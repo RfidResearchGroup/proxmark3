@@ -1655,7 +1655,7 @@ static void Cmdmanchesterdemod(char *str) {
 		} else if ((BitStream[bitidx2] == 1) && (BitStream[bitidx2+1] == 0)) {
 			BitStream2[bitidx2/2] = 0;
 		} else {
-			// We cannot end up in this stage, this means we are unsynchronized,
+			// We cannot end up in this state, this means we are unsynchronized,
 			// move up 1 bit:
 			bitidx2++;
 			PrintToScrollback("Unsynchronized, resync...");

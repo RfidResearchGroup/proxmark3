@@ -1,4 +1,17 @@
 ################
+## 2009/04/09 ##
+################
+
+Initial SVN commit plus:
+        - Added indala demodulation algorithm - full documentation on https://www.lafargue.name/proxmark3/
+        - losim should also be able to simulate an indala tag after indalademod
+	- offline mode for the proxmark3 CLI: if no Proxmark is detected, it will
+	  still go on, but all commands requiring USB will fail (obviously).
+	  A proper implementation would require only enabling offline commands
+	  in this mode.
+
+
+################
 ## 2009/03/28 ##
 ################
 winsrc/command.cpp

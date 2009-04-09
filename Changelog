@@ -1,4 +1,0 @@
-2009-04-09 : Initial SVN commit plus:
-	- Added indala demodulation algorithm - full documentation on https://www.lafargue.name/proxmark3/
-	- losim should also be able to simulate an indala tag after indalademod
-
