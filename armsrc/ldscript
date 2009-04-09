@@ -1,0 +1,11 @@
+SECTIONS
+{
+	. = 0x00010000;
+	.text : { obj/start.o(.text) *(.text) }
+	.rodata : { *(.rodata) }
+	. = 0x00200000;
+	.data : { *(.data) }
+	__bss_start__ = .;
+	.bss : { *(.bss) }
+	__bss_end__ = .;
+}

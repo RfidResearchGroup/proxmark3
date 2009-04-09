@@ -1,0 +1,239 @@
+;
+; Copyright Model Technology, a  Mentor Graphics
+;  Corporation company 2003, - All rights reserved.
+;   
+[Library]
+std = $MODEL_TECH/../std
+ieee = $MODEL_TECH/../ieee
+verilog = $MODEL_TECH/../verilog
+vital2000 = $MODEL_TECH/../vital2000
+std_developerskit = $MODEL_TECH/../std_developerskit
+synopsys = $MODEL_TECH/../synopsys
+modelsim_lib = $MODEL_TECH/../modelsim_lib
+
+
+; VHDL Section
+unisim = $MODEL_TECH/../xilinx/vhdl/unisim
+simprim = $MODEL_TECH/../xilinx/vhdl/simprim
+xilinxcorelib = $MODEL_TECH/../xilinx/vhdl/xilinxcorelib
+aim = $MODEL_TECH/../xilinx/vhdl/aim
+pls = $MODEL_TECH/../xilinx/vhdl/pls
+cpld = $MODEL_TECH/../xilinx/vhdl/cpld
+
+; Verilog Section
+unisims_ver = $MODEL_TECH/../xilinx/verilog/unisims_ver
+uni9000_ver = $MODEL_TECH/../xilinx/verilog/uni9000_ver
+simprims_ver = $MODEL_TECH/../xilinx/verilog/simprims_ver
+xilinxcorelib_ver = $MODEL_TECH/../xilinx/verilog/xilinxcorelib_ver
+aim_ver = $MODEL_TECH/../xilinx/verilog/aim_ver
+cpld_ver = $MODEL_TECH/../xilinx/verilog/cpld_ver
+
+work = work
+[vcom]
+; Turn on VHDL-1993 as the default. Normally is off.
+VHDL93 = 1
+
+; Show source line containing error. Default is off.
+; Show_source = 1
+
+; Turn off unbound-component warnings. Default is on.
+; Show_Warning1 = 0
+
+; Turn off process-without-a-wait-statement warnings. Default is on.
+; Show_Warning2 = 0
+
+; Turn off null-range warnings. Default is on.
+; Show_Warning3 = 0
+
+; Turn off no-space-in-time-literal warnings. Default is on.
+; Show_Warning4 = 0
+
+; Turn off multiple-drivers-on-unresolved-signal warnings. Default is on.
+; Show_Warning5 = 0
+
+; Turn off optimization for IEEE std_logic_1164 package. Default is on.
+; Optimize_1164 = 0
+
+; Turn on resolving of ambiguous function overloading in favor of the
+; "explicit" function declaration (not the one automatically created by
+; the compiler for each type declaration). Default is off.
+ Explicit = 1
+
+; Turn off VITAL compliance checking. Default is checking on.
+; NoVitalCheck = 1
+
+; Ignore VITAL compliance checking errors. Default is to not ignore.
+; IgnoreVitalErrors = 1
+
+; Turn off VITAL compliance checking warnings. Default is to show warnings.
+; Show_VitalChecksWarnings = false
+
+; Turn off "loading..." messages. Default is messages on.
+; Quiet = 1
+
+; Turn on some limited synthesis rule compliance checking. Checks only:
+;	-- signals used (read) by a process must be in the sensitivity list
+; CheckSynthesis = 1
+
+[vlog]
+
+; Turn off "loading..." messages. Default is messages on.
+; Quiet = 1
+
+; Turn on Verilog hazard checking (order-dependent accessing of global vars).
+; Default is off.
+; Hazard = 1
+
+; Turn on converting regular Verilog identifiers to uppercase. Allows case
+; insensitivity for module names. Default is no conversion.
+; UpCase = 1
+
+; Turns on incremental compilation of modules 
+; Incremental = 1
+
+[vsim]
+; Simulator resolution
+; Set to fs, ps, ns, us, ms, or sec with optional prefix of 1, 10, or 100.
+Resolution = ps
+
+; User time unit for run commands
+; Set to default, fs, ps, ns, us, ms, or sec. The default is to use the
+; unit specified for Resolution. For example, if Resolution is 100ps,
+; then UserTimeUnit defaults to ps.
+UserTimeUnit = default
+
+; Default run length
+RunLength = 100
+
+; Maximum iterations that can be run without advancing simulation time
+IterationLimit = 5000
+
+; Directive to license manager:
+; vhdl          Immediately reserve a VHDL license
+; vlog          Immediately reserve a Verilog license
+; plus          Immediately reserve a VHDL and Verilog license
+; nomgc         Do not look for Mentor Graphics Licenses
+; nomti         Do not look for Model Technology Licenses
+; noqueue       Do not wait in the license queue when a license isn't available
+; License = plus
+
+; Stop the simulator after an assertion message
+; 0 = Note  1 = Warning  2 = Error  3 = Failure  4 = Fatal
+BreakOnAssertion = 3
+
+; Assertion Message Format
+; %S - Severity Level 
+; %R - Report Message
+; %T - Time of assertion
+; %D - Delta
+; %I - Instance or Region pathname (if available)
+; %% - print '%' character
+; AssertionFormat = "** %S: %R\n   Timf: %T  Iteration: %D%I\n"
+
+; Assertion File - alternate file for storing assertion messages
+; AssertFile = assert.log
+
+; Default radix for all windows and commands...
+; Set to symbolic, ascii, binary, octal, decimal, hex, unsigned
+DefaultRadix = symbolic
+
+; VSIM Startup command
+; Startup = do startup.do
+
+; File for saving command transcript
+TranscriptFile = transcript
+
+; File for saving command history 
+;CommandHistory = cmdhist.log
+
+; Specify whether paths in simulator commands should be described 
+; in VHDL or Verilog format. For VHDL, PathSeparator = /
+; for Verilog, PathSeparator = .
+PathSeparator = /
+
+; Specify the dataset separator for fully rooted contexts.
+; The default is ':'. For example, sim:/top
+; Must not be the same character as PathSeparator.
+DatasetSeparator = :
+
+; Disable assertion messages
+; IgnoreNote = 1
+; IgnoreWarning = 1
+; IgnoreError = 1
+; IgnoreFailure = 1
+
+; Default force kind. May be freeze, drive, or deposit 
+; or in other terms, fixed, wired or charged.
+; DefaultForceKind = freeze
+
+; If zero, open files when elaborated
+; else open files on first read or write
+; DelayFileOpen = 0
+
+; Control VHDL files opened for write
+;   0 = Buffered, 1 = Unbuffered
+UnbufferedOutput = 0
+
+; Control number of VHDL files open concurrently
+;   This number should always be less then the 
+;   current ulimit setting for max file descriptors
+;   0 = unlimited
+ConcurrentFileLimit = 40
+
+; This controls the number of hierarchical regions displayed as
+; part of a signal name shown in the waveform window.  The default
+; value or a value of zero tells VSIM to display the full name.
+; WaveSignalNameWidth = 0
+
+; Turn off warnings from the std_logic_arith, std_logic_unsigned
+; and std_logic_signed packages.
+; StdArithNoWarnings = 1
+
+; Turn off warnings from the IEEE numeric_std and numeric_bit
+; packages.
+; NumericStdNoWarnings = 1
+
+; Control the format of a generate statement label. Don't quote it.
+; GenerateFormat = %s__%d
+
+; Specify whether checkpoint files should be compressed.
+; The default is to be compressed.
+; CheckpointCompressMode = 0
+
+; List of dynamically loaded objects for Verilog PLI applications
+; Veriuser = veriuser.sl
+
+[lmc]
+[Project]
+Project_Version = 5
+Project_DefaultLib = work
+Project_SortMethod = unused
+Project_Files_Count = 13
+Project_File_0 = G:/RFID/Hardware/Proxmark3/Sources/prox_work/fpga/fpga_tb.v
+Project_File_P_0 = vlog_protect 0 file_type Verilog group_id 0 vlog_1995compat 0 vlog_nodebug 0 folder {Top Level} vlog_noload 0 last_compile 1179836462 vlog_disableopt 0 vlog_hazard 0 vlog_showsource 0 ood 0 vlog_options {} vlog_upper 0 compile_to work compile_order 2 dont_compile 0
+Project_File_1 = G:/RFID/Hardware/Proxmark3/Sources/prox_work/fpga/hi_simulate.v
+Project_File_P_1 = vlog_protect 0 file_type Verilog group_id 0 vlog_1995compat 0 vlog_nodebug 0 folder {Top Level} vlog_noload 0 last_compile 1225963633 vlog_disableopt 0 vlog_hazard 0 vlog_showsource 0 ood 0 compile_to work vlog_upper 0 vlog_options {} compile_order 6 dont_compile 0
+Project_File_2 = G:/RFID/Hardware/Proxmark3/Sources/prox_work/fpga/testbed_hi_simulate.v
+Project_File_P_2 = vlog_protect 0 file_type Verilog group_id 0 vlog_1995compat 0 vlog_nodebug 0 folder {Top Level} vlog_noload 0 last_compile 1225964050 vlog_disableopt 0 vlog_hazard 0 vlog_showsource 0 ood 0 compile_to work vlog_upper 0 vlog_options {} compile_order 12 dont_compile 0
+Project_File_3 = G:/RFID/Hardware/Proxmark3/Sources/prox_work/fpga/fpga.v
+Project_File_P_3 = vlog_protect 0 file_type Verilog group_id 0 vlog_1995compat 0 vlog_nodebug 0 folder {Top Level} vlog_noload 0 last_compile 1207888760 vlog_disableopt 0 vlog_hazard 0 vlog_showsource 0 ood 0 vlog_options {} vlog_upper 0 compile_to work compile_order 1 dont_compile 0
+Project_File_4 = G:/RFID/Hardware/Proxmark3/Sources/prox_work/fpga/hi_read_tx.v
+Project_File_P_4 = vlog_protect 0 file_type Verilog group_id 0 vlog_1995compat 0 vlog_nodebug 0 folder {Top Level} vlog_noload 0 last_compile 1225960972 vlog_disableopt 0 vlog_hazard 0 vlog_showsource 0 ood 0 vlog_options {} vlog_upper 0 compile_to work compile_order 5 dont_compile 0
+Project_File_5 = G:/RFID/Hardware/Proxmark3/Sources/prox_work/fpga/testbed_hi_read_tx.v
+Project_File_P_5 = vlog_protect 0 file_type Verilog group_id 0 vlog_1995compat 0 vlog_nodebug 0 folder {Top Level} vlog_noload 0 last_compile 1225962515 vlog_disableopt 0 vlog_hazard 0 vlog_showsource 0 ood 0 vlog_options {} vlog_upper 0 compile_to work compile_order 11 dont_compile 0
+Project_File_6 = G:/RFID/Hardware/Proxmark3/Sources/prox_work/fpga/hi_iso14443a.v
+Project_File_P_6 = vlog_protect 0 file_type Verilog group_id 0 vlog_1995compat 0 vlog_nodebug 0 folder {Top Level} vlog_noload 0 last_compile 1207889732 vlog_disableopt 0 vlog_hazard 0 vlog_showsource 0 ood 0 vlog_options {} vlog_upper 0 compile_to work compile_order 3 dont_compile 0
+Project_File_7 = G:/RFID/Hardware/Proxmark3/Sources/prox_work/fpga/lo_simulate.v
+Project_File_P_7 = vlog_protect 0 file_type Verilog group_id 0 vlog_1995compat 0 vlog_nodebug 0 folder {Top Level} vlog_noload 0 last_compile 1179836462 vlog_disableopt 0 vlog_hazard 0 vlog_showsource 0 ood 0 vlog_options {} vlog_upper 0 compile_to work compile_order 8 dont_compile 0
+Project_File_8 = G:/RFID/Hardware/Proxmark3/Sources/prox_work/fpga/lo_read.v
+Project_File_P_8 = vlog_protect 0 file_type Verilog group_id 0 vlog_1995compat 0 vlog_nodebug 0 folder {Top Level} vlog_noload 0 last_compile 1225797126 vlog_disableopt 0 vlog_hazard 0 vlog_showsource 0 ood 0 vlog_options {} vlog_upper 0 compile_to work compile_order 7 dont_compile 0
+Project_File_9 = G:/RFID/Hardware/Proxmark3/Sources/prox_work/fpga/util.v
+Project_File_P_9 = vlog_protect 0 file_type Verilog group_id 0 vlog_1995compat 0 vlog_nodebug 0 folder {Top Level} vlog_noload 0 last_compile 1179836462 vlog_disableopt 0 vlog_hazard 0 vlog_showsource 0 ood 0 vlog_options {} vlog_upper 0 compile_to work compile_order 0 dont_compile 0
+Project_File_10 = G:/RFID/Hardware/Proxmark3/Sources/prox_work/fpga/testbed_lo_read.v
+Project_File_P_10 = vlog_protect 0 file_type Verilog group_id 0 vlog_1995compat 0 vlog_nodebug 0 folder {Top Level} vlog_noload 0 last_compile 1225960239 vlog_disableopt 0 vlog_hazard 0 vlog_showsource 0 ood 0 vlog_options {} vlog_upper 0 compile_to work compile_order 9 dont_compile 0
+Project_File_11 = G:/RFID/Hardware/Proxmark3/Sources/prox_work/fpga/testbed_lo_simulate.v
+Project_File_P_11 = vlog_protect 0 file_type Verilog group_id 0 vlog_1995compat 0 vlog_nodebug 0 folder {Top Level} vlog_noload 0 last_compile 1225960231 vlog_disableopt 0 vlog_hazard 0 vlog_showsource 0 ood 0 vlog_options {} vlog_upper 0 compile_to work compile_order 10 dont_compile 0
+Project_File_12 = G:/RFID/Hardware/Proxmark3/Sources/prox_work/fpga/hi_read_rx_xcorr.v
+Project_File_P_12 = vlog_protect 0 file_type Verilog group_id 0 vlog_1995compat 0 vlog_nodebug 0 folder {Top Level} vlog_noload 0 last_compile 1179836462 vlog_disableopt 0 vlog_hazard 0 vlog_showsource 0 ood 0 vlog_options {} vlog_upper 0 compile_to work compile_order 4 dont_compile 0
+Project_Sim_Count = 0
+Project_Folder_Count = 0

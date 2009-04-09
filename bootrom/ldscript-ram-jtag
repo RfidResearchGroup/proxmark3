@@ -1,0 +1,10 @@
+SECTIONS
+{
+    . = 0x00200000;
+    .text : { obj/ram-reset.o(.text) *(.text) }
+    .rodata : { *(.rodata) }
+    .data : { *(.data) }
+    __bss_start__ = .;
+    .bss : { *(.bss) }
+    __bss_end__ = .;
+}

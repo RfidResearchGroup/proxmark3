@@ -1,0 +1,105 @@
+`include "lo_read.v"
+
+/*
+	pck0			- input main 24Mhz clock (PLL / 4)
+	[7:0] adc_d		- input data from A/D converter
+	lo_is_125khz	- input freq selector (1=125Khz, 0=136Khz)
+
+	pwr_lo			- output to coil drivers (ssp_clk / 8)
+	adc_clk			- output A/D clock signal
+	ssp_frame		- output SSS frame indicator (goes high while the 8 bits are shifted)
+	ssp_din			- output SSP data to ARM (shifts 8 bit A/D value serially to ARM MSB first)
+	ssp_clk			- output SSP clock signal 1Mhz/1.09Mhz (pck0 / 2*(11+lo_is_125khz) )
+
+	ck_1356meg		- input unused
+	ck_1356megb		- input unused
+	ssp_dout		- input unused
+	cross_hi		- input unused
+	cross_lo		- input unused
+
+	pwr_hi			- output unused, tied low
+	pwr_oe1			- output unused, undefined
+	pwr_oe2			- output unused, undefined
+	pwr_oe3			- output unused, undefined
+	pwr_oe4			- output unused, undefined
+	dbg				- output alias for adc_clk
+*/
+
+module testbed_lo_read;
+	reg  pck0;
+	reg  [7:0] adc_d;
+	reg  lo_is_125khz;
+
+	wire pwr_lo;
+	wire adc_clk;
+	wire ck_1356meg;
+	wire ck_1356megb;
+	wire ssp_frame;
+	wire ssp_din;
+	wire ssp_clk;
+	wire ssp_dout;
+	wire pwr_hi;
+	wire pwr_oe1;
+	wire pwr_oe2;
+	wire pwr_oe3;
+	wire pwr_oe4;
+	wire cross_lo;
+	wire cross_hi;
+	wire dbg;
+
+	lo_read #(5,200) dut(
+	.pck0(pck0),
+	.ck_1356meg(ck_1356meg),
+	.ck_1356megb(ck_1356megb),
+	.pwr_lo(pwr_lo),
+	.pwr_hi(pwr_hi),
+	.pwr_oe1(pwr_oe1),
+	.pwr_oe2(pwr_oe2),
+	.pwr_oe3(pwr_oe3),
+	.pwr_oe4(pwr_oe4),
+	.adc_d(adc_d),
+	.adc_clk(adc_clk),
+	.ssp_frame(ssp_frame),
+	.ssp_din(ssp_din),
+	.ssp_dout(ssp_dout),
+	.ssp_clk(ssp_clk),
+	.cross_hi(cross_hi),
+	.cross_lo(cross_lo),
+	.dbg(dbg),
+	.lo_is_125khz(lo_is_125khz)
+	);
+
+	integer idx, i;
+
+	// main clock
+	always #5 pck0 = !pck0;
+
+	//new A/D value available from ADC on positive edge
+	task crank_dut;
+	begin
+		@(posedge adc_clk) ;
+		adc_d = $random;
+	end
+	endtask
+
+	initial begin
+
+		// init inputs
+		pck0 = 0;
+		adc_d = 0;
+
+		// simulate 4 A/D cycles at 134Khz
+		lo_is_125khz=0;
+		for (i = 0 ;  i < 4 ;  i = i + 1) begin
+			crank_dut;
+		end
+
+		// simulate 4 A/D cycles at 125Khz
+		lo_is_125khz=1;
+		for (i = 0 ;  i < 4 ;  i = i + 1) begin
+			crank_dut;
+		end
+		$finish;
+	end
+	
+endmodule // main

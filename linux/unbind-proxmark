@@ -1,0 +1,16 @@
+#!/bin/sh
+
+for i in /sys/bus/usb/devices/*; do
+	if grep "9ac4" "${i}/idVendor" >/dev/null 2>&1; then
+		echo "Found Proxmark..."
+		dev=`basename "${i}"`
+
+		for j in /sys/bus/usb/drivers/usbhid/*; do
+			if basename "${j}"|grep "^${dev}" >/dev/null; then
+				bound="`basename "${j}"`"
+				echo "Unbinding ${bound}..."
+				echo -n "${bound}" >/sys/bus/usb/drivers/usbhid/unbind
+			fi
+		done
+	fi
+done
