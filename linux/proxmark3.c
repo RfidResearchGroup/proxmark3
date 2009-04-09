@@ -18,6 +18,10 @@ struct usb_receiver_arg {
 	int run;
 };
 
+struct main_loop_arg {
+	int usb_present;
+};
+
 static void *usb_receiver(void *targ) {
 	struct usb_receiver_arg *arg = (struct usb_receiver_arg*)targ;
 	UsbCommand cmdbuf;
@@ -40,6 +44,7 @@ static void *usb_receiver(void *targ) {
 
 static void *main_loop(void *targ)
 {
+	struct main_loop_arg *arg = (struct main_loop_arg*)targ;
 	char *cmd = NULL;
 
 	while(1) {
@@ -47,11 +52,14 @@ static void *main_loop(void *targ)
 		pthread_t reader_thread;
 
 		rarg.run=1;
-		pthread_create(&reader_thread, NULL, &usb_receiver, &rarg);
-
+		if (arg->usb_present == 1) {
+			pthread_create(&reader_thread, NULL, &usb_receiver, &rarg);
+		}
 		cmd = readline(PROXPROMPT);
 		rarg.run=0;
-		pthread_join(reader_thread, NULL);
+		if (arg->usb_present == 1) {
+			pthread_join(reader_thread, NULL);
+		}
 
 		if (cmd) {
 			if (cmd[0] != 0x00) {
@@ -71,21 +79,26 @@ static void *main_loop(void *targ)
 
 int main(int argc, char **argv)
 {
+	struct main_loop_arg marg;
 	pthread_t main_loop_t;
 	usb_init();
 
 	if (!(devh = OpenProxmark(1))) {
 		fprintf(stderr,"PROXMARK3: NOT FOUND!\n");
-		exit(1);
+		marg.usb_present = 0;
+	} else {
+		marg.usb_present = 1;
 	}
 
-	pthread_create(&main_loop_t, NULL, &main_loop, NULL);
+	pthread_create(&main_loop_t, NULL, &main_loop, &marg);
 	InitGraphics(argc, argv);
 
 	MainGraphics();
 
 	pthread_join(main_loop_t, NULL);
 
-	CloseProxmark();
+	if (marg.usb_present == 1) {
+		CloseProxmark();
+	}
 	return 0;
 }

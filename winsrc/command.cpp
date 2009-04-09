@@ -1302,6 +1302,146 @@ static void CmdVchdemod(char *str)
 	}
 }
 
+static void CmdIndalademod(char *str)
+{
+	// Usage: recover 64bit UID by default, specify "224" as arg to recover a 224bit UID
+
+	int state = -1;
+	int count = 0;
+	int i, j;
+	// worst case with GraphTraceLen=64000 is < 4096
+	// under normal conditions it's < 2048
+	BYTE rawbits[4096];
+	int rawbit = 0;
+	int worst = 0, worstPos = 0;
+	PrintToScrollback("Expecting a bit less than %d raw bits", GraphTraceLen/32);
+	for(i = 0; i < GraphTraceLen-1; i += 2) {
+		count+=1;
+		if((GraphBuffer[i] > GraphBuffer[i + 1]) && (state != 1)) {
+			if (state == 0) {
+				for(j = 0; j <  count - 8; j += 16) {
+					rawbits[rawbit++] = 0;
+				}
+				if ((abs(count - j)) > worst) {
+					worst = abs(count - j);
+					worstPos = i;
+				}
+			}
+			state = 1;
+			count=0;
+		} else if((GraphBuffer[i] < GraphBuffer[i + 1]) && (state != 0)) {
+			if (state == 1) {
+				for(j = 0; j <  count - 8; j += 16) {
+					rawbits[rawbit++] = 1;
+				}
+				if ((abs(count - j)) > worst) {
+					worst = abs(count - j);
+					worstPos = i;
+				}
+			}
+			state = 0;
+			count=0;
+		}
+	}
+	PrintToScrollback("Recovered %d raw bits", rawbit);
+	PrintToScrollback("worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
+
+	// Finding the start of a UID
+	int uidlen, long_wait;
+	if(strcmp(str, "224") == 0) {
+		uidlen=224;
+		long_wait=30;
+	} else {
+		uidlen=64;
+		long_wait=29;
+	}
+	int start;
+	int first = 0;
+	for(start = 0; start <= rawbit - uidlen; start++) {
+		first = rawbits[start];
+		for(i = start; i < start + long_wait; i++) {
+			if(rawbits[i] != first) {
+				break;
+			}
+		}
+		if(i == (start + long_wait)) {
+			break;
+		}
+	}
+	if(start == rawbit - uidlen + 1) {
+		PrintToScrollback("nothing to wait for");
+		return;
+	}
+
+	// Inverting signal if needed
+	if(first == 1) {
+		for(i = start; i < rawbit; i++) {
+			rawbits[i] = !rawbits[i];
+		}
+	}
+
+	// Dumping UID
+	BYTE bits[224];
+	char showbits[225];
+	showbits[uidlen]='\0';
+	int bit;
+	i = start;
+	int times = 0;
+	if(uidlen > rawbit) {
+		PrintToScrollback("Warning: not enough raw bits to get a full UID");
+		for(bit = 0; bit < rawbit; bit++) {
+			bits[bit] = rawbits[i++];
+			// As we cannot know the parity, let's use "." and "/"
+			showbits[bit] = '.' + bits[bit];
+		}
+		showbits[bit+1]='\0';
+		PrintToScrollback("Partial UID=%s", showbits);
+		return;
+	} else {
+		for(bit = 0; bit < uidlen; bit++) {
+			bits[bit] = rawbits[i++];
+			showbits[bit] = '0' + bits[bit];
+		}
+		times = 1;
+	}
+	PrintToScrollback("UID=%s", showbits);
+
+	// Checking UID against next occurences
+	for(; i + uidlen <= rawbit;) {
+		int failed = 0;
+		for(bit = 0; bit < uidlen; bit++) {
+			if(bits[bit] != rawbits[i++]) {
+				failed = 1;
+				break;
+			}
+		}
+		if (failed == 1) {
+			break;
+		}
+		times += 1;
+	}
+	PrintToScrollback("Occurences: %d (expected %d)", times, (rawbit - start) / uidlen);
+
+	// Remodulating for tag cloning
+	GraphTraceLen = 32*uidlen;
+	i = 0;
+	int phase = 0;
+	for(bit = 0; bit < uidlen; bit++) {
+		if(bits[bit] == 0) {
+			phase = 0;
+		} else {
+			phase = 1;
+		}
+		int j;
+		for(j = 0; j < 32; j++) {
+			GraphBuffer[i++] = phase;
+			phase = !phase;
+		}
+	}
+
+	RepaintGraphWindow();
+}
+
 static void CmdFlexdemod(char *str)
 {
 	int i;
@@ -1462,7 +1602,6 @@ static void Cmdaskdemod(char *str) {
 static void Cmdmanchesterdemod(char *str) {
 	int i;
 	int clock;
-	int grouping=16;
 	int lastval;
 	int lc = 0;
 	int bitidx = 0;
@@ -1705,6 +1844,7 @@ static struct {
 	"ltrim",			CmdLtrim,			"trim from left of trace",
 	"scale",			CmdScale,			"set cursor display scale",
 	"flexdemod",		CmdFlexdemod,		"demod samples for FlexPass",
+	"indalademod",		CmdIndalademod,		"demod samples for Indala",
 	"save",				CmdSave,			"save trace (from graph window)",
 	"load",				CmdLoad,			"load trace (to graph window",
 	"hisimlisten",		CmdHisimlisten,		"get HF samples as fake tag",
