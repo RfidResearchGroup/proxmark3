@@ -64,6 +64,7 @@ void ExecCmd(char *cmd)
 
 }
 int CommandFinished;
+int offset = 64;
 
 static void ResizeCommandWindow(void)
 {
@@ -122,8 +123,8 @@ static void PaintGraph(HDC hdc)
 
 	SelectObject(hdc, WhitePen);
 
-	MoveToEx(hdc, r.left + 40, r.top, NULL);
-	LineTo(hdc, r.left + 40, r.bottom);
+	MoveToEx(hdc, r.left + offset, r.top, NULL);
+	LineTo(hdc, r.left + offset, r.bottom);
 
 	int zeroHeight = r.top + (r.bottom - r.top) / 2;
 	SelectObject(hdc, GreyPen);
@@ -131,7 +132,7 @@ static void PaintGraph(HDC hdc)
 	LineTo(hdc, r.right, zeroHeight);
 
 	int startMax =
-		(GraphTraceLen - (int)((r.right - r.left - 40) / GraphPixelsPerPoint));
+		(GraphTraceLen - (int)((r.right - r.left - offset) / GraphPixelsPerPoint));
 	if(startMax < 0) {
 		startMax = 0;
 	}
@@ -151,7 +152,7 @@ static void PaintGraph(HDC hdc)
 		if(fabs((double)GraphBuffer[i]) > absYMax) {
 			absYMax = (int)fabs((double)GraphBuffer[i]);
 		}
-		int x = 40 + (int)((i - GraphStart)*GraphPixelsPerPoint);
+		int x = offset + (int)((i - GraphStart)*GraphPixelsPerPoint);
 		if(x > r.right) {
 			break;
 		}
@@ -163,12 +164,15 @@ static void PaintGraph(HDC hdc)
 	SetBkColor(hdc, RGB(0, 0, 0));
 
 	// number of points that will be plotted
-	int span = (int)((r.right - r.left) / GraphPixelsPerPoint);
-	// one label every 100 pixels, let us say
-	int labels = (r.right - r.left - 40) / 100;
+	double span = (int)((r.right - r.left) / GraphPixelsPerPoint);
+
+	// one label every offset pixels, let us say
+	int labels = (r.right - r.left - offset) / offset;
 	if(labels <= 0) labels = 1;
-	int pointsPerLabel = span / labels;
+	// round to nearest power of 2
+	int pointsPerLabel = (int)(log(span / labels)/log(2.0));
 	if(pointsPerLabel <= 0) pointsPerLabel = 1;
+	pointsPerLabel = (int)pow(2.0,pointsPerLabel);
 
 	int yMin = INT_MAX;
 	int yMax = INT_MIN;
@@ -179,7 +183,7 @@ static void PaintGraph(HDC hdc)
 		if(i >= GraphTraceLen) {
 			break;
 		}
-		int x = 40 + (int)((i - GraphStart)*GraphPixelsPerPoint);
+		int x = offset + (int)((i - GraphStart)*GraphPixelsPerPoint);
 		if(x > r.right + GraphPixelsPerPoint) {
 			break;
 		}
@@ -212,8 +216,8 @@ static void PaintGraph(HDC hdc)
 
 		if(((i - GraphStart) % pointsPerLabel == 0) && i != GraphStart) {
 			SelectObject(hdc, WhitePen);
-			MoveToEx(hdc, x, zeroHeight - 3, NULL);
-			LineTo(hdc, x, zeroHeight + 3);
+			MoveToEx(hdc, x, zeroHeight - 8, NULL);
+			LineTo(hdc, x, zeroHeight + 8);
 
 			char str[100];
 			sprintf(str, "+%d", (i - GraphStart));
@@ -244,9 +248,9 @@ static void PaintGraph(HDC hdc)
 	}
 
 	char str[100];
-	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f]",
+	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f] zoom=%.3f",
 		GraphStart, yMax, yMin, yMean, n, GraphTraceLen,
-		CursorBPos - CursorAPos, (CursorBPos - CursorAPos)/CursorScaleFactor);
+		CursorBPos - CursorAPos, (CursorBPos - CursorAPos)/CursorScaleFactor, GraphPixelsPerPoint);
 	TextOut(hdc, 50, r.bottom - 20, str, strlen(str));
 }
 
@@ -277,28 +281,28 @@ static LRESULT CALLBACK
 		case WM_KEYDOWN:
 			switch(wParam) {
 				case VK_DOWN:
-					if(GraphPixelsPerPoint <= 50) {
+					if(GraphPixelsPerPoint <= 8) {
 						GraphPixelsPerPoint *= 2;
 					}
 					break;
 
 				case VK_UP:
-					if(GraphPixelsPerPoint >= 0.02) {
+					if(GraphPixelsPerPoint >= 0.01) {
 						GraphPixelsPerPoint /= 2;
 					}
 					break;
 
 				case VK_RIGHT:
-					if(GraphPixelsPerPoint < 20) {
-						GraphStart += (int)(20 / GraphPixelsPerPoint);
+					if(GraphPixelsPerPoint < 16) {
+						GraphStart += (int)(16 / GraphPixelsPerPoint);
 					} else {
 						GraphStart++;
 					}
 					break;
 
 				case VK_LEFT:
-					if(GraphPixelsPerPoint < 20) {
-						GraphStart -= (int)(20 / GraphPixelsPerPoint);
+					if(GraphPixelsPerPoint < 16) {
+						GraphStart -= (int)(16 / GraphPixelsPerPoint);
 					} else {
 						GraphStart--;
 					}
@@ -314,7 +318,7 @@ nopaint:
 		case WM_LBUTTONDOWN:
 		case WM_RBUTTONDOWN: {
 			int x = LOWORD(lParam);
-			x -= 40;
+			x -= offset;
 			x = (int)(x / GraphPixelsPerPoint);
 			x += GraphStart;
 			if(msg == WM_LBUTTONDOWN) {

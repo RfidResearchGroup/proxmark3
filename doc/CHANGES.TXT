@@ -1,6 +1,27 @@
 ################
 ## 2009/04/09 ##
 ################
+winsrc/gui.cpp
+	Changes to PaintGraph to create X axis labels that are snapped to a power of two (useful when analysing low freq tags
+	with cycle times that are a power of two). Also small changes to keep the X axis labels fixed within the graph window
+	as the width of the graph window is resized.
+armsrc/apps.h
+	New defines for FPGA commands FPGA_CMD_SET_CONFREG, FPGA_CMD_SET_DIVISOR_REG
+armsrc/appmain.c
+
+armsrc/fpga.c
+	FpgaWriteConfWord(data) is now a special case of FpgaSendCommand(FPGA_CMD_SET_CONFREG, data) to avoid changing every
+	source file containing FpgaWriteConfWord()
+fpga/fpga.v
+	Changes to the serial conf word, now takes a 4 bit command and 12 bit data code
+fpga/lo_read.v
+	Significant changes to lo_read, it now can be configured with a divisor value to produce a configurable drive clock
+	for the antenna.
+	Recompiled FPGA code
+
+################
+## 2009/04/09 ##
+################
 
 Initial SVN commit plus:
         - Added indala demodulation algorithm - full documentation on https://www.lafargue.name/proxmark3/

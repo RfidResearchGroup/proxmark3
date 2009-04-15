@@ -1,5 +1,5 @@
+`include "lo_read_org.v"
 `include "lo_read.v"
-
 /*
 	pck0			- input main 24Mhz clock (PLL / 4)
 	[7:0] adc_d		- input data from A/D converter
@@ -29,6 +29,7 @@ module testbed_lo_read;
 	reg  pck0;
 	reg  [7:0] adc_d;
 	reg  lo_is_125khz;
+	reg [15:0] divisor;
 
 	wire pwr_lo;
 	wire adc_clk;
@@ -47,38 +48,61 @@ module testbed_lo_read;
 	wire cross_hi;
 	wire dbg;
 
-	lo_read #(5,200) dut(
+	lo_read_org #(5,10) dut1(
 	.pck0(pck0),
-	.ck_1356meg(ck_1356meg),
-	.ck_1356megb(ck_1356megb),
-	.pwr_lo(pwr_lo),
-	.pwr_hi(pwr_hi),
-	.pwr_oe1(pwr_oe1),
-	.pwr_oe2(pwr_oe2),
-	.pwr_oe3(pwr_oe3),
-	.pwr_oe4(pwr_oe4),
+	.ck_1356meg(ack_1356meg),
+	.ck_1356megb(ack_1356megb),
+	.pwr_lo(apwr_lo),
+	.pwr_hi(apwr_hi),
+	.pwr_oe1(apwr_oe1),
+	.pwr_oe2(apwr_oe2),
+	.pwr_oe3(apwr_oe3),
+	.pwr_oe4(apwr_oe4),
 	.adc_d(adc_d),
 	.adc_clk(adc_clk),
-	.ssp_frame(ssp_frame),
-	.ssp_din(ssp_din),
-	.ssp_dout(ssp_dout),
-	.ssp_clk(ssp_clk),
-	.cross_hi(cross_hi),
-	.cross_lo(cross_lo),
-	.dbg(dbg),
+	.ssp_frame(assp_frame),
+	.ssp_din(assp_din),
+	.ssp_dout(assp_dout),
+	.ssp_clk(assp_clk),
+	.cross_hi(across_hi),
+	.cross_lo(across_lo),
+	.dbg(adbg),
 	.lo_is_125khz(lo_is_125khz)
 	);
 
-	integer idx, i;
+	lo_read #(5,10) dut2(
+	.pck0(pck0),
+	.ck_1356meg(bck_1356meg),
+	.ck_1356megb(bck_1356megb),
+	.pwr_lo(bpwr_lo),
+	.pwr_hi(bpwr_hi),
+	.pwr_oe1(bpwr_oe1),
+	.pwr_oe2(bpwr_oe2),
+	.pwr_oe3(bpwr_oe3),
+	.pwr_oe4(bpwr_oe4),
+	.adc_d(adc_d),
+	.adc_clk(badc_clk),
+	.ssp_frame(bssp_frame),
+	.ssp_din(bssp_din),
+	.ssp_dout(bssp_dout),
+	.ssp_clk(bssp_clk),
+	.cross_hi(bcross_hi),
+	.cross_lo(bcross_lo),
+	.dbg(bdbg),
+	.lo_is_125khz(lo_is_125khz),
+	.divisor(divisor)
+	);
+
+	integer idx, i, adc_val=8;
 
 	// main clock
 	always #5 pck0 = !pck0;
 
-	//new A/D value available from ADC on positive edge
 	task crank_dut;
 	begin
 		@(posedge adc_clk) ;
-		adc_d = $random;
+		adc_d = adc_val;
+		adc_val = (adc_val *2) + 53;
 	end
 	endtask
 
@@ -87,19 +111,13 @@ module testbed_lo_read;
 		// init inputs
 		pck0 = 0;
 		adc_d = 0;
-
-		// simulate 4 A/D cycles at 134Khz
-		lo_is_125khz=0;
-		for (i = 0 ;  i < 4 ;  i = i + 1) begin
-			crank_dut;
-		end
+		lo_is_125khz = 1;
+		divisor=255;  //min 19, 95=125Khz, max 255
 
 		// simulate 4 A/D cycles at 125Khz
-		lo_is_125khz=1;
-		for (i = 0 ;  i < 4 ;  i = i + 1) begin
+		for (i = 0 ;  i < 8 ;  i = i + 1) begin
 			crank_dut;
 		end
 		$finish;
 	end
-	
 endmodule // main

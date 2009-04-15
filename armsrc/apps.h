@@ -19,6 +19,7 @@ extern BYTE ToSend[];
 extern DWORD BigBuf[];
 
 /// fpga.c
+void FpgaSendCommand(WORD cmd, WORD v);
 void FpgaWriteConfWord(BYTE v);
 void FpgaDownloadAndGo(void);
 void FpgaSetupSsc(void);
@@ -26,6 +27,9 @@ void SetupSpi(int mode);
 void FpgaSetupSscDma(BYTE *buf, int len);
 void SetAdcMuxFor(int whichGpio);
 
+// Definitions for the FPGA commands.
+#define FPGA_CMD_SET_CONFREG				(1<<12)
+#define FPGA_CMD_SET_DIVISOR				(2<<12)
 // Definitions for the FPGA configuration word.
 #define FPGA_MAJOR_MODE_LF_READER			(0<<5)
 #define FPGA_MAJOR_MODE_LF_SIMULATOR		(1<<5)

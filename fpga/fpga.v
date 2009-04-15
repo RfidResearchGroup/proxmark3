@@ -21,7 +21,7 @@
 `include "util.v"
 
 module fpga(
-	spck, miso, mosi, ncs,
+	spcki, miso, mosi, ncs,
 	pck0i, ck_1356meg, ck_1356megb,
 	pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4,
 	adc_d, adc_clk, adc_noe,
@@ -29,7 +29,7 @@ module fpga(
 	cross_hi, cross_lo,
 	dbg
 );
-	input spck, mosi, ncs;
+	input spcki, mosi, ncs;
 	output miso;
 	input pck0i, ck_1356meg, ck_1356megb;
 	output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
@@ -40,11 +40,16 @@ module fpga(
 	input cross_hi, cross_lo;
 	output dbg;
 
+//assign pck0 = pck0i;
 	IBUFG #(.IOSTANDARD("DEFAULT") ) pck0b(
 		.O(pck0),
 		.I(pck0i)
 	);
-//assign pck0 = pck0i;
+//assign spck = spcki;
+	IBUFG #(.IOSTANDARD("DEFAULT") ) spckb(
+		.O(spck),
+		.I(spcki)
+	);
 //-----------------------------------------------------------------------------
 // The SPI receiver. This sets up the configuration word, which the rest of
 // the logic looks at to determine how to connect the A/D and the coil
@@ -52,7 +57,8 @@ module fpga(
 // to the configuration bits, for use below.
 //-----------------------------------------------------------------------------
 
-reg [7:0] conf_word_shift;
+reg [15:0] shift_reg;
+reg [7:0] divisor;
 reg [7:0] conf_word;
 
 // We switch modes between transmitting to the 13.56 MHz tag and receiving
@@ -60,15 +66,18 @@ reg [7:0] conf_word;
 // glitching, or else we will glitch the transmitted carrier.
 always @(posedge ncs)
 begin
-	conf_word <= conf_word_shift;
+	case(shift_reg[15:12])
+		4'b0001: conf_word <= shift_reg[7:0];
+		4'b0010: divisor <= shift_reg[7:0];
+	endcase
 end
 
 always @(posedge spck)
 begin
 	if(~ncs)
 	begin
-		conf_word_shift[7:1] <= conf_word_shift[6:0];
-		conf_word_shift[0] <= mosi;
+		shift_reg[15:1] <= shift_reg[14:0];
+		shift_reg[0] <= mosi;
 	end
 end
 
@@ -110,7 +119,7 @@ lo_read lr(
 	lr_ssp_frame, lr_ssp_din, ssp_dout, lr_ssp_clk,
 	cross_hi, cross_lo,
 	lr_dbg,
-	lo_is_125khz
+	lo_is_125khz, divisor
 );
 
 lo_simulate ls(

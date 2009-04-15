@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 #include <proxmark3.h>
 #include "apps.h"
-#include "..\common\iso14443_crc.c"
+#include "../common/iso14443_crc.c"
 
 
 //static void GetSamplesFor14443(BOOL weTx, int n);

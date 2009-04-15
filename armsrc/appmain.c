@@ -87,8 +87,10 @@ void AcquireRawAdcSamples125k(BOOL at134khz)
 	memset(dest,0,n);
 
 	if(at134khz) {
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_134_KHZ);
 	} else {
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_125_KHZ);
 	}
 
@@ -121,7 +123,7 @@ void AcquireRawAdcSamples125k(BOOL at134khz)
 
 //-----------------------------------------------------------------------------
 // Read an ADC channel and block till it completes, then return the result
-// in ADC units (0 to 1023). Also a routine to average sixteen samples and
+// in ADC units (0 to 1023). Also a routine to average 32 samples and
 // return that.
 //-----------------------------------------------------------------------------
 static int ReadAdc(int ch)
@@ -153,6 +155,29 @@ static int AvgAdc(int ch)
 	return (a + 15) >> 5;
 }
 
+/*
+ * Sweeps the useful LF range of the proxmark from
+ * 46.8kHz (divisor=255) to 600kHz (divisor=19) and
+ * reads the voltage in the antenna: the result is a graph
+ * which should clearly show the resonating frequency of your
+ * LF antenna ( hopefully around 90 if it is tuned to 125kHz!)
+ */
+void SweepLFrange()
+{
+	BYTE *dest = (BYTE *)BigBuf;
+	int i;
+
+	// clear buffer
+	memset(BigBuf,0,sizeof(BigBuf));
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	for (i=255; i>19; i--) {
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
+		SpinDelay(20);
+		dest[i] = (137500 * AvgAdc(4)) >> 18;
+	}
+}
+
 void MeasureAntennaTuning(void)
 {
 // Impedances are Zc = 1/(j*omega*C), in ohms
@@ -164,6 +189,7 @@ void MeasureAntennaTuning(void)
 	UsbCommand c;
 
 	// Let the FPGA drive the low-frequency antenna around 125 kHz.
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_125_KHZ);
 	SpinDelay(20);
 	vLf125 = AvgAdc(4);
@@ -172,6 +198,7 @@ void MeasureAntennaTuning(void)
 	vLf125 = (137500 * vLf125) >> 10;
 
 	// Let the FPGA drive the low-frequency antenna around 134 kHz.
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_134_KHZ);
 	SpinDelay(20);
 	vLf134 = AvgAdc(4);
@@ -207,7 +234,7 @@ void SimulateTagLowFrequency(int period)
 	PIO_OUTPUT_DISABLE = (1 << GPIO_SSC_CLK);
 
 #define SHORT_COIL()	LOW(GPIO_SSC_DOUT)
-#define OPEN_COIL()		HIGH(GPIO_SSC_DOUT)
+#define OPEN_COIL()	HIGH(GPIO_SSC_DOUT)
 
 	i = 0;
 	for(;;) {
@@ -345,6 +372,7 @@ static void CmdHIDdemodFSK(void)
 	int m=0, n=0, i=0, idx=0, found=0, lastval=0;
 	DWORD hi=0, lo=0;
 
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_125_KHZ);
 
 	// Connect the A/D to the peak-detected low-frequency path.
@@ -448,7 +476,7 @@ static void CmdHIDdemodFSK(void)
 						dest[i++]=dest[idx-1];
 						dest[i++]=dest[idx-1];
 						break;
-					// When a logic 0 is immediately followed by the start of the next transmisson 
+					// When a logic 0 is immediately followed by the start of the next transmisson
 					// (special pattern) a pattern of 4 bit duration lengths is created.
 					case 4:
 						dest[i++]=dest[idx-1];
@@ -573,20 +601,19 @@ void UsbPacketReceived(BYTE *packet, int len)
 			break;
 
 		case CMD_READER_ISO_15693:
-			ReaderIso15693(c->ext1); 
+			ReaderIso15693(c->ext1);
 			break;
 
 		case CMD_SIMTAG_ISO_15693:
-			SimTagIso15693(c->ext1); 
+			SimTagIso15693(c->ext1);
 			break;
-
 
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443:
 			AcquireRawAdcSamplesIso14443(c->ext1);
 			break;
 
 		case CMD_READER_ISO_14443a:
-			ReaderIso14443a(c->ext1); 
+			ReaderIso14443a(c->ext1);
 			break;
 
 		case CMD_SNOOP_ISO_14443:
@@ -654,6 +681,14 @@ void UsbPacketReceived(BYTE *packet, int len)
 
 		case CMD_LCD_RESET:
 			LCDReset();
+			break;
+
+		case CMD_SWEEP_LF:
+			SweepLFrange();
+			break;
+
+		case CMD_SET_LF_DIVISOR:
+			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, c->ext1);
 			break;
 
 		case CMD_LCD:

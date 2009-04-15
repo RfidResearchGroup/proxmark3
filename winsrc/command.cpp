@@ -1598,6 +1598,7 @@ static void Cmdaskdemod(char *str) {
  * routine, feel free to improve...
  *
  * 1st argument: clock rate (as number of samples per clock rate)
+ *               Typical values can be 64, 32, 128...
  */
 static void Cmdmanchesterdemod(char *str) {
 	int i;
@@ -1605,18 +1606,23 @@ static void Cmdmanchesterdemod(char *str) {
 	int lastval;
 	int lc = 0;
 	int bitidx = 0;
-	int bitidx2;
+	int bit2idx = 0;
 
 
 	sscanf(str, "%i", &clock);
 
 	int tolerance = clock/4;
-	/* Holds the decoded bitstream. */
-	int BitStream[MAX_GRAPH_TRACE_LEN*2];
-	int BitStream2[MAX_GRAPH_TRACE_LEN];
+	/* Holds the decoded bitstream: each clock period contains 2 bits       */
+	/* later simplified to 1 bit after manchester decoding.                 */
+	/* Add 10 bits to allow for noisy / uncertain traces without aborting   */
+	/* int BitStream[GraphTraceLen*2/clock+10]; */
+
+	/* But it does not work if compiling on WIndows: therefore we just allocate a */
+	/* large array */
+	int BitStream[MAX_GRAPH_TRACE_LEN];
 
 	/* Detect first transition */
-	/* Lo-Hi (arbitrary) */
+	/* Lo-Hi (arbitrary)       */
 	for(i=1;i<GraphTraceLen;i++) {
 		if (GraphBuffer[i-1]<GraphBuffer[i]) {
 		lastval = i;
@@ -1626,18 +1632,24 @@ static void Cmdmanchesterdemod(char *str) {
 	}
 
 	/* Then detect duration between 2 successive transitions */
-	/* At this stage, GraphTrace is either 0 or 1 */
 	for(bitidx = 1 ;i<GraphTraceLen;i++) {
 		if (GraphBuffer[i-1] != GraphBuffer[i]) {
 			lc = i-lastval;
 			lastval = i;
+			// Error check: if bitidx becomes too large, we do not
+			// have a Manchester encoded bitstream or the clock is really
+			// wrong!
+			if (bitidx > (GraphTraceLen*2/clock+8) ) {
+				PrintToScrollback("Error: the clock you gave is probably wrong, aborting.");
+				return;
+			}
 			// Then switch depending on lc length:
 			// Tolerance is 1/4 of clock rate (arbitrary)
-			if ((lc-clock/2) < tolerance) {
-				// Short pulse
+			if (abs(lc-clock/2) < tolerance) {
+				// Short pulse : either "1" or "0"
 				BitStream[bitidx++]=GraphBuffer[i-1];
-			} else if ((lc-clock) < tolerance) {
-				// Long pulse
+			} else if (abs(lc-clock) < tolerance) {
+				// Long pulse: either "11" or "00"
 				BitStream[bitidx++]=GraphBuffer[i-1];
 				BitStream[bitidx++]=GraphBuffer[i-1];
 			} else {
@@ -1649,39 +1661,41 @@ static void Cmdmanchesterdemod(char *str) {
 	}
 
 	// At this stage, we now have a bitstream of "01" ("1") or "10" ("0"), parse it into final decoded bitstream
-	for (bitidx2 = 0; bitidx2<bitidx; bitidx2 += 2) {
-		if ((BitStream[bitidx2] == 0) && (BitStream[bitidx2+1] == 1)) {
-			BitStream2[bitidx2/2] = 1;
-		} else if ((BitStream[bitidx2] == 1) && (BitStream[bitidx2+1] == 0)) {
-			BitStream2[bitidx2/2] = 0;
+	// Actually, we overwrite BitStream with the new decoded bitstream, we just need to be careful
+	// to stop output at the final bitidx2 value, not bitidx
+	for (i = 0; i < bitidx; i += 2) {
+		if ((BitStream[i] == 0) && (BitStream[i+1] == 1)) {
+			BitStream[bit2idx++] = 1;
+		} else if ((BitStream[i] == 1) && (BitStream[i+1] == 0)) {
+			BitStream[bit2idx++] = 0;
 		} else {
 			// We cannot end up in this state, this means we are unsynchronized,
 			// move up 1 bit:
-			bitidx2++;
+			i++;
 			PrintToScrollback("Unsynchronized, resync...");
 			PrintToScrollback("(too many of those messages mean the stream is not Manchester encoded)");
 		}
 	}
 	PrintToScrollback("Manchester decoded bitstream \n---------");
 	// Now output the bitstream to the scrollback by line of 16 bits
-	for (i = 0; i<bitidx/2; i+=16) {
+	for (i = 0; i < (bit2idx-16); i+=16) {
 		PrintToScrollback("%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",
-			BitStream2[i],
-			BitStream2[i+1],
-			BitStream2[i+2],
-			BitStream2[i+3],
-			BitStream2[i+4],
-			BitStream2[i+5],
-			BitStream2[i+6],
-			BitStream2[i+7],
-			BitStream2[i+8],
-			BitStream2[i+9],
-			BitStream2[i+10],
-			BitStream2[i+11],
-			BitStream2[i+12],
-			BitStream2[i+13],
-			BitStream2[i+14],
-			BitStream2[i+15]);
+			BitStream[i],
+			BitStream[i+1],
+			BitStream[i+2],
+			BitStream[i+3],
+			BitStream[i+4],
+			BitStream[i+5],
+			BitStream[i+6],
+			BitStream[i+7],
+			BitStream[i+8],
+			BitStream[i+9],
+			BitStream[i+10],
+			BitStream[i+11],
+			BitStream[i+12],
+			BitStream[i+13],
+			BitStream[i+14],
+			BitStream[i+15]);
 	}
 }
 
@@ -1806,6 +1820,32 @@ static void CmdTest(char *str)
 {
 }
 
+/*
+ * Sets the divisor for LF frequency clock: lets the user choose any LF frequency below
+ * 600kHz.
+ */
+static void CmdSetDivisor(char *str)
+{
+	UsbCommand c;
+	c.cmd = CMD_SET_LF_DIVISOR;
+	c.ext1 = atoi(str);
+	if (( c.ext1<0) || (c.ext1>255)) {
+			PrintToScrollback("divisor must be between 19 and 255");
+	} else {
+			SendCommand(&c, FALSE);
+			PrintToScrollback("Divisor set, expected freq=%dHz", 12000000/(c.ext1+1));
+	}
+}
+
+static void CmdSweepLF(char *str)
+{
+	UsbCommand c;
+	c.cmd = CMD_SWEEP_LF;
+	SendCommand(&c, FALSE);
+}
+
+
+
 typedef void HandlerFunction(char *cmdline);
 
 static struct {
@@ -1863,6 +1903,8 @@ static struct {
 	"lcdreset",			CmdLcdReset,		"Hardware reset LCD",
 	"lcd",				CmdLcd,				"Send command/data to LCD",
 	"test",				CmdTest,			"Placeholder command for testing new code",
+	"setlfdivisor",		CmdSetDivisor,		"Drive LF antenna at 12Mhz/(divisor+1)",
+	"sweeplf",			CmdSweepLF,			"Sweep through LF freq range and store results in buffer",
 	"quit",				CmdQuit,			"quit program"
 };
 

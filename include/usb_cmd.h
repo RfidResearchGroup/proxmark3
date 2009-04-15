@@ -44,6 +44,8 @@ typedef struct {
 #define CMD_SIMULATE_TAG_125K						0x0207
 #define CMD_HID_DEMOD_FSK							0x0208	// ## New command: demodulate HID tag ID
 #define CMD_HID_SIM_TAG								0x0209	// ## New command: simulate HID tag by ID
+#define CMD_SET_LF_DIVISOR							0x020A
+#define CMD_SWEEP_LF								0x020B
 
 // For the 13.56 MHz tags
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693		0x0300
@@ -58,7 +60,6 @@ typedef struct {
 #define CMD_SNOOP_ISO_14443a						0x0383	// ## New snoop command
 #define CMD_SIMULATE_TAG_ISO_14443a					0x0384	// ## New command: Simulate tag 14443a
 #define CMD_READER_ISO_14443a						0x0385	// ## New command to act like a 14443a reader
-
 #define CMD_SIMULATE_MIFARE_CARD					0x0386
 
 // For measurements of the antenna tuning
@@ -67,5 +68,6 @@ typedef struct {
 
 // For direct FPGA control
 #define CMD_FPGA_MAJOR_MODE_OFF						0x0500	// ## FPGA Control
+#define CMD_TEST									0x0501
 
 #endif

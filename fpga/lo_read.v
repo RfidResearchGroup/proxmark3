@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // The way that we connect things in low-frequency read mode. In this case
-// we are generating the 134 kHz or 125 kHz carrier, and running the 
+// we are generating the 134 kHz or 125 kHz carrier, and running the
 // unmodulated carrier at that frequency. The A/D samples at that same rate,
 // and the result is serialized.
 //
@@ -14,7 +14,7 @@ module lo_read(
     ssp_frame, ssp_din, ssp_dout, ssp_clk,
     cross_hi, cross_lo,
     dbg,
-    lo_is_125khz
+    lo_is_125khz, divisor
 );
     input pck0, ck_1356meg, ck_1356megb;
     output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
@@ -25,6 +25,7 @@ module lo_read(
     input cross_hi, cross_lo;
     output dbg;
     input lo_is_125khz;
+    input [7:0] divisor;
 
 // The low-frequency RFID stuff. This is relatively simple, because most
 // of the work happens on the ARM, and we just pass samples through. The
@@ -38,65 +39,39 @@ module lo_read(
 // 125 kHz by dividing by a further factor of (8*12*2), or ~134 kHz by
 // dividing by a factor of (8*11*2) (for 136 kHz, ~2% error, tolerable).
 
-reg [3:0] pck_divider;
-reg clk_lo;
+reg [7:0] to_arm_shiftreg;
+reg [7:0] pck_divider;
+reg [6:0] ssp_divider;
+reg ant_lo;
 
 always @(posedge pck0)
 begin
-    if(lo_is_125khz)
-    begin
-        if(pck_divider == 4'd11)
-        begin
-            pck_divider <= 4'd0;
-            clk_lo = !clk_lo;
-        end
-        else
-            pck_divider <= pck_divider + 1;
-    end
-    else
-    begin
-        if(pck_divider == 4'd10)
-        begin
-            pck_divider <= 4'd0;
-            clk_lo = !clk_lo;
-        end
-        else
-            pck_divider <= pck_divider + 1;
-    end
+	if(pck_divider == 8'd0)
+		begin
+			pck_divider <= divisor[7:0];
+			ant_lo = !ant_lo;
+			if(ant_lo == 1'b0)
+			begin
+			    ssp_divider <= 7'b0011111;
+				to_arm_shiftreg <= adc_d;
+			end
+		end
+	else
+	begin
+		pck_divider <= pck_divider - 1;
+		if(ssp_divider[6] == 1'b0)
+		begin
+			if (ssp_divider[1:0] == 1'b11) to_arm_shiftreg[7:1] <= to_arm_shiftreg[6:0];
+			ssp_divider <= ssp_divider - 1;
+		end
+	end
 end
 
-reg [2:0] carrier_divider_lo;
-
-always @(posedge clk_lo)
-begin
-    carrier_divider_lo <= carrier_divider_lo + 1;
-end
-
-assign pwr_lo = carrier_divider_lo[2];
-
-// This serializes the values returned from the A/D, and sends them out
-// over the SSP.
-
-reg [7:0] to_arm_shiftreg;
-
-always @(posedge clk_lo)
-begin
-    if(carrier_divider_lo == 3'b000)
-        to_arm_shiftreg <= adc_d;
-    else
-        to_arm_shiftreg[7:1] <= to_arm_shiftreg[6:0];
-end
-
-assign ssp_clk = clk_lo;
-assign ssp_frame = (carrier_divider_lo == 3'b001);
 assign ssp_din = to_arm_shiftreg[7];
-
-// The ADC converts on the falling edge, and our serializer loads when
-// carrier_divider_lo == 3'b000.
-assign adc_clk = ~carrier_divider_lo[2];
-
+assign ssp_clk = pck_divider[1];
+assign ssp_frame = ~ssp_divider[5];
 assign pwr_hi = 1'b0;
-
+assign pwr_lo = ant_lo;
+assign adc_clk = ~ant_lo;
 assign dbg = adc_clk;
-
 endmodule

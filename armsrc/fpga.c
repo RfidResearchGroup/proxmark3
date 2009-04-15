@@ -53,7 +53,7 @@ void SetupSpi(int mode)
 				( 1 << 24)	|	// Delay between Consecutive Transfers (32 MCK periods)
 				( 1 << 16)	|	// Delay Before SPCK (1 MCK period)
 				( 6 << 8)	|	// Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
-				( 0 << 4)	|	// Bits per Transfer (8 bits)
+				( 8 << 4)	|	// Bits per Transfer (16 bits)
 				( 0 << 3)	|	// Chip Select inactive after transfer
 				( 1 << 1)	|	// Clock Phase data captured on leading edge, changes on following edge
 				( 0 << 0);		// Clock Polarity inactive state is logic 0
@@ -186,14 +186,24 @@ void FpgaDownloadAndGo(void)
 }
 
 //-----------------------------------------------------------------------------
+// Send a 16 bit command/data pair to the FPGA.
+// The bit format is:  C3 C2 C1 C0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0
+// where C is the 4 bit command and D is the 12 bit data
+//-----------------------------------------------------------------------------
+void FpgaSendCommand(WORD cmd, WORD v)
+{
+	SetupSpi(SPI_FPGA_MODE);
+	while ((SPI_STATUS & SPI_STATUS_TX_EMPTY) == 0);		// wait for the transfer to complete
+	SPI_TX_DATA = SPI_CONTROL_LAST_TRANSFER | cmd | v;		// send the data
+}
+//-----------------------------------------------------------------------------
 // Write the FPGA setup word (that determines what mode the logic is in, read
-// vs. clone vs. etc.).
+// vs. clone vs. etc.). This is now a special case of FpgaSendCommand() to
+// avoid changing this function's occurence everywhere in the source code.
 //-----------------------------------------------------------------------------
 void FpgaWriteConfWord(BYTE v)
 {
-	SetupSpi(SPI_FPGA_MODE);
-	while ((SPI_STATUS & SPI_STATUS_TX_EMPTY) == 0);	// wait for the transfer to complete
-	SPI_TX_DATA = SPI_CONTROL_LAST_TRANSFER | v;		// send the data
+	FpgaSendCommand(FPGA_CMD_SET_CONFREG, v);
 }
 
 //-----------------------------------------------------------------------------

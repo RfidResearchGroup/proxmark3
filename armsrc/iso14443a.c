@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 #include <proxmark3.h>
 #include "apps.h"
-#include "..\common\iso14443_crc.c"
+#include "../common/iso14443_crc.c"
 
 typedef enum {
 	SEC_D = 1,
@@ -1686,7 +1686,7 @@ void ReaderIso14443a(DWORD parameter)
 
 // OK we have selected at least at cascade 1, lets see if first byte of UID was 0x88 in 
 // which case we need to make a cascade 2 request and select - this is a long UID
-		if (receivedAnswer[0] = 0x88)
+		if (receivedAnswer[0] == 0x88)
 		{
 		// Do cascade level 2 stuff
 		///////////////////////////////////////////////////////////////////
