@@ -575,7 +575,7 @@ static BOOL Handle14443SamplesDemod(int ci, int cq)
     return FALSE;
 }
 
-static void GetSamplesFor14443Demod(BOOL weTx, int n)
+static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
 {
     int max = 0;
     BOOL gotFrame = FALSE;
@@ -649,7 +649,7 @@ static void GetSamplesFor14443Demod(BOOL weTx, int n)
         }
     }
     PDC_CONTROL(SSC_BASE) = PDC_RX_DISABLE;
-    DbpIntegers(max, gotFrame, -1);
+    if (!quiet) DbpIntegers(max, gotFrame, Demod.len);
 }
 
 //-----------------------------------------------------------------------------
@@ -788,10 +788,11 @@ void CodeIso14443bAsReader(const BYTE *cmd, int len)
 //-----------------------------------------------------------------------------
 // Read an ISO 14443 tag. We send it some set of commands, and record the
 // responses.
+// The command name is misleading, it actually decodes the reponse in HEX
+// into the output buffer (read the result using hexsamples, not hisamples)
 //-----------------------------------------------------------------------------
 void AcquireRawAdcSamplesIso14443(DWORD parameter)
 {
-//    BYTE cmd1[] = { 0x05, 0x00, 0x00, 0x71, 0xff };
     BYTE cmd1[] = { 0x05, 0x00, 0x08, 0x39, 0x73 };
 
     // Make sure that we start from off, since the tags are stateful;
@@ -811,9 +812,117 @@ void AcquireRawAdcSamplesIso14443(DWORD parameter)
     CodeIso14443bAsReader(cmd1, sizeof(cmd1));
     TransmitFor14443();
     LED_A_ON();
-    GetSamplesFor14443Demod(TRUE, 2000);
+    GetSamplesFor14443Demod(TRUE, 2000, FALSE);
     LED_A_OFF();
 }
+
+//-----------------------------------------------------------------------------
+// Read a SRI512 ISO 14443 tag.
+// 
+// SRI512 tags are just simple memory tags, here we're looking at making a dump
+// of the contents of the memory. No anticollision algorithm is done, we assume
+// we have a single tag in the field.
+//
+// I tried to be systematic and check every answer of the tag, every CRC, etc...
+//-----------------------------------------------------------------------------
+void ReadSRI512Iso14443(DWORD parameter)
+{
+    BYTE i = 0x00;
+
+    // Make sure that we start from off, since the tags are stateful;
+    // confusing things will happen if we don't reset them between reads.
+    LED_D_OFF();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    SpinDelay(200);
+
+    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    FpgaSetupSsc();
+
+    // Now give it time to spin up.
+    FpgaWriteConfWord(
+    	FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ);
+    SpinDelay(200);
+
+    // First command: wake up the tag using the INITIATE command
+    BYTE cmd1[] = { 0x06, 0x00, 0x97, 0x5b};
+    CodeIso14443bAsReader(cmd1, sizeof(cmd1));
+    TransmitFor14443();
+    LED_A_ON();
+    GetSamplesFor14443Demod(TRUE, 2000,TRUE);
+    LED_A_OFF();
+
+    if (Demod.len == 0) {
+	DbpString("No response from tag");
+	return;
+    } else {
+	DbpString("Randomly generated UID from tag (+ 2 byte CRC):");
+	DbpIntegers(Demod.output[0], Demod.output[1],Demod.output[2]);
+    }
+    // There is a response, SELECT the uid
+    DbpString("Now SELECT tag:");
+    cmd1[0] = 0x0E; // 0x0E is SELECT
+    cmd1[1] = Demod.output[0];
+    ComputeCrc14443(CRC_14443_B, cmd1, 2, &cmd1[2], &cmd1[3]);
+    CodeIso14443bAsReader(cmd1, sizeof(cmd1));
+    TransmitFor14443();
+    LED_A_ON();
+    GetSamplesFor14443Demod(TRUE, 2000,TRUE);
+    LED_A_OFF();
+    if (Demod.len != 3) {
+	DbpString("Expected 3 bytes from tag, got:");
+	DbpIntegers(Demod.len,0x0,0x0);
+	return;
+    }
+    // Check the CRC of the answer:
+    ComputeCrc14443(CRC_14443_B, Demod.output, 1 , &cmd1[2], &cmd1[3]);
+    if(cmd1[2] != Demod.output[1] || cmd1[3] != Demod.output[2]) {
+	DbpString("CRC Error reading select response.");
+	return;
+    }
+    // Check response from the tag: should be the same UID as the command we just sent:
+    if (cmd1[1] != Demod.output[0]) {
+	DbpString("Bad response to SELECT from Tag, aborting:");
+	DbpIntegers(cmd1[1],Demod.output[0],0x0);
+	return;
+    }
+    // Tag is now selected,
+    // loop to read all 16 blocks, address from 0 to 15
+    DbpString("Tag memory dump, block 0 to 15");
+    cmd1[0] = 0x08;
+    i = 0x00;
+    for (;;) {
+	    if (i == 0x10) {
+		    DbpString("System area block (0xff):");
+		    i = 0xff;
+	    }
+	    cmd1[1] = i;
+	    ComputeCrc14443(CRC_14443_B, cmd1, 2, &cmd1[2], &cmd1[3]);
+	    CodeIso14443bAsReader(cmd1, sizeof(cmd1));
+	    TransmitFor14443();
+	    LED_A_ON();
+	    GetSamplesFor14443Demod(TRUE, 2000,TRUE);
+	    LED_A_OFF();
+	    if (Demod.len != 6) { // Check if we got an answer from the tag
+		DbpString("Expected 6 bytes from tag, got less...");
+		return;
+	    }
+	    // The check the CRC of the answer (use cmd1 as temporary variable):
+	    ComputeCrc14443(CRC_14443_B, Demod.output, 4, &cmd1[2], &cmd1[3]);
+            if(cmd1[2] != Demod.output[4] || cmd1[3] != Demod.output[5]) {
+		DbpString("CRC Error reading block! - Below: expected, got, 0x0: ");
+		DbpIntegers( (cmd1[2]<<8)+cmd1[3], (Demod.output[4]<<8)+Demod.output[5],0);
+		// Do not return;, let's go on... (we should retry, maybe ?)
+	    }
+	    // Now print out the memory location:
+	    DbpString("Address , Contents, CRC");
+	    DbpIntegers(i, (Demod.output[0]<<24) + (Demod.output[1]<<16) + (Demod.output[2]<<8) + Demod.output[3], (Demod.output[4]<<8)+Demod.output[5]);
+	    if (i == 0xff) {
+		break;
+	    }
+	    i++;
+    }
+}
+
 
 //=============================================================================
 // Finally, the `sniffer' combines elements from both the reader and

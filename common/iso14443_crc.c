@@ -4,7 +4,7 @@
 //-----------------------------------------------------------------------------
 
 #define	CRC_14443_A	0x6363	/* ITU-V.41 */
-#define	CRC_14443_B 0xFFFF  /* ISO/IEC 13239 (formerly ISO/IEC 3309) */
+#define	CRC_14443_B	0xFFFF  /* ISO/IEC 13239 (formerly ISO/IEC 3309) */
 
 static unsigned short UpdateCrc14443(unsigned char ch, unsigned short *lpwCrc)
 {

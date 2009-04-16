@@ -612,6 +612,10 @@ void UsbPacketReceived(BYTE *packet, int len)
 			AcquireRawAdcSamplesIso14443(c->ext1);
 			break;
 
+		case CMD_READ_SRI512_TAG:
+			ReadSRI512Iso14443(c->ext1);
+			break;
+
 		case CMD_READER_ISO_14443a:
 			ReaderIso14443a(c->ext1);
 			break;

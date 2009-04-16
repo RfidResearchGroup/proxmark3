@@ -60,6 +60,7 @@ void SetAdcMuxFor(int whichGpio);
 /// iso14443.h
 void SimulateIso14443Tag(void);
 void AcquireRawAdcSamplesIso14443(DWORD parameter);
+void ReadSRI512Iso14443(DWORD parameter);
 void SnoopIso14443(void);
 
 /// iso14443a.h
