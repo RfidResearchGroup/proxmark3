@@ -886,7 +886,30 @@ void ReadSRI512Iso14443(DWORD parameter)
 	return;
     }
     // Tag is now selected,
-    // loop to read all 16 blocks, address from 0 to 15
+    // First get the tag's UID:
+    cmd1[0] = 0x0B;
+    ComputeCrc14443(CRC_14443_B, cmd1, 1 , &cmd1[1], &cmd1[2]);
+    CodeIso14443bAsReader(cmd1, 3); // Only first three bytes for this one
+    TransmitFor14443();
+    LED_A_ON();
+    GetSamplesFor14443Demod(TRUE, 2000,TRUE);
+    LED_A_OFF();
+    if (Demod.len != 10) {
+	DbpString("Expected 10 bytes from tag, got:");
+	DbpIntegers(Demod.len,0x0,0x0);
+	return;
+    }
+    // The check the CRC of the answer (use cmd1 as temporary variable):
+    ComputeCrc14443(CRC_14443_B, Demod.output, 8, &cmd1[2], &cmd1[3]);
+           if(cmd1[2] != Demod.output[8] || cmd1[3] != Demod.output[9]) {
+	DbpString("CRC Error reading block! - Below: expected, got");
+	DbpIntegers( (cmd1[2]<<8)+cmd1[3], (Demod.output[8]<<8)+Demod.output[9],0);
+	// Do not return;, let's go on... (we should retry, maybe ?)
+    }
+    DbpString("Tag UID (64 bits):");
+    DbpIntegers((Demod.output[7]<<24) + (Demod.output[6]<<16) + (Demod.output[5]<<8) + Demod.output[4], (Demod.output[3]<<24) + (Demod.output[2]<<16) + (Demod.output[1]<<8) + Demod.output[0], 0);
+
+    // Now loop to read all 16 blocks, address from 0 to 15
     DbpString("Tag memory dump, block 0 to 15");
     cmd1[0] = 0x08;
     i = 0x00;
@@ -909,13 +932,13 @@ void ReadSRI512Iso14443(DWORD parameter)
 	    // The check the CRC of the answer (use cmd1 as temporary variable):
 	    ComputeCrc14443(CRC_14443_B, Demod.output, 4, &cmd1[2], &cmd1[3]);
             if(cmd1[2] != Demod.output[4] || cmd1[3] != Demod.output[5]) {
-		DbpString("CRC Error reading block! - Below: expected, got, 0x0: ");
+		DbpString("CRC Error reading block! - Below: expected, got");
 		DbpIntegers( (cmd1[2]<<8)+cmd1[3], (Demod.output[4]<<8)+Demod.output[5],0);
 		// Do not return;, let's go on... (we should retry, maybe ?)
 	    }
 	    // Now print out the memory location:
 	    DbpString("Address , Contents, CRC");
-	    DbpIntegers(i, (Demod.output[0]<<24) + (Demod.output[1]<<16) + (Demod.output[2]<<8) + Demod.output[3], (Demod.output[4]<<8)+Demod.output[5]);
+	    DbpIntegers(i, (Demod.output[3]<<24) + (Demod.output[2]<<16) + (Demod.output[1]<<8) + Demod.output[0], (Demod.output[4]<<8)+Demod.output[5]);
 	    if (i == 0xff) {
 		break;
 	    }
