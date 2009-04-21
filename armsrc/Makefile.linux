@@ -1,0 +1,83 @@
+# This makefile needs to be edited to reflect the location
+# of your own arm-elf-gcc installation (LIB variable)
+
+CC	= arm-elf-gcc
+AS	= arm-elf-as
+LD	= arm-elf-ld
+OBJCOPY = arm-elf-objcopy
+
+INCLUDE = -I../include
+
+INCLUDES = ../include/proxmark3.h ../include/at91sam7s128.h ../include/config_gpio.h ../include/usb_cmd.h apps.h
+LIB = /usr/local/new/gnuarm-4.3.0/lib/gcc/arm-elf/4.3.0/interwork
+
+CFLAGS_COMMON = -O6 -c $(INCLUDE) -Wall  -mthumb-interwork
+CFLAGS	= $(CFLAGS_COMMON) -mthumb
+
+
+OBJDIR = obj
+OBJ =	start.o \
+		appmain.o \
+		fpga.o \
+		iso15693.o \
+		iso14443.o \
+		util.o\
+		LCD.o\
+		fonts.o
+
+OBJFAST =	iso14443a.o
+
+OBJFPGA =	fpgaimg.o
+
+OBJCOMMON =	usb.o
+
+
+all: osimage.s19 fpgaimage.s19 fullimage.s19
+
+fpgaimage.s19: $(OBJFPGA)
+	@echo fpgaimage.s19
+	$(LD) -g -Tldscript-fpga -o fpgaimage.elf $(patsubst %.o, obj/%.o, $^)
+	$(OBJCOPY) -Osrec --srec-forceS3 fpgaimage.elf fpgaimage.s19
+
+osimage.s19: $(OBJ) $(OBJFAST) $(OBJCOMMON)
+	@echo osimage.s19
+	$(LD) -g -Tldscript -o osimage.elf $(patsubst %.o, obj/%.o, $^) $(LIB)/libgcc.a
+	$(OBJCOPY) -Osrec --srec-forceS3 osimage.elf osimage.s19
+
+fullimage.s19: $(OBJ) $(OBJFAST) $(OBJCOMMON) $(OBJFAST) $(OBJFPGA)
+	@echo fullimage.s19
+	$(LD) -g -Tldscript-full -o fullimage.elf $(patsubst %.o, obj/%.o, $^)  $(LIB)/libgcc.a
+	$(OBJCOPY) -Osrec --srec-forceS3 fullimage.elf fullimage.s19
+
+$(OBJ): %.o : %.c
+	$(CC) $(CFLAGS) $< -o $(OBJDIR)/$@
+
+$(OBJFPGA): %.o : %.c
+	$(CC) $(CFLAGS) $< -o $(OBJDIR)/$@
+
+
+$(OBJFAST): %.o : %.c
+	$(CC) $(CFLAGS_COMMON) $< -o $(OBJDIR)/$@
+	
+$(OBJCOMMON): ../common/usb.c
+	$(CC) $(CFLAGS) ../common/usb.c -o $(OBJDIR)/usb.o
+
+flash-fpga: fpgaimage.s19
+	../linux/flasher fpga fpgaimage.s19
+
+flash: osimage.s19
+	../linux/flasher os osimage.s19
+
+jtag-flash-full: fullimage.s19
+	../../OpenOCD/openocd -c "halt; flash write_image fullimage.s19 0x00100000; halt; reset; resume; poll; exit"
+
+jtag-flash-fpga: fpgaimage.s19
+	../../OpenOCD/openocd -c "halt; flash write_image fpgaimage.s19 0x00100000; halt; reset; resume; poll; exit"
+
+jtag-flash: osimage.s19
+	../../OpenOCD/openocd -c "halt; flash write_image osimage.s19 0x00100000; halt; reset; resume; poll; exit"
+
+clean:
+	rm -f $(OBJDIR)/*.o *.elf *.s19
+
+.PHONY: all clean

@@ -1,0 +1,14 @@
+SECTIONS
+{
+	. = 0x00002000;
+	.fpga : { obj/fpgaimg.o(.rodata) }
+	. = 0x00010000;
+	.start : { obj/start.o(.text) }
+	.text : { *(.text) }
+	.rodata : { *(.rodata) }
+	. = 0x00200000;
+	.data : { *(.data) }
+	__bss_start__ = .;
+	.bss : { *(.bss) }
+	__bss_end__ = .;
+}
