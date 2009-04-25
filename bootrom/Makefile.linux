@@ -1,0 +1,65 @@
+CC	  = arm-elf-gcc
+AS	  = arm-elf-as
+LD	  = arm-elf-ld
+OBJCOPY = arm-elf-objcopy
+
+OBJDIR = obj
+
+INCLUDE = -I../include
+
+INCLUDES = ../include/proxmark3.h ../include/at91sam7s128.h ../include/config_gpio.h ../include/usb_cmd.h
+
+CFLAGS  = -g -c $(INCLUDE) -Wall
+
+OBJJTAG = $(OBJDIR)/bootrom.o $(OBJDIR)/ram-reset.o $(OBJDIR)/usb.o
+
+OBJFLASH = $(OBJDIR)/flash-reset.o $(OBJDIR)/fromflash.o
+
+all: bootrom.s19 bootrom-forjtag-swapped.s19
+
+bootrom-merged.s19: bootrom.s19 bootrom-forjtag.s19
+	perl ../tools/merge-srec.pl bootrom.s19 bootrom-forjtag.s19 > bootrom-merged.s19
+
+bootrom-forjtag-swapped.s19: bootrom-merged.s19
+	perl ../tools/srecswap.pl bootrom-forjtag.s19 > bootrom-forjtag-swapped.s19
+
+bootrom.s19: $(OBJFLASH)
+	@echo bootrom.s19
+	$(LD) -g -Tldscript-flash --oformat elf32-littlearm -o $(OBJDIR)/bootrom.elf $(OBJFLASH)
+	$(OBJCOPY) -Osrec --srec-forceS3 $(OBJDIR)/bootrom.elf bootrom.s19
+
+bootrom-forjtag.s19: $(OBJJTAG)
+	@echo bootrom-forjtag.s19
+	$(LD) -g -Tldscript-ram-jtag --oformat elf32-littlearm -o $(OBJDIR)/bootrom-forjtag.elf $(OBJJTAG)
+	$(OBJCOPY) -Osrec --srec-forceS3 $(OBJDIR)/bootrom-forjtag.elf bootrom-forjtag.s19
+
+$(OBJDIR)/bootrom.o: bootrom.c $(INCLUDES)
+	@echo $@
+	$(CC) $(CFLAGS) -mthumb -mthumb-interwork $< -o $@
+
+$(OBJDIR)/fromflash.o: fromflash.c $(INCLUDES)
+	@echo $@
+	$(CC) $(CFLAGS) -mthumb -mthumb-interwork $< -o $@
+
+$(OBJDIR)/usb.o: ../common/usb.c $(INCLUDES)
+	@echo $@
+	$(CC) $(CFLAGS) -mthumb -mthumb-interwork $< -o $@
+
+$(OBJDIR)/ram-reset.o: ram-reset.s
+	@echo $@
+	$(CC) $(CFLAGS) -mthumb-interwork -o $@ $<
+
+$(OBJDIR)/flash-reset.o: flash-reset.s
+	@echo $@
+	$(CC) $(CFLAGS) -mthumb-interwork -o $@ $<
+
+# Those do not work in this Firmware distribution!
+flash: bootrom-merged.s19
+	../linux/flasher bootrom bootrom-merged.s19
+
+jtag-flash: bootrom-merged.s19
+	../../OpenOCD/openocd -c "halt; flash write_image bootrom-merged.s19 0x00100000; halt; reset; resume; poll; exit"
+
+clean:
+	rm -f $(OBJDIR)/*.o $(OBJDIR)/*.elf *.s19
+

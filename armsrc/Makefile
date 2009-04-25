@@ -10,7 +10,12 @@ INCLUDE = -I../include
 INCLUDES = ../include/proxmark3.h ../include/at91sam7s128.h ../include/config_gpio.h ../include/usb_cmd.h apps.h
 LIB = "..\..\devkitARM\lib\gcc\arm-elf\4.1.0\interwork"
 
+# Add the "-DWITH_LCD" flag in CLFAGS to add support for LCD
+# and add OBJLCD to OBJ too
 CFLAGS	= -O6 -c $(INCLUDE) -Wall
+
+OBJLCD = $(OBJDIR)/fonts.o \
+		$(OBJDIR)/LCD.o
 
 OBJ =	$(OBJDIR)/start.o \
 		$(OBJDIR)/appmain.o \
@@ -18,9 +23,7 @@ OBJ =	$(OBJDIR)/start.o \
 		$(OBJDIR)/iso14443.o \
 		$(OBJDIR)/iso14443a.o \
 		$(OBJDIR)/iso15693.o \
-		$(OBJDIR)/util.o \
-		$(OBJDIR)/fonts.o \
-		$(OBJDIR)/LCD.o
+		$(OBJDIR)/util.o
 
 OBJFPGA = \
 		$(OBJDIR)/fpgaimg.o

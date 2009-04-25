@@ -51,7 +51,7 @@ typedef struct {
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693		0x0300
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443		0x0301
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443_SIM	0x0302
-#define CMD_READ_SRI512_TAG				0x0303
+#define CMD_READ_SRI512_TAG							0x0303
 #define CMD_READER_ISO_15693						0x0310	// ## New command to act like a 15693 reader - greg
 #define CMD_SIMTAG_ISO_15693						0x0311	// ## New command to act like a 15693 reader - greg
 

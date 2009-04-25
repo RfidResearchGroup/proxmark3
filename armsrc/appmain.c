@@ -4,10 +4,14 @@
 // Jonathan Westhues, Mar 2006
 // Edits by Gerhard de Koning Gans, Sep 2007 (##)
 //-----------------------------------------------------------------------------
+
+
 #include <proxmark3.h>
 #include "apps.h"
 #include "fonts.h"
+#ifdef WITH_LCD
 #include "LCD.h"
+#endif
 
 // The large multi-purpose buffer, typically used to hold A/D samples,
 // maybe pre-processed in some way.
@@ -682,11 +686,11 @@ void UsbPacketReceived(BYTE *packet, int len)
 			SimulateTagLowFrequency(c->ext1);
 			LED_A_OFF();
 			break;
-
+#ifdef WITH_LCD
 		case CMD_LCD_RESET:
 			LCDReset();
 			break;
-
+#endif
 		case CMD_SWEEP_LF:
 			SweepLFrange();
 			break;
@@ -694,11 +698,11 @@ void UsbPacketReceived(BYTE *packet, int len)
 		case CMD_SET_LF_DIVISOR:
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, c->ext1);
 			break;
-
+#ifdef WITH_LCD
 		case CMD_LCD:
 			LCDSend(c->ext1);
 			break;
-
+#endif
         case CMD_SETUP_WRITE:
 		case CMD_FINISH_WRITE:
 			USB_D_PLUS_PULLUP_OFF();
@@ -745,6 +749,8 @@ void AppMain(void)
 	// Load the FPGA image, which we have stored in our flash.
 	FpgaDownloadAndGo();
 
+#ifdef WITH_LCD
+
 	LCDInit();
 
 	// test text on different colored backgrounds
@@ -766,6 +772,8 @@ void AppMain(void)
 	LCDFill(0, 1+8*13, 132, 8, YELLOW);
 	LCDFill(0, 1+8*14, 132, 8, CYAN);
 	LCDFill(0, 1+8*15, 132, 8, MAGENTA);
+
+#endif
 
 	for(;;) {
 		UsbPoll(FALSE);
