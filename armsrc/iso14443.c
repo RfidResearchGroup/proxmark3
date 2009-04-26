@@ -131,10 +131,20 @@ static struct {
     BYTE   *output;
 } Uart;
 
+/* Receive & handle a bit coming from the reader.
+ *
+ * LED handling:
+ * LED A -> ON once we have received the SOF and are expecting the rest.
+ * LED A -> OFF once we have received EOF or are in error state or unsynced
+ *
+ * Returns: true if we received a EOF
+ *          false if we are still waiting for some more
+ */
 static BOOL Handle14443UartBit(int bit)
 {
     switch(Uart.state) {
         case STATE_UNSYNCD:
+        	LED_A_OFF();
             if(!bit) {
                 // we went low, so this could be the beginning
                 // of an SOF
@@ -154,6 +164,7 @@ static BOOL Handle14443UartBit(int bit)
                         Uart.posCnt = 0;
                         Uart.byteCnt = 0;
                         Uart.state = STATE_AWAITING_START_BIT;
+                        LED_A_ON(); // Indicate we got a valid SOF
                     } else {
                         // didn't stay down long enough
                         // before going high, error
@@ -186,6 +197,7 @@ static BOOL Handle14443UartBit(int bit)
                 Uart.bitCnt = 0;
                 Uart.shiftReg = 0;
                 Uart.state = STATE_RECEIVING_DATA;
+                LED_A_ON(); // Indicate we're receiving
             }
             break;
 
@@ -221,6 +233,7 @@ static BOOL Handle14443UartBit(int bit)
                     }
                 } else if(Uart.shiftReg == 0x000) {
                     // this is an EOF byte
+                	LED_A_OFF(); // Finished receiving
                     return TRUE;
                 } else {
                     // this is an error
@@ -245,6 +258,8 @@ static BOOL Handle14443UartBit(int bit)
             break;
     }
 
+    if (Uart.state == STATE_ERROR_WAIT) LED_A_OFF(); // Error
+
     return FALSE;
 }
 
@@ -264,6 +279,8 @@ static BOOL GetIso14443CommandFromReader(BYTE *received, int *len, int maxLen)
 
     // Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
     // only, since we are receiving, not transmitting).
+    // Signal field is off with the appropriate LED
+    LED_D_OFF();
     FpgaWriteConfWord(
     	FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_NO_MODULATION);
 
@@ -371,6 +388,8 @@ void SimulateIso14443Tag(void)
         if(respLen <= 0) continue;
 
         // Modulate BPSK
+        // Signal field is off with the appropriate LED
+        LED_D_OFF();
         FpgaWriteConfWord(
         	FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK);
         SSC_TRANSMIT_HOLDING = 0xff;
@@ -426,6 +445,17 @@ static struct {
     int     sumQ;
 } Demod;
 
+/*
+ * Handles reception of a bit from the tag
+ *
+ * LED handling:
+ * LED C -> ON once we have received the SOF and are expecting the rest.
+ * LED C -> OFF once we have received EOF or are unsynced
+ *
+ * Returns: true if we received a EOF
+ *          false if we are still waiting for some more
+ *
+ */
 static BOOL Handle14443SamplesDemod(int ci, int cq)
 {
     int v;
@@ -498,6 +528,7 @@ static BOOL Handle14443SamplesDemod(int ci, int cq)
                 if(Demod.posCount < 12) {
                     Demod.state = DEMOD_UNSYNCD;
                 } else {
+                	LED_C_ON(); // Got SOF
                     Demod.state = DEMOD_AWAITING_START_BIT;
                     Demod.posCount = 0;
                     Demod.len = 0;
@@ -557,6 +588,7 @@ static BOOL Handle14443SamplesDemod(int ci, int cq)
                         Demod.state = DEMOD_AWAITING_START_BIT;
                     } else if(s == 0x000) {
                         // This is EOF
+                    	LED_C_OFF();
                         return TRUE;
                         Demod.state = DEMOD_UNSYNCD;
                     } else {
@@ -572,9 +604,16 @@ static BOOL Handle14443SamplesDemod(int ci, int cq)
             break;
     }
 
+    if (Demod.state == DEMOD_UNSYNCD) LED_C_OFF(); // Not synchronized...
     return FALSE;
 }
 
+/*
+ *  Demodulate the samples we received from the tag
+ *  weTx: set to 'TRUE' if we behave like a reader
+ *        set to 'FALSE' if we behave like a snooper
+ *  quiet: set to 'TRUE' to disable debug output
+ */
 static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
 {
     int max = 0;
@@ -607,6 +646,8 @@ static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
     lastRxCounter = DMA_BUFFER_SIZE;
     FpgaSetupSscDma((BYTE *)dmaBuf, DMA_BUFFER_SIZE);
 
+    // Signal field is ON with the appropriate LED:
+	if (weTx) LED_D_ON(); else LED_D_OFF();
     // And put the FPGA in the appropriate mode
     FpgaWriteConfWord(
     	FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ |
@@ -616,7 +657,6 @@ static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
         int behindBy = lastRxCounter - PDC_RX_COUNTER(SSC_BASE);
         if(behindBy > max) max = behindBy;
 
-        LED_D_ON();
         while(((lastRxCounter-PDC_RX_COUNTER(SSC_BASE)) & (DMA_BUFFER_SIZE-1))
                     > 2)
         {
@@ -642,7 +682,6 @@ static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
                 gotFrame = 1;
             }
         }
-        LED_D_OFF();
 
         if(samples > 2000) {
             break;
@@ -697,7 +736,11 @@ static void TransmitFor14443(void)
         SSC_TRANSMIT_HOLDING = 0xff;
     }
 
-    FpgaWriteConfWord(
+    // Signal field is ON with the appropriate Red LED
+	LED_D_ON();
+	// Signal we are transmitting with the Green LED
+	LED_B_ON();
+	FpgaWriteConfWord(
     	FPGA_MAJOR_MODE_HF_READER_TX | FPGA_HF_READER_TX_SHALLOW_MOD);
 
     for(c = 0; c < 10;) {
@@ -727,6 +770,7 @@ static void TransmitFor14443(void)
         }
         WDT_HIT();
     }
+    LED_B_OFF(); // Finished sending
 }
 
 //-----------------------------------------------------------------------------
@@ -797,28 +841,30 @@ void AcquireRawAdcSamplesIso14443(DWORD parameter)
 
     // Make sure that we start from off, since the tags are stateful;
     // confusing things will happen if we don't reset them between reads.
-    LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LED_D_OFF();
     SpinDelay(200);
 
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
     FpgaSetupSsc();
 
     // Now give it time to spin up.
+    // Signal field is on with the appropriate LED
+    LED_D_ON();
     FpgaWriteConfWord(
     	FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ);
     SpinDelay(200);
 
     CodeIso14443bAsReader(cmd1, sizeof(cmd1));
     TransmitFor14443();
-    LED_A_ON();
+//    LED_A_ON();
     GetSamplesFor14443Demod(TRUE, 2000, FALSE);
-    LED_A_OFF();
+//    LED_A_OFF();
 }
 
 //-----------------------------------------------------------------------------
 // Read a SRI512 ISO 14443 tag.
-// 
+//
 // SRI512 tags are just simple memory tags, here we're looking at making a dump
 // of the contents of the memory. No anticollision algorithm is done, we assume
 // we have a single tag in the field.
@@ -839,6 +885,8 @@ void ReadSRI512Iso14443(DWORD parameter)
     FpgaSetupSsc();
 
     // Now give it time to spin up.
+    // Signal field is on with the appropriate LED
+    LED_D_ON();
     FpgaWriteConfWord(
     	FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ);
     SpinDelay(200);
@@ -847,9 +895,9 @@ void ReadSRI512Iso14443(DWORD parameter)
     BYTE cmd1[] = { 0x06, 0x00, 0x97, 0x5b};
     CodeIso14443bAsReader(cmd1, sizeof(cmd1));
     TransmitFor14443();
-    LED_A_ON();
+//    LED_A_ON();
     GetSamplesFor14443Demod(TRUE, 2000,TRUE);
-    LED_A_OFF();
+//    LED_A_OFF();
 
     if (Demod.len == 0) {
 	DbpString("No response from tag");
@@ -865,9 +913,9 @@ void ReadSRI512Iso14443(DWORD parameter)
     ComputeCrc14443(CRC_14443_B, cmd1, 2, &cmd1[2], &cmd1[3]);
     CodeIso14443bAsReader(cmd1, sizeof(cmd1));
     TransmitFor14443();
-    LED_A_ON();
+//    LED_A_ON();
     GetSamplesFor14443Demod(TRUE, 2000,TRUE);
-    LED_A_OFF();
+//    LED_A_OFF();
     if (Demod.len != 3) {
 	DbpString("Expected 3 bytes from tag, got:");
 	DbpIntegers(Demod.len,0x0,0x0);
@@ -891,9 +939,9 @@ void ReadSRI512Iso14443(DWORD parameter)
     ComputeCrc14443(CRC_14443_B, cmd1, 1 , &cmd1[1], &cmd1[2]);
     CodeIso14443bAsReader(cmd1, 3); // Only first three bytes for this one
     TransmitFor14443();
-    LED_A_ON();
+//    LED_A_ON();
     GetSamplesFor14443Demod(TRUE, 2000,TRUE);
-    LED_A_OFF();
+//    LED_A_OFF();
     if (Demod.len != 10) {
 	DbpString("Expected 10 bytes from tag, got:");
 	DbpIntegers(Demod.len,0x0,0x0);
@@ -922,9 +970,9 @@ void ReadSRI512Iso14443(DWORD parameter)
 	    ComputeCrc14443(CRC_14443_B, cmd1, 2, &cmd1[2], &cmd1[3]);
 	    CodeIso14443bAsReader(cmd1, sizeof(cmd1));
 	    TransmitFor14443();
-	    LED_A_ON();
+//	    LED_A_ON();
 	    GetSamplesFor14443Demod(TRUE, 2000,TRUE);
-	    LED_A_OFF();
+//	    LED_A_OFF();
 	    if (Demod.len != 6) { // Check if we got an answer from the tag
 		DbpString("Expected 6 bytes from tag, got less...");
 		return;
@@ -957,6 +1005,13 @@ void ReadSRI512Iso14443(DWORD parameter)
 // triggering so that we start recording at the point that the tag is moved
 // near the reader.
 //-----------------------------------------------------------------------------
+/*
+ * Memory usage for this function, (within BigBuf)
+ * 0-1023 : Demodulated samples receive (1024 bytes)
+ * 1024-1535 : Last Received command, 512 bytes (reader->tag)
+ * 1536-2047 : Last Received command, 512 bytes(tag->reader)
+ * 2048-2304 : DMA Buffer, 256 bytes (samples)
+ */
 void SnoopIso14443(void)
 {
     // We won't start recording the frames that we acquire until we trigger;
@@ -965,9 +1020,9 @@ void SnoopIso14443(void)
     BOOL triggered = FALSE;
 
     // The command (reader -> tag) that we're working on receiving.
-    BYTE *receivedCmd = (((BYTE *)BigBuf) + 1024);
+    BYTE *receivedCmd = (BYTE *)(BigBuf) + 1024;
     // The response (tag -> reader) that we're working on receiving.
-    BYTE *receivedResponse = (((BYTE *)BigBuf) + 1536);
+    BYTE *receivedResponse = (BYTE *)(BigBuf) + 1536;
 
     // As we receive stuff, we copy it from receivedCmd or receivedResponse
     // into trace, along with its length and other annotations.
@@ -975,8 +1030,7 @@ void SnoopIso14443(void)
     int traceLen = 0;
 
     // The DMA buffer, used to stream samples from the FPGA.
-//#   define DMA_BUFFER_SIZE 256
-    SBYTE *dmaBuf = ((SBYTE *)BigBuf) + 2048;
+    SBYTE *dmaBuf = (SBYTE *)(BigBuf) + 2048;
     int lastRxCounter;
     SBYTE *upTo;
     int ci, cq;
@@ -986,7 +1040,8 @@ void SnoopIso14443(void)
     // information in the trace buffer.
     int samples = 0;
 
-    memset(trace, 0x44, 1000);
+    // Initialize the trace buffer
+    memset(trace, 0x44, 1024);
 
     // Set up the demodulator for tag -> reader responses.
     Demod.output = receivedResponse;
@@ -1000,6 +1055,8 @@ void SnoopIso14443(void)
     Uart.state = STATE_UNSYNCD;
 
     // And put the FPGA in the appropriate mode
+    // Signal field is off with the appropriate LED
+    LED_D_OFF();
     FpgaWriteConfWord(
     	FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ |
     	FPGA_HF_READER_RX_XCORR_SNOOP);
@@ -1010,17 +1067,15 @@ void SnoopIso14443(void)
     upTo = dmaBuf;
     lastRxCounter = DMA_BUFFER_SIZE;
     FpgaSetupSscDma((BYTE *)dmaBuf, DMA_BUFFER_SIZE);
-
-    LED_A_ON();
-
     // And now we loop, receiving samples.
     for(;;) {
-        int behindBy = (lastRxCounter - PDC_RX_COUNTER(SSC_BASE)) &
+    	int behindBy = (lastRxCounter - PDC_RX_COUNTER(SSC_BASE)) &
                                 (DMA_BUFFER_SIZE-1);
         if(behindBy > maxBehindBy) {
             maxBehindBy = behindBy;
-            if(behindBy > 100) {
+            if(behindBy > (DMA_BUFFER_SIZE-2)) { // TODO: understand whether we can increase/decrease as we want or not?
                 DbpString("blew circular buffer!");
+                DbpIntegers(behindBy,0,0);
                 goto done;
             }
         }
@@ -1033,7 +1088,7 @@ void SnoopIso14443(void)
         if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
             upTo -= DMA_BUFFER_SIZE;
             lastRxCounter += DMA_BUFFER_SIZE;
-            PDC_RX_NEXT_POINTER(SSC_BASE) = (DWORD)upTo;
+            PDC_RX_NEXT_POINTER(SSC_BASE) = (DWORD) upTo;
             PDC_RX_NEXT_COUNTER(SSC_BASE) = DMA_BUFFER_SIZE;
         }
 
@@ -1093,14 +1148,13 @@ void SnoopIso14443(void)
             if(traceLen > 1000) break;
 
             triggered = TRUE;
-            LED_A_OFF();
-            LED_B_ON();
 
             // And ready to receive another response.
             memset(&Demod, 0, sizeof(Demod));
             Demod.output = receivedResponse;
             Demod.state = DEMOD_UNSYNCD;
         }
+		WDT_HIT();
 
         if(BUTTON_PRESS()) {
             DbpString("cancelled");
@@ -1114,7 +1168,6 @@ void SnoopIso14443(void)
     DbpIntegers(Uart.byteCntMax, traceLen, 0x23);
 
 done:
+	LED_D_OFF();
     PDC_CONTROL(SSC_BASE) = PDC_RX_DISABLE;
-    LED_A_OFF();
-    LED_B_OFF();
 }

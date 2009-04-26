@@ -516,8 +516,8 @@ void SnoopIso14443a(void)
 	#define RECV_RES_OFFSET		3096
 	#define DMA_BUFFER_OFFSET	3160
 	#define DMA_BUFFER_SIZE 	4096
-	#define TRACE_LENGTH	 	3000	
-	
+	#define TRACE_LENGTH	 	3000
+
 //	#define RECV_CMD_OFFSET 	2032	// original (working as of 21/2/09) values
 //	#define RECV_RES_OFFSET		2096	// original (working as of 21/2/09) values
 //	#define DMA_BUFFER_OFFSET	2160	// original (working as of 21/2/09) values
@@ -567,6 +567,8 @@ void SnoopIso14443a(void)
     Uart.state = STATE_UNSYNCD;
 
     // And put the FPGA in the appropriate mode
+    // Signal field is off with the appropriate LED
+    LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_SNIFFER);
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
@@ -841,6 +843,8 @@ static BOOL GetIso14443aCommandFromReader(BYTE *received, int *len, int maxLen)
 {
     // Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
     // only, since we are receiving, not transmitting).
+    // Signal field is off with the appropriate LED
+    LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
     // Now run a `software UART' on the stream of incoming samples.
@@ -893,8 +897,8 @@ void SimulateIso14443aTag(int tagType, int TagUid)
 
 // my desfire
     static const BYTE response2[] = { 0x88, 0x04, 0x21, 0x3f, 0x4d }; // known uid - note cascade (0x88), 2nd byte (0x04) = NXP/Phillips
-   
-	
+
+
 // When reader selects us during cascade1 it will send cmd3
 //BYTE response3[] = { 0x04, 0x00, 0x00 }; // SAK Select (cascade1) successful response (ULTRALITE)
 BYTE response3[] = { 0x24, 0x00, 0x00 }; // SAK Select (cascade1) successful response (DESFire)
@@ -909,7 +913,7 @@ static const BYTE response2a[] = { 0x51, 0x48, 0x1d, 0x80, 0x84 }; //  uid - cas
 //BYTE response3a[] = { 0x00, 0x00, 0x00 }; // SAK Select (cascade2) successful response (ULTRALITE)
 BYTE response3a[] = { 0x20, 0x00, 0x00 }; // SAK Select (cascade2) successful response (DESFire)
 ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
-    
+
 // When reader tries to authenticate
 	// static const BYTE cmd5[] = { 0x60, 0x00, 0xf5, 0x7b };
     static const BYTE response5[] = { 0x00, 0x00, 0x00, 0x00 }; // Very random tag nonce
@@ -1434,8 +1438,10 @@ static BOOL GetIso14443aAnswerFromTag(BYTE *receivedResponse, int maxLen, int *s
 	// buffer needs to be 512 bytes
 	int c;
 
-	// Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
+	// Set FPGA mode to "reader listen mode", no modulation (listen
     // only, since we are receiving, not transmitting).
+    // Signal field is on with the appropriate LED
+    LED_D_ON();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_LISTEN);
 
     // Now get the answer from the card
@@ -1528,7 +1534,7 @@ void ReaderIso14443a(DWORD parameter)
 	int traceLen = 0;
 	int rsamples = 0;
 
-	memset(trace, 0x44, 2000);				// was 2000 - tied to oter size chnages 
+	memset(trace, 0x44, 2000);				// was 2000 - tied to oter size chnages
 	// setting it to 3000 causes no tag responses to be detected (2900 is ok)
 	// setting it to 1000 causes no tag responses to be detected
 
@@ -1558,6 +1564,8 @@ void ReaderIso14443a(DWORD parameter)
 	FpgaSetupSsc();
 
 	// Start from off (no field generated)
+    // Signal field is off with the appropriate LED
+    LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     SpinDelay(200);
 
@@ -1565,13 +1573,14 @@ void ReaderIso14443a(DWORD parameter)
     FpgaSetupSsc();
 
 	// Now give it time to spin up.
+    // Signal field is on with the appropriate LED
+    LED_D_ON();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 	SpinDelay(200);
 
 	LED_A_ON();
 	LED_B_OFF();
 	LED_C_OFF();
-	LED_D_OFF();
 
 	int samples = 0;
 	int tsamples = 0;
@@ -1684,7 +1693,7 @@ void ReaderIso14443a(DWORD parameter)
 		traceLen += Demod.len;
 		if(traceLen > TRACE_LENGTH) goto done;
 
-// OK we have selected at least at cascade 1, lets see if first byte of UID was 0x88 in 
+// OK we have selected at least at cascade 1, lets see if first byte of UID was 0x88 in
 // which case we need to make a cascade 2 request and select - this is a long UID
 		if (receivedAnswer[0] == 0x88)
 		{
@@ -1759,14 +1768,7 @@ void ReaderIso14443a(DWORD parameter)
 		traceLen += Demod.len;
 		if(traceLen > TRACE_LENGTH) goto done;
 
-
-
-
-
-
-		}	
-
-		
+		}
 
 		// Secondly compute the two CRC bytes at the end
 		ComputeCrc14443(CRC_14443_A, cmd5, 2, &cmd5[2], &cmd5[3]);
@@ -1809,7 +1811,6 @@ done:
 	LED_A_OFF();
 	LED_B_OFF();
 	LED_C_OFF();
-	LED_D_OFF();
 	DbpIntegers(rsamples, 0xCC, 0xCC);
 	DbpString("ready..");
 }

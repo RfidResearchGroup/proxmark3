@@ -31,11 +31,12 @@ OBJ =	$(OBJDIR)/start.o \
 		$(OBJDIR)/appmain.o \
 		$(OBJDIR)/fpga.o \
 		$(OBJDIR)/iso15693.o \
-		$(OBJDIR)/iso14443.o \
 		$(OBJDIR)/util.o
 
-
-OBJFAST =	$(OBJDIR)/iso14443a.o
+# To be compiled in ARM mode, not thumb mode: larger but faster
+# Alleviates the 'blew circular buffer' issues somehow...
+OBJFAST = $(OBJDIR)/iso14443.o \
+		  $(OBJDIR)/iso14443a.o
 
 OBJFPGA =	$(OBJDIR)/fpgaimg.o
 

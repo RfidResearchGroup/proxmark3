@@ -805,7 +805,7 @@ static void CmdHi15demod(char *str)
 {
 	// The sampling rate is 106.353 ksps/s, for T = 18.8 us
 
-	// SOF defined as 
+	// SOF defined as
 	// 1) Unmodulated time of 56.64us
 	// 2) 24 pulses of 423.75khz
 	// 3) logic '1' (unmodulated for 18.88us followed by 8 pulses of 423.75khz)
@@ -833,7 +833,7 @@ static void CmdHi15demod(char *str)
 		 1,  1,  1,  1
 	};
 
-	// EOF defined as 
+	// EOF defined as
 	// 1) logic '0' (8 pulses of 423.75khz followed by unmodulated for 18.88us)
 	// 2) 24 pulses of 423.75khz
 	// 3) Unmodulated time of 56.64us
@@ -1667,7 +1667,7 @@ static void Cmdmanchesterdemod(char *str) {
 				BitStream[bitidx++]=GraphBuffer[i-1];
 			} else {
 				// Error
-				PrintToScrollback("Warning: Manchester decode error for pulse width detection.");				
+				PrintToScrollback("Warning: Manchester decode error for pulse width detection.");
 				PrintToScrollback("(too many of those messages mean either the stream is not Manchester encoded, or clock is wrong)");
 			}
 		}
@@ -1909,6 +1909,7 @@ static struct {
 	"hi14alist",		CmdHi14alist,0,		"list ISO 14443a history",				// ## New list command
 	"hiddemod",		CmdHiddemod,1,		"HID Prox Card II (not optimal)",
 	"hidfskdemod",		CmdHIDdemodFSK,0,	"HID FSK demodulator",
+    "indalademod",          CmdIndalademod,0,         "demod samples for Indala",
 	"askdemod",		Cmdaskdemod,1,		"Attempt to demodulate simple ASK tags",
 	"hidsimtag",		CmdHIDsimTAG,0,		"HID tag simulator",
 	"mandemod",		Cmdmanchesterdemod,1,	"Try a Manchester demodulation on a binary stream",

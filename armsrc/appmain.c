@@ -8,8 +8,8 @@
 
 #include <proxmark3.h>
 #include "apps.h"
-#include "fonts.h"
 #ifdef WITH_LCD
+#include "fonts.h"
 #include "LCD.h"
 #endif
 
@@ -657,10 +657,9 @@ void UsbPacketReceived(BYTE *packet, int len)
 			break;
 
 		case CMD_FPGA_MAJOR_MODE_OFF:		// ## FPGA Control
-			LED_C_ON();
 			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 			SpinDelay(200);
-			LED_C_OFF();
+			LED_D_OFF(); // LED D indicates field ON or OFF
 			break;
 
 		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K:
