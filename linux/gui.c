@@ -10,6 +10,7 @@ int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 int GraphTraceLen;
 double CursorScaleFactor;
 int CommandFinished;
+int offline;
 
 static char *logfilename = "proxmark3.log";
 

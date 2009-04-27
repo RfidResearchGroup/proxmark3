@@ -42,6 +42,14 @@ static void GetFromBigBuf(BYTE *dest, int bytes)
 	}
 }
 
+static void CmdReset(char *str)
+{
+	UsbCommand c;
+	c.cmd = CMD_HARDWARE_RESET;
+	SendCommand(&c, FALSE);
+}
+
+
 static void CmdQuit(char *str)
 {
 	exit(0);
@@ -1829,6 +1837,8 @@ static void CmdLcd(char *str)
 	}
 }
 
+
+
 static void CmdTest(char *str)
 {
 }
@@ -1866,59 +1876,60 @@ static struct {
 	int		offline;  // 1 if the command can be used when in offline mode
 	char		*docString;
 } CommandTable[] = {
-	"tune",			CmdTune,0,		"measure antenna tuning",
-	"tiread",		CmdTiread,0,		"read a TI-type 134 kHz tag",
-	"tibits",		CmdTibits,0,		"get raw bits for TI-type LF tag",
-	"tidemod",		CmdTidemod,0,		"demod raw bits for TI-type LF tag",
-	"vchdemod",		CmdVchdemod,0,		"demod samples for VeriChip",
-	"plot",			CmdPlot,1,		"show graph window",
-	"hide",			CmdHide,1,		"hide graph window",
-	"losim",		CmdLosim,0,		"simulate LF tag",
-	"loread",		CmdLoread,0,		"read (125/134 kHz) LF ID-only tag",
+	"tune",				CmdTune,0,		"measure antenna tuning",
+	"tiread",			CmdTiread,0,		"read a TI-type 134 kHz tag",
+	"tibits",			CmdTibits,0,		"get raw bits for TI-type LF tag",
+	"tidemod",			CmdTidemod,0,		"demod raw bits for TI-type LF tag",
+	"vchdemod",			CmdVchdemod,0,		"demod samples for VeriChip",
+	"plot",				CmdPlot,1,		"show graph window",
+	"hide",				CmdHide,1,		"hide graph window",
+	"losim",			CmdLosim,0,		"simulate LF tag",
+	"loread",			CmdLoread,0,		"read (125/134 kHz) LF ID-only tag",
 	"losamples",		CmdLosamples,0,		"get raw samples for LF tag",
 	"hisamples",		CmdHisamples,0,		"get raw samples for HF tag",
 	"hisampless",		CmdHisampless,0,	"get signed raw samples, HF tag",
 	"hisamplest",		CmdHi14readt,0,		"get samples HF, for testing",
-	"higet",		CmdHi14read_sim,0,	"get samples HF, 'analog'",
+	"higet",			CmdHi14read_sim,0,	"get samples HF, 'analog'",
 	"bitsamples",		CmdBitsamples,0,	"get raw samples as bitstring",
 	"hexsamples",		CmdHexsamples,0,	"dump big buffer as hex bytes",
-	"hi15read",		CmdHi15read,0,		"read HF tag (ISO 15693)",
+	"hi15read",			CmdHi15read,0,		"read HF tag (ISO 15693)",
 	"hi15reader",		CmdHi15reader,0,	"act like an ISO15693 reader", // new command greg
-	"hi15sim",		CmdHi15tag,0,		"fake an ISO15693 tag", // new command greg
-	"hi14read",		CmdHi14read,0,		"read HF tag (ISO 14443)",
+	"hi15sim",			CmdHi15tag,0,		"fake an ISO15693 tag", // new command greg
+	"hi14read",			CmdHi14read,0,		"read HF tag (ISO 14443)",
 	"sri512read",		CmdSri512read,0,	"Read contents of a SRI512 tag",
 	"hi14areader",		CmdHi14areader,0,	"act like an ISO14443 Type A reader",	// ## New reader command
 	"hi15demod",		CmdHi15demod,1,		"demod ISO15693 from tag",
 	"hi14bdemod",		CmdHi14bdemod,1,	"demod ISO14443 Type B from tag",
-	"autocorr",		CmdAutoCorr,1,		"autocorrelation over window",
-	"norm",			CmdNorm,1,		"normalize max/min to +/-500",
-	"dec",			CmdDec,1,		"decimate",
-	"hpf",			CmdHpf,1,		"remove DC offset from trace",
+	"autocorr",			CmdAutoCorr,1,		"autocorrelation over window",
+	"norm",				CmdNorm,1,		"normalize max/min to +/-500",
+	"dec",				CmdDec,1,		"decimate",
+	"hpf",				CmdHpf,1,		"remove DC offset from trace",
 	"zerocrossings",	CmdZerocrossings,1,	"count time between zero-crossings",
-	"ltrim",		CmdLtrim,1,		"trim from left of trace",
-	"scale",		CmdScale,1,		"set cursor display scale",
+	"ltrim",			CmdLtrim,1,		"trim from left of trace",
+	"scale",			CmdScale,1,		"set cursor display scale",
 	"flexdemod",		CmdFlexdemod,1,		"demod samples for FlexPass",
-	"save",			CmdSave,1,		"save trace (from graph window)",
-	"load",			CmdLoad,1,		"load trace (to graph window",
+	"save",				CmdSave,1,		"save trace (from graph window)",
+	"load",				CmdLoad,1,		"load trace (to graph window",
 	"hisimlisten",		CmdHisimlisten,0,	"get HF samples as fake tag",
-	"hi14sim",		CmdHi14sim,0,		"fake ISO 14443 tag",
-	"hi14asim",		CmdHi14asim,0,		"fake ISO 14443a tag",					// ## Simulate 14443a tag
+	"hi14sim",			CmdHi14sim,0,		"fake ISO 14443 tag",
+	"hi14asim",			CmdHi14asim,0,		"fake ISO 14443a tag",					// ## Simulate 14443a tag
 	"hi14snoop",		CmdHi14snoop,0,		"eavesdrop ISO 14443",
 	"hi14asnoop",		CmdHi14asnoop,0,	"eavesdrop ISO 14443 Type A",			// ## New snoop command
-	"hi14list",		CmdHi14list,0,		"list ISO 14443 history",
+	"hi14list",			CmdHi14list,0,		"list ISO 14443 history",
 	"hi14alist",		CmdHi14alist,0,		"list ISO 14443a history",				// ## New list command
-	"hiddemod",		CmdHiddemod,1,		"HID Prox Card II (not optimal)",
+	"hiddemod",			CmdHiddemod,1,		"HID Prox Card II (not optimal)",
 	"hidfskdemod",		CmdHIDdemodFSK,0,	"HID FSK demodulator",
-    "indalademod",          CmdIndalademod,0,         "demod samples for Indala",
-	"askdemod",		Cmdaskdemod,1,		"Attempt to demodulate simple ASK tags",
+    "indalademod",		CmdIndalademod,0,         "demod samples for Indala",
+	"askdemod",			Cmdaskdemod,1,		"Attempt to demodulate simple ASK tags",
 	"hidsimtag",		CmdHIDsimTAG,0,		"HID tag simulator",
-	"mandemod",		Cmdmanchesterdemod,1,	"Try a Manchester demodulation on a binary stream",
-	"fpgaoff",		CmdFPGAOff,0,		"set FPGA off",							// ## FPGA Control
-	"lcdreset",		CmdLcdReset,0,		"Hardware reset LCD",
-	"lcd",			CmdLcd,0,		"Send command/data to LCD",
+	"mandemod",			Cmdmanchesterdemod,1,	"Try a Manchester demodulation on a binary stream",
+	"fpgaoff",			CmdFPGAOff,0,		"set FPGA off",							// ## FPGA Control
+	"lcdreset",			CmdLcdReset,0,		"Hardware reset LCD",
+	"lcd",				CmdLcd,0,			"Send command/data to LCD",
 	"setlfdivisor",		CmdSetDivisor,0,	"Drive LF antenna at 12Mhz/(divisor+1)",
-	"sweeplf",		CmdSweepLF,0,		"Sweep through LF freq range and store results in buffer",
-	"quit",			CmdQuit,0,		"quit program"
+	"sweeplf",			CmdSweepLF,0,		"Sweep through LF freq range and store results in buffer",
+	"reset",			CmdReset,0,			"Reset the Proxmark3",
+	"quit",				CmdQuit,1,			"quit program"
 };
 
 
@@ -1933,8 +1944,10 @@ void CommandReceived(char *cmd)
 	PrintToScrollback("> %s", cmd);
 
 	if(strcmp(cmd, "help")==0) {
+		if (offline) PrintToScrollback("Operating in OFFLINE mode (no device connected)");
 		PrintToScrollback("\r\nAvailable commands:");
 		for(i = 0; i < sizeof(CommandTable) / sizeof(CommandTable[0]); i++) {
+			if (offline && (CommandTable[i].offline==0)) continue;
 			char line[256];
 			memset(line, ' ', sizeof(line));
 			strcpy(line+2, CommandTable[i].name);
@@ -1955,6 +1968,10 @@ void CommandReceived(char *cmd)
 			cmd += strlen(name);
 			while(*cmd == ' ') {
 				cmd++;
+			}
+			if (offline && (CommandTable[i].offline==0)) {
+				PrintToScrollback("Offline mode, cannot use this command.");
+				return;
 			}
 			(CommandTable[i].handler)(cmd);
 			return;

@@ -33,6 +33,7 @@ void dbp(char *str, ...)
 
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 int GraphTraceLen;
+int offline; // Whether the GUI operates in Offline mode.
 
 HPEN GreyPen, GreenPen, WhitePen, YellowPen;
 HBRUSH GreenBrush, YellowBrush;

@@ -14,6 +14,7 @@ extern int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 extern int GraphTraceLen;
 extern double CursorScaleFactor;
 extern int CommandFinished;
+extern int offline;
 
 #ifdef __cplusplus
 }

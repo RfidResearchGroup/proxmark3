@@ -704,6 +704,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 #endif
         case CMD_SETUP_WRITE:
 		case CMD_FINISH_WRITE:
+		case CMD_HARDWARE_RESET:
 			USB_D_PLUS_PULLUP_OFF();
 			SpinDelay(1000);
 			SpinDelay(1000);
@@ -712,6 +713,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 				// We're going to reset, and the bootrom will take control.
 			}
 			break;
+
 
 		default:
 			DbpString("unknown command");
