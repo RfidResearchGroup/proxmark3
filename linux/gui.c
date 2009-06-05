@@ -15,7 +15,7 @@ int offline;
 static char *logfilename = "proxmark3.log";
 
 void PrintToScrollback(char *fmt, ...) {
-	va_list argptr;
+	va_list argptr, argptr2;
 	static FILE *logfile = NULL;
 	static int logging=1;
 
@@ -28,7 +28,9 @@ void PrintToScrollback(char *fmt, ...) {
 	}
 
 	va_start(argptr, fmt);
+	va_copy(argptr2, argptr);
 	vprintf(fmt, argptr);
+	va_end(argptr);
 	printf("\n");
 	if (logging && logfile) {
 #if 0
@@ -42,11 +44,11 @@ void PrintToScrollback(char *fmt, ...) {
 
 		fprintf(logfile,"%s ", zeit);
 #endif
-		vfprintf(logfile, fmt, argptr);
+		vfprintf(logfile, fmt, argptr2);
 		fprintf(logfile,"\n");
 		fflush(logfile);
 	}
-	va_end(argptr);
+	va_end(argptr2);
 }
 
 void setlogfilename(char *fn)
