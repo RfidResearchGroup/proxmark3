@@ -153,6 +153,11 @@ usb_dev_handle* OpenProxmark(int verbose) {
 	if (!handle)
 		return NULL;
 
+	/* detach kernel driver first */
+	ret = usb_detach_kernel_driver_np(handle, iface);
+	/* don't complain if no driver attached */
+	if (ret<0 && ret != -61 && verbose)
+		fprintf(stderr, "detach kernel driver failed: (%d) %s!\n", ret, usb_strerror());
 	ret = usb_claim_interface(handle, iface);
 	if (ret<0) {
 		if (verbose)
