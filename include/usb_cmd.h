@@ -24,6 +24,7 @@ typedef struct {
 #define CMD_SETUP_WRITE								0x0001
 #define CMD_FINISH_WRITE							0x0003
 #define CMD_HARDWARE_RESET							0x0004
+#define CMD_START_FLASH								0x0005
 #define CMD_ACK										0x00ff
 
 // For general mucking around

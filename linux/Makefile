@@ -13,7 +13,7 @@ else
 QTGUI = guidummy.o
 endif
 
-all: proxmark3 snooper cli
+all: proxmark3 snooper cli flasher
 
 proxmark3: LDFLAGS+=$(QTLDFLAGS)
 proxmark3: proxmark3.o gui.o command.o usb.o $(QTGUI)
@@ -22,10 +22,12 @@ snooper: snooper.o gui.o command.o usb.o guidummy.o
 
 cli: cli.o gui.o command.o usb.o guidummy.o
 
+flasher: flasher.o usb.o
+
 proxguiqt.moc.cpp: proxguiqt.h
 	$(MOC) -o$@ $^
 
 clean:
-	rm -f cli proxmark3 snooper *.o *.moc.cpp
+	rm -f cli flasher proxmark3 snooper *.o *.moc.cpp
 
 .PHONY: all clean

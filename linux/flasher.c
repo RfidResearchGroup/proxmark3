@@ -149,6 +149,7 @@ int main(int argc, char **argv) {
 	sleep(1);
 
 	fprintf(stderr,"Waiting for Proxmark to reappear on USB...\n");
+	fprintf(stderr,"(Press and hold down button NOW if your bootloader requires it)\n");
 	while(!(devh=OpenProxmark(0))) { sleep(1); }
 	fprintf(stderr,"Found...\n");
 
