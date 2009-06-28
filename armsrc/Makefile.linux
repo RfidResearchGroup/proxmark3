@@ -1,13 +1,15 @@
 # This makefile needs to be edited to reflect the location
-# of your own arm-elf-gcc toolchain (LIB variable)
+# of your own arm-elf-gcc toolchain (ARMLIB variable)
 
 CC	= arm-elf-gcc
 AS	= arm-elf-as
 LD	= arm-elf-ld
 OBJCOPY = arm-elf-objcopy
 
-# Indicate where your gnuarm toolchain libgcc.a library is located:
-LIB = /usr/local/new/gnuarm-4.3.0/lib/gcc/arm-elf/4.3.0/interwork
+# Indicate where your gnuarm toolchain libgcc.a interworking library is located
+# or set $ARMLIB in your environment:
+#ARMLIB = /usr/local/lib/gcc/arm-elf/4.3.3/interwork
+
 
 # Add -DWITH_LCD to EXTRA_CFLAGS if you want support for LCD
 # in your firmware (add OBJLCD to OBJ too!)
@@ -51,12 +53,12 @@ fpgaimage.s19: $(OBJFPGA)
 
 osimage.s19: $(OBJ) $(OBJFAST) $(OBJCOMMON)
 	@echo osimage.s19
-	$(LD) -g -Tldscript -o $(OBJDIR)/osimage.elf $^ $(LIB)/libgcc.a
+	$(LD) -g -Tldscript -o $(OBJDIR)/osimage.elf $^ $(ARMLIB)/libgcc.a
 	$(OBJCOPY) -Osrec --srec-forceS3 $(OBJDIR)/osimage.elf osimage.s19
 
 fullimage.s19: $(OBJ) $(OBJFAST) $(OBJCOMMON) $(OBJFAST) $(OBJFPGA)
 	@echo fullimage.s19
-	$(LD) -g -Tldscript-full -o $(OBJDIR)/fullimage.elf $^  $(LIB)/libgcc.a
+	$(LD) -g -Tldscript-full -o $(OBJDIR)/fullimage.elf $^  $(ARMLIB)/libgcc.a
 	$(OBJCOPY) -Osrec --srec-forceS3 $(OBJDIR)/fullimage.elf fullimage.s19
 
 # Directives to put the *.o in the OBJDIR directory:

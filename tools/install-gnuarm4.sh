@@ -1,32 +1,65 @@
 #!/bin/bash
 
 # Some things for you to configure
+BINUTILS_VER="2.19.1"
+GCC_VER="4.3.3"
+GDB_VER="6.8"
+NEWLIB_VER="1.17.0"
+GMP_VER="4.2.4"
+MPFR_VER="2.4.1"
+INSIGHT_VER="6.8"
 
 # Where you want to install the tools
-DESTDIR=/usr/local/gnuarm-4.3.0
+if [ "${1}" = "" ]; then
+        echo "Syntax: ${0} </installation/target/directory> [download & build directory (default ${PWD})]"
+        exit 1
+else
+	DESTDIR="${1}"
+fi
 
 # Where do you want to build the tools. This is where the log files
 # will be written (which you can monitor with 'tail' during compilation).
 # You can delete this directory after everything is done.
-SRCDIR="/home/lafargue/Documents/Hobbies/RFID/Toolchain/linux"
+if [ ! "${2}" = "" ]; then
+	SRCDIR="${2}"
+else
+	SRCDIR="${PWD}"
+fi
+BUILDDIR=${SRCDIR}/build-gnuarm4
 
 # Where to get each of the toolchain components
-BINUTILS=ftp://ftp.gnu.org/gnu/binutils/binutils-2.18.tar.bz2
-GCCCORE=ftp://ftp.gnu.org/gnu/gcc/gcc-4.3.0/gcc-core-4.3.0.tar.bz2
-GPP=ftp://ftp.gnu.org/gnu/gcc/gcc-4.3.0/gcc-g++-4.3.0.tar.bz2
-NEWLIB=ftp://sources.redhat.com/pub/newlib/newlib-1.16.0.tar.gz
-#INSIGHT=ftp://sourceware.org/pub/insight/releases/insight-6.8.tar.bz2
-INSIGHT=http://mirrors.kernel.org/sources.redhat.com/insight/releases/insight-6.8.tar.bz2
-#INSIGHT=http://www.mirrorservice.org/sites/sources.redhat.com/pub/insight/releases/insight-6.8.tar.bz2
+BINUTILS=ftp://gcc.gnu.org/pub/binutils/releases/binutils-${BINUTILS_VER}.tar.bz2
+GCCCORE=ftp://gcc.gnu.org/pub/gcc/releases/gcc-${GCC_VER}/gcc-core-${GCC_VER}.tar.bz2
+GPP=ftp://gcc.gnu.org/pub/gcc/releases/gcc-${GCC_VER}/gcc-g++-${GCC_VER}.tar.bz2
+NEWLIB=ftp://sources.redhat.com/pub/newlib/newlib-${NEWLIB_VER}.tar.gz
+#INSIGHT=ftp://sourceware.org/pub/insight/releases/insight-${INSIGHT_VER}.tar.bz2
+INSIGHT=http://mirrors.kernel.org/sources.redhat.com/insight/releases/insight-${INSIGHT_VER}.tar.bz2
+#INSIGHT=http://www.mirrorservice.org/sites/sources.redhat.com/pub/insight/releases/insight-${INSIGHT_VER}.tar.bz2
+GDB=ftp://sourceware.org/pub/gdb/releases/gdb-${GDB_VER}.tar.bz2
+GMP=http://ftp.sunet.se/pub/gnu/gmp/gmp-${GMP_VER}.tar.bz2
+MPFR=http://www.mpfr.org/mpfr-current/mpfr-${MPFR_VER}.tar.bz2
 
 # Common configuration options (i.e., things to pass to 'configure')
 COMMON_CFG="--enable-interwork --target=arm-elf --program-prefix=arm-elf- --prefix=${DESTDIR} --disable-werror --enable-languages=c,c++ --enable-multilib --disable-shared"
 
 # Extra configuration options for each toolchain component
 BINUTILS_CFG=
-GCCCORE_CFG="--disable-libssp --disable-threads --with-newlib"  # Not sure about these last 2 options...there to try to make C++ support work
+GCCCORE_CFG="--disable-nls --disable-threads --with-gcc --with-gnu-ld --with-gnu-as --with-dwarf2 --with-newlib --with-headers=../newlib-${NEWLIB_VER}/newlib/libc/include --disable-libssp --disable-libstdcxx-pch --disable-libmudflap --disable-libgomp -v"
 NEWLIB_CFG=
 INSIGHT_CFG=
+GDB_CFG=
+
+# Make flags
+MAKEFLAGS="-j 4"
+
+# wget options
+# -nv: non-verbose but not too quiet (still print errors/warnings)
+# -nc: no-clobber, do not download a file that already exists
+# -t 0: retry indefinitely
+# -a wget.log: append errors/warnings to wget.log file
+# -c continue
+#WGET_OPTS="-nv -nc -t 0 -a wget.log"
+WGET_OPTS="-c -t 0"
 
 # Compiler flags for compiling Newlib (-O2 is already hard-coded)
 NEWLIB_FLAGS="-march=armv4t -mcpu=arm7tdmi -g"
@@ -36,64 +69,50 @@ NEWLIB_FLAGS="-march=armv4t -mcpu=arm7tdmi -g"
 ############################################################################
 
 if [[ `whoami` != "root" ]]; then
-  echo You must be root to run this script
-  exit 1
+  echo "*** Warning! Not running as root!"
+  echo "Installation may fail if you do not have appropriate permissions!"
 fi
 
-mkdir -p ${SRCDIR}
+mkdir -p ${BUILDDIR}
 cd ${SRCDIR}
 
-if [[ -f `basename ${BINUTILS}` ]]; then
-  echo Looks like BINUTILS has already been downloaded.
-else
-  echo Now downloading BINUTILS...
-  # -nv: non-verbose but not too quiet (still print errors/warnings)
-  # -nc: no-clobber, do not download a file that already exists
-  # -t 0: retry indefinitely
-  # -a wget.log: append errors/warnings to wget.log file
-  wget -nv -nc -t 0 -a wget.log ${BINUTILS}
-fi
+echo Now downloading BINUTILS...
+wget ${WGET_OPTS} ${BINUTILS}
 
-if [[ -f `basename ${GCCCORE}` ]]; then
-  echo Looks like GCC has already been downloaded.
-else
-  echo Now downloading GCC...
-  wget -nv -nc -t 0 -a wget.log ${GCCCORE}
-fi
+echo Now downloading GCC...
+wget ${WGET_OPTS} ${GCCCORE}
 
-if [[ -f `basename ${GPP}` ]]; then
-  echo Looks like G++ has already been downloaded.
-else
-  echo Now downloading G++...
-  wget -nv -nc -t 0 -a wget.log ${GPP}
-fi
+echo Now downloading G++...
+wget ${WGET_OPTS} ${GPP}
 
-if [[ -f `basename ${NEWLIB}` ]]; then
-  echo Looks like NEWLIB has already been downloaded.
-else
-  echo Now downloading NEWLIB...
-  wget -nv -nc -t 0 -a wget.log ${NEWLIB}
-fi
+echo Now downloading NEWLIB...
+wget ${WGET_OPTS} ${NEWLIB}
 
-if [[ -f `basename ${INSIGHT}` ]]; then
-  echo Looks like INSIGHT has already been downloaded.
-else
-  echo Now downloading INSIGHT...
-  wget -nv -nc -t 0 -a wget.log ${INSIGHT}
-fi
+echo Now downloading INSIGHT...
+wget ${WGET_OPTS} ${INSIGHT}
 
+echo Now downloading GDB...
+wget ${WGET_OPTS} ${GDB}
+
+echo Now downloading GMP...
+wget ${WGET_OPTS} ${GMP}
+
+echo Now downloading MPFR...
+wget ${WGET_OPTS} ${MPFR}
+
+cd ${BUILDDIR}
 if [[ -f binutils.built ]]; then
   echo Looks like BINUTILS was already built.
 else
   echo Building BINUTILS...
-  tar -xjf `basename ${BINUTILS}`
+  tar -xjf ../`basename ${BINUTILS}`
   echo ___________________  > make.log
   echo Building binutils... >> make.log
   cd `find . -maxdepth 1 -type d -name 'binutils*'`
   mkdir gnuarm
   cd gnuarm
   ../configure ${COMMON_CFG} ${BINUTILS_CFG} >> ../../make.log 2>&1
-  make MAKEINFO=`which makeinfo` >> ../../make.log 2>&1
+  make ${MAKEFLAGS} MAKEINFO=`which makeinfo` >> ../../make.log 2>&1
   make install >> ../../make.log 2>&1
   cd ../..
   touch binutils.built
@@ -108,14 +127,19 @@ if [[ -f gcc.built ]]; then
   echo Looks like GCC was already built.
 else
   echo Building GCC...
-  tar -xjf `basename ${GCCCORE}`
-  tar -xjf `basename ${GPP}`
+  tar -xjf ../`basename ${GCCCORE}`
+  tar -xjf ../`basename ${GPP}`
+  tar -xjf ../`basename ${GMP}`
+  ln -s "${BUILDDIR}/gmp-${GMP_VER}" "${BUILDDIR}/gcc-${GCC_VER}/gmp"
+  tar -xjf ../`basename ${MPFR}`
+  ln -s "${BUILDDIR}/mpfr-${MPFR_VER}" "${BUILDDIR}/gcc-${GCC_VER}/mpfr"
+
   echo ___________________  >> make.log
 
 cat << EOF > gcc.patch
---- gcc-4.2.2.orig/gcc/config/arm/t-arm-elf	2006-11-06 13:13:53.000000000 +0100
-+++ gcc-4.2.2.mod/gcc/config/arm/t-arm-elf	2007-10-05 12:13:00.000000000 +0200
-@@ -23,8 +23,8 @@
+--- gcc-4.3.3.orig/gcc/config/arm/t-arm-elf
++++ gcc-4.3.3.mod/gcc/config/arm/t-arm-elf
+@@ -33,8 +33,8 @@
  # MULTILIB_DIRNAMES   += fpu soft
  # MULTILIB_EXCEPTIONS += *mthumb/*mhard-float*
  # 
@@ -135,7 +159,7 @@ EOF
   mkdir gnuarm
   cd gnuarm
   ../configure ${COMMON_CFG} ${GCCCORE_CFG} >> ../../make.log 2>&1
-  make >> ../../make.log 2>&1
+  make ${MAKEFLAGS} all-gcc >> ../../make.log 2>&1
   make install >> ../../make.log 2>&1
   cd ../..
   touch gcc.built
@@ -145,7 +169,7 @@ if [[ -f newlib.built ]]; then
   echo Looks like NEWLIB was already built.
 else
   echo Building NEWLIB...
-  tar -xzf `basename ${NEWLIB}`
+  tar -xzf ../`basename ${NEWLIB}`
   echo ___________________  >> make.log
   echo Building newlib... >> make.log
   cd `find . -maxdepth 1 -type d -name 'newlib*'`
@@ -156,8 +180,8 @@ else
   # This line adds our NEWLIB_CFLAGS to the configure.host file in the
   # newlib subdirectory. This is the only way I could find to tell Newlib to
   # compile itself with the -mmarch=armv4t and -mcpu=arm7tdmi flags.
-  sed -i "/^newlib_cflags=/s/=.*\$/=\"${NEWLIB_FLAGS}\"/" ../newlib/configure.host
-  make >> ../../make.log 2>&1
+#  sed -i "/^newlib_cflags=/s/=.*\$/=\"${NEWLIB_FLAGS}\"/" ../newlib/configure.host
+  make ${MAKEFLAGS} >> ../../make.log 2>&1
   make install >> ../../make.log 2>&1
   cd ../..
   touch newlib.built
@@ -167,7 +191,7 @@ fi
   echo "Now that newlib is built, second pass for GCC..." >> make.log
   cd `find . -maxdepth 1 -type d -name 'gcc*'`
   cd gnuarm
-  make >> ../../make.log 2>&1
+  make ${MAKEFLAGS} >> ../../make.log 2>&1
   make install >> ../../make.log 2>&1
   cd ../..
 
@@ -176,17 +200,34 @@ if [[ -f insight.built ]]; then
   echo Looks like INSIGHT was already built.
 else
   echo Building INSIGHT...
-  tar -xjf `basename ${INSIGHT}`
+  tar -xjf ../`basename ${INSIGHT}`
   echo ___________________  >> make.log
   echo Building insight... >> make.log
   cd `find . -maxdepth 1 -type d -name 'insight*'`
   mkdir gnuarm
   cd gnuarm
   ../configure ${COMMON_CFG} ${INSIGHT_CFG} >> ../../make.log 2>&1
-  make >> ../../make.log 2>&1
+  make ${MAKEFLAGS} >> ../../make.log 2>&1
   make install >> ../../make.log 2>&1
   cd ../..
   touch insight.built
+fi
+
+if [[ -f gdb.built ]]; then
+  echo Looks like GDB was already built.
+else
+  echo Building GDB...
+  tar -xjf ../`basename ${GDB}`
+  echo ___________________  >> make.log
+  echo Building insight... >> make.log
+  cd `find . -maxdepth 1 -type d -name 'gdb*'`
+  mkdir gnuarm
+  cd gnuarm
+  ../configure ${COMMON_CFG} ${GDB_CFG} >> ../../make.log 2>&1
+  make ${MAKEFLAGS} >> ../../make.log 2>&1
+  make install >> ../../make.log 2>&1
+  cd ../..
+  touch gdb.built
 fi
 
 echo ___________________  >> make.log
@@ -195,4 +236,7 @@ echo Build complete. >> make.log
 cd ${DESTDIR}
 chmod -R a+rX .
 
+echo Downloaded archives are in ${SRCDIR}
+echo build driectory: ${BUILDDIR}
+echo set environment variable ARMLIB to ${DESTDIR}/lib/gcc/arm-elf/4.3.3/interwork for Makefile.linux
 exit 0
