@@ -1,7 +1,9 @@
+ENTRY(Vector)
 SECTIONS
 {
 	. = 0x00010000;
-	.text : { obj/start.o(.text) *(.text) }
+	.start : { obj/start.o(.text) }
+	.text : { *(.text) }
 	.rodata : { *(.rodata) }
 	. = 0x00200000;
 	.data : { *(.data) }
