@@ -1622,15 +1622,24 @@ static void Cmdaskdemod(char *str) {
  *               Typical values can be 64, 32, 128...
  */
 static void Cmdmanchesterdemod(char *str) {
-	int i;
+	int i, j;
+	int bit;
 	int clock;
 	int lastval;
+	int low = 0;
+	int high = 0;
+	int hithigh, hitlow, first;
 	int lc = 0;
 	int bitidx = 0;
 	int bit2idx = 0;
-
+	int warnings = 0;
 
 	sscanf(str, "%i", &clock);
+	if (!clock)
+	{
+		PrintToScrollback("You must provide a clock rate.");
+		return;
+	}
 
 	int tolerance = clock/4;
 	/* Holds the decoded bitstream: each clock period contains 2 bits       */
@@ -1642,21 +1651,77 @@ static void Cmdmanchesterdemod(char *str) {
 	/* large array */
 	int BitStream[MAX_GRAPH_TRACE_LEN];
 
+	/* Detect high and lows */
+	for (i = 0; i < GraphTraceLen; i++)
+	{
+		if (GraphBuffer[i] > high)
+			high = GraphBuffer[i];
+		else if (GraphBuffer[i] < low)
+			low = GraphBuffer[i];
+	}
+
 	/* Detect first transition */
 	/* Lo-Hi (arbitrary)       */
-	for(i=1;i<GraphTraceLen;i++) {
-		if (GraphBuffer[i-1]<GraphBuffer[i]) {
+	for (i = 0; i < GraphTraceLen; i++)
+	{
+		if (GraphBuffer[i] == low)
+		{
+//			BitStream[0]=0; // Previous state = 0;
 		lastval = i;
-		BitStream[0]=0; // Previous state = 0;
 		break;
 		}
 	}
+//PrintToScrollback("cool %d %d %d %d", low, high, lastval, GraphBuffer[i]);
+
+	/* If we're not working with 1/0s, demod based off clock */
+	if (high != 1)
+	{
+		bit = 0;
+		for (i = 0; i < (GraphTraceLen / clock); i++)
+		{
+			hithigh = 0;
+			hitlow = 0;
+			first = 1;
+
+			/* Find out if we hit both high and low peaks */
+			for (j = 0; j < clock; j++)
+			{
+				if (GraphBuffer[(i * clock) + j] == high)
+					hithigh = 1;
+				else if (GraphBuffer[(i * clock) + j] == low)
+					hitlow = 1;
+
+				/* it doesn't count if it's the first part of our read
+				   because it's really just trailing from the last sequence */
+				if (first && (hithigh || hitlow))
+					hithigh = hitlow = 0;
+				else
+					first = 0;
+
+				if (hithigh && hitlow)
+					break;
+			}
+
+			/* If we didn't hit both high and low peaks, we had a bit transition */
+			if (!hithigh || !hitlow)
+				bit ^= 1;
+
+			BitStream[bit2idx++] = bit;
+		}
+	}
+
+	/* standard 1/0 bitstream */
+	else
+	{
 
 	/* Then detect duration between 2 successive transitions */
-	for(bitidx = 1 ;i<GraphTraceLen;i++) {
-		if (GraphBuffer[i-1] != GraphBuffer[i]) {
+		for (bitidx = 1; i < GraphTraceLen; i++)
+		{
+			if (GraphBuffer[i-1] != GraphBuffer[i])
+			{
 			lc = i-lastval;
 			lastval = i;
+
 			// Error check: if bitidx becomes too large, we do not
 			// have a Manchester encoded bitstream or the clock is really
 			// wrong!
@@ -1675,8 +1740,15 @@ static void Cmdmanchesterdemod(char *str) {
 				BitStream[bitidx++]=GraphBuffer[i-1];
 			} else {
 				// Error
+					warnings++;
 				PrintToScrollback("Warning: Manchester decode error for pulse width detection.");
 				PrintToScrollback("(too many of those messages mean either the stream is not Manchester encoded, or clock is wrong)");
+
+					if (warnings > 100)
+					{
+						PrintToScrollback("Error: too many detection errors, aborting.");
+						return;
+					}
 			}
 		}
 	}
@@ -1693,11 +1765,20 @@ static void Cmdmanchesterdemod(char *str) {
 			// We cannot end up in this state, this means we are unsynchronized,
 			// move up 1 bit:
 			i++;
+				warnings++;
 			PrintToScrollback("Unsynchronized, resync...");
 			PrintToScrollback("(too many of those messages mean the stream is not Manchester encoded)");
+
+				if (warnings > 100)
+				{
+					PrintToScrollback("Error: too many decode errors, aborting.");
+					return;
+				}
 		}
 	}
-	PrintToScrollback("Manchester decoded bitstream \n---------");
+	}
+
+	PrintToScrollback("Manchester decoded bitstream");
 	// Now output the bitstream to the scrollback by line of 16 bits
 	for (i = 0; i < (bit2idx-16); i+=16) {
 		PrintToScrollback("%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",
