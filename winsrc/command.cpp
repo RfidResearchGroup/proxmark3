@@ -211,10 +211,10 @@ int CmdClearGraph(int redraw)
 {
 	int gtl = GraphTraceLen;
 	GraphTraceLen = 0;
-	
+
 	if (redraw)
 		RepaintGraphWindow();
-	
+
 	return gtl;
 }
 
@@ -225,8 +225,8 @@ static void CmdAppendGraph(int redraw, int clock, int bit)
 
 	for (i = 0; i < (int)(clock/2); i++)
 		GraphBuffer[GraphTraceLen++] = bit ^ 1;
-	
-	for (i = (int)(clock/2); i < clock; i++)	
+
+	for (i = (int)(clock/2); i < clock; i++)
 		GraphBuffer[GraphTraceLen++] = bit;
 
 	if (redraw)
@@ -240,7 +240,7 @@ static void CmdEM410xwatch(char *str)
 	char *zero = "";
 	char *twok = "2000";
 	go = 1;
-	
+
 	do
 	{
 		CmdLoread(zero);
@@ -264,7 +264,7 @@ static void CmdEM410xread(char *str)
 	char id[11];
 	int BitStream[MAX_GRAPH_TRACE_LEN];
 	high = low = 0;
-	
+
 	/* Detect high and lows and clock */
 	for (i = 0; i < GraphTraceLen; i++)
 	{
@@ -272,15 +272,15 @@ static void CmdEM410xread(char *str)
 			high = GraphBuffer[i];
 		else if (GraphBuffer[i] < low)
 			low = GraphBuffer[i];
-	}	
-	
+	}
+
 	/* get clock */
 	clock = GetClock(str, high);
-	
+
 	/* parity for our 4 columns */
 	parity[0] = parity[1] = parity[2] = parity[3] = 0;
 	header = rows = 0;
-	
+
 	/* manchester demodulate */
 	bit = bit2idx = 0;
 	for (i = 0; i < (int)(GraphTraceLen / clock); i++)
@@ -288,7 +288,7 @@ static void CmdEM410xread(char *str)
 		hithigh = 0;
 		hitlow = 0;
 		first = 1;
-		
+
 		/* Find out if we hit both high and low peaks */
 		for (j = 0; j < clock; j++)
 		{
@@ -296,25 +296,25 @@ static void CmdEM410xread(char *str)
 				hithigh = 1;
 			else if (GraphBuffer[(i * clock) + j] == low)
 				hitlow = 1;
-			
+
 			/* it doesn't count if it's the first part of our read
 			 because it's really just trailing from the last sequence */
 			if (first && (hithigh || hitlow))
 				hithigh = hitlow = 0;
 			else
 				first = 0;
-			
+
 			if (hithigh && hitlow)
 				break;
 		}
-		
+
 		/* If we didn't hit both high and low peaks, we had a bit transition */
 		if (!hithigh || !hitlow)
 			bit ^= 1;
-		
+
 		BitStream[bit2idx++] = bit;
 	}
-	
+
 	/* We go till 5 before the graph ends because we'll get that far below */
 	for (i = 1; i < bit2idx - 5; i++)
 	{
@@ -327,29 +327,29 @@ static void CmdEM410xread(char *str)
 				/* Read another byte! */
 				sprintf(id+rows, "%x", (8 * BitStream[i]) + (4 * BitStream[i+1]) + (2 * BitStream[i+2]) + (1 * BitStream[i+3]));
 				rows++;
-				
+
 				/* Keep parity info */
 				parity[0] ^= BitStream[i];
 				parity[1] ^= BitStream[i+1];
 				parity[2] ^= BitStream[i+2];
 				parity[3] ^= BitStream[i+3];
-				
+
 				/* Move 4 bits ahead */
 				i += 4;
 			}
-			
+
 			/* Damn, something wrong! reset */
 			else
 			{
 				PrintToScrollback("Thought we had a valid tag but failed at word %d (i=%d)", rows + 1, i);
-				
+
 				/* Start back rows * 5 + 9 header bits, -1 to not start at same place */
 				i -= 9 + (5 * rows) - 5;
 
 				rows = header = 0;
 			}
 		}
-		
+
 		/* Step 3: Got our 40 bits! confirm column parity */
 		else if (rows == 10)
 		{
@@ -360,29 +360,29 @@ static void CmdEM410xread(char *str)
 			{
 				/* Sweet! */
 				PrintToScrollback("EM410x Tag ID: %s", id);
-				
+
 				/* Stop any loops */
 				go = 0;
 				break;
 			}
-			
+
 			/* Crap! Incorrect parity or no stop bit, start all over */
 			else
 			{
 				rows = header = 0;
-				
+
 				/* Go back 59 bits (9 header bits + 10 rows at 4+1 parity) */
 				i -= 59;
 			}
 		}
-				
+
 		/* Step 1: get our header */
 		else if (header < 9)
 		{
 			/* Need 9 consecutive 1's */
 			if (BitStream[i] == 1)
 				header++;
-			
+
 			/* We don't have a header, not enough consecutive 1 bits */
 			else
 				header = 0;
@@ -402,20 +402,20 @@ static void CmdEM410xsim(char *str)
 {
 	int i, n, j, h, binary[4], parity[4];
 	char *s = "0";
-	
+
 	/* clock is 64 in EM410x tags */
 	int clock = 64;
-	
+
 	/* clear our graph */
 	CmdClearGraph(0);
-	
+
 	/* write it out a few times */
 	for (h = 0; h < 4; h++)
 	{
 		/* write 9 start bits */
 		for (i = 0; i < 9; i++)
 			CmdAppendGraph(0, clock, 1);
-		
+
 		/* for each hex char */
 		parity[0] = parity[1] = parity[2] = parity[3] = 0;
 		for (i = 0; i < 10; i++)
@@ -424,36 +424,36 @@ static void CmdEM410xsim(char *str)
 			sscanf(&str[i], "%1x", &n);
 			for (j = 3; j >= 0; j--, n/= 2)
 				binary[j] = n % 2;
-			
+
 			/* append each bit */
 			CmdAppendGraph(0, clock, binary[0]);
 			CmdAppendGraph(0, clock, binary[1]);
 			CmdAppendGraph(0, clock, binary[2]);
 			CmdAppendGraph(0, clock, binary[3]);
-			
+
 			/* append parity bit */
 			CmdAppendGraph(0, clock, binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
-			
+
 			/* keep track of column parity */
 			parity[0] ^= binary[0];
 			parity[1] ^= binary[1];
 			parity[2] ^= binary[2];
 			parity[3] ^= binary[3];
 		}
-		
+
 		/* parity columns */
 		CmdAppendGraph(0, clock, parity[0]);
 		CmdAppendGraph(0, clock, parity[1]);
 		CmdAppendGraph(0, clock, parity[2]);
 		CmdAppendGraph(0, clock, parity[3]);
-		
+
 		/* stop bit */
 		CmdAppendGraph(0, clock, 0);
 	}
-	
+
 	/* modulate that biatch */
 	Cmdmanchestermod(s);
-	
+
 	/* booyah! */
 	RepaintGraphWindow();
 
@@ -463,7 +463,7 @@ static void CmdEM410xsim(char *str)
 static void ChkBitstream(char *str)
 {
 	int i;
-	
+
 	/* convert to bitstream if necessary */
 	for (i = 0; i < (int)(GraphTraceLen / 2); i++)
 	{
@@ -479,10 +479,10 @@ static void CmdLosim(char *str)
 {
 	int i;
 	char *zero = "0";
-	
+
 	/* convert to bitstream if necessary */
 	ChkBitstream(str);
-	
+
 	for (i = 0; i < GraphTraceLen; i += 48) {
 		UsbCommand c;
 		int j;
@@ -1822,60 +1822,54 @@ static void CmdFlexdemod(char *str)
 }
 
 /*
- * Generic command to demodulate ASK. bit length in argument.
- * Giving the bit length helps discriminate ripple effects
- * upon zero crossing for noisy traces.
+ * Generic command to demodulate ASK.
  *
- * Second is convention: positive or negative (High mod means zero
+ * Argument is convention: positive or negative (High mod means zero
  * or high mod means one)
  *
  * Updates the Graph trace with 0/1 values
  *
  * Arguments:
- * sl : bit length in terms of number of samples per bit
- *      (use yellow/purple markers to compute).
  * c : 0 or 1
  */
 
 static void Cmdaskdemod(char *str) {
 	int i;
-	int sign = 1;
 	int n = 0;
-	int c = 0;
-	int t1 = 0;
+	int c,high,low = 0;
 
 	// TODO: complain if we do not give 2 arguments here !
-	sscanf(str, "%i %i", &n, &c);
-	if (c == 0) {
-		c = 1 ;
-	} else {
-		c = -1;
+	sscanf(str, "%i", &c);
+
+	/* Detect high and lows and clock */
+	for (i = 0; i < GraphTraceLen; i++)
+	{
+		if (GraphBuffer[i] > high)
+			high = GraphBuffer[i];
+		else if (GraphBuffer[i] < low)
+			low = GraphBuffer[i];
 	}
 
-	if (GraphBuffer[0]*c > 0) {
-		GraphBuffer[0] = 1;
+	if (GraphBuffer[0] > 0) {
+		GraphBuffer[0] = 1-c;
 	} else {
-		GraphBuffer[0] = 0;
+		GraphBuffer[0] = c;
 	}
 	for(i=1;i<GraphTraceLen;i++) {
-		/* Analyse signal within the symbol length */
-		/* Decide if we crossed a zero */
-		if (GraphBuffer[i]*sign < 0) {
-			 /* Crossed a zero, check if this is a ripple or not */
-			if ( (i-t1) > n/4 ) {
-				sign = -sign;
-				t1=i;
-				if (GraphBuffer[i]*c > 0){
-					GraphBuffer[i]=1;
-				} else {
-					GraphBuffer[i]=0;
-				}
-			} else {
-			/* This is a ripple, set the current sample value
-			   to the same as previous */
-				GraphBuffer[i] = GraphBuffer[i-1];
-			}
+		/* Transitions are detected at each peak
+		 * Transitions are either:
+		 * - we're low: transition if we hit a high
+		 * - we're high: transition if we hit a low
+		 * (we need to do it this way because some tags keep high or
+		 * low for long periods, others just reach the peak and go
+		 * down)
+		 */
+		if ((GraphBuffer[i]==high) && (GraphBuffer[i-1] == c)) {
+					GraphBuffer[i]=1-c;
+		} else if ((GraphBuffer[i]==low) && (GraphBuffer[i-1] == (1-c))){
+			GraphBuffer[i] = c;
 		} else {
+			/* No transition */
 			GraphBuffer[i] = GraphBuffer[i-1];
 		}
 	}
@@ -1917,7 +1911,7 @@ int detectclock(int peak)
 			lastpeak = i;
 		}
 	}
-	
+
 	return clock;
 }
 
@@ -1925,7 +1919,7 @@ int detectclock(int peak)
 int GetClock(char *str, int peak)
 {
 	int clock;
-	
+
 	sscanf(str, "%i", &clock);
 	if (!strcmp(str, ""))
 		clock = 0;
@@ -1934,12 +1928,12 @@ int GetClock(char *str, int peak)
 	if (!clock)
 	{
 		clock = detectclock(peak);
-		
+
 		/* Only print this message if we're not looping something */
 		if (!go)
 			PrintToScrollback("Auto-detected clock rate: %d", clock);
 	}
-	
+
 	return clock;
 }
 
@@ -1966,16 +1960,16 @@ static void Cmdbitstream(char *str) {
 
 	/* Get our clock */
 	clock = GetClock(str, high);
-	
+
 	gtl = CmdClearGraph(0);
-	
+
 	bit = 0;
 	for (i = 0; i < (int)(gtl / clock); i++)
 	{
 		hithigh = 0;
 		hitlow = 0;
 		first = 1;
-		
+
 		/* Find out if we hit both high and low peaks */
 		for (j = 0; j < clock; j++)
 		{
@@ -1983,18 +1977,18 @@ static void Cmdbitstream(char *str) {
 				hithigh = 1;
 			else if (GraphBuffer[(i * clock) + j] == low)
 				hitlow = 1;
-			
+
 			/* it doesn't count if it's the first part of our read
 			 because it's really just trailing from the last sequence */
 			if (first && (hithigh || hitlow))
 				hithigh = hitlow = 0;
 			else
 				first = 0;
-			
+
 			if (hithigh && hitlow)
 				break;
 		}
-		
+
 		/* If we didn't hit both high and low peaks, we had a bit transition */
 		if (!hithigh || !hitlow)
 			bit ^= 1;
@@ -2015,7 +2009,7 @@ static void Cmdmanchestermod(char *str)
 	int i, j;
 	int clock;
 	int bit, lastbit, wave;
-	
+
 	/* Get our clock */
 	clock = GetClock(str, 0);
 
@@ -2024,17 +2018,17 @@ static void Cmdmanchestermod(char *str)
 	for (i = 0; i < (int)(GraphTraceLen / clock); i++)
 	{
 		bit = GraphBuffer[i * clock] ^ 1;
-		
+
 		for (j = 0; j < (int)(clock/2); j++)
 			GraphBuffer[(i * clock) + j] = bit ^ lastbit ^ wave;
 		for (j = (int)(clock/2); j < clock; j++)
 			GraphBuffer[(i * clock) + j] = bit ^ lastbit ^ wave ^ 1;
-		
+
 		/* Keep track of how we start our wave and if we changed or not this time */
 		wave ^= bit ^ lastbit;
 		lastbit = bit;
 	}
-	
+
 	RepaintGraphWindow();
 }
 
@@ -2084,9 +2078,9 @@ static void Cmdmanchesterdemod(char *str) {
 
 	/* Get our clock */
 	clock = GetClock(str, high);
-	
+
 	int tolerance = clock/4;
-	
+
 	/* Detect first transition */
 	/* Lo-Hi (arbitrary)       */
 	for (i = 0; i < GraphTraceLen; i++)
@@ -2101,8 +2095,11 @@ static void Cmdmanchesterdemod(char *str) {
 	/* If we're not working with 1/0s, demod based off clock */
 	if (high != 1)
 	{
-		bit = 0;
-		for (i = 0; i < (int)(GraphTraceLen / clock); i++)
+		bit = 0; /* We assume the 1st bit is zero, it may not be
+		          * the case: this routine (I think) has an init problem.
+		          * Ed.
+		          */
+		for (; i < (int)(GraphTraceLen / clock); i++)
 		{
 			hithigh = 0;
 			hitlow = 0;
