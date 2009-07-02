@@ -2376,72 +2376,74 @@ static void CmdSweepLF(char *str)
 
 typedef void HandlerFunction(char *cmdline);
 
+/* in alphabetic order */
 static struct {
 	char		*name;
 	HandlerFunction	*handler;
 	int		offline;  // 1 if the command can be used when in offline mode
 	char		*docString;
 } CommandTable[] = {
-	"tune",				CmdTune,0,		"measure antenna tuning",
-	"tiread",			CmdTiread,0,		"read a TI-type 134 kHz tag",
-	"tibits",			CmdTibits,0,		"get raw bits for TI-type LF tag",
-	"tidemod",			CmdTidemod,0,		"demod raw bits for TI-type LF tag",
-	"vchdemod",			CmdVchdemod,0,		"demod samples for VeriChip",
-	"plot",				CmdPlot,1,		"show graph window",
-	"hide",				CmdHide,1,		"hide graph window",
-	"losim",			CmdLosim,0,		"simulate LF tag",
-	"em410xsim",		CmdEM410xsim,1,		"simulate EM410x tag",
-	"em410xread",		CmdEM410xread,1,	"extract ID from EM410x tag",
-	"em410xwatch",		CmdEM410xwatch,0,	"watches for EM410x tags",
-	"loread",			CmdLoread,0,		"read (125/134 kHz) LF ID-only tag",
-	"losamples",		CmdLosamples,0,		"get raw samples for LF tag",
-	"hisamples",		CmdHisamples,0,		"get raw samples for HF tag",
-	"hisampless",		CmdHisampless,0,	"get signed raw samples, HF tag",
-	"hisamplest",		CmdHi14readt,0,		"get samples HF, for testing",
-	"higet",			CmdHi14read_sim,0,	"get samples HF, 'analog'",
-	"bitsamples",		CmdBitsamples,0,	"get raw samples as bitstring",
-	"hexsamples",		CmdHexsamples,0,	"dump big buffer as hex bytes",
-	"hi15read",			CmdHi15read,0,		"read HF tag (ISO 15693)",
-	"hi15reader",		CmdHi15reader,0,	"act like an ISO15693 reader", // new command greg
-	"hi15sim",			CmdHi15tag,0,		"fake an ISO15693 tag", // new command greg
-	"hi14read",			CmdHi14read,0,		"read HF tag (ISO 14443)",
-	"sri512read",		CmdSri512read,0,	"Read contents of a SRI512 tag",
-	"hi14areader",		CmdHi14areader,0,	"act like an ISO14443 Type A reader",	// ## New reader command
-	"hi15demod",		CmdHi15demod,1,		"demod ISO15693 from tag",
-	"hi14bdemod",		CmdHi14bdemod,1,	"demod ISO14443 Type B from tag",
-	"autocorr",			CmdAutoCorr,1,		"autocorrelation over window",
-	"norm",				CmdNorm,1,		"normalize max/min to +/-500",
-	"dec",				CmdDec,1,		"decimate",
-	"hpf",				CmdHpf,1,		"remove DC offset from trace",
-	"zerocrossings",	CmdZerocrossings,1,	"count time between zero-crossings",
-	"ltrim",			CmdLtrim,1,		"trim from left of trace",
-	"scale",			CmdScale,1,		"set cursor display scale",
-	"flexdemod",		CmdFlexdemod,1,		"demod samples for FlexPass",
-	"save",				CmdSave,1,		"save trace (from graph window)",
-	"load",				CmdLoad,1,		"load trace (to graph window",
-	"hisimlisten",		CmdHisimlisten,0,	"get HF samples as fake tag",
-	"hi14sim",			CmdHi14sim,0,		"fake ISO 14443 tag",
-	"hi14asim",			CmdHi14asim,0,		"fake ISO 14443a tag",					// ## Simulate 14443a tag
-	"hi14snoop",		CmdHi14snoop,0,		"eavesdrop ISO 14443",
-	"hi14asnoop",		CmdHi14asnoop,0,	"eavesdrop ISO 14443 Type A",			// ## New snoop command
-	"hi14list",			CmdHi14list,0,		"list ISO 14443 history",
-	"hi14alist",		CmdHi14alist,0,		"list ISO 14443a history",				// ## New list command
-	"hiddemod",			CmdHiddemod,1,		"HID Prox Card II (not optimal)",
-	"hidfskdemod",		CmdHIDdemodFSK,0,	"HID FSK demodulator",
-    "indalademod",		CmdIndalademod,0,         "demod samples for Indala",
-	"askdemod",			Cmdaskdemod,1,		"Attempt to demodulate simple ASK tags",
-	"bitstream",		Cmdbitstream,1,		"Convert waveform into a bitstream",
-	"hidsimtag",		CmdHIDsimTAG,0,		"HID tag simulator",
-	"mandemod",			Cmdmanchesterdemod,1,	"Try a Manchester demodulation on a binary stream",
-	"manmod",			Cmdmanchestermod,1,	"Manchester modulate a binary stream",
-	"detectclock",		Cmddetectclockrate,1, "Detect clock rate",
-	"fpgaoff",			CmdFPGAOff,0,		"set FPGA off",							// ## FPGA Control
-	"lcdreset",			CmdLcdReset,0,		"Hardware reset LCD",
-	"lcd",				CmdLcd,0,			"Send command/data to LCD",
-	"setlfdivisor",		CmdSetDivisor,0,	"Drive LF antenna at 12Mhz/(divisor+1)",
-	"sweeplf",			CmdSweepLF,0,		"Sweep through LF freq range and store results in buffer",
-	"reset",			CmdReset,0,			"Reset the Proxmark3",
-	"quit",				CmdQuit,1,			"quit program"
+	"askdemod",			Cmdaskdemod,1,		"<samples per bit> <0|1> -- Attempt to demodulate simple ASK tags",
+	"autocorr",			CmdAutoCorr,1,		"<window length> -- Autocorrelation over window",
+	"bitsamples",		CmdBitsamples,0,	"    Get raw samples as bitstring",
+	"bitstream",		Cmdbitstream,1,		"[clock rate] -- Convert waveform into a bitstream",
+	"dec",				CmdDec,1,		"    Decimate samples",
+	"detectclock",		Cmddetectclockrate,1, "    Detect clock rate",
+	"em410xsim",		CmdEM410xsim,1,		"<UID> -- Simulate EM410x tag",
+	"em410xread",		CmdEM410xread,1,	"[clock rate] -- Extract ID from EM410x tag",
+	"em410xwatch",		CmdEM410xwatch,0,	"    Watches for EM410x tags",
+	"exit",				CmdQuit,1,			"    Exit program",
+	"flexdemod",		CmdFlexdemod,1,		"    Demodulate samples for FlexPass",
+	"fpgaoff",			CmdFPGAOff,0,		"    Set FPGA off",							// ## FPGA Control
+	"hexsamples",		CmdHexsamples,0,	"<blocks> -- Dump big buffer as hex bytes",
+	"hi14alist",		CmdHi14alist,0,		"    List ISO 14443a history",				// ## New list command
+	"hi14areader",		CmdHi14areader,0,	"    Act like an ISO14443 Type A reader",	// ## New reader command
+	"hi14asim",			CmdHi14asim,0,		"<UID> -- Fake ISO 14443a tag",					// ## Simulate 14443a tag
+	"hi14asnoop",		CmdHi14asnoop,0,	"    Eavesdrop ISO 14443 Type A",			// ## New snoop command
+	"hi14bdemod",		CmdHi14bdemod,1,	"    Demodulate ISO14443 Type B from tag",
+	"hi14list",			CmdHi14list,0,		"    List ISO 14443 history",
+	"hi14read",			CmdHi14read,0,		"    Read HF tag (ISO 14443)",
+	"hi14sim",			CmdHi14sim,0,		"    Fake ISO 14443 tag",
+	"hi14snoop",		CmdHi14snoop,0,		"    Eavesdrop ISO 14443",
+	"hi15demod",		CmdHi15demod,1,		"    Demodulate ISO15693 from tag",
+	"hi15read",			CmdHi15read,0,		"    Read HF tag (ISO 15693)",
+	"hi15reader",		CmdHi15reader,0,	"    Act like an ISO15693 reader", // new command greg
+	"hi15sim",			CmdHi15tag,0,		"    Fake an ISO15693 tag", // new command greg
+	"hiddemod",			CmdHiddemod,1,		"    Demodulate HID Prox Card II (not optimal)",
+	"hide",				CmdHide,1,		"    Hide graph window",
+	"hidfskdemod",		CmdHIDdemodFSK,0,	"    Realtime HID FSK demodulator",
+	"hidsimtag",		CmdHIDsimTAG,0,		"<ID> -- HID tag simulator",
+	"higet",			CmdHi14read_sim,0,	"<samples> -- Get samples HF, 'analog'",
+	"hisamples",		CmdHisamples,0,		"    Get raw samples for HF tag",
+	"hisampless",		CmdHisampless,0,	"<samples> -- Get signed raw samples, HF tag",
+	"hisamplest",		CmdHi14readt,0,		"    Get samples HF, for testing",
+	"hisimlisten",		CmdHisimlisten,0,	"    Get HF samples as fake tag",
+	"hpf",				CmdHpf,1,		"    Remove DC offset from trace",
+    	"indalademod",		CmdIndalademod,0,         "['224'] -- Demodulate samples for Indala",
+	"lcd",				CmdLcd,0,			"<HEX command> <count> -- Send command/data to LCD",
+	"lcdreset",			CmdLcdReset,0,		"    Hardware reset LCD",
+	"load",				CmdLoad,1,		"<filename> -- Load trace (to graph window",
+	"loread",			CmdLoread,0,		"['h'] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134)",
+	"losamples",		CmdLosamples,0,		"[128 - 16000] -- Get raw samples for LF tag",
+	"losim",			CmdLosim,0,		"    Simulate LF tag",
+	"ltrim",			CmdLtrim,1,		"<samples> -- Trim samples from left of trace",
+	"mandemod",			Cmdmanchesterdemod,1,	"[clock rate] -- Try a Manchester demodulation on a binary stream",
+	"manmod",			Cmdmanchestermod,1,	"[clock rate] -- Manchester modulate a binary stream",
+	"norm",				CmdNorm,1,		"    Normalize max/min to +/-500",
+	"plot",				CmdPlot,1,		"    Show graph window",
+	"quit",				CmdQuit,1,			"    Quit program",
+	"reset",			CmdReset,0,			"    Reset the Proxmark3",
+	"save",				CmdSave,1,		"<filename> -- Save trace (from graph window)",
+	"scale",			CmdScale,1,		"<int> -- Set cursor display scale",
+	"setlfdivisor",		CmdSetDivisor,0,	"<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)",
+	"sri512read",		CmdSri512read,0,	"<int> -- Read contents of a SRI512 tag",
+	"sweeplf",			CmdSweepLF,0,		"    Sweep through LF freq range and store results in buffer",
+	"tibits",			CmdTibits,0,		"    Get raw bits for TI-type LF tag",
+	"tidemod",			CmdTidemod,0,		"    Demodulate raw bits for TI-type LF tag",
+	"tiread",			CmdTiread,0,		"    Read a TI-type 134 kHz tag",
+	"tune",				CmdTune,0,		"    Measure antenna tuning",
+	"vchdemod",			CmdVchdemod,0,		"['clone'] -- Demodulate samples for VeriChip",
+	"zerocrossings",	CmdZerocrossings,1,	"    Count time between zero-crossings",
 };
 
 
