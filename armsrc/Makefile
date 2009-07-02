@@ -1,3 +1,4 @@
+PATH=..\..\devkitARM\bin;%PATH%
 CC	= arm-elf-gcc
 AS	= arm-elf-as
 LD	= arm-elf-ld
