@@ -13,6 +13,7 @@ extern "C" {
 #define OUR_VID 0x9ac4
 #define OUR_PID 0x4b8f
 
+int offline = 0;
 HANDLE UsbHandle;
 
 static void ShowError(void)
@@ -326,30 +327,35 @@ static void LoadFlashFromSRecords(char *file, int addr)
 int main(int argc, char **argv)
 {
 	int i = 0;
-
+	
 	if(argc < 2) {
 		printf("Usage: %s bootrom file.s19\n", argv[0]);
 		printf("       %s load osimage.s19\n", argv[0]);
 		printf("       %s fpga fpgaimg.s19\n", argv[0]);
 		printf("       %s gui\n", argv[0]);
+		printf("       %s offline\n", argv[0]);
 		return -1;
 	}
-
-	for(;;) {
-		if(UsbConnect()) {
-			break;
+	
+	// Only do this if NOT in offline mode
+	if (strcmp(argv[1], "offline"))
+	{
+		for(;;) {
+			if(UsbConnect()) {
+				break;
+			}
+			if(i == 0) {
+				printf("...no device connected, polling for it now\n");
+			}
+			if(i > 50000) {
+				printf("Could not connect to USB device; exiting.\n");
+				return -1;
+			}
+			i++;
+			Sleep(5);
 		}
-		if(i == 0) {
-			printf("...no device connected, polling for it now\n");
-		}
-		if(i > 50000) {
-			printf("Could not connect to USB device; exiting.\n");
-			return -1;
-		}
-		i++;
-		Sleep(5);
 	}
-
+	
 	if(strcmp(argv[1], "bootrom")==0 || strcmp(argv[1], "load")==0 || strcmp(argv[1], "fpga")==0) {
 		if(argc != 3) {
 			printf("Need filename.\n");
@@ -363,6 +369,9 @@ int main(int argc, char **argv)
 			LoadFlashFromSRecords(argv[2], 0x10000);
 		}
 	} else if(strcmp(argv[1], "gui")==0) {
+		ShowGui();
+	} else if(strcmp(argv[1], "offline")==0) {
+		offline = 1;
 		ShowGui();
 	} else if(strcmp(argv[1], "cmd")==0) {
 		if(argc != 3) {

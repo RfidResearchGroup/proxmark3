@@ -33,7 +33,6 @@ void dbp(char *str, ...)
 
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 int GraphTraceLen;
-int offline; // Whether the GUI operates in Offline mode.
 
 HPEN GreyPen, GreenPen, WhitePen, YellowPen;
 HBRUSH GreenBrush, YellowBrush;
@@ -384,7 +383,7 @@ static void SetCommandEditTo(char *str)
 	SendMessage(CommandEdit, EM_SETSEL, strlen(str), strlen(str));
 }
 
-void ShowGui(void)
+void ShowGui()
 {
 	WNDCLASSEX wc;
 	memset(&wc, 0, sizeof(wc));
@@ -505,9 +504,11 @@ void ShowGui(void)
 			}
 		}
 
-		UsbCommand c;
-		if(ReceiveCommandPoll(&c)) {
-			UsbCommandReceived(&c);
+		if (!offline)
+		{
+			UsbCommand c;
+			if(ReceiveCommandPoll(&c))
+				UsbCommandReceived(&c);
 		}
 
 		Sleep(10);
