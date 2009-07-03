@@ -1,4 +1,4 @@
-LDFLAGS = -lusb -lreadline -lpthread -L/opt/local/lib
+LDFLAGS = -ltermcap -lusb -lreadline -lpthread -L/opt/local/lib
 CFLAGS = -I. -I/opt/local/include -Wall
 
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall
