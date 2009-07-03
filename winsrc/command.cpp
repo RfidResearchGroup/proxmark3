@@ -52,6 +52,13 @@ static void CmdReset(char *str)
 	SendCommand(&c, FALSE);
 }
 
+static void CmdBuffClear(char *str)
+{
+	UsbCommand c;
+	c.cmd = CMD_BUFF_CLEAR;
+	SendCommand(&c, FALSE);
+	CmdClearGraph(TRUE);
+}
 
 static void CmdQuit(char *str)
 {
@@ -2396,6 +2403,7 @@ static struct {
 	"autocorr",			CmdAutoCorr,1,		"<window length> -- Autocorrelation over window",
 	"bitsamples",		CmdBitsamples,0,	"    Get raw samples as bitstring",
 	"bitstream",		Cmdbitstream,1,		"[clock rate] -- Convert waveform into a bitstream",
+	"buffclear",		CmdBuffClear,0,		"    Clear sample buffer and graph window",
 	"dec",				CmdDec,1,		"    Decimate samples",
 	"detectclock",		Cmddetectclockrate,1, "    Detect clock rate",
 	"em410xsim",		CmdEM410xsim,1,		"<UID> -- Simulate EM410x tag",

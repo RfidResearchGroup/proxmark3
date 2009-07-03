@@ -27,6 +27,13 @@ BYTE ToSend[256];
 int ToSendMax;
 static int ToSendBit;
 
+
+void BufferClear(void)
+{
+	memset(BigBuf,0,sizeof(BigBuf));
+	DbpString("Buffer cleared");
+}
+
 void ToSendReset(void)
 {
 	ToSendMax = -1;
@@ -602,6 +609,10 @@ void UsbPacketReceived(BYTE *packet, int len)
 
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693:
 			AcquireRawAdcSamplesIso15693();
+			break;
+
+		case CMD_BUFF_CLEAR:
+			BufferClear();
 			break;
 
 		case CMD_READER_ISO_15693:

@@ -22,6 +22,7 @@ extern int CommandFinished;
 extern int offline;
 
 // command.cpp
+static void CmdBuffClear(char *str);
 static void GetFromBigBuf(BYTE *dest, int bytes);
 static void CmdReset(char *str);
 static void CmdQuit(char *str);
