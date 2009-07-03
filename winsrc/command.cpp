@@ -2065,7 +2065,7 @@ static void Cmdmanchestermod(char *str)
  *               Typical values can be 64, 32, 128...
  */
 static void Cmdmanchesterdemod(char *str) {
-	int i, j;
+	int i, j, invert= 0;
 	int bit;
 	int clock;
 	int lastval;
@@ -2076,6 +2076,16 @@ static void Cmdmanchesterdemod(char *str) {
 	int bitidx = 0;
 	int bit2idx = 0;
 	int warnings = 0;
+
+	/* check if we're inverting output */
+ 	if(*str == 'i')
+	{
+		PrintToScrollback("Inverting output");
+		invert= 1;
+		do
+			++str;
+		while(*str == ' '); // in case a 2nd argument was given
+	}
 
 	/* Holds the decoded bitstream: each clock period contains 2 bits       */
 	/* later simplified to 1 bit after manchester decoding.                 */
@@ -2147,7 +2157,7 @@ static void Cmdmanchesterdemod(char *str) {
 			if (!hithigh || !hitlow)
 				bit ^= 1;
 
-			BitStream[bit2idx++] = bit;
+			BitStream[bit2idx++] = bit ^ invert;
 		}
 	}
 
@@ -2155,7 +2165,7 @@ static void Cmdmanchesterdemod(char *str) {
 	else
 	{
 
-	/* Then detect duration between 2 successive transitions */
+		/* Then detect duration between 2 successive transitions */
 		for (bitidx = 1; i < GraphTraceLen; i++)
 		{
 			if (GraphBuffer[i-1] != GraphBuffer[i])
@@ -2190,18 +2200,18 @@ static void Cmdmanchesterdemod(char *str) {
 						PrintToScrollback("Error: too many detection errors, aborting.");
 						return;
 					}
+				}
 			}
 		}
-	}
 
-	// At this stage, we now have a bitstream of "01" ("1") or "10" ("0"), parse it into final decoded bitstream
-	// Actually, we overwrite BitStream with the new decoded bitstream, we just need to be careful
-	// to stop output at the final bitidx2 value, not bitidx
-	for (i = 0; i < bitidx; i += 2) {
-		if ((BitStream[i] == 0) && (BitStream[i+1] == 1)) {
-			BitStream[bit2idx++] = 1;
+		// At this stage, we now have a bitstream of "01" ("1") or "10" ("0"), parse it into final decoded bitstream
+		// Actually, we overwrite BitStream with the new decoded bitstream, we just need to be careful
+		// to stop output at the final bitidx2 value, not bitidx
+		for (i = 0; i < bitidx; i += 2) {
+			if ((BitStream[i] == 0) && (BitStream[i+1] == 1)) {
+				BitStream[bit2idx++] = 1 ^ invert;
 		} else if ((BitStream[i] == 1) && (BitStream[i+1] == 0)) {
-			BitStream[bit2idx++] = 0;
+			BitStream[bit2idx++] = 0 ^ invert;
 		} else {
 			// We cannot end up in this state, this means we are unsynchronized,
 			// move up 1 bit:
@@ -2215,8 +2225,8 @@ static void Cmdmanchesterdemod(char *str) {
 					PrintToScrollback("Error: too many decode errors, aborting.");
 					return;
 				}
-		}
-	}
+			}
+		}	
 	}
 
 	PrintToScrollback("Manchester decoded bitstream");
@@ -2444,7 +2454,7 @@ static struct {
 	"losamples",		CmdLosamples,0,		"[128 - 16000] -- Get raw samples for LF tag",
 	"losim",			CmdLosim,0,		"    Simulate LF tag",
 	"ltrim",			CmdLtrim,1,		"<samples> -- Trim samples from left of trace",
-	"mandemod",			Cmdmanchesterdemod,1,	"[clock rate] -- Try a Manchester demodulation on a binary stream",
+	"mandemod",			Cmdmanchesterdemod,1,	"[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)",
 	"manmod",			Cmdmanchestermod,1,	"[clock rate] -- Manchester modulate a binary stream",
 	"norm",				CmdNorm,1,		"    Normalize max/min to +/-500",
 	"plot",				CmdPlot,1,		"    Show graph window",
