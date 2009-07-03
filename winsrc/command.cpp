@@ -262,6 +262,7 @@ static void CmdEM410xread(char *str)
 	int i, j, clock, header, rows, bit, hithigh, hitlow, first, bit2idx, high, low;
 	int parity[4];
 	char id[11];
+	int retested = 0;
 	int BitStream[MAX_GRAPH_TRACE_LEN];
 	high = low = 0;
 
@@ -307,14 +308,15 @@ static void CmdEM410xread(char *str)
 			if (hithigh && hitlow)
 				break;
 		}
-
+		
 		/* If we didn't hit both high and low peaks, we had a bit transition */
 		if (!hithigh || !hitlow)
 			bit ^= 1;
-
+		
 		BitStream[bit2idx++] = bit;
 	}
-
+	
+retest:
 	/* We go till 5 before the graph ends because we'll get that far below */
 	for (i = 1; i < bit2idx - 5; i++)
 	{
@@ -363,7 +365,7 @@ static void CmdEM410xread(char *str)
 
 				/* Stop any loops */
 				go = 0;
-				break;
+				return;
 			}
 
 			/* Crap! Incorrect parity or no stop bit, start all over */
@@ -388,6 +390,16 @@ static void CmdEM410xread(char *str)
 				header = 0;
 		}
 	}
+	
+	/* if we've already retested after flipping bits, return */
+	if (retested++)
+		return;
+
+	/* if this didn't work, try flipping bits */
+	for (i = 0; i < bit2idx; i++)
+		BitStream[i] ^= 1;
+
+	goto retest;
 }
 
 /* emulate an EM410X tag
