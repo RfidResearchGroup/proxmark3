@@ -48,6 +48,7 @@ typedef struct {
 #define CMD_HID_SIM_TAG								0x0209	// ## New command: simulate HID tag by ID
 #define CMD_SET_LF_DIVISOR							0x020A
 #define CMD_SWEEP_LF								0x020B
+#define CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K			0x020C
 
 // For the 13.56 MHz tags
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693		0x0300

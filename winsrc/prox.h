@@ -51,6 +51,7 @@ int CmdClearGraph(int redraw);
 static void CmdAppendGraph(int redraw, int clock, int bit);
 static void CmdEM410xsim(char *str);
 static void CmdLosim(char *str);
+static void CmdLoCommandRead(char *str);
 static void CmdLoread(char *str);
 static void CmdLosamples(char *str);
 static void CmdBitsamples(char *str);

@@ -91,12 +91,6 @@ void DbpIntegers(int x1, int x2, int x3)
 
 void AcquireRawAdcSamples125k(BOOL at134khz)
 {
-	BYTE *dest = (BYTE *)BigBuf;
-	int n = sizeof(BigBuf);
-	int i;
-
-	memset(dest,0,n);
-
 	if(at134khz) {
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_134_KHZ);
@@ -114,6 +108,18 @@ void AcquireRawAdcSamples125k(BOOL at134khz)
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
 	FpgaSetupSsc();
 
+	// Now call the acquisition routine
+	DoAcquisition125k(at134khz);
+}
+
+// split into two routines so we can avoid timing issues after sending commands //
+void DoAcquisition125k(BOOL at134khz)
+{
+	BYTE *dest = (BYTE *)BigBuf;
+	int n = sizeof(BigBuf);
+	int i;
+
+	memset(dest,0,n);
 	i = 0;
 	for(;;) {
 		if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
@@ -130,6 +136,64 @@ void AcquireRawAdcSamples125k(BOOL at134khz)
 		}
 	}
 	DbpIntegers(dest[0], dest[1], at134khz);
+}
+
+void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYTE *command)
+{
+	BOOL at134khz;
+
+	// see if 'h' was specified
+	if(command[strlen(command) - 1] == 'h')
+		at134khz= TRUE;
+	else
+		at134khz= FALSE;
+	
+	if(at134khz) {
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_134_KHZ);
+	} else {
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_125_KHZ);
+	}
+
+	// Give it a bit of time for the resonant antenna to settle.
+	SpinDelay(50);
+
+	// Now set up the SSC to get the ADC samples that are now streaming at us.
+	FpgaSetupSsc();
+
+	// now modulate the reader field
+	while(*command != '\0' && *command != ' ')
+		{
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+		LED_D_OFF();
+		SpinDelayUs(delay_off);
+		if(at134khz) {
+			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
+			FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_134_KHZ);
+		} else {
+			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+			FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_125_KHZ);
+		}
+		LED_D_ON();
+		if(*(command++) == '0')
+			SpinDelayUs(period_0);
+		else
+			SpinDelayUs(period_1);
+		}
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LED_D_OFF();
+	SpinDelayUs(delay_off);
+	if(at134khz) {
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_134_KHZ);
+	} else {
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_125_KHZ);
+	}
+
+	// now do the read
+	DoAcquisition125k(at134khz);
 }
 
 //-----------------------------------------------------------------------------
@@ -607,6 +671,10 @@ void UsbPacketReceived(BYTE *packet, int len)
 			AcquireRawAdcSamples125k(c->ext1);
 			break;
 
+		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
+			ModThenAcquireRawAdcSamples125k(c->ext1,c->ext2,c->ext3,c->d.asBytes);
+			break;
+
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693:
 			AcquireRawAdcSamplesIso15693();
 			break;
@@ -789,6 +857,28 @@ void AppMain(void)
 
 	for(;;) {
 		UsbPoll(FALSE);
+		WDT_HIT();
+	}
+}
+
+void SpinDelayUs(int us)
+{
+	int ticks = (48*us) >> 10;
+
+	// Borrow a PWM unit for my real-time clock
+	PWM_ENABLE = PWM_CHANNEL(0);
+	// 48 MHz / 1024 gives 46.875 kHz
+	PWM_CH_MODE(0) = PWM_CH_MODE_PRESCALER(10);
+	PWM_CH_DUTY_CYCLE(0) = 0;
+	PWM_CH_PERIOD(0) = 0xffff;
+
+	WORD start = (WORD)PWM_CH_COUNTER(0);
+
+	for(;;) {
+		WORD now = (WORD)PWM_CH_COUNTER(0);
+		if(now == (WORD)(start + ticks)) {
+			return;
+		}
 		WDT_HIT();
 	}
 }

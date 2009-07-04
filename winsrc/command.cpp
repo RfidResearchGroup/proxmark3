@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <math.h>
+#include <unistd.h>
 
 #include "prox.h"
 #include "../common/iso14443_crc.c"
@@ -532,6 +533,21 @@ static void CmdLoread(char *str)
 		return;
 	}
 	c.cmd = CMD_ACQUIRE_RAW_ADC_SAMPLES_125K;
+	SendCommand(&c, FALSE);
+}
+
+/* send a command before reading */
+static void CmdLoCommandRead(char *str)
+{
+	static char dummy[3];
+
+	dummy[0]= ' ';
+	
+	UsbCommand c;
+	c.cmd = CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K;
+	sscanf(str, "%i %i %i %s %s", &c.ext1, &c.ext2, &c.ext3, &c.d.asBytes,&dummy+1);
+	// in case they specified 'h'
+	strcpy(&c.d.asBytes + strlen(c.d.asBytes),dummy);
 	SendCommand(&c, FALSE);
 }
 
@@ -2065,7 +2081,7 @@ static void Cmdmanchestermod(char *str)
  *               Typical values can be 64, 32, 128...
  */
 static void Cmdmanchesterdemod(char *str) {
-	int i, j, invert= 0;
+	int i, j;
 	int bit;
 	int clock;
 	int lastval;
@@ -2076,16 +2092,6 @@ static void Cmdmanchesterdemod(char *str) {
 	int bitidx = 0;
 	int bit2idx = 0;
 	int warnings = 0;
-
-	/* check if we're inverting output */
- 	if(*str == 'i')
-	{
-		PrintToScrollback("Inverting output");
-		invert= 1;
-		do
-			++str;
-		while(*str == ' '); // in case a 2nd argument was given
-	}
 
 	/* Holds the decoded bitstream: each clock period contains 2 bits       */
 	/* later simplified to 1 bit after manchester decoding.                 */
@@ -2157,7 +2163,7 @@ static void Cmdmanchesterdemod(char *str) {
 			if (!hithigh || !hitlow)
 				bit ^= 1;
 
-			BitStream[bit2idx++] = bit ^ invert;
+			BitStream[bit2idx++] = bit;
 		}
 	}
 
@@ -2165,7 +2171,7 @@ static void Cmdmanchesterdemod(char *str) {
 	else
 	{
 
-		/* Then detect duration between 2 successive transitions */
+	/* Then detect duration between 2 successive transitions */
 		for (bitidx = 1; i < GraphTraceLen; i++)
 		{
 			if (GraphBuffer[i-1] != GraphBuffer[i])
@@ -2200,18 +2206,18 @@ static void Cmdmanchesterdemod(char *str) {
 						PrintToScrollback("Error: too many detection errors, aborting.");
 						return;
 					}
-				}
 			}
 		}
+	}
 
-		// At this stage, we now have a bitstream of "01" ("1") or "10" ("0"), parse it into final decoded bitstream
-		// Actually, we overwrite BitStream with the new decoded bitstream, we just need to be careful
-		// to stop output at the final bitidx2 value, not bitidx
-		for (i = 0; i < bitidx; i += 2) {
-			if ((BitStream[i] == 0) && (BitStream[i+1] == 1)) {
-				BitStream[bit2idx++] = 1 ^ invert;
+	// At this stage, we now have a bitstream of "01" ("1") or "10" ("0"), parse it into final decoded bitstream
+	// Actually, we overwrite BitStream with the new decoded bitstream, we just need to be careful
+	// to stop output at the final bitidx2 value, not bitidx
+	for (i = 0; i < bitidx; i += 2) {
+		if ((BitStream[i] == 0) && (BitStream[i+1] == 1)) {
+			BitStream[bit2idx++] = 1;
 		} else if ((BitStream[i] == 1) && (BitStream[i+1] == 0)) {
-			BitStream[bit2idx++] = 0 ^ invert;
+			BitStream[bit2idx++] = 0;
 		} else {
 			// We cannot end up in this state, this means we are unsynchronized,
 			// move up 1 bit:
@@ -2225,8 +2231,8 @@ static void Cmdmanchesterdemod(char *str) {
 					PrintToScrollback("Error: too many decode errors, aborting.");
 					return;
 				}
-			}
-		}	
+		}
+	}
 	}
 
 	PrintToScrollback("Manchester decoded bitstream");
@@ -2450,11 +2456,12 @@ static struct {
 	"lcd",				CmdLcd,0,			"<HEX command> <count> -- Send command/data to LCD",
 	"lcdreset",			CmdLcdReset,0,		"    Hardware reset LCD",
 	"load",				CmdLoad,1,		"<filename> -- Load trace (to graph window",
+	"locomread",			CmdLoCommandRead,0,		"<off period> <'0' period> <'1' period> <command> ['h'] -- Modulate LF reader field to send command before read (all periods in microseconds) (option 'h' for 134)",
 	"loread",			CmdLoread,0,		"['h'] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134)",
 	"losamples",		CmdLosamples,0,		"[128 - 16000] -- Get raw samples for LF tag",
 	"losim",			CmdLosim,0,		"    Simulate LF tag",
 	"ltrim",			CmdLtrim,1,		"<samples> -- Trim samples from left of trace",
-	"mandemod",			Cmdmanchesterdemod,1,	"[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)",
+	"mandemod",			Cmdmanchesterdemod,1,	"[clock rate] -- Try a Manchester demodulation on a binary stream",
 	"manmod",			Cmdmanchestermod,1,	"[clock rate] -- Manchester modulate a binary stream",
 	"norm",				CmdNorm,1,		"    Normalize max/min to +/-500",
 	"plot",				CmdPlot,1,		"    Show graph window",
