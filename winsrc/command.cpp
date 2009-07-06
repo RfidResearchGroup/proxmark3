@@ -256,6 +256,148 @@ static void CmdEM410xwatch(char *str)
 	} while (go);
 }
 
+/* Read the transmitted data of an EM4x50 tag
+ * Format:
+ *
+ *  XXXXXXXX [row parity bit (even)] <- 8 bits plus parity
+ *  XXXXXXXX [row parity bit (even)] <- 8 bits plus parity
+ *  XXXXXXXX [row parity bit (even)] <- 8 bits plus parity
+ *  XXXXXXXX [row parity bit (even)] <- 8 bits plus parity
+ *  CCCCCCCC                         <- column parity bits
+ *  0                                <- stop bit
+ *  LW                               <- Listen Window
+ *
+ * This pattern repeats for every block of data being transmitted.
+ * Transmission starts with two Listen Windows (LW - a modulated
+ * pattern of 320 cycles each (32/32/128/64/64)).
+ *
+ * Note that this data may or may not be the UID. It is whatever data
+ * is stored in the blocks defined in the control word First and Last 
+ * Word Read values. UID is stored in block 32.
+ */ 
+static void CmdEM4x50read(char *str)
+{
+	int i, j, startblock, clock, skip, block, start, end, low, high;
+	BOOL complete= FALSE;
+	int tmpbuff[MAX_GRAPH_TRACE_LEN / 64];
+	char tmp[6];
+
+	high= low= 0;
+	clock= 64;
+
+	/* first get high and low values */
+	for (i = 0; i < GraphTraceLen; i++)
+	{
+		if (GraphBuffer[i] > high)	
+			high = GraphBuffer[i];
+		else if (GraphBuffer[i] < low)
+			low = GraphBuffer[i];
+	}
+
+	/* populate a buffer with pulse lengths */
+	i= 0;
+	j= 0;
+	while(i < GraphTraceLen)
+		{
+		// measure from low to low
+		while(GraphBuffer[i] > low)
+			++i;
+		start= i;
+		while(GraphBuffer[i] < high)
+			++i;
+		while(GraphBuffer[i] > low)
+			++i;
+		tmpbuff[j++]= i - start;
+		}
+
+	
+	/* look for data start - should be 2 pairs of LW (pulses of 192,128) */
+	start= -1;
+	skip= 0;
+	for (i= 0; i < j - 4 ; ++i)
+		{
+		skip += tmpbuff[i];
+		if (tmpbuff[i] >= 190 && tmpbuff[i] <= 194)
+			if (tmpbuff[i+1] >= 126 && tmpbuff[i+1] <= 130)
+				if (tmpbuff[i+2] >= 190 && tmpbuff[i+2] <= 194)
+					if (tmpbuff[i+3] >= 126 && tmpbuff[i+3] <= 130)
+						{
+						start= i + 3;
+						break;
+						}
+		}
+	startblock= i + 3;
+
+	/* skip over the remainder of the LW */
+	skip += tmpbuff[i+1]+tmpbuff[i+2];
+	while(GraphBuffer[skip] > low)
+		++skip;
+	skip += 8;
+
+	/* now do it again to find the end */
+	end= start;
+	for (i += 3; i < j - 4 ; ++i)
+		{
+		end += tmpbuff[i];
+		if (tmpbuff[i] >= 190 && tmpbuff[i] <= 194)
+			if (tmpbuff[i+1] >= 126 && tmpbuff[i+1] <= 130)
+				if (tmpbuff[i+2] >= 190 && tmpbuff[i+2] <= 194)
+					if (tmpbuff[i+3] >= 126 && tmpbuff[i+3] <= 130)
+						{
+						complete= TRUE;
+						break;
+						}
+		}
+
+	if (start >= 0)
+		PrintToScrollback("Found data at sample: %i",skip);
+	else
+		{
+		PrintToScrollback("No data found!");
+		PrintToScrollback("Try again with more samples.");
+		return;
+		}
+
+	if (!complete)
+		{
+		PrintToScrollback("*** Warning!");
+		PrintToScrollback("Partial data - no end found!");
+		PrintToScrollback("Try again with more samples.");
+		}
+
+	/* get rid of leading crap */
+	sprintf(tmp,"%i",skip);
+	CmdLtrim(tmp);
+
+	/* now work through remaining buffer printing out data blocks */
+	block= 0;
+	i= startblock;
+	while(block < 6)
+		{
+		PrintToScrollback("Block %i:", block);
+		// mandemod routine needs to be split so we can call it for data
+		// just print for now for debugging
+		Cmdmanchesterdemod("i 64");
+		skip= 0;
+		/* look for LW before start of next block */
+		for ( ; i < j - 4 ; ++i)
+			{
+			skip += tmpbuff[i];
+			if (tmpbuff[i] >= 190 && tmpbuff[i] <= 194)
+				if (tmpbuff[i+1] >= 126 && tmpbuff[i+1] <= 130)
+					break;
+			}
+		while(GraphBuffer[skip] > low)
+			++skip;
+		skip += 8;
+		sprintf(tmp,"%i",skip);
+		CmdLtrim(tmp);
+		start += skip;
+		block++;
+		}
+}
+
+
 /* Read the ID of an EM410x tag.
  * Format:
  *   1111 1111 1           <-- standard non-repeatable header
@@ -2434,6 +2576,7 @@ static struct {
 	"em410xsim",		CmdEM410xsim,1,		"<UID> -- Simulate EM410x tag",
 	"em410xread",		CmdEM410xread,1,	"[clock rate] -- Extract ID from EM410x tag",
 	"em410xwatch",		CmdEM410xwatch,0,	"    Watches for EM410x tags",
+	"em4x50read",		CmdEM4x50read,1,	"    Extract data from EM4x50 tag",
 	"exit",				CmdQuit,1,			"    Exit program",
 	"flexdemod",		CmdFlexdemod,1,		"    Demodulate samples for FlexPass",
 	"fpgaoff",			CmdFPGAOff,0,		"    Set FPGA off",							// ## FPGA Control
