@@ -2465,6 +2465,7 @@ static struct {
 	"lcd",				CmdLcd,0,			"<HEX command> <count> -- Send command/data to LCD",
 	"lcdreset",			CmdLcdReset,0,		"    Hardware reset LCD",
 	"load",				CmdLoad,1,		"<filename> -- Load trace (to graph window",
+	"locomread",			CmdLoCommandRead,0,		"<off period> <'0' period> <'1' period> <command> ['h'] -- Modulate LF reader field to send command before read (all periods in microseconds) (option 'h' for 134)",
 	"loread",			CmdLoread,0,		"['h'] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134)",
 	"losamples",		CmdLosamples,0,		"[128 - 16000] -- Get raw samples for LF tag",
 	"losim",			CmdLosim,0,		"    Simulate LF tag",
