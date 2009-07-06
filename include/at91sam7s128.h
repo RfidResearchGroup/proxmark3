@@ -381,6 +381,8 @@
 #define ADC_END_OF_RX_BUFFER						(1<<18)
 #define ADC_RX_BUFFER_FULL							(1<<19)
 
+#define ADC_CHAN_LF							4
+#define ADC_CHAN_HF							5
 //-------------
 // Synchronous Serial Controller
 

@@ -249,7 +249,7 @@ void SweepLFrange()
 	for (i=255; i>19; i--) {
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
 		SpinDelay(20);
-		dest[i] = (137500 * AvgAdc(4)) >> 18;
+		dest[i] = (137500 * AvgAdc(ADC_CHAN_LF)) >> 18;
 	}
 }
 
@@ -267,7 +267,7 @@ void MeasureAntennaTuning(void)
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_125_KHZ);
 	SpinDelay(20);
-	vLf125 = AvgAdc(4);
+	vLf125 = AvgAdc(ADC_CHAN_LF);
 	// Vref = 3.3V, and a 10000:240 voltage divider on the input
 	// can measure voltages up to 137500 mV
 	vLf125 = (137500 * vLf125) >> 10;
@@ -276,7 +276,7 @@ void MeasureAntennaTuning(void)
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_134_KHZ);
 	SpinDelay(20);
-	vLf134 = AvgAdc(4);
+	vLf134 = AvgAdc(ADC_CHAN_LF);
 	// Vref = 3.3V, and a 10000:240 voltage divider on the input
 	// can measure voltages up to 137500 mV
 	vLf134 = (137500 * vLf134) >> 10;
@@ -284,7 +284,7 @@ void MeasureAntennaTuning(void)
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 	SpinDelay(20);
-	vHf = AvgAdc(5);
+	vHf = AvgAdc(ADC_CHAN_HF);
 	// Vref = 3300mV, and an 10:1 voltage divider on the input
 	// can measure voltages up to 33000 mV
 	vHf = (33000 * vHf) >> 10;
