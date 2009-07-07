@@ -7,6 +7,7 @@
 
 
 #include <proxmark3.h>
+#include <stdlib.h>
 #include "apps.h"
 #ifdef WITH_LCD
 #include "fonts.h"
@@ -727,6 +728,10 @@ void UsbPacketReceived(BYTE *packet, int len)
 			MeasureAntennaTuning();
 			break;
 
+		case CMD_LISTEN_READER_FIELD:
+			ListenReaderField(c->ext1);
+			break;
+
 		case CMD_HID_DEMOD_FSK:
 			CmdHIDdemodFSK();				// Demodulate HID tag
 			break;
@@ -903,4 +908,86 @@ void SpinDelay(int ms)
 		}
 		WDT_HIT();
 	}
+}
+
+// listen for external reader 
+void ListenReaderField(int limit)
+{
+	int lf_av, lf_av_new, lf_baseline= -1, lf_count= 0;
+	int hf_av, hf_av_new,  hf_baseline= -1, hf_count= 0;
+
+#define LF_ONLY		1
+#define HF_ONLY		2
+
+	LED_A_OFF();
+	LED_B_OFF();
+	LED_C_OFF();
+	LED_D_OFF();
+
+	lf_av= ReadAdc(ADC_CHAN_LF);
+
+	if(limit != HF_ONLY && lf_baseline ==  -1) 
+		{
+		DbpString("LF 125/134 Baseline:");
+		DbpIntegers(lf_av,0,0);
+		lf_baseline= lf_av;
+		}
+
+	hf_av= ReadAdc(ADC_CHAN_HF);
+
+
+	if (limit != LF_ONLY && hf_baseline == -1) 
+		{
+		DbpString("HF 13.56 Baseline:");
+		DbpIntegers(hf_av,0,0);
+		hf_baseline= hf_av;
+		}
+
+	for(;;) 
+		{
+		if(BUTTON_PRESS()) 
+			{
+			LED_B_OFF();
+			LED_D_OFF();
+			return;
+			}
+		WDT_HIT();
+
+
+		if (limit != HF_ONLY) 
+			{
+			if (abs(lf_av - lf_baseline) > 10)
+				LED_D_ON();
+			else
+				LED_D_OFF();
+			++lf_count;
+			lf_av_new= ReadAdc(ADC_CHAN_LF);
+			// see if there's a significant change
+			if(abs(lf_av - lf_av_new) > 10) 
+				{
+				DbpString("LF 125/134 Field Change:");
+				DbpIntegers(lf_av,lf_av_new,lf_count);
+				lf_av= lf_av_new;
+				lf_count= 0;
+				}
+			}
+
+		if (limit != LF_ONLY) 
+			{
+			if (abs(hf_av - hf_baseline) > 10)
+				LED_B_ON();
+			else
+				LED_B_OFF();
+			++hf_count;
+			hf_av_new= ReadAdc(ADC_CHAN_HF);
+			// see if there's a significant change
+			if(abs(hf_av - hf_av_new) > 10) 
+				{
+				DbpString("HF 13.56 Field Change:");
+				DbpIntegers(hf_av,hf_av_new,hf_count);
+				hf_av= hf_av_new;
+				hf_count= 0;
+				}
+			}
+		}
 }

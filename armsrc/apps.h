@@ -15,6 +15,7 @@ void SpinDelay(int ms);
 void SpinDelayUs(int us);
 void ToSendStuffBit(int b);
 void ToSendReset(void);
+void ListenReaderField(int limit);
 void AcquireRawAdcSamples125k(BOOL at134khz);
 void DoAcquisition125k(BOOL at134khz);
 extern int ToSendMax;

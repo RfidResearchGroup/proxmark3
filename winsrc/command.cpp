@@ -677,6 +677,22 @@ static void CmdLoread(char *str)
 	SendCommand(&c, FALSE);
 }
 
+static void CmdDetectReader(char *str)
+{
+	UsbCommand c;
+	// 'l' means LF - 125/134 kHz
+	if(*str == 'l') {
+		c.ext1 = 1;
+	} else if (*str == 'h') {
+		c.ext1 = 2;
+	} else if (*str != '\0') {
+		PrintToScrollback("use 'detectreader' or 'detectreader l' or 'detectreader h'");
+		return;
+	}
+	c.cmd = CMD_LISTEN_READER_FIELD;
+	 SendCommand(&c, FALSE);
+}
+
 /* send a command before reading */
 static void CmdLoCommandRead(char *str)
 {
@@ -2573,6 +2589,7 @@ static struct {
 	"buffclear",		CmdBuffClear,0,		"    Clear sample buffer and graph window",
 	"dec",				CmdDec,1,		"    Decimate samples",
 	"detectclock",		Cmddetectclockrate,1, "    Detect clock rate",
+	"detectreader",		CmdDetectReader,0, "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)",
 	"em410xsim",		CmdEM410xsim,1,		"<UID> -- Simulate EM410x tag",
 	"em410xread",		CmdEM410xread,1,	"[clock rate] -- Extract ID from EM410x tag",
 	"em410xwatch",		CmdEM410xwatch,0,	"    Watches for EM410x tags",
