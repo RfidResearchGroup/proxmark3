@@ -248,9 +248,9 @@ static void PaintGraph(HDC hdc)
 	}
 
 	char str[100];
-	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f] zoom=%.3f",
+	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f] zoom=%.3f CursorA=%d CursorB=%d",
 		GraphStart, yMax, yMin, yMean, n, GraphTraceLen,
-		CursorBPos - CursorAPos, (CursorBPos - CursorAPos)/CursorScaleFactor, GraphPixelsPerPoint);
+		CursorBPos - CursorAPos, (CursorBPos - CursorAPos)/CursorScaleFactor, GraphPixelsPerPoint, CursorAPos, CursorBPos);
 	TextOut(hdc, 50, r.bottom - 20, str, strlen(str));
 }
 
