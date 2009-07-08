@@ -241,7 +241,9 @@ static int AvgAdc(int ch)
 void SweepLFrange()
 {
 	BYTE *dest = (BYTE *)BigBuf;
-	int i;
+	BYTE dummy[12];
+	int i, peak= 0, ptr= 0;
+	double freq;
 
 	// clear buffer
 	memset(BigBuf,0,sizeof(BigBuf));
@@ -251,7 +253,28 @@ void SweepLFrange()
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
 		SpinDelay(20);
 		dest[i] = (137500 * AvgAdc(ADC_CHAN_LF)) >> 18;
+		if(dest[i] > peak) {
+			peak= dest[i];
+			ptr= i;
+			}
 	}
+	dummy[11]= '\0';
+	dummy[10]= 'z';
+	dummy[9]= 'H';
+	dummy[8]= 'k';
+	dummy[7]= ' ';
+	freq= 12000000/(ptr + 1);
+	for(i= 6; i > 3 ; --i) {
+		dummy[i]= '0' + ((int) freq) % 10;
+		freq /= 10;
+		}
+	dummy[3]= '.';
+	for(i= 2; i >= 0 ; --i) {
+		dummy[i]= '0' + ((int) freq) % 10;
+		freq /= 10;
+		}
+	DbpString("Antenna resonates at:");
+	DbpString(dummy);
 }
 
 void MeasureAntennaTuning(void)
