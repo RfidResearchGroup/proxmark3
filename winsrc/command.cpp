@@ -639,7 +639,6 @@ static void ChkBitstream(char *str)
 static void CmdLosim(char *str)
 {
 	int i;
-	char *zero = "0";
 
 	/* convert to bitstream if necessary */
 	ChkBitstream(str);
@@ -704,7 +703,7 @@ static void CmdLoCommandRead(char *str)
 	c.cmd = CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K;
 	sscanf(str, "%i %i %i %s %s", &c.ext1, &c.ext2, &c.ext3, &c.d.asBytes,&dummy+1);
 	// in case they specified 'h'
-	strcpy(&c.d.asBytes + strlen(c.d.asBytes),dummy);
+	strcpy((char *)&c.d.asBytes + strlen((char *)c.d.asBytes), dummy);
 	SendCommand(&c, FALSE);
 }
 
@@ -2027,8 +2026,7 @@ static void CmdFlexdemod(char *str)
 
 static void Cmdaskdemod(char *str) {
 	int i;
-	int n = 0;
-	int c,high,low = 0;
+	int c, high = 0, low = 0;
 
 	// TODO: complain if we do not give 2 arguments here !
 	sscanf(str, "%i", &c);
