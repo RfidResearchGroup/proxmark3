@@ -339,6 +339,7 @@ void SimulateTagLowFrequency(int period)
 	for(;;) {
 		while(!(PIO_PIN_DATA_STATUS & (1<<GPIO_SSC_CLK))) {
 			if(BUTTON_PRESS()) {
+				DbpString("Stopped");
 				return;
 			}
 			WDT_HIT();
@@ -354,6 +355,7 @@ void SimulateTagLowFrequency(int period)
 
 		while(PIO_PIN_DATA_STATUS & (1<<GPIO_SSC_CLK)) {
 			if(BUTTON_PRESS()) {
+				DbpString("Stopped");
 				return;
 			}
 			WDT_HIT();
@@ -487,6 +489,7 @@ static void CmdHIDdemodFSK(void)
 		WDT_HIT();
 		LED_A_ON();
 		if(BUTTON_PRESS()) {
+			DbpString("Stopped");
 			LED_A_OFF();
 			return;
 		}
@@ -970,6 +973,7 @@ void ListenReaderField(int limit)
 		{
 		if(BUTTON_PRESS()) 
 			{
+			DbpString("Stopped");
 			LED_B_OFF();
 			LED_D_OFF();
 			return;
