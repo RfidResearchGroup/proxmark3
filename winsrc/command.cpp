@@ -2647,6 +2647,14 @@ static struct {
 	{"zerocrossings",	CmdZerocrossings,1,	"    Count time between zero-crossings"},
 };
 
+static struct {
+	char *name;
+	char *args;
+	char *argshelp;
+	char *description;
+	} 	CommandExtendedHelp[]= {
+		{"detectreader","'l'|'h'","'l' specifies LF antenna scan only, 'h' specifies HF antenna scan only.","Monitor antenna for changes in voltage. Output is in three fields: CHANGED, CURRENT, PERIOD,\nwhere CHANGED is the value just changed from, CURRENT is the current value and PERIOD is the\nnumber of program loops since the last change.\n\nThe RED LED indicates LF field detected, and the GREEN LED indicates HF field detected.\n"},
+		};
 
 //-----------------------------------------------------------------------------
 // Entry point into our code: called whenever the user types a command and
@@ -2655,15 +2663,29 @@ static struct {
 void CommandReceived(char *cmd)
 {
 	int i;
+	char line[256];
 
 	PrintToScrollback("> %s", cmd);
 
-	if(strcmp(cmd, "help")==0) {
+	if(strcmp(cmd, "help") == 0 || strncmp(cmd,"help ",strlen("help ")) == 0) {
+		// check if we're doing extended help
+		if(strlen(cmd) > strlen("help ")) {
+			cmd += strlen("help ");
+			for(i = 0; i < sizeof(CommandExtendedHelp) / sizeof(CommandExtendedHelp[0]); i++) {
+				if(strcmp(CommandExtendedHelp[i].name,cmd) == 0) {
+					PrintToScrollback("\nExtended help for '%s':\n", cmd);
+					PrintToScrollback("Args: %s\t- %s\n",CommandExtendedHelp[i].args,CommandExtendedHelp[i].argshelp);
+					PrintToScrollback(CommandExtendedHelp[i].description);
+					return;
+				}
+			}
+		PrintToScrollback("No extended help available for '%s'", cmd);
+		return;
+		}
 		if (offline) PrintToScrollback("Operating in OFFLINE mode (no device connected)");
 		PrintToScrollback("\r\nAvailable commands:");
 		for(i = 0; i < sizeof(CommandTable) / sizeof(CommandTable[0]); i++) {
 			if (offline && (CommandTable[i].offline==0)) continue;
-			char line[256];
 			memset(line, ' ', sizeof(line));
 			strcpy(line+2, CommandTable[i].name);
 			line[strlen(line)] = ' ';
@@ -2671,7 +2693,7 @@ void CommandReceived(char *cmd)
 			PrintToScrollback("%s", line);
 		}
 		PrintToScrollback("");
-		PrintToScrollback("and also: help, cls");
+		PrintToScrollback("'help <command>' for extended help on that command");
 		return;
 	}
 
