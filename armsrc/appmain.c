@@ -144,7 +144,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYT
 	BOOL at134khz;
 
 	// see if 'h' was specified
-	if(command[strlen(command) - 1] == 'h')
+	if(command[strlen((char *) command) - 1] == 'h')
 		at134khz= TRUE;
 	else
 		at134khz= FALSE;
@@ -241,7 +241,7 @@ static int AvgAdc(int ch)
 void SweepLFrange()
 {
 	BYTE *dest = (BYTE *)BigBuf;
-	BYTE dummy[12];
+	char dummy[12];
 	int i, peak= 0, ptr= 0;
 	double freq;
 
@@ -939,8 +939,8 @@ void SpinDelay(int ms)
 // listen for external reader 
 void ListenReaderField(int limit)
 {
-	int lf_av, lf_av_new, lf_baseline= -1, lf_count= 0;
-	int hf_av, hf_av_new,  hf_baseline= -1, hf_count= 0;
+	int lf_av, lf_av_new, lf_baseline= 0, lf_count= 0;
+	int hf_av, hf_av_new,  hf_baseline= 0, hf_count= 0;
 
 #define LF_ONLY		1
 #define HF_ONLY		2
@@ -952,7 +952,7 @@ void ListenReaderField(int limit)
 
 	lf_av= ReadAdc(ADC_CHAN_LF);
 
-	if(limit != HF_ONLY && lf_baseline ==  -1) 
+	if(limit != HF_ONLY) 
 		{
 		DbpString("LF 125/134 Baseline:");
 		DbpIntegers(lf_av,0,0);
@@ -962,7 +962,7 @@ void ListenReaderField(int limit)
 	hf_av= ReadAdc(ADC_CHAN_HF);
 
 
-	if (limit != LF_ONLY && hf_baseline == -1) 
+	if (limit != LF_ONLY) 
 		{
 		DbpString("HF 13.56 Baseline:");
 		DbpIntegers(hf_av,0,0);

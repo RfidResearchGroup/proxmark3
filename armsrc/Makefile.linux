@@ -74,13 +74,15 @@ $(OBJFAST): $(OBJDIR)/%.o : %.c
 $(OBJCOMMON): $(OBJDIR)/%.o : ../common/%.c
 	$(CC) $(CFLAGS) $< -o $@
 
-# Those do not work on the current firmware !
+flash-both: flash flash-fpga
+
 flash-fpga: fpgaimage.s19
 	../linux/flasher fpga fpgaimage.s19
 
 flash: osimage.s19
 	../linux/flasher os osimage.s19
 
+# Those do not work on the current firmware !
 jtag-flash-full: fullimage.s19
 	../../OpenOCD/openocd -c "halt; flash write_image fullimage.s19 0x00100000; halt; reset; resume; poll; exit"
 
