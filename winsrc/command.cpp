@@ -2638,7 +2638,7 @@ static struct {
 	{"scale",			CmdScale,1,		"<int> -- Set cursor display scale"},
 	{"setlfdivisor",		CmdSetDivisor,0,	"<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
 	{"sri512read",		CmdSri512read,0,	"<int> -- Read contents of a SRI512 tag"},
-	{"sweeplf",			CmdSweepLF,0,		"    Sweep through LF freq range and store results in buffer"},
+	{"sweeplf",			CmdSweepLF,0,		"    Sweep through LF freq range, store results in buffer and show resonant frequency of antenna"},
 	{"tibits",			CmdTibits,0,		"    Get raw bits for TI-type LF tag"},
 	{"tidemod",			CmdTidemod,0,		"    Demodulate raw bits for TI-type LF tag"},
 	{"tiread",			CmdTiread,0,		"    Read a TI-type 134 kHz tag"},
@@ -2653,7 +2653,8 @@ static struct {
 	char *argshelp;
 	char *description;
 	} 	CommandExtendedHelp[]= {
-		{"detectreader","'l'|'h'","'l' specifies LF antenna scan only, 'h' specifies HF antenna scan only.","Monitor antenna for changes in voltage. Output is in three fields: CHANGED, CURRENT, PERIOD,\nwhere CHANGED is the value just changed from, CURRENT is the current value and PERIOD is the\nnumber of program loops since the last change.\n\nThe RED LED indicates LF field detected, and the GREEN LED indicates HF field detected.\n"},
+		{"detectreader","'l'|'h'","'l' specifies LF antenna scan only, 'h' specifies HF antenna scan only.","Monitor antenna for changes in voltage. Output is in three fields: CHANGED, CURRENT, PERIOD,\nwhere CHANGED is the value just changed from, CURRENT is the current value and PERIOD is the\nnumber of program loops since the last change.\n\nThe RED LED indicates LF field detected, and the GREEN LED indicates HF field detected."},
+		{"sweeplf","","","Drive LF antenna at all divisor range values (19 - 255) and store the results in the output\nbuffer. Issuing 'losamples' and then 'plot' commands will display the resulting peak. 12MHz\ndivided by the peak's position plus one gives the antenna's resonant frequency. For convenience,\nthis value is also printed out by the command."},
 		};
 
 //-----------------------------------------------------------------------------
@@ -2676,6 +2677,7 @@ void CommandReceived(char *cmd)
 					PrintToScrollback("\nExtended help for '%s':\n", cmd);
 					PrintToScrollback("Args: %s\t- %s\n",CommandExtendedHelp[i].args,CommandExtendedHelp[i].argshelp);
 					PrintToScrollback(CommandExtendedHelp[i].description);
+					PrintToScrollback("");
 					return;
 				}
 			}
@@ -2693,7 +2695,7 @@ void CommandReceived(char *cmd)
 			PrintToScrollback("%s", line);
 		}
 		PrintToScrollback("");
-		PrintToScrollback("'help <command>' for extended help on that command");
+		PrintToScrollback("'help <command>' for extended help on that command\n");
 		return;
 	}
 
