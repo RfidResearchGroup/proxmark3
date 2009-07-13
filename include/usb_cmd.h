@@ -33,7 +33,8 @@ typedef struct {
 #define CMD_DEBUG_PRINT_BYTES						0x0102
 #define CMD_LCD_RESET								0x0103
 #define CMD_LCD										0x0104
-#define CMD_BUFF_CLEAR							0x0105
+#define CMD_BUFF_CLEAR								0x0105
+#define CMD_READ_MEM								0x0106
 
 // For low-frequency tags
 #define CMD_ACQUIRE_RAW_BITS_TI_TYPE				0x0200
