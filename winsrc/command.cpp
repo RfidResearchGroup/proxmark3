@@ -2571,14 +2571,6 @@ static void CmdSetDivisor(char *str)
 	}
 }
 
-static void CmdSweepLF(char *str)
-{
-	UsbCommand c;
-	c.cmd = CMD_SWEEP_LF;
-	SendCommand(&c, FALSE);
-}
-
-
 typedef void HandlerFunction(char *cmdline);
 
 /* in alphabetic order */
@@ -2647,7 +2639,6 @@ static struct {
 	{"scale",			CmdScale,1,		"<int> -- Set cursor display scale"},
 	{"setlfdivisor",		CmdSetDivisor,0,	"<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
 	{"sri512read",		CmdSri512read,0,	"<int> -- Read contents of a SRI512 tag"},
-	{"sweeplf",			CmdSweepLF,0,		"    Sweep through LF freq range, store results in buffer and show resonant frequency of antenna"},
 	{"tibits",			CmdTibits,0,		"    Get raw bits for TI-type LF tag"},
 	{"tidemod",			CmdTidemod,0,		"    Demodulate raw bits for TI-type LF tag"},
 	{"tiread",			CmdTiread,0,		"    Read a TI-type 134 kHz tag"},
@@ -2663,7 +2654,7 @@ static struct {
 	char *description;
 	} 	CommandExtendedHelp[]= {
 		{"detectreader","'l'|'h'","'l' specifies LF antenna scan only, 'h' specifies HF antenna scan only.","Monitor antenna for changes in voltage. Output is in three fields: CHANGED, CURRENT, PERIOD,\nwhere CHANGED is the value just changed from, CURRENT is the current value and PERIOD is the\nnumber of program loops since the last change.\n\nThe RED LED indicates LF field detected, and the GREEN LED indicates HF field detected."},
-		{"sweeplf","","","Drive LF antenna at all divisor range values (19 - 255) and store the results in the output\nbuffer. Issuing 'losamples' and then 'plot' commands will display the resulting peak. 12MHz\ndivided by the peak's position plus one gives the antenna's resonant frequency. For convenience,\nthis value is also printed out by the command."},
+		{"tune","","","Drive LF antenna at all divisor range values (19 - 255) and store the results in the output\nbuffer. Issuing 'losamples' and then 'plot' commands will display the resulting peak. 12MHz\ndivided by the peak's position plus one gives the antenna's resonant frequency. For convenience,\nthis value is also printed out by the command."},
 		};
 
 //-----------------------------------------------------------------------------
@@ -2751,19 +2742,25 @@ void UsbCommandReceived(UsbCommand *c)
 			break;
 
 		case CMD_MEASURED_ANTENNA_TUNING: {
-			int zLf, zHf;
+			int peakv, peakf;
 			int vLf125, vLf134, vHf;
 			vLf125 = c->ext1 & 0xffff;
 			vLf134 = c->ext1 >> 16;
-			vHf = c->ext2;
-			zLf = c->ext3 & 0xffff;
-			zHf = c->ext3 >> 16;
-			PrintToScrollback("# LF antenna @ %3d mA / %5d mV [%d ohms] 125Khz",
-				vLf125/zLf, vLf125, zLf);
-			PrintToScrollback("# LF antenna @ %3d mA / %5d mV [%d ohms] 134Khz",
-				vLf134/((zLf*125)/134), vLf134, (zLf*125)/134);
-			PrintToScrollback("# HF antenna @ %3d mA / %5d mV [%d ohms] 13.56Mhz",
-				vHf/zHf, vHf, zHf);
+			vHf = c->ext2 & 0xffff;;
+			peakf = c->ext3 & 0xffff;
+			peakv = c->ext3 >> 16;
+			PrintToScrollback("# LF antenna: %.2f V @ 125.00Khz", vLf125/1000.0);
+			PrintToScrollback("# LF antenna: %.2f V @ 134.00Khz", vLf134/1000.0);
+			PrintToScrollback("# LF optimal: %.2f V @ %.2fKHz", peakv/1000.0, 12000.0/(peakf+1));
+			PrintToScrollback("# HF antenna: %.2f V @  13.56Mhz", vHf/1000.0);
+			if (peakv<2000)
+				PrintToScrollback("# Your LF antenna is unusable."); 
+			else if (peakv<10000)
+				PrintToScrollback("# Your LF antenna is marginal.");
+			if (vHf<2000)
+				PrintToScrollback("# Your HF antenna is unusable."); 
+			else if (vHf<5000)
+				PrintToScrollback("# Your HF antenna is marginal.");
 			break;
 		}
 		default:

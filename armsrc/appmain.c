@@ -240,92 +240,55 @@ static int AvgAdc(int ch)
 	return (a + 15) >> 5;
 }
 
+void MeasureAntennaTuning(void)
+{
+	BYTE *dest = (BYTE *)BigBuf;
+	int i, ptr = 0, adcval = 0, peak = 0, peakv = 0, peakf = 0;;
+	int vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
+
+	UsbCommand c;
+
+	DbpString("Measuring antenna characteristics, please wait.");
+	memset(BigBuf,0,sizeof(BigBuf));
+
 /*
  * Sweeps the useful LF range of the proxmark from
  * 46.8kHz (divisor=255) to 600kHz (divisor=19) and
- * reads the voltage in the antenna: the result is a graph
- * which should clearly show the resonating frequency of your
- * LF antenna ( hopefully around 90 if it is tuned to 125kHz!)
+ * read the voltage in the antenna, the result left
+ * in the buffer is a graph which should clearly show
+ * the resonating frequency of your LF antenna
+ * ( hopefully around 95 if it is tuned to 125kHz!)
  */
-void SweepLFrange()
-{
-	BYTE *dest = (BYTE *)BigBuf;
-	char dummy[12];
-	int i, peak= 0, ptr= 0;
-	double freq;
-
-	// clear buffer
-	memset(BigBuf,0,sizeof(BigBuf));
-
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 	for (i=255; i>19; i--) {
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
 		SpinDelay(20);
-		dest[i] = (137500 * AvgAdc(ADC_CHAN_LF)) >> 18;
+		// Vref = 3.3V, and a 10000:240 voltage divider on the input
+		// can measure voltages up to 137500 mV
+		adcval = ((137500 * AvgAdc(ADC_CHAN_LF)) >> 10);
+		if (i==95) 	vLf125 = adcval; // voltage at 125Khz
+		if (i==89) 	vLf134 = adcval; // voltage at 134Khz
+
+		dest[i] = adcval>>8; // scale int to fit in byte for graphing purposes
 		if(dest[i] > peak) {
-			peak= dest[i];
-			ptr= i;
-			}
+			peakv = adcval;
+			peak = dest[i];
+			peakf = i;
+			ptr = i;
+		}
 	}
-	dummy[11]= '\0';
-	dummy[10]= 'z';
-	dummy[9]= 'H';
-	dummy[8]= 'k';
-	dummy[7]= ' ';
-	freq= 12000000/(ptr + 1);
-	for(i= 6; i > 3 ; --i) {
-		dummy[i]= '0' + ((int) freq) % 10;
-		freq /= 10;
-		}
-	dummy[3]= '.';
-	for(i= 2; i >= 0 ; --i) {
-		dummy[i]= '0' + ((int) freq) % 10;
-		freq /= 10;
-		}
-	DbpString("Antenna resonates at:");
-	DbpString(dummy);
-}
-
-void MeasureAntennaTuning(void)
-{
-// Impedances are Zc = 1/(j*omega*C), in ohms
-#define LF_TUNING_CAP_Z	1273	//  1 nF @ 125   kHz
-#define HF_TUNING_CAP_Z	235		// 50 pF @ 13.56 MHz
-
-	int vLf125, vLf134, vHf;	// in mV
-
-	UsbCommand c;
-
-	// Let the FPGA drive the low-frequency antenna around 125 kHz.
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_125_KHZ);
-	SpinDelay(20);
-	vLf125 = AvgAdc(ADC_CHAN_LF);
-	// Vref = 3.3V, and a 10000:240 voltage divider on the input
-	// can measure voltages up to 137500 mV
-	vLf125 = (137500 * vLf125) >> 10;
-
-	// Let the FPGA drive the low-frequency antenna around 134 kHz.
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_134_KHZ);
-	SpinDelay(20);
-	vLf134 = AvgAdc(ADC_CHAN_LF);
-	// Vref = 3.3V, and a 10000:240 voltage divider on the input
-	// can measure voltages up to 137500 mV
-	vLf134 = (137500 * vLf134) >> 10;
 
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 	SpinDelay(20);
-	vHf = AvgAdc(ADC_CHAN_HF);
 	// Vref = 3300mV, and an 10:1 voltage divider on the input
 	// can measure voltages up to 33000 mV
-	vHf = (33000 * vHf) >> 10;
+	vHf = (33000 * AvgAdc(ADC_CHAN_HF)) >> 10;
 
 	c.cmd = CMD_MEASURED_ANTENNA_TUNING;
 	c.ext1 = (vLf125 << 0) | (vLf134 << 16);
 	c.ext2 = vHf;
-	c.ext3 = (LF_TUNING_CAP_Z << 0) | (HF_TUNING_CAP_Z << 16);
+	c.ext3 =  peakf | (peakv << 16);
 	UsbSendPacket((BYTE *)&c, sizeof(c));
 }
 
@@ -836,10 +799,6 @@ void UsbPacketReceived(BYTE *packet, int len)
 		case CMD_READ_MEM:
 			ReadMem(c->ext1);
 			break;
-		case CMD_SWEEP_LF:
-			SweepLFrange();
-			break;
-
 		case CMD_SET_LF_DIVISOR:
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, c->ext1);
 			break;
