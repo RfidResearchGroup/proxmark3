@@ -2633,7 +2633,7 @@ static struct {
 	{"norm",				CmdNorm,1,		"    Normalize max/min to +/-500"},
 	{"plot",				CmdPlot,1,		"    Show graph window"},
 	{"quit",				CmdQuit,1,			"    Quit program"},
-	{"readmem",			CmdReadmem,0,			"    [address] Read memory at decimal address from flash"},
+	{"readmem",			CmdReadmem,0,			"    [address] -- Read memory at decimal address from flash"},
 	{"reset",			CmdReset,0,			"    Reset the Proxmark3"},
 	{"save",				CmdSave,1,		"<filename> -- Save trace (from graph window)"},
 	{"scale",			CmdScale,1,		"<int> -- Set cursor display scale"},

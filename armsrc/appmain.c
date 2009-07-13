@@ -842,10 +842,10 @@ void AppMain(void)
 	memset(BigBuf,0,sizeof(BigBuf));
 	SpinDelay(100);
 
-    LED_D_OFF();
-    LED_C_OFF();
-    LED_B_OFF();
-    LED_A_OFF();
+	LED_D_OFF();
+	LED_C_OFF();
+	LED_B_OFF();
+	LED_A_OFF();
 
 	UsbStart();
 
@@ -871,14 +871,14 @@ void AppMain(void)
 	LCDInit();
 
 	// test text on different colored backgrounds
-    LCDString(" The quick brown fox  ",	&FONT6x8,1,1+8*0,WHITE  ,BLACK );
-    LCDString("  jumped over the     ",	&FONT6x8,1,1+8*1,BLACK  ,WHITE );
-    LCDString("     lazy dog.        ",	&FONT6x8,1,1+8*2,YELLOW ,RED   );
-    LCDString(" AaBbCcDdEeFfGgHhIiJj ",	&FONT6x8,1,1+8*3,RED    ,GREEN );
-    LCDString(" KkLlMmNnOoPpQqRrSsTt ",	&FONT6x8,1,1+8*4,MAGENTA,BLUE  );
-    LCDString("UuVvWwXxYyZz0123456789",	&FONT6x8,1,1+8*5,BLUE   ,YELLOW);
-    LCDString("`-=[]_;',./~!@#$%^&*()",	&FONT6x8,1,1+8*6,BLACK  ,CYAN  );
-    LCDString("     _+{}|:\\\"<>?     ",&FONT6x8,1,1+8*7,BLUE  ,MAGENTA);
+	LCDString(" The quick brown fox  ",	&FONT6x8,1,1+8*0,WHITE  ,BLACK );
+	LCDString("  jumped over the     ",	&FONT6x8,1,1+8*1,BLACK  ,WHITE );
+	LCDString("     lazy dog.        ",	&FONT6x8,1,1+8*2,YELLOW ,RED   );
+	LCDString(" AaBbCcDdEeFfGgHhIiJj ",	&FONT6x8,1,1+8*3,RED    ,GREEN );
+	LCDString(" KkLlMmNnOoPpQqRrSsTt ",	&FONT6x8,1,1+8*4,MAGENTA,BLUE  );
+	LCDString("UuVvWwXxYyZz0123456789",	&FONT6x8,1,1+8*5,BLUE   ,YELLOW);
+	LCDString("`-=[]_;',./~!@#$%^&*()",	&FONT6x8,1,1+8*6,BLACK  ,CYAN  );
+	LCDString("     _+{}|:\\\"<>?     ",&FONT6x8,1,1+8*7,BLUE  ,MAGENTA);
 
 	// color bands
 	LCDFill(0, 1+8* 8, 132, 8, BLACK);
@@ -947,9 +947,14 @@ void SamyRun()
 						
 			// record
 			DbpString("Starting recording");
-			
+
+			// wait for button to be released
+			while(BUTTON_PRESS())
+				WDT_HIT();
+
 			/* need this delay to prevent catching some weird data */
 			SpinDelay(500);
+
 			CmdHIDdemodFSK(1, &high[selected], &low[selected], 0);
 			DbpString("Recorded");
 			DbpIntegers(selected, high[selected], low[selected]);
@@ -979,9 +984,18 @@ void SamyRun()
 			{
 				LED(LED_GREEN, 0);
 				DbpString("Playing");
+				// wait for button to be released
+				while(BUTTON_PRESS())
+					WDT_HIT();
 				DbpIntegers(selected, high[selected], low[selected]);
 				CmdHIDsimTAG(high[selected], low[selected], 0);
 				DbpString("Done playing");
+				if (BUTTON_HELD(1000) > 0)
+					{
+					DbpString("Exiting");
+					LEDsoff();
+					return;
+					}
 				
 				/* We pressed a button so ignore it here with a delay */
 				SpinDelay(300);
@@ -992,6 +1006,9 @@ void SamyRun()
 				LEDsoff();
 				LED(selected + 1, 0);
 			}
+			else
+				while(BUTTON_PRESS())
+					WDT_HIT();
 		}
 	}
 }
