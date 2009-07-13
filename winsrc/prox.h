@@ -42,6 +42,7 @@ static void CmdHi15tag(char *str);
 static void CmdHi14read_sim(char *str);
 static void CmdHi14readt(char *str);
 static void CmdHisimlisten(char *str);
+static void CmdReadmem(char *str);
 static void CmdHi14sim(char *str);
 static void CmdHi14asim(char *str);
 static void CmdHi14snoop(char *str);

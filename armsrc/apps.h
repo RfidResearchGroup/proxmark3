@@ -8,6 +8,7 @@
 #define __APPS_H
 
 /// appmain.c
+void ReadMem(int addr);
 void AppMain(void);
 void SamyRun(void);
 void DbpIntegers(int a, int b, int c);

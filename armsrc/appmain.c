@@ -69,8 +69,8 @@ void ToSendStuffBit(int b)
 void DbpString(char *str)
 {
 	/* this holds up stuff unless we're connected to usb */
-	if (!usbattached)
-		return;
+//	if (!usbattached)
+//		return;
 	
 	UsbCommand c;
 	c.cmd = CMD_DEBUG_PRINT_STRING;
@@ -85,8 +85,8 @@ void DbpString(char *str)
 void DbpIntegers(int x1, int x2, int x3)
 {
 	/* this holds up stuff unless we're connected to usb */
-	if (!usbattached)
-		return;
+//	if (!usbattached)
+//		return;
 
 	UsbCommand c;
 	c.cmd = CMD_DEBUG_PRINT_INTEGERS;
@@ -833,6 +833,9 @@ void UsbPacketReceived(BYTE *packet, int len)
 			LCDReset();
 			break;
 #endif
+		case CMD_READ_MEM:
+			ReadMem(c->ext1);
+			break;
 		case CMD_SWEEP_LF:
 			SweepLFrange();
 			break;
@@ -862,6 +865,17 @@ void UsbPacketReceived(BYTE *packet, int len)
 			DbpString("unknown command");
 			break;
 	}
+}
+
+void ReadMem(int addr)
+{
+	const DWORD *data = ((DWORD *)addr);
+	int i;
+	
+	DbpString("Reading memory at address");
+	DbpIntegers(0, 0, addr);
+	for (i = 0; i < 8; i+= 2)
+		DbpIntegers(0, data[i], data[i+1]);
 }
 
 void AppMain(void)

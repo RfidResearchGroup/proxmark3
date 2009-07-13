@@ -2520,6 +2520,14 @@ static void CmdHIDsimTAG(char *str)
 	SendCommand(&c, FALSE);
 }
 
+static void CmdReadmem(char *str)
+{
+	UsbCommand c;
+	c.cmd = CMD_READ_MEM;
+	c.ext1 = atoi(str);
+	SendCommand(&c, FALSE);
+}
+
 static void CmdLcdReset(char *str)
 {
 	UsbCommand c;
@@ -2619,7 +2627,7 @@ static struct {
 	{"hisamplest",		CmdHi14readt,0,		"    Get samples HF, for testing"},
 	{"hisimlisten",		CmdHisimlisten,0,	"    Get HF samples as fake tag"},
 	{"hpf",				CmdHpf,1,		"    Remove DC offset from trace"},
-    	{"indalademod",		CmdIndalademod,0,         "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
+	{"indalademod",		CmdIndalademod,0,         "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
 	{"lcd",				CmdLcd,0,			"<HEX command> <count> -- Send command/data to LCD"},
 	{"lcdreset",			CmdLcdReset,0,		"    Hardware reset LCD"},
 	{"load",				CmdLoad,1,		"<filename> -- Load trace (to graph window"},
@@ -2633,6 +2641,7 @@ static struct {
 	{"norm",				CmdNorm,1,		"    Normalize max/min to +/-500"},
 	{"plot",				CmdPlot,1,		"    Show graph window"},
 	{"quit",				CmdQuit,1,			"    Quit program"},
+	{"readmem",			CmdReadmem,0,			"    [address] Read memory at decimal address from flash"},
 	{"reset",			CmdReset,0,			"    Reset the Proxmark3"},
 	{"save",				CmdSave,1,		"<filename> -- Save trace (from graph window)"},
 	{"scale",			CmdScale,1,		"<int> -- Set cursor display scale"},
