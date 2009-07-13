@@ -2749,10 +2749,12 @@ void UsbCommandReceived(UsbCommand *c)
 			vHf = c->ext2 & 0xffff;;
 			peakf = c->ext3 & 0xffff;
 			peakv = c->ext3 >> 16;
-			PrintToScrollback("# LF antenna: %.2f V @ 125.00Khz", vLf125/1000.0);
-			PrintToScrollback("# LF antenna: %.2f V @ 134.00Khz", vLf134/1000.0);
-			PrintToScrollback("# LF optimal: %.2f V @ %.2fKHz", peakv/1000.0, 12000.0/(peakf+1));
-			PrintToScrollback("# HF antenna: %.2f V @  13.56Mhz", vHf/1000.0);
+			PrintToScrollback("");
+			PrintToScrollback("");
+			PrintToScrollback("# LF antenna: %5.2f V @   125.00 kHz", vLf125/1000.0);
+			PrintToScrollback("# LF antenna: %5.2f V @   134.00 kHz", vLf134/1000.0);
+			PrintToScrollback("# LF optimal: %5.2f V @%9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
+			PrintToScrollback("# HF antenna: %5.2f V @    13.56 MHz", vHf/1000.0);
 			if (peakv<2000)
 				PrintToScrollback("# Your LF antenna is unusable."); 
 			else if (peakv<10000)
