@@ -9,10 +9,9 @@
 
 /// appmain.c
 void AppMain(void);
+void SamyRun(void);
 void DbpIntegers(int a, int b, int c);
 void DbpString(char *str);
-void SpinDelay(int ms);
-void SpinDelayUs(int us);
 void ToSendStuffBit(int b);
 void ToSendReset(void);
 void ListenReaderField(int limit);
@@ -78,9 +77,24 @@ void ReaderIso15693(DWORD parameter);	// Simulate an ISO15693 reader - greg
 void SimTagIso15693(DWORD parameter);	// simulate an ISO15693 tag - greg
 
 /// util.h
+#define LED_RED 1
+#define LED_ORANGE 2
+#define LED_GREEN 4
+#define LED_RED2 8
+#define BUTTON_HOLD 1
+#define BUTTON_NO_CLICK 0
+#define BUTTON_SINGLE_CLICK -1
+#define BUTTON_DOUBLE_CLICK -2
+#define BUTTON_ERROR -99
 int strlen(char *str);
 void *memcpy(void *dest, const void *src, int len);
 void *memset(void *dest, int c, int len);
 int memcmp(const void *av, const void *bv, int len);
+void SpinDelay(int ms);
+void SpinDelayUs(int us);
+void LED(int led, int ms);
+void LEDsoff();
+int BUTTON_CLICKED(int ms);
+int BUTTON_HELD(int ms);
 
 #endif

@@ -17,6 +17,7 @@
 // The large multi-purpose buffer, typically used to hold A/D samples,
 // maybe pre-processed in some way.
 DWORD BigBuf[16000];
+int usbattached = 0;
 
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
@@ -67,6 +68,10 @@ void ToSendStuffBit(int b)
 
 void DbpString(char *str)
 {
+	/* this holds up stuff unless we're connected to usb */
+	if (!usbattached)
+		return;
+	
 	UsbCommand c;
 	c.cmd = CMD_DEBUG_PRINT_STRING;
 	c.ext1 = strlen(str);
@@ -79,6 +84,10 @@ void DbpString(char *str)
 
 void DbpIntegers(int x1, int x2, int x3)
 {
+	/* this holds up stuff unless we're connected to usb */
+	if (!usbattached)
+		return;
+
 	UsbCommand c;
 	c.cmd = CMD_DEBUG_PRINT_INTEGERS;
 	c.ext1 = x1;
@@ -320,7 +329,7 @@ void MeasureAntennaTuning(void)
 	UsbSendPacket((BYTE *)&c, sizeof(c));
 }
 
-void SimulateTagLowFrequency(int period)
+void SimulateTagLowFrequency(int period, int ledcontrol)
 {
 	int i;
 	BYTE *tab = (BYTE *)BigBuf;
@@ -345,13 +354,16 @@ void SimulateTagLowFrequency(int period)
 			WDT_HIT();
 		}
 
-		LED_D_ON();
-		if(tab[i]) {
+		if (ledcontrol)
+			LED_D_ON();
+
+		if(tab[i])
 			OPEN_COIL();
-		} else {
+		else
 			SHORT_COIL();
-		}
-		LED_D_OFF();
+		
+		if (ledcontrol)
+			LED_D_OFF();
 
 		while(PIO_PIN_DATA_STATUS & (1<<GPIO_SSC_CLK)) {
 			if(BUTTON_PRESS()) {
@@ -415,7 +427,7 @@ static void fc(int c, int *n) {
 
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a HID tag until the button is pressed
-static void CmdHIDsimTAG(int hi, int lo)
+static void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 {
 	int n=0, i=0;
 	/*
@@ -461,13 +473,16 @@ static void CmdHIDsimTAG(int hi, int lo)
 		}
 	}
 
-	LED_A_ON();
-	SimulateTagLowFrequency(n);
-	LED_A_OFF();
+	if (ledcontrol)
+		LED_A_ON();
+	SimulateTagLowFrequency(n, ledcontrol);
+	
+	if (ledcontrol)
+		LED_A_OFF();
 }
 
 // loop to capture raw HID waveform then FSK demodulate the TAG ID from it
-static void CmdHIDdemodFSK(void)
+static void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
 	BYTE *dest = (BYTE *)BigBuf;
 	int m=0, n=0, i=0, idx=0, found=0, lastval=0;
@@ -487,10 +502,12 @@ static void CmdHIDdemodFSK(void)
 
 	for(;;) {
 		WDT_HIT();
-		LED_A_ON();
+		if (ledcontrol)
+			LED_A_ON();
 		if(BUTTON_PRESS()) {
 			DbpString("Stopped");
-			LED_A_OFF();
+			if (ledcontrol)
+				LED_A_OFF();
 			return;
 		}
 
@@ -500,7 +517,8 @@ static void CmdHIDdemodFSK(void)
 		for(;;) {
 			if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
 				SSC_TRANSMIT_HOLDING = 0x43;
-				LED_D_ON();
+				if (ledcontrol)
+					LED_D_ON();
 			}
 			if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
 				dest[i] = (BYTE)SSC_RECEIVE_HOLDING;
@@ -508,7 +526,8 @@ static void CmdHIDdemodFSK(void)
 				// threshold essentially we capture zero crossings for later analysis
 				if(dest[i] < 127) dest[i] = 0; else dest[i] = 1;
 				i++;
-				LED_D_OFF();
+				if (ledcontrol)
+					LED_D_OFF();
 				if(i >= m) {
 					break;
 				}
@@ -607,6 +626,13 @@ static void CmdHIDdemodFSK(void)
 				if (found && (hi|lo)) {
 					DbpString("TAG ID");
 					DbpIntegers(hi, lo, (lo>>1)&0xffff);
+					/* if we're only looking for one tag */
+					if (findone)
+					{
+						*high = hi;
+						*low = lo;
+						return;
+					}
 					hi=0;
 					lo=0;
 					found=0;
@@ -633,6 +659,13 @@ static void CmdHIDdemodFSK(void)
 				if (found && (hi|lo)) {
 					DbpString("TAG ID");
 					DbpIntegers(hi, lo, (lo>>1)&0xffff);
+					/* if we're only looking for one tag */
+					if (findone)
+					{
+						*high = hi;
+						*low = lo;
+						return;
+					}
 					hi=0;
 					lo=0;
 					found=0;
@@ -759,11 +792,11 @@ void UsbPacketReceived(BYTE *packet, int len)
 			break;
 
 		case CMD_HID_DEMOD_FSK:
-			CmdHIDdemodFSK();				// Demodulate HID tag
+			CmdHIDdemodFSK(0, 0, 0, 1);				// Demodulate HID tag
 			break;
 
 		case CMD_HID_SIM_TAG:
-			CmdHIDsimTAG(c->ext1, c->ext2);					// Simulate HID tag by ID
+			CmdHIDsimTAG(c->ext1, c->ext2, 1);					// Simulate HID tag by ID
 			break;
 
 		case CMD_FPGA_MAJOR_MODE_OFF:		// ## FPGA Control
@@ -792,7 +825,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 		}
 		case CMD_SIMULATE_TAG_125K:
 			LED_A_ON();
-			SimulateTagLowFrequency(c->ext1);
+			SimulateTagLowFrequency(c->ext1, 1);
 			LED_A_OFF();
 			break;
 #ifdef WITH_LCD
@@ -887,54 +920,109 @@ void AppMain(void)
 #endif
 
 	for(;;) {
-		UsbPoll(FALSE);
+		usbattached = UsbPoll(FALSE);
 		WDT_HIT();
+
+		if (BUTTON_HELD(1000) > 0)
+			SamyRun();
 	}
 }
 
-void SpinDelayUs(int us)
+
+// samy's sniff and repeat routine
+void SamyRun()
 {
-	int ticks = (48*us) >> 10;
+	DbpString("Stand-alone mode! No PC necessary.");
 
-	// Borrow a PWM unit for my real-time clock
-	PWM_ENABLE = PWM_CHANNEL(0);
-	// 48 MHz / 1024 gives 46.875 kHz
-	PWM_CH_MODE(0) = PWM_CH_MODE_PRESCALER(10);
-	PWM_CH_DUTY_CYCLE(0) = 0;
-	PWM_CH_PERIOD(0) = 0xffff;
+	// 3 possible options? no just 2 for now
+#define OPTS 2
 
-	WORD start = (WORD)PWM_CH_COUNTER(0);
-
-	for(;;) {
-		WORD now = (WORD)PWM_CH_COUNTER(0);
-		if(now == (WORD)(start + ticks)) {
-			return;
-		}
+	int high[OPTS], low[OPTS];
+	
+	// Oooh pretty -- notify user we're in elite samy mode now
+	LED(LED_RED,	200);
+	LED(LED_ORANGE, 200);
+	LED(LED_GREEN,	200);
+	LED(LED_ORANGE, 200);
+	LED(LED_RED,	200);
+	LED(LED_ORANGE, 200);
+	LED(LED_GREEN,	200);
+	LED(LED_ORANGE, 200);
+	LED(LED_RED,	200);
+	
+	int selected = 0;
+	int playing = 0;
+	
+	// Turn on selected LED
+	LED(selected + 1, 0);
+	
+	for (;;)
+	{
+		usbattached = UsbPoll(FALSE);
 		WDT_HIT();
+		
+		// Was our button held down or pressed?
+		int button_pressed = BUTTON_HELD(1000);
+		SpinDelay(300);
+		
+		// Button was held for a second, begin recording
+		if (button_pressed > 0)
+		{
+			LEDsoff();
+			LED(selected + 1, 0);
+			LED(LED_RED2, 0);
+						
+			// record
+			DbpString("Starting recording");
+			
+			/* need this delay to prevent catching some weird data */
+			SpinDelay(500);
+			CmdHIDdemodFSK(1, &high[selected], &low[selected], 0);
+			DbpString("Recorded");
+			DbpIntegers(selected, high[selected], low[selected]);
+			
+			LEDsoff();
+			LED(selected + 1, 0);
+			// Finished recording
+			
+			// If we were previously playing, set playing off
+			// so next button push begins playing what we recorded
+			playing = 0;
+		}
+		
+		// Change where to record (or begin playing)
+		else if (button_pressed)
+		{
+			// Next option if we were previously playing
+			if (playing)
+				selected = (selected + 1) % OPTS;
+			playing = !playing;
+			
+			LEDsoff();
+			LED(selected + 1, 0);
+			
+			// Begin transmitting
+			if (playing)
+			{
+				LED(LED_GREEN, 0);
+				DbpString("Playing");
+				DbpIntegers(selected, high[selected], low[selected]);
+				CmdHIDsimTAG(high[selected], low[selected], 0);
+				DbpString("Done playing");
+				
+				/* We pressed a button so ignore it here with a delay */
+				SpinDelay(300);
+				
+				// when done, we're done playing, move to next option
+				selected = (selected + 1) % OPTS;
+				playing = !playing;
+				LEDsoff();
+				LED(selected + 1, 0);
+			}
+		}
 	}
 }
 
-void SpinDelay(int ms)
-{
-	int ticks = (48000*ms) >> 10;
-
-	// Borrow a PWM unit for my real-time clock
-	PWM_ENABLE = PWM_CHANNEL(0);
-	// 48 MHz / 1024 gives 46.875 kHz
-	PWM_CH_MODE(0) = PWM_CH_MODE_PRESCALER(10);
-	PWM_CH_DUTY_CYCLE(0) = 0;
-	PWM_CH_PERIOD(0) = 0xffff;
-
-	WORD start = (WORD)PWM_CH_COUNTER(0);
-
-	for(;;) {
-		WORD now = (WORD)PWM_CH_COUNTER(0);
-		if(now == (WORD)(start + ticks)) {
-			return;
-		}
-		WDT_HIT();
-	}
-}
 
 // listen for external reader 
 void ListenReaderField(int limit)
