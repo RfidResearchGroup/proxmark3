@@ -214,7 +214,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYT
 void AcquireTiType(void)
 {
 	int i;
-	int n = 4000;
+	int n = sizeof(BigBuf);
 
 	// clear buffer
 	memset(BigBuf,0,sizeof(BigBuf));

@@ -272,9 +272,9 @@ static void CmdEM410xwatch(char *str)
  * pattern of 320 cycles each (32/32/128/64/64)).
  *
  * Note that this data may or may not be the UID. It is whatever data
- * is stored in the blocks defined in the control word First and Last 
+ * is stored in the blocks defined in the control word First and Last
  * Word Read values. UID is stored in block 32.
- */ 
+ */
 static void CmdEM4x50read(char *str)
 {
 	int i, j, startblock, clock, skip, block, start, end, low, high;
@@ -288,7 +288,7 @@ static void CmdEM4x50read(char *str)
 	/* first get high and low values */
 	for (i = 0; i < GraphTraceLen; i++)
 	{
-		if (GraphBuffer[i] > high)	
+		if (GraphBuffer[i] > high)
 			high = GraphBuffer[i];
 		else if (GraphBuffer[i] < low)
 			low = GraphBuffer[i];
@@ -310,7 +310,7 @@ static void CmdEM4x50read(char *str)
 		tmpbuff[j++]= i - start;
 		}
 
-	
+
 	/* look for data start - should be 2 pairs of LW (pulses of 192,128) */
 	start= -1;
 	skip= 0;
@@ -457,14 +457,14 @@ static void CmdEM410xread(char *str)
 			if (hithigh && hitlow)
 				break;
 		}
-		
+
 		/* If we didn't hit both high and low peaks, we had a bit transition */
 		if (!hithigh || !hitlow)
 			bit ^= 1;
-		
+
 		BitStream[bit2idx++] = bit;
 	}
-	
+
 retest:
 	/* We go till 5 before the graph ends because we'll get that far below */
 	for (i = 1; i < bit2idx - 5; i++)
@@ -539,7 +539,7 @@ retest:
 				header = 0;
 		}
 	}
-	
+
 	/* if we've already retested after flipping bits, return */
 	if (retested++)
 		return;
@@ -698,7 +698,7 @@ static void CmdLoCommandRead(char *str)
 	static char dummy[3];
 
 	dummy[0]= ' ';
-	
+
 	UsbCommand c;
 	c.cmd = CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K;
 	sscanf(str, "%i %i %i %s %s", &c.ext1, &c.ext2, &c.ext3, (char *) &c.d.asBytes,(char *) &dummy+1);
@@ -794,7 +794,6 @@ static void CmdHisamples(char *str)
 
 	RepaintGraphWindow();
 }
-
 
 static int CmdHisamplest(char *str, int nrlow)
 {
@@ -1406,7 +1405,8 @@ static void CmdTibits(char *str)
 {
 	int cnt = 0;
 	int i;
-	for(i = 0; i < 1536; i += 12) {
+//	for(i = 0; i < 1536; i += 12) {
+	for(i = 0; i < 4000; i += 12) {
 		UsbCommand c;
 		c.cmd = CMD_DOWNLOAD_RAW_BITS_TI_TYPE;
 		c.ext1 = i;
@@ -1428,8 +1428,129 @@ static void CmdTibits(char *str)
 			}
 		}
 	}
-	GraphTraceLen = 1536*32;
+//	GraphTraceLen = 1536*32;
+	GraphTraceLen = 4000*32;
 	RepaintGraphWindow();
+}
+
+static void CmdFSKdemod(char *cmdline)
+{
+	static const int LowTone[]  = {
+		1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
+		1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
+		1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
+		1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
+		1,  1,  1,  1,  1, -1, -1, -1, -1, -1
+	};
+	static const int HighTone[] = {
+		1,  1,  1,  1,  1,     -1, -1, -1, -1,
+		1,  1,  1,  1,         -1, -1, -1, -1,
+		1,  1,  1,  1,         -1, -1, -1, -1,
+		1,  1,  1,  1,         -1, -1, -1, -1,
+		1,  1,  1,  1,         -1, -1, -1, -1,
+		1,  1,  1,  1,     -1, -1, -1, -1, -1,
+	};
+
+	int convLen = max(arraylen(HighTone), arraylen(LowTone));
+	DWORD hi = 0, lo = 0;
+
+	int i, j;
+	int minMark=0, maxMark=0;
+	int lowLen = arraylen(LowTone);
+	int highLen = arraylen(HighTone);
+
+	for(i = 0; i < GraphTraceLen - convLen; i++) {
+		int lowSum = 0, highSum = 0;
+
+		for(j = 0; j < lowLen; j++) {
+			lowSum += LowTone[j]*GraphBuffer[i+j];
+		}
+		for(j = 0; j < highLen; j++) {
+			highSum += HighTone[j]*GraphBuffer[i+j];
+		}
+		lowSum = abs((100*lowSum) / lowLen);
+		highSum = abs((100*highSum) / highLen);
+		GraphBuffer[i] = (highSum << 16) | lowSum;
+	}
+
+	for(i = 0; i < GraphTraceLen - convLen - 16; i++) {
+		int j;
+		int lowTot = 0, highTot = 0;
+		// 10 and 8 are f_s divided by f_l and f_h, rounded
+		for(j = 0; j < 10; j++) {
+			lowTot += (GraphBuffer[i+j] & 0xffff);
+		}
+		for(j = 0; j < 8; j++) {
+			highTot += (GraphBuffer[i+j] >> 16);
+		}
+		GraphBuffer[i] = lowTot - highTot;
+		if (GraphBuffer[i]>maxMark) maxMark=GraphBuffer[i];
+		if (GraphBuffer[i]<minMark) minMark=GraphBuffer[i];
+	}
+
+	GraphTraceLen -= (convLen + 16);
+
+	RepaintGraphWindow();
+
+	// Find bit-sync (3 lo followed by 3 high)
+	int max = 0, maxPos = 0;
+	for(i = 0; i < 6000; i++) {
+		int dec = 0;
+		for(j = 0; j < 3*arraylen(LowTone); j++) {
+			dec -= GraphBuffer[i+j];
+		}
+		for(; j < 3*(arraylen(LowTone) + arraylen(HighTone) ); j++) {
+			dec += GraphBuffer[i+j];
+		}
+		if(dec > max) {
+			max = dec;
+			maxPos = i;
+		}
+	}
+
+	// place start of bit sync marker in graph
+	GraphBuffer[maxPos] = maxMark;
+	GraphBuffer[maxPos+1] = minMark;
+
+	maxPos += j;
+
+	// place end of bit sync marker in graph
+	GraphBuffer[maxPos] = maxMark;
+	GraphBuffer[maxPos+1] = minMark;
+
+	PrintToScrollback("actual data bits start at sample %d", maxPos);
+	PrintToScrollback("length %d/%d", arraylen(HighTone), arraylen(LowTone));
+
+	BYTE bits[46];
+	bits[sizeof(bits)-1] = '\0';
+
+	// find bit pairs and manchester decode them
+	for(i = 0; i < arraylen(bits)-1; i++) {
+		int dec = 0;
+		for(j = 0; j < arraylen(LowTone); j++) {
+			dec -= GraphBuffer[maxPos+j];
+		}
+		for(; j < arraylen(LowTone) + arraylen(HighTone); j++) {
+			dec += GraphBuffer[maxPos+j];
+		}
+		maxPos += j;
+		// place inter bit marker in graph
+		GraphBuffer[maxPos] = maxMark;
+		GraphBuffer[maxPos+1] = minMark;
+
+		// hi and lo form a 64 bit pair
+		hi = (hi<<1)|(lo>>31);
+		lo = (lo<<1);
+		// store decoded bit as binary (in hi/lo) and text (in bits[])
+		if(dec<0) {
+			bits[i] = '1';
+			lo|=1;
+		} else {
+			bits[i] = '0';
+		}
+	}
+	PrintToScrollback("bits: '%s'", bits);
+	PrintToScrollback("hex: %08x %08x", hi, lo);
 }
 
 static void CmdTidemod(char *cmdline)
@@ -1448,37 +1569,43 @@ h = 2*pi*ones(1, floor(f_s*T_h))*(f_h/f_s);
 l = sign(sin(cumsum(l)));
 h = sign(sin(cumsum(h)));
 	*/
-	static const int LowTone[] = {
-		1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1,
-		1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1,
-		1, 1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, -1,
-		-1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1,
-		-1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1,
-		-1, -1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, 1,
-		1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1,
-		1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1,
-		1, 1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, -1,
-		-1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1,
-		-1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, 1,
-		1, 1, 1, 1, 1, 1, 1, -1, -1, -1,
-	};
-	static const int HighTone[] = {
-		1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1,
-		1, 1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1,
-		-1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1,
-		-1, -1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, 1, 1,
-		1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1,
-		1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, -1, -1,
-		-1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1,
-		-1, -1, -1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1,
-		1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1,
-		1, 1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1,
-		-1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1,
-		-1, -1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, 1, 1,
-		1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1,
-		1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1,
-	};
+ static const int LowTone[] = {
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1,
+ };
+ static const int HighTone[] = {
+  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
+  1,  1,  1,  1,  1,  1,  1,
+ };
 
 	int convLen = max(arraylen(HighTone), arraylen(LowTone));
 
@@ -1549,9 +1676,6 @@ h = sign(sin(cumsum(h)));
 	PrintToScrollback("actual data bits start at sample %d", maxPos);
 
 	PrintToScrollback("length %d/%d", arraylen(HighTone), arraylen(LowTone));
-
-	GraphBuffer[maxPos] = 800;
-	GraphBuffer[maxPos+1] = -800;
 
 	BYTE bits[64+16+8+1];
 	bits[sizeof(bits)-1] = '\0';
@@ -1664,6 +1788,20 @@ static void CmdZerocrossings(char *str)
 		}
 	}
 
+	RepaintGraphWindow();
+}
+
+static void CmdThreshold(char *str)
+{
+	int i;
+	int threshold = atoi(str);
+
+	for(i = 0; i < GraphTraceLen; i++) {
+		if(GraphBuffer[i]>= threshold)
+			GraphBuffer[i]=127;
+		else
+			GraphBuffer[i]=-128;
+	}
 	RepaintGraphWindow();
 }
 
@@ -2397,7 +2535,7 @@ static void Cmdmanchesterdemod(char *str) {
 					return;
 				}
 			}
-		}	
+		}
 	}
 
 	PrintToScrollback("Manchester decoded bitstream");
@@ -2422,8 +2560,6 @@ static void Cmdmanchesterdemod(char *str) {
 			BitStream[i+15]);
 	}
 }
-
-
 
 /*
  * Usage ???
@@ -2583,66 +2719,68 @@ static struct {
 	{"askdemod",			Cmdaskdemod,1,		"<samples per bit> <0|1> -- Attempt to demodulate simple ASK tags"},
 	{"autocorr",			CmdAutoCorr,1,		"<window length> -- Autocorrelation over window"},
 	{"bitsamples",		CmdBitsamples,0,	"    Get raw samples as bitstring"},
-	{"bitstream",		Cmdbitstream,1,		"[clock rate] -- Convert waveform into a bitstream"},
-	{"buffclear",		CmdBuffClear,0,		"    Clear sample buffer and graph window"},
-	{"dec",				CmdDec,1,		"    Decimate samples"},
+	{"bitstream",			Cmdbitstream,1,		"[clock rate] -- Convert waveform into a bitstream"},
+	{"buffclear",			CmdBuffClear,0,		"    Clear sample buffer and graph window"},
+	{"dec",						CmdDec,1,		"    Decimate samples"},
 	{"detectclock",		Cmddetectclockrate,1, "    Detect clock rate"},
-	{"detectreader",		CmdDetectReader,0, "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
-	{"em410xsim",		CmdEM410xsim,1,		"<UID> -- Simulate EM410x tag"},
+	{"detectreader",	CmdDetectReader,0, "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
+	{"em410xsim",			CmdEM410xsim,1,		"<UID> -- Simulate EM410x tag"},
 	{"em410xread",		CmdEM410xread,1,	"[clock rate] -- Extract ID from EM410x tag"},
 	{"em410xwatch",		CmdEM410xwatch,0,	"    Watches for EM410x tags"},
 	{"em4x50read",		CmdEM4x50read,1,	"    Extract data from EM4x50 tag"},
-	{"exit",				CmdQuit,1,			"    Exit program"},
-	{"flexdemod",		CmdFlexdemod,1,		"    Demodulate samples for FlexPass"},
-	{"fpgaoff",			CmdFPGAOff,0,		"    Set FPGA off"},							// ## FPGA Control
+	{"exit",					CmdQuit,1,			"    Exit program"},
+	{"flexdemod",			CmdFlexdemod,1,		"    Demodulate samples for FlexPass"},
+	{"fpgaoff",				CmdFPGAOff,0,		"    Set FPGA off"},							// ## FPGA Control
+	{"fskdemod",			CmdFSKdemod,1,		"    Demodulate graph window as a HID FSK"},
 	{"hexsamples",		CmdHexsamples,0,	"<blocks> -- Dump big buffer as hex bytes"},
-	{"hi14alist",		CmdHi14alist,0,		"    List ISO 14443a history"},				// ## New list command
+	{"hi14alist",			CmdHi14alist,0,		"    List ISO 14443a history"},				// ## New list command
 	{"hi14areader",		CmdHi14areader,0,	"    Act like an ISO14443 Type A reader"},	// ## New reader command
 	{"hi14asim",			CmdHi14asim,0,		"<UID> -- Fake ISO 14443a tag"},					// ## Simulate 14443a tag
 	{"hi14asnoop",		CmdHi14asnoop,0,	"    Eavesdrop ISO 14443 Type A"},			// ## New snoop command
 	{"hi14bdemod",		CmdHi14bdemod,1,	"    Demodulate ISO14443 Type B from tag"},
 	{"hi14list",			CmdHi14list,0,		"    List ISO 14443 history"},
 	{"hi14read",			CmdHi14read,0,		"    Read HF tag (ISO 14443)"},
-	{"hi14sim",			CmdHi14sim,0,		"    Fake ISO 14443 tag"},
-	{"hi14snoop",		CmdHi14snoop,0,		"    Eavesdrop ISO 14443"},
-	{"hi15demod",		CmdHi15demod,1,		"    Demodulate ISO15693 from tag"},
+	{"hi14sim",				CmdHi14sim,0,		"    Fake ISO 14443 tag"},
+	{"hi14snoop",			CmdHi14snoop,0,		"    Eavesdrop ISO 14443"},
+	{"hi15demod",			CmdHi15demod,1,		"    Demodulate ISO15693 from tag"},
 	{"hi15read",			CmdHi15read,0,		"    Read HF tag (ISO 15693)"},
 	{"hi15reader",		CmdHi15reader,0,	"    Act like an ISO15693 reader"}, // new command greg
-	{"hi15sim",			CmdHi15tag,0,		"    Fake an ISO15693 tag"}, // new command greg
+	{"hi15sim",				CmdHi15tag,0,		"    Fake an ISO15693 tag"}, // new command greg
 	{"hiddemod",			CmdHiddemod,1,		"    Demodulate HID Prox Card II (not optimal)"},
-	{"hide",				CmdHide,1,		"    Hide graph window"},
+	{"hide",					CmdHide,1,		"    Hide graph window"},
 	{"hidfskdemod",		CmdHIDdemodFSK,0,	"    Realtime HID FSK demodulator"},
-	{"hidsimtag",		CmdHIDsimTAG,0,		"<ID> -- HID tag simulator"},
-	{"higet",			CmdHi14read_sim,0,	"<samples> -- Get samples HF, 'analog'"},
-	{"hisamples",		CmdHisamples,0,		"    Get raw samples for HF tag"},
+	{"hidsimtag",			CmdHIDsimTAG,0,		"<ID> -- HID tag simulator"},
+	{"higet",					CmdHi14read_sim,0,	"<samples> -- Get samples HF, 'analog'"},
+	{"hisamples",			CmdHisamples,0,		"    Get raw samples for HF tag"},
 	{"hisampless",		CmdHisampless,0,	"<samples> -- Get signed raw samples, HF tag"},
 	{"hisamplest",		CmdHi14readt,0,		"    Get samples HF, for testing"},
 	{"hisimlisten",		CmdHisimlisten,0,	"    Get HF samples as fake tag"},
-	{"hpf",				CmdHpf,1,		"    Remove DC offset from trace"},
+	{"hpf",						CmdHpf,1,		"    Remove DC offset from trace"},
 	{"indalademod",		CmdIndalademod,0,         "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
-	{"lcd",				CmdLcd,0,			"<HEX command> <count> -- Send command/data to LCD"},
+	{"lcd",						CmdLcd,0,			"<HEX command> <count> -- Send command/data to LCD"},
 	{"lcdreset",			CmdLcdReset,0,		"    Hardware reset LCD"},
-	{"load",				CmdLoad,1,		"<filename> -- Load trace (to graph window"},
+	{"load",					CmdLoad,1,		"<filename> -- Load trace (to graph window"},
 	{"locomread",			CmdLoCommandRead,0,		"<off period> <'0' period> <'1' period> <command> ['h'] -- Modulate LF reader field to send command before read (all periods in microseconds) (option 'h' for 134)"},
-	{"loread",			CmdLoread,0,		"['h'] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134)"},
-	{"losamples",		CmdLosamples,0,		"[128 - 16000] -- Get raw samples for LF tag"},
-	{"losim",			CmdLosim,0,		"    Simulate LF tag"},
-	{"ltrim",			CmdLtrim,1,		"<samples> -- Trim samples from left of trace"},
+	{"loread",				CmdLoread,0,		"['h'] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134)"},
+	{"losamples",			CmdLosamples,0,		"[128 - 16000] -- Get raw samples for LF tag"},
+	{"losim",					CmdLosim,0,		"    Simulate LF tag"},
+	{"ltrim",					CmdLtrim,1,		"<samples> -- Trim samples from left of trace"},
 	{"mandemod",			Cmdmanchesterdemod,1,	"[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)"},
-	{"manmod",			Cmdmanchestermod,1,	"[clock rate] -- Manchester modulate a binary stream"},
-	{"norm",				CmdNorm,1,		"    Normalize max/min to +/-500"},
-	{"plot",				CmdPlot,1,		"    Show graph window"},
-	{"quit",				CmdQuit,1,			"    Quit program"},
-	{"readmem",			CmdReadmem,0,			"    [address] -- Read memory at decimal address from flash"},
-	{"reset",			CmdReset,0,			"    Reset the Proxmark3"},
-	{"save",				CmdSave,1,		"<filename> -- Save trace (from graph window)"},
-	{"scale",			CmdScale,1,		"<int> -- Set cursor display scale"},
-	{"setlfdivisor",		CmdSetDivisor,0,	"<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
+	{"manmod",				Cmdmanchestermod,1,	"[clock rate] -- Manchester modulate a binary stream"},
+	{"norm",					CmdNorm,1,		"    Normalize max/min to +/-500"},
+	{"plot",					CmdPlot,1,		"    Show graph window"},
+	{"quit",					CmdQuit,1,			"    Quit program"},
+	{"readmem",				CmdReadmem,0,			"    [address] -- Read memory at decimal address from flash"},
+	{"reset",					CmdReset,0,			"    Reset the Proxmark3"},
+	{"save",					CmdSave,1,		"<filename> -- Save trace (from graph window)"},
+	{"scale",					CmdScale,1,		"<int> -- Set cursor display scale"},
+	{"setlfdivisor",	CmdSetDivisor,0,	"<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
 	{"sri512read",		CmdSri512read,0,	"<int> -- Read contents of a SRI512 tag"},
-	{"tibits",			CmdTibits,0,		"    Get raw bits for TI-type LF tag"},
-	{"tidemod",			CmdTidemod,0,		"    Demodulate raw bits for TI-type LF tag"},
-	{"tiread",			CmdTiread,0,		"    Read a TI-type 134 kHz tag"},
-	{"tune",				CmdTune,0,		"    Measure antenna tuning"},
+	{"tibits",				CmdTibits,0,		"    Get raw bits for TI-type LF tag"},
+	{"tidemod",				CmdTidemod,1,		"    Demodulate raw bits for TI-type LF tag"},
+	{"tiread",				CmdTiread,0,		"    Read a TI-type 134 kHz tag"},
+	{"threshold",			CmdThreshold,1,		"    Maximize/minimize every value in the graph window depending on threshold"},
+	{"tune",					CmdTune,0,		"    Measure antenna tuning"},
 	{"vchdemod",			CmdVchdemod,0,		"['clone'] -- Demodulate samples for VeriChip"},
 	{"zerocrossings",	CmdZerocrossings,1,	"    Count time between zero-crossings"},
 };
@@ -2756,11 +2894,11 @@ void UsbCommandReceived(UsbCommand *c)
 			PrintToScrollback("# LF optimal: %5.2f V @%9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
 			PrintToScrollback("# HF antenna: %5.2f V @    13.56 MHz", vHf/1000.0);
 			if (peakv<2000)
-				PrintToScrollback("# Your LF antenna is unusable."); 
+				PrintToScrollback("# Your LF antenna is unusable.");
 			else if (peakv<10000)
 				PrintToScrollback("# Your LF antenna is marginal.");
 			if (vHf<2000)
-				PrintToScrollback("# Your HF antenna is unusable."); 
+				PrintToScrollback("# Your HF antenna is unusable.");
 			else if (vHf<5000)
 				PrintToScrollback("# Your HF antenna is marginal.");
 			break;
