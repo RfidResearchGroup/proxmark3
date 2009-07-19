@@ -21,12 +21,9 @@
 // to the FPGA, to transmit that command to the tag.
 //-----------------------------------------------------------------------------
 
-	
-
-
 	// The sampling rate is 106.353 ksps/s, for T = 18.8 us
 
-	// SOF defined as 
+	// SOF defined as
 	// 1) Unmodulated time of 56.64us
 	// 2) 24 pulses of 423.75khz
 	// 3) logic '1' (unmodulated for 18.88us followed by 8 pulses of 423.75khz)
@@ -54,7 +51,7 @@
 		 1,  1,  1,  1
 	};
 
-	// EOF defined as 
+	// EOF defined as
 	// 1) logic '0' (8 pulses of 423.75khz followed by unmodulated for 18.88us)
 	// 2) 24 pulses of 423.75khz
 	// 3) Unmodulated time of 56.64us
@@ -69,9 +66,6 @@
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 	};
-
-
-
 
 static void CodeIso15693AsReader(BYTE *cmd, int n)
 {
@@ -173,9 +167,19 @@ static WORD Crc(BYTE *v, int n)
 	return ~reg;
 }
 
-////////////////////////////////////////// code to do 'itoa'
+char *strcat(char *dest, const char *src)
+{
+	size_t dest_len = strlen(dest);
+	size_t i;
  
+	for (i = 0 ; src[i] != '\0' ; i++)
+	        dest[dest_len + i] = src[i];
+	dest[dest_len + i] = '\0';
+ 
+	return dest;
+}
 
+////////////////////////////////////////// code to do 'itoa'
 
 /* reverse:  reverse string s in place */
 void reverse(char s[])
@@ -204,10 +208,9 @@ void itoa(int n, char s[])
         s[i++] = '-';
     s[i] = '\0';
     reverse(s);
-} 
+}
 
 //////////////////////////////////////// END 'itoa' CODE
-
 
 //-----------------------------------------------------------------------------
 // Encode (into the ToSend buffers) an identify request, which is the first
@@ -220,7 +223,7 @@ static void BuildIdentifyRequest(void)
 	WORD crc;
 	// one sub-carrier, inventory, 1 slot, fast rate
 	// AFI is at bit 5 (1<<4) when doing an INVENTORY
-	cmd[0] = (1 << 2) | (1 << 5) | (1 << 1); 
+	cmd[0] = (1 << 2) | (1 << 5) | (1 << 1);
 	// inventory command code
 	cmd[1] = 0x01;
 	// no mask
@@ -252,10 +255,10 @@ static void BuildSysInfoRequest(BYTE *uid)
 	cmd[5] = 0x01;
 	cmd[6] = 0x00;
 	cmd[7] = 0x10;
-	cmd[8] = 0x05; 
-	cmd[9]= 0xe0; // always e0 (not exactly unique) 	
+	cmd[8] = 0x05;
+	cmd[9]= 0xe0; // always e0 (not exactly unique)
 	//Now the CRC
-	crc = Crc(cmd, 10); // the crc needs to be calculated over 2 bytes 
+	crc = Crc(cmd, 10); // the crc needs to be calculated over 2 bytes
 	cmd[10] = crc & 0xff;
 	cmd[11] = crc >> 8;
 
@@ -264,7 +267,7 @@ static void BuildSysInfoRequest(BYTE *uid)
 
 static void BuildSelectRequest( BYTE uid[])
 {
-	
+
 //	uid[6]=0x31;  // this is getting ignored - the uid array is not happening...
 	BYTE cmd[12];
 
@@ -281,20 +284,20 @@ static void BuildSelectRequest( BYTE uid[])
 //	cmd[5] = uid[3];//0x01;
 //	cmd[6] = uid[4];//0x00;
 //	cmd[7] = uid[5];//0x10;
-//	cmd[8] = uid[6];//0x05; 
+//	cmd[8] = uid[6];//0x05;
 	cmd[2] = 0x32;//
-	cmd[3]= 0x4b;
+	cmd[3] = 0x4b;
 	cmd[4] = 0x03;
 	cmd[5] = 0x01;
 	cmd[6] = 0x00;
 	cmd[7] = 0x10;
 	cmd[8] = 0x05; // infineon?
 
-	cmd[9]= 0xe0; // always e0 (not exactly unique) 
+	cmd[9]= 0xe0; // always e0 (not exactly unique)
 
 //	DbpIntegers(cmd[8],cmd[7],cmd[6]);
 	// Now the CRC
-	crc = Crc(cmd, 10); // the crc needs to be calculated over 10 bytes 
+	crc = Crc(cmd, 10); // the crc needs to be calculated over 10 bytes
 	cmd[10] = crc & 0xff;
 	cmd[11] = crc >> 8;
 
@@ -320,18 +323,17 @@ static void BuildReadBlockRequest(BYTE *uid, BYTE blockNumber )
 	cmd[5] = 0x01;
 	cmd[6] = 0x00;
 	cmd[7] = 0x10;
-	cmd[8] = 0x05; 
-	cmd[9]= 0xe0; // always e0 (not exactly unique) 	
+	cmd[8] = 0x05;
+	cmd[9]= 0xe0; // always e0 (not exactly unique)
 	// Block number to read
 	cmd[10] = blockNumber;//0x00;
 	//Now the CRC
-	crc = Crc(cmd, 11); // the crc needs to be calculated over 2 bytes 
+	crc = Crc(cmd, 11); // the crc needs to be calculated over 2 bytes
 	cmd[11] = crc & 0xff;
 	cmd[12] = crc >> 8;
 
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
-
 
 static void BuildReadMultiBlockRequest(BYTE *uid)
 {
@@ -352,14 +354,14 @@ static void BuildReadMultiBlockRequest(BYTE *uid)
 	cmd[5] = 0x01;
 	cmd[6] = 0x00;
 	cmd[7] = 0x10;
-	cmd[8] = 0x05; 
-	cmd[9]= 0xe0; // always e0 (not exactly unique) 	
+	cmd[8] = 0x05;
+	cmd[9]= 0xe0; // always e0 (not exactly unique)
 	// First Block number to read
 	cmd[10] = 0x00;
 	// Number of Blocks to read
 	cmd[11] = 0x2f; // read quite a few
 	//Now the CRC
-	crc = Crc(cmd, 12); // the crc needs to be calculated over 2 bytes 
+	crc = Crc(cmd, 12); // the crc needs to be calculated over 2 bytes
 	cmd[12] = crc & 0xff;
 	cmd[13] = crc >> 8;
 
@@ -385,22 +387,22 @@ static void BuildArbitraryRequest(BYTE *uid,BYTE CmdCode)
 	cmd[5] = 0x01;
 	cmd[6] = 0x00;
 	cmd[7] = 0x10;
-	cmd[8] = 0x05; 
-	cmd[9]= 0xe0; // always e0 (not exactly unique) 	
+	cmd[8] = 0x05;
+	cmd[9]= 0xe0; // always e0 (not exactly unique)
 	// Parameter
 	cmd[10] = 0x00;
 	cmd[11] = 0x0a;
 
 //	cmd[12] = 0x00;
 //	cmd[13] = 0x00;	//Now the CRC
-	crc = Crc(cmd, 12); // the crc needs to be calculated over 2 bytes 
+	crc = Crc(cmd, 12); // the crc needs to be calculated over 2 bytes
 	cmd[12] = crc & 0xff;
 	cmd[13] = crc >> 8;
 
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
 
-static void BuildArbitraryCustomRequest(BYTE *uid,BYTE CmdCode)
+static void BuildArbitraryCustomRequest(BYTE uid[], BYTE CmdCode)
 {
 	BYTE cmd[14];
 
@@ -419,15 +421,15 @@ static void BuildArbitraryCustomRequest(BYTE *uid,BYTE CmdCode)
 	cmd[5] = 0x01;
 	cmd[6] = 0x00;
 	cmd[7] = 0x10;
-	cmd[8] = 0x05; 
-	cmd[9]= 0xe0; // always e0 (not exactly unique) 	
+	cmd[8] = 0x05;
+	cmd[9]= 0xe0; // always e0 (not exactly unique)
 	// Parameter
 	cmd[10] = 0x05; // for custom codes this must be manufcturer code
 	cmd[11] = 0x00;
 
 //	cmd[12] = 0x00;
 //	cmd[13] = 0x00;	//Now the CRC
-	crc = Crc(cmd, 12); // the crc needs to be calculated over 2 bytes 
+	crc = Crc(cmd, 12); // the crc needs to be calculated over 2 bytes
 	cmd[12] = crc & 0xff;
 	cmd[13] = crc >> 8;
 
@@ -445,7 +447,7 @@ static void BuildArbitraryCustomRequest(BYTE *uid,BYTE CmdCode)
 	WORD crc;
 	// one sub-carrier, inventory, 1 slot, fast rate
 	// AFI is at bit 5 (1<<4) when doing an INVENTORY
-	cmd[0] = 0; //(1 << 2) | (1 << 5) | (1 << 1); 
+	cmd[0] = 0; //(1 << 2) | (1 << 5) | (1 << 1);
 	cmd[1] = 0;
 	// 64-bit UID
 	cmd[2] = 0x32;
@@ -454,7 +456,7 @@ static void BuildArbitraryCustomRequest(BYTE *uid,BYTE CmdCode)
 	cmd[5] = 0x01;
 	cmd[6] = 0x00;
 	cmd[7] = 0x10;
-	cmd[8] = 0x05; 
+	cmd[8] = 0x05;
 	cmd[9]= 0xe0;
 	//Now the CRC
 	crc = Crc(cmd, 10);
@@ -463,7 +465,6 @@ static void BuildArbitraryCustomRequest(BYTE *uid,BYTE CmdCode)
 
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
-
 
 //-----------------------------------------------------------------------------
 // Transmit the command (to the tag) that was placed in ToSend[].
@@ -506,7 +507,6 @@ static void TransmitTo15693Tag(const BYTE *cmd, int len, int *samples, int *wait
 	*samples = (c + *wait) << 3;
 }
 
-
 //-----------------------------------------------------------------------------
 // Transmit the command (to the reader) that was placed in ToSend[].
 //-----------------------------------------------------------------------------
@@ -536,17 +536,11 @@ static void TransmitTo15693Reader(const BYTE *cmd, int len, int *samples, int *w
 	*samples = (c + *wait) << 3;
 }
 
-
-
-
-
-
-static int GetIso15693AnswerFromTag(BYTE *receivedResponse, int maxLen, int *samples, int *elapsed) 
+static int GetIso15693AnswerFromTag(BYTE *receivedResponse, int maxLen, int *samples, int *elapsed)
 {
 	int c = 0;
 	BYTE *dest = (BYTE *)BigBuf;
 	int getNext = 0;
-
 
 	SBYTE prev = 0;
 
@@ -599,10 +593,9 @@ static int GetIso15693AnswerFromTag(BYTE *receivedResponse, int maxLen, int *sam
 //////////////////////////////////////////
 
 	int i, j;
-	int max = 0, maxPos;
+	int max = 0, maxPos=0;
 
 	int skip = 4;
-
 
 //	if(GraphTraceLen < 1000) return;	// THIS CHECKS FOR A BUFFER TO SMALL
 
@@ -622,11 +615,11 @@ static int GetIso15693AnswerFromTag(BYTE *receivedResponse, int maxLen, int *sam
 	int k = 0; // this will be our return value
 
 	// greg - If correlation is less than 1 then there's little point in continuing
-	if ((max/(arraylen(FrameSOF)/skip)) >= 1) 
+	if ((max/(arraylen(FrameSOF)/skip)) >= 1)
 	{
 
 	i = maxPos + arraylen(FrameSOF)/skip;
-	
+
 	BYTE outBuf[20];
 	memset(outBuf, 0, sizeof(outBuf));
 	BYTE mask = 0x01;
@@ -681,22 +674,20 @@ static int GetIso15693AnswerFromTag(BYTE *receivedResponse, int maxLen, int *sam
 
 	for(i = 0; i < k; i++) {
 		receivedResponse[i] = outBuf[i];
-	}	
+	}
 	} // "end if correlation > 0" 	(max/(arraylen(FrameSOF)/skip))
 	return k; // return the number of bytes demodulated
 
 ///	DbpString("CRC=%04x", Iso15693Crc(outBuf, k-2));
 
-
 }
 
 // Now the GetISO15693 message from sniffing command
-static int GetIso15693AnswerFromSniff(BYTE *receivedResponse, int maxLen, int *samples, int *elapsed) 
+static int GetIso15693AnswerFromSniff(BYTE *receivedResponse, int maxLen, int *samples, int *elapsed)
 {
 	int c = 0;
 	BYTE *dest = (BYTE *)BigBuf;
 	int getNext = 0;
-
 
 	SBYTE prev = 0;
 
@@ -749,10 +740,9 @@ static int GetIso15693AnswerFromSniff(BYTE *receivedResponse, int maxLen, int *s
 //////////////////////////////////////////
 
 	int i, j;
-	int max = 0, maxPos;
+	int max = 0, maxPos=0;
 
 	int skip = 4;
-
 
 //	if(GraphTraceLen < 1000) return;	// THIS CHECKS FOR A BUFFER TO SMALL
 
@@ -772,11 +762,11 @@ static int GetIso15693AnswerFromSniff(BYTE *receivedResponse, int maxLen, int *s
 	int k = 0; // this will be our return value
 
 	// greg - If correlation is less than 1 then there's little point in continuing
-	if ((max/(arraylen(FrameSOF)/skip)) >= 1)	// THIS SHOULD BE 1 
+	if ((max/(arraylen(FrameSOF)/skip)) >= 1)	// THIS SHOULD BE 1
 	{
 
 	i = maxPos + arraylen(FrameSOF)/skip;
-	
+
 	BYTE outBuf[20];
 	memset(outBuf, 0, sizeof(outBuf));
 	BYTE mask = 0x01;
@@ -831,16 +821,12 @@ static int GetIso15693AnswerFromSniff(BYTE *receivedResponse, int maxLen, int *s
 
 	for(i = 0; i < k; i++) {
 		receivedResponse[i] = outBuf[i];
-	}	
+	}
 	} // "end if correlation > 0" 	(max/(arraylen(FrameSOF)/skip))
 	return k; // return the number of bytes demodulated
 
 ///	DbpString("CRC=%04x", Iso15693Crc(outBuf, k-2));
-
-
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Start to read an ISO 15693 tag. We send an identify request, then wait
@@ -927,8 +913,6 @@ void AcquireRawAdcSamplesIso15693(void)
 	}
 }
 
-
-
 //-----------------------------------------------------------------------------
 // Simulate an ISO15693 reader, perform anti-collision and then attempt to read a sector
 // all demodulation performed in arm rather than host. - greg
@@ -940,15 +924,14 @@ void ReaderIso15693(DWORD parameter)
 	LED_C_OFF();
 	LED_D_OFF();
 
-
 //DbpString(parameter);
 
 	BYTE *receivedAnswer0 = (((BYTE *)BigBuf) + 3560); // allow 100 bytes per reponse (way too much)
-	BYTE *receivedAnswer1 = (((BYTE *)BigBuf) + 3660); // 
+	BYTE *receivedAnswer1 = (((BYTE *)BigBuf) + 3660); //
 	BYTE *receivedAnswer2 = (((BYTE *)BigBuf) + 3760);
 	BYTE *receivedAnswer3 = (((BYTE *)BigBuf) + 3860);
-	//BYTE *TagUID= (((BYTE *)BigBuf) + 3960);		// where we hold the uid for hi15reader	
-	int responseLen0 = 0;
+	//BYTE *TagUID= (((BYTE *)BigBuf) + 3960);		// where we hold the uid for hi15reader
+//	int responseLen0 = 0;
 	int responseLen1 = 0;
 	int responseLen2 = 0;
 	int responseLen3 = 0;
@@ -988,14 +971,13 @@ void ReaderIso15693(DWORD parameter)
 
 	// FIRST WE RUN AN INVENTORY TO GET THE TAG UID
 	// THIS MEANS WE CAN PRE-BUILD REQUESTS TO SAVE CPU TIME
- BYTE TagUID[7];		// where we hold the uid for hi15reader	
-
+ BYTE TagUID[7];		// where we hold the uid for hi15reader
 
 //	BuildIdentifyRequest();
-//	//TransmitTo15693Tag(ToSend,ToSendMax+3,&tsamples, &wait);	
+//	//TransmitTo15693Tag(ToSend,ToSendMax+3,&tsamples, &wait);
 //	TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
 //	// Now wait for a response
-//	responseLen0 = GetIso15693AnswerFromTag(receivedAnswer0, 100, &samples, &elapsed) ;	
+//	responseLen0 = GetIso15693AnswerFromTag(receivedAnswer0, 100, &samples, &elapsed) ;
 //	if (responseLen0 >=12) // we should do a better check than this
 //	{
 //		// really we should check it is a valid mesg
@@ -1007,19 +989,19 @@ void ReaderIso15693(DWORD parameter)
 //		TagUID[4] = receivedAnswer0[6];
 //		TagUID[5] = receivedAnswer0[7];
 //		TagUID[6] = receivedAnswer0[8]; // IC Manufacturer code
-//	DbpIntegers(TagUID[6],TagUID[5],TagUID[4]);	
+//	DbpIntegers(TagUID[6],TagUID[5],TagUID[4]);
 //}
 
 	// Now send the IDENTIFY command
 	BuildIdentifyRequest();
-	//TransmitTo15693Tag(ToSend,ToSendMax+3,&tsamples, &wait);	
+	//TransmitTo15693Tag(ToSend,ToSendMax+3,&tsamples, &wait);
 	TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
 	// Now wait for a response
 	responseLen1 = GetIso15693AnswerFromTag(receivedAnswer1, 100, &samples, &elapsed) ;
-	
+
 	if (responseLen1 >=12) // we should do a better check than this
 	{
-		
+
 		TagUID[0] = receivedAnswer1[2];
 		TagUID[1] = receivedAnswer1[3];
 		TagUID[2] = receivedAnswer1[4];
@@ -1027,28 +1009,26 @@ void ReaderIso15693(DWORD parameter)
 		TagUID[4] = receivedAnswer1[6];
 		TagUID[5] = receivedAnswer1[7];
 		TagUID[6] = receivedAnswer1[8]; // IC Manufacturer code
-		
+
 		// Now send the SELECT command
-		BuildSelectRequest(*TagUID);
+		BuildSelectRequest(TagUID);
 		TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
 		// Now wait for a response
-		responseLen2 = GetIso15693AnswerFromTag(receivedAnswer2, 100, &samples, &elapsed); 
+		responseLen2 = GetIso15693AnswerFromTag(receivedAnswer2, 100, &samples, &elapsed);
 
 		// Now send the MULTI READ command
 //		BuildArbitraryRequest(*TagUID,parameter);
-		BuildArbitraryCustomRequest(*TagUID,parameter);
+		BuildArbitraryCustomRequest(TagUID,parameter);
 //		BuildReadBlockRequest(*TagUID,parameter);
 //		BuildSysInfoRequest(*TagUID);
-		//TransmitTo15693Tag(ToSend,ToSendMax+3,&tsamples, &wait);	
-		TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3	
+		//TransmitTo15693Tag(ToSend,ToSendMax+3,&tsamples, &wait);
+		TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
 		// Now wait for a response
 		responseLen3 = GetIso15693AnswerFromTag(receivedAnswer3, 100, &samples, &elapsed) ;
 
 	}
 
-
-
-	BYTE str1 [4];
+	char str1 [4];
 	//char str2 [200];
 	int i;
 
@@ -1072,24 +1052,19 @@ void ReaderIso15693(DWORD parameter)
 	for(i = 0; i < responseLen3; i+=3) {
 		DbpIntegers(receivedAnswer3[i],receivedAnswer3[i+1],receivedAnswer3[i+2]);
 	}
-	
 
 //	str2[0]=0;
 //	for(i = 0; i < responseLen3; i++) {
 //		itoa(str1,receivedAnswer3[i]);
 //		strcat(str2,str1);
 //	}
-//	DbpString(str2);	
+//	DbpString(str2);
 
 	LED_A_OFF();
 	LED_B_OFF();
 	LED_C_OFF();
 	LED_D_OFF();
-
-
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
@@ -1102,18 +1077,17 @@ void SimTagIso15693(DWORD parameter)
 	LED_C_OFF();
 	LED_D_OFF();
 
-
 //DbpString(parameter);
 
 	BYTE *receivedAnswer0 = (((BYTE *)BigBuf) + 3560); // allow 100 bytes per reponse (way too much)
-	BYTE *receivedAnswer1 = (((BYTE *)BigBuf) + 3660); // 
+	BYTE *receivedAnswer1 = (((BYTE *)BigBuf) + 3660); //
 	BYTE *receivedAnswer2 = (((BYTE *)BigBuf) + 3760);
 	BYTE *receivedAnswer3 = (((BYTE *)BigBuf) + 3860);
-	//BYTE *TagUID= (((BYTE *)BigBuf) + 3960);		// where we hold the uid for hi15reader	
-	int responseLen0 = 0;
+	//BYTE *TagUID= (((BYTE *)BigBuf) + 3960);		// where we hold the uid for hi15reader
+//	int responseLen0 = 0;
 	int responseLen1 = 0;
-	int responseLen2 = 0;
-	int responseLen3 = 0;
+//	int responseLen2 = 0;
+//	int responseLen3 = 0;
 
 	// Blank arrays
 	int j;
@@ -1150,41 +1124,34 @@ void SimTagIso15693(DWORD parameter)
 
 	// FIRST WE RUN AN INVENTORY TO GET THE TAG UID
 	// THIS MEANS WE CAN PRE-BUILD REQUESTS TO SAVE CPU TIME
- BYTE TagUID[7];		// where we hold the uid for hi15reader	
-
-
+	// BYTE TagUID[7];		// where we hold the uid for hi15reader
 
 	// Now send the IDENTIFY command
-//	BuildIdentifyRequest();
-//	TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
-
+	//	BuildIdentifyRequest();
+	//	TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
 
 	// Now wait for a command from the reader
 	responseLen1=0;
-//	while(responseLen1=0) {
-//		if(BUTTON_PRESS()) break;
+	//	while(responseLen1=0) {
+	//		if(BUTTON_PRESS()) break;
 		responseLen1 = GetIso15693AnswerFromSniff(receivedAnswer1, 100, &samples, &elapsed) ;
-//		}
+	//		}
 
-	
 	if (responseLen1 >=1) // we should do a better check than this
 	{
 		// Build a suitable reponse to the reader INVENTORY cocmmand
-		BuildInventoryResponse;
+		BuildInventoryResponse();
 		TransmitTo15693Reader(ToSend,ToSendMax,&tsamples, &wait);
 
 		// Now wait for a command from the reader
-//		responseLen2 = GetIso15693AnswerFromTag(receivedAnswer2, 100, &samples, &elapsed); 
+//		responseLen2 = GetIso15693AnswerFromTag(receivedAnswer2, 100, &samples, &elapsed);
 
-	
 		// Now wait for a command from the reader
 //		responseLen3 = GetIso15693AnswerFromTag(receivedAnswer3, 100, &samples, &elapsed) ;
 
 	}
 
-
-
-	BYTE str1 [4];
+	char str1 [4];
 	//char str2 [200];
 	int i;
 
@@ -1208,19 +1175,16 @@ void SimTagIso15693(DWORD parameter)
 //	for(i = 0; i < responseLen3; i+=3) {
 //		DbpIntegers(receivedAnswer3[i],receivedAnswer3[i+1],receivedAnswer3[i+2]);
 //	}
-	
 
 //	str2[0]=0;
 //	for(i = 0; i < responseLen3; i++) {
 //		itoa(str1,receivedAnswer3[i]);
 //		strcat(str2,str1);
 //	}
-//	DbpString(str2);	
+//	DbpString(str2);
 
 	LED_A_OFF();
 	LED_B_OFF();
 	LED_C_OFF();
 	LED_D_OFF();
-
-
 }
