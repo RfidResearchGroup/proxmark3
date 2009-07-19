@@ -247,10 +247,12 @@ static void PaintGraph(HDC hdc)
 		yMean /= n;
 	}
 
-	char str[100];
+	char str[200];
+
 	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f] zoom=%.3f CursorA=%d [%d] CursorB=%d [%d]",
 		GraphStart, yMax, yMin, yMean, n, GraphTraceLen,
-		CursorBPos - CursorAPos, (CursorBPos - CursorAPos)/CursorScaleFactor, GraphPixelsPerPoint, CursorAPos, GraphBuffer[CursorAPos], CursorBPos, GraphBuffer[CursorBPos]);
+		CursorBPos - CursorAPos, (CursorBPos - CursorAPos)/CursorScaleFactor, GraphPixelsPerPoint,
+		CursorAPos, GraphBuffer[CursorAPos], CursorBPos, GraphBuffer[CursorBPos]);
 	TextOut(hdc, 50, r.bottom - 20, str, strlen(str));
 }
 
@@ -321,6 +323,7 @@ nopaint:
 			x -= offset;
 			x = (int)(x / GraphPixelsPerPoint);
 			x += GraphStart;
+
 			if(msg == WM_LBUTTONDOWN) {
 				CursorAPos = x;
 			} else {
