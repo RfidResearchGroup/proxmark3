@@ -86,7 +86,7 @@ void LED(int led, int ms)
 	if (led & LED_RED2)
 		LED_D_OFF();
 }
-	
+
 
 // Determine if a button is double clicked, single clicked,
 // not clicked, or held down (for ms || 1sec)
@@ -107,14 +107,14 @@ int BUTTON_CLICKED(int ms)
 	PWM_CH_MODE(0) = PWM_CH_MODE_PRESCALER(10);
 	PWM_CH_DUTY_CYCLE(0) = 0;
 	PWM_CH_PERIOD(0) = 0xffff;
-	
+
 	WORD start = (WORD)PWM_CH_COUNTER(0);
-	
+
 	int letoff = 0;
 	for(;;)
 	{
 		WORD now = (WORD)PWM_CH_COUNTER(0);
-		
+
 		// We haven't let off the button yet
 		if (!letoff)
 		{
@@ -163,20 +163,20 @@ int BUTTON_HELD(int ms)
 	// If we're not even pressed, forget about it!
 	if (!BUTTON_PRESS())
 		return BUTTON_NO_CLICK;
-	
+
 	// Borrow a PWM unit for my real-time clock
 	PWM_ENABLE = PWM_CHANNEL(0);
 	// 48 MHz / 1024 gives 46.875 kHz
 	PWM_CH_MODE(0) = PWM_CH_MODE_PRESCALER(10);
 	PWM_CH_DUTY_CYCLE(0) = 0;
 	PWM_CH_PERIOD(0) = 0xffff;
-	
+
 	WORD start = (WORD)PWM_CH_COUNTER(0);
-	
+
 	for(;;)
 	{
 		WORD now = (WORD)PWM_CH_COUNTER(0);
-		
+
 		// As soon as our button let go, we didn't hold long enough
 		if (!BUTTON_PRESS())
 			return BUTTON_SINGLE_CLICK;
@@ -185,7 +185,7 @@ int BUTTON_HELD(int ms)
 		else
 			if (now == (WORD)(start + ticks))
 				return BUTTON_HOLD;
-		
+
 		WDT_HIT();
 	}
 
@@ -193,47 +193,32 @@ int BUTTON_HELD(int ms)
 	return BUTTON_ERROR;
 }
 
+// attempt at high resolution microsecond timer
+// beware: timer counts in 21.3uS increments (1024/48Mhz)
 void SpinDelayUs(int us)
 {
 	int ticks = (48*us) >> 10;
-	
+
 	// Borrow a PWM unit for my real-time clock
 	PWM_ENABLE = PWM_CHANNEL(0);
 	// 48 MHz / 1024 gives 46.875 kHz
 	PWM_CH_MODE(0) = PWM_CH_MODE_PRESCALER(10);
 	PWM_CH_DUTY_CYCLE(0) = 0;
 	PWM_CH_PERIOD(0) = 0xffff;
-	
+
 	WORD start = (WORD)PWM_CH_COUNTER(0);
-	
+
 	for(;;) {
-		WORD now = (WORD)PWM_CH_COUNTER(0);
-		if(now == (WORD)(start + ticks)) {
-			return;
-		}
-		WDT_HIT();
-	}
-}
-
-void SpinDelay(int ms)
-{
-	int ticks = (48000*ms) >> 10;
-
-	// Borrow a PWM unit for my real-time clock
-	PWM_ENABLE = PWM_CHANNEL(0);
-	// 48 MHz / 1024 gives 46.875 kHz
-	PWM_CH_MODE(0) = PWM_CH_MODE_PRESCALER(10);
-	PWM_CH_DUTY_CYCLE(0) = 0;
-	PWM_CH_PERIOD(0) = 0xffff;
-
-	WORD start = (WORD)PWM_CH_COUNTER(0);
-
-	for(;;)
-	{
 		WORD now = (WORD)PWM_CH_COUNTER(0);
 		if (now == (WORD)(start + ticks))
 			return;
 
 		WDT_HIT();
 	}
+}
+
+void SpinDelay(int ms)
+{
+  // convert to uS and call microsecond delay function
+	SpinDelayUs(ms*1000);
 }
