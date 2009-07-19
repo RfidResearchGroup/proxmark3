@@ -71,7 +71,7 @@ void DbpString(char *str)
 	/* this holds up stuff unless we're connected to usb */
 //	if (!usbattached)
 //		return;
-	
+
 	UsbCommand c;
 	c.cmd = CMD_DEBUG_PRINT_STRING;
 	c.ext1 = strlen(str);
@@ -103,10 +103,10 @@ void AcquireRawAdcSamples125k(BOOL at134khz)
 {
 	if(at134khz) {
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_134_KHZ);
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 	} else {
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_125_KHZ);
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 	}
 
 	// Connect the A/D to the peak-detected low-frequency path.
@@ -157,13 +157,13 @@ void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYT
 		at134khz= TRUE;
 	else
 		at134khz= FALSE;
-	
+
 	if(at134khz) {
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_134_KHZ);
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 	} else {
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_125_KHZ);
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 	}
 
 	// Give it a bit of time for the resonant antenna to settle.
@@ -180,10 +180,10 @@ void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYT
 		SpinDelayUs(delay_off);
 		if(at134khz) {
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-			FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_134_KHZ);
+			FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 		} else {
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-			FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_125_KHZ);
+			FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 		}
 		LED_D_ON();
 		if(*(command++) == '0')
@@ -196,14 +196,76 @@ void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYT
 	SpinDelayUs(delay_off);
 	if(at134khz) {
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_134_KHZ);
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 	} else {
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_125_KHZ);
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 	}
 
 	// now do the read
 	DoAcquisition125k(at134khz);
+}
+
+//-----------------------------------------------------------------------------
+// Read a TI-type tag. We assume that the tag has already been illuminated,
+// and that the exciting signal has been turned off. That means that we just
+// acquire the `one-bit DAC' bits from the comparator.
+//-----------------------------------------------------------------------------
+void AcquireTiType(void)
+{
+	int i;
+	int n = 4000;
+
+	// clear buffer
+	memset(BigBuf,0,sizeof(BigBuf));
+
+  // Set up the synchronous serial port
+  PIO_DISABLE = (1<<GPIO_SSC_DIN);
+  PIO_PERIPHERAL_A_SEL = (1<<GPIO_SSC_DIN);
+
+  SSC_CONTROL = SSC_CONTROL_RESET;
+  SSC_CONTROL = SSC_CONTROL_RX_ENABLE | SSC_CONTROL_TX_ENABLE;
+
+  // Sample at 2 Mbit/s, so TI tags are 16.2 vs. 14.9 clocks long
+  // 48/2 = 24 MHz clock must be divided by 12
+  SSC_CLOCK_DIVISOR = 12;
+
+  SSC_RECEIVE_CLOCK_MODE = SSC_CLOCK_MODE_SELECT(0);
+  SSC_RECEIVE_FRAME_MODE = SSC_FRAME_MODE_BITS_IN_WORD(32) | SSC_FRAME_MODE_MSB_FIRST;
+  SSC_TRANSMIT_CLOCK_MODE = 0;
+  SSC_TRANSMIT_FRAME_MODE = 0;
+
+  i = 0;
+  for(;;) {
+      if(SSC_STATUS & SSC_STATUS_RX_READY) {
+          BigBuf[i] = SSC_RECEIVE_HOLDING;	// store 32 bit values in buffer
+          i++; if(i >= n) return;
+      }
+      WDT_HIT();
+  }
+}
+
+void AcquireRawBitsTI(void)
+{
+	LED_D_ON();
+	// TI tags charge at 134.2Khz
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+
+	// Charge TI tag for 50ms.
+	SpinDelay(50);
+	LED_D_OFF();
+
+	LED_A_ON();
+	// Place FPGA in passthrough mode so as to stop driving the LF coil,
+	// in this mode the CROSS_LO line connects to SSP_DIN
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
+
+	// get TI tag data into the buffer
+	AcquireTiType();
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LED_A_OFF();
 }
 
 //-----------------------------------------------------------------------------
@@ -288,7 +350,7 @@ void MeasureAntennaTuning(void)
 	c.cmd = CMD_MEASURED_ANTENNA_TUNING;
 	c.ext1 = (vLf125 << 0) | (vLf134 << 16);
 	c.ext2 = vHf;
-	c.ext3 =  peakf | (peakv << 16);
+	c.ext3 = peakf | (peakv << 16);
 	UsbSendPacket((BYTE *)&c, sizeof(c));
 }
 
@@ -324,7 +386,7 @@ void SimulateTagLowFrequency(int period, int ledcontrol)
 			OPEN_COIL();
 		else
 			SHORT_COIL();
-		
+
 		if (ledcontrol)
 			LED_D_OFF();
 
@@ -439,7 +501,7 @@ static void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 	if (ledcontrol)
 		LED_A_ON();
 	SimulateTagLowFrequency(n, ledcontrol);
-	
+
 	if (ledcontrol)
 		LED_A_OFF();
 }
@@ -452,7 +514,7 @@ static void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	DWORD hi=0, lo=0;
 
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_READER_USE_125_KHZ);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 
 	// Connect the A/D to the peak-detected low-frequency path.
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
@@ -698,6 +760,10 @@ void UsbPacketReceived(BYTE *packet, int len)
 			ModThenAcquireRawAdcSamples125k(c->ext1,c->ext2,c->ext3,c->d.asBytes);
 			break;
 
+		case CMD_ACQUIRE_RAW_BITS_TI_TYPE:
+			AcquireRawBitsTI();
+			break;
+
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693:
 			AcquireRawAdcSamplesIso15693();
 			break;
@@ -830,7 +896,7 @@ void ReadMem(int addr)
 {
 	const DWORD *data = ((DWORD *)addr);
 	int i;
-	
+
 	DbpString("Reading memory at address");
 	DbpIntegers(0, 0, addr);
 	for (i = 0; i < 8; i+= 2)
@@ -911,7 +977,7 @@ void SamyRun()
 #define OPTS 2
 
 	int high[OPTS], low[OPTS];
-	
+
 	// Oooh pretty -- notify user we're in elite samy mode now
 	LED(LED_RED,	200);
 	LED(LED_ORANGE, 200);
@@ -922,29 +988,29 @@ void SamyRun()
 	LED(LED_GREEN,	200);
 	LED(LED_ORANGE, 200);
 	LED(LED_RED,	200);
-	
+
 	int selected = 0;
 	int playing = 0;
-	
+
 	// Turn on selected LED
 	LED(selected + 1, 0);
-	
+
 	for (;;)
 	{
 		usbattached = UsbPoll(FALSE);
 		WDT_HIT();
-		
+
 		// Was our button held down or pressed?
 		int button_pressed = BUTTON_HELD(1000);
 		SpinDelay(300);
-		
+
 		// Button was held for a second, begin recording
 		if (button_pressed > 0)
 		{
 			LEDsoff();
 			LED(selected + 1, 0);
 			LED(LED_RED2, 0);
-						
+
 			// record
 			DbpString("Starting recording");
 
@@ -958,16 +1024,16 @@ void SamyRun()
 			CmdHIDdemodFSK(1, &high[selected], &low[selected], 0);
 			DbpString("Recorded");
 			DbpIntegers(selected, high[selected], low[selected]);
-			
+
 			LEDsoff();
 			LED(selected + 1, 0);
 			// Finished recording
-			
+
 			// If we were previously playing, set playing off
 			// so next button push begins playing what we recorded
 			playing = 0;
 		}
-		
+
 		// Change where to record (or begin playing)
 		else if (button_pressed)
 		{
@@ -975,10 +1041,10 @@ void SamyRun()
 			if (playing)
 				selected = (selected + 1) % OPTS;
 			playing = !playing;
-			
+
 			LEDsoff();
 			LED(selected + 1, 0);
-			
+
 			// Begin transmitting
 			if (playing)
 			{
@@ -996,10 +1062,10 @@ void SamyRun()
 					LEDsoff();
 					return;
 					}
-				
+
 				/* We pressed a button so ignore it here with a delay */
 				SpinDelay(300);
-				
+
 				// when done, we're done playing, move to next option
 				selected = (selected + 1) % OPTS;
 				playing = !playing;
@@ -1014,7 +1080,7 @@ void SamyRun()
 }
 
 
-// listen for external reader 
+// listen for external reader
 void ListenReaderField(int limit)
 {
 	int lf_av, lf_av_new, lf_baseline= 0, lf_count= 0;
@@ -1030,7 +1096,7 @@ void ListenReaderField(int limit)
 
 	lf_av= ReadAdc(ADC_CHAN_LF);
 
-	if(limit != HF_ONLY) 
+	if(limit != HF_ONLY)
 		{
 		DbpString("LF 125/134 Baseline:");
 		DbpIntegers(lf_av,0,0);
@@ -1040,16 +1106,16 @@ void ListenReaderField(int limit)
 	hf_av= ReadAdc(ADC_CHAN_HF);
 
 
-	if (limit != LF_ONLY) 
+	if (limit != LF_ONLY)
 		{
 		DbpString("HF 13.56 Baseline:");
 		DbpIntegers(hf_av,0,0);
 		hf_baseline= hf_av;
 		}
 
-	for(;;) 
+	for(;;)
 		{
-		if(BUTTON_PRESS()) 
+		if(BUTTON_PRESS())
 			{
 			DbpString("Stopped");
 			LED_B_OFF();
@@ -1059,7 +1125,7 @@ void ListenReaderField(int limit)
 		WDT_HIT();
 
 
-		if (limit != HF_ONLY) 
+		if (limit != HF_ONLY)
 			{
 			if (abs(lf_av - lf_baseline) > 10)
 				LED_D_ON();
@@ -1068,7 +1134,7 @@ void ListenReaderField(int limit)
 			++lf_count;
 			lf_av_new= ReadAdc(ADC_CHAN_LF);
 			// see if there's a significant change
-			if(abs(lf_av - lf_av_new) > 10) 
+			if(abs(lf_av - lf_av_new) > 10)
 				{
 				DbpString("LF 125/134 Field Change:");
 				DbpIntegers(lf_av,lf_av_new,lf_count);
@@ -1077,7 +1143,7 @@ void ListenReaderField(int limit)
 				}
 			}
 
-		if (limit != LF_ONLY) 
+		if (limit != LF_ONLY)
 			{
 			if (abs(hf_av - hf_baseline) > 10)
 				LED_B_ON();
@@ -1086,7 +1152,7 @@ void ListenReaderField(int limit)
 			++hf_count;
 			hf_av_new= ReadAdc(ADC_CHAN_HF);
 			// see if there's a significant change
-			if(abs(hf_av - hf_av_new) > 10) 
+			if(abs(hf_av - hf_av_new) > 10)
 				{
 				DbpString("HF 13.56 Field Change:");
 				DbpIntegers(hf_av,hf_av_new,hf_count);
