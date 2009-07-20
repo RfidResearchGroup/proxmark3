@@ -1798,9 +1798,9 @@ static void CmdThreshold(char *str)
 
 	for(i = 0; i < GraphTraceLen; i++) {
 		if(GraphBuffer[i]>= threshold)
-			GraphBuffer[i]=127;
+			GraphBuffer[i]=1;
 		else
-			GraphBuffer[i]=-128;
+			GraphBuffer[i]=-1;
 	}
 	RepaintGraphWindow();
 }
@@ -2588,6 +2588,14 @@ static void CmdPlot(char *str)
 	ShowGraphWindow();
 }
 
+static void CmdGrid(char *str)
+{
+	int x = 0, y = 0;
+  sscanf(str, "%i %i", &x, &y);
+	SetGraphGrid(x, y);
+	RepaintGraphWindow();
+}
+
 static void CmdHide(char *str)
 {
 	HideGraphWindow();
@@ -2684,12 +2692,6 @@ static void CmdLcd(char *str)
 	}
 }
 
-
-
-static void CmdTest(char *str)
-{
-}
-
 /*
  * Sets the divisor for LF frequency clock: lets the user choose any LF frequency below
  * 600kHz.
@@ -2716,73 +2718,74 @@ static struct {
 	int		offline;  // 1 if the command can be used when in offline mode
 	char		*docString;
 } CommandTable[] = {
-	{"askdemod",			Cmdaskdemod,1,		"<samples per bit> <0|1> -- Attempt to demodulate simple ASK tags"},
-	{"autocorr",			CmdAutoCorr,1,		"<window length> -- Autocorrelation over window"},
-	{"bitsamples",		CmdBitsamples,0,	"    Get raw samples as bitstring"},
-	{"bitstream",			Cmdbitstream,1,		"[clock rate] -- Convert waveform into a bitstream"},
-	{"buffclear",			CmdBuffClear,0,		"    Clear sample buffer and graph window"},
-	{"dec",						CmdDec,1,		"    Decimate samples"},
-	{"detectclock",		Cmddetectclockrate,1, "    Detect clock rate"},
-	{"detectreader",	CmdDetectReader,0, "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
-	{"em410xsim",			CmdEM410xsim,1,		"<UID> -- Simulate EM410x tag"},
-	{"em410xread",		CmdEM410xread,1,	"[clock rate] -- Extract ID from EM410x tag"},
-	{"em410xwatch",		CmdEM410xwatch,0,	"    Watches for EM410x tags"},
-	{"em4x50read",		CmdEM4x50read,1,	"    Extract data from EM4x50 tag"},
-	{"exit",					CmdQuit,1,			"    Exit program"},
-	{"flexdemod",			CmdFlexdemod,1,		"    Demodulate samples for FlexPass"},
-	{"fpgaoff",				CmdFPGAOff,0,		"    Set FPGA off"},							// ## FPGA Control
-	{"fskdemod",			CmdFSKdemod,1,		"    Demodulate graph window as a HID FSK"},
-	{"hexsamples",		CmdHexsamples,0,	"<blocks> -- Dump big buffer as hex bytes"},
-	{"hi14alist",			CmdHi14alist,0,		"    List ISO 14443a history"},				// ## New list command
-	{"hi14areader",		CmdHi14areader,0,	"    Act like an ISO14443 Type A reader"},	// ## New reader command
-	{"hi14asim",			CmdHi14asim,0,		"<UID> -- Fake ISO 14443a tag"},					// ## Simulate 14443a tag
-	{"hi14asnoop",		CmdHi14asnoop,0,	"    Eavesdrop ISO 14443 Type A"},			// ## New snoop command
-	{"hi14bdemod",		CmdHi14bdemod,1,	"    Demodulate ISO14443 Type B from tag"},
-	{"hi14list",			CmdHi14list,0,		"    List ISO 14443 history"},
-	{"hi14read",			CmdHi14read,0,		"    Read HF tag (ISO 14443)"},
-	{"hi14sim",				CmdHi14sim,0,		"    Fake ISO 14443 tag"},
-	{"hi14snoop",			CmdHi14snoop,0,		"    Eavesdrop ISO 14443"},
-	{"hi15demod",			CmdHi15demod,1,		"    Demodulate ISO15693 from tag"},
-	{"hi15read",			CmdHi15read,0,		"    Read HF tag (ISO 15693)"},
-	{"hi15reader",		CmdHi15reader,0,	"    Act like an ISO15693 reader"}, // new command greg
-	{"hi15sim",				CmdHi15tag,0,		"    Fake an ISO15693 tag"}, // new command greg
-	{"hiddemod",			CmdHiddemod,1,		"    Demodulate HID Prox Card II (not optimal)"},
-	{"hide",					CmdHide,1,		"    Hide graph window"},
-	{"hidfskdemod",		CmdHIDdemodFSK,0,	"    Realtime HID FSK demodulator"},
-	{"hidsimtag",			CmdHIDsimTAG,0,		"<ID> -- HID tag simulator"},
-	{"higet",					CmdHi14read_sim,0,	"<samples> -- Get samples HF, 'analog'"},
-	{"hisamples",			CmdHisamples,0,		"    Get raw samples for HF tag"},
-	{"hisampless",		CmdHisampless,0,	"<samples> -- Get signed raw samples, HF tag"},
-	{"hisamplest",		CmdHi14readt,0,		"    Get samples HF, for testing"},
-	{"hisimlisten",		CmdHisimlisten,0,	"    Get HF samples as fake tag"},
-	{"hpf",						CmdHpf,1,		"    Remove DC offset from trace"},
-	{"indalademod",		CmdIndalademod,0,         "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
-	{"lcd",						CmdLcd,0,			"<HEX command> <count> -- Send command/data to LCD"},
-	{"lcdreset",			CmdLcdReset,0,		"    Hardware reset LCD"},
-	{"load",					CmdLoad,1,		"<filename> -- Load trace (to graph window"},
-	{"locomread",			CmdLoCommandRead,0,		"<off period> <'0' period> <'1' period> <command> ['h'] -- Modulate LF reader field to send command before read (all periods in microseconds) (option 'h' for 134)"},
-	{"loread",				CmdLoread,0,		"['h'] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134)"},
-	{"losamples",			CmdLosamples,0,		"[128 - 16000] -- Get raw samples for LF tag"},
-	{"losim",					CmdLosim,0,		"    Simulate LF tag"},
-	{"ltrim",					CmdLtrim,1,		"<samples> -- Trim samples from left of trace"},
-	{"mandemod",			Cmdmanchesterdemod,1,	"[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)"},
-	{"manmod",				Cmdmanchestermod,1,	"[clock rate] -- Manchester modulate a binary stream"},
-	{"norm",					CmdNorm,1,		"    Normalize max/min to +/-500"},
-	{"plot",					CmdPlot,1,		"    Show graph window"},
-	{"quit",					CmdQuit,1,			"    Quit program"},
-	{"readmem",				CmdReadmem,0,			"    [address] -- Read memory at decimal address from flash"},
-	{"reset",					CmdReset,0,			"    Reset the Proxmark3"},
-	{"save",					CmdSave,1,		"<filename> -- Save trace (from graph window)"},
-	{"scale",					CmdScale,1,		"<int> -- Set cursor display scale"},
-	{"setlfdivisor",	CmdSetDivisor,0,	"<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
-	{"sri512read",		CmdSri512read,0,	"<int> -- Read contents of a SRI512 tag"},
-	{"tibits",				CmdTibits,0,		"    Get raw bits for TI-type LF tag"},
-	{"tidemod",				CmdTidemod,1,		"    Demodulate raw bits for TI-type LF tag"},
-	{"tiread",				CmdTiread,0,		"    Read a TI-type 134 kHz tag"},
-	{"threshold",			CmdThreshold,1,		"    Maximize/minimize every value in the graph window depending on threshold"},
-	{"tune",					CmdTune,0,		"    Measure antenna tuning"},
-	{"vchdemod",			CmdVchdemod,0,		"['clone'] -- Demodulate samples for VeriChip"},
-	{"zerocrossings",	CmdZerocrossings,1,	"    Count time between zero-crossings"},
+	{"askdemod",			Cmdaskdemod,				1, "<samples per bit> <0|1> -- Attempt to demodulate simple ASK tags"},
+	{"autocorr",			CmdAutoCorr,				1, "<window length> -- Autocorrelation over window"},
+	{"bitsamples",		CmdBitsamples,			0, "Get raw samples as bitstring"},
+	{"bitstream",			Cmdbitstream,				1, "[clock rate] -- Convert waveform into a bitstream"},
+	{"buffclear",			CmdBuffClear,				0, "Clear sample buffer and graph window"},
+	{"dec",						CmdDec,							1, "Decimate samples"},
+	{"detectclock",		Cmddetectclockrate,	1, "Detect clock rate"},
+	{"detectreader",	CmdDetectReader,		0, "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
+	{"em410xsim",			CmdEM410xsim,				1, "<UID> -- Simulate EM410x tag"},
+	{"em410xread",		CmdEM410xread,			1, "[clock rate] -- Extract ID from EM410x tag"},
+	{"em410xwatch",		CmdEM410xwatch,			0, "Watches for EM410x tags"},
+	{"em4x50read",		CmdEM4x50read,			1, "Extract data from EM4x50 tag"},
+	{"exit",					CmdQuit,						1, "Exit program"},
+	{"flexdemod",			CmdFlexdemod,				1, "Demodulate samples for FlexPass"},
+	{"fpgaoff",				CmdFPGAOff,					0, "Set FPGA off"},
+	{"fskdemod",			CmdFSKdemod,				1, "Demodulate graph window as a HID FSK"},
+	{"grid",					CmdGrid,						1, "grid x y, overlay grid on graph window, use zero value to turn off either"},
+	{"hexsamples",		CmdHexsamples,			0, "<blocks> -- Dump big buffer as hex bytes"},
+	{"hi14alist",			CmdHi14alist,				0, "List ISO 14443a history"},
+	{"hi14areader",		CmdHi14areader,			0, "Act like an ISO14443 Type A reader"},
+	{"hi14asim",			CmdHi14asim,				0, "<UID> -- Fake ISO 14443a tag"},
+	{"hi14asnoop",		CmdHi14asnoop,			0, "Eavesdrop ISO 14443 Type A"},
+	{"hi14bdemod",		CmdHi14bdemod,			1, "Demodulate ISO14443 Type B from tag"},
+	{"hi14list",			CmdHi14list,				0, "List ISO 14443 history"},
+	{"hi14read",			CmdHi14read,				0, "Read HF tag (ISO 14443)"},
+	{"hi14sim",				CmdHi14sim,					0, "Fake ISO 14443 tag"},
+	{"hi14snoop",			CmdHi14snoop,				0, "Eavesdrop ISO 14443"},
+	{"hi15demod",			CmdHi15demod,				1, "Demodulate ISO15693 from tag"},
+	{"hi15read",			CmdHi15read,				0, "Read HF tag (ISO 15693)"},
+	{"hi15reader",		CmdHi15reader,			0, "Act like an ISO15693 reader"},
+	{"hi15sim",				CmdHi15tag,					0, "Fake an ISO15693 tag"},
+	{"hiddemod",			CmdHiddemod,				1, "Demodulate HID Prox Card II (not optimal)"},
+	{"hide",					CmdHide,						1, "Hide graph window"},
+	{"hidfskdemod",		CmdHIDdemodFSK,			0, "Realtime HID FSK demodulator"},
+	{"hidsimtag",			CmdHIDsimTAG,				0, "<ID> -- HID tag simulator"},
+	{"higet",					CmdHi14read_sim,		0, "<samples> -- Get samples HF, 'analog'"},
+	{"hisamples",			CmdHisamples,				0, "Get raw samples for HF tag"},
+	{"hisampless",		CmdHisampless,			0, "<samples> -- Get signed raw samples, HF tag"},
+	{"hisamplest",		CmdHi14readt,				0, "Get samples HF, for testing"},
+	{"hisimlisten",		CmdHisimlisten,			0, "Get HF samples as fake tag"},
+	{"hpf",						CmdHpf,							1, "Remove DC offset from trace"},
+	{"indalademod",		CmdIndalademod,			0, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
+	{"lcd",						CmdLcd,							0, "<HEX command> <count> -- Send command/data to LCD"},
+	{"lcdreset",			CmdLcdReset,				0, "Hardware reset LCD"},
+	{"load",					CmdLoad,						1, "<filename> -- Load trace (to graph window"},
+	{"locomread",			CmdLoCommandRead,		0, "<off period> <'0' period> <'1' period> <command> ['h'] -- Modulate LF reader field to send command before read (all periods in microseconds) (option 'h' for 134)"},
+	{"loread",				CmdLoread,					0, "['h'] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134)"},
+	{"losamples",			CmdLosamples,				0, "[128 - 16000] -- Get raw samples for LF tag"},
+	{"losim",					CmdLosim,						0, "Simulate LF tag"},
+	{"ltrim",					CmdLtrim,						1, "<samples> -- Trim samples from left of trace"},
+	{"mandemod",			Cmdmanchesterdemod,	1, "[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)"},
+	{"manmod",				Cmdmanchestermod,		1, "[clock rate] -- Manchester modulate a binary stream"},
+	{"norm",					CmdNorm,						1, "Normalize max/min to +/-500"},
+	{"plot",					CmdPlot,						1, "Show graph window"},
+	{"quit",					CmdQuit,						1, "Quit program"},
+	{"readmem",				CmdReadmem,					0, "[address] -- Read memory at decimal address from flash"},
+	{"reset",					CmdReset,						0, "Reset the Proxmark3"},
+	{"save",					CmdSave,						1, "<filename> -- Save trace (from graph window)"},
+	{"scale",					CmdScale,						1, "<int> -- Set cursor display scale"},
+	{"setlfdivisor",	CmdSetDivisor,			0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
+	{"sri512read",		CmdSri512read,			0, "<int> -- Read contents of a SRI512 tag"},
+	{"tibits",				CmdTibits,					0, "Get raw bits for TI-type LF tag"},
+	{"tidemod",				CmdTidemod,					1, "Demodulate raw bits for TI-type LF tag"},
+	{"tiread",				CmdTiread,					0, "Read a TI-type 134 kHz tag"},
+	{"threshold",			CmdThreshold,				1, "Maximize/minimize every value in the graph window depending on threshold"},
+	{"tune",					CmdTune,						0, "Measure antenna tuning"},
+	{"vchdemod",			CmdVchdemod,				0, "['clone'] -- Demodulate samples for VeriChip"},
+	{"zerocrossings",	CmdZerocrossings,		1, "Count time between zero-crossings"},
 };
 
 static struct {

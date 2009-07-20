@@ -1,3 +1,2 @@
 @echo off
-cd ..\winsrc
-call prox gui
+call ..\winsrc\prox %1

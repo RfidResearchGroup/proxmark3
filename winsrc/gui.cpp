@@ -34,12 +34,13 @@ void dbp(char *str, ...)
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 int GraphTraceLen;
 
-HPEN GreyPen, GreenPen, WhitePen, YellowPen;
+HPEN GreyPenLite, GreyPen, GreenPen, WhitePen, YellowPen;
 HBRUSH GreenBrush, YellowBrush;
 
 static int GraphStart = 0;
 static double GraphPixelsPerPoint = 1;
 
+static int PlotGridX = 0, PlotGridY = 0;
 static int CursorAPos;
 static int CursorBPos;
 double CursorScaleFactor = 1.0;
@@ -61,10 +62,16 @@ static HFONT MyFixedFont;
 
 void ExecCmd(char *cmd)
 {
-
 }
+
 int CommandFinished;
 int offset = 64;
+
+void SetGraphGrid(int x, int y)
+{
+	PlotGridX = x;
+	PlotGridY = y;
+}
 
 static void ResizeCommandWindow(void)
 {
@@ -108,43 +115,63 @@ static LRESULT CALLBACK
 
 static void PaintGraph(HDC hdc)
 {
+	RECT r;
 	HBRUSH brush;
 	HPEN pen;
+	char str[250];
+	int yMin = INT_MAX;
+	int yMax = INT_MIN;
+	int yMean = 0;
+	int startMax = 0;
+	int absYMax = 1;
+	int n = 0, i = 0;
 
 	brush = GreenBrush;
 	pen = GreenPen;
 
-	if(GraphStart < 0) {
-		GraphStart = 0;
-	}
-
-	RECT r;
 	GetClientRect(GraphWindow, &r);
+	int zeroHeight = (r.top + r.bottom) >> 1;
 
+	// plot X and Y grid lines
+	if ((PlotGridX > 0) && ((PlotGridX * GraphPixelsPerPoint) > 1)) {
+		for(i = offset; i < r.right; i += (int)(PlotGridX * GraphPixelsPerPoint)) {
+			SelectObject(hdc, GreyPenLite);
+			MoveToEx(hdc, r.left + i, r.top, NULL);
+			LineTo(hdc, r.left + i, r.bottom);
+		}
+  }
+
+	if ((PlotGridY > 0) && ((PlotGridY * GraphPixelsPerPoint) > 1)){
+		for(i = 0; i < ((r.top + r.bottom)>>1); i += (int)(PlotGridY * GraphPixelsPerPoint)) {
+			SelectObject(hdc, GreyPenLite);
+			MoveToEx(hdc, r.left, zeroHeight + i, NULL);
+			LineTo(hdc, r.right, zeroHeight + i);
+			MoveToEx(hdc, r.left, zeroHeight - i, NULL);
+			LineTo(hdc, r.right, zeroHeight - i);
+		}
+  }
+
+	// print vertical separator white line on the left of the window
 	SelectObject(hdc, WhitePen);
-
 	MoveToEx(hdc, r.left + offset, r.top, NULL);
 	LineTo(hdc, r.left + offset, r.bottom);
 
-	int zeroHeight = r.top + (r.bottom - r.top) / 2;
+	// print horizontal grey zero axis line
 	SelectObject(hdc, GreyPen);
 	MoveToEx(hdc, r.left, zeroHeight, NULL);
 	LineTo(hdc, r.right, zeroHeight);
 
-	int startMax =
-		(GraphTraceLen - (int)((r.right - r.left - offset) / GraphPixelsPerPoint));
-	if(startMax < 0) {
-		startMax = 0;
-	}
-	if(GraphStart > startMax) {
-		GraphStart = startMax;
-	}
+	startMax = (GraphTraceLen - (int)((r.right - r.left - offset) / GraphPixelsPerPoint));
+	// check boundaries
+	if(startMax < 0) startMax = 0;
+	if(GraphStart > startMax) GraphStart = startMax;
+	if(GraphStart < 0) GraphStart = 0;
 
-	int absYMax = 1;
 
 	SelectObject(hdc, pen);
 
-	int i;
+	// go over the portion of the graph to be displayed and find the largest
+	// absolute value which will be used to auto scale the graph when displayed
 	for(i = GraphStart; ; i++) {
 		if(i >= GraphTraceLen) {
 			break;
@@ -174,11 +201,7 @@ static void PaintGraph(HDC hdc)
 	if(pointsPerLabel <= 0) pointsPerLabel = 1;
 	pointsPerLabel = (int)pow(2.0,pointsPerLabel);
 
-	int yMin = INT_MAX;
-	int yMax = INT_MIN;
-	int yMean = 0;
-	int n = 0;
-
+	// go over the graph and plot samples and labels
 	for(i = GraphStart; ; i++) {
 		if(i >= GraphTraceLen) {
 			break;
@@ -189,12 +212,8 @@ static void PaintGraph(HDC hdc)
 		}
 
 		int y = GraphBuffer[i];
-		if(y < yMin) {
-			yMin = y;
-		}
-		if(y > yMax) {
-			yMax = y;
-		}
+		if(y < yMin) yMin = y;
+		if(y > yMax) yMax = y;
 		yMean += y;
 		n++;
 
@@ -214,13 +233,13 @@ static void PaintGraph(HDC hdc)
 			FillRect(hdc, &f, brush);
 		}
 
+		// plot labels
 		if(((i - GraphStart) % pointsPerLabel == 0) && i != GraphStart) {
 			SelectObject(hdc, WhitePen);
 			MoveToEx(hdc, x, zeroHeight - 8, NULL);
 			LineTo(hdc, x, zeroHeight + 8);
 
-			char str[100];
-			sprintf(str, "+%d", (i - GraphStart));
+			sprintf(str, "+%d", i);
 			SIZE size;
 			GetTextExtentPoint32(hdc, str, strlen(str), &size);
 			TextOut(hdc, x - size.cx, zeroHeight + 8, str, strlen(str));
@@ -229,6 +248,7 @@ static void PaintGraph(HDC hdc)
 			MoveToEx(hdc, x, y, NULL);
 		}
 
+		// plot measurement cursors
 		if(i == CursorAPos || i == CursorBPos) {
 			if(i == CursorAPos) {
 				SelectObject(hdc, CursorAPen);
@@ -247,8 +267,7 @@ static void PaintGraph(HDC hdc)
 		yMean /= n;
 	}
 
-	char str[200];
-
+	// print misc information at bottom of graph window
 	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f] zoom=%.3f CursorA=%d [%d] CursorB=%d [%d]",
 		GraphStart, yMax, yMin, yMean, n, GraphTraceLen,
 		CursorBPos - CursorAPos, (CursorBPos - CursorAPos)/CursorScaleFactor, GraphPixelsPerPoint,
@@ -438,6 +457,7 @@ void ShowGui()
 	PrintToScrollback(">> Started prox, built " __DATE__ " " __TIME__);
 	PrintToScrollback(">> Connected to device");
 
+	GreyPenLite = CreatePen(PS_SOLID, 1, RGB(50, 50, 50));
 	GreyPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
 	GreenPen = CreatePen(PS_SOLID, 1, RGB(100, 255, 100));
 	YellowPen = CreatePen(PS_SOLID, 1, RGB(255, 255, 0));

@@ -13,6 +13,7 @@ void ShowGui();
 void HideGraphWindow(void);
 void ShowGraphWindow(void);
 void RepaintGraphWindow(void);
+void SetGraphGrid(int x, int y);
 void PrintToScrollback(char *fmt, ...);
 #define MAX_GRAPH_TRACE_LEN (1024*128)
 extern int GraphBuffer[MAX_GRAPH_TRACE_LEN];
