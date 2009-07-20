@@ -206,22 +206,21 @@ void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYT
 	DoAcquisition125k(at134khz);
 }
 
-//-----------------------------------------------------------------------------
-// Read a TI-type tag. We assume that the tag has already been illuminated,
-// and that the exciting signal has been turned off. That means that we just
-// acquire the `one-bit DAC' bits from the comparator.
-//-----------------------------------------------------------------------------
 void AcquireTiType(void)
 {
 	int i;
-	int n = sizeof(BigBuf);
+	int n = 5000;
 
 	// clear buffer
 	memset(BigBuf,0,sizeof(BigBuf));
 
-  // Set up the synchronous serial port
+	// Set up the synchronous serial port
   PIO_DISABLE = (1<<GPIO_SSC_DIN);
   PIO_PERIPHERAL_A_SEL = (1<<GPIO_SSC_DIN);
+
+	// steal this pin from the SSP and use it to control the modulation
+  PIO_ENABLE = (1<<GPIO_SSC_DOUT);
+	PIO_OUTPUT_ENABLE	= (1<<GPIO_SSC_DOUT);
 
   SSC_CONTROL = SSC_CONTROL_RESET;
   SSC_CONTROL = SSC_CONTROL_RX_ENABLE | SSC_CONTROL_TX_ENABLE;
@@ -231,18 +230,35 @@ void AcquireTiType(void)
   SSC_CLOCK_DIVISOR = 12;
 
   SSC_RECEIVE_CLOCK_MODE = SSC_CLOCK_MODE_SELECT(0);
-  SSC_RECEIVE_FRAME_MODE = SSC_FRAME_MODE_BITS_IN_WORD(32) | SSC_FRAME_MODE_MSB_FIRST;
-  SSC_TRANSMIT_CLOCK_MODE = 0;
-  SSC_TRANSMIT_FRAME_MODE = 0;
+	SSC_RECEIVE_FRAME_MODE = SSC_FRAME_MODE_BITS_IN_WORD(32) | SSC_FRAME_MODE_MSB_FIRST;
+	SSC_TRANSMIT_CLOCK_MODE = 0;
+	SSC_TRANSMIT_FRAME_MODE = 0;
 
-  i = 0;
-  for(;;) {
-      if(SSC_STATUS & SSC_STATUS_RX_READY) {
-          BigBuf[i] = SSC_RECEIVE_HOLDING;	// store 32 bit values in buffer
-          i++; if(i >= n) return;
-      }
-      WDT_HIT();
-  }
+	LED_D_ON();
+
+	// modulate antenna
+	PIO_OUTPUT_DATA_SET = (1<<GPIO_SSC_DOUT);
+
+	// Charge TI tag for 50ms.
+	SpinDelay(50);
+
+	// stop modulating antenna and listen
+	PIO_OUTPUT_DATA_CLEAR = (1<<GPIO_SSC_DOUT);
+
+	LED_D_OFF();
+
+	i = 0;
+	for(;;) {
+			if(SSC_STATUS & SSC_STATUS_RX_READY) {
+					BigBuf[i] = SSC_RECEIVE_HOLDING;	// store 32 bit values in buffer
+					i++; if(i >= n) return;
+			}
+			WDT_HIT();
+	}
+
+	// return stolen pin ro SSP
+	PIO_DISABLE = (1<<GPIO_SSC_DOUT);
+	PIO_PERIPHERAL_A_SEL = (1<<GPIO_SSC_DIN) | (1<<GPIO_SSC_DOUT);
 }
 
 void AcquireRawBitsTI(void)
@@ -250,22 +266,16 @@ void AcquireRawBitsTI(void)
 	LED_D_ON();
 	// TI tags charge at 134.2Khz
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
-
-	// Charge TI tag for 50ms.
-	SpinDelay(50);
-	LED_D_OFF();
-
-	LED_A_ON();
-	// Place FPGA in passthrough mode so as to stop driving the LF coil,
-	// in this mode the CROSS_LO line connects to SSP_DIN
+	// Place FPGA in passthrough mode, in this mode the CROSS_LO line
+	// connects to SSP_DIN and the SSP_DOUT logic level controls
+	// whether we're modulating the antenna (high)
+	// or listening to the antenna (low)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
 
 	// get TI tag data into the buffer
 	AcquireTiType();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	LED_A_OFF();
 }
 
 //-----------------------------------------------------------------------------

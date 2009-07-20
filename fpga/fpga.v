@@ -129,7 +129,7 @@ lo_passthru lp(
 	adc_d, lp_adc_clk,
 	lp_ssp_frame, lp_ssp_din, ssp_dout, lp_ssp_clk,
 	cross_hi, cross_lo,
-	lp_dbg
+	lp_dbg, divisor
 );
 
 lo_simulate ls(
