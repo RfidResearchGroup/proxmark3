@@ -41,7 +41,6 @@ HBRUSH GreenBrush, YellowBrush;
 static int GraphStart = 0;
 static double GraphPixelsPerPoint = 1;
 
-static int PlotGridX = 0, PlotGridY = 0;
 static int CursorAPos;
 static int CursorBPos;
 double CursorScaleFactor = 1.0;
