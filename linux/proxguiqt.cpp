@@ -86,7 +86,7 @@ ProxGuiQT::~ProxGuiQT(void)
 void ProxWidget::paintEvent(QPaintEvent *event)
 {
 	QPainter painter(this);
-	QPainterPath penPath, whitePath, greyPath, cursorAPath, cursorBPath;
+	QPainterPath penPath, whitePath, greyPath, lightgreyPath, cursorAPath, cursorBPath;
 	QRect r;
 	QBrush brush(QColor(100, 255, 100));
 	QPen pen(QColor(100, 255, 100));
@@ -115,6 +115,29 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 	greyPath.lineTo(r.right(), zeroHeight);
 	painter.setPen(QColor(100, 100, 100));
 	painter.drawPath(greyPath);
+
+        // plot X and Y grid lines
+        int i;
+        if ((PlotGridX > 0) && ((PlotGridX * GraphPixelsPerPoint) > 1)) {
+        	for(i = GraphStart; i < r.right(); i += (int)(PlotGridX * GraphPixelsPerPoint)) {
+        		//SelectObject(hdc, GreyPenLite);
+        		//MoveToEx(hdc, r.left + i, r.top, NULL);
+        		//LineTo(hdc, r.left + i, r.bottom);
+        		lightgreyPath.moveTo(r.left()+i,r.top());
+			lightgreyPath.lineTo(r.left()+i,r.bottom());
+			painter.drawPath(lightgreyPath);
+                } 
+        } 
+        if ((PlotGridY > 0) && ((PlotGridY * GraphPixelsPerPoint) > 1)){
+        	for(i = 0; i < ((r.top() + r.bottom())>>1); i += (int)(PlotGridY * GraphPixelsPerPoint)) {
+       			lightgreyPath.moveTo(r.left(),zeroHeight + i);
+			lightgreyPath.lineTo(r.right(),zeroHeight + i);
+			painter.drawPath(lightgreyPath);
+        		lightgreyPath.moveTo(r.left(),zeroHeight - i);
+			lightgreyPath.lineTo(r.right(),zeroHeight - i);
+			painter.drawPath(lightgreyPath);
+        		}
+        	}
 	
 	int startMax =
 		(GraphTraceLen - (int)((r.right() - r.left() - 40) / GraphPixelsPerPoint));
@@ -127,7 +150,6 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 
 	int absYMax = 1;
 
-	int i;
 	for(i = GraphStart; ; i++) {
 		if(i >= GraphTraceLen) {
 			break;

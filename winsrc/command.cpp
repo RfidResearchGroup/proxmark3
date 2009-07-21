@@ -2590,9 +2590,7 @@ static void CmdPlot(char *str)
 
 static void CmdGrid(char *str)
 {
-	int x = 0, y = 0;
-  sscanf(str, "%i %i", &x, &y);
-	SetGraphGrid(x, y);
+  	sscanf(str, "%i %i", &PlotGridX, &PlotGridY);
 	RepaintGraphWindow();
 }
 
@@ -2734,7 +2732,7 @@ static struct {
 	{"flexdemod",			CmdFlexdemod,				1, "Demodulate samples for FlexPass"},
 	{"fpgaoff",				CmdFPGAOff,					0, "Set FPGA off"},
 	{"fskdemod",			CmdFSKdemod,				1, "Demodulate graph window as a HID FSK"},
-	{"grid",					CmdGrid,						1, "grid x y, overlay grid on graph window, use zero value to turn off either"},
+	{"grid",					CmdGrid,						1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
 	{"hexsamples",		CmdHexsamples,			0, "<blocks> -- Dump big buffer as hex bytes"},
 	{"hi14alist",			CmdHi14alist,				0, "List ISO 14443a history"},
 	{"hi14areader",		CmdHi14areader,			0, "Act like an ISO14443 Type A reader"},

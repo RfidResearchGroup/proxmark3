@@ -9,6 +9,7 @@
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 int GraphTraceLen;
 double CursorScaleFactor;
+int PlotGridX, PlotGridY;
 int CommandFinished;
 int offline;
 

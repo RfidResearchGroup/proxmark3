@@ -67,12 +67,6 @@ void ExecCmd(char *cmd)
 int CommandFinished;
 int offset = 64;
 
-void SetGraphGrid(int x, int y)
-{
-	PlotGridX = x;
-	PlotGridY = y;
-}
-
 static void ResizeCommandWindow(void)
 {
 	int w, h;
