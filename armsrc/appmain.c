@@ -1090,11 +1090,51 @@ void SamyRun()
 }
 
 
-// listen for external reader
+/* 
+OBJECTIVE
+Listen and detect an external reader. Determine the best location
+for the antenna.
+
+INSTRUCTIONS:
+Inside the ListenReaderField() function, there is two mode. 
+By default, when you call the function, you will enter mode 1.
+If you press the PM3 button one time, you will enter mode 2.
+If you press the PM3 button a second time, you will exit the function.
+
+DESCRIPTION OF MODE 1:
+This mode just listens for an external reader field and lights up green 
+for HF and/or red for LF. This is the original mode of the detectreader
+function.
+
+DESCRIPTION OF MODE 2:
+This mode will visually represent, using the LEDs, the actual strength of the
+current compared to the maximum current detected. Basically, once you know 
+what kind of external reader is present, it will help you spot the best location to place
+your antenna. You will probably not get some good results if there is a LF and a HF reader
+at the same place! :-)
+
+LIGHT SCHEME USED:
+
+Light scheme | Descriptiong
+----------------------------------------------------
+    ----     | No field detected
+    X---     | 14% of maximum current detected
+    -X--     | 29% of maximum current detected
+    --X-     | 43% of maximum current detected
+    ---X     | 57% of maximum current detected
+    --XX     | 71% of maximum current detected
+    -XXX     | 86% of maximum current detected
+    XXXX     | 100% of maximum current detected
+
+TODO:
+Add the LF part for MODE 2
+
+*/
 void ListenReaderField(int limit)
 {
 	int lf_av, lf_av_new, lf_baseline= 0, lf_count= 0;
-	int hf_av, hf_av_new,  hf_baseline= 0, hf_count= 0;
+	int hf_av, hf_av_new,  hf_baseline= 0, hf_count= 0, hf_max;
+	int mode=1;
 
 #define LF_ONLY		1
 #define HF_ONLY		2
@@ -1106,36 +1146,45 @@ void ListenReaderField(int limit)
 
 	lf_av= ReadAdc(ADC_CHAN_LF);
 
-	if(limit != HF_ONLY)
+	if(limit != HF_ONLY) 
 		{
 		DbpString("LF 125/134 Baseline:");
 		DbpIntegers(lf_av,0,0);
 		lf_baseline= lf_av;
 		}
 
-	hf_av= ReadAdc(ADC_CHAN_HF);
+	hf_av=hf_max=ReadAdc(ADC_CHAN_HF);
 
-
-	if (limit != LF_ONLY)
+	if (limit != LF_ONLY) 
 		{
 		DbpString("HF 13.56 Baseline:");
 		DbpIntegers(hf_av,0,0);
 		hf_baseline= hf_av;
 		}
 
-	for(;;)
+	for(;;) 
 		{
-		if(BUTTON_PRESS())
-			{
-			DbpString("Stopped");
-			LED_B_OFF();
-			LED_D_OFF();
-			return;
+		if (BUTTON_PRESS()) {
+			SpinDelay(500);
+			switch (mode) {
+				case 1:
+					mode=2;
+					DbpString("Signal Strength Mode");
+					break;
+				case 2:
+				default:
+					DbpString("Stopped");
+					LED_A_OFF();
+					LED_B_OFF();
+					LED_C_OFF();
+					LED_D_OFF();
+					return;
+					break;
 			}
+		}
 		WDT_HIT();
 
-
-		if (limit != HF_ONLY)
+		if (limit != HF_ONLY) 
 			{
 			if (abs(lf_av - lf_baseline) > 10)
 				LED_D_ON();
@@ -1144,7 +1193,7 @@ void ListenReaderField(int limit)
 			++lf_count;
 			lf_av_new= ReadAdc(ADC_CHAN_LF);
 			// see if there's a significant change
-			if(abs(lf_av - lf_av_new) > 10)
+			if(abs(lf_av - lf_av_new) > 10) 
 				{
 				DbpString("LF 125/134 Field Change:");
 				DbpIntegers(lf_av,lf_av_new,lf_count);
@@ -1153,22 +1202,56 @@ void ListenReaderField(int limit)
 				}
 			}
 
-		if (limit != LF_ONLY)
+		if (limit != LF_ONLY) 
 			{
-			if (abs(hf_av - hf_baseline) > 10)
-				LED_B_ON();
-			else
-				LED_B_OFF();
+			if (abs(hf_av - hf_baseline) > 10) {
+				if (mode == 1)
+					LED_B_ON();
+				if (mode == 2) {
+					if ( hf_av>(hf_max/7)*6) {
+						LED_A_ON();	LED_B_ON();	LED_C_ON();	LED_D_ON();
+					}
+					if ( (hf_av>(hf_max/7)*5) && (hf_av<=(hf_max/7)*6) ) {
+						LED_A_ON();	LED_B_ON();	LED_C_OFF(); LED_D_ON();
+					}
+					if ( (hf_av>(hf_max/7)*4) && (hf_av<=(hf_max/7)*5) ) {
+						LED_A_OFF(); LED_B_ON(); LED_C_OFF(); LED_D_ON();
+					}
+					if ( (hf_av>(hf_max/7)*3) && (hf_av<=(hf_max/7)*4) ) {
+						LED_A_OFF(); LED_B_OFF(); LED_C_OFF(); LED_D_ON();
+					}
+					if ( (hf_av>(hf_max/7)*2) && (hf_av<=(hf_max/7)*3) ) {
+						LED_A_OFF(); LED_B_ON(); LED_C_OFF(); LED_D_OFF();
+					}
+					if ( (hf_av>(hf_max/7)*1) && (hf_av<=(hf_max/7)*2) ) {
+						LED_A_ON();	LED_B_OFF(); LED_C_OFF(); LED_D_OFF();
+					}
+					if ( (hf_av>(hf_max/7)*0) && (hf_av<=(hf_max/7)*1) ) {
+						LED_A_OFF(); LED_B_OFF(); LED_C_ON(); LED_D_OFF();
+					}
+				} 
+			} else {
+				if (mode == 1) {
+					LED_B_OFF();
+				}
+				if (mode == 2) {
+					LED_A_OFF(); LED_B_OFF(); LED_C_OFF(); LED_D_OFF();
+				}
+			}
+
 			++hf_count;
 			hf_av_new= ReadAdc(ADC_CHAN_HF);
 			// see if there's a significant change
-			if(abs(hf_av - hf_av_new) > 10)
+			if(abs(hf_av - hf_av_new) > 10) 
 				{
 				DbpString("HF 13.56 Field Change:");
 				DbpIntegers(hf_av,hf_av_new,hf_count);
 				hf_av= hf_av_new;
+				if (hf_av > hf_max)
+					hf_max = hf_av;
 				hf_count= 0;
 				}
 			}
 		}
 }
+
