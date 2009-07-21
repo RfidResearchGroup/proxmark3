@@ -119,7 +119,7 @@ void ProxWidget::paintEvent(QPaintEvent *event)
         // plot X and Y grid lines
         int i;
         if ((PlotGridX > 0) && ((PlotGridX * GraphPixelsPerPoint) > 1)) {
-        	for(i = GraphStart; i < r.right(); i += (int)(PlotGridX * GraphPixelsPerPoint)) {
+        	for(i = 40; i < r.right(); i += (int)(PlotGridX * GraphPixelsPerPoint)) {
         		//SelectObject(hdc, GreyPenLite);
         		//MoveToEx(hdc, r.left + i, r.top, NULL);
         		//LineTo(hdc, r.left + i, r.bottom);
@@ -130,10 +130,10 @@ void ProxWidget::paintEvent(QPaintEvent *event)
         } 
         if ((PlotGridY > 0) && ((PlotGridY * GraphPixelsPerPoint) > 1)){
         	for(i = 0; i < ((r.top() + r.bottom())>>1); i += (int)(PlotGridY * GraphPixelsPerPoint)) {
-       			lightgreyPath.moveTo(r.left(),zeroHeight + i);
+       			lightgreyPath.moveTo(r.left() + 40,zeroHeight + i);
 			lightgreyPath.lineTo(r.right(),zeroHeight + i);
 			painter.drawPath(lightgreyPath);
-        		lightgreyPath.moveTo(r.left(),zeroHeight - i);
+        		lightgreyPath.moveTo(r.left() + 40,zeroHeight - i);
 			lightgreyPath.lineTo(r.right(),zeroHeight - i);
 			painter.drawPath(lightgreyPath);
         		}
