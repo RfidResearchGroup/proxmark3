@@ -12,6 +12,7 @@
 
 #include "prox.h"
 #include "../common/iso14443_crc.c"
+#include "../common/crc16.c"
 
 #define arraylen(x) (sizeof(x)/sizeof((x)[0]))
 #define BIT(x) GraphBuffer[x * clock]
@@ -1608,8 +1609,8 @@ h = sign(sin(cumsum(h)));
  };
 
 	int convLen = max(arraylen(HighTone), arraylen(LowTone));
-
-	int i;
+	WORD crc;
+	int i, TagType;
 	for(i = 0; i < GraphTraceLen - convLen; i++) {
 		int j;
 		int lowSum = 0, highSum = 0;;
@@ -1644,17 +1645,29 @@ h = sign(sin(cumsum(h)));
 
 	RepaintGraphWindow();
 
-	// Okay, so now we have unsliced soft decisions; find bit-sync, and then
-	// get some bits.
+	// TI tag data format is 16 prebits, 8 start bits, 64 data bits,
+	// 16 crc CCITT bits, 8 stop bits, 15 end bits
 
+	// the 16 prebits are always low
+	// the 8 start and stop bits of a tag must match
+	// the start/stop prebits of a ro tag are 01111110
+	// the start/stop prebits of a rw tag are 11111110
+  // the 15 end bits of a ro tag are all low
+  // the 15 end bits of a rw tag match bits 15-1 of the data bits
+
+	// Okay, so now we have unsliced soft decisions;
+	// find bit-sync, and then get some bits.
+	// look for 17 low bits followed by 6 highs (common pattern for ro and rw tags)
 	int max = 0, maxPos = 0;
 	for(i = 0; i < 6000; i++) {
 		int j;
 		int dec = 0;
-		for(j = 0; j < 8*arraylen(LowTone); j++) {
+		// searching 17 consecutive lows
+		for(j = 0; j < 17*arraylen(LowTone); j++) {
 			dec -= GraphBuffer[i+j];
 		}
-		for(; j < 8*arraylen(LowTone) + 8*arraylen(HighTone); j++) {
+		// searching 7 consecutive highs
+		for(; j < 17*arraylen(LowTone) + 6*arraylen(HighTone); j++) {
 			dec += GraphBuffer[i+j];
 		}
 		if(dec > max) {
@@ -1662,14 +1675,18 @@ h = sign(sin(cumsum(h)));
 			maxPos = i;
 		}
 	}
+
+	// place a marker in the buffer to visually aid location
+	// of the start of sync
 	GraphBuffer[maxPos] = 800;
 	GraphBuffer[maxPos+1] = -800;
 
-	maxPos += 8*arraylen(LowTone);
-	GraphBuffer[maxPos] = 800;
-	GraphBuffer[maxPos+1] = -800;
-	maxPos += 8*arraylen(HighTone);
+	// advance pointer to start of actual data stream (after 16 pre and 8 start bits)
+	maxPos += 17*arraylen(LowTone);
+	maxPos += 6*arraylen(HighTone);
 
+	// place a marker in the buffer to visually aid location
+	// of the end of sync
 	GraphBuffer[maxPos] = 800;
 	GraphBuffer[maxPos+1] = -800;
 
@@ -1677,10 +1694,12 @@ h = sign(sin(cumsum(h)));
 
 	PrintToScrollback("length %d/%d", arraylen(HighTone), arraylen(LowTone));
 
-	BYTE bits[64+16+8+1];
+	BYTE bits[1+64+16+8+16];
 	bits[sizeof(bits)-1] = '\0';
 
-	for(i = 0; i < arraylen(bits); i++) {
+	DWORD shift3 = 0x7e000000, shift2 = 0, shift1 = 0, shift0 = 0;
+
+	for(i = 0; i < arraylen(bits)-1; i++) {
 		int high = 0;
 		int low = 0;
 		int j;
@@ -1690,30 +1709,75 @@ h = sign(sin(cumsum(h)));
 		for(j = 0; j < arraylen(HighTone); j++) {
 			high += GraphBuffer[maxPos+j];
 		}
+
 		if(high > low) {
 			bits[i] = '1';
 			maxPos += arraylen(HighTone);
+			// bitstream arrives lsb first so shift right
+			shift3 |= (1<<31);
 		} else {
 			bits[i] = '.';
 			maxPos += arraylen(LowTone);
 		}
+
+		// 128 bit right shift register
+	  shift0 = (shift0>>1) | (shift1 << 31);
+	  shift1 = (shift1>>1) | (shift2 << 31);
+	  shift2 = (shift2>>1) | (shift3 << 31);
+	  shift3 >>= 1;
+
+		// place a marker in the buffer between bits to visually aid location
 		GraphBuffer[maxPos] = 800;
 		GraphBuffer[maxPos+1] = -800;
 	}
-	PrintToScrollback("bits: '%s'", bits);
+	PrintToScrollback("Info: raw tag bits = %s", bits);
 
-	DWORD h = 0, l = 0;
-	for(i = 0; i < 32; i++) {
-		if(bits[i] == '1') {
-			l |= (1<<i);
+	TagType = (shift3>>8)&0xff;
+	if ( TagType != ((shift0>>16)&0xff) ) {
+		PrintToScrollback("Error: start and stop bits do not match!");
+		return;
+	}
+	else if (TagType == 0x7e) {
+		PrintToScrollback("Info: Readonly TI tag detected.");
+		return;
+	}
+	else if (TagType == 0xfe) {
+		PrintToScrollback("Info: Rewriteable TI tag detected.");
+
+	  // put 64 bit data into shift1 and shift0
+	  shift0 = (shift0>>24) | (shift1 << 8);
+	  shift1 = (shift1>>24) | (shift2 << 8);
+
+		// align 16 bit crc into lower half of shift2
+	  shift2 = ((shift2>>24) | (shift3 << 8)) & 0x0ffff;
+
+		// align 16 bit "end bits" or "ident" into lower half of shift3
+	  shift3 >>= 16;
+
+		if ( (shift3^shift0)&0xffff ) {
+			PrintToScrollback("Error: Ident mismatch!");
+		}
+		// calculate CRC
+		crc=0;
+	 	crc = update_crc16(crc, (shift0)&0xff);
+		crc = update_crc16(crc, (shift0>>8)&0xff);
+		crc = update_crc16(crc, (shift0>>16)&0xff);
+		crc = update_crc16(crc, (shift0>>24)&0xff);
+		crc = update_crc16(crc, (shift1)&0xff);
+		crc = update_crc16(crc, (shift1>>8)&0xff);
+		crc = update_crc16(crc, (shift1>>16)&0xff);
+		crc = update_crc16(crc, (shift1>>24)&0xff);
+		PrintToScrollback("Info: Tag data = %08X%08X", shift1, shift0);
+		if (crc != (shift2&0xffff)) {
+			PrintToScrollback("Error: CRC mismatch, calculated %04X, got ^04X", crc, shift2&0xffff);
+		} else {
+			PrintToScrollback("Info: CRC %04X is good", crc);
 		}
 	}
-	for(i = 32; i < 64; i++) {
-		if(bits[i] == '1') {
-			h |= (1<<(i-32));
-		}
+	else {
+		PrintToScrollback("Unknown tag type.");
+		return;
 	}
-	PrintToScrollback("hex: %08x %08x", h, l);
 }
 
 static void CmdNorm(char *str)

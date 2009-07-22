@@ -256,7 +256,7 @@ void AcquireTiType(void)
 			WDT_HIT();
 	}
 
-	// return stolen pin ro SSP
+	// return stolen pin to SSP
 	PIO_DISABLE = (1<<GPIO_SSC_DOUT);
 	PIO_PERIPHERAL_A_SEL = (1<<GPIO_SSC_DIN) | (1<<GPIO_SSC_DOUT);
 }
