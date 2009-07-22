@@ -2720,7 +2720,7 @@ static struct {
 	{"autocorr",			CmdAutoCorr,				1, "<window length> -- Autocorrelation over window"},
 	{"bitsamples",		CmdBitsamples,			0, "Get raw samples as bitstring"},
 	{"bitstream",			Cmdbitstream,				1, "[clock rate] -- Convert waveform into a bitstream"},
-	{"buffclear",			CmdBuffClear,				0, "Clear sample buffer and graph window"},
+	{"buffclear",			CmdBuffClear,				1, "Clear sample buffer and graph window"},
 	{"dec",						CmdDec,							1, "Decimate samples"},
 	{"detectclock",		Cmddetectclockrate,	1, "Detect clock rate"},
 	{"detectreader",	CmdDetectReader,		0, "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
