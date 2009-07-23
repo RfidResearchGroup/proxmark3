@@ -7,3 +7,5 @@ em4x05.pm3: ear tag FDX-B ISO-11784/5 (ID: 6DB0840800F80001 - Application Identi
 em4x50.pm3: credit card style card EM4x50 tag (ID: DE2A3F00)
 hid-proxCardII-05512-11432784-1.pm3: clamshell-style HID ProxCard II card
 indala-00002-12345678-1A: Indala credit-card style card
+homeagain.pm3: HomeAgain animal (cat) tag - ID 985121004515220
+homeagain1600.pm3: HomeAgain animal (cat) tag - ID 985121004515220
