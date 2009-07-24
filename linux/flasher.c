@@ -117,22 +117,31 @@ static void LoadFlashFromSRecords(char *file, int addr)
 
 int main(int argc, char **argv) {
 	unsigned int addr = 0;
+	BOOL fastflash = 0, flashboth = 0;
 	UsbCommand c;
 
-	if (argc != 3) {
-		fprintf(stderr,"Usage: %s {bootrom|os|fpga} image.s19\n", argv[0]);
+	if (argc != 3 && ! ((argc == 4 && *argv[3] == 'f') || (argc == 5 && *argv[4] == 'f'))) {
+		fprintf(stderr,"Usage: %s {bootrom|os|fpga} image.s19 [f]ast\n", argv[0]);
+		fprintf(stderr,"       %s {both} osimage.s19 fpgaimage.s19 [f]ast\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
 	if (!strcmp(argv[1],"bootrom")) {
 		addr = 0;
 	} else if (!strcmp(argv[1],"os")) {
-		addr = 0x10000;
+		addr = FLASH_ADDR_OS;
 	} else if (!strcmp(argv[1],"fpga")) {
-		addr = 0x2000;
+		addr = FLASH_ADDR_FPGA;
+	} else if (!strcmp(argv[1],"both")) {
+		flashboth = 1;
 	} else {
 		fprintf(stderr,"Unknown action '%s'!\n", argv[1]);
 		exit(EXIT_FAILURE);
+	}
+
+	if((argc == 4 && *argv[3] == 'f') || (argc == 5 && *argv[4] == 'f')) {
+		fastflash= 1;
+		fprintf(stderr,"Fastflash - device already in FLASH mode...\n");
 	}
 
 	usb_init();
@@ -141,19 +150,28 @@ int main(int argc, char **argv) {
 	while(!(devh=OpenProxmark(0))) { sleep(1); }
 	fprintf(stderr,"Found...\n");
 
-	fprintf(stderr,"Entering flash-mode...\n");
-	bzero(&c, sizeof(c));
-	c.cmd = CMD_START_FLASH;
-	SendCommand(&c, FALSE);
-	CloseProxmark();
-	sleep(1);
+	if(!fastflash){
+		fprintf(stderr,"Entering flash-mode...\n");
+		bzero(&c, sizeof(c));
+		c.cmd = CMD_START_FLASH;
+		SendCommand(&c, FALSE);
+		CloseProxmark();
+		sleep(1);
 
-	fprintf(stderr,"Waiting for Proxmark to reappear on USB...\n");
-	fprintf(stderr,"(Press and hold down button NOW if your bootloader requires it)\n");
-	while(!(devh=OpenProxmark(0))) { sleep(1); }
-	fprintf(stderr,"Found...\n");
+		fprintf(stderr,"Waiting for Proxmark to reappear on USB...\n");
+		fprintf(stderr,"(Press and hold down button NOW if your bootloader requires it)\n");
+		while(!(devh=OpenProxmark(0))) { sleep(1); }
+		fprintf(stderr,"Found...\n");
+	}
 
-	LoadFlashFromSRecords(argv[2], addr);
+	if(!flashboth)
+		LoadFlashFromSRecords(argv[2], addr);
+	else {
+		fprintf(stderr,"Flashing os...\n");
+		LoadFlashFromSRecords(argv[2],FLASH_ADDR_OS);
+		fprintf(stderr,"Flashing fpga...\n");
+		LoadFlashFromSRecords(argv[3],FLASH_ADDR_FPGA);
+	}
 
 	bzero(&c, sizeof(c));
 	c.cmd = CMD_HARDWARE_RESET;
