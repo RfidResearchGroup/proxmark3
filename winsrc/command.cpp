@@ -1395,14 +1395,14 @@ static void CmdHi15demod(char *str)
 	PrintToScrollback("CRC=%04x", Iso15693Crc(outBuf, k-2));
 }
 
-static void CmdTiread(char *str)
+static void CmdTIReadRaw(char *str)
 {
 	UsbCommand c;
 	c.cmd = CMD_ACQUIRE_RAW_BITS_TI_TYPE;
 	SendCommand(&c, FALSE);
 }
 
-static void CmdTibits(char *str)
+static void CmdTIBits(char *str)
 {
 	int cnt = 0;
 	int i;
@@ -1554,7 +1554,30 @@ static void CmdFSKdemod(char *cmdline)
 	PrintToScrollback("hex: %08x %08x", hi, lo);
 }
 
-static void CmdTidemod(char *cmdline)
+// read a TI tag and return its ID
+static void CmdTIRead(char *str)
+{
+	UsbCommand c;
+	c.cmd = CMD_READ_TI_TYPE;
+	SendCommand(&c, FALSE);
+}
+
+// write new data to a r/w TI tag
+static void CmdTIWrite(char *str)
+{
+	UsbCommand c;
+	int res=0;
+
+	c.cmd = CMD_WRITE_TI_TYPE;
+	res = sscanf(str, "0x%x 0x%x 0x%x ", &c.ext1, &c.ext2, &c.ext3);
+	if (res == 2) c.ext3=0;
+	if (res<2)
+		PrintToScrollback("Please specify 2 or three hex strings, eg 0x1234 0x5678");
+	else 
+		SendCommand(&c, FALSE);
+}
+
+static void CmdTIDemod(char *cmdline)
 {
 	/* MATLAB as follows:
 f_s = 2000000;  % sampling frequency
@@ -1754,9 +1777,13 @@ h = sign(sin(cumsum(h)));
 		// align 16 bit "end bits" or "ident" into lower half of shift3
 	  shift3 >>= 16;
 
-		if ( (shift3^shift0)&0xffff ) {
+		// only 15 bits compare, last bit of ident is not valid
+		if ( (shift3^shift0)&0x7fff ) {
 			PrintToScrollback("Error: Ident mismatch!");
 		}
+		// WARNING the order of the bytes in which we calc crc below needs checking
+		// i'm 99% sure the crc algorithm is correct, but it may need to eat the
+		// bytes in reverse or something
 		// calculate CRC
 		crc=0;
 	 	crc = update_crc16(crc, (shift0)&0xff);
@@ -2841,9 +2868,11 @@ static struct {
 	{"scale",					CmdScale,						1, "<int> -- Set cursor display scale"},
 	{"setlfdivisor",	CmdSetDivisor,			0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
 	{"sri512read",		CmdSri512read,			0, "<int> -- Read contents of a SRI512 tag"},
-	{"tibits",				CmdTibits,					0, "Get raw bits for TI-type LF tag"},
-	{"tidemod",				CmdTidemod,					1, "Demodulate raw bits for TI-type LF tag"},
-	{"tiread",				CmdTiread,					0, "Read a TI-type 134 kHz tag"},
+	{"tibits",				CmdTIBits,					0, "Get raw bits for TI-type LF tag"},
+	{"tidemod",				CmdTIDemod,					1, "Demodulate raw bits for TI-type LF tag"},
+	{"tireadraw",			CmdTIReadRaw,				0, "Read a TI-type 134 kHz tag in raw mode"},
+	{"tiread",				CmdTIRead,					0, "Read and decode a TI 134 kHz tag"},
+	{"tiwrite",				CmdTIWrite,					0, "Write new data to a r/w TI 134 kHz tag"},
 	{"threshold",			CmdThreshold,				1, "Maximize/minimize every value in the graph window depending on threshold"},
 	{"tune",					CmdTune,						0, "Measure antenna tuning"},
 	{"vchdemod",			CmdVchdemod,				0, "['clone'] -- Demodulate samples for VeriChip"},

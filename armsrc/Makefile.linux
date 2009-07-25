@@ -32,6 +32,7 @@ OBJLCD = $(OBJDIR)/LCD.o\
 OBJ =	$(OBJDIR)/start.o \
 		$(OBJDIR)/appmain.o \
 		$(OBJDIR)/fpga.o \
+		$(OBJDIR)/lfops.o \
 		$(OBJDIR)/iso15693.o \
 		$(OBJDIR)/util.o
 

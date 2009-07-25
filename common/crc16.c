@@ -1,4 +1,4 @@
-unsigned short update_crc16( WORD crc, BYTE c ) {
+WORD update_crc16( WORD crc, BYTE c ) {
 	WORD i, v, tcrc = 0;
 
 	v = (crc ^ c) & 0xff;
@@ -7,5 +7,5 @@ unsigned short update_crc16( WORD crc, BYTE c ) {
       v >>= 1;
   }
 
-  return (crc >> 8) ^ tcrc;
+  return ((crc >> 8) ^ tcrc)&0xffff;
 }

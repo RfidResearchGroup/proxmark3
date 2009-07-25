@@ -21,6 +21,7 @@ OBJLCD = $(OBJDIR)/fonts.o \
 OBJ =	$(OBJDIR)/start.o \
 		$(OBJDIR)/appmain.o \
 		$(OBJDIR)/fpga.o \
+		$(OBJDIR)/lfops.o \
 		$(OBJDIR)/iso14443.o \
 		$(OBJDIR)/iso14443a.o \
 		$(OBJDIR)/iso15693.o \

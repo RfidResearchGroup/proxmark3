@@ -7,7 +7,11 @@
 #ifndef __APPS_H
 #define __APPS_H
 
-/// appmain.c
+// The large multi-purpose buffer, typically used to hold A/D samples,
+// maybe processed in some way.
+DWORD BigBuf[16000];
+
+/// appmain.h
 void ReadMem(int addr);
 void AppMain(void);
 void SamyRun(void);
@@ -22,7 +26,7 @@ extern int ToSendMax;
 extern BYTE ToSend[];
 extern DWORD BigBuf[];
 
-/// fpga.c
+/// fpga.h
 void FpgaSendCommand(WORD cmd, WORD v);
 void FpgaWriteConfWord(BYTE v);
 void FpgaDownloadAndGo(void);
@@ -57,6 +61,18 @@ void SetAdcMuxFor(int whichGpio);
 #define FPGA_HF_ISO14443A_TAGSIM_MOD				(2<<0)
 #define FPGA_HF_ISO14443A_READER_LISTEN			(3<<0)
 #define FPGA_HF_ISO14443A_READER_MOD				(4<<0)
+
+/// lfops.h
+void AcquireRawAdcSamples125k(BOOL at134khz);
+void DoAcquisition125k(BOOL at134khz);
+void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYTE *command);
+void ReadTItag();
+void WriteTItag(DWORD idhi, DWORD idlo, WORD crc);
+void AcquireTiType(void);
+void AcquireRawBitsTI(void);
+void SimulateTagLowFrequency(int period, int ledcontrol);
+void CmdHIDsimTAG(int hi, int lo, int ledcontrol);
+void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol);
 
 /// iso14443.h
 void SimulateIso14443Tag(void);
