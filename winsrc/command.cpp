@@ -331,7 +331,7 @@ static void CmdEM4x50read(char *str)
 
 	/* skip over the remainder of the LW */
 	skip += tmpbuff[i+1]+tmpbuff[i+2];
-	while(GraphBuffer[skip] > low)
+	while(skip < MAX_GRAPH_TRACE_LEN && GraphBuffer[skip] > low)
 		++skip;
 	skip += 8;
 
