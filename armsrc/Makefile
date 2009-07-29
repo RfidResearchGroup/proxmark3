@@ -37,12 +37,12 @@ all: osimage.s19
 
 $(OBJDIR)/fpgaimage.s19: $(OBJDIR)/fpgaimg.o
 	@echo obj/fpgaimage.s19
-	@$(LD) -g -Tldscript-fpga -o $(OBJDIR)\fpgaimage.elf $(OBJDIR)/fpgaimg.o
+	@$(LD) -g -Tldscript-fpga -o $(OBJDIR)\fpgaimage.elf -Map=obj/fpgaimage.map $(OBJDIR)/fpgaimg.o
 	@$(OBJCOPY) -Osrec --srec-forceS3 $(OBJDIR)\fpgaimage.elf $(OBJDIR)\fpgaimage.s19
 
 $(OBJDIR)/osimage.s19: $(OBJ) $(OBJCOMMON)
 	@echo obj/osimage.s19
-	@$(LD) -g -Tldscript -o $(OBJDIR)\osimage.elf $(OBJ) $(OBJCOMMON) $(LIB)\libgcc.a
+	@$(LD) -g -Tldscript -o $(OBJDIR)\osimage.elf $(OBJ) $(OBJCOMMON) -Map=obj/osimage.map $(LIB)\libgcc.a
 	@$(OBJCOPY) -Osrec --srec-forceS3 $(OBJDIR)\osimage.elf $(OBJDIR)\osimage.s19
 
 osimage.s19: $(OBJDIR)/osimage.s19 $(OBJDIR)/fpgaimage.s19

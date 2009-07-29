@@ -194,6 +194,7 @@ void SendCommand(UsbCommand *c, BOOL wantAck)
 
 	DWORD written;
 	OVERLAPPED ov;
+
 	memset(&ov, 0, sizeof(ov));
 	WriteFile(UsbHandle, buf, 65, &written, &ov);
 	if(GetLastError() != ERROR_IO_PENDING) {
@@ -229,8 +230,6 @@ static void FlushPrevious(void)
 	UsbCommand c;
 	memset(&c, 0, sizeof(c));
 
-	printf("expected = %08x flush, ", ExpectedAddr);
-
 	int i;
 	for(i = 0; i < 240; i += 48) {
 		c.cmd = CMD_SETUP_WRITE;
@@ -241,7 +240,7 @@ static void FlushPrevious(void)
 
 	c.cmd = CMD_FINISH_WRITE;
 	c.ext1 = (ExpectedAddr-1) & (~255);
-	printf("c.ext1 = %08x\r", c.ext1);
+	printf("Flashing address: %08x\r", c.ext1);
 	memcpy(c.d.asBytes, QueuedToSend+240, 16);
 	SendCommand(&c, TRUE);
 

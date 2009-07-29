@@ -24,12 +24,12 @@ bootrom.s19: $(OBJDIR)/bootrom.s19 $(OBJDIR)/bootrom-forjtag.s19
 
 $(OBJDIR)/bootrom.s19: $(OBJFLASH)
     @echo obj/bootrom.s19
-	@$(LD) -g -Tldscript-flash --oformat elf32-littlearm -o $(OBJDIR)/bootrom.elf $(OBJFLASH)
+	@$(LD) -g -Tldscript-flash --oformat elf32-littlearm -Map=obj/bootrom.map -o $(OBJDIR)/bootrom.elf $(OBJFLASH)
 	@$(OBJCOPY) -Osrec --srec-forceS3 $(OBJDIR)/bootrom.elf $(OBJDIR)/bootrom.s19
 
 $(OBJDIR)/bootrom-forjtag.s19: $(OBJJTAG)
     @echo obj/bootrom-forjtag.s19
-	@$(LD) -g -Tldscript-ram-jtag --oformat elf32-littlearm -o $(OBJDIR)/bootrom-forjtag.elf $(OBJJTAG)
+	@$(LD) -g -Tldscript-ram-jtag --oformat elf32-littlearm -Map=obj/bootrom-forjtag.map -o $(OBJDIR)/bootrom-forjtag.elf $(OBJJTAG)
 	@$(OBJCOPY) -Osrec --srec-forceS3 $(OBJDIR)/bootrom-forjtag.elf $(OBJDIR)/bootrom-forjtag.s19
 
 $(OBJDIR)/bootrom.o: bootrom.c $(INCLUDES)

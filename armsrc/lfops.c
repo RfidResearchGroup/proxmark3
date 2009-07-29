@@ -123,6 +123,7 @@ void AcquireTiType(void)
 	int n = 1250;
 
 	// clear buffer
+	DbpIntegers((DWORD)BigBuf, sizeof(BigBuf), 0x12345678);
 	memset(BigBuf,0,sizeof(BigBuf));
 
 	// Set up the synchronous serial port
@@ -215,17 +216,6 @@ void AcquireRawBitsTI(void)
 	// get TI tag data into the buffer
 	AcquireTiType();
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-}
-
-// this is a dummy function to get around
-// a possible flash bug in the bootloader
-// delete once you've added more code.
-void DummyDummyDummy(void)
-{
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
-	AcquireTiType();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 
