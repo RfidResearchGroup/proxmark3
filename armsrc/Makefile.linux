@@ -54,7 +54,7 @@ fpgaimage.s19: $(OBJFPGA)
 
 osimage.s19: $(OBJ) $(OBJFAST) $(OBJCOMMON)
 	@echo osimage.s19
-	$(LD) -g -Tldscript -o $(OBJDIR)/osimage.elf $^ $(ARMLIB)/libgcc.a
+	$(LD) -g -Tldscript -o $(OBJDIR)/osimage.elf -Map=osimage.map $^ $(ARMLIB)/libgcc.a
 	$(OBJCOPY) -Osrec --srec-forceS3 $(OBJDIR)/osimage.elf osimage.s19
 
 fullimage.s19: $(OBJ) $(OBJFAST) $(OBJCOMMON) $(OBJFAST) $(OBJFPGA)
@@ -94,6 +94,6 @@ jtag-flash: osimage.s19
 	../../OpenOCD/openocd -c "halt; flash write_image osimage.s19 0x00100000; halt; reset; resume; poll; exit"
 
 clean:
-	rm -f $(OBJDIR)/*.o $(OBJDIR)/*.elf *.s19
+	rm -f $(OBJDIR)/*.o $(OBJDIR)/*.elf *.s19 osimage.map
 
 .PHONY: all clean
