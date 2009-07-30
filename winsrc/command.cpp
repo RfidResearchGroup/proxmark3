@@ -301,16 +301,18 @@ static void CmdEM4x50read(char *str)
 	while(i < GraphTraceLen)
 		{
 		// measure from low to low
-		while(GraphBuffer[i] > low)
+		while((GraphBuffer[i] > low) && (i<GraphTraceLen))
 			++i;
 		start= i;
-		while(GraphBuffer[i] < high)
+		while((GraphBuffer[i] < high) && (i<GraphTraceLen))
 			++i;
-		while(GraphBuffer[i] > low)
+		while((GraphBuffer[i] > low) && (i<GraphTraceLen))
 			++i;
+		if (j>(MAX_GRAPH_TRACE_LEN/64)) {
+			break;
+		}
 		tmpbuff[j++]= i - start;
 		}
-
 
 	/* look for data start - should be 2 pairs of LW (pulses of 192,128) */
 	start= -1;
@@ -1573,7 +1575,7 @@ static void CmdTIWrite(char *str)
 	if (res == 2) c.ext3=0;
 	if (res<2)
 		PrintToScrollback("Please specify 2 or three hex strings, eg 0x1234 0x5678");
-	else 
+	else
 		SendCommand(&c, FALSE);
 }
 
