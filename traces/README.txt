@@ -9,3 +9,4 @@ hid-proxCardII-05512-11432784-1.pm3: clamshell-style HID ProxCard II card
 indala-00002-12345678-1A: Indala credit-card style card
 homeagain.pm3: HomeAgain animal (cat) tag - ID 985121004515220
 homeagain1600.pm3: HomeAgain animal (cat) tag - ID 985121004515220
+keri.pm3: Keri PSK-3 Key Ring tag (back of tag: 1460 3411)
