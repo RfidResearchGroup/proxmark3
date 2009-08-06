@@ -597,10 +597,6 @@ void UsbPacketReceived(BYTE *packet, int len)
 			LED_D_OFF(); // LED D indicates field ON or OFF
 			break;
 
-		case CMD_ACQUIRE_RAW_BITS_TI_TYPE:
-			AcquireRawBitsTI();
-			break;
-
 		case CMD_READ_TI_TYPE:
 			ReadTItag();
 			break;
@@ -609,8 +605,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 			WriteTItag(c->ext1,c->ext2,c->ext3);
 			break;
 
-		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K:
-		case CMD_DOWNLOAD_RAW_BITS_TI_TYPE: {
+		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K: {
 			UsbCommand n;
 			if(c->cmd == CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K) {
 				n.cmd = CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K;
@@ -632,11 +627,6 @@ void UsbPacketReceived(BYTE *packet, int len)
 			SimulateTagLowFrequency(c->ext1, 1);
 			LED_A_OFF();
 			break;
-#ifdef WITH_LCD
-		case CMD_LCD_RESET:
-			LCDReset();
-			break;
-#endif
 		case CMD_READ_MEM:
 			ReadMem(c->ext1);
 			break;
@@ -644,6 +634,9 @@ void UsbPacketReceived(BYTE *packet, int len)
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, c->ext1);
 			break;
 #ifdef WITH_LCD
+		case CMD_LCD_RESET:
+			LCDReset();
+			break;
 		case CMD_LCD:
 			LCDSend(c->ext1);
 			break;
@@ -659,7 +652,6 @@ void UsbPacketReceived(BYTE *packet, int len)
 				// We're going to reset, and the bootrom will take control.
 			}
 			break;
-
 
 		default:
 			DbpString("unknown command");

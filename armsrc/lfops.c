@@ -115,15 +115,181 @@ void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYT
 	DoAcquisition125k(at134khz);
 }
 
+/* blank r/w tag data stream
+...0000000000000000 01111111
+1010101010101010101010101010101010101010101010101010101010101010
+0011010010100001
+01111111
+101010101010101[0]000...
+
+[5555fe852c5555555555555555fe0000]
+*/
+void ReadTItag()
+{
+	// some hardcoded initial params
+	// when we read a TI tag we sample the zerocross line at 2Mhz
+	// TI tags modulate a 1 as 16 cycles of 123.2Khz
+	// TI tags modulate a 0 as 16 cycles of 134.2Khz
+	#define FSAMPLE 2000000
+	#define FREQLO 123200
+	#define FREQHI 134200
+
+	signed char *dest = (signed char *)BigBuf;
+	int n = sizeof(BigBuf);
+//	int *dest = GraphBuffer;
+//	int n = GraphTraceLen;
+
+	// 128 bit shift register [shift3:shift2:shift1:shift0]
+	DWORD shift3 = 0, shift2 = 0, shift1 = 0, shift0 = 0;
+
+	int i, cycles=0, samples=0;
+	// how many sample points fit in 16 cycles of each frequency
+	DWORD sampleslo = (FSAMPLE<<4)/FREQLO, sampleshi = (FSAMPLE<<4)/FREQHI;
+	// when to tell if we're close enough to one freq or another
+	DWORD threshold = (sampleslo - sampleshi + 1)>>1;
+
+	// TI tags charge at 134.2Khz
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
+
+	// Place FPGA in passthrough mode, in this mode the CROSS_LO line
+	// connects to SSP_DIN and the SSP_DOUT logic level controls
+	// whether we're modulating the antenna (high)
+	// or listening to the antenna (low)
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
+
+	// get TI tag data into the buffer
+	AcquireTiType();
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+	for (i=0; i<n-1; i++) {
+		// count cycles by looking for lo to hi zero crossings
+		if ( (dest[i]<0) && (dest[i+1]>0) ) {
+			cycles++;
+			// after 16 cycles, measure the frequency
+			if (cycles>15) {
+				cycles=0;
+				samples=i-samples; // number of samples in these 16 cycles
+
+				// TI bits are coming to us lsb first so shift them
+				// right through our 128 bit right shift register
+			  shift0 = (shift0>>1) | (shift1 << 31);
+			  shift1 = (shift1>>1) | (shift2 << 31);
+			  shift2 = (shift2>>1) | (shift3 << 31);
+			  shift3 >>= 1;
+
+				// check if the cycles fall close to the number
+				// expected for either the low or high frequency
+				if ( (samples>(sampleslo-threshold)) && (samples<(sampleslo+threshold)) ) {
+					// low frequency represents a 1
+					shift3 |= (1<<31);
+				} else if ( (samples>(sampleshi-threshold)) && (samples<(sampleshi+threshold)) ) {
+					// high frequency represents a 0
+				} else {
+					// probably detected a gay waveform or noise
+					// use this as gaydar or discard shift register and start again
+					shift3 = shift2 = shift1 = shift0 = 0;
+				}
+				samples = i;
+
+				// for each bit we receive, test if we've detected a valid tag
+
+				// if we see 17 zeroes followed by 6 ones, we might have a tag
+				// remember the bits are backwards
+				if ( ((shift0 & 0x7fffff) == 0x7e0000) ) {
+					// if start and end bytes match, we have a tag so break out of the loop
+					if ( ((shift0>>16)&0xff) == ((shift3>>8)&0xff) ) {
+						cycles = 0xF0B; //use this as a flag (ugly but whatever)
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	// if flag is set we have a tag
+	if (cycles!=0xF0B) {
+		DbpString("Info: No valid tag detected.");
+	} else {
+	  // put 64 bit data into shift1 and shift0
+	  shift0 = (shift0>>24) | (shift1 << 8);
+	  shift1 = (shift1>>24) | (shift2 << 8);
+
+		// align 16 bit crc into lower half of shift2
+	  shift2 = ((shift2>>24) | (shift3 << 8)) & 0x0ffff;
+
+		// if r/w tag, check ident match
+		if ( shift3&(1<<15) ) {
+			DbpString("Info: TI tag is rewriteable");
+			// only 15 bits compare, last bit of ident is not valid
+			if ( ((shift3>>16)^shift0)&0x7fff ) {
+				DbpString("Error: Ident mismatch!");
+			} else {
+				DbpString("Info: TI tag ident is valid");
+			}
+		} else {
+			DbpString("Info: TI tag is readonly");
+		}
+
+		// WARNING the order of the bytes in which we calc crc below needs checking
+		// i'm 99% sure the crc algorithm is correct, but it may need to eat the
+		// bytes in reverse or something
+		// calculate CRC
+		DWORD crc=0;
+
+	 	crc = update_crc16(crc, (shift0)&0xff);
+		crc = update_crc16(crc, (shift0>>8)&0xff);
+		crc = update_crc16(crc, (shift0>>16)&0xff);
+		crc = update_crc16(crc, (shift0>>24)&0xff);
+		crc = update_crc16(crc, (shift1)&0xff);
+		crc = update_crc16(crc, (shift1>>8)&0xff);
+		crc = update_crc16(crc, (shift1>>16)&0xff);
+		crc = update_crc16(crc, (shift1>>24)&0xff);
+
+		DbpString("Info: Tag data_hi, data_lo, crc = ");
+		DbpIntegers(shift1, shift0, shift2&0xffff);
+		if (crc != (shift2&0xffff)) {
+			DbpString("Error: CRC mismatch, expected");
+			DbpIntegers(0, 0, crc);
+		} else {
+			DbpString("Info: CRC is good");
+		}
+	}
+}
+
+void WriteTIbyte(BYTE b)
+{
+	int i = 0;
+
+	// modulate 8 bits out to the antenna
+	for (i=0; i<8; i++)
+	{
+		if (b&(1<<i)) {
+			// stop modulating antenna
+			PIO_OUTPUT_DATA_CLEAR = (1<<GPIO_SSC_DOUT);
+			SpinDelayUs(1000);
+			// modulate antenna
+			PIO_OUTPUT_DATA_SET = (1<<GPIO_SSC_DOUT);
+			SpinDelayUs(1000);
+		} else {
+			// stop modulating antenna
+			PIO_OUTPUT_DATA_CLEAR = (1<<GPIO_SSC_DOUT);
+			SpinDelayUs(300);
+			// modulate antenna
+			PIO_OUTPUT_DATA_SET = (1<<GPIO_SSC_DOUT);
+			SpinDelayUs(1700);
+		}
+	}
+}
+
 void AcquireTiType(void)
 {
-	int i;
+	int i, j, n;
 	// tag transmission is <20ms, sampling at 2M gives us 40K samples max
 	// each sample is 1 bit stuffed into a DWORD so we need 1250 DWORDS
-	int n = 1250;
+	#define TIBUFLEN 1250
 
 	// clear buffer
-	DbpIntegers((DWORD)BigBuf, sizeof(BigBuf), 0x12345678);
 	memset(BigBuf,0,sizeof(BigBuf));
 
 	// Set up the synchronous serial port
@@ -163,7 +329,7 @@ void AcquireTiType(void)
 	for(;;) {
 			if(SSC_STATUS & SSC_STATUS_RX_READY) {
 					BigBuf[i] = SSC_RECEIVE_HOLDING;	// store 32 bit values in buffer
-					i++; if(i >= n) return;
+					i++; if(i >= TIBUFLEN) break;
 			}
 			WDT_HIT();
 	}
@@ -171,52 +337,20 @@ void AcquireTiType(void)
 	// return stolen pin to SSP
 	PIO_DISABLE = (1<<GPIO_SSC_DOUT);
 	PIO_PERIPHERAL_A_SEL = (1<<GPIO_SSC_DIN) | (1<<GPIO_SSC_DOUT);
-}
 
-void ReadTItag()
-{
-}
-
-void WriteTIbyte(BYTE b)
-{
-	int i = 0;
-
-	// modulate 8 bits out to the antenna
-	for (i=0; i<8; i++)
-	{
-		if (b&(1<<i)) {
-			// stop modulating antenna
-			PIO_OUTPUT_DATA_CLEAR = (1<<GPIO_SSC_DOUT);
-			SpinDelayUs(1000);
-			// modulate antenna
-			PIO_OUTPUT_DATA_SET = (1<<GPIO_SSC_DOUT);
-			SpinDelayUs(1000);
-		} else {
-			// stop modulating antenna
-			PIO_OUTPUT_DATA_CLEAR = (1<<GPIO_SSC_DOUT);
-			SpinDelayUs(300);
-			// modulate antenna
-			PIO_OUTPUT_DATA_SET = (1<<GPIO_SSC_DOUT);
-			SpinDelayUs(1700);
+	char *dest = (char *)BigBuf;
+	n = TIBUFLEN*32;
+	// unpack buffer
+	for (i=TIBUFLEN-1; i>=0; i--) {
+//		DbpIntegers(0, 0, BigBuf[i]);
+		for (j=0; j<32; j++) {
+			if(BigBuf[i] & (1 << j)) {
+				dest[--n] = 1;
+			} else {
+				dest[--n] = -1;
+			}
 		}
 	}
-}
-
-void AcquireRawBitsTI(void)
-{
-	// TI tags charge at 134.2Khz
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-
-	// Place FPGA in passthrough mode, in this mode the CROSS_LO line
-	// connects to SSP_DIN and the SSP_DOUT logic level controls
-	// whether we're modulating the antenna (high)
-	// or listening to the antenna (low)
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
-
-	// get TI tag data into the buffer
-	AcquireTiType();
-
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 
 // arguments: 64bit data split into 32bit idhi:idlo and optional 16bit crc
@@ -292,7 +426,7 @@ void WriteTItag(DWORD idhi, DWORD idlo, WORD crc)
 	AcquireTiType();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	DbpString("Now use tibits and tidemod");
+	DbpString("Now use tiread to check");
 }
 
 void SimulateTagLowFrequency(int period, int ledcontrol)

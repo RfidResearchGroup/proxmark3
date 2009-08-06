@@ -1397,45 +1397,6 @@ static void CmdHi15demod(char *str)
 	PrintToScrollback("CRC=%04x", Iso15693Crc(outBuf, k-2));
 }
 
-static void CmdTIReadRaw(char *str)
-{
-	UsbCommand c;
-	c.cmd = CMD_ACQUIRE_RAW_BITS_TI_TYPE;
-	SendCommand(&c, FALSE);
-}
-
-static void CmdTIBits(char *str)
-{
-	int cnt = 0;
-	int i;
-//	for(i = 0; i < 1536; i += 12) {
-	for(i = 0; i < 4000; i += 12) {
-		UsbCommand c;
-		c.cmd = CMD_DOWNLOAD_RAW_BITS_TI_TYPE;
-		c.ext1 = i;
-		SendCommand(&c, FALSE);
-		ReceiveCommand(&c);
-		if(c.cmd != CMD_DOWNLOADED_RAW_BITS_TI_TYPE) {
-			PrintToScrollback("bad resp");
-			return;
-		}
-		int j;
-		for(j = 0; j < 12; j++) {
-			int k;
-			for(k = 31; k >= 0; k--) {
-				if(c.d.asDwords[j] & (1 << k)) {
-					GraphBuffer[cnt++] = 1;
-				} else {
-					GraphBuffer[cnt++] = -1;
-				}
-			}
-		}
-	}
-//	GraphTraceLen = 1536*32;
-	GraphTraceLen = 4000*32;
-	RepaintGraphWindow();
-}
-
 static void CmdFSKdemod(char *cmdline)
 {
 	static const int LowTone[]  = {
@@ -1454,13 +1415,13 @@ static void CmdFSKdemod(char *cmdline)
 		1,  1,  1,  1,     -1, -1, -1, -1, -1,
 	};
 
-	int convLen = max(arraylen(HighTone), arraylen(LowTone));
+	int lowLen = sizeof(LowTone)/sizeof(int);
+	int highLen = sizeof(HighTone)/sizeof(int);
+	int convLen = (highLen>lowLen)?highLen:lowLen;
 	DWORD hi = 0, lo = 0;
 
 	int i, j;
 	int minMark=0, maxMark=0;
-	int lowLen = arraylen(LowTone);
-	int highLen = arraylen(HighTone);
 
 	for(i = 0; i < GraphTraceLen - convLen; i++) {
 		int lowSum = 0, highSum = 0;
@@ -1499,10 +1460,10 @@ static void CmdFSKdemod(char *cmdline)
 	int max = 0, maxPos = 0;
 	for(i = 0; i < 6000; i++) {
 		int dec = 0;
-		for(j = 0; j < 3*arraylen(LowTone); j++) {
+		for(j = 0; j < 3*lowLen; j++) {
 			dec -= GraphBuffer[i+j];
 		}
-		for(; j < 3*(arraylen(LowTone) + arraylen(HighTone) ); j++) {
+		for(; j < 3*(lowLen + highLen ); j++) {
 			dec += GraphBuffer[i+j];
 		}
 		if(dec > max) {
@@ -1522,7 +1483,7 @@ static void CmdFSKdemod(char *cmdline)
 	GraphBuffer[maxPos+1] = minMark;
 
 	PrintToScrollback("actual data bits start at sample %d", maxPos);
-	PrintToScrollback("length %d/%d", arraylen(HighTone), arraylen(LowTone));
+	PrintToScrollback("length %d/%d", highLen, lowLen);
 
 	BYTE bits[46];
 	bits[sizeof(bits)-1] = '\0';
@@ -1530,10 +1491,10 @@ static void CmdFSKdemod(char *cmdline)
 	// find bit pairs and manchester decode them
 	for(i = 0; i < arraylen(bits)-1; i++) {
 		int dec = 0;
-		for(j = 0; j < arraylen(LowTone); j++) {
+		for(j = 0; j < lowLen; j++) {
 			dec -= GraphBuffer[maxPos+j];
 		}
-		for(; j < arraylen(LowTone) + arraylen(HighTone); j++) {
+		for(; j < lowLen + highLen; j++) {
 			dec += GraphBuffer[maxPos+j];
 		}
 		maxPos += j;
@@ -1574,7 +1535,7 @@ static void CmdTIWrite(char *str)
 	res = sscanf(str, "0x%x 0x%x 0x%x ", &c.ext1, &c.ext2, &c.ext3);
 	if (res == 2) c.ext3=0;
 	if (res<2)
-		PrintToScrollback("Please specify 2 or three hex strings, eg 0x1234 0x5678");
+		PrintToScrollback("Please specify the data as two hex strings, optionally the CRC as a third");
 	else
 		SendCommand(&c, FALSE);
 }
@@ -1595,52 +1556,57 @@ h = 2*pi*ones(1, floor(f_s*T_h))*(f_h/f_s);
 l = sign(sin(cumsum(l)));
 h = sign(sin(cumsum(h)));
 	*/
- static const int LowTone[] = {
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1,
- };
- static const int HighTone[] = {
-  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,  1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,     -1, -1, -1, -1, -1, -1, -1, -1,
-  1,  1,  1,  1,  1,  1,  1,
- };
 
-	int convLen = max(arraylen(HighTone), arraylen(LowTone));
+// 2M*16/134.2k = 238
+ static const int LowTone[] = {
+	1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		 -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		 -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		 -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		 -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		 -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		 -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		 -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		 -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		 -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		 -1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		 -1, -1
+ };
+// 2M*16/123.2k = 260
+ static const int HighTone[] = {
+	1, 1, 1, 1, 1, 1, 1, 1,		-1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		-1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1,			-1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1,			-1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1,			-1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1,			-1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		-1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		-1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1,			-1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1,			-1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1,			-1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		-1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		-1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1,		-1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1,			-1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1,			-1, -1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1,			-1, -1, -1, -1, -1, -1, -1,
+	1, 1, 1, 1, 1, 1, 1, 1
+ };
+	int lowLen = sizeof(LowTone)/sizeof(int);
+	int highLen = sizeof(HighTone)/sizeof(int);
+	int convLen = (highLen>lowLen)?highLen:lowLen;
 	WORD crc;
-	int i, TagType;
+	int i, j, TagType;
+	int lowSum = 0, highSum = 0;;
+	int lowTot = 0, highTot = 0;
+
 	for(i = 0; i < GraphTraceLen - convLen; i++) {
-		int j;
-		int lowSum = 0, highSum = 0;;
-		int lowLen = arraylen(LowTone);
-		int highLen = arraylen(HighTone);
+		lowSum = 0;
+		highSum = 0;;
 
 		for(j = 0; j < lowLen; j++) {
 			lowSum += LowTone[j]*GraphBuffer[i+j];
@@ -1650,12 +1616,15 @@ h = sign(sin(cumsum(h)));
 		}
 		lowSum = abs((100*lowSum) / lowLen);
 		highSum = abs((100*highSum) / highLen);
+		lowSum = (lowSum<0)?-lowSum:lowSum;
+		highSum = (highSum<0)?-highSum:highSum;
+
 		GraphBuffer[i] = (highSum << 16) | lowSum;
 	}
 
 	for(i = 0; i < GraphTraceLen - convLen - 16; i++) {
-		int j;
-		int lowTot = 0, highTot = 0;
+		lowTot = 0;
+		highTot = 0;
 		// 16 and 15 are f_s divided by f_l and f_h, rounded
 		for(j = 0; j < 16; j++) {
 			lowTot += (GraphBuffer[i+j] & 0xffff);
@@ -1688,11 +1657,11 @@ h = sign(sin(cumsum(h)));
 		int j;
 		int dec = 0;
 		// searching 17 consecutive lows
-		for(j = 0; j < 17*arraylen(LowTone); j++) {
+		for(j = 0; j < 17*lowLen; j++) {
 			dec -= GraphBuffer[i+j];
 		}
 		// searching 7 consecutive highs
-		for(; j < 17*arraylen(LowTone) + 6*arraylen(HighTone); j++) {
+		for(; j < 17*lowLen + 6*highLen; j++) {
 			dec += GraphBuffer[i+j];
 		}
 		if(dec > max) {
@@ -1707,8 +1676,8 @@ h = sign(sin(cumsum(h)));
 	GraphBuffer[maxPos+1] = -800;
 
 	// advance pointer to start of actual data stream (after 16 pre and 8 start bits)
-	maxPos += 17*arraylen(LowTone);
-	maxPos += 6*arraylen(HighTone);
+	maxPos += 17*lowLen;
+	maxPos += 6*highLen;
 
 	// place a marker in the buffer to visually aid location
 	// of the end of sync
@@ -1717,7 +1686,7 @@ h = sign(sin(cumsum(h)));
 
 	PrintToScrollback("actual data bits start at sample %d", maxPos);
 
-	PrintToScrollback("length %d/%d", arraylen(HighTone), arraylen(LowTone));
+	PrintToScrollback("length %d/%d", highLen, lowLen);
 
 	BYTE bits[1+64+16+8+16];
 	bits[sizeof(bits)-1] = '\0';
@@ -1728,21 +1697,21 @@ h = sign(sin(cumsum(h)));
 		int high = 0;
 		int low = 0;
 		int j;
-		for(j = 0; j < arraylen(LowTone); j++) {
+		for(j = 0; j < lowLen; j++) {
 			low -= GraphBuffer[maxPos+j];
 		}
-		for(j = 0; j < arraylen(HighTone); j++) {
+		for(j = 0; j < highLen; j++) {
 			high += GraphBuffer[maxPos+j];
 		}
 
 		if(high > low) {
 			bits[i] = '1';
-			maxPos += arraylen(HighTone);
+			maxPos += highLen;
 			// bitstream arrives lsb first so shift right
 			shift3 |= (1<<31);
 		} else {
 			bits[i] = '.';
-			maxPos += arraylen(LowTone);
+			maxPos += lowLen;
 		}
 
 		// 128 bit right shift register
@@ -2870,9 +2839,7 @@ static struct {
 	{"scale",					CmdScale,						1, "<int> -- Set cursor display scale"},
 	{"setlfdivisor",	CmdSetDivisor,			0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
 	{"sri512read",		CmdSri512read,			0, "<int> -- Read contents of a SRI512 tag"},
-	{"tibits",				CmdTIBits,					0, "Get raw bits for TI-type LF tag"},
 	{"tidemod",				CmdTIDemod,					1, "Demodulate raw bits for TI-type LF tag"},
-	{"tireadraw",			CmdTIReadRaw,				0, "Read a TI-type 134 kHz tag in raw mode"},
 	{"tiread",				CmdTIRead,					0, "Read and decode a TI 134 kHz tag"},
 	{"tiwrite",				CmdTIWrite,					0, "Write new data to a r/w TI 134 kHz tag"},
 	{"threshold",			CmdThreshold,				1, "Maximize/minimize every value in the graph window depending on threshold"},

@@ -37,8 +37,6 @@ typedef struct {
 #define CMD_READ_MEM																	0x0106
 
 // For low-frequency tags
-#define CMD_ACQUIRE_RAW_BITS_TI_TYPE									0x0200
-#define CMD_DOWNLOAD_RAW_BITS_TI_TYPE									0x0201
 #define CMD_READ_TI_TYPE															0x0202
 #define CMD_WRITE_TI_TYPE															0x0203
 #define CMD_DOWNLOADED_RAW_BITS_TI_TYPE								0x0204
