@@ -13,7 +13,6 @@
 #include "LCD.h"
 #endif
 
-int usbattached = 0;
 
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
@@ -64,8 +63,8 @@ void ToSendStuffBit(int b)
 void DbpString(char *str)
 {
 	/* this holds up stuff unless we're connected to usb */
-//	if (!usbattached)
-//		return;
+	if (!UsbConnected())
+		return;
 
 	UsbCommand c;
 	c.cmd = CMD_DEBUG_PRINT_STRING;
@@ -80,8 +79,8 @@ void DbpString(char *str)
 void DbpIntegers(int x1, int x2, int x3)
 {
 	/* this holds up stuff unless we're connected to usb */
-//	if (!usbattached)
-//		return;
+	if (!UsbConnected())
+		return;
 
 	UsbCommand c;
 	c.cmd = CMD_DEBUG_PRINT_INTEGERS;
@@ -266,7 +265,7 @@ void SamyRun()
 
 	for (;;)
 	{
-		usbattached = UsbPoll(FALSE);
+		UsbPoll(FALSE);
 		WDT_HIT();
 
 		// Was our button held down or pressed?
@@ -715,7 +714,7 @@ void AppMain(void)
 #endif
 
 	for(;;) {
-		usbattached = UsbPoll(FALSE);
+		UsbPoll(FALSE);
 		WDT_HIT();
 
 		if (BUTTON_HELD(1000) > 0)

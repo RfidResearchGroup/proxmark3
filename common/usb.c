@@ -436,6 +436,14 @@ void UsbStart(void)
 	}
 }
 
+BOOL UsbConnected()
+{
+	if (UDP_GLOBAL_STATE & UDP_GLOBAL_STATE_CONFIGURED)
+		return TRUE;
+	else
+		return FALSE;
+}
+
 BOOL UsbPoll(BOOL blinkLeds)
 {
 	BOOL ret = FALSE;

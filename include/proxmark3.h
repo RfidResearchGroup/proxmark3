@@ -52,6 +52,7 @@ typedef signed short SWORD;
 // USB declarations
 
 void UsbSendPacket(BYTE *packet, int len);
+BOOL UsbConnected();
 BOOL UsbPoll(BOOL blinkLeds);
 void UsbStart(void);
 
