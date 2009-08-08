@@ -1,3 +1,0 @@
-
-MAY 2008:	Added ISO14443 type A support, Gerhard de Koning Gans
-
