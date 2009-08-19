@@ -372,56 +372,47 @@ your antenna. You will probably not get some good results if there is a LF and a
 at the same place! :-)
 
 LIGHT SCHEME USED:
-
-Light scheme | Descriptiong
-----------------------------------------------------
-    ----     | No field detected
-    X---     | 14% of maximum current detected
-    -X--     | 29% of maximum current detected
-    --X-     | 43% of maximum current detected
-    ---X     | 57% of maximum current detected
-    --XX     | 71% of maximum current detected
-    -XXX     | 86% of maximum current detected
-    XXXX     | 100% of maximum current detected
-
-TODO:
-Add the LF part for MODE 2
-
 */
+static const char LIGHT_SCHEME[] = {
+		0x0, /* ----     | No field detected */
+		0x1, /* X---     | 14% of maximum current detected */
+		0x2, /* -X--     | 29% of maximum current detected */
+		0x4, /* --X-     | 43% of maximum current detected */
+		0x8, /* ---X     | 57% of maximum current detected */
+		0xC, /* --XX     | 71% of maximum current detected */
+		0xE, /* -XXX     | 86% of maximum current detected */
+		0xF, /* XXXX     | 100% of maximum current detected */
+};
+static const int LIGHT_LEN = sizeof(LIGHT_SCHEME)/sizeof(LIGHT_SCHEME[0]);
+
 void ListenReaderField(int limit)
 {
-	int lf_av, lf_av_new, lf_baseline= 0, lf_count= 0;
+	int lf_av, lf_av_new, lf_baseline= 0, lf_count= 0, lf_max;
 	int hf_av, hf_av_new,  hf_baseline= 0, hf_count= 0, hf_max;
-	int mode=1;
+	int mode=1, display_val, display_max, i;
 
 #define LF_ONLY		1
 #define HF_ONLY		2
 
-	LED_A_OFF();
-	LED_B_OFF();
-	LED_C_OFF();
-	LED_D_OFF();
+	LEDsoff();
 
-	lf_av= ReadAdc(ADC_CHAN_LF);
+	lf_av=lf_max=ReadAdc(ADC_CHAN_LF);
 
-	if(limit != HF_ONLY)
-		{
+	if(limit != HF_ONLY) {
 		DbpString("LF 125/134 Baseline:");
 		DbpIntegers(lf_av,0,0);
 		lf_baseline= lf_av;
-		}
+	}
 
 	hf_av=hf_max=ReadAdc(ADC_CHAN_HF);
 
-	if (limit != LF_ONLY)
-		{
+	if (limit != LF_ONLY) {
 		DbpString("HF 13.56 Baseline:");
 		DbpIntegers(hf_av,0,0);
 		hf_baseline= hf_av;
-		}
+	}
 
-	for(;;)
-		{
+	for(;;) {
 		if (BUTTON_PRESS()) {
 			SpinDelay(500);
 			switch (mode) {
@@ -432,85 +423,78 @@ void ListenReaderField(int limit)
 				case 2:
 				default:
 					DbpString("Stopped");
-					LED_A_OFF();
-					LED_B_OFF();
-					LED_C_OFF();
-					LED_D_OFF();
+					LEDsoff();
 					return;
 					break;
 			}
 		}
 		WDT_HIT();
 
-		if (limit != HF_ONLY)
-			{
-			if (abs(lf_av - lf_baseline) > 10)
-				LED_D_ON();
-			else
-				LED_D_OFF();
+		if (limit != HF_ONLY) {
+			if(mode==1) {
+				if (abs(lf_av - lf_baseline) > 10) LED_D_ON();
+				else                               LED_D_OFF();
+			}
+			
 			++lf_count;
 			lf_av_new= ReadAdc(ADC_CHAN_LF);
 			// see if there's a significant change
-			if(abs(lf_av - lf_av_new) > 10)
-				{
+			if(abs(lf_av - lf_av_new) > 10) {
 				DbpString("LF 125/134 Field Change:");
 				DbpIntegers(lf_av,lf_av_new,lf_count);
 				lf_av= lf_av_new;
+				if (lf_av > lf_max)
+					lf_max = lf_av;
 				lf_count= 0;
-				}
 			}
+		}
 
-		if (limit != LF_ONLY)
-			{
-			if (abs(hf_av - hf_baseline) > 10) {
-				if (mode == 1)
-					LED_B_ON();
-				if (mode == 2) {
-					if ( hf_av>(hf_max/7)*6) {
-						LED_A_ON();	LED_B_ON();	LED_C_ON();	LED_D_ON();
-					}
-					if ( (hf_av>(hf_max/7)*5) && (hf_av<=(hf_max/7)*6) ) {
-						LED_A_ON();	LED_B_ON();	LED_C_OFF(); LED_D_ON();
-					}
-					if ( (hf_av>(hf_max/7)*4) && (hf_av<=(hf_max/7)*5) ) {
-						LED_A_OFF(); LED_B_ON(); LED_C_OFF(); LED_D_ON();
-					}
-					if ( (hf_av>(hf_max/7)*3) && (hf_av<=(hf_max/7)*4) ) {
-						LED_A_OFF(); LED_B_OFF(); LED_C_OFF(); LED_D_ON();
-					}
-					if ( (hf_av>(hf_max/7)*2) && (hf_av<=(hf_max/7)*3) ) {
-						LED_A_OFF(); LED_B_ON(); LED_C_OFF(); LED_D_OFF();
-					}
-					if ( (hf_av>(hf_max/7)*1) && (hf_av<=(hf_max/7)*2) ) {
-						LED_A_ON();	LED_B_OFF(); LED_C_OFF(); LED_D_OFF();
-					}
-					if ( (hf_av>(hf_max/7)*0) && (hf_av<=(hf_max/7)*1) ) {
-						LED_A_OFF(); LED_B_OFF(); LED_C_ON(); LED_D_OFF();
-					}
-				}
-			} else {
-				if (mode == 1) {
-					LED_B_OFF();
-				}
-				if (mode == 2) {
-					LED_A_OFF(); LED_B_OFF(); LED_C_OFF(); LED_D_OFF();
-				}
+		if (limit != LF_ONLY) {
+			if (mode == 1){
+				if (abs(hf_av - hf_baseline) > 10) LED_B_ON();
+				else                               LED_B_OFF();
 			}
-
+			
 			++hf_count;
 			hf_av_new= ReadAdc(ADC_CHAN_HF);
 			// see if there's a significant change
-			if(abs(hf_av - hf_av_new) > 10)
-				{
+			if(abs(hf_av - hf_av_new) > 10) {
 				DbpString("HF 13.56 Field Change:");
 				DbpIntegers(hf_av,hf_av_new,hf_count);
 				hf_av= hf_av_new;
 				if (hf_av > hf_max)
 					hf_max = hf_av;
 				hf_count= 0;
+			}
+		}
+		
+		if(mode == 2) {
+			if (limit == LF_ONLY) {
+				display_val = lf_av;
+				display_max = lf_max;
+			} else if (limit == HF_ONLY) {
+				display_val = hf_av;
+				display_max = hf_max;
+			} else { /* Pick one at random */
+				if( (hf_max - hf_baseline) > (lf_max - lf_baseline) ) {
+					display_val = hf_av;
+					display_max = hf_max;
+				} else {
+					display_val = lf_av;
+					display_max = lf_max;
+				}
+			}
+			for (i=0; i<LIGHT_LEN; i++) {
+				if (display_val >= ((display_max/LIGHT_LEN)*i) && display_val <= ((display_max/LIGHT_LEN)*(i+1))) {
+					if (LIGHT_SCHEME[i] & 0x1) LED_C_ON(); else LED_C_OFF();
+					if (LIGHT_SCHEME[i] & 0x2) LED_A_ON(); else LED_A_OFF();
+					if (LIGHT_SCHEME[i] & 0x4) LED_B_ON(); else LED_B_OFF();
+					if (LIGHT_SCHEME[i] & 0x8) LED_D_ON(); else LED_D_OFF();
+					break;
 				}
 			}
 		}
+	}
 }
 
 void UsbPacketReceived(BYTE *packet, int len)
