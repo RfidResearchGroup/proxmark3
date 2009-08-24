@@ -1811,6 +1811,7 @@ void ReaderIso14443a(DWORD parameter)
 	}
 
 done:
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 	DbpIntegers(rsamples, 0xCC, 0xCC);
 	DbpString("ready..");
