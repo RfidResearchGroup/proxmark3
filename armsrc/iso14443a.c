@@ -914,8 +914,6 @@ static const BYTE response2a[] = { 0x51, 0x48, 0x1d, 0x80, 0x84 }; //  uid - cas
 BYTE response3a[] = { 0x20, 0x00, 0x00 }; // SAK Select (cascade2) successful response (DESFire)
 ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 
-// When reader tries to authenticate
-	// static const BYTE cmd5[] = { 0x60, 0x00, 0xf5, 0x7b };
     static const BYTE response5[] = { 0x00, 0x00, 0x00, 0x00 }; // Very random tag nonce
 
     BYTE *resp;
@@ -1503,6 +1501,9 @@ void ReaderIso14443a(DWORD parameter)
 	//BYTE cmd6[] = { 0xe0,0x50,0xbc,0xa5 };  // original RATS
 	BYTE cmd6[] = { 0xe0,0x21,0xb2,0xc7 };  // Desfire RATS
 
+	// Mifare AUTH
+	BYTE cmd7[] = { 0x60, 0x00, 0x00, 0x00 };
+
 	int reqaddr = 2024;					// was 2024 - tied to other size changes
 	int reqsize = 60;
 
@@ -1525,8 +1526,8 @@ void ReaderIso14443a(DWORD parameter)
     BYTE *req6 = (((BYTE *)BigBuf) + reqaddr + (reqsize * 5));
     int req6Len;
 
-	//BYTE *req7 = (((BYTE *)BigBuf) + reqaddr + (reqsize * 6));
-	//int req7Len;
+    BYTE *req7 = (((BYTE *)BigBuf) + reqaddr + (reqsize * 6));
+    int req7Len;
 
 	BYTE *receivedAnswer = (((BYTE *)BigBuf) + 3560);	// was 3560 - tied to other size changes
 
@@ -1771,13 +1772,15 @@ void ReaderIso14443a(DWORD parameter)
 		}
 
 		// Secondly compute the two CRC bytes at the end
-		ComputeCrc14443(CRC_14443_A, cmd5, 2, &cmd5[2], &cmd5[3]);
+		ComputeCrc14443(CRC_14443_A, cmd7, 2, &cmd7[2], &cmd7[3]);
+		CodeIso14443aAsReader(cmd7, sizeof(cmd7));
+		memcpy(req7, ToSend, ToSendMax); req7Len = ToSendMax;
 		// Send authentication request (Mifare Classic)
-		TransmitFor14443a(req5, req5Len, &samples, &wait);
+		TransmitFor14443a(req7, req7Len, &samples, &wait);
 		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
 		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
 		trace[traceLen++] = 4;
-		memcpy(trace+traceLen, cmd5, 4);
+		memcpy(trace+traceLen, cmd7, 4);
 		traceLen += 4;
 		if(traceLen > TRACE_LENGTH) goto done;
 		if(GetIso14443aAnswerFromTag(receivedAnswer, 100, &samples, &elapsed)) {
@@ -1808,9 +1811,7 @@ void ReaderIso14443a(DWORD parameter)
 	}
 
 done:
-	LED_A_OFF();
-	LED_B_OFF();
-	LED_C_OFF();
+	LEDsoff();
 	DbpIntegers(rsamples, 0xCC, 0xCC);
 	DbpString("ready..");
 }
