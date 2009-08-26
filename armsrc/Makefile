@@ -1,19 +1,11 @@
-PATH=..\..\devkitARM\bin;%PATH%
-CC	= arm-elf-gcc
-AS	= arm-elf-as
-LD	= arm-elf-ld
-OBJCOPY = arm-elf-objcopy
+# Makefile for armsrc, see ../common/Makefile.common for common settings
+include ../common/Makefile.common
 
-OBJDIR	= obj
+APP_INCLUDES = apps.h
 
-INCLUDE = -I../include
-
-INCLUDES = ../include/proxmark3.h ../include/at91sam7s128.h ../include/config_gpio.h ../include/usb_cmd.h apps.h
-LIB = "..\..\devkitARM\lib\gcc\arm-elf\4.1.0\interwork"
-
-# Add the "-DWITH_LCD" flag in CLFAGS to add support for LCD
+# Add the "-DWITH_LCD" flag in APP_CLFAGS to add support for LCD
 # and add OBJLCD to OBJ too
-CFLAGS	= -O6 -c $(INCLUDE) -Wall
+APP_CFLAGS	= -O6
 
 OBJLCD = $(OBJDIR)/fonts.o \
 		$(OBJDIR)/LCD.o
@@ -25,42 +17,37 @@ OBJ =	$(OBJDIR)/start.o \
 		$(OBJDIR)/iso14443.o \
 		$(OBJDIR)/iso14443a.o \
 		$(OBJDIR)/iso15693.o \
-		$(OBJDIR)/util.o
+		$(OBJDIR)/util.o \
+		$(OBJDIR)/usb.o
 
 OBJFPGA = \
 		$(OBJDIR)/fpgaimg.o
 
-OBJCOMMON = \
-		$(OBJDIR)/usb.o
+all: $(OBJDIR)/osimage.s19 $(OBJDIR)/fpgaimage.s19
 
-all: osimage.s19
+$(OBJDIR)/fpgaimage.elf: $(OBJDIR)/fpgaimg.o
+	$(LD) -g -Tldscript-fpga -Map=$(patsubst %.elf,%.map,$@) -o $@ $^
 
-$(OBJDIR)/fpgaimage.s19: $(OBJDIR)/fpgaimg.o
-	@echo obj/fpgaimage.s19
-	@$(LD) -g -Tldscript-fpga -o $(OBJDIR)\fpgaimage.elf -Map=obj/fpgaimage.map $(OBJDIR)/fpgaimg.o
-	@$(OBJCOPY) -Osrec --srec-forceS3 $(OBJDIR)\fpgaimage.elf $(OBJDIR)\fpgaimage.s19
+$(OBJDIR)/osimage.elf: $(OBJ) $(OBJCOMMON) $(ARMLIB)/libgcc.a
+	$(LD) -g -Tldscript -Map=$(patsubst %.elf,%.map,$@) -o $@ $^
 
-$(OBJDIR)/osimage.s19: $(OBJ) $(OBJCOMMON)
-	@echo obj/osimage.s19
-	@$(LD) -g -Tldscript -o $(OBJDIR)\osimage.elf $(OBJ) $(OBJCOMMON) -Map=obj/osimage.map $(LIB)\libgcc.a
-	@$(OBJCOPY) -Osrec --srec-forceS3 $(OBJDIR)\osimage.elf $(OBJDIR)\osimage.s19
+$(OBJDIR)/%.s19: $(OBJDIR)/%.elf
+	$(OBJCOPY) -Osrec --srec-forceS3 $^ $@
 
-osimage.s19: $(OBJDIR)/osimage.s19 $(OBJDIR)/fpgaimage.s19
-	@echo osimage.s19
-
-$(OBJ): $(@B).c $(INCLUDES)
-	@echo $(@B).c
-	@$(CC) $(CFLAGS) -mthumb -mthumb-interwork $(@B).c -o $(OBJDIR)/$(@B).o
-
-$(OBJCOMMON): ../common/$(@B).c $(INCLUDES)
-	@echo $(@B).c
-	@$(CC) $(CFLAGS) -mthumb -mthumb-interwork ../common/$(@B).c -o $(OBJDIR)/$(@B).o
-
-$(OBJFPGA): $(@B).c $(INCLUDES)
-	@echo $(@B).c
-	@$(CC) $(CFLAGS) -mthumb -mthumb-interwork $(@B).c -o $(OBJDIR)/$(@B).o
+$(OBJ) $(OBJFPGA): $(OBJDIR)/%.o: %.c $(INCLUDES)
+	$(CC) $(CFLAGS) -mthumb -mthumb-interwork $< -o $@
 
 clean:
-	del /q obj\*.o
-	del /q obj\*.elf
-	del /q obj\*.s19
+	$(DELETE) $(OBJDIR)$(PATHSEP)*.o
+	$(DELETE) $(OBJDIR)$(PATHSEP)*.elf
+	$(DELETE) $(OBJDIR)$(PATHSEP)*.s19
+	$(DELETE) $(OBJDIR)$(PATHSEP)*.map
+
+.PHONY: all clean help
+help:
+	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
+	@echo Possible targets:
+	@echo +	all           - Make both:
+	@echo +	osimage.s19   - The OS image
+	@echo +	fpgaimage.s19 - The FPGA image
+	@echo +	clean         - Clean $(OBJDIR)

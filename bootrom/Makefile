@@ -1,58 +1,45 @@
-CC	  = arm-elf-gcc
-AS	  = arm-elf-as
-LD	  = arm-elf-ld
-OBJCOPY = arm-elf-objcopy
-
-OBJDIR  = obj
-
-INCLUDE = -I../include
-
-INCLUDES = ../include/proxmark3.h ../include/at91sam7s128.h ../include/config_gpio.h ../include/usb_cmd.h
-
-CFLAGS  = -g -c $(INCLUDE) -Wall
+# Makefile for bootrom, see ../common/Makefile.common for common settings
+include ../common/Makefile.common
 
 OBJJTAG = $(OBJDIR)/bootrom.o $(OBJDIR)/ram-reset.o $(OBJDIR)/usb.o
-
 OBJFLASH = $(OBJDIR)/flash-reset.o $(OBJDIR)/fromflash.o
 
-all: bootrom.s19
+THUMBSRC = usb.c fromflash.c bootrom.c
+ASMSRC   = ram-reset.s flash-reset.s
 
-bootrom.s19: $(OBJDIR)/bootrom.s19 $(OBJDIR)/bootrom-forjtag.s19
-    @echo bootrom.s19
-	@perl ..\tools\merge-srec.pl $(OBJDIR)\bootrom.s19 $(OBJDIR)\bootrom-forjtag.s19 > $(OBJDIR)\bootrom-merged.s19
-	@perl ..\tools\srecswap.pl $(OBJDIR)\bootrom-forjtag.s19 > $(OBJDIR)\bootrom-forjtag-swapped.s19
+THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(THUMBSRC))
+ASMOBJ   = $(patsubst %.s,$(OBJDIR)/%.o,$(ASMSRC))
 
-$(OBJDIR)/bootrom.s19: $(OBJFLASH)
-    @echo obj/bootrom.s19
-	@$(LD) -g -Tldscript-flash --oformat elf32-littlearm -Map=obj/bootrom.map -o $(OBJDIR)/bootrom.elf $(OBJFLASH)
-	@$(OBJCOPY) -Osrec --srec-forceS3 $(OBJDIR)/bootrom.elf $(OBJDIR)/bootrom.s19
+all: bootrom-merged.s19
 
-$(OBJDIR)/bootrom-forjtag.s19: $(OBJJTAG)
-    @echo obj/bootrom-forjtag.s19
-	@$(LD) -g -Tldscript-ram-jtag --oformat elf32-littlearm -Map=obj/bootrom-forjtag.map -o $(OBJDIR)/bootrom-forjtag.elf $(OBJJTAG)
-	@$(OBJCOPY) -Osrec --srec-forceS3 $(OBJDIR)/bootrom-forjtag.elf $(OBJDIR)/bootrom-forjtag.s19
+bootrom-merged.s19: $(OBJDIR)/bootrom.s19 $(OBJDIR)/bootrom-forjtag.s19
+	perl ../tools/merge-srec.pl $(OBJDIR)/bootrom.s19 $(OBJDIR)/bootrom-forjtag.s19 > bootrom-merged.s19
 
-$(OBJDIR)/bootrom.o: bootrom.c $(INCLUDES)
-    @echo $(@B).c
-	@$(CC) $(CFLAGS) -mthumb -mthumb-interwork bootrom.c -o $(OBJDIR)/bootrom.o
+$(OBJDIR)/bootrom.elf: $(OBJFLASH)
+	$(LD) -g -Tldscript-flash --oformat elf32-littlearm -Map=$(patsubst %.elf,%.map,$@) -o $@ $^
 
-$(OBJDIR)/fromflash.o: fromflash.c $(INCLUDES)
-    @echo $(@B).c
-	@$(CC) $(CFLAGS) -mthumb -mthumb-interwork fromflash.c -o $(OBJDIR)/fromflash.o
+$(OBJDIR)/bootrom-forjtag.elf: $(OBJJTAG)
+	$(LD) -g -Tldscript-ram-jtag --oformat elf32-littlearm -Map=$(patsubst %.elf,%.map,$@) -o $@ $^
 
-$(OBJDIR)/usb.o: ../common/usb.c $(INCLUDES)
-    @echo $(@B).c
-	@$(CC) $(CFLAGS) -mthumb -mthumb-interwork ../common/usb.c -o $(OBJDIR)/usb.o
+$(OBJDIR)/%.s19: $(OBJDIR)/%.elf
+	$(OBJCOPY) -Osrec --srec-forceS3 $^ $@
 
-$(OBJDIR)/ram-reset.o: ram-reset.s
-    @echo $(@B).s
-	@$(CC) $(CFLAGS) -mthumb-interwork -o $(OBJDIR)/ram-reset.o ram-reset.s
+$(THUMBOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
+	$(CC) $(CFLAGS) -mthumb -mthumb-interwork -o $@ $< 
 
-$(OBJDIR)/flash-reset.o: flash-reset.s
-    @echo $(@B).s
-	@$(CC) $(CFLAGS) -mthumb-interwork -o $(OBJDIR)/flash-reset.o flash-reset.s
+$(ASMOBJ): $(OBJDIR)/%.o: %.s
+	$(CC) $(CFLAGS) -mthumb-interwork -o $@ $<
 
 clean:
-	del /q obj\*.o
-	del /q obj\*.elf
-	del /q obj\*.s19
+	$(DELETE) $(OBJDIR)$(PATHSEP)*.o
+	$(DELETE) $(OBJDIR)$(PATHSEP)*.elf
+	$(DELETE) $(OBJDIR)$(PATHSEP)*.s19
+	$(DELETE) $(OBJDIR)$(PATHSEP)*.map
+	$(DELETE) bootrom-merged.s19
+
+.PHONY: all clean help
+help:
+	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
+	@echo Possible targets:
+	@echo +	all   - Make bootrom-merged.s19, the main bootrom
+	@echo +	clean - Clean $(OBJDIR)
