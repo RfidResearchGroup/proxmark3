@@ -1,5 +1,5 @@
 @echo off
 cd ..\bootrom
-rem nmake clean
-nmake
+rem make clean
+make
 cd ..\cockpit
