@@ -3,27 +3,38 @@
 # Following is a short OS detection to set up variables, all the
 # remaining Makefile should be portable and only depend on these
 # variables
+#
+
+# Make sure that all is the default target
+# (The including Makefile still needs to define what 'all' is)
+all:
 
 # Windows' echo echos its input verbatim, on Posix there is some
 #  amount of shell command line parsing going on. echo "" on 
 #  Windows yields literal "", on Linux yields an empty line
 ifeq ($(shell echo ""),)
+
 # This is properly a proper system, so we can use uname
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
 # Linux. (Todo: Add MacOS X if appropriate)
 DELETE=rm -rf
+MOVE=mv
 PATHSEP=/
 DETECTED_OS=Linux
 # You may/should set this in your environment
 ARMLIB ?= /usr/local/lib/gcc/arm-elf/4.3.3/interwork
 endif
+
 else
+
 # Assume that we are running on Windows.
 DELETE=del /q
+MOVE=ren
 PATHSEP=\\#
 ARMLIB ?= ../../devkitARM/lib/gcc/arm-elf/4.1.0/interwork
 DETECTED_OS=Windows
+
 endif
 
 CC	= arm-elf-gcc
@@ -41,3 +52,32 @@ VPATH = . ../common/
 INCLUDES = ../include/proxmark3.h ../include/at91sam7s128.h ../include/config_gpio.h ../include/usb_cmd.h $(APP_INCLUDES)
 
 CFLAGS =  -c $(INCLUDE) -Wall $(APP_CFLAGS)
+
+THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(THUMBSRC))
+ARMOBJ   = $(patsubst %.c,$(OBJDIR)/%.o,$(ARMSRC))
+ASMOBJ   = $(patsubst %.s,$(OBJDIR)/%.o,$(ASMSRC))
+
+$(THUMBOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
+	$(CC) $(CFLAGS) -mthumb -mthumb-interwork -o $@ $< 
+
+$(ARMOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
+	$(CC) $(CFLAGS) -mthumb-interwork -o $@ $< 
+
+$(ASMOBJ): $(OBJDIR)/%.o: %.s
+	$(CC) $(CFLAGS) -mthumb-interwork -o $@ $<
+
+$(OBJDIR)/%.s19: $(OBJDIR)/%.elf
+	$(OBJCOPY) -Osrec --srec-forceS3 $^ $@
+
+# Automatic dependency generation
+DEPENDENCY_FILES = $(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(THUMBSRC))) \
+	$(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(ARMSRC))) \
+	$(patsubst %.s,$(OBJDIR)/%.d,$(notdir $(ASMSRC)))
+
+$(DEPENDENCY_FILES): Makefile ../common/Makefile.common
+$(OBJDIR)/%.d: %.c
+	$(CC) -MM -MT "$(@) $(@:.d=.o)" $(CFLAGS) $< > $@
+$(OBJDIR)/%.d: %.s
+	$(CC) -MM -MT "$(@) $(@:.d=.o)" $(CFLAGS) $< > $@
+
+-include $(DEPENDENCY_FILES)
