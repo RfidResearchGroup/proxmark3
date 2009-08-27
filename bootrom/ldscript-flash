@@ -1,11 +1,43 @@
+MEMORY 
+{
+	/* AT91SAM7S256 has 256k Flash and 64k RAM */
+	/* Important note: the correct ORIGIN for bootphase1 is 0x00100000 and for bootphase2 is 0x00100200
+	   However, this will confuse the currently deployed flash code which expects logical and and not
+	   physical addresses and performs no sanity checks at all. If confronted with physical addresses, 
+	   it will happily erase everything and brick the device. So for the time being pretend these addresses
+	   to start at 0x0 while updating all the flash code with proper sanity checks, then come back later and
+	   fix the addresses. -- Henryk Plötz <henryk@ploetzli.ch> 2009-08-27 */
+        bootphase1 : ORIGIN = 0x00000000, LENGTH = 0x200 /* Phase 1 bootloader: Copies real bootloader to RAM */
+        bootphase2 : ORIGIN = 0x00000200, LENGTH = 0x2000 - 0x200 /* Main bootloader code, stored in Flash, executed from RAM */
+        ram     : ORIGIN = 0x00200000, LENGTH = 32K
+}
+
+
 SECTIONS
 {
-    . = 0x00000000;
-    .text : { obj/flash-reset.o(.text) *(.text) }
-    .rodata : { *(.rodata) }
-    . = 0x00200000;
-    .data : { *(.data) }
-    __bss_start__ = .;
-    .bss : { *(.bss) }
+    . = 0;
+    
+    bootphase1 : {
+    	*(.startup) 
+    	*(.bootphase1)
+    } >bootphase1
+    
+    bootphase2 : {
+    	__bootphase2_start__ = .;
+    	*(.startphase2)
+    	*(.text)
+    	*(.glue_7)
+    	*(.rodata)
+        *(.data)
+    	. = ALIGN( 32 / 8 );
+    	__bootphase2_end__ = .;
+    } >ram AT>bootphase2
+    
+    .bss : {
+    	__bss_start__ = .; 
+    	*(.bss)
+    } >ram
+    
+    . = ALIGN( 32 / 8 );
     __bss_end__ = .;
 }

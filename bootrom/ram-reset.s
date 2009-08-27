@@ -1,10 +1,10 @@
 .extern BootROM
     
-.text
-.code 32
-.align 0
+.section .startphase2,"ax"
+         .code 32
+         .align 0
 
-.global start
-start:
+.global ramstart
+ramstart:
     ldr     sp,     = 0x0020FFF8
     bl      BootROM

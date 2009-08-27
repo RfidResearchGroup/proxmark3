@@ -76,8 +76,8 @@ DEPENDENCY_FILES = $(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(THUMBSRC))) \
 
 $(DEPENDENCY_FILES): Makefile ../common/Makefile.common
 $(OBJDIR)/%.d: %.c
-	$(CC) -MM -MT "$(@) $(@:.d=.o)" $(CFLAGS) $< > $@
+	@$(CC) -MM -MT "$(@) $(@:.d=.o)" $(CFLAGS) $< > $@
 $(OBJDIR)/%.d: %.s
-	$(CC) -MM -MT "$(@) $(@:.d=.o)" $(CFLAGS) $< > $@
+	@$(CC) -MM -MT "$(@) $(@:.d=.o)" $(CFLAGS) $< > $@
 
 -include $(DEPENDENCY_FILES)

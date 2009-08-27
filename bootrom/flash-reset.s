@@ -1,11 +1,11 @@
 .extern CopyBootToRAM
     
-.text
-.code 32
-.align 0
+.section .startup,"ax"
+         .code 32
+         .align 0
 
-.global start
-start:
+.global flashstart
+flashstart:
     b       Reset
     b       UndefinedInstruction
     b       SoftwareInterrupt

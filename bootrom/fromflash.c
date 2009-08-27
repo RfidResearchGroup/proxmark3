@@ -1,6 +1,6 @@
 #include <proxmark3.h>
 
-void CopyBootToRAM(void)
+void __attribute__((section("bootphase1"))) CopyBootToRAM(void)
 {
 	int i;
 

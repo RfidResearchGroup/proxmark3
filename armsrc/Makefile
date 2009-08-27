@@ -49,8 +49,8 @@ clean:
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:
-	@echo +	all           - Make both:
-	@echo +	osimage.s19   - The OS image
-	@echo +	fpgaimage.s19 - The FPGA image
-	@echo +	clean         - Clean $(OBJDIR)
+	@echo +	all               - Make both:
+	@echo +	$(OBJDIR)/osimage.s19   - The OS image
+	@echo +	$(OBJDIR)/fpgaimage.s19 - The FPGA image
+	@echo +	clean             - Clean $(OBJDIR)
 
