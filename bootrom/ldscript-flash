@@ -9,7 +9,7 @@ MEMORY
 	   fix the addresses. -- Henryk Plötz <henryk@ploetzli.ch> 2009-08-27 */
         bootphase1 : ORIGIN = 0x00000000, LENGTH = 0x200 /* Phase 1 bootloader: Copies real bootloader to RAM */
         bootphase2 : ORIGIN = 0x00000200, LENGTH = 0x2000 - 0x200 /* Main bootloader code, stored in Flash, executed from RAM */
-        ram     : ORIGIN = 0x00200000, LENGTH = 32K
+        ram     : ORIGIN = 0x00200000, LENGTH = 64K
 }
 
 
@@ -27,6 +27,7 @@ SECTIONS
     	*(.startphase2)
     	*(.text)
     	*(.glue_7)
+    	*(.glue_7t)
     	*(.rodata)
         *(.data)
     	. = ALIGN( 32 / 8 );
