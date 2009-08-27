@@ -5,6 +5,8 @@ SECTIONS
 	fpgaimage : { 
 		obj/fpgaimg.o(.text) *(.text) 
 		*(.rodata) 
+		*(.glue_7)
+		*(.glue_7t)
 	} >fpgaimage
 	.data : { *(.data) } >ram
 	__bss_start__ = .;
