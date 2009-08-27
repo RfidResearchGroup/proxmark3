@@ -66,8 +66,16 @@ $(ARMOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 $(ASMOBJ): $(OBJDIR)/%.o: %.s
 	$(CC) $(CFLAGS) -mthumb-interwork -o $@ $<
 
+# This objcopy call translates physical flash addresses to logical addresses
+# See ldscript.common. -- Henryk Plötz <henryk@ploetzli.ch> 2009-08-27
 $(OBJDIR)/%.s19: $(OBJDIR)/%.elf
-	$(OBJCOPY) -Osrec --srec-forceS3 $^ $@
+	$(OBJCOPY) -Osrec --srec-forceS3  --no-change-warnings \
+	--change-section-address bootphase1-0x100000 \
+	--change-section-address bootphase2-0x100000 \
+	--change-section-address fpgaimage-0x100000 \
+	--change-section-address .start-0x100000 \
+	--change-section-address .text-0x100000 \
+	--change-section-address .rodata-0x100000 $^ $@
 
 # Automatic dependency generation
 DEPENDENCY_FILES = $(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(THUMBSRC))) \

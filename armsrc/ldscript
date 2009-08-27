@@ -1,13 +1,21 @@
+INCLUDE ../common/ldscript.common
+
 ENTRY(Vector)
 SECTIONS
 {
-	. = 0x00010000;
-	.start : { obj/start.o(.text) }
-	.text : { *(.text) }
-	.rodata : { *(.rodata) }
-	. = 0x00200000;
-	.data : { *(.data) }
+	.start : { obj/start.o(.text) } >osimage
+	.text : { 
+		*(.text)
+		*(.text.*)
+		*(.glue_7)
+		*(.glue_7t)
+	} >osimage
+	.rodata : { 
+		*(.rodata) 
+		*(.rodata*) 
+	} >osimage
+	.data : { *(.data) } >ram
 	__bss_start__ = .;
-	.bss : { *(.bss) }
+	.bss : { *(.bss) } >ram
 	__bss_end__ = .;
 }

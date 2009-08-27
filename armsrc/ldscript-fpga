@@ -1,11 +1,13 @@
+INCLUDE ../common/ldscript.common
+
 SECTIONS
 {
-	. = 0x00002000;
-	.text : { obj/fpgaimg.o(.text) *(.text) }
-	.rodata : { *(.rodata) }
-	. = 0x00200000;
-	.data : { *(.data) }
+	fpgaimage : { 
+		obj/fpgaimg.o(.text) *(.text) 
+		*(.rodata) 
+	} >fpgaimage
+	.data : { *(.data) } >ram
 	__bss_start__ = .;
-	.bss : { *(.bss) }
+	.bss : { *(.bss) } >ram
 	__bss_end__ = .;
 }
