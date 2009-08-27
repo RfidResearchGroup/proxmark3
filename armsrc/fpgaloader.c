@@ -135,17 +135,10 @@ void FpgaSetupSscDma(BYTE *buf, int len)
 	PDC_CONTROL(SSC_BASE) = PDC_RX_ENABLE;
 }
 
-//-----------------------------------------------------------------------------
-// Download the FPGA image stored in flash (slave serial).
-//-----------------------------------------------------------------------------
-void FpgaDownloadAndGo(void)
+// Download the fpga image starting at FpgaImage and with length FpgaImageLen DWORDs (e.g. 4 bytes)
+// If bytereversal is set: reverse the byte order in each 4-byte word
+static void DownloadFPGA(const DWORD *FpgaImage, DWORD FpgaImageLen, int bytereversal)
 {
-	// FPGA image lives in FLASH at base address 0x2000
-	// The current board design can not accomodate anything bigger than a XC2S30
-	// FPGA and the config file size is fixed at 336,768 bits = 10,524 DWORDs
-	const DWORD *FpgaImage=((DWORD *)0x2000);
-	const DWORD FpgaImageLen=10524;
-
 	int i, j;
 
 	PIO_OUTPUT_ENABLE = (1 << GPIO_FPGA_ON);
@@ -170,19 +163,126 @@ void FpgaDownloadAndGo(void)
 
 	for(i = 0; i < FpgaImageLen; i++) {
 		DWORD v = FpgaImage[i];
-		for(j = 0; j < 32; j++) {
-			if(v & 0x80000000) {
-				HIGH(GPIO_FPGA_DIN);
-			} else {
-				LOW(GPIO_FPGA_DIN);
-			}
-			HIGH(GPIO_FPGA_CCLK);
-			LOW(GPIO_FPGA_CCLK);
-			v <<= 1;
+		unsigned char w;
+		for(j = 0; j < 4; j++) {
+			if(!bytereversal) 
+				w = v >>(j*8);
+			else
+				w = v >>((3-j)*8);
+#define SEND_BIT(x) { if(w & (1<<x) ) HIGH(GPIO_FPGA_DIN); else LOW(GPIO_FPGA_DIN); HIGH(GPIO_FPGA_CCLK); LOW(GPIO_FPGA_CCLK); }
+			SEND_BIT(7);
+			SEND_BIT(6);
+			SEND_BIT(5);
+			SEND_BIT(4);
+			SEND_BIT(3);
+			SEND_BIT(2);
+			SEND_BIT(1);
+			SEND_BIT(0);
 		}
 	}
 
 	LED_D_OFF();
+}
+
+static char *bitparse_headers_start;
+static char *bitparse_bitstream_end;
+static int bitparse_initialized;
+/* Simple Xilinx .bit parser. The file starts with the fixed opaque byte sequence
+ * 00 09 0f f0 0f f0 0f f0 0f f0 00 00 01
+ * After that the format is 1 byte section type (ASCII character), 2 byte length
+ * (big endian), <length> bytes content. Except for section 'e' which has 4 bytes
+ * length.
+ */
+static const char _bitparse_fixed_header[] = {0x00, 0x09, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x00, 0x00, 0x01};
+static int bitparse_init(void * start_address, void *end_address)
+{
+	bitparse_initialized = 0;
+	
+	if(memcmp(_bitparse_fixed_header, start_address, sizeof(_bitparse_fixed_header)) != 0) {
+		return 0; /* Not matched */
+	} else {
+		bitparse_headers_start= ((char*)start_address) + sizeof(_bitparse_fixed_header);
+		bitparse_bitstream_end= (char*)end_address;
+		bitparse_initialized = 1;
+		return 1;
+	}
+}
+
+int bitparse_find_section(char section_name, void **section_start, unsigned int *section_length)
+{
+	char *pos = bitparse_headers_start;
+	int result = 0;
+
+	if(!bitparse_initialized) return 0;
+
+	while(pos < bitparse_bitstream_end) {
+		char current_name = *pos++;
+		unsigned int current_length = 0;
+		if(current_name < 'a' || current_name > 'e') {
+			/* Strange section name, abort */
+			break;
+		}
+		current_length = 0;
+		switch(current_name) {
+		case 'e':
+			/* Four byte length field */
+			current_length += (*pos++) << 24;
+			current_length += (*pos++) << 16;
+		default: /* Fall through, two byte length field */
+			current_length += (*pos++) << 8;
+			current_length += (*pos++) << 0;
+		}
+		
+		if(current_name != 'e' && current_length > 255) {
+			/* Maybe a parse error */
+			break;
+		}
+		
+		if(current_name == section_name) {
+			/* Found it */
+			*section_start = pos;
+			*section_length = current_length;
+			result = 1;
+			break;
+		}
+		
+		pos += current_length; /* Skip section */
+	}
+	
+	return result;
+}
+
+//-----------------------------------------------------------------------------
+// Find out which FPGA image format is stored in flash, then call DownloadFPGA
+// with the right parameters to download the image
+//-----------------------------------------------------------------------------
+extern char _binary_fpga_bit_start, _binary_fpga_bit_end;
+void FpgaDownloadAndGo(void)
+{
+	/* Check for the new flash image format: Should have the .bit file at &_binary_fpga_bit_start
+	 */
+	if(bitparse_init(&_binary_fpga_bit_start, &_binary_fpga_bit_end)) {
+		/* Successfully initialized the .bit parser. Find the 'e' section and
+		 * send its contents to the FPGA.
+		 */
+		void *bitstream_start;
+		unsigned int bitstream_length;
+		if(bitparse_find_section('e', &bitstream_start, &bitstream_length)) {
+			DownloadFPGA((DWORD *)bitstream_start, bitstream_length/4, 0);
+			
+			return; /* All done */
+		}
+	}
+	
+	/* Fallback for the old flash image format: Check for the magic marker 0xFFFFFFFF
+	 * 0xAA995566 at address 0x2000. This is raw bitstream with a size of 336,768 bits 
+	 * = 10,524 DWORDs, stored as DWORDS e.g. little-endian in memory, but each DWORD
+	 * is still to be transmitted in MSBit first order. Set the invert flag to indicate
+	 * that the DownloadFPGA function should invert every 4 byte sequence when doing
+	 * the bytewise download.
+	 */
+	if( *(DWORD*)0x2000 == 0xFFFFFFFF && *(DWORD*)0x2004 == 0xAA995566 )
+		DownloadFPGA((DWORD *)0x2000, 10524, 1);
 }
 
 //-----------------------------------------------------------------------------

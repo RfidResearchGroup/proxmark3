@@ -3,40 +3,39 @@
 APP_INCLUDES = apps.h
 
 # Add the "-DWITH_LCD" flag in APP_CLFAGS to add support for LCD
-# and add SRC_LCD to SRC_MAIN
+# and add SRC_LCD to THUMBSRC
 APP_CFLAGS	= -O6
 
 SRC_LCD = fonts.c LCD.c
 
-SRC_MAIN = start.c \
+THUMBSRC = start.c \
 	appmain.c \
-	fpga.c \
 	lfops.c \
 	iso15693.c \
 	util.c \
 	usb.c
 
 # These are to be compiled in ARM mode
-SRC_MAIN_FAST =  iso14443.c \
-	iso14443a.c
+ARMSRC =  iso14443.c \
+	iso14443a.c \
+	fpgaloader.c
 
-SRC_FPGA = fpgaimg.c
-
-THUMBSRC = $(SRC_MAIN) $(SRC_FPGA)
-ARMSRC = $(SRC_MAIN_FAST)
-
-MAIN_OBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(SRC_MAIN) $(SRC_MAIN_FAST))
-
-# Do not move this inclusion before the definition of {THUMB,ASM,ARM}{OBJ,SRC}
+# Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
 
 all: $(OBJDIR)/osimage.s19 $(OBJDIR)/fpgaimage.s19
 
-$(OBJDIR)/fpgaimage.elf: $(OBJDIR)/fpgaimg.o
-	$(LD) -g -Tldscript-fpga -Map=$(patsubst %.elf,%.map,$@) -o $@ $^
+$(OBJDIR)/fpga.o: fpga.bit
+	$(OBJCOPY) -O elf32-littlearm -I binary -B arm --redefine-sym _binary____fpga_fpga_bit_start=_binary_fpga_bit_start --redefine-sym _binary____fpga_fpga_bit_end=_binary_fpga_bit_end --prefix-sections=fpga_bit  $^ $@
 
-$(OBJDIR)/osimage.elf: $(MAIN_OBJ) $(ARMLIB)/libgcc.a
+$(OBJDIR)/fullimage.elf: $(OBJDIR)/fpga.o $(THUMBOBJ) $(ARMOBJ) $(ARMLIB)/libgcc.a
 	$(LD) -g -Tldscript -Map=$(patsubst %.elf,%.map,$@) -o $@ $^
+
+$(OBJDIR)/fpgaimage.elf: $(OBJDIR)/fullimage.elf
+	$(OBJCOPY) -F elf32-littlearm --only-section fpgaimage $^ $@  
+
+$(OBJDIR)/osimage.elf: $(OBJDIR)/fullimage.elf
+	$(OBJCOPY) -F elf32-littlearm --remove-section fpgaimage $^ $@
 
 clean:
 	$(DELETE) $(OBJDIR)$(PATHSEP)*.o

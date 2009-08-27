@@ -5,7 +5,7 @@ ARMSRC = fromflash.c
 THUMBSRC = usb.c bootrom.c
 ASMSRC = ram-reset.s flash-reset.s
 
-# Do not move this inclusion before the definition of {THUMB,ASM,ARM}{OBJ,SRC}
+# Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
 
 all: $(OBJDIR)/bootrom.s19

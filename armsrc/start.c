@@ -6,7 +6,7 @@
 #include <proxmark3.h>
 #include "apps.h"
 
-void Vector(void)
+void __attribute__((section(".startos"))) Vector(void)
 {
 	AppMain();
 }
