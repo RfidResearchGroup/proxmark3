@@ -259,6 +259,19 @@ static void UsbSendZeroLength(void)
 		;
 }
 
+static void UsbSendStall(void)
+{
+	UDP_ENDPOINT_CSR(0) |= UDP_CSR_FORCE_STALL;
+
+	while(!(UDP_ENDPOINT_CSR(0) & UDP_CSR_STALL_SENT))
+		;
+
+	UDP_ENDPOINT_CSR(0) &= ~UDP_CSR_STALL_SENT;
+
+	while(UDP_ENDPOINT_CSR(0) & UDP_CSR_STALL_SENT)
+		;
+}
+
 static void HandleRxdSetupData(void)
 {
 	int i;
@@ -346,6 +359,8 @@ static void HandleRxdSetupData(void)
 
 		case USB_REQUEST_CLEAR_FEATURE:
 		case USB_REQUEST_SET_FEATURE:
+			UsbSendStall();
+			break;
 		case USB_REQUEST_SET_DESCRIPTOR:
 		case USB_REQUEST_SYNC_FRAME:
 		default:
