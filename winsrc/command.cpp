@@ -663,6 +663,15 @@ static void CmdLosim(char *str)
 	SendCommand(&c, FALSE);
 }
 
+static void CmdLosimBidir(char *str)
+{
+	UsbCommand c;
+	c.cmd = CMD_LF_SIMULATE_BIDIR;
+	c.ext1 = 47; /* Set ADC to twice the carrier for a slight supersampling */
+	c.ext2 = 384;
+	SendCommand(&c, FALSE);
+}
+
 static void CmdLoread(char *str)
 {
 	UsbCommand c;
@@ -2834,6 +2843,7 @@ static struct {
 	{"loread",				CmdLoread,					0, "['h'] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134)"},
 	{"losamples",			CmdLosamples,				0, "[128 - 16000] -- Get raw samples for LF tag"},
 	{"losim",					CmdLosim,						0, "Simulate LF tag"},
+	{"losimbidir",					CmdLosimBidir,						0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
 	{"ltrim",					CmdLtrim,						1, "<samples> -- Trim samples from left of trace"},
 	{"mandemod",			Cmdmanchesterdemod,	1, "[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)"},
 	{"manmod",				Cmdmanchestermod,		1, "[clock rate] -- Manchester modulate a binary stream"},

@@ -645,6 +645,9 @@ void UsbPacketReceived(BYTE *packet, int len)
 		case CMD_VERSION:
 			SendVersion();
 			break;
+		case CMD_LF_SIMULATE_BIDIR:
+			SimulateTagLowFrequencyBidir(c->ext1, c->ext2);
+			break;
 #ifdef WITH_LCD
 		case CMD_LCD_RESET:
 			LCDReset();

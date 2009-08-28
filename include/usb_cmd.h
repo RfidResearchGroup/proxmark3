@@ -50,6 +50,7 @@ typedef struct {
 #define CMD_HID_DEMOD_FSK															0x020B
 #define CMD_HID_SIM_TAG																0x020C
 #define CMD_SET_LF_DIVISOR														0x020D
+#define CMD_LF_SIMULATE_BIDIR														0x020E
 
 // For the 13.56 MHz tags
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693					0x0300

@@ -14,6 +14,7 @@ THUMBSRC = start.c \
 	iso15693.c \
 	util.c \
 	version.c \
+	hitag2.c \
 	usb.c
 
 # These are to be compiled in ARM mode

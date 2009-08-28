@@ -74,6 +74,7 @@ void AcquireRawBitsTI(void);
 void SimulateTagLowFrequency(int period, int ledcontrol);
 void CmdHIDsimTAG(int hi, int lo, int ledcontrol);
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol);
+void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);
 
 /// iso14443.h
 void SimulateIso14443Tag(void);
