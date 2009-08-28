@@ -1,4 +1,4 @@
-LDFLAGS = -ltermcap -lusb -lreadline -lpthread -L/opt/local/lib
+LDFLAGS = -lusb -lreadline -lpthread -L/opt/local/lib
 CFLAGS = -I. -I/opt/local/include -Wall -Wno-unused-function
 
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall
