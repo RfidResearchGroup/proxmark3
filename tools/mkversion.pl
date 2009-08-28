@@ -4,8 +4,6 @@
 # but this will, at least in theory, also work on Windows with our current compile environment.
 # -- Henryk Plötz <henryk@ploetzli.ch> 2009-09-28
 
-use strict;
-
 my $main_dir = shift;
 
 # Clear environment locale so that svn will not use localized strings
