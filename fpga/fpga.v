@@ -138,7 +138,7 @@ lo_simulate ls(
 	adc_d, ls_adc_clk,
 	ls_ssp_frame, ls_ssp_din, ssp_dout, ls_ssp_clk,
 	cross_hi, cross_lo,
-	ls_dbg
+	ls_dbg, divisor
 );
 
 hi_read_tx ht(
