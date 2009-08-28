@@ -182,8 +182,8 @@ void BootROM(void)
             USB_D_PLUS_PULLUP_OFF();
             LED_B_ON();
 
-			// jump to RAM address 0x10000 (LSBit set for thumb mode)
-            asm("ldr r3, = 0x10001\n");
+			// jump to Flash address 0x10000 (LSBit set for thumb mode, 0x100000 added for Flash base address)
+            asm("ldr r3, = 0x00110001\n");
             asm("bx r3\n");
         }
     }
