@@ -2732,6 +2732,13 @@ static void CmdReadmem(char *str)
 	SendCommand(&c, FALSE);
 }
 
+static void CmdVersion(char *str)
+{
+	UsbCommand c;
+	c.cmd = CMD_VERSION;
+	SendCommand(&c, FALSE);
+}
+
 static void CmdLcdReset(char *str)
 {
 	UsbCommand c;
@@ -2844,6 +2851,7 @@ static struct {
 	{"tiwrite",				CmdTIWrite,					0, "Write new data to a r/w TI 134 kHz tag"},
 	{"threshold",			CmdThreshold,				1, "Maximize/minimize every value in the graph window depending on threshold"},
 	{"tune",					CmdTune,						0, "Measure antenna tuning"},
+	{"version",			CmdVersion,				0, "Show version inforation about the connected Proxmark"},
 	{"vchdemod",			CmdVchdemod,				0, "['clone'] -- Demodulate samples for VeriChip"},
 	{"zerocrossings",	CmdZerocrossings,		1, "Count time between zero-crossings"},
 };

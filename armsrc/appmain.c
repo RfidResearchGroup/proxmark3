@@ -236,6 +236,14 @@ void ReadMem(int addr)
 		DbpIntegers(0, data[i], data[i+1]);
 }
 
+void SendVersion(void)
+{
+	char temp[48]; /* Limited data payload in USB packets */
+	DbpString("Prox/RFID mark3 RFID instrument");
+	FpgaGatherVersion(temp, sizeof(temp));
+	DbpString(temp);
+}
+
 // samy's sniff and repeat routine
 void SamyRun()
 {
@@ -615,6 +623,9 @@ void UsbPacketReceived(BYTE *packet, int len)
 			break;
 		case CMD_SET_LF_DIVISOR:
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, c->ext1);
+			break;
+		case CMD_VERSION:
+			SendVersion();
 			break;
 #ifdef WITH_LCD
 		case CMD_LCD_RESET:

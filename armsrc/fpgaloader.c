@@ -285,6 +285,37 @@ void FpgaDownloadAndGo(void)
 		DownloadFPGA((DWORD *)0x2000, 10524, 1);
 }
 
+void FpgaGatherVersion(char *dst, int len)
+{
+	char *fpga_info; 
+	unsigned int fpga_info_len;
+	dst[0] = 0;
+	if(!bitparse_find_section('e', (void**)&fpga_info, &fpga_info_len)) {
+		strncat(dst, "FPGA image: legacy image without version information", len-1);
+	} else {
+		strncat(dst, "FPGA image built", len-1);
+		/* USB packets only have 48 bytes data payload, so be terse */
+#if 0
+		if(bitparse_find_section('a', (void**)&fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
+			strncat(dst, " from ", len-1);
+			strncat(dst, fpga_info, len-1);
+		}
+		if(bitparse_find_section('b', (void**)&fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
+			strncat(dst, " for ", len-1);
+			strncat(dst, fpga_info, len-1);
+		}
+#endif
+		if(bitparse_find_section('c', (void**)&fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
+			strncat(dst, " on ", len-1);
+			strncat(dst, fpga_info, len-1);
+		}
+		if(bitparse_find_section('d', (void**)&fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
+			strncat(dst, " at ", len-1);
+			strncat(dst, fpga_info, len-1);
+		}
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Send a 16 bit command/data pair to the FPGA.
 // The bit format is:  C3 C2 C1 C0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0
