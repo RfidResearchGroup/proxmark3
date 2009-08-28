@@ -8,6 +8,18 @@ SECTIONS
     bootphase1 : {
     	*(.startup) 
     	*(.bootphase1)
+    	
+    	/* It seems to be impossible to flush align a section at the
+    	   end of a memory segment. Instead, we'll put the version_information
+    	   wherever the linker wants it, and then put a pointer to the start
+    	   of the version information at the end of the section.
+    	   -- Henryk Plötz <henryk@ploetzli.ch> 2009-08-28 */
+    	   
+    	_version_information_start = .;
+    	*(.version_information);
+    	
+    	. = LENGTH(bootphase1) - 0x4; /* Skip ahead to the end */
+    	LONG(_version_information_start)
     } >bootphase1
     
     bootphase2 : {

@@ -20,6 +20,7 @@ ifeq ($(UNAME), Linux)
 # Linux. (Todo: Add MacOS X if appropriate)
 DELETE=rm -rf
 MOVE=mv
+COPY=cp
 PATHSEP=/
 DETECTED_OS=Linux
 # You may/should set this in your environment
@@ -31,6 +32,7 @@ else
 # Assume that we are running on Windows.
 DELETE=del /q
 MOVE=ren
+COPY=copy
 PATHSEP=\\#
 ARMLIB ?= ../../devkitARM/lib/gcc/arm-elf/4.1.0/interwork
 DETECTED_OS=Windows
@@ -76,6 +78,11 @@ $(OBJDIR)/%.s19: $(OBJDIR)/%.elf
 	--change-section-address .start-0x100000 \
 	--change-section-address .text-0x100000 \
 	--change-section-address .rodata-0x100000 $^ $@
+
+# version.c should be remade on every compilation
+.PHONY: version.c
+version.c: default_version.c
+	perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@ 
 
 # Automatic dependency generation
 DEPENDENCY_FILES = $(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(THUMBSRC))) \

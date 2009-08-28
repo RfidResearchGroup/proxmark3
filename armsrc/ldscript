@@ -12,6 +12,7 @@ SECTIONS
 		*(.text.*)
 		*(.glue_7)
 		*(.glue_7t)
+		*(.version_information)
 	} >osimage
 	.rodata : { 
 		*(.rodata) 

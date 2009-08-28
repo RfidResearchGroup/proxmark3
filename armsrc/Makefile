@@ -13,6 +13,7 @@ THUMBSRC = start.c \
 	lfops.c \
 	iso15693.c \
 	util.c \
+	version.c \
 	usb.c
 
 # These are to be compiled in ARM mode
@@ -43,6 +44,7 @@ clean:
 	$(DELETE) $(OBJDIR)$(PATHSEP)*.s19
 	$(DELETE) $(OBJDIR)$(PATHSEP)*.map
 	$(DELETE) $(OBJDIR)$(PATHSEP)*.d
+	$(DELETE) version.c
 
 .PHONY: all clean help
 help:

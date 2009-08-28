@@ -235,3 +235,37 @@ void SpinDelay(int ms)
   // convert to uS and call microsecond delay function
 	SpinDelayUs(ms*1000);
 }
+
+/* Similar to FpgaGatherVersion this formats stored version information
+ * into a string representation. It takes a pointer to the struct version_information,
+ * verifies the magic properties, then stores a formatted string, prefixed by
+ * prefix in dst.
+ */
+void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_information)
+{
+	struct version_information *v = (struct version_information*)version_information;
+	dst[0] = 0;
+	strncat(dst, prefix, len);
+	if(v->magic != VERSION_INFORMATION_MAGIC) {
+		strncat(dst, "Missing/Invalid version information", len);
+		return;
+	}
+	if(v->versionversion != 1) {
+		strncat(dst, "Version information not understood", len);
+		return;
+	}
+	if(!v->present) {
+		strncat(dst, "Version information not available", len);
+		return;
+	}
+	
+	strncat(dst, v->svnversion, len);
+	if(v->clean == 0) {
+		strncat(dst, "-unclean", len);
+	} else if(v->clean == 2) {
+		strncat(dst, "-suspect", len);
+	}
+	
+	strncat(dst, " ", len);
+	strncat(dst, v->buildtime, len);
+}

@@ -236,10 +236,28 @@ void ReadMem(int addr)
 		DbpIntegers(0, data[i], data[i+1]);
 }
 
+/* osimage version information is linked in */
+extern struct version_information version_information;
 void SendVersion(void)
 {
 	char temp[48]; /* Limited data payload in USB packets */
 	DbpString("Prox/RFID mark3 RFID instrument");
+	
+	/* Try to find the bootrom version information. For the time being, expect
+	 * to find a pointer at address 0x1001fc, perform slight sanity checks on 
+	 * the pointer, then use it.
+	 */
+	void *bootrom_version = *(void**)0x1001fc;
+	if( bootrom_version < (void*)0x100000 || bootrom_version > (void*)0x101000 ) {
+		DbpString("bootrom version information appears invalid");
+	} else {
+		FormatVersionInformation(temp, sizeof(temp), "bootrom: ", bootrom_version);
+		DbpString(temp);
+	}
+	
+	FormatVersionInformation(temp, sizeof(temp), "os: ", &version_information);
+	DbpString(temp);
+	
 	FpgaGatherVersion(temp, sizeof(temp));
 	DbpString(temp);
 }
