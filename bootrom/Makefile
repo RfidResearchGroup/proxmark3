@@ -2,7 +2,7 @@
 
 # DO NOT use thumb mode in the phase 1 bootloader since that generates a section with glue code
 ARMSRC = fromflash.c 
-THUMBSRC = usb.c version.c bootrom.c
+THUMBSRC = usb.c bootrom.c
 ASMSRC = ram-reset.s flash-reset.s
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
@@ -10,7 +10,7 @@ include ../common/Makefile.common
 
 all: $(OBJDIR)/bootrom.s19
 
-$(OBJDIR)/bootrom.elf: $(ASMOBJ) $(ARMOBJ) $(THUMBOBJ)
+$(OBJDIR)/bootrom.elf: $(VERSIONOBJ) $(ASMOBJ) $(ARMOBJ) $(THUMBOBJ)
 	$(LD) -g -Tldscript-flash --oformat elf32-littlearm -Map=$(patsubst %.elf,%.map,$@) -o $@ $^
 
 clean:

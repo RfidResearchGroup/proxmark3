@@ -3,7 +3,7 @@ INCLUDE ../common/ldscript.common
 ENTRY(Vector)
 SECTIONS
 {
-	fpgaimage : {
+	.fpgaimage : {
 		*(fpga_bit.data)
 	} >fpgaimage
 	.start : { *(.startos) } >osimage

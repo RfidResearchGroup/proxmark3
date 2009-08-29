@@ -58,6 +58,7 @@ CFLAGS =  -c $(INCLUDE) -Wall $(APP_CFLAGS)
 THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(THUMBSRC))
 ARMOBJ   = $(patsubst %.c,$(OBJDIR)/%.o,$(ARMSRC))
 ASMOBJ   = $(patsubst %.s,$(OBJDIR)/%.o,$(ASMSRC))
+VERSIONOBJ = $(OBJDIR)/version.o
 
 $(THUMBOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 	$(CC) $(CFLAGS) -mthumb -mthumb-interwork -o $@ $< 
@@ -68,13 +69,16 @@ $(ARMOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 $(ASMOBJ): $(OBJDIR)/%.o: %.s
 	$(CC) $(CFLAGS) -mthumb-interwork -o $@ $<
 
+$(VERSIONOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
+	$(CC) $(CFLAGS) -mthumb -mthumb-interwork -o $@ $< 
+
 # This objcopy call translates physical flash addresses to logical addresses
 # See ldscript.common. -- Henryk Plötz <henryk@ploetzli.ch> 2009-08-27
 $(OBJDIR)/%.s19: $(OBJDIR)/%.elf
 	$(OBJCOPY) -Osrec --srec-forceS3  --no-change-warnings \
-	--change-section-address bootphase1-0x100000 \
-	--change-section-address bootphase2-0x100000 \
-	--change-section-address fpgaimage-0x100000 \
+	--change-section-address .bootphase1-0x100000 \
+	--change-section-address .bootphase2-0x100000 \
+	--change-section-address .fpgaimage-0x100000 \
 	--change-section-address .start-0x100000 \
 	--change-section-address .text-0x100000 \
 	--change-section-address .rodata-0x100000 $^ $@
@@ -90,9 +94,9 @@ DEPENDENCY_FILES = $(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(THUMBSRC))) \
 	$(patsubst %.s,$(OBJDIR)/%.d,$(notdir $(ASMSRC)))
 
 $(DEPENDENCY_FILES): Makefile ../common/Makefile.common
-$(OBJDIR)/%.d: %.c
+$(patsubst %.o,%.d,$(THUMBOBJ) $(ARMOBJ)): $(OBJDIR)/%.d: %.c
 	@$(CC) -MM -MT "$(@) $(@:.d=.o)" $(CFLAGS) $< > $@
-$(OBJDIR)/%.d: %.s
+$(patsubst %.o,%.d,$(ASMOBJ)):$(OBJDIR)/%.d: %.s
 	@$(CC) -MM -MT "$(@) $(@:.d=.o)" $(CFLAGS) $< > $@
 
 -include $(DEPENDENCY_FILES)

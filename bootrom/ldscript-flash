@@ -5,7 +5,7 @@ SECTIONS
 {
     . = 0;
     
-    bootphase1 : {
+    .bootphase1 : {
     	*(.startup) 
     	*(.bootphase1)
     	
@@ -15,14 +15,17 @@ SECTIONS
     	   of the version information at the end of the section.
     	   -- Henryk Plötz <henryk@ploetzli.ch> 2009-08-28 */
     	   
-    	_version_information_start = .;
+    	_version_information_start = ABSOLUTE(.);
     	*(.version_information);
     	
-    	. = LENGTH(bootphase1) - 0x4; /* Skip ahead to the end */
+	/* Why doesn't this work even though _bootphase1_version_pointer = 0x1001fc?
+	  . = _bootphase1_version_pointer - ORIGIN(bootphase1); */
+	/* This works, apparently it fools the linker into accepting an absolute address */
+	. = _bootphase1_version_pointer - ORIGIN(bootphase1) + ORIGIN(bootphase1);
     	LONG(_version_information_start)
     } >bootphase1
     
-    bootphase2 : {
+    .bootphase2 : {
     	__bootphase2_start__ = .;
     	*(.startphase2)
     	*(.text)
