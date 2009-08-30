@@ -2861,8 +2861,8 @@ static struct {
 	{"tiwrite",				CmdTIWrite,					0, "Write new data to a r/w TI 134 kHz tag"},
 	{"threshold",			CmdThreshold,				1, "Maximize/minimize every value in the graph window depending on threshold"},
 	{"tune",					CmdTune,						0, "Measure antenna tuning"},
-	{"version",			CmdVersion,				0, "Show version inforation about the connected Proxmark"},
 	{"vchdemod",			CmdVchdemod,				0, "['clone'] -- Demodulate samples for VeriChip"},
+	{"version",			CmdVersion,				0, "Show version inforation about the connected Proxmark"},
 	{"zerocrossings",	CmdZerocrossings,		1, "Count time between zero-crossings"},
 };
 
