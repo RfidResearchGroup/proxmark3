@@ -16,7 +16,9 @@ LIBS   = kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.li
 
 HEADERS = prox.h
 
-all: $(OBJDIR)/prox.exe
+all: prox.exe
+
+prox.exe: $(OBJDIR)/prox.exe
     copy $(OBJDIR)\prox.exe .
 
 clean:
