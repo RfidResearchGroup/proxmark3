@@ -16,11 +16,16 @@ flashstart:
     b       Fiq
 
 Reset:
-    ldr     sp,     = 0x0020FFF8	@ initialize stack pointer to top of RAM
+    ldr     sp,     .stack_end	@ initialize stack pointer to top of RAM
     bl      CopyBootToRAM			@ copy bootloader to RAM (in case the
     								@ user re-flashes the bootloader)
-    ldr     r3,     = 0x00200000	@ start address of RAM bootloader
+    ldr     r3,     .bootphase2_start	@ start address of RAM bootloader
     bx      r3						@ jump to it
+
+	.stack_end:
+	.word _stack_end
+	.bootphase2_start:
+	.word __bootphase2_start__
 
 Fiq:
     b       Fiq

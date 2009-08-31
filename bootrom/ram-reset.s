@@ -6,5 +6,8 @@
 
 .global ramstart
 ramstart:
-    ldr     sp,     = 0x0020FFF8
+    ldr     sp,     .stack_end
     bl      BootROM
+
+	.stack_end:
+	.word _stack_end

@@ -107,6 +107,7 @@ void UsbPacketReceived(BYTE *packet, int len)
     UsbSendPacket(packet, len);
 }
 
+extern char _osimage_entry;
 void BootROM(void)
 {
     //------------
@@ -182,9 +183,8 @@ void BootROM(void)
             USB_D_PLUS_PULLUP_OFF();
             LED_B_ON();
 
-			// jump to Flash address 0x10000 (LSBit set for thumb mode, 0x100000 added for Flash base address)
-            asm("ldr r3, = 0x00110001\n");
-            asm("bx r3\n");
+			// jump to Flash address of the osimage entry point (LSBit set for thumb mode)
+            asm("bx %0\n" : : "r" ( ((int)&_osimage_entry) | 0x1 ) );
         }
     }
 }

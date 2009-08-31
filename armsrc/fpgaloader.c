@@ -275,14 +275,14 @@ void FpgaDownloadAndGo(void)
 	}
 	
 	/* Fallback for the old flash image format: Check for the magic marker 0xFFFFFFFF
-	 * 0xAA995566 at address 0x2000. This is raw bitstream with a size of 336,768 bits 
+	 * 0xAA995566 at address 0x102000. This is raw bitstream with a size of 336,768 bits 
 	 * = 10,524 DWORDs, stored as DWORDS e.g. little-endian in memory, but each DWORD
 	 * is still to be transmitted in MSBit first order. Set the invert flag to indicate
 	 * that the DownloadFPGA function should invert every 4 byte sequence when doing
 	 * the bytewise download.
 	 */
-	if( *(DWORD*)0x2000 == 0xFFFFFFFF && *(DWORD*)0x2004 == 0xAA995566 )
-		DownloadFPGA((DWORD *)0x2000, 10524, 1);
+	if( *(DWORD*)0x102000 == 0xFFFFFFFF && *(DWORD*)0x102004 == 0xAA995566 )
+		DownloadFPGA((DWORD *)0x102000, 10524, 1);
 }
 
 void FpgaGatherVersion(char *dst, int len)

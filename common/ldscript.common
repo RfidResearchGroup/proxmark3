@@ -16,5 +16,7 @@ MEMORY
 
 /* Export some information that can be used from within the firmware */
 _bootphase1_version_pointer = ORIGIN(bootphase1) + LENGTH(bootphase1) - 0x4;
+_osimage_entry = ORIGIN(osimage);
 _flash_start = ORIGIN(bootphase1);
 _flash_end = ORIGIN(osimage) + LENGTH(osimage);
+_stack_end = ORIGIN(ram) + LENGTH(ram) - 8;

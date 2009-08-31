@@ -25,6 +25,7 @@ SECTIONS
     	LONG(_version_information_start)
     } >bootphase1
     
+    __bootphase2_src_start__ = ORIGIN(bootphase2);
     .bootphase2 : {
     	__bootphase2_start__ = .;
     	*(.startphase2)
