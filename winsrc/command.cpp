@@ -1808,6 +1808,40 @@ static void CmdNorm(char *str)
 	RepaintGraphWindow();
 }
 
+static void CmdAmp(char *str)
+{
+	int i, rising, falling;
+	int max = INT_MIN, min = INT_MAX;
+	for(i = 10; i < GraphTraceLen; i++) {
+		if(GraphBuffer[i] > max) {
+			max = GraphBuffer[i];
+		}
+		if(GraphBuffer[i] < min) {
+			min = GraphBuffer[i];
+		}
+	}
+	if(max != min) {
+		rising= falling= 0;
+		for(i = 0; i < GraphTraceLen; i++) {
+			if(GraphBuffer[i+1] < GraphBuffer[i]) {
+				if(rising) {
+ 					GraphBuffer[i]= max;
+					rising= 0;
+					}
+				falling= 1;
+				}
+			if(GraphBuffer[i+1] > GraphBuffer[i]) {
+				if(falling) {
+					GraphBuffer[i]= min;
+					falling= 0;
+					}
+				rising= 1;
+				}
+		}
+	}
+	RepaintGraphWindow();
+}
+
 static void CmdDec(char *str)
 {
 	int i;
@@ -2794,6 +2828,7 @@ static struct {
 	int		offline;  // 1 if the command can be used when in offline mode
 	char		*docString;
 } CommandTable[] = {
+	{"amp",					CmdAmp,						1, "Amplify peaks"},
 	{"askdemod",			Cmdaskdemod,				1, "<samples per bit> <0|1> -- Attempt to demodulate simple ASK tags"},
 	{"autocorr",			CmdAutoCorr,				1, "<window length> -- Autocorrelation over window"},
 	{"bitsamples",		CmdBitsamples,			0, "Get raw samples as bitstring"},
