@@ -34,9 +34,17 @@
 #define RSTC_BASE									(0xfffffd00)
 
 #define RSTC_CONTROL								REG(RSTC_BASE+0x00)
+#define RSTC_STATUS								REG(RSTC_BASE+0x04)
 
 #define RST_CONTROL_KEY								(0xa5<<24)
 #define RST_CONTROL_PROCESSOR_RESET					(1<<0)
+#define RST_STATUS_TYPE_MASK							(7<<8)
+#define RST_STATUS_TYPE_POWERUP								(0<<8)
+#define RST_STATUS_TYPE_WATCHDOG							(2<<8)
+#define RST_STATUS_TYPE_SOFTWARE							(3<<8)
+#define RST_STATUS_TYPE_USER								(4<<8)
+#define RST_STATUS_TYPE_BROWNOUT							(5<<8)
+
 
 //-------------
 // PWM Controller
