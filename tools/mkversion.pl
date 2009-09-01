@@ -38,13 +38,14 @@ if(open(SVNINFO, "svn info $main_dir|")) {
 	}
 	
 } else {
-	# Strategy two: look for .svn/entries. The third line should be "dir", the fourth line should contain the current
+	# Strategy two: look for .svn/entries. The third line should be "dir", the fourth line should contain 
+	#  the currently checked out revision, the eleventh line should contain the last changed revision.
 	#  revision.
 	if(open(ENTRIES, "$main_dir/.svn/entries")) {
 		my $i = 1;
 		while(<ENTRIES>) {
 			last if($i == 3 and !/^dir/);
-			if($i == 4 and /^([0-9]*)/) {
+			if($i == 11 and /^([0-9]*)/) {
 				$present = 1;
 				$svnversion = $1;
 			}
