@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
 	BOOL fastflash = 0, flashboth = 0;
 	UsbCommand c;
 
-	if (argc != 3 && ! ((argc == 4 && *argv[3] == 'f') || (argc == 5 && *argv[4] == 'f'))) {
+	if (argc != 3 && ! ((argc == 4 && (*argv[3] == 'f' || strcmp(argv[1], "both") == 0) ) || (argc == 5 && *argv[4] == 'f'))) {
 		fprintf(stderr,"Usage: %s {bootrom|os|fpga} image.s19 [f]ast\n", argv[0]);
 		fprintf(stderr,"       %s {both} osimage.s19 fpgaimage.s19 [f]ast\n", argv[0]);
 		exit(EXIT_FAILURE);
