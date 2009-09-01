@@ -11,12 +11,15 @@ MEMORY
         bootphase2 : ORIGIN = 0x00100200, LENGTH = 0x2000 - 0x200 /* Main bootloader code, stored in Flash, executed from RAM */
         fpgaimage  : ORIGIN = 0x00102000, LENGTH = 64k - 0x2000 /* Place where the FPGA image will end up */
         osimage    : ORIGIN = 0x00110000, LENGTH = 256K - 64k /* Place where the main OS will end up */
-        ram        : ORIGIN = 0x00200000, LENGTH = 64K
+        ram        : ORIGIN = 0x00200000, LENGTH = 64K - 0x20 /* RAM, minus small common area */
+        commonarea : ORIGIN = 0x00200000 + 64K - 0x20, LENGTH = 0x20 /* Communication between bootloader and main OS */
 }
 
 /* Export some information that can be used from within the firmware */
 _bootphase1_version_pointer = ORIGIN(bootphase1) + LENGTH(bootphase1) - 0x4;
 _osimage_entry = ORIGIN(osimage);
+_bootrom_start = ORIGIN(bootphase1);
+_bootrom_end = ORIGIN(bootphase2) + LENGTH(bootphase2);
 _flash_start = ORIGIN(bootphase1);
 _flash_end = ORIGIN(osimage) + LENGTH(osimage);
 _stack_end = ORIGIN(ram) + LENGTH(ram) - 8;

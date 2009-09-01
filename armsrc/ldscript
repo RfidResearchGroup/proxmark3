@@ -22,4 +22,8 @@ SECTIONS
 	__bss_start__ = .;
 	.bss : { *(.bss) } >ram
 	__bss_end__ = .;
+
+    	.commonarea (NOLOAD) : {
+    		*(.commonarea)
+    	} >commonarea
 }

@@ -39,10 +39,11 @@ DETECTED_OS=Windows
 
 endif
 
-CC	= arm-elf-gcc
-AS	= arm-elf-as
-LD	= arm-elf-ld
-OBJCOPY = arm-elf-objcopy
+CROSS   = arm-elf-
+CC	= $(CROSS)gcc
+AS	= $(CROSS)as
+LD	= $(CROSS)ld
+OBJCOPY = $(CROSS)objcopy
 
 OBJDIR	= obj
 
@@ -78,8 +79,8 @@ $(VERSIONOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 $(OBJDIR)/%.s19: $(OBJDIR)/%.elf
 	$(OBJCOPY) -Osrec --srec-forceS3 --strip-debug --no-change-warnings \
 	--change-addresses -0x100000 --change-start 0 \
-	--change-section-address .bss+0 \
-	--change-section-address .data+0 $^ $@
+	--change-section-address .bss+0 --change-section-address .data+0 \
+	--change-section-address .commonarea+0 $^ $@
 
 # version.c should be remade on every compilation
 .PHONY: version.c

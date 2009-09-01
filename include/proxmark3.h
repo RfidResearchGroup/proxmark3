@@ -70,4 +70,18 @@ struct version_information {
 	char buildtime[30]; /* string with the build time */
 } __attribute__((packed));
 
+#define COMMON_AREA_MAGIC 0x43334d50
+#define COMMON_AREA_COMMAND_NONE 0
+#define COMMON_AREA_COMMAND_ENTER_FLASH_MODE 1
+struct common_area {
+	int magic; /* Magic sequence, to distinguish against random uninitialized memory */
+	char version; /* Must be 1 */
+	char command;
+	struct {
+		unsigned int bootrom_present:1; /* Set when a bootrom that is capable of parsing the common area is present */
+		unsigned int osimage_present:1; /* Set when a osimage that is capable of parsing the common area is present */
+	} __attribute__((packed)) flags;
+	int arg1, arg2;
+} __attribute__((packed));
+
 #endif

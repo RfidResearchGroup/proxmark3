@@ -45,4 +45,8 @@ SECTIONS
     
     . = ALIGN( 32 / 8 );
     __bss_end__ = .;
+    
+    .commonarea (NOLOAD) : {
+    	*(.commonarea)
+    } >commonarea
 }

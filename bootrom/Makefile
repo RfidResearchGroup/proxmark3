@@ -5,6 +5,13 @@ ARMSRC = fromflash.c
 THUMBSRC = usb.c bootrom.c
 ASMSRC = ram-reset.s flash-reset.s
 
+## There is a strange bug with the linker: Sometimes it will not emit the glue to call
+## BootROM from ARM mode. The symbol is emitted, but the section will be filled with
+## zeroes. As a temporary workaround, do not use thumb for the phase 2 bootloader
+## -- Henryk Plötz <henryk@ploetzli.ch> 2009-09-01
+ARMSRC := $(ARMSRC) $(THUMBSRC)
+THUMBSRC := 
+
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
 

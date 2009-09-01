@@ -13,7 +13,6 @@
 #include "LCD.h"
 #endif
 
-
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
 // any purpose (fake tag, as reader, whatever). We go MSB first, since that
@@ -23,6 +22,7 @@
 BYTE ToSend[256];
 int ToSendMax;
 static int ToSendBit;
+struct common_area common_area __attribute__((section(".commonarea")));
 
 void BufferClear(void)
 {
@@ -669,7 +669,23 @@ void UsbPacketReceived(BYTE *packet, int len)
 				// We're going to reset, and the bootrom will take control.
 			}
 			break;
-
+		case CMD_START_FLASH:
+			if(common_area.flags.bootrom_present) {
+				common_area.command = COMMON_AREA_COMMAND_ENTER_FLASH_MODE;
+			}
+			USB_D_PLUS_PULLUP_OFF();
+			RSTC_CONTROL = RST_CONTROL_KEY | RST_CONTROL_PROCESSOR_RESET;
+			for(;;);
+			break;
+			
+		case CMD_DEVICE_INFO: {
+			UsbCommand c;
+			c.cmd = CMD_DEVICE_INFO;
+			c.ext1 = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
+			if(common_area.flags.bootrom_present) c.ext1 |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
+			UsbSendPacket((BYTE*)&c, sizeof(c));
+		}
+			break;
 		default:
 			DbpString("unknown command");
 			break;
@@ -680,6 +696,14 @@ void AppMain(void)
 {
 	memset(BigBuf,0,sizeof(BigBuf));
 	SpinDelay(100);
+	
+	if(common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
+		/* Initialize common area */
+		memset(&common_area, 0, sizeof(common_area));
+		common_area.magic = COMMON_AREA_MAGIC;
+		common_area.version = 1;
+	}
+	common_area.flags.osimage_present = 1;
 
 	LED_D_OFF();
 	LED_C_OFF();
