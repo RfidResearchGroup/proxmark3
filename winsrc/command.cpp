@@ -2272,9 +2272,11 @@ static void Cmdaskdemod(char *str) {
 	int c, high = 0, low = 0;
 
 	// TODO: complain if we do not give 2 arguments here !
+	// (AL - this doesn't make sense! we're only using one argument!!!)
 	sscanf(str, "%i", &c);
 
 	/* Detect high and lows and clock */
+	// (AL - clock???)
 	for (i = 0; i < GraphTraceLen; i++)
 	{
 		if (GraphBuffer[i] > high)
@@ -2282,6 +2284,10 @@ static void Cmdaskdemod(char *str) {
 		else if (GraphBuffer[i] < low)
 			low = GraphBuffer[i];
 	}
+	if(c != 0 && c != 1) {
+		PrintToScrollback("Invalid argument: %s",str);
+		return;
+		}
 
 	if (GraphBuffer[0] > 0) {
 		GraphBuffer[0] = 1-c;
@@ -2829,7 +2835,7 @@ static struct {
 	char		*docString;
 } CommandTable[] = {
 	{"amp",					CmdAmp,						1, "Amplify peaks"},
-	{"askdemod",			Cmdaskdemod,				1, "<samples per bit> <0|1> -- Attempt to demodulate simple ASK tags"},
+	{"askdemod",			Cmdaskdemod,				1, "<0|1> -- Attempt to demodulate simple ASK tags"},
 	{"autocorr",			CmdAutoCorr,				1, "<window length> -- Autocorrelation over window"},
 	{"bitsamples",		CmdBitsamples,			0, "Get raw samples as bitstring"},
 	{"bitstream",			Cmdbitstream,				1, "[clock rate] -- Convert waveform into a bitstream"},
