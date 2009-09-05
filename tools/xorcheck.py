@@ -38,7 +38,7 @@ if(len(sys.argv) < 3):
 	print
 	print 'Should produce the output:'
 	print
-	print '\tTarget (BA) matched with final LRC XOR byte value: 5A'
+	print '\tTarget (BA) requires final LRC XOR byte value: 5A'
 	print
 	os._exit(True)
 
