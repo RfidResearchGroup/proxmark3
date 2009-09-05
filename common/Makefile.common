@@ -22,6 +22,7 @@ DELETE=rm -rf
 MOVE=mv
 COPY=cp
 PATHSEP=/
+FLASH_TOOL=linux/flasher
 DETECTED_OS=Linux
 # You may/should set this in your environment
 ARMLIB ?= /usr/local/lib/gcc/arm-elf/4.3.3/interwork
@@ -35,6 +36,7 @@ MOVE=ren
 COPY=copy
 PATHSEP=\\#
 ARMLIB ?= ../../devkitARM/lib/gcc/arm-elf/4.1.0/interwork
+FLASH_TOOL=winsrc\\prox.exe
 DETECTED_OS=Windows
 
 endif

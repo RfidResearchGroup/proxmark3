@@ -6,17 +6,41 @@ else
 HOST_BINARY=winsrc
 endif
 
-all clean: %:
-	$(MAKE) -C bootrom $@
-	$(MAKE) -C armsrc $@
-	$(MAKE) -C $(HOST_BINARY) $@
+all clean: %: bootrom/% armsrc/% $(HOST_BINARY)/%
 
-.PHONY: all clean help _test
+bootrom/%: FORCE
+	$(MAKE) -C bootrom $(patsubst bootrom/%,%,$@)
+armsrc/%: FORCE
+	$(MAKE) -C armsrc $(patsubst armsrc/%,%,$@)
+linux/%: FORCE
+	$(MAKE) -C linux $(patsubst linux/%,%,$@)
+winsrc/%: FORCE
+	$(MAKE) -C winsrc $(patsubst winsrc/%,%,$@)
+FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
+
+
+.PHONY: all clean help _test flash-bootrom flash-os flash-both flash-all FORCE
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:
-	@echo +	all   - Make bootrom, armsrc and the OS-specific host directory 
-	@echo +	clean - Clean in bootrom, armsrc and the OS-specific host directory
+	@echo +	all           - Make bootrom, armsrc and the OS-specific host directory
+	@echo + flash-bootrom - Make bootrom and flash it
+	@echo + flash-os      - Make armsrc and flash os
+	@echo + flash-both    - Make armsrc and flash os and fpga image
+	@echo + flash-all     - Make bootrom and armsrc and flash bootrom, os and fpga image
+	@echo +	clean         - Clean in bootrom, armsrc and the OS-specific host directory
+
+flash-bootrom: bootrom/obj/bootrom.s19 $(FLASH_TOOL)
+	$(FLASH_TOOL) bootrom $(subst /,$(PATHSEP),$<)
+
+flash-os: armsrc/obj/osimage.s19 $(FLASH_TOOL)
+	$(FLASH_TOOL) os $(subst /,$(PATHSEP),$<)
+
+flash-both: armsrc/obj/osimage.s19 armsrc/obj/fpgaimage.s19 $(FLASH_TOOL)
+	$(FLASH_TOOL) os,fpga $(subst /,$(PATHSEP),$(filter-out $(FLASH_TOOL),$^))
+
+flash-all: bootrom/obj/bootrom.s19 armsrc/obj/osimage.s19 armsrc/obj/fpgaimage.s19 $(FLASH_TOOL)
+	$(FLASH_TOOL) bootrom,os,fpga $(subst /,$(PATHSEP),$(filter-out $(FLASH_TOOL),$^))
 
 # Dummy target to test for GNU make availability
 _test:
