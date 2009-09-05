@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-#  xorcheck.py - find xor values for 8-bit CRC
+#  xorcheck.py - find xor values for 8-bit LRC
 # 
 #  Adam Laurie <adam@algroup.co.uk>
 #  http://rfidiot.org/
@@ -25,12 +25,12 @@ import os
 
 if(len(sys.argv) < 3):
 	print
-	print '\t'+sys.argv[0] + ' - Generate final byte for XOR CRC'
+	print '\t'+sys.argv[0] + ' - Generate final byte for XOR LRC'
 	print
-	print 'Usage: ' + sys.argv[0] + ' <ID Byte1> <ID Byte2> ... <CRC>'
+	print 'Usage: ' + sys.argv[0] + ' <ID Byte1> <ID Byte2> ... <LRC>'
 	print
-	print '\tSpecifying the bytes of a UID with a known CRC will find the last byte value'
-	print '\tneeded to generate that CRC with a rolling XOR. All bytes should be specified in HEX.'
+	print '\tSpecifying the bytes of a UID with a known LRC will find the last byte value'
+	print '\tneeded to generate that LRC with a rolling XOR. All bytes should be specified in HEX.'
 	print
 	print 'Example:'
 	print
@@ -38,19 +38,15 @@ if(len(sys.argv) < 3):
 	print
 	print 'Should produce the output:'
 	print
-	print '\tTarget (BA) matched with final byte value: 5A'
+	print '\tTarget (BA) matched with final LRC XOR byte value: 5A'
 	print
 	os._exit(True)
 
 target= int(sys.argv[len(sys.argv) - 1],16)
 
-for candidate in range(256):
-	crc= 0x00
-	for i in range(len(sys.argv) - 2):
-		crc ^= int(sys.argv[i + 1],16)
-	crc ^= candidate
-	if (crc == target):
-		print
-		print 'Target (%02X) matched with final byte value: %02X' % (target,candidate)
-		print
-
+lrc= 0x00
+for i in range(len(sys.argv) - 1):
+	lrc ^= int(sys.argv[i + 1],16)
+print
+print 'Target (%02X) requires final LRC XOR byte value: %02X' % (target,lrc)
+print
