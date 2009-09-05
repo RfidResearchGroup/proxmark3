@@ -25,10 +25,11 @@ import os
 
 if(len(sys.argv) < 3):
 	print
-	print sys.argv[0] + ' - generate final byte for XOR CRC'
+	print '\t'+sys.argv[0] + ' - Generate final byte for XOR CRC'
+	print
 	print 'Usage: ' + sys.argv[0] + ' <ID Byte1> <ID Byte2> ... <CRC>'
 	print
-	print '\tSpecifying the bytes of a UID with a known CRC will generate the last byte value'
+	print '\tSpecifying the bytes of a UID with a known CRC will find the last byte value'
 	print '\tneeded to generate that CRC with a rolling XOR. All bytes should be specified in HEX.'
 	print
 	print 'Example:'
@@ -37,7 +38,7 @@ if(len(sys.argv) < 3):
 	print
 	print 'Should produce the output:'
 	print
-	print '\tTarget matched with Byte value: 5A'
+	print '\tTarget (BA) matched with final byte value: 5A'
 	print
 	os._exit(True)
 
@@ -50,6 +51,6 @@ for candidate in range(256):
 	crc ^= candidate
 	if (crc == target):
 		print
-		print 'Target matched with Byte value: %02X' % candidate
+		print 'Target (%02X) matched with final byte value: %02X' % (target,candidate)
 		print
 
