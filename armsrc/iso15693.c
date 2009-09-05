@@ -236,7 +236,7 @@ static void BuildIdentifyRequest(void)
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
 
-static void BuildSysInfoRequest(BYTE *uid)
+static void __attribute__((unused)) BuildSysInfoRequest(BYTE *uid)
 {
 	BYTE cmd[12];
 
@@ -304,7 +304,7 @@ static void BuildSelectRequest( BYTE uid[])
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
 
-static void BuildReadBlockRequest(BYTE *uid, BYTE blockNumber )
+static void __attribute__((unused)) BuildReadBlockRequest(BYTE *uid, BYTE blockNumber )
 {
 	BYTE cmd[13];
 
@@ -335,7 +335,7 @@ static void BuildReadBlockRequest(BYTE *uid, BYTE blockNumber )
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
 
-static void BuildReadMultiBlockRequest(BYTE *uid)
+static void __attribute__((unused)) BuildReadMultiBlockRequest(BYTE *uid)
 {
 	BYTE cmd[14];
 
@@ -368,7 +368,7 @@ static void BuildReadMultiBlockRequest(BYTE *uid)
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
 
-static void BuildArbitraryRequest(BYTE *uid,BYTE CmdCode)
+static void __attribute__((unused)) BuildArbitraryRequest(BYTE *uid,BYTE CmdCode)
 {
 	BYTE cmd[14];
 
@@ -402,7 +402,7 @@ static void BuildArbitraryRequest(BYTE *uid,BYTE CmdCode)
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
 
-static void BuildArbitraryCustomRequest(BYTE uid[], BYTE CmdCode)
+static void __attribute__((unused)) BuildArbitraryCustomRequest(BYTE uid[], BYTE CmdCode)
 {
 	BYTE cmd[14];
 

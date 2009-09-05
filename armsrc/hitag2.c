@@ -242,52 +242,6 @@ static u64 _hitag2_round (u64 *state)
 	return _f20 (x);
 }
 
-// Bitslice Hitag2 functions:
-
-#define ht2bs_4a(a,b,c,d)	(~(((a|b)&c)^(a|d)^b))
-#define ht2bs_4b(a,b,c,d)	(~(((d|c)&(a^b))^(d|a|b)))
-#define ht2bs_5c(a,b,c,d,e)	(~((((((c^e)|d)&a)^b)&(c^b))^(((d^e)|a)&((d^b)|c))))
-
-#define uf20bs				u32		// choose your own type/width
-
-static uf20bs _f20bs (const uf20bs *x)
-{
-	return ht2bs_5c (
-		ht2bs_4a(x[ 1],x[ 2],x[ 4],x[ 5]),
-		ht2bs_4b(x[ 7],x[11],x[13],x[14]),
-		ht2bs_4b(x[16],x[20],x[22],x[25]),
-		ht2bs_4b(x[27],x[28],x[30],x[32]),
-		ht2bs_4a(x[33],x[42],x[43],x[45]));
-}
-
-static void _hitag2bs_init (uf20bs *x, const uf20bs *key, const uf20bs *serial, const uf20bs *IV)
-{
-	u32					i, r;
-	
-	for (i = 0; i < 32; i++) x[i] = serial[i];
-	for (i = 0; i < 16; i++) x[32+i] = key[i];
-	
-	for (r = 0; r < 32; r++)
-	{
-		for (i = 0; i < 47; i++) x[i] = x[i+1];
-		x[47] = _f20bs (x) ^ IV[i] ^ key[16+i];
-	}
-}
-
-static uf20bs _hitag2bs_round (uf20bs *x)
-{
-	uf20bs				y;
-	u32					i;
-	
-	y = x[ 0] ^ x[ 2] ^ x[ 3] ^ x[ 6] ^ x[ 7] ^ x[ 8] ^ x[16] ^ x[22]
-	  ^ x[23] ^ x[26] ^ x[30] ^ x[41] ^ x[42] ^ x[43] ^ x[46] ^ x[47];
-	
-	for (i = 0; i < 47; i++) x[i] = x[i+1];
-	x[47] = y;
-	
-	return _f20bs (x);
-}
-
 static u32 _hitag2_byte (u64 * x)
 {
 	u32					i, c;
