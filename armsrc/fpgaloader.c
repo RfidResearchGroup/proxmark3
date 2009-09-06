@@ -152,7 +152,7 @@ static void DownloadFPGA_byte(unsigned char w)
 // If bytereversal is set: reverse the byte order in each 4-byte word
 static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int bytereversal)
 {
-	int i, j;
+	int i;
 
 	PIO_OUTPUT_ENABLE = (1 << GPIO_FPGA_ON);
 	PIO_ENABLE = (1 << GPIO_FPGA_ON);

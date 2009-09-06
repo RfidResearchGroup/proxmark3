@@ -56,7 +56,7 @@ VPATH = . ../common/ ../fpga/
 
 INCLUDES = ../include/proxmark3.h ../include/at91sam7s128.h ../include/config_gpio.h ../include/usb_cmd.h $(APP_INCLUDES)
 
-CFLAGS =  -c $(INCLUDE) -Werror -pedantic -std=gnu99 $(APP_CFLAGS)
+CFLAGS =  -c $(INCLUDE) -Wall -Werror -pedantic -std=gnu99 $(APP_CFLAGS)
 
 THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(THUMBSRC))
 ARMOBJ   = $(patsubst %.c,$(OBJDIR)/%.o,$(ARMSRC))
