@@ -135,9 +135,22 @@ void FpgaSetupSscDma(BYTE *buf, int len)
 	PDC_CONTROL(SSC_BASE) = PDC_RX_ENABLE;
 }
 
-// Download the fpga image starting at FpgaImage and with length FpgaImageLen DWORDs (e.g. 4 bytes)
+static void DownloadFPGA_byte(unsigned char w)
+{
+#define SEND_BIT(x) { if(w & (1<<x) ) HIGH(GPIO_FPGA_DIN); else LOW(GPIO_FPGA_DIN); HIGH(GPIO_FPGA_CCLK); LOW(GPIO_FPGA_CCLK); }
+	SEND_BIT(7);
+	SEND_BIT(6);
+	SEND_BIT(5);
+	SEND_BIT(4);
+	SEND_BIT(3);
+	SEND_BIT(2);
+	SEND_BIT(1);
+	SEND_BIT(0);
+}
+
+// Download the fpga image starting at FpgaImage and with length FpgaImageLen bytes
 // If bytereversal is set: reverse the byte order in each 4-byte word
-static void DownloadFPGA(const DWORD *FpgaImage, DWORD FpgaImageLen, int bytereversal)
+static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int bytereversal)
 {
 	int i, j;
 
@@ -161,24 +174,21 @@ static void DownloadFPGA(const DWORD *FpgaImage, DWORD FpgaImageLen, int byterev
 	SpinDelay(50);
 	HIGH(GPIO_FPGA_NPROGRAM);
 
-	for(i = 0; i < FpgaImageLen; i++) {
-		DWORD v = FpgaImage[i];
-		unsigned char w;
-		for(j = 0; j < 4; j++) {
-			if(!bytereversal) 
-				w = v >>(j*8);
-			else
-				w = v >>((3-j)*8);
-#define SEND_BIT(x) { if(w & (1<<x) ) HIGH(GPIO_FPGA_DIN); else LOW(GPIO_FPGA_DIN); HIGH(GPIO_FPGA_CCLK); LOW(GPIO_FPGA_CCLK); }
-			SEND_BIT(7);
-			SEND_BIT(6);
-			SEND_BIT(5);
-			SEND_BIT(4);
-			SEND_BIT(3);
-			SEND_BIT(2);
-			SEND_BIT(1);
-			SEND_BIT(0);
+	if(bytereversal) {
+		/* This is only supported for DWORD aligned images */
+		if( ((int)FpgaImage % sizeof(DWORD)) == 0 ) {
+			i=0;
+			while(FpgaImageLen-->0)
+				DownloadFPGA_byte(FpgaImage[(i++)^0x3]);
+			/* Explanation of the magic in the above line: 
+			 * i^0x3 inverts the lower two bits of the integer i, counting backwards
+			 * for each 4 byte increment. The generated sequence of (i++)^3 is
+			 * 3 2 1 0 7 6 5 4 11 10 9 8 15 14 13 12 etc. pp. 
+			 */
 		}
+	} else {
+		while(FpgaImageLen-->0)
+			DownloadFPGA_byte(*FpgaImage++);
 	}
 
 	LED_D_OFF();
@@ -268,7 +278,7 @@ void FpgaDownloadAndGo(void)
 		void *bitstream_start;
 		unsigned int bitstream_length;
 		if(bitparse_find_section('e', &bitstream_start, &bitstream_length)) {
-			DownloadFPGA((DWORD *)bitstream_start, bitstream_length/4, 0);
+			DownloadFPGA(bitstream_start, bitstream_length, 0);
 			
 			return; /* All done */
 		}
@@ -282,7 +292,7 @@ void FpgaDownloadAndGo(void)
 	 * the bytewise download.
 	 */
 	if( *(DWORD*)0x102000 == 0xFFFFFFFF && *(DWORD*)0x102004 == 0xAA995566 )
-		DownloadFPGA((DWORD *)0x102000, 10524, 1);
+		DownloadFPGA((char*)0x102000, 10524*4, 1);
 }
 
 void FpgaGatherVersion(char *dst, int len)
