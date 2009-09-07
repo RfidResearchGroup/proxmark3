@@ -1,5 +1,7 @@
 @echo off
 cd ..\winsrc
-rem nmake clean
-nmake
+@echo **************
+@echo *** winsrc ***
+@echo **************
+make %1
 cd ..\cockpit
