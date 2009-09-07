@@ -10,6 +10,7 @@ SECTIONS
 	.text : { 
 		*(.text)
 		*(.text.*)
+		*(.eh_frame)
 		*(.glue_7)
 		*(.glue_7t)
 		*(.version_information)
