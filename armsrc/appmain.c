@@ -249,8 +249,8 @@ void SendVersion(void)
 	 * symbol _bootphase1_version_pointer, perform slight sanity checks on the
 	 * pointer, then use it.
 	 */
-	void *bootrom_version = *(void**)&_bootphase1_version_pointer;
-	if( bootrom_version < (void*)&_flash_start || bootrom_version >= (void*)&_flash_end ) {
+	char *bootrom_version = *(char**)&_bootphase1_version_pointer;
+	if( bootrom_version < &_flash_start || bootrom_version >= &_flash_end ) {
 		DbpString("bootrom version information appears invalid");
 	} else {
 		FormatVersionInformation(temp, sizeof(temp), "bootrom: ", bootrom_version);
