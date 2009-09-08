@@ -218,7 +218,7 @@ static int bitparse_init(void * start_address, void *end_address)
 	}
 }
 
-int bitparse_find_section(char section_name, void **section_start, unsigned int *section_length)
+int bitparse_find_section(char section_name, char **section_start, unsigned int *section_length)
 {
 	char *pos = bitparse_headers_start;
 	int result = 0;
@@ -275,7 +275,7 @@ void FpgaDownloadAndGo(void)
 		/* Successfully initialized the .bit parser. Find the 'e' section and
 		 * send its contents to the FPGA.
 		 */
-		void *bitstream_start;
+		char *bitstream_start;
 		unsigned int bitstream_length;
 		if(bitparse_find_section('e', &bitstream_start, &bitstream_length)) {
 			DownloadFPGA(bitstream_start, bitstream_length, 0);
@@ -300,26 +300,26 @@ void FpgaGatherVersion(char *dst, int len)
 	char *fpga_info; 
 	unsigned int fpga_info_len;
 	dst[0] = 0;
-	if(!bitparse_find_section('e', (void**)&fpga_info, &fpga_info_len)) {
+	if(!bitparse_find_section('e', &fpga_info, &fpga_info_len)) {
 		strncat(dst, "FPGA image: legacy image without version information", len-1);
 	} else {
 		strncat(dst, "FPGA image built", len-1);
 		/* USB packets only have 48 bytes data payload, so be terse */
 #if 0
-		if(bitparse_find_section('a', (void**)&fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
+		if(bitparse_find_section('a', &fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
 			strncat(dst, " from ", len-1);
 			strncat(dst, fpga_info, len-1);
 		}
-		if(bitparse_find_section('b', (void**)&fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
+		if(bitparse_find_section('b', &fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
 			strncat(dst, " for ", len-1);
 			strncat(dst, fpga_info, len-1);
 		}
 #endif
-		if(bitparse_find_section('c', (void**)&fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
+		if(bitparse_find_section('c', &fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
 			strncat(dst, " on ", len-1);
 			strncat(dst, fpga_info, len-1);
 		}
-		if(bitparse_find_section('d', (void**)&fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
+		if(bitparse_find_section('d', &fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
 			strncat(dst, " at ", len-1);
 			strncat(dst, fpga_info, len-1);
 		}
