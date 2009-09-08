@@ -692,9 +692,8 @@ void UsbPacketReceived(BYTE *packet, int len)
 	}
 }
 
-void AppMain(void)
+void  __attribute__((noreturn)) AppMain(void)
 {
-	memset(BigBuf,0,sizeof(BigBuf));
 	SpinDelay(100);
 	
 	if(common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {

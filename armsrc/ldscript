@@ -13,15 +13,26 @@ SECTIONS
 		*(.eh_frame)
 		*(.glue_7)
 		*(.glue_7t)
-		*(.version_information)
-	} >osimage
-	.rodata : { 
 		*(.rodata) 
 		*(.rodata*) 
+		*(.version_information)
 	} >osimage
-	.data : { *(.data) } >ram
-	__bss_start__ = .;
-	.bss : { *(.bss) } >ram
+	__end_of_text__ = .;
+	
+	.data : {
+		__data_start__ = .;
+		__data_src_start__ = __end_of_text__; 
+		*(.data)
+		*(.data.*)
+		__data_end__ = .;
+	} >ram AT>osimage
+	
+	.bss : {
+		__bss_start__ = .; 
+		*(.bss)
+		*(.bss.*) 
+	} >ram
+	. = ALIGN(32 / 8);
 	__bss_end__ = .;
 
     	.commonarea (NOLOAD) : {

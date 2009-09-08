@@ -13,7 +13,7 @@ DWORD BigBuf[12000];
 
 /// appmain.h
 void ReadMem(int addr);
-void AppMain(void);
+void __attribute__((noreturn)) AppMain(void);
 void SamyRun(void);
 void DbpIntegers(int a, int b, int c);
 void DbpString(char *str);
