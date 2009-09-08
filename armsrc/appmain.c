@@ -239,7 +239,7 @@ void ReadMem(int addr)
 /* osimage version information is linked in */
 extern struct version_information version_information;
 /* bootrom version information is pointed to from _bootphase1_version_pointer */
-extern char _bootphase1_version_pointer, _flash_start, _flash_end;
+extern char *_bootphase1_version_pointer, _flash_start, _flash_end;
 void SendVersion(void)
 {
 	char temp[48]; /* Limited data payload in USB packets */
@@ -734,14 +734,14 @@ void AppMain(void)
 	LCDInit();
 
 	// test text on different colored backgrounds
-	LCDString(" The quick brown fox  ",	&FONT6x8,1,1+8*0,WHITE  ,BLACK );
-	LCDString("  jumped over the     ",	&FONT6x8,1,1+8*1,BLACK  ,WHITE );
-	LCDString("     lazy dog.        ",	&FONT6x8,1,1+8*2,YELLOW ,RED   );
-	LCDString(" AaBbCcDdEeFfGgHhIiJj ",	&FONT6x8,1,1+8*3,RED    ,GREEN );
-	LCDString(" KkLlMmNnOoPpQqRrSsTt ",	&FONT6x8,1,1+8*4,MAGENTA,BLUE  );
-	LCDString("UuVvWwXxYyZz0123456789",	&FONT6x8,1,1+8*5,BLUE   ,YELLOW);
-	LCDString("`-=[]_;',./~!@#$%^&*()",	&FONT6x8,1,1+8*6,BLACK  ,CYAN  );
-	LCDString("     _+{}|:\\\"<>?     ",&FONT6x8,1,1+8*7,BLUE  ,MAGENTA);
+	LCDString(" The quick brown fox  ",	(char *)&FONT6x8,1,1+8*0,WHITE  ,BLACK );
+	LCDString("  jumped over the     ",	(char *)&FONT6x8,1,1+8*1,BLACK  ,WHITE );
+	LCDString("     lazy dog.        ",	(char *)&FONT6x8,1,1+8*2,YELLOW ,RED   );
+	LCDString(" AaBbCcDdEeFfGgHhIiJj ",	(char *)&FONT6x8,1,1+8*3,RED    ,GREEN );
+	LCDString(" KkLlMmNnOoPpQqRrSsTt ",	(char *)&FONT6x8,1,1+8*4,MAGENTA,BLUE  );
+	LCDString("UuVvWwXxYyZz0123456789",	(char *)&FONT6x8,1,1+8*5,BLUE   ,YELLOW);
+	LCDString("`-=[]_;',./~!@#$%^&*()",	(char *)&FONT6x8,1,1+8*6,BLACK  ,CYAN  );
+	LCDString("     _+{}|:\\\"<>?     ",(char *)&FONT6x8,1,1+8*7,BLUE  ,MAGENTA);
 
 	// color bands
 	LCDFill(0, 1+8* 8, 132, 8, BLACK);
