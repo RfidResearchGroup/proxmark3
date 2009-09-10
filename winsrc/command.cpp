@@ -2532,7 +2532,12 @@ static void Cmdmanchesterdemod(char *str) {
 
 	/* Detect first transition */
 	/* Lo-Hi (arbitrary)       */
-	for (i = 0; i < GraphTraceLen; i++)
+	/* skip to the first high */
+	for (i= 0; i < GraphTraceLen; i++)
+		if(GraphBuffer[i] == high)
+			break;
+	/* now look for the first low */
+	for (; i < GraphTraceLen; i++)
 	{
 		if (GraphBuffer[i] == low)
 		{
