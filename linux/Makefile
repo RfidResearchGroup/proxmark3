@@ -1,8 +1,10 @@
-LDFLAGS = -lusb -lreadline -lpthread -L/opt/local/lib
-CFLAGS = -I. -I/opt/local/include -Wall -Wno-unused-function
+#COMMON_FLAGS = -m32
+LDLIBS = -L/usr/local/lib -lusb -lreadline -lpthread
+LDFLAGS = $(COMMON_FLAGS)
+CFLAGS = -I. -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS)
 
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall
-QTLDFLAGS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
+QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
 
 ifneq ($(QTLDFLAGS),)
 QTGUI = proxgui.o proxguiqt.o proxguiqt.moc.o
@@ -15,7 +17,10 @@ endif
 
 all: proxmark3 snooper cli flasher
 
-proxmark3: LDFLAGS+=$(QTLDFLAGS)
+all-static: LDLIBS:=-static $(LDLIBS)
+all-static: snooper cli flasher
+
+proxmark3: LDLIBS+=$(QTLDLIBS)
 proxmark3: proxmark3.o gui.o command.o usb.o $(QTGUI)
 
 command.o: ../winsrc/command.cpp translate.h
