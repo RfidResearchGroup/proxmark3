@@ -44,7 +44,7 @@ COMMON_CFG="--enable-interwork --target=arm-elf --program-prefix=arm-elf- --pref
 
 # Extra configuration options for each toolchain component
 BINUTILS_CFG=
-GCCCORE_CFG="--disable-nls --disable-threads --with-gcc --with-gnu-ld --with-gnu-as --with-dwarf2 --with-newlib --with-headers=../newlib-${NEWLIB_VER}/newlib/libc/include --disable-libssp --disable-libstdcxx-pch --disable-libmudflap --disable-libgomp -v"
+GCCCORE_CFG="--disable-nls --disable-threads --with-gcc --with-gnu-ld --with-gnu-as --with-dwarf2 --with-newlib --with-headers=${BUILDDIR}/newlib-${NEWLIB_VER}/newlib/libc/include --disable-libssp --disable-libstdcxx-pch --disable-libmudflap --disable-libgomp -v"
 NEWLIB_CFG=
 INSIGHT_CFG=
 GDB_CFG=
@@ -76,29 +76,35 @@ fi
 mkdir -p ${BUILDDIR}
 cd ${SRCDIR}
 
-echo Now downloading BINUTILS...
-wget ${WGET_OPTS} ${BINUTILS}
+if [[ -f all.downloaded ]]; then
+  echo Looks like all downloads are complete, skipping downloads
+else
+  echo Now downloading BINUTILS...
+  wget ${WGET_OPTS} ${BINUTILS}
 
-echo Now downloading GCC...
-wget ${WGET_OPTS} ${GCCCORE}
+  echo Now downloading GCC...
+  wget ${WGET_OPTS} ${GCCCORE}
 
-echo Now downloading G++...
-wget ${WGET_OPTS} ${GPP}
+  echo Now downloading G++...
+  wget ${WGET_OPTS} ${GPP}
 
-echo Now downloading NEWLIB...
-wget ${WGET_OPTS} ${NEWLIB}
+  echo Now downloading NEWLIB...
+  wget ${WGET_OPTS} ${NEWLIB}
 
-echo Now downloading INSIGHT...
-wget ${WGET_OPTS} ${INSIGHT}
+  echo Now downloading INSIGHT...
+  wget ${WGET_OPTS} ${INSIGHT}
 
-echo Now downloading GDB...
-wget ${WGET_OPTS} ${GDB}
+  echo Now downloading GDB...
+  wget ${WGET_OPTS} ${GDB}
 
-echo Now downloading GMP...
-wget ${WGET_OPTS} ${GMP}
+  echo Now downloading GMP...
+  wget ${WGET_OPTS} ${GMP}
 
-echo Now downloading MPFR...
-wget ${WGET_OPTS} ${MPFR}
+  echo Now downloading MPFR...
+  wget ${WGET_OPTS} ${MPFR}
+
+  touch all.downloaded
+fi
 
 cd ${BUILDDIR}
 if [[ -f binutils.built ]]; then
@@ -133,6 +139,7 @@ else
   ln -s "${BUILDDIR}/gmp-${GMP_VER}" "${BUILDDIR}/gcc-${GCC_VER}/gmp"
   tar -xjf ../`basename ${MPFR}`
   ln -s "${BUILDDIR}/mpfr-${MPFR_VER}" "${BUILDDIR}/gcc-${GCC_VER}/mpfr"
+  tar -xzf ../`basename ${NEWLIB}`
 
   echo ___________________  >> make.log
 
@@ -169,7 +176,6 @@ if [[ -f newlib.built ]]; then
   echo Looks like NEWLIB was already built.
 else
   echo Building NEWLIB...
-  tar -xzf ../`basename ${NEWLIB}`
   echo ___________________  >> make.log
   echo Building newlib... >> make.log
   cd `find . -maxdepth 1 -type d -name 'newlib*'`
