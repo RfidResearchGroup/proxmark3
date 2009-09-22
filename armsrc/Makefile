@@ -2,24 +2,29 @@
 
 APP_INCLUDES = apps.h
 
-# Add the "-DWITH_LCD" flag in APP_CLFAGS to add support for LCD
-# and add SRC_LCD to THUMBSRC
-APP_CFLAGS	= -O6
+#remove one of the following defines and comment out the relevant line
+#in the next section to remove that particular feature from compilation  
+APP_CFLAGS	= -O6 -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b
+#-DWITH_LCD
 
-SRC_LCD = fonts.c LCD.c
+#SRC_LCD = fonts.c LCD.c
+SRC_ISO15693 = iso15693.c
+SRC_ISO14443a = iso14443a.c
+SRC_ISO14443b = iso14443.c
 
 THUMBSRC = start.c \
+	$(SRC_LCD) \
+	$(SRC_ISO15693) \
 	appmain.c \
 	lfops.c \
-	iso15693.c \
 	util.c \
 	hitag2.c \
 	usb.c
 
 # These are to be compiled in ARM mode
-ARMSRC =  iso14443.c \
-	iso14443a.c \
-	fpgaloader.c
+ARMSRC = fpgaloader.c \
+	$(SRC_ISO14443a) \
+	$(SRC_ISO14443b)
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common

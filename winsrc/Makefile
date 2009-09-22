@@ -1,10 +1,11 @@
 CC=cl
+BASE_DIR    ?= "..\..\devkitWIN"
 BASE_DEFS   = /D_WIN32_WINNT=0x501 /DISOLATION_AWARE_ENABLED /D_WIN32_IE=0x600 /DWIN32_LEAN_AND_MEAN /DWIN32 /D_MT /D_CRT_SECURE_NO_WARNINGS
 BASE_CFLAGS = /W3 /nologo /Zi /MT /Fdobj/vc90.pdb
-LIB=..\..\devkitWIN\lib;%LIB%
+LIB         = $(BASE_DIR)\lib
 
 DEFINES  = $(BASE_DEFS)
-INCLUDES = /I..\..\devkitWIN/include
+INCLUDES = /I$(BASE_DIR)\include
 CFLAGS   = $(BASE_CFLAGS) $(INCLUDES)
 
 OBJDIR = obj
@@ -13,7 +14,7 @@ OBJS   = $(OBJDIR)\prox.obj \
          $(OBJDIR)\gui.obj \
          $(OBJDIR)\command.obj
 
-LIBS   = user32.lib gdi32.lib setupapi.lib
+LIBS   = $(LIB)\user32.lib $(LIB)\gdi32.lib $(LIB)\setupapi.lib $(LIB)\libcmt.lib $(LIB)\oldnames.lib $(LIB)\kernel32.lib
 
 all: proxmark3
 

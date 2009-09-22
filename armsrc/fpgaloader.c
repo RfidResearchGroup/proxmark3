@@ -152,27 +152,49 @@ static void DownloadFPGA_byte(unsigned char w)
 // If bytereversal is set: reverse the byte order in each 4-byte word
 static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int bytereversal)
 {
-	int i;
+	int i=0;
 
 	PIO_OUTPUT_ENABLE = (1 << GPIO_FPGA_ON);
 	PIO_ENABLE = (1 << GPIO_FPGA_ON);
-	PIO_OUTPUT_DATA_SET = (1 << GPIO_FPGA_ON);
+	HIGH(GPIO_FPGA_ON);		// ensure everything is powered on
 
 	SpinDelay(50);
 
 	LED_D_ON();
 
+	// These pins are inputs
+    PIO_OUTPUT_DISABLE =     (1 << GPIO_FPGA_NINIT) | (1 << GPIO_FPGA_DONE);
+	// PIO controls the following pins
+    PIO_ENABLE =             (1 << GPIO_FPGA_NINIT) | (1 << GPIO_FPGA_DONE);
+	// Enable pull-ups
+	PIO_NO_PULL_UP_DISABLE = (1 << GPIO_FPGA_NINIT) | (1 << GPIO_FPGA_DONE);
+
+	// setup initial logic state
 	HIGH(GPIO_FPGA_NPROGRAM);
 	LOW(GPIO_FPGA_CCLK);
 	LOW(GPIO_FPGA_DIN);
+	// These pins are outputs
 	PIO_OUTPUT_ENABLE = (1 << GPIO_FPGA_NPROGRAM)	|
 						(1 << GPIO_FPGA_CCLK)		|
 						(1 << GPIO_FPGA_DIN);
-	SpinDelay(1);
 
+	// enter FPGA configuration mode
 	LOW(GPIO_FPGA_NPROGRAM);
 	SpinDelay(50);
 	HIGH(GPIO_FPGA_NPROGRAM);
+
+	i=100000;
+	// wait for FPGA ready to accept data signal
+	while ((i) && ( !(PIO_PIN_DATA_STATUS & (1<<GPIO_FPGA_NINIT) ) ) ) {
+		i--;
+	}
+
+	// crude error indicator, leave both red LEDs on and return
+	if (i==0){
+		LED_C_ON();
+		LED_D_ON();
+		return;
+	}
 
 	if(bytereversal) {
 		/* This is only supported for DWORD aligned images */
@@ -191,6 +213,18 @@ static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int byterevers
 			DownloadFPGA_byte(*FpgaImage++);
 	}
 
+	// continue to clock FPGA until ready signal goes high
+	i=100000;
+	while ( (i--) && ( !(PIO_PIN_DATA_STATUS & (1<<GPIO_FPGA_DONE) ) ) ) {
+		HIGH(GPIO_FPGA_CCLK);
+		LOW(GPIO_FPGA_CCLK);
+	}
+	// crude error indicator, leave both red LEDs on and return
+	if (i==0){
+		LED_C_ON();
+		LED_D_ON();
+		return;
+	}
 	LED_D_OFF();
 }
 
