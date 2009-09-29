@@ -295,11 +295,11 @@ static BOOL GetIso14443CommandFromReader(BYTE *received, int *len, int maxLen)
 
         if(BUTTON_PRESS()) return FALSE;
 
-        if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-            SSC_TRANSMIT_HOLDING = 0x00;
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+            AT91C_BASE_SSC->SSC_THR = 0x00;
         }
-        if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-            BYTE b = (BYTE)SSC_RECEIVE_HOLDING;
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            BYTE b = (BYTE)AT91C_BASE_SSC->SSC_RHR;
 
             mask = 0x80;
             for(i = 0; i < 8; i++, mask >>= 1) {
@@ -392,24 +392,24 @@ void SimulateIso14443Tag(void)
         LED_D_OFF();
         FpgaWriteConfWord(
         	FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK);
-        SSC_TRANSMIT_HOLDING = 0xff;
+        AT91C_BASE_SSC->SSC_THR = 0xff;
         FpgaSetupSsc();
 
         // Transmit the response.
         i = 0;
         for(;;) {
-            if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
+            if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
                 BYTE b = resp[i];
 
-                SSC_TRANSMIT_HOLDING = b;
+                AT91C_BASE_SSC->SSC_THR = b;
 
                 i++;
                 if(i > respLen) {
                     break;
                 }
             }
-            if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-                volatile BYTE b = (BYTE)SSC_RECEIVE_HOLDING;
+            if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                volatile BYTE b = (BYTE)AT91C_BASE_SSC->SSC_RHR;
                 (void)b;
             }
         }
@@ -654,10 +654,10 @@ static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
     	(weTx ? 0 : FPGA_HF_READER_RX_XCORR_SNOOP));
 
     for(;;) {
-        int behindBy = lastRxCounter - PDC_RX_COUNTER(SSC_BASE);
+        int behindBy = lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR;
         if(behindBy > max) max = behindBy;
 
-        while(((lastRxCounter-PDC_RX_COUNTER(SSC_BASE)) & (DMA_BUFFER_SIZE-1))
+        while(((lastRxCounter-AT91C_BASE_PDC_SSC->PDC_RCR) & (DMA_BUFFER_SIZE-1))
                     > 2)
         {
             ci = upTo[0];
@@ -665,8 +665,8 @@ static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
             upTo += 2;
             if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
                 upTo -= DMA_BUFFER_SIZE;
-                PDC_RX_NEXT_POINTER(SSC_BASE) = (DWORD)upTo;
-                PDC_RX_NEXT_COUNTER(SSC_BASE) = DMA_BUFFER_SIZE;
+                AT91C_BASE_PDC_SSC->PDC_RNPR = (DWORD)upTo;
+                AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
             }
             lastRxCounter -= 2;
             if(lastRxCounter <= 0) {
@@ -687,7 +687,7 @@ static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
             break;
         }
     }
-    PDC_CONTROL(SSC_BASE) = PDC_RX_DISABLE;
+    AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
     if (!quiet) DbpIntegers(max, gotFrame, Demod.len);
 }
 
@@ -707,12 +707,12 @@ static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
 
     c = 0;
     for(;;) {
-        if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-            SSC_TRANSMIT_HOLDING = 0x43;
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+            AT91C_BASE_SSC->SSC_THR = 0x43;
         }
-        if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             SBYTE b;
-            b = (SBYTE)SSC_RECEIVE_HOLDING;
+            b = (SBYTE)AT91C_BASE_SSC->SSC_RHR;
 
             dest[c++] = (BYTE)b;
 
@@ -732,8 +732,8 @@ static void TransmitFor14443(void)
 
     FpgaSetupSsc();
 
-    while(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-        SSC_TRANSMIT_HOLDING = 0xff;
+    while(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+        AT91C_BASE_SSC->SSC_THR = 0xff;
     }
 
     // Signal field is ON with the appropriate Red LED
@@ -744,12 +744,12 @@ static void TransmitFor14443(void)
     	FPGA_MAJOR_MODE_HF_READER_TX | FPGA_HF_READER_TX_SHALLOW_MOD);
 
     for(c = 0; c < 10;) {
-        if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-            SSC_TRANSMIT_HOLDING = 0xff;
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+            AT91C_BASE_SSC->SSC_THR = 0xff;
             c++;
         }
-        if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-            volatile DWORD r = SSC_RECEIVE_HOLDING;
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
             (void)r;
         }
         WDT_HIT();
@@ -757,15 +757,15 @@ static void TransmitFor14443(void)
 
     c = 0;
     for(;;) {
-        if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-            SSC_TRANSMIT_HOLDING = ToSend[c];
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+            AT91C_BASE_SSC->SSC_THR = ToSend[c];
             c++;
             if(c >= ToSendMax) {
                 break;
             }
         }
-        if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-            volatile DWORD r = SSC_RECEIVE_HOLDING;
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
             (void)r;
         }
         WDT_HIT();
@@ -1069,7 +1069,7 @@ void SnoopIso14443(void)
     FpgaSetupSscDma((BYTE *)dmaBuf, DMA_BUFFER_SIZE);
     // And now we loop, receiving samples.
     for(;;) {
-    	int behindBy = (lastRxCounter - PDC_RX_COUNTER(SSC_BASE)) &
+    	int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) &
                                 (DMA_BUFFER_SIZE-1);
         if(behindBy > maxBehindBy) {
             maxBehindBy = behindBy;
@@ -1088,8 +1088,8 @@ void SnoopIso14443(void)
         if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
             upTo -= DMA_BUFFER_SIZE;
             lastRxCounter += DMA_BUFFER_SIZE;
-            PDC_RX_NEXT_POINTER(SSC_BASE) = (DWORD) upTo;
-            PDC_RX_NEXT_COUNTER(SSC_BASE) = DMA_BUFFER_SIZE;
+            AT91C_BASE_PDC_SSC->PDC_RNPR = (DWORD) upTo;
+            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
         }
 
         samples += 2;
@@ -1169,5 +1169,5 @@ void SnoopIso14443(void)
 
 done:
 	LED_D_OFF();
-    PDC_CONTROL(SSC_BASE) = PDC_RX_DISABLE;
+    AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 }

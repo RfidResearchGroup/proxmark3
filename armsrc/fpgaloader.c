@@ -21,27 +21,29 @@ void SetupSpi(int mode)
 	// PA14 -> SPI_SPCK Serial Clock
 
 	// Disable PIO control of the following pins, allows use by the SPI peripheral
-	PIO_DISABLE			 =	(1 << GPIO_NCS0)	|
-							(1 << GPIO_NCS2) 	|
-							(1 << GPIO_MISO)	|
-							(1 << GPIO_MOSI)	|
-							(1 << GPIO_SPCK);
+	AT91C_BASE_PIOA->PIO_PDR =
+		GPIO_NCS0	|
+		GPIO_NCS2 	|
+		GPIO_MISO	|
+		GPIO_MOSI	|
+		GPIO_SPCK;
 
-	PIO_PERIPHERAL_A_SEL =	(1 << GPIO_NCS0)	|
-							(1 << GPIO_MISO)	|
-							(1 << GPIO_MOSI)	|
-							(1 << GPIO_SPCK);
+	AT91C_BASE_PIOA->PIO_ASR =
+		GPIO_NCS0	|
+		GPIO_MISO	|
+		GPIO_MOSI	|
+		GPIO_SPCK;
 
-	PIO_PERIPHERAL_B_SEL =	(1 << GPIO_NCS2);
+	AT91C_BASE_PIOA->PIO_BSR = GPIO_NCS2;
 
 	//enable the SPI Peripheral clock
-	PMC_PERIPHERAL_CLK_ENABLE = (1<<PERIPH_SPI);
+	AT91C_BASE_PMC->PMC_PCER = (1<<AT91C_ID_SPI);
 	// Enable SPI
-	SPI_CONTROL = SPI_CONTROL_ENABLE;
+	AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIEN;
 
 	switch (mode) {
 		case SPI_FPGA_MODE:
-			SPI_MODE =
+			AT91C_BASE_SPI->SPI_MR =
 				( 0 << 24)	|	// Delay between chip selects (take default: 6 MCK periods)
 				(14 << 16)	|	// Peripheral Chip Select (selects FPGA SPI_NCS0 or PA11)
 				( 0 << 7)	|	// Local Loopback Disabled
@@ -49,7 +51,7 @@ void SetupSpi(int mode)
 				( 0 << 2)	|	// Chip selects connected directly to peripheral
 				( 0 << 1) 	|	// Fixed Peripheral Select
 				( 1 << 0);		// Master Mode
-			SPI_FOR_CHIPSEL_0 =
+			AT91C_BASE_SPI->SPI_CSR[0] =
 				( 1 << 24)	|	// Delay between Consecutive Transfers (32 MCK periods)
 				( 1 << 16)	|	// Delay Before SPCK (1 MCK period)
 				( 6 << 8)	|	// Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
@@ -59,7 +61,7 @@ void SetupSpi(int mode)
 				( 0 << 0);		// Clock Polarity inactive state is logic 0
 			break;
 		case SPI_LCD_MODE:
-			SPI_MODE =
+			AT91C_BASE_SPI->SPI_MR =
 				( 0 << 24)	|	// Delay between chip selects (take default: 6 MCK periods)
 				(11 << 16)	|	// Peripheral Chip Select (selects LCD SPI_NCS2 or PA10)
 				( 0 << 7)	|	// Local Loopback Disabled
@@ -67,7 +69,7 @@ void SetupSpi(int mode)
 				( 0 << 2)	|	// Chip selects connected directly to peripheral
 				( 0 << 1) 	|	// Fixed Peripheral Select
 				( 1 << 0);		// Master Mode
-			SPI_FOR_CHIPSEL_2 =
+			AT91C_BASE_SPI->SPI_CSR[2] =
 				( 1 << 24)	|	// Delay between Consecutive Transfers (32 MCK periods)
 				( 1 << 16)	|	// Delay Before SPCK (1 MCK period)
 				( 6 << 8)	|	// Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
@@ -77,7 +79,7 @@ void SetupSpi(int mode)
 				( 0 << 0);		// Clock Polarity inactive state is logic 0
 			break;
 		default:				// Disable SPI
-			SPI_CONTROL = SPI_CONTROL_DISABLE;
+			AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIDIS;
 			break;
 	}
 }
@@ -89,35 +91,36 @@ void SetupSpi(int mode)
 void FpgaSetupSsc(void)
 {
 	// First configure the GPIOs, and get ourselves a clock.
-	PIO_PERIPHERAL_A_SEL =	(1 << GPIO_SSC_FRAME)	|
-							(1 << GPIO_SSC_DIN)		|
-							(1 << GPIO_SSC_DOUT)	|
-							(1 << GPIO_SSC_CLK);
-	PIO_DISABLE = (1 << GPIO_SSC_DOUT);
+	AT91C_BASE_PIOA->PIO_ASR =
+		GPIO_SSC_FRAME	|
+		GPIO_SSC_DIN	|
+		GPIO_SSC_DOUT	|
+		GPIO_SSC_CLK;
+	AT91C_BASE_PIOA->PIO_PDR = GPIO_SSC_DOUT;
 
-	PMC_PERIPHERAL_CLK_ENABLE = (1 << PERIPH_SSC);
+	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SSC);
 
 	// Now set up the SSC proper, starting from a known state.
-	SSC_CONTROL = SSC_CONTROL_RESET;
+	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
 
 	// RX clock comes from TX clock, RX starts when TX starts, data changes
 	// on RX clock rising edge, sampled on falling edge
-	SSC_RECEIVE_CLOCK_MODE = SSC_CLOCK_MODE_SELECT(1) | SSC_CLOCK_MODE_START(1);
+	AT91C_BASE_SSC->SSC_RCMR = SSC_CLOCK_MODE_SELECT(1) | SSC_CLOCK_MODE_START(1);
 
 	// 8 bits per transfer, no loopback, MSB first, 1 transfer per sync
 	// pulse, no output sync, start on positive-going edge of sync
-	SSC_RECEIVE_FRAME_MODE = SSC_FRAME_MODE_BITS_IN_WORD(8) |
-		SSC_FRAME_MODE_MSB_FIRST | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
+	AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) |
+		AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
 
 	// clock comes from TK pin, no clock output, outputs change on falling
 	// edge of TK, start on rising edge of TF
-	SSC_TRANSMIT_CLOCK_MODE = SSC_CLOCK_MODE_SELECT(2) |
+	AT91C_BASE_SSC->SSC_TCMR = SSC_CLOCK_MODE_SELECT(2) |
 		SSC_CLOCK_MODE_START(5);
 
 	// tx framing is the same as the rx framing
-	SSC_TRANSMIT_FRAME_MODE = SSC_RECEIVE_FRAME_MODE;
+	AT91C_BASE_SSC->SSC_TFMR = AT91C_BASE_SSC->SSC_RFMR;
 
-	SSC_CONTROL = SSC_CONTROL_RX_ENABLE | SSC_CONTROL_TX_ENABLE;
+	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_RXEN | AT91C_SSC_TXEN;
 }
 
 //-----------------------------------------------------------------------------
@@ -128,11 +131,11 @@ void FpgaSetupSsc(void)
 //-----------------------------------------------------------------------------
 void FpgaSetupSscDma(BYTE *buf, int len)
 {
-	PDC_RX_POINTER(SSC_BASE) = (DWORD)buf;
-	PDC_RX_COUNTER(SSC_BASE) = len;
-	PDC_RX_NEXT_POINTER(SSC_BASE) = (DWORD)buf;
-	PDC_RX_NEXT_COUNTER(SSC_BASE) = len;
-	PDC_CONTROL(SSC_BASE) = PDC_RX_ENABLE;
+	AT91C_BASE_PDC_SSC->PDC_RPR = (DWORD)buf;
+	AT91C_BASE_PDC_SSC->PDC_RCR = len;
+	AT91C_BASE_PDC_SSC->PDC_RNPR = (DWORD)buf;
+	AT91C_BASE_PDC_SSC->PDC_RNCR = len;
+	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
 }
 
 static void DownloadFPGA_byte(unsigned char w)
@@ -154,8 +157,8 @@ static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int byterevers
 {
 	int i=0;
 
-	PIO_OUTPUT_ENABLE = (1 << GPIO_FPGA_ON);
-	PIO_ENABLE = (1 << GPIO_FPGA_ON);
+	AT91C_BASE_PIOA->PIO_OER = GPIO_FPGA_ON;
+	AT91C_BASE_PIOA->PIO_PER = GPIO_FPGA_ON;
 	HIGH(GPIO_FPGA_ON);		// ensure everything is powered on
 
 	SpinDelay(50);
@@ -163,20 +166,27 @@ static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int byterevers
 	LED_D_ON();
 
 	// These pins are inputs
-    PIO_OUTPUT_DISABLE =     (1 << GPIO_FPGA_NINIT) | (1 << GPIO_FPGA_DONE);
+    AT91C_BASE_PIOA->PIO_ODR =
+    	GPIO_FPGA_NINIT |
+    	GPIO_FPGA_DONE;
 	// PIO controls the following pins
-    PIO_ENABLE =             (1 << GPIO_FPGA_NINIT) | (1 << GPIO_FPGA_DONE);
+    AT91C_BASE_PIOA->PIO_PER =
+    	GPIO_FPGA_NINIT |
+    	GPIO_FPGA_DONE;
 	// Enable pull-ups
-	PIO_NO_PULL_UP_DISABLE = (1 << GPIO_FPGA_NINIT) | (1 << GPIO_FPGA_DONE);
+	AT91C_BASE_PIOA->PIO_PPUER =
+		GPIO_FPGA_NINIT |
+		GPIO_FPGA_DONE;
 
 	// setup initial logic state
 	HIGH(GPIO_FPGA_NPROGRAM);
 	LOW(GPIO_FPGA_CCLK);
 	LOW(GPIO_FPGA_DIN);
 	// These pins are outputs
-	PIO_OUTPUT_ENABLE = (1 << GPIO_FPGA_NPROGRAM)	|
-						(1 << GPIO_FPGA_CCLK)		|
-						(1 << GPIO_FPGA_DIN);
+	AT91C_BASE_PIOA->PIO_OER =
+		GPIO_FPGA_NPROGRAM	|
+		GPIO_FPGA_CCLK		|
+		GPIO_FPGA_DIN;
 
 	// enter FPGA configuration mode
 	LOW(GPIO_FPGA_NPROGRAM);
@@ -185,7 +195,7 @@ static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int byterevers
 
 	i=100000;
 	// wait for FPGA ready to accept data signal
-	while ((i) && ( !(PIO_PIN_DATA_STATUS & (1<<GPIO_FPGA_NINIT) ) ) ) {
+	while ((i) && ( !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_FPGA_NINIT ) ) ) {
 		i--;
 	}
 
@@ -215,7 +225,7 @@ static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int byterevers
 
 	// continue to clock FPGA until ready signal goes high
 	i=100000;
-	while ( (i--) && ( !(PIO_PIN_DATA_STATUS & (1<<GPIO_FPGA_DONE) ) ) ) {
+	while ( (i--) && ( !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_FPGA_DONE ) ) ) {
 		HIGH(GPIO_FPGA_CCLK);
 		LOW(GPIO_FPGA_CCLK);
 	}
@@ -368,8 +378,8 @@ void FpgaGatherVersion(char *dst, int len)
 void FpgaSendCommand(WORD cmd, WORD v)
 {
 	SetupSpi(SPI_FPGA_MODE);
-	while ((SPI_STATUS & SPI_STATUS_TX_EMPTY) == 0);		// wait for the transfer to complete
-	SPI_TX_DATA = SPI_CONTROL_LAST_TRANSFER | cmd | v;		// send the data
+	while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0);		// wait for the transfer to complete
+	AT91C_BASE_SPI->SPI_TDR = AT91C_SPI_LASTXFER | cmd | v;		// send the data
 }
 //-----------------------------------------------------------------------------
 // Write the FPGA setup word (that determines what mode the logic is in, read
@@ -386,17 +396,19 @@ void FpgaWriteConfWord(BYTE v)
 // closable, but should only close one at a time. Not an FPGA thing, but
 // the samples from the ADC always flow through the FPGA.
 //-----------------------------------------------------------------------------
-void SetAdcMuxFor(int whichGpio)
+void SetAdcMuxFor(DWORD whichGpio)
 {
-	PIO_OUTPUT_ENABLE = (1 << GPIO_MUXSEL_HIPKD) |
-						(1 << GPIO_MUXSEL_LOPKD) |
-						(1 << GPIO_MUXSEL_LORAW) |
-						(1 << GPIO_MUXSEL_HIRAW);
+	AT91C_BASE_PIOA->PIO_OER =
+		GPIO_MUXSEL_HIPKD |
+		GPIO_MUXSEL_LOPKD |
+		GPIO_MUXSEL_LORAW |
+		GPIO_MUXSEL_HIRAW;
 
-	PIO_ENABLE		=	(1 << GPIO_MUXSEL_HIPKD) |
-						(1 << GPIO_MUXSEL_LOPKD) |
-						(1 << GPIO_MUXSEL_LORAW) |
-						(1 << GPIO_MUXSEL_HIRAW);
+	AT91C_BASE_PIOA->PIO_PER =
+		GPIO_MUXSEL_HIPKD |
+		GPIO_MUXSEL_LOPKD |
+		GPIO_MUXSEL_LORAW |
+		GPIO_MUXSEL_HIRAW;
 
 	LOW(GPIO_MUXSEL_HIPKD);
 	LOW(GPIO_MUXSEL_HIRAW);

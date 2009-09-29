@@ -115,18 +115,18 @@ int BUTTON_CLICKED(int ms)
 		return BUTTON_NO_CLICK;
 
 	// Borrow a PWM unit for my real-time clock
-	PWM_ENABLE = PWM_CHANNEL(0);
+	AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
 	// 48 MHz / 1024 gives 46.875 kHz
-	PWM_CH_MODE(0) = PWM_CH_MODE_PRESCALER(10);
-	PWM_CH_DUTY_CYCLE(0) = 0;
-	PWM_CH_PERIOD(0) = 0xffff;
+	AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);
+	AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;
+	AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;
 
-	WORD start = (WORD)PWM_CH_COUNTER(0);
+	WORD start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
 	int letoff = 0;
 	for(;;)
 	{
-		WORD now = (WORD)PWM_CH_COUNTER(0);
+		WORD now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
 		// We haven't let off the button yet
 		if (!letoff)
@@ -137,7 +137,7 @@ int BUTTON_CLICKED(int ms)
 				letoff = 1;
 
 				// reset our timer for 500ms
-				start = (WORD)PWM_CH_COUNTER(0);
+				start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 				ticks = (48000 * (500)) >> 10;
 			}
 
@@ -178,17 +178,17 @@ int BUTTON_HELD(int ms)
 		return BUTTON_NO_CLICK;
 
 	// Borrow a PWM unit for my real-time clock
-	PWM_ENABLE = PWM_CHANNEL(0);
+	AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
 	// 48 MHz / 1024 gives 46.875 kHz
-	PWM_CH_MODE(0) = PWM_CH_MODE_PRESCALER(10);
-	PWM_CH_DUTY_CYCLE(0) = 0;
-	PWM_CH_PERIOD(0) = 0xffff;
+	AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);
+	AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;
+	AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;
 
-	WORD start = (WORD)PWM_CH_COUNTER(0);
+	WORD start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
 	for(;;)
 	{
-		WORD now = (WORD)PWM_CH_COUNTER(0);
+		WORD now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
 		// As soon as our button let go, we didn't hold long enough
 		if (!BUTTON_PRESS())
@@ -213,16 +213,16 @@ void SpinDelayUs(int us)
 	int ticks = (48*us) >> 10;
 
 	// Borrow a PWM unit for my real-time clock
-	PWM_ENABLE = PWM_CHANNEL(0);
+	AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
 	// 48 MHz / 1024 gives 46.875 kHz
-	PWM_CH_MODE(0) = PWM_CH_MODE_PRESCALER(10);
-	PWM_CH_DUTY_CYCLE(0) = 0;
-	PWM_CH_PERIOD(0) = 0xffff;
+	AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);
+	AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;
+	AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;
 
-	WORD start = (WORD)PWM_CH_COUNTER(0);
+	WORD start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
 	for(;;) {
-		WORD now = (WORD)PWM_CH_COUNTER(0);
+		WORD now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 		if (now == (WORD)(start + ticks))
 			return;
 

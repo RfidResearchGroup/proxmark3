@@ -478,12 +478,12 @@ static void TransmitTo15693Tag(const BYTE *cmd, int len, int *samples, int *wait
 	if(*wait < 10) { *wait = 10; }
 
 //    for(c = 0; c < *wait;) {
-//        if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-//            SSC_TRANSMIT_HOLDING = 0x00;		// For exact timing!
+//        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+//            AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
 //            c++;
 //        }
-//        if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-//            volatile DWORD r = SSC_RECEIVE_HOLDING;
+//        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+//            volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
 //            (void)r;
 //        }
 //        WDT_HIT();
@@ -491,15 +491,15 @@ static void TransmitTo15693Tag(const BYTE *cmd, int len, int *samples, int *wait
 
     c = 0;
     for(;;) {
-        if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-            SSC_TRANSMIT_HOLDING = cmd[c];
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+            AT91C_BASE_SSC->SSC_THR = cmd[c];
             c++;
             if(c >= len) {
                 break;
             }
         }
-        if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-            volatile DWORD r = SSC_RECEIVE_HOLDING;
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
             (void)r;
         }
         WDT_HIT();
@@ -520,15 +520,15 @@ static void TransmitTo15693Reader(const BYTE *cmd, int len, int *samples, int *w
 
     c = 0;
     for(;;) {
-        if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-            SSC_TRANSMIT_HOLDING = cmd[c];
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+            AT91C_BASE_SSC->SSC_THR = cmd[c];
             c++;
             if(c >= len) {
                 break;
             }
         }
-        if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-            volatile DWORD r = SSC_RECEIVE_HOLDING;
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
             (void)r;
         }
         WDT_HIT();
@@ -550,12 +550,12 @@ static int GetIso15693AnswerFromTag(BYTE *receivedResponse, int maxLen, int *sam
 	c = 0;
 	getNext = FALSE;
 	for(;;) {
-		if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-			SSC_TRANSMIT_HOLDING = 0x43;
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			AT91C_BASE_SSC->SSC_THR = 0x43;
 		}
-		if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			SBYTE b;
-			b = (SBYTE)SSC_RECEIVE_HOLDING;
+			b = (SBYTE)AT91C_BASE_SSC->SSC_RHR;
 
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,
@@ -697,12 +697,12 @@ static int GetIso15693AnswerFromSniff(BYTE *receivedResponse, int maxLen, int *s
 	c = 0;
 	getNext = FALSE;
 	for(;;) {
-		if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-			SSC_TRANSMIT_HOLDING = 0x43;
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			AT91C_BASE_SSC->SSC_THR = 0x43;
 		}
-		if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			SBYTE b;
-			b = (SBYTE)SSC_RECEIVE_HOLDING;
+			b = (SBYTE)AT91C_BASE_SSC->SSC_RHR;
 
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,
@@ -855,15 +855,15 @@ void AcquireRawAdcSamplesIso15693(void)
 
 	c = 0;
 	for(;;) {
-		if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-			SSC_TRANSMIT_HOLDING = ToSend[c];
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			AT91C_BASE_SSC->SSC_THR = ToSend[c];
 			c++;
 			if(c == ToSendMax+3) {
 				break;
 			}
 		}
-		if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-			volatile DWORD r = SSC_RECEIVE_HOLDING;
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+			volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
 			(void)r;
 		}
 		WDT_HIT();
@@ -874,12 +874,12 @@ void AcquireRawAdcSamplesIso15693(void)
 	c = 0;
 	getNext = FALSE;
 	for(;;) {
-		if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-			SSC_TRANSMIT_HOLDING = 0x43;
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			AT91C_BASE_SSC->SSC_THR = 0x43;
 		}
-		if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			SBYTE b;
-			b = (SBYTE)SSC_RECEIVE_HOLDING;
+			b = (SBYTE)AT91C_BASE_SSC->SSC_RHR;
 
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,

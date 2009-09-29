@@ -1,9 +1,6 @@
 #ifndef __LCD
 #define __LCD
 
-#define LCD_RESET_HIGH()	PIO_OUTPUT_DATA_SET   |= (1<<GPIO_LRST)
-#define LCD_RESET_LOW()		PIO_OUTPUT_DATA_CLEAR |= (1<<GPIO_LRST)
-
 // The resolution of the LCD
 #define LCD_XRES	132
 #define LCD_YRES	132

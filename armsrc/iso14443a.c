@@ -583,7 +583,7 @@ void SnoopIso14443a(void)
     // And now we loop, receiving samples.
     for(;;) {
 		WDT_HIT();
-        int behindBy = (lastRxCounter - PDC_RX_COUNTER(SSC_BASE)) &
+        int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) &
                                 (DMA_BUFFER_SIZE-1);
         if(behindBy > maxBehindBy) {
             maxBehindBy = behindBy;
@@ -600,8 +600,8 @@ void SnoopIso14443a(void)
         if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
             upTo -= DMA_BUFFER_SIZE;
             lastRxCounter += DMA_BUFFER_SIZE;
-            PDC_RX_NEXT_POINTER(SSC_BASE) = (DWORD)upTo;
-            PDC_RX_NEXT_COUNTER(SSC_BASE) = DMA_BUFFER_SIZE;
+            AT91C_BASE_PDC_SSC->PDC_RNPR = (DWORD)upTo;
+            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
         }
 
         samples += 4;
@@ -672,7 +672,7 @@ void SnoopIso14443a(void)
     DbpIntegers(Uart.byteCntMax, traceLen, (int)Uart.output[0]);
 
 done:
-    PDC_CONTROL(SSC_BASE) = PDC_RX_DISABLE;
+    AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
     DbpIntegers(maxBehindBy, Uart.state, Uart.byteCnt);
     DbpIntegers(Uart.byteCntMax, traceLen, (int)Uart.output[0]);
     LED_A_OFF();
@@ -857,11 +857,11 @@ static BOOL GetIso14443aCommandFromReader(BYTE *received, int *len, int maxLen)
 
         if(BUTTON_PRESS()) return FALSE;
 
-        if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-            SSC_TRANSMIT_HOLDING = 0x00;
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+            AT91C_BASE_SSC->SSC_THR = 0x00;
         }
-        if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-            BYTE b = (BYTE)SSC_RECEIVE_HOLDING;
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            BYTE b = (BYTE)AT91C_BASE_SSC->SSC_RHR;
 			if(MillerDecoding((b & 0xf0) >> 4)) {
 				*len = Uart.byteCnt;
 				return TRUE;
@@ -1128,7 +1128,7 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 
         // Modulate Manchester
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_MOD);
-        SSC_TRANSMIT_HOLDING = 0x00;
+        AT91C_BASE_SSC->SSC_THR = 0x00;
         FpgaSetupSsc();
 
 		// ### Transmit the response ###
@@ -1136,11 +1136,11 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 		b = 0x00;
 		fdt_indicator = FALSE;
         for(;;) {
-            if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-				volatile BYTE b = (BYTE)SSC_RECEIVE_HOLDING;
+            if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+				volatile BYTE b = (BYTE)AT91C_BASE_SSC->SSC_RHR;
                 (void)b;
             }
-            if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
+            if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 				if(i > respLen) {
 					b = 0x00;
 					u++;
@@ -1148,7 +1148,7 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 					b = resp[i];
 					i++;
 				}
-				SSC_TRANSMIT_HOLDING = b;
+				AT91C_BASE_SSC->SSC_THR = b;
 
                 if(u > 4) {
                     break;
@@ -1177,12 +1177,12 @@ static void TransmitFor14443a(const BYTE *cmd, int len, int *samples, int *wait)
 	if(*wait < 10) { *wait = 10; }
 
     for(c = 0; c < *wait;) {
-        if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-            SSC_TRANSMIT_HOLDING = 0x00;		// For exact timing!
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+            AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
             c++;
         }
-        if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-            volatile DWORD r = SSC_RECEIVE_HOLDING;
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
             (void)r;
         }
         WDT_HIT();
@@ -1190,15 +1190,15 @@ static void TransmitFor14443a(const BYTE *cmd, int len, int *samples, int *wait)
 
     c = 0;
     for(;;) {
-        if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-            SSC_TRANSMIT_HOLDING = cmd[c];
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+            AT91C_BASE_SSC->SSC_THR = cmd[c];
             c++;
             if(c >= len) {
                 break;
             }
         }
-        if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-            volatile DWORD r = SSC_RECEIVE_HOLDING;
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
             (void)r;
         }
         WDT_HIT();
@@ -1454,13 +1454,13 @@ static BOOL GetIso14443aAnswerFromTag(BYTE *receivedResponse, int maxLen, int *s
 	for(;;) {
         WDT_HIT();
 
-        if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-            SSC_TRANSMIT_HOLDING = 0x00;  // To make use of exact timing of next command from reader!!
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+            AT91C_BASE_SSC->SSC_THR = 0x00;  // To make use of exact timing of next command from reader!!
 			(*elapsed)++;
         }
-        if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			if(c < 512) { c++; } else { return FALSE; }
-            b = (BYTE)SSC_RECEIVE_HOLDING;
+            b = (BYTE)AT91C_BASE_SSC->SSC_RHR;
 			if(ManchesterDecoding((b & 0xf0) >> 4)) {
 				*samples = ((c - 1) << 3) + 4;
 				return TRUE;

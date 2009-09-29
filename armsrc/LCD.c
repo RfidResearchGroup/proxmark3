@@ -5,10 +5,10 @@
 void LCDSend(unsigned int data)
 {
 	// 9th bit set for data, clear for command
-	while ((SPI_STATUS & SPI_STATUS_TX_EMPTY) == 0);	// wait for the transfer to complete
+	while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0);	// wait for the transfer to complete
 	// For clarity's sake we pass data with 9th bit clear and commands with 9th
 	// bit set since they're implemented as defines, se we need to invert bit
-	SPI_TX_DATA = data^0x100;							// Send the data/command
+	AT91C_BASE_SPI->SPI_TDR = data^0x100;							// Send the data/command
 }
 
 void LCDSetXY(unsigned char x, unsigned char y)
@@ -86,10 +86,10 @@ void LCDReset(void)
 {
 	LED_A_ON();
 	SetupSpi(SPI_LCD_MODE);
-	LCD_RESET_LOW();
+	LOW(GPIO_LRST);
 	SpinDelay(100);
 
-	LCD_RESET_HIGH();
+	HIGH(GPIO_LRST);
 	SpinDelay(100);
 	LED_A_OFF();
 }

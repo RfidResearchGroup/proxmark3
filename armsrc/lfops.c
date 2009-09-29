@@ -42,12 +42,12 @@ void DoAcquisition125k(BOOL at134khz)
 	memset(dest,0,n);
 	i = 0;
 	for(;;) {
-		if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-			SSC_TRANSMIT_HOLDING = 0x43;
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			AT91C_BASE_SSC->SSC_THR = 0x43;
 			LED_D_ON();
 		}
-		if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-			dest[i] = (BYTE)SSC_RECEIVE_HOLDING;
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+			dest[i] = (BYTE)AT91C_BASE_SSC->SSC_RHR;
 			i++;
 			LED_D_OFF();
 			if(i >= n) {
@@ -274,17 +274,17 @@ void WriteTIbyte(BYTE b)
 	{
 		if (b&(1<<i)) {
 			// stop modulating antenna
-			PIO_OUTPUT_DATA_CLEAR = (1<<GPIO_SSC_DOUT);
+			LOW(GPIO_SSC_DOUT);
 			SpinDelayUs(1000);
 			// modulate antenna
-			PIO_OUTPUT_DATA_SET = (1<<GPIO_SSC_DOUT);
+			HIGH(GPIO_SSC_DOUT);
 			SpinDelayUs(1000);
 		} else {
 			// stop modulating antenna
-			PIO_OUTPUT_DATA_CLEAR = (1<<GPIO_SSC_DOUT);
+			LOW(GPIO_SSC_DOUT);
 			SpinDelayUs(300);
 			// modulate antenna
-			PIO_OUTPUT_DATA_SET = (1<<GPIO_SSC_DOUT);
+			HIGH(GPIO_SSC_DOUT);
 			SpinDelayUs(1700);
 		}
 	}
@@ -301,50 +301,50 @@ void AcquireTiType(void)
 	memset(BigBuf,0,sizeof(BigBuf));
 
 	// Set up the synchronous serial port
-  PIO_DISABLE = (1<<GPIO_SSC_DIN);
-  PIO_PERIPHERAL_A_SEL = (1<<GPIO_SSC_DIN);
+	AT91C_BASE_PIOA->PIO_PDR = GPIO_SSC_DIN;
+	AT91C_BASE_PIOA->PIO_ASR = GPIO_SSC_DIN;
 
 	// steal this pin from the SSP and use it to control the modulation
-  PIO_ENABLE = (1<<GPIO_SSC_DOUT);
-	PIO_OUTPUT_ENABLE	= (1<<GPIO_SSC_DOUT);
+	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+	AT91C_BASE_PIOA->PIO_OER	= GPIO_SSC_DOUT;
 
-  SSC_CONTROL = SSC_CONTROL_RESET;
-  SSC_CONTROL = SSC_CONTROL_RX_ENABLE | SSC_CONTROL_TX_ENABLE;
+	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
+	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_RXEN | AT91C_SSC_TXEN;
 
-  // Sample at 2 Mbit/s, so TI tags are 16.2 vs. 14.9 clocks long
-  // 48/2 = 24 MHz clock must be divided by 12
-  SSC_CLOCK_DIVISOR = 12;
+	// Sample at 2 Mbit/s, so TI tags are 16.2 vs. 14.9 clocks long
+	// 48/2 = 24 MHz clock must be divided by 12
+	AT91C_BASE_SSC->SSC_CMR = 12;
 
-  SSC_RECEIVE_CLOCK_MODE = SSC_CLOCK_MODE_SELECT(0);
-	SSC_RECEIVE_FRAME_MODE = SSC_FRAME_MODE_BITS_IN_WORD(32) | SSC_FRAME_MODE_MSB_FIRST;
-	SSC_TRANSMIT_CLOCK_MODE = 0;
-	SSC_TRANSMIT_FRAME_MODE = 0;
+	AT91C_BASE_SSC->SSC_RCMR = SSC_CLOCK_MODE_SELECT(0);
+	AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(32) | AT91C_SSC_MSBF;
+	AT91C_BASE_SSC->SSC_TCMR = 0;
+	AT91C_BASE_SSC->SSC_TFMR = 0;
 
 	LED_D_ON();
 
 	// modulate antenna
-	PIO_OUTPUT_DATA_SET = (1<<GPIO_SSC_DOUT);
+	HIGH(GPIO_SSC_DOUT);
 
 	// Charge TI tag for 50ms.
 	SpinDelay(50);
 
 	// stop modulating antenna and listen
-	PIO_OUTPUT_DATA_CLEAR = (1<<GPIO_SSC_DOUT);
+	LOW(GPIO_SSC_DOUT);
 
 	LED_D_OFF();
 
 	i = 0;
 	for(;;) {
-			if(SSC_STATUS & SSC_STATUS_RX_READY) {
-					BigBuf[i] = SSC_RECEIVE_HOLDING;	// store 32 bit values in buffer
-					i++; if(i >= TIBUFLEN) break;
-			}
-			WDT_HIT();
+		if(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+			BigBuf[i] = AT91C_BASE_SSC->SSC_RHR;	// store 32 bit values in buffer
+			i++; if(i >= TIBUFLEN) break;
+		}
+		WDT_HIT();
 	}
 
 	// return stolen pin to SSP
-	PIO_DISABLE = (1<<GPIO_SSC_DOUT);
-	PIO_PERIPHERAL_A_SEL = (1<<GPIO_SSC_DIN) | (1<<GPIO_SSC_DOUT);
+	AT91C_BASE_PIOA->PIO_PDR = GPIO_SSC_DOUT;
+	AT91C_BASE_PIOA->PIO_ASR = GPIO_SSC_DIN | GPIO_SSC_DOUT;
 
 	char *dest = (char *)BigBuf;
 	n = TIBUFLEN*32;
@@ -394,8 +394,8 @@ void WriteTItag(DWORD idhi, DWORD idlo, WORD crc)
 	LED_A_ON();
 
 	// steal this pin from the SSP and use it to control the modulation
-  PIO_ENABLE = (1<<GPIO_SSC_DOUT);
-	PIO_OUTPUT_ENABLE	= (1<<GPIO_SSC_DOUT);
+	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+	AT91C_BASE_PIOA->PIO_OER	= GPIO_SSC_DOUT;
 
 	// writing algorithm:
 	// a high bit consists of a field off for 1ms and field on for 1ms
@@ -408,7 +408,7 @@ void WriteTItag(DWORD idhi, DWORD idlo, WORD crc)
 	// finish with 15ms programming time
 
 	// modulate antenna
-	PIO_OUTPUT_DATA_SET = (1<<GPIO_SSC_DOUT);
+	HIGH(GPIO_SSC_DOUT);
 	SpinDelay(50);	// charge time
 
 	WriteTIbyte(0xbb); // keyword
@@ -425,7 +425,7 @@ void WriteTItag(DWORD idhi, DWORD idlo, WORD crc)
 	WriteTIbyte( (crc>>8  )&0xff ); // crc hi
 	WriteTIbyte(0x00); // write frame lo
 	WriteTIbyte(0x03); // write frame hi
-	PIO_OUTPUT_DATA_SET = (1<<GPIO_SSC_DOUT);
+	HIGH(GPIO_SSC_DOUT);
 	SpinDelay(50);	// programming time
 
 	LED_A_OFF();
@@ -444,17 +444,17 @@ void SimulateTagLowFrequency(int period, int ledcontrol)
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_SIMULATOR);
 
-	PIO_ENABLE = (1 << GPIO_SSC_DOUT) | (1 << GPIO_SSC_CLK);
+	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
 
-	PIO_OUTPUT_ENABLE = (1 << GPIO_SSC_DOUT);
-	PIO_OUTPUT_DISABLE = (1 << GPIO_SSC_CLK);
+	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 
 #define SHORT_COIL()	LOW(GPIO_SSC_DOUT)
-#define OPEN_COIL()	HIGH(GPIO_SSC_DOUT)
+#define OPEN_COIL()		HIGH(GPIO_SSC_DOUT)
 
 	i = 0;
 	for(;;) {
-		while(!(PIO_PIN_DATA_STATUS & (1<<GPIO_SSC_CLK))) {
+		while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
 			if(BUTTON_PRESS()) {
 				DbpString("Stopped");
 				return;
@@ -473,7 +473,7 @@ void SimulateTagLowFrequency(int period, int ledcontrol)
 		if (ledcontrol)
 			LED_D_OFF();
 
-		while(PIO_PIN_DATA_STATUS & (1<<GPIO_SSC_CLK)) {
+		while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
 			if(BUTTON_PRESS()) {
 				DbpString("Stopped");
 				return;
@@ -542,12 +542,16 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 	 * edge of TIOA. Assign PA15 to TIOA1 (peripheral B)
 	 */
 	
-	PMC_PERIPHERAL_CLK_ENABLE = (1 << PERIPH_TC1);
-	PIO_PERIPHERAL_B_SEL = (1 << GPIO_SSC_FRAME);
-	TC1_CCR = TC_CCR_CLKDIS;
-	TC1_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1 | TC_CMR_ETRGEDG_RISING | TC_CMR_ABETRG |
-		TC_CMR_LDRA_RISING | TC_CMR_LDRB_RISING;
-	TC1_CCR = TC_CCR_CLKEN | TC_CCR_SWTRG;
+	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
+	AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+	AT91C_BASE_TC1->TC_CMR =	TC_CMR_TCCLKS_TIMER_CLOCK1 |
+								AT91C_TC_ETRGEDG_RISING |
+								AT91C_TC_ABETRG |
+								AT91C_TC_LDRA_RISING |
+								AT91C_TC_LDRB_RISING;
+	AT91C_BASE_TC1->TC_CCR =	AT91C_TC_CLKEN |
+								AT91C_TC_SWTRG;
 	
 	/* calculate the new value for the carrier period in terms of TC1 values */
 	t0 = t0/2;
@@ -555,8 +559,8 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 	int overflow = 0;
 	while(!BUTTON_PRESS()) {
 		WDT_HIT();
-		if(TC1_SR & TC_SR_LDRAS) {
-			int ra = TC1_RA;
+		if(AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
+			int ra = AT91C_BASE_TC1->TC_RA;
 			if((ra > t0*HITAG_T_EOF) | overflow) ra = t0*HITAG_T_EOF+1;
 #if DEBUG_RA_VALUES
 			if(ra > 255 || overflow) ra = 255;
@@ -583,7 +587,7 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 			overflow = 0;
 			LED_D_ON();
 		} else {
-			if(TC1_CV > t0*HITAG_T_EOF) {
+			if(AT91C_BASE_TC1->TC_CV > t0*HITAG_T_EOF) {
 				/* Minor nuisance: In Capture mode, the timer can not be
 				 * stopped by a Compare C. There's no way to stop the clock
 				 * in software, so we'll just have to note the fact that an
@@ -619,37 +623,37 @@ static void hitag_send_bit(int t0, int bit) {
 		/* Manchester: Loaded, then unloaded */
 		LED_A_ON();
 		SHORT_COIL();
-		while(TC1_CV < t0*15);
+		while(AT91C_BASE_TC1->TC_CV < t0*15);
 		OPEN_COIL();
-		while(TC1_CV < t0*31);
+		while(AT91C_BASE_TC1->TC_CV < t0*31);
 		LED_A_OFF();
 	} else if(bit == 0) {
 		/* Manchester: Unloaded, then loaded */
 		LED_B_ON();
 		OPEN_COIL();
-		while(TC1_CV < t0*15);
+		while(AT91C_BASE_TC1->TC_CV < t0*15);
 		SHORT_COIL();
-		while(TC1_CV < t0*31);
+		while(AT91C_BASE_TC1->TC_CV < t0*31);
 		LED_B_OFF();
 	}
-	TC1_CCR = TC_CCR_SWTRG; /* Reset clock for the next bit */
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG; /* Reset clock for the next bit */
 	
 }
 static void hitag_send_frame(int t0, int frame_len, const char const * frame, int fdt)
 {
 	OPEN_COIL();
-	PIO_OUTPUT_ENABLE = (1 << GPIO_SSC_DOUT);
+	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	
 	/* Wait for HITAG_T_WRESP carrier periods after the last reader bit,
 	 * not that since the clock counts since the rising edge, but T_wresp is
 	 * with respect to the falling edge, we need to wait actually (T_wresp - T_g)
 	 * periods. The gap time T_g varies (4..10).
 	 */
-	while(TC1_CV < t0*(fdt-8));
+	while(AT91C_BASE_TC1->TC_CV < t0*(fdt-8));
 
-	int saved_cmr = TC1_CMR;
-	TC1_CMR &= ~TC_CMR_ETRGEDG; /* Disable external trigger for the clock */
-	TC1_CCR = TC_CCR_SWTRG; /* Reset the clock and use it for response timing */
+	int saved_cmr = AT91C_BASE_TC1->TC_CMR;
+	AT91C_BASE_TC1->TC_CMR &= ~AT91C_TC_ETRGEDG; /* Disable external trigger for the clock */
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG; /* Reset the clock and use it for response timing */
 	
 	int i;
 	for(i=0; i<5; i++)
@@ -660,7 +664,7 @@ static void hitag_send_frame(int t0, int frame_len, const char const * frame, in
 	}
 	
 	OPEN_COIL();
-	TC1_CMR = saved_cmr;
+	AT91C_BASE_TC1->TC_CMR = saved_cmr;
 }
 
 /* Callback structure to cleanly separate tag emulation code from the radio layer. */
@@ -813,13 +817,13 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		m = sizeof(BigBuf);
 		memset(dest,128,m);
 		for(;;) {
-			if(SSC_STATUS & (SSC_STATUS_TX_READY)) {
-				SSC_TRANSMIT_HOLDING = 0x43;
+			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+				AT91C_BASE_SSC->SSC_THR = 0x43;
 				if (ledcontrol)
 					LED_D_ON();
 			}
-			if(SSC_STATUS & (SSC_STATUS_RX_READY)) {
-				dest[i] = (BYTE)SSC_RECEIVE_HOLDING;
+			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+				dest[i] = (BYTE)AT91C_BASE_SSC->SSC_RHR;
 				// we don't care about actual value, only if it's more or less than a
 				// threshold essentially we capture zero crossings for later analysis
 				if(dest[i] < 127) dest[i] = 0; else dest[i] = 1;
