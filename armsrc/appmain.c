@@ -646,6 +646,14 @@ void UsbPacketReceived(BYTE *packet, int len)
 		case CMD_SET_LF_DIVISOR:
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, c->ext1);
 			break;
+		case CMD_SET_ADC_MUX:
+			switch(c->ext1) {
+			case 0: SetAdcMuxFor(GPIO_MUXSEL_LOPKD); break;
+			case 1: SetAdcMuxFor(GPIO_MUXSEL_LORAW); break;
+			case 2: SetAdcMuxFor(GPIO_MUXSEL_HIPKD); break;
+			case 3: SetAdcMuxFor(GPIO_MUXSEL_HIRAW); break;
+			}
+			break;
 		case CMD_VERSION:
 			SendVersion();
 			break;

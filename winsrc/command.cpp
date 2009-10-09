@@ -2830,6 +2830,22 @@ static void CmdSetDivisor(char *str)
 	}
 }
 
+static void CmdSetMux(char *str)
+{
+	UsbCommand c;
+	c.cmd = CMD_SET_ADC_MUX;
+	if(strncasecmp(str, "lopkd", 5) == 0) {
+		c.ext1 = 0;
+	} else if(strncasecmp(str, "loraw", 5) == 0) {
+		c.ext1 = 1;
+	} else if(strncasecmp(str, "hipkd", 5) == 0) {
+		c.ext1 = 2;
+	} else if(strncasecmp(str, "hiraw", 5) == 0) {
+		c.ext1 = 3;
+	}
+	SendCommand(&c, FALSE);
+}
+
 typedef void HandlerFunction(char *cmdline);
 
 /* in alphabetic order */
@@ -2901,6 +2917,7 @@ static struct {
 	{"save",					CmdSave,						1, "<filename> -- Save trace (from graph window)"},
 	{"scale",					CmdScale,						1, "<int> -- Set cursor display scale"},
 	{"setlfdivisor",	CmdSetDivisor,			0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
+	{"setmux",		CmdSetMux,			0, "<loraw|hiraw|lopkd|hipkd> -- Set the ADC mux to a specific value"},
 	{"sri512read",		CmdSri512read,			0, "<int> -- Read contents of a SRI512 tag"},
 	{"tidemod",				CmdTIDemod,					1, "Demodulate raw bits for TI-type LF tag"},
 	{"tiread",				CmdTIRead,					0, "Read and decode a TI 134 kHz tag"},

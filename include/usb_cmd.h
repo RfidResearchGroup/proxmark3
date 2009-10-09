@@ -52,6 +52,8 @@ typedef struct {
 #define CMD_HID_SIM_TAG																0x020C
 #define CMD_SET_LF_DIVISOR														0x020D
 #define CMD_LF_SIMULATE_BIDIR														0x020E
+#define CMD_SET_ADC_MUX										0x020F
+/* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
 // For the 13.56 MHz tags
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693					0x0300
