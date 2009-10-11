@@ -6,7 +6,7 @@ CFLAGS = -I. -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS)
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
 
-ifneq ($(QTLDFLAGS),)
+ifneq ($(QTLDLIBS),)
 QTGUI = proxgui.o proxguiqt.o proxguiqt.moc.o
 CFLAGS += -DHAVE_GUI
 MOC = $(shell type moc-qt4 >/dev/null 2>&1 && echo moc-qt4 || echo moc)
