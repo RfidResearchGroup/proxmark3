@@ -8,6 +8,7 @@
 #include <proxmark3.h>
 #include <stdlib.h>
 #include "apps.h"
+#include "legicrf.h"
 #ifdef WITH_LCD
 #include "fonts.h"
 #include "LCD.h"
@@ -583,9 +584,13 @@ void UsbPacketReceived(BYTE *packet, int len)
 		case CMD_SIMULATE_TAG_ISO_14443:
 			SimulateIso14443Tag();
 			break;
-
+		
 		case CMD_SIMULATE_TAG_ISO_14443a:
 			SimulateIso14443aTag(c->ext1, c->ext2);  // ## Simulate iso14443a tag - pass tag type & UID
+			break;
+
+		case CMD_SIMULATE_TAG_LEGIC_RF:
+			LegicRfSimulate();
 			break;
 
 		case CMD_MEASURE_ANTENNA_TUNING:
