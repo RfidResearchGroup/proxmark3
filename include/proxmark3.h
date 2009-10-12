@@ -16,6 +16,10 @@
 #define PWM_CHANNEL(x)							(1<<(x))
 
 #define TC_CMR_TCCLKS_TIMER_CLOCK1				(0<<0)
+#define TC_CMR_TCCLKS_TIMER_CLOCK2				(1<<0)
+#define TC_CMR_TCCLKS_TIMER_CLOCK3				(2<<0)
+#define TC_CMR_TCCLKS_TIMER_CLOCK4				(3<<0)
+#define TC_CMR_TCCLKS_TIMER_CLOCK5				(4<<0)
 
 #define ADC_CHAN_LF								4
 #define ADC_CHAN_HF								5
