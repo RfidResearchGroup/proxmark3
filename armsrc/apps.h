@@ -56,6 +56,7 @@ void SetAdcMuxFor(DWORD whichGpio);
 // Options for the HF simulated tag, how to modulate
 #define FPGA_HF_SIMULATOR_NO_MODULATION				(0<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_BPSK				(1<<0)
+#define FPGA_HF_SIMULATOR_MODULATE_212K				(2<<0)
 // Options for ISO14443A
 #define FPGA_HF_ISO14443A_SNIFFER					(0<<0)
 #define FPGA_HF_ISO14443A_TAGSIM_LISTEN				(1<<0)

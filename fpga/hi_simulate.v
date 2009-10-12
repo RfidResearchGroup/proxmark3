@@ -51,7 +51,8 @@ begin
 end
 
 // Divide 13.56 MHz by 32 to produce the SSP_CLK
-reg [4:0] ssp_clk_divider;
+// The register is bigger to allow higher division factors of up to /128
+reg [6:0] ssp_clk_divider;
 always @(posedge adc_clk)
     ssp_clk_divider <= (ssp_clk_divider + 1);
 assign ssp_clk = ssp_clk_divider[4];
@@ -87,6 +88,8 @@ always @(mod_type or ssp_clk or ssp_dout)
         modulating_carrier <= 1'b0;                          // no modulation
     else if(mod_type == 3'b001)
         modulating_carrier <= ssp_dout ^ ssp_clk_divider[3]; // XOR means BPSK
+    else if(mod_type == 3'b010)
+        modulating_carrier <= ssp_dout & ssp_clk_divider[5]; // switch 212kHz subcarrier on/off
     else
         modulating_carrier <= 1'b0;                           // yet unused
 
