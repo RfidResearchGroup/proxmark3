@@ -14,7 +14,13 @@ static struct legic_frame {
 	int num_bits;
 	char data[10];
 } current_frame;
-static char response = 0x2b; /* 1101 01 */
+
+static char queries[][4] = {
+		{7, 0x55}, /* 1010 101 */
+};
+static char responses[][4] = {
+		{6, 0x3b}, /* 1101 11 */
+};
 
 static void frame_send(char *response, int num_bytes, int num_bits)
 {
@@ -46,10 +52,22 @@ static void frame_send(char *response, int num_bytes, int num_bits)
 static void frame_respond(struct legic_frame *f)
 {
 	LED_D_ON();
-	if(f->num_bytes == 0 && f->num_bits == 7) {
-		/* This seems to be the initial dialogue, just send 6 bits of static data */
-		frame_send(&response, 0, 6);
+	int bitcount = f->num_bytes*8+f->num_bits;
+	int i, r=-1;
+	for(i=0; i<sizeof(queries)/sizeof(queries[0]); i++) {
+		if(bitcount == queries[i][0] && f->data[0] == queries[i][1] && f->data[1] == queries[i][2]) {
+			r = i;
+			break;
+		}
 	}
+	
+	if(r != -1) {
+		frame_send(&responses[r][1], responses[r][0]/8, responses[r][0]%8);
+		LED_A_ON();
+	} else {
+		LED_A_OFF();
+	}
+	
 	LED_D_OFF();
 }
 
@@ -67,11 +85,15 @@ static void frame_append_bit(struct legic_frame *f, int bit)
 
 static int frame_is_empty(struct legic_frame *f)
 {
-	return( (f->num_bytes + f->num_bits) <= 4 );
+	return( (f->num_bytes*8 + f->num_bits) <= 4 );
 }
 
 static void frame_handle(struct legic_frame *f)
 {
+	if(f->num_bytes == 0 && f->num_bits == 6) {
+		/* Short path */
+		return;
+	}
 	if( !frame_is_empty(f) ) {
 		frame_respond(f);
 	}
@@ -80,7 +102,8 @@ static void frame_handle(struct legic_frame *f)
 static void frame_clean(struct legic_frame *f)
 {
 	if(!frame_is_empty(f)) 
-		memset(f->data, 0, sizeof(f->data));
+		/* memset(f->data, 0, sizeof(f->data)); */
+		f->data[0] = f->data[1] = 0;
 	f->num_bits = 0;
 	f->num_bytes = 0;
 }
@@ -143,22 +166,26 @@ void LegicRfSimulate(void)
 					/* 1 bit */
 					emit(1);
 					active = 1;
+					LED_B_ON();
 				} else if(time > (BIT_TIME_0-BIT_TIME_FUZZ) && time < (BIT_TIME_0+BIT_TIME_FUZZ)) {
 					/* 0 bit */
 					emit(0);
-					active = 0;
-				} else {
+					active = 1;
+					LED_B_ON();
+				} else if(active) {
 					/* invalid */
 					emit(-1);
 					active = 0;
+					LED_B_OFF();
 				}
 			}
 		}
 		
-		if(time >= (BIT_TIME_1+2*BIT_TIME_FUZZ) && active) {
+		if(time >= (BIT_TIME_1+BIT_TIME_FUZZ) && active) {
 			/* Frame end */
 			emit(-1);
 			active = 0;
+			LED_B_OFF();
 		}
 		
 		if(time >= (20*BIT_TIME_1) && (AT91C_BASE_TC1->TC_SR & AT91C_TC_CLKSTA)) {
