@@ -2841,13 +2841,13 @@ static void CmdSetMux(char *str)
 {
 	UsbCommand c;
 	c.cmd = CMD_SET_ADC_MUX;
-	if(strncasecmp(str, "lopkd", 5) == 0) {
+	if(strcmp(str, "lopkd") == 0) {
 		c.ext1 = 0;
-	} else if(strncasecmp(str, "loraw", 5) == 0) {
+	} else if(strcmp(str, "loraw") == 0) {
 		c.ext1 = 1;
-	} else if(strncasecmp(str, "hipkd", 5) == 0) {
+	} else if(strcmp(str, "hipkd") == 0) {
 		c.ext1 = 2;
-	} else if(strncasecmp(str, "hiraw", 5) == 0) {
+	} else if(strcmp(str, "hiraw") == 0) {
 		c.ext1 = 3;
 	}
 	SendCommand(&c, FALSE);
