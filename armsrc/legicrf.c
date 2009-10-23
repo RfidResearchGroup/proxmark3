@@ -8,21 +8,23 @@
 
 #include "apps.h"
 #include "legicrf.h"
+#include "unistd.h"
+#include "stdint.h"
 
 static struct legic_frame {
-	int num_bytes;
-	int num_bits;
-	char data[10];
+	int bits;
+	uint16_t data;
 } current_frame;
 
-static char queries[][4] = {
+static struct legic_frame queries[] = {
 		{7, 0x55}, /* 1010 101 */
 };
-static char responses[][4] = {
+
+static struct legic_frame responses[] = {
 		{6, 0x3b}, /* 1101 11 */
 };
 
-static void frame_send(char *response, int num_bytes, int num_bits)
+static void frame_send(uint16_t response, int bits)
 {
 #if 0
 	/* Use the SSC to send a response. 8-bit transfers, LSBit first, 100us per bit */
@@ -36,9 +38,10 @@ static void frame_send(char *response, int num_bytes, int num_bits)
 	while(AT91C_BASE_TC1->TC_CV < 490) ;
 	
 	int i;
-	for(i=0; i<(num_bytes*8+num_bits); i++) {
+	for(i=0; i<bits; i++) {
 		int nextbit = AT91C_BASE_TC1->TC_CV + 150;
-		int bit = response[i/8] & (1<<(i%8));
+		int bit = response & 1;
+		response = response >> 1;
 		if(bit) 
 			AT91C_BASE_PIOA->PIO_SODR = GPIO_SSC_DOUT;
 		else
@@ -49,20 +52,21 @@ static void frame_send(char *response, int num_bytes, int num_bits)
 #endif
 }
 
-static void frame_respond(struct legic_frame *f)
+static void frame_respond(struct legic_frame const * const f)
 {
 	LED_D_ON();
-	int bitcount = f->num_bytes*8+f->num_bits;
-	int i, r=-1;
+	int i;
+	struct legic_frame *r = NULL;
+	
 	for(i=0; i<sizeof(queries)/sizeof(queries[0]); i++) {
-		if(bitcount == queries[i][0] && f->data[0] == queries[i][1] && f->data[1] == queries[i][2]) {
-			r = i;
+		if(f->bits == queries[i].bits && f->data == queries[i].data) {
+			r = &responses[i];
 			break;
 		}
 	}
 	
-	if(r != -1) {
-		frame_send(&responses[r][1], responses[r][0]/8, responses[r][0]%8);
+	if(r != NULL) {
+		frame_send(r->data, r->bits);
 		LED_A_ON();
 	} else {
 		LED_A_OFF();
@@ -71,26 +75,22 @@ static void frame_respond(struct legic_frame *f)
 	LED_D_OFF();
 }
 
-static void frame_append_bit(struct legic_frame *f, int bit)
+static void frame_append_bit(struct legic_frame * const f, int bit)
 {
-	if(f->num_bytes >= (int)sizeof(f->data))
+	if(f->bits >= 15)
 		return; /* Overflow, won't happen */
-	f->data[f->num_bytes] |= (bit<<f->num_bits);
-	f->num_bits++;
-	if(f->num_bits > 7) {
-		f->num_bits = 0;
-		f->num_bytes++;
-	}
+	f->data |= (bit<<f->bits);
+	f->bits++;
 }
 
-static int frame_is_empty(struct legic_frame *f)
+static int frame_is_empty(struct legic_frame const * const f)
 {
-	return( (f->num_bytes*8 + f->num_bits) <= 4 );
+	return( f->bits <= 4 );
 }
 
-static void frame_handle(struct legic_frame *f)
+static void frame_handle(struct legic_frame const * const f)
 {
-	if(f->num_bytes == 0 && f->num_bits == 6) {
+	if(f->bits == 6) {
 		/* Short path */
 		return;
 	}
@@ -99,13 +99,10 @@ static void frame_handle(struct legic_frame *f)
 	}
 }
 
-static void frame_clean(struct legic_frame *f)
+static void frame_clean(struct legic_frame * const f)
 {
-	if(!frame_is_empty(f)) 
-		/* memset(f->data, 0, sizeof(f->data)); */
-		f->data[0] = f->data[1] = 0;
-	f->num_bits = 0;
-	f->num_bytes = 0;
+	f->data = 0;
+	f->bits = 0;
 }
 
 static void emit(int bit)
