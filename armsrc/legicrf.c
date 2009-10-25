@@ -16,11 +16,11 @@ static struct legic_frame {
 	uint16_t data;
 } current_frame;
 
-static struct legic_frame queries[] = {
+static const struct legic_frame queries[] = {
 		{7, 0x55}, /* 1010 101 */
 };
 
-static struct legic_frame responses[] = {
+static const struct legic_frame responses[] = {
 		{6, 0x3b}, /* 1101 11 */
 };
 
@@ -55,18 +55,19 @@ static void frame_send(uint16_t response, int bits)
 static void frame_respond(struct legic_frame const * const f)
 {
 	LED_D_ON();
-	int i;
-	struct legic_frame *r = NULL;
+	int i, r_size;
+	uint16_t r_data;
 	
 	for(i=0; i<sizeof(queries)/sizeof(queries[0]); i++) {
 		if(f->bits == queries[i].bits && f->data == queries[i].data) {
-			r = &responses[i];
+			r_data = responses[i].data;
+			r_size = responses[i].bits;
 			break;
 		}
 	}
 	
-	if(r != NULL) {
-		frame_send(r->data, r->bits);
+	if(r_size != 0) {
+		frame_send(r_data, r_size);
 		LED_A_ON();
 	} else {
 		LED_A_OFF();
