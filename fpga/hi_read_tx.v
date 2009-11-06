@@ -68,9 +68,22 @@ always @(negedge ssp_clk)
 
 assign ssp_frame = (hi_byte_div == 3'b000);
 
-assign ssp_din = 1'b0;
+// Implement a hysteresis to give out the received signal on
+// ssp_din. Sample at fc.
+assign adc_clk = ck_1356meg;
+
+// ADC data appears on the rising edge, so sample it on the falling edge
+reg after_hysteresis;
+always @(negedge adc_clk)
+begin
+    if(& adc_d[7:0]) after_hysteresis <= 1'b1;
+    else if(~(| adc_d[7:0])) after_hysteresis <= 1'b0;
+end
+
+
+assign ssp_din = after_hysteresis;
 
 assign pwr_lo = 1'b0;
-assign dbg = ssp_frame;
+assign dbg = ssp_din;
 
 endmodule
