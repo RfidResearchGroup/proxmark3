@@ -553,6 +553,10 @@ void UsbPacketReceived(BYTE *packet, int len)
 			ReaderIso15693(c->ext1);
 			break;
 
+		case CMD_READER_LEGIC_RF:
+			LegicRfReader();
+			break;
+
 		case CMD_SIMTAG_ISO_15693:
 			SimTagIso15693(c->ext1);
 			break;

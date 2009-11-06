@@ -8,5 +8,6 @@
 #define LEGICRF_H_
 
 extern void LegicRfSimulate(void);
+extern void LegicRfReader(void);
 
 #endif /* LEGICRF_H_ */
