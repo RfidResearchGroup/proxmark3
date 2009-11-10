@@ -541,57 +541,77 @@ void UsbPacketReceived(BYTE *packet, int len)
 			ModThenAcquireRawAdcSamples125k(c->ext1,c->ext2,c->ext3,c->d.asBytes);
 			break;
 
+#ifdef WITH_ISO15693
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693:
 			AcquireRawAdcSamplesIso15693();
 			break;
+#endif
 
 		case CMD_BUFF_CLEAR:
 			BufferClear();
 			break;
 
+#ifdef WITH_ISO15693
 		case CMD_READER_ISO_15693:
 			ReaderIso15693(c->ext1);
 			break;
+#endif
 
 		case CMD_READER_LEGIC_RF:
 			LegicRfReader();
 			break;
 
+#ifdef WITH_ISO15693
 		case CMD_SIMTAG_ISO_15693:
 			SimTagIso15693(c->ext1);
 			break;
+#endif
 
+#ifdef WITH_ISO14443b
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443:
 			AcquireRawAdcSamplesIso14443(c->ext1);
 			break;
+#endif
 
+#ifdef WITH_ISO14443b
 		case CMD_READ_SRI512_TAG:
 			ReadSRI512Iso14443(c->ext1);
 			break;
+#endif
 
+#ifdef WITH_ISO14443a
 		case CMD_READER_ISO_14443a:
 			ReaderIso14443a(c->ext1);
 			break;
+#endif
 
+#ifdef WITH_ISO14443b
 		case CMD_SNOOP_ISO_14443:
 			SnoopIso14443();
 			break;
+#endif
 
+#ifdef WITH_ISO14443a
 		case CMD_SNOOP_ISO_14443a:
 			SnoopIso14443a();
 			break;
+#endif
 
 		case CMD_SIMULATE_TAG_HF_LISTEN:
 			SimulateTagHfListen();
 			break;
 
+#ifdef WITH_ISO14443b
 		case CMD_SIMULATE_TAG_ISO_14443:
 			SimulateIso14443Tag();
 			break;
+#endif
 		
+#ifdef WITH_ISO14443a
 		case CMD_SIMULATE_TAG_ISO_14443a:
 			SimulateIso14443aTag(c->ext1, c->ext2);  // ## Simulate iso14443a tag - pass tag type & UID
 			break;
+#endif
 
 		case CMD_SIMULATE_TAG_LEGIC_RF:
 			LegicRfSimulate();
