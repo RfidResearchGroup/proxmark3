@@ -4,10 +4,11 @@ APP_INCLUDES = apps.h
 
 #remove one of the following defines and comment out the relevant line
 #in the next section to remove that particular feature from compilation  
-APP_CFLAGS	= -O6 -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b
-#-DWITH_LCD
+APP_CFLAGS	= -O6 -DWITH_LF -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b
+#-DWITH_LCD 
 
 #SRC_LCD = fonts.c LCD.c
+SRC_LF = lfops.c hitag2.c
 SRC_ISO15693 = iso15693.c
 SRC_ISO14443a = iso14443a.c
 SRC_ISO14443b = iso14443.c
@@ -15,10 +16,9 @@ SRC_ISO14443b = iso14443.c
 THUMBSRC = start.c \
 	$(SRC_LCD) \
 	$(SRC_ISO15693) \
+	$(SRC_LF) \
 	appmain.c \
-	lfops.c \
 	util.c \
-	hitag2.c \
 	usb.c
 
 # These are to be compiled in ARM mode

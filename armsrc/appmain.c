@@ -267,6 +267,7 @@ void SendVersion(void)
 	DbpString(temp);
 }
 
+#ifdef DWITH_LF
 // samy's sniff and repeat routine
 void SamyRun()
 {
@@ -377,7 +378,7 @@ void SamyRun()
 		}
 	}
 }
-
+#endif
 
 /*
 OBJECTIVE
@@ -533,13 +534,17 @@ void UsbPacketReceived(BYTE *packet, int len)
 	UsbCommand *c = (UsbCommand *)packet;
 
 	switch(c->cmd) {
+#ifdef DWITH_LF
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			AcquireRawAdcSamples125k(c->ext1);
 			break;
+#endif
 
+#ifdef DWITH_LF
 		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			ModThenAcquireRawAdcSamples125k(c->ext1,c->ext2,c->ext3,c->d.asBytes);
 			break;
+#endif
 
 #ifdef WITH_ISO15693
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693:
@@ -625,13 +630,17 @@ void UsbPacketReceived(BYTE *packet, int len)
 			ListenReaderField(c->ext1);
 			break;
 
+#ifdef DWITH_LF
 		case CMD_HID_DEMOD_FSK:
 			CmdHIDdemodFSK(0, 0, 0, 1);				// Demodulate HID tag
 			break;
+#endif
 
+#ifdef DWITH_LF
 		case CMD_HID_SIM_TAG:
 			CmdHIDsimTAG(c->ext1, c->ext2, 1);					// Simulate HID tag by ID
 			break;
+#endif
 
 		case CMD_FPGA_MAJOR_MODE_OFF:		// ## FPGA Control
 			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -639,13 +648,17 @@ void UsbPacketReceived(BYTE *packet, int len)
 			LED_D_OFF(); // LED D indicates field ON or OFF
 			break;
 
+#ifdef DWITH_LF
 		case CMD_READ_TI_TYPE:
 			ReadTItag();
 			break;
+#endif
 
+#ifdef DWITH_LF
 		case CMD_WRITE_TI_TYPE:
 			WriteTItag(c->ext1,c->ext2,c->ext3);
 			break;
+#endif
 
 		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K: {
 			UsbCommand n;
@@ -659,36 +672,48 @@ void UsbPacketReceived(BYTE *packet, int len)
 			UsbSendPacket((BYTE *)&n, sizeof(n));
 			break;
 		}
+
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
 			BYTE *b = (BYTE *)BigBuf;
 			memcpy(b+c->ext1, c->d.asBytes, 48);
 			break;
 		}
+
+#ifdef DWITH_LF
 		case CMD_SIMULATE_TAG_125K:
 			LED_A_ON();
 			SimulateTagLowFrequency(c->ext1, 1);
 			LED_A_OFF();
 			break;
+#endif
+
 		case CMD_READ_MEM:
 			ReadMem(c->ext1);
 			break;
+
 		case CMD_SET_LF_DIVISOR:
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, c->ext1);
 			break;
+
 		case CMD_SET_ADC_MUX:
 			switch(c->ext1) {
-			case 0: SetAdcMuxFor(GPIO_MUXSEL_LOPKD); break;
-			case 1: SetAdcMuxFor(GPIO_MUXSEL_LORAW); break;
-			case 2: SetAdcMuxFor(GPIO_MUXSEL_HIPKD); break;
-			case 3: SetAdcMuxFor(GPIO_MUXSEL_HIRAW); break;
+				case 0: SetAdcMuxFor(GPIO_MUXSEL_LOPKD); break;
+				case 1: SetAdcMuxFor(GPIO_MUXSEL_LORAW); break;
+				case 2: SetAdcMuxFor(GPIO_MUXSEL_HIPKD); break;
+				case 3: SetAdcMuxFor(GPIO_MUXSEL_HIRAW); break;
 			}
 			break;
+
 		case CMD_VERSION:
 			SendVersion();
 			break;
+
+#ifdef DWITH_LF
 		case CMD_LF_SIMULATE_BIDIR:
 			SimulateTagLowFrequencyBidir(c->ext1, c->ext2);
 			break;
+#endif
+
 #ifdef WITH_LCD
 		case CMD_LCD_RESET:
 			LCDReset();
@@ -708,6 +733,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 				// We're going to reset, and the bootrom will take control.
 			}
 			break;
+
 		case CMD_START_FLASH:
 			if(common_area.flags.bootrom_present) {
 				common_area.command = COMMON_AREA_COMMAND_ENTER_FLASH_MODE;
@@ -797,7 +823,9 @@ void  __attribute__((noreturn)) AppMain(void)
 		UsbPoll(FALSE);
 		WDT_HIT();
 
+#ifdef DWITH_LF
 		if (BUTTON_HELD(1000) > 0)
 			SamyRun();
+#endif
 	}
 }
