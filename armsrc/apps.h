@@ -81,6 +81,8 @@ void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);
 void SimulateIso14443Tag(void);
 void AcquireRawAdcSamplesIso14443(DWORD parameter);
 void ReadSRI512Iso14443(DWORD parameter);
+void ReadSRIX4KIso14443(DWORD parameter);
+void ReadSTMemoryIso14443(DWORD parameter,DWORD dwLast);
 void SnoopIso14443(void);
 
 /// iso14443a.h

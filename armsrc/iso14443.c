@@ -873,6 +873,15 @@ void AcquireRawAdcSamplesIso14443(DWORD parameter)
 //-----------------------------------------------------------------------------
 void ReadSRI512Iso14443(DWORD parameter)
 {
+     ReadSTMemoryIso14443(parameter,0x0F);
+}
+void ReadSRIX4KIso14443(DWORD parameter)
+{
+     ReadSTMemoryIso14443(parameter,0x7F);
+}
+
+void ReadSTMemoryIso14443(DWORD parameter,DWORD dwLast)
+{
     BYTE i = 0x00;
 
     // Make sure that we start from off, since the tags are stateful;
@@ -961,8 +970,9 @@ void ReadSRI512Iso14443(DWORD parameter)
     DbpString("Tag memory dump, block 0 to 15");
     cmd1[0] = 0x08;
     i = 0x00;
+    dwLast++;
     for (;;) {
-	    if (i == 0x10) {
+           if (i == dwLast) {
 		    DbpString("System area block (0xff):");
 		    i = 0xff;
 	    }

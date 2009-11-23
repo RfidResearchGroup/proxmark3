@@ -8,6 +8,7 @@
 #include <QKeyEvent>
 #include <math.h>
 #include <limits.h>
+#include <stdio.h>
 #include "proxguiqt.h"
 #include "proxgui.h"
 

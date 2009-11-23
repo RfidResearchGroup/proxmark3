@@ -108,6 +108,20 @@ static void CmdSri512read(char *str)
 	SendCommand(&c, FALSE);
 }
 
+/* New command to read the contents of a SRIX4K tag
+ * SRIX4K tags are ISO14443-B modulated memory tags,
+ * this command just dumps the contents of the memory/
+ */
+static void CmdSrix4kread(char *str)
+{
+        UsbCommand c;
+        c.cmd = CMD_READ_SRIX4K_TAG;
+        c.ext1 = atoi(str);
+        SendCommand(&c, FALSE);
+}
+
+
+
 // ## New command
 static void CmdHi14areader(char *str)
 {
@@ -2935,6 +2949,7 @@ static struct {
 	{"setlfdivisor",	CmdSetDivisor,			0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
 	{"setmux",		CmdSetMux,			0, "<loraw|hiraw|lopkd|hipkd> -- Set the ADC mux to a specific value"},
 	{"sri512read",		CmdSri512read,			0, "<int> -- Read contents of a SRI512 tag"},
+	{"srix4kread",		CmdSrix4kread,			0, "<int> -- Read contents of a SRIX4K tag"},
 	{"tidemod",				CmdTIDemod,					1, "Demodulate raw bits for TI-type LF tag"},
 	{"tiread",				CmdTIRead,					0, "Read and decode a TI 134 kHz tag"},
 	{"tiwrite",				CmdTIWrite,					0, "Write new data to a r/w TI 134 kHz tag"},

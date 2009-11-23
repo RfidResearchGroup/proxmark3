@@ -582,6 +582,9 @@ void UsbPacketReceived(BYTE *packet, int len)
 		case CMD_READ_SRI512_TAG:
 			ReadSRI512Iso14443(c->ext1);
 			break;
+               case CMD_READ_SRIX4K_TAG:
+                       ReadSRIX4KIso14443(c->ext1);
+                       break;
 #endif
 
 #ifdef WITH_ISO14443a
