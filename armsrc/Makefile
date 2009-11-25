@@ -25,7 +25,8 @@ THUMBSRC = start.c \
 ARMSRC = fpgaloader.c \
 	legicrf.c \
 	$(SRC_ISO14443a) \
-	$(SRC_ISO14443b)
+	$(SRC_ISO14443b) \
+	crc.c
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
