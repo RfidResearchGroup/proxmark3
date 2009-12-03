@@ -909,9 +909,12 @@ static void CmdHexsamples(char *str)
 {
 	int i;
 	int n;
+	int requested = atoi(str);
+	int delivered = 0;
 
 	if(atoi(str) == 0) {
 		n = 12;
+		requested = 12;
 	} else {
 		n = atoi(str)/4;
 	}
@@ -939,7 +942,12 @@ static void CmdHexsamples(char *str)
 				c.d.asBytes[j+7],
 				c.d.asBytes[j+8]
 			);
+			delivered += 8;
+			if(delivered >= requested)
+				break;
 		}
+		if(delivered >= requested)
+			break;
 	}
 }
 
