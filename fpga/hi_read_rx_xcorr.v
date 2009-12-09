@@ -10,7 +10,7 @@ module hi_read_rx_xcorr(
     ssp_frame, ssp_din, ssp_dout, ssp_clk,
     cross_hi, cross_lo,
     dbg,
-    xcorr_is_848, snoop
+    xcorr_is_848, snoop, xcorr_quarter_freq
 );
     input pck0, ck_1356meg, ck_1356megb;
     output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
@@ -20,7 +20,7 @@ module hi_read_rx_xcorr(
     output ssp_frame, ssp_din, ssp_clk;
     input cross_hi, cross_lo;
     output dbg;
-    input xcorr_is_848, snoop;
+    input xcorr_is_848, snoop, xcorr_quarter_freq;
 
 // Carrier is steady on through this, unless we're snooping.
 assign pwr_hi = ck_1356megb & (~snoop);
@@ -36,17 +36,37 @@ reg fc_div_2;
 always @(posedge ck_1356meg)
     fc_div_2 = ~fc_div_2;
 
+reg fc_div_4;
+always @(posedge fc_div_2)
+    fc_div_4 = ~fc_div_4;
+
+reg fc_div_8;
+always @(posedge fc_div_4)
+    fc_div_8 = ~fc_div_8;
+
 reg adc_clk;
 
-always @(xcorr_is_848 or fc_div_2 or ck_1356meg)
-    if(xcorr_is_848)
-        // The subcarrier frequency is fc/16; we will sample at fc, so that 
-        // means the subcarrier is 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 1 1 ...
-        adc_clk <= ck_1356meg;
+always @(xcorr_is_848 or xcorr_quarter_freq or ck_1356meg)
+    if(~xcorr_quarter_freq)
+    begin
+	    if(xcorr_is_848)
+	        // The subcarrier frequency is fc/16; we will sample at fc, so that 
+	        // means the subcarrier is 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 1 1 ...
+	        adc_clk <= ck_1356meg;
+	    else
+	        // The subcarrier frequency is fc/32; we will sample at fc/2, and
+	        // the subcarrier will look identical.
+	        adc_clk <= fc_div_2;
+    end
     else
-        // The subcarrier frequency is fc/32; we will sample at fc/2, and
-        // the subcarrier will look identical.
-        adc_clk <= fc_div_2;
+    begin
+	    if(xcorr_is_848)
+	        // The subcarrier frequency is fc/64
+	        adc_clk <= fc_div_4;
+	    else
+	        // The subcarrier frequency is fc/128
+	        adc_clk <= fc_div_8;
+	end
 
 // When we're a reader, we just need to do the BPSK demod; but when we're an
 // eavesdropper, we also need to pick out the commands sent by the reader,
