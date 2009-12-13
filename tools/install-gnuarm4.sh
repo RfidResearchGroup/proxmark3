@@ -28,9 +28,9 @@ fi
 BUILDDIR=${SRCDIR}/build-gnuarm4
 
 # Where to get each of the toolchain components
-BINUTILS=ftp://gcc.gnu.org/pub/binutils/releases/binutils-${BINUTILS_VER}.tar.bz2
-GCCCORE=ftp://gcc.gnu.org/pub/gcc/releases/gcc-${GCC_VER}/gcc-core-${GCC_VER}.tar.bz2
-GPP=ftp://gcc.gnu.org/pub/gcc/releases/gcc-${GCC_VER}/gcc-g++-${GCC_VER}.tar.bz2
+BINUTILS=http://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.bz2
+GCCCORE=http://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-core-${GCC_VER}.tar.bz2
+GPP=http://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-g++-${GCC_VER}.tar.bz2
 NEWLIB=ftp://sources.redhat.com/pub/newlib/newlib-${NEWLIB_VER}.tar.gz
 #INSIGHT=ftp://sourceware.org/pub/insight/releases/insight-${INSIGHT_VER}.tar.bz2
 INSIGHT=http://mirrors.kernel.org/sources.redhat.com/insight/releases/insight-${INSIGHT_VER}.tar.bz2
