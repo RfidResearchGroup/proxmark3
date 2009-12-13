@@ -37,7 +37,7 @@ INSIGHT=http://mirrors.kernel.org/sources.redhat.com/insight/releases/insight-${
 #INSIGHT=http://www.mirrorservice.org/sites/sources.redhat.com/pub/insight/releases/insight-${INSIGHT_VER}.tar.bz2
 GDB=ftp://sourceware.org/pub/gdb/releases/gdb-${GDB_VER}.tar.bz2
 GMP=http://ftp.sunet.se/pub/gnu/gmp/gmp-${GMP_VER}.tar.bz2
-MPFR=http://www.mpfr.org/mpfr-current/mpfr-${MPFR_VER}.tar.bz2
+MPFR=http://mpfr.loria.fr/mpfr-current/mpfr-${MPFR_VER}.tar.bz2
 
 # Common configuration options (i.e., things to pass to 'configure')
 COMMON_CFG="--enable-interwork --target=arm-elf --program-prefix=arm-elf- --prefix=${DESTDIR} --disable-werror --enable-languages=c,c++ --enable-multilib --disable-shared"
