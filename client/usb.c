@@ -51,7 +51,7 @@ void SendCommand(UsbCommand *c, bool wantAck) {
 	}
 }
 
-int ReceiveCommandP(UsbCommand *c) {
+bool ReceiveCommandPoll(UsbCommand *c) {
 	int ret;
 
 	bzero(c, sizeof(UsbCommand));
@@ -96,11 +96,11 @@ int ReceiveCommandP(UsbCommand *c) {
 #endif
 	}
 
-	return ret;
+	return ret > 0;
 }
 
 void ReceiveCommand(UsbCommand *c) {
-	while(ReceiveCommandP(c)<0) {}
+	while(!ReceiveCommandPoll(c)) {}
 }
 
 usb_dev_handle* findProxmark(int verbose, unsigned int *iface) {

@@ -34,7 +34,7 @@ int main()
 			ReceiveCommand(&cmdbuf);
 			HANDLE_ERROR
 			for (i=0; i<5; i++) {
-				ReceiveCommandP(&cmdbuf);
+				ReceiveCommandPoll(&cmdbuf);
 			}
 			HANDLE_ERROR
 

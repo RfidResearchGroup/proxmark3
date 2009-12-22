@@ -26,7 +26,7 @@ static void *usb_receiver(void *targ) {
 	UsbCommand cmdbuf;
 
 	while(arg->run) {
-		if (ReceiveCommandP(&cmdbuf) > 0) {
+		if (ReceiveCommandPoll(&cmdbuf)) {
 			int i;
 
 			for (i=0; i<strlen(PROXPROMPT); i++)
