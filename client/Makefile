@@ -1,8 +1,11 @@
+WINCC=c:\mingw\bin\gcc
+
 #COMMON_FLAGS = -m32
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb -lreadline -lpthread
 LDFLAGS = $(COMMON_FLAGS)
 CFLAGS = -I. -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS)
 
+WINLIBS = -lgdi32 -lsetupapi
 #CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -arch i386 -D_
 #QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null) -arch i386
 
@@ -15,11 +18,24 @@ else
 QTGUI = guidummy.o
 endif
 
-all: proxmark3 snooper cli flasher
+ifeq ($(shell echo ""),)
+RM = rm -f
+BINS = proxmark3 snooper cli flasher
+CLEAN = cli flasher proxmark3 snooper *.o *.moc.cpp
+else
+RM = del
+BINS = prox.exe
+CLEAN = prox.exe
+endif
+
+all: $(BINS)
 
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: snooper cli flasher
 
+prox.exe: prox.c wingui.c command.c
+	$(WINCC) $(CFLAGS) $(DEFINES) -o prox.exe prox.c wingui.c command.c $(WINLIBS)
+	
 proxmark3: LDLIBS+=$(QTLDLIBS)
 proxmark3: proxmark3.o gui.o command.o usb.o $(QTGUI)
 
@@ -35,6 +51,6 @@ proxguiqt.moc.cpp: proxguiqt.h
 	$(MOC) -o$@ $^
 
 clean:
-	rm -f cli flasher proxmark3 snooper *.o *.moc.cpp
+	$(RM) $(CLEAN)
 
 .PHONY: all clean
