@@ -253,16 +253,16 @@ static void FlushPrevious(int translate)
 	for(i = 0; i < 240; i += 48) {
 		c.cmd = CMD_SETUP_WRITE;
 		memcpy(c.d.asBytes, QueuedToSend+i, 48);
-		c.ext1 = (i/4);
+		c.arg[0] = (i/4);
 		SendCommand(&c, TRUE);
 	}
 
 	c.cmd = CMD_FINISH_WRITE;
-	c.ext1 = (ExpectedAddr-1) & (~255);
+	c.arg[0] = (ExpectedAddr-1) & (~255);
 	if(translate) {
-		c.ext1 -= PHYSICAL_FLASH_START;
+		c.arg[0] -= PHYSICAL_FLASH_START;
 	}
-	printf("Flashing address: %08x\r", c.ext1);
+	printf("Flashing address: %08x\r", c.arg[0]);
 	memcpy(c.d.asBytes, QueuedToSend+240, 16);
 	SendCommand(&c, TRUE);
 
@@ -362,14 +362,14 @@ static int PrepareFlash(struct partition *p, const char *filename, unsigned int 
 	if(state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
 		UsbCommand c;
 		c.cmd = CMD_START_FLASH;
-		c.ext1 = p->start;
-		c.ext2 = p->end;
+		c.arg[0] = p->start;
+		c.arg[1] = p->end;
 
 		/* Only send magic when flashing bootrom */
 		if(p->precious) {
-			c.ext3 = START_FLASH_MAGIC;
+			c.arg[2] = START_FLASH_MAGIC;
 		} else {
-			c.ext3 = 0;
+			c.arg[2] = 0;
 		}
 		SendCommand(&c, TRUE);
 		translate = 0;
@@ -407,7 +407,7 @@ static unsigned int GetProxmarkState(void)
 		state = DEVICE_INFO_FLAG_CURRENT_MODE_OS;
 		break;
 	case CMD_DEVICE_INFO:
-		state = resp.ext1;
+		state = resp.arg[0];
 		break;
 	default:
 		fprintf(stderr, "Couldn't get proxmark state, bad response type: 0x%04X\n", resp.cmd);

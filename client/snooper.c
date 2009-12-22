@@ -6,7 +6,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include "translate.h"
+//#include "translate.h"
 #include "prox.h"
 #include "proxmark3.h"
 

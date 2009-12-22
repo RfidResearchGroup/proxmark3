@@ -1,15 +1,24 @@
 #ifndef __PROX_H
 #define __PROX_H
-
+#ifdef _MSC_VER
+typedef DWORD uint32_t;
+typedef BYTE uint8_t;
+typedef WORD uint16_t;
+#define bool BOOL
+#else
+#include <stdint.h>
+#include <stdbool.h>
+#endif
 #include "../include/usb_cmd.h"
 
 // prox.cpp
 void ReceiveCommand(UsbCommand *c);
-BOOL ReceiveCommandPoll(UsbCommand *c);
-void SendCommand(UsbCommand *c, BOOL wantAck);
+bool ReceiveCommandPoll(UsbCommand *c);
+void SendCommand(UsbCommand *c, bool);
+void wait_for_response(uint32_t command_type);
 
 // gui.cpp
-void ShowGui();
+void ShowGui(void);
 void HideGraphWindow(void);
 void ShowGraphWindow(void);
 void RepaintGraphWindow(void);
@@ -24,7 +33,7 @@ extern int offline;
 
 // command.cpp
 static void CmdBuffClear(char *str);
-static void GetFromBigBuf(BYTE *dest, int bytes);
+static void GetFromBigBuf(uint8_t *dest, int bytes);
 static void CmdReset(char *str);
 static void CmdQuit(char *str);
 static void CmdEM410xread(char *str);
@@ -61,7 +70,7 @@ static void CmdHisamples(char *str);
 static int CmdHisamplest(char *str, int nrlow);
 static void CmdHexsamples(char *str);
 static void CmdHisampless(char *str);
-static WORD Iso15693Crc(BYTE *v, int n);
+static uint16_t Iso15693Crc(uint8_t *v, int n);
 static void CmdHi14bdemod(char *str);
 static void CmdHi14list(char *str);
 static void CmdHi14alist(char *str);

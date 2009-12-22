@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <usb.h>
 #include <strings.h>
 #include <errno.h>
 
-#include "translate.h"
 #include "prox.h"
 #include "proxmark3.h"
 
@@ -14,7 +15,7 @@ static unsigned int claimed_iface = 0;
 unsigned char return_on_error = 0;
 unsigned char error_occured = 0;
 
-void SendCommand(UsbCommand *c, BOOL wantAck) {
+void SendCommand(UsbCommand *c, bool wantAck) {
 	int ret;
 
 #if 0

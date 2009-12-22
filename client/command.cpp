@@ -34,7 +34,7 @@ static void GetFromBigBuf(BYTE *dest, int bytes)
 	for(i = 0; i < n; i += 12) {
 		UsbCommand c;
 		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.ext1 = i;
+		c.arg[0] = i;
 		SendCommand(&c, FALSE);
 		ReceiveCommand(&c);
 		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
@@ -91,7 +91,7 @@ static void CmdHi14read(char *str)
 {
 	UsbCommand c;
 	c.cmd = CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443;
-	c.ext1 = atoi(str);
+	c.arg[0] = atoi(str);
 	SendCommand(&c, FALSE);
 }
 
@@ -104,7 +104,7 @@ static void CmdSri512read(char *str)
 {
 	UsbCommand c;
 	c.cmd = CMD_READ_SRI512_TAG;
-	c.ext1 = atoi(str);
+	c.arg[0] = atoi(str);
 	SendCommand(&c, FALSE);
 }
 
@@ -116,7 +116,7 @@ static void CmdSrix4kread(char *str)
 {
         UsbCommand c;
         c.cmd = CMD_READ_SRIX4K_TAG;
-        c.ext1 = atoi(str);
+        c.arg[0] = atoi(str);
         SendCommand(&c, FALSE);
 }
 
@@ -127,7 +127,7 @@ static void CmdHi14areader(char *str)
 {
 	UsbCommand c;
 	c.cmd = CMD_READER_ISO_14443a;
-	c.ext1 = atoi(str);
+	c.arg[0] = atoi(str);
 	SendCommand(&c, FALSE);
 }
 
@@ -136,7 +136,7 @@ static void CmdHi15reader(char *str)
 {
 	UsbCommand c;
 	c.cmd = CMD_READER_ISO_15693;
-	c.ext1 = atoi(str);
+	c.arg[0] = atoi(str);
 	SendCommand(&c, FALSE);
 }
 
@@ -145,7 +145,7 @@ static void CmdHi15tag(char *str)
 {
 	UsbCommand c;
 	c.cmd = CMD_SIMTAG_ISO_15693;
-	c.ext1 = atoi(str);
+	c.arg[0] = atoi(str);
 	SendCommand(&c, FALSE);
 }
 
@@ -153,7 +153,7 @@ static void CmdHi14read_sim(char *str)
 {
 	UsbCommand c;
 	c.cmd = CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443_SIM;
-	c.ext1 = atoi(str);
+	c.arg[0] = atoi(str);
 	SendCommand(&c, FALSE);
 }
 
@@ -161,13 +161,13 @@ static void CmdHi14readt(char *str)
 {
 	UsbCommand c;
 	c.cmd = CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443;
-	c.ext1 = atoi(str);
+	c.arg[0] = atoi(str);
 	SendCommand(&c, FALSE);
 
 	//CmdHisamplest(str);
 	while(CmdHisamplest(str,atoi(str))==0) {
 		c.cmd = CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443;
-		c.ext1 = atoi(str);
+		c.arg[0] = atoi(str);
 		SendCommand(&c, FALSE);
 	}
 	RepaintGraphWindow();
@@ -201,8 +201,8 @@ static void CmdHi14asim(char *str)	// ## simulate iso14443a tag
 
 	c.cmd = CMD_SIMULATE_TAG_ISO_14443a;
 	// c.ext should be set to *str or convert *str to the correct format for a uid
-	c.ext1 = hi;
-	c.ext2 = lo;
+	c.arg[0] = hi;
+	c.arg[1] = lo;
 	PrintToScrollback("Emulating 14443A TAG with UID %x%16x", hi, lo);
 	SendCommand(&c, FALSE);
 }
@@ -681,13 +681,13 @@ static void CmdLosim(char *str)
 			c.d.asBytes[j] = GraphBuffer[i+j];
 		}
 		c.cmd = CMD_DOWNLOADED_SIM_SAMPLES_125K;
-		c.ext1 = i;
+		c.arg[0] = i;
 		SendCommand(&c, FALSE);
 	}
 
 	UsbCommand c;
 	c.cmd = CMD_SIMULATE_TAG_125K;
-	c.ext1 = GraphTraceLen;
+	c.arg[0] = GraphTraceLen;
 	SendCommand(&c, FALSE);
 }
 
@@ -695,8 +695,8 @@ static void CmdLosimBidir(char *str)
 {
 	UsbCommand c;
 	c.cmd = CMD_LF_SIMULATE_BIDIR;
-	c.ext1 = 47; /* Set ADC to twice the carrier for a slight supersampling */
-	c.ext2 = 384;
+	c.arg[0] = 47; /* Set ADC to twice the carrier for a slight supersampling */
+	c.arg[1] = 384;
 	SendCommand(&c, FALSE);
 }
 
@@ -705,9 +705,9 @@ static void CmdLoread(char *str)
 	UsbCommand c;
 	// 'h' means higher-low-frequency, 134 kHz
 	if(*str == 'h') {
-		c.ext1 = 1;
+		c.arg[0] = 1;
 	} else if (*str == '\0') {
-		c.ext1 = 0;
+		c.arg[0] = 0;
 	} else {
 		PrintToScrollback("use 'loread' or 'loread h'");
 		return;
@@ -721,9 +721,9 @@ static void CmdDetectReader(char *str)
 	UsbCommand c;
 	// 'l' means LF - 125/134 kHz
 	if(*str == 'l') {
-		c.ext1 = 1;
+		c.arg[0] = 1;
 	} else if (*str == 'h') {
-		c.ext1 = 2;
+		c.arg[0] = 2;
 	} else if (*str != '\0') {
 		PrintToScrollback("use 'detectreader' or 'detectreader l' or 'detectreader h'");
 		return;
@@ -741,7 +741,7 @@ static void CmdLoCommandRead(char *str)
 
 	UsbCommand c;
 	c.cmd = CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K;
-	sscanf(str, "%i %i %i %s %s", &c.ext1, &c.ext2, &c.ext3, (char *) &c.d.asBytes,(char *) &dummy+1);
+	sscanf(str, "%i %i %i %s %s", &c.arg[0], &c.arg[1], &c.arg[2], (char *) &c.d.asBytes,(char *) &dummy+1);
 	// in case they specified 'h'
 	strcpy((char *)&c.d.asBytes + strlen((char *)c.d.asBytes), dummy);
 	SendCommand(&c, FALSE);
@@ -760,7 +760,7 @@ static void CmdLosamples(char *str)
 	for(i = 0; i < n; i += 12) {
 		UsbCommand c;
 		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.ext1 = i;
+		c.arg[0] = i;
 		SendCommand(&c, FALSE);
 		ReceiveCommand(&c);
 		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
@@ -787,7 +787,7 @@ static void CmdBitsamples(char *str)
 	for(i = 0; i < n; i += 12) {
 		UsbCommand c;
 		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.ext1 = i;
+		c.arg[0] = i;
 		SendCommand(&c, FALSE);
 		ReceiveCommand(&c);
 		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
@@ -818,7 +818,7 @@ static void CmdHisamples(char *str)
 	for(i = 0; i < n; i += 12) {
 		UsbCommand c;
 		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.ext1 = i;
+		c.arg[0] = i;
 		SendCommand(&c, FALSE);
 		ReceiveCommand(&c);
 		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
@@ -850,7 +850,7 @@ static int CmdHisamplest(char *str, int nrlow)
 	for(i = 0; i < n; i += 12) {
 		UsbCommand c;
 		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.ext1 = i;
+		c.arg[0] = i;
 		SendCommand(&c, FALSE);
 		ReceiveCommand(&c);
 		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
@@ -922,7 +922,7 @@ static void CmdHexsamples(char *str)
 	for(i = 0; i < n; i += 12) {
 		UsbCommand c;
 		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.ext1 = i;
+		c.arg[0] = i;
 		SendCommand(&c, FALSE);
 		ReceiveCommand(&c);
 		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
@@ -966,7 +966,7 @@ static void CmdHisampless(char *str)
 	for(i = 0; i < n; i += 12) {
 		UsbCommand c;
 		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.ext1 = i;
+		c.arg[0] = i;
 		SendCommand(&c, FALSE);
 		ReceiveCommand(&c);
 		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
@@ -1577,8 +1577,8 @@ static void CmdTIWrite(char *str)
 	int res=0;
 
 	c.cmd = CMD_WRITE_TI_TYPE;
-	res = sscanf(str, "0x%x 0x%x 0x%x ", &c.ext1, &c.ext2, &c.ext3);
-	if (res == 2) c.ext3=0;
+	res = sscanf(str, "0x%x 0x%x 0x%x ", &c.arg[0], &c.arg[1], &c.arg[2]);
+	if (res == 2) c.arg[2]=0;
 	if (res<2)
 		PrintToScrollback("Please specify the data as two hex strings, optionally the CRC as a third");
 	else
@@ -2809,8 +2809,8 @@ static void CmdHIDsimTAG(char *str)
 	PrintToScrollback("Emulating tag with ID %x%16x", hi, lo);
 
 	c.cmd = CMD_HID_SIM_TAG;
-	c.ext1 = hi;
-	c.ext2 = lo;
+	c.arg[0] = hi;
+	c.arg[1] = lo;
 	SendCommand(&c, FALSE);
 }
 
@@ -2818,7 +2818,7 @@ static void CmdReadmem(char *str)
 {
 	UsbCommand c;
 	c.cmd = CMD_READ_MEM;
-	c.ext1 = atoi(str);
+	c.arg[0] = atoi(str);
 	SendCommand(&c, FALSE);
 }
 
@@ -2833,7 +2833,7 @@ static void CmdLcdReset(char *str)
 {
 	UsbCommand c;
 	c.cmd = CMD_LCD_RESET;
-	c.ext1 = atoi(str);
+	c.arg[0] = atoi(str);
 	SendCommand(&c, FALSE);
 }
 
@@ -2844,7 +2844,7 @@ static void CmdLcd(char *str)
 	c.cmd = CMD_LCD;
 	sscanf(str, "%x %d", &i, &j);
 	while (j--) {
-		c.ext1 = i&0x1ff;
+		c.arg[0] = i&0x1ff;
 		SendCommand(&c, FALSE);
 	}
 }
@@ -2857,12 +2857,12 @@ static void CmdSetDivisor(char *str)
 {
 	UsbCommand c;
 	c.cmd = CMD_SET_LF_DIVISOR;
-	c.ext1 = atoi(str);
-	if (( c.ext1<0) || (c.ext1>255)) {
+	c.arg[0] = atoi(str);
+	if (( c.arg[0]<0) || (c.arg[0]>255)) {
 			PrintToScrollback("divisor must be between 19 and 255");
 	} else {
 			SendCommand(&c, FALSE);
-			PrintToScrollback("Divisor set, expected freq=%dHz", 12000000/(c.ext1+1));
+			PrintToScrollback("Divisor set, expected freq=%dHz", 12000000/(c.arg[0]+1));
 	}
 }
 
@@ -2871,13 +2871,13 @@ static void CmdSetMux(char *str)
 	UsbCommand c;
 	c.cmd = CMD_SET_ADC_MUX;
 	if(strcmp(str, "lopkd") == 0) {
-		c.ext1 = 0;
+		c.arg[0] = 0;
 	} else if(strcmp(str, "loraw") == 0) {
-		c.ext1 = 1;
+		c.arg[0] = 1;
 	} else if(strcmp(str, "hipkd") == 0) {
-		c.ext1 = 2;
+		c.arg[0] = 2;
 	} else if(strcmp(str, "hiraw") == 0) {
-		c.ext1 = 3;
+		c.arg[0] = 3;
 	}
 	SendCommand(&c, FALSE);
 }
@@ -3049,27 +3049,27 @@ void UsbCommandReceived(UsbCommand *c)
 	switch(c->cmd) {
 		case CMD_DEBUG_PRINT_STRING: {
 			char s[100];
-			if(c->ext1 > 70 || c->ext1 < 0) {
-				c->ext1 = 0;
+			if(c->arg[0] > 70 || c->arg[0] < 0) {
+				c->arg[0] = 0;
 			}
-			memcpy(s, c->d.asBytes, c->ext1);
-			s[c->ext1] = '\0';
+			memcpy(s, c->d.asBytes, c->arg[0]);
+			s[c->arg[0]] = '\0';
 			PrintToScrollback("#db# %s", s);
 			break;
 		}
 
 		case CMD_DEBUG_PRINT_INTEGERS:
-			PrintToScrollback("#db# %08x, %08x, %08x\r\n", c->ext1, c->ext2, c->ext3);
+			PrintToScrollback("#db# %08x, %08x, %08x\r\n", c->arg[0], c->arg[1], c->arg[2]);
 			break;
 
 		case CMD_MEASURED_ANTENNA_TUNING: {
 			int peakv, peakf;
 			int vLf125, vLf134, vHf;
-			vLf125 = c->ext1 & 0xffff;
-			vLf134 = c->ext1 >> 16;
-			vHf = c->ext2 & 0xffff;;
-			peakf = c->ext3 & 0xffff;
-			peakv = c->ext3 >> 16;
+			vLf125 = c->arg[0] & 0xffff;
+			vLf134 = c->arg[0] >> 16;
+			vHf = c->arg[1] & 0xffff;;
+			peakf = c->arg[2] & 0xffff;
+			peakv = c->arg[2] >> 16;
 			PrintToScrollback("");
 			PrintToScrollback("");
 			PrintToScrollback("# LF antenna: %5.2f V @   125.00 kHz", vLf125/1000.0);
