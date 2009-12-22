@@ -1,7 +1,7 @@
 @echo off
-cd ..\winsrc
+cd ..\client
 @echo **************
-@echo *** winsrc ***
+@echo *** client ***
 @echo **************
 make %1
 cd ..\cockpit

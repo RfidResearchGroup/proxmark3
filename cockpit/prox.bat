@@ -1,2 +1,2 @@
 @echo off
-call ..\winsrc\prox %1
+call ..\client\prox %1
