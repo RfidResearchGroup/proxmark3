@@ -44,11 +44,11 @@ static void *usb_receiver(void *targ) {
 static void *main_loop(void *targ)
 {
 	struct main_loop_arg *arg = (struct main_loop_arg*)targ;
+	struct usb_receiver_arg rarg;
 	char *cmd = NULL;
 	pthread_t reader_thread;
 
 	if (arg->usb_present == 1) {
-		struct usb_receiver_arg rarg;
 		rarg.run=1;
 		pthread_create(&reader_thread, NULL, &usb_receiver, &rarg);
 	}
@@ -66,6 +66,11 @@ static void *main_loop(void *targ)
 			printf("\n");
 			break;
 		}
+	}
+	
+	if (arg->usb_present == 1) {
+		rarg.run = 0;
+		pthread_join(reader_thread, NULL);
 	}
 
 	ExitGraphics();
