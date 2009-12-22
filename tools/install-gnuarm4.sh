@@ -6,7 +6,7 @@ GCC_VER="4.3.3"
 GDB_VER="6.8"
 NEWLIB_VER="1.17.0"
 GMP_VER="4.2.4"
-MPFR_VER="2.4.1"
+MPFR_VER="2.4.2"
 INSIGHT_VER="6.8"
 
 # Where you want to install the tools
