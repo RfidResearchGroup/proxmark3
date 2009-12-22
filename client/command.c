@@ -3,74 +3,76 @@
 // Jonathan Westhues, Sept 2005
 // Edits by Gerhard de Koning Gans, Sep 2007 (##)
 //-----------------------------------------------------------------------------
-#ifdef _WIN32
+#ifdef WIN32
 #include <windows.h>
 #endif
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <limits.h>
 #include <math.h>
-#ifdef _MSC_VER
-typedef DWORD uint32_t;
-typedef BYTE uint8_t;
-typedef WORD uint16_t;
-#define bool BOOL
-#define true TRUE
-#define false FALSE
-#else
-#include <stdint.h>
-#include <stdbool.h>
-#endif
 
 #include "prox.h"
 #include "../common/iso14443_crc.c"
 #include "../common/crc16.c"
+#include "../include/usb_cmd.h"
 
 #define arraylen(x) (sizeof(x)/sizeof((x)[0]))
 #define BIT(x) GraphBuffer[x * clock]
 #define BITS (GraphTraceLen / clock)
+#define SAMPLE_BUFFER_SIZE 64 // XXX check this
 
 int go = 0;
 static int CmdHisamplest(char *str, int nrlow);
+unsigned int current_command = CMD_UNKNOWN;
+unsigned int received_command = CMD_UNKNOWN;
+static uint8_t sample_buf[SAMPLE_BUFFER_SIZE];
+
+void wait_for_response(uint32_t response_type)
+{
+	while (received_command != response_type) {
+#ifdef WIN32
+		UsbCommand c;
+		if (ReceiveCommandPoll(&c))
+			UsbCommandReceived(&c);
+		Sleep(0);
+#else
+		usleep(10000); // XXX ugh
+#endif
+	}
+	received_command = CMD_UNKNOWN;
+}
 
 static void GetFromBigBuf(uint8_t *dest, int bytes)
 {
 	int n = bytes/4;
-	int i;
 
 	if(n % 48 != 0) {
 		PrintToScrollback("bad len in GetFromBigBuf");
 		return;
 	}
 
+	int i;
 	for(i = 0; i < n; i += 12) {
-		UsbCommand c;
-		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.arg[0] = i;
-		SendCommand(&c, false);
-		ReceiveCommand(&c);
-		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
-			PrintToScrollback("bad resp");
-			return;
-		}
+		UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
+		SendCommand(&c);
+		wait_for_response(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
 
-		memcpy(dest+(i*4), c.d.asBytes, 48);
+		memcpy(dest+(i*4), sample_buf, 48);
 	}
 }
 
 static void CmdReset(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_HARDWARE_RESET;
-	SendCommand(&c, false);
+	UsbCommand c = {CMD_HARDWARE_RESET};
+	SendCommand(&c);
 }
 
 static void CmdBuffClear(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_BUFF_CLEAR;
-	SendCommand(&c, false);
+	UsbCommand c = {CMD_BUFF_CLEAR};
+	SendCommand(&c);
 	CmdClearGraph(true);
 }
 
@@ -81,44 +83,37 @@ static void CmdQuit(char *str)
 
 static void CmdHIDdemodFSK(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_HID_DEMOD_FSK;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_HID_DEMOD_FSK};
+	SendCommand(&c);
 }
 
 static void CmdTune(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_MEASURE_ANTENNA_TUNING;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_MEASURE_ANTENNA_TUNING};
+	SendCommand(&c);
 }
 
 static void CmdHi15read(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693};
+	SendCommand(&c);
 }
 
 static void CmdHi14read(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443;
-	c.arg[0] = atoi(str);
-	SendCommand(&c, false);
+	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443, {strtol(str, NULL, 0), 0, 0}};
+	SendCommand(&c);
 }
 
 
 /* New command to read the contents of a SRI512 tag
  * SRI512 tags are ISO14443-B modulated memory tags,
- * this command just dumps the contents of the memory/
+ * this command just dumps the contents of the memory
  */
 static void CmdSri512read(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_READ_SRI512_TAG;
-	c.arg[0] = atoi(str);
-	SendCommand(&c, false);
+	UsbCommand c={CMD_READ_SRI512_TAG, {strtol(str, NULL, 0), 0, 0}};
+	SendCommand(&c);
 }
 
 /* New command to read the contents of a SRIX4K tag
@@ -127,77 +122,56 @@ static void CmdSri512read(char *str)
  */
 static void CmdSrix4kread(char *str)
 {
-        UsbCommand c;
-        c.cmd = CMD_READ_SRIX4K_TAG;
-        c.arg[0] = atoi(str);
-        SendCommand(&c, false);
+	UsbCommand c={CMD_READ_SRIX4K_TAG, {strtol(str, NULL, 0), 0, 0}};
+        SendCommand(&c);
 }
 
-
-
-// ## New command
 static void CmdHi14areader(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_READER_ISO_14443a;
-	c.arg[0] = atoi(str);
-	SendCommand(&c, false);
+	UsbCommand c={CMD_READER_ISO_14443a, {strtol(str, NULL, 0), 0, 0}};
+	SendCommand(&c);
 }
 
-// ## New command
 static void CmdHi15reader(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_READER_ISO_15693;
-	c.arg[0] = atoi(str);
-	SendCommand(&c, false);
+	UsbCommand c={CMD_READER_ISO_15693, {strtol(str, NULL, 0), 0, 0}};
+	SendCommand(&c);
 }
 
-// ## New command
 static void CmdHi15tag(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_SIMTAG_ISO_15693;
-	c.arg[0] = atoi(str);
-	SendCommand(&c, false);
+	UsbCommand c={CMD_SIMTAG_ISO_15693, {strtol(str, NULL, 0), 0, 0}};
+	SendCommand(&c);
 }
 
 static void CmdHi14read_sim(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443_SIM;
-	c.arg[0] = atoi(str);
-	SendCommand(&c, false);
+	UsbCommand c={CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443_SIM, {strtol(str, NULL, 0), 0, 0}};
+	SendCommand(&c);
 }
 
 static void CmdHi14readt(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443;
-	c.arg[0] = atoi(str);
-	SendCommand(&c, false);
+	UsbCommand c={CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443, {strtol(str, NULL, 0), 0, 0}};
+	SendCommand(&c);
 
 	//CmdHisamplest(str);
-	while(CmdHisamplest(str,atoi(str))==0) {
-		c.cmd = CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443;
-		c.arg[0] = atoi(str);
-		SendCommand(&c, false);
+	while(CmdHisamplest(str,strtol(str, NULL, 0))==0) {
+		SendCommand(&c);
 	}
 	RepaintGraphWindow();
 }
 
 static void CmdHisimlisten(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_SIMULATE_TAG_HF_LISTEN;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_SIMULATE_TAG_HF_LISTEN};
+	SendCommand(&c);
 }
 
 static void CmdHi14sim(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_SIMULATE_TAG_ISO_14443;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_SIMULATE_TAG_ISO_14443};
+	SendCommand(&c);
 }
 
 static void CmdHi14asim(char *str)	// ## simulate iso14443a tag
@@ -205,54 +179,45 @@ static void CmdHi14asim(char *str)	// ## simulate iso14443a tag
 
 	unsigned int hi=0, lo=0;
 	int n=0, i=0;
-	UsbCommand c;
-
 	while (sscanf(&str[i++], "%1x", &n ) == 1) {
 		hi=(hi<<4)|(lo>>28);
 		lo=(lo<<4)|(n&0xf);
 	}
 
-	c.cmd = CMD_SIMULATE_TAG_ISO_14443a;
-	// c.ext should be set to *str or convert *str to the correct format for a uid
-	c.arg[0] = hi;
-	c.arg[1] = lo;
+	// c.arg should be set to *str or convert *str to the correct format for a uid
+	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a, {hi, lo, 0}};
 	PrintToScrollback("Emulating 14443A TAG with UID %x%16x", hi, lo);
-	SendCommand(&c, false);
+	SendCommand(&c);
 }
 
 static void CmdHi14snoop(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_SNOOP_ISO_14443;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_SNOOP_ISO_14443};
+	SendCommand(&c);
 }
 
 static void CmdHi14asnoop(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_SNOOP_ISO_14443a;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_SNOOP_ISO_14443a};
+	SendCommand(&c);
 }
 
 static void CmdLegicRfSim(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_SIMULATE_TAG_LEGIC_RF;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_SIMULATE_TAG_LEGIC_RF};
+	SendCommand(&c);
 }
 
 static void CmdLegicRfRead(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_READER_LEGIC_RF;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_READER_LEGIC_RF};
+	SendCommand(&c);
 }
 
 static void CmdFPGAOff(char *str)		// ## FPGA Control
 {
-	UsbCommand c;
-	c.cmd = CMD_FPGA_MAJOR_MODE_OFF;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_FPGA_MAJOR_MODE_OFF};
+	SendCommand(&c);
 }
 
 /* clear out our graph window */
@@ -683,39 +648,33 @@ static void ChkBitstream(char *str)
 static void CmdLosim(char *str)
 {
 	int i;
-	UsbCommand c;
 
 	/* convert to bitstream if necessary */
 	ChkBitstream(str);
 
 	for (i = 0; i < GraphTraceLen; i += 48) {
-		UsbCommand c;
+		UsbCommand c={CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
 		int j;
 		for(j = 0; j < 48; j++) {
 			c.d.asBytes[j] = GraphBuffer[i+j];
 		}
-		c.cmd = CMD_DOWNLOADED_SIM_SAMPLES_125K;
-		c.arg[0] = i;
-		SendCommand(&c, false);
+		SendCommand(&c);
 	}
 
-	c.cmd = CMD_SIMULATE_TAG_125K;
-	c.arg[0] = GraphTraceLen;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_SIMULATE_TAG_125K, {GraphTraceLen, 0, 0}};
+	SendCommand(&c);
 }
 
 static void CmdLosimBidir(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_LF_SIMULATE_BIDIR;
-	c.arg[0] = 47; /* Set ADC to twice the carrier for a slight supersampling */
-	c.arg[1] = 384;
-	SendCommand(&c, false);
+	/* Set ADC to twice the carrier for a slight supersampling */
+	UsbCommand c={CMD_LF_SIMULATE_BIDIR, {47, 384, 0}};
+	SendCommand(&c);
 }
 
 static void CmdLoread(char *str)
 {
-	UsbCommand c;
+	UsbCommand c={CMD_ACQUIRE_RAW_ADC_SAMPLES_125K};
 	// 'h' means higher-low-frequency, 134 kHz
 	if(*str == 'h') {
 		c.arg[0] = 1;
@@ -725,13 +684,12 @@ static void CmdLoread(char *str)
 		PrintToScrollback("use 'loread' or 'loread h'");
 		return;
 	}
-	c.cmd = CMD_ACQUIRE_RAW_ADC_SAMPLES_125K;
-	SendCommand(&c, false);
+	SendCommand(&c);
 }
 
 static void CmdDetectReader(char *str)
 {
-	UsbCommand c;
+	UsbCommand c={CMD_LISTEN_READER_FIELD};
 	// 'l' means LF - 125/134 kHz
 	if(*str == 'l') {
 		c.arg[0] = 1;
@@ -741,51 +699,42 @@ static void CmdDetectReader(char *str)
 		PrintToScrollback("use 'detectreader' or 'detectreader l' or 'detectreader h'");
 		return;
 	}
-	c.cmd = CMD_LISTEN_READER_FIELD;
-	 SendCommand(&c, false);
+	SendCommand(&c);
 }
 
 /* send a command before reading */
 static void CmdLoCommandRead(char *str)
 {
 	static char dummy[3];
-	UsbCommand c;
 
 	dummy[0]= ' ';
 
-	c.cmd = CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K;
+	UsbCommand c={CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K};
 	sscanf(str, "%i %i %i %s %s", &c.arg[0], &c.arg[1], &c.arg[2], (char *) &c.d.asBytes,(char *) &dummy+1);
 	// in case they specified 'h'
 	strcpy((char *)&c.d.asBytes + strlen((char *)c.d.asBytes), dummy);
-	SendCommand(&c, false);
+	SendCommand(&c);
 }
 
 static void CmdLosamples(char *str)
 {
 	int cnt = 0;
-	int i;
-	int n;
-	int j;
+	int i, j, n;
 
-	n=atoi(str);
+	n=strtol(str, NULL, 0);
 	if (n==0) n=128;
 	if (n>16000) n=16000;
 
+	PrintToScrollback("Reading %d samples\n", n);
 	for(i = 0; i < n; i += 12) {
-		UsbCommand c;
-		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.arg[0] = i;
-		SendCommand(&c, false);
-		ReceiveCommand(&c);
-		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
-			if (!go)
-				PrintToScrollback("bad resp");
-			return;
-		}
+		UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
+		SendCommand(&c);
+		wait_for_response(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
 		for(j = 0; j < 48; j++) {
-			GraphBuffer[cnt++] = ((int)c.d.asBytes[j]) - 128;
+			GraphBuffer[cnt++] = ((int)sample_buf[j]) - 128;
 		}
 	}
+	PrintToScrollback("Done!\n");
 	GraphTraceLen = n*4;
 	RepaintGraphWindow();
 }
@@ -793,24 +742,17 @@ static void CmdLosamples(char *str)
 static void CmdBitsamples(char *str)
 {
 	int cnt = 0;
-	int i;
-	int n;
-	int j, k;
+	int i, j, k, n;
 
 	n = 3072;
 	for(i = 0; i < n; i += 12) {
-		UsbCommand c;
-		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.arg[0] = i;
-		SendCommand(&c, false);
-		ReceiveCommand(&c);
-		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
-			PrintToScrollback("bad resp");
-			return;
-		}
+		UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
+		SendCommand(&c);
+		wait_for_response(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+
 		for(j = 0; j < 48; j++) {
 			for(k = 0; k < 8; k++) {
-				if(c.d.asBytes[j] & (1 << (7 - k))) {
+				if(sample_buf[j] & (1 << (7 - k))) {
 					GraphBuffer[cnt++] = 1;
 				} else {
 					GraphBuffer[cnt++] = 0;
@@ -825,26 +767,19 @@ static void CmdBitsamples(char *str)
 static void CmdHisamples(char *str)
 {
 	int cnt = 0;
-	int i;
-	int n;
-	int j;
+	int i, j, n;
+
 	n = 1000;
 	for(i = 0; i < n; i += 12) {
-		UsbCommand c;
-		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.arg[0] = i;
-		SendCommand(&c, false);
-		ReceiveCommand(&c);
-		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
-			PrintToScrollback("bad resp");
-			return;
-		}
+		UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
+		SendCommand(&c);
+		wait_for_response(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
 		for(j = 0; j < 48; j++) {
-			GraphBuffer[cnt++] = (int)((uint8_t)c.d.asBytes[j]);
+			GraphBuffer[cnt++] = (int)(sample_buf[j]);
 		}
 	}
-	GraphTraceLen = n*4;
 
+	GraphTraceLen = n*4;
 	RepaintGraphWindow();
 }
 
@@ -852,27 +787,18 @@ static int CmdHisamplest(char *str, int nrlow)
 {
 	int cnt = 0;
 	int t1, t2;
-	int i;
-	int n;
+	int i, j, n;
 	int hasbeennull;
 	int show;
-	int j;
-
 
 	n = 1000;
 	hasbeennull = 0;
 	for(i = 0; i < n; i += 12) {
-		UsbCommand c;
-		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.arg[0] = i;
-		SendCommand(&c, false);
-		ReceiveCommand(&c);
-		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
-			PrintToScrollback("bad resp");
-			return 0;
-		}
+		UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
+		SendCommand(&c);
+		wait_for_response(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
 		for(j = 0; j < 48; j++) {
-			t2 = (int)((uint8_t)c.d.asBytes[j]);
+			t2 = (int)(sample_buf[j]);
 			if((t2 ^ 0xC0) & 0xC0) { hasbeennull++; }
 
 			show = 0;
@@ -920,46 +846,38 @@ static int CmdHisamplest(char *str, int nrlow)
 
 static void CmdHexsamples(char *str)
 {
-	int i;
-	int n;
-	int requested = atoi(str);
+	int i, j, n;
+	int requested = strtol(str, NULL, 0);
 	int delivered = 0;
-	int j;
 
-	if(atoi(str) == 0) {
+	if (requested == 0) {
 		n = 12;
 		requested = 12;
 	} else {
-		n = atoi(str)/4;
+		n = requested/4;
 	}
 
 	for(i = 0; i < n; i += 12) {
-		UsbCommand c;
-		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.arg[0] = i;
-		SendCommand(&c, false);
-		ReceiveCommand(&c);
-		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
-			PrintToScrollback("bad resp");
-			return;
-		}
-		for(j = 0; j < 48; j += 8) {
+		UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
+		SendCommand(&c);
+		wait_for_response(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+		for (j = 0; j < 48; j += 8) {
 			PrintToScrollback("%02x %02x %02x %02x %02x %02x %02x %02x",
-				c.d.asBytes[j+0],
-				c.d.asBytes[j+1],
-				c.d.asBytes[j+2],
-				c.d.asBytes[j+3],
-				c.d.asBytes[j+4],
-				c.d.asBytes[j+5],
-				c.d.asBytes[j+6],
-				c.d.asBytes[j+7],
-				c.d.asBytes[j+8]
+				sample_buf[j+0],
+				sample_buf[j+1],
+				sample_buf[j+2],
+				sample_buf[j+3],
+				sample_buf[j+4],
+				sample_buf[j+5],
+				sample_buf[j+6],
+				sample_buf[j+7],
+				sample_buf[j+8]
 			);
 			delivered += 8;
-			if(delivered >= requested)
+			if (delivered >= requested)
 				break;
 		}
-		if(delivered >= requested)
+		if (delivered >= requested)
 			break;
 	}
 }
@@ -967,28 +885,21 @@ static void CmdHexsamples(char *str)
 static void CmdHisampless(char *str)
 {
 	int cnt = 0;
-	int i;
-	int n;
-	int j;
+	int i, j;
+	int n = strtol(str, NULL, 0);
 
-	if(atoi(str) == 0) {
+	if(n == 0) {
 		n = 1000;
 	} else {
-		n = atoi(str)/4;
+		n/= 4;
 	}
 
 	for(i = 0; i < n; i += 12) {
-		UsbCommand c;
-		c.cmd = CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K;
-		c.arg[0] = i;
-		SendCommand(&c, false);
-		ReceiveCommand(&c);
-		if(c.cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
-			PrintToScrollback("bad resp");
-			return;
-		}
+		UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
+		SendCommand(&c);
+		wait_for_response(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
 		for(j = 0; j < 48; j++) {
-			GraphBuffer[cnt++] = (int)((signed char)c.d.asBytes[j]);
+			GraphBuffer[cnt++] = (int)(sample_buf[j]);
 		}
 	}
 	GraphTraceLen = cnt;
@@ -1022,7 +933,6 @@ static void CmdHi14bdemod(char *str)
 	int isum, qsum;
 	int outOfWeakAt;
 	bool negateI, negateQ;
-	uint8_t first, second;
 
 	uint8_t data[256];
 	int dataLen=0;
@@ -1080,13 +990,13 @@ static void CmdHi14bdemod(char *str)
 	PrintToScrollback("make it to demod loop");
 
 	for(;;) {
-		uint16_t shiftReg = 0;
 		iold = i;
 		while(GraphBuffer[i] >= 0 && i < GraphTraceLen)
 			i++;
 		if(i >= GraphTraceLen) goto demodError;
 		if((i - iold) > 6) goto demodError;
 
+		uint16_t shiftReg = 0;
 		if(i + 20 >= GraphTraceLen) goto demodError;
 
 		for(j = 0; j < 10; j++) {
@@ -1121,6 +1031,7 @@ static void CmdHi14bdemod(char *str)
 		}
 	}
 
+	uint8_t first, second;
 	ComputeCrc14443(CRC_14443_B, data, dataLen-2, &first, &second);
 	PrintToScrollback("CRC: %02x %02x (%s)\n", first, second,
 		(first == data[dataLen-2] && second == data[dataLen-1]) ?
@@ -1137,33 +1048,31 @@ demodError:
 static void CmdHi14list(char *str)
 {
 	uint8_t got[960];
-	int i = 0;
-	int prev = -1;
 	GetFromBigBuf(got, sizeof(got));
 
 	PrintToScrollback("recorded activity:");
 	PrintToScrollback(" time	:rssi: who bytes");
 	PrintToScrollback("---------+----+----+-----------");
 
-	for(i=0; i<900;) {
+	int i = 0;
+	int prev = -1;
+
+	for(;;) {
+		if(i >= 900) {
+			break;
+		}
+
 		bool isResponse;
-		int len = got[i+8];
-		int metric = *((uint32_t *)(got+i+4));
-
 		int timestamp = *((uint32_t *)(got+i));
-		uint8_t *frame = (got+i+9);
-		char *crc;
-		char metricString[100];
-
-		char line[1000] = "";
-		int j;
-
 		if(timestamp & 0x80000000) {
 			timestamp &= 0x7fffffff;
 			isResponse = 1;
 		} else {
 			isResponse = 0;
 		}
+		int metric = *((uint32_t *)(got+i+4));
+
+		int len = got[i+8];
 
 		if(len > 100) {
 			break;
@@ -1172,10 +1081,15 @@ static void CmdHi14list(char *str)
 			break;
 		}
 
+		uint8_t *frame = (got+i+9);
+
+		char line[1000] = "";
+		int j;
 		for(j = 0; j < len; j++) {
 			sprintf(line+(j*3), "%02x  ", frame[j]);
 		}
 
+		char *crc;
 		if(len > 2) {
 			uint8_t b1, b2;
 			ComputeCrc14443(CRC_14443_B, frame, len-2, &b1, &b2);
@@ -1188,6 +1102,7 @@ static void CmdHi14list(char *str)
 			crc = "(SHORT)";
 		}
 
+		char metricString[100];
 		if(isResponse) {
 			sprintf(metricString, "%3d", metric);
 		} else {
@@ -1207,27 +1122,22 @@ static void CmdHi14list(char *str)
 static void CmdHi14alist(char *str)
 {
 	uint8_t got[1920];
-	int i = 0;
-	int prev = -1;
-
 	GetFromBigBuf(got, sizeof(got));
 
 	PrintToScrollback("recorded activity:");
 	PrintToScrollback(" ETU     :rssi: who bytes");
 	PrintToScrollback("---------+----+----+-----------");
 
-	for(i=0;i<1900;) {
+	int i = 0;
+	int prev = -1;
+
+	for(;;) {
+		if(i >= 1900) {
+			break;
+		}
+
 		bool isResponse;
 		int timestamp = *((uint32_t *)(got+i));
-		int metric = 0;
-		int parityBits = *((uint32_t *)(got+i+4));
-		int len = got[i+8];
-		char line[1000] = "";
-		int j;
-		uint8_t *frame = (got+i+9);
-		const char *crc;
-		char metricString[100];
-
 		if(timestamp & 0x80000000) {
 			timestamp &= 0x7fffffff;
 			isResponse = 1;
@@ -1235,6 +1145,8 @@ static void CmdHi14alist(char *str)
 			isResponse = 0;
 		}
 
+		int metric = 0;
+		int parityBits = *((uint32_t *)(got+i+4));
 		// 4 bytes of additional information...
 		// maximum of 32 additional parity bit information
 		//
@@ -1243,6 +1155,8 @@ static void CmdHi14alist(char *str)
 		// or each half bit period in 256 levels.
 
 
+		int len = got[i+8];
+
 		if(len > 100) {
 			break;
 		}
@@ -1250,9 +1164,13 @@ static void CmdHi14alist(char *str)
 			break;
 		}
 
+		uint8_t *frame = (got+i+9);
+
 		// Break and stick with current result if buffer was not completely full
 		if(frame[0] == 0x44 && frame[1] == 0x44 && frame[3] == 0x44) { break; }
 
+		char line[1000] = "";
+		int j;
 		for(j = 0; j < len; j++) {
 			int oddparity = 0x01;
 			int k;
@@ -1270,6 +1188,7 @@ static void CmdHi14alist(char *str)
 			}
 		}
 
+		char *crc;
 		crc = "";
 		if(len > 2) {
 			uint8_t b1, b2;
@@ -1309,6 +1228,7 @@ static void CmdHi14alist(char *str)
 			crc = ""; // SHORT
 		}
 
+		char metricString[100];
 		if(isResponse) {
 			sprintf(metricString, "%3d", metric);
 		} else {
@@ -1378,9 +1298,6 @@ static void CmdHi15demod(char *str)
 	int max = 0, maxPos;
 
 	int skip = 4;
-	int k = 0;
-	uint8_t outBuf[20];
-	uint8_t mask = 0x01;
 
 	if(GraphTraceLen < 1000) return;
 
@@ -1399,7 +1316,10 @@ static void CmdHi15demod(char *str)
 		max/(arraylen(FrameSOF)/skip));
 
 	i = maxPos + arraylen(FrameSOF)/skip;
+	int k = 0;
+	uint8_t outBuf[20];
 	memset(outBuf, 0, sizeof(outBuf));
+	uint8_t mask = 0x01;
 	for(;;) {
 		int corr0 = 0, corr1 = 0, corrEOF = 0;
 		for(j = 0; j < arraylen(Logic0); j += skip) {
@@ -1471,8 +1391,6 @@ static void CmdFSKdemod(char *cmdline)
 
 	int i, j;
 	int minMark=0, maxMark=0;
-	int max = 0, maxPos = 0;
-	uint8_t bits[46];
 
 	for(i = 0; i < GraphTraceLen - convLen; i++) {
 		int lowSum = 0, highSum = 0;
@@ -1508,6 +1426,7 @@ static void CmdFSKdemod(char *cmdline)
 	RepaintGraphWindow();
 
 	// Find bit-sync (3 lo followed by 3 high)
+	int max = 0, maxPos = 0;
 	for(i = 0; i < 6000; i++) {
 		int dec = 0;
 		for(j = 0; j < 3*lowLen; j++) {
@@ -1535,6 +1454,7 @@ static void CmdFSKdemod(char *cmdline)
 	PrintToScrollback("actual data bits start at sample %d", maxPos);
 	PrintToScrollback("length %d/%d", highLen, lowLen);
 
+	uint8_t bits[46];
 	bits[sizeof(bits)-1] = '\0';
 
 	// find bit pairs and manchester decode them
@@ -1569,24 +1489,22 @@ static void CmdFSKdemod(char *cmdline)
 // read a TI tag and return its ID
 static void CmdTIRead(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_READ_TI_TYPE;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_READ_TI_TYPE};
+	SendCommand(&c);
 }
 
 // write new data to a r/w TI tag
 static void CmdTIWrite(char *str)
 {
-	UsbCommand c;
+	UsbCommand c={CMD_WRITE_TI_TYPE};
 	int res=0;
 
-	c.cmd = CMD_WRITE_TI_TYPE;
 	res = sscanf(str, "0x%x 0x%x 0x%x ", &c.arg[0], &c.arg[1], &c.arg[2]);
 	if (res == 2) c.arg[2]=0;
 	if (res<2)
 		PrintToScrollback("Please specify the data as two hex strings, optionally the CRC as a third");
 	else
-		SendCommand(&c, false);
+		SendCommand(&c);
 }
 
 static void CmdTIDemod(char *cmdline)
@@ -1650,12 +1568,8 @@ h = sign(sin(cumsum(h)));
 	int convLen = (highLen>lowLen)?highLen:lowLen;
 	uint16_t crc;
 	int i, j, TagType;
-	int lowSum = 0, highSum = 0;
+	int lowSum = 0, highSum = 0;;
 	int lowTot = 0, highTot = 0;
-	int max = 0, maxPos = 0;
-	uint8_t bits[1+64+16+8+16];
-	uint32_t shift3 = 0x7e000000, shift2 = 0, shift1 = 0, shift0 = 0;
-
 
 	for(i = 0; i < GraphTraceLen - convLen; i++) {
 		lowSum = 0;
@@ -1705,6 +1619,7 @@ h = sign(sin(cumsum(h)));
 	// Okay, so now we have unsliced soft decisions;
 	// find bit-sync, and then get some bits.
 	// look for 17 low bits followed by 6 highs (common pattern for ro and rw tags)
+	int max = 0, maxPos = 0;
 	for(i = 0; i < 6000; i++) {
 		int j;
 		int dec = 0;
@@ -1740,7 +1655,10 @@ h = sign(sin(cumsum(h)));
 
 	PrintToScrollback("length %d/%d", highLen, lowLen);
 
+	uint8_t bits[1+64+16+8+16];
 	bits[sizeof(bits)-1] = '\0';
+
+	uint32_t shift3 = 0x7e000000, shift2 = 0, shift1 = 0, shift0 = 0;
 
 	for(i = 0; i < arraylen(bits)-1; i++) {
 		int high = 0;
@@ -1911,12 +1829,12 @@ static void CmdHpf(char *str)
 static void CmdZerocrossings(char *str)
 {
 	int i;
-	int sign = 1;
-	int zc = 0;
-	int lastZc = 0;
 	// Zero-crossings aren't meaningful unless the signal is zero-mean.
 	CmdHpf("");
 
+	int sign = 1;
+	int zc = 0;
+	int lastZc = 0;
 	for(i = 0; i < GraphTraceLen; i++) {
 		if(GraphBuffer[i]*sign >= 0) {
 			// No change in sign, reproduce the previous sample count.
@@ -1966,7 +1884,6 @@ static void CmdLtrim(char *str)
 static void CmdAutoCorr(char *str)
 {
 	static int CorrelBuffer[MAX_GRAPH_TRACE_LEN];
-	int i;
 
 	int window = atoi(str);
 
@@ -1983,6 +1900,7 @@ static void CmdAutoCorr(char *str)
 
 	PrintToScrollback("performing %d correlations", GraphTraceLen - window);
 
+	int i;
 	for(i = 0; i < GraphTraceLen - window; i++) {
 		int sum = 0;
 		int j;
@@ -2018,10 +1936,6 @@ static void CmdVchdemod(char *str)
 	// So first, we correlate for the sync pattern, and mark that.
 	int bestCorrel = 0, bestPos = 0;
 	int i;
-	char bits[257];
-	int worst = INT_MAX;
-	int worstPos;
-
 	// It does us no good to find the sync pattern, with fewer than
 	// 2048 samples after it...
 	for(i = 0; i < (GraphTraceLen-2048); i++) {
@@ -2037,7 +1951,11 @@ static void CmdVchdemod(char *str)
 	}
 	PrintToScrollback("best sync at %d [metric %d]", bestPos, bestCorrel);
 
+	char bits[257];
 	bits[256] = '\0';
+
+	int worst = INT_MAX;
+	int worstPos;
 
 	for(i = 0; i < 2048; i += 8) {
 		int sum = 0;
@@ -2060,8 +1978,8 @@ static void CmdVchdemod(char *str)
 	PrintToScrollback("worst metric: %d at pos %d", worst, worstPos);
 
 	if(strcmp(str, "clone")==0) {
-		char *s;
 		GraphTraceLen = 0;
+		char *s;
 		for(s = bits; *s; s++) {
 			int j;
 			for(j = 0; j < 16; j++) {
@@ -2079,20 +1997,11 @@ static void CmdIndalademod(char *str)
 	int state = -1;
 	int count = 0;
 	int i, j;
-	int uidlen, long_wait;
 	// worst case with GraphTraceLen=64000 is < 4096
 	// under normal conditions it's < 2048
 	uint8_t rawbits[4096];
 	int rawbit = 0;
 	int worst = 0, worstPos = 0;
-	int start;
-	int first = 0;
-	uint8_t bits[224];
-	char showbits[225];
-	int bit;
-	int times = 0;
-	int phase = 0;
-
 	PrintToScrollback("Expecting a bit less than %d raw bits", GraphTraceLen/32);
 	for(i = 0; i < GraphTraceLen-1; i += 2) {
 		count+=1;
@@ -2126,6 +2035,7 @@ static void CmdIndalademod(char *str)
 	PrintToScrollback("worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
 
 	// Finding the start of a UID
+	int uidlen, long_wait;
 	if(strcmp(str, "224") == 0) {
 		uidlen=224;
 		long_wait=30;
@@ -2133,6 +2043,8 @@ static void CmdIndalademod(char *str)
 		uidlen=64;
 		long_wait=29;
 	}
+	int start;
+	int first = 0;
 	for(start = 0; start <= rawbit - uidlen; start++) {
 		first = rawbits[start];
 		for(i = start; i < start + long_wait; i++) {
@@ -2157,8 +2069,12 @@ static void CmdIndalademod(char *str)
 	}
 
 	// Dumping UID
+	uint8_t bits[224];
+	char showbits[225];
 	showbits[uidlen]='\0';
+	int bit;
 	i = start;
+	int times = 0;
 	if(uidlen > rawbit) {
 		PrintToScrollback("Warning: not enough raw bits to get a full UID");
 		for(bit = 0; bit < rawbit; bit++) {
@@ -2197,13 +2113,14 @@ static void CmdIndalademod(char *str)
 	// Remodulating for tag cloning
 	GraphTraceLen = 32*uidlen;
 	i = 0;
+	int phase = 0;
 	for(bit = 0; bit < uidlen; bit++) {
-		int j;
 		if(bits[bit] == 0) {
 			phase = 0;
 		} else {
 			phase = 1;
 		}
+		int j;
 		for(j = 0; j < 32; j++) {
 			GraphBuffer[i++] = phase;
 			phase = !phase;
@@ -2216,12 +2133,6 @@ static void CmdIndalademod(char *str)
 static void CmdFlexdemod(char *str)
 {
 	int i;
-	int start;
-	uint8_t bits[64];
-
-	int bit;
-	int phase = 0;
-	
 	for(i = 0; i < GraphTraceLen; i++) {
 		if(GraphBuffer[i] < 0) {
 			GraphBuffer[i] = -1;
@@ -2231,6 +2142,7 @@ static void CmdFlexdemod(char *str)
 	}
 
 #define LONG_WAIT 100
+	int start;
 	for(start = 0; start < GraphTraceLen - LONG_WAIT; start++) {
 		int first = GraphBuffer[start];
 		for(i = start; i < start + LONG_WAIT; i++) {
@@ -2250,6 +2162,9 @@ static void CmdFlexdemod(char *str)
 	GraphBuffer[start] = 2;
 	GraphBuffer[start+1] = -2;
 
+	uint8_t bits[64];
+
+	int bit;
 	i = start;
 	for(bit = 0; bit < 64; bit++) {
 		int j;
@@ -2281,13 +2196,14 @@ static void CmdFlexdemod(char *str)
 
 	GraphTraceLen = 32*64;
 	i = 0;
+	int phase = 0;
 	for(bit = 0; bit < 64; bit++) {
-		int j;
 		if(bits[bit] == 0) {
 			phase = 0;
 		} else {
 			phase = 1;
 		}
+		int j;
 		for(j = 0; j < 32; j++) {
 			GraphBuffer[i++] = phase;
 			phase = !phase;
@@ -2538,16 +2454,6 @@ static void Cmdmanchesterdemod(char *str) {
 	int bitidx = 0;
 	int bit2idx = 0;
 	int warnings = 0;
-	int tolerance;
-	/* Holds the decoded bitstream: each clock period contains 2 bits       */
-	/* later simplified to 1 bit after manchester decoding.                 */
-	/* Add 10 bits to allow for noisy / uncertain traces without aborting   */
-	/* int BitStream[GraphTraceLen*2/clock+10]; */
-
-	/* But it does not work if compiling on WIndows: therefore we just allocate a */
-	/* large array */
-	int BitStream[MAX_GRAPH_TRACE_LEN];
-
 
 	/* check if we're inverting output */
  	if(*str == 'i')
@@ -2558,6 +2464,15 @@ static void Cmdmanchesterdemod(char *str) {
 			++str;
 		while(*str == ' '); // in case a 2nd argument was given
 	}
+
+	/* Holds the decoded bitstream: each clock period contains 2 bits       */
+	/* later simplified to 1 bit after manchester decoding.                 */
+	/* Add 10 bits to allow for noisy / uncertain traces without aborting   */
+	/* int BitStream[GraphTraceLen*2/clock+10]; */
+
+	/* But it does not work if compiling on WIndows: therefore we just allocate a */
+	/* large array */
+	int BitStream[MAX_GRAPH_TRACE_LEN];
 
 	/* Detect high and lows */
 	for (i = 0; i < GraphTraceLen; i++)
@@ -2571,7 +2486,7 @@ static void Cmdmanchesterdemod(char *str) {
 	/* Get our clock */
 	clock = GetClock(str, high);
 
-	tolerance = clock/4;
+	int tolerance = clock/4;
 
 	/* Detect first transition */
 	/* Lo-Hi (arbitrary)       */
@@ -2725,13 +2640,13 @@ static void Cmdmanchesterdemod(char *str) {
  */
 static void CmdHiddemod(char *str)
 {
-	int i;
 	if(GraphTraceLen < 4800) {
 		PrintToScrollback("too short; need at least 4800 samples");
 		return;
 	}
 
 	GraphTraceLen = 4800;
+	int i;
 	for(i = 0; i < GraphTraceLen; i++) {
 		if(GraphBuffer[i] < 0) {
 			GraphBuffer[i] = 0;
@@ -2770,12 +2685,12 @@ static void CmdScale(char *str)
 
 static void CmdSave(char *str)
 {
-	int i;
 	FILE *f = fopen(str, "w");
 	if(!f) {
 		PrintToScrollback("couldn't open '%s'", str);
 		return;
 	}
+	int i;
 	for(i = 0; i < GraphTraceLen; i++) {
 		fprintf(f, "%d\n", GraphBuffer[i]);
 	}
@@ -2785,7 +2700,6 @@ static void CmdSave(char *str)
 
 static void CmdLoad(char *str)
 {
-	char line[80];
 	FILE *f = fopen(str, "r");
 	if(!f) {
 		PrintToScrollback("couldn't open '%s'", str);
@@ -2793,6 +2707,7 @@ static void CmdLoad(char *str)
 	}
 
 	GraphTraceLen = 0;
+	char line[80];
 	while(fgets(line, sizeof(line), f)) {
 		GraphBuffer[GraphTraceLen] = atoi(line);
 		GraphTraceLen++;
@@ -2806,7 +2721,6 @@ static void CmdHIDsimTAG(char *str)
 {
 	unsigned int hi=0, lo=0;
 	int n=0, i=0;
-	UsbCommand c;
 
 	while (sscanf(&str[i++], "%1x", &n ) == 1) {
 		hi=(hi<<4)|(lo>>28);
@@ -2815,44 +2729,36 @@ static void CmdHIDsimTAG(char *str)
 
 	PrintToScrollback("Emulating tag with ID %x%16x", hi, lo);
 
-	c.cmd = CMD_HID_SIM_TAG;
-	c.arg[0] = hi;
-	c.arg[1] = lo;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_HID_SIM_TAG, {hi, lo, 0}};
+	SendCommand(&c);
 }
 
 static void CmdReadmem(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_READ_MEM;
-	c.arg[0] = atoi(str);
-	SendCommand(&c, false);
+	UsbCommand c={CMD_READ_MEM, {strtol(str, NULL, 0), 0, 0}};
+	SendCommand(&c);
 }
 
 static void CmdVersion(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_VERSION;
-	SendCommand(&c, false);
+	UsbCommand c={CMD_VERSION};
+	SendCommand(&c);
 }
 
 static void CmdLcdReset(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_LCD_RESET;
-	c.arg[0] = atoi(str);
-	SendCommand(&c, false);
+	UsbCommand c={CMD_LCD_RESET, {strtol(str, NULL, 0), 0, 0}};
+	SendCommand(&c);
 }
 
 static void CmdLcd(char *str)
 {
 	int i, j;
-	UsbCommand c;
-	c.cmd = CMD_LCD;
+	UsbCommand c={CMD_LCD};
 	sscanf(str, "%x %d", &i, &j);
 	while (j--) {
 		c.arg[0] = i&0x1ff;
-		SendCommand(&c, false);
+		SendCommand(&c);
 	}
 }
 
@@ -2862,21 +2768,18 @@ static void CmdLcd(char *str)
  */
 static void CmdSetDivisor(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_SET_LF_DIVISOR;
-	c.arg[0] = atoi(str);
+	UsbCommand c={CMD_SET_LF_DIVISOR, {strtol(str, NULL, 0), 0, 0}};
 	if (( c.arg[0]<0) || (c.arg[0]>255)) {
 			PrintToScrollback("divisor must be between 19 and 255");
 	} else {
-			SendCommand(&c, false);
+			SendCommand(&c);
 			PrintToScrollback("Divisor set, expected freq=%dHz", 12000000/(c.arg[0]+1));
 	}
 }
 
 static void CmdSetMux(char *str)
 {
-	UsbCommand c;
-	c.cmd = CMD_SET_ADC_MUX;
+	UsbCommand c={CMD_SET_ADC_MUX};
 	if(strcmp(str, "lopkd") == 0) {
 		c.arg[0] = 0;
 	} else if(strcmp(str, "loraw") == 0) {
@@ -2886,7 +2789,7 @@ static void CmdSetMux(char *str)
 	} else if(strcmp(str, "hiraw") == 0) {
 		c.arg[0] = 3;
 	}
-	SendCommand(&c, false);
+	SendCommand(&c);
 }
 
 typedef void HandlerFunction(char *cmdline);
@@ -2898,81 +2801,81 @@ static struct {
 	int		offline;  // 1 if the command can be used when in offline mode
 	char		*docString;
 } CommandTable[] = {
-	{"amp",					CmdAmp,						1, "Amplify peaks"},
-	{"askdemod",			Cmdaskdemod,				1, "<0|1> -- Attempt to demodulate simple ASK tags"},
-	{"autocorr",			CmdAutoCorr,				1, "<window length> -- Autocorrelation over window"},
-	{"bitsamples",		CmdBitsamples,			0, "Get raw samples as bitstring"},
-	{"bitstream",			Cmdbitstream,				1, "[clock rate] -- Convert waveform into a bitstream"},
-	{"buffclear",			CmdBuffClear,				1, "Clear sample buffer and graph window"},
-	{"dec",						CmdDec,							1, "Decimate samples"},
+	{"amp",			CmdAmp,			1, "Amplify peaks"},
+	{"askdemod",		Cmdaskdemod,		1, "<0|1> -- Attempt to demodulate simple ASK tags"},
+	{"autocorr",		CmdAutoCorr,		1, "<window length> -- Autocorrelation over window"},
+	{"bitsamples",		CmdBitsamples,		0, "Get raw samples as bitstring"},
+	{"bitstream",		Cmdbitstream,		1, "[clock rate] -- Convert waveform into a bitstream"},
+	{"buffclear",		CmdBuffClear,		1, "Clear sample buffer and graph window"},
+	{"dec",			CmdDec,			1, "Decimate samples"},
 	{"detectclock",		Cmddetectclockrate,	1, "Detect clock rate"},
-	{"detectreader",	CmdDetectReader,		0, "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
-	{"em410xsim",			CmdEM410xsim,				1, "<UID> -- Simulate EM410x tag"},
-	{"em410xread",		CmdEM410xread,			1, "[clock rate] -- Extract ID from EM410x tag"},
-	{"em410xwatch",		CmdEM410xwatch,			0, "Watches for EM410x tags"},
-	{"em4x50read",		CmdEM4x50read,			1, "Extract data from EM4x50 tag"},
-	{"exit",					CmdQuit,						1, "Exit program"},
-	{"flexdemod",			CmdFlexdemod,				1, "Demodulate samples for FlexPass"},
-	{"fpgaoff",				CmdFPGAOff,					0, "Set FPGA off"},
-	{"fskdemod",			CmdFSKdemod,				1, "Demodulate graph window as a HID FSK"},
-	{"grid",					CmdGrid,						1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
-	{"hexsamples",		CmdHexsamples,			0, "<blocks> -- Dump big buffer as hex bytes"},
-	{"hi14alist",			CmdHi14alist,				0, "List ISO 14443a history"},
-	{"hi14areader",		CmdHi14areader,			0, "Act like an ISO14443 Type A reader"},
-	{"hi14asim",			CmdHi14asim,				0, "<UID> -- Fake ISO 14443a tag"},
-	{"hi14asnoop",		CmdHi14asnoop,			0, "Eavesdrop ISO 14443 Type A"},
-	{"hi14bdemod",		CmdHi14bdemod,			1, "Demodulate ISO14443 Type B from tag"},
-	{"hi14list",			CmdHi14list,				0, "List ISO 14443 history"},
-	{"hi14read",			CmdHi14read,				0, "Read HF tag (ISO 14443)"},
-	{"hi14sim",				CmdHi14sim,					0, "Fake ISO 14443 tag"},
-	{"hi14snoop",			CmdHi14snoop,				0, "Eavesdrop ISO 14443"},
-	{"hi15demod",			CmdHi15demod,				1, "Demodulate ISO15693 from tag"},
-	{"hi15read",			CmdHi15read,				0, "Read HF tag (ISO 15693)"},
-	{"hi15reader",		CmdHi15reader,			0, "Act like an ISO15693 reader"},
-	{"hi15sim",				CmdHi15tag,					0, "Fake an ISO15693 tag"},
-	{"hiddemod",			CmdHiddemod,				1, "Demodulate HID Prox Card II (not optimal)"},
-	{"hide",					CmdHide,						1, "Hide graph window"},
-	{"hidfskdemod",		CmdHIDdemodFSK,			0, "Realtime HID FSK demodulator"},
-	{"hidsimtag",			CmdHIDsimTAG,				0, "<ID> -- HID tag simulator"},
-	{"higet",					CmdHi14read_sim,		0, "<samples> -- Get samples HF, 'analog'"},
-	{"hisamples",			CmdHisamples,				0, "Get raw samples for HF tag"},
-	{"hisampless",		CmdHisampless,			0, "<samples> -- Get signed raw samples, HF tag"},
-	{"hisamplest",		CmdHi14readt,				0, "Get samples HF, for testing"},
-	{"hisimlisten",		CmdHisimlisten,			0, "Get HF samples as fake tag"},
-	{"hpf",						CmdHpf,							1, "Remove DC offset from trace"},
-	{"indalademod",		CmdIndalademod,			0, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
-	{"lcd",						CmdLcd,							0, "<HEX command> <count> -- Send command/data to LCD"},
-	{"lcdreset",			CmdLcdReset,				0, "Hardware reset LCD"},
-	{"legicrfsim",			CmdLegicRfSim,							0, "Start the LEGIC RF tag simulator"},
-	{"legicrfread",			CmdLegicRfRead,							0, "Start the LEGIC RF reader"},
-	{"load",					CmdLoad,						1, "<filename> -- Load trace (to graph window"},
-	{"locomread",			CmdLoCommandRead,		0, "<off period> <'0' period> <'1' period> <command> ['h'] -- Modulate LF reader field to send command before read (all periods in microseconds) (option 'h' for 134)"},
-	{"loread",				CmdLoread,					0, "['h'] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134)"},
-	{"losamples",			CmdLosamples,				0, "[128 - 16000] -- Get raw samples for LF tag"},
-	{"losim",					CmdLosim,						0, "Simulate LF tag"},
-	{"losimbidir",					CmdLosimBidir,						0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
-	{"ltrim",					CmdLtrim,						1, "<samples> -- Trim samples from left of trace"},
-	{"mandemod",			Cmdmanchesterdemod,	1, "[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)"},
-	{"manmod",				Cmdmanchestermod,		1, "[clock rate] -- Manchester modulate a binary stream"},
-	{"norm",					CmdNorm,						1, "Normalize max/min to +/-500"},
-	{"plot",					CmdPlot,						1, "Show graph window"},
-	{"quit",					CmdQuit,						1, "Quit program"},
-	{"readmem",				CmdReadmem,					0, "[address] -- Read memory at decimal address from flash"},
-	{"reset",					CmdReset,						0, "Reset the Proxmark3"},
-	{"save",					CmdSave,						1, "<filename> -- Save trace (from graph window)"},
-	{"scale",					CmdScale,						1, "<int> -- Set cursor display scale"},
-	{"setlfdivisor",	CmdSetDivisor,			0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
-	{"setmux",		CmdSetMux,			0, "<loraw|hiraw|lopkd|hipkd> -- Set the ADC mux to a specific value"},
-	{"sri512read",		CmdSri512read,			0, "<int> -- Read contents of a SRI512 tag"},
-	{"srix4kread",		CmdSrix4kread,			0, "<int> -- Read contents of a SRIX4K tag"},
-	{"tidemod",				CmdTIDemod,					1, "Demodulate raw bits for TI-type LF tag"},
-	{"tiread",				CmdTIRead,					0, "Read and decode a TI 134 kHz tag"},
-	{"tiwrite",				CmdTIWrite,					0, "Write new data to a r/w TI 134 kHz tag"},
-	{"threshold",			CmdThreshold,				1, "Maximize/minimize every value in the graph window depending on threshold"},
-	{"tune",					CmdTune,						0, "Measure antenna tuning"},
-	{"vchdemod",			CmdVchdemod,				0, "['clone'] -- Demodulate samples for VeriChip"},
-	{"version",			CmdVersion,				0, "Show version inforation about the connected Proxmark"},
-	{"zerocrossings",	CmdZerocrossings,		1, "Count time between zero-crossings"},
+	{"detectreader",	CmdDetectReader,	0, "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
+	{"em410xsim",		CmdEM410xsim,		1, "<UID> -- Simulate EM410x tag"},
+	{"em410xread",		CmdEM410xread,		1, "[clock rate] -- Extract ID from EM410x tag"},
+	{"em410xwatch",		CmdEM410xwatch,		0, "Watches for EM410x tags"},
+	{"em4x50read",		CmdEM4x50read,		1, "Extract data from EM4x50 tag"},
+	{"exit",		CmdQuit,		1, "Exit program"},
+	{"flexdemod",		CmdFlexdemod,		1, "Demodulate samples for FlexPass"},
+	{"fpgaoff",		CmdFPGAOff,		0, "Set FPGA off"},
+	{"fskdemod",		CmdFSKdemod,		1, "Demodulate graph window as a HID FSK"},
+	{"grid",		CmdGrid,		1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
+	{"hexsamples",		CmdHexsamples,		0, "<blocks> -- Dump big buffer as hex bytes"},
+	{"hi14alist",		CmdHi14alist,		0, "List ISO 14443a history"},
+	{"hi14areader",		CmdHi14areader,		0, "Act like an ISO14443 Type A reader"},
+	{"hi14asim",		CmdHi14asim,		0, "<UID> -- Fake ISO 14443a tag"},
+	{"hi14asnoop",		CmdHi14asnoop,		0, "Eavesdrop ISO 14443 Type A"},
+	{"hi14bdemod",		CmdHi14bdemod,		1, "Demodulate ISO14443 Type B from tag"},
+	{"hi14list",		CmdHi14list,		0, "List ISO 14443 history"},
+	{"hi14read",		CmdHi14read,		0, "Read HF tag (ISO 14443)"},
+	{"hi14sim",		CmdHi14sim,		0, "Fake ISO 14443 tag"},
+	{"hi14snoop",		CmdHi14snoop,		0, "Eavesdrop ISO 14443"},
+	{"hi15demod",		CmdHi15demod,		1, "Demodulate ISO15693 from tag"},
+	{"hi15read",		CmdHi15read,		0, "Read HF tag (ISO 15693)"},
+	{"hi15reader",		CmdHi15reader,		0, "Act like an ISO15693 reader"},
+	{"hi15sim",		CmdHi15tag,		0, "Fake an ISO15693 tag"},
+	{"hiddemod",		CmdHiddemod,		1, "Demodulate HID Prox Card II (not optimal)"},
+	{"hide",		CmdHide,		1, "Hide graph window"},
+	{"hidfskdemod",		CmdHIDdemodFSK,		0, "Realtime HID FSK demodulator"},
+	{"hidsimtag",		CmdHIDsimTAG,		0, "<ID> -- HID tag simulator"},
+	{"higet",		CmdHi14read_sim,	0, "<samples> -- Get samples HF, 'analog'"},
+	{"hisamples",		CmdHisamples,		0, "Get raw samples for HF tag"},
+	{"hisampless",		CmdHisampless,		0, "<samples> -- Get signed raw samples, HF tag"},
+	{"hisamplest",		CmdHi14readt,		0, "Get samples HF, for testing"},
+	{"hisimlisten",		CmdHisimlisten,		0, "Get HF samples as fake tag"},
+	{"hpf",			CmdHpf,			1, "Remove DC offset from trace"},
+	{"indalademod",		CmdIndalademod,		0, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
+	{"lcd",			CmdLcd,			0, "<HEX command> <count> -- Send command/data to LCD"},
+	{"lcdreset",		CmdLcdReset,		0, "Hardware reset LCD"},
+	{"legicrfsim",		CmdLegicRfSim,		0, "Start the LEGIC RF tag simulator"},
+	{"legicrfread",		CmdLegicRfRead,		0, "Start the LEGIC RF reader"},
+	{"load",		CmdLoad,		1, "<filename> -- Load trace (to graph window"},
+	{"locomread",		CmdLoCommandRead,	0, "<off period> <'0' period> <'1' period> <command> ['h'] -- Modulate LF reader field to send command before read (all periods in microseconds) (option 'h' for 134)"},
+	{"loread",		CmdLoread,		0, "['h'] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134)"},
+	{"losamples",		CmdLosamples,		0, "[128 - 16000] -- Get raw samples for LF tag"},
+	{"losim",		CmdLosim,		0, "Simulate LF tag"},
+	{"losimbidir",		CmdLosimBidir,		0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
+	{"ltrim",		CmdLtrim,		1, "<samples> -- Trim samples from left of trace"},
+	{"mandemod",		Cmdmanchesterdemod,	1, "[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)"},
+	{"manmod",		Cmdmanchestermod,	1, "[clock rate] -- Manchester modulate a binary stream"},
+	{"norm",		CmdNorm,		1, "Normalize max/min to +/-500"},
+	{"plot",		CmdPlot,		1, "Show graph window"},
+	{"quit",		CmdQuit,		1, "Quit program"},
+	{"readmem",		CmdReadmem,		0, "[address] -- Read memory at decimal address from flash"},
+	{"reset",		CmdReset,		0, "Reset the Proxmark3"},
+	{"save",		CmdSave,		1, "<filename> -- Save trace (from graph window)"},
+	{"scale",		CmdScale,		1, "<int> -- Set cursor display scale"},
+	{"setlfdivisor",	CmdSetDivisor,		0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
+	{"setmux",		CmdSetMux,		0, "<loraw|hiraw|lopkd|hipkd> -- Set the ADC mux to a specific value"},
+	{"sri512read",		CmdSri512read,		0, "<int> -- Read contents of a SRI512 tag"},
+	{"srix4kread",		CmdSrix4kread,		0, "<int> -- Read contents of a SRIX4K tag"},
+	{"tidemod",		CmdTIDemod,		1, "Demodulate raw bits for TI-type LF tag"},
+	{"tiread",		CmdTIRead,		0, "Read and decode a TI 134 kHz tag"},
+	{"tiwrite",		CmdTIWrite,		0, "Write new data to a r/w TI 134 kHz tag"},
+	{"threshold",		CmdThreshold,		1, "Maximize/minimize every value in the graph window depending on threshold"},
+	{"tune",		CmdTune,		0, "Measure antenna tuning"},
+	{"vchdemod",		CmdVchdemod,		0, "['clone'] -- Demodulate samples for VeriChip"},
+	{"version",		CmdVersion,		0, "Show version inforation about the connected Proxmark"},
+	{"zerocrossings",	CmdZerocrossings,	1, "Count time between zero-crossings"},
 };
 
 static struct {
@@ -3053,6 +2956,8 @@ void CommandReceived(char *cmd)
 //-----------------------------------------------------------------------------
 void UsbCommandReceived(UsbCommand *c)
 {
+//	printf("%s(%x) current cmd = %x\n", __FUNCTION__, c->cmd, current_command);
+/* If we recognize a response, return to avoid further processing */
 	switch(c->cmd) {
 		case CMD_DEBUG_PRINT_STRING: {
 			char s[100];
@@ -3062,12 +2967,12 @@ void UsbCommandReceived(UsbCommand *c)
 			memcpy(s, c->d.asBytes, c->arg[0]);
 			s[c->arg[0]] = '\0';
 			PrintToScrollback("#db# %s", s);
-			break;
+			return;
 		}
 
 		case CMD_DEBUG_PRINT_INTEGERS:
 			PrintToScrollback("#db# %08x, %08x, %08x\r\n", c->arg[0], c->arg[1], c->arg[2]);
-			break;
+			return;
 
 		case CMD_MEASURED_ANTENNA_TUNING: {
 			int peakv, peakf;
@@ -3091,10 +2996,23 @@ void UsbCommandReceived(UsbCommand *c)
 				PrintToScrollback("# Your HF antenna is unusable.");
 			else if (vHf<5000)
 				PrintToScrollback("# Your HF antenna is marginal.");
-			break;
+			return;
 		}
 		default:
-			PrintToScrollback("unrecognized command %08x\n", c->cmd);
 			break;
+	}
+	/* Maybe it's a response: */
+	switch(current_command) {
+		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K:
+		if (c->cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) goto unexpected_response;
+		int i;
+		for(i=0; i<48; i++) sample_buf[i] = c->d.asBytes[i];
+		printf("stored 48 samples\n");
+		received_command = c->cmd;
+		return;
+	default:
+	unexpected_response:
+		PrintToScrollback("unrecognized command %08x\n", c->cmd);
+		break;
 	}
 }

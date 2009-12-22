@@ -17,6 +17,7 @@
 
 int offline = 0;
 HANDLE UsbHandle;
+extern unsigned int current_command;
 
 static void ShowError(void)
 {
@@ -188,7 +189,7 @@ void ReceiveCommand(UsbCommand *c)
 	}
 }
 
-void SendCommand(UsbCommand *c, bool wantAck)
+void SendCommand(UsbCommand *c)
 {
 	BYTE buf[65];
 	buf[0] = 0;
@@ -212,14 +213,15 @@ void SendCommand(UsbCommand *c, bool wantAck)
 		ShowError();
 		exit(-1);
 	}
+	current_command = c->cmd;
+}
 
-	if(wantAck) {
-		UsbCommand ack;
-		ReceiveCommand(&ack);
-		if(ack.cmd != CMD_ACK) {
-			printf("bad ACK\n");
-			exit(-1);
-		}
+void WaitForAck(void) {
+	UsbCommand ack;
+	ReceiveCommand(&ack);
+	if(ack.cmd != CMD_ACK) {
+		printf("bad ACK\n");
+		exit(-1);
 	}
 }
 
@@ -255,7 +257,8 @@ static void FlushPrevious(int translate)
 		c.cmd = CMD_SETUP_WRITE;
 		memcpy(c.d.asBytes, QueuedToSend+i, 48);
 		c.arg[0] = (i/4);
-		SendCommand(&c, TRUE);
+		SendCommand(&c);
+		WaitForAck();
 	}
 
 	c.cmd = CMD_FINISH_WRITE;
@@ -265,8 +268,9 @@ static void FlushPrevious(int translate)
 	}
 	printf("Flashing address: %08x\r", c.arg[0]);
 	memcpy(c.d.asBytes, QueuedToSend+240, 16);
-	SendCommand(&c, TRUE);
-
+	SendCommand(&c);
+	WaitForAck();
+	
 	AllWritten = TRUE;
 }
 
@@ -372,7 +376,8 @@ static int PrepareFlash(struct partition *p, const char *filename, unsigned int 
 		} else {
 			c.arg[2] = 0;
 		}
-		SendCommand(&c, TRUE);
+		SendCommand(&c);
+		WaitForAck();
 		translate = 0;
 	} else {
 		fprintf(stderr, "Warning: Your bootloader does not understand the new START_FLASH command\n");
@@ -390,7 +395,7 @@ static unsigned int GetProxmarkState(void)
 
 	UsbCommand c;
 	c.cmd = CMD_DEVICE_INFO;
-	SendCommand(&c, FALSE);
+	SendCommand(&c);
 
 	UsbCommand resp;
 	ReceiveCommand(&resp);
@@ -445,13 +450,13 @@ static unsigned int EnterFlashState(void)
 			 * enter the bootrom on the next boot.
 			 */
 			c.cmd = CMD_START_FLASH;
-			SendCommand(&c, FALSE);
+			SendCommand(&c);
 			fprintf(stderr,"(You don't have to do anything. Press and release the button only if you want to abort)\n");
 			fprintf(stderr,"Waiting for Proxmark to reappear on USB... ");
 		} else {
 			/* Old style handover: Ask the user to press the button, then reset the board */
 			c.cmd = CMD_HARDWARE_RESET;
-			SendCommand(&c, FALSE);
+			SendCommand(&c);
 			fprintf(stderr,"(Press and hold down button NOW if your bootloader requires it)\n");
 			fprintf(stderr,"Waiting for Proxmark to reappear on USB... ");
 		}

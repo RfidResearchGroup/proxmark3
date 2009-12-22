@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
 #include <usb.h>
@@ -9,18 +8,20 @@
 
 #include "prox.h"
 #include "proxmark3.h"
-
+#include "../include/usb_cmd.h"
 usb_dev_handle *devh = NULL;
 static unsigned int claimed_iface = 0;
 unsigned char return_on_error = 0;
 unsigned char error_occured = 0;
+extern unsigned int current_command;
 
-void SendCommand(UsbCommand *c, bool wantAck) {
+void SendCommand(UsbCommand *c) {
 	int ret;
 
 #if 0
 	printf("Sending %d bytes\n", sizeof(UsbCommand));
 #endif
+	current_command = c->cmd;
 	ret = usb_bulk_write(devh, 0x01, (char*)c, sizeof(UsbCommand), 1000);
 	if (ret<0) {
 		error_occured = 1;
@@ -40,15 +41,19 @@ void SendCommand(UsbCommand *c, bool wantAck) {
 		
 		return;
 	}
-
+/*
 	if(wantAck) {
 		UsbCommand ack;
+		printf("waiting for ack\n");
 		ReceiveCommand(&ack);
 		if(ack.cmd != CMD_ACK) {
 			printf("bad ACK\n");
 			exit(-1);
 		}
+	} else {
+		printf("not waiting for ack\n");
 	}
+*/
 }
 
 bool ReceiveCommandPoll(UsbCommand *c) {
@@ -60,7 +65,7 @@ bool ReceiveCommandPoll(UsbCommand *c) {
 		if (ret != -ETIMEDOUT) {
 			error_occured = 1;
 			if (return_on_error)
-				return 0;
+				return false;
 
 			fprintf(stderr, "read failed: %s(%d)!\nTrying to reopen device...\n",
 				usb_strerror(), ret);
@@ -73,7 +78,7 @@ bool ReceiveCommandPoll(UsbCommand *c) {
 			printf(PROXPROMPT);
 			fflush(NULL);
 
-			return 0;
+			return false;
 		}
 	} else {
 		if (ret && (ret < sizeof(UsbCommand))) {
@@ -96,11 +101,17 @@ bool ReceiveCommandPoll(UsbCommand *c) {
 #endif
 	}
 
-	return ret > 0;
+	return ret != 0;
 }
 
 void ReceiveCommand(UsbCommand *c) {
-	while(!ReceiveCommandPoll(c)) {}
+//	printf("%s()\n", __FUNCTION__);
+	int retval = 0;
+	do {
+		retval = ReceiveCommandPoll(c);
+		if (retval != 1) printf("ReceiveCommandPoll returned %d\n", retval);
+	} while(retval<0);
+//	printf("recv %x\n", c->cmd);
 }
 
 usb_dev_handle* findProxmark(int verbose, unsigned int *iface) {

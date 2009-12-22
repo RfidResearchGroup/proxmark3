@@ -16,6 +16,16 @@ static uint32_t ExpectedAddr;
 static uint8_t QueuedToSend[256];
 static bool AllWritten;
 #define PHYSICAL_FLASH_START 0x100000
+unsigned int current_command = CMD_UNKNOWN;
+
+void WaitForAck(void) {
+	UsbCommand ack;
+	ReceiveCommand(&ack);
+	if(ack.cmd != CMD_ACK) {
+		printf("bad ACK\n");
+		exit(-1);
+	}
+}
 
 struct partition {
 	int start;
@@ -44,7 +54,8 @@ static void FlushPrevious(int translate)
 		c.cmd = CMD_SETUP_WRITE;
 		memcpy(c.d.asBytes, QueuedToSend+i, 48);
 		c.arg[0] = (i/4);
-		SendCommand(&c, true);
+		SendCommand(&c);
+		WaitForAck();
 	}
 
 	c.cmd = CMD_FINISH_WRITE;
@@ -54,7 +65,8 @@ static void FlushPrevious(int translate)
 	}
 	printf("c.arg[0] = %08x\r", c.arg[0]);
 	memcpy(c.d.asBytes, QueuedToSend+240, 16);
-	SendCommand(&c, true);
+	SendCommand(&c);
+	WaitForAck();
 
 	AllWritten = true;
 }
@@ -161,7 +173,8 @@ static int PrepareFlash(struct partition *p, const char *filename, unsigned int 
 		} else {
 			c.arg[2] = 0;
 		}
-		SendCommand(&c, true);
+		SendCommand(&c);
+		WaitForAck();
 		translate = 0;
 	} else {
 		fprintf(stderr, "Warning: Your bootloader does not understand the new START_FLASH command\n");
@@ -179,7 +192,7 @@ static unsigned int GetProxmarkState(void)
 	
 	UsbCommand c;
 	c.cmd = CMD_DEVICE_INFO;
-	SendCommand(&c, false);
+	SendCommand(&c);
 	
 	UsbCommand resp;
 	ReceiveCommand(&resp);
@@ -234,13 +247,13 @@ static unsigned int EnterFlashState(void)
 			 * enter the bootrom on the next boot.
 			 */
 			c.cmd = CMD_START_FLASH;
-			SendCommand(&c, false);
+			SendCommand(&c);
 			fprintf(stderr,"(You don't have to do anything. Press and release the button only if you want to abort)\n");
 			fprintf(stderr,"Waiting for Proxmark to reappear on USB... ");
 		} else {
 			/* Old style handover: Ask the user to press the button, then reset the board */
 			c.cmd = CMD_HARDWARE_RESET;
-			SendCommand(&c, false);
+			SendCommand(&c);
 			fprintf(stderr,"(Press and hold down button NOW if your bootloader requires it)\n");
 			fprintf(stderr,"Waiting for Proxmark to reappear on USB... ");
 		}
@@ -346,7 +359,7 @@ int main(int argc, char **argv) {
 	UsbCommand c;
 	bzero(&c, sizeof(c));
 	c.cmd = CMD_HARDWARE_RESET;
-	SendCommand(&c, false);
+	SendCommand(&c);
 
 	CloseProxmark();
 

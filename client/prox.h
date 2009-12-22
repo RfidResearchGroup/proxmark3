@@ -14,7 +14,8 @@ typedef WORD uint16_t;
 // prox.cpp
 void ReceiveCommand(UsbCommand *c);
 bool ReceiveCommandPoll(UsbCommand *c);
-void SendCommand(UsbCommand *c, bool);
+void SendCommand(UsbCommand *c);
+void WaitForAck(void);
 void wait_for_response(uint32_t command_type);
 
 // gui.cpp
