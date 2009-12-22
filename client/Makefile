@@ -23,7 +23,7 @@ all-static: snooper cli flasher
 proxmark3: LDLIBS+=$(QTLDLIBS)
 proxmark3: proxmark3.o gui.o command.o usb.o $(QTGUI)
 
-command.o: ../winsrc/command.cpp translate.h
+command.o: command.cpp translate.h
 
 snooper: snooper.o gui.o command.o usb.o guidummy.o
 

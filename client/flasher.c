@@ -8,7 +8,7 @@
 #include <ctype.h>
 
 #include "translate.h"
-#include "../winsrc/prox.h"
+#include "prox.h"
 #include "proxmark3.h"
 
 static DWORD ExpectedAddr;

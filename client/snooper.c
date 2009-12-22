@@ -7,7 +7,7 @@
 #include <errno.h>
 
 #include "translate.h"
-#include "../winsrc/prox.h"
+#include "prox.h"
 #include "proxmark3.h"
 
 #define HANDLE_ERROR if (error_occured) { \
@@ -15,22 +15,10 @@
 	break;\
 }
 
-int main(int argc, char **argv)
+int main()
 {
-	if(argc != 3 && argc != 4)
-		{
-		printf("\n\tusage: cli <command 1> <command 2> [logfile (default cli.log)]\n");
-		printf("\n");
-		printf("\texample: cli hi14asnoop hi14alist h14a.log\n");
-		printf("\n");
-		return -1;
-		}
-
 	usb_init();
-	if (argc == 4)
-		setlogfilename(argv[3]);
-	else
-		setlogfilename("cli.log");
+	setlogfilename("snooper.log");
 
 	return_on_error = 1;
 
@@ -41,7 +29,7 @@ int main(int argc, char **argv)
 			UsbCommand cmdbuf;
 			int i;
 
-			CommandReceived(argv[1]);
+			CommandReceived("hi14asnoop");
 			HANDLE_ERROR
 
 			ReceiveCommand(&cmdbuf);
@@ -51,7 +39,7 @@ int main(int argc, char **argv)
 			}
 			HANDLE_ERROR
 
-			CommandReceived(argv[2]);
+			CommandReceived("hi14alist");
 			HANDLE_ERROR
 		}
 	}

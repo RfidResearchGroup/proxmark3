@@ -4,7 +4,7 @@
 
 #include "proxgui.h"
 #include "translate.h"
-#include "../winsrc/prox.h"
+#include "prox.h"
 
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 int GraphTraceLen;
