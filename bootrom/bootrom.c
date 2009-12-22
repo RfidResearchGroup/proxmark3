@@ -83,9 +83,9 @@ void UsbPacketReceived(BYTE *packet, int len)
         case CMD_DEVICE_INFO:
             dont_ack = 1;
             c->cmd = CMD_DEVICE_INFO;
-            c->ext1 = DEVICE_INFO_FLAG_BOOTROM_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
+            c->arg[0] = DEVICE_INFO_FLAG_BOOTROM_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
                 DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH;
-            if(common_area.flags.osimage_present) c->ext1 |= DEVICE_INFO_FLAG_OSIMAGE_PRESENT;
+            if(common_area.flags.osimage_present) c->arg[0] |= DEVICE_INFO_FLAG_OSIMAGE_PRESENT;
             UsbSendPacket(packet, len);
             break;
 
@@ -95,7 +95,7 @@ void UsbPacketReceived(BYTE *packet, int len)
              */
             p = (volatile DWORD *)&_flash_start;
             for(i = 0; i < 12; i++) {
-                p[i+c->ext1] = c->d.asDwords[i];
+                p[i+c->arg[0]] = c->d.asDwords[i];
             }
             break;
 
@@ -106,7 +106,7 @@ void UsbPacketReceived(BYTE *packet, int len)
             }
 
             /* Check that the address that we are supposed to write to is within our allowed region */
-            if( ((c->ext1+AT91C_IFLASH_PAGE_SIZE-1) >= end_addr) || (c->ext1 < start_addr) ) {
+            if( ((c->arg[0]+AT91C_IFLASH_PAGE_SIZE-1) >= end_addr) || (c->arg[0] < start_addr) ) {
                 /* Disallow write */
                 dont_ack = 1;
                 c->cmd = CMD_NACK;
@@ -114,7 +114,7 @@ void UsbPacketReceived(BYTE *packet, int len)
             } else {
                 /* Translate address to flash page and do flash, update here for the 512k part */
                 AT91C_BASE_EFC0->EFC_FCR = MC_FLASH_COMMAND_KEY |
-                    MC_FLASH_COMMAND_PAGEN((c->ext1-(int)&_flash_start)/AT91C_IFLASH_PAGE_SIZE) |
+                    MC_FLASH_COMMAND_PAGEN((c->arg[0]-(int)&_flash_start)/AT91C_IFLASH_PAGE_SIZE) |
                     AT91C_MC_FCMD_START_PROG;
             }
             while(!(AT91C_BASE_EFC0->EFC_FSR & MC_FLASH_STATUS_READY))
@@ -127,15 +127,15 @@ void UsbPacketReceived(BYTE *packet, int len)
             break;
 
         case CMD_START_FLASH:
-            if(c->ext3 == START_FLASH_MAGIC) bootrom_unlocked = 1;
+            if(c->arg[2] == START_FLASH_MAGIC) bootrom_unlocked = 1;
             else bootrom_unlocked = 0;
             {
                 int prot_start = (int)&_bootrom_start;
                 int prot_end = (int)&_bootrom_end;
                 int allow_start = (int)&_flash_start;
                 int allow_end = (int)&_flash_end;
-                int cmd_start = c->ext1;
-                int cmd_end = c->ext2;
+                int cmd_start = c->arg[0];
+                int cmd_end = c->arg[1];
 
                 /* Only allow command if the bootrom is unlocked, or the parameters are outside of the protected
                  * bootrom area. In any case they must be within the flash area.

@@ -78,7 +78,7 @@ typedef signed short SWORD;
 
 #include <usb_cmd.h>
 
-#define PACKED __attribute__((__packed__))
+//#define PACKED __attribute__((__packed__))
 
 #define USB_D_PLUS_PULLUP_ON() { \
 		HIGH(GPIO_USB_PU); \

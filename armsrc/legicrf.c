@@ -185,8 +185,8 @@ static void frame_receive_rwd(struct legic_frame * const f, int bits)
 static void frame_respond_tag(struct legic_frame const * const f)
 {
 	LED_D_ON();
-	int i, r_size;
-	uint16_t r_data;
+	int i, r_size=0;
+	uint16_t r_data=0;
 	
 	for(i=0; i<sizeof(queries)/sizeof(queries[0]); i++) {
 		if(f->bits == queries[i].bits && f->data == queries[i].data) {

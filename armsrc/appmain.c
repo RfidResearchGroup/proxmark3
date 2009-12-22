@@ -69,8 +69,8 @@ void DbpString(char *str)
 
 	UsbCommand c;
 	c.cmd = CMD_DEBUG_PRINT_STRING;
-	c.ext1 = strlen(str);
-	memcpy(c.d.asBytes, str, c.ext1);
+	c.arg[0] = strlen(str);
+	memcpy(c.d.asBytes, str, c.arg[0]);
 
 	UsbSendPacket((BYTE *)&c, sizeof(c));
 	// TODO fix USB so stupid things like this aren't req'd
@@ -85,9 +85,9 @@ void DbpIntegers(int x1, int x2, int x3)
 
 	UsbCommand c;
 	c.cmd = CMD_DEBUG_PRINT_INTEGERS;
-	c.ext1 = x1;
-	c.ext2 = x2;
-	c.ext3 = x3;
+	c.arg[0] = x1;
+	c.arg[1] = x2;
+	c.arg[2] = x3;
 
 	UsbSendPacket((BYTE *)&c, sizeof(c));
 	// XXX
@@ -176,9 +176,9 @@ void MeasureAntennaTuning(void)
 	vHf = (33000 * AvgAdc(ADC_CHAN_HF)) >> 10;
 
 	c.cmd = CMD_MEASURED_ANTENNA_TUNING;
-	c.ext1 = (vLf125 << 0) | (vLf134 << 16);
-	c.ext2 = vHf;
-	c.ext3 = peakf | (peakv << 16);
+	c.arg[0] = (vLf125 << 0) | (vLf134 << 16);
+	c.arg[1] = vHf;
+	c.arg[2] = peakf | (peakv << 16);
 	UsbSendPacket((BYTE *)&c, sizeof(c));
 }
 
@@ -536,13 +536,13 @@ void UsbPacketReceived(BYTE *packet, int len)
 	switch(c->cmd) {
 #ifdef WITH_LF
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K:
-			AcquireRawAdcSamples125k(c->ext1);
+			AcquireRawAdcSamples125k(c->arg[0]);
 			break;
 #endif
 
 #ifdef WITH_LF
 		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
-			ModThenAcquireRawAdcSamples125k(c->ext1,c->ext2,c->ext3,c->d.asBytes);
+			ModThenAcquireRawAdcSamples125k(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
 			break;
 #endif
 
@@ -558,7 +558,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 
 #ifdef WITH_ISO15693
 		case CMD_READER_ISO_15693:
-			ReaderIso15693(c->ext1);
+			ReaderIso15693(c->arg[0]);
 			break;
 #endif
 
@@ -568,28 +568,28 @@ void UsbPacketReceived(BYTE *packet, int len)
 
 #ifdef WITH_ISO15693
 		case CMD_SIMTAG_ISO_15693:
-			SimTagIso15693(c->ext1);
+			SimTagIso15693(c->arg[0]);
 			break;
 #endif
 
 #ifdef WITH_ISO14443b
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443:
-			AcquireRawAdcSamplesIso14443(c->ext1);
+			AcquireRawAdcSamplesIso14443(c->arg[0]);
 			break;
 #endif
 
 #ifdef WITH_ISO14443b
 		case CMD_READ_SRI512_TAG:
-			ReadSRI512Iso14443(c->ext1);
+			ReadSRI512Iso14443(c->arg[0]);
 			break;
                case CMD_READ_SRIX4K_TAG:
-                       ReadSRIX4KIso14443(c->ext1);
+                       ReadSRIX4KIso14443(c->arg[0]);
                        break;
 #endif
 
 #ifdef WITH_ISO14443a
 		case CMD_READER_ISO_14443a:
-			ReaderIso14443a(c->ext1);
+			ReaderIso14443a(c->arg[0]);
 			break;
 #endif
 
@@ -617,7 +617,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 		
 #ifdef WITH_ISO14443a
 		case CMD_SIMULATE_TAG_ISO_14443a:
-			SimulateIso14443aTag(c->ext1, c->ext2);  // ## Simulate iso14443a tag - pass tag type & UID
+			SimulateIso14443aTag(c->arg[0], c->arg[1]);  // ## Simulate iso14443a tag - pass tag type & UID
 			break;
 #endif
 
@@ -630,7 +630,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 			break;
 
 		case CMD_LISTEN_READER_FIELD:
-			ListenReaderField(c->ext1);
+			ListenReaderField(c->arg[0]);
 			break;
 
 #ifdef WITH_LF
@@ -641,7 +641,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 
 #ifdef WITH_LF
 		case CMD_HID_SIM_TAG:
-			CmdHIDsimTAG(c->ext1, c->ext2, 1);					// Simulate HID tag by ID
+			CmdHIDsimTAG(c->arg[0], c->arg[1], 1);					// Simulate HID tag by ID
 			break;
 #endif
 
@@ -659,7 +659,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 
 #ifdef WITH_LF
 		case CMD_WRITE_TI_TYPE:
-			WriteTItag(c->ext1,c->ext2,c->ext3);
+			WriteTItag(c->arg[0],c->arg[1],c->arg[2]);
 			break;
 #endif
 
@@ -670,36 +670,36 @@ void UsbPacketReceived(BYTE *packet, int len)
 			} else {
 				n.cmd = CMD_DOWNLOADED_RAW_BITS_TI_TYPE;
 			}
-			n.ext1 = c->ext1;
-			memcpy(n.d.asDwords, BigBuf+c->ext1, 12*sizeof(DWORD));
+			n.arg[0] = c->arg[0];
+			memcpy(n.d.asDwords, BigBuf+c->arg[0], 12*sizeof(DWORD));
 			UsbSendPacket((BYTE *)&n, sizeof(n));
 			break;
 		}
 
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
 			BYTE *b = (BYTE *)BigBuf;
-			memcpy(b+c->ext1, c->d.asBytes, 48);
+			memcpy(b+c->arg[0], c->d.asBytes, 48);
 			break;
 		}
 
 #ifdef WITH_LF
 		case CMD_SIMULATE_TAG_125K:
 			LED_A_ON();
-			SimulateTagLowFrequency(c->ext1, 1);
+			SimulateTagLowFrequency(c->arg[0], 1);
 			LED_A_OFF();
 			break;
 #endif
 
 		case CMD_READ_MEM:
-			ReadMem(c->ext1);
+			ReadMem(c->arg[0]);
 			break;
 
 		case CMD_SET_LF_DIVISOR:
-			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, c->ext1);
+			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, c->arg[0]);
 			break;
 
 		case CMD_SET_ADC_MUX:
-			switch(c->ext1) {
+			switch(c->arg[0]) {
 				case 0: SetAdcMuxFor(GPIO_MUXSEL_LOPKD); break;
 				case 1: SetAdcMuxFor(GPIO_MUXSEL_LORAW); break;
 				case 2: SetAdcMuxFor(GPIO_MUXSEL_HIPKD); break;
@@ -713,7 +713,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 
 #ifdef WITH_LF
 		case CMD_LF_SIMULATE_BIDIR:
-			SimulateTagLowFrequencyBidir(c->ext1, c->ext2);
+			SimulateTagLowFrequencyBidir(c->arg[0], c->arg[1]);
 			break;
 #endif
 
@@ -722,7 +722,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 			LCDReset();
 			break;
 		case CMD_LCD:
-			LCDSend(c->ext1);
+			LCDSend(c->arg[0]);
 			break;
 #endif
 		case CMD_SETUP_WRITE:
@@ -749,8 +749,8 @@ void UsbPacketReceived(BYTE *packet, int len)
 		case CMD_DEVICE_INFO: {
 			UsbCommand c;
 			c.cmd = CMD_DEVICE_INFO;
-			c.ext1 = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
-			if(common_area.flags.bootrom_present) c.ext1 |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
+			c.arg[0] = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
+			if(common_area.flags.bootrom_present) c.arg[0] |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
 			UsbSendPacket((BYTE*)&c, sizeof(c));
 		}
 			break;
