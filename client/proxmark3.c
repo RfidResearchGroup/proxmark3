@@ -9,7 +9,6 @@
 #include <readline/history.h>
 #include <pthread.h>
 
-#include "translate.h"
 #include "prox.h"
 #include "proxmark3.h"
 #include "proxgui.h"

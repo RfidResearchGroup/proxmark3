@@ -2,18 +2,19 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include <strings.h>
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
 
-#include "translate.h"
 #include "prox.h"
 #include "proxmark3.h"
 
-static DWORD ExpectedAddr;
-static BYTE QueuedToSend[256];
-static BOOL AllWritten;
+static uint32_t ExpectedAddr;
+static uint8_t QueuedToSend[256];
+static bool AllWritten;
 #define PHYSICAL_FLASH_START 0x100000
 
 struct partition {
@@ -43,7 +44,7 @@ static void FlushPrevious(int translate)
 		c.cmd = CMD_SETUP_WRITE;
 		memcpy(c.d.asBytes, QueuedToSend+i, 48);
 		c.arg[0] = (i/4);
-		SendCommand(&c, TRUE);
+		SendCommand(&c, true);
 	}
 
 	c.cmd = CMD_FINISH_WRITE;
@@ -53,16 +54,16 @@ static void FlushPrevious(int translate)
 	}
 	printf("c.arg[0] = %08x\r", c.arg[0]);
 	memcpy(c.d.asBytes, QueuedToSend+240, 16);
-	SendCommand(&c, TRUE);
+	SendCommand(&c, true);
 
-	AllWritten = TRUE;
+	AllWritten = true;
 }
 
 /* Where must be between start_addr (inclusive) and end_addr (exclusive).
  */
-static void GotByte(DWORD where, BYTE which, int start_addr, int end_addr, int translate)
+static void GotByte(uint32_t where, uint8_t which, int start_addr, int end_addr, int translate)
 {
-	AllWritten = FALSE;
+	AllWritten = false;
 	
 	if(where < start_addr || where >= end_addr) {
 		printf("bad: got byte at %08x, outside of range %08x-%08x\n", where, start_addr, end_addr);
@@ -95,7 +96,7 @@ static int HexVal(int c)
 	}
 }
 
-static BYTE HexByte(char *s)
+static uint8_t HexByte(char *s)
 {
 	return (HexVal(s[0]) << 4) | HexVal(s[1]);
 }
@@ -120,7 +121,7 @@ static void LoadFlashFromSRecords(const char *file, int start_addr, int end_addr
 			char addrStr[9];
 			memcpy(addrStr, s, 8);
 			addrStr[8] = '\0';
-			DWORD addr;
+			uint32_t addr;
 			sscanf(addrStr, "%x", &addr);
 			s += 8;
 			
@@ -160,7 +161,7 @@ static int PrepareFlash(struct partition *p, const char *filename, unsigned int 
 		} else {
 			c.arg[2] = 0;
 		}
-		SendCommand(&c, TRUE);
+		SendCommand(&c, true);
 		translate = 0;
 	} else {
 		fprintf(stderr, "Warning: Your bootloader does not understand the new START_FLASH command\n");
@@ -178,7 +179,7 @@ static unsigned int GetProxmarkState(void)
 	
 	UsbCommand c;
 	c.cmd = CMD_DEVICE_INFO;
-	SendCommand(&c, FALSE);
+	SendCommand(&c, false);
 	
 	UsbCommand resp;
 	ReceiveCommand(&resp);
@@ -233,13 +234,13 @@ static unsigned int EnterFlashState(void)
 			 * enter the bootrom on the next boot.
 			 */
 			c.cmd = CMD_START_FLASH;
-			SendCommand(&c, FALSE);
+			SendCommand(&c, false);
 			fprintf(stderr,"(You don't have to do anything. Press and release the button only if you want to abort)\n");
 			fprintf(stderr,"Waiting for Proxmark to reappear on USB... ");
 		} else {
 			/* Old style handover: Ask the user to press the button, then reset the board */
 			c.cmd = CMD_HARDWARE_RESET;
-			SendCommand(&c, FALSE);
+			SendCommand(&c, false);
 			fprintf(stderr,"(Press and hold down button NOW if your bootloader requires it)\n");
 			fprintf(stderr,"Waiting for Proxmark to reappear on USB... ");
 		}
@@ -345,7 +346,7 @@ int main(int argc, char **argv) {
 	UsbCommand c;
 	bzero(&c, sizeof(c));
 	c.cmd = CMD_HARDWARE_RESET;
-	SendCommand(&c, FALSE);
+	SendCommand(&c, false);
 
 	CloseProxmark();
 
