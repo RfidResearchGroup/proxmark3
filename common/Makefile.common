@@ -9,38 +9,6 @@
 # (The including Makefile still needs to define what 'all' is)
 all:
 
-# Windows' echo echos its input verbatim, on Posix there is some
-#  amount of shell command line parsing going on. echo "" on 
-#  Windows yields literal "", on Linux yields an empty line
-ifeq ($(shell echo ""),)
-
-# This is probably a proper system, so we can use uname
-UNAME := $(shell uname)
-ifeq ($(UNAME), Linux)
-# Linux. (Todo: Add MacOS X if appropriate)
-DELETE=rm -rf
-MOVE=mv
-COPY=cp
-PATHSEP=/
-FLASH_TOOL=linux/flasher
-DETECTED_OS=Linux
-# You may/should set this in your environment
-ARMLIB ?= /usr/local/lib/gcc/arm-elf/4.3.3/interwork
-endif
-
-else
-
-# Assume that we are running on Windows.
-DELETE=del /q
-MOVE=ren
-COPY=copy
-PATHSEP=\\#
-ARMLIB ?= ../../devkitARM/lib/gcc/arm-elf/4.1.0/interwork
-FLASH_TOOL=winsrc\\prox.exe
-DETECTED_OS=Windows
-
-endif
-
 CROSS   = arm-elf-
 CC	= $(CROSS)gcc
 AS	= $(CROSS)as
@@ -50,6 +18,36 @@ OBJCOPY = $(CROSS)objcopy
 OBJDIR	= obj
 
 INCLUDE = -I../include
+
+# Windows' echo echos its input verbatim, on Posix there is some
+#  amount of shell command line parsing going on. echo "" on 
+#  Windows yields literal "", on Linux yields an empty line
+ifeq ($(shell echo ""),)
+
+# This is probably a proper system, so we can use uname
+UNAME := $(shell uname)
+DELETE=rm -rf
+MOVE=mv
+COPY=cp
+PATHSEP=/
+FLASH_TOOL=client/flasher
+DETECTED_OS=UNAME
+# You may/should set this in your environment
+LIBGCC ?= $(shell $(CC) -print-libgcc-file-name)
+
+else
+
+# Assume that we are running on Windows.
+DELETE=del /q
+MOVE=ren
+COPY=copy
+PATHSEP=\\#
+LIBGCC ?= ../../devkitARM/lib/gcc/arm-elf/4.1.0/interwork/libgcc.a
+FLASH_TOOL=winsrc\\prox.exe
+DETECTED_OS=Windows
+
+endif
+
 
 # Also search prerequisites in the common directory (for usb.c), and the fpga directory (for fpga.bit)
 VPATH = . ../common/ ../fpga/

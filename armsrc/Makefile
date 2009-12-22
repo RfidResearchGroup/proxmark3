@@ -36,7 +36,7 @@ all: $(OBJDIR)/osimage.s19 $(OBJDIR)/fpgaimage.s19
 $(OBJDIR)/fpga.o: fpga.bit
 	$(OBJCOPY) -O elf32-littlearm -I binary -B arm --redefine-sym _binary____fpga_fpga_bit_start=_binary_fpga_bit_start --redefine-sym _binary____fpga_fpga_bit_end=_binary_fpga_bit_end --prefix-sections=fpga_bit  $^ $@
 
-$(OBJDIR)/fullimage.elf: $(VERSIONOBJ) $(OBJDIR)/fpga.o $(THUMBOBJ) $(ARMOBJ) $(ARMLIB)/libgcc.a
+$(OBJDIR)/fullimage.elf: $(VERSIONOBJ) $(OBJDIR)/fpga.o $(THUMBOBJ) $(ARMOBJ) $(LIBGCC)
 	$(LD) -g -Tldscript -Map=$(patsubst %.elf,%.map,$@) -o $@ $^
 
 $(OBJDIR)/fpgaimage.elf: $(OBJDIR)/fullimage.elf

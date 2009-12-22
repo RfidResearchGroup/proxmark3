@@ -1,21 +1,13 @@
 include common/Makefile.common
 
-ifeq ($(DETECTED_OS),Linux)
-HOST_BINARY=linux
-else
-HOST_BINARY=winsrc
-endif
-
-all clean: %: bootrom/% armsrc/% $(HOST_BINARY)/%
+all clean: %: bootrom/% armsrc/% client/%
 
 bootrom/%: FORCE
 	$(MAKE) -C bootrom $(patsubst bootrom/%,%,$@)
 armsrc/%: FORCE
 	$(MAKE) -C armsrc $(patsubst armsrc/%,%,$@)
-linux/%: FORCE
-	$(MAKE) -C linux $(patsubst linux/%,%,$@)
-winsrc/%: FORCE
-	$(MAKE) -C winsrc $(patsubst winsrc/%,%,$@)
+client/%: FORCE
+	$(MAKE) -C client $(patsubst client/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
 
