@@ -45,21 +45,17 @@ static void *main_loop(void *targ)
 {
 	struct main_loop_arg *arg = (struct main_loop_arg*)targ;
 	char *cmd = NULL;
+	pthread_t reader_thread;
+
+	if (arg->usb_present == 1) {
+		struct usb_receiver_arg rarg;
+		rarg.run=1;
+		pthread_create(&reader_thread, NULL, &usb_receiver, &rarg);
+	}
 
 	while(1) {
-		struct usb_receiver_arg rarg;
-		pthread_t reader_thread;
 
-		rarg.run=1;
-		if (arg->usb_present == 1) {
-			pthread_create(&reader_thread, NULL, &usb_receiver, &rarg);
-		}
 		cmd = readline(PROXPROMPT);
-		rarg.run=0;
-		if (arg->usb_present == 1) {
-			pthread_join(reader_thread, NULL);
-		}
-
 		if (cmd) {
 			if (cmd[0] != 0x00) {
 				CommandReceived(cmd);

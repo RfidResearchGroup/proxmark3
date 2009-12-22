@@ -1,18 +1,25 @@
 WINCC=c:\mingw\bin\gcc
 
 #COMMON_FLAGS = -m32
+
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb -lreadline -lpthread
 LDFLAGS = $(COMMON_FLAGS)
 CFLAGS = -I. -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS)
 
 WINLIBS = -lgdi32 -lsetupapi
-#CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -arch i386 -D_
-#QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null) -arch i386
+CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall
+QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
+
+ifeq ($(shell uname),Darwin)
+CXXFLAGS += -arch i386 -DQ_WS_MAC32
+CFLAGS += -arch i386
+QTLDLIBS += -arch i386
+endif
 
 ifneq ($(QTLDLIBS),)
 QTGUI = proxgui.o proxguiqt.o proxguiqt.moc.o
 CFLAGS += -DHAVE_GUI
-MOC = $(shell type moc-qt4 >/dev/null 2>&1 && echo moc-qt4 || echo moc)
+MOC = $(shell pkg-config --variable=moc_location QtCore)
 LINK.o = $(LINK.cpp)
 else
 QTGUI = guidummy.o
@@ -52,5 +59,16 @@ proxguiqt.moc.cpp: proxguiqt.h
 
 clean:
 	$(RM) $(CLEAN)
+
+# must be run as root
+install_kext: Info.plist
+	mkdir -p /System/Library/Extensions/Proxmark3.kext/Contents
+	cp Info.plist /System/Library/Extensions/Proxmark3.kext/Contents
+	chown -R root:wheel /System/Library/Extensions/Proxmark3.kext
+	chmod 755 /System/Library/Extensions/Proxmark3.kext /System/Library/Extensions/Proxmark3.kext/Contents
+	chmod 644 /System/Library/Extensions/Proxmark3.kext/Contents/Info.plist
+	rm -rf /System/Library/Caches/com.apple.kext.caches
+	touch /System/Library/Extensions
+	@echo "*** You may need to reboot for the kext to take effect."
 
 .PHONY: all clean

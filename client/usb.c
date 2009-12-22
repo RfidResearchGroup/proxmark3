@@ -41,19 +41,6 @@ void SendCommand(UsbCommand *c) {
 		
 		return;
 	}
-/*
-	if(wantAck) {
-		UsbCommand ack;
-		printf("waiting for ack\n");
-		ReceiveCommand(&ack);
-		if(ack.cmd != CMD_ACK) {
-			printf("bad ACK\n");
-			exit(-1);
-		}
-	} else {
-		printf("not waiting for ack\n");
-	}
-*/
 }
 
 bool ReceiveCommandPoll(UsbCommand *c) {
@@ -85,23 +72,9 @@ bool ReceiveCommandPoll(UsbCommand *c) {
 			fprintf(stderr, "Read only %d instead of requested %d bytes!\n",
 				ret, (int)sizeof(UsbCommand));
 		}
-
-#if 0
-		{
-			int i;
-
-			printf("Read %d bytes\n", ret);
-			for (i = 0; i < ret; i++) {
-				printf("0x%02X ", ((unsigned char*)c)[i]);
-				if (!((i+1)%8))
-					printf("\n");
-			}
-			printf("\n");
-		}
-#endif
 	}
 
-	return ret != 0;
+	return ret > 0;
 }
 
 void ReceiveCommand(UsbCommand *c) {
