@@ -15,8 +15,8 @@ static unsigned short UpdateCrc14443(unsigned char ch, unsigned short *lpwCrc)
     return (*lpwCrc);
 }
 
-static void ComputeCrc14443(int CrcType, BYTE *Data, int Length,
-           BYTE *TransmitFirst, BYTE *TransmitSecond)
+static void ComputeCrc14443(int CrcType, unsigned char *Data, int Length,
+           unsigned char *TransmitFirst, unsigned char *TransmitSecond)
 {
     unsigned char chBlock;
     unsigned short wCrc=CrcType;
@@ -29,7 +29,7 @@ static void ComputeCrc14443(int CrcType, BYTE *Data, int Length,
     if (CrcType == CRC_14443_B)
         wCrc = ~wCrc;                /* ISO/IEC 13239 (formerly ISO/IEC 3309) */
 
-    *TransmitFirst = (BYTE) (wCrc & 0xFF);
-    *TransmitSecond = (BYTE) ((wCrc >> 8) & 0xFF);
+    *TransmitFirst = (unsigned char) (wCrc & 0xFF);
+    *TransmitSecond = (unsigned char) ((wCrc >> 8) & 0xFF);
     return;
 }

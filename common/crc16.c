@@ -1,5 +1,5 @@
-WORD update_crc16( WORD crc, BYTE c ) {
-	WORD i, v, tcrc = 0;
+unsigned short update_crc16( unsigned short crc, unsigned char c ) {
+	unsigned short i, v, tcrc = 0;
 
 	v = (crc ^ c) & 0xff;
   for (i = 0; i < 8; i++) {

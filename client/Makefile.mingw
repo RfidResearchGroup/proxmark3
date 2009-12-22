@@ -1,0 +1,11 @@
+CC=c:\mingw\bin\gcc
+
+LIBS   = -lgdi32 -lsetupapi
+
+all: proxmark3
+
+proxmark3: prox.c wingui.c command.c
+	$(CC) $(CFLAGS) $(DEFINES) -o prox.exe prox.c wingui.c command.c $(LIBS)
+
+clean:
+	del prox.exe

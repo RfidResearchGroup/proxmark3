@@ -3,10 +3,11 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
-extern "C" {
-#include "include/hidsdi.h"
+//extern "C" {
+#include "include/hidusage.h"
 #include "include/hidpi.h"
-}
+#include "include/hidsdi.h"
+//}
 
 #include "prox.h"
 
@@ -147,7 +148,7 @@ static BOOL UsbConnect(void)
 	return FALSE;
 }
 
-BOOL ReceiveCommandPoll(UsbCommand *c)
+bool ReceiveCommandPoll(UsbCommand *c)
 {
 	static BOOL ReadInProgress = FALSE;
 	static OVERLAPPED Ov;
@@ -187,7 +188,7 @@ void ReceiveCommand(UsbCommand *c)
 	}
 }
 
-void SendCommand(UsbCommand *c, BOOL wantAck)
+void SendCommand(UsbCommand *c, bool wantAck)
 {
 	BYTE buf[65];
 	buf[0] = 0;

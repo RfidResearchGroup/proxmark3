@@ -20,7 +20,7 @@ Environment:
 #define   __HIDPI_H__
 
 #include <pshpack4.h>
-
+typedef LONG NTSTATUS;
 // Please include "hidsdi.h" to use the user space (dll / parser)
 // Please include "hidpddi.h" to use the kernel space parser
 

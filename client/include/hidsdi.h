@@ -29,7 +29,7 @@ Environment:
 //#include <win32.h>
 //#include <basetyps.h>
 
-typedef LONG NTSTATUS;
+//typedef LONG NTSTATUS;
 #include "hidusage.h"
 #include "hidpi.h"
 
