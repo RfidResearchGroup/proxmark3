@@ -7,6 +7,10 @@
 #include "apps.h"
 #include "../common/iso14443_crc.c"
 
+static BYTE *trace = (BYTE *) BigBuf;
+static int traceLen = 0;
+static int rsamples = 0;
+
 typedef enum {
 	SEC_D = 1,
 	SEC_E = 2,
@@ -15,6 +19,42 @@ typedef enum {
 	SEC_Y = 5,
 	SEC_Z = 6
 } SecType;
+
+static const BYTE OddByteParity[256] = {
+  1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+  0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+  0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+  1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+  0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+  1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+  1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+  0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+  0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+  1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+  1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+  0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+  1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+  0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+  0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+  1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1
+};
+
+//-----------------------------------------------------------------------------
+// Generate the parity value for a byte sequence
+// 
+//-----------------------------------------------------------------------------
+DWORD GetParity(const BYTE * pbtCmd, int iLen)
+{
+  int i;
+  DWORD dwPar = 0;
+  
+  // Generate the encrypted data
+  for (i = 0; i < iLen; i++) {
+    // Save the encrypted parity bit
+    dwPar |= ((OddByteParity[pbtCmd[i]]) << i);
+  }
+  return dwPar;
+}
 
 //-----------------------------------------------------------------------------
 // The software UART that receives commands from the reader, and its state
@@ -538,8 +578,8 @@ void SnoopIso14443a(void)
 
     // As we receive stuff, we copy it from receivedCmd or receivedResponse
     // into trace, along with its length and other annotations.
-    BYTE *trace = (BYTE *)BigBuf;
-    int traceLen = 0;
+    //BYTE *trace = (BYTE *)BigBuf;
+    //int traceLen = 0;
 
     // The DMA buffer, used to stream samples from the FPGA
     SBYTE *dmaBuf = ((SBYTE *)BigBuf) + DMA_BUFFER_OFFSET;
@@ -832,6 +872,27 @@ static void CodeStrangeAnswer()
     ToSend[ToSendMax++] = 0x00;
 	ToSend[ToSendMax++] = 0x00;
     //ToSendMax += 2;
+}
+
+int LogTrace(const BYTE * btBytes, int iLen, int iSamples, DWORD dwParity, BOOL bReader)
+{
+  // Trace the random, i'm curious
+  rsamples += iSamples;
+  trace[traceLen++] = ((rsamples >> 0) & 0xff);
+  trace[traceLen++] = ((rsamples >> 8) & 0xff);
+  trace[traceLen++] = ((rsamples >> 16) & 0xff);
+  trace[traceLen++] = ((rsamples >> 24) & 0xff);
+  if (!bReader) {
+    trace[traceLen - 1] |= 0x80;
+  }
+  trace[traceLen++] = ((dwParity >> 0) & 0xff);
+  trace[traceLen++] = ((dwParity >> 8) & 0xff);
+  trace[traceLen++] = ((dwParity >> 16) & 0xff);
+  trace[traceLen++] = ((dwParity >> 24) & 0xff);
+  trace[traceLen++] = iLen;
+  memcpy(trace + traceLen, btBytes, iLen);
+  traceLen += iLen;
+  return (traceLen < TRACE_LENGTH);
 }
 
 //-----------------------------------------------------------------------------
@@ -1473,6 +1534,8 @@ static BOOL GetIso14443aAnswerFromTag(BYTE *receivedResponse, int maxLen, int *s
     }
 }
 
+
+
 //-----------------------------------------------------------------------------
 // Read an ISO 14443a tag. Send out commands and store answers.
 //
@@ -1531,9 +1594,10 @@ void ReaderIso14443a(DWORD parameter)
 
 	BYTE *receivedAnswer = (((BYTE *)BigBuf) + 3560);	// was 3560 - tied to other size changes
 
-	BYTE *trace = (BYTE *)BigBuf;
-	int traceLen = 0;
-	int rsamples = 0;
+	//BYTE *trace = (BYTE *)BigBuf;
+	//int traceLen = 0;
+	//int rsamples = 0;
+  traceLen = 0;
 
 	memset(trace, 0x44, 2000);				// was 2000 - tied to oter size chnages
 	// setting it to 3000 causes no tag responses to be detected (2900 is ok)
@@ -1588,229 +1652,105 @@ void ReaderIso14443a(DWORD parameter)
 	int wait = 0;
 	int elapsed = 0;
 
-	for(;;) {
+	while(1) {
 		// Send WUPA (or REQA)
 		TransmitFor14443a(req1, req1Len, &tsamples, &wait);
-		// Store answer in buffer
-		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-		trace[traceLen++] = 1;
-		memcpy(trace+traceLen, cmd1, 1);
-		traceLen += 1;
-		if(traceLen > TRACE_LENGTH) goto done;
 
-		while(!GetIso14443aAnswerFromTag(receivedAnswer, 100, &samples, &elapsed)) {
-			if(BUTTON_PRESS()) goto done;
+    // Store reader command in buffer
+    if (!LogTrace(cmd1,1,0,GetParity(cmd1,1),TRUE)) break;
+    
+    // Test if the action was cancelled
+    if(BUTTON_PRESS()) {
+      break;
+    }
+    
+		if(!GetIso14443aAnswerFromTag(receivedAnswer, 100, &samples, &elapsed)) continue;
+    
+    // Log the ATQA
+    if (!LogTrace(receivedAnswer,Demod.len,samples,Demod.parityBits,FALSE)) break;
 
-			// No answer, just continue polling
-			TransmitFor14443a(req1, req1Len, &tsamples, &wait);
-			// Store answer in buffer
-			trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-			trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-			trace[traceLen++] = 1;
-			memcpy(trace+traceLen, cmd1, 1);
-			traceLen += 1;
-			if(traceLen > TRACE_LENGTH) goto done;
-		}
+    // Store reader command in buffer
+    if (!LogTrace(cmd2,2,0,GetParity(cmd2,2),TRUE)) break;
+    TransmitFor14443a(req2, req2Len, &samples, &wait);
 
-		// Store answer in buffer
-		rsamples = rsamples + (samples - Demod.samples);
-		trace[traceLen++] = ((rsamples >>  0) & 0xff);
-		trace[traceLen++] = ((rsamples >>  8) & 0xff);
-		trace[traceLen++] = ((rsamples >> 16) & 0xff);
-		trace[traceLen++] = 0x80 | ((rsamples >> 24) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >>  0) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >>  8) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >> 16) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >> 24) & 0xff);
-		trace[traceLen++] = Demod.len;
-		memcpy(trace+traceLen, receivedAnswer, Demod.len);
-		traceLen += Demod.len;
-		if(traceLen > TRACE_LENGTH) goto done;
+		if(!GetIso14443aAnswerFromTag(receivedAnswer, 100, &samples, &elapsed)) continue;
 
-		// Ask for card UID
-		TransmitFor14443a(req2, req2Len, &tsamples, &wait);
-		// Store answer in buffer
-		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-		trace[traceLen++] = 2;
-		memcpy(trace+traceLen, cmd2, 2);
-		traceLen += 2;
-		if(traceLen > TRACE_LENGTH) goto done;
-
-		if(!GetIso14443aAnswerFromTag(receivedAnswer, 100, &samples, &elapsed)) {
-			continue;
-		}
-
-		// Store answer in buffer
-		rsamples = rsamples + (samples - Demod.samples);
-		trace[traceLen++] = ((rsamples >>  0) & 0xff);
-		trace[traceLen++] = ((rsamples >>  8) & 0xff);
-		trace[traceLen++] = ((rsamples >> 16) & 0xff);
-		trace[traceLen++] = 0x80 | ((rsamples >> 24) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >>  0) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >>  8) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >> 16) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >> 24) & 0xff);
-		trace[traceLen++] = Demod.len;
-		memcpy(trace+traceLen, receivedAnswer, Demod.len);
-		traceLen += Demod.len;
-		if(traceLen > TRACE_LENGTH) goto done;
-
+    // Log the uid
+    if (!LogTrace(receivedAnswer,Demod.len,samples,Demod.parityBits,FALSE)) break;
+    
 		// Construct SELECT UID command
 		// First copy the 5 bytes (Mifare Classic) after the 93 70
 		memcpy(cmd3+2,receivedAnswer,5);
 		// Secondly compute the two CRC bytes at the end
 		ComputeCrc14443(CRC_14443_A, cmd3, 7, &cmd3[7], &cmd3[8]);
-		// Prepare the bit sequence to modulate the subcarrier
-		// Store answer in buffer
-		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-		trace[traceLen++] = 9;
-		memcpy(trace+traceLen, cmd3, 9);
-		traceLen += 9;
-		if(traceLen > TRACE_LENGTH) goto done;
+
+		// Store reader command in buffer
+    if (!LogTrace(cmd3,9,0,GetParity(cmd5,9),TRUE)) break;
+		
 		CodeIso14443aAsReader(cmd3, sizeof(cmd3));
 		memcpy(req3, ToSend, ToSendMax); req3Len = ToSendMax;
 
 		// Select the card
 		TransmitFor14443a(req3, req3Len, &samples, &wait);
-		if(!GetIso14443aAnswerFromTag(receivedAnswer, 100, &samples, &elapsed)) {
-			continue;
-		}
+		if(!GetIso14443aAnswerFromTag(receivedAnswer, 100, &samples, &elapsed)) continue;
 
-		// Store answer in buffer
-		rsamples = rsamples + (samples - Demod.samples);
-		trace[traceLen++] = ((rsamples >>  0) & 0xff);
-		trace[traceLen++] = ((rsamples >>  8) & 0xff);
-		trace[traceLen++] = ((rsamples >> 16) & 0xff);
-		trace[traceLen++] = 0x80 | ((rsamples >> 24) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >>  0) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >>  8) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >> 16) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >> 24) & 0xff);
-		trace[traceLen++] = Demod.len;
-		memcpy(trace+traceLen, receivedAnswer, Demod.len);
-		traceLen += Demod.len;
-		if(traceLen > TRACE_LENGTH) goto done;
+    // Log the SAK
+    if (!LogTrace(receivedAnswer,Demod.len,samples,Demod.parityBits,FALSE)) break;
 
-// OK we have selected at least at cascade 1, lets see if first byte of UID was 0x88 in
-// which case we need to make a cascade 2 request and select - this is a long UID
+    // OK we have selected at least at cascade 1, lets see if first byte of UID was 0x88 in
+    // which case we need to make a cascade 2 request and select - this is a long UID
 		if (receivedAnswer[0] == 0x88)
 		{
-		// Do cascade level 2 stuff
-		///////////////////////////////////////////////////////////////////
-		// First issue a '95 20' identify request
-		// Ask for card UID (part 2)
-		TransmitFor14443a(req4, req4Len, &tsamples, &wait);
-		// Store answer in buffer
-		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-		trace[traceLen++] = 2;
-		memcpy(trace+traceLen, cmd4, 2);
-		traceLen += 2;
-		if(traceLen > TRACE_LENGTH) {
-		DbpString("Bugging out, just popped tracelength");
-		goto done;}
+      // Do cascade level 2 stuff
+      ///////////////////////////////////////////////////////////////////
+      // First issue a '95 20' identify request
+      // Ask for card UID (part 2)
+      TransmitFor14443a(req4, req4Len, &tsamples, &wait);
 
-		if(!GetIso14443aAnswerFromTag(receivedAnswer, 100, &samples, &elapsed)) {
-			continue;
-		}
-		// Store answer in buffer
-		rsamples = rsamples + (samples - Demod.samples);
-		trace[traceLen++] = ((rsamples >>  0) & 0xff);
-		trace[traceLen++] = ((rsamples >>  8) & 0xff);
-		trace[traceLen++] = ((rsamples >> 16) & 0xff);
-		trace[traceLen++] = 0x80 | ((rsamples >> 24) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >>  0) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >>  8) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >> 16) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >> 24) & 0xff);
-		trace[traceLen++] = Demod.len;
-		memcpy(trace+traceLen, receivedAnswer, Demod.len);
-		traceLen += Demod.len;
-		if(traceLen > TRACE_LENGTH) goto done;
-		//////////////////////////////////////////////////////////////////
-		// Then Construct SELECT UID (cascasde 2) command
-		DbpString("Just about to copy the UID out of the cascade 2 id req");
-		// First copy the 5 bytes (Mifare Classic) after the 95 70
-		memcpy(cmd5+2,receivedAnswer,5);
-		// Secondly compute the two CRC bytes at the end
-		ComputeCrc14443(CRC_14443_A, cmd4, 7, &cmd5[7], &cmd5[8]);
-		// Prepare the bit sequence to modulate the subcarrier
-		// Store answer in buffer
-		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-		trace[traceLen++] = 9;
-		memcpy(trace+traceLen, cmd5, 9);
-		traceLen += 9;
-		if(traceLen > TRACE_LENGTH) goto done;
-		CodeIso14443aAsReader(cmd5, sizeof(cmd5));
-		memcpy(req5, ToSend, ToSendMax); req5Len = ToSendMax;
+      // Store reader command in buffer
+      if (!LogTrace(cmd4,2,0,GetParity(cmd4,2),TRUE)) break;
 
-		// Select the card
-		TransmitFor14443a(req4, req4Len, &samples, &wait);
-		if(!GetIso14443aAnswerFromTag(receivedAnswer, 100, &samples, &elapsed)) {
-			continue;
-		}
+      if(!GetIso14443aAnswerFromTag(receivedAnswer, 100, &samples, &elapsed)) continue;
 
-		// Store answer in buffer
-		rsamples = rsamples + (samples - Demod.samples);
-		trace[traceLen++] = ((rsamples >>  0) & 0xff);
-		trace[traceLen++] = ((rsamples >>  8) & 0xff);
-		trace[traceLen++] = ((rsamples >> 16) & 0xff);
-		trace[traceLen++] = 0x80 | ((rsamples >> 24) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >>  0) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >>  8) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >> 16) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >> 24) & 0xff);
-		trace[traceLen++] = Demod.len;
-		memcpy(trace+traceLen, receivedAnswer, Demod.len);
-		traceLen += Demod.len;
-		if(traceLen > TRACE_LENGTH) goto done;
+      //////////////////////////////////////////////////////////////////
+      // Then Construct SELECT UID (cascasde 2) command
+      DbpString("Just about to copy the UID out of the cascade 2 id req");
+      // First copy the 5 bytes (Mifare Classic) after the 95 70
+      memcpy(cmd5+2,receivedAnswer,5);
+      // Secondly compute the two CRC bytes at the end
+      ComputeCrc14443(CRC_14443_A, cmd4, 7, &cmd5[7], &cmd5[8]);
 
+      // Store reader command in buffer
+      if (!LogTrace(cmd5,9,0,GetParity(cmd5,9),TRUE)) break;
+
+      CodeIso14443aAsReader(cmd5, sizeof(cmd5));
+      memcpy(req5, ToSend, ToSendMax); req5Len = ToSendMax;
+      
+      // Select the card
+      TransmitFor14443a(req4, req4Len, &samples, &wait);
+      if(!GetIso14443aAnswerFromTag(receivedAnswer, 100, &samples, &elapsed)) continue;
+      
+      // Log the SAK
+      if (!LogTrace(receivedAnswer,Demod.len,samples,Demod.parityBits,FALSE)) break;
 		}
 
 		// Secondly compute the two CRC bytes at the end
 		ComputeCrc14443(CRC_14443_A, cmd7, 2, &cmd7[2], &cmd7[3]);
 		CodeIso14443aAsReader(cmd7, sizeof(cmd7));
 		memcpy(req7, ToSend, ToSendMax); req7Len = ToSendMax;
+
 		// Send authentication request (Mifare Classic)
 		TransmitFor14443a(req7, req7Len, &samples, &wait);
-		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-		trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0; trace[traceLen++] = 0;
-		trace[traceLen++] = 4;
-		memcpy(trace+traceLen, cmd7, 4);
-		traceLen += 4;
-		if(traceLen > TRACE_LENGTH) goto done;
-		if(GetIso14443aAnswerFromTag(receivedAnswer, 100, &samples, &elapsed)) {
-			rsamples++;
-			// We received probably a random, continue and trace!
-		}
-		else {
-			// Received nothing
-			continue;
-		}
+    // Store reader command in buffer
+    if (!LogTrace(cmd7,4,0,GetParity(cmd7,4),TRUE)) break;
 
-		// Trace the random, i'm curious
-		rsamples = rsamples + (samples - Demod.samples);
-		trace[traceLen++] = ((rsamples >>  0) & 0xff);
-		trace[traceLen++] = ((rsamples >>  8) & 0xff);
-		trace[traceLen++] = ((rsamples >> 16) & 0xff);
-		trace[traceLen++] = 0x80 | ((rsamples >> 24) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >>  0) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >>  8) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >> 16) & 0xff);
-		trace[traceLen++] = ((Demod.parityBits >> 24) & 0xff);
-		trace[traceLen++] = Demod.len;
-		memcpy(trace+traceLen, receivedAnswer, Demod.len);
-		traceLen += Demod.len;
-		if(traceLen > TRACE_LENGTH) goto done;
+		if(!GetIso14443aAnswerFromTag(receivedAnswer, 100, &samples, &elapsed)) continue;
 
-		// Thats it...
+    // We received probably a random, continue and trace!
+    if (!LogTrace(receivedAnswer,Demod.len,samples,Demod.parityBits,FALSE)) break;
 	}
 
-done:
+  // Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 	DbpIntegers(rsamples, 0xCC, 0xCC);
