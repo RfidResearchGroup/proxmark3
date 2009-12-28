@@ -80,6 +80,7 @@ static void frame_send_rwd(uint16_t data, int bits)
 	
 	/* Reset the timer, to measure time until the start of the tag frame */
 	timer->TC_CCR = AT91C_TC_SWTRG;
+	while(timer->TC_CV > 1) ; /* Wait till the clock has reset */
 }
 
 /* Receive a frame from the card in reader emulation mode, the FPGA and
@@ -140,12 +141,41 @@ static void frame_receive_rwd(struct legic_frame * const f, int bits)
 	
 	f->data = data;
 	f->bits = bits;
+	
+	/* Reset the timer, to synchronize the next frame */
+	timer->TC_CCR = AT91C_TC_SWTRG;
+	while(timer->TC_CV > 1) ; /* Wait till the clock has reset */
 }
 
 static void frame_clean(struct legic_frame * const f)
 {
 	f->data = 0;
 	f->bits = 0;
+}
+
+static uint16_t perform_setup_phase_rwd(void)
+{
+	
+	/* Switch on carrier and let the tag charge for 1ms */
+	AT91C_BASE_PIOA->PIO_SODR = GPIO_SSC_DOUT;
+	SpinDelay(1);
+	
+	frame_send_rwd(0x55, 7);
+	frame_clean(&current_frame);
+	frame_receive_rwd(&current_frame, 6);
+	while(timer->TC_CV < 387) ; /* ~ 258us */
+	frame_send_rwd(0x019, 6);
+	
+	return current_frame.data ^ 0x26;
+}
+
+static void switch_off_tag_rwd(void)
+{
+	/* Switch off carrier, make sure tag is reset */
+	AT91C_BASE_PIOA->PIO_CODR = GPIO_SSC_DOUT;
+	SpinDelay(10);
+	
+	WDT_HIT();
 }
 
 void LegicRfReader(void)
@@ -161,25 +191,62 @@ void LegicRfReader(void)
 	
 	setup_timer();
 	
-	while(!BUTTON_PRESS()) {
-		/* Switch on carrier and let the tag charge for 1ms */
-		AT91C_BASE_PIOA->PIO_SODR = GPIO_SSC_DOUT;
-		SpinDelay(1);
-		
-		LED_A_ON();
-		frame_send_rwd(queries[0].data, queries[0].bits);
-		LED_A_OFF();
-		
-		frame_clean(&current_frame);
-		LED_B_ON();
-		frame_receive_rwd(&current_frame, responses[0].bits);
-		LED_B_OFF();
-		
-		/* Switch off carrier, make sure tag is reset */
-		AT91C_BASE_PIOA->PIO_CODR = GPIO_SSC_DOUT;
-		SpinDelay(10);
-		
-		WDT_HIT();
+	memset(BigBuf, 0, 1024);
+	
+	int byte_index = 0, card_size = 0, command_size = 0;
+	uint16_t command_obfuscation = 0x57, response_obfuscation = 0;
+	uint16_t tag_type = perform_setup_phase_rwd();
+	switch_off_tag_rwd();
+	
+	int error = 0;
+	switch(tag_type) {
+	case 0x1d:
+		DbpString("MIM 256 card found, reading card ...");
+		command_size = 9;
+		card_size = 256;
+		response_obfuscation = 0x52;
+		break;
+	case 0x3d:
+		DbpString("MIM 1024 card found, reading card ...");
+		command_size = 11;
+		card_size = 1024;
+		response_obfuscation = 0xd4;
+		break;
+	default:
+		DbpString("No or unknown card found, aborting");
+		error = 1;
+		break;
 	}
 	
+	LED_B_ON();
+	while(!BUTTON_PRESS() && (byte_index<card_size)) {
+		if(perform_setup_phase_rwd() != tag_type) {
+			DbpString("Card removed, aborting");
+			switch_off_tag_rwd();
+			error=1;
+			break;
+		}
+		
+		while(timer->TC_CV < 387) ; /* ~ 258us */
+		frame_send_rwd(command_obfuscation ^ (byte_index<<1), command_size);
+		frame_clean(&current_frame);
+		frame_receive_rwd(&current_frame, 8);
+		((uint8_t*)BigBuf)[byte_index] = (current_frame.data ^ response_obfuscation) & 0xff;
+		
+		switch_off_tag_rwd();
+		
+		WDT_HIT();
+		byte_index++;
+		if(byte_index & 0x04) LED_C_ON(); else LED_C_OFF();
+	}
+	LED_B_OFF();
+	LED_C_OFF();
+	
+	if(!error) {
+		if(card_size == 256) {
+			DbpString("Card read, use hexsamples 256 to view results");
+		} else if(card_size == 1024) {
+			DbpString("Card read, use hexsamples 1024 to view results");
+		}
+	}
 }
