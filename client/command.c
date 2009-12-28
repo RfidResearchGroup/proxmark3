@@ -202,12 +202,6 @@ static void CmdHi14asnoop(char *str)
 	SendCommand(&c);
 }
 
-static void CmdLegicRfSim(char *str)
-{
-	UsbCommand c={CMD_SIMULATE_TAG_LEGIC_RF};
-	SendCommand(&c);
-}
-
 static void CmdLegicRfRead(char *str)
 {
 	UsbCommand c={CMD_READER_LEGIC_RF};
@@ -2846,7 +2840,6 @@ static struct {
 	{"indalademod",		CmdIndalademod,		0, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
 	{"lcd",			CmdLcd,			0, "<HEX command> <count> -- Send command/data to LCD"},
 	{"lcdreset",		CmdLcdReset,		0, "Hardware reset LCD"},
-	{"legicrfsim",		CmdLegicRfSim,		0, "Start the LEGIC RF tag simulator"},
 	{"legicrfread",		CmdLegicRfRead,		0, "Start the LEGIC RF reader"},
 	{"load",		CmdLoad,		1, "<filename> -- Load trace (to graph window"},
 	{"locomread",		CmdLoCommandRead,	0, "<off period> <'0' period> <'1' period> <command> ['h'] -- Modulate LF reader field to send command before read (all periods in microseconds) (option 'h' for 134)"},
@@ -3007,7 +3000,6 @@ void UsbCommandReceived(UsbCommand *c)
 		if (c->cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) goto unexpected_response;
 		int i;
 		for(i=0; i<48; i++) sample_buf[i] = c->d.asBytes[i];
-		printf("stored 48 samples\n");
 		received_command = c->cmd;
 		return;
 	default:

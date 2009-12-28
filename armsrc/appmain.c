@@ -621,10 +621,6 @@ void UsbPacketReceived(BYTE *packet, int len)
 			break;
 #endif
 
-		case CMD_SIMULATE_TAG_LEGIC_RF:
-			LegicRfSimulate();
-			break;
-
 		case CMD_MEASURE_ANTENNA_TUNING:
 			MeasureAntennaTuning();
 			break;
