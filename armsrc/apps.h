@@ -25,7 +25,7 @@ void ToSendStuffBit(int b);
 void ToSendReset(void);
 void ListenReaderField(int limit);
 void AcquireRawAdcSamples125k(BOOL at134khz);
-void DoAcquisition125k(BOOL at134khz);
+void DoAcquisition125k(void);
 extern int ToSendMax;
 extern BYTE ToSend[];
 extern DWORD BigBuf[];
@@ -71,9 +71,8 @@ void SetAdcMuxFor(DWORD whichGpio);
 
 /// lfops.h
 void AcquireRawAdcSamples125k(BOOL at134khz);
-void DoAcquisition125k(BOOL at134khz);
 void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYTE *command);
-void ReadTItag();
+void ReadTItag(void);
 void WriteTItag(DWORD idhi, DWORD idlo, WORD crc);
 void AcquireTiType(void);
 void AcquireRawBitsTI(void);

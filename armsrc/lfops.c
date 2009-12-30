@@ -13,13 +13,12 @@ int sprintf(char *dest, const char *fmt, ...);
 
 void AcquireRawAdcSamples125k(BOOL at134khz)
 {
-	if(at134khz) {
+	if (at134khz)
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
-	} else {
+	else
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
-	}
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 
 	// Connect the A/D to the peak-detected low-frequency path.
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
@@ -31,37 +30,37 @@ void AcquireRawAdcSamples125k(BOOL at134khz)
 	FpgaSetupSsc();
 
 	// Now call the acquisition routine
-	DoAcquisition125k(at134khz);
+	DoAcquisition125k();
 }
 
 // split into two routines so we can avoid timing issues after sending commands //
-void DoAcquisition125k(BOOL at134khz)
+void DoAcquisition125k(void)
 {
 	BYTE *dest = (BYTE *)BigBuf;
 	int n = sizeof(BigBuf);
 	int i;
 	char output_string[64];
 	
-	memset(dest,0,n);
+	memset(dest, 0, n);
 	i = 0;
 	for(;;) {
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
 			LED_D_ON();
 		}
-		if(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			dest[i] = (BYTE)AT91C_BASE_SSC->SSC_RHR;
 			i++;
 			LED_D_OFF();
 			if (i >= n) break;
 		}
 	}
-	sprintf(output_string, "read samples, dest[0]=%x dest[1]=%x at134khz=%d",
-		dest[0], dest[1], at134khz);
+	sprintf(output_string, "read samples, dest[0]=%x dest[1]=%x",
+		dest[0], dest[1]);
 	DbpString(output_string);
 }
 
-void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYTE *command)
+void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, BYTE *command)
 {
 	BOOL at134khz;
 
@@ -70,18 +69,17 @@ void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYT
 	SpinDelay(2500);
 	
 	// see if 'h' was specified
-	if(command[strlen((char *) command) - 1] == 'h')
-		at134khz= TRUE;
+	if (command[strlen((char *) command) - 1] == 'h')
+		at134khz = TRUE;
 	else
-		at134khz= FALSE;
+		at134khz = FALSE;
 
-	if(at134khz) {
+	if (at134khz)
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
-	} else {
+	else
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
-	}
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 
 	// Give it a bit of time for the resonant antenna to settle.
 	SpinDelay(50);
@@ -92,38 +90,34 @@ void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYT
 	FpgaSetupSsc();
 
 	// now modulate the reader field
-	while(*command != '\0' && *command != ' ')
-		{
+	while(*command != '\0' && *command != ' ') {
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LED_D_OFF();
 		SpinDelayUs(delay_off);
-		if(at134khz) {
+		if (at134khz)
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-			FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
-		} else {
+		else
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-			FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
-		}
+
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 		LED_D_ON();
-		if(*(command++) == '0') {
+		if(*(command++) == '0')
 			SpinDelayUs(period_0);
-		} else {
+		else
 			SpinDelayUs(period_1);
-		}
-		}
+	}
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LED_D_OFF();
 	SpinDelayUs(delay_off);
-	if(at134khz) {
+	if (at134khz)
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
-	} else {
+	else
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
-	}
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 
 	// now do the read
-	DoAcquisition125k(at134khz);
+	DoAcquisition125k();
 }
 
 /* blank r/w tag data stream
@@ -135,7 +129,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYT
 
 [5555fe852c5555555555555555fe0000]
 */
-void ReadTItag()
+void ReadTItag(void)
 {
 	// some hardcoded initial params
 	// when we read a TI tag we sample the zerocross line at 2Mhz
@@ -311,7 +305,7 @@ void AcquireTiType(void)
 
 	// steal this pin from the SSP and use it to control the modulation
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-	AT91C_BASE_PIOA->PIO_OER	= GPIO_SSC_DOUT;
+	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_RXEN | AT91C_SSC_TXEN;
