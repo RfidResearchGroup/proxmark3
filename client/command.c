@@ -132,6 +132,12 @@ static void CmdHi14areader(char *str)
 	SendCommand(&c);
 }
 
+static void CmdHi14amifare(char *str)
+{
+	UsbCommand c={CMD_READER_MIFARE, {strtol(str, NULL, 0), 0, 0}};
+	SendCommand(&c);
+}
+
 static void CmdHi15reader(char *str)
 {
 	UsbCommand c={CMD_READER_ISO_15693, {strtol(str, NULL, 0), 0, 0}};
@@ -2815,6 +2821,7 @@ static struct {
 	{"grid",		CmdGrid,		1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
 	{"hexsamples",		CmdHexsamples,		0, "<blocks> -- Dump big buffer as hex bytes"},
 	{"hi14alist",		CmdHi14alist,		0, "List ISO 14443a history"},
+	{"hi14amifare",		CmdHi14amifare,	0, "Read out sector 0 parity error messages"},
 	{"hi14areader",		CmdHi14areader,		0, "Act like an ISO14443 Type A reader"},
 	{"hi14asim",		CmdHi14asim,		0, "<UID> -- Fake ISO 14443a tag"},
 	{"hi14asnoop",		CmdHi14asnoop,		0, "Eavesdrop ISO 14443 Type A"},
