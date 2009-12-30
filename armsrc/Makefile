@@ -17,7 +17,7 @@ THUMBSRC = start.c \
 	$(SRC_LCD) \
 	$(SRC_ISO15693) \
 	$(SRC_LF) \
-	appmain.c \
+	appmain.c printf.c \
 	util.c \
 	usb.c
 

@@ -9,6 +9,8 @@
 #include "hitag2.h"
 #include "../common/crc16.c"
 
+int sprintf(char *dest, const char *fmt, ...);
+
 void AcquireRawAdcSamples125k(BOOL at134khz)
 {
 	if(at134khz) {
@@ -38,24 +40,25 @@ void DoAcquisition125k(BOOL at134khz)
 	BYTE *dest = (BYTE *)BigBuf;
 	int n = sizeof(BigBuf);
 	int i;
-
+	char output_string[64];
+	
 	memset(dest,0,n);
 	i = 0;
 	for(;;) {
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
 			LED_D_ON();
 		}
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+		if(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			dest[i] = (BYTE)AT91C_BASE_SSC->SSC_RHR;
 			i++;
 			LED_D_OFF();
-			if(i >= n) {
-				break;
-			}
+			if (i >= n) break;
 		}
 	}
-	DbpIntegers(dest[0], dest[1], at134khz);
+	sprintf(output_string, "read samples, dest[0]=%x dest[1]=%x at134khz=%d",
+		dest[0], dest[1], at134khz);
+	DbpString(output_string);
 }
 
 void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYTE *command)
@@ -254,11 +257,13 @@ void ReadTItag()
 		crc = update_crc16(crc, (shift1>>16)&0xff);
 		crc = update_crc16(crc, (shift1>>24)&0xff);
 
-		DbpString("Info: Tag data_hi, data_lo, crc = ");
-		DbpIntegers(shift1, shift0, shift2&0xffff);
+		char output_string[64];
+		sprintf(output_string, "Info: Tag data_hi=%x, data_lo=%x, crc=%x",
+			(unsigned int)shift1, (unsigned int)shift0, (unsigned int)shift2 & 0xFFFF);
+		DbpString(output_string);
 		if (crc != (shift2&0xffff)) {
-			DbpString("Error: CRC mismatch, expected");
-			DbpIntegers(0, 0, crc);
+			sprintf(output_string, "Error: CRC mismatch, expected %x", (unsigned int)crc);
+			DbpString(output_string);
 		} else {
 			DbpString("Info: CRC is good");
 		}
@@ -381,8 +386,10 @@ void WriteTItag(DWORD idhi, DWORD idlo, WORD crc)
 		crc = update_crc16(crc, (idhi>>16)&0xff);
 		crc = update_crc16(crc, (idhi>>24)&0xff);
 	}
-	DbpString("Writing the following data to tag:");
-	DbpIntegers(idhi, idlo, crc);
+	char output_string[64];
+	sprintf(output_string, "Writing the following data to tag: %x, %x, %x",
+		(unsigned int) idhi, (unsigned int) idlo, crc);
+	DbpString(output_string);
 
 	// TI tags charge at 134.2Khz
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
@@ -395,7 +402,7 @@ void WriteTItag(DWORD idhi, DWORD idlo, WORD crc)
 
 	// steal this pin from the SSP and use it to control the modulation
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-	AT91C_BASE_PIOA->PIO_OER	= GPIO_SSC_DOUT;
+	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 
 	// writing algorithm:
 	// a high bit consists of a field off for 1ms and field on for 1ms
@@ -926,8 +933,10 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				found=1;
 				idx+=6;
 				if (found && (hi|lo)) {
-					DbpString("TAG ID");
-					DbpIntegers(hi, lo, (lo>>1)&0xffff);
+					char output_string[64];
+					sprintf(output_string, "TAG ID: %x %x %x", 
+						(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+					DbpString(output_string);
 					/* if we're only looking for one tag */
 					if (findone)
 					{
@@ -959,8 +968,10 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				found=1;
 				idx+=6;
 				if (found && (hi|lo)) {
-					DbpString("TAG ID");
-					DbpIntegers(hi, lo, (lo>>1)&0xffff);
+					char output_string[64];
+					sprintf(output_string, "TAG ID: %x %x %x", 
+						(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+					DbpString(output_string);
 					/* if we're only looking for one tag */
 					if (findone)
 					{
