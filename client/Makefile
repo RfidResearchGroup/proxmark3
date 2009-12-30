@@ -11,11 +11,11 @@ CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
 
 ifeq ($(shell uname),Darwin)
-CXXFLAGS += -DQ_WS_MAC32
-CFLAGS += 
-QTLDLIBS += 
+CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Versions/Current/Headers -I/Library/Frameworks/QtCore.framework/Versions/Current/Headers
+QTLDLIBS = -framework QtGui -framework QtCore
+MOC = moc
 endif
-QTLDLIBS=
+
 ifneq ($(QTLDLIBS),)
 QTGUI = proxgui.o proxguiqt.o proxguiqt.moc.o
 CFLAGS += -DHAVE_GUI
