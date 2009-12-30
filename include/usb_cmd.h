@@ -80,6 +80,7 @@ typedef struct {
 #define CMD_SIMULATE_MIFARE_CARD			0x0386
 #define CMD_SIMULATE_TAG_LEGIC_RF			0x0387
 #define CMD_READER_LEGIC_RF				0x0388
+#define CMD_READER_MIFARE				0x0389
 
 // For measurements of the antenna tuning
 #define CMD_MEASURE_ANTENNA_TUNING			0x0400
