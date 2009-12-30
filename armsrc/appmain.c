@@ -593,6 +593,12 @@ void UsbPacketReceived(BYTE *packet, int len)
 			break;
 #endif
 
+#ifdef WITH_ISO14443a
+		case CMD_READER_MIFARE:
+			ReaderMifare(c->arg[0]);
+			break;
+#endif
+      
 #ifdef WITH_ISO14443b
 		case CMD_SNOOP_ISO_14443:
 			SnoopIso14443();

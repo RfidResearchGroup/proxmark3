@@ -7,6 +7,10 @@
 #ifndef __APPS_H
 #define __APPS_H
 
+#include "stdint.h"
+#include "stddef.h"
+typedef unsigned char byte_t;
+
 // The large multi-purpose buffer, typically used to hold A/D samples,
 // maybe processed in some way.
 DWORD BigBuf[12000];
@@ -90,6 +94,7 @@ void SnoopIso14443(void);
 void SnoopIso14443a(void);
 void SimulateIso14443aTag(int tagType, int TagUid);	// ## simulate iso14443a tag
 void ReaderIso14443a(DWORD parameter);
+void ReaderMifare(DWORD parameter);
 
 /// iso15693.h
 void AcquireRawAdcSamplesIso15693(void);
@@ -111,6 +116,9 @@ void *memcpy(void *dest, const void *src, int len);
 void *memset(void *dest, int c, int len);
 int memcmp(const void *av, const void *bv, int len);
 char *strncat(char *dest, const char *src, unsigned int n);
+void num_to_bytes(uint64_t n, size_t len, byte_t* dest);
+uint64_t bytes_to_num(byte_t* src, size_t len);
+
 void SpinDelay(int ms);
 void SpinDelayUs(int us);
 void LED(int led, int ms);

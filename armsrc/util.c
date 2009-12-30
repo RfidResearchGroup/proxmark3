@@ -64,6 +64,24 @@ char* strncat(char *dest, const char *src, unsigned int n)
 	return dest;
 }
 
+void num_to_bytes(uint64_t n, size_t len, byte_t* dest)
+{
+	while (len--) {
+		dest[len] = (byte_t) n;
+		n >>= 8;
+	}
+}
+
+uint64_t bytes_to_num(byte_t* src, size_t len)
+{
+	uint64_t num = 0;
+	while (len--)
+	{
+		num = (num << 8) | (*src);
+		src++;
+	}
+	return num;
+}
 
 void LEDsoff()
 {
