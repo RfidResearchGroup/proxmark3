@@ -117,8 +117,16 @@ void UsbPacketReceived(BYTE *packet, int len)
                     MC_FLASH_COMMAND_PAGEN((c->arg[0]-(int)&_flash_start)/AT91C_IFLASH_PAGE_SIZE) |
                     AT91C_MC_FCMD_START_PROG;
             }
-            while(!(AT91C_BASE_EFC0->EFC_FSR & MC_FLASH_STATUS_READY))
+            
+            uint32_t sr;
+            
+            while(!((sr = AT91C_BASE_EFC0->EFC_FSR) & MC_FLASH_STATUS_READY))
                 ;
+            if(sr & (MC_FLASH_STATUS_LOCKE | MC_FLASH_STATUS_PROGE)) { 
+        	    dont_ack = 1;
+                    c->cmd = CMD_NACK;
+                    UsbSendPacket(packet, len);
+            }
             break;
 
         case CMD_HARDWARE_RESET:
