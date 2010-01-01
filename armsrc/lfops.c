@@ -39,7 +39,6 @@ void DoAcquisition125k(void)
 	BYTE *dest = (BYTE *)BigBuf;
 	int n = sizeof(BigBuf);
 	int i;
-	char output_string[64];
 	
 	memset(dest, 0, n);
 	i = 0;
@@ -55,9 +54,7 @@ void DoAcquisition125k(void)
 			if (i >= n) break;
 		}
 	}
-	sprintf(output_string, "read samples, dest[0]=%x dest[1]=%x",
-		dest[0], dest[1]);
-	DbpString(output_string);
+	Dbprintf("read samples, dest[0]=%x dest[1]=%x", dest[0], dest[1]);
 }
 
 void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, BYTE *command)
@@ -251,13 +248,10 @@ void ReadTItag(void)
 		crc = update_crc16(crc, (shift1>>16)&0xff);
 		crc = update_crc16(crc, (shift1>>24)&0xff);
 
-		char output_string[64];
-		sprintf(output_string, "Info: Tag data_hi=%x, data_lo=%x, crc=%x",
+		Dbprintf("Info: Tag data_hi=%x, data_lo=%x, crc=%x",
 			(unsigned int)shift1, (unsigned int)shift0, (unsigned int)shift2 & 0xFFFF);
-		DbpString(output_string);
 		if (crc != (shift2&0xffff)) {
-			sprintf(output_string, "Error: CRC mismatch, expected %x", (unsigned int)crc);
-			DbpString(output_string);
+			Dbprintf("Error: CRC mismatch, expected %x", (unsigned int)crc);
 		} else {
 			DbpString("Info: CRC is good");
 		}
@@ -380,10 +374,8 @@ void WriteTItag(DWORD idhi, DWORD idlo, WORD crc)
 		crc = update_crc16(crc, (idhi>>16)&0xff);
 		crc = update_crc16(crc, (idhi>>24)&0xff);
 	}
-	char output_string[64];
-	sprintf(output_string, "Writing the following data to tag: %x, %x, %x",
+	Dbprintf("Writing the following data to tag: %x, %x, %x",
 		(unsigned int) idhi, (unsigned int) idlo, crc);
-	DbpString(output_string);
 
 	// TI tags charge at 134.2Khz
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
@@ -927,10 +919,8 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				found=1;
 				idx+=6;
 				if (found && (hi|lo)) {
-					char output_string[64];
-					sprintf(output_string, "TAG ID: %x %x %x", 
+					Dbprintf("TAG ID: %x %x %x", 
 						(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
-					DbpString(output_string);
 					/* if we're only looking for one tag */
 					if (findone)
 					{
@@ -962,10 +952,8 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				found=1;
 				idx+=6;
 				if (found && (hi|lo)) {
-					char output_string[64];
-					sprintf(output_string, "TAG ID: %x %x %x", 
+					Dbprintf("TAG ID: %x %x %x", 
 						(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
-					DbpString(output_string);
 					/* if we're only looking for one tag */
 					if (findone)
 					{

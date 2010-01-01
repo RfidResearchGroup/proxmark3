@@ -14,6 +14,12 @@
 #include "LCD.h"
 #endif
 
+#define va_list __builtin_va_list
+#define va_start __builtin_va_start
+#define va_arg __builtin_va_arg
+#define va_end __builtin_va_end
+int kvsprintf(char const *fmt, void *arg, int radix, va_list ap);
+	
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
 // any purpose (fake tag, as reader, whatever). We go MSB first, since that
@@ -92,6 +98,18 @@ void DbpIntegers(int x1, int x2, int x3)
 	UsbSendPacket((BYTE *)&c, sizeof(c));
 	// XXX
 	SpinDelay(50);
+}
+
+void Dbprintf(const char *fmt, ...) {
+// should probably limit size here; oh well, let's just use a big buffer
+	char output_string[128];
+	va_list ap;
+
+	va_start(ap, fmt);
+	kvsprintf(fmt, output_string, 10, ap);
+	va_end(ap);
+ 
+	DbpString(output_string);
 }
 
 //-----------------------------------------------------------------------------

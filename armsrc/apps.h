@@ -21,6 +21,8 @@ void __attribute__((noreturn)) AppMain(void);
 void SamyRun(void);
 void DbpIntegers(int a, int b, int c);
 void DbpString(char *str);
+void Dbprintf(const char *fmt, ...);
+
 void ToSendStuffBit(int b);
 void ToSendReset(void);
 void ListenReaderField(int limit);
