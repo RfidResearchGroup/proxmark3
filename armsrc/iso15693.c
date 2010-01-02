@@ -926,24 +926,18 @@ void ReaderIso15693(DWORD parameter)
 
 //DbpString(parameter);
 
-	BYTE *receivedAnswer0 = (((BYTE *)BigBuf) + 3560); // allow 100 bytes per reponse (way too much)
-	BYTE *receivedAnswer1 = (((BYTE *)BigBuf) + 3660); //
-	BYTE *receivedAnswer2 = (((BYTE *)BigBuf) + 3760);
-	BYTE *receivedAnswer3 = (((BYTE *)BigBuf) + 3860);
+	//BYTE *answer0 = (((BYTE *)BigBuf) + 3560); // allow 100 bytes per reponse (way too much)
+	BYTE *answer1 = (((BYTE *)BigBuf) + 3660); //
+	BYTE *answer2 = (((BYTE *)BigBuf) + 3760);
+	BYTE *answer3 = (((BYTE *)BigBuf) + 3860);
 	//BYTE *TagUID= (((BYTE *)BigBuf) + 3960);		// where we hold the uid for hi15reader
-//	int responseLen0 = 0;
-	int responseLen1 = 0;
-	int responseLen2 = 0;
-	int responseLen3 = 0;
+//	int answerLen0 = 0;
+	int answerLen1 = 0;
+	int answerLen2 = 0;
+	int answerLen3 = 0;
 
 	// Blank arrays
-	int j;
-	for(j = 0; j < 100; j++) {
-		receivedAnswer3[j] = 0;
-		receivedAnswer2[j] =0;
-		receivedAnswer1[j] = 0;
-		receivedAnswer0[j] = 0;
-	}
+	memset(BigBuf + 3660, 0, 300);
 
 	// Setup SSC
 	FpgaSetupSsc();
@@ -997,24 +991,24 @@ void ReaderIso15693(DWORD parameter)
 	//TransmitTo15693Tag(ToSend,ToSendMax+3,&tsamples, &wait);
 	TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
 	// Now wait for a response
-	responseLen1 = GetIso15693AnswerFromTag(receivedAnswer1, 100, &samples, &elapsed) ;
+	answerLen1 = GetIso15693AnswerFromTag(answer1, 100, &samples, &elapsed) ;
 
-	if (responseLen1 >=12) // we should do a better check than this
+	if (answerLen1 >=12) // we should do a better check than this
 	{
 
-		TagUID[0] = receivedAnswer1[2];
-		TagUID[1] = receivedAnswer1[3];
-		TagUID[2] = receivedAnswer1[4];
-		TagUID[3] = receivedAnswer1[5];
-		TagUID[4] = receivedAnswer1[6];
-		TagUID[5] = receivedAnswer1[7];
-		TagUID[6] = receivedAnswer1[8]; // IC Manufacturer code
+		TagUID[0] = answer1[2];
+		TagUID[1] = answer1[3];
+		TagUID[2] = answer1[4];
+		TagUID[3] = answer1[5];
+		TagUID[4] = answer1[6];
+		TagUID[5] = answer1[7];
+		TagUID[6] = answer1[8]; // IC Manufacturer code
 
 		// Now send the SELECT command
 		BuildSelectRequest(TagUID);
 		TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
 		// Now wait for a response
-		responseLen2 = GetIso15693AnswerFromTag(receivedAnswer2, 100, &samples, &elapsed);
+		answerLen2 = GetIso15693AnswerFromTag(answer2, 100, &samples, &elapsed);
 
 		// Now send the MULTI READ command
 //		BuildArbitraryRequest(*TagUID,parameter);
@@ -1024,34 +1018,25 @@ void ReaderIso15693(DWORD parameter)
 		//TransmitTo15693Tag(ToSend,ToSendMax+3,&tsamples, &wait);
 		TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
 		// Now wait for a response
-		responseLen3 = GetIso15693AnswerFromTag(receivedAnswer3, 100, &samples, &elapsed) ;
+		answerLen3 = GetIso15693AnswerFromTag(answer3, 100, &samples, &elapsed) ;
 
 	}
 
-	char str1 [4];
-	//char str2 [200];
-	int i;
+	Dbprintf("%d octets read from IDENTIFY request: %x %x %x %x %x %x %x %x %x", answerLen1,
+		answer1[0], answer1[1], answer1[2],
+		answer1[3], answer1[4], answer1[5],
+		answer1[6], answer1[7], answer1[8]);
 
-	itoa(responseLen1,str1);
-	strcat(str1," octets read from IDENTIFY request");
-	DbpString(str1);
-	for(i = 0; i < responseLen1; i+=3) {
-		DbpIntegers(receivedAnswer1[i],receivedAnswer1[i+1],receivedAnswer1[i+2]);
-	}
+	Dbprintf("%d octets read from SELECT request: %x %x %x %x %x %x %x %x %x", answerLen2,
+		answer2[0], answer2[1], answer2[2],
+		answer2[3], answer2[4], answer2[5],
+		answer2[6], answer2[7], answer2[8]);
 
-	itoa(responseLen2,str1);
-	strcat(str1," octets read from SELECT request");
-	DbpString(str1);
-	for(i = 0; i < responseLen2; i+=3) {
-		DbpIntegers(receivedAnswer2[i],receivedAnswer2[i+1],receivedAnswer2[i+2]);
-	}
+	Dbprintf("%d octets read from XXX request: %x %x %x %x %x %x %x %x %x", answerLen3,
+		answer3[0], answer3[1], answer3[2],
+		answer3[3], answer3[4], answer3[5],
+		answer3[6], answer3[7], answer3[8]);
 
-	itoa(responseLen3,str1);
-	strcat(str1," octets read from XXX request");
-	DbpString(str1);
-	for(i = 0; i < responseLen3; i+=3) {
-		DbpIntegers(receivedAnswer3[i],receivedAnswer3[i+1],receivedAnswer3[i+2]);
-	}
 
 //	str2[0]=0;
 //	for(i = 0; i < responseLen3; i++) {
@@ -1077,26 +1062,11 @@ void SimTagIso15693(DWORD parameter)
 	LED_C_OFF();
 	LED_D_OFF();
 
-//DbpString(parameter);
-
-	BYTE *receivedAnswer0 = (((BYTE *)BigBuf) + 3560); // allow 100 bytes per reponse (way too much)
-	BYTE *receivedAnswer1 = (((BYTE *)BigBuf) + 3660); //
-	BYTE *receivedAnswer2 = (((BYTE *)BigBuf) + 3760);
-	BYTE *receivedAnswer3 = (((BYTE *)BigBuf) + 3860);
-	//BYTE *TagUID= (((BYTE *)BigBuf) + 3960);		// where we hold the uid for hi15reader
-//	int responseLen0 = 0;
-	int responseLen1 = 0;
-//	int responseLen2 = 0;
-//	int responseLen3 = 0;
+	BYTE *answer1 = (((BYTE *)BigBuf) + 3660); //
+	int answerLen1 = 0;
 
 	// Blank arrays
-	int j;
-	for(j = 0; j < 100; j++) {
-		receivedAnswer3[j] = 0;
-		receivedAnswer2[j] =0;
-		receivedAnswer1[j] = 0;
-		receivedAnswer0[j] = 0;
-	}
+	memset(answer1, 0, 100);
 
 	// Setup SSC
 	FpgaSetupSsc();
@@ -1122,66 +1092,19 @@ void SimTagIso15693(DWORD parameter)
 	int wait = 0;
 	int elapsed = 0;
 
-	// FIRST WE RUN AN INVENTORY TO GET THE TAG UID
-	// THIS MEANS WE CAN PRE-BUILD REQUESTS TO SAVE CPU TIME
-	// BYTE TagUID[7];		// where we hold the uid for hi15reader
+	answerLen1 = GetIso15693AnswerFromSniff(answer1, 100, &samples, &elapsed) ;
 
-	// Now send the IDENTIFY command
-	//	BuildIdentifyRequest();
-	//	TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
-
-	// Now wait for a command from the reader
-	responseLen1=0;
-	//	while(responseLen1=0) {
-	//		if(BUTTON_PRESS()) break;
-		responseLen1 = GetIso15693AnswerFromSniff(receivedAnswer1, 100, &samples, &elapsed) ;
-	//		}
-
-	if (responseLen1 >=1) // we should do a better check than this
+	if (answerLen1 >=1) // we should do a better check than this
 	{
 		// Build a suitable reponse to the reader INVENTORY cocmmand
 		BuildInventoryResponse();
-		TransmitTo15693Reader(ToSend,ToSendMax,&tsamples, &wait);
-
-		// Now wait for a command from the reader
-//		responseLen2 = GetIso15693AnswerFromTag(receivedAnswer2, 100, &samples, &elapsed);
-
-		// Now wait for a command from the reader
-//		responseLen3 = GetIso15693AnswerFromTag(receivedAnswer3, 100, &samples, &elapsed) ;
-
+		TransmitTo15693Reader(ToSend,ToSendMax, &tsamples, &wait);
 	}
 
-	char str1 [4];
-	//char str2 [200];
-	int i;
-
-	itoa(responseLen1,str1);
-	strcat(str1," octets read from reader command");
-	DbpString(str1);
-	for(i = 0; i < responseLen1; i+=3) {
-		DbpIntegers(receivedAnswer1[i],receivedAnswer1[i+1],receivedAnswer1[i+2]);
-	}
-
-//	itoa(responseLen2,str1);
-//	strcat(str1," octets read from SELECT request");
-//	DbpString(str1);
-//	for(i = 0; i < responseLen2; i+=3) {
-//		DbpIntegers(receivedAnswer2[i],receivedAnswer2[i+1],receivedAnswer2[i+2]);
-//	}
-//
-//	itoa(responseLen3,str1);
-//	strcat(str1," octets read from XXX request");
-//	DbpString(str1);
-//	for(i = 0; i < responseLen3; i+=3) {
-//		DbpIntegers(receivedAnswer3[i],receivedAnswer3[i+1],receivedAnswer3[i+2]);
-//	}
-
-//	str2[0]=0;
-//	for(i = 0; i < responseLen3; i++) {
-//		itoa(str1,receivedAnswer3[i]);
-//		strcat(str2,str1);
-//	}
-//	DbpString(str2);
+	Dbprintf("%d octets read from reader command: %x %x %x %x %x %x %x %x %x", answerLen1,
+		answer1[0], answer1[1], answer1[2],
+		answer1[3], answer1[4], answer1[5],
+		answer1[6], answer1[7], answer1[8]);
 
 	LED_A_OFF();
 	LED_B_OFF();

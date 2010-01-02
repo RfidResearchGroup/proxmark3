@@ -83,6 +83,7 @@ void DbpString(char *str)
 	SpinDelay(50);
 }
 
+#if 0
 void DbpIntegers(int x1, int x2, int x3)
 {
 	/* this holds up stuff unless we're connected to usb */
@@ -99,6 +100,7 @@ void DbpIntegers(int x1, int x2, int x3)
 	// XXX
 	SpinDelay(50);
 }
+#endif
 
 void Dbprintf(const char *fmt, ...) {
 // should probably limit size here; oh well, let's just use a big buffer
@@ -249,12 +251,9 @@ void SimulateTagHfListen(void)
 void ReadMem(int addr)
 {
 	const DWORD *data = ((DWORD *)addr);
-	int i;
 
-	DbpString("Reading memory at address");
-	DbpIntegers(0, 0, addr);
-	for (i = 0; i < 8; i+= 2)
-		DbpIntegers(0, data[i], data[i+1]);
+	Dbprintf("Reading memory at address %x: %02x %02x %02x %02x %02x %02x %02x %02x",
+		addr, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 }
 
 /* osimage version information is linked in */
@@ -340,8 +339,7 @@ void SamyRun()
 			SpinDelay(500);
 
 			CmdHIDdemodFSK(1, &high[selected], &low[selected], 0);
-			DbpString("Recorded");
-			DbpIntegers(selected, high[selected], low[selected]);
+			Dbprintf("Recorded %x %x %x", selected, high[selected], low[selected]);
 
 			LEDsoff();
 			LED(selected + 1, 0);
@@ -371,7 +369,7 @@ void SamyRun()
 				// wait for button to be released
 				while(BUTTON_PRESS())
 					WDT_HIT();
-				DbpIntegers(selected, high[selected], low[selected]);
+				Dbprintf("%x %x %x", selected, high[selected], low[selected]);
 				CmdHIDsimTAG(high[selected], low[selected], 0);
 				DbpString("Done playing");
 				if (BUTTON_HELD(1000) > 0)
@@ -449,17 +447,15 @@ void ListenReaderField(int limit)
 	lf_av=lf_max=ReadAdc(ADC_CHAN_LF);
 
 	if(limit != HF_ONLY) {
-		DbpString("LF 125/134 Baseline:");
-		DbpIntegers(lf_av,0,0);
-		lf_baseline= lf_av;
+		Dbprintf("LF 125/134 Baseline: %d", lf_av);
+		lf_baseline = lf_av;
 	}
 
 	hf_av=hf_max=ReadAdc(ADC_CHAN_HF);
 
 	if (limit != LF_ONLY) {
-		DbpString("HF 13.56 Baseline:");
-		DbpIntegers(hf_av,0,0);
-		hf_baseline= hf_av;
+		Dbprintf("HF 13.56 Baseline: %d", hf_av);
+		hf_baseline = hf_av;
 	}
 
 	for(;;) {
@@ -490,9 +486,8 @@ void ListenReaderField(int limit)
 			lf_av_new= ReadAdc(ADC_CHAN_LF);
 			// see if there's a significant change
 			if(abs(lf_av - lf_av_new) > 10) {
-				DbpString("LF 125/134 Field Change:");
-				DbpIntegers(lf_av,lf_av_new,lf_count);
-				lf_av= lf_av_new;
+				Dbprintf("LF 125/134 Field Change: %x %x %x", lf_av, lf_av_new, lf_count);
+				lf_av = lf_av_new;
 				if (lf_av > lf_max)
 					lf_max = lf_av;
 				lf_count= 0;
@@ -509,9 +504,8 @@ void ListenReaderField(int limit)
 			hf_av_new= ReadAdc(ADC_CHAN_HF);
 			// see if there's a significant change
 			if(abs(hf_av - hf_av_new) > 10) {
-				DbpString("HF 13.56 Field Change:");
-				DbpIntegers(hf_av,hf_av_new,hf_count);
-				hf_av= hf_av_new;
+				Dbprintf("HF 13.56 Field Change: %x %x %x", hf_av, hf_av_new, hf_count);
+				hf_av = hf_av_new;
 				if (hf_av > hf_max)
 					hf_max = hf_av;
 				hf_count= 0;

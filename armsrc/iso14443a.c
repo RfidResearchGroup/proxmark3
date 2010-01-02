@@ -741,13 +741,13 @@ void SnoopIso14443a(void)
 
     DbpString("COMMAND FINISHED");
 
-    DbpIntegers(maxBehindBy, Uart.state, Uart.byteCnt);
-    DbpIntegers(Uart.byteCntMax, traceLen, (int)Uart.output[0]);
+    Dbprintf("%x %x %x", maxBehindBy, Uart.state, Uart.byteCnt);
+    Dbprintf("%x %x %x", Uart.byteCntMax, traceLen, (int)Uart.output[0]);
 
 done:
     AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
-    DbpIntegers(maxBehindBy, Uart.state, Uart.byteCnt);
-    DbpIntegers(Uart.byteCntMax, traceLen, (int)Uart.output[0]);
+    Dbprintf("%x %x %x", maxBehindBy, Uart.state, Uart.byteCnt);
+    Dbprintf("%x %x %x", Uart.byteCntMax, traceLen, (int)Uart.output[0]);
     LED_A_OFF();
     LED_B_OFF();
 	LED_C_OFF();
@@ -1144,8 +1144,8 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 		} else if(receivedCmd[0] == 0x30) {
 			// Received a READ
 			resp = resp4; respLen = resp4Len; order = 4; // Do nothing
-			DbpString("Read request from reader:");
-			DbpIntegers(receivedCmd[0], receivedCmd[1], receivedCmd[2]);
+			Dbprintf("Read request from reader: %x %x %x",
+				receivedCmd[0], receivedCmd[1], receivedCmd[2]);
 
 
 		} else if(receivedCmd[0] == 0x50) {
@@ -1156,21 +1156,20 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 		} else if(receivedCmd[0] == 0x60) {
 			// Received an authentication request
 			resp = resp5; respLen = resp5Len; order = 7;
-			DbpString("Authenticate request from reader:");
-			DbpIntegers(receivedCmd[0], receivedCmd[1], receivedCmd[2]);
+			Dbprintf("Authenticate request from reader: %x %x %x",
+				receivedCmd[0], receivedCmd[1], receivedCmd[2]);
 
 		} else if(receivedCmd[0] == 0xE0) {
 			// Received a RATS request
 			resp = resp1; respLen = 0;order = 70;
-			DbpString("RATS request from reader:");
-			DbpIntegers(receivedCmd[0], receivedCmd[1], receivedCmd[2]);
+			Dbprintf("RATS request from reader: %x %x %x",
+				receivedCmd[0], receivedCmd[1], receivedCmd[2]);
         } else {
             // Never seen this command before
-			DbpString("Unknown command received from reader:");
-			DbpIntegers(receivedCmd[0], receivedCmd[1], receivedCmd[2]);
-			DbpIntegers(receivedCmd[3], receivedCmd[4], receivedCmd[5]);
-			DbpIntegers(receivedCmd[6], receivedCmd[7], receivedCmd[8]);
-
+		Dbprintf("Unknown command received from reader: %x %x %x %x %x %x %x %x %x",
+			receivedCmd[0], receivedCmd[1], receivedCmd[2],
+			receivedCmd[3], receivedCmd[3], receivedCmd[4],
+			receivedCmd[5], receivedCmd[6], receivedCmd[7]);
 			// Do not respond
 			resp = resp1; respLen = 0; order = 0;
         }
@@ -1234,7 +1233,7 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 
     }
 
-	DbpIntegers(happened, happened2, cmdsRecvd);
+	Dbprintf("%x %x %x", happened, happened2, cmdsRecvd);
 	LED_A_OFF();
 }
 
@@ -1694,7 +1693,7 @@ void ReaderIso14443a(DWORD parameter)
   // Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-	DbpIntegers(rsamples, 0xCC, 0xCC);
+	Dbprintf("%x %x %x", rsamples, 0xCC, 0xCC);
 	DbpString("ready..");
 }
 

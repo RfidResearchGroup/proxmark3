@@ -353,9 +353,8 @@ void SimulateIso14443Tag(void)
         BYTE b1, b2;
 
         if(!GetIso14443CommandFromReader(receivedCmd, &len, 100)) {
-            DbpIntegers(cmdsRecvd, 0, 0);
-            DbpString("button press");
-            break;
+		Dbprintf("button pressed, received %d commands", cmdsRecvd);
+		break;
         }
 
         // Good, look at the command now.
@@ -363,8 +362,7 @@ void SimulateIso14443Tag(void)
         if(len == sizeof(cmd1) && memcmp(receivedCmd, cmd1, len)==0) {
             resp = resp1; respLen = resp1Len;
         } else {
-            DbpString("new cmd from reader:");
-            DbpIntegers(len, 0x1234, cmdsRecvd);
+            Dbprintf("new cmd from reader: len=%d, cmdsRecvd=%d", len, cmdsRecvd);
             // And print whether the CRC fails, just for good measure
             ComputeCrc14443(CRC_14443_B, receivedCmd, len-2, &b1, &b2);
             if(b1 != receivedCmd[len-2] || b2 != receivedCmd[len-1]) {
@@ -688,7 +686,7 @@ static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
         }
     }
     AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
-    if (!quiet) DbpIntegers(max, gotFrame, Demod.len);
+    if (!quiet) Dbprintf("%x %x %x", max, gotFrame, Demod.len);
 }
 
 //-----------------------------------------------------------------------------
@@ -912,8 +910,8 @@ void ReadSTMemoryIso14443(DWORD parameter,DWORD dwLast)
 	DbpString("No response from tag");
 	return;
     } else {
-	DbpString("Randomly generated UID from tag (+ 2 byte CRC):");
-	DbpIntegers(Demod.output[0], Demod.output[1],Demod.output[2]);
+	Dbprintf("Randomly generated UID from tag (+ 2 byte CRC): %x %x %x",
+		Demod.output[0], Demod.output[1],Demod.output[2]);
     }
     // There is a response, SELECT the uid
     DbpString("Now SELECT tag:");
@@ -926,8 +924,7 @@ void ReadSTMemoryIso14443(DWORD parameter,DWORD dwLast)
     GetSamplesFor14443Demod(TRUE, 2000,TRUE);
 //    LED_A_OFF();
     if (Demod.len != 3) {
-	DbpString("Expected 3 bytes from tag, got:");
-	DbpIntegers(Demod.len,0x0,0x0);
+	Dbprintf("Expected 3 bytes from tag, got %d", Demod.len);
 	return;
     }
     // Check the CRC of the answer:
@@ -938,8 +935,7 @@ void ReadSTMemoryIso14443(DWORD parameter,DWORD dwLast)
     }
     // Check response from the tag: should be the same UID as the command we just sent:
     if (cmd1[1] != Demod.output[0]) {
-	DbpString("Bad response to SELECT from Tag, aborting:");
-	DbpIntegers(cmd1[1],Demod.output[0],0x0);
+	Dbprintf("Bad response to SELECT from Tag, aborting: %x %x", cmd1[1], Demod.output[0]);
 	return;
     }
     // Tag is now selected,
@@ -952,19 +948,19 @@ void ReadSTMemoryIso14443(DWORD parameter,DWORD dwLast)
     GetSamplesFor14443Demod(TRUE, 2000,TRUE);
 //    LED_A_OFF();
     if (Demod.len != 10) {
-	DbpString("Expected 10 bytes from tag, got:");
-	DbpIntegers(Demod.len,0x0,0x0);
+	Dbprintf("Expected 10 bytes from tag, got %d", Demod.len);
 	return;
     }
     // The check the CRC of the answer (use cmd1 as temporary variable):
     ComputeCrc14443(CRC_14443_B, Demod.output, 8, &cmd1[2], &cmd1[3]);
            if(cmd1[2] != Demod.output[8] || cmd1[3] != Demod.output[9]) {
-	DbpString("CRC Error reading block! - Below: expected, got");
-	DbpIntegers( (cmd1[2]<<8)+cmd1[3], (Demod.output[8]<<8)+Demod.output[9],0);
+	Dbprintf("CRC Error reading block! - Below: expected, got %x %x",
+		(cmd1[2]<<8)+cmd1[3], (Demod.output[8]<<8)+Demod.output[9]);
 	// Do not return;, let's go on... (we should retry, maybe ?)
     }
-    DbpString("Tag UID (64 bits):");
-    DbpIntegers((Demod.output[7]<<24) + (Demod.output[6]<<16) + (Demod.output[5]<<8) + Demod.output[4], (Demod.output[3]<<24) + (Demod.output[2]<<16) + (Demod.output[1]<<8) + Demod.output[0], 0);
+    Dbprintf("Tag UID (64 bits): %08x %08x",
+	(Demod.output[7]<<24) + (Demod.output[6]<<16) + (Demod.output[5]<<8) + Demod.output[4],
+	(Demod.output[3]<<24) + (Demod.output[2]<<16) + (Demod.output[1]<<8) + Demod.output[0]);
 
     // Now loop to read all 16 blocks, address from 0 to 15
     DbpString("Tag memory dump, block 0 to 15");
@@ -990,13 +986,14 @@ void ReadSTMemoryIso14443(DWORD parameter,DWORD dwLast)
 	    // The check the CRC of the answer (use cmd1 as temporary variable):
 	    ComputeCrc14443(CRC_14443_B, Demod.output, 4, &cmd1[2], &cmd1[3]);
             if(cmd1[2] != Demod.output[4] || cmd1[3] != Demod.output[5]) {
-		DbpString("CRC Error reading block! - Below: expected, got");
-		DbpIntegers( (cmd1[2]<<8)+cmd1[3], (Demod.output[4]<<8)+Demod.output[5],0);
+		Dbprintf("CRC Error reading block! - Below: expected, got %x %x",
+			(cmd1[2]<<8)+cmd1[3], (Demod.output[4]<<8)+Demod.output[5]);
 		// Do not return;, let's go on... (we should retry, maybe ?)
 	    }
 	    // Now print out the memory location:
-	    DbpString("Address , Contents, CRC");
-	    DbpIntegers(i, (Demod.output[3]<<24) + (Demod.output[2]<<16) + (Demod.output[1]<<8) + Demod.output[0], (Demod.output[4]<<8)+Demod.output[5]);
+	    Dbprintf("Address=%x, Contents=%x, CRC=%x", i,
+		(Demod.output[3]<<24) + (Demod.output[2]<<16) + (Demod.output[1]<<8) + Demod.output[0],
+		(Demod.output[4]<<8)+Demod.output[5]);
 	    if (i == 0xff) {
 		break;
 	    }
@@ -1084,8 +1081,7 @@ void SnoopIso14443(void)
         if(behindBy > maxBehindBy) {
             maxBehindBy = behindBy;
             if(behindBy > (DMA_BUFFER_SIZE-2)) { // TODO: understand whether we can increase/decrease as we want or not?
-                DbpString("blew circular buffer!");
-                DbpIntegers(behindBy,0,0);
+                Dbprintf("blew circular buffer! behindBy=%x", behindBy);
                 goto done;
             }
         }
@@ -1173,9 +1169,8 @@ void SnoopIso14443(void)
     }
 
     DbpString("in done pt");
-
-    DbpIntegers(maxBehindBy, Uart.state, Uart.byteCnt);
-    DbpIntegers(Uart.byteCntMax, traceLen, 0x23);
+    Dbprintf("%x %x %x", maxBehindBy, Uart.state, Uart.byteCnt);
+    Dbprintf("%x %x %x", Uart.byteCntMax, traceLen, 0x23);
 
 done:
 	LED_D_OFF();
