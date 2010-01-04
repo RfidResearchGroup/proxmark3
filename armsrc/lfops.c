@@ -54,7 +54,8 @@ void DoAcquisition125k(void)
 			if (i >= n) break;
 		}
 	}
-	Dbprintf("read samples, dest[0]=%x dest[1]=%x", dest[0], dest[1]);
+	Dbprintf("buffer samples: %02x %02x %02x %02x %02x %02x %02x %02x ...",
+			dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
 }
 
 void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, BYTE *command)
@@ -248,7 +249,7 @@ void ReadTItag(void)
 		crc = update_crc16(crc, (shift1>>16)&0xff);
 		crc = update_crc16(crc, (shift1>>24)&0xff);
 
-		Dbprintf("Info: Tag data_hi=%x, data_lo=%x, crc=%x",
+		Dbprintf("Info: Tag data: %x%08x, crc=%x",
 			(unsigned int)shift1, (unsigned int)shift0, (unsigned int)shift2 & 0xFFFF);
 		if (crc != (shift2&0xffff)) {
 			Dbprintf("Error: CRC mismatch, expected %x", (unsigned int)crc);
@@ -343,7 +344,6 @@ void AcquireTiType(void)
 	n = TIBUFLEN*32;
 	// unpack buffer
 	for (i=TIBUFLEN-1; i>=0; i--) {
-//		DbpIntegers(0, 0, BigBuf[i]);
 		for (j=0; j<32; j++) {
 			if(BigBuf[i] & (1 << j)) {
 				dest[--n] = 1;
@@ -359,11 +359,6 @@ void AcquireTiType(void)
 // if not provided a valid crc will be computed from the data and written.
 void WriteTItag(DWORD idhi, DWORD idlo, WORD crc)
 {
-
-	// WARNING the order of the bytes in which we calc crc below needs checking
-	// i'm 99% sure the crc algorithm is correct, but it may need to eat the
-	// bytes in reverse or something
-
 	if(crc == 0) {
 	 	crc = update_crc16(crc, (idlo)&0xff);
 		crc = update_crc16(crc, (idlo>>8)&0xff);
@@ -374,7 +369,7 @@ void WriteTItag(DWORD idhi, DWORD idlo, WORD crc)
 		crc = update_crc16(crc, (idhi>>16)&0xff);
 		crc = update_crc16(crc, (idhi>>24)&0xff);
 	}
-	Dbprintf("Writing the following data to tag: %x, %x, %x",
+	Dbprintf("Writing to tag: %x%08x, crc=%x",
 		(unsigned int) idhi, (unsigned int) idlo, crc);
 
 	// TI tags charge at 134.2Khz
@@ -919,7 +914,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				found=1;
 				idx+=6;
 				if (found && (hi|lo)) {
-					Dbprintf("TAG ID: %x %x %x", 
+					Dbprintf("TAG ID: %x%08x (%d)",
 						(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
 					/* if we're only looking for one tag */
 					if (findone)
@@ -952,7 +947,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				found=1;
 				idx+=6;
 				if (found && (hi|lo)) {
-					Dbprintf("TAG ID: %x %x %x", 
+					Dbprintf("TAG ID: %x%08x (%d)",
 						(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
 					/* if we're only looking for one tag */
 					if (findone)

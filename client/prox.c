@@ -225,7 +225,7 @@ void WaitForAck(void) {
 	}
 }
 
-static DWORD ExpectedAddr;
+static unsigned int ExpectedAddr;
 static BYTE QueuedToSend[256];
 static BOOL AllWritten;
 #define PHYSICAL_FLASH_START 0x100000
@@ -336,7 +336,7 @@ static void LoadFlashFromSRecords(const char *file, int start_addr, int end_addr
 			char addrStr[9];
 			memcpy(addrStr, s, 8);
 			addrStr[8] = '\0';
-			DWORD addr;
+			unsigned int addr;
 			sscanf(addrStr, "%x", &addr);
 			s += 8;
 

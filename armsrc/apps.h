@@ -19,7 +19,7 @@ DWORD BigBuf[12000];
 void ReadMem(int addr);
 void __attribute__((noreturn)) AppMain(void);
 void SamyRun(void);
-void DbpIntegers(int a, int b, int c);
+//void DbpIntegers(int a, int b, int c);
 void DbpString(char *str);
 void Dbprintf(const char *fmt, ...);
 
