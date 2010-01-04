@@ -4,7 +4,7 @@ WINCC=c:\mingw\bin\gcc
 
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb -lreadline -lpthread
 LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -I. -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS)
+CFLAGS = -I. -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g3
 
 WINLIBS = -lgdi32 -lsetupapi
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall
@@ -41,8 +41,8 @@ all: $(BINS)
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: snooper cli flasher
 
-prox.exe: prox.c wingui.c command.c
-	$(WINCC) $(CFLAGS) $(DEFINES) -o prox.exe prox.c wingui.c command.c $(WINLIBS)
+prox.exe: prox.c wingui.c command.c flash.c
+	$(WINCC) $(CFLAGS) $(DEFINES) -o prox.exe prox.c wingui.c command.c flash.c $(WINLIBS)
 	
 proxmark3: LDLIBS+=$(QTLDLIBS)
 proxmark3: proxmark3.o gui.o command.o usb.o $(QTGUI)
@@ -53,7 +53,7 @@ snooper: snooper.o gui.o command.o usb.o guidummy.o
 
 cli: cli.o gui.o command.o usb.o guidummy.o
 
-flasher: flasher.o usb.o
+flasher: flash.o flasher.o usb.o
 
 proxguiqt.moc.cpp: proxguiqt.h
 	$(MOC) -o$@ $^
