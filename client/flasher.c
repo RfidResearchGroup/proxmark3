@@ -30,7 +30,7 @@ static void usage(char **argv)
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "         image is the path to the corresponding image\n\n");
-	fprintf(stderr, "Example: %s os,fpga path/to/osimage.s19 path/to/fpgaimage.s19\n", argv[0]);
+	fprintf(stderr, "Example: %s os,fpga path/to/osimage.elf path/to/fpgaimage.elf\n", argv[0]);
 }
 
 int main(int argc, char **argv) {

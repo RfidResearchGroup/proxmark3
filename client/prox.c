@@ -223,7 +223,7 @@ static void usage(char **argv)
 	int i;
 		printf("Usage: %s gui\n", argv[0]);
 		printf("       %s offline\n", argv[0]);
-		printf("       %s areas file.s19\n", argv[0]);
+		printf("       %s areas file.elf\n", argv[0]);
 		printf("               Known areas are:");
 		for(i=0; partitions[i].name != NULL; i++) {
 			fprintf(stderr, " %s", partitions[i].name);

@@ -22,11 +22,13 @@ BOOL UsbConnect(void);
 #include "proxmark3.h"
 #endif
 #include "flash.h"
+#include "elf.h"
 
 static uint32_t ExpectedAddr;
 static uint8_t QueuedToSend[256];
 static bool AllWritten;
 #define PHYSICAL_FLASH_START 0x100000
+#define PHYSICAL_FLASH_END   0x200000
 
 void WaitForAck(void) {
 	UsbCommand ack;
@@ -47,147 +49,112 @@ struct partition partitions[] = {
 /* If translate is set, subtract PHYSICAL_FLASH_START to translate for old
  * bootroms.
  */
-void FlushPrevious(int translate)
+void WriteBlock(unsigned int block_start, unsigned int len, unsigned char *buf)
 {
-	UsbCommand c;
-	memset(&c, 0, sizeof(c));
+	unsigned char temp_buf[256];
+	if (block_start & 0xFF) {
+		printf("moving stuff forward by %d bytes\n", block_start & 0xFF);
+		memset(temp_buf, 0xFF, block_start & 0xFF);
+		memcpy(temp_buf + (block_start & 0xFF), buf, len);
+		block_start &= ~0xFF;
+	} else memcpy(temp_buf, buf, len);
+	
+	UsbCommand c = {CMD_SETUP_WRITE};
 
-	printf("expected = %08x flush, ", ExpectedAddr);
+//	printf("expected = %08x flush, ", ExpectedAddr);
 
 	int i;
 	for(i = 0; i < 240; i += 48) {
-		c.cmd = CMD_SETUP_WRITE;
-		memcpy(c.d.asBytes, QueuedToSend+i, 48);
+		memcpy(c.d.asBytes, temp_buf+i, 48);
 		c.arg[0] = (i/4);
 		SendCommand(&c);
 		WaitForAck();
 	}
 
 	c.cmd = CMD_FINISH_WRITE;
-	c.arg[0] = (ExpectedAddr-1) & (~255);
-	if(translate) {
-		c.arg[0] -= PHYSICAL_FLASH_START;
-	}
-	printf("c.arg[0] = %08x\r", c.arg[0]);
-	memcpy(c.d.asBytes, QueuedToSend+240, 16);
+	c.arg[0] = block_start;
+
+	printf("writing block %08x\r", c.arg[0]);
+	memcpy(c.d.asBytes, temp_buf+240, 16);
 	SendCommand(&c);
 	WaitForAck();
 
 	AllWritten = true;
 }
 
-/* Where must be between start_addr (inclusive) and end_addr (exclusive).
- */
-void GotByte(uint32_t where, uint8_t which, int start_addr, int end_addr, int translate)
+void LoadFlashFromFile(const char *file, int start_addr, int end_addr)
 {
-	AllWritten = false;
-	
-	if(where < start_addr || where >= end_addr) {
-		printf("bad: got byte at %08x, outside of range %08x-%08x\n", where, start_addr, end_addr);
-		exit(-1);
-	}
-
-	if(where != ExpectedAddr) {
-		printf("bad: got at %08x, expected at %08x\n", where, ExpectedAddr);
-		exit(-1);
-	}
-	QueuedToSend[where & 255] = which;
-	ExpectedAddr++;
-
-	if((where & 255) == 255) {
-		// we have completed a full page
-		FlushPrevious(translate);
-	}
-}
-
-int HexVal(int c)
-{
-	c = tolower(c);
-	if(c >= '0' && c <= '9') {
-		return c - '0';
-	} else if(c >= 'a' && c <= 'f') {
-		return (c - 'a') + 10;
-	} else {
-		printf("bad hex digit '%c'\n", c);
-		exit(-1);
-	}
-}
-
-uint8_t HexByte(char *s)
-{
-	return (HexVal(s[0]) << 4) | HexVal(s[1]);
-}
-
-void LoadFlashFromSRecords(const char *file, int start_addr, int end_addr, int translate)
-{
-	ExpectedAddr = start_addr;
-	
-	FILE *f = fopen(file, "r");
+	FILE *f = fopen(file, "rb");
 	if(!f) {
 		printf("couldn't open file\n");
 		exit(-1);
 	}
 
-	char line[512];
-	while(fgets(line, sizeof(line), f)) {
-		if(memcmp(line, "S3", 2)==0) {
-			char *s = line + 2;
-			int len = HexByte(s) - 5;
-			s += 2;
-
-			char addrStr[9];
-			memcpy(addrStr, s, 8);
-			addrStr[8] = '\0';
-			uint32_t addr;
-			sscanf(addrStr, "%x", &addr);
-			s += 8;
-			
-			/* Accept files that are located at PHYSICAL_FLASH_START, and files that are located at 0 */
-			if(addr < PHYSICAL_FLASH_START) 
-				addr += PHYSICAL_FLASH_START;
-
-			int i;
-			for(i = 0; i < len; i++) {
-				while((addr+i) > ExpectedAddr) {
-					GotByte(ExpectedAddr, 0xff, start_addr, end_addr, translate);
+	char buf[4];
+	fread(buf, 1, 4, f);
+	if (memcmp(buf, "\x7F" "ELF", 4) == 0) {
+		int i;
+		fseek(f, 0, SEEK_SET);
+		Elf32_Ehdr header;
+		fread(&header, 1, sizeof(header), f);
+		int count = header.e_phnum;
+		printf("count=%d phoff=%x\n", count, header.e_phoff);
+		Elf32_Phdr phdr;
+		
+		for (i=0; i<header.e_phnum; i++) {
+			fseek(f, header.e_phoff + i * sizeof(Elf32_Phdr), SEEK_SET);
+			fread(&phdr, 1, sizeof(phdr), f);
+//			printf("type=%d offset=%x paddr=%x vaddr=%x filesize=%x memsize=%x flags=%x align=%x\n",
+//				phdr.p_type, phdr.p_offset, phdr.p_paddr, phdr.p_vaddr, phdr.p_filesz, phdr.p_memsz, phdr.p_flags, phdr.p_align);
+			if (phdr.p_type == PT_LOAD && phdr.p_filesz > 0 && phdr.p_paddr >= PHYSICAL_FLASH_START
+				&& (phdr.p_paddr + phdr.p_filesz) < PHYSICAL_FLASH_END) {
+				printf("flashing offset=%x paddr=%x size=%x\n", phdr.p_offset, phdr.p_paddr, phdr.p_filesz);
+				if (phdr.p_offset == 0) {
+					printf("skipping forward 0x2000 because of strange linker thing\n");
+					phdr.p_offset += 0x2000;
+					phdr.p_paddr += 0x2000;
 				}
-				GotByte(addr+i, HexByte(s), start_addr, end_addr, translate);
-				s += 2;
-			}
-		}
-	}
 
-	if(!AllWritten) FlushPrevious(translate);
+				fseek(f, phdr.p_offset, SEEK_SET);
+				ExpectedAddr = phdr.p_paddr;
+				while (ExpectedAddr < (phdr.p_paddr + phdr.p_filesz)) {
+					unsigned int bytes_to_read = phdr.p_paddr + phdr.p_filesz - ExpectedAddr;
+					if (bytes_to_read > 256) bytes_to_read=256;
+					fread(QueuedToSend, 1, bytes_to_read, f);
+//					printf("read %d bytes\n", bytes_to_read);
+					printf("WriteBlock(%x, %d, %p)\n", ExpectedAddr, bytes_to_read, QueuedToSend);
+					WriteBlock(ExpectedAddr, bytes_to_read, QueuedToSend);
+					ExpectedAddr += bytes_to_read;
+				}
+            }
+        }
 
-	fclose(f);
-	printf("\ndone.\n");
+		fclose(f);
+		printf("\ndone.\n");
+		return;
+	} else printf("Bad file format\n");		
 }
 
 int PrepareFlash(struct partition *p, const char *filename, unsigned int state)
 {
-	int translate = 0;
 	if(state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
-		UsbCommand c;
-		c.cmd = CMD_START_FLASH;
-		c.arg[0] = p->start;
-		c.arg[1] = p->end;
+		UsbCommand c = {CMD_START_FLASH, {p->start, p->end, 0}};
 		
 		/* Only send magic when flashing bootrom */
-		if(p->precious) {
+		if(p->precious)
 			c.arg[2] = START_FLASH_MAGIC;
-		} else {
+		else
 			c.arg[2] = 0;
-		}
+
 		SendCommand(&c);
 		WaitForAck();
-		translate = 0;
 	} else {
 		fprintf(stderr, "Warning: Your bootloader does not understand the new START_FLASH command\n");
 		fprintf(stderr, "         It is recommended that you update your bootloader\n\n");
-		translate = 1;
+		exit(0);
 	}
 	
-	LoadFlashFromSRecords(filename, p->start, p->end, translate);
+	LoadFlashFromFile(filename, p->start, p->end);
 	return 1;
 }
 

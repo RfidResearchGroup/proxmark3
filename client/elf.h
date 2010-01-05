@@ -1,0 +1,31 @@
+#ifndef __ELF_H__
+#define __ELF_H__
+
+#define EI_NIDENT 16
+
+typedef struct {
+	unsigned char   e_ident[EI_NIDENT];
+	uint16_t e_type;
+	uint16_t e_machine;
+	uint32_t e_version;
+	uint32_t e_entry;
+	uint32_t e_phoff;
+	uint32_t e_shoff;
+	uint32_t e_flags;
+	uint16_t e_ehsize;
+	uint16_t e_phentsize;
+	uint16_t e_phnum;
+	uint16_t e_shentsize;
+	uint16_t e_shnum;
+	uint16_t e_shtrndx;
+} __attribute__((__packed__)) Elf32_Ehdr;
+
+#define PT_NULL     0
+#define PT_LOAD     1
+#define PT_DYNAMIC  2
+#define PT_INTERP   3
+#define PT_NOTE     4
+#define PT_SHLIB    5
+#define PT_PHDR     6
+#endif
+
