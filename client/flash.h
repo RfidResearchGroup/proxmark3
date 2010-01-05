@@ -1,3 +1,6 @@
+#ifndef __FLASH_H__
+#define __FLASH_H__
+
 struct partition {
 	int start;
 	int end;
@@ -13,3 +16,6 @@ int find_next_area(const char *str, int *offset, int *length);
 
 #define PHYSICAL_FLASH_START 0x100000
 void do_flash(char **argv);
+
+#endif
+
