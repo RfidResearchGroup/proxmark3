@@ -2844,7 +2844,7 @@ static struct {
 	{"hisamplest",		CmdHi14readt,		0, "Get samples HF, for testing"},
 	{"hisimlisten",		CmdHisimlisten,		0, "Get HF samples as fake tag"},
 	{"hpf",			CmdHpf,			1, "Remove DC offset from trace"},
-	{"indalademod",		CmdIndalademod,		0, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
+	{"indalademod",		CmdIndalademod,		1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
 	{"lcd",			CmdLcd,			0, "<HEX command> <count> -- Send command/data to LCD"},
 	{"lcdreset",		CmdLcdReset,		0, "Hardware reset LCD"},
 	{"legicrfread",		CmdLegicRfRead,		0, "Start the LEGIC RF reader"},
@@ -2873,7 +2873,7 @@ static struct {
 	{"tiwrite",		CmdTIWrite,		0, "Write new data to a r/w TI 134 kHz tag"},
 	{"threshold",		CmdThreshold,		1, "Maximize/minimize every value in the graph window depending on threshold"},
 	{"tune",		CmdTune,		0, "Measure antenna tuning"},
-	{"vchdemod",		CmdVchdemod,		0, "['clone'] -- Demodulate samples for VeriChip"},
+	{"vchdemod",		CmdVchdemod,		1, "['clone'] -- Demodulate samples for VeriChip"},
 	{"version",		CmdVersion,		0, "Show version inforation about the connected Proxmark"},
 	{"zerocrossings",	CmdZerocrossings,	1, "Count time between zero-crossings"},
 };
