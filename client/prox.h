@@ -44,6 +44,7 @@ int GetClock(char *str, int peak);
 static void CmdHIDdemodFSK(char *str);
 static void Cmdmanchestermod(char *str);
 static void CmdTune(char *str);
+static void CmdHiTune(char *str);
 static void CmdHi15read(char *str);
 static void CmdHi14read(char *str);
 static void CmdSri512read(char *str);

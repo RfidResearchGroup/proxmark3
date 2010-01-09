@@ -202,6 +202,27 @@ void MeasureAntennaTuning(void)
 	UsbSendPacket((BYTE *)&c, sizeof(c));
 }
 
+void MeasureAntennaTuningHf(void)
+{
+	int vHf = 0;	// in mV
+
+	DbpString("Measuring HF antenna characteristics, press button to exit");
+
+	for (;;) {
+		// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
+		SpinDelay(20);
+		// Vref = 3300mV, and an 10:1 voltage divider on the input
+		// can measure voltages up to 33000 mV
+		vHf = (33000 * AvgAdc(ADC_CHAN_HF)) >> 10;
+	
+		Dbprintf("%d mV",vHf);
+		if (BUTTON_PRESS()) break;
+	}
+	DbpString("cancelled");
+}
+
+
 void SimulateTagHfListen(void)
 {
 	BYTE *dest = (BYTE *)BigBuf;
@@ -641,6 +662,10 @@ void UsbPacketReceived(BYTE *packet, int len)
 
 		case CMD_MEASURE_ANTENNA_TUNING:
 			MeasureAntennaTuning();
+			break;
+
+		case CMD_MEASURE_ANTENNA_TUNING_HF:
+			MeasureAntennaTuningHf();
 			break;
 
 		case CMD_LISTEN_READER_FIELD:

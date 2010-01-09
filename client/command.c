@@ -93,6 +93,12 @@ static void CmdTune(char *str)
 	SendCommand(&c);
 }
 
+static void CmdHiTune(char *str)
+{
+	UsbCommand c={CMD_MEASURE_ANTENNA_TUNING_HF};
+	SendCommand(&c);
+}
+
 static void CmdHi15read(char *str)
 {
 	UsbCommand c={CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693};
@@ -2825,6 +2831,7 @@ static struct {
 /* low-level hardware control */
 	{"fpgaoff",			CmdFPGAOff,			0, "Set FPGA off"},
 	{"tune",			CmdTune,			0, "Measure antenna tuning"},
+	{"hitune",			CmdHiTune,			0, "Continuously measure HF antenna tuning"},
 	{"readmem",			CmdReadmem,			0, "[address] -- Read memory at decimal address from flash"},
 	{"reset",			CmdReset,			0, "Reset the Proxmark3"},
 	{"setlfdivisor",	CmdSetDivisor,		0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
