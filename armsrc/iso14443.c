@@ -11,7 +11,10 @@
 
 //static void GetSamplesFor14443(BOOL weTx, int n);
 
-#define DMA_BUFFER_SIZE 256
+#define DEMOD_TRACE_SIZE 4096
+#define READER_TAG_BUFFER_SIZE 2048
+#define TAG_READER_BUFFER_SIZE 2048
+#define DMA_BUFFER_SIZE 1024
 
 //=============================================================================
 // An ISO 14443 Type B tag. We listen for commands from the reader, using
@@ -1014,10 +1017,10 @@ void ReadSTMemoryIso14443(DWORD parameter,DWORD dwLast)
 //-----------------------------------------------------------------------------
 /*
  * Memory usage for this function, (within BigBuf)
- * 0-1023 : Demodulated samples receive (1024 bytes)
- * 1024-1535 : Last Received command, 512 bytes (reader->tag)
- * 1536-2047 : Last Received command, 512 bytes(tag->reader)
- * 2048-2304 : DMA Buffer, 256 bytes (samples)
+ * 0-4095 : Demodulated samples receive (4096 bytes) - DEMOD_TRACE_SIZE
+ * 4096-6143 : Last Received command, 2048 bytes (reader->tag) - READER_TAG_BUFFER_SIZE
+ * 6144-8191 : Last Received command, 2048 bytes(tag->reader) - TAG_READER_BUFFER_SIZE
+ * 8192-9215 : DMA Buffer, 1024 bytes (samples) - DMA_BUFFER_SIZE
  */
 void SnoopIso14443(void)
 {
@@ -1027,9 +1030,9 @@ void SnoopIso14443(void)
     BOOL triggered = FALSE;
 
     // The command (reader -> tag) that we're working on receiving.
-    BYTE *receivedCmd = (BYTE *)(BigBuf) + 1024;
+    BYTE *receivedCmd = (BYTE *)(BigBuf) + DEMOD_TRACE_SIZE;
     // The response (tag -> reader) that we're working on receiving.
-    BYTE *receivedResponse = (BYTE *)(BigBuf) + 1536;
+    BYTE *receivedResponse = (BYTE *)(BigBuf) + DEMOD_TRACE_SIZE + READER_TAG_BUFFER_SIZE;
 
     // As we receive stuff, we copy it from receivedCmd or receivedResponse
     // into trace, along with its length and other annotations.
@@ -1037,7 +1040,7 @@ void SnoopIso14443(void)
     int traceLen = 0;
 
     // The DMA buffer, used to stream samples from the FPGA.
-    SBYTE *dmaBuf = (SBYTE *)(BigBuf) + 2048;
+    SBYTE *dmaBuf = (SBYTE *)(BigBuf) + DEMOD_TRACE_SIZE + READER_TAG_BUFFER_SIZE + TAG_READER_BUFFER_SIZE;
     int lastRxCounter;
     SBYTE *upTo;
     int ci, cq;
@@ -1048,7 +1051,7 @@ void SnoopIso14443(void)
     int samples = 0;
 
     // Initialize the trace buffer
-    memset(trace, 0x44, 1024);
+    memset(trace, 0x44, DEMOD_TRACE_SIZE);
 
     // Set up the demodulator for tag -> reader responses.
     Demod.output = receivedResponse;
@@ -1061,6 +1064,17 @@ void SnoopIso14443(void)
     Uart.byteCntMax = 100;
     Uart.state = STATE_UNSYNCD;
 
+	// Print some debug information about the buffer sizes
+	Dbprintf("Snooping buffers initialized:");
+	Dbprintf("  Trace: %i bytes", DEMOD_TRACE_SIZE);
+	Dbprintf("  Reader -> tag: %i bytes", READER_TAG_BUFFER_SIZE);
+	Dbprintf("  tag -> Reader: %i bytes", TAG_READER_BUFFER_SIZE);
+	Dbprintf("  DMA: %i bytes", DMA_BUFFER_SIZE);
+	
+	// Use a counter for blinking the LED
+	long ledCount=0;
+	long ledFlashAt=200000;
+	
     // And put the FPGA in the appropriate mode
     // Signal field is off with the appropriate LED
     LED_D_OFF();
@@ -1076,6 +1090,16 @@ void SnoopIso14443(void)
     FpgaSetupSscDma((BYTE *)dmaBuf, DMA_BUFFER_SIZE);
     // And now we loop, receiving samples.
     for(;;) {
+		// Blink the LED while Snooping
+		ledCount++;
+		if (ledCount == ledFlashAt) {
+			LED_D_ON();
+		}
+		if (ledCount >= 2*ledFlashAt) {
+			LED_D_OFF();
+			ledCount=0;
+		}
+		
     	int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) &
                                 (DMA_BUFFER_SIZE-1);
         if(behindBy > maxBehindBy) {
@@ -1102,6 +1126,7 @@ void SnoopIso14443(void)
 
 #define HANDLE_BIT_IF_BODY \
             if(triggered) { \
+				ledFlashAt=30000; \
                 trace[traceLen++] = ((samples >>  0) & 0xff); \
                 trace[traceLen++] = ((samples >>  8) & 0xff); \
                 trace[traceLen++] = ((samples >> 16) & 0xff); \
@@ -1151,7 +1176,10 @@ void SnoopIso14443(void)
             trace[traceLen++] = Demod.len;
             memcpy(trace+traceLen, receivedResponse, Demod.len);
             traceLen += Demod.len;
-            if(traceLen > 1000) break;
+            if(traceLen > DEMOD_TRACE_SIZE) {		
+				DbpString("Reached trace limit");
+				goto done;
+			}
 
             triggered = TRUE;
 
@@ -1168,11 +1196,13 @@ void SnoopIso14443(void)
         }
     }
 
-    DbpString("in done pt");
-    Dbprintf("%x %x %x", maxBehindBy, Uart.state, Uart.byteCnt);
-    Dbprintf("%x %x %x", Uart.byteCntMax, traceLen, 0x23);
-
 done:
 	LED_D_OFF();
     AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
+	DbpString("Snoop statistics:");
+    Dbprintf("  Max behind by: %i", maxBehindBy);
+	Dbprintf("  Uart State: %x", Uart.state);
+	Dbprintf("  Uart ByteCnt: %i", Uart.byteCnt);
+	Dbprintf("  Uart ByteCntMax: %i", Uart.byteCntMax);
+	Dbprintf("  Trace length: %i", traceLen);
 }
