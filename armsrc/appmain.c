@@ -206,7 +206,7 @@ void MeasureAntennaTuningHf(void)
 {
 	int vHf = 0;	// in mV
 
-	DbpString("Measuring HF antenna characteristics, press button to exit");
+	DbpString("Measuring HF antenna, press button to exit");
 
 	for (;;) {
 		// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
