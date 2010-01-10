@@ -9,8 +9,6 @@
 #include "hitag2.h"
 #include "../common/crc16.c"
 
-int sprintf(char *dest, const char *fmt, ...);
-
 void AcquireRawAdcSamples125k(BOOL at134khz)
 {
 	if (at134khz)

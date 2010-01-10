@@ -13,7 +13,7 @@ typedef unsigned char byte_t;
 
 // The large multi-purpose buffer, typically used to hold A/D samples,
 // maybe processed in some way.
-DWORD BigBuf[12000];
+DWORD BigBuf[8000];
 
 /// appmain.h
 void ReadMem(int addr);

@@ -46,9 +46,6 @@ struct partition partitions[] = {
 		{0, 0, 0, NULL},
 };
 
-/* If translate is set, subtract PHYSICAL_FLASH_START to translate for old
- * bootroms.
- */
 void WriteBlock(unsigned int block_start, unsigned int len, unsigned char *buf)
 {
 	unsigned char temp_buf[256];
@@ -61,8 +58,6 @@ void WriteBlock(unsigned int block_start, unsigned int len, unsigned char *buf)
 	
 	UsbCommand c = {CMD_SETUP_WRITE};
 
-//	printf("expected = %08x flush, ", ExpectedAddr);
-
 	int i;
 	for(i = 0; i < 240; i += 48) {
 		memcpy(c.d.asBytes, temp_buf+i, 48);
@@ -74,7 +69,7 @@ void WriteBlock(unsigned int block_start, unsigned int len, unsigned char *buf)
 	c.cmd = CMD_FINISH_WRITE;
 	c.arg[0] = block_start;
 
-	printf("writing block %08x\r", c.arg[0]);
+//	printf("writing block %08x\r", c.arg[0]);
 	memcpy(c.d.asBytes, temp_buf+240, 16);
 	SendCommand(&c);
 	WaitForAck();
@@ -104,8 +99,8 @@ void LoadFlashFromFile(const char *file, int start_addr, int end_addr)
 		for (i=0; i<header.e_phnum; i++) {
 			fseek(f, header.e_phoff + i * sizeof(Elf32_Phdr), SEEK_SET);
 			fread(&phdr, 1, sizeof(phdr), f);
-//			printf("type=%d offset=%x paddr=%x vaddr=%x filesize=%x memsize=%x flags=%x align=%x\n",
-//				phdr.p_type, phdr.p_offset, phdr.p_paddr, phdr.p_vaddr, phdr.p_filesz, phdr.p_memsz, phdr.p_flags, phdr.p_align);
+			printf("type=%d offset=%x paddr=%x vaddr=%x filesize=%x memsize=%x flags=%x align=%x\n",
+				phdr.p_type, phdr.p_offset, phdr.p_paddr, phdr.p_vaddr, phdr.p_filesz, phdr.p_memsz, phdr.p_flags, phdr.p_align);
 			if (phdr.p_type == PT_LOAD && phdr.p_filesz > 0 && phdr.p_paddr >= PHYSICAL_FLASH_START
 				&& (phdr.p_paddr + phdr.p_filesz) < PHYSICAL_FLASH_END) {
 				printf("flashing offset=%x paddr=%x size=%x\n", phdr.p_offset, phdr.p_paddr, phdr.p_filesz);
@@ -113,17 +108,25 @@ void LoadFlashFromFile(const char *file, int start_addr, int end_addr)
 					printf("skipping forward 0x2000 because of strange linker thing\n");
 					phdr.p_offset += 0x2000;
 					phdr.p_paddr += 0x2000;
+					phdr.p_filesz -= 0x2000;
+					phdr.p_memsz -= 0x2000;
 				}
 
 				fseek(f, phdr.p_offset, SEEK_SET);
 				ExpectedAddr = phdr.p_paddr;
 				while (ExpectedAddr < (phdr.p_paddr + phdr.p_filesz)) {
 					unsigned int bytes_to_read = phdr.p_paddr + phdr.p_filesz - ExpectedAddr;
-					if (bytes_to_read > 256) bytes_to_read=256;
+					if (bytes_to_read > 256)
+						bytes_to_read=256;
+					else
+						memset(QueuedToSend, 0xFF, 256);
 					fread(QueuedToSend, 1, bytes_to_read, f);
-//					printf("read %d bytes\n", bytes_to_read);
-					printf("WriteBlock(%x, %d, %p)\n", ExpectedAddr, bytes_to_read, QueuedToSend);
-					WriteBlock(ExpectedAddr, bytes_to_read, QueuedToSend);
+					printf("WriteBlock(%x, %d, %02x %02x %02x %02x %02x %02x %02x %02x ... %02x %02x %02x %02x %02x %02x %02x %02x)\n", ExpectedAddr, bytes_to_read,
+							QueuedToSend[0], QueuedToSend[1], QueuedToSend[2], QueuedToSend[3],
+							QueuedToSend[4], QueuedToSend[5], QueuedToSend[6], QueuedToSend[7],
+							QueuedToSend[248], QueuedToSend[249], QueuedToSend[250], QueuedToSend[251],
+							QueuedToSend[252], QueuedToSend[253], QueuedToSend[254], QueuedToSend[255]);
+					WriteBlock(ExpectedAddr, 256, QueuedToSend);
 					ExpectedAddr += bytes_to_read;
 				}
             }
