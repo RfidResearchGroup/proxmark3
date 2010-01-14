@@ -853,7 +853,15 @@ static int CmdHisamplest(char *str, int nrlow)
 static void CmdHexsamples(char *str)
 {
 	int i, j, n;
-	int requested = strtol(str, NULL, 0);
+	int requested = 0;
+	int offset = 0;
+  	sscanf(str, "%i %i", &requested, &offset);
+	if (offset % 4!=0) {
+		PrintToScrollback("Offset must be a multiple of 4");
+		return;
+	}
+	offset = offset/4;                
+
 	int delivered = 0;
 
 	if (requested == 0) {
@@ -863,7 +871,7 @@ static void CmdHexsamples(char *str)
 		n = requested/4;
 	}
 
-	for(i = 0; i < n; i += 12) {
+	for(i = offset; i < n+offset; i += 12) {
 		UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
 		SendCommand(&c);
 		wait_for_response(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
@@ -2843,7 +2851,7 @@ static struct {
 /* data transfer functions */
 
 	{"bitsamples",		CmdBitsamples,		0, "Get raw samples as bitstring"},
-	{"hexsamples",		CmdHexsamples,		0, "<blocks> -- Dump big buffer as hex bytes"},
+	{"hexsamples",		CmdHexsamples,		0, "<blocks> [<offset>] -- Dump big buffer as hex bytes"},
 	{"higet",			CmdHi14read_sim,	0, "<samples> -- Get samples HF, 'analog'"},
 	{"hisamples",		CmdHisamples,		0, "Get raw samples for HF tag"},
 	{"hisampless",		CmdHisampless,		0, "<samples> -- Get signed raw samples, HF tag"},
