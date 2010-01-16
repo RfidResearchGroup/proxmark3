@@ -297,6 +297,8 @@ void BootROM(void)
 	    flash_mode(1);
     } else if(BUTTON_PRESS()) {
 	    flash_mode(0);
+    } else if(*(uint32_t*)&_osimage_entry == 0xffffffffU) {
+	    flash_mode(1);
     } else {
 	    // jump to Flash address of the osimage entry point (LSBit set for thumb mode)
 	    asm("bx %0\n" : : "r" ( ((int)&_osimage_entry) | 0x1 ) );
