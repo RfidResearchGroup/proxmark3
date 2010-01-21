@@ -22,16 +22,16 @@ help:
 	@echo + flash-all     - Make bootrom and armsrc and flash bootrom, os and fpga image
 	@echo +	clean         - Clean in bootrom, armsrc and the OS-specific host directory
 
-flash-bootrom: bootrom/obj/bootrom.s19 $(FLASH_TOOL)
+flash-bootrom: bootrom/obj/bootrom.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) bootrom $(subst /,$(PATHSEP),$<)
 
-flash-os: armsrc/obj/osimage.s19 $(FLASH_TOOL)
+flash-os: armsrc/obj/osimage.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) os $(subst /,$(PATHSEP),$<)
 
-flash-both: armsrc/obj/osimage.s19 armsrc/obj/fpgaimage.s19 $(FLASH_TOOL)
+flash-both: armsrc/obj/osimage.elf armsrc/obj/fpgaimage.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) os,fpga $(subst /,$(PATHSEP),$(filter-out $(FLASH_TOOL),$^))
 
-flash-all: bootrom/obj/bootrom.s19 armsrc/obj/osimage.s19 armsrc/obj/fpgaimage.s19 $(FLASH_TOOL)
+flash-all: bootrom/obj/bootrom.elf armsrc/obj/osimage.elf armsrc/obj/fpgaimage.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) bootrom,os,fpga $(subst /,$(PATHSEP),$(filter-out $(FLASH_TOOL),$^))
 
 # Dummy target to test for GNU make availability
