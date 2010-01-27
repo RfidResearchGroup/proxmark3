@@ -52,9 +52,11 @@ void WriteBlock(unsigned int block_start, unsigned int len, unsigned char *buf)
 	if (block_start & 0xFF) {
 		printf("moving stuff forward by %d bytes\n", block_start & 0xFF);
 		memset(temp_buf, 0xFF, block_start & 0xFF);
-		memcpy(temp_buf + (block_start & 0xFF), buf, len);
+		memcpy(temp_buf + (block_start & 0xFF), buf, len - (block_start & 0xFF));
 		block_start &= ~0xFF;
-	} else memcpy(temp_buf, buf, len);
+	} else {
+		memcpy(temp_buf, buf, len);
+	}
 	
 	UsbCommand c = {CMD_SETUP_WRITE};
 
