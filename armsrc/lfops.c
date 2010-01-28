@@ -423,7 +423,7 @@ void WriteTItag(DWORD idhi, DWORD idlo, WORD crc)
 	DbpString("Now use tiread to check");
 }
 
-void SimulateTagLowFrequency(int period, int ledcontrol)
+void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
 	int i;
 	BYTE *tab = (BYTE *)BigBuf;
@@ -468,7 +468,13 @@ void SimulateTagLowFrequency(int period, int ledcontrol)
 		}
 
 		i++;
-		if(i == period) i = 0;
+		if(i == period) {
+			i = 0;
+			if (gap) { 
+				SHORT_COIL();
+				SpinDelayUs(gap);
+			}
+		}
 	}
 }
 
@@ -762,7 +768,7 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 
 	if (ledcontrol)
 		LED_A_ON();
-	SimulateTagLowFrequency(n, ledcontrol);
+	SimulateTagLowFrequency(n, 0, ledcontrol);
 
 	if (ledcontrol)
 		LED_A_OFF();

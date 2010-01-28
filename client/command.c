@@ -577,7 +577,6 @@ retest:
 static void CmdEM410xsim(char *str)
 {
 	int i, n, j, h, binary[4], parity[4];
-	char *s = "0";
 
 	/* clock is 64 in EM410x tags */
 	int clock = 64;
@@ -628,12 +627,40 @@ static void CmdEM410xsim(char *str)
 	}
 
 	/* modulate that biatch */
-	Cmdmanchestermod(s);
+	Cmdmanchestermod("");
 
 	/* booyah! */
 	RepaintGraphWindow();
+	
+	CmdLosim("");
+}
 
-	CmdLosim(s);
+/* simulate an LF Manchester encoded tag with specified bitstream, clock rate and inter-id gap */
+static void CmdLosimManchester(char *str)
+{
+	static int clock, gap;
+	static char data[1024], gapstring[8];
+	int i;
+
+	/* get settings/bits */
+	sscanf(str, "%i %s %i", &clock, &data[0], &gap);
+
+	/* clear our graph */
+	CmdClearGraph(0);
+
+	/* fill it with our bitstream */
+	for (i= 0; i < strlen(data) ; ++i)
+		CmdAppendGraph(0, clock, data[i]- '0');
+
+	/* modulate */
+	Cmdmanchestermod("");
+
+	/* show what we've done */
+	RepaintGraphWindow();
+
+	/* simulate */
+	sprintf(&gapstring[0], "%i", gap);
+	CmdLosim(gapstring);
 }
 
 static void ChkBitstream(char *str)
@@ -654,6 +681,9 @@ static void ChkBitstream(char *str)
 static void CmdLosim(char *str)
 {
 	int i;
+	static int gap;
+
+	sscanf(str,"%i",&gap);
 
 	/* convert to bitstream if necessary */
 	ChkBitstream(str);
@@ -667,7 +697,7 @@ static void CmdLosim(char *str)
 		SendCommand(&c);
 	}
 
-	UsbCommand c={CMD_SIMULATE_TAG_125K, {GraphTraceLen, 0, 0}};
+	UsbCommand c={CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
 	SendCommand(&c);
 }
 
@@ -2881,7 +2911,8 @@ static struct {
 	{"hi15sim",			CmdHi15tag,			0, "Fake an ISO15693 tag"},
 	{"hidsimtag",		CmdHIDsimTAG,		0, "<ID> -- HID tag simulator"},
 	{"hisimlisten",		CmdHisimlisten,		0, "Get HF samples as fake tag"},
-	{"losim",			CmdLosim,			0, "Simulate LF tag"},
+	{"losim",			CmdLosim,			0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
+	{"losimman",			CmdLosimManchester,			0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
 	{"losimbidir",		CmdLosimBidir,		0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
 
 /* card reading functions */
@@ -2923,7 +2954,7 @@ static struct {
 void CommandReceived(char *cmd)
 {
 	int i;
-	char line[256];
+	char line[512];
 
 	PrintToScrollback("> %s", cmd);
 

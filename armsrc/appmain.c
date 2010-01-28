@@ -26,7 +26,7 @@ int kvsprintf(char const *fmt, void *arg, int radix, va_list ap);
 // is the order in which they go out on the wire.
 //=============================================================================
 
-BYTE ToSend[256];
+BYTE ToSend[512];
 int ToSendMax;
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
@@ -34,7 +34,7 @@ struct common_area common_area __attribute__((section(".commonarea")));
 void BufferClear(void)
 {
 	memset(BigBuf,0,sizeof(BigBuf));
-	DbpString("Buffer cleared");
+	Dbprintf("Buffer cleared (%i bytes)",sizeof(BigBuf));
 }
 
 void ToSendReset(void)
@@ -718,13 +718,14 @@ void UsbPacketReceived(BYTE *packet, int len)
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
 			BYTE *b = (BYTE *)BigBuf;
 			memcpy(b+c->arg[0], c->d.asBytes, 48);
+			//Dbprintf("copied 48 bytes to %i",b+c->arg[0]);
 			break;
 		}
 
 #ifdef WITH_LF
 		case CMD_SIMULATE_TAG_125K:
 			LED_A_ON();
-			SimulateTagLowFrequency(c->arg[0], 1);
+			SimulateTagLowFrequency(c->arg[0], c->arg[1], 1);
 			LED_A_OFF();
 			break;
 #endif
@@ -794,7 +795,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 		}
 			break;
 		default:
-			DbpString("unknown command");
+			Dbprintf("%s: 0x%04x","unknown command:",c->cmd);
 			break;
 	}
 }

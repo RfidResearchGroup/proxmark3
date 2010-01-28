@@ -78,7 +78,7 @@ void ReadTItag(void);
 void WriteTItag(DWORD idhi, DWORD idlo, WORD crc);
 void AcquireTiType(void);
 void AcquireRawBitsTI(void);
-void SimulateTagLowFrequency(int period, int ledcontrol);
+void SimulateTagLowFrequency(int period, int gap, int ledcontrol);
 void CmdHIDsimTAG(int hi, int lo, int ledcontrol);
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol);
 void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);
