@@ -688,6 +688,7 @@ static void CmdLosim(char *str)
 	/* convert to bitstream if necessary */
 	ChkBitstream(str);
 
+	PrintToScrollback("Sending data, please wait...");
 	for (i = 0; i < GraphTraceLen; i += 48) {
 		UsbCommand c={CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
 		int j;
@@ -695,8 +696,10 @@ static void CmdLosim(char *str)
 			c.d.asBytes[j] = GraphBuffer[i+j];
 		}
 		SendCommand(&c);
+		wait_for_response(CMD_ACK);
 	}
 
+	PrintToScrollback("Starting simulator...");
 	UsbCommand c={CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
 	SendCommand(&c);
 }
@@ -3063,14 +3066,19 @@ void UsbCommandReceived(UsbCommand *c)
 	/* Maybe it's a response: */
 	switch(current_command) {
 		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K:
-		if (c->cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) goto unexpected_response;
-		int i;
-		for(i=0; i<48; i++) sample_buf[i] = c->d.asBytes[i];
-		received_command = c->cmd;
-		return;
-	default:
-	unexpected_response:
-		PrintToScrollback("unrecognized command %08x\n", c->cmd);
-		break;
+			if (c->cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) goto unexpected_response;
+			int i;
+			for(i=0; i<48; i++) sample_buf[i] = c->d.asBytes[i];
+			received_command = c->cmd;
+			return;
+		case CMD_DOWNLOADED_SIM_SAMPLES_125K:
+			if (c->cmd != CMD_ACK) goto unexpected_response;
+			// got ACK
+			received_command = c->cmd;
+			return;
+		default:
+		unexpected_response:
+			PrintToScrollback("unrecognized command %08x\n", c->cmd);
+			break;
 	}
 }

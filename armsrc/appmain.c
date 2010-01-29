@@ -716,9 +716,12 @@ void UsbPacketReceived(BYTE *packet, int len)
 		}
 
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
+			UsbCommand ack;
 			BYTE *b = (BYTE *)BigBuf;
 			memcpy(b+c->arg[0], c->d.asBytes, 48);
 			//Dbprintf("copied 48 bytes to %i",b+c->arg[0]);
+			ack.cmd = CMD_ACK;
+			UsbSendPacket((BYTE*)&ack, sizeof(ack));
 			break;
 		}
 
