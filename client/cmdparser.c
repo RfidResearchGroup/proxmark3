@@ -28,5 +28,6 @@ void CmdsParse(const command_t Commands[], const char *Cmd)
   if (Commands[i].Name)
     Commands[i].Parse(Cmd + len);
   else
-    PrintAndLog("Command not found");
+    // show help (always first in array) for selected hierarchy or if command not recognised
+    Commands[0].Parse("help");
 }
