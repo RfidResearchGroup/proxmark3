@@ -266,6 +266,7 @@ int CmdLFRead(const char *Cmd)
     return 0;
   }
   SendCommand(&c);
+  WaitForResponse(CMD_ACK);
   return 0;
 }
 

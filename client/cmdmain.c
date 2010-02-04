@@ -125,6 +125,7 @@ void UsbCommandReceived(UsbCommand *UC)
       for(i=0; i<48; i++) sample_buf[i] = UC->d.asBytes[i];
       received_command = UC->cmd;
       return;
+    case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K:
     case CMD_DOWNLOADED_SIM_SAMPLES_125K:
       if (UC->cmd != CMD_ACK) goto unexpected_response;
       // got ACK
