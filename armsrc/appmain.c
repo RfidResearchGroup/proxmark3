@@ -76,6 +76,9 @@ void DbpString(char *str)
 	UsbCommand c;
 	c.cmd = CMD_DEBUG_PRINT_STRING;
 	c.arg[0] = strlen(str);
+	if(c.arg[0] > sizeof(c.d.asBytes)) {
+		c.arg[0] = sizeof(c.d.asBytes);
+	}
 	memcpy(c.d.asBytes, str, c.arg[0]);
 
 	UsbSendPacket((BYTE *)&c, sizeof(c));
