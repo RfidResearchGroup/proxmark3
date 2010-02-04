@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 #include <proxmark3.h>
 #include "apps.h"
-#include "../common/iso14443_crc.c"
+#include "iso14443crc.h"
 
 static BYTE *trace = (BYTE *) BigBuf;
 static int traceLen = 0;

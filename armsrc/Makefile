@@ -24,6 +24,8 @@ THUMBSRC = start.c \
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
 	legicrf.c \
+	iso14443crc.c \
+	crc16.c \
 	$(SRC_ISO14443a) \
 	$(SRC_ISO14443b) \
 	crc.c

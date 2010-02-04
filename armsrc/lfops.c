@@ -7,7 +7,7 @@
 #include <proxmark3.h>
 #include "apps.h"
 #include "hitag2.h"
-#include "../common/crc16.c"
+#include "crc16.h"
 
 void AcquireRawAdcSamples125k(BOOL at134khz)
 {

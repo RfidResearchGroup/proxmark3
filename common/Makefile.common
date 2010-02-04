@@ -17,7 +17,7 @@ OBJCOPY = $(CROSS)objcopy
 
 OBJDIR	= obj
 
-INCLUDE = -I../include
+INCLUDE = -I../include -I../common
 
 # Windows' echo echos its input verbatim, on Posix there is some
 #  amount of shell command line parsing going on. echo "" on 
@@ -57,7 +57,7 @@ INCLUDES = ../include/proxmark3.h ../include/at91sam7s512.h ../include/config_gp
 CFLAGS =  -c $(INCLUDE) -Wall -Werror -pedantic -std=gnu99 $(APP_CFLAGS)
 
 THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(THUMBSRC))
-ARMOBJ   = $(patsubst %.c,$(OBJDIR)/%.o,$(ARMSRC))
+ARMOBJ   = $(ARMSRC:%.c=$(OBJDIR)/%.o)
 ASMOBJ   = $(patsubst %.s,$(OBJDIR)/%.o,$(ASMSRC))
 VERSIONOBJ = $(OBJDIR)/version.o
 

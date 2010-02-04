@@ -2,10 +2,10 @@
 #define __FLASH_H__
 
 struct partition {
-	int start;
-	int end;
-	int precious;
-	const char *name;
+  int start;
+  int end;
+  int precious;
+  const char *name;
 };
 
 void FlushPrevious(int translate);

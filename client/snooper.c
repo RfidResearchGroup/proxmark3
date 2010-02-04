@@ -1,48 +1,36 @@
-#include <usb.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <strings.h>
-#include <string.h>
-#include <errno.h>
-
-#include "prox.h"
-#include "proxmark3.h"
+#include "ui.h"
+#include "proxusb.h"
+#include "cmdmain.h"
 
 #define HANDLE_ERROR if (error_occured) { \
-	error_occured = 0;\
-	break;\
+  error_occured = 0;\
+  break;\
 }
 
 int main()
 {
-	usb_init();
-	setlogfilename("snooper.log");
+  usb_init();
+  SetLogFilename("snooper.log");
 
-	return_on_error = 1;
+  return_on_error = 1;
 
-	while(1) {
-		while(!(devh=OpenProxmark(0))) { sleep(1); }
+  while(1) {
+    while (!OpenProxmark(0)) { sleep(1); }
+    while (1) {
+      UsbCommand cmdbuf;
+      CommandReceived("hi14asnoop");
+      HANDLE_ERROR;
+      ReceiveCommand(&cmdbuf);
+      HANDLE_ERROR;
+      for (int i = 0; i < 5; ++i) {
+        ReceiveCommandPoll(&cmdbuf);
+      }
+      HANDLE_ERROR;
+      CommandReceived("hi14alist");
+      HANDLE_ERROR;
+    }
+  }
 
-		while(1) {
-			UsbCommand cmdbuf;
-			int i;
-
-			CommandReceived("hi14asnoop");
-			HANDLE_ERROR
-
-			ReceiveCommand(&cmdbuf);
-			HANDLE_ERROR
-			for (i=0; i<5; i++) {
-				ReceiveCommandPoll(&cmdbuf);
-			}
-			HANDLE_ERROR
-
-			CommandReceived("hi14alist");
-			HANDLE_ERROR
-		}
-	}
-
-	CloseProxmark();
-	return 0;
+  CloseProxmark();
+  return 0;
 }
