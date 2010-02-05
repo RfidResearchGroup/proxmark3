@@ -21,11 +21,11 @@ static int CmdQuit(const char *Cmd);
 static command_t CommandTable[] = 
 {
   {"help",  CmdHelp,  1, "This help. Use '<command> help' for details of the following commands:\n"},
-  {"data",  CmdData,  1, "Plot window / data buffer manipulation"},
+  {"data",  CmdData,  1, "{ Plot window / data buffer manipulation... }"},
   {"exit",  CmdQuit,  1, "Exit program"},
-  {"hf",    CmdHF,    1, "HF commands"},
-  {"hw",    CmdHW,    1, "Hardware commands"},
-  {"lf",    CmdLF,    1, "LF commands"},
+  {"hf",    CmdHF,    1, "{ HF commands... }"},
+  {"hw",    CmdHW,    1, "{ Hardware commands... }"},
+  {"lf",    CmdLF,    1, "{ LF commands... }"},
   {"quit",  CmdQuit,  1, "Quit program"},
   {NULL, NULL, 0, NULL}
 };

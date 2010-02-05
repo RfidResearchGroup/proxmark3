@@ -428,15 +428,15 @@ static command_t CommandTable[] =
 {
   {"help",        CmdHelp,            1, "This help"},
   {"cmdread",     CmdLFCommandRead,   0, "<off period> <'0' period> <'1' period> <command> ['h'] -- Modulate LF reader field to send command before read (all periods in microseconds) (option 'h' for 134)"},
-  {"em4x",        CmdLFEM4X,          1, "EM4X RFIDs"},
+  {"em4x",        CmdLFEM4X,          1, "{ EM4X RFIDs... }"},
   {"flexdemod",   CmdFlexdemod,       1, "Demodulate samples for FlexPass"},
-  {"hid",         CmdLFHID,           1, "HID RFIDs"},
+  {"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
   {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
   {"read",        CmdLFRead,          0, "['h'] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134)"},
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
   {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
   {"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
-  {"ti",          CmdLFTI,            1, "TI RFIDs"},
+  {"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
   {"vchdemod",    CmdVchDemod,        1, "['clone'] -- Demodulate samples for VeriChip"},
   {NULL, NULL, 0, NULL}
 };

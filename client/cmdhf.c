@@ -21,9 +21,9 @@ int CmdHFTune(const char *Cmd)
 static command_t CommandTable[] = 
 {
   {"help",        CmdHelp,          1, "This help"},
-  {"14a",         CmdHF14A,         1, "ISO14443A RFIDs"},
-  {"14b",         CmdHF14B,         1, "ISO14443B RFIDs"},
-  {"15",          CmdHF15,          1, "ISO15693 RFIDs"},
+  {"14a",         CmdHF14A,         1, "{ ISO14443A RFIDs... }"},
+  {"14b",         CmdHF14B,         1, "{ ISO14443B RFIDs... }"},
+  {"15",          CmdHF15,          1, "{ ISO15693 RFIDs... }"},
   {"tune",        CmdHFTune,        0, "Continuously measure HF antenna tuning"},
   {NULL, NULL, 0, NULL}
 };
