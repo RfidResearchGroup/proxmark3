@@ -5,6 +5,7 @@
 #include "graph.h"
 #include "ui.h"
 #include "cmdparser.h"
+#include "cmdmain.h"
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "cmdlfhid.h"
