@@ -33,7 +33,6 @@ int CmdHelp(const char *Cmd)
  *  Output BigBuf and deobfuscate LEGIC RF tag data.
  *   This is based on information given in the talk held
  *  by Henryk Ploetz and Karsten Nohl at 26c3
- *  FIXME: will crash if sample buffer does not contain valid legic data
  */
 int CmdLegicDecode(const char *Cmd)
 {
@@ -162,7 +161,7 @@ int CmdLegicDecode(const char *Cmd)
     
     if (wrc>0) {
       PrintAndLog("WRC protected area:");
-      for (k=0, j=0; k < wrc; k++, i++, j += 3) {
+      for (k=0, j=0; k < wrc && j<(sizeof(out_string)-3); k++, i++, j += 3) {
         sprintf(&out_string[j], "%02x", (data_buf[i]^crc));
         out_string[j+2] = ' ';
       };
@@ -175,7 +174,7 @@ int CmdLegicDecode(const char *Cmd)
     if (wrp>wrc) {
       PrintAndLog("Remaining write protected area:");
       
-      for (k=0, j=0; k < (wrp-wrc); k++, i++, j += 3) {
+      for (k=0, j=0; k < (wrp-wrc) && j<(sizeof(out_string)-3); k++, i++, j += 3) {
         sprintf(&out_string[j], "%02x", (data_buf[i]^crc));
         out_string[j+2] = ' ';
       };
@@ -190,7 +189,7 @@ int CmdLegicDecode(const char *Cmd)
     }
     
     PrintAndLog("Remaining segment payload:");
-    for (k=0, j=0; k < (segment_len - wrp - 5); k++, i++, j += 3) {
+    for (k=0, j=0; k < (segment_len - wrp - 5) && j<(sizeof(out_string)-3); k++, i++, j += 3) {
       sprintf(&out_string[j], "%02x", (data_buf[i]^crc));
       out_string[j+2] = ' ';
     };
