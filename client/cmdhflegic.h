@@ -4,5 +4,6 @@
 int CmdHFLegic(const char *Cmd);
 
 int CmdLegicRFRead(const char *Cmd);
+int CmdLegicDecode(const char *Cmd);
 
 #endif
