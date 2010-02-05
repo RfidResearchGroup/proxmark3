@@ -28,6 +28,7 @@ ARMSRC = fpgaloader.c \
 	crc16.c \
 	$(SRC_ISO14443a) \
 	$(SRC_ISO14443b) \
+        legic_prng.c \
 	crc.c
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC

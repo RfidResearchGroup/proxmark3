@@ -8,6 +8,5 @@
 #define LEGICRF_H_
 
 extern void LegicRfSimulate(void);
-extern void LegicRfReader(void);
-
+extern void LegicRfReader(int bytes, int offset);
 #endif /* LEGICRF_H_ */

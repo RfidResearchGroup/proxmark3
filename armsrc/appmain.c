@@ -602,7 +602,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 #endif
 
 		case CMD_READER_LEGIC_RF:
-			LegicRfReader();
+			LegicRfReader(c->arg[0], c->arg[1]);
 			break;
 
 #ifdef WITH_ISO15693
