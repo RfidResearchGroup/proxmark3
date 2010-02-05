@@ -1,32 +1,19 @@
 #include <stdio.h>
 #include <string.h>
 #include "proxusb.h"
+#include "data.h"
+#include "ui.h"
 #include "cmdparser.h"
 #include "cmdhflegic.h"
 #include "cmdmain.h"
-#include "data.h"
-#include "ui.h"
-#include <string.h>
-#include <stdio.h>
 
 static int CmdHelp(const char *Cmd);
-
-int CmdLegicRFRead(const char *Cmd)
-{
-  int byte_count=0,offset=0;
-  sscanf(Cmd, "%i %i", &offset, &byte_count);
-  if(byte_count == 0) byte_count = 256;
-  if(byte_count + offset > 256) byte_count = 256 - offset;
-  UsbCommand c={CMD_READER_LEGIC_RF, {offset, byte_count, 0}};
-  SendCommand(&c);
-  return 0;
-}
 
 static command_t CommandTable[] = 
 {
   {"help",        CmdHelp,        1, "This help"},
-  {"reader",      CmdLegicRFRead, 0, "[offset [length]] -- read bytes from a LEGIC card"},
   {"decode",      CmdLegicDecode, 0, "Display deobfuscated and decoded LEGIC RF tag data (use after hf legic reader)"},
+  {"reader",      CmdLegicRFRead, 0, "[offset [length]] -- read bytes from a LEGIC card"},
   {NULL, NULL, 0, NULL}
 };
 
@@ -147,7 +134,7 @@ int CmdLegicDecode(const char *Cmd)
   
   PrintAndLog("\nADF: User Area");
   
-    i = 22;  
+  i = 22;  
   for (n=0; n<64; n++) {
     segment_len = ((data_buf[i+1]^crc)&0x0f) * 256 + (data_buf[i]^crc);
     segment_flag = ((data_buf[i+1]^crc)&0xf0)>>4;
@@ -216,5 +203,16 @@ int CmdLegicDecode(const char *Cmd)
     if (segment_flag & 0x8)
       return 0;
   };
+  return 0;
+}
+
+int CmdLegicRFRead(const char *Cmd)
+{
+  int byte_count=0,offset=0;
+  sscanf(Cmd, "%i %i", &offset, &byte_count);
+  if(byte_count == 0) byte_count = 256;
+  if(byte_count + offset > 256) byte_count = 256 - offset;
+  UsbCommand c={CMD_READER_LEGIC_RF, {offset, byte_count, 0}};
+  SendCommand(&c);
   return 0;
 }
