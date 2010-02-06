@@ -235,16 +235,11 @@ int CmdEM410xSim(const char *Cmd)
  * looped until an EM410x tag is detected */
 int CmdEM410xWatch(const char *Cmd)
 {
-  char *zero = "";
-  char *twok = "2000";
-
-  int stop = 0;
   do
   {
-    CmdLFRead(zero);
-    CmdLFSamples(twok);
-    stop = CmdEM410xRead(zero);
-  } while (!stop);
+    CmdLFRead("");
+    CmdSamples("2000");
+  } while ( ! CmdEM410xRead(""));
   return 0;
 }
 
