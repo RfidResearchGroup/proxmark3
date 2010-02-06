@@ -16,7 +16,7 @@
 
 static struct legic_frame {
 	int bits;
-	uint16_t data;
+	uint32_t data;
 } current_frame;
 
 static crc_t legic_crc;
@@ -114,8 +114,8 @@ static void frame_send_rwd(uint32_t data, int bits)
  */
 static void frame_receive_rwd(struct legic_frame * const f, int bits, int crypt)
 {
-	uint16_t the_bit = 1;  /* Use a bitmask to save on shifts */
-	uint16_t data=0;
+	uint32_t the_bit = 1;  /* Use a bitmask to save on shifts */
+	uint32_t data=0;
 	int i, old_level=0, edges=0;
 	int next_bit_at = TAG_TIME_WAIT;
 	
@@ -174,7 +174,7 @@ static void frame_clean(struct legic_frame * const f)
 	f->bits = 0;
 }
 
-static uint16_t perform_setup_phase_rwd(int iv)
+static uint32_t perform_setup_phase_rwd(int iv)
 {
 	
 	/* Switch on carrier and let the tag charge for 1ms */
@@ -191,8 +191,6 @@ static uint16_t perform_setup_phase_rwd(int iv)
 	while(timer->TC_CV < 387) ; /* ~ 258us */
 	frame_send_rwd(0x19, 6);
 
-	if(current_frame.data != 0x1d)
-		Dbprintf("probably don't know how to deal with %x card", current_frame.data);
 	return current_frame.data;
 }
 
@@ -220,28 +218,30 @@ static void switch_off_tag_rwd(void)
 	WDT_HIT();
 }
 /* calculate crc for a legic command */
-static int LegicCRC(int byte_index, int value) {
+static int LegicCRC(int byte_index, int value, int cmd_sz) {
 	crc_clear(&legic_crc);
 	crc_update(&legic_crc, 1, 1); /* CMD_READ */
-	crc_update(&legic_crc, byte_index, 8);
+	crc_update(&legic_crc, byte_index, cmd_sz-1);
 	crc_update(&legic_crc, value, 8);
 	return crc_finish(&legic_crc);
 }
 
-int legic_read_byte(int byte_index) {
+int legic_read_byte(int byte_index, int cmd_sz) {
 	int byte;
 
 	legic_prng_forward(4); /* we wait anyways */
     	while(timer->TC_CV < 387) ; /* ~ 258us + 100us*delay */
 
-	frame_send_rwd(1 | (byte_index << 1), 9);
+	frame_send_rwd(1 | (byte_index << 1), cmd_sz);
 	frame_clean(&current_frame);
 
 	frame_receive_rwd(&current_frame, 12, 1);
 
 	byte = current_frame.data & 0xff;
-	if( LegicCRC(byte_index, byte) != (current_frame.data >> 8) )
-		Dbprintf("!!! crc mismatch: expected %x but got %x !!!", LegicCRC(byte_index, current_frame.data & 0xff), current_frame.data >> 8);
+	if( LegicCRC(byte_index, byte, cmd_sz) != (current_frame.data >> 8) ) {
+		Dbprintf("!!! crc mismatch: expected %x but got %x !!!", LegicCRC(byte_index, current_frame.data & 0xff, cmd_sz), current_frame.data >> 8);
+		return -1;
+	}
 
 	return byte;
 }
@@ -256,19 +256,51 @@ int legic_read_byte(int byte_index) {
 
 
 void LegicRfReader(int offset, int bytes) {
-	int byte_index=0;
+	int byte_index=0, cmd_sz=0, card_sz=0;
 	
 	LegicCommonInit();
 
-	memset(BigBuf, 0, 256);
+	memset(BigBuf, 0, 1024);
 	
 	DbpString("setting up legic card");
+	uint32_t tag_type = perform_setup_phase_rwd(0x55);
+	switch(tag_type) {
+		case 0x1d:
+			DbpString("MIM 256 card found, reading card ...");
+	                cmd_sz = 9;
+			card_sz = 256;
+			break;
+		case 0x3d:
+			DbpString("MIM 1024 card found, reading card ...");
+	                cmd_sz = 11;
+			card_sz = 1024;
+			break;
+		default:
+			Dbprintf("No or unknown card found, aborting");
+ 			switch_off_tag_rwd();
+	                return;
+	}
+	if(bytes == -1) {
+		bytes = card_sz;
+	}
+        if(bytes+offset >= card_sz) {
+		bytes = card_sz-offset;
+        }
+
+	switch_off_tag_rwd(); //we lost to mutch time with dprintf
 	perform_setup_phase_rwd(0x55);
 
 	while(byte_index < bytes) {
-		((uint8_t*)BigBuf)[byte_index] = legic_read_byte(byte_index+offset);
+                int r = legic_read_byte(byte_index+offset, cmd_sz);
+                if(r == -1) {
+			Dbprintf("aborting");
+ 			switch_off_tag_rwd();
+	                return;
+		}
+		((uint8_t*)BigBuf)[byte_index] = r;
 		byte_index++;
 	}
 	switch_off_tag_rwd();
 	Dbprintf("Card read, use 'data hexsamples %d' to view results", (bytes+7) & ~7);
 }
+

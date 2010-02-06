@@ -209,8 +209,8 @@ int CmdLegicRFRead(const char *Cmd)
 {
   int byte_count=0,offset=0;
   sscanf(Cmd, "%i %i", &offset, &byte_count);
-  if(byte_count == 0) byte_count = 256;
-  if(byte_count + offset > 256) byte_count = 256 - offset;
+  if(byte_count == 0) byte_count = -1;
+  if(byte_count + offset > 1024) byte_count = 1024 - offset;
   UsbCommand c={CMD_READER_LEGIC_RF, {offset, byte_count, 0}};
   SendCommand(&c);
   return 0;
