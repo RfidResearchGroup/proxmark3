@@ -429,30 +429,6 @@ int CmdHexsamples(const char *Cmd)
   return 0;
 }
 
-int CmdHFSamples(const char *Cmd)
-{
-  int cnt = 0;
-  int n = strtol(Cmd, NULL, 0);
-
-  if(n == 0) {
-    n = 1000;
-  } else {
-    n/= 4;
-  }
-
-  for (int i = 0; i < n; i += 12) {
-    UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
-    SendCommand(&c);
-    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
-    for (int j = 0; j < 48; ++j) {
-      GraphBuffer[cnt++] = (int)(sample_buf[j]);
-    }
-  }
-  GraphTraceLen = cnt;
-  RepaintGraphWindow();
-  return 0;
-}
-
 int CmdHide(const char *Cmd)
 {
   HideGraphWindow();
@@ -474,7 +450,7 @@ int CmdHpf(const char *Cmd)
   return 0;
 }
 
-int CmdLFSamples(const char *Cmd)
+int CmdSamples(const char *Cmd)
 {
   int cnt = 0;
   int n;
@@ -880,10 +856,9 @@ static command_t CommandTable[] =
   {"fskdemod",      CmdFSKdemod,        1, "Demodulate graph window as a HID FSK"},
   {"grid",          CmdGrid,            1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
   {"hexsamples",    CmdHexsamples,      0, "<blocks> [<offset>] -- Dump big buffer as hex bytes"},  
-  {"hfsamples",     CmdHFSamples,       0, "[nb of samples] Get raw samples for HF tag"},
   {"hide",          CmdHide,            1, "Hide graph window"},
   {"hpf",           CmdHpf,             1, "Remove DC offset from trace"},
-  {"lfsamples",     CmdLFSamples,       0, "[128 - 16000] -- Get raw samples for LF tag"},
+  {"samples",       CmdSamples,         0, "[128 - 16000] -- Get raw samples for graph window"},
   {"load",          CmdLoad,            1, "<filename> -- Load trace (to graph window"},
   {"ltrim",         CmdLtrim,           1, "<samples> -- Trim samples from left of trace"},
   {"mandemod",      CmdManchesterDemod, 1, "[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)"},
