@@ -301,6 +301,6 @@ void LegicRfReader(int offset, int bytes) {
 		byte_index++;
 	}
 	switch_off_tag_rwd();
-	Dbprintf("Card read, use 'data hexsamples %d' to view results", (bytes+7) & ~7);
+	Dbprintf("Card read, use 'hf legic decode' or 'data hexsamples %d' to view results", (bytes+7) & ~7);
 }
 
