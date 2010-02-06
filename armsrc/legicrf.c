@@ -276,7 +276,7 @@ void LegicRfReader(int offset, int bytes) {
 			card_sz = 1024;
 			break;
 		default:
-			Dbprintf("No or unknown card found, aborting");
+			Dbprintf("Unknown card format: %x",tag_type);
  			switch_off_tag_rwd();
 	                return;
 	}
