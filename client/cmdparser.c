@@ -32,10 +32,10 @@ void CmdsParse(const command_t Commands[], const char *Cmd)
     int matches = 0;
 
     for(i=0;Commands[i].Name;i++) {
-	if( !strncmp(Commands[i].Name, cmd_name, strlen(cmd_name)) ) {
-	    last_match = i;
-	    matches++;
-	}
+      if( !strncmp(Commands[i].Name, cmd_name, strlen(cmd_name)) ) {
+        last_match = i;
+        matches++;
+      }
     }
     if(matches == 1) i=last_match;
   }
