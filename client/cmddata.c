@@ -867,7 +867,7 @@ static command_t CommandTable[] =
   {"samples",       CmdSamples,         0, "[128 - 16000] -- Get raw samples for graph window"},
   {"save",          CmdSave,            1, "<filename> -- Save trace (from graph window)"},
   {"scale",         CmdScale,           1, "<int> -- Set cursor display scale"},
-  {"threshold",     CmdThreshold,       1, "Maximize/minimize every value in the graph window depending on threshold"},
+  {"threshold",     CmdThreshold,       1, "<threshold> -- Maximize/minimize every value in the graph window depending on threshold"},
   {"zerocrossings", CmdZerocrossings,   1, "Count time between zero-crossings"},
   {NULL, NULL, 0, NULL}
 };
