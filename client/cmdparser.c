@@ -25,6 +25,21 @@ void CmdsParse(const command_t Commands[], const char *Cmd)
   int i = 0;
   while (Commands[i].Name && strcmp(Commands[i].Name, cmd_name))
     ++i;
+
+  /* try to find exactly one prefix-match */
+  if(!Commands[i].Name) {
+    int last_match = 0;
+    int matches = 0;
+
+    for(i=0;Commands[i].Name;i++) {
+	if( !strncmp(Commands[i].Name, cmd_name, strlen(cmd_name)) ) {
+	    last_match = i;
+	    matches++;
+	}
+    }
+    if(matches == 1) i=last_match;
+  }
+
   if (Commands[i].Name)
     Commands[i].Parse(Cmd + len);
   else
