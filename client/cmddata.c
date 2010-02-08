@@ -476,9 +476,9 @@ int CmdSamples(const char *Cmd)
 
 int CmdLoad(const char *Cmd)
 {
-  FILE *f = fopen(Cmd, "r");
+  FILE *f = fopen(Cmd + 1, "r");
   if (!f) {
-    PrintAndLog("couldn't open '%s'", Cmd);
+    PrintAndLog("couldn't open '%s'", Cmd + 1);
     return 0;
   }
 
