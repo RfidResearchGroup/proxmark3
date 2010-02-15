@@ -534,10 +534,11 @@ int CmdManchesterDemod(const char *Cmd)
   int warnings = 0;
 
   /* check if we're inverting output */
-  if (*Cmd == 'i')
+  if (*(Cmd + 1) == 'i')
   {
     PrintAndLog("Inverting output");
     invert = 1;
+    ++Cmd;
     do
       ++Cmd;
     while(*Cmd == ' '); // in case a 2nd argument was given
