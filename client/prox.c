@@ -3,14 +3,16 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <stdint.h>
 //extern "C" {
 #include "include/hidusage.h"
 #include "include/hidpi.h"
 #include "include/hidsdi.h"
 //}
 
-#include "prox.h"
+#include "ui.h"
 #include "flash.h"
+#include "proxusb.h"
 
 #define OUR_VID 0x9ac4
 #define OUR_PID 0x4b8f

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "proxusb.h"
 #include "data.h"
 #include "graph.h"

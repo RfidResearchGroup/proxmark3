@@ -12,8 +12,8 @@ CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
 
 CMDSRCS = \
-			crc16.c \
-			iso14443crc.c \
+			$(VPATH)\crc16.c \
+			$(VPATH)\iso14443crc.c \
 			data.c \
 			graph.c \
 			ui.c \

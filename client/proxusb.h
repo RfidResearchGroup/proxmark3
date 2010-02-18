@@ -10,7 +10,7 @@ typedef WORD uint16_t;
 #include <stdint.h>
 #include <stdbool.h>
 #endif
-#include <usb.h>
+#include "usb.h"
 #include "usb_cmd.h"
 
 extern unsigned char return_on_error;

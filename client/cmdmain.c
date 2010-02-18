@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#ifdef WIN32
+#include <windows.h>
+#endif
 #include "cmdparser.h"
 #include "data.h"
 #include "usb_cmd.h"
@@ -11,6 +14,7 @@
 #include "cmdhw.h"
 #include "cmdlf.h"
 #include "cmdmain.h"
+#include "proxusb.h"
 
 unsigned int current_command = CMD_UNKNOWN;
 unsigned int received_command = CMD_UNKNOWN;

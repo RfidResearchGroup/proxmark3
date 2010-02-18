@@ -10,8 +10,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-
-#include "prox.h"
+#include "graph.h"
+#include "proxusb.h"
+#include "cmdmain.h"
+#include "ui.h"
 
 #define oops() do { \
 	char line[100]; \
