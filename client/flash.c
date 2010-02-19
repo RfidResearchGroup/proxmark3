@@ -3,22 +3,18 @@
 #include <setupapi.h>
 #define bzero(b,len) (memset((b), '\0', (len)), (void) 0)
 BOOL UsbConnect(void);
-#else
-#include <proxusb.h>
 #endif
+#include <proxusb.h>
 
-#include <usb_cmd.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include "flash.h"
 #include "elf.h"
-#include "proxusb.h"
 
 static uint32_t ExpectedAddr;
 static uint8_t QueuedToSend[256];
-static BOOL AllWritten;
+static bool AllWritten;
 #define PHYSICAL_FLASH_START 0x100000
 #define PHYSICAL_FLASH_END   0x200000
 
