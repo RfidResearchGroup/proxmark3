@@ -8,8 +8,7 @@
 
 #include "apps.h"
 #include "legicrf.h"
-#include "unistd.h"
-#include "stdint.h"
+#include <stdint.h>
 
 #include "legic_prng.h"
 #include "crc.h"

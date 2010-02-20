@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------------
 
 #include <proxmark3.h>
-#include <stdlib.h>
 #include "apps.h"
 #include "legicrf.h"
 #ifdef WITH_LCD
@@ -20,6 +19,9 @@
 #define va_end __builtin_va_end
 int kvsprintf(char const *fmt, void *arg, int radix, va_list ap);
 	
+
+#define abs(x) ( ((x)<0) ? -(x) : (x) )
+
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
 // any purpose (fake tag, as reader, whatever). We go MSB first, since that

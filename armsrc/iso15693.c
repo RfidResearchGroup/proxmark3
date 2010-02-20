@@ -10,8 +10,6 @@
 //-----------------------------------------------------------------------------
 #include <proxmark3.h>
 #include "apps.h"
-#include <stdio.h>
-#include <stdlib.h>
 
 // FROM winsrc\prox.h //////////////////////////////////
 #define arraylen(x) (sizeof(x)/sizeof((x)[0]))
