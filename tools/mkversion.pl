@@ -25,7 +25,7 @@ if(open(SVNINFO, "svn info $main_dir|")) {
 		}
 	}
 	close(SVNINFO);
-	
+
 	if(open(SVNSTATUS, "svn status $main_dir|")) {
 		$clean = 1;
 		while(<SVNSTATUS>) {
@@ -36,9 +36,9 @@ if(open(SVNINFO, "svn info $main_dir|")) {
 		}
 		close(SVNINFO);
 	}
-	
+
 } else {
-	# Strategy two: look for .svn/entries. The third line should be "dir", the fourth line should contain 
+	# Strategy two: look for .svn/entries. The third line should be "dir", the fourth line should contain
 	#  the currently checked out revision, the eleventh line should contain the last changed revision.
 	#  revision.
 	if(open(ENTRIES, "$main_dir/.svn/entries")) {
@@ -59,7 +59,7 @@ $compiletime[5] += 1900;
 my $ctime = sprintf("%6\$04i-%5\$02i-%4\$02i %3\$02i:%2\$02i:%1\$02i", @compiletime);
 
 print <<EOF
-#include <proxmark3.h>
+#include "proxmark3.h"
 /* Generated file, do not edit */
 struct version_information __attribute__((section(".version_information"))) version_information = {
 	VERSION_INFORMATION_MAGIC,
