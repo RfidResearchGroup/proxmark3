@@ -1,4 +1,4 @@
-WINCC=c:\mingw\bin\gcc
+CC=gcc
 #COMMON_FLAGS = -m32
 
 VPATH = ../common
@@ -12,8 +12,8 @@ CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
 
 CMDSRCS = \
-			$(VPATH)\crc16.c \
-			$(VPATH)\iso14443crc.c \
+			crc16.c \
+			iso14443crc.c \
 			data.c \
 			graph.c \
 			ui.c \
@@ -64,8 +64,8 @@ all: $(BINS)
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: snooper cli flasher
 
-prox.exe: prox.c wingui.c $(CMDSRCS) flash.c
-	$(WINCC) $(CFLAGS) $(DEFINES) -o prox.exe prox.c wingui.c $(CMDSRCS) flash.c $(WINLIBS)
+prox.exe: prox.o wingui.o $(CMDOBJS) flash.o
+	$(CC) $(CFLAGS) $(DEFINES) -o prox.exe prox.o wingui.o $(CMDOBJS) flash.c $(WINLIBS)
 	
 proxmark3: LDLIBS+=$(QTLDLIBS)
 proxmark3: proxmark3.o $(CMDOBJS) proxusb.o $(QTGUI)

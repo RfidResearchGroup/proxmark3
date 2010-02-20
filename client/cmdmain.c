@@ -2,9 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#ifdef WIN32
-#include <windows.h>
-#endif
+#include "sleep.h"
 #include "cmdparser.h"
 #include "data.h"
 #include "usb_cmd.h"
@@ -14,7 +12,6 @@
 #include "cmdhw.h"
 #include "cmdlf.h"
 #include "cmdmain.h"
-#include "proxusb.h"
 
 unsigned int current_command = CMD_UNKNOWN;
 unsigned int received_command = CMD_UNKNOWN;
@@ -50,13 +47,16 @@ void WaitForResponse(uint32_t response_type)
 {
   while (received_command != response_type) {
 #ifdef WIN32
+    // FIXME: Do we really need this under windows or is it
+    // just some historical code?
+    // pthread seems to be availabe for win32 nowadays
+    // so we should be able to port the code and get rid
+    // of this part.
     UsbCommand c;
     if (ReceiveCommandPoll(&c))
       UsbCommandReceived(&c);
-    Sleep(0);
-#else
-    usleep(10000); // XXX ugh
 #endif
+    msleep(10); // XXX ugh
   }
   received_command = CMD_UNKNOWN;
 }

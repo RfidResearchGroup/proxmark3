@@ -1,14 +1,10 @@
 #ifndef PROXUSB_H__
 #define PROXUSB_H__
 
-#ifdef _MSC_VER
-typedef DWORD uint32_t;
-typedef BYTE uint8_t;
-typedef WORD uint16_t;
-#define bool BOOL
-#else
 #include <stdint.h>
 #include <stdbool.h>
+#ifndef WIN32
+#include <usb.h>
 #endif
 #include "usb_cmd.h"
 

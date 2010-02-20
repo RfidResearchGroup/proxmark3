@@ -10,10 +10,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include "graph.h"
+
 #include "proxusb.h"
-#include "cmdmain.h"
+#include "graph.h"
 #include "ui.h"
+#include "cmdmain.h"
 
 #define oops() do { \
 	char line[100]; \
@@ -354,7 +355,7 @@ nopaint:
 	return 1;
 }
 
-void PrintToScrollback(char *fmt, ...)
+void PrintAndLog(char *fmt, ...)
 {
 	va_list f;
 	char str[1024];
@@ -450,8 +451,8 @@ void ShowGui()
 	ResizeCommandWindow();
 	SetFocus(CommandEdit);
 
-	PrintToScrollback(">> Started prox, built " __DATE__ " " __TIME__);
-	PrintToScrollback(">> Connected to device");
+	PrintAndLog(">> Started prox, built " __DATE__ " " __TIME__);
+	PrintAndLog(">> Connected to device");
 
 	GreyPenLite = CreatePen(PS_SOLID, 1, RGB(50, 50, 50));
 	GreyPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));

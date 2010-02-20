@@ -10,6 +10,11 @@ int offline;
 
 static char *logfilename = "proxmark3.log";
 
+// FIXME: ifndef not really nice...
+// We should eventually get rid of it once
+// we fully factorize the code between *nix and windows
+// (using pthread and alikes...)
+#ifndef WIN32
 void PrintAndLog(char *fmt, ...)
 {
   va_list argptr, argptr2;
@@ -30,23 +35,13 @@ void PrintAndLog(char *fmt, ...)
   va_end(argptr);
   printf("\n");
   if (logging && logfile) {
-#if 0
-    char zeit[25];
-    time_t jetzt_t;
-    struct tm *jetzt;
-
-    jetzt_t = time(NULL);
-    jetzt = localtime(&jetzt_t);
-    strftime(zeit, 25, "%b %e %T", jetzt);
-
-    fprintf(logfile,"%s ", zeit);
-#endif
     vfprintf(logfile, fmt, argptr2);
     fprintf(logfile,"\n");
     fflush(logfile);
   }
   va_end(argptr2);
 }
+#endif
 
 void SetLogFilename(char *fn)
 {

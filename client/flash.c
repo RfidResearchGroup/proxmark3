@@ -14,7 +14,6 @@ BOOL UsbConnect(void);
 
 static uint32_t ExpectedAddr;
 static uint8_t QueuedToSend[256];
-static bool AllWritten;
 #define PHYSICAL_FLASH_START 0x100000
 #define PHYSICAL_FLASH_END   0x200000
 
@@ -63,8 +62,6 @@ void WriteBlock(unsigned int block_start, unsigned int len, unsigned char *buf)
   memcpy(c.d.asBytes, temp_buf+240, 16);
   SendCommand(&c);
   WaitForAck();
-
-  AllWritten = true;
 }
 
 void LoadFlashFromFile(const char *file, int start_addr, int end_addr)
