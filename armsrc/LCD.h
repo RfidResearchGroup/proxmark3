@@ -1,5 +1,5 @@
-#ifndef __LCD
-#define __LCD
+#ifndef __LCD_H
+#define __LCD_H
 
 // The resolution of the LCD
 #define LCD_XRES	132
@@ -114,4 +114,5 @@ void LCDSetXY(unsigned char x, unsigned char y);
 void LCDSetPixel(unsigned char x, unsigned char y, unsigned char color);
 void LCDString (char *lcd_string, const char *font_style,unsigned char x, unsigned char y, unsigned char fcolor, unsigned char bcolor);
 void LCDFill (unsigned char xs,unsigned char ys,unsigned char width,unsigned char height, unsigned char color);
+
 #endif

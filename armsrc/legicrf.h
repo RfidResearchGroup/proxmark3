@@ -1,12 +1,13 @@
 /*
  * LEGIC RF emulation public interface
- * 
+ *
  * (c) 2009 Henryk Plötz <henryk@ploetzli.ch>
  */
 
-#ifndef LEGICRF_H_
-#define LEGICRF_H_
+#ifndef __LEGICRF_H
+#define __LEGICRF_H
 
 extern void LegicRfSimulate(void);
 extern void LegicRfReader(int bytes, int offset);
-#endif /* LEGICRF_H_ */
+
+#endif /* __LEGICRF_H */

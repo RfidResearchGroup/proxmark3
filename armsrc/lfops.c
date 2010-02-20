@@ -4,7 +4,7 @@
 // Also routines for raw mode reading/simulating of LF waveform
 //
 //-----------------------------------------------------------------------------
-#include <proxmark3.h>
+#include "proxmark3.h"
 #include "apps.h"
 #include "hitag2.h"
 #include "crc16.h"
@@ -37,7 +37,7 @@ void DoAcquisition125k(void)
 	BYTE *dest = (BYTE *)BigBuf;
 	int n = sizeof(BigBuf);
 	int i;
-	
+
 	memset(dest, 0, n);
 	i = 0;
 	for(;;) {
@@ -63,7 +63,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 	/* Make sure the tag is reset */
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelay(2500);
-	
+
 	// see if 'h' was specified
 	if (command[strlen((char *) command) - 1] == 'h')
 		at134khz = TRUE;
@@ -470,7 +470,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 		i++;
 		if(i == period) {
 			i = 0;
-			if (gap) { 
+			if (gap) {
 				SHORT_COIL();
 				SpinDelayUs(gap);
 			}
@@ -481,7 +481,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 /* Provides a framework for bidirectional LF tag communication
  * Encoding is currently Hitag2, but the general idea can probably
  * be transferred to other encodings.
- * 
+ *
  * The new FPGA code will, for the LF simulator mode, give on SSC_FRAME
  * (PA15) a thresholded version of the signal from the ADC. Setting the
  * ADC path to the low frequency peak detection signal, will enable a
@@ -490,18 +490,18 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
  * field is switched off, and high when the reader field is active. Due
  * to the way that the signal looks like, mostly only the rising edge is
  * useful, your mileage may vary.
- * 
+ *
  * Neat perk: PA15 can not only be used as a bit-banging GPIO, but is also
  * TIOA1, which can be used as the capture input for timer 1. This should
  * make it possible to measure the exact edge-to-edge time, without processor
  * intervention.
- * 
+ *
  * Arguments: divisor is the divisor to be sent to the FPGA (e.g. 95 for 125kHz)
  * t0 is the carrier frequency cycle duration in terms of MCK (384 for 125kHz)
- * 
- * The following defines are in carrier periods: 
+ *
+ * The following defines are in carrier periods:
  */
-#define HITAG_T_0_MIN 15 /* T[0] should be 18..22 */ 
+#define HITAG_T_0_MIN 15 /* T[0] should be 18..22 */
 #define HITAG_T_1_MIN 24 /* T[1] should be 26..30 */
 #define HITAG_T_EOF   40 /* T_EOF should be > 36 */
 #define HITAG_T_WRESP 208 /* T_wresp should be 204..212 */
@@ -516,10 +516,10 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 #endif
 	char frame[10];
 	int frame_pos=0;
-	
+
 	DbpString("Starting Hitag2 emulator, press button to end");
 	hitag2_init();
-	
+
 	/* Set up simulator mode, frequency divisor which will drive the FPGA
 	 * and analog mux selection.
 	 */
@@ -527,13 +527,13 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor);
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 	RELAY_OFF();
-	
+
 	/* Set up Timer 1:
 	 * Capture mode, timer source MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
 	 * external trigger rising edge, load RA on rising edge of TIOA, load RB on rising
 	 * edge of TIOA. Assign PA15 to TIOA1 (peripheral B)
 	 */
-	
+
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
@@ -544,10 +544,10 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 								AT91C_TC_LDRB_RISING;
 	AT91C_BASE_TC1->TC_CCR =	AT91C_TC_CLKEN |
 								AT91C_TC_SWTRG;
-	
+
 	/* calculate the new value for the carrier period in terms of TC1 values */
 	t0 = t0/2;
-	
+
 	int overflow = 0;
 	while(!BUTTON_PRESS()) {
 		WDT_HIT();
@@ -559,7 +559,7 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 			((char*)BigBuf)[i] = ra;
 			i = (i+1) % 8000;
 #endif
-			
+
 			if(overflow || (ra > t0*HITAG_T_EOF) || (ra < t0*HITAG_T_0_MIN)) {
 				/* Ignore */
 			} else if(ra >= t0*HITAG_T_1_MIN ) {
@@ -575,7 +575,7 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 					frame_pos++;
 				}
 			}
-			
+
 			overflow = 0;
 			LED_D_ON();
 		} else {
@@ -587,9 +587,9 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 				 * have wrapped. Also, this marks the end of frame, and the
 				 * still running counter can be used to determine the correct
 				 * time for the start of the reply.
-				 */ 
+				 */
 				overflow = 1;
-				
+
 				if(frame_pos > 0) {
 					/* Have a frame, do something with it */
 #if DEBUG_FRAME_CONTENTS
@@ -629,13 +629,13 @@ static void hitag_send_bit(int t0, int bit) {
 		LED_B_OFF();
 	}
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG; /* Reset clock for the next bit */
-	
+
 }
 static void hitag_send_frame(int t0, int frame_len, const char const * frame, int fdt)
 {
 	OPEN_COIL();
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-	
+
 	/* Wait for HITAG_T_WRESP carrier periods after the last reader bit,
 	 * not that since the clock counts since the rising edge, but T_wresp is
 	 * with respect to the falling edge, we need to wait actually (T_wresp - T_g)
@@ -646,15 +646,15 @@ static void hitag_send_frame(int t0, int frame_len, const char const * frame, in
 	int saved_cmr = AT91C_BASE_TC1->TC_CMR;
 	AT91C_BASE_TC1->TC_CMR &= ~AT91C_TC_ETRGEDG; /* Disable external trigger for the clock */
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG; /* Reset the clock and use it for response timing */
-	
+
 	int i;
 	for(i=0; i<5; i++)
 		hitag_send_bit(t0, 1); /* Start of frame */
-	
+
 	for(i=0; i<frame_len; i++) {
 		hitag_send_bit(t0, !!(frame[i/ 8] & (1<<( 7-(i%8) ))) );
 	}
-	
+
 	OPEN_COIL();
 	AT91C_BASE_TC1->TC_CMR = saved_cmr;
 }

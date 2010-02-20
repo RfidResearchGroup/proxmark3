@@ -2,7 +2,7 @@
 // Utility functions used in many places, not specific to any piece of code.
 // Jonathan Westhues, Sept 2005
 //-----------------------------------------------------------------------------
-#include <proxmark3.h>
+#include "proxmark3.h"
 #include "apps.h"
 
 void *memcpy(void *dest, const void *src, int len)
@@ -56,11 +56,11 @@ char* strncat(char *dest, const char *src, unsigned int n)
 {
 	unsigned int dest_len = strlen(dest);
 	unsigned int i;
-	
+
 	for (i = 0 ; i < n && src[i] != '\0' ; i++)
 		dest[dest_len + i] = src[i];
 	dest[dest_len + i] = '\0';
-	
+
 	return dest;
 }
 
@@ -276,14 +276,14 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
 		strncat(dst, "Version information not available", len);
 		return;
 	}
-	
+
 	strncat(dst, v->svnversion, len);
 	if(v->clean == 0) {
 		strncat(dst, "-unclean", len);
 	} else if(v->clean == 2) {
 		strncat(dst, "-suspect", len);
 	}
-	
+
 	strncat(dst, " ", len);
 	strncat(dst, v->buildtime, len);
 }

@@ -1,4 +1,4 @@
-#include <proxmark3.h>
+#include "proxmark3.h"
 #include "apps.h"
 #include "LCD.h"
 
@@ -114,7 +114,7 @@ void LCDInit(void)
 
     LCDSend(PSETCON);			// set contrast
     LCDSend(0xDC);
-    
+
 	// clear display
     LCDSetXY(0,0);
 	LCDSend(PRAMWR);			// Write to display

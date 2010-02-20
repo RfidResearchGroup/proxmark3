@@ -1,5 +1,5 @@
-#ifndef LEGIC_PRNG_H__
-#define LEGIC_PRNG_H__
+#ifndef __LEGIC_PRNG_H
+#define __LEGIC_PRNG_H
 
 #include <stdint.h>
 extern void legic_prng_init(uint8_t init);

@@ -1,5 +1,5 @@
 .extern CopyBootToRAM
-    
+
 .section .startup,"ax"
          .code 32
          .align 0

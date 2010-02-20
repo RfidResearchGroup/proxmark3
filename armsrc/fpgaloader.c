@@ -4,7 +4,7 @@
 //
 // Jonathan Westhues, April 2006
 //-----------------------------------------------------------------------------
-#include <proxmark3.h>
+#include "proxmark3.h"
 #include "apps.h"
 
 //-----------------------------------------------------------------------------
@@ -212,10 +212,10 @@ static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int byterevers
 			i=0;
 			while(FpgaImageLen-->0)
 				DownloadFPGA_byte(FpgaImage[(i++)^0x3]);
-			/* Explanation of the magic in the above line: 
+			/* Explanation of the magic in the above line:
 			 * i^0x3 inverts the lower two bits of the integer i, counting backwards
 			 * for each 4 byte increment. The generated sequence of (i++)^3 is
-			 * 3 2 1 0 7 6 5 4 11 10 9 8 15 14 13 12 etc. pp. 
+			 * 3 2 1 0 7 6 5 4 11 10 9 8 15 14 13 12 etc. pp.
 			 */
 		}
 	} else {
@@ -251,7 +251,7 @@ static const char _bitparse_fixed_header[] = {0x00, 0x09, 0x0f, 0xf0, 0x0f, 0xf0
 static int bitparse_init(void * start_address, void *end_address)
 {
 	bitparse_initialized = 0;
-	
+
 	if(memcmp(_bitparse_fixed_header, start_address, sizeof(_bitparse_fixed_header)) != 0) {
 		return 0; /* Not matched */
 	} else {
@@ -286,12 +286,12 @@ int bitparse_find_section(char section_name, char **section_start, unsigned int 
 			current_length += (*pos++) << 8;
 			current_length += (*pos++) << 0;
 		}
-		
+
 		if(current_name != 'e' && current_length > 255) {
 			/* Maybe a parse error */
 			break;
 		}
-		
+
 		if(current_name == section_name) {
 			/* Found it */
 			*section_start = pos;
@@ -299,10 +299,10 @@ int bitparse_find_section(char section_name, char **section_start, unsigned int 
 			result = 1;
 			break;
 		}
-		
+
 		pos += current_length; /* Skip section */
 	}
-	
+
 	return result;
 }
 
@@ -323,13 +323,13 @@ void FpgaDownloadAndGo(void)
 		unsigned int bitstream_length;
 		if(bitparse_find_section('e', &bitstream_start, &bitstream_length)) {
 			DownloadFPGA(bitstream_start, bitstream_length, 0);
-			
+
 			return; /* All done */
 		}
 	}
-	
+
 	/* Fallback for the old flash image format: Check for the magic marker 0xFFFFFFFF
-	 * 0xAA995566 at address 0x102000. This is raw bitstream with a size of 336,768 bits 
+	 * 0xAA995566 at address 0x102000. This is raw bitstream with a size of 336,768 bits
 	 * = 10,524 DWORDs, stored as DWORDS e.g. little-endian in memory, but each DWORD
 	 * is still to be transmitted in MSBit first order. Set the invert flag to indicate
 	 * that the DownloadFPGA function should invert every 4 byte sequence when doing
@@ -341,7 +341,7 @@ void FpgaDownloadAndGo(void)
 
 void FpgaGatherVersion(char *dst, int len)
 {
-	char *fpga_info; 
+	char *fpga_info;
 	unsigned int fpga_info_len;
 	dst[0] = 0;
 	if(!bitparse_find_section('e', &fpga_info, &fpga_info_len)) {

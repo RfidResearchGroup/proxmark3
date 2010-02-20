@@ -93,7 +93,7 @@ typedef struct {
 #define CMD_UNKNOWN					0xFFFF
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
-/* Whether a bootloader that understands the common_area is present */ 
+/* Whether a bootloader that understands the common_area is present */
 #define DEVICE_INFO_FLAG_BOOTROM_PRESENT         	(1<<0)
 
 /* Whether a osimage that understands the common_area is present */
@@ -108,7 +108,7 @@ typedef struct {
 /* Set if this device understands the extend start flash command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH 	(1<<4)
 
-/* CMD_START_FLASH may have three arguments: start of area to flash, 
+/* CMD_START_FLASH may have three arguments: start of area to flash,
    end of area to flash, optional magic.
    The bootrom will not allow to overwrite itself unless this magic
    is given as third parameter */

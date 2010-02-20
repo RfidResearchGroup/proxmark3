@@ -2,11 +2,11 @@
  * crc.h
  *
  * Generic CRC calculation code.
- * 
+ *
  */
 
-#ifndef CRC_H_
-#define CRC_H_
+#ifndef __CRC_H
+#define __CRC_H
 
 #include <stdint.h>
 
@@ -26,7 +26,7 @@ extern void crc_init(crc_t *crc, int order, uint32_t polynom, uint32_t initial_v
 
 /* Update the crc state. data is the data of length data_width bits (only the the
  * data_width lower-most bits are used).
- */ 
+ */
 extern void crc_update(crc_t *crc, uint32_t data, int data_width);
 
 /* Clean the crc state, e.g. reset it to initial_value */
@@ -44,4 +44,4 @@ extern uint32_t crc_finish(crc_t *crc);
 	.final_xor = (_final_xor), \
 	.mask = ((1L<<(_order))-1) }
 
-#endif /* CRC_H_ */
+#endif /* __CRC_H */

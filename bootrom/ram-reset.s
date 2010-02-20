@@ -1,5 +1,5 @@
 .extern BootROM
-    
+
 .section .startphase2,"ax"
          .code 32
          .align 0

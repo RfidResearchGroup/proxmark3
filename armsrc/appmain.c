@@ -5,7 +5,7 @@
 // Edits by Gerhard de Koning Gans, Sep 2007 (##)
 //-----------------------------------------------------------------------------
 
-#include <proxmark3.h>
+#include "proxmark3.h"
 #include "apps.h"
 #include "legicrf.h"
 #ifdef WITH_LCD
@@ -18,7 +18,7 @@
 #define va_arg __builtin_va_arg
 #define va_end __builtin_va_end
 int kvsprintf(char const *fmt, void *arg, int radix, va_list ap);
-	
+
 
 #define abs(x) ( ((x)<0) ? -(x) : (x) )
 
@@ -115,7 +115,7 @@ void Dbprintf(const char *fmt, ...) {
 	va_start(ap, fmt);
 	kvsprintf(fmt, output_string, 10, ap);
 	va_end(ap);
- 
+
 	DbpString(output_string);
 }
 
@@ -220,7 +220,7 @@ void MeasureAntennaTuningHf(void)
 		// Vref = 3300mV, and an 10:1 voltage divider on the input
 		// can measure voltages up to 33000 mV
 		vHf = (33000 * AvgAdc(ADC_CHAN_HF)) >> 10;
-	
+
 		Dbprintf("%d mV",vHf);
 		if (BUTTON_PRESS()) break;
 	}
@@ -290,8 +290,8 @@ void SendVersion(void)
 {
 	char temp[48]; /* Limited data payload in USB packets */
 	DbpString("Prox/RFID mark3 RFID instrument");
-	
-	/* Try to find the bootrom version information. Expect to find a pointer at 
+
+	/* Try to find the bootrom version information. Expect to find a pointer at
 	 * symbol _bootphase1_version_pointer, perform slight sanity checks on the
 	 * pointer, then use it.
 	 */
@@ -302,10 +302,10 @@ void SendVersion(void)
 		FormatVersionInformation(temp, sizeof(temp), "bootrom: ", bootrom_version);
 		DbpString(temp);
 	}
-	
+
 	FormatVersionInformation(temp, sizeof(temp), "os: ", &version_information);
 	DbpString(temp);
-	
+
 	FpgaGatherVersion(temp, sizeof(temp));
 	DbpString(temp);
 }
@@ -507,7 +507,7 @@ void ListenReaderField(int limit)
 				if (abs(lf_av - lf_baseline) > 10) LED_D_ON();
 				else                               LED_D_OFF();
 			}
-			
+
 			++lf_count;
 			lf_av_new= ReadAdc(ADC_CHAN_LF);
 			// see if there's a significant change
@@ -525,7 +525,7 @@ void ListenReaderField(int limit)
 				if (abs(hf_av - hf_baseline) > 10) LED_B_ON();
 				else                               LED_B_OFF();
 			}
-			
+
 			++hf_count;
 			hf_av_new= ReadAdc(ADC_CHAN_HF);
 			// see if there's a significant change
@@ -537,7 +537,7 @@ void ListenReaderField(int limit)
 				hf_count= 0;
 			}
 		}
-		
+
 		if(mode == 2) {
 			if (limit == LF_ONLY) {
 				display_val = lf_av;
@@ -639,7 +639,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 			ReaderMifare(c->arg[0]);
 			break;
 #endif
-      
+
 #ifdef WITH_ISO14443b
 		case CMD_SNOOP_ISO_14443:
 			SnoopIso14443();
@@ -661,7 +661,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 			SimulateIso14443Tag();
 			break;
 #endif
-		
+
 #ifdef WITH_ISO14443a
 		case CMD_SIMULATE_TAG_ISO_14443a:
 			SimulateIso14443aTag(c->arg[0], c->arg[1]);  // ## Simulate iso14443a tag - pass tag type & UID
@@ -794,7 +794,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
 			for(;;);
 			break;
-			
+
 		case CMD_DEVICE_INFO: {
 			UsbCommand c;
 			c.cmd = CMD_DEVICE_INFO;
@@ -812,7 +812,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 void  __attribute__((noreturn)) AppMain(void)
 {
 	SpinDelay(100);
-	
+
 	if(common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
 		/* Initialize common area */
 		memset(&common_area, 0, sizeof(common_area));

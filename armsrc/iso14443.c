@@ -4,7 +4,7 @@
 // supported.
 // Jonathan Westhues, split Nov 2006
 //-----------------------------------------------------------------------------
-#include <proxmark3.h>
+#include "proxmark3.h"
 #include "apps.h"
 #include "iso14443crc.h"
 
@@ -1070,11 +1070,11 @@ void SnoopIso14443(void)
 	Dbprintf("  Reader -> tag: %i bytes", READER_TAG_BUFFER_SIZE);
 	Dbprintf("  tag -> Reader: %i bytes", TAG_READER_BUFFER_SIZE);
 	Dbprintf("  DMA: %i bytes", DMA_BUFFER_SIZE);
-	
+
 	// Use a counter for blinking the LED
 	long ledCount=0;
 	long ledFlashAt=200000;
-	
+
     // And put the FPGA in the appropriate mode
     // Signal field is off with the appropriate LED
     LED_D_OFF();
@@ -1099,7 +1099,7 @@ void SnoopIso14443(void)
 			LED_D_OFF();
 			ledCount=0;
 		}
-		
+
     	int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) &
                                 (DMA_BUFFER_SIZE-1);
         if(behindBy > maxBehindBy) {
@@ -1176,7 +1176,7 @@ void SnoopIso14443(void)
             trace[traceLen++] = Demod.len;
             memcpy(trace+traceLen, receivedResponse, Demod.len);
             traceLen += Demod.len;
-            if(traceLen > DEMOD_TRACE_SIZE) {		
+            if(traceLen > DEMOD_TRACE_SIZE) {
 				DbpString("Reached trace limit");
 				goto done;
 			}
