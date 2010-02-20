@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------------
 #include "proxmark3.h"
 #include "apps.h"
+#include "util.h"
 
 //-----------------------------------------------------------------------------
 // Set up the Serial Peripheral Interface as master
@@ -129,11 +130,11 @@ void FpgaSetupSsc(void)
 // ourselves, not to another buffer). The stuff to manipulate those buffers
 // is in apps.h, because it should be inlined, for speed.
 //-----------------------------------------------------------------------------
-void FpgaSetupSscDma(BYTE *buf, int len)
+void FpgaSetupSscDma(uint8_t *buf, int len)
 {
-	AT91C_BASE_PDC_SSC->PDC_RPR = (DWORD)buf;
+	AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) buf;
 	AT91C_BASE_PDC_SSC->PDC_RCR = len;
-	AT91C_BASE_PDC_SSC->PDC_RNPR = (DWORD)buf;
+	AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) buf;
 	AT91C_BASE_PDC_SSC->PDC_RNCR = len;
 	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
 }
@@ -207,8 +208,8 @@ static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int byterevers
 	}
 
 	if(bytereversal) {
-		/* This is only supported for DWORD aligned images */
-		if( ((int)FpgaImage % sizeof(DWORD)) == 0 ) {
+		/* This is only supported for uint32_t aligned images */
+		if( ((int)FpgaImage % sizeof(uint32_t)) == 0 ) {
 			i=0;
 			while(FpgaImageLen-->0)
 				DownloadFPGA_byte(FpgaImage[(i++)^0x3]);
@@ -330,12 +331,12 @@ void FpgaDownloadAndGo(void)
 
 	/* Fallback for the old flash image format: Check for the magic marker 0xFFFFFFFF
 	 * 0xAA995566 at address 0x102000. This is raw bitstream with a size of 336,768 bits
-	 * = 10,524 DWORDs, stored as DWORDS e.g. little-endian in memory, but each DWORD
+	 * = 10,524 uint32_t, stored as uint32_t e.g. little-endian in memory, but each DWORD
 	 * is still to be transmitted in MSBit first order. Set the invert flag to indicate
 	 * that the DownloadFPGA function should invert every 4 byte sequence when doing
 	 * the bytewise download.
 	 */
-	if( *(DWORD*)0x102000 == 0xFFFFFFFF && *(DWORD*)0x102004 == 0xAA995566 )
+	if( *(uint32_t*)0x102000 == 0xFFFFFFFF && *(uint32_t*)0x102004 == 0xAA995566 )
 		DownloadFPGA((char*)0x102000, 10524*4, 1);
 }
 
@@ -375,7 +376,7 @@ void FpgaGatherVersion(char *dst, int len)
 // The bit format is:  C3 C2 C1 C0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0
 // where C is the 4 bit command and D is the 12 bit data
 //-----------------------------------------------------------------------------
-void FpgaSendCommand(WORD cmd, WORD v)
+void FpgaSendCommand(uint16_t cmd, uint16_t v)
 {
 	SetupSpi(SPI_FPGA_MODE);
 	while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0);		// wait for the transfer to complete
@@ -386,7 +387,7 @@ void FpgaSendCommand(WORD cmd, WORD v)
 // vs. clone vs. etc.). This is now a special case of FpgaSendCommand() to
 // avoid changing this function's occurence everywhere in the source code.
 //-----------------------------------------------------------------------------
-void FpgaWriteConfWord(BYTE v)
+void FpgaWriteConfWord(uint8_t v)
 {
 	FpgaSendCommand(FPGA_CMD_SET_CONFREG, v);
 }
@@ -396,7 +397,7 @@ void FpgaWriteConfWord(BYTE v)
 // closable, but should only close one at a time. Not an FPGA thing, but
 // the samples from the ADC always flow through the FPGA.
 //-----------------------------------------------------------------------------
-void SetAdcMuxFor(DWORD whichGpio)
+void SetAdcMuxFor(uint32_t whichGpio)
 {
 	AT91C_BASE_PIOA->PIO_OER =
 		GPIO_MUXSEL_HIPKD |

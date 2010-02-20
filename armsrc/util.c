@@ -3,12 +3,12 @@
 // Jonathan Westhues, Sept 2005
 //-----------------------------------------------------------------------------
 #include "proxmark3.h"
-#include "apps.h"
+#include "util.h"
 
 void *memcpy(void *dest, const void *src, int len)
 {
-	BYTE *d = dest;
-	const BYTE *s = src;
+	uint8_t *d = dest;
+	const uint8_t *s = src;
 	while((len--) > 0) {
 		*d = *s;
 		d++;
@@ -19,7 +19,7 @@ void *memcpy(void *dest, const void *src, int len)
 
 void *memset(void *dest, int c, int len)
 {
-	BYTE *d = dest;
+	uint8_t *d = dest;
 	while((len--) > 0) {
 		*d = c;
 		d++;
@@ -29,8 +29,8 @@ void *memset(void *dest, int c, int len)
 
 int memcmp(const void *av, const void *bv, int len)
 {
-	const BYTE *a = av;
-	const BYTE *b = bv;
+	const uint8_t *a = av;
+	const uint8_t *b = bv;
 
 	while((len--) > 0) {
 		if(*a != *b) {
@@ -42,7 +42,7 @@ int memcmp(const void *av, const void *bv, int len)
 	return 0;
 }
 
-int strlen(char *str)
+int strlen(const char *str)
 {
 	int l = 0;
 	while(*str) {
@@ -64,15 +64,15 @@ char* strncat(char *dest, const char *src, unsigned int n)
 	return dest;
 }
 
-void num_to_bytes(uint64_t n, size_t len, byte_t* dest)
+void num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
 {
 	while (len--) {
-		dest[len] = (byte_t) n;
+		dest[len] = (uint8_t) n;
 		n >>= 8;
 	}
 }
 
-uint64_t bytes_to_num(byte_t* src, size_t len)
+uint64_t bytes_to_num(uint8_t* src, size_t len)
 {
 	uint64_t num = 0;
 	while (len--)
@@ -139,12 +139,12 @@ int BUTTON_CLICKED(int ms)
 	AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;
 	AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;
 
-	WORD start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+	uint16_t start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
 	int letoff = 0;
 	for(;;)
 	{
-		WORD now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+		uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
 		// We haven't let off the button yet
 		if (!letoff)
@@ -162,7 +162,7 @@ int BUTTON_CLICKED(int ms)
 			// Still haven't let it off
 			else
 				// Have we held down a full second?
-				if (now == (WORD)(start + ticks))
+				if (now == (uint16_t)(start + ticks))
 					return BUTTON_HOLD;
 		}
 
@@ -174,7 +174,7 @@ int BUTTON_CLICKED(int ms)
 
 			// Have we ran out of time to double click?
 			else
-				if (now == (WORD)(start + ticks))
+				if (now == (uint16_t)(start + ticks))
 					// At least we did a single click
 					return BUTTON_SINGLE_CLICK;
 
@@ -202,11 +202,11 @@ int BUTTON_HELD(int ms)
 	AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;
 	AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;
 
-	WORD start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+	uint16_t start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
 	for(;;)
 	{
-		WORD now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+		uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
 		// As soon as our button let go, we didn't hold long enough
 		if (!BUTTON_PRESS())
@@ -214,7 +214,7 @@ int BUTTON_HELD(int ms)
 
 		// Have we waited the full second?
 		else
-			if (now == (WORD)(start + ticks))
+			if (now == (uint16_t)(start + ticks))
 				return BUTTON_HOLD;
 
 		WDT_HIT();
@@ -237,11 +237,11 @@ void SpinDelayUs(int us)
 	AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;
 	AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;
 
-	WORD start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+	uint16_t start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
 	for(;;) {
-		WORD now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
-		if (now == (WORD)(start + ticks))
+		uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+		if (now == (uint16_t)(start + ticks))
 			return;
 
 		WDT_HIT();

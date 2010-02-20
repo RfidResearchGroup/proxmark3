@@ -9,6 +9,7 @@
 
 //-----------------------------------------------------------------------------
 #include "proxmark3.h"
+#include "util.h"
 #include "apps.h"
 
 // FROM winsrc\prox.h //////////////////////////////////
@@ -65,7 +66,7 @@
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 	};
 
-static void CodeIso15693AsReader(BYTE *cmd, int n)
+static void CodeIso15693AsReader(uint8_t *cmd, int n)
 {
 	int i, j;
 
@@ -145,14 +146,14 @@ static void CodeIso15693AsReader(BYTE *cmd, int n)
 //-----------------------------------------------------------------------------
 // The CRC used by ISO 15693.
 //-----------------------------------------------------------------------------
-static WORD Crc(BYTE *v, int n)
+static uint16_t Crc(uint8_t *v, int n)
 {
-	DWORD reg;
+	uint32_t reg;
 	int i, j;
 
 	reg = 0xffff;
 	for(i = 0; i < n; i++) {
-		reg = reg ^ ((DWORD)v[i]);
+		reg = reg ^ ((uint32_t)v[i]);
 		for (j = 0; j < 8; j++) {
 			if (reg & 0x0001) {
 				reg = (reg >> 1) ^ 0x8408;
@@ -216,9 +217,9 @@ void itoa(int n, char s[])
 //-----------------------------------------------------------------------------
 static void BuildIdentifyRequest(void)
 {
-	BYTE cmd[5];
+	uint8_t cmd[5];
 
-	WORD crc;
+	uint16_t crc;
 	// one sub-carrier, inventory, 1 slot, fast rate
 	// AFI is at bit 5 (1<<4) when doing an INVENTORY
 	cmd[0] = (1 << 2) | (1 << 5) | (1 << 1);
@@ -234,11 +235,11 @@ static void BuildIdentifyRequest(void)
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
 
-static void __attribute__((unused)) BuildSysInfoRequest(BYTE *uid)
+static void __attribute__((unused)) BuildSysInfoRequest(uint8_t *uid)
 {
-	BYTE cmd[12];
+	uint8_t cmd[12];
 
-	WORD crc;
+	uint16_t crc;
 	// If we set the Option_Flag in this request, the VICC will respond with the secuirty status of the block
 	// followed by teh block data
 	// one sub-carrier, inventory, 1 slot, fast rate
@@ -263,13 +264,13 @@ static void __attribute__((unused)) BuildSysInfoRequest(BYTE *uid)
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
 
-static void BuildSelectRequest( BYTE uid[])
+static void BuildSelectRequest( uint8_t uid[])
 {
 
 //	uid[6]=0x31;  // this is getting ignored - the uid array is not happening...
-	BYTE cmd[12];
+	uint8_t cmd[12];
 
-	WORD crc;
+	uint16_t crc;
 	// one sub-carrier, inventory, 1 slot, fast rate
 	//cmd[0] = (1 << 2) | (1 << 5) | (1 << 1);	// INVENTROY FLAGS
 	cmd[0] = (1 << 4) | (1 << 5) | (1 << 1);	// Select and addressed FLAGS
@@ -302,11 +303,11 @@ static void BuildSelectRequest( BYTE uid[])
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
 
-static void __attribute__((unused)) BuildReadBlockRequest(BYTE *uid, BYTE blockNumber )
+static void __attribute__((unused)) BuildReadBlockRequest(uint8_t *uid, uint8_t blockNumber )
 {
-	BYTE cmd[13];
+	uint8_t cmd[13];
 
-	WORD crc;
+	uint16_t crc;
 	// If we set the Option_Flag in this request, the VICC will respond with the secuirty status of the block
 	// followed by teh block data
 	// one sub-carrier, inventory, 1 slot, fast rate
@@ -333,11 +334,11 @@ static void __attribute__((unused)) BuildReadBlockRequest(BYTE *uid, BYTE blockN
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
 
-static void __attribute__((unused)) BuildReadMultiBlockRequest(BYTE *uid)
+static void __attribute__((unused)) BuildReadMultiBlockRequest(uint8_t *uid)
 {
-	BYTE cmd[14];
+	uint8_t cmd[14];
 
-	WORD crc;
+	uint16_t crc;
 	// If we set the Option_Flag in this request, the VICC will respond with the secuirty status of the block
 	// followed by teh block data
 	// one sub-carrier, inventory, 1 slot, fast rate
@@ -366,11 +367,11 @@ static void __attribute__((unused)) BuildReadMultiBlockRequest(BYTE *uid)
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
 
-static void __attribute__((unused)) BuildArbitraryRequest(BYTE *uid,BYTE CmdCode)
+static void __attribute__((unused)) BuildArbitraryRequest(uint8_t *uid,uint8_t CmdCode)
 {
-	BYTE cmd[14];
+	uint8_t cmd[14];
 
-	WORD crc;
+	uint16_t crc;
 	// If we set the Option_Flag in this request, the VICC will respond with the secuirty status of the block
 	// followed by teh block data
 	// one sub-carrier, inventory, 1 slot, fast rate
@@ -400,11 +401,11 @@ static void __attribute__((unused)) BuildArbitraryRequest(BYTE *uid,BYTE CmdCode
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
 
-static void __attribute__((unused)) BuildArbitraryCustomRequest(BYTE uid[], BYTE CmdCode)
+static void __attribute__((unused)) BuildArbitraryCustomRequest(uint8_t uid[], uint8_t CmdCode)
 {
-	BYTE cmd[14];
+	uint8_t cmd[14];
 
-	WORD crc;
+	uint16_t crc;
 	// If we set the Option_Flag in this request, the VICC will respond with the secuirty status of the block
 	// followed by teh block data
 	// one sub-carrier, inventory, 1 slot, fast rate
@@ -440,9 +441,9 @@ static void __attribute__((unused)) BuildArbitraryCustomRequest(BYTE uid[], BYTE
 
  static void BuildInventoryResponse(void)
 {
-	BYTE cmd[12];
+	uint8_t cmd[12];
 
-	WORD crc;
+	uint16_t crc;
 	// one sub-carrier, inventory, 1 slot, fast rate
 	// AFI is at bit 5 (1<<4) when doing an INVENTORY
 	cmd[0] = 0; //(1 << 2) | (1 << 5) | (1 << 1);
@@ -467,7 +468,7 @@ static void __attribute__((unused)) BuildArbitraryCustomRequest(BYTE uid[], BYTE
 //-----------------------------------------------------------------------------
 // Transmit the command (to the tag) that was placed in ToSend[].
 //-----------------------------------------------------------------------------
-static void TransmitTo15693Tag(const BYTE *cmd, int len, int *samples, int *wait)
+static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *wait)
 {
     int c;
 
@@ -481,7 +482,7 @@ static void TransmitTo15693Tag(const BYTE *cmd, int len, int *samples, int *wait
 //            c++;
 //        }
 //        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-//            volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
+//            volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
 //            (void)r;
 //        }
 //        WDT_HIT();
@@ -497,7 +498,7 @@ static void TransmitTo15693Tag(const BYTE *cmd, int len, int *samples, int *wait
             }
         }
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
+            volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
             (void)r;
         }
         WDT_HIT();
@@ -508,7 +509,7 @@ static void TransmitTo15693Tag(const BYTE *cmd, int len, int *samples, int *wait
 //-----------------------------------------------------------------------------
 // Transmit the command (to the reader) that was placed in ToSend[].
 //-----------------------------------------------------------------------------
-static void TransmitTo15693Reader(const BYTE *cmd, int len, int *samples, int *wait)
+static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int *wait)
 {
     int c;
 
@@ -526,7 +527,7 @@ static void TransmitTo15693Reader(const BYTE *cmd, int len, int *samples, int *w
             }
         }
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
+            volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
             (void)r;
         }
         WDT_HIT();
@@ -534,13 +535,13 @@ static void TransmitTo15693Reader(const BYTE *cmd, int len, int *samples, int *w
 	*samples = (c + *wait) << 3;
 }
 
-static int GetIso15693AnswerFromTag(BYTE *receivedResponse, int maxLen, int *samples, int *elapsed)
+static int GetIso15693AnswerFromTag(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed)
 {
 	int c = 0;
-	BYTE *dest = (BYTE *)BigBuf;
+	uint8_t *dest = (uint8_t *)BigBuf;
 	int getNext = 0;
 
-	SBYTE prev = 0;
+	int8_t prev = 0;
 
 // NOW READ RESPONSE
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
@@ -552,15 +553,15 @@ static int GetIso15693AnswerFromTag(BYTE *receivedResponse, int maxLen, int *sam
 			AT91C_BASE_SSC->SSC_THR = 0x43;
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			SBYTE b;
-			b = (SBYTE)AT91C_BASE_SSC->SSC_RHR;
+			int8_t b;
+			b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
 
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
 			if(getNext) {
-				SBYTE r;
+				int8_t r;
 
 				if(b < 0) {
 					r = -b;
@@ -573,7 +574,7 @@ static int GetIso15693AnswerFromTag(BYTE *receivedResponse, int maxLen, int *sam
 					r += prev;
 				}
 
-				dest[c++] = (BYTE)r;
+				dest[c++] = (uint8_t)r;
 
 				if(c >= 2000) {
 					break;
@@ -618,9 +619,9 @@ static int GetIso15693AnswerFromTag(BYTE *receivedResponse, int maxLen, int *sam
 
 	i = maxPos + arraylen(FrameSOF)/skip;
 
-	BYTE outBuf[20];
+	uint8_t outBuf[20];
 	memset(outBuf, 0, sizeof(outBuf));
-	BYTE mask = 0x01;
+	uint8_t mask = 0x01;
 	for(;;) {
 		int corr0 = 0, corr1 = 0, corrEOF = 0;
 		for(j = 0; j < arraylen(Logic0); j += skip) {
@@ -659,7 +660,7 @@ static int GetIso15693AnswerFromTag(BYTE *receivedResponse, int maxLen, int *sam
 		DbpString("error, uneven octet! (discard extra bits!)");
 ///		DbpString("   mask=%02x", mask);
 	}
-//	BYTE str1 [8];
+//	uint8_t str1 [8];
 //	itoa(k,str1);
 //	strcat(str1," octets read");
 
@@ -681,13 +682,13 @@ static int GetIso15693AnswerFromTag(BYTE *receivedResponse, int maxLen, int *sam
 }
 
 // Now the GetISO15693 message from sniffing command
-static int GetIso15693AnswerFromSniff(BYTE *receivedResponse, int maxLen, int *samples, int *elapsed)
+static int GetIso15693AnswerFromSniff(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed)
 {
 	int c = 0;
-	BYTE *dest = (BYTE *)BigBuf;
+	uint8_t *dest = (uint8_t *)BigBuf;
 	int getNext = 0;
 
-	SBYTE prev = 0;
+	int8_t prev = 0;
 
 // NOW READ RESPONSE
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
@@ -699,15 +700,15 @@ static int GetIso15693AnswerFromSniff(BYTE *receivedResponse, int maxLen, int *s
 			AT91C_BASE_SSC->SSC_THR = 0x43;
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			SBYTE b;
-			b = (SBYTE)AT91C_BASE_SSC->SSC_RHR;
+			int8_t b;
+			b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
 
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
 			if(getNext) {
-				SBYTE r;
+				int8_t r;
 
 				if(b < 0) {
 					r = -b;
@@ -720,7 +721,7 @@ static int GetIso15693AnswerFromSniff(BYTE *receivedResponse, int maxLen, int *s
 					r += prev;
 				}
 
-				dest[c++] = (BYTE)r;
+				dest[c++] = (uint8_t)r;
 
 				if(c >= 20000) {
 					break;
@@ -765,9 +766,9 @@ static int GetIso15693AnswerFromSniff(BYTE *receivedResponse, int maxLen, int *s
 
 	i = maxPos + arraylen(FrameSOF)/skip;
 
-	BYTE outBuf[20];
+	uint8_t outBuf[20];
 	memset(outBuf, 0, sizeof(outBuf));
-	BYTE mask = 0x01;
+	uint8_t mask = 0x01;
 	for(;;) {
 		int corr0 = 0, corr1 = 0, corrEOF = 0;
 		for(j = 0; j < arraylen(Logic0); j += skip) {
@@ -806,7 +807,7 @@ static int GetIso15693AnswerFromSniff(BYTE *receivedResponse, int maxLen, int *s
 		DbpString("error, uneven octet! (discard extra bits!)");
 ///		DbpString("   mask=%02x", mask);
 	}
-//	BYTE str1 [8];
+//	uint8_t str1 [8];
 //	itoa(k,str1);
 //	strcat(str1," octets read");
 
@@ -834,10 +835,10 @@ static int GetIso15693AnswerFromSniff(BYTE *receivedResponse, int maxLen, int *s
 void AcquireRawAdcSamplesIso15693(void)
 {
 	int c = 0;
-	BYTE *dest = (BYTE *)BigBuf;
+	uint8_t *dest = (uint8_t *)BigBuf;
 	int getNext = 0;
 
-	SBYTE prev = 0;
+	int8_t prev = 0;
 
 	BuildIdentifyRequest();
 
@@ -861,7 +862,7 @@ void AcquireRawAdcSamplesIso15693(void)
 			}
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
+			volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
 			(void)r;
 		}
 		WDT_HIT();
@@ -876,15 +877,15 @@ void AcquireRawAdcSamplesIso15693(void)
 			AT91C_BASE_SSC->SSC_THR = 0x43;
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			SBYTE b;
-			b = (SBYTE)AT91C_BASE_SSC->SSC_RHR;
+			int8_t b;
+			b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
 
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
 			if(getNext) {
-				SBYTE r;
+				int8_t r;
 
 				if(b < 0) {
 					r = -b;
@@ -897,7 +898,7 @@ void AcquireRawAdcSamplesIso15693(void)
 					r += prev;
 				}
 
-				dest[c++] = (BYTE)r;
+				dest[c++] = (uint8_t)r;
 
 				if(c >= 2000) {
 					break;
@@ -915,7 +916,7 @@ void AcquireRawAdcSamplesIso15693(void)
 // Simulate an ISO15693 reader, perform anti-collision and then attempt to read a sector
 // all demodulation performed in arm rather than host. - greg
 //-----------------------------------------------------------------------------
-void ReaderIso15693(DWORD parameter)
+void ReaderIso15693(uint32_t parameter)
 {
 	LED_A_ON();
 	LED_B_ON();
@@ -924,11 +925,11 @@ void ReaderIso15693(DWORD parameter)
 
 //DbpString(parameter);
 
-	//BYTE *answer0 = (((BYTE *)BigBuf) + 3560); // allow 100 bytes per reponse (way too much)
-	BYTE *answer1 = (((BYTE *)BigBuf) + 3660); //
-	BYTE *answer2 = (((BYTE *)BigBuf) + 3760);
-	BYTE *answer3 = (((BYTE *)BigBuf) + 3860);
-	//BYTE *TagUID= (((BYTE *)BigBuf) + 3960);		// where we hold the uid for hi15reader
+	//uint8_t *answer0 = (((uint8_t *)BigBuf) + 3560); // allow 100 bytes per reponse (way too much)
+	uint8_t *answer1 = (((uint8_t *)BigBuf) + 3660); //
+	uint8_t *answer2 = (((uint8_t *)BigBuf) + 3760);
+	uint8_t *answer3 = (((uint8_t *)BigBuf) + 3860);
+	//uint8_t *TagUID= (((uint8_t *)BigBuf) + 3960);		// where we hold the uid for hi15reader
 //	int answerLen0 = 0;
 	int answerLen1 = 0;
 	int answerLen2 = 0;
@@ -963,7 +964,7 @@ void ReaderIso15693(DWORD parameter)
 
 	// FIRST WE RUN AN INVENTORY TO GET THE TAG UID
 	// THIS MEANS WE CAN PRE-BUILD REQUESTS TO SAVE CPU TIME
- BYTE TagUID[7];		// where we hold the uid for hi15reader
+ uint8_t TagUID[7];		// where we hold the uid for hi15reader
 
 //	BuildIdentifyRequest();
 //	//TransmitTo15693Tag(ToSend,ToSendMax+3,&tsamples, &wait);
@@ -1053,14 +1054,14 @@ void ReaderIso15693(DWORD parameter)
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
 // all demodulation performed in arm rather than host. - greg
 //-----------------------------------------------------------------------------
-void SimTagIso15693(DWORD parameter)
+void SimTagIso15693(uint32_t parameter)
 {
 	LED_A_ON();
 	LED_B_ON();
 	LED_C_OFF();
 	LED_D_OFF();
 
-	BYTE *answer1 = (((BYTE *)BigBuf) + 3660); //
+	uint8_t *answer1 = (((uint8_t *)BigBuf) + 3660); //
 	int answerLen1 = 0;
 
 	// Blank arrays

@@ -7,8 +7,8 @@
 #define __PROXMARK3_H
 
 // Might as well have the hardware-specific defines everywhere.
-#include <at91sam7s512.h>
-#include <config_gpio.h>
+#include "at91sam7s512.h"
+#include "config_gpio.h"
 
 #define WDT_HIT()								AT91C_BASE_WDTC->WDTC_WDCR = 0xa5000001
 
@@ -67,14 +67,6 @@
 #define SPI_FPGA_MODE	0
 #define SPI_LCD_MODE	1
 
-typedef unsigned long DWORD;
-typedef signed long SDWORD;
-typedef unsigned long long QWORD;
-typedef int BOOL;
-typedef unsigned char BYTE;
-typedef signed char SBYTE;
-typedef unsigned short WORD;
-typedef signed short SWORD;
 #define TRUE 1
 #define FALSE 0
 
@@ -102,14 +94,14 @@ typedef signed short SWORD;
 //--------------------------------
 // USB declarations
 
-void UsbSendPacket(BYTE *packet, int len);
-BOOL UsbConnected();
-BOOL UsbPoll(BOOL blinkLeds);
+void UsbSendPacket(uint8_t *packet, int len);
+int UsbConnected();
+int UsbPoll(int blinkLeds);
 void UsbStart(void);
 
 // This function is provided by the apps/bootrom, and called from UsbPoll
 // if data are available.
-void UsbPacketReceived(BYTE *packet, int len);
+void UsbPacketReceived(uint8_t *packet, int len);
 
 #define VERSION_INFORMATION_MAGIC 0x56334d50
 struct version_information {

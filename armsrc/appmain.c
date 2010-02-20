@@ -7,10 +7,13 @@
 
 #include "proxmark3.h"
 #include "apps.h"
+#include "util.h"
+
 #include "legicrf.h"
+
 #ifdef WITH_LCD
-#include "fonts.h"
-#include "LCD.h"
+# include "fonts.h"
+# include "LCD.h"
 #endif
 
 #define va_list __builtin_va_list
@@ -28,7 +31,7 @@ int kvsprintf(char const *fmt, void *arg, int radix, va_list ap);
 // is the order in which they go out on the wire.
 //=============================================================================
 
-BYTE ToSend[512];
+uint8_t ToSend[512];
 int ToSendMax;
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
@@ -83,7 +86,7 @@ void DbpString(char *str)
 	}
 	memcpy(c.d.asBytes, str, c.arg[0]);
 
-	UsbSendPacket((BYTE *)&c, sizeof(c));
+	UsbSendPacket((uint8_t *)&c, sizeof(c));
 	// TODO fix USB so stupid things like this aren't req'd
 	SpinDelay(50);
 }
@@ -101,7 +104,7 @@ void DbpIntegers(int x1, int x2, int x3)
 	c.arg[1] = x2;
 	c.arg[2] = x3;
 
-	UsbSendPacket((BYTE *)&c, sizeof(c));
+	UsbSendPacket((uint8_t *)&c, sizeof(c));
 	// XXX
 	SpinDelay(50);
 }
@@ -126,7 +129,7 @@ void Dbprintf(const char *fmt, ...) {
 //-----------------------------------------------------------------------------
 static int ReadAdc(int ch)
 {
-	DWORD d;
+	uint32_t d;
 
 	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
 	AT91C_BASE_ADC->ADC_MR =
@@ -157,7 +160,7 @@ static int AvgAdc(int ch)
 
 void MeasureAntennaTuning(void)
 {
-	BYTE *dest = (BYTE *)BigBuf;
+	uint8_t *dest = (uint8_t *)BigBuf;
 	int i, ptr = 0, adcval = 0, peak = 0, peakv = 0, peakf = 0;;
 	int vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
 
@@ -204,7 +207,7 @@ void MeasureAntennaTuning(void)
 	c.arg[0] = (vLf125 << 0) | (vLf134 << 16);
 	c.arg[1] = vHf;
 	c.arg[2] = peakf | (peakv << 16);
-	UsbSendPacket((BYTE *)&c, sizeof(c));
+	UsbSendPacket((uint8_t *)&c, sizeof(c));
 }
 
 void MeasureAntennaTuningHf(void)
@@ -230,9 +233,9 @@ void MeasureAntennaTuningHf(void)
 
 void SimulateTagHfListen(void)
 {
-	BYTE *dest = (BYTE *)BigBuf;
+	uint8_t *dest = (uint8_t *)BigBuf;
 	int n = sizeof(BigBuf);
-	BYTE v = 0;
+	uint8_t v = 0;
 	int i;
 	int p = 0;
 
@@ -251,7 +254,7 @@ void SimulateTagHfListen(void)
 			AT91C_BASE_SSC->SSC_THR = 0xff;
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			BYTE r = (BYTE)AT91C_BASE_SSC->SSC_RHR;
+			uint8_t r = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
 			v <<= 1;
 			if(r & 1) {
@@ -276,7 +279,7 @@ void SimulateTagHfListen(void)
 
 void ReadMem(int addr)
 {
-	const BYTE *data = ((BYTE *)addr);
+	const uint8_t *data = ((uint8_t *)addr);
 
 	Dbprintf("%x: %02x %02x %02x %02x %02x %02x %02x %02x",
 		addr, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
@@ -567,7 +570,7 @@ void ListenReaderField(int limit)
 	}
 }
 
-void UsbPacketReceived(BYTE *packet, int len)
+void UsbPacketReceived(uint8_t *packet, int len)
 {
 	UsbCommand *c = (UsbCommand *)packet;
 	UsbCommand ack;
@@ -577,7 +580,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 #ifdef WITH_LF
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			AcquireRawAdcSamples125k(c->arg[0]);
-			UsbSendPacket((BYTE*)&ack, sizeof(ack));
+			UsbSendPacket((uint8_t*)&ack, sizeof(ack));
 			break;
 #endif
 
@@ -718,16 +721,16 @@ void UsbPacketReceived(BYTE *packet, int len)
 				n.cmd = CMD_DOWNLOADED_RAW_BITS_TI_TYPE;
 			}
 			n.arg[0] = c->arg[0];
-			memcpy(n.d.asDwords, BigBuf+c->arg[0], 12*sizeof(DWORD));
-			UsbSendPacket((BYTE *)&n, sizeof(n));
+			memcpy(n.d.asDwords, BigBuf+c->arg[0], 12*sizeof(uint32_t));
+			UsbSendPacket((uint8_t *)&n, sizeof(n));
 			break;
 		}
 
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
-			BYTE *b = (BYTE *)BigBuf;
+			uint8_t *b = (uint8_t *)BigBuf;
 			memcpy(b+c->arg[0], c->d.asBytes, 48);
 			//Dbprintf("copied 48 bytes to %i",b+c->arg[0]);
-			UsbSendPacket((BYTE*)&ack, sizeof(ack));
+			UsbSendPacket((uint8_t*)&ack, sizeof(ack));
 			break;
 		}
 
@@ -800,7 +803,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 			c.cmd = CMD_DEVICE_INFO;
 			c.arg[0] = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
 			if(common_area.flags.bootrom_present) c.arg[0] |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
-			UsbSendPacket((BYTE*)&c, sizeof(c));
+			UsbSendPacket((uint8_t*)&c, sizeof(c));
 		}
 			break;
 		default:

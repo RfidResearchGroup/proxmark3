@@ -7,13 +7,13 @@
 #ifndef __APPS_H
 #define __APPS_H
 
-#include "stdint.h"
-#include "stddef.h"
+#include <stdint.h>
+#include <stddef.h>
 typedef unsigned char byte_t;
 
 // The large multi-purpose buffer, typically used to hold A/D samples,
 // maybe processed in some way.
-DWORD BigBuf[8000];
+uint32_t BigBuf[8000];
 
 /// appmain.h
 void ReadMem(int addr);
@@ -26,21 +26,21 @@ void Dbprintf(const char *fmt, ...);
 void ToSendStuffBit(int b);
 void ToSendReset(void);
 void ListenReaderField(int limit);
-void AcquireRawAdcSamples125k(BOOL at134khz);
+void AcquireRawAdcSamples125k(int at134khz);
 void DoAcquisition125k(void);
 extern int ToSendMax;
-extern BYTE ToSend[];
-extern DWORD BigBuf[];
+extern uint8_t ToSend[];
+extern uint32_t BigBuf[];
 
 /// fpga.h
-void FpgaSendCommand(WORD cmd, WORD v);
-void FpgaWriteConfWord(BYTE v);
+void FpgaSendCommand(uint16_t cmd, uint16_t v);
+void FpgaWriteConfWord(uint8_t v);
 void FpgaDownloadAndGo(void);
 void FpgaGatherVersion(char *dst, int len);
 void FpgaSetupSsc(void);
 void SetupSpi(int mode);
-void FpgaSetupSscDma(BYTE *buf, int len);
-void SetAdcMuxFor(DWORD whichGpio);
+void FpgaSetupSscDma(uint8_t *buf, int len);
+void SetAdcMuxFor(uint32_t whichGpio);
 
 // Definitions for the FPGA commands.
 #define FPGA_CMD_SET_CONFREG						(1<<12)
@@ -72,10 +72,10 @@ void SetAdcMuxFor(DWORD whichGpio);
 #define FPGA_HF_ISO14443A_READER_MOD				(4<<0)
 
 /// lfops.h
-void AcquireRawAdcSamples125k(BOOL at134khz);
-void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,BYTE *command);
+void AcquireRawAdcSamples125k(int at134khz);
+void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,uint8_t *command);
 void ReadTItag(void);
-void WriteTItag(DWORD idhi, DWORD idlo, WORD crc);
+void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc);
 void AcquireTiType(void);
 void AcquireRawBitsTI(void);
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol);
@@ -85,47 +85,23 @@ void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);
 
 /// iso14443.h
 void SimulateIso14443Tag(void);
-void AcquireRawAdcSamplesIso14443(DWORD parameter);
-void ReadSRI512Iso14443(DWORD parameter);
-void ReadSRIX4KIso14443(DWORD parameter);
-void ReadSTMemoryIso14443(DWORD parameter,DWORD dwLast);
+void AcquireRawAdcSamplesIso14443(uint32_t parameter);
+void ReadSRI512Iso14443(uint32_t parameter);
+void ReadSRIX4KIso14443(uint32_t parameter);
+void ReadSTMemoryIso14443(uint32_t parameter,uint32_t dwLast);
 void SnoopIso14443(void);
 
 /// iso14443a.h
 void SnoopIso14443a(void);
 void SimulateIso14443aTag(int tagType, int TagUid);	// ## simulate iso14443a tag
-void ReaderIso14443a(DWORD parameter);
-void ReaderMifare(DWORD parameter);
+void ReaderIso14443a(uint32_t parameter);
+void ReaderMifare(uint32_t parameter);
 
 /// iso15693.h
 void AcquireRawAdcSamplesIso15693(void);
-void ReaderIso15693(DWORD parameter);	// Simulate an ISO15693 reader - greg
-void SimTagIso15693(DWORD parameter);	// simulate an ISO15693 tag - greg
+void ReaderIso15693(uint32_t parameter);	// Simulate an ISO15693 reader - greg
+void SimTagIso15693(uint32_t parameter);	// simulate an ISO15693 tag - greg
 
 /// util.h
-#define LED_RED 1
-#define LED_ORANGE 2
-#define LED_GREEN 4
-#define LED_RED2 8
-#define BUTTON_HOLD 1
-#define BUTTON_NO_CLICK 0
-#define BUTTON_SINGLE_CLICK -1
-#define BUTTON_DOUBLE_CLICK -2
-#define BUTTON_ERROR -99
-int strlen(char *str);
-void *memcpy(void *dest, const void *src, int len);
-void *memset(void *dest, int c, int len);
-int memcmp(const void *av, const void *bv, int len);
-char *strncat(char *dest, const char *src, unsigned int n);
-void num_to_bytes(uint64_t n, size_t len, byte_t* dest);
-uint64_t bytes_to_num(byte_t* src, size_t len);
-
-void SpinDelay(int ms);
-void SpinDelayUs(int us);
-void LED(int led, int ms);
-void LEDsoff();
-int BUTTON_CLICKED(int ms);
-int BUTTON_HELD(int ms);
-void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_information);
 
 #endif

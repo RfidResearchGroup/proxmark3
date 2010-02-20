@@ -6,10 +6,11 @@
 //-----------------------------------------------------------------------------
 #include "proxmark3.h"
 #include "apps.h"
+#include "util.h"
+
 #include "iso14443crc.h"
 
-
-//static void GetSamplesFor14443(BOOL weTx, int n);
+//static void GetSamplesFor14443(int weTx, int n);
 
 #define DEMOD_TRACE_SIZE 4096
 #define READER_TAG_BUFFER_SIZE 2048
@@ -29,7 +30,7 @@
 // that here) so that they can be transmitted to the reader. Doesn't transmit
 // them yet, just leaves them ready to send in ToSend[].
 //-----------------------------------------------------------------------------
-static void CodeIso14443bAsTag(const BYTE *cmd, int len)
+static void CodeIso14443bAsTag(const uint8_t *cmd, int len)
 {
     int i;
 
@@ -62,7 +63,7 @@ static void CodeIso14443bAsTag(const BYTE *cmd, int len)
 
     for(i = 0; i < len; i++) {
         int j;
-        BYTE b = cmd[i];
+        uint8_t b = cmd[i];
 
         // Start bit
         ToSendStuffBit(0);
@@ -126,12 +127,12 @@ static struct {
         STATE_RECEIVING_DATA,
         STATE_ERROR_WAIT
     }       state;
-    WORD    shiftReg;
+    uint16_t    shiftReg;
     int     bitCnt;
     int     byteCnt;
     int     byteCntMax;
     int     posCnt;
-    BYTE   *output;
+    uint8_t   *output;
 } Uart;
 
 /* Receive & handle a bit coming from the reader.
@@ -143,7 +144,7 @@ static struct {
  * Returns: true if we received a EOF
  *          false if we are still waiting for some more
  */
-static BOOL Handle14443UartBit(int bit)
+static int Handle14443UartBit(int bit)
 {
     switch(Uart.state) {
         case STATE_UNSYNCD:
@@ -275,9 +276,9 @@ static BOOL Handle14443UartBit(int bit)
 // Assume that we're called with the SSC (to the FPGA) and ADC path set
 // correctly.
 //-----------------------------------------------------------------------------
-static BOOL GetIso14443CommandFromReader(BYTE *received, int *len, int maxLen)
+static int GetIso14443CommandFromReader(uint8_t *received, int *len, int maxLen)
 {
-    BYTE mask;
+    uint8_t mask;
     int i, bit;
 
     // Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
@@ -302,7 +303,7 @@ static BOOL GetIso14443CommandFromReader(BYTE *received, int *len, int maxLen)
             AT91C_BASE_SSC->SSC_THR = 0x00;
         }
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            BYTE b = (BYTE)AT91C_BASE_SSC->SSC_RHR;
+            uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
             mask = 0x80;
             for(i = 0; i < 8; i++, mask >>= 1) {
@@ -322,19 +323,19 @@ static BOOL GetIso14443CommandFromReader(BYTE *received, int *len, int maxLen)
 //-----------------------------------------------------------------------------
 void SimulateIso14443Tag(void)
 {
-    static const BYTE cmd1[] = { 0x05, 0x00, 0x08, 0x39, 0x73 };
-    static const BYTE response1[] = {
+    static const uint8_t cmd1[] = { 0x05, 0x00, 0x08, 0x39, 0x73 };
+    static const uint8_t response1[] = {
         0x50, 0x82, 0x0d, 0xe1, 0x74, 0x20, 0x38, 0x19, 0x22,
         0x00, 0x21, 0x85, 0x5e, 0xd7
     };
 
-    BYTE *resp;
+    uint8_t *resp;
     int respLen;
 
-    BYTE *resp1 = (((BYTE *)BigBuf) + 800);
+    uint8_t *resp1 = (((uint8_t *)BigBuf) + 800);
     int resp1Len;
 
-    BYTE *receivedCmd = (BYTE *)BigBuf;
+    uint8_t *receivedCmd = (uint8_t *)BigBuf;
     int len;
 
     int i;
@@ -353,7 +354,7 @@ void SimulateIso14443Tag(void)
     cmdsRecvd = 0;
 
     for(;;) {
-        BYTE b1, b2;
+        uint8_t b1, b2;
 
         if(!GetIso14443CommandFromReader(receivedCmd, &len, 100)) {
 		Dbprintf("button pressed, received %d commands", cmdsRecvd);
@@ -400,7 +401,7 @@ void SimulateIso14443Tag(void)
         i = 0;
         for(;;) {
             if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-                BYTE b = resp[i];
+                uint8_t b = resp[i];
 
                 AT91C_BASE_SSC->SSC_THR = b;
 
@@ -410,7 +411,7 @@ void SimulateIso14443Tag(void)
                 }
             }
             if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-                volatile BYTE b = (BYTE)AT91C_BASE_SSC->SSC_RHR;
+                volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
                 (void)b;
             }
         }
@@ -439,8 +440,8 @@ static struct {
     int     thisBit;
     int     metric;
     int     metricN;
-    WORD    shiftReg;
-    BYTE   *output;
+    uint16_t    shiftReg;
+    uint8_t   *output;
     int     len;
     int     sumI;
     int     sumQ;
@@ -457,7 +458,7 @@ static struct {
  *          false if we are still waiting for some more
  *
  */
-static BOOL Handle14443SamplesDemod(int ci, int cq)
+static int Handle14443SamplesDemod(int ci, int cq)
 {
     int v;
 
@@ -581,9 +582,9 @@ static BOOL Handle14443SamplesDemod(int ci, int cq)
 
                 Demod.bitCount++;
                 if(Demod.bitCount == 10) {
-                    WORD s = Demod.shiftReg;
+                    uint16_t s = Demod.shiftReg;
                     if((s & 0x200) && !(s & 0x001)) {
-                        BYTE b = (s >> 1);
+                        uint8_t b = (s >> 1);
                         Demod.output[Demod.len] = b;
                         Demod.len++;
                         Demod.state = DEMOD_AWAITING_START_BIT;
@@ -615,16 +616,16 @@ static BOOL Handle14443SamplesDemod(int ci, int cq)
  *        set to 'FALSE' if we behave like a snooper
  *  quiet: set to 'TRUE' to disable debug output
  */
-static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
+static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
 {
     int max = 0;
-    BOOL gotFrame = FALSE;
+    int gotFrame = FALSE;
 
 //#   define DMA_BUFFER_SIZE 8
-    SBYTE *dmaBuf;
+    int8_t *dmaBuf;
 
     int lastRxCounter;
-    SBYTE *upTo;
+    int8_t *upTo;
 
     int ci, cq;
 
@@ -632,20 +633,20 @@ static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
 
     // Clear out the state of the "UART" that receives from the tag.
     memset(BigBuf, 0x44, 400);
-    Demod.output = (BYTE *)BigBuf;
+    Demod.output = (uint8_t *)BigBuf;
     Demod.len = 0;
     Demod.state = DEMOD_UNSYNCD;
 
     // And the UART that receives from the reader
-    Uart.output = (((BYTE *)BigBuf) + 1024);
+    Uart.output = (((uint8_t *)BigBuf) + 1024);
     Uart.byteCntMax = 100;
     Uart.state = STATE_UNSYNCD;
 
     // Setup for the DMA.
-    dmaBuf = (SBYTE *)(BigBuf + 32);
+    dmaBuf = (int8_t *)(BigBuf + 32);
     upTo = dmaBuf;
     lastRxCounter = DMA_BUFFER_SIZE;
-    FpgaSetupSscDma((BYTE *)dmaBuf, DMA_BUFFER_SIZE);
+    FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE);
 
     // Signal field is ON with the appropriate LED:
 	if (weTx) LED_D_ON(); else LED_D_OFF();
@@ -666,7 +667,7 @@ static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
             upTo += 2;
             if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
                 upTo -= DMA_BUFFER_SIZE;
-                AT91C_BASE_PDC_SSC->PDC_RNPR = (DWORD)upTo;
+                AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
                 AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
             }
             lastRxCounter -= 2;
@@ -697,9 +698,9 @@ static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
 // samples from the FPGA, which we will later do some signal processing on,
 // to get the bits.
 //-----------------------------------------------------------------------------
-/*static void GetSamplesFor14443(BOOL weTx, int n)
+/*static void GetSamplesFor14443(int weTx, int n)
 {
-    BYTE *dest = (BYTE *)BigBuf;
+    uint8_t *dest = (uint8_t *)BigBuf;
     int c;
 
     FpgaWriteConfWord(
@@ -712,10 +713,10 @@ static void GetSamplesFor14443Demod(BOOL weTx, int n, BOOL quiet)
             AT91C_BASE_SSC->SSC_THR = 0x43;
         }
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            SBYTE b;
-            b = (SBYTE)AT91C_BASE_SSC->SSC_RHR;
+            int8_t b;
+            b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
 
-            dest[c++] = (BYTE)b;
+            dest[c++] = (uint8_t)b;
 
             if(c >= n) {
                 break;
@@ -750,7 +751,7 @@ static void TransmitFor14443(void)
             c++;
         }
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
+            volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
             (void)r;
         }
         WDT_HIT();
@@ -766,7 +767,7 @@ static void TransmitFor14443(void)
             }
         }
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            volatile DWORD r = AT91C_BASE_SSC->SSC_RHR;
+            volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
             (void)r;
         }
         WDT_HIT();
@@ -778,10 +779,10 @@ static void TransmitFor14443(void)
 // Code a layer 2 command (string of octets, including CRC) into ToSend[],
 // so that it is ready to transmit to the tag using TransmitFor14443().
 //-----------------------------------------------------------------------------
-void CodeIso14443bAsReader(const BYTE *cmd, int len)
+void CodeIso14443bAsReader(const uint8_t *cmd, int len)
 {
     int i, j;
-    BYTE b;
+    uint8_t b;
 
     ToSendReset();
 
@@ -836,9 +837,9 @@ void CodeIso14443bAsReader(const BYTE *cmd, int len)
 // The command name is misleading, it actually decodes the reponse in HEX
 // into the output buffer (read the result using hexsamples, not hisamples)
 //-----------------------------------------------------------------------------
-void AcquireRawAdcSamplesIso14443(DWORD parameter)
+void AcquireRawAdcSamplesIso14443(uint32_t parameter)
 {
-    BYTE cmd1[] = { 0x05, 0x00, 0x08, 0x39, 0x73 };
+    uint8_t cmd1[] = { 0x05, 0x00, 0x08, 0x39, 0x73 };
 
     // Make sure that we start from off, since the tags are stateful;
     // confusing things will happen if we don't reset them between reads.
@@ -872,18 +873,18 @@ void AcquireRawAdcSamplesIso14443(DWORD parameter)
 //
 // I tried to be systematic and check every answer of the tag, every CRC, etc...
 //-----------------------------------------------------------------------------
-void ReadSRI512Iso14443(DWORD parameter)
+void ReadSRI512Iso14443(uint32_t parameter)
 {
      ReadSTMemoryIso14443(parameter,0x0F);
 }
-void ReadSRIX4KIso14443(DWORD parameter)
+void ReadSRIX4KIso14443(uint32_t parameter)
 {
      ReadSTMemoryIso14443(parameter,0x7F);
 }
 
-void ReadSTMemoryIso14443(DWORD parameter,DWORD dwLast)
+void ReadSTMemoryIso14443(uint32_t parameter,uint32_t dwLast)
 {
-    BYTE i = 0x00;
+    uint8_t i = 0x00;
 
     // Make sure that we start from off, since the tags are stateful;
     // confusing things will happen if we don't reset them between reads.
@@ -902,7 +903,7 @@ void ReadSTMemoryIso14443(DWORD parameter,DWORD dwLast)
     SpinDelay(200);
 
     // First command: wake up the tag using the INITIATE command
-    BYTE cmd1[] = { 0x06, 0x00, 0x97, 0x5b};
+    uint8_t cmd1[] = { 0x06, 0x00, 0x97, 0x5b};
     CodeIso14443bAsReader(cmd1, sizeof(cmd1));
     TransmitFor14443();
 //    LED_A_ON();
@@ -1027,22 +1028,22 @@ void SnoopIso14443(void)
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
     // response from the tag.
-    BOOL triggered = FALSE;
+    int triggered = FALSE;
 
     // The command (reader -> tag) that we're working on receiving.
-    BYTE *receivedCmd = (BYTE *)(BigBuf) + DEMOD_TRACE_SIZE;
+    uint8_t *receivedCmd = (uint8_t *)(BigBuf) + DEMOD_TRACE_SIZE;
     // The response (tag -> reader) that we're working on receiving.
-    BYTE *receivedResponse = (BYTE *)(BigBuf) + DEMOD_TRACE_SIZE + READER_TAG_BUFFER_SIZE;
+    uint8_t *receivedResponse = (uint8_t *)(BigBuf) + DEMOD_TRACE_SIZE + READER_TAG_BUFFER_SIZE;
 
     // As we receive stuff, we copy it from receivedCmd or receivedResponse
     // into trace, along with its length and other annotations.
-    BYTE *trace = (BYTE *)BigBuf;
+    uint8_t *trace = (uint8_t *)BigBuf;
     int traceLen = 0;
 
     // The DMA buffer, used to stream samples from the FPGA.
-    SBYTE *dmaBuf = (SBYTE *)(BigBuf) + DEMOD_TRACE_SIZE + READER_TAG_BUFFER_SIZE + TAG_READER_BUFFER_SIZE;
+    int8_t *dmaBuf = (int8_t *)(BigBuf) + DEMOD_TRACE_SIZE + READER_TAG_BUFFER_SIZE + TAG_READER_BUFFER_SIZE;
     int lastRxCounter;
-    SBYTE *upTo;
+    int8_t *upTo;
     int ci, cq;
     int maxBehindBy = 0;
 
@@ -1087,7 +1088,7 @@ void SnoopIso14443(void)
     FpgaSetupSsc();
     upTo = dmaBuf;
     lastRxCounter = DMA_BUFFER_SIZE;
-    FpgaSetupSscDma((BYTE *)dmaBuf, DMA_BUFFER_SIZE);
+    FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE);
     // And now we loop, receiving samples.
     for(;;) {
 		// Blink the LED while Snooping
@@ -1118,7 +1119,7 @@ void SnoopIso14443(void)
         if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
             upTo -= DMA_BUFFER_SIZE;
             lastRxCounter += DMA_BUFFER_SIZE;
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (DWORD) upTo;
+            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
             AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
         }
 

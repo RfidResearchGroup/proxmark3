@@ -10,11 +10,11 @@
 #define USB_REPORT_PACKET_SIZE 64
 
 typedef struct PACKED {
-	BYTE	bmRequestType;
-	BYTE	bRequest;
-	WORD	wValue;
-	WORD	wIndex;
-	WORD	wLength;
+	uint8_t		bmRequestType;
+	uint8_t		bRequest;
+	uint16_t	wValue;
+	uint16_t	wIndex;
+	uint16_t	wLength;
 } UsbSetupData;
 
 #define USB_REQUEST_GET_STATUS					0
@@ -42,7 +42,7 @@ typedef struct PACKED {
 
 #define USB_DEVICE_CLASS_HID					0x03
 
-static const BYTE HidReportDescriptor[] = {
+static const uint8_t HidReportDescriptor[] = {
 	0x06,0xA0,0xFF,	// Usage Page (vendor defined) FFA0
 	0x09,0x01,		// Usage (vendor defined)
 	0xA1,0x01,	 	// Collection (Application)
@@ -77,7 +77,7 @@ static const BYTE HidReportDescriptor[] = {
 	0xC0,			// End Collection
 };
 
-static const BYTE DeviceDescriptor[] = {
+static const uint8_t DeviceDescriptor[] = {
 	0x12,			// Descriptor length (18 bytes)
 	0x01,			// Descriptor type (Device)
 	0x10,0x01,		// Complies with USB Spec. Release (0110h = release 1.10)
@@ -94,7 +94,7 @@ static const BYTE DeviceDescriptor[] = {
 	0x01,			// Number of possible configurations (1)
 };
 
-static const BYTE ConfigurationDescriptor[] = {
+static const uint8_t ConfigurationDescriptor[] = {
 	0x09,			// Descriptor length (9 bytes)
 	0x02,			// Descriptor type (Configuration)
 	0x29,0x00,		// Total data length (41 bytes)
@@ -142,14 +142,14 @@ static const BYTE ConfigurationDescriptor[] = {
 	0x01,			// Polling interval (1 ms)
 };
 
-static const BYTE StringDescriptor0[] = {
+static const uint8_t StringDescriptor0[] = {
 	0x04,			// Length
 	0x03,			// Type is string
 	0x09,			// English
 	0x04,			//  US
 };
 
-static const BYTE StringDescriptor1[] = {
+static const uint8_t StringDescriptor1[] = {
 	24,				// Length
 	0x03,			// Type is string
 	'J', 0x00,
@@ -165,7 +165,7 @@ static const BYTE StringDescriptor1[] = {
 	's', 0x00,
 };
 
-static const BYTE StringDescriptor2[] = {
+static const uint8_t StringDescriptor2[] = {
 	54,				// Length
 	0x03,			// Type is string
 	'P', 0x00,
@@ -196,19 +196,19 @@ static const BYTE StringDescriptor2[] = {
 	't', 0x00,
 };
 
-static const BYTE * const StringDescriptors[] = {
+static const uint8_t * const StringDescriptors[] = {
 	StringDescriptor0,
 	StringDescriptor1,
 	StringDescriptor2,
 };
 
 
-static BYTE UsbBuffer[64];
+static uint8_t UsbBuffer[64];
 static int  UsbSoFarCount;
 
-static BYTE CurrentConfiguration;
+static uint8_t CurrentConfiguration;
 
-static void UsbSendEp0(const BYTE *data, int len)
+static void UsbSendEp0(const uint8_t *data, int len)
 {
 	int thisTime, i;
 
@@ -278,7 +278,7 @@ static void HandleRxdSetupData(void)
 	UsbSetupData usd;
 
 	for(i = 0; i < sizeof(usd); i++) {
-		((BYTE *)&usd)[i] = AT91C_BASE_UDP->UDP_FDR[0];
+		((uint8_t *)&usd)[i] = AT91C_BASE_UDP->UDP_FDR[0];
 	}
 
 	if(usd.bmRequestType & 0x80) {
@@ -294,19 +294,19 @@ static void HandleRxdSetupData(void)
 	switch(usd.bRequest) {
 		case USB_REQUEST_GET_DESCRIPTOR:
 			if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_DEVICE) {
-				UsbSendEp0((BYTE *)&DeviceDescriptor,
+				UsbSendEp0((uint8_t *)&DeviceDescriptor,
 					min(sizeof(DeviceDescriptor), usd.wLength));
 			} else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_CONFIGURATION) {
-				UsbSendEp0((BYTE *)&ConfigurationDescriptor,
+				UsbSendEp0((uint8_t *)&ConfigurationDescriptor,
 					min(sizeof(ConfigurationDescriptor), usd.wLength));
 			} else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_STRING) {
-				const BYTE *s = StringDescriptors[usd.wValue & 0xff];
+				const uint8_t *s = StringDescriptors[usd.wValue & 0xff];
 				UsbSendEp0(s, min(s[0], usd.wLength));
 			} else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_HID_REPORT) {
-				UsbSendEp0((BYTE *)&HidReportDescriptor,
+				UsbSendEp0((uint8_t *)&HidReportDescriptor,
 					min(sizeof(HidReportDescriptor), usd.wLength));
 			} else {
-				*((DWORD *)0x00200000) = usd.wValue;
+				*((uint32_t *)0x00200000) = usd.wValue;
 			}
 			break;
 
@@ -326,8 +326,8 @@ static void HandleRxdSetupData(void)
 
 		case USB_REQUEST_GET_STATUS: {
 			if(usd.bmRequestType & 0x80) {
-				WORD w = 0;
-				UsbSendEp0((BYTE *)&w, sizeof(w));
+				uint16_t w = 0;
+				UsbSendEp0((uint8_t *)&w, sizeof(w));
 			}
 			break;
 		}
@@ -348,7 +348,7 @@ static void HandleRxdSetupData(void)
 			break;
 
 		case USB_REQUEST_GET_INTERFACE: {
-			BYTE b = 0;
+			uint8_t b = 0;
 			UsbSendEp0(&b, sizeof(b));
 			break;
 		}
@@ -368,7 +368,7 @@ static void HandleRxdSetupData(void)
 	}
 }
 
-void UsbSendPacket(BYTE *packet, int len)
+void UsbSendPacket(uint8_t *packet, int len)
 {
 	int i, thisTime;
 
@@ -451,7 +451,7 @@ void UsbStart(void)
 	}
 }
 
-BOOL UsbConnected()
+int UsbConnected()
 {
 	if (AT91C_BASE_UDP->UDP_GLBSTATE & AT91C_UDP_CONFG)
 		return TRUE;
@@ -459,9 +459,9 @@ BOOL UsbConnected()
 		return FALSE;
 }
 
-BOOL UsbPoll(BOOL blinkLeds)
+int UsbPoll(int blinkLeds)
 {
-	BOOL ret = FALSE;
+	int ret = FALSE;
 
 	if(AT91C_BASE_UDP->UDP_ISR & AT91C_UDP_ENDBUSRES) {
 		AT91C_BASE_UDP->UDP_ICR = AT91C_UDP_ENDBUSRES;

@@ -6,10 +6,11 @@
 //-----------------------------------------------------------------------------
 #include "proxmark3.h"
 #include "apps.h"
+#include "util.h"
 #include "hitag2.h"
 #include "crc16.h"
 
-void AcquireRawAdcSamples125k(BOOL at134khz)
+void AcquireRawAdcSamples125k(int at134khz)
 {
 	if (at134khz)
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
@@ -34,7 +35,7 @@ void AcquireRawAdcSamples125k(BOOL at134khz)
 // split into two routines so we can avoid timing issues after sending commands //
 void DoAcquisition125k(void)
 {
-	BYTE *dest = (BYTE *)BigBuf;
+	uint8_t *dest = (uint8_t *)BigBuf;
 	int n = sizeof(BigBuf);
 	int i;
 
@@ -46,7 +47,7 @@ void DoAcquisition125k(void)
 			LED_D_ON();
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-			dest[i] = (BYTE)AT91C_BASE_SSC->SSC_RHR;
+			dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			i++;
 			LED_D_OFF();
 			if (i >= n) break;
@@ -56,9 +57,9 @@ void DoAcquisition125k(void)
 			dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
 }
 
-void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, BYTE *command)
+void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, uint8_t *command)
 {
-	BOOL at134khz;
+	int at134khz;
 
 	/* Make sure the tag is reset */
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -141,13 +142,13 @@ void ReadTItag(void)
 //	int n = GraphTraceLen;
 
 	// 128 bit shift register [shift3:shift2:shift1:shift0]
-	DWORD shift3 = 0, shift2 = 0, shift1 = 0, shift0 = 0;
+	uint32_t shift3 = 0, shift2 = 0, shift1 = 0, shift0 = 0;
 
 	int i, cycles=0, samples=0;
 	// how many sample points fit in 16 cycles of each frequency
-	DWORD sampleslo = (FSAMPLE<<4)/FREQLO, sampleshi = (FSAMPLE<<4)/FREQHI;
+	uint32_t sampleslo = (FSAMPLE<<4)/FREQLO, sampleshi = (FSAMPLE<<4)/FREQHI;
 	// when to tell if we're close enough to one freq or another
-	DWORD threshold = (sampleslo - sampleshi + 1)>>1;
+	uint32_t threshold = (sampleslo - sampleshi + 1)>>1;
 
 	// TI tags charge at 134.2Khz
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
@@ -236,7 +237,7 @@ void ReadTItag(void)
 		// i'm 99% sure the crc algorithm is correct, but it may need to eat the
 		// bytes in reverse or something
 		// calculate CRC
-		DWORD crc=0;
+		uint32_t crc=0;
 
 	 	crc = update_crc16(crc, (shift0)&0xff);
 		crc = update_crc16(crc, (shift0>>8)&0xff);
@@ -257,7 +258,7 @@ void ReadTItag(void)
 	}
 }
 
-void WriteTIbyte(BYTE b)
+void WriteTIbyte(uint8_t b)
 {
 	int i = 0;
 
@@ -286,7 +287,7 @@ void AcquireTiType(void)
 {
 	int i, j, n;
 	// tag transmission is <20ms, sampling at 2M gives us 40K samples max
-	// each sample is 1 bit stuffed into a DWORD so we need 1250 DWORDS
+	// each sample is 1 bit stuffed into a uint32_t so we need 1250 uint32_t
 	#define TIBUFLEN 1250
 
 	// clear buffer
@@ -355,7 +356,7 @@ void AcquireTiType(void)
 // arguments: 64bit data split into 32bit idhi:idlo and optional 16bit crc
 // if crc provided, it will be written with the data verbatim (even if bogus)
 // if not provided a valid crc will be computed from the data and written.
-void WriteTItag(DWORD idhi, DWORD idlo, WORD crc)
+void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 {
 	if(crc == 0) {
 	 	crc = update_crc16(crc, (idlo)&0xff);
@@ -426,7 +427,7 @@ void WriteTItag(DWORD idhi, DWORD idlo, WORD crc)
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
 	int i;
-	BYTE *tab = (BYTE *)BigBuf;
+	uint8_t *tab = (uint8_t *)BigBuf;
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_SIMULATOR);
 
@@ -673,7 +674,7 @@ static void hitag_handle_frame(int t0, int frame_len, char *frame)
 
 // compose fc/8 fc/10 waveform
 static void fc(int c, int *n) {
-	BYTE *dest = (BYTE *)BigBuf;
+	uint8_t *dest = (uint8_t *)BigBuf;
 	int idx;
 
 	// for when we want an fc8 pattern every 4 logical bits
@@ -778,9 +779,9 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 // loop to capture raw HID waveform then FSK demodulate the TAG ID from it
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
-	BYTE *dest = (BYTE *)BigBuf;
+	uint8_t *dest = (uint8_t *)BigBuf;
 	int m=0, n=0, i=0, idx=0, found=0, lastval=0;
-	DWORD hi=0, lo=0;
+	uint32_t hi=0, lo=0;
 
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
@@ -815,7 +816,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 					LED_D_ON();
 			}
 			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-				dest[i] = (BYTE)AT91C_BASE_SSC->SSC_RHR;
+				dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 				// we don't care about actual value, only if it's more or less than a
 				// threshold essentially we capture zero crossings for later analysis
 				if(dest[i] < 127) dest[i] = 0; else dest[i] = 1;

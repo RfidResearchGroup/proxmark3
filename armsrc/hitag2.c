@@ -8,9 +8,9 @@
  */
 
 #include "proxmark3.h"
-#include <stdint.h>
-
 #include "apps.h"
+#include "util.h"
+
 #include "hitag2.h"
 
 struct hitag2_cipher_state {

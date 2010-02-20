@@ -69,11 +69,11 @@ static void Fatal(void)
     for(;;);
 }
 
-void UsbPacketReceived(BYTE *packet, int len)
+void UsbPacketReceived(uint8_t *packet, int len)
 {
     int i, dont_ack=0;
     UsbCommand *c = (UsbCommand *)packet;
-    volatile DWORD *p;
+    volatile uint32_t *p;
 
     if(len != sizeof(*c)) {
         Fatal();
@@ -93,14 +93,14 @@ void UsbPacketReceived(BYTE *packet, int len)
             /* The temporary write buffer of the embedded flash controller is mapped to the
              * whole memory region, only the last 8 bits are decoded.
              */
-            p = (volatile DWORD *)&_flash_start;
+            p = (volatile uint32_t *)&_flash_start;
             for(i = 0; i < 12; i++) {
                 p[i+c->arg[0]] = c->d.asDwords[i];
             }
             break;
 
         case CMD_FINISH_WRITE:
-            p = (volatile DWORD *)&_flash_start;
+            p = (volatile uint32_t *)&_flash_start;
             for(i = 0; i < 4; i++) {
                 p[i+60] = c->d.asDwords[i];
             }

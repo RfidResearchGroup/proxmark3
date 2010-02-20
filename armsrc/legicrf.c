@@ -5,11 +5,10 @@
  */
 
 #include "proxmark3.h"
-
 #include "apps.h"
-#include "legicrf.h"
-#include <stdint.h>
+#include "util.h"
 
+#include "legicrf.h"
 #include "legic_prng.h"
 #include "crc.h"
 
