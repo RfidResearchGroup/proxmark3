@@ -9,7 +9,7 @@
 # (The including Makefile still needs to define what 'all' is)
 all:
 
-CROSS   = arm-eabi-
+CROSS  ?= arm-eabi-
 CC	= $(CROSS)gcc
 AS	= $(CROSS)as
 LD	= $(CROSS)ld
