@@ -1,14 +1,8 @@
-#ifdef WIN32
-#include <windows.h>
-#include <setupapi.h>
-#define bzero(b,len) (memset((b), '\0', (len)), (void) 0)
-BOOL UsbConnect(void);
-#endif
-#include <proxusb.h>
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "sleep.h"
+#include "proxusb.h"
 #include "flash.h"
 #include "elf.h"
 
@@ -194,7 +188,7 @@ unsigned int EnterFlashState(void)
   if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
     fprintf(stderr,"Entering flash-mode...\n");
     UsbCommand c;
-    bzero(&c, sizeof(c));
+    memset(&c, 0, sizeof (c));
 
     if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT) && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
       /* New style handover: Send CMD_START_FLASH, which will reset the board and
@@ -212,15 +206,10 @@ unsigned int EnterFlashState(void)
       fprintf(stderr,"Waiting for Proxmark to reappear on USB... ");
     }
 
-#ifdef WIN32
-    Sleep(1000);
-    while (!UsbConnect()) { Sleep(1000); }
-#else
     CloseProxmark();
     sleep(1);
 
     while (!OpenProxmark(0)) { sleep(1); }
-#endif
     fprintf(stderr,"Found.\n");
 
     return GetProxmarkState();

@@ -7,7 +7,6 @@ LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb -lreadline -lpthread
 LDFLAGS = $(COMMON_FLAGS)
 CFLAGS = -std=gnu99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g3
 
-WINLIBS = -lgdi32 -lsetupapi
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
 
@@ -33,8 +32,6 @@ CMDSRCS = \
 
 CMDOBJS = $(CMDSRCS:.c=.o)
 
-ifeq ($(shell echo ""),)
-
 ifeq ($(shell uname),Darwin)
 CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Versions/Current/Headers -I/Library/Frameworks/QtCore.framework/Versions/Current/Headers
 QTLDLIBS = -framework QtGui -framework QtCore
@@ -52,20 +49,12 @@ endif
 
 RM = rm -f
 BINS = proxmark3 snooper cli flasher
-CLEAN = cli flasher proxmark3 snooper *.o $(CMDOBJS) *.moc.cpp
-else
-RM = del
-BINS = prox.exe
-CLEAN = prox.exe
-endif
+CLEAN = cli cli.exe flasher flasher.exe proxmark3 proxmark3.exe snooper snooper.exe *.o $(CMDOBJS) *.moc.cpp
 
 all: $(BINS)
 
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: snooper cli flasher
-
-prox.exe: prox.o wingui.o $(CMDOBJS) flash.o
-	$(CC) $(CFLAGS) $(DEFINES) -o prox.exe prox.o wingui.o $(CMDOBJS) flash.c $(WINLIBS)
 	
 proxmark3: LDLIBS+=$(QTLDLIBS)
 proxmark3: proxmark3.o $(CMDOBJS) proxusb.o $(QTGUI)

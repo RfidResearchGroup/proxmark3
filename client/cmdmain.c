@@ -46,16 +46,6 @@ int CmdQuit(const char *Cmd)
 void WaitForResponse(uint32_t response_type)
 {
   while (received_command != response_type) {
-#ifdef WIN32
-    // FIXME: Do we really need this under windows or is it
-    // just some historical code?
-    // pthread seems to be availabe for win32 nowadays
-    // so we should be able to port the code and get rid
-    // of this part.
-    UsbCommand c;
-    if (ReceiveCommandPoll(&c))
-      UsbCommandReceived(&c);
-#endif
     msleep(10); // XXX ugh
   }
   received_command = CMD_UNKNOWN;

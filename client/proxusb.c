@@ -6,9 +6,15 @@
 #include <strings.h>
 #include <errno.h>
 
+#include "sleep.h"
 #include "proxusb.h"
 #include "proxmark3.h"
 #include "usb_cmd.h"
+
+// It seems to be missing for mingw
+#ifndef ETIMEDOUT
+#define ETIMEDOUT 116
+#endif
 
 usb_dev_handle *devh = NULL;
 static unsigned int claimed_iface = 0;
@@ -37,7 +43,7 @@ void SendCommand(UsbCommand *c)
       usb_close(devh);
       devh = NULL;
     }
-    while(!(devh=OpenProxmark(0))) { sleep(1); }
+    while(!OpenProxmark(0)) { sleep(1); }
     printf(PROXPROMPT);
     fflush(NULL);
 
@@ -49,7 +55,7 @@ bool ReceiveCommandPoll(UsbCommand *c)
 {
   int ret;
 
-  bzero(c, sizeof(UsbCommand));
+  memset(c, 0, sizeof (UsbCommand));
   ret = usb_bulk_read(devh, 0x82, (char*)c, sizeof(UsbCommand), 500);
   if (ret<0) {
     if (ret != -ETIMEDOUT) {
@@ -64,7 +70,7 @@ bool ReceiveCommandPoll(UsbCommand *c)
         usb_close(devh);
         devh = NULL;
       }
-      while(!(devh=OpenProxmark(0))) { sleep(1); }
+      while(!OpenProxmark(0)) { sleep(1); }
       printf(PROXPROMPT);
       fflush(NULL);
 
@@ -130,7 +136,7 @@ usb_dev_handle* OpenProxmark(int verbose)
   usb_dev_handle *handle = NULL;
   unsigned int iface;
 
-#ifndef __APPLE__
+#ifdef __linux__
   handle = findProxmark(verbose, &iface);
   if (!handle)
     return NULL;
@@ -143,20 +149,28 @@ usb_dev_handle* OpenProxmark(int verbose)
   if (!handle)
     return NULL;
 
-#ifndef __APPLE__
+#ifdef __linux__
   /* detach kernel driver first */
   ret = usb_detach_kernel_driver_np(handle, iface);
   /* don't complain if no driver attached */
   if (ret<0 && ret != -61 && verbose)
     fprintf(stderr, "detach kernel driver failed: (%d) %s!\n", ret, usb_strerror());
 #endif
+
+  // Needed for Windows. Optional for Mac OS and Linux
+  ret = usb_set_configuration(handle, 1);
+  if (ret < 0) {
+    if (verbose)
+      fprintf(stderr, "configuration set failed: %s!\n", usb_strerror());
+    return NULL;
+  }
+
   ret = usb_claim_interface(handle, iface);
   if (ret < 0) {
     if (verbose)
       fprintf(stderr, "claim failed: %s!\n", usb_strerror());
     return NULL;
   }
-
   claimed_iface = iface;
   devh = handle;
   return handle;
@@ -166,4 +180,5 @@ void CloseProxmark(void)
 {
   usb_release_interface(devh, claimed_iface);
   usb_close(devh);
+  devh = NULL;
 }

@@ -1,0 +1,39 @@
+The client compiles on Linux, Mac OS X and Windows (MinGW/MSYS).
+
+it requires:
+- gcc
+- libpthread
+- libreadline
+- libusb
+
+and optionally libQT
+
+
+To compile, just run "make".
+
+
+==========
+= MingGW =
+==========
+It is known to work using:
+- MingW 5.1.6
+- MSYS 1.0.11
+- libpthread 2.8.0 (from MinGW or directly from pthread-win32)
+- readline 5.0 from gnuwin32
+- libusb-win32-device-bin-0.1.12.2
+  Be careful here, it is *NOT* working with the filter version!
+  You have to use the device version and use the inf-wizard
+  to create a driver for your proxmark and install it.
+
+
+============
+= Mac OS X =
+============
+
+macport stuff should do ;)
+
+============
+=   Linux  =
+============
+
+

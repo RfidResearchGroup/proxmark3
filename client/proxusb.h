@@ -3,9 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#ifndef WIN32
 #include <usb.h>
-#endif
 #include "usb_cmd.h"
 
 extern unsigned char return_on_error;

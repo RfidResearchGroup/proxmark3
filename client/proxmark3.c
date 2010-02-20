@@ -35,6 +35,7 @@ static void *usb_receiver(void *targ)
   }
 
   pthread_exit(NULL);
+  return NULL;
 }
 
 static void *main_loop(void *targ)
@@ -70,6 +71,7 @@ static void *main_loop(void *targ)
 
   ExitGraphics();
   pthread_exit(NULL);
+  return NULL;
 }
 
 int main(int argc, char **argv)
