@@ -8,7 +8,7 @@
 // The common USB driver used for both the bootloader and the application.
 //-----------------------------------------------------------------------------
 
-#include <proxmark3.h>
+#include "proxmark3.h"
 
 #define min(a, b) (((a) > (b)) ? (b) : (a))
 
