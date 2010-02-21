@@ -28,15 +28,13 @@ USING THE PACKAGE:
 The software tools required to build include:
 
     * cygwin or other unix-like tools for Windows
-    * the Microsoft Visual C++ compiler (I use Version 6)
-    * arm-elf-gcc; I use WinterMute's build, from http://www.devkitpro.org/
+    * devkitPro (http://wiki.devkitpro.org/index.php/Getting_Started/devkitARM)
     * Xilinx's WebPack tools
     * Modelsim (for test only)
     * perl
 
-It is not necessary to build the FPGA image yourself; a pre-compiled
-image is provided, as armsrc/fpgaimg.c. This is a generated file,
-though, and you can rebuild it by running fpga/go.bat.
+When installing devkitPro, you only need to install the compiler itself. Additional
+support libraries are  not required.
 
 Documentation is minimal, but see the doc/ directory for what exists. A
 previous familiarity with the ARM, with digital signal processing,
