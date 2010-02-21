@@ -1,8 +1,13 @@
 //-----------------------------------------------------------------------------
-// The main application code. This is the first thing called after start.c
-// executes.
 // Jonathan Westhues, Mar 2006
 // Edits by Gerhard de Koning Gans, Sep 2007 (##)
+//
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
+//-----------------------------------------------------------------------------
+// The main application code. This is the first thing called after start.c
+// executes.
 //-----------------------------------------------------------------------------
 
 #include "proxmark3.h"

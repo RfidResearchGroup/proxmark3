@@ -1,3 +1,11 @@
+//-----------------------------------------------------------------------------
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
+//-----------------------------------------------------------------------------
+// Helper function for launching the bootloader from FLASH
+//-----------------------------------------------------------------------------
+
 #include <proxmark3.h>
 
 extern char __bootphase2_src_start__, __bootphase2_start__, __bootphase2_end__;

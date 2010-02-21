@@ -1,8 +1,14 @@
 //-----------------------------------------------------------------------------
+// Jonathan Westhues, Mar 2006
+//
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
+//-----------------------------------------------------------------------------
 // Just vector to AppMain(). This is in its own file so that I can place it
 // with the linker script.
-// Jonathan Westhues, Mar 2006
 //-----------------------------------------------------------------------------
+
 #include "proxmark3.h"
 #include "apps.h"
 

@@ -1,9 +1,10 @@
-/*
- * crc.c
- *
- * Generic CRC calculation code.
- * 
- */
+//-----------------------------------------------------------------------------
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
+//-----------------------------------------------------------------------------
+// Generic CRC calculation code.
+//-----------------------------------------------------------------------------
 
 #include "crc.h"
 

@@ -1,3 +1,11 @@
+//-----------------------------------------------------------------------------
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
+//-----------------------------------------------------------------------------
+// Fonts for the LCD
+//-----------------------------------------------------------------------------
+
 const char FONT6x8[97][8] = {
 	{0x06,0x08,0x08,0x00,0x00,0x00,0x00,0x00},	// columns, rows, bytes per char
 	{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},	// space

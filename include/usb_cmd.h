@@ -1,8 +1,13 @@
 //-----------------------------------------------------------------------------
-// Definitions for all the types of commands that may be sent over USB; our
-// own protocol.
 // Jonathan Westhues, Mar 2006
 // Edits by Gerhard de Koning Gans, Sep 2007
+//
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
+//-----------------------------------------------------------------------------
+// Definitions for all the types of commands that may be sent over USB; our
+// own protocol.
 //-----------------------------------------------------------------------------
 
 #ifndef __USB_CMD_H

@@ -1,3 +1,11 @@
+@-----------------------------------------------------------------------------
+@ This code is licensed to you under the terms of the GNU GPL, version 2 or,
+@ at your option, any later version. See the LICENSE.txt file for the text of
+@ the license.
+@-----------------------------------------------------------------------------
+@ Reset vector for running from FLASH
+@-----------------------------------------------------------------------------
+
 .extern CopyBootToRAM
 
 .section .startup,"ax"

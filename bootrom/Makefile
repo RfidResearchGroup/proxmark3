@@ -1,4 +1,10 @@
+#-----------------------------------------------------------------------------
+# This code is licensed to you under the terms of the GNU GPL, version 2 or,
+# at your option, any later version. See the LICENSE.txt file for the text of
+# the license.
+#-----------------------------------------------------------------------------
 # Makefile for bootrom, see ../common/Makefile.common for common settings
+#-----------------------------------------------------------------------------
 
 # DO NOT use thumb mode in the phase 1 bootloader since that generates a section with glue code
 ARMSRC = fromflash.c 

@@ -1,3 +1,13 @@
+/*
+-----------------------------------------------------------------------------
+ This code is licensed to you under the terms of the GNU GPL, version 2 or,
+ at your option, any later version. See the LICENSE.txt file for the text of
+ the license.
+-----------------------------------------------------------------------------
+ Common linker script
+-----------------------------------------------------------------------------
+*/
+
 /* AT91SAM7S256 has 256k Flash and 64k RAM */
 MEMORY 
 {

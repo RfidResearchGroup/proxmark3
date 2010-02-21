@@ -1,5 +1,13 @@
-#ifndef ISO14443CRC_H__
-#define ISO14443CRC_H__
+//-----------------------------------------------------------------------------
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
+//-----------------------------------------------------------------------------
+// ISO14443 CRC calculation code.
+//-----------------------------------------------------------------------------
+
+#ifndef __ISO14443CRC_H
+#define __ISO14443CRC_H
 
 //-----------------------------------------------------------------------------
 // Routines to compute the CRCs (two different flavours, just for confusion)

@@ -1,13 +1,18 @@
 //-----------------------------------------------------------------------------
+// Jonathan Westhues, split Nov 2006
+// Modified by Greg Jones, Jan 2009
+//
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
+//-----------------------------------------------------------------------------
 // Routines to support ISO 15693. This includes both the reader software and
 // the `fake tag' modes, but at the moment I've implemented only the reader
 // stuff, and that barely.
-// Jonathan Westhues, split Nov 2006
-
-// Modified by Greg Jones, Jan 2009 to perform modulation onboard in arm rather than on PC
+// Modified to perform modulation onboard in arm rather than on PC
 // Also added additional reader commands (SELECT, READ etc.)
-
 //-----------------------------------------------------------------------------
+
 #include "proxmark3.h"
 #include "util.h"
 #include "apps.h"

@@ -1,11 +1,15 @@
-/*
- * Hitag2 emulation
- *
- * Contains state and functions for an emulated Hitag2 tag. Offers an entry
- * point to handle commands, needs a callback to send response.
- *
- * (c) 2009 Henryk Plötz <henryk@ploetzli.ch>
- */
+//-----------------------------------------------------------------------------
+// (c) 2009 Henryk Plötz <henryk@ploetzli.ch>
+//
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
+//-----------------------------------------------------------------------------
+// Hitag2 emulation
+//
+// Contains state and functions for an emulated Hitag2 tag. Offers an entry
+// point to handle commands, needs a callback to send response.
+//-----------------------------------------------------------------------------
 
 #include "proxmark3.h"
 #include "apps.h"

@@ -1,9 +1,13 @@
 //-----------------------------------------------------------------------------
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
+//-----------------------------------------------------------------------------
 // Miscellaneous routines for low frequency tag operations.
 // Tags supported here so far are Texas Instruments (TI), HID
 // Also routines for raw mode reading/simulating of LF waveform
-//
 //-----------------------------------------------------------------------------
+
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"

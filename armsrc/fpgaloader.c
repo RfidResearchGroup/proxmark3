@@ -1,9 +1,14 @@
 //-----------------------------------------------------------------------------
+// Jonathan Westhues, April 2006
+//
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
+//-----------------------------------------------------------------------------
 // Routines to load the FPGA image, and then to configure the FPGA's major
 // mode once it is configured.
-//
-// Jonathan Westhues, April 2006
 //-----------------------------------------------------------------------------
+
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"

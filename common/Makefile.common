@@ -1,3 +1,11 @@
+#-----------------------------------------------------------------------------
+# This code is licensed to you under the terms of the GNU GPL, version 2 or,
+# at your option, any later version. See the LICENSE.txt file for the text of
+# the license.
+#-----------------------------------------------------------------------------
+# Common makefile functions for all platforms
+#-----------------------------------------------------------------------------
+
 # This new makefile replaces the previous Makefile/Makefile.linux
 # with as much common code for both environments as possible.
 # Following is a short OS detection to set up variables, all the
