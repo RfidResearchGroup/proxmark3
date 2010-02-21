@@ -534,7 +534,7 @@ int CmdManchesterDemod(const char *Cmd)
   int i, j, invert= 0;
   int bit;
   int clock;
-  int lastval;
+  int lastval = 0;
   int low = 0;
   int high = 0;
   int hithigh, hitlow, first;

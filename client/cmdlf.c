@@ -401,7 +401,7 @@ int CmdVchDemod(const char *Cmd)
   bits[256] = '\0';
 
   int worst = INT_MAX;
-  int worstPos;
+  int worstPos = 0;
 
   for (i = 0; i < 2048; i += 8) {
     int sum = 0;

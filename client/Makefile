@@ -12,9 +12,9 @@ OBJDIR = obj
 
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb -lreadline -lpthread
 LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=gnu99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g3
+CFLAGS = -std=gnu99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O3
 
-CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall
+CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
 
 ifeq ($(shell uname),Darwin)

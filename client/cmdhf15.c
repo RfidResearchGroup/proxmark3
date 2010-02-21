@@ -90,7 +90,7 @@ int CmdHF15Demod(const char *Cmd)
   };
 
   int i, j;
-  int max = 0, maxPos;
+  int max = 0, maxPos = 0;
 
   int skip = 4;
 
