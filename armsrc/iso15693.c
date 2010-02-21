@@ -11,6 +11,7 @@
 #include "proxmark3.h"
 #include "util.h"
 #include "apps.h"
+#include "string.h"
 
 // FROM winsrc\prox.h //////////////////////////////////
 #define arraylen(x) (sizeof(x)/sizeof((x)[0]))

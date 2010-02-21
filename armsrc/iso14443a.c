@@ -6,6 +6,8 @@
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
+#include "string.h"
+
 #include "iso14443crc.h"
 
 static uint8_t *trace = (uint8_t *) BigBuf;

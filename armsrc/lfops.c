@@ -9,6 +9,7 @@
 #include "util.h"
 #include "hitag2.h"
 #include "crc16.h"
+#include "string.h"
 
 void AcquireRawAdcSamples125k(int at134khz)
 {

@@ -7,6 +7,7 @@
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
+#include "string.h"
 
 #include "legicrf.h"
 #include "legic_prng.h"

@@ -19,6 +19,7 @@ THUMBSRC = start.c \
 	$(SRC_LF) \
 	appmain.c printf.c \
 	util.c \
+	string.c \
 	usb.c
 
 # These are to be compiled in ARM mode

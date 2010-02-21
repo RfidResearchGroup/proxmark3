@@ -10,8 +10,8 @@
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
-
 #include "hitag2.h"
+#include "string.h"
 
 struct hitag2_cipher_state {
 	uint64_t state;

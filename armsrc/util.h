@@ -13,11 +13,7 @@
 #define BUTTON_SINGLE_CLICK -1
 #define BUTTON_DOUBLE_CLICK -2
 #define BUTTON_ERROR -99
-int strlen(const char *str);
-void *memcpy(void *dest, const void *src, int len);
-void *memset(void *dest, int c, int len);
-int memcmp(const void *av, const void *bv, int len);
-char *strncat(char *dest, const char *src, unsigned int n);
+
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
 uint64_t bytes_to_num(uint8_t* src, size_t len);
 

@@ -7,6 +7,7 @@
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
+#include "string.h"
 
 //-----------------------------------------------------------------------------
 // Set up the Serial Peripheral Interface as master

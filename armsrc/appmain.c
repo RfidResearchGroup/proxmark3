@@ -8,6 +8,10 @@
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
+#include "printf.h"
+#include "string.h"
+
+#include <stdarg.h>
 
 #include "legicrf.h"
 
@@ -15,13 +19,6 @@
 # include "fonts.h"
 # include "LCD.h"
 #endif
-
-#define va_list __builtin_va_list
-#define va_start __builtin_va_start
-#define va_arg __builtin_va_arg
-#define va_end __builtin_va_end
-int kvsprintf(char const *fmt, void *arg, int radix, va_list ap);
-
 
 #define abs(x) ( ((x)<0) ? -(x) : (x) )
 
