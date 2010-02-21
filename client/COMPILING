@@ -11,7 +11,6 @@ and optionally libQT
 
 To compile, just run "make".
 
-
 ==========
 = MingGW =
 ==========
@@ -25,6 +24,50 @@ It is known to work using:
   You have to use the device version and use the inf-wizard
   to create a driver for your proxmark and install it.
 
+Setting up the Windows "client folder" compile environment.
+
+Download MinGW-5.1.6.exe from http://sourceforge.net/projects/mingw/files/
+
+Run it, click next, leave "Download and Install" selected, click next
+Agree to license, leave "Current" selected, click next
+Select "MinGW base" and "MinGW make", click next
+Select installation folder, click next, Install, click next and finish.
+
+CAUTION! When extracting the downloaded archives further down in this guide,
+make sure that the contents of the archive directories go into the MinGW
+installation directories, eg archive bin goes to MinGW bin, archive lib to
+MinGW lib, etc, otherwise if the archive extracts into it's own subdirecory
+the paths to the files will be all wrong.
+
+You should now have the base MinGW installed in whatever installation folder
+you selected earlier. By default it installs GCC 3.4.5 so if you want to
+go to GCC 4.4 go back to http://sourceforge.net/projects/mingw/files/ and
+download gcc-full-4.4.0-mingw32-bin-2.tar which includes the ADA, Fortran,
+Java, etc compilers as well, but it is by far the easiest for newbees to
+download and install as it already includes pthreads and a few other
+libraries/dlls required by the GCC compiler.
+
+After download, extract it into the MinGW installation directory, see
+caution note above.
+
+Download readline from http://sourceforge.net/projects/gnuwin32/files/readline/5.0-1/readline-5.0-1-bin.zip/download
+Extract it into the MinGW installation directory, see caution note above.
+
+Download http://sourceforge.net/projects/libusb-win32/files/libusb-win32-releases/0.1.12.2/libusb-win32-device-bin-0.1.12.2.tar.gz/download
+Extract it into the MinGW installation directory, see caution note above.
+
+By default, the installer should have set your system path to the MinGW
+installation \bin directory, verify this by opening a command prompt and
+typing "gcc -v". You should get some text output indicating the version of
+your GCC compiler (either 3.4.5 or 4.4 depending on what you installed).
+If you get "unrecognized command", you must set the path manually.
+
+You can now run 0setpath.bat and 3makewin.bat in the cockpit and have the
+client compiled. During compilation you will see some CreateProcess failed
+and some "system cannot find the path specified" messages, however the
+compile will succeed and you will have some .exe files. The error messages
+relate to the fact that windows doesn't have the uname command, and possibly
+some other makefile related stuff following the recent changes.
 
 ============
 = Mac OS X =
