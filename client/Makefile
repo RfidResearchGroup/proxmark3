@@ -17,6 +17,21 @@ CFLAGS = -std=gnu99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
 
+ifeq ($(shell uname),Darwin)
+CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Versions/Current/Headers -I/Library/Frameworks/QtCore.framework/Versions/Current/Headers
+QTLDLIBS = -framework QtGui -framework QtCore
+MOC = moc
+endif
+
+ifneq ($(QTLDLIBS),)
+QTGUI = $(OBJDIR)/proxgui.o $(OBJDIR)/proxguiqt.o $(OBJDIR)/proxguiqt.moc.o
+CFLAGS += -DHAVE_GUI
+MOC ?= $(shell pkg-config --variable=moc_location QtCore)
+LINK.o = $(LINK.cpp)
+else
+QTGUI = guidummy.o
+endif
+
 CMDSRCS = \
 			crc16.c \
 			iso14443crc.c \
@@ -38,21 +53,6 @@ CMDSRCS = \
 			cmdmain.c
 
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
-
-ifeq ($(shell uname),Darwin)
-CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Versions/Current/Headers -I/Library/Frameworks/QtCore.framework/Versions/Current/Headers
-QTLDLIBS = -framework QtGui -framework QtCore
-MOC = moc
-endif
-
-ifneq ($(QTLDLIBS),)
-QTGUI = $(OBJDIR)/proxgui.o $(OBJDIR)/proxguiqt.o $(OBJDIR)/proxguiqt.moc.o
-CFLAGS += -DHAVE_GUI
-MOC ?= $(shell pkg-config --variable=moc_location QtCore)
-LINK.o = $(LINK.cpp)
-else
-QTGUI = guidummy.o
-endif
 
 RM = rm -f
 BINS = proxmark3 snooper cli flasher
