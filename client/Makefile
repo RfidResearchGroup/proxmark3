@@ -1,7 +1,9 @@
 CC=gcc
+CXX=g++
 #COMMON_FLAGS = -m32
 
 VPATH = ../common
+OBJDIR = obj
 
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb -lreadline -lpthread
 LDFLAGS = $(COMMON_FLAGS)
@@ -30,7 +32,7 @@ CMDSRCS = \
 			cmdparser.c \
 			cmdmain.c
 
-CMDOBJS = $(CMDSRCS:.c=.o)
+CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
 
 ifeq ($(shell uname),Darwin)
 CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Versions/Current/Headers -I/Library/Frameworks/QtCore.framework/Versions/Current/Headers
@@ -39,7 +41,7 @@ MOC = moc
 endif
 
 ifneq ($(QTLDLIBS),)
-QTGUI = proxgui.o proxguiqt.o proxguiqt.moc.o
+QTGUI = $(OBJDIR)/proxgui.o $(OBJDIR)/proxguiqt.o $(OBJDIR)/proxguiqt.moc.o
 CFLAGS += -DHAVE_GUI
 MOC ?= $(shell pkg-config --variable=moc_location QtCore)
 LINK.o = $(LINK.cpp)
@@ -49,7 +51,7 @@ endif
 
 RM = rm -f
 BINS = proxmark3 snooper cli flasher
-CLEAN = cli cli.exe flasher flasher.exe proxmark3 proxmark3.exe snooper snooper.exe *.o $(CMDOBJS) *.moc.cpp
+CLEAN = cli cli.exe flasher flasher.exe proxmark3 proxmark3.exe snooper snooper.exe $(CMDOBJS) $(OBJDIR)/*.o *.o *.moc.cpp
 
 all: $(BINS)
 
@@ -57,13 +59,23 @@ all-static: LDLIBS:=-static $(LDLIBS)
 all-static: snooper cli flasher
 	
 proxmark3: LDLIBS+=$(QTLDLIBS)
-proxmark3: proxmark3.o $(CMDOBJS) proxusb.o $(QTGUI)
+proxmark3: $(OBJDIR)/proxmark3.o $(CMDOBJS) $(OBJDIR)/proxusb.o $(QTGUI)
+	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
-snooper: snooper.o $(CMDOBJS) proxusb.o guidummy.o
+snooper: $(OBJDIR)/snooper.o $(CMDOBJS) $(OBJDIR)/proxusb.o $(OBJDIR)/guidummy.o
+	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
-cli: cli.o $(CMDOBJS) proxusb.o guidummy.o
+cli: $(OBJDIR)/cli.o $(CMDOBJS) $(OBJDIR)/proxusb.o $(OBJDIR)/guidummy.o
+	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
-flasher: flash.o flasher.o proxusb.o
+flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(OBJDIR)/proxusb.o
+	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
+
+$(OBJDIR)/%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 proxguiqt.moc.cpp: proxguiqt.h
 	$(MOC) -o$@ $^
