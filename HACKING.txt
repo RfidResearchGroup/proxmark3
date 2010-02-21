@@ -1,4 +1,4 @@
-	Coding styles are like assholes, everyone has one and no one likes anyone elses."
+	"Coding styles are like assholes, everyone has one and no one likes anyone elses."
 	--Eric Warmenhoven
 
 The Proxmark3 codebase is pretty messy and in the process of being cleaned up,
@@ -179,6 +179,10 @@ static void hexdump(void *buf, size_t len)
 	...
 }
 
+As a general guideline, functions shouldn't usually be much more than 30-50
+lines. Above, the general algorithm won't be easily apparent, and you're
+probably missing some factoring/restructuring opportunity.
+
 === STRUCTS / UNIONS / ENUMS ===
 
 Use typedefs when defining structs. The type should be named something_t.
@@ -237,6 +241,15 @@ Use //, it's shorter:
 /* */ can be used to comment blocks of code, but you should probably remove
 them anyway - we have version control, it's easy to fetch old code if needed,
 so avoid committing commented out chunks of code. The same goes for #if 0.
+
+=== FILE ===
+
+Please use common sense and restrain yourself from having a thousands+++ line
+file. Functions in a file should have something *specific* in common. Over time
+sub-categories can arise and should therefore yield to file splitting.
+
+For these reasons, vague and general filenames (e.g. util.*, global.*, misc.*,
+main.*, and the like) should be very limited, if not prohibited.
 
 === FILE HEADERS ===
 
