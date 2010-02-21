@@ -62,12 +62,16 @@ typing "gcc -v". You should get some text output indicating the version of
 your GCC compiler (either 3.4.5 or 4.4 depending on what you installed).
 If you get "unrecognized command", you must set the path manually.
 
+Download MSYS from http://downloads.sourceforge.net/mingw/MSYS-1.0.11.exe
+Run it and just follow the defaults. A post install configuration screen
+will come up asking you some questions, answer yes to continue, then yes
+to having MinGW installed then enter the path to the MinGW installation.
+I believe it needs unix slashes so use c:/blah/
+
+Manually add the MSYS bin directory to you system path.
+
 You can now run 0setpath.bat and 3makewin.bat in the cockpit and have the
-client compiled. During compilation you will see some CreateProcess failed
-and some "system cannot find the path specified" messages, however the
-compile will succeed and you will have some .exe files. The error messages
-relate to the fact that windows doesn't have the uname command, and possibly
-some other makefile related stuff following the recent changes.
+client compiled.
 
 ============
 = Mac OS X =
