@@ -41,7 +41,8 @@ PATHSEP=/
 FLASH_TOOL=client/flasher
 DETECTED_OS=UNAME
 # You may/should set this in your environment
-LIBGCC ?= $(shell $(CC) -print-libgcc-file-name)
+LIBGCC ?= $(DEVKITARM)/lib/gcc/arm-eabi/4.4.2/libgcc.a
+PATH := $(PATH):$(DEVKITARM)/bin
 
 else
 
