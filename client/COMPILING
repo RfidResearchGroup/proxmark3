@@ -23,6 +23,7 @@ The following is a complete list of packages required to build the compile envir
 - gcc-core-4.4.0-mingw32-bin
 - gcc-core-4.4.0-mingw32-dll
 - gmp-4.2.4-mingw32-dll
+- libpthread-2.8.0-3-mingw32-dll-2
 - mingwrt-3.17-mingw32-dev
 - mingwrt-3.17-mingw32-dll
 - mpfr-2.4.1-mingw32-dll
