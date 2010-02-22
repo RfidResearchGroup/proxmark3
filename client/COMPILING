@@ -14,64 +14,41 @@ To compile, just run "make".
 ==========
 = MingGW =
 ==========
-It is known to work using:
-- MingW 5.1.6
-- MSYS 1.0.11
-- libpthread 2.8.0 (from MinGW or directly from pthread-win32)
-- readline 5.0 from gnuwin32
+The following is a complete list of packages required to build the compile environment:
+
+- MSYS-1.0.11
+- binutils-2.20-1-mingw32-bin
+- gcc-c++-4.4.0-mingw32-bin
+- gcc-c++-4.4.0-mingw32-dll
+- gcc-core-4.4.0-mingw32-bin
+- gcc-core-4.4.0-mingw32-dll
+- gmp-4.2.4-mingw32-dll
+- mingwrt-3.17-mingw32-dev
+- mingwrt-3.17-mingw32-dll
+- mpfr-2.4.1-mingw32-dll
+- perl-5.8.6-4.tar (minimal from cygwin)
+- pthreads-w32-2.8.0-3-mingw32-dev
+- readline-5.0-1-bin
+- w32api-3.14-mingw32-dev
 - libusb-win32-device-bin-0.1.12.2
   Be careful here, it is *NOT* working with the filter version!
   You have to use the device version and use the inf-wizard
   to create a driver for your proxmark and install it.
 
-Setting up the Windows "client folder" compile environment.
+Additionally to compile the ARM code you need:
+- devkitARM-r27
 
-Download MinGW-5.1.6.exe from http://sourceforge.net/projects/mingw/files/
+Rather than download and install every one of these packages, a new ProxSpace
+environment archive file will be made available for download on the project
+page at http://code.google.com/p/proxmark3/downloads/list
 
-Run it, click next, leave "Download and Install" selected, click next
-Agree to license, leave "Current" selected, click next
-Select "MinGW base" and "MinGW make", click next
-Select installation folder, click next, Install, click next and finish.
+Download the ProxSpace environment archive and extract it to your C:\ drive, then you
+can run 0setpath.bat and 5makeall.bat in the cockpit directory and have the source
+tree compiled.
 
-CAUTION! When extracting the downloaded archives further down in this guide,
-make sure that the contents of the archive directories go into the MinGW
-installation directories, eg archive bin goes to MinGW bin, archive lib to
-MinGW lib, etc, otherwise if the archive extracts into it's own subdirecory
-the paths to the files will be all wrong.
-
-You should now have the base MinGW installed in whatever installation folder
-you selected earlier. By default it installs GCC 3.4.5 so if you want to
-go to GCC 4.4 go back to http://sourceforge.net/projects/mingw/files/ and
-download gcc-full-4.4.0-mingw32-bin-2.tar which includes the ADA, Fortran,
-Java, etc compilers as well, but it is by far the easiest for newbees to
-download and install as it already includes pthreads and a few other
-libraries/dlls required by the GCC compiler.
-
-After download, extract it into the MinGW installation directory, see
-caution note above.
-
-Download readline from http://sourceforge.net/projects/gnuwin32/files/readline/5.0-1/readline-5.0-1-bin.zip/download
-Extract it into the MinGW installation directory, see caution note above.
-
-Download http://sourceforge.net/projects/libusb-win32/files/libusb-win32-releases/0.1.12.2/libusb-win32-device-bin-0.1.12.2.tar.gz/download
-Extract it into the MinGW installation directory, see caution note above.
-
-By default, the installer should have set your system path to the MinGW
-installation \bin directory, verify this by opening a command prompt and
-typing "gcc -v". You should get some text output indicating the version of
-your GCC compiler (either 3.4.5 or 4.4 depending on what you installed).
-If you get "unrecognized command", you must set the path manually.
-
-Download MSYS from http://downloads.sourceforge.net/mingw/MSYS-1.0.11.exe
-Run it and just follow the defaults. A post install configuration screen
-will come up asking you some questions, answer yes to continue, then yes
-to having MinGW installed then enter the path to the MinGW installation.
-I believe it needs unix slashes so use c:/blah/
-
-Manually add the MSYS bin directory to you system path.
-
-You can now run 0setpath.bat and 3makewin.bat in the cockpit and have the
-client compiled.
+If you choose to extract it to another dir/path = <new_path>, you must modify the
+paths in <new_path>\ProxSpace\pm3\cockpit\0setpath.bat dir as well as in the file
+<new_path>\ProxSpace\msys\etc\fstab
 
 ============
 = Mac OS X =
