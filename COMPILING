@@ -1,12 +1,14 @@
-The client compiles on Linux, Mac OS X and Windows (MinGW/MSYS).
+The project compiles on Linux, Mac OS X and Windows (MinGW/MSYS).
 
 it requires:
-- gcc
+- gcc >= 4.4
 - libpthread
 - libreadline
 - libusb
+- perl
+- an ARM cross-compiler to compile the firmware
 
-and optionally libQT
+and optionally QT for the GUI
 
 
 To compile, just run "make".
@@ -40,12 +42,25 @@ Likewise copy:
 include/usb.h to C:\QT\mingw\include
 lib/gcc/libusb.a to C:\QT\mingw\lib
 
+
+5 - Install DevkitPro [5]
+
+You'll need it to compile the firmware (ARM) side.
+You only need devkitARM, nothing more (no extra lib or anything else)
+Assuming you installed it to C:\devkitpro, make sure you set
+the DEVKITARM environment variable to /c/devkitPro/devkitARM :
+export DEVKITARM=/c/devkitPro/devkitARM
+
+6 - Install Strawberry Perl [6]
+
 Download links:
 
 [1] http://qt.nokia.com/downloads/sdk-windows-cpp
 [2] http://downloads.sourceforge.net/mingw/MSYS-1.0.11.exe
 [3] http://sourceforge.net/projects/gnuwin32/files/readline/5.0-1/readline-5.0-1-bin.zip/download
 [4] http://sourceforge.net/projects/libusb-win32/files/libusb-win32-releases/0.1.12.2/libusb-win32-device-bin-0.1.12.2.tar.gz/download
+[5] http://sourceforge.net/projects/devkitpro/files/Automated%20Installer/devkitProUpdater-1.5.0.exe/download
+[6] http://strawberry-perl.googlecode.com/files/strawberry-perl-5.10.1.1.msi
 
 Rather than download and install every one of these packages, a new ProxSpace
 environment archive file will be made available for download on the project
