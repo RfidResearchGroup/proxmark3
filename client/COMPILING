@@ -11,45 +11,47 @@ and optionally libQT
 
 To compile, just run "make".
 
-==========
-= MingGW =
-==========
-The following is a complete list of packages required to build the compile environment:
+===========
+= Windows =
+===========
+The following is a complete list of packages required to setup the compile environment yourself. Alternatively you can download an archive of the full environment (see below).
 
-- MSYS-1.0.11
-- binutils-2.20-1-mingw32-bin
-- gcc-c++-4.4.0-mingw32-bin
-- gcc-c++-4.4.0-mingw32-dll
-- gcc-core-4.4.0-mingw32-bin
-- gcc-core-4.4.0-mingw32-dll
-- gmp-4.2.4-mingw32-dll
-- libpthread-2.8.0-3-mingw32-dll-2
-- mingwrt-3.17-mingw32-dev
-- mingwrt-3.17-mingw32-dll
-- mpfr-2.4.1-mingw32-dll
-- perl-5.8.6-4.tar (minimal from cygwin)
-- pthreads-w32-2.8.0-3-mingw32-dev
-- readline-5.0-1-bin
-- w32api-3.14-mingw32-dev
-- libusb-win32-device-bin-0.1.12.2
-  Be careful here, it is *NOT* working with the filter version!
-  You have to use the device version and use the inf-wizard
-  to create a driver for your proxmark and install it.
+1 - Install QT SDK for Windows [1]
 
-Additionally to compile the ARM code you need:
-- devkitARM-r27
+In the following instructions, we'll assume you installed it to C:\QT
+
+2 - MSYS-1.0.11 [2]
+
+Just follow the installation procedure.
+When asked if you have MinGW installed and for its path, provide:
+C:/QT/mingw
+
+3 - readline-5.0-1-bin [5]
+
+From this archive, copy:
+bin/* to C:\QT\mingw\bin
+include/* to C:\QT\mingw\include
+lib/*.a to C:\QT\mingw\lib
+
+4 - libusb-win32-device-bin-0.1.12.2 [6]
+
+Be careful here, it is *NOT* working with the filter version!
+Likewise copy:
+include/usb.h to C:\QT\mingw\include
+lib/gcc/libusb.a to C:\QT\mingw\lib
+
+Download links:
+
+[1] http://qt.nokia.com/downloads/sdk-windows-cpp
+[2] http://downloads.sourceforge.net/mingw/MSYS-1.0.11.exe
+[3] http://sourceforge.net/projects/gnuwin32/files/readline/5.0-1/readline-5.0-1-bin.zip/download
+[4] http://sourceforge.net/projects/libusb-win32/files/libusb-win32-releases/0.1.12.2/libusb-win32-device-bin-0.1.12.2.tar.gz/download
 
 Rather than download and install every one of these packages, a new ProxSpace
 environment archive file will be made available for download on the project
 page at http://code.google.com/p/proxmark3/downloads/list
 
-Download the ProxSpace environment archive and extract it to your C:\ drive, then you
-can run 0setpath.bat and 5makeall.bat in the cockpit directory and have the source
-tree compiled.
-
-If you choose to extract it to another dir/path = <new_path>, you must modify the
-paths in <new_path>\ProxSpace\pm3\cockpit\0setpath.bat dir as well as in the file
-<new_path>\ProxSpace\msys\etc\fstab
+Download the ProxSpace environment archive and extract it to C:\
 
 ============
 = Mac OS X =
