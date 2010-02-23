@@ -281,6 +281,7 @@ int CmdEM4x50Read(const char *Cmd)
 
   high= low= 0;
   clock= 64;
+  memset(tmpbuff, 0, MAX_GRAPH_TRACE_LEN / 64);
 
   /* first get high and low values */
   for (i = 0; i < GraphTraceLen; i++)
