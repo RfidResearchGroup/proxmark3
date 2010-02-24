@@ -53,6 +53,13 @@ export DEVKITARM=/c/devkitPro/devkitARM
 
 6 - Install Strawberry Perl [6]
 
+7 - Setup a few variables
+
+In your shell from MSYS, make sure you set QTDIR to your QT installation:
+export QTDIR=/c/QT/qt
+And add its bin to your path as well:
+export PATH=$PATH:$QTDIR/bin
+
 Download links:
 
 [1] http://qt.nokia.com/downloads/sdk-windows-cpp

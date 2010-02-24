@@ -14,19 +14,26 @@ LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb -lreadline -lpthread
 LDFLAGS = $(COMMON_FLAGS)
 CFLAGS = -std=gnu99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O3
 
+platform = $(shell uname)
+
+ifneq (,$(findstring MINGW,$(platform)))
+CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
+QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
+MOC = moc
+else ifeq ($(platform),Darwin)
+CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Version/Current/Headers -I/Library/Frameworks/QtCore.framework/Versions/Current/Headers
+QTLDLIBS = -framework QtGui -framework QtCore
+MOC = moc 
+else
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
-
-ifeq ($(shell uname),Darwin)
-CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Versions/Current/Headers -I/Library/Frameworks/QtCore.framework/Versions/Current/Headers
-QTLDLIBS = -framework QtGui -framework QtCore
-MOC = moc
+MOC = $(shell pkg-config --variable=moc_location QtCore)
 endif
+
 
 ifneq ($(QTLDLIBS),)
 QTGUI = $(OBJDIR)/proxgui.o $(OBJDIR)/proxguiqt.o $(OBJDIR)/proxguiqt.moc.o
 CFLAGS += -DHAVE_GUI
-MOC ?= $(shell pkg-config --variable=moc_location QtCore)
 LINK.o = $(LINK.cpp)
 else
 QTGUI = guidummy.o
