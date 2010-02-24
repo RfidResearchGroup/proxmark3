@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
+#include <string.h>
 #include "proxusb.h"
 #include "ui.h"
 #include "graph.h"
