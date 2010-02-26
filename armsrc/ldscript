@@ -60,7 +60,7 @@ SECTIONS
 		*(.bss.*) 
 		. = ALIGN(4);
 		__bss_end__ = .;
-	} >ram :bss
+	} >ram AT>ram :bss
 
 	.commonarea (NOLOAD) : {
 		*(.commonarea)
