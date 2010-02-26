@@ -17,10 +17,7 @@
 #include "elf.h"
 #include "proxendian.h"
 
-//static uint32_t ExpectedAddr;
-//static uint8_t QueuedToSend[256];
-
-// TODO: what the fuckity fuck
+// FIXME: what the fuckity fuck
 unsigned int current_command = CMD_UNKNOWN;
 
 #define FLASH_START            0x100000
