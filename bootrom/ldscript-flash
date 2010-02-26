@@ -13,51 +13,44 @@ INCLUDE ../common/ldscript.common
 ENTRY(flashstart)
 SECTIONS
 {
-    . = 0;
-    
-    .bootphase1 : {
-    	*(.startup) 
-    	*(.bootphase1)
-    	
-    	/* It seems to be impossible to flush align a section at the
-    	   end of a memory segment. Instead, we'll put the version_information
-    	   wherever the linker wants it, and then put a pointer to the start
-    	   of the version information at the end of the section.
-    	   -- Henryk Plötz <henryk@ploetzli.ch> 2009-08-28 */
-    	   
-    	_version_information_start = ABSOLUTE(.);
-    	*(.version_information);
-    	
-	/* Why doesn't this work even though _bootphase1_version_pointer = 0x1001fc?
-	  . = _bootphase1_version_pointer - ORIGIN(bootphase1); */
-	/* This works, apparently it fools the linker into accepting an absolute address */
-	. = _bootphase1_version_pointer - ORIGIN(bootphase1) + ORIGIN(bootphase1);
-    	LONG(_version_information_start)
-    } >bootphase1
-    
-    __bootphase2_src_start__ = ORIGIN(bootphase2);
-    .bootphase2 : {
-    	__bootphase2_start__ = .;
-    	*(.startphase2)
-    	*(.text)
-    	*(.eh_frame)
-    	*(.glue_7)
-    	*(.glue_7t)
-    	*(.rodata)
-        *(.data)
-    	. = ALIGN( 32 / 8 );
-    	__bootphase2_end__ = .;
-    } >ram AT>bootphase2
-    
-    .bss : {
-    	__bss_start__ = .; 
-    	*(.bss)
-    } >ram
-    
-    . = ALIGN( 32 / 8 );
-    __bss_end__ = .;
-    
-    .commonarea (NOLOAD) : {
-    	*(.commonarea)
-    } >commonarea
+	.bootphase1 : {
+		*(.startup)
+
+		. = ALIGN(4);
+		_version_information_start = .;
+		*(.version_information);
+
+		. = LENGTH(bootphase1) - 0x4;
+		LONG(_version_information_start);
+	} >bootphase1
+
+	.bootphase2 : {
+		*(.startphase2)
+		*(.text)
+		*(.text.*)
+		*(.eh_frame)
+		*(.glue_7)
+		*(.glue_7t)
+		*(.rodata)
+		*(.rodata.*)
+		*(.data)
+		*(.data.*)
+		. = ALIGN(4);
+	} >ram AT>bootphase2
+
+	__bootphase2_src_start__ = LOADADDR(.bootphase2);
+	__bootphase2_start__ = ADDR(.bootphase2);
+	__bootphase2_end__ = __bootphase2_start__ + SIZEOF(.bootphase2);
+
+	.bss : {
+		__bss_start__ = .;
+		*(.bss)
+		*(.bss.*)
+		. = ALIGN(4);
+		__bss_end__ = .;
+	} >ram
+
+	.commonarea (NOLOAD) : {
+		*(.commonarea)
+	} >commonarea
 }

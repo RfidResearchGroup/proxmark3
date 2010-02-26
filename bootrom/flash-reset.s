@@ -6,46 +6,48 @@
 @ Reset vector for running from FLASH
 @-----------------------------------------------------------------------------
 
-.extern CopyBootToRAM
-
 .section .startup,"ax"
-         .code 32
-         .align 0
+
+.arm
 
 .global flashstart
 flashstart:
-    b       Reset
-    b       UndefinedInstruction
-    b       SoftwareInterrupt
-    b       PrefetchAbort
-    b       DataAbort
-    b       Reserved
-    b       Irq
-    b       Fiq
+	b	reset
+	b	undefined_instruction
+	b	software_interrupt
+	b	prefetch_abort
+	b	data_abort
+	b	. @reserved
+	b	irq
+	b	fiq
 
-Reset:
-    ldr     sp,     .stack_end	@ initialize stack pointer to top of RAM
-    bl      CopyBootToRAM			@ copy bootloader to RAM (in case the
-    								@ user re-flashes the bootloader)
-    ldr     r3,     .bootphase2_start	@ start address of RAM bootloader
-    bx      r3						@ jump to it
+reset:
+	ldr	sp, =_stack_end		@ initialize stack pointer to top of RAM
 
-	.stack_end:
-	.word _stack_end
-	.bootphase2_start:
-	.word __bootphase2_start__
+	@ copy bootloader to RAM (in case the user re-flashes the bootloader)
+	ldr	r0, =__bootphase2_src_start__
+	ldr	r1, =__bootphase2_start__
+	ldr	r2, =__bootphase2_end__
+1:
+	ldr	r3, [r0], #4
+	str	r3, [r1], #4
+	cmp	r1, r2
+	blo	1b
 
-Fiq:
-    b       Fiq
-UndefinedInstruction:
-    b       UndefinedInstruction
-SoftwareInterrupt:
-    b       SoftwareInterrupt
-PrefetchAbort:
-    b       PrefetchAbort
-DataAbort:
-    b       DataAbort
-Reserved:
-    b       Reserved
-Irq:
-    b       Irq
+	ldr	r3, =ram_start		@ start address of RAM bootloader
+	bx	r3			@ jump to it
+
+	.ltorg
+
+undefined_instruction:
+	b	.
+software_interrupt:
+	b	.
+prefetch_abort:
+	b	.
+data_abort:
+	b	.
+irq:
+	b	.
+fiq:
+	b	.
