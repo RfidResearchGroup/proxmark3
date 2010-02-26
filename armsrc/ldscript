@@ -39,7 +39,7 @@ SECTIONS
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)
-		*(.version_information)
+		KEEP(*(.version_information))
 	} >osimage :text
 
 	. = ALIGN(4);
