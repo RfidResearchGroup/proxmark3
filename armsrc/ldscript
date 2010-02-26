@@ -38,7 +38,7 @@ SECTIONS
 
 	.rodata : {
 		*(.rodata)
-		*(.rodata*)
+		*(.rodata.*)
 		*(.version_information)
 	} >osimage :text
 
