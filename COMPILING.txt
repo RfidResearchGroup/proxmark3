@@ -50,6 +50,8 @@ You only need devkitARM, nothing more (no extra lib or anything else)
 Assuming you installed it to C:\devkitpro, make sure you set
 the DEVKITARM environment variable to /c/devkitPro/devkitARM :
 export DEVKITARM=/c/devkitPro/devkitARM
+Also, add its bin to your PATH:
+export PATH=$PATH:$DEVKITARM/bin
 
 6 - Install Strawberry Perl [6]
 
