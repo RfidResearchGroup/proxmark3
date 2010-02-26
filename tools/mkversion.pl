@@ -61,7 +61,7 @@ my $ctime = sprintf("%6\$04i-%5\$02i-%4\$02i %3\$02i:%2\$02i:%1\$02i", @compilet
 print <<EOF
 #include "proxmark3.h"
 /* Generated file, do not edit */
-struct version_information __attribute__((section(".version_information"))) version_information = {
+const struct version_information __attribute__((section(".version_information"))) version_information = {
 	VERSION_INFORMATION_MAGIC,
 	1,
 	$present,
