@@ -9,42 +9,60 @@
 */
 INCLUDE ../common/ldscript.common
 
+PHDRS
+{
+	fpgaimage PT_LOAD FLAGS(4);
+	text PT_LOAD;
+	data PT_LOAD;
+	bss PT_LOAD;
+}
+
 ENTRY(Vector)
 SECTIONS
 {
 	.fpgaimage : {
 		*(fpga_bit.data)
-	} >fpgaimage
-	.start : { *(.startos) } >osimage
-	.text : { 
+	} >fpgaimage :fpgaimage
+
+	.start : {
+		*(.startos)
+	} >osimage :text
+
+	.text : {
 		*(.text)
 		*(.text.*)
 		*(.eh_frame)
 		*(.glue_7)
 		*(.glue_7t)
-		*(.rodata) 
-		*(.rodata*) 
+	} >osimage :text
+
+	.rodata : {
+		*(.rodata)
+		*(.rodata*)
 		*(.version_information)
-	} >osimage
-	__end_of_text__ = .;
-	
+	} >osimage :text
+
+	. = ALIGN(4);
+
 	.data : {
-		__data_start__ = .;
-		__data_src_start__ = __end_of_text__; 
 		*(.data)
 		*(.data.*)
-		__data_end__ = .;
-	} >ram AT>osimage
+		. = ALIGN(4);
+	} >ram AT>osimage :data
+
+	__data_src_start__ = LOADADDR(.data);
+	__data_start__ = ADDR(.data);
+	__data_end__ = __data_start__ + SIZEOF(.data);
 	
 	.bss : {
 		__bss_start__ = .; 
 		*(.bss)
 		*(.bss.*) 
-	} >ram
-	. = ALIGN(32 / 8);
-	__bss_end__ = .;
+		. = ALIGN(4);
+		__bss_end__ = .;
+	} >ram :bss
 
-    	.commonarea (NOLOAD) : {
-    		*(.commonarea)
-    	} >commonarea
+	.commonarea (NOLOAD) : {
+		*(.commonarea)
+	} >commonarea :NONE
 }
