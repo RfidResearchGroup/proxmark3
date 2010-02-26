@@ -250,6 +250,7 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl)
 	if (res < 0)
 		goto fail;
 
+	free(phdrs);
 	fclose(fd);
 	ctx->filename = name;
 	return 0;
