@@ -11,18 +11,12 @@
 /* AT91SAM7S256 has 256k Flash and 64k RAM */
 MEMORY 
 {
-	/* Important note: this memory map has the correct origins for all the flash sections.
-	   However, this will confuse the currently deployed flash code which expects logical and and not
-	   physical addresses and performs no sanity checks at all. If confronted with physical addresses, 
-	   it will happily erase everything and brick the device. So for the time being translate these addresses
-	   down in the objcopy call while updating all the flash code with proper sanity checks, then come
-	   back later and fix the addresses. -- Henryk Plötz <henryk@ploetzli.ch> 2009-08-27 */
-        bootphase1 : ORIGIN = 0x00100000, LENGTH = 0x200 /* Phase 1 bootloader: Copies real bootloader to RAM */
-        bootphase2 : ORIGIN = 0x00100200, LENGTH = 0x2000 - 0x200 /* Main bootloader code, stored in Flash, executed from RAM */
-        fpgaimage  : ORIGIN = 0x00102000, LENGTH = 64k - 0x2000 /* Place where the FPGA image will end up */
-        osimage    : ORIGIN = 0x00110000, LENGTH = 256K - 64k /* Place where the main OS will end up */
-        ram        : ORIGIN = 0x00200000, LENGTH = 64K - 0x20 /* RAM, minus small common area */
-        commonarea : ORIGIN = 0x00200000 + 64K - 0x20, LENGTH = 0x20 /* Communication between bootloader and main OS */
+	bootphase1 : ORIGIN = 0x00100000, LENGTH = 0x200             /* Phase 1 bootloader: Copies real bootloader to RAM */
+	bootphase2 : ORIGIN = 0x00100200, LENGTH = 0x2000 - 0x200    /* Main bootloader code, stored in Flash, executed from RAM */
+	fpgaimage  : ORIGIN = 0x00102000, LENGTH = 64k - 0x2000      /* Place where the FPGA image will end up */
+	osimage    : ORIGIN = 0x00110000, LENGTH = 256K - 64k        /* Place where the main OS will end up */
+	ram        : ORIGIN = 0x00200000, LENGTH = 64K - 0x20        /* RAM, minus small common area */
+	commonarea : ORIGIN = 0x00200000 + 64K - 0x20, LENGTH = 0x20 /* Communication between bootloader and main OS */
 }
 
 /* Export some information that can be used from within the firmware */
