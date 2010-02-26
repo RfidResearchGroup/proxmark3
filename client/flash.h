@@ -10,22 +10,26 @@
 #define __FLASH_H__
 
 #include <stdint.h>
+#include "elf.h"
 
-struct partition {
-  int start;
-  int end;
-  int precious;
-  const char *name;
-};
+typedef struct {
+	void *data;
+	uint32_t start;
+	uint32_t length;
+} flash_seg_t;
 
-void FlushPrevious(int translate);
-void GotByte(uint32_t where, uint8_t which, int start_addr, int end_addr, int translate);
-unsigned int EnterFlashState(void);
-int PrepareFlash(struct partition *p, const char *filename, unsigned int state);
-int find_next_area(const char *str, int *offset, int *length);
+typedef struct {
+	const char *filename;
+	int can_write_bl;
+	int num_segs;
+	flash_seg_t *segments;
+} flash_file_t;
 
-#define PHYSICAL_FLASH_START 0x100000
-void do_flash(char **argv);
+int flash_load(flash_file_t *ctx, const char *name, int can_write_bl);
+int flash_start_flashing(int enable_bl_writes);
+int flash_write(flash_file_t *ctx);
+void flash_free(flash_file_t *ctx);
+int flash_stop_flashing(void);
 
 #endif
 
