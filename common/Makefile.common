@@ -40,9 +40,6 @@ COPY=cp
 PATHSEP=/
 FLASH_TOOL=client/flasher
 DETECTED_OS=UNAME
-# You may/should set this in your environment
-LIBGCC ?= $(shell $(CC) -print-libgcc-file-name)
-PATH := $(PATH):$(DEVKITARM)/bin
 
 else
 
@@ -51,7 +48,6 @@ DELETE=del /q
 MOVE=ren
 COPY=copy
 PATHSEP=\\#
-LIBGCC ?= ../../devkitARM/lib/gcc/arm-elf/4.1.0/interwork/libgcc.a
 FLASH_TOOL=winsrc\\prox.exe
 DETECTED_OS=Windows
 
@@ -64,6 +60,8 @@ VPATH = . ../common/ ../fpga/
 INCLUDES = ../include/proxmark3.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/usb_cmd.h $(APP_INCLUDES)
 
 CFLAGS =  -c $(INCLUDE) -Wall -Werror -pedantic -std=gnu99 $(APP_CFLAGS)
+LDFLAGS = -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
+LIBS = -lgcc
 
 THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(THUMBSRC))
 ARMOBJ   = $(ARMSRC:%.c=$(OBJDIR)/%.o)
