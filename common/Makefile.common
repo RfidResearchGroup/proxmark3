@@ -40,6 +40,7 @@ COPY=cp
 PATHSEP=/
 FLASH_TOOL=client/flasher
 DETECTED_OS=UNAME
+PATH := $(PATH):$(DEVKITARM)/bin
 
 else
 
