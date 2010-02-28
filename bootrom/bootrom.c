@@ -257,7 +257,7 @@ void BootROM(void)
     LED_A_OFF();
 
     // if 512K FLASH part - TODO make some defines :)
-    if ((AT91C_BASE_DBGU->DBGU_CIDR | 0xf00) == 0xa00) {
+    if ((AT91C_BASE_DBGU->DBGU_CIDR & 0xf00) == 0xa00) {
 	    AT91C_BASE_EFC0->EFC_FMR =
 	    	MC_FLASH_MODE_FLASH_WAIT_STATES(1) |
 			MC_FLASH_MODE_MASTER_CLK_IN_MHZ(0x48);
