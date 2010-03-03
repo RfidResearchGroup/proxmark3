@@ -77,7 +77,7 @@ static void AppendCrc14443a(uint8_t* data, int len)
   ComputeCrc14443(CRC_14443_A,data,len,data+len,data+len+1);
 }
 
-int LogTrace(const uint8_t * btBytes, int iLen, int iSamples, uint32_t dwParity, int bReader)
+int LogTrace(const uint8_t * btBytes, size_t iLen, int iSamples, uint32_t dwParity, int bReader)
 {
   // Return when trace is full
   if (traceLen >= TRACE_LENGTH) return FALSE;
