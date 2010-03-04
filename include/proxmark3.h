@@ -44,7 +44,7 @@
 #define MC_FLASH_STATUS_LOCKE					(1<<2)
 #define MC_FLASH_STATUS_PROGE					(1<<3)
 #define MC_FLASH_MODE_FLASH_WAIT_STATES(x)		((x)<<8)
-#define MC_FLASH_MODE_MASTER_CLK_IN_MHZ(x)		((x)<<16)
+#define MC_FLASH_MODE_MASTER_CLK_IN_MHZ(x)		(((x)+((x)/2))<<16)
 #define MC_FLASH_COMMAND_PAGEN(x)				((x)<<8)
 
 #define RST_CONTROL_KEY							(0xa5<<24)
