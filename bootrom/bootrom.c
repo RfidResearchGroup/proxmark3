@@ -29,21 +29,22 @@ static void ConfigClocks(void)
 		(1<<AT91C_ID_PWMC)	|
 		(1<<AT91C_ID_UDP);
 
-	// worst case scenario, with 16Mhz xtal startup delay is 14.5ms
-	// with a slow clock running at it worst case (max) frequency of 42khz
-	// max startup delay = (14.5ms*42k)/8 = 76 = 0x4C round up to 0x50
+	// worst case scenario, with MAINCK = 16Mhz xtal, startup delay is 1.4ms
+	// if SLCK slow clock runs at its worst case (max) frequency of 42khz
+	// max startup delay = (1.4ms*42k)/8 = 7.356 so round up to 8
 
 	// enable main oscillator and set startup delay
     AT91C_BASE_PMC->PMC_MOR =
-    	PMC_MAIN_OSC_ENABLE |
-        PMC_MAIN_OSC_STARTUP_DELAY(0x50);
+        AT91C_CKGR_MOSCEN |
+        PMC_MAIN_OSC_STARTUP_DELAY(8);
 
 	// wait for main oscillator to stabilize
-	while ( !(AT91C_BASE_PMC->PMC_SR & PMC_MAIN_OSC_STABILIZED) )
+	while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MOSCS) )
 		;
 
-    // minimum PLL clock frequency is 80 MHz in range 00 (96 here so okay)
-    // frequency is crystal * multiplier / divisor = 16Mhz * 12 / 2 = 96Mhz
+    // PLL output clock frequency in range  80 - 160 MHz needs CKGR_PLL = 00
+    // PLL output clock frequency in range 150 - 180 MHz needs CKGR_PLL = 10
+    // PLL output is MAINCK * multiplier / divisor = 16Mhz * 12 / 2 = 96Mhz
     AT91C_BASE_PMC->PMC_PLLR =
     	PMC_PLL_DIVISOR(2) |
 		PMC_PLL_COUNT_BEFORE_LOCK(0x50) |
@@ -52,23 +53,23 @@ static void ConfigClocks(void)
 		PMC_PLL_USB_DIVISOR(1);
 
 	// wait for PLL to lock
-	while ( !(AT91C_BASE_PMC->PMC_SR & PMC_MAIN_OSC_PLL_LOCK) )
+	while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_LOCK) )
 		;
 
 	// we want a master clock (MCK) to be PLL clock / 2 = 96Mhz / 2 = 48Mhz
-	// as per datasheet, this register must be programmed in two operations
+	// datasheet recommends that this register is programmed in two operations
 	// when changing to PLL, program the prescaler first then the source
-    AT91C_BASE_PMC->PMC_MCKR = PMC_CLK_PRESCALE_DIV_2;
+    AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_PRES_CLK_2;
 
 	// wait for main clock ready signal
-	while ( !(AT91C_BASE_PMC->PMC_SR & PMC_MAIN_OSC_MCK_READY) )
+	while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY) )
 		;
 
 	// set the source to PLL
-    AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_CSS_PLL_CLK | PMC_CLK_PRESCALE_DIV_2;
+    AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_PRES_CLK_2 | AT91C_PMC_CSS_PLL_CLK;
 
 	// wait for main clock ready signal
-	while ( !(AT91C_BASE_PMC->PMC_SR & PMC_MAIN_OSC_MCK_READY) )
+	while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY) )
 		;
 }
 
@@ -128,9 +129,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 
             uint32_t sr;
 
-            while(!((sr = AT91C_BASE_EFC0->EFC_FSR) & MC_FLASH_STATUS_READY))
+            while(!((sr = AT91C_BASE_EFC0->EFC_FSR) & AT91C_MC_FRDY))
                 ;
-            if(sr & (MC_FLASH_STATUS_LOCKE | MC_FLASH_STATUS_PROGE)) {
+            if(sr & (AT91C_MC_LOCKE | AT91C_MC_PROGE)) {
         	    dont_ack = 1;
                     c->cmd = CMD_NACK;
                     UsbSendPacket(packet, len);
@@ -257,7 +258,7 @@ void BootROM(void)
     LED_A_OFF();
 
 	AT91C_BASE_EFC0->EFC_FMR =
-		MC_FLASH_MODE_FLASH_WAIT_STATES(1) |
+		AT91C_MC_FWS_1FWS |
 		MC_FLASH_MODE_MASTER_CLK_IN_MHZ(48);
 
     // Initialize all system clocks

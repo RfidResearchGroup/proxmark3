@@ -34,7 +34,7 @@ static void setup_timer(void)
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
 	timer = AT91C_BASE_TC1;
 	timer->TC_CCR = AT91C_TC_CLKDIS;
-	timer->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK3;
+	timer->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
 	timer->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
 /* At TIMER_CLOCK3 (MCK/32) */
