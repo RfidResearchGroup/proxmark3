@@ -20,14 +20,20 @@ static int traceLen = 0;
 static int rsamples = 0;
 static int tracing = TRUE;
 
-typedef enum {
-	SEC_D = 1,
-	SEC_E = 2,
-	SEC_F = 3,
-	SEC_X = 4,
-	SEC_Y = 5,
-	SEC_Z = 6
-} SecType;
+// CARD TO READER
+// Sequence D: 11110000 modulation with subcarrier during first half
+// Sequence E: 00001111 modulation with subcarrier during second half
+// Sequence F: 00000000 no modulation with subcarrier
+// READER TO CARD
+// Sequence X: 00001100 drop after half a period
+// Sequence Y: 00000000 no drop
+// Sequence Z: 11000000 drop at start
+#define	SEC_D 0xf0
+#define	SEC_E 0x0f
+#define	SEC_F 0x00
+#define	SEC_X 0x0c
+#define	SEC_Y 0x00
+#define	SEC_Z 0xc0
 
 static const uint8_t OddByteParity[256] = {
   1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
@@ -63,7 +69,7 @@ uint32_t GetParity(const uint8_t * pbtCmd, int iLen)
 {
   int i;
   uint32_t dwPar = 0;
-  
+
   // Generate the encrypted data
   for (i = 0; i < iLen; i++) {
     // Save the encrypted parity bit
@@ -99,11 +105,6 @@ int LogTrace(const uint8_t * btBytes, int iLen, int iSamples, uint32_t dwParity,
   memcpy(trace + traceLen, btBytes, iLen);
   traceLen += iLen;
   return TRUE;
-}
-
-int LogTraceInfo(byte_t* data, size_t len)
-{
-  return LogTrace(data,len,0,GetParity(data,len),TRUE);
 }
 
 //-----------------------------------------------------------------------------
@@ -686,32 +687,29 @@ void SnoopIso14443a(void)
         }
 
         samples += 4;
-#define HANDLE_BIT_IF_BODY \
-            LED_C_ON(); \
-			if(triggered) { \
-				trace[traceLen++] = ((rsamples >>  0) & 0xff); \
-                trace[traceLen++] = ((rsamples >>  8) & 0xff); \
-                trace[traceLen++] = ((rsamples >> 16) & 0xff); \
-                trace[traceLen++] = ((rsamples >> 24) & 0xff); \
-				trace[traceLen++] = ((Uart.parityBits >>  0) & 0xff); \
-				trace[traceLen++] = ((Uart.parityBits >>  8) & 0xff); \
-				trace[traceLen++] = ((Uart.parityBits >> 16) & 0xff); \
-				trace[traceLen++] = ((Uart.parityBits >> 24) & 0xff); \
-                trace[traceLen++] = Uart.byteCnt; \
-                memcpy(trace+traceLen, receivedCmd, Uart.byteCnt); \
-                traceLen += Uart.byteCnt; \
-                if(traceLen > TRACE_LENGTH) break; \
-            } \
-            /* And ready to receive another command. */ \
-            Uart.state = STATE_UNSYNCD; \
-            /* And also reset the demod code, which might have been */ \
-            /* false-triggered by the commands from the reader. */ \
-            Demod.state = DEMOD_UNSYNCD; \
-			LED_B_OFF(); \
-
 		if(MillerDecoding((smpl & 0xF0) >> 4)) {
             rsamples = samples - Uart.samples;
-			HANDLE_BIT_IF_BODY
+            LED_C_ON();
+			if(triggered) {
+				trace[traceLen++] = ((rsamples >>  0) & 0xff);
+                trace[traceLen++] = ((rsamples >>  8) & 0xff);
+                trace[traceLen++] = ((rsamples >> 16) & 0xff);
+                trace[traceLen++] = ((rsamples >> 24) & 0xff);
+				trace[traceLen++] = ((Uart.parityBits >>  0) & 0xff);
+				trace[traceLen++] = ((Uart.parityBits >>  8) & 0xff);
+				trace[traceLen++] = ((Uart.parityBits >> 16) & 0xff);
+				trace[traceLen++] = ((Uart.parityBits >> 24) & 0xff);
+                trace[traceLen++] = Uart.byteCnt;
+                memcpy(trace+traceLen, receivedCmd, Uart.byteCnt);
+                traceLen += Uart.byteCnt;
+                if(traceLen > TRACE_LENGTH) break;
+            }
+            /* And ready to receive another command. */
+            Uart.state = STATE_UNSYNCD;
+            /* And also reset the demod code, which might have been */
+            /* false-triggered by the commands from the reader. */
+            Demod.state = DEMOD_UNSYNCD;
+			LED_B_OFF();
         }
 		if(ManchesterDecoding(smpl & 0x0F)) {
 			rsamples = samples - Demod.samples;
@@ -762,47 +760,6 @@ done:
 	LED_D_OFF();
 }
 
-// Prepare communication bits to send to FPGA
-void Sequence(SecType seq)
-{
-	ToSendMax++;
-	switch(seq) {
-	// CARD TO READER
-	case SEC_D:
-		// Sequence D: 11110000
-		// modulation with subcarrier during first half
-        ToSend[ToSendMax] = 0xf0;
-		break;
-	case SEC_E:
-		// Sequence E: 00001111
-		// modulation with subcarrier during second half
-        ToSend[ToSendMax] = 0x0f;
-		break;
-	case SEC_F:
-		// Sequence F: 00000000
-		// no modulation with subcarrier
-        ToSend[ToSendMax] = 0x00;
-		break;
-	// READER TO CARD
-	case SEC_X:
-		// Sequence X: 00001100
-		// drop after half a period
-        ToSend[ToSendMax] = 0x0c;
-		break;
-	case SEC_Y:
-	default:
-		// Sequence Y: 00000000
-		// no drop
-        ToSend[ToSendMax] = 0x00;
-		break;
-	case SEC_Z:
-		// Sequence Z: 11000000
-		// drop at start
-        ToSend[ToSendMax] = 0xc0;
-		break;
-	}
-}
-
 //-----------------------------------------------------------------------------
 // Prepare tag messages
 //-----------------------------------------------------------------------------
@@ -824,7 +781,7 @@ static void CodeIso14443aAsTag(const uint8_t *cmd, int len)
 	ToSendStuffBit(0);
 
 	// Send startbit
-	Sequence(SEC_D);
+	ToSend[++ToSendMax] = SEC_D;
 
     for(i = 0; i < len; i++) {
         int j;
@@ -835,27 +792,27 @@ static void CodeIso14443aAsTag(const uint8_t *cmd, int len)
 		for(j = 0; j < 8; j++) {
             oddparity ^= (b & 1);
 			if(b & 1) {
-				Sequence(SEC_D);
+				ToSend[++ToSendMax] = SEC_D;
 			} else {
-				Sequence(SEC_E);
+				ToSend[++ToSendMax] = SEC_E;
             }
             b >>= 1;
         }
 
         // Parity bit
         if(oddparity) {
-			Sequence(SEC_D);
+        	ToSend[++ToSendMax] = SEC_D;
 		} else {
-			Sequence(SEC_E);
+			ToSend[++ToSendMax] = SEC_E;
 		}
     }
 
     // Send stopbit
-	Sequence(SEC_F);
+    ToSend[++ToSendMax] = SEC_F;
 
 	// Flush the buffer in FPGA!!
 	for(i = 0; i < 5; i++) {
-		Sequence(SEC_F);
+		ToSend[++ToSendMax] = SEC_F;
 	}
 
     // Convert from last byte pos to length
@@ -887,23 +844,23 @@ static void CodeStrangeAnswer()
 	ToSendStuffBit(0);
 
 	// Send startbit
-	Sequence(SEC_D);
+	ToSend[++ToSendMax] = SEC_D;
 
 	// 0
-	Sequence(SEC_E);
+	ToSend[++ToSendMax] = SEC_E;
 
 	// 0
-	Sequence(SEC_E);
+	ToSend[++ToSendMax] = SEC_E;
 
 	// 1
-	Sequence(SEC_D);
+	ToSend[++ToSendMax] = SEC_D;
 
     // Send stopbit
-	Sequence(SEC_F);
+	ToSend[++ToSendMax] = SEC_F;
 
 	// Flush the buffer in FPGA!!
 	for(i = 0; i < 5; i++) {
-		Sequence(SEC_F);
+		ToSend[++ToSendMax] = SEC_F;
 	}
 
     // Convert from last byte pos to length
@@ -974,8 +931,6 @@ void SimulateIso14443aTag(int tagType, int TagUid)
     // static const uint8_t cmd2[] = { 0x93, 0x20 };
     //static const uint8_t response2[] = { 0x9a, 0xe5, 0xe4, 0x43, 0xd8 }; // original value - greg
 
-
-
 // my desfire
     static const uint8_t response2[] = { 0x88, 0x04, 0x21, 0x3f, 0x4d }; // known uid - note cascade (0x88), 2nd byte (0x04) = NXP/Phillips
 
@@ -988,7 +943,6 @@ ComputeCrc14443(CRC_14443_A, response3, 1, &response3[1], &response3[2]);
 // send cascade2 2nd half of UID
 static const uint8_t response2a[] = { 0x51, 0x48, 0x1d, 0x80, 0x84 }; //  uid - cascade2 - 2nd half (4 bytes) of UID+ BCCheck
 // NOTE : THE CRC on the above may be wrong as I have obfuscated the actual UID
-
 
 // When reader selects us during cascade2 it will send cmd3a
 //uint8_t response3a[] = { 0x00, 0x00, 0x00 }; // SAK Select (cascade2) successful response (ULTRALITE)
@@ -1012,7 +966,6 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 	//
 	// 166 bytes, since every bit that needs to be send costs us a byte
 	//
-
 
     // Respond with card type
     uint8_t *resp1 = (((uint8_t *)BigBuf) + 800);
@@ -1289,86 +1242,6 @@ static void TransmitFor14443a(const uint8_t *cmd, int len, int *samples, int *wa
 }
 
 //-----------------------------------------------------------------------------
-// To generate an arbitrary stream from reader
-//
-//-----------------------------------------------------------------------------
-void ArbitraryFromReader(const uint8_t *cmd, int parity, int len)
-{
-	int i;
-	int j;
-	int last;
-    uint8_t b;
-
-	ToSendReset();
-
-	// Start of Communication (Seq. Z)
-	Sequence(SEC_Z);
-	last = 0;
-
-	for(i = 0; i < len; i++) {
-        // Data bits
-        b = cmd[i];
-		for(j = 0; j < 8; j++) {
-			if(b & 1) {
-				// Sequence X
-				Sequence(SEC_X);
-				last = 1;
-			} else {
-				if(last == 0) {
-					// Sequence Z
-					Sequence(SEC_Z);
-				}
-				else {
-					// Sequence Y
-					Sequence(SEC_Y);
-					last = 0;
-				}
-			}
-			b >>= 1;
-
-		}
-
-		// Predefined parity bit, the flipper flips when needed, because of flips in byte sent
-		if(((parity >> (len - i - 1)) & 1)) {
-			// Sequence X
-			Sequence(SEC_X);
-			last = 1;
-		} else {
-			if(last == 0) {
-				// Sequence Z
-				Sequence(SEC_Z);
-			}
-			else {
-				// Sequence Y
-				Sequence(SEC_Y);
-				last = 0;
-			}
-		}
-	}
-
-	// End of Communication
-	if(last == 0) {
-		// Sequence Z
-		Sequence(SEC_Z);
-	}
-	else {
-		// Sequence Y
-		Sequence(SEC_Y);
-		last = 0;
-	}
-	// Sequence Y
-	Sequence(SEC_Y);
-
-	// Just to be sure!
-	Sequence(SEC_Y);
-	Sequence(SEC_Y);
-	Sequence(SEC_Y);
-
-    // Convert from last character reference to length
-    ToSendMax++;
-}
-
-//-----------------------------------------------------------------------------
 // Code a 7-bit command without parity bit
 // This is especially for 0x26 and 0x52 (REQA and WUPA)
 //-----------------------------------------------------------------------------
@@ -1381,23 +1254,23 @@ void ShortFrameFromReader(const uint8_t bt)
 	ToSendReset();
 
 	// Start of Communication (Seq. Z)
-	Sequence(SEC_Z);
+	ToSend[++ToSendMax] = SEC_Z;
 	last = 0;
 
 	b = bt;
 	for(j = 0; j < 7; j++) {
 		if(b & 1) {
 			// Sequence X
-			Sequence(SEC_X);
+			ToSend[++ToSendMax] = SEC_X;
 			last = 1;
 		} else {
 			if(last == 0) {
 				// Sequence Z
-				Sequence(SEC_Z);
+				ToSend[++ToSendMax] = SEC_Z;
 			}
 			else {
 				// Sequence Y
-				Sequence(SEC_Y);
+				ToSend[++ToSendMax] = SEC_Y;
 				last = 0;
 			}
 		}
@@ -1407,20 +1280,20 @@ void ShortFrameFromReader(const uint8_t bt)
 	// End of Communication
 	if(last == 0) {
 		// Sequence Z
-		Sequence(SEC_Z);
+		ToSend[++ToSendMax] = SEC_Z;
 	}
 	else {
 		// Sequence Y
-		Sequence(SEC_Y);
+		ToSend[++ToSendMax] = SEC_Y;
 		last = 0;
 	}
 	// Sequence Y
-	Sequence(SEC_Y);
+	ToSend[++ToSendMax] = SEC_Y;
 
 	// Just to be sure!
-	Sequence(SEC_Y);
-	Sequence(SEC_Y);
-	Sequence(SEC_Y);
+	ToSend[++ToSendMax] = SEC_Y;
+	ToSend[++ToSendMax] = SEC_Y;
+	ToSend[++ToSendMax] = SEC_Y;
 
     // Convert from last character reference to length
     ToSendMax++;
@@ -1439,7 +1312,7 @@ void CodeIso14443aAsReaderPar(const uint8_t * cmd, int len, uint32_t dwParity)
   ToSendReset();
 
   // Start of Communication (Seq. Z)
-  Sequence(SEC_Z);
+  ToSend[++ToSendMax] = SEC_Z;
   last = 0;
 
   // Generate send structure for the data bits
@@ -1450,15 +1323,15 @@ void CodeIso14443aAsReaderPar(const uint8_t * cmd, int len, uint32_t dwParity)
     for (j = 0; j < 8; j++) {
       if (b & 1) {
         // Sequence X
-        Sequence(SEC_X);
+    	  ToSend[++ToSendMax] = SEC_X;
         last = 1;
       } else {
         if (last == 0) {
           // Sequence Z
-          Sequence(SEC_Z);
+        	ToSend[++ToSendMax] = SEC_Z;
         } else {
           // Sequence Y
-          Sequence(SEC_Y);
+        	ToSend[++ToSendMax] = SEC_Y;
           last = 0;
         }
       }
@@ -1468,15 +1341,15 @@ void CodeIso14443aAsReaderPar(const uint8_t * cmd, int len, uint32_t dwParity)
     // Get the parity bit
     if ((dwParity >> i) & 0x01) {
       // Sequence X
-      Sequence(SEC_X);
+    	ToSend[++ToSendMax] = SEC_X;
       last = 1;
     } else {
       if (last == 0) {
         // Sequence Z
-        Sequence(SEC_Z);
+    	  ToSend[++ToSendMax] = SEC_Z;
       } else {
         // Sequence Y
-        Sequence(SEC_Y);
+    	  ToSend[++ToSendMax] = SEC_Y;
         last = 0;
       }
     }
@@ -1485,19 +1358,19 @@ void CodeIso14443aAsReaderPar(const uint8_t * cmd, int len, uint32_t dwParity)
   // End of Communication
   if (last == 0) {
     // Sequence Z
-    Sequence(SEC_Z);
+	  ToSend[++ToSendMax] = SEC_Z;
   } else {
     // Sequence Y
-    Sequence(SEC_Y);
+	  ToSend[++ToSendMax] = SEC_Y;
     last = 0;
   }
   // Sequence Y
-  Sequence(SEC_Y);
+  ToSend[++ToSendMax] = SEC_Y;
 
   // Just to be sure!
-  Sequence(SEC_Y);
-  Sequence(SEC_Y);
-  Sequence(SEC_Y);
+  ToSend[++ToSendMax] = SEC_Y;
+  ToSend[++ToSendMax] = SEC_Y;
+  ToSend[++ToSendMax] = SEC_Y;
 
   // Convert from last character reference to length
   ToSendMax++;
@@ -1538,7 +1411,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, int maxLen, int 
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			if(c < 512) { c++; } else { return FALSE; }
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			if(ManchesterDecoding((b & 0xf0) >> 4)) {
+			if(ManchesterDecoding((b>>4) & 0xf)) {
 				*samples = ((c - 1) << 3) + 4;
 				return TRUE;
 			}
@@ -1625,7 +1498,6 @@ void ReaderIso14443a(uint32_t parameter)
   SpinDelay(200);
 
   SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-  FpgaSetupSsc();
 
 	// Now give it time to spin up.
   // Signal field is on with the appropriate LED
@@ -1735,7 +1607,6 @@ void ReaderMifare(uint32_t parameter)
   SpinDelay(200);
 
   SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-  FpgaSetupSsc();
 
 	// Now give it time to spin up.
   // Signal field is on with the appropriate LED
@@ -1848,10 +1719,10 @@ void ReaderMifare(uint32_t parameter)
     }
   }
 
-  LogTraceInfo(sel_uid+2,4);
-  LogTraceInfo(nt,4);
-  LogTraceInfo(par_list,8);
-  LogTraceInfo(ks_list,8);
+  LogTrace(sel_uid+2,4,0,GetParity(sel_uid+2,4),TRUE);
+  LogTrace(nt,4,0,GetParity(nt,4),TRUE);
+  LogTrace(par_list,8,0,GetParity(par_list,8),TRUE);
+  LogTrace(ks_list,8,0,GetParity(ks_list,8),TRUE);
 
   // Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
