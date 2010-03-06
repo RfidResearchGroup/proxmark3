@@ -486,9 +486,9 @@ int CmdSamples(const char *Cmd)
 
 int CmdLoad(const char *Cmd)
 {
-  FILE *f = fopen(Cmd + 1, "r");
+  FILE *f = fopen(Cmd, "r");
   if (!f) {
-    PrintAndLog("couldn't open '%s'", Cmd + 1);
+    PrintAndLog("couldn't open '%s'", Cmd);
     return 0;
   }
 
@@ -544,7 +544,7 @@ int CmdManchesterDemod(const char *Cmd)
   int warnings = 0;
 
   /* check if we're inverting output */
-  if (*(Cmd + 1) == 'i')
+  if (*Cmd == 'i')
   {
     PrintAndLog("Inverting output");
     invert = 1;
