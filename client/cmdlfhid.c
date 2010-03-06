@@ -46,7 +46,7 @@ int CmdHIDDemodFSK(const char *Cmd)
 int CmdHIDSim(const char *Cmd)
 {
   unsigned int hi = 0, lo = 0;
-  int n = 0, i = 1;
+  int n = 0, i = 0;
 
   while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
     hi = (hi << 4) | (lo >> 28);

@@ -50,9 +50,12 @@ void CmdsParse(const command_t Commands[], const char *Cmd)
     if(matches == 1) i=last_match;
   }
 
-  if (Commands[i].Name)
+  if (Commands[i].Name) {
+    while (Cmd[len] == ' ')
+      ++len;
     Commands[i].Parse(Cmd + len);
-  else
+  } else {
     // show help (always first in array) for selected hierarchy or if command not recognised
     CmdsHelp(Commands);
+  }
 }
