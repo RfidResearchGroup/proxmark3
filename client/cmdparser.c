@@ -26,7 +26,7 @@ void CmdsHelp(const command_t Commands[])
   }
 }
 
-void CmdsParse(const command_t Commands[], const char *Cmd)
+void CmdsParse(const command_t Commands[], char *Cmd)
 {
   char cmd_name[32];
   int len = 0;
@@ -53,9 +53,11 @@ void CmdsParse(const command_t Commands[], const char *Cmd)
   if (Commands[i].Name) {
     while (Cmd[len] == ' ')
       ++len;
+    while (Cmd[strlen(Cmd) - 1] == ' ')
+      Cmd[strlen(Cmd) - 1] = '\0';
     Commands[i].Parse(Cmd + len);
   } else {
-    // show help (always first in array) for selected hierarchy or if command not recognised
+    // show help for selected hierarchy or if command not recognised
     CmdsHelp(Commands);
   }
 }
