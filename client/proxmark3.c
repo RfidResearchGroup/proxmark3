@@ -65,6 +65,8 @@ static void *main_loop(void *targ)
     cmd = readline(PROXPROMPT);
     if (cmd) {
       if (cmd[0] != 0x00) {
+        while(cmd[strlen(cmd) - 1] == ' ')
+          cmd[strlen(cmd) - 1]= 0x00;
         CommandReceived(cmd);
         add_history(cmd);
       }

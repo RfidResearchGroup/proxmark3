@@ -24,6 +24,6 @@ typedef struct command_s
 // Print help for each command in the command array
 void CmdsHelp(const command_t Commands[]);
 // Parse a command line
-void CmdsParse(const command_t Commands[], char *Cmd);
+void CmdsParse(const command_t Commands[], const char *Cmd);
 
 #endif
