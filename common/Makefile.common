@@ -39,7 +39,7 @@ MOVE=mv
 COPY=cp
 PATHSEP=/
 FLASH_TOOL=client/flasher
-DETECTED_OS=UNAME
+DETECTED_OS=$(UNAME)
 
 else
 
