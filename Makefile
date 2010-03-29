@@ -16,12 +16,15 @@ help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:
 	@echo +	all           - Make bootrom, armsrc and the OS-specific host directory
+	@echo + client        - Make only the OS-specific host directory
 	@echo + flash-bootrom - Make bootrom and flash it
 	@echo + flash-os      - Make armsrc and flash os
 	@echo + flash-fpga    - Make armsrc and flash fpga
 	@echo + flash-both    - Make armsrc and flash os and fpga image
 	@echo + flash-all     - Make bootrom and armsrc and flash bootrom, os and fpga image
 	@echo +	clean         - Clean in bootrom, armsrc and the OS-specific host directory
+
+client: client/all
 
 flash-bootrom: bootrom/obj/bootrom.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) -b $(subst /,$(PATHSEP),$<)
