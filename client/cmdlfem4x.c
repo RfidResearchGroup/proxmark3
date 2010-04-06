@@ -34,7 +34,7 @@ int CmdEM410xRead(const char *Cmd)
   int parity[4];
   char id[11];
   int retested = 0;
-  int BitStream[MAX_GRAPH_TRACE_LEN];
+  uint8_t BitStream[MAX_GRAPH_TRACE_LEN];
   high = low = 0;
 
   /* Detect high and lows and clock */
