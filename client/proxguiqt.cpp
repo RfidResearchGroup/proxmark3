@@ -263,7 +263,7 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 	painter.setPen(QColor(255, 0, 255));
 	painter.drawPath(cursorBPath);
 
-	char str[100];
+	char str[200];
 	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f] zoom=%.3f CursorA=%d [%d] CursorB=%d [%d]",
 			GraphStart, yMax, yMin, yMean, n, GraphTraceLen,
 			CursorBPos - CursorAPos, (CursorBPos - CursorAPos)/CursorScaleFactor,GraphPixelsPerPoint,CursorAPos,GraphBuffer[CursorAPos],CursorBPos,GraphBuffer[CursorBPos]);
