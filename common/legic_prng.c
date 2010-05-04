@@ -22,27 +22,13 @@ void legic_prng_init(uint8_t init) {
 }
 
 void legic_prng_forward(int count) {
-  uint8_t tmp;
   while(count--) {
-    tmp  =  lfsr.a & 1;
-    tmp ^= (lfsr.a & 0x40) >> 6;
-    
-    lfsr.a >>= 1;
-    lfsr.a |= tmp << 6;
-    
-    tmp  =  lfsr.b & 1;
-    tmp ^= (lfsr.b & 4) >> 2;
-    tmp  = ~tmp;
-    tmp ^= (lfsr.b & 8) >> 3;
-    tmp  = ~tmp;
-    tmp ^= (lfsr.b & 0x80) >> 7;
-    
-    lfsr.b >>= 1;
-    lfsr.b |= tmp << 7;
+    lfsr.a = lfsr.a >> 1 | (lfsr.a ^ lfsr.a >> 6) << 6;
+    lfsr.b = lfsr.b >> 1 | (lfsr.b ^ lfsr.b >> 2 ^ lfsr.b >> 3 ^ lfsr.b >> 7) << 7;
   }
 }
 
 uint8_t legic_prng_get_bit() {
-  uint8_t idx = 7-((lfsr.a & 4) | ((lfsr.a & 8) >> 2) | ((lfsr.a & 0x10) >> 4));
-  return ((lfsr.b >> idx) & 1);
+  uint8_t idx = 7 - ( (lfsr.a & 4) | (lfsr.a >> 2 & 2) | (lfsr.a >> 4 & 1) );
+  return lfsr.b >> idx & 1;
 }
