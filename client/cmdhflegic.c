@@ -24,6 +24,11 @@ static command_t CommandTable[] =
   {"help",        CmdHelp,        1, "This help"},
   {"decode",      CmdLegicDecode, 0, "Display deobfuscated and decoded LEGIC RF tag data (use after hf legic reader)"},
   {"reader",      CmdLegicRFRead, 0, "[offset [length]] -- read bytes from a LEGIC card"},
+  {"save",        CmdLegicSave,   0, "<filename> [<length>] -- Store samples"},
+  {"load",        CmdLegicLoad,   0, "<filename> -- Restore samples"},
+  {"sim",         CmdLegicRfSim,  0, "[phase drift [frame drift [req/resp drift]]] Start tag simulator (use after load or read)"},
+  {"write",       CmdLegicRfWrite,0, "<offset> <length> -- Write sample buffer (user after load or read)"},
+  {"fill",        CmdLegicRfFill, 0, "<offset> <length> <value> -- Fill/Write tag with constant value"},
   {NULL, NULL, 0, NULL}
 };
 
@@ -225,3 +230,136 @@ int CmdLegicRFRead(const char *Cmd)
   SendCommand(&c);
   return 0;
 }
+
+int CmdLegicLoad(const char *Cmd)
+{
+    FILE *f = fopen(Cmd, "r");
+    if(!f) {
+        PrintAndLog("couldn't open '%s'", Cmd);
+        return -1;
+    }
+    char line[80]; int offset = 0; unsigned int data[8];
+    while(fgets(line, sizeof(line), f)) {
+        int res = sscanf(line, "%x %x %x %x %x %x %x %x", 
+            &data[0], &data[1], &data[2], &data[3],
+            &data[4], &data[5], &data[6], &data[7]);
+        if(res != 8) {
+          PrintAndLog("Error: could not read samples");
+          fclose(f);
+          return -1;
+        }
+        UsbCommand c={CMD_DOWNLOADED_SIM_SAMPLES_125K, {offset, 0, 0}};
+        int j; for(j = 0; j < 8; j++) {
+            c.d.asBytes[j] = data[j];
+        }
+        SendCommand(&c);
+        WaitForResponse(CMD_ACK);
+        offset += 8;
+    }
+    fclose(f);
+    PrintAndLog("loaded %u samples", offset);
+    return 0;
+}
+
+int CmdLegicSave(const char *Cmd)
+{
+  int n;
+  int requested = 1024;
+  int offset = 0;
+  char filename[1024];
+  sscanf(Cmd, " %s %i %i", filename, &requested, &offset);
+  if (offset % 4 != 0) {
+    PrintAndLog("Offset must be a multiple of 4");
+    return 0;
+  }
+  offset = offset/4;
+
+  int delivered = 0;
+
+  if (requested == 0) {
+    n = 12;
+    requested = 12;
+  } else {
+    n = requested/4;
+  }
+
+  FILE *f = fopen(filename, "w");
+  if(!f) {
+    PrintAndLog("couldn't open '%s'", Cmd+1);
+    return -1;
+  }
+
+  for (int i = offset; i < n+offset; i += 12) {
+    UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
+    SendCommand(&c);
+    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+    for (int j = 0; j < 48; j += 8) {
+      fprintf(f, "%02x %02x %02x %02x %02x %02x %02x %02x\n",
+        sample_buf[j+0],
+        sample_buf[j+1],
+        sample_buf[j+2],
+        sample_buf[j+3],
+        sample_buf[j+4],
+        sample_buf[j+5],
+        sample_buf[j+6],
+        sample_buf[j+7]
+      );
+      delivered += 8;
+      if (delivered >= requested)
+        break;
+    }
+    if (delivered >= requested)
+      break;
+  }
+
+  fclose(f);
+  PrintAndLog("saved %u samples", delivered);
+  return 0;
+}
+
+int CmdLegicRfSim(const char *Cmd)
+{
+   UsbCommand c={CMD_SIMULATE_TAG_LEGIC_RF};
+   c.arg[0] = 6;
+   c.arg[1] = 3;
+   c.arg[2] = 0;
+   sscanf(Cmd, " %i %i %i", &c.arg[0], &c.arg[1], &c.arg[2]);
+   SendCommand(&c);
+   return 0;
+}
+
+int CmdLegicRfWrite(const char *Cmd)
+{
+    UsbCommand c={CMD_WRITER_LEGIC_RF};
+    int res = sscanf(Cmd, " 0x%x 0x%x", &c.arg[0], &c.arg[1]);
+	if(res != 2) {
+		PrintAndLog("Please specify the offset and length as two hex strings");
+        return -1;
+    }
+    SendCommand(&c);
+    return 0;
+}
+
+int CmdLegicRfFill(const char *Cmd)
+{
+    UsbCommand cmd ={CMD_WRITER_LEGIC_RF};
+    int res = sscanf(Cmd, " 0x%x 0x%x 0x%x", &cmd.arg[0], &cmd.arg[1], &cmd.arg[2]);
+    if(res != 3) {
+        PrintAndLog("Please specify the offset, length and value as two hex strings");
+        return -1;
+    }
+
+    int i;
+    UsbCommand c={CMD_DOWNLOADED_SIM_SAMPLES_125K, {0, 0, 0}};
+    for(i = 0; i < 48; i++) {
+      c.d.asBytes[i] = cmd.arg[2];
+    }
+    for(i = 0; i < 22; i++) {
+      c.arg[0] = i*48;
+      SendCommand(&c);
+      WaitForResponse(CMD_ACK);
+    }
+    SendCommand(&cmd);
+    return 0;
+ }
+
