@@ -44,7 +44,9 @@ APP_CFLAGS += -I.
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
 
-all: $(OBJDIR)/osimage.s19 $(OBJDIR)/fpgaimage.s19
+OBJS = $(OBJDIR)/osimage.s19 $(OBJDIR)/fpgaimage.s19
+
+all: $(OBJS)
 
 $(OBJDIR)/fpga.o: fpga.bit
 	$(OBJCOPY) -O elf32-littlearm -I binary -B arm --redefine-sym _binary____fpga_fpga_bit_start=_binary_fpga_bit_start --redefine-sym _binary____fpga_fpga_bit_end=_binary_fpga_bit_end --prefix-sections=fpga_bit  $^ $@
@@ -57,6 +59,10 @@ $(OBJDIR)/fpgaimage.elf: $(OBJDIR)/fullimage.elf
 
 $(OBJDIR)/osimage.elf: $(OBJDIR)/fullimage.elf
 	$(OBJCOPY) -F elf32-littlearm --remove-section .fpgaimage $^ $@
+
+tarbin: $(OBJS)
+	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(OBJS:%=armsrc/%) $(OBJS:%.s19=armsrc/%.elf)
+
 
 clean:
 	$(DELETE) $(OBJDIR)$(PATHSEP)*.o

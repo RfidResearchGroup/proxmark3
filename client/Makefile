@@ -3,6 +3,8 @@
 # at your option, any later version. See the LICENSE.txt file for the text of
 # the license.
 #-----------------------------------------------------------------------------
+include ../common/Makefile.common
+
 CC=gcc
 CXX=g++
 #COMMON_FLAGS = -m32
@@ -13,8 +15,6 @@ OBJDIR = obj
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb -lreadline -lpthread
 LDFLAGS = $(COMMON_FLAGS)
 CFLAGS = -std=gnu99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O3
-
-platform = $(shell uname)
 
 ifneq (,$(findstring MINGW,$(platform)))
 CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
@@ -94,6 +94,9 @@ proxguiqt.moc.cpp: proxguiqt.h
 
 clean:
 	$(RM) $(CLEAN)
+
+tarbin: $(BINS)
+	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%)
 
 # must be run as root
 install_kext: Info.plist

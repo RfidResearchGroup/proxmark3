@@ -1,5 +1,7 @@
 include common/Makefile.common
 
+GZIP=gzip
+
 all clean: %: bootrom/% armsrc/% client/%
 
 bootrom/%: FORCE
@@ -40,6 +42,13 @@ flash-both: armsrc/obj/osimage.elf armsrc/obj/fpgaimage.elf $(FLASH_TOOL)
 
 flash-all: bootrom/obj/bootrom.elf armsrc/obj/osimage.elf armsrc/obj/fpgaimage.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) -b $(subst /,$(PATHSEP),$(filter-out $(FLASH_TOOL),$^))
+
+newtarbin:
+	$(DELETE) proxmark3-$(platform)-bin.tar proxmark3-$(platform)-bin.tar.gz
+	@touch proxmark3-$(platform)-bin.tar
+
+tarbin: newtarbin client/tarbin armsrc/tarbin bootrom/tarbin
+	$(GZIP) proxmark3-$(platform)-bin.tar
 
 # Dummy target to test for GNU make availability
 _test:

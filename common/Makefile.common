@@ -15,6 +15,9 @@
 
 # Make sure that all is the default target
 # (The including Makefile still needs to define what 'all' is)
+
+platform = $(shell uname)
+
 all:
 
 CROSS  ?= arm-eabi-
@@ -26,6 +29,9 @@ OBJCOPY = $(CROSS)objcopy
 OBJDIR	= obj
 
 INCLUDE = -I../include -I../common
+
+TAR=tar
+TARFLAGS = -C .. -rvf
 
 # Windows' echo echos its input verbatim, on Posix there is some
 #  amount of shell command line parsing going on. echo "" on 

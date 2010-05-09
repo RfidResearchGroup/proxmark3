@@ -24,7 +24,12 @@ APP_CFLAGS = -I.
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
 
-all: $(OBJDIR)/bootrom.s19
+OBJS = $(OBJDIR)/bootrom.s19
+
+all: $(OBJS)
+
+tarbin: $(OBJS)
+	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(OBJS:%=bootrom/%) $(OBJS:%.s19=bootrom/%.elf)
 
 $(OBJDIR)/bootrom.elf: $(VERSIONOBJ) $(ASMOBJ) $(ARMOBJ) $(THUMBOBJ)
 	$(CC) $(LDFLAGS) -Wl,-T,ldscript-flash,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
