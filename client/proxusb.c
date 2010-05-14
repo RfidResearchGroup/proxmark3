@@ -113,6 +113,8 @@ usb_dev_handle* findProxmark(int verbose, unsigned int *iface)
 {
   struct usb_bus *busses, *bus;
   usb_dev_handle *handle = NULL;
+  struct prox_unit units[50];
+  int iUnit = 0;
 
   usb_find_busses();
   usb_find_devices();
@@ -129,14 +131,46 @@ usb_dev_handle* findProxmark(int verbose, unsigned int *iface)
         handle = usb_open(dev);
         if (!handle) {
           if (verbose)
-            fprintf(stderr, "open failed: %s!\n", usb_strerror());
-          return NULL;
+            fprintf(stderr, "open fabiled: %s!\n", usb_strerror());
+          //return NULL;
+          continue;
         }
         *iface = dev->config[0].interface[0].altsetting[0].bInterfaceNumber;
-        return handle;
-      }
 
+        struct prox_unit unit = {handle, {0}};
+        usb_get_string_simple(handle, desc->iSerialNumber, unit.serial_number, sizeof(unit.serial_number));
+        units[iUnit++] = unit;
+
+        //return handle;
+      }
     }
+  }
+
+  if (iUnit > 0) {
+    int iSelection = 0;
+
+    fprintf(stdout, "\nConnected units:\n");
+
+    for (int i = 0; i < iUnit; i++)
+      fprintf(stdout, "\t%d. SN: %s\n", i+1, units[i].serial_number);
+
+    if (iUnit > 1) {
+      while (iSelection < 1 || iSelection > iUnit) {
+        fprintf(stdout, "Which unit do you want to connect to? ");
+        fscanf(stdin, "%d", &iSelection);
+        }
+      }
+    else
+      iSelection = 1;
+    iSelection --;
+
+    for (int i = 0; i < iUnit; i++) {
+      if (iSelection == i) continue;
+      usb_close(units[i].handle);
+      units[i].handle = NULL;
+    }
+
+    return units[iSelection].handle;
   }
 
   return NULL;

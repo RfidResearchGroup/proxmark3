@@ -26,4 +26,9 @@ struct usb_dev_handle* FindProxmark(int verbose, unsigned int *iface);
 struct usb_dev_handle* OpenProxmark(int verbose);
 void CloseProxmark(void);
 
+struct prox_unit {
+  usb_dev_handle *handle;
+  char serial_number[256];
+};
+
 #endif

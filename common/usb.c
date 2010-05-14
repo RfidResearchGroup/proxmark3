@@ -95,7 +95,7 @@ static const uint8_t DeviceDescriptor[] = {
 	0x01,0x00,		// Device release number (0001)
 	0x01,			// Manufacturer string descriptor index
 	0x02,			// Product string descriptor index
-	0x00,			// Serial Number string descriptor index (None)
+	0x03,			// Serial Number string descriptor index
 	0x01,			// Number of possible configurations (1)
 };
 
@@ -201,10 +201,26 @@ static const uint8_t StringDescriptor2[] = {
 	't', 0x00,
 };
 
+// Serial Number
+// TODO: Pick yours! Don't forget to modify the length, if needed.
+static const uint8_t StringDescriptor3[] = {
+	18,             // Length
+	0x03,           // Type is string
+	'C', 0x00,
+	'h', 0x00,
+	'a', 0x00,
+	'n', 0x00,
+	'g', 0x00,
+	'e', 0x00,
+	'M', 0x00,
+	'e', 0x00,
+};
+
 static const uint8_t * const StringDescriptors[] = {
 	StringDescriptor0,
 	StringDescriptor1,
 	StringDescriptor2,
+	StringDescriptor3,
 };
 
 
