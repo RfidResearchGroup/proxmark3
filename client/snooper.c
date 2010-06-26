@@ -29,7 +29,7 @@ int main()
     while (!OpenProxmark(0)) { sleep(1); }
     while (1) {
       UsbCommand cmdbuf;
-      CommandReceived("hi14asnoop");
+      CommandReceived("hf 14a snoop");
       HANDLE_ERROR;
       ReceiveCommand(&cmdbuf);
       HANDLE_ERROR;
@@ -37,7 +37,7 @@ int main()
         ReceiveCommandPoll(&cmdbuf);
       }
       HANDLE_ERROR;
-      CommandReceived("hi14alist");
+      CommandReceived("hf 14a list");
       HANDLE_ERROR;
     }
   }
