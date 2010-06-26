@@ -182,15 +182,6 @@ usb_dev_handle* OpenProxmark(int verbose)
   usb_dev_handle *handle = NULL;
   unsigned int iface;
 
-#ifdef __linux__
-  handle = findProxmark(verbose, &iface);
-  if (!handle)
-    return NULL;
-
-  /* Whatever... */
-  usb_reset(handle);
-#endif
-
   handle = findProxmark(verbose, &iface);
   if (!handle)
     return NULL;

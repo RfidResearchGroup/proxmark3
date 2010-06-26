@@ -1113,7 +1113,7 @@ void SnoopIso14443(void)
         if(behindBy > maxBehindBy) {
             maxBehindBy = behindBy;
             if(behindBy > (DMA_BUFFER_SIZE-2)) { // TODO: understand whether we can increase/decrease as we want or not?
-                Dbprintf("blew circular buffer! behindBy=%x", behindBy);
+                Dbprintf("blew circular buffer! behindBy=0x%x", behindBy);
                 goto done;
             }
         }
