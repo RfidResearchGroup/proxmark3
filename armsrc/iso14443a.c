@@ -1,5 +1,6 @@
 //-----------------------------------------------------------------------------
 // Gerhard de Koning Gans - May 2008
+// Hagen Fritsch - June 2010
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -14,11 +15,13 @@
 #include "string.h"
 
 #include "iso14443crc.h"
+#include "iso14443a.h"
 
 static uint8_t *trace = (uint8_t *) BigBuf;
 static int traceLen = 0;
 static int rsamples = 0;
 static int tracing = TRUE;
+static uint32_t iso14a_timeout;
 
 // CARD TO READER
 // Sequence D: 11110000 modulation with subcarrier during first half
@@ -61,6 +64,11 @@ static const uint8_t OddByteParity[256] = {
 #define DMA_BUFFER_SIZE   4096
 #define TRACE_LENGTH      3000
 
+uint8_t trigger = 0;
+void iso14a_set_trigger(int enable) {
+	trigger = enable;
+}
+
 //-----------------------------------------------------------------------------
 // Generate the parity value for a byte sequence
 //
@@ -78,7 +86,7 @@ uint32_t GetParity(const uint8_t * pbtCmd, int iLen)
   return dwPar;
 }
 
-static void AppendCrc14443a(uint8_t* data, int len)
+void AppendCrc14443a(uint8_t* data, int len)
 {
   ComputeCrc14443(CRC_14443_A,data,len,data+len,data+len+1);
 }
@@ -454,6 +462,7 @@ static int ManchesterDecoding(int v)
 			Demod.parityBits = 0;
 			Demod.samples = 0;
 			if(Demod.posCount) {
+				if(trigger) LED_A_OFF();
 				switch(Demod.syncBit) {
 					case 0x08: Demod.samples = 3; break;
 					case 0x04: Demod.samples = 2; break;
@@ -1389,30 +1398,30 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, int maxLen, int 
 	int c;
 
 	// Set FPGA mode to "reader listen mode", no modulation (listen
-    // only, since we are receiving, not transmitting).
-    // Signal field is on with the appropriate LED
-    LED_D_ON();
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_LISTEN);
+	// only, since we are receiving, not transmitting).
+	// Signal field is on with the appropriate LED
+	LED_D_ON();
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_LISTEN);
 
-    // Now get the answer from the card
-    Demod.output = receivedResponse;
-    Demod.len = 0;
-    Demod.state = DEMOD_UNSYNCD;
+	// Now get the answer from the card
+	Demod.output = receivedResponse;
+	Demod.len = 0;
+	Demod.state = DEMOD_UNSYNCD;
 
 	uint8_t b;
 	if (elapsed) *elapsed = 0;
 
 	c = 0;
 	for(;;) {
-        WDT_HIT();
+		WDT_HIT();
 
-        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = 0x00;  // To make use of exact timing of next command from reader!!
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			AT91C_BASE_SSC->SSC_THR = 0x00;  // To make use of exact timing of next command from reader!!
 			if (elapsed) (*elapsed)++;
-        }
-        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			if(c < 2048) { c++; } else { return FALSE; }
-            b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+		}
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+			if(c < iso14a_timeout) { c++; } else { return FALSE; }
+			b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			if(ManchesterDecoding((b>>4) & 0xf)) {
 				*samples = ((c - 1) << 3) + 4;
 				return TRUE;
@@ -1421,8 +1430,8 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, int maxLen, int 
 				*samples = c << 3;
 				return TRUE;
 			}
-        }
-    }
+		}
+	}
 }
 
 void ReaderTransmitShort(const uint8_t* bt)
@@ -1450,6 +1459,8 @@ void ReaderTransmitPar(uint8_t* frame, int len, uint32_t par)
 
   // Select the card
   TransmitFor14443a(ToSend, ToSendMax, &samples, &wait);
+  if(trigger)
+  	LED_A_ON();
 
   // Store reader command in buffer
   if (tracing) LogTrace(frame,len,0,par,TRUE);
@@ -1472,17 +1483,19 @@ int ReaderReceive(uint8_t* receivedAnswer)
 }
 
 /* performs iso14443a anticolision procedure
- * fills the uid pointer */
-int iso14443a_select_card(uint8_t * uid_ptr) {
+ * fills the uid pointer unless NULL
+ * fills resp_data unless NULL */
+int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data) {
 	uint8_t wupa[]       = { 0x52 };
 	uint8_t sel_all[]    = { 0x93,0x20 };
 	uint8_t sel_uid[]    = { 0x93,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
-	uint8_t sel_all_c2[] = { 0x95,0x20 };
-	uint8_t sel_uid_c2[] = { 0x95,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
 	uint8_t rats[]       = { 0xE0,0x80,0x00,0x00 }; // FSD=256, FSDI=8, CID=0
 
 	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
 	uint8_t* uid  = resp + 7;
+
+	uint8_t sak = 0x04; // cascade uid
+	int cascade_level = 0;
 
 	int len;
 
@@ -1490,44 +1503,52 @@ int iso14443a_select_card(uint8_t * uid_ptr) {
 	ReaderTransmitShort(wupa);
 	// Receive the ATQA
 	if(!ReaderReceive(resp)) return 0;
-	// if(*(uint16_t *) resp == 0x4403) MIFARE_CLASSIC
-	// if(*(uint16_t *) resp == 0x0400) MIFARE_DESFIRE
 
-	ReaderTransmit(sel_all,sizeof(sel_all)); // SELECT_ALL
+	if(resp_data)
+		memcpy(resp_data->atqa, resp, 2);
+	
+	ReaderTransmit(sel_all,sizeof(sel_all)); 
 	if(!ReaderReceive(uid)) return 0;
 
-	// Construct SELECT UID command
-	// First copy the 5 bytes (Mifare Classic) after the 93 70
-	memcpy(sel_uid+2,uid,5);
-	// Secondly compute the two CRC bytes at the end
-	AppendCrc14443a(sel_uid,7);
-
-	ReaderTransmit(sel_uid,sizeof(sel_uid));
-	// Receive the SAK
-	if (!ReaderReceive(resp)) return 0;
-
-	// OK we have selected at least at cascade 1, lets see if first byte of UID was 0x88 in
+	// OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
 	// which case we need to make a cascade 2 request and select - this is a long UID
-	// When the UID is not complete, the 3nd bit (from the right) is set in the SAK.
-	if (resp[0] &= 0x04)
+	// While the UID is not complete, the 3nd bit (from the right) is set in the SAK.
+	for(; sak & 0x04; cascade_level++)
 	{
-		ReaderTransmit(sel_all_c2,sizeof(sel_all_c2));
-		if (!ReaderReceive(uid+5)) return 0;
+		// SELECT_* (L1: 0x93, L2: 0x95, L3: 0x97)
+		sel_uid[0] = sel_all[0] = 0x93 + cascade_level * 2;
+
+		// SELECT_ALL
+		ReaderTransmit(sel_all,sizeof(sel_all));
+		if (!ReaderReceive(resp)) return 0;
+		if(uid_ptr) memcpy(uid_ptr + cascade_level*4, resp, 4);
 
 		// Construct SELECT UID command
-		memcpy(sel_uid_c2+2,uid+5,5);
-		AppendCrc14443a(sel_uid_c2,7);
-		ReaderTransmit(sel_uid_c2,sizeof(sel_uid_c2));
+		memcpy(sel_uid+2,resp,5);
+		AppendCrc14443a(sel_uid,7);
+		ReaderTransmit(sel_uid,sizeof(sel_uid));
+
 		// Receive the SAK
 		if (!ReaderReceive(resp)) return 0;
+		sak = resp[0];
 	}
-	if(uid_ptr) memcpy(uid_ptr, uid, 10);
-	if( (resp[0] & 0x20) == 0)
+	if(resp_data) {
+		resp_data->sak = sak;
+		resp_data->ats_len = 0;
+	}
+
+	if( (sak & 0x20) == 0)
 		return 2; // non iso14443a compliant tag
+
 	// Request for answer to select
 	AppendCrc14443a(rats, 2);
 	ReaderTransmit(rats, sizeof(rats));
 	if (!(len = ReaderReceive(resp))) return 0;
+	if(resp_data) {
+		memcpy(resp_data->ats, resp, sizeof(resp_data->ats));
+		resp_data->ats_len = len;
+	}
+
 	return 1;
 }
 
@@ -1547,52 +1568,75 @@ void iso14443a_setup() {
 	LED_D_ON();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 	SpinDelay(200);
+
+	iso14a_timeout = 2048; //default
 }
+
+int iso14_apdu(uint8_t * cmd, size_t cmd_len, void * data) {
+	uint8_t real_cmd[cmd_len+4];
+	real_cmd[0] = 0x0a; //I-Block
+	real_cmd[1] = 0x00; //CID: 0 //FIXME: allow multiple selected cards
+	memcpy(real_cmd+2, cmd, cmd_len);
+	AppendCrc14443a(real_cmd,cmd_len+2);
+ 
+	ReaderTransmit(real_cmd, cmd_len+4);
+	size_t len = ReaderReceive(data);
+	if(!len)
+		return -1; //DATA LINK ERROR
+	
+	return len;
+}
+
 
 //-----------------------------------------------------------------------------
 // Read an ISO 14443a tag. Send out commands and store answers.
 //
 //-----------------------------------------------------------------------------
-void ReaderIso14443a(uint32_t parameter)
+void ReaderIso14443a(UsbCommand * c, UsbCommand * ack)
 {
+	iso14a_command_t param = c->arg[0];
+	uint8_t * cmd = c->d.asBytes;
+	size_t len = c->arg[1];
 
-	// Mifare AUTH
-	uint8_t mf_auth[]    = { 0x60,0x00,0xf5,0x7b };
-//	uint8_t mf_nr_ar[]   = { 0x00,0x00,0x00,0x00 };
+	if(param & ISO14A_REQUEST_TRIGGER) iso14a_set_trigger(1);
 
-	uint8_t* receivedAnswer = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
-	traceLen = 0;
-
-	iso14443a_setup();
-
-	LED_A_ON();
-	LED_B_OFF();
-	LED_C_OFF();
-
-	while(traceLen < TRACE_LENGTH)
-	{
-		// Test if the action was cancelled
-		if(BUTTON_PRESS()) break;
-
-		if(!iso14443a_select_card(NULL)) {
-			DbpString("iso14443a setup failed");
-			break;
-		}
-
-		// Transmit MIFARE_CLASSIC_AUTH
-		ReaderTransmit(mf_auth,sizeof(mf_auth));
-
-		// Receive the (16 bit) "random" nonce
-		if (!ReaderReceive(receivedAnswer)) continue;
+	if(param & ISO14A_CONNECT) {
+		iso14443a_setup();
+		ack->arg[0] = iso14443a_select_card(ack->d.asBytes, (iso14a_card_select_t *) (ack->d.asBytes+12));
+		UsbSendPacket((void *)ack, sizeof(UsbCommand));
 	}
 
-	// Thats it...
+	if(param & ISO14A_SET_TIMEOUT) {
+		iso14a_timeout = c->arg[2];
+	}
+
+	if(param & ISO14A_SET_TIMEOUT) {
+		iso14a_timeout = c->arg[2];
+	}
+
+	if(param & ISO14A_APDU) {
+		ack->arg[0] = iso14_apdu(cmd, len, ack->d.asBytes);
+		UsbSendPacket((void *)ack, sizeof(UsbCommand));
+	}
+
+	if(param & ISO14A_RAW) {
+		if(param & ISO14A_APPEND_CRC) {
+			AppendCrc14443a(cmd,len);
+			len += 2;
+		}
+		ReaderTransmit(cmd,len);
+		ack->arg[0] = ReaderReceive(ack->d.asBytes);
+		UsbSendPacket((void *)ack, sizeof(UsbCommand));
+	}
+
+	if(param & ISO14A_REQUEST_TRIGGER) iso14a_set_trigger(0);
+
+	if(param & ISO14A_NO_DISCONNECT)
+		return;
+
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-	Dbprintf("%x %x %x", rsamples, 0xCC, 0xCC);
-	DbpString("ready..");
 }
-
 //-----------------------------------------------------------------------------
 // Read an ISO 14443a tag. Send out commands and store answers.
 //
@@ -1638,7 +1682,7 @@ void ReaderMifare(uint32_t parameter)
       break;
     }
 
-    if(!iso14443a_select_card(NULL)) continue;
+    if(!iso14443a_select_card(NULL, NULL)) continue;
 
     // Transmit MIFARE_CLASSIC_AUTH
     ReaderTransmit(mf_auth,sizeof(mf_auth));

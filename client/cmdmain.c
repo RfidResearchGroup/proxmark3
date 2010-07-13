@@ -25,6 +25,7 @@
 
 unsigned int current_command = CMD_UNKNOWN;
 unsigned int received_command = CMD_UNKNOWN;
+UsbCommand current_response;
 
 static int CmdHelp(const char *Cmd);
 static int CmdQuit(const char *Cmd);
@@ -53,12 +54,25 @@ int CmdQuit(const char *Cmd)
   return 0;
 }
 
-void WaitForResponse(uint32_t response_type)
+UsbCommand * WaitForResponseTimeout(uint32_t response_type, uint32_t ms_timeout) {
+	UsbCommand * ret = &current_response;
+	int i=0;
+
+	for(i=0; received_command != response_type && i < ms_timeout / 10; i++) {
+		msleep(10); // XXX ugh
+	}
+
+	if(received_command != response_type)
+		ret = NULL;
+
+	received_command = CMD_UNKNOWN;
+
+	return ret;
+}
+
+UsbCommand * WaitForResponse(uint32_t response_type)
 {
-  while (received_command != response_type) {
-    msleep(10); // XXX ugh
-  }
-  received_command = CMD_UNKNOWN;
+	return WaitForResponseTimeout(response_type, -1);
 }
 
 //-----------------------------------------------------------------------------
@@ -137,7 +151,11 @@ void UsbCommandReceived(UsbCommand *UC)
       return;
     default:
     unexpected_response:
-    PrintAndLog("unrecognized command %08x\n", UC->cmd);
-    break;
+
+	if(UC->cmd != CMD_ACK)
+		PrintAndLog("unrecognized command %08x\n", UC->cmd);
+	else
+		memcpy(&current_response, UC, sizeof(UsbCommand));
+	received_command = UC->cmd;
   }
 }

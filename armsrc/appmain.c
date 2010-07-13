@@ -643,7 +643,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 
 #ifdef WITH_ISO14443a
 		case CMD_READER_ISO_14443a:
-			ReaderIso14443a(c->arg[0]);
+			ReaderIso14443a(c, &ack);
 			break;
 #endif
 

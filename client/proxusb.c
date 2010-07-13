@@ -151,9 +151,10 @@ usb_dev_handle* findProxmark(int verbose, unsigned int *iface)
 
     fprintf(stdout, "\nConnected units:\n");
 
-    for (int i = 0; i < iUnit; i++)
-      fprintf(stdout, "\t%d. SN: %s\n", i+1, units[i].serial_number);
-
+    for (int i = 0; i < iUnit; i++) {
+      struct usb_device * dev = usb_device(units[i].handle);
+      fprintf(stdout, "\t%d. SN: %s [%s/%s]\n", i+1, units[i].serial_number, dev->bus->dirname, dev->filename);
+    }
     if (iUnit > 1) {
       while (iSelection < 1 || iSelection > iUnit) {
         fprintf(stdout, "Which unit do you want to connect to? ");

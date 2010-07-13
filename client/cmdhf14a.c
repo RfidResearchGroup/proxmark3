@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>, Hagen Fritsch
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -17,6 +17,7 @@
 #include "ui.h"
 #include "cmdparser.h"
 #include "cmdhf14a.h"
+#include "common.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -147,6 +148,11 @@ int CmdHF14AList(const char *Cmd)
   return 0;
 }
 
+void iso14a_set_timeout(uint32_t timeout) {
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_SET_TIMEOUT, 0, timeout}};
+	SendCommand(&c);
+}
+
 int CmdHF14AMifare(const char *Cmd)
 {
   UsbCommand c = {CMD_READER_MIFARE, {strtol(Cmd, NULL, 0), 0, 0}};
@@ -156,9 +162,26 @@ int CmdHF14AMifare(const char *Cmd)
 
 int CmdHF14AReader(const char *Cmd)
 {
-  UsbCommand c = {CMD_READER_ISO_14443a, {strtol(Cmd, NULL, 0), 0, 0}};
-  SendCommand(&c);
-  return 0;
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
+	SendCommand(&c);
+	UsbCommand * resp = WaitForResponse(CMD_ACK);
+	uint8_t              * uid  = resp->d.asBytes;
+	iso14a_card_select_t * card = uid + 12;
+
+	if(resp->arg[0] == 0) {
+		PrintAndLog("iso14443a card select failed");
+		return 0;
+	}
+
+	PrintAndLog("ATQA : %02x %02x", card->atqa[0], card->atqa[1]);
+	PrintAndLog(" UID : %s", sprint_hex(uid, 12));
+	PrintAndLog(" SAK : %02x [%d]", card->sak, resp->arg[0]);
+	if(resp->arg[0] == 1)
+		PrintAndLog(" ATS : %s", sprint_hex(card->ats, card->ats_len));
+	else
+		PrintAndLog("proprietary non-iso14443a card found, RATS not supported");
+
+	return resp->arg[0];
 }
 
 // ## simulate iso14443a tag

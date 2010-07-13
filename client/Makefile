@@ -45,6 +45,7 @@ CMDSRCS = \
 			data.c \
 			graph.c \
 			ui.c \
+			util.c \
 			cmddata.c \
 			cmdhf.c \
 			cmdhf14a.c \

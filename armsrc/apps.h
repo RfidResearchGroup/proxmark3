@@ -99,7 +99,7 @@ void SnoopIso14443(void);
 /// iso14443a.h
 void SnoopIso14443a(void);
 void SimulateIso14443aTag(int tagType, int TagUid);	// ## simulate iso14443a tag
-void ReaderIso14443a(uint32_t parameter);
+void ReaderIso14443a(UsbCommand * c, UsbCommand * ack);
 void ReaderMifare(uint32_t parameter);
 
 /// iso15693.h
