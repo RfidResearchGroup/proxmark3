@@ -732,7 +732,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			}
 			n.arg[0] = c->arg[0];
 			memcpy(n.d.asDwords, BigBuf+c->arg[0], 12*sizeof(uint32_t));
+			LED_B_ON();
 			UsbSendPacket((uint8_t *)&n, sizeof(n));
+			LED_B_OFF();
 			break;
 		}
 
