@@ -18,7 +18,7 @@ flashstart:
 	b	prefetch_abort
 	b	data_abort
 	b	. @reserved
-	b	irq
+	ldr	pc, [pc,#-0xF20]	@ IRQ - read the AIC
 	b	fiq
 
 reset:
@@ -46,8 +46,6 @@ software_interrupt:
 prefetch_abort:
 	b	.
 data_abort:
-	b	.
-irq:
 	b	.
 fiq:
 	b	.
