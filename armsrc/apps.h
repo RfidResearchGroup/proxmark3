@@ -20,6 +20,10 @@ typedef unsigned char byte_t;
 // maybe processed in some way.
 uint32_t BigBuf[8000];
 
+// This may be used (sparingly) to declare a function to be copied to
+// and executed from RAM
+#define RAMFUNC __attribute((long_call, section(".ramfunc")))
+
 /// appmain.h
 void ReadMem(int addr);
 void __attribute__((noreturn)) AppMain(void);
@@ -97,7 +101,7 @@ void ReadSTMemoryIso14443(uint32_t parameter,uint32_t dwLast);
 void SnoopIso14443(void);
 
 /// iso14443a.h
-void SnoopIso14443a(void);
+void RAMFUNC SnoopIso14443a(void);
 void SimulateIso14443aTag(int tagType, int TagUid);	// ## simulate iso14443a tag
 void ReaderIso14443a(UsbCommand * c, UsbCommand * ack);
 void ReaderMifare(uint32_t parameter);

@@ -47,6 +47,7 @@ SECTIONS
 	.data : {
 		*(.data)
 		*(.data.*)
+		*(.ramfunc)
 		. = ALIGN(4);
 	} >ram AT>osimage :data
 

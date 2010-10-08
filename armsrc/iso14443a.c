@@ -146,7 +146,7 @@ static struct {
     uint8_t   *output;
 } Uart;
 
-static int MillerDecoding(int bit)
+static RAMFUNC int MillerDecoding(int bit)
 {
 	int error = 0;
 	int bitright;
@@ -410,7 +410,7 @@ static struct {
     uint8_t   *output;
 } Demod;
 
-static int ManchesterDecoding(int v)
+static RAMFUNC int ManchesterDecoding(int v)
 {
 	int bit;
 	int modulation;
@@ -607,7 +607,7 @@ static int ManchesterDecoding(int v)
 // triggering so that we start recording at the point that the tag is moved
 // near the reader.
 //-----------------------------------------------------------------------------
-void SnoopIso14443a(void)
+void RAMFUNC SnoopIso14443a(void)
 {
 //	#define RECV_CMD_OFFSET 	2032	// original (working as of 21/2/09) values
 //	#define RECV_RES_OFFSET		2096	// original (working as of 21/2/09) values
