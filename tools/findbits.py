@@ -37,7 +37,7 @@ def invert(data):
 	return out
 
 # do the actual search
-def search(data,target):
+def search(target,data):
 	location= string.find(data,target)
 	if location >= 0:
 		print '*** Match at bit %d:' % location,

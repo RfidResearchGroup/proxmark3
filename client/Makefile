@@ -42,6 +42,7 @@ endif
 CMDSRCS = \
 			crc16.c \
 			iso14443crc.c \
+			iso15693tools.c \
 			data.c \
 			graph.c \
 			ui.c \

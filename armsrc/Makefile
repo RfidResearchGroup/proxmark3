@@ -15,7 +15,7 @@ APP_CFLAGS	= -O2 -DWITH_LF -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b
 
 #SRC_LCD = fonts.c LCD.c
 SRC_LF = lfops.c hitag2.c
-SRC_ISO15693 = iso15693.c
+SRC_ISO15693 = iso15693.c iso15693tools.c 
 SRC_ISO14443a = iso14443a.c
 SRC_ISO14443b = iso14443.c
 
@@ -35,7 +35,7 @@ ARMSRC = fpgaloader.c \
 	crc16.c \
 	$(SRC_ISO14443a) \
 	$(SRC_ISO14443b) \
-        legic_prng.c \
+	legic_prng.c \
 	crc.c
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant

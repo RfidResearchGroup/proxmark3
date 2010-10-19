@@ -87,4 +87,24 @@ macport stuff should do ;)
 =   Linux  =
 ============
 
+1 - Download 
+
+A precompiled DevKitARM cross compiler tool chain package can be found at 
+http://sourceforge.net/projects/devkitpro/files/devkitARM
+Select the one you need (32bit or 64bit) and unpack to a convinient place, eg 
+$HOME/proxmark3/. It will create a devkitARM/ subdirectory.
+
+Of course, you will need a general compiling environment on your computer for
+the client and the libusb headers. In most distributions you will get all you 
+need with the lsb-package (Linux Standard Base). In debian/ubuntu you simply 
+call `aptitude install lsb libusb-dev`. 
+
+For the graphical plot view, you might need the qtlibs (debian/ubuntu: 
+libqt4-dev), too.
+
+2 - Set Environment
+
+export DEVKITPRO=$HOME/proxmark3/
+export DEVKITARM=$DEVKITPRO/devkitARM
+export PATH=${PATH}:${DEVKITARM}/bin
 

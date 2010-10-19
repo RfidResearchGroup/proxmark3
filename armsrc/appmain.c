@@ -124,6 +124,29 @@ void Dbprintf(const char *fmt, ...) {
 	DbpString(output_string);
 }
 
+// prints HEX & ASCII
+void Dbhexdump(int len, uint8_t *d) {
+	int l=0,i;
+	char ascii[9];
+
+	while (len>0) {
+		if (len>8) l=8;
+		else l=len;
+		
+		memcpy(ascii,d,l);
+		ascii[l]=0;	
+		
+		// filter safe ascii
+		for (i=0;i<l;i++) 
+			if (ascii[i]<32 || ascii[i]>126) ascii[i]='.';
+
+		Dbprintf("%-8s %*D",ascii,l,d," ");
+
+		len-=8;
+		d+=8;		
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Read an ADC channel and block till it completes, then return the result
 // in ADC units (0 to 1023). Also a routine to average 32 samples and
@@ -598,6 +621,24 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 #endif
 
+#ifdef WITH_ISO15693
+		case CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693:
+			RecordRawAdcSamplesIso15693();
+			break;
+			
+		case CMD_ISO_15693_COMMAND:
+			DirectTag15693Command(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
+			break;
+					
+		case CMD_ISO_15693_FIND_AFI:
+			BruteforceIso15693Afi(c->arg[0]);
+			break;	
+			
+		case CMD_ISO_15693_DEBUG:
+			SetDebugIso15693(c->arg[0]);
+			break;
+			
+#endif
 		case CMD_BUFF_CLEAR:
 			BufferClear();
 			break;
