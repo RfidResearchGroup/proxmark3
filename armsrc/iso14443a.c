@@ -630,7 +630,8 @@ void RAMFUNC SnoopIso14443a(void)
     // As we receive stuff, we copy it from receivedCmd or receivedResponse
     // into trace, along with its length and other annotations.
     //uint8_t *trace = (uint8_t *)BigBuf;
-    //int traceLen = 0;
+    
+    traceLen = 0; // uncommented to fix ISSUE 15 - gerhard - jan2011
 
     // The DMA buffer, used to stream samples from the FPGA
     int8_t *dmaBuf = ((int8_t *)BigBuf) + DMA_BUFFER_OFFSET;
