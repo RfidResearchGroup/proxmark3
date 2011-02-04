@@ -450,7 +450,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 			Demod.syncBit = 0x02;
 		}
 
-		if(bit & 0x01) {
+		if(bit & 0x01 && Demod.syncBit) {
 			Demod.syncBit = 0x01;
 		}
 		
