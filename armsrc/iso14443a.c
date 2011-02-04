@@ -348,7 +348,7 @@ static RAMFUNC int MillerDecoding(int bit)
 				if(!Uart.syncBit)	{ Uart.syncBit = bit & 2; Uart.samples = 1; }
 				else if(bit & 2)	{ Uart.syncBit = bit & 2; Uart.samples = 1; bit <<= 1; }
 				if(!Uart.syncBit)	{ Uart.syncBit = bit & 1; Uart.samples = 0;
-					if(Uart.syncBit & (Uart.bitBuffer & 8)) {
+					if(Uart.syncBit && (Uart.bitBuffer & 8)) {
 						Uart.syncBit = 8;
 
 						// the first half bit period is expected in next sample
@@ -431,28 +431,29 @@ static RAMFUNC int ManchesterDecoding(int v)
 		Demod.syncBit = 0;
 		//Demod.samples = 0;
 		Demod.posCount = 1;		// This is the first half bit period, so after syncing handle the second part
-		if(bit & 0x08) { Demod.syncBit = 0x08; }
-		if(!Demod.syncBit)	{
-			if(bit & 0x04) { Demod.syncBit = 0x04; }
-		}
-		else if(bit & 0x04) { Demod.syncBit = 0x04; bit <<= 4; }
-		if(!Demod.syncBit)	{
-			if(bit & 0x02) { Demod.syncBit = 0x02; }
-		}
-		else if(bit & 0x02) { Demod.syncBit = 0x02; bit <<= 4; }
-		if(!Demod.syncBit)	{
-			if(bit & 0x01) { Demod.syncBit = 0x01; }
 
-			if(Demod.syncBit & (Demod.buffer & 0x08)) {
-				Demod.syncBit = 0x08;
+		if(bit & 0x08) {
+			Demod.syncBit = 0x08;
+		}
 
-				// The first half bitperiod is expected in next sample
-				Demod.posCount = 0;
-				Demod.output[Demod.len] = 0xfb;
+		if(bit & 0x04) {
+			if(Demod.syncBit) {
+				bit <<= 4;
 			}
+			Demod.syncBit = 0x04;
 		}
-		else if(bit & 0x01) { Demod.syncBit = 0x01; }
 
+		if(bit & 0x02) {
+			if(Demod.syncBit) {
+				bit <<= 2;
+			}
+			Demod.syncBit = 0x02;
+		}
+
+		if(bit & 0x01) {
+			Demod.syncBit = 0x01;
+		}
+		
 		if(Demod.syncBit) {
 			Demod.len = 0;
 			Demod.state = DEMOD_START_OF_COMMUNICATION;
