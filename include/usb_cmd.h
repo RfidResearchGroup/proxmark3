@@ -91,6 +91,7 @@ typedef struct {
 #define CMD_READER_LEGIC_RF				0x0388
 #define CMD_WRITER_LEGIC_RF				0x0399
 #define CMD_READER_MIFARE				0x0389
+#define CMD_SNOOP_ICLASS				0x0392
 
 // For measurements of the antenna tuning
 #define CMD_MEASURE_ANTENNA_TUNING			0x0400

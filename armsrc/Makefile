@@ -36,6 +36,7 @@ ARMSRC = fpgaloader.c \
 	$(SRC_ISO14443a) \
 	$(SRC_ISO14443b) \
 	legic_prng.c \
+	iclass.c \
 	crc.c
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant

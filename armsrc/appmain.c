@@ -706,6 +706,13 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 #endif
 
+#ifdef WITH_ISO14443a
+		// Makes use of ISO14443a FPGA Firmware
+		case CMD_SNOOP_ICLASS:
+			SnoopIClass();
+			break;
+#endif
+
 		case CMD_SIMULATE_TAG_HF_LISTEN:
 			SimulateTagHfListen();
 			break;

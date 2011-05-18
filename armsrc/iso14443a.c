@@ -644,7 +644,7 @@ void RAMFUNC SnoopIso14443a(void)
     // Count of samples received so far, so that we can include timing
     // information in the trace buffer.
     int samples = 0;
-	int rsamples = 0;
+    int rsamples = 0;
 
     memset(trace, 0x44, RECV_CMD_OFFSET);
 
