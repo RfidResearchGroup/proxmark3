@@ -14,6 +14,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define BYTEx(x, n) (((x) >> (n * 8)) & 0xff )
+
 #define LED_RED 1
 #define LED_ORANGE 2
 #define LED_GREEN 4

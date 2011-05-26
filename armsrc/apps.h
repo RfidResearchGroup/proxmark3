@@ -106,6 +106,11 @@ void RAMFUNC SnoopIso14443a(void);
 void SimulateIso14443aTag(int tagType, int TagUid);	// ## simulate iso14443a tag
 void ReaderIso14443a(UsbCommand * c, UsbCommand * ack);
 void ReaderMifare(uint32_t parameter);
+void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
+void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
+void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
+void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
+void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 
 /// iso15693.h
 void RecordRawAdcSamplesIso15693(void);

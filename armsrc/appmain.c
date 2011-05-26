@@ -694,6 +694,25 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 #endif
 
+#ifdef WITH_ISO14443a
+		case CMD_MIFARE_READBL:
+			MifareReadBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+		case CMD_MIFARE_READSC:
+			MifareReadSector(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+		case CMD_MIFARE_WRITEBL:
+			MifareWriteBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+		case CMD_MIFARE_NESTED:
+			MifareNested(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+		case CMD_SIMULATE_MIFARE_CARD:
+			Mifare1ksim(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+			
+#endif
+
 #ifdef WITH_ISO14443b
 		case CMD_SNOOP_ISO_14443:
 			SnoopIso14443();

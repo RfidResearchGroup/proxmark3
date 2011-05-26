@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "util.h"
 #include "iso14443crc.h"
 #include "data.h"
 #include "proxusb.h"
@@ -18,6 +19,7 @@
 #include "cmdparser.h"
 #include "cmdhf14a.h"
 #include "common.h"
+#include "cmdmain.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -160,6 +162,231 @@ int CmdHF14AMifare(const char *Cmd)
   return 0;
 }
 
+int CmdHF14AMfWrBl(const char *Cmd)
+{
+	int i, temp;
+	uint8_t blockNo = 0;
+	uint8_t keyType = 0;
+	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
+	uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	
+	const char *cmdp	= Cmd;
+	const char *cmdpe	= Cmd;
+
+	if (strlen(Cmd)<3) {
+		PrintAndLog("Usage:  hf 14 mfwrbl    <block number> <key A/B> <key (12 hex symbols)> <block data (32 hex symbols)>");
+		PrintAndLog("           sample: hf 14a mfwrbl 0 A FFFFFFFFFFFF 000102030405060708090A0B0C0D0E0F");
+		return 0;
+	}	
+	PrintAndLog("l: %s", Cmd);
+	
+  // skip spaces
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+	blockNo = strtol(cmdp, NULL, 0) & 0xff;
+	
+	// next value
+	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+	if (*cmdp != 'A' && *cmdp != 'a')  {
+		keyType = 1;
+	}
+
+	// next value
+	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+
+	// next value here:cmdpe
+	cmdpe = cmdp;
+	while (*cmdpe!=' ' && *cmdpe!='\t') cmdpe++;
+	while (*cmdpe==' ' || *cmdpe=='\t') cmdpe++;
+
+	if ((int)cmdpe - (int)cmdp != 13) {
+		PrintAndLog("Length of key must be 12 hex symbols");
+		return 0;
+	}
+	
+	for(i = 0; i < 6; i++) {
+		sscanf((char[]){cmdp[0],cmdp[1],0},"%X",&temp);
+		key[i] = temp & 0xff;
+		cmdp++;
+		cmdp++;
+	}	
+
+	// next value
+	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+
+	if (strlen(cmdp) != 32) {
+		PrintAndLog("Length of block data must be 32 hex symbols");
+		return 0;
+	}
+
+	for(i = 0; i < 16; i++) {
+		sscanf((char[]){cmdp[0],cmdp[1],0},"%X",&temp);
+		bldata[i] = temp & 0xff;
+		cmdp++;
+		cmdp++;
+	}	
+	PrintAndLog(" block no:%02x key type:%02x key:%s", blockNo, keyType, sprint_hex(key, 6));
+	PrintAndLog(" data: %s", sprint_hex(bldata, 16));
+	
+  UsbCommand c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}};
+	memcpy(c.d.asBytes, key, 6);
+	memcpy(c.d.asBytes + 10, bldata, 16);
+  SendCommand(&c);
+	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
+
+	if (resp != NULL) {
+		uint8_t                isOK  = resp->arg[0] & 0xff;
+
+		PrintAndLog("isOk:%02x", isOK);
+	} else {
+		PrintAndLog("Command execute timeout");
+	}
+
+	return 0;
+}
+
+int CmdHF14AMfRdBl(const char *Cmd)
+{
+	int i, temp;
+	uint8_t blockNo = 0;
+	uint8_t keyType = 0;
+	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
+	
+	const char *cmdp	= Cmd;
+
+
+	if (strlen(Cmd)<3) {
+		PrintAndLog("Usage:  hf 14 mfrdbl    <block number> <key A/B> <key (12 hex symbols)>");
+		PrintAndLog("           sample: hf 14a mfrdbl 0 A FFFFFFFFFFFF ");
+		return 0;
+	}	
+	
+  // skip spaces
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+	blockNo = strtol(cmdp, NULL, 0) & 0xff;
+	
+	// next value
+	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+	if (*cmdp != 'A' && *cmdp != 'a')  {
+		keyType = 1;
+	}
+
+	// next value
+	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+
+	if (strlen(cmdp) != 12) {
+		PrintAndLog("Length of key must be 12 hex symbols");
+		return 0;
+	}
+	
+	for(i = 0; i < 6; i++) {
+		sscanf((char[]){cmdp[0],cmdp[1],0},"%X",&temp);
+		key[i] = temp & 0xff;
+		cmdp++;
+		cmdp++;
+	}	
+	PrintAndLog(" block no:%02x key type:%02x key:%s ", blockNo, keyType, sprint_hex(key, 6));
+	
+  UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}};
+	memcpy(c.d.asBytes, key, 6);
+  SendCommand(&c);
+	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
+
+	if (resp != NULL) {
+		uint8_t                isOK  = resp->arg[0] & 0xff;
+		uint8_t              * data  = resp->d.asBytes;
+
+		PrintAndLog("isOk:%02x data:%s", isOK, sprint_hex(data, 16));
+	} else {
+		PrintAndLog("Command execute timeout");
+	}
+
+  return 0;
+}
+
+int CmdHF14AMfRdSc(const char *Cmd)
+{
+	int i, temp;
+	uint8_t sectorNo = 0;
+	uint8_t keyType = 0;
+	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
+	
+	const char *cmdp	= Cmd;
+
+
+	if (strlen(Cmd)<3) {
+		PrintAndLog("Usage:  hf 14 mfrdsc    <sector number> <key A/B> <key (12 hex symbols)>");
+		PrintAndLog("           sample: hf 14a mfrdsc 0 A FFFFFFFFFFFF ");
+		return 0;
+	}	
+	
+  // skip spaces
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+	sectorNo = strtol(cmdp, NULL, 0) & 0xff;
+	
+	// next value
+	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+	if (*cmdp != 'A' && *cmdp != 'a')  {
+		keyType = 1;
+	}
+
+	// next value
+	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+
+	if (strlen(cmdp) != 12) {
+		PrintAndLog("Length of key must be 12 hex symbols");
+		return 0;
+	}
+	
+	for(i = 0; i < 6; i++) {
+		sscanf((char[]){cmdp[0],cmdp[1],0},"%X",&temp);
+		key[i] = temp & 0xff;
+		cmdp++;
+		cmdp++;
+	}	
+	PrintAndLog(" sector no:%02x key type:%02x key:%s ", sectorNo, keyType, sprint_hex(key, 6));
+	
+  UsbCommand c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}};
+	memcpy(c.d.asBytes, key, 6);
+  SendCommand(&c);
+	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
+	PrintAndLog(" ");
+
+	if (resp != NULL) {
+		uint8_t                isOK  = resp->arg[0] & 0xff;
+		uint8_t              * data  = resp->d.asBytes;
+
+		PrintAndLog("isOk:%02x", isOK);
+		for (i = 0; i < 2; i++) {
+			PrintAndLog("data:%s", sprint_hex(data + i * 16, 16));
+		}
+	} else {
+		PrintAndLog("Command1 execute timeout");
+	}
+
+		// response2
+	resp = WaitForResponseTimeout(CMD_ACK, 500);
+	PrintAndLog(" ");
+
+	if (resp != NULL) {
+		uint8_t              * data  = resp->d.asBytes;
+
+		for (i = 0; i < 2; i++) {
+			PrintAndLog("data:%s", sprint_hex(data + i * 16, 16));
+		}
+	} else {
+		PrintAndLog("Command2 execute timeout");
+	}
+	
+  return 0;
+}
+
 int CmdHF14AReader(const char *Cmd)
 {
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
@@ -215,6 +442,9 @@ static command_t CommandTable[] =
   {"help",    CmdHelp,        1, "This help"},
   {"list",    CmdHF14AList,   0, "List ISO 14443a history"},
   {"mifare",  CmdHF14AMifare, 0, "Read out sector 0 parity error messages"},
+  {"mfrdbl",  CmdHF14AMfRdBl, 0, "Read MIFARE classic block"},
+  {"mfrdsc",  CmdHF14AMfRdSc, 0, "Read MIFARE classic sector"},
+  {"mfwrbl",  CmdHF14AMfWrBl, 0, "Write MIFARE classic block"},
   {"reader",  CmdHF14AReader, 0, "Act like an ISO14443 Type A reader"},
   {"sim",     CmdHF14ASim,    0, "<UID> -- Fake ISO 14443a tag"},
   {"snoop",   CmdHF14ASnoop,  0, "Eavesdrop ISO 14443 Type A"},

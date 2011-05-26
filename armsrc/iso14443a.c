@@ -16,6 +16,8 @@
 
 #include "iso14443crc.h"
 #include "iso14443a.h"
+#include "crapto1.h"
+#include "mifareutil.h"
 
 static uint8_t *trace = (uint8_t *) BigBuf;
 static int traceLen = 0;
@@ -73,6 +75,11 @@ void iso14a_set_trigger(int enable) {
 // Generate the parity value for a byte sequence
 //
 //-----------------------------------------------------------------------------
+byte_t oddparity (const byte_t bt)
+{
+  return OddByteParity[bt];
+}
+
 uint32_t GetParity(const uint8_t * pbtCmd, int iLen)
 {
   int i;
@@ -1140,10 +1147,11 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 				receivedCmd[0], receivedCmd[1], receivedCmd[2]);
         } else {
             // Never seen this command before
-		Dbprintf("Unknown command received from reader: %x %x %x %x %x %x %x %x %x",
+		Dbprintf("Unknown command received from reader (len=%d): %x %x %x %x %x %x %x %x %x",
+			len,
 			receivedCmd[0], receivedCmd[1], receivedCmd[2],
-			receivedCmd[3], receivedCmd[3], receivedCmd[4],
-			receivedCmd[5], receivedCmd[6], receivedCmd[7]);
+			receivedCmd[3], receivedCmd[4], receivedCmd[5],
+			receivedCmd[6], receivedCmd[7], receivedCmd[8]);
 			// Do not respond
 			resp = resp1; respLen = 0; order = 0;
         }
@@ -1478,7 +1486,7 @@ void ReaderTransmit(uint8_t* frame, int len)
 int ReaderReceive(uint8_t* receivedAnswer)
 {
   int samples = 0;
-  if (!GetIso14443aAnswerFromTag(receivedAnswer,100,&samples,0)) return FALSE;
+  if (!GetIso14443aAnswerFromTag(receivedAnswer,160,&samples,0)) return FALSE;
   if (tracing) LogTrace(receivedAnswer,Demod.len,samples,Demod.parityBits,FALSE);
   if(samples == 0) return FALSE;
   return Demod.len;
@@ -1487,19 +1495,22 @@ int ReaderReceive(uint8_t* receivedAnswer)
 /* performs iso14443a anticolision procedure
  * fills the uid pointer unless NULL
  * fills resp_data unless NULL */
-int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data) {
-	uint8_t wupa[]       = { 0x52 };
+int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data, uint32_t * cuid_ptr) {
+	uint8_t wupa[]       = { 0x52 };  // 0x26 - REQA  0x52 - WAKE-UP
 	uint8_t sel_all[]    = { 0x93,0x20 };
 	uint8_t sel_uid[]    = { 0x93,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
 	uint8_t rats[]       = { 0xE0,0x80,0x00,0x00 }; // FSD=256, FSDI=8, CID=0
 
 	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
-	uint8_t* uid  = resp + 7;
+	//uint8_t* uid  = resp + 7;
 
 	uint8_t sak = 0x04; // cascade uid
 	int cascade_level = 0;
 
 	int len;
+	
+	// clear uid
+	memset(uid_ptr, 0, 8);
 
 	// Broadcast for a card, WUPA (0x52) will force response from all cards in the field
 	ReaderTransmitShort(wupa);
@@ -1509,8 +1520,8 @@ int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data) {
 	if(resp_data)
 		memcpy(resp_data->atqa, resp, 2);
 	
-	ReaderTransmit(sel_all,sizeof(sel_all)); 
-	if(!ReaderReceive(uid)) return 0;
+	//ReaderTransmit(sel_all,sizeof(sel_all)); --- avoid duplicate SELECT request
+	//if(!ReaderReceive(uid)) return 0;
 
 	// OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
 	// which case we need to make a cascade 2 request and select - this is a long UID
@@ -1524,6 +1535,9 @@ int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data) {
 		ReaderTransmit(sel_all,sizeof(sel_all));
 		if (!ReaderReceive(resp)) return 0;
 		if(uid_ptr) memcpy(uid_ptr + cascade_level*4, resp, 4);
+		
+		// calculate crypto UID
+		if(cuid_ptr) *cuid_ptr = bytes_to_num(resp, 4);
 
 		// Construct SELECT UID command
 		memcpy(sel_uid+2,resp,5);
@@ -1538,19 +1552,26 @@ int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data) {
 		resp_data->sak = sak;
 		resp_data->ats_len = 0;
 	}
+	//--  this byte not UID, it CT.  http://www.nxp.com/documents/application_note/AN10927.pdf  page 3
+	if (uid_ptr[0] == 0x88) {  
+		memcpy(uid_ptr, uid_ptr + 1, 7);
+		uid_ptr[7] = 0;
+	}
 
 	if( (sak & 0x20) == 0)
 		return 2; // non iso14443a compliant tag
 
 	// Request for answer to select
-	AppendCrc14443a(rats, 2);
-	ReaderTransmit(rats, sizeof(rats));
-	if (!(len = ReaderReceive(resp))) return 0;
-	if(resp_data) {
+	if(resp_data) {  // JCOP cards - if reader sent RATS then there is no MIFARE session at all!!!
+		AppendCrc14443a(rats, 2);
+		ReaderTransmit(rats, sizeof(rats));
+		
+		if (!(len = ReaderReceive(resp))) return 0;
+		
 		memcpy(resp_data->ats, resp, sizeof(resp_data->ats));
 		resp_data->ats_len = len;
 	}
-
+	
 	return 1;
 }
 
@@ -1604,7 +1625,7 @@ void ReaderIso14443a(UsbCommand * c, UsbCommand * ack)
 
 	if(param & ISO14A_CONNECT) {
 		iso14443a_setup();
-		ack->arg[0] = iso14443a_select_card(ack->d.asBytes, (iso14a_card_select_t *) (ack->d.asBytes+12));
+		ack->arg[0] = iso14443a_select_card(ack->d.asBytes, (iso14a_card_select_t *) (ack->d.asBytes+12), NULL);
 		UsbSendPacket((void *)ack, sizeof(UsbCommand));
 	}
 
@@ -1684,7 +1705,7 @@ void ReaderMifare(uint32_t parameter)
       break;
     }
 
-    if(!iso14443a_select_card(NULL, NULL)) continue;
+    if(!iso14443a_select_card(NULL, NULL, NULL)) continue;
 
     // Transmit MIFARE_CLASSIC_AUTH
     ReaderTransmit(mf_auth,sizeof(mf_auth));
@@ -1738,4 +1759,371 @@ void ReaderMifare(uint32_t parameter)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
   tracing = TRUE;
+  
+    DbpString("COMMAND FINISHED");
+
+    Dbprintf("nt=%x", (int)nt[0]);  
+}
+
+//-----------------------------------------------------------------------------
+// Select, Authenticaate, Read an MIFARE tag. 
+// read block
+//-----------------------------------------------------------------------------
+void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
+{
+  // params
+	uint8_t blockNo = arg0;
+	uint8_t keyType = arg1;
+	uint64_t ui64Key = 0;
+	ui64Key = bytes_to_num(datain, 6);
+	
+	// variables
+  byte_t isOK = 0;
+  byte_t dataoutbuf[16];
+	uint8_t uid[7];
+	uint32_t cuid;
+  struct Crypto1State mpcs = {0, 0};
+	struct Crypto1State *pcs;
+	pcs = &mpcs;
+
+	// clear trace
+  traceLen = 0;
+//  tracing = false;
+
+	iso14443a_setup();
+
+	LED_A_ON();
+	LED_B_OFF();
+	LED_C_OFF();
+
+	while (true) {
+		if(!iso14443a_select_card(uid, NULL, &cuid)) {
+			Dbprintf("Can't select card");
+			break;
+		};
+
+		if(mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, 0)) {
+			Dbprintf("Auth error");
+			break;
+		};
+		
+		if(mifare_classic_readblock(pcs, cuid, blockNo, dataoutbuf)) {
+			Dbprintf("Read block error");
+			break;
+		};
+
+		if(mifare_classic_halt(pcs, cuid)) {
+			Dbprintf("Halt error");
+			break;
+		};
+		
+		isOK = 1;
+		break;
+	}
+	
+	//  ----------------------------- crypto1 destroy
+	crypto1_destroy(pcs);
+	
+//    DbpString("READ BLOCK FINISHED");
+
+	// add trace trailer
+	uid[0] = 0xff;
+	uid[1] = 0xff;
+	uid[2] = 0xff;
+	uid[3] = 0xff;
+  LogTrace(uid, 4, 0, 0, TRUE);
+
+	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
+	memcpy(ack.d.asBytes, dataoutbuf, 16);
+	
+	LED_B_ON();
+	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+	LED_B_OFF();	
+
+
+  // Thats it...
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
+//  tracing = TRUE;
+
+}
+
+//-----------------------------------------------------------------------------
+// Select, Authenticaate, Read an MIFARE tag. 
+// read sector (data = 4 x 16 bytes = 64 bytes)
+//-----------------------------------------------------------------------------
+void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
+{
+  // params
+	uint8_t sectorNo = arg0;
+	uint8_t keyType = arg1;
+	uint64_t ui64Key = 0;
+	ui64Key = bytes_to_num(datain, 6);
+	
+	// variables
+  byte_t isOK = 0;
+  byte_t dataoutbuf[16 * 4];
+	uint8_t uid[8];
+	uint32_t cuid;
+  struct Crypto1State mpcs = {0, 0};
+	struct Crypto1State *pcs;
+	pcs = &mpcs;
+
+	// clear trace
+  traceLen = 0;
+//  tracing = false;
+
+	iso14443a_setup();
+
+	LED_A_ON();
+	LED_B_OFF();
+	LED_C_OFF();
+
+	while (true) {
+		if(!iso14443a_select_card(uid, NULL, &cuid)) {
+			Dbprintf("Can't select card");
+			break;
+		};
+
+		if(mifare_classic_auth(pcs, cuid, sectorNo * 4, keyType, ui64Key, 0)) {
+			Dbprintf("Auth error");
+			break;
+		};
+		
+		if(mifare_classic_readblock(pcs, cuid, sectorNo * 4 + 0, dataoutbuf + 16 * 0)) {
+			Dbprintf("Read block 0 error");
+			break;
+		};
+		if(mifare_classic_readblock(pcs, cuid, sectorNo * 4 + 1, dataoutbuf + 16 * 1)) {
+			Dbprintf("Read block 1 error");
+			break;
+		};
+		if(mifare_classic_readblock(pcs, cuid, sectorNo * 4 + 2, dataoutbuf + 16 * 2)) {
+			Dbprintf("Read block 2 error");
+			break;
+		};
+		if(mifare_classic_readblock(pcs, cuid, sectorNo * 4 + 3, dataoutbuf + 16 * 3)) {
+			Dbprintf("Read block 3 error");
+			break;
+		};
+		
+		if(mifare_classic_halt(pcs, cuid)) {
+			Dbprintf("Halt error");
+			break;
+		};
+
+		isOK = 1;
+		break;
+	}
+	
+	//  ----------------------------- crypto1 destroy
+	crypto1_destroy(pcs);
+	
+//    DbpString("READ BLOCK FINISHED");
+
+	// add trace trailer
+	uid[0] = 0xff;
+	uid[1] = 0xff;
+	uid[2] = 0xff;
+	uid[3] = 0xff;
+  LogTrace(uid, 4, 0, 0, TRUE);
+
+	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
+	memcpy(ack.d.asBytes, dataoutbuf, 16 * 2);
+	
+	LED_B_ON();
+	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+
+	SpinDelay(100);
+	
+	memcpy(ack.d.asBytes, dataoutbuf + 16 * 2, 16 * 2);
+	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+	LED_B_OFF();	
+
+  // Thats it...
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
+//  tracing = TRUE;
+
+}
+
+//-----------------------------------------------------------------------------
+// Select, Authenticaate, Read an MIFARE tag. 
+// read block
+//-----------------------------------------------------------------------------
+void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
+{
+  // params
+	uint8_t blockNo = arg0;
+	uint8_t keyType = arg1;
+	uint64_t ui64Key = 0;
+  byte_t blockdata[16];
+
+	ui64Key = bytes_to_num(datain, 6);
+	memcpy(blockdata, datain + 10, 16);
+	
+	// variables
+  byte_t isOK = 0;
+	uint8_t uid[8];
+	uint32_t cuid;
+  struct Crypto1State mpcs = {0, 0};
+	struct Crypto1State *pcs;
+	pcs = &mpcs;
+
+	// clear trace
+  traceLen = 0;
+//  tracing = false;
+
+	iso14443a_setup();
+
+	LED_A_ON();
+	LED_B_OFF();
+	LED_C_OFF();
+
+	while (true) {
+		if(!iso14443a_select_card(uid, NULL, &cuid)) {
+			Dbprintf("Can't select card");
+			break;
+		};
+
+		if(mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, 0)) {
+			Dbprintf("Auth error");
+			break;
+		};
+		
+		if(mifare_classic_writeblock(pcs, cuid, blockNo, blockdata)) {
+			Dbprintf("Write block error");
+			break;
+		};
+
+		if(mifare_classic_halt(pcs, cuid)) {
+			Dbprintf("Halt error");
+			break;
+		};
+		
+		isOK = 1;
+		break;
+	}
+	
+	//  ----------------------------- crypto1 destroy
+	crypto1_destroy(pcs);
+	
+//  DbpString("WRITE BLOCK FINISHED");
+
+	// add trace trailer
+	uid[0] = 0xff;
+	uid[1] = 0xff;
+	uid[2] = 0xff;
+	uid[3] = 0xff;
+  LogTrace(uid, 4, 0, 0, TRUE);
+
+	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
+	
+	LED_B_ON();
+	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+	LED_B_OFF();	
+
+
+  // Thats it...
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
+//  tracing = TRUE;
+
+}
+
+//-----------------------------------------------------------------------------
+// MIFARE nested authentication. 
+// 
+//-----------------------------------------------------------------------------
+void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
+{
+  // params
+	uint8_t blockNo = arg0;
+	uint8_t keyType = arg1;
+	uint64_t ui64Key = 0;
+
+	ui64Key = bytes_to_num(datain, 6);
+	
+	// variables
+  byte_t isOK = 0;
+	uint8_t uid[8];
+	uint32_t cuid;
+	uint8_t dataoutbuf[16];
+  struct Crypto1State mpcs = {0, 0};
+	struct Crypto1State *pcs;
+	pcs = &mpcs;
+
+	// clear trace
+  traceLen = 0;
+//  tracing = false;
+
+	iso14443a_setup();
+
+	LED_A_ON();
+	LED_B_OFF();
+	LED_C_OFF();
+
+	while (true) {
+		if(!iso14443a_select_card(uid, NULL, &cuid)) {
+			Dbprintf("Can't select card");
+			break;
+		};
+		
+		if(mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, 0)) {
+			Dbprintf("Auth error");
+			break;
+		};
+
+		// nested authenticate block = (blockNo + 1)
+		if(mifare_classic_auth(pcs, (uint32_t)bytes_to_num(uid, 4), blockNo + 1, keyType, ui64Key, 1)) {
+			Dbprintf("Auth error");
+			break;
+		};
+		
+		if(mifare_classic_readblock(pcs, (uint32_t)bytes_to_num(uid, 4), blockNo + 1, dataoutbuf)) {
+			Dbprintf("Read block error");
+			break;
+		};
+
+		if(mifare_classic_halt(pcs, (uint32_t)bytes_to_num(uid, 4))) {
+			Dbprintf("Halt error");
+			break;
+		};
+		
+		isOK = 1;
+		break;
+	}
+	
+	//  ----------------------------- crypto1 destroy
+	crypto1_destroy(pcs);
+	
+  DbpString("NESTED FINISHED");
+
+	// add trace trailer
+	uid[0] = 0xff;
+	uid[1] = 0xff;
+	uid[2] = 0xff;
+	uid[3] = 0xff;
+  LogTrace(uid, 4, 0, 0, TRUE);
+
+	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
+	memcpy(ack.d.asBytes, dataoutbuf, 16);
+	
+	LED_B_ON();
+	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+	LED_B_OFF();	
+
+  // Thats it...
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
+//  tracing = TRUE;
+
+}
+
+//-----------------------------------------------------------------------------
+// MIFARE 1K simulate. 
+// 
+//-----------------------------------------------------------------------------
+void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
+{
 }
