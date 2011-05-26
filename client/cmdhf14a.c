@@ -387,6 +387,109 @@ int CmdHF14AMfRdSc(const char *Cmd)
   return 0;
 }
 
+int CmdHF14AMfNested(const char *Cmd)
+{
+	int i, temp;
+	uint8_t sectorNo = 0;
+	uint8_t keyType = 0;
+	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
+	
+	const char *cmdp	= Cmd;
+
+
+	if (strlen(Cmd)<3) {
+		PrintAndLog("Usage:  hf 14a nested    <sector number> <key A/B> <key (12 hex symbols)>");
+		PrintAndLog("           sample: hf 14a nested 0 A FFFFFFFFFFFF ");
+		return 0;
+	}	
+	
+  // skip spaces
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+	sectorNo = strtol(cmdp, NULL, 0) & 0xff;
+	
+	// next value
+	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+	if (*cmdp != 'A' && *cmdp != 'a')  {
+		keyType = 1;
+	}
+
+	// next value
+	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+
+	if (strlen(cmdp) != 12) {
+		PrintAndLog("Length of key must be 12 hex symbols");
+		return 0;
+	}
+	
+	for(i = 0; i < 6; i++) {
+		sscanf((char[]){cmdp[0],cmdp[1],0},"%X",&temp);
+		key[i] = temp & 0xff;
+		cmdp++;
+		cmdp++;
+	}	
+	PrintAndLog(" sector no:%02x key type:%02x key:%s ", sectorNo, keyType, sprint_hex(key, 6));
+	
+  UsbCommand c = {CMD_MIFARE_NESTED, {sectorNo, keyType, 0}};
+	memcpy(c.d.asBytes, key, 6);
+  SendCommand(&c);
+	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
+	PrintAndLog(" ");
+
+	if (resp != NULL) {
+		uint8_t                isOK  = resp->arg[0] & 0xff;
+		uint8_t              * data  = resp->d.asBytes;
+
+		PrintAndLog("isOk:%02x", isOK);
+		for (i = 0; i < 2; i++) {
+			PrintAndLog("data:%s", sprint_hex(data + i * 16, 16));
+		}
+	} else {
+		PrintAndLog("Command execute timeout");
+	}
+
+  return 0;
+}
+
+int CmdHF14AMf1kSim(const char *Cmd)
+{
+	int i, temp;
+	uint8_t uid[4] = {0, 0, 0, 0};
+	
+	const char *cmdp	= Cmd;
+
+
+	if (strlen(Cmd)<3) {
+		PrintAndLog("Usage:  hf 14a mfsim  <uid (8 hex symbols)>");
+		PrintAndLog("           sample: hf 14a mfsim 0a0a0a0a ");
+		return 0;
+	}	
+	
+  // skip spaces
+	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+
+	if (strlen(cmdp) != 8) {
+		PrintAndLog("Length of UID must be 8 hex symbols");
+		return 0;
+	}
+	
+	for(i = 0; i < 4; i++) {
+		sscanf((char[]){cmdp[0],cmdp[1],0},"%X",&temp);
+		uid[i] = temp & 0xff;
+		cmdp++;
+		cmdp++;
+	}	
+	PrintAndLog(" uid:%s ", sprint_hex(uid, 4));
+	
+  UsbCommand c = {CMD_SIMULATE_MIFARE_CARD, {0, 0, 0}};
+	memcpy(c.d.asBytes, uid, 6);
+  SendCommand(&c);
+
+  return 0;
+}
+
+
 int CmdHF14AReader(const char *Cmd)
 {
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
@@ -439,15 +542,17 @@ int CmdHF14ASnoop(const char *Cmd)
 
 static command_t CommandTable[] = 
 {
-  {"help",    CmdHelp,        1, "This help"},
-  {"list",    CmdHF14AList,   0, "List ISO 14443a history"},
-  {"mifare",  CmdHF14AMifare, 0, "Read out sector 0 parity error messages"},
-  {"mfrdbl",  CmdHF14AMfRdBl, 0, "Read MIFARE classic block"},
-  {"mfrdsc",  CmdHF14AMfRdSc, 0, "Read MIFARE classic sector"},
-  {"mfwrbl",  CmdHF14AMfWrBl, 0, "Write MIFARE classic block"},
-  {"reader",  CmdHF14AReader, 0, "Act like an ISO14443 Type A reader"},
-  {"sim",     CmdHF14ASim,    0, "<UID> -- Fake ISO 14443a tag"},
-  {"snoop",   CmdHF14ASnoop,  0, "Eavesdrop ISO 14443 Type A"},
+  {"help",   CmdHelp,          1, "This help"},
+  {"list",   CmdHF14AList,     0, "List ISO 14443a history"},
+  {"mifare", CmdHF14AMifare,   0, "Read out sector 0 parity error messages"},
+  {"mfrdbl", CmdHF14AMfRdBl,   0, "Read MIFARE classic block"},
+  {"mfrdsc", CmdHF14AMfRdSc,   0, "Read MIFARE classic sector"},
+  {"mfwrbl", CmdHF14AMfWrBl,   0, "Write MIFARE classic block"},
+  {"nested", CmdHF14AMfNested, 0, "Test nested authentication"},
+  {"mfsim",  CmdHF14AMf1kSim,  0, "Simulate MIFARE 1k card - NOT WORKING!!!"},
+  {"reader", CmdHF14AReader,   0, "Act like an ISO14443 Type A reader"},
+  {"sim",    CmdHF14ASim,      0, "<UID> -- Fake ISO 14443a tag"},
+  {"snoop",  CmdHF14ASnoop,    0, "Eavesdrop ISO 14443 Type A"},
   {NULL, NULL, 0, NULL}
 };
 

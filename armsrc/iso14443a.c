@@ -1502,7 +1502,6 @@ int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data, u
 	uint8_t rats[]       = { 0xE0,0x80,0x00,0x00 }; // FSD=256, FSDI=8, CID=0
 
 	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
-	//uint8_t* uid  = resp + 7;
 
 	uint8_t sak = 0x04; // cascade uid
 	int cascade_level = 0;
@@ -1520,9 +1519,6 @@ int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data, u
 	if(resp_data)
 		memcpy(resp_data->atqa, resp, 2);
 	
-	//ReaderTransmit(sel_all,sizeof(sel_all)); --- avoid duplicate SELECT request
-	//if(!ReaderReceive(uid)) return 0;
-
 	// OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
 	// which case we need to make a cascade 2 request and select - this is a long UID
 	// While the UID is not complete, the 3nd bit (from the right) is set in the SAK.
@@ -1778,17 +1774,17 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	ui64Key = bytes_to_num(datain, 6);
 	
 	// variables
-  byte_t isOK = 0;
-  byte_t dataoutbuf[16];
+	byte_t isOK = 0;
+	byte_t dataoutbuf[16];
 	uint8_t uid[7];
 	uint32_t cuid;
-  struct Crypto1State mpcs = {0, 0};
+	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
 
 	// clear trace
-  traceLen = 0;
-//  tracing = false;
+	traceLen = 0;
+//	tracing = false;
 
 	iso14443a_setup();
 
@@ -1802,7 +1798,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 			break;
 		};
 
-		if(mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, 0)) {
+		if(mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
 			Dbprintf("Auth error");
 			break;
 		};
@@ -1831,14 +1827,14 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	uid[1] = 0xff;
 	uid[2] = 0xff;
 	uid[3] = 0xff;
-  LogTrace(uid, 4, 0, 0, TRUE);
+	LogTrace(uid, 4, 0, 0, TRUE);
 
 	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
 	memcpy(ack.d.asBytes, dataoutbuf, 16);
 	
 	LED_B_ON();
 	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
-	LED_B_OFF();	
+	LED_B_OFF();
 
 
   // Thats it...
@@ -1861,17 +1857,17 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	ui64Key = bytes_to_num(datain, 6);
 	
 	// variables
-  byte_t isOK = 0;
-  byte_t dataoutbuf[16 * 4];
+	byte_t isOK = 0;
+	byte_t dataoutbuf[16 * 4];
 	uint8_t uid[8];
 	uint32_t cuid;
-  struct Crypto1State mpcs = {0, 0};
+	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
 
 	// clear trace
-  traceLen = 0;
-//  tracing = false;
+	traceLen = 0;
+//	tracing = false;
 
 	iso14443a_setup();
 
@@ -1885,7 +1881,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 			break;
 		};
 
-		if(mifare_classic_auth(pcs, cuid, sectorNo * 4, keyType, ui64Key, 0)) {
+		if(mifare_classic_auth(pcs, cuid, sectorNo * 4, keyType, ui64Key, AUTH_FIRST)) {
 			Dbprintf("Auth error");
 			break;
 		};
@@ -1926,7 +1922,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	uid[1] = 0xff;
 	uid[2] = 0xff;
 	uid[3] = 0xff;
-  LogTrace(uid, 4, 0, 0, TRUE);
+	LogTrace(uid, 4, 0, 0, TRUE);
 
 	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
 	memcpy(ack.d.asBytes, dataoutbuf, 16 * 2);
@@ -1940,7 +1936,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 	LED_B_OFF();	
 
-  // Thats it...
+	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 //  tracing = TRUE;
@@ -1953,25 +1949,25 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 //-----------------------------------------------------------------------------
 void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 {
-  // params
+	// params
 	uint8_t blockNo = arg0;
 	uint8_t keyType = arg1;
 	uint64_t ui64Key = 0;
-  byte_t blockdata[16];
+	byte_t blockdata[16];
 
 	ui64Key = bytes_to_num(datain, 6);
 	memcpy(blockdata, datain + 10, 16);
 	
 	// variables
-  byte_t isOK = 0;
+	byte_t isOK = 0;
 	uint8_t uid[8];
 	uint32_t cuid;
-  struct Crypto1State mpcs = {0, 0};
+	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
 
 	// clear trace
-  traceLen = 0;
+	traceLen = 0;
 //  tracing = false;
 
 	iso14443a_setup();
@@ -1986,7 +1982,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 			break;
 		};
 
-		if(mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, 0)) {
+		if(mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
 			Dbprintf("Auth error");
 			break;
 		};
@@ -2015,7 +2011,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	uid[1] = 0xff;
 	uid[2] = 0xff;
 	uid[3] = 0xff;
-  LogTrace(uid, 4, 0, 0, TRUE);
+	LogTrace(uid, 4, 0, 0, TRUE);
 
 	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
 	
@@ -2024,7 +2020,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LED_B_OFF();	
 
 
-  // Thats it...
+	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 //  tracing = TRUE;
@@ -2037,7 +2033,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 //-----------------------------------------------------------------------------
 void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 {
-  // params
+	// params
 	uint8_t blockNo = arg0;
 	uint8_t keyType = arg1;
 	uint64_t ui64Key = 0;
@@ -2045,16 +2041,16 @@ void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	ui64Key = bytes_to_num(datain, 6);
 	
 	// variables
-  byte_t isOK = 0;
+	byte_t isOK = 0;
 	uint8_t uid[8];
 	uint32_t cuid;
 	uint8_t dataoutbuf[16];
-  struct Crypto1State mpcs = {0, 0};
+	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
 
 	// clear trace
-  traceLen = 0;
+	traceLen = 0;
 //  tracing = false;
 
 	iso14443a_setup();
@@ -2069,13 +2065,13 @@ void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 			break;
 		};
 		
-		if(mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, 0)) {
+		if(mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
 			Dbprintf("Auth error");
 			break;
 		};
 
 		// nested authenticate block = (blockNo + 1)
-		if(mifare_classic_auth(pcs, (uint32_t)bytes_to_num(uid, 4), blockNo + 1, keyType, ui64Key, 1)) {
+		if(mifare_classic_auth(pcs, (uint32_t)bytes_to_num(uid, 4), blockNo + 1, keyType, ui64Key, AUTH_NESTED)) {
 			Dbprintf("Auth error");
 			break;
 		};
@@ -2097,14 +2093,14 @@ void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
 	
-  DbpString("NESTED FINISHED");
+	DbpString("NESTED FINISHED");
 
 	// add trace trailer
 	uid[0] = 0xff;
 	uid[1] = 0xff;
 	uid[2] = 0xff;
 	uid[3] = 0xff;
-  LogTrace(uid, 4, 0, 0, TRUE);
+	LogTrace(uid, 4, 0, 0, TRUE);
 
 	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
 	memcpy(ack.d.asBytes, dataoutbuf, 16);
@@ -2113,7 +2109,7 @@ void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 	LED_B_OFF();	
 
-  // Thats it...
+	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 //  tracing = TRUE;

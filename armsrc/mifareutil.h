@@ -9,6 +9,12 @@
 // code for work with mifare cards.
 //-----------------------------------------------------------------------------
 
+#define CRYPT_NONE    0
+#define CRYPT_ALL     1
+#define CRYPT_REQUEST 2
+#define AUTH_FIRST    0
+#define AUTH_NESTED   2
+
 int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, \
                         uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested);
 int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData); 
