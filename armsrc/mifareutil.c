@@ -25,6 +25,11 @@ uint8_t* mifare_get_bigbufptr(void) {
 
 int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer)
 {
+	return mifare_sendcmd_shortex(pcs, crypted, cmd, data, answer, NULL);
+}
+
+int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint32_t * parptr)
+{
 	uint8_t dcmd[4], ecmd[4];
 	uint32_t pos, par, res;
 
@@ -48,7 +53,9 @@ int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd,
 		ReaderTransmit(dcmd, sizeof(dcmd));
 	}
 
-	int len = ReaderReceive(answer);
+	int len = ReaderReceivePar(answer, &par);
+	
+	if (parptr) *parptr = par;
 
 	if (crypted == CRYPT_ALL) {
 		if (len == 1) {
@@ -70,6 +77,11 @@ int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd,
 }
 
 int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested) 
+{
+	return mifare_classic_authex(pcs, uid, blockNo, keyType, ui64Key, isNested, NULL);
+}
+
+int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested, uint32_t * ntptr) 
 {
 	// variables
 	int len;	
@@ -111,7 +123,12 @@ int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo,
 	}
 
 	// some statistic
-	Dbprintf("auth uid: %08x nt: %08x", uid, nt);  
+	if (!ntptr)
+		Dbprintf("auth uid: %08x nt: %08x", uid, nt);  
+	
+	// save Nt
+	if (ntptr)
+		*ntptr = nt;
 
 	par = 0;
 	// Generate (encrypted) nr+parity by loading it into the cipher (Nr)

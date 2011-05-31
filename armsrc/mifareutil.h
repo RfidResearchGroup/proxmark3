@@ -15,8 +15,14 @@
 #define AUTH_FIRST    0
 #define AUTH_NESTED   2
 
+uint8_t* mifare_get_bigbufptr(void);
+int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer);
+int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint32_t * parptr);
+
 int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, \
-                        uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested);
+												uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested);
+int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, \
+													uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested, uint32_t * ntptr);
 int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData); 
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData);
 int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid); 

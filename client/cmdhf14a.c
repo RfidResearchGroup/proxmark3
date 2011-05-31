@@ -1,4 +1,5 @@
 //-----------------------------------------------------------------------------
+// 2011, Merlok
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>, Hagen Fritsch
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -11,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <conio.h>
 #include "util.h"
 #include "iso14443crc.h"
 #include "data.h"
@@ -20,6 +22,8 @@
 #include "cmdhf14a.h"
 #include "common.h"
 #include "cmdmain.h"
+#include "nonce2key/nonce2key.h"
+#include "nonce2key/crapto1.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -147,7 +151,7 @@ int CmdHF14AList(const char *Cmd)
     prev = timestamp;
     i += (len + 9);
   }
-  return 0;
+	return 0;
 }
 
 void iso14a_set_timeout(uint32_t timeout) {
@@ -157,9 +161,60 @@ void iso14a_set_timeout(uint32_t timeout) {
 
 int CmdHF14AMifare(const char *Cmd)
 {
-  UsbCommand c = {CMD_READER_MIFARE, {strtol(Cmd, NULL, 0), 0, 0}};
-  SendCommand(&c);
-  return 0;
+	uint32_t uid = 0;
+	uint32_t nt = 0;
+	uint64_t par_list = 0, ks_list = 0, r_key = 0;
+	uint8_t isOK = 0;
+	
+	UsbCommand c = {CMD_READER_MIFARE, {strtol(Cmd, NULL, 0), 0, 0}};
+	SendCommand(&c);
+	
+	//flush queue
+	while (kbhit())	getchar();
+	while (WaitForResponseTimeout(CMD_ACK, 500) != NULL) ;
+
+	// message
+	printf("-------------------------------------------------------------------------\n");
+	printf("Executing command. It may take up to 30 min.\n");
+	printf("Press the key on proxmark3 device to abort proxmark3.\n");
+	printf("Press the key on the proxmark3 device to abort both proxmark3 and client.\n");
+	printf("-------------------------------------------------------------------------\n");
+	
+	// wait cycle
+	while (true) {
+		printf(".");
+		if (kbhit()) {
+			getchar();
+			printf("\naborted via keyboard!\n");
+			break;
+		}
+		
+		UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 2000);
+		if (resp != NULL) {
+			isOK  = resp->arg[0] & 0xff;
+	
+			uid = (uint32_t)bytes_to_num(resp->d.asBytes +  0, 4);
+			nt =  (uint32_t)bytes_to_num(resp->d.asBytes +  4, 4);
+			par_list = bytes_to_num(resp->d.asBytes +  8, 8);
+			ks_list = bytes_to_num(resp->d.asBytes +  16, 8);
+	
+			printf("\n\n");
+			PrintAndLog("isOk:%02x", isOK);
+			if (!isOK) PrintAndLog("Proxmark can't get statistic info. Execution aborted.\n");
+			break;
+		}
+	}	
+	printf("\n");
+	
+	// error
+	if (isOK != 1) return 1;
+	
+	// execute original function from util nonce2key
+	if (nonce2key(uid, nt, par_list, ks_list, &r_key)) return 2;
+	printf("-------------------------------------------------------------------------\n");
+	PrintAndLog("Key found:%012llx \n", r_key);
+	
+	return 0;
 }
 
 int CmdHF14AMfWrBl(const char *Cmd)
@@ -180,7 +235,7 @@ int CmdHF14AMfWrBl(const char *Cmd)
 	}	
 	PrintAndLog("l: %s", Cmd);
 	
-  // skip spaces
+	// skip spaces
 	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
 	blockNo = strtol(cmdp, NULL, 0) & 0xff;
 	
@@ -544,7 +599,7 @@ static command_t CommandTable[] =
 {
   {"help",   CmdHelp,          1, "This help"},
   {"list",   CmdHF14AList,     0, "List ISO 14443a history"},
-  {"mifare", CmdHF14AMifare,   0, "Read out sector 0 parity error messages"},
+  {"mifare", CmdHF14AMifare,   0, "Read out sector 0 parity error messages. param - <used card nonce>"},
   {"mfrdbl", CmdHF14AMfRdBl,   0, "Read MIFARE classic block"},
   {"mfrdsc", CmdHF14AMfRdSc,   0, "Read MIFARE classic sector"},
   {"mfwrbl", CmdHF14AMfWrBl,   0, "Write MIFARE classic block"},

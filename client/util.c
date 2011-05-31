@@ -30,3 +30,22 @@ char * sprint_hex(const uint8_t * data, const size_t len) {
 
 	return buf;
 }
+
+void num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
+{
+	while (len--) {
+		dest[len] = (uint8_t) n;
+		n >>= 8;
+	}
+}
+
+uint64_t bytes_to_num(uint8_t* src, size_t len)
+{
+	uint64_t num = 0;
+	while (len--)
+	{
+		num = (num << 8) | (*src);
+		src++;
+	}
+	return num;
+}
