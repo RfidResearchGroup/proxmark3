@@ -444,13 +444,18 @@ int CmdHF14AMfRdSc(const char *Cmd)
 
 int CmdHF14AMfNested(const char *Cmd)
 {
-	int i, temp;
+	int i, temp, len;
 	uint8_t sectorNo = 0;
 	uint8_t keyType = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
+	uint8_t isEOF;
+	uint8_t * data;
+	uint32_t uid;
+	fnVector * vector = NULL;
+	int lenVector = 0;
+	UsbCommand * resp = NULL;
 	
 	const char *cmdp	= Cmd;
-
 
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:  hf 14a nested    <sector number> <key A/B> <key (12 hex symbols)>");
@@ -485,24 +490,69 @@ int CmdHF14AMfNested(const char *Cmd)
 		cmdp++;
 	}	
 	PrintAndLog(" sector no:%02x key type:%02x key:%s ", sectorNo, keyType, sprint_hex(key, 6));
+
+	// flush queue
+	while (WaitForResponseTimeout(CMD_ACK, 500) != NULL) ;
 	
   UsbCommand c = {CMD_MIFARE_NESTED, {sectorNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
   SendCommand(&c);
-	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
-	PrintAndLog(" ");
 
-	if (resp != NULL) {
-		uint8_t                isOK  = resp->arg[0] & 0xff;
-		uint8_t              * data  = resp->d.asBytes;
+	PrintAndLog("\n");
+	printf("-------------------------------------------------------------------------\n");
 
-		PrintAndLog("isOk:%02x", isOK);
-		for (i = 0; i < 2; i++) {
-			PrintAndLog("data:%s", sprint_hex(data + i * 16, 16));
+	// wait cycle
+	while (true) {
+		printf(".");
+		if (kbhit()) {
+			getchar();
+			printf("\naborted via keyboard!\n");
+			break;
 		}
-	} else {
-		PrintAndLog("Command execute timeout");
+
+		resp = WaitForResponseTimeout(CMD_ACK, 1500);
+
+		if (resp != NULL) {
+			isEOF  = resp->arg[0] & 0xff;
+			data  = resp->d.asBytes;
+
+			PrintAndLog("isEOF:%02x", isEOF);	
+			for (i = 0; i < 2; i++) {
+				PrintAndLog("data:%s", sprint_hex(data + i * 16, 16));
+			}
+			if (isEOF) break;
+			
+			len = resp->arg[1] & 0xff;
+			if (len == 0) continue;
+			
+			memcpy(&uid, resp->d.asBytes, 4); 
+			PrintAndLog("uid:%08x len=%d trgbl=%d trgkey=%d", uid, len, resp->arg[2] & 0xff, (resp->arg[2] >> 8) & 0xff);
+
+			vector = (fnVector *) realloc((void *)vector, (lenVector + len) * sizeof(fnVector) + 200);
+			if (vector == NULL) {
+				PrintAndLog("Memory allocation error for fnVector. len: %d bytes: %d", lenVector + len, (lenVector + len) * sizeof(fnVector)); 
+				break;
+			}
+			
+			for (i = 0; i < len; i++) {
+				vector[lenVector + i].blockNo = resp->arg[2] & 0xff;
+				vector[lenVector + i].keyType = (resp->arg[2] >> 8) & 0xff;
+				vector[lenVector + i].uid = uid;
+
+				memcpy(&vector[lenVector + i].nt,  (void *)(resp->d.asBytes + 8 + i * 8 + 0), 4);
+				memcpy(&vector[lenVector + i].ks1, (void *)(resp->d.asBytes + 8 + i * 8 + 4), 4);
+
+				PrintAndLog("i=%d nt:%08x ks1:%08x", i, vector[lenVector + i].nt, vector[lenVector + i].ks1);
+			}
+
+			lenVector += len;
+		}
 	}
+	
+	
+	
+	// finalize
+	free(vector);
 
   return 0;
 }

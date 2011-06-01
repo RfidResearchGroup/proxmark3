@@ -15,6 +15,16 @@
 #define AUTH_FIRST    0
 #define AUTH_NESTED   2
 
+//mifare emulate states
+#define MFEMUL_NOFIELD  0
+#define MFEMUL_IDLE     1
+#define MFEMUL_SELECT1  2
+#define MFEMUL_SELECT2  3
+#define MFEMUL_AUTH1    4
+#define MFEMUL_AUTH2    5
+#define MFEMUL_HALTED   6
+
+//functions
 uint8_t* mifare_get_bigbufptr(void);
 int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer);
 int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint32_t * parptr);

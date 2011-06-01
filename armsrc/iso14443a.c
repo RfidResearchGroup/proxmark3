@@ -1693,7 +1693,7 @@ void ReaderMifare(uint32_t parameter)
 	byte_t par_mask = 0xff;
 	byte_t par_low = 0;
 	int led_on = TRUE;
-	uint8_t uid[7];
+	uint8_t uid[8];
 	uint32_t cuid;
 
 	tracing = FALSE;
@@ -1702,13 +1702,15 @@ void ReaderMifare(uint32_t parameter)
 	byte_t par_list[8] = {0,0,0,0,0,0,0,0};
 	byte_t ks_list[8] = {0,0,0,0,0,0,0,0};
 	num_to_bytes(parameter, 4, nt_attacked);
-	int isOK = 0;
+	int isOK = 0, isNULL = 0;
 	
 	while(TRUE)
 	{
+		LED_C_ON();
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		SpinDelay(200);
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+		LED_C_OFF();
 
 		// Test if the action was cancelled
 		if(BUTTON_PRESS()) {
@@ -1730,6 +1732,9 @@ void ReaderMifare(uint32_t parameter)
 		// Receive 4 bit answer
 		if (ReaderReceive(receivedAnswer))
 		{
+			isNULL = (nt_attacked[0] = 0) && (nt_attacked[1] = 0) && (nt_attacked[2] = 0) && (nt_attacked[3] = 0);
+			if ( (isNULL != 0 ) && (memcmp(nt, nt_attacked, 4) != 0) ) continue;
+
 			if (nt_diff == 0)
 			{
 				LED_A_ON();
@@ -1737,8 +1742,6 @@ void ReaderMifare(uint32_t parameter)
 				par_mask = 0xf8;
 				par_low = par & 0x07;
 			}
-
-			if (memcmp(nt, nt_attacked, 4) != 0) continue;
 
 			led_on = !led_on;
 			if(led_on) LED_B_ON(); else LED_B_OFF();
@@ -1801,7 +1804,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	// variables
 	byte_t isOK = 0;
 	byte_t dataoutbuf[16];
-	uint8_t uid[7];
+	uint8_t uid[8];
 	uint32_t cuid;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
@@ -2075,7 +2078,8 @@ void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	
 	// variables
 	uint8_t targetBlockNo = blockNo + 1;
-	int rtr, i, m, len;
+	uint8_t targetKeyType = keyType;
+	int rtr, i, j, m, len;
 	int davg, dmin, dmax;
 	uint8_t uid[8];
 	uint32_t cuid, nt1, nt2, nttmp, nttest, par, ks1;
@@ -2083,6 +2087,7 @@ void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	nestedVector nvector[3][10];
 	int nvectorcount[3] = {10, 10, 10};
 	int ncount = 0;
+	UsbCommand ack = {CMD_ACK, {0, 0, 0}};
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
@@ -2156,8 +2161,8 @@ void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LED_C_ON();
 
 	//  get crypted nonces for target sector
-	for (rtr = 0; rtr < 4; rtr++) {
-		Dbprintf("------------------------------");
+	for (rtr = 0; rtr < 2; rtr++) {
+//		Dbprintf("------------------------------");
 
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     SpinDelay(100);
@@ -2179,14 +2184,14 @@ void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 		};
 
 		// nested authentication
-		len = mifare_sendcmd_shortex(pcs, AUTH_NESTED, 0x60 + (keyType & 0x01), targetBlockNo, receivedAnswer, &par);
+		len = mifare_sendcmd_shortex(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, &par);
 		if (len != 4) {
 			Dbprintf("Auth2 error len=%d", len);
 			break;
 		};
 	
 		nt2 = bytes_to_num(receivedAnswer, 4);		
-		Dbprintf("r=%d nt1=%08x nt2enc=%08x nt2par=%08x", rtr, nt1, nt2, par);
+//		Dbprintf("r=%d nt1=%08x nt2enc=%08x nt2par=%08x", rtr, nt1, nt2, par);
 		
 // -----------------------  test		
 /*	uint32_t d_nt, d_ks1, d_ks2, d_ks3, reader_challenge;
@@ -2234,23 +2239,25 @@ void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 				ncount++;
 				nvectorcount[2] = ncount;
 				
-				Dbprintf("valid m=%d ks1=%08x nttest=%08x", m, ks1, nttest);
+//				Dbprintf("valid m=%d ks1=%08x nttest=%08x", m, ks1, nttest);
 			}
 
 		}
 		
 		// select vector with length less than got
-		m = 2;
-		if (nvectorcount[2] < nvectorcount[1]) m = 1;
-		if (nvectorcount[2] < nvectorcount[0]) m = 0;
-		if (m != 2) {
-			for (i = 0; i < nvectorcount[m]; i++) {
-				nvector[m][i] = nvector[2][i];
+		if (nvectorcount[2] != 0) {
+			m = 2;
+			if (nvectorcount[2] < nvectorcount[1]) m = 1;
+			if (nvectorcount[2] < nvectorcount[0]) m = 0;
+			if (m != 2) {
+				for (i = 0; i < nvectorcount[m]; i++) {
+					nvector[m][i] = nvector[2][i];
+				}
+				nvectorcount[m] = nvectorcount[2];
 			}
-			nvectorcount[m] = nvectorcount[2];
 		}
 		
-		Dbprintf("vector count: 1=%d 2=%d 3=%d", nvectorcount[0], nvectorcount[1], nvectorcount[2]);
+//		Dbprintf("vector count: 1=%d 2=%d 3=%d", nvectorcount[0], nvectorcount[1], nvectorcount[2]);
 	}
 
 	LED_C_OFF();
@@ -2267,27 +2274,36 @@ void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LogTrace(uid, 4, 0, 0, TRUE);
 
 	for (i = 0; i < 2; i++) {
-		ncount = nvectorcount[i];
-		if (ncount > 5) ncount = 5; //!!!!!  needs to be 2 packets x 5 pairs (nt,ks1)
+		for (j = 0; j < nvectorcount[i]; j += 5) {
+			ncount = nvectorcount[i] - j;
+			if (ncount > 5) ncount = 5; 
 
-		// isEOF = 0
-		UsbCommand ack = {CMD_ACK, {0, ncount, targetBlockNo}};
-		memcpy(ack.d.asBytes, &cuid, 4);
-		for (m = 0; m < 5; m++) {
-			memcpy(ack.d.asBytes + 4 + m * 8 + 0, &nvector[i][m].nt, 4);
-			memcpy(ack.d.asBytes + 4 + m * 8 + 4, &nvector[i][m].ks1, 4);
-		}
+			ack.arg[0] = 0; // isEOF = 0
+			ack.arg[1] = ncount;
+			ack.arg[2] = targetBlockNo + (targetKeyType * 0x100);
+			memset(ack.d.asBytes, 0x00, sizeof(ack.d.asBytes));
+			
+			memcpy(ack.d.asBytes, &cuid, 4);
+			for (m = 0; m < ncount; m++) {
+				memcpy(ack.d.asBytes + 8 + m * 8 + 0, &nvector[i][m + j].nt, 4);
+				memcpy(ack.d.asBytes + 8 + m * 8 + 4, &nvector[i][m + j].ks1, 4);
+			}
 	
-		LED_B_ON();
-		UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
-		LED_B_OFF();	
+			LED_B_ON();
+			SpinDelay(100);
+			UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+			LED_B_OFF();	
+		}
 	}
 
 	// finalize list
-	// isEOF = 1
-	UsbCommand ack = {CMD_ACK, {1, 0, 0}};
+	ack.arg[0] = 1; // isEOF = 1
+	ack.arg[1] = 0;
+	ack.arg[2] = 0;
+	memset(ack.d.asBytes, 0x00, sizeof(ack.d.asBytes));
 	
 	LED_B_ON();
+	SpinDelay(300);
 	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 	LED_B_OFF();	
 
@@ -2306,4 +2322,39 @@ void MifareNested(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 //-----------------------------------------------------------------------------
 void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 {
+	int cardSTATE = MFEMUL_NOFIELD;
+
+	while (true) {
+
+		if(BUTTON_PRESS()) {
+      break;
+    }
+	
+		switch (cardSTATE) {
+			case MFEMUL_NOFIELD:{
+				break;
+			}
+			case MFEMUL_IDLE:{
+				break;
+			}
+			case MFEMUL_SELECT1:{
+				break;
+			}
+			case MFEMUL_SELECT2:{
+				break;
+			}
+			case MFEMUL_AUTH1:{
+				break;
+			}
+			case MFEMUL_AUTH2:{
+				break;
+			}
+			case MFEMUL_HALTED:{
+				break;
+			}
+		
+		}
+	
+	}
+
 }

@@ -26,6 +26,7 @@
 unsigned int current_command = CMD_UNKNOWN;
 unsigned int received_command = CMD_UNKNOWN;
 UsbCommand current_response;
+UsbCommand current_response_user;
 
 static int CmdHelp(const char *Cmd);
 static int CmdQuit(const char *Cmd);
@@ -55,12 +56,16 @@ int CmdQuit(const char *Cmd)
 }
 
 UsbCommand * WaitForResponseTimeout(uint32_t response_type, uint32_t ms_timeout) {
-	UsbCommand * ret = &current_response;
+	UsbCommand * ret =  NULL;
 	int i=0;
 
 	for(i=0; received_command != response_type && i < ms_timeout / 10; i++) {
 		msleep(10); // XXX ugh
 	}
+	
+	// There was evil BUG
+	memcpy(&current_response_user, &current_response, sizeof(UsbCommand));
+	ret = &current_response_user;
 
 	if(received_command != response_type)
 		ret = NULL;

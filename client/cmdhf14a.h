@@ -1,4 +1,5 @@
 //-----------------------------------------------------------------------------
+// 2011, Merlok
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -10,6 +11,8 @@
 
 #ifndef CMDHF14A_H__
 #define CMDHF14A_H__
+
+typedef struct fnVector { uint8_t blockNo, keyType; uint32_t uid, nt, ks1; } fnVector;
 
 int CmdHF14A(const char *Cmd);
 
