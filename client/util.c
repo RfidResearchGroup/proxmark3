@@ -15,6 +15,8 @@
 #include "util.h"
 
 #ifdef __linux__
+#include <termios.h>
+#include <sys/ioctl.h> 
 int ukbhit(void)
 {
   int cnt = 0;

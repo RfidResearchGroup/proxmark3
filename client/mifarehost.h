@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <conio.h>
 #include "common.h"
 #include "cmdmain.h"
 #include "ui.h"
