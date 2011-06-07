@@ -19,6 +19,8 @@
 #include "crapto1.h"
 #include "mifareutil.h"
 
+int MF_DBGLEVEL = MF_DBG_ALL;
+
 uint8_t* mifare_get_bigbufptr(void) {
 	return (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
 }
@@ -96,7 +98,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 
 	// Transmit MIFARE_CLASSIC_AUTH
 	len = mifare_sendcmd_short(pcs, isNested, 0x60 + (keyType & 0x01), blockNo, receivedAnswer);
-//	Dbprintf("rand nonce len: %x", len);  
+  if (MF_DBGLEVEL >= 4)	Dbprintf("rand nonce len: %x", len);  
 	if (len != 4) return 1;
 	
 	ar[0] = 0x55;
@@ -123,7 +125,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	}
 
 	// some statistic
-	if (!ntptr)
+	if (!ntptr && (MF_DBGLEVEL >= 3))
 		Dbprintf("auth uid: %08x nt: %08x", uid, nt);  
 	
 	// save Nt
@@ -156,7 +158,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	len = ReaderReceive(receivedAnswer);
 	if (!len)
 	{
-		Dbprintf("Authentication failed. Card timeout.");
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Authentication failed. Card timeout.");
 		return 2;
 	}
 	
@@ -164,7 +166,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	ntpp = prng_successor(nt, 32) ^ crypto1_word(pcs, 0,0);
 	
 	if (ntpp != bytes_to_num(tmp4, 4)) {
-		Dbprintf("Authentication failed. Error card response.");
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Authentication failed. Error card response.");
 		return 3;
 	}
 
@@ -182,18 +184,18 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 	// command MIFARE_CLASSIC_READBLOCK
 	len = mifare_sendcmd_short(pcs, 1, 0x30, blockNo, receivedAnswer);
 	if (len == 1) {
-		Dbprintf("Cmd Error: %02x", receivedAnswer[0]);  
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: %02x", receivedAnswer[0]);  
 		return 1;
 	}
 	if (len != 18) {
-		Dbprintf("Cmd Error: card timeout. len: %x", len);  
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: card timeout. len: %x", len);  
 		return 2;
 	}
 
 	memcpy(bt, receivedAnswer + 16, 2);
 	AppendCrc14443a(receivedAnswer, 16);
 	if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
-		Dbprintf("Cmd CRC response error.");  
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd CRC response error.");  
 		return 3;
 	}
 	
@@ -216,7 +218,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 	len = mifare_sendcmd_short(pcs, 1, 0xA0, blockNo, receivedAnswer);
 
 	if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
-		Dbprintf("Cmd Error: %02x", receivedAnswer[0]);  
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: %02x", receivedAnswer[0]);  
 		return 1;
 	}
 	
@@ -241,7 +243,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 		res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], i)) << i;
 
 	if ((len != 1) || (res != 0x0A)) {
-		Dbprintf("Cmd send data2 Error: %02x", res);  
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd send data2 Error: %02x", res);  
 		return 2;
 	}
 	
@@ -258,7 +260,7 @@ int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid)
 
 	len = mifare_sendcmd_short(pcs, 1, 0x50, 0x00, receivedAnswer);
 	if (len != 0) {
-		Dbprintf("halt error. response len: %x", len);  
+		if (MF_DBGLEVEL >= 1)	Dbprintf("halt error. response len: %x", len);  
 		return 1;
 	}
 

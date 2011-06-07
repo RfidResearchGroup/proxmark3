@@ -8,12 +8,30 @@
 //-----------------------------------------------------------------------------
 // code for work with mifare cards.
 //-----------------------------------------------------------------------------
+#ifndef __MIFAREUTIL_H
+#define __MIFAREUTIL_H
 
 #define CRYPT_NONE    0
 #define CRYPT_ALL     1
 #define CRYPT_REQUEST 2
 #define AUTH_FIRST    0
 #define AUTH_NESTED   2
+
+// debug
+// 0 - no debug messages 1 - error messages 2 - all messages 4 - extended debug mode
+#define MF_DBG_NONE          0
+#define MF_DBG_ERROR         1
+#define MF_DBG_ALL           2
+#define MF_DBG_EXTENDED      4
+
+extern int MF_DBGLEVEL;
+
+//mifare nested
+#define MEM_CHUNK        10000
+#define TRY_KEYS            50
+#define NS_TOLERANCE        10 //  [distance avg-value, distance avg+value]
+#define NS_RETRIES_GETNONCE 15
+#define NES_MAX_INFO         5
 
 //mifare emulate states
 #define MFEMUL_NOFIELD  0
@@ -37,3 +55,4 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData);
 int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid); 
 
+#endif

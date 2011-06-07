@@ -12,7 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <conio.h>
+#include <unistd.h>
+#include <ctype.h>
 #include "util.h"
 #include "iso14443crc.h"
 #include "data.h"
@@ -24,6 +25,7 @@
 #include "cmdmain.h"
 #include "nonce2key/nonce2key.h"
 #include "nonce2key/crapto1.h"
+#include "mifarehost.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -165,13 +167,18 @@ int CmdHF14AMifare(const char *Cmd)
 	uint32_t nt = 0;
 	uint64_t par_list = 0, ks_list = 0, r_key = 0;
 	uint8_t isOK = 0;
+	uint8_t keyBlock[6] = {0,0,0,0,0,0};
 	
-	UsbCommand c = {CMD_READER_MIFARE, {strtol(Cmd, NULL, 0), 0, 0}};
+	if (param_getchar(Cmd, 0) && param_gethex(Cmd, 0, keyBlock, 8)) {
+		PrintAndLog("Nt must include 8 HEX symbols");
+		return 1;
+	}
+	
+	UsbCommand c = {CMD_READER_MIFARE, {(uint32_t)bytes_to_num(keyBlock, 4), 0, 0}};
 	SendCommand(&c);
 	
 	//flush queue
-	while (kbhit())	getchar();
-	while (WaitForResponseTimeout(CMD_ACK, 500) != NULL) ;
+	while (ukbhit())	getchar();
 
 	// message
 	printf("-------------------------------------------------------------------------\n");
@@ -183,7 +190,7 @@ int CmdHF14AMifare(const char *Cmd)
 	// wait cycle
 	while (true) {
 		printf(".");
-		if (kbhit()) {
+		if (ukbhit()) {
 			getchar();
 			printf("\naborted via keyboard!\n");
 			break;
@@ -211,79 +218,52 @@ int CmdHF14AMifare(const char *Cmd)
 	
 	// execute original function from util nonce2key
 	if (nonce2key(uid, nt, par_list, ks_list, &r_key)) return 2;
-	printf("-------------------------------------------------------------------------\n");
+	printf("------------------------------------------------------------------\n");
 	PrintAndLog("Key found:%012llx \n", r_key);
+
+	num_to_bytes(r_key, 6, keyBlock);
+	isOK = mfCheckKeys(0, 0, 1, keyBlock, &r_key);
+	if (!isOK) 
+		PrintAndLog("Found valid key:%012llx", r_key);
+	else
+		PrintAndLog("Found invalid key. (");	
+	
 	
 	return 0;
 }
 
 int CmdHF14AMfWrBl(const char *Cmd)
 {
-	int i, temp;
 	uint8_t blockNo = 0;
 	uint8_t keyType = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
 	uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	
-	const char *cmdp	= Cmd;
-	const char *cmdpe	= Cmd;
+	char cmdp	= 0x00;
 
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:  hf 14 mfwrbl    <block number> <key A/B> <key (12 hex symbols)> <block data (32 hex symbols)>");
-		PrintAndLog("           sample: hf 14a mfwrbl 0 A FFFFFFFFFFFF 000102030405060708090A0B0C0D0E0F");
+		PrintAndLog("        sample: hf 14a mfwrbl 0 A FFFFFFFFFFFF 000102030405060708090A0B0C0D0E0F");
 		return 0;
 	}	
-	PrintAndLog("l: %s", Cmd);
-	
-	// skip spaces
-	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
-	blockNo = strtol(cmdp, NULL, 0) & 0xff;
-	
-	// next value
-	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
-	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
-	if (*cmdp != 'A' && *cmdp != 'a')  {
-		keyType = 1;
+
+	blockNo = param_get8(Cmd, 0);
+	cmdp = param_getchar(Cmd, 1);
+	if (cmdp == 0x00) {
+		PrintAndLog("Key type must be A or B");
+		return 1;
 	}
-
-	// next value
-	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
-	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
-
-	// next value here:cmdpe
-	cmdpe = cmdp;
-	while (*cmdpe!=' ' && *cmdpe!='\t') cmdpe++;
-	while (*cmdpe==' ' || *cmdpe=='\t') cmdpe++;
-
-	if ((int)cmdpe - (int)cmdp != 13) {
-		PrintAndLog("Length of key must be 12 hex symbols");
-		return 0;
+	if (cmdp != 'A' && cmdp != 'a') keyType = 1;
+	if (param_gethex(Cmd, 2, key, 12)) {
+		PrintAndLog("Key must include 12 HEX symbols");
+		return 1;
 	}
-	
-	for(i = 0; i < 6; i++) {
-		sscanf((char[]){cmdp[0],cmdp[1],0},"%X",&temp);
-		key[i] = temp & 0xff;
-		cmdp++;
-		cmdp++;
-	}	
-
-	// next value
-	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
-	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
-
-	if (strlen(cmdp) != 32) {
-		PrintAndLog("Length of block data must be 32 hex symbols");
-		return 0;
+	if (param_gethex(Cmd, 3, bldata, 32)) {
+		PrintAndLog("Block data must include 32 HEX symbols");
+		return 1;
 	}
-
-	for(i = 0; i < 16; i++) {
-		sscanf((char[]){cmdp[0],cmdp[1],0},"%X",&temp);
-		bldata[i] = temp & 0xff;
-		cmdp++;
-		cmdp++;
-	}	
-	PrintAndLog(" block no:%02x key type:%02x key:%s", blockNo, keyType, sprint_hex(key, 6));
-	PrintAndLog(" data: %s", sprint_hex(bldata, 16));
+	PrintAndLog("--block no:%02x key type:%02x key:%s", blockNo, keyType, sprint_hex(key, 6));
+	PrintAndLog("--data: %s", sprint_hex(bldata, 16));
 	
   UsbCommand c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
@@ -304,47 +284,31 @@ int CmdHF14AMfWrBl(const char *Cmd)
 
 int CmdHF14AMfRdBl(const char *Cmd)
 {
-	int i, temp;
 	uint8_t blockNo = 0;
 	uint8_t keyType = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
 	
-	const char *cmdp	= Cmd;
+	char cmdp	= 0x00;
 
 
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:  hf 14 mfrdbl    <block number> <key A/B> <key (12 hex symbols)>");
-		PrintAndLog("           sample: hf 14a mfrdbl 0 A FFFFFFFFFFFF ");
+		PrintAndLog("        sample: hf 14a mfrdbl 0 A FFFFFFFFFFFF ");
 		return 0;
 	}	
 	
-  // skip spaces
-	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
-	blockNo = strtol(cmdp, NULL, 0) & 0xff;
-	
-	// next value
-	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
-	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
-	if (*cmdp != 'A' && *cmdp != 'a')  {
-		keyType = 1;
+	blockNo = param_get8(Cmd, 0);
+	cmdp = param_getchar(Cmd, 1);
+	if (cmdp == 0x00) {
+		PrintAndLog("Key type must be A or B");
+		return 1;
 	}
-
-	// next value
-	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
-	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
-
-	if (strlen(cmdp) != 12) {
-		PrintAndLog("Length of key must be 12 hex symbols");
-		return 0;
+	if (cmdp != 'A' && cmdp != 'a') keyType = 1;
+	if (param_gethex(Cmd, 2, key, 12)) {
+		PrintAndLog("Key must include 12 HEX symbols");
+		return 1;
 	}
-	
-	for(i = 0; i < 6; i++) {
-		sscanf((char[]){cmdp[0],cmdp[1],0},"%X",&temp);
-		key[i] = temp & 0xff;
-		cmdp++;
-		cmdp++;
-	}	
-	PrintAndLog(" block no:%02x key type:%02x key:%s ", blockNo, keyType, sprint_hex(key, 6));
+	PrintAndLog("--block no:%02x key type:%02x key:%s ", blockNo, keyType, sprint_hex(key, 6));
 	
   UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
@@ -355,7 +319,10 @@ int CmdHF14AMfRdBl(const char *Cmd)
 		uint8_t                isOK  = resp->arg[0] & 0xff;
 		uint8_t              * data  = resp->d.asBytes;
 
-		PrintAndLog("isOk:%02x data:%s", isOK, sprint_hex(data, 16));
+		if (isOK)
+			PrintAndLog("isOk:%02x data:%s", isOK, sprint_hex(data, 16));
+		else
+			PrintAndLog("isOk:%02x", isOK);
 	} else {
 		PrintAndLog("Command execute timeout");
 	}
@@ -365,47 +332,38 @@ int CmdHF14AMfRdBl(const char *Cmd)
 
 int CmdHF14AMfRdSc(const char *Cmd)
 {
-	int i, temp;
+	int i;
 	uint8_t sectorNo = 0;
 	uint8_t keyType = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
 	
-	const char *cmdp	= Cmd;
+	uint8_t isOK  = 0;
+	uint8_t * data  = NULL;
 
+	char cmdp	= 0x00;
 
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:  hf 14 mfrdsc    <sector number> <key A/B> <key (12 hex symbols)>");
-		PrintAndLog("           sample: hf 14a mfrdsc 0 A FFFFFFFFFFFF ");
+		PrintAndLog("        sample: hf 14a mfrdsc 0 A FFFFFFFFFFFF ");
 		return 0;
 	}	
 	
-  // skip spaces
-	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
-	sectorNo = strtol(cmdp, NULL, 0) & 0xff;
-	
-	// next value
-	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
-	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
-	if (*cmdp != 'A' && *cmdp != 'a')  {
-		keyType = 1;
+	sectorNo = param_get8(Cmd, 0);
+	if (sectorNo > 63) {
+		PrintAndLog("Sector number must be less than 64");
+		return 1;
 	}
-
-	// next value
-	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
-	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
-
-	if (strlen(cmdp) != 12) {
-		PrintAndLog("Length of key must be 12 hex symbols");
-		return 0;
+	cmdp = param_getchar(Cmd, 1);
+	if (cmdp == 0x00) {
+		PrintAndLog("Key type must be A or B");
+		return 1;
 	}
-	
-	for(i = 0; i < 6; i++) {
-		sscanf((char[]){cmdp[0],cmdp[1],0},"%X",&temp);
-		key[i] = temp & 0xff;
-		cmdp++;
-		cmdp++;
-	}	
-	PrintAndLog(" sector no:%02x key type:%02x key:%s ", sectorNo, keyType, sprint_hex(key, 6));
+	if (cmdp != 'A' && cmdp != 'a') keyType = 1;
+	if (param_gethex(Cmd, 2, key, 12)) {
+		PrintAndLog("Key must include 12 HEX symbols");
+		return 1;
+	}
+	PrintAndLog("--sector no:%02x key type:%02x key:%s ", sectorNo, keyType, sprint_hex(key, 6));
 	
   UsbCommand c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
@@ -414,13 +372,14 @@ int CmdHF14AMfRdSc(const char *Cmd)
 	PrintAndLog(" ");
 
 	if (resp != NULL) {
-		uint8_t                isOK  = resp->arg[0] & 0xff;
-		uint8_t              * data  = resp->d.asBytes;
+		isOK  = resp->arg[0] & 0xff;
+		data  = resp->d.asBytes;
 
 		PrintAndLog("isOk:%02x", isOK);
-		for (i = 0; i < 2; i++) {
-			PrintAndLog("data:%s", sprint_hex(data + i * 16, 16));
-		}
+		if (isOK) 
+			for (i = 0; i < 2; i++) {
+				PrintAndLog("data:%s", sprint_hex(data + i * 16, 16));
+			}
 	} else {
 		PrintAndLog("Command1 execute timeout");
 	}
@@ -430,10 +389,12 @@ int CmdHF14AMfRdSc(const char *Cmd)
 	PrintAndLog(" ");
 
 	if (resp != NULL) {
-		uint8_t              * data  = resp->d.asBytes;
+		isOK  = resp->arg[0] & 0xff;
+		data  = resp->d.asBytes;
 
-		for (i = 0; i < 2; i++) {
-			PrintAndLog("data:%s", sprint_hex(data + i * 16, 16));
+		if (isOK) 
+			for (i = 0; i < 2; i++) {
+				PrintAndLog("data:%s", sprint_hex(data + i * 16, 16));
 		}
 	} else {
 		PrintAndLog("Command2 execute timeout");
@@ -444,115 +405,207 @@ int CmdHF14AMfRdSc(const char *Cmd)
 
 int CmdHF14AMfNested(const char *Cmd)
 {
-	int i, temp, len;
-	uint8_t sectorNo = 0;
+	int i, j, res, iterations;
+	sector	*	e_sector = NULL;
+	uint8_t blockNo = 0;
 	uint8_t keyType = 0;
+	uint8_t trgBlockNo = 0;
+	uint8_t trgKeyType = 0;
+	uint8_t blDiff = 0;
+	int  SectorsCnt = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-	uint8_t isEOF;
-	uint8_t * data;
-	uint32_t uid;
-	fnVector * vector = NULL;
-	int lenVector = 0;
-	UsbCommand * resp = NULL;
+	uint8_t keyBlock[16 * 6];
+	uint64_t key64 = 0;
 	
-	const char *cmdp	= Cmd;
+	char cmdp, ctmp;
 
 	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf 14a nested    <sector number> <key A/B> <key (12 hex symbols)>");
-		PrintAndLog("           sample: hf 14a nested 0 A FFFFFFFFFFFF ");
+		PrintAndLog("Usage:");
+		PrintAndLog(" all sectors:  hf 14a nested  <card memory> <block number> <key A/B> <key (12 hex symbols)>");
+		PrintAndLog(" one sector:   hf 14a nested  o <block number> <key A/B> <key (12 hex symbols)>");
+		PrintAndLog("               <target block number> <target key A/B>");
+		PrintAndLog("card memory - 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
+		PrintAndLog(" ");
+		PrintAndLog("      sample1: hf 14a nested 1 0 A FFFFFFFFFFFF ");
+		PrintAndLog("      sample2: hf 14a nested o 0 A FFFFFFFFFFFF 4 A");
 		return 0;
 	}	
 	
-  // skip spaces
-	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
-	sectorNo = strtol(cmdp, NULL, 0) & 0xff;
+	cmdp = param_getchar(Cmd, 0);
+	blockNo = param_get8(Cmd, 1);
+	ctmp = param_getchar(Cmd, 2);
+	if (ctmp == 0x00) {
+		PrintAndLog("Key type must be A or B");
+		return 1;
+	}
+	if (ctmp != 'A' && ctmp != 'a') keyType = 1;
+	if (param_gethex(Cmd, 3, key, 12)) {
+		PrintAndLog("Key must include 12 HEX symbols");
+		return 1;
+	}
 	
-	// next value
-	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
-	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
-	if (*cmdp != 'A' && *cmdp != 'a')  {
-		keyType = 1;
+	if (cmdp =='o' || cmdp == 'O') {
+		cmdp = 'o';
+		trgBlockNo = param_get8(Cmd, 4);
+		ctmp = param_getchar(Cmd, 5);
+		if (ctmp == 0x00) {
+			PrintAndLog("Target key type must be A or B");
+			return 1;
+		}
+		if (ctmp != 'A' && ctmp != 'a') trgKeyType = 1;
+	} else {
+		switch (cmdp) {
+			case '1': SectorsCnt = 16; break;
+			case '2': SectorsCnt = 32; break;
+			case '4': SectorsCnt = 64; break;
+			default:  SectorsCnt = 16;
+		}
+	}
+	
+	PrintAndLog("--block no:%02x key type:%02x key:%s ", blockNo, keyType, sprint_hex(key, 6));
+	if (cmdp == 'o')
+		PrintAndLog("--target block no:%02x target key type:%02x ", trgBlockNo, trgKeyType);
+
+	if (cmdp == 'o') {
+		if (mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock)) {
+			PrintAndLog("Nested error.");
+			return 2;
+		}
+
+		for (i = 0; i < 16; i++) {
+			PrintAndLog("cnt=%d key= %s", i, sprint_hex(keyBlock + i * 6, 6));
+		}
+	
+		// test keys
+		res = mfCheckKeys(trgBlockNo, trgKeyType, 8, keyBlock, &key64);
+		if (res)
+			res = mfCheckKeys(trgBlockNo, trgKeyType, 8, &keyBlock[6 * 8], &key64);
+		if (!res)
+			PrintAndLog("Found valid key:%012llx", key64);
+		else
+			PrintAndLog("No valid key found");
+	} else  // ------------------------------------  multiple sectors working
+	{
+		blDiff = blockNo % 4;
+		PrintAndLog("Block shift=%d", blDiff);
+		e_sector = calloc(SectorsCnt, sizeof(sector));
+		if (e_sector == NULL) return 1;
+		
+		//test current key 4 sectors
+		memcpy(keyBlock, key, 6);
+		num_to_bytes(0xa0a1a2a3a4a5, 6, (uint8_t*)(keyBlock + 1 * 6));
+		num_to_bytes(0xb0b1b2b3b4b5, 6, (uint8_t*)(keyBlock + 2 * 6));
+		num_to_bytes(0xffffffffffff, 6, (uint8_t*)(keyBlock + 3 * 6));
+		num_to_bytes(0x000000000000, 6, (uint8_t*)(keyBlock + 4 * 6));
+		num_to_bytes(0xaabbccddeeff, 6, (uint8_t*)(keyBlock + 5 * 6));
+
+		PrintAndLog("Testing known keys. Sector count=%d", SectorsCnt);
+		for (i = 0; i < SectorsCnt; i++) {
+			for (j = 0; j < 2; j++) {
+				if (e_sector[i].foundKey[j]) continue;
+				
+				res = mfCheckKeys(i * 4 + blDiff, j, 6, keyBlock, &key64);
+				
+				if (!res) {
+					e_sector[i].Key[j] = key64;
+					e_sector[i].foundKey[j] = 1;
+				}
+			}
+		} 
+		
+		
+		// nested sectors
+		iterations = 0;
+		PrintAndLog("nested...");
+		for (i = 0; i < NESTED_SECTOR_RETRY; i++) {
+			for (trgBlockNo = blDiff; trgBlockNo < SectorsCnt * 4; trgBlockNo = trgBlockNo + 4) 
+				for (trgKeyType = 0; trgKeyType < 2; trgKeyType++) { 
+					if (e_sector[trgBlockNo / 4].foundKey[trgKeyType]) continue;
+					if (mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock)) continue;
+					
+					iterations++;
+					
+					//try keys from nested
+					res = mfCheckKeys(trgBlockNo, trgKeyType, 8, keyBlock, &key64);
+					if (res)
+						res = mfCheckKeys(trgBlockNo, trgKeyType, 8, &keyBlock[6 * 8], &key64);
+					if (!res) {
+						PrintAndLog("Found valid key:%012llx", key64);	
+						e_sector[trgBlockNo / 4].foundKey[trgKeyType] = 1;
+						e_sector[trgBlockNo / 4].Key[trgKeyType] = key64;
+					}
+				}
+		}
+
+		PrintAndLog("Iterations count: %d", iterations);
+		//print them
+		PrintAndLog("|---|----------------|---|----------------|---|");
+		PrintAndLog("|blk|key A           |res|key B           |res|");
+		PrintAndLog("|---|----------------|---|----------------|---|");
+		for (i = 0; i < SectorsCnt; i++) {
+			PrintAndLog("|%03d|  %012llx  | %d |  %012llx  | %d |", i, 
+				e_sector[i].Key[0], e_sector[i].foundKey[0], e_sector[i].Key[1], e_sector[i].foundKey[1]);
+		}
+		PrintAndLog("|---|----------------|---|----------------|---|");
+		
+		free(e_sector);
 	}
 
-	// next value
-	while (*cmdp!=' ' && *cmdp!='\t') cmdp++;
-	while (*cmdp==' ' || *cmdp=='\t') cmdp++;
+	return 0;
+}
 
-	if (strlen(cmdp) != 12) {
-		PrintAndLog("Length of key must be 12 hex symbols");
+int CmdHF14AMfChk(const char *Cmd)
+{
+	int i, res;
+	int	keycnt = 0;
+	char ctmp	= 0x00;
+	uint8_t blockNo = 0;
+	uint8_t keyType = 0;
+	uint8_t keyBlock[8 * 6];
+	uint64_t key64 = 0;
+
+	memset(keyBlock, 0x00, sizeof(keyBlock));
+
+	if (strlen(Cmd)<3) {
+		PrintAndLog("Usage:  hf 14a chk <block number> <key A/B> [<key (12 hex symbols)>]");
+		PrintAndLog("      sample: hf 14a chk 0 A FFFFFFFFFFFF a0a1a2a3a4a5 b01b2b3b4b5 ");
 		return 0;
-	}
-	
-	for(i = 0; i < 6; i++) {
-		sscanf((char[]){cmdp[0],cmdp[1],0},"%X",&temp);
-		key[i] = temp & 0xff;
-		cmdp++;
-		cmdp++;
 	}	
-	PrintAndLog(" sector no:%02x key type:%02x key:%s ", sectorNo, keyType, sprint_hex(key, 6));
-
-	// flush queue
-	while (WaitForResponseTimeout(CMD_ACK, 500) != NULL) ;
 	
-  UsbCommand c = {CMD_MIFARE_NESTED, {sectorNo, keyType, 0}};
-	memcpy(c.d.asBytes, key, 6);
-  SendCommand(&c);
+	blockNo = param_get8(Cmd, 0);
+	ctmp = param_getchar(Cmd, 1);
+	if (ctmp == 0x00) {
+		PrintAndLog("Key type must be A or B");
+		return 1;
+	}
+	if (ctmp != 'A' && ctmp != 'a') keyType = 1;
+	
+	for (i = 0; i < 6; i++) {
+		if (!isxdigit(param_getchar(Cmd, 2 + i))) break;
 
-	PrintAndLog("\n");
-	printf("-------------------------------------------------------------------------\n");
-
-	// wait cycle
-	while (true) {
-		printf(".");
-		if (kbhit()) {
-			getchar();
-			printf("\naborted via keyboard!\n");
-			break;
+		if (param_gethex(Cmd, 2 + i, keyBlock + 6 * i, 12)) {
+			PrintAndLog("Key[%d] must include 12 HEX symbols", i);
+			return 1;
 		}
-
-		resp = WaitForResponseTimeout(CMD_ACK, 1500);
-
-		if (resp != NULL) {
-			isEOF  = resp->arg[0] & 0xff;
-			data  = resp->d.asBytes;
-
-			PrintAndLog("isEOF:%02x", isEOF);	
-			for (i = 0; i < 2; i++) {
-				PrintAndLog("data:%s", sprint_hex(data + i * 16, 16));
-			}
-			if (isEOF) break;
-			
-			len = resp->arg[1] & 0xff;
-			if (len == 0) continue;
-			
-			memcpy(&uid, resp->d.asBytes, 4); 
-			PrintAndLog("uid:%08x len=%d trgbl=%d trgkey=%d", uid, len, resp->arg[2] & 0xff, (resp->arg[2] >> 8) & 0xff);
-
-			vector = (fnVector *) realloc((void *)vector, (lenVector + len) * sizeof(fnVector) + 200);
-			if (vector == NULL) {
-				PrintAndLog("Memory allocation error for fnVector. len: %d bytes: %d", lenVector + len, (lenVector + len) * sizeof(fnVector)); 
-				break;
-			}
-			
-			for (i = 0; i < len; i++) {
-				vector[lenVector + i].blockNo = resp->arg[2] & 0xff;
-				vector[lenVector + i].keyType = (resp->arg[2] >> 8) & 0xff;
-				vector[lenVector + i].uid = uid;
-
-				memcpy(&vector[lenVector + i].nt,  (void *)(resp->d.asBytes + 8 + i * 8 + 0), 4);
-				memcpy(&vector[lenVector + i].ks1, (void *)(resp->d.asBytes + 8 + i * 8 + 4), 4);
-
-				PrintAndLog("i=%d nt:%08x ks1:%08x", i, vector[lenVector + i].nt, vector[lenVector + i].ks1);
-			}
-
-			lenVector += len;
-		}
+		keycnt = i + 1;
 	}
 	
+	if (keycnt == 0) {
+		PrintAndLog("There is must be at least one key");
+		return 1;
+	}
+
+	PrintAndLog("--block no:%02x key type:%02x key count:%d ", blockNo, keyType, keycnt);
 	
-	
-	// finalize
-	free(vector);
+	res = mfCheckKeys(blockNo, keyType, keycnt, keyBlock, &key64);
+	if (res !=1) {
+		if (!res)
+			PrintAndLog("isOk:%02x valid key:%012llx", 1, key64);
+		else
+			PrintAndLog("isOk:%02x", 0);
+	} else {
+		PrintAndLog("Command execute timeout");
+	}
 
   return 0;
 }
@@ -654,6 +707,7 @@ static command_t CommandTable[] =
   {"mfrdsc", CmdHF14AMfRdSc,   0, "Read MIFARE classic sector"},
   {"mfwrbl", CmdHF14AMfWrBl,   0, "Write MIFARE classic block"},
   {"nested", CmdHF14AMfNested, 0, "Test nested authentication"},
+  {"chk",    CmdHF14AMfChk,    0, "Test block up to 8 keys"},
   {"mfsim",  CmdHF14AMf1kSim,  0, "Simulate MIFARE 1k card - NOT WORKING!!!"},
   {"reader", CmdHF14AReader,   0, "Act like an ISO14443 Type A reader"},
   {"sim",    CmdHF14ASim,      0, "<UID> -- Fake ISO 14443a tag"},
@@ -663,6 +717,10 @@ static command_t CommandTable[] =
 
 int CmdHF14A(const char *Cmd)
 {
+	// flush
+	while (WaitForResponseTimeout(CMD_ACK, 500) != NULL) ;
+
+	// parse
   CmdsParse(CommandTable, Cmd);
   return 0;
 }

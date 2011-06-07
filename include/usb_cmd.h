@@ -95,6 +95,7 @@ typedef struct {
 #define CMD_MIFARE_READBL								0x0391
 #define CMD_MIFARE_READSC								0x0393
 #define CMD_MIFARE_WRITEBL							0x0394
+#define CMD_MIFARE_CHKKEYS							0x0395
 #define CMD_SNOOP_ICLASS								0x0392
 
 // For measurements of the antenna tuning

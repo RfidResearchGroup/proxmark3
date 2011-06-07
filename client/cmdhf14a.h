@@ -12,8 +12,6 @@
 #ifndef CMDHF14A_H__
 #define CMDHF14A_H__
 
-typedef struct fnVector { uint8_t blockNo, keyType; uint32_t uid, nt, ks1; } fnVector;
-
 int CmdHF14A(const char *Cmd);
 
 int CmdHF14AList(const char *Cmd);

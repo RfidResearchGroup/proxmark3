@@ -63,7 +63,7 @@ UsbCommand * WaitForResponseTimeout(uint32_t response_type, uint32_t ms_timeout)
 		msleep(10); // XXX ugh
 	}
 	
-	// There was evil BUG
+	// There was an evil BUG
 	memcpy(&current_response_user, &current_response, sizeof(UsbCommand));
 	ret = &current_response_user;
 
