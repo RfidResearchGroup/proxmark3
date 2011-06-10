@@ -90,6 +90,10 @@ uint64_t bytes_to_num(uint8_t* src, size_t len)
 }
 
 //  -------------------------------------------------------------------------
+//  string parameters lib
+//  -------------------------------------------------------------------------
+
+//  -------------------------------------------------------------------------
 //  line     - param line
 //  bg, en   - symbol numbers in param line of beginning an ending parameter
 //  paramnum - param number (from 0)

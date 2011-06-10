@@ -8,14 +8,19 @@
 //-----------------------------------------------------------------------------
 // code for work with mifare cards.
 //-----------------------------------------------------------------------------
+
 #ifndef __MIFAREUTIL_H
 #define __MIFAREUTIL_H
 
+// mifare authentication
 #define CRYPT_NONE    0
 #define CRYPT_ALL     1
 #define CRYPT_REQUEST 2
 #define AUTH_FIRST    0
 #define AUTH_NESTED   2
+
+// reader voltage field detector
+#define MF_MINFIELDV      4000
 
 // debug
 // 0 - no debug messages 1 - error messages 2 - all messages 4 - extended debug mode
@@ -33,14 +38,15 @@ extern int MF_DBGLEVEL;
 #define NS_RETRIES_GETNONCE 15
 #define NES_MAX_INFO         5
 
-//mifare emulate states
+//mifare emulator states
 #define MFEMUL_NOFIELD  0
 #define MFEMUL_IDLE     1
 #define MFEMUL_SELECT1  2
 #define MFEMUL_SELECT2  3
 #define MFEMUL_AUTH1    4
 #define MFEMUL_AUTH2    5
-#define MFEMUL_HALTED   6
+#define MFEMUL_WORK			6
+#define MFEMUL_HALTED   7
 
 //functions
 uint8_t* mifare_get_bigbufptr(void);

@@ -266,3 +266,4 @@ int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid)
 
 	return 0;
 }
+

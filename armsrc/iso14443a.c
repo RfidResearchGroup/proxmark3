@@ -932,6 +932,7 @@ static int GetIso14443aCommandFromReader(uint8_t *received, int *len, int maxLen
         }
     }
 }
+static int EmSendCmd14443aRaw(uint8_t *resp, int respLen, int correctionNeeded);
 
 //-----------------------------------------------------------------------------
 // Main loop of simulated tag: receive commands from reader, decide what
@@ -1180,8 +1181,13 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 		}
 
         if(respLen <= 0) continue;
+		//----------------------------
+		u = 0;
+		b = 0x00;
+		fdt_indicator = FALSE;
 
-        // Modulate Manchester
+		EmSendCmd14443aRaw(resp, respLen, receivedCmd[0] == 0x52);
+/*        // Modulate Manchester
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_MOD);
         AT91C_BASE_SSC->SSC_THR = 0x00;
         FpgaSetupSsc();
@@ -1213,7 +1219,7 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 			    break;
 			}
         }
-
+*/
     }
 
 	Dbprintf("%x %x %x", happened, happened2, cmdsRecvd);
@@ -1396,6 +1402,133 @@ void CodeIso14443aAsReaderPar(const uint8_t * cmd, int len, uint32_t dwParity)
 
   // Convert from last character reference to length
   ToSendMax++;
+}
+
+//-----------------------------------------------------------------------------
+// Wait for commands from reader
+// Stop when button is pressed (return 1) or field was gone (return 2)
+// Or return 0 when command is captured
+//-----------------------------------------------------------------------------
+static int EmGetCmd(uint8_t *received, int *len, int maxLen)
+{
+	*len = 0;
+
+	uint32_t timer = 0, vtime = 0;
+	int analogCnt = 0;
+	int analogAVG = 0;
+
+	// Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
+	// only, since we are receiving, not transmitting).
+	// Signal field is off with the appropriate LED
+	LED_D_OFF();
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
+
+	// Set ADC to read field strength
+	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
+	AT91C_BASE_ADC->ADC_MR =
+				ADC_MODE_PRESCALE(32) |
+				ADC_MODE_STARTUP_TIME(16) |
+				ADC_MODE_SAMPLE_HOLD_TIME(8);
+	AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ADC_CHAN_HF);
+	// start ADC
+	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+	
+	// Now run a 'software UART' on the stream of incoming samples.
+	Uart.output = received;
+	Uart.byteCntMax = maxLen;
+	Uart.state = STATE_UNSYNCD;
+
+	for(;;) {
+		WDT_HIT();
+
+		if (BUTTON_PRESS()) return 1;
+
+		// test if the field exists
+		if (AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_HF)) {
+			analogCnt++;
+			analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF];
+			AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+			if (analogCnt >= 32) {
+				if ((33000 * (analogAVG / analogCnt) >> 10) < MF_MINFIELDV) {
+					vtime = GetTickCount();
+					if (!timer) timer = vtime;
+					// 50ms no field --> card to idle state
+					if (vtime - timer > 50) return 2;
+				} else
+					if (timer) timer = 0;
+				analogCnt = 0;
+				analogAVG = 0;
+			}
+		}
+		// transmit none
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			AT91C_BASE_SSC->SSC_THR = 0x00;
+		}
+		// receive and test the miller decoding
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+			volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+			if(MillerDecoding((b & 0xf0) >> 4)) {
+				*len = Uart.byteCnt;
+				return 0;
+			}
+			if(MillerDecoding(b & 0x0f)) {
+				*len = Uart.byteCnt;
+				return 0;
+			}
+		}
+	}
+}
+
+static int EmSendCmd14443aRaw(uint8_t *resp, int respLen, int correctionNeeded)
+{
+	int i, u = 0;
+	uint8_t b = 0;
+
+	// Modulate Manchester
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_MOD);
+	AT91C_BASE_SSC->SSC_THR = 0x00;
+	FpgaSetupSsc();
+	
+	// include correction bit
+	i = 1;
+	if((Uart.parityBits & 0x01) || correctionNeeded) {
+		// 1236, so correction bit needed
+		i = 0;
+	}
+	
+	// send cycle
+	for(;;) {
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+			volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+			(void)b;
+		}
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			if(i > respLen) {
+				b = 0x00;
+				u++;
+			} else {
+				b = resp[i];
+				i++;
+			}
+			AT91C_BASE_SSC->SSC_THR = b;
+
+			if(u > 4) break;
+		}
+		if(BUTTON_PRESS()) {
+			break;
+		}
+	}
+
+	return 0;
+}
+
+static int EmSendCmdEx(uint8_t *resp, int respLen, int correctionNeeded){
+  CodeIso14443aAsTag(resp, respLen);
+	return EmSendCmd14443aRaw(ToSend, ToSendMax, correctionNeeded);
+}
+
+static int EmSendCmd(uint8_t *resp, int respLen){
+	return EmSendCmdEx(resp, respLen, 0);
 }
 
 //-----------------------------------------------------------------------------
@@ -2390,33 +2523,161 @@ void MifareChkKeys(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 {
 	int cardSTATE = MFEMUL_NOFIELD;
-
-	while (true) {
-
-		if(BUTTON_PRESS()) {
-      break;
-    }
+	int vHf = 0;	// in mV
+	int res;
+	uint32_t timer = 0;
+	int len = 0;
+	uint8_t cardAUTHSC = 0;
+	uint8_t cardAUTHKEY = 0xff;  // no authentication
+	uint32_t cuid = 0;
+	struct Crypto1State mpcs = {0, 0};
+	struct Crypto1State *pcs;
+	pcs = &mpcs;
 	
+	uint64_t key64 = 0xffffffffffffULL;
+	
+	uint8_t* receivedCmd = mifare_get_bigbufptr();
+	
+	static uint8_t rATQA[] = {0x04, 0x00}; // Mifare classic 1k
+
+	static uint8_t rUIDBCC1[] = {0xde,  0xad,  0xbe,  0xaf,  0x62}; 
+	static uint8_t rUIDBCC2[] = {0xde,  0xad,  0xbe,  0xaf,  0x62}; // !!!
+		
+	static uint8_t rSAK[] = {0x08,  0xb6,  0xdd};
+
+	static uint8_t rAUTH_NT[] = {0x01, 0x02, 0x03, 0x04};
+	
+// --------------------------------------	test area
+
+
+// --------------------------------------	END test area
+
+	// We need to listen to the high-frequency, peak-detected path.
+	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+	FpgaSetupSsc();
+
+  FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
+	SpinDelay(200);
+
+Dbprintf("--> start");
+	while (true) {
+		WDT_HIT();
+//		timer = GetTickCount();
+//		Dbprintf("time: %d", GetTickCount() - timer);
+
+		// find reader field
+		// Vref = 3300mV, and an 10:1 voltage divider on the input
+		// can measure voltages up to 33000 mV
+		if (cardSTATE == MFEMUL_NOFIELD) {
+			vHf = (33000 * AvgAdc(ADC_CHAN_HF)) >> 10;
+			if (vHf > MF_MINFIELDV) {
+				cardSTATE = MFEMUL_IDLE;
+				LED_A_ON();
+			}
+		} 
+
+		if (cardSTATE != MFEMUL_NOFIELD) {
+			res = EmGetCmd(receivedCmd, &len, 100);
+			if (res == 2) {
+				cardSTATE = MFEMUL_NOFIELD;
+				LEDsoff();
+				continue;
+			}
+			if(res) break;
+		}
+		
+		if(BUTTON_PRESS()) {
+			break;
+		}
+	
+//		if (len) Dbprintf("len:%d cmd: %02x %02x %02x %02x", len, receivedCmd[0], receivedCmd[1], receivedCmd[2], receivedCmd[3]);
+		
 		switch (cardSTATE) {
 			case MFEMUL_NOFIELD:{
 				break;
 			}
+			case MFEMUL_HALTED:{
+				// WUP request
+				if (!(len == 1 && receivedCmd[0] == 0x52)) break;
+			}
 			case MFEMUL_IDLE:{
+				// REQ or WUP request
+				if (len == 1 && (receivedCmd[0] == 0x26 || receivedCmd[0] == 0x52)) {
+timer = GetTickCount();
+					EmSendCmdEx(rATQA, sizeof(rATQA), (receivedCmd[0] == 0x52));
+					cardSTATE = MFEMUL_SELECT1;
+					
+					// init crypto block
+					crypto1_destroy(pcs);
+					cardAUTHKEY = 0xff;
+				}
 				break;
 			}
 			case MFEMUL_SELECT1:{
+				// select all
+				if (len == 2 && (receivedCmd[0] == 0x93 && receivedCmd[1] == 0x20)) {
+					EmSendCmd(rUIDBCC1, sizeof(rUIDBCC1));
+
+					if (rUIDBCC1[0] == 0x88) {
+						cardSTATE = MFEMUL_SELECT2;
+					}
+				}
+
+				// select card
+				if (len == 9 && (receivedCmd[0] == 0x93 && receivedCmd[1] == 0x70)) {
+					EmSendCmd(rSAK, sizeof(rSAK));
+
+					cuid = bytes_to_num(rUIDBCC1, 4);
+					cardSTATE = MFEMUL_WORK;
+					LED_B_ON();
+Dbprintf("--> WORK. anticol1 time: %d", GetTickCount() - timer);
+				}
+				
 				break;
 			}
 			case MFEMUL_SELECT2:{
+					EmSendCmd(rUIDBCC2, sizeof(rUIDBCC2));
+
+				cuid = bytes_to_num(rUIDBCC2, 4);
+				cardSTATE = MFEMUL_WORK;
+				LED_B_ON();
+Dbprintf("--> WORK. anticol2 time: %d", GetTickCount() - timer);
 				break;
 			}
 			case MFEMUL_AUTH1:{
+if (len) Dbprintf("au1 len:%d cmd: %02x %02x %02x %02x", len, receivedCmd[0], receivedCmd[1], receivedCmd[2], receivedCmd[3]);
+				if (len == 8) {
+				
+				}
 				break;
 			}
 			case MFEMUL_AUTH2:{
+
+				LED_C_ON();
+Dbprintf("AUTH COMPLETED. sec=%d, key=%d time=%d", cardAUTHSC, cardAUTHKEY, GetTickCount() - timer);
 				break;
 			}
-			case MFEMUL_HALTED:{
+			case MFEMUL_WORK:{
+				// auth
+				if (len == 4 && (receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61)) {
+timer = GetTickCount();
+					crypto1_create(pcs, key64);
+//					if (cardAUTHKEY == 0xff) { // first auth
+					crypto1_word(pcs, cuid ^ bytes_to_num(rAUTH_NT, 4), 0); // uid ^ nonce
+//					} else { // nested auth
+//					}
+
+					EmSendCmd(rAUTH_NT, sizeof(rAUTH_NT));
+					cardAUTHSC = receivedCmd[1];
+					cardAUTHKEY = receivedCmd[0] - 0x60;
+					cardSTATE = MFEMUL_AUTH1;
+				}
+				
+				// halt
+				if (len == 4 && (receivedCmd[0] == 0x50 || receivedCmd[0] == 0x00)) {
+					cardSTATE = MFEMUL_HALTED;
+					LED_B_OFF();
+				}
 				break;
 			}
 		
@@ -2424,4 +2685,8 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	
 	}
 
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
+
+	DbpString("Emulator stopped.");
 }

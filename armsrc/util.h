@@ -14,6 +14,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define RAMFUNC __attribute((long_call, section(".ramfunc")))
+
 #define BYTEx(x, n) (((x) >> (n * 8)) & 0xff )
 
 #define LED_RED 1
@@ -36,5 +38,8 @@ void LEDsoff();
 int BUTTON_CLICKED(int ms);
 int BUTTON_HELD(int ms);
 void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_information);
+
+void StartTickCount();
+uint32_t RAMFUNC GetTickCount();
 
 #endif

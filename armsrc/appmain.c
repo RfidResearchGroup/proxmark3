@@ -171,7 +171,7 @@ static int ReadAdc(int ch)
 	return d;
 }
 
-static int AvgAdc(int ch)
+int AvgAdc(int ch) // was static - merlok
 {
 	int i;
 	int a = 0;
@@ -930,6 +930,8 @@ void  __attribute__((noreturn)) AppMain(void)
 	// Load the FPGA image, which we have stored in our flash.
 	FpgaDownloadAndGo();
 
+	StartTickCount();
+	
 #ifdef WITH_LCD
 
 	LCDInit();

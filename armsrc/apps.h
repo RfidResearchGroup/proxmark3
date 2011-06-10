@@ -33,6 +33,8 @@ void DbpString(char *str);
 void Dbprintf(const char *fmt, ...);
 void Dbhexdump(int len, uint8_t *d);
 
+int AvgAdc(int ch);
+
 void ToSendStuffBit(int b);
 void ToSendReset(void);
 void ListenReaderField(int limit);

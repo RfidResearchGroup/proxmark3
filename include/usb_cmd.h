@@ -33,13 +33,13 @@ typedef struct {
 } PACKED UsbCommand;
 
 // For the bootloader
-#define CMD_DEVICE_INFO					0x0000
-#define CMD_SETUP_WRITE					0x0001
-#define CMD_FINISH_WRITE				0x0003
-#define CMD_HARDWARE_RESET			0x0004
-#define CMD_START_FLASH					0x0005
-#define CMD_NACK								0x00fe
-#define CMD_ACK									0x00ff
+#define CMD_DEVICE_INFO								0x0000
+#define CMD_SETUP_WRITE								0x0001
+#define CMD_FINISH_WRITE							0x0003
+#define CMD_HARDWARE_RESET						0x0004
+#define CMD_START_FLASH								0x0005
+#define CMD_NACK											0x00fe
+#define CMD_ACK												0x00ff
 
 // For general mucking around
 #define CMD_DEBUG_PRINT_STRING				0x0100
@@ -52,32 +52,32 @@ typedef struct {
 #define CMD_VERSION										0x0107
 
 // For low-frequency tags
-#define CMD_READ_TI_TYPE										0x0202
-#define CMD_WRITE_TI_TYPE										0x0203
-#define CMD_DOWNLOADED_RAW_BITS_TI_TYPE			0x0204
-#define CMD_ACQUIRE_RAW_ADC_SAMPLES_125K		0x0205
-#define CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K	0x0206
-#define CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K		0x0207
-#define CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K		0x0208
-#define CMD_DOWNLOADED_SIM_SAMPLES_125K			0x0209
-#define CMD_SIMULATE_TAG_125K				0x020A
-#define CMD_HID_DEMOD_FSK				0x020B
-#define CMD_HID_SIM_TAG					0x020C
-#define CMD_SET_LF_DIVISOR				0x020D
-#define CMD_LF_SIMULATE_BIDIR				0x020E
-#define CMD_SET_ADC_MUX					0x020F
+#define CMD_READ_TI_TYPE														0x0202
+#define CMD_WRITE_TI_TYPE														0x0203
+#define CMD_DOWNLOADED_RAW_BITS_TI_TYPE							0x0204
+#define CMD_ACQUIRE_RAW_ADC_SAMPLES_125K						0x0205
+#define CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K		0x0206
+#define CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K						0x0207
+#define CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K					0x0208
+#define CMD_DOWNLOADED_SIM_SAMPLES_125K							0x0209
+#define CMD_SIMULATE_TAG_125K												0x020A
+#define CMD_HID_DEMOD_FSK								0x020B
+#define CMD_HID_SIM_TAG									0x020C
+#define CMD_SET_LF_DIVISOR							0x020D
+#define CMD_LF_SIMULATE_BIDIR						0x020E
+#define CMD_SET_ADC_MUX									0x020F
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
 // For the 13.56 MHz tags
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693		0x0300
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443		0x0301
-#define CMD_READ_SRI512_TAG							0x0303
-#define CMD_READ_SRIX4K_TAG							0x0304
-#define CMD_READER_ISO_15693						0x0310
-#define CMD_SIMTAG_ISO_15693						0x0311
+#define CMD_READ_SRI512_TAG											0x0303
+#define CMD_READ_SRIX4K_TAG											0x0304
+#define CMD_READER_ISO_15693										0x0310
+#define CMD_SIMTAG_ISO_15693										0x0311
 #define CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693		0x0312
-#define CMD_ISO_15693_COMMAND						0x0313
-#define CMD_ISO_15693_COMMAND_DONE			0x0314
+#define CMD_ISO_15693_COMMAND										0x0313
+#define CMD_ISO_15693_COMMAND_DONE							0x0314
 #define CMD_ISO_15693_FIND_AFI					0x0315
 #define CMD_ISO_15693_DEBUG							0x0316
 #define CMD_SIMULATE_TAG_HF_LISTEN			0x0380
@@ -86,28 +86,37 @@ typedef struct {
 #define CMD_SNOOP_ISO_14443a						0x0383
 #define CMD_SIMULATE_TAG_ISO_14443a			0x0384
 #define CMD_READER_ISO_14443a						0x0385
-#define CMD_SIMULATE_MIFARE_CARD				0x0386
 #define CMD_SIMULATE_TAG_LEGIC_RF				0x0387
 #define CMD_READER_LEGIC_RF							0x0388
 #define CMD_WRITER_LEGIC_RF							0x0399
-#define CMD_READER_MIFARE								0x0389
-#define CMD_MIFARE_NESTED								0x0390
-#define CMD_MIFARE_READBL								0x0391
-#define CMD_MIFARE_READSC								0x0393
-#define CMD_MIFARE_WRITEBL							0x0394
-#define CMD_MIFARE_CHKKEYS							0x0395
+
 #define CMD_SNOOP_ICLASS								0x0392
 
 // For measurements of the antenna tuning
-#define CMD_MEASURE_ANTENNA_TUNING				0x0400
-#define CMD_MEASURE_ANTENNA_TUNING_HF			0x0401
-#define CMD_MEASURED_ANTENNA_TUNING				0x0410
-#define CMD_LISTEN_READER_FIELD						0x0420
+#define CMD_MEASURE_ANTENNA_TUNING			0x0400
+#define CMD_MEASURE_ANTENNA_TUNING_HF		0x0401
+#define CMD_MEASURED_ANTENNA_TUNING			0x0410
+#define CMD_LISTEN_READER_FIELD					0x0420
 
 // For direct FPGA control
-#define CMD_FPGA_MAJOR_MODE_OFF						0x0500
+#define CMD_FPGA_MAJOR_MODE_OFF					0x0500
 
-#define CMD_UNKNOWN												0xFFFF
+// For mifare commands
+#define CMD_MIFARE_SET_DBGMODE					0x0600
+#define CMD_MIFARE_EML_MEMSET						0x0601
+#define CMD_MIFARE_EML_MEMGET						0x0602
+
+#define CMD_SIMULATE_MIFARE_CARD				0x0603
+
+#define CMD_READER_MIFARE								0x0605
+#define CMD_MIFARE_NESTED								0x0606
+
+#define CMD_MIFARE_READBL								0x0610
+#define CMD_MIFARE_READSC								0x0611
+#define CMD_MIFARE_WRITEBL							0x0612
+#define CMD_MIFARE_CHKKEYS							0x0613
+
+#define CMD_UNKNOWN											0xFFFF
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
 /* Whether a bootloader that understands the common_area is present */

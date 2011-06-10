@@ -58,6 +58,7 @@ CMDSRCS = \
 			cmdhf15.c \
 			cmdhflegic.c \
 			cmdhficlass.c \
+			cmdhfmf.c \
 			cmdhw.c \
 			cmdlf.c \
 			cmdlfem4x.c \
