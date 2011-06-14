@@ -252,13 +252,13 @@ void StartTickCount()
 //  0x20 - 1 ms / bit 
 //  0x40 - 2 ms / bit
 
-	AT91C_BASE_RTTC->RTTC_RTMR = AT91C_RTTC_RTTRST + 0x003B;
+	AT91C_BASE_RTTC->RTTC_RTMR = AT91C_RTTC_RTTRST + 0x001D; // was 0x003B
 }
 
 /*
 * Get the current count.
 */
 uint32_t RAMFUNC GetTickCount(){
-	return AT91C_BASE_RTTC->RTTC_RTVR * 2;
+	return AT91C_BASE_RTTC->RTTC_RTVR;// * 2;
 }
 
