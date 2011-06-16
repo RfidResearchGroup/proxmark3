@@ -1,12 +1,12 @@
 //-----------------------------------------------------------------------------
 // Merlok, May 2011
-// Many authors, that makes it possible
+// Many authors, whom made it possible
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// code for work with mifare cards.
+// Work with mifare cards.
 //-----------------------------------------------------------------------------
 
 #include "proxmark3.h"
@@ -21,10 +21,62 @@
 
 int MF_DBGLEVEL = MF_DBG_ALL;
 
+// memory management
 uint8_t* mifare_get_bigbufptr(void) {
-	return (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
+	return (((uint8_t *)BigBuf) + MIFARE_BUFF_OFFSET);	// was 3560 - tied to other size changes
+}
+uint8_t* eml_get_bigbufptr_sendbuf(void) {
+	return (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);	
+}
+uint8_t* eml_get_bigbufptr_recbuf(void) {
+	return (((uint8_t *)BigBuf) + MIFARE_BUFF_OFFSET);
+}
+uint8_t* eml_get_bigbufptr_cardmem(void) {
+	return (((uint8_t *)BigBuf) + CARD_MEMORY);
 }
 
+// crypto1 helpers
+void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len){
+	uint8_t	bt = 0;
+	int i;
+	
+	if (len != 1) {
+		for (i = 0; i < len; i++)
+			data[i] = crypto1_byte(pcs, 0x00, 0) ^ data[i];
+	} else {
+		bt = 0;
+		for (i = 0; i < 4; i++)
+			bt |= (crypto1_bit(pcs, 0, 0) ^ BIT(data[0], i)) << i;
+				
+		data[0] = bt;
+	}
+	return;
+}
+
+void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, int len, uint32_t *par) {
+	uint8_t bt = 0;
+	int i;
+	uint32_t mltpl = 1 << (len - 1); // for len=18 it=0x20000
+	*par = 0;
+	for (i = 0; i < len; i++) {
+		bt = data[i];
+		data[i] = crypto1_byte(pcs, 0x00, 0) ^ data[i];
+		*par = (*par >> 1) | ( ((filter(pcs->odd) ^ oddparity(bt)) & 0x01) * mltpl );
+	}	
+	return;
+}
+
+uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data) {
+	uint8_t bt = 0;
+	int i;
+
+	for (i = 0; i < 4; i++)
+		bt |= (crypto1_bit(pcs, 0, 0) ^ BIT(data, i)) << i;
+		
+	return bt;
+}
+
+// send commands
 int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer)
 {
 	return mifare_sendcmd_shortex(pcs, crypted, cmd, data, answer, NULL);
@@ -78,6 +130,7 @@ int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cm
 	return len;
 }
 
+// mifare commands
 int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested) 
 {
 	return mifare_classic_authex(pcs, uid, blockNo, keyType, ui64Key, isNested, NULL);
@@ -267,3 +320,40 @@ int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid)
 	return 0;
 }
 
+// work with emulator memory
+void emlSetMem(uint8_t *data, int blockNum, int blocksCount) {
+	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	
+	memcpy(emCARD + blockNum * 16, data, blocksCount * 16);
+}
+
+void emlGetMem(uint8_t *data, int blockNum, int blocksCount) {
+	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	
+	memcpy(data, emCARD + blockNum * 16, blocksCount * 16);
+}
+
+void emlGetMemBt(uint8_t *data, int bytePtr, int byteCount) {
+	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	
+	memcpy(data, emCARD + bytePtr, byteCount);
+}
+
+void emlClearMem(void) {
+	int i;
+	
+	const uint8_t trailer[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x07, 0x80, 0x69, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+	const uint8_t empty[] =   {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	const uint8_t uid[]   =   {0xe6, 0x84, 0x87, 0xf3, 0x16, 0x88, 0x04, 0x00, 0x46, 0x8e, 0x45, 0x55, 0x4d, 0x70, 0x41, 0x04};
+	// fill sectors data
+	for(i = 0; i < 16; i++) {
+		emlSetMem((uint8_t *)empty,   i * 4 + 0, 1);
+		emlSetMem((uint8_t *)empty,   i * 4 + 1, 1);
+		emlSetMem((uint8_t *)empty,   i * 4 + 2, 1);
+		emlSetMem((uint8_t *)trailer, i * 4 + 3, 1);
+	}
+
+	// uid
+	emlSetMem((uint8_t *)uid, 0, 1);
+	return;
+}

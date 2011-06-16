@@ -14,6 +14,19 @@
 #define __ISO14443A_H
 #include "common.h"
 
+// BIG CHANGE - UNDERSTAND THIS BEFORE WE COMMIT
+#define RECV_CMD_OFFSET    3032
+#define RECV_RES_OFFSET    3096
+#define DMA_BUFFER_OFFSET  3160
+#define DMA_BUFFER_SIZE    4096
+#define TRACE_LENGTH       3000
+// mifare reader                      over DMA buffer (SnoopIso14443a())!!!
+#define MIFARE_BUFF_OFFSET 3560  //              \/   \/   \/
+// card emulator memory
+#define EML_RESPONSES      4000
+#define CARD_MEMORY        6000
+#define CARD_MEMORY_LEN    1024
+
 
 typedef struct nestedVector { uint32_t nt, ks1; } nestedVector;
 

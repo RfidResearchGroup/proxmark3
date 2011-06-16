@@ -26,11 +26,11 @@ static int rsamples = 0;
 static int tracing = TRUE;
 static uint32_t iso14a_timeout;
 
-// CARD TO READER
+// CARD TO READER - manchester
 // Sequence D: 11110000 modulation with subcarrier during first half
 // Sequence E: 00001111 modulation with subcarrier during second half
 // Sequence F: 00000000 no modulation with subcarrier
-// READER TO CARD
+// READER TO CARD - miller
 // Sequence X: 00001100 drop after half a period
 // Sequence Y: 00000000 no drop
 // Sequence Z: 11000000 drop at start
@@ -59,16 +59,6 @@ static const uint8_t OddByteParity[256] = {
   0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
   1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1
 };
-
-// BIG CHANGE - UNDERSTAND THIS BEFORE WE COMMIT
-#define RECV_CMD_OFFSET   3032
-#define RECV_RES_OFFSET   3096
-#define DMA_BUFFER_OFFSET 3160
-#define DMA_BUFFER_SIZE   4096
-#define TRACE_LENGTH      3000
-// card emulator memory
-#define CARD_MEMORY       7260
-#define CARD_MEMORY_LEN   1024
 
 uint8_t trigger = 0;
 void iso14a_set_trigger(int enable) {
@@ -787,12 +777,12 @@ done:
 //-----------------------------------------------------------------------------
 // Prepare tag messages
 //-----------------------------------------------------------------------------
-static void CodeIso14443aAsTag(const uint8_t *cmd, int len)
+static void CodeIso14443aAsTagPar(const uint8_t *cmd, int len, uint32_t dwParity)
 {
-    int i;
-	int oddparity;
+	int i;
+//	int oddparity;
 
-    ToSendReset();
+	ToSendReset();
 
 	// Correction bit, might be removed when not needed
 	ToSendStuffBit(0);
@@ -803,55 +793,68 @@ static void CodeIso14443aAsTag(const uint8_t *cmd, int len)
 	ToSendStuffBit(0);
 	ToSendStuffBit(0);
 	ToSendStuffBit(0);
-
+	
 	// Send startbit
 	ToSend[++ToSendMax] = SEC_D;
 
-    for(i = 0; i < len; i++) {
-        int j;
-        uint8_t b = cmd[i];
+	for(i = 0; i < len; i++) {
+		int j;
+		uint8_t b = cmd[i];
 
 		// Data bits
-        oddparity = 0x01;
+//		oddparity = 0x01;
 		for(j = 0; j < 8; j++) {
-            oddparity ^= (b & 1);
+//			oddparity ^= (b & 1);
 			if(b & 1) {
 				ToSend[++ToSendMax] = SEC_D;
 			} else {
 				ToSend[++ToSendMax] = SEC_E;
-            }
-            b >>= 1;
-        }
+			}
+			b >>= 1;
+		}
 
-        // Parity bit
-        if(oddparity) {
-        	ToSend[++ToSendMax] = SEC_D;
+	// Get the parity bit
+		if ((dwParity >> i) & 0x01) {
+			ToSend[++ToSendMax] = SEC_D;
 		} else {
 			ToSend[++ToSendMax] = SEC_E;
 		}
-    }
+		
+			// Parity bit
+//			if(oddparity) {
+//				ToSend[++ToSendMax] = SEC_D;
+//			} else {
+//				ToSend[++ToSendMax] = SEC_E;
+//			}
 
-    // Send stopbit
-    ToSend[++ToSendMax] = SEC_F;
+//		if (oddparity != ((dwParity >> i) & 0x01))
+//		  Dbprintf("par error. i=%d", i);
+	}
+
+	// Send stopbit
+	ToSend[++ToSendMax] = SEC_F;
 
 	// Flush the buffer in FPGA!!
 	for(i = 0; i < 5; i++) {
 		ToSend[++ToSendMax] = SEC_F;
 	}
 
-    // Convert from last byte pos to length
-    ToSendMax++;
+	// Convert from last byte pos to length
+	ToSendMax++;
 
     // Add a few more for slop
-    ToSend[ToSendMax++] = 0x00;
-	ToSend[ToSendMax++] = 0x00;
-    //ToSendMax += 2;
+//    ToSend[ToSendMax++] = 0x00;
+//	ToSend[ToSendMax++] = 0x00;
+}
+
+static void CodeIso14443aAsTag(const uint8_t *cmd, int len){
+	CodeIso14443aAsTagPar(cmd, len, GetParity(cmd, len));
 }
 
 //-----------------------------------------------------------------------------
 // This is to send a NACK kind of answer, its only 3 bits, I know it should be 4
 //-----------------------------------------------------------------------------
-static void CodeStrangeAnswer()
+static void CodeStrangeAnswerAsTag()
 {
 	int i;
 
@@ -889,11 +892,47 @@ static void CodeStrangeAnswer()
 
     // Convert from last byte pos to length
     ToSendMax++;
+}
 
-    // Add a few more for slop
-    ToSend[ToSendMax++] = 0x00;
-	ToSend[ToSendMax++] = 0x00;
-    //ToSendMax += 2;
+static void Code4bitAnswerAsTag(uint8_t cmd)
+{
+	int i;
+
+    ToSendReset();
+
+	// Correction bit, might be removed when not needed
+	ToSendStuffBit(0);
+	ToSendStuffBit(0);
+	ToSendStuffBit(0);
+	ToSendStuffBit(0);
+	ToSendStuffBit(1);  // 1
+	ToSendStuffBit(0);
+	ToSendStuffBit(0);
+	ToSendStuffBit(0);
+
+	// Send startbit
+	ToSend[++ToSendMax] = SEC_D;
+
+	uint8_t b = cmd;
+	for(i = 0; i < 4; i++) {
+		if(b & 1) {
+			ToSend[++ToSendMax] = SEC_D;
+		} else {
+			ToSend[++ToSendMax] = SEC_E;
+		}
+		b >>= 1;
+	}
+
+	// Send stopbit
+	ToSend[++ToSendMax] = SEC_F;
+
+	// Flush the buffer in FPGA!!
+	for(i = 0; i < 5; i++) {
+		ToSend[++ToSendMax] = SEC_F;
+	}
+
+    // Convert from last byte pos to length
+    ToSendMax++;
 }
 
 //-----------------------------------------------------------------------------
@@ -1066,7 +1105,7 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
     memcpy(resp3a, ToSend, ToSendMax); resp3aLen = ToSendMax;
 
 	// Strange answer is an example of rare message size (3 bits)
-	CodeStrangeAnswer();
+	CodeStrangeAnswerAsTag();
 	memcpy(resp4, ToSend, ToSendMax); resp4Len = ToSendMax;
 
 	// Authentication answer (random nonce)
@@ -1472,12 +1511,12 @@ static int EmGetCmd(uint8_t *received, int *len, int maxLen)
 			volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			if(MillerDecoding((b & 0xf0) >> 4)) {
 				*len = Uart.byteCnt;
-				if (tracing) LogTrace(received, *len, 0, GetParity(received, *len), TRUE);
+				if (tracing) LogTrace(received, *len, GetDeltaCountUS(), Uart.parityBits, TRUE);
 				return 0;
 			}
 			if(MillerDecoding(b & 0x0f)) {
 				*len = Uart.byteCnt;
-				if (tracing) LogTrace(received, *len, 0, GetParity(received, *len), TRUE);
+				if (tracing) LogTrace(received, *len, GetDeltaCountUS(), Uart.parityBits, TRUE);
 				return 0;
 			}
 		}
@@ -1509,7 +1548,7 @@ static int EmSendCmd14443aRaw(uint8_t *resp, int respLen, int correctionNeeded)
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			if(i > respLen) {
-				b = 0x00;
+				b = 0xff; // was 0x00
 				u++;
 			} else {
 				b = resp[i];
@@ -1527,15 +1566,34 @@ static int EmSendCmd14443aRaw(uint8_t *resp, int respLen, int correctionNeeded)
 	return 0;
 }
 
-static int EmSendCmdEx(uint8_t *resp, int respLen, int correctionNeeded){
-  CodeIso14443aAsTag(resp, respLen);
+int EmSend4bitEx(uint8_t resp, int correctionNeeded){
+  Code4bitAnswerAsTag(resp);
 	int res = EmSendCmd14443aRaw(ToSend, ToSendMax, correctionNeeded);
-  if (tracing) LogTrace(resp, respLen, 0, GetParity(resp, respLen), FALSE);
+  if (tracing) LogTrace(&resp, 1, GetDeltaCountUS(), GetParity(&resp, 1), FALSE);
 	return res;
 }
 
-static int EmSendCmd(uint8_t *resp, int respLen){
-	return EmSendCmdEx(resp, respLen, 0);
+int EmSend4bit(uint8_t resp){
+	return EmSend4bitEx(resp, 0);
+}
+
+int EmSendCmdExPar(uint8_t *resp, int respLen, int correctionNeeded, uint32_t par){
+  CodeIso14443aAsTagPar(resp, respLen, par);
+	int res = EmSendCmd14443aRaw(ToSend, ToSendMax, correctionNeeded);
+  if (tracing) LogTrace(resp, respLen, GetDeltaCountUS(), par, FALSE);
+	return res;
+}
+
+int EmSendCmdEx(uint8_t *resp, int respLen, int correctionNeeded){
+	return EmSendCmdExPar(resp, respLen, correctionNeeded, GetParity(resp, respLen));
+}
+
+int EmSendCmd(uint8_t *resp, int respLen){
+	return EmSendCmdExPar(resp, respLen, 0, GetParity(resp, respLen));
+}
+
+int EmSendCmdPar(uint8_t *resp, int respLen, uint32_t par){
+	return EmSendCmdExPar(resp, respLen, 0, par);
 }
 
 //-----------------------------------------------------------------------------
@@ -1993,10 +2051,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	if (MF_DBGLEVEL >= 2)	DbpString("READ BLOCK FINISHED");
 
 	// add trace trailer
-	uid[0] = 0xff;
-	uid[1] = 0xff;
-	uid[2] = 0xff;
-	uid[3] = 0xff;
+	memset(uid, 0x44, 4);
 	LogTrace(uid, 4, 0, 0, TRUE);
 
 	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
@@ -2088,10 +2143,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	if (MF_DBGLEVEL >= 2) DbpString("READ SECTOR FINISHED");
 
 	// add trace trailer
-	uid[0] = 0xff;
-	uid[1] = 0xff;
-	uid[2] = 0xff;
-	uid[3] = 0xff;
+	memset(uid, 0x44, 4);
 	LogTrace(uid, 4, 0, 0, TRUE);
 
 	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
@@ -2177,10 +2229,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	if (MF_DBGLEVEL >= 2)	DbpString("WRITE BLOCK FINISHED");
 
 	// add trace trailer
-	uid[0] = 0xff;
-	uid[1] = 0xff;
-	uid[2] = 0xff;
-	uid[3] = 0xff;
+	memset(uid, 0x44, 4);
 	LogTrace(uid, 4, 0, 0, TRUE);
 
 	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
@@ -2392,10 +2441,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 	crypto1_destroy(pcs);
 	
 	// add trace trailer
-	uid[0] = 0xff;
-	uid[1] = 0xff;
-	uid[2] = 0xff;
-	uid[3] = 0xff;
+	memset(uid, 0x44, 4);
 	LogTrace(uid, 4, 0, 0, TRUE);
 
 	for (i = 0; i < NES_MAX_INFO; i++) {
@@ -2502,10 +2548,7 @@ void MifareChkKeys(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	crypto1_destroy(pcs);
 	
 	// add trace trailer
-	uid[0] = 0xff;
-	uid[1] = 0xff;
-	uid[2] = 0xff;
-	uid[3] = 0xff;
+	memset(uid, 0x44, 4);
 	LogTrace(uid, 4, 0, 0, TRUE);
 
 	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
@@ -2531,13 +2574,14 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 {
 	int cardSTATE = MFEMUL_NOFIELD;
 	int vHf = 0;	// in mV
-	int res, i;
+	int nextCycleTimeout = 0;
+	int res;
 	uint32_t timer = 0;
 	uint32_t selTimer = 0;
 	uint32_t authTimer = 0;
 	uint32_t par = 0;
 	int len = 0;
-	uint8_t bt;
+	uint8_t cardWRBL = 0;
 	uint8_t cardAUTHSC = 0;
 	uint8_t cardAUTHKEY = 0xff;  // no authentication
 	uint32_t cuid = 0;
@@ -2547,7 +2591,8 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	
 	uint64_t key64 = 0xffffffffffffULL;
 	
-	uint8_t* receivedCmd = mifare_get_bigbufptr();
+	uint8_t* receivedCmd = eml_get_bigbufptr_recbuf();
+	uint8_t *response = eml_get_bigbufptr_sendbuf();
 	
 	static uint8_t rATQA[] = {0x04, 0x00}; // Mifare classic 1k
 
@@ -2558,19 +2603,23 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 	static uint8_t rAUTH_NT[] = {0x1a, 0xac, 0xff, 0x4f};
 	static uint8_t rAUTH_AT[] = {0x00, 0x00, 0x00, 0x00};
-	static uint8_t cmdBuf[18];
 	
 	// clear trace
 	traceLen = 0;
 	tracing = true;
 	
+	// emulator memory
+	emlClearMem();
+	emlGetMemBt(rUIDBCC1, 0, 4);
+	rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
+	
 // --------------------------------------	test area
 
    // Authenticate response - nonce
-    uint8_t *resp1 = (((uint8_t *)BigBuf) + CARD_MEMORY);
+    uint8_t *resp1 = (((uint8_t *)BigBuf) + EML_RESPONSES);
     int resp1Len;
-    uint8_t *resp2 = (((uint8_t *)BigBuf) + CARD_MEMORY + 200);
-    int resp2Len;
+//    uint8_t *resp2 = (((uint8_t *)BigBuf) + EML_RESPONSES + 200);
+//    int resp2Len;
 	CodeIso14443aAsTag(rAUTH_NT, sizeof(rAUTH_NT));
     memcpy(resp1, ToSend, ToSendMax); resp1Len = ToSendMax;
 		
@@ -2579,7 +2628,7 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	uint32_t rn_enc = 0x98d76b77; // !!!!!!!!!!!!!!!!!
 	uint32_t ans = 0;
 	cuid = bytes_to_num(rUIDBCC1, 4);
-	
+/*	
 	crypto1_create(pcs, key64);
   crypto1_word(pcs, cuid ^ nonce, 0);
   crypto1_word(pcs, rn_enc , 1);
@@ -2589,8 +2638,10 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	CodeIso14443aAsTag(rAUTH_AT, sizeof(rAUTH_AT));
   memcpy(resp2, ToSend, ToSendMax); resp2Len = ToSendMax;
 	Dbprintf("crypto auth time: %d", GetTickCount() - timer);
-
+*/
 // --------------------------------------	END test area
+	// start mkseconds counter
+	StartCountUS();
 
 	// We need to listen to the high-frequency, peak-detected path.
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -2599,9 +2650,15 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
   FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 	SpinDelay(200);
 
-Dbprintf("--> start");
+	Dbprintf("--> start");
+	// calibrate mkseconds counter
+	GetDeltaCountUS();
 	while (true) {
 		WDT_HIT();
+
+		if(BUTTON_PRESS()) {
+			break;
+		}
 
 		// find reader field
 		// Vref = 3300mV, and an 10:1 voltage divider on the input
@@ -2615,7 +2672,7 @@ Dbprintf("--> start");
 		} 
 
 		if (cardSTATE != MFEMUL_NOFIELD) {
-			res = EmGetCmd(receivedCmd, &len, 100);
+			res = EmGetCmd(receivedCmd, &len, 100); // (+ nextCycleTimeout)
 			if (res == 2) {
 				cardSTATE = MFEMUL_NOFIELD;
 				LEDsoff();
@@ -2624,13 +2681,12 @@ Dbprintf("--> start");
 			if(res) break;
 		}
 		
-		if(BUTTON_PRESS()) {
-			break;
-		}
+		nextCycleTimeout = 0;
+		
 //		if (len) Dbprintf("len:%d cmd: %02x %02x %02x %02x", len, receivedCmd[0], receivedCmd[1], receivedCmd[2], receivedCmd[3]);
 
 		if (len != 4 && cardSTATE != MFEMUL_NOFIELD) { // len != 4 <---- speed up the code 4 authentication
-				// REQ or WUP request in ANY state and WUP in HALTED state
+			// REQ or WUP request in ANY state and WUP in HALTED state
 			if (len == 1 && ((receivedCmd[0] == 0x26 && cardSTATE != MFEMUL_HALTED) || receivedCmd[0] == 0x52)) {
 				selTimer = GetTickCount();
 				EmSendCmdEx(rATQA, sizeof(rATQA), (receivedCmd[0] == 0x52));
@@ -2683,12 +2739,11 @@ Dbprintf("--> start");
 				cuid = bytes_to_num(rUIDBCC2, 4);
 				cardSTATE = MFEMUL_WORK;
 				LED_B_ON();
-Dbprintf("--> WORK. anticol2 time: %d", GetTickCount() - timer);
+Dbprintf("--> WORK. anticol2 time: %d", GetTickCount() - selTimer);
 				break;
 			}
 			case MFEMUL_AUTH1:{
 				if (len == 8) {
-timer = GetTickCount();
 // ---------------------------------
 	rn_enc = bytes_to_num(receivedCmd, 4);
 	crypto1_create(pcs, key64);
@@ -2699,7 +2754,6 @@ timer = GetTickCount();
 	num_to_bytes(ans, 4, rAUTH_AT);
 // ---------------------------------
 				EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
-//					EmSendCmd14443aRaw(resp2, resp2Len, 0);
 					cardSTATE = MFEMUL_AUTH2;
 				} else {
 					cardSTATE = MFEMUL_IDLE;
@@ -2713,16 +2767,16 @@ timer = GetTickCount();
 
 				LED_C_ON();
 				cardSTATE = MFEMUL_WORK;
-Dbprintf("AUTH COMPLETED. sec=%d, key=%d time=%d a=%d", cardAUTHSC, cardAUTHKEY, GetTickCount() - authTimer, GetTickCount() - timer);
+Dbprintf("AUTH COMPLETED. sec=%d, key=%d time=%d", cardAUTHSC, cardAUTHKEY, GetTickCount() - authTimer);
 				break;
 			}
 			case MFEMUL_WORK:{
 				// auth
 				if (len == 4 && (receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61)) {
-					authTimer = GetTickCount();
+authTimer = GetTickCount();
 //					EmSendCmd(rAUTH_NT, sizeof(rAUTH_NT));
-//SpinDelayUs(30);
 					EmSendCmd14443aRaw(resp1, resp1Len, 0);
+LogTrace(NULL, 0, GetDeltaCountUS(), 0, TRUE);
 //					crypto1_create(pcs, key64);
 //					if (cardAUTHKEY == 0xff) { // first auth
 //					crypto1_word(pcs, cuid ^ bytes_to_num(rAUTH_NT, 4), 0); // uid ^ nonce
@@ -2732,50 +2786,54 @@ Dbprintf("AUTH COMPLETED. sec=%d, key=%d time=%d a=%d", cardAUTHSC, cardAUTHKEY,
 					cardAUTHSC = receivedCmd[1] / 4;  // received block num
 					cardAUTHKEY = receivedCmd[0] - 0x60;
 					cardSTATE = MFEMUL_AUTH1;
+					nextCycleTimeout = 10;
 					break;
 				}
 				
 				if (len == 0) break;
 				
 				// decrypt seqence
-				if (cardAUTHKEY != 0xff){
-					if (len != 1) {
-						for (i = 0; i < len; i++)
-							receivedCmd[i] = crypto1_byte(pcs, 0x00, 0) ^ receivedCmd[i];
-					} else {
-						bt = 0;
-						for (i = 0; i < 4; i++)
-							bt |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedCmd[0], i)) << i;
+				if (cardAUTHKEY != 0xff) mf_crypto1_decrypt(pcs, receivedCmd, len);
 				
-						receivedCmd[0] = bt;
-					}
+				// rule 13 of 7.5.3. in ISO 14443-4. chaining shall be continued
+				// BUT... ACK --> NACK
+				if (len == 1 && receivedCmd[0] == CARD_ACK) {
+					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+					break;
+				}
+				
+				// rule 12 of 7.5.3. in ISO 14443-4. R(NAK) --> R(ACK)
+				if (len == 1 && receivedCmd[0] == CARD_NACK_NA) {
+					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK));
+					break;
 				}
 				
 				// read block
 				if (len == 4 && receivedCmd[0] == 0x30) {
-				cmdBuf[0] = 0;
-				par = 0;
-/*					memcpy(cmdBuf, blockData, 16);
-					AppendCrc14443a(cmdBuf, 16);
-	
-	// crypto
-					par = 0;
-					for (i = 0; i < 18; i++) {
-						d_block_enc[pos] = crypto1_byte(pcs, 0x00, 0) ^ cmdBuf[pos];
-						par = (par >> 1) | ( ((filter(pcs->odd) ^ oddparity(cmdBuf[pos])) & 0x01) * 0x20000 );
-					}	
-*/
-					//ReaderTransmitPar(d_block_enc, sizeof(d_block_enc), par);
-Dbprintf("read block: %d", receivedCmd[1]);
+					if (receivedCmd[1] >= 16 * 4) {
+						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+						break;
+					}
+					emlGetMem(response, receivedCmd[1], 1);
+					AppendCrc14443a(response, 16);
+					mf_crypto1_encrypt(pcs, response, 18, &par);
+					EmSendCmdPar(response, 18, par);
 					break;
 				}
 				
 				// write block
 				if (len == 4 && receivedCmd[0] == 0xA0) {
-Dbprintf("write block: %d", receivedCmd[1]);
+					if (receivedCmd[1] >= 16 * 4) {
+						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+						break;
+					}
+					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK));
+					nextCycleTimeout = 50;
+					cardSTATE = MFEMUL_WRITEBL2;
+					cardWRBL = receivedCmd[1];
 					break;
 				}
-				
+			
 				// halt
 				if (len == 4 && (receivedCmd[0] == 0x50 && receivedCmd[1] == 0x00)) {
 					cardSTATE = MFEMUL_HALTED;
@@ -2784,6 +2842,23 @@ Dbprintf("write block: %d", receivedCmd[1]);
 					Dbprintf("--> HALTED. Selected time: %d ms",  GetTickCount() - selTimer);
 					break;
 				}
+				break;
+
+				// command not allowed
+				if (len == 4) {
+					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+					break;
+				}
+			}
+			case MFEMUL_WRITEBL2:{
+				if (len == 18){
+					mf_crypto1_decrypt(pcs, receivedCmd, len);
+					emlSetMem(receivedCmd, cardWRBL, 1);
+					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK));
+					cardSTATE = MFEMUL_WORK;
+					break;
+				}
+Dbprintf("err write block: %d len:%d", cardWRBL, len);
 				break;
 			}
 		
@@ -2795,6 +2870,7 @@ Dbprintf("write block: %d", receivedCmd[1]);
 	LEDsoff();
 
 	// add trace trailer
+	memset(rAUTH_NT, 0x44, 4);
 	LogTrace(rAUTH_NT, 4, 0, 0, TRUE);
 
 	DbpString("Emulator stopped.");

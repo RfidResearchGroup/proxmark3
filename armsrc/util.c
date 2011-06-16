@@ -259,6 +259,45 @@ void StartTickCount()
 * Get the current count.
 */
 uint32_t RAMFUNC GetTickCount(){
-	return AT91C_BASE_RTTC->RTTC_RTVR;// * 2;
+	return AT91C_BASE_RTTC->RTTC_RTVR;// was * 2;
 }
+
+//  -------------------------------------------------------------------------
+//  microseconds timer 
+//  -------------------------------------------------------------------------
+void StartCountUS()
+{
+	AT91C_BASE_PMC->PMC_PCER |= (0x1 << 12) | (0x1 << 13) | (0x1 << 14);
+//	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC1XC1S_TIOA0;
+	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
+
+	// fast clock
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS; // timer disable
+	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK | // MCK(48MHz)/32 -- tick=1.5mks
+														AT91C_TC_WAVE | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_CLEAR |
+														AT91C_TC_ACPC_SET | AT91C_TC_ASWTRG_SET;
+	AT91C_BASE_TC0->TC_RA = 1;
+	AT91C_BASE_TC0->TC_RC = 0xBFFF + 1; // 0xC000
+	
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS; // timer disable  
+	AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_XC1; // from timer 0
+
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN;
+	AT91C_BASE_TCB->TCB_BCR = 1;
+}
+
+uint32_t RAMFUNC GetCountUS(){
+	return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV / 15) * 10);
+}
+
+static uint32_t GlobalUsCounter = 0;
+
+uint32_t RAMFUNC GetDeltaCountUS(){
+	uint32_t g_cnt = GetCountUS();
+	uint32_t g_res = g_cnt - GlobalUsCounter;
+	GlobalUsCounter = g_cnt;
+	return g_res;
+}
+
 

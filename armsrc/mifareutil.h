@@ -19,6 +19,11 @@
 #define AUTH_FIRST    0
 #define AUTH_NESTED   2
 
+// mifare 4bit card answers
+#define CARD_ACK      0x0A  // 1010 - ACK
+#define CARD_NACK_NA  0x04  // 0100 - NACK, not allowed (command not allowed)
+#define CARD_NACK_TR  0x05  // 0101 - NACK, transmission error
+
 // reader voltage field detector
 #define MF_MINFIELDV      4000
 
@@ -46,7 +51,8 @@ extern int MF_DBGLEVEL;
 #define MFEMUL_AUTH1    4
 #define MFEMUL_AUTH2    5
 #define MFEMUL_WORK			6
-#define MFEMUL_HALTED   7
+#define MFEMUL_WRITEBL2 7
+#define MFEMUL_HALTED   8
 
 //functions
 uint8_t* mifare_get_bigbufptr(void);
@@ -60,5 +66,21 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, \
 int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData); 
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData);
 int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid); 
+
+// crypto functions
+void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *receivedCmd, int len);
+void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, int len, uint32_t *par);
+uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data);
+
+// memory management
+uint8_t* mifare_get_bigbufptr(void);
+uint8_t* eml_get_bigbufptr_sendbuf(void);
+uint8_t* eml_get_bigbufptr_recbuf(void);
+
+// emulator functions
+void emlClearMem(void);
+void emlSetMem(uint8_t *data, int blockNum, int blocksCount);
+void emlGetMem(uint8_t *data, int blockNum, int blocksCount);
+void emlGetMemBt(uint8_t *data, int bytePtr, int byteCount);
 
 #endif

@@ -42,4 +42,8 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
 void StartTickCount();
 uint32_t RAMFUNC GetTickCount();
 
+void StartCountUS();
+uint32_t RAMFUNC GetCountUS();
+uint32_t RAMFUNC GetDeltaCountUS();
+
 #endif
