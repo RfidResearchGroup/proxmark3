@@ -103,18 +103,20 @@ typedef struct {
 
 // For mifare commands
 #define CMD_MIFARE_SET_DBGMODE					0x0600
-#define CMD_MIFARE_EML_MEMSET						0x0601
-#define CMD_MIFARE_EML_MEMGET						0x0602
+#define CMD_MIFARE_EML_MEMCLR						0x0601
+#define CMD_MIFARE_EML_MEMSET						0x0602
+#define CMD_MIFARE_EML_MEMGET						0x0603
+#define CMD_MIFARE_EML_CARDLOAD					0x0604
 
-#define CMD_SIMULATE_MIFARE_CARD				0x0603
+#define CMD_SIMULATE_MIFARE_CARD				0x0610
 
-#define CMD_READER_MIFARE								0x0605
-#define CMD_MIFARE_NESTED								0x0606
+#define CMD_READER_MIFARE								0x0611
+#define CMD_MIFARE_NESTED								0x0612
 
-#define CMD_MIFARE_READBL								0x0610
-#define CMD_MIFARE_READSC								0x0611
-#define CMD_MIFARE_WRITEBL							0x0612
-#define CMD_MIFARE_CHKKEYS							0x0613
+#define CMD_MIFARE_READBL								0x0620
+#define CMD_MIFARE_READSC								0x0621
+#define CMD_MIFARE_WRITEBL							0x0622
+#define CMD_MIFARE_CHKKEYS							0x0623
 
 #define CMD_UNKNOWN											0xFFFF
 

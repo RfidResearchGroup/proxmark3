@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhfmf.h"
+#include "proxmark3.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -268,17 +269,20 @@ int CmdHF14AMfNested(const char *Cmd)
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
 	uint8_t keyBlock[16 * 6];
 	uint64_t key64 = 0;
+	int transferToEml = 0;
 	
 	char cmdp, ctmp;
 
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:");
-		PrintAndLog(" all sectors:  hf mf nested  <card memory> <block number> <key A/B> <key (12 hex symbols)>");
-		PrintAndLog(" one sector:   hf mf nested  o <block number> <key A/B> <key (12 hex symbols)>");
+		PrintAndLog(" all sectors:  hf mf nested  <card memory> <block number> <key A/B> <key (12 hex symbols)> [t]");
+		PrintAndLog(" one sector:   hf mf nested  o <block number> <key A/B> <key (12 hex symbols)> [t]");
 		PrintAndLog("               <target block number> <target key A/B>");
 		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
+		PrintAndLog("t - transfer keys into emulator memory");
 		PrintAndLog(" ");
 		PrintAndLog("      sample1: hf mf nested 1 0 A FFFFFFFFFFFF ");
+		PrintAndLog("      sample1: hf mf nested 1 0 A FFFFFFFFFFFF t ");
 		PrintAndLog("      sample2: hf mf nested o 0 A FFFFFFFFFFFF 4 A");
 		return 0;
 	}	
@@ -296,7 +300,7 @@ int CmdHF14AMfNested(const char *Cmd)
 		return 1;
 	}
 	
-	if (cmdp =='o' || cmdp == 'O') {
+	if (cmdp == 'o' || cmdp == 'O') {
 		cmdp = 'o';
 		trgBlockNo = param_get8(Cmd, 4);
 		ctmp = param_getchar(Cmd, 5);
@@ -314,8 +318,13 @@ int CmdHF14AMfNested(const char *Cmd)
 			default:  SectorsCnt = 16;
 		}
 	}
+
+	ctmp = param_getchar(Cmd, 4);
+	if (ctmp == 't' || ctmp == 'T') transferToEml = 1;
+	ctmp = param_getchar(Cmd, 6);
+	transferToEml |= (ctmp == 't' || ctmp == 'T');
 	
-	PrintAndLog("--block no:%02x key type:%02x key:%s ", blockNo, keyType, sprint_hex(key, 6));
+	PrintAndLog("--block no:%02x key type:%02x key:%s etrans:%d", blockNo, keyType, sprint_hex(key, 6), transferToEml);
 	if (cmdp == 'o')
 		PrintAndLog("--target block no:%02x target key type:%02x ", trgBlockNo, trgKeyType);
 
@@ -333,10 +342,22 @@ int CmdHF14AMfNested(const char *Cmd)
 		res = mfCheckKeys(trgBlockNo, trgKeyType, 8, keyBlock, &key64);
 		if (res)
 			res = mfCheckKeys(trgBlockNo, trgKeyType, 8, &keyBlock[6 * 8], &key64);
-		if (!res)
+		if (!res) {
 			PrintAndLog("Found valid key:%012llx", key64);
-		else
+
+			// transfer key to the emulator
+			if (transferToEml) {
+				mfEmlGetMem(keyBlock, (trgBlockNo / 4) * 4 + 3, 1);
+		
+				if (!trgKeyType)
+					num_to_bytes(key64, 6, keyBlock);
+				else
+					num_to_bytes(key64, 6, &keyBlock[10]);
+				mfEmlSetMem(keyBlock, (trgBlockNo / 4) * 4 + 3, 1);		
+			}
+		} else {
 			PrintAndLog("No valid key found");
+		}
 	} else  // ------------------------------------  multiple sectors working
 	{
 		blDiff = blockNo % 4;
@@ -400,6 +421,18 @@ int CmdHF14AMfNested(const char *Cmd)
 				e_sector[i].Key[0], e_sector[i].foundKey[0], e_sector[i].Key[1], e_sector[i].foundKey[1]);
 		}
 		PrintAndLog("|---|----------------|---|----------------|---|");
+		
+		// transfer them to the emulator
+		if (transferToEml) {
+			for (i = 0; i < SectorsCnt; i++) {
+				mfEmlGetMem(keyBlock, i * 4 + 3, 1);
+				if (e_sector[i].foundKey[0])
+					num_to_bytes(e_sector[i].Key[1], 6, keyBlock);
+				if (e_sector[i].foundKey[1])
+					num_to_bytes(e_sector[i].Key[1], 6, &keyBlock[10]);
+				mfEmlSetMem(keyBlock, i * 4 + 3, 1);
+			}		
+		}
 		
 		free(e_sector);
 	}
@@ -488,7 +521,12 @@ int CmdHF14AMf1kSim(const char *Cmd)
 
 int CmdHF14AMfDbg(const char *Cmd)
 {
-	if (strlen(Cmd) < 1) {
+	int dbgMode = param_get32ex(Cmd, 0, 0, 10);
+	if (dbgMode > 4) {
+		PrintAndLog("Max debud mode parameter is 4 \n");
+	}
+
+	if (strlen(Cmd) < 1 || !param_getchar(Cmd, 0) || dbgMode > 4) {
 		PrintAndLog("Usage:  hf mf dbg  <debug level>");
 		PrintAndLog(" 0 - no debug messages");
 		PrintAndLog(" 1 - error messages");
@@ -497,19 +535,83 @@ int CmdHF14AMfDbg(const char *Cmd)
 		return 0;
 	}	
 
-	PrintAndLog("No code here (");
+  UsbCommand c = {CMD_MIFARE_SET_DBGMODE, {dbgMode, 0, 0}};
+  SendCommand(&c);
+
   return 0;
 }
 
 int CmdHF14AMfEGet(const char *Cmd)
 {
-	PrintAndLog("No code here (");
+	uint8_t blockNo = 0;
+	uint8_t data[3 * 16];
+	int i;
+
+	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("Usage:  hf mf eget <block number>");
+		PrintAndLog(" sample: hf mf eget 0 ");
+		return 0;
+	}	
+	
+	blockNo = param_get8(Cmd, 0);
+	if (blockNo >= 16 * 4) {
+		PrintAndLog("Block number must be in [0..63] as in MIFARE classic.");
+		return 1;
+	}
+
+	PrintAndLog(" ");
+	if (!mfEmlGetMem(data, blockNo, 3)) {
+		for (i = 0; i < 3; i++) {
+			PrintAndLog("data[%d]:%s", blockNo + i, sprint_hex(data + i * 16, 16));
+		}
+	} else {
+		PrintAndLog("Command execute timeout");
+	}
+
+  return 0;
+}
+
+int CmdHF14AMfEClear(const char *Cmd)
+{
+	if (param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("Usage:  hf mf eclr");
+		PrintAndLog("It set card emulator memory to empty data blocks and key A/B FFFFFFFFFFFF \n");
+		return 0;
+	}	
+
+  UsbCommand c = {CMD_MIFARE_EML_MEMCLR, {0, 0, 0}};
+  SendCommand(&c);
   return 0;
 }
 
 int CmdHF14AMfESet(const char *Cmd)
 {
-	PrintAndLog("No code here (");
+	uint8_t memBlock[16];
+	uint8_t blockNo = 0;
+
+	memset(memBlock, 0x00, sizeof(memBlock));
+
+	if (strlen(Cmd) < 3 || param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("Usage:  hf mf eset <block number> <block data (32 hex symbols)>");
+		PrintAndLog(" sample: hf mf eset 1 000102030405060708090a0b0c0d0e0f ");
+		return 0;
+	}	
+	
+	blockNo = param_get8(Cmd, 0);
+	if (blockNo >= 16 * 4) {
+		PrintAndLog("Block number must be in [0..63] as in MIFARE classic.");
+		return 1;
+	}
+	
+	if (param_gethex(Cmd, 1, memBlock, 32)) {
+		PrintAndLog("block data must include 32 HEX symbols");
+		return 1;
+	}
+	
+	//  1 - blocks count
+  UsbCommand c = {CMD_MIFARE_EML_MEMSET, {blockNo, 1, 0}};
+	memcpy(c.d.asBytes, memBlock, 16);
+  SendCommand(&c);
   return 0;
 }
 
@@ -525,6 +627,51 @@ int CmdHF14AMfESave(const char *Cmd)
   return 0;
 }
 
+int CmdHF14AMfECFill(const char *Cmd) {
+	uint8_t keyType = 0;
+
+	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("Usage:  hf mf efill <key A/B>");
+		PrintAndLog("sample:  hf mf efill A");
+		PrintAndLog("Card data blocks transfers to card emulator memory.");
+		PrintAndLog("Keys must be laid in the simulator memory. \n");
+		return 0;
+	}	
+
+	char ctmp = param_getchar(Cmd, 0);
+	if (ctmp == 0x00) {
+		PrintAndLog("Key type must be A or B");
+		return 1;
+	}
+	if (ctmp != 'A' && ctmp != 'a') keyType = 1;
+
+  UsbCommand c = {CMD_MIFARE_EML_CARDLOAD, {0, keyType, 0}};
+  SendCommand(&c);
+  return 0;
+}
+
+int CmdHF14AMfEKeyPrn(const char *Cmd) {
+	int i;
+	uint8_t data[16];
+	uint64_t keyA, keyB;
+	
+	PrintAndLog("|---|----------------|----------------|");
+	PrintAndLog("|sec|key A           |key B           |");
+	PrintAndLog("|---|----------------|----------------|");
+	for (i = 0; i < 16; i++) {
+		if (mfEmlGetMem(data, i * 4 + 3, 1)) {
+			PrintAndLog("error get block %d", i * 4 + 3);
+			break;
+		}
+		keyA = bytes_to_num(data, 6);
+		keyB = bytes_to_num(data + 10, 6);
+		PrintAndLog("|%03d|  %012llx  |  %012llx  |", i, keyA, keyB);
+	}
+	PrintAndLog("|---|----------------|----------------|");
+	
+	return 0;
+}
+
 static command_t CommandTable[] = 
 {
   {"help",		CmdHelp,						1, "This help"},
@@ -536,10 +683,13 @@ static command_t CommandTable[] =
   {"mifare",	CmdHF14AMifare,			0, "Read parity error messages. param - <used card nonce>"},
   {"nested",	CmdHF14AMfNested,		0, "Test nested authentication"},
   {"sim",			CmdHF14AMf1kSim,		0, "Simulate MIFARE 1k card"},
+  {"eclr",  	CmdHF14AMfEClear,		0, "Clear simulator memory block"},
   {"eget",		CmdHF14AMfEGet,			0, "Set simulator memory block"},
   {"eset",		CmdHF14AMfESet,			0, "Get simulator memory block"},
   {"eload",		CmdHF14AMfELoad,		0, "Load from file emul dump"},
   {"esave",		CmdHF14AMfESave,		0, "Save to file emul dump"},
+  {"ecfill",	CmdHF14AMfECFill,		0, "Fill simulator memory with help of keys from simulator"},
+  {"ekeyprn",	CmdHF14AMfEKeyPrn,	0, "Print keys from simulator memory"},
   {NULL, NULL, 0, NULL}
 };
 

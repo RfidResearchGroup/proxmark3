@@ -16,7 +16,7 @@ APP_CFLAGS	= -O2 -DWITH_LF -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b
 #SRC_LCD = fonts.c LCD.c
 SRC_LF = lfops.c hitag2.c
 SRC_ISO15693 = iso15693.c iso15693tools.c 
-SRC_ISO14443a = iso14443a.c mifareutil.c
+SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c
 SRC_ISO14443b = iso14443.c
 SRC_CRAPTO1 = crapto1.c crypto1.c
 

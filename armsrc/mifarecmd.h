@@ -1,30 +1,28 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2011 Merlok
+// Merlok - June 2011
+// Gerhard de Koning Gans - May 2008
+// Hagen Fritsch - June 2010
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// High frequency MIFARE commands
+// Routines to support ISO 14443 type A.
 //-----------------------------------------------------------------------------
 
-#ifndef CMDHFMF_H__
-#define CMDHFMF_H__
+#ifndef __MIFARECMD_H
+#define __MIFARECMD_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
 #include "proxmark3.h"
-#include "iso14443crc.h"
-#include "data.h"
-#include "proxusb.h"
-#include "ui.h"
-#include "cmdparser.h"
-#include "common.h"
+#include "apps.h"
 #include "util.h"
-#include "mifarehost.h"
+#include "string.h"
 
-int CmdHFMF(const char *Cmd);
+#include "iso14443crc.h"
+#include "iso14443a.h"
+#include "crapto1.h"
+#include "mifareutil.h"
+#include "common.h"
+
 
 #endif

@@ -195,3 +195,23 @@ int mfCheckKeys (uint8_t blockNo, uint8_t keyType, uint8_t keycnt, uint8_t * key
 	*key = bytes_to_num(resp->d.asBytes, 6);
 	return 0;
 }
+
+int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
+  UsbCommand c = {CMD_MIFARE_EML_MEMGET, {blockNum, blocksCount, 0}};
+ 
+  SendCommand(&c);
+
+	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
+
+	if (resp == NULL) return 1;
+	memcpy(data, resp->d.asBytes, blocksCount * 16); 
+	return 0;
+}
+
+int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
+  UsbCommand c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, 0}};
+	memcpy(c.d.asBytes, data, blocksCount * 16); 
+  SendCommand(&c);
+	return 0;
+}
+

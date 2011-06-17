@@ -713,6 +713,23 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_SIMULATE_MIFARE_CARD:
 			Mifare1ksim(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
+		
+		// emulator
+		case CMD_MIFARE_SET_DBGMODE:
+			MifareSetDbgLvl(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+		case CMD_MIFARE_EML_MEMCLR:
+			MifareEMemClr(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+		case CMD_MIFARE_EML_MEMSET:
+			MifareEMemSet(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+		case CMD_MIFARE_EML_MEMGET:
+			MifareEMemGet(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+		case CMD_MIFARE_EML_CARDLOAD:
+			MifareECardLoad(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
 			
 #endif
 

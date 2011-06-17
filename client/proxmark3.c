@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "proxusb.h"
@@ -40,7 +41,11 @@ static void *usb_receiver(void *targ)
       for (int i = 0; i < strlen(PROXPROMPT); i++)
         putchar(0x08);
       UsbCommandReceived(&cmdbuf);
-      printf(PROXPROMPT);
+			// there is a big bug )
+			if (cmdbuf.cmd > 0x0100 && cmdbuf.cmd < 0x0110) { // debug commands
+				rl_on_new_line_with_prompt();
+				rl_forced_update_display();
+			}
       fflush(NULL);
     }
   }
@@ -61,21 +66,28 @@ static void *main_loop(void *targ)
     pthread_create(&reader_thread, NULL, &usb_receiver, &rarg);
   }
 
-  while(1) {
-    cmd = readline(PROXPROMPT);
-    if (cmd) {
-      while(cmd[strlen(cmd) - 1] == ' ')
-        cmd[strlen(cmd) - 1] = 0x00;
-      if (cmd[0] != 0x00) {
-        CommandReceived(cmd);
-        add_history(cmd);
-      }
-      free(cmd);
-    } else {
-      printf("\n");
-      break;
-    }
-  }
+	read_history(".history");
+	while(1) {
+		cmd = readline(PROXPROMPT);
+		if (cmd) {
+			while(cmd[strlen(cmd) - 1] == ' ')
+			cmd[strlen(cmd) - 1] = 0x00;
+			
+			if (cmd[0] != 0x00) {
+				if (strncmp(cmd, "quit", 4) == 0) {
+					write_history(".history");
+					break;
+				}
+				
+				CommandReceived(cmd);
+				add_history(cmd);
+			}
+			free(cmd);
+		} else {
+			printf("\n");
+			break;
+		}
+	}
 
   if (arg->usb_present == 1) {
     rarg.run = 0;

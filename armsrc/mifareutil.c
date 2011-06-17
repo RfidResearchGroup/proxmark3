@@ -339,6 +339,14 @@ void emlGetMemBt(uint8_t *data, int bytePtr, int byteCount) {
 	memcpy(data, emCARD + bytePtr, byteCount);
 }
 
+uint64_t emlGetKey(int sectorNum, int keyType) {
+	uint8_t key[6];
+	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	
+	memcpy(key, emCARD + 3 * 16 + sectorNum * 4 * 16 + keyType * 10, 6);
+	return bytes_to_num(key, 6);
+}
+
 void emlClearMem(void) {
 	int i;
 	

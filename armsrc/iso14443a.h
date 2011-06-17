@@ -27,7 +27,6 @@
 #define CARD_MEMORY        6000
 #define CARD_MEMORY_LEN    1024
 
-
 typedef struct nestedVector { uint32_t nt, ks1; } nestedVector;
 
 extern byte_t oddparity (const byte_t bt);
@@ -43,5 +42,9 @@ extern int ReaderReceivePar(uint8_t* receivedAnswer, uint32_t * parptr);
 extern void iso14443a_setup();
 extern int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data, uint32_t * cuid_ptr);
 extern void iso14a_set_trigger(int enable);
+
+extern void iso14a_clear_tracelen(void);
+extern void iso14a_set_tracing(int enable);
+extern int LogTrace(const uint8_t * btBytes, int iLen, int iSamples, uint32_t dwParity, int bReader);
 
 #endif /* __ISO14443A_H */
