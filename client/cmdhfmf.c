@@ -427,7 +427,7 @@ int CmdHF14AMfNested(const char *Cmd)
 			for (i = 0; i < SectorsCnt; i++) {
 				mfEmlGetMem(keyBlock, i * 4 + 3, 1);
 				if (e_sector[i].foundKey[0])
-					num_to_bytes(e_sector[i].Key[1], 6, keyBlock);
+					num_to_bytes(e_sector[i].Key[0], 6, keyBlock);
 				if (e_sector[i].foundKey[1])
 					num_to_bytes(e_sector[i].Key[1], 6, &keyBlock[10]);
 				mfEmlSetMem(keyBlock, i * 4 + 3, 1);
@@ -617,13 +617,125 @@ int CmdHF14AMfESet(const char *Cmd)
 
 int CmdHF14AMfELoad(const char *Cmd)
 {
-	PrintAndLog("No code here (");
+	FILE * f;
+	char filename[20];
+	char * fnameptr = filename;
+	char buf[64];
+	uint8_t buf8[64];
+	int i, len, blockNum;
+	
+	memset(filename, 0, sizeof(filename));
+	memset(buf, 0, sizeof(buf));
+
+	if (param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("It loads emul dump from the file `filename.eml`");
+		PrintAndLog("Usage:  hf mf eload <file name w/o `.eml`>");
+		PrintAndLog(" sample: hf mf eload filename");
+		return 0;
+	}	
+
+	len = strlen(Cmd);
+	if (len > 14) len = 14;
+	
+	if (len < 1) {
+	}
+
+	memcpy(filename, Cmd, len);
+	fnameptr += len;
+
+	sprintf(fnameptr, ".eml"); 
+	
+	// open file
+	f = fopen(filename, "r");
+	if (f == NULL) {
+		PrintAndLog("File not found or locked.");
+		return 1;
+	}
+	
+	blockNum = 0;
+	while(!feof(f)){
+		memset(buf, 0, sizeof(buf));
+		fgets(buf, sizeof(buf), f);
+		if (strlen(buf) < 32){
+			PrintAndLog("File content error. Block data must include 32 HEX symbols");
+			return 2;
+		}
+		for (i = 0; i < 32; i += 2)
+		  sscanf(&buf[i], "%02x", (unsigned int *)&buf8[i / 2]);
+//			PrintAndLog("data[%02d]:%s", blockNum, sprint_hex(buf8, 16));
+
+		if (mfEmlSetMem(buf8, blockNum, 1)) {
+			PrintAndLog("Cant set emul block: %d", blockNum);
+			return 3;
+		}
+		blockNum++;
+		
+		if (blockNum >= 16 * 4) break;
+	}
+	fclose(f);
+	
+	if (blockNum != 16 * 4){
+		PrintAndLog("File content error. There must be 64 blocks");
+		return 4;
+	}
+	PrintAndLog("Loaded from file: %s", filename);
   return 0;
 }
 
 int CmdHF14AMfESave(const char *Cmd)
 {
-	PrintAndLog("No code here (");
+	FILE * f;
+	char filename[20];
+	char * fnameptr = filename;
+	uint8_t buf[64];
+	int i, j, len;
+	
+	memset(filename, 0, sizeof(filename));
+	memset(buf, 0, sizeof(buf));
+
+	if (param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("It saves emul dump into the file `filename.eml` or `cardID.eml`");
+		PrintAndLog("Usage:  hf mf esave [file name w/o `.eml`]");
+		PrintAndLog(" sample: hf mf esave ");
+		PrintAndLog("         hf mf esave filename");
+		return 0;
+	}	
+
+	len = strlen(Cmd);
+	if (len > 14) len = 14;
+	
+	if (len < 1) {
+		// get filename
+		if (mfEmlGetMem(buf, 0, 1)) {
+			PrintAndLog("Cant get block: %d", 0);
+			return 1;
+		}
+		for (j = 0; j < 7; j++, fnameptr += 2)
+			sprintf(fnameptr, "%02x", buf[j]); 
+	} else {
+		memcpy(filename, Cmd, len);
+		fnameptr += len;
+	}
+
+	sprintf(fnameptr, ".eml"); 
+	
+	// open file
+	f = fopen(filename, "w+");
+
+	// put hex
+	for (i = 0; i < 16 * 4; i++) {
+		if (mfEmlGetMem(buf, i, 1)) {
+			PrintAndLog("Cant get block: %d", i);
+			break;
+		}
+		for (j = 0; j < 16; j++)
+			fprintf(f, "%02x", buf[j]); 
+		fprintf(f,"\n");
+	}
+	fclose(f);
+	
+	PrintAndLog("Saved to file: %s", filename);
+	
   return 0;
 }
 

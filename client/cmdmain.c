@@ -105,12 +105,12 @@ void UsbCommandReceived(UsbCommand *UC)
       }
       memcpy(s, UC->d.asBytes, UC->arg[0]);
       s[UC->arg[0]] = '\0';
-      PrintAndLog("#db# %s", s);
+      PrintAndLog("#db# %s       ", s);
       return;
     }
 
     case CMD_DEBUG_PRINT_INTEGERS:
-      PrintAndLog("#db# %08x, %08x, %08x\r\n", UC->arg[0], UC->arg[1], UC->arg[2]);
+      PrintAndLog("#db# %08x, %08x, %08x       \r\n", UC->arg[0], UC->arg[1], UC->arg[2]);
       return;
 
     case CMD_MEASURED_ANTENNA_TUNING: {
@@ -158,7 +158,7 @@ void UsbCommandReceived(UsbCommand *UC)
     unexpected_response:
 
 	if(UC->cmd != CMD_ACK)
-		PrintAndLog("unrecognized command %08x\n", UC->cmd);
+		PrintAndLog("unrecognized command %08x       \n", UC->cmd);
 	else
 		memcpy(&current_response, UC, sizeof(UsbCommand));
 	received_command = UC->cmd;

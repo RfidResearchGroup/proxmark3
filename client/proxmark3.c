@@ -42,9 +42,10 @@ static void *usb_receiver(void *targ)
         putchar(0x08);
       UsbCommandReceived(&cmdbuf);
 			// there is a big bug )
-			if (cmdbuf.cmd > 0x0100 && cmdbuf.cmd < 0x0110) { // debug commands
-				rl_on_new_line_with_prompt();
-				rl_forced_update_display();
+			if (cmdbuf.cmd >= 0x0100 && cmdbuf.cmd <= 0x0110) { // debug commands
+				printf(">");
+//				rl_on_new_line_with_prompt();
+//				rl_forced_update_display();
 			}
       fflush(NULL);
     }

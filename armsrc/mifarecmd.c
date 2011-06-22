@@ -636,6 +636,7 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 
 	// variables
 	byte_t dataoutbuf[16];
+	byte_t dataoutbuf2[16];
 	uint8_t uid[8];
 
 	// clear trace
@@ -687,6 +688,15 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 				break;
 			};
 			emlSetMem(dataoutbuf, sectorNo * 4 + 2, 1);
+
+			// get block 3 bytes 6-9
+			if(mifare_classic_readblock(pcs, cuid, sectorNo * 4 + 3, dataoutbuf)) {
+				if (MF_DBGLEVEL >= 1)	Dbprintf("Read block 3 error");
+				break;
+			};
+			emlGetMem(dataoutbuf2, sectorNo * 4 + 3, 1);
+			memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
+			emlSetMem(dataoutbuf2,  sectorNo * 4 + 3, 1);
 		}
 
 		if(mifare_classic_halt(pcs, cuid)) {
@@ -699,14 +709,15 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 
 	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
 	
 	if (MF_DBGLEVEL >= 2) DbpString("EMUL FILL SECTORS FINISHED");
 
 	// add trace trailer
 	memset(uid, 0x44, 4);
 	LogTrace(uid, 4, 0, 0, TRUE);
-	
-	Dbprintf("Loaded.");
 }
 
 //-----------------------------------------------------------------------------
