@@ -38,15 +38,7 @@ static void *usb_receiver(void *targ)
 
   while (arg->run) {
     if (ReceiveCommandPoll(&cmdbuf)) {
-      for (int i = 0; i < strlen(PROXPROMPT); i++)
-        putchar(0x08);
       UsbCommandReceived(&cmdbuf);
-			// there is a big bug )
-			if (cmdbuf.cmd >= 0x0100 && cmdbuf.cmd <= 0x0110) { // debug commands
-				printf(">");
-//				rl_on_new_line_with_prompt();
-//				rl_forced_update_display();
-			}
       fflush(NULL);
     }
   }
@@ -76,7 +68,6 @@ static void *main_loop(void *targ)
 			
 			if (cmd[0] != 0x00) {
 				if (strncmp(cmd, "quit", 4) == 0) {
-					write_history(".history");
 					break;
 				}
 				
@@ -89,6 +80,8 @@ static void *main_loop(void *targ)
 			break;
 		}
 	}
+
+	write_history(".history");
 
   if (arg->usb_present == 1) {
     rarg.run = 0;

@@ -2008,7 +2008,7 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	int vHf = 0;	// in mV
 	int nextCycleTimeout = 0;
 	int res;
-	uint32_t timer = 0;
+//	uint32_t timer = 0;
 	uint32_t selTimer = 0;
 	uint32_t authTimer = 0;
 	uint32_t par = 0;
@@ -2016,12 +2016,14 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	uint8_t cardWRBL = 0;
 	uint8_t cardAUTHSC = 0;
 	uint8_t cardAUTHKEY = 0xff;  // no authentication
+	uint32_t cardRn = 0;
+	uint32_t cardRr = 0;
 	uint32_t cuid = 0;
+	uint32_t rn_enc = 0;
+	uint32_t ans = 0;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
-	
-	uint64_t key64 = 0xffffffffffffULL;
 	
 	uint8_t* receivedCmd = eml_get_bigbufptr_recbuf();
 	uint8_t *response = eml_get_bigbufptr_sendbuf();
@@ -2040,6 +2042,9 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	// clear trace
 	traceLen = 0;
 	tracing = true;
+
+  // Authenticate response - nonce
+	uint32_t nonce = bytes_to_num(rAUTH_NT, 4);
 	
 	// get UID from emul memory
 	emlGetMemBt(receivedCmd, 7, 1);
@@ -2061,30 +2066,6 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 // --------------------------------------	test area
 
-   // Authenticate response - nonce
-    uint8_t *resp1 = (((uint8_t *)BigBuf) + EML_RESPONSES);
-    int resp1Len;
-//    uint8_t *resp2 = (((uint8_t *)BigBuf) + EML_RESPONSES + 200);
-//    int resp2Len;
-	CodeIso14443aAsTag(rAUTH_NT, sizeof(rAUTH_NT));
-    memcpy(resp1, ToSend, ToSendMax); resp1Len = ToSendMax;
-		
-	timer = GetTickCount();
-	uint32_t nonce = bytes_to_num(rAUTH_NT, 4);
-	uint32_t rn_enc = 0x98d76b77; // !!!!!!!!!!!!!!!!!
-	uint32_t ans = 0;
-	cuid = bytes_to_num(rUIDBCC1, 4);
-/*	
-	crypto1_create(pcs, key64);
-  crypto1_word(pcs, cuid ^ nonce, 0);
-  crypto1_word(pcs, rn_enc , 1);
-  crypto1_word(pcs, 0, 0);
-  ans = prng_successor(nonce, 96) ^ crypto1_word(pcs, 0, 0);
-	num_to_bytes(ans, 4, rAUTH_AT);
-	CodeIso14443aAsTag(rAUTH_AT, sizeof(rAUTH_AT));
-  memcpy(resp2, ToSend, ToSendMax); resp2Len = ToSendMax;
-	Dbprintf("crypto auth time: %d", GetTickCount() - timer);
-*/
 // --------------------------------------	END test area
 	// start mkseconds counter
 	StartCountUS();
@@ -2178,7 +2159,7 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 						break;
 					}
 					LED_B_ON();
-					Dbprintf("--> WORK. anticol1 time: %d", GetTickCount() - selTimer);
+					if (MF_DBGLEVEL >= 4)	Dbprintf("--> WORK. anticol1 time: %d", GetTickCount() - selTimer);
 				}
 				
 				break;
@@ -2205,16 +2186,22 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 			}
 			case MFEMUL_AUTH1:{
 				if (len == 8) {
-// ---------------------------------
-	rn_enc = bytes_to_num(receivedCmd, 4);
-	crypto1_create(pcs, key64);
-  crypto1_word(pcs, cuid ^ nonce, 0);
-  crypto1_word(pcs, rn_enc , 1);
-  crypto1_word(pcs, 0, 0);
-  ans = prng_successor(nonce, 96) ^ crypto1_word(pcs, 0, 0);
-	num_to_bytes(ans, 4, rAUTH_AT);
-// ---------------------------------
-				EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
+					// --- crypto
+					rn_enc = bytes_to_num(receivedCmd, 4);
+					cardRn = rn_enc ^ crypto1_word(pcs, rn_enc , 1);
+					cardRr = bytes_to_num(&receivedCmd[4], 4) ^ crypto1_word(pcs, 0, 0);
+					// test if auth OK
+					if (cardRr != prng_successor(nonce, 64)){
+						Dbprintf("AUTH FAILED. cardRr=%08x, suc=%08x", cardRr, prng_successor(nonce, 64));
+						cardSTATE = MFEMUL_IDLE;
+						LED_B_OFF();
+						LED_C_OFF();
+						break;
+					}
+					ans = prng_successor(nonce, 96) ^ crypto1_word(pcs, 0, 0);
+					num_to_bytes(ans, 4, rAUTH_AT);
+					// --- crypto
+					EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
 					cardSTATE = MFEMUL_AUTH2;
 				} else {
 					cardSTATE = MFEMUL_IDLE;
@@ -2228,34 +2215,58 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 				LED_C_ON();
 				cardSTATE = MFEMUL_WORK;
-Dbprintf("AUTH COMPLETED. sec=%d, key=%d time=%d", cardAUTHSC, cardAUTHKEY, GetTickCount() - authTimer);
+				Dbprintf("AUTH COMPLETED. sec=%d, key=%d time=%d", cardAUTHSC, cardAUTHKEY, GetTickCount() - authTimer);
 				break;
 			}
 			case MFEMUL_WORK:{
-				// auth
-				if (len == 4 && (receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61)) {
-authTimer = GetTickCount();
-//					EmSendCmd(rAUTH_NT, sizeof(rAUTH_NT));
-//SpinDelayUs(190);
-					EmSendCmd14443aRaw(resp1, resp1Len, 0);
-LogTrace(NULL, 0, GetDeltaCountUS(), 0, TRUE);
-//					crypto1_create(pcs, key64);
-//					if (cardAUTHKEY == 0xff) { // first auth
-//					crypto1_word(pcs, cuid ^ bytes_to_num(rAUTH_NT, 4), 0); // uid ^ nonce
-//					} else { // nested auth
-//					}
-
-					cardAUTHSC = receivedCmd[1] / 4;  // received block num
-					cardAUTHKEY = receivedCmd[0] - 0x60;
-					cardSTATE = MFEMUL_AUTH1;
-					nextCycleTimeout = 10;
-					break;
-				}
-				
 				if (len == 0) break;
 				
-				// decrypt seqence
-				if (cardAUTHKEY != 0xff) mf_crypto1_decrypt(pcs, receivedCmd, len);
+				if (cardAUTHKEY == 0xff) {
+					// first authentication
+					if (len == 4 && (receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61)) {
+						authTimer = GetTickCount();
+
+						cardAUTHSC = receivedCmd[1] / 4;  // received block num
+						cardAUTHKEY = receivedCmd[0] - 0x60;
+
+						// --- crypto
+						crypto1_create(pcs, emlGetKey(cardAUTHSC, cardAUTHKEY));
+						ans = nonce ^ crypto1_word(pcs, cuid ^ nonce, 0); 
+						num_to_bytes(nonce, 4, rAUTH_AT);
+						EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
+						// --- crypto
+						
+//   last working revision 
+//						EmSendCmd14443aRaw(resp1, resp1Len, 0);
+//						LogTrace(NULL, 0, GetDeltaCountUS(), 0, true);
+
+						cardSTATE = MFEMUL_AUTH1;
+						nextCycleTimeout = 10;
+						break;
+					}
+				} else {
+					// decrypt seqence
+					mf_crypto1_decrypt(pcs, receivedCmd, len);
+					
+					// nested authentication
+					if (len == 4 && (receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61)) {
+						authTimer = GetTickCount();
+
+						cardAUTHSC = receivedCmd[1] / 4;  // received block num
+						cardAUTHKEY = receivedCmd[0] - 0x60;
+
+						// --- crypto
+						crypto1_create(pcs, emlGetKey(cardAUTHSC, cardAUTHKEY));
+						ans = nonce ^ crypto1_word(pcs, cuid ^ nonce, 0); 
+						num_to_bytes(ans, 4, rAUTH_AT);
+						EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
+						// --- crypto
+
+						cardSTATE = MFEMUL_AUTH1;
+						nextCycleTimeout = 10;
+						break;
+					}
+				}
 				
 				// rule 13 of 7.5.3. in ISO 14443-4. chaining shall be continued
 				// BUT... ACK --> NACK
@@ -2272,7 +2283,7 @@ LogTrace(NULL, 0, GetDeltaCountUS(), 0, TRUE);
 				
 				// read block
 				if (len == 4 && receivedCmd[0] == 0x30) {
-					if (receivedCmd[1] >= 16 * 4) {
+					if (receivedCmd[1] >= 16 * 4 || receivedCmd[1] / 4 != cardAUTHSC) {
 						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
 						break;
 					}
@@ -2285,7 +2296,7 @@ LogTrace(NULL, 0, GetDeltaCountUS(), 0, TRUE);
 				
 				// write block
 				if (len == 4 && receivedCmd[0] == 0xA0) {
-					if (receivedCmd[1] >= 16 * 4) {
+					if (receivedCmd[1] >= 16 * 4 || receivedCmd[1] / 4 != cardAUTHSC) {
 						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
 						break;
 					}
@@ -2304,13 +2315,15 @@ LogTrace(NULL, 0, GetDeltaCountUS(), 0, TRUE);
 					Dbprintf("--> HALTED. Selected time: %d ms",  GetTickCount() - selTimer);
 					break;
 				}
-				break;
-
+				
 				// command not allowed
 				if (len == 4) {
 					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
 					break;
 				}
+
+				// case break
+				break;
 			}
 			case MFEMUL_WRITEBL2:{
 				if (len == 18){
@@ -2319,8 +2332,12 @@ LogTrace(NULL, 0, GetDeltaCountUS(), 0, TRUE);
 					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK));
 					cardSTATE = MFEMUL_WORK;
 					break;
+				} else {
+					cardSTATE = MFEMUL_IDLE;
+					LED_B_OFF();
+					LED_C_OFF();
+					break;
 				}
-Dbprintf("err write block: %d len:%d", cardWRBL, len);
 				break;
 			}
 		
