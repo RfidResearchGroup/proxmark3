@@ -339,6 +339,52 @@ void emlGetMemBt(uint8_t *data, int bytePtr, int byteCount) {
 	memcpy(data, emCARD + bytePtr, byteCount);
 }
 
+int emlCheckValBl(int blockNum) {
+	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	uint8_t* data = emCARD + blockNum * 16;
+
+	if ((data[0] != (data[4] ^ 0xff)) || (data[0] != data[8]) ||
+			(data[1] != (data[5] ^ 0xff)) || (data[1] != data[9]) ||
+			(data[2] != (data[6] ^ 0xff)) || (data[2] != data[10]) ||
+			(data[3] != (data[7] ^ 0xff)) || (data[3] != data[11]) ||
+			(data[12] != (data[13] ^ 0xff)) || (data[12] != data[14]) ||
+			(data[12] != (data[15] ^ 0xff))
+		 ) 
+		return 1;
+	return 0;
+}
+
+int emlGetValBl(uint32_t *blReg, uint8_t *blBlock, int blockNum) {
+	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	uint8_t* data = emCARD + blockNum * 16;
+	
+	if (emlCheckValBl(blockNum)) {
+		return 1;
+	}
+	
+	memcpy(blReg, data, 4);
+	*blBlock = data[12];
+	
+	return 0;
+}
+
+int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum) {
+	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	uint8_t* data = emCARD + blockNum * 16;
+	
+	memcpy(data + 0, &blReg, 4);
+	memcpy(data + 8, &blReg, 4);
+	blReg = blReg ^ 0xffffffff;
+	memcpy(data + 4, &blReg, 4);
+	
+	data[12] = blBlock;
+	data[13] = blBlock ^ 0xff;
+	data[14] = blBlock;
+	data[15] = blBlock ^ 0xff;
+	
+	return 0;
+}
+
 uint64_t emlGetKey(int sectorNum, int keyType) {
 	uint8_t key[6];
 	uint8_t* emCARD = eml_get_bigbufptr_cardmem();

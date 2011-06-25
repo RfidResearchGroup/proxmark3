@@ -44,15 +44,20 @@ extern int MF_DBGLEVEL;
 #define NES_MAX_INFO         5
 
 //mifare emulator states
-#define MFEMUL_NOFIELD  0
-#define MFEMUL_IDLE     1
-#define MFEMUL_SELECT1  2
-#define MFEMUL_SELECT2  3
-#define MFEMUL_AUTH1    4
-#define MFEMUL_AUTH2    5
-#define MFEMUL_WORK			6
-#define MFEMUL_WRITEBL2 7
-#define MFEMUL_HALTED   8
+#define MFEMUL_NOFIELD      0
+#define MFEMUL_IDLE         1
+#define MFEMUL_SELECT1      2
+#define MFEMUL_SELECT2      3
+#define MFEMUL_AUTH1        4
+#define MFEMUL_AUTH2        5
+#define MFEMUL_WORK	        6
+#define MFEMUL_WRITEBL2     7
+#define MFEMUL_INTREG_INC   8
+#define MFEMUL_INTREG_DEC   9
+#define MFEMUL_INTREG_REST 10
+#define MFEMUL_HALTED      11
+
+#define cardSTATE_TO_IDLE() cardSTATE = MFEMUL_IDLE; LED_B_OFF(); LED_C_OFF();
 
 //functions
 uint8_t* mifare_get_bigbufptr(void);
@@ -83,5 +88,8 @@ void emlSetMem(uint8_t *data, int blockNum, int blocksCount);
 void emlGetMem(uint8_t *data, int blockNum, int blocksCount);
 void emlGetMemBt(uint8_t *data, int bytePtr, int byteCount);
 uint64_t emlGetKey(int sectorNum, int keyType);
+int emlGetValBl(uint32_t *blReg, uint8_t *blBlock, int blockNum);
+int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum);
+int emlCheckValBl(int blockNum);
 
 #endif

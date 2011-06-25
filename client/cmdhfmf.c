@@ -276,8 +276,8 @@ int CmdHF14AMfNested(const char *Cmd)
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:");
 		PrintAndLog(" all sectors:  hf mf nested  <card memory> <block number> <key A/B> <key (12 hex symbols)> [t]");
-		PrintAndLog(" one sector:   hf mf nested  o <block number> <key A/B> <key (12 hex symbols)> [t]");
-		PrintAndLog("               <target block number> <target key A/B>");
+		PrintAndLog(" one sector:   hf mf nested  o <block number> <key A/B> <key (12 hex symbols)>");
+		PrintAndLog("               <target block number> <target key A/B> [t]");
 		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
 		PrintAndLog("t - transfer keys into emulator memory");
 		PrintAndLog(" ");
@@ -454,7 +454,7 @@ int CmdHF14AMfChk(const char *Cmd)
 
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:  hf mf chk <block number> <key A/B> [<key (12 hex symbols)>]");
-		PrintAndLog("      sample: hf mf chk 0 A FFFFFFFFFFFF a0a1a2a3a4a5 b01b2b3b4b5 ");
+		PrintAndLog("      sample: hf mf chk 0 A FFFFFFFFFFFF a0a1a2a3a4a5 b0b1b2b3b4b5 ");
 		return 0;
 	}	
 	

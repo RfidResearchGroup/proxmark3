@@ -787,7 +787,6 @@ done:
 static void CodeIso14443aAsTagPar(const uint8_t *cmd, int len, uint32_t dwParity)
 {
 	int i;
-//	int oddparity;
 
 	ToSendReset();
 
@@ -809,9 +808,7 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, int len, uint32_t dwParity
 		uint8_t b = cmd[i];
 
 		// Data bits
-//		oddparity = 0x01;
 		for(j = 0; j < 8; j++) {
-//			oddparity ^= (b & 1);
 			if(b & 1) {
 				ToSend[++ToSendMax] = SEC_D;
 			} else {
@@ -820,38 +817,19 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, int len, uint32_t dwParity
 			b >>= 1;
 		}
 
-	// Get the parity bit
+		// Get the parity bit
 		if ((dwParity >> i) & 0x01) {
 			ToSend[++ToSendMax] = SEC_D;
 		} else {
 			ToSend[++ToSendMax] = SEC_E;
 		}
-		
-			// Parity bit
-//			if(oddparity) {
-//				ToSend[++ToSendMax] = SEC_D;
-//			} else {
-//				ToSend[++ToSendMax] = SEC_E;
-//			}
-
-//		if (oddparity != ((dwParity >> i) & 0x01))
-//		  Dbprintf("par error. i=%d", i);
 	}
 
 	// Send stopbit
 	ToSend[++ToSendMax] = SEC_F;
 
-	// Flush the buffer in FPGA!!
-	for(i = 0; i < 5; i++) {
-//		ToSend[++ToSendMax] = SEC_F;
-	}
-
 	// Convert from last byte pos to length
 	ToSendMax++;
-
-    // Add a few more for slop
-//    ToSend[ToSendMax++] = 0x00;
-//	ToSend[ToSendMax++] = 0x00;
 }
 
 static void CodeIso14443aAsTag(const uint8_t *cmd, int len){
@@ -2021,6 +1999,8 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	uint32_t cuid = 0;
 	uint32_t rn_enc = 0;
 	uint32_t ans = 0;
+	uint32_t cardINTREG = 0;
+	uint8_t cardINTBLOCK = 0;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
@@ -2036,9 +2016,10 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	static uint8_t rSAK[] = {0x08, 0xb6, 0xdd};
 	static uint8_t rSAK1[] = {0x04, 0xda, 0x17};
 
-	static uint8_t rAUTH_NT[] = {0x1a, 0xac, 0xff, 0x4f};
+	static uint8_t rAUTH_NT[] = {0x01, 0x02, 0x03, 0x04};
+//	static uint8_t rAUTH_NT[] = {0x1a, 0xac, 0xff, 0x4f};
 	static uint8_t rAUTH_AT[] = {0x00, 0x00, 0x00, 0x00};
-	
+
 	// clear trace
 	traceLen = 0;
 	tracing = true;
@@ -2077,7 +2058,7 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
   FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 	SpinDelay(200);
 
-	Dbprintf("--> start. 7buid=%d", _7BUID);
+	if (MF_DBGLEVEL >= 1)	Dbprintf("Started. 7buid=%d", _7BUID);
 	// calibrate mkseconds counter
 	GetDeltaCountUS();
 	while (true) {
@@ -2093,7 +2074,7 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 		if (cardSTATE == MFEMUL_NOFIELD) {
 			vHf = (33000 * AvgAdc(ADC_CHAN_HF)) >> 10;
 			if (vHf > MF_MINFIELDV) {
-				cardSTATE = MFEMUL_IDLE;
+				cardSTATE_TO_IDLE();
 				LED_A_ON();
 			}
 		} 
@@ -2141,6 +2122,7 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 				// select all
 				if (len == 2 && (receivedCmd[0] == 0x93 && receivedCmd[1] == 0x20)) {
 					EmSendCmd(rUIDBCC1, sizeof(rUIDBCC1));
+					break;
 				}
 
 				// select card
@@ -2154,17 +2136,20 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 					cuid = bytes_to_num(rUIDBCC1, 4);
 					if (!_7BUID) {
 						cardSTATE = MFEMUL_WORK;
+						LED_B_ON();
+						if (MF_DBGLEVEL >= 4)	Dbprintf("--> WORK. anticol1 time: %d", GetTickCount() - selTimer);
+						break;
 					} else {
 						cardSTATE = MFEMUL_SELECT2;
 						break;
 					}
-					LED_B_ON();
-					if (MF_DBGLEVEL >= 4)	Dbprintf("--> WORK. anticol1 time: %d", GetTickCount() - selTimer);
 				}
 				
 				break;
 			}
 			case MFEMUL_SELECT2:{
+				if (!len) break;
+			
 				if (len == 2 && (receivedCmd[0] == 0x95 && receivedCmd[1] == 0x20)) {
 					EmSendCmd(rUIDBCC2, sizeof(rUIDBCC2));
 					break;
@@ -2178,11 +2163,14 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 					cuid = bytes_to_num(rUIDBCC2, 4);
 					cardSTATE = MFEMUL_WORK;
 					LED_B_ON();
-					Dbprintf("--> WORK. anticol2 time: %d", GetTickCount() - selTimer);
+					if (MF_DBGLEVEL >= 4)	Dbprintf("--> WORK. anticol2 time: %d", GetTickCount() - selTimer);
 					break;
 				}
-				// TODO: goto work state - i guess there is a command
-				break;
+				
+				// i guess there is a command). go into the work state.
+				if (len != 4) break;
+				cardSTATE = MFEMUL_WORK;
+				goto lbWORK;
 			}
 			case MFEMUL_AUTH1:{
 				if (len == 8) {
@@ -2192,10 +2180,8 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 					cardRr = bytes_to_num(&receivedCmd[4], 4) ^ crypto1_word(pcs, 0, 0);
 					// test if auth OK
 					if (cardRr != prng_successor(nonce, 64)){
-						Dbprintf("AUTH FAILED. cardRr=%08x, suc=%08x", cardRr, prng_successor(nonce, 64));
-						cardSTATE = MFEMUL_IDLE;
-						LED_B_OFF();
-						LED_C_OFF();
+						if (MF_DBGLEVEL >= 4)	Dbprintf("AUTH FAILED. cardRr=%08x, succ=%08x", cardRr, prng_successor(nonce, 64));
+						cardSTATE_TO_IDLE();
 						break;
 					}
 					ans = prng_successor(nonce, 96) ^ crypto1_word(pcs, 0, 0);
@@ -2204,22 +2190,18 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 					EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
 					cardSTATE = MFEMUL_AUTH2;
 				} else {
-					cardSTATE = MFEMUL_IDLE;
-					LED_B_OFF();
-					LED_C_OFF();
+					cardSTATE_TO_IDLE();
 				}
 				if (cardSTATE != MFEMUL_AUTH2) break;
 			}
 			case MFEMUL_AUTH2:{
-				// test auth info here...
-
 				LED_C_ON();
 				cardSTATE = MFEMUL_WORK;
-				Dbprintf("AUTH COMPLETED. sec=%d, key=%d time=%d", cardAUTHSC, cardAUTHKEY, GetTickCount() - authTimer);
+				if (MF_DBGLEVEL >= 4)	Dbprintf("AUTH COMPLETED. sec=%d, key=%d time=%d", cardAUTHSC, cardAUTHKEY, GetTickCount() - authTimer);
 				break;
 			}
 			case MFEMUL_WORK:{
-				if (len == 0) break;
+lbWORK:	if (len == 0) break;
 				
 				if (cardAUTHKEY == 0xff) {
 					// first authentication
@@ -2307,12 +2289,50 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 					break;
 				}
 			
+				// works with cardINTREG
+				
+				// increment, decrement, restore
+				if (len == 4 && (receivedCmd[0] == 0xC0 || receivedCmd[0] == 0xC1 || receivedCmd[0] == 0xC2)) {
+					if (receivedCmd[1] >= 16 * 4 || 
+							receivedCmd[1] / 4 != cardAUTHSC || 
+							emlCheckValBl(receivedCmd[1])) {
+						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+						break;
+					}
+					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK));
+					if (receivedCmd[0] == 0xC1)
+						cardSTATE = MFEMUL_INTREG_INC;
+					if (receivedCmd[0] == 0xC0)
+						cardSTATE = MFEMUL_INTREG_DEC;
+					if (receivedCmd[0] == 0xC2)
+						cardSTATE = MFEMUL_INTREG_REST;
+					cardWRBL = receivedCmd[1];
+					
+					break;
+				}
+				
+
+				// transfer
+				if (len == 4 && receivedCmd[0] == 0xB0) {
+					if (receivedCmd[1] >= 16 * 4 || receivedCmd[1] / 4 != cardAUTHSC) {
+						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+						break;
+					}
+					
+					if (emlSetValBl(cardINTREG, cardINTBLOCK, receivedCmd[1]))
+						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+					else
+						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK));
+						
+					break;
+				}
+
 				// halt
 				if (len == 4 && (receivedCmd[0] == 0x50 && receivedCmd[1] == 0x00)) {
-					cardSTATE = MFEMUL_HALTED;
 					LED_B_OFF();
 					LED_C_OFF();
-					Dbprintf("--> HALTED. Selected time: %d ms",  GetTickCount() - selTimer);
+					cardSTATE = MFEMUL_HALTED;
+					if (MF_DBGLEVEL >= 4)	Dbprintf("--> HALTED. Selected time: %d ms",  GetTickCount() - selTimer);
 					break;
 				}
 				
@@ -2333,11 +2353,45 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 					cardSTATE = MFEMUL_WORK;
 					break;
 				} else {
-					cardSTATE = MFEMUL_IDLE;
-					LED_B_OFF();
-					LED_C_OFF();
+					cardSTATE_TO_IDLE();
 					break;
 				}
+				break;
+			}
+			
+			case MFEMUL_INTREG_INC:{
+				mf_crypto1_decrypt(pcs, receivedCmd, len);
+				memcpy(&ans, receivedCmd, 4);
+				if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL)) {
+					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+					cardSTATE_TO_IDLE();
+					break;
+				}
+				cardINTREG = cardINTREG + ans;
+				cardSTATE = MFEMUL_WORK;
+				break;
+			}
+			case MFEMUL_INTREG_DEC:{
+				mf_crypto1_decrypt(pcs, receivedCmd, len);
+				memcpy(&ans, receivedCmd, 4);
+				if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL)) {
+					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+					cardSTATE_TO_IDLE();
+					break;
+				}
+				cardINTREG = cardINTREG - ans;
+				cardSTATE = MFEMUL_WORK;
+				break;
+			}
+			case MFEMUL_INTREG_REST:{
+				mf_crypto1_decrypt(pcs, receivedCmd, len);
+				memcpy(&ans, receivedCmd, 4);
+				if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL)) {
+					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+					cardSTATE_TO_IDLE();
+					break;
+				}
+				cardSTATE = MFEMUL_WORK;
 				break;
 			}
 		
@@ -2352,5 +2406,5 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	memset(rAUTH_NT, 0x44, 4);
 	LogTrace(rAUTH_NT, 4, 0, 0, TRUE);
 
-	DbpString("Emulator stopped.");
+	if (MF_DBGLEVEL >= 1)	Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ",	tracing, traceLen);
 }
