@@ -13,7 +13,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-
 int CmdHF14AMifare(const char *Cmd)
 {
 	uint32_t uid = 0;
@@ -256,6 +255,206 @@ int CmdHF14AMfRdSc(const char *Cmd)
   return 0;
 }
 
+int CmdHF14AMfDump1k(const char *Cmd)
+{
+	int i, j;
+	
+	uint8_t keyType = 0;
+	uint8_t c[3][4];
+	uint8_t keyA[16][6];
+	uint8_t keyB[16][6];
+	uint8_t rights[16][4];
+	
+	uint8_t isOK  = 0;
+	uint8_t *data  = NULL;
+
+	FILE *fin;
+	FILE *fout;
+	
+	UsbCommand *resp;
+	
+	if ((fin = fopen("dumpkeys.bin","rb")) == NULL) {
+		PrintAndLog("Could not find file keys.bin");
+		return 1;
+	}
+	
+	if ((fout = fopen("dumpdata.bin","wb")) == NULL) { 
+		PrintAndLog("Could not create file name dump.bin");
+		return 1;
+	}
+	
+	// Read key file
+	
+	for (i=0 ; i<16 ; i++) {
+		fread ( keyA[i], 1, 6, fin );
+	}
+	for (i=0 ; i<16 ; i++) {
+		fread ( keyB[i], 1, 6, fin );
+	}
+	
+	// Read access rights to sectors
+	
+	PrintAndLog("|-----------------------------------------|");
+	PrintAndLog("|------ Reading sector access bits...-----|");
+	PrintAndLog("|-----------------------------------------|");
+	
+	for (i = 0 ; i < 16 ; i++) {
+		UsbCommand c = {CMD_MIFARE_READBL, {4*i + 3, 0, 0}};
+		memcpy(c.d.asBytes, keyA[i], 6);
+		SendCommand(&c);
+		resp = WaitForResponseTimeout(CMD_ACK, 1500);
+
+		if (resp != NULL) {
+			uint8_t isOK  = resp->arg[0] & 0xff;
+			uint8_t *data  = resp->d.asBytes;
+			if (isOK){
+				rights[i][0] = ((data[7] & 0x10)>>4) | ((data[8] & 0x1)<<1) | ((data[8] & 0x10)>>2);
+				rights[i][1] = ((data[7] & 0x20)>>5) | ((data[8] & 0x2)<<0) | ((data[8] & 0x20)>>3);
+				rights[i][2] = ((data[7] & 0x40)>>6) | ((data[8] & 0x4)>>1) | ((data[8] & 0x40)>>4);
+				rights[i][3] = ((data[7] & 0x80)>>7) | ((data[8] & 0x8)>>2) | ((data[8] & 0x80)>>5);
+				}
+			else{
+				PrintAndLog("Could not get access rights for block %d", i);
+			}
+		}
+		else {
+			PrintAndLog("Command execute timeout");
+		}
+	}
+	
+	// Read blocks and print to file
+	
+	PrintAndLog("|-----------------------------------------|");
+	PrintAndLog("|----- Dumping all blocks to file... -----|");
+	PrintAndLog("|-----------------------------------------|");
+	
+	for (i=0 ; i<16 ; i++) {
+		for (j=0 ; j<4 ; j++) {
+			
+			if (j == 3){
+				UsbCommand c = {CMD_MIFARE_READBL, {i*4 + j, 0, 0}};
+				memcpy(c.d.asBytes, keyA[i], 6);
+				SendCommand(&c);
+				resp = WaitForResponseTimeout(CMD_ACK, 1500);
+			}
+			else{
+				if ((rights[i][j] == 6) | (rights[i][j] == 5)) {
+					UsbCommand c = {CMD_MIFARE_READBL, {i*4+j, 1, 0}};
+					memcpy(c.d.asBytes, keyB[i], 6);
+					SendCommand(&c);
+					resp = WaitForResponseTimeout(CMD_ACK, 1500);
+				}
+				else if (rights[i][j] == 7) {
+					PrintAndLog("Access rights do not allow reading of sector %d block %d",i,j);
+				}
+				else {
+					UsbCommand c = {CMD_MIFARE_READBL, {i*4+j, 0, 0}};
+					memcpy(c.d.asBytes, keyA[i], 6);
+					SendCommand(&c);
+					resp = WaitForResponseTimeout(CMD_ACK, 1500);
+				}
+			}
+
+			if (resp != NULL) {
+				uint8_t isOK  = resp->arg[0] & 0xff;
+				uint8_t *data  = resp->d.asBytes;
+				if (isOK) {
+					fwrite ( data, 1, 16, fout );
+				}
+				else {
+					PrintAndLog("Could not get access rights for block %d", i);
+				}
+			}
+			else {
+				PrintAndLog("Command execute timeout");
+			}
+		}
+	}
+	
+	fclose(fin);
+	fclose(fout);
+	
+  return 0;
+}
+
+int CmdHF14AMfRestore1k(const char *Cmd)
+{
+
+	int i,j;
+	uint8_t blockNo = 0;
+	uint8_t keyType = 0;
+	uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+	uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t keyA[16][6];
+	uint8_t keyB[16][6];
+	
+	char cmdp = 0x00;
+	
+	FILE *fdump;
+	FILE *fkeys;
+	
+	FILE *fdebug = fopen("debug.bin","wb");
+	
+	if ((fdump = fopen("dumpdata.bin","rb")) == NULL) {
+		PrintAndLog("Could not find file dump.bin");
+		return 1;
+	}
+	if ((fkeys = fopen("dumpkeys.bin","rb")) == NULL) {
+		PrintAndLog("Could not find file keys.bin");
+		return 1;
+	}
+	
+	for (i=0 ; i<16 ; i++) {
+		fread(keyA[i], 1, 6, fkeys);
+	}
+	for (i=0 ; i<16 ; i++) {
+		fread(keyB[i], 1, 6, fkeys);
+	}
+	
+	PrintAndLog("going...");
+
+	for (i=0 ; i<16 ; i++) {
+		for( j=0 ; j<4 ; j++) {
+			UsbCommand c = {CMD_MIFARE_WRITEBL, {i*4 + j, keyType, 0}};
+			memcpy(c.d.asBytes, key, 6);
+			
+			fread(bldata, 1, 16, fdump);
+					
+			if (j == 3) {
+				bldata[0]  = (keyA[i][0]);
+				bldata[1]  = (keyA[i][1]);
+				bldata[2]  = (keyA[i][2]);
+				bldata[3]  = (keyA[i][3]);
+				bldata[4]  = (keyA[i][4]);
+				bldata[5]  = (keyA[i][5]);
+				bldata[10] = (keyB[i][0]);
+				bldata[11] = (keyB[i][1]);
+				bldata[12] = (keyB[i][2]);
+				bldata[13] = (keyB[i][3]);
+				bldata[14] = (keyB[i][4]);
+				bldata[15] = (keyB[i][5]);
+			}		
+			
+			PrintAndLog("writing to block %2d: %s confirm?", i*4+j, sprint_hex(bldata, 16));
+			
+			memcpy(c.d.asBytes + 10, bldata, 16);
+			SendCommand(&c);
+			UsbCommand *resp = WaitForResponseTimeout(CMD_ACK, 1500);
+
+			if (resp != NULL) {
+				uint8_t isOK  = resp->arg[0] & 0xff;
+				PrintAndLog("isOk:%02x", isOK);
+			} else {
+				PrintAndLog("Command execute timeout");
+			}
+		}
+	}
+	
+	fclose(fdump);
+	fclose(fkeys);
+	return 0;
+}
+
 int CmdHF14AMfNested(const char *Cmd)
 {
 	int i, j, res, iterations;
@@ -271,18 +470,23 @@ int CmdHF14AMfNested(const char *Cmd)
 	uint64_t key64 = 0;
 	int transferToEml = 0;
 	
+	int createDumpFile = 0;
+	FILE *fkeys;
+	
 	char cmdp, ctmp;
 
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:");
-		PrintAndLog(" all sectors:  hf mf nested  <card memory> <block number> <key A/B> <key (12 hex symbols)> [t]");
+		PrintAndLog(" all sectors:  hf mf nested  <card memory> <block number> <key A/B> <key (12 hex symbols)> [t,d]");
 		PrintAndLog(" one sector:   hf mf nested  o <block number> <key A/B> <key (12 hex symbols)>");
 		PrintAndLog("               <target block number> <target key A/B> [t]");
 		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
 		PrintAndLog("t - transfer keys into emulator memory");
+		PrintAndLog("d - write keys to binary file");
 		PrintAndLog(" ");
 		PrintAndLog("      sample1: hf mf nested 1 0 A FFFFFFFFFFFF ");
 		PrintAndLog("      sample1: hf mf nested 1 0 A FFFFFFFFFFFF t ");
+		PrintAndLog("      sample1: hf mf nested 1 0 A FFFFFFFFFFFF d ");
 		PrintAndLog("      sample2: hf mf nested o 0 A FFFFFFFFFFFF 4 A");
 		return 0;
 	}	
@@ -323,6 +527,7 @@ int CmdHF14AMfNested(const char *Cmd)
 	if (ctmp == 't' || ctmp == 'T') transferToEml = 1;
 	ctmp = param_getchar(Cmd, 6);
 	transferToEml |= (ctmp == 't' || ctmp == 'T');
+	createDumpFile |= (ctmp == 'd' || ctmp == 'D');
 	
 	PrintAndLog("--block no:%02x key type:%02x key:%s etrans:%d", blockNo, keyType, sprint_hex(key, 6), transferToEml);
 	if (cmdp == 'o')
@@ -432,6 +637,21 @@ int CmdHF14AMfNested(const char *Cmd)
 					num_to_bytes(e_sector[i].Key[1], 6, &keyBlock[10]);
 				mfEmlSetMem(keyBlock, i * 4 + 3, 1);
 			}		
+		}
+		
+		if (createDumpFile) {
+			if ((fkeys = fopen("dumpkeys.bin","wb")) == NULL) { 
+				rintAndLog("Could not create file keys.bin");
+				free(e_sector);
+				return 1;
+			}
+			for(i=0; i<16; i++) {
+				fwrite ( e_sector[i].Key[0], sizeof(e_sector[i].Key[0]), 1, fkeys );
+			}
+			for(i=0; i<16; i++) {
+				fwrite ( e_sector[i].Key[1], sizeof(e_sector[i].Key[1]), 1, fkeys );
+			}
+			fclose(fkeys);
 		}
 		
 		free(e_sector);
@@ -739,7 +959,8 @@ int CmdHF14AMfESave(const char *Cmd)
   return 0;
 }
 
-int CmdHF14AMfECFill(const char *Cmd) {
+int CmdHF14AMfECFill(const char *Cmd)
+{
 	uint8_t keyType = 0;
 
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
@@ -762,7 +983,8 @@ int CmdHF14AMfECFill(const char *Cmd) {
   return 0;
 }
 
-int CmdHF14AMfEKeyPrn(const char *Cmd) {
+int CmdHF14AMfEKeyPrn(const char *Cmd)
+{
 	int i;
 	uint8_t data[16];
 	uint64_t keyA, keyB;
@@ -784,17 +1006,19 @@ int CmdHF14AMfEKeyPrn(const char *Cmd) {
 	return 0;
 }
 
-static command_t CommandTable[] = 
+static command_t CommandTable[] =
 {
-  {"help",		CmdHelp,						1, "This help"},
-  {"dbg",			CmdHF14AMfDbg,			0, "Set default debug mode"},
+  {"help",		CmdHelp,				1, "This help"},
+  {"dbg",		CmdHF14AMfDbg,			0, "Set default debug mode"},
   {"rdbl",		CmdHF14AMfRdBl,			0, "Read MIFARE classic block"},
   {"rdsc",		CmdHF14AMfRdSc,			0, "Read MIFARE classic sector"},
+  {"dump1k",	CmdHF14AMfDump1k,		0, "Dump MIFARE classic tag to binary file"},
+  {"restore1k",	CmdHF14AMfRestore1k,	0, "Restore MIFARE classic binary file to BLANK tag"},
   {"wrbl",		CmdHF14AMfWrBl,			0, "Write MIFARE classic block"},
-  {"chk",			CmdHF14AMfChk,			0, "Test block up to 8 keys"},
+  {"chk",		CmdHF14AMfChk,			0, "Test block up to 8 keys"},
   {"mifare",	CmdHF14AMifare,			0, "Read parity error messages. param - <used card nonce>"},
   {"nested",	CmdHF14AMfNested,		0, "Test nested authentication"},
-  {"sim",			CmdHF14AMf1kSim,		0, "Simulate MIFARE 1k card"},
+  {"sim",		CmdHF14AMf1kSim,		0, "Simulate MIFARE 1k card"},
   {"eclr",  	CmdHF14AMfEClear,		0, "Clear simulator memory block"},
   {"eget",		CmdHF14AMfEGet,			0, "Get simulator memory block"},
   {"eset",		CmdHF14AMfESet,			0, "Set simulator memory block"},
