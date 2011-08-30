@@ -29,18 +29,28 @@ BUILDDIR=${SRCDIR}/build-gnuarm4
 
 # Where to get each of the toolchain components
 BINUTILS=http://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.bz2
+BINUTILS_TAR=binutils-${BINUTILS_VER}.tar.bz2
 GCCCORE=http://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-core-${GCC_VER}.tar.bz2
+GCCCORE_TAR=gcc-core-${GCC_VER}.tar.bz2
 GPP=http://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-g++-${GCC_VER}.tar.bz2
+GPP_TAR=gcc-g++-${GCC_VER}.tar.bz2
 NEWLIB=ftp://sources.redhat.com/pub/newlib/newlib-${NEWLIB_VER}.tar.gz
+NEWLIB_TAR=newlib-${NEWLIB_VER}.tar.gz
 #INSIGHT=ftp://sourceware.org/pub/insight/releases/insight-${INSIGHT_VER}.tar.bz2
 INSIGHT=http://mirrors.kernel.org/sources.redhat.com/insight/releases/insight-${INSIGHT_VER}.tar.bz2
+INSIGHT_TAR=insight-${INSIGHT_VER}.tar.bz2
 #INSIGHT=http://www.mirrorservice.org/sites/sources.redhat.com/pub/insight/releases/insight-${INSIGHT_VER}.tar.bz2
-GDB=ftp://sourceware.org/pub/gdb/releases/gdb-${GDB_VER}.tar.bz2
+GDB=http://ftp.gnu.org/gnu/gdb/gdb-${GDB_VER}.tar.bz2
+GDB_TAR=gdb-${GDB_VER}.tar.bz2
 GMP=http://ftp.sunet.se/pub/gnu/gmp/gmp-${GMP_VER}.tar.bz2
-MPFR=http://mpfr.loria.fr/mpfr-current/mpfr-${MPFR_VER}.tar.bz2
+GMP_TAR=gmp-${GMP_VER}.tar.bz2
+MPFR=http://ftp.gnu.org/gnu/mpfr/mpfr-${MPFR_VER}.tar.bz2
+MPFR_TAR=mpfr-${MPFR_VER}.tar.bz2
+GNU_KEYRING_GPG=gnu-keyring.gpg
+GNU_KEYRING=ftp://ftp.gnu.org/gnu/${GNU_KEYRING_GPG}
 
 # Common configuration options (i.e., things to pass to 'configure')
-COMMON_CFG="--enable-interwork --target=arm-elf --program-prefix=arm-elf- --prefix=${DESTDIR} --disable-werror --enable-languages=c,c++ --enable-multilib --disable-shared"
+COMMON_CFG="--enable-interwork --target=arm-eabi --program-prefix=arm-eabi- --prefix=${DESTDIR} --disable-werror --enable-languages=c,c++ --enable-multilib --disable-shared"
 
 # Extra configuration options for each toolchain component
 BINUTILS_CFG=
@@ -79,31 +89,85 @@ cd ${SRCDIR}
 if [[ -f all.downloaded ]]; then
   echo Looks like all downloads are complete, skipping downloads
 else
+  wget ${WGET_OPTS} ${GNU_KEYRING}
+  # TODO: need to avoid polluting the users keyring, but how?!
+  gpg --import ${GNU_KEYRING_GPG}
+
+  # TODO: guess it's better to have a function that "downloads, checks file-presence and signature, and returns true/false" whether the file is ok
+  # Function will check if file exists (otherwise try to download the file - if failed and file still doesn't exist, complain and exit the script)
+  # Check if signature file exists (otherwise download the signature file as well - if download fail, warn the user and return function)
+  # Check the signature. If failed, backup-by-renaming current files, redownload both file & signature, run the function body one more time - if still no success, warn and return from function
+
+  # NOTE: If new downloads are added here, please see the IMPORTANT note below
   echo Now downloading BINUTILS...
   wget ${WGET_OPTS} ${BINUTILS}
+  wget -N ${WGET_OPTS} ${BINUTILS}.sig
+  gpg --verify ${BINUTILS_TAR}.sig 2> /dev/null
+  if [[ $? != 0 ]]; then
+    echo "Failed signature check for:" ${BINUTILS_TAR}.sig
+    exit 1
+  fi
 
   echo Now downloading GCC...
   wget ${WGET_OPTS} ${GCCCORE}
+  wget -N ${WGET_OPTS} ${GCCCORE}.sig
+  gpg --verify ${GCCCORE_TAR}.sig 2> /dev/null
+  if [[ $? != 0 ]]; then
+    echo "Failed signature check for:" ${GCCCORE_TAR}.sig
+    exit 1
+  fi
 
   echo Now downloading G++...
   wget ${WGET_OPTS} ${GPP}
+  wget -N ${WGET_OPTS} ${GPP}.sig
+  gpg --verify ${GPP_TAR}.sig 2> /dev/null
+  if [[ $? != 0 ]]; then
+    echo "Failed signature check for:" ${GPP_TAR}.sig
+    exit 1
+  fi
 
   echo Now downloading NEWLIB...
   wget ${WGET_OPTS} ${NEWLIB}
+  # TODO: signature/hash check
 
   echo Now downloading INSIGHT...
   wget ${WGET_OPTS} ${INSIGHT}
+  # TODO: signature/hash check
 
   echo Now downloading GDB...
   wget ${WGET_OPTS} ${GDB}
+  wget -N ${WGET_OPTS} ${GDB}.sig
+  gpg --verify ${GDB_TAR}.sig 2> /dev/null
+  if [[ $? != 0 ]]; then
+    echo "Failed signature check for:" ${GDB_TAR}.sig
+    exit 1
+  fi
 
   echo Now downloading GMP...
   wget ${WGET_OPTS} ${GMP}
+  wget -N ${WGET_OPTS} ${GMP}.sig
+  gpg --verify ${GMP_TAR}.sig 2> /dev/null
+  if [[ $? != 0 ]]; then
+    echo "Failed signature check for:" ${GMP_TAR}.sig
+    exit 1
+  fi
 
   echo Now downloading MPFR...
   wget ${WGET_OPTS} ${MPFR}
+  wget -N ${WGET_OPTS} ${MPFR}.sig
+  gpg --verify ${MPFR_TAR}.sig 2> /dev/null
+  if [[ $? != 0 ]]; then
+    echo "Failed signature check for:" ${MPFR_TAR}.sig
+    exit 1
+  fi
 
-  touch all.downloaded
+  # IMPORTANT: Here is the number of .tar. archives downloaded above. Please update if new .tar. are added to download list.
+  if [[ `ls -1 *.tar.bz2 *.tar.gz | wc -l` != 8 ]]; then
+    echo "Seems like not all prerequisite files donwloaded... Exiting."
+    exit 1
+  else
+    touch all.downloaded
+  fi
 fi
 
 cd ${BUILDDIR}
