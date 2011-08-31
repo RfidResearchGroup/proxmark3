@@ -381,19 +381,14 @@ int CmdHF14AMfRestore1k(const char *Cmd)
 {
 
 	int i,j;
-	uint8_t blockNo = 0;
 	uint8_t keyType = 0;
 	uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	uint8_t keyA[16][6];
 	uint8_t keyB[16][6];
 	
-	char cmdp = 0x00;
-	
 	FILE *fdump;
 	FILE *fkeys;
-	
-	FILE *fdebug = fopen("debug.bin","wb");
 	
 	if ((fdump = fopen("dumpdata.bin","rb")) == NULL) {
 		PrintAndLog("Could not find file dump.bin");
@@ -641,15 +636,15 @@ int CmdHF14AMfNested(const char *Cmd)
 		
 		if (createDumpFile) {
 			if ((fkeys = fopen("dumpkeys.bin","wb")) == NULL) { 
-				rintAndLog("Could not create file keys.bin");
+				PrintAndLog("Could not create file keys.bin");
 				free(e_sector);
 				return 1;
 			}
 			for(i=0; i<16; i++) {
-				fwrite ( e_sector[i].Key[0], sizeof(e_sector[i].Key[0]), 1, fkeys );
+				fwrite ( e_sector[i].Key, sizeof(e_sector[i].Key[0]), 1, fkeys );
 			}
 			for(i=0; i<16; i++) {
-				fwrite ( e_sector[i].Key[1], sizeof(e_sector[i].Key[1]), 1, fkeys );
+				fwrite ( e_sector[i].Key, sizeof(e_sector[i].Key[1]), 1, fkeys );
 			}
 			fclose(fkeys);
 		}
