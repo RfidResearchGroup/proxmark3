@@ -467,6 +467,8 @@ int CmdHF14AMfNested(const char *Cmd)
 	
 	int createDumpFile = 0;
 	FILE *fkeys;
+	uint8_t standart[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	
 	char cmdp, ctmp;
 
@@ -519,10 +521,12 @@ int CmdHF14AMfNested(const char *Cmd)
 	}
 
 	ctmp = param_getchar(Cmd, 4);
-	if (ctmp == 't' || ctmp == 'T') transferToEml = 1;
+	if		(ctmp == 't' || ctmp == 'T') transferToEml = 1;
+	else if (ctmp == 'd' || ctmp == 'D') createDumpFile = 1;
+	
 	ctmp = param_getchar(Cmd, 6);
 	transferToEml |= (ctmp == 't' || ctmp == 'T');
-	createDumpFile |= (ctmp == 'd' || ctmp == 'D');
+	transferToEml |= (ctmp == 'd' || ctmp == 'D');
 	
 	PrintAndLog("--block no:%02x key type:%02x key:%s etrans:%d", blockNo, keyType, sprint_hex(key, 6), transferToEml);
 	if (cmdp == 'o')
@@ -558,8 +562,8 @@ int CmdHF14AMfNested(const char *Cmd)
 		} else {
 			PrintAndLog("No valid key found");
 		}
-	} else  // ------------------------------------  multiple sectors working
-	{
+	}
+	else { // ------------------------------------  multiple sectors working
 		blDiff = blockNo % 4;
 		PrintAndLog("Block shift=%d", blDiff);
 		e_sector = calloc(SectorsCnt, sizeof(sector));
@@ -586,7 +590,6 @@ int CmdHF14AMfNested(const char *Cmd)
 				}
 			}
 		} 
-		
 		
 		// nested sectors
 		iterations = 0;
@@ -634,17 +637,31 @@ int CmdHF14AMfNested(const char *Cmd)
 			}		
 		}
 		
+		// Create dump file
 		if (createDumpFile) {
 			if ((fkeys = fopen("dumpkeys.bin","wb")) == NULL) { 
 				PrintAndLog("Could not create file keys.bin");
 				free(e_sector);
 				return 1;
 			}
+			PrintAndLog("Printing keys to bynary file dumpkeys.bin...");
 			for(i=0; i<16; i++) {
-				fwrite ( e_sector[i].Key, sizeof(e_sector[i].Key[0]), 1, fkeys );
+				if (e_sector[i].foundKey[0]){
+					num_to_bytes(e_sector[i].Key[0], 6, tempkey);
+					fwrite ( tempkey, 1, 6, fkeys );
+				}
+				else{
+					fwrite ( &standart, 1, 6, fkeys );
+				}
 			}
 			for(i=0; i<16; i++) {
-				fwrite ( e_sector[i].Key, sizeof(e_sector[i].Key[1]), 1, fkeys );
+				if (e_sector[i].foundKey[1]){
+					num_to_bytes(e_sector[i].Key[1], 6, tempkey);
+					fwrite ( tempkey, 1, 6, fkeys );
+				}
+				else{
+					fwrite ( &standart, 1, 6, fkeys );
+				}
 			}
 			fclose(fkeys);
 		}
