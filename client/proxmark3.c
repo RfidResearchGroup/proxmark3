@@ -29,6 +29,7 @@ struct usb_receiver_arg
 struct main_loop_arg
 {
   int usb_present;
+  char *script_cmds_file;
 };
 
 static void *usb_receiver(void *targ)
@@ -49,19 +50,61 @@ static void *usb_receiver(void *targ)
 
 static void *main_loop(void *targ)
 {
-  struct main_loop_arg *arg = (struct main_loop_arg*)targ;
-  struct usb_receiver_arg rarg;
-  char *cmd = NULL;
-  pthread_t reader_thread;
+    struct main_loop_arg *arg = (struct main_loop_arg*)targ;
+    struct usb_receiver_arg rarg;
+    char *cmd = NULL;
+    pthread_t reader_thread;
 
-  if (arg->usb_present == 1) {
-    rarg.run=1;
-    pthread_create(&reader_thread, NULL, &usb_receiver, &rarg);
-  }
+    if (arg->usb_present == 1) {
+        rarg.run=1;
+        pthread_create(&reader_thread, NULL, &usb_receiver, &rarg);
+    }
+    
+    FILE *script_file = NULL;
+    char script_cmd_buf[256];
+    
+    if (arg->script_cmds_file)
+    {
+        script_file = fopen(arg->script_cmds_file, "r");
+        if (script_file)
+        {
+            printf("using 'scripting' commands file %s\n", arg->script_cmds_file);
+        }
+    }
 
 	read_history(".history");
-	while(1) {
-		cmd = readline(PROXPROMPT);
+	while(1)
+        {
+	    // If there is a script file
+	    if (script_file)
+	    {
+	        if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), script_file))
+	        {
+	            fclose(script_file);
+	            script_file = NULL;
+	        }
+	        else
+	        {
+	            char *nl;
+	            nl = strrchr(script_cmd_buf, '\r');
+                    if (nl) *nl = '\0';
+                    nl = strrchr(script_cmd_buf, '\n');
+                    if (nl) *nl = '\0';
+	            
+                    if ((cmd = (char*) malloc(strlen(script_cmd_buf))) != NULL)
+                    {
+                        memset(cmd, 0, strlen(script_cmd_buf));
+                        strcpy(cmd, script_cmd_buf);
+                        printf("%s\n", cmd);
+                    }
+	        }
+	    }
+		
+		if (!script_file)
+		{
+		    cmd = readline(PROXPROMPT);
+		}
+		
 		if (cmd) {
 			while(cmd[strlen(cmd) - 1] == ' ')
 			cmd[strlen(cmd) - 1] = 0x00;
@@ -83,21 +126,37 @@ static void *main_loop(void *targ)
 
 	write_history(".history");
 
-  if (arg->usb_present == 1) {
-    rarg.run = 0;
-    pthread_join(reader_thread, NULL);
-  }
+    if (arg->usb_present == 1) {
+        rarg.run = 0;
+        pthread_join(reader_thread, NULL);
+    }
+    
+    if (script_file)
+    {
+        fclose(script_file);
+        script_file = NULL;
+    }
 
-  ExitGraphics();
-  pthread_exit(NULL);
-  return NULL;
+    ExitGraphics();
+    pthread_exit(NULL);
+    return NULL;
 }
 
 int main(int argc, char **argv)
 {
-  struct main_loop_arg marg;
+  // Make sure to initialize
+  struct main_loop_arg marg = {
+    .usb_present = 0,
+    .script_cmds_file = NULL
+  };
   pthread_t main_loop_t;
   usb_init();
+
+  // If the user passed the filename of the 'script' to execute, get it
+  if (argc > 1 && argv[1])
+  {
+    marg.script_cmds_file = argv[1];
+  }
 
   if (!OpenProxmark(1)) {
     fprintf(stderr,"PROXMARK3: NOT FOUND!\n");
