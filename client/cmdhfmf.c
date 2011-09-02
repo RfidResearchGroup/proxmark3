@@ -330,7 +330,6 @@ int CmdHF14AMfDump1k(const char *Cmd)
 	
 	for (i=0 ; i<16 ; i++) {
 		for (j=0 ; j<4 ; j++) {
-			
 			if (j == 3){
 				UsbCommand c = {CMD_MIFARE_READBL, {i*4 + j, 0, 0}};
 				memcpy(c.d.asBytes, keyA[i], 6);
@@ -358,6 +357,20 @@ int CmdHF14AMfDump1k(const char *Cmd)
 			if (resp != NULL) {
 				uint8_t isOK  = resp->arg[0] & 0xff;
 				uint8_t *data  = resp->d.asBytes;
+				if (j == 3) {
+					data[0]  = (keyA[i][0]);
+					data[1]  = (keyA[i][1]);
+					data[2]  = (keyA[i][2]);
+					data[3]  = (keyA[i][3]);
+					data[4]  = (keyA[i][4]);
+					data[5]  = (keyA[i][5]);
+					data[10] = (keyB[i][0]);
+					data[11] = (keyB[i][1]);
+					data[12] = (keyB[i][2]);
+					data[13] = (keyB[i][3]);
+					data[14] = (keyB[i][4]);
+					data[15] = (keyB[i][5]);
+				}
 				if (isOK) {
 					fwrite ( data, 1, 16, fout );
 				}
