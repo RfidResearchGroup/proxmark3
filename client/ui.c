@@ -52,7 +52,7 @@ void PrintAndLog(char *fmt, ...)
   va_start(argptr, fmt);
   va_copy(argptr2, argptr);
   vprintf(fmt, argptr);
-  vprintf("          ", 0); // cleaning prompt
+  printf("          "); // cleaning prompt
   va_end(argptr);
   printf("\n");
 
