@@ -14,7 +14,7 @@
 #include <ctype.h>
 #include "util.h"
 
-#ifdef __linux__
+#ifndef WIN32
 #include <termios.h>
 #include <sys/ioctl.h> 
 int ukbhit(void)

@@ -20,7 +20,7 @@ platform = $(shell uname)
 
 all:
 
-CROSS  ?= arm-eabi-
+CROSS  ?= arm-none-eabi-
 CC	= $(CROSS)gcc
 AS	= $(CROSS)as
 LD	= $(CROSS)ld
