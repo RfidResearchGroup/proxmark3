@@ -31,13 +31,13 @@ MOC = $(shell pkg-config --variable=moc_location QtCore)
 endif
 
 
-#ifneq ($(QTLDLIBS),)
-#QTGUI = $(OBJDIR)/proxgui.o $(OBJDIR)/proxguiqt.o $(OBJDIR)/proxguiqt.moc.o
-#CFLAGS += -DHAVE_GUI
-#LINK.o = $(LINK.cpp)
-#else
+ifneq ($(QTLDLIBS),)
+QTGUI = $(OBJDIR)/proxgui.o $(OBJDIR)/proxguiqt.o $(OBJDIR)/proxguiqt.moc.o
+CFLAGS += -DHAVE_GUI
+LINK.o = $(LINK.cpp)
+else
 QTGUI = guidummy.o
-#endif
+endif
 
 CMDSRCS = \
 			nonce2key/crapto1.c\
