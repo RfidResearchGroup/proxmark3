@@ -101,7 +101,7 @@ void AcquireRawAdcSamplesIso14443(uint32_t parameter);
 void ReadSRI512Iso14443(uint32_t parameter);
 void ReadSRIX4KIso14443(uint32_t parameter);
 void ReadSTMemoryIso14443(uint32_t parameter,uint32_t dwLast);
-void SnoopIso14443(void);
+void RAMFUNC SnoopIso14443(void);
 
 /// iso14443a.h
 void RAMFUNC SnoopIso14443a(void);

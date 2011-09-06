@@ -465,7 +465,7 @@ static struct {
  *          false if we are still waiting for some more
  *
  */
-static int Handle14443SamplesDemod(int ci, int cq)
+static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
 {
     int v;
 
@@ -1030,12 +1030,12 @@ void ReadSTMemoryIso14443(uint32_t parameter,uint32_t dwLast)
  * 6144-8191 : Last Received command, 2048 bytes(tag->reader) - TAG_READER_BUFFER_SIZE
  * 8192-9215 : DMA Buffer, 1024 bytes (samples) - DMA_BUFFER_SIZE
  */
-void SnoopIso14443(void)
+void RAMFUNC SnoopIso14443(void)
 {
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
     // response from the tag.
-    int triggered = FALSE;
+    int triggered = TRUE;
 
     // The command (reader -> tag) that we're working on receiving.
     uint8_t *receivedCmd = (uint8_t *)(BigBuf) + DEMOD_TRACE_SIZE;
@@ -1079,9 +1079,6 @@ void SnoopIso14443(void)
 	Dbprintf("  tag -> Reader: %i bytes", TAG_READER_BUFFER_SIZE);
 	Dbprintf("  DMA: %i bytes", DMA_BUFFER_SIZE);
 
-	// Use a counter for blinking the LED
-	long ledCount=0;
-	long ledFlashAt=200000;
 
     // And put the FPGA in the appropriate mode
     // Signal field is off with the appropriate LED
@@ -1096,18 +1093,11 @@ void SnoopIso14443(void)
     upTo = dmaBuf;
     lastRxCounter = DMA_BUFFER_SIZE;
     FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE);
+		
+    LED_A_ON();
+		
     // And now we loop, receiving samples.
     for(;;) {
-		// Blink the LED while Snooping
-		ledCount++;
-		if (ledCount == ledFlashAt) {
-			LED_D_ON();
-		}
-		if (ledCount >= 2*ledFlashAt) {
-			LED_D_OFF();
-			ledCount=0;
-		}
-
     	int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) &
                                 (DMA_BUFFER_SIZE-1);
         if(behindBy > maxBehindBy) {
@@ -1134,7 +1124,6 @@ void SnoopIso14443(void)
 
 #define HANDLE_BIT_IF_BODY \
             if(triggered) { \
-				ledFlashAt=30000; \
                 trace[traceLen++] = ((samples >>  0) & 0xff); \
                 trace[traceLen++] = ((samples >>  8) & 0xff); \
                 trace[traceLen++] = ((samples >> 16) & 0xff); \
@@ -1190,6 +1179,8 @@ void SnoopIso14443(void)
 			}
 
             triggered = TRUE;
+            LED_A_OFF();
+            LED_B_ON();
 
             // And ready to receive another response.
             memset(&Demod, 0, sizeof(Demod));
@@ -1205,10 +1196,12 @@ void SnoopIso14443(void)
     }
 
 done:
-	LED_D_OFF();
-    AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
+	LED_A_OFF();
+	LED_B_OFF();
+	LED_C_OFF();
+  AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 	DbpString("Snoop statistics:");
-    Dbprintf("  Max behind by: %i", maxBehindBy);
+  Dbprintf("  Max behind by: %i", maxBehindBy);
 	Dbprintf("  Uart State: %x", Uart.state);
 	Dbprintf("  Uart ByteCnt: %i", Uart.byteCnt);
 	Dbprintf("  Uart ByteCntMax: %i", Uart.byteCntMax);
