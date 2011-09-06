@@ -403,6 +403,8 @@ int CmdHF14AMfRestore1k(const char *Cmd)
 	FILE *fdump;
 	FILE *fkeys;
 	
+	char c;
+	
 	if ((fdump = fopen("dumpdata.bin","rb")) == NULL) {
 		PrintAndLog("Could not find file dump.bin");
 		return 1;
@@ -419,7 +421,7 @@ int CmdHF14AMfRestore1k(const char *Cmd)
 		fread(keyB[i], 1, 6, fkeys);
 	}
 	
-	PrintAndLog("going...");
+	PrintAndLog("Restoring dumpdata.bin to card");
 
 	for (i=0 ; i<16 ; i++) {
 		for( j=0 ; j<4 ; j++) {
@@ -443,7 +445,13 @@ int CmdHF14AMfRestore1k(const char *Cmd)
 				bldata[15] = (keyB[i][5]);
 			}		
 			
-			PrintAndLog("writing to block %2d: %s confirm?", i*4+j, sprint_hex(bldata, 16));
+			PrintAndLog("Writing to block %2d: %s Confirm? [Y,N]", i*4+j, sprint_hex(bldata, 16));
+			
+			scanf("%c",&c);
+			if ((c != 'y') || (c != 'Y')){
+				PrintAndLog("Aborting !");
+				return 1;
+			}
 			
 			memcpy(c.d.asBytes + 10, bldata, 16);
 			SendCommand(&c);
