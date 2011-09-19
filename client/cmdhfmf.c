@@ -403,8 +403,6 @@ int CmdHF14AMfRestore1k(const char *Cmd)
 	FILE *fdump;
 	FILE *fkeys;
 	
-	char ch;
-	
 	if ((fdump = fopen("dumpdata.bin","rb")) == NULL) {
 		PrintAndLog("Could not find file dump.bin");
 		return 1;
@@ -445,13 +443,17 @@ int CmdHF14AMfRestore1k(const char *Cmd)
 				bldata[15] = (keyB[i][5]);
 			}		
 			
+			PrintAndLog("Writing to block %2d: %s", i*4+j, sprint_hex(bldata, 16));
+			
+			/*
 			PrintAndLog("Writing to block %2d: %s Confirm? [Y,N]", i*4+j, sprint_hex(bldata, 16));
 			
 			scanf("%c",&ch);
-			if ((ch != 'y') || (ch != 'Y')){
+			if ((ch != 'y') && (ch != 'Y')){
 				PrintAndLog("Aborting !");
 				return 1;
 			}
+			*/
 			
 			memcpy(c.d.asBytes + 10, bldata, 16);
 			SendCommand(&c);
