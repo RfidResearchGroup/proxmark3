@@ -792,6 +792,12 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 #endif
 
+#ifdef WITH_LF
+		case CMD_HID_CLONE_TAG:
+			CopyHIDtoT5567(c->arg[0], c->arg[1]);					// Clone HID tag by ID to T55x7
+			break;
+#endif
+
 		case CMD_FPGA_MAJOR_MODE_OFF:		// ## FPGA Control
 			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 			SpinDelay(200);

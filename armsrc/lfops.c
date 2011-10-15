@@ -975,3 +975,109 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		WDT_HIT();
 	}
 }
+
+//----------------------
+// T5557/T5567 routines
+
+// Relevant times in microsecond
+// To compensate antenna falling times shorten the write times
+//  and enlarge the gap ones.
+#define start_gap 250 
+#define write_gap 160 
+#define write_0 144 //192
+#define write_1 400 //432 for T55x7; 448 for E5550
+
+//Write one bit to card
+void T5567WriteBit(int bit)
+{
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	if (bit == 0)  SpinDelayUs(write_0);
+	else SpinDelayUs(write_1);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelayUs(write_gap);
+}
+
+//Write one card block in page 0, no lock
+void T5567WriteBlock(int Data, int Block)
+{
+
+	/* Make sure the tag is reset */
+//	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+//	SpinDelay(2500);
+
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+
+	// Give it a bit of time for the resonant antenna to settle.
+	// And for the tag to fully power up
+	SpinDelay(150);
+
+	// now start writting
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelayUs(start_gap);
+
+  //Opcode
+  T5567WriteBit(1);
+  T5567WriteBit(0); //Page 0
+  //Lock bit
+  T5567WriteBit(0);
+  
+  //Data 
+  for (int i=0;i<32;i++){
+     T5567WriteBit(Data&(1<<(31-i)));
+  }	
+
+  //Page 
+  for (int i=0;i<3;i++){
+     T5567WriteBit(Block&(1<<(2-i)));
+  }	
+  
+  //Now perform write (nominal is 5.6 ms for T55x7 and 18ms for E5550,
+  //                   so wait a little more)
+ 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	SpinDelay(20);
+	
+}
+
+//Copy HID id to card and setup block 0 config
+void CopyHIDtoT5567(int hi, int lo)
+{
+	int data1, data2, data3;
+
+  // ensure no more than 44 bits supplied
+	if (hi>0xFFF) {
+		DbpString("Tags can only have 44 bits.");
+		return;
+	}
+	
+	//Build the 3 data blocks for supplied 44bit ID
+	data1 = 0x1D000000; //load preamble
+	for (int i=0;i<12;i++){
+		if (hi & (1<<(11-i))) data1 |= (1<<(((11-i)*2)+1)); // 1 -> 10
+		else data1 |= (1<<((11-i)*2));                      // 0 -> 01
+	}
+	data2 = 0; 
+	for (int i=0;i<16;i++){
+		if (lo & (1<<(31-i))) data2 |= (1<<(((15-i)*2)+1)); // 1 -> 10
+		else data2 |= (1<<((15-i)*2));                      // 0 -> 01
+	}
+	data3 = 0; 
+	for (int i=0;i<16;i++){
+		if (lo & (1<<(15-i))) data3 |= (1<<(((15-i)*2)+1)); // 1 -> 10
+		else data3 |= (1<<((15-i)*2));                      // 0 -> 01
+	}
+
+	//Program the 3 data blocks for supplied 44bit ID
+	// and the block 0 for HID format
+  T5567WriteBlock(data1,1);
+  T5567WriteBlock(data2,2);
+  T5567WriteBlock(data3,3);
+  //Config for HID (RF/50;FSK2a;Maxblock=3)
+  T5567WriteBlock(0x00107060,0);
+
+	DbpString("DONE!");
+
+}	
+

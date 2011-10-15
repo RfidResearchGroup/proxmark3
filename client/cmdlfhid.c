@@ -60,12 +60,30 @@ int CmdHIDSim(const char *Cmd)
   return 0;
 }
 
+int CmdHIDClone(const char *Cmd)
+{
+  unsigned int hi = 0, lo = 0;
+  int n = 0, i = 0;
+
+  while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
+    hi = (hi << 4) | (lo >> 28);
+    lo = (lo << 4) | (n & 0xf);
+  }
+
+  PrintAndLog("Cloning tag with ID %x%08x", hi, lo);
+
+  UsbCommand c = {CMD_HID_CLONE_TAG, {hi, lo}};
+  SendCommand(&c);
+  return 0;
+}
+
 static command_t CommandTable[] = 
 {
   {"help",      CmdHelp,        1, "This help"},
   {"demod",     CmdHIDDemod,    1, "Demodulate HID Prox Card II (not optimal)"},
   {"fskdemod",  CmdHIDDemodFSK, 0, "Realtime HID FSK demodulator"},
   {"sim",       CmdHIDSim,      0, "<ID> -- HID tag simulator"},
+  {"clone",     CmdHIDClone,    0, "<ID> -- Clone HID to T55x7 (tag must be in antenna)"},
   {NULL, NULL, 0, NULL}
 };
 
