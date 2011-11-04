@@ -174,15 +174,17 @@ int CmdHF14AReader(const char *Cmd)
 	PrintAndLog(" UID : %s", sprint_hex(uid, 12));
 	PrintAndLog(" SAK : %02x [%d]", card->sak, resp->arg[0]);
 	switch (card->sak) {
-		case  0: PrintAndLog(" SAK : MIFARE ultralight?"); break;
-		case  8: PrintAndLog(" SAK : MIFARE CLASSIC 1K"); break;
-		case  9: PrintAndLog(" SAK : MIFARE MINI"); break;
-		case 18: PrintAndLog(" SAK : MIFARE CLASSIC 4K"); break;
-		case 20: PrintAndLog(" SAK : MIFARE DESFIRE or JCOP 31/41"); break;
-		case 28: PrintAndLog(" SAK : JCOP31 or JCOP41 v2.3.1"); break;
-		case 38: PrintAndLog(" SAK : Nokia 6212 or 6131 MIFARE CLASSIC 4K"); break;
-		case 88: PrintAndLog(" SAK : Infineon MIFARE CLASSIC 1K"); break;
-		case 98: PrintAndLog(" SAK : Gemplus MPCOS"); break;
+		case 0x00: PrintAndLog(" SAK : MIFARE ultralight?"); break;
+		case 0x08: PrintAndLog(" SAK : MIFARE CLASSIC 1K"); break;
+		case 0x09: PrintAndLog(" SAK : MIFARE MINI"); break;
+		case 0x10: PrintAndLog(" SAK : MIFARE PLUS 1k"); break;
+		case 0x11: PrintAndLog(" SAK : MIFARE PLUS 4k"); break;
+		case 0x18: PrintAndLog(" SAK : MIFARE CLASSIC 4K"); break;
+		case 0x20: PrintAndLog(" SAK : MIFARE DESFIRE | PLUS | JCOP 31/41"); break;
+		case 0x28: PrintAndLog(" SAK : JCOP31 or JCOP41 v2.3.1"); break;
+		case 0x38: PrintAndLog(" SAK : Nokia 6212 or 6131 MIFARE CLASSIC 4K"); break;
+		case 0x88: PrintAndLog(" SAK : Infineon MIFARE CLASSIC 1K"); break;
+		case 0x98: PrintAndLog(" SAK : Gemplus MPCOS"); break;
 		default: ;
 	}
 	if(resp->arg[0] == 1)

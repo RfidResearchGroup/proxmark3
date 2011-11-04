@@ -298,7 +298,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 	uint8_t uid[8];
 	uint32_t cuid, nt1, nt2, nttmp, nttest, par, ks1;
 	uint8_t par_array[4];
-	nestedVector nvector[NES_MAX_INFO + 1][10];
+	nestedVector nvector[NES_MAX_INFO + 1][11];
 	int nvectorcount[NES_MAX_INFO + 1];
 	int ncount = 0;
 	UsbCommand ack = {CMD_ACK, {0, 0, 0}};
