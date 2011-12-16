@@ -607,11 +607,31 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			AcquireRawAdcSamples125k(c->arg[0]);
 			UsbSendPacket((uint8_t*)&ack, sizeof(ack));
 			break;
-#endif
-
-#ifdef WITH_LF
 		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			ModThenAcquireRawAdcSamples125k(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
+			break;
+		case CMD_HID_DEMOD_FSK:
+			CmdHIDdemodFSK(0, 0, 0, 1);				// Demodulate HID tag
+			break;
+		case CMD_HID_SIM_TAG:
+			CmdHIDsimTAG(c->arg[0], c->arg[1], 1);					// Simulate HID tag by ID
+			break;
+		case CMD_HID_CLONE_TAG:
+			CopyHIDtoT5567(c->arg[0], c->arg[1]);					// Clone HID tag by ID to T55x7
+			break;
+		case CMD_READ_TI_TYPE:
+			ReadTItag();
+			break;
+		case CMD_WRITE_TI_TYPE:
+			WriteTItag(c->arg[0],c->arg[1],c->arg[2]);
+			break;
+		case CMD_SIMULATE_TAG_125K:
+			LED_A_ON();
+			SimulateTagLowFrequency(c->arg[0], c->arg[1], 1);
+			LED_A_OFF();
+			break;
+		case CMD_LF_SIMULATE_BIDIR:
+			SimulateTagLowFrequencyBidir(c->arg[0], c->arg[1]);
 			break;
 #endif
 
@@ -619,9 +639,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693:
 			AcquireRawAdcSamplesIso15693();
 			break;
-#endif
-
-#ifdef WITH_ISO15693
 		case CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693:
 			RecordRawAdcSamplesIso15693();
 			break;
@@ -637,33 +654,26 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_ISO_15693_DEBUG:
 			SetDebugIso15693(c->arg[0]);
 			break;
-			
-#endif
-		case CMD_BUFF_CLEAR:
-			BufferClear();
-			break;
 
-#ifdef WITH_ISO15693
 		case CMD_READER_ISO_15693:
 			ReaderIso15693(c->arg[0]);
 			break;
+		case CMD_SIMTAG_ISO_15693:
+			SimTagIso15693(c->arg[0]);
+			break;
 #endif
 
-        case CMD_SIMULATE_TAG_LEGIC_RF:
-            LegicRfSimulate(c->arg[0], c->arg[1], c->arg[2]);
-            break;
+#ifdef WITH_LEGICRF
+		case CMD_SIMULATE_TAG_LEGIC_RF:
+			LegicRfSimulate(c->arg[0], c->arg[1], c->arg[2]);
+			break;
 
-        case CMD_WRITER_LEGIC_RF:
-            LegicRfWriter(c->arg[1], c->arg[0]);
-            break;
+		case CMD_WRITER_LEGIC_RF:
+			LegicRfWriter(c->arg[1], c->arg[0]);
+			break;
 
 		case CMD_READER_LEGIC_RF:
 			LegicRfReader(c->arg[0], c->arg[1]);
-			break;
-
-#ifdef WITH_ISO15693
-		case CMD_SIMTAG_ISO_15693:
-			SimTagIso15693(c->arg[0]);
 			break;
 #endif
 
@@ -671,30 +681,34 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443:
 			AcquireRawAdcSamplesIso14443(c->arg[0]);
 			break;
-#endif
-
-#ifdef WITH_ISO14443b
 		case CMD_READ_SRI512_TAG:
 			ReadSRI512Iso14443(c->arg[0]);
 			break;
-               case CMD_READ_SRIX4K_TAG:
-                       ReadSRIX4KIso14443(c->arg[0]);
-                       break;
+		case CMD_READ_SRIX4K_TAG:
+			ReadSRIX4KIso14443(c->arg[0]);
+			break;
+		case CMD_SNOOP_ISO_14443:
+			SnoopIso14443();
+			break;
+		case CMD_SIMULATE_TAG_ISO_14443:
+			SimulateIso14443Tag();
+			break;
 #endif
 
 #ifdef WITH_ISO14443a
+		case CMD_SNOOP_ISO_14443a:
+			SnoopIso14443a();
+			break;
 		case CMD_READER_ISO_14443a:
 			ReaderIso14443a(c, &ack);
 			break;
-#endif
-
-#ifdef WITH_ISO14443a
+		case CMD_SIMULATE_TAG_ISO_14443a:
+			SimulateIso14443aTag(c->arg[0], c->arg[1]);  // ## Simulate iso14443a tag - pass tag type & UID
+			break;
+			
 		case CMD_READER_MIFARE:
 			ReaderMifare(c->arg[0]);
 			break;
-#endif
-
-#ifdef WITH_ISO14443a
 		case CMD_MIFARE_READBL:
 			MifareReadBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
@@ -730,22 +744,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MIFARE_EML_CARDLOAD:
 			MifareECardLoad(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
-			
 #endif
 
-#ifdef WITH_ISO14443b
-		case CMD_SNOOP_ISO_14443:
-			SnoopIso14443();
-			break;
-#endif
-
-#ifdef WITH_ISO14443a
-		case CMD_SNOOP_ISO_14443a:
-			SnoopIso14443a();
-			break;
-#endif
-
-#ifdef WITH_ISO14443a
+#ifdef WITH_ICLASS
 		// Makes use of ISO14443a FPGA Firmware
 		case CMD_SNOOP_ICLASS:
 			SnoopIClass();
@@ -756,17 +757,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			SimulateTagHfListen();
 			break;
 
-#ifdef WITH_ISO14443b
-		case CMD_SIMULATE_TAG_ISO_14443:
-			SimulateIso14443Tag();
+		case CMD_BUFF_CLEAR:
+			BufferClear();
 			break;
-#endif
-
-#ifdef WITH_ISO14443a
-		case CMD_SIMULATE_TAG_ISO_14443a:
-			SimulateIso14443aTag(c->arg[0], c->arg[1]);  // ## Simulate iso14443a tag - pass tag type & UID
-			break;
-#endif
 
 		case CMD_MEASURE_ANTENNA_TUNING:
 			MeasureAntennaTuning();
@@ -780,41 +773,11 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			ListenReaderField(c->arg[0]);
 			break;
 
-#ifdef WITH_LF
-		case CMD_HID_DEMOD_FSK:
-			CmdHIDdemodFSK(0, 0, 0, 1);				// Demodulate HID tag
-			break;
-#endif
-
-#ifdef WITH_LF
-		case CMD_HID_SIM_TAG:
-			CmdHIDsimTAG(c->arg[0], c->arg[1], 1);					// Simulate HID tag by ID
-			break;
-#endif
-
-#ifdef WITH_LF
-		case CMD_HID_CLONE_TAG:
-			CopyHIDtoT5567(c->arg[0], c->arg[1]);					// Clone HID tag by ID to T55x7
-			break;
-#endif
-
 		case CMD_FPGA_MAJOR_MODE_OFF:		// ## FPGA Control
 			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 			SpinDelay(200);
 			LED_D_OFF(); // LED D indicates field ON or OFF
 			break;
-
-#ifdef WITH_LF
-		case CMD_READ_TI_TYPE:
-			ReadTItag();
-			break;
-#endif
-
-#ifdef WITH_LF
-		case CMD_WRITE_TI_TYPE:
-			WriteTItag(c->arg[0],c->arg[1],c->arg[2]);
-			break;
-#endif
 
 		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K: {
 			UsbCommand n;
@@ -839,14 +802,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		}
 
-#ifdef WITH_LF
-		case CMD_SIMULATE_TAG_125K:
-			LED_A_ON();
-			SimulateTagLowFrequency(c->arg[0], c->arg[1], 1);
-			LED_A_OFF();
-			break;
-#endif
-
 		case CMD_READ_MEM:
 			ReadMem(c->arg[0]);
 			break;
@@ -869,9 +824,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 
 #ifdef WITH_LF
-		case CMD_LF_SIMULATE_BIDIR:
-			SimulateTagLowFrequencyBidir(c->arg[0], c->arg[1]);
-			break;
+
 #endif
 
 #ifdef WITH_LCD

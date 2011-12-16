@@ -44,8 +44,7 @@
 #include "apps.h"
 #include "util.h"
 #include "string.h"
-
-#include "iclass.h"
+#include "common.h"
 
 static uint8_t *trace = (uint8_t *) BigBuf;
 static int traceLen = 0;
