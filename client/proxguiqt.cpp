@@ -22,6 +22,10 @@
 #include "proxguiqt.h"
 #include "proxgui.h"
 
+int GridOffset= 0;
+bool GridLocked= 0;
+int startMax;
+
 void ProxGuiQT::ShowGraphWindow(void)
 {
 	emit ShowGraphWindowSignal();
@@ -130,7 +134,7 @@ void ProxWidget::paintEvent(QPaintEvent *event)
         // plot X and Y grid lines
         int i;
         if ((PlotGridX > 0) && ((PlotGridX * GraphPixelsPerPoint) > 1)) {
-        	for(i = 40; i < r.right(); i += (int)(PlotGridX * GraphPixelsPerPoint)) {
+        	for(i = 40 + GridOffset; i < r.right(); i += (int)(PlotGridX * GraphPixelsPerPoint)) {
         		//SelectObject(hdc, GreyPenLite);
         		//MoveToEx(hdc, r.left + i, r.top, NULL);
         		//LineTo(hdc, r.left + i, r.bottom);
@@ -150,8 +154,7 @@ void ProxWidget::paintEvent(QPaintEvent *event)
         		}
         	}
 	
-	int startMax =
-		(GraphTraceLen - (int)((r.right() - r.left() - 40) / GraphPixelsPerPoint));
+	startMax = (GraphTraceLen - (int)((r.right() - r.left() - 40) / GraphPixelsPerPoint));
 	if(startMax < 0) {
 		startMax = 0;
 	}
@@ -323,18 +326,65 @@ void ProxWidget::keyPressEvent(QKeyEvent *event)
 
 		case Qt::Key_Right:
 			if(GraphPixelsPerPoint < 20) {
+				if (GridLocked && GraphStart < startMax)
+					GridOffset -= (int)(20 / GraphPixelsPerPoint);
 				GraphStart += (int)(20 / GraphPixelsPerPoint);
 			} else {
 				GraphStart++;
+				if (GridLocked && GraphStart < startMax)
+					GridOffset--;
 			}
+			if(GridOffset < 0)
+				GridOffset += PlotGridX;
+			if (PlotGridX)
+				GridOffset %= PlotGridX;
 			break;
 
 		case Qt::Key_Left:
 			if(GraphPixelsPerPoint < 20) {
+				if (GridLocked && GraphStart > 0)
+					GridOffset += (int)(20 / GraphPixelsPerPoint);
 				GraphStart -= (int)(20 / GraphPixelsPerPoint);
 			} else {
 				GraphStart--;
+				if (GridLocked && GraphStart > 0)
+					GridOffset++;
 			}
+			if (PlotGridX)
+				GridOffset %= PlotGridX;
+			break;
+
+		case Qt::Key_G:
+			if(PlotGridX || PlotGridY) {
+				PlotGridX= 0;
+				PlotGridY= 0;
+			} else {
+				PlotGridX= PlotGridXdefault;
+				PlotGridY= PlotGridYdefault;
+				}
+			break;
+
+		case Qt::Key_H:
+			puts("Plot Window Keystrokes:\n");
+			puts(" Key           Action\n");
+			puts(" DOWN          Zoom in");
+			puts(" G             Toggle grid display");
+			puts(" H             Show help");
+			puts(" LEFT          Move left");
+			puts(" L             Toggle lock grid relative to samples");
+			puts(" Q             Hide window");
+			puts(" RIGHT         Move right");
+			puts(" UP            Zoom out");
+			puts("");
+			puts("Use client window 'data help' for more plot commands\n");
+			break;
+
+		case Qt::Key_L:
+			GridLocked= !GridLocked;
+			break;
+
+		case Qt::Key_Q:
+			this->hide();
 			break;
 
 		default:

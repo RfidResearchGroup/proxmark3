@@ -388,6 +388,8 @@ int CmdFSKdemod(const char *Cmd)
 int CmdGrid(const char *Cmd)
 {
   sscanf(Cmd, "%i %i", &PlotGridX, &PlotGridY);
+  PlotGridXdefault= PlotGridX;
+  PlotGridYdefault= PlotGridY;
   RepaintGraphWindow();
   return 0;
 }
@@ -874,7 +876,7 @@ static command_t CommandTable[] =
   {"mandemod",      CmdManchesterDemod, 1, "[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)"},
   {"manmod",        CmdManchesterMod,   1, "[clock rate] -- Manchester modulate a binary stream"},
   {"norm",          CmdNorm,            1, "Normalize max/min to +/-500"},
-  {"plot",          CmdPlot,            1, "Show graph window"},
+  {"plot",          CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
   {"samples",       CmdSamples,         0, "[128 - 16000] -- Get raw samples for graph window"},
   {"save",          CmdSave,            1, "<filename> -- Save trace (from graph window)"},
   {"scale",         CmdScale,           1, "<int> -- Set cursor display scale"},

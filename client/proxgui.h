@@ -23,7 +23,7 @@ void ExitGraphics(void);
 extern int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 extern int GraphTraceLen;
 extern double CursorScaleFactor;
-extern int PlotGridX, PlotGridY;
+extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault;
 extern int CommandFinished;
 extern int offline;
 

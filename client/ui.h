@@ -19,7 +19,7 @@ void PrintAndLog(char *fmt, ...);
 void SetLogFilename(char *fn);
 
 extern double CursorScaleFactor;
-extern int PlotGridX, PlotGridY;
+extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault;
 extern int offline;
 
 #endif

@@ -18,7 +18,7 @@
 #include "ui.h"
 
 double CursorScaleFactor;
-int PlotGridX, PlotGridY;
+int PlotGridX, PlotGridY, PlotGridXdefault= 64, PlotGridYdefault= 64;
 int offline;
 
 static char *logfilename = "proxmark3.log";
