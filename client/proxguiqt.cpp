@@ -134,7 +134,7 @@ void ProxWidget::paintEvent(QPaintEvent *event)
         // plot X and Y grid lines
         int i;
         if ((PlotGridX > 0) && ((PlotGridX * GraphPixelsPerPoint) > 1)) {
-        	for(i = 40 + GridOffset; i < r.right(); i += (int)(PlotGridX * GraphPixelsPerPoint)) {
+        	for(i = 40 + (GridOffset * GraphPixelsPerPoint); i < r.right(); i += (int)(PlotGridX * GraphPixelsPerPoint)) {
         		//SelectObject(hdc, GreyPenLite);
         		//MoveToEx(hdc, r.left + i, r.top, NULL);
         		//LineTo(hdc, r.left + i, r.bottom);
@@ -330,9 +330,9 @@ void ProxWidget::keyPressEvent(QKeyEvent *event)
 					GridOffset -= (int)(20 / GraphPixelsPerPoint);
 				GraphStart += (int)(20 / GraphPixelsPerPoint);
 			} else {
-				GraphStart++;
 				if (GridLocked && GraphStart < startMax)
 					GridOffset--;
+				GraphStart++;
 			}
 			if(GridOffset < 0)
 				GridOffset += PlotGridX;
@@ -346,9 +346,9 @@ void ProxWidget::keyPressEvent(QKeyEvent *event)
 					GridOffset += (int)(20 / GraphPixelsPerPoint);
 				GraphStart -= (int)(20 / GraphPixelsPerPoint);
 			} else {
-				GraphStart--;
 				if (GridLocked && GraphStart > 0)
 					GridOffset++;
+				GraphStart--;
 			}
 			if (PlotGridX)
 				GridOffset %= PlotGridX;
