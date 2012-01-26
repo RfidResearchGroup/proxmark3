@@ -11,3 +11,7 @@ homeagain.pm3: HomeAgain animal (cat) tag - ID 985121004515220
 homeagain1600.pm3: HomeAgain animal (cat) tag - ID 985121004515220
 keri.pm3: Keri PSK-3 Key Ring tag (back of tag: 1460 3411)
 Transit999-best.pm3: Transit 999 format (UID 99531670)
+
+The files 'modulation-'... are all encoded with identical data (hex 00 01 02 03 04 05 06 07 08 09 0A 0B)
+for the purpose of recognition and testing of demodulation schemes. They were created by writing Q5 tags
+appropriately configured. The raw data is in 'modulation-data.dat'.
