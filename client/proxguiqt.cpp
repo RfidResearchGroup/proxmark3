@@ -270,9 +270,9 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 	painter.drawPath(cursorBPath);
 
 	char str[200];
-	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f] zoom=%.3f CursorA=%d [%d] CursorB=%d [%d]",
+	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f] zoom=%.3f CursorA=%d [%d] CursorB=%d [%d]    GridX=%d GridY=%d (%s)",
 			GraphStart, yMax, yMin, yMean, n, GraphTraceLen,
-			CursorBPos - CursorAPos, (CursorBPos - CursorAPos)/CursorScaleFactor,GraphPixelsPerPoint,CursorAPos,GraphBuffer[CursorAPos],CursorBPos,GraphBuffer[CursorBPos]);
+			CursorBPos - CursorAPos, (CursorBPos - CursorAPos)/CursorScaleFactor,GraphPixelsPerPoint,CursorAPos,GraphBuffer[CursorAPos],CursorBPos,GraphBuffer[CursorBPos],PlotGridXdefault,PlotGridYdefault,GridLocked?"Locked":"Unlocked");
 
 	painter.setPen(QColor(255, 255, 255));
 	painter.drawText(50, r.bottom() - 20, str);
@@ -324,9 +324,11 @@ void ProxWidget::keyPressEvent(QKeyEvent *event)
 			offset= PageWidth - (PageWidth % PlotGridX);
 		else
 			offset= PageWidth;
-	}
-	else
-		offset= (int)(20 / GraphPixelsPerPoint);
+	} else 
+		if(event->modifiers() & Qt::ControlModifier)
+			offset= 1;
+		else
+			offset= (int)(20 / GraphPixelsPerPoint);
 
 	switch(event->key()) {
 		case Qt::Key_Down:
@@ -404,17 +406,21 @@ void ProxWidget::keyPressEvent(QKeyEvent *event)
 
 		case Qt::Key_H:
 			puts("Plot Window Keystrokes:\n");
-			puts(" Key               Action\n");
-			puts(" DOWN              Zoom in");
-			puts(" G                 Toggle grid display");
-			puts(" H                 Show help");
-			puts(" LEFT              Move left");
-			puts(" <SHIFT>LEFT       Page left");
-			puts(" L                 Toggle lock grid relative to samples");
-			puts(" Q                 Hide window");
-			puts(" RIGHT             Move right");
-			puts(" <SHIFT>RIGHT      Page right");
-			puts(" UP                Zoom out");
+			puts(" Key                      Action\n");
+			puts(" DOWN                     Zoom in");
+			puts(" G                        Toggle grid display");
+			puts(" H                        Show help");
+			puts(" L                        Toggle lock grid relative to samples");
+			puts(" LEFT                     Move left");
+			puts(" <CTL>LEFT                Move left 1 sample");
+			puts(" <SHIFT>LEFT              Page left");
+			puts(" LEFT-MOUSE-CLICK         Set yellow cursor");
+			puts(" Q                        Hide window");
+			puts(" RIGHT                    Move right");
+			puts(" <CTL>RIGHT               Move right 1 sample");
+			puts(" <SHIFT>RIGHT             Page right");
+			puts(" RIGHT-MOUSE-CLICK        Set purple cursor");
+			puts(" UP                       Zoom out");
 			puts("");
 			puts("Use client window 'data help' for more plot commands\n");
 			break;
