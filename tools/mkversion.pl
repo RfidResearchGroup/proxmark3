@@ -57,6 +57,7 @@ if(open(SVNINFO, "svn info $main_dir|")) {
 $compiletime[4] += 1;
 $compiletime[5] += 1900;
 my $ctime = sprintf("%6\$04i-%5\$02i-%4\$02i %3\$02i:%2\$02i:%1\$02i", @compiletime);
+$svnversion=~ s/(^\s+|\s+$)//g;
 
 print <<EOF
 #include "proxmark3.h"
