@@ -173,14 +173,18 @@ int CmdHF14AReader(const char *Cmd)
 	PrintAndLog("ATQA : %02x %02x", card->atqa[0], card->atqa[1]);
 	PrintAndLog(" UID : %s", sprint_hex(uid, 12));
 	PrintAndLog(" SAK : %02x [%d]", card->sak, resp->arg[0]);
+
 	switch (card->sak) {
-		case 0x00: PrintAndLog(" SAK : MIFARE ultralight?"); break;
-		case 0x08: PrintAndLog(" SAK : MIFARE CLASSIC 1K"); break;
-		case 0x09: PrintAndLog(" SAK : MIFARE MINI"); break;
-		case 0x10: PrintAndLog(" SAK : MIFARE PLUS 1k"); break;
-		case 0x11: PrintAndLog(" SAK : MIFARE PLUS 4k"); break;
-		case 0x18: PrintAndLog(" SAK : MIFARE CLASSIC 4K"); break;
-		case 0x20: PrintAndLog(" SAK : MIFARE DESFIRE | PLUS | JCOP 31/41"); break;
+		case 0x00: PrintAndLog(" SAK : NXP MIFARE Ultralight | Ultralight C"); break;
+		case 0x04: PrintAndLog(" SAK : NXP MIFARE (various !DESFire !DESFire EV1)"); break;
+
+		case 0x08: PrintAndLog(" SAK : NXP MIFARE CLASSIC 1k | Plus 2k"); break;
+		case 0x09: PrintAndLog(" SAK : NXP MIFARE Mini 0.3k"); break;
+		case 0x10: PrintAndLog(" SAK : NXP MIFARE Plus 2k"); break;
+		case 0x11: PrintAndLog(" SAK : NXP MIFARE Plus 4k"); break;
+		case 0x18: PrintAndLog(" SAK : NXP MIFARE Classic 4k | Plus 4k"); break;
+		case 0x20: PrintAndLog(" SAK : NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k | JCOP 31/41"); break;
+		case 0x24: PrintAndLog(" SAK : NXP MIFARE DESFire | DESFire EV1"); break;
 		case 0x28: PrintAndLog(" SAK : JCOP31 or JCOP41 v2.3.1"); break;
 		case 0x38: PrintAndLog(" SAK : Nokia 6212 or 6131 MIFARE CLASSIC 4K"); break;
 		case 0x88: PrintAndLog(" SAK : Infineon MIFARE CLASSIC 1K"); break;
