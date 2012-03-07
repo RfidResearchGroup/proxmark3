@@ -619,6 +619,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_HID_CLONE_TAG:
 			CopyHIDtoT5567(c->arg[0], c->arg[1]);					// Clone HID tag by ID to T55x7
 			break;
+		case CMD_EM410X_WRITE_TAG:
+			WriteEM410x(c->arg[0], c->arg[1], c->arg[2]);
+			break;
 		case CMD_READ_TI_TYPE:
 			ReadTItag();
 			break;

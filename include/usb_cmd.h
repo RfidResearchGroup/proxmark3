@@ -67,6 +67,7 @@ typedef struct {
 #define CMD_LF_SIMULATE_BIDIR						0x020E
 #define CMD_SET_ADC_MUX									0x020F
 #define CMD_HID_CLONE_TAG								0x0210
+#define CMD_EM410X_WRITE_TAG						0x0211
 
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 

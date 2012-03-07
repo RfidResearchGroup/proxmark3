@@ -95,7 +95,7 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol);
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol);
 void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);
 void CopyHIDtoT5567(int hi, int lo); // Clone an HID card to T5557/T5567
-
+void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo);
 
 /// iso14443.h
 void SimulateIso14443Tag(void);

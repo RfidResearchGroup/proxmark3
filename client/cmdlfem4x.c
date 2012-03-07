@@ -399,12 +399,37 @@ int CmdEM4x50Read(const char *Cmd)
   return 0;
 }
 
-static command_t CommandTable[] = 
+int CmdEM410xWrite(const char *Cmd)
+{
+  uint64_t id = 0;
+  unsigned int card;
+
+  sscanf(Cmd, "%lx %d", &id, &card);
+
+  if (id >= 0x10000000000) {
+    PrintAndLog("Error! Given EM410x ID is longer than 40 bits.\n");
+    return 0;
+  }
+
+  if (card > 1) {
+    PrintAndLog("Error! Bad card type selected.\n");
+    return 0;
+  }
+
+  PrintAndLog("Writing %s tag with UID 0x%010lx", card ? "T55x7":"T5555", id);
+  UsbCommand c = {CMD_EM410X_WRITE_TAG, {card, (uint32_t)(id >> 32), (uint32_t)id}};
+  SendCommand(&c);
+
+  return 0;
+}
+
+static command_t CommandTable[] =
 {
   {"help",        CmdHelp,        1, "This help"},
   {"em410xread",  CmdEM410xRead,  1, "[clock rate] -- Extract ID from EM410x tag"},
   {"em410xsim",   CmdEM410xSim,   0, "<UID> -- Simulate EM410x tag"},
   {"em410xwatch", CmdEM410xWatch, 0, "Watches for EM410x tags"},
+  {"em410xwrite", CmdEM410xWrite, 1, "<UID> <'0' T5555> <'1' T55x7> -- Write EM410x UID to T5555(Q5) or T55x7 tag"},
   {"em4x50read",  CmdEM4x50Read,  1, "Extract data from EM4x50 tag"},
   {NULL, NULL, 0, NULL}
 };

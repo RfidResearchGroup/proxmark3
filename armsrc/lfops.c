@@ -976,35 +976,87 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	}
 }
 
-//----------------------
-// T5557/T5567 routines
+/*------------------------------
+ * T5555/T5557/T5567 routines
+ *------------------------------
+ */
 
-// Relevant times in microsecond
-// To compensate antenna falling times shorten the write times
-//  and enlarge the gap ones.
-#define start_gap 250 
-#define write_gap 160 
-#define write_0 144 //192
-#define write_1 400 //432 for T55x7; 448 for E5550
+/* T55x7 configuration register definitions */
+#define T55x7_POR_DELAY			0x00000001
+#define T55x7_ST_TERMINATOR		0x00000008
+#define T55x7_PWD			0x00000010
+#define T55x7_MAXBLOCK_SHIFT		5
+#define T55x7_AOR			0x00000200
+#define T55x7_PSKCF_RF_2		0
+#define T55x7_PSKCF_RF_4		0x00000400
+#define T55x7_PSKCF_RF_8		0x00000800
+#define T55x7_MODULATION_DIRECT		0
+#define T55x7_MODULATION_PSK1		0x00001000
+#define T55x7_MODULATION_PSK2		0x00002000
+#define T55x7_MODULATION_PSK3		0x00003000
+#define T55x7_MODULATION_FSK1		0x00004000
+#define T55x7_MODULATION_FSK2		0x00005000
+#define T55x7_MODULATION_FSK1a		0x00006000
+#define T55x7_MODULATION_FSK2a		0x00007000
+#define T55x7_MODULATION_MANCHESTER	0x00008000
+#define T55x7_MODULATION_BIPHASE	0x00010000
+#define T55x7_BITRATE_RF_8		0
+#define T55x7_BITRATE_RF_16		0x00040000
+#define T55x7_BITRATE_RF_32		0x00080000
+#define T55x7_BITRATE_RF_40		0x000C0000
+#define T55x7_BITRATE_RF_50		0x00100000
+#define T55x7_BITRATE_RF_64		0x00140000
+#define T55x7_BITRATE_RF_100		0x00180000
+#define T55x7_BITRATE_RF_128		0x001C0000
 
-//Write one bit to card
-void T5567WriteBit(int bit)
+/* T5555 (Q5) configuration register definitions */
+#define T5555_ST_TERMINATOR		0x00000001
+#define T5555_MAXBLOCK_SHIFT		0x00000001
+#define T5555_MODULATION_MANCHESTER	0
+#define T5555_MODULATION_PSK1		0x00000010
+#define T5555_MODULATION_PSK2		0x00000020
+#define T5555_MODULATION_PSK3		0x00000030
+#define T5555_MODULATION_FSK1		0x00000040
+#define T5555_MODULATION_FSK2		0x00000050
+#define T5555_MODULATION_BIPHASE	0x00000060
+#define T5555_MODULATION_DIRECT		0x00000070
+#define T5555_INVERT_OUTPUT		0x00000080
+#define T5555_PSK_RF_2			0
+#define T5555_PSK_RF_4			0x00000100
+#define T5555_PSK_RF_8			0x00000200
+#define T5555_USE_PWD			0x00000400
+#define T5555_USE_AOR			0x00000800
+#define T5555_BITRATE_SHIFT		12
+#define T5555_FAST_WRITE		0x00004000
+#define T5555_PAGE_SELECT		0x00008000
+
+/*
+ * Relevant times in microsecond
+ * To compensate antenna falling times shorten the write times
+ * and enlarge the gap ones.
+ */
+#define START_GAP 250
+#define WRITE_GAP 160
+#define WRITE_0   144 // 192
+#define WRITE_1   400 // 432 for T55x7; 448 for E5550
+
+// Write one bit to card
+void T55xxWriteBit(int bit)
 {
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
-	if (bit == 0)  SpinDelayUs(write_0);
-	else SpinDelayUs(write_1);
+	if (bit == 0)
+		SpinDelayUs(WRITE_0);
+	else
+		SpinDelayUs(WRITE_1);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelayUs(write_gap);
+	SpinDelayUs(WRITE_GAP);
 }
 
-//Write one card block in page 0, no lock
-void T5567WriteBlock(int Data, int Block)
+// Write one card block in page 0, no lock
+void T55xxWriteBlock(int Data, int Block)
 {
-
-	/* Make sure the tag is reset */
-//	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-//	SpinDelay(2500);
+	unsigned int i;
 
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
@@ -1013,71 +1065,166 @@ void T5567WriteBlock(int Data, int Block)
 	// And for the tag to fully power up
 	SpinDelay(150);
 
-	// now start writting
+	// Now start writting
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelayUs(start_gap);
+	SpinDelayUs(START_GAP);
 
-  //Opcode
-  T5567WriteBit(1);
-  T5567WriteBit(0); //Page 0
-  //Lock bit
-  T5567WriteBit(0);
-  
-  //Data 
-  for (int i=0;i<32;i++){
-     T5567WriteBit(Data&(1<<(31-i)));
-  }	
+	// Opcode
+	T55xxWriteBit(1);
+	T55xxWriteBit(0); //Page 0
+	// Lock bit
+	T55xxWriteBit(0);
 
-  //Page 
-  for (int i=0;i<3;i++){
-     T5567WriteBit(Block&(1<<(2-i)));
-  }	
-  
-  //Now perform write (nominal is 5.6 ms for T55x7 and 18ms for E5550,
-  //                   so wait a little more)
- 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	// Data
+	for (i = 0x80000000; i != 0; i >>= 1)
+		T55xxWriteBit(Data & i);
+
+	// Page
+	for (i = 0x04; i != 0; i >>= 1)
+		T55xxWriteBit(Block & i);
+
+	// Now perform write (nominal is 5.6 ms for T55x7 and 18ms for E5550,
+	// so wait a little more)
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 	SpinDelay(20);
-	
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 
-//Copy HID id to card and setup block 0 config
+// Copy HID id to card and setup block 0 config
 void CopyHIDtoT5567(int hi, int lo)
 {
 	int data1, data2, data3;
 
-  // ensure no more than 44 bits supplied
+	// Ensure no more than 44 bits supplied
 	if (hi>0xFFF) {
 		DbpString("Tags can only have 44 bits.");
 		return;
 	}
-	
-	//Build the 3 data blocks for supplied 44bit ID
-	data1 = 0x1D000000; //load preamble
-	for (int i=0;i<12;i++){
-		if (hi & (1<<(11-i))) data1 |= (1<<(((11-i)*2)+1)); // 1 -> 10
-		else data1 |= (1<<((11-i)*2));                      // 0 -> 01
-	}
-	data2 = 0; 
-	for (int i=0;i<16;i++){
-		if (lo & (1<<(31-i))) data2 |= (1<<(((15-i)*2)+1)); // 1 -> 10
-		else data2 |= (1<<((15-i)*2));                      // 0 -> 01
-	}
-	data3 = 0; 
-	for (int i=0;i<16;i++){
-		if (lo & (1<<(15-i))) data3 |= (1<<(((15-i)*2)+1)); // 1 -> 10
-		else data3 |= (1<<((15-i)*2));                      // 0 -> 01
+
+	// Build the 3 data blocks for supplied 44bit ID
+	data1 = 0x1D000000; // load preamble
+
+	for (int i=0;i<12;i++) {
+		if (hi & (1<<(11-i)))
+			data1 |= (1<<(((11-i)*2)+1)); // 1 -> 10
+		else
+			data1 |= (1<<((11-i)*2)); // 0 -> 01
 	}
 
-	//Program the 3 data blocks for supplied 44bit ID
+	data2 = 0;
+	for (int i=0;i<16;i++) {
+		if (lo & (1<<(31-i)))
+			data2 |= (1<<(((15-i)*2)+1)); // 1 -> 10
+		else
+			data2 |= (1<<((15-i)*2)); // 0 -> 01
+	}
+
+	data3 = 0;
+	for (int i=0;i<16;i++) {
+		if (lo & (1<<(15-i)))
+			data3 |= (1<<(((15-i)*2)+1)); // 1 -> 10
+		else
+			data3 |= (1<<((15-i)*2)); // 0 -> 01
+	}
+
+	// Program the 3 data blocks for supplied 44bit ID
 	// and the block 0 for HID format
-  T5567WriteBlock(data1,1);
-  T5567WriteBlock(data2,2);
-  T5567WriteBlock(data3,3);
-  //Config for HID (RF/50;FSK2a;Maxblock=3)
-  T5567WriteBlock(0x00107060,0);
+	T55xxWriteBlock(data1,1);
+	T55xxWriteBlock(data2,2);
+	T55xxWriteBlock(data3,3);
+
+	// Config for HID (RF/50, FSK2a, Maxblock=3)
+	T55xxWriteBlock(T55x7_BITRATE_RF_50	    |
+			T55x7_MODULATION_MANCHESTER |
+			3 << T55x7_MAXBLOCK_SHIFT,
+			0);
 
 	DbpString("DONE!");
+}
 
-}	
+// Define 9bit header for EM410x tags
+#define EM410X_HEADER		0x1FF
+#define EM410X_ID_LENGTH	40
 
+void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo)
+{
+	int i, id_bit;
+	uint64_t id = EM410X_HEADER;
+	uint64_t rev_id = 0;	// reversed ID
+	int c_parity[4];	// column parity
+	int r_parity = 0;	// row parity
+
+	// Reverse ID bits given as parameter (for simpler operations)
+	for (i = 0; i < EM410X_ID_LENGTH; ++i) {
+		if (i < 32) {
+			rev_id = (rev_id << 1) | (id_lo & 1);
+			id_lo >>= 1;
+		} else {
+			rev_id = (rev_id << 1) | (id_hi & 1);
+			id_hi >>= 1;
+		}
+	}
+
+	for (i = 0; i < EM410X_ID_LENGTH; ++i) {
+		id_bit = rev_id & 1;
+
+		if (i % 4 == 0) {
+			// Don't write row parity bit at start of parsing
+			if (i)
+				id = (id << 1) | r_parity;
+			// Start counting parity for new row
+			r_parity = id_bit;
+		} else {
+			// Count row parity
+			r_parity ^= id_bit;
+		}
+
+		// First elements in column?
+		if (i < 4)
+			// Fill out first elements
+			c_parity[i] = id_bit;
+		else
+			// Count column parity
+			c_parity[i % 4] ^= id_bit;
+
+		// Insert ID bit
+		id = (id << 1) | id_bit;
+		rev_id >>= 1;
+	}
+
+	// Insert parity bit of last row
+	id = (id << 1) | r_parity;
+
+	// Fill out column parity at the end of tag
+	for (i = 0; i < 4; ++i)
+		id = (id << 1) | c_parity[i];
+
+	// Add stop bit
+	id <<= 1;
+
+	Dbprintf("Started writing %s tag ...", card ? "T55x7":"T5555");
+	LED_D_ON();
+
+	// Write EM410x ID
+	T55xxWriteBlock((uint32_t)(id >> 32), 1);
+	T55xxWriteBlock((uint32_t)id, 2);
+
+	// Config for EM410x (RF/64, Manchester, Maxblock=2)
+	if (card)
+		// Writing configuration for T55x7 tag
+		T55xxWriteBlock(T55x7_BITRATE_RF_64	    |
+				T55x7_MODULATION_MANCHESTER |
+				2 << T55x7_MAXBLOCK_SHIFT,
+				0);
+	else
+		// Writing configuration for T5555(Q5) tag
+		T55xxWriteBlock(0x1F << T5555_BITRATE_SHIFT |
+				T5555_MODULATION_MANCHESTER   |
+				2 << T5555_MAXBLOCK_SHIFT,
+				0);
+
+	LED_D_OFF();
+	Dbprintf("Tag %s written with 0x%08x%08x\n", card ? "T55x7":"T5555",
+					(uint32_t)(id >> 32), (uint32_t)id);
+}
