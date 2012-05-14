@@ -111,7 +111,7 @@ int getUID(uint8_t *buf)
 //		uid[8] 	tag uid
 // returns description of the best match	
 static char* getTagInfo(uint8_t *uid) {
-	uint64_t myuid,mask,t;
+	uint64_t myuid,mask;
 	int i=0, best=-1;	
 	memcpy(&myuid,uid,sizeof(uint64_t));
 	while (uidmapping[i].mask>0) {

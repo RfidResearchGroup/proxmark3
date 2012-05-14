@@ -259,15 +259,10 @@ int CmdHF14AMfDump1k(const char *Cmd)
 {
 	int i, j;
 	
-	uint8_t keyType = 0;
-	uint8_t c[3][4];
 	uint8_t keyA[16][6];
 	uint8_t keyB[16][6];
 	uint8_t rights[16][4];
 	
-	uint8_t isOK  = 0;
-	uint8_t *data  = NULL;
-
 	FILE *fin;
 	FILE *fout;
 	

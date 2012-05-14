@@ -275,13 +275,12 @@ int CmdEM410xWatch(const char *Cmd)
  */
 int CmdEM4x50Read(const char *Cmd)
 {
-  int i, j, startblock, clock, skip, block, start, end, low, high;
+  int i, j, startblock, skip, block, start, end, low, high;
   bool complete= false;
   int tmpbuff[MAX_GRAPH_TRACE_LEN / 64];
   char tmp[6];
 
   high= low= 0;
-  clock= 64;
   memset(tmpbuff, 0, MAX_GRAPH_TRACE_LEN / 64);
 
   /* first get high and low values */
