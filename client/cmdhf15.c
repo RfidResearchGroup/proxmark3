@@ -134,10 +134,20 @@ static char* getTagInfo(uint8_t *uid) {
 }
 
 
-// will return a clear-text message to an errorcode
+// return a clear-text message to an errorcode
 static char* TagErrorStr(uint8_t error) {
-	// TODO
-	return NULL;
+	switch (error) {
+		case 0x01: return "The command is not supported";
+		case 0x02: return "The command is not recognised";
+		case 0x03: return "The option is not supported.";
+		case 0x0f: return "Unknown error.";
+		case 0x10: return "The specified block is not available (doesn’t exist).";
+		case 0x11: return "The specified block is already -locked and thus cannot be locked again";
+		case 0x12: return "The specified block is locked and its content cannot be changed.";
+		case 0x13: return "The specified block was not successfully programmed.";
+		case 0x14: return "The specified block was not successfully locked.";
+		default: return "Reserved for Future Use or Custom command error.";
+	}
 }
 
 
@@ -312,7 +322,7 @@ int CmdHF15DumpMem(const char*Cmd) {
 					blocknum++;
 					// PrintAndLog("bn=%i",blocknum);
 				} else {
-					PrintAndLog("Tag returned Error %i: %s",recv[0],TagErrorStr(recv[0])); 
+					PrintAndLog("Tag returned Error %i: %s",recv[1],TagErrorStr(recv[1])); 
 					return 0;
 				}
 			} // else PrintAndLog("crc");
@@ -324,7 +334,7 @@ int CmdHF15DumpMem(const char*Cmd) {
 	else if (r && ISO15_CRC_CHECK!=Crc(r->d.asBytes,r->arg[0]))
 		PrintAndLog("CRC Failed");
 	else 
-		PrintAndLog("Tag returned Error %i: %s",recv[0],TagErrorStr(recv[0])); 
+		PrintAndLog("Tag returned Error %i: %s",recv[1],TagErrorStr(recv[1])); 
 	return 0;
 }
 
@@ -649,7 +659,7 @@ int CmdHF15CmdRead(const char *Cmd) {
 				}					
 				PrintAndLog("%s",output);	
 			} else {
-				PrintAndLog("Tag returned Error %i: %s",recv[0],TagErrorStr(recv[0])); 
+				PrintAndLog("Tag returned Error %i: %s",recv[1],TagErrorStr(recv[1])); 
 			}		   
 		} else {
 			PrintAndLog("CRC failed");
@@ -731,7 +741,7 @@ int CmdHF15CmdWrite(const char *Cmd) {
 			if (!(recv[0] & ISO15_RES_ERROR)) {					
 				PrintAndLog("OK");	
 			} else {
-				PrintAndLog("Tag returned Error %i: %s",recv[0],TagErrorStr(recv[0])); 
+				PrintAndLog("Tag returned Error %i: %s",recv[1],TagErrorStr(recv[1])); 
 			}		   
 		} else {
 			PrintAndLog("CRC failed");
