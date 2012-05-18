@@ -668,7 +668,7 @@ int CmdHF15CmdRead(const char *Cmd) {
 					sprintf(output+strlen(output),"%02hX ",recv[i]);					
 				}					
 				strcat(output,"   ");
-				for ( int i=2; i<r->arg[0]-2; i++) {
+				for ( int i=1; i<r->arg[0]-2; i++) {
 					sprintf(output+strlen(output),"%c",recv[i]>31 && recv[i]<127?recv[i]:'.');					
 				}					
 				PrintAndLog("%s",output);	
