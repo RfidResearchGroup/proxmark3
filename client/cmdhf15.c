@@ -445,6 +445,7 @@ int CmdHF15CmdRaw (const char *cmd) {
 	int i=0;
 	uint8_t data[100];
 	unsigned int datalen=0, temp;
+	char *hexout;
 
 	
 	if (strlen(cmd)<3) {
@@ -514,7 +515,14 @@ int CmdHF15CmdRaw (const char *cmd) {
 		if (r!=NULL) {
 			recv = r->d.asBytes;
 			PrintAndLog("received %i octets",r->arg[0]);
-			// TODO: output
+			hexout = (char *)malloc(r->arg[0] * 3 + 1);
+			if (hexout != NULL) {
+				for (int i = 0; i < r->arg[0]; i++) { // data in hex
+					sprintf(&hexout[i * 3], "%02hX ", recv[i]);
+				}
+				PrintAndLog("%s", hexout);
+				free(hexout);
+			}
 		} else {
 			PrintAndLog("timeout while waiting for reply.");
 		}
