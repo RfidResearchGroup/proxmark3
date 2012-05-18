@@ -84,8 +84,8 @@ const productName uidmapping[] = {
 };
 
 
-// fast method to just read the UID of an tag (collission detection not supported)
-//		*buf	shouls be large enough to fit the 64bit uid
+// fast method to just read the UID of a tag (collission detection not supported)
+//		*buf	should be large enough to fit the 64bit uid
 // returns 1 if suceeded
 int getUID(uint8_t *buf) 
 {
