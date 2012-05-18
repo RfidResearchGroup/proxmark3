@@ -533,7 +533,7 @@ int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd[], int iso15cmdle
 	while (**cmd==' ' || **cmd=='\t') (*cmd)++;
 	
 	if (strstr(*cmd,"-2")==*cmd) {
-	 	c->arg[1]=0; // quse 1of256
+	 	c->arg[1]=0; // use 1of256
 	 	(*cmd)+=2;
 	}
 
