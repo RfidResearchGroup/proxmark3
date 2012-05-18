@@ -669,7 +669,7 @@ int CmdHF15CmdRead(const char *Cmd) {
 				}					
 				strcat(output,"   ");
 				for ( int i=2; i<r->arg[0]-2; i++) {
-					sprintf(output+strlen(output),"%c",recv[i]>31 || recv[i]<127?recv[i]:'.');					
+					sprintf(output+strlen(output),"%c",recv[i]>31 && recv[i]<127?recv[i]:'.');					
 				}					
 				PrintAndLog("%s",output);	
 			} else {
