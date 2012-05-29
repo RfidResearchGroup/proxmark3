@@ -715,6 +715,87 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 }
 
 
+/**
+ * Commandline handling: HF15 CMD READMULTI
+ * Read multiple blocks at once (not all tags support this)
+ */
+int CmdHF15CmdReadmulti(const char *Cmd) {
+	UsbCommand *r;	
+	uint8_t *recv;
+	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
+	uint8_t *req=c.d.asBytes;
+	int reqlen=0, pagenum,pagecount;
+	char cmdbuf[100];
+	char *cmd=cmdbuf;
+	char output[2048]="";
+	
+	strncpy(cmd,Cmd,99);
+
+	// usage:
+	if (strlen(cmd)<3) {
+		PrintAndLog("Usage:  hf 15 cmd readmulti  [options] <uid|s|*> <start#> <count#>");
+		PrintAndLog("           options:");
+		PrintAndLog("               -2        use slower '1 out of 256' mode");
+		PrintAndLog("           uid (either): ");
+		PrintAndLog("               <8B hex>  full UID eg E011223344556677");
+		PrintAndLog("               s         selected tag");
+		PrintAndLog("               u         unaddressed mode");
+		PrintAndLog("               *         scan for tag");
+		PrintAndLog("           start#:       page number to start 0-255");  
+		PrintAndLog("           count#:       number of pages");  
+		return 0;
+	}	
+	
+	prepareHF15Cmd(&cmd, &c,(uint8_t[]){ISO15_CMD_READMULTI},1);	
+	reqlen=c.arg[0];
+
+	pagenum=strtol(cmd,NULL,0);
+
+	// skip to next space		
+	while (*cmd!=' ' && *cmd!='\t') cmd++;
+	// skip over the space
+	while (*cmd==' ' || *cmd=='\t') cmd++;
+
+	pagecount=strtol(cmd,NULL,0);
+	if (pagecount>0) pagecount--; // 0 means 1 page, 1 means 2 pages, ...	
+	
+	req[reqlen++]=(uint8_t)pagenum;
+	req[reqlen++]=(uint8_t)pagecount;
+	
+	reqlen=AddCrc(req,reqlen);
+	
+	c.arg[0]=reqlen;
+
+	SendCommand(&c);
+ 
+	r=WaitForResponseTimeout(CMD_ACK,1000);
+	
+	if (r!=NULL && r->arg[0]>2) {
+		recv = r->d.asBytes;
+		if (ISO15_CRC_CHECK==Crc(recv,r->arg[0])) {
+			if (!(recv[0] & ISO15_RES_ERROR)) {
+				*output=0; // reset outputstring
+				for ( int i=1; i<r->arg[0]-2; i++) {
+					sprintf(output+strlen(output),"%02hX ",recv[i]);					
+				}					
+				strcat(output,"   ");
+				for ( int i=1; i<r->arg[0]-2; i++) {
+					sprintf(output+strlen(output),"%c",recv[i]>31 && recv[i]<127?recv[i]:'.');					
+				}					
+				PrintAndLog("%s",output);	
+			} else {
+				PrintAndLog("Tag returned Error %i: %s",recv[0],TagErrorStr(recv[0])); 
+			}		   
+		} else {
+			PrintAndLog("CRC failed");
+		}
+	} else {
+		PrintAndLog("no answer");
+	}
+	
+	return 0;
+}
+
 
 /**
  * Commandline handling: HF15 CMD READ
@@ -889,9 +970,7 @@ static command_t CommandTable15Cmd[] =
  */
 	{"read",    CmdHF15CmdRead,    0, "Read a block"},	
 	{"write",   CmdHF15CmdWrite,    0, "Write a block"},	
-/*
 	{"readmulti",CmdHF15CmdReadmulti,    0, "Reads multiple Blocks"},
-*/	
 	{"sysinfo",	 CmdHF15CmdSysinfo,	0,	"Get Card Information"},
 	{"raw",		 CmdHF15CmdRaw,		0,	"Send raw hex data to tag"}, 
 	{"debug",    CmdHF15CmdDebug,    0, "Turn debugging on/off"},
