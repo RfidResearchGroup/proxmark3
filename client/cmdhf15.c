@@ -1,6 +1,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
 // Modified 2010 by <adrian -at- atrox.at>
+// Modified 2010, 2011 by <adrian -at- atrox.at>
+// Modified 2012 by <vsza at vsza.hu>
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -578,6 +580,7 @@ int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd[], int iso15cmdle
 			reqlen+=iso15cmdlen;		   
 		   break;
 		case '*':
+			// we scan for the UID ourself
 			req[reqlen++]|= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | 
 		       ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
 		   memcpy(&req[reqlen],&iso15cmd[0],iso15cmdlen);
@@ -869,7 +872,7 @@ int CmdHF15CmdWrite(const char *Cmd) {
 			PrintAndLog("CRC failed");
 		}
 	} else {
-		PrintAndLog("no answer");
+		PrintAndLog("timeout: no answer - data may be written anyway");
 	}
 	
 	return 0;
