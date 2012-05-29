@@ -1917,7 +1917,7 @@ void ReaderMifare(uint32_t parameter)
 		{
 			if ( (parameter != 0) && (memcmp(nt, nt_noattack, 4) == 0) ) continue;
 
-			isNULL = (nt_attacked[0] = 0) && (nt_attacked[1] = 0) && (nt_attacked[2] = 0) && (nt_attacked[3] = 0);
+			isNULL = (nt_attacked[0] == 0) && (nt_attacked[1] == 0) && (nt_attacked[2] == 0) && (nt_attacked[3] == 0);
 			if ( (isNULL != 0 ) && (memcmp(nt, nt_attacked, 4) != 0) ) continue;
 
 			if (nt_diff == 0)
