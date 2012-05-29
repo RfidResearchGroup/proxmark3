@@ -705,7 +705,7 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 			PrintAndLog("CRC failed");
 		}
 	} else {
-		PrintAndLog("no answer");
+		PrintAndLog("timeout: no answer");
 	}
 	
 	return 0;
