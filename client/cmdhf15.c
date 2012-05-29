@@ -713,6 +713,10 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 
 
 
+/**
+ * Commandline handling: HF15 CMD READ
+ * Reads a single Block
+ */
 int CmdHF15CmdRead(const char *Cmd) {
 	UsbCommand *r;	
 	uint8_t *recv;
@@ -786,6 +790,10 @@ int CmdHF15CmdRead(const char *Cmd) {
 }
 
 
+/**
+ * Commandline handling: HF15 CMD WRITE
+ * Writes a single Block - might run into timeout, even when successful
+ */
 int CmdHF15CmdWrite(const char *Cmd) {
 	UsbCommand *r;	
 	uint8_t *recv;
