@@ -768,13 +768,10 @@ void RAMFUNC SnoopIso14443a(void)
 
     DbpString("COMMAND FINISHED");
 
-    Dbprintf("%x %x %x", maxBehindBy, Uart.state, Uart.byteCnt);
-    Dbprintf("%x %x %x", Uart.byteCntMax, traceLen, (int)Uart.output[0]);
-
 done:
     AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
-    Dbprintf("%x %x %x", maxBehindBy, Uart.state, Uart.byteCnt);
-    Dbprintf("%x %x %x", Uart.byteCntMax, traceLen, (int)Uart.output[0]);
+    Dbprintf("maxBehindBy=%x, Uart.state=%x, Uart.byteCnt=%x", maxBehindBy, Uart.state, Uart.byteCnt);
+    Dbprintf("Uart.byteCntMax=%x, traceLen=%x, Uart.output[0]=%x", Uart.byteCntMax, traceLen, (int)Uart.output[0]);
     LED_A_OFF();
     LED_B_OFF();
 	LED_C_OFF();
