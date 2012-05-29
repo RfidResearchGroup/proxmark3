@@ -417,8 +417,9 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 		}
 		
 		ncount = 0;
-		for (m = dmin - NS_TOLERANCE; m < dmax + NS_TOLERANCE; m++) {
-			nttest = prng_successor(nt1, m);
+		nttest = prng_successor(nt1, dmin - NS_TOLERANCE);
+		for (m = dmin - NS_TOLERANCE + 1; m < dmax + NS_TOLERANCE; m++) {
+			nttest = prng_successor(nttest, 1);
 			ks1 = nt2 ^ nttest;
 
 			if (valid_nonce(nttest, nt2, ks1, par_array) && (ncount < 11)){
