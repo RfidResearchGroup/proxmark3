@@ -163,7 +163,7 @@ else
 
   # IMPORTANT: Here is the number of .tar. archives downloaded above. Please update if new .tar. are added to download list.
   if [[ `ls -1 *.tar.bz2 *.tar.gz | wc -l` != 8 ]]; then
-    echo "Seems like not all prerequisite files donwloaded... Exiting."
+    echo "Seems like not all prerequisite files downloaded... Exiting."
     exit 1
   else
     touch all.downloaded
