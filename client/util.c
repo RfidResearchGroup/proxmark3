@@ -194,3 +194,15 @@ int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt)
 
 	return 0;
 }
+
+int param_getstr(const char *line, int paramnum, char * str)
+{
+	int bg, en;
+
+	if (param_getptr(line, &bg, &en, paramnum)) return 0;
+	
+	memcpy(str, line + bg, en - bg + 1);
+	str[en - bg + 1] = 0;
+	
+	return en - bg + 1;
+}

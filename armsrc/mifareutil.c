@@ -394,18 +394,18 @@ uint64_t emlGetKey(int sectorNum, int keyType) {
 }
 
 void emlClearMem(void) {
-	int i;
+	int b;
 	
 	const uint8_t trailer[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x07, 0x80, 0x69, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-	const uint8_t empty[] =   {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 	const uint8_t uid[]   =   {0xe6, 0x84, 0x87, 0xf3, 0x16, 0x88, 0x04, 0x00, 0x46, 0x8e, 0x45, 0x55, 0x4d, 0x70, 0x41, 0x04};
-	// fill sectors data
-	for(i = 0; i < 16; i++) {
-		emlSetMem((uint8_t *)empty,   i * 4 + 0, 1);
-		emlSetMem((uint8_t *)empty,   i * 4 + 1, 1);
-		emlSetMem((uint8_t *)empty,   i * 4 + 2, 1);
-		emlSetMem((uint8_t *)trailer, i * 4 + 3, 1);
-	}
+	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	
+	memset(emCARD, 0, CARD_MEMORY_LEN);
+	
+	// fill sectors trailer data
+	for(b = 3; b < 256; b<127?(b+=4):(b+=16)) {
+		emlSetMem((uint8_t *)trailer, b , 1);
+	}	
 
 	// uid
 	emlSetMem((uint8_t *)uid, 0, 1);

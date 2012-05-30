@@ -20,13 +20,15 @@ int CmdHF14AMifare(const char *Cmd)
 	uint64_t par_list = 0, ks_list = 0, r_key = 0;
 	uint8_t isOK = 0;
 	uint8_t keyBlock[6] = {0,0,0,0,0,0};
-	
+
 	if (param_getchar(Cmd, 0) && param_gethex(Cmd, 0, keyBlock, 8)) {
 		PrintAndLog("Nt must include 8 HEX symbols");
 		return 1;
 	}
+
 	
 	UsbCommand c = {CMD_READER_MIFARE, {(uint32_t)bytes_to_num(keyBlock, 4), 0, 0}};
+start:
 	SendCommand(&c);
 	
 	//flush queue
@@ -42,6 +44,7 @@ int CmdHF14AMifare(const char *Cmd)
 	// wait cycle
 	while (true) {
 		printf(".");
+		fflush(stdout);
 		if (ukbhit()) {
 			getchar();
 			printf("\naborted via keyboard!\n");
@@ -78,8 +81,11 @@ int CmdHF14AMifare(const char *Cmd)
 	if (!isOK) 
 		PrintAndLog("Found valid key:%012llx", r_key);
 	else
-		PrintAndLog("Found invalid key. ( Nt=%08x", nt);	
-	
+	{
+		PrintAndLog("Found invalid key. ( Nt=%08x ,Trying use it to run again...", nt);	
+		c.d.asDwords[0] = nt;
+		goto start;
+	}
 	
 	return 0;
 }
@@ -255,13 +261,13 @@ int CmdHF14AMfRdSc(const char *Cmd)
   return 0;
 }
 
-int CmdHF14AMfDump1k(const char *Cmd)
+int CmdHF14AMfDump(const char *Cmd)
 {
 	int i, j;
 	
-	uint8_t keyA[16][6];
-	uint8_t keyB[16][6];
-	uint8_t rights[16][4];
+	uint8_t keyA[40][6];
+	uint8_t keyB[40][6];
+	uint8_t rights[40][4];
 	
 	FILE *fin;
 	FILE *fout;
@@ -269,12 +275,12 @@ int CmdHF14AMfDump1k(const char *Cmd)
 	UsbCommand *resp;
 	
 	if ((fin = fopen("dumpkeys.bin","rb")) == NULL) {
-		PrintAndLog("Could not find file keys.bin");
+		PrintAndLog("Could not find file dumpkeys.bin");
 		return 1;
 	}
 	
 	if ((fout = fopen("dumpdata.bin","wb")) == NULL) { 
-		PrintAndLog("Could not create file name dump.bin");
+		PrintAndLog("Could not create file name dumpdata.bin");
 		return 1;
 	}
 	
@@ -385,7 +391,7 @@ int CmdHF14AMfDump1k(const char *Cmd)
   return 0;
 }
 
-int CmdHF14AMfRestore1k(const char *Cmd)
+int CmdHF14AMfRestore(const char *Cmd)
 {
 
 	int i,j;
@@ -399,11 +405,11 @@ int CmdHF14AMfRestore1k(const char *Cmd)
 	FILE *fkeys;
 	
 	if ((fdump = fopen("dumpdata.bin","rb")) == NULL) {
-		PrintAndLog("Could not find file dump.bin");
+		PrintAndLog("Could not find file dumpdata.bin");
 		return 1;
 	}
 	if ((fkeys = fopen("dumpkeys.bin","rb")) == NULL) {
-		PrintAndLog("Could not find file keys.bin");
+		PrintAndLog("Could not find file dumpkeys.bin");
 		return 1;
 	}
 	
@@ -557,7 +563,7 @@ int CmdHF14AMfNested(const char *Cmd)
 		}
 
 		for (i = 0; i < 16; i++) {
-			PrintAndLog("cnt=%d key= %s", i, sprint_hex(keyBlock + i * 6, 6));
+			PrintAndLog("count=%d key= %s", i, sprint_hex(keyBlock + i * 6, 6));
 		}
 	
 		// test keys
@@ -658,7 +664,7 @@ int CmdHF14AMfNested(const char *Cmd)
 		// Create dump file
 		if (createDumpFile) {
 			if ((fkeys = fopen("dumpkeys.bin","wb")) == NULL) { 
-				PrintAndLog("Could not create file keys.bin");
+				PrintAndLog("Could not create file dumpkeys.bin");
 				free(e_sector);
 				return 1;
 			}
@@ -690,59 +696,230 @@ int CmdHF14AMfNested(const char *Cmd)
 	return 0;
 }
 
+static  uint32_t
+get_trailer_block (uint32_t uiBlock)
+{
+  // Test if we are in the small or big sectors
+  uint32_t trailer_block = 0;
+  if (uiBlock < 128) {
+    trailer_block = uiBlock + (3 - (uiBlock % 4));
+  } else {
+    trailer_block = uiBlock + (15 - (uiBlock % 16));
+  }
+  return trailer_block;
+}
 int CmdHF14AMfChk(const char *Cmd)
 {
+	FILE * f;
+	char filename[256]={0};
+	uint8_t *keyBlock = NULL, *p;
+	uint8_t stKeyBlock = 20;
+	
 	int i, res;
 	int	keycnt = 0;
 	char ctmp	= 0x00;
 	uint8_t blockNo = 0;
+	uint8_t SectorsCnt = 1;
 	uint8_t keyType = 0;
-	uint8_t keyBlock[8 * 6];
 	uint64_t key64 = 0;
+	
+	int transferToEml = 0;
+	int createDumpFile = 0;
 
-	memset(keyBlock, 0x00, sizeof(keyBlock));
+	keyBlock = calloc(stKeyBlock, 6);
+	if (keyBlock == NULL) return 1;
 
+	num_to_bytes(0xffffffffffff, 6, (uint8_t*)(keyBlock + 0 * 6)); // Default key (first key used by program if no user defined key)
+	num_to_bytes(0x000000000000, 6, (uint8_t*)(keyBlock + 1 * 6)); // Blank key
+	num_to_bytes(0xa0a1a2a3a4a5, 6, (uint8_t*)(keyBlock + 2 * 6)); // NFCForum MAD key
+	num_to_bytes(0xb0b1b2b3b4b5, 6, (uint8_t*)(keyBlock + 3 * 6));
+	num_to_bytes(0xaabbccddeeff, 6, (uint8_t*)(keyBlock + 4 * 6));
+	num_to_bytes(0x4d3a99c351dd, 6, (uint8_t*)(keyBlock + 5 * 6));
+	num_to_bytes(0x1a982c7e459a, 6, (uint8_t*)(keyBlock + 6 * 6));
+	num_to_bytes(0xd3f7d3f7d3f7, 6, (uint8_t*)(keyBlock + 7 * 6));
+	num_to_bytes(0x714c5c886e97, 6, (uint8_t*)(keyBlock + 8 * 6));
+	num_to_bytes(0x587ee5f9350f, 6, (uint8_t*)(keyBlock + 9 * 6));
+	num_to_bytes(0xa0478cc39091, 6, (uint8_t*)(keyBlock + 10 * 6));
+	num_to_bytes(0x533cb6c723f6, 6, (uint8_t*)(keyBlock + 11 * 6));
+	num_to_bytes(0x8fd0a4f256e9, 6, (uint8_t*)(keyBlock + 12 * 6));
+	
 	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf mf chk <block number> <key A/B> [<key (12 hex symbols)>]");
-		PrintAndLog("      sample: hf mf chk 0 A FFFFFFFFFFFF a0a1a2a3a4a5 b0b1b2b3b4b5 ");
+		PrintAndLog("Usage:  hf mf chk <block number>/<*card memory> <key type (A/B/?)> [t] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+		PrintAndLog("          * - all sectors");
+		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
+//		PrintAndLog("d - write keys to binary file\n");
+		
+		PrintAndLog("      sample: hf mf chk 0 A 1234567890ab keys.dic");
+		PrintAndLog("              hf mf chk *1 ? t");
 		return 0;
 	}	
 	
-	blockNo = param_get8(Cmd, 0);
-	ctmp = param_getchar(Cmd, 1);
-	if (ctmp == 0x00) {
-		PrintAndLog("Key type must be A or B");
-		return 1;
-	}
-	if (ctmp != 'A' && ctmp != 'a') keyType = 1;
-	
-	for (i = 0; i < 6; i++) {
-		if (!isxdigit(param_getchar(Cmd, 2 + i))) break;
-
-		if (param_gethex(Cmd, 2 + i, keyBlock + 6 * i, 12)) {
-			PrintAndLog("Key[%d] must include 12 HEX symbols", i);
-			return 1;
+	if (param_getchar(Cmd, 0)=='*') {
+		blockNo = 3;
+		switch(param_getchar(Cmd+1, 0)) {
+			case '0': SectorsCnt =  5; break;
+			case '1': SectorsCnt = 16; break;
+			case '2': SectorsCnt = 32; break;
+			case '4': SectorsCnt = 40; break;
+			default:  SectorsCnt = 16;
 		}
-		keycnt = i + 1;
+	}
+	else
+		blockNo = param_get8(Cmd, 0);
+	
+	ctmp = param_getchar(Cmd, 1);
+	switch (ctmp) {	
+	case 'a': case 'A':
+		keyType = !0;
+		break;
+	case 'b': case 'B':
+		keyType = !1;
+		break;
+	case '?':
+		keyType = 2;
+		break;
+	default:
+		PrintAndLog("Key type must be A , B or ?");
+		return 1;
+	};
+	
+	ctmp = param_getchar(Cmd, 2);
+	if		(ctmp == 't' || ctmp == 'T') transferToEml = 1;
+	else if (ctmp == 'd' || ctmp == 'D') createDumpFile = 1;
+	
+	for (i = transferToEml || createDumpFile; param_getchar(Cmd, 2 + i); i++) {
+		if (!param_gethex(Cmd, 2 + i, keyBlock + 6 * keycnt, 12)) {
+			if ( stKeyBlock - keycnt < 2) {
+				p = realloc(keyBlock, 6*(stKeyBlock+=10));
+				if (!p) {
+					PrintAndLog("Cannot allocate memory for Keys");
+					free(keyBlock);
+					return 2;
+				}
+				keyBlock = p;
+			}
+			PrintAndLog("chk key[%d] %02x%02x%02x%02x%02x%02x", keycnt,
+			(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
+			(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
+			keycnt++;
+		} else {
+			// May be a dic file
+			if ( param_getstr(Cmd, 2 + i,filename) > 255 ) {
+				PrintAndLog("File name too long");
+				free(keyBlock);
+				return 2;
+			}
+			
+            char * line = NULL;
+            size_t len = 0;
+            ssize_t read;
+			if ( (f = fopen( filename , "r")) ) {
+				while((read = getline(&line, &len, f)) != -1){
+				
+					if( line[0]=='#' || line[0]=='\n' ) continue;	//The line start with # is remcommnet,skip
+
+					if (read < 12 || !isxdigit(line[0])){
+						PrintAndLog("File content error. '%s' must include 12 HEX symbols",line);
+						continue;
+					}
+					
+					line[12] = 0;
+
+					if ( stKeyBlock - keycnt < 2) {
+						p = realloc(keyBlock, 6*(stKeyBlock+=10));
+						if (!p) {
+							PrintAndLog("Cannot allocate memory for defKeys");
+							free(keyBlock);
+							return 2;
+						}
+						keyBlock = p;
+					}
+					memset(keyBlock + 6 * keycnt, 0, 6);
+					num_to_bytes(strtoll(line, NULL, 16), 6, keyBlock + 6*keycnt);
+					PrintAndLog("chk custom key[%d] %012llx", keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
+					keycnt++;
+				}
+				free(line);
+			} else {
+				PrintAndLog("File: %s: not found or locked.", filename);
+				free(keyBlock);
+				return 1;
+			fclose(f);
+			}
+		}
 	}
 	
 	if (keycnt == 0) {
-		PrintAndLog("There is must be at least one key");
-		return 1;
+		PrintAndLog("No key specified,try default keys");
+		for (;keycnt <=12; keycnt++)
+			PrintAndLog("chk default key[%d] %02x%02x%02x%02x%02x%02x", keycnt,
+			(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
+			(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
 	}
-
-	PrintAndLog("--block no:%02x key type:%02x key count:%d ", blockNo, keyType, keycnt);
 	
-	res = mfCheckKeys(blockNo, keyType, keycnt, keyBlock, &key64);
-	if (res !=1) {
-		if (!res)
-			PrintAndLog("isOk:%02x valid key:%012llx", 1, key64);
-		else
-			PrintAndLog("isOk:%02x", 0);
-	} else {
-		PrintAndLog("Command execute timeout");
+	for ( int t = !keyType ; t < 2 ; keyType==2?(t++):(t=2) ) {
+		int b=blockNo;
+		for (int i=0; i<SectorsCnt; ++i) {
+			PrintAndLog("--SectorsCnt:%d block no:0x%02x key type:%C key count:%d ", i,	 b, t?'B':'A', keycnt);
+			int size = keycnt>8?8:keycnt;
+			for (int c = 0; c < keycnt; c+=size) {
+				size=keycnt-c>8?8:keycnt-c;			
+				res = mfCheckKeys(b, t, size, keyBlock +6*c, &key64);
+				if (res !=1) {
+					if (!res) {
+						PrintAndLog("Found valid key:[%012llx]",key64);
+						if (transferToEml) {
+							uint8_t block[16];
+							mfEmlGetMem(block, get_trailer_block(b), 1);
+							num_to_bytes(key64, 6, block + t*10);
+							mfEmlSetMem(block, get_trailer_block(b), 1);
+						}
+						break;
+					}
+					else {
+						printf("Not found yet, keycnt:%d\r", c+size);
+						fflush(stdout);
+					}
+				} else {
+					PrintAndLog("Command execute timeout");
+				}
+			}
+			b<127?(b+=4):(b+=16);	
+		}
 	}
+	
+	free(keyBlock);
 
+/*
+	// Create dump file
+	if (createDumpFile) {
+		if ((fkeys = fopen("dumpkeys.bin","wb")) == NULL) { 
+			PrintAndLog("Could not create file dumpkeys.bin");
+			free(e_sector);
+			return 1;
+		}
+		PrintAndLog("Printing keys to bynary file dumpkeys.bin...");
+		for(i=0; i<16; i++) {
+			if (e_sector[i].foundKey[0]){
+				num_to_bytes(e_sector[i].Key[0], 6, tempkey);
+				fwrite ( tempkey, 1, 6, fkeys );
+			}
+			else{
+				fwrite ( &standart, 1, 6, fkeys );
+			}
+		}
+		for(i=0; i<16; i++) {
+			if (e_sector[i].foundKey[1]){
+				num_to_bytes(e_sector[i].Key[1], 6, tempkey);
+				fwrite ( tempkey, 1, 6, fkeys );
+			}
+			else{
+				fwrite ( &standart, 1, 6, fkeys );
+			}
+		}
+		fclose(fkeys);
+	}
+*/
   return 0;
 }
 
@@ -804,8 +981,8 @@ int CmdHF14AMfEGet(const char *Cmd)
 	}	
 	
 	blockNo = param_get8(Cmd, 0);
-	if (blockNo >= 16 * 4) {
-		PrintAndLog("Block number must be in [0..63] as in MIFARE classic.");
+	if (blockNo >= 32 * 4 + 8 * 16) {
+		PrintAndLog("Block number must be in [0..255] as in MIFARE classic.");
 		return 1;
 	}
 
@@ -848,8 +1025,8 @@ int CmdHF14AMfESet(const char *Cmd)
 	}	
 	
 	blockNo = param_get8(Cmd, 0);
-	if (blockNo >= 16 * 4) {
-		PrintAndLog("Block number must be in [0..63] as in MIFARE classic.");
+	if (blockNo >= 32 * 4 + 8 * 16) {
+		PrintAndLog("Block number must be in [0..255] as in MIFARE classic.");
 		return 1;
 	}
 	
@@ -877,7 +1054,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 	memset(filename, 0, sizeof(filename));
 	memset(buf, 0, sizeof(buf));
 
-	if (param_getchar(Cmd, 0) == 'h') {
+	if (param_getchar(Cmd, 0) == 'h' || param_getchar(Cmd, 0)== 0x00) {
 		PrintAndLog("It loads emul dump from the file `filename.eml`");
 		PrintAndLog("Usage:  hf mf eload <file name w/o `.eml`>");
 		PrintAndLog(" sample: hf mf eload filename");
@@ -886,9 +1063,6 @@ int CmdHF14AMfELoad(const char *Cmd)
 
 	len = strlen(Cmd);
 	if (len > 14) len = 14;
-	
-	if (len < 1) {
-	}
 
 	memcpy(filename, Cmd, len);
 	fnameptr += len;
@@ -906,7 +1080,10 @@ int CmdHF14AMfELoad(const char *Cmd)
 	while(!feof(f)){
 		memset(buf, 0, sizeof(buf));
 		fgets(buf, sizeof(buf), f);
+
 		if (strlen(buf) < 32){
+			if(strlen(buf) && feof(f))
+				break;
 			PrintAndLog("File content error. Block data must include 32 HEX symbols");
 			return 2;
 		}
@@ -920,11 +1097,11 @@ int CmdHF14AMfELoad(const char *Cmd)
 		}
 		blockNum++;
 		
-		if (blockNum >= 16 * 4) break;
+		if (blockNum >= 32 * 4 + 8 * 16) break;
 	}
 	fclose(f);
 	
-	if (blockNum != 16 * 4){
+	if (blockNum != 16 * 4 && blockNum != 32 * 4 + 8 * 16){
 		PrintAndLog("File content error. There must be 64 blocks");
 		return 4;
 	}
@@ -973,7 +1150,7 @@ int CmdHF14AMfESave(const char *Cmd)
 	f = fopen(filename, "w+");
 
 	// put hex
-	for (i = 0; i < 16 * 4; i++) {
+	for (i = 0; i < 32 * 4 + 8 * 16; i++) {
 		if (mfEmlGetMem(buf, i, 1)) {
 			PrintAndLog("Cant get block: %d", i);
 			break;
@@ -1015,16 +1192,17 @@ int CmdHF14AMfECFill(const char *Cmd)
 
 int CmdHF14AMfEKeyPrn(const char *Cmd)
 {
-	int i;
+	int i,b=-1;
 	uint8_t data[16];
 	uint64_t keyA, keyB;
 	
 	PrintAndLog("|---|----------------|----------------|");
 	PrintAndLog("|sec|key A           |key B           |");
 	PrintAndLog("|---|----------------|----------------|");
-	for (i = 0; i < 16; i++) {
-		if (mfEmlGetMem(data, i * 4 + 3, 1)) {
-			PrintAndLog("error get block %d", i * 4 + 3);
+	for (i = 0; i < 40; i++) {
+		b<127?(b+=4):(b+=16);
+		if (mfEmlGetMem(data, b, 1)) {
+			PrintAndLog("error get block %d", b);
 			break;
 		}
 		keyA = bytes_to_num(data, 6);
@@ -1042,13 +1220,13 @@ static command_t CommandTable[] =
   {"dbg",		CmdHF14AMfDbg,			0, "Set default debug mode"},
   {"rdbl",		CmdHF14AMfRdBl,			0, "Read MIFARE classic block"},
   {"rdsc",		CmdHF14AMfRdSc,			0, "Read MIFARE classic sector"},
-  {"dump1k",	CmdHF14AMfDump1k,		0, "Dump MIFARE classic tag to binary file"},
-  {"restore1k",	CmdHF14AMfRestore1k,	0, "Restore MIFARE classic binary file to BLANK tag"},
+  {"dump",		CmdHF14AMfDump,			0, "Dump MIFARE classic tag to binary file"},
+  {"restore",	CmdHF14AMfRestore,		0, "Restore MIFARE classic binary file to BLANK tag"},
   {"wrbl",		CmdHF14AMfWrBl,			0, "Write MIFARE classic block"},
-  {"chk",		CmdHF14AMfChk,			0, "Test block up to 8 keys"},
+  {"chk",		CmdHF14AMfChk,			0, "Test block keys"},
   {"mifare",	CmdHF14AMifare,			0, "Read parity error messages. param - <used card nonce>"},
   {"nested",	CmdHF14AMfNested,		0, "Test nested authentication"},
-  {"sim",		CmdHF14AMf1kSim,		0, "Simulate MIFARE 1k card"},
+  {"sim",		CmdHF14AMf1kSim,		0, "Simulate MIFARE card"},
   {"eclr",  	CmdHF14AMfEClear,		0, "Clear simulator memory block"},
   {"eget",		CmdHF14AMfEGet,			0, "Get simulator memory block"},
   {"eset",		CmdHF14AMfESet,			0, "Set simulator memory block"},

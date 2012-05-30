@@ -25,7 +25,7 @@
 // card emulator memory
 #define EML_RESPONSES      4000
 #define CARD_MEMORY        6000
-#define CARD_MEMORY_LEN    1024
+#define CARD_MEMORY_LEN    4096
 
 typedef struct nestedVector { uint32_t nt, ks1; } nestedVector;
 
