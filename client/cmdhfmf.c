@@ -712,6 +712,7 @@ int CmdHF14AMfChk(const char *Cmd)
 {
 	FILE * f;
 	char filename[256]={0};
+	uint8_t buf[13];
 	uint8_t *keyBlock = NULL, *p;
 	uint8_t stKeyBlock = 20;
 	
@@ -810,20 +811,24 @@ int CmdHF14AMfChk(const char *Cmd)
 				return 2;
 			}
 			
-            char * line = NULL;
-            size_t len = 0;
-            ssize_t read;
 			if ( (f = fopen( filename , "r")) ) {
-				while((read = getline(&line, &len, f)) != -1){
+				while( !feof(f) ){
+					memset(buf, 0, sizeof(buf));
+					fgets(buf, sizeof(buf), f);
+					
+					if (strlen(buf) < 12 || buf[11] == '\n')
+						continue;
 				
-					if( line[0]=='#' || line[0]=='\n' ) continue;	//The line start with # is remcommnet,skip
+					while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
+					
+					if( buf[0]=='#' ) continue;	//The line start with # is remcommnet,skip
 
-					if (read < 12 || !isxdigit(line[0])){
-						PrintAndLog("File content error. '%s' must include 12 HEX symbols",line);
+					if (!isxdigit(buf[0])){
+						PrintAndLog("File content error. '%s' must include 12 HEX symbols",buf);
 						continue;
 					}
 					
-					line[12] = 0;
+					buf[12] = 0;
 
 					if ( stKeyBlock - keycnt < 2) {
 						p = realloc(keyBlock, 6*(stKeyBlock+=10));
@@ -835,11 +840,10 @@ int CmdHF14AMfChk(const char *Cmd)
 						keyBlock = p;
 					}
 					memset(keyBlock + 6 * keycnt, 0, 6);
-					num_to_bytes(strtoll(line, NULL, 16), 6, keyBlock + 6*keycnt);
+					num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6*keycnt);
 					PrintAndLog("chk custom key[%d] %012llx", keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
 					keycnt++;
 				}
-				free(line);
 			} else {
 				PrintAndLog("File: %s: not found or locked.", filename);
 				free(keyBlock);
