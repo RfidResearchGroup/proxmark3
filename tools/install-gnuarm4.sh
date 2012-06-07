@@ -74,6 +74,9 @@ WGET_OPTS="-c -t 0"
 # Compiler flags for compiling Newlib (-O2 is already hard-coded)
 NEWLIB_FLAGS="-march=armv4t -mcpu=arm7tdmi -g"
 
+# GPG options to avoid polluting the user's keyring
+GPG_OPTS="--keyring ${GNU_KEYRING_GPG} --no-default-keyring --homedir ."
+
 ############################################################################
 # End of configuration section. You shouldn't have to modify anything below.
 ############################################################################
@@ -90,8 +93,6 @@ if [[ -f all.downloaded ]]; then
   echo Looks like all downloads are complete, skipping downloads
 else
   wget ${WGET_OPTS} ${GNU_KEYRING}
-  # TODO: need to avoid polluting the users keyring, but how?!
-  gpg --import ${GNU_KEYRING_GPG}
 
   # TODO: guess it's better to have a function that "downloads, checks file-presence and signature, and returns true/false" whether the file is ok
   # Function will check if file exists (otherwise try to download the file - if failed and file still doesn't exist, complain and exit the script)
@@ -102,7 +103,7 @@ else
   echo Now downloading BINUTILS...
   wget ${WGET_OPTS} ${BINUTILS}
   wget -N ${WGET_OPTS} ${BINUTILS}.sig
-  gpg --verify ${BINUTILS_TAR}.sig 2> /dev/null
+  gpg $GPG_OPTS --verify ${BINUTILS_TAR}.sig 2> /dev/null
   if [[ $? != 0 ]]; then
     echo "Failed signature check for:" ${BINUTILS_TAR}.sig
     exit 1
@@ -111,7 +112,7 @@ else
   echo Now downloading GCC...
   wget ${WGET_OPTS} ${GCCCORE}
   wget -N ${WGET_OPTS} ${GCCCORE}.sig
-  gpg --verify ${GCCCORE_TAR}.sig 2> /dev/null
+  gpg $GPG_OPTS --verify ${GCCCORE_TAR}.sig 2> /dev/null
   if [[ $? != 0 ]]; then
     echo "Failed signature check for:" ${GCCCORE_TAR}.sig
     exit 1
@@ -120,7 +121,7 @@ else
   echo Now downloading G++...
   wget ${WGET_OPTS} ${GPP}
   wget -N ${WGET_OPTS} ${GPP}.sig
-  gpg --verify ${GPP_TAR}.sig 2> /dev/null
+  gpg $GPG_OPTS --verify ${GPP_TAR}.sig 2> /dev/null
   if [[ $? != 0 ]]; then
     echo "Failed signature check for:" ${GPP_TAR}.sig
     exit 1
@@ -137,7 +138,7 @@ else
   echo Now downloading GDB...
   wget ${WGET_OPTS} ${GDB}
   wget -N ${WGET_OPTS} ${GDB}.sig
-  gpg --verify ${GDB_TAR}.sig 2> /dev/null
+  gpg $GPG_OPTS --verify ${GDB_TAR}.sig 2> /dev/null
   if [[ $? != 0 ]]; then
     echo "Failed signature check for:" ${GDB_TAR}.sig
     exit 1
@@ -146,7 +147,7 @@ else
   echo Now downloading GMP...
   wget ${WGET_OPTS} ${GMP}
   wget -N ${WGET_OPTS} ${GMP}.sig
-  gpg --verify ${GMP_TAR}.sig 2> /dev/null
+  gpg $GPG_OPTS --verify ${GMP_TAR}.sig 2> /dev/null
   if [[ $? != 0 ]]; then
     echo "Failed signature check for:" ${GMP_TAR}.sig
     exit 1
@@ -155,7 +156,7 @@ else
   echo Now downloading MPFR...
   wget ${WGET_OPTS} ${MPFR}
   wget -N ${WGET_OPTS} ${MPFR}.sig
-  gpg --verify ${MPFR_TAR}.sig 2> /dev/null
+  gpg $GPG_OPTS --verify ${MPFR_TAR}.sig 2> /dev/null
   if [[ $? != 0 ]]; then
     echo "Failed signature check for:" ${MPFR_TAR}.sig
     exit 1
