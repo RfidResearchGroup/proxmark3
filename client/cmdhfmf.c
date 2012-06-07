@@ -712,7 +712,7 @@ int CmdHF14AMfChk(const char *Cmd)
 {
 	FILE * f;
 	char filename[256]={0};
-	uint8_t buf[13];
+	char buf[13];
 	uint8_t *keyBlock = NULL, *p;
 	uint8_t stKeyBlock = 20;
 	
