@@ -288,6 +288,8 @@ ProxWidget::ProxWidget(QWidget *parent) : QWidget(parent), GraphStart(0), GraphP
 	palette.setColor(QPalette::Button, QColor(100, 100, 100));
 	setPalette(palette);
 	setAutoFillBackground(true);
+	CursorAPos = 0;
+	CursorBPos = 0;
 }
 
 void ProxWidget::closeEvent(QCloseEvent *event)
