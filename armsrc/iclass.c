@@ -125,7 +125,7 @@ static struct {
 
 static RAMFUNC int MillerDecoding(int bit)
 {
-	int error = 0;
+	//int error = 0;
 	int bitright;
 
 	if(!Uart.bitBuffer) {
@@ -193,7 +193,7 @@ static RAMFUNC int MillerDecoding(int bit)
 					// When not part of SOF or EOF, it is an error
 					Uart.state = STATE_UNSYNCD;
 					Uart.highCnt = 0;
-					error = 4;
+					//error = 4;
 				}
 			}
 		}
@@ -205,10 +205,10 @@ static RAMFUNC int MillerDecoding(int bit)
 			if(!bit) {
 				if(Uart.dropPosition) {
 					if(Uart.state == STATE_START_OF_COMMUNICATION) {
-						error = 1;
+						//error = 1;
 					}
 					else {
-						error = 7;
+						//error = 7;
 					}
 					// It is an error if we already have seen a drop in current frame
 					Uart.state = STATE_UNSYNCD;
@@ -248,7 +248,7 @@ static RAMFUNC int MillerDecoding(int bit)
 					if(!Uart.dropPosition) {
 						Uart.state = STATE_UNSYNCD;
 						Uart.highCnt = 0;
-						error = 9;
+						//error = 9;
 					}
 					else {
 						Uart.shiftReg >>= 2;
@@ -282,7 +282,7 @@ static RAMFUNC int MillerDecoding(int bit)
 				if(!Uart.dropPosition) {
 					Uart.state = STATE_UNSYNCD;
 					Uart.highCnt = 0;
-					error = 3;
+					//error = 3;
 				}
 				else {
 					Uart.dropPosition--;
@@ -358,7 +358,7 @@ static RAMFUNC int MillerDecoding(int bit)
 				Uart.OutOfCnt = 4; // Start at 1/4, could switch to 1/256
 				Uart.dropPosition = 0;
 				Uart.shiftReg = 0;
-				error = 0;
+				//error = 0;
 			}
 			else {
 				Uart.highCnt = 0;
@@ -730,7 +730,7 @@ void RAMFUNC SnoopIClass(void)
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
     // response from the tag.
-    int triggered = FALSE; // FALSE to wait first for card
+    //int triggered = FALSE; // FALSE to wait first for card
 
     // The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.
@@ -885,7 +885,7 @@ void RAMFUNC SnoopIClass(void)
 		    traceLen += Demod.len;
 		    if(traceLen > TRACE_LENGTH) break;
 
-		    triggered = TRUE;
+		    //triggered = TRUE;
 
 		    // And ready to receive another response.
 		    memset(&Demod, 0, sizeof(Demod));

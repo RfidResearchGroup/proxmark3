@@ -186,7 +186,7 @@ int AvgAdc(int ch) // was static - merlok
 void MeasureAntennaTuning(void)
 {
 	uint8_t *dest = (uint8_t *)BigBuf;
-	int i, ptr = 0, adcval = 0, peak = 0, peakv = 0, peakf = 0;;
+	int i, adcval = 0, peak = 0, peakv = 0, peakf = 0; //ptr = 0 
 	int vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
 
 	UsbCommand c;
@@ -217,7 +217,7 @@ void MeasureAntennaTuning(void)
 			peakv = adcval;
 			peak = dest[i];
 			peakf = i;
-			ptr = i;
+			//ptr = i;
 		}
 	}
 

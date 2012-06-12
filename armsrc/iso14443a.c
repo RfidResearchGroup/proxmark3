@@ -156,7 +156,7 @@ static struct {
 
 static RAMFUNC int MillerDecoding(int bit)
 {
-	int error = 0;
+	//int error = 0;
 	int bitright;
 
 	if(!Uart.bitBuffer) {
@@ -202,7 +202,7 @@ static RAMFUNC int MillerDecoding(int bit)
 				// measured a drop in first and second half
 				// which should not be possible
 				Uart.state = STATE_ERROR_WAIT;
-				error = 0x01;
+				//error = 0x01;
 			}
 
 			Uart.posCnt = 0;
@@ -213,7 +213,7 @@ static RAMFUNC int MillerDecoding(int bit)
 					if(Uart.drop == DROP_SECOND_HALF) {
 						// error, should not happen in SOC
 						Uart.state = STATE_ERROR_WAIT;
-						error = 0x02;
+						//error = 0x02;
 					}
 					else {
 						// correct SOC
@@ -251,7 +251,7 @@ static RAMFUNC int MillerDecoding(int bit)
 						// Would be STATE_MILLER_Z
 						// but Z does not follow X, so error
 						Uart.state = STATE_ERROR_WAIT;
-						error = 0x03;
+						//error = 0x03;
 					}
 					if(Uart.drop == DROP_SECOND_HALF) {
 						// We see a '1' and stay in state X
@@ -372,7 +372,7 @@ static RAMFUNC int MillerDecoding(int bit)
 				Uart.bitCnt = 0;
 				Uart.byteCnt = 0;
 				Uart.parityBits = 0;
-				error = 0;
+				//error = 0;
 			}
 			else {
 				Uart.highCnt = 0;
@@ -422,7 +422,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 {
 	int bit;
 	int modulation;
-	int error = 0;
+	//int error = 0;
 
 	if(!Demod.buff) {
 		Demod.buff = 1;
@@ -479,7 +479,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 					case 0x01: Demod.samples = 0; break;
 				}
 			}
-			error = 0;
+			//error = 0;
 		}
 	}
 	else {
@@ -503,7 +503,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 				if(Demod.state!=DEMOD_ERROR_WAIT) {
 					Demod.state = DEMOD_ERROR_WAIT;
 					Demod.output[Demod.len] = 0xaa;
-					error = 0x01;
+					//error = 0x01;
 				}
 			}
 			else if(modulation) {
@@ -518,7 +518,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 					else {
 						Demod.output[Demod.len] = 0xab;
 						Demod.state = DEMOD_ERROR_WAIT;
-						error = 0x02;
+						//error = 0x02;
 					}
 					break;
 
@@ -556,7 +556,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 					else {
 						Demod.output[Demod.len] = 0xad;
 						Demod.state = DEMOD_ERROR_WAIT;
-						error = 0x03;
+						//error = 0x03;
 					}
 					break;
 
@@ -1045,9 +1045,9 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
     uint8_t *receivedCmd = (uint8_t *)BigBuf;
     int len;
 
-    int i;
-	int u;
-	uint8_t b;
+    //int i;
+	//int u;
+	//uint8_t b;
 
 	// To control where we are in the protocol
 	int order = 0;
@@ -1059,7 +1059,7 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 
     int cmdsRecvd = 0;
 
-	int fdt_indicator;
+	//int fdt_indicator;
 
     memset(receivedCmd, 0x44, 400);
 
@@ -1110,7 +1110,7 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 	// doob - added loads of debug strings so we can see what the reader is saying to us during the sim as hi14alist is not populated
         // Okay, look at the command now.
         lastorder = order;
-		i = 1; // first byte transmitted
+		//i = 1; // first byte transmitted
         if(receivedCmd[0] == 0x26) {
 			// Received a REQUEST
 			resp = resp1; respLen = resp1Len; order = 1;
@@ -1191,7 +1191,7 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 		// Look at last parity bit to determine timing of answer
 		if((Uart.parityBits & 0x01) || receivedCmd[0] == 0x52) {
 			// 1236, so correction bit needed
-			i = 0;
+			//i = 0;
 		}
 
         memset(receivedCmd, 0x44, 32);
@@ -1206,9 +1206,9 @@ ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 
         if(respLen <= 0) continue;
 		//----------------------------
-		u = 0;
-		b = 0x00;
-		fdt_indicator = FALSE;
+		//u = 0;
+		//b = 0x00;
+		//fdt_indicator = FALSE;
 
 		EmSendCmd14443aRaw(resp, respLen, receivedCmd[0] == 0x52);
 /*        // Modulate Manchester
@@ -1870,7 +1870,7 @@ void ReaderMifare(uint32_t parameter)
 	byte_t nt_diff = 0;
 	LED_A_OFF();
 	byte_t par = 0;
-	byte_t par_mask = 0xff;
+	//byte_t par_mask = 0xff;
 	byte_t par_low = 0;
 	int led_on = TRUE;
 	uint8_t uid[8];
@@ -1921,7 +1921,7 @@ void ReaderMifare(uint32_t parameter)
 			{
 				LED_A_ON();
 				memcpy(nt_attacked, nt, 4);
-				par_mask = 0xf8;
+				//par_mask = 0xf8;
 				par_low = par & 0x07;
 			}
 
@@ -1981,7 +1981,7 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	int cardSTATE = MFEMUL_NOFIELD;
 	int _7BUID = 0;
 	int vHf = 0;	// in mV
-	int nextCycleTimeout = 0;
+	//int nextCycleTimeout = 0;
 	int res;
 //	uint32_t timer = 0;
 	uint32_t selTimer = 0;
@@ -1991,10 +1991,10 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	uint8_t cardWRBL = 0;
 	uint8_t cardAUTHSC = 0;
 	uint8_t cardAUTHKEY = 0xff;  // no authentication
-	uint32_t cardRn = 0;
+	//uint32_t cardRn = 0;
 	uint32_t cardRr = 0;
 	uint32_t cuid = 0;
-	uint32_t rn_enc = 0;
+	//uint32_t rn_enc = 0;
 	uint32_t ans = 0;
 	uint32_t cardINTREG = 0;
 	uint8_t cardINTBLOCK = 0;
@@ -2086,7 +2086,7 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 			if(res) break;
 		}
 		
-		nextCycleTimeout = 0;
+		//nextCycleTimeout = 0;
 		
 //		if (len) Dbprintf("len:%d cmd: %02x %02x %02x %02x", len, receivedCmd[0], receivedCmd[1], receivedCmd[2], receivedCmd[3]);
 
@@ -2172,8 +2172,8 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 			case MFEMUL_AUTH1:{
 				if (len == 8) {
 					// --- crypto
-					rn_enc = bytes_to_num(receivedCmd, 4);
-					cardRn = rn_enc ^ crypto1_word(pcs, rn_enc , 1);
+					//rn_enc = bytes_to_num(receivedCmd, 4);
+					//cardRn = rn_enc ^ crypto1_word(pcs, rn_enc , 1);
 					cardRr = bytes_to_num(&receivedCmd[4], 4) ^ crypto1_word(pcs, 0, 0);
 					// test if auth OK
 					if (cardRr != prng_successor(nonce, 64)){
@@ -2220,7 +2220,7 @@ lbWORK:	if (len == 0) break;
 //						LogTrace(NULL, 0, GetDeltaCountUS(), 0, true);
 
 						cardSTATE = MFEMUL_AUTH1;
-						nextCycleTimeout = 10;
+						//nextCycleTimeout = 10;
 						break;
 					}
 				} else {
@@ -2242,7 +2242,7 @@ lbWORK:	if (len == 0) break;
 						// --- crypto
 
 						cardSTATE = MFEMUL_AUTH1;
-						nextCycleTimeout = 10;
+						//nextCycleTimeout = 10;
 						break;
 					}
 				}
@@ -2280,7 +2280,7 @@ lbWORK:	if (len == 0) break;
 						break;
 					}
 					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK));
-					nextCycleTimeout = 50;
+					//nextCycleTimeout = 50;
 					cardSTATE = MFEMUL_WRITEBL2;
 					cardWRBL = receivedCmd[1];
 					break;
