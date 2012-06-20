@@ -39,11 +39,7 @@ def search(target,data):
 
 # convert integer to binary string
 def binstring(number):
-	out= ''
-	while number > 0:
-		out += chr(0x30 + (number & 0x01))
-		number= number >> 1
-	return stringreverse(out)
+	return bin(number)[2:] if number > 0 else ''
 
 # reverse string order
 def stringreverse(data):
