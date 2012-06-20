@@ -75,39 +75,43 @@ def domatch(number,binary):
 	print '    Reverse: (%s)' % reversed,
 	search(inverted,reversed)
 
-if(len(sys.argv) < 3):
-	print
-	print '\t'+sys.argv[0] + ' - Search bitstream for a known number'
-	print
-	print 'Usage: ' + sys.argv[0] + ' <NUMBER> <BITSTREAM>'
-	print
-	print '\tNUMBER will be converted to it\'s BINARY equivalent for all valid'
-	print '\tinstances of BINARY, OCTAL, DECIMAL and HEX, and the bitstream'
-	print '\tand it\'s inverse will be searched for a pattern match. Note that'
-	print '\tNUMBER must be specified in BINARY to match leading zeros.'
-	print
-	print 'Example:'
-	print
-	print '\tfindbits.py 73 0110010101110011'
-	print
-	os._exit(True)
-
-bases=	{ 
-	2:'BINARY',
-	8:'OCTAL',
-	10:'DECIMAL',
-	16:'HEX',
-       	}
-
-for base in 2,8,10,16:
-	try:
-		number= int(sys.argv[1],base)
+def main():
+	if(len(sys.argv) < 3):
 		print
-		print 'Trying', bases[base]
-		# do BINARY as specified to preserve leading zeros
-		if base == 2:
-			domatch(sys.argv[1],sys.argv[2])
-		else:
-			domatch(binstring(number),sys.argv[2])
-	except:
-		continue
+		print '\t'+sys.argv[0] + ' - Search bitstream for a known number'
+		print
+		print 'Usage: ' + sys.argv[0] + ' <NUMBER> <BITSTREAM>'
+		print
+		print '\tNUMBER will be converted to it\'s BINARY equivalent for all valid'
+		print '\tinstances of BINARY, OCTAL, DECIMAL and HEX, and the bitstream'
+		print '\tand it\'s inverse will be searched for a pattern match. Note that'
+		print '\tNUMBER must be specified in BINARY to match leading zeros.'
+		print
+		print 'Example:'
+		print
+		print '\tfindbits.py 73 0110010101110011'
+		print
+		os._exit(True)
+
+	bases=	{ 
+		2:'BINARY',
+		8:'OCTAL',
+		10:'DECIMAL',
+		16:'HEX',
+			}
+
+	for base in 2,8,10,16:
+		try:
+			number= int(sys.argv[1],base)
+			print
+			print 'Trying', bases[base]
+			# do BINARY as specified to preserve leading zeros
+			if base == 2:
+				domatch(sys.argv[1],sys.argv[2])
+			else:
+				domatch(binstring(number),sys.argv[2])
+		except:
+			continue
+
+if __name__ == '__main__':
+	main()
