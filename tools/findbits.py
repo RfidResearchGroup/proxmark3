@@ -22,7 +22,6 @@
 
 import sys
 import os
-import string
 
 # invert binary string
 def invert(data):
@@ -30,7 +29,7 @@ def invert(data):
 
 # do the actual search
 def search(target,data):
-	location= string.find(data,target)
+	location = data.find(target)
 	if location >= 0:
 		print '*** Match at bit %d:' % location,
 		print '%s<%s>%s' % (data[:location],target,data[location+len(target):])
