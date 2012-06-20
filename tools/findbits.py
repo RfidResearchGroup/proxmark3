@@ -85,11 +85,11 @@ def main():
 		16:'HEX',
 			}
 
-	for base in 2,8,10,16:
+	for base, base_name in sorted(bases.iteritems()):
 		try:
 			number= int(sys.argv[1],base)
 			print
-			print 'Trying', bases[base]
+			print 'Trying', base_name
 			# do BINARY as specified to preserve leading zeros
 			if base == 2:
 				domatch(sys.argv[1],sys.argv[2])
