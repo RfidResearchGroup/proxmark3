@@ -26,15 +26,7 @@ import string
 
 # invert binary string
 def invert(data):
-	i=  0
-	out= ''
-	while(i < len(data)):
-		if data[i] == '0':
-			out += '1'
-		else:
-			out += '0'
-		i += 1
-	return out
+	return ''.join('0' if c == '1' else '1' for c in data)
 
 # do the actual search
 def search(target,data):
