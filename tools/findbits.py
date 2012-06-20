@@ -43,10 +43,7 @@ def binstring(number):
 
 # reverse string order
 def stringreverse(data):
-	out= ''
-	for x in range(len(data) -1,-1,-1):
-		out += data[x]
-	return out
+	return data[::-1]
 
 # match forward, backward and inverted
 def domatch(number,binary):
