@@ -1,7 +1,6 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
-// Modified 2010 by <adrian -at- atrox.at>
-// Modified 2010, 2011 by <adrian -at- atrox.at>
+// Modified 2010-2012 by <adrian -at- atrox.at>
 // Modified 2012 by <vsza at vsza.hu>
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -56,6 +55,7 @@ typedef struct {
 
 
 const productName uidmapping[] = {
+	// UID, #significant Bits, "Vendor(+Product)"
 	{ 0xE001000000000000LL, 16, "Motorola" },
 	{ 0xE002000000000000LL, 16, "ST Microelectronics" },
 	{ 0xE003000000000000LL, 16, "Hitachi" },
@@ -67,6 +67,7 @@ const productName uidmapping[] = {
 	{ 0xE007000000000000LL, 16, "Texas Instrument; " },
 	{ 0xE007000000000000LL, 20, "Texas Instrument; Tag-it HF-I Plus Inlay; 64x32bit" },
 	{ 0xE007100000000000LL, 20, "Texas Instrument; Tag-it HF-I Plus Chip; 64x32bit" },
+	{ 0xE007800000000000LL, 23, "Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)" },
 	{ 0xE007C00000000000LL, 23, "Texas Instrument; Tag-it HF-I Standard; 8x32bit" },
 	{ 0xE007C40000000000LL, 23, "Texas Instrument; Tag-it HF-I Pro; 8x23bit; password" },	
 	{ 0xE008000000000000LL, 16, "Fujitsu" },
@@ -80,8 +81,10 @@ const productName uidmapping[] = {
 	{ 0xE010000000000000LL, 16, "LG-Semiconductors" },
 	{ 0xE012000000000000LL, 16, "HID Corporation" },
 	{ 0xE016000000000000LL, 16, "EM-Marin SA (Skidata)" },
-	{ 0xE016040000000000LL, 24, "EM-Marin SA (Skidata Keycard-eco); no memory" },
+	{ 0xE016040000000000LL, 24, "EM-Marin SA (Skidata Keycard-eco); EM4034? no 'read', just 'readmulti'" },
+	{ 0xE0160c0000000000LL, 24, "EM-Marin SA; EM4035?" },
 	{ 0xE016100000000000LL, 24, "EM-Marin SA (Skidata); EM4135; 36x64bit start page 13" },
+	{ 0xE016940000000000LL, 24, "EM-Marin SA (Skidata); 51x64bit" },
 	{ 0,0,"no tag-info available" } // must be the last entry
 };
 
@@ -534,6 +537,11 @@ int CmdHF15CmdRaw (const char *cmd) {
 }
 
 
+/**
+ * parses common HF 15 CMD parameters and prepares some data structures
+ * Parameters:
+ *  **cmd   	command line
+ */
 int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd[], int iso15cmdlen) {
 	int temp;
 	uint8_t *req=c->d.asBytes, uid[8];
@@ -622,8 +630,6 @@ int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd[], int iso15cmdle
 	return 1;
 }
 
-
-
 /**
  * Commandline handling: HF15 CMD SYSINFO
  * get system information from tag/VICC
@@ -643,7 +649,7 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 
 	// usage:
 	if (strlen(cmd)<1) {
-		PrintAndLog("Usage:  hf 15 cmd sysinfo    [options] <uid|s|*>");
+		PrintAndLog("Usage:  hf 15 cmd sysinfo    [options] <uid|s|u|*>");
 		PrintAndLog("           options:");
 		PrintAndLog("               -2        use slower '1 out of 256' mode");
 		PrintAndLog("           uid (either): ");
@@ -714,7 +720,6 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 	return 0;
 }
 
-
 /**
  * Commandline handling: HF15 CMD READMULTI
  * Read multiple blocks at once (not all tags support this)
@@ -733,7 +738,7 @@ int CmdHF15CmdReadmulti(const char *Cmd) {
 
 	// usage:
 	if (strlen(cmd)<3) {
-		PrintAndLog("Usage:  hf 15 cmd readmulti  [options] <uid|s|*> <start#> <count#>");
+		PrintAndLog("Usage:  hf 15 cmd readmulti  [options] <uid|s|u|*> <start#> <count#>");
 		PrintAndLog("           options:");
 		PrintAndLog("               -2        use slower '1 out of 256' mode");
 		PrintAndLog("           uid (either): ");
@@ -767,7 +772,7 @@ int CmdHF15CmdReadmulti(const char *Cmd) {
 	c.arg[0]=reqlen;
 
 	SendCommand(&c);
- 
+
 	r=WaitForResponseTimeout(CMD_ACK,1000);
 	
 	if (r!=NULL && r->arg[0]>2) {
@@ -796,7 +801,6 @@ int CmdHF15CmdReadmulti(const char *Cmd) {
 	return 0;
 }
 
-
 /**
  * Commandline handling: HF15 CMD READ
  * Reads a single Block
@@ -815,7 +819,7 @@ int CmdHF15CmdRead(const char *Cmd) {
 
 	// usage:
 	if (strlen(cmd)<3) {
-		PrintAndLog("Usage:  hf 15 cmd read    [options] <uid|s|*> <page#>");
+		PrintAndLog("Usage:  hf 15 cmd read    [options] <uid|s|u|*> <page#>");
 		PrintAndLog("           options:");
 		PrintAndLog("               -2        use slower '1 out of 256' mode");
 		PrintAndLog("           uid (either): ");
@@ -892,7 +896,7 @@ int CmdHF15CmdWrite(const char *Cmd) {
 
 	// usage:
 	if (strlen(cmd)<3) {
-		PrintAndLog("Usage:  hf 15 cmd write    [options] <uid|s|*> <page#> <hexdata>");
+		PrintAndLog("Usage:  hf 15 cmd write    [options] <uid|s|u|*> <page#> <hexdata>");
 		PrintAndLog("           options:");
 		PrintAndLog("               -2        use slower '1 out of 256' mode");
 		PrintAndLog("               -o        set OPTION Flag (needed for TI)");
@@ -971,7 +975,7 @@ static command_t CommandTable15Cmd[] =
 	{"read",    CmdHF15CmdRead,    0, "Read a block"},	
 	{"write",   CmdHF15CmdWrite,    0, "Write a block"},	
 	{"readmulti",CmdHF15CmdReadmulti,    0, "Reads multiple Blocks"},
-	{"sysinfo",	 CmdHF15CmdSysinfo,	0,	"Get Card Information"},
+	{"sysinfo",CmdHF15CmdSysinfo,    0, "Get Card Information"},
 	{"raw",		 CmdHF15CmdRaw,		0,	"Send raw hex data to tag"}, 
 	{"debug",    CmdHF15CmdDebug,    0, "Turn debugging on/off"},
 	{NULL, NULL, 0, NULL}

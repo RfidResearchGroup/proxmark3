@@ -1,5 +1,5 @@
 // ISO15693 commons
-// Adrian Dabrowski 2010, GPLv2
+// Adrian Dabrowski 2010 and others, GPLv2
 
 #ifndef ISO15693_H__
 #define ISO15693_H__
