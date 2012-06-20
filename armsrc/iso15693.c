@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Jonathan Westhues, split Nov 2006
 // Modified by Greg Jones, Jan 2009
-// Modified by Adrian Dabrowski "atrox", Mar-Sept 2010
+// Modified by Adrian Dabrowski "atrox", Mar-Sept 2010,Oct 2011
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -51,6 +51,7 @@
 // *) signal decoding from the card is still a bit shaky. 
 // *) signal decoding is unable to detect collissions.
 // *) add anti-collission support for inventory-commands 
+// *) read security status of a block
 // *) sniffing and simulation do only support one transmission mode. need to support 
 //		all 8 transmission combinations
 //	*) remove or refactor code under "depricated"
@@ -745,6 +746,7 @@ void RecordRawAdcSamplesIso15693(void)
 
 
 // Initialize the proxmark as iso15k reader 
+// (this might produces glitches that confuse some tags
 void Iso15693InitReader() {
 	LED_A_ON();
 	LED_B_ON();
@@ -752,18 +754,18 @@ void Iso15693InitReader() {
 	LED_D_OFF();
 	
 	// Setup SSC
-	FpgaSetupSsc();
+	// FpgaSetupSsc();
 
 	// Start from off (no field generated)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(200);
+	SpinDelay(10);
 
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
 
 	// Give the tags time to energize
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	SpinDelay(200);
+	SpinDelay(250);
 
 	LED_A_ON();
 	LED_B_OFF();
@@ -857,7 +859,7 @@ static void BuildReadBlockRequest(uint8_t *uid, uint8_t blockNumber )
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
 
-// Universal Method for sending to and recv from a tag
+// Universal Method for sending to and recv bytes from a tag
 // 	init ... should we initialize the reader?
 // 	speed ... 0 low speed, 1 hi speed 
 // 	**recv will return you a pointer to the received data
@@ -1291,6 +1293,7 @@ void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8
 // -- Misc & deprecated functions
 // --------------------------------------------------------------------
 
+/*
 
 // do not use; has a fix UID
 static void __attribute__((unused)) BuildSysInfoRequest(uint8_t *uid)
@@ -1321,47 +1324,6 @@ static void __attribute__((unused)) BuildSysInfoRequest(uint8_t *uid)
 
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
-
-// do not use; has a fix UID
-static void __attribute__((unused)) BuildSelectRequest( uint8_t uid[])
-{
-
-//	uid[6]=0x31;  // this is getting ignored - the uid array is not happening...
-	uint8_t cmd[12];
-
-	uint16_t crc;
-	// one sub-carrier, inventory, 1 slot, fast rate
-	//cmd[0] = (1 << 2) | (1 << 5) | (1 << 1);	// INVENTROY FLAGS
-	cmd[0] = (1 << 4) | (1 << 5) | (1 << 1);	// Select and addressed FLAGS
-	// SELECT command code
-	cmd[1] = 0x25;
-	// 64-bit UID
-//	cmd[2] = uid[0];//0x32;
-//	cmd[3]= uid[1];//0x4b;
-//	cmd[4] = uid[2];//0x03;
-//	cmd[5] = uid[3];//0x01;
-//	cmd[6] = uid[4];//0x00;
-//	cmd[7] = uid[5];//0x10;
-//	cmd[8] = uid[6];//0x05;
-	cmd[2] = 0x32;//
-	cmd[3] = 0x4b;
-	cmd[4] = 0x03;
-	cmd[5] = 0x01;
-	cmd[6] = 0x00;
-	cmd[7] = 0x10;
-	cmd[8] = 0x05; // infineon?
-
-	cmd[9]= 0xe0; // always e0 (not exactly unique)
-
-//	DbpIntegers(cmd[8],cmd[7],cmd[6]);
-	// Now the CRC
-	crc = Crc(cmd, 10); // the crc needs to be calculated over 10 bytes
-	cmd[10] = crc & 0xff;
-	cmd[11] = crc >> 8;
-
-	CodeIso15693AsReader(cmd, sizeof(cmd));
-}
-
 
 
 // do not use; has a fix UID
@@ -1471,6 +1433,6 @@ static void __attribute__((unused)) BuildArbitraryCustomRequest(uint8_t uid[], u
 
 
 
-
+*/
 
 
