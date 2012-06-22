@@ -81,7 +81,7 @@ GPG_OPTS="--keyring ${GNU_KEYRING_GPG} --no-default-keyring --homedir ."
 # End of configuration section. You shouldn't have to modify anything below.
 ############################################################################
 
-if [[ `whoami` != "root" ]]; then
+if [[ "$USER" != "root" ]]; then
   echo "*** Warning! Not running as root!"
   echo "Installation may fail if you do not have appropriate permissions!"
 fi
