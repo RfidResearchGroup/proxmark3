@@ -31,4 +31,5 @@ def main(argv):
         file_inp.close()
         file_out.close()
 
-main(sys.argv)
+if __name__ == '__main__':
+    main(sys.argv)
