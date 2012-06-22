@@ -6,8 +6,11 @@
 # Converts PM3 Mifare Classic MFD binary dump file to emulator EML text file
 '''
 
+from __future__ import with_statement
 import sys
 import binascii
+
+READ_BLOCKSIZE = 16
 
 def main(argv):
     argc = len(argv)
@@ -15,22 +18,14 @@ def main(argv):
         print 'Usage:', argv[0], 'input.mfd output.eml'
         sys.exit(1)
 
-    try:
-        file_inp = open(argv[1], "rb")
-        file_out = open(argv[2], "w")
-        
-        while 1:
-            # TODO: need to use defines instead of hardcoded 16, 64, etc.
-            byte_s = file_inp.read(16)
+    with file(argv[1], "rb") as file_inp, file(argv[2], "w") as file_out:
+        while True:
+            byte_s = file_inp.read(READ_BLOCKSIZE)
             if not byte_s:
                 break
             hex_char_repr = binascii.hexlify(byte_s)
             file_out.write(hex_char_repr)
             file_out.write("\n")
-    
-    finally:
-        file_inp.close()
-        file_out.close()
 
 if __name__ == '__main__':
     main(sys.argv)
