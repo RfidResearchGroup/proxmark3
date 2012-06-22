@@ -99,68 +99,32 @@ else
   # Check if signature file exists (otherwise download the signature file as well - if download fail, warn the user and return function)
   # Check the signature. If failed, backup-by-renaming current files, redownload both file & signature, run the function body one more time - if still no success, warn and return from function
 
+  function download_lib {
+    echo Now downloading $1
+    wget ${WGET_OPTS} $2
+  }
+
+  function download_signed_lib {
+    download_lib $1 $2
+    wget -N ${WGET_OPTS} $2.sig
+    gpg $GPG_OPTS --verify $3.sig 2> /dev/null
+    if [[ $? != 0 ]]; then
+      echo "Failed signature check for:" $3.sig
+      exit 1
+    fi
+  }
+
   # NOTE: If new downloads are added here, please see the IMPORTANT note below
-  echo Now downloading BINUTILS...
-  wget ${WGET_OPTS} ${BINUTILS}
-  wget -N ${WGET_OPTS} ${BINUTILS}.sig
-  gpg $GPG_OPTS --verify ${BINUTILS_TAR}.sig 2> /dev/null
-  if [[ $? != 0 ]]; then
-    echo "Failed signature check for:" ${BINUTILS_TAR}.sig
-    exit 1
-  fi
-
-  echo Now downloading GCC...
-  wget ${WGET_OPTS} ${GCCCORE}
-  wget -N ${WGET_OPTS} ${GCCCORE}.sig
-  gpg $GPG_OPTS --verify ${GCCCORE_TAR}.sig 2> /dev/null
-  if [[ $? != 0 ]]; then
-    echo "Failed signature check for:" ${GCCCORE_TAR}.sig
-    exit 1
-  fi
-
-  echo Now downloading G++...
-  wget ${WGET_OPTS} ${GPP}
-  wget -N ${WGET_OPTS} ${GPP}.sig
-  gpg $GPG_OPTS --verify ${GPP_TAR}.sig 2> /dev/null
-  if [[ $? != 0 ]]; then
-    echo "Failed signature check for:" ${GPP_TAR}.sig
-    exit 1
-  fi
-
-  echo Now downloading NEWLIB...
-  wget ${WGET_OPTS} ${NEWLIB}
+  download_signed_lib BINUTILS ${BINUTILS} ${BINUTILS_TAR} || exit 1
+  download_signed_lib GCC ${GCCCORE} ${GCCCORE_TAR} || exit 1
+  download_signed_lib G++ ${GPP} ${GPP_TAR} || exit 1
+  download_lib NEWLIB ${NEWLIB}
   # TODO: signature/hash check
-
-  echo Now downloading INSIGHT...
-  wget ${WGET_OPTS} ${INSIGHT}
+  download_lib INSIGHT ${INSIGHT}
   # TODO: signature/hash check
-
-  echo Now downloading GDB...
-  wget ${WGET_OPTS} ${GDB}
-  wget -N ${WGET_OPTS} ${GDB}.sig
-  gpg $GPG_OPTS --verify ${GDB_TAR}.sig 2> /dev/null
-  if [[ $? != 0 ]]; then
-    echo "Failed signature check for:" ${GDB_TAR}.sig
-    exit 1
-  fi
-
-  echo Now downloading GMP...
-  wget ${WGET_OPTS} ${GMP}
-  wget -N ${WGET_OPTS} ${GMP}.sig
-  gpg $GPG_OPTS --verify ${GMP_TAR}.sig 2> /dev/null
-  if [[ $? != 0 ]]; then
-    echo "Failed signature check for:" ${GMP_TAR}.sig
-    exit 1
-  fi
-
-  echo Now downloading MPFR...
-  wget ${WGET_OPTS} ${MPFR}
-  wget -N ${WGET_OPTS} ${MPFR}.sig
-  gpg $GPG_OPTS --verify ${MPFR_TAR}.sig 2> /dev/null
-  if [[ $? != 0 ]]; then
-    echo "Failed signature check for:" ${MPFR_TAR}.sig
-    exit 1
-  fi
+  download_signed_lib GDB ${GDB} ${GDB_TAR} || exit 1
+  download_signed_lib GMP ${GMP} ${GMP_TAR} || exit 1
+  download_signed_lib MPFR ${MPFR} ${MPFR_TAR} || exit 1
 
   # IMPORTANT: Here is the number of .tar. archives downloaded above. Please update if new .tar. are added to download list.
   if [[ `ls -1 *.tar.bz2 *.tar.gz | wc -l` != 8 ]]; then
