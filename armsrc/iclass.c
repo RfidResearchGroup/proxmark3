@@ -885,20 +885,10 @@ done:
     LED_D_OFF();
 }
 
-
-void rotateCSN(uint8_t* originalCSN, uint8_t* rotatedCSN, int direction) {
-	int i;
-	int j = 0;
-	
-	if(direction == 0) {
-		for(i = 0; i < 8; i++) {
-			rotatedCSN[i] = (originalCSN[i] >> 3) | (originalCSN[(i+1)%8] << 5);
-		}
-	} else {
-		for(i = 0; i < 8; i++) {
-			if(i == 0) { j = 7; } else { j = i - 1; }
-			originalCSN[i] = (rotatedCSN[i] << 3) | (rotatedCSN[j] >> 5);
-		}
+void rotateCSN(uint8_t* originalCSN, uint8_t* rotatedCSN) {
+	int i; 
+	for(i = 0; i < 8; i++) {
+		rotatedCSN[i] = (originalCSN[i] >> 3) | (originalCSN[(i+1)%8] << 5);
 	}
 }
 
@@ -909,7 +899,7 @@ void rotateCSN(uint8_t* originalCSN, uint8_t* rotatedCSN, int direction) {
 //-----------------------------------------------------------------------------
 static int GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen)
 {
-    // Set FPGA mode to "simulated ISO 14443A tag", no modulation (listen
+    // Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
     // only, since we are receiving, not transmitting).
     // Signal field is off with the appropriate LED
     LED_D_OFF();
@@ -1019,38 +1009,14 @@ static void CodeIClassTagSOF()
 //-----------------------------------------------------------------------------
 void SimulateIClass(uint8_t arg0, uint8_t *datain)
 {
-	// DEFINED ABOVE
-	// #define RECV_CMD_OFFSET   3032
-	// #define RECV_RES_OFFSET   3096
-	// #define DMA_BUFFER_OFFSET 3160
-	// #define DMA_BUFFER_SIZE   4096
-	// #define TRACE_LENGTH      3000
 	uint8_t simType = arg0;
-	int SMALL_BUFFER_OFFSET = 2000;
-	bool fullbuffer = FALSE;
-	uint32_t parityBits = 0;
-	
-	iso14a_set_tracing(TRUE);
-	iso14a_clear_tracelen();
-	iso14a_set_trigger(FALSE);
-
-	// PREPARE PROTOCOL MESSAGES FIRST
-	
-	// Pointers to tag answers that should be stored in the buffer
-	uint8_t *response;
-	int responselength;
 
 	// CSN followed by two CRC bytes
-	uint8_t response1[] = { 0x0f }; // Tag SOF
 	uint8_t response2[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	uint8_t response3[] = { 0x00, 0x0B, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0, 0x00, 0x00 };
-	int response1length = 1;
-	int response2length = 10;
-	int response3length = 10;
+	uint8_t response3[] = { 0x03, 0x1f, 0xec, 0x8a, 0xf7, 0xff, 0x12, 0xe0, 0x00, 0x00 };
 
 	// e-Purse
 	uint8_t response4[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	int response4length = 8;
 
 	if(simType == 0) {
 		// Use the CSN from commandline
@@ -1058,7 +1024,7 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 	}
 
 	// Construct anticollision-CSN
-	rotateCSN(response3,response2,0);
+	rotateCSN(response3,response2);
 
 	// Compute CRC on both CSNs
 	ComputeCrc14443(CRC_ICLASS, response2, 8, &response2[8], &response2[9]);
@@ -1075,32 +1041,28 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
         int respLen;
 
 	// Respond SOF -- takes 8 bytes
-	uint8_t *resp1 = (((uint8_t *)BigBuf));
+	uint8_t *resp1 = (((uint8_t *)BigBuf) + 800);
 	int resp1Len;
 
 	// Anticollision CSN (rotated CSN)
 	// 176: Takes 16 bytes for SOF/EOF and 10 * 16 = 160 bytes (2 bytes/bit)
-	uint8_t *resp2 = (((uint8_t *)BigBuf) + 10 + SMALL_BUFFER_OFFSET);
+	uint8_t *resp2 = (((uint8_t *)BigBuf) + 810);
 	int resp2Len;
 
 	// CSN
 	// 176: Takes 16 bytes for SOF/EOF and 10 * 16 = 160 bytes (2 bytes/bit)
-	uint8_t *resp3 = (((uint8_t *)BigBuf) + 190 + SMALL_BUFFER_OFFSET);
-	//int resp3Len; // NOT USED
+	uint8_t *resp3 = (((uint8_t *)BigBuf) + 990);
+	int resp3Len;
 
 	// e-Purse
 	// 144: Takes 16 bytes for SOF/EOF and 8 * 16 = 128 bytes (2 bytes/bit)
-	uint8_t *resp4 = (((uint8_t *)BigBuf) + 270 + SMALL_BUFFER_OFFSET);
+	uint8_t *resp4 = (((uint8_t *)BigBuf) + 1170);
 	int resp4Len;
 
 	// + 1720..
-	//uint8_t *receivedCmd = (uint8_t *)BigBuf;
-        uint8_t *receivedCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
-	memset(receivedCmd, 0x44, 64);
+	uint8_t *receivedCmd = (uint8_t *)BigBuf;
+	memset(receivedCmd, 0x44, 400);
 	int len;
-
-	// Reset trace buffer
-        memset(trace, 0x44, RECV_CMD_OFFSET);
 
 	// Prepare card messages
 	ToSendMax = 0;
@@ -1115,7 +1077,7 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 
 	// CSN
 	CodeIClassTagAnswer(response3, sizeof(response3));
-	memcpy(resp3, ToSend, ToSendMax); //resp3Len = ToSendMax; // NOT USED
+	memcpy(resp3, ToSend, ToSendMax); resp3Len = ToSendMax;
 
 	// e-Purse
 	CodeIClassTagAnswer(response4, sizeof(response4));
@@ -1126,11 +1088,8 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 	FpgaSetupSsc();
 
 	// To control where we are in the protocol
-	//int order = 0;
-	// int lastorder; // NOT USED
 	int cmdsRecvd = 0;
-	resp = resp1; respLen = 0;
-	response = response1; responselength = response1length;
+
 	LED_A_ON();
 	for(;;) {
 		LED_B_OFF();
@@ -1140,33 +1099,28 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
        		}
 
 	        // Okay, look at the command now.
-	        //lastorder = order; // NOT USED
 	        if(receivedCmd[0] == 0x0a) {
 			// Reader in anticollission phase
 			resp = resp1; respLen = resp1Len; //order = 1;
-			response = response1; responselength = response1length;
 			//resp = resp2; respLen = resp2Len; order = 2;
 			//DbpString("Hello request from reader:");
 		} else if(receivedCmd[0] == 0x0c) {
 			// Reader asks for anticollission CSN
 			resp = resp2; respLen = resp2Len; //order = 2;
-			response = response2; responselength = response2length;
 			//DbpString("Reader requests anticollission CSN:");
 		} else if(receivedCmd[0] == 0x81) {
 			// Reader selects anticollission CSN.
 			// Tag sends the corresponding real CSN
-			resp = resp3; respLen = resp2Len; //order = 3;
-			response = response3; responselength = response3length;
+			resp = resp3; respLen = resp3Len; //order = 3;
 			//DbpString("Reader selects anticollission CSN:");
 		} else if(receivedCmd[0] == 0x88) {
 			// Read e-purse (88 02)
 			resp = resp4; respLen = resp4Len; //order = 4;
-			response = response4; responselength = response4length;
 			LED_B_ON();
 		} else if(receivedCmd[0] == 0x05) {
 			// Reader random and reader MAC!!!
 			// Lets store this ;-)
-			Dbprintf("            CSN: %02x %02x %02x %02x %02x %02x %02x %02x",
+			Dbprintf("                CSN: %02x %02x %02x %02x %02x %02x %02x %02x",
 			response3[0], response3[1], response3[2],
 			response3[3], response3[4], response3[5],
 			response3[6], response3[7]);
@@ -1182,6 +1136,11 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 		} else if(receivedCmd[0] == 0x00 && len == 1) {
 			// Reader ends the session
 			resp = resp1; respLen = 0; //order = 0;
+/*		} else if(receivedCmd[0] == 0x50) {
+			// Received a HALT
+			resp = resp1; respLen = 0; order = 5; // Do nothing
+			DbpString("Reader requested we HALT!:");
+*/
 	        } else {
 			// Never seen this command before
 			Dbprintf("Unknown command received from reader (len=%d): %x %x %x %x %x %x %x %x %x",
@@ -1191,8 +1150,9 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 			receivedCmd[6], receivedCmd[7], receivedCmd[8]);
 			// Do not respond
 			resp = resp1; respLen = 0; //order = 0;
-			response = response1; responselength = response1length;
 		}
+
+		memset(receivedCmd, 0x44, 32);
 
 		if(cmdsRecvd > 999) {
 			DbpString("1000 commands later...");
@@ -1205,24 +1165,9 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 		if(respLen <= 0) continue;
 
 		SendIClassAnswer(resp, respLen, 21);
-
-  		// Store commands and responses in buffer
-		// as long as there is room for it.
-		if(traceLen < (SMALL_BUFFER_OFFSET - 32)) {
-			if(tracing) {
-				LogTrace(receivedCmd,len,0,GetParity(receivedCmd,len),TRUE);
-				parityBits = SwapBits(GetParity(response,responselength),responselength);
-				LogTrace(response,responselength,0,parityBits,FALSE);
-			}
-		} else if(!fullbuffer) {
-			DbpString("Trace buffer is full now...");
-			fullbuffer = TRUE;
-		}
-
-		memset(receivedCmd, 0x44, 32);
     }
 
-	//Dbprintf("Commands received: %d", cmdsRecvd);
+	Dbprintf("%x", cmdsRecvd);
 	LED_A_OFF();
 	LED_B_OFF();
 }
@@ -1231,6 +1176,9 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, int delay)
 {
 	int i = 0, u = 0, d = 0;
 	uint8_t b = 0;
+	// return 0;
+	// Modulate Manchester
+	// FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_MOD424);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_MOD);
 	AT91C_BASE_SSC->SSC_THR = 0x00;
 	FpgaSetupSsc();
@@ -1452,14 +1400,9 @@ int ReaderReceiveIClass(uint8_t* receivedAnswer)
 
 // Reader iClass Anticollission
 void ReaderIClass(uint8_t arg0) {
-	int i = 0;
-	int length = 0;
-	bool csn_failure = FALSE;
-
 	uint8_t act_all[]     = { 0x0a };
 	uint8_t identify[]    = { 0x0c };
-	uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	uint8_t check_csn[]   = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	//uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
 
@@ -1492,34 +1435,8 @@ void ReaderIClass(uint8_t arg0) {
 		// Card present?
 		if(ReaderReceiveIClass(resp)) {
 			ReaderTransmitIClass(identify, 1);
-			if((length = ReaderReceiveIClass(resp))) {
-				if(length == 10) {
-					// Select card		
-					memcpy(&select[1],resp,8);
-					ReaderTransmitIClass(select, sizeof(select));
-	
-					if((length = ReaderReceiveIClass(resp))) {
-						if(length == 10) {
-							rotateCSN(check_csn,&select[1],1);
-							csn_failure = FALSE;
-							for(i = 0; i < 8; i++) {
-								if(check_csn[i] != resp[i]) {
-									csn_failure = TRUE;
-									break;
-								}
-							}
-							
-							if(!csn_failure) {
-			Dbprintf("     Selected CSN: %02x %02x %02x %02x %02x %02x %02x %02x",
-			check_csn[0], check_csn[1], check_csn[2],
-			check_csn[3], check_csn[4], check_csn[5],
-			check_csn[6], check_csn[7]);
-							}
-							// Card selected, whats next... ;-)
-							
-						}
-					}
-				}
+			if(ReaderReceiveIClass(resp)) {
+				//ReaderTransmitIClass(select, sizeof(select));
 			}
 		}
 		WDT_HIT();
@@ -1527,5 +1444,58 @@ void ReaderIClass(uint8_t arg0) {
 	
 	LED_A_OFF();
 
+/*	if(resp_data)
+		memcpy(resp_data->atqa, resp, 2);
+	
+	// OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
+	// which case we need to make a cascade 2 request and select - this is a long UID
+	// While the UID is not complete, the 3nd bit (from the right) is set in the SAK.
+	for(; sak & 0x04; cascade_level++)
+	{
+		// SELECT_* (L1: 0x93, L2: 0x95, L3: 0x97)
+		sel_uid[0] = sel_all[0] = 0x93 + cascade_level * 2;
+
+		// SELECT_ALL
+		ReaderTransmit(sel_all,sizeof(sel_all));
+		if (!ReaderReceive(resp)) return 0;
+		if(uid_ptr) memcpy(uid_ptr + cascade_level*4, resp, 4);
+		
+		// calculate crypto UID
+		if(cuid_ptr) *cuid_ptr = bytes_to_num(resp, 4);
+
+		// Construct SELECT UID command
+		memcpy(sel_uid+2,resp,5);
+		AppendCrc14443a(sel_uid,7);
+		ReaderTransmit(sel_uid,sizeof(sel_uid));
+
+		// Receive the SAK
+		if (!ReaderReceive(resp)) return 0;
+		sak = resp[0];
+	}
+	if(resp_data) {
+		resp_data->sak = sak;
+		resp_data->ats_len = 0;
+	}
+	//--  this byte not UID, it CT.  http://www.nxp.com/documents/application_note/AN10927.pdf  page 3
+	if (uid_ptr[0] == 0x88) {  
+		memcpy(uid_ptr, uid_ptr + 1, 7);
+		uid_ptr[7] = 0;
+	}
+
+	if( (sak & 0x20) == 0)
+		return 2; // non iso14443a compliant tag
+
+	// Request for answer to select
+	if(resp_data) {  // JCOP cards - if reader sent RATS then there is no MIFARE session at all!!!
+		AppendCrc14443a(rats, 2);
+		ReaderTransmit(rats, sizeof(rats));
+		
+		if (!(len = ReaderReceive(resp))) return 0;
+		
+		memcpy(resp_data->ats, resp, sizeof(resp_data->ats));
+		resp_data->ats_len = len;
+	}
+*/	
 }
+
 
