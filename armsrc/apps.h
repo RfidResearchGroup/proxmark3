@@ -19,6 +19,12 @@ typedef unsigned char byte_t;
 // The large multi-purpose buffer, typically used to hold A/D samples,
 // maybe processed in some way.
 uint32_t BigBuf[8000];
+extern const uint8_t OddByteParity[256];
+extern uint8_t *trace; // = (uint8_t *) BigBuf;
+extern int traceLen;   // = 0;
+extern int rsamples;   // = 0;
+extern int tracing;    // = TRUE;
+extern uint8_t trigger;
 
 // This may be used (sparingly) to declare a function to be copied to
 // and executed from RAM
@@ -109,6 +115,12 @@ void RAMFUNC SnoopIso14443(void);
 void RAMFUNC SnoopIso14443a(void);
 void SimulateIso14443aTag(int tagType, int TagUid);	// ## simulate iso14443a tag
 void ReaderIso14443a(UsbCommand * c, UsbCommand * ack);
+// Also used in iclass.c
+int LogTrace(const uint8_t * btBytes, int iLen, int iSamples, uint32_t dwParity, int bReader);
+uint32_t GetParity(const uint8_t * pbtCmd, int iLen);
+void iso14a_set_trigger(int enable);
+void iso14a_clear_tracelen(void);
+void iso14a_set_tracing(int enable);
 
 // mifarecmd.h
 void ReaderMifare(uint32_t parameter);
@@ -135,6 +147,8 @@ void SetDebugIso15693(uint32_t flag);
 
 /// iclass.h
 void RAMFUNC SnoopIClass(void);
+void SimulateIClass(uint8_t arg0, uint8_t *datain);
+void ReaderIClass(uint8_t arg0);
 
 /// util.h
 

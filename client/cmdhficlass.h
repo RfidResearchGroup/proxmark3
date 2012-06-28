@@ -15,6 +15,8 @@
 int CmdHFiClass(const char *Cmd);
 
 int CmdHFiClassSnoop(const char *Cmd);
+int CmdHFiClassSim(const char *Cmd);
 int CmdHFiClassList(const char *Cmd);
+int CmdHFiClassReader(const char *Cmd);
 
 #endif

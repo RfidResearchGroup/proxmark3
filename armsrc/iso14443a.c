@@ -20,11 +20,12 @@
 #include "crapto1.h"
 #include "mifareutil.h"
 
-static uint8_t *trace = (uint8_t *) BigBuf;
-static int traceLen = 0;
-static int rsamples = 0;
-static int tracing = TRUE;
 static uint32_t iso14a_timeout;
+uint8_t *trace = (uint8_t *) BigBuf;
+int traceLen = 0;
+int rsamples = 0;
+int tracing = TRUE;
+uint8_t trigger = 0;
 
 // CARD TO READER - manchester
 // Sequence D: 11110000 modulation with subcarrier during first half
@@ -41,7 +42,7 @@ static uint32_t iso14a_timeout;
 #define	SEC_Y 0x00
 #define	SEC_Z 0xc0
 
-static const uint8_t OddByteParity[256] = {
+const uint8_t OddByteParity[256] = {
   1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
   0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
   0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
@@ -60,7 +61,7 @@ static const uint8_t OddByteParity[256] = {
   1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1
 };
 
-uint8_t trigger = 0;
+
 void iso14a_set_trigger(int enable) {
 	trigger = enable;
 }
@@ -99,6 +100,7 @@ void AppendCrc14443a(uint8_t* data, int len)
   ComputeCrc14443(CRC_14443_A,data,len,data+len,data+len+1);
 }
 
+// The function LogTrace() is also used by the iClass implementation in iClass.c
 int LogTrace(const uint8_t * btBytes, int iLen, int iSamples, uint32_t dwParity, int bReader)
 {
   // Return when trace is full
