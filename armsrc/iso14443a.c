@@ -1042,52 +1042,12 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 	response3a[0] = sak & 0xFB;
 	ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 
+	uint8_t response5[] = { 0x00, 0x00, 0x00, 0x00 }; // Very random tag nonce
+	uint8_t response6[] = { 0x03, 0x3B, 0x00, 0x00, 0x00 }; // dummy ATS (pseudo-ATR), answer to RATS
+	ComputeCrc14443(CRC_14443_A, response6, 3, &response6[3], &response6[4]);
 
-/*
-	// Check if the uid uses the (optional) second part
-	if (uid_2nd) {
-		// Configure the ATQA and SAK accordingly
-		response1[0] |= 0x40;
-		sak |= 0x04;
-	}
-*/
-
-//static const uint8_t response2a[] = { 0x51, 0x48, 0x1d, 0x80, 0x84 }; //  uid - cascade2 - 2nd half (4 bytes) of UID+ BCCheck
-
-
-	// Prepare protocol messages
-    // static const uint8_t cmd1[] = { 0x26 };
-//     static const uint8_t response1[] = { 0x02, 0x00 }; // Says: I am Mifare 4k - original line - greg
-//
-//	uint8_t response1[] = { 0x44, 0x03 }; // Says: I am a DESFire Tag, ph33r me
-//	static const uint8_t response1[] = { 0x44, 0x00 }; // Says: I am a ULTRALITE Tag, 0wn me
-
-	// UID response
-    // static const uint8_t cmd2[] = { 0x93, 0x20 };
-    //static const uint8_t response2[] = { 0x9a, 0xe5, 0xe4, 0x43, 0xd8 }; // original value - greg
-
-// my desfire
-//	uint8_t response2[] = { 0x88, 0x04, 0x21, 0x3f, 0x4d }; // known uid - note cascade (0x88), 2nd byte (0x04) = NXP/Phillips
-
-
-// When reader selects us during cascade1 it will send cmd3
-//uint8_t response3[] = { 0x04, 0x00, 0x00 }; // SAK Select (cascade1) successful response (ULTRALITE)
-//uint8_t response3[] = { 0x24, 0x00, 0x00 }; // SAK Select (cascade1) successful response (DESFire)
-//ComputeCrc14443(CRC_14443_A, response3, 1, &response3[1], &response3[2]);
-
-// send cascade2 2nd half of UID
-//static const uint8_t response2a[] = { 0x51, 0x48, 0x1d, 0x80, 0x84 }; //  uid - cascade2 - 2nd half (4 bytes) of UID+ BCCheck
-// NOTE : THE CRC on the above may be wrong as I have obfuscated the actual UID
-
-// When reader selects us during cascade2 it will send cmd3a
-//uint8_t response3a[] = { 0x00, 0x00, 0x00 }; // SAK Select (cascade2) successful response (ULTRALITE)
-//uint8_t response3a[] = { 0x20, 0x00, 0x00 }; // SAK Select (cascade2) successful response (DESFire)
-//ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
-
-    static const uint8_t response5[] = { 0x00, 0x00, 0x00, 0x00 }; // Very random tag nonce
-
-    uint8_t *resp;
-    int respLen;
+	uint8_t *resp;
+	int respLen;
 
   // Longest possible response will be 16 bytes + 2 CRC = 18 bytes
 	// This will need
@@ -1102,42 +1062,41 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 	// 166 bytes, since every bit that needs to be send costs us a byte
 	//
 
-    // Respond with card type
-    uint8_t *resp1 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
-    int resp1Len;
+	// Respond with card type
+	uint8_t *resp1 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
+	int resp1Len;
 
-    // Anticollision cascade1 - respond with uid
-    uint8_t *resp2 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 166);
-    int resp2Len;
+	// Anticollision cascade1 - respond with uid
+	uint8_t *resp2 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 166);
+	int resp2Len;
 
-    // Anticollision cascade2 - respond with 2nd half of uid if asked
-    // we're only going to be asked if we set the 1st byte of the UID (during cascade1) to 0x88
-    uint8_t *resp2a = (((uint8_t *)BigBuf) + 1140);
-    int resp2aLen;
+	// Anticollision cascade2 - respond with 2nd half of uid if asked
+	// we're only going to be asked if we set the 1st byte of the UID (during cascade1) to 0x88
+	uint8_t *resp2a = (((uint8_t *)BigBuf) + 1140);
+	int resp2aLen;
 
-    // Acknowledge select - cascade 1
-    uint8_t *resp3 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*2));
-    int resp3Len;
+	// Acknowledge select - cascade 1
+	uint8_t *resp3 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*2));
+	int resp3Len;
 
-    // Acknowledge select - cascade 2
-    uint8_t *resp3a = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*3));
-    int resp3aLen;
+	// Acknowledge select - cascade 2
+	uint8_t *resp3a = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*3));
+	int resp3aLen;
 
-    // Response to a read request - not implemented atm
-    uint8_t *resp4 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*4));
-    int resp4Len;
+	// Response to a read request - not implemented atm
+	uint8_t *resp4 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*4));
+	int resp4Len;
 
-    // Authenticate response - nonce
-    uint8_t *resp5 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*5));
-    int resp5Len;
+	// Authenticate response - nonce
+	uint8_t *resp5 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*5));
+	int resp5Len;
 
-    uint8_t *receivedCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
-//		uint8_t *receivedCmd = (uint8_t *)BigBuf;
-    int len;
+	// Authenticate response - nonce
+	uint8_t *resp6 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*6));
+	int resp6Len;
 
-    //int i;
-	//int u;
-	//uint8_t b;
+	uint8_t *receivedCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
+	int len;
 
 	// To control where we are in the protocol
 	int order = 0;
@@ -1152,8 +1111,6 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 	int respsize = 0;
 	uint8_t nack = 0x04;
 
-	//int fdt_indicator;
-
 	memset(receivedCmd, 0x44, RECV_CMD_SIZE);
 
 	// Prepare the responses of the anticollision phase
@@ -1161,23 +1118,23 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 
 	// Answer to request
 	CodeIso14443aAsTag(response1, sizeof(response1));
-    memcpy(resp1, ToSend, ToSendMax); resp1Len = ToSendMax;
+	memcpy(resp1, ToSend, ToSendMax); resp1Len = ToSendMax;
 
 	// Send our UID (cascade 1)
 	CodeIso14443aAsTag(response2, sizeof(response2));
-    memcpy(resp2, ToSend, ToSendMax); resp2Len = ToSendMax;
+	memcpy(resp2, ToSend, ToSendMax); resp2Len = ToSendMax;
 
 	// Answer to select (cascade1)
 	CodeIso14443aAsTag(response3, sizeof(response3));
-    memcpy(resp3, ToSend, ToSendMax); resp3Len = ToSendMax;
+	memcpy(resp3, ToSend, ToSendMax); resp3Len = ToSendMax;
 
 	// Send the cascade 2 2nd part of the uid
 	CodeIso14443aAsTag(response2a, sizeof(response2a));
-    memcpy(resp2a, ToSend, ToSendMax); resp2aLen = ToSendMax;
+	memcpy(resp2a, ToSend, ToSendMax); resp2aLen = ToSendMax;
 
 	// Answer to select (cascade 2)
 	CodeIso14443aAsTag(response3a, sizeof(response3a));
-    memcpy(resp3a, ToSend, ToSendMax); resp3aLen = ToSendMax;
+	memcpy(resp3a, ToSend, ToSendMax); resp3aLen = ToSendMax;
 
 	// Strange answer is an example of rare message size (3 bits)
 	CodeStrangeAnswerAsTag();
@@ -1185,101 +1142,74 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 
 	// Authentication answer (random nonce)
 	CodeIso14443aAsTag(response5, sizeof(response5));
-    memcpy(resp5, ToSend, ToSendMax); resp5Len = ToSendMax;
+	memcpy(resp5, ToSend, ToSendMax); resp5Len = ToSendMax;
 
-    // We need to listen to the high-frequency, peak-detected path.
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-    FpgaSetupSsc();
+	// dummy ATS (pseudo-ATR), answer to RATS
+	CodeIso14443aAsTag(response6, sizeof(response6));
+	memcpy(resp6, ToSend, ToSendMax); resp6Len = ToSendMax;
 
-    cmdsRecvd = 0;
+	// We need to listen to the high-frequency, peak-detected path.
+	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+	FpgaSetupSsc();
 
-    LED_A_ON();
+	cmdsRecvd = 0;
+
+	LED_A_ON();
 	for(;;) {
-
+	
 		if(!GetIso14443aCommandFromReader(receivedCmd, &len, RECV_CMD_SIZE)) {
-            DbpString("button press");
-            break;
-        }
-	// doob - added loads of debug strings so we can see what the reader is saying to us during the sim as hi14alist is not populated
-        // Okay, look at the command now.
-        lastorder = order;
-		//i = 1; // first byte transmitted
-        if(receivedCmd[0] == 0x26) {
-			// Received a REQUEST
+			DbpString("button press");
+			break;
+		}
+		// doob - added loads of debug strings so we can see what the reader is saying to us during the sim as hi14alist is not populated
+		// Okay, look at the command now.
+		lastorder = order;
+		if(receivedCmd[0] == 0x26) { // Received a REQUEST
 			resp = resp1; respLen = resp1Len; order = 1;
 			respdata = response1;
 			respsize = sizeof(response1);
-			//DbpString("Hello request from reader:");
-		} else if(receivedCmd[0] == 0x52) {
-			// Received a WAKEUP
+		} else if(receivedCmd[0] == 0x52) { // Received a WAKEUP
 			resp = resp1; respLen = resp1Len; order = 6;
-//			//DbpString("Wakeup request from reader:");
 			respdata = response1;
 			respsize = sizeof(response1);
-		} else if(receivedCmd[1] == 0x20 && receivedCmd[0] == 0x93) {	// greg - cascade 1 anti-collision
-			// Received request for UID (cascade 1)
+		} else if(receivedCmd[1] == 0x20 && receivedCmd[0] == 0x93) {	// Received request for UID (cascade 1)
 			resp = resp2; respLen = resp2Len; order = 2;
-//			DbpString("UID (cascade 1) request from reader:");
-//			DbpIntegers(receivedCmd[0], receivedCmd[1], receivedCmd[2]);
 			respdata = response2;
 			respsize = sizeof(response2);
-		} else if(receivedCmd[1] == 0x20 && receivedCmd[0] ==0x95) {	// greg - cascade 2 anti-collision
-			// Received request for UID (cascade 2)
+		} else if(receivedCmd[1] == 0x20 && receivedCmd[0] == 0x95) { // Received request for UID (cascade 2)
 			resp = resp2a; respLen = resp2aLen; order = 20;
-//			DbpString("UID (cascade 2) request from reader:");
-//			DbpIntegers(receivedCmd[0], receivedCmd[1], receivedCmd[2]);
 			respdata = response2a;
 			respsize = sizeof(response2a);
-
-		} else if(receivedCmd[1] == 0x70 && receivedCmd[0] ==0x93) {	// greg - cascade 1 select
-			// Received a SELECT
+		} else if(receivedCmd[1] == 0x70 && receivedCmd[0] == 0x93) {	// Received a SELECT (cascade 1)
 			resp = resp3; respLen = resp3Len; order = 3;
-//			DbpString("Select (cascade 1) request from reader:");
-//			DbpIntegers(receivedCmd[0], receivedCmd[1], receivedCmd[2]);
 			respdata = response3;
 			respsize = sizeof(response3);
-
-		} else if(receivedCmd[1] == 0x70 && receivedCmd[0] ==0x95) {	// greg - cascade 2 select
-			// Received a SELECT
+		} else if(receivedCmd[1] == 0x70 && receivedCmd[0] == 0x95) {	// Received a SELECT (cascade 2)
 			resp = resp3a; respLen = resp3aLen; order = 30;
-//			DbpString("Select (cascade 2) request from reader:");
-//			DbpIntegers(receivedCmd[0], receivedCmd[1], receivedCmd[2]);
 			respdata = response3a;
 			respsize = sizeof(response3a);
-
-		} else if(receivedCmd[0] == 0x30) {
-			// Received a READ
+		} else if(receivedCmd[0] == 0x30) {	// Received a (plain) READ
 			resp = resp4; respLen = resp4Len; order = 4; // Do nothing
-			Dbprintf("Read request from reader: %x %x %x",
-				receivedCmd[0], receivedCmd[1], receivedCmd[2]);
+			Dbprintf("Read request from reader: %x %x",receivedCmd[0],receivedCmd[1]);
 			respdata = &nack;
 			respsize = sizeof(nack); // 4-bit answer
-
-		} else if(receivedCmd[0] == 0x50) {
-			// Received a HALT
-			resp = resp1; respLen = 0; order = 5; // Do nothing
+		} else if(receivedCmd[0] == 0x50) {	// Received a HALT
 			DbpString("Reader requested we HALT!:");
+			// Do not respond
+			resp = resp1; respLen = 0; order = 0;
 			respdata = NULL;
 			respsize = 0;
-
-		} else if(receivedCmd[0] == 0x60) {
-			// Received an authentication request
+		} else if(receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61) {	// Received an authentication request
 			resp = resp5; respLen = resp5Len; order = 7;
-			Dbprintf("Authenticate request from reader: %x %x %x",
-				receivedCmd[0], receivedCmd[1], receivedCmd[2]);
-			respdata = NULL;
-			respsize = 0;
-
-		} else if(receivedCmd[0] == 0xE0) {
-			// Received a RATS request
-			resp = resp1; respLen = 0;order = 70;
-			Dbprintf("RATS request from reader: %x %x %x",
-				receivedCmd[0], receivedCmd[1], receivedCmd[2]);
-			respdata = NULL;
-			respsize = 0;
+			respdata = response5;
+			respsize = sizeof(response5);
+		} else if(receivedCmd[0] == 0xE0) {	// Received a RATS request
+			resp = resp6; respLen = resp6Len; order = 70;
+			respdata = response6;
+			respsize = sizeof(response6);
 		} else {
 			// Never seen this command before
-			Dbprintf("Unknown command received from reader (len=%d): %x %x %x %x %x %x %x %x %x",
+			Dbprintf("Received unknown command (len=%d): %02x %02x %02x %02x %02x %02x %02x %02x %02x",
 			len,
 			receivedCmd[0], receivedCmd[1], receivedCmd[2],
 			receivedCmd[3], receivedCmd[4], receivedCmd[5],
@@ -1302,22 +1232,26 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 			//i = 0;
 		}
 
-
 		if(cmdsRecvd > 999) {
 			DbpString("1000 commands later...");
-            break;
-        }
-		else {
+			break;
+		} else {
 			cmdsRecvd++;
 		}
 
 		if(respLen > 0) {
-			//----------------------------
-			//u = 0;
-			//b = 0x00;
-			//fdt_indicator = FALSE;
 			EmSendCmd14443aRaw(resp, respLen, receivedCmd[0] == 0x52);
 		}
+			
+		// After sending the response, print out some debug data.
+		if (receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61) {
+			Dbprintf("Authenticate request from reader: %02x %02x",receivedCmd[0],receivedCmd[1]);
+		} else if (receivedCmd[0] == 0xE0) {
+			Dbprintf("RATS request from reader: %02x %02x",receivedCmd[0],receivedCmd[1]);
+		} else if (receivedCmd[0] == 0x30) {
+			Dbprintf("READ request from reader: %02x %02x",receivedCmd[0],receivedCmd[1]);
+		}
+
 		
 		if (tracing) {
 			LogTrace(receivedCmd,len, 0, Uart.parityBits, TRUE);
@@ -1331,40 +1265,7 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 		}
 
 		memset(receivedCmd, 0x44, RECV_CMD_SIZE);
-/*        // Modulate Manchester
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_MOD);
-        AT91C_BASE_SSC->SSC_THR = 0x00;
-        FpgaSetupSsc();
-
-		// ### Transmit the response ###
-		u = 0;
-		b = 0x00;
-		fdt_indicator = FALSE;
-        for(;;) {
-            if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-				volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-                (void)b;
-            }
-            if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-				if(i > respLen) {
-					b = 0x00;
-					u++;
-				} else {
-					b = resp[i];
-					i++;
-				}
-				AT91C_BASE_SSC->SSC_THR = b;
-
-                if(u > 4) {
-                    break;
-                }
-            }
-			if(BUTTON_PRESS()) {
-			    break;
-			}
-        }
-*/
-    }
+  }
 
 	Dbprintf("%x %x %x", happened, happened2, cmdsRecvd);
 	LED_A_OFF();
