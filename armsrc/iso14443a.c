@@ -1209,7 +1209,7 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 			respsize = sizeof(response6);
 		} else {
 			// Never seen this command before
-			Dbprintf("Received unknown command (len=%d): %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+			Dbprintf("Received (len=%d): %02x %02x %02x %02x %02x %02x %02x %02x %02x",
 			len,
 			receivedCmd[0], receivedCmd[1], receivedCmd[2],
 			receivedCmd[3], receivedCmd[4], receivedCmd[5],
