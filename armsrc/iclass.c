@@ -60,22 +60,6 @@ static int timeout = 4096;
 #define	SEC_Y 0x00
 #define	SEC_Z 0xc0
 
-// SAME AS IN iso14443a.
-#define RECV_CMD_OFFSET   3032
-#define RECV_RES_OFFSET   3096
-#define DMA_BUFFER_OFFSET 3160
-#define DMA_BUFFER_SIZE   4096
-#define TRACE_LENGTH      3000
-
-uint32_t SwapBits(uint32_t value, int nrbits) {
-	int i;
-	uint32_t newvalue = 0;
-	for(i = 0; i < nrbits; i++) {
-		newvalue ^= ((value >> i) & 1) << (nrbits - 1 - i);
-	}
-	return newvalue;
-}
-
 static int SendIClassAnswer(uint8_t *resp, int respLen, int delay);
 
 //-----------------------------------------------------------------------------
@@ -687,7 +671,7 @@ void RAMFUNC SnoopIClass(void)
 // #define RECV_RES_OFFSET   3096
 // #define DMA_BUFFER_OFFSET 3160
 // #define DMA_BUFFER_SIZE   4096
-// #define TRACE_LENGTH      3000
+// #define TRACE_SIZE        3000
 
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
@@ -816,7 +800,7 @@ void RAMFUNC SnoopIClass(void)
 			trace[traceLen++] = Uart.byteCnt;
 			memcpy(trace+traceLen, receivedCmd, Uart.byteCnt);
 			traceLen += Uart.byteCnt;
-			if(traceLen > TRACE_LENGTH) break;
+			if(traceLen > TRACE_SIZE) break;
 		    //}
 		    /* And ready to receive another command. */
 		    Uart.state = STATE_UNSYNCD;
@@ -848,7 +832,7 @@ void RAMFUNC SnoopIClass(void)
 		    trace[traceLen++] = Demod.len;
 		    memcpy(trace+traceLen, receivedResponse, Demod.len);
 		    traceLen += Demod.len;
-		    if(traceLen > TRACE_LENGTH) break;
+		    if(traceLen > TRACE_SIZE) break;
 
 		    //triggered = TRUE;
 
@@ -1011,6 +995,11 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 {
 	uint8_t simType = arg0;
 
+  // Enable and clear the trace
+	tracing = TRUE;
+	traceLen = 0;
+  memset(trace, 0x44, TRACE_SIZE);
+
 	// CSN followed by two CRC bytes
 	uint8_t response2[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	uint8_t response3[] = { 0x03, 0x1f, 0xec, 0x8a, 0xf7, 0xff, 0x12, 0xe0, 0x00, 0x00 };
@@ -1037,31 +1026,34 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 	// Reader 81 anticoll. CSN
 	// Tag    CSN
 
-        uint8_t *resp;
-        int respLen;
+	uint8_t *resp;
+	int respLen;
+	uint8_t* respdata = NULL;
+	int respsize = 0;
+	uint8_t sof = 0x0f;
 
 	// Respond SOF -- takes 8 bytes
-	uint8_t *resp1 = (((uint8_t *)BigBuf) + 800);
+	uint8_t *resp1 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
 	int resp1Len;
 
 	// Anticollision CSN (rotated CSN)
 	// 176: Takes 16 bytes for SOF/EOF and 10 * 16 = 160 bytes (2 bytes/bit)
-	uint8_t *resp2 = (((uint8_t *)BigBuf) + 810);
+	uint8_t *resp2 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 10);
 	int resp2Len;
 
 	// CSN
 	// 176: Takes 16 bytes for SOF/EOF and 10 * 16 = 160 bytes (2 bytes/bit)
-	uint8_t *resp3 = (((uint8_t *)BigBuf) + 990);
+	uint8_t *resp3 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 190);
 	int resp3Len;
 
 	// e-Purse
 	// 144: Takes 16 bytes for SOF/EOF and 8 * 16 = 128 bytes (2 bytes/bit)
-	uint8_t *resp4 = (((uint8_t *)BigBuf) + 1170);
+	uint8_t *resp4 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 370);
 	int resp4Len;
 
 	// + 1720..
-	uint8_t *receivedCmd = (uint8_t *)BigBuf;
-	memset(receivedCmd, 0x44, 400);
+  uint8_t *receivedCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
+	memset(receivedCmd, 0x44, RECV_CMD_SIZE);
 	int len;
 
 	// Prepare card messages
@@ -1094,36 +1086,46 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 	for(;;) {
 		LED_B_OFF();
 		if(!GetIClassCommandFromReader(receivedCmd, &len, 100)) {
-        		DbpString("button press");
+			DbpString("button press");
 			break;
-       		}
+		}
 
-	        // Okay, look at the command now.
-	        if(receivedCmd[0] == 0x0a) {
+		// Okay, look at the command now.
+		if(receivedCmd[0] == 0x0a) {
 			// Reader in anticollission phase
 			resp = resp1; respLen = resp1Len; //order = 1;
+			respdata = &sof;
+			respsize = sizeof(sof);
 			//resp = resp2; respLen = resp2Len; order = 2;
 			//DbpString("Hello request from reader:");
 		} else if(receivedCmd[0] == 0x0c) {
 			// Reader asks for anticollission CSN
 			resp = resp2; respLen = resp2Len; //order = 2;
+			respdata = response2;
+			respsize = sizeof(response2);
 			//DbpString("Reader requests anticollission CSN:");
 		} else if(receivedCmd[0] == 0x81) {
 			// Reader selects anticollission CSN.
 			// Tag sends the corresponding real CSN
 			resp = resp3; respLen = resp3Len; //order = 3;
+			respdata = response3;
+			respsize = sizeof(response3);
 			//DbpString("Reader selects anticollission CSN:");
 		} else if(receivedCmd[0] == 0x88) {
 			// Read e-purse (88 02)
 			resp = resp4; respLen = resp4Len; //order = 4;
+			respdata = response4;
+			respsize = sizeof(response4);
 			LED_B_ON();
 		} else if(receivedCmd[0] == 0x05) {
 			// Reader random and reader MAC!!!
 			// Lets store this ;-)
+/*
 			Dbprintf("                CSN: %02x %02x %02x %02x %02x %02x %02x %02x",
 			response3[0], response3[1], response3[2],
 			response3[3], response3[4], response3[5],
 			response3[6], response3[7]);
+*/			
 			Dbprintf("READER AUTH (len=%02d): %02x %02x %02x %02x %02x %02x %02x %02x %02x",
 			len,
 			receivedCmd[0], receivedCmd[1], receivedCmd[2],
@@ -1133,15 +1135,14 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 			// Do not respond
 			// We do not know what to answer, so lets keep quit
 			resp = resp1; respLen = 0; //order = 5;
+			respdata = NULL;
+			respsize = 0;
 		} else if(receivedCmd[0] == 0x00 && len == 1) {
 			// Reader ends the session
 			resp = resp1; respLen = 0; //order = 0;
-/*		} else if(receivedCmd[0] == 0x50) {
-			// Received a HALT
-			resp = resp1; respLen = 0; order = 5; // Do nothing
-			DbpString("Reader requested we HALT!:");
-*/
-	        } else {
+			respdata = NULL;
+			respsize = 0;
+		} else {
 			// Never seen this command before
 			Dbprintf("Unknown command received from reader (len=%d): %x %x %x %x %x %x %x %x %x",
 			len,
@@ -1150,9 +1151,9 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 			receivedCmd[6], receivedCmd[7], receivedCmd[8]);
 			// Do not respond
 			resp = resp1; respLen = 0; //order = 0;
+			respdata = NULL;
+			respsize = 0;
 		}
-
-		memset(receivedCmd, 0x44, 32);
 
 		if(cmdsRecvd > 999) {
 			DbpString("1000 commands later...");
@@ -1162,10 +1163,19 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 			cmdsRecvd++;
 		}
 
-		if(respLen <= 0) continue;
+		if(respLen > 0) {
+			SendIClassAnswer(resp, respLen, 21);
+		}
+		
+		if (tracing) {
+			LogTrace(receivedCmd,len, 0, Uart.parityBits, TRUE);
+			if (respdata != NULL) {
+				LogTrace(respdata,respsize, 0, SwapBits(GetParity(respdata,respsize),respsize), FALSE);
+			}
+		}
 
-		SendIClassAnswer(resp, respLen, 21);
-    }
+		memset(receivedCmd, 0x44, RECV_CMD_SIZE);
+	}
 
 	Dbprintf("%x", cmdsRecvd);
 	LED_A_OFF();
@@ -1428,7 +1438,7 @@ void ReaderIClass(uint8_t arg0) {
 	LED_A_ON();
 
 	for(;;) {
-		if(traceLen > TRACE_LENGTH || BUTTON_PRESS()) break;
+		if(traceLen > TRACE_SIZE || BUTTON_PRESS()) break;
 
 		// Send act_all
 		ReaderTransmitIClass(act_all, 1);

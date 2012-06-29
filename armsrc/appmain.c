@@ -706,7 +706,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			ReaderIso14443a(c, &ack);
 			break;
 		case CMD_SIMULATE_TAG_ISO_14443a:
-			SimulateIso14443aTag(c->arg[0], c->arg[1]);  // ## Simulate iso14443a tag - pass tag type & UID
+			SimulateIso14443aTag(c->arg[0], c->arg[1], c->arg[2]);  // ## Simulate iso14443a tag - pass tag type & UID
 			break;
 			
 		case CMD_READER_MIFARE:

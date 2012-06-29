@@ -202,18 +202,84 @@ int CmdHF14AReader(const char *Cmd)
 // ## simulate iso14443a tag
 // ## greg - added ability to specify tag UID
 int CmdHF14ASim(const char *Cmd)
-{                                 
+{
+	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a,{0,0,0}};
+	
+	// Retrieve the tag type
+	uint8_t tagtype = param_get8ex(Cmd,0,0,10);
+	
+	// When no argument was given, just print help message
+	if (tagtype == 0) {
+		PrintAndLog("");
+		PrintAndLog(" Emulating ISO/IEC 14443 type A tag with 4 or 7 byte UID");
+		PrintAndLog("");
+		PrintAndLog("   syntax: hf 14a sim <type> <uid>");
+		PrintAndLog("    types: 1 = MIFARE Classic");
+		PrintAndLog("           2 = MIFARE Ultralight");
+		PrintAndLog("           3 = MIFARE DESFIRE");
+		PrintAndLog("           4 = ISO/IEC 14443-4");
+		PrintAndLog("");
+		return 1;
+	}
+	
+	// Store the tag type
+	c.arg[0] = tagtype;
+	
+	// Retrieve the full 4 or 7 byte long uid 
+	uint64_t long_uid = param_get64ex(Cmd,1,0,16);
 
+	// Are we handling the (optional) second part uid?
+	if (long_uid > 0xffffffff) {
+		PrintAndLog("Emulating ISO/IEC 14443 type A tag with 7 byte UID (%014llx)",long_uid);
+		// Store the second part
+		c.arg[2] = (long_uid & 0xffffffff);
+		long_uid >>= 32;
+		// Store the first part, ignore the first byte, it is replaced by cascade byte (0x88)
+		c.arg[1] = (long_uid & 0xffffff);
+	} else {
+		PrintAndLog("Emulating ISO/IEC 14443 type A tag with 4 byte UID (%08x)",long_uid);
+		// Only store the first part
+		c.arg[1] = long_uid & 0xffffffff;
+	}
+/*
+		// At lease save the mandatory first part of the UID
+		c.arg[0] = long_uid & 0xffffffff;
+
+	
+	// At lease save the mandatory first part of the UID
+	c.arg[0] = long_uid & 0xffffffff;
+	
+	if (c.arg[1] == 0) {
+		PrintAndLog("Emulating ISO/IEC 14443 type A tag with UID %01d %08x %08x",c.arg[0],c.arg[1],c.arg[2]);
+	}
+	
+	switch (c.arg[0]) {
+		case 1: {
+			PrintAndLog("Emulating ISO/IEC 14443-3 type A tag with 4 byte UID");
+			UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a,param_get32ex(Cmd,0,0,10),param_get32ex(Cmd,1,0,16),param_get32ex(Cmd,2,0,16)};
+		} break;
+		case 2: {
+			PrintAndLog("Emulating ISO/IEC 14443-4 type A tag with 7 byte UID");
+		} break;
+		default: {
+			PrintAndLog("Error: unkown tag type (%d)",c.arg[0]);
+			PrintAndLog("syntax: hf 14a sim <uid>",c.arg[0]);
+			PrintAndLog(" type1: 4 ",c.arg[0]);
+
+			return 1;
+		} break;
+	}	
+*/
+/*
   unsigned int hi = 0, lo = 0;
   int n = 0, i = 0;
   while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
     hi= (hi << 4) | (lo >> 28);
     lo= (lo << 4) | (n & 0xf);
   }
-
-  // c.arg should be set to *Cmd or convert *Cmd to the correct format for a uid
-  UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a, {hi, lo, 0}};
-  PrintAndLog("Emulating 14443A TAG with UID %x%16x", hi, lo);
+*/
+//	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a,param_get32ex(Cmd,0,0,10),param_get32ex(Cmd,1,0,16),param_get32ex(Cmd,2,0,16)};
+//  PrintAndLog("Emulating ISO/IEC 14443 type A tag with UID %01d %08x %08x",c.arg[0],c.arg[1],c.arg[2]);
   SendCommand(&c);
   return 0;
 }

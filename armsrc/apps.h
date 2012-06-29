@@ -18,7 +18,19 @@ typedef unsigned char byte_t;
 
 // The large multi-purpose buffer, typically used to hold A/D samples,
 // maybe processed in some way.
-uint32_t BigBuf[8000];
+uint32_t BigBuf[10000];
+// BIG CHANGE - UNDERSTAND THIS BEFORE WE COMMIT
+#define TRACE_OFFSET          0
+#define TRACE_SIZE         3000
+#define RECV_CMD_OFFSET    3032
+#define RECV_CMD_SIZE        64
+#define RECV_RES_OFFSET    3096
+#define RECV_RES_SIZE        64
+#define DMA_BUFFER_OFFSET  3160
+#define DMA_BUFFER_SIZE    4096
+#define FREE_BUFFER_OFFSET 7256
+#define FREE_BUFFER_SIZE   2744
+
 extern const uint8_t OddByteParity[256];
 extern uint8_t *trace; // = (uint8_t *) BigBuf;
 extern int traceLen;   // = 0;
@@ -113,7 +125,7 @@ void RAMFUNC SnoopIso14443(void);
 
 /// iso14443a.h
 void RAMFUNC SnoopIso14443a(void);
-void SimulateIso14443aTag(int tagType, int TagUid);	// ## simulate iso14443a tag
+void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd);	// ## simulate iso14443a tag
 void ReaderIso14443a(UsbCommand * c, UsbCommand * ack);
 // Also used in iclass.c
 int LogTrace(const uint8_t * btBytes, int iLen, int iSamples, uint32_t dwParity, int bReader);

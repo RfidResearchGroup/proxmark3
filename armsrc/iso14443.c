@@ -22,7 +22,7 @@
 #define DEMOD_TRACE_SIZE 4096
 #define READER_TAG_BUFFER_SIZE 2048
 #define TAG_READER_BUFFER_SIZE 2048
-#define DMA_BUFFER_SIZE 1024
+#define DEMOD_DMA_BUFFER_SIZE 1024
 
 //=============================================================================
 // An ISO 14443 Type B tag. We listen for commands from the reader, using
@@ -652,8 +652,8 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
     // Setup for the DMA.
     dmaBuf = (int8_t *)(BigBuf + 32);
     upTo = dmaBuf;
-    lastRxCounter = DMA_BUFFER_SIZE;
-    FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE);
+    lastRxCounter = DEMOD_DMA_BUFFER_SIZE;
+    FpgaSetupSscDma((uint8_t *)dmaBuf, DEMOD_DMA_BUFFER_SIZE);
 
     // Signal field is ON with the appropriate LED:
 	if (weTx) LED_D_ON(); else LED_D_OFF();
@@ -666,20 +666,20 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
         int behindBy = lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR;
         if(behindBy > max) max = behindBy;
 
-        while(((lastRxCounter-AT91C_BASE_PDC_SSC->PDC_RCR) & (DMA_BUFFER_SIZE-1))
+        while(((lastRxCounter-AT91C_BASE_PDC_SSC->PDC_RCR) & (DEMOD_DMA_BUFFER_SIZE-1))
                     > 2)
         {
             ci = upTo[0];
             cq = upTo[1];
             upTo += 2;
-            if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
-                upTo -= DMA_BUFFER_SIZE;
+            if(upTo - dmaBuf > DEMOD_DMA_BUFFER_SIZE) {
+                upTo -= DEMOD_DMA_BUFFER_SIZE;
                 AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
-                AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+                AT91C_BASE_PDC_SSC->PDC_RNCR = DEMOD_DMA_BUFFER_SIZE;
             }
             lastRxCounter -= 2;
             if(lastRxCounter <= 0) {
-                lastRxCounter += DMA_BUFFER_SIZE;
+                lastRxCounter += DEMOD_DMA_BUFFER_SIZE;
             }
 
             samples += 2;
@@ -1028,7 +1028,7 @@ void ReadSTMemoryIso14443(uint32_t parameter,uint32_t dwLast)
  * 0-4095 : Demodulated samples receive (4096 bytes) - DEMOD_TRACE_SIZE
  * 4096-6143 : Last Received command, 2048 bytes (reader->tag) - READER_TAG_BUFFER_SIZE
  * 6144-8191 : Last Received command, 2048 bytes(tag->reader) - TAG_READER_BUFFER_SIZE
- * 8192-9215 : DMA Buffer, 1024 bytes (samples) - DMA_BUFFER_SIZE
+ * 8192-9215 : DMA Buffer, 1024 bytes (samples) - DEMOD_DMA_BUFFER_SIZE
  */
 void RAMFUNC SnoopIso14443(void)
 {
@@ -1077,7 +1077,7 @@ void RAMFUNC SnoopIso14443(void)
 	Dbprintf("  Trace: %i bytes", DEMOD_TRACE_SIZE);
 	Dbprintf("  Reader -> tag: %i bytes", READER_TAG_BUFFER_SIZE);
 	Dbprintf("  tag -> Reader: %i bytes", TAG_READER_BUFFER_SIZE);
-	Dbprintf("  DMA: %i bytes", DMA_BUFFER_SIZE);
+	Dbprintf("  DMA: %i bytes", DEMOD_DMA_BUFFER_SIZE);
 
 
     // And put the FPGA in the appropriate mode
@@ -1091,18 +1091,18 @@ void RAMFUNC SnoopIso14443(void)
     // Setup for the DMA.
     FpgaSetupSsc();
     upTo = dmaBuf;
-    lastRxCounter = DMA_BUFFER_SIZE;
-    FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE);
+    lastRxCounter = DEMOD_DMA_BUFFER_SIZE;
+    FpgaSetupSscDma((uint8_t *)dmaBuf, DEMOD_DMA_BUFFER_SIZE);
 		
     LED_A_ON();
 		
     // And now we loop, receiving samples.
     for(;;) {
     	int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) &
-                                (DMA_BUFFER_SIZE-1);
+                                (DEMOD_DMA_BUFFER_SIZE-1);
         if(behindBy > maxBehindBy) {
             maxBehindBy = behindBy;
-            if(behindBy > (DMA_BUFFER_SIZE-2)) { // TODO: understand whether we can increase/decrease as we want or not?
+            if(behindBy > (DEMOD_DMA_BUFFER_SIZE-2)) { // TODO: understand whether we can increase/decrease as we want or not?
                 Dbprintf("blew circular buffer! behindBy=0x%x", behindBy);
                 goto done;
             }
@@ -1113,11 +1113,11 @@ void RAMFUNC SnoopIso14443(void)
         cq = upTo[1];
         upTo += 2;
         lastRxCounter -= 2;
-        if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
-            upTo -= DMA_BUFFER_SIZE;
-            lastRxCounter += DMA_BUFFER_SIZE;
+        if(upTo - dmaBuf > DEMOD_DMA_BUFFER_SIZE) {
+            upTo -= DEMOD_DMA_BUFFER_SIZE;
+            lastRxCounter += DEMOD_DMA_BUFFER_SIZE;
             AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+            AT91C_BASE_PDC_SSC->PDC_RNCR = DEMOD_DMA_BUFFER_SIZE;
         }
 
         samples += 2;

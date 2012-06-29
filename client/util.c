@@ -166,7 +166,7 @@ uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base)
 	int bg, en;
 
 	if (!param_getptr(line, &bg, &en, paramnum)) 
-		return strtol(&line[bg], NULL, base);
+		return strtoll(&line[bg], NULL, base);
 	else
 		return deflt;
 

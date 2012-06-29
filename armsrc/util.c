@@ -12,6 +12,15 @@
 #include "util.h"
 #include "string.h"
 
+uint32_t SwapBits(uint32_t value, int nrbits) {
+	int i;
+	uint32_t newvalue = 0;
+	for(i = 0; i < nrbits; i++) {
+		newvalue ^= ((value >> i) & 1) << (nrbits - 1 - i);
+	}
+	return newvalue;
+}
+
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
 {
 	while (len--) {

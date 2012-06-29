@@ -28,6 +28,7 @@
 #define BUTTON_DOUBLE_CLICK -2
 #define BUTTON_ERROR -99
 
+uint32_t SwapBits(uint32_t value, int nrbits);
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
 uint64_t bytes_to_num(uint8_t* src, size_t len);
 

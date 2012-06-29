@@ -14,12 +14,6 @@
 #define __ISO14443A_H
 #include "common.h"
 
-// BIG CHANGE - UNDERSTAND THIS BEFORE WE COMMIT
-#define RECV_CMD_OFFSET    3032
-#define RECV_RES_OFFSET    3096
-#define DMA_BUFFER_OFFSET  3160
-#define DMA_BUFFER_SIZE    4096
-#define TRACE_LENGTH       3000
 // mifare reader                      over DMA buffer (SnoopIso14443a())!!!
 #define MIFARE_BUFF_OFFSET 3560  //              \/   \/   \/
 // card emulator memory
