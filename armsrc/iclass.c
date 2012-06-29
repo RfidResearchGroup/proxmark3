@@ -1172,6 +1172,10 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 			if (respdata != NULL) {
 				LogTrace(respdata,respsize, 0, SwapBits(GetParity(respdata,respsize),respsize), FALSE);
 			}
+			if(traceLen > TRACE_SIZE) {
+				DbpString("Trace full");
+				break;
+			}
 		}
 
 		memset(receivedCmd, 0x44, RECV_CMD_SIZE);
@@ -1412,7 +1416,7 @@ int ReaderReceiveIClass(uint8_t* receivedAnswer)
 void ReaderIClass(uint8_t arg0) {
 	uint8_t act_all[]     = { 0x0a };
 	uint8_t identify[]    = { 0x0c };
-	//uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
 
@@ -1438,74 +1442,37 @@ void ReaderIClass(uint8_t arg0) {
 	LED_A_ON();
 
 	for(;;) {
-		if(traceLen > TRACE_SIZE || BUTTON_PRESS()) break;
+	
+		if(traceLen > TRACE_SIZE) {
+			DbpString("Trace full");
+			break;
+		}
+		
+		if (BUTTON_PRESS()) break;
 
 		// Send act_all
 		ReaderTransmitIClass(act_all, 1);
 		// Card present?
 		if(ReaderReceiveIClass(resp)) {
 			ReaderTransmitIClass(identify, 1);
-			if(ReaderReceiveIClass(resp)) {
-				//ReaderTransmitIClass(select, sizeof(select));
+			if(ReaderReceiveIClass(resp) == 10) {
+				// Select card          
+				memcpy(&select[1],resp,8);
+				ReaderTransmitIClass(select, sizeof(select));
+
+				if(ReaderReceiveIClass(resp) == 10) {
+					Dbprintf("     Selected CSN: %02x %02x %02x %02x %02x %02x %02x %02x",
+					resp[0], resp[1], resp[2],
+					resp[3], resp[4], resp[5],
+					resp[6], resp[7]);
+				}
+				// Card selected, whats next... ;-)
 			}
 		}
 		WDT_HIT();
 	}
 	
 	LED_A_OFF();
-
-/*	if(resp_data)
-		memcpy(resp_data->atqa, resp, 2);
-	
-	// OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
-	// which case we need to make a cascade 2 request and select - this is a long UID
-	// While the UID is not complete, the 3nd bit (from the right) is set in the SAK.
-	for(; sak & 0x04; cascade_level++)
-	{
-		// SELECT_* (L1: 0x93, L2: 0x95, L3: 0x97)
-		sel_uid[0] = sel_all[0] = 0x93 + cascade_level * 2;
-
-		// SELECT_ALL
-		ReaderTransmit(sel_all,sizeof(sel_all));
-		if (!ReaderReceive(resp)) return 0;
-		if(uid_ptr) memcpy(uid_ptr + cascade_level*4, resp, 4);
-		
-		// calculate crypto UID
-		if(cuid_ptr) *cuid_ptr = bytes_to_num(resp, 4);
-
-		// Construct SELECT UID command
-		memcpy(sel_uid+2,resp,5);
-		AppendCrc14443a(sel_uid,7);
-		ReaderTransmit(sel_uid,sizeof(sel_uid));
-
-		// Receive the SAK
-		if (!ReaderReceive(resp)) return 0;
-		sak = resp[0];
-	}
-	if(resp_data) {
-		resp_data->sak = sak;
-		resp_data->ats_len = 0;
-	}
-	//--  this byte not UID, it CT.  http://www.nxp.com/documents/application_note/AN10927.pdf  page 3
-	if (uid_ptr[0] == 0x88) {  
-		memcpy(uid_ptr, uid_ptr + 1, 7);
-		uid_ptr[7] = 0;
-	}
-
-	if( (sak & 0x20) == 0)
-		return 2; // non iso14443a compliant tag
-
-	// Request for answer to select
-	if(resp_data) {  // JCOP cards - if reader sent RATS then there is no MIFARE session at all!!!
-		AppendCrc14443a(rats, 2);
-		ReaderTransmit(rats, sizeof(rats));
-		
-		if (!(len = ReaderReceive(resp))) return 0;
-		
-		memcpy(resp_data->ats, resp, sizeof(resp_data->ats));
-		resp_data->ats_len = len;
-	}
-*/	
 }
 
 

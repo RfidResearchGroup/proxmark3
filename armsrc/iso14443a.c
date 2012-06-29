@@ -1324,6 +1324,10 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 			if (respdata != NULL) {
 				LogTrace(respdata,respsize, 0, SwapBits(GetParity(respdata,respsize),respsize), FALSE);
 			}
+			if(traceLen > TRACE_SIZE) {
+				DbpString("Trace full");
+				break;
+			}
 		}
 
 		memset(receivedCmd, 0x44, RECV_CMD_SIZE);
