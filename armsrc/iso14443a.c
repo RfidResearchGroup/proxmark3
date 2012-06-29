@@ -1242,16 +1242,6 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 		if(respLen > 0) {
 			EmSendCmd14443aRaw(resp, respLen, receivedCmd[0] == 0x52);
 		}
-			
-		// After sending the response, print out some debug data.
-		if (receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61) {
-			Dbprintf("Authenticate request from reader: %02x %02x",receivedCmd[0],receivedCmd[1]);
-		} else if (receivedCmd[0] == 0xE0) {
-			Dbprintf("RATS request from reader: %02x %02x",receivedCmd[0],receivedCmd[1]);
-		} else if (receivedCmd[0] == 0x30) {
-			Dbprintf("READ request from reader: %02x %02x",receivedCmd[0],receivedCmd[1]);
-		}
-
 		
 		if (tracing) {
 			LogTrace(receivedCmd,len, 0, Uart.parityBits, TRUE);
