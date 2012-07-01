@@ -11,8 +11,8 @@ int main (int argc, char *argv[]) {
   uint32_t nr_enc;  // encrypted reader challenge
   uint32_t ar_enc;  // encrypted reader response
   uint32_t at_enc;  // encrypted tag response
-	uint32_t ks2;     // keystream used to encrypt reader response
-	uint32_t ks3;     // keystream used to encrypt tag response
+  uint32_t ks2;     // keystream used to encrypt reader response
+  uint32_t ks3;     // keystream used to encrypt tag response
 
   printf("MIFARE Classic key recovery\n\n");
 
@@ -48,7 +48,7 @@ int main (int argc, char *argv[]) {
 
   // Extract the keystream from the messages
   printf("\nKeystream used to generate {ar} and {at}:\n");
-	ks2 = ar_enc ^ prng_successor(nt, 64);
+  ks2 = ar_enc ^ prng_successor(nt, 64);
   ks3 = at_enc ^ prng_successor(nt, 96);
   printf("  ks2: %08x\n",ks2);
   printf("  ks3: %08x\n",ks3);
