@@ -68,6 +68,8 @@ typedef struct {
 #define CMD_SET_ADC_MUX									0x020F
 #define CMD_HID_CLONE_TAG								0x0210
 #define CMD_EM410X_WRITE_TAG						0x0211
+#define CMD_INDALA_CLONE_TAG						0x0212
+#define CMD_INDALA_CLONE_TAG_L					0x0213	// for 224 bits UID
 
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 

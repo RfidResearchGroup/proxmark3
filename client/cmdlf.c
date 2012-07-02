@@ -227,7 +227,42 @@ int CmdIndalaDemod(const char *Cmd)
     }
     times = 1;
   }
-  PrintAndLog("UID=%s", showbits);
+  
+  //convert UID to HEX
+  uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
+  int idx;
+  uid1=0;
+  uid2=0;
+  if (uidlen==64){
+    for( idx=0; idx<64; idx++) {
+        if (showbits[idx] == '0') {
+        uid1=(uid1<<1)|(uid2>>31);
+        uid2=(uid2<<1)|0;
+        } else {
+        uid1=(uid1<<1)|(uid2>>31);
+        uid2=(uid2<<1)|1;
+        } 
+      }
+    PrintAndLog("UID=%s (%x%08x)", showbits, uid1, uid2);
+  }
+  else {
+    uid3=0;
+    uid4=0;
+    uid5=0;
+    uid6=0;
+    uid7=0;
+    for( idx=0; idx<224; idx++) {
+        uid1=(uid1<<1)|(uid2>>31);
+        uid2=(uid2<<1)|(uid3>>31);
+        uid3=(uid3<<1)|(uid4>>31);
+        uid4=(uid4<<1)|(uid5>>31);
+        uid5=(uid5<<1)|(uid6>>31);
+        uid6=(uid6<<1)|(uid7>>31);
+        if (showbits[idx] == '0') uid7=(uid7<<1)|0;
+        else uid7=(uid7<<1)|1;
+      }
+    PrintAndLog("UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+  }
 
   // Checking UID against next occurences
   for (; i + uidlen <= rawbit;) {
@@ -263,6 +298,55 @@ int CmdIndalaDemod(const char *Cmd)
   }
 
   RepaintGraphWindow();
+  return 0;
+}
+
+int CmdIndalaClone(const char *Cmd)
+{
+  unsigned int uid1, uid2, uid3, uid4, uid5, uid6, uid7;
+  UsbCommand c;
+  uid1=0;
+  uid2=0;
+  uid3=0;
+  uid4=0;
+  uid5=0;
+  uid6=0;
+  uid7=0;  
+  int n = 0, i = 0;
+
+  if (strchr(Cmd,'l') != 0) {
+    while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
+      uid1 = (uid1 << 4) | (uid2 >> 28);
+      uid2 = (uid2 << 4) | (uid3 >> 28);
+      uid3 = (uid3 << 4) | (uid4 >> 28);
+      uid4 = (uid4 << 4) | (uid5 >> 28);
+      uid5 = (uid5 << 4) | (uid6 >> 28);
+      uid6 = (uid6 << 4) | (uid7 >> 28);
+    	uid7 = (uid7 << 4) | (n & 0xf);
+    }
+    PrintAndLog("Cloning 224bit tag with UID %x%08x%08x%08x%08x%08x%08x", uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+    c.cmd = CMD_INDALA_CLONE_TAG_L;
+    c.d.asDwords[0] = uid1;
+    c.d.asDwords[1] = uid2;
+    c.d.asDwords[2] = uid3;
+    c.d.asDwords[3] = uid4;
+    c.d.asDwords[4] = uid5;
+    c.d.asDwords[5] = uid6;
+    c.d.asDwords[6] = uid7;
+  } 
+  else 
+  {
+    while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
+      uid1 = (uid1 << 4) | (uid2 >> 28);
+      uid2 = (uid2 << 4) | (n & 0xf);
+    }
+    PrintAndLog("Cloning 64bit tag with UID %x%08x", uid1, uid2);
+    c.cmd = CMD_INDALA_CLONE_TAG;
+    c.arg[0] = uid1;
+    c.arg[1] = uid2;
+  }
+
+  SendCommand(&c);
   return 0;
 }
 
@@ -445,6 +529,7 @@ static command_t CommandTable[] =
   {"flexdemod",   CmdFlexdemod,       1, "Demodulate samples for FlexPass"},
   {"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
   {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
+  {"indalaclone", CmdIndalaClone,     1, "<UID> ['l']-- Clone Indala to T55x7 (tag must be in antenna)(UID in HEX)(option 'l' for 224 UID"},
   {"read",        CmdLFRead,          0, "['h'] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134)"},
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
   {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},

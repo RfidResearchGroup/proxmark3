@@ -1092,7 +1092,7 @@ void T55xxWriteBlock(int Data, int Block)
 }
 
 // Copy HID id to card and setup block 0 config
-void CopyHIDtoT5567(int hi, int lo)
+void CopyHIDtoT55x7(int hi, int lo)
 {
 	int data1, data2, data3;
 
@@ -1135,8 +1135,8 @@ void CopyHIDtoT5567(int hi, int lo)
 	T55xxWriteBlock(data3,3);
 
 	// Config for HID (RF/50, FSK2a, Maxblock=3)
-	T55xxWriteBlock(T55x7_BITRATE_RF_50	    |
-			T55x7_MODULATION_MANCHESTER |
+	T55xxWriteBlock(T55x7_BITRATE_RF_50    |
+			T55x7_MODULATION_FSK2a |
 			3 << T55x7_MAXBLOCK_SHIFT,
 			0);
 
@@ -1227,4 +1227,48 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo)
 	LED_D_OFF();
 	Dbprintf("Tag %s written with 0x%08x%08x\n", card ? "T55x7":"T5555",
 					(uint32_t)(id >> 32), (uint32_t)id);
+}
+
+// Clone Indala 64-bit tag by UID to T55x7
+void CopyIndala64toT55x7(int hi, int lo)
+{
+
+	//Program the 2 data blocks for supplied 64bit UID
+	// and the block 0 for Indala64 format
+	T55xxWriteBlock(hi,1);
+	T55xxWriteBlock(lo,2);
+	//Config for Indala (RF/32;PSK1 with RF/2;Maxblock=2)
+	T55xxWriteBlock(T55x7_BITRATE_RF_32    |
+			T55x7_MODULATION_PSK1 |
+			2 << T55x7_MAXBLOCK_SHIFT,
+			0);
+	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
+//	T5567WriteBlock(0x603E1042,0);
+
+	DbpString("DONE!");
+
+}	
+
+void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int uid6, int uid7)
+{
+
+	//Program the 7 data blocks for supplied 224bit UID
+	// and the block 0 for Indala224 format
+	T55xxWriteBlock(uid1,1);
+	T55xxWriteBlock(uid2,2);
+	T55xxWriteBlock(uid3,3);
+	T55xxWriteBlock(uid4,4);
+	T55xxWriteBlock(uid5,5);
+	T55xxWriteBlock(uid6,6);
+	T55xxWriteBlock(uid7,7);
+	//Config for Indala (RF/32;PSK1 with RF/2;Maxblock=7)
+	T55xxWriteBlock(T55x7_BITRATE_RF_32    |
+			T55x7_MODULATION_PSK1 |
+			7 << T55x7_MAXBLOCK_SHIFT,
+			0);
+	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
+//	T5567WriteBlock(0x603E10E2,0);
+
+	DbpString("DONE!");
+
 }

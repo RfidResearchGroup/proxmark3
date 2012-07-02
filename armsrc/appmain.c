@@ -611,13 +611,13 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			ModThenAcquireRawAdcSamples125k(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
 			break;
 		case CMD_HID_DEMOD_FSK:
-			CmdHIDdemodFSK(0, 0, 0, 1);				// Demodulate HID tag
+			CmdHIDdemodFSK(0, 0, 0, 1);					// Demodulate HID tag
 			break;
 		case CMD_HID_SIM_TAG:
 			CmdHIDsimTAG(c->arg[0], c->arg[1], 1);					// Simulate HID tag by ID
 			break;
 		case CMD_HID_CLONE_TAG:
-			CopyHIDtoT5567(c->arg[0], c->arg[1]);					// Clone HID tag by ID to T55x7
+			CopyHIDtoT55x7(c->arg[0], c->arg[1]);					// Clone HID tag by ID to T55x7
 			break;
 		case CMD_EM410X_WRITE_TAG:
 			WriteEM410x(c->arg[0], c->arg[1], c->arg[2]);
@@ -635,6 +635,12 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		case CMD_LF_SIMULATE_BIDIR:
 			SimulateTagLowFrequencyBidir(c->arg[0], c->arg[1]);
+			break;
+		case CMD_INDALA_CLONE_TAG:					// Clone Indala 64-bit tag by UID to T55x7
+			CopyIndala64toT55x7(c->arg[0], c->arg[1]);					
+			break;
+		case CMD_INDALA_CLONE_TAG_L:					// Clone Indala 224-bit tag by UID to T55x7
+			CopyIndala224toT55x7(c->d.asDwords[0], c->d.asDwords[1], c->d.asDwords[2], c->d.asDwords[3], c->d.asDwords[4], c->d.asDwords[5], c->d.asDwords[6]);
 			break;
 #endif
 
