@@ -50,7 +50,7 @@ GNU_KEYRING_GPG=gnu-keyring.gpg
 GNU_KEYRING=ftp://ftp.gnu.org/gnu/${GNU_KEYRING_GPG}
 
 # Common configuration options (i.e., things to pass to 'configure')
-COMMON_CFG="--enable-interwork --target=arm-eabi --program-prefix=arm-eabi- --prefix=${DESTDIR} --disable-werror --enable-languages=c,c++ --enable-multilib --disable-shared"
+COMMON_CFG="--enable-interwork --target=arm-eabi --program-prefix=arm-none-eabi- --prefix=${DESTDIR} --disable-werror --enable-languages=c,c++ --enable-multilib --disable-shared"
 
 # Extra configuration options for each toolchain component
 BINUTILS_CFG=
