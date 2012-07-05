@@ -1255,6 +1255,40 @@ int CmdHF14AMfCSetUID(const char *Cmd)
 
 int CmdHF14AMfCSetBlk(const char *Cmd)
 {
+	uint8_t uid[8];
+	uint8_t memBlock[16];
+	uint8_t blockNo = 0;
+	int res;
+	memset(memBlock, 0x00, sizeof(memBlock));
+
+	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("Usage:  hf mf csetblk <block number> <block data (32 hex symbols)>");
+		PrintAndLog("sample:  hf mf csetblk 1 01020304050607080910111213141516");
+		PrintAndLog("Set block data for magic Chinese card (only works with!!!)");
+		PrintAndLog("If you want wipe card then add 'w' into command line. \n");
+		return 0;
+	}	
+
+	blockNo = param_get8(Cmd, 0);
+	if (blockNo >= 32 * 4 + 8 * 16) {
+		PrintAndLog("Block number must be in [0..255] as in MIFARE classic.");
+		return 1;
+	}
+
+	if (param_gethex(Cmd, 1, memBlock, 32)) {
+		PrintAndLog("block data must include 32 HEX symbols");
+		return 1;
+	}
+
+	PrintAndLog("--block number:%02x data:%s", blockNo, sprint_hex(memBlock, 16));
+
+	res = mfCSetBlock(blockNo, memBlock, uid, 0);
+	if (res) {
+			PrintAndLog("Can't write block. error=%d", res);
+			return 1;
+		}
+	
+	PrintAndLog("UID:%s", sprint_hex(uid, 4));
 	return 0;
 }
 
@@ -1284,7 +1318,7 @@ static command_t CommandTable[] =
   {"ecfill",	CmdHF14AMfECFill,		0, "Fill simulator memory with help of keys from simulator"},
   {"ekeyprn",	CmdHF14AMfEKeyPrn,	0, "Print keys from simulator memory"},
   {"csetuid",	CmdHF14AMfCSetUID,	0, "Set UID for magic Chinese card"},
-  {"csetblk",	CmdHF14AMfCSetBlk,	0, "(n/a)Write block into magic Chinese card"},
+  {"csetblk",	CmdHF14AMfCSetBlk,	0, "Write block into magic Chinese card"},
   {"cload",		CmdHF14AMfCLoad,		0, "(n/a)Load dump into magic Chinese card"},
   {NULL, NULL, 0, NULL}
 };

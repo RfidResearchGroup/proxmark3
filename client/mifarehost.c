@@ -217,14 +217,19 @@ int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 }
 
 int mfCSetUID(uint8_t *uid, uint8_t *oldUID, int wantWipe) {
-	uint8_t isOK = 0;
 	uint8_t block0[16];
 	memset(block0, 0, 16);
 	memcpy(block0, uid, 4); 
 	block0[4] = block0[0]^block0[1]^block0[2]^block0[3]; // Mifare UID BCC
+	
+	return mfCSetBlock(0, block0, oldUID, wantWipe);
+}
 
-  UsbCommand c = {CMD_MIFARE_EML_CSETBLOCK, {wantWipe, 1, 0}};
-	memcpy(c.d.asBytes, block0, 16); 
+int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, int wantWipe) {
+	uint8_t isOK = 0;
+
+  UsbCommand c = {CMD_MIFARE_EML_CSETBLOCK, {wantWipe, 1, blockNo}};
+	memcpy(c.d.asBytes, data, 16); 
   SendCommand(&c);
 
 	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
@@ -232,7 +237,7 @@ int mfCSetUID(uint8_t *uid, uint8_t *oldUID, int wantWipe) {
 	if (resp != NULL) {
 		isOK  = resp->arg[0] & 0xff;
 		PrintAndLog("isOk:%02x", isOK);
-		memcpy(oldUID, resp->d.asBytes, 4); 
+		memcpy(uid, resp->d.asBytes, 4); 
 		if (!isOK) return 2;
 	} else {
 		PrintAndLog("Command execute timeout");
