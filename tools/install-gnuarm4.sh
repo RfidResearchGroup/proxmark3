@@ -273,5 +273,5 @@ chmod -R a+rX .
 
 echo Downloaded archives are in ${SRCDIR}
 echo build driectory: ${BUILDDIR}
-echo set environment variable ARMLIB to ${DESTDIR}/lib/gcc/arm-elf/4.3.3/interwork for Makefile.linux
+echo set environment variable ARMLIB to ${DESTDIR}/lib/gcc/arm-eabi/4.3.3/interwork for Makefile.linux
 exit 0
