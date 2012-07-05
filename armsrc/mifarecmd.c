@@ -726,3 +726,129 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 // 
 //-----------------------------------------------------------------------------
 
+
+//-----------------------------------------------------------------------------
+// Work with "magic Chinese" card (email him: ouyangweidaxian@live.cn)
+// 
+//-----------------------------------------------------------------------------
+void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
+  
+  // params
+	uint8_t needWipe = arg0;
+	uint8_t needGetUID = arg1;
+	uint8_t blockNo = arg2;
+	
+	// card commands
+	uint8_t wupC1[]       = { 0x40 }; 
+	uint8_t wupC2[]       = { 0x43 }; 
+	uint8_t wipeC[]       = { 0x41 }; 
+	
+	// variables
+	byte_t isOK = 0;
+	uint8_t uid[8];
+	uint8_t d_block[18];
+	uint32_t cuid;
+	
+	memset(uid, 0x00, 8);
+	uint8_t* receivedAnswer = mifare_get_bigbufptr();
+	
+	// clear trace
+	iso14a_clear_tracelen();
+  iso14a_set_tracing(TRUE);
+
+	iso14443a_setup();
+
+	LED_A_ON();
+	LED_B_OFF();
+	LED_C_OFF();
+	
+	SpinDelay(300);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelay(100);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+
+	while (true) {
+		// get UID from chip
+		if (needGetUID) {
+			if(!iso14443a_select_card(uid, NULL, &cuid)) {
+				if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
+				break;
+			};
+
+			if(mifare_classic_halt(NULL, cuid)) {
+				if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
+				break;
+			};
+		};
+	
+		// reset chip
+		if (needWipe){
+			ReaderTransmitShort(wupC1);
+			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
+				if (MF_DBGLEVEL >= 1)	Dbprintf("wupC1 error");
+				break;
+			};
+
+			ReaderTransmit(wipeC, sizeof(wipeC));
+			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
+				if (MF_DBGLEVEL >= 1)	Dbprintf("wipeC error");
+				break;
+			};
+
+			if(mifare_classic_halt(NULL, cuid)) {
+				if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
+				break;
+			};
+		};	
+
+		// write UID block
+		ReaderTransmitShort(wupC1);
+		if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("wupC1 error");
+			break;
+		};
+
+		ReaderTransmit(wupC2, sizeof(wupC2));
+		if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("wupC2 error");
+			break;
+		};
+
+		if ((mifare_sendcmd_short(NULL, 0, 0xA0, blockNo, receivedAnswer) != 1) || (receivedAnswer[0] != 0x0a)) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("write block send command error");
+			break;
+		};
+	
+		memcpy(d_block, datain, 16);
+		AppendCrc14443a(d_block, 16);
+	
+		ReaderTransmit(d_block, sizeof(d_block));
+		if ((ReaderReceive(receivedAnswer) != 1) || (receivedAnswer[0] != 0x0a)) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("write block send data error");
+			break;
+		};	
+	
+		if(mifare_classic_halt(NULL, cuid)) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
+			break;
+		};
+		
+		isOK = 1;
+		break;
+	}
+	
+	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
+	if (isOK) memcpy(ack.d.asBytes, uid, 4);
+	
+	// add trace trailer
+	memset(uid, 0x44, 4);
+	LogTrace(uid, 4, 0, 0, TRUE);
+
+	LED_B_ON();
+	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+	LED_B_OFF();
+
+  // Thats it...
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
+}

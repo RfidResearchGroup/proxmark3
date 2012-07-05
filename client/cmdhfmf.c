@@ -1218,6 +1218,51 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 	return 0;
 }
 
+int CmdHF14AMfCSetUID(const char *Cmd)
+{
+	uint8_t wipeCard = 0;
+	uint8_t uid[8];
+	uint8_t oldUid[8];
+	int res;
+
+	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("Usage:  hf mf csetuid <UID 8 hex symbols> <w>");
+		PrintAndLog("sample:  hf mf csetuid 01020304 w");
+		PrintAndLog("Set UID for magic Chinese card (only works with!!!)");
+		PrintAndLog("If you want wipe card then add 'w' into command line. \n");
+		return 0;
+	}	
+
+	if (param_getchar(Cmd, 0) && param_gethex(Cmd, 0, uid, 8)) {
+		PrintAndLog("UID must include 8 HEX symbols");
+		return 1;
+	}
+
+	char ctmp = param_getchar(Cmd, 1);
+	if (ctmp == 'w' || ctmp == 'W') wipeCard = 1;
+	
+	PrintAndLog("--wipe card:%02x uid:%s", wipeCard, sprint_hex(uid, 4));
+
+	res = mfCSetUID(uid, oldUid, wipeCard);
+	if (res) {
+			PrintAndLog("Can't set UID. error=%d", res);
+			return 1;
+		}
+	
+	PrintAndLog("old UID:%s", sprint_hex(oldUid, 4));
+	return 0;
+}
+
+int CmdHF14AMfCSetBlk(const char *Cmd)
+{
+	return 0;
+}
+
+int CmdHF14AMfCLoad(const char *Cmd)
+{
+	return 0;
+}
+
 static command_t CommandTable[] =
 {
   {"help",		CmdHelp,				1, "This help"},
@@ -1238,6 +1283,9 @@ static command_t CommandTable[] =
   {"esave",		CmdHF14AMfESave,		0, "Save to file emul dump"},
   {"ecfill",	CmdHF14AMfECFill,		0, "Fill simulator memory with help of keys from simulator"},
   {"ekeyprn",	CmdHF14AMfEKeyPrn,	0, "Print keys from simulator memory"},
+  {"csetuid",	CmdHF14AMfCSetUID,	0, "Set UID for magic Chinese card"},
+  {"csetblk",	CmdHF14AMfCSetBlk,	0, "(n/a)Write block into magic Chinese card"},
+  {"cload",		CmdHF14AMfCLoad,		0, "(n/a)Load dump into magic Chinese card"},
   {NULL, NULL, 0, NULL}
 };
 
