@@ -758,6 +758,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MIFARE_EML_CSETBLOCK:
 			MifareCSetBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
+		case CMD_MIFARE_EML_CGETBLOCK:
+			MifareCGetBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
 #endif
 
 #ifdef WITH_ICLASS

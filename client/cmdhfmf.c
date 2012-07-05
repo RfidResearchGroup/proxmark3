@@ -1387,20 +1387,175 @@ int CmdHF14AMfCLoad(const char *Cmd)
 	}
 }
 
+int CmdHF14AMfCGetBlk(const char *Cmd) {
+	uint8_t memBlock[16];
+	uint8_t blockNo = 0;
+	int res;
+	memset(memBlock, 0x00, sizeof(memBlock));
+
+	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("Usage:  hf mf cgetblk <block number>");
+		PrintAndLog("sample:  hf mf cgetblk 1");
+		PrintAndLog("Get block data from magic Chinese card (only works with!!!)\n");
+		return 0;
+	}	
+
+	blockNo = param_get8(Cmd, 0);
+	if (blockNo >= 32 * 4 + 8 * 16) {
+		PrintAndLog("Block number must be in [0..255] as in MIFARE classic.");
+		return 1;
+	}
+
+	PrintAndLog("--block number:%02x ", blockNo);
+
+	res = mfCGetBlock(blockNo, memBlock, CSETBLOCK_SINGLE_OPER);
+	if (res) {
+			PrintAndLog("Can't read block. error=%d", res);
+			return 1;
+		}
+	
+	PrintAndLog("block data:%s", sprint_hex(memBlock, 16));
+	return 0;
+}
+
+int CmdHF14AMfCGetSc(const char *Cmd) {
+	uint8_t memBlock[16];
+	uint8_t sectorNo = 0;
+	int i, res, flags;
+	memset(memBlock, 0x00, sizeof(memBlock));
+
+	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("Usage:  hf mf cgetsc <sector number>");
+		PrintAndLog("sample:  hf mf cgetsc 0");
+		PrintAndLog("Get sector data from magic Chinese card (only works with!!!)\n");
+		return 0;
+	}	
+
+	sectorNo = param_get8(Cmd, 0);
+	if (sectorNo > 15) {
+		PrintAndLog("Sector number must be in [0..15] as in MIFARE classic.");
+		return 1;
+	}
+
+	PrintAndLog("--sector number:%02x ", sectorNo);
+
+	flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;
+	for (i = 0; i < 4; i++) {
+		if (i == 1) flags = 0;
+		if (i == 3) flags = CSETBLOCK_HALT + CSETBLOCK_RESET_FIELD;
+
+		res = mfCGetBlock(sectorNo * 4 + i, memBlock, flags);
+		if (res) {
+			PrintAndLog("Can't read block. %02x error=%d", sectorNo * 4 + i, res);
+			return 1;
+		}
+	
+		PrintAndLog("block %02x data:%s", sectorNo * 4 + i, sprint_hex(memBlock, 16));
+	}
+	return 0;
+}
+
+int CmdHF14AMfCSave(const char *Cmd) {
+
+	FILE * f;
+	char filename[20];
+	char * fnameptr = filename;
+	uint8_t fillFromEmulator = 0;
+	uint8_t buf[64];
+	int i, j, len, flags;
+	
+	memset(filename, 0, sizeof(filename));
+	memset(buf, 0, sizeof(buf));
+
+	if (param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("It saves `magic Chinese` card dump into the file `filename.eml` or `cardID.eml`");
+		PrintAndLog("or into emulator memory (option `e`)");
+		PrintAndLog("Usage:  hf mf esave [file name w/o `.eml`][e]");
+		PrintAndLog(" sample: hf mf esave ");
+		PrintAndLog("         hf mf esave filename");
+		PrintAndLog("         hf mf esave e \n");
+		return 0;
+	}	
+
+	char ctmp = param_getchar(Cmd, 0);
+	if (ctmp == 'e' || ctmp == 'E') fillFromEmulator = 1;
+
+	if (fillFromEmulator) {
+		// put into emulator
+		flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;
+		for (i = 0; i < 16 * 4; i++) {
+			if (i == 1) flags = 0;
+			if (i == 16 * 4 - 1) flags = CSETBLOCK_HALT + CSETBLOCK_RESET_FIELD;
+		
+			if (mfCGetBlock(i, buf, flags)) {
+				PrintAndLog("Cant get block: %d", i);
+				break;
+			}
+			
+			if (mfEmlSetMem(buf, i, 1)) {
+				PrintAndLog("Cant set emul block: %d", i);
+				return 3;
+			}
+		}
+		return 0;
+	} else {
+		len = strlen(Cmd);
+		if (len > 14) len = 14;
+	
+		if (len < 1) {
+			// get filename
+			if (mfCGetBlock(0, buf, CSETBLOCK_SINGLE_OPER)) {
+				PrintAndLog("Cant get block: %d", 0);
+				return 1;
+			}
+			for (j = 0; j < 7; j++, fnameptr += 2)
+				sprintf(fnameptr, "%02x", buf[j]); 
+		} else {
+			memcpy(filename, Cmd, len);
+			fnameptr += len;
+		}
+
+		sprintf(fnameptr, ".eml"); 
+	
+		// open file
+		f = fopen(filename, "w+");
+
+		// put hex
+		flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;
+		for (i = 0; i < 16 * 4; i++) {
+			if (i == 1) flags = 0;
+			if (i == 16 * 4 - 1) flags = CSETBLOCK_HALT + CSETBLOCK_RESET_FIELD;
+		
+			if (mfCGetBlock(i, buf, flags)) {
+				PrintAndLog("Cant get block: %d", i);
+				break;
+			}
+			for (j = 0; j < 16; j++)
+				fprintf(f, "%02x", buf[j]); 
+			fprintf(f,"\n");
+		}
+		fclose(f);
+	
+		PrintAndLog("Saved to file: %s", filename);
+	
+		return 0;
+	}
+}
+
 static command_t CommandTable[] =
 {
-  {"help",		CmdHelp,				1, "This help"},
-  {"dbg",		CmdHF14AMfDbg,			0, "Set default debug mode"},
+  {"help",		CmdHelp,						1, "This help"},
+  {"dbg",			CmdHF14AMfDbg,			0, "Set default debug mode"},
   {"rdbl",		CmdHF14AMfRdBl,			0, "Read MIFARE classic block"},
   {"rdsc",		CmdHF14AMfRdSc,			0, "Read MIFARE classic sector"},
   {"dump",		CmdHF14AMfDump,			0, "Dump MIFARE classic tag to binary file"},
-  {"restore",	CmdHF14AMfRestore,		0, "Restore MIFARE classic binary file to BLANK tag"},
+  {"restore",	CmdHF14AMfRestore,	0, "Restore MIFARE classic binary file to BLANK tag"},
   {"wrbl",		CmdHF14AMfWrBl,			0, "Write MIFARE classic block"},
-  {"chk",		CmdHF14AMfChk,			0, "Test block keys"},
+  {"chk",			CmdHF14AMfChk,			0, "Test block keys"},
   {"mifare",	CmdHF14AMifare,			0, "Read parity error messages. param - <used card nonce>"},
   {"nested",	CmdHF14AMfNested,		0, "Test nested authentication"},
-  {"sim",		CmdHF14AMf1kSim,		0, "Simulate MIFARE card"},
-  {"eclr",  	CmdHF14AMfEClear,		0, "Clear simulator memory block"},
+  {"sim",			CmdHF14AMf1kSim,		0, "Simulate MIFARE card"},
+  {"eclr",		CmdHF14AMfEClear,		0, "Clear simulator memory block"},
   {"eget",		CmdHF14AMfEGet,			0, "Get simulator memory block"},
   {"eset",		CmdHF14AMfESet,			0, "Set simulator memory block"},
   {"eload",		CmdHF14AMfELoad,		0, "Load from file emul dump"},
@@ -1409,7 +1564,10 @@ static command_t CommandTable[] =
   {"ekeyprn",	CmdHF14AMfEKeyPrn,	0, "Print keys from simulator memory"},
   {"csetuid",	CmdHF14AMfCSetUID,	0, "Set UID for magic Chinese card"},
   {"csetblk",	CmdHF14AMfCSetBlk,	0, "Write block into magic Chinese card"},
+  {"cgetblk",	CmdHF14AMfCGetBlk,	0, "Read block from magic Chinese card"},
+  {"cgetsc",	CmdHF14AMfCGetSc,		0, "Read sector from magic Chinese card"},
   {"cload",		CmdHF14AMfCLoad,		0, "Load dump into magic Chinese card"},
+  {"csave",		CmdHF14AMfCSave,		0, "Save dump from magic Chinese card into file or emulator"},
   {NULL, NULL, 0, NULL}
 };
 

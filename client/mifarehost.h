@@ -54,4 +54,4 @@ int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount);
 int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount);
 int mfCSetUID(uint8_t *uid, uint8_t *oldUID, int wantWipe);
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, int wantWipe, uint8_t params);
-
+int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params);

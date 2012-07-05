@@ -198,9 +198,9 @@ int mfCheckKeys (uint8_t blockNo, uint8_t keyType, uint8_t keycnt, uint8_t * key
 }
 
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
-  UsbCommand c = {CMD_MIFARE_EML_MEMGET, {blockNum, blocksCount, 0}};
+	UsbCommand c = {CMD_MIFARE_EML_MEMGET, {blockNum, blocksCount, 0}};
  
-  SendCommand(&c);
+	SendCommand(&c);
 
 	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
 
@@ -210,9 +210,9 @@ int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
 }
 
 int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
-  UsbCommand c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, 0}};
+	UsbCommand c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, 0}};
 	memcpy(c.d.asBytes, data, blocksCount * 16); 
-  SendCommand(&c);
+	SendCommand(&c);
 	return 0;
 }
 
@@ -228,15 +228,34 @@ int mfCSetUID(uint8_t *uid, uint8_t *oldUID, int wantWipe) {
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, int wantWipe, uint8_t params) {
 	uint8_t isOK = 0;
 
-  UsbCommand c = {CMD_MIFARE_EML_CSETBLOCK, {wantWipe, params & (0xFE | (uid == NULL ? 0:1)), blockNo}};
+	UsbCommand c = {CMD_MIFARE_EML_CSETBLOCK, {wantWipe, params & (0xFE | (uid == NULL ? 0:1)), blockNo}};
 	memcpy(c.d.asBytes, data, 16); 
-  SendCommand(&c);
+	SendCommand(&c);
 
 	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
 
 	if (resp != NULL) {
 		isOK  = resp->arg[0] & 0xff;
 		if (uid != NULL) memcpy(uid, resp->d.asBytes, 4); 
+		if (!isOK) return 2;
+	} else {
+		PrintAndLog("Command execute timeout");
+		return 1;
+	}
+	return 0;
+}
+
+int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
+	uint8_t isOK = 0;
+
+	UsbCommand c = {CMD_MIFARE_EML_CGETBLOCK, {params, 0, blockNo}};
+	SendCommand(&c);
+
+	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
+
+	if (resp != NULL) {
+		isOK  = resp->arg[0] & 0xff;
+		memcpy(data, resp->d.asBytes, 16); 
 		if (!isOK) return 2;
 	} else {
 		PrintAndLog("Command execute timeout");

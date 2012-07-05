@@ -808,7 +808,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 			};
 		};	
 
-		// write UID block
+		// write block
 		if (workFlags & 0x02) {
 			ReaderTransmitShort(wupC1);
 			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
@@ -859,9 +859,100 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 	LED_B_OFF();
 
-	if (workFlags & 0x10) {
+	if ((workFlags & 0x10) || (!isOK)) {
 		// Thats it...
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
 	}
 }
+
+void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
+  
+  // params
+	// bit 1 - need wupC
+	// bit 2 - need HALT after sequence
+	// bit 3 - need init FPGA and field before sequence
+	// bit 4 - need reset FPGA and LED
+	uint8_t workFlags = arg0;
+	uint8_t blockNo = arg2;
+	
+	// card commands
+	uint8_t wupC1[]       = { 0x40 }; 
+	uint8_t wupC2[]       = { 0x43 }; 
+	
+	// variables
+	byte_t isOK = 0;
+	uint8_t data[18];
+	uint32_t cuid = 0;
+	
+	memset(data, 0x00, 18);
+	uint8_t* receivedAnswer = mifare_get_bigbufptr();
+	
+	if (workFlags & 0x08) {
+		// clear trace
+		iso14a_clear_tracelen();
+		iso14a_set_tracing(TRUE);
+
+		iso14443a_setup();
+
+		LED_A_ON();
+		LED_B_OFF();
+		LED_C_OFF();
+	
+		SpinDelay(300);
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+		SpinDelay(100);
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+	}
+
+	while (true) {
+		if (workFlags & 0x02) {
+			ReaderTransmitShort(wupC1);
+			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
+				if (MF_DBGLEVEL >= 1)	Dbprintf("wupC1 error");
+				break;
+			};
+
+			ReaderTransmit(wupC2, sizeof(wupC2));
+			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
+				if (MF_DBGLEVEL >= 1)	Dbprintf("wupC2 error");
+				break;
+			};
+		}
+
+		// read block
+		if ((mifare_sendcmd_short(NULL, 0, 0x30, blockNo, receivedAnswer) != 18)) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("read block send command error");
+			break;
+		};
+		memcpy(data, receivedAnswer, 18);
+		
+		if (workFlags & 0x04) {
+			if (mifare_classic_halt(NULL, cuid)) {
+				if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
+				break;
+			};
+		}
+		
+		isOK = 1;
+		break;
+	}
+	
+	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
+	if (isOK) memcpy(ack.d.asBytes, data, 18);
+	
+	// add trace trailer
+	memset(data, 0x44, 4);
+	LogTrace(data, 4, 0, 0, TRUE);
+
+	LED_B_ON();
+	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+	LED_B_OFF();
+
+	if ((workFlags & 0x10) || (!isOK)) {
+		// Thats it...
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+		LEDsoff();
+	}
+}
+
