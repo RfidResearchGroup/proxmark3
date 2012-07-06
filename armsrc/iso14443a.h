@@ -23,6 +23,60 @@
 
 typedef struct nestedVector { uint32_t nt, ks1; } nestedVector;
 
+typedef struct {
+	enum {
+		DEMOD_UNSYNCD,
+		DEMOD_START_OF_COMMUNICATION,
+		DEMOD_MANCHESTER_D,
+		DEMOD_MANCHESTER_E,
+		DEMOD_MANCHESTER_F,
+		DEMOD_ERROR_WAIT
+	}       state;
+	int     bitCount;
+	int     posCount;
+	int     syncBit;
+	int     parityBits;
+	uint16_t    shiftReg;
+	int     buffer;
+	int     buff;
+	int     samples;
+	int     len;
+	enum {
+		SUB_NONE,
+		SUB_FIRST_HALF,
+		SUB_SECOND_HALF
+	}		sub;
+	uint8_t   *output;
+} tDemod;
+
+typedef struct {
+	enum {
+		STATE_UNSYNCD,
+		STATE_START_OF_COMMUNICATION,
+		STATE_MILLER_X,
+		STATE_MILLER_Y,
+		STATE_MILLER_Z,
+		STATE_ERROR_WAIT
+		}		state;
+		uint16_t    shiftReg;
+		int	bitCnt;
+		int	byteCnt;
+		int	byteCntMax;
+		int	posCnt;
+		int	syncBit;
+		int	parityBits;
+		int	samples;
+		int	highCnt;
+		int	bitBuffer;
+	enum {
+		DROP_NONE,
+		DROP_FIRST_HALF,
+		DROP_SECOND_HALF
+	}		drop;
+    uint8_t   *output;
+} tUart;
+
+
 extern byte_t oddparity (const byte_t bt);
 extern uint32_t GetParity(const uint8_t * pbtCmd, int iLen);
 extern void AppendCrc14443a(uint8_t* data, int len);

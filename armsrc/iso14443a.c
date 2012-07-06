@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Merlok - June 2011
+// Merlok - June 2011, 2012
 // Gerhard de Koning Gans - May 2008
 // Hagen Fritsch - June 2010
 //
@@ -129,32 +129,7 @@ int LogTrace(const uint8_t * btBytes, int iLen, int iSamples, uint32_t dwParity,
 // The software UART that receives commands from the reader, and its state
 // variables.
 //-----------------------------------------------------------------------------
-static struct {
-    enum {
-        STATE_UNSYNCD,
-        STATE_START_OF_COMMUNICATION,
-		STATE_MILLER_X,
-		STATE_MILLER_Y,
-		STATE_MILLER_Z,
-        STATE_ERROR_WAIT
-    }       state;
-    uint16_t    shiftReg;
-    int     bitCnt;
-    int     byteCnt;
-    int     byteCntMax;
-    int     posCnt;
-    int     syncBit;
-	int     parityBits;
-	int     samples;
-    int     highCnt;
-    int     bitBuffer;
-	enum {
-		DROP_NONE,
-		DROP_FIRST_HALF,
-		DROP_SECOND_HALF
-	}		drop;
-    uint8_t   *output;
-} Uart;
+static tUart Uart;
 
 static RAMFUNC int MillerDecoding(int bit)
 {
@@ -393,32 +368,7 @@ static RAMFUNC int MillerDecoding(int bit)
 //=============================================================================
 // ISO 14443 Type A - Manchester
 //=============================================================================
-
-static struct {
-    enum {
-        DEMOD_UNSYNCD,
-		DEMOD_START_OF_COMMUNICATION,
-		DEMOD_MANCHESTER_D,
-		DEMOD_MANCHESTER_E,
-		DEMOD_MANCHESTER_F,
-        DEMOD_ERROR_WAIT
-    }       state;
-    int     bitCount;
-    int     posCount;
-	int     syncBit;
-	int     parityBits;
-    uint16_t    shiftReg;
-	int     buffer;
-	int     buff;
-	int     samples;
-    int     len;
-	enum {
-		SUB_NONE,
-		SUB_FIRST_HALF,
-		SUB_SECOND_HALF
-	}		sub;
-    uint8_t   *output;
-} Demod;
+static tDemod Demod;
 
 static RAMFUNC int ManchesterDecoding(int v)
 {
@@ -2402,9 +2352,7 @@ lbWORK:	if (len == 0) break;
 				cardSTATE = MFEMUL_WORK;
 				break;
 			}
-		
 		}
-	
 	}
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -2415,4 +2363,133 @@ lbWORK:	if (len == 0) break;
 	LogTrace(rAUTH_NT, 4, 0, 0, TRUE);
 
 	if (MF_DBGLEVEL >= 1)	Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ",	tracing, traceLen);
+}
+
+//-----------------------------------------------------------------------------
+// MIFARE sniffer. 
+// 
+//-----------------------------------------------------------------------------
+void RAMFUNC SniffMifare(void) {
+	LEDsoff();
+	// init trace buffer
+	traceLen = 0;
+	memset(trace, 0x44, TRACE_SIZE);
+
+	// We won't start recording the frames that we acquire until we trigger;
+	// a good trigger condition to get started is probably when we see a
+	// response from the tag.
+	int triggered = FALSE; // FALSE to wait first for card
+
+	// The command (reader -> tag) that we're receiving.
+	// The length of a received command will in most cases be no more than 18 bytes.
+	// So 32 should be enough!
+	uint8_t *receivedCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
+	// The response (tag -> reader) that we're receiving.
+	uint8_t *receivedResponse = (((uint8_t *)BigBuf) + RECV_RES_OFFSET);
+
+	// As we receive stuff, we copy it from receivedCmd or receivedResponse
+	// into trace, along with its length and other annotations.
+	//uint8_t *trace = (uint8_t *)BigBuf;
+	
+	// The DMA buffer, used to stream samples from the FPGA
+	int8_t *dmaBuf = ((int8_t *)BigBuf) + DMA_BUFFER_OFFSET;
+	int lastRxCounter;
+	int8_t *upTo;
+	int smpl;
+	int maxBehindBy = 0;
+
+	// Set up the demodulator for tag -> reader responses.
+	Demod.output = receivedResponse;
+	Demod.len = 0;
+	Demod.state = DEMOD_UNSYNCD;
+
+	// Set up the demodulator for the reader -> tag commands
+	memset(&Uart, 0, sizeof(Uart));
+	Uart.output = receivedCmd;
+	Uart.byteCntMax = 32; // was 100 (greg)//////////////////
+	Uart.state = STATE_UNSYNCD;
+
+	// Setup for the DMA.
+	FpgaSetupSsc();
+	upTo = dmaBuf;
+	lastRxCounter = DMA_BUFFER_SIZE;
+	FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE);
+
+	// And put the FPGA in the appropriate mode
+	// Signal field is off with the appropriate LED
+	LED_D_OFF();
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_SNIFFER);
+	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+
+	// Count of samples received so far, so that we can include timing
+	// information in the trace buffer.
+	rsamples = 0;
+	// And now we loop, receiving samples.
+	while(true) {
+		LED_A_ON();
+		WDT_HIT();
+		int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) &
+									(DMA_BUFFER_SIZE-1);
+		if(behindBy > maxBehindBy) {
+			maxBehindBy = behindBy;
+			if(behindBy > 400) {
+				Dbprintf("blew circular buffer! behindBy=0x%x", behindBy);
+				goto done;
+			}
+		}
+		if(behindBy < 1) continue;
+
+		LED_A_OFF();
+		
+		smpl = upTo[0];
+		upTo++;
+		lastRxCounter -= 1;
+		if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
+			upTo -= DMA_BUFFER_SIZE;
+			lastRxCounter += DMA_BUFFER_SIZE;
+			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
+			AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+		}
+		
+		rsamples += 4;
+		if(MillerDecoding((smpl & 0xF0) >> 4)) {
+			LED_C_ON();
+			if(triggered) {
+				if (!LogTrace(receivedCmd, Uart.byteCnt, -1 * Uart.samples, Uart.parityBits, TRUE)) break;
+			}
+			/* And ready to receive another command. */
+			Uart.state = STATE_UNSYNCD;
+			/* And also reset the demod code, which might have been */
+			/* false-triggered by the commands from the reader. */
+			Demod.state = DEMOD_UNSYNCD;
+			LED_B_OFF();
+		}
+
+		if(ManchesterDecoding(smpl & 0x0F)) {
+			LED_B_ON();
+
+			if (!LogTrace(receivedResponse, Demod.len, -1 * Demod.samples, Demod.parityBits, FALSE)) break;
+
+			triggered = TRUE;
+
+			// And ready to receive another response.
+			memset(&Demod, 0, sizeof(Demod));
+			Demod.output = receivedResponse;
+			Demod.state = DEMOD_UNSYNCD;
+			LED_C_OFF();
+		}
+
+		if(BUTTON_PRESS()) {
+			DbpString("button cancelled");
+			goto done;
+		}
+	} // main cycle
+
+	DbpString("COMMAND FINISHED");
+
+done:
+	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
+	Dbprintf("maxBehindBy=%x, Uart.state=%x, Uart.byteCnt=%x", maxBehindBy, Uart.state, Uart.byteCnt);
+	Dbprintf("Uart.byteCntMax=%x, traceLen=%x, Uart.output[0]=%x", Uart.byteCntMax, traceLen, (int)Uart.output[0]);
+	LEDsoff();
 }

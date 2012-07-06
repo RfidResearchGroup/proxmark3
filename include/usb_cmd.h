@@ -127,6 +127,8 @@ typedef struct {
 #define CMD_MIFARE_WRITEBL							0x0622
 #define CMD_MIFARE_CHKKEYS							0x0623
 
+#define CMD_MIFARE_SNIFFER							0x0630
+
 #define CMD_UNKNOWN											0xFFFF
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:

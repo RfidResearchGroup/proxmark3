@@ -135,6 +135,7 @@ uint32_t GetParity(const uint8_t * pbtCmd, int iLen);
 void iso14a_set_trigger(int enable);
 void iso14a_clear_tracelen(void);
 void iso14a_set_tracing(int enable);
+void RAMFUNC SniffMifare(void);
 
 // mifarecmd.h
 void ReaderMifare(uint32_t parameter);

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2011 Merlok
+// Copyright (C) 2011,2012 Merlok
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -1542,6 +1542,20 @@ int CmdHF14AMfCSave(const char *Cmd) {
 	}
 }
 
+int CmdHF14AMfSniff(const char *Cmd){
+	
+	if (param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("Usage:  hf mf sniff ");
+		PrintAndLog("        sample: hf mf sniff ");
+		return 0;
+	}	
+	
+  UsbCommand c = {CMD_MIFARE_SNIFFER, {0, 0, 0}};
+  SendCommand(&c);
+
+  return 0;
+}
+
 static command_t CommandTable[] =
 {
   {"help",		CmdHelp,						1, "This help"},
@@ -1554,6 +1568,7 @@ static command_t CommandTable[] =
   {"chk",			CmdHF14AMfChk,			0, "Test block keys"},
   {"mifare",	CmdHF14AMifare,			0, "Read parity error messages. param - <used card nonce>"},
   {"nested",	CmdHF14AMfNested,		0, "Test nested authentication"},
+  {"sniff",		CmdHF14AMfSniff,		0, "Sniff card-reader communication"},
   {"sim",			CmdHF14AMf1kSim,		0, "Simulate MIFARE card"},
   {"eclr",		CmdHF14AMfEClear,		0, "Clear simulator memory block"},
   {"eget",		CmdHF14AMfEGet,			0, "Get simulator memory block"},

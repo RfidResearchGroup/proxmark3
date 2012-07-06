@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Merlok - June 2011
+// Merlok - June 2011, 2012
 // Gerhard de Koning Gans - May 2008
 // Hagen Fritsch - June 2010
 //

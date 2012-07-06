@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Merlok, May 2011
+// Merlok, May 2011, 2012
 // Many authors, whom made it possible
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
