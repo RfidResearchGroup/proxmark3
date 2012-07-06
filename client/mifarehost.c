@@ -221,6 +221,10 @@ int mfCSetUID(uint8_t *uid, uint8_t *oldUID, int wantWipe) {
 	memset(block0, 0, 16);
 	memcpy(block0, uid, 4); 
 	block0[4] = block0[0]^block0[1]^block0[2]^block0[3]; // Mifare UID BCC
+	// mifare classic SAK(byte 5) and ATQA(byte 6 and 7)
+	block0[5] = 0x88;
+	block0[6] = 0x04;
+	block0[7] = 0x00;
 	
 	return mfCSetBlock(0, block0, oldUID, wantWipe, CSETBLOCK_SINGLE_OPER);
 }
