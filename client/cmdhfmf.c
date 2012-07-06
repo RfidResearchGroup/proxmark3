@@ -19,7 +19,7 @@ int CmdHF14AMifare(const char *Cmd)
 	uint32_t nt = 0;
 	uint64_t par_list = 0, ks_list = 0, r_key = 0;
 	uint8_t isOK = 0;
-	uint8_t keyBlock[6] = {0,0,0,0,0,0};
+	uint8_t keyBlock[8] = {0};
 
 	if (param_getchar(Cmd, 0) && param_gethex(Cmd, 0, keyBlock, 8)) {
 		PrintAndLog("Nt must include 8 HEX symbols");
@@ -83,7 +83,7 @@ start:
 	else
 	{
 		PrintAndLog("Found invalid key. ( Nt=%08x ,Trying use it to run again...", nt);	
-		c.d.asDwords[0] = nt;
+		c.arg[0] = nt;
 		goto start;
 	}
 	
