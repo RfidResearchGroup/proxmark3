@@ -93,6 +93,5 @@ extern void iso14a_set_trigger(int enable);
 
 extern void iso14a_clear_tracelen(void);
 extern void iso14a_set_tracing(int enable);
-extern int LogTrace(const uint8_t * btBytes, int iLen, int iSamples, uint32_t dwParity, int bReader);
 
 #endif /* __ISO14443A_H */

@@ -126,16 +126,16 @@ void ReadSTMemoryIso14443(uint32_t parameter,uint32_t dwLast);
 void RAMFUNC SnoopIso14443(void);
 
 /// iso14443a.h
-void RAMFUNC SnoopIso14443a(void);
+void RAMFUNC SnoopIso14443a(uint8_t param);
 void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd);	// ## simulate iso14443a tag
 void ReaderIso14443a(UsbCommand * c, UsbCommand * ack);
 // Also used in iclass.c
-int LogTrace(const uint8_t * btBytes, int iLen, int iSamples, uint32_t dwParity, int bReader);
+int RAMFUNC LogTrace(const uint8_t * btBytes, int iLen, int iSamples, uint32_t dwParity, int bReader);
 uint32_t GetParity(const uint8_t * pbtCmd, int iLen);
 void iso14a_set_trigger(int enable);
 void iso14a_clear_tracelen(void);
 void iso14a_set_tracing(int enable);
-void RAMFUNC SniffMifare(void);
+void RAMFUNC SniffMifare(uint8_t param);
 
 // mifarecmd.h
 void ReaderMifare(uint32_t parameter);

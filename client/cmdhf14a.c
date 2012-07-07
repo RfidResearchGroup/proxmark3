@@ -284,9 +284,26 @@ int CmdHF14ASim(const char *Cmd)
   return 0;
 }
 
-int CmdHF14ASnoop(const char *Cmd)
-{
-  UsbCommand c = {CMD_SNOOP_ISO_14443a};
+int CmdHF14ASnoop(const char *Cmd) {
+	int param = 0;
+	
+	if (param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("It get data from the field and saves it into command buffer.");
+		PrintAndLog("Buffer accessible from command hf 14a list.");
+		PrintAndLog("Usage:  hf 14a snoop [c][r]");
+		PrintAndLog("c - triggered by first data from card");
+		PrintAndLog("r - triggered by first 7-bit request from reader (REQ,WUP,...)");
+		PrintAndLog("sample: hf 14a snoop c r");
+		return 0;
+	}	
+	
+	for (int i = 0; i < 2; i++) {
+		char ctmp = param_getchar(Cmd, i);
+		if (ctmp == 'c' || ctmp == 'C') param |= 0x01;
+		if (ctmp == 'r' || ctmp == 'R') param |= 0x02;
+	}
+
+  UsbCommand c = {CMD_SNOOP_ISO_14443a, {param, 0, 0}};
   SendCommand(&c);
   return 0;
 }

@@ -706,7 +706,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 
 #ifdef WITH_ISO14443a
 		case CMD_SNOOP_ISO_14443a:
-			SnoopIso14443a();
+			SnoopIso14443a(c->arg[0]);
 			break;
 		case CMD_READER_ISO_14443a:
 			ReaderIso14443a(c, &ack);
@@ -764,7 +764,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			
 		// mifare sniffer
 		case CMD_MIFARE_SNIFFER:
-			SniffMifare();
+			SniffMifare(c->arg[0]);
 			break;
 #endif
 
