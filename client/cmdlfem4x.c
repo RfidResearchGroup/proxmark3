@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include "proxusb.h"
 #include "ui.h"
 #include "graph.h"
@@ -403,7 +404,7 @@ int CmdEM410xWrite(const char *Cmd)
   uint64_t id = 0;
   unsigned int card;
 
-  sscanf(Cmd, "%lx %d", &id, &card);
+  sscanf(Cmd, "%" PRIx64 " %d", &id, &card);
 
   if (id >= 0x10000000000) {
     PrintAndLog("Error! Given EM410x ID is longer than 40 bits.\n");
@@ -415,7 +416,7 @@ int CmdEM410xWrite(const char *Cmd)
     return 0;
   }
 
-  PrintAndLog("Writing %s tag with UID 0x%010lx", card ? "T55x7":"T5555", id);
+  PrintAndLog("Writing %s tag with UID 0x%010" PRIx64, card ? "T55x7":"T5555", id);
   UsbCommand c = {CMD_EM410X_WRITE_TAG, {card, (uint32_t)(id >> 32), (uint32_t)id}};
   SendCommand(&c);
 
