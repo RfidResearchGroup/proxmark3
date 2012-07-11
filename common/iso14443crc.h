@@ -8,6 +8,7 @@
 
 #ifndef __ISO14443CRC_H
 #define __ISO14443CRC_H
+#include "common.h"
 
 //-----------------------------------------------------------------------------
 // Routines to compute the CRCs (two different flavours, just for confusion)
@@ -18,8 +19,9 @@
 #define CRC_ICLASS	0xE012  /* ICLASS PRERFIX */
 
 void ComputeCrc14443(int CrcType,
-                     unsigned char *Data, int Length,
+                     const unsigned char *Data, int Length,
                      unsigned char *TransmitFirst,
                      unsigned char *TransmitSecond);
+int CheckCrc14443(int CrcType, const unsigned char *Data, int Length);
 
 #endif

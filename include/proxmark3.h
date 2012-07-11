@@ -51,8 +51,11 @@
 #define UDP_CSR_BYTES_RECEIVED(x)				(((x) >> 16) & 0x7ff)
 //**************************************************************
 
-#define LOW(x)	AT91C_BASE_PIOA->PIO_CODR = (x)
-#define HIGH(x)	AT91C_BASE_PIOA->PIO_SODR = (x)
+#define LOW(x)	 AT91C_BASE_PIOA->PIO_CODR = (x)
+#define HIGH(x)	 AT91C_BASE_PIOA->PIO_SODR = (x)
+#define GETBIT(x) (AT91C_BASE_PIOA->PIO_ODSR & (x)) ? 1:0
+#define SETBIT(x, y) (y) ? (HIGH(x)):(LOW(x))
+#define INVBIT(x) SETBIT((x), !(GETBIT(x)))
 
 #define SPI_FPGA_MODE	0
 #define SPI_LCD_MODE	1
@@ -72,12 +75,16 @@
 
 #define LED_A_ON()		HIGH(GPIO_LED_A)
 #define LED_A_OFF()		LOW(GPIO_LED_A)
+#define LED_A_INV()		INVBIT(GPIO_LED_A)
 #define LED_B_ON()		HIGH(GPIO_LED_B)
 #define LED_B_OFF()		LOW(GPIO_LED_B)
+#define LED_B_INV()		INVBIT(GPIO_LED_B)
 #define LED_C_ON()		HIGH(GPIO_LED_C)
 #define LED_C_OFF()		LOW(GPIO_LED_C)
+#define LED_C_INV()		INVBIT(GPIO_LED_C)
 #define LED_D_ON()		HIGH(GPIO_LED_D)
 #define LED_D_OFF()		LOW(GPIO_LED_D)
+#define LED_D_INV()		INVBIT(GPIO_LED_D)
 #define RELAY_ON()		HIGH(GPIO_RELAY)
 #define RELAY_OFF()		LOW(GPIO_RELAY)
 #define BUTTON_PRESS()	!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_BUTTON)

@@ -13,6 +13,7 @@
 #ifndef __ISO14443A_H
 #define __ISO14443A_H
 #include "common.h"
+#include "mifaresniff.h"
 
 // mifare reader                      over DMA buffer (SnoopIso14443a())!!!
 #define MIFARE_BUFF_OFFSET 3560  //              \/   \/   \/

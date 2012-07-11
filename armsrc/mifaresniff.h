@@ -22,5 +22,26 @@
 #include "mifareutil.h"
 #include "common.h"
 
+#define SNF_INIT				0
+#define SNF_NO_FIELD		1
+#define SNF_WUPREQ			2
+#define SNF_ATQA				3
+#define SNF_ANTICOL1		4
+#define SNF_UID1				5
+#define SNF_ANTICOL2		6
+#define SNF_UID2				7
+#define SNF_SAK					8
+#define SNF_CARD_IDLE		9
+#define SNF_CARD_CMD		10
+#define SNF_CARD_RESP		11
+
+#define SNF_UID_4				0
+#define SNF_UID_7				0
+
+int MfSniffInit(void);
+int RAMFUNC MfSniffLogic(const uint8_t * data, int len, int bitCnt, int reader);
+int RAMFUNC MfSniffSend(int maxTimeoutMs);
+int intMfSniffSend();
+int MfSniffEnd(void);
 
 #endif

@@ -18,7 +18,7 @@ static unsigned short UpdateCrc14443(unsigned char ch, unsigned short *lpwCrc)
 }
 
 void ComputeCrc14443(int CrcType,
-                     unsigned char *Data, int Length,
+                     const unsigned char *Data, int Length,
                      unsigned char *TransmitFirst,
                      unsigned char *TransmitSecond)
 {
@@ -36,4 +36,13 @@ void ComputeCrc14443(int CrcType,
     *TransmitFirst = (unsigned char) (wCrc & 0xFF);
     *TransmitSecond = (unsigned char) ((wCrc >> 8) & 0xFF);
     return;
+}
+
+int CheckCrc14443(int CrcType, const unsigned char *Data, int Length) {
+	unsigned char b1;
+	unsigned char b2;
+	if (Length < 3) return 0;
+	ComputeCrc14443(CrcType, Data, Length - 2, &b1, &b2);
+	if ((b1 == Data[Length - 2]) && (b2 == Data[Length - 1])) return 1;
+	return 0;
 }

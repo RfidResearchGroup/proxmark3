@@ -138,11 +138,16 @@ void FpgaSetupSsc(void)
 //-----------------------------------------------------------------------------
 void FpgaSetupSscDma(uint8_t *buf, int len)
 {
+	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
+	
 	AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) buf;
 	AT91C_BASE_PDC_SSC->PDC_RCR = len;
 	AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) buf;
 	AT91C_BASE_PDC_SSC->PDC_RNCR = len;
-	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
+	
+	if (buf != NULL) {
+		AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
+	}
 }
 
 static void DownloadFPGA_byte(unsigned char w)

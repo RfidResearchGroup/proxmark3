@@ -37,7 +37,6 @@ start:
 	// message
 	printf("-------------------------------------------------------------------------\n");
 	printf("Executing command. It may take up to 30 min.\n");
-	printf("Press the key on proxmark3 device to abort proxmark3.\n");
 	printf("Press the key on the proxmark3 device to abort both proxmark3 and client.\n");
 	printf("-------------------------------------------------------------------------\n");
 	
@@ -1543,6 +1542,18 @@ int CmdHF14AMfCSave(const char *Cmd) {
 }
 
 int CmdHF14AMfSniff(const char *Cmd){
+	int res = 0;
+	int len = 0;
+	int blockLen = 0;
+	int num = 0;
+	int pckNum = 0;
+	uint8_t uid[8];
+	uint8_t atqa[2];
+	uint8_t sak;
+	bool isTag;
+	uint8_t buf[3000];
+	uint8_t * bufPtr = buf;
+	memset(buf, 0x00, 3000);
 	
 	if (param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("Usage:  hf mf sniff ");
@@ -1550,9 +1561,66 @@ int CmdHF14AMfSniff(const char *Cmd){
 		return 0;
 	}	
 	
+	printf("-------------------------------------------------------------------------\n");
+	printf("Executing command. \n");
+	printf("Press the key on the proxmark3 device to abort both proxmark3 and client.\n");
+	printf("Press the key on pc keyboard to abort the client.\n");
+	printf("-------------------------------------------------------------------------\n");
+
   UsbCommand c = {CMD_MIFARE_SNIFFER, {0, 0, 0}};
   SendCommand(&c);
 
+	// wait cycle
+	while (true) {
+		printf(".");
+		fflush(stdout);
+		if (ukbhit()) {
+			getchar();
+			printf("\naborted via keyboard!\n");
+			break;
+		}
+		
+		UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 2000);
+		if (resp != NULL) {
+			res = resp->arg[0] & 0xff;
+			len = resp->arg[1];
+			num = resp->arg[2];
+			
+			if (res == 0) return 0;
+			if (res == 1) {
+				if (num ==0) {
+					bufPtr = buf;
+					memset(buf, 0x00, 3000);
+				}
+				memcpy(bufPtr, resp->d.asBytes, len);
+				bufPtr += len;
+				pckNum++;
+			}
+			if (res == 2) {
+				blockLen = bufPtr - buf;
+				bufPtr = buf;
+				printf(">\n");
+				PrintAndLog("received trace len: %d packages: %d", blockLen, pckNum);
+				num = 0;
+				while (bufPtr - buf + 9 < blockLen) {
+				  isTag = bufPtr[3] & 0x80 ? true:false;
+					bufPtr += 8;
+					len = bufPtr[0];
+					bufPtr++;
+					if ((len == 14) && (bufPtr[0] = 0xff) && (bufPtr[1] = 0xff)) {
+						memcpy(uid, bufPtr + 2, 7);
+						memcpy(atqa, bufPtr + 2 + 7, 2);
+						sak = bufPtr[11];
+						PrintAndLog("tag select uid:%s atqa:%02x %02x sak:0x%02x", sprint_hex(uid, 7), atqa[0], atqa[1], sak);
+					} else {
+						PrintAndLog("%s(%d):%s", isTag ? "TAG":"RDR", num, sprint_hex(bufPtr, len));
+					}
+					bufPtr += len;
+					num++;
+				}
+			}
+		} // resp not NILL
+	} // while (true)
   return 0;
 }
 

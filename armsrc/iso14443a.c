@@ -656,7 +656,6 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 		if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
 			AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dmaBuf;
 			AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-			Dbprintf("RxEmpty ERROR!!! %d", dataLen); // temporary
 		}
 		// secondary buffer sets as primary, secondary buffer was stopped
 		if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
@@ -2356,7 +2355,8 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// param:
 	// bit 0 - trigger from first card answer
 	// bit 1 - trigger from first reader 7-bit request
-	
+
+	// C(red) A(yellow) B(green)
 	LEDsoff();
 	// init trace buffer
 	traceLen = 0;
@@ -2378,7 +2378,6 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	int8_t *data = dmaBuf;
 	int maxDataLen = 0;
 	int dataLen = 0;
-//	data = dmaBuf;
 
 	// Set up the demodulator for tag -> reader responses.
 	Demod.output = receivedResponse;
@@ -2400,10 +2399,11 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	LED_D_OFF();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_SNIFFER);
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+	
+	// init sniffer
+	MfSniffInit();
+	int sniffCounter = 0;
 
-	// Count of samples received so far, so that we can include timing
-	// information in the trace buffer.
-	rsamples = 0;
 	// And now we loop, receiving samples.
 	while(true) {
 		if(BUTTON_PRESS()) {
@@ -2413,6 +2413,13 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
 		LED_A_ON();
 		WDT_HIT();
+		
+		if (++sniffCounter > 65) {
+			if (MfSniffSend(2000)) {
+				AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
+			}
+			sniffCounter = 0;
+		}
 
 		int register readBufDataP = data - dmaBuf;
 		int register dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
@@ -2445,33 +2452,30 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
 		LED_A_OFF();
 		
-		rsamples += 4;
 		if(MillerDecoding((data[0] & 0xF0) >> 4)) {
-			LED_C_ON();
+			LED_C_INV();
 			// check - if there is a short 7bit request from reader
-			if ((Uart.byteCnt == 1) && (Uart.bitCnt = 9)) { 
-
-			}
-			if (!LogTrace(receivedCmd, Uart.byteCnt, 0 - Uart.samples, Uart.parityBits, TRUE)) break;
+			if (MfSniffLogic(receivedCmd, Uart.byteCnt, Uart.bitCnt, TRUE)) break;
 
 			/* And ready to receive another command. */
 			Uart.state = STATE_UNSYNCD;
-			/* And also reset the demod code, which might have been */
-			/* false-triggered by the commands from the reader. */
+			
+			/* And also reset the demod code */
 			Demod.state = DEMOD_UNSYNCD;
-			LED_B_OFF();
 		}
 
 		if(ManchesterDecoding(data[0] & 0x0F)) {
-			LED_B_ON();
+			LED_C_INV();
 
-			if (!LogTrace(receivedResponse, Demod.len, 0 - Demod.samples, Demod.parityBits, FALSE)) break;
+			if (MfSniffLogic(receivedResponse, Demod.len, Uart.bitCnt, FALSE)) break;
 
 			// And ready to receive another response.
 			memset(&Demod, 0, sizeof(Demod));
 			Demod.output = receivedResponse;
 			Demod.state = DEMOD_UNSYNCD;
-			LED_C_OFF();
+
+			/* And also reset the uart code */
+			Uart.state = STATE_UNSYNCD;
 		}
 
 		data++;
@@ -2484,7 +2488,9 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
 done:
 	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
+	MfSniffEnd();
+	
 	Dbprintf("maxDataLen=%x, Uart.state=%x, Uart.byteCnt=%x", maxDataLen, Uart.state, Uart.byteCnt);
-	Dbprintf("Uart.byteCntMax=%x, traceLen=%x, Uart.output[0]=%x", Uart.byteCntMax, traceLen, (int)Uart.output[0]);
+	Dbprintf("Uart.byteCntMax=%x, traceLen=%x", Uart.byteCntMax, traceLen);
 	LEDsoff();
 }
