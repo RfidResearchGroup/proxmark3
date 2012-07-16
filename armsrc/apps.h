@@ -70,6 +70,12 @@ void FpgaGatherVersion(char *dst, int len);
 void FpgaSetupSsc(void);
 void SetupSpi(int mode);
 void FpgaSetupSscDma(uint8_t *buf, int len);
+void inline FpgaDisableSscDma(void){
+	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
+}
+void inline FpgaEnableSscDma(void){
+	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
+}
 void SetAdcMuxFor(uint32_t whichGpio);
 
 // Definitions for the FPGA commands.

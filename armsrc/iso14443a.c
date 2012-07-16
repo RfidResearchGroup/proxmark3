@@ -2416,7 +2416,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		
 		if (++sniffCounter > 65) {
 			if (MfSniffSend(2000)) {
-				AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
+				FpgaEnableSscDma();
 			}
 			sniffCounter = 0;
 		}
@@ -2442,7 +2442,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
 			AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dmaBuf;
 			AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-			Dbprintf("RxEmpty ERROR!!! %d", dataLen); // temporary
+			Dbprintf("RxEmpty ERROR!!! data length:%d", dataLen); // temporary
 		}
 		// secondary buffer sets as primary, secondary buffer was stopped
 		if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
@@ -2487,10 +2487,9 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	DbpString("COMMAND FINISHED");
 
 done:
-	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
+	FpgaDisableSscDma();
 	MfSniffEnd();
 	
-	Dbprintf("maxDataLen=%x, Uart.state=%x, Uart.byteCnt=%x", maxDataLen, Uart.state, Uart.byteCnt);
-	Dbprintf("Uart.byteCntMax=%x, traceLen=%x", Uart.byteCntMax, traceLen);
+	Dbprintf("maxDataLen=%x, Uart.state=%x, Uart.byteCnt=%x Uart.byteCntMax=%x", maxDataLen, Uart.state, Uart.byteCnt, Uart.byteCntMax);
 	LEDsoff();
 }

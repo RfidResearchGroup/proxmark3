@@ -10,8 +10,19 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <time.h>
 
 int ukbhit(void);
+
+void AddLogLine(char *fileName, char *extData, char *c);
+void AddLogHex(char *fileName, char *extData, const uint8_t * data, const size_t len);
+void AddLogUint64(char *fileName, char *extData, const uint64_t data);
+void AddLogCurrentDT(char *fileName);
+void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext);
 
 void print_hex(const uint8_t * data, const size_t len);
 char * sprint_hex(const uint8_t * data, const size_t len);
@@ -26,3 +37,4 @@ uint32_t param_get32ex(const char *line, int paramnum, int deflt, int base);
 uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base);
 int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt);
 int param_getstr(const char *line, int paramnum, char * str);
+

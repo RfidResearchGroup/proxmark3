@@ -8,10 +8,6 @@
 // utilities
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
 #include "util.h"
 
 #ifndef WIN32
@@ -48,6 +44,54 @@ int ukbhit(void) {
 }
 #endif
 
+// log files functions
+void AddLogLine(char *fileName, char *extData, char *c) {
+	FILE *fLog = NULL;
+
+	fLog = fopen(fileName, "a");
+	if (!fLog) {
+		printf("Could not append log file %s", fileName);
+		return;
+	}
+
+	fprintf(fLog, "%s", extData);
+	fprintf(fLog, "%s\n", c);
+	fclose(fLog);
+}
+
+void AddLogHex(char *fileName, char *extData, const uint8_t * data, const size_t len){
+	AddLogLine(fileName, extData, sprint_hex(data, len));
+}
+
+void AddLogUint64(char *fileName, char *extData, const uint64_t data) {
+  char buf[100] = {0};
+	sprintf(buf, "%x%x", (unsigned int)((data & 0xFFFFFFFF00000000) >> 32), (unsigned int)(data & 0xFFFFFFFF));
+	AddLogLine(fileName, extData, buf);
+}
+
+void AddLogCurrentDT(char *fileName) {
+	char buff[20];
+	struct tm *curTime;
+
+	time_t now = time(0);
+	curTime = gmtime(&now);
+
+	strftime (buff, sizeof(buff), "%Y-%m-%d %H:%M:%S", curTime);
+	AddLogLine(fileName, "\nanticollision: ", buff);
+}
+
+void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext) {
+	char * fnameptr = fileName;
+	memset(fileName, 0x00, 200);
+	
+	for (int j = 0; j < 7; j++, fnameptr += 2)
+		sprintf(fnameptr, "%02x", uid[j]); 
+	sprintf(fnameptr, "%s", ext); 
+	
+	printf("fname:%s", fileName);
+}
+
+// printing and converting functions
 
 void print_hex(const uint8_t * data, const size_t len)
 {

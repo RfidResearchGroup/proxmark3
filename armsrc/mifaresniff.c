@@ -42,7 +42,7 @@ int MfSniffEnd(void){
 
 int RAMFUNC MfSniffLogic(const uint8_t * data, int len, int bitCnt, int reader) {
 
-	if ((len == 1) && (bitCnt = 9)) { 
+	if ((len == 1) && (bitCnt = 9) && (data[0] > 0x0F)) { 
 		sniffState = SNF_INIT;
 	}
 
@@ -163,7 +163,7 @@ int intMfSniffSend() {
 	
 	if (!traceLen) return 0;
 
-	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
+	FpgaDisableSscDma();
 
 	while (pckLen > 0) {
 		pckSize = min(32, pckLen);
