@@ -275,9 +275,13 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
 
 // SNIFFER
 
+// constants
+static uint8_t trailerAccessBytes[4] = {0x08, 0x77, 0x8F, 0x00};
+
 // variables
 char logHexFileName[200] = {0x00};
-static uint8_t traceCard[4096];
+static uint8_t traceCard[4096] = {0x00};
+static char traceFileName[20];
 static int traceState = TRACE_IDLE;
 static uint8_t traceCurBlock = 0;
 static uint8_t traceCurKey = 0;
@@ -295,13 +299,79 @@ uint32_t nr_enc;  // encrypted reader challenge
 uint32_t ar_enc;  // encrypted reader response
 uint32_t at_enc;  // encrypted tag response
 
-int mfTraceInit(uint8_t *tuid, uint8_t *atqa, uint8_t sak) {
+int isTraceCardEmpty(void) {
+	return ((traceCard[0] == 0) && (traceCard[1] == 0) && (traceCard[2] == 0) && (traceCard[3] == 0));
+}
+
+int isBlockEmpty(int blockN) {
+	for (int i = 0; i < 16; i++) 
+		if (traceCard[blockN * 16 + i] != 0) return 0;
+
+	return 1;
+}
+
+int isBlockTrailer(int blockN) {
+ return ((blockN & 0x03) == 0x03);
+}
+
+int loadTraceCard(uint8_t *tuid) {
+	FILE * f;
+	char buf[64];
+	uint8_t buf8[64];
+	int i, blockNum;
+	
+	if (!isTraceCardEmpty()) saveTraceCard();
+	memset(traceCard, 0x00, 4096);
+	memcpy(traceCard, tuid + 3, 4);
+	FillFileNameByUID(traceFileName, tuid, ".eml", 7);
+
+	f = fopen(traceFileName, "r");
+	if (!f) return 1;
+	
+	blockNum = 0;
+	while(!feof(f)){
+		memset(buf, 0, sizeof(buf));
+		fgets(buf, sizeof(buf), f);
+
+		if (strlen(buf) < 32){
+			if (feof(f)) break;
+			PrintAndLog("File content error. Block data must include 32 HEX symbols");
+			return 2;
+		}
+		for (i = 0; i < 32; i += 2)
+			sscanf(&buf[i], "%02x", (unsigned int *)&buf8[i / 2]);
+
+		memcpy(traceCard + blockNum * 16, buf8, 16);
+
+		blockNum++;
+	}
+	fclose(f);
+
+	return 0;
+}
+
+int saveTraceCard(void) {
+	FILE * f;
+	
+	if ((!strlen(traceFileName)) || (isTraceCardEmpty())) return 0;
+	
+	f = fopen(traceFileName, "w+");
+	for (int i = 0; i < 64; i++) {  // blocks
+		for (int j = 0; j < 16; j++)  // bytes
+			fprintf(f, "%02x", *(traceCard + i * 16 + j)); 
+		fprintf(f,"\n");
+	}
+	fclose(f);
+
+	return 0;
+}
+
+int mfTraceInit(uint8_t *tuid, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile) {
 
 	if (traceCrypto1) crypto1_destroy(traceCrypto1);
 	traceCrypto1 = NULL;
 
-	memset(traceCard, 0x00, 4096);
-	memcpy(traceCard, tuid + 3, 4);
+	if (wantSaveToEmlFile) loadTraceCard(tuid);
 	traceCard[4] = traceCard[0] ^ traceCard[1] ^ traceCard[2] ^ traceCard[3];
 	traceCard[5] = sak;
 	memcpy(&traceCard[6], atqa, 2);
@@ -331,7 +401,7 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
 }
 
 
-int mfTraceDecode(uint8_t *data_src, int len) {
+int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 	uint8_t data[64];
 
 	if (traceState == TRACE_ERROR) return 1;
@@ -386,7 +456,12 @@ int mfTraceDecode(uint8_t *data_src, int len) {
 		if (len == 18) {
 			traceState = TRACE_IDLE;
 
-			memcpy(traceCard + traceCurBlock * 16, data, 16);
+			if (isBlockTrailer(traceCurBlock)) {
+				memcpy(traceCard + traceCurBlock * 16 + 6, data + 6, 4);
+			} else {
+				memcpy(traceCard + traceCurBlock * 16, data, 16);
+			}
+			if (wantSaveToEmlFile) saveTraceCard();
 			return 0;
 		} else {
 			traceState = TRACE_ERROR;
@@ -410,6 +485,7 @@ int mfTraceDecode(uint8_t *data_src, int len) {
 			traceState = TRACE_IDLE;
 
 			memcpy(traceCard + traceCurBlock * 16, data, 16);
+			if (wantSaveToEmlFile) saveTraceCard();
 			return 0;
 		} else {
 			traceState = TRACE_ERROR;
@@ -470,11 +546,15 @@ int mfTraceDecode(uint8_t *data_src, int len) {
 			printf("key> %x%x\n", (unsigned int)((lfsr & 0xFFFFFFFF00000000) >> 32), (unsigned int)(lfsr & 0xFFFFFFFF));
 			AddLogUint64(logHexFileName, "key> ", lfsr); 
 			
+			int blockShift = ((traceCurBlock & 0xFC) + 3) * 16;
+			if (isBlockEmpty((traceCurBlock & 0xFC) + 3)) memcpy(traceCard + blockShift + 6, trailerAccessBytes, 4);
+			
 			if (traceCurKey) {
-				num_to_bytes(lfsr, 6, traceCard + traceCurBlock * 16 + 10);
+				num_to_bytes(lfsr, 6, traceCard + blockShift + 10);
 			} else {
-				num_to_bytes(lfsr, 6, traceCard + traceCurBlock * 16);
+				num_to_bytes(lfsr, 6, traceCard + blockShift);
 			}
+			if (wantSaveToEmlFile) saveTraceCard();
 
 			if (traceCrypto1) {
 				crypto1_destroy(traceCrypto1);

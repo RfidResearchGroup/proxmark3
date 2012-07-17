@@ -63,10 +63,19 @@ extern char logHexFileName[200];
 
 int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t * ResultKeys);
 int mfCheckKeys (uint8_t blockNo, uint8_t keyType, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key);
+
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount);
 int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount);
+
 int mfCSetUID(uint8_t *uid, uint8_t *oldUID, int wantWipe);
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, int wantWipe, uint8_t params);
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params);
-int mfTraceInit(uint8_t *tuid, uint8_t *atqa, uint8_t sak);
-int mfTraceDecode(uint8_t *data_src, int len);
+
+int mfTraceInit(uint8_t *tuid, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile);
+int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile);
+
+int isTraceCardEmpty(void);
+int isBlockEmpty(int blockN);
+int isBlockTrailer(int blockN);
+int loadTraceCard(uint8_t *tuid);
+int saveTraceCard(void);

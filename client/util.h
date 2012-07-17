@@ -22,7 +22,7 @@ void AddLogLine(char *fileName, char *extData, char *c);
 void AddLogHex(char *fileName, char *extData, const uint8_t * data, const size_t len);
 void AddLogUint64(char *fileName, char *extData, const uint64_t data);
 void AddLogCurrentDT(char *fileName);
-void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext);
+void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext, int byteCount);
 
 void print_hex(const uint8_t * data, const size_t len);
 char * sprint_hex(const uint8_t * data, const size_t len);

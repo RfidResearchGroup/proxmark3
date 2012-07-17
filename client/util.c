@@ -80,15 +80,13 @@ void AddLogCurrentDT(char *fileName) {
 	AddLogLine(fileName, "\nanticollision: ", buff);
 }
 
-void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext) {
+void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext, int byteCount) {
 	char * fnameptr = fileName;
 	memset(fileName, 0x00, 200);
 	
-	for (int j = 0; j < 7; j++, fnameptr += 2)
+	for (int j = 0; j < byteCount; j++, fnameptr += 2)
 		sprintf(fnameptr, "%02x", uid[j]); 
 	sprintf(fnameptr, "%s", ext); 
-	
-	printf("fname:%s", fileName);
 }
 
 // printing and converting functions
