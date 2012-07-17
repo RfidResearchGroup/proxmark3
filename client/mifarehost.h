@@ -19,6 +19,7 @@
 #include "util.h"
 #include "nonce2key/nonce2key.h"
 #include "nonce2key/crapto1.h"
+#include "iso14443crc.h"
 
 #define MEM_CHUNK               1000000
 #define NESTED_SECTOR_RETRY     10

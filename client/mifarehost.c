@@ -419,7 +419,13 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 	
 	switch (traceState) {
 	case TRACE_IDLE: 
-		// TODO: check packet crc16!
+		// check packet crc16!
+		if ((len >= 4) && (!CheckCrc14443(CRC_14443_A, data, len))) {
+			PrintAndLog("dec> CRC ERROR!!!");
+			AddLogLine(logHexFileName, "dec> ", "CRC ERROR!!!"); 
+			traceState = TRACE_ERROR;  // do not decrypt the next commands
+			return 1;
+		}
 		
 		// AUTHENTICATION
 		if ((len ==4) && ((data[0] == 0x60) || (data[0] == 0x61))) {
