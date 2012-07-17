@@ -1558,6 +1558,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 	uint8_t atqa[2];
 	uint8_t sak;
 	bool isTag;
+	uint32_t parity;
 	uint8_t buf[3000];
 	uint8_t * bufPtr = buf;
 	memset(buf, 0x00, 3000);
@@ -1625,7 +1626,9 @@ int CmdHF14AMfSniff(const char *Cmd){
 				num = 0;
 				while (bufPtr - buf + 9 < blockLen) {
 				  isTag = bufPtr[3] & 0x80 ? true:false;
-					bufPtr += 8;
+					bufPtr += 4;
+					parity = *((uint32_t *)(bufPtr));
+					bufPtr += 4;
 					len = bufPtr[0];
 					bufPtr++;
 					if ((len == 14) && (bufPtr[0] = 0xff) && (bufPtr[1] = 0xff)) {
@@ -1642,7 +1645,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 					} else {
 						PrintAndLog("%s(%d):%s", isTag ? "TAG":"RDR", num, sprint_hex(bufPtr, len));
 						if (wantLogToFile) AddLogHex(logHexFileName, isTag ? "TAG: ":"RDR: ", bufPtr, len);
-						if (wantDecrypt) mfTraceDecode(bufPtr, len, wantSaveToEmlFile);
+						if (wantDecrypt) mfTraceDecode(bufPtr, len, parity, wantSaveToEmlFile);
 					}
 					bufPtr += len;
 					num++;

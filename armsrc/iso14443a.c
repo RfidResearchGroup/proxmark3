@@ -2455,7 +2455,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		if(MillerDecoding((data[0] & 0xF0) >> 4)) {
 			LED_C_INV();
 			// check - if there is a short 7bit request from reader
-			if (MfSniffLogic(receivedCmd, Uart.byteCnt, Uart.bitCnt, TRUE)) break;
+			if (MfSniffLogic(receivedCmd, Uart.byteCnt, Uart.parityBits, Uart.bitCnt, TRUE)) break;
 
 			/* And ready to receive another command. */
 			Uart.state = STATE_UNSYNCD;
@@ -2467,7 +2467,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		if(ManchesterDecoding(data[0] & 0x0F)) {
 			LED_C_INV();
 
-			if (MfSniffLogic(receivedResponse, Demod.len, Uart.bitCnt, FALSE)) break;
+			if (MfSniffLogic(receivedResponse, Demod.len, Demod.parityBits, Demod.bitCount, FALSE)) break;
 
 			// And ready to receive another response.
 			memset(&Demod, 0, sizeof(Demod));
