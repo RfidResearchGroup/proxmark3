@@ -1543,8 +1543,8 @@ int CmdHF14AMfCSave(const char *Cmd) {
 
 int CmdHF14AMfSniff(const char *Cmd){
 	// params
-	bool wantLogToFile = 1;
-	bool wantDecrypt = 1;
+	bool wantLogToFile = 0;
+	bool wantDecrypt = 0;
 	bool wantSaveToEml = 0;
 	bool wantSaveToEmlFile = 0;
 
