@@ -1545,7 +1545,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 	// params
 	bool wantLogToFile = 0;
 	bool wantDecrypt = 0;
-	bool wantSaveToEml = 0;
+	//bool wantSaveToEml = 0; TODO
 	bool wantSaveToEmlFile = 0;
 
 	//var 
@@ -1579,7 +1579,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 		char ctmp = param_getchar(Cmd, i);
 		if (ctmp == 'l' || ctmp == 'L') wantLogToFile = true;
 		if (ctmp == 'd' || ctmp == 'D') wantDecrypt = true;
-		if (ctmp == 'e' || ctmp == 'E') wantSaveToEml = true;
+		//if (ctmp == 'e' || ctmp == 'E') wantSaveToEml = true; TODO
 		if (ctmp == 'f' || ctmp == 'F') wantSaveToEmlFile = true;
 	}
 	
