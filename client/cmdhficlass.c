@@ -19,6 +19,7 @@
 #include "cmdparser.h"
 #include "cmdhficlass.h"
 #include "common.h"
+#include "util.h"
 
 static int CmdHelp(const char *Cmd);
 
