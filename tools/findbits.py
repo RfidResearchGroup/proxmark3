@@ -45,7 +45,7 @@ def stringreverse(data):
 	return data[::-1]
 
 # match forward, backward and inverted
-def domatch(number,binary):
+def domatch(binary,number):
 	reversed= stringreverse(number)
 	inverted= invert(binary)
 
