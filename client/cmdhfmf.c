@@ -984,10 +984,6 @@ int CmdHF14AMfEGet(const char *Cmd)
 	}	
 	
 	blockNo = param_get8(Cmd, 0);
-	if (blockNo >= 32 * 4 + 8 * 16) {
-		PrintAndLog("Block number must be in [0..255] as in MIFARE classic.");
-		return 1;
-	}
 
 	PrintAndLog(" ");
 	if (!mfEmlGetMem(data, blockNo, 3)) {
@@ -1028,10 +1024,6 @@ int CmdHF14AMfESet(const char *Cmd)
 	}	
 	
 	blockNo = param_get8(Cmd, 0);
-	if (blockNo >= 32 * 4 + 8 * 16) {
-		PrintAndLog("Block number must be in [0..255] as in MIFARE classic.");
-		return 1;
-	}
 	
 	if (param_gethex(Cmd, 1, memBlock, 32)) {
 		PrintAndLog("block data must include 32 HEX symbols");
@@ -1269,10 +1261,6 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 	}	
 
 	blockNo = param_get8(Cmd, 0);
-	if (blockNo >= 32 * 4 + 8 * 16) {
-		PrintAndLog("Block number must be in [0..255] as in MIFARE classic.");
-		return 1;
-	}
 
 	if (param_gethex(Cmd, 1, memBlock, 32)) {
 		PrintAndLog("block data must include 32 HEX symbols");
@@ -1400,10 +1388,6 @@ int CmdHF14AMfCGetBlk(const char *Cmd) {
 	}	
 
 	blockNo = param_get8(Cmd, 0);
-	if (blockNo >= 32 * 4 + 8 * 16) {
-		PrintAndLog("Block number must be in [0..255] as in MIFARE classic.");
-		return 1;
-	}
 
 	PrintAndLog("--block number:%02x ", blockNo);
 
