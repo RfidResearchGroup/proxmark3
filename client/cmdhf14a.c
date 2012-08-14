@@ -315,6 +315,43 @@ int CmdHF14AReader(const char *Cmd)
 	return resp->arg[0];
 }
 
+// Collect ISO14443 Type A UIDs
+int CmdHF14ACUIDs(const char *Cmd)
+{
+	// requested number of UIDs
+	int n = atoi(Cmd);
+	// collect at least 1 (e.g. if no parameter was given)
+	n = n > 0 ? n : 1;
+
+	PrintAndLog("Collecting %d UIDs", n);
+	PrintAndLog("Start: %u", time(NULL));
+	// repeat n times
+	for (int i = 0; i < n; i++) {
+		// execute anticollision procedure
+		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
+		SendCommand(&c);
+		UsbCommand *resp = WaitForResponse(CMD_ACK);
+		uint8_t *uid  = resp->d.asBytes;
+		iso14a_card_select_t *card = (iso14a_card_select_t *)(uid + 12);
+
+		// check if command failed
+		if (resp->arg[0] == 0) {
+			PrintAndLog("Card select failed.");
+		} else {
+			// check if UID is 4 bytes
+			if ((card->atqa[1] & 0xC0) == 0) {
+				PrintAndLog("%02X%02X%02X%02X",
+				            *uid, *(uid + 1), *(uid + 2), *(uid + 3));
+			} else {
+				PrintAndLog("UID longer than 4 bytes");
+			}
+		}
+	}
+	PrintAndLog("End: %u", time(NULL));
+
+	return 1;
+}
+
 // ## simulate iso14443a tag
 // ## greg - added ability to specify tag UID
 int CmdHF14ASim(const char *Cmd)
@@ -429,6 +466,7 @@ static command_t CommandTable[] =
   {"help",   CmdHelp,          1, "This help"},
   {"list",   CmdHF14AList,     0, "List ISO 14443a history"},
   {"reader", CmdHF14AReader,   0, "Act like an ISO14443 Type A reader"},
+  {"cuids",  CmdHF14ACUIDs,    0, "<n> Collect n>0 ISO14443 Type A UIDs in one go"},
   {"sim",    CmdHF14ASim,      0, "<UID> -- Fake ISO 14443a tag"},
   {"snoop",  CmdHF14ASnoop,    0, "Eavesdrop ISO 14443 Type A"},
   {NULL, NULL, 0, NULL}
