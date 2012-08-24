@@ -26,6 +26,8 @@ int traceLen = 0;
 int rsamples = 0;
 int tracing = TRUE;
 uint8_t trigger = 0;
+// the block number for the ISO14443-4 PCB
+static uint8_t iso14_pcb_blocknum = 0;
 
 // CARD TO READER - manchester
 // Sequence D: 11110000 modulation with subcarrier during first half
@@ -71,6 +73,9 @@ void iso14a_clear_tracelen(void) {
 }
 void iso14a_set_tracing(int enable) {
 	tracing = enable;
+}
+void iso14a_set_timeout(uint32_t timeout) {
+	iso14a_timeout = timeout;
 }
 
 //-----------------------------------------------------------------------------
@@ -1702,6 +1707,9 @@ int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data, u
 		resp_data->ats_len = len;
 	}
 	
+	// reset the PCB block number
+	iso14_pcb_blocknum = 0;
+	
 	return 1;
 }
 
@@ -1728,18 +1736,29 @@ void iso14443a_setup() {
 int iso14_apdu(uint8_t * cmd, size_t cmd_len, void * data) {
 	uint8_t real_cmd[cmd_len+4];
 	real_cmd[0] = 0x0a; //I-Block
+	// put block number into the PCB
+	real_cmd[0] |= iso14_pcb_blocknum;
 	real_cmd[1] = 0x00; //CID: 0 //FIXME: allow multiple selected cards
 	memcpy(real_cmd+2, cmd, cmd_len);
 	AppendCrc14443a(real_cmd,cmd_len+2);
  
 	ReaderTransmit(real_cmd, cmd_len+4);
 	size_t len = ReaderReceive(data);
-	if(!len)
-		return -1; //DATA LINK ERROR
-	
+	uint8_t * data_bytes = (uint8_t *) data;
+	if (!len)
+		return 0; //DATA LINK ERROR
+	// if we received an I- or R(ACK)-Block with a block number equal to the
+	// current block number, toggle the current block number
+	else if (len >= 4 // PCB+CID+CRC = 4 bytes
+	         && ((data_bytes[0] & 0xC0) == 0 // I-Block
+	             || (data_bytes[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
+	         && (data_bytes[0] & 0x01) == iso14_pcb_blocknum) // equal block numbers
+	{
+		iso14_pcb_blocknum ^= 1;
+	}
+
 	return len;
 }
-
 
 //-----------------------------------------------------------------------------
 // Read an ISO 14443a tag. Send out commands and store answers.
@@ -1790,6 +1809,7 @@ void ReaderIso14443a(UsbCommand * c, UsbCommand * ack)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
+
 //-----------------------------------------------------------------------------
 // Read an ISO 14443a tag. Send out commands and store answers.
 //
