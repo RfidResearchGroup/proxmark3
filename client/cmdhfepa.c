@@ -26,8 +26,10 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 	uint8_t m = 0;
 	// requested number of Nonces
 	unsigned int n = 0;
+	// delay between requests
+	unsigned int d = 0;
 	
-	sscanf(Cmd, "%hhu %u", &m, &n);
+	sscanf(Cmd, "%hhu %u %u", &m, &n, &d);
 	
 	// values are expected to be > 0
 	m = m > 0 ? m : 1;
@@ -57,6 +59,9 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 			PrintAndLog("Length: %d, Nonce: %s",
 			            resp->arg[1], nonce);
 		}
+		if (i < n - 1) {
+			sleep(d);
+		}
 	}
 	PrintAndLog("End: %u", time(NULL));
 
@@ -68,7 +73,8 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 static const command_t CommandTable[] = 
 {
   {"help",    CmdHelp,                   1, "This help"},
-  {"cnonces", CmdHFEPACollectPACENonces, 0, "<m> <n> Acquire n>0 encrypted PACE nonces of size m>0"},
+  {"cnonces", CmdHFEPACollectPACENonces, 0,
+              "<m> <n> <d> Acquire n>0 encrypted PACE nonces of size m>0 with d sec pauses"},
   {NULL, NULL, 0, NULL}
 };
 
