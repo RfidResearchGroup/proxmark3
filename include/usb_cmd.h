@@ -95,6 +95,7 @@ typedef struct {
 #define CMD_SIMULATE_TAG_LEGIC_RF                                         0x0387
 #define CMD_READER_LEGIC_RF                                               0x0388
 #define CMD_WRITER_LEGIC_RF                                               0x0389
+#define CMD_EPA_PACE_COLLECT_NONCE                                        0x038A
 
 #define CMD_SNOOP_ICLASS                                                  0x0392
 #define CMD_SIMULATE_TAG_ICLASS                                           0x0393

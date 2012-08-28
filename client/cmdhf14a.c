@@ -463,12 +463,12 @@ int CmdHF14ASnoop(const char *Cmd) {
 
 static command_t CommandTable[] = 
 {
-  {"help",   CmdHelp,          1, "This help"},
-  {"list",   CmdHF14AList,     0, "List ISO 14443a history"},
-  {"reader", CmdHF14AReader,   0, "Act like an ISO14443 Type A reader"},
-  {"cuids",  CmdHF14ACUIDs,    0, "<n> Collect n>0 ISO14443 Type A UIDs in one go"},
-  {"sim",    CmdHF14ASim,      0, "<UID> -- Fake ISO 14443a tag"},
-  {"snoop",  CmdHF14ASnoop,    0, "Eavesdrop ISO 14443 Type A"},
+  {"help",   CmdHelp,              1, "This help"},
+  {"list",   CmdHF14AList,         0, "List ISO 14443a history"},
+  {"reader", CmdHF14AReader,       0, "Act like an ISO14443 Type A reader"},
+  {"cuids",  CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443 Type A UIDs in one go"},
+  {"sim",    CmdHF14ASim,          0, "<UID> -- Fake ISO 14443a tag"},
+  {"snoop",  CmdHF14ASnoop,        0, "Eavesdrop ISO 14443 Type A"},
   {NULL, NULL, 0, NULL}
 };
 

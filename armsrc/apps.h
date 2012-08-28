@@ -143,6 +143,9 @@ void iso14a_clear_tracelen(void);
 void iso14a_set_tracing(int enable);
 void RAMFUNC SniffMifare(uint8_t param);
 
+/// epa.h
+void EPA_PACE_Collect_Nonce(UsbCommand * c, UsbCommand * ack);
+
 // mifarecmd.h
 void ReaderMifare(uint32_t parameter);
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);

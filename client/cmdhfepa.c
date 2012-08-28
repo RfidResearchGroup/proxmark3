@@ -1,0 +1,89 @@
+//-----------------------------------------------------------------------------
+// Copyright (C) 2012 Frederik Möllers
+//
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
+//-----------------------------------------------------------------------------
+// Commands related to the German electronic Identification Card
+//-----------------------------------------------------------------------------
+
+#include "util.h"
+#include "proxusb.h"
+#include "ui.h"
+#include "cmdparser.h"
+#include "common.h"
+#include "cmdmain.h"
+
+#include "cmdhfepa.h"
+
+static int CmdHelp(const char *Cmd);
+
+// Perform (part of) the PACE protocol
+int CmdHFEPACollectPACENonces(const char *Cmd)
+{
+	// requested nonce size
+	uint8_t m = 0;
+	// requested number of Nonces
+	unsigned int n = 0;
+	
+	sscanf(Cmd, "%hhu %u", &m, &n);
+	
+	// values are expected to be > 0
+	m = m > 0 ? m : 1;
+	n = n > 0 ? n : 1;
+
+	PrintAndLog("Collecting %u %hhu-byte nonces", n, m);
+	PrintAndLog("Start: %u", time(NULL));
+	// repeat n times
+	for (unsigned int i = 0; i < n; i++) {
+		// execute PACE
+		UsbCommand c = {CMD_EPA_PACE_COLLECT_NONCE, {(int)m, 0, 0}};
+		SendCommand(&c);
+		UsbCommand *resp = WaitForResponse(CMD_ACK);
+
+		// check if command failed
+		if (resp->arg[0] != 0) {
+			PrintAndLog("Error in step %d, Return code: %d",
+			            resp->arg[0],
+						(int)resp->arg[1]);
+		} else {
+			size_t nonce_length = resp->arg[1];
+			char *nonce = (char *) malloc(2 * nonce_length + 1);
+			for(int j = 0; j < nonce_length; j++) {
+				snprintf(nonce + (2 * j), 3, "%02X", resp->d.asBytes[j]);
+			}
+			// print nonce
+			PrintAndLog("Length: %d, Nonce: %s",
+			            resp->arg[1], nonce);
+		}
+	}
+	PrintAndLog("End: %u", time(NULL));
+
+	return 1;
+}
+
+// UI-related stuff
+
+static const command_t CommandTable[] = 
+{
+  {"help",    CmdHelp,                   1, "This help"},
+  {"cnonces", CmdHFEPACollectPACENonces, 0, "<m> <n> Acquire n>0 encrypted PACE nonces of size m>0"},
+  {NULL, NULL, 0, NULL}
+};
+
+int CmdHelp(const char *Cmd)
+{
+  CmdsHelp(CommandTable);
+  return 0;
+}
+
+int CmdHFEPA(const char *Cmd)
+{
+	// flush
+	while (WaitForResponseTimeout(CMD_ACK, 500) != NULL) ;
+
+	// parse
+  CmdsParse(CommandTable, Cmd);
+  return 0;
+}
