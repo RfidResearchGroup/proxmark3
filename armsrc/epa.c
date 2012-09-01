@@ -217,12 +217,12 @@ static void EPA_PACE_Collect_Nonce_Abort(UsbCommand *ack, uint8_t step, int func
 	ack->arg[0] = step;
 	// last return code
 	ack->arg[1] = func_return;
-	
-	// send the USB packet
-	UsbSendPacket((void *)ack, sizeof(UsbCommand));
 
 	// power down the field
 	EPA_Finish();
+	
+	// send the USB packet
+	UsbSendPacket((void *)ack, sizeof(UsbCommand));
 }
 
 //-----------------------------------------------------------------------------
