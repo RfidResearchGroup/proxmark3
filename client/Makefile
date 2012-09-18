@@ -64,6 +64,7 @@ CMDSRCS = \
 			cmdlf.c \
 			cmdlfem4x.c \
 			cmdlfhid.c \
+			cmdlfhitag.c \
 			cmdlfti.c \
 			cmdparser.c \
 			cmdmain.c

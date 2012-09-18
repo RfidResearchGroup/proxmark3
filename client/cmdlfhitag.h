@@ -1,23 +1,21 @@
 //-----------------------------------------------------------------------------
-// Merlok - June 2011
-// Roel - Dec 2009
-// Unknown author
+// Copyright (C) 2012 Roel Verdult
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// MIFARE Darkside hack
+// Low frequency Hitag support
 //-----------------------------------------------------------------------------
 
-#ifndef __NONCE2KEY_H
-#define __NONCE2KEY_H
+#ifndef CMDLFHITAG_H__
+#define CMDLFHITAG_H__
 
-#include <inttypes.h>
-#include <stdio.h>
-#include "crapto1.h"
-#include "common.h"
+int CmdLFHitag(const char *Cmd);
 
-int nonce2key(uint32_t uid, uint32_t nt, uint64_t par_info, uint64_t ks_info, uint64_t * key); 
+int CmdLFHitagList(const char *Cmd);
+int CmdLFHitagSnoop(const char *Cmd);
+int CmdLFHitagSim(const char *Cmd);
+int CmdLFHitagReader(const char *Cmd);
 
 #endif

@@ -28,7 +28,7 @@ static int CmdHelp(const char *Cmd);
 int CmdHF14AList(const char *Cmd)
 {
   uint8_t got[1920];
-  GetFromBigBuf(got, sizeof(got));
+  GetFromBigBuf(got,sizeof(got),0);
 
   PrintAndLog("recorded activity:");
   PrintAndLog(" ETU     :rssi: who bytes");

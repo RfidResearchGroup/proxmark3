@@ -144,7 +144,7 @@ demodError:
 int CmdHF14BList(const char *Cmd)
 {
   uint8_t got[960];
-  GetFromBigBuf(got, sizeof(got));
+  GetFromBigBuf(got,sizeof(got),0);
 
   PrintAndLog("recorded activity:");
   PrintAndLog(" time  :rssi: who bytes");

@@ -17,19 +17,20 @@
 
 uint8_t sample_buf[SAMPLE_BUFFER_SIZE];
 
-void GetFromBigBuf(uint8_t *dest, int bytes)
+void GetFromBigBuf(uint8_t *dest, int bytes, int start_index)
 {
-  int n = bytes/4;
-
-  if (n % 48 != 0) {
-    PrintAndLog("bad len in GetFromBigBuf");
-    return;
-  }
-
-  for (int i = 0; i < n; i += 12) {
-    UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
-    SendCommand(&c);
-    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
-    memcpy(dest+(i*4), sample_buf, 48);
-  }
+	start_index = ((start_index/12)*12);
+    int n = (((bytes/4)/48)*48) + start_index;
+    /*
+     if (n % 48 != 0) {
+     PrintAndLog("bad len in GetFromBigBuf");
+     return;
+     }
+     */
+    for (int i = start_index; i < n; i += 12) {
+        UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
+        SendCommand(&c);
+        WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+        memcpy(dest+(i*4), sample_buf, 48);
+    }
 }

@@ -23,6 +23,7 @@
 #include "cmdlfhid.h"
 #include "cmdlfti.h"
 #include "cmdlfem4x.h"
+#include "cmdlfhitag.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -535,6 +536,7 @@ static command_t CommandTable[] =
   {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
   {"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
   {"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
+  {"hitag",       CmdLFHitag,         1, "{ Hitag tags and transponders... }"},
   {"vchdemod",    CmdVchDemod,        1, "['clone'] -- Demodulate samples for VeriChip"},
   {NULL, NULL, 0, NULL}
 };

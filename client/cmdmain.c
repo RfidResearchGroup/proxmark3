@@ -98,6 +98,7 @@ void UsbCommandReceived(UsbCommand *UC)
   //	printf("%s(%x) current cmd = %x\n", __FUNCTION__, c->cmd, current_command);
   /* If we recognize a response, return to avoid further processing */
   switch(UC->cmd) {
+    // First check if we are handling a debug message
     case CMD_DEBUG_PRINT_STRING: {
       char s[100];
       if(UC->arg[0] > 70 || UC->arg[0] < 0) {
@@ -107,11 +108,12 @@ void UsbCommandReceived(UsbCommand *UC)
       s[UC->arg[0]] = '\0';
       PrintAndLog("#db# %s       ", s);
       return;
-    }
+    } break;
 
-    case CMD_DEBUG_PRINT_INTEGERS:
+    case CMD_DEBUG_PRINT_INTEGERS: {
       PrintAndLog("#db# %08x, %08x, %08x       \r\n", UC->arg[0], UC->arg[1], UC->arg[2]);
       return;
+    } break;
 
     case CMD_MEASURED_ANTENNA_TUNING: {
       int peakv, peakf;
@@ -121,7 +123,6 @@ void UsbCommandReceived(UsbCommand *UC)
       vHf = UC->arg[1] & 0xffff;;
       peakf = UC->arg[2] & 0xffff;
       peakv = UC->arg[2] >> 16;
-      PrintAndLog("");
       PrintAndLog("");
       PrintAndLog("# LF antenna: %5.2f V @   125.00 kHz", vLf125/1000.0);
       PrintAndLog("# LF antenna: %5.2f V @   134.00 kHz", vLf134/1000.0);
@@ -135,12 +136,32 @@ void UsbCommandReceived(UsbCommand *UC)
         PrintAndLog("# Your HF antenna is unusable.");
       else if (vHf<5000)
         PrintAndLog("# Your HF antenna is marginal.");
-      return;
-    }
-    default:
-      break;
+    } break;
+      
+    default: {
+      // Maybe it's a response
+      switch(current_command) {
+        case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K: {
+          if (UC->cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
+            PrintAndLog("unrecognized command %08x\n", UC->cmd);
+            break;
+          }
+          int i;
+          for(i=0; i<48; i++) sample_buf[i] = UC->d.asBytes[i];
+          received_command = UC->cmd;
+        } break;
+
+        default: {
+        } break;
+      }
+      // Store the last received command
+      received_command = UC->cmd;
+      memcpy(&current_response, UC, sizeof(UsbCommand));
+    } break;
   }
-  /* Maybe it's a response: */
+  received_command = UC->cmd;
+/*
+  // Maybe it's a response:
   switch(current_command) {
     case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K:
       if (UC->cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) goto unexpected_response;
@@ -163,4 +184,5 @@ void UsbCommandReceived(UsbCommand *UC)
 		memcpy(&current_response, UC, sizeof(UsbCommand));
 	received_command = UC->cmd;
   }
+ */
 }
