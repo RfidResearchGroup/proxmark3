@@ -1,19 +1,33 @@
 //-----------------------------------------------------------------------------
-// (c) 2009 Henryk Plötz <henryk@ploetzli.ch>
+// (c) 2012 Roel Verdult
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Hitag2 emulation public interface
+// Hitag2 type prototyping
 //-----------------------------------------------------------------------------
 
-#ifndef __HITAG2_H
-#define __HITAG2_H
+#ifndef _HITAG2_H_
+#define _HITAG2_H_
 
-typedef int (*hitag2_response_callback_t)(const char* response_data, const int response_length, const int fdt, void *cb_cookie);
+typedef enum {
+	RHT2F_PASSWORD           = 21,
+	RHT2F_AUTHENTICATE       = 22,
+    RHT2F_TEST_AUTH_ATTEMPTS = 25,
+} hitag_function;
 
-extern int hitag2_init(void);
-extern int hitag2_handle_command(const char* data, const int length, hitag2_response_callback_t cb, void *cb_cookie);
+typedef struct {
+	byte_t password[4];
+} PACKED rht2d_password;
+
+typedef struct {
+	byte_t NrAr[8];
+} PACKED rht2d_authenticate;
+
+typedef union {
+	rht2d_password pwd;
+	rht2d_authenticate auth;
+} hitag_data;
 
 #endif

@@ -35,7 +35,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	pcs = &mpcs;
 
 	// clear trace
-	iso14a_clear_tracelen();
+	iso14a_clear_trace();
 //	iso14a_set_tracing(false);
 
 	iso14443a_setup();
@@ -115,7 +115,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	pcs = &mpcs;
 
 	// clear trace
-	iso14a_clear_tracelen();
+	iso14a_clear_trace();
 //	iso14a_set_tracing(false);
 
 	iso14443a_setup();
@@ -213,7 +213,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	pcs = &mpcs;
 
 	// clear trace
-	iso14a_clear_tracelen();
+	iso14a_clear_trace();
 //  iso14a_set_tracing(false);
 
 	iso14443a_setup();
@@ -311,7 +311,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 	for (i = 0; i < NES_MAX_INFO + 1; i++) nvectorcount[i] = 11;  //  11 - empty block;
 	
 	// clear trace
-	iso14a_clear_tracelen();
+	iso14a_clear_trace();
   iso14a_set_tracing(false);
 	
 	iso14443a_setup();
@@ -539,7 +539,7 @@ void MifareChkKeys(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	MF_DBGLEVEL = MF_DBG_NONE;
 	
 	// clear trace
-	iso14a_clear_tracelen();
+	iso14a_clear_trace();
   iso14a_set_tracing(TRUE);
 
 	iso14443a_setup();
@@ -641,7 +641,7 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	uint8_t uid[8];
 
 	// clear trace
-	iso14a_clear_tracelen();
+	iso14a_clear_trace();
 	iso14a_set_tracing(false);
 	
 	iso14443a_setup();
@@ -759,7 +759,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	
 	if (workFlags & 0x08) {
 		// clear trace
-		iso14a_clear_tracelen();
+		iso14a_clear_trace();
 		iso14a_set_tracing(TRUE);
 
 		iso14443a_setup();
@@ -890,7 +890,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	
 	if (workFlags & 0x08) {
 		// clear trace
-		iso14a_clear_tracelen();
+		iso14a_clear_trace();
 		iso14a_set_tracing(TRUE);
 
 		iso14443a_setup();

@@ -691,7 +691,7 @@ void RAMFUNC SnoopIClass(void)
     
     // reset traceLen to 0
     iso14a_set_tracing(TRUE);
-    iso14a_clear_tracelen();
+    iso14a_clear_trace();
     iso14a_set_trigger(FALSE);
 
     // The DMA buffer, used to stream samples from the FPGA

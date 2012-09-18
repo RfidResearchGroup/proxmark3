@@ -401,12 +401,15 @@ void UsbSendPacket(uint8_t *packet, int len)
 		}
 		AT91C_BASE_UDP->UDP_CSR[2] |= AT91C_UDP_TXPKTRDY;
 
-		while(!(AT91C_BASE_UDP->UDP_CSR[2] & AT91C_UDP_TXCOMP))
-			;
+		while(!(AT91C_BASE_UDP->UDP_CSR[2] & AT91C_UDP_TXCOMP)) {
+            WDT_HIT();
+        }
+
 		AT91C_BASE_UDP->UDP_CSR[2] &= ~AT91C_UDP_TXCOMP;
 
-		while(AT91C_BASE_UDP->UDP_CSR[2] & AT91C_UDP_TXCOMP)
-			;
+		while(AT91C_BASE_UDP->UDP_CSR[2] & AT91C_UDP_TXCOMP) {
+            WDT_HIT();
+        }
 
 		len -= thisTime;
 		packet += thisTime;
@@ -426,8 +429,9 @@ static void HandleRxdData(void)
 		}
 
 		AT91C_BASE_UDP->UDP_CSR[1] &= ~AT91C_UDP_RX_DATA_BK0;
-		while(AT91C_BASE_UDP->UDP_CSR[1] & AT91C_UDP_RX_DATA_BK0)
-			;
+		while(AT91C_BASE_UDP->UDP_CSR[1] & AT91C_UDP_RX_DATA_BK0) {
+            WDT_HIT();
+        }
 
 		if(UsbSoFarCount >= 64) {
 			UsbPacketReceived(UsbBuffer, UsbSoFarCount);
@@ -444,14 +448,17 @@ static void HandleRxdData(void)
 		}
 
 		AT91C_BASE_UDP->UDP_CSR[1] &= ~AT91C_UDP_RX_DATA_BK1;
-		while(AT91C_BASE_UDP->UDP_CSR[1] & AT91C_UDP_RX_DATA_BK1)
-			;
-
+		while(AT91C_BASE_UDP->UDP_CSR[1] & AT91C_UDP_RX_DATA_BK1) {
+            WDT_HIT();
+        }
+        
 		if(UsbSoFarCount >= 64) {
 			UsbPacketReceived(UsbBuffer, UsbSoFarCount);
 			UsbSoFarCount = 0;
 		}
 	}
+    
+    WDT_HIT();
 }
 
 void UsbStart(void)

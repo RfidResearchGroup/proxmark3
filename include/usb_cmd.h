@@ -86,6 +86,12 @@ typedef struct {
 #define CMD_ISO_15693_COMMAND_DONE                                        0x0314
 #define CMD_ISO_15693_FIND_AFI                                            0x0315
 #define CMD_ISO_15693_DEBUG                                               0x0316
+
+// For Hitag2 transponders
+#define CMD_SNOOP_HITAG                                                   0x0370
+#define CMD_SIMULATE_HITAG                                                0x0371
+#define CMD_READER_HITAG                                                  0x0372
+
 #define CMD_SIMULATE_TAG_HF_LISTEN                                        0x0380
 #define CMD_SIMULATE_TAG_ISO_14443                                        0x0381
 #define CMD_SNOOP_ISO_14443                                               0x0382

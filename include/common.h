@@ -13,6 +13,7 @@
 #define __COMMON_H
 
 #include <stdint.h>
+typedef unsigned char byte_t;
 
 //-----------------------------------------------------------------------------
 // ISO 14443A

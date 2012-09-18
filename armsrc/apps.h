@@ -14,7 +14,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-typedef unsigned char byte_t;
+#include "common.h"
+#include "hitag2.h"
 
 // The large multi-purpose buffer, typically used to hold A/D samples,
 // maybe processed in some way.
@@ -49,7 +50,7 @@ void SamyRun(void);
 //void DbpIntegers(int a, int b, int c);
 void DbpString(char *str);
 void Dbprintf(const char *fmt, ...);
-void Dbhexdump(int len, uint8_t *d);
+void Dbhexdump(int len, uint8_t *d, bool bAsci);
 
 int AvgAdc(int ch);
 
@@ -69,13 +70,9 @@ void FpgaDownloadAndGo(void);
 void FpgaGatherVersion(char *dst, int len);
 void FpgaSetupSsc(void);
 void SetupSpi(int mode);
-void FpgaSetupSscDma(uint8_t *buf, int len);
-void inline FpgaDisableSscDma(void){
-	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
-}
-void inline FpgaEnableSscDma(void){
-	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
-}
+bool FpgaSetupSscDma(uint8_t *buf, int len);
+#define FpgaDisableSscDma(void)	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
+#define FpgaEnableSscDma(void) AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
 void SetAdcMuxFor(uint32_t whichGpio);
 
 // Definitions for the FPGA commands.
@@ -83,19 +80,21 @@ void SetAdcMuxFor(uint32_t whichGpio);
 #define FPGA_CMD_SET_DIVISOR						(2<<12)
 // Definitions for the FPGA configuration word.
 #define FPGA_MAJOR_MODE_LF_READER					(0<<5)
-#define FPGA_MAJOR_MODE_LF_SIMULATOR				(1<<5)
+#define FPGA_MAJOR_MODE_LF_EDGE_DETECT				(1<<5)
 #define FPGA_MAJOR_MODE_HF_READER_TX				(2<<5)
 #define FPGA_MAJOR_MODE_HF_READER_RX_XCORR			(3<<5)
 #define FPGA_MAJOR_MODE_HF_SIMULATOR				(4<<5)
 #define FPGA_MAJOR_MODE_HF_ISO14443A				(5<<5)
 #define FPGA_MAJOR_MODE_LF_PASSTHRU					(6<<5)
 #define FPGA_MAJOR_MODE_OFF							(7<<5)
+// Options for LF_EDGE_DETECT
+#define FPGA_LF_EDGE_DETECT_READER_FIELD 			(1<<0)
 // Options for the HF reader, tx to tag
 #define FPGA_HF_READER_TX_SHALLOW_MOD				(1<<0)
 // Options for the HF reader, correlating against rx from tag
 #define FPGA_HF_READER_RX_XCORR_848_KHZ				(1<<0)
 #define FPGA_HF_READER_RX_XCORR_SNOOP				(1<<1)
-#define FPGA_HF_READER_RX_XCORR_QUARTER_FREQ			(1<<2)
+#define FPGA_HF_READER_RX_XCORR_QUARTER_FREQ		(1<<2)
 // Options for the HF simulated tag, how to modulate
 #define FPGA_HF_SIMULATOR_NO_MODULATION				(0<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_BPSK				(1<<0)
@@ -139,7 +138,7 @@ void ReaderIso14443a(UsbCommand * c, UsbCommand * ack);
 int RAMFUNC LogTrace(const uint8_t * btBytes, int iLen, int iSamples, uint32_t dwParity, int bReader);
 uint32_t GetParity(const uint8_t * pbtCmd, int iLen);
 void iso14a_set_trigger(int enable);
-void iso14a_clear_tracelen(void);
+void iso14a_clear_trace(void);
 void iso14a_set_tracing(int enable);
 void RAMFUNC SniffMifare(uint8_t param);
 
@@ -175,6 +174,11 @@ void SetDebugIso15693(uint32_t flag);
 void RAMFUNC SnoopIClass(void);
 void SimulateIClass(uint8_t arg0, uint8_t *datain);
 void ReaderIClass(uint8_t arg0);
+
+// hitag2.h
+void SnoopHitag(uint32_t type);
+void SimulateHitagTag(bool tag_mem_supplied, byte_t* data);
+void ReaderHitag(hitag_function htf, hitag_data* htd);
 
 /// util.h
 

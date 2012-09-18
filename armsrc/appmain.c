@@ -19,6 +19,7 @@
 #include <stdarg.h>
 
 #include "legicrf.h"
+#include <hitag2.h>
 
 #ifdef WITH_LCD
 # include "fonts.h"
@@ -125,23 +126,27 @@ void Dbprintf(const char *fmt, ...) {
 }
 
 // prints HEX & ASCII
-void Dbhexdump(int len, uint8_t *d) {
+void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 	int l=0,i;
 	char ascii[9];
-
+    
 	while (len>0) {
 		if (len>8) l=8;
 		else l=len;
 		
 		memcpy(ascii,d,l);
-		ascii[l]=0;	
+		ascii[l]=0;
 		
 		// filter safe ascii
-		for (i=0;i<l;i++) 
+		for (i=0;i<l;i++)
 			if (ascii[i]<32 || ascii[i]>126) ascii[i]='.';
-
-		Dbprintf("%-8s %*D",ascii,l,d," ");
-
+        
+		if (bAsci) {
+			Dbprintf("%-8s %*D",ascii,l,d," ");
+		} else {
+			Dbprintf("%*D",l,d," ");
+		}
+        
 		len-=8;
 		d+=8;		
 	}
@@ -185,14 +190,15 @@ int AvgAdc(int ch) // was static - merlok
 
 void MeasureAntennaTuning(void)
 {
-	uint8_t *dest = (uint8_t *)BigBuf;
+	uint8_t *dest = (uint8_t *)BigBuf+FREE_BUFFER_OFFSET;
 	int i, adcval = 0, peak = 0, peakv = 0, peakf = 0; //ptr = 0 
 	int vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
 
 	UsbCommand c;
 
-	DbpString("Measuring antenna characteristics, please wait.");
-	memset(BigBuf,0,sizeof(BigBuf));
+  LED_B_ON();
+	DbpString("Measuring antenna characteristics, please wait...");
+	memset(dest,0,sizeof(FREE_BUFFER_SIZE));
 
 /*
  * Sweeps the useful LF range of the proxmark from
@@ -202,8 +208,10 @@ void MeasureAntennaTuning(void)
  * the resonating frequency of your LF antenna
  * ( hopefully around 95 if it is tuned to 125kHz!)
  */
+  
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 	for (i=255; i>19; i--) {
+    WDT_HIT();
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
 		SpinDelay(20);
 		// Vref = 3.3V, and a 10000:240 voltage divider on the input
@@ -221,6 +229,7 @@ void MeasureAntennaTuning(void)
 		}
 	}
 
+  LED_A_ON();
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 	SpinDelay(20);
@@ -232,7 +241,14 @@ void MeasureAntennaTuning(void)
 	c.arg[0] = (vLf125 << 0) | (vLf134 << 16);
 	c.arg[1] = vHf;
 	c.arg[2] = peakf | (peakv << 16);
+
+  DbpString("Measuring complete, sending report back to host");
+
 	UsbSendPacket((uint8_t *)&c, sizeof(c));
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+  LED_A_OFF();
+  LED_B_OFF();
+  return;
 }
 
 void MeasureAntennaTuningHf(void)
@@ -258,8 +274,7 @@ void MeasureAntennaTuningHf(void)
 
 void SimulateTagHfListen(void)
 {
-	uint8_t *dest = (uint8_t *)BigBuf;
-	int n = sizeof(BigBuf);
+	uint8_t *dest = (uint8_t *)BigBuf+FREE_BUFFER_OFFSET;
 	uint8_t v = 0;
 	int i;
 	int p = 0;
@@ -293,7 +308,7 @@ void SimulateTagHfListen(void)
 				p = 0;
 				i++;
 
-				if(i >= n) {
+				if(i >= FREE_BUFFER_SIZE) {
 					break;
 				}
 			}
@@ -644,6 +659,18 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 #endif
 
+#ifdef WITH_HITAG
+		case CMD_SNOOP_HITAG: // Eavesdrop Hitag tag, args = type
+			SnoopHitag(c->arg[0]);
+			break;
+		case CMD_SIMULATE_HITAG: // Simulate Hitag tag, args = memory content
+			SimulateHitagTag((bool)c->arg[0],(byte_t*)c->d.asBytes);
+			break;
+		case CMD_READER_HITAG: // Reader for Hitag tags, args = type and function
+			ReaderHitag((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes);
+			break;
+#endif
+            
 #ifdef WITH_ISO15693
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693:
 			AcquireRawAdcSamplesIso15693();
@@ -822,16 +849,14 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			LED_B_ON();
 			UsbSendPacket((uint8_t *)&n, sizeof(n));
 			LED_B_OFF();
-			break;
-		}
+		} break;
 
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
 			uint8_t *b = (uint8_t *)BigBuf;
 			memcpy(b+c->arg[0], c->d.asBytes, 48);
 			//Dbprintf("copied 48 bytes to %i",b+c->arg[0]);
 			UsbSendPacket((uint8_t*)&ack, sizeof(ack));
-			break;
-		}
+		} break;
 
 		case CMD_READ_MEM:
 			ReadMem(c->arg[0]);
@@ -854,10 +879,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			SendVersion();
 			break;
 
-#ifdef WITH_LF
-
-#endif
-
 #ifdef WITH_LCD
 		case CMD_LCD_RESET:
 			LCDReset();
@@ -868,7 +889,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 #endif
 		case CMD_SETUP_WRITE:
 		case CMD_FINISH_WRITE:
-		case CMD_HARDWARE_RESET:
+		case CMD_HARDWARE_RESET: {
 			USB_D_PLUS_PULLUP_OFF();
 			SpinDelay(1000);
 			SpinDelay(1000);
@@ -876,16 +897,16 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			for(;;) {
 				// We're going to reset, and the bootrom will take control.
 			}
-			break;
+        } break;
 
-		case CMD_START_FLASH:
+		case CMD_START_FLASH: {
 			if(common_area.flags.bootrom_present) {
 				common_area.command = COMMON_AREA_COMMAND_ENTER_FLASH_MODE;
 			}
 			USB_D_PLUS_PULLUP_OFF();
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
 			for(;;);
-			break;
+        } break;
 
 		case CMD_DEVICE_INFO: {
 			UsbCommand c;
@@ -893,11 +914,11 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			c.arg[0] = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
 			if(common_area.flags.bootrom_present) c.arg[0] |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
 			UsbSendPacket((uint8_t*)&c, sizeof(c));
-		}
-			break;
-		default:
+		} break;
+            
+		default: {
 			Dbprintf("%s: 0x%04x","unknown command:",c->cmd);
-			break;
+        } break;
 	}
 }
 

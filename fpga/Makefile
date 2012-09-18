@@ -6,7 +6,7 @@ clean:
 	$(DELETE) fpga.map  fpga.ngc           fpga_ngdbuild.xrpt  fpga.pcf         fpga-placed_pad.csv  fpga-placed.ptwx      fpga.rbt          xlnx_auto_0_xdb
 	$(DELETE) fpga.bld  fpga.mrp  fpga.ngc_xst.xrpt  fpga.ngm            fpga-placed.ncd  fpga-placed_pad.txt  fpga-placed.unroutes  fpga_summary.xml  netlist.lst     xst
 
-fpga.ngc: fpga.v fpga.ucf xst.scr util.v lo_simulate.v lo_read.v lo_passthru.v hi_simulate.v hi_read_tx.v hi_read_rx_xcorr.v hi_iso14443a.v
+fpga.ngc: fpga.v fpga.ucf xst.scr util.v lo_edge_detect.v lo_read.v lo_passthru.v hi_simulate.v hi_read_tx.v hi_read_rx_xcorr.v hi_iso14443a.v
 	$(DELETE) fpga.ngc
 	$(XILINX_TOOLS_PREFIX)xst -ifn xst.scr
 

@@ -1102,7 +1102,7 @@ void ReaderIso15693(uint32_t parameter)
 
 	Dbprintf("%d octets read from IDENTIFY request:", answerLen1);
 	DbdecodeIso15693Answer(answerLen1,answer1);
-	Dbhexdump(answerLen1,answer1);
+	Dbhexdump(answerLen1,answer1,true);
 
 	// UID is reverse
 	if (answerLen1>=12) 
@@ -1113,11 +1113,11 @@ void ReaderIso15693(uint32_t parameter)
 
 	Dbprintf("%d octets read from SELECT request:", answerLen2);
 	DbdecodeIso15693Answer(answerLen2,answer2);
-	Dbhexdump(answerLen2,answer2);
+	Dbhexdump(answerLen2,answer2,true);
 
 	Dbprintf("%d octets read from XXX request:", answerLen3);
 	DbdecodeIso15693Answer(answerLen3,answer3);
-	Dbhexdump(answerLen3,answer3);
+	Dbhexdump(answerLen3,answer3,true);
 
  
 	// read all pages
@@ -1130,7 +1130,7 @@ void ReaderIso15693(uint32_t parameter)
 			if (answerLen2>0) {
 				Dbprintf("READ SINGLE BLOCK %d returned %d octets:",i,answerLen2);
 				DbdecodeIso15693Answer(answerLen2,answer2);
-				Dbhexdump(answerLen2,answer2);
+				Dbhexdump(answerLen2,answer2,true);
 				if ( *((uint32_t*) answer2) == 0x07160101 ) break; // exit on NoPageErr 
 			} 
 			i++;
@@ -1264,7 +1264,7 @@ void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8
 	
 	if (DEBUG) {
 		Dbprintf("SEND");
-		Dbhexdump(datalen,data);	
+		Dbhexdump(datalen,data,true);
 	}
 	
 	recvlen=SendDataTag(data,datalen,1,speed,(recv?&recvbuf:NULL));
@@ -1280,7 +1280,7 @@ void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8
 		if (DEBUG) {
 			Dbprintf("RECV");
 			DbdecodeIso15693Answer(recvlen,recvbuf); 
-			Dbhexdump(recvlen,recvbuf); 
+			Dbhexdump(recvlen,recvbuf,true);
 		}
 	}
 

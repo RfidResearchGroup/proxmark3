@@ -14,7 +14,7 @@
 
 `include "lo_read.v"
 `include "lo_passthru.v"
-`include "lo_simulate.v"
+`include "lo_edge_detect.v"
 `include "hi_read_tx.v"
 `include "hi_read_rx_xcorr.v"
 `include "hi_simulate.v"
@@ -111,6 +111,10 @@ assign hi_read_rx_xcorr_quarter = conf_word[2];
 wire [2:0] hi_simulate_mod_type;
 assign hi_simulate_mod_type = conf_word[2:0];
 
+// For the high-frequency simulated tag: what kind of modulation to use.
+wire lf_field;
+assign lf_field = conf_word[0];
+
 //-----------------------------------------------------------------------------
 // And then we instantiate the modules corresponding to each of the FPGA's
 // major modes, and use muxes to connect the outputs of the active mode to
@@ -136,13 +140,14 @@ lo_passthru lp(
 	lp_dbg, divisor
 );
 
-lo_simulate ls(
+lo_edge_detect ls(
 	pck0, ck_1356meg, ck_1356megb,
 	ls_pwr_lo, ls_pwr_hi, ls_pwr_oe1, ls_pwr_oe2, ls_pwr_oe3, ls_pwr_oe4,
 	adc_d, ls_adc_clk,
 	ls_ssp_frame, ls_ssp_din, ssp_dout, ls_ssp_clk,
 	cross_hi, cross_lo,
-	ls_dbg, divisor
+	ls_dbg, divisor,
+	lf_field
 );
 
 hi_read_tx ht(

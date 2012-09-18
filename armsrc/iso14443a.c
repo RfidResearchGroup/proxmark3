@@ -21,7 +21,7 @@
 #include "mifareutil.h"
 
 static uint32_t iso14a_timeout;
-uint8_t *trace = (uint8_t *) BigBuf;
+uint8_t *trace = (uint8_t *) BigBuf+TRACE_OFFSET;
 int traceLen = 0;
 int rsamples = 0;
 int tracing = TRUE;
@@ -68,12 +68,15 @@ void iso14a_set_trigger(int enable) {
 	trigger = enable;
 }
 
-void iso14a_clear_tracelen(void) {
+void iso14a_clear_trace(void) {
+    memset(trace, 0x44, TRACE_SIZE);
 	traceLen = 0;
 }
+
 void iso14a_set_tracing(int enable) {
 	tracing = enable;
 }
+
 void iso14a_set_timeout(uint32_t timeout) {
 	iso14a_timeout = timeout;
 }
@@ -580,8 +583,7 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 	
 	LEDsoff();
 	// init trace buffer
-	traceLen = 0;
-	memset(trace, 0x44, TRACE_SIZE);
+    iso14a_clear_trace();
 
 	// We won't start recording the frames that we acquire until we trigger;
 	// a good trigger condition to get started is probably when we see a
@@ -905,8 +907,7 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 {
   // Enable and clear the trace
 	tracing = TRUE;
-	traceLen = 0;
-  memset(trace, 0x44, TRACE_SIZE);
+  iso14a_clear_trace();
 
 	// This function contains the tag emulation
 	uint8_t sak;
@@ -2379,8 +2380,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// C(red) A(yellow) B(green)
 	LEDsoff();
 	// init trace buffer
-	traceLen = 0;
-	memset(trace, 0x44, TRACE_SIZE);
+    iso14a_clear_trace();
 
 	// The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.
