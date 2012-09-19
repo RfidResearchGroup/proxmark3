@@ -450,6 +450,8 @@ static void hitag_reader_send_frame(const byte_t* frame, size_t frame_len)
 	LOW(GPIO_SSC_DOUT);
 }
 
+size_t blocknr;
+
 bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
 	// Reset the transmission frame length
 	*txlen = 0;
@@ -474,9 +476,15 @@ bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) 
 				memcpy(tx,password,4);
 				bPwd = true;
 			} else {
-				DbpString("Password succesful!");
-				// We are done... for now
-				return false;
+        if (blocknr > 7) {
+          DbpString("Read succesful!");
+          // We are done... for now
+          return false;
+        }
+        *txlen = 10;
+        tx[0] = 0xc0 | (blocknr << 3) | ((blocknr^7) >> 2);
+        tx[1] = ((blocknr^7) << 6);
+        blocknr++;
 			}
 		} break;
 			
@@ -513,7 +521,7 @@ bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txl
 				memcpy(tx,NrAr,8);
 				bCrypto = true;
 			} else {
-				DbpString("Authentication succesful!");
+				DbpString("Read succesful!");
 				// We are done... for now
 				return false;
 			}
@@ -590,8 +598,8 @@ void SnoopHitag(uint32_t type) {
 	size_t rxlen=0;
 	
 	// Clean up trace and prepare it for storing frames
-    iso14a_set_tracing(TRUE);
-    iso14a_clear_trace();
+	iso14a_set_tracing(TRUE);
+	iso14a_clear_trace();
 
 	auth_table_len = 0;
 	auth_table_pos = 0;
@@ -993,6 +1001,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 		case RHT2F_PASSWORD: {
             Dbprintf("List identifier in password mode");
 			memcpy(password,htd->pwd.password,4);
+      blocknr = 0;
 			bQuitTraceFull = false;
 			bQuiet = false;
 			bPwd = false;
