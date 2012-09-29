@@ -60,6 +60,7 @@ int main (int argc, char *argv[]) {
   lfsr_rollback_word(revstate, uid ^ nt, 0);
   crypto1_get_lfsr(revstate, &lfsr);
   printf("\nFound Key: [%02x %02x %02x %02x %02x %02x]\n\n",plfsr[5],plfsr[4],plfsr[3],plfsr[2],plfsr[1],plfsr[0]);
+  crypto1_destroy(revstate);
 
   return 0;
 }
