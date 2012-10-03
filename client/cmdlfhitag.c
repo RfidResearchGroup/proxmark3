@@ -25,6 +25,17 @@ int CmdLFHitagList(const char *Cmd)
 {
   uint8_t got[3000];
   GetFromBigBuf(got,sizeof(got),0);
+  char filename[256];
+  FILE* pf;
+
+  param_getstr(Cmd,0,filename);
+  
+  if (strlen(filename) > 0) {
+      if ((pf = fopen(filename,"w")) == NULL) {
+	    PrintAndLog("Error: Could not open file [%s]",filename);
+	    return 1;
+	  }
+  }
 
   PrintAndLog("recorded activity:");
   PrintAndLog(" ETU     :rssi: who bytes");
@@ -102,10 +113,26 @@ int CmdLFHitagList(const char *Cmd)
       (isResponse ? "TAG" : "   "),
       line);
 
+
+	if (strlen(filename) > 0) {
+      fprintf(pf," +%7d: %s: %s %s %s",
+					(prev < 0 ? 0 : (timestamp - prev)),
+					metricString,
+					(isResponse ? "TAG" : "   "),
+					line,
+					"\n");
+    }
+	
     prev = timestamp;
     i += (len + 9);
   }
-	return 0;
+  
+  if (strlen(filename) > 0) {
+	  PrintAndLog("Recorded activity succesfully written to file: %s", filename);
+    fclose(pf);
+  }
+	
+  return 0;
 }
 
 int CmdLFHitagSnoop(const char *Cmd) {
