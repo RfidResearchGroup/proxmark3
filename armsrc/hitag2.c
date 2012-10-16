@@ -25,6 +25,7 @@
 static bool bQuiet;
 
 bool bCrypto;
+bool bAuthenticating;
 bool bPwd;
 
 struct hitag2_tag {
@@ -41,8 +42,7 @@ struct hitag2_tag {
 	byte_t sectors[12][4];
 };
 
-static struct hitag2_tag tag;
-static const struct hitag2_tag resetdata = {
+static struct hitag2_tag tag = {
     .state = TAG_STATE_RESET,
     .sectors = {                         // Password mode:               | Crypto mode:
         [0]  = { 0x02, 0x4e, 0x02, 0x20}, // UID                          | UID
@@ -73,6 +73,8 @@ size_t auth_table_len = AUTH_TABLE_LENGTH;
 
 byte_t password[4];
 byte_t NrAr[8];
+byte_t key[8];
+uint64_t cipher_state;
 
 /* Following is a modified version of cryptolib.com/ciphers/hitag2/ */
 // Software optimized 48-bit Philips/NXP Mifare Hitag2 PCF7936/46/47/52 stream cipher algorithm by I.C. Wiener 2006-2007.
@@ -163,23 +165,23 @@ int hitag2_reset(void)
 
 int hitag2_init(void)
 {
-	memcpy(&tag, &resetdata, sizeof(tag));
+//	memcpy(&tag, &resetdata, sizeof(tag));
 	hitag2_reset();
 	return 0;
 }
 
 static void hitag2_cipher_reset(struct hitag2_tag *tag, const byte_t *iv)
 {
-	uint64_t key = ((uint64_t)tag->sectors[2][2]) |
-			((uint64_t)tag->sectors[2][3] << 8) |
-			((uint64_t)tag->sectors[1][0] << 16) |
-			((uint64_t)tag->sectors[1][1] << 24) |
-			((uint64_t)tag->sectors[1][2] << 32) |
-			((uint64_t)tag->sectors[1][3] << 40);
-	uint32_t uid = ((uint32_t)tag->sectors[0][0]) |
-			((uint32_t)tag->sectors[0][1] << 8) |
-			((uint32_t)tag->sectors[0][2] << 16) |
-			((uint32_t)tag->sectors[0][3] << 24);
+	uint64_t key =  ((uint64_t)tag->sectors[2][2]) |
+                  ((uint64_t)tag->sectors[2][3] << 8) |
+                  ((uint64_t)tag->sectors[1][0] << 16) |
+                  ((uint64_t)tag->sectors[1][1] << 24) |
+                  ((uint64_t)tag->sectors[1][2] << 32) |
+                  ((uint64_t)tag->sectors[1][3] << 40);
+	uint32_t uid =  ((uint32_t)tag->sectors[0][0]) |
+                  ((uint32_t)tag->sectors[0][1] << 8) |
+                  ((uint32_t)tag->sectors[0][2] << 16) |
+                  ((uint32_t)tag->sectors[0][3] << 24);
 	uint32_t iv_ = (((uint32_t)(iv[0]))) |
 			(((uint32_t)(iv[1])) << 8) |
 			(((uint32_t)(iv[2])) << 16) |
@@ -489,13 +491,85 @@ bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) 
 		} break;
 			
 		// Unexpected response
-        default: {
+    default: {
 			Dbprintf("Uknown frame length: %d",rxlen);
 			return false;
 		} break;
 	}
 	return true;
 }
+
+bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+	// Reset the transmission frame length
+	*txlen = 0;
+	
+  if(bCrypto) {
+		hitag2_cipher_transcrypt(&cipher_state,rx,rxlen/8,rxlen%8);
+	}
+
+	// Try to find out which command was send by selecting on length (in bits)
+	switch (rxlen) {
+      // No answer, try to resurrect
+		case 0: {
+			// Stop if there is no answer while we are in crypto mode (after sending NrAr)
+			if (bCrypto) {
+				DbpString("Authentication failed!");
+				return false;
+			}
+			*txlen = 5;
+			memcpy(tx,"\xc0",nbytes(*txlen));
+		} break;
+			
+      // Received UID, crypto tag answer
+		case 32: {
+			if (!bCrypto) {
+        uint64_t ui64key = key[0] | ((uint64_t)key[1]) << 8 | ((uint64_t)key[2]) << 16 | ((uint64_t)key[3]) << 24 | ((uint64_t)key[4]) << 32 | ((uint64_t)key[5]) << 40;
+        uint32_t ui32uid = rx[0] | ((uint32_t)rx[1]) << 8 | ((uint32_t)rx[2]) << 16 | ((uint32_t)rx[3]) << 24;
+        cipher_state = _hitag2_init(rev64(ui64key), rev32(ui32uid), 0);
+        memset(tx,0x00,4);
+        memset(tx+4,0xff,4);
+        hitag2_cipher_transcrypt(&cipher_state,tx+4,4,0);
+				*txlen = 64;
+				bCrypto = true;
+        bAuthenticating = true;
+			} else {
+        // Check if we received answer tag (at)
+        if (bAuthenticating) {
+          bAuthenticating = false;
+        } else {
+          // Store the received block
+          memcpy(tag.sectors[blocknr],rx,4);
+          blocknr++;
+        }
+        if (blocknr > 7) {
+          DbpString("Read succesful!");
+          // We are done... for now
+          return false;
+        }
+        *txlen = 10;
+        tx[0] = 0xc0 | (blocknr << 3) | ((blocknr^7) >> 2);
+        tx[1] = ((blocknr^7) << 6);
+			}
+		} break;
+			
+      // Unexpected response
+		default: {
+			Dbprintf("Uknown frame length: %d",rxlen);
+			return false;
+		} break;
+	}
+	
+  
+  if(bCrypto) {
+    // We have to return now to avoid double encryption
+    if (!bAuthenticating) {
+      hitag2_cipher_transcrypt(&cipher_state,tx,*txlen/8,*txlen%8);
+    }
+	}
+
+	return true;
+}
+
 
 bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
 	// Reset the transmission frame length 
@@ -521,7 +595,7 @@ bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txl
 				memcpy(tx,NrAr,8);
 				bCrypto = true;
 			} else {
-				DbpString("Read succesful!");
+				DbpString("Authentication succesful!");
 				// We are done... for now
 				return false;
 			}
@@ -807,8 +881,8 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	bQuiet = false;
 	
 	// Clean up trace and prepare it for storing frames
-    iso14a_set_tracing(TRUE);
-    iso14a_clear_trace();
+  iso14a_set_tracing(TRUE);
+  iso14a_clear_trace();
 	auth_table_len = 0;
 	auth_table_pos = 0;
 	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
@@ -992,27 +1066,39 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	bool bQuitTraceFull = false;
 	
 	// Clean up trace and prepare it for storing frames
-    iso14a_set_tracing(TRUE);
-    iso14a_clear_trace();
+  iso14a_set_tracing(TRUE);
+  iso14a_clear_trace();
 	DbpString("Starting Hitag reader family");
 
 	// Check configuration
 	switch(htf) {
 		case RHT2F_PASSWORD: {
-            Dbprintf("List identifier in password mode");
+      Dbprintf("List identifier in password mode");
 			memcpy(password,htd->pwd.password,4);
       blocknr = 0;
 			bQuitTraceFull = false;
 			bQuiet = false;
 			bPwd = false;
 		} break;
+      
 		case RHT2F_AUTHENTICATE: {
-			DbpString("Authenticating in crypto mode");
+			DbpString("Authenticating using nr,ar pair:");
 			memcpy(NrAr,htd->auth.NrAr,8);
-			Dbprintf("Reader-challenge:");
 			Dbhexdump(8,NrAr,false);
 			bQuiet = false;
 			bCrypto = false;
+      bAuthenticating = false;
+			bQuitTraceFull = true;
+		} break;
+      
+		case RHT2F_CRYPTO: {
+			DbpString("Authenticating using key:");
+			memcpy(key,htd->crypto.key,6);
+			Dbhexdump(6,key,false);
+      blocknr = 0;
+			bQuiet = false;
+			bCrypto = false;
+      bAuthenticating = false;
 			bQuitTraceFull = true;
 		} break;
 
@@ -1124,6 +1210,9 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 			} break;
 			case RHT2F_AUTHENTICATE: {
 				bStop = !hitag2_authenticate(rx,rxlen,tx,&txlen);
+			} break;
+			case RHT2F_CRYPTO: {
+				bStop = !hitag2_crypto(rx,rxlen,tx,&txlen);
 			} break;
 			case RHT2F_TEST_AUTH_ATTEMPTS: {
 				bStop = !hitag2_test_auth_attempts(rx,rxlen,tx,&txlen);

@@ -143,7 +143,7 @@ int CmdLFHitagSnoop(const char *Cmd) {
 
 int CmdLFHitagSim(const char *Cmd) {
   UsbCommand c = {CMD_SIMULATE_HITAG};
-	char filename[256];
+	char filename[256] = { 0x00 };
 	FILE* pf;
 	bool tag_mem_supplied;
 
@@ -184,6 +184,10 @@ int CmdLFHitagReader(const char *Cmd) {
 			num_to_bytes(param_get32ex(Cmd,1,0,16),4,htd->auth.NrAr);
 			num_to_bytes(param_get32ex(Cmd,2,0,16),4,htd->auth.NrAr+4);
 		} break;
+		case RHT2F_CRYPTO: {
+			num_to_bytes(param_get64ex(Cmd,1,0,16),6,htd->crypto.key);
+//			num_to_bytes(param_get32ex(Cmd,2,0,16),4,htd->auth.NrAr+4);
+		} break;
 		case RHT2F_TEST_AUTH_ATTEMPTS: {
 			// No additional parameters needed
 		} break;
@@ -195,6 +199,7 @@ int CmdLFHitagReader(const char *Cmd) {
 			PrintAndLog(" Hitag2 (2*)",htf);
 			PrintAndLog("  21 <password> (password mode)",htf);
 			PrintAndLog("  22 <nr> <ar> (authentication)",htf);
+			PrintAndLog("  23 <key> (authentication)",htf);
 			PrintAndLog("  25 (test recorded authentications)",htf);
 			return 1;
 		} break;
