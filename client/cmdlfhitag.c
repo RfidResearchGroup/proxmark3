@@ -199,7 +199,7 @@ int CmdLFHitagReader(const char *Cmd) {
 			PrintAndLog(" Hitag2 (2*)",htf);
 			PrintAndLog("  21 <password> (password mode)",htf);
 			PrintAndLog("  22 <nr> <ar> (authentication)",htf);
-			PrintAndLog("  23 <key> (authentication)",htf);
+			PrintAndLog("  23 <key> (authentication) key is in format: ISK high + ISK low",htf);
 			PrintAndLog("  25 (test recorded authentications)",htf);
 			return 1;
 		} break;

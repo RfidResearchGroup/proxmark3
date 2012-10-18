@@ -477,16 +477,26 @@ bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) 
 				*txlen = 32;
 				memcpy(tx,password,4);
 				bPwd = true;
+				 memcpy(tag.sectors[blocknr],rx,4);
+				 blocknr++;
 			} else {
-        if (blocknr > 7) {
-          DbpString("Read succesful!");
-          // We are done... for now
-          return false;
-        }
-        *txlen = 10;
-        tx[0] = 0xc0 | (blocknr << 3) | ((blocknr^7) >> 2);
-        tx[1] = ((blocknr^7) << 6);
-        blocknr++;
+				
+			if(blocknr == 1){
+				//store password in block1, the TAG answers with Block3, but we need the password in memory
+				memcpy(tag.sectors[blocknr],tx,4);
+			}else{
+				memcpy(tag.sectors[blocknr],rx,4);
+			}
+			
+			blocknr++;
+			if (blocknr > 7) {
+			  DbpString("Read succesful!");
+			  // We are done... for now
+			  return false;
+			}
+			*txlen = 10;
+			tx[0] = 0xc0 | (blocknr << 3) | ((blocknr^7) >> 2);
+			tx[1] = ((blocknr^7) << 6);
 			}
 		} break;
 			
