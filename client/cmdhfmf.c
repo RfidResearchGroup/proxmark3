@@ -71,17 +71,22 @@ start:
 	if (isOK != 1) return 1;
 	
 	// execute original function from util nonce2key
-	if (nonce2key(uid, nt, par_list, ks_list, &r_key)) return 2;
-	printf("------------------------------------------------------------------\n");
-	PrintAndLog("Key found:%012llx \n", r_key);
+	if (nonce2key(uid, nt, par_list, ks_list, &r_key))
+	{
+		isOK = 2;
+		PrintAndLog("Key not found (lfsr_common_prefix list is null). Nt=%08x", nt);	
+	} else {
+		printf("------------------------------------------------------------------\n");
+		PrintAndLog("Key found:%012llx \n", r_key);
 
-	num_to_bytes(r_key, 6, keyBlock);
-	isOK = mfCheckKeys(0, 0, 1, keyBlock, &r_key);
+		num_to_bytes(r_key, 6, keyBlock);
+		isOK = mfCheckKeys(0, 0, 1, keyBlock, &r_key);
+	}
 	if (!isOK) 
 		PrintAndLog("Found valid key:%012llx", r_key);
 	else
 	{
-		PrintAndLog("Found invalid key. ( Nt=%08x ,Trying use it to run again...", nt);	
+		if (isOK != 2) PrintAndLog("Found invalid key. ( Nt=%08x ,Trying use it to run again...", nt);	
 		c.arg[0] = nt;
 		goto start;
 	}

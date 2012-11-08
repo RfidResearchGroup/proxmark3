@@ -15,6 +15,7 @@
 
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "crapto1.h"
 #include "common.h"
 

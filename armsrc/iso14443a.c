@@ -1850,11 +1850,12 @@ void ReaderMifare(uint32_t parameter)
 
 	while(TRUE)
 	{
-		LED_C_ON();
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-		SpinDelay(200);
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 		LED_C_OFF();
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+		SpinDelay(10);
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+		LED_C_ON();
+		SpinDelay(2);
 
 		// Test if the action was cancelled
 		if(BUTTON_PRESS()) {
