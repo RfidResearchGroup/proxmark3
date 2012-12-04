@@ -10,6 +10,9 @@
 // executes.
 //-----------------------------------------------------------------------------
 
+#include "usb_cdc.h"
+#include "cmd.h"
+
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
@@ -22,8 +25,7 @@
 #include <hitag2.h>
 
 #ifdef WITH_LCD
-# include "fonts.h"
-# include "LCD.h"
+ #include "LCD.h"
 #endif
 
 #define abs(x) ( ((x)<0) ? -(x) : (x) )
@@ -77,39 +79,41 @@ void ToSendStuffBit(int b)
 
 void DbpString(char *str)
 {
-	/* this holds up stuff unless we're connected to usb */
-	if (!UsbConnected())
-		return;
-
-	UsbCommand c;
-	c.cmd = CMD_DEBUG_PRINT_STRING;
-	c.arg[0] = strlen(str);
-	if(c.arg[0] > sizeof(c.d.asBytes)) {
-		c.arg[0] = sizeof(c.d.asBytes);
-	}
-	memcpy(c.d.asBytes, str, c.arg[0]);
-
-	UsbSendPacket((uint8_t *)&c, sizeof(c));
-	// TODO fix USB so stupid things like this aren't req'd
-	SpinDelay(50);
+  cmd_send(CMD_DEBUG_PRINT_STRING,strlen(str),0,0,(byte_t*)str,strlen(str));
+//	/* this holds up stuff unless we're connected to usb */
+//	if (!UsbConnected())
+//		return;
+//
+//	UsbCommand c;
+//	c.cmd = CMD_DEBUG_PRINT_STRING;
+//	c.arg[0] = strlen(str);
+//	if(c.arg[0] > sizeof(c.d.asBytes)) {
+//		c.arg[0] = sizeof(c.d.asBytes);
+//	}
+//	memcpy(c.d.asBytes, str, c.arg[0]);
+//
+//	UsbSendPacket((uint8_t *)&c, sizeof(c));
+//	// TODO fix USB so stupid things like this aren't req'd
+//	SpinDelay(50);
 }
 
 #if 0
 void DbpIntegers(int x1, int x2, int x3)
 {
-	/* this holds up stuff unless we're connected to usb */
-	if (!UsbConnected())
-		return;
-
-	UsbCommand c;
-	c.cmd = CMD_DEBUG_PRINT_INTEGERS;
-	c.arg[0] = x1;
-	c.arg[1] = x2;
-	c.arg[2] = x3;
-
-	UsbSendPacket((uint8_t *)&c, sizeof(c));
-	// XXX
-	SpinDelay(50);
+  cmd_send(CMD_DEBUG_PRINT_INTEGERS,x1,x2,x3,0,0);
+//	/* this holds up stuff unless we're connected to usb */
+//	if (!UsbConnected())
+//		return;
+//
+//	UsbCommand c;
+//	c.cmd = CMD_DEBUG_PRINT_INTEGERS;
+//	c.arg[0] = x1;
+//	c.arg[1] = x2;
+//	c.arg[2] = x3;
+//
+//	UsbSendPacket((uint8_t *)&c, sizeof(c));
+//	// XXX
+//	SpinDelay(50);
 }
 #endif
 
@@ -194,7 +198,7 @@ void MeasureAntennaTuning(void)
 	int i, adcval = 0, peak = 0, peakv = 0, peakf = 0; //ptr = 0 
 	int vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
 
-	UsbCommand c;
+//	UsbCommand c;
 
   LED_B_ON();
 	DbpString("Measuring antenna characteristics, please wait...");
@@ -237,14 +241,14 @@ void MeasureAntennaTuning(void)
 	// can measure voltages up to 33000 mV
 	vHf = (33000 * AvgAdc(ADC_CHAN_HF)) >> 10;
 
-	c.cmd = CMD_MEASURED_ANTENNA_TUNING;
-	c.arg[0] = (vLf125 << 0) | (vLf134 << 16);
-	c.arg[1] = vHf;
-	c.arg[2] = peakf | (peakv << 16);
+//	c.cmd = CMD_MEASURED_ANTENNA_TUNING;
+//	c.arg[0] = (vLf125 << 0) | (vLf134 << 16);
+//	c.arg[1] = vHf;
+//	c.arg[2] = peakf | (peakv << 16);
 
   DbpString("Measuring complete, sending report back to host");
-
-	UsbSendPacket((uint8_t *)&c, sizeof(c));
+  cmd_send(CMD_MEASURED_ANTENNA_TUNING,vLf125|(vLf134<<16),vHf,peakf|(peakv<<16),0,0);
+//	UsbSendPacket((uint8_t *)&c, sizeof(c));
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
   LED_A_OFF();
   LED_B_OFF();
@@ -613,14 +617,14 @@ void ListenReaderField(int limit)
 void UsbPacketReceived(uint8_t *packet, int len)
 {
 	UsbCommand *c = (UsbCommand *)packet;
-	UsbCommand ack;
-	ack.cmd = CMD_ACK;
 
+//  Dbprintf("received %d bytes, with command: 0x%04x and args: %d %d %d",len,c->cmd,c->arg[0],c->arg[1],c->arg[2]);
+  
 	switch(c->cmd) {
 #ifdef WITH_LF
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			AcquireRawAdcSamples125k(c->arg[0]);
-			UsbSendPacket((uint8_t*)&ack, sizeof(ack));
+      cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			ModThenAcquireRawAdcSamples125k(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
@@ -736,13 +740,13 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			SnoopIso14443a(c->arg[0]);
 			break;
 		case CMD_READER_ISO_14443a:
-			ReaderIso14443a(c, &ack);
+			ReaderIso14443a(c);
 			break;
 		case CMD_SIMULATE_TAG_ISO_14443a:
 			SimulateIso14443aTag(c->arg[0], c->arg[1], c->arg[2]);  // ## Simulate iso14443a tag - pass tag type & UID
 			break;
 		case CMD_EPA_PACE_COLLECT_NONCE:
-			EPA_PACE_Collect_Nonce(c, &ack);
+			EPA_PACE_Collect_Nonce(c);
 			break;
 			
 		case CMD_READER_MIFARE:
@@ -838,16 +842,26 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 
 		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K: {
-			UsbCommand n;
-			if(c->cmd == CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K) {
-				n.cmd = CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K;
-			} else {
-				n.cmd = CMD_DOWNLOADED_RAW_BITS_TI_TYPE;
-			}
-			n.arg[0] = c->arg[0];
-			memcpy(n.d.asDwords, BigBuf+c->arg[0], 12*sizeof(uint32_t));
-			LED_B_ON();
-			UsbSendPacket((uint8_t *)&n, sizeof(n));
+//			UsbCommand n;
+//			if(c->cmd == CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K) {
+//				n.cmd = CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K;
+//			} else {
+//				n.cmd = CMD_DOWNLOADED_RAW_BITS_TI_TYPE;
+//			}
+//			n.arg[0] = c->arg[0];
+      //			memcpy(n.d.asBytes, BigBuf+c->arg[0], 48); // 12*sizeof(uint32_t)
+      //			LED_B_ON();
+      //      usb_write((uint8_t *)&n, sizeof(n));
+      //			UsbSendPacket((uint8_t *)&n, sizeof(n));
+      //			LED_B_OFF();
+
+      LED_B_ON();
+      for(size_t i=0; i<c->arg[1]; i += USB_CMD_DATA_SIZE) {
+        size_t len = MIN((c->arg[1] - i),USB_CMD_DATA_SIZE);
+        cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,0,((byte_t*)BigBuf)+c->arg[0]+i,len);
+      }
+      // Trigger a finish downloading signal with an ACK frame
+      cmd_send(CMD_ACK,0,0,0,0,0);
 			LED_B_OFF();
 		} break;
 
@@ -855,7 +869,8 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			uint8_t *b = (uint8_t *)BigBuf;
 			memcpy(b+c->arg[0], c->d.asBytes, 48);
 			//Dbprintf("copied 48 bytes to %i",b+c->arg[0]);
-			UsbSendPacket((uint8_t*)&ack, sizeof(ack));
+//			UsbSendPacket((uint8_t*)&ack, sizeof(ack));
+      cmd_send(CMD_ACK,0,0,0,0,0);
 		} break;
 
 		case CMD_READ_MEM:
@@ -909,11 +924,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
         } break;
 
 		case CMD_DEVICE_INFO: {
-			UsbCommand c;
-			c.cmd = CMD_DEVICE_INFO;
-			c.arg[0] = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
-			if(common_area.flags.bootrom_present) c.arg[0] |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
-			UsbSendPacket((uint8_t*)&c, sizeof(c));
+			uint32_t dev_info = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
+			if(common_area.flags.bootrom_present) dev_info |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
+//			UsbSendPacket((uint8_t*)&c, sizeof(c));
+      cmd_send(CMD_DEVICE_INFO,dev_info,0,0,0,0);
 		} break;
             
 		default: {
@@ -939,7 +953,10 @@ void  __attribute__((noreturn)) AppMain(void)
 	LED_B_OFF();
 	LED_A_OFF();
 
-	UsbStart();
+  // Init USB device
+  usb_enable();
+  UsbStart();
+//	UsbStart();
 
 	// The FPGA gets its clock from us from PCK0 output, so set that up.
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_PCK0;
@@ -959,35 +976,23 @@ void  __attribute__((noreturn)) AppMain(void)
 	FpgaDownloadAndGo();
 
 	StartTickCount();
-	
+  	
 #ifdef WITH_LCD
-
 	LCDInit();
-
-	// test text on different colored backgrounds
-	LCDString(" The quick brown fox  ",	(char *)&FONT6x8,1,1+8*0,WHITE  ,BLACK );
-	LCDString("  jumped over the     ",	(char *)&FONT6x8,1,1+8*1,BLACK  ,WHITE );
-	LCDString("     lazy dog.        ",	(char *)&FONT6x8,1,1+8*2,YELLOW ,RED   );
-	LCDString(" AaBbCcDdEeFfGgHhIiJj ",	(char *)&FONT6x8,1,1+8*3,RED    ,GREEN );
-	LCDString(" KkLlMmNnOoPpQqRrSsTt ",	(char *)&FONT6x8,1,1+8*4,MAGENTA,BLUE  );
-	LCDString("UuVvWwXxYyZz0123456789",	(char *)&FONT6x8,1,1+8*5,BLUE   ,YELLOW);
-	LCDString("`-=[]_;',./~!@#$%^&*()",	(char *)&FONT6x8,1,1+8*6,BLACK  ,CYAN  );
-	LCDString("     _+{}|:\\\"<>?     ",(char *)&FONT6x8,1,1+8*7,BLUE  ,MAGENTA);
-
-	// color bands
-	LCDFill(0, 1+8* 8, 132, 8, BLACK);
-	LCDFill(0, 1+8* 9, 132, 8, WHITE);
-	LCDFill(0, 1+8*10, 132, 8, RED);
-	LCDFill(0, 1+8*11, 132, 8, GREEN);
-	LCDFill(0, 1+8*12, 132, 8, BLUE);
-	LCDFill(0, 1+8*13, 132, 8, YELLOW);
-	LCDFill(0, 1+8*14, 132, 8, CYAN);
-	LCDFill(0, 1+8*15, 132, 8, MAGENTA);
-
 #endif
 
+  byte_t rx[sizeof(UsbCommand)];
+	size_t rx_len;
+  
 	for(;;) {
-		UsbPoll(FALSE);
+    if (usb_poll()) {
+      rx_len = usb_read(rx,sizeof(UsbCommand));
+      if (rx_len) {
+        UsbPacketReceived(rx,rx_len);
+      }
+    }
+//		UsbPoll(FALSE);
+
 		WDT_HIT();
 
 #ifdef WITH_LF

@@ -91,10 +91,10 @@ extern int ReaderReceivePar(uint8_t* receivedAnswer, uint32_t * parptr);
 extern void iso14443a_setup();
 extern int iso14_apdu(uint8_t * cmd, size_t cmd_len, void * data);
 extern int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data, uint32_t * cuid_ptr);
-extern void iso14a_set_trigger(int enable);
+extern void iso14a_set_trigger(bool enable);
 extern void iso14a_set_timeout(uint32_t timeout);
 
-extern void iso14a_clear_tracelen(void);
-extern void iso14a_set_tracing(int enable);
+extern void iso14a_clear_tracelen();
+extern void iso14a_set_tracing(bool enable);
 
 #endif /* __ISO14443A_H */

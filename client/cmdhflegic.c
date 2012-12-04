@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "proxusb.h"
+#include "proxmark3.h"
 #include "data.h"
 #include "ui.h"
 #include "cmdparser.h"
@@ -69,7 +70,7 @@ int CmdLegicDecode(const char *Cmd)
   for (i = 0; i < 256; i += 12, h += 48) {
     UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
     SendCommand(&c);
-    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, NULL);
     
     for (j = 0; j < 48; j += 8) {
       for (k = 0; k < 8; k++) {
@@ -253,7 +254,7 @@ int CmdLegicLoad(const char *Cmd)
             c.d.asBytes[j] = data[j];
         }
         SendCommand(&c);
-        WaitForResponse(CMD_ACK);
+        WaitForResponse(CMD_ACK, NULL);
         offset += 8;
     }
     fclose(f);
@@ -292,7 +293,7 @@ int CmdLegicSave(const char *Cmd)
   for (int i = offset; i < n+offset; i += 12) {
     UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
     SendCommand(&c);
-    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, NULL);
     for (int j = 0; j < 48; j += 8) {
       fprintf(f, "%02x %02x %02x %02x %02x %02x %02x %02x\n",
         sample_buf[j+0],
@@ -357,7 +358,7 @@ int CmdLegicRfFill(const char *Cmd)
     for(i = 0; i < 22; i++) {
       c.arg[0] = i*48;
       SendCommand(&c);
-      WaitForResponse(CMD_ACK);
+      WaitForResponse(CMD_ACK,NULL);
     }
     SendCommand(&cmd);
     return 0;

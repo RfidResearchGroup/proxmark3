@@ -116,13 +116,11 @@ void FpgaSetupSsc(void)
 
 	// 8 bits per transfer, no loopback, MSB first, 1 transfer per sync
 	// pulse, no output sync, start on positive-going edge of sync
-	AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) |
-		AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
+	AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) |	AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
 
 	// clock comes from TK pin, no clock output, outputs change on falling
 	// edge of TK, start on rising edge of TF
-	AT91C_BASE_SSC->SSC_TCMR = SSC_CLOCK_MODE_SELECT(2) |
-		SSC_CLOCK_MODE_START(5);
+	AT91C_BASE_SSC->SSC_TCMR = SSC_CLOCK_MODE_SELECT(2) |	SSC_CLOCK_MODE_START(5);
 
 	// tx framing is the same as the rx framing
 	AT91C_BASE_SSC->SSC_TFMR = AT91C_BASE_SSC->SSC_RFMR;

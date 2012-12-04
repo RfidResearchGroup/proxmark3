@@ -34,15 +34,15 @@ unsigned char return_on_error = 0;
 unsigned char error_occured = 0;
 extern unsigned int current_command;
 
-void SendCommand(UsbCommand *c)
+void SendCommand_(HidCommand *c)
 {
   int ret;
 
 #if 0
-  printf("Sending %d bytes\n", sizeof(UsbCommand));
+  printf("Sending %d bytes\n", sizeof(HidCommand));
 #endif
   current_command = c->cmd;
-  ret = usb_bulk_write(devh, 0x01, (char*)c, sizeof(UsbCommand), 1000);
+  ret = usb_bulk_write(devh, 0x01, (char*)c, sizeof(HidCommand), 1000);
   if (ret<0) {
     error_occured = 1;
     if (return_on_error)
@@ -63,12 +63,12 @@ void SendCommand(UsbCommand *c)
   }
 }
 
-bool ReceiveCommandPoll(UsbCommand *c)
+bool ReceiveCommandPoll(HidCommand *c)
 {
   int ret;
 
-  memset(c, 0, sizeof (UsbCommand));
-  ret = usb_bulk_read(devh, 0x82, (char*)c, sizeof(UsbCommand), 500);
+  memset(c, 0, sizeof (HidCommand));
+  ret = usb_bulk_read(devh, 0x82, (char*)c, sizeof(HidCommand), 500);
   if (ret<0) {
     if (ret != -ETIMEDOUT) {
       error_occured = 1;
@@ -89,16 +89,16 @@ bool ReceiveCommandPoll(UsbCommand *c)
       return false;
     }
   } else {
-    if (ret && (ret < sizeof(UsbCommand))) {
+    if (ret && (ret < sizeof(HidCommand))) {
       fprintf(stderr, "Read only %d instead of requested %d bytes!\n",
-        ret, (int)sizeof(UsbCommand));
+        ret, (int)sizeof(HidCommand));
     }
   }
 
   return ret > 0;
 }
 
-void ReceiveCommand(UsbCommand *c)
+void ReceiveCommand(HidCommand *c)
 {
 //  printf("%s()\n", __FUNCTION__);
   int retval = 0;

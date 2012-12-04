@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include "proxusb.h"
+#include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"
 #include "cmdparser.h"

@@ -14,6 +14,7 @@
 #include <string.h>
 #include "sleep.h"
 #include "cmdparser.h"
+#include "proxmark3.h"
 #include "data.h"
 #include "usb_cmd.h"
 #include "ui.h"
@@ -55,37 +56,40 @@ int CmdQuit(const char *Cmd)
   return 0;
 }
 
-UsbCommand * WaitForResponseTimeout(uint32_t response_type, uint32_t ms_timeout) {
-	UsbCommand * ret =  NULL;
-	int i=0;
+bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeout) {
 
-	for(i=0; received_command != response_type && i < ms_timeout / 10; i++) {
-		msleep(10); // XXX ugh
+	// Wait until the command is received
+  for(size_t i=0; received_command != cmd && i < ms_timeout; i++) {
+		msleep(1); // XXX ugh
+    if (i == 2000) {
+      PrintAndLog("Waiting for a response from the proxmark...");
+      PrintAndLog("Don't forget to cancel its operation first by pressing on the button");
+    }
 	}
 	
-	// There was an evil BUG
-	memcpy(&current_response_user, &current_response, sizeof(UsbCommand));
-	ret = &current_response_user;
+  // Check if timeout occured
+  if(received_command != cmd) return false;
 
-	if(received_command != response_type)
-		ret = NULL;
+	// Copy the received response (if supplied)
+  if (response) {
+    memcpy(response, &current_response, sizeof(UsbCommand));
+  }
 
-	received_command = CMD_UNKNOWN;
+	// Reset the received command
+  received_command = CMD_UNKNOWN;
 
-	return ret;
+	return true;
 }
 
-UsbCommand * WaitForResponse(uint32_t response_type)
-{
-	return WaitForResponseTimeout(response_type, -1);
+bool WaitForResponse(uint32_t cmd, UsbCommand* response) {
+	return WaitForResponseTimeout(cmd,response,-1);
 }
 
 //-----------------------------------------------------------------------------
 // Entry point into our code: called whenever the user types a command and
 // then presses Enter, which the full command line that they typed.
 //-----------------------------------------------------------------------------
-void CommandReceived(char *Cmd)
-{
+void CommandReceived(char *Cmd) {
   CmdsParse(CommandTable, Cmd);
 }
 
@@ -138,6 +142,19 @@ void UsbCommandReceived(UsbCommand *UC)
         PrintAndLog("# Your HF antenna is marginal.");
     } break;
       
+    case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K: {
+//      printf("received samples: ");
+//      print_hex(UC->d.asBytes,512);
+      sample_buf_len += UC->arg[1];
+//      printf("samples: %zd offset: %d\n",sample_buf_len,UC->arg[0]);
+      memcpy(sample_buf+(UC->arg[0]),UC->d.asBytes,UC->arg[1]);
+    } break;
+
+
+//    case CMD_ACK: {
+//      PrintAndLog("Receive ACK\n");
+//    } break;
+
     default: {
       // Maybe it's a response
       switch(current_command) {
@@ -146,19 +163,24 @@ void UsbCommandReceived(UsbCommand *UC)
             PrintAndLog("unrecognized command %08x\n", UC->cmd);
             break;
           }
-          int i;
-          for(i=0; i<48; i++) sample_buf[i] = UC->d.asBytes[i];
+//          int i;
+          PrintAndLog("received samples %d\n",UC->arg[0]);
+          memcpy(sample_buf+UC->arg[0],UC->d.asBytes,48);
+          sample_buf_len += 48;
+//          for(i=0; i<48; i++) sample_buf[i] = UC->d.asBytes[i];
           received_command = UC->cmd;
         } break;
 
         default: {
         } break;
       }
-      // Store the last received command
-      received_command = UC->cmd;
-      memcpy(&current_response, UC, sizeof(UsbCommand));
+//      // Store the last received command
+//      memcpy(&current_response, UC, sizeof(UsbCommand));
+//      received_command = UC->cmd;
     } break;
   }
+  // Store the last received command
+  memcpy(&current_response, UC, sizeof(UsbCommand));
   received_command = UC->cmd;
 /*
   // Maybe it's a response:

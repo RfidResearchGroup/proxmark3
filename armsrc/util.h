@@ -17,7 +17,8 @@
 #define RAMFUNC __attribute((long_call, section(".ramfunc")))
 
 #define BYTEx(x, n) (((x) >> (n * 8)) & 0xff )
-#define min(a, b) (((a) > (b)) ? (b) : (a))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 #define LED_RED 1
 #define LED_ORANGE 2

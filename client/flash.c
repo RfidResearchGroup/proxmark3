@@ -267,11 +267,11 @@ fail:
 // Get the state of the proxmark, backwards compatible
 static int get_proxmark_state(uint32_t *state)
 {
-	UsbCommand c;
+	HidCommand c;
 	c.cmd = CMD_DEVICE_INFO;
-	SendCommand(&c);
+	SendCommand_(&c);
 
-	UsbCommand resp;
+	HidCommand resp;
 	ReceiveCommand(&resp);
 
 	// Three outcomes:
@@ -313,7 +313,7 @@ static int enter_bootloader(void)
 
 	if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
 		fprintf(stderr,"Entering bootloader...\n");
-		UsbCommand c;
+		HidCommand c;
 		memset(&c, 0, sizeof (c));
 
 		if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
@@ -322,12 +322,12 @@ static int enter_bootloader(void)
 			// New style handover: Send CMD_START_FLASH, which will reset the board
 			// and enter the bootrom on the next boot.
 			c.cmd = CMD_START_FLASH;
-			SendCommand(&c);
+			SendCommand_(&c);
 			fprintf(stderr,"(Press and release the button only to abort)\n");
 		} else {
 			// Old style handover: Ask the user to press the button, then reset the board
 			c.cmd = CMD_HARDWARE_RESET;
-			SendCommand(&c);
+			SendCommand_(&c);
 			fprintf(stderr,"Press and hold down button NOW if your bootloader requires it.\n");
 		}
 		fprintf(stderr,"Waiting for Proxmark to reappear on USB...");
@@ -349,7 +349,7 @@ static int enter_bootloader(void)
 
 static int wait_for_ack(void)
 {
-	UsbCommand ack;
+	HidCommand ack;
 	ReceiveCommand(&ack);
 	if (ack.cmd != CMD_ACK) {
 		printf("Error: Unexpected reply 0x%04x (expected ACK)\n", ack.cmd);
@@ -372,7 +372,7 @@ int flash_start_flashing(int enable_bl_writes)
 	if (state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
 		// This command is stupid. Why the heck does it care which area we're
 		// flashing, as long as it's not the bootloader area? The mind boggles.
-		UsbCommand c = {CMD_START_FLASH};
+		HidCommand c = {CMD_START_FLASH};
 
 		if (enable_bl_writes) {
 			c.arg[0] = FLASH_START;
@@ -383,7 +383,7 @@ int flash_start_flashing(int enable_bl_writes)
 			c.arg[1] = FLASH_END;
 			c.arg[2] = 0;
 		}
-		SendCommand(&c);
+		SendCommand_(&c);
 		return wait_for_ack();
 	} else {
 		fprintf(stderr, "Note: Your bootloader does not understand the new START_FLASH command\n");
@@ -400,11 +400,11 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length)
 	memset(block_buf, 0xFF, BLOCK_SIZE);
 	memcpy(block_buf, data, length);
 
-	UsbCommand c = {CMD_SETUP_WRITE};
+	HidCommand c = {CMD_SETUP_WRITE};
 	for (int i = 0; i < 240; i += 48) {
 		memcpy(c.d.asBytes, block_buf + i, 48);
 		c.arg[0] = i / 4;
-		SendCommand(&c);
+		SendCommand_(&c);
 		if (wait_for_ack() < 0)
 			return -1;
 	}
@@ -412,7 +412,7 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length)
 	c.cmd = CMD_FINISH_WRITE;
 	c.arg[0] = address;
 	memcpy(c.d.asBytes, block_buf+240, 16);
-	SendCommand(&c);
+	SendCommand_(&c);
 	return wait_for_ack();
 }
 
@@ -472,7 +472,7 @@ void flash_free(flash_file_t *ctx)
 
 // just reset the unit
 int flash_stop_flashing(void) {
-	UsbCommand c = {CMD_HARDWARE_RESET};
-	SendCommand(&c);
+	HidCommand c = {CMD_HARDWARE_RESET};
+	SendCommand_(&c);
 	return 0;
 }

@@ -166,7 +166,7 @@ int intMfSniffSend() {
 	FpgaDisableSscDma();
 
 	while (pckLen > 0) {
-		pckSize = min(32, pckLen);
+		pckSize = MIN(32, pckLen);
 		UsbCommand ack = {CMD_ACK, {1, pckSize, pckNum}};
 		memcpy(ack.d.asBytes, trace + traceLen - pckLen, pckSize);
 	

@@ -9,6 +9,7 @@
 #include "proxmark3.h"
 #include "apps.h"
 #include "LCD.h"
+#include "fonts.h"
 
 void LCDSend(unsigned int data)
 {
@@ -128,4 +129,25 @@ void LCDInit(void)
 	LCDSend(PRAMWR);			// Write to display
 	i=LCD_XRES*LCD_YRES;
 	while(i--) LCDSend(WHITE);
+  
+  // test text on different colored backgrounds
+	LCDString(" The quick brown fox  ",	(char *)&FONT6x8,1,1+8*0,WHITE  ,BLACK );
+	LCDString("  jumped over the     ",	(char *)&FONT6x8,1,1+8*1,BLACK  ,WHITE );
+	LCDString("     lazy dog.        ",	(char *)&FONT6x8,1,1+8*2,YELLOW ,RED   );
+	LCDString(" AaBbCcDdEeFfGgHhIiJj ",	(char *)&FONT6x8,1,1+8*3,RED    ,GREEN );
+	LCDString(" KkLlMmNnOoPpQqRrSsTt ",	(char *)&FONT6x8,1,1+8*4,MAGENTA,BLUE  );
+	LCDString("UuVvWwXxYyZz0123456789",	(char *)&FONT6x8,1,1+8*5,BLUE   ,YELLOW);
+	LCDString("`-=[]_;',./~!@#$%^&*()",	(char *)&FONT6x8,1,1+8*6,BLACK  ,CYAN  );
+	LCDString("     _+{}|:\\\"<>?     ",(char *)&FONT6x8,1,1+8*7,BLUE  ,MAGENTA);
+  
+	// color bands
+	LCDFill(0, 1+8* 8, 132, 8, BLACK);
+	LCDFill(0, 1+8* 9, 132, 8, WHITE);
+	LCDFill(0, 1+8*10, 132, 8, RED);
+	LCDFill(0, 1+8*11, 132, 8, GREEN);
+	LCDFill(0, 1+8*12, 132, 8, BLUE);
+	LCDFill(0, 1+8*13, 132, 8, YELLOW);
+	LCDFill(0, 1+8*14, 132, 8, CYAN);
+	LCDFill(0, 1+8*15, 132, 8, MAGENTA);
+
 }

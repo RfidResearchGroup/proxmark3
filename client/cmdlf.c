@@ -13,6 +13,7 @@
 #include <string.h>
 #include <limits.h>
 #include "proxusb.h"
+#include "proxmark3.h"
 #include "data.h"
 #include "graph.h"
 #include "ui.h"
@@ -364,7 +365,7 @@ int CmdLFRead(const char *Cmd)
     return 0;
   }
   SendCommand(&c);
-  WaitForResponse(CMD_ACK);
+  WaitForResponse(CMD_ACK,NULL);
   return 0;
 }
 
@@ -401,7 +402,7 @@ int CmdLFSim(const char *Cmd)
       c.d.asBytes[j] = GraphBuffer[i+j];
     }
     SendCommand(&c);
-    WaitForResponse(CMD_ACK);
+    WaitForResponse(CMD_ACK,NULL);
   }
 
   PrintAndLog("Starting simulator...");

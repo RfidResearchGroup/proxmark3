@@ -12,6 +12,11 @@
 #ifndef PROXMARK3_H__
 #define PROXMARK3_H__
 
+#include <usb.h>
+#include "usb_cmd.h"
+
 #define PROXPROMPT "proxmark3> "
+
+void SendCommand(UsbCommand *c);
 
 #endif

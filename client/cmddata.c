@@ -13,6 +13,7 @@
 #include <string.h>
 #include <limits.h>
 #include "proxusb.h"
+#include "proxmark3.h"
 #include "data.h"
 #include "ui.h"
 #include "graph.h"
@@ -158,7 +159,7 @@ int CmdBitsamples(const char *Cmd)
   for (int i = 0; i < n; i += 12) {
     UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
     SendCommand(&c);
-    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, NULL);
 
     for (int j = 0; j < 48; j++) {
       for (int k = 0; k < 8; k++) {
@@ -418,7 +419,7 @@ int CmdHexsamples(const char *Cmd)
   for (int i = offset; i < n+offset; i += 12) {
     UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
     SendCommand(&c);
-    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, NULL);
     for (int j = 0; j < 48; j += 8) {
       PrintAndLog("%02x %02x %02x %02x %02x %02x %02x %02x",
         sample_buf[j+0],
@@ -475,7 +476,7 @@ int CmdSamples(const char *Cmd)
   for (int i = 0; i < n; i += 12) {
     UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
     SendCommand(&c);
-    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
+    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, NULL);
     for (int j = 0; j < 48; j++) {
       GraphBuffer[cnt++] = ((int)sample_buf[j]) - 128;
     }

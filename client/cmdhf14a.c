@@ -17,11 +17,13 @@
 #include "iso14443crc.h"
 #include "data.h"
 #include "proxusb.h"
+#include "proxmark3.h"
 #include "ui.h"
 #include "cmdparser.h"
 #include "cmdhf14a.h"
 #include "common.h"
 #include "cmdmain.h"
+#include "mifare.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -29,6 +31,7 @@ int CmdHF14AList(const char *Cmd)
 {
   uint8_t got[1920];
   GetFromBigBuf(got,sizeof(got),0);
+  WaitForResponse(CMD_ACK,NULL);
 
   PrintAndLog("recorded activity:");
   PrintAndLog(" ETU     :rssi: who bytes");
@@ -161,18 +164,21 @@ int CmdHF14AReader(const char *Cmd)
 {
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
 	SendCommand(&c);
-	UsbCommand * resp = WaitForResponse(CMD_ACK);
-	uint8_t              * uid  = resp->d.asBytes;
+
+	UsbCommand resp;
+  WaitForResponse(CMD_ACK,&resp);
+	
+  uint8_t              * uid  = resp.d.asBytes;
 	iso14a_card_select_t * card = (iso14a_card_select_t *)(uid + 12);
 
-	if(resp->arg[0] == 0) {
+	if(resp.arg[0] == 0) {
 		PrintAndLog("iso14443a card select failed");
 		return 0;
 	}
 
 	PrintAndLog("ATQA : %02x %02x", card->atqa[0], card->atqa[1]);
 	PrintAndLog(" UID : %s", sprint_hex(uid, 12));
-	PrintAndLog(" SAK : %02x [%d]", card->sak, resp->arg[0]);
+	PrintAndLog(" SAK : %02x [%d]", card->sak, resp.arg[0]);
 
 	switch (card->sak) {
 		case 0x00: PrintAndLog(" SAK : NXP MIFARE Ultralight | Ultralight C"); break;
@@ -191,7 +197,7 @@ int CmdHF14AReader(const char *Cmd)
 		case 0x98: PrintAndLog(" SAK : Gemplus MPCOS"); break;
 		default: ;
 	}
-	if(resp->arg[0] == 1) {
+	if(resp.arg[0] == 1) {
 		bool ta1 = 0, tb1 = 0, tc1 = 0;
 		int pos;
 
@@ -312,7 +318,7 @@ int CmdHF14AReader(const char *Cmd)
 	else
 		PrintAndLog("proprietary non-iso14443a card found, RATS not supported");
 
-	return resp->arg[0];
+	return resp.arg[0];
 }
 
 // Collect ISO14443 Type A UIDs
@@ -330,12 +336,15 @@ int CmdHF14ACUIDs(const char *Cmd)
 		// execute anticollision procedure
 		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
 		SendCommand(&c);
-		UsbCommand *resp = WaitForResponse(CMD_ACK);
-		uint8_t *uid  = resp->d.asBytes;
+    
+    UsbCommand resp;
+    WaitForResponse(CMD_ACK,&resp);
+
+		uint8_t *uid  = resp.d.asBytes;
 		iso14a_card_select_t *card = (iso14a_card_select_t *)(uid + 12);
 
 		// check if command failed
-		if (resp->arg[0] == 0) {
+		if (resp.arg[0] == 0) {
 			PrintAndLog("Card select failed.");
 		} else {
 			// check if UID is 4 bytes
@@ -472,10 +481,9 @@ static command_t CommandTable[] =
   {NULL, NULL, 0, NULL}
 };
 
-int CmdHF14A(const char *Cmd)
-{
+int CmdHF14A(const char *Cmd) {
 	// flush
-	while (WaitForResponseTimeout(CMD_ACK, 500) != NULL) ;
+	WaitForResponseTimeout(CMD_ACK,NULL,100);
 
 	// parse
   CmdsParse(CommandTable, Cmd);

@@ -67,12 +67,13 @@ CMDSRCS = \
 			cmdlfhitag.c \
 			cmdlfti.c \
 			cmdparser.c \
-			cmdmain.c
+			cmdmain.c \
+			uart.c
 
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
 
 RM = rm -f
-BINS = proxmark3 snooper cli flasher
+BINS = proxmark3 flasher #snooper cli
 CLEAN = cli cli.exe flasher flasher.exe proxmark3 proxmark3.exe snooper snooper.exe $(CMDOBJS) $(OBJDIR)/*.o *.o *.moc.cpp
 
 all: $(BINS)

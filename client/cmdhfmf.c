@@ -9,7 +9,6 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhfmf.h"
-#include "proxmark3.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -50,14 +49,14 @@ start:
 			break;
 		}
 		
-		UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 2000);
-		if (resp != NULL) {
-			isOK  = resp->arg[0] & 0xff;
+		UsbCommand resp;
+		if (WaitForResponseTimeout(CMD_ACK,&resp,2000)) {
+			isOK  = resp.arg[0] & 0xff;
 	
-			uid = (uint32_t)bytes_to_num(resp->d.asBytes +  0, 4);
-			nt =  (uint32_t)bytes_to_num(resp->d.asBytes +  4, 4);
-			par_list = bytes_to_num(resp->d.asBytes +  8, 8);
-			ks_list = bytes_to_num(resp->d.asBytes +  16, 8);
+			uid = (uint32_t)bytes_to_num(resp.d.asBytes +  0, 4);
+			nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
+			par_list = bytes_to_num(resp.d.asBytes +  8, 8);
+			ks_list = bytes_to_num(resp.d.asBytes +  16, 8);
 	
 			printf("\n\n");
 			PrintAndLog("isOk:%02x", isOK);
@@ -131,11 +130,10 @@ int CmdHF14AMfWrBl(const char *Cmd)
 	memcpy(c.d.asBytes, key, 6);
 	memcpy(c.d.asBytes + 10, bldata, 16);
   SendCommand(&c);
-	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
 
-	if (resp != NULL) {
-		uint8_t                isOK  = resp->arg[0] & 0xff;
-
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		uint8_t isOK  = resp.arg[0] & 0xff;
 		PrintAndLog("isOk:%02x", isOK);
 	} else {
 		PrintAndLog("Command execute timeout");
@@ -175,11 +173,11 @@ int CmdHF14AMfRdBl(const char *Cmd)
   UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
   SendCommand(&c);
-	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
 
-	if (resp != NULL) {
-		uint8_t                isOK  = resp->arg[0] & 0xff;
-		uint8_t              * data  = resp->d.asBytes;
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		uint8_t                isOK  = resp.arg[0] & 0xff;
+		uint8_t              * data  = resp.d.asBytes;
 
 		if (isOK)
 			PrintAndLog("isOk:%02x data:%s", isOK, sprint_hex(data, 16));
@@ -230,12 +228,12 @@ int CmdHF14AMfRdSc(const char *Cmd)
   UsbCommand c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
   SendCommand(&c);
-	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
 	PrintAndLog(" ");
 
-	if (resp != NULL) {
-		isOK  = resp->arg[0] & 0xff;
-		data  = resp->d.asBytes;
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		isOK  = resp.arg[0] & 0xff;
+		data  = resp.d.asBytes;
 
 		PrintAndLog("isOk:%02x", isOK);
 		if (isOK) 
@@ -246,13 +244,11 @@ int CmdHF14AMfRdSc(const char *Cmd)
 		PrintAndLog("Command1 execute timeout");
 	}
 
-		// response2
-	resp = WaitForResponseTimeout(CMD_ACK, 500);
+  // response2
 	PrintAndLog(" ");
-
-	if (resp != NULL) {
-		isOK  = resp->arg[0] & 0xff;
-		data  = resp->d.asBytes;
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		isOK  = resp.arg[0] & 0xff;
+		data  = resp.d.asBytes;
 
 		if (isOK) 
 			for (i = 0; i < 2; i++) {
@@ -276,7 +272,7 @@ int CmdHF14AMfDump(const char *Cmd)
 	FILE *fin;
 	FILE *fout;
 	
-	UsbCommand *resp;
+	UsbCommand resp;
 	
 	if ((fin = fopen("dumpkeys.bin","rb")) == NULL) {
 		PrintAndLog("Could not find file dumpkeys.bin");
@@ -307,11 +303,10 @@ int CmdHF14AMfDump(const char *Cmd)
 		UsbCommand c = {CMD_MIFARE_READBL, {4*i + 3, 0, 0}};
 		memcpy(c.d.asBytes, keyA[i], 6);
 		SendCommand(&c);
-		resp = WaitForResponseTimeout(CMD_ACK, 1500);
 
-		if (resp != NULL) {
-			uint8_t isOK  = resp->arg[0] & 0xff;
-			uint8_t *data  = resp->d.asBytes;
+    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+			uint8_t isOK  = resp.arg[0] & 0xff;
+			uint8_t *data  = resp.d.asBytes;
 			if (isOK){
 				rights[i][0] = ((data[7] & 0x10)>>4) | ((data[8] & 0x1)<<1) | ((data[8] & 0x10)>>2);
 				rights[i][1] = ((data[7] & 0x20)>>5) | ((data[8] & 0x2)<<0) | ((data[8] & 0x20)>>3);
@@ -333,20 +328,23 @@ int CmdHF14AMfDump(const char *Cmd)
 	PrintAndLog("|----- Dumping all blocks to file... -----|");
 	PrintAndLog("|-----------------------------------------|");
 	
+  
 	for (i=0 ; i<16 ; i++) {
 		for (j=0 ; j<4 ; j++) {
-			if (j == 3){
+      bool received = false;
+      
+      if (j == 3){
 				UsbCommand c = {CMD_MIFARE_READBL, {i*4 + j, 0, 0}};
 				memcpy(c.d.asBytes, keyA[i], 6);
 				SendCommand(&c);
-				resp = WaitForResponseTimeout(CMD_ACK, 1500);
+        received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
 			}
 			else{
 				if ((rights[i][j] == 6) | (rights[i][j] == 5)) {
 					UsbCommand c = {CMD_MIFARE_READBL, {i*4+j, 1, 0}};
 					memcpy(c.d.asBytes, keyB[i], 6);
 					SendCommand(&c);
-					resp = WaitForResponseTimeout(CMD_ACK, 1500);
+          received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
 				}
 				else if (rights[i][j] == 7) {
 					PrintAndLog("Access rights do not allow reading of sector %d block %d",i,j);
@@ -355,13 +353,13 @@ int CmdHF14AMfDump(const char *Cmd)
 					UsbCommand c = {CMD_MIFARE_READBL, {i*4+j, 0, 0}};
 					memcpy(c.d.asBytes, keyA[i], 6);
 					SendCommand(&c);
-					resp = WaitForResponseTimeout(CMD_ACK, 1500);
+          received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
 				}
 			}
 
-			if (resp != NULL) {
-				uint8_t isOK  = resp->arg[0] & 0xff;
-				uint8_t *data  = resp->d.asBytes;
+			if (received) {
+				uint8_t isOK  = resp.arg[0] & 0xff;
+				uint8_t *data  = resp.d.asBytes;
 				if (j == 3) {
 					data[0]  = (keyA[i][0]);
 					data[1]  = (keyA[i][1]);
@@ -462,10 +460,10 @@ int CmdHF14AMfRestore(const char *Cmd)
 			
 			memcpy(c.d.asBytes + 10, bldata, 16);
 			SendCommand(&c);
-			UsbCommand *resp = WaitForResponseTimeout(CMD_ACK, 1500);
 
-			if (resp != NULL) {
-				uint8_t isOK  = resp->arg[0] & 0xff;
+			UsbCommand resp;
+      if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+				uint8_t isOK  = resp.arg[0] & 0xff;
 				PrintAndLog("isOk:%02x", isOK);
 			} else {
 				PrintAndLog("Command execute timeout");
@@ -1591,11 +1589,11 @@ int CmdHF14AMfSniff(const char *Cmd){
 			break;
 		}
 		
-		UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 2000);
-		if (resp != NULL) {
-			res = resp->arg[0] & 0xff;
-			len = resp->arg[1];
-			num = resp->arg[2];
+    UsbCommand resp;
+    if (WaitForResponseTimeout(CMD_ACK,&resp,2000)) {
+			res = resp.arg[0] & 0xff;
+			len = resp.arg[1];
+			num = resp.arg[2];
 			
 			if (res == 0) return 0;
 			if (res == 1) {
@@ -1603,7 +1601,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 					bufPtr = buf;
 					memset(buf, 0x00, 3000);
 				}
-				memcpy(bufPtr, resp->d.asBytes, len);
+				memcpy(bufPtr, resp.d.asBytes, len);
 				bufPtr += len;
 				pckNum++;
 			}
@@ -1678,7 +1676,7 @@ static command_t CommandTable[] =
 int CmdHFMF(const char *Cmd)
 {
 	// flush
-	while (WaitForResponseTimeout(CMD_ACK, 500) != NULL) ;
+	while (!WaitForResponseTimeout(CMD_ACK,NULL,500));
 
   CmdsParse(CommandTable, Cmd);
   return 0;

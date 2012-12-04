@@ -15,7 +15,7 @@
 
 void UsbCommandReceived(UsbCommand *UC);
 void CommandReceived(char *Cmd);
-UsbCommand * WaitForResponseTimeout(uint32_t response_type, uint32_t ms_timeout);
-UsbCommand * WaitForResponse(uint32_t response_type);
+bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeout);
+bool WaitForResponse(uint32_t cmd, UsbCommand* response);
 
 #endif

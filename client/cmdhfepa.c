@@ -10,6 +10,7 @@
 
 #include "util.h"
 #include "proxusb.h"
+#include "proxmark3.h"
 #include "ui.h"
 #include "cmdparser.h"
 #include "common.h"
@@ -42,22 +43,21 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 		// execute PACE
 		UsbCommand c = {CMD_EPA_PACE_COLLECT_NONCE, {(int)m, 0, 0}};
 		SendCommand(&c);
-		UsbCommand *resp = WaitForResponse(CMD_ACK);
+		UsbCommand resp;
+    
+    WaitForResponse(CMD_ACK,&resp);
 
 		// check if command failed
-		if (resp->arg[0] != 0) {
-			PrintAndLog("Error in step %d, Return code: %d",
-			            resp->arg[0],
-						(int)resp->arg[1]);
+		if (resp.arg[0] != 0) {
+			PrintAndLog("Error in step %d, Return code: %d",resp.arg[0],(int)resp.arg[1]);
 		} else {
-			size_t nonce_length = resp->arg[1];
+			size_t nonce_length = resp.arg[1];
 			char *nonce = (char *) malloc(2 * nonce_length + 1);
 			for(int j = 0; j < nonce_length; j++) {
-				snprintf(nonce + (2 * j), 3, "%02X", resp->d.asBytes[j]);
+				snprintf(nonce + (2 * j), 3, "%02X", resp.d.asBytes[j]);
 			}
 			// print nonce
-			PrintAndLog("Length: %d, Nonce: %s",
-			            resp->arg[1], nonce);
+			PrintAndLog("Length: %d, Nonce: %s",resp.arg[1], nonce);
 		}
 		if (i < n - 1) {
 			sleep(d);
@@ -87,7 +87,7 @@ int CmdHelp(const char *Cmd)
 int CmdHFEPA(const char *Cmd)
 {
 	// flush
-	while (WaitForResponseTimeout(CMD_ACK, 500) != NULL) ;
+	while (!WaitForResponseTimeout(CMD_ACK,NULL,500));
 
 	// parse
   CmdsParse(CommandTable, Cmd);

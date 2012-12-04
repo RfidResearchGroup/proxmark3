@@ -300,6 +300,6 @@ void BootROM(void)
 	    flash_mode(1);
     } else {
 	    // jump to Flash address of the osimage entry point (LSBit set for thumb mode)
-	    asm("bx %0\n" : : "r" ( ((int)&_osimage_entry) | 0x1 ) );
+	    __asm("bx %0\n" : : "r" ( ((int)&_osimage_entry) | 0x1 ) );
     }
 }

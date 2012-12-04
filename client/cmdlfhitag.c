@@ -13,11 +13,14 @@
 #include <string.h>
 #include "data.h"
 #include "proxusb.h"
+#include "proxmark3.h"
 #include "ui.h"
 #include "cmdparser.h"
 #include "common.h"
 #include "util.h"
 #include "hitag2.h"
+#include "sleep.h"
+#include "cmdmain.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -25,16 +28,18 @@ int CmdLFHitagList(const char *Cmd)
 {
   uint8_t got[3000];
   GetFromBigBuf(got,sizeof(got),0);
-  char filename[256];
-  FILE* pf;
+  WaitForResponse(CMD_ACK,NULL);
 
-  param_getstr(Cmd,0,filename);
-  
-  if (strlen(filename) > 0) {
+  char filename[256];
+  FILE* pf = NULL;
+
+  if (param_getstr(Cmd,0,filename)) {
+    if (strlen(filename) > 0) {
       if ((pf = fopen(filename,"w")) == NULL) {
-	    PrintAndLog("Error: Could not open file [%s]",filename);
-	    return 1;
-	  }
+        PrintAndLog("Error: Could not open file [%s]",filename);
+        return 1;
+      }
+    }
   }
 
   PrintAndLog("recorded activity:");
@@ -114,7 +119,7 @@ int CmdLFHitagList(const char *Cmd)
       line);
 
 
-	if (strlen(filename) > 0) {
+   if (pf) {
       fprintf(pf," +%7d: %s: %s %s %s",
 					(prev < 0 ? 0 : (timestamp - prev)),
 					metricString,
@@ -127,7 +132,7 @@ int CmdLFHitagList(const char *Cmd)
     i += (len + 9);
   }
   
-  if (strlen(filename) > 0) {
+  if (pf) {
 	  PrintAndLog("Recorded activity succesfully written to file: %s", filename);
     fclose(pf);
   }

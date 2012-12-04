@@ -24,12 +24,23 @@ typedef BYTE uint8_t;
 #endif
 
 typedef struct {
-	uint32_t	cmd;
-	uint32_t	arg[3];
-	union {
-		uint8_t		asBytes[48];
-		uint32_t	asDwords[12];
-	} d;
+  uint32_t	cmd;
+  uint32_t	arg[3];
+  union {
+    uint8_t		asBytes[48];
+    uint32_t	asDwords[12];
+  } d;
+} PACKED HidCommand;
+
+#define USB_CMD_DATA_SIZE 512
+
+typedef struct {
+  uint32_t cmd;
+  uint32_t arg[3];
+  union {
+    uint8_t	 asBytes[USB_CMD_DATA_SIZE];
+    uint32_t asDwords[USB_CMD_DATA_SIZE/4];
+  } d;
 } PACKED UsbCommand;
 
 // For the bootloader

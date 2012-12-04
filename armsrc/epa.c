@@ -12,8 +12,8 @@
 //-----------------------------------------------------------------------------
 
 #include "iso14443a.h"
-
 #include "epa.h"
+#include "cmd.h"
 
 // Protocol and Parameter Selection Request
 // use regular (1x) speed in both directions
@@ -211,24 +211,25 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
 // Abort helper function for EPA_PACE_Collect_Nonce
 // sets relevant data in ack, sends the response
 //-----------------------------------------------------------------------------
-static void EPA_PACE_Collect_Nonce_Abort(UsbCommand *ack, uint8_t step, int func_return)
+static void EPA_PACE_Collect_Nonce_Abort(uint8_t step, int func_return)
 {
-	// step in which the failure occured
-	ack->arg[0] = step;
-	// last return code
-	ack->arg[1] = func_return;
+//	// step in which the failure occured
+//	ack->arg[0] = step;
+//	// last return code
+//	ack->arg[1] = func_return;
 
 	// power down the field
 	EPA_Finish();
 	
 	// send the USB packet
-	UsbSendPacket((void *)ack, sizeof(UsbCommand));
+  cmd_send(CMD_ACK,step,func_return,0,0,0);
+//UsbSendPacket((void *)ack, sizeof(UsbCommand));
 }
 
 //-----------------------------------------------------------------------------
 // Acquire one encrypted PACE nonce
 //-----------------------------------------------------------------------------
-void EPA_PACE_Collect_Nonce(UsbCommand *c, UsbCommand *ack)
+void EPA_PACE_Collect_Nonce(UsbCommand *c)
 {
 	/*
 	 * ack layout:
@@ -244,14 +245,14 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c, UsbCommand *ack)
 	// return value of a function
 	int func_return;
 
-	// initialize ack with 0s
-	memset(ack->arg, 0, 12);
-	memset(ack->d.asBytes, 0, 48);
+//	// initialize ack with 0s
+//	memset(ack->arg, 0, 12);
+//	memset(ack->d.asBytes, 0, 48);
 	
 	// set up communication
 	func_return = EPA_Setup();
 	if (func_return != 0) {
-		EPA_PACE_Collect_Nonce_Abort(ack, 1, func_return);
+		EPA_PACE_Collect_Nonce_Abort(1, func_return);
 		return;
 	}
 
@@ -264,7 +265,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c, UsbCommand *ack)
 	int card_access_length = EPA_Read_CardAccess(card_access, 256);
 	// the response has to be at least this big to hold the OID
 	if (card_access_length < 18) {
-		EPA_PACE_Collect_Nonce_Abort(ack, 2, card_access_length);
+		EPA_PACE_Collect_Nonce_Abort(2, card_access_length);
 		return;
 	}
 
@@ -275,7 +276,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c, UsbCommand *ack)
 	                                   card_access_length,
 	                                   &pace_version_info);
 	if (func_return != 0 || pace_version_info.version == 0) {
-		EPA_PACE_Collect_Nonce_Abort(ack, 3, func_return);
+		EPA_PACE_Collect_Nonce_Abort(3, func_return);
 		return;
 	}
 	
@@ -290,17 +291,18 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c, UsbCommand *ack)
 	// check if the command succeeded
 	if (func_return < 0)
 	{
-		EPA_PACE_Collect_Nonce_Abort(ack, 4, func_return);
+		EPA_PACE_Collect_Nonce_Abort(4, func_return);
 		return;
 	}
+  
+  // all done, return
+	EPA_Finish();
 	
 	// save received information
-	ack->arg[1] = func_return;
-	memcpy(ack->d.asBytes, nonce, func_return);
-
-	// all done, return
-	EPA_Finish();
-	UsbSendPacket((void *)ack, sizeof(UsbCommand));
+//	ack->arg[1] = func_return;
+//	memcpy(ack->d.asBytes, nonce, func_return);
+//	UsbSendPacket((void *)ack, sizeof(UsbCommand));
+  cmd_send(CMD_ACK,0,func_return,0,nonce,func_return);
 }
 
 //-----------------------------------------------------------------------------
