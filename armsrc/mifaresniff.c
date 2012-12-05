@@ -31,10 +31,11 @@ int MfSniffInit(void){
 }
 
 int MfSniffEnd(void){
-	UsbCommand ack = {CMD_ACK, {0, 0, 0}};
+//	UsbCommand ack = {CMD_ACK, {0, 0, 0}};
 
 	LED_B_ON();
-	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+  cmd_send(CMD_ACK,0,0,0,0,0);
+//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 	LED_B_OFF();
 
 	return 0;
@@ -167,22 +168,24 @@ int intMfSniffSend() {
 
 	while (pckLen > 0) {
 		pckSize = MIN(32, pckLen);
-		UsbCommand ack = {CMD_ACK, {1, pckSize, pckNum}};
-		memcpy(ack.d.asBytes, trace + traceLen - pckLen, pckSize);
+//		UsbCommand ack = {CMD_ACK, {1, pckSize, pckNum}};
+//		memcpy(ack.d.asBytes, trace + traceLen - pckLen, pckSize);
 	
 		LED_B_ON();
-		UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
-		SpinDelay(20);
+    cmd_send(CMD_ACK,1,pckSize,pckNum,trace + traceLen - pckLen,pckSize);
+//		UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+//		SpinDelay(20);
 		LED_B_OFF();
 
 		pckLen -= pckSize;
 		pckNum++;
 	}
 
-	UsbCommand ack = {CMD_ACK, {2, 0, 0}};
+//	UsbCommand ack = {CMD_ACK, {2, 0, 0}};
 
 	LED_B_ON();
-	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+  cmd_send(CMD_ACK,2,0,0,0,0);
+//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 	LED_B_OFF();
 
 	traceLen = 0;

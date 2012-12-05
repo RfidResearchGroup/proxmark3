@@ -7,6 +7,7 @@
 //-----------------------------------------------------------------------------
 
 #include <proxmark3.h>
+#include "usb_hid.h"
 
 struct common_area common_area __attribute__((section(".commonarea")));
 unsigned int start_addr, end_addr, bootrom_unlocked;

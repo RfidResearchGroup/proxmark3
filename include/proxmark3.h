@@ -67,12 +67,6 @@
 
 //#define PACKED __attribute__((__packed__))
 
-#define USB_D_PLUS_PULLUP_ON() { \
-		HIGH(GPIO_USB_PU); \
-		AT91C_BASE_PIOA->PIO_OER = GPIO_USB_PU; \
-	}
-#define USB_D_PLUS_PULLUP_OFF() AT91C_BASE_PIOA->PIO_ODR = GPIO_USB_PU
-
 #define LED_A_ON()		HIGH(GPIO_LED_A)
 #define LED_A_OFF()		LOW(GPIO_LED_A)
 #define LED_A_INV()		INVBIT(GPIO_LED_A)
@@ -88,17 +82,6 @@
 #define RELAY_ON()		HIGH(GPIO_RELAY)
 #define RELAY_OFF()		LOW(GPIO_RELAY)
 #define BUTTON_PRESS()	!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_BUTTON)
-//--------------------------------
-// USB declarations
-
-void UsbSendPacket(uint8_t *packet, int len);
-int UsbConnected();
-int UsbPoll(int blinkLeds);
-void UsbStart(void);
-
-// This function is provided by the apps/bootrom, and called from UsbPoll
-// if data are available.
-void UsbPacketReceived(uint8_t *packet, int len);
 
 #define VERSION_INFORMATION_MAGIC 0x56334d50
 struct version_information {

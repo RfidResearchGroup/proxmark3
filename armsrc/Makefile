@@ -27,7 +27,6 @@ THUMBSRC = start.c \
 	appmain.c printf.c \
 	util.c \
 	string.c \
-	usb.c \
 	usb_cdc.c \
 	cmd.c
 

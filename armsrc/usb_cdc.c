@@ -33,6 +33,7 @@
  */
 
 #include "usb_cdc.h"
+#include "util.h"
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -216,11 +217,25 @@ byte_t btConnection    = 0;
 byte_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
 
 //*----------------------------------------------------------------------------
+//* \fn    AT91F_USB_Disable
+//* \brief This function deactivates the USB device
+//*----------------------------------------------------------------------------
+void usb_disable() {
+  // Disconnect and reconnect USB controller for 100ms
+  AT91C_BASE_PIOA->PIO_ODR = AT91C_PIO_PA24;
+  SpinDelay(100);
+  
+  // Clear all lingering interrupts
+  if(pUdp->UDP_ISR & AT91C_UDP_ENDBUSRES) {
+    pUdp->UDP_ICR = AT91C_UDP_ENDBUSRES;
+  }
+}
+
+//*----------------------------------------------------------------------------
 //* \fn    AT91F_USB_Enable
 //* \brief This function Activates the USB device
 //*----------------------------------------------------------------------------
-void usb_enable()
-{
+void usb_enable() {
   // Set the PLL USB Divider
   AT91C_BASE_CKGR->CKGR_PLLR |= AT91C_CKGR_USBDIV_1 ;
   
@@ -236,14 +251,23 @@ void usb_enable()
   
   // Clear for set the Pul up resistor
 	AT91C_BASE_PIOA->PIO_CODR = AT91C_PIO_PA16;
+  
+  // Disconnect and USB device
+  usb_disable();
+  
+  // Wait for a short while
+  SpinDelay(100);
+
+  // Reconnect USB reconnect
+  AT91C_BASE_PIOA->PIO_SODR = AT91C_PIO_PA24;
+  AT91C_BASE_PIOA->PIO_OER = AT91C_PIO_PA24;
 }
 
 //*----------------------------------------------------------------------------
 //* \fn    AT91F_UDP_IsConfigured
 //* \brief Test if the device is configured and handle enumeration
 //*----------------------------------------------------------------------------
-bool usb_check()
-{
+bool usb_check() {
 	AT91_REG isr = pUdp->UDP_ISR;
 
 	if (isr & AT91C_UDP_ENDBUSRES) {
@@ -274,8 +298,7 @@ bool usb_poll()
 //* \fn    AT91F_UDP_Read
 //* \brief Read available data from Endpoint OUT
 //*----------------------------------------------------------------------------
-uint32_t usb_read(byte_t* data, size_t len)
-{
+uint32_t usb_read(byte_t* data, size_t len) {
   byte_t bank = btReceiveBank;
 	uint32_t packetSize, nbBytesRcv = 0;
   uint32_t time_out = 0;
@@ -308,8 +331,7 @@ uint32_t usb_read(byte_t* data, size_t len)
 //* \fn    AT91F_CDC_Write
 //* \brief Send through endpoint 2
 //*----------------------------------------------------------------------------
-uint32_t usb_write(const byte_t* data, const size_t len)
-{
+uint32_t usb_write(const byte_t* data, const size_t len) {
   size_t length = len;
 	uint32_t cpt = 0;
 
@@ -354,8 +376,7 @@ uint32_t usb_write(const byte_t* data, const size_t len)
 unsigned int csrTab[100];
 unsigned char csrIdx = 0;
 
-static void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length)
-{
+static void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length) {
 	uint32_t cpt = 0;
 	AT91_REG csr;
 
@@ -394,8 +415,7 @@ static void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t leng
 //* \fn    AT91F_USB_SendZlp
 //* \brief Send zero length packet through the control endpoint
 //*----------------------------------------------------------------------------
-void AT91F_USB_SendZlp(AT91PS_UDP pUdp)
-{
+void AT91F_USB_SendZlp(AT91PS_UDP pUdp) {
 	pUdp->UDP_CSR[0] |= AT91C_UDP_TXPKTRDY;
 	while ( !(pUdp->UDP_CSR[0] & AT91C_UDP_TXCOMP) );
 	pUdp->UDP_CSR[0] &= ~(AT91C_UDP_TXCOMP);
@@ -406,8 +426,7 @@ void AT91F_USB_SendZlp(AT91PS_UDP pUdp)
 //* \fn    AT91F_USB_SendStall
 //* \brief Stall the control endpoint
 //*----------------------------------------------------------------------------
-void AT91F_USB_SendStall(AT91PS_UDP pUdp)
-{
+void AT91F_USB_SendStall(AT91PS_UDP pUdp) {
 	pUdp->UDP_CSR[0] |= AT91C_UDP_FORCESTALL;
 	while ( !(pUdp->UDP_CSR[0] & AT91C_UDP_ISOERROR) );
 	pUdp->UDP_CSR[0] &= ~(AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR);
@@ -418,8 +437,7 @@ void AT91F_USB_SendStall(AT91PS_UDP pUdp)
 //* \fn    AT91F_CDC_Enumerate
 //* \brief This function is a callback invoked when a SETUP packet is received
 //*----------------------------------------------------------------------------
-void AT91F_CDC_Enumerate()
-{
+void AT91F_CDC_Enumerate() {
 	byte_t bmRequestType, bRequest;
 	uint16_t wValue, wIndex, wLength, wStatus;
 

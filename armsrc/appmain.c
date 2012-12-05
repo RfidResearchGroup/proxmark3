@@ -387,8 +387,9 @@ void SamyRun()
 
 	for (;;)
 	{
-		UsbPoll(FALSE);
-		WDT_HIT();
+//		UsbPoll(FALSE);
+		usb_poll();
+    WDT_HIT();
 
 		// Was our button held down or pressed?
 		int button_pressed = BUTTON_HELD(1000);
@@ -905,7 +906,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_SETUP_WRITE:
 		case CMD_FINISH_WRITE:
 		case CMD_HARDWARE_RESET: {
-			USB_D_PLUS_PULLUP_OFF();
+      usb_disable();
 			SpinDelay(1000);
 			SpinDelay(1000);
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
@@ -918,7 +919,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			if(common_area.flags.bootrom_present) {
 				common_area.command = COMMON_AREA_COMMAND_ENTER_FLASH_MODE;
 			}
-			USB_D_PLUS_PULLUP_OFF();
+      usb_disable();
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
 			for(;;);
         } break;
@@ -955,7 +956,6 @@ void  __attribute__((noreturn)) AppMain(void)
 
   // Init USB device
   usb_enable();
-  UsbStart();
 //	UsbStart();
 
 	// The FPGA gets its clock from us from PCK0 output, so set that up.

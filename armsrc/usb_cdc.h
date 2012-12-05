@@ -37,6 +37,7 @@
 
 #include <common.h>
 
+void usb_disable();
 void usb_enable();
 bool usb_check();
 bool usb_poll();
