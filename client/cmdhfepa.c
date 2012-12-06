@@ -15,6 +15,7 @@
 #include "cmdparser.h"
 #include "common.h"
 #include "cmdmain.h"
+#include "sleep.h"
 
 #include "cmdhfepa.h"
 
