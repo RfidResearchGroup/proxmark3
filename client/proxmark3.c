@@ -67,6 +67,7 @@ static void *uart_receiver(void *targ) {
   size_t cmd_count;
   
   while (arg->run) {
+    rxlen = sizeof(UsbCommand);
     if (uart_receive(sp,rx,&rxlen)) {
       if ((rxlen % sizeof(UsbCommand)) != 0) {
         PrintAndLog("ERROR: received %zd bytes, which does not seem to be one or more command(s)\n",rxlen);
