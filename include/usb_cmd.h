@@ -36,7 +36,7 @@ typedef struct {
 
 typedef struct {
   uint32_t cmd;
-  uint32_t arg[3];
+  uint64_t arg[3];
   union {
     uint8_t	 asBytes[USB_CMD_DATA_SIZE];
     uint32_t asDwords[USB_CMD_DATA_SIZE/4];
