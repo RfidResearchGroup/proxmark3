@@ -1676,7 +1676,7 @@ static command_t CommandTable[] =
 int CmdHFMF(const char *Cmd)
 {
 	// flush
-	while (!WaitForResponseTimeout(CMD_ACK,NULL,500));
+	WaitForResponseTimeout(CMD_ACK,NULL,100);
 
   CmdsParse(CommandTable, Cmd);
   return 0;

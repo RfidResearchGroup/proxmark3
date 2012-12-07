@@ -65,7 +65,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	memset(resultKeys, 0x00, 16 * 6);
 
 	// flush queue
-	while (!WaitForResponseTimeout(CMD_ACK,NULL,500));
+	WaitForResponseTimeout(CMD_ACK,NULL,100);
 	
   UsbCommand c = {CMD_MIFARE_NESTED, {blockNo, keyType, trgBlockNo + trgKeyType * 0x100}};
 	memcpy(c.d.asBytes, key, 6);

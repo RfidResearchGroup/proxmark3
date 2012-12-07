@@ -88,7 +88,7 @@ int CmdHelp(const char *Cmd)
 int CmdHFEPA(const char *Cmd)
 {
 	// flush
-	while (!WaitForResponseTimeout(CMD_ACK,NULL,500));
+	WaitForResponseTimeout(CMD_ACK,NULL,100);
 
 	// parse
   CmdsParse(CommandTable, Cmd);
