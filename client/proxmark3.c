@@ -67,6 +67,7 @@ struct main_loop_arg {
 //}
 
 byte_t rx[0x1000000];
+byte_t* prx = rx;
 
 static void *uart_receiver(void *targ) {
   struct receiver_arg *arg = (struct receiver_arg*)targ;
@@ -75,18 +76,19 @@ static void *uart_receiver(void *targ) {
   
   while (arg->run) {
     rxlen = sizeof(UsbCommand);
-    if (uart_receive(sp,rx,&rxlen)) {
-      if ((rxlen % sizeof(UsbCommand)) != 0) {
-        PrintAndLog("ERROR: received %03zd bytes, which does not seem to be one or more command(s)\n",rxlen	);
+    if (uart_receive(sp,prx,&rxlen)) {
+      prx += rxlen;
+      if (((prx-rx) % sizeof(UsbCommand)) != 0) {
         continue;
       }
-      cmd_count = rxlen / sizeof(UsbCommand);
-//      printf("received %zd bytes, which represents %zd commands\n",rxlen, cmd_count);
+      cmd_count = (prx-rx) / sizeof(UsbCommand);
+      //      printf("received %d bytes, which represents %d commands\n",(prx-rx), cmd_count);
       for (size_t i=0; i<cmd_count; i++) {
         UsbCommandReceived((UsbCommand*)(rx+(i*sizeof(UsbCommand))));
       }
     }
-
+    prx = rx;
+    
     if(txcmd_pending) {
       if (!uart_send(sp,(byte_t*)&txcmd,sizeof(UsbCommand))) {
         PrintAndLog("Sending bytes to proxmark failed");
@@ -98,7 +100,6 @@ static void *uart_receiver(void *targ) {
   pthread_exit(NULL);
   return NULL;
 }
-
 
 static void *main_loop(void *targ) {
   struct main_loop_arg *arg = (struct main_loop_arg*)targ;

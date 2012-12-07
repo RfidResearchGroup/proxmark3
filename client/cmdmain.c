@@ -59,9 +59,9 @@ int CmdQuit(const char *Cmd)
 bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeout) {
 
 	// Wait until the command is received
-  for(size_t i=0; received_command != cmd && i < ms_timeout; i++) {
-		msleep(1); // XXX ugh
-    if (i == 2000) {
+  for(size_t i=0; received_command != cmd && i < ms_timeout/10; i++) {
+		msleep(10); // XXX ugh
+    if (i == 200) { // Two seconds elapsed
       PrintAndLog("Waiting for a response from the proxmark...");
       PrintAndLog("Don't forget to cancel its operation first by pressing on the button");
     }
