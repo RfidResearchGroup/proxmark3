@@ -25,14 +25,21 @@
 #include "ui.h"
 
 static serial_port sp;
+static UsbCommand txcmd;
+static bool txcmd_pending = false;
 
 void SendCommand(UsbCommand *c) {
 #if 0
   printf("Sending %d bytes\n", sizeof(UsbCommand));
 #endif
-  if (!uart_send(sp,(byte_t*)c,sizeof(UsbCommand))) {
-    ERR("Sending bytes to proxmark failed");
+/*
+  if (txcmd_pending) {
+    ERR("Sending command failed, previous command is still pending");
   }
+*/
+  while(txcmd_pending);
+  txcmd = *c;
+  txcmd_pending = true;
 }
 
 struct receiver_arg {
@@ -78,6 +85,13 @@ static void *uart_receiver(void *targ) {
       for (size_t i=0; i<cmd_count; i++) {
         UsbCommandReceived((UsbCommand*)(rx+(i*sizeof(UsbCommand))));
       }
+    }
+
+    if(txcmd_pending) {
+      if (!uart_send(sp,(byte_t*)&txcmd,sizeof(UsbCommand))) {
+        PrintAndLog("Sending bytes to proxmark failed");
+      }
+      txcmd_pending = false;
     }
   }
   
