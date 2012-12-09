@@ -27,6 +27,7 @@ static bool bQuiet;
 bool bCrypto;
 bool bAuthenticating;
 bool bPwd;
+bool bSuccessful;
 
 struct hitag2_tag {
 	uint32_t uid;
@@ -477,8 +478,8 @@ bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) 
 				*txlen = 32;
 				memcpy(tx,password,4);
 				bPwd = true;
-				 memcpy(tag.sectors[blocknr],rx,4);
-				 blocknr++;
+        memcpy(tag.sectors[blocknr],rx,4);
+        blocknr++;
 			} else {
 				
 			if(blocknr == 1){
@@ -491,7 +492,7 @@ bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) 
 			blocknr++;
 			if (blocknr > 7) {
 			  DbpString("Read succesful!");
-			  // We are done... for now
+        bSuccessful = true;
 			  return false;
 			}
 			*txlen = 10;
@@ -553,7 +554,7 @@ bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
         }
         if (blocknr > 7) {
           DbpString("Read succesful!");
-          // We are done... for now
+          bSuccessful = true;
           return false;
         }
         *txlen = 10;
@@ -1074,7 +1075,10 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	int t_wait = HITAG_T_WAIT_MAX;
 	bool bStop;
 	bool bQuitTraceFull = false;
-	
+  
+  // Reset the return status
+  bSuccessful = false;
+  
 	// Clean up trace and prepare it for storing frames
   iso14a_set_tracing(TRUE);
   iso14a_clear_trace();
@@ -1172,26 +1176,26 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	lastbit = 1;
 	bStop = false;
 
-	// Tag specific configuration settings (sof, timings, etc.)
-	if (htf < 10){
-		// hitagS settings
-		reset_sof = 1;
-		t_wait = 200;
-		DbpString("Configured for hitagS reader");
-	} else if (htf < 20) {
-		// hitag1 settings
-		reset_sof = 1;
-		t_wait = 200;
-		DbpString("Configured for hitag1 reader");
-	} else if (htf < 30) {
-		// hitag2 settings
-		reset_sof = 4;
-		t_wait = HITAG_T_WAIT_2;
-		DbpString("Configured for hitag2 reader");
+  // Tag specific configuration settings (sof, timings, etc.)
+  if (htf < 10){
+    // hitagS settings
+    reset_sof = 1;
+    t_wait = 200;
+    DbpString("Configured for hitagS reader");
+  } else if (htf < 20) {
+    // hitag1 settings
+    reset_sof = 1;
+    t_wait = 200;
+    DbpString("Configured for hitag1 reader");
+  } else if (htf < 30) {
+    // hitag2 settings
+    reset_sof = 4;
+    t_wait = HITAG_T_WAIT_2;
+    DbpString("Configured for hitag2 reader");
 	} else {
-        Dbprintf("Error, unknown hitag reader type: %d",htf);
-        return;
-    }
+    Dbprintf("Error, unknown hitag reader type: %d",htf);
+    return;
+  }
 		
 	while(!bStop && !BUTTON_PRESS()) {
 		// Watchdog hit
@@ -1336,7 +1340,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	
-//	Dbprintf("frame received: %d",frame_count);
-//	DbpString("All done");
+	Dbprintf("frame received: %d",frame_count);
+  DbpString("All done");
+  cmd_send(CMD_ACK,bSuccessful,0,0,(byte_t*)tag.sectors,48);
 }

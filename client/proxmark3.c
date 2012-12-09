@@ -196,7 +196,8 @@ static void *main_loop(void *targ) {
 }
 
 int main(int argc, char* argv[]) {
-  
+  srand(time(0));
+
   if (argc < 2) {
     printf("syntax: %s <port>\n\n",argv[0]);
     return 1;
