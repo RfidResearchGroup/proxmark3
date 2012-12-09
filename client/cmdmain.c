@@ -23,6 +23,7 @@
 #include "cmdhw.h"
 #include "cmdlf.h"
 #include "cmdmain.h"
+#include "util.h"
 
 unsigned int current_command = CMD_UNKNOWN;
 unsigned int received_command = CMD_UNKNOWN;
@@ -99,17 +100,23 @@ void CommandReceived(char *Cmd) {
 //-----------------------------------------------------------------------------
 void UsbCommandReceived(UsbCommand *UC)
 {
+  //  Debug
+  //  printf("UsbCommand length[len=%d]\n",sizeof(UsbCommand));
+  //  printf("  cmd[len=%d]: %x\n",sizeof(UC->cmd),UC->cmd);
+  //  printf(" arg0[len=%d]: %x\n",sizeof(UC->arg[0]),UC->arg[0]);
+  //  printf(" arg1[len=%d]: %x\n",sizeof(UC->arg[1]),UC->arg[1]);
+  //  printf(" arg2[len=%d]: %x\n",sizeof(UC->arg[2]),UC->arg[2]);
+  //  printf(" data[len=%d]: %02x%02x%02x...\n",sizeof(UC->d.asBytes),UC->d.asBytes[0],UC->d.asBytes[1],UC->d.asBytes[2]);
+
   //	printf("%s(%x) current cmd = %x\n", __FUNCTION__, c->cmd, current_command);
-  /* If we recognize a response, return to avoid further processing */
+  // If we recognize a response, return to avoid further processing
   switch(UC->cmd) {
-    // First check if we are handling a debug message
+      // First check if we are handling a debug message
     case CMD_DEBUG_PRINT_STRING: {
-      char s[100];
-      if(UC->arg[0] > 70 || UC->arg[0] < 0) {
-        UC->arg[0] = 0;
-      }
-      memcpy(s, UC->d.asBytes, UC->arg[0]);
-      s[UC->arg[0]] = '\0';
+      char s[USB_CMD_DATA_SIZE+1];
+      size_t len = MIN(UC->arg[0],USB_CMD_DATA_SIZE);
+      memcpy(s,UC->d.asBytes,len);
+      s[len] = 0x00;
       PrintAndLog("#db# %s       ", s);
       return;
     } break;

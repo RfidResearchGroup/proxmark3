@@ -35,10 +35,10 @@ typedef struct {
 #define USB_CMD_DATA_SIZE 512
 
 typedef struct {
-  uint32_t cmd;
+  uint64_t cmd;
   uint64_t arg[3];
   union {
-    uint8_t	 asBytes[USB_CMD_DATA_SIZE];
+    uint8_t  asBytes[USB_CMD_DATA_SIZE];
     uint32_t asDwords[USB_CMD_DATA_SIZE/4];
   } d;
 } PACKED UsbCommand;

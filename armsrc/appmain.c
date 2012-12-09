@@ -79,7 +79,8 @@ void ToSendStuffBit(int b)
 
 void DbpString(char *str)
 {
-  cmd_send(CMD_DEBUG_PRINT_STRING,strlen(str),0,0,(byte_t*)str,strlen(str));
+  byte_t len = strlen(str);
+  cmd_send(CMD_DEBUG_PRINT_STRING,len,0,0,(byte_t*)str,len);
 //	/* this holds up stuff unless we're connected to usb */
 //	if (!UsbConnected())
 //		return;

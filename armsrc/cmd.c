@@ -58,13 +58,13 @@ bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, byte_t*
   // Compose the outgoing command frame
   txcmd.cmd = cmd;
   txcmd.arg[0] = arg0;
-  txcmd.arg[1] = arg1;
+  txcmd.arg[1] = arg1;	
   txcmd.arg[2] = arg2;
 
   // Add the (optional) content to the frame, with a maximum size of USB_CMD_DATA_SIZE
   if (data && len) {
     memcpy(txcmd.d.asBytes,data,MIN(len,USB_CMD_DATA_SIZE));
-  }
+	  }
   
   // Send frame and make sure all bytes are transmitted
   if (usb_write((byte_t*)&txcmd,sizeof(UsbCommand)) != 0) return false;
