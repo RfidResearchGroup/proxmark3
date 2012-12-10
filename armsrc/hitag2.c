@@ -524,11 +524,27 @@ bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
 		case 0: {
 			// Stop if there is no answer while we are in crypto mode (after sending NrAr)
 			if (bCrypto) {
-				DbpString("Authentication failed!");
-				return false;
-			}
-			*txlen = 5;
-			memcpy(tx,"\xc0",nbytes(*txlen));
+        // Failed during authentication
+        if (bAuthenticating) {
+          DbpString("Authentication failed!");
+          return false;
+        } else {
+          // Failed reading a block, could be (read/write) locked, skip block and re-authenticate
+          if (blocknr == 1) {
+            memcpy(tag.sectors[1],key+2,4);
+          } else if (blocknr == 2) {
+            tag.sectors[2][0] = 0x00;
+            tag.sectors[2][1] = 0x00;
+            tag.sectors[2][2] = key[0];
+            tag.sectors[2][3] = key[1];
+          }
+          blocknr++;
+          bCrypto = false;
+        }
+			} else {
+        *txlen = 5;
+        memcpy(tx,"\xc0",nbytes(*txlen));
+      }
 		} break;
 			
       // Received UID, crypto tag answer
