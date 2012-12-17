@@ -531,12 +531,17 @@ bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
         } else {
           // Failed reading a block, could be (read/write) locked, skip block and re-authenticate
           if (blocknr == 1) {
+            // Write the low part of the key in memory
             memcpy(tag.sectors[1],key+2,4);
           } else if (blocknr == 2) {
+            // Write the high part of the key in memory
             tag.sectors[2][0] = 0x00;
             tag.sectors[2][1] = 0x00;
             tag.sectors[2][2] = key[0];
             tag.sectors[2][3] = key[1];
+          } else {
+            // Just put zero's in the memory (of the unreadable block)
+            memset(tag.sectors[blocknr],0x00,4);
           }
           blocknr++;
           bCrypto = false;
