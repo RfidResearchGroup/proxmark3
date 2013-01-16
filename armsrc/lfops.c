@@ -598,7 +598,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = (uint8_t *)BigBuf;
 	int m=0, n=0, i=0, idx=0, found=0, lastval=0;
-	uint32_t hi=0, lo=0;
+	uint32_t hi2=0, hi=0, lo=0;
 
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
@@ -735,9 +735,15 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 			{
 				found=1;
 				idx+=6;
-				if (found && (hi|lo)) {
-					Dbprintf("TAG ID: %x%08x (%d)",
-						(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+				if (found && (hi2|hi|lo)) {
+					if (hi2 != 0){
+  					Dbprintf("TAG ID: %x%08x%08x (%d)",
+	  					(unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+	  			}		
+					else {
+					  Dbprintf("TAG ID: %x%08x (%d)",
+						  (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+					}	
 					/* if we're only looking for one tag */
 					if (findone)
 					{
@@ -745,6 +751,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 						*low = lo;
 						return;
 					}
+					hi2=0;
 					hi=0;
 					lo=0;
 					found=0;
@@ -752,13 +759,16 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 			}
 			if (found) {
 				if (dest[idx] && (!dest[idx+1]) ) {
+					hi2=(hi2<<1)|(hi>>31);
 					hi=(hi<<1)|(lo>>31);
 					lo=(lo<<1)|0;
 				} else if ( (!dest[idx]) && dest[idx+1]) {
+					hi2=(hi2<<1)|(hi>>31);
 					hi=(hi<<1)|(lo>>31);
 					lo=(lo<<1)|1;
 				} else {
 					found=0;
+					hi2=0;
 					hi=0;
 					lo=0;
 				}
@@ -769,8 +779,14 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				found=1;
 				idx+=6;
 				if (found && (hi|lo)) {
-					Dbprintf("TAG ID: %x%08x (%d)",
-						(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+					if (hi2 != 0){
+  					Dbprintf("TAG ID: %x%08x%08x (%d)",
+	  					(unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+	  			}		
+					else {
+					  Dbprintf("TAG ID: %x%08x (%d)",
+						  (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+					}	
 					/* if we're only looking for one tag */
 					if (findone)
 					{
@@ -778,6 +794,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 						*low = lo;
 						return;
 					}
+          hi2=0;
 					hi=0;
 					lo=0;
 					found=0;
@@ -787,6 +804,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		WDT_HIT();
 	}
 }
+
 
 /*------------------------------
  * T5555/T5557/T5567 routines
@@ -866,7 +884,7 @@ void T55xxWriteBit(int bit)
 }
 
 // Write one card block in page 0, no lock
-void T55xxWriteBlock(int Data, int Block)
+void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 {
 	unsigned int i;
 
@@ -884,6 +902,11 @@ void T55xxWriteBlock(int Data, int Block)
 	// Opcode
 	T55xxWriteBit(1);
 	T55xxWriteBit(0); //Page 0
+	if (PwdMode == 1){
+		// Pwd
+		for (i = 0x80000000; i != 0; i >>= 1)
+			T55xxWriteBit(Pwd & i);
+	}	
 	// Lock bit
 	T55xxWriteBit(0);
 
@@ -891,7 +914,7 @@ void T55xxWriteBlock(int Data, int Block)
 	for (i = 0x80000000; i != 0; i >>= 1)
 		T55xxWriteBit(Data & i);
 
-	// Page
+	// Block
 	for (i = 0x04; i != 0; i >>= 1)
 		T55xxWriteBit(Block & i);
 
@@ -903,55 +926,243 @@ void T55xxWriteBlock(int Data, int Block)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 
-// Copy HID id to card and setup block 0 config
-void CopyHIDtoT55x7(int hi, int lo)
+
+// Read one card block in page 0 
+void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 {
-	int data1, data2, data3;
+	uint8_t *dest = (uint8_t *)BigBuf;
+	int m=0, i=0;
+ 
+	m = sizeof(BigBuf);
+  // Clear destination buffer before sending the command
+	memset(dest, 128, m);
+	// Connect the A/D to the peak-detected low-frequency path.
+	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+	// Now set up the SSC to get the ADC samples that are now streaming at us.
+	FpgaSetupSsc();
 
-	// Ensure no more than 44 bits supplied
-	if (hi>0xFFF) {
-		DbpString("Tags can only have 44 bits.");
-		return;
+	LED_D_ON();
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+
+	// Give it a bit of time for the resonant antenna to settle.
+	// And for the tag to fully power up
+	SpinDelay(150);
+
+	// Now start writting
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelayUs(START_GAP);
+
+	// Opcode
+	T55xxWriteBit(1);
+	T55xxWriteBit(0); //Page 0
+	if (PwdMode == 1){
+		// Pwd
+		for (i = 0x80000000; i != 0; i >>= 1)
+			T55xxWriteBit(Pwd & i);
+	}	
+	// Lock bit
+	T55xxWriteBit(0);
+	// Block
+	for (i = 0x04; i != 0; i >>= 1)
+		T55xxWriteBit(Block & i);
+  
+  // Turn field on to read the response
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+
+	// Now do the acquisition 
+	i = 0;
+	for(;;) {
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+			AT91C_BASE_SSC->SSC_THR = 0x43;
+		}
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+			dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+			// we don't care about actual value, only if it's more or less than a
+			// threshold essentially we capture zero crossings for later analysis
+//			if(dest[i] < 127) dest[i] = 0; else dest[i] = 1;
+			i++;
+			if (i >= m) break;
+		}
 	}
 
-	// Build the 3 data blocks for supplied 44bit ID
-	data1 = 0x1D000000; // load preamble
+  FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
+	LED_D_OFF();
+	DbpString("DONE!");
+}
 
-	for (int i=0;i<12;i++) {
-		if (hi & (1<<(11-i)))
-			data1 |= (1<<(((11-i)*2)+1)); // 1 -> 10
-		else
-			data1 |= (1<<((11-i)*2)); // 0 -> 01
+// Read card traceability data (page 1)
+void T55xxReadTrace(void){ 
+	uint8_t *dest = (uint8_t *)BigBuf;
+	int m=0, i=0;
+ 
+	m = sizeof(BigBuf);
+  // Clear destination buffer before sending the command
+	memset(dest, 128, m);
+	// Connect the A/D to the peak-detected low-frequency path.
+	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+	// Now set up the SSC to get the ADC samples that are now streaming at us.
+	FpgaSetupSsc();
+
+	LED_D_ON();
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+
+	// Give it a bit of time for the resonant antenna to settle.
+	// And for the tag to fully power up
+	SpinDelay(150);
+
+	// Now start writting
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelayUs(START_GAP);
+
+	// Opcode
+	T55xxWriteBit(1);
+	T55xxWriteBit(1); //Page 1
+  
+  // Turn field on to read the response
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+
+	// Now do the acquisition 
+	i = 0;
+	for(;;) {
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+			AT91C_BASE_SSC->SSC_THR = 0x43;
+		}
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+			dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+			i++;
+			if (i >= m) break;
+		}
 	}
 
-	data2 = 0;
-	for (int i=0;i<16;i++) {
-		if (lo & (1<<(31-i)))
-			data2 |= (1<<(((15-i)*2)+1)); // 1 -> 10
-		else
-			data2 |= (1<<((15-i)*2)); // 0 -> 01
-	}
+  FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
+	LED_D_OFF();
+	DbpString("DONE!");
+}
 
-	data3 = 0;
-	for (int i=0;i<16;i++) {
-		if (lo & (1<<(15-i)))
-			data3 |= (1<<(((15-i)*2)+1)); // 1 -> 10
-		else
-			data3 |= (1<<((15-i)*2)); // 0 -> 01
-	}
+/*-------------- Cloning routines -----------*/
+// Copy HID id to card and setup block 0 config
+void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT)
+{
+	int data1, data2, data3, data4, data5, data6; //up to six blocks for long format
+	int last_block = 0;
 
-	// Program the 3 data blocks for supplied 44bit ID
+  if (longFMT){
+	  // Ensure no more than 84 bits supplied
+	  if (hi2>0xFFFFF) {
+		  DbpString("Tags can only have 84 bits.");
+		  return;
+	  }
+    // Build the 6 data blocks for supplied 84bit ID
+    last_block = 6;
+    data1 = 0x1D96A900; // load preamble (1D) & long format identifier (9E manchester encoded)
+	  for (int i=0;i<4;i++) {
+		  if (hi2 & (1<<(19-i)))
+			  data1 |= (1<<(((3-i)*2)+1)); // 1 -> 10
+		  else
+			  data1 |= (1<<((3-i)*2)); // 0 -> 01
+	  }
+
+  	data2 = 0;
+  	for (int i=0;i<16;i++) {
+  		if (hi2 & (1<<(15-i)))
+  			data2 |= (1<<(((15-i)*2)+1)); // 1 -> 10
+  		else
+  			data2 |= (1<<((15-i)*2)); // 0 -> 01
+    }
+
+  	data3 = 0;
+  	for (int i=0;i<16;i++) {
+  		if (hi & (1<<(31-i)))
+  			data3 |= (1<<(((15-i)*2)+1)); // 1 -> 10
+  		else
+  			data3 |= (1<<((15-i)*2)); // 0 -> 01
+  	}
+  
+  	data4 = 0;
+  	for (int i=0;i<16;i++) {
+  		if (hi & (1<<(15-i)))
+  			data4 |= (1<<(((15-i)*2)+1)); // 1 -> 10
+  		else
+  			data4 |= (1<<((15-i)*2)); // 0 -> 01
+    }
+    
+  	data5 = 0;
+  	for (int i=0;i<16;i++) {
+  		if (lo & (1<<(31-i)))
+  			data5 |= (1<<(((15-i)*2)+1)); // 1 -> 10
+  		else
+  			data5 |= (1<<((15-i)*2)); // 0 -> 01
+  	}
+  
+  	data6 = 0;
+  	for (int i=0;i<16;i++) {
+  		if (lo & (1<<(15-i)))
+  			data6 |= (1<<(((15-i)*2)+1)); // 1 -> 10
+  		else
+  			data6 |= (1<<((15-i)*2)); // 0 -> 01
+    }
+  }
+  else {	
+	  // Ensure no more than 44 bits supplied
+	  if (hi>0xFFF) {
+		  DbpString("Tags can only have 44 bits.");
+		  return;
+	  }
+
+  	// Build the 3 data blocks for supplied 44bit ID
+  	last_block = 3;
+  	
+  	data1 = 0x1D000000; // load preamble
+  
+  	for (int i=0;i<12;i++) {
+  		if (hi & (1<<(12-i)))
+  			data1 |= (1<<(((12-i)*2)+1)); // 1 -> 10
+  		else
+  			data1 |= (1<<((12-i)*2)); // 0 -> 01
+  	}
+  
+  	data2 = 0;
+  	for (int i=0;i<16;i++) {
+  		if (lo & (1<<(31-i)))
+  			data2 |= (1<<(((15-i)*2)+1)); // 1 -> 10
+  		else
+  			data2 |= (1<<((15-i)*2)); // 0 -> 01
+  	}
+  
+  	data3 = 0;
+  	for (int i=0;i<16;i++) {
+  		if (lo & (1<<(15-i)))
+  			data3 |= (1<<(((15-i)*2)+1)); // 1 -> 10
+  		else
+  			data3 |= (1<<((15-i)*2)); // 0 -> 01
+  	}		
+  }
+
+	LED_D_ON();
+	// Program the data blocks for supplied ID
 	// and the block 0 for HID format
-	T55xxWriteBlock(data1,1);
-	T55xxWriteBlock(data2,2);
-	T55xxWriteBlock(data3,3);
+	T55xxWriteBlock(data1,1,0,0);
+	T55xxWriteBlock(data2,2,0,0);
+	T55xxWriteBlock(data3,3,0,0);
+	
+	if (longFMT) { // if long format there are 6 blocks
+	  T55xxWriteBlock(data4,4,0,0);
+	  T55xxWriteBlock(data5,5,0,0);
+	  T55xxWriteBlock(data6,6,0,0);
+  }
 
-	// Config for HID (RF/50, FSK2a, Maxblock=3)
+	// Config for HID (RF/50, FSK2a, Maxblock=3 for short/6 for long)
 	T55xxWriteBlock(T55x7_BITRATE_RF_50    |
 			T55x7_MODULATION_FSK2a |
-			3 << T55x7_MAXBLOCK_SHIFT,
-			0);
-
+			last_block << T55x7_MAXBLOCK_SHIFT,
+			0,0,0);
+  
+	LED_D_OFF();
+	
 	DbpString("DONE!");
 }
 
@@ -1019,8 +1230,8 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo)
 	LED_D_ON();
 
 	// Write EM410x ID
-	T55xxWriteBlock((uint32_t)(id >> 32), 1);
-	T55xxWriteBlock((uint32_t)id, 2);
+	T55xxWriteBlock((uint32_t)(id >> 32), 1, 0, 0);
+	T55xxWriteBlock((uint32_t)id, 2, 0, 0);
 
 	// Config for EM410x (RF/64, Manchester, Maxblock=2)
 	if (card)
@@ -1028,13 +1239,13 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo)
 		T55xxWriteBlock(T55x7_BITRATE_RF_64	    |
 				T55x7_MODULATION_MANCHESTER |
 				2 << T55x7_MAXBLOCK_SHIFT,
-				0);
+				0, 0, 0);
 	else
 		// Writing configuration for T5555(Q5) tag
 		T55xxWriteBlock(0x1F << T5555_BITRATE_SHIFT |
 				T5555_MODULATION_MANCHESTER   |
 				2 << T5555_MAXBLOCK_SHIFT,
-				0);
+				0, 0, 0);
 
 	LED_D_OFF();
 	Dbprintf("Tag %s written with 0x%08x%08x\n", card ? "T55x7":"T5555",
@@ -1047,13 +1258,13 @@ void CopyIndala64toT55x7(int hi, int lo)
 
 	//Program the 2 data blocks for supplied 64bit UID
 	// and the block 0 for Indala64 format
-	T55xxWriteBlock(hi,1);
-	T55xxWriteBlock(lo,2);
+	T55xxWriteBlock(hi,1,0,0);
+	T55xxWriteBlock(lo,2,0,0);
 	//Config for Indala (RF/32;PSK1 with RF/2;Maxblock=2)
 	T55xxWriteBlock(T55x7_BITRATE_RF_32    |
 			T55x7_MODULATION_PSK1 |
 			2 << T55x7_MAXBLOCK_SHIFT,
-			0);
+			0,0,0);
 	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
 //	T5567WriteBlock(0x603E1042,0);
 
@@ -1066,18 +1277,18 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
 
 	//Program the 7 data blocks for supplied 224bit UID
 	// and the block 0 for Indala224 format
-	T55xxWriteBlock(uid1,1);
-	T55xxWriteBlock(uid2,2);
-	T55xxWriteBlock(uid3,3);
-	T55xxWriteBlock(uid4,4);
-	T55xxWriteBlock(uid5,5);
-	T55xxWriteBlock(uid6,6);
-	T55xxWriteBlock(uid7,7);
+	T55xxWriteBlock(uid1,1,0,0);
+	T55xxWriteBlock(uid2,2,0,0);
+	T55xxWriteBlock(uid3,3,0,0);
+	T55xxWriteBlock(uid4,4,0,0);
+	T55xxWriteBlock(uid5,5,0,0);
+	T55xxWriteBlock(uid6,6,0,0);
+	T55xxWriteBlock(uid7,7,0,0);
 	//Config for Indala (RF/32;PSK1 with RF/2;Maxblock=7)
 	T55xxWriteBlock(T55x7_BITRATE_RF_32    |
 			T55x7_MODULATION_PSK1 |
 			7 << T55x7_MAXBLOCK_SHIFT,
-			0);
+			0,0,0);
 	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
 //	T5567WriteBlock(0x603E10E2,0);
 
