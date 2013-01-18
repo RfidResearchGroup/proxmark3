@@ -1295,3 +1295,261 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
 	DbpString("DONE!");
 
 }
+
+#define abs(x) ( ((x)<0) ? -(x) : (x) )
+#define max(x,y) ( x<y ? y:x)
+
+int DemodPCF7931(uint8_t **outBlocks) {
+  uint8_t BitStream[256];
+  uint8_t Blocks[8][16];
+  uint8_t *GraphBuffer = (uint8_t *)BigBuf;
+  int GraphTraceLen = sizeof(BigBuf);
+  int i, j, lastval, bitidx, half_switch;
+  int clock = 64;
+  int tolerance = clock / 8;
+  int pmc, block_done;
+  int lc, warnings = 0;
+  int num_blocks = 0;
+  int lmin=128, lmax=128;
+  uint8_t dir;
+
+  AcquireRawAdcSamples125k(0);
+
+  lmin = 64;
+  lmax = 192;
+
+  i = 2;
+
+  /* Find first local max/min */
+  if(GraphBuffer[1] > GraphBuffer[0]) {
+    while(i < GraphTraceLen) {
+      if( !(GraphBuffer[i] > GraphBuffer[i-1]) && GraphBuffer[i] > lmax)
+	break;
+      i++;
+    }
+    dir = 0;
+  }
+  else {
+    while(i < GraphTraceLen) {
+      if( !(GraphBuffer[i] < GraphBuffer[i-1]) && GraphBuffer[i] < lmin)
+	break;
+      i++;
+    }
+    dir = 1;
+  }
+  
+  lastval = i++;
+  half_switch = 0;
+  pmc = 0;
+  block_done = 0;
+  
+  for (bitidx = 0; i < GraphTraceLen; i++)
+    {
+      if ( (GraphBuffer[i-1] > GraphBuffer[i] && dir == 1 && GraphBuffer[i] > lmax) || (GraphBuffer[i-1] < GraphBuffer[i] && dir == 0 && GraphBuffer[i] < lmin))
+	{
+	  lc = i - lastval;
+	  lastval = i;
+	  
+	  // Switch depending on lc length:
+	  // Tolerance is 1/8 of clock rate (arbitrary)
+	  if (abs(lc-clock/4) < tolerance) {
+	    // 16T0
+	    if((i - pmc) == lc) { /* 16T0 was previous one */
+	      /* It's a PMC ! */
+	      i += (128+127+16+32+33+16)-1;
+	      lastval = i;
+	      pmc = 0;
+	      block_done = 1;
+	    }
+	    else {
+	      pmc = i;
+	    }
+	  } else if (abs(lc-clock/2) < tolerance) {
+	    // 32TO
+	    if((i - pmc) == lc) { /* 16T0 was previous one */
+	      /* It's a PMC ! */
+	      i += (128+127+16+32+33)-1;
+	      lastval = i;
+	      pmc = 0;
+	      block_done = 1;
+	    }
+	    else if(half_switch == 1) {
+	      BitStream[bitidx++] = 0;
+	      half_switch = 0;
+	    }
+	    else
+	      half_switch++;
+	  } else if (abs(lc-clock) < tolerance) {
+	    // 64TO
+	    BitStream[bitidx++] = 1;
+	  } else {
+	    // Error
+	    warnings++;
+	    if (warnings > 10)
+	      {
+		Dbprintf("Error: too many detection errors, aborting.");
+		return 0;
+	      }
+	  }
+	  
+	  if(block_done == 1) {
+	    if(bitidx == 128) {
+	      for(j=0; j<16; j++) {
+		Blocks[num_blocks][j] = 128*BitStream[j*8+7]+
+		  64*BitStream[j*8+6]+
+		  32*BitStream[j*8+5]+
+		  16*BitStream[j*8+4]+
+		  8*BitStream[j*8+3]+
+		  4*BitStream[j*8+2]+
+		  2*BitStream[j*8+1]+
+		  BitStream[j*8];
+	      }
+	      num_blocks++;
+	    }
+	    bitidx = 0;
+	    block_done = 0;
+	    half_switch = 0;
+	  }
+	  if (GraphBuffer[i-1] > GraphBuffer[i]) dir=0;
+	  else dir = 1;
+	}
+      if(bitidx==255)
+	bitidx=0;
+      warnings = 0;
+      if(num_blocks == 4) break;
+    }
+  memcpy(outBlocks, Blocks, 16*num_blocks);
+  return num_blocks;
+}
+
+int IsBlock0PCF7931(uint8_t *Block) {
+  // Assume RFU means 0 :)
+  if((memcmp(Block, "\x00\x00\x00\x00\x00\x00\x00\x01", 8) == 0) && memcmp(Block+9, "\x00\x00\x00\x00\x00\x00\x00", 7) == 0) // PAC enabled
+    return 1;
+  if((memcmp(Block+9, "\x00\x00\x00\x00\x00\x00\x00", 7) == 0) && Block[7] == 0) // PAC disabled, can it *really* happen ?
+    return 1;
+  return 0;
+}
+
+int IsBlock1PCF7931(uint8_t *Block) {
+  // Assume RFU means 0 :)
+  if(Block[10] == 0 && Block[11] == 0 && Block[12] == 0 && Block[13] == 0)
+    if((Block[14] & 0x7f) <= 9 && Block[15] <= 9)
+      return 1;
+
+  return 0;
+}
+
+#define ALLOC 16
+
+void ReadPCF7931() {
+  uint8_t Blocks[8][17];
+  uint8_t tmpBlocks[4][16];
+  int i, j, ind, ind2, n;
+  int num_blocks = 0;
+  int max_blocks = 8;
+  int ident = 0;
+  int error = 0;
+  int tries = 0;
+  
+  memset(Blocks, 0, 8*17*sizeof(uint8_t));
+
+  do {
+    memset(tmpBlocks, 0, 4*16*sizeof(uint8_t));
+    n = DemodPCF7931((uint8_t**)tmpBlocks);
+    if(!n)
+      error++;
+    if(error==10 && num_blocks == 0) {
+      Dbprintf("Error, no tag or bad tag");
+      return;
+    }
+    else if (tries==20 || error==10) {
+      Dbprintf("Error reading the tag");
+      Dbprintf("Here is the partial content");
+      goto end;
+    }
+    
+    for(i=0; i<n; i++)
+      Dbprintf("(dbg) %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+	       tmpBlocks[i][0], tmpBlocks[i][1], tmpBlocks[i][2], tmpBlocks[i][3], tmpBlocks[i][4], tmpBlocks[i][5], tmpBlocks[i][6], tmpBlocks[i][7], 
+	       tmpBlocks[i][8], tmpBlocks[i][9], tmpBlocks[i][10], tmpBlocks[i][11], tmpBlocks[i][12], tmpBlocks[i][13], tmpBlocks[i][14], tmpBlocks[i][15]);
+    if(!ident) {
+      for(i=0; i<n; i++) {
+	if(IsBlock0PCF7931(tmpBlocks[i])) {
+	  // Found block 0 ?
+	  if(i < n-1 && IsBlock1PCF7931(tmpBlocks[i+1])) {
+	    // Found block 1!
+	    // \o/
+	    ident = 1;
+	    memcpy(Blocks[0], tmpBlocks[i], 16);
+	    Blocks[0][ALLOC] = 1;
+	    memcpy(Blocks[1], tmpBlocks[i+1], 16);
+	    Blocks[1][ALLOC] = 1;
+	    max_blocks = max((Blocks[1][14] & 0x7f), Blocks[1][15]) + 1;
+	    // Debug print
+	    Dbprintf("(dbg) Max blocks: %d", max_blocks);
+	    num_blocks = 2;
+	    // Handle following blocks
+	    for(j=i+2, ind2=2; j!=i; j++, ind2++, num_blocks++) {
+	      if(j==n) j=0;
+	      if(j==i) break;
+	      memcpy(Blocks[ind2], tmpBlocks[j], 16);
+	      Blocks[ind2][ALLOC] = 1;
+	    }
+	    break;
+	  }
+	}
+      }
+    }
+    else {
+      for(i=0; i<n; i++) { // Look for identical block in known blocks
+	if(memcmp(tmpBlocks[i], "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16)) { // Block is not full of 00
+	  for(j=0; j<max_blocks; j++) {
+	    if(Blocks[j][ALLOC] == 1 && !memcmp(tmpBlocks[i], Blocks[j], 16)) {
+	      // Found an identical block
+	      for(ind=i-1,ind2=j-1; ind >= 0; ind--,ind2--) {
+		if(ind2 < 0)
+		  ind2 = max_blocks;
+		if(!Blocks[ind2][ALLOC]) { // Block ind2 not already found
+		  // Dbprintf("Tmp %d -> Block %d", ind, ind2);
+		  memcpy(Blocks[ind2], tmpBlocks[ind], 16);
+		  Blocks[ind2][ALLOC] = 1;
+		  num_blocks++;
+		  if(num_blocks == max_blocks) goto end;
+		}
+	      }
+	      for(ind=i+1,ind2=j+1; ind < n; ind++,ind2++) {
+		if(ind2 > max_blocks)
+		  ind2 = 0;
+		if(!Blocks[ind2][ALLOC]) { // Block ind2 not already found
+		  // Dbprintf("Tmp %d -> Block %d", ind, ind2);
+		  memcpy(Blocks[ind2], tmpBlocks[ind], 16);
+		  Blocks[ind2][ALLOC] = 1;
+		  num_blocks++;
+		  if(num_blocks == max_blocks) goto end;
+		}
+	      }
+	    }
+	  }
+	}
+      }
+    }
+    tries++;
+    if (BUTTON_PRESS()) return;
+  } while (num_blocks != max_blocks);
+ end:
+  Dbprintf("-----------------------------------------");
+  Dbprintf("Memory content:");
+  Dbprintf("-----------------------------------------");
+  for(i=0; i<max_blocks; i++) {
+    if(Blocks[i][ALLOC]==1)
+      Dbprintf("%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+	       Blocks[i][0], Blocks[i][1], Blocks[i][2], Blocks[i][3], Blocks[i][4], Blocks[i][5], Blocks[i][6], Blocks[i][7], 
+	       Blocks[i][8], Blocks[i][9], Blocks[i][10], Blocks[i][11], Blocks[i][12], Blocks[i][13], Blocks[i][14], Blocks[i][15]);
+    else
+      Dbprintf("<missing block %d>", i);
+  }
+  Dbprintf("-----------------------------------------");
+  
+  return ;
+}

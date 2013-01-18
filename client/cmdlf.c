@@ -25,6 +25,7 @@
 #include "cmdlfem4x.h"
 #include "cmdlfhitag.h"
 #include "cmdlft55xx.h"
+#include "cmdlfpcf7931.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -540,6 +541,7 @@ static command_t CommandTable[] =
   {"hitag",       CmdLFHitag,         1, "{ Hitag tags and transponders... }"},
   {"vchdemod",    CmdVchDemod,        1, "['clone'] -- Demodulate samples for VeriChip"},
   {"t55xx",       CmdLFT55XX,         1, "{ T55xx RFIDs... }"},
+  {"pcf7931",     CmdLFPCF7931,       1, "{PCF7931 RFIDs...}"},
   {NULL, NULL, 0, NULL}
 };
 

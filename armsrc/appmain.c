@@ -666,6 +666,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_T55XX_READ_TRACE: // Clone HID tag by ID to T55x7
 			T55xxReadTrace();
 			break;
+		case CMD_PCF7931_READ: // Read PCF7931 tag
+			ReadPCF7931();
+			UsbSendPacket((uint8_t*)&ack, sizeof(ack));
+			break;
 #endif
 
 #ifdef WITH_HITAG

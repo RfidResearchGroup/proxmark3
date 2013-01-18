@@ -124,6 +124,10 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
 void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMode);
 void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode );
 void T55xxReadTrace(void);
+int DemodPCF7931(uint8_t **outBlocks);
+int IsBlock0PCF7931(uint8_t *Block);
+int IsBlock1PCF7931(uint8_t *Block);
+void ReadPCF7931();
 
 /// iso14443.h
 void SimulateIso14443Tag(void);

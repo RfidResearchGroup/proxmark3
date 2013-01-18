@@ -68,7 +68,8 @@ CMDSRCS = \
 			cmdlfti.c \
 			cmdparser.c \
 			cmdmain.c \
-			cmdlft55xx.c
+			cmdlft55xx.c \
+			cmdlfpcf7931.c
 
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
 
