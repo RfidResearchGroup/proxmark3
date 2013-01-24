@@ -1119,10 +1119,10 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT)
   	data1 = 0x1D000000; // load preamble
   
   	for (int i=0;i<12;i++) {
-  		if (hi & (1<<(12-i)))
-  			data1 |= (1<<(((12-i)*2)+1)); // 1 -> 10
+  		if (hi & (1<<(11-i)))
+  			data1 |= (1<<(((11-i)*2)+1)); // 1 -> 10
   		else
-  			data1 |= (1<<((12-i)*2)); // 0 -> 01
+  			data1 |= (1<<((11-i)*2)); // 0 -> 01
   	}
   
   	data2 = 0;
@@ -1553,3 +1553,222 @@ void ReadPCF7931() {
   
   return ;
 }
+
+
+//-----------------------------------
+//   EM4469 / EM4305 routines
+//-----------------------------------
+#define FWD_CMD_LOGIN   0xC      //including the even parity, binary mirrored 
+#define FWD_CMD_WRITE   0xA 
+#define FWD_CMD_READ    0x9 
+#define FWD_CMD_DISABLE 0x5 
+
+
+uint8_t forwardLink_data[64];       //array of forwarded bits  
+uint8_t * forward_ptr;              //ptr for forward message preparation 
+uint8_t fwd_bit_sz;                 //forwardlink bit counter
+uint8_t * fwd_write_ptr;            //forwardlink bit pointer
+ 
+//==================================================================== 
+// prepares command bits 
+// see EM4469 spec 
+//==================================================================== 
+//-------------------------------------------------------------------- 
+uint8_t Prepare_Cmd( uint8_t cmd ) { 
+//--------------------------------------------------------------------  
+ 
+  *forward_ptr++ = 0;               //start bit 
+  *forward_ptr++ = 0;               //second pause for 4050 code 
+ 
+  *forward_ptr++ = cmd; 
+  cmd >>= 1; 
+  *forward_ptr++ = cmd; 
+  cmd >>= 1; 
+  *forward_ptr++ = cmd; 
+  cmd >>= 1;
+  *forward_ptr++ = cmd; 
+ 
+  return 6;                         //return number of emited bits 
+} 
+ 
+//==================================================================== 
+// prepares address bits 
+// see EM4469 spec 
+//==================================================================== 
+ 
+//-------------------------------------------------------------------- 
+uint8_t Prepare_Addr( uint8_t addr ) { 
+//-------------------------------------------------------------------- 
+ 
+  register uint8_t line_parity; 
+ 
+  uint8_t i;
+  line_parity = 0;
+  for(i=0;i<6;i++) {
+    *forward_ptr++ = addr; 
+    line_parity ^= addr; 
+    addr >>= 1;
+  }
+  
+  *forward_ptr++ = (line_parity & 1);  
+ 
+  return 7;                      //return number of emited bits 
+} 
+ 
+//==================================================================== 
+// prepares data bits intreleaved with parity bits 
+// see EM4469 spec 
+//==================================================================== 
+ 
+//-------------------------------------------------------------------- 
+uint8_t Prepare_Data( uint16_t data_low, uint16_t data_hi) { 
+//-------------------------------------------------------------------- 
+ 
+  register uint8_t line_parity; 
+  register uint8_t column_parity; 
+  register uint8_t i, j; 
+  register uint16_t data; 
+ 
+  data = data_low; 
+  column_parity = 0; 
+ 
+  for(i=0; i<4; i++) { 
+    line_parity = 0; 
+    for(j=0; j<8; j++) { 
+      line_parity ^= data; 
+      column_parity ^= (data & 1) << j; 
+      *forward_ptr++ = data; 
+      data >>= 1; 
+    } 
+    *forward_ptr++ = line_parity; 
+    if(i == 1) 
+      data = data_hi; 
+  } 
+ 
+  for(j=0; j<8; j++) { 
+    *forward_ptr++ = column_parity; 
+    column_parity >>= 1; 
+  } 
+  *forward_ptr = 0; 
+ 
+  return 45;                             //return number of emited bits 
+} 
+ 
+//==================================================================== 
+// Forward Link send function 
+// Requires: forwarLink_data filled with valid bits (1 bit per byte) 
+//           fwd_bit_count set with number of bits to be sent 
+//==================================================================== 
+void SendForward(uint8_t fwd_bit_count) {
+
+  fwd_write_ptr = forwardLink_data;
+  fwd_bit_sz = fwd_bit_count;
+
+	LED_D_ON();
+
+  //Field on
+ 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	
+	// Give it a bit of time for the resonant antenna to settle.
+	// And for the tag to fully power up
+	SpinDelay(150);
+	
+  // force 1st mod pulse (start gap must be longer for 4305)
+  fwd_bit_sz--;                        //prepare next bit modulation 
+  fwd_write_ptr++; 
+  FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
+  SpinDelayUs(55*8); //55 cycles off (8us each)for 4305
+  FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+  FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);//field on
+  SpinDelayUs(16*8); //16 cycles on (8us each)
+
+	// now start writting
+  while(fwd_bit_sz-- > 0) {                   //prepare next bit modulation
+    if(((*fwd_write_ptr++) & 1) == 1) 
+      SpinDelayUs(32*8); //32 cycles at 125Khz (8us each)
+    else {
+      //These timings work for 4469/4269/4305 (with the 55*8 above)
+	    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
+      SpinDelayUs(23*8); //16-4 cycles off (8us each)
+ 	    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);//field on
+      SpinDelayUs(9*8); //16 cycles on (8us each)
+    }
+  } 
+}
+
+void Login (uint32_t Password) {
+
+  uint8_t fwd_bit_count;
+
+  forward_ptr = forwardLink_data; 
+  fwd_bit_count = Prepare_Cmd( FWD_CMD_LOGIN ); 
+  fwd_bit_count += Prepare_Data( Password&0xFFFF, Password>>16 ); 
+
+  SendForward(fwd_bit_count); 
+  
+  //Wait for command to complete 
+	SpinDelay(20);
+
+} 
+
+void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) { 
+ 
+  uint8_t fwd_bit_count;
+	uint8_t *dest = (uint8_t *)BigBuf;
+	int m=0, i=0;
+ 
+  //If password mode do login
+  if (PwdMode == 1) Login(Pwd);
+
+  forward_ptr = forwardLink_data; 
+  fwd_bit_count  = Prepare_Cmd( FWD_CMD_READ ); 
+  fwd_bit_count += Prepare_Addr( Address ); 
+
+	m = sizeof(BigBuf);
+  // Clear destination buffer before sending the command
+	memset(dest, 128, m);
+	// Connect the A/D to the peak-detected low-frequency path.
+	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+	// Now set up the SSC to get the ADC samples that are now streaming at us.
+	FpgaSetupSsc();
+
+  SendForward(fwd_bit_count); 
+  
+	// Now do the acquisition 
+	i = 0;
+	for(;;) {
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+			AT91C_BASE_SSC->SSC_THR = 0x43;
+		}
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+			dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+			i++;
+			if (i >= m) break;
+		}
+	}
+  FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
+	LED_D_OFF();
+}
+
+void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode) { 
+ 
+  uint8_t fwd_bit_count;
+ 
+  //If password mode do login
+  if (PwdMode == 1) Login(Pwd);
+  	
+  forward_ptr = forwardLink_data; 
+  fwd_bit_count  = Prepare_Cmd( FWD_CMD_WRITE ); 
+  fwd_bit_count += Prepare_Addr( Address ); 
+  fwd_bit_count += Prepare_Data( Data&0xFFFF, Data>>16 ); 
+
+  SendForward(fwd_bit_count); 
+  
+  //Wait for write to complete 
+	SpinDelay(20);
+  FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
+	LED_D_OFF();
+}
+

@@ -670,6 +670,12 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			ReadPCF7931();
 			UsbSendPacket((uint8_t*)&ack, sizeof(ack));
 			break;
+		case CMD_EM4X_READ_WORD: 
+			EM4xReadWord(c->arg[1], c->arg[2],c->d.asBytes[0]);
+			break;
+		case CMD_EM4X_WRITE_WORD: 
+			EM4xWriteWord(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]); 
+			break;
 #endif
 
 #ifdef WITH_HITAG

@@ -128,6 +128,8 @@ int DemodPCF7931(uint8_t **outBlocks);
 int IsBlock0PCF7931(uint8_t *Block);
 int IsBlock1PCF7931(uint8_t *Block);
 void ReadPCF7931();
+void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode); 
+void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode); 
 
 /// iso14443.h
 void SimulateIso14443Tag(void);

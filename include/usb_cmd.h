@@ -75,6 +75,8 @@ typedef struct {
 #define CMD_T55XX_WRITE_BLOCK                                             0x0215
 #define CMD_T55XX_READ_TRACE                                              0x0216
 #define CMD_PCF7931_READ                                                  0x0217
+#define CMD_EM4X_READ_WORD                                                0x0218
+#define CMD_EM4X_WRITE_WORD                                               0x0219
 
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 

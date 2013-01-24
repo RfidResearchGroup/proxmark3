@@ -423,14 +423,115 @@ int CmdEM410xWrite(const char *Cmd)
   return 0;
 }
 
+int CmdReadWord(const char *Cmd)
+{
+  int Word = 16; //default to invalid word
+  UsbCommand c;
+
+  sscanf(Cmd, "%d", &Word);
+
+  if (Word > 15) {
+  	PrintAndLog("Word must be between 0 and 15");
+  	return 1;
+  }	
+
+  PrintAndLog("Reading word %d", Word);
+
+  c.cmd = CMD_EM4X_READ_WORD;
+  c.d.asBytes[0] = 0x0; //Normal mode
+  c.arg[0] = 0;
+  c.arg[1] = Word;
+  c.arg[2] = 0;
+  SendCommand(&c);
+  return 0;
+}
+
+int CmdReadWordPWD(const char *Cmd)
+{
+  int Word = 16; //default to invalid word
+  int Password = 0xFFFFFFFF; //default to blank password
+  UsbCommand c;
+
+  sscanf(Cmd, "%d %x", &Word, &Password);
+
+  if (Word > 15) {
+  	PrintAndLog("Word must be between 0 and 15");
+  	return 1;
+  }	
+
+  PrintAndLog("Reading word %d with password %08X", Word, Password);
+
+  c.cmd = CMD_EM4X_READ_WORD;
+  c.d.asBytes[0] = 0x1; //Password mode
+  c.arg[0] = 0;
+  c.arg[1] = Word;
+  c.arg[2] = Password;
+  SendCommand(&c);
+  return 0;
+}
+
+int CmdWriteWord(const char *Cmd)
+{
+  int Word = 16; //default to invalid block
+  int Data = 0xFFFFFFFF; //default to blank data 
+  UsbCommand c;
+
+  sscanf(Cmd, "%x %d", &Data, &Word);
+
+  if (Word > 15) {
+  	PrintAndLog("Word must be between 0 and 15");
+  	return 1;
+  }	
+
+  PrintAndLog("Writting word %d with data %08X", Word, Data);
+
+  c.cmd = CMD_EM4X_WRITE_WORD;
+  c.d.asBytes[0] = 0x0; //Normal mode
+  c.arg[0] = Data;
+  c.arg[1] = Word;
+  c.arg[2] = 0;
+  SendCommand(&c);
+  return 0;
+}
+
+int CmdWriteWordPWD(const char *Cmd)
+{
+  int Word = 8; //default to invalid word
+  int Data = 0xFFFFFFFF; //default to blank data 
+  int Password = 0xFFFFFFFF; //default to blank password
+  UsbCommand c;
+
+  sscanf(Cmd, "%x %d %x", &Data, &Word, &Password);
+
+  if (Word > 15) {
+  	PrintAndLog("Word must be between 0 and 15");
+  	return 1;
+  }	
+
+  PrintAndLog("Writting word %d with data %08X and password %08X", Word, Data, Password);
+
+  c.cmd = CMD_EM4X_WRITE_WORD;
+  c.d.asBytes[0] = 0x1; //Password mode
+  c.arg[0] = Data;
+  c.arg[1] = Word;
+  c.arg[2] = Password;
+  SendCommand(&c);
+  return 0;
+}
+
+
 static command_t CommandTable[] =
 {
-  {"help",        CmdHelp,        1, "This help"},
-  {"em410xread",  CmdEM410xRead,  1, "[clock rate] -- Extract ID from EM410x tag"},
-  {"em410xsim",   CmdEM410xSim,   0, "<UID> -- Simulate EM410x tag"},
-  {"em410xwatch", CmdEM410xWatch, 0, "Watches for EM410x tags"},
-  {"em410xwrite", CmdEM410xWrite, 1, "<UID> <'0' T5555> <'1' T55x7> -- Write EM410x UID to T5555(Q5) or T55x7 tag"},
-  {"em4x50read",  CmdEM4x50Read,  1, "Extract data from EM4x50 tag"},
+  {"help",         CmdHelp,         1, "This help"},
+  {"em410xread",   CmdEM410xRead,   1, "[clock rate] -- Extract ID from EM410x tag"},
+  {"em410xsim",    CmdEM410xSim,    0, "<UID> -- Simulate EM410x tag"},
+  {"em410xwatch",  CmdEM410xWatch,  0, "Watches for EM410x tags"},
+  {"em410xwrite",  CmdEM410xWrite,  1, "<UID> <'0' T5555> <'1' T55x7> -- Write EM410x UID to T5555(Q5) or T55x7 tag"},
+  {"em4x50read",   CmdEM4x50Read,   1, "Extract data from EM4x50 tag"},
+  {"readword",     CmdReadWord,     1, "<Word> -- Read EM4xxx word data"},
+  {"readwordPWD",  CmdReadWordPWD,  1, "<Word> <Password> -- Read EM4xxx word data in password mode"},
+  {"writeword",    CmdWriteWord,    1, "<Data> <Word> -- Write EM4xxx word data"},
+  {"writewordPWD", CmdWriteWordPWD, 1, "<Data> <Word> <Password> -- Write EM4xxx word data in password mode"},
   {NULL, NULL, 0, NULL}
 };
 
