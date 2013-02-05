@@ -22,6 +22,7 @@
 #include "cmdhf14a.h"
 #include "common.h"
 #include "cmdmain.h"
+#include "sleep.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -160,6 +161,22 @@ void iso14a_set_timeout(uint32_t timeout) {
 int CmdHF14AReader(const char *Cmd)
 {
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
+	char param[256]={0};
+	
+	if( 3 == param_getstr(Cmd,0,param) && !strcmp("con",param))
+	{
+	  c.arg[0]|=ISO14A_NO_DISCONNECT;
+		PrintAndLog("KEEP connected!\n");
+	}
+	
+	if( 3 == param_getstr(Cmd,0,param) && !strcmp("dis",param))
+	{
+	  c.arg[0] = 0;
+		PrintAndLog("disconnected!\n");
+		SendCommand(&c);
+		return 0;
+	}
+	
 	SendCommand(&c);
 	UsbCommand * resp = WaitForResponse(CMD_ACK);
 	uint8_t              * uid  = resp->d.asBytes;
@@ -461,6 +478,54 @@ int CmdHF14ASnoop(const char *Cmd) {
   return 0;
 }
 
+int CmdHF14AFuzz(const char *Cmd) {
+  char  formatstr[256] = {0},sendbuf[256] = {0};
+  uint32_t   start=0,end=0;
+
+  if (param_getchar(Cmd, 0) == 0) {
+	  PrintAndLog("fuzz raw hex data to the card and show response <ONLY for develepers>");
+	  PrintAndLog("Usage:  hf 14a fuzz <FORMAT> [<start index> <end index>]");
+	  PrintAndLog("FORMAT controls the output as in C printf");
+	  PrintAndLog("sample: hf 14a fuzz 909F");
+	  PrintAndLog("        hf 14a fuzz 00%02x00000000 0 0xFF");
+	  return 0;
+  }
+
+  start  = param_get8ex(Cmd, 1, 0,16);
+  end    = param_get8ex(Cmd, 2, 0,16);
+  param_getstr(Cmd, 0, formatstr);  
+  
+  for( int i=start;i<=end;++i)
+  {
+    snprintf(sendbuf, sizeof(sendbuf), formatstr, i);
+    
+    int len = strlen(sendbuf)/2;
+    
+	  UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_APDU|ISO14A_NO_DISCONNECT, len, 0}};
+    param_gethex(sendbuf, 0, c.d.asBytes, len*2);
+    PrintAndLog("len:%d raw:",len);	
+	  PrintAndLog("%s",sprint_hex(c.d.asBytes, len));
+	  SendCommand(&c);
+    
+    UsbCommand * resp = WaitForResponse(CMD_ACK);
+    PrintAndLog("res:%d",resp->arg[0]);
+    
+    while(resp->arg[0] > sizeof(resp->d))
+    {
+      PrintAndLog("%s", sprint_hex(resp->d.asBytes,sizeof(resp->d)));
+      
+      resp = WaitForResponse(CMD_ACK);
+    }
+    PrintAndLog("%s", sprint_hex(resp->d.asBytes,resp->arg[0]));
+    
+    PrintAndLog("");
+    
+    msleep(100);
+  }
+  
+  return 0;
+}
+
 static command_t CommandTable[] = 
 {
   {"help",   CmdHelp,              1, "This help"},
@@ -469,6 +534,7 @@ static command_t CommandTable[] =
   {"cuids",  CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443 Type A UIDs in one go"},
   {"sim",    CmdHF14ASim,          0, "<UID> -- Fake ISO 14443a tag"},
   {"snoop",  CmdHF14ASnoop,        0, "Eavesdrop ISO 14443 Type A"},
+  {"fuzz",   CmdHF14AFuzz,         0, "Fuzz"},
   {NULL, NULL, 0, NULL}
 };
 

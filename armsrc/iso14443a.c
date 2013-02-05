@@ -1770,6 +1770,7 @@ void ReaderIso14443a(UsbCommand * c, UsbCommand * ack)
 	iso14a_command_t param = c->arg[0];
 	uint8_t * cmd = c->d.asBytes;
 	size_t len = c->arg[1];
+	uint8_t *receiveBuf = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
 
 	if(param & ISO14A_REQUEST_TRIGGER) iso14a_set_trigger(1);
 
@@ -1788,7 +1789,19 @@ void ReaderIso14443a(UsbCommand * c, UsbCommand * ack)
 	}
 
 	if(param & ISO14A_APDU) {
-		ack->arg[0] = iso14_apdu(cmd, len, ack->d.asBytes);
+  	memcpy(receiveBuf, ack->d.asBytes, len);
+		ack->arg[0] = iso14_apdu(cmd, len, receiveBuf);
+		
+    while(ack->arg[0] > sizeof(ack->d))
+    {
+      memcpy(ack->d.asBytes, receiveBuf, sizeof(ack->d));  		
+  		UsbSendPacket((void *)ack, sizeof(UsbCommand));
+
+      receiveBuf+=sizeof(ack->d);
+  		ack->arg[0]-=sizeof(ack->d);
+		}
+		
+		memcpy(ack->d.asBytes, receiveBuf, ack->arg[0]);
 		UsbSendPacket((void *)ack, sizeof(UsbCommand));
 	}
 
