@@ -168,8 +168,8 @@ int CmdHF14AReader(const char *Cmd)
 	UsbCommand resp;
   WaitForResponse(CMD_ACK,&resp);
 	
-  uint8_t              * uid  = resp.d.asBytes;
-	iso14a_card_select_t * card = (iso14a_card_select_t *)(uid + 12);
+	iso14a_card_select_t *card = (iso14a_card_select_t *)resp.d.asBytes;
+  uint8_t              * uid = card->uid;
 
 	if(resp.arg[0] == 0) {
 		PrintAndLog("iso14443a card select failed");
@@ -177,24 +177,24 @@ int CmdHF14AReader(const char *Cmd)
 	}
 
 	PrintAndLog("ATQA : %02x %02x", card->atqa[0], card->atqa[1]);
-	PrintAndLog(" UID : %s", sprint_hex(uid, 12));
+	PrintAndLog(" UID : %s", sprint_hex(card->uid, card->uidlen));
 	PrintAndLog(" SAK : %02x [%d]", card->sak, resp.arg[0]);
 
 	switch (card->sak) {
-		case 0x00: PrintAndLog(" SAK : NXP MIFARE Ultralight | Ultralight C"); break;
-		case 0x04: PrintAndLog(" SAK : NXP MIFARE (various !DESFire !DESFire EV1)"); break;
+		case 0x00: PrintAndLog("TYPE : NXP MIFARE Ultralight | Ultralight C"); break;
+		case 0x04: PrintAndLog("TYPE : NXP MIFARE (various !DESFire !DESFire EV1)"); break;
 
-		case 0x08: PrintAndLog(" SAK : NXP MIFARE CLASSIC 1k | Plus 2k"); break;
-		case 0x09: PrintAndLog(" SAK : NXP MIFARE Mini 0.3k"); break;
-		case 0x10: PrintAndLog(" SAK : NXP MIFARE Plus 2k"); break;
-		case 0x11: PrintAndLog(" SAK : NXP MIFARE Plus 4k"); break;
-		case 0x18: PrintAndLog(" SAK : NXP MIFARE Classic 4k | Plus 4k"); break;
-		case 0x20: PrintAndLog(" SAK : NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k | JCOP 31/41"); break;
-		case 0x24: PrintAndLog(" SAK : NXP MIFARE DESFire | DESFire EV1"); break;
-		case 0x28: PrintAndLog(" SAK : JCOP31 or JCOP41 v2.3.1"); break;
-		case 0x38: PrintAndLog(" SAK : Nokia 6212 or 6131 MIFARE CLASSIC 4K"); break;
-		case 0x88: PrintAndLog(" SAK : Infineon MIFARE CLASSIC 1K"); break;
-		case 0x98: PrintAndLog(" SAK : Gemplus MPCOS"); break;
+		case 0x08: PrintAndLog("TYPE : NXP MIFARE CLASSIC 1k | Plus 2k"); break;
+		case 0x09: PrintAndLog("TYPE : NXP MIFARE Mini 0.3k"); break;
+		case 0x10: PrintAndLog("TYPE : NXP MIFARE Plus 2k"); break;
+		case 0x11: PrintAndLog("TYPE : NXP MIFARE Plus 4k"); break;
+		case 0x18: PrintAndLog("TYPE : NXP MIFARE Classic 4k | Plus 4k"); break;
+		case 0x20: PrintAndLog("TYPE : NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k | JCOP 31/41"); break;
+		case 0x24: PrintAndLog("TYPE : NXP MIFARE DESFire | DESFire EV1"); break;
+		case 0x28: PrintAndLog("TYPE : JCOP31 or JCOP41 v2.3.1"); break;
+		case 0x38: PrintAndLog("TYPE : Nokia 6212 or 6131 MIFARE CLASSIC 4K"); break;
+		case 0x88: PrintAndLog("TYPE : Infineon MIFARE CLASSIC 1K"); break;
+		case 0x98: PrintAndLog("TYPE : Gemplus MPCOS"); break;
 		default: ;
 	}
 	if(resp.arg[0] == 1) {
@@ -314,9 +314,9 @@ int CmdHF14AReader(const char *Cmd)
 				}
 			}
 		}
-	}
-	else
-		PrintAndLog("proprietary non-iso14443a card found, RATS not supported");
+	} else {
+		PrintAndLog("proprietary non iso14443a-4 card found, RATS not supported");
+  }
 
 	return resp.arg[0];
 }

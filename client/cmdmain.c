@@ -100,13 +100,15 @@ void CommandReceived(char *Cmd) {
 //-----------------------------------------------------------------------------
 void UsbCommandReceived(UsbCommand *UC)
 {
+  /*
   //  Debug
-  //  printf("UsbCommand length[len=%d]\n",sizeof(UsbCommand));
-  //  printf("  cmd[len=%d]: %x\n",sizeof(UC->cmd),UC->cmd);
-  //  printf(" arg0[len=%d]: %x\n",sizeof(UC->arg[0]),UC->arg[0]);
-  //  printf(" arg1[len=%d]: %x\n",sizeof(UC->arg[1]),UC->arg[1]);
-  //  printf(" arg2[len=%d]: %x\n",sizeof(UC->arg[2]),UC->arg[2]);
-  //  printf(" data[len=%d]: %02x%02x%02x...\n",sizeof(UC->d.asBytes),UC->d.asBytes[0],UC->d.asBytes[1],UC->d.asBytes[2]);
+  printf("UsbCommand length[len=%zd]\n",sizeof(UsbCommand));
+  printf("  cmd[len=%zd]: %llx\n",sizeof(UC->cmd),UC->cmd);
+  printf(" arg0[len=%zd]: %llx\n",sizeof(UC->arg[0]),UC->arg[0]);
+  printf(" arg1[len=%zd]: %llx\n",sizeof(UC->arg[1]),UC->arg[1]);
+  printf(" arg2[len=%zd]: %llx\n",sizeof(UC->arg[2]),UC->arg[2]);
+  printf(" data[len=%zd]: %02x%02x%02x...\n",sizeof(UC->d.asBytes),UC->d.asBytes[0],UC->d.asBytes[1],UC->d.asBytes[2]);
+  */
 
   //	printf("%s(%x) current cmd = %x\n", __FUNCTION__, c->cmd, current_command);
   // If we recognize a response, return to avoid further processing

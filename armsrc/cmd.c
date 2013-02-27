@@ -1,7 +1,7 @@
 /*
  * Proxmark send and receive commands
  *
- * Copyright (c) 2010, Roel Verdult
+ * Copyright (c) 2012, Roel Verdult
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,7 +52,7 @@ bool cmd_receive(UsbCommand* cmd) {
   return true;
 }
 
-bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, byte_t* data, size_t len) {
+bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, void* data, size_t len) {
   UsbCommand txcmd;
 
   // Compose the outgoing command frame
@@ -63,7 +63,7 @@ bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, byte_t*
 
   // Add the (optional) content to the frame, with a maximum size of USB_CMD_DATA_SIZE
   if (data && len) {
-    memcpy(txcmd.d.asBytes,data,MIN(len,USB_CMD_DATA_SIZE));
+    memcpy(txcmd.d.asBytes,(byte_t*)data,MIN(len,USB_CMD_DATA_SIZE));
 	  }
   
   // Send frame and make sure all bytes are transmitted

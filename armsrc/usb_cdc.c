@@ -34,6 +34,7 @@
 
 #include "usb_cdc.h"
 #include "util.h"
+#include "config_gpio.h"
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -217,12 +218,12 @@ byte_t btConnection    = 0;
 byte_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
 
 //*----------------------------------------------------------------------------
-//* \fn    AT91F_USB_Disable
+//* \fn    usb_disable
 //* \brief This function deactivates the USB device
 //*----------------------------------------------------------------------------
 void usb_disable() {
-  // Disconnect and reconnect USB controller for 100ms
-  AT91C_BASE_PIOA->PIO_ODR = AT91C_PIO_PA24;
+  // Disconnect the USB device
+  AT91C_BASE_PIOA->PIO_ODR = GPIO_USB_PU;
   SpinDelay(100);
   
   // Clear all lingering interrupts
@@ -232,7 +233,7 @@ void usb_disable() {
 }
 
 //*----------------------------------------------------------------------------
-//* \fn    AT91F_USB_Enable
+//* \fn    usb_enable
 //* \brief This function Activates the USB device
 //*----------------------------------------------------------------------------
 void usb_enable() {
@@ -246,25 +247,25 @@ void usb_enable() {
   
   // Enable UDP PullUp (USB_DP_PUP) : enable & Clear of the corresponding PIO
   // Set in PIO mode and Configure in Output
-  AT91C_BASE_PIOA->PIO_PER = AT91C_PIO_PA16; // Set in PIO mode
-	AT91C_BASE_PIOA->PIO_OER = AT91C_PIO_PA16; // Configure as Output
+  AT91C_BASE_PIOA->PIO_PER = GPIO_USB_PU; // Set in PIO mode
+	AT91C_BASE_PIOA->PIO_OER = GPIO_USB_PU; // Configure as Output
   
-  // Clear for set the Pul up resistor
-	AT91C_BASE_PIOA->PIO_CODR = AT91C_PIO_PA16;
+  // Clear for set the Pullup resistor
+	AT91C_BASE_PIOA->PIO_CODR = GPIO_USB_PU;
   
-  // Disconnect and USB device
+  // Disconnect and reconnect USB controller for 100ms
   usb_disable();
   
   // Wait for a short while
   SpinDelay(100);
 
   // Reconnect USB reconnect
-  AT91C_BASE_PIOA->PIO_SODR = AT91C_PIO_PA24;
-  AT91C_BASE_PIOA->PIO_OER = AT91C_PIO_PA24;
+  AT91C_BASE_PIOA->PIO_SODR = GPIO_USB_PU;
+  AT91C_BASE_PIOA->PIO_OER = GPIO_USB_PU;
 }
 
 //*----------------------------------------------------------------------------
-//* \fn    AT91F_UDP_IsConfigured
+//* \fn    usb_check
 //* \brief Test if the device is configured and handle enumeration
 //*----------------------------------------------------------------------------
 bool usb_check() {
@@ -295,7 +296,7 @@ bool usb_poll()
 }
 
 //*----------------------------------------------------------------------------
-//* \fn    AT91F_UDP_Read
+//* \fn    usb_read
 //* \brief Read available data from Endpoint OUT
 //*----------------------------------------------------------------------------
 uint32_t usb_read(byte_t* data, size_t len) {
@@ -328,7 +329,7 @@ uint32_t usb_read(byte_t* data, size_t len) {
 }
 
 //*----------------------------------------------------------------------------
-//* \fn    AT91F_CDC_Write
+//* \fn    usb_write
 //* \brief Send through endpoint 2
 //*----------------------------------------------------------------------------
 uint32_t usb_write(const byte_t* data, const size_t len) {

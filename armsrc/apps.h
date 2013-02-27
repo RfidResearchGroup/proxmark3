@@ -183,7 +183,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd);
 
 // cmd.h
 bool cmd_receive(UsbCommand* cmd);
-bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, byte_t* data, size_t len);
+bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, void* data, size_t len);
 
 /// util.h
 

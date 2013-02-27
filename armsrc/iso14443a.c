@@ -1636,31 +1636,36 @@ int ReaderReceivePar(uint8_t* receivedAnswer, uint32_t * parptr)
 /* performs iso14443a anticolision procedure
  * fills the uid pointer unless NULL
  * fills resp_data unless NULL */
-int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data, uint32_t * cuid_ptr) {
+int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, uint32_t* cuid_ptr) {
 	uint8_t wupa[]       = { 0x52 };  // 0x26 - REQA  0x52 - WAKE-UP
 	uint8_t sel_all[]    = { 0x93,0x20 };
 	uint8_t sel_uid[]    = { 0x93,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
 	uint8_t rats[]       = { 0xE0,0x80,0x00,0x00 }; // FSD=256, FSDI=8, CID=0
-
 	uint8_t* resp = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);	// was 3560 - tied to other size changes
+  byte_t uid_resp[4];
+  size_t uid_resp_len;
 
 	uint8_t sak = 0x04; // cascade uid
 	int cascade_level = 0;
-
 	int len;
-	
-	// clear uid
-	memset(uid_ptr, 0, 12);
-
+	 
 	// Broadcast for a card, WUPA (0x52) will force response from all cards in the field
 	ReaderTransmitShort(wupa);
 	// Receive the ATQA
 	if(!ReaderReceive(resp)) return 0;
 //  Dbprintf("atqa: %02x %02x",resp[0],resp[1]);
   
-	if(resp_data)
-		memcpy(resp_data->atqa, resp, 2);
+	if(p_hi14a_card) {
+		memcpy(p_hi14a_card->atqa, resp, 2);
+    p_hi14a_card->uidlen = 0;
+    memset(p_hi14a_card->uid,0,10);
+  }
 	
+  // clear uid
+  if (uid_ptr) {
+    memset(uid_ptr,0,10);
+  }
+
 	// OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
 	// which case we need to make a cascade 2 request and select - this is a long UID
 	// While the UID is not complete, the 3nd bit (from the right) is set in the SAK.
@@ -1672,12 +1677,16 @@ int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data, u
 		// SELECT_ALL
 		ReaderTransmit(sel_all,sizeof(sel_all));
 		if (!ReaderReceive(resp)) return 0;
-//    Dbprintf("uid: %02x %02x %02x %02x",resp[0],resp[1],resp[2],resp[3]);
-
-		if(uid_ptr) memcpy(uid_ptr + cascade_level*4, resp, 4);
-		
+    
+    // First backup the current uid 
+    memcpy(uid_resp,resp,4);
+    uid_resp_len = 4;
+    //    Dbprintf("uid: %02x %02x %02x %02x",uid_resp[0],uid_resp[1],uid_resp[2],uid_resp[3]);
+    
 		// calculate crypto UID
-		if(cuid_ptr) *cuid_ptr = bytes_to_num(resp, 4);
+		if(cuid_ptr) {
+      *cuid_ptr = bytes_to_num(uid_resp, 4);
+    }
 
 		// Construct SELECT UID command
 		memcpy(sel_uid+2,resp,5);
@@ -1687,34 +1696,47 @@ int iso14443a_select_card(uint8_t * uid_ptr, iso14a_card_select_t * resp_data, u
 		// Receive the SAK
 		if (!ReaderReceive(resp)) return 0;
 		sak = resp[0];
-	}
-	if(resp_data) {
-		resp_data->sak = sak;
-		resp_data->ats_len = 0;
-	}
-	//--  this byte not UID, it CT.  http://www.nxp.com/documents/application_note/AN10927.pdf  page 3
-	if (uid_ptr[0] == 0x88) {  
-		memcpy(uid_ptr, uid_ptr + 1, 7);
-		uid_ptr[7] = 0;
+
+    // Test if more parts of the uid are comming
+    if ((sak & 0x04) && uid_resp[0] == 0x88) {
+      // Remove first byte, 0x88 is not an UID byte, it CT, see page 3 of:
+      // http://www.nxp.com/documents/application_note/AN10927.pdf
+      memcpy(uid_ptr, uid_ptr + 1, 3);
+      uid_resp_len = 3;
+    }
+    
+    if(uid_ptr) {
+      memcpy(uid_ptr + (cascade_level*3), uid_resp, uid_resp_len);
+    }
+    
+    if(p_hi14a_card) {
+      memcpy(p_hi14a_card->uid + (cascade_level*3), uid_resp, uid_resp_len);
+      p_hi14a_card->uidlen += uid_resp_len;
+    }
 	}
 
-	if( (sak & 0x20) == 0)
+	if(p_hi14a_card) {
+		p_hi14a_card->sak = sak;
+		p_hi14a_card->ats_len = 0;
+	}
+
+	if( (sak & 0x20) == 0) {
 		return 2; // non iso14443a compliant tag
+  }
 
 	// Request for answer to select
-	if(resp_data) {  // JCOP cards - if reader sent RATS then there is no MIFARE session at all!!!
+	if(p_hi14a_card) {  // JCOP cards - if reader sent RATS then there is no MIFARE session at all!!!
 		AppendCrc14443a(rats, 2);
 		ReaderTransmit(rats, sizeof(rats));
 		
 		if (!(len = ReaderReceive(resp))) return 0;
 		
-		memcpy(resp_data->ats, resp, sizeof(resp_data->ats));
-		resp_data->ats_len = len;
+		memcpy(p_hi14a_card->ats, resp, sizeof(p_hi14a_card->ats));
+		p_hi14a_card->ats_len = len;
 	}
 	
 	// reset the PCB block number
 	iso14_pcb_blocknum = 0;
-	
 	return 1;
 }
 
@@ -1774,18 +1796,20 @@ void ReaderIso14443a(UsbCommand * c)
 	iso14a_command_t param = c->arg[0];
 	uint8_t * cmd = c->d.asBytes;
 	size_t len = c->arg[1];
-  uint32_t arg0;
-  byte_t buf[48];
+  uint32_t arg0 = 0;
+  byte_t buf[USB_CMD_DATA_SIZE];
   
   iso14a_clear_trace();
   iso14a_set_tracing(true);
 
-	if(param & ISO14A_REQUEST_TRIGGER) iso14a_set_trigger(1);
+	if(param & ISO14A_REQUEST_TRIGGER) {
+    iso14a_set_trigger(1);
+  }
 
 	if(param & ISO14A_CONNECT) {
 		iso14443a_setup();
-		arg0 = iso14443a_select_card(buf, (iso14a_card_select_t *)(buf+12), NULL);
-		cmd_send(CMD_ACK,arg0,0,0,buf,48);
+		arg0 = iso14443a_select_card(NULL,(iso14a_card_select_t*)buf,NULL);
+		cmd_send(CMD_ACK,arg0,0,0,buf,sizeof(iso14a_card_select_t));
 //    UsbSendPacket((void *)ack, sizeof(UsbCommand));
 	}
 
@@ -1799,7 +1823,7 @@ void ReaderIso14443a(UsbCommand * c)
 
 	if(param & ISO14A_APDU) {
 		arg0 = iso14_apdu(cmd, len, buf);
-		cmd_send(CMD_ACK,arg0,0,0,buf,48);
+		cmd_send(CMD_ACK,arg0,0,0,buf,sizeof(buf));
 //		UsbSendPacket((void *)ack, sizeof(UsbCommand));
 	}
 
@@ -1811,13 +1835,16 @@ void ReaderIso14443a(UsbCommand * c)
 		ReaderTransmit(cmd,len);
 		arg0 = ReaderReceive(buf);
 //		UsbSendPacket((void *)ack, sizeof(UsbCommand));
-    cmd_send(CMD_ACK,arg0,0,0,buf,48);
+    cmd_send(CMD_ACK,arg0,0,0,buf,sizeof(buf));
 	}
 
-	if(param & ISO14A_REQUEST_TRIGGER) iso14a_set_trigger(0);
+	if(param & ISO14A_REQUEST_TRIGGER) {
+    iso14a_set_trigger(0);
+  }
 
-	if(param & ISO14A_NO_DISCONNECT)
+	if(param & ISO14A_NO_DISCONNECT) {
 		return;
+  }
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
