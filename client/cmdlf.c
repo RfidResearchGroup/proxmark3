@@ -38,7 +38,7 @@ int CmdLFCommandRead(const char *Cmd)
   dummy[0]= ' ';
 
   UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K};
-  sscanf(Cmd, "%lli %lli %lli %s %s", &c.arg[0], &c.arg[1], &c.arg[2], (char *) &c.d.asBytes,(char *) &dummy+1);
+  sscanf(Cmd, "%"lli" %"lli" %"lli" %s %s", &c.arg[0], &c.arg[1], &c.arg[2],(char*)(&c.d.asBytes),(char*)(&dummy+1));
   // in case they specified 'h'
   strcpy((char *)&c.d.asBytes + strlen((char *)c.d.asBytes), dummy);
   SendCommand(&c);

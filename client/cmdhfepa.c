@@ -31,13 +31,13 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 	// delay between requests
 	unsigned int d = 0;
 	
-	sscanf(Cmd, "%hhu %u %u", &m, &n, &d);
+	sscanf(Cmd, "%"hhu" %u %u", &m, &n, &d);
 	
 	// values are expected to be > 0
 	m = m > 0 ? m : 1;
 	n = n > 0 ? n : 1;
 
-	PrintAndLog("Collecting %u %hhu-byte nonces", n, m);
+	PrintAndLog("Collecting %u %"hhu"-byte nonces", n, m);
 	PrintAndLog("Start: %u", time(NULL));
 	// repeat n times
 	for (unsigned int i = 0; i < n; i++) {
