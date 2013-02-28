@@ -637,8 +637,8 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_HID_SIM_TAG:
 			CmdHIDsimTAG(c->arg[0], c->arg[1], 1);					// Simulate HID tag by ID
 			break;
-		case CMD_HID_CLONE_TAG:
-			CopyHIDtoT55x7(c->arg[0], c->arg[1]);					// Clone HID tag by ID to T55x7
+    case CMD_HID_CLONE_TAG: // Clone HID tag by ID to T55x7
+      CopyHIDtoT55x7(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
 			break;
 		case CMD_EM410X_WRITE_TAG:
 			WriteEM410x(c->arg[0], c->arg[1], c->arg[2]);
@@ -663,6 +663,26 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_INDALA_CLONE_TAG_L:					// Clone Indala 224-bit tag by UID to T55x7
 			CopyIndala224toT55x7(c->d.asDwords[0], c->d.asDwords[1], c->d.asDwords[2], c->d.asDwords[3], c->d.asDwords[4], c->d.asDwords[5], c->d.asDwords[6]);
 			break;
+    case CMD_T55XX_READ_BLOCK:
+      T55xxReadBlock(c->arg[1], c->arg[2],c->d.asBytes[0]);
+      break;
+    case CMD_T55XX_WRITE_BLOCK:
+      T55xxWriteBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
+      break;
+    case CMD_T55XX_READ_TRACE: // Clone HID tag by ID to T55x7
+      T55xxReadTrace();
+      break;
+    case CMD_PCF7931_READ: // Read PCF7931 tag
+      ReadPCF7931();
+      cmd_send(CMD_ACK,0,0,0,0,0);
+//      UsbSendPacket((uint8_t*)&ack, sizeof(ack));
+      break;
+    case CMD_EM4X_READ_WORD:
+      EM4xReadWord(c->arg[1], c->arg[2],c->d.asBytes[0]);
+      break;
+    case CMD_EM4X_WRITE_WORD:
+      EM4xWriteWord(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
+      break;
 #endif
 
 #ifdef WITH_HITAG

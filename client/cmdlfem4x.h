@@ -18,5 +18,9 @@ int CmdEM410xSim(const char *Cmd);
 int CmdEM410xWatch(const char *Cmd);
 int CmdEM410xWrite(const char *Cmd);
 int CmdEM4x50Read(const char *Cmd);
+int CmdReadWord(const char *Cmd);
+int CmdReadWordPWD(const char *Cmd);
+int CmdWriteWord(const char *Cmd);
+int CmdWriteWordPWD(const char *Cmd);
 
 #endif

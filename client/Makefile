@@ -55,6 +55,7 @@ CMDSRCS = \
 			data.c \
 			graph.c \
 			ui.c \
+			uart.c \
 			util.c \
 			cmddata.c \
 			cmdhf.c \
@@ -73,8 +74,8 @@ CMDSRCS = \
 			cmdlfti.c \
 			cmdparser.c \
 			cmdmain.c \
-			uart.c
-
+			cmdlft55xx.c \
+			cmdlfpcf7931.c
 
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
 

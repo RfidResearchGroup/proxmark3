@@ -118,10 +118,19 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol);
 void CmdHIDsimTAG(int hi, int lo, int ledcontrol);
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol);
 void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);
-void CopyHIDtoT55x7(int hi, int lo); // Clone an HID card to T5557/T5567
+void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT); // Clone an HID card to T5557/T5567
 void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo);
 void CopyIndala64toT55x7(int hi, int lo); // Clone Indala 64-bit tag by UID to T55x7
 void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int uid6, int uid7); // Clone Indala 224-bit tag by UID to T55x7
+void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMode);
+void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode );
+void T55xxReadTrace(void);
+int DemodPCF7931(uint8_t **outBlocks);
+int IsBlock0PCF7931(uint8_t *Block);
+int IsBlock1PCF7931(uint8_t *Block);
+void ReadPCF7931();
+void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
+void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 
 /// iso14443.h
 void SimulateIso14443Tag(void);
