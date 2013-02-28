@@ -332,7 +332,7 @@ int CmdLegicRfSim(const char *Cmd)
 int CmdLegicRfWrite(const char *Cmd)
 {
     UsbCommand c={CMD_WRITER_LEGIC_RF};
-    int res = sscanf(Cmd, " 0x%llx 0x%llx", &c.arg[0], &c.arg[1]);
+    int res = sscanf(Cmd, " 0x%"llx" 0x%"llx, &c.arg[0], &c.arg[1]);
 	if(res != 2) {
 		PrintAndLog("Please specify the offset and length as two hex strings");
         return -1;

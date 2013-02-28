@@ -274,7 +274,7 @@ int CmdTIWrite(const char *Cmd)
   UsbCommand c = {CMD_WRITE_TI_TYPE};
   int res = 0;
 
-  res = sscanf(Cmd, "0x%llx 0x%llx 0x%llx ", &c.arg[0], &c.arg[1], &c.arg[2]);
+  res = sscanf(Cmd, "0x%"PRIu64"x 0x%"PRIu64"x 0x%"PRIu64"x ", &c.arg[0], &c.arg[1], &c.arg[2]);
   if (res == 2) c.arg[2]=0;
   if (res < 2)
     PrintAndLog("Please specify the data as two hex strings, optionally the CRC as a third");

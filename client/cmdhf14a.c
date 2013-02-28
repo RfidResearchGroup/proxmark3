@@ -391,7 +391,7 @@ int CmdHF14ASim(const char *Cmd)
 
 	// Are we handling the (optional) second part uid?
 	if (long_uid > 0xffffffff) {
-		PrintAndLog("Emulating ISO/IEC 14443 type A tag with 7 byte UID (%014llx)",long_uid);
+		PrintAndLog("Emulating ISO/IEC 14443 type A tag with 7 byte UID (%014"llx")",long_uid);
 		// Store the second part
 		c.arg[2] = (long_uid & 0xffffffff);
 		long_uid >>= 32;

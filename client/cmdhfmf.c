@@ -76,13 +76,13 @@ start:
 		PrintAndLog("Key not found (lfsr_common_prefix list is null). Nt=%08x", nt);	
 	} else {
 		printf("------------------------------------------------------------------\n");
-		PrintAndLog("Key found:%012llx \n", r_key);
+		PrintAndLog("Key found:%012"llx" \n", r_key);
 
 		num_to_bytes(r_key, 6, keyBlock);
 		isOK = mfCheckKeys(0, 0, 1, keyBlock, &r_key);
 	}
 	if (!isOK) 
-		PrintAndLog("Found valid key:%012llx", r_key);
+		PrintAndLog("Found valid key:%012"llx, r_key);
 	else
 	{
 		if (isOK != 2) PrintAndLog("Found invalid key. ( Nt=%08x ,Trying use it to run again...", nt);	
@@ -573,7 +573,7 @@ int CmdHF14AMfNested(const char *Cmd)
 		if (res)
 			res = mfCheckKeys(trgBlockNo, trgKeyType, 8, &keyBlock[6 * 8], &key64);
 		if (!res) {
-			PrintAndLog("Found valid key:%012llx", key64);
+			PrintAndLog("Found valid key:%012"llx, key64);
 
 			// transfer key to the emulator
 			if (transferToEml) {
@@ -633,7 +633,7 @@ int CmdHF14AMfNested(const char *Cmd)
 					if (res)
 						res = mfCheckKeys(trgBlockNo, trgKeyType, 8, &keyBlock[6 * 8], &key64);
 					if (!res) {
-						PrintAndLog("Found valid key:%012llx", key64);	
+						PrintAndLog("Found valid key:%012"llx, key64);
 						e_sector[trgBlockNo / 4].foundKey[trgKeyType] = 1;
 						e_sector[trgBlockNo / 4].Key[trgKeyType] = key64;
 					}
@@ -646,7 +646,7 @@ int CmdHF14AMfNested(const char *Cmd)
 		PrintAndLog("|sec|key A           |res|key B           |res|");
 		PrintAndLog("|---|----------------|---|----------------|---|");
 		for (i = 0; i < SectorsCnt; i++) {
-			PrintAndLog("|%03d|  %012llx  | %d |  %012llx  | %d |", i, 
+			PrintAndLog("|%03d|  %012"llx"  | %d |  %012"llx"  | %d |", i,
 				e_sector[i].Key[0], e_sector[i].foundKey[0], e_sector[i].Key[1], e_sector[i].foundKey[1]);
 		}
 		PrintAndLog("|---|----------------|---|----------------|---|");
@@ -843,7 +843,7 @@ int CmdHF14AMfChk(const char *Cmd)
 					}
 					memset(keyBlock + 6 * keycnt, 0, 6);
 					num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6*keycnt);
-					PrintAndLog("chk custom key[%d] %012llx", keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
+					PrintAndLog("chk custom key[%d] %012"llx, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
 					keycnt++;
 				}
 			} else {
@@ -873,7 +873,7 @@ int CmdHF14AMfChk(const char *Cmd)
 				res = mfCheckKeys(b, t, size, keyBlock +6*c, &key64);
 				if (res !=1) {
 					if (!res) {
-						PrintAndLog("Found valid key:[%012llx]",key64);
+						PrintAndLog("Found valid key:[%012"llx"]",key64);
 						if (transferToEml) {
 							uint8_t block[16];
 							mfEmlGetMem(block, get_trailer_block(b), 1);
@@ -1205,7 +1205,7 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 		}
 		keyA = bytes_to_num(data, 6);
 		keyB = bytes_to_num(data + 10, 6);
-		PrintAndLog("|%03d|  %012llx  |  %012llx  |", i, keyA, keyB);
+		PrintAndLog("|%03d|  %012"llx"  |  %012"llx"  |", i, keyA, keyB);
 	}
 	PrintAndLog("|---|----------------|----------------|");
 	

@@ -103,10 +103,10 @@ void UsbCommandReceived(UsbCommand *UC)
   /*
   //  Debug
   printf("UsbCommand length[len=%zd]\n",sizeof(UsbCommand));
-  printf("  cmd[len=%zd]: %llx\n",sizeof(UC->cmd),UC->cmd);
-  printf(" arg0[len=%zd]: %llx\n",sizeof(UC->arg[0]),UC->arg[0]);
-  printf(" arg1[len=%zd]: %llx\n",sizeof(UC->arg[1]),UC->arg[1]);
-  printf(" arg2[len=%zd]: %llx\n",sizeof(UC->arg[2]),UC->arg[2]);
+  printf("  cmd[len=%zd]: %"llx"\n",sizeof(UC->cmd),UC->cmd);
+  printf(" arg0[len=%zd]: %"llx"\n",sizeof(UC->arg[0]),UC->arg[0]);
+  printf(" arg1[len=%zd]: %"llx"\n",sizeof(UC->arg[1]),UC->arg[1]);
+  printf(" arg2[len=%zd]: %"llx"\n",sizeof(UC->arg[2]),UC->arg[2]);
   printf(" data[len=%zd]: %02x%02x%02x...\n",sizeof(UC->d.asBytes),UC->d.asBytes[0],UC->d.asBytes[1],UC->d.asBytes[2]);
   */
 
