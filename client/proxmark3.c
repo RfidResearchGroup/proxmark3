@@ -198,9 +198,6 @@ static void *main_loop(void *targ) {
 int main(int argc, char* argv[]) {
   srand(time(0));
   
-  printf("lala: %08"llx"",(uint64_t)0xaabb11223344);
-  return 0;
-
   if (argc < 2) {
     printf("syntax: %s <port>\n\n",argv[0]);
     return 1;
