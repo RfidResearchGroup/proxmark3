@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "data.h"
-#include "proxusb.h"
+//#include "proxusb.h"
 #include "proxmark3.h"
 #include "ui.h"
 #include "cmdparser.h"

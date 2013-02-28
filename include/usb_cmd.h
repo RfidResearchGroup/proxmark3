@@ -23,15 +23,6 @@ typedef BYTE uint8_t;
 #define PACKED __attribute__((packed))
 #endif
 
-typedef struct {
-  uint32_t	cmd;
-  uint32_t	arg[3];
-  union {
-    uint8_t		asBytes[48];
-    uint32_t	asDwords[12];
-  } d;
-} PACKED HidCommand;
-
 #define USB_CMD_DATA_SIZE 512
 
 typedef struct {

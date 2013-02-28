@@ -15,7 +15,6 @@
 #include "proxmark3.h"
 
 // MIFARE
-
 int compar_int(const void * a, const void * b) {
 	return (*(uint64_t*)b - *(uint64_t*)a);
 }

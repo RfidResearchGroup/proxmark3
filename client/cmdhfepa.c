@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include "util.h"
-#include "proxusb.h"
+//#include "proxusb.h"
 #include "proxmark3.h"
 #include "ui.h"
 #include "cmdparser.h"

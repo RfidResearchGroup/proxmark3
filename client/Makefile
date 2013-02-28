@@ -14,7 +14,7 @@ OBJDIR = obj
 
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb -lreadline -lpthread
 LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=gnu99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O3
+CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O4
 
 ifneq (,$(findstring MINGW,$(platform)))
 CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
@@ -30,7 +30,7 @@ CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Versions/Current/Headers -I/Lib
 QTLDLIBS = -framework QtGui -framework QtCore
 MOC = moc 
 else
-CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
+CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
 MOC = $(shell pkg-config --variable=moc_location QtCore)
 endif
@@ -67,13 +67,14 @@ CMDSRCS = \
 			cmdhfmf.c \
 			cmdhw.c \
 			cmdlf.c \
-			cmdlfem4x.c \
 			cmdlfhid.c \
+			cmdlfem4x.c \
 			cmdlfhitag.c \
 			cmdlfti.c \
 			cmdparser.c \
 			cmdmain.c \
 			uart.c
+
 
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
 
@@ -87,16 +88,16 @@ all-static: LDLIBS:=-static $(LDLIBS)
 all-static: snooper cli flasher
 	
 proxmark3: LDLIBS+=$(QTLDLIBS)
-proxmark3: $(OBJDIR)/proxmark3.o $(CMDOBJS) $(OBJDIR)/proxusb.o $(QTGUI)
+proxmark3: $(OBJDIR)/proxmark3.o $(CMDOBJS) $(OBJDIR)/uart.o $(QTGUI)
 	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
-snooper: $(OBJDIR)/snooper.o $(CMDOBJS) $(OBJDIR)/proxusb.o $(OBJDIR)/guidummy.o
+snooper: $(OBJDIR)/snooper.o $(CMDOBJS) $(OBJDIR)/uart.o $(OBJDIR)/guidummy.o
 	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
-cli: $(OBJDIR)/cli.o $(CMDOBJS) $(OBJDIR)/proxusb.o $(OBJDIR)/guidummy.o
+cli: $(OBJDIR)/cli.o $(CMDOBJS) $(OBJDIR)/uart.o $(OBJDIR)/guidummy.o
 	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
-flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(OBJDIR)/proxusb.o
+flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(OBJDIR)/uart.o
 	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
 $(OBJDIR)/%.o: %.c

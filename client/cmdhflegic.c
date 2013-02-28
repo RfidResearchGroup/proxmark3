@@ -10,7 +10,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "proxusb.h"
+//#include "proxusb.h"
 #include "proxmark3.h"
 #include "data.h"
 #include "ui.h"
@@ -324,7 +324,7 @@ int CmdLegicRfSim(const char *Cmd)
    c.arg[0] = 6;
    c.arg[1] = 3;
    c.arg[2] = 0;
-   sscanf(Cmd, " %i %i %i", &c.arg[0], &c.arg[1], &c.arg[2]);
+   sscanf(Cmd, " %lli %lli %lli", &c.arg[0], &c.arg[1], &c.arg[2]);
    SendCommand(&c);
    return 0;
 }
@@ -332,7 +332,7 @@ int CmdLegicRfSim(const char *Cmd)
 int CmdLegicRfWrite(const char *Cmd)
 {
     UsbCommand c={CMD_WRITER_LEGIC_RF};
-    int res = sscanf(Cmd, " 0x%x 0x%x", &c.arg[0], &c.arg[1]);
+    int res = sscanf(Cmd, " 0x%llx 0x%llx", &c.arg[0], &c.arg[1]);
 	if(res != 2) {
 		PrintAndLog("Please specify the offset and length as two hex strings");
         return -1;
@@ -344,7 +344,7 @@ int CmdLegicRfWrite(const char *Cmd)
 int CmdLegicRfFill(const char *Cmd)
 {
     UsbCommand cmd ={CMD_WRITER_LEGIC_RF};
-    int res = sscanf(Cmd, " 0x%x 0x%x 0x%x", &cmd.arg[0], &cmd.arg[1], &cmd.arg[2]);
+    int res = sscanf(Cmd, " 0x%llx 0x%llx 0x%llx", &cmd.arg[0], &cmd.arg[1], &cmd.arg[2]);
     if(res != 3) {
         PrintAndLog("Please specify the offset, length and value as two hex strings");
         return -1;

@@ -32,7 +32,6 @@
 
 #include "cmd.h"
 #include "string.h"
-#include "util.h"
 #include "proxmark3.h"
 
 //static UsbCommand txcmd;
@@ -55,6 +54,10 @@ bool cmd_receive(UsbCommand* cmd) {
 bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, void* data, size_t len) {
   UsbCommand txcmd;
 
+  for (size_t i=0; i<sizeof(UsbCommand); i++) {
+    ((byte_t*)&txcmd)[i] = 0x00;
+  }
+  
   // Compose the outgoing command frame
   txcmd.cmd = cmd;
   txcmd.arg[0] = arg0;
@@ -63,8 +66,11 @@ bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, void* d
 
   // Add the (optional) content to the frame, with a maximum size of USB_CMD_DATA_SIZE
   if (data && len) {
-    memcpy(txcmd.d.asBytes,(byte_t*)data,MIN(len,USB_CMD_DATA_SIZE));
-	  }
+    len = MIN(len,USB_CMD_DATA_SIZE);
+    for (size_t i=0; i<len; i++) {
+      txcmd.d.asBytes[i] = ((byte_t*)data)[i];
+    }
+  }
   
   // Send frame and make sure all bytes are transmitted
   if (usb_write((byte_t*)&txcmd,sizeof(UsbCommand)) != 0) return false;

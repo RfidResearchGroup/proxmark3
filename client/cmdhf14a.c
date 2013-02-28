@@ -16,7 +16,7 @@
 #include "util.h"
 #include "iso14443crc.h"
 #include "data.h"
-#include "proxusb.h"
+//#include "proxusb.h"
 #include "proxmark3.h"
 #include "ui.h"
 #include "cmdparser.h"
@@ -169,7 +169,6 @@ int CmdHF14AReader(const char *Cmd)
   WaitForResponse(CMD_ACK,&resp);
 	
 	iso14a_card_select_t *card = (iso14a_card_select_t *)resp.d.asBytes;
-  uint8_t              * uid = card->uid;
 
 	if(resp.arg[0] == 0) {
 		PrintAndLog("iso14443a card select failed");

@@ -12,10 +12,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include "sleep.h"
-#include "proxusb.h"
+//#include "proxusb.h"
 #include "flash.h"
 #include "elf.h"
 #include "proxendian.h"
+#include "usb_cmd.h"
+
+void SendCommand(UsbCommand* txcmd);
+void ReceiveCommand(UsbCommand* rxcmd);
+void CloseProxmark();
+int OpenProxmark(size_t i);
 
 // FIXME: what the fuckity fuck
 unsigned int current_command = CMD_UNKNOWN;
@@ -26,7 +32,7 @@ unsigned int current_command = CMD_UNKNOWN;
 #define BOOTLOADER_SIZE        0x2000
 #define BOOTLOADER_END         (FLASH_START + BOOTLOADER_SIZE)
 
-#define BLOCK_SIZE             0x100
+#define BLOCK_SIZE             0x200
 
 static const uint8_t elf_ident[] = {
 	0x7f, 'E', 'L', 'F',
@@ -267,11 +273,11 @@ fail:
 // Get the state of the proxmark, backwards compatible
 static int get_proxmark_state(uint32_t *state)
 {
-	HidCommand c;
+	UsbCommand c;
 	c.cmd = CMD_DEVICE_INFO;
-	SendCommand_(&c);
-
-	HidCommand resp;
+//	SendCommand_(&c);
+  SendCommand(&c);
+	UsbCommand resp;
 	ReceiveCommand(&resp);
 
 	// Three outcomes:
@@ -290,7 +296,7 @@ static int get_proxmark_state(uint32_t *state)
 			*state = resp.arg[0];
 			break;
 		default:
-			fprintf(stderr, "Error: Couldn't get proxmark state, bad response type: 0x%04x\n", resp.cmd);
+			fprintf(stderr, "Error: Couldn't get proxmark state, bad response type: 0x%04llx\n", resp.cmd);
 			return -1;
 			break;
 	}
@@ -313,7 +319,7 @@ static int enter_bootloader(void)
 
 	if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
 		fprintf(stderr,"Entering bootloader...\n");
-		HidCommand c;
+		UsbCommand c;
 		memset(&c, 0, sizeof (c));
 
 		if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
@@ -322,12 +328,12 @@ static int enter_bootloader(void)
 			// New style handover: Send CMD_START_FLASH, which will reset the board
 			// and enter the bootrom on the next boot.
 			c.cmd = CMD_START_FLASH;
-			SendCommand_(&c);
+			SendCommand(&c);
 			fprintf(stderr,"(Press and release the button only to abort)\n");
 		} else {
 			// Old style handover: Ask the user to press the button, then reset the board
 			c.cmd = CMD_HARDWARE_RESET;
-			SendCommand_(&c);
+			SendCommand(&c);
 			fprintf(stderr,"Press and hold down button NOW if your bootloader requires it.\n");
 		}
 		fprintf(stderr,"Waiting for Proxmark to reappear on USB...");
@@ -349,10 +355,10 @@ static int enter_bootloader(void)
 
 static int wait_for_ack(void)
 {
-	HidCommand ack;
+  UsbCommand ack;
 	ReceiveCommand(&ack);
 	if (ack.cmd != CMD_ACK) {
-		printf("Error: Unexpected reply 0x%04x (expected ACK)\n", ack.cmd);
+		printf("Error: Unexpected reply 0x%04llx (expected ACK)\n", ack.cmd);
 		return -1;
 	}
 	return 0;
@@ -372,7 +378,7 @@ int flash_start_flashing(int enable_bl_writes)
 	if (state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
 		// This command is stupid. Why the heck does it care which area we're
 		// flashing, as long as it's not the bootloader area? The mind boggles.
-		HidCommand c = {CMD_START_FLASH};
+		UsbCommand c = {CMD_START_FLASH};
 
 		if (enable_bl_writes) {
 			c.arg[0] = FLASH_START;
@@ -383,7 +389,8 @@ int flash_start_flashing(int enable_bl_writes)
 			c.arg[1] = FLASH_END;
 			c.arg[2] = 0;
 		}
-		SendCommand_(&c);
+		SendCommand(&c);
+//		SendCommand_(&c);
 		return wait_for_ack();
 	} else {
 		fprintf(stderr, "Note: Your bootloader does not understand the new START_FLASH command\n");
@@ -399,21 +406,26 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length)
 
 	memset(block_buf, 0xFF, BLOCK_SIZE);
 	memcpy(block_buf, data, length);
-
-	HidCommand c = {CMD_SETUP_WRITE};
+  UsbCommand c;
+/*
+	c.cmd = {CMD_SETUP_WRITE};
 	for (int i = 0; i < 240; i += 48) {
 		memcpy(c.d.asBytes, block_buf + i, 48);
 		c.arg[0] = i / 4;
-		SendCommand_(&c);
-		if (wait_for_ack() < 0)
+		SendCommand(&c);
+//		SendCommand_(&c);
+		if (wait_for_ack() < 0) {
 			return -1;
+    }
 	}
-
+*/
 	c.cmd = CMD_FINISH_WRITE;
 	c.arg[0] = address;
-	memcpy(c.d.asBytes, block_buf+240, 16);
-	SendCommand_(&c);
-	return wait_for_ack();
+//	memcpy(c.d.asBytes, block_buf+240, 16);
+//	SendCommand_(&c);
+	memcpy(c.d.asBytes, block_buf, length);
+  SendCommand(&c);
+  return wait_for_ack();
 }
 
 // Write a file's segments to Flash
@@ -472,7 +484,8 @@ void flash_free(flash_file_t *ctx)
 
 // just reset the unit
 int flash_stop_flashing(void) {
-	HidCommand c = {CMD_HARDWARE_RESET};
-	SendCommand_(&c);
-	return 0;
+	UsbCommand c = {CMD_HARDWARE_RESET};
+//	SendCommand_(&c);
+  SendCommand(&c);
+  return 0;
 }

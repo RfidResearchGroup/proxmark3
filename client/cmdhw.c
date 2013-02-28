@@ -13,7 +13,7 @@
 #include <string.h>
 #include <limits.h>
 #include "ui.h"
-#include "proxusb.h"
+//#include "proxusb.h"
 #include "proxmark3.h"
 #include "cmdparser.h"
 #include "cmdhw.h"

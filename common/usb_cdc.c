@@ -33,7 +33,6 @@
  */
 
 #include "usb_cdc.h"
-#include "util.h"
 #include "config_gpio.h"
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -224,7 +223,7 @@ byte_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
 void usb_disable() {
   // Disconnect the USB device
   AT91C_BASE_PIOA->PIO_ODR = GPIO_USB_PU;
-  SpinDelay(100);
+//  SpinDelay(100);
   
   // Clear all lingering interrupts
   if(pUdp->UDP_ISR & AT91C_UDP_ENDBUSRES) {
@@ -257,7 +256,8 @@ void usb_enable() {
   usb_disable();
   
   // Wait for a short while
-  SpinDelay(100);
+  for (volatile size_t i=0; i<0x100000; i++);
+//  SpinDelay(100);
 
   // Reconnect USB reconnect
   AT91C_BASE_PIOA->PIO_SODR = GPIO_USB_PU;
