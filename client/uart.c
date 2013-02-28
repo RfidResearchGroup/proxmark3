@@ -282,6 +282,15 @@ typedef struct {
   COMMTIMEOUTS ct;  // Serial port time-out configuration
 } serial_port_windows;
 
+void upcase(char *p) {
+	while(*p != '\0') {
+		if(*p >= 97 && *p <= 122) {
+			*p -= 32;
+    }
+		++p;
+	}
+}
+
 serial_port uart_open(const char* pcPortName)
 {
   char acPortName[255];
@@ -289,7 +298,7 @@ serial_port uart_open(const char* pcPortName)
 
   // Copy the input "com?" to "\\.\COM?" format
   sprintf(acPortName,"\\\\.\\%s",pcPortName);
-  _strupr(acPortName);
+  upcase(acPortName);
 
   // Try to open the serial port
   sp->hPort = CreateFileA(acPortName,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,0,NULL);

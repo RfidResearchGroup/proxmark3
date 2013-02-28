@@ -25,13 +25,13 @@ static int CmdHelp(const char *Cmd);
 int CmdHFEPACollectPACENonces(const char *Cmd)
 {
 	// requested nonce size
-	uint8_t m = 0;
+	unsigned int m = 0;
 	// requested number of Nonces
 	unsigned int n = 0;
 	// delay between requests
 	unsigned int d = 0;
 	
-	sscanf(Cmd, "%"hhu" %u %u", &m, &n, &d);
+	sscanf(Cmd, "%u %u %u", &m, &n, &d);
 	
 	// values are expected to be > 0
 	m = m > 0 ? m : 1;
