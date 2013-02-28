@@ -70,7 +70,7 @@ static inline int parity(uint32_t x)
 	x ^= x >> 4;
 	return BIT(0x6996, x & 0xf);
 #else
-        asm(    "movl %1, %%eax\n"
+        __asm(    "movl %1, %%eax\n"
 		"mov %%ax, %%cx\n"
 		"shrl $0x10, %%eax\n"
 		"xor %%ax, %%cx\n"

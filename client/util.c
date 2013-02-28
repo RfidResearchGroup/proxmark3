@@ -10,7 +10,7 @@
 
 #include "util.h"
 
-#ifndef WIN32
+#ifndef _WIN32
 #include <termios.h>
 #include <sys/ioctl.h> 
 int ukbhit(void)
