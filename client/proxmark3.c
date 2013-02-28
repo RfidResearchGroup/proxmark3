@@ -144,7 +144,7 @@ static void *main_loop(void *targ) {
         nl = strrchr(script_cmd_buf, '\n');
         if (nl) *nl = '\0';
         
-        if ((cmd = (char*) malloc(strlen(script_cmd_buf))) != NULL)
+        if ((cmd = (char*) malloc(strlen(script_cmd_buf) + 1)) != NULL)
         {
           memset(cmd, 0, strlen(script_cmd_buf));
           strcpy(cmd, script_cmd_buf);
