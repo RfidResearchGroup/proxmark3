@@ -19,12 +19,7 @@ CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-u
 ifneq (,$(findstring MINGW,$(platform)))
 CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
 QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
-MOC = $(QTDIR)/moc
-####################################################
-# Disabled gui for Windows, can someone with more
-# knowledge about QT fix this problem??
-####################################################
-QTLDLIBS=
+MOC = $(QTDIR)/bin/moc
 else ifeq ($(platform),Darwin)
 CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Versions/Current/Headers -I/Library/Frameworks/QtCore.framework/Versions/Current/Headers
 QTLDLIBS = -framework QtGui -framework QtCore
