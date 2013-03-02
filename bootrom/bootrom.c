@@ -86,10 +86,6 @@ static void ConfigClocks(void)
 
 static void Fatal(void)
 {
-  LED_D_OFF();
-  LED_C_OFF();
-  LED_B_OFF();
-  LED_A_OFF();
   for(;;);
 }
 
@@ -222,10 +218,6 @@ static void flash_mode(int externally_entered)
 
   usb_enable();
   for (volatile size_t i=0; i<0x100000; i++);
-  LED_D_ON();
-  LED_C_ON();
-  LED_B_ON();
-  LED_A_ON();
 
 //	UsbStart();
 	for(;;) {
