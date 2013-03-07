@@ -9,7 +9,6 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhfmf.h"
-#include "proxmark3.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -50,14 +49,14 @@ start:
 			break;
 		}
 		
-		UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 2000);
-		if (resp != NULL) {
-			isOK  = resp->arg[0] & 0xff;
+		UsbCommand resp;
+		if (WaitForResponseTimeout(CMD_ACK,&resp,2000)) {
+			isOK  = resp.arg[0] & 0xff;
 	
-			uid = (uint32_t)bytes_to_num(resp->d.asBytes +  0, 4);
-			nt =  (uint32_t)bytes_to_num(resp->d.asBytes +  4, 4);
-			par_list = bytes_to_num(resp->d.asBytes +  8, 8);
-			ks_list = bytes_to_num(resp->d.asBytes +  16, 8);
+			uid = (uint32_t)bytes_to_num(resp.d.asBytes +  0, 4);
+			nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
+			par_list = bytes_to_num(resp.d.asBytes +  8, 8);
+			ks_list = bytes_to_num(resp.d.asBytes +  16, 8);
 	
 			printf("\n\n");
 			PrintAndLog("isOk:%02x", isOK);
@@ -77,13 +76,13 @@ start:
 		PrintAndLog("Key not found (lfsr_common_prefix list is null). Nt=%08x", nt);	
 	} else {
 		printf("------------------------------------------------------------------\n");
-		PrintAndLog("Key found:%012I64x \n", r_key);
+		PrintAndLog("Key found:%012"llx" \n", r_key);
 
 		num_to_bytes(r_key, 6, keyBlock);
 		isOK = mfCheckKeys(0, 0, 1, keyBlock, &r_key);
 	}
 	if (!isOK) 
-		PrintAndLog("Found valid key:%012I64x", r_key);
+		PrintAndLog("Found valid key:%012"llx, r_key);
 	else
 	{
 		if (isOK != 2) PrintAndLog("Found invalid key. ( Nt=%08x ,Trying use it to run again...", nt);	
@@ -131,11 +130,10 @@ int CmdHF14AMfWrBl(const char *Cmd)
 	memcpy(c.d.asBytes, key, 6);
 	memcpy(c.d.asBytes + 10, bldata, 16);
   SendCommand(&c);
-	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
 
-	if (resp != NULL) {
-		uint8_t                isOK  = resp->arg[0] & 0xff;
-
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		uint8_t isOK  = resp.arg[0] & 0xff;
 		PrintAndLog("isOk:%02x", isOK);
 	} else {
 		PrintAndLog("Command execute timeout");
@@ -175,11 +173,11 @@ int CmdHF14AMfRdBl(const char *Cmd)
   UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
   SendCommand(&c);
-	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
 
-	if (resp != NULL) {
-		uint8_t                isOK  = resp->arg[0] & 0xff;
-		uint8_t              * data  = resp->d.asBytes;
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		uint8_t                isOK  = resp.arg[0] & 0xff;
+		uint8_t              * data  = resp.d.asBytes;
 
 		if (isOK)
 			PrintAndLog("isOk:%02x data:%s", isOK, sprint_hex(data, 16));
@@ -230,12 +228,12 @@ int CmdHF14AMfRdSc(const char *Cmd)
   UsbCommand c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
   SendCommand(&c);
-	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
 	PrintAndLog(" ");
 
-	if (resp != NULL) {
-		isOK  = resp->arg[0] & 0xff;
-		data  = resp->d.asBytes;
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		isOK  = resp.arg[0] & 0xff;
+		data  = resp.d.asBytes;
 
 		PrintAndLog("isOk:%02x", isOK);
 		if (isOK) 
@@ -246,13 +244,11 @@ int CmdHF14AMfRdSc(const char *Cmd)
 		PrintAndLog("Command1 execute timeout");
 	}
 
-		// response2
-	resp = WaitForResponseTimeout(CMD_ACK, 500);
+  // response2
 	PrintAndLog(" ");
-
-	if (resp != NULL) {
-		isOK  = resp->arg[0] & 0xff;
-		data  = resp->d.asBytes;
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		isOK  = resp.arg[0] & 0xff;
+		data  = resp.d.asBytes;
 
 		if (isOK) 
 			for (i = 0; i < 2; i++) {
@@ -276,7 +272,7 @@ int CmdHF14AMfDump(const char *Cmd)
 	FILE *fin;
 	FILE *fout;
 	
-	UsbCommand *resp;
+	UsbCommand resp;
 	
 	if ((fin = fopen("dumpkeys.bin","rb")) == NULL) {
 		PrintAndLog("Could not find file dumpkeys.bin");
@@ -307,11 +303,10 @@ int CmdHF14AMfDump(const char *Cmd)
 		UsbCommand c = {CMD_MIFARE_READBL, {4*i + 3, 0, 0}};
 		memcpy(c.d.asBytes, keyA[i], 6);
 		SendCommand(&c);
-		resp = WaitForResponseTimeout(CMD_ACK, 1500);
 
-		if (resp != NULL) {
-			uint8_t isOK  = resp->arg[0] & 0xff;
-			uint8_t *data  = resp->d.asBytes;
+    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+			uint8_t isOK  = resp.arg[0] & 0xff;
+			uint8_t *data  = resp.d.asBytes;
 			if (isOK){
 				rights[i][0] = ((data[7] & 0x10)>>4) | ((data[8] & 0x1)<<1) | ((data[8] & 0x10)>>2);
 				rights[i][1] = ((data[7] & 0x20)>>5) | ((data[8] & 0x2)<<0) | ((data[8] & 0x20)>>3);
@@ -333,20 +328,23 @@ int CmdHF14AMfDump(const char *Cmd)
 	PrintAndLog("|----- Dumping all blocks to file... -----|");
 	PrintAndLog("|-----------------------------------------|");
 	
+  
 	for (i=0 ; i<16 ; i++) {
 		for (j=0 ; j<4 ; j++) {
-			if (j == 3){
+      bool received = false;
+      
+      if (j == 3){
 				UsbCommand c = {CMD_MIFARE_READBL, {i*4 + j, 0, 0}};
 				memcpy(c.d.asBytes, keyA[i], 6);
 				SendCommand(&c);
-				resp = WaitForResponseTimeout(CMD_ACK, 1500);
+        received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
 			}
 			else{
 				if ((rights[i][j] == 6) | (rights[i][j] == 5)) {
 					UsbCommand c = {CMD_MIFARE_READBL, {i*4+j, 1, 0}};
 					memcpy(c.d.asBytes, keyB[i], 6);
 					SendCommand(&c);
-					resp = WaitForResponseTimeout(CMD_ACK, 1500);
+          received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
 				}
 				else if (rights[i][j] == 7) {
 					PrintAndLog("Access rights do not allow reading of sector %d block %d",i,j);
@@ -355,13 +353,13 @@ int CmdHF14AMfDump(const char *Cmd)
 					UsbCommand c = {CMD_MIFARE_READBL, {i*4+j, 0, 0}};
 					memcpy(c.d.asBytes, keyA[i], 6);
 					SendCommand(&c);
-					resp = WaitForResponseTimeout(CMD_ACK, 1500);
+          received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
 				}
 			}
 
-			if (resp != NULL) {
-				uint8_t isOK  = resp->arg[0] & 0xff;
-				uint8_t *data  = resp->d.asBytes;
+			if (received) {
+				uint8_t isOK  = resp.arg[0] & 0xff;
+				uint8_t *data  = resp.d.asBytes;
 				if (j == 3) {
 					data[0]  = (keyA[i][0]);
 					data[1]  = (keyA[i][1]);
@@ -462,10 +460,10 @@ int CmdHF14AMfRestore(const char *Cmd)
 			
 			memcpy(c.d.asBytes + 10, bldata, 16);
 			SendCommand(&c);
-			UsbCommand *resp = WaitForResponseTimeout(CMD_ACK, 1500);
 
-			if (resp != NULL) {
-				uint8_t isOK  = resp->arg[0] & 0xff;
+			UsbCommand resp;
+      if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+				uint8_t isOK  = resp.arg[0] & 0xff;
 				PrintAndLog("isOk:%02x", isOK);
 			} else {
 				PrintAndLog("Command execute timeout");
@@ -575,7 +573,7 @@ int CmdHF14AMfNested(const char *Cmd)
 		if (res)
 			res = mfCheckKeys(trgBlockNo, trgKeyType, 8, &keyBlock[6 * 8], &key64);
 		if (!res) {
-			PrintAndLog("Found valid key:%012I64x", key64);
+			PrintAndLog("Found valid key:%012"llx, key64);
 
 			// transfer key to the emulator
 			if (transferToEml) {
@@ -635,7 +633,7 @@ int CmdHF14AMfNested(const char *Cmd)
 					if (res)
 						res = mfCheckKeys(trgBlockNo, trgKeyType, 8, &keyBlock[6 * 8], &key64);
 					if (!res) {
-						PrintAndLog("Found valid key:%012I64x", key64);	
+						PrintAndLog("Found valid key:%012"llx, key64);
 						e_sector[trgBlockNo / 4].foundKey[trgKeyType] = 1;
 						e_sector[trgBlockNo / 4].Key[trgKeyType] = key64;
 					}
@@ -648,7 +646,7 @@ int CmdHF14AMfNested(const char *Cmd)
 		PrintAndLog("|sec|key A           |res|key B           |res|");
 		PrintAndLog("|---|----------------|---|----------------|---|");
 		for (i = 0; i < SectorsCnt; i++) {
-			PrintAndLog("|%03d|  %012I64x  | %d |  %012I64x  | %d |", i, 
+			PrintAndLog("|%03d|  %012"llx"  | %d |  %012"llx"  | %d |", i,
 				e_sector[i].Key[0], e_sector[i].foundKey[0], e_sector[i].Key[1], e_sector[i].foundKey[1]);
 		}
 		PrintAndLog("|---|----------------|---|----------------|---|");
@@ -845,7 +843,7 @@ int CmdHF14AMfChk(const char *Cmd)
 					}
 					memset(keyBlock + 6 * keycnt, 0, 6);
 					num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6*keycnt);
-					PrintAndLog("chk custom key[%d] %012I64x", keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
+					PrintAndLog("chk custom key[%d] %012"llx, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
 					keycnt++;
 				}
 			} else {
@@ -875,7 +873,7 @@ int CmdHF14AMfChk(const char *Cmd)
 				res = mfCheckKeys(b, t, size, keyBlock +6*c, &key64);
 				if (res !=1) {
 					if (!res) {
-						PrintAndLog("Found valid key:[%012I64x]",key64);
+						PrintAndLog("Found valid key:[%012"llx"]",key64);
 						if (transferToEml) {
 							uint8_t block[16];
 							mfEmlGetMem(block, get_trailer_block(b), 1);
@@ -1207,7 +1205,7 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 		}
 		keyA = bytes_to_num(data, 6);
 		keyB = bytes_to_num(data + 10, 6);
-		PrintAndLog("|%03d|  %012I64x  |  %012I64x  |", i, keyA, keyB);
+		PrintAndLog("|%03d|  %012"llx"  |  %012"llx"  |", i, keyA, keyB);
 	}
 	PrintAndLog("|---|----------------|----------------|");
 	
@@ -1591,11 +1589,11 @@ int CmdHF14AMfSniff(const char *Cmd){
 			break;
 		}
 		
-		UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 2000);
-		if (resp != NULL) {
-			res = resp->arg[0] & 0xff;
-			len = resp->arg[1];
-			num = resp->arg[2];
+    UsbCommand resp;
+    if (WaitForResponseTimeout(CMD_ACK,&resp,2000)) {
+			res = resp.arg[0] & 0xff;
+			len = resp.arg[1];
+			num = resp.arg[2];
 			
 			if (res == 0) return 0;
 			if (res == 1) {
@@ -1603,7 +1601,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 					bufPtr = buf;
 					memset(buf, 0x00, 3000);
 				}
-				memcpy(bufPtr, resp->d.asBytes, len);
+				memcpy(bufPtr, resp.d.asBytes, len);
 				bufPtr += len;
 				pckNum++;
 			}
@@ -1678,7 +1676,7 @@ static command_t CommandTable[] =
 int CmdHFMF(const char *Cmd)
 {
 	// flush
-	while (WaitForResponseTimeout(CMD_ACK, 500) != NULL) ;
+	WaitForResponseTimeout(CMD_ACK,NULL,100);
 
   CmdsParse(CommandTable, Cmd);
   return 0;

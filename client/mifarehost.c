@@ -12,9 +12,9 @@
 #include <stdlib.h> 
 #include <string.h>
 #include "mifarehost.h"
+#include "proxmark3.h"
 
 // MIFARE
-
 int compar_int(const void * a, const void * b) {
 	return (*(uint64_t*)b - *(uint64_t*)a);
 }
@@ -59,12 +59,12 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	fnVector * vector = NULL;
 	countKeys	*ck;
 	int lenVector = 0;
-	UsbCommand * resp = NULL;
+	UsbCommand resp;
 	
 	memset(resultKeys, 0x00, 16 * 6);
 
 	// flush queue
-	while (WaitForResponseTimeout(CMD_ACK, 500) != NULL) ;
+	WaitForResponseTimeout(CMD_ACK,NULL,100);
 	
   UsbCommand c = {CMD_MIFARE_NESTED, {blockNo, keyType, trgBlockNo + trgKeyType * 0x100}};
 	memcpy(c.d.asBytes, key, 6);
@@ -81,18 +81,16 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 			break;
 		}
 
-		resp = WaitForResponseTimeout(CMD_ACK, 1500);
-
-		if (resp != NULL) {
-			isEOF  = resp->arg[0] & 0xff;
+		if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+			isEOF  = resp.arg[0] & 0xff;
 
 			if (isEOF) break;
 			
-			len = resp->arg[1] & 0xff;
+			len = resp.arg[1] & 0xff;
 			if (len == 0) continue;
 			
-			memcpy(&uid, resp->d.asBytes, 4); 
-			PrintAndLog("uid:%08x len=%d trgbl=%d trgkey=%x", uid, len, resp->arg[2] & 0xff, (resp->arg[2] >> 8) & 0xff);
+			memcpy(&uid, resp.d.asBytes, 4);
+			PrintAndLog("uid:%08x len=%d trgbl=%d trgkey=%x", uid, len, resp.arg[2] & 0xff, (resp.arg[2] >> 8) & 0xff);
 			vector = (fnVector *) realloc((void *)vector, (lenVector + len) * sizeof(fnVector) + 200);
 			if (vector == NULL) {
 				PrintAndLog("Memory allocation error for fnVector. len: %d bytes: %d", lenVector + len, (lenVector + len) * sizeof(fnVector)); 
@@ -100,12 +98,12 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 			}
 			
 			for (i = 0; i < len; i++) {
-				vector[lenVector + i].blockNo = resp->arg[2] & 0xff;
-				vector[lenVector + i].keyType = (resp->arg[2] >> 8) & 0xff;
+				vector[lenVector + i].blockNo = resp.arg[2] & 0xff;
+				vector[lenVector + i].keyType = (resp.arg[2] >> 8) & 0xff;
 				vector[lenVector + i].uid = uid;
 
-				memcpy(&vector[lenVector + i].nt,  (void *)(resp->d.asBytes + 8 + i * 8 + 0), 4);
-				memcpy(&vector[lenVector + i].ks1, (void *)(resp->d.asBytes + 8 + i * 8 + 4), 4);
+				memcpy(&vector[lenVector + i].nt,  (void *)(resp.d.asBytes + 8 + i * 8 + 0), 4);
+				memcpy(&vector[lenVector + i].ks1, (void *)(resp.d.asBytes + 8 + i * 8 + 4), 4);
 			}
 
 			lenVector += len;
@@ -187,14 +185,12 @@ int mfCheckKeys (uint8_t blockNo, uint8_t keyType, uint8_t keycnt, uint8_t * key
 
   UsbCommand c = {CMD_MIFARE_CHKKEYS, {blockNo, keyType, keycnt}};
 	memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
-
   SendCommand(&c);
 
-	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 3000);
-
-	if (resp == NULL) return 1;
-	if ((resp->arg[0] & 0xff) != 0x01) return 2;
-	*key = bytes_to_num(resp->d.asBytes, 6);
+	UsbCommand resp;
+	if (!WaitForResponseTimeout(CMD_ACK,&resp,3000)) return 1;
+	if ((resp.arg[0] & 0xff) != 0x01) return 2;
+	*key = bytes_to_num(resp.d.asBytes, 6);
 	return 0;
 }
 
@@ -202,13 +198,11 @@ int mfCheckKeys (uint8_t blockNo, uint8_t keyType, uint8_t keycnt, uint8_t * key
 
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
 	UsbCommand c = {CMD_MIFARE_EML_MEMGET, {blockNum, blocksCount, 0}};
- 
-	SendCommand(&c);
+ 	SendCommand(&c);
 
-	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
-
-	if (resp == NULL) return 1;
-	memcpy(data, resp->d.asBytes, blocksCount * 16); 
+  UsbCommand resp;
+	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500)) return 1;
+	memcpy(data, resp.d.asBytes, blocksCount * 16);
 	return 0;
 }
 
@@ -241,11 +235,10 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, int wantWipe, uint
 	memcpy(c.d.asBytes, data, 16); 
 	SendCommand(&c);
 
-	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
-
-	if (resp != NULL) {
-		isOK  = resp->arg[0] & 0xff;
-		if (uid != NULL) memcpy(uid, resp->d.asBytes, 4); 
+  UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		isOK  = resp.arg[0] & 0xff;
+		if (uid != NULL) memcpy(uid, resp.d.asBytes, 4);
 		if (!isOK) return 2;
 	} else {
 		PrintAndLog("Command execute timeout");
@@ -260,11 +253,10 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
 	UsbCommand c = {CMD_MIFARE_EML_CGETBLOCK, {params, 0, blockNo}};
 	SendCommand(&c);
 
-	UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
-
-	if (resp != NULL) {
-		isOK  = resp->arg[0] & 0xff;
-		memcpy(data, resp->d.asBytes, 16); 
+  UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		isOK  = resp.arg[0] & 0xff;
+		memcpy(data, resp.d.asBytes, 16);
 		if (!isOK) return 2;
 	} else {
 		PrintAndLog("Command execute timeout");

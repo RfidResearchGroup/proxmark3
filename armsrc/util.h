@@ -15,9 +15,7 @@
 #include <stdint.h>
 
 #define RAMFUNC __attribute((long_call, section(".ramfunc")))
-
 #define BYTEx(x, n) (((x) >> (n * 8)) & 0xff )
-#define min(a, b) (((a) > (b)) ? (b) : (a))
 
 #define LED_RED 1
 #define LED_ORANGE 2

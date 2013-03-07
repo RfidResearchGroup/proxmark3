@@ -10,7 +10,8 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "proxusb.h"
+//#include "proxusb.h"
+#include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"
 #include "cmdparser.h"
@@ -25,7 +26,8 @@ int CmdLFPCF7931Read(const char *Cmd)
 {
   UsbCommand c = {CMD_PCF7931_READ};
   SendCommand(&c);
-  WaitForResponse(CMD_ACK);
+  UsbCommand resp;
+  WaitForResponse(CMD_ACK,&resp);
   return 0;
 }
 

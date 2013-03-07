@@ -10,7 +10,7 @@ APP_INCLUDES = apps.h
 
 #remove one of the following defines and comment out the relevant line
 #in the next section to remove that particular feature from compilation  
-APP_CFLAGS	= -O2 -DWITH_LF -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b -DWITH_ICLASS -DWITH_LEGICRF -DWITH_HITAG
+APP_CFLAGS	= -DWITH_LF -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b -DWITH_ICLASS -DWITH_LEGICRF -DWITH_HITAG
 #-DWITH_LCD 
 
 #SRC_LCD = fonts.c LCD.c
@@ -27,7 +27,8 @@ THUMBSRC = start.c \
 	appmain.c printf.c \
 	util.c \
 	string.c \
-	usb.c
+	usb_cdc.c \
+	cmd.c
 
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \

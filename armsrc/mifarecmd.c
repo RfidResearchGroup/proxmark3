@@ -78,11 +78,12 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	memset(uid, 0x44, 4);
 	LogTrace(uid, 4, 0, 0, TRUE);
 
-	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
-	memcpy(ack.d.asBytes, dataoutbuf, 16);
+//	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
+//	memcpy(ack.d.asBytes, dataoutbuf, 16);
 	
 	LED_B_ON();
-	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+  cmd_send(CMD_ACK,isOK,0,0,0,0);
+//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 	LED_B_OFF();
 
 
@@ -170,17 +171,18 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	memset(uid, 0x44, 4);
 	LogTrace(uid, 4, 0, 0, TRUE);
 
-	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
-	memcpy(ack.d.asBytes, dataoutbuf, 16 * 2);
+//	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
+//	memcpy(ack.d.asBytes, dataoutbuf, 16 * 2);
 	
 	LED_B_ON();
-	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
-
-	SpinDelay(100);
+  cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,32);
+//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+//	SpinDelay(100);
 	
-	memcpy(ack.d.asBytes, dataoutbuf + 16 * 2, 16 * 2);
-	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
-	LED_B_OFF();	
+//	memcpy(ack.d.asBytes, dataoutbuf + 16 * 2, 16 * 2);
+//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+  cmd_send(CMD_ACK,isOK,0,0,dataoutbuf+32, 32);
+	LED_B_OFF();
 
 	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -256,11 +258,12 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	memset(uid, 0x44, 4);
 	LogTrace(uid, 4, 0, 0, TRUE);
 
-	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
+//	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
 	
 	LED_B_ON();
-	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
-	LED_B_OFF();	
+  cmd_send(CMD_ACK,isOK,0,0,0,0);
+//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+	LED_B_OFF();
 
 
 	// Thats it...
@@ -301,7 +304,6 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 	nestedVector nvector[NES_MAX_INFO + 1][11];
 	int nvectorcount[NES_MAX_INFO + 1];
 	int ncount = 0;
-	UsbCommand ack = {CMD_ACK, {0, 0, 0}};
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
@@ -468,6 +470,8 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 	memset(uid, 0x44, 4);
 	LogTrace(uid, 4, 0, 0, TRUE);
 
+//  UsbCommand ack = {CMD_ACK, {0, 0, 0}};
+
 	for (i = 0; i < NES_MAX_INFO; i++) {
 		if (nvectorcount[i] > 10) continue;
 		
@@ -475,34 +479,38 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 			ncount = nvectorcount[i] - j;
 			if (ncount > 5) ncount = 5; 
 
-			ack.arg[0] = 0; // isEOF = 0
-			ack.arg[1] = ncount;
-			ack.arg[2] = targetBlockNo + (targetKeyType * 0x100);
-			memset(ack.d.asBytes, 0x00, sizeof(ack.d.asBytes));
+//			ack.arg[0] = 0; // isEOF = 0
+//			ack.arg[1] = ncount;
+//			ack.arg[2] = targetBlockNo + (targetKeyType * 0x100);
+//			memset(ack.d.asBytes, 0x00, sizeof(ack.d.asBytes));
 			
-			memcpy(ack.d.asBytes, &cuid, 4);
+      byte_t buf[48];
+      memset(buf, 0x00, sizeof(buf));
+			memcpy(buf, &cuid, 4);
 			for (m = 0; m < ncount; m++) {
-				memcpy(ack.d.asBytes + 8 + m * 8 + 0, &nvector[i][m + j].nt, 4);
-				memcpy(ack.d.asBytes + 8 + m * 8 + 4, &nvector[i][m + j].ks1, 4);
+				memcpy(buf + 8 + m * 8 + 0, &nvector[i][m + j].nt, 4);
+				memcpy(buf + 8 + m * 8 + 4, &nvector[i][m + j].ks1, 4);
 			}
 	
 			LED_B_ON();
-			SpinDelay(100);
-			UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
-			LED_B_OFF();	
+//			SpinDelay(100);
+      cmd_send(CMD_ACK,0,ncount,targetBlockNo + (targetKeyType * 0x100),buf,48);
+//			UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+			LED_B_OFF();
 		}
 	}
 
 	// finalize list
-	ack.arg[0] = 1; // isEOF = 1
-	ack.arg[1] = 0;
-	ack.arg[2] = 0;
-	memset(ack.d.asBytes, 0x00, sizeof(ack.d.asBytes));
+//	ack.arg[0] = 1; // isEOF = 1
+//	ack.arg[1] = 0;
+//	ack.arg[2] = 0;
+//	memset(ack.d.asBytes, 0x00, sizeof(ack.d.asBytes));
 	
 	LED_B_ON();
-	SpinDelay(300);
-	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
-	LED_B_OFF();	
+//	SpinDelay(300);
+//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+  cmd_send(CMD_ACK,1,0,0,0,0);
+	LED_B_OFF();
 
 	if (MF_DBGLEVEL >= 4)	DbpString("NESTED FINISHED");
 
@@ -575,11 +583,12 @@ void MifareChkKeys(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	memset(uid, 0x44, 4);
 	LogTrace(uid, 4, 0, 0, TRUE);
 
-	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
-	if (isOK) memcpy(ack.d.asBytes, datain + i * 6, 6);
+//	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
+//	if (isOK) memcpy(ack.d.asBytes, datain + i * 6, 6);
 	
 	LED_B_ON();
-	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+    cmd_send(CMD_ACK,isOK,0,0,datain + i * 6,6);
+//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 	LED_B_OFF();
 
   // Thats it...
@@ -612,12 +621,14 @@ void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 }
 
 void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
-	UsbCommand ack = {CMD_ACK, {arg0, arg1, 0}};
+//	UsbCommand ack = {CMD_ACK, {arg0, arg1, 0}};
 
-	emlGetMem(ack.d.asBytes, arg0, arg1); // data, block num, blocks count
+  byte_t buf[48];
+	emlGetMem(buf, arg0, arg1); // data, block num, blocks count
 
 	LED_B_ON();
-	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+  cmd_send(CMD_ACK,arg0,arg1,0,buf,48);
+//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 	LED_B_OFF();
 }
 
@@ -848,15 +859,16 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		break;
 	}
 	
-	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
-	if (isOK) memcpy(ack.d.asBytes, uid, 4);
+//	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
+//	if (isOK) memcpy(ack.d.asBytes, uid, 4);
 	
 	// add trace trailer
 	memset(uid, 0x44, 4);
 	LogTrace(uid, 4, 0, 0, TRUE);
 
 	LED_B_ON();
-	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+  cmd_send(CMD_ACK,isOK,0,0,uid,4);
+//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 	LED_B_OFF();
 
 	if ((workFlags & 0x10) || (!isOK)) {
@@ -938,15 +950,16 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		break;
 	}
 	
-	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
-	if (isOK) memcpy(ack.d.asBytes, data, 18);
+//	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
+//	if (isOK) memcpy(ack.d.asBytes, data, 18);
 	
 	// add trace trailer
 	memset(data, 0x44, 4);
 	LogTrace(data, 4, 0, 0, TRUE);
 
 	LED_B_ON();
-	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+  cmd_send(CMD_ACK,isOK,0,0,data,18);
+//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 	LED_B_OFF();
 
 	if ((workFlags & 0x10) || (!isOK)) {

@@ -10,6 +10,10 @@
 // MIFARE Darkside hack
 //-----------------------------------------------------------------------------
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+#define llx PRIx64
+
 #include "nonce2key.h"
 #include "ui.h"
 
@@ -23,7 +27,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint64_t par_info, uint64_t ks_info, ui
   // Reset the last three significant bits of the reader nonce
   nr &= 0xffffff1f;
   
-  PrintAndLog("\nuid(%08x) nt(%08x) par(%016llx) ks(%016llx)\n\n",uid,nt,par_info,ks_info);
+  PrintAndLog("\nuid(%08x) nt(%08x) par(%016"llx") ks(%016"llx")\n\n",uid,nt,par_info,ks_info);
 
   for (pos=0; pos<8; pos++)
   {

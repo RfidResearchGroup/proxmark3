@@ -23,13 +23,15 @@ typedef BYTE uint8_t;
 #define PACKED __attribute__((packed))
 #endif
 
+#define USB_CMD_DATA_SIZE 512
+
 typedef struct {
-	uint32_t	cmd;
-	uint32_t	arg[3];
-	union {
-		uint8_t		asBytes[48];
-		uint32_t	asDwords[12];
-	} d;
+  uint64_t cmd;
+  uint64_t arg[3];
+  union {
+    uint8_t  asBytes[USB_CMD_DATA_SIZE];
+    uint32_t asDwords[USB_CMD_DATA_SIZE/4];
+  } d;
 } PACKED UsbCommand;
 
 // For the bootloader
@@ -77,7 +79,6 @@ typedef struct {
 #define CMD_PCF7931_READ                                                  0x0217
 #define CMD_EM4X_READ_WORD                                                0x0218
 #define CMD_EM4X_WRITE_WORD                                               0x0219
-
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
 // For the 13.56 MHz tags

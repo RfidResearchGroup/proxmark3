@@ -12,7 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-#include "proxusb.h"
+//#include "proxusb.h"
+#include "proxmark3.h"
 #include "data.h"
 #include "graph.h"
 #include "ui.h"
@@ -37,7 +38,7 @@ int CmdLFCommandRead(const char *Cmd)
   dummy[0]= ' ';
 
   UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K};
-  sscanf(Cmd, "%i %i %i %s %s", &c.arg[0], &c.arg[1], &c.arg[2], (char *) &c.d.asBytes,(char *) &dummy+1);
+  sscanf(Cmd, "%"lli" %"lli" %"lli" %s %s", &c.arg[0], &c.arg[1], &c.arg[2],(char*)(&c.d.asBytes),(char*)(&dummy+1));
   // in case they specified 'h'
   strcpy((char *)&c.d.asBytes + strlen((char *)c.d.asBytes), dummy);
   SendCommand(&c);
@@ -366,7 +367,7 @@ int CmdLFRead(const char *Cmd)
     return 0;
   }
   SendCommand(&c);
-  WaitForResponse(CMD_ACK);
+  WaitForResponse(CMD_ACK,NULL);
   return 0;
 }
 
@@ -403,7 +404,7 @@ int CmdLFSim(const char *Cmd)
       c.d.asBytes[j] = GraphBuffer[i+j];
     }
     SendCommand(&c);
-    WaitForResponse(CMD_ACK);
+    WaitForResponse(CMD_ACK,NULL);
   }
 
   PrintAndLog("Starting simulator...");

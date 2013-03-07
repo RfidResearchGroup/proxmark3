@@ -16,6 +16,7 @@
 #include <stddef.h>
 #include "common.h"
 #include "hitag2.h"
+#include "mifare.h"
 
 // The large multi-purpose buffer, typically used to hold A/D samples,
 // maybe processed in some way.
@@ -128,8 +129,8 @@ int DemodPCF7931(uint8_t **outBlocks);
 int IsBlock0PCF7931(uint8_t *Block);
 int IsBlock1PCF7931(uint8_t *Block);
 void ReadPCF7931();
-void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode); 
-void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode); 
+void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
+void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 
 /// iso14443.h
 void SimulateIso14443Tag(void);
@@ -142,17 +143,17 @@ void RAMFUNC SnoopIso14443(void);
 /// iso14443a.h
 void RAMFUNC SnoopIso14443a(uint8_t param);
 void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd);	// ## simulate iso14443a tag
-void ReaderIso14443a(UsbCommand * c, UsbCommand * ack);
+void ReaderIso14443a(UsbCommand * c);
 // Also used in iclass.c
 int RAMFUNC LogTrace(const uint8_t * btBytes, int iLen, int iSamples, uint32_t dwParity, int bReader);
 uint32_t GetParity(const uint8_t * pbtCmd, int iLen);
-void iso14a_set_trigger(int enable);
-void iso14a_clear_trace(void);
-void iso14a_set_tracing(int enable);
+void iso14a_set_trigger(bool enable);
+void iso14a_clear_trace();
+void iso14a_set_tracing(bool enable);
 void RAMFUNC SniffMifare(uint8_t param);
 
 /// epa.h
-void EPA_PACE_Collect_Nonce(UsbCommand * c, UsbCommand * ack);
+void EPA_PACE_Collect_Nonce(UsbCommand * c);
 
 // mifarecmd.h
 void ReaderMifare(uint32_t parameter);
@@ -188,6 +189,10 @@ void ReaderIClass(uint8_t arg0);
 void SnoopHitag(uint32_t type);
 void SimulateHitagTag(bool tag_mem_supplied, byte_t* data);
 void ReaderHitag(hitag_function htf, hitag_data* htd);
+
+// cmd.h
+bool cmd_receive(UsbCommand* cmd);
+bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, void* data, size_t len);
 
 /// util.h
 

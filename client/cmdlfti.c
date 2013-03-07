@@ -11,7 +11,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "crc16.h"
-#include "proxusb.h"
+//#include "proxusb.h"
+#include "proxmark3.h"
 #include "data.h"
 #include "ui.h"
 #include "graph.h"
@@ -273,7 +274,7 @@ int CmdTIWrite(const char *Cmd)
   UsbCommand c = {CMD_WRITE_TI_TYPE};
   int res = 0;
 
-  res = sscanf(Cmd, "0x%x 0x%x 0x%x ", &c.arg[0], &c.arg[1], &c.arg[2]);
+  res = sscanf(Cmd, "0x%"PRIu64"x 0x%"PRIu64"x 0x%"PRIu64"x ", &c.arg[0], &c.arg[1], &c.arg[2]);
   if (res == 2) c.arg[2]=0;
   if (res < 2)
     PrintAndLog("Please specify the data as two hex strings, optionally the CRC as a third");

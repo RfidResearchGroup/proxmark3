@@ -15,7 +15,7 @@
 #include "cmdmain.h"
 #include "ui.h"
 #include "data.h"
-#include "proxusb.h"
+//#include "proxusb.h"
 #include "util.h"
 #include "nonce2key/nonce2key.h"
 #include "nonce2key/crapto1.h"

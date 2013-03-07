@@ -16,6 +16,9 @@
 #include <ctype.h>
 #include <time.h>
 
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
 int ukbhit(void);
 
 void AddLogLine(char *fileName, char *extData, char *c);

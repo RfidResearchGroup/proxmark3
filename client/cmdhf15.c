@@ -26,7 +26,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include "proxusb.h"
+//#include "proxusb.h"
+#include "proxmark3.h"
 #include "data.h"
 #include "graph.h"
 #include "ui.h"
@@ -94,7 +95,7 @@ const productName uidmapping[] = {
 // returns 1 if suceeded
 int getUID(uint8_t *buf) 
 {
-	UsbCommand *r;	
+	UsbCommand resp;
 	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
 	uint8_t *req=c.d.asBytes;
@@ -111,11 +112,9 @@ int getUID(uint8_t *buf)
 	
 		SendCommand(&c);
 		
-		r=WaitForResponseTimeout(CMD_ACK,1000);
-		
-		if (r!=NULL) {
-			recv = r->d.asBytes;
-			if (r->arg[0]>=12 && ISO15_CRC_CHECK==Crc(recv,12)) {
+		if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+			recv = resp.d.asBytes;
+			if (resp.arg[0]>=12 && ISO15_CRC_CHECK==Crc(recv,12)) {
 			   memcpy(buf,&recv[2],8);
 			   return 1;
 			} 
@@ -292,7 +291,7 @@ int CmdHF15Afi(const char *Cmd)
 
 // Reads all memory pages
 int CmdHF15DumpMem(const char*Cmd) {
-	UsbCommand *r;	
+	UsbCommand resp;
 	uint8_t uid[8];	
 	uint8_t *recv=NULL;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
@@ -321,20 +320,18 @@ int CmdHF15DumpMem(const char*Cmd) {
 	
 		SendCommand(&c);
 		
-		r=WaitForResponseTimeout(CMD_ACK,1000);
-		
-		if (r!=NULL) {
-			recv = r->d.asBytes;
-			if (ISO15_CRC_CHECK==Crc(recv,r->arg[0])) {
+		if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+			recv = resp.d.asBytes;
+			if (ISO15_CRC_CHECK==Crc(recv,resp.arg[0])) {
 				if (!(recv[0] & ISO15_RES_ERROR)) {
 					retry=0;
 					*output=0; // reset outputstring
 					sprintf(output, "Block %2i   ",blocknum);
-					for ( int i=1; i<r->arg[0]-2; i++) { // data in hex
+					for ( int i=1; i<resp.arg[0]-2; i++) { // data in hex
 						sprintf(output+strlen(output),"%02hX ",recv[i]);					
 					}					
 					strcat(output,"   "); 
-					for ( int i=1; i<r->arg[0]-2; i++) { // data in cleaned ascii
+					for ( int i=1; i<resp.arg[0]-2; i++) { // data in cleaned ascii
 						sprintf(output+strlen(output),"%c",(recv[i]>31 && recv[i]<127)?recv[i]:'.');					
 					}					
 					PrintAndLog("%s",output);	
@@ -346,14 +343,14 @@ int CmdHF15DumpMem(const char*Cmd) {
 				}
 			} // else PrintAndLog("crc");
 		} // else PrintAndLog("r null");
-		
 	} // retry
-	if (r && r->arg[0]<3) 
-		PrintAndLog("Lost Connection");
-	else if (r && ISO15_CRC_CHECK!=Crc(r->d.asBytes,r->arg[0]))
-		PrintAndLog("CRC Failed");
-	else 
-		PrintAndLog("Tag returned Error %i: %s",recv[1],TagErrorStr(recv[1])); 
+  // TODO: need fix
+//	if (resp.arg[0]<3)
+//		PrintAndLog("Lost Connection");
+//	else if (ISO15_CRC_CHECK!=Crc(resp.d.asBytes,resp.arg[0]))
+//		PrintAndLog("CRC Failed");
+//	else 
+//		PrintAndLog("Tag returned Error %i: %s",recv[1],TagErrorStr(recv[1])); 
 	return 0;
 }
 
@@ -392,7 +389,7 @@ int CmdHF15Help(const char *Cmd)
 
 int CmdHF15CmdInquiry(const char *Cmd) 
 {
-	UsbCommand *r;	
+	UsbCommand resp;
 	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
 	uint8_t *req=c.d.asBytes;
@@ -407,15 +404,13 @@ int CmdHF15CmdInquiry(const char *Cmd)
 
 	SendCommand(&c);
 	
-	r=WaitForResponseTimeout(CMD_ACK,1000);
-	
-	if (r!=NULL) {
-		if (r->arg[0]>=12) {
-		   recv = r->d.asBytes;
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+		if (resp.arg[0]>=12) {
+		   recv = resp.d.asBytes;
 		   PrintAndLog("UID=%s",sprintUID(NULL,&recv[2]));
 		   PrintAndLog("Tag Info: %s",getTagInfo(&recv[2]));	
 		} else {
-			PrintAndLog("Response to short, just %i bytes. No tag?\n",r->arg[0]);		
+			PrintAndLog("Response to short, just %i bytes. No tag?\n",resp.arg[0]);
 		}
 	} else {
 		PrintAndLog("timeout.");
@@ -440,7 +435,7 @@ int CmdHF15CmdDebug( const char *cmd) {
 
 
 int CmdHF15CmdRaw (const char *cmd) {
-	UsbCommand *r;	
+	UsbCommand resp;
 	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
 	int reply=1;
@@ -515,14 +510,12 @@ int CmdHF15CmdRaw (const char *cmd) {
 	SendCommand(&c);
 	
 	if (reply) {
-		r=WaitForResponseTimeout(CMD_ACK,1000);
-	
-		if (r!=NULL) {
-			recv = r->d.asBytes;
-			PrintAndLog("received %i octets",r->arg[0]);
-			hexout = (char *)malloc(r->arg[0] * 3 + 1);
+		if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+			recv = resp.d.asBytes;
+			PrintAndLog("received %i octets",resp.arg[0]);
+			hexout = (char *)malloc(resp.arg[0] * 3 + 1);
 			if (hexout != NULL) {
-				for (int i = 0; i < r->arg[0]; i++) { // data in hex
+				for (int i = 0; i < resp.arg[0]; i++) { // data in hex
 					sprintf(&hexout[i * 3], "%02hX ", recv[i]);
 				}
 				PrintAndLog("%s", hexout);
@@ -635,7 +628,7 @@ int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd[], int iso15cmdle
  * get system information from tag/VICC
  */
 int CmdHF15CmdSysinfo(const char *Cmd) {
-	UsbCommand *r;	
+	UsbCommand resp;
 	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
 	uint8_t *req=c.d.asBytes;
@@ -670,14 +663,12 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 
 	SendCommand(&c);
 
-	r=WaitForResponseTimeout(CMD_ACK,1000);
-	
-	if (r!=NULL && r->arg[0]>2) {
-		recv = r->d.asBytes;
-		if (ISO15_CRC_CHECK==Crc(recv,r->arg[0])) {
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1000) && resp.arg[0]>2) {
+		recv = resp.d.asBytes;
+		if (ISO15_CRC_CHECK==Crc(recv,resp.arg[0])) {
 			if (!(recv[0] & ISO15_RES_ERROR)) {
 				*output=0; // reset outputstring
-				for ( i=1; i<r->arg[0]-2; i++) {
+				for ( i=1; i<resp.arg[0]-2; i++) {
 					sprintf(output+strlen(output),"%02hX ",recv[i]);					
 				}					
 				strcat(output,"\n\r");
@@ -725,7 +716,7 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
  * Read multiple blocks at once (not all tags support this)
  */
 int CmdHF15CmdReadmulti(const char *Cmd) {
-	UsbCommand *r;	
+	UsbCommand resp;
 	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
 	uint8_t *req=c.d.asBytes;
@@ -773,18 +764,16 @@ int CmdHF15CmdReadmulti(const char *Cmd) {
 
 	SendCommand(&c);
 
-	r=WaitForResponseTimeout(CMD_ACK,1000);
-	
-	if (r!=NULL && r->arg[0]>2) {
-		recv = r->d.asBytes;
-		if (ISO15_CRC_CHECK==Crc(recv,r->arg[0])) {
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1000) && resp.arg[0]>2) {
+		recv = resp.d.asBytes;
+		if (ISO15_CRC_CHECK==Crc(recv,resp.arg[0])) {
 			if (!(recv[0] & ISO15_RES_ERROR)) {
 				*output=0; // reset outputstring
-				for ( int i=1; i<r->arg[0]-2; i++) {
+				for ( int i=1; i<resp.arg[0]-2; i++) {
 					sprintf(output+strlen(output),"%02hX ",recv[i]);					
 				}					
 				strcat(output,"   ");
-				for ( int i=1; i<r->arg[0]-2; i++) {
+				for ( int i=1; i<resp.arg[0]-2; i++) {
 					sprintf(output+strlen(output),"%c",recv[i]>31 && recv[i]<127?recv[i]:'.');					
 				}					
 				PrintAndLog("%s",output);	
@@ -806,7 +795,7 @@ int CmdHF15CmdReadmulti(const char *Cmd) {
  * Reads a single Block
  */
 int CmdHF15CmdRead(const char *Cmd) {
-	UsbCommand *r;	
+	UsbCommand resp;
 	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
 	uint8_t *req=c.d.asBytes;
@@ -848,19 +837,17 @@ int CmdHF15CmdRead(const char *Cmd) {
 
 	SendCommand(&c);
 
-	r=WaitForResponseTimeout(CMD_ACK,1000);
-	
-	if (r!=NULL && r->arg[0]>2) {
-		recv = r->d.asBytes;
-		if (ISO15_CRC_CHECK==Crc(recv,r->arg[0])) {
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1000) && resp.arg[0]>2) {
+		recv = resp.d.asBytes;
+		if (ISO15_CRC_CHECK==Crc(recv,resp.arg[0])) {
 			if (!(recv[0] & ISO15_RES_ERROR)) {
 				*output=0; // reset outputstring
 				//sprintf(output, "Block %2i   ",blocknum);
-				for ( int i=1; i<r->arg[0]-2; i++) {
+				for ( int i=1; i<resp.arg[0]-2; i++) {
 					sprintf(output+strlen(output),"%02hX ",recv[i]);					
 				}					
 				strcat(output,"   ");
-				for ( int i=1; i<r->arg[0]-2; i++) {
+				for ( int i=1; i<resp.arg[0]-2; i++) {
 					sprintf(output+strlen(output),"%c",recv[i]>31 && recv[i]<127?recv[i]:'.');					
 				}					
 				PrintAndLog("%s",output);	
@@ -883,7 +870,7 @@ int CmdHF15CmdRead(const char *Cmd) {
  * Writes a single Block - might run into timeout, even when successful
  */
 int CmdHF15CmdWrite(const char *Cmd) {
-	UsbCommand *r;	
+	UsbCommand resp;
 	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
 	uint8_t *req=c.d.asBytes;
@@ -943,11 +930,9 @@ int CmdHF15CmdWrite(const char *Cmd) {
 
 	SendCommand(&c);
 
-	r=WaitForResponseTimeout(CMD_ACK,2000);
-	
-	if (r!=NULL && r->arg[0]>2) {
-		recv = r->d.asBytes;
-		if (ISO15_CRC_CHECK==Crc(recv,r->arg[0])) {
+	if (WaitForResponseTimeout(CMD_ACK,&resp,2000) && resp.arg[0]>2) {
+		recv = resp.d.asBytes;
+		if (ISO15_CRC_CHECK==Crc(recv,resp.arg[0])) {
 			if (!(recv[0] & ISO15_RES_ERROR)) {					
 				PrintAndLog("OK");	
 			} else {
