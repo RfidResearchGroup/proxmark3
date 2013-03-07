@@ -1133,7 +1133,7 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 			respdata = &nack;
 			respsize = sizeof(nack); // 4-bit answer
 		} else if(receivedCmd[0] == 0x50) {	// Received a HALT
-			DbpString("Reader requested we HALT!:");
+//			DbpString("Reader requested we HALT!:");
 			// Do not respond
 			resp = resp1; respLen = 0; order = 0;
 			respdata = NULL;
@@ -1147,16 +1147,19 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 			respdata = response6;
 			respsize = sizeof(response6);
 		} else {
-			// Never seen this command before
-			Dbprintf("Received (len=%d): %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-			len,
-			receivedCmd[0], receivedCmd[1], receivedCmd[2],
-			receivedCmd[3], receivedCmd[4], receivedCmd[5],
-			receivedCmd[6], receivedCmd[7], receivedCmd[8]);
-			// Do not respond
-			resp = resp1; respLen = 0; order = 0;
-			respdata = NULL;
-			respsize = 0;
+      if (order == 7 && len ==8) {
+        uint32_t nr = bytes_to_num(receivedCmd,4);
+        uint32_t ar = bytes_to_num(receivedCmd+4,4);
+        Dbprintf("Auth attempt {nr}{ar}: %08x %08x",nr,ar);
+      } else {
+        // Never seen this command before
+        Dbprintf("Received unknown command (len=%d):",len);
+        Dbhexdump(len,receivedCmd,false);
+      }
+      // Do not respond
+      resp = resp1; respLen = 0; order = 0;
+      respdata = NULL;
+      respsize = 0;
 		}
 
 		// Count number of wakeups received after a halt

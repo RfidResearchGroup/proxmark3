@@ -11,5 +11,5 @@
  +   1287:    :     a1  e4  58  ce  6e  ea  41  e0
  +     64:   0: TAG 5c  ad  f4  39
 
-./mfkey 9c599b32 82a4166c a1e458ce 6eea41e0 5cadf439
+./mfkey64 9c599b32 82a4166c a1e458ce 6eea41e0 5cadf439
 

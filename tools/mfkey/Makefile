@@ -5,7 +5,7 @@ LDFLAGS =
 
 OBJS = crapto1.o crypto1.o
 HEADERS = 
-EXES = mfkey
+EXES = mfkey64 mfkey32
 LIBS =
 	
 all: $(OBJS) $(EXES) $(LIBS)
