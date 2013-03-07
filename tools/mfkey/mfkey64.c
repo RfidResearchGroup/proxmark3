@@ -1,11 +1,15 @@
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+#define llx PRIx64
+#define lli PRIi64
+
 // Test-file: test2.c
 #include "crapto1.h"
 #include <stdio.h>
 
 int main (int argc, char *argv[]) {
   struct Crypto1State *revstate;
-  uint64_t lfsr;
-  uint8_t* plfsr = (uint8_t*)&lfsr;
+  uint64_t key;     // recovered key
   uint32_t uid;     // serial number
   uint32_t nt;      // tag challenge
   uint32_t nr_enc;  // encrypted reader challenge
@@ -14,7 +18,8 @@ int main (int argc, char *argv[]) {
   uint32_t ks2;     // keystream used to encrypt reader response
   uint32_t ks3;     // keystream used to encrypt tag response
 
-  printf("MIFARE Classic key recovery\n\n");
+  printf("MIFARE Classic key recovery - based 64 bits of keystream\n");
+  printf("Recover key from only one complete authentication!\n\n");
 
   if (argc < 6) {
     printf(" syntax: %s <uid> <nt> <{nr}> <{ar}> <{at}>\n\n",argv[0]);
@@ -58,8 +63,8 @@ int main (int argc, char *argv[]) {
   lfsr_rollback_word(revstate, 0, 0);
   lfsr_rollback_word(revstate, nr_enc, 1);
   lfsr_rollback_word(revstate, uid ^ nt, 0);
-  crypto1_get_lfsr(revstate, &lfsr);
-  printf("\nFound Key: [%02x %02x %02x %02x %02x %02x]\n\n",plfsr[5],plfsr[4],plfsr[3],plfsr[2],plfsr[1],plfsr[0]);
+  crypto1_get_lfsr(revstate, &key);
+  printf("\nFound Key: [%012"llx"]\n\n",key);
   crypto1_destroy(revstate);
 
   return 0;
