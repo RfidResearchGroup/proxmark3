@@ -74,10 +74,10 @@ int CmdHIDSim(const char *Cmd)
     c.d.asBytes[0] = 0;
   }
   
-  c.cmd = CMD_HID_CLONE_TAG;
-	c.arg[0] = hi2;
-	c.arg[1] = hi;
-	c.arg[2] = lo;
+  c.cmd = CMD_HID_SIM_TAG;
+  c.arg[0] = hi2;
+  c.arg[1] = hi;
+  c.arg[2] = lo;
   
 //  UsbCommand c = {CMD_HID_SIM_TAG, {hi, lo, 0}};
   SendCommand(&c);
