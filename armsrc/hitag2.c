@@ -29,6 +29,34 @@ bool bAuthenticating;
 bool bPwd;
 bool bSuccessful;
 
+size_t nbytes(size_t nbits) {
+	return (nbits/8)+((nbits%8)>0);
+}
+
+int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int bReader)
+{
+  // Return when trace is full
+  if (traceLen >= TRACE_SIZE) return FALSE;
+  
+  // Trace the random, i'm curious
+  rsamples += iSamples;
+  trace[traceLen++] = ((rsamples >> 0) & 0xff);
+  trace[traceLen++] = ((rsamples >> 8) & 0xff);
+  trace[traceLen++] = ((rsamples >> 16) & 0xff);
+  trace[traceLen++] = ((rsamples >> 24) & 0xff);
+  if (!bReader) {
+    trace[traceLen - 1] |= 0x80;
+  }
+  trace[traceLen++] = ((dwParity >> 0) & 0xff);
+  trace[traceLen++] = ((dwParity >> 8) & 0xff);
+  trace[traceLen++] = ((dwParity >> 16) & 0xff);
+  trace[traceLen++] = ((dwParity >> 24) & 0xff);
+  trace[traceLen++] = iBits;
+  memcpy(trace + traceLen, btBytes, nbytes(iBits));
+  traceLen += nbytes(iBits);
+  return TRUE;
+}
+
 struct hitag2_tag {
 	uint32_t uid;
 	enum {
@@ -151,10 +179,6 @@ static u32 _hitag2_byte (u64 * x)
 
 	for (i = 0, c = 0; i < 8; i++) c += (u32) _hitag2_round (x) << (i^7);
 	return c;
-}
-
-size_t nbytes(size_t nbits) {
-	return (nbits/8)+((nbits%8)>0);
 }
 
 int hitag2_reset(void)
@@ -399,8 +423,8 @@ void hitag2_handle_reader_command(byte_t* rx, const size_t rxlen, byte_t* tx, si
 		break;
 	}
 
-//	LogTrace(rx,nbytes(rxlen),0,0,false);
-//	LogTrace(tx,nbytes(*txlen),0,0,true);
+//	LogTraceHitag(rx,rxlen,0,0,false);
+//	LogTraceHitag(tx,*txlen,0,0,true);
 	
 	if(tag.crypto_active) {
 		hitag2_cipher_transcrypt(&(tag.cs), tx, *txlen/8, *txlen%8);
@@ -853,7 +877,7 @@ void SnoopHitag(uint32_t type) {
 		// Check if frame was captured
 		if(rxlen > 0) {
 			frame_count++;
-			if (!LogTrace(rx,nbytes(rxlen),response,0,reader_frame)) {
+			if (!LogTraceHitag(rx,rxlen,response,0,reader_frame)) {
 				DbpString("Trace full");
 				break;
 			}
@@ -1016,7 +1040,7 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 		if(rxlen > 4) {
 			frame_count++;
 			if (!bQuiet) {
-				if (!LogTrace(rx,nbytes(rxlen),response,0,true)) {
+				if (!LogTraceHitag(rx,rxlen,response,0,true)) {
 					DbpString("Trace full");
 					if (bQuitTraceFull) {
 						break;
@@ -1045,7 +1069,7 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 				hitag_send_frame(tx,txlen);
 				// Store the frame in the trace
 				if (!bQuiet) {
-					if (!LogTrace(tx,nbytes(txlen),0,0,false)) {
+					if (!LogTraceHitag(tx,txlen,0,0,false)) {
 						DbpString("Trace full");
 						if (bQuitTraceFull) {
 							break;
@@ -1226,7 +1250,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 		if(rxlen > 0) {
 			frame_count++;
 			if (!bQuiet) {
-				if (!LogTrace(rx,nbytes(rxlen),response,0,false)) {
+				if (!LogTraceHitag(rx,rxlen,response,0,false)) {
 					DbpString("Trace full");
 					if (bQuitTraceFull) {
 						break;
@@ -1280,7 +1304,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 			frame_count++;
 			if (!bQuiet) {
 				// Store the frame in the trace
-				if (!LogTrace(tx,nbytes(txlen),HITAG_T_WAIT_2,0,true)) {
+				if (!LogTraceHitag(tx,txlen,HITAG_T_WAIT_2,0,true)) {
 					if (bQuitTraceFull) {
 						break;
 					} else {

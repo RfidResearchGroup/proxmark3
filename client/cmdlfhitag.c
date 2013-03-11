@@ -24,6 +24,10 @@
 
 static int CmdHelp(const char *Cmd);
 
+size_t nbytes(size_t nbits) {
+	return (nbits/8)+((nbits%8)>0);
+}
+
 int CmdLFHitagList(const char *Cmd)
 {
   uint8_t got[3000];
@@ -31,8 +35,8 @@ int CmdLFHitagList(const char *Cmd)
   WaitForResponse(CMD_ACK,NULL);
 
   PrintAndLog("recorded activity:");
-  PrintAndLog(" ETU     :rssi: who bytes");
-  PrintAndLog("---------+----+----+-----------");
+  PrintAndLog(" ETU     :nbits: who bytes");
+  PrintAndLog("---------+-----+----+-----------");
 
   int i = 0;
   int prev = -1;
@@ -54,7 +58,6 @@ int CmdLFHitagList(const char *Cmd)
       isResponse = 0;
     }
 
-    int metric = 0;
     int parityBits = *((uint32_t *)(got+i+4));
     // 4 bytes of additional information...
     // maximum of 32 additional parity bit information
@@ -63,7 +66,8 @@ int CmdLFHitagList(const char *Cmd)
     // at each quarter bit period we can send power level (16 levels)
     // or each half bit period in 256 levels.
 
-    int len = got[i+8];
+    int bits = got[i+8];
+    int len = nbytes(got[i+8]);
 
     if (len > 100) {
       break;
@@ -96,27 +100,19 @@ int CmdLFHitagList(const char *Cmd)
       }
     }
 
-    char metricString[100];
-    if (isResponse) {
-      sprintf(metricString, "%3d", metric);
-    } else {
-      strcpy(metricString, "   ");
-    }
-
-    PrintAndLog(" +%7d: %s: %s %s",
+    PrintAndLog(" +%7d:  %3d: %s %s",
       (prev < 0 ? 0 : (timestamp - prev)),
-      metricString,
+      bits,
       (isResponse ? "TAG" : "   "),
       line);
 
 
    if (pf) {
-      fprintf(pf," +%7d: %s: %s %s %s",
+      fprintf(pf," +%7d:  %3d: %s %s\n",
 					(prev < 0 ? 0 : (timestamp - prev)),
-					metricString,
+					bits,
 					(isResponse ? "TAG" : "   "),
-					line,
-					"\n");
+					line);
     }
 	
     prev = timestamp;
