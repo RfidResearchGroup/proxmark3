@@ -13,15 +13,18 @@
 
 #include <stdint.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 # define HOST_LITTLE_ENDIAN
 #else
 # include <sys/types.h>
-
+# ifndef BYTE_ORDER
+#  define BYTE_ORDER __BYTE_ORDER
+#  define LITTLE_ENDIAN __LITTLE_ENDIAN
+#  define BIG_ENDIAN __BIG_ENDIAN
+# endif
 # if !defined(BYTE_ORDER) || (BYTE_ORDER != LITTLE_ENDIAN && BYTE_ORDER != BIG_ENDIAN)
 #  error Define BYTE_ORDER to be equal to either LITTLE_ENDIAN or BIG_ENDIAN
 # endif
-
 # if BYTE_ORDER == LITTLE_ENDIAN
 #  define HOST_LITTLE_ENDIAN
 # endif
