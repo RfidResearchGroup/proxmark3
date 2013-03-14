@@ -23,6 +23,7 @@
 #include "uart.h"
 #include "messages.h"
 #include "ui.h"
+#include "sleep.h"
 
 static serial_port sp;
 static UsbCommand txcmd;

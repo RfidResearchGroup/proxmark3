@@ -8,20 +8,21 @@
 // platform-independant sleep macros
 //-----------------------------------------------------------------------------
 
-#ifndef SLEEP_H__
-#define SLEEP_H__
+#ifndef _WIN32
 
-#ifdef _WIN32
-# include <windows.h>
-# define sleep(n) Sleep(1000 * n)
-# define msleep(n) Sleep(n)
-#else
-# include <inttypes.h>
-# include <unistd.h>
-  void nsleep(uint64_t n);
-# define msleep(n) nsleep(1000000 * n)
-# define usleep(n) nsleep(1000 * n)
+#define _POSIX_C_SOURCE	199309L
+#include "sleep.h"
+#include <time.h>
+#include <stdio.h>
+#include <sys/time.h>
+#include <errno.h>
+
+void nsleep(uint64_t n) {
+  struct timespec timeout;
+  timeout.tv_sec = n/1000000000;
+  timeout.tv_nsec = n%1000000000;
+  while (nanosleep(&timeout, &timeout) && errno == EINTR);
+}
+
 #endif // _WIN32
-
-#endif // SLEEP_H__
 

@@ -18,7 +18,6 @@
 #define lli PRIi64
 #define hhu PRIu8
 
-#include <usb.h>
 #include "usb_cmd.h"
 
 #define PROXPROMPT "proxmark3> "

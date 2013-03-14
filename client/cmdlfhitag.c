@@ -147,7 +147,10 @@ int CmdLFHitagSim(const char *Cmd) {
 			return 1;
 		}
 		tag_mem_supplied = true;
-		fread(c.d.asBytes,48,1,pf);
+		if (fread(c.d.asBytes,48,1,pf) == 0) {
+      PrintAndLog("Error: File reading error");
+			return 1;
+    }
 		fclose(pf);
 	} else {
 		tag_mem_supplied = false;

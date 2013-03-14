@@ -287,10 +287,16 @@ int CmdHF14AMfDump(const char *Cmd)
 	// Read key file
 	
 	for (i=0 ; i<16 ; i++) {
-		fread ( keyA[i], 1, 6, fin );
+		if (fread( keyA[i], 1, 6, fin ) == 0) {
+      PrintAndLog("File reading error.");
+			return 2;
+    }
 	}
 	for (i=0 ; i<16 ; i++) {
-		fread ( keyB[i], 1, 6, fin );
+		if (fread( keyB[i], 1, 6, fin ) == 0) {
+      PrintAndLog("File reading error.");
+			return 2;
+    }
 	}
 	
 	// Read access rights to sectors
@@ -416,10 +422,16 @@ int CmdHF14AMfRestore(const char *Cmd)
 	}
 	
 	for (i=0 ; i<16 ; i++) {
-		fread(keyA[i], 1, 6, fkeys);
+		if (fread(keyA[i], 1, 6, fkeys) == 0) {
+      PrintAndLog("File reading error.");
+			return 2;
+    }
 	}
 	for (i=0 ; i<16 ; i++) {
-		fread(keyB[i], 1, 6, fkeys);
+		if (fread(keyB[i], 1, 6, fkeys) == 0) {
+      PrintAndLog("File reading error.");
+			return 2;
+    }
 	}
 	
 	PrintAndLog("Restoring dumpdata.bin to card");
@@ -429,7 +441,10 @@ int CmdHF14AMfRestore(const char *Cmd)
 			UsbCommand c = {CMD_MIFARE_WRITEBL, {i*4 + j, keyType, 0}};
 			memcpy(c.d.asBytes, key, 6);
 			
-			fread(bldata, 1, 16, fdump);
+			if (fread(bldata, 1, 16, fdump) == 0) {
+        PrintAndLog("File reading error.");
+        return 2;
+      }
 					
 			if (j == 3) {
 				bldata[0]  = (keyA[i][0]);
@@ -816,8 +831,11 @@ int CmdHF14AMfChk(const char *Cmd)
 			if ( (f = fopen( filename , "r")) ) {
 				while( !feof(f) ){
 					memset(buf, 0, sizeof(buf));
-					fgets(buf, sizeof(buf), f);
-					
+					if (fgets(buf, sizeof(buf), f) == NULL) {
+            PrintAndLog("File reading error.");
+            return 2;
+          }
+          
 					if (strlen(buf) < 12 || buf[11] == '\n')
 						continue;
 				
@@ -1077,7 +1095,10 @@ int CmdHF14AMfELoad(const char *Cmd)
 	blockNum = 0;
 	while(!feof(f)){
 		memset(buf, 0, sizeof(buf));
-		fgets(buf, sizeof(buf), f);
+		if (fgets(buf, sizeof(buf), f) == NULL) {
+      PrintAndLog("File reading error.");
+			return 2;
+    }
 
 		if (strlen(buf) < 32){
 			if(strlen(buf) && feof(f))
@@ -1344,7 +1365,10 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;
 		while(!feof(f)){
 			memset(buf, 0, sizeof(buf));
-			fgets(buf, sizeof(buf), f);
+			if (fgets(buf, sizeof(buf), f) == NULL) {
+        PrintAndLog("File reading error.");
+        return 2;
+      }
 
 			if (strlen(buf) < 32){
 				if(strlen(buf) && feof(f))

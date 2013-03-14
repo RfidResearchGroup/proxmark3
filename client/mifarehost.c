@@ -326,7 +326,10 @@ int loadTraceCard(uint8_t *tuid) {
 	blockNum = 0;
 	while(!feof(f)){
 		memset(buf, 0, sizeof(buf));
-		fgets(buf, sizeof(buf), f);
+		if (fgets(buf, sizeof(buf), f) == NULL) {
+      PrintAndLog("File reading error.");
+			return 2;
+    }
 
 		if (strlen(buf) < 32){
 			if (feof(f)) break;

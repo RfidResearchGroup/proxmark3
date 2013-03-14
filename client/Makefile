@@ -12,7 +12,7 @@ CXX=g++
 VPATH = ../common
 OBJDIR = obj
 
-LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb -lreadline -lpthread
+LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread
 LDFLAGS = $(COMMON_FLAGS)
 CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O4
 
@@ -39,10 +39,14 @@ else
 QTGUI = guidummy.o
 endif
 
-CMDSRCS = \
-			nonce2key/crapto1.c\
-			nonce2key/crypto1.c\
-			nonce2key/nonce2key.c\
+CORESRCS = 	uart.c \
+		util.c \
+		sleep.c
+
+
+CMDSRCS = 	nonce2key/crapto1.c\
+		nonce2key/crypto1.c\
+		nonce2key/nonce2key.c\
 			mifarehost.c\
 			crc16.c \
 			iso14443crc.c \
@@ -50,8 +54,6 @@ CMDSRCS = \
 			data.c \
 			graph.c \
 			ui.c \
-			uart.c \
-			util.c \
 			cmddata.c \
 			cmdhf.c \
 			cmdhf14a.c \
@@ -72,6 +74,7 @@ CMDSRCS = \
 			cmdlft55xx.c \
 			cmdlfpcf7931.c
 
+COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
 
 RM = rm -f
@@ -84,16 +87,16 @@ all-static: LDLIBS:=-static $(LDLIBS)
 all-static: snooper cli flasher
 	
 proxmark3: LDLIBS+=$(QTLDLIBS)
-proxmark3: $(OBJDIR)/proxmark3.o $(CMDOBJS) $(OBJDIR)/uart.o $(QTGUI)
+proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(QTGUI)
 	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
-snooper: $(OBJDIR)/snooper.o $(CMDOBJS) $(OBJDIR)/uart.o $(OBJDIR)/guidummy.o
+snooper: $(OBJDIR)/snooper.o $(COREOBJS) $(CMDOBJS) $(OBJDIR)/guidummy.o
 	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
-cli: $(OBJDIR)/cli.o $(CMDOBJS) $(OBJDIR)/uart.o $(OBJDIR)/guidummy.o
+cli: $(OBJDIR)/cli.o $(COREOBJS) $(CMDOBJS) $(OBJDIR)/guidummy.o
 	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
-flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(OBJDIR)/uart.o
+flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS)
 	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
 $(OBJDIR)/%.o: %.c
