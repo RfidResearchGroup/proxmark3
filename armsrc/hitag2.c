@@ -677,12 +677,19 @@ bool hitag2_test_auth_attempts(byte_t* rx, const size_t rxlen, byte_t* tx, size_
 		case 0: {
 			// Stop if there is no answer while we are in crypto mode (after sending NrAr)
 			if (bCrypto) {
-				Dbprintf("auth: %02x%02x%02x%02x%02x%02x%02x%02x Failed!",NrAr[0],NrAr[1],NrAr[2],NrAr[3],NrAr[4],NrAr[5],NrAr[6],NrAr[7]);
+				Dbprintf("auth: %02x%02x%02x%02x%02x%02x%02x%02x Failed, removed entry!",NrAr[0],NrAr[1],NrAr[2],NrAr[3],NrAr[4],NrAr[5],NrAr[6],NrAr[7]);
+
+        // Removing failed entry from authentiations table
+        memcpy(auth_table+auth_table_pos,auth_table+auth_table_pos+8,8);
+        auth_table_len -= 8;
+
+        // Return if we reached the end of the authentiactions table
 				bCrypto = false;
-				if ((auth_table_pos+8) == auth_table_len) {
+				if (auth_table_pos == auth_table_len) {
 					return false;
 				}
-				auth_table_pos += 8;
+        
+        // Copy the next authentication attempt in row (at the same position, b/c we removed last failed entry)
 				memcpy(NrAr,auth_table+auth_table_pos,8);
 			}
 			*txlen = 5;
