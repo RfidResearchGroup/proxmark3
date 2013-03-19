@@ -90,6 +90,14 @@ serial_port uart_open(const char* pcPortName)
   sp->tiNew.c_iflag = CCLAIMED | IGNPAR;
   sp->tiNew.c_oflag = 0;
   sp->tiNew.c_lflag = 0;
+  
+  // Set serial port equivalent to raw mode
+//  sp->tiNew.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+//  sp->tiNew.c_oflag &= ~OPOST;
+//  sp->tiNew.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+//  sp->tiNew.c_cflag &= ~(CSIZE | PARENB);
+//  sp->tiNew.c_iflag |= CCLAIMED | IGNPAR;
+//  sp->tiNew.c_cflag |= CS8 | CLOCAL | CREAD;
 
   sp->tiNew.c_cc[VMIN] = 0;      // block until n bytes are received
   sp->tiNew.c_cc[VTIME] = 0;     // block until a timer expires (n * 100 mSec.)
@@ -100,7 +108,7 @@ serial_port uart_open(const char* pcPortName)
     return INVALID_SERIAL_PORT;
   }
 
-  tcflush(sp->fd, TCIFLUSH);
+  tcflush(sp->fd, TCIOFLUSH);
   return sp;
 }
 
@@ -171,6 +179,7 @@ uint32_t uart_get_speed(const serial_port sp)
 
 void uart_close(const serial_port sp)
 {
+  tcflush(((serial_port_unix*)sp)->fd,TCIOFLUSH);
   tcsetattr(((serial_port_unix*)sp)->fd,TCSANOW,&((serial_port_unix*)sp)->tiOld);
   close(((serial_port_unix*)sp)->fd);
   free(sp);
