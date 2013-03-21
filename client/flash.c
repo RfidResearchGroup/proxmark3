@@ -337,14 +337,14 @@ static int enter_bootloader(void)
 			SendCommand(&c);
 			fprintf(stderr,"Press and hold down button NOW if your bootloader requires it.\n");
 		}
-		fprintf(stderr,"Waiting for Proxmark to reappear on USB...");
-
+    msleep(100);
 		CloseProxmark();
-		sleep(1);
-		while (!OpenProxmark(0)) {
+
+		fprintf(stderr,"Waiting for Proxmark to reappear on USB...");
+    do {
 			sleep(1);
 			fprintf(stderr, ".");
-		}
+		} while (!OpenProxmark(0));
 		fprintf(stderr," Found.\n");
 
 		return 0;
@@ -488,5 +488,6 @@ int flash_stop_flashing(void) {
 	UsbCommand c = {CMD_HARDWARE_RESET};
 //	SendCommand_(&c);
   SendCommand(&c);
+  msleep(100);
   return 0;
 }
