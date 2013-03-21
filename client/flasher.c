@@ -122,11 +122,13 @@ int main(int argc, char **argv)
 	}
 
   serial_port_name = argv[1];
-	fprintf(stderr, "Waiting for Proxmark to appear on USB...");
-	while (!OpenProxmark(0)) {
-		fprintf(stderr, ".");
-	}
-	fprintf(stderr, " Found.\n");
+  
+  fprintf(stderr,"Waiting for Proxmark to appear on USB...");
+  do {
+    sleep(1);
+    fprintf(stderr, ".");
+  } while (!OpenProxmark(0));
+  fprintf(stderr," Found.\n");
 
 	res = flash_start_flashing(can_write_bl);
 	if (res < 0)
