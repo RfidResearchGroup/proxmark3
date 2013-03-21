@@ -15,6 +15,10 @@
 #include "uart.h"
 #include "usb_cmd.h"
 
+#ifdef _WIN32
+# define unlink(x)
+#endif
+
 static serial_port sp;
 static char* serial_port_name;
 
@@ -62,6 +66,8 @@ void ReceiveCommand(UsbCommand* rxcmd) {
 void CloseProxmark() {
   // Clean up the port
   uart_close(sp);
+  // Fix for linux, it seems that it is extremely slow to release the serial port file descriptor /dev/*
+  unlink(serial_port_name);
 }
 
 int OpenProxmark(size_t i) {

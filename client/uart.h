@@ -1,7 +1,7 @@
 /*
- * Proxmark3 generic uart / rs232/ serial port library
+ * Generic uart / rs232/ serial port library
  *
- * Copyright (c) 2012, Roel Verdult
+ * Copyright (c) 2013, Roel Verdult
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,8 +31,8 @@
  *
  */
 
-#ifndef _PROXMARK3_RS232_H_
-#define _PROXMARK3_RS232_H_
+#ifndef _RS232_H_
+#define _RS232_H_
 
 #include <stdio.h>
 #include <string.h>
@@ -53,6 +53,7 @@ typedef unsigned char byte_t;
   #include <sys/stat.h>
   #include <limits.h>
   #include <sys/time.h>
+  #include <errno.h>
 #else
   #include <windows.h>
 #endif
@@ -65,7 +66,7 @@ typedef void* serial_port;
 serial_port uart_open(const char* pcPortName);
 void uart_close(const serial_port sp);
 
-void uart_set_speed(serial_port sp, const uint32_t uiPortSpeed);
+bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed);
 uint32_t uart_get_speed(const serial_port sp);
 
 bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t* pszRxLen);
