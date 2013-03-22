@@ -58,6 +58,13 @@ typedef unsigned char byte_t;
   #include <windows.h>
 #endif
 
+typedef enum {
+  SP_INVALID = 0x00, // invalid value, error occured
+  SP_NONE    = 0x01, // no parity (default)
+  SP_EVEN    = 0x02, // even parity
+  SP_ODD     = 0x03  // odd parity
+} serial_port_parity;
+
 // Define shortcut to types to make code more readable
 typedef void* serial_port;
 #define INVALID_SERIAL_PORT (void*)(~1)
@@ -68,6 +75,9 @@ void uart_close(const serial_port sp);
 
 bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed);
 uint32_t uart_get_speed(const serial_port sp);
+
+bool uart_set_parity(serial_port sp, serial_port_parity spp);
+serial_port_parity uart_get_parity(const serial_port sp);
 
 bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t* pszRxLen);
 bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen);
