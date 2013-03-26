@@ -2,7 +2,7 @@ include common/Makefile.common
 
 GZIP=gzip
 
-all clean: %: bootrom/% armsrc/% client/%
+all clean: %: bootrom/% armsrc/% client/% recovery/%
 
 bootrom/%: FORCE
 	$(MAKE) -C bootrom $(patsubst bootrom/%,%,$@)
@@ -10,6 +10,8 @@ armsrc/%: FORCE
 	$(MAKE) -C armsrc $(patsubst armsrc/%,%,$@)
 client/%: FORCE
 	$(MAKE) -C client $(patsubst client/%,%,$@)
+recovery/%: FORCE
+	$(MAKE) -C recovery $(patsubst recovery/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
 
