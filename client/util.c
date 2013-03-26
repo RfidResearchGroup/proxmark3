@@ -188,7 +188,7 @@ uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base)
 	int bg, en;
 
 	if (!param_getptr(line, &bg, &en, paramnum)) 
-		return strtol(&line[bg], NULL, base) & 0xff;
+		return strtoul(&line[bg], NULL, base) & 0xff;
 	else
 		return deflt;
 }
@@ -198,7 +198,7 @@ uint32_t param_get32ex(const char *line, int paramnum, int deflt, int base)
 	int bg, en;
 
 	if (!param_getptr(line, &bg, &en, paramnum)) 
-		return strtol(&line[bg], NULL, base);
+		return strtoul(&line[bg], NULL, base);
 	else
 		return deflt;
 }
@@ -208,7 +208,7 @@ uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base)
 	int bg, en;
 
 	if (!param_getptr(line, &bg, &en, paramnum)) 
-		return strtoll(&line[bg], NULL, base);
+		return strtoull(&line[bg], NULL, base);
 	else
 		return deflt;
 
