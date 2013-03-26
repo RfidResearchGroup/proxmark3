@@ -72,7 +72,7 @@ void CloseProxmark() {
 
 int OpenProxmark(size_t i) {
   sp = uart_open(serial_port_name);
-  if (sp == INVALID_SERIAL_PORT) {
+  if (sp == INVALID_SERIAL_PORT || sp == CLAIMED_SERIAL_PORT) {
     //poll once a second
     return 0;
   }

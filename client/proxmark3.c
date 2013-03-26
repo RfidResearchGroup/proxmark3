@@ -221,9 +221,14 @@ int main(int argc, char* argv[]) {
     offline = 0;
   }
 */
+  
   sp = uart_open(argv[1]);
   if (sp == INVALID_SERIAL_PORT) {
     printf("ERROR: invalid serial port\n");
+    marg.usb_present = 0;
+    offline = 1;
+  } else if (sp == CLAIMED_SERIAL_PORT) {
+    printf("ERROR: serial port is claimed by another process\n");
     marg.usb_present = 0;
     offline = 1;
   } else {
