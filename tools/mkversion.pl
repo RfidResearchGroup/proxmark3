@@ -11,7 +11,6 @@ $ENV{'LC_ALL'} = "C";
 $ENV{'LANG'} = "C";
 
 my $svnversion = 0;
-my $present = 0;
 my $clean = 2;
 my @compiletime = gmtime();
 
@@ -19,7 +18,6 @@ my @compiletime = gmtime();
 if(open(SVNINFO, "svn info $main_dir|")) {
 	while(<SVNINFO>) {
 		if (/^Last Changed Rev: (.*)/) {
-			$present = 1;
 			$svnversion = $1;
 			## last; # Do not abort here, since SVN tends to complain about a Broken pipe
 		}
@@ -46,7 +44,6 @@ if(open(SVNINFO, "svn info $main_dir|")) {
 		while(<ENTRIES>) {
 			last if($i == 3 and !/^dir/);
 			if($i == 11 and /^([0-9]*)/) {
-				$present = 1;
 				$svnversion = $1;
 			}
 			$i++;
@@ -65,7 +62,7 @@ print <<EOF
 const struct version_information __attribute__((section(".version_information"))) version_information = {
 	VERSION_INFORMATION_MAGIC,
 	1,
-	$present,
+	1,
 	$clean,
 	"svn $svnversion",
 	"$ctime",
