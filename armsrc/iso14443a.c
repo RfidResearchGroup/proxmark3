@@ -1728,12 +1728,12 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
   }
 
 	// Request for answer to select
-	if(p_hi14a_card) {  // JCOP cards - if reader sent RATS then there is no MIFARE session at all!!!
-		AppendCrc14443a(rats, 2);
-		ReaderTransmit(rats, sizeof(rats));
-		
-		if (!(len = ReaderReceive(resp))) return 0;
-		
+  AppendCrc14443a(rats, 2);
+  ReaderTransmit(rats, sizeof(rats));
+  
+  if (!(len = ReaderReceive(resp))) return 0;
+
+  if(p_hi14a_card) {
 		memcpy(p_hi14a_card->ats, resp, sizeof(p_hi14a_card->ats));
 		p_hi14a_card->ats_len = len;
 	}
