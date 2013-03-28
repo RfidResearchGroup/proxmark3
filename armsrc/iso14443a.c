@@ -898,13 +898,21 @@ static int GetIso14443aCommandFromReader(uint8_t *received, int *len, int maxLen
         }
     }
 }
+
 static int EmSendCmd14443aRaw(uint8_t *resp, int respLen, int correctionNeeded);
+int EmSend4bitEx(uint8_t resp, int correctionNeeded);
+int EmSend4bit(uint8_t resp);
+int EmSendCmdExPar(uint8_t *resp, int respLen, int correctionNeeded, uint32_t par);
+int EmSendCmdExPar(uint8_t *resp, int respLen, int correctionNeeded, uint32_t par);
+int EmSendCmdEx(uint8_t *resp, int respLen, int correctionNeeded);
+int EmSendCmd(uint8_t *resp, int respLen);
+int EmSendCmdPar(uint8_t *resp, int respLen, uint32_t par);
 
 //-----------------------------------------------------------------------------
 // Main loop of simulated tag: receive commands from reader, decide what
 // response to send, and send it.
 //-----------------------------------------------------------------------------
-void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
+void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 {
   // Enable and clear the trace
 	tracing = TRUE;
@@ -1024,7 +1032,7 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 
 	// Response to a read request - not implemented atm
 	uint8_t *resp4 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*4));
-	int resp4Len;
+//	int resp4Len;
 
 	// Authenticate response - nonce
 	uint8_t *resp5 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*5));
@@ -1048,7 +1056,7 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 	int cmdsRecvd = 0;
 	uint8_t* respdata = NULL;
 	int respsize = 0;
-	uint8_t nack = 0x04;
+//	uint8_t nack = 0x04;
 
 	memset(receivedCmd, 0x44, RECV_CMD_SIZE);
 
@@ -1077,7 +1085,7 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 
 	// Strange answer is an example of rare message size (3 bits)
 	CodeStrangeAnswerAsTag();
-	memcpy(resp4, ToSend, ToSendMax); resp4Len = ToSendMax;
+	memcpy(resp4, ToSend, ToSendMax);// resp4Len = ToSendMax;
 
 	// Authentication answer (random nonce)
 	CodeIso14443aAsTag(response5, sizeof(response5));
@@ -1100,6 +1108,11 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 			DbpString("button press");
 			break;
 		}
+    
+    if (tracing) {
+			LogTrace(receivedCmd,len, 0, Uart.parityBits, TRUE);
+    }
+    
 		// doob - added loads of debug strings so we can see what the reader is saying to us during the sim as hi14alist is not populated
 		// Okay, look at the command now.
 		lastorder = order;
@@ -1128,10 +1141,13 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 			respdata = response3a;
 			respsize = sizeof(response3a);
 		} else if(receivedCmd[0] == 0x30) {	// Received a (plain) READ
-			resp = resp4; respLen = resp4Len; order = 4; // Do nothing
+//			resp = resp4; respLen = resp4Len; order = 4; // Do nothing
+//			respdata = &nack;
+//			respsize = sizeof(nack); // 4-bit answer
+      EmSendCmdEx(data+(4*receivedCmd[0]),16,false);
 			Dbprintf("Read request from reader: %x %x",receivedCmd[0],receivedCmd[1]);
-			respdata = &nack;
-			respsize = sizeof(nack); // 4-bit answer
+      // We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
+      respLen = 0;
 		} else if(receivedCmd[0] == 0x50) {	// Received a HALT
 //			DbpString("Reader requested we HALT!:");
 			// Do not respond
@@ -1186,7 +1202,6 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd)
 		}
 		
 		if (tracing) {
-			LogTrace(receivedCmd,len, 0, Uart.parityBits, TRUE);
 			if (respdata != NULL) {
 				LogTrace(respdata,respsize, 0, SwapBits(GetParity(respdata,respsize),respsize), FALSE);
 			}
