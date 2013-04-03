@@ -1262,68 +1262,9 @@ static void TransmitFor14443a(const uint8_t *cmd, int len, int *samples, int *wa
 }
 
 //-----------------------------------------------------------------------------
-// Code a 7-bit command without parity bit
-// This is especially for 0x26 and 0x52 (REQA and WUPA)
+// Prepare reader command (in bits, support short frames) to send to FPGA
 //-----------------------------------------------------------------------------
-void ShortFrameFromReader(const uint8_t bt)
-{
-	int j;
-	int last;
-  uint8_t b;
-
-	ToSendReset();
-
-	// Start of Communication (Seq. Z)
-	ToSend[++ToSendMax] = SEC_Z;
-	last = 0;
-
-	b = bt;
-	for(j = 0; j < 7; j++) {
-		if(b & 1) {
-			// Sequence X
-			ToSend[++ToSendMax] = SEC_X;
-			last = 1;
-		} else {
-			if(last == 0) {
-				// Sequence Z
-				ToSend[++ToSendMax] = SEC_Z;
-			}
-			else {
-				// Sequence Y
-				ToSend[++ToSendMax] = SEC_Y;
-				last = 0;
-			}
-		}
-		b >>= 1;
-	}
-
-	// End of Communication
-	if(last == 0) {
-		// Sequence Z
-		ToSend[++ToSendMax] = SEC_Z;
-	}
-	else {
-		// Sequence Y
-		ToSend[++ToSendMax] = SEC_Y;
-		last = 0;
-	}
-	// Sequence Y
-	ToSend[++ToSendMax] = SEC_Y;
-
-	// Just to be sure!
-	ToSend[++ToSendMax] = SEC_Y;
-	ToSend[++ToSendMax] = SEC_Y;
-	ToSend[++ToSendMax] = SEC_Y;
-
-    // Convert from last character reference to length
-    ToSendMax++;
-}
-
-//-----------------------------------------------------------------------------
-// Prepare reader command to send to FPGA
-//
-//-----------------------------------------------------------------------------
-void CodeIso14443aAsReaderPar(const uint8_t * cmd, int len, uint32_t dwParity)
+void CodeIso14443aBitsAsReaderPar(const uint8_t * cmd, int bits, uint32_t dwParity)
 {
   int i, j;
   int last;
@@ -1335,12 +1276,14 @@ void CodeIso14443aAsReaderPar(const uint8_t * cmd, int len, uint32_t dwParity)
   ToSend[++ToSendMax] = SEC_Z;
   last = 0;
 
+  size_t bytecount = nbytes(bits);
   // Generate send structure for the data bits
-  for (i = 0; i < len; i++) {
+  for (i = 0; i < bytecount; i++) {
     // Get the current byte to send
     b = cmd[i];
+    size_t bitsleft = MIN((bits-(i*8)),8);
 
-    for (j = 0; j < 8; j++) {
+    for (j = 0; j < bitsleft; j++) {
       if (b & 1) {
         // Sequence X
     	  ToSend[++ToSendMax] = SEC_X;
@@ -1358,19 +1301,22 @@ void CodeIso14443aAsReaderPar(const uint8_t * cmd, int len, uint32_t dwParity)
       b >>= 1;
     }
 
-    // Get the parity bit
-    if ((dwParity >> i) & 0x01) {
-      // Sequence X
-    	ToSend[++ToSendMax] = SEC_X;
-      last = 1;
-    } else {
-      if (last == 0) {
-        // Sequence Z
-    	  ToSend[++ToSendMax] = SEC_Z;
+    // Only transmit (last) parity bit if we transmitted a complete byte
+    if (j == 8) {
+      // Get the parity bit
+      if ((dwParity >> i) & 0x01) {
+        // Sequence X
+        ToSend[++ToSendMax] = SEC_X;
+        last = 1;
       } else {
-        // Sequence Y
-    	  ToSend[++ToSendMax] = SEC_Y;
-        last = 0;
+        if (last == 0) {
+          // Sequence Z
+          ToSend[++ToSendMax] = SEC_Z;
+        } else {
+          // Sequence Y
+          ToSend[++ToSendMax] = SEC_Y;
+          last = 0;
+        }
       }
     }
   }
@@ -1394,6 +1340,14 @@ void CodeIso14443aAsReaderPar(const uint8_t * cmd, int len, uint32_t dwParity)
 
   // Convert from last character reference to length
   ToSendMax++;
+}
+
+//-----------------------------------------------------------------------------
+// Prepare reader command to send to FPGA
+//-----------------------------------------------------------------------------
+void CodeIso14443aAsReaderPar(const uint8_t * cmd, int len, uint32_t dwParity)
+{
+  CodeIso14443aBitsAsReaderPar(cmd,len*8,dwParity);
 }
 
 //-----------------------------------------------------------------------------
@@ -1598,7 +1552,8 @@ void ReaderTransmitShort(const uint8_t* bt)
   int wait = 0;
   int samples = 0;
 
-  ShortFrameFromReader(*bt);
+//  ShortFrameFromReader(*bt);
+  CodeIso14443aBitsAsReaderPar(bt,7,0);
 
   // Select the card
   TransmitFor14443a(ToSend, ToSendMax, &samples, &wait);

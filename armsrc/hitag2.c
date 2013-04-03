@@ -29,10 +29,6 @@ bool bAuthenticating;
 bool bPwd;
 bool bSuccessful;
 
-size_t nbytes(size_t nbits) {
-	return (nbits/8)+((nbits%8)>0);
-}
-
 int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int bReader)
 {
   // Return when trace is full

@@ -12,6 +12,10 @@
 #include "util.h"
 #include "string.h"
 
+size_t nbytes(size_t nbits) {
+	return (nbits/8)+((nbits%8)>0);
+}
+
 uint32_t SwapBits(uint32_t value, int nrbits) {
 	int i;
 	uint32_t newvalue = 0;
