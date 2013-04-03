@@ -82,8 +82,8 @@ extern byte_t oddparity (const byte_t bt);
 extern uint32_t GetParity(const uint8_t * pbtCmd, int iLen);
 extern void AppendCrc14443a(uint8_t* data, int len);
 
-extern void ReaderTransmitShort(const uint8_t* bt);
 extern void ReaderTransmit(uint8_t* frame, int len);
+extern void ReaderTransmitBitsPar(uint8_t* frame, int bits, uint32_t par);
 extern void ReaderTransmitPar(uint8_t* frame, int len, uint32_t par);
 extern int ReaderReceive(uint8_t* receivedAnswer);
 extern int ReaderReceivePar(uint8_t* receivedAnswer, uint32_t * parptr);

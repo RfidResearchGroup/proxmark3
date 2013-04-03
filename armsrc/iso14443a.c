@@ -1547,44 +1547,33 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, int maxLen, int 
 	}
 }
 
-void ReaderTransmitShort(const uint8_t* bt)
+void ReaderTransmitBitsPar(uint8_t* frame, int bits, uint32_t par)
 {
   int wait = 0;
   int samples = 0;
-
-//  ShortFrameFromReader(*bt);
-  CodeIso14443aBitsAsReaderPar(bt,7,0);
-
-  // Select the card
-  TransmitFor14443a(ToSend, ToSendMax, &samples, &wait);
-
-  // Store reader command in buffer
-  if (tracing) LogTrace(bt,1,0,GetParity(bt,1),TRUE);
-}
-
-void ReaderTransmitPar(uint8_t* frame, int len, uint32_t par)
-{
-  int wait = 0;
-  int samples = 0;
-
+  
   // This is tied to other size changes
   // 	uint8_t* frame_addr = ((uint8_t*)BigBuf) + 2024;
-  CodeIso14443aAsReaderPar(frame,len,par);
-
+  CodeIso14443aBitsAsReaderPar(frame,bits,par);
+  
   // Select the card
   TransmitFor14443a(ToSend, ToSendMax, &samples, &wait);
   if(trigger)
   	LED_A_ON();
-
+  
   // Store reader command in buffer
-  if (tracing) LogTrace(frame,len,0,par,TRUE);
+  if (tracing) LogTrace(frame,nbytes(bits),0,par,TRUE);
 }
 
+void ReaderTransmitPar(uint8_t* frame, int len, uint32_t par)
+{
+  ReaderTransmitBitsPar(frame,len*8,par);
+}
 
 void ReaderTransmit(uint8_t* frame, int len)
 {
   // Generate parity and redirect
-  ReaderTransmitPar(frame,len,GetParity(frame,len));
+  ReaderTransmitBitsPar(frame,len*8,GetParity(frame,len));
 }
 
 int ReaderReceive(uint8_t* receivedAnswer)
@@ -1623,7 +1612,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 	int len;
 	 
 	// Broadcast for a card, WUPA (0x52) will force response from all cards in the field
-	ReaderTransmitShort(wupa);
+  ReaderTransmitBitsPar(wupa,7,0);
 	// Receive the ATQA
 	if(!ReaderReceive(resp)) return 0;
 //  Dbprintf("atqa: %02x %02x",resp[0],resp[1]);

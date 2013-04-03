@@ -801,7 +801,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	
 		// reset chip
 		if (needWipe){
-			ReaderTransmitShort(wupC1);
+      ReaderTransmitBitsPar(wupC1,7,0);
 			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("wupC1 error");
 				break;
@@ -821,7 +821,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 
 		// write block
 		if (workFlags & 0x02) {
-			ReaderTransmitShort(wupC1);
+      ReaderTransmitBitsPar(wupC1,7,0);
 			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("wupC1 error");
 				break;
@@ -919,7 +919,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 
 	while (true) {
 		if (workFlags & 0x02) {
-			ReaderTransmitShort(wupC1);
+      ReaderTransmitBitsPar(wupC1,7,0);
 			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("wupC1 error");
 				break;
