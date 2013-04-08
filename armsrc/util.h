@@ -13,8 +13,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <common.h>
 
-#define RAMFUNC __attribute((long_call, section(".ramfunc")))
 #define BYTEx(x, n) (((x) >> (n * 8)) & 0xff )
 
 #define LED_RED 1

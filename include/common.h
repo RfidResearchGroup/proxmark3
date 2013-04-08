@@ -25,4 +25,6 @@ typedef unsigned char byte_t;
 # define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
+#define RAMFUNC __attribute((long_call, section(".ramfunc")))
+
 #endif
