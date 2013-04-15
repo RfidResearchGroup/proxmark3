@@ -81,7 +81,7 @@ const char cfgDescriptor[] = {
 	0x01, // bNumEndpoints
 	0x02, // bInterfaceClass
 	0x02, // bInterfaceSubclass
-	0x01, // bInterfaceProtocol
+	0x00, // bInterfaceProtocol
 	0x00, // iInterface
 
 	/* Header Functional Descriptor */
