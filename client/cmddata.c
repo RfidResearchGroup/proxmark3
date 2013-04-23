@@ -463,24 +463,24 @@ int CmdHpf(const char *Cmd)
   return 0;
 }
 
+#define MAX_SAMPLE_COUNT 10000
 int CmdSamples(const char *Cmd)
 {
   int cnt = 0;
   int n;
-
+  
   n = strtol(Cmd, NULL, 0);
   if (n == 0) n = 128;
-  if (n > 16000) n = 16000;
-
+  if (n > MAX_SAMPLE_COUNT) n = MAX_SAMPLE_COUNT;
+  
   PrintAndLog("Reading %d samples\n", n);
-  for (int i = 0; i < n; i += 12) {
-    UsbCommand c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {i, 0, 0}};
-    SendCommand(&c);
-    WaitForResponse(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, NULL);
-    for (int j = 0; j < 48; j++) {
-      GraphBuffer[cnt++] = ((int)sample_buf[j]) - 128;
-    }
+  uint8_t got[MAX_SAMPLE_COUNT * 4];
+  GetFromBigBuf(got,sizeof(got),0);
+  WaitForResponse(CMD_ACK,NULL);
+  for (int j = 0; j < n*4; j++) {
+    GraphBuffer[cnt++] = ((int)got[j]) - 128;
   }
+  
   PrintAndLog("Done!\n");
   GraphTraceLen = n*4;
   RepaintGraphWindow();
