@@ -1041,7 +1041,7 @@ void ReaderIso15693(uint32_t parameter)
 
 	// FIRST WE RUN AN INVENTORY TO GET THE TAG UID
 	// THIS MEANS WE CAN PRE-BUILD REQUESTS TO SAVE CPU TIME
-	 uint8_t TagUID[8];		// where we hold the uid for hi15reader
+	 uint8_t TagUID[8] = {0, 0, 0, 0, 0, 0, 0, 0};		// where we hold the uid for hi15reader
 
 //	BuildIdentifyRequest();
 //	//TransmitTo15693Tag(ToSend,ToSendMax+3,&tsamples, &wait);

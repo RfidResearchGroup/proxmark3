@@ -993,7 +993,7 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 	uint8_t response6[] = { 0x03, 0x3B, 0x00, 0x00, 0x00 }; // dummy ATS (pseudo-ATR), answer to RATS
 	ComputeCrc14443(CRC_14443_A, response6, 3, &response6[3], &response6[4]);
 
-	uint8_t *resp;
+	uint8_t *resp = NULL;
 	int respLen;
 
   // Longest possible response will be 16 bytes + 2 CRC = 18 bytes
