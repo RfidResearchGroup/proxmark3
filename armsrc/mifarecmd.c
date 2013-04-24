@@ -82,7 +82,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 //	memcpy(ack.d.asBytes, dataoutbuf, 16);
 	
 	LED_B_ON();
-  cmd_send(CMD_ACK,isOK,0,0,0,0);
+  cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,16);
 //	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 	LED_B_OFF();
 
