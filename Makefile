@@ -1,6 +1,7 @@
 include common/Makefile.common
 
 GZIP=gzip
+FLASH_PORT=/dev/ttyACM0
 
 all clean: %: bootrom/% armsrc/% client/% recovery/%
 
@@ -31,19 +32,19 @@ help:
 client: client/all
 
 flash-bootrom: bootrom/obj/bootrom.elf $(FLASH_TOOL)
-	$(FLASH_TOOL) -b $(subst /,$(PATHSEP),$<)
+	$(FLASH_TOOL) $(FLASH_PORT) -b $(subst /,$(PATHSEP),$<)
 
 flash-os: armsrc/obj/osimage.elf $(FLASH_TOOL)
-	$(FLASH_TOOL) $(subst /,$(PATHSEP),$<)
+	$(FLASH_TOOL) $(FLASH_PORT) $(subst /,$(PATHSEP),$<)
 
 flash-fpga: armsrc/obj/fpgaimage.elf $(FLASH_TOOL)
-	$(FLASH_TOOL) $(subst /,$(PATHSEP),$<)
+	$(FLASH_TOOL) $(FLASH_PORT) $(subst /,$(PATHSEP),$<)
 
 flash-both: armsrc/obj/osimage.elf armsrc/obj/fpgaimage.elf $(FLASH_TOOL)
-	$(FLASH_TOOL) $(subst /,$(PATHSEP),$(filter-out $(FLASH_TOOL),$^))
+	$(FLASH_TOOL) $(FLASH_PORT) $(subst /,$(PATHSEP),$(filter-out $(FLASH_TOOL),$^))
 
 flash-all: bootrom/obj/bootrom.elf armsrc/obj/osimage.elf armsrc/obj/fpgaimage.elf $(FLASH_TOOL)
-	$(FLASH_TOOL) -b $(subst /,$(PATHSEP),$(filter-out $(FLASH_TOOL),$^))
+	$(FLASH_TOOL) $(FLASH_PORT) -b $(subst /,$(PATHSEP),$(filter-out $(FLASH_TOOL),$^))
 
 newtarbin:
 	$(DELETE) proxmark3-$(platform)-bin.tar proxmark3-$(platform)-bin.tar.gz
