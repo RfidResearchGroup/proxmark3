@@ -1599,26 +1599,26 @@ int ReaderReceivePar(uint8_t* receivedAnswer, uint32_t * parptr)
  * fills the uid pointer unless NULL
  * fills resp_data unless NULL */
 int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, uint32_t* cuid_ptr) {
-	uint8_t wupa[]       = { 0x52 };  // 0x26 - REQA  0x52 - WAKE-UP
-	uint8_t sel_all[]    = { 0x93,0x20 };
-	uint8_t sel_uid[]    = { 0x93,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
-	uint8_t rats[]       = { 0xE0,0x80,0x00,0x00 }; // FSD=256, FSDI=8, CID=0
-	uint8_t* resp = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);	// was 3560 - tied to other size changes
+  uint8_t wupa[]       = { 0x52 };  // 0x26 - REQA  0x52 - WAKE-UP
+  uint8_t sel_all[]    = { 0x93,0x20 };
+  uint8_t sel_uid[]    = { 0x93,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
+  uint8_t rats[]       = { 0xE0,0x80,0x00,0x00 }; // FSD=256, FSDI=8, CID=0
+  uint8_t* resp = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);	// was 3560 - tied to other size changes
   byte_t uid_resp[4];
   size_t uid_resp_len;
 
-	uint8_t sak = 0x04; // cascade uid
-	int cascade_level = 0;
-	int len;
+  uint8_t sak = 0x04; // cascade uid
+  int cascade_level = 0;
+  int len;
 	 
-	// Broadcast for a card, WUPA (0x52) will force response from all cards in the field
+  // Broadcast for a card, WUPA (0x52) will force response from all cards in the field
   ReaderTransmitBitsPar(wupa,7,0);
-	// Receive the ATQA
-	if(!ReaderReceive(resp)) return 0;
+  // Receive the ATQA
+  if(!ReaderReceive(resp)) return 0;
 //  Dbprintf("atqa: %02x %02x",resp[0],resp[1]);
   
-	if(p_hi14a_card) {
-		memcpy(p_hi14a_card->atqa, resp, 2);
+  if(p_hi14a_card) {
+    memcpy(p_hi14a_card->atqa, resp, 2);
     p_hi14a_card->uidlen = 0;
     memset(p_hi14a_card->uid,0,10);
   }
@@ -1628,19 +1628,18 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     memset(uid_ptr,0,10);
   }
 
-	// OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
-	// which case we need to make a cascade 2 request and select - this is a long UID
-	// While the UID is not complete, the 3nd bit (from the right) is set in the SAK.
-	for(; sak & 0x04; cascade_level++)
-	{
-		// SELECT_* (L1: 0x93, L2: 0x95, L3: 0x97)
-		sel_uid[0] = sel_all[0] = 0x93 + cascade_level * 2;
+  // OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
+  // which case we need to make a cascade 2 request and select - this is a long UID
+  // While the UID is not complete, the 3nd bit (from the right) is set in the SAK.
+  for(; sak & 0x04; cascade_level++) {
+    // SELECT_* (L1: 0x93, L2: 0x95, L3: 0x97)
+    sel_uid[0] = sel_all[0] = 0x93 + cascade_level * 2;
 
-		// SELECT_ALL
-		ReaderTransmit(sel_all,sizeof(sel_all));
-		if (!ReaderReceive(resp)) return 0;
+    // SELECT_ALL
+    ReaderTransmit(sel_all,sizeof(sel_all));
+    if (!ReaderReceive(resp)) return 0;
     
-    // First backup the current uid 
+    // First backup the current uid
     memcpy(uid_resp,resp,4);
     uid_resp_len = 4;
     //    Dbprintf("uid: %02x %02x %02x %02x",uid_resp[0],uid_resp[1],uid_resp[2],uid_resp[3]);
@@ -1650,20 +1649,20 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
       *cuid_ptr = bytes_to_num(uid_resp, 4);
     }
 
-		// Construct SELECT UID command
+    // Construct SELECT UID command
 		memcpy(sel_uid+2,resp,5);
-		AppendCrc14443a(sel_uid,7);
-		ReaderTransmit(sel_uid,sizeof(sel_uid));
+    AppendCrc14443a(sel_uid,7);
+    ReaderTransmit(sel_uid,sizeof(sel_uid));
 
-		// Receive the SAK
-		if (!ReaderReceive(resp)) return 0;
-		sak = resp[0];
+    // Receive the SAK
+    if (!ReaderReceive(resp)) return 0;
+    sak = resp[0];
 
     // Test if more parts of the uid are comming
     if ((sak & 0x04) && uid_resp[0] == 0x88) {
       // Remove first byte, 0x88 is not an UID byte, it CT, see page 3 of:
       // http://www.nxp.com/documents/application_note/AN10927.pdf
-      memcpy(uid_ptr, uid_ptr + 1, 3);
+      memcpy(uid_resp, uid_resp + 1, 3);
       uid_resp_len = 3;
     }
     
@@ -1675,31 +1674,31 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
       memcpy(p_hi14a_card->uid + (cascade_level*3), uid_resp, uid_resp_len);
       p_hi14a_card->uidlen += uid_resp_len;
     }
-	}
-
-	if(p_hi14a_card) {
-		p_hi14a_card->sak = sak;
-		p_hi14a_card->ats_len = 0;
-	}
-
-	if( (sak & 0x20) == 0) {
-		return 2; // non iso14443a compliant tag
   }
 
-	// Request for answer to select
+  if(p_hi14a_card) {
+    p_hi14a_card->sak = sak;
+    p_hi14a_card->ats_len = 0;
+  }
+
+  if( (sak & 0x20) == 0) {
+    return 2; // non iso14443a compliant tag
+  }
+
+  // Request for answer to select
   AppendCrc14443a(rats, 2);
   ReaderTransmit(rats, sizeof(rats));
   
   if (!(len = ReaderReceive(resp))) return 0;
 
   if(p_hi14a_card) {
-		memcpy(p_hi14a_card->ats, resp, sizeof(p_hi14a_card->ats));
-		p_hi14a_card->ats_len = len;
-	}
+    memcpy(p_hi14a_card->ats, resp, sizeof(p_hi14a_card->ats));
+    p_hi14a_card->ats_len = len;
+  }
 	
-	// reset the PCB block number
-	iso14_pcb_blocknum = 0;
-	return 1;
+  // reset the PCB block number
+  iso14_pcb_blocknum = 0;
+  return 1;
 }
 
 void iso14443a_setup() {
