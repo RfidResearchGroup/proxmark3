@@ -200,6 +200,7 @@ int main(int argc, char* argv[]) {
   
   if (argc < 2) {
     printf("syntax: %s <port>\n\n",argv[0]);
+    printf("\tLinux example:'%s /dev/ttyACM0'\n\n", argv[0]);
     return 1;
   }
   
