@@ -863,8 +863,14 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 //	if (isOK) memcpy(ack.d.asBytes, uid, 4);
 	
 	// add trace trailer
-	memset(uid, 0x44, 4);
-	LogTrace(uid, 4, 0, 0, TRUE);
+	/**
+	*	Removed by Martin, the uid is overwritten with 0x44, 
+	*	which can 't be intended. 
+	*
+	*	memset(uid, 0x44, 4);
+	*	LogTrace(uid, 4, 0, 0, TRUE);
+	**/
+	
 
 	LED_B_ON();
   cmd_send(CMD_ACK,isOK,0,0,uid,4);
