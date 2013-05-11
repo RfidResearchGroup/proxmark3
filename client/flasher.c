@@ -83,7 +83,11 @@ static void usage(char *argv0)
 {
 	fprintf(stderr, "Usage:   %s <port> [-b] image.elf [image.elf...]\n\n", argv0);
 	fprintf(stderr, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n\n");
-	fprintf(stderr, "Example: %s path/to/osimage.elf path/to/fpgaimage.elf\n", argv0);
+	//Is the example below really true? /Martin
+	fprintf(stderr, "Example:\n\t %s path/to/osimage.elf path/to/fpgaimage.elf\n", argv0);
+	fprintf(stderr, "Example (Linux):\n\t %s  /dev/ttyACM0 armsrc/obj/fullimage.elf\n", argv0);
+	fprintf(stderr, "\nNote (Linux): if the flasher gets stuck in 'Waiting for Proxmark to reappear on USB', try deactivating modem-manager: 'sudo service modemmanager stop'\n\n");
+
 }
 
 #define MAX_FILES 4
