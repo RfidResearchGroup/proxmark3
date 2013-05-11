@@ -1625,7 +1625,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 	
   // clear uid
   if (uid_ptr) {
-    memset(uid_ptr,0,10);
+    memset(uid_ptr,0,8);
   }
 
   // OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
