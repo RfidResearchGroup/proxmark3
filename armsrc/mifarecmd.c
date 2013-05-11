@@ -954,9 +954,13 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 //	if (isOK) memcpy(ack.d.asBytes, data, 18);
 	
 	// add trace trailer
-	memset(data, 0x44, 4);
-	LogTrace(data, 4, 0, 0, TRUE);
-
+	/*
+	* Removed by Martin, this piece of overwrites the 'data' variable 
+	* which is sent two lines down, and is obviously not correct. 
+	* 
+	* memset(data, 0x44, 4);
+	* LogTrace(data, 4, 0, 0, TRUE);
+	*/
 	LED_B_ON();
   cmd_send(CMD_ACK,isOK,0,0,data,18);
 //	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
