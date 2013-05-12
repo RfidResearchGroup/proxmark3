@@ -1175,6 +1175,7 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo)
 	uint64_t rev_id = 0;	// reversed ID
 	int c_parity[4];	// column parity
 	int r_parity = 0;	// row parity
+	uint32_t clock = 0;
 
 	// Reverse ID bits given as parameter (for simpler operations)
 	for (i = 0; i < EM410X_ID_LENGTH; ++i) {
@@ -1232,12 +1233,35 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo)
 	T55xxWriteBlock((uint32_t)id, 2, 0, 0);
 
 	// Config for EM410x (RF/64, Manchester, Maxblock=2)
-	if (card)
+	if (card) {
+		// Clock rate is stored in bits 8-15 of the card value
+		clock = (card & 0xFF00) >> 8;
+		Dbprintf("Clock rate: %d", clock);
+		switch (clock)
+		{
+			case 32:
+				clock = T55x7_BITRATE_RF_32;
+				break;
+			case 16:
+				clock = T55x7_BITRATE_RF_16;
+				break;
+			case 0:
+				// A value of 0 is assumed to be 64 for backwards-compatibility
+				// Fall through...
+			case 64:
+				clock = T55x7_BITRATE_RF_64;
+				break;      
+			default:
+				Dbprintf("Invalid clock rate: %d", clock);
+				return;
+		}
+
 		// Writing configuration for T55x7 tag
-		T55xxWriteBlock(T55x7_BITRATE_RF_64	    |
+		T55xxWriteBlock(clock	    |
 				T55x7_MODULATION_MANCHESTER |
 				2 << T55x7_MAXBLOCK_SHIFT,
 				0, 0, 0);
+  }
 	else
 		// Writing configuration for T5555(Q5) tag
 		T55xxWriteBlock(0x1F << T5555_BITRATE_SHIFT |

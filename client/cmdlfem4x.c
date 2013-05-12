@@ -248,10 +248,16 @@ int CmdEM410xSim(const char *Cmd)
  * looped until an EM410x tag is detected */
 int CmdEM410xWatch(const char *Cmd)
 {
+  int read_h = (*Cmd == 'h');
   do
   {
-    CmdLFRead("");
-    CmdSamples("2000");
+    CmdLFRead(read_h ? "h" : "");
+    // 2000 samples is OK for clock=64, but not clock=32.  Probably want
+		//   8000 for clock=16.  Don't want to go too high since old HID driver
+		//   is very slow
+		// TBD: Auto-grow sample size based on detected sample rate.  IE: If the
+		//   rate gets lower, then grow the number of samples
+		CmdSamples("4000");
   } while ( ! CmdEM410xRead(""));
   return 0;
 }
@@ -402,22 +408,66 @@ int CmdEM4x50Read(const char *Cmd)
 
 int CmdEM410xWrite(const char *Cmd)
 {
-  uint64_t id = 0;
-  unsigned int card;
+  uint64_t id = 0xFFFFFFFFFFFFFFFF; // invalid id value
+  unsigned int card = 0xFF; // invalid card value
+	unsigned int clock = 0; // invalid clock value
 
-  sscanf(Cmd, "%" PRIx64 " %d", &id, &card);
+	sscanf(Cmd, "%" PRIx64 " %d %d", &id, &card, &clock);
 
-  if (id >= 0x10000000000) {
-    PrintAndLog("Error! Given EM410x ID is longer than 40 bits.\n");
-    return 0;
-  }
+	// Check ID
+	if (id == 0xFFFFFFFFFFFFFFFF) {
+		PrintAndLog("Error! ID is required.\n");
+		return 0;
+	}
+	if (id >= 0x10000000000) {
+		PrintAndLog("Error! Given EM410x ID is longer than 40 bits.\n");
+		return 0;
+	}
 
-  if (card > 1) {
-    PrintAndLog("Error! Bad card type selected.\n");
-    return 0;
-  }
+	// Check Card
+	if (card == 0xFF) {
+		PrintAndLog("Error! Card type required.\n");
+		return 0;
+	}
+	if (card < 0) {
+		PrintAndLog("Error! Bad card type selected.\n");
+		return 0;
+	}
 
-  PrintAndLog("Writing %s tag with UID 0x%010" PRIx64, card ? "T55x7":"T5555", id);
+	// Check Clock
+	if (card == 1)
+	{
+		// Default: 64
+		if (clock == 0)
+			clock = 64;
+
+		// Allowed clock rates: 16, 32 and 64
+		if ((clock != 16) && (clock != 32) && (clock != 64)) {
+			PrintAndLog("Error! Clock rate %d not valid. Supported clock rates are 16, 32 and 64.\n", clock);
+			return 0;
+		}
+	}
+	else if (clock != 0)
+	{
+		PrintAndLog("Error! Clock rate is only supported on T55x7 tags.\n");
+		return 0;
+	}
+
+	if (card == 1) {
+		PrintAndLog("Writing %s tag with UID 0x%010" PRIx64 " (clock rate: %d)", "T55x7", id, clock);
+		// NOTE: We really should pass the clock in as a separate argument, but to
+		//   provide for backwards-compatibility for older firmware, and to avoid
+		//   having to add another argument to CMD_EM410X_WRITE_TAG, we just store
+		//   the clock rate in bits 8-15 of the card value
+		card = (card & 0xFF) | (((uint64_t)clock << 8) & 0xFF00);
+	}
+	else if (card == 0)
+		PrintAndLog("Writing %s tag with UID 0x%010" PRIx64, "T5555", id, clock);
+	else {
+		PrintAndLog("Error! Bad card type selected.\n");
+		return 0;
+	}
+
   UsbCommand c = {CMD_EM410X_WRITE_TAG, {card, (uint32_t)(id >> 32), (uint32_t)id}};
   SendCommand(&c);
 
@@ -527,8 +577,8 @@ static command_t CommandTable[] =
   {"help", CmdHelp, 1, "This help"},
   {"em410xread", CmdEM410xRead, 1, "[clock rate] -- Extract ID from EM410x tag"},
   {"em410xsim", CmdEM410xSim, 0, "<UID> -- Simulate EM410x tag"},
-  {"em410xwatch", CmdEM410xWatch, 0, "Watches for EM410x tags"},
-  {"em410xwrite", CmdEM410xWrite, 1, "<UID> <'0' T5555> <'1' T55x7> -- Write EM410x UID to T5555(Q5) or T55x7 tag"},
+  {"em410xwatch", CmdEM410xWatch, 0, "['h'] -- Watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
+  {"em410xwrite", CmdEM410xWrite, 1, "<UID> <'0' T5555> <'1' T55x7> [clock rate] -- Write EM410x UID to T5555(Q5) or T55x7 tag, optionally setting clock rate"},
   {"em4x50read", CmdEM4x50Read, 1, "Extract data from EM4x50 tag"},
   {"readword", CmdReadWord, 1, "<Word> -- Read EM4xxx word data"},
   {"readwordPWD", CmdReadWordPWD, 1, "<Word> <Password> -- Read EM4xxx word data in password mode"},
