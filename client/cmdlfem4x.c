@@ -257,8 +257,11 @@ int CmdEM410xWatch(const char *Cmd)
 		//   is very slow
 		// TBD: Auto-grow sample size based on detected sample rate.  IE: If the
 		//   rate gets lower, then grow the number of samples
-		CmdSamples("4000");
-  } while ( ! CmdEM410xRead(""));
+
+    // Changed by martin, 4000 x 4 = 16000, 
+    // see http://www.proxmark.org/forum/viewtopic.php?pid=7235#p7235
+		CmdSamples("16000");
+ } while ( ! CmdEM410xRead(""));
   return 0;
 }
 
