@@ -5,6 +5,7 @@
 #-----------------------------------------------------------------------------
 include ../common/Makefile.common
 
+
 CC=gcc
 CXX=g++
 #COMMON_FLAGS = -m32
@@ -12,9 +13,9 @@ CXX=g++
 VPATH = ../common
 OBJDIR = obj
 
-LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread
+LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread ../liblua/liblua.a
 LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O4
+CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -I../liblua -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O4 
 
 ifneq (,$(findstring MINGW,$(platform)))
 CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
@@ -72,7 +73,9 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			cmdparser.c \
 			cmdmain.c \
 			cmdlft55xx.c \
-			cmdlfpcf7931.c
+			cmdlfpcf7931.c\
+			cmdscript.c\
+
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
@@ -81,7 +84,7 @@ RM = rm -f
 BINS = proxmark3 flasher #snooper cli
 CLEAN = cli cli.exe flasher flasher.exe proxmark3 proxmark3.exe snooper snooper.exe $(CMDOBJS) $(OBJDIR)/*.o *.o *.moc.cpp
 
-all: $(BINS)
+all: lua_build $(BINS) 
 
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: snooper cli flasher
@@ -124,5 +127,9 @@ install_kext: Info.plist
 	rm -rf /System/Library/Caches/com.apple.kext.caches
 	touch /System/Library/Extensions
 	@echo "*** You may need to reboot for the kext to take effect."
+
+lua_build:
+	@echo Compiling liblua;
+	cd ../liblua && make linux
 
 .PHONY: all clean
