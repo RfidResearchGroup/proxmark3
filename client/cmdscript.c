@@ -106,70 +106,39 @@ static int l_hfmf (lua_State *L) {
 
 }
 */
-static int l_CmdHelp(lua_State *L){ return CmdHelp('foo');}
-static int l_CmdHF14AMfDbg(lua_State *L){ return CmdHF14AMfDbg('foo');}
-static int l_CmdHF14AMfRdBl(lua_State *L){ return CmdHF14AMfRdBl('foo');}
-static int l_CmdHF14AMfRdSc(lua_State *L){ return CmdHF14AMfRdSc('foo');}
-static int l_CmdHF14AMfDump(lua_State *L){ return CmdHF14AMfDump('foo');}
-static int l_CmdHF14AMfRestore(lua_State *L){ return CmdHF14AMfRestore('foo');}
-static int l_CmdHF14AMfWrBl(lua_State *L){ return CmdHF14AMfWrBl('foo');}
-static int l_CmdHF14AMfChk(lua_State *L){ return CmdHF14AMfChk('foo');}
+//static int l_CmdHelp(lua_State *L){ return CmdHelp(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfDbg(lua_State *L){ return CmdHF14AMfDbg(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfRdBl(lua_State *L){ return CmdHF14AMfRdBl(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfRdSc(lua_State *L){ return CmdHF14AMfRdSc(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfDump(lua_State *L){ return CmdHF14AMfDump(luaL_checkstring(L, 1));}
 static int l_CmdHF14AMifare(lua_State *L){ return CmdHF14AMifare(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfWrBl(lua_State *L){ return CmdHF14AMfWrBl(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfChk(lua_State *L){ return CmdHF14AMfChk(luaL_checkstring(L, 1));}
 static int l_CmdHF14AMfNested(lua_State *L){ return CmdHF14AMfNested(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfSniff(lua_State *L){ return CmdHF14AMfSniff('foo');}
-static int l_CmdHF14AMf1kSim(lua_State *L){ return CmdHF14AMf1kSim('foo');}
-static int l_CmdHF14AMfEClear(lua_State *L){ return CmdHF14AMfEClear('foo');}
-static int l_CmdHF14AMfEGet(lua_State *L){ return CmdHF14AMfEGet('foo');}
-static int l_CmdHF14AMfESet(lua_State *L){ return CmdHF14AMfESet('foo');}
-static int l_CmdHF14AMfELoad(lua_State *L){ return CmdHF14AMfELoad('foo');}
-static int l_CmdHF14AMfESave(lua_State *L){ return CmdHF14AMfESave('foo');}
-static int l_CmdHF14AMfECFill(lua_State *L){ return CmdHF14AMfECFill('foo');}
-static int l_CmdHF14AMfEKeyPrn(lua_State *L){ return CmdHF14AMfEKeyPrn('foo');}
-static int l_CmdHF14AMfCSetUID(lua_State *L){ return CmdHF14AMfCSetUID('foo');}
-static int l_CmdHF14AMfCSetBlk(lua_State *L){ return CmdHF14AMfCSetBlk('foo');}
-static int l_CmdHF14AMfCGetBlk(lua_State *L){ return CmdHF14AMfCGetBlk('foo');}
-static int l_CmdHF14AMfCGetSc(lua_State *L){ return CmdHF14AMfCGetSc('foo');}
-static int l_CmdHF14AMfCLoad(lua_State *L){ return CmdHF14AMfCLoad('foo');}
-static int l_CmdHF14AMfCSave(lua_State *L){ return CmdHF14AMfCSave('foo');}
+static int l_CmdHF14AMfRestore(lua_State *L){ return CmdHF14AMfRestore(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfSniff(lua_State *L){ return CmdHF14AMfSniff(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMf1kSim(lua_State *L){ return CmdHF14AMf1kSim(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfEClear(lua_State *L){ return CmdHF14AMfEClear(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfEGet(lua_State *L){ return CmdHF14AMfEGet(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfESet(lua_State *L){ return CmdHF14AMfESet(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfELoad(lua_State *L){ return CmdHF14AMfELoad(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfESave(lua_State *L){ return CmdHF14AMfESave(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfECFill(lua_State *L){ return CmdHF14AMfECFill(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfEKeyPrn(lua_State *L){ return CmdHF14AMfEKeyPrn(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfCSetUID(lua_State *L){ return CmdHF14AMfCSetUID(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfCSetBlk(lua_State *L){ return CmdHF14AMfCSetBlk(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfCGetBlk(lua_State *L){ return CmdHF14AMfCGetBlk(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfCGetSc(lua_State *L){ return CmdHF14AMfCGetSc(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfCLoad(lua_State *L){ return CmdHF14AMfCLoad(luaL_checkstring(L, 1));}
+static int l_CmdHF14AMfCSave(lua_State *L){ return CmdHF14AMfCSave(luaL_checkstring(L, 1));}
 
-int luaopen_hfmf(lua_State *L)
-{
-    static const luaL_Reg hfmf_lib[] = {
-        {"help",    l_CmdHelp},
-        {"dbg",     l_CmdHF14AMfDbg},
-        {"rdbl",    l_CmdHF14AMfRdBl},
-        {"rdsc",    l_CmdHF14AMfRdSc},
-        {"dump",    l_CmdHF14AMfDump},
-        {"restore", l_CmdHF14AMfRestore},
-        {"wrbl",    l_CmdHF14AMfWrBl},
-        {"chk",     l_CmdHF14AMfChk},
-        {"mifare",  l_CmdHF14AMifare},
-        {"nested",  l_CmdHF14AMfNested},
-        {"sniff",   l_CmdHF14AMfSniff},
-        {"sim",     l_CmdHF14AMf1kSim},
-        {"eclr",    l_CmdHF14AMfEClear},
-        {"eget",    l_CmdHF14AMfEGet},
-        {"eset",    l_CmdHF14AMfESet},
-        {"eload",   l_CmdHF14AMfELoad},
-        {"esave",   l_CmdHF14AMfESave},
-        {"ecfill",  l_CmdHF14AMfECFill},
-        {"ekeyprn", l_CmdHF14AMfEKeyPrn},
-        {"csetuid", l_CmdHF14AMfCSetUID},
-        {"csetblk", l_CmdHF14AMfCSetBlk},
-        {"cgetblk", l_CmdHF14AMfCGetBlk},
-        {"cgetsc",  l_CmdHF14AMfCGetSc},
-        {"cload",   l_CmdHF14AMfCLoad},
-        {"csave",   l_CmdHF14AMfCSave},
-        {NULL, NULL}
-    };
-    luaL_newlib(L, hfmf_lib);
-    return 1;
-}
+
+
 
 static void set_libraries(lua_State *L)
 {
     static const luaL_Reg hfmf_lib[] = {
-        {"help",    l_CmdHelp},
+        //{"help",    l_CmdHelp},
         {"dbg",     l_CmdHF14AMfDbg},
         {"rdbl",    l_CmdHF14AMfRdBl},
         {"rdsc",    l_CmdHF14AMfRdSc},
@@ -235,19 +204,7 @@ int CmdRun(const char *Cmd)
     lua_state = luaL_newstate();
 
     // load Lua libraries
-    static const luaL_Reg lualibs[] =
-    {
-        {"base", luaopen_base },
-        { NULL, NULL}
-    };
-
-    const luaL_Reg *lib = lualibs;
-    for(; lib->func != NULL; lib++)
-    {
-        lib->func(lua_state);
-        lua_settop(lua_state, 0);
-    }
-
+    luaL_openlibs(lua_state);
     set_libraries(lua_state);
     char cmd_name[32];
     int len = 0;

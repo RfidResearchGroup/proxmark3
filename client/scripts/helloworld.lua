@@ -6,7 +6,7 @@ print("hf.mf:",hf.mf);
 print("and now... ");
 print("hf.mf.mifare",hf.mf.mifare);
 
-hf.mf.mifare("");
+hf.mf.nested("");
 
 	
 function foo()
