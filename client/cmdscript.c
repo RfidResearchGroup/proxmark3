@@ -218,7 +218,7 @@ int CmdRun(const char *Cmd)
     char buf[256];
     snprintf(buf, sizeof buf, "./scripts/%s", cmd_name);
 
-    printf("Executing file '%s'\n---------------------------\n" , cmd_name);
+    printf("-----Executing file '%s'\n" , cmd_name);
     // run the Lua script
 
     int error = luaL_loadfile(lua_state, buf);
@@ -241,6 +241,6 @@ int CmdRun(const char *Cmd)
     //luaL_dofile(lua_state, buf);
     // close the Lua state
     lua_close(lua_state);
-    printf("-----------------Finished\n");
+    printf("\n-----Finished\n");
 }
 

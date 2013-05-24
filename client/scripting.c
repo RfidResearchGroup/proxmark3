@@ -40,10 +40,23 @@ static int l_SendCommand(lua_State *L){
     ==> A 544 byte buffer will do.
     **/
     //Pop cmd
-    UsbCommand *c = (UsbCommand *)lua_touserdata(L, 1);
-    luaL_argcheck(L, c != NULL, 1, "'UsbCommand' expected");
-    SendCommand(c);
+    size_t size;
+    const char *data = luaL_checklstring(L, 1, &size);
+    if(size != sizeof(UsbCommand))
+    {
+        printf("Got data size %d, expected %d" , size,sizeof(UsbCommand));
+        lua_pushstring(L,"Wrong data size");
+        return 1;
+    }
+
+//    UsbCommand c = (*data);
+    SendCommand(data);
     return 0;
+    //UsbCommand *c = (UsbCommand *)lua_touserdata(L, 1);
+    //luaL_argcheck(L, c != NULL, 1, "'UsbCommand' expected");
+
+    //SendCommand(c);
+    //return 0;
 }
 /**
  * @brief The following params expected:
@@ -59,7 +72,7 @@ static int l_WaitForResponseTimeout(lua_State *L){
     printf("in l_WaitForResponseTimeout, got cmd 0x%0x\n",(int) cmd);
     //UsbCommand response;
 
-    //We allocate the usbcommand as userdata on the Lua-stack
+     //We allocate the usbcommand as userdata on the Lua-stack
     size_t nbytes = sizeof(UsbCommand);
 
     UsbCommand *response = (UsbCommand *)lua_newuserdata(L, nbytes);
