@@ -42,8 +42,7 @@ endif
 
 CORESRCS = 	uart.c \
 		util.c \
-		sleep.c
-
+		sleep.c \
 
 CMDSRCS = 	nonce2key/crapto1.c\
 		nonce2key/crypto1.c\
@@ -74,7 +73,9 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			cmdmain.c \
 			cmdlft55xx.c \
 			cmdlfpcf7931.c\
+			scripting.c\
 			cmdscript.c\
+
 
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)

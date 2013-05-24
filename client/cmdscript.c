@@ -1,11 +1,11 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// Copyright (C) 2013 m h swende <martin at swende.se>
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Data and Graph commands
+// Some lua scripting glue to proxmark core.
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
@@ -16,6 +16,7 @@
 #include <dirent.h>
 
 #include "proxmark3.h"
+#include "scripting.h"
 #include "data.h"
 #include "ui.h"
 #include "graph.h"
@@ -29,7 +30,6 @@
 #include <lauxlib.h>
 
 
-
 static int CmdHelp(const char *Cmd);
 static int CmdList(const char *Cmd);
 static int CmdRun(const char *Cmd);
@@ -37,8 +37,8 @@ static int CmdRun(const char *Cmd);
 command_t CommandTable[] =
 {
   {"help",  CmdHelp, 1, "This help"},
-  {"list",  CmdList, 1, "<name> -- List available scripts"},
-  {"run",   CmdRun,  1, "Execute a script"},
+  {"list",  CmdList, 1, "List available scripts"},
+  {"run",   CmdRun,  1, "<name> -- Execute a script"},
   {NULL, NULL, 0, NULL}
 };
 
@@ -135,10 +135,9 @@ static int l_CmdHF14AMfCSave(lua_State *L){ return CmdHF14AMfCSave(luaL_checkstr
 
 
 
-static void set_libraries(lua_State *L)
+static void set_cmdlibraries(lua_State *L)
 {
     static const luaL_Reg hfmf_lib[] = {
-        //{"help",    l_CmdHelp},
         {"dbg",     l_CmdHF14AMfDbg},
         {"rdbl",    l_CmdHF14AMfRdBl},
         {"rdsc",    l_CmdHF14AMfRdSc},
@@ -205,7 +204,12 @@ int CmdRun(const char *Cmd)
 
     // load Lua libraries
     luaL_openlibs(lua_state);
-    set_libraries(lua_state);
+
+    //Sets the pm3 core libraries, that go a bit 'under the hood'
+    set_pm3_libraries(lua_state);
+
+    //Sets the 'command line' libraries, basically just the commandline stuff
+    set_cmdlibraries(lua_state);
     char cmd_name[32];
     int len = 0;
     memset(cmd_name, 0, 32);
@@ -216,7 +220,25 @@ int CmdRun(const char *Cmd)
 
     printf("Executing file '%s'\n---------------------------\n" , cmd_name);
     // run the Lua script
-    luaL_dofile(lua_state, buf);
+
+    int error = luaL_loadfile(lua_state, buf);
+    if(!error)
+    {
+         error = lua_pcall(lua_state, 0, LUA_MULTRET, 0); // once again, returns non-0 on error,
+    }
+    if(error) // if non-0, then an error
+    {
+        // the top of the stack should be the error string
+        if (!lua_isstring(lua_state, lua_gettop(lua_state)))
+            printf( "Error - but no error (?!)");
+
+        // get the top of the stack as the error and pop it off
+        const char * str = lua_tostring(lua_state, lua_gettop(lua_state));
+        lua_pop(lua_state, 1);
+        printf(str);
+    }
+
+    //luaL_dofile(lua_state, buf);
     // close the Lua state
     lua_close(lua_state);
     printf("-----------------Finished\n");
