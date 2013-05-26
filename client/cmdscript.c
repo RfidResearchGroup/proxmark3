@@ -24,6 +24,7 @@
 #include "cmdmain.h"
 #include "cmdscript.h"
 #include "cmdhfmf.h"
+#include "pm3_binlib.h"
 
 #include <lua.h>
 #include <lualib.h>
@@ -210,6 +211,10 @@ int CmdRun(const char *Cmd)
 
     //Sets the 'command line' libraries, basically just the commandline stuff
     set_cmdlibraries(lua_state);
+
+    //Add the 'bin' library
+    set_bin_library(lua_state);
+
     char cmd_name[32];
     int len = 0;
     memset(cmd_name, 0, 32);

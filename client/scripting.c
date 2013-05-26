@@ -44,7 +44,7 @@ static int l_SendCommand(lua_State *L){
     const char *data = luaL_checklstring(L, 1, &size);
     if(size != sizeof(UsbCommand))
     {
-        printf("Got data size %d, expected %d" , size,sizeof(UsbCommand));
+        printf("Got data size %d, expected %d" , (int) size,(int) sizeof(UsbCommand));
         lua_pushstring(L,"Wrong data size");
         return 1;
     }
@@ -106,7 +106,7 @@ static int l_WaitForResponseTimeout(lua_State *L){
 static int l_nonce2key(lua_State *L){ return CmdHF14AMfRdSc(luaL_checkstring(L, 1));}
 static int l_PrintAndLog(lua_State *L){ return CmdHF14AMfDump(luaL_checkstring(L, 1));}
 
-void set_pm3_libraries(lua_State *L)
+int set_pm3_libraries(lua_State *L)
 {
     static const luaL_Reg libs[] = {
         {"SendCommand",                 l_SendCommand},

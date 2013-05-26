@@ -18,6 +18,6 @@
  * @param L
  */
 
-void set_pm3_libraries(lua_State *L);
+int set_pm3_libraries(lua_State *L);
 
 #endif
