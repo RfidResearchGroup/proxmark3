@@ -493,7 +493,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 			}
 	
 			LED_B_ON();
-//			SpinDelay(100);
+			SpinDelay(100);
       cmd_send(CMD_ACK,0,ncount,targetBlockNo + (targetKeyType * 0x100),buf,48);
 //			UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 			LED_B_OFF();
@@ -507,7 +507,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 //	memset(ack.d.asBytes, 0x00, sizeof(ack.d.asBytes));
 	
 	LED_B_ON();
-//	SpinDelay(300);
+	SpinDelay(300);
 //	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
   cmd_send(CMD_ACK,1,0,0,0,0);
 	LED_B_OFF();
