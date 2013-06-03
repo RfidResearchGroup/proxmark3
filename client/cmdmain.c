@@ -26,9 +26,9 @@
 #include "util.h"
 
 unsigned int current_command = CMD_UNKNOWN;
-unsigned int received_command = CMD_UNKNOWN;
-UsbCommand current_response;
-UsbCommand current_response_user;
+//unsigned int received_command = CMD_UNKNOWN;
+//UsbCommand current_response;
+//UsbCommand current_response_user;
 
 static int CmdHelp(const char *Cmd);
 static int CmdQuit(const char *Cmd);
@@ -74,6 +74,11 @@ int CmdQuit(const char *Cmd)
  * @return true if command was returned, otherwise false
  */
 bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeout) {
+  
+  if (response == NULL) {
+    UsbCommand resp;
+    response = &resp;
+  }
 
   // Wait until the command is received
   for(size_t dm_seconds=0; dm_seconds < ms_timeout/10; dm_seconds++) {
@@ -175,6 +180,7 @@ void UsbCommandReceived(UsbCommand *UC)
 
     default: {
       // Maybe it's a response
+      /*
       switch(current_command) {
         case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K: {
           if (UC->cmd != CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K) {
@@ -186,13 +192,14 @@ void UsbCommandReceived(UsbCommand *UC)
           memcpy(sample_buf+UC->arg[0],UC->d.asBytes,48);
           sample_buf_len += 48;
 //          for(i=0; i<48; i++) sample_buf[i] = UC->d.asBytes[i];
-          received_command = UC->cmd;
+          //received_command = UC->cmd;
         } break;
 
         default: {
         } break;
-      }
-    } break;
+      }*/
+    }
+      break;
   }
 
   storeCommand(UC);
