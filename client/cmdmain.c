@@ -39,7 +39,7 @@ static UsbCommand cmdBuffer[CMD_BUFFER_SIZE];
 //Points to the next empty position to write to
 static int cmd_head;//Starts as 0
 //Points to the position of the last unread command
-static int cmd_tail = -1;//Starts as -1
+static int cmd_tail;//Starts as 0
 
 static command_t CommandTable[] = 
 {
@@ -211,7 +211,7 @@ void UsbCommandReceived(UsbCommand *UC)
  */
 void storeCommand(UsbCommand *command)
 {
-    if(cmd_head == cmd_tail)
+    if( ( cmd_head+1) % CMD_BUFFER_SIZE == cmd_tail)
     {
         //If these two are equal, we're about to overwrite in the
         // circular buffer.
@@ -221,14 +221,7 @@ void storeCommand(UsbCommand *command)
     UsbCommand* destination = &cmdBuffer[cmd_head];
     memcpy(destination, command, sizeof(UsbCommand));
 
-    //Also, if cmd_tail is still -1 because the buffer was
-    // previously empty, set it to head
-    if(cmd_tail < 0) {
-        cmd_tail = cmd_head;
-    }
-
-    cmd_head++; //increment head
-    cmd_head %= CMD_BUFFER_SIZE;//wrap around
+    cmd_head = (cmd_head +1) % CMD_BUFFER_SIZE; //increment head and wrap
 
 }
 /**
@@ -239,7 +232,7 @@ void storeCommand(UsbCommand *command)
 int getCommand(UsbCommand* response)
 {
     //If head == tail, there's nothing to read, or if we just got initialized
-    if(cmd_head == cmd_tail || cmd_tail == -1){
+    if(cmd_head == cmd_tail){
         return 0;
     }
     //Pick out the next unread command
@@ -247,12 +240,6 @@ int getCommand(UsbCommand* response)
     memcpy(response, last_unread, sizeof(UsbCommand));
     //Increment tail - this is a circular buffer, so modulo buffer size
     cmd_tail = (cmd_tail +1 ) % CMD_BUFFER_SIZE;
-    //In order to detect when the buffer overwrites itself, we set the
-    // tail to -1 whenever it 'catches up' with head : this means the buffer is empty.
-    // Otherwise, head==tail could mean both: either empty or full.
-    if(cmd_tail == cmd_head){
-        cmd_tail = -1 ;
-    }
 
     return 1;
 
