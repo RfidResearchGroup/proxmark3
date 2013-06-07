@@ -26,7 +26,7 @@
 
 static serial_port sp;
 static UsbCommand txcmd;
-static bool txcmd_pending = false;
+static volatile bool txcmd_pending = false;
 
 void SendCommand(UsbCommand *c) {
 #if 0
