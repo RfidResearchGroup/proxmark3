@@ -15,6 +15,7 @@
 #include "usb_cmd.h"
 #include "cmdmain.h"
 #include "scripting.h"
+#include "util.h"
 /**
  * The following params expected:
  *  UsbCommand c
@@ -51,12 +52,7 @@ static int l_SendCommand(lua_State *L){
 
 //    UsbCommand c = (*data);
     SendCommand(data);
-    return 0;
-    //UsbCommand *c = (UsbCommand *)lua_touserdata(L, 1);
-    //luaL_argcheck(L, c != NULL, 1, "'UsbCommand' expected");
-
-    //SendCommand(c);
-    //return 0;
+    return 0; // no return values
 }
 /**
  * @brief The following params expected:
@@ -67,44 +63,78 @@ static int l_SendCommand(lua_State *L){
  */
 static int l_WaitForResponseTimeout(lua_State *L){
 
-    //pop cmd
-    uint32_t cmd = luaL_checkunsigned(L,1);
-    printf("in l_WaitForResponseTimeout, got cmd 0x%0x\n",(int) cmd);
-    //UsbCommand response;
+    uint32_t cmd = 0;
+    size_t ms_timeout = -1;
 
-     //We allocate the usbcommand as userdata on the Lua-stack
-    size_t nbytes = sizeof(UsbCommand);
-
-    UsbCommand *response = (UsbCommand *)lua_newuserdata(L, nbytes);
-
-    size_t ms_timeout = 2000;
-    //Did the user send a timeout ?
-    //Check if the current top of stack is an integer
-
-    if(lua_isnumber( L, 2))
+    //Check number of arguments
+    int n = lua_gettop(L);
+    if(n == 0)
     {
-        printf("You sent a timout-value\n");
-        ms_timeout = luaL_checkunsigned(L,2);
+        //signal error by returning Nil, errorstring
+        lua_pushnil(L);
+        lua_pushstring(L,"You need to supply at least command to wait for");
+        return 2; // two return values
     }
-    printf("Timeout set to %dms\n" , (int) ms_timeout);
+    if(n >= 1)
+    {
+        //pop cmd
+        cmd = luaL_checkunsigned(L,1);
+    }
+    if(n >= 2)
+    {
+        //Did the user send a timeout ?
+        //Check if the current top of stack is an integer
+        ms_timeout = luaL_checkunsigned(L,2);
+        //printf("Timeout set to %dms\n" , (int) ms_timeout);
+    }
 
-    if(WaitForResponseTimeout(cmd, response, ms_timeout))
+    UsbCommand response;
+
+    if(WaitForResponseTimeout(cmd, &response, ms_timeout))
     {
-        //Return the UsbCommand as userdata
-        //the usbcommand is already on the stack
-        // return 1 to signal one return value
-        return 1;
-    }else
-    {
-        //Don't return the UsbCommand. Pop it.
-        lua_pop(L,-1);
+        //Push it as a string
+         lua_pushlstring(L,&response,sizeof(UsbCommand));
+
+        return 1;// return 1 to signal one return value
+    }else{
         //Push a Nil instead
         lua_pushnil(L);
-        return 1;
+        return 1;// one return value
     }
 }
 static int l_nonce2key(lua_State *L){ return CmdHF14AMfRdSc(luaL_checkstring(L, 1));}
 static int l_PrintAndLog(lua_State *L){ return CmdHF14AMfDump(luaL_checkstring(L, 1));}
+static int l_clearCommandBuffer(lua_State *L){
+    clearCommandBuffer();
+}
+/**
+ * @brief l_foobar is a dummy function to test lua-integration with
+ * @param L
+ * @return
+ */
+static int l_foobar(lua_State *L)
+{
+    //Check number of arguments
+    int n = lua_gettop(L);
+    printf("foobar called with %d arguments" , n);
+    lua_settop(L, 0);
+    printf("Arguments discarded, stack now contains %d elements", lua_gettop(L));
+    UsbCommand response =  {CMD_MIFARE_READBL, {1337, 1338, 1339}};
+    printf("Now returning a UsbCommand as a string");
+    lua_pushlstring(L,&response,sizeof(UsbCommand));
+    return 1;
+}
+
+/**
+ * @brief Utility to check if a key has been pressed by the user. This method does not block.
+ * @param L
+ * @return boolean, true if kbhit, false otherwise.
+ */
+static int l_ukbhit(lua_State *L)
+{
+    lua_pushboolean(L,ukbhit() ? true : false);
+    return 1;
+}
 
 int set_pm3_libraries(lua_State *L)
 {
@@ -113,6 +143,9 @@ int set_pm3_libraries(lua_State *L)
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},
         {"nonce2key",                   l_nonce2key},
         {"PrintAndLog",                 l_PrintAndLog},
+        {"foobar",                      l_foobar},
+        {"ukbhit",                      l_ukbhit},
+        {"clearCommandBuffer",          l_clearCommandBuffer},
         {NULL, NULL}
     };
 
