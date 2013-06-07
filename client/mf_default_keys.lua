@@ -7,7 +7,7 @@ local _keys = {
     These keys are from the pm3 c-codebase. 
 
     --]]
-    'fffffffffff0', -- Default key (first key used by program if no user defined key)
+    'ffffffffffff', -- Default key (first key used by program if no user defined key)
     '000000000000', -- Blank key
     'a0a1a2a3a4a5', -- NFCForum MAD key
     'b0b1b2b3b4b5',
@@ -30,7 +30,7 @@ local _keys = {
     --]]
 
     '000000000000', -- Default key
-    'fffffffffff0', -- Default key
+    'ffffffffffff', -- Default key
     'b0b1b2b3b4b5', -- Key from mfoc
     '4d3a99c351dd', -- Key from mfoc
     '1a982c7e459a', -- Key from mfoc
@@ -126,14 +126,12 @@ local _keys = {
     'eeeeeeeeeeee',
     '0123456789ab',
     '123456789abc',
-    'ffffffffffff', -- Default key
-}
+  
 
---[[
-    The keys above have just been pasted in, for completeness sake. They contain duplicates. 
-    We need to weed the duplicates out before we expose the list to someone who actually wants to use them
-    
---]]
+---
+--    The keys above have just been pasted in, for completeness sake. They contain duplicates. 
+--    We need to weed the duplicates out before we expose the list to someone who actually wants to use them
+--    @param list a list to do 'uniq' on
 
 local function uniq(list)
     
