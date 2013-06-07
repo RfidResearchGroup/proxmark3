@@ -12,6 +12,9 @@
 local cmds = require('commands')
 -- Load the default keys
 local keys = require('mf_default_keys')
+-- Ability to read what card is there
+local reader = require('read14a')
+
 local desc = 
 ("This script implements check keys. It utilises a large list of default keys (currently %d keys).\
 If you want to add more, just put them inside mf_default_keys.lua. "):format(#keys)
@@ -102,6 +105,14 @@ end
 local function main()
 
 	print(desc);
+
+	result, err = reader.read1443a()
+	if not result then
+		print(err)
+		return
+	end
+	print(("Found a %s tag"):format(result.name))
+
 
 	core.clearCommandBuffer()
 	local blockNo
