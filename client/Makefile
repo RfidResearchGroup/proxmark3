@@ -16,11 +16,13 @@ OBJDIR = obj
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread ../liblua/liblua.a
 LDFLAGS = $(COMMON_FLAGS)
 CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -I../liblua -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O4 
+LUAPLATFORM = generic
 
 ifneq (,$(findstring MINGW,$(platform)))
 CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
 QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
 MOC = $(QTDIR)/bin/moc
+LUAPLATFORM = mingw
 else ifeq ($(platform),Darwin)
 CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Versions/Current/Headers -I/Library/Frameworks/QtCore.framework/Versions/Current/Headers
 QTLDLIBS = -framework QtGui -framework QtCore
@@ -29,6 +31,7 @@ else
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
 MOC = $(shell pkg-config --variable=moc_location QtCore)
+LUAPLATFORM = linux
 endif
 
 
@@ -131,7 +134,7 @@ install_kext: Info.plist
 	@echo "*** You may need to reboot for the kext to take effect."
 
 lua_build:
-	@echo Compiling liblua;
-	cd ../liblua && make linux
+	@echo Compiling liblua, using platform $(LUAPLATFORM)
+	cd ../liblua && make $(LUAPLATFORM)
 
 .PHONY: all clean
