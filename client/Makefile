@@ -27,6 +27,7 @@ else ifeq ($(platform),Darwin)
 CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Versions/Current/Headers -I/Library/Frameworks/QtCore.framework/Versions/Current/Headers
 QTLDLIBS = -framework QtGui -framework QtCore
 MOC = moc 
+LUAPLATFORM = macosx
 else
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
@@ -118,6 +119,7 @@ proxguiqt.moc.cpp: proxguiqt.h
 
 clean:
 	$(RM) $(CLEAN)
+	cd ../liblua && make clean
 
 tarbin: $(BINS)
 	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%)
