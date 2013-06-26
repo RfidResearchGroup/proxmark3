@@ -28,7 +28,8 @@ int CmdHF14AMifare(const char *Cmd)
 	
 	UsbCommand c = {CMD_READER_MIFARE, {(uint32_t)bytes_to_num(keyBlock, 4), 0, 0}};
 start:
-	SendCommand(&c);
+    clearCommandBuffer();
+    SendCommand(&c);
 	
 	//flush queue
 	while (ukbhit())	getchar();
@@ -41,7 +42,7 @@ start:
 	
 	// wait cycle
 	while (true) {
-		printf(".");
+        //printf(".");
 		fflush(stdout);
 		if (ukbhit()) {
 			getchar();

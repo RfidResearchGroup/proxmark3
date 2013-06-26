@@ -25,6 +25,7 @@
 #include "cmdmain.h"
 #include "util.h"
 
+
 unsigned int current_command = CMD_UNKNOWN;
 //unsigned int received_command = CMD_UNKNOWN;
 //UsbCommand current_response;
@@ -64,6 +65,8 @@ int CmdQuit(const char *Cmd)
   exit(0);
   return 0;
 }
+int getCommand(UsbCommand* response);
+void storeCommand(UsbCommand *command);
 /**
  * Waits for a certain response type. This method waits for a maximum of
  * ms_timeout milliseconds for a specified response command.
@@ -83,9 +86,13 @@ bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeou
   // Wait until the command is received
   for(size_t dm_seconds=0; dm_seconds < ms_timeout/10; dm_seconds++) {
 
-      if(getCommand(response) && response->cmd == cmd){
+      while(getCommand(response))
+      {
+          if(response->cmd == cmd){
           //We got what we expected
           return true;
+          }
+
       }
         msleep(10); // XXX ugh
         if (dm_seconds == 200) { // Two seconds elapsed
@@ -205,6 +212,19 @@ void UsbCommandReceived(UsbCommand *UC)
   storeCommand(UC);
 
 }
+
+/**
+ * @brief This method should be called when sending a new command to the pm3. In case any old
+ *  responses from previous commands are stored in the buffer, a call to this method should clear them.
+ *  A better method could have been to have explicit command-ACKS, so we can know which ACK goes to which
+ *  operation. Right now we'll just have to live with this.
+ */
+void clearCommandBuffer()
+{
+    //This is a very simple operation
+    cmd_tail = cmd_head;
+}
+
 /**
  * @brief storeCommand stores a USB command in a circular buffer
  * @param UC
