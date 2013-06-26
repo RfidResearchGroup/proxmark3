@@ -35,7 +35,7 @@
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
-
+#include <stdint.h>
 #include "pm3_binlib.h"
 
 
@@ -158,20 +158,21 @@ static int l_unpack(lua_State *L) 		/** unpack(f,s, [init]) */
     ++n;
     break;
    }
-   UNPACKSTRING(OP_BSTRING, unsigned char)
-   UNPACKSTRING(OP_WSTRING, unsigned short)
-   UNPACKSTRING(OP_SSTRING, size_t)
+
+   UNPACKSTRING(OP_BSTRING, uint8_t)
+   UNPACKSTRING(OP_WSTRING, uint16_t)
+   UNPACKSTRING(OP_SSTRING, uint32_t)
    UNPACKNUMBER(OP_NUMBER, lua_Number)
    UNPACKNUMBER(OP_DOUBLE, double)
    UNPACKNUMBER(OP_FLOAT, float)
-   UNPACKNUMBER(OP_CHAR, char)
-   UNPACKNUMBER(OP_BYTE, unsigned char)
-   UNPACKNUMBER(OP_SHORT, short)
-   UNPACKNUMBER(OP_USHORT, unsigned short)
-   UNPACKNUMBER(OP_INT, int)
-   UNPACKNUMBER(OP_UINT, unsigned int)
-   UNPACKNUMBER(OP_LONG, long)
-   UNPACKNUMBER(OP_ULONG, unsigned long)
+   UNPACKNUMBER(OP_CHAR, int8_t)
+   UNPACKNUMBER(OP_BYTE, uint8_t)
+   UNPACKNUMBER(OP_SHORT, int16_t)
+   UNPACKNUMBER(OP_USHORT, uint16_t)
+   UNPACKNUMBER(OP_INT, int32_t)
+   UNPACKNUMBER(OP_UINT, uint32_t)
+   UNPACKNUMBER(OP_LONG, int64_t)
+   UNPACKNUMBER(OP_ULONG, uint64_t)
   case OP_HEX:
     {
       luaL_Buffer buf;
@@ -264,20 +265,20 @@ static int l_pack(lua_State *L) 		/** pack(f,...) */
     luaL_addlstring(&b,a,l+(c==OP_ZSTRING));
     break;
    }
-   PACKSTRING(OP_BSTRING, unsigned char)
-   PACKSTRING(OP_WSTRING, unsigned short)
-   PACKSTRING(OP_SSTRING, size_t)
+   PACKSTRING(OP_BSTRING, uint8_t)
+   PACKSTRING(OP_WSTRING, uint16_t)
+   PACKSTRING(OP_SSTRING, uint32_t)
    PACKNUMBER(OP_NUMBER, lua_Number)
    PACKNUMBER(OP_DOUBLE, double)
    PACKNUMBER(OP_FLOAT, float)
-   PACKNUMBER(OP_CHAR, char)
-   PACKNUMBER(OP_BYTE, unsigned char)
-   PACKNUMBER(OP_SHORT, short)
-   PACKNUMBER(OP_USHORT, unsigned short)
-   PACKNUMBER(OP_INT, int)
-   PACKNUMBER(OP_UINT, unsigned int)
-   PACKNUMBER(OP_LONG, long)
-   PACKNUMBER(OP_ULONG, unsigned long)
+   PACKNUMBER(OP_CHAR, int8_t)
+   PACKNUMBER(OP_BYTE, uint8_t)
+   PACKNUMBER(OP_SHORT, int16_t)
+   PACKNUMBER(OP_USHORT, uint16_t)
+   PACKNUMBER(OP_INT, int32_t)
+   PACKNUMBER(OP_UINT, uint32_t)
+   PACKNUMBER(OP_LONG, int64_t)
+   PACKNUMBER(OP_ULONG, uint64_t)
   case OP_HEX:
     { // doing digit parsing the lpack way
       unsigned char sbyte = 0;
