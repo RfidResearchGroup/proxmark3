@@ -74,7 +74,11 @@ local library = {
 		command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
 									arg1 = ISO14A_COMMAND.ISO14A_CONNECT}
 
-		core.SendCommand(command:getBytes())
+		err = core.SendCommand(command:getBytes())
+		if err then
+			print(err)
+			return nil, err
+		end
 		local result = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
 		if result then
 			local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
