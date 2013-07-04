@@ -162,6 +162,10 @@ Command = {
 		
 		return o
 	end,
+	parse = function (packet)
+		local count,cmd,arg1,arg2,arg3,data = bin.unpack('LLLLH512',packet)
+		return Command:new{cmd = cmd, arg1 = arg1, arg2 = arg2, arg3 = arg3, data = data}
+	end,
 }
 function Command:__tostring()
 	local output = ("%s\r\nargs : (%s, %s, %s)\r\ndata:\r\n%s\r\n"):format(
@@ -181,6 +185,4 @@ function Command:getBytes()
 	
 	return bin.pack("LLLLH",cmd, arg1, arg2, arg3,data);
 end
-
-
 return _commands
