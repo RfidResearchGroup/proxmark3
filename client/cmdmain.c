@@ -24,7 +24,6 @@
 #include "cmdlf.h"
 #include "cmdmain.h"
 #include "util.h"
-#include "cmdscript.h"
 
 unsigned int current_command = CMD_UNKNOWN;
 //unsigned int received_command = CMD_UNKNOWN;
@@ -51,7 +50,6 @@ static command_t CommandTable[] =
   {"hw",    CmdHW,    1, "{ Hardware commands... }"},
   {"lf",    CmdLF,    1, "{ LF commands... }"},
   {"quit",  CmdQuit,  1, "Quit program"},
-  {"script", CmdScript,   1,"Run script"},
   {NULL, NULL, 0, NULL}
 };
 
