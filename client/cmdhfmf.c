@@ -15,18 +15,20 @@ static int CmdHelp(const char *Cmd);
 int CmdHF14AMifare(const char *Cmd)
 {
 	uint32_t uid = 0;
-	uint32_t nt = 0;
+	uint32_t nt = 0, nr = 0;
 	uint64_t par_list = 0, ks_list = 0, r_key = 0;
 	uint8_t isOK = 0;
 	uint8_t keyBlock[8] = {0};
 
-	if (param_getchar(Cmd, 0) && param_gethex(Cmd, 0, keyBlock, 8)) {
-		PrintAndLog("Nt must include 8 HEX symbols");
-		return 1;
-	}
+	UsbCommand c = {CMD_READER_MIFARE, {true, 0, 0}};
+
+	// message
+	printf("-------------------------------------------------------------------------\n");
+	printf("Executing command. Expected execution time: 25sec on average  :-)\n");
+	printf("Press the key on the proxmark3 device to abort both proxmark3 and client.\n");
+	printf("-------------------------------------------------------------------------\n");
 
 	
-	UsbCommand c = {CMD_READER_MIFARE, {(uint32_t)bytes_to_num(keyBlock, 4), 0, 0}};
 start:
     clearCommandBuffer();
     SendCommand(&c);
@@ -34,15 +36,10 @@ start:
 	//flush queue
 	while (ukbhit())	getchar();
 
-	// message
-	printf("-------------------------------------------------------------------------\n");
-	printf("Executing command. It may take up to 30 min.\n");
-	printf("Press the key on the proxmark3 device to abort both proxmark3 and client.\n");
-	printf("-------------------------------------------------------------------------\n");
 	
 	// wait cycle
 	while (true) {
-        //printf(".");
+        printf(".");
 		fflush(stdout);
 		if (ukbhit()) {
 			getchar();
@@ -51,27 +48,26 @@ start:
 		}
 		
 		UsbCommand resp;
-		if (WaitForResponseTimeout(CMD_ACK,&resp,2000)) {
+		if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
 			isOK  = resp.arg[0] & 0xff;
-	
 			uid = (uint32_t)bytes_to_num(resp.d.asBytes +  0, 4);
 			nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
 			par_list = bytes_to_num(resp.d.asBytes +  8, 8);
 			ks_list = bytes_to_num(resp.d.asBytes +  16, 8);
-	
+			nr = bytes_to_num(resp.d.asBytes + 24, 4);
 			printf("\n\n");
-			PrintAndLog("isOk:%02x", isOK);
 			if (!isOK) PrintAndLog("Proxmark can't get statistic info. Execution aborted.\n");
 			break;
 		}
 	}	
+
 	printf("\n");
 	
 	// error
 	if (isOK != 1) return 1;
 	
 	// execute original function from util nonce2key
-	if (nonce2key(uid, nt, par_list, ks_list, &r_key))
+	if (nonce2key(uid, nt, nr, par_list, ks_list, &r_key))
 	{
 		isOK = 2;
 		PrintAndLog("Key not found (lfsr_common_prefix list is null). Nt=%08x", nt);	
@@ -86,8 +82,9 @@ start:
 		PrintAndLog("Found valid key:%012"llx, r_key);
 	else
 	{
-		if (isOK != 2) PrintAndLog("Found invalid key. ( Nt=%08x ,Trying use it to run again...", nt);	
-		c.arg[0] = nt;
+		if (isOK != 2) PrintAndLog("Found invalid key. ");	
+		PrintAndLog("Failing is expected to happen in 25%% of all cases. Trying again with a different reader nonce...");
+		c.arg[0] = false;
 		goto start;
 	}
 	

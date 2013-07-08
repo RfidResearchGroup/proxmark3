@@ -17,12 +17,12 @@
 #include "nonce2key.h"
 #include "ui.h"
 
-int nonce2key(uint32_t uid, uint32_t nt, uint64_t par_info, uint64_t ks_info, uint64_t * key) {
+int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t * key) {
   struct Crypto1State *state, *state_s;
-  uint32_t pos, nr, rr, nr_diff;//, ks1, ks2;
+  uint32_t pos, rr, nr_diff;//, ks1, ks2;
   byte_t bt, i, ks3x[8], par[8][8];
   uint64_t key_recovered;
-  nr = rr = 0;
+  rr = 0;
   
   // Reset the last three significant bits of the reader nonce
   nr &= 0xffffff1f;

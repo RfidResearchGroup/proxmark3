@@ -47,4 +47,7 @@ void StartCountUS();
 uint32_t RAMFUNC GetCountUS();
 uint32_t RAMFUNC GetDeltaCountUS();
 
+void StartCountMifare();
+uint32_t RAMFUNC GetCountMifare();
+
 #endif

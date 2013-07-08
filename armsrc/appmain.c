@@ -626,7 +626,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 #ifdef WITH_LF
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			AcquireRawAdcSamples125k(c->arg[0]);
-      cmd_send(CMD_ACK,0,0,0,0,0);
+			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			ModThenAcquireRawAdcSamples125k(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
@@ -638,7 +638,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			CmdHIDsimTAG(c->arg[0], c->arg[1], 1);					// Simulate HID tag by ID
 			break;
     case CMD_HID_CLONE_TAG: // Clone HID tag by ID to T55x7
-      CopyHIDtoT55x7(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
+			CopyHIDtoT55x7(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
 			break;
 		case CMD_EM410X_WRITE_TAG:
 			WriteEM410x(c->arg[0], c->arg[1], c->arg[2]);
@@ -663,26 +663,26 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_INDALA_CLONE_TAG_L:					// Clone Indala 224-bit tag by UID to T55x7
 			CopyIndala224toT55x7(c->d.asDwords[0], c->d.asDwords[1], c->d.asDwords[2], c->d.asDwords[3], c->d.asDwords[4], c->d.asDwords[5], c->d.asDwords[6]);
 			break;
-    case CMD_T55XX_READ_BLOCK:
-      T55xxReadBlock(c->arg[1], c->arg[2],c->d.asBytes[0]);
-      break;
-    case CMD_T55XX_WRITE_BLOCK:
-      T55xxWriteBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
-      break;
-    case CMD_T55XX_READ_TRACE: // Clone HID tag by ID to T55x7
-      T55xxReadTrace();
-      break;
-    case CMD_PCF7931_READ: // Read PCF7931 tag
-      ReadPCF7931();
-      cmd_send(CMD_ACK,0,0,0,0,0);
-//      UsbSendPacket((uint8_t*)&ack, sizeof(ack));
-      break;
-    case CMD_EM4X_READ_WORD:
-      EM4xReadWord(c->arg[1], c->arg[2],c->d.asBytes[0]);
-      break;
-    case CMD_EM4X_WRITE_WORD:
-      EM4xWriteWord(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
-      break;
+		case CMD_T55XX_READ_BLOCK:
+			T55xxReadBlock(c->arg[1], c->arg[2],c->d.asBytes[0]);
+			break;
+		case CMD_T55XX_WRITE_BLOCK:
+			T55xxWriteBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
+			break;
+		case CMD_T55XX_READ_TRACE: // Clone HID tag by ID to T55x7
+			T55xxReadTrace();
+			break;
+		case CMD_PCF7931_READ: // Read PCF7931 tag
+			ReadPCF7931();
+			cmd_send(CMD_ACK,0,0,0,0,0);
+//      	UsbSendPacket((uint8_t*)&ack, sizeof(ack));
+			break;
+		case CMD_EM4X_READ_WORD:
+			EM4xReadWord(c->arg[1], c->arg[2],c->d.asBytes[0]);
+			break;
+		case CMD_EM4X_WRITE_WORD:
+			EM4xWriteWord(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
+			break;
 #endif
 
 #ifdef WITH_HITAG
@@ -772,7 +772,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 			
 		case CMD_READER_MIFARE:
-            ReaderMifare(c);
+            ReaderMifare(c->arg[0]);
 			break;
 		case CMD_MIFARE_READBL:
 			MifareReadBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
@@ -863,7 +863,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			LED_D_OFF(); // LED D indicates field ON or OFF
 			break;
 
-		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K: {
+		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K:
 //			UsbCommand n;
 //			if(c->cmd == CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K) {
 //				n.cmd = CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K;
@@ -877,24 +877,24 @@ void UsbPacketReceived(uint8_t *packet, int len)
       //			UsbSendPacket((uint8_t *)&n, sizeof(n));
       //			LED_B_OFF();
 
-      LED_B_ON();
-      for(size_t i=0; i<c->arg[1]; i += USB_CMD_DATA_SIZE) {
-        size_t len = MIN((c->arg[1] - i),USB_CMD_DATA_SIZE);
-        cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,0,((byte_t*)BigBuf)+c->arg[0]+i,len);
-      }
-      // Trigger a finish downloading signal with an ACK frame
-      cmd_send(CMD_ACK,0,0,0,0,0);
+			LED_B_ON();
+			for(size_t i=0; i<c->arg[1]; i += USB_CMD_DATA_SIZE) {
+				size_t len = MIN((c->arg[1] - i),USB_CMD_DATA_SIZE);
+				cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,0,((byte_t*)BigBuf)+c->arg[0]+i,len);
+			}
+			// Trigger a finish downloading signal with an ACK frame
+			cmd_send(CMD_ACK,0,0,0,0,0);
 			LED_B_OFF();
-		} break;
+			break;
 
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
 			uint8_t *b = (uint8_t *)BigBuf;
 			memcpy(b+c->arg[0], c->d.asBytes, 48);
 			//Dbprintf("copied 48 bytes to %i",b+c->arg[0]);
 //			UsbSendPacket((uint8_t*)&ack, sizeof(ack));
-      cmd_send(CMD_ACK,0,0,0,0,0);
-		} break;
-
+			cmd_send(CMD_ACK,0,0,0,0,0);
+			break;
+		}	
 		case CMD_READ_MEM:
 			ReadMem(c->arg[0]);
 			break;
@@ -926,35 +926,35 @@ void UsbPacketReceived(uint8_t *packet, int len)
 #endif
 		case CMD_SETUP_WRITE:
 		case CMD_FINISH_WRITE:
-		case CMD_HARDWARE_RESET: {
-      usb_disable();
+		case CMD_HARDWARE_RESET:
+			usb_disable();
 			SpinDelay(1000);
 			SpinDelay(1000);
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
 			for(;;) {
 				// We're going to reset, and the bootrom will take control.
 			}
-        } break;
+			break;
 
-		case CMD_START_FLASH: {
+		case CMD_START_FLASH:
 			if(common_area.flags.bootrom_present) {
 				common_area.command = COMMON_AREA_COMMAND_ENTER_FLASH_MODE;
 			}
-      usb_disable();
+			usb_disable();
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
 			for(;;);
-        } break;
+			break;
 
 		case CMD_DEVICE_INFO: {
 			uint32_t dev_info = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
 			if(common_area.flags.bootrom_present) dev_info |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
 //			UsbSendPacket((uint8_t*)&c, sizeof(c));
-      cmd_send(CMD_DEVICE_INFO,dev_info,0,0,0,0);
-		} break;
-            
-		default: {
+			cmd_send(CMD_DEVICE_INFO,dev_info,0,0,0,0);	
+			break;
+		}
+		default:
 			Dbprintf("%s: 0x%04x","unknown command:",c->cmd);
-        } break;
+			break;
 	}
 }
 

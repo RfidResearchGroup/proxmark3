@@ -18,6 +18,6 @@
 #include "crapto1.h"
 #include "common.h"
 
-int nonce2key(uint32_t uid, uint32_t nt, uint64_t par_info, uint64_t ks_info, uint64_t * key); 
+int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t * key); 
 
 #endif

@@ -294,11 +294,11 @@ void StartCountUS()
 	
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS; // timer disable  
 	AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_XC1; // from timer 0
-
+	
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN;
 	AT91C_BASE_TCB->TCB_BCR = 1;
-}
+	}
 
 uint32_t RAMFUNC GetCountUS(){
 	return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV / 15) * 10);
@@ -314,3 +314,60 @@ uint32_t RAMFUNC GetDeltaCountUS(){
 }
 
 
+//  -------------------------------------------------------------------------
+//  Mifare timer. Uses ssp_clk from FPGA 
+//  -------------------------------------------------------------------------
+void StartCountMifare()
+{
+	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);  // Enable Clock to all timers
+	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_TIOA1 		// XC0 Clock = TIOA1
+							| AT91C_TCB_TC1XC1S_NONE 		// XC1 Clock = none
+							| AT91C_TCB_TC2XC2S_TIOA0;		// XC2 Clock = TIOA0
+
+	// configure TC1 to create a short pulse on TIOA1 when a rising edge on TIOB1 (= ssp_clk from FPGA) occurs:
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS; 				// disable TC1
+	AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK // TC1 Clock = MCK(48MHz)/2 = 24MHz
+							| AT91C_TC_CPCSTOP				// Stop clock on RC compare
+							| AT91C_TC_EEVTEDG_RISING		// Trigger on rising edge of Event
+							| AT91C_TC_EEVT_TIOB			// Event-Source: TIOB1 (= ssc_clk from FPGA = 13,56MHz / 16)
+							| AT91C_TC_ENETRG				// Enable external trigger event
+							| AT91C_TC_WAVESEL_UP	 		// Upmode without automatic trigger on RC compare
+							| AT91C_TC_WAVE 				// Waveform Mode
+							| AT91C_TC_AEEVT_SET 			// Set TIOA1 on external event
+							| AT91C_TC_ACPC_CLEAR; 			// Clear TIOA1 on RC Compare
+	AT91C_BASE_TC1->TC_RC = 0x04; 							// RC Compare value = 0x04
+
+	// use TC0 to count TIOA1 pulses
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS; 				// disable TC0  
+	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_XC0	 			// TC0 clock = XC0 clock = TIOA1
+							| AT91C_TC_WAVE 				// Waveform Mode
+							| AT91C_TC_WAVESEL_UP	 		// just count
+							| AT91C_TC_ACPA_CLEAR 			// Clear TIOA0 on RA Compare
+							| AT91C_TC_ACPC_SET; 			// Set TIOA0 on RC Compare
+	AT91C_BASE_TC0->TC_RA = 1;								// RA Compare value = 1; pulse width to TC2
+	AT91C_BASE_TC0->TC_RC = 0; 								// RC Compare value = 0; increment TC2 on overflow
+
+	// use TC2 to count TIOA0 pulses (giving us a 32bit counter (TC0/TC2) clocked by ssp_clk)
+	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS; 				// disable TC2  
+	AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_XC2	 			// TC2 clock = XC2 clock = TIOA0
+							| AT91C_TC_WAVE 				// Waveform Mode
+							| AT91C_TC_WAVESEL_UP;	 		// just count
+	
+	
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;				// enable TC0
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN;				// enable TC1
+	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN;				// enable TC2
+	AT91C_BASE_TCB->TCB_BCR = 1;							// assert Sync (set all timers to 0 on next active clock edge)
+}
+
+
+uint32_t RAMFUNC GetCountMifare(){
+	uint32_t tmp_count;
+	tmp_count = (AT91C_BASE_TC2->TC_CV << 16) | AT91C_BASE_TC0->TC_CV;
+	if ((tmp_count & 0xffff) == 0) { //small chance that we may have missed an increment in TC2
+		return (AT91C_BASE_TC2->TC_CV << 16);
+	} 
+	else {
+		return tmp_count;
+	}
+}

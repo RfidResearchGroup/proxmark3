@@ -156,7 +156,7 @@ void RAMFUNC SniffMifare(uint8_t param);
 void EPA_PACE_Collect_Nonce(UsbCommand * c);
 
 // mifarecmd.h
-void ReaderMifare(UsbCommand *c);
+void ReaderMifare(bool first_try);
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
 void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
