@@ -393,46 +393,43 @@ int CmdGrid(const char *Cmd)
 
 int CmdHexsamples(const char *Cmd)
 {
-  int n;
+  int i, j;
   int requested = 0;
   int offset = 0;
+  char string_buf[25];
+  char* string_ptr = string_buf;
+  uint8_t got[40000];
+ 
   sscanf(Cmd, "%i %i", &requested, &offset);
 
-  int delivered = 0;
-  uint8_t got[40000];
-
-  /* round up to nearest 8 bytes so the printed data is all valid */
-  if (requested < 8) {
+  /* if no args send something */
+  if (requested == 0) {
     requested = 8;
   }
-  if (requested % 8 != 0) {
-    int remainder = requested % 8;
-    requested = requested + 8 - remainder;
-  }  
   if (offset + requested > sizeof(got)) {
     PrintAndLog("Tried to read past end of buffer, <bytes> + <offset> > 40000");
-       return 0;
-  } else {
-    n = requested;
-  }
+    return 0;
+  } 
 
-  GetFromBigBuf(got,n,offset);
+  GetFromBigBuf(got,requested,offset);
   WaitForResponse(CMD_ACK,NULL);
 
-  for (int j = 0; j < n; j += 8) {
-    PrintAndLog("%02x %02x %02x %02x %02x %02x %02x %02x",
-      sample_buf[j+0],
-      sample_buf[j+1],
-      sample_buf[j+2],
-      sample_buf[j+3],
-      sample_buf[j+4],
-      sample_buf[j+5],
-      sample_buf[j+6],
-      sample_buf[j+7]
-    );
-    delivered += 8;
-    if (delivered >= requested)
-      break;
+  i = 0;
+  for (j = 0; j < requested; j++) {
+    i++;
+    string_ptr += sprintf(string_ptr, "%02x ", got[j]);
+    if (i == 8) {
+      *(string_ptr - 1) = '\0';    // remove the trailing space
+      PrintAndLog("%s", string_buf);
+      string_buf[0] = '\0';
+      string_ptr = string_buf;
+      i = 0;
+    }
+    if (j == requested - 1 && string_buf[0] != '\0') { // print any remaining bytes
+      *(string_ptr - 1) = '\0';
+      PrintAndLog("%s", string_buf);
+      string_buf[0] = '\0';
+    }  
   }
   return 0;
 }
