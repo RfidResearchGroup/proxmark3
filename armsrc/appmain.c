@@ -744,16 +744,19 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			AcquireRawAdcSamplesIso14443(c->arg[0]);
 			break;
 		case CMD_READ_SRI512_TAG:
-			ReadSRI512Iso14443(c->arg[0]);
+			ReadSTMemoryIso14443(0x0F);
 			break;
 		case CMD_READ_SRIX4K_TAG:
-			ReadSRIX4KIso14443(c->arg[0]);
+			ReadSTMemoryIso14443(0x7F);
 			break;
 		case CMD_SNOOP_ISO_14443:
 			SnoopIso14443();
 			break;
 		case CMD_SIMULATE_TAG_ISO_14443:
 			SimulateIso14443Tag();
+			break;
+		case CMD_ISO_14443B_COMMAND:
+			SendRawCommand14443B(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
 			break;
 #endif
 

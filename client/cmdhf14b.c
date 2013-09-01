@@ -21,6 +21,7 @@
 #include "ui.h"
 #include "cmdparser.h"
 #include "cmdhf14b.h"
+#include "cmdmain.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -267,6 +268,116 @@ int CmdSrix4kRead(const char *Cmd)
   return 0;
 }
 
+int CmdHF14BCmdRaw (const char *cmd) {
+    UsbCommand resp;
+    uint8_t *recv;
+    UsbCommand c = {CMD_ISO_14443B_COMMAND, {0, 0, 0}}; // len,recv?
+    uint8_t reply=1;
+    uint8_t crc=0;
+    uint8_t power=0;
+    char buf[5]="";
+    int i=0;
+    uint8_t data[100];
+    unsigned int datalen=0, temp;
+    char *hexout;
+    
+    if (strlen(cmd)<3) {
+        PrintAndLog("Usage: hf 14b raw [-r] [-c] [-p] <0A 0B 0C ... hex>");
+        PrintAndLog("       -r    do not read response");
+        PrintAndLog("       -c    calculate and append CRC");
+        PrintAndLog("       -p    leave the field on after receive");
+        return 0;    
+    }
+
+    // strip
+    while (*cmd==' ' || *cmd=='\t') cmd++;
+    
+    while (cmd[i]!='\0') {
+        if (cmd[i]==' ' || cmd[i]=='\t') { i++; continue; }
+        if (cmd[i]=='-') {
+            switch (cmd[i+1]) {
+                case 'r': 
+                case 'R': 
+                    reply=0;
+                    break;
+                case 'c':
+                case 'C':                
+                    crc=1;
+                    break;
+                case 'p': 
+                case 'P': 
+                    power=1;
+                    break;
+                default:
+                    PrintAndLog("Invalid option");
+                    return 0;
+            }
+            i+=2;
+            continue;
+        }
+        if ((cmd[i]>='0' && cmd[i]<='9') ||
+            (cmd[i]>='a' && cmd[i]<='f') ||
+            (cmd[i]>='A' && cmd[i]<='F') ) {
+            buf[strlen(buf)+1]=0;
+            buf[strlen(buf)]=cmd[i];
+            i++;
+            
+            if (strlen(buf)>=2) {
+                sscanf(buf,"%x",&temp);
+                data[datalen]=(uint8_t)(temp & 0xff);
+                datalen++;
+                *buf=0;
+            }
+            continue;
+        }
+        PrintAndLog("Invalid char on input");
+        return 0;
+    }
+    if(crc)
+    {
+        uint8_t first, second;
+        ComputeCrc14443(CRC_14443_B, data, datalen, &first, &second);
+        data[datalen++] = first;
+        data[datalen++] = second;
+    }
+    
+    c.arg[0] = datalen;
+    c.arg[1] = reply;
+    c.arg[2] = power;
+    memcpy(c.d.asBytes,data,datalen);
+    
+    SendCommand(&c);
+    
+    if (reply) {
+        if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+            recv = resp.d.asBytes;
+            PrintAndLog("received %i octets",resp.arg[0]);
+            if(!resp.arg[0])
+                return 0;
+            hexout = (char *)malloc(resp.arg[0] * 3 + 1);
+            if (hexout != NULL) {
+                uint8_t first, second;
+                for (int i = 0; i < resp.arg[0]; i++) { // data in hex
+                    sprintf(&hexout[i * 3], "%02hX ", recv[i]);
+                }
+                PrintAndLog("%s", hexout);
+                free(hexout);
+                ComputeCrc14443(CRC_14443_B, recv, resp.arg[0]-2, &first, &second);
+                if(recv[resp.arg[0]-2]==first && recv[resp.arg[0]-1]==second) {
+                    PrintAndLog("CRC OK");
+                } else {
+                    PrintAndLog("CRC failed");
+                }
+            } else {
+                PrintAndLog("malloc failed your client has low memory?");
+            }
+        } else {
+            PrintAndLog("timeout while waiting for reply.");
+        }
+    } // if reply
+    return 0;
+}
+
 static command_t CommandTable[] = 
 {
   {"help",        CmdHelp,        1, "This help"},
@@ -276,8 +387,9 @@ static command_t CommandTable[] =
   {"sim",         CmdHF14Sim,     0, "Fake ISO 14443 tag"},
   {"simlisten",   CmdHFSimlisten, 0, "Get HF samples as fake tag"},
   {"snoop",       CmdHF14BSnoop,  0, "Eavesdrop ISO 14443"},
-  {"sri512read",  CmdSri512Read,  0, "<int> -- Read contents of a SRI512 tag"},
-  {"srix4kread",  CmdSrix4kRead,  0, "<int> -- Read contents of a SRIX4K tag"},
+  {"sri512read",  CmdSri512Read,  0, "Read contents of a SRI512 tag"},
+  {"srix4kread",  CmdSrix4kRead,  0, "Read contents of a SRIX4K tag"},
+  {"raw",         CmdHF14BCmdRaw, 0, "Send raw hex data to tag"},
   {NULL, NULL, 0, NULL}
 };
 
