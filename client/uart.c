@@ -266,7 +266,7 @@ bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t* pszRxLen) {
     if (res < 0) {
       return false;
     }
-    
+ 
     // Read time-out
     if (res == 0) {
       if (*pszRxLen == 0) {
@@ -277,21 +277,24 @@ bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t* pszRxLen) {
         return true;
       }
     }
-    
+ 
     // Retrieve the count of the incoming bytes
     res = ioctl(((serial_port_unix*)sp)->fd, FIONREAD, &byteCount);
     if (res < 0) return false;
-    
+
     // There is something available, read the data
     res = read(((serial_port_unix*)sp)->fd,pbtRx+(*pszRxLen),byteCount);
-    
+
     // Stop if the OS has some troubles reading the data
     if (res <= 0) return false;
-    
+ 
     *pszRxLen += res;
+
+    if(res==byteCount)
+        return true;
     
   } while (byteCount);
-  
+
   return true;
 }
 

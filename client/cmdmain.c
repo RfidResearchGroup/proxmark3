@@ -26,6 +26,7 @@
 #include "util.h"
 #include "cmdscript.h"
 
+
 unsigned int current_command = CMD_UNKNOWN;
 //unsigned int received_command = CMD_UNKNOWN;
 //UsbCommand current_response;

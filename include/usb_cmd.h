@@ -86,6 +86,7 @@ typedef struct {
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443                             0x0301
 #define CMD_READ_SRI512_TAG                                               0x0303
 #define CMD_READ_SRIX4K_TAG                                               0x0304
+#define CMD_ISO_14443B_COMMAND                                            0x0305
 #define CMD_READER_ISO_15693                                              0x0310
 #define CMD_SIMTAG_ISO_15693                                              0x0311
 #define CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693                              0x0312

@@ -28,7 +28,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	// variables
 	byte_t isOK = 0;
 	byte_t dataoutbuf[16];
-	uint8_t uid[8];
+	uint8_t uid[10];
 	uint32_t cuid;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
@@ -109,7 +109,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	// variables
 	byte_t isOK = 0;
 	byte_t dataoutbuf[16 * 4];
-	uint8_t uid[8];
+	uint8_t uid[10];
 	uint32_t cuid;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
@@ -208,7 +208,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	
 	// variables
 	byte_t isOK = 0;
-	uint8_t uid[8];
+	uint8_t uid[10];
 	uint32_t cuid;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
@@ -298,7 +298,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 	// variables
 	int rtr, i, j, m, len;
 	int davg, dmin, dmax;
-	uint8_t uid[8];
+	uint8_t uid[10];
 	uint32_t cuid, nt1, nt2, nttmp, nttest, par, ks1;
 	uint8_t par_array[4];
 	nestedVector nvector[NES_MAX_INFO + 1][11];
@@ -493,7 +493,6 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 			}
 	
 			LED_B_ON();
-//			SpinDelay(100);
       cmd_send(CMD_ACK,0,ncount,targetBlockNo + (targetKeyType * 0x100),buf,48);
 //			UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 			LED_B_OFF();
@@ -507,7 +506,6 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 //	memset(ack.d.asBytes, 0x00, sizeof(ack.d.asBytes));
 	
 	LED_B_ON();
-//	SpinDelay(300);
 //	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
   cmd_send(CMD_ACK,1,0,0,0,0);
 	LED_B_OFF();
@@ -536,7 +534,7 @@ void MifareChkKeys(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	// variables
 	int i;
 	byte_t isOK = 0;
-	uint8_t uid[8];
+	uint8_t uid[10];
 	uint32_t cuid;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
@@ -649,7 +647,7 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	// variables
 	byte_t dataoutbuf[16];
 	byte_t dataoutbuf2[16];
-	uint8_t uid[8];
+	uint8_t uid[10];
 
 	// clear trace
 	iso14a_clear_trace();
@@ -761,11 +759,11 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	
 	// variables
 	byte_t isOK = 0;
-	uint8_t uid[8];
+	uint8_t uid[10];
 	uint8_t d_block[18];
 	uint32_t cuid;
 	
-	memset(uid, 0x00, 8);
+	memset(uid, 0x00, 10);
 	uint8_t* receivedAnswer = mifare_get_bigbufptr();
 	
 	if (workFlags & 0x08) {

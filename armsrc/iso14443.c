@@ -537,7 +537,7 @@ static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
                 if(Demod.posCount < 12) {
                     Demod.state = DEMOD_UNSYNCD;
                 } else {
-                	LED_C_ON(); // Got SOF
+                    LED_C_ON(); // Got SOF
                     Demod.state = DEMOD_AWAITING_START_BIT;
                     Demod.posCount = 0;
                     Demod.len = 0;
@@ -598,8 +598,8 @@ static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
                     } else if(s == 0x000) {
                         // This is EOF
                     	LED_C_OFF();
-                        return TRUE;
                         Demod.state = DEMOD_UNSYNCD;
+                        return TRUE;
                     } else {
                         Demod.state = DEMOD_UNSYNCD;
                     }
@@ -639,7 +639,7 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
     int samples = 0;
 
     // Clear out the state of the "UART" that receives from the tag.
-    memset(BigBuf, 0x44, 400);
+    memset(BigBuf, 0x00, 400);
     Demod.output = (uint8_t *)BigBuf;
     Demod.len = 0;
     Demod.state = DEMOD_UNSYNCD;
@@ -656,7 +656,7 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
     FpgaSetupSscDma((uint8_t *)dmaBuf, DEMOD_DMA_BUFFER_SIZE);
 
     // Signal field is ON with the appropriate LED:
-	if (weTx) LED_D_ON(); else LED_D_OFF();
+    if (weTx) LED_D_ON(); else LED_D_OFF();
     // And put the FPGA in the appropriate mode
     FpgaWriteConfWord(
     	FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ |
@@ -786,7 +786,7 @@ static void TransmitFor14443(void)
 // Code a layer 2 command (string of octets, including CRC) into ToSend[],
 // so that it is ready to transmit to the tag using TransmitFor14443().
 //-----------------------------------------------------------------------------
-void CodeIso14443bAsReader(const uint8_t *cmd, int len)
+static void CodeIso14443bAsReader(const uint8_t *cmd, int len)
 {
     int i, j;
     uint8_t b;
@@ -843,32 +843,14 @@ void CodeIso14443bAsReader(const uint8_t *cmd, int len)
 // responses.
 // The command name is misleading, it actually decodes the reponse in HEX
 // into the output buffer (read the result using hexsamples, not hisamples)
+//
+// obsolete function only for test
 //-----------------------------------------------------------------------------
 void AcquireRawAdcSamplesIso14443(uint32_t parameter)
 {
     uint8_t cmd1[] = { 0x05, 0x00, 0x08, 0x39, 0x73 };
 
-    // Make sure that we start from off, since the tags are stateful;
-    // confusing things will happen if we don't reset them between reads.
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LED_D_OFF();
-    SpinDelay(200);
-
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-    FpgaSetupSsc();
-
-    // Now give it time to spin up.
-    // Signal field is on with the appropriate LED
-    LED_D_ON();
-    FpgaWriteConfWord(
-    	FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ);
-    SpinDelay(200);
-
-    CodeIso14443bAsReader(cmd1, sizeof(cmd1));
-    TransmitFor14443();
-//    LED_A_ON();
-    GetSamplesFor14443Demod(TRUE, 2000, FALSE);
-//    LED_A_OFF();
+    SendRawCommand14443B(sizeof(cmd1),1,1,cmd1);
 }
 
 //-----------------------------------------------------------------------------
@@ -880,16 +862,7 @@ void AcquireRawAdcSamplesIso14443(uint32_t parameter)
 //
 // I tried to be systematic and check every answer of the tag, every CRC, etc...
 //-----------------------------------------------------------------------------
-void ReadSRI512Iso14443(uint32_t parameter)
-{
-     ReadSTMemoryIso14443(parameter,0x0F);
-}
-void ReadSRIX4KIso14443(uint32_t parameter)
-{
-     ReadSTMemoryIso14443(parameter,0x7F);
-}
-
-void ReadSTMemoryIso14443(uint32_t parameter,uint32_t dwLast)
+void ReadSTMemoryIso14443(uint32_t dwLast)
 {
     uint8_t i = 0x00;
 
@@ -973,8 +946,8 @@ void ReadSTMemoryIso14443(uint32_t parameter,uint32_t dwLast)
 	(Demod.output[7]<<24) + (Demod.output[6]<<16) + (Demod.output[5]<<8) + Demod.output[4],
 	(Demod.output[3]<<24) + (Demod.output[2]<<16) + (Demod.output[1]<<8) + Demod.output[0]);
 
-    // Now loop to read all 16 blocks, address from 0 to 15
-    DbpString("Tag memory dump, block 0 to 15");
+    // Now loop to read all 16 blocks, address from 0 to last block
+    Dbprintf("Tag memory dump, block 0 to %d",dwLast);
     cmd1[0] = 0x08;
     i = 0x00;
     dwLast++;
@@ -1072,13 +1045,12 @@ void RAMFUNC SnoopIso14443(void)
     Uart.byteCntMax = 100;
     Uart.state = STATE_UNSYNCD;
 
-	// Print some debug information about the buffer sizes
-	Dbprintf("Snooping buffers initialized:");
-	Dbprintf("  Trace: %i bytes", DEMOD_TRACE_SIZE);
-	Dbprintf("  Reader -> tag: %i bytes", READER_TAG_BUFFER_SIZE);
-	Dbprintf("  tag -> Reader: %i bytes", TAG_READER_BUFFER_SIZE);
-	Dbprintf("  DMA: %i bytes", DEMOD_DMA_BUFFER_SIZE);
-
+    // Print some debug information about the buffer sizes
+    Dbprintf("Snooping buffers initialized:");
+    Dbprintf("  Trace: %i bytes", DEMOD_TRACE_SIZE);
+    Dbprintf("  Reader -> tag: %i bytes", READER_TAG_BUFFER_SIZE);
+    Dbprintf("  tag -> Reader: %i bytes", TAG_READER_BUFFER_SIZE);
+    Dbprintf("  DMA: %i bytes", DEMOD_DMA_BUFFER_SIZE);
 
     // And put the FPGA in the appropriate mode
     // Signal field is off with the appropriate LED
@@ -1187,7 +1159,7 @@ void RAMFUNC SnoopIso14443(void)
             Demod.output = receivedResponse;
             Demod.state = DEMOD_UNSYNCD;
         }
-		WDT_HIT();
+	WDT_HIT();
 
         if(BUTTON_PRESS()) {
             DbpString("cancelled");
@@ -1207,3 +1179,56 @@ done:
 	Dbprintf("  Uart ByteCntMax: %i", Uart.byteCntMax);
 	Dbprintf("  Trace length: %i", traceLen);
 }
+
+/*
+ * Send raw command to tag ISO14443B
+ * @Input
+ * datalen     len of buffer data
+ * recv        bool when true wait for data from tag and send to client
+ * powerfield  bool leave the field on when true
+ * data        buffer with byte to send
+ *
+ * @Output
+ * none
+ *
+ */
+
+void SendRawCommand14443B(uint32_t datalen, uint32_t recv,uint8_t powerfield, uint8_t data[])
+{
+    if(!powerfield)
+    {
+        // Make sure that we start from off, since the tags are stateful;
+        // confusing things will happen if we don't reset them between reads.
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        LED_D_OFF();
+        SpinDelay(200);
+    }
+
+    if(!GETBIT(GPIO_LED_D))
+    {
+        SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+        FpgaSetupSsc();
+
+        // Now give it time to spin up.
+        // Signal field is on with the appropriate LED
+        LED_D_ON();
+        FpgaWriteConfWord(
+            FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ);
+        SpinDelay(200);
+    }
+
+    CodeIso14443bAsReader(data, datalen);
+    TransmitFor14443();
+    if(recv)
+    {
+        uint16_t iLen = MIN(Demod.len,USB_CMD_DATA_SIZE);
+        GetSamplesFor14443Demod(TRUE, 2000, TRUE);
+        cmd_send(CMD_ACK,iLen,0,0,Demod.output,iLen);
+    }
+    if(!powerfield)
+    {
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        LED_D_OFF();
+    }
+}
+

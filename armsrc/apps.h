@@ -135,10 +135,9 @@ void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode
 /// iso14443.h
 void SimulateIso14443Tag(void);
 void AcquireRawAdcSamplesIso14443(uint32_t parameter);
-void ReadSRI512Iso14443(uint32_t parameter);
-void ReadSRIX4KIso14443(uint32_t parameter);
-void ReadSTMemoryIso14443(uint32_t parameter,uint32_t dwLast);
+void ReadSTMemoryIso14443(uint32_t);
 void RAMFUNC SnoopIso14443(void);
+void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
 
 /// iso14443a.h
 void RAMFUNC SnoopIso14443a(uint8_t param);
@@ -156,7 +155,7 @@ void RAMFUNC SniffMifare(uint8_t param);
 void EPA_PACE_Collect_Nonce(UsbCommand * c);
 
 // mifarecmd.h
-void ReaderMifare(UsbCommand *c);
+void ReaderMifare(bool first_try);
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
 void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
