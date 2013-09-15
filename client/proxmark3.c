@@ -24,9 +24,13 @@
 #include "ui.h"
 #include "sleep.h"
 
+// a global mutex to prevent interlaced printing from different threads
+pthread_mutex_t print_lock;
+
 static serial_port sp;
 static UsbCommand txcmd;
 volatile static bool txcmd_pending = false;
+
 
 void SendCommand(UsbCommand *c) {
 #if 0
@@ -196,20 +200,20 @@ static void *main_loop(void *targ) {
 }
 
 int main(int argc, char* argv[]) {
-  srand(time(0));
+	srand(time(0));
   
-  if (argc < 2) {
-    printf("syntax: %s <port>\n\n",argv[0]);
-    printf("\tLinux example:'%s /dev/ttyACM0'\n\n", argv[0]);
-    return 1;
-  }
+	if (argc < 2) {
+		printf("syntax: %s <port>\n\n",argv[0]);
+		printf("\tLinux example:'%s /dev/ttyACM0'\n\n", argv[0]);
+		return 1;
+	}
   
-  // Make sure to initialize
-  struct main_loop_arg marg = {
-    .usb_present = 0,
-    .script_cmds_file = NULL
-  };
-  pthread_t main_loop_t;
+	// Make sure to initialize
+	struct main_loop_arg marg = {
+		.usb_present = 0,
+		.script_cmds_file = NULL
+	};
+	pthread_t main_loop_t;
 
 /*
   usb_init();
@@ -223,38 +227,44 @@ int main(int argc, char* argv[]) {
   }
 */
   
-  sp = uart_open(argv[1]);
-  if (sp == INVALID_SERIAL_PORT) {
-    printf("ERROR: invalid serial port\n");
-    marg.usb_present = 0;
-    offline = 1;
-  } else if (sp == CLAIMED_SERIAL_PORT) {
-    printf("ERROR: serial port is claimed by another process\n");
-    marg.usb_present = 0;
-    offline = 1;
-  } else {
-    marg.usb_present = 1;
-    offline = 0;
-  }
+	sp = uart_open(argv[1]);
+	if (sp == INVALID_SERIAL_PORT) {
+		printf("ERROR: invalid serial port\n");
+		marg.usb_present = 0;
+		offline = 1;
+	} else if (sp == CLAIMED_SERIAL_PORT) {
+		printf("ERROR: serial port is claimed by another process\n");
+		marg.usb_present = 0;
+		offline = 1;
+	} else {
+		marg.usb_present = 1;
+		offline = 0;
+	}
 
-  // If the user passed the filename of the 'script' to execute, get it
-  if (argc > 2 && argv[2]) {
-    marg.script_cmds_file = argv[2];
-  }
+	// If the user passed the filename of the 'script' to execute, get it
+	if (argc > 2 && argv[2]) {
+		marg.script_cmds_file = argv[2];
+	}
   
-  pthread_create(&main_loop_t, NULL, &main_loop, &marg);
-  InitGraphics(argc, argv);
+	// create a mutex to avoid interlacing print commands from our different threads
+	pthread_mutex_init(&print_lock, NULL);
 
-  MainGraphics();
+	pthread_create(&main_loop_t, NULL, &main_loop, &marg);
+	InitGraphics(argc, argv);
 
-  pthread_join(main_loop_t, NULL);
+	MainGraphics();
+
+	pthread_join(main_loop_t, NULL);
 
 //  if (marg.usb_present == 1) {
 //    CloseProxmark();
 //  }
 
-  // Clean up the port
-  uart_close(sp);
+	// Clean up the port
+	uart_close(sp);
+  
+	// clean up mutex
+	pthread_mutex_destroy(&print_lock);
   
   return 0;
 }

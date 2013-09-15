@@ -500,7 +500,7 @@ int CmdHF14AMfNested(const char *Cmd)
 	uint8_t blDiff = 0;
 	int  SectorsCnt = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-	uint8_t keyBlock[16 * 6];
+	uint8_t keyBlock[6*6];
 	uint64_t key64 = 0;
 	int transferToEml = 0;
 	
@@ -572,20 +572,12 @@ int CmdHF14AMfNested(const char *Cmd)
 		PrintAndLog("--target block no:%02x target key type:%02x ", trgBlockNo, trgKeyType);
 
 	if (cmdp == 'o') {
-		if (mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock)) {
+		if (mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, true)) {
 			PrintAndLog("Nested error.");
 			return 2;
 		}
-
-		for (i = 0; i < 16; i++) {
-			PrintAndLog("count=%d key= %s", i, sprint_hex(keyBlock + i * 6, 6));
-		}
-	
-		// test keys
-		res = mfCheckKeys(trgBlockNo, trgKeyType, 8, keyBlock, &key64);
-		if (res)
-			res = mfCheckKeys(trgBlockNo, trgKeyType, 8, &keyBlock[6 * 8], &key64);
-		if (!res) {
+		key64 = bytes_to_num(keyBlock, 6);
+		if (key64) {
 			PrintAndLog("Found valid key:%012"llx, key64);
 
 			// transfer key to the emulator
@@ -603,6 +595,9 @@ int CmdHF14AMfNested(const char *Cmd)
 		}
 	}
 	else { // ------------------------------------  multiple sectors working
+		clock_t time1;
+		time1 = clock();
+
 		blDiff = blockNo % 4;
 		PrintAndLog("Block shift=%d", blDiff);
 		e_sector = calloc(SectorsCnt, sizeof(sector));
@@ -610,10 +605,10 @@ int CmdHF14AMfNested(const char *Cmd)
 		
 		//test current key 4 sectors
 		memcpy(keyBlock, key, 6);
-		num_to_bytes(0xa0a1a2a3a4a5, 6, (uint8_t*)(keyBlock + 1 * 6));
-		num_to_bytes(0xb0b1b2b3b4b5, 6, (uint8_t*)(keyBlock + 2 * 6));
-		num_to_bytes(0xffffffffffff, 6, (uint8_t*)(keyBlock + 3 * 6));
-		num_to_bytes(0x000000000000, 6, (uint8_t*)(keyBlock + 4 * 6));
+		num_to_bytes(0xffffffffffff, 6, (uint8_t*)(keyBlock + 1 * 6));
+		num_to_bytes(0x000000000000, 6, (uint8_t*)(keyBlock + 2 * 6));
+		num_to_bytes(0xa0a1a2a3a4a5, 6, (uint8_t*)(keyBlock + 3 * 6));
+		num_to_bytes(0xb0b1b2b3b4b5, 6, (uint8_t*)(keyBlock + 4 * 6));
 		num_to_bytes(0xaabbccddeeff, 6, (uint8_t*)(keyBlock + 5 * 6));
 
 		PrintAndLog("Testing known keys. Sector count=%d", SectorsCnt);
@@ -628,32 +623,41 @@ int CmdHF14AMfNested(const char *Cmd)
 					e_sector[i].foundKey[j] = 1;
 				}
 			}
-		} 
+		}
+		
 		
 		// nested sectors
 		iterations = 0;
 		PrintAndLog("nested...");
+		bool calibrate = true;
 		for (i = 0; i < NESTED_SECTOR_RETRY; i++) {
-			for (trgBlockNo = blDiff; trgBlockNo < SectorsCnt * 4; trgBlockNo = trgBlockNo + 4) 
+			for (trgBlockNo = blDiff; trgBlockNo < SectorsCnt * 4; trgBlockNo = trgBlockNo + 4) {
 				for (trgKeyType = 0; trgKeyType < 2; trgKeyType++) { 
 					if (e_sector[trgBlockNo / 4].foundKey[trgKeyType]) continue;
-					if (mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock)) continue;
+					PrintAndLog("-----------------------------------------------");
+					if(mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, calibrate)) {
+						PrintAndLog("Nested error.\n");
+						return 2;
+					}
+					else {
+						calibrate = false;
+					}
 					
 					iterations++;
-					
-					//try keys from nested
-					res = mfCheckKeys(trgBlockNo, trgKeyType, 8, keyBlock, &key64);
-					if (res)
-						res = mfCheckKeys(trgBlockNo, trgKeyType, 8, &keyBlock[6 * 8], &key64);
-					if (!res) {
+
+					key64 = bytes_to_num(keyBlock, 6);
+					if (key64) {
 						PrintAndLog("Found valid key:%012"llx, key64);
 						e_sector[trgBlockNo / 4].foundKey[trgKeyType] = 1;
 						e_sector[trgBlockNo / 4].Key[trgKeyType] = key64;
 					}
 				}
+			}
 		}
 
-		PrintAndLog("Iterations count: %d", iterations);
+		printf("Time in nested: %1.3f (%1.3f sec per key)\n\n", ((float)clock() - time1)/1000.0, ((float)clock() - time1)/iterations/1000.0);
+		
+		PrintAndLog("-----------------------------------------------\nIterations count: %d\n\n", iterations);
 		//print them
 		PrintAndLog("|---|----------------|---|----------------|---|");
 		PrintAndLog("|sec|key A           |res|key B           |res|");
@@ -830,16 +834,16 @@ int CmdHF14AMfChk(const char *Cmd)
 				while( !feof(f) ){
 					memset(buf, 0, sizeof(buf));
 					if (fgets(buf, sizeof(buf), f) == NULL) {
-            PrintAndLog("File reading error.");
-            return 2;
-          }
+						PrintAndLog("File reading error.");
+						return 2;
+					}
           
 					if (strlen(buf) < 12 || buf[11] == '\n')
 						continue;
 				
 					while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
 					
-					if( buf[0]=='#' ) continue;	//The line start with # is remcommnet,skip
+					if( buf[0]=='#' ) continue;	//The line start with # is comment, skip
 
 					if (!isxdigit(buf[0])){
 						PrintAndLog("File content error. '%s' must include 12 HEX symbols",buf);
@@ -883,10 +887,10 @@ int CmdHF14AMfChk(const char *Cmd)
 		int b=blockNo;
 		for (int i=0; i<SectorsCnt; ++i) {
 			PrintAndLog("--SectorsCnt:%d block no:0x%02x key type:%C key count:%d ", i,	 b, t?'B':'A', keycnt);
-			int size = keycnt>8?8:keycnt;
-			for (int c = 0; c < keycnt; c+=size) {
-				size=keycnt-c>8?8:keycnt-c;			
-				res = mfCheckKeys(b, t, size, keyBlock +6*c, &key64);
+			uint32_t max_keys = keycnt>USB_CMD_DATA_SIZE/6?USB_CMD_DATA_SIZE/6:keycnt;
+			for (uint32_t c = 0; c < keycnt; c+=max_keys) {
+				uint32_t size = keycnt-c>max_keys?max_keys:keycnt-c;
+				res = mfCheckKeys(b, t, size, &keyBlock[6*c], &key64);
 				if (res !=1) {
 					if (!res) {
 						PrintAndLog("Found valid key:[%012"llx"]",key64);
@@ -896,11 +900,6 @@ int CmdHF14AMfChk(const char *Cmd)
 							num_to_bytes(key64, 6, block + t*10);
 							mfEmlSetMem(block, get_trailer_block(b), 1);
 						}
-						break;
-					}
-					else {
-						printf("Not found yet, keycnt:%d\r", c+size);
-						fflush(stdout);
 					}
 				} else {
 					PrintAndLog("Command execute timeout");

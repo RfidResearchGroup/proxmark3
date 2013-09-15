@@ -1218,47 +1218,75 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 	LED_A_OFF();
 }
 
+
+// prepare a delayed transfer. This simply shifts ToSend[] by a number
+// of bits specified in the delay parameter.
+void PrepareDelayedTransfer(uint16_t delay)
+{
+	uint8_t bitmask = 0;
+	uint8_t bits_to_shift = 0;
+	uint8_t bits_shifted = 0;
+	
+	delay &= 0x07;
+	if (delay) {
+		for (uint16_t i = 0; i < delay; i++) {
+			bitmask |= (0x01 << i);
+		}
+		ToSend[++ToSendMax] = 0x00;
+		for (uint16_t i = 0; i < ToSendMax; i++) {
+			bits_to_shift = ToSend[i] & bitmask;
+			ToSend[i] = ToSend[i] >> delay;
+			ToSend[i] = ToSend[i] | (bits_shifted << (8 - delay));
+			bits_shifted = bits_to_shift;
+		}
+	}
+}
+
+
+
+
 //-----------------------------------------------------------------------------
 // Transmit the command (to the tag) that was placed in ToSend[].
+// Parameter timing:
+// if NULL: ignored
+// if == 0:	return time of transfer
+// if != 0: delay transfer until time specified
 //-----------------------------------------------------------------------------
-static void TransmitFor14443a(const uint8_t *cmd, int len, int *samples, int *wait)
+static void TransmitFor14443a(const uint8_t *cmd, int len, uint32_t *timing)
 {
-  int c;
+	int c;
 
-  FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 
-	if (wait)
-    if(*wait < 10)
-      *wait = 10;
 
-  for(c = 0; c < *wait;) {
-    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-      AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
-      c++;
-    }
-    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-      volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
-      (void)r;
-    }
-    WDT_HIT();
-  }
+	if (timing) {
+		if(*timing == 0) {										// Measure time
+			*timing = (GetCountMifare() + 8) & 0xfffffff8;
+		} else {
+			PrepareDelayedTransfer(*timing & 0x00000007);		// Delay transfer (fine tuning - up to 7 MF clock ticks)
+		}
+		if(MF_DBGLEVEL >= 4 && GetCountMifare() >= (*timing & 0xfffffff8)) Dbprintf("TransmitFor14443a: Missed timing");
+		while(GetCountMifare() < (*timing & 0xfffffff8));		// Delay transfer (multiple of 8 MF clock ticks)
+	}
 
-  c = 0;
-  for(;;) {
-    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-      AT91C_BASE_SSC->SSC_THR = cmd[c];
-      c++;
-      if(c >= len) {
-        break;
-      }
-    }
-    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-      volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
-      (void)r;
-    }
-    WDT_HIT();
-  }
-	if (samples) *samples = (c + *wait) << 3;
+	for(c = 0; c < 10;) {	// standard delay for each transfer (allow tag to be ready after last transmission)
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			AT91C_BASE_SSC->SSC_THR = 0x00;	
+			c++;
+		}
+	}
+	
+	c = 0;
+	for(;;) {
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			AT91C_BASE_SSC->SSC_THR = cmd[c];
+			c++;
+			if(c >= len) {
+				break;
+			}
+		}
+	}
+
 }
 
 //-----------------------------------------------------------------------------
@@ -1528,10 +1556,10 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, int maxLen, int 
 	for(;;) {
 		WDT_HIT();
 
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-			AT91C_BASE_SSC->SSC_THR = 0x00;  // To make use of exact timing of next command from reader!!
-			if (elapsed) (*elapsed)++;
-		}
+		// if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			// AT91C_BASE_SSC->SSC_THR = 0x00;  // To make use of exact timing of next command from reader!!
+			// if (elapsed) (*elapsed)++;
+		// }
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			if(c < iso14a_timeout) { c++; } else { return FALSE; }
 			b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -1547,17 +1575,13 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, int maxLen, int 
 	}
 }
 
-void ReaderTransmitBitsPar(uint8_t* frame, int bits, uint32_t par)
+void ReaderTransmitBitsPar(uint8_t* frame, int bits, uint32_t par, uint32_t *timing)
 {
-  int wait = 0;
-  int samples = 0;
-  
-  // This is tied to other size changes
-  // 	uint8_t* frame_addr = ((uint8_t*)BigBuf) + 2024;
+ 
   CodeIso14443aBitsAsReaderPar(frame,bits,par);
   
   // Select the card
-  TransmitFor14443a(ToSend, ToSendMax, &samples, &wait);
+  TransmitFor14443a(ToSend, ToSendMax, timing);
   if(trigger)
   	LED_A_ON();
   
@@ -1565,15 +1589,15 @@ void ReaderTransmitBitsPar(uint8_t* frame, int bits, uint32_t par)
   if (tracing) LogTrace(frame,nbytes(bits),0,par,TRUE);
 }
 
-void ReaderTransmitPar(uint8_t* frame, int len, uint32_t par)
+void ReaderTransmitPar(uint8_t* frame, int len, uint32_t par, uint32_t *timing)
 {
-  ReaderTransmitBitsPar(frame,len*8,par);
+  ReaderTransmitBitsPar(frame,len*8,par, timing);
 }
 
-void ReaderTransmit(uint8_t* frame, int len)
+void ReaderTransmit(uint8_t* frame, int len, uint32_t *timing)
 {
   // Generate parity and redirect
-  ReaderTransmitBitsPar(frame,len*8,GetParity(frame,len));
+  ReaderTransmitBitsPar(frame,len*8,GetParity(frame,len), timing);
 }
 
 int ReaderReceive(uint8_t* receivedAnswer)
@@ -1612,7 +1636,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
   int len;
 	 
   // Broadcast for a card, WUPA (0x52) will force response from all cards in the field
-    ReaderTransmitBitsPar(wupa,7,0);
+    ReaderTransmitBitsPar(wupa,7,0, NULL);
   // Receive the ATQA
   if(!ReaderReceive(resp)) return 0;
 //  Dbprintf("atqa: %02x %02x",resp[0],resp[1]);
@@ -1636,7 +1660,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     sel_uid[0] = sel_all[0] = 0x93 + cascade_level * 2;
 
     // SELECT_ALL
-    ReaderTransmit(sel_all,sizeof(sel_all));
+    ReaderTransmit(sel_all,sizeof(sel_all), NULL);
     if (!ReaderReceive(resp)) return 0;
     
     // First backup the current uid
@@ -1644,15 +1668,15 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     uid_resp_len = 4;
     //    Dbprintf("uid: %02x %02x %02x %02x",uid_resp[0],uid_resp[1],uid_resp[2],uid_resp[3]);
     
-		// calculate crypto UID
-		if(cuid_ptr) {
-      *cuid_ptr = bytes_to_num(uid_resp, 4);
+	// calculate crypto UID. Always use last 4 Bytes.
+	if(cuid_ptr) {
+		*cuid_ptr = bytes_to_num(uid_resp, 4);
     }
 
     // Construct SELECT UID command
 		memcpy(sel_uid+2,resp,5);
     AppendCrc14443a(sel_uid,7);
-    ReaderTransmit(sel_uid,sizeof(sel_uid));
+    ReaderTransmit(sel_uid,sizeof(sel_uid), NULL);
 
     // Receive the SAK
     if (!ReaderReceive(resp)) return 0;
@@ -1687,7 +1711,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 
   // Request for answer to select
   AppendCrc14443a(rats, 2);
-  ReaderTransmit(rats, sizeof(rats));
+  ReaderTransmit(rats, sizeof(rats), NULL);
 
   if (!(len = ReaderReceive(resp))) return 0;
 
@@ -1702,13 +1726,13 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 }
 
 void iso14443a_setup() {
-  // Set up the synchronous serial port
-  FpgaSetupSsc();
+	// Set up the synchronous serial port
+	FpgaSetupSsc();
 	// Start from off (no field generated)
 	// Signal field is off with the appropriate LED
-	LED_D_OFF();
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(50);
+//	LED_D_OFF();
+//	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	// SpinDelay(50);
 
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
@@ -1716,7 +1740,7 @@ void iso14443a_setup() {
 	// Signal field is on with the appropriate LED
 	LED_D_ON();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
-	SpinDelay(50);
+	SpinDelay(7); // iso14443-3 specifies 5ms max.
 
 	iso14a_timeout = 2048; //default
 }
@@ -1730,7 +1754,7 @@ int iso14_apdu(uint8_t * cmd, size_t cmd_len, void * data) {
 	memcpy(real_cmd+2, cmd, cmd_len);
 	AppendCrc14443a(real_cmd,cmd_len+2);
  
-	ReaderTransmit(real_cmd, cmd_len+4);
+	ReaderTransmit(real_cmd, cmd_len+4, NULL);
 	size_t len = ReaderReceive(data);
 	uint8_t * data_bytes = (uint8_t *) data;
 	if (!len)
@@ -1757,21 +1781,20 @@ void ReaderIso14443a(UsbCommand * c)
 	iso14a_command_t param = c->arg[0];
 	uint8_t * cmd = c->d.asBytes;
 	size_t len = c->arg[1];
-  uint32_t arg0 = 0;
-  byte_t buf[USB_CMD_DATA_SIZE];
+	uint32_t arg0 = 0;
+	byte_t buf[USB_CMD_DATA_SIZE];
   
-  iso14a_clear_trace();
-  iso14a_set_tracing(true);
+	iso14a_clear_trace();
+	iso14a_set_tracing(true);
 
 	if(param & ISO14A_REQUEST_TRIGGER) {
-    iso14a_set_trigger(1);
-  }
+		iso14a_set_trigger(1);
+	}
 
 	if(param & ISO14A_CONNECT) {
 		iso14443a_setup();
-		arg0 = iso14443a_select_card(NULL,(iso14a_card_select_t*)buf,NULL);
+		arg0 = iso14443a_select_card(NULL, (iso14a_card_select_t*)buf, NULL);
 		cmd_send(CMD_ACK,arg0,0,0,buf,sizeof(iso14a_card_select_t));
-//    UsbSendPacket((void *)ack, sizeof(UsbCommand));
 	}
 
 	if(param & ISO14A_SET_TIMEOUT) {
@@ -1785,7 +1808,6 @@ void ReaderIso14443a(UsbCommand * c)
 	if(param & ISO14A_APDU) {
 		arg0 = iso14_apdu(cmd, len, buf);
 		cmd_send(CMD_ACK,arg0,0,0,buf,sizeof(buf));
-//		UsbSendPacket((void *)ack, sizeof(UsbCommand));
 	}
 
 	if(param & ISO14A_RAW) {
@@ -1793,48 +1815,22 @@ void ReaderIso14443a(UsbCommand * c)
 			AppendCrc14443a(cmd,len);
 			len += 2;
 		}
-		ReaderTransmit(cmd,len);
+		ReaderTransmit(cmd,len, NULL);
 		arg0 = ReaderReceive(buf);
-//		UsbSendPacket((void *)ack, sizeof(UsbCommand));
-    cmd_send(CMD_ACK,arg0,0,0,buf,sizeof(buf));
+		cmd_send(CMD_ACK,arg0,0,0,buf,sizeof(buf));
 	}
 
 	if(param & ISO14A_REQUEST_TRIGGER) {
-    iso14a_set_trigger(0);
-  }
+		iso14a_set_trigger(0);
+	}
 
 	if(param & ISO14A_NO_DISCONNECT) {
 		return;
-  }
+	}
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
-
-
-// prepare the Mifare AUTH transfer with an added necessary delay.
-void PrepareDelayedAuthTransfer(uint8_t* frame, int len, uint16_t delay)
-{
-	CodeIso14443aBitsAsReaderPar(frame, len*8, GetParity(frame,len));
-
-	uint8_t bitmask = 0;
-	uint8_t bits_to_shift = 0;
-	uint8_t bits_shifted = 0;
-	
-	if (delay) {
-		for (uint16_t i = 0; i < delay; i++) {
-			bitmask |= (0x01 << i);
-		}
-		ToSend[++ToSendMax] = 0x00;
-		for (uint16_t i = 0; i < ToSendMax; i++) {
-			bits_to_shift = ToSend[i] & bitmask;
-			ToSend[i] = ToSend[i] >> delay;
-			ToSend[i] = ToSend[i] | (bits_shifted << (8 - delay));
-			bits_shifted = bits_to_shift;
-		}
-	}
-}
-
 
 
 // Determine the distance between two nonces.
@@ -1904,11 +1900,8 @@ void ReaderMifare(bool first_try)
 		StartCountMifare();
 		mf_nr_ar3 = 0;
 		iso14443a_setup();
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN); // resets some FPGA internal registers
 		while((GetCountMifare() & 0xffff0000) != 0x10000);		// wait for counter to reset and "warm up" 
-		while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME); 		// wait for ssp_frame to be low
-		while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME)); 	// sync on rising edge of ssp_frame
-		sync_time = GetCountMifare();
+		sync_time = GetCountMifare() & 0xfffffff8;
 		sync_cycles = 65536;									// theory: Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
 		nt_attacked = 0;
 		nt = 0;
@@ -1939,41 +1932,37 @@ void ReaderMifare(bool first_try)
 		LED_C_ON();
 
 		if(!iso14443a_select_card(uid, NULL, &cuid)) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("Mifare: Can't select card");
 			continue;
 		}
 
 		//keep the card active
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 
-		PrepareDelayedAuthTransfer(mf_auth, sizeof(mf_auth), (sync_cycles + catch_up_cycles) & 0x00000007);
+		// CodeIso14443aBitsAsReaderPar(mf_auth, sizeof(mf_auth)*8, GetParity(mf_auth, sizeof(mf_auth)*8));
 
-		sync_time = sync_time + ((sync_cycles + catch_up_cycles) & 0xfffffff8);
+		sync_time = (sync_time & 0xfffffff8) + sync_cycles + catch_up_cycles;
 		catch_up_cycles = 0;
 
 		// if we missed the sync time already, advance to the next nonce repeat
 		while(GetCountMifare() > sync_time) {
-			sync_time = sync_time + (sync_cycles & 0xfffffff8);
+			sync_time = (sync_time & 0xfffffff8) + sync_cycles;
 		}
 
-		// now sync. After syncing, the following Classic Auth will return the same tag nonce (mostly)
-		while(GetCountMifare() < sync_time);
-		
-		// Transmit MIFARE_CLASSIC_AUTH
-		int samples = 0;
-		int wait = 0;
-		TransmitFor14443a(ToSend, ToSendMax, &samples, &wait);
+		// Transmit MIFARE_CLASSIC_AUTH at synctime. Should result in returning the same tag nonce (== nt_attacked) 
+		ReaderTransmit(mf_auth, sizeof(mf_auth), &sync_time);
 
 		// Receive the (4 Byte) "random" nonce
 		if (!ReaderReceive(receivedAnswer)) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("Mifare: Couldn't receive tag nonce");
 			continue;
 		  }
 
- 
 		previous_nt = nt;
 		nt = bytes_to_num(receivedAnswer, 4);
 
 		// Transmit reader nonce with fake par
-		ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par);
+		ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par, NULL);
 
 		if (first_try && previous_nt && !nt_attacked) { // we didn't calibrate our clock yet
 			int nt_distance = dist_nt(previous_nt, nt);
@@ -1985,7 +1974,7 @@ void ReaderMifare(bool first_try)
 					continue;
 				}
 				sync_cycles = (sync_cycles - nt_distance);
-//				Dbprintf("calibrating in cycle %d. nt_distance=%d, Sync_cycles: %d\n", i, nt_distance, sync_cycles);
+				if (MF_DBGLEVEL >= 3) Dbprintf("calibrating in cycle %d. nt_distance=%d, Sync_cycles: %d\n", i, nt_distance, sync_cycles);
 				continue;
 			}
 		}
@@ -2004,11 +1993,11 @@ void ReaderMifare(bool first_try)
 			    consecutive_resyncs = 0;
 			}
 			if (consecutive_resyncs < 3) {
-				Dbprintf("Lost sync in cycle %d. nt_distance=%d. Consecutive Resyncs = %d. Trying one time catch up...\n", i, -catch_up_cycles, consecutive_resyncs);
+				if (MF_DBGLEVEL >= 3) Dbprintf("Lost sync in cycle %d. nt_distance=%d. Consecutive Resyncs = %d. Trying one time catch up...\n", i, -catch_up_cycles, consecutive_resyncs);
 			}
 			else {	
 				sync_cycles = sync_cycles + catch_up_cycles;
-				Dbprintf("Lost sync in cycle %d for the fourth time consecutively (nt_distance = %d). Adjusting sync_cycles to %d.\n", i, -catch_up_cycles, sync_cycles);
+				if (MF_DBGLEVEL >= 3) Dbprintf("Lost sync in cycle %d for the fourth time consecutively (nt_distance = %d). Adjusting sync_cycles to %d.\n", i, -catch_up_cycles, sync_cycles);
 			}
 			continue;
 		}
@@ -2018,7 +2007,7 @@ void ReaderMifare(bool first_try)
 		// Receive answer. This will be a 4 Bit NACK when the 8 parity bits are OK after decoding
 		if (ReaderReceive(receivedAnswer))
 		{
-			catch_up_cycles = 8; 	// the PRNG doesn't run during data transfers. 4 Bit = 8 cycles
+			catch_up_cycles = 8; 	// the PRNG is delayed by 8 cycles due to the NAC (4Bits = 0x05 encrypted) transfer
 	
 			if (nt_diff == 0)
 			{

@@ -77,12 +77,12 @@ uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data) {
 }
 
 // send commands
-int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer)
+int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint32_t *timing)
 {
-	return mifare_sendcmd_shortex(pcs, crypted, cmd, data, answer, NULL);
+	return mifare_sendcmd_shortex(pcs, crypted, cmd, data, answer, NULL, timing);
 }
 
-int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint32_t * parptr)
+int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint32_t * parptr, uint32_t *timing)
 {
 	uint8_t dcmd[4], ecmd[4];
 	uint32_t pos, par, res;
@@ -101,10 +101,10 @@ int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cm
 			par = (par >> 1) | ( ((filter(pcs->odd) ^ oddparity(dcmd[pos])) & 0x01) * 0x08 );
 		}	
 
-		ReaderTransmitPar(ecmd, sizeof(ecmd), par);
+		ReaderTransmitPar(ecmd, sizeof(ecmd), par, timing);
 
 	} else {
-		ReaderTransmit(dcmd, sizeof(dcmd));
+		ReaderTransmit(dcmd, sizeof(dcmd), timing);
 	}
 
 	int len = ReaderReceivePar(answer, &par);
@@ -133,10 +133,10 @@ int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cm
 // mifare commands
 int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested) 
 {
-	return mifare_classic_authex(pcs, uid, blockNo, keyType, ui64Key, isNested, NULL);
+	return mifare_classic_authex(pcs, uid, blockNo, keyType, ui64Key, isNested, NULL, NULL);
 }
 
-int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested, uint32_t * ntptr) 
+int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested, uint32_t * ntptr, uint32_t *timing) 
 {
 	// variables
 	int len;	
@@ -150,8 +150,8 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	uint8_t* receivedAnswer = mifare_get_bigbufptr();
 
 	// Transmit MIFARE_CLASSIC_AUTH
-	len = mifare_sendcmd_short(pcs, isNested, 0x60 + (keyType & 0x01), blockNo, receivedAnswer);
-  if (MF_DBGLEVEL >= 4)	Dbprintf("rand nonce len: %x", len);  
+	len = mifare_sendcmd_short(pcs, isNested, 0x60 + (keyType & 0x01), blockNo, receivedAnswer, timing);
+	if (MF_DBGLEVEL >= 4)	Dbprintf("rand nonce len: %x", len);  
 	if (len != 4) return 1;
 	
 	ar[0] = 0x55;
@@ -205,7 +205,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	}	
 		
 	// Transmit reader nonce and reader answer
-	ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par);
+	ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par, NULL);
 
 	// Receive 4 bit answer
 	len = ReaderReceive(receivedAnswer);
@@ -235,7 +235,7 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 	uint8_t* receivedAnswer = mifare_get_bigbufptr();
 	
 	// command MIFARE_CLASSIC_READBLOCK
-	len = mifare_sendcmd_short(pcs, 1, 0x30, blockNo, receivedAnswer);
+	len = mifare_sendcmd_short(pcs, 1, 0x30, blockNo, receivedAnswer, NULL);
 	if (len == 1) {
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: %02x", receivedAnswer[0]);  
 		return 1;
@@ -268,7 +268,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 	uint8_t* receivedAnswer = mifare_get_bigbufptr();
 	
 	// command MIFARE_CLASSIC_WRITEBLOCK
-	len = mifare_sendcmd_short(pcs, 1, 0xA0, blockNo, receivedAnswer);
+	len = mifare_sendcmd_short(pcs, 1, 0xA0, blockNo, receivedAnswer, NULL);
 
 	if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: %02x", receivedAnswer[0]);  
@@ -286,7 +286,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 		par = (par >> 1) | ( ((filter(pcs->odd) ^ oddparity(d_block[pos])) & 0x01) * 0x20000 );
 	}	
 
-	ReaderTransmitPar(d_block_enc, sizeof(d_block_enc), par);
+	ReaderTransmitPar(d_block_enc, sizeof(d_block_enc), par, NULL);
 
 	// Receive the response
 	len = ReaderReceive(receivedAnswer);	
@@ -311,7 +311,7 @@ int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid)
 	// Mifare HALT
 	uint8_t* receivedAnswer = mifare_get_bigbufptr();
 
-	len = mifare_sendcmd_short(pcs, pcs == NULL ? 0:1, 0x50, 0x00, receivedAnswer);
+	len = mifare_sendcmd_short(pcs, pcs == NULL ? 0:1, 0x50, 0x00, receivedAnswer, NULL);
 	if (len != 0) {
 		if (MF_DBGLEVEL >= 1)	Dbprintf("halt error. response len: %x", len);  
 		return 1;

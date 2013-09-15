@@ -156,6 +156,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand * c);
 
 // mifarecmd.h
 void ReaderMifare(bool first_try);
+int32_t dist_nt(uint32_t nt1, uint32_t nt2);
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
 void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);

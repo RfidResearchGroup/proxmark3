@@ -432,7 +432,7 @@ int EPA_Setup()
 	}
 
 	// send the PPS request
-	ReaderTransmit((uint8_t *)pps, sizeof(pps));
+	ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
 	uint8_t pps_response[3];
 	return_code = ReaderReceive(pps_response);
 	if (return_code != 3 || pps_response[0] != 0xD0) {
