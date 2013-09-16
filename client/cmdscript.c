@@ -77,6 +77,7 @@ int CmdList(const char *Cmd)
     DIR *dp;
     struct dirent *ep;
     dp = opendir ("./scripts/");
+
     if (dp != NULL)
     {
         while (ep = readdir (dp))
@@ -87,7 +88,7 @@ int CmdList(const char *Cmd)
         (void) closedir (dp);
     }
     else
-        PrintAndLog ("Couldn't open the directory");
+        PrintAndLog ("Couldn't open the scripts-directory");
     return 0;
 }
 /**
@@ -190,6 +191,14 @@ static void set_cmdlibraries(lua_State *L)
     lua_pop(L, 1);
     return 1;
 }
+/**
+ * Utility to check the ending of a string (used to check file suffix)
+ */
+bool endsWith (char* base, char* str) {
+    int blen = strlen(base);
+    int slen = strlen(str);
+    return (blen >= slen) && (0 == strcmp(base + blen - slen, str));
+}
 
 /**
  * @brief CmdRun - executes a script file.
@@ -215,20 +224,41 @@ int CmdRun(const char *Cmd)
     //Add the 'bin' library
     set_bin_library(lua_state);
 
-    char cmd_name[32];
-    int len = 0;
-    memset(cmd_name, 0, 32);
-    sscanf(Cmd, "%31s%n", cmd_name, &len);
+//    char cmd_name[32];
+//    memset(cmd_name, 0, 32);
+//    sscanf(Cmd, "%31s%n", cmd_name, &len);
+
+    char script_name[128];
+    char arguments[256];
+
+    int name_len = 0;
+    int arg_len = 0;
+    sscanf(Cmd, "%127s%n %255[^\n\r]%n", script_name,&name_len, arguments, &arg_len);
+
+    char *suffix = "";
+    if(!endsWith(script_name,".lua"))
+    {
+        suffix = ".lua";
+    }
 
     char buf[256];
-    snprintf(buf, sizeof buf, "./scripts/%s", cmd_name);
+    snprintf(buf, sizeof buf, "./scripts/%s%s", script_name, suffix);
 
-    printf("-----Executing file '%s'\n" , cmd_name);
+    printf("---Executing: %s with arguments '%s'\n",buf,arguments);
+
+
+
+
     // run the Lua script
 
     int error = luaL_loadfile(lua_state, buf);
     if(!error)
     {
+
+        lua_pushstring(lua_state, arguments);
+        lua_setglobal(lua_state, "args");
+
+        //Call it with 0 arguments
          error = lua_pcall(lua_state, 0, LUA_MULTRET, 0); // once again, returns non-0 on error,
     }
     if(error) // if non-0, then an error
