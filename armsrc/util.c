@@ -11,6 +11,7 @@
 #include "proxmark3.h"
 #include "util.h"
 #include "string.h"
+#include "apps.h"
 
 size_t nbytes(size_t nbits) {
 	return (nbits/8)+((nbits%8)>0);
@@ -357,6 +358,14 @@ void StartCountMifare()
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;				// enable TC0
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN;				// enable TC1
 	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN;				// enable TC2
+
+	// activate the ISO14443 part of the FPGA. We need the clock and frame signals.
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
+
+	// synchronize the counter with the ssp_frame signal.
+	while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME); 		// wait for ssp_frame to be low
+	while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME)); 	// sync on rising edge of ssp_frame (= start of transfer)
+
 	AT91C_BASE_TCB->TCB_BCR = 1;							// assert Sync (set all timers to 0 on next active clock edge)
 }
 

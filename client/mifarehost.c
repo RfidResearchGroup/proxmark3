@@ -11,181 +11,204 @@
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h>
+#include <pthread.h>
 #include "mifarehost.h"
 #include "proxmark3.h"
 
 // MIFARE
 int compar_int(const void * a, const void * b) {
-	return (*(uint64_t*)b - *(uint64_t*)a);
+	// didn't work: (the result is truncated to 32 bits)
+	//return (*(uint64_t*)b - *(uint64_t*)a);
+
+	// better:
+	if (*(uint64_t*)b == *(uint64_t*)a) return 0;
+	else if (*(uint64_t*)b > *(uint64_t*)a) return 1;
+	else return -1;
 }
 
-// Compare countKeys structure
-int compar_special_int(const void * a, const void * b) {
-	return (((countKeys *)b)->count - ((countKeys *)a)->count);
+
+
+// Compare 16 Bits out of cryptostate
+int Compare16Bits(const void * a, const void * b) {
+	if ((*(uint64_t*)b & 0x00ff000000ff0000) == (*(uint64_t*)a & 0x00ff000000ff0000)) return 0;
+	else if ((*(uint64_t*)b & 0x00ff000000ff0000) > (*(uint64_t*)a & 0x00ff000000ff0000)) return 1;
+	else return -1;
 }
 
-countKeys * uniqsort(uint64_t * possibleKeys, uint32_t size) {
-	int i, j = 0;
-	int count = 0;
-	countKeys *our_counts;
-	
-	qsort(possibleKeys, size, sizeof (uint64_t), compar_int);
-	
-	our_counts = calloc(size, sizeof(countKeys));
-	if (our_counts == NULL) {
-		PrintAndLog("Memory allocation error for our_counts");
-		return NULL;
-	}
-	
-	for (i = 0; i < size; i++) {
-        if (possibleKeys[i+1] == possibleKeys[i]) { 
-			count++;
-		} else {
-			our_counts[j].key = possibleKeys[i];
-			our_counts[j].count = count;
-			j++;
-			count=0;
-		}
-	}
-	qsort(our_counts, j, sizeof(countKeys), compar_special_int);
-	return (our_counts);
-}
 
-int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t * resultKeys) 
+typedef 
+	struct {
+		union {
+			struct Crypto1State *slhead;
+			uint64_t *keyhead;
+		};
+		union {
+			struct Crypto1State *sltail;
+			uint64_t *keytail;
+		};
+		uint32_t len;
+		uint32_t uid;
+		uint32_t blockNo;
+		uint32_t keyType;
+		uint32_t nt;
+		uint32_t ks1;
+	} StateList_t;
+
+
+// wrapper function for multi-threaded lfsr_recovery32
+void* nested_worker_thread(void *arg)
 {
-	int i, m, len;
-	uint8_t isEOF;
-	uint32_t uid;
-	fnVector * vector = NULL;
-	countKeys	*ck;
-	int lenVector = 0;
-	UsbCommand resp;
-	
-	memset(resultKeys, 0x00, 16 * 6);
+	struct Crypto1State *p1;
+	StateList_t *statelist = arg;
 
+	statelist->slhead = lfsr_recovery32(statelist->ks1, statelist->nt ^ statelist->uid);
+	for (p1 = statelist->slhead; *(uint64_t *)p1 != 0; p1++);
+	statelist->len = p1 - statelist->slhead;
+	statelist->sltail = --p1;
+	qsort(statelist->slhead, statelist->len, sizeof(uint64_t), Compare16Bits);
+	
+	return statelist->slhead;
+}
+
+
+
+
+int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t * resultKey, bool calibrate) 
+{
+	uint16_t i, len;
+	uint32_t uid;
+	UsbCommand resp;
+
+	
+	StateList_t statelists[2];
+	struct Crypto1State *p1, *p2, *p3, *p4;
+	
 	// flush queue
 	WaitForResponseTimeout(CMD_ACK,NULL,100);
 	
-  UsbCommand c = {CMD_MIFARE_NESTED, {blockNo, keyType, trgBlockNo + trgKeyType * 0x100}};
+	UsbCommand c = {CMD_MIFARE_NESTED, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, calibrate}};
 	memcpy(c.d.asBytes, key, 6);
-  SendCommand(&c);
+	SendCommand(&c);
 
-	PrintAndLog("\n");
-
-	// wait cycle
-	while (true) {
-		printf(".");
-		if (ukbhit()) {
-			getchar();
-			printf("\naborted via keyboard!\n");
-			break;
-		}
-
-		if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-			isEOF  = resp.arg[0] & 0xff;
-
-			if (isEOF) break;
-			
-			len = resp.arg[1] & 0xff;
-			if (len == 0) continue;
-			
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		len = resp.arg[1];
+		if (len == 2) {	
 			memcpy(&uid, resp.d.asBytes, 4);
-			PrintAndLog("uid:%08x len=%d trgbl=%d trgkey=%x", uid, len, resp.arg[2] & 0xff, (resp.arg[2] >> 8) & 0xff);
-			vector = (fnVector *) realloc((void *)vector, (lenVector + len) * sizeof(fnVector) + 200);
-			if (vector == NULL) {
-				PrintAndLog("Memory allocation error for fnVector. len: %d bytes: %d", lenVector + len, (lenVector + len) * sizeof(fnVector)); 
-				break;
-			}
+			PrintAndLog("uid:%08x len=%d trgbl=%d trgkey=%x", uid, len, (uint16_t)resp.arg[2] & 0xff, (uint16_t)resp.arg[2] >> 8);
 			
-			for (i = 0; i < len; i++) {
-				vector[lenVector + i].blockNo = resp.arg[2] & 0xff;
-				vector[lenVector + i].keyType = (resp.arg[2] >> 8) & 0xff;
-				vector[lenVector + i].uid = uid;
+			for (i = 0; i < 2; i++) {
+				statelists[i].blockNo = resp.arg[2] & 0xff;
+				statelists[i].keyType = (resp.arg[2] >> 8) & 0xff;
+				statelists[i].uid = uid;
 
-				memcpy(&vector[lenVector + i].nt,  (void *)(resp.d.asBytes + 8 + i * 8 + 0), 4);
-				memcpy(&vector[lenVector + i].ks1, (void *)(resp.d.asBytes + 8 + i * 8 + 4), 4);
+				memcpy(&statelists[i].nt,  (void *)(resp.d.asBytes + 4 + i * 8 + 0), 4);
+				memcpy(&statelists[i].ks1, (void *)(resp.d.asBytes + 4 + i * 8 + 4), 4);
 			}
-
-			lenVector += len;
+		}
+		else {
+			PrintAndLog("Got 0 keys from proxmark."); 
+			return 1;
 		}
 	}
-	
-	if (!lenVector) {
-		PrintAndLog("Got 0 keys from proxmark."); 
-		return 1;
-	}
-	printf("------------------------------------------------------------------\n");
 	
 	// calc keys
-	struct Crypto1State* revstate = NULL;
-	struct Crypto1State* revstate_start = NULL;
-	uint64_t lfsr;
-	int kcount = 0;
-	pKeys		*pk;
 	
-	if ((pk = (void *) malloc(sizeof(pKeys))) == NULL) return 1;
-	memset(pk, 0x00, sizeof(pKeys));
+	pthread_t thread_id[2];
+		
+	// create and run worker threads
+	for (i = 0; i < 2; i++) {
+		pthread_create(thread_id + i, NULL, nested_worker_thread, &statelists[i]);
+	}
 	
-	for (m = 0; m < lenVector; m++) {
-		// And finally recover the first 32 bits of the key
-		revstate = lfsr_recovery32(vector[m].ks1, vector[m].nt ^ vector[m].uid);
-		if (revstate_start == NULL) revstate_start = revstate;
-	
-		while ((revstate->odd != 0x0) || (revstate->even != 0x0)) {
-			lfsr_rollback_word(revstate, vector[m].nt ^ vector[m].uid, 0);
-			crypto1_get_lfsr(revstate, &lfsr);
+	// wait for threads to terminate:
+	for (i = 0; i < 2; i++) {
+		pthread_join(thread_id[i], (void*)&statelists[i].slhead);
+	}
 
-			// Allocate a new space for keys
-			if (((kcount % MEM_CHUNK) == 0) || (kcount >= pk->size)) {
-				pk->size += MEM_CHUNK;
-//fprintf(stdout, "New chunk by %d, sizeof %d\n", kcount, pk->size * sizeof(uint64_t));
-				pk->possibleKeys = (uint64_t *) realloc((void *)pk->possibleKeys, pk->size * sizeof(uint64_t));
-				if (pk->possibleKeys == NULL) {
-					PrintAndLog("Memory allocation error for pk->possibleKeys"); 
-					return 1;
-				}
+
+	// the first 16 Bits of the cryptostate already contain part of our key.
+	// Create the intersection of the two lists based on these 16 Bits and
+	// roll back the cryptostate
+	p1 = p3 = statelists[0].slhead; 
+	p2 = p4 = statelists[1].slhead;
+	while (p1 <= statelists[0].sltail && p2 <= statelists[1].sltail) {
+		if (Compare16Bits(p1, p2) == 0) {
+			struct Crypto1State savestate, *savep = &savestate;
+			savestate = *p1;
+			while(Compare16Bits(p1, savep) == 0 && p1 <= statelists[0].sltail) {
+				*p3 = *p1;
+				lfsr_rollback_word(p3, statelists[0].nt ^ statelists[0].uid, 0);
+				p3++;
+				p1++;
 			}
-			pk->possibleKeys[kcount] = lfsr;
-			kcount++;
-			revstate++;
+			savestate = *p2;
+			while(Compare16Bits(p2, savep) == 0 && p2 <= statelists[1].sltail) {
+				*p4 = *p2;
+				lfsr_rollback_word(p4, statelists[1].nt ^ statelists[1].uid, 0);
+				p4++;
+				p2++;
+			}
 		}
-	free(revstate_start);
-	revstate_start = NULL;
+		else {
+			while (Compare16Bits(p1, p2) == -1) p1++;
+			while (Compare16Bits(p1, p2) == 1) p2++;
+		}
+	}
+	p3->even = 0; p3->odd = 0;
+	p4->even = 0; p4->odd = 0;
+	statelists[0].len = p3 - statelists[0].slhead;
+	statelists[1].len = p4 - statelists[1].slhead;
+	statelists[0].sltail=--p3;
+	statelists[1].sltail=--p4;
 
+	// the statelists now contain possible keys. The key we are searching for must be in the
+	// intersection of both lists. Create the intersection:
+	qsort(statelists[0].keyhead, statelists[0].len, sizeof(uint64_t), compar_int);
+	qsort(statelists[1].keyhead, statelists[1].len, sizeof(uint64_t), compar_int);
+
+	uint64_t *p5, *p6, *p7;
+	p5 = p7 = statelists[0].keyhead; 
+	p6 = statelists[1].keyhead;
+	while (p5 <= statelists[0].keytail && p6 <= statelists[1].keytail) {
+		if (compar_int(p5, p6) == 0) {
+			*p7++ = *p5++;
+			p6++;
+		}
+		else {
+			while (compar_int(p5, p6) == -1) p5++;
+			while (compar_int(p5, p6) == 1) p6++;
+		}
+	}
+	statelists[0].len = p7 - statelists[0].keyhead;
+	statelists[0].keytail=--p7;
+
+	memset(resultKey, 0, 6);
+	// The list may still contain several key candidates. Test each of them with mfCheckKeys
+	for (i = 0; i < statelists[0].len; i++) {
+		uint8_t keyBlock[6];
+		uint64_t key64;
+		crypto1_get_lfsr(statelists[0].slhead + i, &key64);
+		num_to_bytes(key64, 6, keyBlock);
+		key64 = 0;
+		if (!mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, 1, keyBlock, &key64)) {
+			num_to_bytes(key64, 6, resultKey);
+			break;
+		}
 	}
 	
-	// Truncate
-	if (kcount != 0) {
-		pk->size = --kcount;
-		if ((pk->possibleKeys = (uint64_t *) realloc((void *)pk->possibleKeys, pk->size * sizeof(uint64_t))) == NULL) {
-			PrintAndLog("Memory allocation error for pk->possibleKeys"); 
-			return 1;
-		}		
-	}
-
-	PrintAndLog("Total keys count:%d", kcount);
-	ck = uniqsort(pk->possibleKeys, pk->size);
-
-	// fill key array
-	for (i = 0; i < 16 ; i++) {
-		num_to_bytes(ck[i].key, 6, (uint8_t*)(resultKeys + i * 6));
-	}
-
-	// finalize
-	free(pk->possibleKeys);
-	free(pk);
-	free(ck);
-	free(vector);
-
+	free(statelists[0].slhead);
+	free(statelists[1].slhead);
+	
 	return 0;
 }
 
 int mfCheckKeys (uint8_t blockNo, uint8_t keyType, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key){
+
 	*key = 0;
 
-  UsbCommand c = {CMD_MIFARE_CHKKEYS, {blockNo, keyType, keycnt}};
+	UsbCommand c = {CMD_MIFARE_CHKKEYS, {blockNo, keyType, keycnt}};
 	memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
-  SendCommand(&c);
+	SendCommand(&c);
 
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK,&resp,3000)) return 1;
