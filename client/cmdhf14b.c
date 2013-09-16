@@ -147,6 +147,7 @@ int CmdHF14BList(const char *Cmd)
 {
   uint8_t got[960];
   GetFromBigBuf(got,sizeof(got),0);
+  WaitForResponse(CMD_ACK,NULL);
 
   PrintAndLog("recorded activity:");
   PrintAndLog(" time  :rssi: who bytes");
