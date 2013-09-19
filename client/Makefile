@@ -5,6 +5,7 @@
 #-----------------------------------------------------------------------------
 include ../common/Makefile.common
 
+
 CC=gcc
 CXX=g++
 #COMMON_FLAGS = -m32
@@ -12,24 +13,30 @@ CXX=g++
 VPATH = ../common
 OBJDIR = obj
 
-LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread
+LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread ../liblua/liblua.a -ldl
 LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O4
+CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -I../liblua -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O4 
+LUAPLATFORM = generic
 
 ifneq (,$(findstring MINGW,$(platform)))
 CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
 QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
 MOC = $(QTDIR)/bin/moc
+LUAPLATFORM = mingw
 else ifeq ($(platform),Darwin)
 CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Versions/Current/Headers -I/Library/Frameworks/QtCore.framework/Versions/Current/Headers
 QTLDLIBS = -framework QtGui -framework QtCore
 MOC = moc 
+LUAPLATFORM = macosx
 else
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
 MOC = $(shell pkg-config --variable=moc_location QtCore)
+LDLIBS +=  -ldl
+
 # Below is a variant you can use if you have problems compiling with QT5 on ubuntu. see http://www.proxmark.org/forum/viewtopic.php?id=1661 for more info. 
 #MOC = /usr/lib/x86_64-linux-gnu/qt4/bin/moc
+LUAPLATFORM = linux
 endif
 
 
@@ -74,7 +81,12 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			cmdparser.c \
 			cmdmain.c \
 			cmdlft55xx.c \
-			cmdlfpcf7931.c
+			cmdlfpcf7931.c\
+			pm3_binlib.c\
+			scripting.c\
+			cmdscript.c\
+
+
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
@@ -83,7 +95,7 @@ RM = rm -f
 BINS = proxmark3 flasher #snooper cli
 CLEAN = cli cli.exe flasher flasher.exe proxmark3 proxmark3.exe snooper snooper.exe $(CMDOBJS) $(OBJDIR)/*.o *.o *.moc.cpp
 
-all: $(BINS)
+all: lua_build $(BINS) 
 
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: snooper cli flasher
@@ -112,6 +124,7 @@ proxguiqt.moc.cpp: proxguiqt.h
 
 clean:
 	$(RM) $(CLEAN)
+	cd ../liblua && make clean
 
 tarbin: $(BINS)
 	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%)
@@ -126,5 +139,9 @@ install_kext: Info.plist
 	rm -rf /System/Library/Caches/com.apple.kext.caches
 	touch /System/Library/Extensions
 	@echo "*** You may need to reboot for the kext to take effect."
+
+lua_build:
+	@echo Compiling liblua, using platform $(LUAPLATFORM)
+	cd ../liblua && make $(LUAPLATFORM)
 
 .PHONY: all clean
