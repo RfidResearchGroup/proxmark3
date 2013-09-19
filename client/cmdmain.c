@@ -68,6 +68,58 @@ int CmdQuit(const char *Cmd)
   return 0;
 }
 /**
+ * @brief This method should be called when sending a new command to the pm3. In case any old
+ *  responses from previous commands are stored in the buffer, a call to this method should clear them.
+ *  A better method could have been to have explicit command-ACKS, so we can know which ACK goes to which
+ *  operation. Right now we'll just have to live with this.
+ */
+void clearCommandBuffer()
+{
+    //This is a very simple operation
+    cmd_tail = cmd_head;
+}
+
+/**
+ * @brief storeCommand stores a USB command in a circular buffer
+ * @param UC
+ */
+void storeCommand(UsbCommand *command)
+{
+    if( ( cmd_head+1) % CMD_BUFFER_SIZE == cmd_tail)
+    {
+        //If these two are equal, we're about to overwrite in the
+        // circular buffer.
+        PrintAndLog("WARNING: Command buffer about to overwrite command! This needs to be fixed!");
+    }
+    //Store the command at the 'head' location
+    UsbCommand* destination = &cmdBuffer[cmd_head];
+    memcpy(destination, command, sizeof(UsbCommand));
+
+    cmd_head = (cmd_head +1) % CMD_BUFFER_SIZE; //increment head and wrap
+
+}
+/**
+ * @brief getCommand gets a command from an internal circular buffer.
+ * @param response location to write command
+ * @return 1 if response was returned, 0 if nothing has been received
+ */
+int getCommand(UsbCommand* response)
+{
+    //If head == tail, there's nothing to read, or if we just got initialized
+    if(cmd_head == cmd_tail){
+        return 0;
+    }
+    //Pick out the next unread command
+    UsbCommand* last_unread = &cmdBuffer[cmd_tail];
+    memcpy(response, last_unread, sizeof(UsbCommand));
+    //Increment tail - this is a circular buffer, so modulo buffer size
+    cmd_tail = (cmd_tail +1 ) % CMD_BUFFER_SIZE;
+
+    return 1;
+
+}
+
+/**
  * Waits for a certain response type. This method waits for a maximum of
  * ms_timeout milliseconds for a specified response command.
  *@brief WaitForResponseTimeout
@@ -213,54 +265,3 @@ void UsbCommandReceived(UsbCommand *UC)
 
 }
 
-/**
- * @brief This method should be called when sending a new command to the pm3. In case any old
- *  responses from previous commands are stored in the buffer, a call to this method should clear them.
- *  A better method could have been to have explicit command-ACKS, so we can know which ACK goes to which
- *  operation. Right now we'll just have to live with this.
- */
-void clearCommandBuffer()
-{
-    //This is a very simple operation
-    cmd_tail = cmd_head;
-}
-
-/**
- * @brief storeCommand stores a USB command in a circular buffer
- * @param UC
- */
-void storeCommand(UsbCommand *command)
-{
-    if( ( cmd_head+1) % CMD_BUFFER_SIZE == cmd_tail)
-    {
-        //If these two are equal, we're about to overwrite in the
-        // circular buffer.
-        PrintAndLog("WARNING: Command buffer about to overwrite command! This needs to be fixed!");
-    }
-    //Store the command at the 'head' location
-    UsbCommand* destination = &cmdBuffer[cmd_head];
-    memcpy(destination, command, sizeof(UsbCommand));
-
-    cmd_head = (cmd_head +1) % CMD_BUFFER_SIZE; //increment head and wrap
-
-}
-/**
- * @brief getCommand gets a command from an internal circular buffer.
- * @param response location to write command
- * @return 1 if response was returned, 0 if nothing has been received
- */
-int getCommand(UsbCommand* response)
-{
-    //If head == tail, there's nothing to read, or if we just got initialized
-    if(cmd_head == cmd_tail){
-        return 0;
-    }
-    //Pick out the next unread command
-    UsbCommand* last_unread = &cmdBuffer[cmd_tail];
-    memcpy(response, last_unread, sizeof(UsbCommand));
-    //Increment tail - this is a circular buffer, so modulo buffer size
-    cmd_tail = (cmd_tail +1 ) % CMD_BUFFER_SIZE;
-
-    return 1;
-
-}

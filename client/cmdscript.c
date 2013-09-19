@@ -65,6 +65,7 @@ int str_ends_with(const char * str, const char * suffix) {
 int CmdHelp(const char * Cmd)
 {
     PrintAndLog("This is a feature to run Lua-scripts. You can place lua-scripts within the scripts/-folder. ");
+    return 0;
 }
 
 /**
@@ -80,7 +81,7 @@ int CmdList(const char *Cmd)
 
     if (dp != NULL)
     {
-        while (ep = readdir (dp))
+        while ((ep = readdir (dp)) != NULL)
         {
             if(ep->d_name != NULL && str_ends_with(ep->d_name, ".lua"))
                 PrintAndLog("%-16s %s", ep->d_name, "A script file");
@@ -189,7 +190,6 @@ static void set_cmdlibraries(lua_State *L)
 
     //-- remove the global environment table from the stack
     lua_pop(L, 1);
-    return 1;
 }
 /**
  * Utility to check the ending of a string (used to check file suffix)
@@ -270,12 +270,13 @@ int CmdRun(const char *Cmd)
         // get the top of the stack as the error and pop it off
         const char * str = lua_tostring(lua_state, lua_gettop(lua_state));
         lua_pop(lua_state, 1);
-        printf(str);
+        puts(str);
     }
 
     //luaL_dofile(lua_state, buf);
     // close the Lua state
     lua_close(lua_state);
     printf("\n-----Finished\n");
+    return 0;
 }
 

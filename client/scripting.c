@@ -51,7 +51,7 @@ static int l_SendCommand(lua_State *L){
     }
 
 //    UsbCommand c = (*data);
-    SendCommand(data);
+    SendCommand((UsbCommand* )data);
     return 0; // no return values
 }
 /**
@@ -93,7 +93,7 @@ static int l_WaitForResponseTimeout(lua_State *L){
     if(WaitForResponseTimeout(cmd, &response, ms_timeout))
     {
         //Push it as a string
-         lua_pushlstring(L,&response,sizeof(UsbCommand));
+         lua_pushlstring(L,(const char *)&response,sizeof(UsbCommand));
 
         return 1;// return 1 to signal one return value
     }else{
@@ -102,10 +102,11 @@ static int l_WaitForResponseTimeout(lua_State *L){
         return 1;// one return value
     }
 }
-static int l_nonce2key(lua_State *L){ return CmdHF14AMfRdSc(luaL_checkstring(L, 1));}
-static int l_PrintAndLog(lua_State *L){ return CmdHF14AMfDump(luaL_checkstring(L, 1));}
+//static int l_nonce2key(lua_State *L){ return CmdHF14AMfRdSc(luaL_checkstring(L, 1));}
+//static int l_PrintAndLog(lua_State *L){ return CmdHF14AMfDump(luaL_checkstring(L, 1));}
 static int l_clearCommandBuffer(lua_State *L){
     clearCommandBuffer();
+    return 0;
 }
 /**
  * @brief l_foobar is a dummy function to test lua-integration with
@@ -121,7 +122,7 @@ static int l_foobar(lua_State *L)
     printf("Arguments discarded, stack now contains %d elements", lua_gettop(L));
     UsbCommand response =  {CMD_MIFARE_READBL, {1337, 1338, 1339}};
     printf("Now returning a UsbCommand as a string");
-    lua_pushlstring(L,&response,sizeof(UsbCommand));
+    lua_pushlstring(L,(const char *)&response,sizeof(UsbCommand));
     return 1;
 }
 
@@ -141,8 +142,8 @@ int set_pm3_libraries(lua_State *L)
     static const luaL_Reg libs[] = {
         {"SendCommand",                 l_SendCommand},
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},
-        {"nonce2key",                   l_nonce2key},
-        {"PrintAndLog",                 l_PrintAndLog},
+        //{"nonce2key",                   l_nonce2key},
+        //{"PrintAndLog",                 l_PrintAndLog},
         {"foobar",                      l_foobar},
         {"ukbhit",                      l_ukbhit},
         {"clearCommandBuffer",          l_clearCommandBuffer},
