@@ -228,8 +228,8 @@ int CmdRun(const char *Cmd)
 //    memset(cmd_name, 0, 32);
 //    sscanf(Cmd, "%31s%n", cmd_name, &len);
 
-    char script_name[128];
-    char arguments[256];
+    char script_name[128] = {0};
+    char arguments[256] = {0};
 
     int name_len = 0;
     int arg_len = 0;
@@ -244,7 +244,7 @@ int CmdRun(const char *Cmd)
     char buf[256];
     snprintf(buf, sizeof buf, "./scripts/%s%s", script_name, suffix);
 
-    printf("---Executing: %s with arguments '%s'\n",buf,arguments);
+    printf("--- Executing: %s, args'%s'\n",buf,arguments);
 
 
 
