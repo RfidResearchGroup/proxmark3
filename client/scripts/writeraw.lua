@@ -28,12 +28,18 @@ end
 print(string.len(rawdata))
 local command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
 									arg1 = 3, -- Connect (1) and don't disconnect (2)
-									arg2 = 0-- string.len(rawdata), 
-									--data = rawdata
+									arg2 = 0
                   }
 local mf_auth = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
-									arg1 = 6, -- Send raw 
-									arg2 = string.len(rawdata), 
+									arg1 = 10, -- Send raw 
+									-- arg2 contains the length. 
+									-- Remember; rawdata is an ascii string containing
+									-- ASCII characters. Thus; rawdata= "FF" are two bytes in length
+									-- but when converted to true hexvalues internally inside the Command 
+									-- constructor, 0xFF is only one byte. So, the bytelength is the 
+									-- length of the ASCII-string divided by two. Thanks jonor!
+
+									arg2 = string.len(rawdata)/2, 
 									data = rawdata}
 local quit = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
 									arg1 = 0, -- Nothing 
