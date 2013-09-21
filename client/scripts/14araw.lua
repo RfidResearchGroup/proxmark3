@@ -2,7 +2,7 @@ local cmds = require('commands')
 local getopt = require('getopt')
 local lib14a = require('read14a')
 
-example = "script run writerraw -x 6000F57b"
+example = "script run 14araw -x 6000F57b"
 author = "Martin Holst Swende"
 
 
@@ -21,14 +21,14 @@ Arguments:
 Examples : 
 
 # 1. Connect and don't disconnect
-script run writeraw -p 
+script run 14araw -p 
 # 2. Send mf auth, read response (nonce)
-script run writeraw -o -x 6000F57b -p
+script run 14araw -o -x 6000F57b -p
 # 3. disconnect
-script run writeraw -o
+script run 14araw -o
 
 # All three steps in one go:
-script run writeraw -x 6000F57b
+script run 14araw -x 6000F57b
 ]]
 
 --[[
@@ -52,7 +52,7 @@ local DEBUG = false -- the debug flag
 -- A debug printout-function
 function dbg(args)
 	if DEBUG then
-		print("# ", args)
+		print("###", args)
 	end
 end 
 --- 
@@ -168,14 +168,18 @@ end
 -- 	Testing
 -------------------------
 function selftest()
+	DEBUG = true
+	dbg("Performing test")
+	main()
 	main("-p")
 	main(" -o -x 6000F57b -p")
 	main("-o")
 	main("-x 6000F57b")
+	dbg("Tests done")
 end
 -- Flip the switch here to perform a sanity check. 
 -- It read a nonce in two different ways, as specified in the usage-section
-if false then 
+if "--test"==args then 
 	selftest()
 else 
 	-- Call the main 
