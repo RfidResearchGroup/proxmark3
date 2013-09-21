@@ -1,78 +1,183 @@
 local cmds = require('commands')
-local desc =
+local getopt = require('getopt')
+local lib14a = require('read14a')
+
+example = "script run writerraw -x 6000F57b"
+author = "Martin Holst Swende"
+
+
+desc =
 [[
+This is a script to allow raw 1444a commands to be sent and received. 
 
-This script is a work in progress, not yet functional. It is an attempt to use the raw-writing 
-capabilities already present within the devices
+Arguments:
+	-o 				do not connect - use this only if you previously used -p to stay connected 
+	-r 				do not read response
+	-c 				calculate and append CRC
+	-p 				stay connected - dont inactivate the field
+	-x <payload> 	Data to send (NO SPACES!)
+	-d 				Debug flag
 
+Examples : 
+
+# 1. Connect and don't disconnect
+script run writeraw -p 
+# 2. Send mf auth, read response (nonce)
+script run writeraw -o -x 6000F57b -p
+# 3. disconnect
+script run writeraw -o
+
+# All three steps in one go:
+script run writeraw -x 6000F57b
 ]]
 
-print(desc)
+--[[
 
--- Some raw data
-local rawdata = "6000F57b" --mf_auth
+This script communicates with 
+/armsrc/iso14443a.c, specifically ReaderIso14443a() at around line 1779 and onwards. 
+
+Check there for details about data format and how commands are interpreted on the 
+device-side.  
+]]
+
+-- Some globals
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
+local DEBUG = false -- the debug flag
 
-function show(usbpacket)
-	if usbpacket then
-		local response = Command.parse(usbpacket)
-		print(response)
+-------------------------------
+-- Some utilities 
+-------------------------------
+
+--- 
+-- A debug printout-function
+function dbg(args)
+	if DEBUG then
+		print("# ", args)
+	end
+end 
+--- 
+-- This is only meant to be used when errors occur
+function oops(err)
+	print("ERROR: ",err)
+end
+
+
+--- 
+-- Usage help
+function help()
+	print(desc)
+	print("Example usage")
+	print(example)
+end
+
+--- 
+-- The main entry point
+function main(args)
+
+	if args == nil or #args == 0 then
+		return help()
+	end
+
+	local ignore_response = false
+	local appendcrc = false
+	local stayconnected = false
+	local payload = nil
+	local doconnect = true
+
+	-- Read the parameters
+	for o, a in getopt.getopt(args, 'corcpx:') do
+		if o == "o" then doconnect = false end		
+		if o == "r" then ignore_response = true end
+		if o == "c" then appendcrc = true end
+		if o == "p" then stayconnected = true end
+		if o == "x" then payload = a end
+		if o == "d" then DEBUG = true end
+	end
+
+	-- First of all, connect
+	if doconnect then
+		dbg("doconnect")
+		-- We reuse the connect functionality from a 
+		-- common library
+		info, err = lib14a.read1443a(true)
+
+		if err then return oops(err) end
+		print(("Connected to card, uid = %s"):format(info.uid))
+	end
+
+	-- The actual raw payload, if any
+	if payload then
+		res,err = sendRaw(payload,{ignore_response = ignore_response})
+		if err then return oops(err) end
+	
+		if not ignoreresponse then 
+			-- Display the returned data	
+			showdata(res)
+		end
+	end
+	-- And, perhaps disconnect?
+	if not stayconnected then 
+		disconnect()
 	end
 end
 
--- Want to do both connect and send raw, so we should AND the two commands
--- ISO14A_COMMAND.ISO14A_RAW(8) and ISO14A_CONNECT (1). However, we don't have a 
--- bitlib yet, so we'll do it manually, 1 & 8 == 9
--- ISO14A_NO_DISCONNECT = 2 ==> 11
+--- Picks out and displays the data read from a tag
+-- Specifically, takes a usb packet, converts to a Command
+-- (as in commands.lua), takes the data-array and 
+-- reads the number of bytes specified in arg1 (arg0 in c-struct)
+-- and displays the data
+-- @param usbpacket the data received from the device
+function showdata(usbpacket)
+	local cmd_response = Command.parse(usbpacket)
+	local len = tonumber(cmd_response.arg1) *2
+	--print("data length:",len)
+	local data = string.sub(tostring(cmd_response.data), 0, len);
+	print("<< ",data)
+	--print("----------------")
+end
 
-print(string.len(rawdata))
-local command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
-									arg1 = 3, -- Connect (1) and don't disconnect (2)
-									arg2 = 0
-                  }
-local mf_auth = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
-									arg1 = 10, -- Send raw 
-									-- arg2 contains the length. 
-									-- Remember; rawdata is an ascii string containing
-									-- ASCII characters. Thus; rawdata= "FF" are two bytes in length
-									-- but when converted to true hexvalues internally inside the Command 
-									-- constructor, 0xFF is only one byte. So, the bytelength is the 
-									-- length of the ASCII-string divided by two. Thanks jonor!
 
+
+function sendRaw(rawdata, options)
+	print(">> ", rawdata)
+	
+	local flags = lib14a.ISO14A_COMMAND.ISO14A_NO_DISCONNECT + lib14a.ISO14A_COMMAND.ISO14A_RAW
+
+	local command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
+									arg1 = flags, -- Send raw 
+									-- arg2 contains the length, which is half the length 
+									-- of the ASCII-string rawdata
 									arg2 = string.len(rawdata)/2, 
 									data = rawdata}
-local quit = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
+	return lib14a.sendToDevice(command, options.ignore_response) 
+end
+
+-- Sends an instruction to do nothing, only disconnect
+function disconnect()
+
+	local command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
 									arg1 = 0, -- Nothing 
 									}
-									
-core.clearCommandBuffer()
---print("Sending")
---print(command)
-local err = core.SendCommand(command:getBytes())
-if err then
-	print(err)
-	return nil, err
+	-- We can ignore the response here, no ACK is returned for this command
+	-- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
+	return lib14a.sendToDevice(command,true) 
+end								
+
+
+-------------------------
+-- 	Testing
+-------------------------
+function selftest()
+	main("-p")
+	main(" -o -x 6000F57b -p")
+	main("-o")
+	main("-x 6000F57b")
 end
-local cardselect = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
-print("Card select:")
-show(cardselect)
---local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
---print("Raw response:")
---show(response)
-
-local answer = ""
-while answer ~='q' do
-  	
-	local err = core.SendCommand(mf_auth:getBytes())
-		if err then
-			print(err)
-			return nil, err
-		end
-	local nonce = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
-	print("Nonce:")
-	show(nonce)
-  	io.write("Write q to quit, hit any char to get a nonce ")
-  	io.flush()
-  	answer=io.read(1)
-
-end--]]
+-- Flip the switch here to perform a sanity check. 
+-- It read a nonce in two different ways, as specified in the usage-section
+if false then 
+	selftest()
+else 
+	-- Call the main 
+	main(args)
+end

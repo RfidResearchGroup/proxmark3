@@ -66,20 +66,41 @@ local function parse1443a(data)
 	return { uid = uid, atqa  = atqa, sak = sak, name = tostring_1443a(sak)}
 end
 
+--- Sends a USBpacket to the device
+-- @param command - the usb packet to send
+-- @param ignoreresponse - if set to true, we don't read the device answer packet 
+-- 		which is usually recipe for fail. If not sent, the host will wait 2s for a 
+-- 		response of type CMD_ACK
+-- @return 	packet,nil if successfull
+--			nil, errormessage if unsuccessfull
+
+local function sendToDevice(command, ignoreresponse)
+	core.clearCommandBuffer()
+	local err = core.SendCommand(command:getBytes())
+	if err then
+		print(err)
+		return nil, err
+	end
+	if ignoreresponse then return nil,nil end
+
+	local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
+	return response,nil
+end
+
+
 local library = {
-	read1443a = function(blockNo, keys, keyType)
+	-- This function does a connect. 
+	-- @param dont_disconnect - if true, does not disable the field
+	read1443a = function(dont_disconnect)
+
 		local command, result, info, err, data
 
-		core.clearCommandBuffer()
 		command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
 									arg1 = ISO14A_COMMAND.ISO14A_CONNECT}
-
-		err = core.SendCommand(command:getBytes())
-		if err then
-			print(err)
-			return nil, err
+		if dont_disconnect then
+			command.arg1 = command.arg1 + ISO14A_COMMAND.ISO14A_NO_DISCONNECT
 		end
-		local result = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
+		local result,err = sendToDevice(command)
 		if result then
 			local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
 			if arg0 == 0 then 
@@ -97,8 +118,10 @@ local library = {
 			return nil, err
 		end
 		return info
-	end
-
+	end,
+	parse1443a = parse1443a,
+	sendToDevice = sendToDevice,
+	ISO14A_COMMAND = ISO14A_COMMAND,
 }
 
 return library
