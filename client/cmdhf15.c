@@ -328,7 +328,7 @@ int CmdHF15DumpMem(const char*Cmd) {
 					*output=0; // reset outputstring
 					sprintf(output, "Block %2i   ",blocknum);
 					for ( int i=1; i<resp.arg[0]-2; i++) { // data in hex
-						sprintf(output+strlen(output),"%02hX ",recv[i]);					
+						sprintf(output+strlen(output),"%02X ",recv[i]);
 					}					
 					strcat(output,"   "); 
 					for ( int i=1; i<resp.arg[0]-2; i++) { // data in cleaned ascii
@@ -516,7 +516,7 @@ int CmdHF15CmdRaw (const char *cmd) {
 			hexout = (char *)malloc(resp.arg[0] * 3 + 1);
 			if (hexout != NULL) {
 				for (int i = 0; i < resp.arg[0]; i++) { // data in hex
-					sprintf(&hexout[i * 3], "%02hX ", recv[i]);
+					sprintf(&hexout[i * 3], "%02X ", recv[i]);
 				}
 				PrintAndLog("%s", hexout);
 				free(hexout);
@@ -669,7 +669,7 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 			if (!(recv[0] & ISO15_RES_ERROR)) {
 				*output=0; // reset outputstring
 				for ( i=1; i<resp.arg[0]-2; i++) {
-					sprintf(output+strlen(output),"%02hX ",recv[i]);					
+					sprintf(output+strlen(output),"%02X ",recv[i]);
 				}					
 				strcat(output,"\n\r");
 				strcat(output,"UID = ");
@@ -679,11 +679,11 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 				strcat(output,"\n\r");
 				i=10;
 				if (recv[1] & 0x01) 
-					sprintf(output+strlen(output),"DSFID supported, set to %02hX\n\r",recv[i++]);
+					sprintf(output+strlen(output),"DSFID supported, set to %02X\n\r",recv[i++]);
 				else 
 					strcat(output,"DSFID not supported\n\r");
 				if (recv[1] & 0x02) 
-					sprintf(output+strlen(output),"AFI supported, set to %03hX\n\r",recv[i++]);
+					sprintf(output+strlen(output),"AFI supported, set to %03X\n\r",recv[i++]);
 				else 
 					strcat(output,"AFI not supported\n\r");
 				if (recv[1] & 0x04) {
@@ -693,7 +693,7 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 					i+=2;
 				} else 
 					strcat(output,"Tag does not provide information on memory layout\n\r");
-				if (recv[1] & 0x08) sprintf(output+strlen(output),"IC reference given: %02hX\n\r",recv[i++]);
+				if (recv[1] & 0x08) sprintf(output+strlen(output),"IC reference given: %02X\n\r",recv[i++]);
 					else strcat(output,"IC reference not given\n\r");
 
 
@@ -770,7 +770,7 @@ int CmdHF15CmdReadmulti(const char *Cmd) {
 			if (!(recv[0] & ISO15_RES_ERROR)) {
 				*output=0; // reset outputstring
 				for ( int i=1; i<resp.arg[0]-2; i++) {
-					sprintf(output+strlen(output),"%02hX ",recv[i]);					
+					sprintf(output+strlen(output),"%02X ",recv[i]);
 				}					
 				strcat(output,"   ");
 				for ( int i=1; i<resp.arg[0]-2; i++) {
@@ -844,7 +844,7 @@ int CmdHF15CmdRead(const char *Cmd) {
 				*output=0; // reset outputstring
 				//sprintf(output, "Block %2i   ",blocknum);
 				for ( int i=1; i<resp.arg[0]-2; i++) {
-					sprintf(output+strlen(output),"%02hX ",recv[i]);					
+					sprintf(output+strlen(output),"%02X ",recv[i]);
 				}					
 				strcat(output,"   ");
 				for ( int i=1; i<resp.arg[0]-2; i++) {

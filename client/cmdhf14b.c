@@ -359,7 +359,7 @@ int CmdHF14BCmdRaw (const char *cmd) {
             if (hexout != NULL) {
                 uint8_t first, second;
                 for (int i = 0; i < resp.arg[0]; i++) { // data in hex
-                    sprintf(&hexout[i * 3], "%02hX ", recv[i]);
+                    sprintf(&hexout[i * 3], "%02X ", recv[i]);
                 }
                 PrintAndLog("%s", hexout);
                 free(hexout);

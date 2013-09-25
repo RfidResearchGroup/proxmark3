@@ -87,7 +87,7 @@ int CmdReset(const char *Cmd)
 int CmdSetDivisor(const char *Cmd)
 {
   UsbCommand c = {CMD_SET_LF_DIVISOR, {strtol(Cmd, NULL, 0), 0, 0}};
-  if (c.arg[0] < 0 || c.arg[0] > 255) {
+  if (c.arg[0] < 19 || c.arg[0] > 255) {
     PrintAndLog("divisor must be between 19 and 255");
   } else {
     SendCommand(&c);

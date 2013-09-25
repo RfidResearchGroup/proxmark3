@@ -412,7 +412,7 @@ int CmdEM4x50Read(const char *Cmd)
 int CmdEM410xWrite(const char *Cmd)
 {
   uint64_t id = 0xFFFFFFFFFFFFFFFF; // invalid id value
-  unsigned int card = 0xFF; // invalid card value
+  int card = 0xFF; // invalid card value
 	unsigned int clock = 0; // invalid clock value
 
 	sscanf(Cmd, "%" PRIx64 " %d %d", &id, &card, &clock);

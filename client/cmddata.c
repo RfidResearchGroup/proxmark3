@@ -812,7 +812,7 @@ int CmdThreshold(const char *Cmd)
     if (GraphBuffer[i] >= threshold)
       GraphBuffer[i] = 1;
     else
-      GraphBuffer[i] =- 1;
+      GraphBuffer[i] = -1;
   }
   RepaintGraphWindow();
   return 0;
