@@ -15,12 +15,14 @@
 #include "crc16.h"
 #include "string.h"
 
-void AcquireRawAdcSamples125k(int at134khz)
+void AcquireRawAdcSamples125k(int divisor)
 {
-	if (at134khz)
+	if ( (divisor == 1) || (divisor < 0) || (divisor > 255) )
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-	else
+	else if (divisor == 0)
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	else
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor);
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 

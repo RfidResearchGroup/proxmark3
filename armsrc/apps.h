@@ -108,7 +108,7 @@ void SetAdcMuxFor(uint32_t whichGpio);
 #define FPGA_HF_ISO14443A_READER_MOD				(4<<0)
 
 /// lfops.h
-void AcquireRawAdcSamples125k(int at134khz);
+void AcquireRawAdcSamples125k(int divisor);
 void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,uint8_t *command);
 void ReadTItag(void);
 void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc);

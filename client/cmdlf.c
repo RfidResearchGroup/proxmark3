@@ -362,8 +362,8 @@ int CmdLFRead(const char *Cmd)
     c.arg[0] = 1;
   } else if (*Cmd == '\0') {
     c.arg[0] = 0;
-  } else {
-    PrintAndLog("use 'read' or 'read h'");
+  } else if (sscanf(Cmd, "%i", &c.arg[0]) != 1) {
+    PrintAndLog("use 'read' or 'read h', or 'read <divisor>'");
     return 0;
   }
   SendCommand(&c);
@@ -534,7 +534,7 @@ static command_t CommandTable[] =
   {"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
   {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
   {"indalaclone", CmdIndalaClone,     1, "<UID> ['l']-- Clone Indala to T55x7 (tag must be in antenna)(UID in HEX)(option 'l' for 224 UID"},
-  {"read",        CmdLFRead,          0, "['h'] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134)"},
+  {"read",        CmdLFRead,          0, "['h'|<divisor>] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134, alternatively: f=12MHz/(divisor+1))"},
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
   {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
   {"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
