@@ -137,8 +137,33 @@ static int l_ukbhit(lua_State *L)
     return 1;
 }
 
+/**
+ * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
+ * able to do "require('foobar')" if foobar.lua is within lualibs folder.
+ * Taken from http://stackoverflow.com/questions/4125971/setting-the-global-lua-path-variable-from-c-c
+ * @param L
+ * @param path
+ * @return
+ */
+int setLuaPath( lua_State* L, const char* path )
+{
+    lua_getglobal( L, "package" );
+    lua_getfield( L, -1, "path" ); // get field "path" from table at top of stack (-1)
+    const char* cur_path = lua_tostring( L, -1 ); // grab path string from top of stack
+    int requiredLength = strlen(cur_path)+ strlen(path)+10; //A few bytes too many, whatever we can afford it
+    char * buf = malloc(requiredLength);
+    snprintf(buf, requiredLength, "%s;%s", cur_path, path);
+    lua_pop( L, 1 ); // get rid of the string on the stack we just pushed on line 5
+    lua_pushstring( L, buf ); // push the new one
+    lua_setfield( L, -2, "path" ); // set the field "path" in table at -2 with value at top of stack
+    lua_pop( L, 1 ); // get rid of package table from top of stack
+    return 0; // all done!
+}
+
+
 int set_pm3_libraries(lua_State *L)
 {
+
     static const luaL_Reg libs[] = {
         {"SendCommand",                 l_SendCommand},
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},
@@ -165,5 +190,10 @@ int set_pm3_libraries(lua_State *L)
 
     //-- remove the global environment table from the stack
     lua_pop(L, 1);
+
+    //-- Last but not least, add to the LUA_PATH (package.path in lua)
+    // so we can load libraries from the ./lualib/ - directory
+    setLuaPath(L,"./lualibs/?.lua");
+
     return 1;
 }
