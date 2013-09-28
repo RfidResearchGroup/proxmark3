@@ -26,6 +26,7 @@
 #include "mifare.h"
 
 static int CmdHelp(const char *Cmd);
+static void waitCmd(uint8_t iLen);
 
 int CmdHF14AList(const char *Cmd)
 {
@@ -469,6 +470,146 @@ int CmdHF14ASnoop(const char *Cmd) {
   return 0;
 }
 
+int CmdHF14ACmdRaw(const char *cmd) {
+    UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}};
+    uint8_t reply=1;
+    uint8_t crc=0;
+    uint8_t power=0;
+    uint8_t active=0;
+    uint8_t active_select=0;
+    uint16_t numbits=0;
+    char buf[5]="";
+    int i=0;
+    uint8_t data[100];
+    unsigned int datalen=0, temp;
+
+    if (strlen(cmd)<2) {
+        PrintAndLog("Usage: hf 14a raw [-r] [-c] [-p] [-f] [-b] <number of bits> <0A 0B 0C ... hex>");
+        PrintAndLog("       -r    do not read response");
+        PrintAndLog("       -c    calculate and append CRC");
+        PrintAndLog("       -p    leave the signal field ON after receive");
+        PrintAndLog("       -a    active signal field ON without select");
+        PrintAndLog("       -s    active signal field ON with select");
+        PrintAndLog("       -b    number of bits to send. Useful for send partial byte");
+        return 0;
+    }
+
+    // strip
+    while (*cmd==' ' || *cmd=='\t') cmd++;
+
+    while (cmd[i]!='\0') {
+        if (cmd[i]==' ' || cmd[i]=='\t') { i++; continue; }
+        if (cmd[i]=='-') {
+            switch (cmd[i+1]) {
+                case 'r': 
+                    reply=0;
+                    break;
+                case 'c':
+                    crc=1;
+                    break;
+                case 'p':
+                    power=1;
+                    break;
+                case 'a':
+                    active=1;
+                    break;
+                case 's':
+                    active_select=1;
+                    break;
+                case 'b': 
+                    sscanf(cmd+i+2,"%d",&temp);
+                    numbits = temp & 0xFFFF;
+                    i+=3;
+                    while(cmd[i]!=' ' && cmd[i]!='\0') { i++; }
+                    i-=2;
+                    break;
+                default:
+                    PrintAndLog("Invalid option");
+                    return 0;
+            }
+            i+=2;
+            continue;
+        }
+        if ((cmd[i]>='0' && cmd[i]<='9') ||
+            (cmd[i]>='a' && cmd[i]<='f') ||
+            (cmd[i]>='A' && cmd[i]<='F') ) {
+            buf[strlen(buf)+1]=0;
+            buf[strlen(buf)]=cmd[i];
+            i++;
+
+            if (strlen(buf)>=2) {
+                sscanf(buf,"%x",&temp);
+                data[datalen]=(uint8_t)(temp & 0xff);
+                datalen++;
+                *buf=0;
+            }
+            continue;
+        }
+        PrintAndLog("Invalid char on input");
+        return 0;
+    }
+    if(crc && datalen>0)
+    {
+        uint8_t first, second;
+        ComputeCrc14443(CRC_14443_A, data, datalen, &first, &second);
+        data[datalen++] = first;
+        data[datalen++] = second;
+    }
+
+    if(active || active_select)
+    {
+        c.arg[0] |= ISO14A_CONNECT;
+        if(active)
+            c.arg[0] |= ISO14A_NO_SELECT;
+    }
+    if(power)
+        c.arg[0] |= ISO14A_NO_DISCONNECT;
+    if(datalen>0)
+        c.arg[0] |= ISO14A_RAW;
+
+    c.arg[1] = datalen;
+    c.arg[2] = numbits;
+    memcpy(c.d.asBytes,data,datalen);
+
+    SendCommand(&c);
+
+    if (reply) {
+        if(active_select)
+            waitCmd(1);
+        if(datalen>0)
+            waitCmd(0);
+    } // if reply
+    return 0;
+}
+
+static void waitCmd(uint8_t iSelect)
+{
+    uint8_t *recv;
+    UsbCommand resp;
+    char *hexout;
+
+    if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+        recv = resp.d.asBytes;
+        uint8_t iLen = iSelect ? resp.arg[1] : resp.arg[0];
+        PrintAndLog("received %i octets",iLen);
+        if(!iLen)
+            return;
+        hexout = (char *)malloc(iLen * 3 + 1);
+        if (hexout != NULL) {
+            uint8_t first, second;
+            for (int i = 0; i < iLen; i++) { // data in hex
+                sprintf(&hexout[i * 3], "%02hX ", recv[i]);
+            }
+            PrintAndLog("%s", hexout);
+            free(hexout);
+        } else {
+            PrintAndLog("malloc failed your client has low memory?");
+        }
+    } else {
+        PrintAndLog("timeout while waiting for reply.");
+    }
+}
+
 static command_t CommandTable[] = 
 {
   {"help",   CmdHelp,              1, "This help"},
@@ -477,6 +618,7 @@ static command_t CommandTable[] =
   {"cuids",  CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443 Type A UIDs in one go"},
   {"sim",    CmdHF14ASim,          0, "<UID> -- Fake ISO 14443a tag"},
   {"snoop",  CmdHF14ASnoop,        0, "Eavesdrop ISO 14443 Type A"},
+  {"raw",    CmdHF14ACmdRaw,       0, "Send raw hex data to tag"},
   {NULL, NULL, 0, NULL}
 };
 

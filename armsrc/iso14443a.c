@@ -88,25 +88,25 @@ void iso14a_set_timeout(uint32_t timeout) {
 //-----------------------------------------------------------------------------
 byte_t oddparity (const byte_t bt)
 {
-  return OddByteParity[bt];
+	return OddByteParity[bt];
 }
 
 uint32_t GetParity(const uint8_t * pbtCmd, int iLen)
 {
-  int i;
-  uint32_t dwPar = 0;
+	int i;
+	uint32_t dwPar = 0;
 
-  // Generate the encrypted data
-  for (i = 0; i < iLen; i++) {
-    // Save the encrypted parity bit
-    dwPar |= ((OddByteParity[pbtCmd[i]]) << i);
-  }
-  return dwPar;
+	// Generate the encrypted data
+	for (i = 0; i < iLen; i++) {
+		// Save the encrypted parity bit
+		dwPar |= ((OddByteParity[pbtCmd[i]]) << i);
+	}
+	return dwPar;
 }
 
 void AppendCrc14443a(uint8_t* data, int len)
 {
-  ComputeCrc14443(CRC_14443_A,data,len,data+len,data+len+1);
+	ComputeCrc14443(CRC_14443_A,data,len,data+len,data+len+1);
 }
 
 // The function LogTrace() is also used by the iClass implementation in iClass.c
@@ -584,7 +584,7 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 	
 	LEDsoff();
 	// init trace buffer
-    iso14a_clear_trace();
+	iso14a_clear_trace();
 
 	// We won't start recording the frames that we acquire until we trigger;
 	// a good trigger condition to get started is probably when we see a
@@ -782,7 +782,7 @@ static void CodeStrangeAnswerAsTag()
 {
 	int i;
 
-    ToSendReset();
+	ToSendReset();
 
 	// Correction bit, might be removed when not needed
 	ToSendStuffBit(0);
@@ -806,7 +806,7 @@ static void CodeStrangeAnswerAsTag()
 	// 1
 	ToSend[++ToSendMax] = SEC_D;
 
-    // Send stopbit
+	// Send stopbit
 	ToSend[++ToSendMax] = SEC_F;
 
 	// Flush the buffer in FPGA!!
@@ -814,15 +814,15 @@ static void CodeStrangeAnswerAsTag()
 		ToSend[++ToSendMax] = SEC_F;
 	}
 
-    // Convert from last byte pos to length
-    ToSendMax++;
+	// Convert from last byte pos to length
+	ToSendMax++;
 }
 
 static void Code4bitAnswerAsTag(uint8_t cmd)
 {
 	int i;
 
-    ToSendReset();
+	ToSendReset();
 
 	// Correction bit, might be removed when not needed
 	ToSendStuffBit(0);
@@ -855,8 +855,8 @@ static void Code4bitAnswerAsTag(uint8_t cmd)
 		ToSend[++ToSendMax] = SEC_F;
 	}
 
-    // Convert from last byte pos to length
-    ToSendMax++;
+	// Convert from last byte pos to length
+	ToSendMax++;
 }
 
 //-----------------------------------------------------------------------------
@@ -914,9 +914,9 @@ int EmSendCmdPar(uint8_t *resp, int respLen, uint32_t par);
 //-----------------------------------------------------------------------------
 void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 {
-  // Enable and clear the trace
+	// Enable and clear the trace
 	tracing = TRUE;
-  iso14a_clear_trace();
+	iso14a_clear_trace();
 
 	// This function contains the tag emulation
 	uint8_t sak;
@@ -996,7 +996,7 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 	uint8_t *resp = NULL;
 	int respLen;
 
-  // Longest possible response will be 16 bytes + 2 CRC = 18 bytes
+	// Longest possible response will be 16 bytes + 2 CRC = 18 bytes
 	// This will need
 	//    144        data bits (18 * 8)
 	//     18        parity bits
@@ -1109,9 +1109,9 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 			break;
 		}
     
-    if (tracing) {
+		if (tracing) {
 			LogTrace(receivedCmd,len, 0, Uart.parityBits, TRUE);
-    }
+		}
     
 		// doob - added loads of debug strings so we can see what the reader is saying to us during the sim as hi14alist is not populated
 		// Okay, look at the command now.
@@ -1144,10 +1144,10 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 //			resp = resp4; respLen = resp4Len; order = 4; // Do nothing
 //			respdata = &nack;
 //			respsize = sizeof(nack); // 4-bit answer
-      EmSendCmdEx(data+(4*receivedCmd[0]),16,false);
+			EmSendCmdEx(data+(4*receivedCmd[0]),16,false);
 			Dbprintf("Read request from reader: %x %x",receivedCmd[0],receivedCmd[1]);
-      // We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
-      respLen = 0;
+			// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
+			respLen = 0;
 		} else if(receivedCmd[0] == 0x50) {	// Received a HALT
 //			DbpString("Reader requested we HALT!:");
 			// Do not respond
@@ -1646,7 +1646,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     p_hi14a_card->uidlen = 0;
     memset(p_hi14a_card->uid,0,10);
   }
-	
+
   // clear uid
   if (uid_ptr) {
     memset(uid_ptr,0,10);
@@ -1662,19 +1662,19 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     // SELECT_ALL
     ReaderTransmit(sel_all,sizeof(sel_all), NULL);
     if (!ReaderReceive(resp)) return 0;
-    
+
     // First backup the current uid
     memcpy(uid_resp,resp,4);
     uid_resp_len = 4;
     //    Dbprintf("uid: %02x %02x %02x %02x",uid_resp[0],uid_resp[1],uid_resp[2],uid_resp[3]);
-    
-	// calculate crypto UID. Always use last 4 Bytes.
-	if(cuid_ptr) {
-		*cuid_ptr = bytes_to_num(uid_resp, 4);
+
+        // calculate crypto UID. Always use last 4 Bytes.
+    if(cuid_ptr) {
+        *cuid_ptr = bytes_to_num(uid_resp, 4);
     }
 
     // Construct SELECT UID command
-		memcpy(sel_uid+2,resp,5);
+    memcpy(sel_uid+2,resp,5);
     AppendCrc14443a(sel_uid,7);
     ReaderTransmit(sel_uid,sizeof(sel_uid), NULL);
 
@@ -1689,11 +1689,11 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
       memcpy(uid_resp, uid_resp + 1, 3);
       uid_resp_len = 3;
     }
-    
+
     if(uid_ptr) {
       memcpy(uid_ptr + (cascade_level*3), uid_resp, uid_resp_len);
     }
-    
+
     if(p_hi14a_card) {
       memcpy(p_hi14a_card->uid + (cascade_level*3), uid_resp, uid_resp_len);
       p_hi14a_card->uidlen += uid_resp_len;
@@ -1719,7 +1719,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     memcpy(p_hi14a_card->ats, resp, sizeof(p_hi14a_card->ats));
     p_hi14a_card->ats_len = len;
   }
-	
+
   // reset the PCB block number
   iso14_pcb_blocknum = 0;
   return 1;
@@ -1781,10 +1781,13 @@ void ReaderIso14443a(UsbCommand * c)
 	iso14a_command_t param = c->arg[0];
 	uint8_t * cmd = c->d.asBytes;
 	size_t len = c->arg[1];
+	size_t lenbits = c->arg[2];
 	uint32_t arg0 = 0;
 	byte_t buf[USB_CMD_DATA_SIZE];
   
-	iso14a_clear_trace();
+	if(param & ISO14A_CONNECT) {
+		iso14a_clear_trace();
+	}
 	iso14a_set_tracing(true);
 
 	if(param & ISO14A_REQUEST_TRIGGER) {
@@ -1793,8 +1796,11 @@ void ReaderIso14443a(UsbCommand * c)
 
 	if(param & ISO14A_CONNECT) {
 		iso14443a_setup();
-		arg0 = iso14443a_select_card(NULL, (iso14a_card_select_t*)buf, NULL);
-		cmd_send(CMD_ACK,arg0,0,0,buf,sizeof(iso14a_card_select_t));
+		if(!(param & ISO14A_NO_SELECT)) {
+			iso14a_card_select_t *card = (iso14a_card_select_t*)buf;
+			arg0 = iso14443a_select_card(NULL,card,NULL);
+			cmd_send(CMD_ACK,arg0,card->uidlen,0,buf,sizeof(iso14a_card_select_t));
+		}
 	}
 
 	if(param & ISO14A_SET_TIMEOUT) {
@@ -1815,7 +1821,11 @@ void ReaderIso14443a(UsbCommand * c)
 			AppendCrc14443a(cmd,len);
 			len += 2;
 		}
-		ReaderTransmit(cmd,len, NULL);
+		if(lenbits>0) {
+			ReaderTransmitBitsPar(cmd,lenbits,GetParity(cmd,lenbits/8), NULL);
+		} else {
+			ReaderTransmit(cmd,len, NULL);
+		}
 		arg0 = ReaderReceive(buf);
 		cmd_send(CMD_ACK,arg0,0,0,buf,sizeof(buf));
 	}
