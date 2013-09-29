@@ -15,15 +15,36 @@
 #define llx PRIx64
 
 #include "nonce2key.h"
+#include "mifarehost.h"
 #include "ui.h"
 
+int compar_state(const void * a, const void * b) {
+	// didn't work: (the result is truncated to 32 bits)
+	//return (*(int64_t*)b - *(int64_t*)a);
+
+	// better:
+	if (*(int64_t*)b == *(int64_t*)a) return 0;
+	else if (*(int64_t*)b > *(int64_t*)a) return 1;
+	else return -1;
+}
+
 int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t * key) {
-  struct Crypto1State *state, *state_s;
-  uint32_t pos, rr, nr_diff;//, ks1, ks2;
-  byte_t bt, i, ks3x[8], par[8][8];
+  struct Crypto1State *state;
+  uint32_t i, pos, rr, nr_diff, key_count;//, ks1, ks2;
+  byte_t bt, ks3x[8], par[8][8];
   uint64_t key_recovered;
+  int64_t *state_s;
+  static uint32_t last_uid;
+  static int64_t *last_keylist;
   rr = 0;
   
+  if (last_uid != uid)
+  {
+	free(last_keylist);
+	last_keylist = NULL;
+  }
+  last_uid = uid;
+
   // Reset the last three significant bits of the reader nonce
   nr &= 0xffffff1f;
   
@@ -50,20 +71,81 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
     printf("%01x|\n", par[i][7]);
   }
   
-  state = lfsr_common_prefix(nr, rr, ks3x, par);
-	state_s = 0;
-	for (i = 0; (state) && ((state + i)->odd != 0 || (state + i)->even != 0) && (i < 10); i++)
-	{
-    printf("%08x|%08x\n",(state+i)->odd, (state+i)->even);
-		state_s = state + i;
-	}
-  if (!state_s) return 1;
-	
-  lfsr_rollback_word(state_s, uid^nt, 0);
-  crypto1_get_lfsr(state_s, &key_recovered);
-  if (!state) free(state);
-	
-	*key = key_recovered;
+	if (par_info==0)
+		PrintAndLog("parity is all zero,try special attack!just wait for few more seconds...");
   
-  return 0;
+	state = lfsr_common_prefix(nr, rr, ks3x, par, par_info==0);
+	state_s = (int64_t*)state;
+	
+	//char filename[50] ;
+    //sprintf(filename, "nt_%08x_%d.txt", nt, nr);
+    //printf("name %s\n", filename);
+	//FILE* fp = fopen(filename,"w");
+	for (i = 0; (state) && ((state + i)->odd != -1); i++)
+	{
+		lfsr_rollback_word(state+i, uid^nt, 0);
+		crypto1_get_lfsr(state + i, &key_recovered);
+		*(state_s + i) = key_recovered;
+		//fprintf(fp, "%012llx\n",key_recovered);
+	}
+	//fclose(fp);
+	
+	if(!state)
+		return 1;
+	
+	qsort(state_s, i, sizeof(*state_s), compar_state);
+	*(state_s + i) = -1;
+	
+	//Create the intersection:
+	if (par_info == 0 )
+		if ( last_keylist != NULL)
+		{
+			int64_t *p1, *p2, *p3;
+			p1 = p3 = last_keylist; 
+			p2 = state_s;
+			while ( *p1 != -1 && *p2 != -1 ) {
+				if (compar_state(p1, p2) == 0) {
+					printf("p1:%d p2:%d p3:%d key:%012llx\n",p1-last_keylist, p2-state_s, p3-last_keylist,*p1);
+					*p3++ = *p1++;
+					p2++;
+				}
+				else {
+					while (compar_state(p1, p2) == -1) ++p1;
+					while (compar_state(p1, p2) == 1) ++p2;
+				}
+			}
+			key_count = p3 - last_keylist;;
+		}
+		else
+			key_count = 0;
+	else
+	{
+		last_keylist = state_s;
+		key_count = i;
+	}
+	
+	printf("key_count:%d\n", key_count);
+	
+	// The list may still contain several key candidates. Test each of them with mfCheckKeys
+	for (i = 0; i < key_count; i++) {
+		uint8_t keyBlock[6];
+		uint64_t key64;
+		key64 = *(last_keylist + i);
+		num_to_bytes(key64, 6, keyBlock);
+		key64 = 0;
+		if (!mfCheckKeys(0, 0, 1, keyBlock, &key64)) {
+			*key = key64;
+			free(last_keylist);
+			last_keylist = NULL;
+			if (par_info ==0)
+				free(state);
+			return 0;
+		}
+	}	
+
+	
+	free(last_keylist);
+	last_keylist = state_s;
+	
+	return 1;
 }

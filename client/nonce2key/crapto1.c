@@ -507,7 +507,7 @@ uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
  */
 static struct Crypto1State*
 brute_top(uint32_t prefix, uint32_t rresp, unsigned char parities[8][8],
-          uint32_t odd, uint32_t even, struct Crypto1State* sl)
+          uint32_t odd, uint32_t even, struct Crypto1State* sl, uint8_t no_chk)
 {
 	struct Crypto1State s;
 	uint32_t ks1, nr, ks2, rr, ks3, good, c;
@@ -525,6 +525,9 @@ brute_top(uint32_t prefix, uint32_t rresp, unsigned char parities[8][8],
 		
 		sl->odd = s.odd;
 		sl->even = s.even;
+		
+		if (no_chk)
+			break;
 	
 		ks1 = crypto1_word(&s, prefix | c << 5, 1);
 		ks2 = crypto1_word(&s,0,0);
@@ -557,7 +560,7 @@ brute_top(uint32_t prefix, uint32_t rresp, unsigned char parities[8][8],
  * tag nonce was fed in
  */
 struct Crypto1State*
-lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
+lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8], uint8_t no_par)
 {
 	struct Crypto1State *statelist, *s;
 	uint32_t *odd, *even, *o, *e, top;
@@ -565,21 +568,21 @@ lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
 	odd = lfsr_prefix_ks(ks, 1);
 	even = lfsr_prefix_ks(ks, 0);
 
-	statelist = malloc((sizeof *statelist) << 20);
+	statelist = malloc((sizeof *statelist) << 21);	//how large should be? 
 	if(!statelist || !odd || !even)
                 return 0;
 
-
 	s = statelist;
-	for(o = odd; *o != 0xffffffff; ++o)
-		for(e = even; *e != 0xffffffff; ++e)
+	for(o = odd; *o != -1; ++o)
+		for(e = even; *e != -1; ++e)
 			for(top = 0; top < 64; ++top) {
 				*o = (*o & 0x1fffff) | (top << 21);
 				*e = (*e & 0x1fffff) | (top >> 3) << 21;
-				s = brute_top(pfx, rr, par, *o, *e, s);
+				s = brute_top(pfx, rr, par, *o, *e, s, no_par);
 			}
 
-	s->odd = s->even = 0;
+	s->odd = s->even = -1;	
+	//printf("state count = %d\n",s-statelist);
 
 	free(odd);
 	free(even);

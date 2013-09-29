@@ -370,8 +370,8 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 				continue;
 			};
 
-			nttmp = prng_successor(nt1, 500);
-			for (i = 501; i < 1200; i++) {
+			nttmp = prng_successor(nt1, 100);				//NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
+			for (i = 101; i < 1200; i++) {
 				nttmp = prng_successor(nttmp, 1);
 				if (nttmp == nt2) break;
 			}
