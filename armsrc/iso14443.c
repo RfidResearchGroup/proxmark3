@@ -269,7 +269,8 @@ static int Handle14443UartBit(int bit)
             break;
     }
 
-    if (Uart.state == STATE_ERROR_WAIT) LED_A_OFF(); // Error
+    // This row make the error blew circular buffer in hf 14b snoop
+    //if (Uart.state == STATE_ERROR_WAIT) LED_A_OFF(); // Error
 
     return FALSE;
 }
