@@ -7,7 +7,7 @@
 	the license.
 	
 	Copyright (C) 2013 m h swende <martin at swende.se>
-]]
+--]]
 -- Loads the commands-library
 local cmds = require('commands')
 -- Load the default keys
@@ -15,11 +15,49 @@ local keys = require('mf_default_keys')
 -- Ability to read what card is there
 local reader = require('read14a')
 
+
 local desc = 
 ("This script implements check keys. It utilises a large list of default keys (currently %d keys).\
 If you want to add more, just put them inside mf_default_keys.lua. "):format(#keys)
 
 local TIMEOUT = 10000 -- 10 seconds
+	
+--[[This may be moved to a separate library at some point]]
+local utils = 
+{
+	--- 
+	-- Asks the user for Yes or No
+	confirm = function(message, ...)
+		local answer
+		message = message .. " [y]/[n] ?"
+		repeat
+			io.write(message)
+			io.flush()
+			answer=io.read()
+			if answer == 'Y' or answer == "y" then
+				return true
+			elseif answer == 'N' or answer == 'n' then 
+				return false
+			end
+		until false
+	end,
+	---
+	-- Asks the user for input
+	input = function (message , default)
+		local answer
+		if default ~= nil then
+			message = message .. " (default: ".. default.. " )"
+		end
+		message = message .." \n > "
+		io.write(message)
+		io.flush()
+		answer=io.read()
+		if answer == '' then answer = default end
+
+		return answer
+	end,
+}
+
 
 local function checkCommand(command)
 
@@ -101,8 +139,33 @@ local function placeFirst(akey, list)
 	end
 	return result
 end
+local function dumptofile(results)
+	local sector, blockNo, keyA, keyB,_
 
-local function main()
+	if utils.confirm("Do you wish to save the keys to dumpfile?") then 
+		local destination = utils.input("Select a filename to store to", "dumpkeys.bin")
+		local file = io.open(destination, "w")
+		if file == nil then 
+			print("Could not write to file ", destination)
+			return
+		end
+
+		local key_a = ""
+		local key_b = ""
+		
+		for sector,_ in pairs(results) do
+			blockNo, keyA, keyB = unpack(_)
+			key_a = key_a .. bin.pack("H",keyA);
+			key_b = key_b .. bin.pack("H",keyB);
+		end
+		file:write(key_a)
+		file:write(key_b)
+		file:close()
+	end
+end
+
+
+local function main( args)
 
 	print(desc);
 
@@ -117,12 +180,30 @@ local function main()
 	core.clearCommandBuffer()
 	local blockNo
 	local keyType = 0 -- A=0, B=1
-	local result = {}
-	for sector=1,40,1 do
+	local numSectors = 16 
+
+	if 0x18 == result.sak then --NXP MIFARE Classic 4k | Plus 4k
+		-- IFARE Classic 4K offers 4096 bytes split into forty sectors, 
+		-- of which 32 are same size as in the 1K with eight more that are quadruple size sectors. 
+		numSectors = 40
+	elseif 0x08 == result.sak then -- NXP MIFARE CLASSIC 1k | Plus 2k
+		-- 1K offers 1024 bytes of data storage, split into 16 sector
+		numSectors = 16
+	elseif 0x09 == result.sak then -- NXP MIFARE Mini 0.3k
+		-- MIFARE Classic mini offers 320 bytes split into five sectors.
+		numSectors = 5
+	elseif  0x10 == result.sak then-- "NXP MIFARE Plus 2k"
+		numSectors = 32
+	else
+		print("I don't know how many sectors there are on this type of card, defaulting to 16")
+	end
+
+	result = {}
+	for sector=1,numSectors,1 do
 
 		--[[
-		The mifare Classic 1k card has 16 sectors of 4 data blocks each. The
-		first 32 sectors of a mifare Classic 4k card consists of 4 data blocks and the remaining
+		The mifare Classic 1k card has 16 sectors of 4 data blocks each. 
+		The first 32 sectors of a mifare Classic 4k card consists of 4 data blocks and the remaining
 		8 sectors consist of 16 data blocks. 
 		--]]
 		local blockNo = sector * 4 -1 
@@ -148,7 +229,8 @@ local function main()
 		end
 	end
 	displayresults(result)
+	dumptofile(result)
 end
 
-main()
+main( args)
 

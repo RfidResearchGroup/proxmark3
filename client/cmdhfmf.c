@@ -380,6 +380,8 @@ int CmdHF14AMfDump(const char *Cmd)
 				}
 				if (isOK) {
 					fwrite ( data, 1, 16, fout );
+                    PrintAndLog("Dumped card data into 'dumpkeys.bin'");
+
 				}
 				else {
 					PrintAndLog("Could not get access rights for block %d", i);
@@ -393,7 +395,6 @@ int CmdHF14AMfDump(const char *Cmd)
 	
 	fclose(fin);
 	fclose(fout);
-	
   return 0;
 }
 
