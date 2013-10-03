@@ -596,9 +596,8 @@ static void waitCmd(uint8_t iSelect)
             return;
         hexout = (char *)malloc(iLen * 3 + 1);
         if (hexout != NULL) {
-            uint8_t first, second;
             for (int i = 0; i < iLen; i++) { // data in hex
-                sprintf(&hexout[i * 3], "%02hX ", recv[i]);
+                sprintf(&hexout[i * 3], "%02X ", recv[i]);
             }
             PrintAndLog("%s", hexout);
             free(hexout);

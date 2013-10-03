@@ -362,7 +362,7 @@ int CmdLFRead(const char *Cmd)
     c.arg[0] = 1;
   } else if (*Cmd == '\0') {
     c.arg[0] = 0;
-  } else if (sscanf(Cmd, "%i", &c.arg[0]) != 1) {
+  } else if (sscanf(Cmd, "%"lli, &c.arg[0]) != 1) {
     PrintAndLog("use 'read' or 'read h', or 'read <divisor>'");
     return 0;
   }
