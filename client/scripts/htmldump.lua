@@ -3,9 +3,9 @@
 getopt = require('getopt')
 bin = require('bin')
 
-example = "script run 14araw -x 6000F57b"
+example = "script run htmldump -o mifarecard_foo.html"
 author = "Martin Holst Swende"
-usage = "script run htmldump [-f <file>]"
+usage = "script run htmldump [-i <file>] [-o <file>]"
 desc =[[
 This script takes a dumpfile and produces a html based dump, which is a 
 bit more easily analyzed. 

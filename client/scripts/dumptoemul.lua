@@ -3,9 +3,9 @@
 getopt = require('getopt')
 bin = require('bin')
 
-example = "script run 14araw -x 6000F57b"
+example = "script run dumptoemul -i dumpdata-foobar.bin"
 author = "Martin Holst Swende"
-usage = "script run htmldump [-f <file>]"
+usage = "script run dumptoemul [-i <file>] [-o <file>]"
 desc =[[
 This script takes a dumpfile from 'hf mf dump' and converts it to a format that can be used
 by the emulator
