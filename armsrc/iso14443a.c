@@ -775,48 +775,48 @@ static void CodeIso14443aAsTag(const uint8_t *cmd, int len){
 	CodeIso14443aAsTagPar(cmd, len, GetParity(cmd, len));
 }
 
-//-----------------------------------------------------------------------------
-// This is to send a NACK kind of answer, its only 3 bits, I know it should be 4
-//-----------------------------------------------------------------------------
-static void CodeStrangeAnswerAsTag()
-{
-	int i;
-
-	ToSendReset();
-
-	// Correction bit, might be removed when not needed
-	ToSendStuffBit(0);
-	ToSendStuffBit(0);
-	ToSendStuffBit(0);
-	ToSendStuffBit(0);
-	ToSendStuffBit(1);  // 1
-	ToSendStuffBit(0);
-	ToSendStuffBit(0);
-	ToSendStuffBit(0);
-
-	// Send startbit
-	ToSend[++ToSendMax] = SEC_D;
-
-	// 0
-	ToSend[++ToSendMax] = SEC_E;
-
-	// 0
-	ToSend[++ToSendMax] = SEC_E;
-
-	// 1
-	ToSend[++ToSendMax] = SEC_D;
-
-	// Send stopbit
-	ToSend[++ToSendMax] = SEC_F;
-
-	// Flush the buffer in FPGA!!
-	for(i = 0; i < 5; i++) {
-		ToSend[++ToSendMax] = SEC_F;
-	}
-
-	// Convert from last byte pos to length
-	ToSendMax++;
-}
+////-----------------------------------------------------------------------------
+//// This is to send a NACK kind of answer, its only 3 bits, I know it should be 4
+////-----------------------------------------------------------------------------
+//static void CodeStrangeAnswerAsTag()
+//{
+//	int i;
+//
+//	ToSendReset();
+//
+//	// Correction bit, might be removed when not needed
+//	ToSendStuffBit(0);
+//	ToSendStuffBit(0);
+//	ToSendStuffBit(0);
+//	ToSendStuffBit(0);
+//	ToSendStuffBit(1);  // 1
+//	ToSendStuffBit(0);
+//	ToSendStuffBit(0);
+//	ToSendStuffBit(0);
+//
+//	// Send startbit
+//	ToSend[++ToSendMax] = SEC_D;
+//
+//	// 0
+//	ToSend[++ToSendMax] = SEC_E;
+//
+//	// 0
+//	ToSend[++ToSendMax] = SEC_E;
+//
+//	// 1
+//	ToSend[++ToSendMax] = SEC_D;
+//
+//	// Send stopbit
+//	ToSend[++ToSendMax] = SEC_F;
+//
+//	// Flush the buffer in FPGA!!
+//	for(i = 0; i < 5; i++) {
+//		ToSend[++ToSendMax] = SEC_F;
+//	}
+//
+//	// Convert from last byte pos to length
+//	ToSendMax++;
+//}
 
 static void Code4bitAnswerAsTag(uint8_t cmd)
 {
@@ -908,6 +908,67 @@ int EmSendCmdEx(uint8_t *resp, int respLen, int correctionNeeded);
 int EmSendCmd(uint8_t *resp, int respLen);
 int EmSendCmdPar(uint8_t *resp, int respLen, uint32_t par);
 
+static uint8_t* free_buffer_pointer = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
+
+typedef struct {
+  uint8_t* response;
+  size_t   response_n;
+  uint8_t* modulation;
+  size_t   modulation_n;
+} tag_response_info_t;
+
+void reset_free_buffer() {
+  free_buffer_pointer = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
+}
+
+bool prepare_tag_modulation(tag_response_info_t* response_info, size_t max_buffer_size) {
+	// Exmaple response, answer to MIFARE Classic read block will be 16 bytes + 2 CRC = 18 bytes
+	// This will need the following byte array for a modulation sequence
+	//    144        data bits (18 * 8)
+	//     18        parity bits
+	//      2        Start and stop
+	//      1        Correction bit (Answer in 1172 or 1236 periods, see FPGA)
+	//      1        just for the case
+	// ----------- +
+	//    166 bytes, since every bit that needs to be send costs us a byte
+	//
+  
+  // Prepare the tag modulation bits from the message
+  CodeIso14443aAsTag(response_info->response,response_info->response_n);
+  
+  // Make sure we do not exceed the free buffer space
+  if (ToSendMax > max_buffer_size) {
+    Dbprintf("Out of memory, when modulating bits for tag answer:");
+    Dbhexdump(response_info->response_n,response_info->response,false);
+    return false;
+  }
+  
+  // Copy the byte array, used for this modulation to the buffer position
+  memcpy(response_info->modulation,ToSend,ToSendMax);
+  
+  // Store the number of bytes that were used for encoding/modulation
+  response_info->modulation_n = ToSendMax;
+  
+  return true;
+}
+
+bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
+  // Retrieve and store the current buffer index
+  response_info->modulation = free_buffer_pointer;
+  
+  // Determine the maximum size we can use from our buffer
+  size_t max_buffer_size = (((uint8_t *)BigBuf)+FREE_BUFFER_OFFSET+FREE_BUFFER_SIZE)-free_buffer_pointer;
+  
+  // Forward the prepare tag modulation function to the inner function
+  if (prepare_tag_modulation(response_info,max_buffer_size)) {
+    // Update the free buffer offset
+    free_buffer_pointer += ToSendMax;
+    return true;
+  } else {
+    return false;
+  }
+}
+
 //-----------------------------------------------------------------------------
 // Main loop of simulated tag: receive commands from reader, decide what
 // response to send, and send it.
@@ -990,57 +1051,41 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 	ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 
 	uint8_t response5[] = { 0x00, 0x00, 0x00, 0x00 }; // Very random tag nonce
-	uint8_t response6[] = { 0x03, 0x3B, 0x00, 0x00, 0x00 }; // dummy ATS (pseudo-ATR), answer to RATS
-	ComputeCrc14443(CRC_14443_A, response6, 3, &response6[3], &response6[4]);
+	uint8_t response6[] = { 0x04, 0x58, 0x00, 0x02, 0x00, 0x00 }; // dummy ATS (pseudo-ATR), answer to RATS
+	ComputeCrc14443(CRC_14443_A, response6, 4, &response6[4], &response6[5]);
 
-	uint8_t *resp = NULL;
-	int respLen;
+  #define TAG_RESPONSE_COUNT 7
+  tag_response_info_t responses[TAG_RESPONSE_COUNT] = {
+    { .response = response1,  .response_n = sizeof(response1)  },  // Answer to request - respond with card type
+    { .response = response2,  .response_n = sizeof(response2)  },  // Anticollision cascade1 - respond with uid
+    { .response = response2a, .response_n = sizeof(response2a) },  // Anticollision cascade2 - respond with 2nd half of uid if asked
+    { .response = response3,  .response_n = sizeof(response3)  },  // Acknowledge select - cascade 1
+    { .response = response3a, .response_n = sizeof(response3a) },  // Acknowledge select - cascade 2
+    { .response = response5,  .response_n = sizeof(response5)  },  // Authentication answer (random nonce)
+    { .response = response6,  .response_n = sizeof(response6)  },  // dummy ATS (pseudo-ATR), answer to RATS
+  };
 
-	// Longest possible response will be 16 bytes + 2 CRC = 18 bytes
-	// This will need
-	//    144        data bits (18 * 8)
-	//     18        parity bits
-	//      2        Start and stop
-	//      1        Correction bit (Answer in 1172 or 1236 periods, see FPGA)
-	//      1        just for the case
-	// ----------- +
-	//    166
-	//
-	// 166 bytes, since every bit that needs to be send costs us a byte
-	//
-
-	// Respond with card type
-	uint8_t *resp1 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
-	int resp1Len;
-
-	// Anticollision cascade1 - respond with uid
-	uint8_t *resp2 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 166);
-	int resp2Len;
-
-	// Anticollision cascade2 - respond with 2nd half of uid if asked
-	// we're only going to be asked if we set the 1st byte of the UID (during cascade1) to 0x88
-	uint8_t *resp2a = (((uint8_t *)BigBuf) + 1140);
-	int resp2aLen;
-
-	// Acknowledge select - cascade 1
-	uint8_t *resp3 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*2));
-	int resp3Len;
-
-	// Acknowledge select - cascade 2
-	uint8_t *resp3a = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*3));
-	int resp3aLen;
-
-	// Response to a read request - not implemented atm
-	uint8_t *resp4 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*4));
-//	int resp4Len;
-
-	// Authenticate response - nonce
-	uint8_t *resp5 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*5));
-	int resp5Len;
-
-	// Authenticate response - nonce
-	uint8_t *resp6 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + (166*6));
-	int resp6Len;
+  // Allocate 512 bytes for the dynamic modulation, created when the reader querries for it
+  // Such a response is less time critical, so we can prepare them on the fly
+  #define DYNAMIC_RESPONSE_BUFFER_SIZE 64
+  #define DYNAMIC_MODULATION_BUFFER_SIZE 512
+  uint8_t dynamic_response_buffer[DYNAMIC_RESPONSE_BUFFER_SIZE];
+  uint8_t dynamic_modulation_buffer[DYNAMIC_MODULATION_BUFFER_SIZE];
+  tag_response_info_t dynamic_response_info = {
+    .response = dynamic_response_buffer,
+    .response_n = 0,
+    .modulation = dynamic_modulation_buffer,
+    .modulation_n = 0
+  };
+  
+  // Reset the offset pointer of the free buffer
+  reset_free_buffer();
+  
+  // Prepare the responses of the anticollision phase
+	// there will be not enough time to do this at the moment the reader sends it REQA
+  for (size_t i=0; i<TAG_RESPONSE_COUNT; i++) {
+    prepare_allocated_tag_modulation(&responses[i]);
+  }
 
 	uint8_t *receivedCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
 	int len;
@@ -1052,60 +1097,22 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 	// Just to allow some checks
 	int happened = 0;
 	int happened2 = 0;
-
 	int cmdsRecvd = 0;
-	uint8_t* respdata = NULL;
-	int respsize = 0;
-//	uint8_t nack = 0x04;
-
-	memset(receivedCmd, 0x44, RECV_CMD_SIZE);
-
-	// Prepare the responses of the anticollision phase
-	// there will be not enough time to do this at the moment the reader sends it REQA
-
-	// Answer to request
-	CodeIso14443aAsTag(response1, sizeof(response1));
-	memcpy(resp1, ToSend, ToSendMax); resp1Len = ToSendMax;
-
-	// Send our UID (cascade 1)
-	CodeIso14443aAsTag(response2, sizeof(response2));
-	memcpy(resp2, ToSend, ToSendMax); resp2Len = ToSendMax;
-
-	// Answer to select (cascade1)
-	CodeIso14443aAsTag(response3, sizeof(response3));
-	memcpy(resp3, ToSend, ToSendMax); resp3Len = ToSendMax;
-
-	// Send the cascade 2 2nd part of the uid
-	CodeIso14443aAsTag(response2a, sizeof(response2a));
-	memcpy(resp2a, ToSend, ToSendMax); resp2aLen = ToSendMax;
-
-	// Answer to select (cascade 2)
-	CodeIso14443aAsTag(response3a, sizeof(response3a));
-	memcpy(resp3a, ToSend, ToSendMax); resp3aLen = ToSendMax;
-
-	// Strange answer is an example of rare message size (3 bits)
-	CodeStrangeAnswerAsTag();
-	memcpy(resp4, ToSend, ToSendMax);// resp4Len = ToSendMax;
-
-	// Authentication answer (random nonce)
-	CodeIso14443aAsTag(response5, sizeof(response5));
-	memcpy(resp5, ToSend, ToSendMax); resp5Len = ToSendMax;
-
-	// dummy ATS (pseudo-ATR), answer to RATS
-	CodeIso14443aAsTag(response6, sizeof(response6));
-	memcpy(resp6, ToSend, ToSendMax); resp6Len = ToSendMax;
 
 	// We need to listen to the high-frequency, peak-detected path.
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
 
 	cmdsRecvd = 0;
+  tag_response_info_t* p_response;
 
 	LED_A_ON();
 	for(;;) {
+    // Clean receive command buffer
+    memset(receivedCmd, 0x44, RECV_CMD_SIZE);
 	
 		if(!GetIso14443aCommandFromReader(receivedCmd, &len, RECV_CMD_SIZE)) {
-			DbpString("button press");
+			DbpString("Button press");
 			break;
 		}
     
@@ -1113,69 +1120,98 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 			LogTrace(receivedCmd,len, 0, Uart.parityBits, TRUE);
 		}
     
+    p_response = NULL;
+    
 		// doob - added loads of debug strings so we can see what the reader is saying to us during the sim as hi14alist is not populated
 		// Okay, look at the command now.
 		lastorder = order;
 		if(receivedCmd[0] == 0x26) { // Received a REQUEST
-			resp = resp1; respLen = resp1Len; order = 1;
-			respdata = response1;
-			respsize = sizeof(response1);
+			p_response = &responses[0]; order = 1;
 		} else if(receivedCmd[0] == 0x52) { // Received a WAKEUP
-			resp = resp1; respLen = resp1Len; order = 6;
-			respdata = response1;
-			respsize = sizeof(response1);
+			p_response = &responses[0]; order = 6;
 		} else if(receivedCmd[1] == 0x20 && receivedCmd[0] == 0x93) {	// Received request for UID (cascade 1)
-			resp = resp2; respLen = resp2Len; order = 2;
-			respdata = response2;
-			respsize = sizeof(response2);
+			p_response = &responses[1]; order = 2;
 		} else if(receivedCmd[1] == 0x20 && receivedCmd[0] == 0x95) { // Received request for UID (cascade 2)
-			resp = resp2a; respLen = resp2aLen; order = 20;
-			respdata = response2a;
-			respsize = sizeof(response2a);
+			p_response = &responses[2]; order = 20;
 		} else if(receivedCmd[1] == 0x70 && receivedCmd[0] == 0x93) {	// Received a SELECT (cascade 1)
-			resp = resp3; respLen = resp3Len; order = 3;
-			respdata = response3;
-			respsize = sizeof(response3);
+			p_response = &responses[3]; order = 3;
 		} else if(receivedCmd[1] == 0x70 && receivedCmd[0] == 0x95) {	// Received a SELECT (cascade 2)
-			resp = resp3a; respLen = resp3aLen; order = 30;
-			respdata = response3a;
-			respsize = sizeof(response3a);
+			p_response = &responses[4]; order = 30;
 		} else if(receivedCmd[0] == 0x30) {	// Received a (plain) READ
-//			resp = resp4; respLen = resp4Len; order = 4; // Do nothing
-//			respdata = &nack;
-//			respsize = sizeof(nack); // 4-bit answer
 			EmSendCmdEx(data+(4*receivedCmd[0]),16,false);
 			Dbprintf("Read request from reader: %x %x",receivedCmd[0],receivedCmd[1]);
 			// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
-			respLen = 0;
+      p_response = NULL;
 		} else if(receivedCmd[0] == 0x50) {	// Received a HALT
 //			DbpString("Reader requested we HALT!:");
-			// Do not respond
-			resp = resp1; respLen = 0; order = 0;
-			respdata = NULL;
-			respsize = 0;
+      p_response = NULL;
 		} else if(receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61) {	// Received an authentication request
-			resp = resp5; respLen = resp5Len; order = 7;
-			respdata = response5;
-			respsize = sizeof(response5);
+			p_response = &responses[5]; order = 7;
 		} else if(receivedCmd[0] == 0xE0) {	// Received a RATS request
-			resp = resp6; respLen = resp6Len; order = 70;
-			respdata = response6;
-			respsize = sizeof(response6);
-		} else {
-      if (order == 7 && len ==8) {
-        uint32_t nr = bytes_to_num(receivedCmd,4);
-        uint32_t ar = bytes_to_num(receivedCmd+4,4);
-        Dbprintf("Auth attempt {nr}{ar}: %08x %08x",nr,ar);
-      } else {
-        // Never seen this command before
-        Dbprintf("Received unknown command (len=%d):",len);
-        Dbhexdump(len,receivedCmd,false);
+			p_response = &responses[6]; order = 70;
+		} else if (order == 7 && len ==8) { // Received authentication request
+      uint32_t nr = bytes_to_num(receivedCmd,4);
+      uint32_t ar = bytes_to_num(receivedCmd+4,4);
+      Dbprintf("Auth attempt {nr}{ar}: %08x %08x",nr,ar);
+    } else {
+      // Check for ISO 14443A-4 compliant commands, look at left nibble
+      switch (receivedCmd[0]) {
+
+        case 0x0B:
+        case 0x0A: { // IBlock (command)
+          dynamic_response_info.response[0] = receivedCmd[0];
+          dynamic_response_info.response[1] = 0x00;
+          dynamic_response_info.response[2] = 0x90;
+          dynamic_response_info.response[3] = 0x00;
+          dynamic_response_info.response_n = 4;
+        } break;
+
+        case 0x1A:
+        case 0x1B: { // Chaining command
+          dynamic_response_info.response[0] = 0xaa | ((receivedCmd[0]) & 1);
+          dynamic_response_info.response_n = 2;
+        } break;
+
+        case 0xaa:
+        case 0xbb: {
+          dynamic_response_info.response[0] = receivedCmd[0] ^ 0x11;
+          dynamic_response_info.response_n = 2;
+        } break;
+          
+        case 0xBA: { //
+          memcpy(dynamic_response_info.response,"\xAB\x00",2);
+          dynamic_response_info.response_n = 2;
+        } break;
+
+        case 0xCA:
+        case 0xC2: { // Readers sends deselect command
+          memcpy(dynamic_response_info.response,"\xCA\x00",2);
+          dynamic_response_info.response_n = 2;
+        } break;
+
+        default: {
+          // Never seen this command before
+          Dbprintf("Received unknown command (len=%d):",len);
+          Dbhexdump(len,receivedCmd,false);
+          // Do not respond
+          dynamic_response_info.response_n = 0;
+        } break;
       }
-      // Do not respond
-      resp = resp1; respLen = 0; order = 0;
-      respdata = NULL;
-      respsize = 0;
+      
+      if (dynamic_response_info.response_n > 0) {
+        // Copy the CID from the reader query
+        dynamic_response_info.response[1] = receivedCmd[1];
+
+        // Add CRC bytes, always used in ISO 14443A-4 compliant cards
+        AppendCrc14443a(dynamic_response_info.response,dynamic_response_info.response_n);
+        dynamic_response_info.response_n += 2;
+        
+        if (prepare_tag_modulation(&dynamic_response_info,DYNAMIC_MODULATION_BUFFER_SIZE) == false) {
+          Dbprintf("Error preparing tag response");
+          break;
+        }
+        p_response = &dynamic_response_info;
+      }
 		}
 
 		// Count number of wakeups received after a halt
@@ -1193,25 +1229,19 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 		if(cmdsRecvd > 999) {
 			DbpString("1000 commands later...");
 			break;
-		} else {
-			cmdsRecvd++;
 		}
+		cmdsRecvd++;
 
-		if(respLen > 0) {
-			EmSendCmd14443aRaw(resp, respLen, receivedCmd[0] == 0x52);
-		}
-		
-		if (tracing) {
-			if (respdata != NULL) {
-				LogTrace(respdata,respsize, 0, SwapBits(GetParity(respdata,respsize),respsize), FALSE);
-			}
-			if(traceLen > TRACE_SIZE) {
-				DbpString("Trace full");
-				break;
-			}
-		}
-
-		memset(receivedCmd, 0x44, RECV_CMD_SIZE);
+		if (p_response != NULL) {
+      EmSendCmd14443aRaw(p_response->modulation, p_response->modulation_n, receivedCmd[0] == 0x52);
+      if (tracing) {
+        LogTrace(p_response->response,p_response->response_n,0,SwapBits(GetParity(p_response->response,p_response->response_n),p_response->response_n),FALSE);
+        if(traceLen > TRACE_SIZE) {
+          DbpString("Trace full");
+//          break;
+        }
+      }
+    }
   }
 
 	Dbprintf("%x %x %x", happened, happened2, cmdsRecvd);
@@ -1241,9 +1271,6 @@ void PrepareDelayedTransfer(uint16_t delay)
 		}
 	}
 }
-
-
-
 
 //-----------------------------------------------------------------------------
 // Transmit the command (to the tag) that was placed in ToSend[].
