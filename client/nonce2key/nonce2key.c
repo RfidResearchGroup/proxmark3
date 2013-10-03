@@ -105,7 +105,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 			p2 = state_s;
 			while ( *p1 != -1 && *p2 != -1 ) {
 				if (compar_state(p1, p2) == 0) {
-					printf("p1:%ld p2:%ld p3:%ld key:%012"llx"\n",p1-last_keylist, p2-state_s, p3-last_keylist,*p1);
+					printf("p1:%"llx" p2:%"llx" p3:%"llx" key:%012"llx"\n",(uint64_t)(p1-last_keylist),(uint64_t)(p2-state_s),(uint64_t)(p3-last_keylist),*p1);
 					*p3++ = *p1++;
 					p2++;
 				}
