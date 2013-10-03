@@ -65,7 +65,6 @@ end
 
 local function main(args)
 
-	print(desc)
 	local input = "dumpdata.bin"
 	local output = os.date("%Y-%m-%d_%H%M%S.html");
 	for o, a in getopt.getopt(args, 'i:o:h') do
@@ -77,7 +76,7 @@ local function main(args)
 	
 	local infile = io.open(input, "r")
 	if infile == nil then 
-		return ("Could not read file ", input)
+		return oops("Could not read file ", input)
 	end
 	--lokal skel = require("skel")
 	local dumpdata = readdump(infile)
