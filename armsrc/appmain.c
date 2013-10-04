@@ -356,6 +356,8 @@ void SendVersion(void)
 
 	FpgaGatherVersion(temp, sizeof(temp));
 	DbpString(temp);
+	// Send Chip ID
+	cmd_send(CMD_ACK,*(AT91C_DBGU_CIDR),0,0,NULL,0);
 }
 
 #ifdef WITH_LF
