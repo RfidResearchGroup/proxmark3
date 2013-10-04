@@ -136,6 +136,18 @@ static int l_ukbhit(lua_State *L)
     lua_pushboolean(L,ukbhit() ? true : false);
     return 1;
 }
+/**
+ * @brief Calls the command line parser to deal with the command. This enables
+ * lua-scripts to do stuff like "core.console('hf mf mifare')"
+ * @param L
+ * @return
+ */
+static int l_CmdConsole(lua_State *L)
+{
+    CommandReceived((char *)luaL_checkstring(L, 1));
+    return 0;
+}
+
 
 /**
  * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
@@ -172,6 +184,7 @@ int set_pm3_libraries(lua_State *L)
         {"foobar",                      l_foobar},
         {"ukbhit",                      l_ukbhit},
         {"clearCommandBuffer",          l_clearCommandBuffer},
+        {"console",                      l_CmdConsole},
         {NULL, NULL}
     };
 

@@ -103,94 +103,6 @@ int CmdScript(const char *Cmd)
   CmdsParse(CommandTable, Cmd);
   return 0;
 }
-/*
-static int l_hfmf (lua_State *L) {
-    return CmdHFMF("wohoo");
-
-}
-*/
-//static int l_CmdHelp(lua_State *L){ return CmdHelp(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfDbg(lua_State *L){ return CmdHF14AMfDbg(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfRdBl(lua_State *L){ return CmdHF14AMfRdBl(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfRdSc(lua_State *L){ return CmdHF14AMfRdSc(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfDump(lua_State *L){ return CmdHF14AMfDump(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMifare(lua_State *L){ return CmdHF14AMifare(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfWrBl(lua_State *L){ return CmdHF14AMfWrBl(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfChk(lua_State *L){ return CmdHF14AMfChk(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfNested(lua_State *L){ return CmdHF14AMfNested(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfRestore(lua_State *L){ return CmdHF14AMfRestore(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfSniff(lua_State *L){ return CmdHF14AMfSniff(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMf1kSim(lua_State *L){ return CmdHF14AMf1kSim(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfEClear(lua_State *L){ return CmdHF14AMfEClear(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfEGet(lua_State *L){ return CmdHF14AMfEGet(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfESet(lua_State *L){ return CmdHF14AMfESet(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfELoad(lua_State *L){ return CmdHF14AMfELoad(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfESave(lua_State *L){ return CmdHF14AMfESave(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfECFill(lua_State *L){ return CmdHF14AMfECFill(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfEKeyPrn(lua_State *L){ return CmdHF14AMfEKeyPrn(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfCSetUID(lua_State *L){ return CmdHF14AMfCSetUID(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfCSetBlk(lua_State *L){ return CmdHF14AMfCSetBlk(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfCGetBlk(lua_State *L){ return CmdHF14AMfCGetBlk(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfCGetSc(lua_State *L){ return CmdHF14AMfCGetSc(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfCLoad(lua_State *L){ return CmdHF14AMfCLoad(luaL_checkstring(L, 1));}
-static int l_CmdHF14AMfCSave(lua_State *L){ return CmdHF14AMfCSave(luaL_checkstring(L, 1));}
-
-
-
-
-static void set_cmdlibraries(lua_State *L)
-{
-    static const luaL_Reg hfmf_lib[] = {
-        {"dbg",     l_CmdHF14AMfDbg},
-        {"rdbl",    l_CmdHF14AMfRdBl},
-        {"rdsc",    l_CmdHF14AMfRdSc},
-        {"dump",    l_CmdHF14AMfDump},
-        {"restore", l_CmdHF14AMfRestore},
-        {"wrbl",    l_CmdHF14AMfWrBl},
-        {"chk",     l_CmdHF14AMfChk},
-        {"mifare",  l_CmdHF14AMifare},
-        {"nested",  l_CmdHF14AMfNested},
-        {"sniff",   l_CmdHF14AMfSniff},
-        {"sim",     l_CmdHF14AMf1kSim},
-        {"eclr",    l_CmdHF14AMfEClear},
-        {"eget",    l_CmdHF14AMfEGet},
-        {"eset",    l_CmdHF14AMfESet},
-        {"eload",   l_CmdHF14AMfELoad},
-        {"esave",   l_CmdHF14AMfESave},
-        {"ecfill",  l_CmdHF14AMfECFill},
-        {"ekeyprn", l_CmdHF14AMfEKeyPrn},
-        {"csetuid", l_CmdHF14AMfCSetUID},
-        {"csetblk", l_CmdHF14AMfCSetBlk},
-        {"cgetblk", l_CmdHF14AMfCGetBlk},
-        {"cgetsc",  l_CmdHF14AMfCGetSc},
-        {"cload",   l_CmdHF14AMfCLoad},
-        {"csave",   l_CmdHF14AMfCSave},
-        {NULL, NULL}
-    };
-
-    lua_pushglobaltable(L);
-    // Core library is in this table. Contains 'hf'
-
-    //this is 'hf' table
-    lua_newtable(L);
-
-    //this is the mf table
-    lua_newtable(L);
-
-    //Put the function into the hash table.
-    for (int i = 0; hfmf_lib[i].name; i++) {
-        lua_pushcfunction(L, hfmf_lib[i].func);
-        lua_setfield(L, -2, hfmf_lib[i].name);//set the name, pop stack
-    }
-    //Name of 'mf'
-    lua_setfield(L, -2, "mf");
-
-    //Name of 'hf'
-    lua_setfield(L, -2, "hf");
-
-    //-- remove the global environment table from the stack
-    lua_pop(L, 1);
-}
 /**
  * Utility to check the ending of a string (used to check file suffix)
  */
@@ -218,15 +130,9 @@ int CmdRun(const char *Cmd)
     //Sets the pm3 core libraries, that go a bit 'under the hood'
     set_pm3_libraries(lua_state);
 
-    //Sets the 'command line' libraries, basically just the commandline stuff
-    set_cmdlibraries(lua_state);
-
     //Add the 'bin' library
     set_bin_library(lua_state);
 
-//    char cmd_name[32];
-//    memset(cmd_name, 0, 32);
-//    sscanf(Cmd, "%31s%n", cmd_name, &len);
 
     char script_name[128] = {0};
     char arguments[256] = {0};
