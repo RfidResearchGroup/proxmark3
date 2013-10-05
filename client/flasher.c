@@ -128,8 +128,7 @@ int main(int argc, char **argv)
 
   serial_port_name = argv[1];
   
-  fprintf(stderr,"Waiting for Proxmark to appear on ");
-  fprintf(stderr,serial_port_name);
+  fprintf(stderr,"Waiting for Proxmark to appear on %s",serial_port_name);
   do {
     sleep(1);
     fprintf(stderr, ".");

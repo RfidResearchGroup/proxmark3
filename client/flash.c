@@ -340,8 +340,7 @@ static int enter_bootloader(char *serial_port_name)
     msleep(100);
 		CloseProxmark();
 
-		fprintf(stderr,"Waiting for Proxmark to reappear on ");
-		fprintf(stderr,serial_port_name);
+		fprintf(stderr,"Waiting for Proxmark to reappear on %s",serial_port_name);
     do {
 			sleep(1);
 			fprintf(stderr, ".");
