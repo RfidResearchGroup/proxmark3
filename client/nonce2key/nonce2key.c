@@ -38,7 +38,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
   static int64_t *last_keylist;
   rr = 0;
   
-  if (last_uid != uid)
+  if (last_uid != uid && last_keylist != NULL)
   {
 	free(last_keylist);
 	last_keylist = NULL;
@@ -48,7 +48,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
   // Reset the last three significant bits of the reader nonce
   nr &= 0xffffff1f;
   
-  PrintAndLog("\nuid(%08x) nt(%08x) par(%016"llx") ks(%016"llx")\n\n",uid,nt,par_info,ks_info);
+  PrintAndLog("\nuid(%08x) nt(%08x) par(%016"llx") ks(%016"llx") nr(%08"llx")\n\n",uid,nt,par_info,ks_info,nr);
 
   for (pos=0; pos<8; pos++)
   {
@@ -125,7 +125,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	}
 	
 	printf("key_count:%d\n", key_count);
-	
+
 	// The list may still contain several key candidates. Test each of them with mfCheckKeys
 	for (i = 0; i < key_count; i++) {
 		uint8_t keyBlock[6];
