@@ -16,6 +16,8 @@
 #include "cmdmain.h"
 #include "scripting.h"
 #include "util.h"
+#include "nonce2key/nonce2key.h"
+
 /**
  * The following params expected:
  *  UsbCommand c
@@ -102,7 +104,57 @@ static int l_WaitForResponseTimeout(lua_State *L){
         return 1;// one return value
     }
 }
-//static int l_nonce2key(lua_State *L){ return CmdHF14AMfRdSc(luaL_checkstring(L, 1));}
+
+static int returnToLuaWithError(lua_State *L, const char* fmt, ...)
+{
+    char buffer[200];
+    va_list args;
+    va_start(args,fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt,args);
+    va_end(args);
+
+    lua_pushnil(L);
+    lua_pushstring(L,buffer);
+    return 2;
+}
+
+static int l_nonce2key(lua_State *L){
+
+    size_t size;
+    const char *p_uid = luaL_checklstring(L, 1, &size);
+    if(size != 4)  return returnToLuaWithError(L,"Wrong size of uid, got %d bytes, expected 4", (int) size);
+
+    const char *p_nt = luaL_checklstring(L, 2, &size);
+    if(size != 4)  return returnToLuaWithError(L,"Wrong size of nt, got %d bytes, expected 4", (int) size);
+
+    const char *p_nr = luaL_checklstring(L, 3, &size);
+    if(size != 4)  return returnToLuaWithError(L,"Wrong size of nr, got %d bytes, expected 4", (int) size);
+
+    const char *p_par_info = luaL_checklstring(L, 4, &size);
+    if(size != 8)  return returnToLuaWithError(L,"Wrong size of par_info, got %d bytes, expected 8", (int) size);
+
+    const char *p_pks_info = luaL_checklstring(L, 5, &size);
+    if(size != 8)  return returnToLuaWithError(L,"Wrong size of ks_info, got %d bytes, expected 8", (int) size);
+
+
+    uint32_t uid = bytes_to_num(( uint8_t *)p_uid,4);
+    uint32_t nt = bytes_to_num(( uint8_t *)p_nt,4);
+
+    uint32_t nr = bytes_to_num(( uint8_t*)p_nr,4);
+    uint64_t par_info = bytes_to_num(( uint8_t *)p_par_info,8);
+    uint64_t ks_info = bytes_to_num(( uint8_t *)p_pks_info,8);
+
+    uint64_t key = 0;
+
+    int retval = nonce2key(uid,nt, nr, par_info,ks_info, &key);
+
+    //Push the retval on the stack
+    lua_pushinteger(L,retval);
+    //Push the key onto the stack
+    lua_pushlstring(L,(const char *) &key,sizeof(key));
+
+    return 2; //Two return values
+}
 //static int l_PrintAndLog(lua_State *L){ return CmdHF14AMfDump(luaL_checkstring(L, 1));}
 static int l_clearCommandBuffer(lua_State *L){
     clearCommandBuffer();
@@ -125,6 +177,7 @@ static int l_foobar(lua_State *L)
     lua_pushlstring(L,(const char *)&response,sizeof(UsbCommand));
     return 1;
 }
+
 
 /**
  * @brief Utility to check if a key has been pressed by the user. This method does not block.
@@ -179,7 +232,7 @@ int set_pm3_libraries(lua_State *L)
     static const luaL_Reg libs[] = {
         {"SendCommand",                 l_SendCommand},
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},
-        //{"nonce2key",                   l_nonce2key},
+        {"nonce2key",                   l_nonce2key},
         //{"PrintAndLog",                 l_PrintAndLog},
         {"foobar",                      l_foobar},
         {"ukbhit",                      l_ukbhit},
