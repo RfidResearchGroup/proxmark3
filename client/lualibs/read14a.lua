@@ -104,7 +104,6 @@ local library = {
 		if result then
 			local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
 			if arg0 == 0 then 
-				print("iso14443a card select failed");
 				return nil, "iso14443a card select failed"
 			end
 			data = string.sub(result,count)
