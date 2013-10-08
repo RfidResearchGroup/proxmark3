@@ -21,7 +21,7 @@
 double CursorScaleFactor;
 int PlotGridX, PlotGridY, PlotGridXdefault= 64, PlotGridYdefault= 64;
 int offline;
-
+int flushAfterWrite = 0;  //buzzy
 extern pthread_mutex_t print_lock;
 
 static char *logfilename = "proxmark3.log";
@@ -77,6 +77,10 @@ void PrintAndLog(char *fmt, ...)
 	}
 	va_end(argptr2);
 
+	if (flushAfterWrite == 1)  //buzzy
+	{
+		fflush(NULL);
+	}
 	//release lock
 	pthread_mutex_unlock(&print_lock);  
 }

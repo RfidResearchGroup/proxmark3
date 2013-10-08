@@ -243,9 +243,19 @@ int main(int argc, char* argv[]) {
 
 	// If the user passed the filename of the 'script' to execute, get it
 	if (argc > 2 && argv[2]) {
+		if (argv[2][0] == 'f' &&  //buzzy, if a word 'flush' passed, flush the output after every log entry.
+			argv[2][1] == 'l' &&
+			argv[2][2] == 'u' &&
+			argv[2][3] == 's' &&
+			argv[2][4] == 'h')
+		{
+			printf("Output will be flushed after every print.\n");
+			flushAfterWrite = 1;
+		}
+		else
 		marg.script_cmds_file = argv[2];
 	}
-  
+
 	// create a mutex to avoid interlacing print commands from our different threads
 	pthread_mutex_init(&print_lock, NULL);
 
