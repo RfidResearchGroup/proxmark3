@@ -45,8 +45,6 @@
 #define AddCrc(data,datalen)  Iso15693AddCrc(data,datalen)
 #define sprintUID(target,uid)	Iso15693sprintUID(target,uid)
 
-static int CmdHelp(const char *Cmd);
-
 // structure and database for uid -> tagtype lookups 
 typedef struct { 
 	uint64_t uid;

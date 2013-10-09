@@ -95,32 +95,6 @@ static void bucket_sort_intersect(uint32_t* const estart, uint32_t* const estop,
 		}
 }
 
-
-static void quicksort(uint32_t* const start, uint32_t* const stop)
-{
-	uint32_t *it = start + 1, *rit = stop;
-
-	if(it > rit)
-		return;
-
-	while(it < rit)
-		if(*it <= *start)
-			++it;
-		else if(*rit > *start)
-			--rit;
-		else
-			*it ^= (*it ^= *rit, *rit ^= *it);
-
-	if(*rit >= *start)
-		--rit;
-	if(rit != start)
-		*rit ^= (*rit ^= *start, *start ^= *rit);
-
-	quicksort(start, rit - 1);
-	quicksort(rit + 1, stop);
-}
-
-
 /** binsearch
  * Binary search for the first occurence of *stop's MSB in sorted [start,stop]
  */
