@@ -123,8 +123,20 @@ function mfcrack_inner()
 	return nil, "Aborted by user"
 end
 
-function nested(key)
-	local cmd = string.format("hf mf nested 1 0 A %s d",key)
+function nested(key,sak)
+	local typ = 1
+	if 0x18 == sak then --NXP MIFARE Classic 4k | Plus 4k
+		typ = 4
+	elseif 0x08 == sak then -- NXP MIFARE CLASSIC 1k | Plus 2k
+		typ= 1
+	elseif 0x09 == sak then -- NXP MIFARE Mini 0.3k
+		typ = 0
+	elseif  0x10 == sak then-- "NXP MIFARE Plus 2k"
+		typ = 2
+	else
+		print("I don't know how many sectors there are on this type of card, defaulting to 16")
+	end
+	local cmd = string.format("hf mf nested %d 0 A %s d",typ,key)
 	core.console(cmd)
 end
 
@@ -149,7 +161,7 @@ end
 function main(args)
 
 
-	local verbose, exit,res,uid,err,_
+	local verbose, exit,res,uid,err,_,sak
 	local seen_uids = {}
 
 	-- Read the parameters
@@ -163,6 +175,7 @@ function main(args)
 		if err then return oops(err) end
 		-- Seen already?
 		uid = res.uid
+		sak = res.sak
 		if not seen_uids[uid] then
 			-- Store it
 			seen_uids[uid] = uid
@@ -180,13 +193,12 @@ function main(args)
 			print("Key ", key)
 
 			-- Use nested attack
-			nested(key)
+			nested(key,sak)
 			-- Dump info
 			dump(uid)
 		end
 	end
 end
 
-end
 -- Call the main 
 main(args)
