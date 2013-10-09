@@ -151,7 +151,11 @@ static int l_nonce2key(lua_State *L){
     //Push the retval on the stack
     lua_pushinteger(L,retval);
     //Push the key onto the stack
-    lua_pushlstring(L,(const char *) &key,sizeof(key));
+	uint8_t dest_key[8];
+	num_to_bytes(key,sizeof(dest_key),&dest_key);
+
+	//printf("Pushing to lua stack: %012"llx"\n",key);
+	lua_pushlstring(L,(const char *) &dest_key,sizeof(dest_key));
 
     return 2; //Two return values
 }
@@ -173,9 +177,14 @@ static int l_foobar(lua_State *L)
     lua_settop(L, 0);
     printf("Arguments discarded, stack now contains %d elements", lua_gettop(L));
     UsbCommand response =  {CMD_MIFARE_READBL, {1337, 1338, 1339}};
-    printf("Now returning a UsbCommand as a string");
-    lua_pushlstring(L,(const char *)&response,sizeof(UsbCommand));
-    return 1;
+	printf("Now returning a uint64_t as a string");
+	uint64_t x = 0xDEADBEEF;
+	uint8_t destination[8];
+	num_to_bytes(x,sizeof(x),&destination);
+	lua_pushlstring(L,(const char *)&x,sizeof(x));
+	lua_pushlstring(L,(const char *)&destination,sizeof(destination));
+
+	return 2;
 }
 
 

@@ -171,7 +171,12 @@ function main(args)
 			local key, cnt
 			res,err = mfcrack()
 			if not res then return oops(err) end
-			_,key = bin.unpack("H6",res)
+			-- The key is actually 8 bytes, so a 
+			-- 6-byte key is sent as 00XXXXXX
+			-- This means we unpack it as first
+			-- two bytes, then six bytes actual key data
+			-- We can discard first and second return values
+			_,_,key = bin.unpack("H2H6",res)
 			print("Key ", key)
 
 			-- Use nested attack
@@ -182,5 +187,6 @@ function main(args)
 	end
 end
 
+end
 -- Call the main 
 main(args)
