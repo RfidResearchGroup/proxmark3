@@ -1,0 +1,10 @@
+# Proxmark3 linux modem-manager de-confliction file
+#
+# copy this file to /etc/udev/rules.d (or add the entry to the end of an existing file)
+# and restart udev hotplug:
+#
+#  'sudo udevadm control --reload-rules'
+#
+
+# proxmark3
+ATTRS{idVendor}=="2d2d" ATTRS{idProduct}=="504d", ENV{ID_MM_DEVICE_IGNORE}="1"
