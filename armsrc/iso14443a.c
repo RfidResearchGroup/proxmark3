@@ -1604,7 +1604,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, int maxLen, int 
 
 void ReaderTransmitBitsPar(uint8_t* frame, int bits, uint32_t par, uint32_t *timing)
 {
- 
+
   CodeIso14443aBitsAsReaderPar(frame,bits,par);
   
   // Select the card

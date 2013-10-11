@@ -168,6 +168,7 @@ static void *main_loop(void *targ) {
 			
 			if (cmd[0] != 0x00) {
 				if (strncmp(cmd, "quit", 4) == 0) {
+					exit(0);
 					break;
 				}
 				

@@ -29,10 +29,13 @@ int CmdHFMF(const char *Cmd);
 
 int CmdHF14AMfDbg(const char* cmd);
 int CmdHF14AMfRdBl(const char* cmd);
+int CmdHF14AMfURdBl(const char* cmd);
 int CmdHF14AMfRdSc(const char* cmd);
+int CmdHF14SMfURdCard(const char* cmd);
 int CmdHF14AMfDump(const char* cmd);
 int CmdHF14AMfRestore(const char* cmd);
 int CmdHF14AMfWrBl(const char* cmd);
+int CmdHF14AMfUWrBl(const char* cmd);
 int CmdHF14AMfChk(const char* cmd);
 int CmdHF14AMifare(const char* cmd);
 int CmdHF14AMfNested(const char* cmd);

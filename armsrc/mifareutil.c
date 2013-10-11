@@ -82,6 +82,32 @@ int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd,
 	return mifare_sendcmd_shortex(pcs, crypted, cmd, data, answer, NULL, timing);
 }
 
+int mifare_sendcmd_short_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t* data, uint8_t* answer, uint8_t *timing)
+{
+        uint8_t dcmd[8];//, ecmd[4];
+        //uint32_t par=0;
+
+        dcmd[0] = cmd;
+        dcmd[1] = data[0];
+	dcmd[2] = data[1];
+	dcmd[3] = data[2];
+	dcmd[4] = data[3];
+	dcmd[5] = data[4];
+	AppendCrc14443a(dcmd, 6);
+	//Dbprintf("Data command: %02x", dcmd[0]);
+	//Dbprintf("Data R: %02x %02x %02x %02x %02x %02x %02x", dcmd[1],dcmd[2],dcmd[3],dcmd[4],dcmd[5],dcmd[6],dcmd[7]);
+
+        //memcpy(ecmd, dcmd, sizeof(dcmd));
+	ReaderTransmit(dcmd, sizeof(dcmd), NULL);
+	int len = ReaderReceive(answer);
+	if(!len)
+	{
+                if (MF_DBGLEVEL >= 1)   Dbprintf("Authentication failed. Card timeout.");
+                return 2;
+        }
+	return len;
+}
+
 int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint32_t * parptr, uint32_t *timing)
 {
 	uint8_t dcmd[4], ecmd[4];
@@ -256,6 +282,37 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 	return 0;
 }
 
+int mifare_ultra_readblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
+{
+	// variables
+	int len;
+	uint8_t	bt[2];
+	
+	uint8_t* receivedAnswer = mifare_get_bigbufptr();
+	
+	// command MIFARE_CLASSIC_READBLOCK
+	len = mifare_sendcmd_short(NULL, 1, 0x30, blockNo, receivedAnswer,NULL);
+	if (len == 1) {
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+		return 1;
+	}
+	if (len != 18) {
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: card timeout. len: %x", len);
+		return 2;
+	}
+    
+	memcpy(bt, receivedAnswer + 16, 2);
+	AppendCrc14443a(receivedAnswer, 16);
+	if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd CRC response error.");
+		return 3;
+	}
+	
+	memcpy(blockData, receivedAnswer, 14);
+	return 0;
+}
+
+
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData) 
 {
 	// variables
@@ -303,6 +360,65 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 	return 0;
 }
 
+int mifare_ultra_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData) 
+{
+        // variables
+        int len;     
+        uint32_t par = 0;
+        
+        uint8_t d_block[18];
+        uint8_t* receivedAnswer = mifare_get_bigbufptr();
+        
+        // command MIFARE_CLASSIC_WRITEBLOCK
+        len = mifare_sendcmd_short(NULL, 1, 0xA0, blockNo, receivedAnswer,NULL);
+
+        if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
+                if (MF_DBGLEVEL >= 1)   Dbprintf("Cmd Addr Error: %02x", receivedAnswer[0]);  
+                return 1;
+        }
+
+	memset(d_block,'\0',18);
+	memcpy(d_block, blockData, 16);
+        AppendCrc14443a(d_block, 16);
+
+	ReaderTransmitPar(d_block, sizeof(d_block), par, NULL);
+
+        // Receive the response
+        len = ReaderReceive(receivedAnswer);    
+
+	if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
+                if (MF_DBGLEVEL >= 1)   Dbprintf("Cmd Data Error: %02x %d", receivedAnswer[0],len);
+                return 2;
+        }        
+
+        return 0;
+} 
+
+int mifare_ultra_special_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
+{
+        // variables
+        int len;
+        //uint32_t par = 0;
+
+        uint8_t d_block[8];
+        uint8_t* receivedAnswer = mifare_get_bigbufptr();
+
+        // command MIFARE_CLASSIC_WRITEBLOCK
+	memset(d_block,'\0',8);
+	d_block[0]= blockNo;
+	memcpy(d_block+1,blockData,4);
+	AppendCrc14443a(d_block, 6);
+
+	//i know the data send here is correct
+        len = mifare_sendcmd_short_special(NULL, 1, 0xA2, d_block, receivedAnswer,NULL);
+
+        if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
+                if (MF_DBGLEVEL >= 1)   Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0],len);
+                return 1;
+        }
+        return 0;
+}
+
 int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid) 
 {
 	// variables
@@ -317,6 +433,23 @@ int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid)
 		return 1;
 	}
 
+	return 0;
+}
+
+int mifare_ultra_halt(uint32_t uid)
+{
+	// variables
+	int len;
+	
+	// Mifare HALT
+	uint8_t* receivedAnswer = mifare_get_bigbufptr();
+    
+	len = mifare_sendcmd_short(NULL, 1, 0x50, 0x00, receivedAnswer, NULL);
+	if (len != 0) {
+		if (MF_DBGLEVEL >= 1)	Dbprintf("halt error. response len: %x", len);
+		return 1;
+	}
+    
 	return 0;
 }
 
