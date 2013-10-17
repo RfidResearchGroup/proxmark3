@@ -1,0 +1,83 @@
+local manufacturer = {}
+manufacturer[0x01]='Motorola UK'
+manufacturer[0x02]='STMicroelectronics SA France'
+manufacturer[0x03]='Hitachi, Ltd Japan'
+manufacturer[0x04]='NXP Semiconductors Germany'
+manufacturer[0x05]='Infineon Technologies AG Germany'
+manufacturer[0x06]='Cylink USA'
+manufacturer[0x07]='Texas Instrument France'
+manufacturer[0x08]='Fujitsu Limited Japan'
+manufacturer[0x09]='Matsushita Electronics Corporation, Semiconductor Company Japan'
+manufacturer[0x0A]='NEC Japan'
+manufacturer[0x0B]='Oki Electric Industry Co. Ltd Japan'
+manufacturer[0x0C]='Toshiba Corp. Japan'
+manufacturer[0x0D]='Mitsubishi Electric Corp. Japan'
+manufacturer[0x0E]='Samsung Electronics Co. Ltd Korea'
+manufacturer[0x0F]='Hynix Korea'
+manufacturer[0x10]='LG-Semiconductors Co. Ltd Korea'
+manufacturer[0x11]='Emosyn-EM Microelectronics USA'
+manufacturer[0x12]='INSIDE Technology France'
+manufacturer[0x13]='ORGA Kartensysteme GmbH Germany'
+manufacturer[0x14]='SHARP Corporation Japan'
+manufacturer[0x15]='ATMEL France'
+manufacturer[0x16]='EM Microelectronic-Marin SA Switzerland'
+manufacturer[0x17]='KSW Microtec GmbH Germany'
+manufacturer[0x18]='ZMD AG Germany'
+manufacturer[0x19]='XICOR, Inc. USA'
+manufacturer[0x1A]='Sony Corporation Japan'
+manufacturer[0x1B]='Malaysia Microelectronic Solutions Sdn. Bhd Malaysia'
+manufacturer[0x1C]='Emosyn USA'
+manufacturer[0x1D]='Shanghai Fudan Microelectronics Co. Ltd. P.R. China'
+manufacturer[0x1E]='Magellan Technology Pty Limited Australia'
+manufacturer[0x1F]='Melexis NV BO Switzerland'
+manufacturer[0x20]='Renesas Technology Corp. Japan'
+manufacturer[0x21]='TAGSYS France'
+manufacturer[0x22]='Transcore USA'
+manufacturer[0x23]='Shanghai belling corp., ltd. China'
+manufacturer[0x24]='Masktech Germany Gmbh Germany'
+manufacturer[0x25]='Innovision Research and Technology Plc UK'
+manufacturer[0x26]='Hitachi ULSI Systems Co., Ltd. Japan'
+manufacturer[0x27]='Cypak AB Sweden'
+manufacturer[0x28]='Ricoh Japan'
+manufacturer[0x29]='ASK France'
+manufacturer[0x2A]='Unicore Microsystems, LLC RussianFederation'
+manufacturer[0x2B]='Dallas Semiconductor/Maxim USA'
+manufacturer[0x2C]='Impinj, Inc. USA'
+manufacturer[0x2D]='RightPlug Alliance USA'
+manufacturer[0x2E]='Broadcom Corporation USA'
+manufacturer[0x2F]='MStar Semiconductor, Inc Taiwan, ROC'
+manufacturer[0x30]='BeeDar Technology Inc. USA'
+manufacturer[0x31]='RFIDsec Denmark'
+manufacturer[0x32]='Schweizer Electronic AG Germany'
+manufacturer[0x33]='AMIC Technology Corp Taiwan'
+manufacturer[0x34]='Mikron JSC Russia'
+manufacturer[0x35]='Fraunhofer Institute for Photonic Microsystems Germany'
+manufacturer[0x36]='IDS Microchip AG Switzerland'
+manufacturer[0x37]='Kovio USA'
+manufacturer[0x38]='HMT Microelectronic Ltd Switzerland'
+manufacturer[0x39]='Silicon Craft Technology Thailand'
+manufacturer[0x3A]='Advanced Film Device Inc. Japan'
+manufacturer[0x3B]='Nitecrest Ltd UK'
+manufacturer[0x3C]='Verayo Inc. USA'
+manufacturer[0x3D]='HID Global USA'
+manufacturer[0x3E]='Productivity Engineering Gmbh Germany'
+manufacturer[0x3F]='Austriamicrosystems AG (reserved) Austria'
+manufacturer[0x40]='Gemalto SA France'
+manufacturer[0x41]='Renesas Electronics Corporation Japan'
+manufacturer[0x42]='3Alogics Inc Korea'
+manufacturer[0x43]='Top TroniQ Asia Limited Hong Kong'
+manufacturer[0x44]='Gentag Inc (USA) USA'
+
+return {
+	lookupManufacturer = function (value)
+		if type(value) == 'string' then
+			local v = tonumber(value, 16)
+			print(string.format("WARNING: lookupManufacturer expects numeric value, converted %s into %x", value,v))
+			value = v
+		end
+
+		return manufacturer[value] or "no tag-info available"
+	end,
+
+
+}
