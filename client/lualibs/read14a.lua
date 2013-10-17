@@ -87,37 +87,54 @@ local function sendToDevice(command, ignoreresponse)
 	return response,nil
 end
 
+-- This function does a connect and retrieves som einfo
+-- @param dont_disconnect - if true, does not disable the field
+-- @return if successfull: an table containing card info
+-- @return if unsuccessfull : nil, error
+local function read14443a(dont_disconnect)
+	local command, result, info, err, data
 
+	command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
+								arg1 = ISO14A_COMMAND.ISO14A_CONNECT}
+	if dont_disconnect then
+		command.arg1 = command.arg1 + ISO14A_COMMAND.ISO14A_NO_DISCONNECT
+	end
+	local result,err = sendToDevice(command)
+	if result then
+		local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
+		if arg0 == 0 then 
+			return nil, "iso14443a card select failed"
+		end
+		data = string.sub(result,count)
+		info, err = parse1443a(data)
+	else
+		err ="No response from card"
+	end
+
+	if err then 
+		print(err) 
+		return nil, err
+	end
+	return info
+end
+
+---
+-- Waits for a mifare card to be placed within the vicinity of the reader. 
+-- @return if successfull: an table containing card info
+-- @return if unsuccessfull : nil, error
+local function waitFor14443a()
+	print("Waiting for card... press any key to quit")
+	while not core.ukbhit() do
+		res, err = read14443a()
+		if res then return res end
+		-- err means that there was no response from card
+	end
+	return nil, "Aborted by user"
+end
 local library = {
-	-- This function does a connect. 
-	-- @param dont_disconnect - if true, does not disable the field
-	read1443a = function(dont_disconnect)
-
-		local command, result, info, err, data
-
-		command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
-									arg1 = ISO14A_COMMAND.ISO14A_CONNECT}
-		if dont_disconnect then
-			command.arg1 = command.arg1 + ISO14A_COMMAND.ISO14A_NO_DISCONNECT
-		end
-		local result,err = sendToDevice(command)
-		if result then
-			local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
-			if arg0 == 0 then 
-				return nil, "iso14443a card select failed"
-			end
-			data = string.sub(result,count)
-			info, err = parse1443a(data)
-		else
-			err ="No response from card"
-		end
-
-		if err then 
-			print(err) 
-			return nil, err
-		end
-		return info
-	end,
+	
+	read1443a = read14443a,
+	waitFor14443a = waitFor14443a,
 	parse1443a = parse1443a,
 	sendToDevice = sendToDevice,
 	ISO14A_COMMAND = ISO14A_COMMAND,
