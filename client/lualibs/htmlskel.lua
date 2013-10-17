@@ -14,6 +14,9 @@ local skel_1 = [[
 			float:left;
 			border: 1px solid white;
 		}
+		td{
+			empty-cells : show;
+		}
 		td.blockzero {
 			color: rgb(140, 245, 193);
 		}
@@ -64,7 +67,7 @@ local skel_1 = [[
 			}		
 
 			if(byte < 6) el.className += " key_a";
-			else if(byte < 11) el.className += " accessconditions";
+			else if(byte < 10) el.className += " accessconditions";
 			else el.className += " key_b";
 		}
 
