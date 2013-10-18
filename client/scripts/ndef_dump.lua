@@ -105,7 +105,7 @@ local function getBlock(block)
 	show(data)
 	
 	if string.len(data) < 18 then
-		return nil, ("Error, expected at least 18 bytes, got %d"):format(string.len(data))
+		return nil, ("Expected at least 18 bytes, got %d - this tag is not NDEF-compliant"):format(string.len(data))
 	end
 	-- Now, parse out the block data
 	-- 0534 00B9 049C AD7F 4A00 0000 E110 1000 2155
