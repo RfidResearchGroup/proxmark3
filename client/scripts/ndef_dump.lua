@@ -7,6 +7,14 @@ local taglib = require('taglib')
 local desc = 
 [[This script will automatically recognize and dump full content of a NFC NDEF Initialized tag; non-initialized tags will be ignored.
 
+It also write the dump to an eml-file <uid>.eml.
+
+(The difference between an .eml-file and a .bin-file is that the eml file contains
+ASCII representation of the hex-data, with linebreaks between 'rows'. A .bin-file contains the 
+raw data, but when saving into that for, we lose the infromation about how the memory is structured. 
+For example: 24 bytes could be 6 blocks of 4 bytes, or vice versa. 
+Therefore, the .eml is better to use file when saving dumps.)
+
 Arguments:
 	-d 				debug logging on
 	-h 				this help
@@ -14,16 +22,53 @@ Arguments:
 ]]
 local example = "script run xxx"
 local author = "Martin Holst Swende & Asper"
-
-
-
-
 ---
 -- PrintAndLog
 function prlog(...)
 	-- TODO; replace this with a call to the proper PrintAndLog
 	print(...)
 end
+--- 
+-- This is only meant to be used when errors occur
+function oops(err)
+	prlog("ERROR: ",err)
+	return nil,err
+end
+
+
+-- Perhaps this will be moved to a separate library at one point
+local utils = {
+	--- Writes an eml-file.
+	-- @param uid - the uid of the tag. Used in filename
+	-- @param blockData. Assumed to be on the format {'\0\1\2\3,'\b\e\e\f' ..., 
+	-- that is, blockData[row] contains a string with the actual data, not ascii hex representation 
+	-- return filename if all went well, 
+	-- @reurn nil, error message if unsuccessfull
+	writeDumpFile = function(uid, blockData)
+		local destination = string.format("%s.eml", uid)
+		local file = io.open(destination, "w")
+		if file == nil then 
+			return nil, string.format("Could not write to file %s", destination)
+		end
+		local rowlen = string.len(blockData[1])
+
+		for i,block in ipairs(blockData) do
+			if rowlen ~= string.len(block) then
+				prlog(string.format("WARNING: Dumpdata seems corrupted, line %d was not the same length as line 1",i))
+			end
+
+			local formatString = string.format("H%d", string.len(block))
+			local _,hex = bin.unpack(formatString,block)
+			file:write(hex)
+			file:write(0x0A) -- Line feed
+		end
+		file:close()	
+		return destination
+	end,
+}
+
+
+
 --- 
 -- Usage help
 function help()
@@ -38,12 +83,6 @@ function debug(...)
 	end
 end
 
---- 
--- This is only meant to be used when errors occur
-function oops(err)
-	prlog("ERROR: ",err)
-	return nil,err
-end
 
 local function show(data)
 	if DEBUG then
@@ -201,5 +240,10 @@ local function main( args)
 	for k,v in ipairs(blockData) do
 		prlog(string.format("Block %02x: %02x %02x %02x %02x",k-1, string.byte(v, 1,4)))
 	end
+	local filename, err = utils.writeDumpFile(uidHexstr, blockData)
+	if err then return oops(err) end
+
+	prlog(string.format("Dumped data into %s", filename))
+
 end
 main(args)
