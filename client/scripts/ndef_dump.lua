@@ -59,8 +59,7 @@ local utils = {
 
 			local formatString = string.format("H%d", string.len(block))
 			local _,hex = bin.unpack(formatString,block)
-			file:write(hex)
-			file:write(0x0A) -- Line feed
+			file:write(hex.."\n")
 		end
 		file:close()	
 		return destination
