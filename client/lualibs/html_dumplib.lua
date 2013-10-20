@@ -16,6 +16,7 @@ end
 -- This is only meant to be used when errors occur
 local function oops(err)
 	print("ERROR: ",err)
+	return nil, err
 end
 
 local function save_HTML(javascript, filename)
@@ -28,7 +29,7 @@ local function save_HTML(javascript, filename)
 	
 	local outfile = io.open(filename, "w")
 	if outfile == nil then 
-		return oops("Could not write to file ", filename)
+		return oops(string.format("Could not write to file %s",tostring(filename)))
 	end
 	-- Write the data into it
 	outfile:write(html)
@@ -88,7 +89,7 @@ local function convert_eml_to_html(input, output)
 
 	local infile = io.open(input, "r")
 	if infile == nil then 
-		return oops("Could not read file ", input)
+		return oops(string.format("Could not read file %s",tostring(input)))
 	end
 
 	-- Read file, get JS
@@ -108,7 +109,7 @@ local function convert_bin_to_html(input, output, blockLen)
 
 	local infile = io.open(input, "r")
 	if infile == nil then 
-		return oops("Could not read file ", input)
+		return oops(string.format("Could not read file %s",tostring(input)))
 	end
 	-- Read file, get JS
 	local javascript = convert_binary_dump_to_JS(infile, blockLen)
