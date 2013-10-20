@@ -334,6 +334,11 @@ int CmdHF14BCmdRaw (const char *cmd) {
         PrintAndLog("Invalid char on input");
         return 0;
     }
+    if (datalen == 0)
+    {
+      PrintAndLog("Missing data input");
+      return 0;
+    }
     if(crc)
     {
         uint8_t first, second;
