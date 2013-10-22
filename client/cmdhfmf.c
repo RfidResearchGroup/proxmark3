@@ -853,7 +853,7 @@ int CmdHF14AMfNested(const char *Cmd)
 			}
 		}
 
-		printf("Time in nested: %1.3f (%1.3f sec per key)\n\n", ((float)clock() - time1)/1000.0, ((float)clock() - time1)/iterations/1000.0);
+		printf("Time in nested: %1.3f (%1.3f sec per key)\n\n", ((float)clock() - time1)/CLOCKS_PER_SEC, ((float)clock() - time1)/iterations/CLOCKS_PER_SEC);
 		
 		PrintAndLog("-----------------------------------------------\nIterations count: %d\n\n", iterations);
 		//print them
