@@ -134,6 +134,7 @@ end
 local library = {
 	
 	read1443a = read14443a,
+	read 	= read14443a,
 	waitFor14443a = waitFor14443a,
 	parse1443a = parse1443a,
 	sendToDevice = sendToDevice,
