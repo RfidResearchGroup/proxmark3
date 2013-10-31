@@ -344,6 +344,7 @@ local skel_1 = [[
 	</script>
 	
 </head>
+<body></body>
 <script>
 	var x = { data : 
 ]]
