@@ -1,10 +1,12 @@
-[[
+--[[
 THIS IS WORK IN PROGREESS, very much not finished. 
 
 This library utilises other libraries under the hood, but can be used as a generic reader for 13.56MHz tags. 
 ]]
 
 local reader14443A = require('read14a')
+local cmds = require('commands')
+local TIMEOUT = 1000
 
 local function sendToDevice(command, ignoreresponse)
 	core.clearCommandBuffer()
@@ -14,7 +16,6 @@ local function sendToDevice(command, ignoreresponse)
 		return nil, err
 	end
 	if ignoreresponse then return nil,nil end
-
 	local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
 	return response,nil
 end
@@ -36,17 +37,17 @@ local reader14443B = {
 -------------------------------------------------------
 
 local function errorString15693(number)
-	local errors = {
-		0x01 :  "The command is not supported",
-		0x02 :  "The command is not recognised",
-		0x03 :  "The option is not supported.",
-		0x0f :  "Unknown error.",
-		0x10 :  "The specified block is not available (doesn’t exist).",
-		0x11 :  "The specified block is already -locked and thus cannot be locked again",
-		0x12 :  "The specified block is locked and its content cannot be changed.",
-		0x13 :  "The specified block was not successfully programmed.",
-		0x14 :  "The specified block was not successfully locked.",
-	}
+	local errors = {}
+	errors[0x01] =  "The command is not supported"
+	errors[0x02] =  "The command is not recognised"
+	errors[0x03] =  "The option is not supported."
+	errors[0x0f] =  "Unknown error."
+	errors[0x10] =  "The specified block is not available (doesn’t exist)."
+	errors[0x11] =  "The specified block is already -locked and thus cannot be locked again"
+	errors[0x12] =  "The specified block is locked and its content cannot be changed."
+	errors[0x13] =  "The specified block was not successfully programmed."
+	errors[0x14] =  "The specified block was not successfully locked."
+	
 	return errors[number] or "Reserved for Future Use or Custom command error." 
 end
 -------------------------------------------------------
@@ -64,7 +65,7 @@ local function parse15693(data)
 	-- The following code is based on cmdhf15.c around line 666 (NoTB!) and onwards
 	if core.iso15693_crc(data, string.len(data)) ~= 0xF47 then
 		return nil, "CRC failed"
-	else if data[1] % 2 == 1 then
+	elseif data[1] % 2 == 1 then
 		-- Above is a poor-mans bit check:
 		-- recv[0] & ISO15_RES_ERROR //(0x01)
 		local err = "Tag returned error %i: %s"
@@ -97,7 +98,7 @@ end
 -------------------------------------------------------
 
 local function read15693()
-	[[
+	--[[
 
 	We start by trying this command:
 	 
@@ -126,7 +127,7 @@ local function read15693()
 		proxmark3>
 	 
 	From which we obtain less information than the above one.
-	]]
+	--]]
 
 	local command, result, info, err, data
 	local data = "02"
@@ -159,8 +160,6 @@ local function read15693()
 	return info
 end
 
-
-}
 local reader15693 = {
 	read = read15693
 }
@@ -174,13 +173,20 @@ local reader15693 = {
 -- @return if unsuccessfull : nil, error
 local function waitForTag()
 	print("Waiting for card... press any key to quit")
-	local readers = [reader14443A, reader14443B, readerISO15693]
-	local r
+	local readers = {reader14443A, reader14443B, reader15693}
+	local i = 0;
 	while not core.ukbhit() do
-		for _, r in ipairs(readers) do
-			res, err = r.read()
-			if res then return res end
+		i = (i % 3) +1
+		r = readers[i]
+		print("Reading with ",i)
+		res, err = r.read()
+		if res then return res end
+		print(err)
 			-- err means that there was no response from card
 	end
 	return nil, "Aborted by user"
 end
+
+return {
+	waitForTag = waitForTag,
+}
