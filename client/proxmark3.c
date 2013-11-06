@@ -41,6 +41,12 @@ void SendCommand(UsbCommand *c) {
     ERR("Sending command failed, previous command is still pending");
   }
 */
+  if(offline)
+    {
+      PrintAndLog("Sending bytes to proxmark failed - offline");
+      return;
+    }
+
   while(txcmd_pending);
   txcmd = *c;
   txcmd_pending = true;
