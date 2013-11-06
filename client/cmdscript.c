@@ -25,7 +25,7 @@
 #include "cmdscript.h"
 #include "cmdhfmf.h"
 #include "pm3_binlib.h"
-
+#include "pm3_bitlib.h"
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
@@ -133,6 +133,8 @@ int CmdRun(const char *Cmd)
     //Add the 'bin' library
     set_bin_library(lua_state);
 
+	//Add the 'bit' library
+	set_bit_library(lua_state);
 
     char script_name[128] = {0};
     char arguments[256] = {0};

@@ -17,7 +17,7 @@
 #include "scripting.h"
 #include "util.h"
 #include "nonce2key/nonce2key.h"
-
+#include "../common/iso15693tools.h"
 /**
  * The following params expected:
  *  UsbCommand c
@@ -214,6 +214,15 @@ static int l_CmdConsole(lua_State *L)
     return 0;
 }
 
+static int l_iso15693_crc(lua_State *L)
+{
+    //    uint16_t Iso15693Crc(uint8_t *v, int n);
+    size_t size;
+    const char *v = luaL_checklstring(L, 1, &size);
+    uint16_t retval = Iso15693Crc((uint8_t *) v, size);
+    lua_pushinteger(L, (int) retval);
+    return 1;
+}
 
 /**
  * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
@@ -251,6 +260,7 @@ int set_pm3_libraries(lua_State *L)
         {"ukbhit",                      l_ukbhit},
         {"clearCommandBuffer",          l_clearCommandBuffer},
         {"console",                      l_CmdConsole},
+        {"iso15693_crc",                 l_iso15693_crc},
         {NULL, NULL}
     };
 
