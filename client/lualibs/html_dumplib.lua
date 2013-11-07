@@ -107,7 +107,7 @@ local function convert_bin_to_html(input, output, blockLen)
 	blockLen = blockLen or 16
 	output = output or input .. 'html'
 
-	local infile = io.open(input, "r")
+	local infile = io.open(input, "rb")
 	if infile == nil then 
 		return oops(string.format("Could not read file %s",tostring(input)))
 	end
