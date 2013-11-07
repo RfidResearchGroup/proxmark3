@@ -88,7 +88,7 @@ local function main(args)
 	end
 	-- Validate the parameters
 	
-	local infile = io.open(input, "r")
+	local infile = io.open(input, "rb")
 	if infile == nil then 
 		return oops("Could not read file ", input)
 	end
