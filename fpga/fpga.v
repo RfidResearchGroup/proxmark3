@@ -22,17 +22,17 @@
 `include "util.v"
 
 module fpga(
-	spcki, miso, mosi, ncs,
-	pck0i, ck_1356meg, ck_1356megb,
+	spck, miso, mosi, ncs,
+	pck0, ck_1356meg, ck_1356megb,
 	pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4,
 	adc_d, adc_clk, adc_noe,
 	ssp_frame, ssp_din, ssp_dout, ssp_clk,
 	cross_hi, cross_lo,
 	dbg
 );
-	input spcki, mosi, ncs;
+	input spck, mosi, ncs;
 	output miso;
-	input pck0i, ck_1356meg, ck_1356megb;
+	input pck0, ck_1356meg, ck_1356megb;
 	output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
 	input [7:0] adc_d;
 	output adc_clk, adc_noe;
@@ -42,15 +42,17 @@ module fpga(
 	output dbg;
 
 //assign pck0 = pck0i;
-	IBUFG #(.IOSTANDARD("DEFAULT") ) pck0b(
-		.O(pck0),
-		.I(pck0i)
-	);
+//	IBUFG #(.IOSTANDARD("DEFAULT") ) pck0b(
+//		.O(pck0),
+//		.I(pck0i)
+//	);
 //assign spck = spcki;
-	IBUFG #(.IOSTANDARD("DEFAULT") ) spckb(
-		.O(spck),
-		.I(spcki)
-	);
+// IBUFG #(.IOSTANDARD("DEFAULT") ) spckb(
+	// .O(spck),
+	// .I(spcki)
+// );
+
+
 //-----------------------------------------------------------------------------
 // The SPI receiver. This sets up the configuration word, which the rest of
 // the logic looks at to determine how to connect the A/D and the coil
@@ -68,8 +70,8 @@ reg [7:0] conf_word;
 always @(posedge ncs)
 begin
 	case(shift_reg[15:12])
-		4'b0001: conf_word <= shift_reg[7:0];
-		4'b0010: divisor <= shift_reg[7:0];
+		4'b0001: conf_word <= shift_reg[7:0];		// FPGA_CMD_SET_CONFREG
+		4'b0010: divisor <= shift_reg[7:0];			// FPGA_CMD_SET_DIVISOR
 	endcase
 end
 
@@ -202,7 +204,7 @@ hi_iso14443a hisn(
 
 mux8 mux_ssp_clk		(major_mode, ssp_clk,   lr_ssp_clk,   ls_ssp_clk,   ht_ssp_clk,   hrxc_ssp_clk,   hs_ssp_clk,   hisn_ssp_clk,   lp_ssp_clk,   1'b0);
 mux8 mux_ssp_din		(major_mode, ssp_din,   lr_ssp_din,   ls_ssp_din,   ht_ssp_din,   hrxc_ssp_din,   hs_ssp_din,   hisn_ssp_din,   lp_ssp_din,   1'b0);
-mux8 mux_ssp_frame	(major_mode, ssp_frame, lr_ssp_frame, ls_ssp_frame, ht_ssp_frame, hrxc_ssp_frame, hs_ssp_frame, hisn_ssp_frame, lp_ssp_frame, 1'b0);
+mux8 mux_ssp_frame		(major_mode, ssp_frame, lr_ssp_frame, ls_ssp_frame, ht_ssp_frame, hrxc_ssp_frame, hs_ssp_frame, hisn_ssp_frame, lp_ssp_frame, 1'b0);
 mux8 mux_pwr_oe1		(major_mode, pwr_oe1,   lr_pwr_oe1,   ls_pwr_oe1,   ht_pwr_oe1,   hrxc_pwr_oe1,   hs_pwr_oe1,   hisn_pwr_oe1,   lp_pwr_oe1,   1'b0);
 mux8 mux_pwr_oe2		(major_mode, pwr_oe2,   lr_pwr_oe2,   ls_pwr_oe2,   ht_pwr_oe2,   hrxc_pwr_oe2,   hs_pwr_oe2,   hisn_pwr_oe2,   lp_pwr_oe2,   1'b0);
 mux8 mux_pwr_oe3		(major_mode, pwr_oe3,   lr_pwr_oe3,   ls_pwr_oe3,   ht_pwr_oe3,   hrxc_pwr_oe3,   hs_pwr_oe3,   hisn_pwr_oe3,   lp_pwr_oe3,   1'b0);
@@ -210,7 +212,7 @@ mux8 mux_pwr_oe4		(major_mode, pwr_oe4,   lr_pwr_oe4,   ls_pwr_oe4,   ht_pwr_oe4
 mux8 mux_pwr_lo			(major_mode, pwr_lo,    lr_pwr_lo,    ls_pwr_lo,    ht_pwr_lo,    hrxc_pwr_lo,    hs_pwr_lo,    hisn_pwr_lo,    lp_pwr_lo,    1'b0);
 mux8 mux_pwr_hi			(major_mode, pwr_hi,    lr_pwr_hi,    ls_pwr_hi,    ht_pwr_hi,    hrxc_pwr_hi,    hs_pwr_hi,    hisn_pwr_hi,    lp_pwr_hi,    1'b0);
 mux8 mux_adc_clk		(major_mode, adc_clk,   lr_adc_clk,   ls_adc_clk,   ht_adc_clk,   hrxc_adc_clk,   hs_adc_clk,   hisn_adc_clk,   lp_adc_clk,   1'b0);
-mux8 mux_dbg				(major_mode, dbg,       lr_dbg,       ls_dbg,       ht_dbg,       hrxc_dbg,       hs_dbg,       hisn_dbg,       lp_dbg,       1'b0);
+mux8 mux_dbg			(major_mode, dbg,       lr_dbg,       ls_dbg,       ht_dbg,       hrxc_dbg,       hs_dbg,       hisn_dbg,       lp_dbg,       1'b0);
 
 // In all modes, let the ADC's outputs be enabled.
 assign adc_noe = 1'b0;

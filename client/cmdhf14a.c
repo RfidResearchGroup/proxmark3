@@ -101,7 +101,7 @@ int CmdHF14AList(const char *Cmd)
     char *crc;
     crc = "";
     if (len > 2) {
-      uint8_t b1, b2;
+		uint8_t b1, b2;
       for (j = 0; j < (len - 1); j++) {
         // gives problems... search for the reason..
         /*if(frame[j] == 0xAA) {
@@ -132,8 +132,8 @@ int CmdHF14AList(const char *Cmd)
           crc = (isResponse & (len < 6)) ? "" : " !crc";
         } else {
           crc = "";
-        }
-      }
+		}
+    }
     } else {
       crc = ""; // SHORT
     }
@@ -148,7 +148,7 @@ int CmdHF14AList(const char *Cmd)
     PrintAndLog(" +%7d: %s: %s %s %s",
       (prev < 0 ? 0 : (timestamp - prev)),
       metricString,
-      (isResponse ? "TAG" : "   "), line, crc);
+      (isResponse ? "TAG " : "    "), line, crc);
 
     prev = timestamp;
     i += (len + 9);
@@ -184,12 +184,12 @@ int CmdHF14AReader(const char *Cmd)
 		case 0x00: PrintAndLog("TYPE : NXP MIFARE Ultralight | Ultralight C"); break;
 		case 0x04: PrintAndLog("TYPE : NXP MIFARE (various !DESFire !DESFire EV1)"); break;
 
-		case 0x08: PrintAndLog("TYPE : NXP MIFARE CLASSIC 1k | Plus 2k"); break;
+		case 0x08: PrintAndLog("TYPE : NXP MIFARE CLASSIC 1k | Plus 2k SL1"); break;
 		case 0x09: PrintAndLog("TYPE : NXP MIFARE Mini 0.3k"); break;
-		case 0x10: PrintAndLog("TYPE : NXP MIFARE Plus 2k"); break;
-		case 0x11: PrintAndLog("TYPE : NXP MIFARE Plus 4k"); break;
-		case 0x18: PrintAndLog("TYPE : NXP MIFARE Classic 4k | Plus 4k"); break;
-		case 0x20: PrintAndLog("TYPE : NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k | JCOP 31/41"); break;
+		case 0x10: PrintAndLog("TYPE : NXP MIFARE Plus 2k SL2"); break;
+		case 0x11: PrintAndLog("TYPE : NXP MIFARE Plus 4k SL2"); break;
+		case 0x18: PrintAndLog("TYPE : NXP MIFARE Classic 4k | Plus 4k SL1"); break;
+		case 0x20: PrintAndLog("TYPE : NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k SL3 | JCOP 31/41"); break;
 		case 0x24: PrintAndLog("TYPE : NXP MIFARE DESFire | DESFire EV1"); break;
 		case 0x28: PrintAndLog("TYPE : JCOP31 or JCOP41 v2.3.1"); break;
 		case 0x38: PrintAndLog("TYPE : Nokia 6212 or 6131 MIFARE CLASSIC 4K"); break;

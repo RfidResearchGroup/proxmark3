@@ -12,11 +12,11 @@ fpga.ngc: fpga.v fpga.ucf xst.scr util.v lo_edge_detect.v lo_read.v lo_passthru.
 
 fpga.ngd: fpga.ngc
 	$(DELETE) fpga.ngd
-	$(XILINX_TOOLS_PREFIX)ngdbuild -aul -p xc2s30-6vq100 -nt timestamp -uc fpga.ucf fpga.ngc fpga.ngd
+	$(XILINX_TOOLS_PREFIX)ngdbuild -aul -p xc2s30-5-vq100 -nt timestamp -uc fpga.ucf fpga.ngc fpga.ngd
 
 fpga.ncd: fpga.ngd
 	$(DELETE) fpga.ncd
-	$(XILINX_TOOLS_PREFIX)map -p xc2s30-6vq100 fpga.ngd
+	$(XILINX_TOOLS_PREFIX)map -p xc2s30-5-vq100 fpga.ngd
 
 fpga-placed.ncd: fpga.ncd
 	$(DELETE) fpga-placed.ncd

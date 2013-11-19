@@ -96,9 +96,9 @@ uint32_t GetParity(const uint8_t * pbtCmd, int iLen)
 	int i;
 	uint32_t dwPar = 0;
 
-	// Generate the encrypted data
+	// Generate the parity bits
 	for (i = 0; i < iLen; i++) {
-		// Save the encrypted parity bit
+		// and save them to a 32Bit word
 		dwPar |= ((OddByteParity[pbtCmd[i]]) << i);
 	}
 	return dwPar;
@@ -375,196 +375,176 @@ static RAMFUNC int MillerDecoding(int bit)
 }
 
 //=============================================================================
-// ISO 14443 Type A - Manchester
+// ISO 14443 Type A - Manchester decoder
 //=============================================================================
+// Basics:
+// The tag will modulate the reader field by asserting different loads to it. As a consequence, the voltage
+// at the reader antenna will be modulated as well. The FPGA detects the modulation for us and would deliver e.g. the following:
+// ........ 0 0 1 1 1 1 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .......
+// The Manchester decoder needs to identify the following sequences:
+// 4 ticks modulated followed by 4 ticks unmodulated: 	Sequence D = 1 (also used as "start of communication")
+// 4 ticks unmodulated followed by 4 ticks modulated: 	Sequence E = 0
+// 8 ticks unmodulated:									Sequence F = end of communication
+// 8 ticks modulated:									A collision. Save the collision position and treat as Sequence D
+// Note 1: the bitstream may start at any time (either in first or second nibble within the parameter bit). We therefore need to sync.
+// Note 2: parameter offset is used to determine the position of the parity bits (required for the anticollision command only)
 static tDemod Demod;
 
-static RAMFUNC int ManchesterDecoding(int v)
+inline RAMFUNC bool IsModulation(byte_t b)
 {
-	int bit;
-	int modulation;
-	//int error = 0;
+	if (b >= 5 || b == 3)		// majority decision: 2 or more bits are set
+		return true;
+	else
+		return false;
+	
+}
 
-	if(!Demod.buff) {
-		Demod.buff = 1;
-		Demod.buffer = v;
-		return FALSE;
-	}
-	else {
-		bit = Demod.buffer;
-		Demod.buffer = v;
-	}
+inline RAMFUNC bool IsModulationNibble1(byte_t b)
+{
+	return IsModulation((b & 0xE0) >> 5);
+}
 
-	if(Demod.state==DEMOD_UNSYNCD) {
-		Demod.output[Demod.len] = 0xfa;
-		Demod.syncBit = 0;
-		//Demod.samples = 0;
-		Demod.posCount = 1;		// This is the first half bit period, so after syncing handle the second part
+inline RAMFUNC bool IsModulationNibble2(byte_t b)
+{
+	return IsModulation((b & 0x0E) >> 1);
+}
 
-		if(bit & 0x08) {
-			Demod.syncBit = 0x08;
-		}
+static RAMFUNC int ManchesterDecoding(int bit, uint16_t offset)
+{
+	
+	switch (Demod.state) {
 
-		if(bit & 0x04) {
-			if(Demod.syncBit) {
-				bit <<= 4;
-			}
-			Demod.syncBit = 0x04;
-		}
-
-		if(bit & 0x02) {
-			if(Demod.syncBit) {
-				bit <<= 2;
-			}
-			Demod.syncBit = 0x02;
-		}
-
-		if(bit & 0x01 && Demod.syncBit) {
-			Demod.syncBit = 0x01;
-		}
-		
-		if(Demod.syncBit) {
-			Demod.len = 0;
-			Demod.state = DEMOD_START_OF_COMMUNICATION;
-			Demod.sub = SUB_FIRST_HALF;
-			Demod.bitCount = 0;
-			Demod.shiftReg = 0;
-			Demod.parityBits = 0;
-			Demod.samples = 0;
-			if(Demod.posCount) {
+		case DEMOD_UNSYNCD:						// not yet synced
+			Demod.len = 0;						// initialize number of decoded data bytes
+			Demod.bitCount = offset;			// initialize number of decoded data bits
+			Demod.shiftReg = 0;					// initialize shiftreg to hold decoded data bits
+			Demod.parityBits = 0;				// initialize parity bits
+			Demod.collisionPos = 0;				// Position of collision bit
+			
+			if (IsModulationNibble1(bit) 
+				&& !IsModulationNibble2(bit)) { 	 						// this is the start bit
+				Demod.samples = 8;
 				if(trigger) LED_A_OFF();
-				switch(Demod.syncBit) {
-					case 0x08: Demod.samples = 3; break;
-					case 0x04: Demod.samples = 2; break;
-					case 0x02: Demod.samples = 1; break;
-					case 0x01: Demod.samples = 0; break;
+				Demod.state = DEMOD_MANCHESTER_DATA;
+			} else if (!IsModulationNibble1(bit) && IsModulationNibble2(bit)) { // this may be the first half of the start bit
+					Demod.samples = 4;
+					Demod.state = DEMOD_HALF_SYNCD;
+			}
+			break;
+
+
+		case DEMOD_HALF_SYNCD:
+			Demod.samples += 8;
+			if (IsModulationNibble1(bit)) {								// error: this was not a start bit.
+				Demod.state = DEMOD_UNSYNCD;
+			} else {
+				if (IsModulationNibble2(bit)) {							// modulation in first half
+					Demod.state = DEMOD_MOD_FIRST_HALF;
+				} else {												// no modulation in first half
+					Demod.state = DEMOD_NOMOD_FIRST_HALF;
 				}
 			}
-			//error = 0;
-		}
-	}
-	else {
-		//modulation = bit & Demod.syncBit;
-		modulation = ((bit << 1) ^ ((Demod.buffer & 0x08) >> 3)) & Demod.syncBit;
-
-		Demod.samples += 4;
-
-		if(Demod.posCount==0) {
-			Demod.posCount = 1;
-			if(modulation) {
-				Demod.sub = SUB_FIRST_HALF;
-			}
-			else {
-				Demod.sub = SUB_NONE;
-			}
-		}
-		else {
-			Demod.posCount = 0;
-			if(modulation && (Demod.sub == SUB_FIRST_HALF)) {
-				if(Demod.state!=DEMOD_ERROR_WAIT) {
-					Demod.state = DEMOD_ERROR_WAIT;
-					Demod.output[Demod.len] = 0xaa;
-					//error = 0x01;
+			break;
+			
+			
+		case DEMOD_MOD_FIRST_HALF:
+			Demod.samples += 8;
+			Demod.bitCount++;
+			if (IsModulationNibble1(bit)) {								// modulation in both halfs - collision
+				if (!Demod.collisionPos) {
+					Demod.collisionPos = (Demod.len << 3) + Demod.bitCount;
 				}
-			}
-			else if(modulation) {
-				Demod.sub = SUB_SECOND_HALF;
-			}
-
-			switch(Demod.state) {
-				case DEMOD_START_OF_COMMUNICATION:
-					if(Demod.sub == SUB_FIRST_HALF) {
-						Demod.state = DEMOD_MANCHESTER_D;
-					}
-					else {
-						Demod.output[Demod.len] = 0xab;
-						Demod.state = DEMOD_ERROR_WAIT;
-						//error = 0x02;
-					}
-					break;
-
-				case DEMOD_MANCHESTER_D:
-				case DEMOD_MANCHESTER_E:
-					if(Demod.sub == SUB_FIRST_HALF) {
-						Demod.bitCount++;
-						Demod.shiftReg = (Demod.shiftReg >> 1) ^ 0x100;
-						Demod.state = DEMOD_MANCHESTER_D;
-					}
-					else if(Demod.sub == SUB_SECOND_HALF) {
-						Demod.bitCount++;
-						Demod.shiftReg >>= 1;
-						Demod.state = DEMOD_MANCHESTER_E;
-					}
-					else {
-						Demod.state = DEMOD_MANCHESTER_F;
-					}
-					break;
-
-				case DEMOD_MANCHESTER_F:
-					// Tag response does not need to be a complete byte!
-					if(Demod.len > 0 || Demod.bitCount > 0) {
-						if(Demod.bitCount > 0) {
-							Demod.shiftReg >>= (9 - Demod.bitCount);
-							Demod.output[Demod.len] = Demod.shiftReg & 0xff;
-							Demod.len++;
-							// No parity bit, so just shift a 0
-							Demod.parityBits <<= 1;
-						}
-
-						Demod.state = DEMOD_UNSYNCD;
-						return TRUE;
-					}
-					else {
-						Demod.output[Demod.len] = 0xad;
-						Demod.state = DEMOD_ERROR_WAIT;
-						//error = 0x03;
-					}
-					break;
-
-				case DEMOD_ERROR_WAIT:
-					Demod.state = DEMOD_UNSYNCD;
-					break;
-
-				default:
-					Demod.output[Demod.len] = 0xdd;
-					Demod.state = DEMOD_UNSYNCD;
-					break;
-			}
-
-			if(Demod.bitCount>=9) {
-				Demod.output[Demod.len] = Demod.shiftReg & 0xff;
-				Demod.len++;
-
-				Demod.parityBits <<= 1;
-				Demod.parityBits ^= ((Demod.shiftReg >> 8) & 0x01);
-
+			}															// modulation in first half only - Sequence D = 1
+			Demod.shiftReg = (Demod.shiftReg >> 1) | 0x100;				// add a 1 to the shiftreg
+			if(Demod.bitCount >= 9) {									// if we decoded a full byte (including parity)
+				Demod.parityBits <<= 1;									// make room for the parity bit
+				Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
+				Demod.parityBits |= ((Demod.shiftReg >> 8) & 0x01); 	// store parity bit
 				Demod.bitCount = 0;
 				Demod.shiftReg = 0;
 			}
+			if (IsModulationNibble2(bit)) {								// modulation in first half
+				Demod.state = DEMOD_MOD_FIRST_HALF;
+			} else {													// no modulation in first half
+				Demod.state = DEMOD_NOMOD_FIRST_HALF;
+			}
+			break;
 
-			/*if(error) {
-				Demod.output[Demod.len] = 0xBB;
-				Demod.len++;
-				Demod.output[Demod.len] = error & 0xFF;
-				Demod.len++;
-				Demod.output[Demod.len] = 0xBB;
-				Demod.len++;
-				Demod.output[Demod.len] = bit & 0xFF;
-				Demod.len++;
-				Demod.output[Demod.len] = Demod.buffer & 0xFF;
-				Demod.len++;
-				Demod.output[Demod.len] = Demod.syncBit & 0xFF;
-				Demod.len++;
-				Demod.output[Demod.len] = 0xBB;
-				Demod.len++;
-				return TRUE;
-			}*/
 
-		}
+		case DEMOD_NOMOD_FIRST_HALF:
+			if (IsModulationNibble1(bit)) {								// modulation in second half only - Sequence E = 0
+				Demod.bitCount++;
+				Demod.samples += 8;
+				Demod.shiftReg = (Demod.shiftReg >> 1);		 			// add a 0 to the shiftreg
+				if(Demod.bitCount >= 9) {								// if we decoded a full byte (including parity)
+					Demod.parityBits <<= 1;								// make room for the new parity bit
+					Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
+					Demod.parityBits |= ((Demod.shiftReg >> 8) & 0x01); // store parity bit
+					Demod.bitCount = 0;
+					Demod.shiftReg = 0;
+				}
+			} else {													// no modulation in both halves - End of communication
+				Demod.samples += 4;
+				if(Demod.bitCount > 0) {								// if we decoded bits
+					Demod.shiftReg >>= (9 - Demod.bitCount);			// add the remaining decoded bits to the output
+					Demod.output[Demod.len++] = Demod.shiftReg & 0xff;
+					// No parity bit, so just shift a 0
+					Demod.parityBits <<= 1;
+				}
+				Demod.state = DEMOD_UNSYNCD;							// start from the beginning
+				return TRUE;											// we are finished with decoding the raw data sequence
+			}
+			if (IsModulationNibble2(bit)) {								// modulation in first half
+				Demod.state = DEMOD_MOD_FIRST_HALF;
+			} else {													// no modulation in first half
+				Demod.state = DEMOD_NOMOD_FIRST_HALF;
+			}
+			break;
+			
 
-	} // end (state != UNSYNCED)
+		case DEMOD_MANCHESTER_DATA:
+			Demod.samples += 8;
+			if (IsModulationNibble1(bit)) {									// modulation in first half
+				if (IsModulationNibble2(bit) & 0x0f) {						// ... and in second half = collision
+					if (!Demod.collisionPos) {
+						Demod.collisionPos = (Demod.len << 3) + Demod.bitCount;
+					}
+				}														// modulation in first half only - Sequence D = 1
+				Demod.bitCount++;
+				Demod.shiftReg = (Demod.shiftReg >> 1) | 0x100;			// in both cases, add a 1 to the shiftreg
+				if(Demod.bitCount >= 9) {								// if we decoded a full byte (including parity)
+					Demod.parityBits <<= 1;								// make room for the parity bit
+					Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
+					Demod.parityBits |= ((Demod.shiftReg >> 8) & 0x01); // store parity bit
+					Demod.bitCount = 0;
+					Demod.shiftReg = 0;
+				}
+			} else {													// no modulation in first half
+				if (IsModulationNibble2(bit)) {							// and modulation in second half = Sequence E = 0
+					Demod.bitCount++;
+					Demod.shiftReg = (Demod.shiftReg >> 1);				// add a 0 to the shiftreg
+					if(Demod.bitCount >= 9) {							// if we decoded a full byte (including parity)
+						Demod.parityBits <<= 1;							// make room for the new parity bit
+						Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
+						Demod.parityBits |= ((Demod.shiftReg >> 8) & 0x01); // store parity bit
+						Demod.bitCount = 0;
+						Demod.shiftReg = 0;
+					}
+				} else {												// no modulation in both halves - End of communication
+					if(Demod.bitCount > 0) {							// if we decoded bits
+						Demod.shiftReg >>= (9 - Demod.bitCount);		// add the remaining decoded bits to the output
+						Demod.output[Demod.len++] = Demod.shiftReg & 0xff;
+						// No parity bit, so just shift a 0
+						Demod.parityBits <<= 1;
+					}
+					Demod.state = DEMOD_UNSYNCD;						// start from the beginning
+					return TRUE;										// we are finished with decoding the raw data sequence
+				}
+			}
+			
+	} 
 
-    return FALSE;
+    return FALSE;	// not finished yet, need more data
 }
 
 //=============================================================================
@@ -691,7 +671,7 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 			LED_B_OFF();
 		}
 
-		if(ManchesterDecoding(data[0] & 0x0F)) {
+		if(ManchesterDecoding(data[0], 0)) {
 			LED_B_ON();
 
 			if (!LogTrace(receivedResponse, Demod.len, 0 - Demod.samples, Demod.parityBits, FALSE)) break;
@@ -1296,7 +1276,7 @@ static void TransmitFor14443a(const uint8_t *cmd, int len, uint32_t *timing)
 		while(GetCountMifare() < (*timing & 0xfffffff8));		// Delay transfer (multiple of 8 MF clock ticks)
 	}
 
-	for(c = 0; c < 10;) {	// standard delay for each transfer (allow tag to be ready after last transmission)
+	for(c = 0; c < 10;) {	// standard delay for each transfer (allow tag to be ready after last transmission?)
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = 0x00;	
 			c++;
@@ -1558,13 +1538,12 @@ int EmSendCmdPar(uint8_t *resp, int respLen, uint32_t par){
 //-----------------------------------------------------------------------------
 // Wait a certain time for tag response
 //  If a response is captured return TRUE
-//  If it takes to long return FALSE
+//  If it takes too long return FALSE
 //-----------------------------------------------------------------------------
-static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed) //uint8_t *buffer
+static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint16_t offset, int maxLen, int *samples)
 {
-	// buffer needs to be 512 bytes
 	int c;
-
+	
 	// Set FPGA mode to "reader listen mode", no modulation (listen
 	// only, since we are receiving, not transmitting).
 	// Signal field is on with the appropriate LED
@@ -1577,7 +1556,6 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, int maxLen, int 
 	Demod.state = DEMOD_UNSYNCD;
 
 	uint8_t b;
-	if (elapsed) *elapsed = 0;
 
 	c = 0;
 	for(;;) {
@@ -1590,12 +1568,8 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, int maxLen, int 
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			if(c < iso14a_timeout) { c++; } else { return FALSE; }
 			b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			if(ManchesterDecoding((b>>4) & 0xf)) {
-				*samples = ((c - 1) << 3) + 4;
-				return TRUE;
-			}
-			if(ManchesterDecoding(b & 0x0f)) {
-				*samples = c << 3;
+			if(ManchesterDecoding(b, offset)) {
+				*samples = Demod.samples;
 				return TRUE;
 			}
 		}
@@ -1607,12 +1581,12 @@ void ReaderTransmitBitsPar(uint8_t* frame, int bits, uint32_t par, uint32_t *tim
 
   CodeIso14443aBitsAsReaderPar(frame,bits,par);
   
-  // Select the card
+  // Send command to tag
   TransmitFor14443a(ToSend, ToSendMax, timing);
   if(trigger)
   	LED_A_ON();
   
-  // Store reader command in buffer
+  // Log reader command in trace buffer
   if (tracing) LogTrace(frame,nbytes(bits),0,par,TRUE);
 }
 
@@ -1621,38 +1595,49 @@ void ReaderTransmitPar(uint8_t* frame, int len, uint32_t par, uint32_t *timing)
   ReaderTransmitBitsPar(frame,len*8,par, timing);
 }
 
+void ReaderTransmitBits(uint8_t* frame, int len, uint32_t *timing)
+{
+  // Generate parity and redirect
+  ReaderTransmitBitsPar(frame,len,GetParity(frame,len/8), timing);
+}
+
 void ReaderTransmit(uint8_t* frame, int len, uint32_t *timing)
 {
   // Generate parity and redirect
   ReaderTransmitBitsPar(frame,len*8,GetParity(frame,len), timing);
 }
 
+int ReaderReceiveOffset(uint8_t* receivedAnswer, uint16_t offset)
+{
+	int samples = 0;
+	if (!GetIso14443aAnswerFromTag(receivedAnswer,offset,160,&samples)) return FALSE;
+	if (tracing) LogTrace(receivedAnswer,Demod.len,samples,Demod.parityBits,FALSE);
+	if(samples == 0) return FALSE;
+	return Demod.len;
+}
+
 int ReaderReceive(uint8_t* receivedAnswer)
 {
-  int samples = 0;
-  if (!GetIso14443aAnswerFromTag(receivedAnswer,160,&samples,0)) return FALSE;
-  if (tracing) LogTrace(receivedAnswer,Demod.len,samples,Demod.parityBits,FALSE);
-  if(samples == 0) return FALSE;
-  return Demod.len;
+	return ReaderReceiveOffset(receivedAnswer, 0);
 }
 
-int ReaderReceivePar(uint8_t* receivedAnswer, uint32_t * parptr)
+int ReaderReceivePar(uint8_t *receivedAnswer, uint32_t *parptr)
 {
-  int samples = 0;
-  if (!GetIso14443aAnswerFromTag(receivedAnswer,160,&samples,0)) return FALSE;
-  if (tracing) LogTrace(receivedAnswer,Demod.len,samples,Demod.parityBits,FALSE);
+	int samples = 0;
+	if (!GetIso14443aAnswerFromTag(receivedAnswer,0,160,&samples)) return FALSE;
+	if (tracing) LogTrace(receivedAnswer,Demod.len,samples,Demod.parityBits,FALSE);
 	*parptr = Demod.parityBits;
-  if(samples == 0) return FALSE;
-  return Demod.len;
+	if(samples == 0) return FALSE;
+	return Demod.len;
 }
 
-/* performs iso14443a anticolision procedure
+/* performs iso14443a anticollision procedure
  * fills the uid pointer unless NULL
  * fills resp_data unless NULL */
 int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, uint32_t* cuid_ptr) {
   uint8_t wupa[]       = { 0x52 };  // 0x26 - REQA  0x52 - WAKE-UP
   uint8_t sel_all[]    = { 0x93,0x20 };
-  uint8_t sel_uid[]    = { 0x93,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
+  uint8_t sel_uid[]    = { 0x93,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
   uint8_t rats[]       = { 0xE0,0x80,0x00,0x00 }; // FSD=256, FSDI=8, CID=0
   uint8_t* resp = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);	// was 3560 - tied to other size changes
   byte_t uid_resp[4];
@@ -1666,7 +1651,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     ReaderTransmitBitsPar(wupa,7,0, NULL);
   // Receive the ATQA
   if(!ReaderReceive(resp)) return 0;
-//  Dbprintf("atqa: %02x %02x",resp[0],resp[1]);
+  // Dbprintf("atqa: %02x %02x",resp[0],resp[1]);
 
   if(p_hi14a_card) {
     memcpy(p_hi14a_card->atqa, resp, 2);
@@ -1690,19 +1675,50 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     ReaderTransmit(sel_all,sizeof(sel_all), NULL);
     if (!ReaderReceive(resp)) return 0;
 
-    // First backup the current uid
-    memcpy(uid_resp,resp,4);
-    uid_resp_len = 4;
+	if (Demod.collisionPos) {			// we had a collision and need to construct the UID bit by bit
+		memset(uid_resp, 0, 4);
+		uint16_t uid_resp_bits = 0;
+		uint16_t collision_answer_offset = 0;
+		// anti-collision-loop:
+		while (Demod.collisionPos) {
+			Dbprintf("Multiple tags detected. Collision after Bit %d", Demod.collisionPos);
+			for (uint16_t i = collision_answer_offset; i < Demod.collisionPos; i++, uid_resp_bits++) {	// add valid UID bits before collision point
+				uint16_t UIDbit = (resp[i/8] >> (i % 8)) & 0x01;
+				uid_resp[uid_resp_bits & 0xf8] |= UIDbit << (uid_resp_bits % 8);
+			}
+			uid_resp[uid_resp_bits/8] |= 1 << (uid_resp_bits % 8);					// next time select the card(s) with a 1 in the collision position
+			uid_resp_bits++;
+			// construct anticollosion command:
+			sel_uid[1] = ((2 + uid_resp_bits/8) << 4) | (uid_resp_bits & 0x07);  	// length of data in bytes and bits
+			for (uint16_t i = 0; i <= uid_resp_bits/8; i++) {
+				sel_uid[2+i] = uid_resp[i];
+			}
+			collision_answer_offset = uid_resp_bits%8;
+			ReaderTransmitBits(sel_uid, 16 + uid_resp_bits, NULL);
+			if (!ReaderReceiveOffset(resp, collision_answer_offset)) return 0;
+		}
+		// finally, add the last bits and BCC of the UID
+		for (uint16_t i = collision_answer_offset; i < (Demod.len-1)*8; i++, uid_resp_bits++) {
+			uint16_t UIDbit = (resp[i/8] >> (i%8)) & 0x01;
+			uid_resp[uid_resp_bits/8] |= UIDbit << (uid_resp_bits % 8);
+		}
+
+	} else {		// no collision, use the response to SELECT_ALL as current uid
+		memcpy(uid_resp,resp,4);
+	}
+	uid_resp_len = 4;
     //    Dbprintf("uid: %02x %02x %02x %02x",uid_resp[0],uid_resp[1],uid_resp[2],uid_resp[3]);
 
-        // calculate crypto UID. Always use last 4 Bytes.
+    // calculate crypto UID. Always use last 4 Bytes.
     if(cuid_ptr) {
         *cuid_ptr = bytes_to_num(uid_resp, 4);
     }
 
     // Construct SELECT UID command
-    memcpy(sel_uid+2,resp,5);
-    AppendCrc14443a(sel_uid,7);
+	sel_uid[1] = 0x70;													// transmitting a full UID (1 Byte cmd, 1 Byte NVB, 4 Byte UID, 1 Byte BCC, 2 Bytes CRC)
+    memcpy(sel_uid+2,uid_resp,4);										// the UID
+	sel_uid[6] = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5];  	// calculate and add BCC
+    AppendCrc14443a(sel_uid,7);											// calculate and add CRC
     ReaderTransmit(sel_uid,sizeof(sel_uid), NULL);
 
     // Receive the SAK
@@ -1710,7 +1726,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     sak = resp[0];
 
     // Test if more parts of the uid are comming
-    if ((sak & 0x04) && uid_resp[0] == 0x88) {
+    if ((sak & 0x04) /* && uid_resp[0] == 0x88 */) {
       // Remove first byte, 0x88 is not an UID byte, it CT, see page 3 of:
       // http://www.nxp.com/documents/application_note/AN10927.pdf
       memcpy(uid_resp, uid_resp + 1, 3);
@@ -1769,6 +1785,7 @@ void iso14443a_setup() {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 	SpinDelay(7); // iso14443-3 specifies 5ms max.
 
+	Demod.state = DEMOD_UNSYNCD;
 	iso14a_timeout = 2048; //default
 }
 
@@ -1815,6 +1832,7 @@ void ReaderIso14443a(UsbCommand * c)
 	if(param & ISO14A_CONNECT) {
 		iso14a_clear_trace();
 	}
+
 	iso14a_set_tracing(true);
 
 	if(param & ISO14A_REQUEST_TRIGGER) {
@@ -1975,8 +1993,6 @@ void ReaderMifare(bool first_try)
 
 		//keep the card active
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
-
-		// CodeIso14443aBitsAsReaderPar(mf_auth, sizeof(mf_auth)*8, GetParity(mf_auth, sizeof(mf_auth)*8));
 
 		sync_time = (sync_time & 0xfffffff8) + sync_cycles + catch_up_cycles;
 		catch_up_cycles = 0;
@@ -2645,7 +2661,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 			Demod.state = DEMOD_UNSYNCD;
 		}
 
-		if(ManchesterDecoding(data[0] & 0x0F)) {
+		if(ManchesterDecoding(data[0], 0)) {
 			LED_C_INV();
 
 			if (MfSniffLogic(receivedResponse, Demod.len, Demod.parityBits, Demod.bitCount, FALSE)) break;
