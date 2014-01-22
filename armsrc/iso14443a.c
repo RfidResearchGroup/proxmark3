@@ -2135,7 +2135,7 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	//uint32_t cardRn = 0;
 	uint32_t cardRr = 0;
 	uint32_t cuid = 0;
-	//uint32_t rn_enc = 0;
+	uint32_t rn_enc = 0;
 	uint32_t ans = 0;
 	uint32_t cardINTREG = 0;
 	uint8_t cardINTBLOCK = 0;
@@ -2313,8 +2313,8 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 			case MFEMUL_AUTH1:{
 				if (len == 8) {
 					// --- crypto
-					//rn_enc = bytes_to_num(receivedCmd, 4);
-					//cardRn = rn_enc ^ crypto1_word(pcs, rn_enc , 1);
+					rn_enc = bytes_to_num(receivedCmd, 4);
+					crypto1_word(pcs, rn_enc , 1);
 					cardRr = bytes_to_num(&receivedCmd[4], 4) ^ crypto1_word(pcs, 0, 0);
 					// test if auth OK
 					if (cardRr != prng_successor(nonce, 64)){
