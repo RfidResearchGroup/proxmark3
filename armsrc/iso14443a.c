@@ -2606,7 +2606,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		if(ar_nr_collected > 1)
 		{
 			Dbprintf("Collected two pairs of AR/NR which can be used to extract keys from reader:");
-			Dbprintf("../tools/mfcrack32 %08x %08x %08x %08x",
+			Dbprintf("../tools/mfkey/mfkey32 %08x %08x %08x %08x",
 					 ar_nr_responses[0], // UID
 					ar_nr_responses[1], //NT
 					ar_nr_responses[2], //AR1
