@@ -1144,23 +1144,67 @@ int CmdHF14AMfChk(const char *Cmd)
 
 int CmdHF14AMf1kSim(const char *Cmd)
 {
-	uint8_t uid[4] = {0, 0, 0, 0};
-	
+	uint8_t uid[7] = {0, 0, 0, 0,0,0,0};
+	uint8_t exitAfterNReads = 0;
+	uint8_t flags = 0;
+
 	if (param_getchar(Cmd, 0) == 'h') {
-		PrintAndLog("Usage:  hf mf sim  <uid (8 hex symbols)>");
+		PrintAndLog("Usage:  hf mf sim  u <uid (8 hex symbols)> n <numreads> i x");
+		PrintAndLog("           u    (Optional) UID. If not specified, the UID from emulator memory will be used");
+		PrintAndLog("           n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
+		PrintAndLog("           i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
+		PrintAndLog("           x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a legitimate reader, fishes out the key(s)");
 		PrintAndLog("           sample: hf mf sim 0a0a0a0a ");
 		return 0;
-	}	
-	
-	if (param_getchar(Cmd, 0) && param_gethex(Cmd, 0, uid, 8)) {
-		PrintAndLog("UID must include 8 HEX symbols");
-		return 1;
 	}
-	PrintAndLog(" uid:%s ", sprint_hex(uid, 4));
-	
-  UsbCommand c = {CMD_SIMULATE_MIFARE_CARD, {0, 0, 0}};
-	memcpy(c.d.asBytes, uid, 4);
+	uint8_t pnr = 0;
+	if (param_getchar(Cmd, pnr) == 'u') {
+		if(param_gethex(Cmd, pnr+1, uid, 8) == 0)
+		{
+			flags |=FLAG_4B_UID_IN_DATA; // UID from packet
+		}else if(param_gethex(Cmd,pnr+1,uid,14) == 0)
+		{
+			flags |= FLAG_7B_UID_IN_DATA;// UID from packet
+		}else
+		{
+				PrintAndLog("UID, if specified, must include 8 or 14 HEX symbols");
+				return 1;
+		}
+		pnr +=2;
+	}
+	if (param_getchar(Cmd, pnr) == 'n') {
+		exitAfterNReads = param_get8(Cmd,pnr+1);
+		pnr += 2;
+	}
+	if (param_getchar(Cmd, pnr) == 'i' ) {
+		//Using a flag to signal interactiveness, least significant bit
+		flags |= FLAG_INTERACTIVE;
+		pnr++;
+	}
+
+	if (param_getchar(Cmd, pnr) == 'x' ) {
+		//Using a flag to signal interactiveness, least significant bit
+		flags |= FLAG_NR_AR_ATTACK;
+	}
+	PrintAndLog(" uid:%s, numreads:%d, flags:%d (0x%02x) ",
+				flags & FLAG_4B_UID_IN_DATA ? sprint_hex(uid,4):
+											  flags & FLAG_7B_UID_IN_DATA	? sprint_hex(uid,7): "N/A"
+				, exitAfterNReads, flags,flags);
+
+
+  UsbCommand c = {CMD_SIMULATE_MIFARE_CARD, {flags, exitAfterNReads,0}};
+  memcpy(c.d.asBytes, uid, sizeof(uid));
   SendCommand(&c);
+
+  if(flags & 1)
+  {
+	  UsbCommand resp;
+	  PrintAndLog("Press pm3-button to abort simulation");
+	  while(! WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		//We're waiting only 1.5 s at a time, otherwise we get the
+		  // annoying message about "Waiting for a response... "
+	  }
+  }
 
   return 0;
 }
@@ -1291,7 +1335,11 @@ int CmdHF14AMfELoad(const char *Cmd)
 	while(!feof(f)){
 		memset(buf, 0, sizeof(buf));
 		if (fgets(buf, sizeof(buf), f) == NULL) {
-      PrintAndLog("File reading error.");
+			if(blockNum == 16 * 4)
+			{
+				break;
+			}
+			PrintAndLog("File reading error.");
 			return 2;
     }
 
@@ -1319,7 +1367,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 		PrintAndLog("File content error. There must be 64 blocks");
 		return 4;
 	}
-	PrintAndLog("Loaded from file: %s", filename);
+	PrintAndLog("Loaded %d blocks from file: %s", blockNum, filename);
   return 0;
 }
 

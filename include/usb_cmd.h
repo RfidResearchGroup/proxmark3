@@ -151,6 +151,15 @@ typedef struct {
 
 #define CMD_UNKNOWN                                                       0xFFFF
 
+
+//Mifare simulation flags
+#define FLAG_INTERACTIVE 0x01
+#define FLAG_4B_UID_IN_DATA 0x02
+#define FLAG_7B_UID_IN_DATA 0x04
+#define FLAG_NR_AR_ATTACK 0x08
+
+
+
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
 /* Whether a bootloader that understands the common_area is present */
 #define DEVICE_INFO_FLAG_BOOTROM_PRESENT         	(1<<0)

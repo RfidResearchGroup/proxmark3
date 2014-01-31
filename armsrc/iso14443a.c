@@ -1926,7 +1926,7 @@ void ReaderMifare(bool first_try)
 	static uint8_t mf_nr_ar3;
 
 	uint8_t* receivedAnswer = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
-	traceLen = 0;
+	iso14a_clear_trace();
 	tracing = false;
 
 	byte_t nt_diff = 0;
@@ -1974,7 +1974,7 @@ void ReaderMifare(bool first_try)
 	LED_B_OFF();
 	LED_C_OFF();
 	
-  
+
 	for(uint16_t i = 0; TRUE; i++) {
 		
 		WDT_HIT();
@@ -2113,18 +2113,22 @@ void ReaderMifare(bool first_try)
 	tracing = TRUE;
 }
 
-//-----------------------------------------------------------------------------
-// MIFARE 1K simulate. 
-// 
-//-----------------------------------------------------------------------------
-void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
+/**
+  *MIFARE 1K simulate.
+  *
+  *@param flags :
+  *	FLAG_INTERACTIVE - In interactive mode, we are expected to finish the operation with an ACK
+  * 4B_FLAG_UID_IN_DATA - means that there is a 4-byte UID in the data-section, we're expected to use that
+  * 7B_FLAG_UID_IN_DATA - means that there is a 7-byte UID in the data-section, we're expected to use that
+  *	FLAG_NR_AR_ATTACK  - means we should collect NR_AR responses for bruteforcing later
+  *@param exitAfterNReads, exit simulation after n blocks have been read, 0 is inifite
+  */
+void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *datain)
 {
 	int cardSTATE = MFEMUL_NOFIELD;
 	int _7BUID = 0;
 	int vHf = 0;	// in mV
-	//int nextCycleTimeout = 0;
 	int res;
-//	uint32_t timer = 0;
 	uint32_t selTimer = 0;
 	uint32_t authTimer = 0;
 	uint32_t par = 0;
@@ -2132,60 +2136,83 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	uint8_t cardWRBL = 0;
 	uint8_t cardAUTHSC = 0;
 	uint8_t cardAUTHKEY = 0xff;  // no authentication
-	//uint32_t cardRn = 0;
 	uint32_t cardRr = 0;
 	uint32_t cuid = 0;
-	uint32_t rn_enc = 0;
+	//uint32_t rn_enc = 0;
 	uint32_t ans = 0;
 	uint32_t cardINTREG = 0;
 	uint8_t cardINTBLOCK = 0;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
-	
+	uint32_t numReads = 0;//Counts numer of times reader read a block
 	uint8_t* receivedCmd = eml_get_bigbufptr_recbuf();
 	uint8_t *response = eml_get_bigbufptr_sendbuf();
 	
-	static uint8_t rATQA[] = {0x04, 0x00}; // Mifare classic 1k 4BUID
+	uint8_t rATQA[] = {0x04, 0x00}; // Mifare classic 1k 4BUID
+	uint8_t rUIDBCC1[] = {0xde, 0xad, 0xbe, 0xaf, 0x62};
+	uint8_t rUIDBCC2[] = {0xde, 0xad, 0xbe, 0xaf, 0x62}; // !!!
+	uint8_t rSAK[] = {0x08, 0xb6, 0xdd};
+	uint8_t rSAK1[] = {0x04, 0xda, 0x17};
 
-	static uint8_t rUIDBCC1[] = {0xde, 0xad, 0xbe, 0xaf, 0x62}; 
-	static uint8_t rUIDBCC2[] = {0xde, 0xad, 0xbe, 0xaf, 0x62}; // !!!
-		
-	static uint8_t rSAK[] = {0x08, 0xb6, 0xdd};
-	static uint8_t rSAK1[] = {0x04, 0xda, 0x17};
+	uint8_t rAUTH_NT[] = {0x01, 0x02, 0x03, 0x04};
+	uint8_t rAUTH_AT[] = {0x00, 0x00, 0x00, 0x00};
 
-	static uint8_t rAUTH_NT[] = {0x01, 0x02, 0x03, 0x04};
-//	static uint8_t rAUTH_NT[] = {0x1a, 0xac, 0xff, 0x4f};
-	static uint8_t rAUTH_AT[] = {0x00, 0x00, 0x00, 0x00};
+	//Here, we collect UID,NT,AR,NR,UID2,NT2,AR2,NR2
+	// This can be used in a reader-only attack.
+	// (it can also be retrieved via 'hf 14a list', but hey...
+	uint32_t ar_nr_responses[] = {0,0,0,0,0,0,0,0};
+	uint8_t ar_nr_collected = 0;
 
 	// clear trace
-	traceLen = 0;
+	iso14a_clear_trace();
+
 	tracing = true;
 
   // Authenticate response - nonce
 	uint32_t nonce = bytes_to_num(rAUTH_NT, 4);
-	
-	// get UID from emul memory
-	emlGetMemBt(receivedCmd, 7, 1);
-	_7BUID = !(receivedCmd[0] == 0x00);
-	if (!_7BUID) {                     // ---------- 4BUID
-		rATQA[0] = 0x04;
 
-		emlGetMemBt(rUIDBCC1, 0, 4);
+	//-- Determine the UID
+	// Can be set from emulator memory, incoming data
+	// and can be 7 or 4 bytes long
+	if(flags & FLAG_4B_UID_IN_DATA)
+	{
+		// 4B uid comes from data-portion of packet
+		memcpy(rUIDBCC1,datain,4);
 		rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
-	} else {                           // ---------- 7BUID
+
+	}else if(flags & FLAG_7B_UID_IN_DATA)
+	{
+		// 7B uid comes from data-portion of packet
+		memcpy(&rUIDBCC1[1],datain,3);
+		memcpy(rUIDBCC2, datain+3, 4);
+		_7BUID = true;
+	}
+	else
+	{
+		// get UID from emul memory
+		emlGetMemBt(receivedCmd, 7, 1);
+		_7BUID = !(receivedCmd[0] == 0x00);
+		if (!_7BUID) {                     // ---------- 4BUID
+			emlGetMemBt(rUIDBCC1, 0, 4);
+		} else {                           // ---------- 7BUID
+			emlGetMemBt(&rUIDBCC1[1], 0, 3);
+			emlGetMemBt(rUIDBCC2, 3, 4);
+		}
+	}
+	/*
+	 * Regardless of what method was used to set the UID, set fifth byte and modify
+	 * the ATQA for 4 or 7-byte UID
+	 */
+
+	rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
+	if(_7BUID)
+	{
 		rATQA[0] = 0x44;
-
 		rUIDBCC1[0] = 0x88;
-		emlGetMemBt(&rUIDBCC1[1], 0, 3);
-		rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
-		emlGetMemBt(rUIDBCC2, 3, 4);
 		rUIDBCC2[4] = rUIDBCC2[0] ^ rUIDBCC2[1] ^ rUIDBCC2[2] ^ rUIDBCC2[3];
 	}
 
-// --------------------------------------	test area
-
-// --------------------------------------	END test area
 	// start mkseconds counter
 	StartCountUS();
 
@@ -2193,18 +2220,22 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
 
-  FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 	SpinDelay(200);
 
-	if (MF_DBGLEVEL >= 1)	Dbprintf("Started. 7buid=%d", _7BUID);
+	if (MF_DBGLEVEL >= 1)	{
+		if (!_7BUID) {
+			Dbprintf("4B UID: %02x%02x%02x%02x",rUIDBCC1[0] , rUIDBCC1[1] , rUIDBCC1[2] , rUIDBCC1[3]);
+		}else
+		{
+			Dbprintf("7B UID: (%02x)%02x%02x%02x%02x%02x%02x%02x",rUIDBCC1[0] , rUIDBCC1[1] , rUIDBCC1[2] , rUIDBCC1[3],rUIDBCC2[0],rUIDBCC2[1] ,rUIDBCC2[2] , rUIDBCC2[3]);
+		}
+	}
 	// calibrate mkseconds counter
 	GetDeltaCountUS();
-	while (true) {
+	bool finished = false;
+	while (!BUTTON_PRESS() && !finished) {
 		WDT_HIT();
-
-		if(BUTTON_PRESS()) {
-			break;
-		}
 
 		// find reader field
 		// Vref = 3300mV, and an 10:1 voltage divider on the input
@@ -2216,56 +2247,54 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 				LED_A_ON();
 			}
 		} 
+		if(cardSTATE == MFEMUL_NOFIELD) continue;
 
-		if (cardSTATE != MFEMUL_NOFIELD) {
-			res = EmGetCmd(receivedCmd, &len, RECV_CMD_SIZE); // (+ nextCycleTimeout)
-			if (res == 2) {
-				cardSTATE = MFEMUL_NOFIELD;
-				LEDsoff();
-				continue;
-			}
-			if(res) break;
+		//Now, get data
+
+		res = EmGetCmd(receivedCmd, &len, RECV_CMD_SIZE); // (+ nextCycleTimeout)
+		if (res == 2) { //Field is off!
+			cardSTATE = MFEMUL_NOFIELD;
+			LEDsoff();
+			continue;
+		}else if(res == 1) break;//return value 1 means button press
+
+
+		// REQ or WUP request in ANY state and WUP in HALTED state
+		if (len == 1 && ((receivedCmd[0] == 0x26 && cardSTATE != MFEMUL_HALTED) || receivedCmd[0] == 0x52)) {
+			selTimer = GetTickCount();
+			EmSendCmdEx(rATQA, sizeof(rATQA), (receivedCmd[0] == 0x52));
+			cardSTATE = MFEMUL_SELECT1;
+
+			// init crypto block
+			LED_B_OFF();
+			LED_C_OFF();
+			crypto1_destroy(pcs);
+			cardAUTHKEY = 0xff;
+			continue;
 		}
-		
-		//nextCycleTimeout = 0;
-		
-//		if (len) Dbprintf("len:%d cmd: %02x %02x %02x %02x", len, receivedCmd[0], receivedCmd[1], receivedCmd[2], receivedCmd[3]);
 
-		if (len != 4 && cardSTATE != MFEMUL_NOFIELD) { // len != 4 <---- speed up the code 4 authentication
-			// REQ or WUP request in ANY state and WUP in HALTED state
-			if (len == 1 && ((receivedCmd[0] == 0x26 && cardSTATE != MFEMUL_HALTED) || receivedCmd[0] == 0x52)) {
-				selTimer = GetTickCount();
-				EmSendCmdEx(rATQA, sizeof(rATQA), (receivedCmd[0] == 0x52));
-				cardSTATE = MFEMUL_SELECT1;
-
-				// init crypto block
-				LED_B_OFF();
-				LED_C_OFF();
-				crypto1_destroy(pcs);
-				cardAUTHKEY = 0xff;
-			}
-		}
-		
 		switch (cardSTATE) {
-			case MFEMUL_NOFIELD:{
-				break;
-			}
-			case MFEMUL_HALTED:{
-				break;
-			}
+			case MFEMUL_NOFIELD:
+			case MFEMUL_HALTED:
 			case MFEMUL_IDLE:{
 				break;
 			}
 			case MFEMUL_SELECT1:{
 				// select all
 				if (len == 2 && (receivedCmd[0] == 0x93 && receivedCmd[1] == 0x20)) {
+					if (MF_DBGLEVEL >= 4)	Dbprintf("SELECT ALL received");
 					EmSendCmd(rUIDBCC1, sizeof(rUIDBCC1));
 					break;
 				}
 
+				if (MF_DBGLEVEL >= 4 && len == 9 && receivedCmd[0] == 0x93 && receivedCmd[1] == 0x70 )
+				{
+					Dbprintf("SELECT %02x%02x%02x%02x received",receivedCmd[2],receivedCmd[3],receivedCmd[4],receivedCmd[5]);
+				}
 				// select card
 				if (len == 9 && 
 						(receivedCmd[0] == 0x93 && receivedCmd[1] == 0x70 && memcmp(&receivedCmd[2], rUIDBCC1, 4) == 0)) {
+
 					if (!_7BUID) 
 						EmSendCmd(rSAK, sizeof(rSAK));
 					else
@@ -2283,6 +2312,51 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 					}
 				}
 				
+				break;
+			}
+			case MFEMUL_AUTH1:{
+				if( len != 8)
+				{
+					cardSTATE_TO_IDLE();
+					break;
+				}
+				uint32_t ar = bytes_to_num(receivedCmd, 4);
+				uint32_t nr= bytes_to_num(&receivedCmd[4], 4);
+
+				//Collect AR/NR
+				if(ar_nr_collected < 2){
+					if(ar_nr_responses[ar_nr_collected*4+2] != ar)
+					{// Avoid duplicates
+						ar_nr_collected++;
+						ar_nr_responses[ar_nr_collected*4] = cuid;
+						ar_nr_responses[ar_nr_collected*4+1] = nonce;
+						ar_nr_responses[ar_nr_collected*4+2] = ar;
+						ar_nr_responses[ar_nr_collected*4+3] = nr;
+					}
+				}
+
+				// --- crypto
+				crypto1_word(pcs, ar , 1);
+				cardRr = nr ^ crypto1_word(pcs, 0, 0);
+
+				// test if auth OK
+				if (cardRr != prng_successor(nonce, 64)){
+					if (MF_DBGLEVEL >= 2)	Dbprintf("AUTH FAILED. cardRr=%08x, succ=%08x",cardRr, prng_successor(nonce, 64));
+					//Shouldn't we respond anything here?
+					// Right now, we don't nack or anything, which causes the
+					// reader to do a WUPA after a while. /Martin
+					cardSTATE_TO_IDLE();
+					break;
+				}
+
+				ans = prng_successor(nonce, 96) ^ crypto1_word(pcs, 0, 0);
+
+				num_to_bytes(ans, 4, rAUTH_AT);
+				// --- crypto
+				EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
+				LED_C_ON();
+				cardSTATE = MFEMUL_WORK;
+				if (MF_DBGLEVEL >= 4)	Dbprintf("AUTH COMPLETED. sector=%d, key=%d time=%d", cardAUTHSC, cardAUTHKEY, GetTickCount() - authTimer);
 				break;
 			}
 			case MFEMUL_SELECT2:{
@@ -2308,86 +2382,44 @@ void Mifare1ksim(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 				// i guess there is a command). go into the work state.
 				if (len != 4) break;
 				cardSTATE = MFEMUL_WORK;
-				goto lbWORK;
-			}
-			case MFEMUL_AUTH1:{
-				if (len == 8) {
-					// --- crypto
-					rn_enc = bytes_to_num(receivedCmd, 4);
-					crypto1_word(pcs, rn_enc , 1);
-					cardRr = bytes_to_num(&receivedCmd[4], 4) ^ crypto1_word(pcs, 0, 0);
-					// test if auth OK
-					if (cardRr != prng_successor(nonce, 64)){
-						if (MF_DBGLEVEL >= 4)	Dbprintf("AUTH FAILED. cardRr=%08x, succ=%08x", cardRr, prng_successor(nonce, 64));
-						cardSTATE_TO_IDLE();
-						break;
-					}
-					ans = prng_successor(nonce, 96) ^ crypto1_word(pcs, 0, 0);
-					num_to_bytes(ans, 4, rAUTH_AT);
-					// --- crypto
-					EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
-					cardSTATE = MFEMUL_AUTH2;
-				} else {
-					cardSTATE_TO_IDLE();
-				}
-				if (cardSTATE != MFEMUL_AUTH2) break;
-			}
-			case MFEMUL_AUTH2:{
-				LED_C_ON();
-				cardSTATE = MFEMUL_WORK;
-				if (MF_DBGLEVEL >= 4)	Dbprintf("AUTH COMPLETED. sec=%d, key=%d time=%d", cardAUTHSC, cardAUTHKEY, GetTickCount() - authTimer);
-				break;
+				//goto lbWORK;
+				//intentional fall-through to the next case-stmt
 			}
 			case MFEMUL_WORK:{
-lbWORK:	if (len == 0) break;
-				
-				if (cardAUTHKEY == 0xff) {
-					// first authentication
-					if (len == 4 && (receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61)) {
-						authTimer = GetTickCount();
+				if (len == 0) break;
 
-						cardAUTHSC = receivedCmd[1] / 4;  // received block num
-						cardAUTHKEY = receivedCmd[0] - 0x60;
+				bool encrypted_data = (cardAUTHKEY != 0xFF) ;
 
-						// --- crypto
-						crypto1_create(pcs, emlGetKey(cardAUTHSC, cardAUTHKEY));
-						ans = nonce ^ crypto1_word(pcs, cuid ^ nonce, 0); 
-						num_to_bytes(nonce, 4, rAUTH_AT);
-						EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
-						// --- crypto
-						
-//   last working revision 
-//						EmSendCmd14443aRaw(resp1, resp1Len, 0);
-//						LogTrace(NULL, 0, GetDeltaCountUS(), 0, true);
-
-						cardSTATE = MFEMUL_AUTH1;
-						//nextCycleTimeout = 10;
-						break;
-					}
-				} else {
+				if(encrypted_data)
+				{
 					// decrypt seqence
 					mf_crypto1_decrypt(pcs, receivedCmd, len);
-					
-					// nested authentication
-					if (len == 4 && (receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61)) {
-						authTimer = GetTickCount();
-
-						cardAUTHSC = receivedCmd[1] / 4;  // received block num
-						cardAUTHKEY = receivedCmd[0] - 0x60;
-
-						// --- crypto
-						crypto1_create(pcs, emlGetKey(cardAUTHSC, cardAUTHKEY));
-						ans = nonce ^ crypto1_word(pcs, cuid ^ nonce, 0); 
-						num_to_bytes(ans, 4, rAUTH_AT);
-						EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
-						// --- crypto
-
-						cardSTATE = MFEMUL_AUTH1;
-						//nextCycleTimeout = 10;
-						break;
-					}
 				}
-				
+
+				if (len == 4 && (receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61)) {
+					authTimer = GetTickCount();
+					cardAUTHSC = receivedCmd[1] / 4;  // received block num
+					cardAUTHKEY = receivedCmd[0] - 0x60;
+					crypto1_destroy(pcs);//Added by martin
+					crypto1_create(pcs, emlGetKey(cardAUTHSC, cardAUTHKEY));
+
+					if (!encrypted_data) { // first authentication
+						if (MF_DBGLEVEL >= 2) Dbprintf("Reader authenticating for block %d (0x%02x) with key %d",receivedCmd[1] ,receivedCmd[1],cardAUTHKEY  );
+
+						crypto1_word(pcs, cuid ^ nonce, 0);//Update crypto state
+						num_to_bytes(nonce, 4, rAUTH_AT); // Send nonce
+					}
+					else{ // nested authentication
+						if (MF_DBGLEVEL >= 2) Dbprintf("Reader doing nested authentication for block %d (0x%02x) with key %d",receivedCmd[1] ,receivedCmd[1],cardAUTHKEY );
+						ans = nonce ^ crypto1_word(pcs, cuid ^ nonce, 0);
+						num_to_bytes(ans, 4, rAUTH_AT);
+					}
+					EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
+					//Dbprintf("Sending rAUTH %02x%02x%02x%02x", rAUTH_AT[0],rAUTH_AT[1],rAUTH_AT[2],rAUTH_AT[3]);
+					cardSTATE = MFEMUL_AUTH1;
+					break;
+				}
+
 				// rule 13 of 7.5.3. in ISO 14443-4. chaining shall be continued
 				// BUT... ACK --> NACK
 				if (len == 1 && receivedCmd[0] == CARD_ACK) {
@@ -2401,39 +2433,63 @@ lbWORK:	if (len == 0) break;
 					break;
 				}
 				
-				// read block
-				if (len == 4 && receivedCmd[0] == 0x30) {
-					if (receivedCmd[1] >= 16 * 4 || receivedCmd[1] / 4 != cardAUTHSC) {
+				if(len != 4) break;
+
+				if(receivedCmd[0] == 0x30 // read block
+						|| receivedCmd[0] == 0xA0 // write block
+						|| receivedCmd[0] == 0xC0
+						|| receivedCmd[0] == 0xC1
+						|| receivedCmd[0] == 0xC2 // inc dec restore
+						|| receivedCmd[0] == 0xB0) // transfer
+				{
+					if (receivedCmd[1] >= 16 * 4)
+					{
+
 						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+						if (MF_DBGLEVEL >= 2) Dbprintf("Reader tried to operate (0x%02) on out of range block: %d (0x%02x), nacking",receivedCmd[0],receivedCmd[1],receivedCmd[1]);
 						break;
+					}
+
+					if (receivedCmd[1] / 4 != cardAUTHSC)
+					{
+						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+						if (MF_DBGLEVEL >= 2) Dbprintf("Reader tried to operate (0x%02) on block (0x%02x) not authenticated for (0x%02x), nacking",receivedCmd[0],receivedCmd[1],cardAUTHSC);
+						break;
+					}
+				}
+				// read block
+				if (receivedCmd[0] == 0x30) {
+					if (MF_DBGLEVEL >= 2) {
+						Dbprintf("Reader reading block %d (0x%02x)",receivedCmd[1],receivedCmd[1]);
 					}
 					emlGetMem(response, receivedCmd[1], 1);
 					AppendCrc14443a(response, 16);
 					mf_crypto1_encrypt(pcs, response, 18, &par);
 					EmSendCmdPar(response, 18, par);
+					numReads++;
+					if(exitAfterNReads > 0 && numReads == exitAfterNReads)
+					{
+						Dbprintf("%d reads done, exiting", numReads);
+						finished = true;
+					}
 					break;
 				}
-				
 				// write block
-				if (len == 4 && receivedCmd[0] == 0xA0) {
-					if (receivedCmd[1] >= 16 * 4 || receivedCmd[1] / 4 != cardAUTHSC) {
-						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-						break;
-					}
+				if (receivedCmd[0] == 0xA0) {
+					if (MF_DBGLEVEL >= 2) Dbprintf("RECV 0xA0 write block %d (%02x)",receivedCmd[1],receivedCmd[1]);
+
 					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK));
 					//nextCycleTimeout = 50;
 					cardSTATE = MFEMUL_WRITEBL2;
 					cardWRBL = receivedCmd[1];
 					break;
-				}
-			
-				// works with cardINTREG
-				
+				}				
 				// increment, decrement, restore
-				if (len == 4 && (receivedCmd[0] == 0xC0 || receivedCmd[0] == 0xC1 || receivedCmd[0] == 0xC2)) {
-					if (receivedCmd[1] >= 16 * 4 || 
-							receivedCmd[1] / 4 != cardAUTHSC || 
-							emlCheckValBl(receivedCmd[1])) {
+				if (receivedCmd[0] == 0xC0 || receivedCmd[0] == 0xC1 || receivedCmd[0] == 0xC2) {
+					if (MF_DBGLEVEL >= 2) Dbprintf("RECV 0x%02x inc(0xC1)/dec(0xC0)/restore(0xC2) block %d (%02x)",receivedCmd[0],receivedCmd[1],receivedCmd[1]);
+
+					if (emlCheckValBl(receivedCmd[1])) {
+						if (MF_DBGLEVEL >= 2) Dbprintf("Reader tried to operate on block, but emlCheckValBl failed, nacking");
 						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
 						break;
 					}
@@ -2445,17 +2501,13 @@ lbWORK:	if (len == 0) break;
 					if (receivedCmd[0] == 0xC2)
 						cardSTATE = MFEMUL_INTREG_REST;
 					cardWRBL = receivedCmd[1];
-					
+
 					break;
 				}
 				
-
 				// transfer
-				if (len == 4 && receivedCmd[0] == 0xB0) {
-					if (receivedCmd[1] >= 16 * 4 || receivedCmd[1] / 4 != cardAUTHSC) {
-						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-						break;
-					}
+				if (receivedCmd[0] == 0xB0) {
+					if (MF_DBGLEVEL >= 2) Dbprintf("RECV 0x%02x transfer block %d (%02x)",receivedCmd[0],receivedCmd[1],receivedCmd[1]);
 					
 					if (emlSetValBl(cardINTREG, cardINTBLOCK, receivedCmd[1]))
 						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
@@ -2466,19 +2518,22 @@ lbWORK:	if (len == 0) break;
 				}
 
 				// halt
-				if (len == 4 && (receivedCmd[0] == 0x50 && receivedCmd[1] == 0x00)) {
+				if (receivedCmd[0] == 0x50 && receivedCmd[1] == 0x00) {
 					LED_B_OFF();
 					LED_C_OFF();
 					cardSTATE = MFEMUL_HALTED;
 					if (MF_DBGLEVEL >= 4)	Dbprintf("--> HALTED. Selected time: %d ms",  GetTickCount() - selTimer);
 					break;
 				}
-				
-				// command not allowed
-				if (len == 4) {
+				// RATS
+				if (receivedCmd[0] == 0xe0) {//RATS
 					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
 					break;
 				}
+
+				// command not allowed
+				if (MF_DBGLEVEL >= 4)	Dbprintf("Received command not allowed, nacking");
+				EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
 
 				// case break
 				break;
@@ -2541,9 +2596,42 @@ lbWORK:	if (len == 0) break;
 	// add trace trailer
 	memset(rAUTH_NT, 0x44, 4);
 	LogTrace(rAUTH_NT, 4, 0, 0, TRUE);
-
+	if(flags & FLAG_INTERACTIVE)// Interactive mode flag, means we need to send ACK
+	{
+		//May just aswell send the collected ar_nr in the response aswell
+		cmd_send(CMD_ACK,CMD_SIMULATE_MIFARE_CARD,0,0,&ar_nr_responses,ar_nr_collected*4*4);
+	}
+	if(flags & FLAG_NR_AR_ATTACK)
+	{
+		if(ar_nr_collected > 1)
+		{
+			Dbprintf("Collected two pairs of AR/NR which can be used to extract keys from reader:");
+			Dbprintf("../tools/mfcrack32 %08x %08x %08x %08x",
+					 ar_nr_responses[0], // UID
+					ar_nr_responses[1], //NT
+					ar_nr_responses[2], //AR1
+					ar_nr_responses[3], //NR1
+					ar_nr_responses[6], //AR2
+					ar_nr_responses[7] //NR2
+					);
+		}else
+		{
+			Dbprintf("Failed to obtain two AR/NR pairs!");
+			if(ar_nr_collected >0)
+			{
+				Dbprintf("Only got these: UID=%08d, nonce=%08d, AR1=%08d, NR1=%08d",
+						ar_nr_responses[0], // UID
+						ar_nr_responses[1], //NT
+						ar_nr_responses[2], //AR1
+						ar_nr_responses[3] //NR1
+						);
+			}
+		}
+	}
 	if (MF_DBGLEVEL >= 1)	Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ",	tracing, traceLen);
 }
+
+
 
 //-----------------------------------------------------------------------------
 // MIFARE sniffer. 
