@@ -652,7 +652,7 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 		}
 
 		LED_A_OFF();
-		
+		if(MF_DBGLEVEL > 4) Dbprintf("1:%d",dataLen);
 		rsamples += 4;
 		if(MillerDecoding((data[0] & 0xF0) >> 4)) {
 			LED_C_ON();
@@ -670,7 +670,7 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 			Demod.state = DEMOD_UNSYNCD;
 			LED_B_OFF();
 		}
-
+		if(MF_DBGLEVEL > 4) Dbprintf("2");
 		if(ManchesterDecoding(data[0], 0)) {
 			LED_B_ON();
 
@@ -2325,13 +2325,13 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 				//Collect AR/NR
 				if(ar_nr_collected < 2){
-					if(ar_nr_responses[ar_nr_collected*4+2] != ar)
-					{// Avoid duplicates
-						ar_nr_collected++;
+					if(ar_nr_responses[2] != ar)
+					{// Avoid duplicates... probably not necessary, ar should vary. 
 						ar_nr_responses[ar_nr_collected*4] = cuid;
 						ar_nr_responses[ar_nr_collected*4+1] = nonce;
 						ar_nr_responses[ar_nr_collected*4+2] = ar;
 						ar_nr_responses[ar_nr_collected*4+3] = nr;
+						ar_nr_collected++;
 					}
 				}
 
