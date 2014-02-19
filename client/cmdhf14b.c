@@ -182,6 +182,9 @@ int CmdHF14BList(const char *Cmd)
 
     uint8_t *frame = (got+i+9);
 
+	// Break and stick with current result if buffer was not completely full
+	if (frame[0] == 0x44 && frame[1] == 0x44 && frame[2] == 0x44 && frame[3] == 0x44) break; 
+	
     char line[1000] = "";
     int j;
     for(j = 0; j < len; j++) {

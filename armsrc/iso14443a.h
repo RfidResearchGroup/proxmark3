@@ -25,20 +25,30 @@
 typedef struct {
 	enum {
 		DEMOD_UNSYNCD,
-		DEMOD_HALF_SYNCD,
-		DEMOD_MOD_FIRST_HALF,
-		DEMOD_NOMOD_FIRST_HALF,
+		// DEMOD_HALF_SYNCD,
+		// DEMOD_MOD_FIRST_HALF,
+		// DEMOD_NOMOD_FIRST_HALF,
 		DEMOD_MANCHESTER_DATA
 	} state;
+	uint16_t twoBits;
+	uint16_t highCnt;
 	uint16_t bitCount;
 	uint16_t collisionPos;
 	uint16_t syncBit;
-	uint16_t parityBits;
+	uint32_t parityBits;
 	uint16_t shiftReg;
 	uint16_t samples;
 	uint16_t len;
+	uint32_t startTime, endTime;
 	uint8_t  *output;
 } tDemod;
+
+typedef enum {
+	MOD_NOMOD = 0,
+	MOD_SECOND_HALF,
+	MOD_FIRST_HALF,
+	MOD_BOTH_HALVES
+	} Modulation_t;
 
 typedef struct {
 	enum {
@@ -47,25 +57,22 @@ typedef struct {
 		STATE_MILLER_X,
 		STATE_MILLER_Y,
 		STATE_MILLER_Z,
-		STATE_ERROR_WAIT
-		}		state;
-		uint16_t    shiftReg;
-		int	bitCnt;
-		int	byteCnt;
-		int	byteCntMax;
-		int	posCnt;
-		int	syncBit;
-		int	parityBits;
-		int	samples;
-		int	highCnt;
-		int	bitBuffer;
-	enum {
-		DROP_NONE,
-		DROP_FIRST_HALF,
-		DROP_SECOND_HALF
-	}		drop;
-    uint8_t   *output;
+		// DROP_NONE,
+		// DROP_FIRST_HALF,
+		} state;
+	uint16_t shiftReg;
+	uint16_t bitCount;
+	uint16_t len;
+	uint16_t byteCntMax;
+	uint16_t posCnt;
+	uint16_t syncBit;
+	uint32_t parityBits;
+	uint16_t highCnt;
+	uint16_t twoBits;
+	uint32_t startTime, endTime;
+    uint8_t *output;
 } tUart;
+
 
 
 extern byte_t oddparity (const byte_t bt);
@@ -78,7 +85,7 @@ extern void ReaderTransmitPar(uint8_t *frame, int len, uint32_t par, uint32_t *t
 extern int ReaderReceive(uint8_t *receivedAnswer);
 extern int ReaderReceivePar(uint8_t *receivedAnswer, uint32_t *parptr);
 
-extern void iso14443a_setup();
+extern void iso14443a_setup(uint8_t fpga_minor_mode);
 extern int iso14_apdu(uint8_t *cmd, size_t cmd_len, void *data);
 extern int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *resp_data, uint32_t *cuid_ptr);
 extern void iso14a_set_trigger(bool enable);

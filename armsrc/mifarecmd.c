@@ -38,7 +38,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	iso14a_clear_trace();
 //	iso14a_set_tracing(false);
 
-	iso14443a_setup();
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	LED_A_ON();
 	LED_B_OFF();
@@ -107,7 +107,7 @@ void MifareUReadBlock(uint8_t arg0,uint8_t *datain)
     
 	// clear trace
 	iso14a_clear_trace();
-	iso14443a_setup();
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     
 	LED_A_ON();
 	LED_B_OFF();
@@ -173,7 +173,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	iso14a_clear_trace();
 //	iso14a_set_tracing(false);
 
-	iso14443a_setup();
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	LED_A_ON();
 	LED_B_OFF();
@@ -260,7 +260,7 @@ void MifareUReadCard(uint8_t arg0, uint8_t *datain)
         iso14a_clear_trace();
 //      iso14a_set_tracing(false);
 
-        iso14443a_setup();
+		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
         LED_A_ON();
         LED_B_OFF();
@@ -293,7 +293,7 @@ void MifareUReadCard(uint8_t arg0, uint8_t *datain)
         LogTrace(uid, 4, 0, 0, TRUE);
         
         LED_B_ON();
-  cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,64);
+		cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,64);
   //cmd_send(CMD_ACK,isOK,0,0,dataoutbuf+32, 32);
         LED_B_OFF();
 
@@ -332,7 +332,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	iso14a_clear_trace();
 //  iso14a_set_tracing(false);
 
-	iso14443a_setup();
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	LED_A_ON();
 	LED_B_OFF();
@@ -405,7 +405,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
         iso14a_clear_trace();
 	//  iso14a_set_tracing(false);
 
-        iso14443a_setup();
+		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
         LED_A_ON();
         LED_B_OFF();
@@ -467,7 +467,7 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
         iso14a_clear_trace();
         //  iso14a_set_tracing(false);
 
-        iso14443a_setup();
+		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
         LED_A_ON();
         LED_B_OFF();
@@ -554,19 +554,15 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	uint32_t auth1_time, auth2_time;
 	static uint16_t delta_time;
 
-	StartCountMifare();
-
 	// clear trace
 	iso14a_clear_trace();
 	iso14a_set_tracing(false);
 	
-	iso14443a_setup();
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	LED_A_ON();
 	LED_C_OFF();
 
-
-	while((GetCountMifare() & 0xffff0000) != 0x00010000);		// wait for counter to reset and "warm up" 
 
 	// statistics on nonce distance
 	if (calibrate) {	// for first call only. Otherwise reuse previous calibration
@@ -767,7 +763,7 @@ void MifareChkKeys(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	iso14a_clear_trace();
 	iso14a_set_tracing(TRUE);
 
-	iso14443a_setup();
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	LED_A_ON();
 	LED_B_OFF();
@@ -874,7 +870,7 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	iso14a_clear_trace();
 	iso14a_set_tracing(false);
 	
-	iso14443a_setup();
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	LED_A_ON();
 	LED_B_OFF();
@@ -992,7 +988,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		iso14a_clear_trace();
 		iso14a_set_tracing(TRUE);
 
-		iso14443a_setup();
+		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 		LED_A_ON();
 		LED_B_OFF();
@@ -1130,7 +1126,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		iso14a_clear_trace();
 		iso14a_set_tracing(TRUE);
 
-		iso14443a_setup();
+		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 		LED_A_ON();
 		LED_B_OFF();
@@ -1144,7 +1140,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 
 	while (true) {
 		if (workFlags & 0x02) {
-      ReaderTransmitBitsPar(wupC1,7,0, NULL);
+			ReaderTransmitBitsPar(wupC1,7,0, NULL);
 			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("wupC1 error");
 				break;

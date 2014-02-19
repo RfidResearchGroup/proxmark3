@@ -423,7 +423,7 @@ int EPA_Setup()
 	// card select information
 	iso14a_card_select_t card_select_info;
 	// power up the field
-	iso14443a_setup();
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
 	// select the card
 	return_code = iso14443a_select_card(uid, &card_select_info, NULL);

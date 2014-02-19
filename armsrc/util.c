@@ -316,9 +316,9 @@ uint32_t RAMFUNC GetDeltaCountUS(){
 
 
 //  -------------------------------------------------------------------------
-//  Mifare timer. Uses ssp_clk from FPGA 
+//  Timer for iso14443 commands. Uses ssp_clk from FPGA 
 //  -------------------------------------------------------------------------
-void StartCountMifare()
+void StartCountSspClk()
 {
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);  // Enable Clock to all timers
 	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_TIOA1 		// XC0 Clock = TIOA1
@@ -330,7 +330,7 @@ void StartCountMifare()
 	AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK // TC1 Clock = MCK(48MHz)/2 = 24MHz
 							| AT91C_TC_CPCSTOP				// Stop clock on RC compare
 							| AT91C_TC_EEVTEDG_RISING		// Trigger on rising edge of Event
-							| AT91C_TC_EEVT_TIOB			// Event-Source: TIOB1 (= ssc_clk from FPGA = 13,56MHz / 16)
+							| AT91C_TC_EEVT_TIOB			// Event-Source: TIOB1 (= ssp_clk from FPGA = 13,56MHz/16)
 							| AT91C_TC_ENETRG				// Enable external trigger event
 							| AT91C_TC_WAVESEL_UP	 		// Upmode without automatic trigger on RC compare
 							| AT91C_TC_WAVE 				// Waveform Mode
@@ -339,7 +339,7 @@ void StartCountMifare()
 	AT91C_BASE_TC1->TC_RC = 0x04; 							// RC Compare value = 0x04
 
 	// use TC0 to count TIOA1 pulses
-	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS; 				// disable TC0  
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;				// disable TC0
 	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_XC0	 			// TC0 clock = XC0 clock = TIOA1
 							| AT91C_TC_WAVE 				// Waveform Mode
 							| AT91C_TC_WAVESEL_UP	 		// just count
@@ -354,29 +354,40 @@ void StartCountMifare()
 							| AT91C_TC_WAVE 				// Waveform Mode
 							| AT91C_TC_WAVESEL_UP;	 		// just count
 	
-	
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;				// enable TC0
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN;				// enable TC1
 	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN;				// enable TC2
 
-	// activate the ISO14443 part of the FPGA. We need the clock and frame signals.
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
-
-	// synchronize the counter with the ssp_frame signal.
+	//
+	// synchronize the counter with the ssp_frame signal. Note: FPGA must be in any iso14446 mode, otherwise the frame signal would not be present 
+	//
+	while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME)); 	// wait for ssp_frame to go high (start of frame)
 	while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME); 		// wait for ssp_frame to be low
-	while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME)); 	// sync on rising edge of ssp_frame (= start of transfer)
-
+	// after the falling edge of ssp_frame, there is delay of 1/13,56MHz (73ns) until the next rising edge of ssp_clk. This are only a few
+	// processor cycles. We therefore may or may not be able to sync on this edge. Therefore better make sure that we miss it:
+	while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); 	// wait for ssp_clk to go high
+	// note: up to now two ssp_clk rising edges have passed since the rising edge of ssp_frame
+	// it is now safe to assert a sync signal. This sets all timers to 0 on next active clock edge
 	AT91C_BASE_TCB->TCB_BCR = 1;							// assert Sync (set all timers to 0 on next active clock edge)
+	// at the next (3rd) ssp_clk rising edge, TC1 will be reset (and not generate a clock signal to TC0)
+	// at the next (4th) ssp_clk rising edge, TC0 (the low word of our counter) will be reset. From now on,
+	// whenever the last three bits of our counter go 0, we can be sure to be in the middle of a frame transfer.
+	// (just started with the transfer of the 4th Bit).
+	// The high word of the counter (TC2) will not reset until the low word (TC0) overflows. Therefore need to wait quite some time before
+	// we can use the counter.
+	while (AT91C_BASE_TC0->TC_CV < 0xFFF0);
 }
 
 
-uint32_t RAMFUNC GetCountMifare(){
+uint32_t RAMFUNC GetCountSspClk(){
 	uint32_t tmp_count;
 	tmp_count = (AT91C_BASE_TC2->TC_CV << 16) | AT91C_BASE_TC0->TC_CV;
-	if ((tmp_count & 0xffff) == 0) { //small chance that we may have missed an increment in TC2
+	if ((tmp_count & 0x0000ffff) == 0) { //small chance that we may have missed an increment in TC2
 		return (AT91C_BASE_TC2->TC_CV << 16);
 	} 
 	else {
 		return tmp_count;
 	}
 }
+
+

@@ -1168,9 +1168,9 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 		}
 		
 		if (tracing) {
-			LogTrace(receivedCmd,len, 0, Uart.parityBits, TRUE);
+			LogTrace(receivedCmd,len, rsamples, Uart.parityBits, TRUE);
 			if (respdata != NULL) {
-				LogTrace(respdata,respsize, 0, SwapBits(GetParity(respdata,respsize),respsize), FALSE);
+				LogTrace(respdata,respsize, rsamples, SwapBits(GetParity(respdata,respsize),respsize), FALSE);
 			}
 			if(traceLen > TRACE_SIZE) {
 				DbpString("Trace full");
@@ -1349,7 +1349,7 @@ void ReaderTransmitIClass(uint8_t* frame, int len)
   	LED_A_ON();
 
   // Store reader command in buffer
-  if (tracing) LogTrace(frame,len,0,par,TRUE);
+  if (tracing) LogTrace(frame,len,rsamples,par,TRUE);
 }
 
 //-----------------------------------------------------------------------------
@@ -1407,7 +1407,8 @@ int ReaderReceiveIClass(uint8_t* receivedAnswer)
 {
   int samples = 0;
   if (!GetIClassAnswer(receivedAnswer,160,&samples,0)) return FALSE;
-  if (tracing) LogTrace(receivedAnswer,Demod.len,samples,Demod.parityBits,FALSE);
+  rsamples += samples;
+  if (tracing) LogTrace(receivedAnswer,Demod.len,rsamples,Demod.parityBits,FALSE);
   if(samples == 0) return FALSE;
   return Demod.len;
 }

@@ -1144,7 +1144,7 @@ int CmdHF14AMfChk(const char *Cmd)
 
 int CmdHF14AMf1kSim(const char *Cmd)
 {
-	uint8_t uid[7] = {0, 0, 0, 0,0,0,0};
+	uint8_t uid[7] = {0, 0, 0, 0, 0, 0, 0};
 	uint8_t exitAfterNReads = 0;
 	uint8_t flags = 0;
 
@@ -1196,7 +1196,7 @@ int CmdHF14AMf1kSim(const char *Cmd)
   memcpy(c.d.asBytes, uid, sizeof(uid));
   SendCommand(&c);
 
-  if(flags & 1)
+  if(flags & FLAG_INTERACTIVE)
   {
 	  UsbCommand resp;
 	  PrintAndLog("Press pm3-button to abort simulation");
@@ -1879,7 +1879,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 				PrintAndLog("received trace len: %d packages: %d", blockLen, pckNum);
 				num = 0;
 				while (bufPtr - buf + 9 < blockLen) {
-				  isTag = bufPtr[3] & 0x80 ? true:false;
+					isTag = bufPtr[3] & 0x80 ? true:false;
 					bufPtr += 4;
 					parity = *((uint32_t *)(bufPtr));
 					bufPtr += 4;
@@ -1923,7 +1923,7 @@ static command_t CommandTable[] =
   {"restore",	CmdHF14AMfRestore,	0, "Restore MIFARE classic binary file to BLANK tag"},
   {"wrbl",		CmdHF14AMfWrBl,			0, "Write MIFARE classic block"},
   {"chk",			CmdHF14AMfChk,			0, "Test block keys"},
-  {"mifare",	CmdHF14AMifare,			0, "Read parity error messages. param - <used card nonce>"},
+  {"mifare",	CmdHF14AMifare,			0, "Read parity error messages."},
   {"nested",	CmdHF14AMfNested,		0, "Test nested authentication"},
   {"sniff",		CmdHF14AMfSniff,		0, "Sniff card-reader communication"},
   {"sim",			CmdHF14AMf1kSim,		0, "Simulate MIFARE card"},
