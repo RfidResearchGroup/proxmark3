@@ -236,6 +236,15 @@ bool RAMFUNC LogTrace(const uint8_t * btBytes, uint8_t iLen, uint32_t timestamp,
 //-----------------------------------------------------------------------------
 static tUart Uart;
 
+// Lookup-Table to decide if 4 raw bits are a modulation.
+// We accept two or three consecutive "0" in any position with the rest "1"
+const bool Mod_Miller_LUT[] = {
+	TRUE,  TRUE,  FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE,
+	TRUE,  TRUE,  FALSE, FALSE, TRUE,  FALSE, FALSE, FALSE
+};
+#define IsMillerModulationNibble1(b) (Mod_Miller_LUT[(b & 0x00F0) >> 4])
+#define IsMillerModulationNibble2(b) (Mod_Miller_LUT[(b & 0x000F)])
+
 void UartReset()
 {
 	Uart.state = STATE_UNSYNCD;
@@ -249,7 +258,7 @@ void UartReset()
 	Uart.endTime = 0;
 }
 
-inline RAMFUNC Modulation_t MillerModulation(uint8_t b)
+/* inline RAMFUNC Modulation_t MillerModulation(uint8_t b)
 {
 	// switch (b & 0x88) {
 		// case 0x00: 	return MILLER_MOD_BOTH_HALVES;
@@ -265,7 +274,7 @@ inline RAMFUNC Modulation_t MillerModulation(uint8_t b)
 		default:	return MOD_NOMOD;
 	}
 }
-
+ */
 // use parameter non_real_time to provide a timestamp. Set to 0 if the decoder should measure real time
 static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 {
@@ -293,14 +302,18 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 			if (Uart.syncBit != 0xFFFF) {
 				Uart.startTime = non_real_time?non_real_time:(GetCountSspClk() & 0xfffffff8);
 				Uart.startTime -= Uart.syncBit;
+				Uart.endTime = Uart.startTime;
 				Uart.state = STATE_START_OF_COMMUNICATION;
 			}
 		}
 
 	} else {
 
-		switch (MillerModulation(Uart.twoBits >> Uart.syncBit)) {
-			case MOD_FIRST_HALF:												// Sequence Z = 0
+		if (IsMillerModulationNibble1(Uart.twoBits >> Uart.syncBit)) {			
+			if (IsMillerModulationNibble2(Uart.twoBits >> Uart.syncBit)) {		// Modulation in both halves - error
+				UartReset();
+				Uart.highCnt = 6;
+			} else {															// Modulation in first half = Sequence Z = logic "0"
 				if (Uart.state == STATE_MILLER_X) {								// error - must not follow after X
 					UartReset();
 					Uart.highCnt = 6;
@@ -317,8 +330,9 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 						Uart.shiftReg = 0;
 					}
 				}
-				break;
-			case MOD_SECOND_HALF:												// Sequence X = 1
+			}
+		} else {
+			if (IsMillerModulationNibble2(Uart.twoBits >> Uart.syncBit)) {		// Modulation second half = Sequence X = logic "1"
 				Uart.bitCount++;
 				Uart.shiftReg = (Uart.shiftReg >> 1) | 0x100;					// add a 1 to the shiftreg
 				Uart.state = STATE_MILLER_X;
@@ -330,15 +344,14 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 					Uart.bitCount = 0;
 					Uart.shiftReg = 0;
 				}
-				break;
-			case MOD_NOMOD:														// no modulation in both halves - Sequence Y
+			} else {															// no modulation in both halves - Sequence Y
 				if (Uart.state == STATE_MILLER_Z || Uart.state == STATE_MILLER_Y) {	// Y after logic "0" - End of Communication
 					Uart.state = STATE_UNSYNCD;
 					if(Uart.len == 0 && Uart.bitCount > 0) {										// if we decoded some bits
 						Uart.shiftReg >>= (9 - Uart.bitCount);					// add them to the output
 						Uart.output[Uart.len++] = (Uart.shiftReg & 0xff);
 						Uart.parityBits <<= 1;									// no parity bit - add "0"
-						Uart.bitCount--;											// last "0" was part of the EOC sequence
+						Uart.bitCount--;										// last "0" was part of the EOC sequence
 					}
 					return TRUE;
 				}
@@ -357,11 +370,7 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 						Uart.shiftReg = 0;
 					}
 				}
-				break;
-			case MOD_BOTH_HALVES:												// Error
-				UartReset();
-				Uart.highCnt = 6;
-				return FALSE;
+			}
 		}
 			
 	} 
@@ -388,9 +397,11 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 // Note 2: parameter offset is used to determine the position of the parity bits (required for the anticollision command only)
 static tDemod Demod;
 
+// Lookup-Table to decide if 4 raw bits are a modulation.
+// We accept three or four consecutive "1" in any position
 const bool Mod_Manchester_LUT[] = {
-	FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE,
-	FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE
+	FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE,
+	FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE,  TRUE
 };
 
 #define IsManchesterModulationNibble1(b) (Mod_Manchester_LUT[(b & 0x00F0) >> 4])
@@ -434,7 +445,7 @@ static RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non
 			else if ((Demod.twoBits & 0x03B8) == 0x0380) Demod.syncBit = 2;
 			else if ((Demod.twoBits & 0x01DC) == 0x01C0) Demod.syncBit = 1;
 			else if ((Demod.twoBits & 0x00EE) == 0x00E0) Demod.syncBit = 0;
-			if (Demod.syncBit < 8) {
+			if (Demod.syncBit != 0xFFFF) {
 				Demod.startTime = non_real_time?non_real_time:(GetCountSspClk() & 0xfffffff8);
 				Demod.startTime -= Demod.syncBit;
 				Demod.bitCount = offset;			// number of decoded data bits
@@ -473,15 +484,17 @@ static RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non
 				}
 				Demod.endTime = Demod.startTime + 8*(9*Demod.len + Demod.bitCount + 1);
 			} else {													// no modulation in both halves - End of communication
-				if(Demod.bitCount > 0) {								// if we decoded bits
-					Demod.shiftReg >>= (9 - Demod.bitCount);			// add the remaining decoded bits to the output
-					Demod.output[Demod.len++] = Demod.shiftReg & 0xff;
-					// No parity bit, so just shift a 0
-					Demod.parityBits <<= 1;
+				if (Demod.len > 0 || Demod.bitCount > 0) {				// received something
+					if(Demod.bitCount > 0) {							// if we decoded bits
+						Demod.shiftReg >>= (9 - Demod.bitCount);		// add the remaining decoded bits to the output
+						Demod.output[Demod.len++] = Demod.shiftReg & 0xff;
+						// No parity bit, so just shift a 0
+						Demod.parityBits <<= 1;
+					}
+					return TRUE;										// we are finished with decoding the raw data sequence
+				} else { 												// nothing received. Start over
+					DemodReset();
 				}
-				Demod.state = DEMOD_UNSYNCD;							// start from the beginning
-				Demod.twoBits = 0;
-				return TRUE;											// we are finished with decoding the raw data sequence
 			}
 		}
 			

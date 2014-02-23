@@ -35,7 +35,7 @@ reg ssp_frame;
 wire adc_clk;
 assign adc_clk = ck_1356meg;
 
-reg after_hysteresis, after_hysteresis_prev1, after_hysteresis_prev2, after_hysteresis_prev3, after_hysteresis_prev4;
+reg after_hysteresis, pre_after_hysteresis, after_hysteresis_prev1, after_hysteresis_prev2, after_hysteresis_prev3, after_hysteresis_prev4;
 reg [11:0] has_been_low_for;
 reg [8:0] saw_deep_modulation;
 reg [2:0] deep_counter;
@@ -45,6 +45,8 @@ always @(negedge adc_clk)
 begin
 	if(& adc_d[7:6]) after_hysteresis <= 1'b1;			// adc_d >= 196 (U >= 3,28V) -> after_hysteris = 1
     else if(~(| adc_d[7:4])) after_hysteresis <= 1'b0;  // if adc_d <= 15 (U <= 1,13V) -> after_hysteresis = 0
+
+	pre_after_hysteresis <= after_hysteresis;
 	
 	if(~(| adc_d[7:0]))									// if adc_d == 0 (U <= 0,94V)
 	begin
@@ -122,6 +124,7 @@ reg mod_sig, mod_sig_coil;
 reg temp_buffer_reset;
 reg sendbit;
 reg [3:0] sub_carrier_cnt;
+reg[3:0] reader_falling_edge_time;
 
 // ADC data appears on the rising edge, so sample it on the falling edge
 always @(negedge adc_clk)
@@ -244,13 +247,42 @@ begin
 			sendbit = 1'b0;
 	end
 
+
+
+	// check timing of a falling edge in reader signal
+	if (pre_after_hysteresis && ~after_hysteresis)
+		reader_falling_edge_time[3:0] <= negedge_cnt[3:0];
+	else
+		reader_falling_edge_time[3:0] <= 4'd8;
+
+
+
+	// sync clock to external reader's clock:
+	if (negedge_cnt[3:0] == 4'd13 && (mod_type == `SNIFFER || mod_type == `TAGSIM_MOD || mod_type == `TAGSIM_LISTEN))
+	begin
+		// adjust clock if necessary:
+		if (reader_falling_edge_time < 4'd8 && reader_falling_edge_time > 4'd1)
+		begin
+			negedge_cnt <= negedge_cnt;				// freeze time
+		end	
+		else if (reader_falling_edge_time == 4'd8)
+		begin
+			negedge_cnt <= negedge_cnt + 1;			// the desired state. Advance as usual;
+		end
+		else
+		begin
+			negedge_cnt[3:0] <= 4'd15;				// time warp
+		end
+		reader_falling_edge_time <= 4'd8;			// only once per detected rising edge
+	end
+	
+
+
 	//------------------------------------------------------------------------------------------------------------------------------------------
 	// Prepare 8 Bits to communicate to ARM
-
-	// in SNIFFER mode: 4 Bits data sniffed as Tag, 4 Bits data sniffed as Reader
-	if(mod_type == `SNIFFER)
+	if (negedge_cnt == 7'd63)
 	begin
-		if (negedge_cnt == 7'd63)
+		if (mod_type == `SNIFFER)
 		begin
 			if(deep_modulation) // a reader is sending (or there's no field at all)
 			begin
@@ -259,34 +291,32 @@ begin
 			else
 			begin
 				to_arm <= {after_hysteresis_prev1,after_hysteresis_prev2,after_hysteresis_prev3,after_hysteresis_prev4,bit1,bit2,bit3,bit4};
-			end
+			end			
 			negedge_cnt <= 0;
 		end
 		else
 		begin
 			negedge_cnt <= negedge_cnt + 1;
 		end
-	end
-	else
-	// other modes: 8 Bits info on queue delay
+	end	
+	else if(negedge_cnt == 7'd127)
 	begin
-		if(negedge_cnt == 7'd127)
+		if (mod_type == `TAGSIM_MOD)
 		begin
-			if (mod_type == `TAGSIM_MOD)
-			begin
-				to_arm[7:0] <= {mod_sig_ptr[4:0], mod_sig_flip[3:1]};
-			end
-			else
-			begin
-				to_arm[7:0] <= 8'd0;
-			end
+			to_arm[7:0] <= {mod_sig_ptr[4:0], mod_sig_flip[3:1]};
 			negedge_cnt <= 0;
 		end
 		else
 		begin
-				negedge_cnt <= negedge_cnt + 1;
+			to_arm[7:0] <= 8'd0;
+			negedge_cnt <= negedge_cnt + 1;
 		end
 	end
+	else
+	begin
+		negedge_cnt <= negedge_cnt + 1;
+	end
+
 	
     if(negedge_cnt == 7'd1)
 	begin
