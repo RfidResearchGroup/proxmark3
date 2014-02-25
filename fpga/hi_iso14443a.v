@@ -252,8 +252,6 @@ begin
 	// check timing of a falling edge in reader signal
 	if (pre_after_hysteresis && ~after_hysteresis)
 		reader_falling_edge_time[3:0] <= negedge_cnt[3:0];
-	else
-		reader_falling_edge_time[3:0] <= 4'd8;
 
 
 
@@ -333,7 +331,7 @@ begin
         after_hysteresis_prev3 <= after_hysteresis;
 		bit3 <= curbit;
 	end
-    if(negedge_cnt == 7'd47)
+    if(negedge_cnt == 7'd49)
 	begin
         after_hysteresis_prev4 <= after_hysteresis;
 		bit4 <= curbit;
