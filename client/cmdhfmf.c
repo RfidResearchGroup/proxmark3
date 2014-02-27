@@ -947,19 +947,28 @@ int CmdHF14AMfChk(const char *Cmd)
 	keyBlock = calloc(stKeyBlock, 6);
 	if (keyBlock == NULL) return 1;
 
-	num_to_bytes(0xffffffffffff, 6, (uint8_t*)(keyBlock + 0 * 6)); // Default key (first key used by program if no user defined key)
-	num_to_bytes(0x000000000000, 6, (uint8_t*)(keyBlock + 1 * 6)); // Blank key
-	num_to_bytes(0xa0a1a2a3a4a5, 6, (uint8_t*)(keyBlock + 2 * 6)); // NFCForum MAD key
-	num_to_bytes(0xb0b1b2b3b4b5, 6, (uint8_t*)(keyBlock + 3 * 6));
-	num_to_bytes(0xaabbccddeeff, 6, (uint8_t*)(keyBlock + 4 * 6));
-	num_to_bytes(0x4d3a99c351dd, 6, (uint8_t*)(keyBlock + 5 * 6));
-	num_to_bytes(0x1a982c7e459a, 6, (uint8_t*)(keyBlock + 6 * 6));
-	num_to_bytes(0xd3f7d3f7d3f7, 6, (uint8_t*)(keyBlock + 7 * 6));
-	num_to_bytes(0x714c5c886e97, 6, (uint8_t*)(keyBlock + 8 * 6));
-	num_to_bytes(0x587ee5f9350f, 6, (uint8_t*)(keyBlock + 9 * 6));
-	num_to_bytes(0xa0478cc39091, 6, (uint8_t*)(keyBlock + 10 * 6));
-	num_to_bytes(0x533cb6c723f6, 6, (uint8_t*)(keyBlock + 11 * 6));
-	num_to_bytes(0x8fd0a4f256e9, 6, (uint8_t*)(keyBlock + 12 * 6));
+	uint64_t defaultKeys[] =
+	{
+		0xffffffffffff, // Default key (first key used by program if no user defined key)
+		0x000000000000, // Blank key
+		0xa0a1a2a3a4a5, // NFCForum MAD key
+		0xb0b1b2b3b4b5,
+		0xaabbccddeeff,
+		0x4d3a99c351dd,
+		0x1a982c7e459a,
+		0xd3f7d3f7d3f7,
+		0x714c5c886e97,
+		0x587ee5f9350f,
+		0xa0478cc39091,
+		0x533cb6c723f6,
+		0x8fd0a4f256e9
+	};
+	int defaultKeysSize = (sizeof(defaultKeys) / 7) - 1;
+
+	for (int defaultKeyCounter = 0; defaultKeyCounter < defaultKeysSize; defaultKeyCounter++)
+	{
+		num_to_bytes(defaultKeys[defaultKeyCounter], 6, (uint8_t*)(keyBlock + defaultKeyCounter * 6));
+	}
 	
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:  hf mf chk <block number>/<*card memory> <key type (A/B/?)> [t] [<key (12 hex symbols)>] [<dic (*.dic)>]");
@@ -1029,13 +1038,7 @@ int CmdHF14AMfChk(const char *Cmd)
 			}
 			
 			if ( (f = fopen( filename , "r")) ) {
-				while( !feof(f) ){
-					memset(buf, 0, sizeof(buf));
-					if (fgets(buf, sizeof(buf), f) == NULL) {
-						PrintAndLog("File reading error.");
-						return 2;
-					}
-          
+				while( fgets(buf, sizeof(buf), f) ){
 					if (strlen(buf) < 12 || buf[11] == '\n')
 						continue;
 				
@@ -1063,6 +1066,7 @@ int CmdHF14AMfChk(const char *Cmd)
 					num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6*keycnt);
 					PrintAndLog("chk custom key[%d] %012"llx, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
 					keycnt++;
+					memset(buf, 0, sizeof(buf));
 				}
 			} else {
 				PrintAndLog("File: %s: not found or locked.", filename);
@@ -1075,7 +1079,7 @@ int CmdHF14AMfChk(const char *Cmd)
 	
 	if (keycnt == 0) {
 		PrintAndLog("No key specified,try default keys");
-		for (;keycnt <=12; keycnt++)
+		for (;keycnt < defaultKeysSize; keycnt++)
 			PrintAndLog("chk default key[%d] %02x%02x%02x%02x%02x%02x", keycnt,
 			(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
 			(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
