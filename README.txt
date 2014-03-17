@@ -1,3 +1,10 @@
+NOTICE:
+(2014-03-17)
+Moving the repository from google code to GitHub is up for discussion!
+Please check out the following thread and post your comments...
+http://www.proxmark.org/forum/viewtopic.php?id=1902
+Discussions will close on March 31st.
+
 INTRO:
 
 This file contains enough software, logic (for the FPGA), and design
