@@ -35,6 +35,7 @@ int CmdEM410xRead(const char *Cmd)
   int i, j, clock, header, rows, bit, hithigh, hitlow, first, bit2idx, high, low;
   int parity[4];
   char id[11];
+  char id2[11];
   int retested = 0;
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN];
   high = low = 0;
@@ -101,6 +102,7 @@ retest:
       {
         /* Read another byte! */
         sprintf(id+rows, "%x", (8 * BitStream[i]) + (4 * BitStream[i+1]) + (2 * BitStream[i+2]) + (1 * BitStream[i+3]));
+        sprintf(id+rows, "%x", (8 * BitStream[i+3]) + (4 * BitStream[i+2]) + (2 * BitStream[i+1]) + (1 * BitStream[i]));
         rows++;
 
         /* Keep parity info */
@@ -135,6 +137,7 @@ retest:
       {
         /* Sweet! */
         PrintAndLog("EM410x Tag ID: %s", id);
+        PrintAndLog("Unique Tag ID: %s", id);
 
         /* Stop any loops */
         return 1;
