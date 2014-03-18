@@ -807,6 +807,264 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	}
 }
 
+void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
+{
+	uint8_t *dest = (uint8_t *)BigBuf;
+	int m=0, n=0, i=0, idx=0, lastval=0;
+	int found=0;
+	uint32_t code=0, code2=0;
+	//uint32_t hi2=0, hi=0, lo=0;
+
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+
+	// Connect the A/D to the peak-detected low-frequency path.
+	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+
+	// Give it a bit of time for the resonant antenna to settle.
+	SpinDelay(50);
+
+	// Now set up the SSC to get the ADC samples that are now streaming at us.
+	FpgaSetupSsc();
+
+	for(;;) {
+		WDT_HIT();
+		if (ledcontrol)
+			LED_A_ON();
+		if(BUTTON_PRESS()) {
+			DbpString("Stopped");
+			if (ledcontrol)
+				LED_A_OFF();
+			return;
+		}
+
+		i = 0;
+		m = sizeof(BigBuf);
+		memset(dest,128,m);
+		for(;;) {
+			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+				AT91C_BASE_SSC->SSC_THR = 0x43;
+				if (ledcontrol)
+					LED_D_ON();
+			}
+			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+				dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+				// we don't care about actual value, only if it's more or less than a
+				// threshold essentially we capture zero crossings for later analysis
+				if(dest[i] < 127) dest[i] = 0; else dest[i] = 1;
+				i++;
+				if (ledcontrol)
+					LED_D_OFF();
+				if(i >= m) {
+					break;
+				}
+			}
+		}
+
+		// FSK demodulator
+
+		// sync to first lo-hi transition
+		for( idx=1; idx<m; idx++) {
+			if (dest[idx-1]<dest[idx])
+				lastval=idx;
+				break;
+		}
+		WDT_HIT();
+
+		// count cycles between consecutive lo-hi transitions, there should be either 8 (fc/8)
+		// or 10 (fc/10) cycles but in practice due to noise etc we may end up with with anywhere
+		// between 7 to 11 cycles so fuzz it by treat anything <9 as 8 and anything else as 10
+		for( i=0; idx<m; idx++) {
+			if (dest[idx-1]<dest[idx]) {
+				dest[i]=idx-lastval;
+				if (dest[i] <= 8) {
+						dest[i]=1;
+				} else {
+						dest[i]=0;
+				}
+
+				lastval=idx;
+				i++;
+			}
+		}
+		m=i;
+		WDT_HIT();
+
+		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
+		lastval=dest[0];
+		idx=0;
+		i=0;
+		n=0;
+		for( idx=0; idx<m; idx++) {
+			if (dest[idx]==lastval) {
+				n++;
+			} else {
+				// a bit time is five fc/10 or six fc/8 cycles so figure out how many bits a pattern width represents,
+				// an extra fc/8 pattern preceeds every 4 bits (about 200 cycles) just to complicate things but it gets
+				// swallowed up by rounding
+				// expected results are 1 or 2 bits, any more and it's an invalid manchester encoding
+				// special start of frame markers use invalid manchester states (no transitions) by using sequences
+				// like 111000
+				if (dest[idx-1]) {
+					n=(n+1)/7;			// fc/8 in sets of 7
+				} else {
+					n=(n+1)/6;			// fc/10 in sets of 6
+				}
+				switch (n) {			// stuff appropriate bits in buffer
+					case 0:
+					case 1:	// one bit
+						dest[i++]=dest[idx-1]^1;
+						//Dbprintf("%d",dest[idx-1]);
+						break;
+					case 2: // two bits
+						dest[i++]=dest[idx-1]^1;
+						dest[i++]=dest[idx-1]^1;
+						//Dbprintf("%d",dest[idx-1]);
+						//Dbprintf("%d",dest[idx-1]);
+						break;
+					case 3: // 3 bit start of frame markers
+						for(int j=0; j<3; j++){
+						  dest[i++]=dest[idx-1]^1;
+						//  Dbprintf("%d",dest[idx-1]);
+						}
+						break;
+					case 4:
+						for(int j=0; j<4; j++){
+						  dest[i++]=dest[idx-1]^1;
+						//  Dbprintf("%d",dest[idx-1]);
+						}
+						break;
+					case 5:
+						for(int j=0; j<5; j++){
+						  dest[i++]=dest[idx-1]^1;
+						//  Dbprintf("%d",dest[idx-1]);
+						}
+						break;
+					case 6:
+						for(int j=0; j<6; j++){
+						  dest[i++]=dest[idx-1]^1;
+						//  Dbprintf("%d",dest[idx-1]);
+						}
+						break;
+					case 7:
+						for(int j=0; j<7; j++){
+						  dest[i++]=dest[idx-1]^1;
+						//  Dbprintf("%d",dest[idx-1]);
+						}
+						break;
+					case 8:
+						for(int j=0; j<8; j++){
+						  dest[i++]=dest[idx-1]^1;
+						//  Dbprintf("%d",dest[idx-1]);
+						}
+						break;
+					case 9:
+						for(int j=0; j<9; j++){
+						  dest[i++]=dest[idx-1]^1;
+						//  Dbprintf("%d",dest[idx-1]);
+						}
+						break;
+					case 10:
+						for(int j=0; j<10; j++){
+						  dest[i++]=dest[idx-1]^1;
+						//  Dbprintf("%d",dest[idx-1]);
+						}
+						break;
+					case 11:
+						for(int j=0; j<11; j++){
+						  dest[i++]=dest[idx-1]^1;
+						//  Dbprintf("%d",dest[idx-1]);
+						}
+						break;
+					case 12:
+						for(int j=0; j<12; j++){
+						  dest[i++]=dest[idx-1]^1;
+						 // Dbprintf("%d",dest[idx-1]);
+						}
+						break;
+					default:	// this shouldn't happen, don't stuff any bits
+						//Dbprintf("%d",dest[idx-1]);
+						break;
+				}
+				n=0;
+				lastval=dest[idx];
+			}
+		}//end for
+		/*for(int j=0; j<64;j+=8){
+		  Dbprintf("%d%d%d%d%d%d%d%d",dest[j],dest[j+1],dest[j+2],dest[j+3],dest[j+4],dest[j+5],dest[j+6],dest[j+7]);
+		}
+		Dbprintf("\n");*/
+		m=i;
+		WDT_HIT();
+		
+        for( idx=0; idx<m-9; idx++) {
+	  if ( !(dest[idx]) && !(dest[idx+1]) && !(dest[idx+2]) && !(dest[idx+3]) && !(dest[idx+4]) && !(dest[idx+5]) && !(dest[idx+6]) && !(dest[idx+7]) && !(dest[idx+8])&& (dest[idx+9])){
+		found=1;
+		//idx+=9;
+		if (found) {
+		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx],   dest[idx+1],   dest[idx+2],dest[idx+3],dest[idx+4],dest[idx+5],dest[idx+6],dest[idx+7]);
+		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+8], dest[idx+9], dest[idx+10],dest[idx+11],dest[idx+12],dest[idx+13],dest[idx+14],dest[idx+15]);			  
+		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+16],dest[idx+17],dest[idx+18],dest[idx+19],dest[idx+20],dest[idx+21],dest[idx+22],dest[idx+23]);
+		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+24],dest[idx+25],dest[idx+26],dest[idx+27],dest[idx+28],dest[idx+29],dest[idx+30],dest[idx+31]);
+		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+32],dest[idx+33],dest[idx+34],dest[idx+35],dest[idx+36],dest[idx+37],dest[idx+38],dest[idx+39]);
+		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+40],dest[idx+41],dest[idx+42],dest[idx+43],dest[idx+44],dest[idx+45],dest[idx+46],dest[idx+47]);
+		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+48],dest[idx+49],dest[idx+50],dest[idx+51],dest[idx+52],dest[idx+53],dest[idx+54],dest[idx+55]);
+		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
+		
+		    short version='\x00';
+		    char unknown='\x00';
+		    uint16_t number=0;
+		    for(int j=14;j<18;j++){
+		       //Dbprintf("%d",dest[idx+j]);
+		       version <<=1;
+		       if (dest[idx+j]) version |= 1;
+		    }
+		    for(int j=19;j<27;j++){
+		       //Dbprintf("%d",dest[idx+j]);
+		       unknown <<=1;
+		       if (dest[idx+j]) unknown |= 1;
+		    }
+		    for(int j=36;j<45;j++){
+		       //Dbprintf("%d",dest[idx+j]);
+		       number <<=1;
+		       if (dest[idx+j]) number |= 1;
+		    }
+		    for(int j=46;j<53;j++){
+		       //Dbprintf("%d",dest[idx+j]);
+		       number <<=1;
+		       if (dest[idx+j]) number |= 1;
+		    }
+		    for(int j=0; j<32; j++){
+			code <<=1;
+			if(dest[idx+j]) code |= 1;
+		    }
+		    for(int j=32; j<64; j++){
+			code2 <<=1;
+			if(dest[idx+j]) code2 |= 1;
+		    }
+		    
+		    Dbprintf("XSF(%02d)%02x:%d (%08x%08x)",version,unknown,number,code,code2);
+		    if (ledcontrol)
+			LED_D_OFF();
+		}
+		// if we're only looking for one tag 
+		if (findone){
+			//*high = hi;
+			//*low = lo;
+			LED_A_OFF();
+			return;
+		}
+      
+		//hi=0;
+		//lo=0;
+		found=0;
+	  }
+		
+	}
+	}
+	WDT_HIT();
+}
+
 /*------------------------------
  * T5555/T5557/T5567 routines
  *------------------------------
@@ -1164,6 +1422,26 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT)
 	LED_D_OFF();
 	
 	DbpString("DONE!");
+}
+
+void CopyIOtoT55x7(uint32_t hi, uint32_t lo, uint8_t longFMT)
+{
+   int data1=0, data2=0; //up to six blocks for long format
+  	
+    data1 = hi;  // load preamble
+    data2 = lo;
+    
+    LED_D_ON();
+    // Program the data blocks for supplied ID
+    // and the block 0 for HID format
+    T55xxWriteBlock(data1,1,0,0);
+    T55xxWriteBlock(data2,2,0,0);
+	
+    //Config Block
+    T55xxWriteBlock(0x00147040,0,0,0);
+    LED_D_OFF();
+	
+    DbpString("DONE!");
 }
 
 // Define 9bit header for EM410x tags

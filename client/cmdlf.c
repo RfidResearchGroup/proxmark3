@@ -27,6 +27,7 @@
 #include "cmdlfhitag.h"
 #include "cmdlft55xx.h"
 #include "cmdlfpcf7931.h"
+#include "cmdlfio.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -128,7 +129,7 @@ int CmdFlexdemod(const char *Cmd)
   RepaintGraphWindow();
   return 0;
 }
-
+  
 int CmdIndalaDemod(const char *Cmd)
 {
   // Usage: recover 64bit UID by default, specify "224" as arg to recover a 224bit UID
@@ -532,6 +533,7 @@ static command_t CommandTable[] =
   {"em4x",        CmdLFEM4X,          1, "{ EM4X RFIDs... }"},
   {"flexdemod",   CmdFlexdemod,       1, "Demodulate samples for FlexPass"},
   {"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
+  {"io",     	  CmdLFIO,	      1, "{ ioProx tags... }"},
   {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
   {"indalaclone", CmdIndalaClone,     1, "<UID> ['l']-- Clone Indala to T55x7 (tag must be in antenna)(UID in HEX)(option 'l' for 224 UID"},
   {"read",        CmdLFRead,          0, "['h'|<divisor>] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134, alternatively: f=12MHz/(divisor+1))"},
