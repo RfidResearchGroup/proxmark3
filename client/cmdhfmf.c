@@ -142,76 +142,112 @@ int CmdHF14AMfWrBl(const char *Cmd)
 
 int CmdHF14AMfUWrBl(const char *Cmd)
 {
-        uint8_t blockNo = 0;
-        uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t blockNo = 0;
+	bool chinese_card=0;
+	uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	UsbCommand resp;
-        
-        if (strlen(Cmd)<3) {
-                PrintAndLog("Usage:  hf mf uwrbl    <block number> <block data (8 hex symbols)>");
-                PrintAndLog("        sample: hf mf uwrbl 0 01020304");
-                return 0;
-        }       
+       
+	if (strlen(Cmd)<3) {
+		PrintAndLog("Usage:  hf mf uwrbl    <block number> <block data (8 hex symbols)> <w>");
+		PrintAndLog("        sample: hf mf uwrbl 0 01020304");
+		return 0;
+	}      
 
-        blockNo = param_get8(Cmd, 0);
-        if (param_gethex(Cmd, 1, bldata, 8)) {
-                PrintAndLog("Block data must include 8 HEX symbols");
-                return 1;
-        }
-
-	switch(blockNo)
-	{
-	case 0:
-		PrintAndLog("Access Denied");
-		break;
-	case 1:
-		PrintAndLog("Access Denied");
-		break;
-	case 2:
-		PrintAndLog("--specialblock no:%02x", blockNo);
-                PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-                UsbCommand c = {CMD_MIFAREU_WRITEBL, {blockNo}};
-                memcpy(c.d.asBytes, bldata, 4);
-                SendCommand(&c);
-
-                if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-                        uint8_t isOK  = resp.arg[0] & 0xff;
-                        PrintAndLog("isOk:%02x", isOK);
-                } else {
-                        PrintAndLog("Command execute timeout");
-                }
-		break;
-	case 3:
-	        PrintAndLog("--specialblock no:%02x", blockNo);
-                PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-                UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
-                memcpy(d.d.asBytes,bldata, 4);
-                SendCommand(&d);
-
-                if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-                        uint8_t isOK  = resp.arg[0] & 0xff;
-                        PrintAndLog("isOk:%02x", isOK);
-                } else {
-                        PrintAndLog("Command execute timeout");
-                }
-		break;
-	default: 
-        	PrintAndLog("--block no:%02x", blockNo);
-        	PrintAndLog("--data: %s", sprint_hex(bldata, 4));        	
-  		//UsbCommand e = {CMD_MIFAREU_WRITEBL_COMPAT, {blockNo}};
-        	//memcpy(e.d.asBytes,bldata, 16);
-  		UsbCommand e = {CMD_MIFAREU_WRITEBL, {blockNo}};
-                memcpy(e.d.asBytes,bldata, 4);
-		SendCommand(&e);
-
-        	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-        	        uint8_t isOK  = resp.arg[0] & 0xff;
-                	PrintAndLog("isOk:%02x", isOK);
-        	} else {
-                	PrintAndLog("Command execute timeout");
-        	}
-		break;
+	blockNo = param_get8(Cmd, 0);
+	if (param_gethex(Cmd, 1, bldata, 8)) {
+		PrintAndLog("Block data must include 8 HEX symbols");
+		return 1;
 	}
-        return 0;
+       
+	if (strchr(Cmd,'w') != 0) {
+	  chinese_card=1;
+	}
+       
+	switch(blockNo){
+		case 0:
+			if (!chinese_card){
+				PrintAndLog("Access Denied");
+			}else{
+				PrintAndLog("--specialblock no:%02x", blockNo);
+				PrintAndLog("--data: %s", sprint_hex(bldata, 4));
+				UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
+				memcpy(d.d.asBytes,bldata, 4);
+				SendCommand(&d);
+
+				if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+					uint8_t isOK  = resp.arg[0] & 0xff;
+					PrintAndLog("isOk:%02x", isOK);
+				} else {
+					PrintAndLog("Command execute timeout");
+			      }
+			}
+			break;
+		case 1:
+			  if (!chinese_card){
+				PrintAndLog("Access Denied");
+			  }else{
+				PrintAndLog("--specialblock no:%02x", blockNo);
+				PrintAndLog("--data: %s", sprint_hex(bldata, 4));
+				UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
+				memcpy(d.d.asBytes,bldata, 4);
+				SendCommand(&d);
+
+				if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+				uint8_t isOK  = resp.arg[0] & 0xff;
+				PrintAndLog("isOk:%02x", isOK);
+				} else {
+					PrintAndLog("Command execute timeout");
+				}
+			}
+			break;
+		case 2:
+			if (!chinese_card){
+				PrintAndLog("Access Denied");
+			}else{
+				PrintAndLog("--specialblock no:%02x", blockNo);
+				PrintAndLog("--data: %s", sprint_hex(bldata, 4));
+				UsbCommand c = {CMD_MIFAREU_WRITEBL, {blockNo}};
+				memcpy(c.d.asBytes, bldata, 4);
+				SendCommand(&c);
+
+				if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+					uint8_t isOK  = resp.arg[0] & 0xff;
+					PrintAndLog("isOk:%02x", isOK);
+				} else {
+					PrintAndLog("Command execute timeout");
+				}
+			}
+			break;
+		case 3:
+			PrintAndLog("--specialblock no:%02x", blockNo);
+			PrintAndLog("--data: %s", sprint_hex(bldata, 4));
+			UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
+			memcpy(d.d.asBytes,bldata, 4);
+			SendCommand(&d);
+
+			if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+				uint8_t isOK  = resp.arg[0] & 0xff;
+				PrintAndLog("isOk:%02x", isOK);
+			} else {
+				PrintAndLog("Command execute timeout");
+			}
+			break;
+		default: 
+			PrintAndLog("--block no:%02x", blockNo);
+			PrintAndLog("--data: %s", sprint_hex(bldata, 4));        	
+			UsbCommand e = {CMD_MIFAREU_WRITEBL, {blockNo}};
+			memcpy(e.d.asBytes,bldata, 4);
+			SendCommand(&e);
+
+			if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+				uint8_t isOK  = resp.arg[0] & 0xff;
+				PrintAndLog("isOk:%02x", isOK);
+			} else {
+				PrintAndLog("Command execute timeout");
+		      }
+		      break;
+	}
+	return 0;
 }
 
 int CmdHF14AMfRdBl(const char *Cmd)
