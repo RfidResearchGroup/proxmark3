@@ -102,7 +102,7 @@ retest:
       {
         /* Read another byte! */
         sprintf(id+rows, "%x", (8 * BitStream[i]) + (4 * BitStream[i+1]) + (2 * BitStream[i+2]) + (1 * BitStream[i+3]));
-        sprintf(id+rows, "%x", (8 * BitStream[i+3]) + (4 * BitStream[i+2]) + (2 * BitStream[i+1]) + (1 * BitStream[i]));
+        sprintf(id2+rows, "%x", (8 * BitStream[i+3]) + (4 * BitStream[i+2]) + (2 * BitStream[i+1]) + (1 * BitStream[i]));
         rows++;
 
         /* Keep parity info */
@@ -137,7 +137,7 @@ retest:
       {
         /* Sweet! */
         PrintAndLog("EM410x Tag ID: %s", id);
-        PrintAndLog("Unique Tag ID: %s", id);
+        PrintAndLog("Unique Tag ID: %s", id2);
 
         /* Stop any loops */
         return 1;
