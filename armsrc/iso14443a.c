@@ -42,15 +42,14 @@ static uint8_t iso14_pcb_blocknum = 0;
 //
 // Total delays including SSC-Transfers between ARM and FPGA. These are in carrier clock cycles (1/13,56MHz)
 //
-// When the PM acts as reader and is receiving, it takes 
-// 3 ticks for the A/D conversion
-// 10 ticks ( 16 on average) delay in the modulation detector.
-// 6 ticks until the SSC samples the first data
-// 7*16 ticks to complete the transfer from FPGA to ARM
-// 8 ticks to the next ssp_clk rising edge
+// When the PM acts as reader and is receiving tag data, it takes
+// 3 ticks delay in the AD converter
+// 16 ticks until the modulation detector completes and sets curbit
+// 8 ticks until bit_to_arm is assigned from curbit
+// 8*16 ticks for the transfer from FPGA to ARM
 // 4*16 ticks until we measure the time
 // - 8*16 ticks because we measure the time of the previous transfer 
-#define DELAY_AIR2ARM_AS_READER (3 + 10 + 6 + 7*16 + 8 + 4*16 - 8*16) 
+#define DELAY_AIR2ARM_AS_READER (3 + 16 + 8 + 8*16 + 4*16 - 8*16) 
 
 // When the PM acts as a reader and is sending, it takes
 // 4*16 ticks until we can write data to the sending hold register
@@ -61,15 +60,15 @@ static uint8_t iso14_pcb_blocknum = 0;
 #define DELAY_ARM2AIR_AS_READER (4*16 + 8*16 + 8 + 8 + 1)
 
 // When the PM acts as tag and is receiving it takes
-// 12 ticks delay in the RF part,
+// 2 ticks delay in the RF part (for the first falling edge),
 // 3 ticks for the A/D conversion,
 // 8 ticks on average until the start of the SSC transfer,
 // 8 ticks until the SSC samples the first data
 // 7*16 ticks to complete the transfer from FPGA to ARM
 // 8 ticks until the next ssp_clk rising edge
-// 3*16 ticks until we measure the time 
+// 4*16 ticks until we measure the time 
 // - 8*16 ticks because we measure the time of the previous transfer 
-#define DELAY_AIR2ARM_AS_TAG (12 + 3 + 8 + 8 + 7*16 + 8 + 3*16 - 8*16)
+#define DELAY_AIR2ARM_AS_TAG (2 + 3 + 8 + 8 + 7*16 + 8 + 4*16 - 8*16)
  
 // The FPGA will report its internal sending delay in
 uint16_t FpgaSendQueueDelay;
@@ -78,29 +77,30 @@ uint16_t FpgaSendQueueDelay;
 #define DELAY_FPGA_QUEUE (FpgaSendQueueDelay<<1)
 
 // When the PM acts as tag and is sending, it takes
-// 5*16 ticks until we can write data to the sending hold register
+// 4*16 ticks until we can write data to the sending hold register
 // 8*16 ticks until the SHR is transferred to the Sending Shift Register
 // 8 ticks until the first transfer starts
 // 8 ticks later the FPGA samples the data
 // + a varying number of ticks in the FPGA Delay Queue (mod_sig_buf)
 // + 1 tick to assign mod_sig_coil
-#define DELAY_ARM2AIR_AS_TAG (5*16 + 8*16 + 8 + 8 + DELAY_FPGA_QUEUE + 1)
+#define DELAY_ARM2AIR_AS_TAG (4*16 + 8*16 + 8 + 8 + DELAY_FPGA_QUEUE + 1)
 
 // When the PM acts as sniffer and is receiving tag data, it takes
 // 3 ticks A/D conversion
-// 16 ticks delay in the modulation detector (on average).
-// + 16 ticks until it's result is sampled.
+// 14 ticks to complete the modulation detection
+// 8 ticks (on average) until the result is stored in to_arm
 // + the delays in transferring data - which is the same for
 // sniffing reader and tag data and therefore not relevant
-#define DELAY_TAG_AIR2ARM_AS_SNIFFER (3 + 16 + 16) 
+#define DELAY_TAG_AIR2ARM_AS_SNIFFER (3 + 14 + 8) 
  
-// When the PM acts as sniffer and is receiving tag data, it takes
-// 12 ticks delay in analogue RF receiver
+// When the PM acts as sniffer and is receiving reader data, it takes
+// 2 ticks delay in analogue RF receiver (for the falling edge of the 
+// start bit, which marks the start of the communication)
 // 3 ticks A/D conversion
-// 8 ticks on average until we sample the data.
+// 8 ticks on average until the data is stored in to_arm.
 // + the delays in transferring data - which is the same for
 // sniffing reader and tag data and therefore not relevant
-#define DELAY_READER_AIR2ARM_AS_SNIFFER (12 + 3 + 8) 
+#define DELAY_READER_AIR2ARM_AS_SNIFFER (2 + 3 + 8) 
 
 //variables used for timing purposes:
 //these are in ssp_clk cycles:
@@ -258,23 +258,7 @@ void UartReset()
 	Uart.endTime = 0;
 }
 
-/* inline RAMFUNC Modulation_t MillerModulation(uint8_t b)
-{
-	// switch (b & 0x88) {
-		// case 0x00: 	return MILLER_MOD_BOTH_HALVES;
-		// case 0x08: 	return MILLER_MOD_FIRST_HALF;
-		// case 0x80: 	return MILLER_MOD_SECOND_HALF;
-		// case 0x88: 	return MILLER_MOD_NOMOD;
-	// }
-	// test the second cycle for a pause. For whatever reason the startbit tends to appear earlier than the rest.
-	switch (b & 0x44) {
-		case 0x00: 	return MOD_BOTH_HALVES;
-		case 0x04: 	return MOD_FIRST_HALF;
-		case 0x40: 	return MOD_SECOND_HALF;
-		default:	return MOD_NOMOD;
-	}
-}
- */
+
 // use parameter non_real_time to provide a timestamp. Set to 0 if the decoder should measure real time
 static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 {
@@ -398,10 +382,10 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 static tDemod Demod;
 
 // Lookup-Table to decide if 4 raw bits are a modulation.
-// We accept three or four consecutive "1" in any position
+// We accept three or four "1" in any position
 const bool Mod_Manchester_LUT[] = {
 	FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE,
-	FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE,  TRUE
+	FALSE, FALSE, FALSE, TRUE,  FALSE, TRUE,  TRUE,  TRUE
 };
 
 #define IsManchesterModulationNibble1(b) (Mod_Manchester_LUT[(b & 0x00F0) >> 4])
@@ -646,7 +630,7 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 		previous_data = *data;
 		rsamples++;
 		data++;
-		if(data > dmaBuf + DMA_BUFFER_SIZE) {
+		if(data == dmaBuf + DMA_BUFFER_SIZE) {
 			data = dmaBuf;
 		}
 	} // main cycle
@@ -1423,7 +1407,7 @@ static int EmSendCmd14443aRaw(uint8_t *resp, int respLen, bool correctionNeeded)
 		i = 1;
 	}
 
-	// clear receiving shift register and holding register
+ 	// clear receiving shift register and holding register
 	while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
 	b = AT91C_BASE_SSC->SSC_RHR; (void) b;
 	while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
@@ -2593,11 +2577,12 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		//May just aswell send the collected ar_nr in the response aswell
 		cmd_send(CMD_ACK,CMD_SIMULATE_MIFARE_CARD,0,0,&ar_nr_responses,ar_nr_collected*4*4);
 	}
+
 	if(flags & FLAG_NR_AR_ATTACK)
 	{
 		if(ar_nr_collected > 1) {
 			Dbprintf("Collected two pairs of AR/NR which can be used to extract keys from reader:");
-			Dbprintf("../tools/mfkey/mfkey32 %08x %08x %08x %08x",
+			Dbprintf("../tools/mfkey/mfkey32 %08x %08x %08x %08x %08x %08x",
 					 ar_nr_responses[0], // UID
 					ar_nr_responses[1], //NT
 					ar_nr_responses[2], //AR1
@@ -2608,7 +2593,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		} else {
 			Dbprintf("Failed to obtain two AR/NR pairs!");
 			if(ar_nr_collected >0) {
-				Dbprintf("Only got these: UID=%08d, nonce=%08d, AR1=%08d, NR1=%08d",
+				Dbprintf("Only got these: UID=%08x, nonce=%08x, AR1=%08x, NR1=%08x",
 						ar_nr_responses[0], // UID
 						ar_nr_responses[1], //NT
 						ar_nr_responses[2], //AR1
@@ -2762,7 +2747,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		previous_data = *data;
 		sniffCounter++;
 		data++;
-		if(data > dmaBuf + DMA_BUFFER_SIZE) {
+		if(data == dmaBuf + DMA_BUFFER_SIZE) {
 			data = dmaBuf;
 		}
 
