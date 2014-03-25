@@ -363,8 +363,6 @@ void StartCountSspClk()
 	//
 	while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME)); 	// wait for ssp_frame to go high (start of frame)
 	while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME); 		// wait for ssp_frame to be low
-	// after the falling edge of ssp_frame, there is delay of 1/13,56MHz (73ns) until the next rising edge of ssp_clk. This are only a few
-	// processor cycles. We therefore may or may not be able to sync on this edge. Therefore better make sure that we miss it:
 	while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); 	// wait for ssp_clk to go high
 	// note: up to now two ssp_clk rising edges have passed since the rising edge of ssp_frame
 	// it is now safe to assert a sync signal. This sets all timers to 0 on next active clock edge

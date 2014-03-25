@@ -1883,8 +1883,9 @@ int CmdHF14AMfSniff(const char *Cmd){
 	printf("Press the key on pc keyboard to abort the client.\n");
 	printf("-------------------------------------------------------------------------\n");
 
-  UsbCommand c = {CMD_MIFARE_SNIFFER, {0, 0, 0}};
-  SendCommand(&c);
+	UsbCommand c = {CMD_MIFARE_SNIFFER, {0, 0, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
 
 	// wait cycle
 	while (true) {
@@ -1931,7 +1932,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 						sak = bufPtr[11];
 						
 						PrintAndLog("tag select uid:%s atqa:%02x %02x sak:0x%02x", sprint_hex(uid, 7), atqa[0], atqa[1], sak);
-						if (wantLogToFile) {
+						if (wantLogToFile || wantDecrypt) {
 							FillFileNameByUID(logHexFileName, uid, ".log", 7);
 							AddLogCurrentDT(logHexFileName);
 						}						
@@ -1947,7 +1948,8 @@ int CmdHF14AMfSniff(const char *Cmd){
 			}
 		} // resp not NILL
 	} // while (true)
-  return 0;
+	
+	return 0;
 }
 
 static command_t CommandTable[] =
