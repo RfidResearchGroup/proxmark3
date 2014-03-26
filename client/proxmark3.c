@@ -219,8 +219,8 @@ static void dumpAllHelp()
 {
   offline=3;
   printf("\n# Proxmark3 command dump\n\n");
-  printf("Some commands are available only if a Proxmark is actually connected,\n");
-  printf("Those commands are flagged with \"@\" in front of their description.\n");
+  printf("Some commands are available only if a Proxmark is actually connected.\n");
+  printf("Check column \"offline\" for their availability.\n");
   printf("\n");
   command_t *cmds = getTopLevelCommandTable();
 
