@@ -1,94 +1,52 @@
 NOTICE:
-(2014-03-17)
-Moving the repository from google code to GitHub is up for discussion!
-Please check out the following thread and post your comments...
-http://www.proxmark.org/forum/viewtopic.php?id=1902
-Discussions will close on March 31st.
+(2014-03-26)
+This is now the official Proxmark repository!
 
-INTRO:
+INTRODUCTION:
 
-This file contains enough software, logic (for the FPGA), and design
+The proxmark3 is a powerful general purpose RFID tool, the size of a deck
+of cards, designed to snoop, listen and emulate everything from
+Low Frequency (125kHz) to High Frequency (13.56MHz) tags.
+
+This repository contains enough software, logic (for the FPGA), and design
 documentation for the hardware that you could, at least in theory,
-do something useful with a proxmark3. It has commands to:
+do something useful with a proxmark3.
 
-    * read any kind of 125 kHz unidirectional tag
-    * simulate any kind of 125 kHz unidirectional tag
+RESOURCES:
 
-(This is enough to perform all of the silly cloning attacks, like the
-ones that I did at the Capitol in Sacramento, or anything involving
-a Verichip. From a technical standpoint, these are not that exciting,
-although the `software radio' architecture of the proxmark3 makes it
-easy and fun to support new formats.)
+   * This repository!
+      https://github.com/Proxmark/proxmark3
+      
+   * The Wiki
+      https://github.com/Proxmark/proxmark3/wiki
+      
+   * The GitHub page
+      http://proxmark.github.io/proxmark3/
+      
+   * The Forum
+      http://www.proxmark.org/forum
+      
+   * The IRC chanel
+       irc.freenode.org #proxmark3
+       -or-
+       http://webchat.freenode.net/?channels=#proxmark3
+   
+DEVELOPMENT:
 
-As a bonus, I include some code to use the 13.56 MHz hardware, so you can:
+The tools required to build  or run the project will vary depending on
+your operating system. Please refer to the Wiki for details.
 
-    * do anything that a (medium-range) ISO 15693 reader could
-    * read an ISO 14443 tag, if you know the higher-layer protocol
-    * pretend to be an ISO 14443 tag, if you know the higher-layer protocol
-    * snoop on an ISO 14443 transaction
-
-I am not actively developing any of this. I have other projects that
-seem to be more useful.
-
-USING THE PACKAGE:
-
-The software tools required to build include:
-
-    * cygwin or other unix-like tools for Windows
-    * devkitPro (http://wiki.devkitpro.org/index.php/Getting_Started/devkitARM)
-    * Xilinx's WebPack tools
-    * Modelsim (for test only)
-    * perl
-
-When installing devkitPro, you only need to install the compiler itself. Additional
-support libraries are  not required.
-
-Documentation is minimal, but see the doc/ directory for what exists. A
-previous familiarity with the ARM, with digital signal processing,
-and with embedded programming in general is assumed.
-
-The device is used through a specialized command line interface; for
-example, to clone a Verichip, you might type:
-
-    loread                          ; this reads the tag, and stores the
-                                    ; raw samples in memory on the ARM
-
-    losamples                       ; then we download the samples to
-                                    ; the PC
-
-    vchdemod clone                  ; demodulate the ID, and then put it
-                                    ; back in a format that we can replay
-
-    losim                           ; and then replay it
-
-To read an ISO 15693 tag, you might type:
-
-    hiread                          ; read the tag; this involves sending a
-                                    ; particular command, and then getting
-                                    ; the response (which is stored as raw
-                                    ; samples in memory on the ARM)
-
-    hisamples                       ; then download those samples to the PC
-
-    hi15demod                       ; and demod them to bits (and check the
-                                    ; CRC etc. at the same time)
-
-Notice that in both cases the signal processing mostly happened on the PC
-side; that is of course not practical for a real reader, but it is easier
-to initially write your code and debug on the PC side than on the ARM. As
-long as you use integer math (and I do), it's trivial to port it over
-when you're done.
-
-The USB driver and bootloader are documented (and available separately
-for download, if you wish to use them in another project) at
-
-    http://cq.cx/trivia.pl
-
+   * https://github.com/Proxmark/proxmark3/wiki
 
 OBTAINING HARDWARE:
 
-Most of the ultra-low-volume contract assemblers that have sprung up
-(Screaming Circuits, the various cheap Asian suppliers, etc.) could put
+The Proxmark 3 is available for purcahse (assembled and tested) from the
+following locations:
+
+   * http://proxmark3.com/
+   * http://www.xfpga.com/
+
+Most of the ultra-low-volume contract assemblers could put
 something like this together with a reasonable yield. A run of around
 a dozen units is probably cost-effective. The BOM includes (possibly-
 outdated) component pricing, and everything is available from Digikey
@@ -104,37 +62,6 @@ nearly anything you would want with appropriate population options.
 
 The printed circuit board artwork is also available, as Gerbers and an
 Excellon drill file.
-
-
-FUTURE PLANS, ENHANCEMENTS THAT YOU COULD MAKE:
-
-At some point I should write software involving a proper real-time
-operating system for the ARM. I would then provide interrupt-driven
-drivers for many of the peripherals that are polled now (the USB,
-the data stream from the FPGA), which would make it easier to develop
-complex applications.
-
-It would not be all that hard to implement the ISO 15693 reader properly
-(with anticollision, all the commands supported, and so on)--the signal
-processing is already written, so it is all straightforward applications
-work.
-
-I have basic support for ISO 14443 as well: a sniffer, a simulated
-tag, and a reader. It won't do anything useful unless you fill in the
-high-layer protocol.
-
-Nicer (i.e., closer-to-optimal) implementations of all kinds of signal
-processing would be useful as well.
-
-A practical implementation of the learning-the-tag's-ID-from-what-the-
-reader-broadcasts-during-anticollision attacks would be relatively
-straightforward. This would involve some signal processing on the FPGA,
-but not much else after that.
-
-It would be neat to write a driver that could stream samples from the A/Ds
-over USB to the PC, using the full available bandwidth of USB. I am not
-yet sure what that would be good for, but surely something. This would
-require a kernel-mode driver under Windows, though, which is more work.
 
 
 LICENSING:
