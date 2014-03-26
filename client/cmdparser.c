@@ -85,7 +85,6 @@ void dumpCommandsRecursive(const command_t cmds[])
 
   int i = 0;
   char* tabulation = "###";
-  char* offline = "N";
   // First, dump all single commands, which are not a container for 
   // other commands
   printf("command|offline|description\n");
@@ -93,6 +92,7 @@ void dumpCommandsRecursive(const command_t cmds[])
 
   while (cmds[i].Name)
   {
+    char* offline = "N";
     if(cmds[i].Help[0] == '{' && ++i) continue;
 
     if ( cmds[i].Offline) offline = "Y";
