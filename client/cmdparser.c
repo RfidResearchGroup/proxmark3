@@ -21,8 +21,10 @@ void CmdsHelp(const command_t Commands[])
   int i = 0;
   while (Commands[i].Name)
   {
-    if (!offline || Commands[i].Offline)
+    if (offline == 0 || Commands[i].Offline)
       PrintAndLog("%-16s %s", Commands[i].Name, Commands[i].Help);
+    if (offline == 2 && !Commands[i].Offline)
+      PrintAndLog("%-14s @ %s", Commands[i].Name, Commands[i].Help);
     ++i;
   }
 }
