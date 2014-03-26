@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "ui.h"
 #include "cmdparser.h"
@@ -21,16 +22,26 @@ void CmdsHelp(const command_t Commands[])
   int i = 0;
   while (Commands[i].Name)
   {
-    if (offline == 0 || Commands[i].Offline)
-      PrintAndLog("%-16s %s", Commands[i].Name, Commands[i].Help);
-    if (offline == 2 && !Commands[i].Offline)
-      PrintAndLog("%-14s @ %s", Commands[i].Name, Commands[i].Help);
+      if(Commands[i].Offline)
+      {
+        PrintAndLog("%-16s  \t%s", Commands[i].Name, Commands[i].Help);
+      }else
+      {
+        PrintAndLog("%-16s @\t%s", Commands[i].Name, Commands[i].Help);
+      }
     ++i;
   }
 }
 
 void CmdsParse(const command_t Commands[], const char *Cmd)
 {
+  if(strcmp( Cmd, "XX_internal_command_dump_XX") == 0)
+  {// Markdown dump children
+      dumpCommandsRecursive(Commands);
+      return;
+  }
+
+
   char cmd_name[32];
   int len = 0;
   memset(cmd_name, 0, 32);
@@ -61,4 +72,54 @@ void CmdsParse(const command_t Commands[], const char *Cmd)
     // show help for selected hierarchy or if command not recognised
     CmdsHelp(Commands);
   }
+}
+//static int tablevel = 0;
+
+char pparent[512] = {0};
+char *parent = pparent;
+
+void dumpCommandsRecursive(const command_t cmds[])
+{
+   if (cmds[0].Name == NULL)
+    return;
+
+  int i = 0;
+  char* tabulation = "###";
+  char* offline = "N";
+  // First, dump all single commands, which are not a container for 
+  // other commands
+  printf("command|offline|description\n");
+  printf("-------|-------|-----------\n");
+
+  while (cmds[i].Name)
+  {
+    if(cmds[i].Help[0] == '{' && ++i) continue;
+
+    if ( cmds[i].Offline) offline = "Y";
+    printf("|`%s%s`|%s|`%s`|\n", parent, cmds[i].Name,offline, cmds[i].Help);
+    ++i;
+  }
+  printf("\n\n");
+  i=0;
+  // Then, print the categories. These will go into subsections with their own tables
+
+  while (cmds[i].Name)
+  {
+    if(cmds[i].Help[0] != '{' && ++i)  continue;
+
+    printf("%s %s%s\n\n %s\n\n", tabulation, parent, cmds[i].Name, cmds[i].Help);        
+
+    char currentparent[512] = {0};
+    snprintf(currentparent, sizeof currentparent, "%s%s ", parent, cmds[i].Name);
+    char *old_parent = parent;
+    parent = currentparent;
+//    tablevel++;
+    // This is what causes the recursion, since commands Parse-implementation
+    // in turn calls the CmdsParse above. 
+    cmds[i].Parse("XX_internal_command_dump_XX");
+//    tablevel--;
+    parent = old_parent;
+    ++i;
+  }
+
 }

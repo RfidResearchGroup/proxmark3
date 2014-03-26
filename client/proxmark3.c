@@ -23,6 +23,8 @@
 #include "uart.h"
 #include "ui.h"
 #include "sleep.h"
+#include "cmdparser.h"
+#include "cmdmain.h"
 
 // a global mutex to prevent interlaced printing from different threads
 pthread_mutex_t print_lock;
@@ -30,7 +32,6 @@ pthread_mutex_t print_lock;
 static serial_port sp;
 static UsbCommand txcmd;
 volatile static bool txcmd_pending = false;
-
 
 void SendCommand(UsbCommand *c) {
 #if 0
@@ -206,39 +207,25 @@ static void *main_loop(void *targ) {
   return NULL;
 }
 
-#define DUMPHELP(cmd) \
-  do { \
-    printf("%s\n", cmd); \
-    printf("---------------------------------------------\n"); \
-    CommandReceived(cmd); \
-    printf("\n"); \
-  } while (0)
+//static void dumpHelp(char  *parent, ...)
+//{
+//  printf("## %s\n\n", parent);
+//  CommandReceived(parent);
+//  
+//  printf("\n");
+//}
 
-static void dumphelp()
+static void dumpAllHelp()
 {
-  offline=2;
-  printf("\n------------PROXMARK3 HELP DUMP--------------\n");
+  offline=3;
+  printf("\n# Proxmark3 command dump\n\n");
   printf("Some commands are available only if a Proxmark is actually connected,\n");
   printf("Those commands are flagged with \"@\" in front of their description.\n");
   printf("\n");
-  DUMPHELP("help");
-  DUMPHELP("data help");
-  DUMPHELP("hf help");
-  DUMPHELP("hf 14a help");
-  DUMPHELP("hf 14b help");
-  DUMPHELP("hf 15 help");
-  DUMPHELP("hf epa help");
-  DUMPHELP("hf legic help");
-  DUMPHELP("hf iclass help");
-  DUMPHELP("hf mf help");
-  DUMPHELP("hw help");
-  DUMPHELP("lf help");
-  DUMPHELP("lf em4x help");
-  DUMPHELP("lf hid help");
-  DUMPHELP("lf ti help");
-  DUMPHELP("lf hitag help");
-  DUMPHELP("lf pcf7931 help");
-  DUMPHELP("lf t55xx help");
+  command_t *cmds = getTopLevelCommandTable();
+
+  dumpCommandsRecursive(cmds);
+
 }
 
 int main(int argc, char* argv[]) {
@@ -247,18 +234,17 @@ int main(int argc, char* argv[]) {
 	if (argc < 2) {
 		printf("syntax: %s <port>\n\n",argv[0]);
 		printf("\tLinux example:'%s /dev/ttyACM0'\n\n", argv[0]);
-		printf("help:   %s -h\n\n", argv[0]);
-		printf("\tDump all interactive help at once\n");
+    printf("help:   %s -h\n\n", argv[0]);
+    printf("\tDump all interactive help at once\n");
 		return 1;
 	}
   
-	if (strcmp(argv[1], "-h") == 0) {
-		printf("syntax: %s <port>\n\n",argv[0]);
-		printf("\tLinux example:'%s /dev/ttyACM0'\n\n", argv[0]);
-		offline = 2;
-		dumphelp();
-		return 0;
-	}
+  if (strcmp(argv[1], "-h") == 0) {
+    printf("syntax: %s <port>\n\n",argv[0]);
+    printf("\tLinux example:'%s /dev/ttyACM0'\n\n", argv[0]);
+    dumpAllHelp();
+    return 0;
+  }  
 	// Make sure to initialize
 	struct main_loop_arg marg = {
 		.usb_present = 0,

@@ -45,17 +45,21 @@ static int cmd_tail;//Starts as 0
 
 static command_t CommandTable[] = 
 {
-  {"help",  CmdHelp,  1, "This help. Use '<command> help' for details of the following commands:\n"},
+  {"help",  CmdHelp,  1, "This help. Use '<command> help' for details of a particular command."},
   {"data",  CmdData,  1, "{ Plot window / data buffer manipulation... }"},
-  {"exit",  CmdQuit,  1, "Exit program"},
   {"hf",    CmdHF,    1, "{ HF commands... }"},
   {"hw",    CmdHW,    1, "{ Hardware commands... }"},
   {"lf",    CmdLF,    1, "{ LF commands... }"},
-  {"quit",  CmdQuit,  1, "Quit program"},
-  {"script", CmdScript,   1,"Run script"},
+  {"script", CmdScript,   1,"{ Scripting commands }"},
+  {"quit",  CmdQuit,  1, "Exit program"},
+  {"exit",  CmdQuit,  1, "Exit program"},
   {NULL, NULL, 0, NULL}
 };
 
+command_t* getTopLevelCommandTable()
+{
+  return CommandTable;
+}
 int CmdHelp(const char *Cmd)
 {
   CmdsHelp(CommandTable);
