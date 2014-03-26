@@ -36,12 +36,15 @@ void CmdsHelp(const command_t Commands[])
 void CmdsParse(const command_t Commands[], const char *Cmd)
 {
   if(strcmp( Cmd, "XX_internal_command_dump_XX") == 0)
-  {// Markdown dump children
-      dumpCommandsRecursive(Commands);
+  {// Help dump children
+      dumpCommandsRecursive(Commands, 0);
       return;
   }
-
-
+  if(strcmp( Cmd, "XX_internal_command_dump_markdown_XX") == 0)
+  {// Markdown help dump children
+      dumpCommandsRecursive(Commands, 1);
+      return;
+  }
   char cmd_name[32];
   int len = 0;
   memset(cmd_name, 0, 32);
@@ -73,30 +76,38 @@ void CmdsParse(const command_t Commands[], const char *Cmd)
     CmdsHelp(Commands);
   }
 }
-//static int tablevel = 0;
 
 char pparent[512] = {0};
 char *parent = pparent;
 
-void dumpCommandsRecursive(const command_t cmds[])
+void dumpCommandsRecursive(const command_t cmds[], int markdown)
 {
-   if (cmds[0].Name == NULL)
+  if (cmds[0].Name == NULL)
     return;
 
   int i = 0;
-  char* tabulation = "###";
+  int w_cmd=25;
+  int w_off=8;
   // First, dump all single commands, which are not a container for 
   // other commands
-  printf("command|offline|description\n");
-  printf("-------|-------|-----------\n");
+  if (markdown) {
+    printf("command|offline|description\n");
+    printf("-------|-------|-----------\n");
+  } else {
+    printf("%-*s|%-*s|%s\n",w_cmd,"command",w_off,"offline","description");
+    printf("%-*s|%-*s|%s\n",w_cmd,"-------",w_off,"-------","-----------");
+  }
 
   while (cmds[i].Name)
   {
-    char* offline = "N";
+    char* cmd_offline = "N";
     if(cmds[i].Help[0] == '{' && ++i) continue;
 
-    if ( cmds[i].Offline) offline = "Y";
-    printf("|`%s%s`|%s|`%s`|\n", parent, cmds[i].Name,offline, cmds[i].Help);
+    if ( cmds[i].Offline) cmd_offline = "Y";
+    if (markdown)
+      printf("|`%s%s`|%s|`%s`|\n", parent, cmds[i].Name,cmd_offline, cmds[i].Help);
+    else
+      printf("%s%-*s|%-*s|%s\n", parent, w_cmd-(int)strlen(parent), cmds[i].Name, w_off, cmd_offline, cmds[i].Help);
     ++i;
   }
   printf("\n\n");
@@ -107,17 +118,18 @@ void dumpCommandsRecursive(const command_t cmds[])
   {
     if(cmds[i].Help[0] != '{' && ++i)  continue;
 
-    printf("%s %s%s\n\n %s\n\n", tabulation, parent, cmds[i].Name, cmds[i].Help);        
+    printf("### %s%s\n\n %s\n\n", parent, cmds[i].Name, cmds[i].Help);
 
     char currentparent[512] = {0};
     snprintf(currentparent, sizeof currentparent, "%s%s ", parent, cmds[i].Name);
     char *old_parent = parent;
     parent = currentparent;
-//    tablevel++;
     // This is what causes the recursion, since commands Parse-implementation
     // in turn calls the CmdsParse above. 
-    cmds[i].Parse("XX_internal_command_dump_XX");
-//    tablevel--;
+    if (markdown)
+      cmds[i].Parse("XX_internal_command_dump_markdown_XX");
+    else
+      cmds[i].Parse("XX_internal_command_dump_XX");
     parent = old_parent;
     ++i;
   }

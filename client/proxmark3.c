@@ -215,17 +215,14 @@ static void *main_loop(void *targ) {
 //  printf("\n");
 //}
 
-static void dumpAllHelp()
+static void dumpAllHelp(int markdown)
 {
-  offline=3;
-  printf("\n# Proxmark3 command dump\n\n");
-  printf("Some commands are available only if a Proxmark is actually connected.\n");
+  printf("\n%sProxmark3 command dump%s\n\n",markdown?"# ":"",markdown?"":"\n======================");
+  printf("Some commands are available only if a Proxmark is actually connected.%s\n",markdown?"  ":"");
   printf("Check column \"offline\" for their availability.\n");
   printf("\n");
   command_t *cmds = getTopLevelCommandTable();
-
-  dumpCommandsRecursive(cmds);
-
+  dumpCommandsRecursive(cmds, markdown);
 }
 
 int main(int argc, char* argv[]) {
@@ -234,17 +231,22 @@ int main(int argc, char* argv[]) {
 	if (argc < 2) {
 		printf("syntax: %s <port>\n\n",argv[0]);
 		printf("\tLinux example:'%s /dev/ttyACM0'\n\n", argv[0]);
-    printf("help:   %s -h\n\n", argv[0]);
-    printf("\tDump all interactive help at once\n");
+		printf("help:   %s -h\n\n", argv[0]);
+		printf("\tDump all interactive help at once\n");
+		printf("markdown:   %s -m\n\n", argv[0]);
+		printf("\tDump all interactive help at once in markdown syntax\n");
 		return 1;
 	}
-  
-  if (strcmp(argv[1], "-h") == 0) {
-    printf("syntax: %s <port>\n\n",argv[0]);
-    printf("\tLinux example:'%s /dev/ttyACM0'\n\n", argv[0]);
-    dumpAllHelp();
-    return 0;
-  }  
+	if (strcmp(argv[1], "-h") == 0) {
+		printf("syntax: %s <port>\n\n",argv[0]);
+		printf("\tLinux example:'%s /dev/ttyACM0'\n\n", argv[0]);
+		dumpAllHelp(0);
+		return 0;
+	}
+	if (strcmp(argv[1], "-m") == 0) {
+		dumpAllHelp(1);
+		return 0;
+	}
 	// Make sure to initialize
 	struct main_loop_arg marg = {
 		.usb_present = 0,
