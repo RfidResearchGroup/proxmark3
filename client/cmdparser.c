@@ -86,8 +86,8 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown)
   // First, dump all single commands, which are not a container for 
   // other commands
   if (markdown) {
-    printf("command|offline|description\n");
-    printf("-------|-------|-----------\n");
+    printf("|%-*s|%-*s|%s\n",w_cmd,"command",w_off,"offline","description");
+    printf("|%-*s|%-*s|%s\n",w_cmd,"-------",w_off,"-------","-----------");
   } else {
     printf("%-*s|%-*s|%s\n",w_cmd,"command",w_off,"offline","description");
     printf("%-*s|%-*s|%s\n",w_cmd,"-------",w_off,"-------","-----------");
@@ -100,7 +100,7 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown)
 
     if ( cmds[i].Offline) cmd_offline = "Y";
     if (markdown)
-      printf("|`%s%s`|%s|`%s`|\n", parent, cmds[i].Name,cmd_offline, cmds[i].Help);
+      printf("|`%s%-*s`|%-*s|`%s`\n", parent, w_cmd-(int)strlen(parent)-2, cmds[i].Name, w_off, cmd_offline, cmds[i].Help);
     else
       printf("%s%-*s|%-*s|%s\n", parent, w_cmd-(int)strlen(parent), cmds[i].Name, w_off, cmd_offline, cmds[i].Help);
     ++i;
