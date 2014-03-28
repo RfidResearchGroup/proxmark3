@@ -23,6 +23,8 @@
 #include "uart.h"
 #include "ui.h"
 #include "sleep.h"
+#include "cmdparser.h"
+#include "cmdmain.h"
 
 // a global mutex to prevent interlaced printing from different threads
 pthread_mutex_t print_lock;
@@ -30,7 +32,6 @@ pthread_mutex_t print_lock;
 static serial_port sp;
 static UsbCommand txcmd;
 volatile static bool txcmd_pending = false;
-
 
 void SendCommand(UsbCommand *c) {
 #if 0
@@ -206,15 +207,46 @@ static void *main_loop(void *targ) {
   return NULL;
 }
 
+//static void dumpHelp(char  *parent, ...)
+//{
+//  printf("## %s\n\n", parent);
+//  CommandReceived(parent);
+//  
+//  printf("\n");
+//}
+
+static void dumpAllHelp(int markdown)
+{
+  printf("\n%sProxmark3 command dump%s\n\n",markdown?"# ":"",markdown?"":"\n======================");
+  printf("Some commands are available only if a Proxmark is actually connected.%s\n",markdown?"  ":"");
+  printf("Check column \"offline\" for their availability.\n");
+  printf("\n");
+  command_t *cmds = getTopLevelCommandTable();
+  dumpCommandsRecursive(cmds, markdown);
+}
+
 int main(int argc, char* argv[]) {
 	srand(time(0));
   
 	if (argc < 2) {
 		printf("syntax: %s <port>\n\n",argv[0]);
 		printf("\tLinux example:'%s /dev/ttyACM0'\n\n", argv[0]);
+		printf("help:   %s -h\n\n", argv[0]);
+		printf("\tDump all interactive help at once\n");
+		printf("markdown:   %s -m\n\n", argv[0]);
+		printf("\tDump all interactive help at once in markdown syntax\n");
 		return 1;
 	}
-  
+	if (strcmp(argv[1], "-h") == 0) {
+		printf("syntax: %s <port>\n\n",argv[0]);
+		printf("\tLinux example:'%s /dev/ttyACM0'\n\n", argv[0]);
+		dumpAllHelp(0);
+		return 0;
+	}
+	if (strcmp(argv[1], "-m") == 0) {
+		dumpAllHelp(1);
+		return 0;
+	}
 	// Make sure to initialize
 	struct main_loop_arg marg = {
 		.usb_present = 0,

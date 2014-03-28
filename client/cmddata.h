@@ -11,6 +11,8 @@
 #ifndef CMDDATA_H__
 #define CMDDATA_H__
 
+command_t * CmdDataCommands();
+
 int CmdData(const char *Cmd);
 
 int CmdAmp(const char *Cmd);
