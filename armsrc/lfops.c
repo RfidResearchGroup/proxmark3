@@ -605,55 +605,16 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 	if (ledcontrol)
 		LED_A_OFF();
 }
-void setup_for_125khz()
+
+size_t fsk_demod(uint8_t * dest, size_t size)
 {
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
-
-	// Connect the A/D to the peak-detected low-frequency path.
-	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-
-	// Give it a bit of time for the resonant antenna to settle.
-	SpinDelay(50);
-
-	// Now set up the SSC to get the ADC samples that are now streaming at us.
-	FpgaSetupSsc();
-
-}
-void get_samples(int ledcontrol, uint8_t* dest, int size)
-{
-	int i = 0;
-
-	memset(dest,128,size);
-	for(;;) {
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-			AT91C_BASE_SSC->SSC_THR = 0x43;
-			if (ledcontrol) LED_D_ON();
-		}
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			// we don't care about actual value, only if it's more or less than a
-			// threshold essentially we capture zero crossings for later analysis
-			if(dest[i] < 127) dest[i] = 0; else dest[i] = 1;
-			i++;
-			if (ledcontrol) LED_D_OFF();
-			if(i >= size) {
-				break;
-			}
-		}
-	}
-}
-
-uint8_t fsk_demod(uint8_t * dest, int size)
-{
-	uint8_t last_transition = 0;
-	uint8_t idx = 1;
+	uint32_t last_transition = 0;
+	uint32_t idx = 1;
 
 	// we don't care about actual value, only if it's more or less than a
 	// threshold essentially we capture zero crossings for later analysis
 	uint8_t threshold_value = 127;
 
-	WDT_HIT();
 
 	// sync to first lo-hi transition, and threshold
 
@@ -661,12 +622,11 @@ uint8_t fsk_demod(uint8_t * dest, int size)
 	if(dest[0] < threshold_value) dest[0] = 0;
 	else dest[0] = 1;
 
-	uint8_t numBits = 0;
+	size_t numBits = 0;
 	// count cycles between consecutive lo-hi transitions, there should be either 8 (fc/8)
 	// or 10 (fc/10) cycles but in practice due to noise etc we may end up with with anywhere
 	// between 7 to 11 cycles so fuzz it by treat anything <9 as 8 and anything else as 10
 	for(idx = 1; idx < size; idx++) {
-
 		// threshold current value
 		if (dest[idx] < threshold_value) dest[idx] = 0;
 		else dest[idx] = 1;
@@ -686,12 +646,13 @@ uint8_t fsk_demod(uint8_t * dest, int size)
 	return numBits; //Actually, it returns the number of bytes, but each byte represents a bit: 1 or 0
 }
 
-uint8_t aggregate_bits(uint8_t *dest,uint8_t size, uint8_t h2l_crossing_value,uint8_t l2h_crossing_value, uint8_t maxConsequtiveBits )
+
+size_t aggregate_bits(uint8_t *dest,size_t size, uint8_t h2l_crossing_value,uint8_t l2h_crossing_value, uint8_t maxConsequtiveBits )
 {
 	uint8_t lastval=dest[0];
-	uint8_t idx=0;
-	uint8_t numBits=0;
-	uint8_t n=1, i=0;
+	uint32_t idx=0;
+	size_t numBits=0;
+	uint32_t n=1;
 
 	for( idx=1; idx < size; idx++) {
 
@@ -700,14 +661,16 @@ uint8_t aggregate_bits(uint8_t *dest,uint8_t size, uint8_t h2l_crossing_value,ui
 			continue;
 		}
 		//if lastval was 1, we have a 1->0 crossing
-		if ( lastval ) {
-			n=(n+1)/7;
+		if ( dest[idx-1] ) {
+			n=(n+1) / h2l_crossing_value;
 		} else {// 0->1 crossing
-			n=(n+1)/6;
+			n=(n+1) / l2h_crossing_value;
 		}
-		if(n < 13)
+		if (n == 0) n = 1;
+
+		if(n < maxConsequtiveBits)
 		{
-			memset(dest+i, lastval ^ 1, n);
+			memset(dest+numBits, dest[idx-1] , n);
 			numBits += n;
 		}
 		n=0;
@@ -722,34 +685,26 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = (uint8_t *)BigBuf;
 
-	int size=0, idx=0, found=0;
+	size_t size=0,idx=0; //, found=0;
 	uint32_t hi2=0, hi=0, lo=0;
 
-	// Configure to go in 125Khz listen mode
-	SetupToAcquireRawAdcSamples(0);
 
-	for(;;) {
+	while(!BUTTON_PRESS()) {
+
+		// Configure to go in 125Khz listen mode
+		SetupToAcquireRawAdcSamples(0);
+
 		WDT_HIT();
-		if (ledcontrol)
-			LED_A_ON();
-		if(BUTTON_PRESS()) {
-			DbpString("Stopped");
-			if (ledcontrol)
-				LED_A_OFF();
-			return;
-		}
-
+		if (ledcontrol) LED_A_ON();
 
 		DoAcquisition125k_internal(true);
 		size  = sizeof(BigBuf);
 
 		// FSK demodulator
 		size = fsk_demod(dest, size);
-
 		WDT_HIT();
 
 		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
-
 		// 1->0 : fc/8 in sets of 6
 		// 0->1 : fc/10 in sets of 5
 		size = aggregate_bits(dest,size, 6,5,5);
@@ -759,36 +714,32 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		// final loop, go over previously decoded manchester data and decode into usable tag ID
 		// 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
 		uint8_t frame_marker_mask[] = {1,1,1,0,0,0};
+		int numshifts = 0;
+		idx = 0;
+		while( idx + sizeof(frame_marker_mask) < size) {
+			// search for a start of frame marker
+			if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
+			{ // frame marker found
+				idx+=sizeof(frame_marker_mask);
 
-		for( idx=0; idx < size-sizeof(frame_marker_mask); idx++) {
-
-			if (found) {
-				if(dest[idx] == dest[idx+1])
-				{// 1 1 or 00
-					found=0;
-					hi2=0;
-					hi=0;
-					lo=0;
-				}else
-				{
-					//Shift in a bit. Start by shifting high registers
+				while(dest[idx] != dest[idx+1] && idx < size-2)
+				{	// Keep going until next frame marker (or error)
+					// Shift in a bit. Start by shifting high registers
 					hi2 = (hi2<<1)|(hi>>31);
 					hi = (hi<<1)|(lo>>31);
 					//Then, shift in a 0 or one into low
 					if (dest[idx] && !dest[idx+1])	// 1 0
 						lo=(lo<<1)|0;
 					else // 0 1
-						lo=(lo<<1)|1;
+						lo=(lo<<1)|
+								1;
+					numshifts ++;
+					idx += 2;
 				}
-				idx++;
-			}
-
-			// search for a start of frame marker
-			if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
-			{	// Found start of frame marker
-				found=1;
-				idx+=sizeof(frame_marker_mask);
-				if (found && (hi2|hi|lo)) {
+				//Dbprintf("Num shifts: %d ", numshifts);
+				// Hopefully, we read a tag and	 hit upon the next frame marker
+				if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
+				{
 					if (hi2 != 0){
 						Dbprintf("TAG ID: %x%08x%08x (%d)",
 							 (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
@@ -797,22 +748,21 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 						Dbprintf("TAG ID: %x%08x (%d)",
 						 (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
 					}
-					/* if we're only looking for one tag */
-					if (findone)
-					{
-						*high = hi;
-						*low = lo;
-						return;
-					}
-					hi2=0;
-					hi=0;
-					lo=0;
-					found=0;
 				}
+
+				// reset
+				hi2 = hi = lo = 0;
+				numshifts = 0;
+			}else
+			{
+				idx++;
 			}
 		}
 		WDT_HIT();
+
 	}
+	DbpString("Stopped");
+	if (ledcontrol) LED_A_OFF();
 }
 
 uint32_t bytebits_to_byte(uint8_t* src, int numbits)
@@ -830,22 +780,18 @@ uint32_t bytebits_to_byte(uint8_t* src, int numbits)
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = (uint8_t *)BigBuf;
-	int size=0, idx=0;
+
+	size_t size=0, idx=0;
 	uint32_t code=0, code2=0;
-	//uint32_t hi2=0, hi=0, lo=0;
 
-	setup_for_125khz();
 
-	for(;;) {
+	while(!BUTTON_PRESS()) {
+
+		// Configure to go in 125Khz listen mode
+		SetupToAcquireRawAdcSamples(0);
+
 		WDT_HIT();
-		if (ledcontrol)
-			LED_A_ON();
-		if(BUTTON_PRESS()) {
-			DbpString("Stopped");
-			if (ledcontrol)
-				LED_A_OFF();
-			return;
-		}
+		if (ledcontrol) LED_A_ON();
 
 		DoAcquisition125k_internal(true);
 		size  = sizeof(BigBuf);
@@ -853,6 +799,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		// FSK demodulator
 		size = fsk_demod(dest, size);
 		WDT_HIT();
+
 		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
 		// 1->0 : fc/8 in sets of 7
 		// 0->1 : fc/10 in sets of 6
@@ -860,6 +807,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
 		WDT_HIT();
 		
+		//Handle the data
  	    uint8_t mask[] = {0,0,0,0,0,0,0,0,0,1};
 		for( idx=0; idx < size - 64; idx++) {
 
@@ -890,8 +838,10 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				return;
 			}		
 		}
+		WDT_HIT();
 	}
-	WDT_HIT();
+	DbpString("Stopped");
+	if (ledcontrol) LED_A_OFF();
 }
 
 /*------------------------------
