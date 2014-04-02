@@ -89,7 +89,7 @@ struct version_information {
 	char versionversion; /* Must be 1 */
 	char present; /* 1 if the version information could be created at compile time, otherwise 0 and the remaining fields (except for magic) are empty */
 	char clean; /* 1: Tree was clean, no local changes. 0: Tree was unclean. 2: Couldn't be determined */
-	char svnversion[9]; /* String with the SVN revision */
+	char svnversion[50]; /* String with the SVN revision */
 	char buildtime[30]; /* string with the build time */
 } __attribute__((packed));
 
