@@ -239,7 +239,7 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
 		return;
 	}
 
-	strncat(dst, v->svnversion, len);
+	strncat(dst, v->gitversion, len);
 	if(v->clean == 0) {
 		strncat(dst, "-unclean", len);
 	} else if(v->clean == 2) {
