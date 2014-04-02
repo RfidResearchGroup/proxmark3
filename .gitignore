@@ -12,8 +12,11 @@
 *.moc.cpp
 *.exe
 proxmark
+proxmark3
 flasher
 version.c
+lua
+luac
 
 fpga/*
 !fpga/fpga.bit
