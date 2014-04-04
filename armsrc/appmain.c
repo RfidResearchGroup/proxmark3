@@ -336,7 +336,7 @@ extern struct version_information version_information;
 extern char *_bootphase1_version_pointer, _flash_start, _flash_end;
 void SendVersion(void)
 {
-	char temp[48]; /* Limited data payload in USB packets */
+	char temp[256]; /* Limited data payload in USB packets */
 	DbpString("Prox/RFID mark3 RFID instrument");
 
 	/* Try to find the bootrom version information. Expect to find a pointer at
