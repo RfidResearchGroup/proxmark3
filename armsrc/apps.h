@@ -190,6 +190,7 @@ void SetDebugIso15693(uint32_t flag);
 void RAMFUNC SnoopIClass(void);
 void SimulateIClass(uint8_t arg0, uint8_t *datain);
 void ReaderIClass(uint8_t arg0);
+void ReaderIClass_Replay(uint8_t arg0,uint8_t *MAC);
 
 // hitag2.h
 void SnoopHitag(uint32_t type);

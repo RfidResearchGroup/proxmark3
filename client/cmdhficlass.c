@@ -219,19 +219,34 @@ int CmdHFiClassReader(const char *Cmd)
   PrintAndLog("--readertype:%02x", readerType);
 
   UsbCommand c = {CMD_READER_ICLASS, {readerType}};
-  //memcpy(c.d.asBytes, CSN, 8);
   SendCommand(&c);
-
-  /*UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
-  if (resp != NULL) {
-	uint8_t                isOK  = resp->arg[0] & 0xff;
-	PrintAndLog("isOk:%02x", isOK);
-  } else {
-	PrintAndLog("Command execute timeout");
-  }*/
 
   return 0;
 }
+
+int CmdHFiClassReader_Replay(const char *Cmd)
+{
+  uint8_t readerType = 0;
+  uint8_t MAC[4]={0x00, 0x00, 0x00, 0x00};
+
+  if (strlen(Cmd)<1) {
+    PrintAndLog("Usage:  hf iclass replay <MAC>");
+    PrintAndLog("        sample: hf iclass replay 00112233");
+    return 0;
+  }
+
+  if (param_gethex(Cmd, 0, MAC, 8)) {
+    PrintAndLog("MAC must include 8 HEX symbols");
+    return 1;
+  }
+
+  UsbCommand c = {CMD_READER_ICLASS_REPLAY, {readerType}};
+  memcpy(c.d.asBytes, MAC, 4);
+  SendCommand(&c);
+
+  return 0;
+}
+
 
 static command_t CommandTable[] = 
 {
@@ -240,6 +255,7 @@ static command_t CommandTable[] =
   {"snoop",   CmdHFiClassSnoop,  0, "Eavesdrop iClass communication"},
   {"sim",     CmdHFiClassSim,    0, "Simulate iClass tag"},
   {"reader",  CmdHFiClassReader, 0, "Read an iClass tag"},
+  {"replay",  CmdHFiClassReader_Replay, 0, "Read an iClass tag via Reply Attack"},
   {NULL, NULL, 0, NULL}
 };
 
