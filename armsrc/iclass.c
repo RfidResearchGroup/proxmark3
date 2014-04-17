@@ -986,31 +986,70 @@ static void CodeIClassTagSOF()
 	ToSendMax++;
 }
 
-//-----------------------------------------------------------------------------
-// Simulate iClass Card
-// Only CSN (Card Serial Number)
-// 
-//-----------------------------------------------------------------------------
-void SimulateIClass(uint8_t arg0, uint8_t *datain)
+/**
+ * @brief SimulateIClass simulates an iClass card.
+ * @param arg0 type of simulation
+ *			- 0 uses the first 8 bytes in usb data as CSN
+ *			- 2 "dismantling iclass"-attack. This mode iterates through all CSN's specified
+ *			in the usb data. This mode collects MAC from the reader, in order to do an offline
+ *			attack on the keys. For more info, see "dismantling iclass" and proxclone.com.
+ *			- Other : Uses the default CSN (031fec8af7ff12e0)
+ * @param arg1 - number of CSN's contained in datain (applicable for mode 2 only)
+ * @param arg2
+ * @param datain
+ */
+void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 {
-	uint8_t simType = arg0;
+	uint32_t simType = arg0;
+	uint32_t numberOfCSNS = arg1;
 
-  // Enable and clear the trace
-	tracing = TRUE;
-	traceLen = 0;
-  memset(trace, 0x44, TRACE_SIZE);
+	// Enable and clear the trace
+	iso14a_set_tracing(TRUE);
+	iso14a_clear_trace();
 
-	// CSN followed by two CRC bytes
-	uint8_t response2[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	uint8_t response3[] = { 0x03, 0x1f, 0xec, 0x8a, 0xf7, 0xff, 0x12, 0xe0, 0x00, 0x00 };
-
-	// e-Purse
-	uint8_t response4[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	uint8_t csn_crc[] = { 0x03, 0x1f, 0xec, 0x8a, 0xf7, 0xff, 0x12, 0xe0, 0x00, 0x00 };
 
 	if(simType == 0) {
 		// Use the CSN from commandline
-		memcpy(response3, datain, 8);
+		memcpy(csn_crc, datain, 8);
+		doIClassSimulation(csn_crc,0);
+	}else if(simType == 1)
+	{
+		doIClassSimulation(csn_crc,0);
 	}
+	else if(simType == 2)
+	{
+		// In this mode, a number of csns are within datain. We'll simulate each one, one at a time
+		// in order to collect MAC's from the reader. This can later be used in an offlne-attack
+		// in order to obtain the keys, as in the "dismantling iclass"-paper.
+		for(int i = 0 ; i < numberOfCSNS && i*8+8 < USB_CMD_DATA_SIZE; i++)
+		{
+			// The usb data is 512 bytes, fitting 65 8-byte CSNs in there.
+
+			memcpy(csn_crc, datain+(i*8), 8);
+			doIClassSimulation(csn_crc,1);
+		}
+	}else{
+		// We may want a mode here where we hardcode the csns to use (from proxclone).
+		// That will speed things up a little, but not required just yet.
+		Dbprintf("The mode is not implemented, reserved for future use");
+	}
+
+}
+/**
+ * @brief Does the actual simulation
+ * @param csn - csn to use
+ * @param breakAfterMacReceived if true, returns after reader MAC has been received.
+ */
+void doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
+{
+	// CSN followed by two CRC bytes
+	uint8_t response2[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	uint8_t response3[] = { 0,0,0,0,0,0,0,0,0,0};
+	memcpy(response3,csn,sizeof(response3));
+
+	// e-Purse
+	uint8_t response4[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 	// Construct anticollision-CSN
 	rotateCSN(response3,response2);
@@ -1019,6 +1058,7 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 	ComputeCrc14443(CRC_ICLASS, response2, 8, &response2[8], &response2[9]);
 	ComputeCrc14443(CRC_ICLASS, response3, 8, &response3[8], &response3[9]);
 
+	int exitLoop = 0;
 	// Reader 0a
 	// Tag    0f
 	// Reader 0c
@@ -1052,7 +1092,7 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 	int resp4Len;
 
 	// + 1720..
-  uint8_t *receivedCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
+	uint8_t *receivedCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
 	memset(receivedCmd, 0x44, RECV_CMD_SIZE);
 	int len;
 
@@ -1083,7 +1123,7 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 	int cmdsRecvd = 0;
 
 	LED_A_ON();
-	for(;;) {
+	while(!exitLoop) {
 		LED_B_OFF();
 		if(!GetIClassCommandFromReader(receivedCmd, &len, 100)) {
 			DbpString("button press");
@@ -1119,24 +1159,21 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 			LED_B_ON();
 		} else if(receivedCmd[0] == 0x05) {
 			// Reader random and reader MAC!!!
-			// Lets store this ;-)
-/*
-			Dbprintf("                CSN: %02x %02x %02x %02x %02x %02x %02x %02x",
-			response3[0], response3[1], response3[2],
-			response3[3], response3[4], response3[5],
-			response3[6], response3[7]);
-*/			
-			Dbprintf("READER AUTH (len=%02d): %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-			len,
-			receivedCmd[0], receivedCmd[1], receivedCmd[2],
-			receivedCmd[3], receivedCmd[4], receivedCmd[5],
-			receivedCmd[6], receivedCmd[7], receivedCmd[8]);
-
 			// Do not respond
 			// We do not know what to answer, so lets keep quit
 			resp = resp1; respLen = 0; //order = 5;
 			respdata = NULL;
 			respsize = 0;
+			if (breakAfterMacReceived){
+				// TODO, actually return this to the caller instead of just
+				// dbprintf:ing ...
+				Dbprintf("CSN: %02x %02x %02x %02x %02x %02x %02x %02x");
+				Dbprintf("RDR:  (len=%02d): %02x %02x %02x %02x %02x %02x %02x %02x %02x",len,
+						 receivedCmd[0], receivedCmd[1], receivedCmd[2],
+						receivedCmd[3], receivedCmd[4], receivedCmd[5],
+						receivedCmd[6], receivedCmd[7], receivedCmd[8]);
+				exitLoop = true;
+			}
 		} else if(receivedCmd[0] == 0x00 && len == 1) {
 			// Reader ends the session
 			resp = resp1; respLen = 0; //order = 0;
@@ -1177,7 +1214,6 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 				break;
 			}
 		}
-
 		memset(receivedCmd, 0x44, RECV_CMD_SIZE);
 	}
 
@@ -1422,7 +1458,7 @@ void ReaderIClass(uint8_t arg0) {
 	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
 
 	// Reset trace buffer
-    	memset(trace, 0x44, RECV_CMD_OFFSET);
+	memset(trace, 0x44, RECV_CMD_OFFSET);
 	traceLen = 0;
 
 	// Setup SSC
