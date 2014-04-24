@@ -666,12 +666,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 //-----------------------------------------------------------------------------
 void RAMFUNC SnoopIClass(void)
 {
-// DEFINED ABOVE
-// #define RECV_CMD_OFFSET   3032
-// #define RECV_RES_OFFSET   3096
-// #define DMA_BUFFER_OFFSET 3160
-// #define DMA_BUFFER_SIZE   4096
-// #define TRACE_SIZE        3000
+
 
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
@@ -681,14 +676,10 @@ void RAMFUNC SnoopIClass(void)
     // The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.
 	// So 32 should be enough!
-    uint8_t *receivedCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
+	uint8_t *readerToTagCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
     // The response (tag -> reader) that we're receiving.
-    uint8_t *receivedResponse = (((uint8_t *)BigBuf) + RECV_RES_OFFSET);
+	uint8_t *tagToReaderResponse = (((uint8_t *)BigBuf) + RECV_RES_OFFSET);
 
-    // As we receive stuff, we copy it from receivedCmd or receivedResponse
-    // into trace, along with its length and other annotations.
-    //uint8_t *trace = (uint8_t *)BigBuf;
-    
     // reset traceLen to 0
     iso14a_set_tracing(TRUE);
     iso14a_clear_trace();
@@ -709,7 +700,7 @@ void RAMFUNC SnoopIClass(void)
     memset(trace, 0x44, RECV_CMD_OFFSET);
 
     // Set up the demodulator for tag -> reader responses.
-    Demod.output = receivedResponse;
+	Demod.output = tagToReaderResponse;
     Demod.len = 0;
     Demod.state = DEMOD_UNSYNCD;
 
@@ -721,7 +712,7 @@ void RAMFUNC SnoopIClass(void)
 
     // And the reader -> tag commands
     memset(&Uart, 0, sizeof(Uart));
-    Uart.output = receivedCmd;
+	Uart.output = readerToTagCmd;
     Uart.byteCntMax = 32; // was 100 (greg)////////////////////////////////////////////////////////////////////////
     Uart.state = STATE_UNSYNCD;
 
@@ -764,20 +755,13 @@ void RAMFUNC SnoopIClass(void)
 
         //samples += 4;
 	samples += 1;
-	//div2++;	
 
-	//if(div2 > 3) {
-		//div2 = 0;
-	//decbyte ^= ((smpl & 0x01) << (3 - div));
-	//decbyte ^= (((smpl & 0x01) | ((smpl & 0x02) >> 1)) << (3 - div)); // better already...
-	//decbyte ^= (((smpl & 0x01) | ((smpl & 0x02) >> 1) | ((smpl & 0x04) >> 2)) << (3 - div)); // even better...
 	if(smpl & 0xF) {
 		decbyte ^= (1 << (3 - div));
 	}
-	//decbyte ^= (MajorityNibble[(smpl & 0x0F)] << (3 - div));
 	
 	// FOR READER SIDE COMMUMICATION...
-	//decbyte ^=  ((smpl & 0x10) << (3 - div));
+
 	decbyter <<= 2;
 	decbyter ^= (smpl & 0x30);
 
@@ -788,21 +772,11 @@ void RAMFUNC SnoopIClass(void)
 		if(OutOfNDecoding((smpl & 0xF0) >> 4)) {
 		    rsamples = samples - Uart.samples;
 		    LED_C_ON();
-		    //if(triggered) {
-			trace[traceLen++] = ((rsamples >>  0) & 0xff);
-			trace[traceLen++] = ((rsamples >>  8) & 0xff);
-			trace[traceLen++] = ((rsamples >> 16) & 0xff);
-			trace[traceLen++] = ((rsamples >> 24) & 0xff);
-			trace[traceLen++] = ((Uart.parityBits >>  0) & 0xff);
-			trace[traceLen++] = ((Uart.parityBits >>  8) & 0xff);
-			trace[traceLen++] = ((Uart.parityBits >> 16) & 0xff);
-			trace[traceLen++] = ((Uart.parityBits >> 24) & 0xff);
-			trace[traceLen++] = Uart.byteCnt;
-			memcpy(trace+traceLen, receivedCmd, Uart.byteCnt);
-			traceLen += Uart.byteCnt;
-			if(traceLen > TRACE_SIZE) break;
-		    //}
-		    /* And ready to receive another command. */
+
+			if(!LogTrace(readerToTagCmd,Uart.byteCnt, rsamples, Uart.parityBits,TRUE)) break;
+			//if(!LogTrace(NULL, 0, Uart.endTime*16 - DELAY_READER_AIR2ARM_AS_SNIFFER, 0, TRUE)) break;
+
+			/* And ready to receive another command. */
 		    Uart.state = STATE_UNSYNCD;
 		    /* And also reset the demod code, which might have been */
 		    /* false-triggered by the commands from the reader. */
@@ -819,26 +793,13 @@ void RAMFUNC SnoopIClass(void)
 		    rsamples = samples - Demod.samples;
 		    LED_B_ON();
 
-		    // timestamp, as a count of samples
-		    trace[traceLen++] = ((rsamples >>  0) & 0xff);
-		    trace[traceLen++] = ((rsamples >>  8) & 0xff);
-		    trace[traceLen++] = ((rsamples >> 16) & 0xff);
-		    trace[traceLen++] = 0x80 | ((rsamples >> 24) & 0xff);
-		    trace[traceLen++] = ((Demod.parityBits >>  0) & 0xff);
-		    trace[traceLen++] = ((Demod.parityBits >>  8) & 0xff);
-		    trace[traceLen++] = ((Demod.parityBits >> 16) & 0xff);
-		    trace[traceLen++] = ((Demod.parityBits >> 24) & 0xff);
-		    // length
-		    trace[traceLen++] = Demod.len;
-		    memcpy(trace+traceLen, receivedResponse, Demod.len);
-		    traceLen += Demod.len;
-		    if(traceLen > TRACE_SIZE) break;
+			if(!LogTrace(tagToReaderResponse,Demod.len, rsamples, Demod.parityBits,FALSE)) break;
+			//if (!LogTrace(NULL, 0, Demod.endTime*16 - DELAY_TAG_AIR2ARM_AS_SNIFFER, 0, FALSE)) break;
 
-		    //triggered = TRUE;
 
 		    // And ready to receive another response.
 		    memset(&Demod, 0, sizeof(Demod));
-		    Demod.output = receivedResponse;
+			Demod.output = tagToReaderResponse;
 		    Demod.state = DEMOD_UNSYNCD;
 		    LED_C_OFF();
 		}
@@ -1019,6 +980,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	}
 	else if(simType == 2)
 	{
+		Dbprintf("Going into attack mode");
 		// In this mode, a number of csns are within datain. We'll simulate each one, one at a time
 		// in order to collect MAC's from the reader. This can later be used in an offlne-attack
 		// in order to obtain the keys, as in the "dismantling iclass"-paper.
@@ -1131,13 +1093,13 @@ void doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 		}
 
 		// Okay, look at the command now.
-		if(receivedCmd[0] == 0x0a) {
+		if(receivedCmd[0] == 0x0a || receivedCmd[0] == 0x26) {
 			// Reader in anticollission phase
 			resp = resp1; respLen = resp1Len; //order = 1;
 			respdata = &sof;
 			respsize = sizeof(sof);
 			//resp = resp2; respLen = resp2Len; order = 2;
-			//DbpString("Hello request from reader:");
+			Dbprintf("Hello request from reader, %02x, tracing=%d", receivedCmd[0], tracing);
 		} else if(receivedCmd[0] == 0x0c) {
 			// Reader asks for anticollission CSN
 			resp = resp2; respLen = resp2Len; //order = 2;
@@ -1180,6 +1142,7 @@ void doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 			respdata = NULL;
 			respsize = 0;
 		} else {
+			//#db# Unknown command received from reader (len=5): 26 1 0 f6 a 44 44 44 44
 			// Never seen this command before
 			Dbprintf("Unknown command received from reader (len=%d): %x %x %x %x %x %x %x %x %x",
 			len,
@@ -1205,13 +1168,20 @@ void doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 		}
 		
 		if (tracing) {
-			LogTrace(receivedCmd,len, rsamples, Uart.parityBits, TRUE);
-			if (respdata != NULL) {
-				LogTrace(respdata,respsize, rsamples, SwapBits(GetParity(respdata,respsize),respsize), FALSE);
-			}
-			if(traceLen > TRACE_SIZE) {
+			//LogTrace(receivedCmd,len, rsamples, Uart.parityBits, TRUE);
+			if(!LogTrace(receivedCmd,len, rsamples, Uart.parityBits,TRUE))
+			{
 				DbpString("Trace full");
 				break;
+			}
+
+			if (respdata != NULL) {
+				//LogTrace(respdata,respsize, rsamples, SwapBits(GetParity(respdata,respsize),respsize), FALSE);
+				if(!LogTrace(respdata,respsize, rsamples,SwapBits(GetParity(respdata,respsize),respsize),FALSE))
+				{
+					DbpString("Trace full");
+					break;
+				}
 			}
 		}
 		memset(receivedCmd, 0x44, RECV_CMD_SIZE);
