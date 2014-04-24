@@ -989,7 +989,10 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 			// The usb data is 512 bytes, fitting 65 8-byte CSNs in there.
 
 			memcpy(csn_crc, datain+(i*8), 8);
-			doIClassSimulation(csn_crc,1);
+			if(doIClassSimulation(csn_crc,1))
+			{
+				return; // Button pressed
+			}
 		}
 	}else{
 		// We may want a mode here where we hardcode the csns to use (from proxclone).
@@ -1003,13 +1006,13 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
  * @param csn - csn to use
  * @param breakAfterMacReceived if true, returns after reader MAC has been received.
  */
-void doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
+int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 {
 	// CSN followed by two CRC bytes
 	uint8_t response2[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	uint8_t response3[] = { 0,0,0,0,0,0,0,0,0,0};
 	memcpy(response3,csn,sizeof(response3));
-
+	Dbprintf("Simulating CSN %02x%02x%02x%02x%02x%02x%02x%02x",csn[0],csn[1],csn[2],csn[3],csn[4],csn[5],csn[6],csn[7]);
 	// e-Purse
 	uint8_t response4[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
@@ -1085,26 +1088,28 @@ void doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 	int cmdsRecvd = 0;
 
 	LED_A_ON();
+	bool displayDebug = true;
+	bool buttonPressed = false;
 	while(!exitLoop) {
 		LED_B_OFF();
 		if(!GetIClassCommandFromReader(receivedCmd, &len, 100)) {
-			DbpString("button press");
+			buttonPressed = true;
 			break;
 		}
 
 		// Okay, look at the command now.
-		if(receivedCmd[0] == 0x0a || receivedCmd[0] == 0x26) {
+		if(receivedCmd[0] == 0x0a ) {
 			// Reader in anticollission phase
 			resp = resp1; respLen = resp1Len; //order = 1;
 			respdata = &sof;
 			respsize = sizeof(sof);
-			//resp = resp2; respLen = resp2Len; order = 2;
-			Dbprintf("Hello request from reader, %02x, tracing=%d", receivedCmd[0], tracing);
+			displayDebug = false;
 		} else if(receivedCmd[0] == 0x0c) {
 			// Reader asks for anticollission CSN
 			resp = resp2; respLen = resp2Len; //order = 2;
 			respdata = response2;
 			respsize = sizeof(response2);
+			displayDebug = false;
 			//DbpString("Reader requests anticollission CSN:");
 		} else if(receivedCmd[0] == 0x81) {
 			// Reader selects anticollission CSN.
@@ -1165,8 +1170,19 @@ void doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 
 		if(respLen > 0) {
 			SendIClassAnswer(resp, respLen, 21);
+
+			if(displayDebug) Dbprintf("R2T:(len=%d): %x %x %x %x %x %x %x %x %x\nT2R: (total/data =%d/%d): %x %x %x %x %x %x %x %x %x",
+			len,
+			receivedCmd[0], receivedCmd[1], receivedCmd[2],
+			receivedCmd[3], receivedCmd[4], receivedCmd[5],
+			receivedCmd[6], receivedCmd[7], receivedCmd[8],
+			respLen,respsize,
+			resp[0], resp[1], resp[2],
+			resp[3], resp[4], resp[5],
+			resp[6], resp[7], resp[8]);
+
 		}
-		
+
 		if (tracing) {
 			//LogTrace(receivedCmd,len, rsamples, Uart.parityBits, TRUE);
 			if(!LogTrace(receivedCmd,len, rsamples, Uart.parityBits,TRUE))
@@ -1177,6 +1193,7 @@ void doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 
 			if (respdata != NULL) {
 				//LogTrace(respdata,respsize, rsamples, SwapBits(GetParity(respdata,respsize),respsize), FALSE);
+				//if(!LogTrace(resp,respLen, rsamples,SwapBits(GetParity(respdata,respsize),respsize),FALSE))
 				if(!LogTrace(respdata,respsize, rsamples,SwapBits(GetParity(respdata,respsize),respsize),FALSE))
 				{
 					DbpString("Trace full");
@@ -1190,6 +1207,12 @@ void doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 	Dbprintf("%x", cmdsRecvd);
 	LED_A_OFF();
 	LED_B_OFF();
+	if(buttonPressed)
+	{
+		DbpString("Button pressed");
+	}
+
+	return buttonPressed;
 }
 
 static int SendIClassAnswer(uint8_t *resp, int respLen, int delay)

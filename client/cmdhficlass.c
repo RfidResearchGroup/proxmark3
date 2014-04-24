@@ -69,7 +69,6 @@ int CmdHFiClassList(const char *Cmd)
 	uint8_t *frame;
 	uint32_t EndOfTransmissionTimestamp = 0;
 
-	uint8_t empty[4] = {0x44,0x44,0x44,0x44};
 
 	for( i=0; i < 1900;)
 	{
@@ -91,9 +90,8 @@ int CmdHFiClassList(const char *Cmd)
 			first_timestamp = timestamp;
 		}
 
-		// Break and stick with current result if buffer
-		// was not completely full
-		if(memcmp(frame,empty,sizeof(empty))) break;
+		// Break and stick with current result if buffer was not completely full
+		if (frame[0] == 0x44 && frame[1] == 0x44 && frame[2] == 0x44 && frame[3] == 0x44) break;
 
 		char line[1000] = "";
 
