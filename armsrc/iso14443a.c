@@ -192,6 +192,7 @@ void AppendCrc14443a(uint8_t* data, int len)
 // The function LogTrace() is also used by the iClass implementation in iClass.c
 bool RAMFUNC LogTrace(const uint8_t * btBytes, uint8_t iLen, uint32_t timestamp, uint32_t dwParity, bool readerToTag)
 {
+	if (!tracing) return FALSE;
 	// Return when trace is full
 	if (traceLen + sizeof(timestamp) + sizeof(dwParity) + iLen >= TRACE_SIZE) {
 		tracing = FALSE;	// don't trace any more
@@ -1859,8 +1860,10 @@ void ReaderIso14443a(UsbCommand *c)
 		if(param & ISO14A_APPEND_CRC) {
 			AppendCrc14443a(cmd,len);
 			len += 2;
+			lenbits += 16;
 		}
 		if(lenbits>0) {
+
 			ReaderTransmitBitsPar(cmd,lenbits,GetParity(cmd,lenbits/8), NULL);
 		} else {
 			ReaderTransmit(cmd,len, NULL);
