@@ -21,6 +21,10 @@
 #include "cmdhficlass.h"
 #include "common.h"
 #include "util.h"
+#include "loclass/des.h"
+#include "loclass/cipherutils.h"
+#include "loclass/cipher.h"
+#include "loclass/ikeys.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -247,6 +251,72 @@ int CmdHFiClassReader_Replay(const char *Cmd)
   return 0;
 }
 
+int CmdHFiClassReader_Dump(const char *Cmd)
+{
+  uint8_t readerType = 0;
+  uint8_t MAC[4]={0x00,0x00,0x00,0x00};
+  uint8_t KEY[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  uint8_t CSN[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  uint8_t CCNR[12]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  uint8_t CC_temp[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  uint8_t result[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  uint8_t div_key[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  des_context ctx_enc;
+  uint64_t crypted_id=0;
+
+  if (strlen(Cmd)<3) {
+    PrintAndLog("Usage:  hf iclass dump <Key> <CSN> <CC>");
+    PrintAndLog("        sample: hf iclass dump 0011223344556677 aabbccddeeffgghh FFFFFFFFFFFFFFFF");
+    return 0;
+  }
+
+  if (param_gethex(Cmd, 0, KEY, 16)) {
+    PrintAndLog("KEY must include 16 HEX symbols");
+    return 1;
+  }
+  
+  if (param_gethex(Cmd, 1, CSN, 16)) {
+    PrintAndLog("CSN must include 16 HEX symbols");
+    return 1;
+  }
+  if (param_gethex(Cmd, 2, CC_temp, 16)) {
+    PrintAndLog("CC must include 16 HEX symbols");
+    return 1;
+  }
+  
+  memcpy(CCNR,CC_temp,8);
+  des_setkey_enc( &ctx_enc, KEY);
+  des_crypt_ecb(&ctx_enc,CSN,result);
+  PrintAndLog("DES Key: %s",sprint_hex(result,8));
+    uint64_t newz=0;
+	crypted_id = bytes_to_num(result,8);
+	uint64_t x = (crypted_id & 0xFFFF000000000000 );
+	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,0),7);
+	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,1),6);
+	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,2),5);
+	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,3),4);
+	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,4),3);
+	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,5),2);
+	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,6),1);
+	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,7),0);
+	newz|= x;
+	crypted_id=newz;
+	num_to_bytes(crypted_id,8,result);
+  PrintAndLog("DESr Key: %s",sprint_hex(result,8));	
+  //crypted_id = bytes_to_num(result,8);
+  //memset(result,0,8);
+  hash0(crypted_id,div_key);
+  //memcpy(div_key,result,8);
+  PrintAndLog("Div Key: %s",sprint_hex(div_key,8));
+  calc_iclass_mac(CCNR,div_key,MAC);
+
+  UsbCommand c = {CMD_READER_ICLASS_REPLAY, {readerType}};
+  memcpy(c.d.asBytes, MAC, 4);
+  SendCommand(&c);
+
+  return 0;
+}
+
 
 static command_t CommandTable[] = 
 {
@@ -256,6 +326,7 @@ static command_t CommandTable[] =
   {"sim",     CmdHFiClassSim,    0, "Simulate iClass tag"},
   {"reader",  CmdHFiClassReader, 0, "Read an iClass tag"},
   {"replay",  CmdHFiClassReader_Replay, 0, "Read an iClass tag via Reply Attack"},
+  {"dump",	  CmdHFiClassReader_Dump, 0, "Authenticate and Dump iClass tag"},
   {NULL, NULL, 0, NULL}
 };
 

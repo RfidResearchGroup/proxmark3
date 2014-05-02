@@ -15,7 +15,7 @@ OBJDIR = obj
 
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread ../liblua/liblua.a
 LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O4 
+CFLAGS = -std=c99 -lcrypto -I. -I../include -I../common -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O4 
 LUAPLATFORM = generic
 
 ifneq (,$(findstring MINGW,$(platform)))
@@ -24,9 +24,9 @@ QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
 MOC = $(QTDIR)/bin/moc
 LUAPLATFORM = mingw
 else ifeq ($(platform),Darwin)
-CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Versions/Current/Headers -I/Library/Frameworks/QtCore.framework/Versions/Current/Headers
-QTLDLIBS = -framework QtGui -framework QtCore
-MOC = moc 
+CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
+QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
+MOC = $(shell pkg-config --variable=moc_location QtCore)
 LUAPLATFORM = macosx
 else
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
@@ -56,6 +56,10 @@ CORESRCS = 	uart.c \
 CMDSRCS = 	nonce2key/crapto1.c\
 		nonce2key/crypto1.c\
 		nonce2key/nonce2key.c\
+		loclass/cipher.c \
+		loclass/cipherutils.c \
+		loclass/des.c \
+		loclass/ikeys.c \
 			mifarehost.c\
 			crc16.c \
 			iso14443crc.c \
@@ -74,8 +78,8 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			cmdhfmf.c \
 			cmdhw.c \
 			cmdlf.c \
-			cmdlfhid.c \
 			cmdlfio.c \
+			cmdlfhid.c \
 			cmdlfem4x.c \
 			cmdlfhitag.c \
 			cmdlfti.c \
