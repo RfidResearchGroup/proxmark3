@@ -308,7 +308,7 @@ int CmdHFiClassReader_Dump(const char *Cmd)
   hash0(crypted_id,div_key);
   //memcpy(div_key,result,8);
   PrintAndLog("Div Key: %s",sprint_hex(div_key,8));
-  calc_iclass_mac(CCNR,div_key,MAC);
+  calc_iclass_mac(CCNR,12,div_key,MAC);
 
   UsbCommand c = {CMD_READER_ICLASS_REPLAY, {readerType}};
   memcpy(c.d.asBytes, MAC, 4);

@@ -41,6 +41,6 @@ typedef struct {
 } State;
 
 void printarr(char * name, uint8_t* arr, int len);
-int calc_iclass_mac(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t *mac);
+int calc_iclass_mac(uint8_t *cc_nr_p, int length, uint8_t *div_key_p, uint8_t *mac);
 
 #endif // CIPHER_H

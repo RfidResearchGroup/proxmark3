@@ -238,15 +238,16 @@ int testMAC()
 	return 0;
 }
 
-int calc_iclass_mac(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t *mac)
+int calc_iclass_mac(uint8_t *cc_nr_p, int length, uint8_t *div_key_p, uint8_t *mac)
 {
-    uint8_t cc_nr[12];
+    uint8_t *cc_nr;
     uint8_t div_key[8];
-    memcpy(cc_nr,cc_nr_p,12);
+    cc_nr=(uint8_t*)malloc(length+1);
+    memcpy(cc_nr,cc_nr_p,length);
     memcpy(div_key,div_key_p,8);
     
-	reverse_arraybytes(cc_nr,sizeof(cc_nr));
-	BitstreamIn bitstream = {cc_nr,sizeof(cc_nr) * 8,0};
+	reverse_arraybytes(cc_nr,length);
+	BitstreamIn bitstream = {cc_nr,length * 8,0};
 	uint8_t dest []= {0,0,0,0,0,0,0,0};
 	BitstreamOut out = { dest, sizeof(dest)*8, 0 };
 	MAC(div_key,bitstream, out);
@@ -255,6 +256,6 @@ int calc_iclass_mac(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t *mac)
 	
 	printf("Calculated_MAC\t%02x%02x%02x%02x\n", dest[0],dest[1],dest[2],dest[3]);
 	memcpy(mac,dest,4);
-	
+	free(cc_nr);
 	return 1;
 }
