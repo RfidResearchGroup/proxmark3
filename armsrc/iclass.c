@@ -1092,10 +1092,11 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 
 
 	// Start from off (no field generated)
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(200);
-
-
+	//FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	//SpinDelay(200);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
+	SpinDelay(100);
+	StartCountSspClk();
 	// We need to listen to the high-frequency, peak-detected path.
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
@@ -1107,10 +1108,8 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 	uint32_t r2t_time =0;
 
 	LED_A_ON();
-	bool displayDebug = true;
 	bool buttonPressed = false;
 	while(!exitLoop) {
-		displayDebug = true;
 
 		LED_B_OFF();
 		//Signal tracer
@@ -1131,13 +1130,11 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 			resp = resp1; respLen = resp1Len; //order = 1;
 			respdata = &sof;
 			respsize = sizeof(sof);
-			displayDebug = false;
 		} else if(receivedCmd[0] == 0x0c) {
 			// Reader asks for anticollission CSN
 			resp = resp2; respLen = resp2Len; //order = 2;
 			respdata = response2;
 			respsize = sizeof(response2);
-			//displayDebug = false;
 			//DbpString("Reader requests anticollission CSN:");
 		} else if(receivedCmd[0] == 0x81) {
 			// Reader selects anticollission CSN.
@@ -1199,29 +1196,13 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 		if(respLen > 0) {
 			SendIClassAnswer(resp, respLen, 21);
 			t2r_time = GetCountSspClk();
-
-//			}
-			if(displayDebug) Dbprintf("R2T:(len=%d): %x %x %x %x %x %x %x %x %x\nT2R: (total/data =%d/%d): %x %x %x %x %x %x %x %x %x",
-			len,
-			receivedCmd[0], receivedCmd[1], receivedCmd[2],
-			receivedCmd[3], receivedCmd[4], receivedCmd[5],
-			receivedCmd[6], receivedCmd[7], receivedCmd[8],
-			respLen,respsize,
-			resp[0], resp[1], resp[2],
-			resp[3], resp[4], resp[5],
-			resp[6], resp[7], resp[8]);
-
 		}
 
 		if (tracing) {
-			//LogTrace(receivedCmd,len, rsamples, Uart.parityBits, TRUE);
-
 			LogTrace(receivedCmd,len, (r2t_time-time_0)<< 4, Uart.parityBits,TRUE);
 			LogTrace(NULL,0, (r2t_time-time_0) << 4, 0,TRUE);
 
 			if (respdata != NULL) {
-				//LogTrace(respdata,respsize, rsamples, SwapBits(GetParity(respdata,respsize),respsize), FALSE);
-				//if(!LogTrace(resp,respLen, rsamples,SwapBits(GetParity(respdata,respsize),respsize),FALSE))
 				LogTrace(respdata,respsize, (t2r_time-time_0) << 4,SwapBits(GetParity(respdata,respsize),respsize),FALSE);
 				LogTrace(NULL,0, (t2r_time-time_0) << 4,0,FALSE);
 
