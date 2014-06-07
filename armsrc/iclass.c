@@ -1075,6 +1075,12 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 	CodeIClassTagAnswer(response4, sizeof(response4));
 	memcpy(resp4, ToSend, ToSendMax); resp4Len = ToSendMax;
 
+
+	// Start from off (no field generated)
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelay(200);
+
+
 	// We need to listen to the high-frequency, peak-detected path.
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
@@ -1085,10 +1091,17 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 	LED_A_ON();
 	for(;;) {
 		LED_B_OFF();
+		//Signal tracer
+		// Can be used to get a trigger for an oscilloscope..
+		LED_C_OFF();
+
 		if(!GetIClassCommandFromReader(receivedCmd, &len, 100)) {
 			DbpString("button press");
 			break;
 		}
+		//Signal tracer
+		LED_C_ON();
+
 
 		// Okay, look at the command now.
 		if(receivedCmd[0] == 0x0a) {
@@ -1188,41 +1201,34 @@ void SimulateIClass(uint8_t arg0, uint8_t *datain)
 
 static int SendIClassAnswer(uint8_t *resp, int respLen, int delay)
 {
-	int i = 0, u = 0, d = 0;
+	int i = 0, d=0;//, u = 0, d = 0;
 	uint8_t b = 0;
-	// return 0;
-	// Modulate Manchester
-	// FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_MOD424);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_MOD);
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR|FPGA_HF_SIMULATOR_MODULATE_424K);
+
 	AT91C_BASE_SSC->SSC_THR = 0x00;
 	FpgaSetupSsc();
-	
-	// send cycle
-	for(;;) {
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			(void)b;
+	while(!BUTTON_PRESS()) {
+		if((AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)){
+			b = AT91C_BASE_SSC->SSC_RHR; (void) b;
 		}
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)){
+			b = 0x00;
 			if(d < delay) {
-				b = 0x00;
 				d++;
 			}
-			else if(i >= respLen) {
-				b = 0x00;
-				u++;
-			} else {
-				b = resp[i];
-				u++;
-				if(u > 1) { i++; u = 0; }
+			else {
+				if( i < respLen){
+					b = resp[i];
+					//Hack
+					//b = 0xAC;
+				}
+				i++;
 			}
 			AT91C_BASE_SSC->SSC_THR = b;
+		}
 
-			if(u > 4) break;
-		}
-		if(BUTTON_PRESS()) {
-			break;
-		}
+		if (i > respLen +4) break;
 	}
 
 	return 0;
@@ -1236,7 +1242,6 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, int delay)
 static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int *wait)
 {
   int c;
-
   FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
   AT91C_BASE_SSC->SSC_THR = 0x00;
   FpgaSetupSsc();
@@ -1312,12 +1317,12 @@ void CodeIClassCommand(const uint8_t * cmd, int len)
     b = cmd[i];
     for(j = 0; j < 4; j++) {
       for(k = 0; k < 4; k++) {
-	if(k == (b & 3)) {
-	    ToSend[++ToSendMax] = 0x0f;
-	}
-	else {
-	    ToSend[++ToSendMax] = 0x00;
-	}
+			if(k == (b & 3)) {
+				ToSend[++ToSendMax] = 0x0f;
+			}
+			else {
+				ToSend[++ToSendMax] = 0x00;
+			}
       }
       b >>= 2;
     }
