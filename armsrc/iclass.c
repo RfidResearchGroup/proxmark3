@@ -48,17 +48,6 @@
 
 static int timeout = 4096;
 
-// CARD TO READER
-// Sequence D: 11110000 modulation with subcarrier during first half
-// Sequence E: 00001111 modulation with subcarrier during second half
-// Sequence F: 00000000 no modulation with subcarrier
-// READER TO CARD
-// Sequence X: 00001100 drop after half a period
-// Sequence Y: 00000000 no drop
-// Sequence Z: 11000000 drop at start
-#define	SEC_X 0x0c
-#define	SEC_Y 0x00
-#define	SEC_Z 0xc0
 
 static int SendIClassAnswer(uint8_t *resp, int respLen, int delay);
 
@@ -697,8 +686,6 @@ void RAMFUNC SnoopIClass(void)
     int samples = 0;
     rsamples = 0;
 
-    memset(trace, 0x44, RECV_CMD_OFFSET);
-
     // Set up the demodulator for tag -> reader responses.
 	Demod.output = tagToReaderResponse;
     Demod.len = 0;
@@ -721,6 +708,9 @@ void RAMFUNC SnoopIClass(void)
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_SNIFFER);
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+
+	uint32_t time_0 = GetCountSspClk();
+
 
     int div = 0;
     //int div2 = 0;
@@ -773,8 +763,14 @@ void RAMFUNC SnoopIClass(void)
 		    rsamples = samples - Uart.samples;
 		    LED_C_ON();
 
-			if(!LogTrace(readerToTagCmd,Uart.byteCnt, rsamples, Uart.parityBits,TRUE)) break;
+			//if(!LogTrace(Uart.output,Uart.byteCnt, rsamples, Uart.parityBits,TRUE)) break;
 			//if(!LogTrace(NULL, 0, Uart.endTime*16 - DELAY_READER_AIR2ARM_AS_SNIFFER, 0, TRUE)) break;
+			if(tracing)
+			{
+				LogTrace(Uart.output,Uart.byteCnt, (GetCountSspClk()-time_0) << 4, Uart.parityBits,TRUE);
+				LogTrace(NULL, 0, (GetCountSspClk()-time_0) << 4, 0, TRUE);
+			}
+
 
 			/* And ready to receive another command. */
 		    Uart.state = STATE_UNSYNCD;
@@ -793,8 +789,11 @@ void RAMFUNC SnoopIClass(void)
 		    rsamples = samples - Demod.samples;
 		    LED_B_ON();
 
-			if(!LogTrace(tagToReaderResponse,Demod.len, rsamples, Demod.parityBits,FALSE)) break;
-			//if (!LogTrace(NULL, 0, Demod.endTime*16 - DELAY_TAG_AIR2ARM_AS_SNIFFER, 0, FALSE)) break;
+			if(tracing)
+			{
+				LogTrace(Demod.output,Demod.len, (GetCountSspClk()-time_0) << 4 , Demod.parityBits,FALSE);
+				LogTrace(NULL, 0, (GetCountSspClk()-time_0) << 4, 0, FALSE);
+			}
 
 
 		    // And ready to receive another response.
@@ -883,6 +882,8 @@ static int GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen)
 //-----------------------------------------------------------------------------
 static void CodeIClassTagAnswer(const uint8_t *cmd, int len)
 {
+	//So far a dummy implementation, not used
+	//int lastProxToAirDuration =0;
 	int i;
 
 	ToSendReset();
@@ -891,7 +892,7 @@ static void CodeIClassTagAnswer(const uint8_t *cmd, int len)
 	ToSend[++ToSendMax] = 0x00;
 	ToSend[++ToSendMax] = 0x00;
 	ToSend[++ToSendMax] = 0x00;
-	ToSend[++ToSendMax] = 0xff;
+	ToSend[++ToSendMax] = 0xff;//Proxtoair duration starts here
 	ToSend[++ToSendMax] = 0xff;
 	ToSend[++ToSendMax] = 0xff;
 	ToSend[++ToSendMax] = 0x00;
@@ -919,10 +920,12 @@ static void CodeIClassTagAnswer(const uint8_t *cmd, int len)
 	ToSend[++ToSendMax] = 0x00;
 	ToSend[++ToSendMax] = 0xff;
 	ToSend[++ToSendMax] = 0xff;
-	ToSend[++ToSendMax] = 0xff;
+	ToSend[++ToSendMax] = 0xff;	
 	ToSend[++ToSendMax] = 0x00;
 	ToSend[++ToSendMax] = 0x00;
 	ToSend[++ToSendMax] = 0x00;
+
+	//lastProxToAirDuration  = 8*ToSendMax - 3*8 - 3*8;//Not counting zeroes in the beginning or end
 
 	// Convert from last byte pos to length
 	ToSendMax++;
@@ -931,8 +934,10 @@ static void CodeIClassTagAnswer(const uint8_t *cmd, int len)
 // Only SOF 
 static void CodeIClassTagSOF()
 {
-	ToSendReset();
+	//So far a dummy implementation, not used
+	//int lastProxToAirDuration =0;
 
+	ToSendReset();
 	// Send SOF
 	ToSend[++ToSendMax] = 0x00;
 	ToSend[++ToSendMax] = 0x00;
@@ -942,6 +947,9 @@ static void CodeIClassTagSOF()
 	ToSend[++ToSendMax] = 0xff;
 	ToSend[++ToSendMax] = 0x00;
 	ToSend[++ToSendMax] = 0xff;
+
+//	lastProxToAirDuration  = 8*ToSendMax - 3*8;//Not counting zeroes in the beginning
+
 	
 	// Convert from last byte pos to length
 	ToSendMax++;
@@ -994,7 +1002,8 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 				return; // Button pressed
 			}
 		}
-	}else{
+	}
+	else{
 		// We may want a mode here where we hardcode the csns to use (from proxclone).
 		// That will speed things up a little, but not required just yet.
 		Dbprintf("The mode is not implemented, reserved for future use");
@@ -1008,6 +1017,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
  */
 int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 {
+
 	// CSN followed by two CRC bytes
 	uint8_t response2[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	uint8_t response3[] = { 0,0,0,0,0,0,0,0,0,0};
@@ -1086,16 +1096,22 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 
 	// To control where we are in the protocol
 	int cmdsRecvd = 0;
+	uint32_t time_0 = GetCountSspClk();
+	uint32_t t2r_time =0;
+	uint32_t r2t_time =0;
 
 	LED_A_ON();
 	bool displayDebug = true;
 	bool buttonPressed = false;
 	while(!exitLoop) {
+		displayDebug = true;
+
 		LED_B_OFF();
 		if(!GetIClassCommandFromReader(receivedCmd, &len, 100)) {
 			buttonPressed = true;
 			break;
 		}
+		r2t_time = GetCountSspClk();
 
 		// Okay, look at the command now.
 		if(receivedCmd[0] == 0x0a ) {
@@ -1109,7 +1125,7 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 			resp = resp2; respLen = resp2Len; //order = 2;
 			respdata = response2;
 			respsize = sizeof(response2);
-			displayDebug = false;
+			//displayDebug = false;
 			//DbpString("Reader requests anticollission CSN:");
 		} else if(receivedCmd[0] == 0x81) {
 			// Reader selects anticollission CSN.
@@ -1160,8 +1176,8 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 			respsize = 0;
 		}
 
-		if(cmdsRecvd > 999) {
-			DbpString("1000 commands later...");
+		if(cmdsRecvd >  100) {
+			//DbpString("100 commands later...");
 			break;
 		}
 		else {
@@ -1170,7 +1186,9 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 
 		if(respLen > 0) {
 			SendIClassAnswer(resp, respLen, 21);
+			t2r_time = GetCountSspClk();
 
+//			}
 			if(displayDebug) Dbprintf("R2T:(len=%d): %x %x %x %x %x %x %x %x %x\nT2R: (total/data =%d/%d): %x %x %x %x %x %x %x %x %x",
 			len,
 			receivedCmd[0], receivedCmd[1], receivedCmd[2],
@@ -1185,21 +1203,23 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 
 		if (tracing) {
 			//LogTrace(receivedCmd,len, rsamples, Uart.parityBits, TRUE);
-			if(!LogTrace(receivedCmd,len, rsamples, Uart.parityBits,TRUE))
-			{
-				DbpString("Trace full");
-				break;
-			}
+
+			LogTrace(receivedCmd,len, (r2t_time-time_0)<< 4, Uart.parityBits,TRUE);
+			LogTrace(NULL,0, (r2t_time-time_0) << 4, 0,TRUE);
 
 			if (respdata != NULL) {
 				//LogTrace(respdata,respsize, rsamples, SwapBits(GetParity(respdata,respsize),respsize), FALSE);
 				//if(!LogTrace(resp,respLen, rsamples,SwapBits(GetParity(respdata,respsize),respsize),FALSE))
-				if(!LogTrace(respdata,respsize, rsamples,SwapBits(GetParity(respdata,respsize),respsize),FALSE))
-				{
-					DbpString("Trace full");
-					break;
-				}
+				LogTrace(respdata,respsize, (t2r_time-time_0) << 4,SwapBits(GetParity(respdata,respsize),respsize),FALSE);
+				LogTrace(NULL,0, (t2r_time-time_0) << 4,0,FALSE);
+
+
 			}
+			if(!tracing) {
+				DbpString("Trace full");
+				//break;
+			}
+
 		}
 		memset(receivedCmd, 0x44, RECV_CMD_SIZE);
 	}
@@ -1211,7 +1231,6 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 	{
 		DbpString("Button pressed");
 	}
-
 	return buttonPressed;
 }
 
