@@ -954,7 +954,7 @@ static void CodeIClassTagSOF()
 	// Convert from last byte pos to length
 	ToSendMax++;
 }
-
+int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader_mac_buf);
 /**
  * @brief SimulateIClass simulates an iClass card.
  * @param arg0 type of simulation
@@ -977,37 +977,42 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	iso14a_clear_trace();
 
 	uint8_t csn_crc[] = { 0x03, 0x1f, 0xec, 0x8a, 0xf7, 0xff, 0x12, 0xe0, 0x00, 0x00 };
-
 	if(simType == 0) {
 		// Use the CSN from commandline
 		memcpy(csn_crc, datain, 8);
-		doIClassSimulation(csn_crc,0);
+		doIClassSimulation(csn_crc,0,NULL);
 	}else if(simType == 1)
 	{
-		doIClassSimulation(csn_crc,0);
+		doIClassSimulation(csn_crc,0,NULL);
 	}
 	else if(simType == 2)
 	{
+
+		uint8_t mac_responses[64] = { 0 };
 		Dbprintf("Going into attack mode");
 		// In this mode, a number of csns are within datain. We'll simulate each one, one at a time
 		// in order to collect MAC's from the reader. This can later be used in an offlne-attack
 		// in order to obtain the keys, as in the "dismantling iclass"-paper.
-		for(int i = 0 ; i < numberOfCSNS && i*8+8 < USB_CMD_DATA_SIZE; i++)
+		int i = 0;
+		for( ; i < numberOfCSNS && i*8+8 < USB_CMD_DATA_SIZE; i++)
 		{
 			// The usb data is 512 bytes, fitting 65 8-byte CSNs in there.
 
 			memcpy(csn_crc, datain+(i*8), 8);
-			if(doIClassSimulation(csn_crc,1))
+			if(doIClassSimulation(csn_crc,1,mac_responses))
 			{
 				return; // Button pressed
 			}
 		}
+		cmd_send(CMD_ACK,CMD_SIMULATE_TAG_ICLASS,i,0,mac_responses,i*8);
+
 	}
 	else{
 		// We may want a mode here where we hardcode the csns to use (from proxclone).
 		// That will speed things up a little, but not required just yet.
 		Dbprintf("The mode is not implemented, reserved for future use");
 	}
+	Dbprintf("Done...");
 
 }
 /**
@@ -1015,7 +1020,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
  * @param csn - csn to use
  * @param breakAfterMacReceived if true, returns after reader MAC has been received.
  */
-int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
+int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader_mac_buf)
 {
 
 	// CSN followed by two CRC bytes
@@ -1109,6 +1114,12 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 
 	LED_A_ON();
 	bool buttonPressed = false;
+
+	/** Hack  for testing
+	memcpy(reader_mac_buf,csn,8);
+	exitLoop = true;
+	end hack **/
+
 	while(!exitLoop) {
 
 		LED_B_OFF();
@@ -1159,11 +1170,15 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 			if (breakAfterMacReceived){
 				// TODO, actually return this to the caller instead of just
 				// dbprintf:ing ...
-				Dbprintf("CSN: %02x %02x %02x %02x %02x %02x %02x %02x");
+				Dbprintf("CSN: %02x %02x %02x %02x %02x %02x %02x %02x",csn[0],csn[1],csn[2],csn[3],csn[4],csn[5],csn[6],csn[7]);
 				Dbprintf("RDR:  (len=%02d): %02x %02x %02x %02x %02x %02x %02x %02x %02x",len,
 						 receivedCmd[0], receivedCmd[1], receivedCmd[2],
 						receivedCmd[3], receivedCmd[4], receivedCmd[5],
 						receivedCmd[6], receivedCmd[7], receivedCmd[8]);
+				if (reader_mac_buf != NULL)
+				{
+					memcpy(reader_mac_buf,receivedCmd+1,8);
+				}
 				exitLoop = true;
 			}
 		} else if(receivedCmd[0] == 0x00 && len == 1) {
@@ -1187,7 +1202,7 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 
 		if(cmdsRecvd >  100) {
 			//DbpString("100 commands later...");
-			break;
+			//break;
 		}
 		else {
 			cmdsRecvd++;
@@ -1217,7 +1232,7 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived)
 		memset(receivedCmd, 0x44, RECV_CMD_SIZE);
 	}
 
-	Dbprintf("%x", cmdsRecvd);
+	//Dbprintf("%x", cmdsRecvd);
 	LED_A_OFF();
 	LED_B_OFF();
 	if(buttonPressed)

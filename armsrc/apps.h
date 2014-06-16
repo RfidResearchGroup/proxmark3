@@ -191,7 +191,7 @@ void SetDebugIso15693(uint32_t flag);
 void RAMFUNC SnoopIClass(void);
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void ReaderIClass(uint8_t arg0);
-int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived);
+//int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived);
 // hitag2.h
 void SnoopHitag(uint32_t type);
 void SimulateHitagTag(bool tag_mem_supplied, byte_t* data);
