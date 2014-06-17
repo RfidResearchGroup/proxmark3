@@ -1,6 +1,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>, Hagen Fritsch
 // Copyright (C) 2011 Gerhard de Koning Gans
+// Copyright (C) 2014 Midnitesnake & Andy Davies
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -164,11 +165,6 @@ int CmdHFiClassList(const char *Cmd)
   return 0;
 }
 
-/*void iso14a_set_timeout(uint32_t timeout) {
-	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_SET_TIMEOUT, 0, timeout}};
-	SendCommand(&c);
-}*/
-
 int CmdHFiClassSnoop(const char *Cmd)
 {
   UsbCommand c = {CMD_SNOOP_ICLASS};
@@ -197,14 +193,6 @@ int CmdHFiClassSim(const char *Cmd)
   UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType}};
   memcpy(c.d.asBytes, CSN, 8);
   SendCommand(&c);
-
-  /*UsbCommand * resp = WaitForResponseTimeout(CMD_ACK, 1500);
-  if (resp != NULL) {
-	uint8_t                isOK  = resp->arg[0] & 0xff;
-	PrintAndLog("isOk:%02x", isOK);
-  } else {
-	PrintAndLog("Command execute timeout");
-  }*/
 
   return 0;
 }
@@ -258,75 +246,198 @@ int CmdHFiClassReader_Dump(const char *Cmd)
   uint8_t KEY[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
   uint8_t CSN[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
   uint8_t CCNR[12]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-  uint8_t CC_temp[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  //uint8_t CC_temp[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
   uint8_t result[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
   uint8_t div_key[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
   des_context ctx_enc;
   uint64_t crypted_id=0;
 
-  if (strlen(Cmd)<3) {
-    PrintAndLog("Usage:  hf iclass dump <Key> <CSN> <CC>");
-    PrintAndLog("        sample: hf iclass dump 0011223344556677 aabbccddeeffgghh FFFFFFFFFFFFFFFF");
+  if (strlen(Cmd)<1) 
+  {
+    //PrintAndLog("Usage:  hf iclass dump <Key> <CSN> <CC>");
+    //PrintAndLog("        sample: hf iclass dump 0011223344556677 aabbccddeeffgghh FFFFFFFFFFFFFFFF");
+    PrintAndLog("Usage:  hf iclass dump <Key>");
+    PrintAndLog("        sample: hf iclass dump 0011223344556677");
     return 0;
   }
 
-  if (param_gethex(Cmd, 0, KEY, 16)) {
+  if (param_gethex(Cmd, 0, KEY, 16)) 
+  {
     PrintAndLog("KEY must include 16 HEX symbols");
     return 1;
   }
   
-  if (param_gethex(Cmd, 1, CSN, 16)) {
+  /*if (param_gethex(Cmd, 1, CSN, 16)) 
+  {
     PrintAndLog("CSN must include 16 HEX symbols");
     return 1;
   }
-  if (param_gethex(Cmd, 2, CC_temp, 16)) {
+  if (param_gethex(Cmd, 2, CC_temp, 16)) 
+  {
     PrintAndLog("CC must include 16 HEX symbols");
     return 1;
+  }*/
+  
+  UsbCommand c = {CMD_ICLASS_ISO14443A_GETPUBLIC, {0}};
+  //memcpy(c.d.asBytes, MAC, 4);
+  SendCommand(&c);
+  
+  UsbCommand resp;
+  if (WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
+    uint8_t isOK    = resp.arg[0] & 0xff;
+    uint8_t * data  = resp.d.asBytes;
+    
+    memcpy(CSN,data,8);
+    memcpy(CCNR,data+8,8);
+    PrintAndLog("DEBUG: %s",sprint_hex(CSN,8));
+    PrintAndLog("DEBUG: %s",sprint_hex(CCNR,8));
+	PrintAndLog("isOk:%02x", isOK);
+  } else {
+	PrintAndLog("Command execute timeout");
   }
   
-  memcpy(CCNR,CC_temp,8);
+  
+  //memcpy(CCNR,CC_temp,8);
   des_setkey_enc( &ctx_enc, KEY);
   des_crypt_ecb(&ctx_enc,CSN,result);
   PrintAndLog("DES Key: %s",sprint_hex(result,8));
-    uint64_t newz=0;
-	crypted_id = bytes_to_num(result,8);
-	uint64_t x = (crypted_id & 0xFFFF000000000000 );
-	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,0),7);
-	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,1),6);
-	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,2),5);
-	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,3),4);
-	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,4),3);
-	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,5),2);
-	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,6),1);
-	pushbackSixBitByte(&newz, getSixBitByte(crypted_id,7),0);
-	newz|= x;
-	crypted_id=newz;
-	num_to_bytes(crypted_id,8,result);
+  uint64_t newz=0;
+  crypted_id = bytes_to_num(result,8);
+  uint64_t x = (crypted_id & 0xFFFF000000000000 );
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,0),7);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,1),6);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,2),5);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,3),4);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,4),3);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,5),2);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,6),1);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,7),0);
+  newz|= x;
+  crypted_id=newz;
+  num_to_bytes(crypted_id,8,result);
   PrintAndLog("DESr Key: %s",sprint_hex(result,8));	
-  //crypted_id = bytes_to_num(result,8);
-  //memset(result,0,8);
   hash0(crypted_id,div_key);
-  //memcpy(div_key,result,8);
   PrintAndLog("Div Key: %s",sprint_hex(div_key,8));
   calc_iclass_mac(CCNR,12,div_key,MAC);
 
-  UsbCommand c = {CMD_READER_ICLASS_REPLAY, {readerType}};
-  memcpy(c.d.asBytes, MAC, 4);
+  UsbCommand d = {CMD_READER_ICLASS_REPLAY, {readerType}};
+  memcpy(d.d.asBytes, MAC, 4);
+  SendCommand(&d);
+
+  return 0;
+}
+
+int CmdHFiClass_iso14443A_write(const char *Cmd)
+{
+  uint8_t readerType = 0;
+  uint8_t MAC[4]={0x00,0x00,0x00,0x00};
+  uint8_t KEY[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  uint8_t CSN[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  uint8_t CCNR[12]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  uint8_t CC_temp[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  uint8_t result[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  uint8_t div_key[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  des_context ctx_enc;
+  uint64_t crypted_id=0;
+  uint8_t blockNo=0;
+  uint8_t bldata[8]={0};
+
+  if (strlen(Cmd)<3) 
+  {
+    PrintAndLog("Usage:  hf iclass write <Key> <Block> <Data>");
+    PrintAndLog("        sample: hf iclass write 0011223344556677 10 AAAAAAAAAAAAAAAA");
+    return 0;
+  }
+
+  if (param_gethex(Cmd, 0, KEY, 16)) 
+  {
+    PrintAndLog("KEY must include 16 HEX symbols");
+    return 1;
+  }
+  
+  blockNo = param_get8(Cmd, 1);
+  if (blockNo>32)
+  {
+        PrintAndLog("Error: Maximum number of blocks is 32 for iClass 2K Cards!");
+        return 1;
+  }
+  if (param_gethex(Cmd, 2, bldata, 8)) 
+  {
+        PrintAndLog("Block data must include 8 HEX symbols");
+        return 1;
+  }
+  
+  UsbCommand c = {CMD_ICLASS_ISO14443A_GETPUBLIC, {0}};
+  //memcpy(c.d.asBytes, MAC, 4);
+  SendCommand(&c);
+  
+  UsbCommand resp;
+  if (WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
+    uint8_t isOK    = resp.arg[0] & 0xff;
+    uint8_t * data  = resp.d.asBytes;
+    
+    memcpy(CSN,data,8);
+    memcpy(CCNR,data+8,8);
+    PrintAndLog("DEBUG: %s",sprint_hex(CSN,8));
+    PrintAndLog("DEBUG: %s",sprint_hex(CCNR,8));
+	PrintAndLog("isOk:%02x", isOK);
+  } else {
+	PrintAndLog("Command execute timeout");
+  }
+  
+  des_setkey_enc( &ctx_enc, KEY);
+  des_crypt_ecb(&ctx_enc,CSN,result);
+  PrintAndLog("DES Key: %s",sprint_hex(result,8));
+  uint64_t newz=0;
+  crypted_id = bytes_to_num(result,8);
+  uint64_t x = (crypted_id & 0xFFFF000000000000 );
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,0),7);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,1),6);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,2),5);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,3),4);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,4),3);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,5),2);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,6),1);
+  pushbackSixBitByte(&newz, getSixBitByte(crypted_id,7),0);
+  newz|= x;
+  crypted_id=newz;
+  num_to_bytes(crypted_id,8,result);
+  PrintAndLog("DESr Key: %s",sprint_hex(result,8));	
+  hash0(crypted_id,div_key);
+  PrintAndLog("Div Key: %s",sprint_hex(div_key,8));
+  calc_iclass_mac(CCNR,12,div_key,MAC);
+
+  UsbCommand c = {CMD_ICLASS_ISO14443A_WRITE, {readerType,blockNo}};
+  memcpy(c.d.asBytes, bldata, 8);
+  memcpy(c.d.asBytes+8, MAC, 4);
   SendCommand(&c);
 
+  UsbCommand resp;
+  if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+    uint8_t isOK    = resp.arg[0] & 0xff;
+    uint8_t * data  = resp.d.asBytes;
+
+    if (isOK)
+      PrintAndLog("isOk:%02x data:%s", isOK, sprint_hex(data, 4));
+    else
+      PrintAndLog("isOk:%02x", isOK);
+  } else {
+      PrintAndLog("Command execute timeout");
+  }
   return 0;
 }
 
 
 static command_t CommandTable[] = 
 {
-  {"help",    CmdHelp,        1, "This help"},
-  {"list",    CmdHFiClassList,   0, "List iClass history"},
-  {"snoop",   CmdHFiClassSnoop,  0, "Eavesdrop iClass communication"},
-  {"sim",     CmdHFiClassSim,    0, "Simulate iClass tag"},
-  {"reader",  CmdHFiClassReader, 0, "Read an iClass tag"},
-  {"replay",  CmdHFiClassReader_Replay, 0, "Read an iClass tag via Reply Attack"},
-  {"dump",	  CmdHFiClassReader_Dump, 0, "Authenticate and Dump iClass tag"},
+  {"help",	CmdHelp,			1,	"This help"},
+  {"list",	CmdHFiClassList,	0,	"List iClass history"},
+  {"snoop",	CmdHFiClassSnoop,	0,	"Eavesdrop iClass communication"},
+  {"sim",	CmdHFiClassSim,		0,	"Simulate iClass tag"},
+  {"reader",CmdHFiClassReader,	0,	"Read an iClass tag"},
+  {"replay",CmdHFiClassReader_Replay,	0,	"Read an iClass tag via Reply Attack"},
+  {"dump",	CmdHFiClassReader_Dump,	0,		"Authenticate and Dump iClass tag"},
+  {"write",	CmdHFiClass_iso14443A_write,	0,	"Authenticate and Write iClass block"},
   {NULL, NULL, 0, NULL}
 };
 
