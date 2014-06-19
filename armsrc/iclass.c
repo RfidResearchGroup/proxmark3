@@ -689,6 +689,8 @@ void RAMFUNC SnoopIClass(void)
     // into trace, along with its length and other annotations.
     //uint8_t *trace = (uint8_t *)BigBuf;
     
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+ 
     // reset traceLen to 0
     iso14a_set_tracing(TRUE);
     iso14a_clear_trace();
@@ -994,6 +996,8 @@ static void CodeIClassTagSOF()
 void SimulateIClass(uint8_t arg0, uint8_t *datain)
 {
 	uint8_t simType = arg0;
+
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
   // Enable and clear the trace
 	tracing = TRUE;
@@ -1425,6 +1429,8 @@ void ReaderIClass(uint8_t arg0) {
 	uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
+
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	// Reset trace buffer
     	memset(trace, 0x44, RECV_CMD_OFFSET);

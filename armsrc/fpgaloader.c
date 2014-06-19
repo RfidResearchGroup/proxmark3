@@ -252,7 +252,7 @@ static void DownloadFPGA(const char *FpgaImage, int FpgaImageLen, int byterevers
 
 static char *bitparse_headers_start;
 static char *bitparse_bitstream_end;
-static int bitparse_initialized;
+static int bitparse_initialized = 0;
 /* Simple Xilinx .bit parser. The file starts with the fixed opaque byte sequence
  * 00 09 0f f0 0f f0 0f f0 0f f0 00 00 01
  * After that the format is 1 byte section type (ASCII character), 2 byte length
@@ -322,12 +322,28 @@ int bitparse_find_section(char section_name, char **section_start, unsigned int 
 // Find out which FPGA image format is stored in flash, then call DownloadFPGA
 // with the right parameters to download the image
 //-----------------------------------------------------------------------------
-extern char _binary_fpga_bit_start, _binary_fpga_bit_end;
-void FpgaDownloadAndGo(void)
+extern char _binary_fpga_lf_bit_start, _binary_fpga_lf_bit_end;
+extern char _binary_fpga_hf_bit_start, _binary_fpga_hf_bit_end;
+void FpgaDownloadAndGo(int bitstream_version)
 {
+	void *bit_start;
+	void *bit_end;
+
+	// check whether or not the bitstream is already loaded
+	if (FpgaGatherBitstreamVersion() == bitstream_version)
+		return;
+
+	if (bitstream_version == FPGA_BITSTREAM_LF) {
+		bit_start = &_binary_fpga_lf_bit_start;
+		bit_end = &_binary_fpga_lf_bit_end;
+	} else if (bitstream_version == FPGA_BITSTREAM_HF) {
+		bit_start = &_binary_fpga_hf_bit_start;
+		bit_end = &_binary_fpga_hf_bit_end;
+	} else
+		return;
 	/* Check for the new flash image format: Should have the .bit file at &_binary_fpga_bit_start
 	 */
-	if(bitparse_init(&_binary_fpga_bit_start, &_binary_fpga_bit_end)) {
+	if(bitparse_init(bit_start, bit_end)) {
 		/* Successfully initialized the .bit parser. Find the 'e' section and
 		 * send its contents to the FPGA.
 		 */
@@ -351,6 +367,17 @@ void FpgaDownloadAndGo(void)
 		DownloadFPGA((char*)0x102000, 10524*4, 1);
 }
 
+int FpgaGatherBitstreamVersion()
+{
+	char temp[256];
+	FpgaGatherVersion(temp, sizeof (temp));
+	if (!memcmp("LF", temp, 2))
+		return FPGA_BITSTREAM_LF;
+	else if (!memcmp("HF", temp, 2))
+		return FPGA_BITSTREAM_HF;
+	return FPGA_BITSTREAM_ERR;
+}
+
 void FpgaGatherVersion(char *dst, int len)
 {
 	char *fpga_info;
@@ -359,13 +386,15 @@ void FpgaGatherVersion(char *dst, int len)
 	if(!bitparse_find_section('e', &fpga_info, &fpga_info_len)) {
 		strncat(dst, "FPGA image: legacy image without version information", len-1);
 	} else {
-		strncat(dst, "FPGA image built", len-1);
 		/* USB packets only have 48 bytes data payload, so be terse */
-#if 0
 		if(bitparse_find_section('a', &fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
-			strncat(dst, " from ", len-1);
-			strncat(dst, fpga_info, len-1);
+			if (!memcmp("fpga_lf", fpga_info, 7))
+				strncat(dst, "LF ", len-1);
+			else if (!memcmp("fpga_hf", fpga_info, 7))
+				strncat(dst, "HF ", len-1);
 		}
+		strncat(dst, "FPGA image built", len-1);
+#if 0
 		if(bitparse_find_section('b', &fpga_info, &fpga_info_len) && fpga_info[fpga_info_len-1] == 0 ) {
 			strncat(dst, " for ", len-1);
 			strncat(dst, fpga_info, len-1);

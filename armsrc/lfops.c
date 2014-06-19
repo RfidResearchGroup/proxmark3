@@ -17,6 +17,7 @@
 
 void AcquireRawAdcSamples125k(int divisor)
 {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	if ( (divisor == 1) || (divisor < 0) || (divisor > 255) )
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
 	else if (divisor == 0)
@@ -69,6 +70,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 	int at134khz;
 
 	/* Make sure the tag is reset */
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelay(2500);
 
@@ -158,6 +160,7 @@ void ReadTItag(void)
 	uint32_t threshold = (sampleslo - sampleshi + 1)>>1;
 
 	// TI tags charge at 134.2Khz
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
 
 	// Place FPGA in passthrough mode, in this mode the CROSS_LO line
@@ -365,6 +368,7 @@ void AcquireTiType(void)
 // if not provided a valid crc will be computed from the data and written.
 void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);	
 	if(crc == 0) {
 	 	crc = update_crc16(crc, (idlo)&0xff);
 		crc = update_crc16(crc, (idlo>>8)&0xff);
@@ -436,6 +440,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	int i;
 	uint8_t *tab = (uint8_t *)BigBuf;
     
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
     
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
@@ -602,6 +607,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	int m=0, n=0, i=0, idx=0, found=0, lastval=0;
   uint32_t hi2=0, hi=0, lo=0;
 
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 
@@ -815,6 +821,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	uint32_t code=0, code2=0;
 	//uint32_t hi2=0, hi=0, lo=0;
 
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 
@@ -1132,6 +1139,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 // Write one bit to card
 void T55xxWriteBit(int bit)
 {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 	if (bit == 0)
@@ -1147,6 +1155,7 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 {
 	unsigned int i;
 
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
 
@@ -1191,6 +1200,7 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 	uint8_t *dest = (uint8_t *)BigBuf;
 	int m=0, i=0;
   
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	m = sizeof(BigBuf);
   // Clear destination buffer before sending the command
 	memset(dest, 128, m);
@@ -1255,6 +1265,7 @@ void T55xxReadTrace(void){
 	uint8_t *dest = (uint8_t *)BigBuf;
 	int m=0, i=0;
   
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	m = sizeof(BigBuf);
   // Clear destination buffer before sending the command
 	memset(dest, 128, m);
@@ -1970,6 +1981,7 @@ void SendForward(uint8_t fwd_bit_count) {
   LED_D_ON();
   
   //Field on
+  FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
   FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
   FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
   

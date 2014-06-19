@@ -67,7 +67,8 @@ extern uint32_t BigBuf[];
 /// fpga.h
 void FpgaSendCommand(uint16_t cmd, uint16_t v);
 void FpgaWriteConfWord(uint8_t v);
-void FpgaDownloadAndGo(void);
+void FpgaDownloadAndGo(int bitstream_version);
+int FpgaGatherBitstreamVersion();
 void FpgaGatherVersion(char *dst, int len);
 void FpgaSetupSsc(void);
 void SetupSpi(int mode);
@@ -77,17 +78,20 @@ bool FpgaSetupSscDma(uint8_t *buf, int len);
 void SetAdcMuxFor(uint32_t whichGpio);
 
 // Definitions for the FPGA commands.
-#define FPGA_CMD_SET_CONFREG						(1<<12)
-#define FPGA_CMD_SET_DIVISOR						(2<<12)
+#define FPGA_CMD_SET_CONFREG					(1<<12)
+#define FPGA_CMD_SET_DIVISOR					(2<<12)
 // Definitions for the FPGA configuration word.
-#define FPGA_MAJOR_MODE_LF_READER					(0<<5)
+// LF
+#define FPGA_MAJOR_MODE_LF_READER				(0<<5)
 #define FPGA_MAJOR_MODE_LF_EDGE_DETECT				(1<<5)
-#define FPGA_MAJOR_MODE_HF_READER_TX				(2<<5)
-#define FPGA_MAJOR_MODE_HF_READER_RX_XCORR			(3<<5)
-#define FPGA_MAJOR_MODE_HF_SIMULATOR				(4<<5)
-#define FPGA_MAJOR_MODE_HF_ISO14443A				(5<<5)
-#define FPGA_MAJOR_MODE_LF_PASSTHRU					(6<<5)
-#define FPGA_MAJOR_MODE_OFF							(7<<5)
+#define FPGA_MAJOR_MODE_LF_PASSTHRU				(2<<5)
+// HF
+#define FPGA_MAJOR_MODE_HF_READER_TX				(0<<5)
+#define FPGA_MAJOR_MODE_HF_READER_RX_XCORR			(1<<5)
+#define FPGA_MAJOR_MODE_HF_SIMULATOR				(2<<5)
+#define FPGA_MAJOR_MODE_HF_ISO14443A				(3<<5)
+// BOTH
+#define FPGA_MAJOR_MODE_OFF					(7<<5)
 // Options for LF_EDGE_DETECT
 #define FPGA_LF_EDGE_DETECT_READER_FIELD 			(1<<0)
 // Options for the HF reader, tx to tag
@@ -95,14 +99,14 @@ void SetAdcMuxFor(uint32_t whichGpio);
 // Options for the HF reader, correlating against rx from tag
 #define FPGA_HF_READER_RX_XCORR_848_KHZ				(1<<0)
 #define FPGA_HF_READER_RX_XCORR_SNOOP				(1<<1)
-#define FPGA_HF_READER_RX_XCORR_QUARTER_FREQ		(1<<2)
+#define FPGA_HF_READER_RX_XCORR_QUARTER_FREQ			(1<<2)
 // Options for the HF simulated tag, how to modulate
 #define FPGA_HF_SIMULATOR_NO_MODULATION				(0<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_BPSK				(1<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_212K				(2<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_424K				(4<<0)
 // Options for ISO14443A
-#define FPGA_HF_ISO14443A_SNIFFER					(0<<0)
+#define FPGA_HF_ISO14443A_SNIFFER				(0<<0)
 #define FPGA_HF_ISO14443A_TAGSIM_LISTEN				(1<<0)
 #define FPGA_HF_ISO14443A_TAGSIM_MOD				(2<<0)
 #define FPGA_HF_ISO14443A_READER_LISTEN				(3<<0)
