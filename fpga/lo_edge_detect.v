@@ -4,6 +4,7 @@
 // (because it is so slow).
 //
 // Jonathan Westhues, April 2006
+// iZsh <izsh at fail0verflow.com>, June 2014
 //-----------------------------------------------------------------------------
 
 module lo_edge_detect(

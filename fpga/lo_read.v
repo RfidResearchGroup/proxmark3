@@ -4,6 +4,7 @@
 // The A/D samples at that same rate and the result is serialized.
 //
 // Jonathan Westhues, April 2006
+// iZsh <izsh at fail0verflow.com>, June 2014
 //-----------------------------------------------------------------------------
 
 module lo_read(

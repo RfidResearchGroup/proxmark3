@@ -2,6 +2,7 @@
 // For reading TI tags, we need to place the FPGA in pass through mode
 // and pass everything through to the ARM
 //-----------------------------------------------------------------------------
+// iZsh <izsh at fail0verflow.com>, June 2014
 
 module lo_passthru(
 	input pck_divclk,

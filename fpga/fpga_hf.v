@@ -10,6 +10,7 @@
 //
 // Jonathan Westhues, March 2006
 // Added ISO14443-A support by Gerhard de Koning Gans, April 2008
+// iZsh <izsh at fail0verflow.com>, June 2014
 //-----------------------------------------------------------------------------
 
 `include "hi_read_tx.v"
