@@ -81,6 +81,7 @@ void SetAdcMuxFor(uint32_t whichGpio);
 // Definitions for the FPGA commands.
 #define FPGA_CMD_SET_CONFREG					(1<<12)
 #define FPGA_CMD_SET_DIVISOR					(2<<12)
+#define FPGA_CMD_SET_USER_BYTE1					(3<<12)
 // Definitions for the FPGA configuration word.
 // LF
 #define FPGA_MAJOR_MODE_LF_ADC					(0<<5)
@@ -96,7 +97,9 @@ void SetAdcMuxFor(uint32_t whichGpio);
 // Options for LF_ADC
 #define FPGA_LF_ADC_READER_FIELD				(1<<0)
 // Options for LF_EDGE_DETECT
+#define FPGA_CMD_SET_EDGE_DETECT_THRESHOLD			FPGA_CMD_SET_USER_BYTE1
 #define FPGA_LF_EDGE_DETECT_READER_FIELD 			(1<<0)
+#define FPGA_LF_EDGE_DETECT_TOGGLE_MODE				(1<<1)
 // Options for the HF reader, tx to tag
 #define FPGA_HF_READER_TX_SHALLOW_MOD				(1<<0)
 // Options for the HF reader, correlating against rx from tag

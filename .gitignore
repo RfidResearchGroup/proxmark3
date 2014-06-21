@@ -19,6 +19,7 @@ lua
 luac
 
 fpga/*
+!fpga/tests
 !fpga/fpga_lf.bit
 !fpga/fpga_hf.bit
 !fpga/*.v
