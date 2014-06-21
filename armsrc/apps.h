@@ -59,7 +59,8 @@ void ToSendStuffBit(int b);
 void ToSendReset(void);
 void ListenReaderField(int limit);
 void AcquireRawAdcSamples125k(int at134khz);
-void DoAcquisition125k(void);
+void SnoopLFRawAdcSamples(int divisor, int trigger_threshold);
+void DoAcquisition125k(int trigger_threshold);
 extern int ToSendMax;
 extern uint8_t ToSend[];
 extern uint32_t BigBuf[];
@@ -82,8 +83,8 @@ void SetAdcMuxFor(uint32_t whichGpio);
 #define FPGA_CMD_SET_DIVISOR					(2<<12)
 // Definitions for the FPGA configuration word.
 // LF
-#define FPGA_MAJOR_MODE_LF_READER				(0<<5)
-#define FPGA_MAJOR_MODE_LF_EDGE_DETECT				(1<<5)
+#define FPGA_MAJOR_MODE_LF_ADC					(0<<5)
+#define FPGA_MAJOR_MODE_LF_EDGE_DETECT			(1<<5)
 #define FPGA_MAJOR_MODE_LF_PASSTHRU				(2<<5)
 // HF
 #define FPGA_MAJOR_MODE_HF_READER_TX				(0<<5)
@@ -92,6 +93,8 @@ void SetAdcMuxFor(uint32_t whichGpio);
 #define FPGA_MAJOR_MODE_HF_ISO14443A				(3<<5)
 // BOTH
 #define FPGA_MAJOR_MODE_OFF					(7<<5)
+// Options for LF_ADC
+#define FPGA_LF_ADC_READER_FIELD				(1<<0)
 // Options for LF_EDGE_DETECT
 #define FPGA_LF_EDGE_DETECT_READER_FIELD 			(1<<0)
 // Options for the HF reader, tx to tag

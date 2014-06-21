@@ -215,7 +215,7 @@ void MeasureAntennaTuning(void)
  */
   
   	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	for (i=255; i>19; i--) {
     WDT_HIT();
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
@@ -637,6 +637,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			ModThenAcquireRawAdcSamples125k(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
+			break;
+		case CMD_LF_SNOOP_RAW_ADC_SAMPLES:
+			SnoopLFRawAdcSamples(c->arg[0], c->arg[1]);
+			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		case CMD_HID_DEMOD_FSK:
 			CmdHIDdemodFSK(0, 0, 0, 1);					// Demodulate HID tag

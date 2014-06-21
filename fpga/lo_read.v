@@ -13,7 +13,8 @@ module lo_read(
 	output pwr_oe1, output pwr_oe2, output pwr_oe3, output pwr_oe4,
 	input [7:0] adc_d, output adc_clk,
 	output ssp_frame, output ssp_din, output ssp_clk,
-	output dbg
+	output dbg,
+	input lf_field
 );
 
 reg [7:0] to_arm_shiftreg;
@@ -65,7 +66,7 @@ assign pwr_oe2 = 1'b0;
 assign pwr_oe3 = 1'b0;
 assign pwr_oe4 = 1'b0;
 // this is the antenna driver signal
-assign pwr_lo = pck_divclk;
+assign pwr_lo = lf_field & pck_divclk;
 // ADC clock out of phase with antenna driver
 assign adc_clk = ~pck_divclk;
 // ADC clock also routed to debug pin

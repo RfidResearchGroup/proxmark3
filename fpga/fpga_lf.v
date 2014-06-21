@@ -80,7 +80,7 @@ lo_read lr(
 	lr_pwr_lo, lr_pwr_hi, lr_pwr_oe1, lr_pwr_oe2, lr_pwr_oe3, lr_pwr_oe4,
 	adc_d, lr_adc_clk,
 	lr_ssp_frame, lr_ssp_din, lr_ssp_clk,
-	lr_dbg
+	lr_dbg, lf_field
 );
 
 lo_passthru lp(
