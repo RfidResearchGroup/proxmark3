@@ -196,7 +196,7 @@ int CmdHF14AReader(const char *Cmd)
 		return 0;
 	}
 
-	PrintAndLog("ATQA : %02x %02x", card->atqa[0], card->atqa[1]);
+	PrintAndLog("ATQA : %02x %02x", card->atqa[1], card->atqa[0]);
 	PrintAndLog(" UID : %s", sprint_hex(card->uid, card->uidlen));
 	PrintAndLog(" SAK : %02x [%d]", card->sak, resp.arg[0]);
 
@@ -357,23 +357,20 @@ int CmdHF14ACUIDs(const char *Cmd)
 		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
 		SendCommand(&c);
     
-    UsbCommand resp;
-    WaitForResponse(CMD_ACK,&resp);
+		UsbCommand resp;
+		WaitForResponse(CMD_ACK,&resp);
 
-		uint8_t *uid  = resp.d.asBytes;
-		iso14a_card_select_t *card = (iso14a_card_select_t *)(uid + 12);
+		iso14a_card_select_t *card = (iso14a_card_select_t *) resp.d.asBytes;
 
 		// check if command failed
 		if (resp.arg[0] == 0) {
 			PrintAndLog("Card select failed.");
 		} else {
-			// check if UID is 4 bytes
-			if ((card->atqa[1] & 0xC0) == 0) {
-				PrintAndLog("%02X%02X%02X%02X",
-				            *uid, *(uid + 1), *(uid + 2), *(uid + 3));
-			} else {
-				PrintAndLog("UID longer than 4 bytes");
+			char uid_string[20];
+			for (uint16_t i = 0; i < card->uidlen; i++) {
+				sprintf(&uid_string[2*i], "%02X", card->uid[i]);
 			}
+			PrintAndLog("%s", uid_string);
 		}
 	}
 	PrintAndLog("End: %u", time(NULL));
