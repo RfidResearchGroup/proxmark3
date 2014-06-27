@@ -11,7 +11,7 @@
 // (resp. low peak) is reached/detected, since you can't know it isn't a
 // local minima (resp. maxima) until then.
 // This also means the peaks are detected with an unpredictable delay.
-// This algorithm can't therefore be used directly for realtime peak detections,
+// This algorithm therefore can't be used directly for realtime peak detections,
 // but it can be used as a simple envelope follower.
 module min_max_tracker(input clk, input [7:0] adc_d, input [7:0] threshold,
 	output [7:0] min, output [7:0] max);
