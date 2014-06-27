@@ -1,0 +1,4 @@
+# .gitattributes
+# prevent binary files from CRLF handling, diff and merge:
+fpga/fpga.bit -crlf -diff
+ 

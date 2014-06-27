@@ -1,6 +1,7 @@
 # .gitignore
 # don't push these files to the repository
 
+*.log
 *.o
 *.a
 *.d
