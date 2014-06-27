@@ -1765,6 +1765,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 }
 
 void iso14443a_setup(uint8_t fpga_minor_mode) {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	// Set up the synchronous serial port
 	FpgaSetupSsc();
 	// connect Demodulated Signal to ADC:

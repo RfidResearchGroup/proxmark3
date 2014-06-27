@@ -669,6 +669,8 @@ void RAMFUNC SnoopIClass(void)
     // The response (tag -> reader) that we're receiving.
 	uint8_t *tagToReaderResponse = (((uint8_t *)BigBuf) + RECV_RES_OFFSET);
 
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+ 
     // reset traceLen to 0
     iso14a_set_tracing(TRUE);
     iso14a_clear_trace();
@@ -971,6 +973,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 {
 	uint32_t simType = arg0;
 	uint32_t numberOfCSNS = arg1;
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	// Enable and clear the trace
 	iso14a_set_tracing(TRUE);
@@ -1022,6 +1025,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
  */
 int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader_mac_buf)
 {
+
 
 	// CSN followed by two CRC bytes
 	uint8_t response2[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -1468,6 +1472,8 @@ void ReaderIClass(uint8_t arg0) {
 	uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
+
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	// Reset trace buffer
 	memset(trace, 0x44, RECV_CMD_OFFSET);

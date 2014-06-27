@@ -21,7 +21,8 @@ ENTRY(Vector)
 SECTIONS
 {
 	.fpgaimage : {
-		*(fpga_bit.data)
+		*(fpga_lf_bit.data)
+		*(fpga_hf_bit.data)
 	} >fpgaimage :fpgaimage
 
 	.start : {

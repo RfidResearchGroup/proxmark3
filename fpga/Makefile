@@ -1,31 +1,33 @@
 include ../common/Makefile.common
 
-all: fpga.ngc fpga.ngd fpga.ncd fpga-placed.ncd fpga.bit
+all: fpga_lf.bit fpga_hf.bit
 clean:
-	$(DELETE) fpga.bgn  fpga.drc  fpga.ncd           fpga.ngd            fpga_par.xrpt    fpga-placed.pad      fpga-placed.par       fpga-placed.xpi   fpga_usage.xml  xlnx_auto_0.ise  xst.srp
-	$(DELETE) fpga.map  fpga.ngc           fpga_ngdbuild.xrpt  fpga.pcf         fpga-placed_pad.csv  fpga-placed.ptwx      fpga.rbt          xlnx_auto_0_xdb
-	$(DELETE) fpga.bld  fpga.mrp  fpga.ngc_xst.xrpt  fpga.ngm            fpga-placed.ncd  fpga-placed_pad.txt  fpga-placed.unroutes  fpga_summary.xml  netlist.lst     xst
+	$(DELETE) *.bgn *.drc *.ncd *.ngd *_par.xrpt *-placed.* *-placed_pad.* *_usage.xml xst_hf.srp xst_lf.srp
+	$(DELETE) *.map *.ngc *.xrpt *.pcf *.rbt *_auto_* *.bld *.mrp *.ngm *.unroutes *_summary.xml netlist.lst xst
 
-fpga.ngc: fpga.v fpga.ucf xst.scr util.v lo_edge_detect.v lo_read.v lo_passthru.v hi_simulate.v hi_read_tx.v hi_read_rx_xcorr.v hi_iso14443a.v
-	$(DELETE) fpga.ngc
-	$(XILINX_TOOLS_PREFIX)xst -ifn xst.scr
+fpga_hf.ngc: fpga_hf.v fpga.ucf xst_hf.scr util.v hi_simulate.v hi_read_tx.v hi_read_rx_xcorr.v hi_iso14443a.v
+	$(DELETE) $@
+	$(XILINX_TOOLS_PREFIX)xst -ifn xst_hf.scr
 
-fpga.ngd: fpga.ngc
-	$(DELETE) fpga.ngd
-	$(XILINX_TOOLS_PREFIX)ngdbuild -aul -p xc2s30-5-vq100 -nt timestamp -uc fpga.ucf fpga.ngc fpga.ngd
+fpga_lf.ngc: fpga_lf.v fpga.ucf xst_lf.scr util.v clk_divider.v lo_edge_detect.v lo_read.v lo_passthru.v
+	$(DELETE) $@
+	$(XILINX_TOOLS_PREFIX)xst -ifn xst_lf.scr
 
-fpga.ncd: fpga.ngd
-	$(DELETE) fpga.ncd
-	$(XILINX_TOOLS_PREFIX)map -p xc2s30-5-vq100 fpga.ngd
+%.ngd: %.ngc
+	$(DELETE) $@
+	$(XILINX_TOOLS_PREFIX)ngdbuild -aul -p xc2s30-5-vq100 -nt timestamp -uc fpga.ucf $< $@
 
-fpga-placed.ncd: fpga.ncd
-	$(DELETE) fpga-placed.ncd
-	$(XILINX_TOOLS_PREFIX)par fpga.ncd fpga-placed.ncd
+%.ncd: %.ngd
+	$(DELETE) $@
+	$(XILINX_TOOLS_PREFIX)map -p xc2s30-5-vq100 $<
 
-fpga.bit: fpga-placed.ncd
-	$(DELETE) fpga.bit fpga.drc fpga.rbt
-	$(XILINX_TOOLS_PREFIX)bitgen fpga-placed.ncd fpga.bit
+%-placed.ncd: %.ncd
+	$(DELETE) $@
+	$(XILINX_TOOLS_PREFIX)par $< $@
 
+%.bit: %-placed.ncd
+	$(DELETE) $@ $*.drc $*.rbt
+	$(XILINX_TOOLS_PREFIX)bitgen $< $@
 
 .PHONY: all clean help
 help:

@@ -310,6 +310,7 @@ static uint32_t perform_setup_phase_rwd(int iv)
 }
 
 static void LegicCommonInit(void) {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
@@ -687,6 +688,7 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
    legic_frame_drift = frame;
    legic_reqresp_drift = reqresp;
 
+   FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
    FpgaSetupSsc();
    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_212K);

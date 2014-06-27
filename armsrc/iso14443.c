@@ -350,6 +350,7 @@ void SimulateIso14443Tag(void)
 
     int cmdsRecvd = 0;
 
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     memset(receivedCmd, 0x44, 400);
 
     CodeIso14443bAsTag(response1, sizeof(response1));
@@ -867,6 +868,7 @@ void ReadSTMemoryIso14443(uint32_t dwLast)
 {
     uint8_t i = 0x00;
 
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     // Make sure that we start from off, since the tags are stateful;
     // confusing things will happen if we don't reset them between reads.
     LED_D_OFF();
@@ -1011,6 +1013,7 @@ void RAMFUNC SnoopIso14443(void)
     // response from the tag.
     int triggered = TRUE;
 
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     // The command (reader -> tag) that we're working on receiving.
     uint8_t *receivedCmd = (uint8_t *)(BigBuf) + DEMOD_TRACE_SIZE;
     // The response (tag -> reader) that we're working on receiving.
@@ -1196,6 +1199,7 @@ done:
 
 void SendRawCommand14443B(uint32_t datalen, uint32_t recv,uint8_t powerfield, uint8_t data[])
 {
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     if(!powerfield)
     {
         // Make sure that we start from off, since the tags are stateful;
