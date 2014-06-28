@@ -18,6 +18,6 @@ int CmdHFiClassSnoop(const char *Cmd);
 int CmdHFiClassSim(const char *Cmd);
 int CmdHFiClassList(const char *Cmd);
 int CmdHFiClassReader(const char *Cmd);
-int saveFile(const char *preferredName, const char *suffix, const void* data, size_t datalen);
+int CmdHFiClassReader_Replay(const char *Cmd);
 
 #endif
