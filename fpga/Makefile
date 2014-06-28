@@ -9,7 +9,7 @@ fpga_hf.ngc: fpga_hf.v fpga.ucf xst_hf.scr util.v hi_simulate.v hi_read_tx.v hi_
 	$(DELETE) $@
 	$(XILINX_TOOLS_PREFIX)xst -ifn xst_hf.scr
 
-fpga_lf.ngc: fpga_lf.v fpga.ucf xst_lf.scr util.v clk_divider.v lo_edge_detect.v lo_read.v lo_passthru.v
+fpga_lf.ngc: fpga_lf.v fpga.ucf xst_lf.scr util.v clk_divider.v lo_edge_detect.v lo_read.v lo_passthru.v lp20khz_1MSa_iir_filter.v min_max_tracker.v lf_edge_detect.v
 	$(DELETE) $@
 	$(XILINX_TOOLS_PREFIX)xst -ifn xst_lf.scr
 
