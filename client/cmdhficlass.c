@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>, Hagen Fritsch
 // Copyright (C) 2011 Gerhard de Koning Gans
-// Copyright (C) 2014 Midnitesnake & Andy Davies
+// Copyright (C) 2014 Midnitesnake & Andy Davies & Martin Holst Swende
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -88,7 +88,7 @@ int CmdHFiClassList(const char *Cmd)
 		timestamp = *((uint32_t *)(got+i));
 		parityBits = *((uint32_t *)(got+i+4));
 		len = got[i+8];
-		frame = (got+i+9);
+        frame = (got+i+9);
 		uint32_t next_timestamp = (*((uint32_t *)(got+i+9))) & 0x7fffffff;
 
 		tagToReader = timestamp & 0x80000000;
@@ -98,7 +98,7 @@ int CmdHFiClassList(const char *Cmd)
 			first_timestamp = timestamp;
 		}
 
-		// Break and stick with current result if buffer was not completely full
+        // Break and stick with current result idf buffer was not completely full
 		if (frame[0] == 0x44 && frame[1] == 0x44 && frame[2] == 0x44 && frame[3] == 0x44) break;
 
 		char line[1000] = "";
@@ -453,8 +453,6 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 
   if (strlen(Cmd)<1) 
   {
-    //PrintAndLog("Usage:  hf iclass dump <Key> <CSN> <CC>");
-    //PrintAndLog("        sample: hf iclass dump 0011223344556677 aabbccddeeffgghh FFFFFFFFFFFFFFFF");
     PrintAndLog("Usage:  hf iclass dump <Key>");
     PrintAndLog("        sample: hf iclass dump 0011223344556677");
     return 0;
@@ -465,43 +463,43 @@ int CmdHFiClassReader_Dump(const char *Cmd)
     PrintAndLog("KEY must include 16 HEX symbols");
     return 1;
   }
-  
-  /*if (param_gethex(Cmd, 1, CSN, 16)) 
-  {
-    PrintAndLog("CSN must include 16 HEX symbols");
-    return 1;
-  }
-  if (param_gethex(Cmd, 2, CC_temp, 16)) 
-  {
-    PrintAndLog("CC must include 16 HEX symbols");
-    return 1;
-  }*/
-  
+    
   UsbCommand c = {CMD_ICLASS_ISO14443A_GETPUBLIC, {0}};
-  //memcpy(c.d.asBytes, MAC, 4);
+
   SendCommand(&c);
   
   UsbCommand resp;
+
   if (WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
-    uint8_t isOK    = resp.arg[0] & 0xff;
-    uint8_t * data  = resp.d.asBytes;
-    
-    memcpy(CSN,data,8);
-    memcpy(CCNR,data+8,8);
-    PrintAndLog("DEBUG: %s",sprint_hex(CSN,8));
-    PrintAndLog("DEBUG: %s",sprint_hex(CCNR,8));
-	PrintAndLog("isOk:%02x", isOK);
-  } else {
-	PrintAndLog("Command execute timeout");
-  }
+        uint8_t isOK    = resp.arg[0] & 0xff;
+        uint8_t * data  = resp.d.asBytes;
 
-  diversifyKey(CSN,KEY, div_key);
 
-  doMAC(CCNR,div_key, MAC);
+        memcpy(CSN,data,8);
+        memcpy(CCNR,data+8,8);
 
-  UsbCommand d = {CMD_READER_ICLASS_REPLAY, {readerType}};
-  memcpy(d.d.asBytes, MAC, 4);
-  SendCommand(&d);
+        PrintAndLog("isOk:%02x", isOK);
+
+        if(isOK > 0)
+        {
+            PrintAndLog("CSN: %s",sprint_hex(CSN,8));
+        }
+        if(isOK > 1)
+        {
+            PrintAndLog("CC: %s",sprint_hex(CCNR,8));
+            diversifyKey(CSN,KEY, div_key);
+            doMAC(CCNR,div_key, MAC);
+
+            UsbCommand d = {CMD_READER_ICLASS_REPLAY, {readerType}};
+            memcpy(d.d.asBytes, MAC, 4);
+            SendCommand(&d);
+
+        }else{
+            PrintAndLog("Failed to obtain CC! Aborting");
+        }
+    } else {
+        PrintAndLog("Command execute timeout");
+    }
 
   return 0;
 }

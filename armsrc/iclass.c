@@ -1169,12 +1169,11 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 		} else if(receivedCmd[0] == 0x05) {
 			// Reader random and reader MAC!!!
 			// Do not respond
-			// We do not know what to answer, so lets keep quit
+            // We do not know what to answer, so lets keep quiet
 			resp = resp1; respLen = 0; //order = 5;
 			respdata = NULL;
 			respsize = 0;
 			if (breakAfterMacReceived){
-				// TODO, actually return this to the caller instead of just
 				// dbprintf:ing ...
 				Dbprintf("CSN: %02x %02x %02x %02x %02x %02x %02x %02x",csn[0],csn[1],csn[2],csn[3],csn[4],csn[5],csn[6],csn[7]);
 				Dbprintf("RDR:  (len=%02d): %02x %02x %02x %02x %02x %02x %02x %02x %02x",len,
@@ -1478,8 +1477,8 @@ void ReaderIClass(uint8_t arg0) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	// Reset trace buffer
-	memset(trace, 0x44, RECV_CMD_OFFSET);
-	traceLen = 0;
+    iso14a_set_tracing(TRUE);
+    iso14a_clear_trace();
 
 	// Setup SSC
 	FpgaSetupSsc();
@@ -1554,10 +1553,11 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	} memory;
 	
 	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
+    // Enable and clear the trace
+    iso14a_set_tracing(TRUE);
+    iso14a_clear_trace();
 
-	// Reset trace buffer
-    memset(trace, 0x44, RECV_CMD_OFFSET);
-	traceLen = 0;
+
 
 	// Setup SSC
 	FpgaSetupSsc();
@@ -1681,15 +1681,16 @@ void IClass_iso14443A_GetPublic(uint8_t arg0) {
 	uint8_t identify[]    = { 0x0c };
 	uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	uint8_t readcheck_cc[]= { 0x88, 0x02 };	
-	//uint8_t read[]        = { 0x0c, 0x00, 0x00, 0x00 };	
-	uint8_t card_data[24]={0};
-	
-	//bool read_success=false;
-	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
 
-	// Reset trace buffer
-    memset(trace, 0x44, RECV_CMD_OFFSET);
-	traceLen = 0;
+    uint8_t card_data[24]={0};
+    uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+    int read_success= 0;
+
+    // Enable and clear the trace
+    iso14a_set_tracing(TRUE);
+    iso14a_clear_trace();
 
 	// Setup SSC
 	FpgaSetupSsc();
@@ -1708,67 +1709,50 @@ void IClass_iso14443A_GetPublic(uint8_t arg0) {
 
 	LED_A_ON();
 
-	for(int i=0;i<1;i++) {
-	
-		if(traceLen > TRACE_SIZE) {
-			DbpString("Trace full");
-			break;
-		}
-		
-		if (BUTTON_PRESS()) break;
+    // Send act_all
+    ReaderTransmitIClass(act_all, 1);
+    // Card present?
+    if(ReaderReceiveIClass(resp)) {
+        ReaderTransmitIClass(identify, 1);
+        if(ReaderReceiveIClass(resp) == 10) {
+            //Copy the Anti-collision CSN to our select-packet
+            memcpy(&select[1],resp,8);
+            Dbprintf("Anti-collision CSN: %02x %02x %02x %02x %02x %02x %02x %02x");
+            //Select the card
+            ReaderTransmitIClass(select, sizeof(select));
 
-		// Send act_all
-		ReaderTransmitIClass(act_all, 1);
-		// Card present?
-		if(ReaderReceiveIClass(resp)) {
-			ReaderTransmitIClass(identify, 1);
-			if(ReaderReceiveIClass(resp) == 10) {
-				// Select card          
-				memcpy(&select[1],resp,8);
-				ReaderTransmitIClass(select, sizeof(select));
+            if(ReaderReceiveIClass(resp) == 10) {
+                Dbprintf("     Selected CSN: %02x %02x %02x %02x %02x %02x %02x %02x",
+                resp[0], resp[1], resp[2],
+                resp[3], resp[4], resp[5],
+                resp[6], resp[7]);
+                //Save CSN in response data
+                memcpy(card_data,resp,8);
+                //Flag that we got to at least stage 1, read CSN
+                read_success = 1;
 
-				if(ReaderReceiveIClass(resp) == 10) {
-					Dbprintf("     Selected CSN: %02x %02x %02x %02x %02x %02x %02x %02x",
-					resp[0], resp[1], resp[2],
-					resp[3], resp[4], resp[5],
-					resp[6], resp[7]);
-				}
-				memcpy(card_data,resp,8);
-				// Card selected
-				Dbprintf("Readcheck on Sector 2");
-				ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
-				if(ReaderReceiveIClass(resp) == 8) {
-				   Dbprintf("     CC: %02x %02x %02x %02x %02x %02x %02x %02x",
-					resp[0], resp[1], resp[2],
-					resp[3], resp[4], resp[5],
-					resp[6], resp[7]);
-				}
-				memcpy(card_data+8,resp,8);
-				//prep to read config block
-				/*  read card configuration block
-				  while(!read_success){
-				  uint8_t sector_config=0x01;
-				  memcpy(read+1,&sector_config,1);
-				  ReaderTransmitIClass(read, sizeof(read));
-				  if(ReaderReceiveIClass(resp) == 8) {
-				    Dbprintf("     CC: %02x %02x %02x %02x %02x %02x %02x %02x",
-					resp[0], resp[1], resp[2],
-					resp[3], resp[4], resp[5],
-					resp[6], resp[7]);
-					read_success=true;
-                    memcpy(card_data+16,resp,8);
-				  }
-				}*/
-			}
-		}
-		WDT_HIT();
-	}
-	//Dbprintf("DEBUG: %02x%02x%02x%02x%02x%02x%02x%02x",card_data[0],card_data[1],card_data[2],card_data[3],card_data[4],card_data[5],card_data[6],card_data[7]);
-	//Dbprintf("DEBUG: %02x%02x%02x%02x%02x%02x%02x%02x",card_data[8],card_data[9],card_data[10],card_data[11],card_data[12],card_data[13],card_data[14],card_data[15]);
+                // Card selected
+                Dbprintf("Readcheck on Sector 2");
+                ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
+                if(ReaderReceiveIClass(resp) == 8) {
+                   Dbprintf("     CC: %02x %02x %02x %02x %02x %02x %02x %02x",
+                    resp[0], resp[1], resp[2],
+                    resp[3], resp[4], resp[5],
+                    resp[6], resp[7]);
+                //Save CC (e-purse) in response data
+                memcpy(card_data+8,resp,8);
+                //Got both
+                read_success = 2;
+                }
+            }
+        }
+    }
+    WDT_HIT();
+
 	LED_A_OFF();
 	LED_B_ON();
-	//send data back to the client
-    cmd_send(CMD_ACK,0,0,0,card_data,16);
+    //Send back to client
+    cmd_send(CMD_ACK,read_success,0,0,card_data,16);
 	LED_B_OFF();
 }
 
