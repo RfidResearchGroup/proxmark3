@@ -862,7 +862,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			SnoopIClass();
 			break;
 		case CMD_SIMULATE_TAG_ICLASS:
-			SimulateIClass(c->arg[0], c->d.asBytes);
+			SimulateIClass(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
 		case CMD_READER_ICLASS:
 			ReaderIClass(c->arg[0]);
