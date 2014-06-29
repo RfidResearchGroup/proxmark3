@@ -25,7 +25,7 @@
 #define CIPHER_H
 #include <stdint.h>
 
-void doMAC(uint8_t cc_nr[12],uint8_t div_key[8], uint8_t mac[4]);
+void doMAC(uint8_t *cc_nr_p, int length, uint8_t *div_key_p, uint8_t mac[4]);
 int testMAC();
 
 #endif // CIPHER_H

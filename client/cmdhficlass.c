@@ -474,22 +474,21 @@ int CmdHFiClassReader_Dump(const char *Cmd)
         uint8_t isOK    = resp.arg[0] & 0xff;
         uint8_t * data  = resp.d.asBytes;
 
-
         memcpy(CSN,data,8);
         memcpy(CCNR,data+8,8);
 
         PrintAndLog("isOk:%02x", isOK);
 
-        if(isOK > 0)
+        if(isOK != 0)
         {
             PrintAndLog("CSN: %s",sprint_hex(CSN,8));
         }
-        if(isOK > 1)
+        if(isOK == 0)
         {
-            PrintAndLog("CC: %s",sprint_hex(CCNR,8));
+            //PrintAndLog("CC: %s",sprint_hex(CCNR,8));
             diversifyKey(CSN,KEY, div_key);
-            doMAC(CCNR,div_key, MAC);
-
+            doMAC(CCNR,12,div_key, MAC);
+            PrintAndLog("MAC:  %s",sprint_hex(MAC,sizeof(MAC)));
             UsbCommand d = {CMD_READER_ICLASS_REPLAY, {readerType}};
             memcpy(d.d.asBytes, MAC, 4);
             SendCommand(&d);
@@ -561,7 +560,7 @@ int CmdHFiClass_iso14443A_write(const char *Cmd)
   diversifyKey(CSN,KEY, div_key);
 
   PrintAndLog("Div Key: %s",sprint_hex(div_key,8));
-  doMAC(CCNR, div_key, MAC);
+  doMAC(CCNR, 12,div_key, MAC);
 
   UsbCommand c2 = {CMD_ICLASS_ISO14443A_WRITE, {readerType,blockNo}};
   memcpy(c2.d.asBytes, bldata, 8);
