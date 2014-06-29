@@ -1502,7 +1502,6 @@ void ReaderIClass(uint8_t arg0) {
     uint8_t last_csn[8]={0};
 
     uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     int read_status= 0;
     bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;
@@ -1594,28 +1593,9 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	} memory;
 	
 	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
-    // Enable and clear the trace
-    iso14a_set_tracing(TRUE);
-    iso14a_clear_trace();
 
+    setupIclassReader();
 
-
-	// Setup SSC
-	FpgaSetupSsc();
-	// Start from off (no field generated)
-	// Signal field is off with the appropriate LED
-	LED_D_OFF();
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(200);
-
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-
-	// Now give it time to spin up.
-	// Signal field is on with the appropriate LED
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
-	SpinDelay(200);
-
-	LED_A_ON();
 
 	for(int i=0;i<1;i++) {
 	
@@ -1654,8 +1634,8 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 				Dbprintf("Authenticate");
 				//for now replay captured auth (as cc not updated)
 				memcpy(check+5,MAC,4);
-				Dbprintf("     AA: %02x %02x %02x %02x",
-					check[5], check[6], check[7],check[8]);
+                //Dbprintf("     AA: %02x %02x %02x %02x",
+                //	check[5], check[6], check[7],check[8]);
 				ReaderTransmitIClass(check, sizeof(check));
 				if(ReaderReceiveIClass(resp) == 4) {
 				   Dbprintf("     AR: %02x %02x %02x %02x",

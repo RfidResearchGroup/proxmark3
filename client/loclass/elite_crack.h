@@ -68,7 +68,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]);
  * @param k output
  */
 void hash1(uint8_t csn[] , uint8_t k[]);
-
+void hash2(uint8_t *key64, uint8_t *outp_keytable);
 /**
  * From dismantling iclass-paper:
  *	Assume that an adversary somehow learns the first 16 bytes of hash2(K_cus ), i.e., y [0] and z [0] .

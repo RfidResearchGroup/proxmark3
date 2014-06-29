@@ -390,8 +390,8 @@ void diversifyKey(uint8_t csn[8], uint8_t key[8], uint8_t div_key[8])
 	des_crypt_ecb(&ctx_enc,csn, crypted_csn);
 
 	//Calculate HASH0(DES))
-        uint64_t crypt_csn = x_bytes_to_num(crypted_csn, 8);
-	uint64_t crypted_csn_swapped = swapZvalues(crypt_csn);
+    uint64_t crypt_csn = x_bytes_to_num(crypted_csn, 8);
+    //uint64_t crypted_csn_swapped = swapZvalues(crypt_csn);
 
 	hash0(crypt_csn,div_key);
 }

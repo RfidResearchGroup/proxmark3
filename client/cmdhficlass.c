@@ -461,11 +461,20 @@ int CmdHFiClassReader_Dump(const char *Cmd)
   uint8_t CCNR[12]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
   //uint8_t CC_temp[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
   uint8_t div_key[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-
+  uint8_t keytable[128] = {0};
+  int elite = 0;
+  uint8_t *used_key;
+  int i;
   if (strlen(Cmd)<1) 
   {
-    PrintAndLog("Usage:  hf iclass dump <Key>");
+    PrintAndLog("Usage:  hf iclass dump <Key> [e]");
+    PrintAndLog("        Key    - A 16 byte master key");
+    PrintAndLog("        e      - If 'e' is specified, the key is interpreted as the 16 byte");
+    PrintAndLog("                 Custom Key (KCus), which can be obtained via reader-attack");
+    PrintAndLog("                 See 'hf iclass sim 2'. This key should be on iclass-format");
     PrintAndLog("        sample: hf iclass dump 0011223344556677");
+
+
     return 0;
   }
 
@@ -474,7 +483,18 @@ int CmdHFiClassReader_Dump(const char *Cmd)
     PrintAndLog("KEY must include 16 HEX symbols");
     return 1;
   }
-    
+
+  if (param_getchar(Cmd, 1) == 'e')
+  {
+    PrintAndLog("Elite switch on");
+    elite = 1;
+
+    //calc h2
+    hash2(KEY, keytable);
+
+  }
+
+
   UsbCommand c = {CMD_READER_ICLASS, {0}};
   c.arg[0] = FLAG_ICLASS_READER_ONLY_ONCE;
 
@@ -495,12 +515,34 @@ int CmdHFiClassReader_Dump(const char *Cmd)
         {
             PrintAndLog("CSN: %s",sprint_hex(CSN,8));
         }
-        if(isOK >= 1)
+        if(isOK > 1)
         {
-            //PrintAndLog("CC: %s",sprint_hex(CCNR,8));
-            diversifyKey(CSN,KEY, div_key);
+            if(elite)
+            {
+                uint8_t key_sel[8] = {0};
+                uint8_t key_sel_p[8] = { 0 };
+                //Get the key index (hash1)
+                uint8_t key_index[8] = {0};
+
+                hash1(CSN, key_index);
+                printvar("hash1", key_index,8);
+                for(i = 0; i < 8 ; i++)
+                    key_sel[i] = keytable[key_index[i]] & 0xFF;
+                printvar("k_sel", key_sel,8);
+                //Permute from iclass format to standard format
+                permutekey_rev(key_sel,key_sel_p);
+                used_key = key_sel_p;
+            }else{
+                used_key = KEY;
+
+            }
+            printvar("CC:",CCNR,8);
+            printvar("Used key",used_key,8);
+            diversifyKey(CSN,used_key, div_key);
+            printvar("Div key", div_key, 8);
             doMAC(CCNR,12,div_key, MAC);
-            PrintAndLog("MAC:  %s",sprint_hex(MAC,sizeof(MAC)));
+            printvar("MAC", MAC, 4);
+
             UsbCommand d = {CMD_READER_ICLASS_REPLAY, {readerType}};
             memcpy(d.d.asBytes, MAC, 4);
             SendCommand(&d);
