@@ -1466,69 +1466,110 @@ int ReaderReceiveIClass(uint8_t* receivedAnswer)
   return Demod.len;
 }
 
-// Reader iClass Anticollission
-void ReaderIClass(uint8_t arg0) {
-	uint8_t act_all[]     = { 0x0a };
-	uint8_t identify[]    = { 0x0c };
-	uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-
-	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
-
+void setupIclassReader()
+{
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
-	// Reset trace buffer
+    // Reset trace buffer
     iso14a_set_tracing(TRUE);
     iso14a_clear_trace();
 
-	// Setup SSC
-	FpgaSetupSsc();
-	// Start from off (no field generated)
-	// Signal field is off with the appropriate LED
-	LED_D_OFF();
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(200);
+    // Setup SSC
+    FpgaSetupSsc();
+    // Start from off (no field generated)
+    // Signal field is off with the appropriate LED
+    LED_D_OFF();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    SpinDelay(200);
 
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
-	// Now give it time to spin up.
-	// Signal field is on with the appropriate LED
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
-	SpinDelay(200);
+    // Now give it time to spin up.
+    // Signal field is on with the appropriate LED
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+    SpinDelay(200);
+    LED_A_ON();
 
-	LED_A_ON();
+}
 
-	for(;;) {
-	
-		if(traceLen > TRACE_SIZE) {
-			DbpString("Trace full");
-			break;
-		}
-		
-		if (BUTTON_PRESS()) break;
+// Reader iClass Anticollission
+void ReaderIClass(uint8_t arg0) {
+    uint8_t act_all[]     = { 0x0a };
+    uint8_t identify[]    = { 0x0c };
+    uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t readcheck_cc[]= { 0x88, 0x02 };
 
-		// Send act_all
-		ReaderTransmitIClass(act_all, 1);
-		// Card present?
-		if(ReaderReceiveIClass(resp)) {
-			ReaderTransmitIClass(identify, 1);
-			if(ReaderReceiveIClass(resp) == 10) {
-				// Select card          
-				memcpy(&select[1],resp,8);
-				ReaderTransmitIClass(select, sizeof(select));
+    uint8_t card_data[24]={0};
+    uint8_t last_csn[8]={0};
 
-				if(ReaderReceiveIClass(resp) == 10) {
-					Dbprintf("     Selected CSN: %02x %02x %02x %02x %02x %02x %02x %02x",
-					resp[0], resp[1], resp[2],
-					resp[3], resp[4], resp[5],
-					resp[6], resp[7]);
-				}
-				// Card selected, whats next... ;-)
-			}
-		}
-		WDT_HIT();
-	}
-	
-	LED_A_OFF();
+    uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+    int read_status= 0;
+    bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;
+
+    setupIclassReader();
+
+    size_t datasize = 0;
+    while(!BUTTON_PRESS())
+    {
+        WDT_HIT();
+
+        // Send act_all
+        ReaderTransmitIClass(act_all, 1);
+        // Card present?
+        if(ReaderReceiveIClass(resp)) {
+
+            ReaderTransmitIClass(identify, 1);
+
+            if(ReaderReceiveIClass(resp) == 10) {
+                //Copy the Anti-collision CSN to our select-packet
+                memcpy(&select[1],resp,8);
+                //Dbprintf("Anti-collision CSN: %02x %02x %02x %02x %02x %02x %02x %02x",resp[0], resp[1], resp[2],
+                //        resp[3], resp[4], resp[5],
+                //        resp[6], resp[7]);
+                //Select the card
+                ReaderTransmitIClass(select, sizeof(select));
+
+                if(ReaderReceiveIClass(resp) == 10) {
+                    //Save CSN in response data
+                    memcpy(card_data,resp,8);
+                    datasize += 8;
+                    //Flag that we got to at least stage 1, read CSN
+                    read_status = 1;
+
+                    // Card selected
+                    //Dbprintf("Readcheck on Sector 2");
+                    ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
+                    if(ReaderReceiveIClass(resp) == 8) {
+                        //Save CC (e-purse) in response data
+                        memcpy(card_data+8,resp,8);
+                        datasize += 8;
+                        //Got both
+                        read_status = 2;
+                    }
+
+                    LED_B_ON();
+                    //Send back to client, but don't bother if we already sent this
+                    if(memcmp(last_csn, card_data, 8) != 0)
+                        cmd_send(CMD_ACK,read_status,0,0,card_data,datasize);
+
+                    //Save that we already sent this....
+                    if(read_status ==  2)
+                        memcpy(last_csn, card_data, 8);
+
+                    LED_B_OFF();
+
+                    if(abort_after_read) break;
+                }
+            }
+        }
+
+        if(traceLen > TRACE_SIZE) {
+            DbpString("Trace full");
+            break;
+        }
+    }
+    LED_A_OFF();
 }
 
 void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
@@ -1673,89 +1714,6 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	}
 	
 	LED_A_OFF();
-}
-
-//1. Create Method to Read sectors/blocks 0,1,2 and Send to client
-void IClass_iso14443A_GetPublic(uint8_t arg0) {
-	uint8_t act_all[]     = { 0x0a };
-	uint8_t identify[]    = { 0x0c };
-	uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	uint8_t readcheck_cc[]= { 0x88, 0x02 };	
-
-    uint8_t card_data[24]={0};
-    uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
-    int read_success= 0;
-
-    // Enable and clear the trace
-    iso14a_set_tracing(TRUE);
-    iso14a_clear_trace();
-
-	// Setup SSC
-	FpgaSetupSsc();
-	// Start from off (no field generated)
-	// Signal field is off with the appropriate LED
-	LED_D_OFF();
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(200);
-
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-
-	// Now give it time to spin up.
-	// Signal field is on with the appropriate LED
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
-	SpinDelay(200);
-
-	LED_A_ON();
-
-    // Send act_all
-    ReaderTransmitIClass(act_all, 1);
-    // Card present?
-    if(ReaderReceiveIClass(resp)) {
-        ReaderTransmitIClass(identify, 1);
-        if(ReaderReceiveIClass(resp) == 10) {
-            //Copy the Anti-collision CSN to our select-packet
-            memcpy(&select[1],resp,8);
-            Dbprintf("Anti-collision CSN: %02x %02x %02x %02x %02x %02x %02x %02x",resp[0], resp[1], resp[2],
-                    resp[3], resp[4], resp[5],
-                    resp[6], resp[7]);
-            //Select the card
-            ReaderTransmitIClass(select, sizeof(select));
-
-            if(ReaderReceiveIClass(resp) == 10) {
-                Dbprintf("     Selected CSN: %02x %02x %02x %02x %02x %02x %02x %02x",
-                resp[0], resp[1], resp[2],
-                resp[3], resp[4], resp[5],
-                resp[6], resp[7]);
-                //Save CSN in response data
-                memcpy(card_data,resp,8);
-                //Flag that we got to at least stage 1, read CSN
-                read_success = 1;
-
-                // Card selected
-                Dbprintf("Readcheck on Sector 2");
-                ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
-                if(ReaderReceiveIClass(resp) == 8) {
-                   Dbprintf("     CC: %02x %02x %02x %02x %02x %02x %02x %02x",
-                    resp[0], resp[1], resp[2],
-                    resp[3], resp[4], resp[5],
-                    resp[6], resp[7]);
-                //Save CC (e-purse) in response data
-                memcpy(card_data+8,resp,8);
-                //Got both
-                read_success = 2;
-                }
-            }
-        }
-    }
-    WDT_HIT();
-
-	LED_A_OFF();
-	LED_B_ON();
-    //Send back to client
-    cmd_send(CMD_ACK,read_success,0,0,card_data,16);
-	LED_B_OFF();
 }
 
 //2. Create Read method (cut-down from above) based off responses from 1. 

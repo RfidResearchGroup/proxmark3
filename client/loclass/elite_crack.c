@@ -122,7 +122,109 @@ void hash1(uint8_t csn[] , uint8_t k[])
 	for(i = 7; i >=0; i--)
 		k[i] = k[i] & 0x7F;
 }
+/**
+Definition 14. Define the rotate key function rk : (F 82 ) 8 × N → (F 82 ) 8 as
+rk(x [0] . . . x [7] , 0) = x [0] . . . x [7]
+rk(x [0] . . . x [7] , n + 1) = rk(rl(x [0] ) . . . rl(x [7] ), n)
+**/
+void rk(uint8_t *key, uint8_t n, uint8_t *outp_key)
+{
 
+    memcpy(outp_key, key, 8);
+
+    uint8_t j;
+
+    while(n-- > 0)
+        for(j=0; j < 8 ; j++)
+            outp_key[j] = rl(outp_key[j]);
+
+    return;
+}
+
+static des_context ctx_enc = {DES_ENCRYPT,{0}};
+static des_context ctx_dec = {DES_DECRYPT,{0}};
+
+void desdecrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output)
+{
+    uint8_t key_std_format[8] = {0};
+    permutekey_rev(iclass_key, key_std_format);
+    des_setkey_dec( &ctx_dec, key_std_format);
+    des_crypt_ecb(&ctx_dec,input,output);
+}
+void desencrypt_iclass(uint8_t *iclass_key, uint8_t *input, uint8_t *output)
+{
+    uint8_t key_std_format[8] = {0};
+    permutekey_rev(iclass_key, key_std_format);
+    des_setkey_enc( &ctx_enc, key_std_format);
+    des_crypt_ecb(&ctx_enc,input,output);
+}
+
+/**
+ * @brief Insert uint8_t[8] custom master key to calculate hash2 and return key_select.
+ * @param key unpermuted custom key
+ * @param hash1 hash1
+ * @param key_sel output key_sel=h[hash1[i]]
+ */
+void hash2(uint8_t *key64, uint8_t *outp_keytable)
+{
+    /**
+     *Expected:
+     * High Security Key Table
+
+00  F1 35 59 A1 0D 5A 26 7F 18 60 0B 96 8A C0 25 C1
+10  BF A1 3B B0 FF 85 28 75 F2 1F C6 8F 0E 74 8F 21
+20  14 7A 55 16 C8 A9 7D B3 13 0C 5D C9 31 8D A9 B2
+30  A3 56 83 0F 55 7E DE 45 71 21 D2 6D C1 57 1C 9C
+40  78 2F 64 51 42 7B 64 30 FA 26 51 76 D3 E0 FB B6
+50  31 9F BF 2F 7E 4F 94 B4 BD 4F 75 91 E3 1B EB 42
+60  3F 88 6F B8 6C 2C 93 0D 69 2C D5 20 3C C1 61 95
+70  43 08 A0 2F FE B3 26 D7 98 0B 34 7B 47 70 A0 AB
+
+**** The 64-bit HS Custom Key Value = 5B7C62C491C11B39 ******/
+    uint8_t key64_negated[8] = {0};
+    uint8_t z[8][8]={{0},{0}};
+    uint8_t temp_output[8]={0};
+    //calculate complement of key
+    int i;
+    for(i=0;i<8;i++)
+        key64_negated[i]= ~key64[i];
+
+    // Once again, key is on iclass-format
+    desencrypt_iclass(key64, key64_negated, z[0]);
+
+    prnlog("\nHigh security custom key (Kcus):");
+    printvar("z0  ",  z[0],8);
+
+    uint8_t y[8][8]={{0},{0}};
+
+    // y[0]=DES_dec(z[0],~key)
+    // Once again, key is on iclass-format
+    desdecrypt_iclass(z[0], key64_negated, y[0]);
+    printvar("y0  ",  y[0],8);
+
+    for(i=1; i<8; i++)
+    {
+
+        // z [i] = DES dec (rk(K cus , i), z [i−1] )
+        rk(key64, i, temp_output);
+        //y [i] = DES enc (rk(K cus , i), y [i−1] )
+
+        desdecrypt_iclass(temp_output,z[i-1], z[i]);
+        desencrypt_iclass(temp_output,y[i-1], y[i]);
+
+    }
+    if(outp_keytable != NULL)
+    {
+        for(i = 0 ; i < 8 ; i++)
+        {
+            memcpy(outp_keytable+i*16,y[i],8);
+            memcpy(outp_keytable+8+i*16,z[i],8);
+        }
+    }else
+    {
+        printarr_human_readable("hash2", outp_keytable,128);
+    }
+}
 
 /**
  * @brief Reads data from the iclass-reader-attack dump file.
@@ -254,7 +356,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[])
 		//Diversify
 		diversifyKey(item.csn, key_sel_p, div_key);
 		//Calc mac
-		doMAC(item.cc_nr, div_key,calculated_MAC);
+        doMAC(item.cc_nr,12, div_key,calculated_MAC);
 
 		if(memcmp(calculated_MAC, item.mac, 4) == 0)
 		{
@@ -515,7 +617,35 @@ int _test_iclass_key_permutation()
 int testElite()
 {
 	prnlog("[+] Testing iClass Elite functinality...");
-	prnlog("[+] Testing key diversification ...");
+    prnlog("[+] Testing hash2");
+    uint8_t k_cus[8] = {0x5B,0x7C,0x62,0xC4,0x91,0xC1,0x1B,0x39};
+
+    /**
+     *Expected:
+     * High Security Key Table
+
+00  F1 35 59 A1 0D 5A 26 7F 18 60 0B 96 8A C0 25 C1
+10  BF A1 3B B0 FF 85 28 75 F2 1F C6 8F 0E 74 8F 21
+20  14 7A 55 16 C8 A9 7D B3 13 0C 5D C9 31 8D A9 B2
+30  A3 56 83 0F 55 7E DE 45 71 21 D2 6D C1 57 1C 9C
+40  78 2F 64 51 42 7B 64 30 FA 26 51 76 D3 E0 FB B6
+50  31 9F BF 2F 7E 4F 94 B4 BD 4F 75 91 E3 1B EB 42
+60  3F 88 6F B8 6C 2C 93 0D 69 2C D5 20 3C C1 61 95
+70  43 08 A0 2F FE B3 26 D7 98 0B 34 7B 47 70 A0 AB
+
+
+
+**** The 64-bit HS Custom Key Value = 5B7C62C491C11B39 ****
+     */
+    uint8_t keytable[128] = {0};
+    hash2(k_cus, keytable);
+    printarr_human_readable("Hash2", keytable, 128);
+    if(keytable[3] == 0xA1 && keytable[0x30] == 0xA3 && keytable[0x6F] == 0x95)
+    {
+        prnlog("[+] Hash2 looks fine...");
+    }
+
+    prnlog("[+] Testing key diversification ...");
 
 	int errors = 0 ;
 	errors +=_test_iclass_key_permutation();

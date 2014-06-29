@@ -401,19 +401,30 @@ int CmdHFiClassSim(const char *Cmd)
 
 int CmdHFiClassReader(const char *Cmd)
 {
-  uint8_t readerType = 0;
-
-  if (strlen(Cmd)<1) {
-	PrintAndLog("Usage:  hf iclass reader    <reader type>");
-	PrintAndLog("        sample: hf iclass reader 0");
-	return 0;
-  }	
-
-  readerType = param_get8(Cmd, 0);
-  PrintAndLog("--readertype:%02x", readerType);
-
-  UsbCommand c = {CMD_READER_ICLASS, {readerType}};
+  UsbCommand c = {CMD_READER_ICLASS, {0}};
   SendCommand(&c);
+    UsbCommand resp;
+  while(!ukbhit()){
+      if (WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
+            uint8_t isOK    = resp.arg[0] & 0xff;
+            uint8_t * data  = resp.d.asBytes;
+
+            PrintAndLog("isOk:%02x", isOK);
+
+            if(isOK > 0)
+            {
+                PrintAndLog("CSN: %s",sprint_hex(data,8));
+            }
+            if(isOK >= 1)
+            {
+                PrintAndLog("CC: %s",sprint_hex(data+8,8));
+            }else{
+                PrintAndLog("No CC obtained");
+            }
+        } else {
+            PrintAndLog("Command execute timeout");
+        }
+    }
 
   return 0;
 }
@@ -464,7 +475,8 @@ int CmdHFiClassReader_Dump(const char *Cmd)
     return 1;
   }
     
-  UsbCommand c = {CMD_ICLASS_ISO14443A_GETPUBLIC, {0}};
+  UsbCommand c = {CMD_READER_ICLASS, {0}};
+  c.arg[0] = FLAG_ICLASS_READER_ONLY_ONCE;
 
   SendCommand(&c);
   
@@ -479,11 +491,11 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 
         PrintAndLog("isOk:%02x", isOK);
 
-        if(isOK != 0)
+        if(isOK > 0)
         {
             PrintAndLog("CSN: %s",sprint_hex(CSN,8));
         }
-        if(isOK == 0)
+        if(isOK >= 1)
         {
             //PrintAndLog("CC: %s",sprint_hex(CCNR,8));
             diversifyKey(CSN,KEY, div_key);
@@ -540,7 +552,7 @@ int CmdHFiClass_iso14443A_write(const char *Cmd)
         return 1;
   }
   
-  UsbCommand c = {CMD_ICLASS_ISO14443A_GETPUBLIC, {0}};
+  UsbCommand c = {CMD_ICLASS_ISO14443A_WRITE, {0}};
   SendCommand(&c);
   UsbCommand resp;
 
