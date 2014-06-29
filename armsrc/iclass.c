@@ -1717,7 +1717,9 @@ void IClass_iso14443A_GetPublic(uint8_t arg0) {
         if(ReaderReceiveIClass(resp) == 10) {
             //Copy the Anti-collision CSN to our select-packet
             memcpy(&select[1],resp,8);
-            Dbprintf("Anti-collision CSN: %02x %02x %02x %02x %02x %02x %02x %02x");
+            Dbprintf("Anti-collision CSN: %02x %02x %02x %02x %02x %02x %02x %02x",resp[0], resp[1], resp[2],
+                    resp[3], resp[4], resp[5],
+                    resp[6], resp[7]);
             //Select the card
             ReaderTransmitIClass(select, sizeof(select));
 
