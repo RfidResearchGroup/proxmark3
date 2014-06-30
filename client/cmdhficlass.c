@@ -491,6 +491,7 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 
     //calc h2
     hash2(KEY, keytable);
+    printarr_human_readable("keytable", keytable, 128);
 
   }
 
@@ -533,13 +534,21 @@ int CmdHFiClassReader_Dump(const char *Cmd)
                 permutekey_rev(key_sel,key_sel_p);
                 used_key = key_sel_p;
             }else{
+                //Perhaps this should also be permuted to std format?
+                // Something like the code below? I have no std system
+                // to test this with /Martin
+
+                //uint8_t key_sel_p[8] = { 0 };
+                //permutekey_rev(KEY,key_sel_p);
+                //used_key = key_sel_p;
+
                 used_key = KEY;
 
             }
-            printvar("CC:",CCNR,8);
             printvar("Used key",used_key,8);
             diversifyKey(CSN,used_key, div_key);
             printvar("Div key", div_key, 8);
+            printvar("CC_NR:",CCNR,12);
             doMAC(CCNR,12,div_key, MAC);
             printvar("MAC", MAC, 4);
 
