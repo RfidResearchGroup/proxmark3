@@ -190,8 +190,9 @@ void AppendCrc14443a(uint8_t* data, int len)
 }
 
 // The function LogTrace() is also used by the iClass implementation in iClass.c
-bool RAMFUNC LogTrace(const uint8_t * btBytes, uint8_t iLen, uint32_t timestamp, uint32_t dwParity, bool bReader)
+bool RAMFUNC LogTrace(const uint8_t * btBytes, uint8_t iLen, uint32_t timestamp, uint32_t dwParity, bool readerToTag)
 {
+	if (!tracing) return FALSE;
 	// Return when trace is full
 	if (traceLen + sizeof(timestamp) + sizeof(dwParity) + iLen >= TRACE_SIZE) {
 		tracing = FALSE;	// don't trace any more
@@ -203,7 +204,8 @@ bool RAMFUNC LogTrace(const uint8_t * btBytes, uint8_t iLen, uint32_t timestamp,
 	trace[traceLen++] = ((timestamp >> 8) & 0xff);
 	trace[traceLen++] = ((timestamp >> 16) & 0xff);
 	trace[traceLen++] = ((timestamp >> 24) & 0xff);
-	if (!bReader) {
+
+	if (!readerToTag) {
 		trace[traceLen - 1] |= 0x80;
 	}
 	trace[traceLen++] = ((dwParity >> 0) & 0xff);
@@ -1763,6 +1765,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 }
 
 void iso14443a_setup(uint8_t fpga_minor_mode) {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	// Set up the synchronous serial port
 	FpgaSetupSsc();
 	// connect Demodulated Signal to ADC:
@@ -1858,8 +1861,10 @@ void ReaderIso14443a(UsbCommand *c)
 		if(param & ISO14A_APPEND_CRC) {
 			AppendCrc14443a(cmd,len);
 			len += 2;
+			lenbits += 16;
 		}
 		if(lenbits>0) {
+
 			ReaderTransmitBitsPar(cmd,lenbits,GetParity(cmd,lenbits/8), NULL);
 		} else {
 			ReaderTransmit(cmd,len, NULL);

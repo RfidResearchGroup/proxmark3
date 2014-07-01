@@ -59,7 +59,8 @@ void ToSendStuffBit(int b);
 void ToSendReset(void);
 void ListenReaderField(int limit);
 void AcquireRawAdcSamples125k(int at134khz);
-void DoAcquisition125k(void);
+void SnoopLFRawAdcSamples(int divisor, int trigger_threshold);
+void DoAcquisition125k(int trigger_threshold);
 extern int ToSendMax;
 extern uint8_t ToSend[];
 extern uint32_t BigBuf[];
@@ -67,7 +68,8 @@ extern uint32_t BigBuf[];
 /// fpga.h
 void FpgaSendCommand(uint16_t cmd, uint16_t v);
 void FpgaWriteConfWord(uint8_t v);
-void FpgaDownloadAndGo(void);
+void FpgaDownloadAndGo(int bitstream_version);
+int FpgaGatherBitstreamVersion();
 void FpgaGatherVersion(char *dst, int len);
 void FpgaSetupSsc(void);
 void SetupSpi(int mode);
@@ -77,31 +79,40 @@ bool FpgaSetupSscDma(uint8_t *buf, int len);
 void SetAdcMuxFor(uint32_t whichGpio);
 
 // Definitions for the FPGA commands.
-#define FPGA_CMD_SET_CONFREG						(1<<12)
-#define FPGA_CMD_SET_DIVISOR						(2<<12)
+#define FPGA_CMD_SET_CONFREG					(1<<12)
+#define FPGA_CMD_SET_DIVISOR					(2<<12)
+#define FPGA_CMD_SET_USER_BYTE1					(3<<12)
 // Definitions for the FPGA configuration word.
-#define FPGA_MAJOR_MODE_LF_READER					(0<<5)
-#define FPGA_MAJOR_MODE_LF_EDGE_DETECT				(1<<5)
-#define FPGA_MAJOR_MODE_HF_READER_TX				(2<<5)
-#define FPGA_MAJOR_MODE_HF_READER_RX_XCORR			(3<<5)
-#define FPGA_MAJOR_MODE_HF_SIMULATOR				(4<<5)
-#define FPGA_MAJOR_MODE_HF_ISO14443A				(5<<5)
-#define FPGA_MAJOR_MODE_LF_PASSTHRU					(6<<5)
-#define FPGA_MAJOR_MODE_OFF							(7<<5)
+// LF
+#define FPGA_MAJOR_MODE_LF_ADC					(0<<5)
+#define FPGA_MAJOR_MODE_LF_EDGE_DETECT			(1<<5)
+#define FPGA_MAJOR_MODE_LF_PASSTHRU				(2<<5)
+// HF
+#define FPGA_MAJOR_MODE_HF_READER_TX				(0<<5)
+#define FPGA_MAJOR_MODE_HF_READER_RX_XCORR			(1<<5)
+#define FPGA_MAJOR_MODE_HF_SIMULATOR				(2<<5)
+#define FPGA_MAJOR_MODE_HF_ISO14443A				(3<<5)
+// BOTH
+#define FPGA_MAJOR_MODE_OFF					(7<<5)
+// Options for LF_ADC
+#define FPGA_LF_ADC_READER_FIELD				(1<<0)
 // Options for LF_EDGE_DETECT
+#define FPGA_CMD_SET_EDGE_DETECT_THRESHOLD			FPGA_CMD_SET_USER_BYTE1
 #define FPGA_LF_EDGE_DETECT_READER_FIELD 			(1<<0)
+#define FPGA_LF_EDGE_DETECT_TOGGLE_MODE				(1<<1)
 // Options for the HF reader, tx to tag
 #define FPGA_HF_READER_TX_SHALLOW_MOD				(1<<0)
 // Options for the HF reader, correlating against rx from tag
 #define FPGA_HF_READER_RX_XCORR_848_KHZ				(1<<0)
 #define FPGA_HF_READER_RX_XCORR_SNOOP				(1<<1)
-#define FPGA_HF_READER_RX_XCORR_QUARTER_FREQ		(1<<2)
+#define FPGA_HF_READER_RX_XCORR_QUARTER_FREQ			(1<<2)
 // Options for the HF simulated tag, how to modulate
 #define FPGA_HF_SIMULATOR_NO_MODULATION				(0<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_BPSK				(1<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_212K				(2<<0)
+#define FPGA_HF_SIMULATOR_MODULATE_424K				(4<<0)
 // Options for ISO14443A
-#define FPGA_HF_ISO14443A_SNIFFER					(0<<0)
+#define FPGA_HF_ISO14443A_SNIFFER				(0<<0)
 #define FPGA_HF_ISO14443A_TAGSIM_LISTEN				(1<<0)
 #define FPGA_HF_ISO14443A_TAGSIM_MOD				(2<<0)
 #define FPGA_HF_ISO14443A_READER_LISTEN				(3<<0)
@@ -146,7 +157,7 @@ void RAMFUNC SnoopIso14443a(uint8_t param);
 void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data);
 void ReaderIso14443a(UsbCommand * c);
 // Also used in iclass.c
-bool RAMFUNC LogTrace(const uint8_t * btBytes, uint8_t iLen, uint32_t iSamples, uint32_t dwParity, bool bReader);
+bool RAMFUNC LogTrace(const uint8_t * btBytes, uint8_t iLen, uint32_t iSamples, uint32_t dwParity, bool readerToTag);
 uint32_t GetParity(const uint8_t * pbtCmd, int iLen);
 void iso14a_set_trigger(bool enable);
 void iso14a_clear_trace();
@@ -188,9 +199,9 @@ void SetDebugIso15693(uint32_t flag);
 
 /// iclass.h
 void RAMFUNC SnoopIClass(void);
-void SimulateIClass(uint8_t arg0, uint8_t *datain);
+void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void ReaderIClass(uint8_t arg0);
-
+//int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived);
 // hitag2.h
 void SnoopHitag(uint32_t type);
 void SimulateHitagTag(bool tag_mem_supplied, byte_t* data);

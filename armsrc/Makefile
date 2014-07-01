@@ -52,10 +52,13 @@ OBJS = $(OBJDIR)/osimage.s19 $(OBJDIR)/fpgaimage.s19
 
 all: $(OBJS)
 
-$(OBJDIR)/fpga.o: fpga.bit
-	$(OBJCOPY) -O elf32-littlearm -I binary -B arm --redefine-sym _binary____fpga_fpga_bit_start=_binary_fpga_bit_start --redefine-sym _binary____fpga_fpga_bit_end=_binary_fpga_bit_end --prefix-sections=fpga_bit  $^ $@
+$(OBJDIR)/fpga_lf.o: fpga_lf.bit
+	$(OBJCOPY) -O elf32-littlearm -I binary -B arm --redefine-sym _binary____fpga_fpga_lf_bit_start=_binary_fpga_lf_bit_start --redefine-sym _binary____fpga_fpga_lf_bit_end=_binary_fpga_lf_bit_end --prefix-sections=fpga_lf_bit  $^ $@
 
-$(OBJDIR)/fullimage.elf: $(VERSIONOBJ) $(OBJDIR)/fpga.o $(THUMBOBJ) $(ARMOBJ)
+$(OBJDIR)/fpga_hf.o: fpga_hf.bit
+	$(OBJCOPY) -O elf32-littlearm -I binary -B arm --redefine-sym _binary____fpga_fpga_hf_bit_start=_binary_fpga_hf_bit_start --redefine-sym _binary____fpga_fpga_hf_bit_end=_binary_fpga_hf_bit_end --prefix-sections=fpga_hf_bit  $^ $@
+
+$(OBJDIR)/fullimage.elf: $(VERSIONOBJ) $(OBJDIR)/fpga_lf.o $(OBJDIR)/fpga_hf.o $(THUMBOBJ) $(ARMOBJ)
 	$(CC) $(LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 $(OBJDIR)/fpgaimage.elf: $(OBJDIR)/fullimage.elf

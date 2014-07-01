@@ -743,6 +743,7 @@ void SnoopHitag(uint32_t type) {
 	
 	// Set up eavesdropping mode, frequency divisor which will drive the FPGA
 	// and analog mux selection.
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
@@ -966,6 +967,7 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	
 	// Set up simulator mode, frequency divisor which will drive the FPGA
 	// and analog mux selection.
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
@@ -1124,6 +1126,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	bool bStop;
 	bool bQuitTraceFull = false;
   
+  FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
   // Reset the return status
   bSuccessful = false;
   
