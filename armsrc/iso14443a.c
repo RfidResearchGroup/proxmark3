@@ -1861,10 +1861,9 @@ void ReaderIso14443a(UsbCommand *c)
 		if(param & ISO14A_APPEND_CRC) {
 			AppendCrc14443a(cmd,len);
 			len += 2;
-			lenbits += 16;
+			if (lenbits) lenbits += 16;
 		}
 		if(lenbits>0) {
-
 			ReaderTransmitBitsPar(cmd,lenbits,GetParity(cmd,lenbits/8), NULL);
 		} else {
 			ReaderTransmit(cmd,len, NULL);
