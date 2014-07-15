@@ -1848,7 +1848,8 @@ int CmdHF14AMfSniff(const char *Cmd){
 	int blockLen = 0;
 	int num = 0;
 	int pckNum = 0;
-	uint8_t uid[8];
+	uint8_t uid[7];
+	uint8_t uid_len;
 	uint8_t atqa[2];
 	uint8_t sak;
 	bool isTag;
@@ -1926,14 +1927,19 @@ int CmdHF14AMfSniff(const char *Cmd){
 					bufPtr += 4;
 					len = bufPtr[0];
 					bufPtr++;
-					if ((len == 14) && (bufPtr[0] = 0xff) && (bufPtr[1] = 0xff)) {
+					if ((len == 14) && (bufPtr[0] == 0xff) && (bufPtr[1] == 0xff)) {
 						memcpy(uid, bufPtr + 2, 7);
 						memcpy(atqa, bufPtr + 2 + 7, 2);
+						uid_len = (atqa[0] & 0xC0) == 0x40 ? 7 : 4;
 						sak = bufPtr[11];
 						
-						PrintAndLog("tag select uid:%s atqa:%02x %02x sak:0x%02x", sprint_hex(uid, 7), atqa[0], atqa[1], sak);
+						PrintAndLog("tag select uid:%s atqa:0x%02x%02x sak:0x%02x", 
+							sprint_hex(uid + (7 - uid_len), uid_len),
+							atqa[1], 
+							atqa[0], 
+							sak);
 						if (wantLogToFile || wantDecrypt) {
-							FillFileNameByUID(logHexFileName, uid, ".log", 7);
+							FillFileNameByUID(logHexFileName, uid + (7 - uid_len), ".log", uid_len);
 							AddLogCurrentDT(logHexFileName);
 						}						
 						if (wantDecrypt) mfTraceInit(uid, atqa, sak, wantSaveToEmlFile);

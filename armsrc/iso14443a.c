@@ -507,6 +507,7 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 	LEDsoff();
 	// init trace buffer
 	iso14a_clear_trace();
+	iso14a_set_tracing(TRUE);
 
 	// We won't start recording the frames that we acquire until we trigger;
 	// a good trigger condition to get started is probably when we see a
@@ -2623,7 +2624,8 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// C(red) A(yellow) B(green)
 	LEDsoff();
 	// init trace buffer
-    iso14a_clear_trace();
+	iso14a_clear_trace();
+	iso14a_set_tracing(TRUE);
 
 	// The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.
