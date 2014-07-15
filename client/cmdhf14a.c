@@ -192,7 +192,7 @@ int CmdHF14AReader(const char *Cmd)
 	iso14a_card_select_t card;
 	memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 
-	uint64_t select_status = resp.arg[0];
+	uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS
 	
 	if(select_status == 0) {
 		PrintAndLog("iso14443a card select failed");
@@ -232,7 +232,7 @@ int CmdHF14AReader(const char *Cmd)
 		WaitForResponse(CMD_ACK,&resp);
 		
 	    memcpy(&card.ats, resp.d.asBytes, resp.arg[0]);
-		card.ats_len = resp.arg[0];
+		card.ats_len = resp.arg[0];				// note: ats_len includes CRC Bytes
 	} 
 
 	// disconnect
@@ -242,28 +242,36 @@ int CmdHF14AReader(const char *Cmd)
 	SendCommand(&c);
 
 	
-	if(card.ats_len >= 3) {			// a valid ATS consists of at least the length byte TL and 2 CRC bytes
+	if(card.ats_len >= 3) {			// a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
 		bool ta1 = 0, tb1 = 0, tc1 = 0;
 		int pos;
 
-		if (!(card.sak & 0x02)) {
+		if (select_status == 2) {
 			PrintAndLog("SAK incorrectly claims that card doesn't support RATS");
 		}
 		PrintAndLog(" ATS : %s", sprint_hex(card.ats, card.ats_len));
-		if (card.ats_len > 0) {
-			PrintAndLog("       -  TL : length is %d bytes", card.ats[0]);
+		PrintAndLog("       -  TL : length is %d bytes", card.ats[0]);
+		if (card.ats[0] != card.ats_len - 2) {
+			PrintAndLog("ATS may be corrupted. Length of ATS (%d bytes incl. 2 Bytes CRC) doesn't match TL", card.ats_len);
 		}
-		if (card.ats_len > 1) {
+		
+		if (card.ats[0] > 1) {		// there is a format byte (T0)
 			ta1 = (card.ats[1] & 0x10) == 0x10;
 			tb1 = (card.ats[1] & 0x20) == 0x20;
 			tc1 = (card.ats[1] & 0x40) == 0x40;
+			int16_t fsci = card.ats[1] & 0x0f;
 			PrintAndLog("       -  T0 : TA1 is%s present, TB1 is%s present, "
-					"TC1 is%s present, FSCI is %d",
+					"TC1 is%s present, FSCI is %d (FSC = %ld)",
 				(ta1 ? "" : " NOT"), (tb1 ? "" : " NOT"), (tc1 ? "" : " NOT"),
-				(card.ats[1] & 0x0f));
+				fsci,
+				fsci < 5 ? (fsci - 2) * 8 : 
+					fsci < 8 ? (fsci - 3) * 32 :
+					fsci == 8 ? 256 :
+					-1
+				);
 		}
 		pos = 2;
-		if (ta1 && card.ats_len > pos) {
+		if (ta1) {
 			char dr[16], ds[16];
 			dr[0] = ds[0] = '\0';
 			if (card.ats[pos] & 0x10) strcat(ds, "2, ");
@@ -279,28 +287,34 @@ int CmdHF14AReader(const char *Cmd)
 					(card.ats[pos] & 0x80 ? " NOT" : ""), dr, ds);
 			pos++;
 		}
-		if (tb1 && card.ats_len > pos) {
-			PrintAndLog("       - TB1 : SFGI = %d, FWI = %d",
-					(card.ats[pos] & 0x08),
-					(card.ats[pos] & 0x80) >> 4);
+		if (tb1) {
+			uint32_t sfgi = card.ats[pos] & 0x0F;
+			uint32_t fwi = card.ats[pos] >> 4;
+			PrintAndLog("       - TB1 : SFGI = %d (SFGT = %s%ld/fc), FWI = %d (FWT = %ld/fc)",
+					(sfgi),
+					sfgi ? "" : "(not needed) ",
+					sfgi ? (1 << 12) << sfgi : 0,
+					fwi,
+					(1 << 12) << fwi
+					);
 			pos++;
 		}
-		if (tc1 && card.ats_len > pos) {
+		if (tc1) {
 			PrintAndLog("       - TC1 : NAD is%s supported, CID is%s supported",
 					(card.ats[pos] & 0x01) ? "" : " NOT",
 					(card.ats[pos] & 0x02) ? "" : " NOT");
 			pos++;
 		}
-		if (card.ats_len > pos) {
+		if (card.ats[0] > pos) {
 			char *tip = "";
-			if (card.ats_len - pos > 7) {
+			if (card.ats[0] - pos >= 7) {
 				if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
 					tip = "-> MIFARE Plus X 2K or 4K";
 				} else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
 					tip = "-> MIFARE Plus S 2K or 4K";
 				}
 			} 
-			PrintAndLog("       -  HB : %s%s", sprint_hex(card.ats + pos, card.ats_len - pos - 2), tip);
+			PrintAndLog("       -  HB : %s%s", sprint_hex(card.ats + pos, card.ats[0] - pos), tip);
 			if (card.ats[pos] == 0xC1) {
 				PrintAndLog("               c1 -> Mifare or (multiple) virtual cards of various type");
 				PrintAndLog("                  %02x -> Length is %d bytes",
