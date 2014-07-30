@@ -1194,7 +1194,7 @@ int CmdHF14AMf1kSim(const char *Cmd)
 		PrintAndLog("           n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
 		PrintAndLog("           i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
 		PrintAndLog("           x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a legitimate reader, fishes out the key(s)");
-		PrintAndLog("           sample: hf mf sim 0a0a0a0a ");
+		PrintAndLog("           sample: hf mf sim u 0a0a0a0a ");
 		return 0;
 	}
 	uint8_t pnr = 0;
@@ -1260,8 +1260,10 @@ int CmdHF14AMfDbg(const char *Cmd)
 		PrintAndLog("Usage:  hf mf dbg  <debug level>");
 		PrintAndLog(" 0 - no debug messages");
 		PrintAndLog(" 1 - error messages");
-		PrintAndLog(" 2 - all messages");
-		PrintAndLog(" 4 - extended debug mode");
+		PrintAndLog(" 2 - plus information messages");
+		PrintAndLog(" 3 - plus debug messages");
+		PrintAndLog(" 4 - print even debug messages in timing critical functions");
+		PrintAndLog("     Note: this option therefore may cause malfunction itself");
 		return 0;
 	}	
 
@@ -1473,8 +1475,8 @@ int CmdHF14AMfECFill(const char *Cmd)
 	uint8_t keyType = 0;
 
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
-		PrintAndLog("Usage:  hf mf efill <key A/B>");
-		PrintAndLog("sample:  hf mf efill A");
+		PrintAndLog("Usage:  hf mf ecfill <key A/B>");
+		PrintAndLog("sample:  hf mf ecfill A");
 		PrintAndLog("Card data blocks transfers to card emulator memory.");
 		PrintAndLog("Keys must be laid in the simulator memory. \n");
 		return 0;
