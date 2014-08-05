@@ -2279,7 +2279,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				// select card
 				if (len == 9 && 
 						(receivedCmd[0] == 0x93 && receivedCmd[1] == 0x70 && memcmp(&receivedCmd[2], rUIDBCC1, 4) == 0)) {
-					EmSendCmd(_7BUID?rSAK1:rSAK, sizeof(_7BUID?rSAK1:rSAK));
+					EmSendCmd(_7BUID?rSAK1:rSAK, _7BUID?sizeof(rSAK1):sizeof(rSAK));
 					cuid = bytes_to_num(rUIDBCC1, 4);
 					if (!_7BUID) {
 						cardSTATE = MFEMUL_WORK;
