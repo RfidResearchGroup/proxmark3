@@ -2,6 +2,7 @@
 # don't push these files to the repository
 
 *.log
+*.eml
 *.o
 *.a
 *.d
