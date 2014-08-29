@@ -126,6 +126,21 @@ local _keys = {
     'eeeeeeeeeeee',
     '0123456789ab',
     '123456789abc',
+	
+	--[[
+    The keys below are taken from from https://github.com/4ZM/mfterm/blob/master/dictionary.txt
+    --]]
+	
+	'abcdef123456', -- Key from ladyada.net
+
+	'000000000001',
+	'000000000002',
+	'00000000000a',
+	'00000000000b',
+	'100000000000',
+	'200000000000',
+	'a00000000000',
+	'b00000000000',	
   }
 
 ---

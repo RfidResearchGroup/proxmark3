@@ -13,7 +13,7 @@ by the emulator
 Arguments:
 	-h 				This help
 	-i <file>		Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used	
-	-o <filename>	Speciies the output file. If omitted, <uid>.eml is used. 	
+	-o <filename>	Specifies the output file. If omitted, <uid>.eml is used. 	
 
 ]]
 

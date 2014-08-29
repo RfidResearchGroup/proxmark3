@@ -8,10 +8,17 @@ bin = require('bin')
 --- 
 -- A debug printout-function
 local function dbg(args)
-	if DEBUG then
+	
+    if type(args) == "table" then
+		local i = 1
+		while args[i] do
+			print("###", args[i])
+			i = i+1
+		end
+	else
 		print("###", args)
-	end
-end 
+	end	
+end	
 --- 
 -- This is only meant to be used when errors occur
 local function oops(err)
@@ -40,19 +47,37 @@ local function save_HTML(javascript, filename)
 
 end
 
-
+local function save_BIN(data, filename)
+	-- Open the output file
+	
+	local outfile = io.open(filename, "wb")
+	if outfile == nil then 
+		return oops(string.format("Could not write to file %s",tostring(filename)))
+	end
+	
+	-- Write the data into it
+	local i = 1
+	while data[i] do
+		outfile:write(data[i])
+		i = i+1
+	end
+	
+	io.close(outfile)
+	return filename   
+end
 
 local function convert_ascii_dump_to_JS(infile)
 	local t = infile:read("*all")
 	
 	local output = "[";
 	for line in string.gmatch(t, "[^\n]+") do 
-		output = output .. "'"..line.."',\n"
+	    if string.byte(line,1) ~= string.byte("+",1) then
+                  output = output .. "'"..line.."',\n"
+        end
 	end
 	output = output .. "]"
 	return output
 end
-
 
 local function convert_binary_dump_to_JS(infile, blockLen)
 	 local bindata = infile:read("*all")
@@ -77,6 +102,21 @@ local function convert_binary_dump_to_JS(infile, blockLen)
 	js = js .. "]"
 	return js
 end
+
+local function convert_ascii_dump_to_BIN(infile)
+	local t = infile:read("*all")
+	
+	local output = {};
+	for line in string.gmatch(t, "[^\n]+") do 
+		if string.byte(line) ~= string.byte("+") then
+			for c in (line or ''):gmatch('..') do
+				output[#output+1] = string.char( tonumber(c,16) )
+			end
+		end
+	end
+	return output
+end
+
 
 ---
 -- Converts a .eml-file into a HTML/Javascript file. 
@@ -118,7 +158,27 @@ local function convert_bin_to_html(input, output, blockLen)
 	return save_HTML(javascript, output )
 end
 
+--- Converts a eml dump into a binary file
+-- @param input the file containing the eml-dump  (defaults to dumpdata.eml)
+-- @param output the file to write to  ( defaults to dumpdata.bin)
+local function convert_eml_to_bin(input, output)
+	input = input or 'dumpdata.eml'
+	output = output or 'dumpdata.bin'
+
+	local infile = io.open(input, "rb")
+	if infile == nil then 
+		return oops(string.format("Could not read file %s",tostring(input)))
+	end
+	-- Read file, get BIN
+	local data = convert_ascii_dump_to_BIN(infile)
+	io.close(infile)
+
+	return save_BIN(data, output )
+end
+
+
 return {
 	convert_bin_to_html = convert_bin_to_html,
-	convert_eml_to_html = convert_eml_to_html,	
+	convert_eml_to_html = convert_eml_to_html,
+    convert_eml_to_bin = convert_eml_to_bin,	
 }
