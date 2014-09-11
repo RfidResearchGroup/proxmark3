@@ -771,7 +771,7 @@ int CmdHF14AMfNested(const char *Cmd)
 	uint8_t trgKeyType = 0;
 	uint8_t SectorsCnt = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-	uint8_t keyBlock[6*6];
+	uint8_t keyBlock[13*6];
 	uint64_t key64 = 0;
 	bool transferToEml = false;
 	
@@ -882,6 +882,14 @@ int CmdHF14AMfNested(const char *Cmd)
 		num_to_bytes(0xa0a1a2a3a4a5, 6, (uint8_t*)(keyBlock + 3 * 6));
 		num_to_bytes(0xb0b1b2b3b4b5, 6, (uint8_t*)(keyBlock + 4 * 6));
 		num_to_bytes(0xaabbccddeeff, 6, (uint8_t*)(keyBlock + 5 * 6));
+		num_to_bytes(0x4d3a99c351dd, 6, (uint8_t*)(keyBlock + 6 * 6));
+		num_to_bytes(0x1a982c7e459a, 6, (uint8_t*)(keyBlock + 7 * 6));
+		num_to_bytes(0xd3f7d3f7d3f7, 6, (uint8_t*)(keyBlock + 8 * 6));
+		num_to_bytes(0x714c5c886e97, 6, (uint8_t*)(keyBlock + 9 * 6));
+		num_to_bytes(0x587ee5f9350f, 6, (uint8_t*)(keyBlock + 10 * 6));
+		num_to_bytes(0xa0478cc39091, 6, (uint8_t*)(keyBlock + 11 * 6));
+		num_to_bytes(0x533cb6c723f6, 6, (uint8_t*)(keyBlock + 12 * 6));
+		num_to_bytes(0x8fd0a4f256e9, 6, (uint8_t*)(keyBlock + 13 * 6));
 
 		PrintAndLog("Testing known keys. Sector count=%d", SectorsCnt);
 		for (i = 0; i < SectorsCnt; i++) {
@@ -1312,7 +1320,6 @@ int CmdHF14AMfDbg(const char *Cmd)
   return 0;
 }
 
-
 int CmdHF14AMfEGet(const char *Cmd)
 {
 	uint8_t blockNo = 0;
@@ -1609,7 +1616,6 @@ int CmdHF14AMfCSetUID(const char *Cmd)
 	return 0;
 }
 
-
 int CmdHF14AMfCSetBlk(const char *Cmd)
 {
 	uint8_t uid[8];
@@ -1735,7 +1741,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		}
 		fclose(f);
 	
-		if (blockNum != 16 * 4){
+		if (blockNum != 16 * 4 && blockNum != 32 * 4 + 8 * 16){
 			PrintAndLog("File content error. There must be 64 blocks");
 			return 4;
 		}
@@ -1743,7 +1749,6 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		return 0;
 	}
 }
-
 
 int CmdHF14AMfCGetBlk(const char *Cmd) {
 	uint8_t memBlock[16];

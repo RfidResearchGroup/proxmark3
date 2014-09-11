@@ -36,8 +36,6 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 	// clear trace
  	iso14a_clear_trace();
-//	iso14a_set_tracing(false);
-
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	LED_A_ON();
@@ -78,10 +76,8 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,16);
 	LED_B_OFF();
 
-	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-//  iso14a_set_tracing(TRUE);
 
 }
 
@@ -126,15 +122,9 @@ void MifareUReadBlock(uint8_t arg0,uint8_t *datain)
 	
 	if (MF_DBGLEVEL >= 2)	DbpString("READ BLOCK FINISHED");
     
-	// add trace trailer
-	memset(uid, 0x44, 4);
-	LogTrace(uid, 4, 0, 0, TRUE);
 	LED_B_ON();
-        cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,16);
+    cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,16);
 	LED_B_OFF();
-    
-    
-    // Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
@@ -153,7 +143,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	ui64Key = bytes_to_num(datain, 6);
 	
 	// variables
-	byte_t isOK;
+	byte_t isOK = 0;
 	byte_t dataoutbuf[16 * 16];
 	uint8_t uid[10];
 	uint32_t cuid;
@@ -163,7 +153,6 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 	// clear trace
  	iso14a_clear_trace();
-//	iso14a_set_tracing(false);
 
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -195,7 +184,6 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
 	}
 
-	
 	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
 	
@@ -208,7 +196,6 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-//  iso14a_set_tracing(TRUE);
 }
 
 
@@ -225,7 +212,6 @@ void MifareUReadCard(uint8_t arg0, uint8_t *datain)
 
         // clear trace
         iso14a_clear_trace();
-//      iso14a_set_tracing(false);
 
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -291,7 +277,6 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 	// clear trace
 	iso14a_clear_trace();
-//  iso14a_set_tracing(false);
 
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -337,10 +322,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-//  iso14a_set_tracing(TRUE);
-
 }
-
 
 void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 {
@@ -358,7 +340,6 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 
         // clear trace
         iso14a_clear_trace();
-	//  iso14a_set_tracing(false);
 
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -399,7 +380,6 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 //  iso14a_set_tracing(TRUE);
 }
 
-
 void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 {
 	// params
@@ -415,7 +395,6 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 
 	// clear trace
 	iso14a_clear_trace();
-	//  iso14a_set_tracing(false);
 
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -449,14 +428,10 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
 	LED_B_OFF();
 
-
 	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-//  iso14a_set_tracing(TRUE);
-
 }
-
 
 // Return 1 if the nonce is invalid else return 0
 int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, byte_t * parity) {
@@ -757,7 +732,6 @@ void MifareSetDbgLvl(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	Dbprintf("Debug level: %d", MF_DBGLEVEL);
 }
 
-
 //-----------------------------------------------------------------------------
 // Work with emulator memory
 // 
@@ -766,14 +740,11 @@ void MifareEMemClr(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 	emlClearMem();
 }
 
-
 void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
 	emlSetMem(datain, arg0, arg1); // data, block num, blocks count
 }
 
-
 void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
-
 	byte_t buf[48];
 	emlGetMem(buf, arg0, arg1); // data, block num, blocks count (max 4)
 
@@ -781,7 +752,6 @@ void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 	cmd_send(CMD_ACK,arg0,arg1,0,buf,48);
 	LED_B_OFF();
 }
-
 
 //-----------------------------------------------------------------------------
 // Load a card into the emulator memory
