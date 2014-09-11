@@ -509,6 +509,7 @@ int CmdHF14AMfDump(const char *Cmd)
 	uint8_t keyA[40][6];
 	uint8_t keyB[40][6];
 	uint8_t rights[40][4];
+	uint8_t carddata[256][16];
 	uint8_t numSectors = 16;
 	
 	FILE *fin;
@@ -537,11 +538,6 @@ int CmdHF14AMfDump(const char *Cmd)
 	
 	if ((fin = fopen("dumpkeys.bin","rb")) == NULL) {
 		PrintAndLog("Could not find file dumpkeys.bin");
-		return 1;
-	}
-	
-	if ((fout = fopen("dumpdata.bin","wb")) == NULL) { 
-		PrintAndLog("Could not create file name dumpdata.bin");
 		return 1;
 	}
 	
@@ -581,10 +577,12 @@ int CmdHF14AMfDump(const char *Cmd)
 				rights[sectorNo][2] = ((data[7] & 0x40)>>6) | ((data[8] & 0x4)>>1) | ((data[8] & 0x40)>>4);
 				rights[sectorNo][3] = ((data[7] & 0x80)>>7) | ((data[8] & 0x8)>>2) | ((data[8] & 0x80)>>5);
 			} else {
-				PrintAndLog("Could not get access rights for sector %2d.", sectorNo);
+				PrintAndLog("Could not get access rights for sector %2d. Trying with defaults...", sectorNo);
+				rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = rights[sectorNo][3] = 0x01;
 			}
 		} else {
-			PrintAndLog("Command execute timeout");
+			PrintAndLog("Command execute timeout when trying to read access rights for sector %2d. Trying with defaults...", sectorNo);
+			rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = rights[sectorNo][3] = 0x01;
 		}
 	}
 	
@@ -594,9 +592,9 @@ int CmdHF14AMfDump(const char *Cmd)
 	PrintAndLog("|----- Dumping all blocks to file... -----|");
 	PrintAndLog("|-----------------------------------------|");
 	
-  
-	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
-		for (blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
+	bool isOK = true;
+	for (sectorNo = 0; isOK && sectorNo < numSectors; sectorNo++) {
+		for (blockNo = 0; isOK && blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
 			bool received = false;
 			if (blockNo == NumBlocksPerSector(sectorNo) - 1) {		// sector trailer. At least the Access Conditions can always be read with key A. 
 				UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}};
@@ -611,17 +609,18 @@ int CmdHF14AMfDump(const char *Cmd)
 					SendCommand(&c);
 					received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
 				} else if (rights[sectorNo][data_area] == 7) {											// no key would work
-						PrintAndLog("Access rights do not allow reading of sector %2d block %3d", sectorNo, blockNo);
+					isOK = false;
+					PrintAndLog("Access rights do not allow reading of sector %2d block %3d", sectorNo, blockNo);
 				} else {																				// key A would work
-						UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}};
-						memcpy(c.d.asBytes, keyA[sectorNo], 6);
-						SendCommand(&c);
-						received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
+					UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}};
+					memcpy(c.d.asBytes, keyA[sectorNo], 6);
+					SendCommand(&c);
+					received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
 				}
 			}
 
 			if (received) {
-				uint8_t isOK  = resp.arg[0] & 0xff;
+				isOK  = resp.arg[0] & 0xff;
 				uint8_t *data  = resp.d.asBytes;
 				if (blockNo == NumBlocksPerSector(sectorNo) - 1) {		// sector trailer. Fill in the keys.
 					data[0]  = (keyA[sectorNo][0]);
@@ -638,21 +637,34 @@ int CmdHF14AMfDump(const char *Cmd)
 					data[15] = (keyB[sectorNo][5]);
 				}
 				if (isOK) {
-					fwrite ( data, 1, 16, fout );
-                    PrintAndLog("Dumped block %2d of sector %2d into 'dumpdata.bin'");
+					memcpy(carddata[FirstBlockOfSector(sectorNo) + blockNo], data, 16);
+                    PrintAndLog("Successfully read block %2d of sector %2d.", blockNo, sectorNo);
 				} else {
 					PrintAndLog("Could not read block %2d of sector %2d", blockNo, sectorNo);
+					break;
 				}
 			}
 			else {
-				PrintAndLog("Command execute timeout");
+				isOK = false;
+				PrintAndLog("Command execute timeout when trying to read block %2d of sector %2d.", blockNo, sectorNo);
+				break;
 			}
 		}
 
 	}
-	
+
+	if (isOK) {
+		if ((fout = fopen("dumpdata.bin","wb")) == NULL) { 
+			PrintAndLog("Could not create file name dumpdata.bin");
+			return 1;
+		}
+		uint16_t numblocks = FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1);
+		fwrite(carddata, 1, 16*numblocks, fout);
+		fclose(fout);
+		PrintAndLog("Dumped %d blocks (%d bytes) to file dumpdata.bin", numblocks, 16*numblocks);
+	}
+		
 	fclose(fin);
-	fclose(fout);
 	return 0;
 }
 
@@ -712,7 +724,7 @@ int CmdHF14AMfRestore(const char *Cmd)
 			return 2;
 		}
 	}
-	
+
 	PrintAndLog("Restoring dumpdata.bin to card");
 
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
@@ -792,9 +804,9 @@ int CmdHF14AMfNested(const char *Cmd)
 		PrintAndLog("d - write keys to binary file");
 		PrintAndLog(" ");
 		PrintAndLog("      sample1: hf mf nested 1 0 A FFFFFFFFFFFF ");
-		PrintAndLog("      sample1: hf mf nested 1 0 A FFFFFFFFFFFF t ");
-		PrintAndLog("      sample1: hf mf nested 1 0 A FFFFFFFFFFFF d ");
-		PrintAndLog("      sample2: hf mf nested o 0 A FFFFFFFFFFFF 4 A");
+		PrintAndLog("      sample2: hf mf nested 1 0 A FFFFFFFFFFFF t ");
+		PrintAndLog("      sample3: hf mf nested 1 0 A FFFFFFFFFFFF d ");
+		PrintAndLog("      sample4: hf mf nested o 0 A FFFFFFFFFFFF 4 A");
 		return 0;
 	}	
 	
@@ -988,19 +1000,6 @@ int CmdHF14AMfNested(const char *Cmd)
 }
 
 
-static uint32_t get_trailer_block (uint32_t uiBlock)
-{
-  // Test if we are in the small or big sectors
-  uint32_t trailer_block = 0;
-  if (uiBlock < 128) {
-    trailer_block = uiBlock + (3 - (uiBlock % 4));
-  } else {
-    trailer_block = uiBlock + (15 - (uiBlock % 16));
-  }
-  return trailer_block;
-}
-
-
 int CmdHF14AMfChk(const char *Cmd)
 {
 	FILE * f;
@@ -1050,8 +1049,7 @@ int CmdHF14AMfChk(const char *Cmd)
 		PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t] [<key (12 hex symbols)>] [<dic (*.dic)>]");
 		PrintAndLog("          * - all sectors");
 		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
-//		PrintAndLog("d - write keys to binary file\n");
-		
+		PrintAndLog("d - write keys to binary file\n");
 		PrintAndLog("      sample: hf mf chk 0 A 1234567890ab keys.dic");
 		PrintAndLog("              hf mf chk *1 ? t");
 		return 0;
@@ -1157,14 +1155,26 @@ int CmdHF14AMfChk(const char *Cmd)
 		PrintAndLog("No key specified, trying default keys");
 		for (;keycnt < defaultKeysSize; keycnt++)
 			PrintAndLog("chk default key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
-			(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
-			(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
+				(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
+				(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
+	}
+	
+	// initialize storage for found keys
+	bool validKey[2][40];
+	uint8_t foundKey[2][40][6];
+	for (uint16_t t = 0; t < 2; t++) {
+		for (uint16_t sectorNo = 0; sectorNo < SectorsCnt; sectorNo++) {
+			validKey[t][sectorNo] = false;
+			for (uint16_t i = 0; i < 6; i++) {
+				foundKey[t][sectorNo][i] = 0xff;
+			}
+		}
 	}
 	
 	for ( int t = !keyType; t < 2; keyType==2?(t++):(t=2) ) {
 		int b=blockNo;
 		for (int i = 0; i < SectorsCnt; ++i) {
-			PrintAndLog("--SectorsCnt:%2d, block no:%3d, key type:%C, key count:%2d ", i, b, t?'B':'A', keycnt);
+			PrintAndLog("--sector:%2d, block:%3d, key type:%C, key count:%2d ", i, b, t?'B':'A', keycnt);
 			uint32_t max_keys = keycnt>USB_CMD_DATA_SIZE/6?USB_CMD_DATA_SIZE/6:keycnt;
 			for (uint32_t c = 0; c < keycnt; c+=max_keys) {
 				uint32_t size = keycnt-c>max_keys?max_keys:keycnt-c;
@@ -1172,13 +1182,9 @@ int CmdHF14AMfChk(const char *Cmd)
 				if (res != 1) {
 					if (!res) {
 						PrintAndLog("Found valid key:[%012"llx"]",key64);
-						if (transferToEml) {
-							uint8_t block[16];
-							mfEmlGetMem(block, get_trailer_block(b), 1);
-							num_to_bytes(key64, 6, block + t*10);
-							mfEmlSetMem(block, get_trailer_block(b), 1);
-						}
-					}
+						num_to_bytes(key64, 6, foundKey[t][i]);
+						validKey[t][i] = true;
+					} 
 				} else {
 					PrintAndLog("Command execute timeout");
 				}
@@ -1186,41 +1192,42 @@ int CmdHF14AMfChk(const char *Cmd)
 			b<127?(b+=4):(b+=16);	
 		}
 	}
-	
-	free(keyBlock);
 
-/*
-	// Create dump file
+	if (transferToEml) {
+		uint8_t block[16];
+		for (uint16_t sectorNo = 0; sectorNo < SectorsCnt; sectorNo++) {
+			if (validKey[0][sectorNo] || validKey[1][sectorNo]) {
+				mfEmlGetMem(block, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
+				for (uint16_t t = 0; t < 2; t++) {
+					if (validKey[t][sectorNo]) {
+						memcpy(block + t*10, foundKey[t][sectorNo], 6);
+					}
+				}
+				mfEmlSetMem(block, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
+			}
+		}
+		PrintAndLog("Found keys have been transferred to the emulator memory");
+	}
+
 	if (createDumpFile) {
-		if ((fkeys = fopen("dumpkeys.bin","wb")) == NULL) { 
+		FILE *fkeys = fopen("dumpkeys.bin","wb");
+		if (fkeys == NULL) { 
 			PrintAndLog("Could not create file dumpkeys.bin");
-			free(e_sector);
+			free(keyBlock);
 			return 1;
 		}
-		PrintAndLog("Printing keys to binary file dumpkeys.bin...");
-		for(i=0; i<16; i++) {
-			if (e_sector[i].foundKey[0]){
-				num_to_bytes(e_sector[i].Key[0], 6, tempkey);
-				fwrite ( tempkey, 1, 6, fkeys );
-			}
-			else{
-				fwrite ( &standart, 1, 6, fkeys );
-			}
-		}
-		for(i=0; i<16; i++) {
-			if (e_sector[i].foundKey[1]){
-				num_to_bytes(e_sector[i].Key[1], 6, tempkey);
-				fwrite ( tempkey, 1, 6, fkeys );
-			}
-			else{
-				fwrite ( &standart, 1, 6, fkeys );
-			}
+		for (uint16_t t = 0; t < 2; t++) {
+			fwrite(foundKey[t], 1, 6*SectorsCnt, fkeys);
 		}
 		fclose(fkeys);
+		PrintAndLog("Found keys have been dumped to file dumpkeys.bin. 0xffffffffffff has been inserted for unknown keys.");
 	}
-*/
-  return 0;
+
+	free(keyBlock);
+
+	return 0;
 }
+
 
 int CmdHF14AMf1kSim(const char *Cmd)
 {
