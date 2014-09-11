@@ -13,23 +13,16 @@ CXX=g++
 VPATH = ../common
 OBJDIR = obj
 
-LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread ../liblua/liblua.a
+LDLIBS = -L/mingw/lib -L/opt/local/lib -L/usr/local/lib ../liblua/liblua.a  -lreadline -lpthread -lcrypto -lgdi32
 LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O4 
+CFLAGS = -std=c99  -I. -I../include -I../common -I/mingw/include -I/opt/local/include -I../liblua  -Wall $(COMMON_FLAGS) -g -O4  $(ICE_FLAGS)
 LUAPLATFORM = generic
 
 ifneq (,$(findstring MINGW,$(platform)))
-CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
-QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
+CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui -I$(QTDIR)/include/QtWidgets 
+QTLDLIBS = -L$(QTDIR)/lib  -lQt5Core -lQt5Gui -lQt5Widgets 
 MOC = $(QTDIR)/bin/moc
 LUAPLATFORM = mingw
-else ifeq ($(platform),Darwin)
-#CXXFLAGS = -I/Library/Frameworks/QtGui.framework/Versions/Current/Headers -I/Library/Frameworks/QtCore.framework/Versions/Current/Headers
-#QTLDLIBS = -framework QtGui -framework QtCore
-CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
-QTLDLIBS = -F/opt/local/Library/Frameworks -framework QtGui -framework QtCore
-MOC = moc 
-LUAPLATFORM = macosx
 else
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
@@ -58,6 +51,12 @@ CORESRCS = 	uart.c \
 CMDSRCS = 	nonce2key/crapto1.c\
 		nonce2key/crypto1.c\
 		nonce2key/nonce2key.c\
+			loclass/cipher.c \
+			loclass/cipherutils.c \
+			loclass/des.c \
+			loclass/ikeys.c \
+			loclass/elite_crack.c\
+			loclass/fileutils.c\
 			mifarehost.c\
 			crc16.c \
 			iso14443crc.c \
@@ -74,6 +73,9 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			cmdhflegic.c \
 			cmdhficlass.c \
 			cmdhfmf.c \
+			cmdhfmfu.c \
+			cmdhfmfdes.c \
+            cmdhfdes.c \
 			cmdhw.c \
 			cmdlf.c \
 			cmdlfhid.c \

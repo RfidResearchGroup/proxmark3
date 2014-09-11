@@ -13,11 +13,10 @@
 #include <stdlib.h>
 #include "proxmark3.h"
 #include "sleep.h"
-//#include "proxusb.h"
 #include "flash.h"
 #include "elf.h"
 #include "proxendian.h"
-#include "usb_cmd.h"
+#include "../include/usb_cmd.h"
 
 void SendCommand(UsbCommand* txcmd);
 void ReceiveCommand(UsbCommand* rxcmd);

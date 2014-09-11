@@ -16,10 +16,10 @@
 // (c) 2012 Roel Verdult
 //-----------------------------------------------------------------------------
 
-#include "proxmark3.h"
+#include "../include/proxmark3.h"
 #include "apps.h"
 #include "util.h"
-#include "hitag2.h"
+#include "../include/hitag2.h"
 #include "string.h"
 
 static bool bQuiet;

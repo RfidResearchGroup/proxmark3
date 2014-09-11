@@ -13,16 +13,15 @@
 #ifndef __MIFARECMD_H
 #define __MIFARECMD_H
 
-#include "proxmark3.h"
+#include "../include/proxmark3.h"
 #include "apps.h"
 #include "util.h"
 #include "string.h"
 
-#include "iso14443crc.h"
+#include "../common/iso14443crc.h"
 #include "iso14443a.h"
 #include "crapto1.h"
 #include "mifareutil.h"
-#include "common.h"
-
+#include "../include/common.h"
 
 #endif

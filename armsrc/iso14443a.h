@@ -12,7 +12,7 @@
 
 #ifndef __ISO14443A_H
 #define __ISO14443A_H
-#include "common.h"
+#include "../include/common.h"
 #include "mifaresniff.h"
 
 // mifare reader                      over DMA buffer (SnoopIso14443a())!!!
@@ -84,6 +84,7 @@ extern void ReaderTransmitBitsPar(uint8_t *frame, int bits, uint32_t par, uint32
 extern void ReaderTransmitPar(uint8_t *frame, int len, uint32_t par, uint32_t *timing);
 extern int ReaderReceive(uint8_t *receivedAnswer);
 extern int ReaderReceivePar(uint8_t *receivedAnswer, uint32_t *parptr);
+extern int ReaderReceiveDesfiresAuthTiming(uint8_t *receivedAnswer, uint32_t *elapsedTime);
 
 extern void iso14443a_setup(uint8_t fpga_minor_mode);
 extern int iso14_apdu(uint8_t *cmd, size_t cmd_len, void *data);

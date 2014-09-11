@@ -13,7 +13,7 @@
 #include "proxmark3.h"
 #include "flash.h"
 #include "uart.h"
-#include "usb_cmd.h"
+#include "../include/usb_cmd.h"
 
 #ifdef _WIN32
 # define unlink(x)

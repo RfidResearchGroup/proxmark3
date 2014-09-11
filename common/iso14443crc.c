@@ -6,7 +6,7 @@
 // ISO14443 CRC calculation code.
 //-----------------------------------------------------------------------------
 
-#include "iso14443crc.h"
+#include "../common/iso14443crc.h"
 
 static unsigned short UpdateCrc14443(unsigned char ch, unsigned short *lpwCrc)
 {

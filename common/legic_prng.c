@@ -6,7 +6,7 @@
 // LEFIC's obfuscation function
 //-----------------------------------------------------------------------------
 
-#include "legic_prng.h"
+#include "../include/legic_prng.h"
 
 struct lfsr {
   uint8_t  a;

@@ -32,7 +32,7 @@
 
 #include "cmd.h"
 #include "string.h"
-#include "proxmark3.h"
+#include "../include/proxmark3.h"
 
 //static UsbCommand txcmd;
 

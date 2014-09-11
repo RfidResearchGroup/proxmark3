@@ -10,55 +10,88 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-//#include "proxusb.h"
 #include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"
+#include "cmdmain.h"
 #include "cmdparser.h"
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "cmdlft55xx.h"
+#include "util.h"
+#include "data.h"
 
+#define LF_TRACE_BUFF_SIZE 16000
 static int CmdHelp(const char *Cmd);
 
 
 int CmdReadBlk(const char *Cmd)
 {
-  int Block = 8; //default to invalid block
+	//default to invalid block
+	int Block = -1;
   UsbCommand c;
 
   sscanf(Cmd, "%d", &Block);
 
-  if (Block > 7) {
+	if ((Block > 7) | (Block < 0)) {
   	PrintAndLog("Block must be between 0 and 7");
   	return 1;
   }	
 
-  PrintAndLog("Reading block %d", Block);
+	PrintAndLog(" Reading page 0 block : %d", Block);
 
+	// this command fills up BigBuff
+	// 
   c.cmd = CMD_T55XX_READ_BLOCK;
-  c.d.asBytes[0] = 0x0; //Normal mode
+	c.d.asBytes[0] = 0x00;
   c.arg[0] = 0;
   c.arg[1] = Block;
   c.arg[2] = 0;
   SendCommand(&c);
+	WaitForResponse(CMD_ACK, NULL);
+	
+	uint8_t data[LF_TRACE_BUFF_SIZE];
+	memset(data, 0x00, LF_TRACE_BUFF_SIZE);
+	
+	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
+	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
+
+	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
+		GraphBuffer[j] = ((int)data[j]) - 128;
+	}
+	GraphTraceLen = LF_TRACE_BUFF_SIZE;
+	  
+	// BiDirectional
+	CmdDirectionalThreshold("70 -60");	
+	
+	// Askdemod
+	Cmdaskdemod("1");
+	
+	uint8_t bits[1000];
+	uint8_t * bitstream = bits;
+	uint8_t len = 0;
+	len = manchester_decode(data, LF_TRACE_BUFF_SIZE, bitstream);
+	if ( len > 0 )
+		PrintPaddedManchester(bitstream, len, 32);
+
   return 0;
 }
 
+
 int CmdReadBlkPWD(const char *Cmd)
 {
-  int Block = 8; //default to invalid block
+	int Block = -1; //default to invalid block
   int Password = 0xFFFFFFFF; //default to blank Block 7
   UsbCommand c;
 
   sscanf(Cmd, "%d %x", &Block, &Password);
 
-  if (Block > 7) {
+	if ((Block > 7) | (Block < 0)) {
   	PrintAndLog("Block must be between 0 and 7");
   	return 1;
   }	
 
-  PrintAndLog("Reading block %d with password %08X", Block, Password);
+	PrintAndLog("Reading page 0 block %d pwd %08X", Block, Password);
 
   c.cmd = CMD_T55XX_READ_BLOCK;
   c.d.asBytes[0] = 0x1; //Password mode
@@ -66,8 +99,34 @@ int CmdReadBlkPWD(const char *Cmd)
   c.arg[1] = Block;
   c.arg[2] = Password;
   SendCommand(&c);
+	WaitForResponse(CMD_ACK, NULL);
+		
+	uint8_t data[LF_TRACE_BUFF_SIZE];
+	memset(data, 0x00, LF_TRACE_BUFF_SIZE);
+
+	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
+	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
+
+	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
+		GraphBuffer[j] = ((int)data[j]) - 128;
+	}
+	GraphTraceLen = LF_TRACE_BUFF_SIZE;
+
+	// BiDirectional
+	CmdDirectionalThreshold("70 -60");	
+	
+	// Askdemod
+	Cmdaskdemod("1");
+		
+	uint8_t bits[1000];
+	uint8_t len = 0;
+	len = manchester_decode(data, LF_TRACE_BUFF_SIZE, bits);
+	if ( len > 0 )
+		PrintPaddedManchester(bits, len, 32);
+		
   return 0;
 }
+
 
 int CmdWriteBlk(const char *Cmd)
 {
@@ -120,11 +179,35 @@ int CmdWriteBlkPWD(const char *Cmd)
 
 int CmdReadTrace(const char *Cmd)
 {
-
-  PrintAndLog("Reading traceability data");
+	PrintAndLog(" Reading page 1 - tracedata");
 
   UsbCommand c = {CMD_T55XX_READ_TRACE, {0, 0, 0}};
   SendCommand(&c);
+	WaitForResponse(CMD_ACK, NULL);
+
+	uint8_t data[LF_TRACE_BUFF_SIZE];
+	memset(data, 0x00, LF_TRACE_BUFF_SIZE);
+
+	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
+	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
+
+	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
+		GraphBuffer[j] = ((int)data[j]) - 128;
+	}
+	GraphTraceLen = LF_TRACE_BUFF_SIZE;
+	
+	// BiDirectional
+	CmdDirectionalThreshold("70 -60");	
+	
+	// Askdemod
+	Cmdaskdemod("1");
+
+	uint8_t bits[512];
+	uint8_t len = 0;
+	len =  manchester_decode(data,LF_TRACE_BUFF_SIZE,bits);
+	if ( len > 0 )
+		PrintPaddedManchester(bits, len, 64);
+	
   return 0;
 }
 

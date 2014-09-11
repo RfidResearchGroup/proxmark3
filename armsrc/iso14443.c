@@ -10,12 +10,12 @@
 // supported.
 //-----------------------------------------------------------------------------
 
-#include "proxmark3.h"
+#include "../include/proxmark3.h"
 #include "apps.h"
 #include "util.h"
 #include "string.h"
 
-#include "iso14443crc.h"
+#include "../common/iso14443crc.h"
 
 //static void GetSamplesFor14443(int weTx, int n);
 

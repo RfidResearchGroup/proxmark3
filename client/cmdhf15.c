@@ -33,7 +33,7 @@
 #include "ui.h"
 #include "cmdparser.h"
 #include "cmdhf15.h"
-#include "iso15693tools.h"
+#include "../common/iso15693tools.h"
 #include "cmdmain.h"
 
 #define FrameSOF              Iso15693FrameSOF

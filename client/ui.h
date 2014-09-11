@@ -11,6 +11,8 @@
 #ifndef UI_H__
 #define UI_H__
 
+#include "util.h"
+
 void ShowGui(void);
 void HideGraphWindow(void);
 void ShowGraphWindow(void);
@@ -23,4 +25,6 @@ extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault;
 extern int offline;
 extern int flushAfterWrite;   //buzzy
 
+uint8_t manchester_decode(const uint8_t * data, const size_t len, uint8_t * dataout);
+void PrintPaddedManchester( uint8_t * bitStream, size_t len, size_t blocksize);
 #endif

@@ -14,9 +14,27 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "common.h"
-#include "hitag2.h"
-#include "mifare.h"
+#include <sys/types.h>
+
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
+
+#include "../include/common.h"
+#include "../include/hitag2.h"
+#include "../include/mifare.h"
+
+//#include <openssl/des.h>
+//#include <openssl/aes.h>
+
+//#include "des.h"
+//#include "aes.h"
+#include "../common/desfire.h"
+#include "../common/crc32.h"
+//#include "desfire_crypto.h"
+//#include "desfire_key.h"
+
 
 // The large multi-purpose buffer, typically used to hold A/D samples,
 // maybe processed in some way.
@@ -172,7 +190,9 @@ void ReaderMifare(bool first_try);
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
 void MifareUReadBlock(uint8_t arg0,uint8_t *datain);
-void MifareUReadCard(uint8_t arg0,uint8_t *datain);
+void MifareUC_Auth1(uint8_t arg0, uint8_t *datain);
+void MifareUC_Auth2(uint32_t arg0, uint8_t *datain);
+void MifareUReadCard(uint8_t arg0,int Pages,uint8_t *datain);
 void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareUWriteBlock(uint8_t arg0,uint8_t *datain);
@@ -188,6 +208,47 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);  // Work with "magic Chinese" card
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 
+// mifaredesfire.h
+void 		MifareDesfireGetInformation();
+void 		MifareDES_Auth1(uint8_t arg0,uint8_t arg1,uint8_t arg2, uint8_t *datain);
+void 		MifareDES_Auth2(uint32_t arg0, uint8_t *datain);
+int 		mifare_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData);
+void 		ReaderMifareDES(uint32_t param, uint32_t param2, uint8_t * datain);
+int 		SendDesfireCommand(enum DESFIRE_CMD desfire_cmd, uint8_t *dataout, uint8_t fromscratch);
+uint8_t* 	CreateAPDU( uint8_t *datain, size_t len);
+void 		OnSuccess();
+void 		OnError();
+
+// desfire_key.h
+desfirekey_t 		Desfire_des_key_new (const uint8_t value[8]);
+desfirekey_t 		Desfire_3des_key_new (const uint8_t value[16]);
+desfirekey_t 		Desfire_des_key_new_with_version (const uint8_t value[8]);
+desfirekey_t 		Desfire_3des_key_new_with_version (const uint8_t value[16]);
+desfirekey_t 		Desfire_3k3des_key_new (const uint8_t value[24]);
+desfirekey_t 		Desfire_3k3des_key_new_with_version (const uint8_t value[24]);
+desfirekey_t 		Desfire_aes_key_new (const uint8_t value[16]);
+desfirekey_t 		Desfire_aes_key_new_with_version (const uint8_t value[16], uint8_t version);
+uint8_t          	Desfire_key_get_version (desfirekey_t key);
+void             	Desfire_key_set_version (desfirekey_t key, uint8_t version);
+desfirekey_t 		Desfire_session_key_new (const uint8_t rnda[], const uint8_t rndb[], desfirekey_t authkey);
+
+// desfire_crypto.h
+void	            *mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes, off_t offset, int communication_settings);
+void    	        *mifare_cryto_postprocess_data (desfiretag_t tag, void *data, ssize_t *nbytes, int communication_settings);
+void        	    mifare_cypher_single_block (desfirekey_t  key, uint8_t *data, uint8_t *ivect, MifareCryptoDirection direction, MifareCryptoOperation operation, size_t block_size);
+void            	mifare_cypher_blocks_chained (desfiretag_t tag, desfirekey_t key, uint8_t *ivect, uint8_t *data, size_t data_size, MifareCryptoDirection direction, MifareCryptoOperation operation);
+size_t           	key_block_size (const desfirekey_t  key);
+size_t           	padded_data_length (const size_t nbytes, const size_t block_size);
+size_t           	maced_data_length (const desfirekey_t  key, const size_t nbytes);
+size_t           	enciphered_data_length (const desfiretag_t tag, const size_t nbytes, int communication_settings);
+void             	cmac_generate_subkeys (desfirekey_t key);
+void             	cmac (const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
+
+
+
+
+
+
 /// iso15693.h
 void RecordRawAdcSamplesIso15693(void);
 void AcquireRawAdcSamplesIso15693(void);
@@ -201,7 +262,9 @@ void SetDebugIso15693(uint32_t flag);
 void RAMFUNC SnoopIClass(void);
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void ReaderIClass(uint8_t arg0);
-//int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived);
+void ReaderIClass_Replay(uint8_t arg0,uint8_t *MAC);
+void IClass_iso14443A_GetPublic(uint8_t arg0);
+ 
 // hitag2.h
 void SnoopHitag(uint32_t type);
 void SimulateHitagTag(bool tag_mem_supplied, byte_t* data);

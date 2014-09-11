@@ -16,7 +16,7 @@
 #include "cmdparser.h"
 #include "proxmark3.h"
 #include "data.h"
-#include "usb_cmd.h"
+#include "../include/usb_cmd.h"
 #include "ui.h"
 #include "cmdhf.h"
 #include "cmddata.h"

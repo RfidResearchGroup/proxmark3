@@ -13,8 +13,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
-#include "iso14443crc.h"
-//#include "proxusb.h"
+#include "../common/iso14443crc.h"
 #include "proxmark3.h"
 #include "data.h"
 #include "graph.h"

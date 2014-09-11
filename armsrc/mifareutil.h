@@ -56,6 +56,7 @@ extern int MF_DBGLEVEL;
 uint8_t* mifare_get_bigbufptr(void);
 int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint32_t *timing);
 int mifare_sendcmd_short_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t* amswer, uint8_t *timing);
+int mifare_sendcmd_short_mfucauth(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t* amswer, uint32_t *timing);
 int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint32_t * parptr, uint32_t *timing);
 
 int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, \
@@ -63,6 +64,8 @@ int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, \
 int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, \
 													uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested, uint32_t * ntptr, uint32_t *timing);
 int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData); 
+int mifare_ultra_auth1(uint32_t cuid, uint8_t *blockData);
+int mifare_ultra_auth2(uint32_t cuid, uint8_t *key, uint8_t *blockData);
 int mifare_ultra_readblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData);
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData);
 int mifare_ultra_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData);

@@ -3,7 +3,6 @@
 #include <string.h>
 #include <inttypes.h>
 #include <limits.h>
-//#include "proxusb.h"
 #include "proxmark3.h"
 #include "data.h"
 #include "graph.h"

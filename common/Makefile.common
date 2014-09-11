@@ -54,7 +54,8 @@ DELETE=del /q
 MOVE=ren
 COPY=copy
 PATHSEP=\\#
-FLASH_TOOL=winsrc\\prox.exe
+#FLASH_TOOL=winsrc\\prox.exe
+FLASH_TOOL=winsrc\\flash.exe
 DETECTED_OS=Windows
 
 endif
@@ -67,6 +68,7 @@ INCLUDES = ../include/proxmark3.h ../include/at91sam7s512.h ../include/config_gp
 
 CFLAGS =  -c $(INCLUDE) -Wall -Werror -pedantic -std=c99 $(APP_CFLAGS) -Os
 LDFLAGS = -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
+
 LIBS = -lgcc
 
 THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(THUMBSRC))

@@ -13,7 +13,7 @@
 
 #include "iso14443a.h"
 #include "epa.h"
-#include "cmd.h"
+#include "../common/cmd.h"
 
 // Protocol and Parameter Selection Request
 // use regular (1x) speed in both directions

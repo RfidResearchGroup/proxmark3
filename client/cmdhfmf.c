@@ -7,7 +7,7 @@
 //-----------------------------------------------------------------------------
 // High frequency MIFARE commands
 //-----------------------------------------------------------------------------
-
+#include "../include/mifare.h"
 #include "cmdhfmf.h"
 
 static int CmdHelp(const char *Cmd);
@@ -140,6 +140,7 @@ int CmdHF14AMfWrBl(const char *Cmd)
 	return 0;
 }
 
+/*  dublett finns i CMDHFMFU.C 
 int CmdHF14AMfUWrBl(const char *Cmd)
 {
 	uint8_t blockNo = 0;
@@ -249,8 +250,7 @@ int CmdHF14AMfUWrBl(const char *Cmd)
 	}
 	return 0;
 }
-
-
+*/
 int CmdHF14AMfRdBl(const char *Cmd)
 {
 	uint8_t blockNo = 0;
@@ -299,6 +299,7 @@ int CmdHF14AMfRdBl(const char *Cmd)
   return 0;
 }
 
+/* dublett finns i CMDHFMFU.C 
 int CmdHF14AMfURdBl(const char *Cmd)
 {
 	uint8_t blockNo = 0;
@@ -330,8 +331,9 @@ int CmdHF14AMfURdBl(const char *Cmd)
 
 	return 0;
 }
+*/
 
-
+/* dublett finns i CMDHFMFU.C 
 int CmdHF14AMfURdCard(const char *Cmd)
 {
     int i;
@@ -422,7 +424,7 @@ int CmdHF14AMfURdCard(const char *Cmd)
         }
   return 0;
 }
-
+*/
 
 int CmdHF14AMfRdSc(const char *Cmd)
 {
@@ -516,7 +518,16 @@ int CmdHF14AMfDump(const char *Cmd)
 	
 	UsbCommand resp;
 
+	int size = GetCardSize();		
 	char cmdp = param_getchar(Cmd, 0);
+	
+	PrintAndLog("Got %d",size);
+	
+	return;
+	
+	if  ( size > -1) 
+		cmdp = (char)48+size;
+	
 	switch (cmdp) {
 		case '0' : numSectors = 5; break;
 		case '1' : 
@@ -545,8 +556,7 @@ int CmdHF14AMfDump(const char *Cmd)
 		return 1;
 	}
 	
-	// Read key file
-
+	// Read keys A from file
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		if (fread( keyA[sectorNo], 1, 6, fin ) == 0) {
 			PrintAndLog("File reading error.");
@@ -554,6 +564,7 @@ int CmdHF14AMfDump(const char *Cmd)
 		}
 	}
 	
+	// Read keys B from file
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		if (fread( keyB[sectorNo], 1, 6, fin ) == 0) {
 			PrintAndLog("File reading error.");
@@ -561,8 +572,6 @@ int CmdHF14AMfDump(const char *Cmd)
 		}
 	}
 	
-	// Read access rights to sectors
-
 	PrintAndLog("|-----------------------------------------|");
 	PrintAndLog("|------ Reading sector access bits...-----|");
 	PrintAndLog("|-----------------------------------------|");
@@ -588,16 +597,14 @@ int CmdHF14AMfDump(const char *Cmd)
 		}
 	}
 	
-	// Read blocks and print to file
-	
 	PrintAndLog("|-----------------------------------------|");
 	PrintAndLog("|----- Dumping all blocks to file... -----|");
 	PrintAndLog("|-----------------------------------------|");
 	
-  
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		for (blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
 			bool received = false;
+			
 			if (blockNo == NumBlocksPerSector(sectorNo) - 1) {		// sector trailer. At least the Access Conditions can always be read with key A. 
 				UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}};
 				memcpy(c.d.asBytes, keyA[sectorNo], 6);
@@ -639,7 +646,7 @@ int CmdHF14AMfDump(const char *Cmd)
 				}
 				if (isOK) {
 					fwrite ( data, 1, 16, fout );
-                    PrintAndLog("Dumped block %2d of sector %2d into 'dumpdata.bin'");
+                    PrintAndLog("Dumped block %2d of sector %2d into 'dumpdata.bin'", blockNo, sectorNo);
 				} else {
 					PrintAndLog("Could not read block %2d of sector %2d", blockNo, sectorNo);
 				}
@@ -648,7 +655,6 @@ int CmdHF14AMfDump(const char *Cmd)
 				PrintAndLog("Command execute timeout");
 			}
 		}
-
 	}
 	
 	fclose(fin);
@@ -801,11 +807,15 @@ int CmdHF14AMfNested(const char *Cmd)
 	cmdp = param_getchar(Cmd, 0);
 	blockNo = param_get8(Cmd, 1);
 	ctmp = param_getchar(Cmd, 2);
+	
 	if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
 		PrintAndLog("Key type must be A or B");
 		return 1;
 	}
-	if (ctmp != 'A' && ctmp != 'a') keyType = 1;
+	
+	if (ctmp != 'A' && ctmp != 'a') 
+		keyType = 1;
+		
 	if (param_gethex(Cmd, 3, key, 12)) {
 		PrintAndLog("Key must include 12 HEX symbols");
 		return 1;
@@ -819,8 +829,12 @@ int CmdHF14AMfNested(const char *Cmd)
 			PrintAndLog("Target key type must be A or B");
 			return 1;
 		}
-		if (ctmp != 'A' && ctmp != 'a') trgKeyType = 1;
+		if (ctmp != 'A' && ctmp != 'a') 
+			trgKeyType = 1;
 	} else {
+		
+		
+	
 		switch (cmdp) {
 			case '0': SectorsCnt = 05; break;
 			case '1': SectorsCnt = 16; break;
@@ -2011,30 +2025,121 @@ int CmdHF14AMfSniff(const char *Cmd){
 							FillFileNameByUID(logHexFileName, uid + (7 - uid_len), ".log", uid_len);
 							AddLogCurrentDT(logHexFileName);
 						}						
-						if (wantDecrypt) mfTraceInit(uid, atqa, sak, wantSaveToEmlFile);
+						if (wantDecrypt) 
+							mfTraceInit(uid, atqa, sak, wantSaveToEmlFile);
 					} else {
 						PrintAndLog("%s(%d):%s", isTag ? "TAG":"RDR", num, sprint_hex(bufPtr, len));
-						if (wantLogToFile) AddLogHex(logHexFileName, isTag ? "TAG: ":"RDR: ", bufPtr, len);
-						if (wantDecrypt) mfTraceDecode(bufPtr, len, parity, wantSaveToEmlFile);
+						if (wantLogToFile) 
+							AddLogHex(logHexFileName, isTag ? "TAG: ":"RDR: ", bufPtr, len);
+						if (wantDecrypt) 
+							mfTraceDecode(bufPtr, len, parity, wantSaveToEmlFile);
 					}
 					bufPtr += len;
 					num++;
 				}
 			}
-		} // resp not NILL
+		} // resp not NULL
 	} // while (true)
 	
 	return 0;
 }
+
+// Tries to identify cardsize.
+// Returns <num>  where num is:
+// -1  unidentified
+//  0 - MINI (320bytes)
+//  1 - 1K
+//  2 - 2K
+//  4 - 4K
+int GetCardSize()
+{
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
+	SendCommand(&c);
+
+	UsbCommand resp;
+	WaitForResponse(CMD_ACK,&resp);
+
+	if(resp.arg[0] == 0) {
+		PrintAndLog("iso14443a card select failed");
+		return -1;
+	}
+	
+	iso14a_card_select_t *card = (iso14a_card_select_t *)resp.d.asBytes;
+
+	PrintAndLog("Trying to detect card size.");
+	
+	uint16_t atqa = 0;
+	uint8_t sak = 0;
+	atqa = (card->atqa[1] & 0xff) << 8;
+    atqa += card->atqa[0] & 0xff;
+	sak = card->sak;
+	
+	// https://code.google.com/p/libnfc/source/browse/libnfc/target-subr.c
+	
+	PrintAndLog("found ATAQ: %04X SAK: %02X", atqa, sak);
+	
+	
+	// NXP MIFARE Mini 0.3k
+	if ( (atqa && 0xff0f == 0x0004) && (sak == 0x09) ) return 0;
+	
+	// MIFARE Classic 1K
+	if ( (atqa && 0xff0f == 0x0004) && (sak == 0x08) ) return 1;
+	
+	// MIFARE Classik 4K
+	if ( (atqa && 0xff0f == 0x0002) && (sak == 0x18) ) return 4;
+	
+	// SmartMX with MIFARE 1K emulation 
+	if ( (atqa && 0xf0ff == 0x0004) ) return 1;
+
+	// SmartMX with MIFARE 4K emulation 
+	if ( (atqa && 0xf0ff == 0x0002) ) return 4;	
+	
+	// Infineon MIFARE CLASSIC 1K
+	if ( (atqa && 0xffff == 0x0004) && (sak == 0x88) ) return 1;
+	
+	// MFC 4K emulated by Nokia 6212 Classic
+	if ( (atqa && 0xffff == 0x0002) && (sak == 0x38) ) return 4;
+
+	// MFC 4K emulated by Nokia 6131 NFC
+	if ( (atqa && 0xffff == 0x0008) && (sak == 0x38) ) return 4;
+
+	// MIFARE Plus (4 Byte UID or 4 Byte RID)
+	// MIFARE Plus (7 Byte UID)
+	if (
+			(atqa && 0xffff == 0x0002) ||
+			(atqa && 0xffff == 0x0004) ||
+			(atqa && 0xffff == 0x0042) ||	
+			(atqa && 0xffff == 0x0044) 
+		)
+	{
+		switch(sak){
+			case 0x08:
+			case 0x10:
+			//case 0x20:
+				return 2;
+				break;
+			case 0x11:
+			case 0x18:
+			//case 0x20:
+				return 4;
+				break;
+		}
+	}
+	
+	return -1;
+}
+
+
+
 
 static command_t CommandTable[] =
 {
   {"help",		CmdHelp,				1, "This help"},
   {"dbg",		CmdHF14AMfDbg,			0, "Set default debug mode"},
   {"rdbl",		CmdHF14AMfRdBl,			0, "Read MIFARE classic block"},
-  {"urdbl",     CmdHF14AMfURdBl,        0, "Read MIFARE Ultralight block"},
-  {"urdcard",   CmdHF14AMfURdCard,      0,"Read MIFARE Ultralight Card"},
-  {"uwrbl",		CmdHF14AMfUWrBl,		0,"Write MIFARE Ultralight block"},
+  //{"urdbl",              CmdHF14AMfURdBl,                 0, "Read MIFARE Ultralight block"},
+  //{"urdcard",           CmdHF14AMfURdCard,               0,"Read MIFARE Ultralight Card"},
+  //{"uwrbl",		CmdHF14AMfUWrBl,		0,"Write MIFARE Ultralight block"},
   {"rdsc",		CmdHF14AMfRdSc,			0, "Read MIFARE classic sector"},
   {"dump",		CmdHF14AMfDump,			0, "Dump MIFARE classic tag to binary file"},
   {"restore",	CmdHF14AMfRestore,		0, "Restore MIFARE classic binary file to BLANK tag"},

@@ -20,7 +20,7 @@
 
 #include "usb_cmd.h"
 
-#define PROXPROMPT "proxmark3> "
+#define PROXPROMPT "pm3 --> "
 
 void SendCommand(UsbCommand *c);
 

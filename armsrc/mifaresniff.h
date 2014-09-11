@@ -11,16 +11,16 @@
 #ifndef __MIFARESNIFF_H
 #define __MIFARESNIFF_H
 
-#include "proxmark3.h"
+#include "../include/proxmark3.h"
 #include "apps.h"
 #include "util.h"
 #include "string.h"
 
-#include "iso14443crc.h"
+#include "../common/iso14443crc.h"
 #include "iso14443a.h"
 #include "crapto1.h"
 #include "mifareutil.h"
-#include "common.h"
+#include "../include/common.h"
 
 #define SNF_INIT				0
 #define SNF_NO_FIELD		1

@@ -8,14 +8,14 @@
 // LEGIC RF simulation code
 //-----------------------------------------------------------------------------
 
-#include "proxmark3.h"
+#include "../include/proxmark3.h"
 #include "apps.h"
 #include "util.h"
 #include "string.h"
 
 #include "legicrf.h"
-#include "legic_prng.h"
-#include "crc.h"
+#include "../include/legic_prng.h"
+#include "../common/crc.h"
 
 static struct legic_frame {
 	int bits;

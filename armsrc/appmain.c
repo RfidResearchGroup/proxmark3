@@ -10,10 +10,10 @@
 // executes.
 //-----------------------------------------------------------------------------
 
-#include "usb_cdc.h"
-#include "cmd.h"
+#include "../common/usb_cdc.h"
+#include "../common/cmd.h"
 
-#include "proxmark3.h"
+#include "../include/proxmark3.h"
 #include "apps.h"
 #include "util.h"
 #include "printf.h"
@@ -22,7 +22,7 @@
 #include <stdarg.h>
 
 #include "legicrf.h"
-#include <hitag2.h>
+#include "../include/hitag2.h"
 
 #ifdef WITH_LCD
  #include "LCD.h"
@@ -81,40 +81,12 @@ void DbpString(char *str)
 {
   byte_t len = strlen(str);
   cmd_send(CMD_DEBUG_PRINT_STRING,len,0,0,(byte_t*)str,len);
-//	/* this holds up stuff unless we're connected to usb */
-//	if (!UsbConnected())
-//		return;
-//
-//	UsbCommand c;
-//	c.cmd = CMD_DEBUG_PRINT_STRING;
-//	c.arg[0] = strlen(str);
-//	if(c.arg[0] > sizeof(c.d.asBytes)) {
-//		c.arg[0] = sizeof(c.d.asBytes);
-//	}
-//	memcpy(c.d.asBytes, str, c.arg[0]);
-//
-//	UsbSendPacket((uint8_t *)&c, sizeof(c));
-//	// TODO fix USB so stupid things like this aren't req'd
-//	SpinDelay(50);
 }
 
 #if 0
 void DbpIntegers(int x1, int x2, int x3)
 {
   cmd_send(CMD_DEBUG_PRINT_INTEGERS,x1,x2,x3,0,0);
-//	/* this holds up stuff unless we're connected to usb */
-//	if (!UsbConnected())
-//		return;
-//
-//	UsbCommand c;
-//	c.cmd = CMD_DEBUG_PRINT_INTEGERS;
-//	c.arg[0] = x1;
-//	c.arg[1] = x2;
-//	c.arg[2] = x3;
-//
-//	UsbSendPacket((uint8_t *)&c, sizeof(c));
-//	// XXX
-//	SpinDelay(50);
 }
 #endif
 
@@ -198,8 +170,6 @@ void MeasureAntennaTuning(void)
 	uint8_t *dest = (uint8_t *)BigBuf+FREE_BUFFER_OFFSET;
 	int i, adcval = 0, peak = 0, peakv = 0, peakf = 0; //ptr = 0 
 	int vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
-
-//	UsbCommand c;
 
   LED_B_ON();
 	DbpString("Measuring antenna characteristics, please wait...");
@@ -692,7 +662,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_PCF7931_READ: // Read PCF7931 tag
 			ReadPCF7931();
 			cmd_send(CMD_ACK,0,0,0,0,0);
-//      	UsbSendPacket((uint8_t*)&ack, sizeof(ack));
 			break;
 		case CMD_EM4X_READ_WORD:
 			EM4xReadWord(c->arg[1], c->arg[2],c->d.asBytes[0]);
@@ -800,8 +769,17 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MIFAREU_READBL:
 			MifareUReadBlock(c->arg[0],c->d.asBytes);
 			break;
+		case CMD_MIFAREUC_AUTH1:
+			MifareUC_Auth1(c->arg[0],c->d.asBytes);
+			break;
+		case CMD_MIFAREUC_AUTH2:
+			MifareUC_Auth2(c->arg[0],c->d.asBytes);
+			break;
 		case CMD_MIFAREU_READCARD:
-			MifareUReadCard(c->arg[0],c->d.asBytes);
+			MifareUReadCard(c->arg[0],c->arg[1],c->d.asBytes);
+                        break;
+		case CMD_MIFAREUC_READCARD:
+			MifareUReadCard(c->arg[0],c->arg[1],c->d.asBytes);
                         break;
 		case CMD_MIFARE_READSC:
 			MifareReadSector(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
@@ -854,6 +832,24 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MIFARE_SNIFFER:
 			SniffMifare(c->arg[0]);
 			break;
+			
+		// mifare desfire
+		case CMD_MIFARE_DESFIRE_READBL:
+			break;
+		case CMD_MIFARE_DESFIRE_WRITEBL:
+			break;
+		case CMD_MIFARE_DESFIRE_AUTH1:
+			MifareDES_Auth1(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+		case CMD_MIFARE_DESFIRE_AUTH2:
+			MifareDES_Auth2(c->arg[0],c->d.asBytes);
+			break;
+		// case CMD_MIFARE_DES_READER:
+			// ReaderMifareDES(c->arg[0], c->arg[1], c->d.asBytes);
+			break;
+		case CMD_MIFARE_DESFIRE_INFO:
+			MifareDesfireGetInformation();
+			break;
 #endif
 
 #ifdef WITH_ICLASS
@@ -866,6 +862,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		case CMD_READER_ICLASS:
 			ReaderIClass(c->arg[0]);
+			break;
+		case CMD_READER_ICLASS_REPLAY:
+		        ReaderIClass_Replay(c->arg[0], c->d.asBytes);
 			break;
 #endif
 
@@ -896,18 +895,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 
 		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K:
-//			UsbCommand n;
-//			if(c->cmd == CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K) {
-//				n.cmd = CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K;
-//			} else {
-//				n.cmd = CMD_DOWNLOADED_RAW_BITS_TI_TYPE;
-//			}
-//			n.arg[0] = c->arg[0];
-      //			memcpy(n.d.asBytes, BigBuf+c->arg[0], 48); // 12*sizeof(uint32_t)
-      //			LED_B_ON();
-      //      usb_write((uint8_t *)&n, sizeof(n));
-      //			UsbSendPacket((uint8_t *)&n, sizeof(n));
-      //			LED_B_OFF();
 
 			LED_B_ON();
 			for(size_t i=0; i<c->arg[1]; i += USB_CMD_DATA_SIZE) {
@@ -923,7 +910,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			uint8_t *b = (uint8_t *)BigBuf;
 			memcpy(b+c->arg[0], c->d.asBytes, 48);
 			//Dbprintf("copied 48 bytes to %i",b+c->arg[0]);
-//			UsbSendPacket((uint8_t*)&ack, sizeof(ack));
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		}	
@@ -981,7 +967,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_DEVICE_INFO: {
 			uint32_t dev_info = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
 			if(common_area.flags.bootrom_present) dev_info |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
-//			UsbSendPacket((uint8_t*)&c, sizeof(c));
 			cmd_send(CMD_DEVICE_INFO,dev_info,0,0,0,0);	
 			break;
 		}
@@ -1010,7 +995,6 @@ void  __attribute__((noreturn)) AppMain(void)
 
   // Init USB device`
   usb_enable();
-//	UsbStart();
 
 	// The FPGA gets its clock from us from PCK0 output, so set that up.
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_PCK0;
@@ -1046,8 +1030,6 @@ void  __attribute__((noreturn)) AppMain(void)
         UsbPacketReceived(rx,rx_len);
       }
     }
-//		UsbPoll(FALSE);
-
 		WDT_HIT();
 
 #ifdef WITH_LF

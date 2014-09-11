@@ -10,13 +10,12 @@
 // Routines to support ISO 14443 type A.
 //-----------------------------------------------------------------------------
 
-#include "proxmark3.h"
+#include "../include/proxmark3.h"
 #include "apps.h"
 #include "util.h"
 #include "string.h"
-#include "cmd.h"
-
-#include "iso14443crc.h"
+#include "../common/cmd.h"
+#include "../common/iso14443crc.h"
 #include "iso14443a.h"
 #include "crapto1.h"
 #include "mifareutil.h"
@@ -1616,6 +1615,13 @@ int ReaderReceive(uint8_t* receivedAnswer)
 	return ReaderReceiveOffset(receivedAnswer, 0);
 }
 
+int ReaderReceiveDesfiresAuthTiming(uint8_t *receivedAnswer, uint32_t *elapsedTime)
+{
+	int len =  ReaderReceiveOffset(receivedAnswer, 0);
+	*elapsedTime =  (Demod.endTime*16 - DELAY_AIR2ARM_AS_READER) -  (Demod.startTime*16 - DELAY_AIR2ARM_AS_READER);
+	return len;
+}
+
 int ReaderReceivePar(uint8_t *receivedAnswer, uint32_t *parptr)
 {
 	if (!GetIso14443aAnswerFromTag(receivedAnswer,0,160)) return FALSE;
@@ -1787,7 +1793,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 	DemodReset();
 	UartReset();
 	NextTransferTime = 2*DELAY_ARM2AIR_AS_READER;
-	iso14a_set_timeout(1050); // 10ms default
+	iso14a_set_timeout(1050); // 10ms default  10*105 = 
 }
 
 int iso14_apdu(uint8_t * cmd, size_t cmd_len, void * data) {
@@ -1825,8 +1831,8 @@ void ReaderIso14443a(UsbCommand *c)
 {
 	iso14a_command_t param = c->arg[0];
 	uint8_t *cmd = c->d.asBytes;
-	size_t len = c->arg[1];
-	size_t lenbits = c->arg[2];
+	size_t len = c->arg[1] & 0xFFFF;
+	size_t lenbits = c->arg[1] >> 16;
 	uint32_t arg0 = 0;
 	byte_t buf[USB_CMD_DATA_SIZE];
   
@@ -1862,9 +1868,10 @@ void ReaderIso14443a(UsbCommand *c)
 		if(param & ISO14A_APPEND_CRC) {
 			AppendCrc14443a(cmd,len);
 			len += 2;
-			if (lenbits) lenbits += 16;
+			lenbits += 16; 
 		}
 		if(lenbits>0) {
+
 			ReaderTransmitBitsPar(cmd,lenbits,GetParity(cmd,lenbits/8), NULL);
 		} else {
 			ReaderTransmit(cmd,len, NULL);
@@ -2206,12 +2213,9 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 	if (MF_DBGLEVEL >= 1)	{
 		if (!_7BUID) {
-			Dbprintf("4B UID: %02x%02x%02x%02x", 
-				rUIDBCC1[0], rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3]);
+			Dbprintf("4B UID: %02x%02x%02x%02x",rUIDBCC1[0] , rUIDBCC1[1] , rUIDBCC1[2] , rUIDBCC1[3]);
 		} else {
-			Dbprintf("7B UID: (%02x)%02x%02x%02x%02x%02x%02x%02x",
-				rUIDBCC1[0], rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3],
-				rUIDBCC2[0], rUIDBCC2[1] ,rUIDBCC2[2], rUIDBCC2[3]);
+			Dbprintf("7B UID: (%02x)%02x%02x%02x%02x%02x%02x%02x",rUIDBCC1[0] , rUIDBCC1[1] , rUIDBCC1[2] , rUIDBCC1[3],rUIDBCC2[0],rUIDBCC2[1] ,rUIDBCC2[2] , rUIDBCC2[3]);
 		}
 	}
 
@@ -2321,9 +2325,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 				// test if auth OK
 				if (cardRr != prng_successor(nonce, 64)){
-					if (MF_DBGLEVEL >= 2) Dbprintf("AUTH FAILED for sector %d with key %c. cardRr=%08x, succ=%08x",
-							cardAUTHSC, cardAUTHKEY == 0 ? 'A' : 'B',
-							cardRr, prng_successor(nonce, 64));
+					if (MF_DBGLEVEL >= 2)	Dbprintf("AUTH FAILED. cardRr=%08x, succ=%08x",cardRr, prng_successor(nonce, 64));
 					// Shouldn't we respond anything here?
 					// Right now, we don't nack or anything, which causes the
 					// reader to do a WUPA after a while. /Martin

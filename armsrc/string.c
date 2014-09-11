@@ -48,6 +48,11 @@ int memcmp(const void *av, const void *bv, int len)
 	return 0;
 }
 
+void memxor(uint8_t * dest, uint8_t * src, size_t len) {
+   for( ; len > 0; len--,dest++,src++)
+       *dest ^= *src;
+}
+
 int strlen(const char *str)
 {
 	int l = 0;

@@ -13,6 +13,7 @@
 #ifndef _WIN32
 #include <termios.h>
 #include <sys/ioctl.h> 
+
 int ukbhit(void)
 {
   int cnt = 0;
@@ -112,6 +113,17 @@ char * sprint_hex(const uint8_t * data, const size_t len) {
 	return buf;
 }
 
+char * sprint_bin(const uint8_t * data, const size_t len) {
+	static char buf[1024];
+	char * tmp = buf;
+	size_t i;
+
+	for (i=0; i < len && i < 1024; i++, tmp++)
+		sprintf(tmp, "%u", data[i]);
+
+	return buf;
+}
+
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
 {
 	while (len--) {
@@ -129,6 +141,28 @@ uint64_t bytes_to_num(uint8_t* src, size_t len)
 		src++;
 	}
 	return num;
+}
+
+//assumes little endian
+char * printBits(size_t const size, void const * const ptr)
+{
+    unsigned char *b = (unsigned char*) ptr;	
+    unsigned char byte;
+	static char buf[1024];
+	char * tmp = buf;
+    int i, j;
+
+    for (i=size-1;i>=0;i--)
+    {
+        for (j=7;j>=0;j--)
+        {
+            byte = b[i] & (1<<j);
+            byte >>= j;
+            sprintf(tmp, "%u", byte);
+			tmp++;
+        }
+    }
+	return buf;
 }
 
 //  -------------------------------------------------------------------------

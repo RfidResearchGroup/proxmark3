@@ -8,12 +8,14 @@
 // Also routines for raw mode reading/simulating of LF waveform
 //-----------------------------------------------------------------------------
 
-#include "proxmark3.h"
+#include "../include/proxmark3.h"
 #include "apps.h"
 #include "util.h"
-#include "hitag2.h"
-#include "crc16.h"
+#include "../include/hitag2.h"
+#include "../common/crc16.h"
 #include "string.h"
+#include "crapto1.h"
+#include "mifareutil.h"
 
 void LFSetupFPGAForADC(int divisor, bool lf_field)
 {
@@ -1146,6 +1148,15 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 #define WRITE_0   144 // 192
 #define WRITE_1   400 // 432 for T55x7; 448 for E5550
 
+// VALUES TAKEN FROM EM4x function: SendForward
+//  START_GAP = 440; //(55*8)
+//  WRITE_GAP = 128; //(16*8)
+//  WRITE_1 = 256 32*8; //32 cycles at 125Khz (8us each) 1
+//    //These timings work for 4469/4269/4305 (with the 55*8 above)
+//  WRITE_0 = 23*8 , 9*8  SpinDelayUs(23*8); // (8us each) 0
+
+
+
 // Write one bit to card
 void T55xxWriteBit(int bit)
 {
@@ -1207,13 +1218,15 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 // Read one card block in page 0
 void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 {
-	uint8_t *dest = (uint8_t *)BigBuf;
-	int m=0, i=0;
+	uint8_t *dest =  mifare_get_bigbufptr();
+	uint16_t bufferlength = 16000;
+	uint32_t i = 0;
+
+	// Clear destination buffer before sending the command  0x80 = average.
+	memset(dest, 0x80, bufferlength);
   
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	m = sizeof(BigBuf);
-  // Clear destination buffer before sending the command
-	memset(dest, 128, m);
+	
 	// Connect the A/D to the peak-detected low-frequency path.
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
@@ -1254,31 +1267,33 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 	for(;;) {
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
+			LED_D_ON();
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			// we don't care about actual value, only if it's more or less than a
-			// threshold essentially we capture zero crossings for later analysis
-      //			if(dest[i] < 127) dest[i] = 0; else dest[i] = 1;
-			i++;
-			if (i >= m) break;
+			LED_D_OFF();
+			++i;
+			if (i > bufferlength) break;
 		}
 	}
+ 
+	cmd_send(CMD_ACK,0,0,0,0,0);
   
   FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 	LED_D_OFF();
-	DbpString("DONE!");
 }
 
 // Read card traceability data (page 1)
 void T55xxReadTrace(void){
-	uint8_t *dest = (uint8_t *)BigBuf;
-	int m=0, i=0;
+	uint8_t *dest =  mifare_get_bigbufptr();
+	uint16_t bufferlength = 16000;
+	int i=0;
+	
+	// Clear destination buffer before sending the command 0x80 = average
+	memset(dest, 0x80, bufferlength);  
   
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	m = sizeof(BigBuf);
-  // Clear destination buffer before sending the command
-	memset(dest, 128, m);
+		
 	// Connect the A/D to the peak-detected low-frequency path.
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
@@ -1309,17 +1324,20 @@ void T55xxReadTrace(void){
 	for(;;) {
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
+			LED_D_ON();
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			i++;
-			if (i >= m) break;
+			LED_D_OFF();
+			++i;			
+			if (i >= bufferlength) break;
 		}
 	}
   
+	cmd_send(CMD_ACK,0,0,0,0,0);
+  
   FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 	LED_D_OFF();
-	DbpString("DONE!");
 }
 
 /*-------------- Cloning routines -----------*/
@@ -1763,7 +1781,6 @@ int IsBlock1PCF7931(uint8_t *Block) {
 	
 	return 0;
 }
-
 #define ALLOC 16
 
 void ReadPCF7931() {
@@ -2023,6 +2040,7 @@ void SendForward(uint8_t fwd_bit_count) {
   }
 }
 
+
 void EM4xLogin(uint32_t Password) {
   
   uint8_t fwd_bit_count;
@@ -2040,9 +2058,14 @@ void EM4xLogin(uint32_t Password) {
 
 void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
   
+  	uint8_t *dest =  mifare_get_bigbufptr();
+	uint16_t bufferlength = 16000;
+	uint32_t i = 0;
+
+	// Clear destination buffer before sending the command  0x80 = average.
+	memset(dest, 0x80, bufferlength);
+	
   uint8_t fwd_bit_count;
-  uint8_t *dest = (uint8_t *)BigBuf;
-  int m=0, i=0;
   
   //If password mode do login
   if (PwdMode == 1) EM4xLogin(Pwd);
@@ -2051,9 +2074,6 @@ void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
   fwd_bit_count = Prepare_Cmd( FWD_CMD_READ );
   fwd_bit_count += Prepare_Addr( Address );
   
-  m = sizeof(BigBuf);
-  // Clear destination buffer before sending the command
-  memset(dest, 128, m);
   // Connect the A/D to the peak-detected low-frequency path.
   SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
   // Now set up the SSC to get the ADC samples that are now streaming at us.
@@ -2069,10 +2089,12 @@ void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
     }
     if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
       dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-      i++;
-      if (i >= m) break;
+		++i;
+      if (i >= bufferlength) break;
     }
   }
+  
+	cmd_send(CMD_ACK,0,0,0,0,0);
   FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
   LED_D_OFF();
 }

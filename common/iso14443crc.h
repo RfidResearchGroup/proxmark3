@@ -8,7 +8,7 @@
 
 #ifndef __ISO14443CRC_H
 #define __ISO14443CRC_H
-#include "common.h"
+#include "../include/common.h"
 
 //-----------------------------------------------------------------------------
 // Routines to compute the CRCs (two different flavours, just for confusion)

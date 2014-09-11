@@ -11,7 +11,7 @@
 #ifndef CMDMAIN_H__
 #define CMDMAIN_H__
 
-#include "usb_cmd.h"
+#include "../include/usb_cmd.h"
 #include "cmdparser.h"
 void UsbCommandReceived(UsbCommand *UC);
 void CommandReceived(char *Cmd);

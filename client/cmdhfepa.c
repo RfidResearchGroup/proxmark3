@@ -13,7 +13,7 @@
 #include "proxmark3.h"
 #include "ui.h"
 #include "cmdparser.h"
-#include "common.h"
+#include "../include/common.h"
 #include "cmdmain.h"
 #include "sleep.h"
 #include "cmdhfepa.h"

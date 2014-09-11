@@ -58,12 +58,12 @@
 // *) document all the functions
 
 
-#include "proxmark3.h"
+#include "../include/proxmark3.h"
 #include "util.h"
 #include "apps.h"
 #include "string.h"
-#include "iso15693tools.h"
-#include "cmd.h"
+#include "../common/iso15693tools.h"
+#include "../common/cmd.h"
 
 #define arraylen(x) (sizeof(x)/sizeof((x)[0]))
 
@@ -1275,12 +1275,8 @@ void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8
 	recvlen=SendDataTag(data,datalen,1,speed,(recv?&recvbuf:NULL));
 
 	if (recv) { 
-//		n.cmd=/* CMD_ISO_15693_COMMAND_DONE */ CMD_ACK;
-//		n.arg[0]=recvlen>48?48:recvlen;
-//		memcpy(n.d.asBytes, recvbuf, 48);
 		LED_B_ON();
     cmd_send(CMD_ACK,recvlen>48?48:recvlen,0,0,recvbuf,48);
-//		UsbSendPacket((uint8_t *)&n, sizeof(n));
 		LED_B_OFF();	
 		
 		if (DEBUG) {
