@@ -12,5 +12,4 @@
 #include "mifareutil.h"
 #include "../include/common.h"
 
-
 #endif

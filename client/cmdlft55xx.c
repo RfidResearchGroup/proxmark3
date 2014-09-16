@@ -29,25 +29,25 @@ int CmdReadBlk(const char *Cmd)
 {
 	//default to invalid block
 	int Block = -1;
-  UsbCommand c;
+	UsbCommand c;
 
-  sscanf(Cmd, "%d", &Block);
+	sscanf(Cmd, "%d", &Block);
 
 	if ((Block > 7) | (Block < 0)) {
-  	PrintAndLog("Block must be between 0 and 7");
-  	return 1;
-  }	
+		PrintAndLog("Block must be between 0 and 7");
+		return 1;
+	}	
 
 	PrintAndLog(" Reading page 0 block : %d", Block);
 
 	// this command fills up BigBuff
 	// 
-  c.cmd = CMD_T55XX_READ_BLOCK;
+	c.cmd = CMD_T55XX_READ_BLOCK;
 	c.d.asBytes[0] = 0x00;
-  c.arg[0] = 0;
-  c.arg[1] = Block;
-  c.arg[2] = 0;
-  SendCommand(&c);
+	c.arg[0] = 0;
+	c.arg[1] = Block;
+	c.arg[2] = 0;
+	SendCommand(&c);
 	WaitForResponse(CMD_ACK, NULL);
 	
 	uint8_t data[LF_TRACE_BUFF_SIZE];
@@ -62,18 +62,17 @@ int CmdReadBlk(const char *Cmd)
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
 	  
 	// BiDirectional
-	CmdDirectionalThreshold("70 -60");	
+	//CmdDirectionalThreshold("70 60");
 	
 	// Askdemod
-	Cmdaskdemod("1");
+	//Cmdaskdemod("1");
 	
 	uint8_t bits[1000];
 	uint8_t * bitstream = bits;
-	uint8_t len = 0;
-	len = manchester_decode(data, LF_TRACE_BUFF_SIZE, bitstream);
-	if ( len > 0 )
-		PrintPaddedManchester(bitstream, len, 32);
-
+	memset(bitstream, 0x00, sizeof(bits));
+	
+	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
+	
   return 0;
 }
 
@@ -81,24 +80,24 @@ int CmdReadBlk(const char *Cmd)
 int CmdReadBlkPWD(const char *Cmd)
 {
 	int Block = -1; //default to invalid block
-  int Password = 0xFFFFFFFF; //default to blank Block 7
-  UsbCommand c;
+	int Password = 0xFFFFFFFF; //default to blank Block 7
+	UsbCommand c;
 
-  sscanf(Cmd, "%d %x", &Block, &Password);
+	sscanf(Cmd, "%d %x", &Block, &Password);
 
 	if ((Block > 7) | (Block < 0)) {
-  	PrintAndLog("Block must be between 0 and 7");
-  	return 1;
-  }	
+		PrintAndLog("Block must be between 0 and 7");
+		return 1;
+	}	
 
 	PrintAndLog("Reading page 0 block %d pwd %08X", Block, Password);
 
-  c.cmd = CMD_T55XX_READ_BLOCK;
-  c.d.asBytes[0] = 0x1; //Password mode
-  c.arg[0] = 0;
-  c.arg[1] = Block;
-  c.arg[2] = Password;
-  SendCommand(&c);
+	c.cmd = CMD_T55XX_READ_BLOCK;
+	c.d.asBytes[0] = 0x1; //Password mode
+	c.arg[0] = 0;
+	c.arg[1] = Block;
+	c.arg[2] = Password;
+	SendCommand(&c);
 	WaitForResponse(CMD_ACK, NULL);
 		
 	uint8_t data[LF_TRACE_BUFF_SIZE];
@@ -113,17 +112,16 @@ int CmdReadBlkPWD(const char *Cmd)
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
 
 	// BiDirectional
-	CmdDirectionalThreshold("70 -60");	
+	//CmdDirectionalThreshold("70 -60");	
 	
 	// Askdemod
-	Cmdaskdemod("1");
+	//Cmdaskdemod("1");
 		
 	uint8_t bits[1000];
-	uint8_t len = 0;
-	len = manchester_decode(data, LF_TRACE_BUFF_SIZE, bits);
-	if ( len > 0 )
-		PrintPaddedManchester(bits, len, 32);
-		
+	uint8_t * bitstream = bits;
+	memset(bitstream, 0x00, sizeof(bits));
+	
+	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
   return 0;
 }
 
@@ -197,28 +195,29 @@ int CmdReadTrace(const char *Cmd)
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
 	
 	// BiDirectional
-	CmdDirectionalThreshold("70 -60");	
+	//CmdDirectionalThreshold("70 -60");	
 	
 	// Askdemod
-	Cmdaskdemod("1");
+	//Cmdaskdemod("1");
 
-	uint8_t bits[512];
-	uint8_t len = 0;
-	len =  manchester_decode(data,LF_TRACE_BUFF_SIZE,bits);
-	if ( len > 0 )
-		PrintPaddedManchester(bits, len, 64);
+
+	uint8_t bits[1000];
+	uint8_t * bitstream = bits;
+	memset(bitstream, 0x00, sizeof(bits));
 	
+	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
+		
   return 0;
 }
 
 static command_t CommandTable[] =
 {
-  {"help",          CmdHelp,        1, "This help"},
-  {"readblock",     CmdReadBlk,     1, "<Block> -- Read T55xx block data (page 0)"},
-  {"readblockPWD",  CmdReadBlkPWD,  1, "<Block> <Password> -- Read T55xx block data in password mode(page 0)"},
-  {"writeblock",    CmdWriteBlk,    1, "<Data> <Block> -- Write T55xx block data (page 0)"},
-  {"writeblockPWD", CmdWriteBlkPWD, 1, "<Data> <Block> <Password> -- Write T55xx block data in password mode(page 0)"},
-  {"readtrace",     CmdReadTrace,   1, "Read T55xx traceability data (page 1)"},
+  {"help",   CmdHelp,        1, "This help"},
+  {"rd",     CmdReadBlk,     0, "<Block> -- Read T55xx block data (page 0)"},
+  {"rdPWD",  CmdReadBlkPWD,  0, "<Block> <Password> -- Read T55xx block data in password mode(page 0)"},
+  {"wr",     CmdWriteBlk,    0, "<Data> <Block> -- Write T55xx block data (page 0)"},
+  {"wrPWD",  CmdWriteBlkPWD, 0, "<Data> <Block> <Password> -- Write T55xx block data in password mode(page 0)"},
+  {"trace",  CmdReadTrace,   0, "Read T55xx traceability data (page 1)"},
   {NULL, NULL, 0, NULL}
 };
 

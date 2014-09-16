@@ -524,7 +524,7 @@ int CmdHF14AMfDump(const char *Cmd)
 	
 	PrintAndLog("Got %d",size);
 	
-	return;
+	return 0;
 	
 	if  ( size > -1) 
 		cmdp = (char)48+size;
@@ -1027,6 +1027,18 @@ int CmdHF14AMfNested(const char *Cmd)
 
 int CmdHF14AMfChk(const char *Cmd)
 {
+	if (strlen(Cmd)<3) {
+		PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+		PrintAndLog("          * - all sectors");
+		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
+		PrintAndLog("d - write keys to binary file\n");
+		PrintAndLog("t - write keys to emulator memory");
+		PrintAndLog("      sample: hf mf chk 0 A 1234567890ab keys.dic");
+		PrintAndLog("              hf mf chk *1 ? t");
+		PrintAndLog("              hf mf chk *1 ? d");
+		return 0;
+	}
+	
 	FILE * f;
 	char filename[256]={0};
 	char buf[13];
@@ -1069,16 +1081,6 @@ int CmdHF14AMfChk(const char *Cmd)
 	{
 		num_to_bytes(defaultKeys[defaultKeyCounter], 6, (uint8_t*)(keyBlock + defaultKeyCounter * 6));
 	}
-	
-	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t] [<key (12 hex symbols)>] [<dic (*.dic)>]");
-		PrintAndLog("          * - all sectors");
-		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
-		PrintAndLog("d - write keys to binary file\n");
-		PrintAndLog("      sample: hf mf chk 0 A 1234567890ab keys.dic");
-		PrintAndLog("              hf mf chk *1 ? t");
-		return 0;
-	}	
 	
 	if (param_getchar(Cmd, 0)=='*') {
 		blockNo = 3;
@@ -2090,49 +2092,56 @@ int GetCardSize()
 	
 	
 	// NXP MIFARE Mini 0.3k
-	if ( (atqa && 0xff0f == 0x0004) && (sak == 0x09) ) return 0;
+	if ( ( (atqa & 0xff0f) == 0x0004) && (sak == 0x09) ) return 0;
 	
 	// MIFARE Classic 1K
-	if ( (atqa && 0xff0f == 0x0004) && (sak == 0x08) ) return 1;
+	if ( ((atqa & 0xff0f) == 0x0004) && (sak == 0x08) ) return 1;
 	
 	// MIFARE Classik 4K
-	if ( (atqa && 0xff0f == 0x0002) && (sak == 0x18) ) return 4;
+	if ( ((atqa & 0xff0f) == 0x0002) && (sak == 0x18) ) return 4;
 	
 	// SmartMX with MIFARE 1K emulation 
-	if ( (atqa && 0xf0ff == 0x0004) ) return 1;
+	if ( ((atqa & 0xf0ff) == 0x0004) ) return 1;
 
 	// SmartMX with MIFARE 4K emulation 
-	if ( (atqa && 0xf0ff == 0x0002) ) return 4;	
+	if ( ((atqa & 0xf0ff) == 0x0002) ) return 4;	
 	
 	// Infineon MIFARE CLASSIC 1K
-	if ( (atqa && 0xffff == 0x0004) && (sak == 0x88) ) return 1;
+	if ( ((atqa & 0xffff) == 0x0004) && (sak == 0x88) ) return 1;
 	
 	// MFC 4K emulated by Nokia 6212 Classic
-	if ( (atqa && 0xffff == 0x0002) && (sak == 0x38) ) return 4;
+	if ( ((atqa & 0xffff) == 0x0002) && (sak == 0x38) ) return 4;
 
 	// MFC 4K emulated by Nokia 6131 NFC
-	if ( (atqa && 0xffff == 0x0008) && (sak == 0x38) ) return 4;
+	if ( ((atqa & 0xffff) == 0x0008) && (sak == 0x38) ) return 4;
 
+	
+	PrintAndLog("BEFOOO  1K %02X",  (atqa & 0xff0f));
+	
 	// MIFARE Plus (4 Byte UID or 4 Byte RID)
 	// MIFARE Plus (7 Byte UID)
 	if (
-			(atqa && 0xffff == 0x0002) ||
-			(atqa && 0xffff == 0x0004) ||
-			(atqa && 0xffff == 0x0042) ||	
-			(atqa && 0xffff == 0x0044) 
+			((atqa & 0xffff) == 0x0002) |
+			((atqa & 0xffff) == 0x0004) |
+			((atqa & 0xffff) == 0x0042) |	
+			((atqa & 0xffff) == 0x0044) 
 		)
 	{
 		switch(sak){
 			case 0x08:
-			case 0x10:
+			case 0x10: {
 			//case 0x20:
+				PrintAndLog("2");
 				return 2;
 				break;
+				}
 			case 0x11:
-			case 0x18:
+			case 0x18:{
 			//case 0x20:
+				PrintAndLog("4");
 				return 4;
 				break;
+				}
 		}
 	}
 	

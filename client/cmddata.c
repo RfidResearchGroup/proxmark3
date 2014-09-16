@@ -588,13 +588,16 @@ int CmdManchesterDemod(const char *Cmd)
     }
   }
 
+  PrintAndLog("Clock:  %d", clock); 
+  
   /* If we're not working with 1/0s, demod based off clock */
   if (high != 1)
   {
+	PrintAndLog("Entering path A"); 
     bit = 0; /* We assume the 1st bit is zero, it may not be
               * the case: this routine (I think) has an init problem.
               * Ed.
-              */
+			  */
     for (; i < (int)(GraphTraceLen / clock); i++)
     {
       hithigh = 0;

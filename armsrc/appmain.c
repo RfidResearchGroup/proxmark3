@@ -993,7 +993,7 @@ void  __attribute__((noreturn)) AppMain(void)
 	LED_B_OFF();
 	LED_A_OFF();
 
-  // Init USB device`
+	// Init USB device
   usb_enable();
 
 	// The FPGA gets its clock from us from PCK0 output, so set that up.

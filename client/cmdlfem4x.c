@@ -21,6 +21,7 @@
 #include "cmdlfem4x.h"
 #include "util.h"
 #include "data.h"
+#define LF_TRACE_BUFF_SIZE 16000
 
 char *global_em410xId;
 
@@ -506,41 +507,47 @@ int CmdEM410xWrite(const char *Cmd)
 int CmdReadWord(const char *Cmd)
 {
 	int Word = -1; //default to invalid word
-  UsbCommand c;
+	UsbCommand c;
   
-  sscanf(Cmd, "%d", &Word);
+	sscanf(Cmd, "%d", &Word);
   
 	if ( (Word > 15) | (Word < 0) ) {
-    PrintAndLog("Word must be between 0 and 15");
-    return 1;
-  }
+		PrintAndLog("Word must be between 0 and 15");
+		return 1;
+	}
   
-  PrintAndLog("Reading word %d", Word);
+	PrintAndLog("Reading word %d", Word);
   
-  c.cmd = CMD_EM4X_READ_WORD;
-  c.d.asBytes[0] = 0x0; //Normal mode
-  c.arg[0] = 0;
-  c.arg[1] = Word;
-  c.arg[2] = 0;
-  SendCommand(&c);
+	c.cmd = CMD_EM4X_READ_WORD;
+	c.d.asBytes[0] = 0x0; //Normal mode
+	c.arg[0] = 0;
+	c.arg[1] = Word;
+	c.arg[2] = 0;
+	SendCommand(&c);
 	WaitForResponse(CMD_ACK, NULL);
 
-	size_t bytelength = 4096;
-	uint8_t data[bytelength];
-	memset(data, 0x00, bytelength);
+	uint8_t data[LF_TRACE_BUFF_SIZE];
+	memset(data, 0x00, LF_TRACE_BUFF_SIZE);
 
-	GetFromBigBuf(data,bytelength,3560);  //3560 -- should be offset..
+	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
 	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
-	for (int j = 0; j < bytelength; j++) {
+	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
 		GraphBuffer[j] = ((int)data[j]) - 128;
 	}
-	GraphTraceLen = bytelength;
-	RepaintGraphWindow();
-
-	manchester_decode(data, bytelength);
-
-	free(data);
+	GraphTraceLen = LF_TRACE_BUFF_SIZE;
+	  
+	// BiDirectional
+	//CmdDirectionalThreshold("70 -60");	
+	
+	// Askdemod
+	//Cmdaskdemod("1");
+	
+	uint8_t bits[1000];
+	uint8_t * bitstream = bits;
+	memset(bitstream, 0x00, sizeof(bits));
+	
+	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
 	
   return 0;
 }
@@ -548,42 +555,48 @@ int CmdReadWord(const char *Cmd)
 int CmdReadWordPWD(const char *Cmd)
 {
 	int Word = -1; //default to invalid word
-  int Password = 0xFFFFFFFF; //default to blank password
-  UsbCommand c;
-  
-  sscanf(Cmd, "%d %x", &Word, &Password);
-  
+	int Password = 0xFFFFFFFF; //default to blank password
+	UsbCommand c;
+
+	sscanf(Cmd, "%d %x", &Word, &Password);
+
 	if ( (Word > 15) | (Word < 0) ) {
-    PrintAndLog("Word must be between 0 and 15");
-    return 1;
-  }
+		PrintAndLog("Word must be between 0 and 15");
+		return 1;
+	}
   
-  PrintAndLog("Reading word %d with password %08X", Word, Password);
-  
-  c.cmd = CMD_EM4X_READ_WORD;
-  c.d.asBytes[0] = 0x1; //Password mode
-  c.arg[0] = 0;
-  c.arg[1] = Word;
-  c.arg[2] = Password;
-  SendCommand(&c);
+	PrintAndLog("Reading word %d with password %08X", Word, Password);
+
+	c.cmd = CMD_EM4X_READ_WORD;
+	c.d.asBytes[0] = 0x1; //Password mode
+	c.arg[0] = 0;
+	c.arg[1] = Word;
+	c.arg[2] = Password;
+	SendCommand(&c);
 	WaitForResponse(CMD_ACK, NULL);
+		
+	uint8_t data[LF_TRACE_BUFF_SIZE];
+	memset(data, 0x00, LF_TRACE_BUFF_SIZE);
 
-	size_t bytelength = 4096;
-	uint8_t data[bytelength];
-	memset(data, 0x00, bytelength);
-
-	GetFromBigBuf(data,bytelength,3560);  //3560 -- should be offset..
+	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
 	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
-	for (int j = 0; j < bytelength; j++) {
+	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
 		GraphBuffer[j] = ((int)data[j]) - 128;
 	}
-	GraphTraceLen = bytelength;
-	RepaintGraphWindow();
+	GraphTraceLen = LF_TRACE_BUFF_SIZE;
 
-	manchester_decode(data, bytelength);
-
-	free(data);
+	// BiDirectional
+	//CmdDirectionalThreshold("70 -60");	
+	
+	// Askdemod
+	//Cmdaskdemod("1");
+		
+	uint8_t bits[1000];
+	uint8_t * bitstream = bits;
+	memset(bitstream, 0x00, sizeof(bits));
+	
+	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
   return 0;
 }
 
@@ -635,8 +648,6 @@ int CmdWriteWordPWD(const char *Cmd)
   SendCommand(&c);
   return 0;
 }
-
-
 
 static command_t CommandTable[] =
 {

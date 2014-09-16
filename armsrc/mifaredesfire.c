@@ -131,16 +131,15 @@ void MifareDesfireGetInformation(){
 void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain){
 
 	uint8_t null_key_data[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	uint8_t new_key_data[8]  = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77 };
-	int res;
+	//uint8_t new_key_data[8]  = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77 };
+	int res = 0;
 	
-	MifareDESFireKey default_key = mifare_desfire_des_key_new_with_version (null_key_data);
+	desfirekey_t default_key = Desfire_des_key_new_with_version (null_key_data);
 
-	res = mifare_desfire_select_application (tags[i], aid);
+	// res = Desfire_select_application (tags[i], aid);
 	if (res < 0) {
-		freefare_perror (tags[i], "mifare_desfire_select_application");
-		error = EXIT_FAILURE;
-		break;
+		print_result("default key: ", default_key->data, 24 );
+		return;
 	}
 				
 	return;
