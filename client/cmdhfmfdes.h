@@ -56,3 +56,10 @@ char * GetProtocolStr(uint8_t id);
 #define     CHANGE_KEY 					 0xc4
 #define     GET_KEY_VERSION 			 0x64
 #define     AUTHENTICATION_FRAME 		 0xAF
+
+
+#define MAX_APPLICATION_COUNT 28
+#define MAX_FILE_COUNT 16
+#define MAX_FRAME_SIZE 60
+#define NOT_YET_AUTHENTICATED 255
+#define FRAME_PAYLOAD_SIZE (MAX_FRAME_SIZE - 5)

@@ -71,7 +71,7 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 		OnError();
 		return;
 	}
-	cmd_send(CMD_ACK,1,0,0,resp,len);
+	cmd_send(CMD_ACK,1,len,0,resp,len);
 	
 
 	OnSuccess();
@@ -279,7 +279,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 			real_cmd[2] = AUTHENTICATE_AES;
 			real_cmd[3] = keyno;
 			
-			AppendCrc14443a(real_cmd, 2);
+			AppendCrc14443a(real_cmd, 4);
 			ReaderTransmit(real_cmd, sizeof(real_cmd), NULL);
 	
 			int len = ReaderReceive(resp);
@@ -321,7 +321,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 			real_cmd_A[1] = ADDITIONAL_FRAME;
 			
 			memcpy(real_cmd_A+2, encBoth, sizeof(encBoth) );
-			AppendCrc14443a(real_cmd_A, sizeof(real_cmd_A));
+			AppendCrc14443a(real_cmd_A, 34);
 			ReaderTransmit(real_cmd_A, sizeof(real_cmd_A), NULL);
 		
 			len = ReaderReceive(resp);
@@ -514,7 +514,7 @@ int mifare_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData){
 
 	if (len == 11){
 		if (MF_DBGLEVEL >= 1) {
-			Dbprintf("Auth2 Resp: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+			Dbprintf("Auth2 Resp: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
 					  buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],
 					  buffer[5],buffer[6],buffer[7],buffer[8],buffer[9],
 					  buffer[10]);

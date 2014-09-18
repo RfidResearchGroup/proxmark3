@@ -144,7 +144,7 @@ int CmdHF14ADesInfo(const char *Cmd){
 	}
 	uint8_t isOK  = resp.arg[0] & 0xff;
 	if ( !isOK ){
-		PrintAndLog("Command unsuccessfull");
+		PrintAndLog("Command unsuccessful");
 		return 0;
 	}  
 	
@@ -227,10 +227,9 @@ int CmdHF14ADesInfo(const char *Cmd){
 
 	PrintAndLog("     Free memory on card : %d bytes", le24toh( tmp ));
 	PrintAndLog("-------------------------------------------------------------");
+
 	/*
-		Card Master key (CMK)  0x00 on AID = 00 00 00 (card level)
-		0x1
-		
+		Card Master key (CMK)  0x00 on AID = 00 00 00 (card level) 0x1
 		Application Master Key (AMK) 0x00 on AID != 00 00 00
 		Application keys (APK) = 0x01-0x0D
 		Application free = 0x0E
@@ -242,9 +241,6 @@ int CmdHF14ADesInfo(const char *Cmd){
 		keys 8,9,10,11   W
 		keys 12,13,14,15 R
 		
-		KEY Versioning.
-			Se GetKeyVersion (samma nyckel kan ha olika versionen?)
-			
 		Session key:
 			16 : RndA(byte0-byte3) + RndB(byte0-byte3) + RndA(byte4-byte7) + RndB(byte4-byte7)
 			8  : RndA(byte0-byte3) + RndB(byte0-byte3) 
@@ -301,6 +297,50 @@ char * GetProtocolStr(uint8_t id){
 }
 
 int CmdHF14ADesEnumApplications(const char *Cmd){
+	
+	UsbCommand c = {CMD_MIFARE_DESFIRE, { 0x01, 0x01 }};
+	c.d.asBytes[0] = GET_APPLICATION_IDS;
+    SendCommand(&c);
+	UsbCommand resp;
+		
+	if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
+		return 0;
+	}  
+	
+	uint8_t isOK  = resp.arg[0] & 0xff;
+	if ( !isOK ){
+		PrintAndLog("Command unsuccessful");
+		return 0;
+	} 
+	
+	PrintAndLog("---Desfire Enum Applications --------------------------------");
+	PrintAndLog("-------------------------------------------------------------");
+
+	//UsbCommand respFiles;
+	
+	uint8_t num = 0;
+	int max = resp.arg[1] -3 -2;
+	
+	for(int i=3; i<=max; i+=3){
+		PrintAndLog(" Aid %d : %s ",num ,sprint_hex(resp.d.asBytes+i,3));
+		num++;
+		
+		// UsbCommand cFiles = {CMD_MIFARE_DESFIRE, { 0x01, 0x04 }};
+		// cFiles.d.asBytes[0] = GET_FILE_IDS;
+		// cFiles.d.asBytes[1] = resp.d.asBytes+i;
+		// cFiles.d.asBytes[2] = resp.d.asBytes+i+1;
+		// cFiles.d.asBytes[3] = resp.d.asBytes+i+2;
+		// SendCommand(&cFiles);
+		
+		// if ( !WaitForResponseTimeout(CMD_ACK,&respFiles,1500) ) {
+			// PrintAndLog("   No files found");
+			// break;
+		// }
+		
+	}
+	PrintAndLog("-------------------------------------------------------------");
+	
+	
 	return 1;
 }
 
