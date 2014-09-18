@@ -597,7 +597,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 {
 	UsbCommand *c = (UsbCommand *)packet;
 
-//  Dbprintf("received %d bytes, with command: 0x%04x and args: %d %d %d",len,c->cmd,c->arg[0],c->arg[1],c->arg[2]);
+  //Dbprintf("received %d bytes, with command: 0x%04x and args: %d %d %d",len,c->cmd,c->arg[0],c->arg[1],c->arg[2]);
   
 	switch(c->cmd) {
 #ifdef WITH_LF
@@ -846,10 +846,14 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		// case CMD_MIFARE_DES_READER:
 			// ReaderMifareDES(c->arg[0], c->arg[1], c->d.asBytes);
-			break;
+			//break;
 		case CMD_MIFARE_DESFIRE_INFO:
 			MifareDesfireGetInformation();
 			break;
+		case CMD_MIFARE_DESFIRE:
+			MifareSendCommand(c->arg[0], c->arg[1], c->d.asBytes);
+			break;
+
 #endif
 
 #ifdef WITH_ICLASS
@@ -994,7 +998,7 @@ void  __attribute__((noreturn)) AppMain(void)
 	LED_A_OFF();
 
 	// Init USB device
-  usb_enable();
+	usb_enable();
 
 	// The FPGA gets its clock from us from PCK0 output, so set that up.
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_PCK0;
@@ -1024,12 +1028,12 @@ void  __attribute__((noreturn)) AppMain(void)
 	size_t rx_len;
   
 	for(;;) {
-    if (usb_poll()) {
-      rx_len = usb_read(rx,sizeof(UsbCommand));
-      if (rx_len) {
-        UsbPacketReceived(rx,rx_len);
-      }
-    }
+		if (usb_poll()) {
+			rx_len = usb_read(rx,sizeof(UsbCommand));
+			if (rx_len) {
+				UsbPacketReceived(rx,rx_len);
+			}
+		}
 		WDT_HIT();
 
 #ifdef WITH_LF

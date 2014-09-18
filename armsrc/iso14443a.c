@@ -1615,13 +1615,6 @@ int ReaderReceive(uint8_t* receivedAnswer)
 	return ReaderReceiveOffset(receivedAnswer, 0);
 }
 
-int ReaderReceiveDesfiresAuthTiming(uint8_t *receivedAnswer, uint32_t *elapsedTime)
-{
-	int len =  ReaderReceiveOffset(receivedAnswer, 0);
-	*elapsedTime =  (Demod.endTime*16 - DELAY_AIR2ARM_AS_READER) -  (Demod.startTime*16 - DELAY_AIR2ARM_AS_READER);
-	return len;
-}
-
 int ReaderReceivePar(uint8_t *receivedAnswer, uint32_t *parptr)
 {
 	if (!GetIso14443aAnswerFromTag(receivedAnswer,0,160)) return FALSE;
@@ -1856,7 +1849,7 @@ void ReaderIso14443a(UsbCommand *c)
 	}
 
 	if(param & ISO14A_SET_TIMEOUT) {
-		iso14a_timeout = c->arg[2];
+		iso14a_set_timeout(c->arg[2]);
 	}
 
 	if(param & ISO14A_APDU) {

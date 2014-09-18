@@ -209,13 +209,15 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 
 // mifaredesfire.h
+bool 		InitDesfireCard();
+void		MifareSendCommand(uint8_t arg0,uint8_t arg1, uint8_t *datain);
 void 		MifareDesfireGetInformation();
 void 		MifareDES_Auth1(uint8_t arg0,uint8_t arg1,uint8_t arg2, uint8_t *datain);
 void 		MifareDES_Auth2(uint32_t arg0, uint8_t *datain);
 int 		mifare_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData);
 void 		ReaderMifareDES(uint32_t param, uint32_t param2, uint8_t * datain);
-int 		SendDesfireCommand(enum DESFIRE_CMD desfire_cmd, uint8_t *dataout, uint8_t fromscratch);
-uint8_t* 	CreateAPDU( uint8_t *datain, size_t len);
+int 		DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout);
+size_t		CreateAPDU( uint8_t *datain, size_t len, uint8_t *dataout);
 void 		OnSuccess();
 void 		OnError();
 
@@ -233,18 +235,16 @@ void             	Desfire_key_set_version (desfirekey_t key, uint8_t version);
 desfirekey_t 		Desfire_session_key_new (const uint8_t rnda[], const uint8_t rndb[], desfirekey_t authkey);
 
 // desfire_crypto.h
-void	            *mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes, off_t offset, int communication_settings);
-void    	        *mifare_cryto_postprocess_data (desfiretag_t tag, void *data, ssize_t *nbytes, int communication_settings);
-void        	    mifare_cypher_single_block (desfirekey_t  key, uint8_t *data, uint8_t *ivect, MifareCryptoDirection direction, MifareCryptoOperation operation, size_t block_size);
-void            	mifare_cypher_blocks_chained (desfiretag_t tag, desfirekey_t key, uint8_t *ivect, uint8_t *data, size_t data_size, MifareCryptoDirection direction, MifareCryptoOperation operation);
-size_t           	key_block_size (const desfirekey_t  key);
-size_t           	padded_data_length (const size_t nbytes, const size_t block_size);
-size_t           	maced_data_length (const desfirekey_t  key, const size_t nbytes);
-size_t           	enciphered_data_length (const desfiretag_t tag, const size_t nbytes, int communication_settings);
-void             	cmac_generate_subkeys (desfirekey_t key);
-void             	cmac (const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
-
-
+void	*mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes, off_t offset, int communication_settings);
+void    *mifare_cryto_postprocess_data (desfiretag_t tag, void *data, ssize_t *nbytes, int communication_settings);
+void    mifare_cypher_single_block (desfirekey_t  key, uint8_t *data, uint8_t *ivect, MifareCryptoDirection direction, MifareCryptoOperation operation, size_t block_size);
+void    mifare_cypher_blocks_chained (desfiretag_t tag, desfirekey_t key, uint8_t *ivect, uint8_t *data, size_t data_size, MifareCryptoDirection direction, MifareCryptoOperation operation);
+size_t  key_block_size (const desfirekey_t  key);
+size_t  padded_data_length (const size_t nbytes, const size_t block_size);
+size_t  maced_data_length (const desfirekey_t  key, const size_t nbytes);
+size_t  enciphered_data_length (const desfiretag_t tag, const size_t nbytes, int communication_settings);
+void    cmac_generate_subkeys (desfirekey_t key);
+void    cmac (const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
 
 
 

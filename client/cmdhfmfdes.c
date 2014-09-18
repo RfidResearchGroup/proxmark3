@@ -134,16 +134,17 @@ int CmdHF14ADesRb(const char *Cmd)
 
 int CmdHF14ADesInfo(const char *Cmd){
 
-	UsbCommand c = {CMD_MIFARE_DESFIRE_INFO, { 0x00 }};
-	
+	UsbCommand c = {CMD_MIFARE_DESFIRE_INFO};
     SendCommand(&c);
 	UsbCommand resp;
 	
-	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-		uint8_t isOK  = resp.arg[0] & 0xff;
-		PrintAndLog("isOk:%02x", isOK);
-	} else {
+	if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
 		PrintAndLog("Command execute timeout");
+		return 0;
+	}
+	uint8_t isOK  = resp.arg[0] & 0xff;
+	if ( !isOK ){
+		PrintAndLog("Command unsuccessfull");
 		return 0;
 	}  
 	
@@ -170,34 +171,59 @@ int CmdHF14ADesInfo(const char *Cmd){
 	PrintAndLog("      Protocol       : %s", GetProtocolStr(resp.d.asBytes[20]));
 	PrintAndLog("-------------------------------------------------------------");
 	
+	
+	UsbCommand c1 = {CMD_MIFARE_DESFIRE, { 0x01, 0x01 }};
+	c1.d.asBytes[0] = GET_KEY_SETTINGS;
+    SendCommand(&c1);
+	if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
+		return 0;
+	}  
+	
 	PrintAndLog("  Master Key settings");
-	if (  resp.d.asBytes[35] & (1 << 3 ) )
+	if (  resp.d.asBytes[3] & (1 << 3 ) )
 		PrintAndLog("     0x08 Configuration changeable;");
 	else
 		PrintAndLog("     0x08 Configuration NOT changeable;");
 
-	if (  resp.d.asBytes[35] & (1 << 2 ) )
+	if (  resp.d.asBytes[3] & (1 << 2 ) )
 		PrintAndLog("     0x04 PICC Master Key not required for create / delete;");
 	else 
 		PrintAndLog("     0x04 PICC Master Key required for create / delete;");
 
-	if (  resp.d.asBytes[35] & (1 << 1 ) )
+	if (  resp.d.asBytes[3] & (1 << 1 ) )
 		PrintAndLog("     0x02 Free directory list access without PICC Master Key;");
 	else
 		PrintAndLog("     0x02 Directory list access with PICC Master Key;");
 	
-	if (  resp.d.asBytes[35] & (1 << 0 ) )
+	if (  resp.d.asBytes[3] & (1 << 0 ) )
 		PrintAndLog("     0x01 Allow changing the Master Key;");
 	else
 		PrintAndLog("     0x01 Master Key is not changeable anymore;");
 	
-		PrintAndLog("");
-		PrintAndLog("     Max number of keys  : %d", resp.d.asBytes[36]);
-		PrintAndLog("     Master key Version  : %d (0x%02x)", resp.d.asBytes[37], resp.d.asBytes[37]);
+	//                                      init   len
+	UsbCommand c2 = {CMD_MIFARE_DESFIRE, { 0x01, 0x02 }};
+    c2.d.asBytes[0] = GET_KEY_VERSION;
+	c2.d.asBytes[1] = 0x00;
+	SendCommand(&c2);
+	if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
+		return 0;
+	}
+	
+	PrintAndLog("");
+	PrintAndLog("     Max number of keys  : %d", resp.d.asBytes[2]);
+	PrintAndLog("     Master key Version  : %d (0x%02x)", resp.d.asBytes[3], resp.d.asBytes[3]);
 	PrintAndLog("-------------------------------------------------------------");
 	
+
+	UsbCommand c3 = {CMD_MIFARE_DESFIRE, { 0x01, 0x01 }};
+	c3.d.asBytes[0] = GET_FREE_MEMORY;
+    SendCommand(&c3);
+	if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		return 0;
+	}  
+	
 	uint8_t tmp[3];
-	memcpy(tmp, resp.d.asBytes+38,3); 
+	memcpy(tmp, resp.d.asBytes+3,3); 
 
 	PrintAndLog("     Free memory on card : %d bytes", le24toh( tmp ));
 	PrintAndLog("-------------------------------------------------------------");
@@ -226,7 +252,6 @@ int CmdHF14ADesInfo(const char *Cmd){
 			AES 16 : RndA(byte0-byte3) + RndB(byte0-byte3) + RndA(byte12-byte15) + RndB(byte12-byte15)
 	*/
 	
-	PrintAndLog(" RX :%s",sprint_hex(resp.d.asBytes, 40));
     return 1;
 }
 
@@ -434,3 +459,5 @@ int CmdHelp(const char *Cmd)
   CmdsHelp(CommandTable);
   return 0;
 }
+
+

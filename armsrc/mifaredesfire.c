@@ -6,42 +6,103 @@
 #define NOT_YET_AUTHENTICATED 255
 #define FRAME_PAYLOAD_SIZE (MAX_FRAME_SIZE - 5)
 
+// the block number for the ISO14443-4 PCB
+uint8_t pcb_blocknum = 0;
+// Deselect card by sending a s-block. the crc is precalced for speed
+static  uint8_t deselect_cmd[] = {0xc2,0xe0,0xb4};
+
 //static uint8_t __msg[MAX_FRAME_SIZE] = { 0x0A, 0x00, 0x00, /* ..., */ 0x00 };
 /*                                       PCB   CID   CMD    PAYLOAD    */
 //static uint8_t __res[MAX_FRAME_SIZE];
 
-void MifareDesfireGetInformation(){
+bool InitDesfireCard(){
+
+	// Make sure it is off.
+//	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+//	SpinDelay(300);
+	
+	byte_t cardbuf[USB_CMD_DATA_SIZE];
+	memset(cardbuf,0,sizeof(cardbuf));
+	
+	iso14a_set_tracing(TRUE);
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+	
+	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
+	int len = iso14443a_select_card(NULL,card,NULL);
+
+	if (!len) {
+		if (MF_DBGLEVEL >= 1) {
+			Dbprintf("Can't select card");
+		}
+		OnError();
+		return false;
+	}
+	return true;
+}
+
+void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
+	
+	/* ARG0 contains flags.
+		0x01 = init card.
+		0x02 =
+		0x03
+	*/
+	uint8_t flags = arg0;
+	size_t datalen = arg1;
+	uint8_t resp[RECV_RES_SIZE];
+	memset(resp,0,sizeof(resp));
+	
+	if (MF_DBGLEVEL >= 4) {
+		Dbprintf(" flags: %02X", flags);
+		Dbprintf(" len  : %02X", datalen);
+		print_result("to send: ", datain, datalen);
+	}
+	
+	if ( flags & 0x01 ){
+		if ( !InitDesfireCard() )
+			return;
+	}
+	
+	int len = DesfireAPDU(datain, datalen, resp);
+	if ( !len ) {
+		if (MF_DBGLEVEL >= 4) {
+			print_result("ERR <--: ", resp, len);	
+		}
+		OnError();
+		return;
+	}
+	cmd_send(CMD_ACK,1,0,0,resp,len);
 	
 
-	uint8_t len = 0;
-	uint8_t resp[RECV_RES_SIZE];
-	uint8_t dataout[RECV_CMD_SIZE];
-	byte_t buf[RECV_RES_SIZE];
+	OnSuccess();
+}
+
+void MifareDesfireGetInformation(){
+		
+	int len = 0;
+	uint8_t resp[USB_CMD_DATA_SIZE];
+	uint8_t dataout[USB_CMD_DATA_SIZE];
+	byte_t cardbuf[USB_CMD_DATA_SIZE];
 	
 	memset(resp,0,sizeof(resp));
 	memset(dataout,0, sizeof(dataout));
-	memset(buf,0,sizeof(buf));
+	memset(cardbuf,0,sizeof(cardbuf));
 	
 	/*
 		1 = PCB					1
 		2 = cid					2
 		3 = desfire command		3 
 		4-5 = crc				4  key
-								5-6 crc
-								
+								5-6 crc								
 		PCB == 0x0A because sending CID byte.
-		CID == 0x00 first card?
-		
+		CID == 0x00 first card?		
 	*/
-	uint8_t cmd1[] = {0x0a,0x00,GET_VERSION, 0x00, 0x00 };	
-	uint8_t cmd2[] = {0x0a,0x00,GET_KEY_VERSION, 0x00, 0x00, 0x00 };
-	
 	iso14a_clear_trace();
 	iso14a_set_tracing(TRUE);
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	// card select - information
-	iso14a_card_select_t *card = (iso14a_card_select_t*)buf;
+	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
 	byte_t isOK = iso14443a_select_card(NULL, card, NULL);
 	if (isOK != 1) {
 		if (MF_DBGLEVEL >= 1) {
@@ -51,45 +112,42 @@ void MifareDesfireGetInformation(){
 		return;
 	}
 
-
 	memcpy(dataout,card->uid,7);
 
 	LED_A_ON();
 	LED_B_OFF();
 	LED_C_OFF();
 	
-	// GET INFORMATION
-	AppendCrc14443a(cmd1, 3);
-	ReaderTransmit(cmd1, sizeof(cmd1), NULL);
-	len = ReaderReceive(resp);
-	if ( resp[2] != ADDITIONAL_FRAME) {
+	uint8_t cmd[] = {GET_VERSION};	
+	size_t cmd_len = sizeof(cmd);
+	
+	len =  DesfireAPDU(cmd, cmd_len, resp);
+	if ( !len ) {
 		print_result("ERROR <--: ", resp, len);	
 		OnError();
 		return;
 	}
-
+	
+	LED_A_OFF();
+	LED_B_ON();
 	memcpy(dataout+7,resp+3,7);
 	
 	// ADDITION_FRAME 1
-	++cmd1[0];
-	cmd1[2] = ADDITIONAL_FRAME;
-	AppendCrc14443a(cmd1, 3);
-	ReaderTransmit(cmd1, sizeof(cmd1), NULL);
-	len = ReaderReceive(resp);
-	
-	if ( resp[2] != ADDITIONAL_FRAME) {
+	cmd[0] = ADDITIONAL_FRAME;
+	len =  DesfireAPDU(cmd, cmd_len, resp);
+	if ( !len ) {
 		print_result("ERROR <--: ", resp, len);	
 		OnError();
 		return;
 	}	
+	
+	LED_B_OFF();
+	LED_C_ON();
 	memcpy(dataout+7+7,resp+3,7);
 
 	// ADDITION_FRAME 2
-	--cmd1[0];
-	AppendCrc14443a(cmd1, 3);
-	ReaderTransmit(cmd1, sizeof(cmd1), NULL);
-	len = ReaderReceive(resp);
-	if ( resp[2] != OPERATION_OK) {
+	len =  DesfireAPDU(cmd, cmd_len, resp);
+	if ( !len ) {
 		print_result("ERROR <--: ", resp, len);	
 		OnError();
 		return;
@@ -97,34 +155,10 @@ void MifareDesfireGetInformation(){
 	
 	memcpy(dataout+7+7+7,resp+3,14);
 	
-	// GET MASTER KEYSETTINGS
-	cmd1[2] = GET_KEY_SETTINGS;
-	AppendCrc14443a(cmd1, 3);
-	ReaderTransmit(cmd1, sizeof(cmd1), NULL);
-	len = ReaderReceive(resp);
-	if (len){
-		memcpy(dataout+7+7+7+14,resp+3,2);
-	}
-	
-
-	// GET MASTER KEY VERSION
-	AppendCrc14443a(cmd2, 4);
-	ReaderTransmit(cmd2, sizeof(cmd2), NULL);
-	len = ReaderReceive(resp);
-	if (len){
-		memcpy(dataout+7+7+7+14+2,resp+3,1);
-	}
-	
-	// GET FREE MEMORY
-	cmd1[2] = GET_FREE_MEMORY;
-	AppendCrc14443a(cmd1, 3);
-	ReaderTransmit(cmd1, sizeof(cmd1), NULL);
-	len = ReaderReceive(resp);
-	if (len){
-		memcpy(dataout+7+7+7+14+2+1,resp+3,3);
-	}
-
 	cmd_send(CMD_ACK,1,0,0,dataout,sizeof(dataout));
+		
+	// reset the pcb_blocknum,
+	pcb_blocknum = 0;
 	OnSuccess();
 }
 
@@ -309,50 +343,59 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 	OnSuccess(resp);
 }
 
+// 3 olika ISO sätt att skicka data till DESFIRE (direkt, inkapslat, inkapslat ISO)
+// cmd  =  cmd bytes to send
+// cmd_len = length of cmd
+// dataout = pointer to response data array
+int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
+
+	uint32_t status = 0;
+	size_t wrappedLen = 0;
+	uint8_t wCmd[USB_CMD_DATA_SIZE];
 	
-// desfire_cmd  =  enum DESFIRE_CMD in desfire.h
-// cmd = pointer to 
-// dataout = point to array for response data.
-int SendDesfireCommand(enum DESFIRE_CMD desfire_cmd,uint8_t *dataout, uint8_t fromscratch){
-
-   uint8_t resp[80];
-   uint8_t len;
-
-   if ( fromscratch){
-		
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-		
-		// power up the field
-		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-		// select the card
-		iso14443a_select_card(NULL, NULL, NULL);
-   }
-
-   // 3 olika ISO sätt att skicka data till DESFIRE (direkt, inkapslat, inkapslat ISO)
-   uint8_t real_cmd[4];
-   real_cmd[0] = 0x02;
-   real_cmd[1] = desfire_cmd;
-   AppendCrc14443a(real_cmd, 2);   
-   ReaderTransmit(real_cmd, sizeof(real_cmd), NULL);
-   len = ReaderReceive(resp);
-   if(!len)
-       return -1; //DATA LINK ERROR
-
-   	if ( fromscratch){
-	  	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	wrappedLen = CreateAPDU( cmd, cmd_len, wCmd);
+	
+	if (MF_DBGLEVEL >= 4) {
+		print_result("WCMD <--: ", wCmd, wrappedLen);	
 	}
+	ReaderTransmit( wCmd, wrappedLen, NULL);
 
-   enum DESFIRE_STATUS status = resp[1];
-   //1 bytes iso, 1 byte status,  in the end: 2 bytes crc	
-   if ( status == OPERATION_OK  || status == ADDITIONAL_FRAME) {
-       memcpy(dataout, resp+2, 2);
-       return len;
-	}   
-	else {
-	   Dbprintf("unexpected desfire response: %X (to %X)", status, desfire_cmd);
-       return -status;
-   }
+	status = ReaderReceive(dataout);
+	
+	if(!status){
+		return FALSE; //DATA LINK ERROR
+	}
+	// if we received an I- or R(ACK)-Block with a block number equal to the
+	// current block number, toggle the current block number
+	else if (status >= 4 // PCB+CID+CRC = 4 bytes
+	         && ((dataout[0] & 0xC0) == 0 // I-Block
+	             || (dataout[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
+	         && (dataout[0] & 0x01) == pcb_blocknum) // equal block numbers
+	{
+		pcb_blocknum ^= 1;  //toggle next block 
+	}
+	return status;
 }	
+
+// CreateAPDU
+size_t CreateAPDU( uint8_t *datain, size_t len, uint8_t *dataout){
+	
+	size_t cmdlen = MIN(len+4, USB_CMD_DATA_SIZE-1);
+
+	uint8_t cmd[cmdlen];
+	memset(cmd, 0, cmdlen);
+	
+	cmd[0] = 0x0A;  //  0x0A = skicka cid,  0x02 = ingen cid. Särskilda bitar //
+	cmd[0] |= pcb_blocknum; // OR the block number into the PCB	
+	cmd[1] = 0x00;  //  CID: 0x00 //FIXME: allow multiple selected cards
+	
+	memcpy(cmd+2, datain, len);
+	AppendCrc14443a(cmd, len+2);
+	
+	memcpy(dataout, cmd, cmdlen);
+	
+	return cmdlen;
+}
 
 			// crc_update(&desfire_crc32, 0, 1); /* CMD_WRITE */
 			// crc_update(&desfire_crc32, addr, addr_sz);
@@ -512,56 +555,20 @@ void MifareDES_Auth2(uint32_t arg0, uint8_t *datain){
 	LEDsoff();
 }
 
-// CreateAPDU
-uint8_t* CreateAPDU( uint8_t *datain, size_t len){
-	
-	len = MIN(len, USB_CMD_DATA_SIZE);
-	
-	uint8_t tmpcmd[len];
-	uint8_t *cmd = tmpcmd;
-	memset(cmd, 0, len);
-	cmd[0] = 0x0a;
-	cmd[1] = 0x00;
-	
-	memcpy(cmd, datain,len);
-	AppendCrc14443a(cmd, len+2);
-	return cmd;
-}
-
-void SelectCard(){
-
-	uint8_t resp[RECV_RES_SIZE];
-	byte_t buf[RECV_RES_SIZE];
-	
-	memset(resp,0,sizeof(resp));
-	memset(buf,0,sizeof(buf));
-	
-	iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
-	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
-	// card select - information
-	iso14a_card_select_t *card = (iso14a_card_select_t*)buf;
-	byte_t isOK = iso14443a_select_card(NULL, card, NULL);
-	if (isOK != 1) {
-		if (MF_DBGLEVEL >= 1) {
-			Dbprintf("Can't select card");
-		}
-		OnError();
-		return;
-	}
-}
-
 void OnSuccess(){
-	// Deselect card by sending a s-block. the crc is precalced for speed
-	uint8_t cmd[] = {0xc2,0xe0,0xb4};
-	ReaderTransmit(cmd, sizeof(cmd), NULL);
+	// transmit a DESELECT COMMAND for Desfire. 
+	ReaderTransmit(deselect_cmd, 3 , NULL);
+	// reset the pcb_blocknum,
+	pcb_blocknum = 0;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
 
 void OnError(){
 	cmd_send(CMD_ACK,0,0,0,0,0);
+	ReaderTransmit(deselect_cmd, 3 , NULL);
+	// reset the pcb_blocknum,
+	pcb_blocknum = 0;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }

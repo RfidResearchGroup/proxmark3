@@ -106,9 +106,6 @@ void MifareUC_Auth1(uint8_t arg0, uint8_t *datain){
 	if(!iso14443a_select_card(uid, NULL, &cuid)) {
           if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card, something went wrong before auth");
 	};
-
-	
-	
 	
 	if(mifare_ultra_auth1(cuid, dataoutbuf)){
 	  if (MF_DBGLEVEL >= 1)	Dbprintf("Authentication part1: Fail.");    

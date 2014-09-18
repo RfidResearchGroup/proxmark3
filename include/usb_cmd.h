@@ -144,12 +144,15 @@ typedef struct {
 #define CMD_MIFARE_NESTED                                                 0x0612
 
 #define CMD_MIFARE_READBL                                                 0x0620
-#define CMD_MIFAREU_READBL						  0x0720
+#define CMD_MIFAREU_READBL						                          0x0720
+
 #define CMD_MIFARE_READSC                                                 0x0621
-#define CMD_MIFAREU_READCARD						  0x0721
+#define CMD_MIFAREU_READCARD						                      0x0721
+
 #define CMD_MIFARE_WRITEBL                                                0x0622
-#define CMD_MIFAREU_WRITEBL_COMPAT					  0x0722
-#define CMD_MIFAREU_WRITEBL						  0x0723
+#define CMD_MIFAREU_WRITEBL_COMPAT					                      0x0722
+
+#define CMD_MIFAREU_WRITEBL						                          0x0723
 #define CMD_MIFARE_CHKKEYS                                                0x0623
 
 #define CMD_MIFARE_SNIFFER                                                0x0630
@@ -158,7 +161,6 @@ typedef struct {
 #define CMD_MIFAREUC_AUTH2						                          0x0725
 #define CMD_MIFAREUC_READCARD						                      0x0726
 
-
 // mifare desfire
 #define CMD_MIFARE_DESFIRE_READBL                                         0x0728
 #define CMD_MIFARE_DESFIRE_WRITEBL                                        0x0729
@@ -166,6 +168,7 @@ typedef struct {
 #define CMD_MIFARE_DESFIRE_AUTH2                                          0x072b
 #define CMD_MIFARE_DES_READER                                             0x072c
 #define CMD_MIFARE_DESFIRE_INFO                                           0x072d
+#define CMD_MIFARE_DESFIRE                                                0x072e
 
 #define CMD_UNKNOWN                                                       0xFFFF
 
