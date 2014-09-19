@@ -14,7 +14,7 @@
 #include "apps.h"
 
 //-----------------------------------------------------------------------------
-// Select, Authenticaate, Read an MIFARE tag. 
+// Select, Authenticate, Read a MIFARE tag. 
 // read block
 //-----------------------------------------------------------------------------
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
@@ -35,7 +35,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	pcs = &mpcs;
 
 	// clear trace
-	iso14a_clear_trace();
+ 	iso14a_clear_trace();
 //	iso14a_set_tracing(false);
 
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -46,22 +46,22 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 	while (true) {
 		if(!iso14443a_select_card(uid, NULL, &cuid)) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
+			if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
 			break;
 		};
 
 		if(mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Auth error");
+			if (MF_DBGLEVEL >= 1)	Dbprintf("Auth error");
 			break;
 		};
 		
 		if(mifare_classic_readblock(pcs, cuid, blockNo, dataoutbuf)) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Read block error");
+			if (MF_DBGLEVEL >= 1)	Dbprintf("Read block error");
 			break;
 		};
 
 		if(mifare_classic_halt(pcs, cuid)) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
+			if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
 			break;
 		};
 		
@@ -74,20 +74,11 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	
 	if (MF_DBGLEVEL >= 2)	DbpString("READ BLOCK FINISHED");
 
-	// add trace trailer
-	memset(uid, 0x44, 4);
-	LogTrace(uid, 4, 0, 0, TRUE);
-
-//	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
-//	memcpy(ack.d.asBytes, dataoutbuf, 16);
-	
 	LED_B_ON();
-  cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,16);
-//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+	cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,16);
 	LED_B_OFF();
 
-
-  // Thats it...
+	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 //  iso14a_set_tracing(TRUE);
@@ -148,9 +139,10 @@ void MifareUReadBlock(uint8_t arg0,uint8_t *datain)
 	LEDsoff();
 }
 
+
 //-----------------------------------------------------------------------------
-// Select, Authenticaate, Read an MIFARE tag. 
-// read sector (data = 4 x 16 bytes = 64 bytes)
+// Select, Authenticate, Read a MIFARE tag. 
+// read sector (data = 4 x 16 bytes = 64 bytes, or 16 x 16 bytes = 256 bytes)
 //-----------------------------------------------------------------------------
 void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 {
@@ -161,8 +153,8 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	ui64Key = bytes_to_num(datain, 6);
 	
 	// variables
-	byte_t isOK = 0;
-	byte_t dataoutbuf[16 * 4];
+	byte_t isOK;
+	byte_t dataoutbuf[16 * 16];
 	uint8_t uid[10];
 	uint32_t cuid;
 	struct Crypto1State mpcs = {0, 0};
@@ -170,7 +162,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	pcs = &mpcs;
 
 	// clear trace
-	iso14a_clear_trace();
+ 	iso14a_clear_trace();
 //	iso14a_set_tracing(false);
 
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -179,71 +171,46 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LED_B_OFF();
 	LED_C_OFF();
 
-	while (true) {
-		if(!iso14443a_select_card(uid, NULL, &cuid)) {
+	isOK = 1;
+	if(!iso14443a_select_card(uid, NULL, &cuid)) {
+		isOK = 0;
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
-			break;
-		};
-
-		if(mifare_classic_auth(pcs, cuid, sectorNo * 4, keyType, ui64Key, AUTH_FIRST)) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Auth error");
-			break;
-		};
-		
-		if(mifare_classic_readblock(pcs, cuid, sectorNo * 4 + 0, dataoutbuf + 16 * 0)) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Read block 0 error");
-			break;
-		};
-		if(mifare_classic_readblock(pcs, cuid, sectorNo * 4 + 1, dataoutbuf + 16 * 1)) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Read block 1 error");
-			break;
-		};
-		if(mifare_classic_readblock(pcs, cuid, sectorNo * 4 + 2, dataoutbuf + 16 * 2)) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Read block 2 error");
-			break;
-		};
-		if(mifare_classic_readblock(pcs, cuid, sectorNo * 4 + 3, dataoutbuf + 16 * 3)) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Read block 3 error");
-			break;
-		};
-		
-		if(mifare_classic_halt(pcs, cuid)) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
-			break;
-		};
-
-		isOK = 1;
-		break;
 	}
+
+	
+	if(isOK && mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_FIRST)) {
+		isOK = 0;
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Auth error");
+	}
+	
+	for (uint8_t blockNo = 0; isOK && blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
+		if(mifare_classic_readblock(pcs, cuid, FirstBlockOfSector(sectorNo) + blockNo, dataoutbuf + 16 * blockNo)) {
+			isOK = 0;
+			if (MF_DBGLEVEL >= 1)	Dbprintf("Read sector %2d block %2d error", sectorNo, blockNo);
+			break;
+		}
+	}
+		
+	if(mifare_classic_halt(pcs, cuid)) {
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
+	}
+
 	
 	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
 	
 	if (MF_DBGLEVEL >= 2) DbpString("READ SECTOR FINISHED");
 
-	// add trace trailer
-	memset(uid, 0x44, 4);
-	LogTrace(uid, 4, 0, 0, TRUE);
-
-//	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
-//	memcpy(ack.d.asBytes, dataoutbuf, 16 * 2);
-	
 	LED_B_ON();
-  cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,32);
-//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
-//	SpinDelay(100);
-	
-//	memcpy(ack.d.asBytes, dataoutbuf + 16 * 2, 16 * 2);
-//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
-  cmd_send(CMD_ACK,isOK,0,0,dataoutbuf+32, 32);
+	cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,16*NumBlocksPerSector(sectorNo));
 	LED_B_OFF();
 
 	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 //  iso14a_set_tracing(TRUE);
-
 }
+
 
 void MifareUReadCard(uint8_t arg0, uint8_t *datain)
 {
@@ -288,25 +255,19 @@ void MifareUReadCard(uint8_t arg0, uint8_t *datain)
         
         if (MF_DBGLEVEL >= 2) DbpString("READ CARD FINISHED");
 
-        // add trace trailer
-        memset(uid, 0x44, 4);
-        LogTrace(uid, 4, 0, 0, TRUE);
-        
         LED_B_ON();
 		cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,64);
-  //cmd_send(CMD_ACK,isOK,0,0,dataoutbuf+32, 32);
         LED_B_OFF();
 
         // Thats it...
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         LEDsoff();
-//  iso14a_set_tracing(TRUE);
 
 }
 
 
 //-----------------------------------------------------------------------------
-// Select, Authenticaate, Read an MIFARE tag. 
+// Select, Authenticate, Write a MIFARE tag. 
 // read block
 //-----------------------------------------------------------------------------
 void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
@@ -368,15 +329,8 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	
 	if (MF_DBGLEVEL >= 2)	DbpString("WRITE BLOCK FINISHED");
 
-	// add trace trailer
-	memset(uid, 0x44, 4);
-	LogTrace(uid, 4, 0, 0, TRUE);
-
-//	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
-	
 	LED_B_ON();
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
-//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
 	LED_B_OFF();
 
 
@@ -386,6 +340,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 //  iso14a_set_tracing(TRUE);
 
 }
+
 
 void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 {
@@ -433,13 +388,8 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
         
         if (MF_DBGLEVEL >= 2)   DbpString("WRITE BLOCK FINISHED");
 
-        // add trace trailer
-        memset(uid, 0x44, 4);
-        LogTrace(uid, 4, 0, 0, TRUE);
-
         LED_B_ON();
-  	cmd_send(CMD_ACK,isOK,0,0,0,0);
-//      UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+		cmd_send(CMD_ACK,isOK,0,0,0,0);
         LED_B_OFF();
 
 
@@ -447,70 +397,66 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         LEDsoff();
 //  iso14a_set_tracing(TRUE);
-
 }
+
 
 void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 {
-        // params
-        uint8_t blockNo = arg0;
-        byte_t blockdata[4];
-        
+	// params
+	uint8_t blockNo = arg0;
+	byte_t blockdata[4];
+	
 	memcpy(blockdata, datain,4);
 
-        // variables
-        byte_t isOK = 0;
-        uint8_t uid[10];
-        uint32_t cuid;
+	// variables
+	byte_t isOK = 0;
+	uint8_t uid[10];
+	uint32_t cuid;
 
-        // clear trace
-        iso14a_clear_trace();
-        //  iso14a_set_tracing(false);
+	// clear trace
+	iso14a_clear_trace();
+	//  iso14a_set_tracing(false);
 
-		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
-        LED_A_ON();
-        LED_B_OFF();
-        LED_C_OFF();
+	LED_A_ON();
+	LED_B_OFF();
+	LED_C_OFF();
 
-        while (true) {
-                        if(!iso14443a_select_card(uid, NULL, &cuid)) {
-                        if (MF_DBGLEVEL >= 1)   Dbprintf("Can't select card");
-                        break;
-                };
+	while (true) {
+		if(!iso14443a_select_card(uid, NULL, &cuid)) {
+			if (MF_DBGLEVEL >= 1)   Dbprintf("Can't select card");
+			break;
+		};
 
-                if(mifare_ultra_special_writeblock(cuid, blockNo, blockdata)) {
-                        if (MF_DBGLEVEL >= 1)   Dbprintf("Write block error");
-                        break;
-                };
+		if(mifare_ultra_special_writeblock(cuid, blockNo, blockdata)) {
+			if (MF_DBGLEVEL >= 1)   Dbprintf("Write block error");
+			break;
+		};
 
-                if(mifare_ultra_halt(cuid)) {
-                        if (MF_DBGLEVEL >= 1)   Dbprintf("Halt error");
-                        break;
-                };
+		if(mifare_ultra_halt(cuid)) {
+			if (MF_DBGLEVEL >= 1)   Dbprintf("Halt error");
+			break;
+		};
 
-                isOK = 1;
-                break;
-        }
+		isOK = 1;
+		break;
+	}
 
-        if (MF_DBGLEVEL >= 2)   DbpString("WRITE BLOCK FINISHED");
+	if (MF_DBGLEVEL >= 2)   DbpString("WRITE BLOCK FINISHED");
 
-        // add trace trailer
-	memset(uid, 0x44, 4);
-        LogTrace(uid, 4, 0, 0, TRUE);
-
-       LED_B_ON();
-        cmd_send(CMD_ACK,isOK,0,0,0,0);
-//      UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
-        LED_B_OFF();
+	LED_B_ON();
+	cmd_send(CMD_ACK,isOK,0,0,0,0);
+	LED_B_OFF();
 
 
-        // Thats it...
-        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        LEDsoff();
+	// Thats it...
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
 //  iso14a_set_tracing(TRUE);
 
 }
+
 
 // Return 1 if the nonce is invalid else return 0
 int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, byte_t * parity) {
@@ -518,7 +464,6 @@ int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, byte_t * parity) {
 	(oddparity((Nt >> 16) & 0xFF) == ((parity[1]) ^ oddparity((NtEnc >> 16) & 0xFF) ^ BIT(Ks1,8))) & \
 	(oddparity((Nt >> 8) & 0xFF) == ((parity[2]) ^ oddparity((NtEnc >> 8) & 0xFF) ^ BIT(Ks1,0)))) ? 1 : 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -769,18 +714,11 @@ void MifareChkKeys(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LED_B_OFF();
 	LED_C_OFF();
 
-//	SpinDelay(300);
 	for (i = 0; i < keyCount; i++) {
-//		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-//		SpinDelay(100);
-//		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
-		// prepare next select by sending a HALT. There is no need to power down the card.
 		if(mifare_classic_halt(pcs, cuid)) {
 			if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Halt error");
 		}
 
-		// SpinDelay(50);
-		
 		if(!iso14443a_select_card(uid, NULL, &cuid)) {
 			if (OLD_MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card");
 			break;
@@ -798,10 +736,6 @@ void MifareChkKeys(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
 	
-	// add trace trailer
-	memset(uid, 0x44, 4);
-	LogTrace(uid, 4, 0, 0, TRUE);
-
 	LED_B_ON();
     cmd_send(CMD_ACK,isOK,0,0,datain + i * 6,6);
 	LED_B_OFF();
@@ -823,6 +757,7 @@ void MifareSetDbgLvl(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	Dbprintf("Debug level: %d", MF_DBGLEVEL);
 }
 
+
 //-----------------------------------------------------------------------------
 // Work with emulator memory
 // 
@@ -831,29 +766,29 @@ void MifareEMemClr(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 	emlClearMem();
 }
 
+
 void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
 	emlSetMem(datain, arg0, arg1); // data, block num, blocks count
 }
 
-void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
-//	UsbCommand ack = {CMD_ACK, {arg0, arg1, 0}};
 
-  byte_t buf[48];
-	emlGetMem(buf, arg0, arg1); // data, block num, blocks count
+void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
+
+	byte_t buf[48];
+	emlGetMem(buf, arg0, arg1); // data, block num, blocks count (max 4)
 
 	LED_B_ON();
-  cmd_send(CMD_ACK,arg0,arg1,0,buf,48);
-//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+	cmd_send(CMD_ACK,arg0,arg1,0,buf,48);
 	LED_B_OFF();
 }
+
 
 //-----------------------------------------------------------------------------
 // Load a card into the emulator memory
 // 
 //-----------------------------------------------------------------------------
 void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
-	int i;
-	uint8_t sectorNo = 0;
+	uint8_t numSectors = arg0;
 	uint8_t keyType = arg1;
 	uint64_t ui64Key = 0;
 	uint32_t cuid;
@@ -876,63 +811,51 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	LED_B_OFF();
 	LED_C_OFF();
 	
-	while (true) {
-		if(!iso14443a_select_card(uid, NULL, &cuid)) {
-			if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
-			break;
-		};
+	bool isOK = true;
+
+	if(!iso14443a_select_card(uid, NULL, &cuid)) {
+		isOK = false;
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
+	}
 		
-		for (i = 0; i < 16; i++) {
-			sectorNo = i;
-			ui64Key = emlGetKey(sectorNo, keyType);
-	
-			if (!i){
-				if(mifare_classic_auth(pcs, cuid, sectorNo * 4, keyType, ui64Key, AUTH_FIRST)) {
-					if (MF_DBGLEVEL >= 1)	Dbprintf("Sector[%d]. Auth error", i);
-					break;
-				}
-			} else {
-				if(mifare_classic_auth(pcs, cuid, sectorNo * 4, keyType, ui64Key, AUTH_NESTED)) {
-					if (MF_DBGLEVEL >= 1)	Dbprintf("Sector[%d]. Auth nested error", i);
-					break;
+	for (uint8_t sectorNo = 0; isOK && sectorNo < numSectors; sectorNo++) {
+		ui64Key = emlGetKey(sectorNo, keyType);
+		if (sectorNo == 0){
+			if(isOK && mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_FIRST)) {
+				isOK = false;
+				if (MF_DBGLEVEL >= 1)	Dbprintf("Sector[%2d]. Auth error", sectorNo);
+				break;
+			}
+		} else {
+			if(isOK && mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_NESTED)) {
+				isOK = false;
+				if (MF_DBGLEVEL >= 1)	Dbprintf("Sector[%2d]. Auth nested error", sectorNo);
+				break;
+			}
+		}
+		
+		for (uint8_t blockNo = 0; isOK && blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
+			if(isOK && mifare_classic_readblock(pcs, cuid, FirstBlockOfSector(sectorNo) + blockNo, dataoutbuf)) {
+				isOK = false;
+				if (MF_DBGLEVEL >= 1)	Dbprintf("Error reading sector %2d block %2d", sectorNo, blockNo);
+				break;
+			};
+			if (isOK) {
+				if (blockNo < NumBlocksPerSector(sectorNo) - 1) {
+					emlSetMem(dataoutbuf, FirstBlockOfSector(sectorNo) + blockNo, 1);
+				} else {	// sector trailer, keep the keys, set only the AC
+					emlGetMem(dataoutbuf2, FirstBlockOfSector(sectorNo) + blockNo, 1);
+					memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
+					emlSetMem(dataoutbuf2,  FirstBlockOfSector(sectorNo) + blockNo, 1);
 				}
 			}
-		
-			if(mifare_classic_readblock(pcs, cuid, sectorNo * 4 + 0, dataoutbuf)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Read block 0 error");
-				break;
-			};
-			emlSetMem(dataoutbuf, sectorNo * 4 + 0, 1);
-			
-			if(mifare_classic_readblock(pcs, cuid, sectorNo * 4 + 1, dataoutbuf)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Read block 1 error");
-				break;
-			};
-			emlSetMem(dataoutbuf, sectorNo * 4 + 1, 1);
-
-			if(mifare_classic_readblock(pcs, cuid, sectorNo * 4 + 2, dataoutbuf)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Read block 2 error");
-				break;
-			};
-			emlSetMem(dataoutbuf, sectorNo * 4 + 2, 1);
-
-			// get block 3 bytes 6-9
-			if(mifare_classic_readblock(pcs, cuid, sectorNo * 4 + 3, dataoutbuf)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Read block 3 error");
-				break;
-			};
-			emlGetMem(dataoutbuf2, sectorNo * 4 + 3, 1);
-			memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
-			emlSetMem(dataoutbuf2,  sectorNo * 4 + 3, 1);
 		}
 
-		if(mifare_classic_halt(pcs, cuid)) {
-			if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
-			break;
-		};
-		
-		break;
-	}	
+	}
+
+	if(mifare_classic_halt(pcs, cuid)) {
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
+	};
 
 	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
@@ -942,15 +865,7 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	
 	if (MF_DBGLEVEL >= 2) DbpString("EMUL FILL SECTORS FINISHED");
 
-	// add trace trailer
-	memset(uid, 0x44, 4);
-	LogTrace(uid, 4, 0, 0, TRUE);
 }
-
-//-----------------------------------------------------------------------------
-// MIFARE 1k emulator
-// 
-//-----------------------------------------------------------------------------
 
 
 //-----------------------------------------------------------------------------
@@ -1074,22 +989,8 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		break;
 	}
 	
-//	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
-//	if (isOK) memcpy(ack.d.asBytes, uid, 4);
-	
-	// add trace trailer
-	/**
-	*	Removed by Martin, the uid is overwritten with 0x44, 
-	*	which can 't be intended. 
-	*
-	*	memset(uid, 0x44, 4);
-	*	LogTrace(uid, 4, 0, 0, TRUE);
-	**/
-	
-
 	LED_B_ON();
-  cmd_send(CMD_ACK,isOK,0,0,uid,4);
-//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+	cmd_send(CMD_ACK,isOK,0,0,uid,4);
 	LED_B_OFF();
 
 	if ((workFlags & 0x10) || (!isOK)) {
@@ -1098,6 +999,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		LEDsoff();
 	}
 }
+
 
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
   
@@ -1171,20 +1073,8 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		break;
 	}
 	
-//	UsbCommand ack = {CMD_ACK, {isOK, 0, 0}};
-//	if (isOK) memcpy(ack.d.asBytes, data, 18);
-	
-	// add trace trailer
-	/*
-	* Removed by Martin, this piece of overwrites the 'data' variable 
-	* which is sent two lines down, and is obviously not correct. 
-	* 
-	* memset(data, 0x44, 4);
-	* LogTrace(data, 4, 0, 0, TRUE);
-	*/
 	LED_B_ON();
-  cmd_send(CMD_ACK,isOK,0,0,data,18);
-//	UsbSendPacket((uint8_t *)&ack, sizeof(UsbCommand));
+	cmd_send(CMD_ACK,isOK,0,0,data,18);
 	LED_B_OFF();
 
 	if ((workFlags & 0x10) || (!isOK)) {

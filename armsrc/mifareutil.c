@@ -453,6 +453,27 @@ int mifare_ultra_halt(uint32_t uid)
 	return 0;
 }
 
+
+// Mifare Memory Structure: up to 32 Sectors with 4 blocks each (1k and 2k cards),
+// plus evtl. 8 sectors with 16 blocks each (4k cards)
+uint8_t NumBlocksPerSector(uint8_t sectorNo) 
+{
+	if (sectorNo < 32) 
+		return 4;
+	else
+		return 16;
+}
+
+uint8_t FirstBlockOfSector(uint8_t sectorNo) 
+{
+	if (sectorNo < 32)
+		return sectorNo * 4;
+	else
+		return 32*4 + (sectorNo - 32) * 16;
+		
+}
+
+
 // work with emulator memory
 void emlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
@@ -522,7 +543,7 @@ uint64_t emlGetKey(int sectorNum, int keyType) {
 	uint8_t key[6];
 	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
 	
-	memcpy(key, emCARD + 3 * 16 + sectorNum * 4 * 16 + keyType * 10, 6);
+	memcpy(key, emCARD + 16 * (FirstBlockOfSector(sectorNum) + NumBlocksPerSector(sectorNum) - 1) + keyType * 10, 6);
 	return bytes_to_num(key, 6);
 }
 
