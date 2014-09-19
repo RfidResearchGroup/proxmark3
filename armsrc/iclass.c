@@ -41,10 +41,12 @@
 #include "util.h"
 #include "string.h"
 #include "common.h"
+#include "cmd.h"
 // Needed for CRC in emulation mode;
 // same construction as in ISO 14443;
 // different initial value (CRC_ICLASS)
 #include "iso14443crc.h"
+#include "iso15693tools.h"
 
 static int timeout = 4096;
 
@@ -1167,12 +1169,11 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 		} else if(receivedCmd[0] == 0x05) {
 			// Reader random and reader MAC!!!
 			// Do not respond
-			// We do not know what to answer, so lets keep quit
+            // We do not know what to answer, so lets keep quiet
 			resp = resp1; respLen = 0; //order = 5;
 			respdata = NULL;
 			respsize = 0;
 			if (breakAfterMacReceived){
-				// TODO, actually return this to the caller instead of just
 				// dbprintf:ing ...
 				Dbprintf("CSN: %02x %02x %02x %02x %02x %02x %02x %02x",csn[0],csn[1],csn[2],csn[3],csn[4],csn[5],csn[6],csn[7]);
 				Dbprintf("RDR:  (len=%02d): %02x %02x %02x %02x %02x %02x %02x %02x %02x",len,
@@ -1465,38 +1466,138 @@ int ReaderReceiveIClass(uint8_t* receivedAnswer)
   return Demod.len;
 }
 
+void setupIclassReader()
+{
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    // Reset trace buffer
+    iso14a_set_tracing(TRUE);
+    iso14a_clear_trace();
+
+    // Setup SSC
+    FpgaSetupSsc();
+    // Start from off (no field generated)
+    // Signal field is off with the appropriate LED
+    LED_D_OFF();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    SpinDelay(200);
+
+    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+
+    // Now give it time to spin up.
+    // Signal field is on with the appropriate LED
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+    SpinDelay(200);
+    LED_A_ON();
+
+}
+
 // Reader iClass Anticollission
 void ReaderIClass(uint8_t arg0) {
+    uint8_t act_all[]     = { 0x0a };
+    uint8_t identify[]    = { 0x0c };
+    uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t readcheck_cc[]= { 0x88, 0x02 };
+
+    uint8_t card_data[24]={0};
+    uint8_t last_csn[8]={0};
+
+    uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
+
+    int read_status= 0;
+    bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;
+
+    setupIclassReader();
+
+    size_t datasize = 0;
+    while(!BUTTON_PRESS())
+    {
+        WDT_HIT();
+
+        // Send act_all
+        ReaderTransmitIClass(act_all, 1);
+        // Card present?
+        if(ReaderReceiveIClass(resp)) {
+
+            ReaderTransmitIClass(identify, 1);
+
+            if(ReaderReceiveIClass(resp) == 10) {
+                //Copy the Anti-collision CSN to our select-packet
+                memcpy(&select[1],resp,8);
+                //Dbprintf("Anti-collision CSN: %02x %02x %02x %02x %02x %02x %02x %02x",resp[0], resp[1], resp[2],
+                //        resp[3], resp[4], resp[5],
+                //        resp[6], resp[7]);
+                //Select the card
+                ReaderTransmitIClass(select, sizeof(select));
+
+                if(ReaderReceiveIClass(resp) == 10) {
+                    //Save CSN in response data
+                    memcpy(card_data,resp,8);
+                    datasize += 8;
+                    //Flag that we got to at least stage 1, read CSN
+                    read_status = 1;
+
+                    // Card selected
+                    //Dbprintf("Readcheck on Sector 2");
+                    ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
+                    if(ReaderReceiveIClass(resp) == 8) {
+                        //Save CC (e-purse) in response data
+                        memcpy(card_data+8,resp,8);
+                        datasize += 8;
+                        //Got both
+                        read_status = 2;
+                    }
+
+                    LED_B_ON();
+                    //Send back to client, but don't bother if we already sent this
+                    if(memcmp(last_csn, card_data, 8) != 0)
+                        cmd_send(CMD_ACK,read_status,0,0,card_data,datasize);
+
+                    //Save that we already sent this....
+                    if(read_status ==  2)
+                        memcpy(last_csn, card_data, 8);
+
+                    LED_B_OFF();
+
+                    if(abort_after_read) break;
+                }
+            }
+        }
+
+        if(traceLen > TRACE_SIZE) {
+            DbpString("Trace full");
+            break;
+        }
+    }
+    LED_A_OFF();
+}
+
+void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	uint8_t act_all[]     = { 0x0a };
 	uint8_t identify[]    = { 0x0c };
 	uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-
+	uint8_t readcheck_cc[]= { 0x88, 0x02 };
+	uint8_t check[]       = { 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	uint8_t read[]        = { 0x0c, 0x00, 0x00, 0x00 };
+	
+    uint16_t crc = 0;
+	uint8_t cardsize=0;
+	bool read_success=false;
+	uint8_t mem=0;
+	
+	static struct memory_t{
+	  int k16;
+	  int book;
+	  int k2;
+	  int lockauth;
+	  int keyaccess;
+	} memory;
+	
 	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
 
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    setupIclassReader();
 
-	// Reset trace buffer
-	memset(trace, 0x44, RECV_CMD_OFFSET);
-	traceLen = 0;
 
-	// Setup SSC
-	FpgaSetupSsc();
-	// Start from off (no field generated)
-	// Signal field is off with the appropriate LED
-	LED_D_OFF();
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(200);
-
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-
-	// Now give it time to spin up.
-	// Signal field is on with the appropriate LED
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
-	SpinDelay(200);
-
-	LED_A_ON();
-
-	for(;;) {
+	for(int i=0;i<1;i++) {
 	
 		if(traceLen > TRACE_SIZE) {
 			DbpString("Trace full");
@@ -1521,7 +1622,72 @@ void ReaderIClass(uint8_t arg0) {
 					resp[3], resp[4], resp[5],
 					resp[6], resp[7]);
 				}
-				// Card selected, whats next... ;-)
+				// Card selected
+				Dbprintf("Readcheck on Sector 2");
+				ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
+				if(ReaderReceiveIClass(resp) == 8) {
+				   Dbprintf("     CC: %02x %02x %02x %02x %02x %02x %02x %02x",
+					resp[0], resp[1], resp[2],
+					resp[3], resp[4], resp[5],
+					resp[6], resp[7]);
+				}else return;
+				Dbprintf("Authenticate");
+				//for now replay captured auth (as cc not updated)
+				memcpy(check+5,MAC,4);
+                //Dbprintf("     AA: %02x %02x %02x %02x",
+                //	check[5], check[6], check[7],check[8]);
+				ReaderTransmitIClass(check, sizeof(check));
+				if(ReaderReceiveIClass(resp) == 4) {
+				   Dbprintf("     AR: %02x %02x %02x %02x",
+					resp[0], resp[1], resp[2],resp[3]);
+				}else {
+				  Dbprintf("Error: Authentication Fail!");
+				  return;
+				}
+				Dbprintf("Dump Contents");
+				//first get configuration block
+				read_success=false;
+				read[1]=1;
+				uint8_t *blockno=&read[1];
+				crc = iclass_crc16((char *)blockno,1);
+				read[2] = crc >> 8;
+				read[3] = crc & 0xff;
+				while(!read_success){
+				      ReaderTransmitIClass(read, sizeof(read));
+				      if(ReaderReceiveIClass(resp) == 10) {
+					 read_success=true;
+					 mem=resp[5];
+					 memory.k16= (mem & 0x80);
+					 memory.book= (mem & 0x20);
+					 memory.k2= (mem & 0x8);
+					 memory.lockauth= (mem & 0x2);
+					 memory.keyaccess= (mem & 0x1);
+
+				      }
+				}
+				if (memory.k16){
+				  cardsize=255;
+				}else cardsize=32;
+				//then loop around remaining blocks
+				for(uint8_t j=0; j<cardsize; j++){
+				    read_success=false;
+				    uint8_t *blockno=&j;
+				    //crc_data[0]=j;
+				    read[1]=j;
+				    crc = iclass_crc16((char *)blockno,1);
+				    read[2] = crc >> 8;
+				    read[3] = crc & 0xff;
+				    while(!read_success){
+				      ReaderTransmitIClass(read, sizeof(read));
+				      if(ReaderReceiveIClass(resp) == 10) {
+					 read_success=true;
+				         Dbprintf("     %02x: %02x %02x %02x %02x %02x %02x %02x %02x",
+					  j, resp[0], resp[1], resp[2],
+					  resp[3], resp[4], resp[5],
+					  resp[6], resp[7]);
+				      }
+				    }
+				}
 			}
 		}
 		WDT_HIT();
@@ -1530,4 +1696,130 @@ void ReaderIClass(uint8_t arg0) {
 	LED_A_OFF();
 }
 
+//2. Create Read method (cut-down from above) based off responses from 1. 
+//   Since we have the MAC could continue to use replay function.
+//3. Create Write method
+/*
+void IClass_iso14443A_write(uint8_t arg0, uint8_t blockNo, uint8_t *data, uint8_t *MAC) {
+	uint8_t act_all[]     = { 0x0a };
+	uint8_t identify[]    = { 0x0c };
+	uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	uint8_t readcheck_cc[]= { 0x88, 0x02 };
+	uint8_t check[]       = { 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	uint8_t read[]        = { 0x0c, 0x00, 0x00, 0x00 };
+	uint8_t write[]       = { 0x87, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	
+    uint16_t crc = 0;
+	
+	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
 
+	// Reset trace buffer
+    memset(trace, 0x44, RECV_CMD_OFFSET);
+	traceLen = 0;
+
+	// Setup SSC
+	FpgaSetupSsc();
+	// Start from off (no field generated)
+	// Signal field is off with the appropriate LED
+	LED_D_OFF();
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelay(200);
+
+	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+
+	// Now give it time to spin up.
+	// Signal field is on with the appropriate LED
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+	SpinDelay(200);
+
+	LED_A_ON();
+
+	for(int i=0;i<1;i++) {
+	
+		if(traceLen > TRACE_SIZE) {
+			DbpString("Trace full");
+			break;
+		}
+		
+		if (BUTTON_PRESS()) break;
+
+		// Send act_all
+		ReaderTransmitIClass(act_all, 1);
+		// Card present?
+		if(ReaderReceiveIClass(resp)) {
+			ReaderTransmitIClass(identify, 1);
+			if(ReaderReceiveIClass(resp) == 10) {
+				// Select card          
+				memcpy(&select[1],resp,8);
+				ReaderTransmitIClass(select, sizeof(select));
+
+				if(ReaderReceiveIClass(resp) == 10) {
+					Dbprintf("     Selected CSN: %02x %02x %02x %02x %02x %02x %02x %02x",
+					resp[0], resp[1], resp[2],
+					resp[3], resp[4], resp[5],
+					resp[6], resp[7]);
+				}
+				// Card selected
+				Dbprintf("Readcheck on Sector 2");
+				ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
+				if(ReaderReceiveIClass(resp) == 8) {
+				   Dbprintf("     CC: %02x %02x %02x %02x %02x %02x %02x %02x",
+					resp[0], resp[1], resp[2],
+					resp[3], resp[4], resp[5],
+					resp[6], resp[7]);
+				}else return;
+				Dbprintf("Authenticate");
+				//for now replay captured auth (as cc not updated)
+				memcpy(check+5,MAC,4);
+				Dbprintf("     AA: %02x %02x %02x %02x",
+					check[5], check[6], check[7],check[8]);
+				ReaderTransmitIClass(check, sizeof(check));
+				if(ReaderReceiveIClass(resp) == 4) {
+				   Dbprintf("     AR: %02x %02x %02x %02x",
+					resp[0], resp[1], resp[2],resp[3]);
+				}else {
+				  Dbprintf("Error: Authentication Fail!");
+				  return;
+				}
+				Dbprintf("Write Block");
+				
+				//read configuration for max block number
+				read_success=false;
+				read[1]=1;
+				uint8_t *blockno=&read[1];
+				crc = iclass_crc16((char *)blockno,1);
+				read[2] = crc >> 8;
+				read[3] = crc & 0xff;
+				while(!read_success){
+				      ReaderTransmitIClass(read, sizeof(read));
+				      if(ReaderReceiveIClass(resp) == 10) {
+					 read_success=true;
+					 mem=resp[5];
+					 memory.k16= (mem & 0x80);
+					 memory.book= (mem & 0x20);
+					 memory.k2= (mem & 0x8);
+					 memory.lockauth= (mem & 0x2);
+					 memory.keyaccess= (mem & 0x1);
+
+				      }
+				}
+				if (memory.k16){
+				  cardsize=255;
+				}else cardsize=32;
+				//check card_size
+				
+				memcpy(write+1,blockNo,1);
+				memcpy(write+2,data,8);
+				memcpy(write+10,mac,4);
+				while(!send_success){
+				  ReaderTransmitIClass(write, sizeof(write));
+				  if(ReaderReceiveIClass(resp) == 10) {
+				    write_success=true;
+				}
+			}//
+		}
+		WDT_HIT();
+	}
+	
+	LED_A_OFF();
+}*/
