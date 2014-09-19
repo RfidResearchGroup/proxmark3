@@ -23,6 +23,11 @@ CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
 QTLDLIBS = -L$(QTDIR)/lib  -lQt5Core -lQt5Gui -lQt5Widgets 
 MOC = $(QTDIR)/bin/moc
 LUAPLATFORM = mingw
+else ifeq ($(platform),Darwin)
+CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
+QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
+MOC = $(shell pkg-config --variable=moc_location QtCore)
+LUAPLATFORM = macosx
 else
 CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
 QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
@@ -78,8 +83,8 @@ CMDSRCS = 	nonce2key/crapto1.c\
             cmdhfdes.c \
 			cmdhw.c \
 			cmdlf.c \
-			cmdlfhid.c \
 			cmdlfio.c \
+			cmdlfhid.c \
 			cmdlfem4x.c \
 			cmdlfhitag.c \
 			cmdlfti.c \

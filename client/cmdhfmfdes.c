@@ -172,7 +172,7 @@ int CmdHF14ADesInfo(const char *Cmd){
 	PrintAndLog("-------------------------------------------------------------");
 	
 	
-	UsbCommand c1 = {CMD_MIFARE_DESFIRE, { 0x01, 0x01 }};
+	UsbCommand c1 = {CMD_MIFARE_DESFIRE, { 0x03, 0x01 }};
 	c1.d.asBytes[0] = GET_KEY_SETTINGS;
     SendCommand(&c1);
 	if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
@@ -181,27 +181,27 @@ int CmdHF14ADesInfo(const char *Cmd){
 	
 	PrintAndLog("  Master Key settings");
 	if (  resp.d.asBytes[3] & (1 << 3 ) )
-		PrintAndLog("     0x08 Configuration changeable;");
+		PrintAndLog("     0x08 Configuration changeable");
 	else
-		PrintAndLog("     0x08 Configuration NOT changeable;");
+		PrintAndLog("     0x08 Configuration NOT changeable");
 
 	if (  resp.d.asBytes[3] & (1 << 2 ) )
-		PrintAndLog("     0x04 PICC Master Key not required for create / delete;");
+		PrintAndLog("     0x04 PICC Master Key not required for create / delete");
 	else 
-		PrintAndLog("     0x04 PICC Master Key required for create / delete;");
+		PrintAndLog("     0x04 PICC Master Key required for create / delete");
 
 	if (  resp.d.asBytes[3] & (1 << 1 ) )
-		PrintAndLog("     0x02 Free directory list access without PICC Master Key;");
+		PrintAndLog("     0x02 Free directory list access without PICC Master Key");
 	else
-		PrintAndLog("     0x02 Directory list access with PICC Master Key;");
+		PrintAndLog("     0x02 Directory list access with PICC Master Key");
 	
 	if (  resp.d.asBytes[3] & (1 << 0 ) )
-		PrintAndLog("     0x01 Allow changing the Master Key;");
+		PrintAndLog("     0x01 Allow changing the Master Key");
 	else
-		PrintAndLog("     0x01 Master Key is not changeable anymore;");
+		PrintAndLog("     0x01 Master Key is not changeable anymore");
 	
 	//                                      init   len
-	UsbCommand c2 = {CMD_MIFARE_DESFIRE, { 0x01, 0x02 }};
+	UsbCommand c2 = {CMD_MIFARE_DESFIRE, { 0x03, 0x02 }};
     c2.d.asBytes[0] = GET_KEY_VERSION;
 	c2.d.asBytes[1] = 0x00;
 	SendCommand(&c2);
@@ -210,12 +210,12 @@ int CmdHF14ADesInfo(const char *Cmd){
 	}
 	
 	PrintAndLog("");
-	PrintAndLog("     Max number of keys  : %d", resp.d.asBytes[2]);
+	PrintAndLog("     Max number of keys  : %d", resp.d.asBytes[4]);
 	PrintAndLog("     Master key Version  : %d (0x%02x)", resp.d.asBytes[3], resp.d.asBytes[3]);
 	PrintAndLog("-------------------------------------------------------------");
 	
 
-	UsbCommand c3 = {CMD_MIFARE_DESFIRE, { 0x01, 0x01 }};
+	UsbCommand c3 = {CMD_MIFARE_DESFIRE, { 0x03, 0x01 }};
 	c3.d.asBytes[0] = GET_FREE_MEMORY;
     SendCommand(&c3);
 	if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
@@ -229,11 +229,11 @@ int CmdHF14ADesInfo(const char *Cmd){
 	PrintAndLog("-------------------------------------------------------------");
 
 	/*
-		Card Master key (CMK)  0x00 on AID = 00 00 00 (card level) 0x1
-		Application Master Key (AMK) 0x00 on AID != 00 00 00
-		Application keys (APK) = 0x01-0x0D
-		Application free = 0x0E
-		Application never = 0x0F
+		Card Master key (CMK)        0x00 AID = 00 00 00 (card level)
+		Application Master Key (AMK) 0x00 AID != 00 00 00
+		Application keys (APK)       0x01-0x0D
+		Application free             0x0E
+		Application never            0x0F
 		
 		ACCESS RIGHTS:
 		keys 0,1,2,3     C
@@ -298,8 +298,13 @@ char * GetProtocolStr(uint8_t id){
 
 int CmdHF14ADesEnumApplications(const char *Cmd){
 	
-	UsbCommand c = {CMD_MIFARE_DESFIRE, { 0x01, 0x01 }};
-	c.d.asBytes[0] = GET_APPLICATION_IDS;
+	uint32_t options = 0x00;
+	
+	options |= INIT;
+	options  |= DISCONNECT;
+	
+	UsbCommand c = {CMD_MIFARE_DESFIRE, {options , 0x01 }};
+	c.d.asBytes[0] = GET_APPLICATION_IDS;  //0x6a
     SendCommand(&c);
 	UsbCommand resp;
 		
@@ -316,26 +321,56 @@ int CmdHF14ADesEnumApplications(const char *Cmd){
 	PrintAndLog("---Desfire Enum Applications --------------------------------");
 	PrintAndLog("-------------------------------------------------------------");
 
-	//UsbCommand respFiles;
+	UsbCommand respAid;
+	UsbCommand respFiles;
 	
 	uint8_t num = 0;
 	int max = resp.arg[1] -3 -2;
 	
 	for(int i=3; i<=max; i+=3){
-		PrintAndLog(" Aid %d : %s ",num ,sprint_hex(resp.d.asBytes+i,3));
+		PrintAndLog(" Aid %d : %02X %02X %02X ",num ,resp.d.asBytes[i],resp.d.asBytes[i+1],resp.d.asBytes[i+2]);
 		num++;
 		
-		// UsbCommand cFiles = {CMD_MIFARE_DESFIRE, { 0x01, 0x04 }};
-		// cFiles.d.asBytes[0] = GET_FILE_IDS;
-		// cFiles.d.asBytes[1] = resp.d.asBytes+i;
-		// cFiles.d.asBytes[2] = resp.d.asBytes+i+1;
-		// cFiles.d.asBytes[3] = resp.d.asBytes+i+2;
-		// SendCommand(&cFiles);
+		options = INIT;
+
+		UsbCommand cAid = {CMD_MIFARE_DESFIRE, { options, 0x04 }};
+		cAid.d.asBytes[0] = SELECT_APPLICATION;  // 0x5a
+		cAid.d.asBytes[1] = resp.d.asBytes[i];
+		cAid.d.asBytes[2] = resp.d.asBytes[i+1];		
+		cAid.d.asBytes[3] = resp.d.asBytes[i+2];
+		SendCommand(&cAid);
 		
-		// if ( !WaitForResponseTimeout(CMD_ACK,&respFiles,1500) ) {
-			// PrintAndLog("   No files found");
-			// break;
-		// }
+		if (!WaitForResponseTimeout(CMD_ACK,&respAid,1500) ) {
+			PrintAndLog("   Timed-out");
+			continue;
+		} 
+		uint8_t isOK  = respAid.arg[0] & 0xff;
+		if ( !isOK ){
+			PrintAndLog("   Can't select AID: %s",sprint_hex(resp.d.asBytes+i,3));	
+			continue;
+		}
+	
+		options = DISCONNECT;
+		UsbCommand cFiles = {CMD_MIFARE_DESFIRE, { options, 0x01 }};
+		cFiles.d.asBytes[0] = GET_FILE_IDS; // 0x6f
+		SendCommand(&cFiles);
+		
+		if ( !WaitForResponseTimeout(CMD_ACK,&respFiles,1500) ) {
+			PrintAndLog("   Timed-out");
+			continue;
+		} else {
+		
+			uint8_t isOK  = respFiles.arg[0] & 0xff;
+			if ( !isOK ){
+				PrintAndLog("   No files found");
+				continue;
+			}
+		
+			int respfileLen = resp.arg[1]-3-2;			
+			for (int j=0; j< respfileLen; ++j){
+				PrintAndLog("   Fileid %d :", resp.d.asBytes[j+3]);
+			}
+		}
 		
 	}
 	PrintAndLog("-------------------------------------------------------------");

@@ -19,6 +19,14 @@ char * GetCardSizeStr( uint8_t fsize );
 char * GetVendorStr( uint8_t id);
 char * GetProtocolStr(uint8_t id);
 
+// Command options for Desfire behavior.
+enum  {
+ NONE		= 	0x00,
+ INIT 		=	0x01,
+ DISCONNECT =	0x02,
+ FOO		= 	0x04,
+ BAR		= 	0x08,
+} CmdOptions ;
 
 
 #define  CREATE_APPLICATION 			0xca

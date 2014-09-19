@@ -40,11 +40,20 @@ bool InitDesfireCard(){
 	return true;
 }
 
+// ARG0 flag enums
+enum  {
+ NONE		= 	0x00,
+ INIT 		=	0x01,
+ DISCONNECT =	0x02,
+ FOO		= 	0x04,
+ BAR		= 	0x08,
+} CmdOptions ;
+
 void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 	
 	/* ARG0 contains flags.
 		0x01 = init card.
-		0x02 =
+		0x02 = No Disconnect
 		0x03
 	*/
 	uint8_t flags = arg0;
@@ -53,17 +62,18 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 	memset(resp,0,sizeof(resp));
 	
 	if (MF_DBGLEVEL >= 4) {
-		Dbprintf(" flags: %02X", flags);
-		Dbprintf(" len  : %02X", datalen);
-		print_result("to send: ", datain, datalen);
+		Dbprintf(" flags : %02X", flags);
+		Dbprintf(" len   : %02X", datalen);
+		print_result(" RX    : ", datain, datalen);
 	}
 	
-	if ( flags & 0x01 ){
+	if ( flags & INIT ){
 		if ( !InitDesfireCard() )
 			return;
 	}
 	
 	int len = DesfireAPDU(datain, datalen, resp);
+	print_result(" <--: ", resp, len);	
 	if ( !len ) {
 		if (MF_DBGLEVEL >= 4) {
 			print_result("ERR <--: ", resp, len);	
@@ -71,10 +81,14 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 		OnError();
 		return;
 	}
-	cmd_send(CMD_ACK,1,len,0,resp,len);
 	
-
-	OnSuccess();
+	// reset the pcb_blocknum,
+	pcb_blocknum = 0;
+	
+	if ( flags & DISCONNECT )
+		OnSuccess();
+	
+	cmd_send(CMD_ACK,1,len,0,resp,len);
 }
 
 void MifareDesfireGetInformation(){
@@ -556,19 +570,16 @@ void MifareDES_Auth2(uint32_t arg0, uint8_t *datain){
 }
 
 void OnSuccess(){
-	// transmit a DESELECT COMMAND for Desfire. 
-	ReaderTransmit(deselect_cmd, 3 , NULL);
-	// reset the pcb_blocknum,
 	pcb_blocknum = 0;
+	ReaderTransmit(deselect_cmd, 3 , NULL);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
 
 void OnError(){
-	cmd_send(CMD_ACK,0,0,0,0,0);
-	ReaderTransmit(deselect_cmd, 3 , NULL);
-	// reset the pcb_blocknum,
 	pcb_blocknum = 0;
+	ReaderTransmit(deselect_cmd, 3 , NULL);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	cmd_send(CMD_ACK,0,0,0,0,0);
 	LEDsoff();
 }

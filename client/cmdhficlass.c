@@ -97,7 +97,7 @@ int CmdHFiClassList(const char *Cmd)
 			first_timestamp = timestamp;
 		}
 
-		// Break and stick with current result if buffer was not completely full
+        // Break and stick with current result idf buffer was not completely full
 		if (frame[0] == 0x44 && frame[1] == 0x44 && frame[2] == 0x44 && frame[3] == 0x44) break;
 
 		char line[1000] = "";
@@ -437,7 +437,7 @@ int CmdHFiClassReader_Replay(const char *Cmd)
     PrintAndLog("Usage:  hf iclass replay <MAC>");
     PrintAndLog("        sample: hf iclass replay 00112233");
 	return 0;
-  }	
+  }
 
   if (param_gethex(Cmd, 0, MAC, 8)) {
     PrintAndLog("MAC must include 8 HEX symbols");
@@ -477,11 +477,12 @@ int CmdHFiClassReader_Dump(const char *Cmd)
     return 0;
   }
 
-  if (param_gethex(Cmd, 0, KEY, 16)) {
+  if (param_gethex(Cmd, 0, KEY, 16)) 
+  {
     PrintAndLog("KEY must include 16 HEX symbols");
     return 1;
   }
-  
+
   if (param_getchar(Cmd, 1) == 'e')
   {
     PrintAndLog("Elite switch on");
@@ -593,7 +594,7 @@ int CmdHFiClass_iso14443A_write(const char *Cmd)
   if (blockNo>32)
   {
         PrintAndLog("Error: Maximum number of blocks is 32 for iClass 2K Cards!");
-    return 1;
+        return 1;
   }
   if (param_gethex(Cmd, 2, bldata, 8)) 
   {
@@ -649,7 +650,10 @@ static command_t CommandTable[] =
   {"list",    CmdHFiClassList,   0, "List iClass history"},
   {"snoop",   CmdHFiClassSnoop,  0, "Eavesdrop iClass communication"},
   {"sim",     CmdHFiClassSim,    0, "Simulate iClass tag"},
-  {"reader",  CmdHFiClassReader, 0, "Read an iClass tag"},
+  {"reader",CmdHFiClassReader,	0,	"Read an iClass tag"},
+  {"replay",CmdHFiClassReader_Replay,	0,	"Read an iClass tag via Reply Attack"},
+  {"dump",	CmdHFiClassReader_Dump,	0,		"Authenticate and Dump iClass tag"},
+  {"write",	CmdHFiClass_iso14443A_write,	0,	"Authenticate and Write iClass block"},
   {"replay",  CmdHFiClassReader_Replay, 0, "Read an iClass tag via Reply Attack"},
   {"dump",	  CmdHFiClassReader_Dump, 0, "Authenticate and Dump iClass tag"},
   {"write",	CmdHFiClass_iso14443A_write,	0,	"Authenticate and Write iClass block"},

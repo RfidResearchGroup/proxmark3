@@ -47,6 +47,7 @@
 // different initial value (CRC_ICLASS)
 #include "../common/iso14443crc.h"
 #include "../common/iso15693tools.h"
+#include "iso15693tools.h"
 
 
 static int timeout = 4096;
@@ -1514,23 +1515,23 @@ void ReaderIClass(uint8_t arg0) {
     {
         WDT_HIT();
 
-		// Send act_all
-		ReaderTransmitIClass(act_all, 1);
-		// Card present?
-		if(ReaderReceiveIClass(resp)) {
+        // Send act_all
+        ReaderTransmitIClass(act_all, 1);
+        // Card present?
+        if(ReaderReceiveIClass(resp)) {
 
-			ReaderTransmitIClass(identify, 1);
+            ReaderTransmitIClass(identify, 1);
 
-			if(ReaderReceiveIClass(resp) == 10) {
+            if(ReaderReceiveIClass(resp) == 10) {
                 //Copy the Anti-collision CSN to our select-packet
-				memcpy(&select[1],resp,8);
+                memcpy(&select[1],resp,8);
                 //Dbprintf("Anti-collision CSN: %02x %02x %02x %02x %02x %02x %02x %02x",resp[0], resp[1], resp[2],
                 //        resp[3], resp[4], resp[5],
                 //        resp[6], resp[7]);
                 //Select the card
-				ReaderTransmitIClass(select, sizeof(select));
+                ReaderTransmitIClass(select, sizeof(select));
 
-				if(ReaderReceiveIClass(resp) == 10) {
+                if(ReaderReceiveIClass(resp) == 10) {
                     //Save CSN in response data
                     memcpy(card_data,resp,8);
                     datasize += 8;
@@ -1569,7 +1570,7 @@ void ReaderIClass(uint8_t arg0) {
             break;
         }
     }
-	LED_A_OFF();
+    LED_A_OFF();
 }
 
 void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
@@ -1580,7 +1581,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	uint8_t check[]       = { 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	uint8_t read[]        = { 0x0c, 0x00, 0x00, 0x00 };
 	
-        uint16_t crc = 0;
+    uint16_t crc = 0;
 	uint8_t cardsize=0;
 	bool read_success=false;
 	uint8_t mem=0;
@@ -1814,7 +1815,7 @@ void IClass_iso14443A_write(uint8_t arg0, uint8_t blockNo, uint8_t *data, uint8_
 				memcpy(write+10,mac,4);
 				while(!send_success){
 				  ReaderTransmitIClass(write, sizeof(write));
-				      if(ReaderReceiveIClass(resp) == 10) {
+				  if(ReaderReceiveIClass(resp) == 10) {
 				    write_success=true;
 				}
 			}//
