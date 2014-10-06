@@ -454,7 +454,7 @@ lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
 
 	odd = lfsr_prefix_ks(ks, 1);
 	even = lfsr_prefix_ks(ks, 0);
-
+	
 	s = statelist = malloc((sizeof *statelist) << 20);
 	if(!s || !odd || !even) {
 		free(statelist);

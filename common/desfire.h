@@ -1,9 +1,10 @@
 #ifndef __DESFIRE_H
 #define __DESFIRE_H
 
+#include <string.h>
+#include <stdarg.h>
+
 #include "aes.h"
-#define DESFIRE(tag) ((struct desfire_tag *) tag)
-#define DESFIRE_KEY(key) ((struct desfire_key *) key)
 
 #define MAX_CRYPTO_BLOCK_SIZE 16
 /* Mifare DESFire EV1 Application crypto operations */
@@ -65,8 +66,9 @@ enum DESFIRE_CRYPTOALGO {
 	T_AES = 0x03
 };
 
-struct desfire_key {
 
+#define DESFIRE_KEY(key) ((struct desfire_key *) key)
+struct desfire_key {
     enum DESFIRE_CRYPTOALGO type;
     uint8_t data[24];
     // DES_key_schedule ks1;
@@ -77,9 +79,9 @@ struct desfire_key {
     uint8_t cmac_sk2[24];
     uint8_t aes_version;
 };
-
 typedef struct desfire_key *desfirekey_t;
 
+#define DESFIRE(tag) ((struct desfire_tag *) tag)
 struct desfire_tag {
     iso14a_card_select_t info;
     int active;

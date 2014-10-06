@@ -16,8 +16,8 @@
  * 
  * $Id$
  */
-
- #include "desfire_key.h"
+#include <stdlib.h>
+#include "desfire_key.h"
 
 static inline void update_key_schedules (desfirekey_t key);
 
@@ -29,67 +29,68 @@ static inline void update_key_schedules (desfirekey_t key) {
     // }
 }
 
-desfirekey_t Desfire_des_key_new (const uint8_t value[8]) {
+void Desfire_des_key_new (const uint8_t value[8], desfirekey_t key) {
     uint8_t data[8];
     memcpy (data, value, 8);
     for (int n=0; n < 8; n++)
         data[n] &= 0xfe;
-    return Desfire_des_key_new_with_version (data);
+    Desfire_des_key_new_with_version (data, key);
 }
 
-desfirekey_t Desfire_des_key_new_with_version (const uint8_t value[8]) {
-    desfirekey_t key = NULL;
-	key->type = T_DES;
-	memcpy (key->data, value, 8);
-	memcpy (key->data+8, value, 8);
-	update_key_schedules (key);
-    return key;
+void Desfire_des_key_new_with_version (const uint8_t value[8], desfirekey_t key) {
+	if ( key != NULL) {
+		key->type = T_DES;
+		memcpy (key->data, value, 8);
+		memcpy (key->data+8, value, 8);
+		update_key_schedules (key);
+	}
 }
 
-desfirekey_t Desfire_3des_key_new (const uint8_t value[16]) {
+void Desfire_3des_key_new (const uint8_t value[16], desfirekey_t key) {
     uint8_t data[16];
     memcpy (data, value, 16);
     for (int n=0; n < 8; n++)
         data[n] &= 0xfe;
     for (int n=8; n < 16; n++)
         data[n] |= 0x01;
-    return Desfire_3des_key_new_with_version (data);
+    Desfire_3des_key_new_with_version (data, key);
 }
 
-desfirekey_t Desfire_3des_key_new_with_version (const uint8_t value[16]) {
-    desfirekey_t key = NULL;
-	key->type = T_3DES;
-	memcpy (key->data, value, 16);
-	update_key_schedules (key);
-    return key;
+void Desfire_3des_key_new_with_version (const uint8_t value[16], desfirekey_t key) {
+    if ( key != NULL ){
+		key->type = T_3DES;
+		memcpy (key->data, value, 16);
+		update_key_schedules (key);
+	}
 }
 
-desfirekey_t Desfire_3k3des_key_new (const uint8_t value[24]) {
+void Desfire_3k3des_key_new (const uint8_t value[24], desfirekey_t key) {
     uint8_t data[24];
     memcpy (data, value, 24);
     for (int n=0; n < 8; n++)
         data[n] &= 0xfe;
-    return Desfire_3k3des_key_new_with_version (data);
+    Desfire_3k3des_key_new_with_version (data, key);
 }
 
-desfirekey_t Desfire_3k3des_key_new_with_version (const uint8_t value[24]) {
-    desfirekey_t key = NULL;
-    key->type = T_3K3DES;
-    memcpy (key->data, value, 24);
-    update_key_schedules (key);
-    return key;
+void Desfire_3k3des_key_new_with_version (const uint8_t value[24], desfirekey_t key) {
+	if ( key != NULL){
+		key->type = T_3K3DES;
+		memcpy (key->data, value, 24);
+		update_key_schedules (key);
+	}
 }
 
-desfirekey_t Desfire_aes_key_new (const uint8_t value[16]) {
-    return Desfire_aes_key_new_with_version (value, 0);
+ void Desfire_aes_key_new (const uint8_t value[16], desfirekey_t key) {
+    Desfire_aes_key_new_with_version (value, 0, key);
 }
 
-desfirekey_t Desfire_aes_key_new_with_version (const uint8_t value[16], uint8_t version) {
-    desfirekey_t key = NULL;
-	memcpy (key->data, value, 16);
-	key->type = T_AES;
-	key->aes_version = version;
-    return key;
+ void Desfire_aes_key_new_with_version (const uint8_t value[16], uint8_t version, desfirekey_t key) {
+
+	if (key != NULL) {
+		memcpy (key->data, value, 16);
+		key->type = T_AES;
+		key->aes_version = version;
+	}
 }
 
 uint8_t Desfire_key_get_version (desfirekey_t key) {
@@ -98,7 +99,6 @@ uint8_t Desfire_key_get_version (desfirekey_t key) {
     for (int n = 0; n < 8; n++) {
         version |= ((key->data[n] & 1) << (7 - n));
     }
-
     return version;
 }
 
@@ -118,9 +118,7 @@ void Desfire_key_set_version (desfirekey_t key, uint8_t version)
     }
 }
 
-desfirekey_t Desfire_session_key_new (const uint8_t rnda[], const uint8_t rndb[], desfirekey_t authkey) {
-
-    desfirekey_t key = NULL;
+void Desfire_session_key_new (const uint8_t rnda[], const uint8_t rndb[], desfirekey_t authkey, desfirekey_t key) {
 
     uint8_t buffer[24];
 
@@ -128,14 +126,14 @@ desfirekey_t Desfire_session_key_new (const uint8_t rnda[], const uint8_t rndb[]
     case T_DES:
         memcpy (buffer, rnda, 4);
         memcpy (buffer+4, rndb, 4);
-        key = Desfire_des_key_new_with_version (buffer);
+        Desfire_des_key_new_with_version (buffer, key);
         break;
     case T_3DES:
         memcpy (buffer, rnda, 4);
         memcpy (buffer+4, rndb, 4);
         memcpy (buffer+8, rnda+4, 4);
         memcpy (buffer+12, rndb+4, 4);
-        key = Desfire_3des_key_new_with_version (buffer);
+        Desfire_3des_key_new_with_version (buffer, key);
         break;
     case T_3K3DES:
         memcpy (buffer, rnda, 4);
@@ -144,15 +142,14 @@ desfirekey_t Desfire_session_key_new (const uint8_t rnda[], const uint8_t rndb[]
         memcpy (buffer+12, rndb+6, 4);
         memcpy (buffer+16, rnda+12, 4);
         memcpy (buffer+20, rndb+12, 4);
-        key = Desfire_3k3des_key_new (buffer);
+        Desfire_3k3des_key_new (buffer, key);
         break;
     case T_AES:
         memcpy (buffer, rnda, 4);
         memcpy (buffer+4, rndb, 4);
         memcpy (buffer+8, rnda+12, 4);
         memcpy (buffer+12, rndb+12, 4);
-        key = Desfire_aes_key_new (buffer);
+        Desfire_aes_key_new (buffer, key);
         break;
     }
-    return key;
 }

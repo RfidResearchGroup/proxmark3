@@ -14,12 +14,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <sys/types.h>
-
 #include <stdlib.h>
+#include <sys/types.h>
 #include <string.h>
 #include <strings.h>
-
 
 #include "../include/common.h"
 #include "../include/hitag2.h"
@@ -27,14 +25,10 @@
 
 //#include <openssl/des.h>
 //#include <openssl/aes.h>
-
 //#include "des.h"
 //#include "aes.h"
 #include "../common/desfire.h"
 #include "../common/crc32.h"
-//#include "desfire_crypto.h"
-//#include "desfire_key.h"
-
 
 // The large multi-purpose buffer, typically used to hold A/D samples,
 // maybe processed in some way.
@@ -156,6 +150,7 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
 void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMode);
 void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode );
 void T55xxReadTrace(void);
+void TurnReadLFOn();
 int DemodPCF7931(uint8_t **outBlocks);
 int IsBlock0PCF7931(uint8_t *Block);
 int IsBlock1PCF7931(uint8_t *Block);
@@ -209,30 +204,17 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 
 // mifaredesfire.h
-bool 		InitDesfireCard();
-void		MifareSendCommand(uint8_t arg0,uint8_t arg1, uint8_t *datain);
-void 		MifareDesfireGetInformation();
-void 		MifareDES_Auth1(uint8_t arg0,uint8_t arg1,uint8_t arg2, uint8_t *datain);
-void 		MifareDES_Auth2(uint32_t arg0, uint8_t *datain);
-int 		mifare_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData);
-void 		ReaderMifareDES(uint32_t param, uint32_t param2, uint8_t * datain);
-int 		DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout);
-size_t		CreateAPDU( uint8_t *datain, size_t len, uint8_t *dataout);
-void 		OnSuccess();
-void 		OnError();
+bool 	InitDesfireCard();
+void	MifareSendCommand(uint8_t arg0,uint8_t arg1, uint8_t *datain);
+void 	MifareDesfireGetInformation();
+void 	MifareDES_Auth1(uint8_t arg0,uint8_t arg1,uint8_t arg2, uint8_t *datain);
+void 	ReaderMifareDES(uint32_t param, uint32_t param2, uint8_t * datain);
+int 	DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout);
+size_t	CreateAPDU( uint8_t *datain, size_t len, uint8_t *dataout);
+void 	OnSuccess();
+void 	OnError();
 
-// desfire_key.h
-desfirekey_t 		Desfire_des_key_new (const uint8_t value[8]);
-desfirekey_t 		Desfire_3des_key_new (const uint8_t value[16]);
-desfirekey_t 		Desfire_des_key_new_with_version (const uint8_t value[8]);
-desfirekey_t 		Desfire_3des_key_new_with_version (const uint8_t value[16]);
-desfirekey_t 		Desfire_3k3des_key_new (const uint8_t value[24]);
-desfirekey_t 		Desfire_3k3des_key_new_with_version (const uint8_t value[24]);
-desfirekey_t 		Desfire_aes_key_new (const uint8_t value[16]);
-desfirekey_t 		Desfire_aes_key_new_with_version (const uint8_t value[16], uint8_t version);
-uint8_t          	Desfire_key_get_version (desfirekey_t key);
-void             	Desfire_key_set_version (desfirekey_t key, uint8_t version);
-desfirekey_t 		Desfire_session_key_new (const uint8_t rnda[], const uint8_t rndb[], desfirekey_t authkey);
+
 
 // desfire_crypto.h
 void	*mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes, off_t offset, int communication_settings);
@@ -245,8 +227,6 @@ size_t  maced_data_length (const desfirekey_t  key, const size_t nbytes);
 size_t  enciphered_data_length (const desfiretag_t tag, const size_t nbytes, int communication_settings);
 void    cmac_generate_subkeys (desfirekey_t key);
 void    cmac (const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
-
-
 
 
 /// iso15693.h

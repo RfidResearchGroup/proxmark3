@@ -18,8 +18,8 @@
 #include "util.h"
 #include "printf.h"
 #include "string.h"
-
 #include <stdarg.h>
+
 
 #include "legicrf.h"
 #include "../include/hitag2.h"
@@ -842,7 +842,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			MifareDES_Auth1(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
 		case CMD_MIFARE_DESFIRE_AUTH2:
-			MifareDES_Auth2(c->arg[0],c->d.asBytes);
+			//MifareDES_Auth2(c->arg[0],c->d.asBytes);
 			break;
 		// case CMD_MIFARE_DES_READER:
 			// ReaderMifareDES(c->arg[0], c->arg[1], c->d.asBytes);

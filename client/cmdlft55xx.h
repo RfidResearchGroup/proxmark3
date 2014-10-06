@@ -17,5 +17,9 @@ int CmdReadBlkPWD(const char *Cmd);
 int CmdWriteBlk(const char *Cmd);
 int CmdWriteBLkPWD(const char *Cmd);
 int CmdReadTrace(const char *Cmd);
-
+int CmdInfo(const char *Cmd);
+char * GetBitRateStr(uint32_t id);
+char * GetSaferStr(uint32_t id);
+char * GetModulationStr( uint32_t id);
+uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bitstream);
 #endif

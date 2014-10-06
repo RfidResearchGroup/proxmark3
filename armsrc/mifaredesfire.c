@@ -45,7 +45,7 @@ enum  {
  NONE		= 	0x00,
  INIT 		=	0x01,
  DISCONNECT =	0x02,
- FOO		= 	0x04,
+ CLEARTRACE	= 	0x04,
  BAR		= 	0x08,
 } CmdOptions ;
 
@@ -53,7 +53,7 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 	
 	/* ARG0 contains flags.
 		0x01 = init card.
-		0x02 = No Disconnect
+		0x02 = Disconnect
 		0x03
 	*/
 	uint8_t flags = arg0;
@@ -67,17 +67,21 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 		print_result(" RX    : ", datain, datalen);
 	}
 	
+	if ( flags & CLEARTRACE ){
+		iso14a_clear_trace();
+	}
+	
 	if ( flags & INIT ){
 		if ( !InitDesfireCard() )
 			return;
 	}
 	
 	int len = DesfireAPDU(datain, datalen, resp);
-	print_result(" <--: ", resp, len);	
-	if ( !len ) {
 		if (MF_DBGLEVEL >= 4) {
 			print_result("ERR <--: ", resp, len);	
 		}
+
+	if ( !len ) {
 		OnError();
 		return;
 	}
@@ -85,8 +89,9 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 	// reset the pcb_blocknum,
 	pcb_blocknum = 0;
 	
-	if ( flags & DISCONNECT )
+	if ( flags & DISCONNECT ){
 		OnSuccess();
+	}
 	
 	cmd_send(CMD_ACK,1,len,0,resp,len);
 }
@@ -178,87 +183,28 @@ void MifareDesfireGetInformation(){
 
 void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain){
 
-	uint8_t null_key_data[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	//uint8_t new_key_data[8]  = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77 };
-	int res = 0;
-	
-	desfirekey_t default_key = Desfire_des_key_new_with_version (null_key_data);
-
-	// res = Desfire_select_application (tags[i], aid);
-	if (res < 0) {
-		print_result("default key: ", default_key->data, 24 );
-		return;
-	}
-				
-	return;
-	//                pcb  cid  cmd               key   crc1  cr2   	
-	//uint8_t cmd2[] = {0x02,0x00,GET_KEY_VERSION, 0x00, 0x00, 0x00 };
+	int len = 0;
+	//uint8_t PICC_MASTER_KEY8[8] = { 0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47};
+	uint8_t PICC_MASTER_KEY16[16] = { 0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4a,0x4b,0x4c,0x4d,0x4e,0x4f };
+	//uint8_t null_key_data8[8] = {0x00};
+	//uint8_t null_key_data16[16] = {0x00};	
+	//uint8_t new_key_data8[8]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77};
+	//uint8_t new_key_data16[16]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF};
 
 	//uint8_t* bigbuffer = mifare_get_bigbufptr();
-	byte_t isOK = 1;
-	uint8_t resp[256];
-	uint8_t key[24];
-	uint8_t IV[16];
+	uint8_t resp[256] = {0x00};
+	uint8_t IV[16] = {0x00};
+
+	size_t datalen = datain[0];
 	
-	// första byten håller keylength.
-	uint8_t keylen = datain[0];
-	memcpy(key, datain+1, keylen);
-	
-	if (MF_DBGLEVEL >= 1) {
-		
-		Dbprintf("MODE: %d", mode);
-		Dbprintf("ALGO: %d", algo);
-		Dbprintf("KEYNO: %d", keyno);
-		Dbprintf("KEYLEN: %d", keylen);
-		
-		print_result("KEY", key, keylen);
-	}
-	
-	// card select - information
-	byte_t buf[USB_CMD_DATA_SIZE];
-	iso14a_card_select_t *card = (iso14a_card_select_t*)buf;
-	
-	// test of DES on ARM side.
-	/* 
-	if ( mode == 1){
-		uint8_t IV[8];
-		uint8_t plain[16];
-		uint8_t encData[16];
+	uint8_t cmd[40] = {0x00};
+	uint8_t encRndB[16] = {0x00};
+	uint8_t decRndB[16] = {0x00};
+	uint8_t nonce[16] = {0x00};
+	uint8_t both[32] = {0x00};
+	uint8_t encBoth[32] = {0x00};
 
-		uint8_t tmpData[8];
-		uint8_t tmpPlain[8];
-		
-		memset(IV, 0, 8);
-		memset(tmpData, 0 ,8);
-		memset(tmpPlain,0 ,8);
-		memcpy(key, datain, 8);
-		memcpy(plain, datain+30, 16);
-		
-		for(uint8_t i=0; i< sizeof(plain); i=i+8 ){
-		
-			memcpy(tmpPlain, plain+i, 8);
-			des_enc( &tmpData, &tmpPlain, &key);
-			memcpy(encData+i, tmpData, 8);
-		}
-	}
-*/
-
-	iso14a_clear_trace();
-
-	iso14a_set_tracing(TRUE);
-
-	// power up the field
-	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
-	// select the card
-	isOK = iso14443a_select_card(resp, card, NULL);
-	if (isOK != 1) {
-		if (MF_DBGLEVEL >= 1) {
-			Dbprintf("CAN'T SELECT CARD, SOMETHING WENT WRONG BEFORE AUTH");
-		}
-		OnError();
-		return;
-	}
+	InitDesfireCard();
 
 	LED_A_ON();
 	LED_B_OFF();
@@ -279,82 +225,78 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 			//SendDesfireCommand(AUTHENTICATE_ISO, &keyno, resp);
 			break;
 		case 3:{
+		
+			//defaultkey
+			uint8_t keybytes[16];
+			if (datain[1] == 0xff){
+				memcpy(keybytes,PICC_MASTER_KEY16,16); 
+			} else{
+				memcpy(keybytes, datain+1, datalen);
+			}
+			
+			struct desfire_key defaultkey = {0};
+			desfirekey_t key = &defaultkey;
+			Desfire_aes_key_new( keybytes, key);
+		
 			AesCtx ctx;
-			if ( AesCtxIni(&ctx, IV, key, KEY128, CBC) < 0 ){
-				if (MF_DBGLEVEL >= 1) {
+			if ( AesCtxIni(&ctx, IV, key->data, KEY128, CBC) < 0 ){
+				if( MF_DBGLEVEL >= 4) {
 					Dbprintf("AES context failed to init");
 				}
 				OnError();
 				return;
 			}
-			uint8_t real_cmd[6];
-			real_cmd[0] = 0x90;
-			real_cmd[1] = 0x02;
-			real_cmd[2] = AUTHENTICATE_AES;
-			real_cmd[3] = keyno;
 			
-			AppendCrc14443a(real_cmd, 4);
-			ReaderTransmit(real_cmd, sizeof(real_cmd), NULL);
-	
-			int len = ReaderReceive(resp);
-			if(!len) {
-				OnError();
-				return;
-			}
-
-			print_result("RX:", resp, len);
-   
-			enum DESFIRE_STATUS status = resp[1];
-			if ( status != ADDITIONAL_FRAME) {
+			cmd[0] = AUTHENTICATE_AES;
+			cmd[1] = 0x00;  //keynumber
+			len = DesfireAPDU(cmd, 2, resp);
+			if ( !len ) {
+				if (MF_DBGLEVEL >= 1) {
+					DbpString("Authentication failed. Card timeout.");
+				}
 				OnError();
 				return;
 			}
 			
-			// tags enc nonce
-			uint8_t encRndB[16];
-			uint8_t decRndB[16];
-			uint8_t nonce[16];
-			uint8_t both[32];
-			uint8_t encBoth[32];
-
-			memset(nonce, 0, 16);
-			memcpy( encRndB, resp+2, 16);
-
+			memcpy( encRndB, resp+3, 16);
+		
 			// dekryptera tagnonce.
 			AesDecrypt(&ctx, encRndB, decRndB, 16);
-			
 			rol(decRndB,16);
-			
 			memcpy(both, nonce,16);
 			memcpy(both+16, decRndB ,16 );
-
 			AesEncrypt(&ctx, both, encBoth, 32 );
-
-			uint8_t real_cmd_A[36];
-			real_cmd_A[0] = 0x03;
-			real_cmd_A[1] = ADDITIONAL_FRAME;
 			
-			memcpy(real_cmd_A+2, encBoth, sizeof(encBoth) );
-			AppendCrc14443a(real_cmd_A, 34);
-			ReaderTransmit(real_cmd_A, sizeof(real_cmd_A), NULL);
-		
-			len = ReaderReceive(resp);
-
-			print_result("Auth1a ", resp, 36);
+			cmd[0] = ADDITIONAL_FRAME;
+			memcpy(cmd+1, encBoth, 32 );
 			
-			status = resp[1];
-			if ( status != OPERATION_OK)	{
-				Dbprintf("Cmd Error: %02x  Len: %d", status,len);
+			len = DesfireAPDU(cmd, 33, resp);  // 1 + 32 == 33
+			if ( !len ) {
+				if (MF_DBGLEVEL >= 1) {
+					DbpString("Authentication failed. Card timeout.");
+				}
+                OnError();
+				return;
+			}
+			
+			if ( resp[2] == 0x00 ){
+				// Create AES Session key		
+				struct desfire_key sessionKey = {0};
+				desfirekey_t skey = &sessionKey;
+				Desfire_session_key_new( nonce, decRndB , key, skey );
+				print_result("SESSION : ", skey->data, 16);
+			} else {
+				DbpString("Authetication failed.");
 				OnError();
 				return;
 			}
-				
-				break;
-			}
 			
+			break;
+		}	
 	}
 	
-	OnSuccess(resp);
+	OnSuccess();
+	cmd_send(CMD_ACK,1,len,0,resp,len);
 }
 
 // 3 olika ISO sätt att skicka data till DESFIRE (direkt, inkapslat, inkapslat ISO)
@@ -365,7 +307,7 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 
 	uint32_t status = 0;
 	size_t wrappedLen = 0;
-	uint8_t wCmd[USB_CMD_DATA_SIZE];
+	uint8_t wCmd[USB_CMD_DATA_SIZE] = {0};
 	
 	wrappedLen = CreateAPDU( cmd, cmd_len, wCmd);
 	
@@ -376,7 +318,10 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 
 	status = ReaderReceive(dataout);
 	
-	if(!status){
+	if( status == 0x00){
+		if (MF_DBGLEVEL >= 4) {
+			Dbprintf("fukked");
+		}
 		return FALSE; //DATA LINK ERROR
 	}
 	// if we received an I- or R(ACK)-Block with a block number equal to the
@@ -411,163 +356,10 @@ size_t CreateAPDU( uint8_t *datain, size_t len, uint8_t *dataout){
 	return cmdlen;
 }
 
-			// crc_update(&desfire_crc32, 0, 1); /* CMD_WRITE */
-			// crc_update(&desfire_crc32, addr, addr_sz);
-			// crc_update(&desfire_crc32, byte, 8);
-			// uint32_t crc = crc_finish(&desfire_crc32);
-			
-
-	/* Version
-	
-	//uint8_t versionCmd1[] = {0x02, 0x60};
-	//uint8_t versionCmd2[] = {0x03, 0xaf};
-	//uint8_t versionCmd3[] = {0x02, 0xaf};
-
-    // AUTH 1  -  CMD: 0x02, 0x0A, 0x00  = Auth
-	// 0x02 = status byte för simpla svar?!? 
-	// 0x0a = krypto typ
-	// 0x00 = key nr
-	//uint8_t initAuthCmdDES[]  = {0x02, 0x0a, 0x00};  // DES
-	//uint8_t initAuthCmd3DES[] = {0x02, 0x1a, 0x00};  // 3DES
-	//uint8_t initAuthCmdAES[]  = {0x02, 0xaa, 0x00};  // AES
-	// auth 1 - answer command
-	// 0x03 = status byte för komplexa typer?
-	// 0xaf = additional frame
-	// LEN = 1+1+32+2 = 36
-	//uint8_t answerAuthCmd[34] = {0x03, 0xaf}; 
-
-	// Lägg till CRC
-	//AppendCrc14443a(versionCmd1,sizeof(versionCmd1));
-*/
-
-	// Sending commands
-	/*ReaderTransmit(versionCmd1,sizeof(versionCmd1)+2, NULL);
-	len = ReaderReceive(buffer);
-	print_result("Get Version 3", buffer, 9);
-	*/
-	
-	// for( int i = 0; i < 8; i++){
-		// // Auth 1 - Request authentication
-		// ReaderTransmit(initAuthCmdAES,sizeof(initAuthCmdAES)+2, NULL);
-		// //len = ReaderReceive(buffer);
-
-		// // 0xAE =  authentication error
-		// if (buffer[1] == 0xae)	{
-				// Dbprintf("Cmd Error: %02x", buffer[1]);
-				// OnError();
-				// return;
-		// }
-
-		// // tags enc nonce
-		// memcpy(encRndB, buffer+2, 16);
-
-		// // dekryptera svaret från tag.
-		// AesDecrypt(&ctx, encRndB, decRndB, 16);
-
-		// rol8(decRndB,16);
-		// memcpy(RndARndB, RndA,16);
-		// memcpy(RndARndB+16, decRndB ,16 );
-
-		// AesEncrypt(&ctx, RndARndB, encRndARndB, 32 );
-
-		// memcpy(answerAuthCmd+2, encRndARndB, 32);
- 		// AppendCrc14443a(answerAuthCmd,sizeof(answerAuthCmd));
-	
-		// ReaderTransmit(answerAuthCmd,sizeof(answerAuthCmd)+2, NULL);
-
-		// len = ReaderReceive(buffer);
-
-		// print_result("Auth1a ", buffer, 8);
-		// Dbprintf("Rx len: %02x", len);
-
-		// if (buffer[1] == 0xCA)	{
-				// Dbprintf("Cmd Error: %02x  Len: %d", buffer[1],len);
-				// cmd_send(CMD_ACK,0,0,0,0,0);
-				// key[1] = i;
-				// AesCtxIni(&ctx, iv, key, KEY128, CBC);
-		// }
-	// }
-
-	//des_dec(decRndB, encRndB, key);
-	
-    //Do crypto magic
-	/*
-    DES_ede2_cbc_encrypt(e_RndB,RndB,sizeof(e_RndB),&ks1,&ks2,&iv,0);
-    memcpy(RndARndB,RndA,8);
-    memcpy(RndARndB+8,RndB,8);
-    PrintAndLog("     RA+B:%s",sprint_hex(RndARndB, 16));
-    DES_ede2_cbc_encrypt(RndARndB,RndARndB,sizeof(RndARndB),&ks1,&ks2,&e_RndB,1);
-    PrintAndLog("enc(RA+B):%s",sprint_hex(RndARndB, 16));
-    */
-
-
-int mifare_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData){
-	
-	uint8_t* buffer = mifare_get_bigbufptr();
-	uint8_t dcmd[19];
-    
-	dcmd[0] = 0xAF;
-    memcpy(dcmd+1,key,16);
-	AppendCrc14443a(dcmd, 17);
-	
-
-	ReaderTransmit(dcmd, sizeof(dcmd), NULL);
-	int len = ReaderReceive(buffer);
-	if(!len) {
-          if (MF_DBGLEVEL >= 1)   Dbprintf("Authentication failed. Card timeout.");
-          len = ReaderReceive(buffer);
-    }
-    
-	if(len==1)	{
-        if (MF_DBGLEVEL >= 1) {
-			Dbprintf("NAK - Authentication failed.");
-			Dbprintf("Cmd Error: %02x", buffer[0]);
-		}
-		return 1;
-	}
-
-	if (len == 11){
-		if (MF_DBGLEVEL >= 1) {
-			Dbprintf("Auth2 Resp: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-					  buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],
-					  buffer[5],buffer[6],buffer[7],buffer[8],buffer[9],
-					  buffer[10]);
-		}
-		return 0;
-	}
-	return 1;
-}
-
-void MifareDES_Auth2(uint32_t arg0, uint8_t *datain){
-
-	return;
-	uint32_t cuid = arg0;
-	uint8_t key[16];
-
-	byte_t isOK = 0;
-	byte_t dataoutbuf[16];
-	
-    memset(key, 0, 16);
-	memcpy(key, datain, 16);
-    
-	LED_A_ON();
-	LED_B_OFF();
-	LED_C_OFF();
-
-	if(mifare_des_auth2(cuid, key, dataoutbuf)){
-	    if (MF_DBGLEVEL >= 1) Dbprintf("Authentication part2: Fail...");    
-	}
-	isOK=1;
-	if (MF_DBGLEVEL >= 2)	DbpString("AUTH 2 FINISHED");
-    
-	LED_B_ON();
-    cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,11);
-	LED_B_OFF();
-    
-    // Thats it...
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	LEDsoff();
-}
+	// crc_update(&desfire_crc32, 0, 1); /* CMD_WRITE */
+	// crc_update(&desfire_crc32, addr, addr_sz);
+	// crc_update(&desfire_crc32, byte, 8);
+	// uint32_t crc = crc_finish(&desfire_crc32);
 
 void OnSuccess(){
 	pcb_blocknum = 0;

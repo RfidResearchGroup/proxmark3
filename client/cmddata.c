@@ -74,12 +74,14 @@ int Cmdaskdemod(const char *Cmd)
   int i;
   int c, high = 0, low = 0;
 
-  // TODO: complain if we do not give 2 arguments here !
-  // (AL - this doesn't make sense! we're only using one argument!!!)
   sscanf(Cmd, "%i", &c);
 
-  /* Detect high and lows and clock */
-  // (AL - clock???)
+  if (c != 0 && c != 1) {
+    PrintAndLog("Invalid argument: %s", Cmd);
+    return 0;
+  }
+  
+  /* Detect high and lows */
   for (i = 0; i < GraphTraceLen; ++i)
   {
     if (GraphBuffer[i] > high)
@@ -87,11 +89,7 @@ int Cmdaskdemod(const char *Cmd)
     else if (GraphBuffer[i] < low)
       low = GraphBuffer[i];
   }
-  if (c != 0 && c != 1) {
-    PrintAndLog("Invalid argument: %s", Cmd);
-    return 0;
-  }
-
+  
   if (GraphBuffer[0] > 0) {
     GraphBuffer[0] = 1-c;
   } else {

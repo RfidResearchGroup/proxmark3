@@ -8,7 +8,7 @@
 
 #include "../common/iso14443crc.h"
 #include "iso14443a.h"
-#include "crapto1.h"
+#include "desfire_key.h"
 #include "mifareutil.h"
 #include "../include/common.h"
 

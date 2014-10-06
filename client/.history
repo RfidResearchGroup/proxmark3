@@ -1,0 +1,8 @@
+hw tune
+lf read
+data plot
+data sample 4000
+lf t55xx rd 0
+lf t55xx trac
+lf t55xx rd 1
+lf t55xx rd 2

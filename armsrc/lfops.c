@@ -31,8 +31,10 @@ void LFSetupFPGAForADC(int divisor, bool lf_field)
 
 	// Connect the A/D to the peak-detected low-frequency path.
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+	
 	// Give it a bit of time for the resonant antenna to settle.
-	SpinDelay(50);
+	SpinDelay(150);
+	
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
 	FpgaSetupSsc();
 }
@@ -1090,14 +1092,14 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
  */
 
 /* T55x7 configuration register definitions */
-#define T55x7_POR_DELAY			0x00000001
-#define T55x7_ST_TERMINATOR		0x00000008
-#define T55x7_PWD			0x00000010
+#define T55x7_POR_DELAY				0x00000001
+#define T55x7_ST_TERMINATOR			0x00000008
+#define T55x7_PWD					0x00000010
 #define T55x7_MAXBLOCK_SHIFT		5
-#define T55x7_AOR			0x00000200
-#define T55x7_PSKCF_RF_2		0
-#define T55x7_PSKCF_RF_4		0x00000400
-#define T55x7_PSKCF_RF_8		0x00000800
+#define T55x7_AOR					0x00000200
+#define T55x7_PSKCF_RF_2			0
+#define T55x7_PSKCF_RF_4			0x00000400
+#define T55x7_PSKCF_RF_8			0x00000800
 #define T55x7_MODULATION_DIRECT		0
 #define T55x7_MODULATION_PSK1		0x00001000
 #define T55x7_MODULATION_PSK2		0x00002000
@@ -1108,17 +1110,17 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 #define T55x7_MODULATION_FSK2a		0x00007000
 #define T55x7_MODULATION_MANCHESTER	0x00008000
 #define T55x7_MODULATION_BIPHASE	0x00010000
-#define T55x7_BITRATE_RF_8		0
-#define T55x7_BITRATE_RF_16		0x00040000
-#define T55x7_BITRATE_RF_32		0x00080000
-#define T55x7_BITRATE_RF_40		0x000C0000
-#define T55x7_BITRATE_RF_50		0x00100000
-#define T55x7_BITRATE_RF_64		0x00140000
+#define T55x7_BITRATE_RF_8			0
+#define T55x7_BITRATE_RF_16			0x00040000
+#define T55x7_BITRATE_RF_32			0x00080000
+#define T55x7_BITRATE_RF_40			0x000C0000
+#define T55x7_BITRATE_RF_50			0x00100000
+#define T55x7_BITRATE_RF_64			0x00140000
 #define T55x7_BITRATE_RF_100		0x00180000
 #define T55x7_BITRATE_RF_128		0x001C0000
 
 /* T5555 (Q5) configuration register definitions */
-#define T5555_ST_TERMINATOR		0x00000001
+#define T5555_ST_TERMINATOR			0x00000001
 #define T5555_MAXBLOCK_SHIFT		0x00000001
 #define T5555_MODULATION_MANCHESTER	0
 #define T5555_MODULATION_PSK1		0x00000010
@@ -1128,34 +1130,35 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 #define T5555_MODULATION_FSK2		0x00000050
 #define T5555_MODULATION_BIPHASE	0x00000060
 #define T5555_MODULATION_DIRECT		0x00000070
-#define T5555_INVERT_OUTPUT		0x00000080
-#define T5555_PSK_RF_2			0
-#define T5555_PSK_RF_4			0x00000100
-#define T5555_PSK_RF_8			0x00000200
-#define T5555_USE_PWD			0x00000400
-#define T5555_USE_AOR			0x00000800
-#define T5555_BITRATE_SHIFT		12
-#define T5555_FAST_WRITE		0x00004000
-#define T5555_PAGE_SELECT		0x00008000
+#define T5555_INVERT_OUTPUT			0x00000080
+#define T5555_PSK_RF_2				0
+#define T5555_PSK_RF_4				0x00000100
+#define T5555_PSK_RF_8				0x00000200
+#define T5555_USE_PWD				0x00000400
+#define T5555_USE_AOR				0x00000800
+#define T5555_BITRATE_SHIFT			12
+#define T5555_FAST_WRITE			0x00004000
+#define T5555_PAGE_SELECT			0x00008000
 
 /*
  * Relevant times in microsecond
  * To compensate antenna falling times shorten the write times
  * and enlarge the gap ones.
  */
-#define START_GAP 250
-#define WRITE_GAP 160
-#define WRITE_0   144 // 192
-#define WRITE_1   400 // 432 for T55x7; 448 for E5550
+#define START_GAP 30*8 // 10 - 50fc 250
+#define WRITE_GAP 20*8 //  8 - 30fc
+#define WRITE_0   24*8 // 16 - 31fc 24fc 192
+#define WRITE_1   54*8 // 48 - 63fc 54fc 432 for T55x7; 448 for E5550
 
-// VALUES TAKEN FROM EM4x function: SendForward
-//  START_GAP = 440; //(55*8)
-//  WRITE_GAP = 128; //(16*8)
-//  WRITE_1 = 256 32*8; //32 cycles at 125Khz (8us each) 1
-//    //These timings work for 4469/4269/4305 (with the 55*8 above)
-//  WRITE_0 = 23*8 , 9*8  SpinDelayUs(23*8); // (8us each) 0
+//  VALUES TAKEN FROM EM4x function: SendForward
+//  START_GAP = 440;       (55*8) cycles at 125Khz (8us = 1cycle)
+//  WRITE_GAP = 128;       (16*8)
+//  WRITE_1   = 256 32*8;  (32*8) 
 
+//  These timings work for 4469/4269/4305 (with the 55*8 above)
+//  WRITE_0 = 23*8 , 9*8  SpinDelayUs(23*8); 
 
+#define T55xx_SAMPLES_SIZE		12000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
 
 // Write one bit to card
 void T55xxWriteBit(int bit)
@@ -1163,7 +1166,7 @@ void T55xxWriteBit(int bit)
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-	if (bit == 0)
+	if (!bit)
 		SpinDelayUs(WRITE_0);
 	else
 		SpinDelayUs(WRITE_1);
@@ -1174,15 +1177,11 @@ void T55xxWriteBit(int bit)
 // Write one card block in page 0, no lock
 void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 {
-	unsigned int i;
+	uint32_t i = 0;
 
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-
-	// Give it a bit of time for the resonant antenna to settle.
-	// And for the tag to fully power up
-	SpinDelay(150);
+	// Set up FPGA, 125kHz
+	// Wait for config.. (192+8190xPOW)x8 == 67ms
+	LFSetupFPGAForADC(0, true);
 
 	// Now start writting
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1191,11 +1190,11 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 	// Opcode
 	T55xxWriteBit(1);
 	T55xxWriteBit(0); //Page 0
-  if (PwdMode == 1){
-    // Pwd
-    for (i = 0x80000000; i != 0; i >>= 1)
-      T55xxWriteBit(Pwd & i);
-  }
+	if (PwdMode == 1){
+		// Pwd
+		for (i = 0x80000000; i != 0; i >>= 1)
+			T55xxWriteBit(Pwd & i);
+	}
 	// Lock bit
 	T55xxWriteBit(0);
 
@@ -1219,28 +1218,16 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 {
 	uint8_t *dest =  mifare_get_bigbufptr();
-	uint16_t bufferlength = 16000;
+	uint16_t bufferlength = T55xx_SAMPLES_SIZE;
 	uint32_t i = 0;
 
 	// Clear destination buffer before sending the command  0x80 = average.
 	memset(dest, 0x80, bufferlength);
-  
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	
-	// Connect the A/D to the peak-detected low-frequency path.
-	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-	// Now set up the SSC to get the ADC samples that are now streaming at us.
-	FpgaSetupSsc();
-  
-	LED_D_ON();
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-  
-	// Give it a bit of time for the resonant antenna to settle.
-	// And for the tag to fully power up
-	SpinDelay(150);
-  
-	// Now start writting
+
+	// Set up FPGA, 125kHz
+	// Wait for config.. (192+8190xPOW)x8 == 67ms
+	LFSetupFPGAForADC(0, true);
+
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelayUs(START_GAP);
   
@@ -1258,9 +1245,8 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 	for (i = 0x04; i != 0; i >>= 1)
 		T55xxWriteBit(Block & i);
   
-  // Turn field on to read the response
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+	// Turn field on to read the response
+	TurnReadLFOn();
   
 	// Now do the acquisition
 	i = 0;
@@ -1271,43 +1257,28 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			LED_D_OFF();
 			++i;
+			LED_D_OFF();
 			if (i > bufferlength) break;
 		}
 	}
  
 	cmd_send(CMD_ACK,0,0,0,0,0);
-  
-  FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 	LED_D_OFF();
 }
 
 // Read card traceability data (page 1)
 void T55xxReadTrace(void){
 	uint8_t *dest =  mifare_get_bigbufptr();
-	uint16_t bufferlength = 16000;
+	uint16_t bufferlength = T55xx_SAMPLES_SIZE;
 	int i=0;
 	
 	// Clear destination buffer before sending the command 0x80 = average
 	memset(dest, 0x80, bufferlength);  
   
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-		
-	// Connect the A/D to the peak-detected low-frequency path.
-	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-	// Now set up the SSC to get the ADC samples that are now streaming at us.
-	FpgaSetupSsc();
+	LFSetupFPGAForADC(0, true);
   
-	LED_D_ON();
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-  
-	// Give it a bit of time for the resonant antenna to settle.
-	// And for the tag to fully power up
-	SpinDelay(150);
-  
-	// Now start writting
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelayUs(START_GAP);
   
@@ -1315,12 +1286,10 @@ void T55xxReadTrace(void){
 	T55xxWriteBit(1);
 	T55xxWriteBit(1); //Page 1
   
-  // Turn field on to read the response
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+	// Turn field on to read the response
+	TurnReadLFOn();
   
 	// Now do the acquisition
-	i = 0;
 	for(;;) {
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
@@ -1328,16 +1297,24 @@ void T55xxReadTrace(void){
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+			++i;
 			LED_D_OFF();
-			++i;			
+		
 			if (i >= bufferlength) break;
 		}
 	}
   
 	cmd_send(CMD_ACK,0,0,0,0,0);
-  
-  FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 	LED_D_OFF();
+}
+
+void TurnReadLFOn(){
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+	// Give it a bit of time for the resonant antenna to settle.
+	//SpinDelay(30);
+	SpinDelayUs(8*150);
 }
 
 /*-------------- Cloning routines -----------*/
@@ -1453,7 +1430,7 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT)
   }
   
 	// Config for HID (RF/50, FSK2a, Maxblock=3 for short/6 for long)
-	T55xxWriteBlock(T55x7_BITRATE_RF_50    |
+	T55xxWriteBlock(T55x7_BITRATE_RF_50  |
                   T55x7_MODULATION_FSK2a |
                   last_block << T55x7_MAXBLOCK_SHIFT,
                   0,0,0);
@@ -1596,7 +1573,6 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo)
 // Clone Indala 64-bit tag by UID to T55x7
 void CopyIndala64toT55x7(int hi, int lo)
 {
-
 	//Program the 2 data blocks for supplied 64bit UID
 	// and the block 0 for Indala64 format
 	T55xxWriteBlock(hi,1,0,0);
@@ -1607,15 +1583,13 @@ void CopyIndala64toT55x7(int hi, int lo)
 			2 << T55x7_MAXBLOCK_SHIFT,
 			0, 0, 0);
 	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
-//	T5567WriteBlock(0x603E1042,0);
+	//	T5567WriteBlock(0x603E1042,0);
 
 	DbpString("DONE!");
-
 }	
 
 void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int uid6, int uid7)
 {
-
 	//Program the 7 data blocks for supplied 224bit UID
 	// and the block 0 for Indala224 format
 	T55xxWriteBlock(uid1,1,0,0);
@@ -1631,10 +1605,9 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
 			7 << T55x7_MAXBLOCK_SHIFT,
 			0,0,0);
 	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
-//	T5567WriteBlock(0x603E10E2,0);
+	//	T5567WriteBlock(0x603E10E2,0);
 
 	DbpString("DONE!");
-
 }
 
 
@@ -2059,44 +2032,47 @@ void EM4xLogin(uint32_t Password) {
 void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
   
   	uint8_t *dest =  mifare_get_bigbufptr();
-	uint16_t bufferlength = 16000;
+	uint16_t bufferlength = 12000;
 	uint32_t i = 0;
 
 	// Clear destination buffer before sending the command  0x80 = average.
 	memset(dest, 0x80, bufferlength);
 	
-  uint8_t fwd_bit_count;
+	uint8_t fwd_bit_count;
   
-  //If password mode do login
-  if (PwdMode == 1) EM4xLogin(Pwd);
+	//If password mode do login
+	if (PwdMode == 1) EM4xLogin(Pwd);
   
-  forward_ptr = forwardLink_data;
-  fwd_bit_count = Prepare_Cmd( FWD_CMD_READ );
-  fwd_bit_count += Prepare_Addr( Address );
+	forward_ptr = forwardLink_data;
+	fwd_bit_count = Prepare_Cmd( FWD_CMD_READ );
+	fwd_bit_count += Prepare_Addr( Address );
   
-  // Connect the A/D to the peak-detected low-frequency path.
-  SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-  // Now set up the SSC to get the ADC samples that are now streaming at us.
-  FpgaSetupSsc();
+	// Connect the A/D to the peak-detected low-frequency path.
+	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+	// Now set up the SSC to get the ADC samples that are now streaming at us.
+	FpgaSetupSsc();
   
-  SendForward(fwd_bit_count);
+	SendForward(fwd_bit_count);
   
-  // Now do the acquisition
-  i = 0;
-  for(;;) {
-    if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-      AT91C_BASE_SSC->SSC_THR = 0x43;
-    }
-    if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-      dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-		++i;
-      if (i >= bufferlength) break;
-    }
-  }
+	// // Turn field on to read the response
+	// TurnReadLFOn();
+	
+	// Now do the acquisition
+	i = 0;
+	for(;;) {
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+			AT91C_BASE_SSC->SSC_THR = 0x43;
+		}
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+			dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+			++i;
+			if (i >= bufferlength) break;
+		}
+	}
   
 	cmd_send(CMD_ACK,0,0,0,0,0);
-  FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-  LED_D_OFF();
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
+	LED_D_OFF();
 }
 
 void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {

@@ -21,7 +21,7 @@
 #include "cmdlfem4x.h"
 #include "util.h"
 #include "data.h"
-#define LF_TRACE_BUFF_SIZE 16000
+#define LF_TRACE_BUFF_SIZE 12000
 
 char *global_em410xId;
 
@@ -526,29 +526,20 @@ int CmdReadWord(const char *Cmd)
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK, NULL);
 
-	uint8_t data[LF_TRACE_BUFF_SIZE];
-	memset(data, 0x00, LF_TRACE_BUFF_SIZE);
+	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
 
 	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
 	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
 	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
-		GraphBuffer[j] = ((int)data[j]) - 128;
+		GraphBuffer[j] = ((int)data[j]);
 	}
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
-	  
-	// BiDirectional
-	//CmdDirectionalThreshold("70 -60");	
 	
-	// Askdemod
-	//Cmdaskdemod("1");
-	
-	uint8_t bits[1000];
+	uint8_t bits[1000] = {0x00};
 	uint8_t * bitstream = bits;
-	memset(bitstream, 0x00, sizeof(bits));
-	
 	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
-	
+	RepaintGraphWindow();
   return 0;
 }
 
@@ -575,28 +566,21 @@ int CmdReadWordPWD(const char *Cmd)
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK, NULL);
 		
-	uint8_t data[LF_TRACE_BUFF_SIZE];
-	memset(data, 0x00, LF_TRACE_BUFF_SIZE);
+	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
 
 	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
 	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
 	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
-		GraphBuffer[j] = ((int)data[j]) - 128;
+		GraphBuffer[j] = ((int)data[j]);
 	}
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
-
-	// BiDirectional
-	//CmdDirectionalThreshold("70 -60");	
 	
-	// Askdemod
-	//Cmdaskdemod("1");
-		
-	uint8_t bits[1000];
+	uint8_t bits[1000] = {0x00};
 	uint8_t * bitstream = bits;
-	memset(bitstream, 0x00, sizeof(bits));
 	
 	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
+	RepaintGraphWindow();
   return 0;
 }
 

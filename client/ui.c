@@ -12,11 +12,12 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <time.h>
 #include <readline/readline.h>
 #include <pthread.h>
-
 #include "ui.h"
+#include "loclass/cipherutils.h"
 
 double CursorScaleFactor;
 int PlotGridX, PlotGridY, PlotGridXdefault= 64, PlotGridYdefault= 64;
@@ -85,22 +86,20 @@ void PrintAndLog(char *fmt, ...)
 	pthread_mutex_unlock(&print_lock);  
 }
 
-
 void SetLogFilename(char *fn)
 {
   logfilename = fn;
 }
 
-
-int manchester_decode(const int * data, const size_t len, uint8_t * dataout){
+int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 	
 	int bitlength = 0;
 	int i, clock, high, low, startindex;
 	low = startindex = 0;
 	high = 1;
 	uint8_t bitStream[len];
-
-	memset(bitStream, 0x00, len);	
+	
+	memset(bitStream, 0x00, len);
 	
 	/* Detect high and lows */
 	for (i = 0; i < len; i++) {
@@ -112,19 +111,18 @@ int manchester_decode(const int * data, const size_t len, uint8_t * dataout){
 	
 	/* get clock */
 	clock = GetT55x7Clock( data, len, high );	
-	startindex = DetectFirstTransition(data, len, high, low);
+	startindex = DetectFirstTransition(data, len, high);
   
-	PrintAndLog(" Clock      : %d", clock);
-	PrintAndLog(" startindex : %d", startindex);
+	PrintAndLog(" Clock       : %d", clock);
+	PrintAndLog(" startindex  : %d", startindex);
 	
 	if (high != 1)
 		bitlength = ManchesterConvertFrom255(data, len, bitStream, high, low, clock, startindex);
 	else
 		bitlength= ManchesterConvertFrom1(data, len, bitStream, clock, startindex);
 
-	if ( bitlength > 0 ){
+	if ( bitlength > 0 )
 		PrintPaddedManchester(bitStream, bitlength, clock);
-	}
 
 	memcpy(dataout, bitStream, bitlength);
 	
@@ -171,80 +169,112 @@ int manchester_decode(const int * data, const size_t len, uint8_t * dataout){
 		break;
 		default:  break;
 	}
-	return 32;
+	
+	PrintAndLog(" Found Clock : %d  - trying to adjust", clock);
+	
+	// When detected clock is 31 or 33 then then return 
+	int clockmod = clock%8;
+	if ( clockmod == 7 ) 
+		clock += 1;
+	else if ( clockmod == 1 )
+		clock -= 1;
+	
+	return clock;
  }
  
- int DetectFirstTransition(const int * data, const size_t len, int high, int low){
+ int DetectFirstTransition(const int * data, const size_t len, int threshold){
 
-	int i, retval;
-	retval = 0;
-	/* 
-		Detect first transition Lo-Hi (arbitrary)       
-		skip to the first high
-	*/
-	  for (i = 0; i < len; ++i)
-		if (data[i] == high)
-		  break;
-		  
-	  /* now look for the first low */
-	  for (; i < len; ++i) {
-		if (data[i] == low) {
-			retval = i;
+	int i =0;
+	/* now look for the first threshold */
+	for (; i < len; ++i) {
+		if (data[i] == threshold) {
 			break;
 		}
-	  }
-	return retval;
+	}
+	return i;
  }
 
  int ManchesterConvertFrom255(const int * data, const size_t len, uint8_t * dataout, int high, int low, int clock, int startIndex){
 
-	int i, j, hithigh, hitlow, first, bit, bitIndex;
-	i = startIndex;
+	int i, j, z, hithigh, hitlow, bitIndex, startType;
+	i = 0;
 	bitIndex = 0;
+	
+	int isDamp = 0;
+	int damplimit = (int)((high / 2) * 0.3);
+	int dampHi =  (high/2)+damplimit;
+	int dampLow = (high/2)-damplimit;
+	int firstST = 0;
 
-	/*
-	* We assume the 1st bit is zero, it may not be
-	* the case: this routine (I think) has an init problem.
-	* Ed.
-	*/
-	bit = 0; 
-
+	// i = clock frame of data
 	for (; i < (int)(len / clock); i++)
 	{
 		hithigh = 0;
 		hitlow = 0;
-		first = 1;
-
+		startType = -1;
+		z = startIndex + (i*clock);
+		isDamp = 0;
+		
+	
 		/* Find out if we hit both high and low peaks */
 		for (j = 0; j < clock; j++)
-		{
-			if (data[(i * clock) + j] == high)
+		{		
+			if (data[z+j] == high){
 				hithigh = 1;
-			else if (data[(i * clock) + j] == low)
+				if ( startType == -1)
+					startType = 1;
+			}
+			
+			if (data[z+j] == low ){
 				hitlow = 1;
-
-			/* it doesn't count if it's the first part of our read
-			   because it's really just trailing from the last sequence */
-			if (first && (hithigh || hitlow))
-			  hithigh = hitlow = 0;
-			else
-			  first = 0;
-
+				if ( startType == -1)
+					startType = 0;
+			} 
+		
 			if (hithigh && hitlow)
 			  break;
 		}
+		
+		// No high value found, are we in a dampening field?
+		if ( !hithigh ) {
+			//PrintAndLog(" # Entering damp test at index : %d (%d)", z+j, j);
+			for (j = 0; j < clock/2; j++)
+			{
+				if ( 
+				     (data[z+j] <= dampHi && data[z+j] >= dampLow)
+				   ){
+				   isDamp = 1;
+				}
+				else 
+				   isDamp = 0;
+			}
+		}
 
-		/* If we didn't hit both high and low peaks, we had a bit transition */
-		if (!hithigh || !hitlow)
-			bit ^= 1;
-
-		dataout[bitIndex++] = bit;
+		/*  Manchester Switching..
+			0: High -> Low   
+			1: Low -> High  
+		*/
+		if (startType == 0)
+			dataout[bitIndex++] = 1;
+		else if (startType == 1) 
+			dataout[bitIndex++] = 0;
+		else
+			dataout[bitIndex++] = 2;
+			
+		if ( isDamp ) {
+			firstST++;
+		}
+		
+		if ( firstST == 4)
+			break;
 	}
 	return bitIndex;
  }
  
  int ManchesterConvertFrom1(const int * data, const size_t len, uint8_t * dataout, int clock, int startIndex){
 
+	PrintAndLog(" Path B");
+ 
 	int i,j, bitindex, lc, tolerance, warnings;
 	warnings = 0;
 	int upperlimit = len*2/clock+8;
@@ -253,7 +283,7 @@ int manchester_decode(const int * data, const size_t len, uint8_t * dataout){
 	tolerance = clock/4;
 	uint8_t decodedArr[len];
 	
-	/* Then detect duration between 2 successive transitions */
+	/* Detect duration between 2 successive transitions */
 	for (bitindex = 1; i < len; i++) {
 	
 		if (data[i-1] != data[i]) {
@@ -350,19 +380,19 @@ int manchester_decode(const int * data, const size_t len, uint8_t * dataout){
 	PrintAndLog("%s", sprint_hex(decodedArr, j));
 }
  
- 
 void PrintPaddedManchester( uint8_t* bitStream, size_t len, size_t blocksize){
 
-	  PrintAndLog(" Manchester decoded bitstream : %d bits", len);
+	PrintAndLog(" Manchester decoded  : %d bits", len);
 	  
-	  uint8_t mod = len % blocksize;
-	  uint8_t div = len / blocksize;
-	  int i;
-	  // Now output the bitstream to the scrollback by line of 16 bits
-	  for (i = 0; i < div*blocksize; i+=blocksize) {
+	uint8_t mod = len % blocksize;
+	uint8_t div = len / blocksize;
+	int i;
+  
+	// Now output the bitstream to the scrollback by line of 16 bits
+	for (i = 0; i < div*blocksize; i+=blocksize) {
 		PrintAndLog(" %s", sprint_bin(bitStream+i,blocksize) );
-	  }
-	  if ( mod > 0 ){
-		PrintAndLog(" %s", sprint_bin(bitStream+i, mod) );
-	  }
+	}
+	
+	if ( mod > 0 )
+		PrintAndLog(" %s", sprint_bin(bitStream+i, mod) );	
 }

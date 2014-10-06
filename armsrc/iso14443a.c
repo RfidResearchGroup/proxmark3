@@ -1205,13 +1205,6 @@ static void TransmitFor14443a(const uint8_t *cmd, int len, uint32_t *timing)
 	// clear TXRDY
 	AT91C_BASE_SSC->SSC_THR = SEC_Y;
 
-	// for(uint16_t c = 0; c < 10;) {	// standard delay for each transfer (allow tag to be ready after last transmission)
-		// if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-			// AT91C_BASE_SSC->SSC_THR = SEC_Y;	
-			// c++;
-		// }
-	// }
-
 	uint16_t c = 0;
 	for(;;) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
@@ -1223,8 +1216,7 @@ static void TransmitFor14443a(const uint8_t *cmd, int len, uint32_t *timing)
 		}
 	}
 	
-	NextTransferTime = MAX(NextTransferTime, LastTimeProxToAirStart + REQUEST_GUARD_TIME);
-	
+	NextTransferTime = MAX(NextTransferTime, LastTimeProxToAirStart + REQUEST_GUARD_TIME);	
 }
 
 

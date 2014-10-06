@@ -20,7 +20,7 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 
    if ( len % 16 == 0 ) {
 	   for(; p-buf < len; p += 16)
-       Dbprintf("[%s:%02x/%02x] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+       Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
 				name,
 				p-buf,
 				len,
@@ -29,7 +29,7 @@ void print_result(char *name, uint8_t *buf, size_t len) {
    }
    else {
    for(; p-buf < len; p += 8)
-       Dbprintf("[%s:%02x/%02x] %02x %02x %02x %02x %02x %02x %02x %02x", name, p-buf, len, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+       Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x", name, p-buf, len, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
    }
 }
 
