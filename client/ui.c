@@ -113,16 +113,16 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 	clock = GetT55x7Clock( data, len, high );	
 	startindex = DetectFirstTransition(data, len, high);
   
-	PrintAndLog(" Clock       : %d", clock);
-	PrintAndLog(" startindex  : %d", startindex);
+	//PrintAndLog(" Clock       : %d", clock);
+	//PrintAndLog(" startindex  : %d", startindex);
 	
 	if (high != 1)
 		bitlength = ManchesterConvertFrom255(data, len, bitStream, high, low, clock, startindex);
 	else
 		bitlength= ManchesterConvertFrom1(data, len, bitStream, clock, startindex);
 
-	if ( bitlength > 0 )
-		PrintPaddedManchester(bitStream, bitlength, clock);
+	//if ( bitlength > 0 )
+	//	PrintPaddedManchester(bitStream, bitlength, clock);
 
 	memcpy(dataout, bitStream, bitlength);
 	
@@ -170,7 +170,7 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 		default:  break;
 	}
 	
-	PrintAndLog(" Found Clock : %d  - trying to adjust", clock);
+	//PrintAndLog(" Found Clock : %d  - trying to adjust", clock);
 	
 	// When detected clock is 31 or 33 then then return 
 	int clockmod = clock%8;
@@ -214,8 +214,7 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 		startType = -1;
 		z = startIndex + (i*clock);
 		isDamp = 0;
-		
-	
+			
 		/* Find out if we hit both high and low peaks */
 		for (j = 0; j < clock; j++)
 		{		
@@ -238,15 +237,13 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 		// No high value found, are we in a dampening field?
 		if ( !hithigh ) {
 			//PrintAndLog(" # Entering damp test at index : %d (%d)", z+j, j);
-			for (j = 0; j < clock/2; j++)
+			for (j = 0; j < clock; j++)
 			{
 				if ( 
 				     (data[z+j] <= dampHi && data[z+j] >= dampLow)
 				   ){
-				   isDamp = 1;
+				   isDamp++;
 				}
-				else 
-				   isDamp = 0;
 			}
 		}
 
@@ -261,7 +258,7 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 		else
 			dataout[bitIndex++] = 2;
 			
-		if ( isDamp ) {
+		if ( isDamp > clock/2 ) {
 			firstST++;
 		}
 		

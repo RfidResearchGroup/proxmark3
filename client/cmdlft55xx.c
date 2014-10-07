@@ -39,7 +39,7 @@ int CmdReadBlk(const char *Cmd)
 		return 1;
 	}	
 
-	PrintAndLog(" Reading page 0 block : %d", Block);
+	//PrintAndLog(" Reading page 0 block : %d", Block);
 
 	// this command fills up BigBuff
 	// 
@@ -65,6 +65,9 @@ int CmdReadBlk(const char *Cmd)
 	uint8_t * bitstream = bits;
 	
 	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
+	
+	uint32_t bl0     = PackBits(5, 32, bitstream);
+	PrintAndLog("     Block %d  : 0x%08X  %s", Block, bl0, sprint_bin(bitstream+5,32) );
 	
 	RepaintGraphWindow();
   return 0;
@@ -107,6 +110,10 @@ int CmdReadBlkPWD(const char *Cmd)
 	uint8_t * bitstream = bits;
 	
 	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);	
+	
+	uint32_t bl0     = PackBits(5, 32, bitstream);
+	PrintAndLog("     Block %d  : 0x%08X  %s", Block, bl0, sprint_bin(bitstream+5,32) );
+	
 	RepaintGraphWindow();
   return 0;
 }
@@ -187,23 +194,15 @@ int CmdReadTrace(const char *Cmd)
 	uint32_t bl0     = PackBits(si, 32, bitstream);
 	uint32_t bl1     = PackBits(si+32, 32, bitstream);
 	
-	uint32_t acl     = PackBits(si,  8, bitstream);
-	si += 8;
-	uint32_t mfc     = PackBits(si, 8, bitstream);
-	si += 8;
-	uint32_t cid     = PackBits(si, 5, bitstream);
-	si += 5;
-	uint32_t icr     = PackBits(si, 3, bitstream);
-	si += 3;
-	uint32_t year    = PackBits(si, 4, bitstream);
-	si += 4;
-	uint32_t quarter = PackBits(si, 2, bitstream);
-	si += 2;
-	uint32_t num     = PackBits(si, 12, bitstream);
-	si += 12;
-	uint32_t wafer   = PackBits(si, 5, bitstream);
-	si += 5;
-	uint32_t dw      = PackBits(si, 15, bitstream);
+	uint32_t acl     = PackBits(si,  8, bitstream); si += 8;
+	uint32_t mfc     = PackBits(si, 8, bitstream); si += 8;
+	uint32_t cid     = PackBits(si, 5, bitstream); si += 5;
+	uint32_t icr     = PackBits(si, 3, bitstream); si += 3;
+	uint32_t year    = PackBits(si, 4, bitstream); si += 4;
+	uint32_t quarter = PackBits(si, 2, bitstream); si += 2;
+	uint32_t lotid    = PackBits(si, 12, bitstream); si += 12;
+	uint32_t wafer   = PackBits(si, 5, bitstream); si += 5;
+	uint32_t dw      = PackBits(si, 15, bitstream); 
 	
 	PrintAndLog("");
 	PrintAndLog("-- T55xx Trace Information ----------------------------------");
@@ -214,13 +213,13 @@ int CmdReadTrace(const char *Cmd)
 	PrintAndLog(" ICR IC Revision                         : %d",icr );
 	PrintAndLog(" Manufactured");
 	PrintAndLog("     Year/Quarter : %d/%d",2000+year, quarter );
-	PrintAndLog("     Number       : %d", num );
+	PrintAndLog("     Lot ID       : %d", lotid );
 	PrintAndLog("     Wafer number : %d", wafer);
 	PrintAndLog("     Die Number   : %d", dw);
 	PrintAndLog("-------------------------------------------------------------");
-	PrintAndLog(" Raw Data");
-	PrintAndLog("     Block 0  : %08X", bl0);
-	PrintAndLog("     Block 1  : %08X", bl1);
+	PrintAndLog(" Raw Data - Page 1");
+	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(bitstream+5,32) );
+	PrintAndLog("     Block 0  : 0x%08X  %s", bl1, sprint_bin(bitstream+37,32) );
 	PrintAndLog("-------------------------------------------------------------");
 	/*
 	TRACE - BLOCK O
@@ -231,10 +230,10 @@ int CmdReadTrace(const char *Cmd)
 		22-24	ICR IC revision
 		25-28	YEAR (BCD encoded) 						9 (= 2009)
 		29-30	QUARTER									1,2,3,4 
-		31-32	Number
+		31-32	LOT ID
 	
 	TRACE - BLOCK 1
-		1-12	Number
+		1-12	LOT ID  
 		13-17	Wafer number
 		18-32	DW,  die number sequential
 	*/
@@ -257,22 +256,22 @@ int CmdInfo(const char *Cmd){
 	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
 	
 	uint8_t si = 5;
-	uint32_t bl0     = PackBits(si, 32, bitstream);
+	uint32_t bl0      = PackBits(si, 32, bitstream);
 	
-	uint32_t safer   = PackBits(si, 4, bitstream); si += 4;	
-	uint32_t resv   = PackBits(si, 7, bitstream); si += 7;
-	uint32_t dbr   = PackBits(si, 3, bitstream); si += 3;
+	uint32_t safer    = PackBits(si, 4, bitstream); si += 4;	
+	uint32_t resv     = PackBits(si, 7, bitstream); si += 7;
+	uint32_t dbr      = PackBits(si, 3, bitstream); si += 3;
 	uint32_t extend   = PackBits(si, 1, bitstream); si += 1;
 	uint32_t datamodulation   = PackBits(si, 5, bitstream); si += 5;
-	uint32_t pskcf   = PackBits(si, 2, bitstream); si += 2;
-	uint32_t aor   = PackBits(si, 1, bitstream); si += 1;	
-	uint32_t otp   = PackBits(si, 1, bitstream); si += 1;	
+	uint32_t pskcf    = PackBits(si, 2, bitstream); si += 2;
+	uint32_t aor      = PackBits(si, 1, bitstream); si += 1;	
+	uint32_t otp      = PackBits(si, 1, bitstream); si += 1;	
 	uint32_t maxblk   = PackBits(si, 3, bitstream); si += 3;
-	uint32_t pwd   = PackBits(si, 1, bitstream); si += 1;	
-	uint32_t sst   = PackBits(si, 1, bitstream); si += 1;	
-	uint32_t fw   = PackBits(si, 1, bitstream); si += 1;
-	uint32_t inv   = PackBits(si, 1, bitstream); si += 1;	
-	uint32_t por   = PackBits(si, 1, bitstream); si += 1;
+	uint32_t pwd      = PackBits(si, 1, bitstream); si += 1;	
+	uint32_t sst      = PackBits(si, 1, bitstream); si += 1;	
+	uint32_t fw       = PackBits(si, 1, bitstream); si += 1;
+	uint32_t inv      = PackBits(si, 1, bitstream); si += 1;	
+	uint32_t por      = PackBits(si, 1, bitstream); si += 1;
 		
 	PrintAndLog("");
 	PrintAndLog("-- T55xx Configuration --------------------------------------");
@@ -292,10 +291,46 @@ int CmdInfo(const char *Cmd){
 	PrintAndLog(" Inverse data              : %s", (inv) ? "Yes":"No");
 	PrintAndLog(" POR-Delay                 : %s", (por) ? "Yes":"No");
 	PrintAndLog("-------------------------------------------------------------");
-	PrintAndLog(" Raw Data");
-	PrintAndLog("     Block 0  : 0x%08X", bl0);
+	PrintAndLog(" Raw Data - Page 0");
+	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(bitstream+5,32) );
 	PrintAndLog("-------------------------------------------------------------");
 	
+	return 0;
+}
+
+int CmdDump(const char *Cmd){
+
+	char cmdp = param_getchar(Cmd, 0);
+	char s[20];
+	uint8_t pwd[4] = {0x00};
+
+		
+	if (strlen(Cmd)>1 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  lf t55xx dump <password>");
+		PrintAndLog("        sample: lf t55xx dump FFFFFFFF");
+		return 0;
+	}
+
+	bool hasPwd = ( strlen(Cmd) > 0);
+	
+	if ( hasPwd ){
+		if (param_gethex(Cmd, 0, pwd, 4)) {
+			PrintAndLog("password must include 4 HEX symbols");
+			return 0;
+		}
+	}
+
+
+	for ( int i = 0; i <8; ++i){
+		*s = 0;
+		if ( hasPwd ) {
+			sprintf(s,"%d %d", i, pwd);
+			CmdReadBlkPWD(s);
+		} else {
+			sprintf(s,"%d", i);
+			CmdReadBlk(s);
+		}
+	}
 	return 0;
 }
 
@@ -334,7 +369,6 @@ char * GetBitRateStr(uint32_t id){
 
 	return buf;
 }
-
 
 char * GetSaferStr(uint32_t id){
  	static char buf[40];
@@ -416,6 +450,7 @@ static command_t CommandTable[] =
   {"wrPWD",  CmdWriteBlkPWD, 0, "<Data> <Block> <Password> -- Write T55xx block data in password mode(page 0)"},
   {"trace",  CmdReadTrace,   0, "Read T55xx traceability data (page 1)"},
   {"info",   CmdInfo,        0, "Read T55xx configuration data (page 0 / block 0"},
+  {"dump",   CmdDump,        0, "Dump T55xx card block 0-7 (is possible)"},
   {NULL, NULL, 0, NULL}
 };
 
