@@ -116,16 +116,13 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 	clock = GetT55x7Clock( data, len, high );	
 	startindex = DetectFirstTransition(data, len, high);
   
-	//PrintAndLog(" Clock       : %d", clock);
-	//PrintAndLog(" startindex  : %d", startindex);
+	// PrintAndLog(" Clock       : %d", clock);
+	// PrintAndLog(" startindex  : %d", startindex);
 	
 	if (high != 1)
 		bitlength = ManchesterConvertFrom255(data, len, bitStream, high, low, clock, startindex);
 	else
 		bitlength= ManchesterConvertFrom1(data, len, bitStream, clock, startindex);
-
-	//if ( bitlength > 0 )
-	//	PrintPaddedManchester(bitStream, bitlength, clock);
 
 	memcpy(dataout, bitStream, bitlength);
 	return bitlength;
@@ -558,8 +555,14 @@ void iceFsk3(int * data, const size_t len){
 	int stopOne = j-1;
 	
 	int fieldlen = stopOne-startOne;
-	printf("FIELD Length: %d \n", fieldlen);
 	
+	fieldlen = (fieldlen == 39 || fieldlen == 41)? 40 : fieldlen;
+	fieldlen = (fieldlen == 59 || fieldlen == 51)? 50 : fieldlen;
+	if ( fieldlen != 40 && fieldlen != 50){
+		printf("Detected field Length: %d \n", fieldlen);
+		printf("Can only handle len 40 or 50.  Aborting...");
+		return;
+	}
 	
 	// FSK sequence start == 000111
 	int startPos = 0;

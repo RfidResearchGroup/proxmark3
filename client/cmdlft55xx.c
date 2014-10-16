@@ -60,15 +60,7 @@ int CmdReadBlk(const char *Cmd)
 		GraphBuffer[j] = ((int)data[j]) ;
 	}
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
-	
-	uint8_t bits[1000] = {0x00};
-	uint8_t * bitstream = bits;
-	
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
-	
-	uint32_t bl0     = PackBits(5, 32, bitstream);
-	PrintAndLog("     Block %d  : 0x%08X  %s", Block, bl0, sprint_bin(bitstream+5,32) );
-	
+	CmdIceManchester(Cmd);
 	RepaintGraphWindow();
   return 0;
 }
@@ -106,13 +98,7 @@ int CmdReadBlkPWD(const char *Cmd)
 	}
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
 
-	uint8_t bits[1000] = {0x00};
-	uint8_t * bitstream = bits;
-	
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);	
-	
-	uint32_t bl0     = PackBits(5, 32, bitstream);
-	PrintAndLog("     Block %d  : 0x%08X  %s", Block, bl0, sprint_bin(bitstream+5,32) );
+	CmdIceManchester(Cmd);
 	
 	RepaintGraphWindow();
   return 0;
@@ -169,20 +155,32 @@ int CmdWriteBlkPWD(const char *Cmd)
 
 int CmdReadTrace(const char *Cmd)
 {
-	UsbCommand c = {CMD_T55XX_READ_TRACE, {0, 0, 0}};
-	SendCommand(&c);
-	WaitForResponse(CMD_ACK, NULL);
+	char cmdp = param_getchar(Cmd, 0);
 
-	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
-
-	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
-	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
-
-	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
-		GraphBuffer[j] = ((int)data[j]);
-		//GraphBuffer[j] = ((int)data[j]) - 128;
+	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  lf t55xx trace  [use data from Graphbuffer]");
+		PrintAndLog("     [use data from Graphbuffer], if not set, try reading data from tag.");
+		PrintAndLog("");
+		PrintAndLog("        sample: lf t55xx trace");
+		PrintAndLog("        sample: lf t55xx trace 1");
+		return 0;
 	}
-	GraphTraceLen = LF_TRACE_BUFF_SIZE;
+
+	if ( strlen(Cmd)==0){
+		UsbCommand c = {CMD_T55XX_READ_TRACE, {0, 0, 0}};
+		SendCommand(&c);
+		WaitForResponse(CMD_ACK, NULL);
+
+		uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
+
+		GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
+		WaitForResponseTimeout(CMD_ACK,NULL, 1500);
+
+		for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
+			GraphBuffer[j] = ((int)data[j]);
+		}
+		GraphTraceLen = LF_TRACE_BUFF_SIZE;
+	}
 	
 	uint8_t bits[1000] = {0x00};
 	uint8_t * bitstream = bits;
@@ -247,9 +245,22 @@ int CmdInfo(const char *Cmd){
 		Normal mode
 		Extended mode
 	*/
-	// läs block 0 -  data finns i graphbuff
-	CmdReadBlk("0");
+	char cmdp = param_getchar(Cmd, 0);
+
+	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  lf t55xx info  [use data from Graphbuffer]");
+		PrintAndLog("     [use data from Graphbuffer], if not set, try reading data from tag.");
+		PrintAndLog("");
+		PrintAndLog("        sample: lf t55xx info");
+		PrintAndLog("        sample: lf t55xx info 1");
+		return 0;
+	}
+
+	if ( strlen(Cmd)==0){
+		CmdReadBlk("0");
+	}
 	
+
 	uint8_t bits[1000] = {0x00};
 	uint8_t * bitstream = bits;
 	
@@ -333,13 +344,27 @@ int CmdDump(const char *Cmd){
 }
 
 int CmdIceFsk(const char *Cmd){
-	//uint8_t bits[1000] = {0x00};
-	//uint8_t * bitstream = bits;
 	iceFsk3(GraphBuffer, LF_TRACE_BUFF_SIZE);
-	
 	RepaintGraphWindow();
 	return 0;
 }
+int CmdIceManchester(const char *Cmd){
+
+	int  blockNum = -1;
+	uint32_t blockData;
+	uint8_t  bits[1000] = {0x00};
+	uint8_t * bitstream = bits;
+	
+	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);	
+    blockData = PackBits(5, 32, bitstream);
+	sscanf(Cmd, "%d", &blockNum);
+	if ( blockNum > -1){
+		PrintAndLog("   Block %d  : 0x%08X  %s", blockNum, blockData, sprint_bin(bitstream+5,32) );
+	}else{
+		PrintAndLog("   Decoded : 0x%08X  %s", blockData, sprint_bin(bitstream+5,32) );
+	}
+	return 0;
+} 
 
 char * GetBitRateStr(uint32_t id){
  	static char buf[40];
@@ -455,10 +480,11 @@ static command_t CommandTable[] =
   {"rdPWD",  CmdReadBlkPWD,  0, "<block> <password> -- Read T55xx block data with password mode"},
   {"wr",     CmdWriteBlk,    0, "<data> <block> -- Write T55xx block data (page 0)"},
   {"wrPWD",  CmdWriteBlkPWD, 0, "<data> <block> <password> -- Write T55xx block data with password"},
-  {"trace",  CmdReadTrace,   0, "Read T55xx traceability data (page 1 / blk 0-1)"},
-  {"info",   CmdInfo,        0, "Read T55xx configuration data (page0 /blk 0)"},
+  {"trace",  CmdReadTrace,   0, "[1] Read T55xx traceability data (page 1 / blk 0-1) "},
+  {"info",   CmdInfo,        0, "[1] Read T55xx configuration data (page0 /blk 0)"},
   {"dump",   CmdDump,        0, "[password] Dump T55xx card block 0-7. optional with password"},
   {"fsk",    CmdIceFsk,      0, "FSK demod"},
+  {"man",    CmdIceManchester,      0, "Manchester demod"},
   {NULL, NULL, 0, NULL}
 };
 
