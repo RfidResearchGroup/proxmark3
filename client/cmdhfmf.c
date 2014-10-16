@@ -522,13 +522,13 @@ int CmdHF14AMfDump(const char *Cmd)
 	int size = GetCardSize();		
 	char cmdp = param_getchar(Cmd, 0);
 	
-	PrintAndLog("Got %d",size);
 	
-	return 0;
-	
+
 	if  ( size > -1) 
-		cmdp = (char)48+size;
-	
+		cmdp = (char)(48+size);
+
+	PrintAndLog("Got %d",cmdp);
+		
 	switch (cmdp) {
 		case '0' : numSectors = 5; break;
 		case '1' : 

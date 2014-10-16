@@ -21,20 +21,14 @@ int CmdIODemodFSK(const char *Cmd)
   return 0;
 }
 
-
 int CmdIOProxDemod(const char *Cmd){
   if (GraphTraceLen < 4800) {
     PrintAndLog("too short; need at least 4800 samples");
     return 0;
   }
-
   GraphTraceLen = 4800;
   for (int i = 0; i < GraphTraceLen; ++i) {
-    if (GraphBuffer[i] < 0) {
-      GraphBuffer[i] = 0;
-    } else {
-      GraphBuffer[i] = 1;
-    }
+    GraphBuffer[i] = (GraphBuffer[i] < 0) ? 0 : 1;
   }
   RepaintGraphWindow();
   return 0;
@@ -68,10 +62,10 @@ int CmdIOClone(const char *Cmd)
 
 static command_t CommandTable[] = 
 {
-  {"help",        CmdHelp,            1, "This help"},
-  {"demod",	  CmdIOProxDemod,     1, "Demodulate Stream"},
-  {"fskdemod",    CmdIODemodFSK,      1, "Demodulate ioProx Tag"},
-  {"clone",	  CmdIOClone,         1, "Clone ioProx Tag"},
+  {"help",      CmdHelp,         1, "This help"},
+  {"demod",	    CmdIOProxDemod,  1, "Demodulate Stream"},
+  {"fskdemod",  CmdIODemodFSK,   1, "Demodulate ioProx Tag"},
+  {"clone",	    CmdIOClone,      1, "Clone ioProx Tag"},
   {NULL, NULL, 0, NULL}
 };
 

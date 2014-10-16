@@ -64,6 +64,8 @@
 #include "string.h"
 #include "../common/iso15693tools.h"
 #include "../common/cmd.h"
+#include "crapto1.h"
+#include "mifareutil.h"
 
 #define arraylen(x) (sizeof(x)/sizeof((x)[0]))
 
@@ -600,10 +602,10 @@ static void BuildIdentifyRequest(void);
 //-----------------------------------------------------------------------------
 void AcquireRawAdcSamplesIso15693(void)
 {
-	int c = 0;
-	uint8_t *dest = (uint8_t *)BigBuf;
-	int getNext = 0;
+	uint8_t *dest =  mifare_get_bigbufptr();
 
+	int c = 0;
+	int getNext = 0;
 	int8_t prev = 0;
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -682,10 +684,10 @@ void AcquireRawAdcSamplesIso15693(void)
 
 void RecordRawAdcSamplesIso15693(void)
 {
-	int c = 0;
-	uint8_t *dest = (uint8_t *)BigBuf;
-	int getNext = 0;
+	uint8_t *dest =  mifare_get_bigbufptr();
 
+	int c = 0;
+	int getNext = 0;
 	int8_t prev = 0;
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -693,8 +695,8 @@ void RecordRawAdcSamplesIso15693(void)
 	FpgaSetupSsc();
 
 	// Start from off (no field generated)
-    	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    	SpinDelay(200);
+   	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+   	SpinDelay(200);
 
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 

@@ -16,8 +16,11 @@
 #include <time.h>
 #include <readline/readline.h>
 #include <pthread.h>
-#include "ui.h"
 #include "loclass/cipherutils.h"
+#include "ui.h"
+
+//#include <liquid/liquid.h>
+#define M_PI 3.14159265358979323846264338327
 
 double CursorScaleFactor;
 int PlotGridX, PlotGridY, PlotGridXdefault= 64, PlotGridYdefault= 64;
@@ -125,8 +128,6 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 	//	PrintPaddedManchester(bitStream, bitlength, clock);
 
 	memcpy(dataout, bitStream, bitlength);
-	
-	free(bitStream);
 	return bitlength;
 }
 
@@ -392,4 +393,217 @@ void PrintPaddedManchester( uint8_t* bitStream, size_t len, size_t blocksize){
 	
 	if ( mod > 0 )
 		PrintAndLog(" %s", sprint_bin(bitStream+i, mod) );	
+}
+
+void iceFsk(int * data, const size_t len){
+
+	//34359738  == 125khz   (2^32 / 125) =
+	
+    // parameters
+    float phase_offset      = 0.00f;   // carrier phase offset
+    float frequency_offset  = 0.30f;   // carrier frequency offset
+    float wn                = 0.01f;   // pll bandwidth
+    float zeta              = 0.707f;  // pll damping factor
+    float K                 = 1000;    // pll loop gain
+    size_t n                = len;     // number of samples
+
+    // generate loop filter parameters (active PI design)
+    float t1 = K/(wn*wn);   // tau_1
+    float t2 = 2*zeta/wn;   // tau_2
+
+    // feed-forward coefficients (numerator)
+    float b0 = (4*K/t1)*(1.+t2/2.0f);
+    float b1 = (8*K/t1);
+    float b2 = (4*K/t1)*(1.-t2/2.0f);
+
+    // feed-back coefficients (denominator)
+    //    a0 =  1.0  is implied
+    float a1 = -2.0f;
+    float a2 =  1.0f;
+
+    // filter buffer
+    float v0=0.0f, v1=0.0f, v2=0.0f;
+    
+    // initialize states
+    float phi     = phase_offset;  // input signal's initial phase
+    float phi_hat = 0.0f;      // PLL's initial phase
+    
+    unsigned int i;
+    float complex x,y;
+	float complex output[n];
+	
+	for (i=0; i<n; i++) {
+		// INPUT SIGNAL
+		x = data[i];
+		phi += frequency_offset;
+		
+		// generate complex sinusoid
+		y = cosf(phi_hat) + _Complex_I*sinf(phi_hat);
+
+		output[i] = y;
+
+		// compute error estimate
+		float delta_phi = cargf( x * conjf(y) );
+
+		
+        // print results to standard output
+        printf("  %6u %12.8f %12.8f %12.8f %12.8f %12.8f\n",
+                  i,
+                  crealf(x), cimagf(x),
+                  crealf(y), cimagf(y),
+                  delta_phi);
+	
+		// push result through loop filter, updating phase estimate
+
+		// advance buffer
+		v2 = v1;  // shift center register to upper register
+		v1 = v0;  // shift lower register to center register
+
+		// compute new lower register
+		v0 = delta_phi - v1*a1 - v2*a2;
+
+		// compute new output
+		phi_hat = v0*b0 + v1*b1 + v2*b2;
+
+	}
+
+	for (i=0; i<len; ++i){
+		data[i] = (int)crealf(output[i]);
+	}
+}
+
+/* Sliding DFT
+   Smooths out 
+*/ 
+void iceFsk2(int * data, const size_t len){
+
+	int i, j;
+	int output[len];
+	
+	// for (i=0; i<len-5; ++i){
+		// for ( j=1; j <=5; ++j) {
+			// output[i] += data[i*j];
+		// }
+		// output[i] /= 5;
+	// }
+	int rest = 127;
+	int tmp =0;
+	for (i=0; i<len; ++i){
+		if ( data[i] < 127)
+			output[i] = 0;
+		else {
+			tmp =  (100 * (data[i]-rest)) / rest;
+			output[i] = (tmp > 60)? 100:0;
+		}
+	}
+	
+	for (j=0; j<len; ++j)
+		data[j] = output[j];
+}
+
+void iceFsk3(int * data, const size_t len){
+
+	int i,j;
+	int output[len];
+    float fc            = 0.1125f;          // center frequency
+
+    // create very simple low-pass filter to remove images (2nd-order Butterworth)
+    float complex iir_buf[3] = {0,0,0};
+    float b[3] = {0.003621681514929,  0.007243363029857, 0.003621681514929};
+    float a[3] = {1.000000000000000, -1.822694925196308, 0.837181651256023};
+    
+    // process entire input file one sample at a time
+    float         sample      = 0;      // input sample read from file
+    float complex x_prime     = 1.0f;   // save sample for estimating frequency
+    float complex x;
+		
+	for (i=0; i<len; ++i) {
+
+		sample = data[i];
+		
+        // remove DC offset and mix to complex baseband
+        x = (sample - 127.5f) * cexpf( _Complex_I * 2 * M_PI * fc * i );
+
+        // apply low-pass filter, removing spectral image (IIR using direct-form II)
+        iir_buf[2] = iir_buf[1];
+        iir_buf[1] = iir_buf[0];
+        iir_buf[0] = x - a[1]*iir_buf[1] - a[2]*iir_buf[2];
+        x          = b[0]*iir_buf[0] +
+                     b[1]*iir_buf[1] +
+                     b[2]*iir_buf[2];
+					 
+        // compute instantaneous frequency by looking at phase difference
+        // between adjacent samples
+        float freq = cargf(x*conjf(x_prime));
+        x_prime = x;    // retain this sample for next iteration
+
+		output[i] =(freq > 0)? 10 : -10;
+    } 
+
+	// show data
+	for (j=0; j<len; ++j)
+		data[j] = output[j];
+		
+	CmdLtrim("30");
+	
+	// zero crossings.
+	for (j=0; j<len; ++j){
+		if ( data[j] == 10) break;
+	}
+	int startOne =j;
+	
+	for (;j<len; ++j){
+		if ( data[j] == -10 ) break;
+	}
+	int stopOne = j-1;
+	
+	int fieldlen = stopOne-startOne;
+	printf("FIELD Length: %d \n", fieldlen);
+	
+	
+	// FSK sequence start == 000111
+	int startPos = 0;
+	for (i =0; i<len; ++i){
+		int dec = 0;
+		for ( j = 0; j < 6*fieldlen; ++j){
+			dec += data[i + j];
+		}
+		if (dec == 0) {
+			startPos = i;
+			break;
+		}
+	}
+	
+	printf("000111 position: %d \n", startPos);
+
+	startPos += 6*fieldlen+1;
+	
+	printf("BINARY\n");
+	printf("R/40 :  ");
+	for (i =startPos ; i < len; i += 40){
+		if ( data[i] > 0 ) 
+			printf("1");
+		else
+			printf("0");
+	}
+	printf("\n");	
+	
+	printf("R/50 :  ");
+	for (i =startPos ; i < len; i += 50){
+		if ( data[i] > 0 ) 
+			printf("1");
+		else
+			printf("0");
+	}
+	printf("\n");	
+	
+}
+
+float complex cexpf (float complex Z)
+{
+  float complex  Res;
+  double rho = exp (__real__ Z);
+  __real__ Res = rho * cosf(__imag__ Z);
+  __imag__ Res = rho * sinf(__imag__ Z);
+  return Res;
 }

@@ -16,7 +16,7 @@ my $gitbranch = `git rev-parse --abbrev-ref HEAD`;
 my $clean = 2;
 my @compiletime = gmtime();
 
-my $fullgitinfo = $gitbranch . '/' . $gitversion;
+my $fullgitinfo = 'iceman' . $gitbranch . '/' . $gitversion;
 
 $fullgitinfo =~ s/(\s)//g;
 

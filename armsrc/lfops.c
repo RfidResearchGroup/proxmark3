@@ -54,11 +54,11 @@ void SnoopLFRawAdcSamples(int divisor, int trigger_threshold)
 // split into two routines so we can avoid timing issues after sending commands //
 void DoAcquisition125k(int trigger_threshold)
 {
-	uint8_t *dest = (uint8_t *)BigBuf;
-	int n = sizeof(BigBuf);
+	uint8_t *dest =  mifare_get_bigbufptr();
+	int n = 8000;
 	int i;
 
-	memset(dest, 0, n);
+	memset(dest, 0x00, n);
 	i = 0;
 	for(;;) {
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
@@ -77,6 +77,7 @@ void DoAcquisition125k(int trigger_threshold)
 	}
 	Dbprintf("buffer samples: %02x %02x %02x %02x %02x %02x %02x %02x ...",
 			dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
+			
 }
 
 void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, uint8_t *command)
@@ -829,24 +830,12 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
-	uint8_t *dest = (uint8_t *)BigBuf;
+	uint8_t *dest =  mifare_get_bigbufptr();
 	int m=0, n=0, i=0, idx=0, lastval=0;
 	int found=0;
 	uint32_t code=0, code2=0;
-	//uint32_t hi2=0, hi=0, lo=0;
 
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-
-	// Connect the A/D to the peak-detected low-frequency path.
-	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-
-	// Give it a bit of time for the resonant antenna to settle.
-	SpinDelay(50);
-
-	// Now set up the SSC to get the ADC samples that are now streaming at us.
-	FpgaSetupSsc();
+	LFSetupFPGAForADC(0, true);
 
 	for(;;) {
 		WDT_HIT();
@@ -860,7 +849,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		}
 
 		i = 0;
-		m = sizeof(BigBuf);
+		m = 30000;
 		memset(dest,128,m);
 		for(;;) {
 			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
@@ -872,13 +861,12 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 				// we don't care about actual value, only if it's more or less than a
 				// threshold essentially we capture zero crossings for later analysis
-				if(dest[i] < 127) dest[i] = 0; else dest[i] = 1;
-				i++;
+				dest[i] = (dest[i] < 127) ? 0 : 1;
+				++i;
 				if (ledcontrol)
 					LED_D_OFF();
-				if(i >= m) {
+				if(i >= m) 	
 					break;
-				}
 			}
 		}
 
@@ -898,12 +886,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		for( i=0; idx<m; idx++) {
 			if (dest[idx-1]<dest[idx]) {
 				dest[i]=idx-lastval;
-				if (dest[i] <= 8) {
-						dest[i]=1;
-				} else {
-						dest[i]=0;
-				}
-
+				dest[i] = (dest[i] <= 8) ? 1:0;
 				lastval=idx;
 				i++;
 			}
@@ -931,90 +914,23 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				} else {
 					n=(n+1)/6;			// fc/10 in sets of 6
 				}
-				switch (n) {			// stuff appropriate bits in buffer
-					case 0:
-					case 1:	// one bit
-						dest[i++]=dest[idx-1]^1;
-						//Dbprintf("%d",dest[idx-1]);
-						break;
-					case 2: // two bits
-						dest[i++]=dest[idx-1]^1;
-						dest[i++]=dest[idx-1]^1;
-						//Dbprintf("%d",dest[idx-1]);
-						//Dbprintf("%d",dest[idx-1]);
-						break;
-					case 3: // 3 bit start of frame markers
-						for(int j=0; j<3; j++){
-						  dest[i++]=dest[idx-1]^1;
-						//  Dbprintf("%d",dest[idx-1]);
+
+				// stuff appropriate bits in buffer
+				if ( n==0 )
+					dest[i++]=dest[idx-1]^1;
+				else {
+					if ( n < 13){
+						for(int j=0; j<n; j++){
+							dest[i++]=dest[idx-1]^1;
 						}
-						break;
-					case 4:
-						for(int j=0; j<4; j++){
-						  dest[i++]=dest[idx-1]^1;
-						//  Dbprintf("%d",dest[idx-1]);
-						}
-						break;
-					case 5:
-						for(int j=0; j<5; j++){
-						  dest[i++]=dest[idx-1]^1;
-						//  Dbprintf("%d",dest[idx-1]);
-						}
-						break;
-					case 6:
-						for(int j=0; j<6; j++){
-						  dest[i++]=dest[idx-1]^1;
-						//  Dbprintf("%d",dest[idx-1]);
-						}
-						break;
-					case 7:
-						for(int j=0; j<7; j++){
-						  dest[i++]=dest[idx-1]^1;
-						//  Dbprintf("%d",dest[idx-1]);
-						}
-						break;
-					case 8:
-						for(int j=0; j<8; j++){
-						  dest[i++]=dest[idx-1]^1;
-						//  Dbprintf("%d",dest[idx-1]);
-						}
-						break;
-					case 9:
-						for(int j=0; j<9; j++){
-						  dest[i++]=dest[idx-1]^1;
-						//  Dbprintf("%d",dest[idx-1]);
-						}
-						break;
-					case 10:
-						for(int j=0; j<10; j++){
-						  dest[i++]=dest[idx-1]^1;
-						//  Dbprintf("%d",dest[idx-1]);
-						}
-						break;
-					case 11:
-						for(int j=0; j<11; j++){
-						  dest[i++]=dest[idx-1]^1;
-						//  Dbprintf("%d",dest[idx-1]);
-						}
-						break;
-					case 12:
-						for(int j=0; j<12; j++){
-						  dest[i++]=dest[idx-1]^1;
-						 // Dbprintf("%d",dest[idx-1]);
-						}
-						break;
-					default:	// this shouldn't happen, don't stuff any bits
-						//Dbprintf("%d",dest[idx-1]);
-						break;
+					}
 				}
+				
 				n=0;
 				lastval=dest[idx];
 			}
 		}//end for
-		/*for(int j=0; j<64;j+=8){
-		  Dbprintf("%d%d%d%d%d%d%d%d",dest[j],dest[j+1],dest[j+2],dest[j+3],dest[j+4],dest[j+5],dest[j+6],dest[j+7]);
-		}
-		Dbprintf("\n");*/
+
 		m=i;
 		WDT_HIT();
 		
@@ -1045,7 +961,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		       unknown <<=1;
 		       if (dest[idx+j]) unknown |= 1;
 		    }
-		    for(int j=36;j<45;j++){
+		    for(int j=37;j<45;j++){
 		       //Dbprintf("%d",dest[idx+j]);
 		       number <<=1;
 		       if (dest[idx+j]) number |= 1;
@@ -1055,13 +971,14 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		       number <<=1;
 		       if (dest[idx+j]) number |= 1;
 		    }
+			
 		    for(int j=0; j<32; j++){
-			code <<=1;
-			if(dest[idx+j]) code |= 1;
+				code <<=1;
+				if(dest[idx+j]) code |= 1;
 		    }
 		    for(int j=32; j<64; j++){
-			code2 <<=1;
-			if(dest[idx+j]) code2 |= 1;
+				code2 <<=1;
+				if(dest[idx+j]) code2 |= 1;
 		    }
 		    
 		    Dbprintf("XSF(%02d)%02x:%d (%08x%08x)",version,unknown,number,code,code2);
@@ -1070,17 +987,12 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		}
 		// if we're only looking for one tag 
 		if (findone){
-			//*high = hi;
-			//*low = lo;
 			LED_A_OFF();
 			return;
 		}
-      
-		//hi=0;
-		//lo=0;
+
 		found=0;
 	  }
-		
 	}
 	}
 	WDT_HIT();

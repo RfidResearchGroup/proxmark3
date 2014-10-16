@@ -303,7 +303,6 @@ int CmdDump(const char *Cmd){
 	char cmdp = param_getchar(Cmd, 0);
 	char s[20];
 	uint8_t pwd[4] = {0x00};
-
 		
 	if (strlen(Cmd)>1 || cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:  lf t55xx dump <password>");
@@ -320,7 +319,6 @@ int CmdDump(const char *Cmd){
 		}
 	}
 
-
 	for ( int i = 0; i <8; ++i){
 		*s = 0;
 		if ( hasPwd ) {
@@ -331,6 +329,15 @@ int CmdDump(const char *Cmd){
 			CmdReadBlk(s);
 		}
 	}
+	return 0;
+}
+
+int CmdIceFsk(const char *Cmd){
+	//uint8_t bits[1000] = {0x00};
+	//uint8_t * bitstream = bits;
+	iceFsk3(GraphBuffer, LF_TRACE_BUFF_SIZE);
+	
+	RepaintGraphWindow();
 	return 0;
 }
 
@@ -390,7 +397,7 @@ char * GetModulationStr( uint32_t id){
 	
 	switch (id){
 		case 0: 
-			sprintf(retStr,"%d - direct",id);
+			sprintf(retStr,"%d - DIRECT (ASK/NRZ)",id);
 			break;
 		case 1:
 			sprintf(retStr,"%d - PSK 1 phase change when input changes",id);
@@ -444,13 +451,14 @@ uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits){
 static command_t CommandTable[] =
 {
   {"help",   CmdHelp,        1, "This help"},
-  {"rd",     CmdReadBlk,     0, "<Block> -- Read T55xx block data (page 0)"},
-  {"rdPWD",  CmdReadBlkPWD,  0, "<Block> <Password> -- Read T55xx block data in password mode(page 0)"},
-  {"wr",     CmdWriteBlk,    0, "<Data> <Block> -- Write T55xx block data (page 0)"},
-  {"wrPWD",  CmdWriteBlkPWD, 0, "<Data> <Block> <Password> -- Write T55xx block data in password mode(page 0)"},
-  {"trace",  CmdReadTrace,   0, "Read T55xx traceability data (page 1)"},
-  {"info",   CmdInfo,        0, "Read T55xx configuration data (page 0 / block 0"},
-  {"dump",   CmdDump,        0, "Dump T55xx card block 0-7 (is possible)"},
+  {"rd",     CmdReadBlk,     0, "<block> -- Read T55xx block data (page 0)"},
+  {"rdPWD",  CmdReadBlkPWD,  0, "<block> <password> -- Read T55xx block data with password mode"},
+  {"wr",     CmdWriteBlk,    0, "<data> <block> -- Write T55xx block data (page 0)"},
+  {"wrPWD",  CmdWriteBlkPWD, 0, "<data> <block> <password> -- Write T55xx block data with password"},
+  {"trace",  CmdReadTrace,   0, "Read T55xx traceability data (page 1 / blk 0-1)"},
+  {"info",   CmdInfo,        0, "Read T55xx configuration data (page0 /blk 0)"},
+  {"dump",   CmdDump,        0, "[password] Dump T55xx card block 0-7. optional with password"},
+  {"fsk",    CmdIceFsk,      0, "FSK demod"},
   {NULL, NULL, 0, NULL}
 };
 

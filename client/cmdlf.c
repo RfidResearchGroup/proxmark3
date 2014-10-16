@@ -468,6 +468,18 @@ int CmdLFSnoop(const char *Cmd)
   }
   SendCommand(&c);
   WaitForResponse(CMD_ACK,NULL);
+  
+  size_t BUFF_SIZE = 8000;
+  uint8_t data[BUFF_SIZE];
+
+  GetFromBigBuf(data,BUFF_SIZE,3560);  //3560 -- should be offset..
+  WaitForResponseTimeout(CMD_ACK,NULL, 1500);
+
+	for (int j = 0; j < BUFF_SIZE; j++) {
+		GraphBuffer[j] = ((int)data[j]);
+	}
+	GraphTraceLen = BUFF_SIZE;
+  
   return 0;
 }
 
@@ -551,22 +563,27 @@ static command_t CommandTable[] =
 {
   {"help",        CmdHelp,            1, "This help"},
   {"cmdread",     CmdLFCommandRead,   0, "<off period> <'0' period> <'1' period> <command> ['h'] -- Modulate LF reader field to send command before read (all periods in microseconds) (option 'h' for 134)"},
-  {"em4x",        CmdLFEM4X,          1, "{ EM4X RFIDs... }"},
+
   {"flexdemod",   CmdFlexdemod,       1, "Demodulate samples for FlexPass"},
-  {"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
-  {"io",     	  CmdLFIO,	      1, "{ ioProx tags... }"},
   {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
   {"indalaclone", CmdIndalaClone,     1, "<UID> ['l']-- Clone Indala to T55x7 (tag must be in antenna)(UID in HEX)(option 'l' for 224 UID"},
+  {"vchdemod",    CmdVchDemod,        1, "['clone'] -- Demodulate samples for VeriChip"},
+
+  
   {"read",        CmdLFRead,          0, "['h' or <divisor>] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134, alternatively: f=12MHz/(divisor+1))"},
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
   {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
   {"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
   {"snoop",       CmdLFSnoop,         0, "['l'|'h'|<divisor>] [trigger threshold]-- Snoop LF (l:125khz, h:134khz)"},
-  {"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
-  {"hitag",       CmdLFHitag,         1, "{ Hitag tags and transponders... }"},
-  {"vchdemod",    CmdVchDemod,        1, "['clone'] -- Demodulate samples for VeriChip"},
-  {"t55xx",       CmdLFT55XX,         1, "{ T55xx RFIDs... }"},
-  {"pcf7931",     CmdLFPCF7931,       1, "{PCF7931 RFIDs...}"},
+  
+  {"em4x",        CmdLFEM4X,          1, "{ EM4X tags }"},      
+  {"hid",         CmdLFHID,           1, "{ HID tags }"},
+  {"hitag",       CmdLFHitag,         1, "{ Hitag tags and transponders }"},
+  {"io",     	  CmdLFIO,	          1, "{ ioProx tags }"},
+  {"pcf7931",     CmdLFPCF7931,       1, "{ PCF7931 tags }"},
+  {"ti",          CmdLFTI,            1, "{ TI tags }"},
+  {"t55xx",       CmdLFT55XX,         1, "{ T55xx tags }"},
+ 
   {NULL, NULL, 0, NULL}
 };
 
