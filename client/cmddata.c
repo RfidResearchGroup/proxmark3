@@ -464,8 +464,8 @@ int CmdSamples(const char *Cmd)
   if (n == 0) n = 512;
   if (n > sizeof(got)) n = sizeof(got);
   
-  PrintAndLog("Reading %d samples\n", n);
-  GetFromBigBuf(got,n,0);
+  PrintAndLog("Reading %d samples from device memory\n", n);
+  GetFromBigBuf(got,n,3560);
   WaitForResponse(CMD_ACK,NULL);
   for (int j = 0; j < n; j++) {
     GraphBuffer[cnt++] = ((int)got[j]) - 128;

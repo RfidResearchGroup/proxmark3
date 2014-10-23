@@ -255,38 +255,32 @@ int CmdEM410xSim(const char *Cmd)
   return 0;
 }
 
-/* Function is equivalent of loread + losamples + em410xread
- * looped until an EM410x tag is detected */
+/* Function is equivalent of lf read + data samples + em410xread
+ * looped until an EM410x tag is detected 
+ * 
+ * Why is CmdSamples("16000")?
+ *  TBD: Auto-grow sample size based on detected sample rate.  IE: If the
+ *       rate gets lower, then grow the number of samples
+ *  Changed by martin, 4000 x 4 = 16000, 
+ *  see http://www.proxmark.org/forum/viewtopic.php?pid=7235#p7235
+
+*/
 int CmdEM410xWatch(const char *Cmd)
 {
-  int read_h = (*Cmd == 'h');
-  //char k;
-  do
-  {
-    CmdLFRead(read_h ? "h" : "");
-    // 2000 samples is OK for clock=64, but not clock=32.  Probably want
-		//   8000 for clock=16.  Don't want to go too high since old HID driver
-		//   is very slow
-		// TBD: Auto-grow sample size based on detected sample rate.  IE: If the
-		//   rate gets lower, then grow the number of samples
-
-    // Changed by martin, 4000 x 4 = 16000, 
-    // see http://www.proxmark.org/forum/viewtopic.php?pid=7235#p7235
-		CmdSamples("16000");
- } while (
+	int read_h = (*Cmd == 'h');
+	do
+	{
+		CmdLFRead(read_h ? "h" : "");
+		CmdSamples("16000");	
+	} while (
 		!CmdEM410xRead("") 
 	);
-  return 0;
+	return 0;
 }
 
 int CmdEM410xWatchnSpoof(const char *Cmd)
 {
-  int read_h = (*Cmd == 'h');
-  do
-  {
-    CmdLFRead(read_h ? "h" : "");
-    CmdSamples("16000");
- } while ( ! CmdEM410xRead(""));
+	CmdEM410xWatch(Cmd);
     PrintAndLog("# Replaying : %s",global_em410xId);
     CmdEM410xSim(global_em410xId);
   return 0;
@@ -636,12 +630,12 @@ int CmdWriteWordPWD(const char *Cmd)
 static command_t CommandTable[] =
 {
   {"help", CmdHelp, 1, "This help"},
-  {"410read", CmdEM410xRead, 1, "[clock rate] -- Extract ID from EM410x tag"},
-  {"410sim", CmdEM410xSim, 0, "<UID> -- Simulate EM410x tag"},
-  {"410watch", CmdEM410xWatch, 0, "['h'] -- Watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
-  {"410spoof", CmdEM410xWatchnSpoof, 0, "['h'] --- Watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
-  {"410write", CmdEM410xWrite, 1, "<UID> <'0' T5555> <'1' T55x7> [clock rate] -- Write EM410x UID to T5555(Q5) or T55x7 tag, optionally setting clock rate"},
-  {"4xread", CmdEM4x50Read, 1, "Extract data from EM4x50 tag"},
+  {"410xread", CmdEM410xRead, 1, "[clock rate] -- Extract ID from EM410x tag"},
+  {"410xsim", CmdEM410xSim, 0, "<UID> -- Simulate EM410x tag"},
+  {"410xwatch", CmdEM410xWatch, 0, "['h'] -- Watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
+  {"410xspoof", CmdEM410xWatchnSpoof, 0, "['h'] --- Watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
+  {"410xwrite", CmdEM410xWrite, 1, "<UID> <'0' T5555> <'1' T55x7> [clock rate] -- Write EM410x UID to T5555(Q5) or T55x7 tag, optionally setting clock rate"},
+  {"4x50read", CmdEM4x50Read, 1, "Extract data from EM4x50 tag"},
   {"rd", CmdReadWord, 1, "<Word 1-15> -- Read EM4xxx word data"},
   {"rdpwd", CmdReadWordPWD, 1, "<Word 1-15> <Password> -- Read EM4xxx word data  in password mode "},
   {"wr", CmdWriteWord, 1, "<Data> <Word 1-15> -- Write EM4xxx word data"},

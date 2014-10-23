@@ -363,7 +363,9 @@ int CmdLFRead(const char *Cmd)
   } else if (*Cmd == '\0') {
     c.arg[0] = 0;
   } else if (sscanf(Cmd, "%"lli, &c.arg[0]) != 1) {
-    PrintAndLog("use 'read' or 'read h', or 'read <divisor>'");
+    PrintAndLog("Samples 1: 'lf read'");
+	PrintAndLog("        2: 'lf read h'");
+	PrintAndLog("        3: 'lf read <divisor>'");
     return 0;
   }
   SendCommand(&c);
@@ -566,7 +568,7 @@ static command_t CommandTable[] =
 
   {"flexdemod",   CmdFlexdemod,       1, "Demodulate samples for FlexPass"},
   {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
-  {"indalaclone", CmdIndalaClone,     1, "<UID> ['l']-- Clone Indala to T55x7 (tag must be in antenna)(UID in HEX)(option 'l' for 224 UID"},
+  {"indalaclone", CmdIndalaClone,     1, "<UID> ['l']-- Clone Indala to T55x7 (UID in HEX)(option 'l' for 224 UID"},
   {"vchdemod",    CmdVchDemod,        1, "['clone'] -- Demodulate samples for VeriChip"},
 
   

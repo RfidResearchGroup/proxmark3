@@ -56,7 +56,7 @@ int CmdReadBlk(const char *Cmd)
 		GraphBuffer[j] = (int)data[j];
 	}
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
-	CmdIceManchester(Block);
+	ManchesterDemod(Block);
 	RepaintGraphWindow();
   return 0;
 }
@@ -93,7 +93,7 @@ int CmdReadBlkPWD(const char *Cmd)
 		GraphBuffer[j] = ((int)data[j]) - 128;
 	}
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
-	CmdIceManchester(Block);	
+	ManchesterDemod(Block);	
 	RepaintGraphWindow();
   return 0;
 }
@@ -475,9 +475,9 @@ static command_t CommandTable[] =
 {
   {"help",   CmdHelp,        1, "This help"},
   {"rd",     CmdReadBlk,     0, "<block> -- Read T55xx block data (page 0)"},
-  {"rdPWD",  CmdReadBlkPWD,  0, "<block> <password> -- Read T55xx block data with password mode"},
+  {"rdpwd",  CmdReadBlkPWD,  0, "<block> <password> -- Read T55xx block data with password mode"},
   {"wr",     CmdWriteBlk,    0, "<data> <block> -- Write T55xx block data (page 0)"},
-  {"wrPWD",  CmdWriteBlkPWD, 0, "<data> <block> <password> -- Write T55xx block data with password"},
+  {"wrpwd",  CmdWriteBlkPWD, 0, "<data> <block> <password> -- Write T55xx block data with password"},
   {"trace",  CmdReadTrace,   0, "[1] Read T55xx traceability data (page 1 / blk 0-1) "},
   {"info",   CmdInfo,        0, "[1] Read T55xx configuration data (page0 /blk 0)"},
   {"dump",   CmdDump,        0, "[password] Dump T55xx card block 0-7. optional with password"},
