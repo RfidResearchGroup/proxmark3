@@ -24,6 +24,7 @@
 #include "legicrf.h"
 #include "../include/hitag2.h"
 
+
 #ifdef WITH_LCD
  #include "LCD.h"
 #endif
@@ -359,6 +360,7 @@ void SamyRun()
 
 	int selected = 0;
 	int playing = 0;
+	int cardRead = 0;
 
 	// Turn on selected LED
 	LED(selected + 1, 0);
@@ -374,7 +376,7 @@ void SamyRun()
 		SpinDelay(300);
 
 		// Button was held for a second, begin recording
-		if (button_pressed > 0)
+		if (button_pressed > 0 && cardRead == 0)
 		{
 			LEDsoff();
 			LED(selected + 1, 0);
@@ -400,6 +402,40 @@ void SamyRun()
 			// If we were previously playing, set playing off
 			// so next button push begins playing what we recorded
 			playing = 0;
+			
+			cardRead = 1;
+	
+		}
+
+		else if (button_pressed > 0 && cardRead == 1)
+		{
+					LEDsoff();
+					LED(selected + 1, 0);
+					LED(LED_ORANGE, 0);
+
+					// record
+					Dbprintf("Cloning %x %x %x", selected, high[selected], low[selected]);
+
+					// wait for button to be released
+					while(BUTTON_PRESS())
+						WDT_HIT();
+
+					/* need this delay to prevent catching some weird data */
+					SpinDelay(500);
+
+					CopyHIDtoT55x7(high[selected], low[selected], 0, 0);
+					Dbprintf("Cloned %x %x %x", selected, high[selected], low[selected]);
+
+					LEDsoff();
+					LED(selected + 1, 0);
+					// Finished recording
+
+					// If we were previously playing, set playing off
+					// so next button push begins playing what we recorded
+					playing = 0;
+					
+					cardRead = 0;
+			
 		}
 
 		// Change where to record (or begin playing)

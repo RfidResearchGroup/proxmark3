@@ -347,7 +347,7 @@ int CmdHF15DumpMem(const char*Cmd) {
 				if (!(recv[0] & ISO15_RES_ERROR)) {
 					retry=0;
 					*output=0; // reset outputstring
-					sprintf(output, "Block %2i   ",blocknum);
+					sprintf(output, "Block %02x   ",blocknum);
 					for ( int i=1; i<resp.arg[0]-2; i++) { // data in hex
 						sprintf(output+strlen(output),"%02X ",recv[i]);
 					}					

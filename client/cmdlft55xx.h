@@ -20,6 +20,7 @@ int CmdReadTrace(const char *Cmd);
 int CmdInfo(const char *Cmd);
 int CmdIceFsk(const char *Cmd);
 int CmdIceManchester(const char *Cmd);
+int ManchesterDemod(int block);
 char * GetBitRateStr(uint32_t id);
 char * GetSaferStr(uint32_t id);
 char * GetModulationStr( uint32_t id);

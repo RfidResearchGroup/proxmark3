@@ -72,7 +72,10 @@ void ToSendReset(void);
 void ListenReaderField(int limit);
 void AcquireRawAdcSamples125k(int at134khz);
 void SnoopLFRawAdcSamples(int divisor, int trigger_threshold);
-void DoAcquisition125k(int trigger_threshold);
+void DoAcquisition125k_internal(int trigger_threshold, bool silent);
+void DoAcquisition125k_threshold(int trigger_threshold);
+void DoAcquisition125k();
+
 extern int ToSendMax;
 extern uint8_t ToSend[];
 extern uint32_t BigBuf[];

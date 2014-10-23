@@ -26,6 +26,10 @@
 #include "util.h"
 #include "cmdscript.h"
 
+int delta125[2];
+int delta134[2];
+int deltahf[2];
+int deltaReset = 0;
 
 unsigned int current_command = CMD_UNKNOWN;
 //unsigned int received_command = CMD_UNKNOWN;
@@ -210,13 +214,30 @@ void UsbCommandReceived(UsbCommand *UC)
       int vLf125, vLf134, vHf;
       vLf125 = UC->arg[0] & 0xffff;
       vLf134 = UC->arg[0] >> 16;
-      vHf = UC->arg[1] & 0xffff;;
-      peakf = UC->arg[2] & 0xffff;
-      peakv = UC->arg[2] >> 16;
+      vHf    = UC->arg[1] & 0xffff;;
+      peakf  = UC->arg[2] & 0xffff;
+      peakv  = UC->arg[2] >> 16;
+	  
+	  //Reset delta trigger every 3:d time
+	  
+	  if ( deltaReset == 4){
+		delta125[0] = vLf125;
+		delta134[0] = vLf134; 
+		deltahf[0]  = vHf;
+	  } else if ( deltaReset == 2){
+		delta125[1] = vLf125;
+		delta134[1] = vLf134; 
+		deltahf[1]  = vHf;  
+	  }
+	  
+	  if ( deltaReset == 0){
+		
+	  }
+	  
       PrintAndLog("");
       PrintAndLog("# LF antenna: %5.2f V @   125.00 kHz", vLf125/1000.0);
       PrintAndLog("# LF antenna: %5.2f V @   134.00 kHz", vLf134/1000.0);
-      PrintAndLog("# LF optimal: %5.2f V @%9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
+      PrintAndLog("# LF optimal: %5.2f V @    %9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
       PrintAndLog("# HF antenna: %5.2f V @    13.56 MHz", vHf/1000.0);
       if (peakv<2000)
         PrintAndLog("# Your LF antenna is unusable.");
@@ -226,7 +247,10 @@ void UsbCommandReceived(UsbCommand *UC)
         PrintAndLog("# Your HF antenna is unusable.");
       else if (vHf<5000)
         PrintAndLog("# Your HF antenna is marginal.");
-    } break;
+    } 
+	
+	deltaReset = (deltaReset == 0)  ? 4 :  deltaReset>>1;	  
+	break;
       
     case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K: {
 //      printf("received samples: ");

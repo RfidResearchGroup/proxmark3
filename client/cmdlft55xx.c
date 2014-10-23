@@ -28,9 +28,7 @@ static int CmdHelp(const char *Cmd);
 
 int CmdReadBlk(const char *Cmd)
 {
-	//default to invalid block
 	int Block = -1;
-	UsbCommand c;
 
 	sscanf(Cmd, "%d", &Block);
 
@@ -39,10 +37,8 @@ int CmdReadBlk(const char *Cmd)
 		return 1;
 	}	
 
-	//PrintAndLog(" Reading page 0 block : %d", Block);
-
 	// this command fills up BigBuff
-	// 
+	UsbCommand c;
 	c.cmd = CMD_T55XX_READ_BLOCK;
 	c.d.asBytes[0] = 0x00;
 	c.arg[0] = 0;
@@ -57,10 +53,10 @@ int CmdReadBlk(const char *Cmd)
 	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
 	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
-		GraphBuffer[j] = ((int)data[j]) ;
+		GraphBuffer[j] = (int)data[j];
 	}
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
-	CmdIceManchester(Cmd);
+	CmdIceManchester(Block);
 	RepaintGraphWindow();
   return 0;
 }
@@ -97,9 +93,7 @@ int CmdReadBlkPWD(const char *Cmd)
 		GraphBuffer[j] = ((int)data[j]) - 128;
 	}
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
-
-	CmdIceManchester(Cmd);
-	
+	CmdIceManchester(Block);	
 	RepaintGraphWindow();
   return 0;
 }
@@ -349,6 +343,10 @@ int CmdIceFsk(const char *Cmd){
 	return 0;
 }
 int CmdIceManchester(const char *Cmd){
+	ManchesterDemod( -1);
+	return 0;
+}
+int ManchesterDemod(int block){
 
 	int  blockNum = -1;
 	uint32_t blockData;
@@ -357,9 +355,9 @@ int CmdIceManchester(const char *Cmd){
 	
 	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);	
     blockData = PackBits(5, 32, bitstream);
-	sscanf(Cmd, "%d", &blockNum);
+
 	if ( blockNum > -1){
-		PrintAndLog("   Block %d  : 0x%08X  %s", blockNum, blockData, sprint_bin(bitstream+5,32) );
+		PrintAndLog("   Block %d : 0x%08X  %s", blockNum, blockData, sprint_bin(bitstream+5,32) );
 	}else{
 		PrintAndLog("   Decoded : 0x%08X  %s", blockData, sprint_bin(bitstream+5,32) );
 	}
@@ -484,7 +482,7 @@ static command_t CommandTable[] =
   {"info",   CmdInfo,        0, "[1] Read T55xx configuration data (page0 /blk 0)"},
   {"dump",   CmdDump,        0, "[password] Dump T55xx card block 0-7. optional with password"},
   {"fsk",    CmdIceFsk,      0, "FSK demod"},
-  {"man",    CmdIceManchester,      0, "Manchester demod"},
+  {"man",    CmdIceManchester,      0, "Manchester demod (with SST)"},
   {NULL, NULL, 0, NULL}
 };
 

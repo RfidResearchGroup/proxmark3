@@ -42,17 +42,17 @@ void LFSetupFPGAForADC(int divisor, bool lf_field)
 void AcquireRawAdcSamples125k(int divisor)
 {
 	LFSetupFPGAForADC(divisor, true);
-	DoAcquisition125k(-1);
+	DoAcquisition125k();
 }
 
 void SnoopLFRawAdcSamples(int divisor, int trigger_threshold)
 {
 	LFSetupFPGAForADC(divisor, false);
-	DoAcquisition125k(trigger_threshold);
+	DoAcquisition125k_threshold(trigger_threshold);
 }
 
 // split into two routines so we can avoid timing issues after sending commands //
-void DoAcquisition125k(int trigger_threshold)
+void DoAcquisition125k_internal(int trigger_threshold, bool silent)
 {
 	uint8_t *dest =  mifare_get_bigbufptr();
 	int n = 8000;
@@ -75,11 +75,18 @@ void DoAcquisition125k(int trigger_threshold)
 			if (++i >= n) break;
 		}
 	}
-	Dbprintf("buffer samples: %02x %02x %02x %02x %02x %02x %02x %02x ...",
+	if (!silent){
+		Dbprintf("buffer samples: %02x %02x %02x %02x %02x %02x %02x %02x ...",
 			dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
-			
+	}
 }
-
+void DoAcquisition125k_threshold(int trigger_threshold) {
+	 DoAcquisition125k_internal(trigger_threshold, true);
+}
+void DoAcquisition125k() {
+	 DoAcquisition125k_internal(-1, true);
+}	
+	
 void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, uint8_t *command)
 {
 	int at134khz;
@@ -138,7 +145,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
 	// now do the read
-	DoAcquisition125k(-1);
+	DoAcquisition125k();
 }
 
 /* blank r/w tag data stream
@@ -614,331 +621,206 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 		LED_A_OFF();
 }
 
+size_t fsk_demod(uint8_t * dest, size_t size)
+{
+	uint32_t last_transition = 0;
+	uint32_t idx = 1;
 
+	// we don't care about actual value, only if it's more or less than a
+	// threshold essentially we capture zero crossings for later analysis
+	uint8_t threshold_value = 127;
+
+	// sync to first lo-hi transition, and threshold
+
+	//Need to threshold first sample
+	dest[0] = (dest[0] < threshold_value) ? 0 : 1;
+
+	size_t numBits = 0;
+	// count cycles between consecutive lo-hi transitions, there should be either 8 (fc/8)
+	// or 10 (fc/10) cycles but in practice due to noise etc we may end up with with anywhere
+	// between 7 to 11 cycles so fuzz it by treat anything <9 as 8 and anything else as 10
+	for(idx = 1; idx < size; idx++) {
+		// threshold current value
+		dest[idx] = (dest[idx] < threshold_value) ? 0 : 1;
+
+		// Check for 0->1 transition
+		if (dest[idx-1] < dest[idx]) { // 0 -> 1 transition
+
+			dest[numBits] =  (idx-last_transition <  9) ? 1 : 0;
+			last_transition = idx;
+			numBits++;
+		}
+	}
+	return numBits; //Actually, it returns the number of bytes, but each byte represents a bit: 1 or 0
+}
+
+
+size_t aggregate_bits(uint8_t *dest,size_t size, uint8_t h2l_crossing_value,uint8_t l2h_crossing_value, uint8_t maxConsequtiveBits )
+{
+	uint8_t lastval=dest[0];
+	uint32_t idx=0;
+	size_t numBits=0;
+	uint32_t n=1;
+
+	for( idx=1; idx < size; idx++) {
+
+		if (dest[idx]==lastval) {
+			n++;
+			continue;
+		}
+		//if lastval was 1, we have a 1->0 crossing
+		if ( dest[idx-1] ) {
+			n=(n+1) / h2l_crossing_value;
+		} else {// 0->1 crossing
+			n=(n+1) / l2h_crossing_value;
+		}
+		if (n == 0) n = 1;
+
+		if(n < maxConsequtiveBits)
+		{
+			memset(dest+numBits, dest[idx-1] , n);
+			numBits += n;
+		}
+		n=0;
+		lastval=dest[idx];
+	}//end for
+
+	return numBits;
+
+}
 // loop to capture raw HID waveform then FSK demodulate the TAG ID from it
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = (uint8_t *)BigBuf;
-	int m=0, n=0, i=0, idx=0, found=0, lastval=0;
+
+	size_t size=0,idx=0; //, found=0;
   uint32_t hi2=0, hi=0, lo=0;
 
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
-	// Connect the A/D to the peak-detected low-frequency path.
-	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+	while(!BUTTON_PRESS()) {
 
-	// Give it a bit of time for the resonant antenna to settle.
-	SpinDelay(50);
+		// Configure to go in 125Khz listen mode
+		LFSetupFPGAForADC(0,true);
 
-	// Now set up the SSC to get the ADC samples that are now streaming at us.
-	FpgaSetupSsc();
-
-	for(;;) {
 		WDT_HIT();
-		if (ledcontrol)
-			LED_A_ON();
-		if(BUTTON_PRESS()) {
-			DbpString("Stopped");
-			if (ledcontrol)
-				LED_A_OFF();
-			return;
-		}
+		if (ledcontrol) LED_A_ON();
 
-		i = 0;
-		m = sizeof(BigBuf);
-		memset(dest,128,m);
-		for(;;) {
-			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-				AT91C_BASE_SSC->SSC_THR = 0x43;
-				if (ledcontrol)
-					LED_D_ON();
-			}
-			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-				dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-				// we don't care about actual value, only if it's more or less than a
-				// threshold essentially we capture zero crossings for later analysis
-				if(dest[i] < 127) dest[i] = 0; else dest[i] = 1;
-				i++;
-				if (ledcontrol)
-					LED_D_OFF();
-				if(i >= m) {
-					break;
-				}
-			}
-		}
+		DoAcquisition125k();
+		size  = sizeof(BigBuf);
 
 		// FSK demodulator
-
-		// sync to first lo-hi transition
-		for( idx=1; idx<m; idx++) {
-			if (dest[idx-1]<dest[idx])
-				lastval=idx;
-				break;
-		}
-		WDT_HIT();
-
-		// count cycles between consecutive lo-hi transitions, there should be either 8 (fc/8)
-		// or 10 (fc/10) cycles but in practice due to noise etc we may end up with with anywhere
-		// between 7 to 11 cycles so fuzz it by treat anything <9 as 8 and anything else as 10
-		for( i=0; idx<m; idx++) {
-			if (dest[idx-1]<dest[idx]) {
-				dest[i]=idx-lastval;
-				if (dest[i] <= 8) {
-						dest[i]=1;
-				} else {
-						dest[i]=0;
-				}
-
-				lastval=idx;
-				i++;
-			}
-		}
-		m=i;
+		size = fsk_demod(dest, size);
 		WDT_HIT();
 
 		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
-		lastval=dest[0];
-		idx=0;
-		i=0;
-		n=0;
-		for( idx=0; idx<m; idx++) {
-			if (dest[idx]==lastval) {
-				n++;
-			} else {
-				// a bit time is five fc/10 or six fc/8 cycles so figure out how many bits a pattern width represents,
-				// an extra fc/8 pattern preceeds every 4 bits (about 200 cycles) just to complicate things but it gets
-				// swallowed up by rounding
-				// expected results are 1 or 2 bits, any more and it's an invalid manchester encoding
-				// special start of frame markers use invalid manchester states (no transitions) by using sequences
-				// like 111000
-				if (dest[idx-1]) {
-					n=(n+1)/6;			// fc/8 in sets of 6
-				} else {
-					n=(n+1)/5;			// fc/10 in sets of 5
-				}
-				switch (n) {			// stuff appropriate bits in buffer
-					case 0:
-					case 1:	// one bit
-						dest[i++]=dest[idx-1];
-						break;
-					case 2: // two bits
-						dest[i++]=dest[idx-1];
-						dest[i++]=dest[idx-1];
-						break;
-					case 3: // 3 bit start of frame markers
-						dest[i++]=dest[idx-1];
-						dest[i++]=dest[idx-1];
-						dest[i++]=dest[idx-1];
-						break;
-					// When a logic 0 is immediately followed by the start of the next transmisson
-					// (special pattern) a pattern of 4 bit duration lengths is created.
-					case 4:
-						dest[i++]=dest[idx-1];
-						dest[i++]=dest[idx-1];
-						dest[i++]=dest[idx-1];
-						dest[i++]=dest[idx-1];
-						break;
-					default:	// this shouldn't happen, don't stuff any bits
-						break;
-				}
-				n=0;
-				lastval=dest[idx];
-			}
-		}
-		m=i;
+		// 1->0 : fc/8 in sets of 6
+		// 0->1 : fc/10 in sets of 5
+		size = aggregate_bits(dest,size, 6,5,5);
+
 		WDT_HIT();
 
 		// final loop, go over previously decoded manchester data and decode into usable tag ID
 		// 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
-		for( idx=0; idx<m-6; idx++) {
+		uint8_t frame_marker_mask[] = {1,1,1,0,0,0};
+		int numshifts = 0;
+		idx = 0;
+		while( idx + sizeof(frame_marker_mask) < size) {
 			// search for a start of frame marker
-			if ( dest[idx] && dest[idx+1] && dest[idx+2] && (!dest[idx+3]) && (!dest[idx+4]) && (!dest[idx+5]) )
-			{
-				found=1;
-				idx+=6;
-        if (found && (hi2|hi|lo)) {
-          if (hi2 != 0){
-            Dbprintf("TAG ID: %x%08x%08x (%d)",
-                     (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
-          }
-          else {
-            Dbprintf("TAG ID: %x%08x (%d)",
-                     (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
-          }
-					/* if we're only looking for one tag */
-					if (findone)
-					{
-						*high = hi;
-						*low = lo;
-						return;
-					}
-          hi2=0;
-					hi=0;
-					lo=0;
-					found=0;
-				}
-			}
-			if (found) {
-				if (dest[idx] && (!dest[idx+1]) ) {
+			if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
+			{ // frame marker found
+				idx+=sizeof(frame_marker_mask);
+
+				while(dest[idx] != dest[idx+1] && idx < size-2)
+				{	// Keep going until next frame marker (or error)
+					// Shift in a bit. Start by shifting high registers
           hi2=(hi2<<1)|(hi>>31);
 					hi=(hi<<1)|(lo>>31);
+					//Then, shift in a 0 or one into low
+					if (dest[idx] && !dest[idx+1])	// 1 0
 					lo=(lo<<1)|0;
-				} else if ( (!dest[idx]) && dest[idx+1]) {
-          hi2=(hi2<<1)|(hi>>31);
-					hi=(hi<<1)|(lo>>31);
-					lo=(lo<<1)|1;
-				} else {
-					found=0;
-          hi2=0;
-					hi=0;
-					lo=0;
+					else // 0 1
+						lo=(lo<<1)|
+								1;
+					numshifts ++;
+					idx += 2;
 				}
-				idx++;
-			}
-			if ( dest[idx] && dest[idx+1] && dest[idx+2] && (!dest[idx+3]) && (!dest[idx+4]) && (!dest[idx+5]) )
-			{
-				found=1;
-				idx+=6;
-				if (found && (hi|lo)) {
-          if (hi2 != 0){
-            Dbprintf("TAG ID: %x%08x%08x (%d)",
-                     (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
-          }
-          else {
-            Dbprintf("TAG ID: %x%08x (%d)",
-                     (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
-          }
-					/* if we're only looking for one tag */
-					if (findone)
-					{
-						*high = hi;
-						*low = lo;
-						return;
+				//Dbprintf("Num shifts: %d ", numshifts);
+				// Hopefully, we read a tag and	 hit upon the next frame marker
+				if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
+				{
+					if (hi2 != 0){
+						Dbprintf("TAG ID: %x%08x%08x (%d)",
+							 (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
 					}
-          hi2=0;
-					hi=0;
-					lo=0;
-					found=0;
+					else {
+						Dbprintf("TAG ID: %x%08x (%d)",
+						 (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+					}
 				}
+
+				// reset
+				hi2 = hi = lo = 0;
+				numshifts = 0;
+			}else
+			{
+				idx++;
 			}
 		}
 		WDT_HIT();
+
 	}
+	DbpString("Stopped");
+	if (ledcontrol) LED_A_OFF();
 }
+
+uint32_t bytebits_to_byte(uint8_t* src, int numbits)
+{
+	uint32_t num = 0;
+	for(int i = 0 ; i < numbits ; i++)
+	{
+		num = (num << 1) | (*src);
+		src++;
+	}
+	return num;
+}
+
 
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
-	uint8_t *dest =  mifare_get_bigbufptr();
-	int m=0, n=0, i=0, idx=0, lastval=0;
-	int found=0;
+	uint8_t *dest = (uint8_t *)BigBuf;
+
+	size_t size=0, idx=0;
 	uint32_t code=0, code2=0;
 
-	LFSetupFPGAForADC(0, true);
 
-	for(;;) {
+	while(!BUTTON_PRESS()) {
+
+		// Configure to go in 125Khz listen mode
+		LFSetupFPGAForADC(0,true);
+
 		WDT_HIT();
-		if (ledcontrol)
-			LED_A_ON();
-		if(BUTTON_PRESS()) {
-			DbpString("Stopped");
-			if (ledcontrol)
-				LED_A_OFF();
-			return;
-		}
+		if (ledcontrol) LED_A_ON();
 
-		i = 0;
-		m = 30000;
-		memset(dest,128,m);
-		for(;;) {
-			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-				AT91C_BASE_SSC->SSC_THR = 0x43;
-				if (ledcontrol)
-					LED_D_ON();
-			}
-			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-				dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-				// we don't care about actual value, only if it's more or less than a
-				// threshold essentially we capture zero crossings for later analysis
-				dest[i] = (dest[i] < 127) ? 0 : 1;
-				++i;
-				if (ledcontrol)
-					LED_D_OFF();
-				if(i >= m) 	
-					break;
-			}
-		}
+		DoAcquisition125k(true);
+		size  = sizeof(BigBuf);
 
 		// FSK demodulator
-
-		// sync to first lo-hi transition
-		for( idx=1; idx<m; idx++) {
-			if (dest[idx-1]<dest[idx])
-				lastval=idx;
-				break;
-		}
-		WDT_HIT();
-
-		// count cycles between consecutive lo-hi transitions, there should be either 8 (fc/8)
-		// or 10 (fc/10) cycles but in practice due to noise etc we may end up with with anywhere
-		// between 7 to 11 cycles so fuzz it by treat anything <9 as 8 and anything else as 10
-		for( i=0; idx<m; idx++) {
-			if (dest[idx-1]<dest[idx]) {
-				dest[i]=idx-lastval;
-				dest[i] = (dest[i] <= 8) ? 1:0;
-				lastval=idx;
-				i++;
-			}
-		}
-		m=i;
+		size = fsk_demod(dest, size);
 		WDT_HIT();
 
 		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
-		lastval=dest[0];
-		idx=0;
-		i=0;
-		n=0;
-		for( idx=0; idx<m; idx++) {
-			if (dest[idx]==lastval) {
-				n++;
-			} else {
-				// a bit time is five fc/10 or six fc/8 cycles so figure out how many bits a pattern width represents,
-				// an extra fc/8 pattern preceeds every 4 bits (about 200 cycles) just to complicate things but it gets
-				// swallowed up by rounding
-				// expected results are 1 or 2 bits, any more and it's an invalid manchester encoding
-				// special start of frame markers use invalid manchester states (no transitions) by using sequences
-				// like 111000
-				if (dest[idx-1]) {
-					n=(n+1)/7;			// fc/8 in sets of 7
-				} else {
-					n=(n+1)/6;			// fc/10 in sets of 6
-				}
+		// 1->0 : fc/8 in sets of 7
+		// 0->1 : fc/10 in sets of 6
+		size = aggregate_bits(dest, size, 7,6,13);
 
-				// stuff appropriate bits in buffer
-				if ( n==0 )
-					dest[i++]=dest[idx-1]^1;
-				else {
-					if ( n < 13){
-						for(int j=0; j<n; j++){
-							dest[i++]=dest[idx-1]^1;
-						}
-					}
-				}
-				
-				n=0;
-				lastval=dest[idx];
-			}
-		}//end for
-
-		m=i;
 		WDT_HIT();
 		
-        for( idx=0; idx<m-9; idx++) {
-	  if ( !(dest[idx]) && !(dest[idx+1]) && !(dest[idx+2]) && !(dest[idx+3]) && !(dest[idx+4]) && !(dest[idx+5]) && !(dest[idx+6]) && !(dest[idx+7]) && !(dest[idx+8])&& (dest[idx+9])){
-		found=1;
-		//idx+=9;
-		if (found) {
+		//Handle the data
+ 	    uint8_t mask[] = {0,0,0,0,0,0,0,0,0,1};
+		for( idx=0; idx < size - 64; idx++) {
+
+ 	    	if ( memcmp(dest + idx, mask, sizeof(mask)) ) continue;
+
 		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx],   dest[idx+1],   dest[idx+2],dest[idx+3],dest[idx+4],dest[idx+5],dest[idx+6],dest[idx+7]);
 		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+8], dest[idx+9], dest[idx+10],dest[idx+11],dest[idx+12],dest[idx+13],dest[idx+14],dest[idx+15]);			  
 		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+16],dest[idx+17],dest[idx+18],dest[idx+19],dest[idx+20],dest[idx+21],dest[idx+22],dest[idx+23]);
@@ -948,54 +830,26 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+48],dest[idx+49],dest[idx+50],dest[idx+51],dest[idx+52],dest[idx+53],dest[idx+54],dest[idx+55]);
 		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
 		
-		    short version='\x00';
-		    char unknown='\x00';
-		    uint16_t number=0;
-		    for(int j=14;j<18;j++){
-		       //Dbprintf("%d",dest[idx+j]);
-		       version <<=1;
-		       if (dest[idx+j]) version |= 1;
-		    }
-		    for(int j=19;j<27;j++){
-		       //Dbprintf("%d",dest[idx+j]);
-		       unknown <<=1;
-		       if (dest[idx+j]) unknown |= 1;
-		    }
-		    for(int j=37;j<45;j++){
-		       //Dbprintf("%d",dest[idx+j]);
-		       number <<=1;
-		       if (dest[idx+j]) number |= 1;
-		    }
-		    for(int j=46;j<53;j++){
-		       //Dbprintf("%d",dest[idx+j]);
-		       number <<=1;
-		       if (dest[idx+j]) number |= 1;
-		    }
+		    code = bytebits_to_byte(dest+idx,32);
+		    code2 = bytebits_to_byte(dest+idx+32,32); 
 			
-		    for(int j=0; j<32; j++){
-				code <<=1;
-				if(dest[idx+j]) code |= 1;
-		    }
-		    for(int j=32; j<64; j++){
-				code2 <<=1;
-				if(dest[idx+j]) code2 |= 1;
-		    }
+		    short version = bytebits_to_byte(dest+idx+14,4); 
+		    char unknown = bytebits_to_byte(dest+idx+19,8) ;
+		    uint16_t number = bytebits_to_byte(dest+idx+36,9); 
 		    
 		    Dbprintf("XSF(%02d)%02x:%d (%08x%08x)",version,unknown,number,code,code2);
-		    if (ledcontrol)
-			LED_D_OFF();
-		}
+		    if (ledcontrol)	LED_D_OFF();
+		
 		// if we're only looking for one tag 
 		if (findone){
 			LED_A_OFF();
 			return;
 		}
-
-		found=0;
-	  }
-	}
 	}
 	WDT_HIT();
+	}
+	DbpString("Stopped");
+	if (ledcontrol) LED_A_OFF();
 }
 
 /*------------------------------

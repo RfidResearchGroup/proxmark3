@@ -116,8 +116,8 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 	clock = GetT55x7Clock( data, len, high );	
 	startindex = DetectFirstTransition(data, len, high);
   
-	// PrintAndLog(" Clock       : %d", clock);
-	// PrintAndLog(" startindex  : %d", startindex);
+	PrintAndLog(" Clock       : %d", clock);
+	PrintAndLog(" startindex  : %d", startindex);
 	
 	if (high != 1)
 		bitlength = ManchesterConvertFrom255(data, len, bitStream, high, low, clock, startindex);
@@ -579,25 +579,21 @@ void iceFsk3(int * data, const size_t len){
 	
 	printf("000111 position: %d \n", startPos);
 
-	startPos += 6*fieldlen+1;
+	startPos += 6*fieldlen+5;
 	
+	int bit =0;
 	printf("BINARY\n");
 	printf("R/40 :  ");
 	for (i =startPos ; i < len; i += 40){
-		if ( data[i] > 0 ) 
-			printf("1");
-		else
-			printf("0");
+		bit = data[i]>0 ? 1:0;
+		printf("%d", bit );
 	}
 	printf("\n");	
 	
 	printf("R/50 :  ");
 	for (i =startPos ; i < len; i += 50){
-		if ( data[i] > 0 ) 
-			printf("1");
-		else
-			printf("0");
-	}
+		bit = data[i]>0 ? 1:0;
+		printf("%d", bit );	}
 	printf("\n");	
 	
 }
