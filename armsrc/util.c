@@ -227,27 +227,27 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
 	dst[0] = 0;
 	strncat(dst, prefix, len);
 	if(v->magic != VERSION_INFORMATION_MAGIC) {
-		strncat(dst, "Missing/Invalid version information", len);
+		strncat(dst, "Missing/Invalid version information", len - strlen(dst) - 1);
 		return;
 	}
 	if(v->versionversion != 1) {
-		strncat(dst, "Version information not understood", len);
+		strncat(dst, "Version information not understood", len - strlen(dst) - 1);
 		return;
 	}
 	if(!v->present) {
-		strncat(dst, "Version information not available", len);
+		strncat(dst, "Version information not available", len - strlen(dst) - 1);
 		return;
 	}
 
-	strncat(dst, v->svnversion, len);
+	strncat(dst, v->gitversion, len - strlen(dst) - 1);
 	if(v->clean == 0) {
-		strncat(dst, "-unclean", len);
+		strncat(dst, "-unclean", len - strlen(dst) - 1);
 	} else if(v->clean == 2) {
-		strncat(dst, "-suspect", len);
+		strncat(dst, "-suspect", len - strlen(dst) - 1);
 	}
 
-	strncat(dst, " ", len);
-	strncat(dst, v->buildtime, len);
+	strncat(dst, " ", len - strlen(dst) - 1);
+	strncat(dst, v->buildtime, len - strlen(dst) - 1);
 }
 
 //  -------------------------------------------------------------------------

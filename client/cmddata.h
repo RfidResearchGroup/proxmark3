@@ -38,6 +38,7 @@ int CmdSamples(const char *Cmd);
 int CmdSave(const char *Cmd);
 int CmdScale(const char *Cmd);
 int CmdThreshold(const char *Cmd);
+int CmdDirectionalThreshold(const char *Cmd);
 int CmdZerocrossings(const char *Cmd);
 
 #endif

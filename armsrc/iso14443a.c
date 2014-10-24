@@ -190,8 +190,9 @@ void AppendCrc14443a(uint8_t* data, int len)
 }
 
 // The function LogTrace() is also used by the iClass implementation in iClass.c
-bool RAMFUNC LogTrace(const uint8_t * btBytes, uint8_t iLen, uint32_t timestamp, uint32_t dwParity, bool bReader)
+bool RAMFUNC LogTrace(const uint8_t * btBytes, uint8_t iLen, uint32_t timestamp, uint32_t dwParity, bool readerToTag)
 {
+	if (!tracing) return FALSE;
 	// Return when trace is full
 	if (traceLen + sizeof(timestamp) + sizeof(dwParity) + iLen >= TRACE_SIZE) {
 		tracing = FALSE;	// don't trace any more
@@ -203,7 +204,8 @@ bool RAMFUNC LogTrace(const uint8_t * btBytes, uint8_t iLen, uint32_t timestamp,
 	trace[traceLen++] = ((timestamp >> 8) & 0xff);
 	trace[traceLen++] = ((timestamp >> 16) & 0xff);
 	trace[traceLen++] = ((timestamp >> 24) & 0xff);
-	if (!bReader) {
+
+	if (!readerToTag) {
 		trace[traceLen - 1] |= 0x80;
 	}
 	trace[traceLen++] = ((dwParity >> 0) & 0xff);
@@ -505,6 +507,7 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 	LEDsoff();
 	// init trace buffer
 	iso14a_clear_trace();
+	iso14a_set_tracing(TRUE);
 
 	// We won't start recording the frames that we acquire until we trigger;
 	// a good trigger condition to get started is probably when we see a
@@ -1763,6 +1766,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 }
 
 void iso14443a_setup(uint8_t fpga_minor_mode) {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	// Set up the synchronous serial port
 	FpgaSetupSsc();
 	// connect Demodulated Signal to ADC:
@@ -1858,6 +1862,7 @@ void ReaderIso14443a(UsbCommand *c)
 		if(param & ISO14A_APPEND_CRC) {
 			AppendCrc14443a(cmd,len);
 			len += 2;
+			if (lenbits) lenbits += 16;
 		}
 		if(lenbits>0) {
 			ReaderTransmitBitsPar(cmd,lenbits,GetParity(cmd,lenbits/8), NULL);
@@ -2201,9 +2206,12 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 	if (MF_DBGLEVEL >= 1)	{
 		if (!_7BUID) {
-			Dbprintf("4B UID: %02x%02x%02x%02x",rUIDBCC1[0] , rUIDBCC1[1] , rUIDBCC1[2] , rUIDBCC1[3]);
+			Dbprintf("4B UID: %02x%02x%02x%02x", 
+				rUIDBCC1[0], rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3]);
 		} else {
-			Dbprintf("7B UID: (%02x)%02x%02x%02x%02x%02x%02x%02x",rUIDBCC1[0] , rUIDBCC1[1] , rUIDBCC1[2] , rUIDBCC1[3],rUIDBCC2[0],rUIDBCC2[1] ,rUIDBCC2[2] , rUIDBCC2[3]);
+			Dbprintf("7B UID: (%02x)%02x%02x%02x%02x%02x%02x%02x",
+				rUIDBCC1[0], rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3],
+				rUIDBCC2[0], rUIDBCC2[1] ,rUIDBCC2[2], rUIDBCC2[3]);
 		}
 	}
 
@@ -2271,7 +2279,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				// select card
 				if (len == 9 && 
 						(receivedCmd[0] == 0x93 && receivedCmd[1] == 0x70 && memcmp(&receivedCmd[2], rUIDBCC1, 4) == 0)) {
-					EmSendCmd(_7BUID?rSAK1:rSAK, sizeof(_7BUID?rSAK1:rSAK));
+					EmSendCmd(_7BUID?rSAK1:rSAK, _7BUID?sizeof(rSAK1):sizeof(rSAK));
 					cuid = bytes_to_num(rUIDBCC1, 4);
 					if (!_7BUID) {
 						cardSTATE = MFEMUL_WORK;
@@ -2313,10 +2321,13 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 				// test if auth OK
 				if (cardRr != prng_successor(nonce, 64)){
-					if (MF_DBGLEVEL >= 2)	Dbprintf("AUTH FAILED. cardRr=%08x, succ=%08x",cardRr, prng_successor(nonce, 64));
+					if (MF_DBGLEVEL >= 2) Dbprintf("AUTH FAILED for sector %d with key %c. cardRr=%08x, succ=%08x",
+							cardAUTHSC, cardAUTHKEY == 0 ? 'A' : 'B',
+							cardRr, prng_successor(nonce, 64));
 					// Shouldn't we respond anything here?
 					// Right now, we don't nack or anything, which causes the
 					// reader to do a WUPA after a while. /Martin
+					// -- which is the correct response. /piwi
 					cardSTATE_TO_IDLE();
 					LogTrace(Uart.output, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parityBits, TRUE);
 					LogTrace(NULL, 0, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, 0, TRUE);
@@ -2330,7 +2341,9 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
 				LED_C_ON();
 				cardSTATE = MFEMUL_WORK;
-				if (MF_DBGLEVEL >= 4)	Dbprintf("AUTH COMPLETED. sector=%d, key=%d time=%d", cardAUTHSC, cardAUTHKEY, GetTickCount() - authTimer);
+				if (MF_DBGLEVEL >= 4)	Dbprintf("AUTH COMPLETED for sector %d with key %c. time=%d", 
+					cardAUTHSC, cardAUTHKEY == 0 ? 'A' : 'B',
+					GetTickCount() - authTimer);
 				break;
 			}
 			case MFEMUL_SELECT2:{
@@ -2388,12 +2401,12 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 					crypto1_create(pcs, emlGetKey(cardAUTHSC, cardAUTHKEY));
 
 					if (!encrypted_data) { // first authentication
-						if (MF_DBGLEVEL >= 2) Dbprintf("Reader authenticating for block %d (0x%02x) with key %d",receivedCmd[1] ,receivedCmd[1],cardAUTHKEY  );
+						if (MF_DBGLEVEL >= 4) Dbprintf("Reader authenticating for block %d (0x%02x) with key %d",receivedCmd[1] ,receivedCmd[1],cardAUTHKEY  );
 
 						crypto1_word(pcs, cuid ^ nonce, 0);//Update crypto state
 						num_to_bytes(nonce, 4, rAUTH_AT); // Send nonce
 					} else { // nested authentication
-						if (MF_DBGLEVEL >= 2) Dbprintf("Reader doing nested authentication for block %d (0x%02x) with key %d",receivedCmd[1] ,receivedCmd[1],cardAUTHKEY );
+						if (MF_DBGLEVEL >= 4) Dbprintf("Reader doing nested authentication for block %d (0x%02x) with key %d",receivedCmd[1] ,receivedCmd[1],cardAUTHKEY );
 						ans = nonce ^ crypto1_word(pcs, cuid ^ nonce, 0); 
 						num_to_bytes(ans, 4, rAUTH_AT);
 					}
@@ -2424,9 +2437,9 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 				if(receivedCmd[0] == 0x30 // read block
 						|| receivedCmd[0] == 0xA0 // write block
-						|| receivedCmd[0] == 0xC0
-						|| receivedCmd[0] == 0xC1
-						|| receivedCmd[0] == 0xC2 // inc dec restore
+						|| receivedCmd[0] == 0xC0 // inc
+						|| receivedCmd[0] == 0xC1 // dec
+						|| receivedCmd[0] == 0xC2 // restore
 						|| receivedCmd[0] == 0xB0) { // transfer
 					if (receivedCmd[1] >= 16 * 4) {
 						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
@@ -2442,7 +2455,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				}
 				// read block
 				if (receivedCmd[0] == 0x30) {
-					if (MF_DBGLEVEL >= 2) {
+					if (MF_DBGLEVEL >= 4) {
 						Dbprintf("Reader reading block %d (0x%02x)",receivedCmd[1],receivedCmd[1]);
 					}
 					emlGetMem(response, receivedCmd[1], 1);
@@ -2458,7 +2471,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				}
 				// write block
 				if (receivedCmd[0] == 0xA0) {
-					if (MF_DBGLEVEL >= 2) Dbprintf("RECV 0xA0 write block %d (%02x)",receivedCmd[1],receivedCmd[1]);
+					if (MF_DBGLEVEL >= 4) Dbprintf("RECV 0xA0 write block %d (%02x)",receivedCmd[1],receivedCmd[1]);
 					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK));
 					cardSTATE = MFEMUL_WRITEBL2;
 					cardWRBL = receivedCmd[1];
@@ -2466,7 +2479,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				}
 				// increment, decrement, restore
 				if (receivedCmd[0] == 0xC0 || receivedCmd[0] == 0xC1 || receivedCmd[0] == 0xC2) {
-					if (MF_DBGLEVEL >= 2) Dbprintf("RECV 0x%02x inc(0xC1)/dec(0xC0)/restore(0xC2) block %d (%02x)",receivedCmd[0],receivedCmd[1],receivedCmd[1]);
+					if (MF_DBGLEVEL >= 4) Dbprintf("RECV 0x%02x inc(0xC1)/dec(0xC0)/restore(0xC2) block %d (%02x)",receivedCmd[0],receivedCmd[1],receivedCmd[1]);
 					if (emlCheckValBl(receivedCmd[1])) {
 						if (MF_DBGLEVEL >= 2) Dbprintf("Reader tried to operate on block, but emlCheckValBl failed, nacking");
 						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
@@ -2484,7 +2497,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				}
 				// transfer
 				if (receivedCmd[0] == 0xB0) {
-					if (MF_DBGLEVEL >= 2) Dbprintf("RECV 0x%02x transfer block %d (%02x)",receivedCmd[0],receivedCmd[1],receivedCmd[1]);
+					if (MF_DBGLEVEL >= 4) Dbprintf("RECV 0x%02x transfer block %d (%02x)",receivedCmd[0],receivedCmd[1],receivedCmd[1]);
 					if (emlSetValBl(cardINTREG, cardINTBLOCK, receivedCmd[1]))
 						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
 					else
@@ -2619,7 +2632,8 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// C(red) A(yellow) B(green)
 	LEDsoff();
 	// init trace buffer
-    iso14a_clear_trace();
+	iso14a_clear_trace();
+	iso14a_set_tracing(TRUE);
 
 	// The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.

@@ -214,7 +214,8 @@ void MeasureAntennaTuning(void)
  * ( hopefully around 95 if it is tuned to 125kHz!)
  */
   
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+  	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	for (i=255; i>19; i--) {
     WDT_HIT();
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
@@ -236,6 +237,7 @@ void MeasureAntennaTuning(void)
 
   LED_A_ON();
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
+  	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 	SpinDelay(20);
 	// Vref = 3300mV, and an 10:1 voltage divider on the input
@@ -264,6 +266,7 @@ void MeasureAntennaTuningHf(void)
 
 	for (;;) {
 		// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
+		FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 		SpinDelay(20);
 		// Vref = 3300mV, and an 10:1 voltage divider on the input
@@ -286,6 +289,7 @@ void SimulateTagHfListen(void)
 
 	// We're using this mode just so that I can test it out; the simulated
 	// tag mode would work just as well and be simpler.
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ | FPGA_HF_READER_RX_XCORR_SNOOP);
 
 	// We need to listen to the high-frequency, peak-detected path.
@@ -336,7 +340,7 @@ extern struct version_information version_information;
 extern char *_bootphase1_version_pointer, _flash_start, _flash_end;
 void SendVersion(void)
 {
-	char temp[48]; /* Limited data payload in USB packets */
+	char temp[256]; /* Limited data payload in USB packets */
 	DbpString("Prox/RFID mark3 RFID instrument");
 
 	/* Try to find the bootrom version information. Expect to find a pointer at
@@ -365,6 +369,7 @@ void SendVersion(void)
 void SamyRun()
 {
 	DbpString("Stand-alone mode! No PC necessary.");
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
 	// 3 possible options? no just 2 for now
 #define OPTS 2
@@ -633,6 +638,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			ModThenAcquireRawAdcSamples125k(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
 			break;
+		case CMD_LF_SNOOP_RAW_ADC_SAMPLES:
+			SnoopLFRawAdcSamples(c->arg[0], c->arg[1]);
+			cmd_send(CMD_ACK,0,0,0,0,0);
+			break;
 		case CMD_HID_DEMOD_FSK:
 			CmdHIDdemodFSK(0, 0, 0, 1);					// Demodulate HID tag
 			break;
@@ -853,10 +862,13 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			SnoopIClass();
 			break;
 		case CMD_SIMULATE_TAG_ICLASS:
-			SimulateIClass(c->arg[0], c->d.asBytes);
+			SimulateIClass(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
 		case CMD_READER_ICLASS:
 			ReaderIClass(c->arg[0]);
+			break;
+		case CMD_READER_ICLASS_REPLAY:
+		    ReaderIClass_Replay(c->arg[0], c->d.asBytes);
 			break;
 #endif
 
@@ -923,6 +935,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 
 		case CMD_SET_LF_DIVISOR:
+		  	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, c->arg[0]);
 			break;
 
@@ -1017,7 +1030,8 @@ void  __attribute__((noreturn)) AppMain(void)
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
 
 	// Load the FPGA image, which we have stored in our flash.
-	FpgaDownloadAndGo();
+	// (the HF version by default)
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	StartTickCount();
   	

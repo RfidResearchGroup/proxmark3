@@ -450,6 +450,28 @@ int CmdLFSimManchester(const char *Cmd)
   return 0;
 }
 
+int CmdLFSnoop(const char *Cmd)
+{
+  UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES};
+  // 'h' means higher-low-frequency, 134 kHz
+  c.arg[0] = 0;
+  c.arg[1] = -1;
+  if (*Cmd == 0) {
+    // empty
+  } else if (*Cmd == 'l') {
+    sscanf(Cmd, "l %"lli, &c.arg[1]);
+  } else if(*Cmd == 'h') {
+    c.arg[0] = 1;
+    sscanf(Cmd, "h %"lli, &c.arg[1]);
+  } else if (sscanf(Cmd, "%"lli" %"lli, &c.arg[0], &c.arg[1]) < 1) {
+    PrintAndLog("use 'snoop' or 'snoop {l,h} [trigger threshold]', or 'snoop <divisor> [trigger threshold]'");
+    return 0;
+  }
+  SendCommand(&c);
+  WaitForResponse(CMD_ACK,NULL);
+  return 0;
+}
+
 int CmdVchDemod(const char *Cmd)
 {
   // Is this the entire sync pattern, or does this also include some
@@ -540,6 +562,7 @@ static command_t CommandTable[] =
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
   {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
   {"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
+  {"snoop",       CmdLFSnoop,         0, "['l'|'h'|<divisor>] [trigger threshold]-- Snoop LF (l:125khz, h:134khz)"},
   {"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
   {"hitag",       CmdLFHitag,         1, "{ Hitag tags and transponders... }"},
   {"vchdemod",    CmdVchDemod,        1, "['clone'] -- Demodulate samples for VeriChip"},

@@ -606,6 +606,7 @@ void AcquireRawAdcSamplesIso15693(void)
 
 	int8_t prev = 0;
 
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	BuildIdentifyRequest();
 
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -687,6 +688,7 @@ void RecordRawAdcSamplesIso15693(void)
 
 	int8_t prev = 0;
 
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	// Setup SSC
 	FpgaSetupSsc();
 
@@ -753,6 +755,7 @@ void Iso15693InitReader() {
 	LED_C_OFF();
 	LED_D_OFF();
 	
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	// Setup SSC
 	// FpgaSetupSsc();
 
@@ -1015,6 +1018,7 @@ void ReaderIso15693(uint32_t parameter)
 	// Blank arrays
 	memset(BigBuf + 3660, 0, 300);
 
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	// Setup SSC
 	FpgaSetupSsc();
 
@@ -1165,6 +1169,7 @@ void SimTagIso15693(uint32_t parameter)
 	// Blank arrays
 	memset(answer1, 0, 100);
 
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	// Setup SSC
 	FpgaSetupSsc();
 

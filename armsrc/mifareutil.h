@@ -80,6 +80,10 @@ uint8_t* mifare_get_bigbufptr(void);
 uint8_t* eml_get_bigbufptr_sendbuf(void);
 uint8_t* eml_get_bigbufptr_recbuf(void);
 
+// Mifare memory structure
+uint8_t NumBlocksPerSector(uint8_t sectorNo);
+uint8_t FirstBlockOfSector(uint8_t sectorNo);
+
 // emulator functions
 void emlClearMem(void);
 void emlSetMem(uint8_t *data, int blockNum, int blocksCount);

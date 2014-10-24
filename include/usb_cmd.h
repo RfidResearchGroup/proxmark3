@@ -96,6 +96,7 @@ typedef struct {
 #define CMD_ISO_15693_COMMAND_DONE                                        0x0314
 #define CMD_ISO_15693_FIND_AFI                                            0x0315
 #define CMD_ISO_15693_DEBUG                                               0x0316
+#define CMD_LF_SNOOP_RAW_ADC_SAMPLES                                      0x0317
 
 // For Hitag2 transponders
 #define CMD_SNOOP_HITAG                                                   0x0370
@@ -116,6 +117,8 @@ typedef struct {
 #define CMD_SNOOP_ICLASS                                                  0x0392
 #define CMD_SIMULATE_TAG_ICLASS                                           0x0393
 #define CMD_READER_ICLASS                                                 0x0394
+#define CMD_READER_ICLASS_REPLAY					  					  0x0395
+#define CMD_ICLASS_ISO14443A_WRITE										  0x0397
 
 // For measurements of the antenna tuning
 #define CMD_MEASURE_ANTENNA_TUNING                                        0x0400
@@ -161,6 +164,8 @@ typedef struct {
 #define FLAG_NR_AR_ATTACK 0x08
 
 
+//Iclass reader flags
+#define FLAG_ICLASS_READER_ONLY_ONCE 0x01
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
 /* Whether a bootloader that understands the common_area is present */

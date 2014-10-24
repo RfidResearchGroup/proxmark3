@@ -16,7 +16,7 @@
 #include "string.h"
 
 // split into two routines so we can avoid timing issues after sending commands //
-void DoAcquisition125k_internal(bool silent)
+void DoAcquisition125k_internal(int trigger_threshold,bool silent)
 {
 	uint8_t *dest = (uint8_t *)BigBuf;
 	int n = sizeof(BigBuf);
@@ -31,25 +31,30 @@ void DoAcquisition125k_internal(bool silent)
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			i++;
 			LED_D_OFF();
-			if (i >= n) break;
+			if (trigger_threshold != -1 && dest[i] < trigger_threshold)
+				continue;
+			else
+				trigger_threshold = -1;
+			if (++i >= n) break;
 		}
 	}
-	if( ! silent)
+	if(!silent)
 	{
 		Dbprintf("buffer samples: %02x %02x %02x %02x %02x %02x %02x %02x ...",
 				dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
+		
 	}
 }
-
-void DoAcquisition125k(void)
+void DoAcquisition125k(int trigger_threshold)
 {
-	DoAcquisition125k_internal(false);
+	DoAcquisition125k_internal(trigger_threshold, false);
 }
 
-void SetupToAcquireRawAdcSamples(int divisor)
+//void SetupToAcquireRawAdcSamples(int divisor)
+void LFSetupFPGAForADC(int divisor, bool lf_field)
 {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	if ( (divisor == 1) || (divisor < 0) || (divisor > 255) )
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
 	else if (divisor == 0)
@@ -57,23 +62,29 @@ void SetupToAcquireRawAdcSamples(int divisor)
 	else
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor);
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | (lf_field ? FPGA_LF_ADC_READER_FIELD : 0));
 
 	// Connect the A/D to the peak-detected low-frequency path.
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-
 	// Give it a bit of time for the resonant antenna to settle.
 	SpinDelay(50);
-
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
 	FpgaSetupSsc();
 }
 
 void AcquireRawAdcSamples125k(int divisor)
 {
-	SetupToAcquireRawAdcSamples(divisor);
+	LFSetupFPGAForADC(divisor, true);
 	// Now call the acquisition routine
-	DoAcquisition125k_internal(false);
+	DoAcquisition125k_internal(-1,false);
+}
+void SnoopLFRawAdcSamples(int divisor, int trigger_threshold)
+{
+	LFSetupFPGAForADC(divisor, false);
+	DoAcquisition125k(trigger_threshold, false);
+}
+
+
 }
 
 void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, uint8_t *command)
@@ -81,6 +92,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 	int at134khz;
 
 	/* Make sure the tag is reset */
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelay(2500);
 
@@ -95,7 +107,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 	else
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
 	// Give it a bit of time for the resonant antenna to settle.
 	SpinDelay(50);
@@ -115,7 +127,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 		else
 			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 		LED_D_ON();
 		if(*(command++) == '0')
 			SpinDelayUs(period_0);
@@ -130,10 +142,10 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 	else
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
 	// now do the read
-	DoAcquisition125k();
+	DoAcquisition125k(-1);
 }
 
 /* blank r/w tag data stream
@@ -170,6 +182,7 @@ void ReadTItag(void)
 	uint32_t threshold = (sampleslo - sampleshi + 1)>>1;
 
 	// TI tags charge at 134.2Khz
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
 
 	// Place FPGA in passthrough mode, in this mode the CROSS_LO line
@@ -377,6 +390,7 @@ void AcquireTiType(void)
 // if not provided a valid crc will be computed from the data and written.
 void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);	
 	if(crc == 0) {
 	 	crc = update_crc16(crc, (idlo)&0xff);
 		crc = update_crc16(crc, (idlo>>8)&0xff);
@@ -448,6 +462,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	int i;
 	uint8_t *tab = (uint8_t *)BigBuf;
     
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
     
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
@@ -615,7 +630,6 @@ size_t fsk_demod(uint8_t * dest, size_t size)
 	// threshold essentially we capture zero crossings for later analysis
 	uint8_t threshold_value = 127;
 
-
 	// sync to first lo-hi transition, and threshold
 
 	//Need to threshold first sample
@@ -692,7 +706,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	while(!BUTTON_PRESS()) {
 
 		// Configure to go in 125Khz listen mode
-		SetupToAcquireRawAdcSamples(0);
+		LFSetupFPGAForADC(0, true)
 
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
@@ -788,7 +802,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	while(!BUTTON_PRESS()) {
 
 		// Configure to go in 125Khz listen mode
-		SetupToAcquireRawAdcSamples(0);
+		LFSetupFPGAForADC(0, true);
 
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
@@ -911,8 +925,9 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 // Write one bit to card
 void T55xxWriteBit(int bit)
 {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	if (bit == 0)
 		SpinDelayUs(WRITE_0);
 	else
@@ -926,8 +941,9 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 {
 	unsigned int i;
 
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
 	// Give it a bit of time for the resonant antenna to settle.
 	// And for the tag to fully power up
@@ -959,7 +975,7 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 	// Now perform write (nominal is 5.6 ms for T55x7 and 18ms for E5550,
 	// so wait a little more)
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	SpinDelay(20);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
@@ -970,6 +986,7 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 	uint8_t *dest = (uint8_t *)BigBuf;
 	int m=0, i=0;
   
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	m = sizeof(BigBuf);
   // Clear destination buffer before sending the command
 	memset(dest, 128, m);
@@ -980,7 +997,7 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
   
 	LED_D_ON();
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
   
 	// Give it a bit of time for the resonant antenna to settle.
 	// And for the tag to fully power up
@@ -1006,7 +1023,7 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
   
   // Turn field on to read the response
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
   
 	// Now do the acquisition
 	i = 0;
@@ -1034,6 +1051,7 @@ void T55xxReadTrace(void){
 	uint8_t *dest = (uint8_t *)BigBuf;
 	int m=0, i=0;
   
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	m = sizeof(BigBuf);
   // Clear destination buffer before sending the command
 	memset(dest, 128, m);
@@ -1044,7 +1062,7 @@ void T55xxReadTrace(void){
   
 	LED_D_ON();
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
   
 	// Give it a bit of time for the resonant antenna to settle.
 	// And for the tag to fully power up
@@ -1060,7 +1078,7 @@ void T55xxReadTrace(void){
   
   // Turn field on to read the response
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
   
 	// Now do the acquisition
 	i = 0;
@@ -1749,8 +1767,9 @@ void SendForward(uint8_t fwd_bit_count) {
   LED_D_ON();
   
   //Field on
+  FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
   FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-  FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);
+  FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
   
   // Give it a bit of time for the resonant antenna to settle.
   // And for the tag to fully power up
@@ -1762,7 +1781,7 @@ void SendForward(uint8_t fwd_bit_count) {
   FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
   SpinDelayUs(55*8); //55 cycles off (8us each)for 4305
   FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-  FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);//field on
+  FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);//field on
   SpinDelayUs(16*8); //16 cycles on (8us each)
   
   // now start writting
@@ -1774,7 +1793,7 @@ void SendForward(uint8_t fwd_bit_count) {
       FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
       SpinDelayUs(23*8); //16-4 cycles off (8us each)
       FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-      FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER);//field on
+      FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);//field on
       SpinDelayUs(9*8); //16 cycles on (8us each)
     }
   }

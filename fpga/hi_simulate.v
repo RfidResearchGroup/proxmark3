@@ -89,7 +89,9 @@ always @(mod_type or ssp_clk or ssp_dout)
     else if(mod_type == 3'b001)
         modulating_carrier <= ssp_dout ^ ssp_clk_divider[3]; // XOR means BPSK
     else if(mod_type == 3'b010)
-        modulating_carrier <= ssp_dout & ssp_clk_divider[5]; // switch 212kHz subcarrier on/off
+	modulating_carrier <= ssp_dout & ssp_clk_divider[5]; // switch 212kHz subcarrier on/off
+    else if(mod_type == 3'b100)
+	modulating_carrier <= ssp_dout & ssp_clk_divider[4]; // switch 424kHz modulation on/off
     else
         modulating_carrier <= 1'b0;                           // yet unused
 
@@ -105,5 +107,8 @@ assign pwr_oe4 = modulating_carrier;
 assign pwr_oe3 = 1'b0;
 
 assign dbg = after_hysteresis;
+//reg dbg;
+//always @(ssp_dout)
+//    dbg <= ssp_dout;
 
 endmodule
