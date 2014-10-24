@@ -29,7 +29,6 @@ static int CmdHelp(const char *Cmd);
 int CmdReadBlk(const char *Cmd)
 {
 	int Block = -1;
-
 	sscanf(Cmd, "%d", &Block);
 
 	if ((Block > 7) | (Block < 0)) {
@@ -37,7 +36,6 @@ int CmdReadBlk(const char *Cmd)
 		return 1;
 	}	
 
-	// this command fills up BigBuff
 	UsbCommand c;
 	c.cmd = CMD_T55XX_READ_BLOCK;
 	c.d.asBytes[0] = 0x00;
@@ -47,17 +45,18 @@ int CmdReadBlk(const char *Cmd)
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK, NULL);
 	
-	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
+//	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
 	
-	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
-	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
+	// GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
+	// WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
-	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
-		GraphBuffer[j] = (int)data[j];
-	}
-	GraphTraceLen = LF_TRACE_BUFF_SIZE;
+	// for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
+		// GraphBuffer[j] = (int)data[j];
+	// }
+	// GraphTraceLen = LF_TRACE_BUFF_SIZE;
+	CmdSamples("12000");
 	ManchesterDemod(Block);
-	RepaintGraphWindow();
+	// RepaintGraphWindow();
   return 0;
 }
 
@@ -90,7 +89,7 @@ int CmdReadBlkPWD(const char *Cmd)
 	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
 	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
-		GraphBuffer[j] = ((int)data[j]) - 128;
+		GraphBuffer[j] = ((int)data[j]);
 	}
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
 	ManchesterDemod(Block);	
@@ -155,8 +154,8 @@ int CmdReadTrace(const char *Cmd)
 		PrintAndLog("Usage:  lf t55xx trace  [use data from Graphbuffer]");
 		PrintAndLog("     [use data from Graphbuffer], if not set, try reading data from tag.");
 		PrintAndLog("");
-		PrintAndLog("        sample: lf t55xx trace");
-		PrintAndLog("        sample: lf t55xx trace 1");
+		PrintAndLog("     sample: lf t55xx trace");
+		PrintAndLog("     sample: lf t55xx trace 1");
 		return 0;
 	}
 
@@ -245,15 +244,14 @@ int CmdInfo(const char *Cmd){
 		PrintAndLog("Usage:  lf t55xx info  [use data from Graphbuffer]");
 		PrintAndLog("     [use data from Graphbuffer], if not set, try reading data from tag.");
 		PrintAndLog("");
-		PrintAndLog("        sample: lf t55xx info");
-		PrintAndLog("        sample: lf t55xx info 1");
+		PrintAndLog("    sample: lf t55xx info");
+		PrintAndLog("    sample: lf t55xx info 1");
 		return 0;
 	}
 
 	if ( strlen(Cmd)==0){
 		CmdReadBlk("0");
-	}
-	
+	}	
 
 	uint8_t bits[1000] = {0x00};
 	uint8_t * bitstream = bits;
@@ -349,18 +347,20 @@ int CmdIceManchester(const char *Cmd){
 int ManchesterDemod(int block){
 
 	int  blockNum = -1;
+	uint8_t sizebyte = 32;
+	uint8_t offset = 5;
 	uint32_t blockData;
 	uint8_t  bits[1000] = {0x00};
 	uint8_t * bitstream = bits;
 	
 	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);	
-    blockData = PackBits(5, 32, bitstream);
+    blockData = PackBits(offset, sizebyte, bitstream);
 
-	if ( blockNum > -1){
-		PrintAndLog("   Block %d : 0x%08X  %s", blockNum, blockData, sprint_bin(bitstream+5,32) );
-	}else{
-		PrintAndLog("   Decoded : 0x%08X  %s", blockData, sprint_bin(bitstream+5,32) );
-	}
+	if ( blockNum < 0)
+		PrintAndLog(" Decoded     : 0x%08X  %s", blockData, sprint_bin(bitstream+offset,sizebyte) );
+		else
+		PrintAndLog(" Block %d    : 0x%08X  %s", blockNum, blockData, sprint_bin(bitstream+offset,sizebyte) );
+	
 	return 0;
 } 
 

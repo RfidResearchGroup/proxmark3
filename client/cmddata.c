@@ -456,25 +456,23 @@ int CmdHpf(const char *Cmd)
 
 int CmdSamples(const char *Cmd)
 {
-  int cnt = 0;
-  int n;
-  uint8_t got[40000];
-
-  n = strtol(Cmd, NULL, 0);
-  if (n == 0) n = 512;
-  if (n > sizeof(got)) n = sizeof(got);
+	uint8_t got[36440] = {0x00};
+	
+	int n = strtol(Cmd, NULL, 0);
+	if (n == 0) 
+		n = 512;
+	if (n > sizeof(got)) 
+		n = sizeof(got);
   
-  PrintAndLog("Reading %d samples from device memory\n", n);
-  GetFromBigBuf(got,n,3560);
-  WaitForResponse(CMD_ACK,NULL);
-  for (int j = 0; j < n; j++) {
-    GraphBuffer[cnt++] = ((int)got[j]) - 128;
-  }
-  
-  PrintAndLog("Done!\n");
-  GraphTraceLen = n;
-  RepaintGraphWindow();
-  return 0;
+	PrintAndLog("Reading %d samples from device memory\n", n);
+	GetFromBigBuf(got,n,3560);
+	WaitForResponse(CMD_ACK,NULL);
+	for (int j = 0; j < n; ++j) {
+		GraphBuffer[j] = ((int)got[j]) - 128;
+	}
+	GraphTraceLen = n;
+	RepaintGraphWindow();
+	return 0;
 }
 
 int CmdLoad(const char *Cmd)
@@ -684,7 +682,7 @@ int CmdManchesterDemod(const char *Cmd)
       // We cannot end up in this state, this means we are unsynchronized,
       // move up 1 bit:
       i++;
-        warnings++;
+      warnings++;
       PrintAndLog("Unsynchronized, resync...");
       PrintAndLog("(too many of those messages mean the stream is not Manchester encoded)");
 
