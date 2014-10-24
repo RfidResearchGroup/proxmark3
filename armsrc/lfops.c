@@ -15,7 +15,13 @@
 #include "crc16.h"
 #include "string.h"
 
-// split into two routines so we can avoid timing issues after sending commands //
+
+/**
+* Does the sample acquisition. If threshold is specified, the actual sampling 
+* is not commenced until the threshold has been reached. 
+* @param trigger_threshold - the threshold
+* @param silent - is true, now outputs are made. If false, dbprints the status
+*/
 void DoAcquisition125k_internal(int trigger_threshold,bool silent)
 {
 	uint8_t *dest = (uint8_t *)BigBuf;
@@ -46,12 +52,21 @@ void DoAcquisition125k_internal(int trigger_threshold,bool silent)
 		
 	}
 }
+/**
+* Perform sample aquisition. 
+*/
 void DoAcquisition125k(int trigger_threshold)
 {
 	DoAcquisition125k_internal(trigger_threshold, false);
 }
 
-//void SetupToAcquireRawAdcSamples(int divisor)
+/**
+* Setup the FPGA to listen for samples. This method downloads the FPGA bitstream 
+* if not already loaded, sets divisor and starts up the antenna. 
+* @param divisor : 1, 88> 255 or negative ==> 134.8 KHz
+* 				   0 or 95 ==> 125 KHz
+* 				   
+**/
 void LFSetupFPGAForADC(int divisor, bool lf_field)
 {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -71,13 +86,19 @@ void LFSetupFPGAForADC(int divisor, bool lf_field)
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
 	FpgaSetupSsc();
 }
-
+/**
+* Initializes the FPGA, and acquires the samples. 
+**/
 void AcquireRawAdcSamples125k(int divisor)
 {
 	LFSetupFPGAForADC(divisor, true);
 	// Now call the acquisition routine
 	DoAcquisition125k_internal(-1,false);
 }
+/**
+* Initializes the FPGA for snoop-mode, and acquires the samples. 
+**/
+
 void SnoopLFRawAdcSamples(int divisor, int trigger_threshold)
 {
 	LFSetupFPGAForADC(divisor, false);
@@ -86,28 +107,25 @@ void SnoopLFRawAdcSamples(int divisor, int trigger_threshold)
 
 void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, uint8_t *command)
 {
-	int at134khz;
 
 	/* Make sure the tag is reset */
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelay(2500);
 
+
+	int divisor_used = 95; // 125 KHz
 	// see if 'h' was specified
+
 	if (command[strlen((char *) command) - 1] == 'h')
-		at134khz = TRUE;
-	else
-		at134khz = FALSE;
+		divisor_used = 88; // 134.8 KHz
 
-	if (at134khz)
-		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-	else
-		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used); 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-
 	// Give it a bit of time for the resonant antenna to settle.
 	SpinDelay(50);
+
 	// And a little more time for the tag to fully power up
 	SpinDelay(2000);
 
@@ -119,10 +137,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LED_D_OFF();
 		SpinDelayUs(delay_off);
-		if (at134khz)
-			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-		else
-			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used); 
 
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 		LED_D_ON();
@@ -134,10 +149,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LED_D_OFF();
 	SpinDelayUs(delay_off);
-	if (at134khz)
-		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-	else
-		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used); 
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
@@ -702,8 +714,10 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
 	while(!BUTTON_PRESS()) {
 
+		/** TODO! This should probably be moved outside the loop /Martin */
 		// Configure to go in 125Khz listen mode
 		LFSetupFPGAForADC(0, true);
+
 
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
