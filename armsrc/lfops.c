@@ -81,10 +81,7 @@ void AcquireRawAdcSamples125k(int divisor)
 void SnoopLFRawAdcSamples(int divisor, int trigger_threshold)
 {
 	LFSetupFPGAForADC(divisor, false);
-	DoAcquisition125k(trigger_threshold, false);
-}
-
-
+	DoAcquisition125k(trigger_threshold);
 }
 
 void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, uint8_t *command)
@@ -706,12 +703,12 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	while(!BUTTON_PRESS()) {
 
 		// Configure to go in 125Khz listen mode
-		LFSetupFPGAForADC(0, true)
+		LFSetupFPGAForADC(0, true);
 
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
 
-		DoAcquisition125k_internal(true);
+		DoAcquisition125k_internal(-1,true);
 		size  = sizeof(BigBuf);
 
 		// FSK demodulator
@@ -807,7 +804,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
 
-		DoAcquisition125k_internal(true);
+		DoAcquisition125k_internal(-1,true);
 		size  = sizeof(BigBuf);
 
 		// FSK demodulator
