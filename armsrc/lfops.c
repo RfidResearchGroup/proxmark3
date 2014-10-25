@@ -711,13 +711,10 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	size_t size=0,idx=0; //, found=0;
 	uint32_t hi2=0, hi=0, lo=0;
 
+	// Configure to go in 125Khz listen mode
+	LFSetupFPGAForADC(95, true);
 
 	while(!BUTTON_PRESS()) {
-
-		/** TODO! This should probably be moved outside the loop /Martin */
-		// Configure to go in 125Khz listen mode
-		LFSetupFPGAForADC(0, true);
-
 
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
@@ -727,7 +724,6 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
 		// FSK demodulator
 		size = fsk_demod(dest, size);
-		WDT_HIT();
 
 		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
 		// 1->0 : fc/8 in sets of 6
@@ -748,7 +744,8 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				idx+=sizeof(frame_marker_mask);
 
 				while(dest[idx] != dest[idx+1] && idx < size-2)
-				{	// Keep going until next frame marker (or error)
+				{	
+					// Keep going until next frame marker (or error)
 					// Shift in a bit. Start by shifting high registers
 					hi2 = (hi2<<1)|(hi>>31);
 					hi = (hi<<1)|(lo>>31);
@@ -763,16 +760,20 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				}
 				//Dbprintf("Num shifts: %d ", numshifts);
 				// Hopefully, we read a tag and	 hit upon the next frame marker
-				if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
+				if(idx + sizeof(frame_marker_mask) < size)
 				{
-					if (hi2 != 0){
-						Dbprintf("TAG ID: %x%08x%08x (%d)",
-							 (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+					if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
+					{
+						if (hi2 != 0){
+							Dbprintf("TAG ID: %x%08x%08x (%d)",
+								 (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+						}
+						else {
+							Dbprintf("TAG ID: %x%08x (%d)",
+							 (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+						}
 					}
-					else {
-						Dbprintf("TAG ID: %x%08x (%d)",
-						 (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
-					}
+
 				}
 
 				// reset
@@ -809,11 +810,11 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	size_t size=0, idx=0;
 	uint32_t code=0, code2=0;
 
+	// Configure to go in 125Khz listen mode
+	LFSetupFPGAForADC(95, true);
 
 	while(!BUTTON_PRESS()) {
 
-		// Configure to go in 125Khz listen mode
-		LFSetupFPGAForADC(0, true);
 
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
@@ -823,7 +824,6 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
 		// FSK demodulator
 		size = fsk_demod(dest, size);
-		WDT_HIT();
 
 		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
 		// 1->0 : fc/8 in sets of 7
