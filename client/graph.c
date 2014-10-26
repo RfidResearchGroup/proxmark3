@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include "ui.h"
 #include "graph.h"
@@ -92,4 +93,16 @@ int GetClock(const char *str, int peak, int verbose)
   }
 
   return clock;
+}
+
+
+/* A simple test to see if there is any data inside Graphbuffer. 
+*/
+bool HasGraphData(){
+
+	if ( GraphTraceLen <= 0) {
+		PrintAndLog("No data available, try reading something first");
+		return false;
+	}
+	return true;	
 }

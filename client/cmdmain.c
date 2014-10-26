@@ -51,9 +51,9 @@ static command_t CommandTable[] =
 {
   {"help",  CmdHelp,  1, "This help. Use '<command> help' for details of a particular command."},
   {"data",  CmdData,  1, "{ Plot window / data buffer manipulation... }"},
-  {"hf",    CmdHF,    1, "{ HF commands... }"},
+  {"hf",    CmdHF,    1, "{ High Frequency commands... }"},
   {"hw",    CmdHW,    1, "{ Hardware commands... }"},
-  {"lf",    CmdLF,    1, "{ LF commands... }"},
+  {"lf",    CmdLF,    1, "{ Low Frequency commands... }"},
   {"script", CmdScript,   1,"{ Scripting commands }"},
   {"quit",  CmdQuit,  1, "Exit program"},
   {"exit",  CmdQuit,  1, "Exit program"},

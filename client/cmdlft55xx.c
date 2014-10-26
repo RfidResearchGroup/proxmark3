@@ -23,15 +23,16 @@
 
 
 #define LF_TRACE_BUFF_SIZE 12000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
+#define LF_BITSSTREAM_LEN 1000 // more then 1000 bits shouldn't happend..  8block * 4 bytes * 8bits = 
 static int CmdHelp(const char *Cmd);
 
 
 int CmdReadBlk(const char *Cmd)
 {
-	int Block = -1;
-	sscanf(Cmd, "%d", &Block);
+	int block = -1;
+	sscanf(Cmd, "%d", &block);
 
-	if ((Block > 7) | (Block < 0)) {
+	if ((block > 7) | (block < 0)) {
 		PrintAndLog("Block must be between 0 and 7");
 		return 1;
 	}	
@@ -55,7 +56,7 @@ int CmdReadBlk(const char *Cmd)
 	// }
 	// GraphTraceLen = LF_TRACE_BUFF_SIZE;
 	CmdSamples("12000");
-	ManchesterDemod(Block);
+	ManchesterDemod(block);
 	// RepaintGraphWindow();
   return 0;
 }
@@ -175,10 +176,10 @@ int CmdReadTrace(const char *Cmd)
 		GraphTraceLen = LF_TRACE_BUFF_SIZE;
 	}
 	
-	uint8_t bits[1000] = {0x00};
+	uint8_t bits[LF_BITSSTREAM_LEN] = {0x00};
 	uint8_t * bitstream = bits;
 	
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
+	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream, LF_BITSSTREAM_LEN);
 	RepaintGraphWindow();
 
 	uint8_t si = 5;
@@ -253,10 +254,10 @@ int CmdInfo(const char *Cmd){
 		CmdReadBlk("0");
 	}	
 
-	uint8_t bits[1000] = {0x00};
+	uint8_t bits[LF_BITSSTREAM_LEN] = {0x00};
 	uint8_t * bitstream = bits;
 	
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
+	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream, LF_BITSSTREAM_LEN);
 	
 	uint8_t si = 5;
 	uint32_t bl0      = PackBits(si, 32, bitstream);
@@ -324,7 +325,7 @@ int CmdDump(const char *Cmd){
 	for ( int i = 0; i <8; ++i){
 		memset(s,0,sizeof(s));
 		if ( hasPwd ) {
-			sprintf(s,"%d %s", i, sprint_hex(pwd,4));
+			sprintf(s,"%d %02x%02x%02x%02x", i, pwd[0],pwd[1],pwd[2],pwd[3]);
 			CmdReadBlkPWD(s);
 		} else {
 			sprintf(s,"%d", i);
@@ -335,6 +336,9 @@ int CmdDump(const char *Cmd){
 }
 
 int CmdIceFsk(const char *Cmd){
+
+	if (!HasGraphData()) return 0;
+
 	iceFsk3(GraphBuffer, LF_TRACE_BUFF_SIZE);
 	RepaintGraphWindow();
 	return 0;
@@ -343,16 +347,17 @@ int CmdIceManchester(const char *Cmd){
 	ManchesterDemod( -1);
 	return 0;
 }
-int ManchesterDemod(int block){
+int ManchesterDemod(int blockNum){
 
-	int  blockNum = -1;
+	if (!HasGraphData()) return 0;
+		
 	uint8_t sizebyte = 32;
 	uint8_t offset = 5;
 	uint32_t blockData;
-	uint8_t  bits[1000] = {0x00};
+	uint8_t  bits[LF_BITSSTREAM_LEN] = {0x00};
 	uint8_t * bitstream = bits;
 	
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);	
+	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream, LF_BITSSTREAM_LEN);	
     blockData = PackBits(offset, sizebyte, bitstream);
 
 	if ( blockNum < 0)

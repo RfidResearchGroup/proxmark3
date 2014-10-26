@@ -22,6 +22,7 @@
 #include "util.h"
 #include "data.h"
 #define LF_TRACE_BUFF_SIZE 12000
+#define LF_BITSSTREAM_LEN 1000
 
 char *global_em410xId;
 
@@ -530,9 +531,9 @@ int CmdReadWord(const char *Cmd)
 	}
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
 	
-	uint8_t bits[1000] = {0x00};
+	uint8_t bits[LF_BITSSTREAM_LEN] = {0x00};
 	uint8_t * bitstream = bits;
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
+	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream,LF_BITSSTREAM_LEN);
 	RepaintGraphWindow();
   return 0;
 }
@@ -570,10 +571,9 @@ int CmdReadWordPWD(const char *Cmd)
 	}
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
 	
-	uint8_t bits[1000] = {0x00};
-	uint8_t * bitstream = bits;
-	
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream);
+	uint8_t bits[LF_BITSSTREAM_LEN] = {0x00};
+	uint8_t * bitstream = bits;	
+	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream, LF_BITSSTREAM_LEN);
 	RepaintGraphWindow();
   return 0;
 }

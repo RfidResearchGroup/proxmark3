@@ -95,14 +95,14 @@ void SetLogFilename(char *fn)
   logfilename = fn;
 }
 
-int manchester_decode( int * data, const size_t len, uint8_t * dataout){
+int manchester_decode( int * data, const size_t len, uint8_t * dataout,  size_t dataoutlen){
 	
 	int bitlength = 0;
 	int i, clock, high, low, startindex;
 	low = startindex = 0;
 	high = 1;
-	uint8_t * bitStream =  (uint8_t* ) malloc(sizeof(uint8_t) * len);	
-	memset(bitStream, 0x00, len);
+	uint8_t * bitStream =  (uint8_t* ) malloc(sizeof(uint8_t) * dataoutlen);	
+	memset(bitStream, 0x00, dataoutlen);	
 	
 	/* Detect high and lows */
 	for (i = 0; i < len; i++) {
@@ -116,12 +116,12 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 	clock = GetT55x7Clock( data, len, high );	
 	startindex = DetectFirstTransition(data, len, high);
   
-	PrintAndLog(" Clock       : %d", clock);
+	//PrintAndLog(" Clock       : %d", clock);
 
 	if (high != 1)
-		bitlength = ManchesterConvertFrom255(data, len, bitStream, high, low, clock, startindex);
+		bitlength = ManchesterConvertFrom255(data, len, bitStream, dataoutlen, high, low, clock, startindex);
 	else
-		bitlength= ManchesterConvertFrom1(data, len, bitStream, clock, startindex);
+		bitlength= ManchesterConvertFrom1(data, len, bitStream, dataoutlen, clock, startindex);
 
 	memcpy(dataout, bitStream, bitlength);
 	free(bitStream);
@@ -192,7 +192,7 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 	return i;
  }
 
- int ManchesterConvertFrom255(const int * data, const size_t len, uint8_t * dataout, int high, int low, int clock, int startIndex){
+ int ManchesterConvertFrom255(const int * data, const size_t len, uint8_t * dataout, int dataoutlen, int high, int low, int clock, int startIndex){
 
 	int i, j, z, hithigh, hitlow, bitIndex, startType;
 	i = 0;
@@ -205,7 +205,7 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 	int firstST = 0;
 
 	// i = clock frame of data
-	for (; i < (int)(len / clock); i++)
+	for (; i < (int)(len/clock); i++)
 	{
 		hithigh = 0;
 		hitlow = 0;
@@ -261,11 +261,13 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 		
 		if ( firstST == 4)
 			break;
+		if ( bitIndex >= dataoutlen-1 )
+			break;
 	}
 	return bitIndex;
  }
  
- int ManchesterConvertFrom1(const int * data, const size_t len, uint8_t * dataout, int clock, int startIndex){
+ int ManchesterConvertFrom1(const int * data, const size_t len, uint8_t * dataout,int dataoutlen, int clock, int startIndex){
 
 	PrintAndLog(" Path B");
  

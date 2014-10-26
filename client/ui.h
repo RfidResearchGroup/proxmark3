@@ -27,13 +27,13 @@ extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault;
 extern int offline;
 extern int flushAfterWrite;   //buzzy
 
-int manchester_decode( int * data, const size_t len, uint8_t * dataout);
+int manchester_decode( int * data, const size_t len, uint8_t * dataout,  size_t dataoutlen);
 int GetT55x7Clock( const int * data, const size_t len, int high );
 int DetectFirstTransition(const int * data, const size_t len, int low);
 void PrintPaddedManchester( uint8_t * bitStream, size_t len, size_t blocksize);
 void ManchesterDiffDecodedString( const uint8_t *bitStream, size_t len, uint8_t invert );
-int ManchesterConvertFrom255(const int * data, const size_t len, uint8_t * dataout, int high, int low, int clock, int startIndex);
-int ManchesterConvertFrom1(const int * data, const size_t len, uint8_t * dataout, int clock, int startIndex);
+int ManchesterConvertFrom255(const int * data, const size_t len, uint8_t * dataout,int dataoutlen, int high, int low, int clock, int startIndex);
+int ManchesterConvertFrom1(const int * data, const size_t len, uint8_t * dataout, int dataoutlen, int clock, int startIndex);
 void iceFsk2(int * data, const size_t len);
 void iceFsk3(int * data, const size_t len);
 #endif
