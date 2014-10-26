@@ -101,8 +101,7 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 	int i, clock, high, low, startindex;
 	low = startindex = 0;
 	high = 1;
-	uint8_t bitStream[len];
-	
+	uint8_t * bitStream =  (uint8_t* ) malloc(sizeof(uint8_t) * len);	
 	memset(bitStream, 0x00, len);
 	
 	/* Detect high and lows */
@@ -118,14 +117,14 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout){
 	startindex = DetectFirstTransition(data, len, high);
   
 	PrintAndLog(" Clock       : %d", clock);
-	//PrintAndLog(" startindex  : %d", startindex);
-	
+
 	if (high != 1)
 		bitlength = ManchesterConvertFrom255(data, len, bitStream, high, low, clock, startindex);
 	else
 		bitlength= ManchesterConvertFrom1(data, len, bitStream, clock, startindex);
 
 	memcpy(dataout, bitStream, bitlength);
+	free(bitStream);
 	return bitlength;
 }
 
@@ -398,8 +397,9 @@ void PrintPaddedManchester( uint8_t* bitStream, size_t len, size_t blocksize){
 void iceFsk2(int * data, const size_t len){
 
 	int i, j;
-	int output[len];
-	
+	int * output =  (int* ) malloc(sizeof(int) * len);	
+	memset(output, 0x00, len);
+
 	// for (i=0; i<len-5; ++i){
 		// for ( j=1; j <=5; ++j) {
 			// output[i] += data[i*j];
@@ -419,13 +419,17 @@ void iceFsk2(int * data, const size_t len){
 	
 	for (j=0; j<len; ++j)
 		data[j] = output[j];
+		
+	free(output);
 }
 
 void iceFsk3(int * data, const size_t len){
 
 	int i,j;
-	int output[len];
-    float fc           = 0.1125f;          // center frequency
+	
+	int * output =  (int* ) malloc(sizeof(int) * len);	
+	memset(output, 0x00, len);
+	float fc           = 0.1125f;          // center frequency
 	size_t adjustedLen = len;
 	
     // create very simple low-pass filter to remove images (2nd-order Butterworth)
@@ -520,6 +524,7 @@ void iceFsk3(int * data, const size_t len){
 		printf("%d", bit );	}
 	printf("\n");	
 	
+	free(output);
 }
 
 float complex cexpf (float complex Z)

@@ -24,9 +24,9 @@ static int CmdHelp(const char *Cmd);
 //  Mifare Ultralight Write Single Block
 //
 int CmdHF14AMfUWrBl(const char *Cmd){
-    uint8_t blockNo = 0;
-    bool chinese_card=0;
-    uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t blockNo    = 0;
+    bool chinese_card  = 0;
+    uint8_t bldata[16] = {0x00};
     UsbCommand resp;
         
     if (strlen(Cmd)<3) {
@@ -173,10 +173,10 @@ int CmdHF14AMfURdCard(const char *Cmd){
     uint8_t BlockNo = 0;
     int Pages=16;
     uint8_t *lockbytes_t=NULL;
-    uint8_t lockbytes[2]={0,0};
-    bool bit[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    uint8_t lockbytes[2]={0x00};
+    bool bit[16]={0x00};
     bool dump=false;
-    uint8_t datatemp[5]={0,0,0,0,0};
+    uint8_t datatemp[7]= {0x00};
         
     uint8_t isOK  = 0;
     uint8_t * data  = NULL;
@@ -327,19 +327,17 @@ int CmdHF14AMfURdCard(const char *Cmd){
 
 int CmdHF14AMfUDump(const char *Cmd){
     int i;
-    uint8_t BlockNo = 0;
-    int Pages=16;
-    uint8_t *lockbytes_t=NULL;
-    uint8_t lockbytes[2]={0,0};
-    bool bit[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    bool dump=false;
-    uint8_t datatemp[5]={0,0,0,0,0};
-        
-    uint8_t isOK  = 0;
-    uint8_t * data  = NULL;
+    uint8_t BlockNo      = 0;
+    int Pages            = 16;
+    uint8_t *lockbytes_t = NULL;
+    uint8_t lockbytes[2] = {0x00};
+    bool bit[16]         = {0x00};
+    uint8_t datatemp[5]  = {0x00};
+	bool dump            = true;
+    uint8_t isOK         = 0;
+    uint8_t * data       = NULL;
     FILE *fout;
 
-    dump=true;
     if ((fout = fopen("dump_ultralight_data.bin","wb")) == NULL) { 
         PrintAndLog("Could not create file name dumpdata.bin");
         return 1;	
@@ -468,12 +466,12 @@ void rol (uint8_t *data, const size_t len){
 int CmdHF14AMfucAuth(const char *Cmd){
         
     uint8_t blockNo = 0, keyNo=0;
-    uint8_t e_RndB[8];
+    uint8_t e_RndB[8] = {0x00};
     uint32_t cuid=0;
-    unsigned char RndARndB[16];
-    uint8_t key[16];
+    unsigned char RndARndB[16] = {0x00};
+    uint8_t key[16] = {0x00};
     DES_cblock RndA, RndB;
-    DES_cblock iv={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+    DES_cblock iv[8] = {0x00};
     DES_key_schedule ks1,ks2;
     DES_cblock key1,key2;
 
@@ -566,7 +564,6 @@ int CmdHF14AMfucAuth(const char *Cmd){
 //
 int CmdHF14AMfUCRdBl(const char *Cmd)
 {
-
     uint8_t blockNo = 0;
         
     if (strlen(Cmd)<1) {
@@ -607,14 +604,13 @@ int CmdHF14AMfUCRdCard(const char *Cmd){
     uint8_t BlockNo = 0;
     int Pages=44;
     uint8_t *lockbytes_t=NULL;
-    uint8_t lockbytes[2]={0,0};
+    uint8_t lockbytes[2]={0x00};
     uint8_t *lockbytes_t2=NULL;
-    uint8_t lockbytes2[2]={0,0};
-    bool bit[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    bool bit2[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    uint8_t lockbytes2[2]={0x00};
+    bool bit[16]={0x00};
+    bool bit2[16]={0x00};
     bool dump=false;
-    uint8_t datatemp[5]={0,0,0,0,0};
-        
+    uint8_t datatemp[5]={0x00};
     uint8_t isOK  = 0;
     uint8_t * data  = NULL;
     FILE *fout = NULL;
@@ -817,19 +813,18 @@ int CmdHF14AMfUCDump(const char *Cmd){
     uint8_t BlockNo = 0;
     int Pages=44;
     uint8_t *lockbytes_t=NULL;
-    uint8_t lockbytes[2]={0,0};
+    uint8_t lockbytes[2]={0x00};
     uint8_t *lockbytes_t2=NULL;
-    uint8_t lockbytes2[2]={0,0};
-    bool bit[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    bool bit2[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    bool dump=false;
-    uint8_t datatemp[5]={0,0,0,0,0};
+    uint8_t lockbytes2[2]={0x00};
+    bool bit[16]={0x00};
+    bool bit2[16]={0x00};
+    bool dump=true;
+    uint8_t datatemp[5]={0x00};
         
     uint8_t isOK  = 0;
     uint8_t * data  = NULL;
     FILE *fout;
 
-	dump=true;
 	if ((fout = fopen("dump_ultralightc_data.bin","wb")) == NULL) { 
 		PrintAndLog("Could not create file name dumpdata.bin");
 		return 1;	
@@ -1024,8 +1019,8 @@ int CmdHF14AMfUCDump(const char *Cmd){
 int CmdHF14AMfUCWrBl(const char *Cmd){
     
     uint8_t blockNo = 0;
-    bool chinese_card=0;
-    uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    bool chinese_card = 0;
+    uint8_t bldata[16] = {0x00};
     UsbCommand resp;
         
     if (strlen(Cmd)<3) {

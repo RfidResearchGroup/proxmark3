@@ -306,14 +306,13 @@ int CmdDump(const char *Cmd){
 	char cmdp = param_getchar(Cmd, 0);
 	char s[20];
 	uint8_t pwd[4] = {0x00};
-		
-	if (strlen(Cmd)>1 || cmdp == 'h' || cmdp == 'H') {
+	bool hasPwd = ( strlen(Cmd) > 0);
+	
+	if ( cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:  lf t55xx dump <password>");
 		PrintAndLog("        sample: lf t55xx dump FFFFFFFF");
 		return 0;
 	}
-
-	bool hasPwd = ( strlen(Cmd) > 0);
 	
 	if ( hasPwd ){
 		if (param_gethex(Cmd, 0, pwd, 4)) {
@@ -323,9 +322,9 @@ int CmdDump(const char *Cmd){
 	}
 
 	for ( int i = 0; i <8; ++i){
-		*s = 0;
+		memset(s,0,sizeof(s));
 		if ( hasPwd ) {
-			sprintf(s,"%d %d", i, pwd);
+			sprintf(s,"%d %s", i, sprint_hex(pwd,4));
 			CmdReadBlkPWD(s);
 		} else {
 			sprintf(s,"%d", i);
