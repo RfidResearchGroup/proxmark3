@@ -471,10 +471,13 @@ int CmdHF14AMfucAuth(const char *Cmd){
     unsigned char RndARndB[16] = {0x00};
     uint8_t key[16] = {0x00};
     DES_cblock RndA, RndB;
-    DES_cblock iv[8] = {0x00};
+    DES_cblock iv;
     DES_key_schedule ks1,ks2;
     DES_cblock key1,key2;
 
+	// 
+	memset(iv, 0, 8);
+	
     if (strlen(Cmd)<1) {
         PrintAndLog("Usage:  hf mfu auth k <key number>");
         PrintAndLog("        sample: hf mfu auth k 0");
