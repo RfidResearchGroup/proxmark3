@@ -55,7 +55,7 @@ void SnoopLFRawAdcSamples(int divisor, int trigger_threshold)
 void DoAcquisition125k_internal(int trigger_threshold, bool silent)
 {
 	uint8_t *dest =  mifare_get_bigbufptr();
-	int n = 8000;
+	int n = 24000;
 	int i;
 
 	memset(dest, 0x00, n);
@@ -89,28 +89,24 @@ void DoAcquisition125k() {
 	
 void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, uint8_t *command)
 {
-	int at134khz;
 
 	/* Make sure the tag is reset */
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelay(2500);
 
+	int divisor_used = 95; // 125 KHz
 	// see if 'h' was specified
+
 	if (command[strlen((char *) command) - 1] == 'h')
-		at134khz = TRUE;
-	else
-		at134khz = FALSE;
+		divisor_used = 88; // 134.8 KHz
 
-	if (at134khz)
-		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-	else
-		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used); 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-
 	// Give it a bit of time for the resonant antenna to settle.
 	SpinDelay(50);
+	
+	
 	// And a little more time for the tag to fully power up
 	SpinDelay(2000);
 
@@ -122,10 +118,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LED_D_OFF();
 		SpinDelayUs(delay_off);
-		if (at134khz)
-			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-		else
-			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used); 
 
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 		LED_D_ON();
@@ -137,15 +130,12 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LED_D_OFF();
 	SpinDelayUs(delay_off);
-	if (at134khz)
-		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-	else
-		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used); 
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
 	// now do the read
-	DoAcquisition125k();
+	DoAcquisition125k(-1);
 }
 
 /* blank r/w tag data stream
@@ -696,21 +686,19 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	size_t size=0,idx=0; //, found=0;
   uint32_t hi2=0, hi=0, lo=0;
 
+	// Configure to go in 125Khz listen mode
+	LFSetupFPGAForADC(0, true);
 
 	while(!BUTTON_PRESS()) {
-
-		// Configure to go in 125Khz listen mode
-		LFSetupFPGAForADC(0,true);
 
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
 
-		DoAcquisition125k();
+		DoAcquisition125k_internal(-1,true);
 		size  = sizeof(BigBuf);
 
 		// FSK demodulator
 		size = fsk_demod(dest, size);
-		WDT_HIT();
 
 		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
 		// 1->0 : fc/8 in sets of 6
@@ -731,7 +719,8 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				idx+=sizeof(frame_marker_mask);
 
 				while(dest[idx] != dest[idx+1] && idx < size-2)
-				{	// Keep going until next frame marker (or error)
+				{	
+					// Keep going until next frame marker (or error)
 					// Shift in a bit. Start by shifting high registers
           hi2=(hi2<<1)|(hi>>31);
 					hi=(hi<<1)|(lo>>31);
@@ -746,6 +735,8 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				}
 				//Dbprintf("Num shifts: %d ", numshifts);
 				// Hopefully, we read a tag and	 hit upon the next frame marker
+				if(idx + sizeof(frame_marker_mask) < size)
+				{
 				if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
 				{
 					if (hi2 != 0){
@@ -756,6 +747,8 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 						Dbprintf("TAG ID: %x%08x (%d)",
 						 (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
 					}
+				}
+
 				}
 
 				// reset
@@ -792,21 +785,20 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	size_t size=0, idx=0;
 	uint32_t code=0, code2=0;
 
+	// Configure to go in 125Khz listen mode
+	LFSetupFPGAForADC(0, true);
 
 	while(!BUTTON_PRESS()) {
 
-		// Configure to go in 125Khz listen mode
-		LFSetupFPGAForADC(0,true);
 
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
 
-		DoAcquisition125k(true);
+		DoAcquisition125k_internal(-1,true);
 		size  = sizeof(BigBuf);
 
 		// FSK demodulator
 		size = fsk_demod(dest, size);
-		WDT_HIT();
 
 		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
 		// 1->0 : fc/8 in sets of 7

@@ -41,7 +41,7 @@ int CmdReadBlk(const char *Cmd)
 	c.cmd = CMD_T55XX_READ_BLOCK;
 	c.d.asBytes[0] = 0x00;
 	c.arg[0] = 0;
-	c.arg[1] = Block;
+	c.arg[1] = block;
 	c.arg[2] = 0;
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK, NULL);
