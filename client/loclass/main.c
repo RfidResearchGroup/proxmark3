@@ -1,5 +1,17 @@
 /*****************************************************************************
- * This file is part of iClassCipher. It is a reconstructon of the cipher engine
+ * WARNING
+ *
+ * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. 
+ * 
+ * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL 
+ * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, 
+ * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. 
+ * 
+ * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. 
+ *
+ *****************************************************************************
+ *
+ * This file is part of loclass. It is a reconstructon of the cipher engine
  * used in iClass, and RFID techology.
  *
  * The implementation is based on the work performed by
@@ -18,8 +30,12 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with IClassCipher.  If not, see <http://www.gnu.org/licenses/>.
+ * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * 
+ * 
  ****************************************************************************/
+
 
 #include <stdio.h>
 #include <cipherutils.h>
@@ -62,9 +78,22 @@ int showHelp()
 
 int main (int argc, char **argv)
 {
+
+
 	prnlog("IClass Cipher version 1.2, Copyright (C) 2014 Martin Holst Swende\n");
 	prnlog("Comes with ABSOLUTELY NO WARRANTY");
-	prnlog("This is free software, and you are welcome to use, abuse and repackage, please keep the credits\n");
+	prnlog("Released as GPLv2\n");
+	prnlog("WARNING");
+	prnlog("");
+	prnlog("THIS TOOL IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. ");
+	prnlog("");
+	prnlog("USAGE OF THIS TOOL IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL ");
+	prnlog("PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, ");
+	prnlog("AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. ");
+	prnlog("");
+	prnlog("THIS TOOL SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. ");
+
+
 	char *fileName = NULL;
 	int c;
 	while ((c = getopt (argc, argv, "thf:")) != -1)

@@ -450,13 +450,17 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
 	int i;
-	uint8_t *tab = (uint8_t *)BigBuf;
+	uint8_t *buff = (uint8_t *)BigBuf;
     
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-    
-	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
-    
+	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+	
+	// Give it a bit of time for the resonant antenna to settle.
+	SpinDelay(150);
+	
+	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;    
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
     
@@ -476,7 +480,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 		if (ledcontrol)
 			LED_D_ON();
         
-		if(tab[i])
+		if(buff[i])
 			OPEN_COIL();
 		else
 			SHORT_COIL();

@@ -316,8 +316,8 @@ int CmdDump(const char *Cmd){
 	}
 	
 	if ( hasPwd ){
-		if (param_gethex(Cmd, 0, pwd, 4)) {
-			PrintAndLog("password must include 4 HEX symbols");
+		if (param_gethex(Cmd, 0, pwd, 8)) {
+			PrintAndLog("password must include 8 HEX symbols");
 			return 0;
 		}
 	}

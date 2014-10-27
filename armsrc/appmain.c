@@ -949,7 +949,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
 			uint8_t *b = (uint8_t *)BigBuf;
 			memcpy(b+c->arg[0], c->d.asBytes, 48);
-			//Dbprintf("copied 48 bytes to %i",b+c->arg[0]);
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		}	

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+ //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -195,9 +195,27 @@ retest:
  *   0                     <-- stop bit, end of tag
  */
 int CmdEM410xSim(const char *Cmd)
-{
-  int i, n, j, h, binary[4], parity[4];
+{	
+	int i, n, j, h, binary[4], parity[4];
 
+	char cmdp = param_getchar(Cmd, 0);
+	uint8_t uid[5] = {0x00};
+
+	if (cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  lf em4x sim <UID>");
+		PrintAndLog("");
+		PrintAndLog("     sample: lf em4x sim 0F0368568B");
+		return 0;
+	}
+
+	if (param_gethex(Cmd, 0, uid, 10)) {
+		PrintAndLog("UID must include 10 HEX symbols");
+		return 0;
+	}
+	
+	PrintAndLog("Starting simulating with UID %02X %02X %02X %02X %02X", uid[0],uid[1],uid[2],uid[3],uid[4]);
+	
+  
   /* clock is 64 in EM410x tags */
   int clock = 64;
 
@@ -271,10 +289,16 @@ int CmdEM410xWatch(const char *Cmd)
 	int read_h = (*Cmd == 'h');
 	do
 	{
+		if (ukbhit()) {
+			printf("\naborted via keyboard!\n");
+			break;
+		}
+		
 		CmdLFRead(read_h ? "h" : "");
-		CmdSamples("16000");	
+		CmdSamples("16000");
+		
 	} while (
-		!CmdEM410xRead("") 
+		!CmdEM410xRead("64") 
 	);
 	return 0;
 }
