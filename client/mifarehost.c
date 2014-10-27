@@ -296,7 +296,7 @@ static uint8_t trailerAccessBytes[4] = {0x08, 0x77, 0x8F, 0x00};
 // variables
 char logHexFileName[200] = {0x00};
 static uint8_t traceCard[4096] = {0x00};
-static char traceFileName[20];
+static char traceFileName[200] = {0};
 static int traceState = TRACE_IDLE;
 static uint8_t traceCurBlock = 0;
 static uint8_t traceCurKey = 0;

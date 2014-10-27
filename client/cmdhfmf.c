@@ -1004,6 +1004,16 @@ int CmdHF14AMfNested(const char *Cmd)
 
 int CmdHF14AMfChk(const char *Cmd)
 {
+	if (strlen(Cmd)<3) {
+		PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+		PrintAndLog("          * - all sectors");
+		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
+		PrintAndLog("d - write keys to binary file\n");
+		PrintAndLog("      sample: hf mf chk 0 A 1234567890ab keys.dic");
+		PrintAndLog("              hf mf chk *1 ? t");
+		return 0;
+	}	
+
 	FILE * f;
 	char filename[256]={0};
 	char buf[13];
@@ -1020,6 +1030,7 @@ int CmdHF14AMfChk(const char *Cmd)
 	
 	int transferToEml = 0;
 	int createDumpFile = 0;
+
 
 	keyBlock = calloc(stKeyBlock, 6);
 	if (keyBlock == NULL) return 1;
@@ -1047,15 +1058,6 @@ int CmdHF14AMfChk(const char *Cmd)
 		num_to_bytes(defaultKeys[defaultKeyCounter], 6, (uint8_t*)(keyBlock + defaultKeyCounter * 6));
 	}
 	
-	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t] [<key (12 hex symbols)>] [<dic (*.dic)>]");
-		PrintAndLog("          * - all sectors");
-		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
-		PrintAndLog("d - write keys to binary file\n");
-		PrintAndLog("      sample: hf mf chk 0 A 1234567890ab keys.dic");
-		PrintAndLog("              hf mf chk *1 ? t");
-		return 0;
-	}	
 	
 	if (param_getchar(Cmd, 0)=='*') {
 		blockNo = 3;
@@ -1144,11 +1146,11 @@ int CmdHF14AMfChk(const char *Cmd)
 					keycnt++;
 					memset(buf, 0, sizeof(buf));
 				}
+				fclose(f);
 			} else {
 				PrintAndLog("File: %s: not found or locked.", filename);
 				free(keyBlock);
 				return 1;
-			fclose(f);
 			}
 		}
 	}
@@ -1586,8 +1588,8 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 int CmdHF14AMfCSetUID(const char *Cmd)
 {
 	uint8_t wipeCard = 0;
-	uint8_t uid[8];
-	uint8_t oldUid[8];
+	uint8_t uid[8] = {0};
+	uint8_t oldUid[8]= {0};
 	int res;
 
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {

@@ -556,7 +556,7 @@ int CmdManchesterDemod(const char *Cmd)
 
   /* But it does not work if compiling on WIndows: therefore we just allocate a */
   /* large array */
-  uint8_t BitStream[MAX_GRAPH_TRACE_LEN];
+  uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
 
   /* Detect high and lows */
   for (i = 0; i < GraphTraceLen; i++)
