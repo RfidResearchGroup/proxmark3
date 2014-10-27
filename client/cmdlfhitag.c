@@ -41,9 +41,6 @@ int CmdLFHitagList(const char *Cmd)
   int i = 0;
   int prev = -1;
 
-  char filename[256];
-  FILE* pf = NULL;
-  
   for (;;) {
     if(i >= 1900) {
       break;
@@ -107,23 +104,19 @@ int CmdLFHitagList(const char *Cmd)
       line);
 
 
-   if (pf) {
-      fprintf(pf," +%7d:  %3d: %s %s\n",
-					(prev < 0 ? 0 : (timestamp - prev)),
-					bits,
-					(isResponse ? "TAG" : "   "),
-					line);
-    }
+//   if (pf) {
+//      fprintf(pf," +%7d:  %3d: %s %s\n",
+//					(prev < 0 ? 0 : (timestamp - prev)),
+//					bits,
+//					(isResponse ? "TAG" : "   "),
+//					line);
+//    }
 	
     prev = timestamp;
     i += (len + 9);
   }
   
-  if (pf) {
-	  PrintAndLog("Recorded activity succesfully written to file: %s", filename);
-    fclose(pf);
-  }
-	
+
   return 0;
 }
 

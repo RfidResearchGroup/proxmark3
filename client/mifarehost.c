@@ -497,7 +497,7 @@ int mfTraceDecode(uint8_t *data_src, int len, uint32_t parity, bool wantSaveToEm
 	break;
 
 	case TRACE_WRITE_OK: 
-		if ((len == 1) && (data[0] = 0x0a)) {
+		if ((len == 1) && (data[0] == 0x0a)) {
 			traceState = TRACE_WRITE_DATA;
 
 			return 0;
@@ -555,23 +555,13 @@ int mfTraceDecode(uint8_t *data_src, int len, uint32_t parity, bool wantSaveToEm
 			at_par = parity;
 			
 			//  decode key here)
-			if (!traceCrypto1) {
-				ks2 = ar_enc ^ prng_successor(nt, 64);
-				ks3 = at_enc ^ prng_successor(nt, 96);
-				revstate = lfsr_recovery64(ks2, ks3);
-				lfsr_rollback_word(revstate, 0, 0);
-				lfsr_rollback_word(revstate, 0, 0);
-				lfsr_rollback_word(revstate, nr_enc, 1);
-				lfsr_rollback_word(revstate, uid ^ nt, 0);
-			}else{
-				ks2 = ar_enc ^ prng_successor(nt, 64);
-				ks3 = at_enc ^ prng_successor(nt, 96);
-				revstate = lfsr_recovery64(ks2, ks3);
-				lfsr_rollback_word(revstate, 0, 0);
-				lfsr_rollback_word(revstate, 0, 0);
-				lfsr_rollback_word(revstate, nr_enc, 1);
-				lfsr_rollback_word(revstate, uid ^ nt, 0);
-			}
+			ks2 = ar_enc ^ prng_successor(nt, 64);
+			ks3 = at_enc ^ prng_successor(nt, 96);
+			revstate = lfsr_recovery64(ks2, ks3);
+			lfsr_rollback_word(revstate, 0, 0);
+			lfsr_rollback_word(revstate, 0, 0);
+			lfsr_rollback_word(revstate, nr_enc, 1);
+			lfsr_rollback_word(revstate, uid ^ nt, 0);
 			crypto1_get_lfsr(revstate, &lfsr);
 			printf("key> %x%x\n", (unsigned int)((lfsr & 0xFFFFFFFF00000000) >> 32), (unsigned int)(lfsr & 0xFFFFFFFF));
 			AddLogUint64(logHexFileName, "key> ", lfsr); 
