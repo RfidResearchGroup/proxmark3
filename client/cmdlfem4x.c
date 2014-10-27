@@ -221,7 +221,8 @@ int CmdEM410xSim(const char *Cmd)
 
   /* clear our graph */
   ClearGraph(0);
-
+  GraphTraceLen = 0;
+  
   /* write it out a few times */
   for (h = 0; h < 4; h++)
   {
@@ -270,7 +271,7 @@ int CmdEM410xSim(const char *Cmd)
   /* booyah! */
   RepaintGraphWindow();
   
-  CmdLFSim("");
+  CmdLFSim("64");
   return 0;
 }
 
@@ -295,7 +296,7 @@ int CmdEM410xWatch(const char *Cmd)
 		}
 		
 		CmdLFRead(read_h ? "h" : "");
-		CmdSamples("16000");
+		CmdSamples("12000");
 		
 	} while (
 		!CmdEM410xRead("64") 
