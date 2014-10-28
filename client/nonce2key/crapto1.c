@@ -544,7 +544,13 @@ lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8], 
 
 	statelist = malloc((sizeof *statelist) << 21);	//how large should be? 
 	if(!statelist || !odd || !even)
+	{
+				free(statelist);
+				free(odd);
+				free(even);
                 return 0;
+
+	}
 
 	s = statelist;
 	for(o = odd; *o != -1; ++o)

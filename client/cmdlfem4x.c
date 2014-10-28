@@ -319,7 +319,7 @@ int CmdEM4x50Read(const char *Cmd)
       ++i;
     while ((GraphBuffer[i] > low) && (i<GraphTraceLen))
       ++i;
-    if (j>(MAX_GRAPH_TRACE_LEN/64)) {
+    if (j>=(MAX_GRAPH_TRACE_LEN/64)) {
       break;
     }
     tmpbuff[j++]= i - start;

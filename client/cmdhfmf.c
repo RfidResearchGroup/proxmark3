@@ -343,10 +343,6 @@ int CmdHF14AMfURdCard(const char *Cmd)
     uint8_t isOK  = 0;
     uint8_t * data  = NULL;
 
-    if (sectorNo > 15) {
-        PrintAndLog("Sector number must be less than 16");
-        return 1;
-    }
     PrintAndLog("Attempting to Read Ultralight... ");
         
   	UsbCommand c = {CMD_MIFAREU_READCARD, {sectorNo}};
@@ -359,64 +355,24 @@ int CmdHF14AMfURdCard(const char *Cmd)
 
         PrintAndLog("isOk:%02x", isOK);
         if (isOK) 
-            for (i = 0; i < 16; i++) {
-			switch(i){
-				case 2:
-					//process lock bytes
-					lockbytes_t=data+(i*4);
-					lockbytes[0]=lockbytes_t[2];
-					lockbytes[1]=lockbytes_t[3];
-					for(int j=0; j<16; j++){
-						bit[j]=lockbytes[j/8] & ( 1 <<(7-j%8));
-					}
-					//PrintAndLog("LB %02x %02x", lockbytes[0],lockbytes[1]);
-					//PrintAndLog("LB2b %02x %02x %02x %02x %02x %02x %02x %02x",bit[8],bit[9],bit[10],bit[11],bit[12],bit[13],bit[14],bit[15]);		
-					PrintAndLog("Block %3d:%s ", i,sprint_hex(data + i * 4, 4));
-					break;
-				case 3: 
-					PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[4]);
-					break;
-				case 4:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[3]);
-					break;
-				case 5:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[2]);
-					break;
-				case 6:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[1]);
-					break;
-				case 7:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[0]);
-					break;
-				case 8:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[15]);
-					break;
-				case 9:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[14]);
-					break;
-				case 10:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[13]);
-					break;
-				case 11:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[12]);
-					break;
-				case 12:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[11]);
-					break;
-				case 13:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[10]);
-					break;
-				case 14:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[9]);
-					break;
-				case 15:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[8]);
-					break;
-				default:
-					PrintAndLog("Block %3d:%s ", i,sprint_hex(data + i * 4, 4));
-					break;
+        	{	// bit 0 and 1
+				PrintAndLog("Block %3d:%s ", 0,sprint_hex(data + 0 * 4, 4));
+				PrintAndLog("Block %3d:%s ", 1,sprint_hex(data + 1 * 4, 4));
+				// bit 2
+				//process lock bytes
+				lockbytes_t=data+(2*4);
+				lockbytes[0]=lockbytes_t[2];
+				lockbytes[1]=lockbytes_t[3];
+				for(int j=0; j<16; j++){
+					bit[j]=lockbytes[j/8] & ( 1 <<(7-j%8));
 				}
-                        }
+				//remaining
+	            for (i = 3; i < 16; i++) {
+	            	int bitnum = (23-i) % 16;
+					PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[bitnum]);
+	            }
+
+        	}
         } else {
                 PrintAndLog("Command execute timeout");
         }
@@ -546,6 +502,7 @@ int CmdHF14AMfDump(const char *Cmd)
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		if (fread( keyA[sectorNo], 1, 6, fin ) == 0) {
 			PrintAndLog("File reading error.");
+			fclose(fin);
 			return 2;
 		}
 	}
@@ -553,10 +510,11 @@ int CmdHF14AMfDump(const char *Cmd)
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		if (fread( keyB[sectorNo], 1, 6, fin ) == 0) {
 			PrintAndLog("File reading error.");
+			fclose(fin);
 			return 2;
 		}
 	}
-	
+	fclose(fin);
 	// Read access rights to sectors
 
 	PrintAndLog("|-----------------------------------------|");
@@ -666,7 +624,6 @@ int CmdHF14AMfDump(const char *Cmd)
 		PrintAndLog("Dumped %d blocks (%d bytes) to file dumpdata.bin", numblocks, 16*numblocks);
 	}
 		
-	fclose(fin);
 	return 0;
 }
 
@@ -1004,6 +961,16 @@ int CmdHF14AMfNested(const char *Cmd)
 
 int CmdHF14AMfChk(const char *Cmd)
 {
+	if (strlen(Cmd)<3) {
+		PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+		PrintAndLog("          * - all sectors");
+		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
+		PrintAndLog("d - write keys to binary file\n");
+		PrintAndLog("      sample: hf mf chk 0 A 1234567890ab keys.dic");
+		PrintAndLog("              hf mf chk *1 ? t");
+		return 0;
+	}	
+
 	FILE * f;
 	char filename[256]={0};
 	char buf[13];
@@ -1020,6 +987,7 @@ int CmdHF14AMfChk(const char *Cmd)
 	
 	int transferToEml = 0;
 	int createDumpFile = 0;
+
 
 	keyBlock = calloc(stKeyBlock, 6);
 	if (keyBlock == NULL) return 1;
@@ -1047,15 +1015,6 @@ int CmdHF14AMfChk(const char *Cmd)
 		num_to_bytes(defaultKeys[defaultKeyCounter], 6, (uint8_t*)(keyBlock + defaultKeyCounter * 6));
 	}
 	
-	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t] [<key (12 hex symbols)>] [<dic (*.dic)>]");
-		PrintAndLog("          * - all sectors");
-		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
-		PrintAndLog("d - write keys to binary file\n");
-		PrintAndLog("      sample: hf mf chk 0 A 1234567890ab keys.dic");
-		PrintAndLog("              hf mf chk *1 ? t");
-		return 0;
-	}	
 	
 	if (param_getchar(Cmd, 0)=='*') {
 		blockNo = 3;
@@ -1144,11 +1103,11 @@ int CmdHF14AMfChk(const char *Cmd)
 					keycnt++;
 					memset(buf, 0, sizeof(buf));
 				}
+				fclose(f);
 			} else {
 				PrintAndLog("File: %s: not found or locked.", filename);
 				free(keyBlock);
 				return 1;
-			fclose(f);
 			}
 		}
 	}
@@ -1430,12 +1389,14 @@ int CmdHF14AMfELoad(const char *Cmd)
 				break;
 			}
 			PrintAndLog("File reading error.");
+			fclose(f);
 			return 2;
 		}
 		if (strlen(buf) < 32){
 			if(strlen(buf) && feof(f))
 				break;
 			PrintAndLog("File content error. Block data must include 32 HEX symbols");
+			fclose(f);
 			return 2;
 		}
 		for (i = 0; i < 32; i += 2) {
@@ -1444,6 +1405,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 		}
 		if (mfEmlSetMem(buf8, blockNum, 1)) {
 			PrintAndLog("Cant set emul block: %3d", blockNum);
+			fclose(f);
 			return 3;
 		}
 		blockNum++;
@@ -1586,8 +1548,8 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 int CmdHF14AMfCSetUID(const char *Cmd)
 {
 	uint8_t wipeCard = 0;
-	uint8_t uid[8];
-	uint8_t oldUid[8];
+	uint8_t uid[8] = {0};
+	uint8_t oldUid[8]= {0};
 	int res;
 
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {

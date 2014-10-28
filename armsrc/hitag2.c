@@ -1140,7 +1140,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 		case RHT2F_PASSWORD: {
       Dbprintf("List identifier in password mode");
 			memcpy(password,htd->pwd.password,4);
-      blocknr = 0;
+      		blocknr = 0;
 			bQuitTraceFull = false;
 			bQuiet = false;
 			bPwd = false;
@@ -1158,7 +1158,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
       
 		case RHT2F_CRYPTO: {
 			DbpString("Authenticating using key:");
-			memcpy(key,htd->crypto.key,6);
+			memcpy(key,htd->crypto.key,4);
 			Dbhexdump(6,key,false);
       blocknr = 0;
 			bQuiet = false;
