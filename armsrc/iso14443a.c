@@ -1726,7 +1726,13 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     if ((sak & 0x04) /* && uid_resp[0] == 0x88 */) {
       // Remove first byte, 0x88 is not an UID byte, it CT, see page 3 of:
       // http://www.nxp.com/documents/application_note/AN10927.pdf
-      memcpy(uid_resp, uid_resp + 1, 3);
+      // This was earlier:
+      //memcpy(uid_resp, uid_resp + 1, 3);
+      // But memcpy should not be used for overlapping arrays, 
+      // and memmove appears to not be available in the arm build. 
+      // So this has been replaced with a for-loop:
+      for(int xx = 0; xx < 3; xx++) uid_resp[xx] = uid_resp[xx+1];
+
       uid_resp_len = 3;
     }
 
@@ -1936,7 +1942,8 @@ void ReaderMifare(bool first_try)
 	uint8_t uid[10];
 	uint32_t cuid;
 
-	uint32_t nt, previous_nt;
+	uint32_t nt =0 ;
+	uint32_t previous_nt = 0;
 	static uint32_t nt_attacked = 0;
 	byte_t par_list[8] = {0,0,0,0,0,0,0,0};
 	byte_t ks_list[8] = {0,0,0,0,0,0,0,0};

@@ -1456,78 +1456,81 @@ int DemodPCF7931(uint8_t **outBlocks) {
 	
 	for (bitidx = 0; i < GraphTraceLen; i++)
 	{
-    if ( (GraphBuffer[i-1] > GraphBuffer[i] && dir == 1 && GraphBuffer[i] > lmax) || (GraphBuffer[i-1] < GraphBuffer[i] && dir == 0 && GraphBuffer[i] < lmin))
-    {
-      lc = i - lastval;
-      lastval = i;
-      
-      // Switch depending on lc length:
-      // Tolerance is 1/8 of clock rate (arbitrary)
-      if (abs(lc-clock/4) < tolerance) {
-        // 16T0
-        if((i - pmc) == lc) { /* 16T0 was previous one */
-          /* It's a PMC ! */
-          i += (128+127+16+32+33+16)-1;
-          lastval = i;
-          pmc = 0;
-          block_done = 1;
-        }
-        else {
-          pmc = i;
-        }
-      } else if (abs(lc-clock/2) < tolerance) {
-        // 32TO
-        if((i - pmc) == lc) { /* 16T0 was previous one */
-          /* It's a PMC ! */
-          i += (128+127+16+32+33)-1;
-          lastval = i;
-          pmc = 0;
-          block_done = 1;
-        }
-        else if(half_switch == 1) {
-          BitStream[bitidx++] = 0;
-          half_switch = 0;
-        }
-        else
-          half_switch++;
-      } else if (abs(lc-clock) < tolerance) {
-        // 64TO
-        BitStream[bitidx++] = 1;
-      } else {
-        // Error
-        warnings++;
-        if (warnings > 10)
-        {
-          Dbprintf("Error: too many detection errors, aborting.");
-          return 0;
-        }
-      }
-      
-      if(block_done == 1) {
-        if(bitidx == 128) {
-          for(j=0; j<16; j++) {
-            Blocks[num_blocks][j] = 128*BitStream[j*8+7]+
-            64*BitStream[j*8+6]+
-            32*BitStream[j*8+5]+
-            16*BitStream[j*8+4]+
-            8*BitStream[j*8+3]+
-            4*BitStream[j*8+2]+
-            2*BitStream[j*8+1]+
-            BitStream[j*8];
-          }
-          num_blocks++;
-        }
-        bitidx = 0;
-        block_done = 0;
-        half_switch = 0;
-      }
-      if (GraphBuffer[i-1] > GraphBuffer[i]) dir=0;
-      else dir = 1;
-    }
-    if(bitidx==255)
-      bitidx=0;
-    warnings = 0;
-    if(num_blocks == 4) break;
+	    if ( (GraphBuffer[i-1] > GraphBuffer[i] && dir == 1 && GraphBuffer[i] > lmax) || (GraphBuffer[i-1] < GraphBuffer[i] && dir == 0 && GraphBuffer[i] < lmin))
+	    {
+	      lc = i - lastval;
+	      lastval = i;
+	      
+	      // Switch depending on lc length:
+	      // Tolerance is 1/8 of clock rate (arbitrary)
+	      if (abs(lc-clock/4) < tolerance) {
+	        // 16T0
+	        if((i - pmc) == lc) { /* 16T0 was previous one */
+	          /* It's a PMC ! */
+	          i += (128+127+16+32+33+16)-1;
+	          lastval = i;
+	          pmc = 0;
+	          block_done = 1;
+	        }
+	        else {
+	          pmc = i;
+	        }
+	      } else if (abs(lc-clock/2) < tolerance) {
+	        // 32TO
+	        if((i - pmc) == lc) { /* 16T0 was previous one */
+	          /* It's a PMC ! */
+	          i += (128+127+16+32+33)-1;
+	          lastval = i;
+	          pmc = 0;
+	          block_done = 1;
+	        }
+	        else if(half_switch == 1) {
+	          BitStream[bitidx++] = 0;
+	          half_switch = 0;
+	        }
+	        else
+	          half_switch++;
+	      } else if (abs(lc-clock) < tolerance) {
+	        // 64TO
+	        BitStream[bitidx++] = 1;
+	      } else {
+	        // Error
+	        warnings++;
+	        if (warnings > 10)
+	        {
+	          Dbprintf("Error: too many detection errors, aborting.");
+	          return 0;
+	        }
+	      }
+	      
+	      if(block_done == 1) {
+	        if(bitidx == 128) {
+	          for(j=0; j<16; j++) {
+	            Blocks[num_blocks][j] = 128*BitStream[j*8+7]+
+	            64*BitStream[j*8+6]+
+	            32*BitStream[j*8+5]+
+	            16*BitStream[j*8+4]+
+	            8*BitStream[j*8+3]+
+	            4*BitStream[j*8+2]+
+	            2*BitStream[j*8+1]+
+	            BitStream[j*8];
+	          }
+	          num_blocks++;
+	        }
+	        bitidx = 0;
+	        block_done = 0;
+	        half_switch = 0;
+	      }
+	      if(i < GraphTraceLen)
+	      {
+		      if (GraphBuffer[i-1] > GraphBuffer[i]) dir=0;
+		      else dir = 1;	      	
+	      }
+	    }
+	    if(bitidx==255)
+	      bitidx=0;
+	    warnings = 0;
+	    if(num_blocks == 4) break;
 	}
 	memcpy(outBlocks, Blocks, 16*num_blocks);
 	return num_blocks;
