@@ -152,30 +152,13 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout,  size_t 
 			lastpeak = i;
 		}
 	}
-	//return clock;  
- 	//defaults clock to precise values.
-	switch(clock){
-		case 8:
-		case 16:
-		case 32:
-		case 40:
-		case 50:
-		case 64:
-		case 100:
-		case 128:
-		return clock;
-		break;
-		default:  break;
-	}
-	
-	//PrintAndLog(" Found Clock : %d  - trying to adjust", clock);
 	
 	// When detected clock is 31 or 33 then then return 
 	int clockmod = clock%8;
-	if ( clockmod == 7 ) 
-		clock += 1;
-	else if ( clockmod == 1 )
-		clock -= 1;
+	if ( clockmod == 0) return clock;
+	
+	if ( clockmod == 7 ) clock += 1;
+	else if ( clockmod == 1 ) clock -= 1;
 	
 	return clock;
  }

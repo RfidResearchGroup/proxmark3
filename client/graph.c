@@ -21,11 +21,13 @@ int GraphTraceLen;
 void AppendGraph(int redraw, int clock, int bit)
 {
   int i;
-
-  for (i = 0; i < (int)(clock / 2); ++i)
-    GraphBuffer[GraphTraceLen++] = bit ^ 1;
+  int half = (int)(clock/2);
+  int firstbit = bit ^ 1;
+ 
+  for (i = 0; i < half; ++i)
+    GraphBuffer[GraphTraceLen++] = firstbit;
   
-  for (i = (int)(clock / 2); i < clock; ++i)
+  for (i = 0; i <= half; ++i)
     GraphBuffer[GraphTraceLen++] = bit;
 
   if (redraw)
@@ -72,8 +74,23 @@ int DetectClock(int peak)
       lastpeak = i;
     }
   }
+	
+	int clockmod = clock%8;
+	if ( clockmod == 0) 
+		return clock;
+	
+	// When detected clock is 31 or 33 then return 32
 
-  return clock;
+	printf("Found clock at %d ", clock);
+	switch( clockmod )
+	{
+		case 7: clock++; break;
+		case 6: clock += 2 ; break;
+		case 1: clock--; break;
+		case 2: clock -= 2; break;
+	}
+	printf("- adjusted it to %d \n", clock);
+	return clock;
 }
 
 /* Get or auto-detect clock rate */

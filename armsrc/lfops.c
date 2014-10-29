@@ -17,6 +17,9 @@
 #include "crapto1.h"
 #include "mifareutil.h"
 
+#define SHORT_COIL()	LOW(GPIO_SSC_DOUT)
+#define OPEN_COIL()		HIGH(GPIO_SSC_DOUT)
+
 void LFSetupFPGAForADC(int divisor, bool lf_field)
 {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -56,10 +59,9 @@ void DoAcquisition125k_internal(int trigger_threshold, bool silent)
 {
 	uint8_t *dest =  mifare_get_bigbufptr();
 	int n = 24000;
-	int i;
-
+	int i = 0;
 	memset(dest, 0x00, n);
-	i = 0;
+
 	for(;;) {
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
@@ -289,17 +291,17 @@ void WriteTIbyte(uint8_t b)
 	{
 		if (b&(1<<i)) {
 			// stop modulating antenna
-			LOW(GPIO_SSC_DOUT);
+			SHORT_COIL();
 			SpinDelayUs(1000);
 			// modulate antenna
-			HIGH(GPIO_SSC_DOUT);
+			OPEN_COIL();
 			SpinDelayUs(1000);
 		} else {
 			// stop modulating antenna
-			LOW(GPIO_SSC_DOUT);
+			SHORT_COIL();
 			SpinDelayUs(300);
 			// modulate antenna
-			HIGH(GPIO_SSC_DOUT);
+			OPEN_COIL();
 			SpinDelayUs(1700);
 		}
 	}
@@ -449,60 +451,57 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
-	int i;
+	int i = 0;
 	uint8_t *buff = (uint8_t *)BigBuf;
-    
+
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-	
-	// Give it a bit of time for the resonant antenna to settle.
-	SpinDelay(150);
-	
+
+	// Configure output and enable pin that is connected to the FPGA (for modulating)
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;    
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+	
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
-    
-#define SHORT_COIL()	LOW(GPIO_SSC_DOUT)
-#define OPEN_COIL()		HIGH(GPIO_SSC_DOUT)
-    
-	i = 0;
-	for(;;) {
+
+	// Give it a bit of time for the resonant antenna to settle.
+	SpinDelay(30);
+
+	for(;;) { 
+		
 		while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
-			if(BUTTON_PRESS()) {
-				DbpString("Stopped");
-				return;
-			}
-			WDT_HIT();
+			 if(BUTTON_PRESS()) {
+				 DbpString("Stopped at 0");
+				 FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
+				 return;
+			 }
+			 WDT_HIT();
 		}
         
-		if (ledcontrol)
-			LED_D_ON();
-        
-		if(buff[i])
+		if ( buff[i] )
 			OPEN_COIL();
 		else
 			SHORT_COIL();
-        
-		if (ledcontrol)
-			LED_D_OFF();
-        
-		while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
-			if(BUTTON_PRESS()) {
-				DbpString("Stopped");
+       
+		 while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+			 if(BUTTON_PRESS()) {
+				DbpString("Stopped at 1");
+				FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 				return;
 			}
 			WDT_HIT();
-		}
+		 }
         
-		i++;
+		++i;
 		if(i == period) {
 			i = 0;
 			if (gap) {
+				// turn of modulation
 				SHORT_COIL();
-				SpinDelayUs(gap);
-			}
+				// wait
+				SpinDelay(gap);
+			} 
 		}
 	}
 }
@@ -609,6 +608,7 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 
 	if (ledcontrol)
 		LED_A_ON();
+	
 	SimulateTagLowFrequency(n, 0, ledcontrol);
 
 	if (ledcontrol)
@@ -793,8 +793,6 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	LFSetupFPGAForADC(0, true);
 
 	while(!BUTTON_PRESS()) {
-
-
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
 

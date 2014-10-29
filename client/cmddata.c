@@ -552,7 +552,7 @@ int CmdManchesterDemod(const char *Cmd)
 
   /* But it does not work if compiling on WIndows: therefore we just allocate a */
   /* large array */
-  uint8_t BitStream[MAX_GRAPH_TRACE_LEN];
+  uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0x00};
 
   /* Detect high and lows */
   for (i = 0; i < GraphTraceLen; i++)
@@ -564,8 +564,7 @@ int CmdManchesterDemod(const char *Cmd)
   }
 
   /* Get our clock */
-  clock = GetClock(Cmd, high, 1);
-
+  clock = GetClock(Cmd, high, 1); 
   int tolerance = clock/4;
 
   /* Detect first transition */
@@ -583,8 +582,6 @@ int CmdManchesterDemod(const char *Cmd)
       break;
     }
   }
-
-  PrintAndLog("Clock:  %d", clock); 
   
   /* If we're not working with 1/0s, demod based off clock */
   if (high != 1)
@@ -723,21 +720,22 @@ int CmdManchesterDemod(const char *Cmd)
 int CmdManchesterMod(const char *Cmd)
 {
   int i, j;
-  int clock;
   int bit, lastbit, wave;
-
-  /* Get our clock */
-  clock = GetClock(Cmd, 0, 1);
-
+  int clock = GetClock(Cmd, 0, 1);
+  int clock1 = GetT55x7Clock( GraphBuffer, GraphTraceLen, 0 );
+  PrintAndLog("MAN MOD CLOCKS:  %d  ice %d", clock,clock1);
+  
+  int half = (int)(clock/2);
+  
   wave = 0;
   lastbit = 1;
   for (i = 0; i < (int)(GraphTraceLen / clock); i++)
   {
     bit = GraphBuffer[i * clock] ^ 1;
 
-    for (j = 0; j < (int)(clock/2); j++)
+    for (j = 0; j < half; ++j)
       GraphBuffer[(i * clock) + j] = bit ^ lastbit ^ wave;
-    for (j = (int)(clock/2); j < clock; j++)
+    for (j = half; j < clock; ++j)
       GraphBuffer[(i * clock) + j] = bit ^ lastbit ^ wave ^ 1;
 
     /* Keep track of how we start our wave and if we changed or not this time */

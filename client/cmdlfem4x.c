@@ -57,7 +57,8 @@ int CmdEM410xRead(const char *Cmd)
 
   /* get clock */
   clock = GetClock(Cmd, high, 0);
-
+ 
+  
   /* parity for our 4 columns */
   parity[0] = parity[1] = parity[2] = parity[3] = 0;
   header = rows = 0;
@@ -220,8 +221,7 @@ int CmdEM410xSim(const char *Cmd)
   int clock = 64;
 
   /* clear our graph */
-  ClearGraph(0);
-  GraphTraceLen = 0;
+  ClearGraph(1);
   
   /* write it out a few times */
   for (h = 0; h < 4; h++)
@@ -266,12 +266,12 @@ int CmdEM410xSim(const char *Cmd)
   }
 
   /* modulate that biatch */
-  CmdManchesterMod("");
+  CmdManchesterMod("64");
 
   /* booyah! */
   RepaintGraphWindow();
   
-  CmdLFSim("64");
+  CmdLFSim("");
   return 0;
 }
 
@@ -296,10 +296,10 @@ int CmdEM410xWatch(const char *Cmd)
 		}
 		
 		CmdLFRead(read_h ? "h" : "");
-		CmdSamples("12000");
+		CmdSamples("16000");
 		
 	} while (
-		!CmdEM410xRead("64") 
+		!CmdEM410xRead("") 
 	);
 	return 0;
 }
@@ -363,7 +363,7 @@ int CmdEM4x50Read(const char *Cmd)
       ++i;
     while ((GraphBuffer[i] > low) && (i<GraphTraceLen))
       ++i;
-    if (j>(MAX_GRAPH_TRACE_LEN/64)) {
+    if (j>=(MAX_GRAPH_TRACE_LEN/64)) {
       break;
     }
     tmpbuff[j++]= i - start;
@@ -616,7 +616,7 @@ int CmdWriteWord(const char *Cmd)
     return 1;
   }
   
-  PrintAndLog("Writting word %d with data %08X", Word, Data);
+  PrintAndLog("Writing word %d with data %08X", Word, Data);
   
   c.cmd = CMD_EM4X_WRITE_WORD;
   c.d.asBytes[0] = 0x0; //Normal mode
@@ -629,7 +629,7 @@ int CmdWriteWord(const char *Cmd)
 
 int CmdWriteWordPWD(const char *Cmd)
 {
-  int Word = 8; //default to invalid word
+  int Word = 16; //default to invalid word
   int Data = 0xFFFFFFFF; //default to blank data
   int Password = 0xFFFFFFFF; //default to blank password
   UsbCommand c;
@@ -641,7 +641,7 @@ int CmdWriteWordPWD(const char *Cmd)
     return 1;
   }
   
-  PrintAndLog("Writting word %d with data %08X and password %08X", Word, Data, Password);
+  PrintAndLog("Writing word %d with data %08X and password %08X", Word, Data, Password);
   
   c.cmd = CMD_EM4X_WRITE_WORD;
   c.d.asBytes[0] = 0x1; //Password mode

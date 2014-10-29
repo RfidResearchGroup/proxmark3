@@ -521,8 +521,6 @@ int CmdHF14AMfDump(const char *Cmd)
 
 	int size = GetCardSize();		
 	char cmdp = param_getchar(Cmd, 0);
-	
-	
 
 	if  ( size > -1) 
 		cmdp = (char)(48+size);
@@ -548,7 +546,7 @@ int CmdHF14AMfDump(const char *Cmd)
 	}
 	
 	if ((fin = fopen("dumpkeys.bin","rb")) == NULL) {
-		PrintAndLog("Could not find file dumpkeys.bin");
+		PrintAndLog("Could not find file dumpkeys.bin");		
 		return 1;
 	}
 	
@@ -556,6 +554,7 @@ int CmdHF14AMfDump(const char *Cmd)
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		if (fread( keyA[sectorNo], 1, 6, fin ) == 0) {
 			PrintAndLog("File reading error.");
+			fclose(fin);
 			return 2;
 		}
 	}
@@ -564,9 +563,12 @@ int CmdHF14AMfDump(const char *Cmd)
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		if (fread( keyB[sectorNo], 1, 6, fin ) == 0) {
 			PrintAndLog("File reading error.");
+			fclose(fin);
 			return 2;
 		}
 	}
+	
+	fclose(fin);
 	
 	PrintAndLog("|-----------------------------------------|");
 	PrintAndLog("|------ Reading sector access bits...-----|");
@@ -673,7 +675,6 @@ int CmdHF14AMfDump(const char *Cmd)
 		PrintAndLog("Dumped %d blocks (%d bytes) to file dumpdata.bin", numblocks, 16*numblocks);
 	}
 	
-	fclose(fin);
 	return 0;
 }
 
@@ -1169,11 +1170,12 @@ int CmdHF14AMfChk(const char *Cmd)
 					keycnt++;
 					memset(buf, 0, sizeof(buf));
 				}
+				fclose(f);
 			} else {
 				PrintAndLog("File: %s: not found or locked.", filename);
 				free(keyBlock);
 				return 1;
-			fclose(f);
+			
 			}
 		}
 	}
@@ -1454,6 +1456,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 				break;
 			}
 			PrintAndLog("File reading error.");
+			fclose(f);
 			return 2;
 		}
 		if (strlen(buf) < 32){
@@ -1478,6 +1481,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 	
 	if ((blockNum != 16*4) && (blockNum != 32*4 + 8*16)) {
 		PrintAndLog("File content error. There must be 64 or 256 blocks.");
+		fclose(f);
 		return 4;
 	}
 	PrintAndLog("Loaded %d blocks from file: %s", blockNum, filename);
@@ -1610,8 +1614,8 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 int CmdHF14AMfCSetUID(const char *Cmd)
 {
 	uint8_t wipeCard = 0;
-	uint8_t uid[8];
-	uint8_t oldUid[8];
+	uint8_t uid[8] = {0x00};
+	uint8_t oldUid[8] = {0x00};
 	int res;
 
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {

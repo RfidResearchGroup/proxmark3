@@ -410,7 +410,7 @@ int CmdLFSim(const char *Cmd)
 	printf(".");
   }
   printf("\n");
-  PrintAndLog("Starting simulator...");
+  PrintAndLog("Starting to simulate");
   UsbCommand c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
   SendCommand(&c);
   return 0;

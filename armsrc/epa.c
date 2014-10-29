@@ -419,7 +419,7 @@ int EPA_Setup()
 	// return code
 	int return_code = 0;
 	// card UID
-	uint8_t uid[8];
+	uint8_t uid[10];
 	// card select information
 	iso14a_card_select_t card_select_info;
 	// power up the field

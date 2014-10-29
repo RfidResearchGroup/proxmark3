@@ -737,16 +737,14 @@ int doTestsWithKnownInputs()
 
 int readKeyFile(uint8_t key[8])
 {
-
 	FILE *f;
-
+	int retval = 1;
 	f = fopen("iclass_key.bin", "rb");
 	if (f)
 	{
 		if(fread(key, sizeof(key), 1, f) == 1) return 0;
 	}
-	return 1;
-
+	return retval;
 }
 
 
