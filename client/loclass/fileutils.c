@@ -35,6 +35,7 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
 	FILE *fileHandle=fopen(fileName,"wb");
 	if(!fileHandle) {
 		prnlog("Failed to write to file '%s'", fileName);
+		free(fileName);
 		return 1;
 	}
 	fwrite(data, 1,	datalen, fileHandle);

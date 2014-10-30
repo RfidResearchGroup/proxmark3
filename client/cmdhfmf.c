@@ -667,12 +667,15 @@ int CmdHF14AMfRestore(const char *Cmd)
 	}
 	if ((fkeys = fopen("dumpkeys.bin","rb")) == NULL) {
 		PrintAndLog("Could not find file dumpkeys.bin");
+		fclose(fdump);
 		return 1;
 	}
 	
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		if (fread(keyA[sectorNo], 1, 6, fkeys) == 0) {
 			PrintAndLog("File reading error (dumpkeys.bin).");
+			fclose(fdump);
+			fclose(fkeys);
 			return 2;
 		}
 	}
@@ -680,9 +683,12 @@ int CmdHF14AMfRestore(const char *Cmd)
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		if (fread(keyB[sectorNo], 1, 6, fkeys) == 0) {
 			PrintAndLog("File reading error (dumpkeys.bin).");
+			fclose(fdump);
+			fclose(fkeys);
 			return 2;
 		}
 	}
+	fclose(fkeys);
 
 	PrintAndLog("Restoring dumpdata.bin to card");
 
@@ -693,6 +699,7 @@ int CmdHF14AMfRestore(const char *Cmd)
 			
 			if (fread(bldata, 1, 16, fdump) == 0) {
 				PrintAndLog("File reading error (dumpdata.bin).");
+				fclose(fdump);
 				return 2;
 			}
 					
@@ -727,7 +734,6 @@ int CmdHF14AMfRestore(const char *Cmd)
 	}
 	
 	fclose(fdump);
-	fclose(fkeys);
 	return 0;
 }
 

@@ -1730,9 +1730,11 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
       //memcpy(uid_resp, uid_resp + 1, 3);
       // But memcpy should not be used for overlapping arrays, 
       // and memmove appears to not be available in the arm build. 
-      // So this has been replaced with a for-loop:
-      for(int xx = 0; xx < 3; xx++) uid_resp[xx] = uid_resp[xx+1];
-
+      // Therefore:
+      uid_resp[0] = uid_resp[1];
+      uid_resp[1] = uid_resp[2];
+      uid_resp[2] = uid_resp[3]; 
+ 
       uid_resp_len = 3;
     }
 
@@ -1939,7 +1941,7 @@ void ReaderMifare(bool first_try)
 	//byte_t par_mask = 0xff;
 	static byte_t par_low = 0;
 	bool led_on = TRUE;
-	uint8_t uid[10];
+	uint8_t uid[10]  ={0};
 	uint32_t cuid;
 
 	uint32_t nt =0 ;

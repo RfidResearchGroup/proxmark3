@@ -350,13 +350,15 @@ int loadTraceCard(uint8_t *tuid) {
 	while(!feof(f)){
 		memset(buf, 0, sizeof(buf));
 		if (fgets(buf, sizeof(buf), f) == NULL) {
-      PrintAndLog("File reading error.");
+			PrintAndLog("File reading error.");
+			fclose(f);
 			return 2;
-    }
+    	}
 
 		if (strlen(buf) < 32){
 			if (feof(f)) break;
 			PrintAndLog("File content error. Block data must include 32 HEX symbols");
+			fclose(f);
 			return 2;
 		}
 		for (i = 0; i < 32; i += 2)
