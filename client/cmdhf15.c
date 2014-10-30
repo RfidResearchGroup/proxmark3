@@ -298,7 +298,26 @@ int CmdHF15Reader(const char *Cmd)
 // Simulation is still not working very good
 int CmdHF15Sim(const char *Cmd)
 {
-	UsbCommand c = {CMD_SIMTAG_ISO_15693, {strtol(Cmd, NULL, 0), 0, 0}};
+	char cmdp = param_getchar(Cmd, 0);
+	uint8_t uid[8] = {0x00};
+
+	//E0 16 24 00 00 00 00 00
+	if (cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  hf 15 sim <UID>");
+		PrintAndLog("");
+		PrintAndLog("     sample: hf 15 sim E016240000000000");
+		return 0;
+	}
+
+	if (param_gethex(Cmd, 0, uid, 16)) {
+		PrintAndLog("UID must include 16 HEX symbols");
+		return 0;
+	}
+	
+	PrintAndLog("Starting simulating UID %02X %02X %02X %02X %02X %02X %02X %02X",
+			uid[0],uid[1],uid[2],uid[3],uid[4], uid[5], uid[6], uid[7]);
+
+	UsbCommand c = {CMD_SIMTAG_ISO_15693, {0, 0, 0}};
 	SendCommand(&c);
 	return 0;
 }

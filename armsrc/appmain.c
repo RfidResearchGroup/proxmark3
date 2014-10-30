@@ -743,7 +743,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			ReaderIso15693(c->arg[0]);
 			break;
 		case CMD_SIMTAG_ISO_15693:
-			SimTagIso15693(c->arg[0]);
+			SimTagIso15693(c->arg[0], c->d.asBytes);
 			break;
 #endif
 

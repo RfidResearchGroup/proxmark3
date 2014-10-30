@@ -57,8 +57,7 @@ int CmdEM410xRead(const char *Cmd)
 
   /* get clock */
   clock = GetClock(Cmd, high, 0);
- 
-  
+   
   /* parity for our 4 columns */
   parity[0] = parity[1] = parity[2] = parity[3] = 0;
   header = rows = 0;
@@ -99,7 +98,7 @@ int CmdEM410xRead(const char *Cmd)
 
 retest:
   /* We go till 5 before the graph ends because we'll get that far below */
-  for (i = 1; i < bit2idx - 5; i++)
+  for (i = 0; i < bit2idx - 5; i++)
   {
     /* Step 2: We have our header but need our tag ID */
     if (header == 9 && rows < 10)
@@ -128,7 +127,7 @@ retest:
         PrintAndLog("Thought we had a valid tag but failed at word %d (i=%d)", rows + 1, i);
 
         /* Start back rows * 5 + 9 header bits, -1 to not start at same place */
-        i -= 9 + (5 * rows) - 5;
+        i -= 9 + (5 * rows) -2;
 
         rows = header = 0;
       }
@@ -214,8 +213,8 @@ int CmdEM410xSim(const char *Cmd)
 		return 0;
 	}
 	
-	PrintAndLog("Starting simulating with UID %02X %02X %02X %02X %02X", uid[0],uid[1],uid[2],uid[3],uid[4]);
-	
+	PrintAndLog("Starting simulating UID %02X%02X%02X%02X%02X", uid[0],uid[1],uid[2],uid[3],uid[4]);
+	PrintAndLog("Press pm3-button to about simulation");
   
   /* clock is 64 in EM410x tags */
   int clock = 64;
