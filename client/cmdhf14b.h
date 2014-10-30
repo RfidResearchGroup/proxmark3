@@ -21,5 +21,6 @@ int CmdHFSimlisten(const char *Cmd);
 int CmdHF14BSnoop(const char *Cmd);
 int CmdSri512Read(const char *Cmd);
 int CmdSrix4kRead(const char *Cmd);
+int CmdHF14BWrite( const char *cmd);
 
 #endif
