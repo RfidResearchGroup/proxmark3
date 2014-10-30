@@ -535,7 +535,8 @@ int CmdHF15CmdRaw (const char *cmd) {
  */
 int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd[], int iso15cmdlen) {
 	int temp;
-	uint8_t *req=c->d.asBytes, uid[8];
+	uint8_t *req=c->d.asBytes;
+	uint8_t uid[8] = {0};
 	uint32_t reqlen=0;
 
 	// strip

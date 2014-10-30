@@ -225,7 +225,7 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
 {
 	struct version_information *v = (struct version_information*)version_information;
 	dst[0] = 0;
-	strncat(dst, prefix, len);
+	strncat(dst, prefix, len-1);
 	if(v->magic != VERSION_INFORMATION_MAGIC) {
 		strncat(dst, "Missing/Invalid version information", len - strlen(dst) - 1);
 		return;

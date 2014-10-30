@@ -1295,20 +1295,23 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
   FpgaSetupSsc();
 
    if (wait)
-    if(*wait < 10)
-      *wait = 10;
+   {
+     if(*wait < 10) *wait = 10;
+     
+     for(c = 0; c < *wait;) {
+       if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+         AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
+         c++;
+       }
+       if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+         volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
+         (void)r;
+       }
+       WDT_HIT();
+     }
 
-  for(c = 0; c < *wait;) {
-    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-      AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
-      c++;
-    }
-    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-      volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
-      (void)r;
-    }
-    WDT_HIT();
-  }
+   }
+
 
   uint8_t sendbyte;
   bool firstpart = TRUE;

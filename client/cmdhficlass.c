@@ -502,6 +502,8 @@ int CmdHFiClassReader_Dump(const char *Cmd)
   SendCommand(&c);
   
   UsbCommand resp;
+  uint8_t key_sel[8] = {0};
+  uint8_t key_sel_p[8] = { 0 };
 
   if (WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
         uint8_t isOK    = resp.arg[0] & 0xff;
@@ -520,8 +522,6 @@ int CmdHFiClassReader_Dump(const char *Cmd)
         {
             if(elite)
             {
-                uint8_t key_sel[8] = {0};
-                uint8_t key_sel_p[8] = { 0 };
                 //Get the key index (hash1)
                 uint8_t key_index[8] = {0};
 
