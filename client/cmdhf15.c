@@ -318,6 +318,8 @@ int CmdHF15Sim(const char *Cmd)
 			uid[0],uid[1],uid[2],uid[3],uid[4], uid[5], uid[6], uid[7]);
 
 	UsbCommand c = {CMD_SIMTAG_ISO_15693, {0, 0, 0}};
+	memcpy(c.d.asBytes,uid,8);
+	
 	SendCommand(&c);
 	return 0;
 }
