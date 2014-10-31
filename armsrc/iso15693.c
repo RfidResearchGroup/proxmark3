@@ -837,26 +837,27 @@ static void BuildReadBlockRequest(uint8_t *uid, uint8_t blockNumber )
 // Now the VICC>VCD responses when we are simulating a tag
  static void BuildInventoryResponse( uint8_t *uid)
 {
-	uint8_t cmd[12];
+	uint8_t cmd[13];
 
 	uint16_t crc;
 	// one sub-carrier, inventory, 1 slot, fast rate
 	// AFI is at bit 5 (1<<4) when doing an INVENTORY
-	cmd[0] = 0; //(1 << 2) | (1 << 5) | (1 << 1);
-	cmd[1] = 0;
+	cmd[0] = 0x0d;   // COM LEN? Data 8 + 4 //(1 << 2) | (1 << 5) | (1 << 1);
+	cmd[1] = 0; // com_Adr
+	cmd[2] = 0; // status   00 = success
 	// 64-bit UID
-	cmd[2] = uid[7]; //0x32;
-	cmd[3] = uid[6]; //0x4b;
-	cmd[4] = uid[5]; //0x03;
-	cmd[5] = uid[4]; //0x01;
-	cmd[6] = uid[3]; //0x00;
-	cmd[7] = uid[2]; //0x10;
-	cmd[8] = uid[1]; //0x05;
-	cmd[9] = uid[0]; //0xe0;
+	cmd[3] = uid[7]; //0x32;
+	cmd[4] = uid[6]; //0x4b;
+	cmd[5] = uid[5]; //0x03;
+	cmd[6] = uid[4]; //0x01;
+	cmd[7] = uid[3]; //0x00;
+	cmd[8] = uid[2]; //0x10;
+	cmd[9] = uid[1]; //0x05;
+	cmd[10] = uid[0]; //0xe0;
 	//Now the CRC
 	crc = Crc(cmd, 10);
-	cmd[10] = crc & 0xff;
-	cmd[11] = crc >> 8;
+	cmd[11] = crc & 0xff;
+	cmd[12] = crc >> 8;
 
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
