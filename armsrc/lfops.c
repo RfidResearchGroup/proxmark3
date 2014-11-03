@@ -452,7 +452,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
 	int i = 0;
-	uint8_t *buff = (uint8_t *)BigBuf;
+	uint8_t *buf = (uint8_t *)BigBuf;
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
@@ -493,7 +493,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 		//#define LOW(x)	 AT91C_BASE_PIOA->PIO_CODR = (x)
 		//#define HIGH(x)	 AT91C_BASE_PIOA->PIO_SODR = (x)
 		
-		if ( buff[i] > 0 ){
+		if ( buf[i] > 0 ){
 			HIGH(GPIO_SSC_DOUT);
 			//FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 			//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
