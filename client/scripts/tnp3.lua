@@ -132,12 +132,14 @@ local function main(args)
 	print(('Using keyA : %s'):format(keyA))
 	print( string.rep('--',20) )
 
-	print('Trying to find other keys.')
+	
 	if useNested then
+	  print('Trying to find keys.')
 	  core.console( ('hf mf nested 1 0 A %s d'):format(keyA) )
 	end
 	
 	-- Loading keyfile
+	print('Loading dumpkeys.bin')
 	local infile = io.open(input, "rb")
 	if infile == nil then 
 		return oops('Could not read file ', input)
@@ -164,40 +166,51 @@ local function main(args)
 	local blocks = {}
 
 	-- main loop
-	for blockNo = 8, numBlocks-1, 1 do
-		local b = blockNo%4
-		if b ~= 3 then
-			pos = (math.floor( blockNo / 4 ) * 12)+1
-			key = akeys:sub(pos, pos + 12 )
-			cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = blockNo ,arg2 = 0,arg3 = 0, data = key}
-			local err = core.SendCommand(cmd:getBytes())
-			if err then return oops(err) end
-			local blockdata, err = waitCmd()
-			if err then return oops(err) end
-	
-			local base = ('%s%s%d%s'):format(block0, block1, blockNo, hashconstant)
-			local md5hash = md5.sumhexa(base)
-			local aestest = core.aes(md5hash, blockdata)
-		
-			local _,hex = bin.unpack(("H%d"):format(16),aestest)
-		
-			-- local hexascii = string.gsub(hex, '(%x%x)', 
-							-- function(value) 
-								-- return string.char(tonumber(value, 16)) 
-							-- end
-						-- )
+	for blockNo = 0, numBlocks-1, 1 do
 
-	        if string.find(blockdata, '^0+$') then
-				blocks[blockNo] = ('%02d  :: %s :: %s'):format(blockNo,blockdata,blockdata) 
+		if core.ukbhit() then
+			print("aborted by user")
+			break
+		end
+	
+		pos = (math.floor( blockNo / 4 ) * 12)+1
+		key = akeys:sub(pos, pos + 12 )
+		cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = blockNo ,arg2 = 0,arg3 = 0, data = key}
+		local err = core.SendCommand(cmd:getBytes())
+		if err then return oops(err) end
+		local blockdata, err = waitCmd()
+		if err then return oops(err) end		
+
+		local b = blockNo%4
+
+		if b ~= 3 then
+			if blockNo < 8 then
+				-- Block 0-7 not encrypted
+				blocks[blockNo+1] = ('%02d  :: %s :: %s'):format(blockNo,blockdata,blockdata) 
 			else
-				--blocks[blockNo] = ('%02d :: %s :: %s :: %s '):format(blockNo,key,md5hash,hex)
-				blocks[blockNo] = ('%02d  :: %s :: %s'):format(blockNo,blockdata,blockdata) 
-			end		
-		
-			if core.ukbhit() then
-				print("aborted by user")
-				break
+				local base = ('%s%s%d%s'):format(block0, block1, blockNo, hashconstant)
+				local md5hash = md5.sumhexa(base)
+				local aestest = core.aes(md5hash, blockdata)
+			
+				local _,hex = bin.unpack(("H%d"):format(16),aestest)
+			
+				-- local hexascii = string.gsub(hex, '(%x%x)', 
+								-- function(value) 
+									-- return string.char(tonumber(value, 16)) 
+								-- end
+							-- )
+
+				if string.find(blockdata, '^0+$') then
+					blocks[blockNo+1] = ('%02d  :: %s :: %s'):format(blockNo,blockdata,blockdata) 
+				else
+					--blocks[blockNo+1] = ('%02d :: %s :: %s :: %s '):format(blockNo,key,md5hash,hex)
+					blocks[blockNo+1] = ('%02d  :: %s :: %s'):format(blockNo,blockdata,hex) 
+				end		
 			end
+
+		else
+			-- Sectorblocks, not encrypted
+			blocks[blockNo+1] = ('%02d  :: %s :: %s'):format(blockNo,blockdata,blockdata) 
 		end
 	end
 	
