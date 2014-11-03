@@ -71,7 +71,15 @@ local function show(data)
 	end
 end
 
-function waitCmd()
+local function readdumpkeys(infile)
+	 t = infile:read("*all")
+	 len = string.len(t)
+	 local len,hex = bin.unpack(("H%d"):format(len),t)
+	 --print(len,hex)
+	 return hex
+end
+
+local function waitCmd()
 	local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
 	if response then
 		local count,cmd,arg0 = bin.unpack('LL',response)
@@ -95,6 +103,7 @@ local function main(args)
 	local cmd
 	local err
 	local cmdReadBlockString = 'hf mf rdbl %d A %s'
+	local input = "dumpkeys.bin"
 	
 	-- Arguments for the script
 	for o, a in getopt.getopt(args, 'hk:') do
@@ -113,12 +122,12 @@ local function main(args)
 		print(err)
 		return
 	end
-	print((" Found tag : %s"):format(result.name))
+	print((' Found tag : %s'):format(result.name))
 
 	core.clearCommandBuffer()
 	
 	if 0x01 ~= result.sak then -- NXP MIFARE TNP3xxx
-		print("This is not a TNP3xxx tag. aborting.")
+		print('This is not a TNP3xxx tag. aborting.')
 		return
 	end	
 	
@@ -126,11 +135,18 @@ local function main(args)
 	print(('Using keyA : %s'):format(keyA))
 	print( string.rep('--',20) )
 
-	local cmdNestedString = 'hf mf nested 1 0 A %s d'
-	local cmdDumpString = 'hf mf dump'
-	--core.console(cmdNestedString.format(keyA) )
-	--core.console(cmdDumpString)
+	print('Trying to find other keys. ')
+	--core.console( ('hf mf nested 1 0 A %s d'):format(keyA) )
+	
+	-- Reading found keys file
+	local infile = io.open(input, "rb")
+	if infile == nil then 
+		return oops('Could not read file ', input)
+	end
+	local akeys = readdumpkeys(infile):sub(0,12*16)
 
+	--print( ('KEYS: %s'):format(akeys))
+	
 	print('Reading data need to dump data')
 	
 	-- Read block 0
@@ -147,42 +163,46 @@ local function main(args)
 	local block1, err = waitCmd()
 	if err then return oops(err) end
 
+	print('Dumping data')
 
-	-- Read block 9
-	cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = 9,arg2 = 0,arg3 = 0, data = '56f6313550f9'}
-	local err = core.SendCommand(cmd:getBytes())
-	if err then return oops(err) end
-	local block9, err = waitCmd()
-	if err then return oops(err) end
-	
 	-- main loop
 	print('BLOCK MD5                                 DECRYPTED                           ASCII' ) 
+
+	local key
+	local keyPosStart = 0
+	local block
+	for block = 0, numBlocks-1, 1 do
+		local b = (block+1)%4
+		if b ~= 0 then
+			keyPosStart = (math.floor( block / 4 ) * 12)+1
+			key = akeys:sub(keyPosStart, keyPosStart + 12 )
+			--print( ('%02d %s'):format(block, key))
 		
-	for block=0,numBlocks-1,1 do
+			cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = block ,arg2 = 0,arg3 = 0, data = key}
+			local err = core.SendCommand(cmd:getBytes())
+			if err then return oops(err) end
+			local blockdata, err = waitCmd()
+			if err then return oops(err) end
 	
-		if math.fmod(block,4) then
-			
-		end
+			local base = ('%s%s%02d%s'):format(block0, block1, block, hashconstant)
+			local md5hash = md5.sumhexa(base)
+			local aestest = core.aes(md5hash, blockdata)
 		
-		local base = ('%s%s%02d%s'):format(block0, block1, block, hashconstant)
-		local md5hash = md5.sumhexa(base)
-		local aestest = core.aes(md5hash, block9 )
+			local _,hex = bin.unpack(("H%d"):format(16),aestest)
 		
-		local _,hex = bin.unpack(("H%d"):format(16),aestest)
-		
-		
-		local hexascii = string.gsub(hex, '(%x%x)', 
+			local hexascii = string.gsub(hex, '(%x%x)', 
 							function(value) 
 								return string.char(tonumber(value, 16)) 
 							end
 						)
 
-		print( block .. ' ::  ' .. md5hash .. ' :: ' .. hex .. ' :: ' .. hexascii  )	
+			print( ('%02d :: %s :: %s :: %s :: %s'):format(block,key,md5hash,hex,hexascii)  )	
 		
-		-- if core.ukbhit() then
-			-- print("aborted by user")
-			-- break
-		-- end
+			if core.ukbhit() then
+				print("aborted by user")
+				break
+			end
+		end
 	end
 end
 
