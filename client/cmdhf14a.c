@@ -202,6 +202,7 @@ int CmdHF14AReader(const char *Cmd)
 
 	switch (card->sak) {
 		case 0x00: PrintAndLog("TYPE : NXP MIFARE Ultralight | Ultralight C"); break;
+		case 0x01: PrintAndLog("TYPE : NXP TNP3xxx  Activision Game Appliance"); break;
 		case 0x04: PrintAndLog("TYPE : NXP MIFARE (various !DESFire !DESFire EV1)"); break;
 		case 0x08: PrintAndLog("TYPE : NXP MIFARE CLASSIC 1k | Plus 2k SL1"); break;
 		case 0x09: PrintAndLog("TYPE : NXP MIFARE Mini 0.3k"); break;

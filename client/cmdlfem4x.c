@@ -127,7 +127,7 @@ retest:
         PrintAndLog("Thought we had a valid tag but failed at word %d (i=%d)", rows + 1, i);
 
         /* Start back rows * 5 + 9 header bits, -1 to not start at same place */
-        i -= 9 + (5 * rows) -2;
+        i -= 9 + (5 * rows) -5;
 
         rows = header = 0;
       }
@@ -220,11 +220,11 @@ int CmdEM410xSim(const char *Cmd)
   int clock = 64;
 
   /* clear our graph */
-  ClearGraph(1);
+  ClearGraph(0);
   
   /* write it out a few times */
-  for (h = 0; h < 4; h++)
-  {
+  //for (h = 0; h < 4; h++)
+  //{
     /* write 9 start bits */
     for (i = 0; i < 9; i++)
       AppendGraph(0, clock, 1);
@@ -262,10 +262,10 @@ int CmdEM410xSim(const char *Cmd)
 
     /* stop bit */
     AppendGraph(0, clock, 0);
-  }
+  //}
 
   /* modulate that biatch */
-  CmdManchesterMod("64");
+  //CmdManchesterMod("64");
 
   /* booyah! */
   RepaintGraphWindow();
@@ -295,7 +295,7 @@ int CmdEM410xWatch(const char *Cmd)
 		}
 		
 		CmdLFRead(read_h ? "h" : "");
-		CmdSamples("16000");
+		CmdSamples("6000");
 		
 	} while (
 		!CmdEM410xRead("") 
@@ -654,8 +654,10 @@ int CmdWriteWordPWD(const char *Cmd)
 static command_t CommandTable[] =
 {
   {"help", CmdHelp, 1, "This help"},
+  
   {"410xread", CmdEM410xRead, 1, "[clock rate] -- Extract ID from EM410x tag"},
   {"410xsim", CmdEM410xSim, 0, "<UID> -- Simulate EM410x tag"},
+  {"replay",  MWRem4xReplay, 0, "Watches for tag and simulates manchester encoded em4x tag"},
   {"410xwatch", CmdEM410xWatch, 0, "['h'] -- Watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
   {"410xspoof", CmdEM410xWatchnSpoof, 0, "['h'] --- Watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
   {"410xwrite", CmdEM410xWrite, 1, "<UID> <'0' T5555> <'1' T55x7> [clock rate] -- Write EM410x UID to T5555(Q5) or T55x7 tag, optionally setting clock rate"},
@@ -666,6 +668,265 @@ static command_t CommandTable[] =
   {"wrpwd", CmdWriteWordPWD, 1, "<Data> <Word 1-15> <Password> -- Write EM4xxx word data in password mode"},
   {NULL, NULL, 0, NULL}
 };
+
+
+//Confirms the parity of a bitstream as well as obtaining the data (TagID) from within the appropriate memory space.
+//Arguments:
+// Pointer to a string containing the desired bitsream
+// Pointer to a string that will receive the decoded tag ID
+// Length of the bitsream pointed at in the first argument, char* _strBitStream
+//Retuns:
+//1 Parity confirmed
+//0 Parity not confirmed
+int ConfirmEm410xTagParity( char* _strBitStream, char* pID, int LengthOfBitstream )
+{
+	int i = 0;
+	int rows = 0;
+	int Parity[4] = {0x00};
+	char ID[11] = {0x00};
+	int k = 0;
+	int BitStream[70] = {0x00};
+	int counter = 0;
+	//prepare variables
+	for ( i = 0; i <= LengthOfBitstream; i++)
+	{
+		if (_strBitStream[i] == '1')
+		{
+			k =1;
+			memcpy(&BitStream[i], &k,4);
+		}
+		else if (_strBitStream[i] == '0')
+		{
+			k = 0;
+			memcpy(&BitStream[i], &k,4);
+		}
+	}
+	while ( counter < 2 )
+	{
+		//set/reset variables and counters
+		memset(ID,0x00,sizeof(ID));
+		memset(Parity,0x00,sizeof(Parity));
+		rows = 0;
+		for ( i = 9; i <= LengthOfBitstream; i++)
+		{
+			if ( rows < 10 )
+			{
+				if ((BitStream[i] ^ BitStream[i+1] ^ BitStream[i+2] ^ BitStream[i+3]) == BitStream[i+4])
+				{
+					sprintf(ID+rows, "%x", (8 * BitStream[i]) + (4 * BitStream[i+1]) + (2 * BitStream[i+2]) + (1 * BitStream[i+3]));
+					rows++;
+					/* Keep parity info and move four bits ahead*/
+					Parity[0] ^= BitStream[i];
+					Parity[1] ^= BitStream[i+1];
+					Parity[2] ^= BitStream[i+2];
+					Parity[3] ^= BitStream[i+3];
+					i += 4;
+				}
+			}
+			if ( rows == 10 )
+			{
+				if (	BitStream[i] == Parity[0] && BitStream[i+1] == Parity[1] &&
+					BitStream[i+2] == Parity[2] && BitStream[i+3] == Parity[3] &&
+					BitStream[i+4] == 0)
+				{
+					memcpy(pID,ID,strlen(ID));
+					return 1;
+				}
+			}
+		}
+		printf("[PARITY ->]Failed. Flipping Bits, and rechecking parity for bitstream:\n[PARITY ->]");  
+		for (k = 0; k < LengthOfBitstream; k++)
+		{
+			BitStream[k] ^= 1;
+			printf("%i", BitStream[k]);
+		}
+		puts(" ");
+		counter++;
+	}
+	return 0;
+}
+//Reads and demodulates an em410x RFID tag. It further allows slight modification to the decoded bitstream
+//Once a suitable bitstream has been identified, and if needed, modified, it is replayed. Allowing emulation of the
+//"stolen" rfid tag.
+//No meaningful returns or arguments.
+int MWRem4xReplay(const char* Cmd)
+{
+	// //header traces
+	// static char ArrayTraceZero[] = { '0','0','0','0','0','0','0','0','0' };
+	// static char ArrayTraceOne[] =  { '1','1','1','1','1','1','1','1','1' };
+	// //local string variables
+	// char strClockRate[10] = {0x00};
+	// char strAnswer[4] = {0x00};
+	// char strTempBufferMini[2] = {0x00}; 
+	// //our outbound bit-stream
+	// char strSimulateBitStream[65] = {0x00};
+	// //integers
+	// int iClockRate = 0;
+	// int needle = 0;
+	// int j = 0;
+	// int iFirstHeaderOffset = 0x00000000;
+	// int numManchesterDemodBits=0;
+	// //boolean values
+	// bool bInverted = false;
+	// //pointers to strings. memory will be allocated.
+	// char* pstrInvertBitStream = 0x00000000;
+	// char* pTempBuffer = 0x00000000;
+	// char* pID = 0x00000000;
+	// char* strBitStreamBuffer = 0x00000000;
+		
+
+	// puts("###################################");
+	// puts("#### Em4x Replay                 ##");
+	// puts("#### R.A.M.           June 2013  ##");
+	// puts("###################################");
+	// //initialize
+	// CmdLFRead("");
+	// //Collect ourselves 10,000 samples
+	// CmdSamples("10000");
+	// puts("[->]preforming ASK demodulation\n");
+	// //demodulate ask
+	// Cmdaskdemod("0");
+	// iClockRate = DetectClock(0);
+	// sprintf(strClockRate, "%i\n",iClockRate);
+	// printf("[->]Detected ClockRate: %s\n", strClockRate);
+	
+	// //If detected clock rate is something completely unreasonable, dont go ahead
+	// if ( iClockRate < 0xFFFE )
+	// {  
+	    // pTempBuffer = (char*)malloc(MAX_GRAPH_TRACE_LEN);
+	    // if (pTempBuffer == 0x00000000)
+	      // return 0;
+	    // memset(pTempBuffer,0x00,MAX_GRAPH_TRACE_LEN);
+	    // //Preform manchester de-modulation and display in a single line.
+	    // numManchesterDemodBits = CmdManchesterDemod( strClockRate ); 
+	    // //note: numManchesterDemodBits is set above in CmdManchesterDemod()
+	    // if ( numManchesterDemodBits == 0 )
+	      // return 0;
+	    // strBitStreamBuffer = malloc(numManchesterDemodBits+1);
+	    // if ( strBitStreamBuffer == 0x00000000 )
+		// return 0;
+	    // memset(strBitStreamBuffer, 0x00, (numManchesterDemodBits+1));
+	    // //fill strBitStreamBuffer with demodulated, string formatted bits.
+	    // for ( j = 0; j <= numManchesterDemodBits; j++ )
+	    // {
+		// sprintf(strTempBufferMini, "%i",BitStream[j]);
+		// strcat(strBitStreamBuffer,strTempBufferMini);
+	    // }
+	    // printf("[->]Demodulated Bitstream: \n%s\n", strBitStreamBuffer);
+	    // //Reset counter and select most probable bit stream
+	    // j = 0;
+		// while ( j < numManchesterDemodBits )
+		// {
+		    // memset(strSimulateBitStream,0x00,64);
+		    // //search for header of nine (9) 0's : 000000000 or nine (9) 1's : 1111 1111 1
+			// if ( ( strncmp(strBitStreamBuffer+j, ArrayTraceZero, sizeof(ArrayTraceZero)) == 0 ) ||
+			    // ( strncmp(strBitStreamBuffer+j, ArrayTraceOne, sizeof(ArrayTraceOne)) == 0  ) )
+			// {
+				// iFirstHeaderOffset = j;
+			    // memcpy(strSimulateBitStream, strBitStreamBuffer+j,64);
+			    // printf("[->]Offset of Header");
+				// if ( strncmp(strBitStreamBuffer+iFirstHeaderOffset, "0", 1) == 0 )
+					// printf("'%s'", ArrayTraceZero );
+				// else
+					// printf("'%s'", ArrayTraceOne );
+				// printf(": %i\nHighlighted string : %s\n",iFirstHeaderOffset,strSimulateBitStream);
+			    // //allow us to escape loop or choose another frame
+			    // puts("[<-]Are we happy with this sample? [Y]es/[N]o");
+			    // gets(strAnswer);
+			    // if ( ( strncmp(strAnswer,"y",1) == 0 )  || ( strncmp(strAnswer,"Y",1) == 0 ) )
+			    // {
+				    // j = numManchesterDemodBits+1;
+				    // break;
+			    // }
+			// }
+			// j++;
+		// }
+	// }
+	// else return 0;
+	
+	// //Do we want the buffer inverted?
+	// memset(strAnswer, 0x00, sizeof(strAnswer));
+	// printf("[<-]Do you wish to invert the highlighted bitstream? [Y]es/[N]o\n");
+	// gets(strAnswer);
+	// if ( ( strncmp("y", strAnswer,1) == 0 )  || ( strncmp("Y", strAnswer, 1 ) == 0 ) )
+	// {
+		// //allocate heap memory
+		// pstrInvertBitStream = (char*)malloc(numManchesterDemodBits);
+		// if ( pstrInvertBitStream != 0x00000000 )
+		// {
+			// memset(pstrInvertBitStream,0x00,numManchesterDemodBits);
+			// bInverted = true;
+			// //Invert Bitstream
+			// for ( needle = 0; needle <= numManchesterDemodBits; needle++ )
+			// {
+				// if (strSimulateBitStream[needle] == '0')
+					// strcat(pstrInvertBitStream,"1");
+				// else if (strSimulateBitStream[needle] == '1')
+					// strcat(pstrInvertBitStream,"0");
+			// }
+			// printf("[->]Inverted bitstream: %s\n", pstrInvertBitStream);
+		// }
+	// }    
+    // //Confirm parity of selected string
+	// pID = (char*)malloc(11);
+	// if (pID != 0x00000000)
+	// {
+		// memset(pID, 0x00, 11);
+		// if (ConfirmEm410xTagParity(strSimulateBitStream,pID, 64) == 1)
+		// {
+			// printf("[->]Parity confirmed for selected bitstream!\n");
+			// printf("[->]Tag ID was detected as: [hex]:%s\n",pID );
+		// }
+		// else
+			// printf("[->]Parity check failed for the selected bitstream!\n");	
+	// }
+	
+	// //Spoof
+	// memset(strAnswer, 0x00, sizeof(strAnswer));  
+	// printf("[<-]Do you wish to continue with the EM4x simulation? [Y]es/[N]o\n");
+	// gets(strAnswer);
+	// if ( ( strncmp(strAnswer,"y",1) == 0 )  || ( strncmp(strAnswer,"Y",1) == 0 ) )
+	// {
+		// strcat(pTempBuffer, strClockRate);
+		// strcat(pTempBuffer, " ");
+		// if (bInverted == true)
+			// strcat(pTempBuffer,pstrInvertBitStream);
+		// if (bInverted == false)
+			// strcat(pTempBuffer,strSimulateBitStream);
+		// //inform the user
+		// puts("[->]Starting simulation now: \n");
+		// //Simulate tag with prepared buffer.
+		// CmdLFSimManchester(pTempBuffer);
+	// }
+	// else if ( ( strcmp("n", strAnswer) == 0 )  || ( strcmp("N", strAnswer ) == 0 ) )
+		// printf("[->]Exiting procedure now...\n");
+	// else
+		// printf("[->]Erroneous selection\nExiting procedure now....\n");
+	
+	// //Clean up -- Exit function
+	// //clear memory, then release pointer.
+	// if ( pstrInvertBitStream != 0x00000000 )
+	// {
+	    // memset(pstrInvertBitStream,0x00,numManchesterDemodBits);
+	    // free(pstrInvertBitStream);
+	// }
+	// if ( pTempBuffer != 0x00000000 )
+	// {
+	    // memset(pTempBuffer,0x00,MAX_GRAPH_TRACE_LEN);
+	    // free(pTempBuffer);
+	// }
+	// if ( pID != 0x00000000 )
+	// {
+	    // memset(pID,0x00,11);
+	    // free(pID);
+	// }
+	// if ( strBitStreamBuffer != 0x00000000 )
+	// {
+	    // memset(strBitStreamBuffer,0x00,numManchesterDemodBits);
+	    // free(strBitStreamBuffer);
+	// }
+	return 0;
+}
 
 int CmdLFEM4X(const char *Cmd)
 {

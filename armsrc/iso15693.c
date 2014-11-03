@@ -463,28 +463,15 @@ static int GetIso15693AnswerFromSniff(uint8_t *receivedResponse, int maxLen, int
 			AT91C_BASE_SSC->SSC_THR = 0x43;
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			int8_t b;
-			b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
+			int8_t b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
 
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
-			if(getNext) {
-				int8_t r;
+			if (getNext) {
 
-				if(b < 0) {
-					r = -b;
-				} else {
-					r = b;
-				}
-				if(prev < 0) {
-					r -= prev;
-				} else {
-					r += prev;
-				}
-
-				dest[c++] = (uint8_t)r;
+				dest[c++] = abs(b) + abs(prev);
 
 				if(c >= 20000) {
 					break;
@@ -837,27 +824,27 @@ static void BuildReadBlockRequest(uint8_t *uid, uint8_t blockNumber )
 // Now the VICC>VCD responses when we are simulating a tag
  static void BuildInventoryResponse( uint8_t *uid)
 {
-	uint8_t cmd[13];
+	uint8_t cmd[12];
 
 	uint16_t crc;
 	// one sub-carrier, inventory, 1 slot, fast rate
 	// AFI is at bit 5 (1<<4) when doing an INVENTORY
-	cmd[0] = 0x0d;   // COM LEN? Data 8 + 4 //(1 << 2) | (1 << 5) | (1 << 1);
-	cmd[1] = 0; // com_Adr
-	cmd[2] = 0; // status   00 = success
+    //(1 << 2) | (1 << 5) | (1 << 1);
+	cmd[0] = 0; // 
+	cmd[1] = 0; // DSFID (data storage format identifier).  0x00 = not supported
 	// 64-bit UID
-	cmd[3] = uid[7]; //0x32;
-	cmd[4] = uid[6]; //0x4b;
-	cmd[5] = uid[5]; //0x03;
-	cmd[6] = uid[4]; //0x01;
-	cmd[7] = uid[3]; //0x00;
-	cmd[8] = uid[2]; //0x10;
-	cmd[9] = uid[1]; //0x05;
-	cmd[10] = uid[0]; //0xe0;
+	cmd[2] = uid[7]; //0x32;
+	cmd[3] = uid[6]; //0x4b;
+	cmd[4] = uid[5]; //0x03;
+	cmd[5] = uid[4]; //0x01;
+	cmd[6] = uid[3]; //0x00;
+	cmd[7] = uid[2]; //0x10;
+	cmd[8] = uid[1]; //0x05;
+	cmd[9] = uid[0]; //0xe0;
 	//Now the CRC
 	crc = Crc(cmd, 10);
-	cmd[11] = crc & 0xff;
-	cmd[12] = crc >> 8;
+	cmd[10] = crc & 0xff;
+	cmd[11] = crc >> 8;
 
 	CodeIso15693AsReader(cmd, sizeof(cmd));
 }
@@ -1124,9 +1111,6 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid)
 	
 	memset(buf, 0x00, 100);
 	
-	// Inventory response
-	BuildInventoryResponse(uid);
-	
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -1149,12 +1133,19 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid)
 	{
 		// Build a suitable reponse to the reader INVENTORY cocmmand
 		// not so obsvious, but in the call to BuildInventoryResponse,  the command is copied to the global ToSend buffer used below.
+		
+		BuildInventoryResponse(uid);
+	
 		TransmitTo15693Reader(ToSend, ToSendMax, &tsamples, &wait);
 	}
 
 	Dbprintf("%d octets read from reader command: %x %x %x %x %x %x %x %x %x", answerLen1,
 		buf[0], buf[1], buf[2],	buf[3],
 		buf[4], buf[5],	buf[6], buf[7], buf[8]);
+
+	Dbprintf("Simulationg uid: %x %x %x %x %x %x %x %x",
+		uid[0], uid[1], uid[2],	uid[3],
+		uid[4], uid[5],	uid[6], uid[7]);
 
 	LED_A_OFF();
 	LED_B_OFF();

@@ -21,6 +21,7 @@
 #include "cmdmain.h"
 #include "cmddata.h"
 
+
 static int CmdHelp(const char *Cmd);
 
 int CmdAmp(const char *Cmd)
@@ -670,7 +671,9 @@ int CmdManchesterDemod(const char *Cmd)
     // At this stage, we now have a bitstream of "01" ("1") or "10" ("0"), parse it into final decoded bitstream
     // Actually, we overwrite BitStream with the new decoded bitstream, we just need to be careful
     // to stop output at the final bitidx2 value, not bitidx
-    for (i = 0; i < bitidx; i += 2) {
+	
+	//http://www.proxmark.org/forum/viewtopic.php?id=403
+    for (i = 1; i < bitidx; i += 2) {
       if ((BitStream[i] == 0) && (BitStream[i+1] == 1)) {
         BitStream[bit2idx++] = 1 ^ invert;
     } else if ((BitStream[i] == 1) && (BitStream[i+1] == 0)) {
@@ -713,7 +716,7 @@ int CmdManchesterDemod(const char *Cmd)
       BitStream[i+14],
       BitStream[i+15]);
   }
-  return 0;
+  return bit2idx;
 }
 
 /* Modulate our data into manchester */
@@ -884,7 +887,7 @@ static command_t CommandTable[] =
 {
   {"help",          CmdHelp,            1, "This help"},
   {"amp",           CmdAmp,             1, "Amplify peaks"},
-  {"askdemod",      Cmdaskdemod,        1, "<0 or 1> -- Attempt to demodulate simple ASK tags"},
+  {"askdemod",      Cmdaskdemod,        1, "<0|1> -- Attempt to demodulate simple ASK tags"},
   {"autocorr",      CmdAutoCorr,        1, "<window length> -- Autocorrelation over window"},
   {"bitsamples",    CmdBitsamples,      0, "Get raw samples as bitstring"},
   {"bitstream",     CmdBitstream,       1, "[clock rate] -- Convert waveform into a bitstream"},

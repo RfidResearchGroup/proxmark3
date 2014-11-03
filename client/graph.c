@@ -89,6 +89,9 @@ int DetectClock(int peak)
 		case 1: clock--; break;
 		case 2: clock -= 2; break;
 	}
+	if ( clock < 32) 
+		clock = 32;
+		
 	printf("- adjusted it to %d \n", clock);
 	return clock;
 }

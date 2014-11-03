@@ -141,7 +141,13 @@ local _keys = {
 	'200000000000',
 	'a00000000000',
 	'b00000000000',	
-  }
+	
+	--[[
+    Should be for Mifare TNP3xxx tags A KEY.
+    --]]
+	'4b0b20107ccb',
+
+}
 
 ---
 --    The keys above have just been pasted in, for completeness sake. They contain duplicates. 
