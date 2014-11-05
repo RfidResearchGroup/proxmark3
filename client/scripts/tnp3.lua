@@ -145,7 +145,7 @@ local function main(args)
 		return oops('Could not read file ', input)
 	end
 	local akeys = readdumpkeys(infile):sub(0,12*16)
-
+	
 	-- Read block 0
 	cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = 0,arg2 = 0,arg3 = 0, data = keyA}
 	err = core.SendCommand(cmd:getBytes())
@@ -174,7 +174,7 @@ local function main(args)
 		end
 	
 		pos = (math.floor( blockNo / 4 ) * 12)+1
-		key = akeys:sub(pos, pos + 12 )
+		key = akeys:sub(pos, pos + 11 )
 		cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = blockNo ,arg2 = 0,arg3 = 0, data = key}
 		local err = core.SendCommand(cmd:getBytes())
 		if err then return oops(err) end
