@@ -93,7 +93,7 @@ end
 local function main(args)
 
 	print( string.rep('--',20) )
-    --print( string.rep('--',20) )
+	print( string.rep('--',20) )
 	--print()
 	
 	local keyA
@@ -187,35 +187,30 @@ local function main(args)
 		local blockdata, err = waitCmd()
 		if err then return oops(err) end		
 
-		local b = blockNo%4
-
-		if b ~= 3 then
+		if  blockNo%4 ~= 3 then
 			if blockNo < 8 then
 				-- Block 0-7 not encrypted
-				blocks[blockNo+1] = ('%02d  :: %s :: %s'):format(blockNo,blockdata,blockdata) 
+				blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
 			else
-				local base = ('%s%s%d%s'):format(block0, block1, blockNo, hashconstant)		local md5hash = md5.sumhexa(base)
+				local base = ('%s%s%02d%s'):format(block0, block1, blockNo, hashconstant)	
+				local baseArr = utils.ConvertHexStringToBytes(base)
+				local baseStr = utils.ConvertBytesToAsciiString(baseArr)
+				local md5hash = md5.sumhexa(baseStr)
 				local aestest = core.aes(md5hash, blockdata)
-			
-				local _,hex = bin.unpack(("H%d"):format(16),aestest)
-			
-				-- local hexascii = string.gsub(hex, '(%x%x)', 
-								-- function(value) 
-									-- return string.char(tonumber(value, 16)) 
-								-- end
-							-- )
+				--print(aestest, type(aestest))
+				local hex = utils.ConvertAsciiStringToBytes(aestest)
+				hex = utils.ConvertBytes2HexString(hex)
+				--local _,hex = bin.unpack(("H%d"):format(16),aestest)
 
 				if string.find(blockdata, '^0+$') then
-					blocks[blockNo+1] = ('%02d  :: %s :: %s'):format(blockNo,blockdata,blockdata) 
+					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
 				else
-					--blocks[blockNo+1] = ('%02d :: %s :: %s :: %s '):format(blockNo,key,md5hash,hex)
-					blocks[blockNo+1] = ('%02d  :: %s :: %s'):format(blockNo,blockdata,hex) 
+					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,hex) 
 				end		
 			end
-
 		else
 			-- Sectorblocks, not encrypted
-			blocks[blockNo+1] = ('%02d  :: %s :: %s'):format(blockNo,blockdata,blockdata) 
+			blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
 		end
 	end
 	
@@ -226,10 +221,11 @@ local function main(args)
 	print( ('        UID : %s'):format(uid) )
 	print( ('  ITEM TYPE : %s - %s'):format(itemtype, toyNames[itemtype]) )
 	print( ('     CARDID : %s'):format(cardid ) )	
-	print('BLK :: DATA                                DECRYPTED' )
+	print('BLK :: Decrypted                        Ascii' )
 	print( string.rep('--',36) )
 	for _,s in pairs(blocks) do
-		print( s )
+		local arr = utils.ConvertHexStringToBytes(s:sub(7,#s))
+		print( s, utils.ConvertBytesToAsciiString(arr) )
 	end 
 end
 

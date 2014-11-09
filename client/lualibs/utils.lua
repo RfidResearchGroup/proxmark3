@@ -46,18 +46,43 @@ local Utils =
 	end,
 	---
 	-- Convert Byte array to string of hex
-	ConvertBytes2String = function(bytes)
-		local s = {}
+	ConvertBytes2HexString = function(bytes)
+		if #bytes == 0 then
+			return ''
+		end
+		local s={}
 		for i = 1, #(bytes) do
 			s[i] = string.format("%02X",bytes[i]) 
 		end
 		return table.concat(s)
 	end,	
-
-	ConvertStringToBytes = function(s)
+	-- Convert byte array to string with ascii
+    ConvertBytesToAsciiString = function(bytes)
+		if #bytes == 0 then
+			return ''
+		end
+		local s={}
+		for i = 1, #(bytes) do
+			s[i] = string.char(bytes[i]) 
+		end
+		return table.concat(s)		
+	end,	 
+	ConvertHexStringToBytes = function(s)
 		local t={}
+		if s == nil then return t end
+		if #s == 0 then return t end
 		for k in s:gmatch"(%x%x)" do
 			table.insert(t,tonumber(k,16))
+		end
+		return t
+	end,
+	ConvertAsciiStringToBytes = function(s)
+		local t={}
+		if s == nil then return t end
+		if #s == 0 then return t end
+		
+		for k in s:gmatch"(.)" do
+			table.insert(t, string.byte(k))
 		end
 		return t
 	end,
