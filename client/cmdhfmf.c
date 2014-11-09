@@ -36,7 +36,6 @@ start:
 	//flush queue
 	while (ukbhit())	getchar();
 
-	
 	// wait cycle
 	while (true) {
         printf(".");
@@ -848,9 +847,7 @@ int CmdHF14AMfNested(const char *Cmd)
 		if (ctmp != 'A' && ctmp != 'a') 
 			trgKeyType = 1;
 	} else {
-		
-		
-	
+				
 		switch (cmdp) {
 			case '0': SectorsCnt = 05; break;
 			case '1': SectorsCnt = 16; break;
@@ -935,20 +932,26 @@ int CmdHF14AMfNested(const char *Cmd)
 			}
 		}
 		
-		
 		// nested sectors
 		iterations = 0;
 		PrintAndLog("nested...");
 		bool calibrate = true;
 		for (i = 0; i < NESTED_SECTOR_RETRY; i++) {
 			for (uint8_t sectorNo = 0; sectorNo < SectorsCnt; sectorNo++) {
+
+				if (ukbhit()) {
+					printf("\naborted via keyboard!\n");
+					free(e_sector);
+					return 2;
+				}			
+			
 				for (trgKeyType = 0; trgKeyType < 2; trgKeyType++) { 
 					if (e_sector[sectorNo].foundKey[trgKeyType]) continue;
 					PrintAndLog("-----------------------------------------------");
 					if(mfnested(blockNo, keyType, key, FirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate)) {
 						PrintAndLog("Nested error.\n");
-						return 2;
-					}
+						free(e_sector);
+						return 2;					}
 					else {
 						calibrate = false;
 					}
@@ -1018,10 +1021,9 @@ int CmdHF14AMfNested(const char *Cmd)
 			}
 			fclose(fkeys);
 		}
-		
+
 		free(e_sector);
 	}
-
 	return 0;
 }
 

@@ -76,7 +76,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
 	
-	if (MF_DBGLEVEL >= 2)	DbpString("READ BLOCK FINISHED");
+	if (MF_DBGLEVEL >= 2) DbpString("READ BLOCK FINISHED");
 
 	LED_B_ON();
 	cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,16);
@@ -558,6 +558,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	// statistics on nonce distance
 	if (calibrate) {	// for first call only. Otherwise reuse previous calibration
 		LED_B_ON();
+		WDT_HIT();
 
 		davg = dmax = 0;
 		dmin = 2000;
@@ -596,10 +597,10 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 				continue;
 			};
 
-			nttmp = prng_successor(nt1, 100);				//NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
-			for (i = 101; i < 1200; i++) {
+			nttmp = prng_successor(nt1, 140);				//NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
+			for (i = 141; i < 1200; i++) {
 				nttmp = prng_successor(nttmp, 1);
-				if (nttmp == nt2) break;
+				if (nttmp == nt2) {break;}
 			}
 
 			if (i != 1200) {
@@ -615,7 +616,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 			}
 		}
 		
-		if (rtr <= 1)	return;
+		if (rtr <= 1) return;
 
 		davg = (davg + (rtr - 1)/2) / (rtr - 1);
 		
@@ -634,9 +635,18 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	//  get crypted nonces for target sector
 	for(i=0; i < 2; i++) { // look for exactly two different nonces
 
+		WDT_HIT();	
+	    if(BUTTON_PRESS()) {
+			DbpString("Nested: cancelled");
+			crypto1_destroy(pcs);
+			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+			LEDsoff();
+			return;
+		}
+
 		target_nt[i] = 0;
 		while(target_nt[i] == 0) { // continue until we have an unambiguous nonce
-		
+		 
 			// prepare next select. No need to power down the card.
 			if(mifare_classic_halt(pcs, cuid)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Halt error");
@@ -697,15 +707,15 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 			if (target_nt[i] == 0 && j == dmax+1 && MF_DBGLEVEL >= 3) Dbprintf("Nonce#%d: dismissed (all invalid)", i+1);
 		}
 	}
-
+	
 	LED_C_OFF();
 	
 	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
 	
 	// add trace trailer
-	memset(uid, 0x44, 4);
-	LogTrace(uid, 4, 0, 0, TRUE);
+//	memset(uid, 0x44, 4);
+//	LogTrace(uid, 4, 0, 0, TRUE);
 
 	byte_t buf[4 + 4 * 4];
 	memcpy(buf, &cuid, 4);

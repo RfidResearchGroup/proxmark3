@@ -4,6 +4,7 @@ local bin = require('bin')
 local lib14a = require('read14a')
 local utils = require('utils')
 local md5 = require('md5')
+local toyNames = require('default_toys')
 
 example =[[
 	1. script run tnp3
@@ -92,8 +93,8 @@ end
 local function main(args)
 
 	print( string.rep('--',20) )
-	print( string.rep('--',20) )
-	print()
+    --print( string.rep('--',20) )
+	--print()
 	
 	local keyA
 	local cmd
@@ -114,13 +115,15 @@ local function main(args)
 	if #(keyA) ~= 12 then
 		return oops( string.format('Wrong length of write key (was %d) expected 12', #keyA))
 	end
+
+	-- Turn off Debug
+	local cmdSetDbgOff = "hf mf dbg 0"
+	core.console( cmdSetDbgOff) 
 	
 	result, err = lib14a.read1443a(false)
 	if not result then
 		return oops(err)
 	end
-
-	print((' Found tag : %s'):format(result.name))
 
 	core.clearCommandBuffer()
 	
@@ -128,13 +131,14 @@ local function main(args)
 		return oops('This is not a TNP3xxx tag. aborting.')
 	end	
 	
+	print((' Found tag : %s'):format(result.name))
+	
 	-- Show info
 	print(('Using keyA : %s'):format(keyA))
 	print( string.rep('--',20) )
 
-	
+	--Trying to find the other keys
 	if useNested then
-	  print('Trying to find keys.')
 	  core.console( ('hf mf nested 1 0 A %s d'):format(keyA) )
 	end
 	
@@ -165,6 +169,8 @@ local function main(args)
 	local blockNo
 	local blocks = {}
 
+	print('Reading card data')
+	
 	-- main loop
 	for blockNo = 0, numBlocks-1, 1 do
 
@@ -188,8 +194,7 @@ local function main(args)
 				-- Block 0-7 not encrypted
 				blocks[blockNo+1] = ('%02d  :: %s :: %s'):format(blockNo,blockdata,blockdata) 
 			else
-				local base = ('%s%s%d%s'):format(block0, block1, blockNo, hashconstant)
-				local md5hash = md5.sumhexa(base)
+				local base = ('%s%s%d%s'):format(block0, block1, blockNo, hashconstant)		local md5hash = md5.sumhexa(base)
 				local aestest = core.aes(md5hash, blockdata)
 			
 				local _,hex = bin.unpack(("H%d"):format(16),aestest)
@@ -215,6 +220,12 @@ local function main(args)
 	end
 	
 	-- Print results
+	local uid = block0:sub(1,8)
+	local itemtype = block1:sub(1,4)
+	local cardid = block1:sub(9,24)
+	print( ('        UID : %s'):format(uid) )
+	print( ('  ITEM TYPE : %s - %s'):format(itemtype, toyNames[itemtype]) )
+	print( ('     CARDID : %s'):format(cardid ) )	
 	print('BLK :: DATA                                DECRYPTED' )
 	print( string.rep('--',36) )
 	for _,s in pairs(blocks) do

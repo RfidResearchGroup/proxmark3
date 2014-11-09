@@ -9,3 +9,86 @@ lf t55xx rd 2
 lf em4x 410xsim 124s
 lf em4x 410xsim 0F0368568B
 da pl
+scr run sky
+script list
+scr run mifare_autopwn
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3 -n
+scr run  tnp3
+scr run  tnp3 -n
+hf mf nested 0 a 4b0b20107ccb d
+hf mf nested 1 0 a 4b0b20107ccb d
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3
+scr run  tnp3 -n
+scr run  tnp3
+hf mf nested 1 0 a 4b0b20107ccb d
+scr run  tnp3

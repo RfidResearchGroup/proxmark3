@@ -26,15 +26,12 @@ int compar_int(const void * a, const void * b) {
 	else return -1;
 }
 
-
-
 // Compare 16 Bits out of cryptostate
 int Compare16Bits(const void * a, const void * b) {
 	if ((*(uint64_t*)b & 0x00ff000000ff0000) == (*(uint64_t*)a & 0x00ff000000ff0000)) return 0;
 	else if ((*(uint64_t*)b & 0x00ff000000ff0000) > (*(uint64_t*)a & 0x00ff000000ff0000)) return 1;
 	else return -1;
 }
-
 
 typedef 
 	struct {
@@ -70,15 +67,11 @@ void* nested_worker_thread(void *arg)
 	return statelist->head.slhead;
 }
 
-
-
-
 int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t * resultKey, bool calibrate) 
 {
 	uint16_t i, len;
 	uint32_t uid;
 	UsbCommand resp;
-
 	
 	StateList_t statelists[2];
 	struct Crypto1State *p1, *p2, *p3, *p4;
