@@ -4,6 +4,7 @@ local bin = require('bin')
 local lib14a = require('read14a')
 local utils = require('utils')
 local md5 = require('md5')
+local dumplib = require('html_dumplib')
 local toyNames = require('default_toys')
 
 example =[[
@@ -11,9 +12,12 @@ example =[[
 	2. script run tnp3 -n
 	3. script run tnp3 -k aabbccddeeff
 	4. script run tnp3 -k aabbccddeeff -n
+	5. script run tnp3 -o myfile 
+	6. script run tnp3 -n -o myfile 
+	7. script run tnp3 -k aabbccddeeff -n -o myfile 
 ]]
 author = "Iceman"
-usage = "script run tnp3 -k <key> -n"
+usage = "script run tnp3 -k <key> -n -o <filename>"
 desc =[[
 This script will try to dump the contents of a Mifare TNP3xxx card.
 It will need a valid KeyA in order to find the other keys and decode the card.
@@ -21,10 +25,9 @@ Arguments:
 	-h             : this help
 	-k <key>       : Sector 0 Key A.
 	-n             : Use the nested cmd to find all keys
+	-o             : filename for the saved dumps
 ]]
 
--- AES konstant?  LEN 0x24 36,
--- I dekompilen är det för internal static array = 0x36 54
 local hashconstant = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
 
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
@@ -94,7 +97,6 @@ local function main(args)
 
 	print( string.rep('--',20) )
 	print( string.rep('--',20) )
-	--print()
 	
 	local keyA
 	local cmd
@@ -102,12 +104,14 @@ local function main(args)
 	local useNested = false
 	local cmdReadBlockString = 'hf mf rdbl %d A %s'
 	local input = "dumpkeys.bin"
-	
+	local outputTemplate = os.date("toydump-%Y-%m-%d_%H%M%S");
+
 	-- Arguments for the script
-	for o, a in getopt.getopt(args, 'hk:n') do
+	for o, a in getopt.getopt(args, 'hk:no:') do
 		if o == "h" then return help() end		
 		if o == "k" then keyA = a end
 		if o == "n" then useNested = true end
+		if o == "o" then outputTemplate = a end		
 	end
 
 	-- validate input args.
@@ -130,12 +134,10 @@ local function main(args)
 	if 0x01 ~= result.sak then -- NXP MIFARE TNP3xxx
 		return oops('This is not a TNP3xxx tag. aborting.')
 	end	
-	
+
+	-- Show tag info
 	print((' Found tag : %s'):format(result.name))
-	
-	-- Show info
 	print(('Using keyA : %s'):format(keyA))
-	print( string.rep('--',20) )
 
 	--Trying to find the other keys
 	if useNested then
@@ -170,7 +172,8 @@ local function main(args)
 	local blocks = {}
 
 	print('Reading card data')
-	
+	core.clearCommandBuffer()
+		
 	-- main loop
 	for blockNo = 0, numBlocks-1, 1 do
 
@@ -197,7 +200,7 @@ local function main(args)
 				local baseStr = utils.ConvertBytesToAsciiString(baseArr)
 				local md5hash = md5.sumhexa(baseStr)
 				local aestest = core.aes(md5hash, blockdata)
-				--print(aestest, type(aestest))
+
 				local hex = utils.ConvertAsciiStringToBytes(aestest)
 				hex = utils.ConvertBytes2HexString(hex)
 				--local _,hex = bin.unpack(("H%d"):format(16),aestest)
@@ -210,23 +213,44 @@ local function main(args)
 			end
 		else
 			-- Sectorblocks, not encrypted
-			blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
+			blocks[blockNo+1] = ('%02d  :: %s%s'):format(blockNo,key,blockdata:sub(13,32)) 
 		end
 	end
 	
+	core.clearCommandBuffer()
+		
 	-- Print results
+	local bindata = {}
+	local emldata = ''
+
+	for _,s in pairs(blocks) do
+		local slice = s:sub(7,#s)
+		local str = utils.ConvertBytesToAsciiString(
+				 utils.ConvertHexStringToBytes(slice)
+				)
+		emldata = emldata..slice..'\n'
+		for c in (str):gmatch('.') do
+			bindata[#bindata+1] = c
+		end
+	end 
+	
+	-- Write dump to files
+	local foo = dumplib.SaveAsBinary(bindata, outputTemplate..'.bin')
+	print(("Wrote a BIN dump to the file %s"):format(foo))
+	local bar = dumplib.SaveAsText(emldata, outputTemplate..'.eml')
+    print(("Wrote a EML dump to the file %s"):format(bar))
+
 	local uid = block0:sub(1,8)
 	local itemtype = block1:sub(1,4)
 	local cardid = block1:sub(9,24)
-	print( ('        UID : %s'):format(uid) )
-	print( ('  ITEM TYPE : %s - %s'):format(itemtype, toyNames[itemtype]) )
-	print( ('     CARDID : %s'):format(cardid ) )	
-	print('BLK :: Decrypted                        Ascii' )
-	print( string.rep('--',36) )
-	for _,s in pairs(blocks) do
-		local arr = utils.ConvertHexStringToBytes(s:sub(7,#s))
-		print( s, utils.ConvertBytesToAsciiString(arr) )
-	end 
+
+	-- Show info 
+	print( string.rep('--',20) )
+	print( (' ITEM TYPE : 0x%s - %s'):format(itemtype, toyNames[itemtype]) )
+	print( ('       UID : 0x%s'):format(uid) )
+	print( ('    CARDID : 0x%s'):format(cardid ) )	
+	print( string.rep('--',20) )
+
 end
 
 main(args)
