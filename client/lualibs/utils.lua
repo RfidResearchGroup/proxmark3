@@ -86,6 +86,15 @@ local Utils =
 		end
 		return t
 	end,
+	ConvertHexToAscii = function(s)
+		local t={}
+		if s == nil then return t end
+		if #s == 0 then return t end
+		for k in s:gmatch"(%x%x)" do
+			table.insert(t, string.char(tonumber(k,16)))
+		end
+		return  table.concat(t)	
+	end,
 	
 	-- function convertStringToBytes(str)
 	-- local bytes = {}

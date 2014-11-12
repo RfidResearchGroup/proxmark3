@@ -93,6 +93,16 @@ local function waitCmd()
 	return nil, "No response from device"
 end
 
+local function computeCrc16(s)
+	local hash = core.crc16(utils.ConvertHexToAscii(s))	
+	return hash
+end
+
+local function reverseCrcBytes(crc)
+	crc2 = crc:sub(3,4)..crc:sub(1,2)
+	return tonumber(crc2,16)
+end
+
 local function main(args)
 
 	print( string.rep('--',20) )
@@ -104,7 +114,7 @@ local function main(args)
 	local useNested = false
 	local cmdReadBlockString = 'hf mf rdbl %d A %s'
 	local input = "dumpkeys.bin"
-	local outputTemplate = os.date("toydump-%Y-%m-%d_%H%M%S");
+	local outputTemplate = os.date("toydump_%Y-%m-%d_%H%M%S");
 
 	-- Arguments for the script
 	for o, a in getopt.getopt(args, 'hk:no:') do
@@ -175,6 +185,7 @@ local function main(args)
 	core.clearCommandBuffer()
 		
 	-- main loop
+	io.write('Decrypting blocks > ')
 	for blockNo = 0, numBlocks-1, 1 do
 
 		if core.ukbhit() then
@@ -195,9 +206,8 @@ local function main(args)
 				-- Block 0-7 not encrypted
 				blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
 			else
-				local base = ('%s%s%02d%s'):format(block0, block1, blockNo, hashconstant)	
-				local baseArr = utils.ConvertHexStringToBytes(base)
-				local baseStr = utils.ConvertBytesToAsciiString(baseArr)
+				local base = ('%s%s%02x%s'):format(block0, block1, blockNo, hashconstant)	
+				local baseStr = utils.ConvertHexToAscii(base)
 				local md5hash = md5.sumhexa(baseStr)
 				local aestest = core.aes(md5hash, blockdata)
 
@@ -205,10 +215,12 @@ local function main(args)
 				hex = utils.ConvertBytes2HexString(hex)
 				--local _,hex = bin.unpack(("H%d"):format(16),aestest)
 
+				-- blocks with zero not encrypted.
 				if string.find(blockdata, '^0+$') then
 					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
 				else
-					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,hex) 
+					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,hex)
+					io.write( blockNo..',')
 				end		
 			end
 		else
@@ -216,6 +228,7 @@ local function main(args)
 			blocks[blockNo+1] = ('%02d  :: %s%s'):format(blockNo,key,blockdata:sub(13,32)) 
 		end
 	end
+	io.write('\n')
 	
 	core.clearCommandBuffer()
 		
@@ -224,7 +237,7 @@ local function main(args)
 	local emldata = ''
 
 	for _,s in pairs(blocks) do
-		local slice = s:sub(7,#s)
+		local slice = s:sub(8,#s)
 		local str = utils.ConvertBytesToAsciiString(
 				 utils.ConvertHexStringToBytes(slice)
 				)
@@ -235,10 +248,12 @@ local function main(args)
 	end 
 	
 	-- Write dump to files
-	local foo = dumplib.SaveAsBinary(bindata, outputTemplate..'.bin')
-	print(("Wrote a BIN dump to the file %s"):format(foo))
-	local bar = dumplib.SaveAsText(emldata, outputTemplate..'.eml')
-    print(("Wrote a EML dump to the file %s"):format(bar))
+	if not DEBUG then
+		local foo = dumplib.SaveAsBinary(bindata, outputTemplate..'.bin')
+		print(("Wrote a BIN dump to the file %s"):format(foo))
+		local bar = dumplib.SaveAsText(emldata, outputTemplate..'.eml')
+		print(("Wrote a EML dump to the file %s"):format(bar))
+	end
 
 	local uid = block0:sub(1,8)
 	local itemtype = block1:sub(1,4)
@@ -251,6 +266,47 @@ local function main(args)
 	print( ('    CARDID : 0x%s'):format(cardid ) )	
 	print( string.rep('--',20) )
 
-end
+	print('Validating checksums')
+	-- Checksum Typ 0
+	local test1 = ('%s%s'):format(block0, block1:sub(1,28))
+	local crc = block1:sub(29,32)
+	local revcrc = reverseCrcBytes(crc)
 
+	io.write( ('BLOCK 0-1 : %04x = %04x \n'):format(revcrc,computeCrc16(test1)))
+	
+	-- Checksum Typ 1  BLOCK 9
+	local block9 = blocks[9]:sub(8,35)
+	test1 = ('%s0500'):format(block9)
+	crc = blocks[9]:sub(36,39)
+	revcrc = reverseCrcBytes(crc)
+	io.write( ('BLOCK 8 : %04x = %04x \n'):format(revcrc,computeCrc16(test1)))
+
+	-- Checksum Typ 1  BLOCK 37
+	local block37 = blocks[37]:sub(8,35)
+	test1 = ('%s0500'):format(block37)
+	crc = blocks[37]:sub(36,39)
+	revcrc = reverseCrcBytes(crc)
+	io.write( ('BLOCK 36 : %04x = %04x \n'):format(revcrc,computeCrc16(test1)))
+	
+	-- Checksum Typ 2
+	-- 10,11,13
+	test1 =	blocks[10]:sub(8,39)..
+			blocks[11]:sub(8,39)..
+			blocks[13]:sub(8,39)
+
+	crc = blocks[9]:sub(32,35)
+	revcrc = reverseCrcBytes(crc)
+	io.write( ('BLOCK 10-11-13 :%04x = %04x \n'):format(revcrc,computeCrc16(test1)))
+	-- Checksum Typ 3
+	-- 15,17,18,19
+	crc = blocks[9]:sub(28,31)
+	revcrc = reverseCrcBytes(crc)
+	test1 = blocks[14]:sub(8,39)..
+			blocks[15]:sub(8,39)..
+			blocks[17]:sub(8,39)
+
+	local tohash = test1..string.rep('00',0xe0)	
+	local hashed = computeCrc16(tohash)
+	io.write( ('BLOCK 14-15-17 %04x = %04x \n'):format(revcrc,hashed))	
+end
 main(args)

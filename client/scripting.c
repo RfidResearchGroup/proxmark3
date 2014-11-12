@@ -19,6 +19,7 @@
 #include "nonce2key/nonce2key.h"
 #include "../common/iso15693tools.h"
 #include <openssl/aes.h>   
+#include "../common/crc16.h"
 /**
  * The following params expected:
  *  UsbCommand c
@@ -263,6 +264,16 @@ static int l_aes(lua_State *L)
 	return 1;// return 1 to signal one return value
 }
 
+static int l_crc16(lua_State *L)
+{
+	size_t size;
+	const char *p_str = luaL_checklstring(L, 1, &size);
+	
+	unsigned short retval = crc16_ccitt( p_str, size);
+    lua_pushinteger(L, (int) retval);
+    return 1;
+}
+
 /**
  * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
  * able to do "require('foobar')" if foobar.lua is within lualibs folder.
@@ -301,6 +312,7 @@ int set_pm3_libraries(lua_State *L)
         {"console",                     l_CmdConsole},
         {"iso15693_crc",                l_iso15693_crc},
 		{"aes",                         l_aes},
+		{"crc16",                       l_crc16},
         {NULL, NULL}
     };
 
