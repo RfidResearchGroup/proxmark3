@@ -1596,10 +1596,10 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 	uint8_t data[16];
 	uint64_t keyA, keyB;
 	
-	if (param_getchar(Cmd, 0) == 'h' || param_getchar(Cmd, 0)== 0x00) {
+	if (param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("It prints the keys loaded in the emulator memory");
 		PrintAndLog("Usage:  hf mf ekeyprn [card memory]");
-		PrintAndLog("  [card memory]: 1 = 1K (default), 4 = 4K");
+		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
 		PrintAndLog("");
 		PrintAndLog(" sample: hf mf ekeyprn 1");
 		return 0;
@@ -1607,12 +1607,14 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 
 	char cmdp = param_getchar(Cmd, 0);
 	
-	switch (cmdp) {
+	switch (ctmp) {
+		case '0' : numSectors = 5; break;
 		case '1' : 
 		case '\0': numSectors = 16; break;
+		case '2' : numSectors = 32; break;
 		case '4' : numSectors = 40; break;
 		default:   numSectors = 16;
-	}	
+	}		
 	
 	PrintAndLog("|---|----------------|----------------|");
 	PrintAndLog("|sec|key A           |key B           |");
