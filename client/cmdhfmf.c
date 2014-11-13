@@ -1607,7 +1607,7 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 
 	char cmdp = param_getchar(Cmd, 0);
 	
-	switch (ctmp) {
+	switch (cmdp) {
 		case '0' : numSectors = 5; break;
 		case '1' : 
 		case '\0': numSectors = 16; break;
