@@ -1592,13 +1592,32 @@ int CmdHF14AMfECFill(const char *Cmd)
 int CmdHF14AMfEKeyPrn(const char *Cmd)
 {
 	int i;
+	uint8_t numSectors;
 	uint8_t data[16];
 	uint64_t keyA, keyB;
+	
+	if (param_getchar(Cmd, 0) == 'h' || param_getchar(Cmd, 0)== 0x00) {
+		PrintAndLog("It prints the keys loaded in the emulator memory");
+		PrintAndLog("Usage:  hf mf ekeyprn [card memory]");
+		PrintAndLog("  [card memory]: 1 = 1K (default), 4 = 4K");
+		PrintAndLog("");
+		PrintAndLog(" sample: hf mf ekeyprn 1");
+		return 0;
+	}	
+
+	char cmdp = param_getchar(Cmd, 0);
+	
+	switch (cmdp) {
+		case '1' : 
+		case '\0': numSectors = 16; break;
+		case '4' : numSectors = 40; break;
+		default:   numSectors = 16;
+	}	
 	
 	PrintAndLog("|---|----------------|----------------|");
 	PrintAndLog("|sec|key A           |key B           |");
 	PrintAndLog("|---|----------------|----------------|");
-	for (i = 0; i < 40; i++) {
+	for (i = 0; i < numSectors; i++) {
 		if (mfEmlGetMem(data, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1)) {
 			PrintAndLog("error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
 			break;
