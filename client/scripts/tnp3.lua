@@ -28,10 +28,10 @@ Arguments:
 	-o             : filename for the saved dumps
 ]]
 
-local hashconstant = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
+local HASHCONSTANT = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
 
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
-local DEBUG = true -- the debug flag
+local DEBUG = false -- the debug flag
 local numBlocks = 64
 local numSectors = 16
 --- 
@@ -154,14 +154,17 @@ local function main(args)
 	  core.console( ('hf mf nested 1 0 A %s d'):format(keyA) )
 	end
 	
+	core.clearCommandBuffer()
+	
 	-- Loading keyfile
 	print('Loading dumpkeys.bin')
-	local infile = io.open(input, "rb")
-	if infile == nil then 
-		return oops('Could not read file ', input)
+	local hex, err = utils.ReadDumpFile(input)
+	if not hex then
+		return oops(err)
 	end
-	local akeys = readdumpkeys(infile):sub(0,12*16)
-	
+
+	local akeys = hex:sub(0,12*16)
+
 	-- Read block 0
 	cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = 0,arg2 = 0,arg3 = 0, data = keyA}
 	err = core.SendCommand(cmd:getBytes())
@@ -206,13 +209,13 @@ local function main(args)
 				-- Block 0-7 not encrypted
 				blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
 			else
-				local base = ('%s%s%02x%s'):format(block0, block1, blockNo, hashconstant)	
+				local base = ('%s%s%02x%s'):format(block0, block1, blockNo, HASHCONSTANT)	
 				local baseStr = utils.ConvertHexToAscii(base)
 				local md5hash = md5.sumhexa(baseStr)
 				local aestest = core.aes(md5hash, blockdata)
 
-				local hex = utils.ConvertAsciiStringToBytes(aestest)
-				hex = utils.ConvertBytes2HexString(hex)
+				local hex = utils.ConvertAsciiToBytes(aestest)
+				hex = utils.ConvertBytesToHex(hex)
 				--local _,hex = bin.unpack(("H%d"):format(16),aestest)
 
 				-- blocks with zero not encrypted.
@@ -238,8 +241,8 @@ local function main(args)
 
 	for _,s in pairs(blocks) do
 		local slice = s:sub(8,#s)
-		local str = utils.ConvertBytesToAsciiString(
-				 utils.ConvertHexStringToBytes(slice)
+		local str = utils.ConvertBytesToAscii(
+				 utils.ConvertHexToBytes(slice)
 				)
 		emldata = emldata..slice..'\n'
 		for c in (str):gmatch('.') do
@@ -266,47 +269,5 @@ local function main(args)
 	print( ('    CARDID : 0x%s'):format(cardid ) )	
 	print( string.rep('--',20) )
 
-	print('Validating checksums')
-	-- Checksum Typ 0
-	local test1 = ('%s%s'):format(block0, block1:sub(1,28))
-	local crc = block1:sub(29,32)
-	local revcrc = reverseCrcBytes(crc)
-
-	io.write( ('BLOCK 0-1 : %04x = %04x \n'):format(revcrc,computeCrc16(test1)))
-	
-	-- Checksum Typ 1  BLOCK 9
-	local block9 = blocks[9]:sub(8,35)
-	test1 = ('%s0500'):format(block9)
-	crc = blocks[9]:sub(36,39)
-	revcrc = reverseCrcBytes(crc)
-	io.write( ('BLOCK 8 : %04x = %04x \n'):format(revcrc,computeCrc16(test1)))
-
-	-- Checksum Typ 1  BLOCK 37
-	local block37 = blocks[37]:sub(8,35)
-	test1 = ('%s0500'):format(block37)
-	crc = blocks[37]:sub(36,39)
-	revcrc = reverseCrcBytes(crc)
-	io.write( ('BLOCK 36 : %04x = %04x \n'):format(revcrc,computeCrc16(test1)))
-	
-	-- Checksum Typ 2
-	-- 10,11,13
-	test1 =	blocks[10]:sub(8,39)..
-			blocks[11]:sub(8,39)..
-			blocks[13]:sub(8,39)
-
-	crc = blocks[9]:sub(32,35)
-	revcrc = reverseCrcBytes(crc)
-	io.write( ('BLOCK 10-11-13 :%04x = %04x \n'):format(revcrc,computeCrc16(test1)))
-	-- Checksum Typ 3
-	-- 15,17,18,19
-	crc = blocks[9]:sub(28,31)
-	revcrc = reverseCrcBytes(crc)
-	test1 = blocks[14]:sub(8,39)..
-			blocks[15]:sub(8,39)..
-			blocks[17]:sub(8,39)
-
-	local tohash = test1..string.rep('00',0xe0)	
-	local hashed = computeCrc16(tohash)
-	io.write( ('BLOCK 14-15-17 %04x = %04x \n'):format(revcrc,hashed))	
 end
 main(args)

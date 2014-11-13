@@ -117,10 +117,10 @@ local _commands = {
 
 
 local _reverse_lookup,k,v = {}
-for k, v in pairs(_commands) do
-	_reverse_lookup[v] =  k
-end
-_commands.tostring = function(command)
+	for k, v in pairs(_commands) do
+		_reverse_lookup[v] =  k
+	end
+	_commands.tostring = function(command)
 	if(type(command) == 'number') then
 		return ("%s (%d)"):format(_reverse_lookup[command]or "ERROR UNDEFINED!", command) 
 	end
@@ -182,7 +182,6 @@ function Command:getBytes()
 	local cmd = self.cmd 
 	local arg1, arg2, arg3 = self.arg1, self.arg2, self.arg3
 
-	
 	return bin.pack("LLLLH",cmd, arg1, arg2, arg3,data);
 end
 return _commands
