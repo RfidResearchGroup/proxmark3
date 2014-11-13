@@ -1419,7 +1419,7 @@ int CmdHF14AMfESet(const char *Cmd)
 int CmdHF14AMfELoad(const char *Cmd)
 {
 	FILE * f;
-	char filename[20];
+	char filename[255];
 	char *fnameptr = filename;
 	char buf[64];
 	uint8_t buf8[64];
@@ -1436,7 +1436,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 	}	
 
 	len = strlen(Cmd);
-	if (len > 14) len = 14;
+	if (len > 250) len = 250;
 
 	memcpy(filename, Cmd, len);
 	fnameptr += len;
@@ -1494,7 +1494,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 int CmdHF14AMfESave(const char *Cmd)
 {
 	FILE * f;
-	char filename[20];
+	char filename[255];
 	char * fnameptr = filename;
 	uint8_t buf[64];
 	int i, j, len;
@@ -1511,7 +1511,7 @@ int CmdHF14AMfESave(const char *Cmd)
 	}	
 
 	len = strlen(Cmd);
-	if (len > 14) len = 14;
+	if (len > 250) len = 250;
 	
 	if (len < 1) {
 		// get filename
@@ -1687,7 +1687,7 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 int CmdHF14AMfCLoad(const char *Cmd)
 {
 	FILE * f;
-	char filename[20];
+	char filename[255];
 	char * fnameptr = filename;
 	char buf[64];
 	uint8_t buf8[64];
@@ -1728,7 +1728,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		return 0;
 	} else {
 		len = strlen(Cmd);
-		if (len > 14) len = 14;
+		if (len > 250) len = 250;
 
 		memcpy(filename, Cmd, len);
 		fnameptr += len;
@@ -1851,7 +1851,7 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 int CmdHF14AMfCSave(const char *Cmd) {
 
 	FILE * f;
-	char filename[20];
+	char filename[255];
 	char * fnameptr = filename;
 	uint8_t fillFromEmulator = 0;
 	uint8_t buf[64];
@@ -1893,7 +1893,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		return 0;
 	} else {
 		len = strlen(Cmd);
-		if (len > 14) len = 14;
+		if (len > 250) len = 250;
 	
 		if (len < 1) {
 			// get filename
