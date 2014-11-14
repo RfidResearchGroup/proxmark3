@@ -1623,6 +1623,7 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 		if (mfEmlGetMem(data, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1)) {
 			PrintAndLog("error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
 			break;
+			break;
 		}
 		keyA = bytes_to_num(data, 6);
 		keyB = bytes_to_num(data + 10, 6);

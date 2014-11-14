@@ -8,16 +8,16 @@ local dumplib = require('html_dumplib')
 local toyNames = require('default_toys')
 
 example =[[
-	1. script run tnp3
-	2. script run tnp3 -n
-	3. script run tnp3 -k aabbccddeeff
-	4. script run tnp3 -k aabbccddeeff -n
-	5. script run tnp3 -o myfile 
-	6. script run tnp3 -n -o myfile 
-	7. script run tnp3 -k aabbccddeeff -n -o myfile 
+	1. script run tnp3dump
+	2. script run tnp3dump -n
+	3. script run tnp3dump -k aabbccddeeff
+	4. script run tnp3dump -k aabbccddeeff -n
+	5. script run tnp3dump -o myfile 
+	6. script run tnp3dump -n -o myfile 
+	7. script run tnp3dump -k aabbccddeeff -n -o myfile 
 ]]
 author = "Iceman"
-usage = "script run tnp3 -k <key> -n -o <filename>"
+usage = "script run tnp3dump -k <key> -n -o <filename>"
 desc =[[
 This script will try to dump the contents of a Mifare TNP3xxx card.
 It will need a valid KeyA in order to find the other keys and decode the card.
@@ -216,7 +216,6 @@ local function main(args)
 
 				local hex = utils.ConvertAsciiToBytes(aestest)
 				hex = utils.ConvertBytesToHex(hex)
-				--local _,hex = bin.unpack(("H%d"):format(16),aestest)
 
 				-- blocks with zero not encrypted.
 				if string.find(blockdata, '^0+$') then
