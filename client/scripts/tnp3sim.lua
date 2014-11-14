@@ -14,15 +14,16 @@ example =[[
 author = "Iceman"
 usage = "script run tnp3sim -h -m -i <filename>"
 desc =[[
-This script will try to dump the contents of a Mifare TNP3xxx card.
-It will need a valid KeyA in order to find the other keys and decode the card.
+This script will try to load a binary datadump of a Mifare TNP3xxx card.
+It vill try to validate all checksums and view some information stored in the dump
+For an experimental mode, it tries to manipulate some data.
+At last it sends all data to the PM3 device memory where it can be used in the command  "hf mf sim"
+
 Arguments:
 	-h             : this help
-	-m             : Maxed out item
+	-m             : Maxed out items (experimental)
 	-i             : filename for the datadump to read (bin)
 ]]
-
-local HASHCONSTANT = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
 
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = true -- the debug flag
@@ -63,6 +64,7 @@ function ExitMsg(msg)
 	print(msg)
 	print()
 end
+
 
 local function writedumpfile(infile)
 	 t = infile:read("*all")
@@ -185,36 +187,6 @@ local function ValidateCheckSums(blocks)
 	io.write( ('TYPE 3 area 2: %04x = %04x -- %s\n'):format(crc,calc,isOk))
 end
 
--- function EncryptData()
-	-- local HASHCONSTANT = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
-		-- if  blockNo%4 ~= 3 then
-			-- if blockNo < 8 then
-				-- -- Block 0-7 not encrypted
-				-- blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
-			-- else
-				-- local base = ('%s%s%02x%s'):format(block0, block1, blockNo, HASHCONSTANT)	
-				-- local baseStr = utils.ConvertHexToAscii(base)
-				-- local md5hash = md5.sumhexa(baseStr)
-				-- local aestest = core.aes(md5hash, blockdata)
-
-				-- local hex = utils.ConvertAsciiToBytes(aestest)
-				-- hex = utils.ConvertBytesToHex(hex)
-				-- --local _,hex = bin.unpack(("H%d"):format(16),aestest)
-
-				-- -- blocks with zero not encrypted.
-				-- if string.find(blockdata, '^0+$') then
-					-- blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
-				-- else
-					-- blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,hex)
-					-- io.write( blockNo..',')
-				-- end		
-			-- end
-		-- else
-			-- -- Sectorblocks, not encrypted
-			-- blocks[blockNo+1] = ('%02d  :: %s%s'):format(blockNo,key,blockdata:sub(13,32)) 
-		-- end
-
--- end
 
 local function LoadEmulator(blocks)
 	local HASHCONSTANT = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
