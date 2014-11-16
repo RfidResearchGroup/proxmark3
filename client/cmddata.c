@@ -478,11 +478,18 @@ int CmdSamples(const char *Cmd)
 
 int CmdLoad(const char *Cmd)
 {
-  FILE *f = fopen(Cmd, "r");
-  if (!f) {
-    PrintAndLog("couldn't open '%s'", Cmd);
-    return 0;
-  }
+   char filename[FILE_PATH_SIZE] = {0x00};
+   int len = 0;
+
+   len = strlen(Cmd);
+   if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+   memcpy(filename, Cmd, len);
+	
+   FILE *f = fopen(filename, "r");
+   if (!f) {
+     PrintAndLog("couldn't open '%s'", filename);
+     return 0;
+   }
 
   GraphTraceLen = 0;
   char line[80];
@@ -780,9 +787,17 @@ int CmdPlot(const char *Cmd)
 
 int CmdSave(const char *Cmd)
 {
-  FILE *f = fopen(Cmd, "w");
+   char filename[FILE_PATH_SIZE] = {0x00};
+   int len = 0;
+
+   len = strlen(Cmd);
+   if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+   memcpy(filename, Cmd, len);
+   
+
+  FILE *f = fopen(filename, "w");
   if(!f) {
-    PrintAndLog("couldn't open '%s'", Cmd);
+    PrintAndLog("couldn't open '%s'", filename);
     return 0;
   }
   int i;

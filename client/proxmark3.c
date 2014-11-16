@@ -115,7 +115,7 @@ static void *main_loop(void *targ) {
   }
   
   FILE *script_file = NULL;
-  char script_cmd_buf[256];
+  char script_cmd_buf[256];  // iceman, needs lua script the same file_path_buffer as the rest
   
   if (arg->script_cmds_file)
   {

@@ -46,12 +46,18 @@ int ukbhit(void) {
 #endif
 
 // log files functions
-void AddLogLine(char *fileName, char *extData, char *c) {
+void AddLogLine(char *file, char *extData, char *c) {
 	FILE *fLog = NULL;
+    char filename[FILE_PATH_SIZE] = {0x00};
+    int len = 0;
 
-	fLog = fopen(fileName, "a");
+    len = strlen(file);
+    if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+    memcpy(filename, file, len);
+   
+	fLog = fopen(filename, "a");
 	if (!fLog) {
-		printf("Could not append log file %s", fileName);
+		printf("Could not append log file %s", filename);
 		return;
 	}
 

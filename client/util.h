@@ -15,6 +15,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#include "data.h"
 
 #ifndef MIN
 # define MIN(a, b) (((a) < (b)) ? (a) : (b))

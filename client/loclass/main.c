@@ -78,8 +78,6 @@ int showHelp()
 
 int main (int argc, char **argv)
 {
-
-
 	prnlog("IClass Cipher version 1.2, Copyright (C) 2014 Martin Holst Swende\n");
 	prnlog("Comes with ABSOLUTELY NO WARRANTY");
 	prnlog("Released as GPLv2\n");

@@ -714,8 +714,8 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	crypto1_destroy(pcs);
 	
 	// add trace trailer
-//	memset(uid, 0x44, 4);
-//	LogTrace(uid, 4, 0, 0, TRUE);
+	memset(uid, 0x44, 4);
+	LogTrace(uid, 4, 0, 0, TRUE);
 
 	byte_t buf[4 + 4 * 4];
 	memcpy(buf, &cuid, 4);
@@ -826,11 +826,11 @@ void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 }
 
 void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
-	byte_t buf[48];
+	byte_t buf[USB_CMD_DATA_SIZE];
 	emlGetMem(buf, arg0, arg1); // data, block num, blocks count (max 4)
 
 	LED_B_ON();
-	cmd_send(CMD_ACK,arg0,arg1,0,buf,48);
+	cmd_send(CMD_ACK,arg0,arg1,0,buf,USB_CMD_DATA_SIZE);
 	LED_B_OFF();
 }
 

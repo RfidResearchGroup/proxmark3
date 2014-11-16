@@ -79,6 +79,7 @@ void PrintAndLog(char *fmt, ...)
 		vfprintf(logfile, fmt, argptr2);
 		fprintf(logfile,"\n");
 		fflush(logfile);
+		fclose(logfile);  // ICEMAN,  this logfile is never closed?!?
 	}
 	va_end(argptr2);
 

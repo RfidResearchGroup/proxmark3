@@ -680,11 +680,10 @@ int CmdHF14AMfDump(const char *Cmd)
 
 int CmdHF14AMfRestore(const char *Cmd)
 {
-
 	uint8_t sectorNo,blockNo;
 	uint8_t keyType = 0;
-	uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-	uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t key[6] = {0xFF};
+	uint8_t bldata[16] = {0x00};
 	uint8_t keyA[40][6];
 	uint8_t keyB[40][6];
 	uint8_t numSectors;
@@ -702,7 +701,7 @@ int CmdHF14AMfRestore(const char *Cmd)
 		default:   numSectors = 16;
 	}	
 
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
+	if (cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:   hf mf restore [card memory]");
 		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
 		PrintAndLog("");
@@ -710,11 +709,7 @@ int CmdHF14AMfRestore(const char *Cmd)
 		PrintAndLog("         hf mf restore 4");
 		return 0;
 	}
-
-	if ((fdump = fopen("dumpdata.bin","rb")) == NULL) {
-		PrintAndLog("Could not find file dumpdata.bin");
-		return 1;
-	}
+	
 	if ((fkeys = fopen("dumpkeys.bin","rb")) == NULL) {
 		PrintAndLog("Could not find file dumpkeys.bin");
 		return 1;
@@ -734,6 +729,12 @@ int CmdHF14AMfRestore(const char *Cmd)
 		}
 	}
 
+	fclose(fkeys);
+	
+	if ((fdump = fopen("dumpdata.bin","rb")) == NULL) {
+		PrintAndLog("Could not find file dumpdata.bin");
+		return 1;
+	}	
 	PrintAndLog("Restoring dumpdata.bin to card");
 
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
@@ -777,7 +778,7 @@ int CmdHF14AMfRestore(const char *Cmd)
 	}
 	
 	fclose(fdump);
-	fclose(fkeys);
+
 	return 0;
 }
 
@@ -1043,7 +1044,7 @@ int CmdHF14AMfChk(const char *Cmd)
 	}
 	
 	FILE * f;
-	char filename[256]={0};
+	char filename[FILE_PATH_SIZE]={0};
 	char buf[13];
 	uint8_t *keyBlock = NULL, *p;
 	uint8_t stKeyBlock = 20;
@@ -1135,7 +1136,7 @@ int CmdHF14AMfChk(const char *Cmd)
 			keycnt++;
 		} else {
 			// May be a dic file
-			if ( param_getstr(Cmd, 2 + i,filename) > 255 ) {
+			if ( param_getstr(Cmd, 2 + i,filename) >= FILE_PATH_SIZE ) {
 				PrintAndLog("File name too long");
 				free(keyBlock);
 				return 2;
@@ -1419,26 +1420,44 @@ int CmdHF14AMfESet(const char *Cmd)
 int CmdHF14AMfELoad(const char *Cmd)
 {
 	FILE * f;
-	char filename[255];
+	char filename[FILE_PATH_SIZE];
 	char *fnameptr = filename;
 	char buf[64];
 	uint8_t buf8[64];
-	int i, len, blockNum;
+	int i, len, blockNum, numBlocks;
+	int nameParamNo = 1;
 	
 	memset(filename, 0, sizeof(filename));
 	memset(buf, 0, sizeof(buf));
 
-	if (param_getchar(Cmd, 0) == 'h' || param_getchar(Cmd, 0)== 0x00) {
+	char ctmp = param_getchar(Cmd, 0);
+		
+	if ( ctmp == 'h' || ctmp == 0x00) {
 		PrintAndLog("It loads emul dump from the file `filename.eml`");
-		PrintAndLog("Usage:  hf mf eload <file name w/o `.eml`>");
+		PrintAndLog("Usage:  hf mf eload [card memory] <file name w/o `.eml`>");
+		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+		PrintAndLog("");
 		PrintAndLog(" sample: hf mf eload filename");
+		PrintAndLog("         hf mf eload 4 filename");
 		return 0;
 	}	
 
-	len = strlen(Cmd);
-	if (len > 250) len = 250;
+	switch (ctmp) {
+		case '0' : numBlocks = 5*4; break;
+		case '1' : 
+		case '\0': numBlocks = 16*4; break;
+		case '2' : numBlocks = 32*4; break;
+		case '4' : numBlocks = 256; break;
+		default:  {
+			numBlocks = 16*4;
+			nameParamNo = 0;
+		}
+	}
 
-	memcpy(filename, Cmd, len);
+	len = param_getstr(Cmd,nameParamNo,filename);
+	
+	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+
 	fnameptr += len;
 
 	sprintf(fnameptr, ".eml"); 
@@ -1446,43 +1465,49 @@ int CmdHF14AMfELoad(const char *Cmd)
 	// open file
 	f = fopen(filename, "r");
 	if (f == NULL) {
-		PrintAndLog("File not found or locked.");
+		PrintAndLog("File %s not found or locked", filename);
 		return 1;
 	}
+	
+//		for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
+//		for(blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
 	
 	blockNum = 0;
 	while(!feof(f)){
 		memset(buf, 0, sizeof(buf));
+		
 		if (fgets(buf, sizeof(buf), f) == NULL) {
-			if((blockNum == 16*4) || (blockNum == 32*4 + 8*16)) {	// supports both old (1K) and new (4K) .eml files)
-				break;
-			}
+			
+			if (blockNum >= numBlocks) break;
+			
 			PrintAndLog("File reading error.");
 			fclose(f);
 			return 2;
 		}
+		
 		if (strlen(buf) < 32){
 			if(strlen(buf) && feof(f))
 				break;
 			PrintAndLog("File content error. Block data must include 32 HEX symbols");
 			return 2;
 		}
+		
 		for (i = 0; i < 32; i += 2) {
 			sscanf(&buf[i], "%02x", (unsigned int *)&buf8[i / 2]);
-//			PrintAndLog("data[%02d]:%s", blockNum, sprint_hex(buf8, 16));
 		}
+		
 		if (mfEmlSetMem(buf8, blockNum, 1)) {
 			PrintAndLog("Cant set emul block: %3d", blockNum);
 			return 3;
 		}
 		blockNum++;
 		
-		if (blockNum >= 32*4 + 8*16) break;
+		if (blockNum >= numBlocks) break;
 	}
 	fclose(f);
 	
-	if ((blockNum != 16*4) && (blockNum != 32*4 + 8*16)) {
-		PrintAndLog("File content error. There must be 64 or 256 blocks.");
+	if ((blockNum != numBlocks)) {
+		PrintAndLog("File content error. Got %d must be %d blocks.",blockNum, numBlocks);
 		fclose(f);
 		return 4;
 	}
@@ -1494,56 +1519,76 @@ int CmdHF14AMfELoad(const char *Cmd)
 int CmdHF14AMfESave(const char *Cmd)
 {
 	FILE * f;
-	char filename[255];
+	char filename[FILE_PATH_SIZE];
 	char * fnameptr = filename;
 	uint8_t buf[64];
-	int i, j, len;
+	int i, j, len, numBlocks;
+	int nameParamNo = 1;
 	
 	memset(filename, 0, sizeof(filename));
 	memset(buf, 0, sizeof(buf));
 
-	if (param_getchar(Cmd, 0) == 'h') {
-		PrintAndLog("It saves emul dump into the file `filename.eml` or `cardID.eml`");
-		PrintAndLog("Usage:  hf mf esave [file name w/o `.eml`]");
+	char ctmp = param_getchar(Cmd, 0);
+	
+	if ( ctmp == 'h') {
+		PrintAndLog("It saves emul dump into the file `filename.eml` or `cardID.eml`");		
+		PrintAndLog(" Usage:  hf mf esave [card memory] [file name w/o `.eml`]");
+		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+		PrintAndLog("");
 		PrintAndLog(" sample: hf mf esave ");
-		PrintAndLog("         hf mf esave filename");
+		PrintAndLog("         hf mf esave 4");
+		PrintAndLog("         hf mf esave 4 filename");
 		return 0;
 	}	
-
-	len = strlen(Cmd);
-	if (len > 250) len = 250;
 	
+	switch (ctmp) {
+		case '0' : numBlocks = 5*4; break;
+		case '1' : 
+		case '\0': numBlocks = 16*4; break;
+		case '2' : numBlocks = 32*4; break;
+		case '4' : numBlocks = 256; break;
+		default:  {
+			numBlocks = 16*4;
+			nameParamNo = 0;
+		}
+	}
+
+	len = param_getstr(Cmd,nameParamNo,filename);
+	
+	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+	
+	// user supplied filename?
 	if (len < 1) {
-		// get filename
+		// get filename (UID from memory)
 		if (mfEmlGetMem(buf, 0, 1)) {
-			PrintAndLog("Cant get block: %d", 0);
-			return 1;
+			PrintAndLog("Can\'t get UID from block: %d", 0);
+			sprintf(filename, "dump.eml"); 
 		}
 		for (j = 0; j < 7; j++, fnameptr += 2)
-			sprintf(fnameptr, "%02x", buf[j]); 
+			sprintf(fnameptr, "%02X", buf[j]); 
 	} else {
-		memcpy(filename, Cmd, len);
 		fnameptr += len;
 	}
 
+	// add file extension
 	sprintf(fnameptr, ".eml"); 
 	
 	// open file
 	f = fopen(filename, "w+");
 
 	// put hex
-	for (i = 0; i < 32*4 + 8*16; i++) {
+	for (i = 0; i < numBlocks; i++) {
 		if (mfEmlGetMem(buf, i, 1)) {
 			PrintAndLog("Cant get block: %d", i);
 			break;
 		}
 		for (j = 0; j < 16; j++)
-			fprintf(f, "%02x", buf[j]); 
+			fprintf(f, "%02X", buf[j]); 
 		fprintf(f,"\n");
 	}
 	fclose(f);
 	
-	PrintAndLog("Saved to file: %s", filename);
+	PrintAndLog("Saved %d blocks to file: %s", numBlocks, filename);
 	
   return 0;
 }
@@ -1622,7 +1667,6 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 	for (i = 0; i < numSectors; i++) {
 		if (mfEmlGetMem(data, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1)) {
 			PrintAndLog("error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
-			break;
 			break;
 		}
 		keyA = bytes_to_num(data, 6);
@@ -1709,7 +1753,7 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 int CmdHF14AMfCLoad(const char *Cmd)
 {
 	FILE * f;
-	char filename[255];
+	char filename[FILE_PATH_SIZE];
 	char * fnameptr = filename;
 	char buf[64];
 	uint8_t buf8[64];
@@ -1750,7 +1794,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		return 0;
 	} else {
 		len = strlen(Cmd);
-		if (len > 250) len = 250;
+		if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
 
 		memcpy(filename, Cmd, len);
 		fnameptr += len;
@@ -1873,7 +1917,7 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 int CmdHF14AMfCSave(const char *Cmd) {
 
 	FILE * f;
-	char filename[255];
+	char filename[FILE_PATH_SIZE];
 	char * fnameptr = filename;
 	uint8_t fillFromEmulator = 0;
 	uint8_t buf[64];
@@ -1915,7 +1959,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		return 0;
 	} else {
 		len = strlen(Cmd);
-		if (len > 250) len = 250;
+		if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
 	
 		if (len < 1) {
 			// get filename

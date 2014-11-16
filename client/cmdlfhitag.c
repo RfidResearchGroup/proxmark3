@@ -133,13 +133,17 @@ int CmdLFHitagSnoop(const char *Cmd) {
 }
 
 int CmdLFHitagSim(const char *Cmd) {
-  UsbCommand c = {CMD_SIMULATE_HITAG};
-	char filename[256] = { 0x00 };
+    
+	UsbCommand c = {CMD_SIMULATE_HITAG};
+	char filename[FILE_PATH_SIZE] = { 0x00 };
 	FILE* pf;
 	bool tag_mem_supplied;
+	int len = 0;
 
-	param_getstr(Cmd,0,filename);
-	
+	len = strlen(Cmd);
+	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+	memcpy(filename, Cmd, len);
+   
 	if (strlen(filename) > 0) {
 		if ((pf = fopen(filename,"rb+")) == NULL) {
 			PrintAndLog("Error: Could not open file [%s]",filename);
@@ -147,9 +151,9 @@ int CmdLFHitagSim(const char *Cmd) {
 		}
 		tag_mem_supplied = true;
 		if (fread(c.d.asBytes,48,1,pf) == 0) {
-      PrintAndLog("Error: File reading error");
+             PrintAndLog("Error: File reading error");
 			return 1;
-    }
+         }
 		fclose(pf);
 	} else {
 		tag_mem_supplied = false;

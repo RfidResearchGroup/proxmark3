@@ -13,6 +13,7 @@
 
 #include <stdint.h>
 
+#define FILE_PATH_SIZE 1000
 #define SAMPLE_BUFFER_SIZE 64
 
 extern uint8_t* sample_buf;
