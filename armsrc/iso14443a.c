@@ -124,6 +124,8 @@ uint32_t LastProxToAirDuration;
 #define	SEC_Y 0x00
 #define	SEC_Z 0xc0
 
+//replaced large parity table with small parity generation function - saves flash code
+/*
 const uint8_t OddByteParity[256] = {
   1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
   0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
@@ -142,7 +144,7 @@ const uint8_t OddByteParity[256] = {
   0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
   1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1
 };
-
+*/
 
 void iso14a_set_trigger(bool enable) {
 	trigger = enable;
@@ -165,10 +167,12 @@ void iso14a_set_timeout(uint32_t timeout) {
 // Generate the parity value for a byte sequence
 //
 //-----------------------------------------------------------------------------
+/*
 byte_t oddparity (const byte_t bt)
 {
 	return OddByteParity[bt];
 }
+*/
 
 uint32_t GetParity(const uint8_t * pbtCmd, int iLen)
 {
@@ -178,7 +182,8 @@ uint32_t GetParity(const uint8_t * pbtCmd, int iLen)
 	// Generate the parity bits
 	for (i = 0; i < iLen; i++) {
 		// and save them to a 32Bit word
-		dwPar |= ((OddByteParity[pbtCmd[i]]) << i);
+		//dwPar |= ((OddByteParity[pbtCmd[i]]) << i);
+		dwPar |= (oddparity(pbtCmd[i]) << i);
 	}
 	return dwPar;
 }
@@ -683,7 +688,8 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, int len, uint32_t dwParity
 		}
 
 		// Get the parity bit
-		if ((dwParity >> i) & 0x01) {
+		//if ((dwParity >> i) & 0x01) {
+		if (oddparity(cmd[i]) & 0x01) {
 			ToSend[++ToSendMax] = SEC_D;
 			LastProxToAirDuration = 8 * ToSendMax - 4;
 		} else {
@@ -891,6 +897,12 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 			response1[1] = 0x00;
 			sak = 0x28;
 		} break;
+		case 5: { // MIFARE TNP3XXX
+			// Says: I am a toy
+			response1[0] = 0x01;
+			response1[1] = 0x0f;
+			sak = 0x01;
+		} break;		
 		default: {
 			Dbprintf("Error: unkown tagtype (%d)",tagType);
 			return;
@@ -1695,7 +1707,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 		memcpy(uid_resp,resp,4);
 	}
 	uid_resp_len = 4;
-       // Dbprintf("uid: %02x %02x %02x %02x",uid_resp[0],uid_resp[1],uid_resp[2],uid_resp[3]);
+
 
     // calculate crypto UID. Always use last 4 Bytes.
     if(cuid_ptr) {
@@ -1713,6 +1725,8 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     if (!ReaderReceive(resp)) return 0;
     sak = resp[0];
 
+	//Dbprintf("SAK: %02x",resp[0]);
+	
     // Test if more parts of the uid are comming
     if ((sak & 0x04) /* && uid_resp[0] == 0x88 */) {
       // Remove first byte, 0x88 is not an UID byte, it CT, see page 3 of:
@@ -1770,8 +1784,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
 	// Signal field is on with the appropriate LED
-	if (fpga_minor_mode == FPGA_HF_ISO14443A_READER_MOD
-		|| fpga_minor_mode == FPGA_HF_ISO14443A_READER_LISTEN) {
+	if (fpga_minor_mode == FPGA_HF_ISO14443A_READER_MOD	|| fpga_minor_mode == FPGA_HF_ISO14443A_READER_LISTEN) {
 		LED_D_ON();
 	} else {
 		LED_D_OFF();
@@ -1859,10 +1872,10 @@ void ReaderIso14443a(UsbCommand *c)
 		if(param & ISO14A_APPEND_CRC) {
 			AppendCrc14443a(cmd,len);
 			len += 2;
-			lenbits += 16; 
+			if(lenbits>0) 
+				lenbits += 16; 
 		}
-		if(lenbits>0) {
-
+		if(lenbits>0) {			
 			ReaderTransmitBitsPar(cmd,lenbits,GetParity(cmd,lenbits/8), NULL);
 		} else {
 			ReaderTransmit(cmd,len, NULL);
@@ -1937,8 +1950,8 @@ void ReaderMifare(bool first_try)
 	uint32_t nt = 0;
 	uint32_t previous_nt = 0;
 	static uint32_t nt_attacked = 0;
-	byte_t par_list[8] = {0,0,0,0,0,0,0,0};
-	byte_t ks_list[8] = {0,0,0,0,0,0,0,0};
+	byte_t par_list[8] = {0x00};
+	byte_t ks_list[8] = {0x00};
 
 	static uint32_t sync_time;
 	static uint32_t sync_cycles;
@@ -1946,8 +1959,6 @@ void ReaderMifare(bool first_try)
 	int last_catch_up = 0;
 	uint16_t consecutive_resyncs = 0;
 	int isOK = 0;
-
-
 
 	if (first_try) { 
 		mf_nr_ar3 = 0;
@@ -1971,6 +1982,7 @@ void ReaderMifare(bool first_try)
 	LED_C_OFF();
 	
   
+    Dbprintf("Mifare: Before loopen");
 	for(uint16_t i = 0; TRUE; i++) {
 		
 		WDT_HIT();

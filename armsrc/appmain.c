@@ -311,7 +311,7 @@ extern struct version_information version_information;
 extern char *_bootphase1_version_pointer, _flash_start, _flash_end;
 void SendVersion(void)
 {
-	char temp[256]; /* Limited data payload in USB packets */
+	char temp[512]; /* Limited data payload in USB packets */
 	DbpString("Prox/RFID mark3 RFID instrument");
 
 	/* Try to find the bootrom version information. Expect to find a pointer at
@@ -367,9 +367,8 @@ void SamyRun()
 
 	for (;;)
 	{
-//		UsbPoll(FALSE);
 		usb_poll();
-    WDT_HIT();
+		WDT_HIT();
 
 		// Was our button held down or pressed?
 		int button_pressed = BUTTON_HELD(1000);
@@ -792,9 +791,14 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_SIMULATE_TAG_ISO_14443a:
 			SimulateIso14443aTag(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);  // ## Simulate iso14443a tag - pass tag type & UID
 			break;
+			
 		case CMD_EPA_PACE_COLLECT_NONCE:
 			EPA_PACE_Collect_Nonce(c);
 			break;
+			
+		// case CMD_EPA_:
+		//	EpaFoo(c);
+		// break;
 			
 		case CMD_READER_MIFARE:
             ReaderMifare(c->arg[0]);

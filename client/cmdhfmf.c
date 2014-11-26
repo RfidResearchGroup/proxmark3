@@ -2003,7 +2003,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 
 
 int CmdHF14AMfSniff(const char *Cmd){
-	// params
+
 	bool wantLogToFile = 0;
 	bool wantDecrypt = 0;
 	//bool wantSaveToEml = 0; TODO
@@ -2031,8 +2031,8 @@ int CmdHF14AMfSniff(const char *Cmd){
 		PrintAndLog("    l - save encrypted sequence to logfile `uid.log`");
 		PrintAndLog("    d - decrypt sequence and put it to log file `uid.log`");
 		PrintAndLog(" n/a   e - decrypt sequence, collect read and write commands and save the result of the sequence to emulator memory");
-		PrintAndLog("    r - decrypt sequence, collect read and write commands and save the result of the sequence to emulator dump file `uid.eml`");
-		PrintAndLog("Usage:  hf mf sniff [l][d][e][r]");
+		PrintAndLog("    f - decrypt sequence, collect read and write commands and save the result of the sequence to emulator dump file `uid.eml`");
+		PrintAndLog("Usage:  hf mf sniff [l][d][e][f]");
 		PrintAndLog("  sample: hf mf sniff l d e");
 		return 0;
 	}	
@@ -2219,9 +2219,6 @@ int GetCardSize()
 	
 	return -1;
 }
-
-
-
 
 static command_t CommandTable[] =
 {

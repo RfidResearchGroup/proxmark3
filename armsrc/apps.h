@@ -32,10 +32,13 @@
 
 // The large multi-purpose buffer, typically used to hold A/D samples,
 // maybe processed in some way.
-uint32_t BigBuf[10000];
+//#define BIG_BUFF_SIZE 10000  // PM3 w. 256KB ram
+#define BIG_BUFF_SIZE 10000  // PM3 w. 512KB ram
+
+uint32_t BigBuf[BIG_BUFF_SIZE];
 // BIG CHANGE - UNDERSTAND THIS BEFORE WE COMMIT
 #define TRACE_OFFSET          0
-#define TRACE_SIZE         3000
+#define TRACE_SIZE         4096
 #define RECV_CMD_OFFSET    3032
 #define RECV_CMD_SIZE        64
 #define RECV_RES_OFFSET    3096
@@ -45,7 +48,7 @@ uint32_t BigBuf[10000];
 #define FREE_BUFFER_OFFSET 7256
 #define FREE_BUFFER_SIZE   2744
 
-extern const uint8_t OddByteParity[256];
+//extern const uint8_t OddByteParity[256];
 extern uint8_t *trace; // = (uint8_t *) BigBuf;
 extern int traceLen;   // = 0;
 extern int rsamples;   // = 0;

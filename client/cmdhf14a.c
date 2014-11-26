@@ -44,7 +44,7 @@ int CmdHF14AList(const char *Cmd)
 		ShowWaitCycles = true;
 	}
 		
-	uint8_t got[1920];
+	uint8_t got[TRACE_BUFFER_SIZE];
 	GetFromBigBuf(got,sizeof(got),0);
 	WaitForResponse(CMD_ACK,NULL);
 
@@ -62,7 +62,7 @@ int CmdHF14AList(const char *Cmd)
 	uint32_t EndOfTransmissionTimestamp = 0;
 	
 	for (;;) {
-		if(i >= 1900) {
+		if(i >= TRACE_BUFFER_SIZE) {
 			break;
 		}
 
@@ -86,7 +86,7 @@ int CmdHF14AList(const char *Cmd)
 		if (len > 100) {
 			break;
 		}
-		if (i + len >= 1900) {
+		if (i + len >= TRACE_BUFFER_SIZE) {
 			break;
 		}
 
@@ -400,6 +400,7 @@ int CmdHF14ASim(const char *Cmd)
 		PrintAndLog("           2 = MIFARE Ultralight");
 		PrintAndLog("           3 = MIFARE DESFIRE");
 		PrintAndLog("           4 = ISO/IEC 14443-4");
+		PrintAndLog("           5 = MIFARE TNP3XXX");		
 		PrintAndLog("");
 		return 1;
 	}
@@ -628,7 +629,7 @@ static void waitCmd(uint8_t iSelect)
     UsbCommand resp;
     char *hexout;
 
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+    if (WaitForResponseTimeout(CMD_ACK,&resp,10000)) {
         recv = resp.d.asBytes;
         uint8_t iLen = iSelect ? resp.arg[1] : resp.arg[0];
         PrintAndLog("received %i octets",iLen);

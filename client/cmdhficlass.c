@@ -55,7 +55,7 @@ int CmdHFiClassList(const char *Cmd)
 		return 0;
 	}
 
-	uint8_t got[1920];
+	uint8_t got[TRACE_BUFFER_SIZE];
 	GetFromBigBuf(got,sizeof(got),0);
 	WaitForResponse(CMD_ACK,NULL);
 
@@ -77,7 +77,7 @@ int CmdHFiClassList(const char *Cmd)
 	uint32_t EndOfTransmissionTimestamp = 0;
 
 
-	for( i=0; i < 1900;)
+	for( i=0; i < TRACE_BUFFER_SIZE;)
 	{
 		//First 32 bits contain
 		// isResponse (1 bit)

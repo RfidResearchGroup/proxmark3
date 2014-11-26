@@ -228,7 +228,8 @@ static RAMFUNC int OutOfNDecoding(int bit)
 
 							// Calculate the parity bit for the client...
 							Uart.parityBits <<= 1;
-							Uart.parityBits ^= OddByteParity[(Uart.shiftReg & 0xff)];
+							//Uart.parityBits ^= OddByteParity[(Uart.shiftReg & 0xff)];
+							Uart.parityBits ^= oddparity(Uart.shiftReg & 0xff);
 
 							Uart.bitCnt = 0;
 							Uart.shiftReg = 0;
@@ -251,7 +252,8 @@ static RAMFUNC int OutOfNDecoding(int bit)
 
 					// Calculate the parity bit for the client...
 					Uart.parityBits <<= 1;
-					Uart.parityBits ^= OddByteParity[(Uart.dropPosition & 0xff)];
+					//Uart.parityBits ^= OddByteParity[(Uart.dropPosition & 0xff)];
+					Uart.parityBits ^= oddparity((Uart.dropPosition & 0xff));
 
 					Uart.bitCnt = 0;
 					Uart.shiftReg = 0;
@@ -452,8 +454,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 	else {
 		modulation = bit & Demod.syncBit;
 		modulation |= ((bit << 1) ^ ((Demod.buffer & 0x08) >> 3)) & Demod.syncBit;
-		//modulation = ((bit << 1) ^ ((Demod.buffer & 0x08) >> 3)) & Demod.syncBit;
-
+	
 		Demod.samples += 4;
 
 		if(Demod.posCount==0) {
@@ -488,7 +489,8 @@ static RAMFUNC int ManchesterDecoding(int v)
 					Demod.output[Demod.len] = 0x0f;
 					Demod.len++;
 					Demod.parityBits <<= 1;
-					Demod.parityBits ^= OddByteParity[0x0f];
+					//Demod.parityBits ^= OddByteParity[0x0f];
+					Demod.parityBits ^= oddparity(0x0f);
 					Demod.state = DEMOD_UNSYNCD;
 //					error = 0x0f;
 					return TRUE;
@@ -613,7 +615,8 @@ static RAMFUNC int ManchesterDecoding(int v)
 
 				// FOR ISO15639 PARITY NOT SEND OTA, JUST CALCULATE IT FOR THE CLIENT
 				Demod.parityBits <<= 1;
-				Demod.parityBits ^= OddByteParity[(Demod.shiftReg & 0xff)];
+				//Demod.parityBits ^= OddByteParity[(Demod.shiftReg & 0xff)];
+				Demod.parityBits ^= oddparity((Demod.shiftReg & 0xff));
 
 				Demod.bitCount = 0;
 				Demod.shiftReg = 0;
@@ -870,10 +873,7 @@ static int GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen)
         }
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			/*if(OutOfNDecoding((b & 0xf0) >> 4)) {
-				*len = Uart.byteCnt;
-				return TRUE;
-			}*/
+
 			if(OutOfNDecoding(b & 0x0f)) {
 				*len = Uart.byteCnt;
 				return TRUE;
@@ -1395,7 +1395,6 @@ void ReaderTransmitIClass(uint8_t* frame, int len)
   int par = 0;
 
   // This is tied to other size changes
-  // 	uint8_t* frame_addr = ((uint8_t*)BigBuf) + 2024;
   CodeIClassCommand(frame,len);
 
   // Select the card
@@ -1435,7 +1434,7 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
 	for(;;) {
 		WDT_HIT();
 
-	        if(BUTTON_PRESS()) return FALSE;
+	    if(BUTTON_PRESS()) return FALSE;
 
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = 0x00;  // To make use of exact timing of next command from reader!!
@@ -1446,10 +1445,7 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
 			b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			skip = !skip;
 			if(skip) continue;
-			/*if(ManchesterDecoding((b>>4) & 0xf)) {
-				*samples = ((c - 1) << 3) + 4;
-				return TRUE;
-			}*/
+		
 			if(ManchesterDecoding(b & 0x0f)) {
 				*samples = c << 3;
 				return  TRUE;

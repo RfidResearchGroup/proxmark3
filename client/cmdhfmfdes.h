@@ -14,7 +14,7 @@ int CmdHF14ADesRb(const char* cmd);
 int CmdHF14ADesWb(const char* cmd);
 int CmdHF14ADesInfo(const char *Cmd);
 int CmdHF14ADesEnumApplications(const char *Cmd);
-int CmdHF14ADesNonces(const char *Cmd);
+
 char * GetCardSizeStr( uint8_t fsize );
 char * GetVendorStr( uint8_t id);
 char * GetProtocolStr(uint8_t id);
