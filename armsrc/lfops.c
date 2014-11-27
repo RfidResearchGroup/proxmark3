@@ -449,6 +449,12 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 	DbpString("Now use tiread to check");
 }
 
+
+        
+// PIO_CODR = Clear Output Data Register
+// PIO_SODR = Set Output Data Register
+//#define LOW(x)	 AT91C_BASE_PIOA->PIO_CODR = (x)
+//#define HIGH(x)	 AT91C_BASE_PIOA->PIO_SODR = (x)
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
 	int i = 0;
@@ -456,76 +462,64 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
 	
 	// Connect the A/D to the peak-detected low-frequency path.
-	//SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-		
-	// Configure output and enable pin that is connected to the FPGA (for modulating)
-	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;    
-	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;    // (PIO_PER) PIO Enable Register , 
-	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;    // (PIO_OER) Output Enable Register
-	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;     // (PIO_ODR) Output Disable Register
+	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 
-	// Give it a bit of time for the resonant antenna to settle.
-	SpinDelay(150);
+	// Now set up the SSC to get the ADC samples that are now streaming at us.
+	FpgaSetupSsc();
 	
-	while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high
-	while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);    // wait for ssp_clk to go low
+	// Configure output and enable pin that is connected to the FPGA (for modulating)
+	// AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK; // (PIO_PER) PIO Enable Register
+	// AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;    // (PIO_OER) Output Enable Register
+	// AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;     // (PIO_ODR) Output Disable Register
+
+	AT91C_BASE_PIOA->PIO_OER = GPIO_PCK0;
 	
  	while(!BUTTON_PRESS()) { 
 		WDT_HIT();
 
 		// PIO_PDSR = Pin Data Status Register  
 		// GPIO_SSC_CLK  = SSC Transmit Clock
-		while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {    // wait for ssp_clk to go high
+		// wait ssp_clk == high
+		while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {  
 			 if(BUTTON_PRESS()) {
 				 DbpString("Stopped at 0");
-				 FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 				 return;
 			 }
 			 WDT_HIT();
 		}
-        
-		// PIO_CODR = Clear Output Data Register
-		// PIO_SODR = Set Output Data Register
-		//#define LOW(x)	 AT91C_BASE_PIOA->PIO_CODR = (x)
-		//#define HIGH(x)	 AT91C_BASE_PIOA->PIO_SODR = (x)
 		
 		if ( buf[i] > 0 ){
-			HIGH(GPIO_SSC_DOUT);
-			//FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-			//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
+			OPEN_COIL();
 		} else {
-			LOW(GPIO_SSC_DOUT);
-			//FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); 
+			SHORT_COIL();
 		}
 	   
-		 while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {   // wait for ssp_clk to go low
+	   DbpString("Enter Sim3");
+	    // wait ssp_clk == low
+		 while( (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) ) {  
 			 if(BUTTON_PRESS()) {
-				DbpString("Stopped at 1");
-				FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
+				DbpString("stopped at 1");
 				return;
 			}
 			WDT_HIT();
-		 }
+		}
 		
+		DbpString("Enter Sim4 ");
 		//SpinDelayUs(512);
 		
 		++i;
 		if(i == period) {
 			i = 0;
 			if (gap) {
-				// turn of modulation
-				LOW(GPIO_SSC_DOUT);
-				// wait
-				SpinDelay(gap);
+				SHORT_COIL();
+				SpinDelay(gap);				
 			} 
 		}
 	}
 	DbpString("Stopped");
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	return;
 }
 

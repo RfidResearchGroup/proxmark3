@@ -268,8 +268,8 @@ static int l_crc16(lua_State *L)
 {
 	size_t size;
 	const char *p_str = luaL_checklstring(L, 1, &size);
-	
-	unsigned short retval = crc16_ccitt( p_str, size);
+		
+	uint16_t retval = crc16_ccitt( (uint8_t*) p_str, size);
     lua_pushinteger(L, (int) retval);
     return 1;
 }

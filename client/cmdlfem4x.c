@@ -196,7 +196,7 @@ retest:
  */
 int CmdEM410xSim(const char *Cmd)
 {	
-	int i, n, j, h, binary[4], parity[4];
+	int i, n, j, binary[4], parity[4];
 
 	char cmdp = param_getchar(Cmd, 0);
 	uint8_t uid[5] = {0x00};
@@ -222,9 +222,6 @@ int CmdEM410xSim(const char *Cmd)
   /* clear our graph */
   ClearGraph(0);
   
-  /* write it out a few times */
-  //for (h = 0; h < 4; h++)
-  //{
     /* write 9 start bits */
     for (i = 0; i < 9; i++)
       AppendGraph(0, clock, 1);
@@ -260,11 +257,9 @@ int CmdEM410xSim(const char *Cmd)
     AppendGraph(0, clock, parity[2]);
     AppendGraph(0, clock, parity[3]);
 
-    /* stop bit */
-    AppendGraph(0, clock, 0);
-  //}
-
-  /* modulate that biatch */
+  /* stop bit */
+  AppendGraph(0, clock, 0);
+ 
   //CmdManchesterMod("64");
 
   /* booyah! */

@@ -674,6 +674,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_SIMULATE_TAG_125K:
 			LED_A_ON();
 			SimulateTagLowFrequency(c->arg[0], c->arg[1], 0);
+			 FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 			LED_A_OFF();
 			break;
 		case CMD_LF_SIMULATE_BIDIR:
