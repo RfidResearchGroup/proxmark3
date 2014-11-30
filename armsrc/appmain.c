@@ -203,7 +203,7 @@ void MeasureAntennaTuning(void)
 
   LED_B_ON();
 	DbpString("Measuring antenna characteristics, please wait...");
-	memset(dest,0,sizeof(FREE_BUFFER_SIZE));
+	memset(dest,0,FREE_BUFFER_SIZE);
 
 /*
  * Sweeps the useful LF range of the proxmark from

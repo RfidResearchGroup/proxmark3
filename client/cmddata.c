@@ -479,6 +479,26 @@ int CmdSamples(const char *Cmd)
   return 0;
 }
 
+int CmdTuneSamples(const char *Cmd)
+{
+  int cnt = 0;
+  int n = 255;
+  uint8_t got[255];
+
+  PrintAndLog("Reading %d samples\n", n);
+  GetFromBigBuf(got,n,7256); // armsrc/apps.h: #define FREE_BUFFER_OFFSET 7256
+  WaitForResponse(CMD_ACK,NULL);
+  for (int j = 0; j < n; j++) {
+    GraphBuffer[cnt++] = ((int)got[j]) - 128;
+  }
+  
+  PrintAndLog("Done! Divisor 89 is 134khz, 95 is 125khz.\n");
+  PrintAndLog("\n");
+  GraphTraceLen = n;
+  RepaintGraphWindow();
+  return 0;
+}
+
 int CmdLoad(const char *Cmd)
 {
   FILE *f = fopen(Cmd, "r");
@@ -906,6 +926,7 @@ static command_t CommandTable[] =
   {"norm",          CmdNorm,            1, "Normalize max/min to +/-500"},
   {"plot",          CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
   {"samples",       CmdSamples,         0, "[512 - 40000] -- Get raw samples for graph window"},
+  {"tune",          CmdTuneSamples,     0, "Get hw tune samples for graph window"},
   {"save",          CmdSave,            1, "<filename> -- Save trace (from graph window)"},
   {"scale",         CmdScale,           1, "<int> -- Set cursor display scale"},
   {"threshold",     CmdThreshold,       1, "<threshold> -- Maximize/minimize every value in the graph window depending on threshold"},
