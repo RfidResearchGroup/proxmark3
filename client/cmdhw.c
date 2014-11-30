@@ -15,6 +15,7 @@
 #include "ui.h"
 #include "proxmark3.h"
 #include "cmdparser.h"
+#include "cmddata.h"
 #include "cmdhw.h"
 #include "cmdmain.h"
 
@@ -392,6 +393,20 @@ int CmdTune(const char *Cmd)
 {
   UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING};
   SendCommand(&c);
+  
+  char cmdp = param_getchar(Cmd, 0);
+  if (cmdp == 'h' || cmdp == 'H') {
+	PrintAndLog("Usage:  hw tune <p>");
+	PrintAndLog("");
+	PrintAndLog("     sample: hw tune");
+	PrintAndLog("             hw tune p");
+	return 0;
+  }
+  
+  if ( cmdp ==  'p' || cmdp == 'P'){
+	ShowGraphWindow();
+	CmdTuneSamples("");
+  }
   return 0;
 }
 

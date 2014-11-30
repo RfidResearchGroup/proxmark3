@@ -475,6 +475,25 @@ int CmdSamples(const char *Cmd)
 	RepaintGraphWindow();
 	return 0;
 }
+int CmdTuneSamples(const char *Cmd)
+{
+  int cnt = 0;
+  int n = 255;
+  uint8_t got[255] = {0x00};
+
+  PrintAndLog("Reading %d samples\n", n);
+  GetFromBigBuf(got,n,7256); // armsrc/apps.h: #define FREE_BUFFER_OFFSET 7256
+  WaitForResponse(CMD_ACK,NULL);
+  for (int j = 0; j < n; j++) {
+    GraphBuffer[cnt++] = ((int)got[j]) - 128;
+  }
+  
+  PrintAndLog("Done! Divisor 89 is 134khz, 95 is 125khz.\n");
+  GraphTraceLen = n;
+  RepaintGraphWindow();
+  return 0;
+}
+
 
 int CmdLoad(const char *Cmd)
 {
@@ -909,6 +928,7 @@ static command_t CommandTable[] =
   {"buffclear",     CmdBuffClear,       1, "Clear sample buffer and graph window"},
   {"dec",           CmdDec,             1, "Decimate samples"},
   {"detectclock",   CmdDetectClockRate, 1, "Detect clock rate"},
+  {"dirthreshold",  CmdDirectionalThreshold,   1, "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
   {"fskdemod",      CmdFSKdemod,        1, "Demodulate graph window as a HID FSK"},
   {"grid",          CmdGrid,            1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
   {"hexsamples",    CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},  
@@ -924,8 +944,8 @@ static command_t CommandTable[] =
   {"save",          CmdSave,            1, "<filename> -- Save trace (from graph window)"},
   {"scale",         CmdScale,           1, "<int> -- Set cursor display scale"},
   {"threshold",     CmdThreshold,       1, "<threshold> -- Maximize/minimize every value in the graph window depending on threshold"},
+  {"tune",          CmdTuneSamples,     0, "Get hw tune samples for graph window"},
   {"zerocrossings", CmdZerocrossings,   1, "Count time between zero-crossings"},
-  {"dirthreshold",  CmdDirectionalThreshold,   1, "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
   {NULL, NULL, 0, NULL}
 };
 

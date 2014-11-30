@@ -168,13 +168,13 @@ int AvgAdc(int ch) // was static - merlok
 
 void MeasureAntennaTuning(void)
 {
-	uint8_t *dest = (uint8_t *)BigBuf+FREE_BUFFER_OFFSET;
+	uint8_t *dest = (uint8_t *)BigBuf + FREE_BUFFER_OFFSET;
 	int i, adcval = 0, peak = 0, peakv = 0, peakf = 0; //ptr = 0 
 	int vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
 
   LED_B_ON();
 	DbpString("Measuring antenna characteristics, please wait...");
-	memset(dest,0,sizeof(FREE_BUFFER_SIZE));
+	memset(dest,0,FREE_BUFFER_SIZE);
 
 /*
  * Sweeps the useful LF range of the proxmark from
