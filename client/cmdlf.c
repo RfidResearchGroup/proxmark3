@@ -269,7 +269,7 @@ int CmdIndalaDemod(const char *Cmd)
     PrintAndLog("UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
   }
 
-  // Checking UID against next occurences
+  // Checking UID against next occurrences
   for (; i + uidlen <= rawbit;) {
     int failed = 0;
     for (bit = 0; bit < uidlen; bit++) {
@@ -283,7 +283,7 @@ int CmdIndalaDemod(const char *Cmd)
     }
     times += 1;
   }
-  PrintAndLog("Occurences: %d (expected %d)", times, (rawbit - start) / uidlen);
+  PrintAndLog("Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
 
   // Remodulating for tag cloning
   GraphTraceLen = 32*uidlen;
