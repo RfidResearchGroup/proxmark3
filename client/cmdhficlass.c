@@ -340,7 +340,7 @@ int CmdHFiClassSim(const char *Cmd)
 
 	if(simType == 2)
 	{
-		UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType,63}};
+		UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType,8}};
 		UsbCommand resp = {0};
 
 		uint8_t csns[64] = {

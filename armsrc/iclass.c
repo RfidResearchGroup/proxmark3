@@ -994,7 +994,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	{
 
 		uint8_t mac_responses[64] = { 0 };
-		Dbprintf("Going into attack mode");
+		Dbprintf("Going into attack mode, %d CSNS sent", numberOfCSNS);
 		// In this mode, a number of csns are within datain. We'll simulate each one, one at a time
 		// in order to collect MAC's from the reader. This can later be used in an offlne-attack
 		// in order to obtain the keys, as in the "dismantling iclass"-paper.
