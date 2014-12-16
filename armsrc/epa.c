@@ -434,7 +434,8 @@ int EPA_Setup()
 	// send the PPS request
 	ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
 	uint8_t pps_response[3];
-	return_code = ReaderReceive(pps_response);
+	uint8_t pps_response_par[1];
+	return_code = ReaderReceive(pps_response, pps_response_par);
 	if (return_code != 3 || pps_response[0] != 0xD0) {
 		return return_code == 0 ? 2 : return_code;
 	}

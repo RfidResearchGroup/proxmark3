@@ -36,7 +36,8 @@
 // is the order in which they go out on the wire.
 //=============================================================================
 
-uint8_t ToSend[512];
+#define TOSEND_BUFFER_SIZE (9*MAX_FRAME_SIZE + 1 + 1 + 2)  // 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits 
+uint8_t ToSend[TOSEND_BUFFER_SIZE];
 int ToSendMax;
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
@@ -67,7 +68,7 @@ void ToSendStuffBit(int b)
 
 	ToSendBit++;
 
-	if(ToSendBit >= sizeof(ToSend)) {
+	if(ToSendMax >= sizeof(ToSend)) {
 		ToSendBit = 0;
 		DbpString("ToSendStuffBit overflowed!");
 	}

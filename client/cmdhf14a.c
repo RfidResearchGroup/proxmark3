@@ -43,10 +43,13 @@ int CmdHF14AList(const char *Cmd)
 	if (param == 'f') {
 		ShowWaitCycles = true;
 	}
-		
-	uint8_t got[1920];
-	GetFromBigBuf(got,sizeof(got),0);
-	WaitForResponse(CMD_ACK,NULL);
+
+// for the time being. Need better Bigbuf handling.	
+#define TRACE_SIZE 3000	
+
+	uint8_t trace[TRACE_SIZE];
+	GetFromBigBuf(trace, TRACE_SIZE, 0);
+	WaitForResponse(CMD_ACK, NULL);
 
 	PrintAndLog("Recorded Activity");
 	PrintAndLog("");
@@ -56,123 +59,105 @@ int CmdHF14AList(const char *Cmd)
 	PrintAndLog("     Start |       End | Src | Data");
 	PrintAndLog("-----------|-----------|-----|--------");
 
-	int i = 0;
-	uint32_t first_timestamp = 0;
+	uint16_t tracepos = 0;
+	uint16_t duration;
+	uint16_t data_len;
+	uint16_t parity_len;
+	bool isResponse;
 	uint32_t timestamp;
-	uint32_t EndOfTransmissionTimestamp = 0;
+	uint32_t first_timestamp;
+	uint32_t EndOfTransmissionTimestamp;
 	
 	for (;;) {
-		if(i >= 1900) {
+
+		if(tracepos >= TRACE_SIZE) {
 			break;
 		}
 
-		bool isResponse;
-		timestamp = *((uint32_t *)(got+i));
-		if (timestamp & 0x80000000) {
-		  timestamp &= 0x7fffffff;
+		timestamp = *((uint32_t *)(trace + tracepos));
+		if(tracepos == 0) {
+			first_timestamp = timestamp;
+		}
+		tracepos += 4;
+		duration = *((uint16_t *)(trace + tracepos));
+		tracepos += 2;
+		data_len = *((uint16_t *)(trace + tracepos));
+		tracepos += 2;
+		
+		if (data_len & 0x8000) {
+		  data_len &= 0x7fff;
 		  isResponse = true;
 		} else {
 		  isResponse = false;
 		}
 
-		if(i==0) {
-			first_timestamp = timestamp;
+		parity_len = (data_len-1)/8 + 1;
+
+		if (tracepos + data_len + parity_len >= TRACE_SIZE) {
+			break;
 		}
 		
-		int parityBits = *((uint32_t *)(got+i+4));
-
-		int len = got[i+8];
-
-		if (len > 100) {
-			break;
-		}
-		if (i + len >= 1900) {
-			break;
-		}
-
-		uint8_t *frame = (got+i+9);
+		uint8_t *frame = trace + tracepos;
+		tracepos += data_len;
+		uint8_t *parityBytes = trace + tracepos;
+		tracepos += parity_len;
 
 		// Break and stick with current result if buffer was not completely full
-		if (frame[0] == 0x44 && frame[1] == 0x44 && frame[2] == 0x44 && frame[3] == 0x44) break; 
+		if (timestamp == 0x44444444) break; 
 
 		char line[1000] = "";
 		int j;
-		if (len) {
-			for (j = 0; j < len; j++) {
-				int oddparity = 0x01;
-				int k;
+		for (j = 0; j < data_len; j++) {
+			int oddparity = 0x01;
+			int k;
 
-				for (k=0;k<8;k++) {
-					oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
-				}
-
-				//if((parityBits >> (len - j - 1)) & 0x01) {
-				if (isResponse && (oddparity != ((parityBits >> (len - j - 1)) & 0x01))) {
-					sprintf(line+(j*4), "%02x!  ", frame[j]);
-				} else {
-					sprintf(line+(j*4), "%02x   ", frame[j]);
-				}
+			for (k=0;k<8;k++) {
+				oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
 			}
-		} else {
-			if (ShowWaitCycles) {
-				uint32_t next_timestamp = (*((uint32_t *)(got+i+9))) & 0x7fffffff;
-				sprintf(line, "fdt (Frame Delay Time): %d", (next_timestamp - timestamp));
+
+			uint8_t parityBits = parityBytes[j>>3];
+			if (isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
+				sprintf(line+(j*4), "%02x!  ", frame[j]);
+			} else {
+				sprintf(line+(j*4), "%02x   ", frame[j]);
 			}
 		}
 
-		char *crc;
-		crc = "";
-		if (len > 2) {
-			uint8_t b1, b2;
-			for (j = 0; j < (len - 1); j++) {
-				// gives problems... search for the reason..
-				/*if(frame[j] == 0xAA) {
-					switch(frame[j+1]) {
-						case 0x01:
-							crc = "[1] Two drops close after each other";
-							break;
-						case 0x02:
-							crc = "[2] Potential SOC with a drop in second half of bitperiod";
-							break;
-						case 0x03:
-							crc = "[3] Segment Z after segment X is not possible";
-							break;
-						case 0x04:
-							crc = "[4] Parity bit of a fully received byte was wrong";
-							break;
-						default:
-							crc = "[?] Unknown error";
-							break;
-					}
-					break;
-				}*/
+		char crc[6] = ""; 
+		if (data_len > 2) {
+		uint8_t b1, b2;
+			ComputeCrc14443(CRC_14443_A, frame, data_len-2, &b1, &b2);
+			if (b1 != frame[data_len-2] || b2 != frame[data_len-1]) {
+				sprintf(crc, (isResponse & (data_len < 6)) ? "" : " !crc");
+			} else {
+				sprintf(crc, "");
 			}
-
-			if (strlen(crc)==0) {
-				ComputeCrc14443(CRC_14443_A, frame, len-2, &b1, &b2);
-				if (b1 != frame[len-2] || b2 != frame[len-1]) {
-					crc = (isResponse & (len < 6)) ? "" : " !crc";
-				} else {
-					crc = "";
-				}
-			}
-		} else {
-			crc = ""; // SHORT
 		}
 
-		i += (len + 9);
-
-		EndOfTransmissionTimestamp = (*((uint32_t *)(got+i))) & 0x7fffffff;
-		
-		if (!ShowWaitCycles) i += 9;
+		EndOfTransmissionTimestamp = timestamp + duration;
 		
 		PrintAndLog(" %9d | %9d | %s | %s %s",
 			(timestamp - first_timestamp),
 			(EndOfTransmissionTimestamp - first_timestamp),
-			(len?(isResponse ? "Tag" : "Rdr"):"   "),
-			line, crc);
+			(isResponse ? "Tag" : "Rdr"),
+			line, 
+			crc);
 
+		bool next_isResponse = *((uint16_t *)(trace + tracepos + 6)) & 0x8000;
+		
+		if (ShowWaitCycles && !isResponse && next_isResponse) {
+			uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
+			if (next_timestamp != 0x44444444) {
+				PrintAndLog(" %9d | %9d | %s | fdt (Frame Delay Time): %d",
+					(EndOfTransmissionTimestamp - first_timestamp),
+					(next_timestamp - first_timestamp),
+					"   ",
+					(next_timestamp - EndOfTransmissionTimestamp));
+			}
+		}
+			
 	}
+	
 	return 0;
 }
 

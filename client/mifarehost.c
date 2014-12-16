@@ -238,7 +238,7 @@ int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 
 // "MAGIC" CARD
 
-int mfCSetUID(uint8_t *uid, uint8_t *oldUID, int wantWipe) {
+int mfCSetUID(uint8_t *uid, uint8_t *oldUID, bool wantWipe) {
 	uint8_t block0[16];
 	memset(block0, 0, 16);
 	memcpy(block0, uid, 4); 
@@ -251,7 +251,7 @@ int mfCSetUID(uint8_t *uid, uint8_t *oldUID, int wantWipe) {
 	return mfCSetBlock(0, block0, oldUID, wantWipe, CSETBLOCK_SINGLE_OPER);
 }
 
-int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, int wantWipe, uint8_t params) {
+int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, bool wantWipe, uint8_t params) {
 	uint8_t isOK = 0;
 
 	UsbCommand c = {CMD_MIFARE_EML_CSETBLOCK, {wantWipe, params & (0xFE | (uid == NULL ? 0:1)), blockNo}};
@@ -310,12 +310,9 @@ uint32_t ks3;
 
 uint32_t uid;     // serial number
 uint32_t nt;      // tag challenge
-uint32_t nt_par; 
 uint32_t nr_enc;  // encrypted reader challenge
 uint32_t ar_enc;  // encrypted reader response
-uint32_t nr_ar_par; 
 uint32_t at_enc;  // encrypted tag response
-uint32_t at_par; 
 
 int isTraceCardEmpty(void) {
 	return ((traceCard[0] == 0) && (traceCard[1] == 0) && (traceCard[2] == 0) && (traceCard[3] == 0));
@@ -424,7 +421,7 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
 }
 
 
-int mfTraceDecode(uint8_t *data_src, int len, uint32_t parity, bool wantSaveToEmlFile) {
+int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 	uint8_t data[64];
 
 	if (traceState == TRACE_ERROR) return 1;
@@ -527,7 +524,6 @@ int mfTraceDecode(uint8_t *data_src, int len, uint32_t parity, bool wantSaveToEm
 			traceState = TRACE_AUTH2;
 
 			nt = bytes_to_num(data, 4);
-			nt_par = parity;
 			return 0;
 		} else {
 			traceState = TRACE_ERROR;
@@ -541,7 +537,6 @@ int mfTraceDecode(uint8_t *data_src, int len, uint32_t parity, bool wantSaveToEm
 
 			nr_enc = bytes_to_num(data, 4);
 			ar_enc = bytes_to_num(data + 4, 4);
-			nr_ar_par = parity;
 			return 0;
 		} else {
 			traceState = TRACE_ERROR;
@@ -554,7 +549,6 @@ int mfTraceDecode(uint8_t *data_src, int len, uint32_t parity, bool wantSaveToEm
 			traceState = TRACE_IDLE;
 
 			at_enc = bytes_to_num(data, 4);
-			at_par = parity;
 			
 			//  decode key here)
 			ks2 = ar_enc ^ prng_successor(nt, 64);

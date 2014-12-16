@@ -16,7 +16,7 @@
 #define CRYPT_NONE    0
 #define CRYPT_ALL     1
 #define CRYPT_REQUEST 2
-#define AUTH_FIRST    0
+#define AUTH_FIRST    0	
 #define AUTH_NESTED   2
 
 // mifare 4bit card answers
@@ -54,14 +54,12 @@ extern int MF_DBGLEVEL;
 
 //functions
 uint8_t* mifare_get_bigbufptr(void);
-int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint32_t *timing);
-int mifare_sendcmd_short_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t* amswer, uint8_t *timing);
-int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint32_t * parptr, uint32_t *timing);
+int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint8_t *answer_parity, uint32_t *timing);
+int mifare_sendcmd_short_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t* answer, uint8_t *answer_parity, uint32_t *timing);
+int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint8_t *answer_parity, uint32_t *timing);
 
-int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, \
-												uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested);
-int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, \
-													uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested, uint32_t * ntptr, uint32_t *timing);
+int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested);
+int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t * ntptr, uint32_t *timing);
 int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData); 
 int mifare_ultra_readblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData);
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData);
@@ -72,13 +70,13 @@ int mifare_ultra_halt(uint32_t uid);
 
 // crypto functions
 void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *receivedCmd, int len);
-void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, int len, uint32_t *par);
+void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, uint16_t len, uint8_t *par);
 uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data);
 
 // memory management
-uint8_t* mifare_get_bigbufptr(void);
-uint8_t* eml_get_bigbufptr_sendbuf(void);
-uint8_t* eml_get_bigbufptr_recbuf(void);
+uint8_t* get_bigbufptr_recvrespbuf(void);
+uint8_t* get_bigbufptr_recvcmdbuf(void);
+uint8_t* get_bigbufptr_emlcardmem(void);
 
 // Mifare memory structure
 uint8_t NumBlocksPerSector(uint8_t sectorNo);
