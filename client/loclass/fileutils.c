@@ -18,7 +18,7 @@ int fileExists(const char *filename) {
 
 int saveFile(const char *preferredName, const char *suffix, const void* data, size_t datalen)
 {
-	int size = sizeof(char) * (strlen(preferredName)+strlen(suffix)+5);
+	int size = sizeof(char) * (strlen(preferredName)+strlen(suffix)+10);
 	char * fileName = malloc(size);
 
 	memset(fileName,0,size);
@@ -34,13 +34,14 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
 	/*Opening file for writing in binary mode*/
 	FILE *fileHandle=fopen(fileName,"wb");
 	if(!fileHandle) {
-		prnlog("Failed to write to file '%s'", fileName);
+		PrintAndLog("Failed to write to file '%s'", fileName);
 		free(fileName);
 		return 1;
 	}
 	fwrite(data, 1,	datalen, fileHandle);
 	fclose(fileHandle);
-	prnlog("Saved data to '%s'", fileName);
+	PrintAndLog(">Saved data to '%s'", fileName);
+
 	free(fileName);
 
 	return 0;

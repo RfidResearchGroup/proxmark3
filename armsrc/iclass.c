@@ -968,7 +968,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	{
 
 		uint8_t mac_responses[64] = { 0 };
-		Dbprintf("Going into attack mode");
+		Dbprintf("Going into attack mode, %d CSNS sent", numberOfCSNS);
 		// In this mode, a number of csns are within datain. We'll simulate each one, one at a time
 		// in order to collect MAC's from the reader. This can later be used in an offlne-attack
 		// in order to obtain the keys, as in the "dismantling iclass"-paper.
@@ -978,7 +978,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 			// The usb data is 512 bytes, fitting 65 8-byte CSNs in there.
 
 			memcpy(csn_crc, datain+(i*8), 8);
-			if(doIClassSimulation(csn_crc,1,mac_responses))
+			if(doIClassSimulation(csn_crc,1,mac_responses+i*8))
 			{
 				return; // Button pressed
 			}
@@ -1106,7 +1106,6 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 		//Signal tracer
 		// Can be used to get a trigger for an oscilloscope..
 		LED_C_OFF();
-
 		if(!GetIClassCommandFromReader(receivedCmd, &len, 100)) {
 			buttonPressed = true;
 			break;
@@ -1149,9 +1148,10 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 			respsize = 0;
 			if (breakAfterMacReceived){
 				// dbprintf:ing ...
-				Dbprintf("CSN: %02x %02x %02x %02x %02x %02x %02x %02x",csn[0],csn[1],csn[2],csn[3],csn[4],csn[5],csn[6],csn[7]);
+				Dbprintf("CSN: %02x %02x %02x %02x %02x %02x %02x %02x"
+						   ,csn[0],csn[1],csn[2],csn[3],csn[4],csn[5],csn[6],csn[7]);
 				Dbprintf("RDR:  (len=%02d): %02x %02x %02x %02x %02x %02x %02x %02x %02x",len,
-						 receivedCmd[0], receivedCmd[1], receivedCmd[2],
+						receivedCmd[0], receivedCmd[1], receivedCmd[2],
 						receivedCmd[3], receivedCmd[4], receivedCmd[5],
 						receivedCmd[6], receivedCmd[7], receivedCmd[8]);
 				if (reader_mac_buf != NULL)
