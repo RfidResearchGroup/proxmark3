@@ -586,7 +586,7 @@ static void BuildIdentifyRequest(void);
 //-----------------------------------------------------------------------------
 void AcquireRawAdcSamplesIso15693(void)
 {
-	uint8_t *dest =  mifare_get_bigbufptr();
+	uint8_t *dest =  get_bigbufptr_recvrespbuf();
 
 	int c = 0;
 	int getNext = 0;
@@ -668,7 +668,7 @@ void AcquireRawAdcSamplesIso15693(void)
 
 void RecordRawAdcSamplesIso15693(void)
 {
-	uint8_t *dest =  mifare_get_bigbufptr();
+	uint8_t *dest =  get_bigbufptr_recvrespbuf();
 
 	int c = 0;
 	int getNext = 0;

@@ -85,15 +85,6 @@ int32_t le24toh (uint8_t data[3])
     return (data[2] << 16) | (data[1] << 8) | data[0];
 }
 
-//added here for parity calulations
-uint8_t oddparity(uint8_t bt)
-{
-   uint16_t v = bt;
-   v ^= v >> 4;
-   v &= 0xF;
-   return ((0x9669 >> v) & 1);
-}
-
 void LEDsoff()
 {
 	LED_A_OFF();

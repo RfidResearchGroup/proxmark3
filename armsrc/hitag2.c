@@ -744,7 +744,7 @@ void SnoopHitag(uint32_t type) {
 	// Set up eavesdropping mode, frequency divisor which will drive the FPGA
 	// and analog mux selection.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 	RELAY_OFF();
@@ -968,7 +968,7 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	// Set up simulator mode, frequency divisor which will drive the FPGA
 	// and analog mux selection.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 	RELAY_OFF();
@@ -987,21 +987,21 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 	
-  // Disable timer during configuration	
+    // Disable timer during configuration	
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
-	// Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+	// Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
 	// external trigger rising edge, load RA on rising edge of TIOA.
 	AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_RISING | AT91C_TC_ABETRG | AT91C_TC_LDRA_RISING;
 	
-	// Enable and reset counter
-	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-
 	// Reset the received frame, frame count and timing info
 	memset(rx,0x00,sizeof(rx));
 	frame_count = 0;
 	response = 0;
 	overflow = 0;
+
+	// Enable and reset counter
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	
 	while(!BUTTON_PRESS()) {
 		// Watchdog hit
@@ -1105,9 +1105,9 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-//	Dbprintf("frame received: %d",frame_count);
-//	Dbprintf("Authentication Attempts: %d",(auth_table_len/8));
-//	DbpString("All done");
+	
+	DbpString("Sim Stopped");
+	
 }
 
 void ReaderHitag(hitag_function htf, hitag_data* htd) {

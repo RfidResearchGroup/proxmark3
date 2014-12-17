@@ -39,9 +39,12 @@ int CmdHIDDemod(const char *Cmd)
 
 int CmdHIDDemodFSK(const char *Cmd)
 {
-  UsbCommand c={CMD_HID_DEMOD_FSK};
-  SendCommand(&c);
-  return 0;
+	int findone = 0;
+	if(Cmd[0]=='1') findone=1;
+	UsbCommand c = {CMD_HID_DEMOD_FSK};
+	c.arg[0]=findone;
+	SendCommand(&c);
+	return 0;
 }
 
 int CmdHIDSim(const char *Cmd)
@@ -103,9 +106,9 @@ static command_t CommandTable[] =
 {
   {"help",      CmdHelp,        1, "This help"},
   {"demod",     CmdHIDDemod,    1, "Demodulate HID Prox Card II (not optimal)"},
-  {"fskdemod",  CmdHIDDemodFSK, 1, "Realtime HID FSK demodulator"},
-  {"sim",       CmdHIDSim,      1, "<ID> -- HID tag simulator"},
-  {"clone",     CmdHIDClone,    1, "<ID> ['l'] -- Clone HID to T55x7 (tag must be in antenna)(option 'l' for 84bit ID)"},
+  {"fskdemod",  CmdHIDDemodFSK, 0, "['1'] Realtime HID FSK demodulator (option '1' for one tag only)"},
+  {"sim",       CmdHIDSim,      0, "<ID> -- HID tag simulator"},
+  {"clone",     CmdHIDClone,    0, "<ID> ['l'] -- Clone HID to T55x7 (tag must be in antenna)(option 'l' for 84bit ID)"},
   {NULL, NULL, 0, NULL}
 };
 

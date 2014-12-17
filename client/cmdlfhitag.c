@@ -39,9 +39,21 @@ int CmdLFHitagList(const char *Cmd)
 
   int i = 0;
   int prev = -1;
+  int len = strlen(Cmd);
 
-  char filename[256];
+  char filename[FILE_PATH_SIZE]  = { 0x00 };
   FILE* pf = NULL;
+  	
+  if (len > FILE_PATH_SIZE) 
+     len = FILE_PATH_SIZE;
+  memcpy(filename, Cmd, len);
+   
+  if (strlen(filename) > 0) {
+	if ((pf = fopen(filename,"wb")) == NULL) {
+		PrintAndLog("Error: Could not open file [%s]",filename);
+		return 1;
+	}
+  }
   
   for (;;) {
   
@@ -116,8 +128,8 @@ int CmdLFHitagList(const char *Cmd)
   }
   
   if (pf) {
-	  PrintAndLog("Recorded activity succesfully written to file: %s", filename);
     fclose(pf);
+	PrintAndLog("Recorded activity succesfully written to file: %s", filename);
   }
 	
   return 0;
@@ -135,9 +147,7 @@ int CmdLFHitagSim(const char *Cmd) {
 	char filename[FILE_PATH_SIZE] = { 0x00 };
 	FILE* pf;
 	bool tag_mem_supplied;
-	int len = 0;
-
-	len = strlen(Cmd);
+	int len = strlen(Cmd);
 	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
 	memcpy(filename, Cmd, len);
    
@@ -148,7 +158,7 @@ int CmdLFHitagSim(const char *Cmd) {
 		}
 		tag_mem_supplied = true;
 		if (fread(c.d.asBytes,48,1,pf) == 0) {
-             PrintAndLog("Error: File reading error");
+            PrintAndLog("Error: File reading error");
 			return 1;
          }
 		fclose(pf);
@@ -234,11 +244,11 @@ int CmdLFHitagReader(const char *Cmd) {
 static command_t CommandTable[] = 
 {
   {"help",    CmdHelp,           1, "This help"},
-  {"list",    CmdLFHitagList,    1, "List Hitag trace history"},
+  {"list",    CmdLFHitagList,    1, "<outfile> List Hitag trace history"},
   {"reader",  CmdLFHitagReader,  1, "Act like a Hitag Reader"},
-  {"sim",     CmdLFHitagSim,     1, "Simulate Hitag transponder"},
+  {"sim",     CmdLFHitagSim,     1, "<infile> Simulate Hitag transponder"},
   {"snoop",   CmdLFHitagSnoop,   1, "Eavesdrop Hitag communication"},
-		{NULL, NULL, 0, NULL}
+  {NULL, NULL, 0, NULL}
 };
 
 int CmdLFHitag(const char *Cmd)

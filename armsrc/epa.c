@@ -185,6 +185,7 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
 	    || response_apdu[rapdu_length - 4] != 0x90
 	    || response_apdu[rapdu_length - 3] != 0x00)
 	{
+		Dbprintf("epa - no select cardaccess");
 		return -1;
 	}
 	
@@ -196,6 +197,7 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
 	    || response_apdu[rapdu_length - 4] != 0x90
 	    || response_apdu[rapdu_length - 3] != 0x00)
 	{
+		Dbprintf("epa - no read cardaccess");
 		return -1;
 	}
 	
@@ -222,8 +224,7 @@ static void EPA_PACE_Collect_Nonce_Abort(uint8_t step, int func_return)
 	EPA_Finish();
 	
 	// send the USB packet
-  cmd_send(CMD_ACK,step,func_return,0,0,0);
-//UsbSendPacket((void *)ack, sizeof(UsbCommand));
+	cmd_send(CMD_ACK,step,func_return,0,0,0);
 }
 
 //-----------------------------------------------------------------------------
@@ -243,7 +244,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
 	 */
 
 	// return value of a function
-	int func_return;
+	int func_return = 0;
 
 //	// initialize ack with 0s
 //	memset(ack->arg, 0, 12);
@@ -251,13 +252,15 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
 	
 	// set up communication
 	func_return = EPA_Setup();
-	if (func_return != 0) {
+	if (func_return != 0) {	
 		EPA_PACE_Collect_Nonce_Abort(1, func_return);
+		Dbprintf("epa: setup fucked up! %d", func_return);
 		return;
 	}
 
 	// increase the timeout (at least some cards really do need this!)
 	iso14a_set_timeout(0x0002FFFF);
+	Dbprintf("epa: Epic!");
 	
 	// read the CardAccess file
 	// this array will hold the CardAccess file
@@ -265,10 +268,13 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
 	int card_access_length = EPA_Read_CardAccess(card_access, 256);
 	// the response has to be at least this big to hold the OID
 	if (card_access_length < 18) {
+		Dbprintf("epa: Too small!");
 		EPA_PACE_Collect_Nonce_Abort(2, card_access_length);
 		return;
 	}
 
+	Dbprintf("epa: foo!");
+	
 	// this will hold the PACE info of the card
 	pace_version_info_t pace_version_info;
 	// search for the PACE OID
@@ -279,6 +285,8 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
 		EPA_PACE_Collect_Nonce_Abort(3, func_return);
 		return;
 	}
+	
+	Dbprintf("epa: bar!");
 	
 	// initiate the PACE protocol
 	// use the CAN for the password since that doesn't change
@@ -301,8 +309,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
 	// save received information
 //	ack->arg[1] = func_return;
 //	memcpy(ack->d.asBytes, nonce, func_return);
-//	UsbSendPacket((void *)ack, sizeof(UsbCommand));
-  cmd_send(CMD_ACK,0,func_return,0,nonce,func_return);
+	cmd_send(CMD_ACK,0,func_return,0,nonce,func_return);
 }
 
 //-----------------------------------------------------------------------------
@@ -417,27 +424,88 @@ int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
 int EPA_Setup()
 {
 	// return code
-	int return_code = 0;
+	//int return_code = 0;
+	
 	// card UID
-	uint8_t uid[10];
-	// card select information
-	iso14a_card_select_t card_select_info;
+	//uint8_t uid[10] = {0x00};
+	
 	// power up the field
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-
-	// select the card
-	return_code = iso14443a_select_card(uid, &card_select_info, NULL);
-	if (return_code != 1) {
-		return 1;
-	}
-
-	// send the PPS request
-	ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
-	uint8_t pps_response[3];
-	return_code = ReaderReceive(pps_response);
-	if (return_code != 3 || pps_response[0] != 0xD0) {
-		return return_code == 0 ? 2 : return_code;
-	}
+	iso14a_clear_trace();
+	iso14a_set_tracing(TRUE);
+	iso14a_set_timeout(10500);
 	
-	return 0;
+	// card select information
+	byte_t cardbuf[USB_CMD_DATA_SIZE];
+	memset(cardbuf,0,USB_CMD_DATA_SIZE);
+	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
+	
+	// select the card
+	// if (!iso14443a_select_card(uid, &card_info, NULL)) {
+		// Dbprintf("Epa: Can't select card");
+		// return -1;
+	// }
+	
+	uint8_t wupa[]     = { 0x26 };  // 0x26 - REQA  0x52 - WAKE-UP
+	uint8_t sel_all[]  = { 0x93,0x20 };
+	uint8_t sel_uid[]  = { 0x93,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t rats[]       = { 0xE0,0x81,0x00,0x00 }; // FSD=256, FSDI=8, CID=1
+	
+	uint8_t *resp = ((uint8_t *)BigBuf) + RECV_RESP_OFFSET;
+	uint8_t *resp_par = ((uint8_t *)BigBuf) + RECV_RESP_PAR_OFFSET;
+	
+	byte_t uid_resp[4];
+	size_t uid_resp_len = 4;
+
+	uint8_t sak = 0x04; // cascade uid
+	int len;
+	 
+	// Broadcast for a card, WUPA (0x52) will force response from all cards in the field
+    ReaderTransmitBitsPar(wupa,7,0, NULL);
+	
+	// Receive the ATQA
+	if(!ReaderReceive(resp, resp_par)) return -1;
+  
+    // SELECT_ALL
+    ReaderTransmit(sel_all,sizeof(sel_all), NULL);
+    if (!ReaderReceive(resp, resp_par)) return -1;
+	
+	// uid response from tag
+	memcpy(uid_resp,resp,uid_resp_len);
+
+	// Construct SELECT UID command
+	// transmitting a full UID (1 Byte cmd, 1 Byte NVB, 4 Byte UID, 1 Byte BCC, 2 Bytes CRC)
+    memcpy(sel_uid+2,uid_resp,4);										// the UID
+	sel_uid[6] = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5];  	// calculate and add BCC
+    AppendCrc14443a(sel_uid,7);											// calculate and add CRC
+    ReaderTransmit(sel_uid,sizeof(sel_uid), NULL);
+
+    // Receive the SAK
+    if (!ReaderReceive(resp, resp_par)) return -1;
+    sak = resp[0];
+	
+	// Request for answer to select
+	AppendCrc14443a(rats, 2);
+	ReaderTransmit(rats, sizeof(rats), NULL);
+
+	if ( !(len = ReaderReceive(resp, resp_par) )) return -1;
+
+	// populate the collected data.
+    memcpy( card->uid, uid_resp, uid_resp_len);
+    card->uidlen += uid_resp_len;
+    card->sak = sak;
+    card->ats_len = len;
+    memcpy(card->ats, resp, sizeof(card->ats));
+	
+	
+	// send the PPS request
+	// ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
+	// uint8_t pps_response[3];
+	// uint8_t pps_response_par[1];
+	// return_code = ReaderReceive(pps_response,pps_response_par);
+	// if (return_code != 3 || pps_response[0] != 0xD0) {
+		// return return_code == 0 ? 2 : return_code;
+	// }
+	
+	return -1;
 }

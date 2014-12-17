@@ -461,7 +461,7 @@ int CmdSamples(const char *Cmd)
 	
 	int n = strtol(Cmd, NULL, 0);
 	if (n == 0) 
-		n = 512;
+		n = 16000;
 	if (n > sizeof(got)) 
 		n = sizeof(got);
   

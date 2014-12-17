@@ -37,7 +37,8 @@
 // is the order in which they go out on the wire.
 //=============================================================================
 
-uint8_t ToSend[512];
+#define TOSEND_BUFFER_SIZE (9*MAX_FRAME_SIZE + 1 + 1 + 2) // 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits
+uint8_t ToSend[TOSEND_BUFFER_SIZE];
 int ToSendMax;
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
@@ -68,7 +69,7 @@ void ToSendStuffBit(int b)
 
 	ToSendBit++;
 
-	if(ToSendBit >= sizeof(ToSend)) {
+	if(ToSendMax  >= sizeof(ToSend)) {
 		ToSendBit = 0;
 		DbpString("ToSendStuffBit overflowed!");
 	}
@@ -648,18 +649,18 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		case CMD_HID_DEMOD_FSK:
-			CmdHIDdemodFSK(0, 0, 0, 1);					// Demodulate HID tag
+			CmdHIDdemodFSK(c->arg[0], 0, 0, 1);
 			break;
 		case CMD_HID_SIM_TAG:
-			CmdHIDsimTAG(c->arg[0], c->arg[1], 1);					// Simulate HID tag by ID
+			CmdHIDsimTAG(c->arg[0], c->arg[1], 1);
 			break;
-		case CMD_HID_CLONE_TAG: // Clone HID tag by ID to T55x7
+		case CMD_HID_CLONE_TAG:
 			CopyHIDtoT55x7(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
 			break;
 		case CMD_IO_DEMOD_FSK:
-			CmdIOdemodFSK(1, 0, 0, 1);					// Demodulate IO tag
+			CmdIOdemodFSK(c->arg[0], 0, 0, 1);
 			break;
-		case CMD_IO_CLONE_TAG: // Clone IO tag by ID to T55x7
+		case CMD_IO_CLONE_TAG:
 			CopyIOtoT55x7(c->arg[0], c->arg[1], c->d.asBytes[0]);
 			break;
 		case CMD_EM410X_WRITE_TAG:
@@ -672,18 +673,16 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			WriteTItag(c->arg[0],c->arg[1],c->arg[2]);
 			break;
 		case CMD_SIMULATE_TAG_125K:
-			LED_A_ON();
 			SimulateTagLowFrequency(c->arg[0], c->arg[1], 0);
-			 FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-			LED_A_OFF();
+			//SimulateTagLowFrequencyA(c->arg[0], c->arg[1]);
 			break;
 		case CMD_LF_SIMULATE_BIDIR:
 			SimulateTagLowFrequencyBidir(c->arg[0], c->arg[1]);
 			break;
-		case CMD_INDALA_CLONE_TAG:					// Clone Indala 64-bit tag by UID to T55x7
+		case CMD_INDALA_CLONE_TAG:
 			CopyIndala64toT55x7(c->arg[0], c->arg[1]);					
 			break;
-		case CMD_INDALA_CLONE_TAG_L:					// Clone Indala 224-bit tag by UID to T55x7
+		case CMD_INDALA_CLONE_TAG_L:
 			CopyIndala224toT55x7(c->d.asDwords[0], c->d.asDwords[1], c->d.asDwords[2], c->d.asDwords[3], c->d.asDwords[4], c->d.asDwords[5], c->d.asDwords[6]);
 			break;
 		case CMD_T55XX_READ_BLOCK:
@@ -692,10 +691,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_T55XX_WRITE_BLOCK:
 			T55xxWriteBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
 			break;
-		case CMD_T55XX_READ_TRACE: // Clone HID tag by ID to T55x7
+		case CMD_T55XX_READ_TRACE:
 			T55xxReadTrace();
 			break;
-		case CMD_PCF7931_READ: // Read PCF7931 tag
+		case CMD_PCF7931_READ:
 			ReadPCF7931();
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;

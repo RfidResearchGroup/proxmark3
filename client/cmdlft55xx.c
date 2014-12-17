@@ -46,18 +46,17 @@ int CmdReadBlk(const char *Cmd)
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK, NULL);
 	
-//	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
+	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
 	
-	// GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
-	// WaitForResponseTimeout(CMD_ACK,NULL, 1500);
+	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
+	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
-	// for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
-		// GraphBuffer[j] = (int)data[j];
-	// }
-	// GraphTraceLen = LF_TRACE_BUFF_SIZE;
-	CmdSamples("12000");
+	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
+		GraphBuffer[j] = (int)data[j];
+	}
+	GraphTraceLen = LF_TRACE_BUFF_SIZE;
 	ManchesterDemod(block);
-	// RepaintGraphWindow();
+	RepaintGraphWindow();
   return 0;
 }
 
@@ -321,7 +320,7 @@ int CmdDump(const char *Cmd){
 			return 0;
 		}
 	}
-
+	
 	for ( int i = 0; i <8; ++i){
 		memset(s,0,sizeof(s));
 		if ( hasPwd ) {
@@ -352,6 +351,7 @@ int ManchesterDemod(int blockNum){
 	if (!HasGraphData()) return 0;
 		
 	uint8_t sizebyte = 32;
+	// the value 5 was selected during empirical studies of the decoded data. Some signal noise to skip.
 	uint8_t offset = 5;
 	uint32_t blockData;
 	uint8_t  bits[LF_BITSSTREAM_LEN] = {0x00};

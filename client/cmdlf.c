@@ -268,7 +268,7 @@ int CmdIndalaDemod(const char *Cmd)
     PrintAndLog("UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
   }
 
-  // Checking UID against next occurences
+  // Checking UID against next occurrences
   for (; i + uidlen <= rawbit;) {
     int failed = 0;
     for (bit = 0; bit < uidlen; bit++) {
@@ -282,7 +282,7 @@ int CmdIndalaDemod(const char *Cmd)
     }
     times += 1;
   }
-  PrintAndLog("Occurences: %d (expected %d)", times, (rawbit - start) / uidlen);
+  PrintAndLog("Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
 
   // Remodulating for tag cloning
   GraphTraceLen = 32*uidlen;
@@ -390,7 +390,8 @@ static void ChkBitstream(const char *str)
 
 int CmdLFSim(const char *Cmd)
 {
-  int i;
+  int i,j;
+  
   static int gap;
 
   sscanf(Cmd, "%i", &gap);
@@ -398,10 +399,10 @@ int CmdLFSim(const char *Cmd)
   /* convert to bitstream if necessary */
   ChkBitstream(Cmd);
 
-  PrintAndLog("Sending [%d bytes]", GraphTraceLen);
+  printf("Sending [%d bytes]", GraphTraceLen);
   for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
     UsbCommand c={CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
-    int j;
+
     for (j = 0; j < USB_CMD_DATA_SIZE; j++) {
       c.d.asBytes[j] = GraphBuffer[i+j];
     }
@@ -569,7 +570,7 @@ static command_t CommandTable[] =
 
   {"flexdemod",   CmdFlexdemod,       1, "Demodulate samples for FlexPass"},
   {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
-  {"indalaclone", CmdIndalaClone,     1, "<UID> ['l']-- Clone Indala to T55x7 (UID in HEX)(option 'l' for 224 UID"},
+  {"indalaclone", CmdIndalaClone,     0, "<UID> ['l']-- Clone Indala to T55x7 (UID in HEX)(option 'l' for 224 UID"},
   {"vchdemod",    CmdVchDemod,        1, "['clone'] -- Demodulate samples for VeriChip"},
 
   

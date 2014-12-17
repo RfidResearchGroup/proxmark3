@@ -2,9 +2,10 @@
 
 #define MAX_APPLICATION_COUNT 28
 #define MAX_FILE_COUNT 16
-#define MAX_FRAME_SIZE 60
+#define MAX_DESFIRE_FRAME_SIZE 60
 #define NOT_YET_AUTHENTICATED 255
-#define FRAME_PAYLOAD_SIZE (MAX_FRAME_SIZE - 5)
+#define FRAME_PAYLOAD_SIZE (MAX_DESFIRE_FRAME_SIZE - 5)
+#define RECEIVE_SIZE 64
 
 // the block number for the ISO14443-4 PCB
 uint8_t pcb_blocknum = 0;
@@ -58,7 +59,7 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 	*/
 	uint8_t flags = arg0;
 	size_t datalen = arg1;
-	uint8_t resp[RECV_RES_SIZE];
+	uint8_t resp[RECEIVE_SIZE];
 	memset(resp,0,sizeof(resp));
 	
 	if (MF_DBGLEVEL >= 4) {
@@ -191,7 +192,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 	//uint8_t new_key_data8[8]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77};
 	//uint8_t new_key_data16[16]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF};
 
-	//uint8_t* bigbuffer = mifare_get_bigbufptr();
+	//uint8_t* bigbuffer = get_bigbufptr_recvrespbuf();
 	uint8_t resp[256] = {0x00};
 	uint8_t IV[16] = {0x00};
 
@@ -309,6 +310,9 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 	size_t wrappedLen = 0;
 	uint8_t wCmd[USB_CMD_DATA_SIZE] = {0};
 	
+	uint8_t *resp = ((uint8_t *)BigBuf) + RECV_RESP_OFFSET;
+    uint8_t *resp_par = ((uint8_t *)BigBuf) + RECV_RESP_PAR_OFFSET;
+	
 	wrappedLen = CreateAPDU( cmd, cmd_len, wCmd);
 	
 	if (MF_DBGLEVEL >= 4) {
@@ -316,7 +320,7 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 	}
 	ReaderTransmit( wCmd, wrappedLen, NULL);
 
-	status = ReaderReceive(dataout);
+	status = ReaderReceive(resp, resp_par);
 	
 	if( status == 0x00){
 		if (MF_DBGLEVEL >= 4) {
@@ -327,12 +331,14 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 	// if we received an I- or R(ACK)-Block with a block number equal to the
 	// current block number, toggle the current block number
 	else if (status >= 4 // PCB+CID+CRC = 4 bytes
-	         && ((dataout[0] & 0xC0) == 0 // I-Block
-	             || (dataout[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
-	         && (dataout[0] & 0x01) == pcb_blocknum) // equal block numbers
+	         && ((resp[0] & 0xC0) == 0 // I-Block
+	             || (resp[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
+	         && (resp[0] & 0x01) == pcb_blocknum) // equal block numbers
 	{
 		pcb_blocknum ^= 1;  //toggle next block 
 	}
+	// copy response to
+	dataout = resp;
 	return status;
 }	
 

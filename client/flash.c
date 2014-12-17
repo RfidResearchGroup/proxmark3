@@ -275,8 +275,7 @@ static int get_proxmark_state(uint32_t *state)
 {
 	UsbCommand c;
 	c.cmd = CMD_DEVICE_INFO;
-//	SendCommand_(&c);
-  SendCommand(&c);
+	SendCommand(&c);
 	UsbCommand resp;
 	ReceiveCommand(&resp);
 
@@ -390,7 +389,6 @@ int flash_start_flashing(int enable_bl_writes,char *serial_port_name)
 			c.arg[2] = 0;
 		}
 		SendCommand(&c);
-//		SendCommand_(&c);
 		return wait_for_ack();
 	} else {
 		fprintf(stderr, "Note: Your bootloader does not understand the new START_FLASH command\n");
@@ -406,25 +404,11 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length)
 
 	memset(block_buf, 0xFF, BLOCK_SIZE);
 	memcpy(block_buf, data, length);
-  UsbCommand c;
-/*
-	c.cmd = {CMD_SETUP_WRITE};
-	for (int i = 0; i < 240; i += 48) {
-		memcpy(c.d.asBytes, block_buf + i, 48);
-		c.arg[0] = i / 4;
-		SendCommand(&c);
-//		SendCommand_(&c);
-		if (wait_for_ack() < 0) {
-			return -1;
-    }
-	}
-*/
+	UsbCommand c;
 	c.cmd = CMD_FINISH_WRITE;
 	c.arg[0] = address;
-//	memcpy(c.d.asBytes, block_buf+240, 16);
-//	SendCommand_(&c);
 	memcpy(c.d.asBytes, block_buf, length);
-  SendCommand(&c);
+	SendCommand(&c);
   return wait_for_ack();
 }
 
@@ -485,8 +469,7 @@ void flash_free(flash_file_t *ctx)
 // just reset the unit
 int flash_stop_flashing(void) {
 	UsbCommand c = {CMD_HARDWARE_RESET};
-//	SendCommand_(&c);
-  SendCommand(&c);
-  msleep(100);
-  return 0;
+	SendCommand(&c);
+	msleep(100);
+	return 0;
 }

@@ -17,6 +17,12 @@
 #include "crapto1.h"
 #include "mifareutil.h"
 
+// Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
+// TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
+// Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
+// T0 = TIMER_CLOCK1 / 125000 = 192
+#define T0 192
+
 #define SHORT_COIL()	LOW(GPIO_SSC_DOUT)
 #define OPEN_COIL()		HIGH(GPIO_SSC_DOUT)
 
@@ -57,10 +63,9 @@ void SnoopLFRawAdcSamples(int divisor, int trigger_threshold)
 // split into two routines so we can avoid timing issues after sending commands //
 void DoAcquisition125k_internal(int trigger_threshold, bool silent)
 {
-	uint8_t *dest =  mifare_get_bigbufptr();
-	int n = 24000;
-	int i = 0;
-	memset(dest, 0x00, n);
+	uint8_t *dest = get_bigbufptr_recvrespbuf();
+	uint16_t i = 0;
+	memset(dest, 0x00, FREE_BUFFER_SIZE);
 
 	for(;;) {
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
@@ -74,7 +79,7 @@ void DoAcquisition125k_internal(int trigger_threshold, bool silent)
 				continue;
 			else
 				trigger_threshold = -1;
-			if (++i >= n) break;
+			if (++i >= FREE_BUFFER_SIZE) break;
 		}
 	}
 	if (!silent){
@@ -91,25 +96,20 @@ void DoAcquisition125k() {
 	
 void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, uint8_t *command)
 {
-
-	/* Make sure the tag is reset */
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	
+	/* Make sure the tag is reset */
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelay(2500);
 
-	int divisor_used = 95; // 125 KHz
+	int divisor = 95; // 125 KHz
 	// see if 'h' was specified
-
 	if (command[strlen((char *) command) - 1] == 'h')
-		divisor_used = 88; // 134.8 KHz
+		divisor = 88; // 134.8 KHz
 
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used); 
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor); 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	// Give it a bit of time for the resonant antenna to settle.
-	SpinDelay(50);
-	
-	
-	// And a little more time for the tag to fully power up
 	SpinDelay(2000);
 
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
@@ -120,7 +120,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LED_D_OFF();
 		SpinDelayUs(delay_off);
-		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used); 
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor); 
 
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 		LED_D_ON();
@@ -132,8 +132,7 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LED_D_OFF();
 	SpinDelayUs(delay_off);
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used); 
-
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor); 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
 	// now do the read
@@ -455,72 +454,162 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 // PIO_SODR = Set Output Data Register
 //#define LOW(x)	 AT91C_BASE_PIOA->PIO_CODR = (x)
 //#define HIGH(x)	 AT91C_BASE_PIOA->PIO_SODR = (x)
-void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
+void SimulateTagLowFrequency( uint16_t period, uint32_t gap, uint8_t ledcontrol)
 {
-	int i = 0;
+	LED_D_ON();
+
+	uint16_t i = 0;
+	uint8_t send = 0;
+	
+	//int overflow = 0;
+	uint8_t *buf = (uint8_t *)BigBuf;
+
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD); 
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+	RELAY_OFF();
+	
+	// Configure output pin that is connected to the FPGA (for modulating)
+	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+
+	SHORT_COIL();
+
+	// Enable Peripheral Clock for TIMER_CLOCK0, used to measure exact timing before answering
+	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0);
+	
+	// Enable Peripheral Clock for TIMER_CLOCK1, used to capture edges of the reader frames
+	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
+	AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
+	
+    // Disable timer during configuration	
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+	
+	// Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+	// external trigger rising edge, load RA on rising edge of TIOA.
+	AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_RISING | AT91C_TC_ABETRG | AT91C_TC_LDRA_RISING;
+	
+	// Enable and reset counter
+	//AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+
+ 	while(!BUTTON_PRESS()) { 
+		WDT_HIT();
+		
+		// Receive frame, watch for at most T0*EOF periods
+		while (AT91C_BASE_TC1->TC_CV < T0 * 55) {
+
+		// Check if rising edge in modulation is detected
+			if(AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
+				// Retrieve the new timing values 
+				//int ra = (AT91C_BASE_TC1->TC_RA/T0) + overflow;
+				//Dbprintf("Timing value - %d  %d", ra, overflow);
+				//overflow = 0;
+
+				// Reset timer every frame, we have to capture the last edge for timing
+				AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+				send = 1;
+				
+				LED_B_ON();
+			}
+		} 
+
+		if ( send ) {
+			// Disable timer 1 with external trigger to avoid triggers during our own modulation
+			AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+			
+			// Wait for HITAG_T_WAIT_1 carrier periods after the last reader bit,
+			// not that since the clock counts since the rising edge, but T_Wait1 is
+			// with respect to the falling edge, we need to wait actually (T_Wait1 - T_Low)
+			// periods. The gap time T_Low varies (4..10). All timer values are in 
+			// terms of T0 units
+			while(AT91C_BASE_TC0->TC_CV < T0 * 16  );
+			
+			// datat kommer in som 1 bit för varje position i arrayn
+			for(i = 0; i < period; ++i) {
+				
+				// Reset clock for the next bit 
+				AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+
+				if ( buf[i] > 0 )
+					HIGH(GPIO_SSC_DOUT);
+				else
+					LOW(GPIO_SSC_DOUT);
+				
+				while(AT91C_BASE_TC0->TC_CV < T0 * 1 );
+			}
+			// Drop modulation
+			LOW(GPIO_SSC_DOUT);
+							
+			// Enable and reset external trigger in timer for capturing future frames
+			AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+			LED_B_OFF();
+		}
+		
+		send = 0;
+		
+		// Save the timer overflow, will be 0 when frame was received
+		//overflow += (AT91C_BASE_TC1->TC_CV/T0);
+		
+		// Reset the timer to restart while-loop that receives frames
+		AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+	}
+	
+	LED_B_OFF();
+	LED_D_OFF();
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	
+	DbpString("Sim Stopped");
+}
+
+
+void SimulateTagLowFrequencyA(int len, int gap)
+{
+	//Dbprintf("LEN %d || Gap %d",len, gap);
+
 	uint8_t *buf = (uint8_t *)BigBuf;
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE); // new izsh toggle mode!
 	
 	// Connect the A/D to the peak-detected low-frequency path.
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
 	FpgaSetupSsc();
+	SpinDelay(5);
 	
-	// Configure output and enable pin that is connected to the FPGA (for modulating)
-	// AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK; // (PIO_PER) PIO Enable Register
-	// AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;    // (PIO_OER) Output Enable Register
-	// AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;     // (PIO_ODR) Output Disable Register
-
-	AT91C_BASE_PIOA->PIO_OER = GPIO_PCK0;
+	AT91C_BASE_SSC->SSC_THR = 0x00;
 	
+	int i = 0;
  	while(!BUTTON_PRESS()) { 
 		WDT_HIT();
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+			
+			if ( buf[i] > 0 )
+				AT91C_BASE_SSC->SSC_THR = 0x43;
+			else
+				AT91C_BASE_SSC->SSC_THR = 0x00;
 
-		// PIO_PDSR = Pin Data Status Register  
-		// GPIO_SSC_CLK  = SSC Transmit Clock
-		// wait ssp_clk == high
-		while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {  
-			 if(BUTTON_PRESS()) {
-				 DbpString("Stopped at 0");
-				 return;
-			 }
-			 WDT_HIT();
-		}
-		
-		if ( buf[i] > 0 ){
-			OPEN_COIL();
-		} else {
-			SHORT_COIL();
-		}
-	   
-	   DbpString("Enter Sim3");
-	    // wait ssp_clk == low
-		 while( (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) ) {  
-			 if(BUTTON_PRESS()) {
-				DbpString("stopped at 1");
-				return;
+			++i;
+			LED_A_ON();
+			if (i >= len){
+				i = 0;
 			}
-			WDT_HIT();
 		}
 		
-		DbpString("Enter Sim4 ");
-		//SpinDelayUs(512);
-		
-		++i;
-		if(i == period) {
-			i = 0;
-			if (gap) {
-				SHORT_COIL();
-				SpinDelay(gap);				
-			} 
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+			volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
+			(void)r;
+			LED_A_OFF();
 		}
 	}
-	DbpString("Stopped");
-	return;
+	DbpString("lf simulate stopped");
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 
 #define DEBUG_FRAME_CONTENTS 1
@@ -529,7 +618,7 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 }
 
 // compose fc/8 fc/10 waveform
-static void fc(int c, int *n) {
+static void fc(int c, uint16_t *n) {
 	uint8_t *dest = (uint8_t *)BigBuf;
 	int idx;
 
@@ -577,9 +666,9 @@ static void fc(int c, int *n) {
 
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a HID tag until the button is pressed
-void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
+void CmdHIDsimTAG(int hi, int lo, uint8_t ledcontrol)
 {
-	int n=0, i=0;
+	uint16_t n=0, i=0;
 	/*
 	 HID tag bitstream format
 	 The tag contains a 44bit unique code. This is sent out MSB first in sets of 4 bits
@@ -666,7 +755,7 @@ size_t fsk_demod(uint8_t * dest, size_t size)
 }
 
 
-size_t aggregate_bits(uint8_t *dest,size_t size, uint8_t h2l_crossing_value,uint8_t l2h_crossing_value, uint8_t maxConsequtiveBits )
+size_t aggregate_bits(uint8_t *dest,size_t size, uint8_t h2l_crossing_value,uint8_t l2h_crossing_value, uint8_t maxConsequtiveBits, uint8_t invert )
 {
 	uint8_t lastval=dest[0];
 	uint32_t idx=0;
@@ -680,7 +769,7 @@ size_t aggregate_bits(uint8_t *dest,size_t size, uint8_t h2l_crossing_value,uint
 			continue;
 		}
 		//if lastval was 1, we have a 1->0 crossing
-		if ( dest[idx-1] ) {
+		if ( dest[idx-1]==1 ) {
 			n=(n+1) / h2l_crossing_value;
 		} else {// 0->1 crossing
 			n=(n+1) / l2h_crossing_value;
@@ -689,7 +778,11 @@ size_t aggregate_bits(uint8_t *dest,size_t size, uint8_t h2l_crossing_value,uint
 
 		if(n < maxConsequtiveBits)
 		{
-			memset(dest+numBits, dest[idx-1] , n);
+			if ( invert==0)
+				memset(dest+numBits, dest[idx-1] , n);
+			else
+				memset(dest+numBits, dest[idx-1]^1 , n);
+			
 			numBits += n;
 		}
 		n=0;
@@ -702,10 +795,10 @@ size_t aggregate_bits(uint8_t *dest,size_t size, uint8_t h2l_crossing_value,uint
 // loop to capture raw HID waveform then FSK demodulate the TAG ID from it
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
-	uint8_t *dest = (uint8_t *)BigBuf;
+	uint8_t *dest = get_bigbufptr_recvrespbuf();
 
 	size_t size=0,idx=0; //, found=0;
-  uint32_t hi2=0, hi=0, lo=0;
+	uint32_t hi2=0, hi=0, lo=0;
 
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(0, true);
@@ -716,17 +809,15 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		if (ledcontrol) LED_A_ON();
 
 		DoAcquisition125k_internal(-1,true);
-		size  = sizeof(BigBuf);
 
 		// FSK demodulator
-		size = fsk_demod(dest, size);
+		size = fsk_demod(dest, FREE_BUFFER_SIZE);
 
 		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
 		// 1->0 : fc/8 in sets of 6
 		// 0->1 : fc/10 in sets of 5
-		size = aggregate_bits(dest,size, 6,5,5);
-
-		WDT_HIT();
+		// do not invert
+		size = aggregate_bits(dest,size, 6,5,5,0); 
 
 		// final loop, go over previously decoded manchester data and decode into usable tag ID
 		// 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
@@ -743,7 +834,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				{	
 					// Keep going until next frame marker (or error)
 					// Shift in a bit. Start by shifting high registers
-          hi2=(hi2<<1)|(hi>>31);
+					hi2=(hi2<<1)|(hi>>31);
 					hi=(hi<<1)|(lo>>31);
 					//Then, shift in a 0 or one into low
 					if (dest[idx] && !dest[idx+1])	// 1 0
@@ -758,25 +849,23 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				// Hopefully, we read a tag and	 hit upon the next frame marker
 				if(idx + sizeof(frame_marker_mask) < size)
 				{
-				if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
-				{
-					if (hi2 != 0){
-						Dbprintf("TAG ID: %x%08x%08x (%d)",
-							 (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+					if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
+					{
+						if (hi2 != 0){
+							Dbprintf("TAG ID: %x%08x%08x (%d)",
+								 (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+						}
+						else {
+							Dbprintf("TAG ID: %x%08x (%d)",
+							 (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+						}
 					}
-					else {
-						Dbprintf("TAG ID: %x%08x (%d)",
-						 (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
-					}
-				}
-
 				}
 
 				// reset
 				hi2 = hi = lo = 0;
 				numshifts = 0;
-			}else
-			{
+			} else {
 				idx++;
 			}
 		}
@@ -801,63 +890,72 @@ uint32_t bytebits_to_byte(uint8_t* src, int numbits)
 
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
-	uint8_t *dest = (uint8_t *)BigBuf;
-
+	uint8_t *dest = get_bigbufptr_recvrespbuf();
+	
 	size_t size=0, idx=0;
 	uint32_t code=0, code2=0;
-
+	uint8_t isFinish = 0;
+	
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(0, true);
 
-	while(!BUTTON_PRESS()) {
+	while(!BUTTON_PRESS() & !isFinish) {
+
 		WDT_HIT();
+		
 		if (ledcontrol) LED_A_ON();
 
 		DoAcquisition125k_internal(-1,true);
-		size  = sizeof(BigBuf);
 
 		// FSK demodulator
-		size = fsk_demod(dest, size);
+		size = fsk_demod(dest, FREE_BUFFER_SIZE);
 
 		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
 		// 1->0 : fc/8 in sets of 7
 		// 0->1 : fc/10 in sets of 6
-		size = aggregate_bits(dest, size, 7,6,13);
+		size = aggregate_bits(dest, size, 7,6,13,1); //13 max Consecutive should be ok as most 0s in row should be 10 for init seq - invert bits
 
-		WDT_HIT();
-		
+		//Index map
+		//0 10 20 30 40 50 60
+		//| | | | | | |
+		//01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
+		//-----------------------------------------------------------------------------
+		//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
+		//
+		//XSF(version)facility:codeone+codetwo
 		//Handle the data
+
  	    uint8_t mask[] = {0,0,0,0,0,0,0,0,0,1};
-		for( idx=0; idx < size - 64; idx++) {
-
- 	    	if ( memcmp(dest + idx, mask, sizeof(mask)) ) continue;
-
-		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx],   dest[idx+1],   dest[idx+2],dest[idx+3],dest[idx+4],dest[idx+5],dest[idx+6],dest[idx+7]);
-		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+8], dest[idx+9], dest[idx+10],dest[idx+11],dest[idx+12],dest[idx+13],dest[idx+14],dest[idx+15]);			  
-		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+16],dest[idx+17],dest[idx+18],dest[idx+19],dest[idx+20],dest[idx+21],dest[idx+22],dest[idx+23]);
-		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+24],dest[idx+25],dest[idx+26],dest[idx+27],dest[idx+28],dest[idx+29],dest[idx+30],dest[idx+31]);
-		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+32],dest[idx+33],dest[idx+34],dest[idx+35],dest[idx+36],dest[idx+37],dest[idx+38],dest[idx+39]);
-		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+40],dest[idx+41],dest[idx+42],dest[idx+43],dest[idx+44],dest[idx+45],dest[idx+46],dest[idx+47]);
-		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+48],dest[idx+49],dest[idx+50],dest[idx+51],dest[idx+52],dest[idx+53],dest[idx+54],dest[idx+55]);
-		    Dbprintf("%d%d%d%d%d%d%d%d",dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
 		
-		    code = bytebits_to_byte(dest+idx,32);
-		    code2 = bytebits_to_byte(dest+idx+32,32); 
+		for( idx=0; idx < (size - 64); idx++) {
+			if ( memcmp(dest + idx, mask, sizeof(mask))==0) {
+				//frame marker found
+				if(findone){ //only print binary if we are doing one
+					Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx], dest[idx+1], dest[idx+2],dest[idx+3],dest[idx+4],dest[idx+5],dest[idx+6],dest[idx+7],dest[idx+8]);
+					Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+9], dest[idx+10],dest[idx+11],dest[idx+12],dest[idx+13],dest[idx+14],dest[idx+15],dest[idx+16],dest[idx+17]);
+					Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+18],dest[idx+19],dest[idx+20],dest[idx+21],dest[idx+22],dest[idx+23],dest[idx+24],dest[idx+25],dest[idx+26]);
+					Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+27],dest[idx+28],dest[idx+29],dest[idx+30],dest[idx+31],dest[idx+32],dest[idx+33],dest[idx+34],dest[idx+35]);
+					Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+36],dest[idx+37],dest[idx+38],dest[idx+39],dest[idx+40],dest[idx+41],dest[idx+42],dest[idx+43],dest[idx+44]);
+					Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+45],dest[idx+46],dest[idx+47],dest[idx+48],dest[idx+49],dest[idx+50],dest[idx+51],dest[idx+52],dest[idx+53]);
+					Dbprintf("%d%d%d%d%d%d%d%d %d%d",dest[idx+54],dest[idx+55],dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
+				}
+				code = bytebits_to_byte(dest+idx,32);
+				code2 = bytebits_to_byte(dest+idx+32,32);
+				short version = bytebits_to_byte(dest+idx+28,8); //14,4
+				char facilitycode = bytebits_to_byte(dest+idx+19,8) ;
+				uint16_t number = (bytebits_to_byte(dest+idx+37,8)<<8)|(bytebits_to_byte(dest+idx+46,8)); //36,9
+
+				Dbprintf("XSF(%02d)%02x:%d (%08x%08x)",version,facilitycode,number,code,code2);
 			
-		    short version = bytebits_to_byte(dest+idx+14,4); 
-		    char unknown = bytebits_to_byte(dest+idx+19,8) ;
-		    uint16_t number = bytebits_to_byte(dest+idx+36,9); 
-		    
-		    Dbprintf("XSF(%02d)%02x:%d (%08x%08x)",version,unknown,number,code,code2);
-		    if (ledcontrol)	LED_D_OFF();
-		
-		// if we're only looking for one tag 
-		if (findone){
-			LED_A_OFF();
-			return;
+				// if we're only looking for one tag
+				if (findone){
+					if (ledcontrol) LED_A_OFF();
+					isFinish = 1;
+					break;
+				}
+			}
 		}
-	}
-	WDT_HIT();
+		WDT_HIT();
 	}
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
@@ -994,7 +1092,7 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 // Read one card block in page 0
 void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 {
-	uint8_t *dest =  mifare_get_bigbufptr();
+	uint8_t *dest =  get_bigbufptr_recvrespbuf();
 	uint16_t bufferlength = T55xx_SAMPLES_SIZE;
 	uint32_t i = 0;
 
@@ -1030,6 +1128,7 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 	for(;;) {
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
+			//AT91C_BASE_SSC->SSC_THR = 0xff;
 			LED_D_ON();
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
@@ -1047,9 +1146,9 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 
 // Read card traceability data (page 1)
 void T55xxReadTrace(void){
-	uint8_t *dest =  mifare_get_bigbufptr();
+	uint8_t *dest =  get_bigbufptr_recvrespbuf();
 	uint16_t bufferlength = T55xx_SAMPLES_SIZE;
-	int i=0;
+	uint32_t i = 0;
 	
 	// Clear destination buffer before sending the command 0x80 = average
 	memset(dest, 0x80, bufferlength);  
@@ -1808,7 +1907,7 @@ void EM4xLogin(uint32_t Password) {
 
 void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
   
-  	uint8_t *dest =  mifare_get_bigbufptr();
+  	uint8_t *dest =  get_bigbufptr_recvrespbuf();
 	uint16_t bufferlength = 12000;
 	uint32_t i = 0;
 

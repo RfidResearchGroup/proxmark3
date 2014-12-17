@@ -198,10 +198,9 @@ void UsbCommandReceived(UsbCommand *UC)
   switch(UC->cmd) {
       // First check if we are handling a debug message
     case CMD_DEBUG_PRINT_STRING: {
-      char s[USB_CMD_DATA_SIZE+1];
+      char s[USB_CMD_DATA_SIZE+1] = {0x00};
       size_t len = MIN(UC->arg[0],USB_CMD_DATA_SIZE);
       memcpy(s,UC->d.asBytes,len);
-      s[len] = 0x00;
       PrintAndLog("#db# %s       ", s);
       return;
     } break;

@@ -56,7 +56,7 @@ int fileExists(const char *filename) {
 
 int saveFile(const char *preferredName, const char *suffix, const void* data, size_t datalen)
 {
-	int size = sizeof(char) * (strlen(preferredName)+strlen(suffix)+5);
+	int size = sizeof(char) * (strlen(preferredName)+strlen(suffix)+10);
 	char * fileName = malloc(size);
 
 	memset(fileName,0,size);
@@ -70,14 +70,14 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
 	/* We should have a valid filename now, e.g. dumpdata-3.bin */
 
 	/*Opening file for writing in binary mode*/
-	FILE *fileHandle=fopen(fileName,"wb");
-	if(!fileHandle) {
-		prnlog("Failed to write to file '%s'", fileName);
+	FILE *fh=fopen(fileName,"wb");
+	if(!fh) {
+		PrintAndLog("Failed to write to file '%s'", fileName);
 		return 1;
 	}
-	fwrite(data, 1,	datalen, fileHandle);
-	fclose(fileHandle);
-	prnlog("Saved data to '%s'", fileName);
+	fwrite(data, 1,	datalen, fh);
+	fclose(fh);
+	PrintAndLog("Saved data to '%s'", fileName);
 	free(fileName);
 
 	return 0;
@@ -87,7 +87,7 @@ int loadFile(const char *fileName, void* data, size_t datalen)
 {
 	FILE *filehandle = fopen(fileName, "rb");
 	if(!filehandle) {
-		prnlog("Failed to read from file '%s'", fileName);
+		PrintAndLog("Failed to read from file '%s'", fileName);
 		return 1;
 	}
 	fread(data,datalen,1,filehandle);

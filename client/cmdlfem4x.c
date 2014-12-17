@@ -202,9 +202,9 @@ int CmdEM410xSim(const char *Cmd)
 	uint8_t uid[5] = {0x00};
 
 	if (cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  lf em4x sim <UID>");
+		PrintAndLog("Usage:  lf em4x 410xsim <UID>");
 		PrintAndLog("");
-		PrintAndLog("     sample: lf em4x sim 0F0368568B");
+		PrintAndLog("     sample: lf em4x 410xsim 0F0368568B");
 		return 0;
 	}
 
@@ -258,14 +258,9 @@ int CmdEM410xSim(const char *Cmd)
     AppendGraph(0, clock, parity[3]);
 
   /* stop bit */
-  AppendGraph(0, clock, 0);
+  AppendGraph(1, clock, 0);
  
-  //CmdManchesterMod("64");
-
-  /* booyah! */
-  RepaintGraphWindow();
-  
-  CmdLFSim("");
+  CmdLFSim("240"); //240 start_gap.
   return 0;
 }
 

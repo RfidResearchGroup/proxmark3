@@ -505,7 +505,7 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 }
 
 // Return 1 if the nonce is invalid else return 0
-int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, byte_t * parity) {
+int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t * parity) {
 	return ((oddparity((Nt >> 24) & 0xFF) == ((parity[0]) ^ oddparity((NtEnc >> 24) & 0xFF) ^ BIT(Ks1,16))) & \
 	(oddparity((Nt >> 16) & 0xFF) == ((parity[1]) ^ oddparity((NtEnc >> 16) & 0xFF) ^ BIT(Ks1,8))) & \
 	(oddparity((Nt >> 8) & 0xFF) == ((parity[2]) ^ oddparity((NtEnc >> 8) & 0xFF) ^ BIT(Ks1,0)))) ? 1 : 0;
@@ -532,7 +532,8 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	uint16_t davg;
 	static uint16_t dmin, dmax;
 	uint8_t uid[10];
-	uint32_t cuid, nt1, nt2, nttmp, nttest, par, ks1;
+	uint32_t cuid, nt1, nt2, nttmp, nttest, ks1;
+	uint8_t par[1];
 	uint32_t target_nt[2], target_ks[2];
 	
 	uint8_t par_array[4];
@@ -540,7 +541,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
-	uint8_t* receivedAnswer = mifare_get_bigbufptr();
+	uint8_t* receivedAnswer =  get_bigbufptr_recvrespbuf();
 
 	uint32_t auth1_time, auth2_time;
 	static uint16_t delta_time;
@@ -561,7 +562,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 		WDT_HIT();
 
 		davg = dmax = 0;
-		dmin = 2000;
+		dmin = 2000; 
 		delta_time = 0;
 		
 		for (rtr = 0; rtr < 17; rtr++) {
@@ -597,7 +598,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 				continue;
 			};
 
-			nttmp = prng_successor(nt1, 140);				//NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
+			nttmp = prng_successor(nt1, 100);				//NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
 			for (i = 141; i < 1200; i++) {
 				nttmp = prng_successor(nttmp, 1);
 				if (nttmp == nt2) {break;}
@@ -666,19 +667,18 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 
 			// nested authentication
 			auth2_time = auth1_time + delta_time;
-			len = mifare_sendcmd_shortex(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, &par, &auth2_time);
+			len = mifare_sendcmd_shortex(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, &auth2_time);
 			if (len != 4) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Auth2 error len=%d", len);
 				continue;
 			};
 		
 			nt2 = bytes_to_num(receivedAnswer, 4);		
-			if (MF_DBGLEVEL >= 3) Dbprintf("Nonce#%d: Testing nt1=%08x nt2enc=%08x nt2par=%02x", i+1, nt1, nt2, par);
+			if (MF_DBGLEVEL >= 3) Dbprintf("Nonce#%d: Testing nt1=%08x nt2enc=%08x nt2par=%02x", i+1, nt1, nt2, par[0]);
 			
 			// Parity validity check
 			for (j = 0; j < 4; j++) {
-				par_array[j] = (oddparity(receivedAnswer[j]) != ((par & 0x08) >> 3));
-				par = par << 1;
+				par_array[j] = (oddparity(receivedAnswer[j]) != ((par[0] >> (7-j)) & 0x01));
 			}
 			
 			ncount = 0;
@@ -713,10 +713,6 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
 	
-	// add trace trailer
-	memset(uid, 0x44, 4);
-	LogTrace(uid, 4, 0, 0, TRUE);
-
 	byte_t buf[4 + 4 * 4];
 	memcpy(buf, &cuid, 4);
 	memcpy(buf+4, &target_nt[0], 4);
@@ -947,7 +943,8 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	uint32_t cuid;
 	
 	memset(uid, 0x00, 10);
-	uint8_t* receivedAnswer = mifare_get_bigbufptr();
+	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 	
 	if (workFlags & 0x08) {
 		// clear trace
@@ -982,14 +979,14 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	
 		// reset chip
 		if (needWipe){
-      ReaderTransmitBitsPar(wupC1,7,0, NULL);
-			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
+			ReaderTransmitBitsPar(wupC1,7,0, NULL);
+			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("wupC1 error");
 				break;
 			};
 
 			ReaderTransmit(wipeC, sizeof(wipeC), NULL);
-			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
+			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("wipeC error");
 				break;
 			};
@@ -1002,20 +999,20 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 
 		// write block
 		if (workFlags & 0x02) {
-      ReaderTransmitBitsPar(wupC1,7,0, NULL);
-			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
+			ReaderTransmitBitsPar(wupC1,7,0, NULL);
+			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("wupC1 error");
 				break;
 			};
 
 			ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
+			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("wupC2 error");
 				break;
 			};
 		}
 
-		if ((mifare_sendcmd_short(NULL, 0, 0xA0, blockNo, receivedAnswer, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
+		if ((mifare_sendcmd_short(NULL, 0, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
 			if (MF_DBGLEVEL >= 1)	Dbprintf("write block send command error");
 			break;
 		};
@@ -1024,7 +1021,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		AppendCrc14443a(d_block, 16);
 	
 		ReaderTransmit(d_block, sizeof(d_block), NULL);
-		if ((ReaderReceive(receivedAnswer) != 1) || (receivedAnswer[0] != 0x0a)) {
+		if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
 			if (MF_DBGLEVEL >= 1)	Dbprintf("write block send data error");
 			break;
 		};	
@@ -1072,7 +1069,8 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	uint32_t cuid = 0;
 	
 	memset(data, 0x00, 18);
-	uint8_t* receivedAnswer = mifare_get_bigbufptr();
+	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 	
 	if (workFlags & 0x08) {
 		// clear trace
@@ -1094,20 +1092,20 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	while (true) {
 		if (workFlags & 0x02) {
 			ReaderTransmitBitsPar(wupC1,7,0, NULL);
-			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
+			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("wupC1 error");
 				break;
 			};
 
 			ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-			if(!ReaderReceive(receivedAnswer) || (receivedAnswer[0] != 0x0a)) {
+			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("wupC2 error");
 				break;
 			};
 		}
 
 		// read block
-		if ((mifare_sendcmd_short(NULL, 0, 0x30, blockNo, receivedAnswer, NULL) != 18)) {
+		if ((mifare_sendcmd_short(NULL, 0, 0x30, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 18)) {
 			if (MF_DBGLEVEL >= 1)	Dbprintf("read block send command error");
 			break;
 		};
