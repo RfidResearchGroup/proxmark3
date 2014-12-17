@@ -206,28 +206,28 @@ void UsbCommandReceived(UsbCommand *UC)
       return;
     } break;
 
-    case CMD_MEASURED_ANTENNA_TUNING: {
-      int peakv, peakf;
-      int vLf125, vLf134, vHf;
-      vLf125 = UC->arg[0] & 0xffff;
-      vLf134 = UC->arg[0] >> 16;
-      vHf = UC->arg[1] & 0xffff;;
-      peakf = UC->arg[2] & 0xffff;
-      peakv = UC->arg[2] >> 16;
-      PrintAndLog("");
-      PrintAndLog("# LF antenna: %5.2f V @   125.00 kHz", vLf125/1000.0);
-      PrintAndLog("# LF antenna: %5.2f V @   134.00 kHz", vLf134/1000.0);
-      PrintAndLog("# LF optimal: %5.2f V @%9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
-      PrintAndLog("# HF antenna: %5.2f V @    13.56 MHz", vHf/1000.0);
-      if (peakv<2000)
-        PrintAndLog("# Your LF antenna is unusable.");
-      else if (peakv<10000)
-        PrintAndLog("# Your LF antenna is marginal.");
-      if (vHf<2000)
-        PrintAndLog("# Your HF antenna is unusable.");
-      else if (vHf<5000)
-        PrintAndLog("# Your HF antenna is marginal.");
-    } break;
+    // case CMD_MEASURED_ANTENNA_TUNING: {
+      // int peakv, peakf;
+      // int vLf125, vLf134, vHf;
+      // vLf125 = UC->arg[0] & 0xffff;
+      // vLf134 = UC->arg[0] >> 16;
+      // vHf = UC->arg[1] & 0xffff;;
+      // peakf = UC->arg[2] & 0xffff;
+      // peakv = UC->arg[2] >> 16;
+      // PrintAndLog("");
+      // PrintAndLog("# LF antenna: %5.2f V @   125.00 kHz", vLf125/1000.0);
+      // PrintAndLog("# LF antenna: %5.2f V @   134.00 kHz", vLf134/1000.0);
+      // PrintAndLog("# LF optimal: %5.2f V @%9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
+      // PrintAndLog("# HF antenna: %5.2f V @    13.56 MHz", vHf/1000.0);
+      // if (peakv<2000)
+        // PrintAndLog("# Your LF antenna is unusable.");
+      // else if (peakv<10000)
+        // PrintAndLog("# Your LF antenna is marginal.");
+      // if (vHf<2000)
+        // PrintAndLog("# Your HF antenna is unusable.");
+      // else if (vHf<5000)
+        // PrintAndLog("# Your HF antenna is marginal.");
+    // } break;
       
     case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K: {
 //      printf("received samples: ");
