@@ -158,10 +158,11 @@ int CmdHF14AMfURdBl(const char *Cmd){
         if (isOK)
             PrintAndLog("isOk:%02x data:%s", isOK, sprint_hex(data, 4));
         else
-	    PrintAndLog("isOk:%02x", isOK);
-        } else {
-                PrintAndLog("Command execute timeout");
+			PrintAndLog("isOk:%02x", isOK);
         }
+	else {
+        PrintAndLog("Command execute timeout");
+    }
     return 0;
 }
 
@@ -171,7 +172,7 @@ int CmdHF14AMfURdBl(const char *Cmd){
 int CmdHF14AMfURdCard(const char *Cmd){
     int i;
     uint8_t BlockNo = 0;
-    int Pages=16;
+    int pages=16;
     uint8_t *lockbytes_t=NULL;
     uint8_t lockbytes[2]={0x00};
     bool bit[16]={0x00};
@@ -191,7 +192,7 @@ int CmdHF14AMfURdCard(const char *Cmd){
         PrintAndLog("Dumping Ultralight Card Data...");
     }
     PrintAndLog("Attempting to Read Ultralight... ");
-    UsbCommand c = {CMD_MIFAREU_READCARD, {BlockNo, Pages}};
+    UsbCommand c = {CMD_MIFAREU_READCARD, {BlockNo, pages}};
     SendCommand(&c);
     UsbCommand resp;
 
@@ -231,7 +232,7 @@ int CmdHF14AMfURdCard(const char *Cmd){
 			PrintAndLog(" OneTimePad :%s ", sprint_hex(data + 3*4, 4));
 			PrintAndLog("");
 			
-            for (i = 0; i < Pages; i++) {
+            for (i = 0; i < pages; i++) {
                 switch(i){
                     case 2:
                         //process lock bytes
@@ -634,7 +635,7 @@ int CmdHF14AMfUCRdCard(const char *Cmd){
     if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
         isOK  = resp.arg[0] & 0xff;
         data  = resp.d.asBytes;
-	//Pages=sizeof(data)/sizeof(data[0]);
+
         PrintAndLog("isOk:%02x", isOK);
         if (isOK) 
             for (i = 0; i < Pages; i++) {
@@ -833,7 +834,7 @@ int CmdHF14AMfUCDump(const char *Cmd){
 		return 1;	
 	}
 	PrintAndLog("Dumping Ultralight C Card Data...");
-   PrintAndLog("Attempting to Read Ultralight C... ");
+    PrintAndLog("Attempting to Read Ultralight C... ");
     UsbCommand c = {CMD_MIFAREU_READCARD, {BlockNo,Pages}};
     SendCommand(&c);
     UsbCommand resp;
@@ -1130,14 +1131,14 @@ int CmdHF14AMfUCWrBl(const char *Cmd){
 //------------------------------------
 static command_t CommandTable[] =
 {
-    {"help",    CmdHelp,		1,"This help"},
+    {"help",    CmdHelp,		    1,"This help"},
     {"dbg",     CmdHF14AMfDbg,		0,"Set default debug mode"},
-    {"urdbl",   CmdHF14AMfURdBl,        0,"Read MIFARE Ultralight block"},
-    {"urdcard", CmdHF14AMfURdCard,      0,"Read MIFARE Ultralight Card"},
+    {"urdbl",   CmdHF14AMfURdBl,    0,"Read MIFARE Ultralight block"},
+    {"urdcard", CmdHF14AMfURdCard,  0,"Read MIFARE Ultralight Card"},
     {"udump",   CmdHF14AMfUDump,	0,"Dump MIFARE Ultralight tag to binary file"},
     {"uwrbl",   CmdHF14AMfUWrBl,	0,"Write MIFARE Ultralight block"},
-    {"ucrdbl",  CmdHF14AMfUCRdBl,       0,"Read MIFARE Ultralight C block"},
-    {"ucrdcard",CmdHF14AMfUCRdCard,     0,"Read MIFARE Ultralight C Card"},
+    {"ucrdbl",  CmdHF14AMfUCRdBl,   0,"Read MIFARE Ultralight C block"},
+    {"ucrdcard",CmdHF14AMfUCRdCard, 0,"Read MIFARE Ultralight C Card"},
     {"ucdump",  CmdHF14AMfUCDump,	0,"Dump MIFARE Ultralight C tag to binary file"},
     {"ucwrbl",  CmdHF14AMfUCWrBl,	0,"Write MIFARE Ultralight C block"},
     {"auth",    CmdHF14AMfucAuth,	0,"Ultralight C Authentication"},
@@ -1145,7 +1146,6 @@ static command_t CommandTable[] =
 };
 
 int CmdHFMFUltra(const char *Cmd){
-    // flush
     WaitForResponseTimeout(CMD_ACK,NULL,100);
     CmdsParse(CommandTable, Cmd);
     return 0;

@@ -169,13 +169,11 @@ int AvgAdc(int ch) // was static - merlok
 
 void MeasureAntennaTuning(void)
 {
-	uint8_t *dest = (uint8_t *)BigBuf + FREE_BUFFER_OFFSET;
+	uint8_t LF_Results[256];
 	int i, adcval = 0, peak = 0, peakv = 0, peakf = 0; //ptr = 0 
 	int vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
 
   LED_B_ON();
-	DbpString("Measuring antenna characteristics, please wait...");
-	memset(dest,0,FREE_BUFFER_SIZE);
 
 /*
  * Sweeps the useful LF range of the proxmark from
@@ -188,7 +186,7 @@ void MeasureAntennaTuning(void)
   
   	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-	for (i=255; i>19; i--) {
+	for (i=255; i>=19; i--) {
     WDT_HIT();
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
 		SpinDelay(20);
@@ -198,15 +196,17 @@ void MeasureAntennaTuning(void)
 		if (i==95) 	vLf125 = adcval; // voltage at 125Khz
 		if (i==89) 	vLf134 = adcval; // voltage at 134Khz
 
-		dest[i] = adcval>>8; // scale int to fit in byte for graphing purposes
-		if(dest[i] > peak) {
+		LF_Results[i] = adcval>>8; // scale int to fit in byte for graphing purposes
+		if(LF_Results[i] > peak) {
 			peakv = adcval;
-			peak = dest[i];
+			peak = LF_Results[i];
 			peakf = i;
 			//ptr = i;
 		}
 	}
 
+	for (i=18; i >= 0; i--) LF_Results[i] = 0;
+	
   LED_A_ON();
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
   	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -216,14 +216,7 @@ void MeasureAntennaTuning(void)
 	// can measure voltages up to 33000 mV
 	vHf = (33000 * AvgAdc(ADC_CHAN_HF)) >> 10;
 
-//	c.cmd = CMD_MEASURED_ANTENNA_TUNING;
-//	c.arg[0] = (vLf125 << 0) | (vLf134 << 16);
-//	c.arg[1] = vHf;
-//	c.arg[2] = peakf | (peakv << 16);
-
-  DbpString("Measuring complete, sending report back to host");
-  cmd_send(CMD_MEASURED_ANTENNA_TUNING,vLf125|(vLf134<<16),vHf,peakf|(peakv<<16),0,0);
-//	UsbSendPacket((uint8_t *)&c, sizeof(c));
+	cmd_send(CMD_MEASURED_ANTENNA_TUNING,vLf125|(vLf134<<16),vHf,peakf|(peakv<<16),LF_Results,256);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
   LED_A_OFF();
   LED_B_OFF();

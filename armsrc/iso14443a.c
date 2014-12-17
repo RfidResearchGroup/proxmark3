@@ -1714,7 +1714,7 @@ int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity)
  * fills the uid pointer unless NULL
  * fills resp_data unless NULL */
 int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, uint32_t* cuid_ptr) {
-	uint8_t halt[]       = { 0x50 };  // HALT
+	//uint8_t halt[]       = { 0x50 };  // HALT
 	uint8_t wupa[]       = { 0x52 };  // WAKE-UP
 	//uint8_t reqa[]       = { 0x26 };  // REQUEST A
 	uint8_t sel_all[]    = { 0x93,0x20 };
@@ -1725,30 +1725,29 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 
 	byte_t uid_resp[4];
 	size_t uid_resp_len;
-
-  uint8_t sak = 0x04; // cascade uid
-  int cascade_level = 0;
-  int len;
+	uint8_t sak = 0x04; // cascade uid
+	int cascade_level = 0;
+	int len;
 	
-  ReaderTransmit(halt,sizeof(halt), NULL);
+	// test for the SKYLANDERS TOY.
+	//ReaderTransmit(halt,sizeof(halt), NULL);
 	
-  // Broadcast for a card, WUPA (0x52) will force response from all cards in the field
-  ReaderTransmitBitsPar(wupa,7,0, NULL);
+	// Broadcast for a card, WUPA (0x52) will force response from all cards in the field
+	ReaderTransmitBitsPar(wupa,7,0, NULL);
 	
-  // Receive the ATQA
-  if(!ReaderReceive(resp, resp_par)) return 0;
-  // Dbprintf("atqa: %02x %02x",resp[0],resp[1]);
+	// Receive the ATQA
+	if(!ReaderReceive(resp, resp_par)) return 0;
+	
+	if(p_hi14a_card) {
+		memcpy(p_hi14a_card->atqa, resp, 2);
+		p_hi14a_card->uidlen = 0;
+		memset(p_hi14a_card->uid,0,10);
+	}
 
-  if(p_hi14a_card) {
-    memcpy(p_hi14a_card->atqa, resp, 2);
-    p_hi14a_card->uidlen = 0;
-    memset(p_hi14a_card->uid,0,10);
-  }
-
-  // clear uid
-  if (uid_ptr) {
-    memset(uid_ptr,0,10);
-  }
+	// clear uid
+	if (uid_ptr) {
+		memset(uid_ptr,0,10);
+	}
 
   // OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
   // which case we need to make a cascade 2 request and select - this is a long UID
@@ -1794,7 +1793,6 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 	}
 	uid_resp_len = 4;
 
-
     // calculate crypto UID. Always use last 4 Bytes.
     if(cuid_ptr) {
         *cuid_ptr = bytes_to_num(uid_resp, 4);
@@ -1811,17 +1809,11 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     if (!ReaderReceive(resp, resp_par)) return 0;
     sak = resp[0];
 
-	//Dbprintf("SAK: %02x",resp[0]);
 	
-    // Test if more parts of the uid are comming
+    // Test if more parts of the uid are coming
     if ((sak & 0x04) /* && uid_resp[0] == 0x88 */) {
 		// Remove first byte, 0x88 is not an UID byte, it CT, see page 3 of:
 		// http://www.nxp.com/documents/application_note/AN10927.pdf
-		// This was earlier:
-		//memcpy(uid_resp, uid_resp + 1, 3);
-		// But memcpy should not be used for overlapping arrays,
-		// and memmove appears to not be available in the arm build.
-		// Therefore:
 		uid_resp[0] = uid_resp[1];
 		uid_resp[1] = uid_resp[2];
 		uid_resp[2] = uid_resp[3]; 
@@ -1844,24 +1836,24 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     p_hi14a_card->ats_len = 0;
   }
 
-  if( (sak & 0x20) == 0) {
-    return 2; // non iso14443a compliant tag
-  }
+	if( (sak & 0x20) == 0) {
+		return 2; // non iso14443a compliant tag
+	}
 
-  // Request for answer to select
-  AppendCrc14443a(rats, 2);
-  ReaderTransmit(rats, sizeof(rats), NULL);
+	// Request for answer to select
+	AppendCrc14443a(rats, 2);
+	ReaderTransmit(rats, sizeof(rats), NULL);
 
-  if (!(len = ReaderReceive(resp,resp_par))) return 0;
+	if (!(len = ReaderReceive(resp, resp_par))) return 2;
 
-  if(p_hi14a_card) {
-    memcpy(p_hi14a_card->ats, resp, sizeof(p_hi14a_card->ats));
-    p_hi14a_card->ats_len = len;
-  }
+	if(p_hi14a_card) {
+		memcpy(p_hi14a_card->ats, resp, sizeof(p_hi14a_card->ats));
+		p_hi14a_card->ats_len = len;
+	}
 
-  // reset the PCB block number
-  iso14_pcb_blocknum = 0;
-  return 1;
+	// reset the PCB block number
+	iso14_pcb_blocknum = 0;
+	return 1;
 }
 
 void iso14443a_setup(uint8_t fpga_minor_mode) {
