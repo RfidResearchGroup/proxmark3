@@ -56,8 +56,8 @@ int CmdHF14AList(const char *Cmd)
 	PrintAndLog("Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
 	PrintAndLog("All times are in carrier periods (1/13.56Mhz)");
 	PrintAndLog("");
-	PrintAndLog("     Start |       End | Src | Data");
-	PrintAndLog("-----------|-----------|-----|--------");
+	PrintAndLog("     Start |       End | Src | Data (! denotes parity error)                                   | CRC ");
+	PrintAndLog("-----------|-----------|-----|-----------------------------------------------------------------------");
 
 	uint16_t tracepos = 0;
 	uint16_t duration;
@@ -105,30 +105,30 @@ int CmdHF14AList(const char *Cmd)
 		// Break and stick with current result if buffer was not completely full
 		if (timestamp == 0x44444444) break; 
 
-		char line[1000] = "";
-		int j;
-		for (j = 0; j < data_len; j++) {
+		char line[16][110];
+		for (int j = 0; j < data_len; j++) {
 			int oddparity = 0x01;
 			int k;
-
+			
 			for (k=0;k<8;k++) {
 				oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
 			}
 
 			uint8_t parityBits = parityBytes[j>>3];
 			if (isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
-				sprintf(line+(j*4), "%02x!  ", frame[j]);
+				sprintf(line[j/16]+((j%16)*4), "%02x! ", frame[j]);
 			} else {
-				sprintf(line+(j*4), "%02x   ", frame[j]);
+				sprintf(line[j/16]+((j%16)*4), "%02x  ", frame[j]);
 			}
+
 		}
 
-		char crc[6] = ""; 
+		char crc[5] = ""; 
 		if (data_len > 2) {
 		uint8_t b1, b2;
 			ComputeCrc14443(CRC_14443_A, frame, data_len-2, &b1, &b2);
 			if (b1 != frame[data_len-2] || b2 != frame[data_len-1]) {
-				sprintf(crc, (isResponse & (data_len < 6)) ? "" : " !crc");
+				sprintf(crc, (isResponse & (data_len < 6)) ? "" : "!crc");
 			} else {
 				sprintf(crc, "");
 			}
@@ -136,12 +136,21 @@ int CmdHF14AList(const char *Cmd)
 
 		EndOfTransmissionTimestamp = timestamp + duration;
 		
-		PrintAndLog(" %9d | %9d | %s | %s %s",
-			(timestamp - first_timestamp),
-			(EndOfTransmissionTimestamp - first_timestamp),
-			(isResponse ? "Tag" : "Rdr"),
-			line, 
-			crc);
+		int num_lines = (data_len - 1)/16 + 1;
+		for (int j = 0; j < num_lines; j++) {
+			if (j == 0) {
+				PrintAndLog(" %9d | %9d | %s | %-64s| %s",
+					(timestamp - first_timestamp),
+					(EndOfTransmissionTimestamp - first_timestamp),
+					(isResponse ? "Tag" : "Rdr"),
+					line[j], 
+					(j == num_lines-1)?crc:"");
+			} else {
+				PrintAndLog("           |           |     | %-64s| %s",
+					line[j], 
+					(j == num_lines-1)?crc:"");
+			}
+		}				
 
 		bool next_isResponse = *((uint16_t *)(trace + tracepos + 6)) & 0x8000;
 		
