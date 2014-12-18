@@ -518,11 +518,15 @@ int CmdHFiClassReader_Dump(const char *Cmd)
   uint8_t key_sel_p[8] = { 0 };
 
   //HACK -- Below is for testing without access to a tag
-  uint8_t xdata[16] = {0x01,0x02,0x03,0x04,0xF7,0xFF,0x12,0xE0, //CSN from http://www.proxmark.org/forum/viewtopic.php?pid=11230#p11230
-                      0xFE,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}; // Just a random CC. Would be good to add a real testcase here
-  memcpy(resp.d.asBytes,xdata, 16);
-  resp.arg[0] = 2;
   uint8_t fake_dummy_test = false;
+  if(fake_dummy_test)
+  {
+    uint8_t xdata[16] = {0x01,0x02,0x03,0x04,0xF7,0xFF,0x12,0xE0, //CSN from http://www.proxmark.org/forum/viewtopic.php?pid=11230#p11230
+                        0xFE,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}; // Just a random CC. Would be good to add a real testcase here
+    memcpy(resp.d.asBytes,xdata, 16);
+    resp.arg[0] = 2;    
+  }
+  
   //End hack
 
 
