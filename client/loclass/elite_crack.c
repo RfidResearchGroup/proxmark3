@@ -113,9 +113,9 @@ void hash1(uint8_t csn[] , uint8_t k[])
 	k[0] = csn[0]^csn[1]^csn[2]^csn[3]^csn[4]^csn[5]^csn[6]^csn[7];
 	k[1] = csn[0]+csn[1]+csn[2]+csn[3]+csn[4]+csn[5]+csn[6]+csn[7];
 	k[2] = rr(swap( csn[2]+k[1] ));
-	k[3] = rr(swap( csn[3]+k[0] ));
-	k[4] = ~rr(swap( csn[4]+k[2] ))+1;
-	k[5] = ~rr(swap( csn[5]+k[3] ))+1;
+	k[3] = rl(swap( csn[3]+k[0] ));
+	k[4] = ~rr( csn[4]+k[2] )+1;
+	k[5] = ~rl( csn[5]+k[3] )+1;
 	k[6] = rr( csn[6]+(k[4]^0x3c) );
 	k[7] = rl( csn[7]+(k[5]^0xc3) );
 	int i;
