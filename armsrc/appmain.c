@@ -635,7 +635,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		case CMD_HID_DEMOD_FSK:
-			CmdHIDdemodFSK(0, 0, 0, 1);					// Demodulate HID tag
+			CmdHIDdemodFSK(c->arg[0], 0, 0, 1);					// Demodulate HID tag
 			break;
 		case CMD_HID_SIM_TAG:
 			CmdHIDsimTAG(c->arg[0], c->arg[1], 1);					// Simulate HID tag by ID
@@ -644,7 +644,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			CopyHIDtoT55x7(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
 			break;
 		case CMD_IO_DEMOD_FSK:
-			CmdIOdemodFSK(1, 0, 0, 1);					// Demodulate IO tag
+			CmdIOdemodFSK(c->arg[0], 0, 0, 1);					// Demodulate IO tag
 			break;
 		case CMD_IO_CLONE_TAG: // Clone IO tag by ID to T55x7
 			CopyIOtoT55x7(c->arg[0], c->arg[1], c->d.asBytes[0]);

@@ -513,17 +513,31 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 
   }
 
-
-  UsbCommand c = {CMD_READER_ICLASS, {0}};
-  c.arg[0] = FLAG_ICLASS_READER_ONLY_ONCE;
-
-  SendCommand(&c);
-  
   UsbCommand resp;
   uint8_t key_sel[8] = {0};
   uint8_t key_sel_p[8] = { 0 };
 
-  if (WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
+  //HACK -- Below is for testing without access to a tag
+  uint8_t fake_dummy_test = false;
+  if(fake_dummy_test)
+  {
+    uint8_t xdata[16] = {0x01,0x02,0x03,0x04,0xF7,0xFF,0x12,0xE0, //CSN from http://www.proxmark.org/forum/viewtopic.php?pid=11230#p11230
+                        0xFE,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}; // Just a random CC. Would be good to add a real testcase here
+    memcpy(resp.d.asBytes,xdata, 16);
+    resp.arg[0] = 2;    
+  }
+  
+  //End hack
+
+
+  UsbCommand c = {CMD_READER_ICLASS, {0}};
+  c.arg[0] = FLAG_ICLASS_READER_ONLY_ONCE;
+  if(!fake_dummy_test)   
+    SendCommand(&c);
+  
+
+
+  if (fake_dummy_test || WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
         uint8_t isOK    = resp.arg[0] & 0xff;
         uint8_t * data  = resp.d.asBytes;
 
@@ -547,6 +561,7 @@ int CmdHFiClassReader_Dump(const char *Cmd)
                 printvar("hash1", key_index,8);
                 for(i = 0; i < 8 ; i++)
                     key_sel[i] = keytable[key_index[i]] & 0xFF;
+                PrintAndLog("Pre-fortified 'permuted' HS key that would be needed by an iclass reader to talk to above CSN:");
                 printvar("k_sel", key_sel,8);
                 //Permute from iclass format to standard format
                 permutekey_rev(key_sel,key_sel_p);
@@ -563,8 +578,11 @@ int CmdHFiClassReader_Dump(const char *Cmd)
                 used_key = KEY;
 
             }
+
+            PrintAndLog("Pre-fortified key that would be needed by the OmniKey reader to talk to above CSN:");
             printvar("Used key",used_key,8);
             diversifyKey(CSN,used_key, div_key);
+            PrintAndLog("Hash0, a.k.a diversified key, that is computed using Ksel and stored in the card (Block 3):");
             printvar("Div key", div_key, 8);
             printvar("CC_NR:",CCNR,12);
             doMAC(CCNR,12,div_key, MAC);
@@ -572,7 +590,7 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 
             UsbCommand d = {CMD_READER_ICLASS_REPLAY, {readerType}};
             memcpy(d.d.asBytes, MAC, 4);
-            SendCommand(&d);
+            if(!fake_dummy_test) SendCommand(&d);
 
         }else{
             PrintAndLog("Failed to obtain CC! Aborting");
