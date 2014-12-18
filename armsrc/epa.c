@@ -108,9 +108,9 @@ size_t EPA_Parse_CardAccess(uint8_t *data,
 		if (data[index] == 0x31 || data[index] == 0x30) {
 			// enter the set (skip tag + length)
 			index += 2;
-			// extended length
+			// check for extended length
 			if ((data[index - 1] & 0x80) != 0) {
-				index += (data[index] & 0x7F);
+				index += (data[index-1] & 0x7F);
 			}
 		}
 		// OID
