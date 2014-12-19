@@ -78,9 +78,9 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 	}
 	
 	int len = DesfireAPDU(datain, datalen, resp);
-		if (MF_DBGLEVEL >= 4) {
-			print_result("ERR <--: ", resp, len);	
-		}
+	if (MF_DBGLEVEL >= 4) {
+		print_result("ERR <--: ", resp, len);
+	}
 
 	if ( !len ) {
 		OnError();
@@ -124,7 +124,7 @@ void MifareDesfireGetInformation(){
 	// card select - information
 	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
 	byte_t isOK = iso14443a_select_card(NULL, card, NULL);
-	if (isOK != 1) {
+	if ( isOK == 0) {
 		if (MF_DBGLEVEL >= 1) {
 			Dbprintf("Can't select card");
 		}
@@ -306,7 +306,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 // dataout = pointer to response data array
 int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 
-	uint32_t status = 0;
+	size_t len = 0;
 	size_t wrappedLen = 0;
 	uint8_t wCmd[USB_CMD_DATA_SIZE] = {0};
 	
@@ -320,9 +320,9 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 	}
 	ReaderTransmit( wCmd, wrappedLen, NULL);
 
-	status = ReaderReceive(resp, resp_par);
+	len = ReaderReceive(resp, resp_par);
 	
-	if( status == 0x00){
+	if( len == 0x00 ){
 		if (MF_DBGLEVEL >= 4) {
 			Dbprintf("fukked");
 		}
@@ -330,16 +330,16 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 	}
 	// if we received an I- or R(ACK)-Block with a block number equal to the
 	// current block number, toggle the current block number
-	else if (status >= 4 // PCB+CID+CRC = 4 bytes
+	else if (len >= 4 // PCB+CID+CRC = 4 bytes
 	         && ((resp[0] & 0xC0) == 0 // I-Block
 	             || (resp[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
 	         && (resp[0] & 0x01) == pcb_blocknum) // equal block numbers
 	{
 		pcb_blocknum ^= 1;  //toggle next block 
 	}
-	// copy response to
-	dataout = resp;
-	return status;
+
+	memcpy(dataout, resp, len);
+	return len;
 }	
 
 // CreateAPDU

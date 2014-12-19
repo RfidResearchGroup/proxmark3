@@ -54,10 +54,10 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 			size_t nonce_length = resp.arg[1];
 			char *nonce = (char *) malloc(2 * nonce_length + 1);
 			for(int j = 0; j < nonce_length; j++) {
-				snprintf(nonce + (2 * j), 3, "%02X", resp.d.asBytes[j]);
+				snprintf(nonce + (2 * j), "%02X", resp.d.asBytes[j]);
 			}
 			// print nonce
-			PrintAndLog("Length: %d, Nonce: %s",resp.arg[1], nonce);
+			PrintAndLog("Length: %d, Nonce: %s", nonce_length, nonce);
 		}
 		if (i < n - 1) {
 			sleep(d);
@@ -68,7 +68,6 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 	return 1;
 }
 
-// UI-related stuff
 // UI-related stuff
 
 static const command_t CommandTable[] = 

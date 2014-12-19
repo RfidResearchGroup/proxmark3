@@ -20,7 +20,7 @@
 #include "../common/crc.h"
 
 //-----------------------------------------------------------------------------
-// Select, Authenticaate, Read an MIFARE tag. 
+// Select, Authenticate, Read a MIFARE tag. 
 // read block
 //-----------------------------------------------------------------------------
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
@@ -267,25 +267,25 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain)
 {
-  // params
-        uint8_t sectorNo = arg0;
-        int Pages=arg1;
+	// params
+	uint8_t sectorNo = arg0;
+	int Pages=arg1;
 	int count_Pages=0;
-        // variables
-        byte_t isOK = 0;
-        byte_t dataoutbuf[44 * 4];
-        uint8_t uid[10];
-        uint32_t cuid;
+	// variables
+	byte_t isOK = 0;
+	byte_t dataoutbuf[176];
+	uint8_t uid[10];
+	uint32_t cuid;
 
-        // clear trace
-        iso14a_clear_trace();
+	// clear trace
+	iso14a_clear_trace();
 
-		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
-        LED_A_ON();
-        LED_B_OFF();
-        LED_C_OFF();
-        Dbprintf("Pages %d",Pages);
+	LED_A_ON();
+	LED_B_OFF();
+	LED_C_OFF();
+	Dbprintf("Pages %d",Pages);
         while (true) {
                 if(!iso14443a_select_card(uid, NULL, &cuid)) {
                 if (MF_DBGLEVEL >= 1)   Dbprintf("Can't select card");
@@ -307,8 +307,8 @@ void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain)
                 isOK = 1;
                 break;
         }
-        Dbprintf("Pages read %d",count_Pages);
-        if (MF_DBGLEVEL >= 2) DbpString("READ CARD FINISHED");
+	Dbprintf("Pages read %d",count_Pages);
+	if (MF_DBGLEVEL >= 2) DbpString("READ CARD FINISHED");
 
         LED_B_ON();
 	if (Pages==16) cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,64);
@@ -316,9 +316,9 @@ void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain)
 	if (Pages==44 && count_Pages>16) cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,176);
         LED_B_OFF();
 
-        // Thats it...
-        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        LEDsoff();
+	// Thats it...
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
 
 }
 
@@ -792,7 +792,6 @@ void MifareChkKeys(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
     cmd_send(CMD_ACK,isOK,0,0,datain + i * 6,6);
 	LED_B_OFF();
 
-  // Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 
@@ -1127,7 +1126,6 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	LED_B_OFF();
 
 	if ((workFlags & 0x10) || (!isOK)) {
-		// Thats it...
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
 	}

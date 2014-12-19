@@ -769,7 +769,7 @@ size_t aggregate_bits(uint8_t *dest,size_t size, uint8_t h2l_crossing_value,uint
 			continue;
 		}
 		//if lastval was 1, we have a 1->0 crossing
-		if ( dest[idx-1]==1 ) {
+		if ( dest[idx-1] ) {
 			n=(n+1) / h2l_crossing_value;
 		} else {// 0->1 crossing
 			n=(n+1) / l2h_crossing_value;
@@ -814,10 +814,12 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		size = fsk_demod(dest, FREE_BUFFER_SIZE);
 
 		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
-		// 1->0 : fc/8 in sets of 6
-		// 0->1 : fc/10 in sets of 5
+		// 1->0 : fc/8 in sets of 6  (RF/50 / 8 = 6.25)
+		// 0->1 : fc/10 in sets of 5 (RF/50 / 10= 5)
 		// do not invert
 		size = aggregate_bits(dest,size, 6,5,5,0); 
+
+		WDT_HIT();
 
 		// final loop, go over previously decoded manchester data and decode into usable tag ID
 		// 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
@@ -851,17 +853,64 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				{
 					if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
 					{
-						if (hi2 != 0){
+						if (hi2 != 0){ //extra large HID tags
 							Dbprintf("TAG ID: %x%08x%08x (%d)",
 								 (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
 						}
-						else {
-							Dbprintf("TAG ID: %x%08x (%d)",
-							 (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+						else {  //standard HID tags <38 bits
+							//Dbprintf("TAG ID: %x%08x (%d)",(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF); //old print cmd
+							uint8_t bitlen = 0;
+							uint32_t fc = 0;
+							uint32_t cardnum = 0;
+							if (((hi>>5)&1)==1){//if bit 38 is set then < 37 bit format is used
+								uint32_t lo2=0;
+								lo2=(((hi & 31) << 12) | (lo>>20)); //get bits 21-37 to check for format len bit
+								uint8_t idx3 = 1;
+								while(lo2>1){ //find last bit set to 1 (format len bit)
+									lo2=lo2>>1;
+									idx3++;
+								}
+								bitlen =idx3+19;  
+								fc =0;
+								cardnum=0;
+								if(bitlen==26){
+									cardnum = (lo>>1)&0xFFFF;
+									fc = (lo>>17)&0xFF;
+								}
+								if(bitlen==37){
+									cardnum = (lo>>1)&0x7FFFF;
+									fc = ((hi&0xF)<<12)|(lo>>20);
+								}
+								if(bitlen==34){
+									cardnum = (lo>>1)&0xFFFF;
+									fc= ((hi&1)<<15)|(lo>>17);
+								}
+								if(bitlen==35){
+									cardnum = (lo>>1)&0xFFFFF;
+									fc = ((hi&1)<<11)|(lo>>21);
+								}
+							}
+							else { //if bit 38 is not set then 37 bit format is used
+								bitlen= 37;
+								fc =0;
+								cardnum=0;
+								if(bitlen==37){
+									cardnum = (lo>>1)&0x7FFFF;
+									fc = ((hi&0xF)<<12)|(lo>>20);
+								}
+							}
+									//Dbprintf("TAG ID: %x%08x (%d)",
+							// (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);				
+							Dbprintf("TAG ID: %x%08x (%d) - Format Len: %dbit - FC: %d - Card: %d",
+								(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF,
+								(unsigned int) bitlen, (unsigned int) fc, (unsigned int) cardnum);
+						}
+						if (findone){
+							if (ledcontrol)	LED_A_OFF();
+							return;
 						}
 					}
 				}
-
 				// reset
 				hi2 = hi = lo = 0;
 				numshifts = 0;
@@ -890,8 +939,7 @@ uint32_t bytebits_to_byte(uint8_t* src, int numbits)
 
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
-	uint8_t *dest = get_bigbufptr_recvrespbuf();
-	
+	uint8_t *dest = (uint8_t *)BigBuf;
 	size_t size=0, idx=0;
 	uint32_t code=0, code2=0;
 	uint8_t isFinish = 0;
@@ -906,13 +954,13 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		if (ledcontrol) LED_A_ON();
 
 		DoAcquisition125k_internal(-1,true);
+		size  = sizeof(BigBuf);
 
 		// FSK demodulator
-		size = fsk_demod(dest, FREE_BUFFER_SIZE);
-
+		size = fsk_demod(dest, size);
 		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
-		// 1->0 : fc/8 in sets of 7
-		// 0->1 : fc/10 in sets of 6
+		// 1->0 : fc/8 in sets of 7  (RF/64 / 8 = 8)
+		// 0->1 : fc/10 in sets of 6 (RF/64 / 10 = 6.4)
 		size = aggregate_bits(dest, size, 7,6,13,1); //13 max Consecutive should be ok as most 0s in row should be 10 for init seq - invert bits
 
 		//Index map
@@ -1601,9 +1649,12 @@ int DemodPCF7931(uint8_t **outBlocks) {
         block_done = 0;
         half_switch = 0;
       }
+	      if(i < GraphTraceLen)
+	      {
       if (GraphBuffer[i-1] > GraphBuffer[i]) dir=0;
       else dir = 1;
     }
+	    }
     if(bitidx==255)
       bitidx=0;
     warnings = 0;

@@ -293,8 +293,7 @@ static int GetIso14443CommandFromReader(uint8_t *received, int *len, int maxLen)
     // only, since we are receiving, not transmitting).
     // Signal field is off with the appropriate LED
     LED_D_OFF();
-    FpgaWriteConfWord(
-    	FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_NO_MODULATION);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_NO_MODULATION);
 
 
     // Now run a `software UART' on the stream of incoming samples.

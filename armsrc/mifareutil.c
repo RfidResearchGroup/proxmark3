@@ -85,8 +85,11 @@ int mifare_sendcmd_short_special(struct Crypto1State *pcs, uint8_t crypted, uint
 {
 	uint8_t dcmd[8];
 	dcmd[0] = cmd;
-	memcpy(dcmd+1,data,5);
-	
+    dcmd[1] = data[0];
+	dcmd[2] = data[1];
+	dcmd[3] = data[2];
+	dcmd[4] = data[3];
+	dcmd[5] = data[4];
 	AppendCrc14443a(dcmd, 6);
 	ReaderTransmit(dcmd, sizeof(dcmd), NULL);
 	int len = ReaderReceive(answer, answer_parity);
@@ -383,7 +386,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 	// variables
 	uint16_t len, i;	
 	uint32_t pos;
-	uint8_t par[3] = {0x00};
+	uint8_t par[3] = {0};		// enough for 18 Bytes to send
 	byte_t res;
 	
 	uint8_t d_block[18], d_block_enc[18];

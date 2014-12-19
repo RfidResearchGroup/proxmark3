@@ -40,9 +40,7 @@ int CmdHF14AList(const char *Cmd)
 		return 0;
 	}	
 
-	if (param == 'f') {
-		ShowWaitCycles = true;
-	}
+	ShowWaitCycles = (param == 'f');
 		
 // for the time being. Need better Bigbuf handling.	
 #define TRACE_SIZE 3000	
@@ -56,8 +54,8 @@ int CmdHF14AList(const char *Cmd)
 	PrintAndLog("Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
 	PrintAndLog("All times are in carrier periods (1/13.56Mhz)");
 	PrintAndLog("");
-	PrintAndLog("     Start |       End | Src | Data");
-	PrintAndLog("-----------|-----------|-----|--------");
+	PrintAndLog("     Start |       End | Src | Data (! denotes parity error)                                   | CRC ");
+	PrintAndLog("-----------|-----------|-----|-----------------------------------------------------------------------");
 
 	uint16_t tracepos = 0;
 	uint16_t duration;
@@ -70,44 +68,40 @@ int CmdHF14AList(const char *Cmd)
 	
 	for (;;) {
 	
-		if(tracepos >= TRACE_SIZE) {
-			break;
-		}
+		if(tracepos >= TRACE_SIZE) break;
 	
 		timestamp = *((uint32_t *)(trace + tracepos));
+		
+		// Break and stick with current result if buffer was not completely full
+		if (timestamp == 0x44444444) break; 
+
 		if(tracepos == 0) {
 			first_timestamp = timestamp;
 		}
+		
 		tracepos += 4;
 		duration = *((uint16_t *)(trace + tracepos));
 		tracepos += 2;
 		data_len = *((uint16_t *)(trace + tracepos));
 		tracepos += 2;
 
+		isResponse = false;
 		if (data_len & 0x8000) {
 			data_len &= 0x7fff;
 			isResponse = true;
-		} else {
-			isResponse = false;
 		}
-
+		
 		parity_len = (data_len-1)/8 + 1;
-
-		if (tracepos + data_len + parity_len >= TRACE_SIZE) {
-			break;
-		}
+		
+		if (tracepos + data_len + parity_len >= TRACE_SIZE) break;
 
 		uint8_t *frame = trace + tracepos;
 		tracepos += data_len;
 		uint8_t *parityBytes = trace + tracepos;
 		tracepos += parity_len;
-
-		// Break and stick with current result if buffer was not completely full
-		if (timestamp == 0x44444444) break; 
-
-		char line[1000] = "";
-		int j;
-		for (j = 0; j < data_len; j++) {
+		
+		char line[16][110];
+		for (int j = 0; j < data_len; j++) {
 			int oddparity = 0x01;
 			int k;
 
@@ -117,47 +111,53 @@ int CmdHF14AList(const char *Cmd)
 
 			uint8_t parityBits = parityBytes[j>>3];
 			if (isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
-				sprintf(line+(j*4), "%02x! ", frame[j]);
+				sprintf(line[j/16]+((j%16)*4), "%02x! ", frame[j]);
 			} else {
-				sprintf(line+(j*4), "%02x ", frame[j]);
+				sprintf(line[j/16]+((j%16)*4), "%02x  ", frame[j]);	
 			}
 		}
-			
-		char crc[6] = ""; 
+		
+		char crc[5] = {0x00}; 
 		if (data_len > 2) {
 			uint8_t b1, b2;
 			ComputeCrc14443(CRC_14443_A, frame, data_len-2, &b1, &b2);
 			if (b1 != frame[data_len-2] || b2 != frame[data_len-1]) {
-				sprintf(crc, (isResponse & (data_len < 6)) ? "" : " !crc");
-			} else {
-				sprintf(crc, "");
-			}
+				sprintf(crc, (isResponse & (data_len < 6)) ? "" : "!crc");
+			} 
 		}
 		
 		EndOfTransmissionTimestamp = timestamp + duration;
-		
-		PrintAndLog(" %9d | %9d | %s | %s %s",
-			(timestamp - first_timestamp),
-			(EndOfTransmissionTimestamp - first_timestamp),
-			(isResponse ? "Tag" : "Rdr"),
-			line,
-			crc);
+		int num_lines = (data_len - 1)/16 + 1;
+				
+		for (int j = 0; j < num_lines; j++) {
+			if (j == 0) {
+				PrintAndLog(" %9d | %9d | %s | %-64s| %s",
+					(timestamp - first_timestamp),
+					(EndOfTransmissionTimestamp - first_timestamp),
+					(isResponse ? "Tag" : "Rdr"),
+					line[j], 
+					(j == num_lines-1)?crc:""
+					);
+			} else {
+				PrintAndLog("           |           |     | %-64s| %s",
+					line[j], 
+					(j == num_lines-1)?crc:"");
+			}
+		}				
 	
 		bool next_isResponse = *((uint16_t *)(trace + tracepos + 6)) & 0x8000;
 		
 		if (ShowWaitCycles && !isResponse && next_isResponse) {
 			uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
 			if (next_timestamp != 0x44444444) {
-			PrintAndLog(" %9d | %9d | %s | fdt (Frame Delay Time): %d",
-				(EndOfTransmissionTimestamp - first_timestamp),
-				(next_timestamp - first_timestamp),
-				" ",
-				(next_timestamp - EndOfTransmissionTimestamp));
-				}
+				PrintAndLog(" %9d | %9d | %s | fdt (Frame Delay Time): %d",
+					(EndOfTransmissionTimestamp - first_timestamp),
+					(next_timestamp - first_timestamp),
+					" ",
+					(next_timestamp - EndOfTransmissionTimestamp));				
 			}
-			
+		}	
 	}
-	
 	return 0;
 }
 
@@ -168,8 +168,7 @@ void iso14a_set_timeout(uint32_t timeout) {
 
 int CmdHF14AReader(const char *Cmd)
 {
-	//UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
-	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT , 0, 0}};
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
 	SendCommand(&c);
 
 	UsbCommand resp;

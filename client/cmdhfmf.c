@@ -34,7 +34,7 @@ start:
     SendCommand(&c);
 	
 	//flush queue
-	while (ukbhit())	getchar();
+	while (ukbhit()) getchar();
 
 	// wait cycle
 	while (true) {
@@ -66,19 +66,19 @@ start:
 	if (isOK != 1) return 1;
 	
 	// execute original function from util nonce2key
-	if (nonce2key(uid, nt, nr, par_list, ks_list, &r_key))
-	{
+	if (nonce2key(uid, nt, nr, par_list, ks_list, &r_key)) {
 		isOK = 2;
 		PrintAndLog("Key not found (lfsr_common_prefix list is null). Nt=%08x", nt);	
 	} else {
 		printf("------------------------------------------------------------------\n");
-		PrintAndLog("Key found:%012"llx" \n", r_key);
+		PrintAndLog("Key found :%012"llx" \n", r_key);
 
 		num_to_bytes(r_key, 6, keyBlock);
 		isOK = mfCheckKeys(0, 0, 1, keyBlock, &r_key);
 	}
+	
 	if (!isOK) 
-		PrintAndLog("Found valid key:%012"llx, r_key);
+		PrintAndLog("Found valid key :%012"llx, r_key);
 	else
 	{
 		if (isOK != 2) PrintAndLog("Found invalid key. ");	
@@ -87,6 +87,7 @@ start:
 		goto start;
 	}
 	
+	PrintAndLog("");
 	return 0;
 }
 
@@ -139,117 +140,6 @@ int CmdHF14AMfWrBl(const char *Cmd)
 	return 0;
 }
 
-/*  dublett finns i CMDHFMFU.C 
-int CmdHF14AMfUWrBl(const char *Cmd)
-{
-	uint8_t blockNo = 0;
-	bool chinese_card=0;
-	uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-	UsbCommand resp;
-       
-	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf mf uwrbl    <block number> <block data (8 hex symbols)> <w>");
-		PrintAndLog("        sample: hf mf uwrbl 0 01020304");
-		return 0;
-	}      
-
-	blockNo = param_get8(Cmd, 0);
-	if (param_gethex(Cmd, 1, bldata, 8)) {
-		PrintAndLog("Block data must include 8 HEX symbols");
-		return 1;
-	}
-       
-	if (strchr(Cmd,'w') != 0) {
-	  chinese_card=1;
-	}
-       
-	switch(blockNo){
-		case 0:
-			if (!chinese_card){
-				PrintAndLog("Access Denied");
-			}else{
-				PrintAndLog("--specialblock no:%d", blockNo);
-				PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-				UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
-				memcpy(d.d.asBytes,bldata, 4);
-				SendCommand(&d);
-
-				if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-					uint8_t isOK  = resp.arg[0] & 0xff;
-					PrintAndLog("isOk:%02x", isOK);
-				} else {
-					PrintAndLog("Command execute timeout");
-			      }
-			}
-			break;
-		case 1:
-			  if (!chinese_card){
-				PrintAndLog("Access Denied");
-			  }else{
-				PrintAndLog("--specialblock no:%d", blockNo);
-				PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-				UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
-				memcpy(d.d.asBytes,bldata, 4);
-				SendCommand(&d);
-
-				if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-				uint8_t isOK  = resp.arg[0] & 0xff;
-				PrintAndLog("isOk:%02x", isOK);
-				} else {
-					PrintAndLog("Command execute timeout");
-				}
-			}
-			break;
-		case 2:
-			if (!chinese_card){
-				PrintAndLog("Access Denied");
-			}else{
-				PrintAndLog("--specialblock no:%d", blockNo);
-				PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-				UsbCommand c = {CMD_MIFAREU_WRITEBL, {blockNo}};
-				memcpy(c.d.asBytes, bldata, 4);
-				SendCommand(&c);
-
-				if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-					uint8_t isOK  = resp.arg[0] & 0xff;
-					PrintAndLog("isOk:%02x", isOK);
-				} else {
-					PrintAndLog("Command execute timeout");
-				}
-			}
-			break;
-		case 3:
-			PrintAndLog("--specialblock no:%d", blockNo);
-			PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-			UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
-			memcpy(d.d.asBytes,bldata, 4);
-			SendCommand(&d);
-
-			if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-				uint8_t isOK  = resp.arg[0] & 0xff;
-				PrintAndLog("isOk:%02x", isOK);
-			} else {
-				PrintAndLog("Command execute timeout");
-			}
-			break;
-		default: 
-			PrintAndLog("--block no:%d", blockNo);
-			PrintAndLog("--data: %s", sprint_hex(bldata, 4));        	
-			UsbCommand e = {CMD_MIFAREU_WRITEBL, {blockNo}};
-			memcpy(e.d.asBytes,bldata, 4);
-			SendCommand(&e);
-
-			if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-				uint8_t isOK  = resp.arg[0] & 0xff;
-				PrintAndLog("isOk:%02x", isOK);
-			} else {
-				PrintAndLog("Command execute timeout");
-		      }
-		      break;
-	}
-	return 0;
-}
-*/
 int CmdHF14AMfRdBl(const char *Cmd)
 {
 	uint8_t blockNo = 0;
@@ -297,133 +187,6 @@ int CmdHF14AMfRdBl(const char *Cmd)
 
   return 0;
 }
-
-/* dublett finns i CMDHFMFU.C 
-int CmdHF14AMfURdBl(const char *Cmd)
-{
-	uint8_t blockNo = 0;
-
-    if (strlen(Cmd)<1) {
-		PrintAndLog("Usage:  hf mf urdbl    <block number>");
-		PrintAndLog("        sample: hf mf urdbl 0");
-        return 0;
-    }       
-        
-    blockNo = param_get8(Cmd, 0);
-    PrintAndLog("--block no:%d", blockNo);
-        
-	UsbCommand c = {CMD_MIFAREU_READBL, {blockNo}};
-	SendCommand(&c);
-
-    UsbCommand resp;
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-		uint8_t isOK = resp.arg[0] & 0xff;
-        uint8_t *data = resp.d.asBytes;
-
-        if (isOK)
-            PrintAndLog("isOk:%02x data:%s", isOK, sprint_hex(data, 4));
-        else
-            PrintAndLog("isOk:%02x", isOK);
-    } else {
-        PrintAndLog("Command execute timeout");
-    }
-
-	return 0;
-}
-*/
-
-/* dublett finns i CMDHFMFU.C 
-int CmdHF14AMfURdCard(const char *Cmd)
-{
-    int i;
-    uint8_t sectorNo = 0;
-	uint8_t *lockbytes_t=NULL;
-	uint8_t lockbytes[2]={0,0};
-	bool bit[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-        
-    uint8_t isOK  = 0;
-    uint8_t * data  = NULL;
-
-    if (sectorNo > 15) {
-        PrintAndLog("Sector number must be less than 16");
-        return 1;
-    }
-    PrintAndLog("Attempting to Read Ultralight... ");
-        
-  	UsbCommand c = {CMD_MIFAREU_READCARD, {sectorNo}};
-  	SendCommand(&c);
-
-    UsbCommand resp;
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-        isOK = resp.arg[0] & 0xff;
-        data = resp.d.asBytes;
-
-        PrintAndLog("isOk:%02x", isOK);
-        if (isOK) 
-            for (i = 0; i < 16; i++) {
-			switch(i){
-				case 2:
-					//process lock bytes
-					lockbytes_t=data+(i*4);
-					lockbytes[0]=lockbytes_t[2];
-					lockbytes[1]=lockbytes_t[3];
-					for(int j=0; j<16; j++){
-						bit[j]=lockbytes[j/8] & ( 1 <<(7-j%8));
-					}
-					//PrintAndLog("LB %02x %02x", lockbytes[0],lockbytes[1]);
-					//PrintAndLog("LB2b %02x %02x %02x %02x %02x %02x %02x %02x",bit[8],bit[9],bit[10],bit[11],bit[12],bit[13],bit[14],bit[15]);		
-					PrintAndLog("Block %3d:%s ", i,sprint_hex(data + i * 4, 4));
-					break;
-				case 3: 
-					PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[4]);
-					break;
-				case 4:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[3]);
-					break;
-				case 5:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[2]);
-					break;
-				case 6:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[1]);
-					break;
-				case 7:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[0]);
-					break;
-				case 8:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[15]);
-					break;
-				case 9:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[14]);
-					break;
-				case 10:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[13]);
-					break;
-				case 11:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[12]);
-					break;
-				case 12:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[11]);
-					break;
-				case 13:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[10]);
-					break;
-				case 14:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[9]);
-					break;
-				case 15:
-                    PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[8]);
-					break;
-				default:
-					PrintAndLog("Block %3d:%s ", i,sprint_hex(data + i * 4, 4));
-					break;
-				}
-                        }
-        } else {
-                PrintAndLog("Command execute timeout");
-        }
-  return 0;
-}
-*/
 
 int CmdHF14AMfRdSc(const char *Cmd)
 {
@@ -482,7 +245,6 @@ int CmdHF14AMfRdSc(const char *Cmd)
   return 0;
 }
 
-
 uint8_t FirstBlockOfSector(uint8_t sectorNo)
 {
 	if (sectorNo < 32) {
@@ -492,7 +254,6 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo)
 	}
 }
 
-
 uint8_t NumBlocksPerSector(uint8_t sectorNo)
 {
 	if (sectorNo < 32) {
@@ -501,7 +262,6 @@ uint8_t NumBlocksPerSector(uint8_t sectorNo)
 		return 16;
 	}
 }
-
 
 int CmdHF14AMfDump(const char *Cmd)
 {
@@ -677,7 +437,6 @@ int CmdHF14AMfDump(const char *Cmd)
 	return 0;
 }
 
-
 int CmdHF14AMfRestore(const char *Cmd)
 {
 	uint8_t sectorNo,blockNo;
@@ -744,6 +503,7 @@ int CmdHF14AMfRestore(const char *Cmd)
 			
 			if (fread(bldata, 1, 16, fdump) == 0) {
 				PrintAndLog("File reading error (dumpdata.bin).");
+				fclose(fdump);
 				return 2;
 			}
 					
@@ -778,10 +538,8 @@ int CmdHF14AMfRestore(const char *Cmd)
 	}
 	
 	fclose(fdump);
-
 	return 0;
 }
-
 
 int CmdHF14AMfNested(const char *Cmd)
 {
@@ -1028,7 +786,6 @@ int CmdHF14AMfNested(const char *Cmd)
 	return 0;
 }
 
-
 int CmdHF14AMfChk(const char *Cmd)
 {
 	if (strlen(Cmd)<3) {
@@ -1256,10 +1013,9 @@ int CmdHF14AMfChk(const char *Cmd)
 	}
 
 	free(keyBlock);
-
+	PrintAndLog("");
   return 0;
 }
-
 
 int CmdHF14AMf1kSim(const char *Cmd)
 {
@@ -1326,7 +1082,6 @@ int CmdHF14AMf1kSim(const char *Cmd)
 	return 0;
 }
 
-
 int CmdHF14AMfDbg(const char *Cmd)
 {
 	int dbgMode = param_get32ex(Cmd, 0, 0, 10);
@@ -1373,7 +1128,6 @@ int CmdHF14AMfEGet(const char *Cmd)
 
   return 0;
 }
-
 
 int CmdHF14AMfEClear(const char *Cmd)
 {

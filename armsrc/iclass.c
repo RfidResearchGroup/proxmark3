@@ -549,7 +549,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 					// Tag response does not need to be a complete byte!
 					if(Demod.len > 0 || Demod.bitCount > 0) {
 						if(Demod.bitCount > 1) {  // was > 0, do not interpret last closing bit, is part of EOF
-							Demod.shiftReg >>= (9 - Demod.bitCount); // rright align data
+							Demod.shiftReg >>= (9 - Demod.bitCount);	// right align data
 							Demod.output[Demod.len] = Demod.shiftReg & 0xff;
 							Demod.len++;
 						}
@@ -1145,7 +1145,8 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 			respsize = 0;
 			if (breakAfterMacReceived){
 				// dbprintf:ing ...
-				Dbprintf("CSN: %02x %02x %02x %02x %02x %02x %02x %02x",csn[0],csn[1],csn[2],csn[3],csn[4],csn[5],csn[6],csn[7]);
+				Dbprintf("CSN: %02x %02x %02x %02x %02x %02x %02x %02x"
+						   ,csn[0],csn[1],csn[2],csn[3],csn[4],csn[5],csn[6],csn[7]);
 				Dbprintf("RDR:  (len=%02d): %02x %02x %02x %02x %02x %02x %02x %02x %02x",len,
 						receivedCmd[0], receivedCmd[1], receivedCmd[2],
 						receivedCmd[3], receivedCmd[4], receivedCmd[5],
@@ -1264,8 +1265,8 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
   FpgaSetupSsc();
 
    if (wait)
-    if(*wait < 10)
-      *wait = 10;
+   {
+     if(*wait < 10) *wait = 10;
 
   for(c = 0; c < *wait;) {
     if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
@@ -1278,6 +1279,9 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
     }
     WDT_HIT();
   }
+
+   }
+
 
   uint8_t sendbyte;
   bool firstpart = TRUE;

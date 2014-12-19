@@ -310,10 +310,11 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 	if (Uart.state == STATE_UNSYNCD) {											// not yet synced
 	
 		if (Uart.highCnt < 7) {													// wait for a stable unmodulated signal
-			if (Uart.twoBits == 0xffff)
+			if (Uart.twoBits == 0xffff) {
 				Uart.highCnt++;
-			else
+			} else {
 				Uart.highCnt = 0;
+			}
 		} else {
 			Uart.syncBit = 0xFFFF; // not set
 			// look for 00xx1111 (the start bit)
@@ -1602,8 +1603,7 @@ int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par){
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
 				 uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity)
 {
-	if (!tracing) return true;
-
+	if (tracing) {
 	// we cannot exactly measure the end and start of a received command from reader. However we know that the delay from
 	// end of the received command to start of the tag's (simulated by us) answer is n*128+20 or n*128+84 resp.
 	// with n >= 9. The start of the tags answer can be measured and therefore the end of the received command be calculated:
@@ -1614,8 +1614,10 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 	reader_StartTime = reader_EndTime - reader_modlen;
 	if (!LogTrace(reader_data, reader_len, reader_StartTime, reader_EndTime, reader_Parity, TRUE)) {
 		return FALSE;
-	} else 
-		return(!LogTrace(tag_data, tag_len, tag_StartTime, tag_EndTime, tag_Parity, FALSE));
+		} else return(!LogTrace(tag_data, tag_len, tag_StartTime, tag_EndTime, tag_Parity, FALSE));
+	} else {
+		return TRUE;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1703,7 +1705,6 @@ int ReaderReceiveOffset(uint8_t* receivedAnswer, uint16_t offset, uint8_t *parit
 int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity)
 {
 	if (!GetIso14443aAnswerFromTag(receivedAnswer, parity, 0)) return FALSE;
-
 	if (tracing) {
 		LogTrace(receivedAnswer, Demod.len, Demod.startTime*16 - DELAY_AIR2ARM_AS_READER, Demod.endTime*16 - DELAY_AIR2ARM_AS_READER, parity, FALSE);
 	}
@@ -1714,7 +1715,7 @@ int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity)
  * fills the uid pointer unless NULL
  * fills resp_data unless NULL */
 int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, uint32_t* cuid_ptr) {
-	//uint8_t halt[]       = { 0x50 };  // HALT
+	//uint8_t halt[]       = { 0x50, 0x00, 0x57, 0xCD };  // HALT
 	uint8_t wupa[]       = { 0x52 };  // WAKE-UP
 	//uint8_t reqa[]       = { 0x26 };  // REQUEST A
 	uint8_t sel_all[]    = { 0x93,0x20 };
@@ -1731,6 +1732,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 	
 	// test for the SKYLANDERS TOY.
 	//ReaderTransmit(halt,sizeof(halt), NULL);
+	//len = ReaderReceive(resp, resp_par);
 	
 	// Broadcast for a card, WUPA (0x52) will force response from all cards in the field
 	ReaderTransmitBitsPar(wupa,7,0, NULL);
@@ -1808,7 +1810,6 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     // Receive the SAK
     if (!ReaderReceive(resp, resp_par)) return 0;
     sak = resp[0];
-
 	
     // Test if more parts of the uid are coming
     if ((sak & 0x04) /* && uid_resp[0] == 0x88 */) {
@@ -1844,7 +1845,8 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 	AppendCrc14443a(rats, 2);
 	ReaderTransmit(rats, sizeof(rats), NULL);
 
-	if (!(len = ReaderReceive(resp, resp_par))) return 2;
+	len = ReaderReceive(resp, resp_par);
+	if(!len) return 0;
 
 	if(p_hi14a_card) {
 		memcpy(p_hi14a_card->ats, resp, sizeof(p_hi14a_card->ats));
