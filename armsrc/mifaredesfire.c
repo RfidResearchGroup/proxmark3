@@ -1,4 +1,5 @@
 #include "mifaredesfire.h"
+#include "des.h"
 
 #define MAX_APPLICATION_COUNT 28
 #define MAX_FILE_COUNT 16
@@ -186,7 +187,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 	int len = 0;
 	//uint8_t PICC_MASTER_KEY8[8] = { 0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47};
 	uint8_t PICC_MASTER_KEY16[16] = { 0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4a,0x4b,0x4c,0x4d,0x4e,0x4f };
-	//uint8_t null_key_data8[8] = {0x00};
+	uint8_t null_key_data8[8] = {0x00};
 	//uint8_t null_key_data16[16] = {0x00};	
 	//uint8_t new_key_data8[8]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77};
 	//uint8_t new_key_data16[16]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF};
@@ -216,10 +217,31 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 	
 	// des, nyckel 0, 
 	switch (mode){
-		case 1:
-			// if ( SendDesfireCommand(AUTHENTICATE, &keyno, resp) > 0 ){
-				// // fick nonce från kortet
-			// }
+        case 1:{
+            uint8_t keybytes[8];
+            if (datain[1] == 0xff){
+                memcpy(keybytes,null_key_data8,8);
+            } else{
+                memcpy(keybytes, datain+1, datalen);
+            }
+            
+            cmd[0] = AUTHENTICATE;
+            cmd[1] = 0x00;  //keynumber
+            len = DesfireAPDU(cmd, 2, resp);
+            if ( !len ) {
+                if (MF_DBGLEVEL >= 1) {
+                    DbpString("Authentication failed. Card timeout.");
+                }
+                OnError();
+                return;
+            }
+            
+            memcpy( encRndB, resp+3, 8);
+            
+            des_dec(&decRndB, &encRndB, &keybytes);
+            Dbprintf("RandB: %02x%02x%02x%02x%02x%02x%02x%02x",decRndB[0],decRndB[1],decRndB[2],decRndB[3],decRndB[4],decRndB[5],decRndB[6],decRndB[7]);
+            
+            }
 			break;
 		case 2:
 			//SendDesfireCommand(AUTHENTICATE_ISO, &keyno, resp);
