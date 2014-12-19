@@ -49,8 +49,8 @@
  * @return
  */
 int fileExists(const char *filename) {
-	struct _stat fileStat;
-	int result = _stat(filename, &fileStat);
+    struct stat st;
+    int result = stat(filename, &st);
 	return result == 0;
 }
 

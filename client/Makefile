@@ -13,13 +13,13 @@ CXX=g++
 VPATH = ../common
 OBJDIR = obj
 
-LDLIBS =  -L/mingw/lib -L/opt/local/lib -L/usr/local/lib ../liblua/liblua.a -lm -lreadline -lpthread -lcrypto -lgdi32
+LDLIBS =  -L/opt/local/lib -L/usr/local/lib ../liblua/liblua.a -lm -lreadline -lpthread -lcrypto
 LDFLAGS = $(COMMON_FLAGS)
 CFLAGS = -std=c99 -I. -I../include -I../common -I/mingw/include -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O4 $(ICE_FLAGS)
 LUAPLATFORM = generic
 
 ifneq (,$(findstring MINGW,$(platform)))
-CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui -I$(QTDIR)/include/QtWidgets  -I/mingw/include
+CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui -I$(QTDIR)/include/QtWidgets
 QTLDLIBS = -L$(QTDIR)/lib  -lQt5Core -lQt5Gui -lQt5Widgets 
 MOC = $(QTDIR)/bin/moc
 LUAPLATFORM = mingw
