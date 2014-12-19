@@ -100,9 +100,9 @@ int Cmdaskdemod(const char *Cmd)
   } else {
     GraphBuffer[0] = c;
   }
-  //20% fuzz [marshmellow]
-  high=(int)(.8*high);
-  low=(int)(.8*low);
+  ////13% fuzz [marshmellow]
+  //high=(int)(0.87*high);
+  //low=(int)(0.87*low);
   for (i = 1; i < GraphTraceLen; ++i) {
     /* Transitions are detected at each peak
      * Transitions are either:
@@ -112,10 +112,10 @@ int Cmdaskdemod(const char *Cmd)
      * low for long periods, others just reach the peak and go
      * down)
      */
-    //[marhsmellow] changed == to >= for high and <= for low
-    if ((GraphBuffer[i] >= high) && (GraphBuffer[i - 1] == c)) {
+    //[marhsmellow] change == to >= for high and <= for low for fuzz
+    if ((GraphBuffer[i] == high) && (GraphBuffer[i - 1] == c)) {
       GraphBuffer[i] = 1 - c;
-    } else if ((GraphBuffer[i] <= low) && (GraphBuffer[i - 1] == (1 - c))){
+    } else if ((GraphBuffer[i] == low) && (GraphBuffer[i - 1] == (1 - c))){
       GraphBuffer[i] = c;
     } else {
       /* No transition */
