@@ -69,6 +69,9 @@ int CmdAmp(const char *Cmd)
  * Arguments:
  * c : 0 or 1
  */
+ //this method is dependant on all highs and lows to be the same(or clipped)  this could be an issue[marshmellow]
+ //might be able to use clock to help identify highs and lows with some more tolerance
+ //but for now I will try a fuzz factor
 int Cmdaskdemod(const char *Cmd)
 {
   int i;
@@ -79,7 +82,7 @@ int Cmdaskdemod(const char *Cmd)
   sscanf(Cmd, "%i", &c);
 
   /* Detect high and lows and clock */
-  // (AL - clock???)
+  // (AL - clock???) 
   for (i = 0; i < GraphTraceLen; ++i)
   {
     if (GraphBuffer[i] > high)
@@ -91,12 +94,15 @@ int Cmdaskdemod(const char *Cmd)
     PrintAndLog("Invalid argument: %s", Cmd);
     return 0;
   }
-
+  //prime loop
   if (GraphBuffer[0] > 0) {
     GraphBuffer[0] = 1-c;
   } else {
     GraphBuffer[0] = c;
   }
+  //20% fuzz [marshmellow]
+  high=(int)(.8*high);
+  low=(int)(.8*low);
   for (i = 1; i < GraphTraceLen; ++i) {
     /* Transitions are detected at each peak
      * Transitions are either:
@@ -106,9 +112,10 @@ int Cmdaskdemod(const char *Cmd)
      * low for long periods, others just reach the peak and go
      * down)
      */
-    if ((GraphBuffer[i] == high) && (GraphBuffer[i - 1] == c)) {
+    //[marhsmellow] changed == to >= for high and <= for low
+    if ((GraphBuffer[i] >= high) && (GraphBuffer[i - 1] == c)) {
       GraphBuffer[i] = 1 - c;
-    } else if ((GraphBuffer[i] == low) && (GraphBuffer[i - 1] == (1 - c))){
+    } else if ((GraphBuffer[i] <= low) && (GraphBuffer[i - 1] == (1 - c))){
       GraphBuffer[i] = c;
     } else {
       /* No transition */
@@ -264,7 +271,421 @@ int CmdDetectClockRate(const char *Cmd)
   return 0;
 }
 
+//demod GraphBuffer wave to 0s and 1s for each wave - 0s for short waves 1s for long waves
+size_t fsk_wave_demod(int size)
+{
+  uint32_t last_transition = 0;
+  uint32_t idx = 1;
+  uint32_t maxVal = 0;
+  // we don't care about actual value, only if it's more or less than a
+  // threshold essentially we capture zero crossings for later analysis
+  for(idx=1; idx<size; idx++){
+    if(maxVal<GraphBuffer[idx]) maxVal = GraphBuffer[idx];
+  }
+  // set close to the top of the wave threshold with 13% margin for error
+  // less likely to get a false transition up there. 
+  // (but have to be careful not to go too high and miss some short waves)
+  uint32_t threshold_value = (uint32_t)(maxVal*.87);
+  idx=1;
+  // int threshold_value = 100;
+  
+  // sync to first lo-hi transition, and threshold
+  //  PrintAndLog("FSK init complete size: %d",size);//debug
+  // Need to threshold first sample
+  if(GraphBuffer[0] < threshold_value) GraphBuffer[0] = 0;
+  else GraphBuffer[0] = 1;
+  size_t numBits = 0;
+  // count cycles between consecutive lo-hi transitions, there should be either 8 (fc/8)
+  // or 10 (fc/10) cycles but in practice due to noise etc we may end up with with anywhere
+  // between 7 to 11 cycles so fuzz it by treat anything <9 as 8 and anything else as 10
+  for(idx = 1; idx < size; idx++) {
+    // threshold current value 
+    if (GraphBuffer[idx] < threshold_value) GraphBuffer[idx] = 0;
+    else GraphBuffer[idx] = 1;
+    // Check for 0->1 transition
+    if (GraphBuffer[idx-1] < GraphBuffer[idx]) { // 0 -> 1 transition
+      if (idx-last_transition<6){
+        // do nothing with extra garbage (shouldn't be any) noise tolerance?
+      } else if(idx-last_transition < 9) {
+          GraphBuffer[numBits]=1;             
+          // Other fsk demods reverse this making the short waves 1 and long waves 0
+          // this is really backwards...  smaller waves will typically be 0 and larger 1 [marshmellow]
+          // but will leave as is and invert when needed later
+      } else{
+          GraphBuffer[numBits]=0;
+      } 
+      last_transition = idx;
+      numBits++;
+      //  PrintAndLog("numbits %d",numBits);
+    }
+  }
+  return numBits; //Actually, it returns the number of bytes, but each byte represents a bit: 1 or 0
+}
+uint32_t myround(float f)
+{
+  if (f >= UINT_MAX) return UINT_MAX;
+  return (uint32_t) (f + (float)0.5);
+}
+//translate 11111100000 to 10
+size_t aggregate_bits(int size, uint8_t rfLen, uint8_t maxConsequtiveBits, uint8_t invert) //,uint8_t l2h_crossing_value
+{
+  int lastval=GraphBuffer[0];
+  uint32_t idx=0;
+  size_t numBits=0;
+  uint32_t n=1;
+  uint32_t n2=0;
+  for( idx=1; idx < size; idx++) {
+
+    if (GraphBuffer[idx]==lastval) {
+      n++;
+      continue;
+    }
+    // if lastval was 1, we have a 1->0 crossing
+    if ( GraphBuffer[idx-1]==1 ) {
+      n=myround((float)(n+1)/((float)(rfLen)/(float)8)); //-2 noise tolerance
+
+     // n=(n+1) / h2l_crossing_value;    
+                                       //truncating could get us into trouble 
+                                       //now we will try with actual clock (RF/64 or RF/50) variable instead
+                                       //then devide with float casting then truncate after more acurate division
+                                       //and round to nearest int
+                                       //like n = (((float)n)/(float)rfLen/(float)10);
+    } else {// 0->1 crossing
+      n=myround((float)(n+1)/((float)(rfLen-2)/(float)10));  // as int 120/6 = 20 as float 120/(64/10) = 18  (18.75)
+      //n=(n+1) / l2h_crossing_value;
+    }
+    if (n == 0) n = 1; //this should never happen...  should we error if it does?
+
+    if (n < maxConsequtiveBits) // Consecutive  //when the consecutive bits are low - the noise tolerance can be high
+                                                //if it is high then we must be careful how much noise tolerance we allow
+    {
+      if (invert==0){ // do not invert bits 
+        for (n2=0; n2<n; n2++){
+          GraphBuffer[numBits+n2]=GraphBuffer[idx-1];
+        }
+        //memset(GraphBuffer+numBits, GraphBuffer[idx-1] , n);
+      }else{        // invert bits
+        for (n2=0; n2<n; n2++){
+          GraphBuffer[numBits+n2]=GraphBuffer[idx-1]^1;
+        }
+        //memset(GraphBuffer+numBits, GraphBuffer[idx-1]^1 , n);  
+      }      
+      numBits += n;
+    }
+    n=0;
+    lastval=GraphBuffer[idx];
+  }//end for
+  return numBits;
+}
+// full fsk demod from GraphBuffer wave to decoded 1s and 0s (no mandemod)
+size_t fskdemod(uint8_t rfLen, uint8_t invert)
+{
+  //uint8_t h2l_crossing_value = 6;
+  //uint8_t l2h_crossing_value = 5;
+  
+  // if (rfLen==64)  //currently only know settings for RF/64 change from default if option entered
+  // {
+  //   h2l_crossing_value=8;  //or 8  as 64/8 = 8
+  //   l2h_crossing_value=6;  //or 6.4 as 64/10 = 6.4
+  // }
+  size_t size  = GraphTraceLen; 
+    // FSK demodulator
+  size = fsk_wave_demod(size);
+  size = aggregate_bits(size,rfLen,192,invert);
+ // size = aggregate_bits(size, h2l_crossing_value, l2h_crossing_value,192, invert); //192=no limit to same values
+  //done messing with GraphBuffer - repaint
+  RepaintGraphWindow();
+  return size;
+}
+uint32_t bytebits_to_byte(int* src, int numbits)
+{
+  uint32_t num = 0;
+  for(int i = 0 ; i < numbits ; i++)
+  {
+    num = (num << 1) | (*src);
+    src++;
+  }
+  return num;
+}
+
+//fsk demod and print binary
 int CmdFSKdemod(const char *Cmd)
+{
+  //raw fsk demod no manchester decoding no start bit finding just get binary from wave
+  //set defaults
+  uint8_t rfLen = 50;
+  uint8_t invert=0;
+  //set options from parameters entered with the command
+  if (strlen(Cmd)>0 && strlen(Cmd)<=2) {
+     rfLen=param_get8(Cmd, 0); //if rfLen option only is used
+     if (rfLen==1){
+      invert=1;   //if invert option only is used
+      rfLen = 50;
+     } else if(rfLen==0) rfLen=50;
+  } 
+  if (strlen(Cmd)>2) {
+    rfLen=param_get8(Cmd, 0);  //if both options are used
+    invert=param_get8(Cmd,1);
+  }
+  PrintAndLog("Args invert: %d \nClock:%d",invert,rfLen);
+ 
+  size_t size  = fskdemod(rfLen,invert); 
+  
+  PrintAndLog("FSK decoded bitstream:");
+  // Now output the bitstream to the scrollback by line of 16 bits
+  if(size > (7*32)+2) size = (7*32)+2; //only output a max of 7 blocks of 32 bits  most tags will have full bit stream inside that sample size
+
+  for (int i = 2; i < (size-16); i+=16) {
+    PrintAndLog("%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i",
+      GraphBuffer[i],
+      GraphBuffer[i+1],
+      GraphBuffer[i+2],
+      GraphBuffer[i+3],
+      GraphBuffer[i+4],
+      GraphBuffer[i+5],
+      GraphBuffer[i+6],
+      GraphBuffer[i+7],
+      GraphBuffer[i+8],
+      GraphBuffer[i+9],
+      GraphBuffer[i+10],
+      GraphBuffer[i+11],
+      GraphBuffer[i+12],
+      GraphBuffer[i+13],
+      GraphBuffer[i+14],
+      GraphBuffer[i+15]);
+  }
+  ClearGraph(1);
+  return 0;
+}
+
+int CmdFSKdemodHID(const char *Cmd)
+{
+  //raw fsk demod no manchester decoding no start bit finding just get binary from wave
+  //set defaults
+  uint8_t rfLen = 50;
+  uint8_t invert=0;//param_get8(Cmd, 0);
+  size_t idx=0; 
+  uint32_t hi2=0, hi=0, lo=0;
+
+  //get binary from fsk wave
+  size_t size = fskdemod(rfLen,invert); 
+  
+    // final loop, go over previously decoded fsk data and now manchester decode into usable tag ID
+    // 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
+  int frame_marker_mask[] = {1,1,1,0,0,0};
+  int numshifts = 0;
+  idx = 0;
+  while( idx + 6 < size) {
+    // search for a start of frame marker
+
+    if ( memcmp(GraphBuffer+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
+    { // frame marker found
+      idx+=6;//sizeof(frame_marker_mask); //size of int is >6
+      while(GraphBuffer[idx] != GraphBuffer[idx+1] && idx < size-2)
+      { 
+        // Keep going until next frame marker (or error)
+        // Shift in a bit. Start by shifting high registers
+        hi2 = (hi2<<1)|(hi>>31);
+        hi = (hi<<1)|(lo>>31);
+        //Then, shift in a 0 or one into low
+        if (GraphBuffer[idx] && !GraphBuffer[idx+1])  // 1 0
+          lo=(lo<<1)|0;
+        else // 0 1
+          lo=(lo<<1)|1;
+        numshifts++;
+        idx += 2;
+      }
+
+      //PrintAndLog("Num shifts: %d ", numshifts);
+      // Hopefully, we read a tag and  hit upon the next frame marker
+      if(idx + 6 < size)
+      {
+        if ( memcmp(GraphBuffer+(idx), frame_marker_mask, sizeof(frame_marker_mask)) == 0)
+        {
+          if (hi2 != 0){ //extra large HID tags
+            PrintAndLog("TAG ID: %x%08x%08x (%d)",
+               (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+          }
+          else {  //standard HID tags <38 bits
+            //Dbprintf("TAG ID: %x%08x (%d)",(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF); //old print cmd
+            uint8_t bitlen = 0;
+            uint32_t fc = 0;
+            uint32_t cardnum = 0;
+            if (((hi>>5)&1)==1){//if bit 38 is set then < 37 bit format is used
+              uint32_t lo2=0;
+              lo2=(((hi & 15) << 12) | (lo>>20)); //get bits 21-37 to check for format len bit
+              uint8_t idx3 = 1;
+              while(lo2>1){ //find last bit set to 1 (format len bit)
+                lo2=lo2>>1;
+                idx3++;
+              }
+              bitlen =idx3+19;  
+              fc =0;
+              cardnum=0;
+              if(bitlen==26){
+                cardnum = (lo>>1)&0xFFFF;
+                fc = (lo>>17)&0xFF;
+              }
+              if(bitlen==37){
+                cardnum = (lo>>1)&0x7FFFF;
+                fc = ((hi&0xF)<<12)|(lo>>20);
+              }
+              if(bitlen==34){
+                cardnum = (lo>>1)&0xFFFF;
+                fc= ((hi&1)<<15)|(lo>>17);
+              }
+              if(bitlen==35){
+                cardnum = (lo>>1)&0xFFFFF;
+                fc = ((hi&1)<<11)|(lo>>21);
+              }
+            }
+            else { //if bit 38 is not set then 37 bit format is used
+              bitlen= 37;
+              fc =0;
+              cardnum=0;
+              if(bitlen==37){
+                cardnum = (lo>>1)&0x7FFFF;
+                fc = ((hi&0xF)<<12)|(lo>>20);
+              }
+            }
+            
+            PrintAndLog("TAG ID: %x%08x (%d) - Format Len: %dbit - FC: %d - Card: %d",
+              (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF,
+              (unsigned int) bitlen, (unsigned int) fc, (unsigned int) cardnum);
+            ClearGraph(1);
+            return 0;
+          }
+        }
+      }
+      // reset
+      hi2 = hi = lo = 0;
+      numshifts = 0;
+    }else
+    {
+      idx++;
+    }
+  }
+  if (idx + sizeof(frame_marker_mask) >= size){
+    PrintAndLog("start bits for hid not found");
+    PrintAndLog("FSK decoded bitstream:");
+    // Now output the bitstream to the scrollback by line of 16 bits
+    if(size > (7*32)+2) size = (7*32)+2; //only output a max of 7 blocks of 32 bits  most tags will have full bit stream inside that sample size
+
+    for (int i = 2; i < (size-16); i+=16) {
+      PrintAndLog("%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i",
+        GraphBuffer[i],
+        GraphBuffer[i+1],
+        GraphBuffer[i+2],
+        GraphBuffer[i+3],
+        GraphBuffer[i+4],
+        GraphBuffer[i+5],
+        GraphBuffer[i+6],
+        GraphBuffer[i+7],
+        GraphBuffer[i+8],
+        GraphBuffer[i+9],
+        GraphBuffer[i+10],
+        GraphBuffer[i+11],
+        GraphBuffer[i+12],
+        GraphBuffer[i+13],
+        GraphBuffer[i+14],
+        GraphBuffer[i+15]);
+    }   
+  }
+  ClearGraph(1);
+  return 0;
+}
+
+
+int CmdFSKdemodIO(const char *Cmd)
+{
+  //raw fsk demod no manchester decoding no start bit finding just get binary from wave
+  //set defaults
+  uint8_t rfLen = 64;
+  uint8_t invert=1;
+  size_t idx=0; 
+  uint8_t testMax=0;
+  //test samples are not just noise
+  if (GraphTraceLen < 64) return 0;
+  for(idx=0;idx<64;idx++){
+    if (testMax<GraphBuffer[idx]) testMax=GraphBuffer[idx];
+  }
+  idx=0;
+  //get full binary from fsk wave
+  size_t size = fskdemod(rfLen,invert); 
+ 
+  //if not just noise
+  //PrintAndLog("testMax %d",testMax);
+  if (testMax>40){
+    //Index map
+    //0           10          20          30          40          50          60
+    //|           |           |           |           |           |           |
+    //01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
+    //-----------------------------------------------------------------------------
+    //00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
+    //
+    //XSF(version)facility:codeone+codetwo (raw)
+    //Handle the data
+    int mask[] = {0,0,0,0,0,0,0,0,0,1};
+    for( idx=0; idx < (size - 74); idx++) {
+      if ( memcmp(GraphBuffer + idx, mask, sizeof(mask))==0) { 
+        //frame marker found
+        if (GraphBuffer[idx+17]==1 && GraphBuffer[idx+26]==1 && GraphBuffer[idx+35]==1 && GraphBuffer[idx+44]==1 && GraphBuffer[idx+53]==1){
+          //confirmed proper separator bits found
+          
+          PrintAndLog("%d%d%d%d%d%d%d%d %d",GraphBuffer[idx],    GraphBuffer[idx+1],  GraphBuffer[idx+2], GraphBuffer[idx+3], GraphBuffer[idx+4], GraphBuffer[idx+5], GraphBuffer[idx+6], GraphBuffer[idx+7], GraphBuffer[idx+8]);
+          PrintAndLog("%d%d%d%d%d%d%d%d %d",GraphBuffer[idx+9],  GraphBuffer[idx+10], GraphBuffer[idx+11],GraphBuffer[idx+12],GraphBuffer[idx+13],GraphBuffer[idx+14],GraphBuffer[idx+15],GraphBuffer[idx+16],GraphBuffer[idx+17]);       
+          PrintAndLog("%d%d%d%d%d%d%d%d %d",GraphBuffer[idx+18], GraphBuffer[idx+19], GraphBuffer[idx+20],GraphBuffer[idx+21],GraphBuffer[idx+22],GraphBuffer[idx+23],GraphBuffer[idx+24],GraphBuffer[idx+25],GraphBuffer[idx+26]);
+          PrintAndLog("%d%d%d%d%d%d%d%d %d",GraphBuffer[idx+27], GraphBuffer[idx+28], GraphBuffer[idx+29],GraphBuffer[idx+30],GraphBuffer[idx+31],GraphBuffer[idx+32],GraphBuffer[idx+33],GraphBuffer[idx+34],GraphBuffer[idx+35]);
+          PrintAndLog("%d%d%d%d%d%d%d%d %d",GraphBuffer[idx+36], GraphBuffer[idx+37], GraphBuffer[idx+38],GraphBuffer[idx+39],GraphBuffer[idx+40],GraphBuffer[idx+41],GraphBuffer[idx+42],GraphBuffer[idx+43],GraphBuffer[idx+44]);
+          PrintAndLog("%d%d%d%d%d%d%d%d %d",GraphBuffer[idx+45], GraphBuffer[idx+46], GraphBuffer[idx+47],GraphBuffer[idx+48],GraphBuffer[idx+49],GraphBuffer[idx+50],GraphBuffer[idx+51],GraphBuffer[idx+52],GraphBuffer[idx+53]);
+          PrintAndLog("%d%d%d%d%d%d%d%d %d%d",GraphBuffer[idx+54],GraphBuffer[idx+55],GraphBuffer[idx+56],GraphBuffer[idx+57],GraphBuffer[idx+58],GraphBuffer[idx+59],GraphBuffer[idx+60],GraphBuffer[idx+61],GraphBuffer[idx+62],GraphBuffer[idx+63]);
+      
+          uint32_t code = bytebits_to_byte(GraphBuffer+idx,32);
+          uint32_t code2 = bytebits_to_byte(GraphBuffer+idx+32,32); 
+          short version = bytebits_to_byte(GraphBuffer+idx+27,8); //14,4
+          uint8_t facilitycode = bytebits_to_byte(GraphBuffer+idx+19,8) ;
+          uint16_t number = (bytebits_to_byte(GraphBuffer+idx+36,8)<<8)|(bytebits_to_byte(GraphBuffer+idx+45,8)); //36,9
+          
+          PrintAndLog("XSF(%02d)%02x:%d (%08x%08x)",version,facilitycode,number,code,code2);    
+          ClearGraph(1); 
+          return 0;
+        } else {
+          PrintAndLog("thought we had a valid tag but did not match format");
+        }
+      }   
+    }
+    if (idx >= (size-74)){
+      PrintAndLog("start bits for io prox not found");
+      PrintAndLog("FSK decoded bitstream:");
+      // Now output the bitstream to the scrollback by line of 16 bits
+      if(size > (7*32)+2) size = (7*32)+2; //only output a max of 7 blocks of 32 bits  most tags will have full bit stream inside that sample size
+
+      for (int i = 2; i < (size-16); i+=16) {
+        PrintAndLog("%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i",
+          GraphBuffer[i],
+          GraphBuffer[i+1],
+          GraphBuffer[i+2],
+          GraphBuffer[i+3],
+          GraphBuffer[i+4],
+          GraphBuffer[i+5],
+          GraphBuffer[i+6],
+          GraphBuffer[i+7],
+          GraphBuffer[i+8],
+          GraphBuffer[i+9],
+          GraphBuffer[i+10],
+          GraphBuffer[i+11],
+          GraphBuffer[i+12],
+          GraphBuffer[i+13],
+          GraphBuffer[i+14],
+          GraphBuffer[i+15]);
+      }   
+    }
+  }
+  ClearGraph(1);
+  return 0;
+}
+/*
+int CmdFSKdemodHIDold(const char *Cmd)//not put in commands yet //old CmdFSKdemod needs updating
 {
   static const int LowTone[]  = {
     1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
@@ -284,12 +705,12 @@ int CmdFSKdemod(const char *Cmd)
 
   int lowLen = sizeof (LowTone) / sizeof (int);
   int highLen = sizeof (HighTone) / sizeof (int);
-  int convLen = (highLen > lowLen) ? highLen : lowLen;
+  int convLen = (highLen > lowLen) ? highLen : lowLen; //if highlen > lowLen then highlen else lowlen
   uint32_t hi = 0, lo = 0;
 
   int i, j;
   int minMark = 0, maxMark = 0;
-
+  
   for (i = 0; i < GraphTraceLen - convLen; ++i) {
     int lowSum = 0, highSum = 0;
 
@@ -321,7 +742,7 @@ int CmdFSKdemod(const char *Cmd)
   GraphTraceLen -= (convLen + 16);
   RepaintGraphWindow();
 
-  // Find bit-sync (3 lo followed by 3 high)
+  // Find bit-sync (3 lo followed by 3 high) (HID ONLY)
   int max = 0, maxPos = 0;
   for (i = 0; i < 6000; ++i) {
     int dec = 0;
@@ -382,7 +803,7 @@ int CmdFSKdemod(const char *Cmd)
   PrintAndLog("hex: %08x %08x", hi, lo);
   return 0;
 }
-
+*/
 int CmdGrid(const char *Cmd)
 {
   sscanf(Cmd, "%i %i", &PlotGridX, &PlotGridY);
@@ -463,7 +884,7 @@ int CmdSamples(const char *Cmd)
   uint8_t got[40000];
 
   n = strtol(Cmd, NULL, 0);
-  if (n == 0) n = 512;
+  if (n == 0) n = 6000;
   if (n > sizeof(got)) n = sizeof(got);
   
   PrintAndLog("Reading %d samples\n", n);
@@ -657,30 +1078,30 @@ int CmdManchesterDemod(const char *Cmd)
     {
       if (GraphBuffer[i-1] != GraphBuffer[i])
       {
-      lc = i-lastval;
-      lastval = i;
+        lc = i-lastval;
+        lastval = i;
 
-      // Error check: if bitidx becomes too large, we do not
-      // have a Manchester encoded bitstream or the clock is really
-      // wrong!
-      if (bitidx > (GraphTraceLen*2/clock+8) ) {
-        PrintAndLog("Error: the clock you gave is probably wrong, aborting.");
-        return 0;
-      }
-      // Then switch depending on lc length:
-      // Tolerance is 1/4 of clock rate (arbitrary)
-      if (abs(lc-clock/2) < tolerance) {
-        // Short pulse : either "1" or "0"
-        BitStream[bitidx++]=GraphBuffer[i-1];
-      } else if (abs(lc-clock) < tolerance) {
-        // Long pulse: either "11" or "00"
-        BitStream[bitidx++]=GraphBuffer[i-1];
-        BitStream[bitidx++]=GraphBuffer[i-1];
-      } else {
+        // Error check: if bitidx becomes too large, we do not
+        // have a Manchester encoded bitstream or the clock is really
+        // wrong!
+        if (bitidx > (GraphTraceLen*2/clock+8) ) {
+          PrintAndLog("Error: the clock you gave is probably wrong, aborting.");
+          return 0;
+        }
+        // Then switch depending on lc length:
+        // Tolerance is 1/4 of clock rate (arbitrary)
+        if (abs(lc-clock/2) < tolerance) {
+          // Short pulse : either "1" or "0"
+          BitStream[bitidx++]=GraphBuffer[i-1];
+        } else if (abs(lc-clock) < tolerance) {
+          // Long pulse: either "11" or "00"
+          BitStream[bitidx++]=GraphBuffer[i-1];
+          BitStream[bitidx++]=GraphBuffer[i-1];
+        } else {
         // Error
           warnings++;
-        PrintAndLog("Warning: Manchester decode error for pulse width detection.");
-        PrintAndLog("(too many of those messages mean either the stream is not Manchester encoded, or clock is wrong)");
+          PrintAndLog("Warning: Manchester decode error for pulse width detection.");
+          PrintAndLog("(too many of those messages mean either the stream is not Manchester encoded, or clock is wrong)");
 
           if (warnings > 10)
           {
@@ -697,15 +1118,15 @@ int CmdManchesterDemod(const char *Cmd)
     for (i = 0; i < bitidx; i += 2) {
       if ((BitStream[i] == 0) && (BitStream[i+1] == 1)) {
         BitStream[bit2idx++] = 1 ^ invert;
-    } else if ((BitStream[i] == 1) && (BitStream[i+1] == 0)) {
-      BitStream[bit2idx++] = 0 ^ invert;
-    } else {
-      // We cannot end up in this state, this means we are unsynchronized,
-      // move up 1 bit:
-      i++;
+      } else if ((BitStream[i] == 1) && (BitStream[i+1] == 0)) {
+        BitStream[bit2idx++] = 0 ^ invert;
+      } else {
+        // We cannot end up in this state, this means we are unsynchronized,
+        // move up 1 bit:
+        i++;
         warnings++;
-      PrintAndLog("Unsynchronized, resync...");
-      PrintAndLog("(too many of those messages mean the stream is not Manchester encoded)");
+        PrintAndLog("Unsynchronized, resync...");
+        PrintAndLog("(too many of those messages mean the stream is not Manchester encoded)");
 
         if (warnings > 10)
         {
@@ -914,7 +1335,9 @@ static command_t CommandTable[] =
   {"buffclear",     CmdBuffClear,       1, "Clear sample buffer and graph window"},
   {"dec",           CmdDec,             1, "Decimate samples"},
   {"detectclock",   CmdDetectClockRate, 1, "Detect clock rate"},
-  {"fskdemod",      CmdFSKdemod,        1, "Demodulate graph window as a HID FSK"},
+  {"fskdemod",      CmdFSKdemod,        1, "[clock rate] [invert] Demodulate graph window from FSK to binary (clock = 64 or 50)(invert = 1 or 0)"},
+  {"fskdemodhid",   CmdFSKdemodHID,     1, "Demodulate graph window as a HID FSK"},
+  {"fskdemodio",    CmdFSKdemodIO,     1, "Demodulate graph window as an IO Prox FSK"},
   {"grid",          CmdGrid,            1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
   {"hexsamples",    CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},  
   {"hide",          CmdHide,            1, "Hide graph window"},

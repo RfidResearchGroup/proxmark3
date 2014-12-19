@@ -630,17 +630,32 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 		LED_A_OFF();
 }
 
+//translate wave to 11111100000 (1 for each short wave 0 for each long wave) 
 size_t fsk_demod(uint8_t * dest, size_t size)
 {
 	uint32_t last_transition = 0;
 	uint32_t idx = 1;
-	// we don't care about actual value, only if it's more or less than a
-	// threshold essentially we capture zero crossings for later analysis
-	uint8_t threshold_value = 127;
+	uint32_t maxVal=0;
+	// // we don't care about actual value, only if it's more or less than a
+	// // threshold essentially we capture zero crossings for later analysis
+
+	// we do care about the actual value as sometimes near the center of the
+	// wave we may get static that changes direction of wave for one value
+	// if our value is too low it might affect the read.  and if our tag or
+	// antenna is weak a setting too high might not see anything. [marshmellow]
+	if (size<100) return size;
+	for(idx=1; idx<100; idx++){
+    	if(maxVal<dest[idx]) maxVal = dest[idx];
+    }
+    // set close to the top of the wave threshold with 13% margin for error
+    // less likely to get a false transition up there. 
+    // (but have to be careful not to go too high and miss some short waves)
+  	uint32_t threshold_value = (uint32_t)(maxVal*.87); 	idx=1;
+	//uint8_t threshold_value = 127;
 	
 	// sync to first lo-hi transition, and threshold
 
-	//Need to threshold first sample
+	// Need to threshold first sample
 	if(dest[0] < threshold_value) dest[0] = 0;
 	else dest[0] = 1;
 
@@ -655,11 +670,12 @@ size_t fsk_demod(uint8_t * dest, size_t size)
 
 		// Check for 0->1 transition
 		if (dest[idx-1] < dest[idx]) { // 0 -> 1 transition
-
-			if (idx-last_transition <  9) {
-					dest[numBits]=1;
+			if (idx-last_transition<6){
+				//do nothing with extra garbage
+			} else if (idx-last_transition <  9) {
+				dest[numBits]=1;
 			} else {
-					dest[numBits]=0;
+				dest[numBits]=0;
 			}
 			last_transition = idx;
 			numBits++;
@@ -668,8 +684,14 @@ size_t fsk_demod(uint8_t * dest, size_t size)
 	return numBits; //Actually, it returns the number of bytes, but each byte represents a bit: 1 or 0
 }
 
+uint32_t myround(float f)
+{
+  if (f >= 2000) return 2000;//something bad happened
+  return (uint32_t) (f + (float)0.5);
+}
 
-size_t aggregate_bits(uint8_t *dest,size_t size, uint8_t h2l_crossing_value,uint8_t l2h_crossing_value, uint8_t maxConsequtiveBits, uint8_t invert )
+//translate 11111100000 to 10 
+size_t aggregate_bits(uint8_t *dest,size_t size,  uint8_t rfLen, uint8_t maxConsequtiveBits, uint8_t invert )// uint8_t h2l_crossing_value,uint8_t l2h_crossing_value, 
 {
 	uint8_t lastval=dest[0];
 	uint32_t idx=0;
@@ -684,9 +706,11 @@ size_t aggregate_bits(uint8_t *dest,size_t size, uint8_t h2l_crossing_value,uint
 		}
 		//if lastval was 1, we have a 1->0 crossing
 		if ( dest[idx-1]==1 ) {
-			n=(n+1) / h2l_crossing_value;
+			n=myround((float)(n+1)/((float)(rfLen)/(float)8));
+			//n=(n+1) / h2l_crossing_value;
 		} else {// 0->1 crossing
-			n=(n+1) / l2h_crossing_value;
+			n=myround((float)(n+1)/((float)(rfLen-2)/(float)10));
+			//n=(n+1) / l2h_crossing_value;
 		}
 		if (n == 0) n = 1;
 
@@ -696,8 +720,7 @@ size_t aggregate_bits(uint8_t *dest,size_t size, uint8_t h2l_crossing_value,uint
 				memset(dest+numBits, dest[idx-1] , n);
 			}else{
 				memset(dest+numBits, dest[idx-1]^1 , n);	
-			}
-			
+			}			
 			numBits += n;
 		}
 		n=0;
@@ -705,7 +728,7 @@ size_t aggregate_bits(uint8_t *dest,size_t size, uint8_t h2l_crossing_value,uint
 	}//end for
 	return numBits;
 }
-// loop to capture raw HID waveform then FSK demodulate the TAG ID from it
+// loop to get raw HID waveform then FSK demodulate the TAG ID from it
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = (uint8_t *)BigBuf;
@@ -723,7 +746,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
 		DoAcquisition125k_internal(-1,true);
 		size  = sizeof(BigBuf);
-
+        if (size < 2000) continue; 
 		// FSK demodulator
 		size = fsk_demod(dest, size);
 
@@ -731,7 +754,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		// 1->0 : fc/8 in sets of 6  (RF/50 / 8 = 6.25)
 		// 0->1 : fc/10 in sets of 5 (RF/50 / 10= 5)
 		// do not invert
-		size = aggregate_bits(dest,size, 6,5,5,0); 
+		size = aggregate_bits(dest,size, 50,5,0);  //6,5,5,0 
 
 		WDT_HIT();
 
@@ -740,8 +763,11 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		uint8_t frame_marker_mask[] = {1,1,1,0,0,0};
 		int numshifts = 0;
 		idx = 0;
+		//one scan
+		uint8_t sameCardCount =0;
 		while( idx + sizeof(frame_marker_mask) < size) {
 			// search for a start of frame marker
+			if (sameCardCount>2) break;  //only up to 2 valid sets of data for the same read of looping card data
 			if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
 			{ // frame marker found
 				idx+=sizeof(frame_marker_mask);
@@ -818,6 +844,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 								(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF,
 								(unsigned int) bitlen, (unsigned int) fc, (unsigned int) cardnum);
 						}
+						sameCardCount++;
 						if (findone){
 							if (ledcontrol)	LED_A_OFF();
 							return;
@@ -864,51 +891,68 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		if (ledcontrol) LED_A_ON();
 		DoAcquisition125k_internal(-1,true);
 		size  = sizeof(BigBuf);
-
-		// FSK demodulator
-		size = fsk_demod(dest, size);
-		// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
-		// 1->0 : fc/8 in sets of 7  (RF/64 / 8 = 8)
-		// 0->1 : fc/10 in sets of 6 (RF/64 / 10 = 6.4)
-		size = aggregate_bits(dest, size, 7,6,13,1);  //13 max Consecutive should be ok as most 0s in row should be 10 for init seq - invert bits
-		WDT_HIT();
-		//Index map
-		//0           10          20          30          40          50          60
-		//|           |           |           |           |           |           |
-		//01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
-		//-----------------------------------------------------------------------------
-		//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
-		//
-		//XSF(version)facility:codeone+codetwo
-		//Handle the data
- 	    uint8_t mask[] = {0,0,0,0,0,0,0,0,0,1};
-		for( idx=0; idx < (size - 64); idx++) {
- 	    	if ( memcmp(dest + idx, mask, sizeof(mask))==0) {
- 	    		//frame marker found
-                if(findone){ //only print binary if we are doing one
-		 	    	Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx],   dest[idx+1],   dest[idx+2],dest[idx+3],dest[idx+4],dest[idx+5],dest[idx+6],dest[idx+7],dest[idx+8]);
-				    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+9], dest[idx+10],dest[idx+11],dest[idx+12],dest[idx+13],dest[idx+14],dest[idx+15],dest[idx+16],dest[idx+17]);			  
-				    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+18],dest[idx+19],dest[idx+20],dest[idx+21],dest[idx+22],dest[idx+23],dest[idx+24],dest[idx+25],dest[idx+26]);
-				    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+27],dest[idx+28],dest[idx+29],dest[idx+30],dest[idx+31],dest[idx+32],dest[idx+33],dest[idx+34],dest[idx+35]);
-				    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+36],dest[idx+37],dest[idx+38],dest[idx+39],dest[idx+40],dest[idx+41],dest[idx+42],dest[idx+43],dest[idx+44]);
-				    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+45],dest[idx+46],dest[idx+47],dest[idx+48],dest[idx+49],dest[idx+50],dest[idx+51],dest[idx+52],dest[idx+53]);
-				    Dbprintf("%d%d%d%d%d%d%d%d %d%d",dest[idx+54],dest[idx+55],dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
-				}
-				code = bytebits_to_byte(dest+idx,32);
-			    code2 = bytebits_to_byte(dest+idx+32,32); 
-			    short version = bytebits_to_byte(dest+idx+28,8); //14,4
-			    char facilitycode = bytebits_to_byte(dest+idx+19,8) ;
-			    uint16_t number = (bytebits_to_byte(dest+idx+37,8)<<8)|(bytebits_to_byte(dest+idx+46,8)); //36,9
-			    
-			    Dbprintf("XSF(%02d)%02x:%d (%08x%08x)",version,facilitycode,number,code,code2);			
-				// if we're only looking for one tag 
-				if (findone){
-					if (ledcontrol)	LED_A_OFF();
-					//LED_A_OFF();
-					return;
-				}
-			}		
+		//make sure buffer has data
+		if (size < 64) return;
+		//test samples are not just noise
+		uint8_t testMax=0;
+		for(idx=0;idx<64;idx++){
+			if (testMax<dest[idx]) testMax=dest[idx];
 		}
+		idx=0;
+		//if not just noise
+		if (testMax>170){
+			//Dbprintf("testMax: %d",testMax);		
+			// FSK demodulator
+			size = fsk_demod(dest, size);
+			// we now have a set of cycle counts, loop over previous results and aggregate data into bit patterns
+			// 1->0 : fc/8 in sets of 7  (RF/64 / 8 = 8)
+			// 0->1 : fc/10 in sets of 6 (RF/64 / 10 = 6.4)
+			size = aggregate_bits(dest, size, 64, 13, 1);  //13 max Consecutive should be ok as most 0s in row should be 10 for init seq - invert bits
+			WDT_HIT();
+			//Index map
+			//0           10          20          30          40          50          60
+			//|           |           |           |           |           |           |
+			//01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
+			//-----------------------------------------------------------------------------
+			//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
+			//
+			//XSF(version)facility:codeone+codetwo
+			//Handle the data
+			uint8_t sameCardCount=0;
+	 	    uint8_t mask[] = {0,0,0,0,0,0,0,0,0,1};
+			for( idx=0; idx < (size - 74); idx++) {
+				if (sameCardCount>2) break;
+	 	    	if ( memcmp(dest + idx, mask, sizeof(mask))==0) {
+	 	    		//frame marker found
+	 	    		if (!dest[idx+8] && dest[idx+17]==1 && dest[idx+26]==1 && dest[idx+35]==1 && dest[idx+44]==1 && dest[idx+53]==1){
+	 	    			//confirmed proper separator bits found
+		                if(findone){ //only print binary if we are doing one
+				 	    	Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx],   dest[idx+1],   dest[idx+2],dest[idx+3],dest[idx+4],dest[idx+5],dest[idx+6],dest[idx+7],dest[idx+8]);
+						    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+9], dest[idx+10],dest[idx+11],dest[idx+12],dest[idx+13],dest[idx+14],dest[idx+15],dest[idx+16],dest[idx+17]);			  
+						    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+18],dest[idx+19],dest[idx+20],dest[idx+21],dest[idx+22],dest[idx+23],dest[idx+24],dest[idx+25],dest[idx+26]);
+						    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+27],dest[idx+28],dest[idx+29],dest[idx+30],dest[idx+31],dest[idx+32],dest[idx+33],dest[idx+34],dest[idx+35]);
+						    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+36],dest[idx+37],dest[idx+38],dest[idx+39],dest[idx+40],dest[idx+41],dest[idx+42],dest[idx+43],dest[idx+44]);
+						    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+45],dest[idx+46],dest[idx+47],dest[idx+48],dest[idx+49],dest[idx+50],dest[idx+51],dest[idx+52],dest[idx+53]);
+						    Dbprintf("%d%d%d%d%d%d%d%d %d%d",dest[idx+54],dest[idx+55],dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
+						}
+						code = bytebits_to_byte(dest+idx,32);
+					    code2 = bytebits_to_byte(dest+idx+32,32); 
+					    short version = bytebits_to_byte(dest+idx+27,8); //14,4
+					    uint8_t facilitycode = bytebits_to_byte(dest+idx+19,8) ;
+					    uint16_t number = (bytebits_to_byte(dest+idx+36,8)<<8)|(bytebits_to_byte(dest+idx+45,8)); //36,9
+					    
+					    Dbprintf("XSF(%02d)%02x:%d (%08x%08x)",version,facilitycode,number,code,code2);			
+						// if we're only looking for one tag 
+						if (findone){
+							if (ledcontrol)	LED_A_OFF();
+							//LED_A_OFF();
+							return;
+						}
+						sameCardCount++;
+					}
+				}		
+			}
+		}	
 		WDT_HIT();
 	}
 	DbpString("Stopped");

@@ -24,6 +24,8 @@ int CmdBuffClear(const char *Cmd);
 int CmdDec(const char *Cmd);
 int CmdDetectClockRate(const char *Cmd);
 int CmdFSKdemod(const char *Cmd);
+int CmdFSKdemodHID(const char *Cmd);
+int CmdFSKdemodIO(const char *Cmd);
 int CmdGrid(const char *Cmd);
 int CmdHexsamples(const char *Cmd);
 int CmdHide(const char *Cmd);
