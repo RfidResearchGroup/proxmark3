@@ -78,6 +78,10 @@ int CmdHF14AList(const char *Cmd)
 		if(tracepos == 0) {
 			first_timestamp = timestamp;
 		}
+
+		// Break and stick with current result if buffer was not completely full
+		if (timestamp == 0x44444444) break; 
+
 		tracepos += 4;
 		duration = *((uint16_t *)(trace + tracepos));
 		tracepos += 2;
@@ -101,9 +105,6 @@ int CmdHF14AList(const char *Cmd)
 		tracepos += data_len;
 		uint8_t *parityBytes = trace + tracepos;
 		tracepos += parity_len;
-
-		// Break and stick with current result if buffer was not completely full
-		if (timestamp == 0x44444444) break; 
 
 		char line[16][110];
 		for (int j = 0; j < data_len; j++) {

@@ -44,10 +44,9 @@ int xorbits_8(uint8_t val)
 
 int CmdHFiClassList(const char *Cmd)
 {
-
 	bool ShowWaitCycles = false;
 	char param = param_getchar(Cmd, 0);
-
+	
 	if (param != 0) {
 		PrintAndLog("List data in trace buffer.");
 		PrintAndLog("Usage:  hf iclass list");
@@ -56,245 +55,140 @@ int CmdHFiClassList(const char *Cmd)
 		return 0;
 	}
 
-	uint8_t got[1920];
-	GetFromBigBuf(got,sizeof(got),0);
-	WaitForResponse(CMD_ACK,NULL);
+// for the time being. Need better Bigbuf handling.	
+#define TRACE_SIZE 3000	
+
+	uint8_t trace[TRACE_SIZE];
+	GetFromBigBuf(trace, TRACE_SIZE, 0);
+	WaitForResponse(CMD_ACK, NULL);
 
 	PrintAndLog("Recorded Activity");
 	PrintAndLog("");
 	PrintAndLog("Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
 	PrintAndLog("All times are in carrier periods (1/13.56Mhz)");
 	PrintAndLog("");
-	PrintAndLog("     Start |       End | Src | Data");
-	PrintAndLog("-----------|-----------|-----|--------");
+	PrintAndLog("     Start |       End | Src | Data (! denotes parity error)                                   | CRC ");
+	PrintAndLog("-----------|-----------|-----|-----------------------------------------------------------------------");
 
-	int i;
-	uint32_t first_timestamp = 0;
+	uint16_t tracepos = 0;
+	uint16_t duration;
+	uint16_t data_len;
+	uint16_t parity_len;
+	bool isResponse;
 	uint32_t timestamp;
-	bool tagToReader;
-	uint32_t parityBits;
-	uint8_t len;
-	uint8_t *frame;
-	uint32_t EndOfTransmissionTimestamp = 0;
+	uint32_t first_timestamp;
+	uint32_t EndOfTransmissionTimestamp;
+	
+	for (;;) {
 
+		if(tracepos >= TRACE_SIZE) {
+			break;
+		}
 
-	for( i=0; i < 1900;)
-	{
-		//First 32 bits contain
-		// isResponse (1 bit)
-		// timestamp (remaining)
-		//Then paritybits
-		//Then length
-		timestamp = *((uint32_t *)(got+i));
-		parityBits = *((uint32_t *)(got+i+4));
-		len = got[i+8];
-        frame = (got+i+9);
-		uint32_t next_timestamp = (*((uint32_t *)(got+i+9))) & 0x7fffffff;
-
-		tagToReader = timestamp & 0x80000000;
-		timestamp &= 0x7fffffff;
-
-		if(i==0) {
+		timestamp = *((uint32_t *)(trace + tracepos));
+		if(tracepos == 0) {
 			first_timestamp = timestamp;
 		}
 
-        // Break and stick with current result idf buffer was not completely full
-		if (frame[0] == 0x44 && frame[1] == 0x44 && frame[2] == 0x44 && frame[3] == 0x44) break;
+		// Break and stick with current result if buffer was not completely full
+		if (timestamp == 0x44444444) break; 
 
-		char line[1000] = "";
-
-		if(len)//We have some data to display
-		{
-			int j,oddparity;
-
-			for(j = 0; j < len ; j++)
-			{
-				oddparity = 0x01 ^ xorbits_8(frame[j] & 0xFF);
-
-				if (tagToReader && (oddparity != ((parityBits >> (len - j - 1)) & 0x01))) {
-					sprintf(line+(j*4), "%02x!  ", frame[j]);
-				} else {
-					sprintf(line+(j*4), "%02x   ", frame[j]);
-				}
-			}
-		}else
-		{
-			if (ShowWaitCycles) {
-				sprintf(line, "fdt (Frame Delay Time): %d", (next_timestamp - timestamp));
-			}
+		tracepos += 4;
+		duration = *((uint16_t *)(trace + tracepos));
+		tracepos += 2;
+		data_len = *((uint16_t *)(trace + tracepos));
+		tracepos += 2;
+		
+		if (data_len & 0x8000) {
+		  data_len &= 0x7fff;
+		  isResponse = true;
+		} else {
+		  isResponse = false;
 		}
 
-		char *crc = "";
+		parity_len = (data_len-1)/8 + 1;
 
-		if(len > 2)
-		{
+		if (tracepos + data_len + parity_len >= TRACE_SIZE) {
+			break;
+		}
+		
+		uint8_t *frame = trace + tracepos;
+		tracepos += data_len;
+		uint8_t *parityBytes = trace + tracepos;
+		tracepos += parity_len;
+
+		char line[16][110];
+		for (int j = 0; j < data_len; j++) {
+			int oddparity = 0x01;
+			int k;
+			
+			for (k=0;k<8;k++) {
+				oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
+			}
+
+			uint8_t parityBits = parityBytes[j>>3];
+			if (isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
+				sprintf(line[j/16]+((j%16)*4), "%02x! ", frame[j]);
+			} else {
+				sprintf(line[j/16]+((j%16)*4), "%02x  ", frame[j]);
+			}
+
+		}
+
+		char *crc = ""; 
+		if (data_len > 2) {
 			uint8_t b1, b2;
-			if(!tagToReader && len == 4) {
+			if(!isResponse && data_len == 4 ) {
 				// Rough guess that this is a command from the reader
 				// For iClass the command byte is not part of the CRC
-					ComputeCrc14443(CRC_ICLASS, &frame[1], len-3, &b1, &b2);
+				ComputeCrc14443(CRC_ICLASS, &frame[1], data_len-3, &b1, &b2);
+				if (b1 != frame[data_len-2] || b2 != frame[data_len-1]) {
+					crc = "!crc";
+				}
 			}
 			else {
-				  // For other data.. CRC might not be applicable (UPDATE commands etc.)
-				ComputeCrc14443(CRC_ICLASS, frame, len-2, &b1, &b2);
-			}
-
-			if (b1 != frame[len-2] || b2 != frame[len-1]) {
-				crc = (tagToReader & (len < 8)) ? "" : " !crc";
+				// For other data.. CRC might not be applicable (UPDATE commands etc.)
+				ComputeCrc14443(CRC_ICLASS, frame, data_len-2, &b1, &b2);
+				if (b1 != frame[data_len-2] || b2 != frame[data_len-1]) {
+					crc = "!crc";
+				}
 			}
 		}
 
-		i += (len + 9);
-		EndOfTransmissionTimestamp = (*((uint32_t *)(got+i))) & 0x7fffffff;
+		EndOfTransmissionTimestamp = timestamp + duration;
+		
+		int num_lines = (data_len - 1)/16 + 1;
+		for (int j = 0; j < num_lines; j++) {
+			if (j == 0) {
+				PrintAndLog(" %9d | %9d | %s | %-64s| %s",
+					(timestamp - first_timestamp),
+					(EndOfTransmissionTimestamp - first_timestamp),
+					(isResponse ? "Tag" : "Rdr"),
+					line[j], 
+					(j == num_lines-1)?crc:"");
+			} else {
+				PrintAndLog("           |           |     | %-64s| %s",
+					line[j], 
+					(j == num_lines-1)?crc:"");
+			}
+		}				
 
-		// Not implemented for iclass on the ARM-side
-		//if (!ShowWaitCycles) i += 9;
-
-		PrintAndLog(" %9d | %9d | %s | %s %s",
-			(timestamp - first_timestamp),
-			(EndOfTransmissionTimestamp - first_timestamp),
-			(len?(tagToReader ? "Tag" : "Rdr"):"   "),
-			line, crc);
+		bool next_isResponse = *((uint16_t *)(trace + tracepos + 6)) & 0x8000;
+		
+		if (ShowWaitCycles && !isResponse && next_isResponse) {
+			uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
+			if (next_timestamp != 0x44444444) {
+				PrintAndLog(" %9d | %9d | %s | fdt (Frame Delay Time): %d",
+					(EndOfTransmissionTimestamp - first_timestamp),
+					(next_timestamp - first_timestamp),
+					"   ",
+					(next_timestamp - EndOfTransmissionTimestamp));
+			}
+		}
+			
 	}
+	
 	return 0;
-}
-
-int CmdHFiClassListOld(const char *Cmd)
-{
-  uint8_t got[1920];
-  GetFromBigBuf(got,sizeof(got),0);
-
-  PrintAndLog("recorded activity:");
-  PrintAndLog(" ETU     :rssi: who bytes");
-  PrintAndLog("---------+----+----+-----------");
-
-  int i = 0;
-  int prev = -1;
-
-  for (;;) {
-    if(i >= 1900) {
-      break;
-    }
-
-    bool isResponse;
-    int timestamp = *((uint32_t *)(got+i));
-    if (timestamp & 0x80000000) {
-      timestamp &= 0x7fffffff;
-      isResponse = 1;
-    } else {
-      isResponse = 0;
-    }
-
-
-    int metric = 0;
-
-    int parityBits = *((uint32_t *)(got+i+4));
-    // 4 bytes of additional information...
-    // maximum of 32 additional parity bit information
-    //
-    // TODO:
-    // at each quarter bit period we can send power level (16 levels)
-    // or each half bit period in 256 levels.
-
-
-    int len = got[i+8];
-
-    if (len > 100) {
-      break;
-    }
-    if (i + len >= 1900) {
-      break;
-    }
-
-    uint8_t *frame = (got+i+9);
-
-    // Break and stick with current result if buffer was not completely full
-    if (frame[0] == 0x44 && frame[1] == 0x44 && frame[3] == 0x44) { break; }
-
-    char line[1000] = "";
-    int j;
-    for (j = 0; j < len; j++) {
-      int oddparity = 0x01;
-      int k;
-
-      for (k=0;k<8;k++) {
-        oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
-      }
-
-      //if((parityBits >> (len - j - 1)) & 0x01) {
-      if (isResponse && (oddparity != ((parityBits >> (len - j - 1)) & 0x01))) {
-        sprintf(line+(j*4), "%02x!  ", frame[j]);
-      }
-      else {
-        sprintf(line+(j*4), "%02x   ", frame[j]);
-      }
-    }
-
-    char *crc;
-    crc = "";
-    if (len > 2) {
-      uint8_t b1, b2;
-      for (j = 0; j < (len - 1); j++) {
-        // gives problems... search for the reason..
-        /*if(frame[j] == 0xAA) {
-          switch(frame[j+1]) {
-            case 0x01:
-              crc = "[1] Two drops close after each other";
-            break;
-            case 0x02:
-              crc = "[2] Potential SOC with a drop in second half of bitperiod";
-              break;
-            case 0x03:
-              crc = "[3] Segment Z after segment X is not possible";
-              break;
-            case 0x04:
-              crc = "[4] Parity bit of a fully received byte was wrong";
-              break;
-            default:
-              crc = "[?] Unknown error";
-              break;
-          }
-          break;
-        }*/
-      }
-
-      if (strlen(crc)==0) {
-	if(!isResponse && len == 4) {
-		// Rough guess that this is a command from the reader
-		// For iClass the command byte is not part of the CRC
-	        ComputeCrc14443(CRC_ICLASS, &frame[1], len-3, &b1, &b2);
-	}
-	else {
-		// For other data.. CRC might not be applicable (UPDATE commands etc.)
-	        ComputeCrc14443(CRC_ICLASS, frame, len-2, &b1, &b2);
-	}
-	//printf("%1x %1x",(unsigned)b1,(unsigned)b2);
-        if (b1 != frame[len-2] || b2 != frame[len-1]) {
-          crc = (isResponse & (len < 8)) ? "" : " !crc";
-        } else {
-          crc = "";
-        }
-      }
-    } else {
-      crc = ""; // SHORT
-    }
-
-    char metricString[100];
-    if (isResponse) {
-      sprintf(metricString, "%3d", metric);
-    } else {
-      strcpy(metricString, "   ");
-    }
-
-    PrintAndLog(" +%7d: %s: %s %s %s",
-      (prev < 0 ? 0 : (timestamp - prev)),
-      metricString,
-      (isResponse ? "TAG" : "   "), line, crc);
-
-    prev = timestamp;
-    i += (len + 9);
-  }
-  return 0;
 }
 
 int CmdHFiClassSnoop(const char *Cmd)
