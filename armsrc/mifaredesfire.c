@@ -262,7 +262,19 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             memcpy(both + 8, encRndB, 8);
             Dbprintf("both: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",both[0],both[1],both[2],both[3],both[4],both[5],both[6],both[7],both[8],both[9],both[10],both[11],both[12],both[13],both[14],both[15]);
             
-            // TODO: Send response
+            cmd[0] = ADDITIONAL_FRAME;
+            memcpy(cmd+1, both, 16 );
+            
+            len = DesfireAPDU(cmd, 17, resp);
+            if ( !len ) {
+                if (MF_DBGLEVEL >= 1) {
+                    DbpString("Authentication failed. Card timeout.");
+                }
+                OnError();
+                return;
+            }
+            
+            // TODO: Check returned RandA'
             
             }
 			break;
