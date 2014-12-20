@@ -56,12 +56,12 @@ int mfCheckKeys (uint8_t blockNo, uint8_t keyType, uint8_t keycnt, uint8_t * key
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount);
 int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount);
 
-int mfCSetUID(uint8_t *uid, uint8_t *oldUID, int wantWipe);
-int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, int wantWipe, uint8_t params);
+int mfCSetUID(uint8_t *uid, uint8_t *oldUID, bool wantWipe);
+int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, bool wantWipe, uint8_t params);
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params);
 
 int mfTraceInit(uint8_t *tuid, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile);
-int mfTraceDecode(uint8_t *data_src, int len, uint32_t parity, bool wantSaveToEmlFile);
+int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile);
 
 int isTraceCardEmpty(void);
 int isBlockEmpty(int blockN);

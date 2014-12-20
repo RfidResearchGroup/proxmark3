@@ -11,6 +11,7 @@
 #include "mifaresniff.h"
 #include "apps.h"
 
+
 static int sniffState = SNF_INIT;
 static uint8_t sniffUIDType;
 static uint8_t sniffUID[8];
@@ -37,7 +38,7 @@ bool MfSniffEnd(void){
 	return FALSE;
 }
 
-bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint32_t parity, uint16_t bitCnt, bool reader) {
+bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, uint16_t bitCnt, bool reader) {
 
 	if (reader && (len == 1) && (bitCnt == 7)) { 		// reset on 7-Bit commands from reader
 		sniffState = SNF_INIT;
@@ -114,16 +115,16 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint32_t parity, ui
 			sniffBuf[11] = sniffSAK;
 			sniffBuf[12] = 0xFF;
 			sniffBuf[13] = 0xFF;
-			LogTrace(sniffBuf, 14, 0, parity, true);
+			LogTrace(sniffBuf, 14, 0, 0, NULL, TRUE);
 		}	// intentionally no break;
 		case SNF_CARD_CMD:{		
-			LogTrace(data, len, 0, parity, true);
+			LogTrace(data, len, 0, 0, NULL, TRUE);
 			sniffState = SNF_CARD_RESP;
 			timerData = GetTickCount();
 			break;
 		}
 		case SNF_CARD_RESP:{
-			LogTrace(data, len, 0, parity, false);
+			LogTrace(data, len, 0, 0, NULL, FALSE);
 			sniffState = SNF_CARD_CMD;
 			timerData = GetTickCount();
 			break;

@@ -18,6 +18,7 @@
 #include "cmdparser.h"
 #include "cmdhw.h"
 #include "cmdmain.h"
+#include "cmddata.h"
 
 /* low-level hardware control */
 
@@ -391,9 +392,7 @@ int CmdSetMux(const char *Cmd)
 
 int CmdTune(const char *Cmd)
 {
-  UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING};
-  SendCommand(&c);
-  return 0;
+    return CmdTuneSamples(Cmd);
 }
 
 int CmdVersion(const char *Cmd)

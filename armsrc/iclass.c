@@ -71,14 +71,13 @@ static struct {
     int     nOutOfCnt;
     int     OutOfCnt;
     int     syncBit;
-    int     parityBits;
     int     samples;
     int     highCnt;
     int     swapper;
     int     counter;
     int     bitBuffer;
     int     dropPosition;
-    uint8_t   *output;
+    uint8_t *output;
 } Uart;
 
 static RAMFUNC int OutOfNDecoding(int bit)
@@ -137,11 +136,8 @@ static RAMFUNC int OutOfNDecoding(int bit)
 					if(Uart.byteCnt == 0) {
 						// Its not straightforward to show single EOFs
 						// So just leave it and do not return TRUE
-						Uart.output[Uart.byteCnt] = 0xf0;
+						Uart.output[0] = 0xf0;
 						Uart.byteCnt++;
-
-						// Calculate the parity bit for the client...
-						Uart.parityBits = 1;
 					}
 					else {
 						return TRUE;
@@ -223,11 +219,6 @@ static RAMFUNC int OutOfNDecoding(int bit)
 						if(Uart.bitCnt == 8) {
 							Uart.output[Uart.byteCnt] = (Uart.shiftReg & 0xff);
 							Uart.byteCnt++;
-
-							// Calculate the parity bit for the client...
-							Uart.parityBits <<= 1;
-							Uart.parityBits ^= OddByteParity[(Uart.shiftReg & 0xff)];
-
 							Uart.bitCnt = 0;
 							Uart.shiftReg = 0;
 						}
@@ -246,11 +237,6 @@ static RAMFUNC int OutOfNDecoding(int bit)
 					Uart.dropPosition--;
 					Uart.output[Uart.byteCnt] = (Uart.dropPosition & 0xff);
 					Uart.byteCnt++;
-
-					// Calculate the parity bit for the client...
-					Uart.parityBits <<= 1;
-					Uart.parityBits ^= OddByteParity[(Uart.dropPosition & 0xff)];
-
 					Uart.bitCnt = 0;
 					Uart.shiftReg = 0;
 					Uart.nOutOfCnt = 0;
@@ -311,7 +297,6 @@ static RAMFUNC int OutOfNDecoding(int bit)
 				Uart.state = STATE_START_OF_COMMUNICATION;
 				Uart.bitCnt = 0;
 				Uart.byteCnt = 0;
-				Uart.parityBits = 0;
 				Uart.nOutOfCnt = 0;
 				Uart.OutOfCnt = 4; // Start at 1/4, could switch to 1/256
 				Uart.dropPosition = 0;
@@ -353,7 +338,6 @@ static struct {
     int     bitCount;
     int     posCount;
 	int     syncBit;
-	int     parityBits;
     uint16_t    shiftReg;
 	int     buffer;
 	int     buffer2;
@@ -367,7 +351,7 @@ static struct {
 		SUB_SECOND_HALF,
 		SUB_BOTH
 	}		sub;
-    uint8_t   *output;
+    uint8_t *output;
 } Demod;
 
 static RAMFUNC int ManchesterDecoding(int v)
@@ -420,7 +404,6 @@ static RAMFUNC int ManchesterDecoding(int v)
 			Demod.sub = SUB_FIRST_HALF;
 			Demod.bitCount = 0;
 			Demod.shiftReg = 0;
-			Demod.parityBits = 0;
 			Demod.samples = 0;
 			if(Demod.posCount) {
 				//if(trigger) LED_A_OFF();  // Not useful in this case...
@@ -485,8 +468,6 @@ static RAMFUNC int ManchesterDecoding(int v)
 				if(Demod.state == DEMOD_SOF_COMPLETE) {
 					Demod.output[Demod.len] = 0x0f;
 					Demod.len++;
-					Demod.parityBits <<= 1;
-					Demod.parityBits ^= OddByteParity[0x0f];
 					Demod.state = DEMOD_UNSYNCD;
 //					error = 0x0f;
 					return TRUE;
@@ -567,11 +548,9 @@ static RAMFUNC int ManchesterDecoding(int v)
 					// Tag response does not need to be a complete byte!
 					if(Demod.len > 0 || Demod.bitCount > 0) {
 						if(Demod.bitCount > 1) {  // was > 0, do not interpret last closing bit, is part of EOF
-							Demod.shiftReg >>= (9 - Demod.bitCount);
+							Demod.shiftReg >>= (9 - Demod.bitCount);	// right align data
 							Demod.output[Demod.len] = Demod.shiftReg & 0xff;
 							Demod.len++;
-							// No parity bit, so just shift a 0
-							Demod.parityBits <<= 1;
 						}
 
 						Demod.state = DEMOD_UNSYNCD;
@@ -608,11 +587,6 @@ static RAMFUNC int ManchesterDecoding(int v)
 				Demod.shiftReg >>= 1;
 				Demod.output[Demod.len] = (Demod.shiftReg & 0xff);
 				Demod.len++;
-
-				// FOR ISO15639 PARITY NOT SEND OTA, JUST CALCULATE IT FOR THE CLIENT
-				Demod.parityBits <<= 1;
-				Demod.parityBits ^= OddByteParity[(Demod.shiftReg & 0xff)];
-
 				Demod.bitCount = 0;
 				Demod.shiftReg = 0;
 			}
@@ -669,8 +643,8 @@ void RAMFUNC SnoopIClass(void)
 	// So 32 should be enough!
 	uint8_t *readerToTagCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
     // The response (tag -> reader) that we're receiving.
-	uint8_t *tagToReaderResponse = (((uint8_t *)BigBuf) + RECV_RES_OFFSET);
-
+	uint8_t *tagToReaderResponse = (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);
+	
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
  
     // reset traceLen to 0
@@ -769,10 +743,10 @@ void RAMFUNC SnoopIClass(void)
 
 			//if(!LogTrace(Uart.output,Uart.byteCnt, rsamples, Uart.parityBits,TRUE)) break;
 			//if(!LogTrace(NULL, 0, Uart.endTime*16 - DELAY_READER_AIR2ARM_AS_SNIFFER, 0, TRUE)) break;
-			if(tracing)
-			{
-				LogTrace(Uart.output,Uart.byteCnt, (GetCountSspClk()-time_0) << 4, Uart.parityBits,TRUE);
-				LogTrace(NULL, 0, (GetCountSspClk()-time_0) << 4, 0, TRUE);
+			if(tracing)	{
+				uint8_t parity[MAX_PARITY_SIZE];
+				GetParity(Uart.output, Uart.byteCnt, parity);
+				LogTrace(Uart.output,Uart.byteCnt, (GetCountSspClk()-time_0) << 4, (GetCountSspClk()-time_0) << 4, parity, TRUE);
 			}
 
 
@@ -793,10 +767,10 @@ void RAMFUNC SnoopIClass(void)
 		    rsamples = samples - Demod.samples;
 		    LED_B_ON();
 
-			if(tracing)
-			{
-				LogTrace(Demod.output,Demod.len, (GetCountSspClk()-time_0) << 4 , Demod.parityBits,FALSE);
-				LogTrace(NULL, 0, (GetCountSspClk()-time_0) << 4, 0, FALSE);
+			if(tracing)	{
+				uint8_t parity[MAX_PARITY_SIZE];
+				GetParity(Demod.output, Demod.len, parity);
+				LogTrace(Demod.output, Demod.len, (GetCountSspClk()-time_0) << 4, (GetCountSspClk()-time_0) << 4, parity, FALSE);
 			}
 
 
@@ -1079,7 +1053,7 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 
 	// + 1720..
 	uint8_t *receivedCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
-	memset(receivedCmd, 0x44, RECV_CMD_SIZE);
+	memset(receivedCmd, 0x44, MAX_FRAME_SIZE);
 	int len;
 
 	// Prepare card messages
@@ -1219,14 +1193,13 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 		}
 
 		if (tracing) {
-			LogTrace(receivedCmd,len, (r2t_time-time_0)<< 4, Uart.parityBits,TRUE);
-			LogTrace(NULL,0, (r2t_time-time_0) << 4, 0,TRUE);
+			uint8_t parity[MAX_PARITY_SIZE];
+			GetParity(receivedCmd, len, parity);
+			LogTrace(receivedCmd,len, (r2t_time-time_0)<< 4, (r2t_time-time_0) << 4, parity, TRUE);
 
 			if (respdata != NULL) {
-				LogTrace(respdata,respsize, (t2r_time-time_0) << 4,SwapBits(GetParity(respdata,respsize),respsize),FALSE);
-				LogTrace(NULL,0, (t2r_time-time_0) << 4,0,FALSE);
-
-
+				GetParity(respdata, respsize, parity);
+				LogTrace(respdata, respsize, (t2r_time-time_0) << 4, (t2r_time-time_0) << 4, parity, FALSE);
 			}
 			if(!tracing) {
 				DbpString("Trace full");
@@ -1234,7 +1207,7 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 			}
 
 		}
-		memset(receivedCmd, 0x44, RECV_CMD_SIZE);
+		memset(receivedCmd, 0x44, MAX_FRAME_SIZE);
 	}
 
 	//Dbprintf("%x", cmdsRecvd);
@@ -1391,21 +1364,24 @@ void CodeIClassCommand(const uint8_t * cmd, int len)
 
 void ReaderTransmitIClass(uint8_t* frame, int len)
 {
-  int wait = 0;
-  int samples = 0;
-  int par = 0;
+	int wait = 0;
+	int samples = 0;
 
-  // This is tied to other size changes
-  // 	uint8_t* frame_addr = ((uint8_t*)BigBuf) + 2024;
-  CodeIClassCommand(frame,len);
+	// This is tied to other size changes
+	// 	uint8_t* frame_addr = ((uint8_t*)BigBuf) + 2024;
+	CodeIClassCommand(frame,len);
 
-  // Select the card
-  TransmitIClassCommand(ToSend, ToSendMax, &samples, &wait);
-  if(trigger)
-  	LED_A_ON();
+	// Select the card
+	TransmitIClassCommand(ToSend, ToSendMax, &samples, &wait);
+	if(trigger)
+		LED_A_ON();
 
-  // Store reader command in buffer
-  if (tracing) LogTrace(frame,len,rsamples,par,TRUE);
+	// Store reader command in buffer
+	if (tracing) {
+		uint8_t par[MAX_PARITY_SIZE];
+		GetParity(frame, len, par);
+		LogTrace(frame, len, rsamples, rsamples, par, TRUE);
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1464,7 +1440,11 @@ int ReaderReceiveIClass(uint8_t* receivedAnswer)
   int samples = 0;
   if (!GetIClassAnswer(receivedAnswer,160,&samples,0)) return FALSE;
   rsamples += samples;
-  if (tracing) LogTrace(receivedAnswer,Demod.len,rsamples,Demod.parityBits,FALSE);
+  if (tracing) {
+	uint8_t parity[MAX_PARITY_SIZE];
+	GetParity(receivedAnswer, Demod.len, parity);
+	LogTrace(receivedAnswer,Demod.len,rsamples,rsamples,parity,FALSE);
+  }
   if(samples == 0) return FALSE;
   return Demod.len;
 }
@@ -1504,8 +1484,8 @@ void ReaderIClass(uint8_t arg0) {
     uint8_t card_data[24]={0};
     uint8_t last_csn[8]={0};
 
-    uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
-
+    uint8_t *resp = (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);
+	
     int read_status= 0;
     bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;
 
@@ -1595,8 +1575,8 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	  int keyaccess;
 	} memory;
 	
-	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
-
+	uint8_t* resp = (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);
+	
     setupIclassReader();
 
 
@@ -1714,7 +1694,7 @@ void IClass_iso14443A_write(uint8_t arg0, uint8_t blockNo, uint8_t *data, uint8_
 	
     uint16_t crc = 0;
 	
-	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);	// was 3560 - tied to other size changes
+	uint8_t* resp = (((uint8_t *)BigBuf) + 3560);
 
 	// Reset trace buffer
     memset(trace, 0x44, RECV_CMD_OFFSET);
