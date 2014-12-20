@@ -219,11 +219,18 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 	switch (mode){
         case 1:{
             uint8_t keybytes[8];
+            uint8_t RndA[8] = {0x00};
+            uint8_t RndB[8] = {0x00};
+            
             if (datain[1] == 0xff){
                 memcpy(keybytes,null_key_data8,8);
             } else{
                 memcpy(keybytes, datain+1, datalen);
             }
+            
+            struct desfire_key defaultkey = {0};
+            desfirekey_t key = &defaultkey;
+            Desfire_des_key_new(keybytes, key);
             
             cmd[0] = AUTHENTICATE;
             cmd[1] = keyno;  //keynumber
@@ -245,13 +252,15 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             
             memcpy( encRndB, resp+3, 8);
             
-            des_dec(&decRndB, &encRndB, &keybytes);
+            des_dec(&decRndB, &encRndB, key->data);
+            memcpy(RndB, decRndB, 8);
             rol(decRndB,8);
             
             uint8_t decRndA[8] = {0x00};
+            memcpy(RndA, decRndA, 8);
             uint8_t encRndA[8] = {0x00};
             
-            des_dec(&encRndA, &decRndA, &keybytes);
+            des_dec(&encRndA, &decRndA, key->data);
             
             memcpy(both, encRndA, 8);
             
@@ -260,7 +269,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 
             }
             
-            des_dec(&encRndB, &decRndB, &keybytes);
+            des_dec(&encRndB, &decRndB, key->data);
             
             memcpy(both + 8, encRndB, 8);
             
@@ -277,14 +286,29 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             }
             
             if ( resp[2] == 0x00 ){
-                // TODO: Create session key.
+                
+                struct desfire_key sessionKey = {0};
+                desfirekey_t skey = &sessionKey;
+                Desfire_session_key_new( RndA, RndB , key, skey );
+                print_result("SESSION : ", skey->data, 8);
+                
             } else {
                 DbpString("Authetication failed.");
                 OnError();
                 return;
             }
             
-                // TODO: Optionally, confirm ek0RndA' = RndA' to varify PICC
+            memcpy(encRndA, resp+3, 8);
+            des_dec(&encRndA, &encRndA, key->data);
+            rol(decRndA,8);
+            for (int x = 0; x < 8; x++) {
+                if (decRndA[x] != encRndA[x]) {
+                    DbpString("Authetication failed. Cannot varify PICC.");
+                    OnError();
+                    return;
+                }
+            }
+            
             
             }
 			break;
