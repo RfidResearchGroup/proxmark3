@@ -239,7 +239,30 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             memcpy( encRndB, resp+3, 8);
             
             des_dec(&decRndB, &encRndB, &keybytes);
-            Dbprintf("RandB: %02x%02x%02x%02x%02x%02x%02x%02x",decRndB[0],decRndB[1],decRndB[2],decRndB[3],decRndB[4],decRndB[5],decRndB[6],decRndB[7]);
+            Dbprintf("RndB: %02x%02x%02x%02x%02x%02x%02x%02x",decRndB[0],decRndB[1],decRndB[2],decRndB[3],decRndB[4],decRndB[5],decRndB[6],decRndB[7]);
+            rol(decRndB,8);
+            Dbprintf("RndB': %02x%02x%02x%02x%02x%02x%02x%02x",decRndB[0],decRndB[1],decRndB[2],decRndB[3],decRndB[4],decRndB[5],decRndB[6],decRndB[7]);
+            
+            uint8_t decRndA[8] = {0x00};
+            uint8_t encRndA[8] = {0x00};
+            
+            des_dec(&encRndA, &decRndA, &keybytes);
+            Dbprintf("RndA: %02x%02x%02x%02x%02x%02x%02x%02x",decRndA[0],decRndA[1],decRndA[2],decRndA[3],decRndA[4],decRndA[5],decRndA[6],decRndA[7]);
+            Dbprintf("ek0RandA: %02x%02x%02x%02x%02x%02x%02x%02x",encRndA[0],encRndA[1],encRndA[2],encRndA[3],encRndA[4],encRndA[5],encRndA[6],encRndA[7]);
+            
+            memcpy(both, encRndA, 8);
+            
+            for (int x = 0; x < 8; x++) {
+                decRndB[x] = decRndB[x] ^ encRndA[x];
+
+            }
+            
+            des_dec(&encRndB, &decRndB, &keybytes);
+            
+            memcpy(both + 8, encRndB, 8);
+            Dbprintf("both: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",both[0],both[1],both[2],both[3],both[4],both[5],both[6],both[7],both[8],both[9],both[10],both[11],both[12],both[13],both[14],both[15]);
+            
+            // TODO: Send response
             
             }
 			break;
