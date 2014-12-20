@@ -226,12 +226,19 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             }
             
             cmd[0] = AUTHENTICATE;
-            cmd[1] = 0x00;  //keynumber
+            cmd[1] = keyno;  //keynumber
             len = DesfireAPDU(cmd, 2, resp);
             if ( !len ) {
                 if (MF_DBGLEVEL >= 1) {
                     DbpString("Authentication failed. Card timeout.");
                 }
+                OnError();
+                return;
+            }
+            
+            if ( resp[2] == 0xaf ){
+            } else {
+                DbpString("Authetication failed. Invalid key number.");
                 OnError();
                 return;
             }
@@ -277,7 +284,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 return;
             }
             
-                // TOD: Optionally, confirm ek0RndA' = RndA' to varify PICC
+                // TODO: Optionally, confirm ek0RndA' = RndA' to varify PICC
             
             }
 			break;
