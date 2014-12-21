@@ -218,6 +218,8 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 	// des, nyckel 0, 
 	switch (mode){
         case 1:{
+            if (algo == 1) {
+
             uint8_t keybytes[8];
             uint8_t RndA[8] = {0x00};
             uint8_t RndB[8] = {0x00};
@@ -256,6 +258,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             memcpy(RndB, decRndB, 8);
             rol(decRndB,8);
             
+            // This should be random
             uint8_t decRndA[8] = {0x00};
             memcpy(RndA, decRndA, 8);
             uint8_t encRndA[8] = {0x00};
@@ -290,7 +293,8 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 struct desfire_key sessionKey = {0};
                 desfirekey_t skey = &sessionKey;
                 Desfire_session_key_new( RndA, RndB , key, skey );
-                print_result("SESSION : ", skey->data, 8);
+                //print_result("SESSION : ", skey->data, 8);
+                cmd_send(CMD_ACK,1,0,0,skey->data,8);
                 
             } else {
                 DbpString("Authetication failed.");
@@ -310,6 +314,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             }
             
             
+            }
             }
 			break;
 		case 2:
