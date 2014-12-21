@@ -294,6 +294,18 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 desfirekey_t skey = &sessionKey;
                 Desfire_session_key_new( RndA, RndB , key, skey );
                 //print_result("SESSION : ", skey->data, 8);
+                
+                memcpy(encRndA, resp+3, 8);
+                des_dec(&encRndA, &encRndA, key->data);
+                rol(decRndA,8);
+                for (int x = 0; x < 8; x++) {
+                    if (decRndA[x] != encRndA[x]) {
+                        DbpString("Authetication failed. Cannot varify PICC.");
+                        OnError();
+                        return;
+                    }
+                }
+                
                 OnSuccess();
                 cmd_send(CMD_ACK,1,0,0,skey->data,8);
                 
@@ -302,18 +314,6 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 OnError();
                 return;
             }
-            
-            memcpy(encRndA, resp+3, 8);
-            des_dec(&encRndA, &encRndA, key->data);
-            rol(decRndA,8);
-            for (int x = 0; x < 8; x++) {
-                if (decRndA[x] != encRndA[x]) {
-                    DbpString("Authetication failed. Cannot varify PICC.");
-                    OnError();
-                    return;
-                }
-            }
-            
             
             }
             }
