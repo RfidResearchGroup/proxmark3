@@ -294,6 +294,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 desfirekey_t skey = &sessionKey;
                 Desfire_session_key_new( RndA, RndB , key, skey );
                 //print_result("SESSION : ", skey->data, 8);
+                OnSuccess();
                 cmd_send(CMD_ACK,1,0,0,skey->data,8);
                 
             } else {
