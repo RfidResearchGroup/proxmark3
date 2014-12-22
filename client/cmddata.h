@@ -17,6 +17,7 @@ int CmdData(const char *Cmd);
 
 int CmdAmp(const char *Cmd);
 int Cmdaskdemod(const char *Cmd);
+int Cmdaskrawdemod(const char *Cmd);
 int CmdAutoCorr(const char *Cmd);
 int CmdBitsamples(const char *Cmd);
 int CmdBitstream(const char *Cmd);
@@ -26,6 +27,7 @@ int CmdDetectClockRate(const char *Cmd);
 int CmdFSKdemod(const char *Cmd);
 int CmdFSKdemodHID(const char *Cmd);
 int CmdFSKdemodIO(const char *Cmd);
+int CmdFSKrawdemod(const char *Cmd);
 int CmdGrid(const char *Cmd);
 int CmdHexsamples(const char *Cmd);
 int CmdHide(const char *Cmd);
