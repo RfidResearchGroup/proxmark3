@@ -1715,6 +1715,10 @@ int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity)
  * fills the uid pointer unless NULL
  * fills resp_data unless NULL */
 int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, uint32_t* cuid_ptr) {
+
+	iso14a_set_timeout(10500); // 10ms default  10*105 = 
+	
+	//uint8_t deselect[]   = {0xc2};  //DESELECT
 	//uint8_t halt[]       = { 0x50, 0x00, 0x57, 0xCD };  // HALT
 	uint8_t wupa[]       = { 0x52 };  // WAKE-UP
 	//uint8_t reqa[]       = { 0x26 };  // REQUEST A
@@ -1731,8 +1735,8 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 	int len;
 	
 	// test for the SKYLANDERS TOY.
-	//ReaderTransmit(halt,sizeof(halt), NULL);
-	//len = ReaderReceive(resp, resp_par);
+	// ReaderTransmit(deselect,sizeof(deselect), NULL);
+	// len = ReaderReceive(resp, resp_par);
 	
 	// Broadcast for a card, WUPA (0x52) will force response from all cards in the field
 	ReaderTransmitBitsPar(wupa,7,0, NULL);
@@ -1836,7 +1840,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     p_hi14a_card->sak = sak;
     p_hi14a_card->ats_len = 0;
   }
-
+  
 	if( (sak & 0x20) == 0) {
 		return 2; // non iso14443a compliant tag
 	}
@@ -1845,8 +1849,13 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 	AppendCrc14443a(rats, 2);
 	ReaderTransmit(rats, sizeof(rats), NULL);
 
+	
 	len = ReaderReceive(resp, resp_par);
-	if(!len) return 0;
+	Dbprintf("RATS Reponse: %d", len);
+	if(!len) {
+		Dbprintf("RATS: %02x %02x %02x", resp[0], resp[1], resp[2]);
+		return 0;
+	}
 
 	if(p_hi14a_card) {
 		memcpy(p_hi14a_card->ats, resp, sizeof(p_hi14a_card->ats));

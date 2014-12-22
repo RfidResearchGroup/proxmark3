@@ -23,6 +23,10 @@
 #ifndef MAX
 # define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
+#define TRUE                        1
+#define FALSE                       0
+#define EVEN                        0
+#define ODD                         1
 
 int ukbhit(void);
 
@@ -48,4 +52,10 @@ uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base);
 int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt);
 int param_getstr(const char *line, int paramnum, char * str);
 
+ int hextobinarray( char *target,  char *source);
+ int hextobinstring( char *target,  char *source);
+ int binarraytohex( char *target,  char *source,  int length);
+void binarraytobinstring(char *target,  char *source,  int length);
+uint8_t parity( char *string, uint8_t type,  int length);
+void wiegand_add_parity(char *target, char *source, char length);
 

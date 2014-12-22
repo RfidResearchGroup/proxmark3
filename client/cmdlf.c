@@ -581,7 +581,7 @@ static command_t CommandTable[] =
   {"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
   {"snoop",       CmdLFSnoop,         0, "['l'|'h'|<divisor>] [trigger threshold]-- Snoop LF (l:125khz, h:134khz)"},
   
-  {"avid",        CmdLFAWID26,        1, "{ AWID26 tags }"},
+  {"awid26",        CmdLFAWID26,        1, "{ AWID26 tags }"},
   {"em4x",        CmdLFEM4X,          1, "{ EM4X tags }"},      
   {"hid",         CmdLFHID,           1, "{ HID tags }"},
   {"hitag",       CmdLFHitag,         1, "{ Hitag tags and transponders }"},
