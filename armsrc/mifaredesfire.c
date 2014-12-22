@@ -309,7 +309,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 //Change the selected key to a new value.
                 /*
                  
-                cmd[0] = 0xc4;
+                cmd[0] = CHANGE_KEY;
                 cmd[1] = keyno;
                 
                 uint8_t newKey[16] = {0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77};
