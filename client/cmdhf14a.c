@@ -191,6 +191,11 @@ int CmdHF14AReader(const char *Cmd)
 	
 	if(select_status == 0) {
 		PrintAndLog("iso14443a card select failed");
+		// disconnect
+		c.arg[0] = 0;
+		c.arg[1] = 0;
+		c.arg[2] = 0;
+		SendCommand(&c);
 		return 0;
 	}
 

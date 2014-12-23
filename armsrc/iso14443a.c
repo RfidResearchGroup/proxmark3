@@ -395,7 +395,11 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 					} else if (Uart.len & 0x0007) {								// there are some parity bits to store
 						Uart.parityBits <<= (8 - (Uart.len&0x0007));			// left align remaining parity bits
 						Uart.parity[Uart.parityLen++] = Uart.parityBits;		// and store them
+					}
+					if (Uart.len) {
 						return TRUE;											// we are finished with decoding the raw data sequence
+					} else {
+						UartReset();											// Nothing received - try again
 					}
 				}
 				if (Uart.state == STATE_START_OF_COMMUNICATION) {				// error - must not follow directly after SOC
@@ -558,6 +562,8 @@ static RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non
 				} else if (Demod.len & 0x0007) {						// there are some parity bits to store
 					Demod.parityBits <<= (8 - (Demod.len&0x0007));		// left align remaining parity bits
 					Demod.parity[Demod.parityLen++] = Demod.parityBits;	// and store them
+				}
+				if (Demod.len) {
 					return TRUE;										// we are finished with decoding the raw data sequence
 				} else { 												// nothing received. Start over
 					DemodReset();
@@ -1631,7 +1637,7 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 //-----------------------------------------------------------------------------
 static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receivedResponsePar, uint16_t offset)
 {
-	uint16_t c;
+	uint32_t c;
 	
 	// Set FPGA mode to "reader listen mode", no modulation (listen
 	// only, since we are receiving, not transmitting).
