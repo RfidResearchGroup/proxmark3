@@ -240,10 +240,10 @@ int Cmdaskrawdemod(const char *Cmd)
           }
         }
       }
-      /*
+      
       //debug
       if ((bitnum>64) && (BitStream[bitnum-1]!=77)) break; 
-      */
+      
     }    
   }
   ClearGraph(0);
