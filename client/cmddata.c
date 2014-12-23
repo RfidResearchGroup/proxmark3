@@ -302,13 +302,14 @@ int Cmdaskrawdemod(const char *Cmd)
   //PrintAndLog("DEBUG - valid high: %d - valid low: %d",high,low);
   int lastBit = 0;  //set first clock check
   uint32_t bitnum = 0;     //output counter
-  uint8_t tol = clk;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
-                      //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely 
+  uint8_t tol = 0;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
+  if (clk==32)tol=1;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely 
   uint32_t iii = 0;
   uint32_t gLen = GraphTraceLen;
   if (gLen > 500) gLen=500;
   uint8_t errCnt =0;
-
+  uint32_t bestStart = GraphTraceLen;
+  uint32_t bestErrCnt = (GraphTraceLen/1000);
   //PrintAndLog("DEBUG - lastbit - %d",lastBit);
 
   //loop to find first wave that works
@@ -317,32 +318,32 @@ int Cmdaskrawdemod(const char *Cmd)
       lastBit=iii-clk;    
       //loop through to see if this start location works
       for (i = iii; i < GraphTraceLen; ++i) {   
-        if ((GraphBuffer[i] >= high) && ((i-lastBit)>(clk-((int)clk/tol)))) { // && GraphBuffer[i-1] < high   
+        if ((GraphBuffer[i] >= high) && ((i-lastBit)>(clk-tol))){
           lastBit+=clk;
           BitStream[bitnum] =  invert;
           bitnum++;
-        } else if ((GraphBuffer[i] <= low) && ((i-lastBit)>(clk-((int)clk/tol)))){
+        } else if ((GraphBuffer[i] <= low) && ((i-lastBit)>(clk-tol))){
           //low found and we are expecting a bar
           lastBit+=clk;
           BitStream[bitnum] = 1-invert; 
           bitnum++;
         } else {
           //mid value found or no bar supposed to be here
-          if ((i-lastBit)>(clk+((int)(clk/tol)))){
+          if ((i-lastBit)>(clk+tol)){
             //should have hit a high or low based on clock!!
 
-            /* 
+             
             //debug
-            PrintAndLog("DEBUG - no wave in expected area - location: %d, expected: %d-%d, lastBit: %d - resetting search",i,(lastBit+(clk-((int)(clk/tol)))),(lastBit+(clk+((int)(clk/tol)))),lastBit);
+            //PrintAndLog("DEBUG - no wave in expected area - location: %d, expected: %d-%d, lastBit: %d - resetting search",i,(lastBit+(clk-((int)(tol)))),(lastBit+(clk+((int)(tol)))),lastBit);
             if (bitnum > 0){
               BitStream[bitnum]=77;
               bitnum++;
             }
-            */
+            
 
             errCnt++;
             lastBit+=clk;//skip over until hit too many errors
-            if (errCnt>((GraphTraceLen/1000)*2)){  //allow 2 errors for every 1000 samples else start over
+            if (errCnt>((GraphTraceLen/1000))){  //allow 1 error for every 1000 samples else start over
               errCnt=0;
               bitnum=0;//start over
               break;
@@ -350,11 +351,21 @@ int Cmdaskrawdemod(const char *Cmd)
           }
         }
       }
-      
-      //debug
-      if ((bitnum>64) && (BitStream[bitnum-1]!=77)) break; 
-      
-    }    
+      //we got more than 64 good bits and not all errors
+      if ((bitnum > (64+errCnt)) && (errCnt<(GraphTraceLen/1000))) {
+        //possible good read
+        if (errCnt==0) break;  //great read - finish
+        if (bestStart = iii) break;  //if current run == bestErrCnt run (after exhausted testing) then finish 
+        if (errCnt<bestErrCnt){  //set this as new best run
+          bestErrCnt=errCnt;
+          bestStart = iii;
+        }
+      }
+    }
+    if (iii>=gLen){ //exhausted test
+      //if there was a ok test go back to that one and re-run the best run (then dump after that run)
+      if (bestErrCnt < (GraphTraceLen/1000)) iii=bestStart;
+    }
   }
   if (bitnum>16){
     PrintAndLog("Data start pos:%d, lastBit:%d, stop pos:%d, numBits:%d",iii,lastBit,i,bitnum);
@@ -367,7 +378,7 @@ int Cmdaskrawdemod(const char *Cmd)
     RepaintGraphWindow();
     //output
     if (errCnt>0){
-      PrintAndLog("# Errors during Demoding: %d",errCnt);
+      PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
     }
     PrintAndLog("ASK decoded bitstream:");
     // Now output the bitstream to the scrollback by line of 16 bits
