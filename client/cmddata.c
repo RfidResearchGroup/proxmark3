@@ -69,9 +69,7 @@ int CmdAmp(const char *Cmd)
  * Arguments:
  * c : 0 or 1
  */
- //this method is dependant on all highs and lows to be the same(or clipped)  this could be an issue[marshmellow]
- //might be able to use clock to help identify highs and lows with some more tolerance
- //but for now I will try a fuzz factor
+ //this method is dependant on all highs and lows to be the same(or clipped)  this creates issues[marshmellow] it also ignores the clock
 int Cmdaskdemod(const char *Cmd)
 {
   int i;
@@ -100,9 +98,6 @@ int Cmdaskdemod(const char *Cmd)
   } else {
     GraphBuffer[0] = c;
   }
-  //13% fuzz [marshmellow]
-  high=(int)(0.87*high);
-  low=(int)(0.87*low);
   for (i = 1; i < GraphTraceLen; ++i) {
     /* Transitions are detected at each peak
      * Transitions are either:
@@ -126,7 +121,7 @@ int Cmdaskdemod(const char *Cmd)
   return 0;
 }
 
-void printBitStream(uint8_t BitStream[], uint32_t bitLen){
+void printBitStream(int BitStream[], uint32_t bitLen){
   uint32_t i = 0;
   if (bitLen<16) return;
   if (bitLen>512) bitLen=512;
@@ -151,6 +146,120 @@ void printBitStream(uint8_t BitStream[], uint32_t bitLen){
   }
   return; 
 }
+void printBitStream2(uint8_t BitStream[], uint32_t bitLen){
+  uint32_t i = 0;
+  if (bitLen<16) {
+    PrintAndLog("Too few bits found: %d",bitLen);
+    return;
+  }
+  if (bitLen>512) bitLen=512;
+   for (i = 0; i < (bitLen-16); i+=16) {
+    PrintAndLog("%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i",
+      BitStream[i],
+      BitStream[i+1],
+      BitStream[i+2],
+      BitStream[i+3],
+      BitStream[i+4],
+      BitStream[i+5],
+      BitStream[i+6],
+      BitStream[i+7],
+      BitStream[i+8],
+      BitStream[i+9],
+      BitStream[i+10],
+      BitStream[i+11],
+      BitStream[i+12],
+      BitStream[i+13],
+      BitStream[i+14],
+      BitStream[i+15]);
+  }
+  return; 
+}
+
+//by marshmellow
+//takes 1s and 0s and searches for EM410x format - output EM ID
+int Em410xDecode(const char *Cmd)
+{
+  //no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
+  //  otherwise could be a void with no arguments
+  //set defaults
+  int high=0, low=0;
+  uint32_t hi=0, lo=0;
+
+  uint32_t i = 0;
+  uint32_t initLoopMax = 1000;
+  if (initLoopMax>GraphTraceLen) initLoopMax=GraphTraceLen;
+
+  for (;i < initLoopMax; ++i) //1000 samples should be plenty to find high and low values
+  {
+    if (GraphBuffer[i] > high)
+      high = GraphBuffer[i];
+    else if (GraphBuffer[i] < low)
+      low = GraphBuffer[i];
+  }
+  if (((high !=1)||(low !=0))){  //allow only 1s and 0s 
+    PrintAndLog("no data found"); 
+    return 0;
+  }
+  uint8_t parityTest=0;
+   // 111111111 bit pattern represent start of frame
+  int frame_marker_mask[] = {1,1,1,1,1,1,1,1,1};
+  uint32_t idx = 0;
+  uint32_t ii=0;
+  uint8_t resetCnt = 0;
+  while( (idx + 64) < GraphTraceLen) {
+restart:
+    // search for a start of frame marker
+    if ( memcmp(GraphBuffer+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
+    { // frame marker found
+      idx+=9;//sizeof(frame_marker_mask);
+      for (i=0; i<10;i++){
+        for(ii=0; ii<5; ++ii){
+          parityTest += GraphBuffer[(i*5)+ii+idx];        
+        }
+        if (parityTest== ((parityTest>>1)<<1)){
+          parityTest=0;
+          for (ii=0; ii<4;++ii){
+            hi = (hi<<1)|(lo>>31);
+            lo=(lo<<1)|(GraphBuffer[(i*5)+ii+idx]);
+          }
+          //PrintAndLog("DEBUG: EM parity passed parity val: %d, i:%d, ii:%d,idx:%d, Buffer: %d%d%d%d%d,lo: %d",parityTest,i,ii,idx,GraphBuffer[idx+ii+(i*5)-5],GraphBuffer[idx+ii+(i*5)-4],GraphBuffer[idx+ii+(i*5)-3],GraphBuffer[idx+ii+(i*5)-2],GraphBuffer[idx+ii+(i*5)-1],lo);          
+        }else {//parity failed
+          //PrintAndLog("DEBUG: EM parity failed parity val: %d, i:%d, ii:%d,idx:%d, Buffer: %d%d%d%d%d",parityTest,i,ii,idx,GraphBuffer[idx+ii+(i*5)-5],GraphBuffer[idx+ii+(i*5)-4],GraphBuffer[idx+ii+(i*5)-3],GraphBuffer[idx+ii+(i*5)-2],GraphBuffer[idx+ii+(i*5)-1]);
+          parityTest=0;
+          idx-=8;
+          if (resetCnt>5)return 0;
+          resetCnt++;
+          goto restart;//continue;
+        }
+      }
+      //skip last 5 bit parity test for simplicity.
+
+      //output em id
+      PrintAndLog("EM TAG ID    : %02x%08x", hi, lo);
+      //get Unique ID
+      uint32_t iii=1;
+      uint32_t id2hi=0,id2lo=0;
+      for (i=0;i<8;i++){
+        id2hi=(id2hi<<1)|((hi & (iii<<(i)))>>i);
+      }
+      for (ii=4; ii>0;ii--){
+        for (i=0;i<8;i++){
+          id2lo=(id2lo<<1)|((lo & (iii<<(i+((ii-1)*8))))>>(i+((ii-1)*8)));
+        }
+      }
+      PrintAndLog("Unique TAG ID: %02x%08x", id2hi, id2lo);
+      PrintAndLog("DEZ 8        : %08d",lo & 0xFFFFFF);
+      PrintAndLog("DEZ 10       : %010d",lo & 0xFFFFFF);
+      PrintAndLog("DEZ 5.5      : %05d.%05d",(lo>>16) & 0xFFFF,lo & 0xFFFF);
+      PrintAndLog("DEZ 3.5A     : %03d.%05d",hi,lo &0xFFFF);      
+      return 0;
+    }else{
+      idx++;
+    }
+  }
+  return 0;
+}
+
 
 //by marshmellow
 //takes 2 arguments - clock and invert both as integers 
@@ -190,16 +299,17 @@ int Cmdaskrawdemod(const char *Cmd)
   high=(int)(0.75*high);
   low=(int)(0.75*low);
 
-  //PrintAndLog("valid high: %d - valid low: %d",high,low);
+  //PrintAndLog("DEBUG - valid high: %d - valid low: %d",high,low);
   int lastBit = 0;  //set first clock check
   uint32_t bitnum = 0;     //output counter
-  uint8_t tol = 32;//clock tolerance adjust
+  uint8_t tol = clk;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
+                      //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely 
   uint32_t iii = 0;
   uint32_t gLen = GraphTraceLen;
   if (gLen > 500) gLen=500;
   uint8_t errCnt =0;
 
-  //PrintAndLog("lastbit - %d",lastBit);
+  //PrintAndLog("DEBUG - lastbit - %d",lastBit);
 
   //loop to find first wave that works
   for (iii=0; iii < gLen; ++iii){
@@ -223,7 +333,7 @@ int Cmdaskrawdemod(const char *Cmd)
 
             /* 
             //debug
-            PrintAndLog("no wave in expected area - location: %d, expected: %d-%d, lastBit: %d - resetting search",i,(lastBit+(clk-((int)(clk/tol)))),(lastBit+(clk+((int)(clk/tol)))),lastBit);
+            PrintAndLog("DEBUG - no wave in expected area - location: %d, expected: %d-%d, lastBit: %d - resetting search",i,(lastBit+(clk-((int)(clk/tol)))),(lastBit+(clk+((int)(clk/tol)))),lastBit);
             if (bitnum > 0){
               BitStream[bitnum]=77;
               bitnum++;
@@ -246,22 +356,24 @@ int Cmdaskrawdemod(const char *Cmd)
       
     }    
   }
-  ClearGraph(0);
-  //move BitStream back to GraphBuffer
-  for (i=0; i < bitnum; ++i){
-    GraphBuffer[i]=BitStream[i];
-  }
-  GraphTraceLen=bitnum;
-  RepaintGraphWindow();
-
-  //output
-  if (errCnt>0){
-    PrintAndLog("# Error during Demoding: %d\n",errCnt);
-  }
-  PrintAndLog("ASK decoded bitstream:");
-  // Now output the bitstream to the scrollback by line of 16 bits
-  printBitStream(BitStream,bitnum);
-  
+  if (bitnum>16){
+    PrintAndLog("Data start pos:%d, lastBit:%d, stop pos:%d, numBits:%d",iii,lastBit,i,bitnum);
+    //move BitStream back to GraphBuffer
+    ClearGraph(0);
+    for (i=0; i < bitnum; ++i){
+      GraphBuffer[i]=BitStream[i];
+    }
+    GraphTraceLen=bitnum;
+    RepaintGraphWindow();
+    //output
+    if (errCnt>0){
+      PrintAndLog("# Errors during Demoding: %d",errCnt);
+    }
+    PrintAndLog("ASK decoded bitstream:");
+    // Now output the bitstream to the scrollback by line of 16 bits
+    printBitStream2(BitStream,bitnum);
+    Em410xDecode(Cmd);
+  }  
   return 0;
 }
 
@@ -410,6 +522,7 @@ int CmdDetectClockRate(const char *Cmd)
   return 0;
 }
 
+//by marshmellow
 //demod GraphBuffer wave to 0s and 1s for each wave - 0s for short waves 1s for long waves
 size_t fsk_wave_demod(int size)
 {
@@ -465,6 +578,8 @@ uint32_t myround(float f)
   if (f >= UINT_MAX) return UINT_MAX;
   return (uint32_t) (f + (float)0.5);
 }
+
+//by marshmellow (from holiman's base)
 //translate 11111100000 to 10
 size_t aggregate_bits(int size, uint8_t rfLen, uint8_t maxConsequtiveBits, uint8_t invert) //,uint8_t l2h_crossing_value
 {
@@ -516,6 +631,8 @@ size_t aggregate_bits(int size, uint8_t rfLen, uint8_t maxConsequtiveBits, uint8
   }//end for
   return numBits;
 }
+
+//by marshmellow  (from holiman's base)
 // full fsk demod from GraphBuffer wave to decoded 1s and 0s (no mandemod)
 size_t fskdemod(uint8_t rfLen, uint8_t invert)
 {
@@ -547,6 +664,7 @@ uint32_t bytebits_to_byte(int* src, int numbits)
   return num;
 }
 
+//by marshmellow
 //fsk demod and print binary
 int CmdFSKrawdemod(const char *Cmd)
 {
@@ -573,30 +691,13 @@ int CmdFSKrawdemod(const char *Cmd)
   PrintAndLog("FSK decoded bitstream:");
   // Now output the bitstream to the scrollback by line of 16 bits
   if(size > (7*32)+2) size = (7*32)+2; //only output a max of 7 blocks of 32 bits  most tags will have full bit stream inside that sample size
+  printBitStream(GraphBuffer,size);
 
-  for (int i = 2; i < (size-16); i+=16) {
-    PrintAndLog("%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i",
-      GraphBuffer[i],
-      GraphBuffer[i+1],
-      GraphBuffer[i+2],
-      GraphBuffer[i+3],
-      GraphBuffer[i+4],
-      GraphBuffer[i+5],
-      GraphBuffer[i+6],
-      GraphBuffer[i+7],
-      GraphBuffer[i+8],
-      GraphBuffer[i+9],
-      GraphBuffer[i+10],
-      GraphBuffer[i+11],
-      GraphBuffer[i+12],
-      GraphBuffer[i+13],
-      GraphBuffer[i+14],
-      GraphBuffer[i+15]);
-  }
   ClearGraph(1);
   return 0;
 }
 
+//by marshmellow
 int CmdFSKdemodHID(const char *Cmd)
 {
   //raw fsk demod no manchester decoding no start bit finding just get binary from wave
@@ -708,35 +809,14 @@ int CmdFSKdemodHID(const char *Cmd)
     PrintAndLog("start bits for hid not found");
     PrintAndLog("FSK decoded bitstream:");
     // Now output the bitstream to the scrollback by line of 16 bits
-    if(size > (7*32)+2) size = (7*32)+2; //only output a max of 7 blocks of 32 bits  most tags will have full bit stream inside that sample size
     printBitStream(GraphBuffer,size);
-    /*
-    for (int i = 2; i < (size-16); i+=16) {
-      PrintAndLog("%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i",
-        GraphBuffer[i],
-        GraphBuffer[i+1],
-        GraphBuffer[i+2],
-        GraphBuffer[i+3],
-        GraphBuffer[i+4],
-        GraphBuffer[i+5],
-        GraphBuffer[i+6],
-        GraphBuffer[i+7],
-        GraphBuffer[i+8],
-        GraphBuffer[i+9],
-        GraphBuffer[i+10],
-        GraphBuffer[i+11],
-        GraphBuffer[i+12],
-        GraphBuffer[i+13],
-        GraphBuffer[i+14],
-        GraphBuffer[i+15]);
-    }   
-    */
+ 
   }
   ClearGraph(1);
   return 0;
 }
 
-
+//by marshmellow
 int CmdFSKdemodIO(const char *Cmd)
 {
   //raw fsk demod no manchester decoding no start bit finding just get binary from wave
@@ -799,29 +879,7 @@ int CmdFSKdemodIO(const char *Cmd)
       PrintAndLog("start bits for io prox not found");
       PrintAndLog("FSK decoded bitstream:");
       // Now output the bitstream to the scrollback by line of 16 bits
-      if(size > (7*32)+2) size = (7*32)+2; //only output a max of 7 blocks of 32 bits  most tags will have full bit stream inside that sample size
-      printBitStream(GraphBuffer,size);
-      /*
-      for (int i = 2; i < (size-16); i+=16) {
-        PrintAndLog("%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i",
-          GraphBuffer[i],
-          GraphBuffer[i+1],
-          GraphBuffer[i+2],
-          GraphBuffer[i+3],
-          GraphBuffer[i+4],
-          GraphBuffer[i+5],
-          GraphBuffer[i+6],
-          GraphBuffer[i+7],
-          GraphBuffer[i+8],
-          GraphBuffer[i+9],
-          GraphBuffer[i+10],
-          GraphBuffer[i+11],
-          GraphBuffer[i+12],
-          GraphBuffer[i+13],
-          GraphBuffer[i+14],
-          GraphBuffer[i+15]);
-      } 
-      */  
+      printBitStream(GraphBuffer,size);  
     }
   }
   ClearGraph(1);
@@ -1471,7 +1529,7 @@ static command_t CommandTable[] =
   {"help",          CmdHelp,            1, "This help"},
   {"amp",           CmdAmp,             1, "Amplify peaks"},
   {"askdemod",      Cmdaskdemod,        1, "<0 or 1> -- Attempt to demodulate simple ASK tags"},
-  {"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0 or 1>] -- Attempt to demodulate simple ASK tags and output binary (args optional-defaults='64 0'"},
+  {"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0 or 1>] -- Attempt to demodulate simple ASK tags and output binary (args optional-defaults='64 0')"},
   {"autocorr",      CmdAutoCorr,        1, "<window length> -- Autocorrelation over window"},
   {"bitsamples",    CmdBitsamples,      0, "Get raw samples as bitstring"},
   {"bitstream",     CmdBitstream,       1, "[clock rate] -- Convert waveform into a bitstream"},
