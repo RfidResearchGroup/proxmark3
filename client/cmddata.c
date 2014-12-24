@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
+
 #include <limits.h>
 #include "proxmark3.h"
 #include "data.h"
@@ -183,7 +185,7 @@ int Em410xDecode(const char *Cmd)
   //  otherwise could be a void with no arguments
   //set defaults
   int high=0, low=0;
-  uint32_t hi=0, lo=0;
+  uint64_t lo=0; //hi=0,
 
   uint32_t i = 0;
   uint32_t initLoopMax = 1000;
@@ -219,8 +221,8 @@ restart:
         if (parityTest== ((parityTest>>1)<<1)){
           parityTest=0;
           for (ii=0; ii<4;++ii){
-            hi = (hi<<1)|(lo>>31);
-            lo=(lo<<1)|(GraphBuffer[(i*5)+ii+idx]);
+            //hi = (hi<<1)|(lo>>31);
+            lo=(lo<<1LL)|(GraphBuffer[(i*5)+ii+idx]);
           }
           //PrintAndLog("DEBUG: EM parity passed parity val: %d, i:%d, ii:%d,idx:%d, Buffer: %d%d%d%d%d,lo: %d",parityTest,i,ii,idx,GraphBuffer[idx+ii+(i*5)-5],GraphBuffer[idx+ii+(i*5)-4],GraphBuffer[idx+ii+(i*5)-3],GraphBuffer[idx+ii+(i*5)-2],GraphBuffer[idx+ii+(i*5)-1],lo);          
         }else {//parity failed
@@ -234,24 +236,27 @@ restart:
       }
       //skip last 5 bit parity test for simplicity.
 
-      //output em id
-      PrintAndLog("EM TAG ID    : %02x%08x", hi, lo);
       //get Unique ID
-      uint32_t iii=1;
-      uint32_t id2hi=0,id2lo=0;
-      for (i=0;i<8;i++){
-        id2hi=(id2hi<<1)|((hi & (iii<<(i)))>>i);
-      }
-      for (ii=4; ii>0;ii--){
+      uint64_t iii=1;
+      uint64_t id2lo=0; //id2hi=0,
+      //for (i=0;i<8;i++){ //for uint32 instead of uint64
+      //  id2hi=(id2hi<<1)|((hi & (iii<<(i)))>>i);
+     //}
+      for (ii=5; ii>0;ii--){
         for (i=0;i<8;i++){
-          id2lo=(id2lo<<1)|((lo & (iii<<(i+((ii-1)*8))))>>(i+((ii-1)*8)));
+          id2lo=(id2lo<<1LL)|((lo & (iii<<(i+((ii-1)*8))))>>(i+((ii-1)*8)));
         }
       }
-      PrintAndLog("Unique TAG ID: %02x%08x", id2hi, id2lo);
-      PrintAndLog("DEZ 8        : %08d",lo & 0xFFFFFF);
-      PrintAndLog("DEZ 10       : %010d",lo & 0xFFFFFF);
-      PrintAndLog("DEZ 5.5      : %05d.%05d",(lo>>16) & 0xFFFF,lo & 0xFFFF);
-      PrintAndLog("DEZ 3.5A     : %03d.%05d",hi,lo &0xFFFF);      
+      //output em id
+      PrintAndLog("EM TAG ID    : %010llx", lo);
+      PrintAndLog("Unique TAG ID: %010llx",  id2lo); //id2hi,
+      PrintAndLog("DEZ 8        : %08lld",lo & 0xFFFFFF);
+      PrintAndLog("DEZ 10       : %010lld",lo & 0xFFFFFF);
+      PrintAndLog("DEZ 5.5      : %05lld.%05lld",(lo>>16LL) & 0xFFFF,(lo & 0xFFFF));
+      PrintAndLog("DEZ 3.5A     : %03lld.%05lld",(lo>>32ll),(lo & 0xFFFF));
+      PrintAndLog("DEZ 14/IK2   : %014lld",lo);
+      PrintAndLog("DEZ 15/IK3   : %015lld",id2lo);
+      PrintAndLog("Other        : %05lld_%03lld_%08lld",(lo&0xFFFF),((lo>>16LL) & 0xFF),(lo & 0xFFFFFF));
       return 0;
     }else{
       idx++;
@@ -269,13 +274,12 @@ int Cmdaskrawdemod(const char *Cmd)
   uint32_t i;
   int invert=0;  //invert default
   int high = 0, low = 0;
-  int clk=64; //clock default
+  int clk=DetectClock(0); //clock default
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
-  sscanf(Cmd, "%i %i", &clk, &invert);
-  if (!(clk>8)){
-    PrintAndLog("Invalid argument: %s",Cmd);
-    return 0;
-  }
+
+  sscanf(Cmd, "%i %i", &clk, &invert);    
+  if (clk<8) clk =64;
+  if (clk<32) clk=32;
   if (invert != 0 && invert != 1) {
     PrintAndLog("Invalid argument: %s", Cmd);
     return 0;
@@ -355,7 +359,7 @@ int Cmdaskrawdemod(const char *Cmd)
       if ((bitnum > (64+errCnt)) && (errCnt<(GraphTraceLen/1000))) {
         //possible good read
         if (errCnt==0) break;  //great read - finish
-        if (bestStart = iii) break;  //if current run == bestErrCnt run (after exhausted testing) then finish 
+        if (bestStart == iii) break;  //if current run == bestErrCnt run (after exhausted testing) then finish 
         if (errCnt<bestErrCnt){  //set this as new best run
           bestErrCnt=errCnt;
           bestStart = iii;
