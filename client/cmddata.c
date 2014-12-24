@@ -269,7 +269,7 @@ restart:
 //by marshmellow
 //takes 2 arguments - clock and invert both as integers 
 //prints binary found and saves in graphbuffer for further commands
-int Cmdaskrawdemod(const char *Cmd)
+int Cmdaskmandemod(const char *Cmd)
 {
   uint32_t i;
   int invert=0;  //invert default
@@ -315,7 +315,6 @@ int Cmdaskrawdemod(const char *Cmd)
   uint32_t bestStart = GraphTraceLen;
   uint32_t bestErrCnt = (GraphTraceLen/1000);
   //PrintAndLog("DEBUG - lastbit - %d",lastBit);
-
   //loop to find first wave that works
   for (iii=0; iii < gLen; ++iii){
     if ((GraphBuffer[iii]>=high)||(GraphBuffer[iii]<=low)){
@@ -372,6 +371,7 @@ int Cmdaskrawdemod(const char *Cmd)
     }
   }
   if (bitnum>16){
+    
     PrintAndLog("Data start pos:%d, lastBit:%d, stop pos:%d, numBits:%d",iii,lastBit,i,bitnum);
     //move BitStream back to GraphBuffer
     ClearGraph(0);
@@ -1544,7 +1544,7 @@ static command_t CommandTable[] =
   {"help",          CmdHelp,            1, "This help"},
   {"amp",           CmdAmp,             1, "Amplify peaks"},
   {"askdemod",      Cmdaskdemod,        1, "<0 or 1> -- Attempt to demodulate simple ASK tags"},
-  {"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0 or 1>] -- Attempt to demodulate simple ASK tags and output binary (args optional-defaults='64 0')"},
+  {"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert<0 or 1>] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional[clock will try Auto-detect])"},
   {"autocorr",      CmdAutoCorr,        1, "<window length> -- Autocorrelation over window"},
   {"bitsamples",    CmdBitsamples,      0, "Get raw samples as bitstring"},
   {"bitstream",     CmdBitstream,       1, "[clock rate] -- Convert waveform into a bitstream"},
