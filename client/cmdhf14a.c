@@ -225,12 +225,6 @@ int CmdHF14AReader(const char *Cmd)
 	    memcpy(&card.ats, resp.d.asBytes, resp.arg[0]);
 		card.ats_len = resp.arg[0];				// note: ats_len includes CRC Bytes
 	} 
-
-	// disconnect
-	c.arg[0] = 0;
-	c.arg[1] = 0;
-	c.arg[2] = 0;
-	SendCommand(&c);
 	
 	if(card.ats_len >= 3) {			// a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
 		bool ta1 = 0, tb1 = 0, tc1 = 0;
@@ -370,6 +364,23 @@ int CmdHF14AReader(const char *Cmd)
 		PrintAndLog("proprietary non iso14443-4 card found, RATS not supported");
 	}
 
+	
+	// try to see if card responses to "chinese magic backdoor" commands.
+	c.cmd = CMD_MIFARE_CIDENT;
+	c.arg[0] = 0;
+	c.arg[1] = 0;
+	c.arg[2] = 0;	
+	SendCommand(&c);
+	WaitForResponse(CMD_ACK,&resp);
+	uint8_t isOK  = resp.arg[0] & 0xff;
+	PrintAndLog(" Answers to chinese magic backdoor commands: %s", (isOK ? "YES" : "NO") );
+	
+	// disconnect
+	c.arg[0] = 0;
+	c.arg[1] = 0;
+	c.arg[2] = 0;
+	SendCommand(&c);
+	
 	return select_status;
 }
 

@@ -137,8 +137,11 @@ typedef struct {
 #define CMD_MIFARE_EML_MEMSET                                             0x0602
 #define CMD_MIFARE_EML_MEMGET                                             0x0603
 #define CMD_MIFARE_EML_CARDLOAD                                           0x0604
-#define CMD_MIFARE_EML_CSETBLOCK                                          0x0605
-#define CMD_MIFARE_EML_CGETBLOCK                                          0x0606
+
+// magic chinese card commands
+#define CMD_MIFARE_CSETBLOCK                                              0x0605
+#define CMD_MIFARE_CGETBLOCK                                              0x0606
+#define CMD_MIFARE_CIDENT                                                 0x0607
 
 #define CMD_SIMULATE_MIFARE_CARD                                          0x0610
 

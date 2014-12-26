@@ -24,11 +24,11 @@ bool InitDesfireCard(){
 	
 	byte_t cardbuf[USB_CMD_DATA_SIZE];
 	memset(cardbuf,0,sizeof(cardbuf));
+	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
 	
 	iso14a_set_tracing(TRUE);
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	
-	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
 	int len = iso14443a_select_card(NULL,card,NULL);
 
 	if (!len) {
@@ -350,7 +350,7 @@ size_t CreateAPDU( uint8_t *datain, size_t len, uint8_t *dataout){
 	
 	cmd[0] = 0x0A;  //  0x0A = skicka cid,  0x02 = ingen cid. Särskilda bitar //
 	cmd[0] |= pcb_blocknum; // OR the block number into the PCB	
-	cmd[1] = 0x00;  //  CID: 0x00 //FIXME: allow multiple selected cards
+	cmd[1] = 0x00;  //  CID: 0x00 //TODO: allow multiple selected cards
 	
 	memcpy(cmd+2, datain, len);
 	AppendCrc14443a(cmd, len+2);

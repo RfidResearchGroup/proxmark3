@@ -937,29 +937,22 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	
 	// variables
 	byte_t isOK = 0;
-	uint8_t uid[10];
-	uint8_t d_block[18];
+	uint8_t uid[10] = {0x00};
+	uint8_t d_block[18] = {0x00};
 	uint32_t cuid;
 	
-	memset(uid, 0x00, 10);
 	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 	
 	// reset FPGA and LED
 	if (workFlags & 0x08) {
-		iso14a_clear_trace();
-		iso14a_set_tracing(TRUE);
-
-		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
 		LED_A_ON();
 		LED_B_OFF();
 		LED_C_OFF();
-	
-		//SpinDelay(300);
-		//FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-		//SpinDelay(100);
-		//FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+		
+		iso14a_clear_trace();
+		iso14a_set_tracing(TRUE);
+		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	}
 
 	while (true) {
@@ -967,7 +960,6 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		// get UID from chip
 		if (workFlags & 0x01) {
 			if(!iso14443a_select_card(uid, NULL, &cuid)) {
-				Dbprintf("ICE");
 				if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
 				break;
 			};
@@ -1065,28 +1057,20 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	
 	// variables
 	byte_t isOK = 0;
-	uint8_t data[18];
+	uint8_t data[18] = {0x00};
 	uint32_t cuid = 0;
 	
-	memset(data, 0x00, 18);
 	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 	
 	if (workFlags & 0x08) {
-		// clear trace
-		iso14a_clear_trace();
-		iso14a_set_tracing(TRUE);
-
-		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
 		LED_A_ON();
 		LED_B_OFF();
 		LED_C_OFF();
-	
-		// SpinDelay(300);
-		// FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-		// SpinDelay(100);
-		// FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+
+		iso14a_clear_trace();
+		iso14a_set_tracing(TRUE);
+		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	}
 
 	while (true) {
@@ -1130,5 +1114,37 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
 	}
+}
+
+void MifareCIdent(){
+  
+	// card commands
+	uint8_t wupC1[]       = { 0x40 }; 
+	uint8_t wupC2[]       = { 0x43 }; 
+	
+	// variables
+	byte_t isOK = 1;
+	
+	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
+	
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+	
+	ReaderTransmitBitsPar(wupC1,7,0, NULL);
+	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+		isOK = 0;
+	};
+
+	ReaderTransmit(wupC2, sizeof(wupC2), NULL);
+	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+		isOK = 0;
+	};
+
+	if (mifare_classic_halt(NULL, 0)) {
+		isOK = 0;
+	};
+
+	cmd_send(CMD_ACK,isOK,0,0,0,0);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 

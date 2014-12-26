@@ -854,11 +854,14 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 			
 		// Work with "magic Chinese" card
-		case CMD_MIFARE_EML_CSETBLOCK:
+		case CMD_MIFARE_CSETBLOCK:
 			MifareCSetBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
-		case CMD_MIFARE_EML_CGETBLOCK:
+		case CMD_MIFARE_CGETBLOCK:
 			MifareCGetBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+		case CMD_MIFARE_CIDENT:
+			MifareCIdent();
 			break;
 			
 		// mifare sniffer
