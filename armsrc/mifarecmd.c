@@ -1127,9 +1127,7 @@ void MifareCIdent(){
 	
 	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
-	
-	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-	
+
 	ReaderTransmitBitsPar(wupC1,7,0, NULL);
 	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 		isOK = 0;
@@ -1145,6 +1143,5 @@ void MifareCIdent(){
 	};
 
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 

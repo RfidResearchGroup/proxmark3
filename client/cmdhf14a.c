@@ -376,6 +376,7 @@ int CmdHF14AReader(const char *Cmd)
 	PrintAndLog(" Answers to chinese magic backdoor commands: %s", (isOK ? "YES" : "NO") );
 	
 	// disconnect
+	c.cmd = CMD_READER_ISO_14443a;
 	c.arg[0] = 0;
 	c.arg[1] = 0;
 	c.arg[2] = 0;

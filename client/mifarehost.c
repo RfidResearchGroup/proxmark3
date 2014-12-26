@@ -236,7 +236,7 @@ int mfCSetUID(uint8_t *uid, uint8_t *oldUID, bool wantWipe) {
 	memcpy(block0, uid, 4); 
 	block0[4] = block0[0]^block0[1]^block0[2]^block0[3]; // Mifare UID BCC
 	// mifare classic SAK(byte 5) and ATQA(byte 6 and 7)
-	block0[5] = 0x88;
+	block0[5] = 0x08;
 	block0[6] = 0x04;
 	block0[7] = 0x00;
 	
@@ -246,7 +246,7 @@ int mfCSetUID(uint8_t *uid, uint8_t *oldUID, bool wantWipe) {
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, bool wantWipe, uint8_t params) {
 
 	uint8_t isOK = 0;
-	UsbCommand c = {CMD_MIFARE_EML_CSETBLOCK, {wantWipe, params & (0xFE | (uid == NULL ? 0:1)), blockNo}};
+	UsbCommand c = {CMD_MIFARE_CSETBLOCK, {wantWipe, params & (0xFE | (uid == NULL ? 0:1)), blockNo}};
 	memcpy(c.d.asBytes, data, 16); 
 	SendCommand(&c);
 
@@ -265,7 +265,7 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, bool wantWipe, uin
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
 	uint8_t isOK = 0;
 
-	UsbCommand c = {CMD_MIFARE_EML_CGETBLOCK, {params, 0, blockNo}};
+	UsbCommand c = {CMD_MIFARE_CGETBLOCK, {params, 0, blockNo}};
 	SendCommand(&c);
 
   UsbCommand resp;
