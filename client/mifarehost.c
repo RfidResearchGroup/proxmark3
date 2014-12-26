@@ -232,8 +232,7 @@ int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 // "MAGIC" CARD
 
 int mfCSetUID(uint8_t *uid, uint8_t *oldUID, bool wantWipe) {
-	uint8_t block0[16];
-	memset(block0, 0, 16);
+	uint8_t block0[16] = {0x00};
 	memcpy(block0, uid, 4); 
 	block0[4] = block0[0]^block0[1]^block0[2]^block0[3]; // Mifare UID BCC
 	// mifare classic SAK(byte 5) and ATQA(byte 6 and 7)
@@ -245,13 +244,13 @@ int mfCSetUID(uint8_t *uid, uint8_t *oldUID, bool wantWipe) {
 }
 
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, bool wantWipe, uint8_t params) {
-	uint8_t isOK = 0;
 
+	uint8_t isOK = 0;
 	UsbCommand c = {CMD_MIFARE_EML_CSETBLOCK, {wantWipe, params & (0xFE | (uid == NULL ? 0:1)), blockNo}};
 	memcpy(c.d.asBytes, data, 16); 
 	SendCommand(&c);
 
-  UsbCommand resp;
+	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
 		isOK  = resp.arg[0] & 0xff;
 		if (uid != NULL) memcpy(uid, resp.d.asBytes, 4);
@@ -341,12 +340,14 @@ int loadTraceCard(uint8_t *tuid) {
 		memset(buf, 0, sizeof(buf));
 		if (fgets(buf, sizeof(buf), f) == NULL) {
       PrintAndLog("File reading error.");
+			fclose(f);
 			return 2;
     }
 
 		if (strlen(buf) < 32){
 			if (feof(f)) break;
 			PrintAndLog("File content error. Block data must include 32 HEX symbols");
+			fclose(f);
 			return 2;
 		}
 		for (i = 0; i < 32; i += 2)

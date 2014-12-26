@@ -371,6 +371,9 @@ int CmdLFRead(const char *Cmd)
   }
   SendCommand(&c);
   WaitForResponse(CMD_ACK,NULL);
+  
+  // load samples 
+  CmdSamples("");
   return 0;
 }
 

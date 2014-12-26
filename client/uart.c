@@ -73,6 +73,7 @@ serial_port uart_open(const char* pcPortName)
   // Does the system allows us to place a lock on this file descriptor
   if (fcntl(sp->fd, F_SETLK, &fl) == -1) {
     // A conflicting lock is held by another process
+    free(sp);
     return CLAIMED_SERIAL_PORT;
   }
 

@@ -372,7 +372,7 @@ void binarraytobinstring(char *target, char *source,  int length)
 }
 
 // return parity bit required to match type
-uint8_t parity( char *bits, uint8_t type, int length)
+uint8_t GetParity( char *bits, uint8_t type, int length)
 {
     int x;
 
@@ -386,8 +386,8 @@ uint8_t parity( char *bits, uint8_t type, int length)
 // add HID parity to binary array: EVEN prefix for 1st half of ID, ODD suffix for 2nd half
 void wiegand_add_parity(char *target, char *source, char length)
 {
-    *(target++)= parity(source, EVEN, length / 2);
+    *(target++)= GetParity(source, EVEN, length / 2);
     memcpy(target, source, length);
     target += length;
-    *(target)= parity(source + length / 2, ODD, length / 2);
+    *(target)= GetParity(source + length / 2, ODD, length / 2);
 }

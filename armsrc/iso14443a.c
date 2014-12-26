@@ -394,8 +394,12 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 				} else if (Uart.len & 0x0007) { 		// there are some parity bits to store
 					Uart.parityBits <<= (8 - (Uart.len & 0x0007)); // left align remaining parity bits
 					Uart.parity[Uart.parityLen++] = Uart.parityBits; // and store them
-					return TRUE; 						// we are finished with decoding the raw data sequence
 					}
+					if ( Uart.len) {
+					return TRUE; 						// we are finished with decoding the raw data sequence
+					} else {
+						UartReset();					// Nothing receiver - start over
+					}					
 				}
 				if (Uart.state == STATE_START_OF_COMMUNICATION) {				// error - must not follow directly after SOC
 					UartReset();
@@ -556,6 +560,8 @@ static RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non
 					} else if (Demod.len & 0x0007) { // there are some parity bits to store
 						Demod.parityBits <<= (8 - (Demod.len & 0x0007)); // left align remaining parity bits
 						Demod.parity[Demod.parityLen++] = Demod.parityBits; // and store them
+					}
+					if (Demod.len) {
 					return TRUE; // we are finished with decoding the raw data sequence
 				} else { 												// nothing received. Start over
 					DemodReset();
@@ -1627,7 +1633,7 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 //-----------------------------------------------------------------------------
 static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receivedResponsePar, uint16_t offset)
 {
-	uint16_t c;
+	uint32_t c;
 	
 	// Set FPGA mode to "reader listen mode", no modulation (listen
 	// only, since we are receiving, not transmitting).
@@ -1715,8 +1721,6 @@ int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity)
  * fills the uid pointer unless NULL
  * fills resp_data unless NULL */
 int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, uint32_t* cuid_ptr) {
-
-	iso14a_set_timeout(10500); // 10ms default  10*105 = 
 	
 	//uint8_t deselect[]   = {0xc2};  //DESELECT
 	//uint8_t halt[]       = { 0x50, 0x00, 0x57, 0xCD };  // HALT
@@ -1732,7 +1736,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
 	size_t uid_resp_len;
 	uint8_t sak = 0x04; // cascade uid
 	int cascade_level = 0;
-	int len;
+	int len =0;
 	
 	// test for the SKYLANDERS TOY.
 	// ReaderTransmit(deselect,sizeof(deselect), NULL);
@@ -1812,7 +1816,11 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     ReaderTransmit(sel_uid,sizeof(sel_uid), NULL);
 
     // Receive the SAK
-    if (!ReaderReceive(resp, resp_par)) return 0;
+    if (!ReaderReceive(resp, resp_par)){
+		return 0;
+	}
+	
+	
     sak = resp[0];
 	
     // Test if more parts of the uid are coming
@@ -1840,23 +1848,17 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     p_hi14a_card->sak = sak;
     p_hi14a_card->ats_len = 0;
   }
-  
-	if( (sak & 0x20) == 0) {
-		return 2; // non iso14443a compliant tag
-	}
 
+	// non iso14443a compliant tag
+	if( (sak & 0x20) == 0) return 2; 
+	
 	// Request for answer to select
 	AppendCrc14443a(rats, 2);
 	ReaderTransmit(rats, sizeof(rats), NULL);
+	
+	if (!(len = ReaderReceive(resp, resp_par))) return 0;
 
 	
-	len = ReaderReceive(resp, resp_par);
-	Dbprintf("RATS Reponse: %d", len);
-	if(!len) {
-		Dbprintf("RATS: %02x %02x %02x", resp[0], resp[1], resp[2]);
-		return 0;
-	}
-
 	if(p_hi14a_card) {
 		memcpy(p_hi14a_card->ats, resp, sizeof(p_hi14a_card->ats));
 		p_hi14a_card->ats_len = len;

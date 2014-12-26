@@ -56,6 +56,6 @@ int param_getstr(const char *line, int paramnum, char * str);
  int hextobinstring( char *target,  char *source);
  int binarraytohex( char *target,  char *source,  int length);
 void binarraytobinstring(char *target,  char *source,  int length);
-uint8_t parity( char *string, uint8_t type,  int length);
+uint8_t GetParity( char *string, uint8_t type,  int length);
 void wiegand_add_parity(char *target, char *source, char length);
 

@@ -58,6 +58,7 @@ int CmdHIDSim(const char *Cmd)
   }
 
   PrintAndLog("Emulating tag with ID %x%16x", hi, lo);
+  PrintAndLog("Press pm3-button to abort simulation");
 
   UsbCommand c = {CMD_HID_SIM_TAG, {hi, lo, 0}};
   SendCommand(&c);

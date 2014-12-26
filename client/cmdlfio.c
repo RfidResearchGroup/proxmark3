@@ -55,7 +55,7 @@ int CmdIOClone(const char *Cmd)
   }
 
   PrintAndLog("Cloning tag with ID %08x %08x", hi, lo);
-
+  PrintAndLog("Press pm3-button to abort simulation");
   c.cmd = CMD_IO_CLONE_TAG;
   c.arg[0] = hi;
   c.arg[1] = lo;

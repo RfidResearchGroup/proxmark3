@@ -32,9 +32,7 @@ bool InitDesfireCard(){
 	int len = iso14443a_select_card(NULL,card,NULL);
 
 	if (!len) {
-		if (MF_DBGLEVEL >= 1) {
-			Dbprintf("Can't select card");
-		}
+		if (MF_DBGLEVEL >= 1) Dbprintf("Can't select card");
 		OnError();
 		return false;
 	}

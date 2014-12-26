@@ -601,7 +601,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 			nttmp = prng_successor(nt1, 100);				//NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
 			for (i = 141; i < 1200; i++) {
 				nttmp = prng_successor(nttmp, 1);
-				if (nttmp == nt2) {break;}
+				if (nttmp == nt2) break;
 			}
 
 			if (i != 1200) {
@@ -945,8 +945,8 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 	
+	// reset FPGA and LED
 	if (workFlags & 0x08) {
-		// clear trace
 		iso14a_clear_trace();
 		iso14a_set_tracing(TRUE);
 
@@ -956,16 +956,18 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		LED_B_OFF();
 		LED_C_OFF();
 	
-		SpinDelay(300);
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-		SpinDelay(100);
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+		//SpinDelay(300);
+		//FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+		//SpinDelay(100);
+		//FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 	}
 
 	while (true) {
+
 		// get UID from chip
 		if (workFlags & 0x01) {
 			if(!iso14443a_select_card(uid, NULL, &cuid)) {
+				Dbprintf("ICE");
 				if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
 				break;
 			};
@@ -1041,7 +1043,6 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	LED_B_OFF();
 
 	if ((workFlags & 0x10) || (!isOK)) {
-		// Thats it...
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
 	}
@@ -1082,10 +1083,10 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		LED_B_OFF();
 		LED_C_OFF();
 	
-		SpinDelay(300);
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-		SpinDelay(100);
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+		// SpinDelay(300);
+		// FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+		// SpinDelay(100);
+		// FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 	}
 
 	while (true) {

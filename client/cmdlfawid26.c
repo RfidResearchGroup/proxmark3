@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include "proxmark3.h"
 #include "ui.h"
 //#include "graph.h"
@@ -43,22 +44,25 @@ int CmdClone(const char *Cmd)
 	// char block2 = "00107060";  
 	// char block3 = "00107060";  
 
+	unsigned char buf[10] = {0x00};
+	unsigned char *resp = buf;
 	
 	
+	awid26_hex_to_uid(resp, "");
 	// PrintAndLog("Writing block %d with data %08X", Block, Data);
 	return 0;
 }
 
 
 // convert 96 bit AWID FSK data to 8 digit BCD UID
-bool awid26_hex_to_uid(unsigned char *response, unsigned char *awid26)
+bool awid26_hex_to_uid(unsigned char *response, char *awid26)
 {
-	// uint8_t i, tmp[96], tmp1[7];
-    // int site;
-    // int id;
+	uint8_t i, tmp[96], tmp1[7];
+    int site;
+    int id;
 	
-    // if(!hextobinarray(tmp, awid26))
-        // return false;
+    if(!hextobinarray(tmp, awid26))
+        return false;
 
     // // data is in blocks of 4 bits - every 4th bit is parity, except the first
     // // block which is all zeros
@@ -71,7 +75,7 @@ bool awid26_hex_to_uid(unsigned char *response, unsigned char *awid26)
 
     // // check and strip parity on the rest
     // for(i= 1 ; i < 23 ; ++i)
-        // if(tmp[(i * 4) - 1] != parity(tmp + (i - 1) * 4, ODD, 3))
+        // if(tmp[(i * 4) - 1] != GetParity(tmp + (i - 1) * 4, ODD, 3))
             // return false;
         // else
             // memcpy((tmp + (i - 1) * 3), tmp + (i - 1) * 4, 3);
@@ -86,9 +90,9 @@ bool awid26_hex_to_uid(unsigned char *response, unsigned char *awid26)
     // memcpy(tmp, tmp +8, 58);
 
     // // standard wiegand parity check - even for 1st 12 bits, odd for 2nd 12
-    // if(tmp[0] != parity(tmp + 1, EVEN, 12))
+    // if(tmp[0] != GetParity(tmp + 1, EVEN, 12))
         // return false;
-    // if(tmp[25] != parity(tmp + 13, ODD, 12))
+    // if(tmp[25] != GetParity(tmp + 13, ODD, 12))
         // return false;
 
     // // convert to hex, ignoring parity bits
@@ -146,7 +150,7 @@ bool bcd_to_awid26_bin(unsigned char *awid26, unsigned char *bcd)
 
     // // add parity bits
     // for(i= 1 ; i < 24 ; ++i)
-        // awid26[((i + 1) * 4) - 1]= parity(&awid26[i * 4], ODD, 3);
+        // awid26[((i + 1) * 4) - 1]= GetParity(&awid26[i * 4], ODD, 3);
 
     return false;
 }

@@ -231,7 +231,6 @@ int CmdHF14AReader(const char *Cmd)
 	c.arg[1] = 0;
 	c.arg[2] = 0;
 	SendCommand(&c);
-
 	
 	if(card.ats_len >= 3) {			// a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
 		bool ta1 = 0, tb1 = 0, tc1 = 0;
