@@ -14,7 +14,7 @@
 #include "hitag2.h"
 #include "crc16.h"
 #include "string.h"
-#include "../common/lfdemod.h"
+#include "lfdemod.h"
 
 
 /**

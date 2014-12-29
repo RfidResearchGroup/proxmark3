@@ -21,7 +21,7 @@
 #include "util.h"
 #include "cmdmain.h"
 #include "cmddata.h"
-#include "../common/lfdemod.h"
+#include "lfdemod.h"
 
 static int CmdHelp(const char *Cmd);
 
