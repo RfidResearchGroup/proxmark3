@@ -70,6 +70,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			graph.c \
 			ui.c \
 			cmddata.c \
+			lfdemod.c \
 			cmdhf.c \
 			cmdhf14a.c \
 			cmdhf14b.c \

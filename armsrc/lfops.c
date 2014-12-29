@@ -14,6 +14,7 @@
 #include "hitag2.h"
 #include "crc16.h"
 #include "string.h"
+#include "../common/lfdemod.h"
 
 
 /**
@@ -629,7 +630,7 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 	if (ledcontrol)
 		LED_A_OFF();
 }
-
+/*
 //translate wave to 11111100000 (1 for each short wave 0 for each long wave) 
 size_t fsk_demod(uint8_t * dest, size_t size)
 {
@@ -728,8 +729,103 @@ size_t aggregate_bits(uint8_t *dest,size_t size,  uint8_t rfLen, uint8_t maxCons
 	}//end for
 	return numBits;
 }
+*/
+
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
+{
+	uint8_t *dest = (uint8_t *)BigBuf;
+
+	size_t size=0; //, found=0;
+	uint32_t hi2=0, hi=0, lo=0;
+
+	// Configure to go in 125Khz listen mode
+	LFSetupFPGAForADC(95, true);
+
+	while(!BUTTON_PRESS()) {
+
+		WDT_HIT();
+		if (ledcontrol) LED_A_ON();
+
+		DoAcquisition125k_internal(-1,true);
+		size  = sizeof(BigBuf);
+    if (size < 2000) continue; 
+		// FSK demodulator
+
+		int bitLen = HIDdemodFSK(dest,size,&hi2,&hi,&lo);
+		
+		WDT_HIT();
+
+		if (bitLen>0 && lo>0){
+		// final loop, go over previously decoded manchester data and decode into usable tag ID
+		// 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
+			if (hi2 != 0){ //extra large HID tags
+				Dbprintf("TAG ID: %x%08x%08x (%d)",
+					 (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
+			}else {  //standard HID tags <38 bits
+				//Dbprintf("TAG ID: %x%08x (%d)",(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF); //old print cmd
+				uint8_t bitlen = 0;
+				uint32_t fc = 0;
+				uint32_t cardnum = 0;
+				if (((hi>>5)&1)==1){//if bit 38 is set then < 37 bit format is used
+					uint32_t lo2=0;
+					lo2=(((hi & 31) << 12) | (lo>>20)); //get bits 21-37 to check for format len bit
+					uint8_t idx3 = 1;
+					while(lo2>1){ //find last bit set to 1 (format len bit)
+						lo2=lo2>>1;
+						idx3++;
+					}
+					bitlen =idx3+19;  
+					fc =0;
+					cardnum=0;
+					if(bitlen==26){
+						cardnum = (lo>>1)&0xFFFF;
+						fc = (lo>>17)&0xFF;
+					}
+					if(bitlen==37){
+						cardnum = (lo>>1)&0x7FFFF;
+						fc = ((hi&0xF)<<12)|(lo>>20);
+					}
+					if(bitlen==34){
+						cardnum = (lo>>1)&0xFFFF;
+						fc= ((hi&1)<<15)|(lo>>17);
+					}
+					if(bitlen==35){
+						cardnum = (lo>>1)&0xFFFFF;
+						fc = ((hi&1)<<11)|(lo>>21);
+					}
+				}
+				else { //if bit 38 is not set then 37 bit format is used
+					bitlen= 37;
+					fc =0;
+					cardnum=0;
+					if(bitlen==37){
+						cardnum = (lo>>1)&0x7FFFF;
+						fc = ((hi&0xF)<<12)|(lo>>20);
+					}
+				}
+						//Dbprintf("TAG ID: %x%08x (%d)",
+				// (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);				
+				Dbprintf("TAG ID: %x%08x (%d) - Format Len: %dbit - FC: %d - Card: %d",
+					(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF,
+					(unsigned int) bitlen, (unsigned int) fc, (unsigned int) cardnum);
+			}
+			if (findone){
+				if (ledcontrol)	LED_A_OFF();
+				return;
+			}
+			// reset
+			hi2 = hi = lo = 0;
+		}
+		WDT_HIT();
+	}	
+	DbpString("Stopped");
+	if (ledcontrol) LED_A_OFF();
+}
+
+/*
+// loop to get raw HID waveform then FSK demodulate the TAG ID from it
+void CmdHIDdemodFSK2(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = (uint8_t *)BigBuf;
 
@@ -865,7 +961,9 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
 }
+*/
 
+/*
 uint32_t bytebits_to_byte(uint8_t* src, int numbits)
 {
 	uint32_t num = 0;
@@ -876,8 +974,69 @@ uint32_t bytebits_to_byte(uint8_t* src, int numbits)
 	}
 	return num;
 }
+*/
 
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
+{
+	uint8_t *dest = (uint8_t *)BigBuf;
+	size_t size=0;
+	int idx=0;
+	uint32_t code=0, code2=0;
+
+	// Configure to go in 125Khz listen mode
+	LFSetupFPGAForADC(95, true);
+	
+	while(!BUTTON_PRESS()) {
+		WDT_HIT();
+		if (ledcontrol) LED_A_ON();
+		DoAcquisition125k_internal(-1,true);
+		size  = sizeof(BigBuf);
+		//make sure buffer has data
+		if (size < 2000) continue;
+		//fskdemod and get start index
+		idx = IOdemodFSK(dest,size);
+		if (idx>0){
+			//valid tag found
+
+			//Index map
+			//0           10          20          30          40          50          60
+			//|           |           |           |           |           |           |
+			//01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
+			//-----------------------------------------------------------------------------
+			//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
+			//
+			//XSF(version)facility:codeone+codetwo
+			//Handle the data
+      if(findone){ //only print binary if we are doing one
+ 	    	Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx],   dest[idx+1],   dest[idx+2],dest[idx+3],dest[idx+4],dest[idx+5],dest[idx+6],dest[idx+7],dest[idx+8]);
+		    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+9], dest[idx+10],dest[idx+11],dest[idx+12],dest[idx+13],dest[idx+14],dest[idx+15],dest[idx+16],dest[idx+17]);			  
+		    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+18],dest[idx+19],dest[idx+20],dest[idx+21],dest[idx+22],dest[idx+23],dest[idx+24],dest[idx+25],dest[idx+26]);
+		    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+27],dest[idx+28],dest[idx+29],dest[idx+30],dest[idx+31],dest[idx+32],dest[idx+33],dest[idx+34],dest[idx+35]);
+		    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+36],dest[idx+37],dest[idx+38],dest[idx+39],dest[idx+40],dest[idx+41],dest[idx+42],dest[idx+43],dest[idx+44]);
+		    Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+45],dest[idx+46],dest[idx+47],dest[idx+48],dest[idx+49],dest[idx+50],dest[idx+51],dest[idx+52],dest[idx+53]);
+		    Dbprintf("%d%d%d%d%d%d%d%d %d%d",dest[idx+54],dest[idx+55],dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
+			}
+			code = bytebits_to_byte(dest+idx,32);
+	    code2 = bytebits_to_byte(dest+idx+32,32); 
+	    short version = bytebits_to_byte(dest+idx+27,8); //14,4
+	    uint8_t facilitycode = bytebits_to_byte(dest+idx+19,8) ;
+	    uint16_t number = (bytebits_to_byte(dest+idx+36,8)<<8)|(bytebits_to_byte(dest+idx+45,8)); //36,9
+	    
+	    Dbprintf("XSF(%02d)%02x:%d (%08x%08x)",version,facilitycode,number,code,code2);			
+			// if we're only looking for one tag 
+			if (findone){
+				if (ledcontrol)	LED_A_OFF();
+				//LED_A_OFF();
+				return;
+			}
+		}	
+		WDT_HIT();
+	}
+	DbpString("Stopped");
+	if (ledcontrol) LED_A_OFF();
+}
+/*
+void CmdIOdemodFSK2(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = (uint8_t *)BigBuf;
 	size_t size=0, idx=0;
@@ -958,6 +1117,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
 }
+*/
 
 /*------------------------------
  * T5555/T5557/T5567 routines

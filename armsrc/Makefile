@@ -35,6 +35,7 @@ ARMSRC = fpgaloader.c \
 	legicrf.c \
 	iso14443crc.c \
 	crc16.c \
+	lfdemod.c \
 	$(SRC_ISO14443a) \
 	$(SRC_ISO14443b) \
 	$(SRC_CRAPTO1) \

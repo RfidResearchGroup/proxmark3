@@ -18,6 +18,7 @@ int CmdData(const char *Cmd);
 int CmdAmp(const char *Cmd);
 int Cmdaskdemod(const char *Cmd);
 int Cmdaskrawdemod(const char *Cmd);
+int Cmdaskmandemod(const char *Cmd);
 int CmdAutoCorr(const char *Cmd);
 int CmdBitsamples(const char *Cmd);
 int CmdBitstream(const char *Cmd);
