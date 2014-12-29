@@ -13,7 +13,7 @@
 
 int DetectClock2(uint8_t dest[], size_t size, int clock);
 int askmandemod(uint8_t *BinStream,uint32_t *BitLen,int *clk, int *invert);
-uint64_t Em410xDecode(uint8_t BitStream[],uint32_t BitLen);
+uint64_t Em410xDecode(uint8_t *BitStream,uint32_t BitLen);
 int manrawdemod(uint8_t *BitStream, int *bitLen);
 int askrawdemod(uint8_t *BinStream, int *bitLen,int *clk, int *invert);
 int HIDdemodFSK(uint8_t *dest, size_t size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);

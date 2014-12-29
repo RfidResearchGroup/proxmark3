@@ -22,6 +22,20 @@
 
 static int CmdHelp(const char *Cmd);
 
+
+
+int CmdEMdemodASK(const char *Cmd)
+{
+  int findone=0;
+  UsbCommand c={CMD_EM410X_DEMOD};
+  if(Cmd[0]=='1') findone=1;
+  c.arg[0]=findone;
+  SendCommand(&c);
+  return 0;
+}
+
+
+
 /* Read the ID of an EM410x tag.
  * Format:
  *   1111 1111 1           <-- standard non-repeatable header
@@ -581,6 +595,7 @@ int CmdWriteWordPWD(const char *Cmd)
 static command_t CommandTable[] =
 {
   {"help", CmdHelp, 1, "This help"},
+  {"em410xdemod", CmdEMdemodASK, 0, "[clock rate] -- Extract ID from EM410x tag"},  
   {"em410xread", CmdEM410xRead, 1, "[clock rate] -- Extract ID from EM410x tag"},
   {"em410xsim", CmdEM410xSim, 0, "<UID> -- Simulate EM410x tag"},
   {"em410xwatch", CmdEM410xWatch, 0, "['h'] -- Watches for EM410x 125/134 kHz tags (option 'h' for 134)"},

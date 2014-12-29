@@ -27,7 +27,7 @@
 
 //by marshmellow
 //takes 1s and 0s and searches for EM410x format - output EM ID
-uint64_t Em410xDecode(uint8_t BitStream[],uint32_t BitLen)
+uint64_t Em410xDecode(uint8_t *BitStream,uint32_t BitLen)
 {
   //no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
   //  otherwise could be a void with no arguments
@@ -36,10 +36,10 @@ uint64_t Em410xDecode(uint8_t BitStream[],uint32_t BitLen)
   uint64_t lo=0; //hi=0,
 
   uint32_t i = 0;
-  uint32_t initLoopMax = 1000;
+  uint32_t initLoopMax = 65;
   if (initLoopMax>BitLen) initLoopMax=BitLen;
 
-  for (;i < initLoopMax; ++i) //1000 samples should be plenty to find high and low values
+  for (;i < initLoopMax; ++i) //65 samples should be plenty to find high and low values
   {
     if (BitStream[i] > high)
       high = BitStream[i];
@@ -57,7 +57,7 @@ uint64_t Em410xDecode(uint8_t BitStream[],uint32_t BitLen)
   uint32_t ii=0;
   uint8_t resetCnt = 0;
   while( (idx + 64) < BitLen) {
-restart:
+ restart:
     // search for a start of frame marker
     if ( memcmp(BitStream+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
     { // frame marker found
@@ -101,17 +101,17 @@ int askmandemod(uint8_t * BinStream,uint32_t *BitLen,int *clk, int *invert)
   //int invert=0;  //invert default
   int high = 0, low = 0;
   *clk=DetectClock2(BinStream,(size_t)*BitLen,*clk); //clock default
-  uint8_t BitStream[MAX_BitStream_LEN] = {0};
+  uint8_t BitStream[252] = {0};
 
   //sscanf(Cmd, "%i %i", &clk, &invert);    
   if (*clk<8) *clk =64;
   if (*clk<32) *clk=32;
   if (*invert != 0 && *invert != 1) *invert=0;
-  uint32_t initLoopMax = 1000;
+  uint32_t initLoopMax = 200;
   if (initLoopMax>*BitLen) initLoopMax=*BitLen;
   // Detect high and lows 
   //PrintAndLog("Using Clock: %d  and invert=%d",clk,invert);
-  for (i = 0; i < initLoopMax; ++i) //1000 samples should be plenty to find high and low values
+  for (i = 0; i < initLoopMax; ++i) //200 samples should be enough to find high and low values
   {
     if (BinStream[i] > high)
       high = BinStream[i];
@@ -142,6 +142,7 @@ int askmandemod(uint8_t * BinStream,uint32_t *BitLen,int *clk, int *invert)
   for (iii=0; iii < gLen; ++iii){
     if ((BinStream[iii]>=high)||(BinStream[iii]<=low)){
       lastBit=iii-*clk;    
+      bitnum=0;
       //loop through to see if this start location works
       for (i = iii; i < *BitLen; ++i) {   
         if ((BinStream[i] >= high) && ((i-lastBit)>(*clk-tol))){
@@ -176,6 +177,7 @@ int askmandemod(uint8_t * BinStream,uint32_t *BitLen,int *clk, int *invert)
             }
           }
         }
+        if (bitnum >250) break;
       }
       //we got more than 64 good bits and not all errors
       if ((bitnum > (64+errCnt)) && (errCnt<(*BitLen/1000))) {
@@ -220,7 +222,7 @@ int askmandemod(uint8_t * BinStream,uint32_t *BitLen,int *clk, int *invert)
 //run through 2 times and take least errCnt
 int manrawdemod(uint8_t * BitStream, int *bitLen)
 {
-  uint8_t BitStream2[MAX_BitStream_LEN]={0};
+  uint8_t BitStream2[252]={0};
   int bitnum=0;
   int errCnt =0;
   int i=1;
@@ -239,6 +241,7 @@ int manrawdemod(uint8_t * BitStream, int *bitLen)
 		    BitStream2[bitnum++]=77;
 		      errCnt++;
 	    }
+	    if(bitnum>250) break;
 		}
 		if (bestErr>errCnt){
 		  bestErr=errCnt;
@@ -275,15 +278,15 @@ int askrawdemod(uint8_t *BinStream, int *bitLen,int *clk, int *invert)
  // int invert=0;  //invert default
   int high = 0, low = 0;
   *clk=DetectClock2(BinStream,*bitLen,*clk); //clock default
-  uint8_t BitStream[MAX_BitStream_LEN] = {0};
+  uint8_t BitStream[252] = {0};
 
   if (*clk<8) *clk =64;
   if (*clk<32) *clk=32;
   if (*invert != 0 && *invert != 1) *invert =0;
-  uint32_t initLoopMax = 1000;
+  uint32_t initLoopMax = 200;
   if (initLoopMax>*bitLen) initLoopMax=*bitLen;
   // Detect high and lows 
-  for (i = 0; i < initLoopMax; ++i) //1000 samples should be plenty to find high and low values
+  for (i = 0; i < initLoopMax; ++i) //200 samples should be plenty to find high and low values
   {
     if (BinStream[i] > high)
       high = BinStream[i];
@@ -294,7 +297,7 @@ int askrawdemod(uint8_t *BinStream, int *bitLen,int *clk, int *invert)
  //   PrintAndLog("no data found"); 
     return -1;
   }
-  //13% fuzz in case highs and lows aren't clipped [marshmellow]
+  //25% fuzz in case highs and lows aren't clipped [marshmellow]
   high=(int)(0.75*high);
   low=(int)(0.75*low);
 
@@ -363,8 +366,9 @@ int askrawdemod(uint8_t *BinStream, int *bitLen,int *clk, int *invert)
               bitnum=0;//start over
               break;
             }
-          }
+          }          
         }
+        if (bitnum>250) break;
       }
       //we got more than 64 good bits and not all errors
       if ((bitnum > (64+errCnt)) && (errCnt<(*bitLen/1000))) {
@@ -407,15 +411,13 @@ int askrawdemod(uint8_t *BinStream, int *bitLen,int *clk, int *invert)
   return errCnt;
 }
 //translate wave to 11111100000 (1 for each short wave 0 for each long wave) 
-size_t fsk_wave_demod2(uint8_t * dest, size_t size)
+size_t fsk_wave_demod(uint8_t * dest, size_t size)
 {
 	uint32_t last_transition = 0;
 	uint32_t idx = 1;
 	uint32_t maxVal=0;
-	// // we don't care about actual value, only if it's more or less than a
-	// // threshold essentially we capture zero crossings for later analysis
-
-	// we do care about the actual value as sometimes near the center of the
+	
+	// we do care about the actual theshold value as sometimes near the center of the
 	// wave we may get static that changes direction of wave for one value
 	// if our value is too low it might affect the read.  and if our tag or
 	// antenna is weak a setting too high might not see anything. [marshmellow]
@@ -426,8 +428,8 @@ size_t fsk_wave_demod2(uint8_t * dest, size_t size)
     // set close to the top of the wave threshold with 13% margin for error
     // less likely to get a false transition up there. 
     // (but have to be careful not to go too high and miss some short waves)
-  	uint32_t threshold_value = (uint32_t)(maxVal*.87); 	idx=1;
-	//uint8_t threshold_value = 127;
+  	uint8_t threshold_value = (uint8_t)(maxVal*.87); 	idx=1;
+		//uint8_t threshold_value = 127;
 	
 	// sync to first lo-hi transition, and threshold
 
@@ -446,11 +448,11 @@ size_t fsk_wave_demod2(uint8_t * dest, size_t size)
 
 		// Check for 0->1 transition
 		if (dest[idx-1] < dest[idx]) { // 0 -> 1 transition
-			if (idx-last_transition<6){
+			if (idx-last_transition<6){            //0-5 = garbage noise
 				//do nothing with extra garbage
-			} else if (idx-last_transition <  9) {
+			} else if (idx-last_transition <  9) { //6-8 = 8 waves
 				dest[numBits]=1;
-			} else {
+			} else {							//9+ = 10 waves
 				dest[numBits]=0;
 			}
 			last_transition = idx;
@@ -467,7 +469,7 @@ uint32_t myround2(float f)
 }
 
 //translate 11111100000 to 10 
-size_t aggregate_bits2(uint8_t *dest,size_t size,  uint8_t rfLen, uint8_t maxConsequtiveBits, uint8_t invert )// uint8_t h2l_crossing_value,uint8_t l2h_crossing_value, 
+size_t aggregate_bits(uint8_t *dest,size_t size,  uint8_t rfLen, uint8_t maxConsequtiveBits, uint8_t invert )// uint8_t h2l_crossing_value,uint8_t l2h_crossing_value, 
 {
 	uint8_t lastval=dest[0];
 	uint32_t idx=0;
@@ -485,7 +487,7 @@ size_t aggregate_bits2(uint8_t *dest,size_t size,  uint8_t rfLen, uint8_t maxCon
 			n=myround2((float)(n+1)/((float)(rfLen)/(float)8));
 			//n=(n+1) / h2l_crossing_value;
 		} else {// 0->1 crossing
-			n=myround2((float)(n+1)/((float)(rfLen-2)/(float)10));
+			n=myround2((float)(n+1)/((float)(rfLen-2)/(float)10));  //-2 for fudge factor
 			//n=(n+1) / l2h_crossing_value;
 		}
 		if (n == 0) n = 1;
@@ -518,8 +520,8 @@ int fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert)
   // }
  // size_t size  = GraphTraceLen; 
     // FSK demodulator
-  size = fsk_wave_demod2(dest, size);
-  size = aggregate_bits2(dest, size,rfLen,192,invert);
+  size = fsk_wave_demod(dest, size);
+  size = aggregate_bits(dest, size,rfLen,192,invert);
  // size = aggregate_bits(size, h2l_crossing_value, l2h_crossing_value,192, invert); //192=no limit to same values
   //done messing with GraphBuffer - repaint
   //RepaintGraphWindow();
@@ -590,7 +592,7 @@ uint32_t bytebits_to_byte(uint8_t* src, int numbits)
 
 int IOdemodFSK(uint8_t *dest, size_t size)
 {
-  size_t idx=0;
+  uint32_t idx=0;
 	//make sure buffer has data
 	if (size < 64) return -1;
 	//test samples are not just noise
@@ -612,14 +614,14 @@ int IOdemodFSK(uint8_t *dest, size_t size)
 		//
 		//XSF(version)facility:codeone+codetwo
 		//Handle the data
- 	    uint8_t mask[] = {0,0,0,0,0,0,0,0,0,1};
+ 	  uint8_t mask[] = {0,0,0,0,0,0,0,0,0,1};
 		for( idx=0; idx < (size - 74); idx++) {
     	if ( memcmp(dest + idx, mask, sizeof(mask))==0) {
     		//frame marker found
     		if (!dest[idx+8] && dest[idx+17]==1 && dest[idx+26]==1 && dest[idx+35]==1 && dest[idx+44]==1 && dest[idx+53]==1){
     			//confirmed proper separator bits found
     			//return start position
-					return idx;
+					return (int) idx;
 				}
 			}		
 		}

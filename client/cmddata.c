@@ -442,10 +442,10 @@ int CmdBitstream(const char *Cmd)
       bit ^= 1;
 
     AppendGraph(0, clock, bit);
-//    for (j = 0; j < (int)(clock/2); j++)
-//      GraphBuffer[(i * clock) + j] = bit ^ 1;
-//    for (j = (int)(clock/2); j < clock; j++)
-//      GraphBuffer[(i * clock) + j] = bit;
+  //    for (j = 0; j < (int)(clock/2); j++)
+  //      GraphBuffer[(i * clock) + j] = bit ^ 1;
+  //    for (j = (int)(clock/2); j < clock; j++)
+  //      GraphBuffer[(i * clock) + j] = bit;
   }
 
   RepaintGraphWindow();
@@ -477,18 +477,7 @@ int CmdDetectClockRate(const char *Cmd)
   PrintAndLog("Auto-detected clock rate: %d", clock);
   return 0;
 }
-/*
-uint32_t bytebits_to_byte(uint8_t *src, int numbits)
-{
-  uint32_t num = 0;
-  for(int i = 0 ; i < numbits ; i++)
-  {
-    num = (num << 1) | (*src);
-    src++;
-  }
-  return num;
-}
-*/
+
 //by marshmellow
 //fsk raw demod and print binary
 //takes 2 arguments - Clock and invert
