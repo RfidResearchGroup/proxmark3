@@ -259,7 +259,7 @@ int manrawdemod(uint8_t * BitStream, int *bitLen)
 		bitnum=0;
   }
   errCnt=bestErr;
-  if (errCnt<10){
+  if (errCnt<20){
     for (i=0; i<bitnum;++i){
       BitStream[i]=BitStream2[i];
     }  
@@ -278,7 +278,7 @@ int askrawdemod(uint8_t *BinStream, int *bitLen,int *clk, int *invert)
  // int invert=0;  //invert default
   int high = 0, low = 0;
   *clk=DetectClock2(BinStream,*bitLen,*clk); //clock default
-  uint8_t BitStream[252] = {0};
+  uint8_t BitStream[502] = {0};
 
   if (*clk<8) *clk =64;
   if (*clk<32) *clk=32;
@@ -368,7 +368,7 @@ int askrawdemod(uint8_t *BinStream, int *bitLen,int *clk, int *invert)
             }
           }          
         }
-        if (bitnum>250) break;
+        if (bitnum>500) break;
       }
       //we got more than 64 good bits and not all errors
       if ((bitnum > (64+errCnt)) && (errCnt<(*bitLen/1000))) {

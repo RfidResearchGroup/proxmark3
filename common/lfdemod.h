@@ -22,7 +22,7 @@ int fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert);
 uint32_t bytebits_to_byte(uint8_t* src, int numbits);
 
 //
-#define MAX_BitStream_LEN (1024*128)
+//#define MAX_BitStream_LEN (1024*128)
 //extern int BitStreamLen;
 
 #endif

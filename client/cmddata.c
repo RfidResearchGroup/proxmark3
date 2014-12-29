@@ -132,7 +132,7 @@ void printBitStream(uint8_t BitStream[], uint32_t bitLen){
     return;
   }
   if (bitLen>512) bitLen=512;
-   for (i = 0; i < (bitLen-16); i+=16) {
+   for (i = 0; i <= (bitLen-16); i+=16) {
     PrintAndLog("%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i",
       BitStream[i],
       BitStream[i+1],
@@ -272,6 +272,10 @@ int Cmdmandecoderaw(const char *Cmd)
   }
   bitnum=i;
   errCnt=manrawdemod(BitStream,&bitnum);
+  if (errCnt>=20){
+    PrintAndLog("Too many errors: %d",errCnt);
+    return 0;
+  }
   PrintAndLog("Manchester Decoded - # errors:%d - data:",errCnt);
   printBitStream(BitStream,bitnum);
   if (errCnt==0){
@@ -515,7 +519,7 @@ int CmdFSKrawdemod(const char *Cmd)
   RepaintGraphWindow();
   
   // Now output the bitstream to the scrollback by line of 16 bits
-  if(size > (7*32)+2) size = (7*32)+2; //only output a max of 7 blocks of 32 bits  most tags will have full bit stream inside that sample size
+  if(size > (8*32)+2) size = (8*32)+2; //only output a max of 8 blocks of 32 bits  most tags will have full bit stream inside that sample size
   printBitStream(BitStream,size);
   return 0;
 }
