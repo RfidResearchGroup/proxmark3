@@ -20,18 +20,22 @@
 
 // The large multi-purpose buffer, typically used to hold A/D samples,
 // maybe processed in some way.
-uint32_t BigBuf[10000];
-// BIG CHANGE - UNDERSTAND THIS BEFORE WE COMMIT
-#define TRACE_OFFSET          0
-#define TRACE_SIZE         3000
-#define RECV_CMD_OFFSET    3032
-#define RECV_CMD_SIZE        64
-#define RECV_RES_OFFSET    3096
-#define RECV_RES_SIZE        64
-#define DMA_BUFFER_OFFSET  3160
-#define DMA_BUFFER_SIZE    4096
-#define FREE_BUFFER_OFFSET 7256
-#define FREE_BUFFER_SIZE   2744
+#define BIGBUF_SIZE				40000
+uint32_t BigBuf[BIGBUF_SIZE / sizeof(uint32_t)];
+#define TRACE_OFFSET			0
+#define TRACE_SIZE				3000
+#define RECV_CMD_OFFSET			(TRACE_OFFSET + TRACE_SIZE)
+#define MAX_FRAME_SIZE			256
+#define MAX_PARITY_SIZE			((MAX_FRAME_SIZE + 1)/ 8)
+#define RECV_CMD_PAR_OFFSET		(RECV_CMD_OFFSET + MAX_FRAME_SIZE)
+#define RECV_RESP_OFFSET		(RECV_CMD_PAR_OFFSET + MAX_PARITY_SIZE)
+#define RECV_RESP_PAR_OFFSET 	(RECV_RESP_OFFSET + MAX_FRAME_SIZE)
+#define CARD_MEMORY_OFFSET		(RECV_RESP_PAR_OFFSET + MAX_PARITY_SIZE)
+#define CARD_MEMORY_SIZE		4096	
+#define DMA_BUFFER_OFFSET  		CARD_MEMORY_OFFSET
+#define DMA_BUFFER_SIZE    		CARD_MEMORY_SIZE
+#define FREE_BUFFER_OFFSET 		(CARD_MEMORY_OFFSET + CARD_MEMORY_SIZE)
+#define FREE_BUFFER_SIZE   		(BIGBUF_SIZE - FREE_BUFFER_OFFSET - 1)
 
 extern const uint8_t OddByteParity[256];
 extern uint8_t *trace; // = (uint8_t *) BigBuf;
@@ -158,8 +162,8 @@ void RAMFUNC SnoopIso14443a(uint8_t param);
 void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data);
 void ReaderIso14443a(UsbCommand * c);
 // Also used in iclass.c
-bool RAMFUNC LogTrace(const uint8_t * btBytes, uint8_t iLen, uint32_t iSamples, uint32_t dwParity, bool readerToTag);
-uint32_t GetParity(const uint8_t * pbtCmd, int iLen);
+bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t len, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
+void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *parity);
 void iso14a_set_trigger(bool enable);
 void iso14a_clear_trace();
 void iso14a_set_tracing(bool enable);

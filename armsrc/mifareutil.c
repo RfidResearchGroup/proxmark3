@@ -22,17 +22,14 @@
 int MF_DBGLEVEL = MF_DBG_ALL;
 
 // memory management
-uint8_t* mifare_get_bigbufptr(void) {
-	return (((uint8_t *)BigBuf) + MIFARE_BUFF_OFFSET);	// was 3560 - tied to other size changes
+uint8_t* get_bigbufptr_recvrespbuf(void) {
+	return (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);	
 }
-uint8_t* eml_get_bigbufptr_sendbuf(void) {
+uint8_t* get_bigbufptr_recvcmdbuf(void) {
 	return (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);	
 }
-uint8_t* eml_get_bigbufptr_recbuf(void) {
-	return (((uint8_t *)BigBuf) + MIFARE_BUFF_OFFSET);
-}
-uint8_t* eml_get_bigbufptr_cardmem(void) {
-	return (((uint8_t *)BigBuf) + CARD_MEMORY);
+uint8_t* get_bigbufptr_emlcardmem(void) {
+	return (((uint8_t *)BigBuf) + CARD_MEMORY_OFFSET);
 }
 
 // crypto1 helpers
@@ -53,15 +50,15 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len){
 	return;
 }
 
-void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, int len, uint32_t *par) {
+void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, uint16_t len, uint8_t *par) {
 	uint8_t bt = 0;
 	int i;
-	uint32_t mltpl = 1 << (len - 1); // for len=18 it=0x20000
-	*par = 0;
+	par[0] = 0;
 	for (i = 0; i < len; i++) {
 		bt = data[i];
 		data[i] = crypto1_byte(pcs, 0x00, 0) ^ data[i];
-		*par = (*par >> 1) | ( ((filter(pcs->odd) ^ oddparity(bt)) & 0x01) * mltpl );
+		if((i&0x0007) == 0) par[i>>3] = 0;
+		par[i>>3] |= (((filter(pcs->odd) ^ oddparity(bt)) & 0x01)<<(7-(i&0x0007)));
 	}	
 	return;
 }
@@ -77,18 +74,18 @@ uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data) {
 }
 
 // send commands
-int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint32_t *timing)
+int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint8_t *answer_parity, uint32_t *timing)
 {
-	return mifare_sendcmd_shortex(pcs, crypted, cmd, data, answer, NULL, timing);
+	return mifare_sendcmd_shortex(pcs, crypted, cmd, data, answer, answer_parity, timing);
 }
 
-int mifare_sendcmd_short_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t* data, uint8_t* answer, uint8_t *timing)
+int mifare_sendcmd_short_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t* data, uint8_t* answer, uint8_t *answer_parity, uint32_t *timing)
 {
-        uint8_t dcmd[8];//, ecmd[4];
-        //uint32_t par=0;
+    uint8_t dcmd[8];//, ecmd[4];
+    //uint32_t par=0;
 
-        dcmd[0] = cmd;
-        dcmd[1] = data[0];
+    dcmd[0] = cmd;
+    dcmd[1] = data[0];
 	dcmd[2] = data[1];
 	dcmd[3] = data[2];
 	dcmd[4] = data[3];
@@ -99,7 +96,7 @@ int mifare_sendcmd_short_special(struct Crypto1State *pcs, uint8_t crypted, uint
 
         //memcpy(ecmd, dcmd, sizeof(dcmd));
 	ReaderTransmit(dcmd, sizeof(dcmd), NULL);
-	int len = ReaderReceive(answer);
+	int len = ReaderReceive(answer, answer_parity);
 	if(!len)
 	{
                 if (MF_DBGLEVEL >= 1)   Dbprintf("Authentication failed. Card timeout.");
@@ -108,11 +105,11 @@ int mifare_sendcmd_short_special(struct Crypto1State *pcs, uint8_t crypted, uint
 	return len;
 }
 
-int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint32_t * parptr, uint32_t *timing)
+int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing)
 {
 	uint8_t dcmd[4], ecmd[4];
-	uint32_t pos, par, res;
-
+	uint16_t pos, res;
+	uint8_t par[1];			// 1 Byte parity is enough here
 	dcmd[0] = cmd;
 	dcmd[1] = data;
 	AppendCrc14443a(dcmd, 2);
@@ -120,11 +117,11 @@ int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cm
 	memcpy(ecmd, dcmd, sizeof(dcmd));
 	
 	if (crypted) {
-		par = 0;
+		par[0] = 0;
 		for (pos = 0; pos < 4; pos++)
 		{
 			ecmd[pos] = crypto1_byte(pcs, 0x00, 0) ^ dcmd[pos];
-			par = (par >> 1) | ( ((filter(pcs->odd) ^ oddparity(dcmd[pos])) & 0x01) * 0x08 );
+			par[0] |= (((filter(pcs->odd) ^ oddparity(dcmd[pos])) & 0x01) << (7-pos));
 		}	
 
 		ReaderTransmitPar(ecmd, sizeof(ecmd), par, timing);
@@ -133,10 +130,10 @@ int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cm
 		ReaderTransmit(dcmd, sizeof(dcmd), timing);
 	}
 
-	int len = ReaderReceivePar(answer, &par);
+	int len = ReaderReceive(answer, par);
 	
-	if (parptr) *parptr = par;
-
+	if (answer_parity) *answer_parity = par[0];
+	
 	if (crypted == CRYPT_ALL) {
 		if (len == 1) {
 			res = 0;
@@ -157,33 +154,35 @@ int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cm
 }
 
 // mifare commands
-int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested) 
+int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested) 
 {
 	return mifare_classic_authex(pcs, uid, blockNo, keyType, ui64Key, isNested, NULL, NULL);
 }
 
-int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint64_t isNested, uint32_t * ntptr, uint32_t *timing) 
+int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing) 
 {
 	// variables
 	int len;	
 	uint32_t pos;
 	uint8_t tmp4[4];
-	byte_t par = 0;
-	byte_t ar[4];
+	uint8_t par[1] = {0};
+	byte_t nr[4];
 	uint32_t nt, ntpp; // Supplied tag nonce
 	
 	uint8_t mf_nr_ar[] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
-	uint8_t* receivedAnswer = mifare_get_bigbufptr();
-
+	uint8_t *receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
+	
 	// Transmit MIFARE_CLASSIC_AUTH
-	len = mifare_sendcmd_short(pcs, isNested, 0x60 + (keyType & 0x01), blockNo, receivedAnswer, timing);
-	if (MF_DBGLEVEL >= 4)	Dbprintf("rand nonce len: %x", len);  
+	len = mifare_sendcmd_short(pcs, isNested, 0x60 + (keyType & 0x01), blockNo, receivedAnswer, receivedAnswerPar, timing);
+	if (MF_DBGLEVEL >= 4)	Dbprintf("rand tag nonce len: %x", len);  
 	if (len != 4) return 1;
 	
-	ar[0] = 0x55;
-	ar[1] = 0x41;
-	ar[2] = 0x49;
-	ar[3] = 0x92; 
+	// "random" reader nonce:
+	nr[0] = 0x55;
+	nr[1] = 0x41;
+	nr[2] = 0x49;
+	nr[3] = 0x92; 
 	
 	// Save the tag nonce (nt)
 	nt = bytes_to_num(receivedAnswer, 4);
@@ -211,12 +210,13 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	if (ntptr)
 		*ntptr = nt;
 
-	par = 0;
+		
 	// Generate (encrypted) nr+parity by loading it into the cipher (Nr)
+	par[0] = 0;
 	for (pos = 0; pos < 4; pos++)
 	{
-		mf_nr_ar[pos] = crypto1_byte(pcs, ar[pos], 0) ^ ar[pos];
-		par = (par >> 1) | ( ((filter(pcs->odd) ^ oddparity(ar[pos])) & 0x01) * 0x80 );
+		mf_nr_ar[pos] = crypto1_byte(pcs, nr[pos], 0) ^ nr[pos];
+		par[0] |= (((filter(pcs->odd) ^ oddparity(nr[pos])) & 0x01) << (7-pos));
 	}	
 		
 	// Skip 32 bits in pseudo random generator
@@ -227,14 +227,14 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	{
 		nt = prng_successor(nt,8);
 		mf_nr_ar[pos] = crypto1_byte(pcs,0x00,0) ^ (nt & 0xff);
-		par = (par >> 1)| ( ((filter(pcs->odd) ^ oddparity(nt & 0xff)) & 0x01) * 0x80 );
+		par[0] |= (((filter(pcs->odd) ^ oddparity(nt & 0xff)) & 0x01) << (7-pos));
 	}	
 		
 	// Transmit reader nonce and reader answer
 	ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par, NULL);
 
-	// Receive 4 bit answer
-	len = ReaderReceive(receivedAnswer);
+	// Receive 4 byte tag answer
+	len = ReaderReceive(receivedAnswer, receivedAnswerPar);
 	if (!len)
 	{
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Authentication failed. Card timeout.");
@@ -258,10 +258,11 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 	int len;	
 	uint8_t	bt[2];
 	
-	uint8_t* receivedAnswer = mifare_get_bigbufptr();
+	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t* receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 	
 	// command MIFARE_CLASSIC_READBLOCK
-	len = mifare_sendcmd_short(pcs, 1, 0x30, blockNo, receivedAnswer, NULL);
+	len = mifare_sendcmd_short(pcs, 1, 0x30, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 	if (len == 1) {
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: %02x", receivedAnswer[0]);  
 		return 1;
@@ -285,13 +286,14 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 int mifare_ultra_readblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
 {
 	// variables
-	int len;
+	uint16_t len;
 	uint8_t	bt[2];
 	
-	uint8_t* receivedAnswer = mifare_get_bigbufptr();
+	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t* receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 	
 	// command MIFARE_CLASSIC_READBLOCK
-	len = mifare_sendcmd_short(NULL, 1, 0x30, blockNo, receivedAnswer,NULL);
+	len = mifare_sendcmd_short(NULL, 1, 0x30, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 	if (len == 1) {
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
 		return 1;
@@ -318,14 +320,15 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 	// variables
 	int len, i;	
 	uint32_t pos;
-	uint32_t par = 0;
+	uint8_t par[3] = {0};		// enough for 18 Bytes to send
 	byte_t res;
 	
 	uint8_t d_block[18], d_block_enc[18];
-	uint8_t* receivedAnswer = mifare_get_bigbufptr();
+	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t* receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 	
 	// command MIFARE_CLASSIC_WRITEBLOCK
-	len = mifare_sendcmd_short(pcs, 1, 0xA0, blockNo, receivedAnswer, NULL);
+	len = mifare_sendcmd_short(pcs, 1, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 
 	if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: %02x", receivedAnswer[0]);  
@@ -336,17 +339,16 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 	AppendCrc14443a(d_block, 16);
 	
 	// crypto
-	par = 0;
 	for (pos = 0; pos < 18; pos++)
 	{
 		d_block_enc[pos] = crypto1_byte(pcs, 0x00, 0) ^ d_block[pos];
-		par = (par >> 1) | ( ((filter(pcs->odd) ^ oddparity(d_block[pos])) & 0x01) * 0x20000 );
+		par[pos>>3] |= (((filter(pcs->odd) ^ oddparity(d_block[pos])) & 0x01) << (7 - (pos&0x0007)));
 	}	
 
 	ReaderTransmitPar(d_block_enc, sizeof(d_block_enc), par, NULL);
 
 	// Receive the response
-	len = ReaderReceive(receivedAnswer);	
+	len = ReaderReceive(receivedAnswer, receivedAnswerPar);	
 
 	res = 0;
 	for (i = 0; i < 4; i++)
@@ -362,72 +364,74 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 
 int mifare_ultra_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData) 
 {
-        // variables
-        int len;     
-        uint32_t par = 0;
+    // variables
+    uint16_t len;     
+    uint8_t par[3] = {0};  // enough for 18 parity bits
         
-        uint8_t d_block[18];
-        uint8_t* receivedAnswer = mifare_get_bigbufptr();
+    uint8_t d_block[18];
+    uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t* receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
         
-        // command MIFARE_CLASSIC_WRITEBLOCK
-        len = mifare_sendcmd_short(NULL, 1, 0xA0, blockNo, receivedAnswer,NULL);
+    // command MIFARE_CLASSIC_WRITEBLOCK
+    len = mifare_sendcmd_short(NULL, true, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 
-        if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
-                if (MF_DBGLEVEL >= 1)   Dbprintf("Cmd Addr Error: %02x", receivedAnswer[0]);  
-                return 1;
-        }
+    if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
+        if (MF_DBGLEVEL >= 1)   Dbprintf("Cmd Addr Error: %02x", receivedAnswer[0]);  
+        return 1;
+    }
 
 	memset(d_block,'\0',18);
 	memcpy(d_block, blockData, 16);
-        AppendCrc14443a(d_block, 16);
+    AppendCrc14443a(d_block, 16);
 
 	ReaderTransmitPar(d_block, sizeof(d_block), par, NULL);
 
-        // Receive the response
-        len = ReaderReceive(receivedAnswer);    
+    // Receive the response
+    len = ReaderReceive(receivedAnswer, receivedAnswerPar);    
 
 	if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
-                if (MF_DBGLEVEL >= 1)   Dbprintf("Cmd Data Error: %02x %d", receivedAnswer[0],len);
-                return 2;
-        }        
+        if (MF_DBGLEVEL >= 1)   Dbprintf("Cmd Data Error: %02x %d", receivedAnswer[0],len);
+        return 2;
+    }        
 
-        return 0;
+    return 0;
 } 
 
 int mifare_ultra_special_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
 {
-        // variables
-        int len;
-        //uint32_t par = 0;
+    uint16_t len;
 
-        uint8_t d_block[8];
-        uint8_t* receivedAnswer = mifare_get_bigbufptr();
+    uint8_t d_block[8];
+    uint8_t *receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 
-        // command MIFARE_CLASSIC_WRITEBLOCK
+    // command MIFARE_CLASSIC_WRITEBLOCK
 	memset(d_block,'\0',8);
 	d_block[0]= blockNo;
 	memcpy(d_block+1,blockData,4);
 	AppendCrc14443a(d_block, 6);
 
 	//i know the data send here is correct
-        len = mifare_sendcmd_short_special(NULL, 1, 0xA2, d_block, receivedAnswer,NULL);
+    len = mifare_sendcmd_short_special(NULL, 1, 0xA2, d_block, receivedAnswer, receivedAnswerPar, NULL);
 
-        if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
-                if (MF_DBGLEVEL >= 1)   Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0],len);
-                return 1;
-        }
-        return 0;
+    if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
+        if (MF_DBGLEVEL >= 1)   Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0],len);
+        return 1;
+    }
+
+    return 0;
 }
 
 int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid) 
 {
 	// variables
-	int len;	
+	uint16_t len;	
 	
 	// Mifare HALT
-	uint8_t* receivedAnswer = mifare_get_bigbufptr();
+	uint8_t *receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 
-	len = mifare_sendcmd_short(pcs, pcs == NULL ? 0:1, 0x50, 0x00, receivedAnswer, NULL);
+	len = mifare_sendcmd_short(pcs, pcs == NULL ? false:true, 0x50, 0x00, receivedAnswer, receivedAnswerPar, NULL);
 	if (len != 0) {
 		if (MF_DBGLEVEL >= 1)	Dbprintf("halt error. response len: %x", len);  
 		return 1;
@@ -438,13 +442,13 @@ int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid)
 
 int mifare_ultra_halt(uint32_t uid)
 {
-	// variables
-	int len;
+	uint16_t len;
 	
 	// Mifare HALT
-	uint8_t* receivedAnswer = mifare_get_bigbufptr();
+	uint8_t *receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
     
-	len = mifare_sendcmd_short(NULL, 1, 0x50, 0x00, receivedAnswer, NULL);
+	len = mifare_sendcmd_short(NULL, true, 0x50, 0x00, receivedAnswer, receivedAnswerPar, NULL);
 	if (len != 0) {
 		if (MF_DBGLEVEL >= 1)	Dbprintf("halt error. response len: %x", len);
 		return 1;
@@ -476,25 +480,25 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo)
 
 // work with emulator memory
 void emlSetMem(uint8_t *data, int blockNum, int blocksCount) {
-	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	uint8_t* emCARD = get_bigbufptr_emlcardmem();
 	
 	memcpy(emCARD + blockNum * 16, data, blocksCount * 16);
 }
 
 void emlGetMem(uint8_t *data, int blockNum, int blocksCount) {
-	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	uint8_t* emCARD = get_bigbufptr_emlcardmem();
 	
 	memcpy(data, emCARD + blockNum * 16, blocksCount * 16);
 }
 
 void emlGetMemBt(uint8_t *data, int bytePtr, int byteCount) {
-	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	uint8_t* emCARD = get_bigbufptr_emlcardmem();
 	
 	memcpy(data, emCARD + bytePtr, byteCount);
 }
 
 int emlCheckValBl(int blockNum) {
-	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	uint8_t* emCARD = get_bigbufptr_emlcardmem();
 	uint8_t* data = emCARD + blockNum * 16;
 
 	if ((data[0] != (data[4] ^ 0xff)) || (data[0] != data[8]) ||
@@ -509,7 +513,7 @@ int emlCheckValBl(int blockNum) {
 }
 
 int emlGetValBl(uint32_t *blReg, uint8_t *blBlock, int blockNum) {
-	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	uint8_t* emCARD = get_bigbufptr_emlcardmem();
 	uint8_t* data = emCARD + blockNum * 16;
 	
 	if (emlCheckValBl(blockNum)) {
@@ -523,7 +527,7 @@ int emlGetValBl(uint32_t *blReg, uint8_t *blBlock, int blockNum) {
 }
 
 int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum) {
-	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	uint8_t* emCARD = get_bigbufptr_emlcardmem();
 	uint8_t* data = emCARD + blockNum * 16;
 	
 	memcpy(data + 0, &blReg, 4);
@@ -541,7 +545,7 @@ int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum) {
 
 uint64_t emlGetKey(int sectorNum, int keyType) {
 	uint8_t key[6];
-	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	uint8_t* emCARD = get_bigbufptr_emlcardmem();
 	
 	memcpy(key, emCARD + 16 * (FirstBlockOfSector(sectorNum) + NumBlocksPerSector(sectorNum) - 1) + keyType * 10, 6);
 	return bytes_to_num(key, 6);
@@ -552,9 +556,9 @@ void emlClearMem(void) {
 	
 	const uint8_t trailer[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x07, 0x80, 0x69, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 	const uint8_t uid[]   =   {0xe6, 0x84, 0x87, 0xf3, 0x16, 0x88, 0x04, 0x00, 0x46, 0x8e, 0x45, 0x55, 0x4d, 0x70, 0x41, 0x04};
-	uint8_t* emCARD = eml_get_bigbufptr_cardmem();
+	uint8_t* emCARD = get_bigbufptr_emlcardmem();
 	
-	memset(emCARD, 0, CARD_MEMORY_LEN);
+	memset(emCARD, 0, CARD_MEMORY_SIZE);
 	
 	// fill sectors trailer data
 	for(b = 3; b < 256; b<127?(b+=4):(b+=16)) {
