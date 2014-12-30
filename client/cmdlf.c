@@ -142,7 +142,7 @@ int CmdIndalaDemod(const char *Cmd)
   uint8_t rawbits[4096];
   int rawbit = 0;
   int worst = 0, worstPos = 0;
-  PrintAndLog("Expecting a bit less than %d raw bits", GraphTraceLen / 32);
+ // PrintAndLog("Expecting a bit less than %d raw bits", GraphTraceLen / 32);
   for (i = 0; i < GraphTraceLen-1; i += 2) {
     count += 1;
     if ((GraphBuffer[i] > GraphBuffer[i + 1]) && (state != 1)) {
@@ -171,9 +171,10 @@ int CmdIndalaDemod(const char *Cmd)
       count = 0;
     }
   }
-  PrintAndLog("Recovered %d raw bits", rawbit);
-  PrintAndLog("worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
-
+  if (rawbit>0){
+    PrintAndLog("Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
+    PrintAndLog("worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
+  } else return 0;
   // Finding the start of a UID
   int uidlen, long_wait;
   if (strcmp(Cmd, "224") == 0) {
@@ -303,7 +304,7 @@ int CmdIndalaDemod(const char *Cmd)
   }
 
   RepaintGraphWindow();
-  return 0;
+  return 1;
 }
 
 int CmdIndalaClone(const char *Cmd)
@@ -548,6 +549,31 @@ int CmdVchDemod(const char *Cmd)
   return 0;
 }
 
+//by marshmellow
+int CmdLFfind(const char *Cmd)
+{
+  int ans=0;
+  if (!offline){
+    ans=CmdLFRead("");
+    ans=CmdSamples("20000");
+  }
+  if (GraphTraceLen<1000) return 0;
+  PrintAndLog("Checking for known tags:");
+  ans=Cmdaskmandemod("");
+  if (ans>0) return 1;
+  ans=CmdFSKdemodHID("");
+  if (ans>0) return 1;
+  ans=CmdFSKdemodIO("");
+  if (ans>0) return 1;
+  //add psk and indala
+  ans=CmdIndalaDemod("");
+  if (ans>0) return 1;
+  ans=CmdIndalaDemod("224");
+  if (ans>0) return 1;
+  PrintAndLog("No Known Tags Found!\n");
+  return 0;
+}
+
 static command_t CommandTable[] = 
 {
   {"help",        CmdHelp,            1, "This help"},
@@ -559,6 +585,7 @@ static command_t CommandTable[] =
   {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
   {"indalaclone", CmdIndalaClone,     0, "<UID> ['l']-- Clone Indala to T55x7 (tag must be in antenna)(UID in HEX)(option 'l' for 224 UID"},
   {"read",        CmdLFRead,          0, "['h' or <divisor>] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134, alternatively: f=12MHz/(divisor+1))"},
+  {"search",      CmdLFfind,          1, "Read and Search for valid known tag (in offline mode it you can load first then search)"},
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
   {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
   {"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
