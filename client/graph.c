@@ -155,8 +155,11 @@ void setGraphBuf(uint8_t *buff,int size)
 int getFromGraphBuf(uint8_t *buff)
 {
   uint32_t i;
-  for (i=0;i<GraphTraceLen;++i)
+  for (i=0;i<GraphTraceLen;++i){
+    if (GraphBuffer[i]>127) GraphBuffer[i]=127; //trim
+    if (GraphBuffer[i]<-127) GraphBuffer[i]=-127; //trim
     buff[i]=(uint8_t)(GraphBuffer[i]+128);
+  }
   return i;
 }
 /* Get or auto-detect clock rate */

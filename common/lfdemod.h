@@ -11,18 +11,15 @@
 #define LFDEMOD_H__
 #include <stdint.h>
 
-int DetectClock2(uint8_t dest[], size_t size, int clock);
+int DetectASKClock(uint8_t dest[], size_t size, int clock);
 int askmandemod(uint8_t *BinStream,uint32_t *BitLen,int *clk, int *invert);
 uint64_t Em410xDecode(uint8_t *BitStream,uint32_t BitLen);
-int manrawdemod(uint8_t *BitStream, int *bitLen);
+int manrawdecode(uint8_t *BitStream, int *bitLen);
+int BiphaseRawDecode(uint8_t * BitStream, int *bitLen, int offset);
 int askrawdemod(uint8_t *BinStream, int *bitLen,int *clk, int *invert);
 int HIDdemodFSK(uint8_t *dest, size_t size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);
 int IOdemodFSK(uint8_t *dest, size_t size);
-int fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert);
+int fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow);
 uint32_t bytebits_to_byte(uint8_t* src, int numbits);
-
-//
-//#define MAX_BitStream_LEN (1024*128)
-//extern int BitStreamLen;
 
 #endif

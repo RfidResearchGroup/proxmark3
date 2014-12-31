@@ -8,22 +8,9 @@
 // Low frequency commands
 //-----------------------------------------------------------------------------
 
-//#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <inttypes.h>
-//#include <limits.h>
 #include "lfdemod.h"
-//#include "proxmark3.h"
-//#include "data.h"
-//#include "ui.h"
-//#include "graph.h"
-//#include "cmdparser.h"
-//#include "util.h"
-//#include "cmdmain.h"
-//#include "cmddata.h"
-//uint8_t BinStream[MAX_GRAPH_TRACE_LEN];
-//uint8_t BinStreamLen;
 
 //by marshmellow
 //takes 1s and 0s and searches for EM410x format - output EM ID
@@ -32,7 +19,7 @@ uint64_t Em410xDecode(uint8_t *BitStream,uint32_t BitLen)
   //no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
   //  otherwise could be a void with no arguments
   //set defaults
-  int high=0, low=0;
+  int high=0, low=128;
   uint64_t lo=0; //hi=0,
 
   uint32_t i = 0;
@@ -97,20 +84,16 @@ uint64_t Em410xDecode(uint8_t *BitStream,uint32_t BitLen)
 //prints binary found and saves in graphbuffer for further commands
 int askmandemod(uint8_t * BinStream,uint32_t *BitLen,int *clk, int *invert)
 {
-  uint32_t i;
-  //int invert=0;  //invert default
-  int high = 0, low = 0;
-  *clk=DetectClock2(BinStream,(size_t)*BitLen,*clk); //clock default
-  uint8_t BitStream[252] = {0};
+  int i;
+  int high = 0, low = 128;
+  *clk=DetectASKClock(BinStream,(size_t)*BitLen,*clk); //clock default
 
-  //sscanf(Cmd, "%i %i", &clk, &invert);    
   if (*clk<8) *clk =64;
   if (*clk<32) *clk=32;
   if (*invert != 0 && *invert != 1) *invert=0;
   uint32_t initLoopMax = 200;
   if (initLoopMax>*BitLen) initLoopMax=*BitLen;
   // Detect high and lows 
-  //PrintAndLog("Using Clock: %d  and invert=%d",clk,invert);
   for (i = 0; i < initLoopMax; ++i) //200 samples should be enough to find high and low values
   {
     if (BinStream[i] > high)
@@ -118,153 +101,178 @@ int askmandemod(uint8_t * BinStream,uint32_t *BitLen,int *clk, int *invert)
     else if (BinStream[i] < low)
       low = BinStream[i];
   }
-  if ((high < 30) && ((high !=1)||(low !=-1))){  //throw away static - allow 1 and -1 (in case of threshold command first)
+  if ((high < 158) ){  //throw away static 
     //PrintAndLog("no data found"); 
-    return -1;
+    return -2;
   }
-  //13% fuzz in case highs and lows aren't clipped [marshmellow]
-  high=(int)(0.75*high);
-  low=(int)(0.75*low);
-
+  //25% fuzz in case highs and lows aren't clipped [marshmellow]
+  high=(int)((high-128)*.75)+128;
+  low= (int)((low-128)*.75)+128;
+ 
   //PrintAndLog("DEBUG - valid high: %d - valid low: %d",high,low);
   int lastBit = 0;  //set first clock check
   uint32_t bitnum = 0;     //output counter
-  uint8_t tol = 0;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
+  int tol = 0;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
   if (*clk==32)tol=1;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely 
-  uint32_t iii = 0;
+  int iii = 0;
   uint32_t gLen = *BitLen;
-  if (gLen > 500) gLen=500;
+  if (gLen > 3000) gLen=3000;
   uint8_t errCnt =0;
   uint32_t bestStart = *BitLen;
   uint32_t bestErrCnt = (*BitLen/1000);
+  uint32_t maxErr = (*BitLen/1000);
   //PrintAndLog("DEBUG - lastbit - %d",lastBit);
   //loop to find first wave that works
   for (iii=0; iii < gLen; ++iii){
     if ((BinStream[iii]>=high)||(BinStream[iii]<=low)){
       lastBit=iii-*clk;    
-      bitnum=0;
+      errCnt=0;
       //loop through to see if this start location works
       for (i = iii; i < *BitLen; ++i) {   
         if ((BinStream[i] >= high) && ((i-lastBit)>(*clk-tol))){
           lastBit+=*clk;
-          BitStream[bitnum] =  *invert;
-          bitnum++;
         } else if ((BinStream[i] <= low) && ((i-lastBit)>(*clk-tol))){
           //low found and we are expecting a bar
           lastBit+=*clk;
-          BitStream[bitnum] = 1-*invert; 
-          bitnum++;
         } else {
           //mid value found or no bar supposed to be here
           if ((i-lastBit)>(*clk+tol)){
             //should have hit a high or low based on clock!!
-
-             
+           
             //debug
             //PrintAndLog("DEBUG - no wave in expected area - location: %d, expected: %d-%d, lastBit: %d - resetting search",i,(lastBit+(clk-((int)(tol)))),(lastBit+(clk+((int)(tol)))),lastBit);
-            if (bitnum > 0){
-              BitStream[bitnum]=77;
-              bitnum++;
-            }
             
-
             errCnt++;
             lastBit+=*clk;//skip over until hit too many errors
-            if (errCnt>((*BitLen/1000))){  //allow 1 error for every 1000 samples else start over
-              errCnt=0;
-              bitnum=0;//start over
-              break;
-            }
+            if (errCnt>(maxErr)) break;  //allow 1 error for every 1000 samples else start over
           }
         }
-        if (bitnum >250) break;
+        if ((i-iii) >(400 * *clk)) break; //got plenty of bits
       }
       //we got more than 64 good bits and not all errors
-      if ((bitnum > (64+errCnt)) && (errCnt<(*BitLen/1000))) {
+      if ((((i-iii)/ *clk) > (64+errCnt)) && (errCnt<maxErr)) {
         //possible good read
-        if (errCnt==0) break;  //great read - finish
-        if (bestStart == iii) break;  //if current run == bestErrCnt run (after exhausted testing) then finish 
+        if (errCnt==0){
+					bestStart=iii;
+					bestErrCnt=errCnt;
+					break;  //great read - finish
+        } 
         if (errCnt<bestErrCnt){  //set this as new best run
           bestErrCnt=errCnt;
           bestStart = iii;
         }
       }
     }
-    if (iii>=gLen){ //exhausted test
-      //if there was a ok test go back to that one and re-run the best run (then dump after that run)
-      if (bestErrCnt < (*BitLen/1000)) iii=bestStart;
-    }
   }
-  if (bitnum>16){
-    
-   // PrintAndLog("Data start pos:%d, lastBit:%d, stop pos:%d, numBits:%d",iii,lastBit,i,bitnum);
-    //move BitStream back to GraphBuffer
-    //ClearGraph(0);
-    for (i=0; i < bitnum; ++i){
-      BinStream[i]=BitStream[i];
+  if (bestErrCnt<maxErr){
+  	//best run is good enough set to best run and set overwrite BinStream
+  	iii=bestStart;
+  	lastBit=bestStart-*clk;
+  	bitnum=0;
+    for (i = iii; i < *BitLen; ++i) {   
+      if ((BinStream[i] >= high) && ((i-lastBit)>(*clk-tol))){
+        lastBit+=*clk;
+        BinStream[bitnum] =  *invert;
+        bitnum++;
+      } else if ((BinStream[i] <= low) && ((i-lastBit)>(*clk-tol))){
+        //low found and we are expecting a bar
+        lastBit+=*clk;
+        BinStream[bitnum] = 1-*invert; 
+        bitnum++;
+      } else {
+        //mid value found or no bar supposed to be here
+        if ((i-lastBit)>(*clk+tol)){
+          //should have hit a high or low based on clock!!
+         
+          //debug
+          //PrintAndLog("DEBUG - no wave in expected area - location: %d, expected: %d-%d, lastBit: %d - resetting search",i,(lastBit+(clk-((int)(tol)))),(lastBit+(clk+((int)(tol)))),lastBit);
+          if (bitnum > 0){
+            BinStream[bitnum]=77;
+            bitnum++;
+          }
+          
+          lastBit+=*clk;//skip over error
+        }
+      }
+      if (bitnum >=400) break;
     }
     *BitLen=bitnum;
-    //RepaintGraphWindow();
-    //output
-    //if (errCnt>0){
-     // PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
-    //}
-   // PrintAndLog("ASK decoded bitstream:");
-    // Now output the bitstream to the scrollback by line of 16 bits
-   // printBitStream2(BitStream,bitnum);
-   // Em410xDecode(Cmd);
-  }  
-  return errCnt;
+	} else{
+  	*invert=bestStart;
+  	*clk=iii;
+  	return -1; 
+  }	
+  return bestErrCnt;
 }
 
 //by marshmellow
 //take 10 and 01 and manchester decode
 //run through 2 times and take least errCnt
-int manrawdemod(uint8_t * BitStream, int *bitLen)
+int manrawdecode(uint8_t * BitStream, int *bitLen)
 {
-  uint8_t BitStream2[252]={0};
   int bitnum=0;
   int errCnt =0;
   int i=1;
   int bestErr = 1000;
   int bestRun = 0;
-  int finish = 0;
   int ii=1;
   for (ii=1;ii<3;++ii){
   	i=1;
 		for (i=i+ii;i<*bitLen-2;i+=2){
 		  if(BitStream[i]==1 && (BitStream[i+1]==0)){
-		    BitStream2[bitnum++]=0;
 		  } else if((BitStream[i]==0)&& BitStream[i+1]==1){
-		    BitStream2[bitnum++]=1;
 	    } else {
-		    BitStream2[bitnum++]=77;
 		      errCnt++;
 	    }
-	    if(bitnum>250) break;
+	    if(bitnum>300) break;
 		}
 		if (bestErr>errCnt){
 		  bestErr=errCnt;
 		  bestRun=ii;
 		}	
-		if (ii>1 || finish==1) {
-			if (bestRun==ii) {
-				break;
-			}  else{
-			  ii=bestRun-1;
-		    finish=1;
-		  }	
-		}
 		errCnt=0;
-		bitnum=0;
   }
   errCnt=bestErr;
   if (errCnt<20){
-    for (i=0; i<bitnum;++i){
-      BitStream[i]=BitStream2[i];
-    }  
-    *bitLen=bitnum;
-  }
+  	ii=bestRun;
+  	i=1;
+		for (i=i+ii;i<*bitLen-2;i+=2){
+		  if(BitStream[i]==1 && (BitStream[i+1]==0)){
+		    BitStream[bitnum++]=0;
+		  } else if((BitStream[i]==0)&& BitStream[i+1]==1){
+		    BitStream[bitnum++]=1;
+	    } else {
+	      BitStream[bitnum++]=77;
+		      //errCnt++;
+	    }
+	    if(bitnum>300) break;
+		}
+  	*bitLen=bitnum;
+	}   
+  return errCnt;
+}
+
+
+//by marshmellow
+//take 01 or 10 = 0 and 11 or 00 = 1
+int BiphaseRawDecode(uint8_t * BitStream, int *bitLen, int offset)
+{
+  uint8_t bitnum=0;
+  uint32_t errCnt =0;
+  uint32_t i=1;
+	i=offset;
+	for (;i<*bitLen-2;i+=2){
+	  if((BitStream[i]==1 && BitStream[i+1]==0)||(BitStream[i]==0 && BitStream[i+1]==1)){
+	    BitStream[bitnum++]=1;
+	  } else if((BitStream[i]==0 && BitStream[i+1]==0)||(BitStream[i]==1 && BitStream[i+1]==1)){
+	    BitStream[bitnum++]=0;
+    } else {
+	    BitStream[bitnum++]=77;
+      errCnt++;
+    }
+    if(bitnum>250) break;
+	}  
+  *bitLen=bitnum;
   return errCnt;
 }
 
@@ -276,8 +284,8 @@ int askrawdemod(uint8_t *BinStream, int *bitLen,int *clk, int *invert)
 {
   uint32_t i;
  // int invert=0;  //invert default
-  int high = 0, low = 0;
-  *clk=DetectClock2(BinStream,*bitLen,*clk); //clock default
+  int high = 0, low = 128;
+  *clk=DetectASKClock(BinStream,*bitLen,*clk); //clock default
   uint8_t BitStream[502] = {0};
 
   if (*clk<8) *clk =64;
@@ -293,13 +301,13 @@ int askrawdemod(uint8_t *BinStream, int *bitLen,int *clk, int *invert)
     else if (BinStream[i] < low)
       low = BinStream[i];
   }
-  if ((high < 30) && ((high !=1)||(low !=-1))){  //throw away static - allow 1 and -1 (in case of threshold command first)
+  if ((high < 158)){  //throw away static
  //   PrintAndLog("no data found"); 
-    return -1;
+    return -2;
   }
   //25% fuzz in case highs and lows aren't clipped [marshmellow]
-  high=(int)(0.75*high);
-  low=(int)(0.75*low);
+  high=(int)((high-128)*.75)+128;
+  low= (int)((low-128)*.75)+128;
 
   //PrintAndLog("DEBUG - valid high: %d - valid low: %d",high,low);
   int lastBit = 0;  //set first clock check
@@ -411,29 +419,32 @@ int askrawdemod(uint8_t *BinStream, int *bitLen,int *clk, int *invert)
   return errCnt;
 }
 //translate wave to 11111100000 (1 for each short wave 0 for each long wave) 
-size_t fsk_wave_demod(uint8_t * dest, size_t size)
+size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow)
 {
 	uint32_t last_transition = 0;
 	uint32_t idx = 1;
 	uint32_t maxVal=0;
-	
+	if (fchigh==0) fchigh=10;
+	if (fclow==0) fclow=8;
 	// we do care about the actual theshold value as sometimes near the center of the
 	// wave we may get static that changes direction of wave for one value
 	// if our value is too low it might affect the read.  and if our tag or
 	// antenna is weak a setting too high might not see anything. [marshmellow]
 	if (size<100) return 0;
 	for(idx=1; idx<100; idx++){
-    	if(maxVal<dest[idx]) maxVal = dest[idx];
-    }
-    // set close to the top of the wave threshold with 13% margin for error
+    if(maxVal<dest[idx]) maxVal = dest[idx];
+  }
+    // set close to the top of the wave threshold with 25% margin for error
     // less likely to get a false transition up there. 
     // (but have to be careful not to go too high and miss some short waves)
-  	uint8_t threshold_value = (uint8_t)(maxVal*.87); 	idx=1;
+  uint8_t threshold_value = (uint8_t)(((maxVal-128)*.75)+128); 
+ //	idx=1;
 		//uint8_t threshold_value = 127;
 	
 	// sync to first lo-hi transition, and threshold
 
 	// Need to threshold first sample
+	
 	if(dest[0] < threshold_value) dest[0] = 0;
 	else dest[0] = 1;
 
@@ -443,14 +454,15 @@ size_t fsk_wave_demod(uint8_t * dest, size_t size)
 	// between 7 to 11 cycles so fuzz it by treat anything <9 as 8 and anything else as 10
 	for(idx = 1; idx < size; idx++) {
 		// threshold current value
+
 		if (dest[idx] < threshold_value) dest[idx] = 0;
 		else dest[idx] = 1;
 
 		// Check for 0->1 transition
 		if (dest[idx-1] < dest[idx]) { // 0 -> 1 transition
-			if (idx-last_transition<6){            //0-5 = garbage noise
+			if ((idx-last_transition)<(fclow-2)){            //0-5 = garbage noise
 				//do nothing with extra garbage
-			} else if (idx-last_transition <  9) { //6-8 = 8 waves
+			} else if ((idx-last_transition) < (fchigh-1)) { //6-8 = 8 waves
 				dest[numBits]=1;
 			} else {							//9+ = 10 waves
 				dest[numBits]=0;
@@ -469,7 +481,7 @@ uint32_t myround2(float f)
 }
 
 //translate 11111100000 to 10 
-size_t aggregate_bits(uint8_t *dest,size_t size,  uint8_t rfLen, uint8_t maxConsequtiveBits, uint8_t invert )// uint8_t h2l_crossing_value,uint8_t l2h_crossing_value, 
+size_t aggregate_bits(uint8_t *dest,size_t size,  uint8_t rfLen, uint8_t maxConsequtiveBits, uint8_t invert,uint8_t fchigh,uint8_t fclow )// uint8_t h2l_crossing_value,uint8_t l2h_crossing_value, 
 {
 	uint8_t lastval=dest[0];
 	uint32_t idx=0;
@@ -484,10 +496,10 @@ size_t aggregate_bits(uint8_t *dest,size_t size,  uint8_t rfLen, uint8_t maxCons
 		}
 		//if lastval was 1, we have a 1->0 crossing
 		if ( dest[idx-1]==1 ) {
-			n=myround2((float)(n+1)/((float)(rfLen)/(float)8));
+			n=myround2((float)(n+1)/((float)(rfLen)/(float)fclow));
 			//n=(n+1) / h2l_crossing_value;
 		} else {// 0->1 crossing
-			n=myround2((float)(n+1)/((float)(rfLen-2)/(float)10));  //-2 for fudge factor
+			n=myround2((float)(n+1)/((float)(rfLen-2)/(float)fchigh));  //-2 for fudge factor
 			//n=(n+1) / l2h_crossing_value;
 		}
 		if (n == 0) n = 1;
@@ -508,23 +520,11 @@ size_t aggregate_bits(uint8_t *dest,size_t size,  uint8_t rfLen, uint8_t maxCons
 }
 //by marshmellow  (from holiman's base)
 // full fsk demod from GraphBuffer wave to decoded 1s and 0s (no mandemod)
-int fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert)
+int fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow)
 {
-  //uint8_t h2l_crossing_value = 6;
-  //uint8_t l2h_crossing_value = 5;
-  
-  // if (rfLen==64)  //currently only know settings for RF/64 change from default if option entered
-  // {
-  //   h2l_crossing_value=8;  //or 8  as 64/8 = 8
-  //   l2h_crossing_value=6;  //or 6.4 as 64/10 = 6.4
-  // }
- // size_t size  = GraphTraceLen; 
-    // FSK demodulator
-  size = fsk_wave_demod(dest, size);
-  size = aggregate_bits(dest, size,rfLen,192,invert);
- // size = aggregate_bits(size, h2l_crossing_value, l2h_crossing_value,192, invert); //192=no limit to same values
-  //done messing with GraphBuffer - repaint
-  //RepaintGraphWindow();
+  // FSK demodulator
+  size = fsk_wave_demod(dest, size, fchigh, fclow);
+  size = aggregate_bits(dest, size,rfLen,192,invert,fchigh,fclow);
   return size;
 }
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
@@ -533,7 +533,7 @@ int HIDdemodFSK(uint8_t *dest, size_t size, uint32_t *hi2, uint32_t *hi, uint32_
 	
 	size_t idx=0; //, found=0; //size=0,
 	// FSK demodulator
-	size = fskdemod(dest, size,50,0);
+	size = fskdemod(dest, size,50,0,10,8);
 
 	// final loop, go over previously decoded manchester data and decode into usable tag ID
 	// 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
@@ -594,17 +594,18 @@ int IOdemodFSK(uint8_t *dest, size_t size)
 {
   uint32_t idx=0;
 	//make sure buffer has data
-	if (size < 64) return -1;
+	if (size < 66) return -1;
 	//test samples are not just noise
 	uint8_t testMax=0;
-	for(idx=0;idx<64;idx++){
+	for(idx=0;idx<65;idx++){
 		if (testMax<dest[idx]) testMax=dest[idx];
 	}
 	idx=0;
 	//if not just noise
 	if (testMax>170){
 		// FSK demodulator
-		size = fskdemod(dest, size,64,1);
+		size = fskdemod(dest, size,64,1,10,8);  //  RF/64 and invert
+		if (size < 65) return -1;  //did we get a good demod?
 		//Index map
 		//0           10          20          30          40          50          60
 		//|           |           |           |           |           |           |
@@ -615,7 +616,7 @@ int IOdemodFSK(uint8_t *dest, size_t size)
 		//XSF(version)facility:codeone+codetwo
 		//Handle the data
  	  uint8_t mask[] = {0,0,0,0,0,0,0,0,0,1};
-		for( idx=0; idx < (size - 74); idx++) {
+		for( idx=0; idx < (size - 65); idx++) {
     	if ( memcmp(dest + idx, mask, sizeof(mask))==0) {
     		//frame marker found
     		if (!dest[idx+8] && dest[idx+17]==1 && dest[idx+26]==1 && dest[idx+35]==1 && dest[idx+44]==1 && dest[idx+53]==1){
@@ -632,33 +633,36 @@ int IOdemodFSK(uint8_t *dest, size_t size)
 // by marshmellow
 // not perfect especially with lower clocks or VERY good antennas (heavy wave clipping)
 // maybe somehow adjust peak trimming value based on samples to fix?
-int DetectClock2(uint8_t dest[], size_t size, int clock)
+int DetectASKClock(uint8_t dest[], size_t size, int clock)
 {
   int i=0;
   int peak=0;
-  int low=0;
+  int low=128;
   int clk[]={16,32,40,50,64,100,128,256};
+  int loopCnt = 256;  //don't need to loop through entire array...
+  if (size<loopCnt) loopCnt = size;
+
+  //if we already have a valid clock quit
   for (;i<8;++i)
   	if (clk[i]==clock) return clock;
-  if (!peak){
-    for (i=0;i<size;++i){
-      if(dest[i]>peak){
-        peak = dest[i]; 
-      }
-      if(dest[i]<low){
-        low = dest[i];
-      }
+
+  //get high and low peak
+  for (i=0;i<loopCnt;++i){
+    if(dest[i]>peak){
+      peak = dest[i]; 
     }
-    peak=(int)(peak*.75);
-    low= (int)(low*.75);
+    if(dest[i]<low){
+      low = dest[i];
+    }
   }
+  peak=(int)((peak-128)*.75)+128;
+  low= (int)((low-128)*.75)+128;
   int ii;
-  int loopCnt = 256;
-  if (size<loopCnt) loopCnt = size;
   int clkCnt;
   int tol = 0;
   int bestErr=1000;
   int errCnt[]={0,0,0,0,0,0,0,0};
+  //test each valid clock from smallest to greatest to see which lines up
   for(clkCnt=0; clkCnt<6;++clkCnt){
     if (clk[clkCnt]==32){
       tol=1;
@@ -666,22 +670,25 @@ int DetectClock2(uint8_t dest[], size_t size, int clock)
       tol=0;
     }
     bestErr=1000;
+    //try lining up the peaks by moving starting point (try first 256) 
     for (ii=0; ii<loopCnt; ++ii){
       if ((dest[ii]>=peak) || (dest[ii]<=low)){
         errCnt[clkCnt]=0;
+        // now that we have the first one lined up test rest of wave array
         for (i=0; i<((int)(size/clk[clkCnt])-1); ++i){
           if (dest[ii+(i*clk[clkCnt])]>=peak || dest[ii+(i*clk[clkCnt])]<=low){
-         }else if(dest[ii+(i*clk[clkCnt])-tol]>=peak || dest[ii+(i*clk[clkCnt])-tol]<=low){
+          }else if(dest[ii+(i*clk[clkCnt])-tol]>=peak || dest[ii+(i*clk[clkCnt])-tol]<=low){
           }else if(dest[ii+(i*clk[clkCnt])+tol]>=peak || dest[ii+(i*clk[clkCnt])+tol]<=low){
           }else{  //error no peak detected
             errCnt[clkCnt]++;
           }    
         }
+        //if we found no errors this is correct one - return this clock
         if(errCnt[clkCnt]==0) return clk[clkCnt];
+        //if we found errors see if it is lowest so far and save it as best run
         if(errCnt[clkCnt]<bestErr) bestErr=errCnt[clkCnt];
       }
     } 
-    errCnt[clkCnt]=bestErr;
   }
   int iii=0;
   int best=0;

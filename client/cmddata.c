@@ -194,6 +194,7 @@ int CmdEm410xDecode(const char *Cmd)
   return 0;
 }
 
+
 //by marshmellow
 //takes 2 arguments - clock and invert both as integers
 //attempts to demodulate ask while decoding manchester 
@@ -209,25 +210,16 @@ int Cmdaskmandemod(const char *Cmd)
     return 0;
   }
   uint32_t BitLen = getFromGraphBuf(BitStream);
-
+  //  PrintAndLog("DEBUG: Bitlen from grphbuff: %d",BitLen);
   int errCnt=0;
    errCnt = askmandemod(BitStream, &BitLen,&clk,&invert);
-  if (errCnt==-1){  //if fatal error (or -1)
-    //PrintAndLog("no data found"); 
+  if (errCnt<0){  //if fatal error (or -1)
+    // PrintAndLog("no data found %d, errors:%d, bitlen:%d, clock:%d",errCnt,invert,BitLen,clk); 
     return 0;
   } 
-  PrintAndLog("Using Clock: %d  and invert=%d",clk,invert);
-  //no longer put BitStream back into GraphBuffer...
-    //PrintAndLog("Data start pos:%d, lastBit:%d, stop pos:%d, numBits:%d",iii,lastBit,i,bitnum);
-    //move BitStream back to GraphBuffer
-    /*
-      ClearGraph(0);
-      for (i=0; i < bitnum; ++i){
-        GraphBuffer[i]=BitStream[i];
-      }
-      GraphTraceLen=bitnum;
-      RepaintGraphWindow();
-    */
+  if (BitLen<16) return 0;
+  PrintAndLog("\nUsing Clock: %d - Invert: %d - Bits Found: %d",clk,invert,BitLen);
+  
   //output
   if (errCnt>0){
     PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
@@ -352,7 +344,8 @@ int Cmdaskrawdemod(const char *Cmd)
     PrintAndLog("no data found"); 
     return 0;
   } 
-  PrintAndLog("Using Clock: %d  and invert=%d",clk,invert);
+  if (BitLen<16) return 0;
+  PrintAndLog("Using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
     //PrintAndLog("Data start pos:%d, lastBit:%d, stop pos:%d, numBits:%d",iii,lastBit,i,bitnum);
     //move BitStream back to GraphBuffer
     
@@ -371,7 +364,7 @@ int Cmdaskrawdemod(const char *Cmd)
   // Now output the bitstream to the scrollback by line of 16 bits
   printBitStream(BitStream,BitLen);
   
-  return 0;
+  return 1;
 }
 
 int CmdAutoCorr(const char *Cmd)
@@ -523,31 +516,31 @@ int CmdDetectClockRate(const char *Cmd)
 
 //by marshmellow
 //fsk raw demod and print binary
-//takes 2 arguments - Clock and invert
-//defaults: clock = 50, invert=0
+//takes 4 arguments - Clock, invert, rchigh, rclow
+//defaults: clock = 50, invert=0, rchigh=10, rclow=8 (RF/10 RF/8 (fsk2a))
 int CmdFSKrawdemod(const char *Cmd)
 {
   //raw fsk demod  no manchester decoding no start bit finding just get binary from wave
   //set defaults
-  uint8_t rfLen = 50;
-  uint8_t invert=0;
+  int rfLen = 50;
+  int invert=0;
+  int fchigh=10;
+  int fclow=8;
   //set options from parameters entered with the command
+  sscanf(Cmd, "%i %i %i %i", &rfLen, &invert, &fchigh, &fclow);    
+  
   if (strlen(Cmd)>0 && strlen(Cmd)<=2) {
-     rfLen=param_get8(Cmd, 0); //if rfLen option only is used
+     //rfLen=param_get8(Cmd, 0); //if rfLen option only is used
      if (rfLen==1){
       invert=1;   //if invert option only is used
       rfLen = 50;
      } else if(rfLen==0) rfLen=50;
   } 
-  if (strlen(Cmd)>2) {
-    rfLen=param_get8(Cmd, 0);  //if both options are used
-    invert=param_get8(Cmd,1);
-  }
-  PrintAndLog("Args invert: %d \nClock:%d",invert,rfLen);
+  PrintAndLog("Args invert: %d - Clock:%d - fchigh:%d - fclow: %d",invert,rfLen,fchigh, fclow);
   uint32_t i=0;
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
   uint32_t BitLen = getFromGraphBuf(BitStream);
-  int size  = fskdemod(BitStream,BitLen,rfLen,invert); 
+  int size  = fskdemod(BitStream,BitLen,(uint8_t)rfLen,(uint8_t)invert,(uint8_t)fchigh,(uint8_t)fclow); 
   if (size>0){
     PrintAndLog("FSK decoded bitstream:");
     ClearGraph(0);
@@ -677,19 +670,19 @@ int CmdFSKdemodIO(const char *Cmd)
   if (idx+64>BitLen) return 0;
   PrintAndLog("%d%d%d%d%d%d%d%d %d",BitStream[idx],    BitStream[idx+1],  BitStream[idx+2], BitStream[idx+3], BitStream[idx+4], BitStream[idx+5], BitStream[idx+6], BitStream[idx+7], BitStream[idx+8]);
   PrintAndLog("%d%d%d%d%d%d%d%d %d",BitStream[idx+9],  BitStream[idx+10], BitStream[idx+11],BitStream[idx+12],BitStream[idx+13],BitStream[idx+14],BitStream[idx+15],BitStream[idx+16],BitStream[idx+17]);       
-  PrintAndLog("%d%d%d%d%d%d%d%d %d",BitStream[idx+18], BitStream[idx+19], BitStream[idx+20],BitStream[idx+21],BitStream[idx+22],BitStream[idx+23],BitStream[idx+24],BitStream[idx+25],BitStream[idx+26]);
-  PrintAndLog("%d%d%d%d%d%d%d%d %d",BitStream[idx+27], BitStream[idx+28], BitStream[idx+29],BitStream[idx+30],BitStream[idx+31],BitStream[idx+32],BitStream[idx+33],BitStream[idx+34],BitStream[idx+35]);
-  PrintAndLog("%d%d%d%d%d%d%d%d %d",BitStream[idx+36], BitStream[idx+37], BitStream[idx+38],BitStream[idx+39],BitStream[idx+40],BitStream[idx+41],BitStream[idx+42],BitStream[idx+43],BitStream[idx+44]);
-  PrintAndLog("%d%d%d%d%d%d%d%d %d",BitStream[idx+45], BitStream[idx+46], BitStream[idx+47],BitStream[idx+48],BitStream[idx+49],BitStream[idx+50],BitStream[idx+51],BitStream[idx+52],BitStream[idx+53]);
-  PrintAndLog("%d%d%d%d%d%d%d%d %d%d",BitStream[idx+54],BitStream[idx+55],BitStream[idx+56],BitStream[idx+57],BitStream[idx+58],BitStream[idx+59],BitStream[idx+60],BitStream[idx+61],BitStream[idx+62],BitStream[idx+63]);
+  PrintAndLog("%d%d%d%d%d%d%d%d %d facility",BitStream[idx+18], BitStream[idx+19], BitStream[idx+20],BitStream[idx+21],BitStream[idx+22],BitStream[idx+23],BitStream[idx+24],BitStream[idx+25],BitStream[idx+26]);
+  PrintAndLog("%d%d%d%d%d%d%d%d %d version",BitStream[idx+27], BitStream[idx+28], BitStream[idx+29],BitStream[idx+30],BitStream[idx+31],BitStream[idx+32],BitStream[idx+33],BitStream[idx+34],BitStream[idx+35]);
+  PrintAndLog("%d%d%d%d%d%d%d%d %d code1",BitStream[idx+36], BitStream[idx+37], BitStream[idx+38],BitStream[idx+39],BitStream[idx+40],BitStream[idx+41],BitStream[idx+42],BitStream[idx+43],BitStream[idx+44]);
+  PrintAndLog("%d%d%d%d%d%d%d%d %d code2",BitStream[idx+45], BitStream[idx+46], BitStream[idx+47],BitStream[idx+48],BitStream[idx+49],BitStream[idx+50],BitStream[idx+51],BitStream[idx+52],BitStream[idx+53]);
+  PrintAndLog("%d%d%d%d%d%d%d%d %d%d checksum",BitStream[idx+54],BitStream[idx+55],BitStream[idx+56],BitStream[idx+57],BitStream[idx+58],BitStream[idx+59],BitStream[idx+60],BitStream[idx+61],BitStream[idx+62],BitStream[idx+63]);
 
   uint32_t code = bytebits_to_byte(BitStream+idx,32);
   uint32_t code2 = bytebits_to_byte(BitStream+idx+32,32); 
-  short version = bytebits_to_byte(BitStream+idx+27,8); //14,4
-  uint8_t facilitycode = bytebits_to_byte(BitStream+idx+19,8) ;
+  uint8_t version = bytebits_to_byte(BitStream+idx+27,8); //14,4
+  uint8_t facilitycode = bytebits_to_byte(BitStream+idx+18,8) ;
   uint16_t number = (bytebits_to_byte(BitStream+idx+36,8)<<8)|(bytebits_to_byte(BitStream+idx+45,8)); //36,9
   
-  PrintAndLog("XSF(%02d)%02x:%d (%08x%08x)",version,facilitycode,number,code,code2);    
+  PrintAndLog("XSF(%02d)%02x:%05d (%08x%08x)",version,facilitycode,number,code,code2);    
   setGraphBuf(BitStream,BitLen);
   return 1;
 }

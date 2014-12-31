@@ -823,10 +823,10 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 			code = bytebits_to_byte(dest+idx,32);
 	    code2 = bytebits_to_byte(dest+idx+32,32); 
 	    version = bytebits_to_byte(dest+idx+27,8); //14,4
-	    facilitycode = bytebits_to_byte(dest+idx+19,8) ;
+	    facilitycode = bytebits_to_byte(dest+idx+18,8) ;
 	    number = (bytebits_to_byte(dest+idx+36,8)<<8)|(bytebits_to_byte(dest+idx+45,8)); //36,9
 	    
-	    Dbprintf("XSF(%02d)%02x:%d (%08x%08x)",version,facilitycode,number,code,code2);			
+	    Dbprintf("XSF(%02d)%02x:%05d (%08x%08x)",version,facilitycode,number,code,code2);			
 			// if we're only looking for one tag 
 			if (findone){
 				if (ledcontrol)	LED_A_OFF();
