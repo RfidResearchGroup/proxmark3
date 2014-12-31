@@ -952,6 +952,15 @@ int CmdLtrim(const char *Cmd)
   RepaintGraphWindow();
   return 0;
 }
+int CmdRtrim(const char *Cmd)
+{
+  int ds = atoi(Cmd);
+
+  GraphTraceLen = ds;
+
+  RepaintGraphWindow();
+  return 0;
+}
 
 /*
  * Manchester demodulate a bitstream. The bitstream needs to be already in
@@ -1342,13 +1351,14 @@ static command_t CommandTable[] =
   {"fskdemod",      CmdFSKdemod,        1, "Demodulate graph window as a HID FSK"},
   {"fskhiddemod",   CmdFSKdemodHID,     1, "Demodulate graph window as a HID FSK using raw"},
   {"fskiodemod",    CmdFSKdemodIO,      1, "Demodulate graph window as an IO Prox FSK using raw"},
-  {"fskrawdemod",   CmdFSKrawdemod,     1, "[clock rate] [invert] Demodulate graph window from FSK to binary (clock = 64 or 50)(invert = 1 or 0)"},
+  {"fskrawdemod",   CmdFSKrawdemod,     1, "[clock rate] [invert] [rchigh] [rclow] Demodulate graph window from FSK to binary (clock = 50)(invert = 1 or 0)(rchigh = 10)(rclow=8)"},
   {"grid",          CmdGrid,            1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
   {"hexsamples",    CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},  
   {"hide",          CmdHide,            1, "Hide graph window"},
   {"hpf",           CmdHpf,             1, "Remove DC offset from trace"},
   {"load",          CmdLoad,            1, "<filename> -- Load trace (to graph window"},
   {"ltrim",         CmdLtrim,           1, "<samples> -- Trim samples from left of trace"},
+  {"rtrim",         CmdRtrim,           1, "<location to end trace> -- Trim samples from right of trace"},
   {"mandemod",      CmdManchesterDemod, 1, "[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)"},
   {"manrawdecode",  Cmdmandecoderaw,    1, "Manchester decode binary stream already in graph buffer"},
   {"manmod",        CmdManchesterMod,   1, "[clock rate] -- Manchester modulate a binary stream"},
