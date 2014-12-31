@@ -149,6 +149,7 @@ void SimulateTagLowFrequencyA(int period, int gap);
 
 void CmdHIDsimTAG(int hi, int lo, uint8_t ledcontrol);
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol);
+void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol);
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol);
 void CopyIOtoT55x7(uint32_t hi, uint32_t lo, uint8_t longFMT); // Clone an ioProx card to T5557/T5567
 void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);
@@ -212,6 +213,10 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);  // Work with "magic Chinese" card
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void MifareCIdent();  // is "magic chinese" card?
+
+//desfire
+void Mifare_DES_Auth1(uint8_t arg0,uint8_t *datain);
+void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain);					   
 
 // mifaredesfire.h
 bool 	InitDesfireCard();

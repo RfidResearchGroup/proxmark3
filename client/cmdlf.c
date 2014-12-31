@@ -171,9 +171,10 @@ int CmdIndalaDemod(const char *Cmd)
       count = 0;
     }
   }
-  PrintAndLog("Recovered %d raw bits", rawbit);
+  if (rawbit>0){
+    PrintAndLog("Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
   PrintAndLog("worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
-
+  } else return 0;
   // Finding the start of a UID
   int uidlen, long_wait;
   if (strcmp(Cmd, "224") == 0) {
@@ -303,7 +304,7 @@ int CmdIndalaDemod(const char *Cmd)
   }
 
   RepaintGraphWindow();
-  return 0;
+  return 1;
 }
 
 int CmdIndalaClone(const char *Cmd)
@@ -567,6 +568,36 @@ int CmdVchDemod(const char *Cmd)
   return 0;
 }
 
+//by marshmellow
+int CmdLFfind(const char *Cmd)
+{
+  int ans=0;
+  if (!offline){
+    ans=CmdLFRead("");
+    //ans=CmdSamples("20000");
+  }
+  if (GraphTraceLen<1000) return 0;
+  PrintAndLog("Checking for known tags:");
+  
+  ans=Cmdaskmandemod("");
+  PrintAndLog("ASK_MAN: %s", (ans)?"YES":"NO" );
+  
+  ans=CmdFSKdemodHID("");
+  PrintAndLog("HID: %s", (ans)?"YES":"NO" );
+  
+  ans=CmdFSKdemodIO("");
+  PrintAndLog("IO prox: %s", (ans)?"YES":"NO" );
+
+  ans=CmdIndalaDemod("");
+  PrintAndLog("Indala (64): %s", (ans)?"YES":"NO" );
+	
+  ans=CmdIndalaDemod("224");
+  PrintAndLog("Indala (224): %s", (ans)?"YES":"NO" );
+	
+  //PrintAndLog("No Known Tags Found!\n");
+  return 0;
+}
+
 static command_t CommandTable[] = 
 {
   {"help",        CmdHelp,            1, "This help"},
@@ -579,6 +610,7 @@ static command_t CommandTable[] =
 
   
   {"read",        CmdLFRead,          0, "['h' or <divisor>] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134, alternatively: f=12MHz/(divisor+1))"},
+  {"search",      CmdLFfind,          1, "Read and Search for valid known tag (in offline mode it you can load first then search)"},
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
   {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
   {"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},

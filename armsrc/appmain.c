@@ -656,6 +656,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_IO_CLONE_TAG:
 			CopyIOtoT55x7(c->arg[0], c->arg[1], c->d.asBytes[0]);
 			break;
+		case CMD_EM410X_DEMOD:
+			CmdEM410xdemod(c->arg[0], 0, 0, 1);
+			break;
 		case CMD_EM410X_WRITE_TAG:
 			WriteEM410x(c->arg[0], c->arg[1], c->arg[2]);
 			break;

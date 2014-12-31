@@ -60,9 +60,10 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			loclass/cipherutils.c \
 			loclass/des.c \
 			loclass/ikeys.c \
-			loclass/elite_crack.c\
-			loclass/fileutils.c\
-			mifarehost.c\
+			loclass/elite_crack.c \
+			loclass/fileutils.c \
+			loclass/hash1_brute.c \
+			mifarehost.c \
 			crc16.c \
 			iso14443crc.c \
 			iso15693tools.c \
@@ -70,6 +71,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			graph.c \
 			ui.c \
 			cmddata.c \
+			lfdemod.c \
 			cmdhf.c \
 			cmdhf14a.c \
 			cmdhf14b.c \

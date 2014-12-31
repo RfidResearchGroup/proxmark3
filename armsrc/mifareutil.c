@@ -94,8 +94,8 @@ int mifare_sendcmd_short_special(struct Crypto1State *pcs, uint8_t crypted, uint
 	ReaderTransmit(dcmd, sizeof(dcmd), NULL);
 	int len = ReaderReceive(answer, answer_parity);
 	if(!len) {
-                if (MF_DBGLEVEL >= 1)   Dbprintf("Authentication failed. Card timeout.");
-                return 2;
+        if (MF_DBGLEVEL >= 1)   Dbprintf("Authentication failed. Card timeout.");
+        return 2;
     }
 	return len;
 }
@@ -433,7 +433,6 @@ int mifare_ultra_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
 	// variables
 	uint16_t len;     
 	uint8_t par[3] = {0}; // enough for 18 parity bits
-	
 	uint8_t d_block[18];
 	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t* receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
@@ -466,7 +465,6 @@ int mifare_ultra_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
 int mifare_ultra_special_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
 {
     uint16_t len;
-
 	uint8_t d_block[8];
 	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
@@ -624,4 +622,92 @@ void emlClearMem(void) {
 	// uid
 	emlSetMem((uint8_t *)uid, 0, 1);
 	return;
+}
+
+//
+//DESFIRE
+//
+int mifare_sendcmd_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t* data, uint8_t* answer, uint8_t *answer_parity, uint32_t *timing)
+{
+    uint8_t dcmd[5] = {0x00};
+    dcmd[0] = cmd;
+    memcpy(dcmd+1,data,2);
+	AppendCrc14443a(dcmd, 3);
+	
+	ReaderTransmit(dcmd, sizeof(dcmd), NULL);
+	int len = ReaderReceive(answer, answer_parity);
+	if(!len) {
+		if (MF_DBGLEVEL >= 1)   Dbprintf("Authentication failed. Card timeout.");
+			return 2;
+    }
+	return len;
+}
+
+int mifare_sendcmd_special2(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t* data, uint8_t* answer,uint8_t *answer_parity, uint32_t *timing)
+{
+    uint8_t dcmd[20] = {0x00};
+    dcmd[0] = cmd;
+    memcpy(dcmd+1,data,17);
+	AppendCrc14443a(dcmd, 18);
+
+	ReaderTransmit(dcmd, sizeof(dcmd), NULL);
+	int len = ReaderReceive(answer, answer_parity);
+	if(!len){
+        if (MF_DBGLEVEL >= 1)   Dbprintf("Authentication failed. Card timeout.");
+			return 2;
+    }
+	return len;
+}
+
+int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData){
+	// variables
+	int len;
+	//           load key, keynumber
+	uint8_t data[2]={0x0a, 0x00};
+	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
+	
+	// command MIFARE_CLASSIC_READBLOCK
+	len = mifare_sendcmd_special(NULL, 1, 0x02, data, receivedAnswer,receivedAnswerPar,NULL);
+	if (len == 1) {
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+		return 1;
+	}
+	
+	if (len == 12) {
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Auth1 Resp: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+		  receivedAnswer[0],receivedAnswer[1],receivedAnswer[2],receivedAnswer[3],receivedAnswer[4],
+		  receivedAnswer[5],receivedAnswer[6],receivedAnswer[7],receivedAnswer[8],receivedAnswer[9],
+		  receivedAnswer[10],receivedAnswer[11]);
+		memcpy(blockData, receivedAnswer, 12);
+	        return 0;
+	}
+	return 1;
+}
+
+int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData){
+	// variables
+	int len;
+	uint8_t data[17]={0xaf,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	memcpy(data+1,key,16);
+	
+	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
+	
+	// command MIFARE_CLASSIC_READBLOCK
+	len = mifare_sendcmd_special2(NULL, 1, 0x03, data, receivedAnswer, receivedAnswerPar ,NULL);
+	
+	if ((receivedAnswer[0] == 0x03)&&(receivedAnswer[1] == 0xae)) {
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Auth Error: %02x %02x", receivedAnswer[0], receivedAnswer[1]);
+		return 1;
+	}
+	if (len == 12){
+		if (MF_DBGLEVEL >= 1)	Dbprintf("Auth2 Resp: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+		  receivedAnswer[0],receivedAnswer[1],receivedAnswer[2],receivedAnswer[3],receivedAnswer[4],
+		  receivedAnswer[5],receivedAnswer[6],receivedAnswer[7],receivedAnswer[8],receivedAnswer[9],
+		  receivedAnswer[10],receivedAnswer[11]);
+		memcpy(blockData, receivedAnswer, 12);
+		return 0;
+	}
+	return 1;
 }

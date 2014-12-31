@@ -13,8 +13,10 @@
 
 void AppendGraph(int redraw, int clock, int bit);
 int ClearGraph(int redraw);
-int DetectClock(int peak);
+//int DetectClock(int peak);
+int getFromGraphBuf(uint8_t *buff);
 int GetClock(const char *str, int peak, int verbose);
+void setGraphBuf(uint8_t *buff,int size);
 bool HasGraphData();
 
 #define MAX_GRAPH_TRACE_LEN (1024*128)
