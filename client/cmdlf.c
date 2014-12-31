@@ -571,31 +571,44 @@ int CmdVchDemod(const char *Cmd)
 //by marshmellow
 int CmdLFfind(const char *Cmd)
 {
-  int ans=0;
-  if (!offline){
-    ans=CmdLFRead("");
-    //ans=CmdSamples("20000");
-  }
-  if (GraphTraceLen<1000) return 0;
-  PrintAndLog("Checking for known tags:");
-  
-  ans=Cmdaskmandemod("");
-  PrintAndLog("ASK_MAN: %s", (ans)?"YES":"NO" );
-  
-  ans=CmdFSKdemodHID("");
-  PrintAndLog("HID: %s", (ans)?"YES":"NO" );
-  
-  ans=CmdFSKdemodIO("");
-  PrintAndLog("IO prox: %s", (ans)?"YES":"NO" );
+	char cmdp = param_getchar(Cmd, 0);
 
-  ans=CmdIndalaDemod("");
-  PrintAndLog("Indala (64): %s", (ans)?"YES":"NO" );
+	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  lf search [use data from Graphbuffer]");
+		PrintAndLog("     [use data from Graphbuffer], if not set, try reading data from tag.");
+		PrintAndLog("");
+		PrintAndLog("    sample: lf search");
+		PrintAndLog("          : lf search 1");
+		return 0;
+	}
 	
-  ans=CmdIndalaDemod("224");
-  PrintAndLog("Indala (224): %s", (ans)?"YES":"NO" );
-	
-  //PrintAndLog("No Known Tags Found!\n");
-  return 0;
+	int ans = 0;
+	if (!offline && cmdp != '1' ){
+		ans = CmdLFRead("");
+	} else if (GraphTraceLen<1000) {
+		PrintAndLog("Data in Graphbuffer was too small.");
+		return 0;
+	}
+
+	PrintAndLog("Checking for known tags:");
+
+	ans=Cmdaskmandemod("");
+	PrintAndLog("ASK_MAN: %s", (ans)?"YES":"NO" );
+
+	ans=CmdFSKdemodHID("");
+	PrintAndLog("HID: %s", (ans)?"YES":"NO" );
+
+	ans=CmdFSKdemodIO("");
+	PrintAndLog("IO prox: %s", (ans)?"YES":"NO" );
+
+	ans=CmdIndalaDemod("");
+	PrintAndLog("Indala (64): %s", (ans)?"YES":"NO" );
+
+	ans=CmdIndalaDemod("224");
+	PrintAndLog("Indala (224): %s", (ans)?"YES":"NO" );
+
+	//PrintAndLog("No Known Tags Found!\n");
+	return 0;
 }
 
 static command_t CommandTable[] = 
