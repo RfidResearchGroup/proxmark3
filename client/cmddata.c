@@ -234,8 +234,9 @@ int Cmdaskmandemod(const char *Cmd)
     setGraphBuf(BitStream,BitLen); 
     PrintAndLog("EM410x pattern found: ");
     printEM410x(lo);
+    return 1;
   }
-  if (BitLen>16) return 1;
+  //if (BitLen>16) return 1;
   return 0;
 }
 
