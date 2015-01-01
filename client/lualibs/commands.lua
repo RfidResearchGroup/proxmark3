@@ -47,6 +47,9 @@ local _commands = {
 	CMD_PCF7931_READ =                                                   0x0217,
 	CMD_EM4X_READ_WORD =                                                 0x0218,
 	CMD_EM4X_WRITE_WORD =                                                0x0219,
+	CMD_IO_DEMOD_FSK =                                                   0x021A,
+	CMD_IO_CLONE_TAG =                                                   0x021B,
+	CMD_EM410X_DEMOD = 												     0x021c,
 	--/* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
 	--// For the 13.56 MHz tags
@@ -61,6 +64,7 @@ local _commands = {
 	CMD_ISO_15693_COMMAND_DONE =                                         0x0314,
 	CMD_ISO_15693_FIND_AFI =                                             0x0315,
 	CMD_ISO_15693_DEBUG =                                                0x0316,
+	CMD_LF_SNOOP_RAW_ADC_SAMPLES =                                       0x0317,
 
 	--// For Hitag2 transponders
 	CMD_SNOOP_HITAG =                                                    0x0370,
@@ -77,10 +81,13 @@ local _commands = {
 	CMD_READER_LEGIC_RF =                                                0x0388,
 	CMD_WRITER_LEGIC_RF =                                                0x0389,
 	CMD_EPA_PACE_COLLECT_NONCE =                                         0x038A,
+	--//CMD_EPA_ =                                                         0x038B,
 
 	CMD_SNOOP_ICLASS =                                                   0x0392,
 	CMD_SIMULATE_TAG_ICLASS =                                            0x0393,
 	CMD_READER_ICLASS =                                                  0x0394,
+	CMD_READER_ICLASS_REPLAY =											 0x0395,
+	CMD_ICLASS_ISO14443A_WRITE =										 0x0397,
 
 	--// For measurements of the antenna tuning
 	CMD_MEASURE_ANTENNA_TUNING =                                         0x0400,
@@ -97,21 +104,45 @@ local _commands = {
 	CMD_MIFARE_EML_MEMSET =                                              0x0602,
 	CMD_MIFARE_EML_MEMGET =                                              0x0603,
 	CMD_MIFARE_EML_CARDLOAD =                                            0x0604,
-	CMD_MIFARE_EML_CSETBLOCK =                                           0x0605,
-	CMD_MIFARE_EML_CGETBLOCK =                                           0x0606,
-
+	
+	--// magic chinese card commands
+	CMD_MIFARE_CSETBLOCK =                                               0x0605,
+	CMD_MIFARE_CGETBLOCK =                                               0x0606,
+	CMD_MIFARE_CIDENT =                                                  0x0607,
+	
 	CMD_SIMULATE_MIFARE_CARD =                                           0x0610,
 
 	CMD_READER_MIFARE =                                                  0x0611,
 	CMD_MIFARE_NESTED =                                                  0x0612,
 
 	CMD_MIFARE_READBL =                                                  0x0620,
+	CMD_MIFAREU_READBL =                                                 0x0720,
+	
 	CMD_MIFARE_READSC =                                                  0x0621,
+	CMD_MIFAREU_READCARD =                                               0x0721,
+	
 	CMD_MIFARE_WRITEBL =                                                 0x0622,
+	CMD_MIFAREU_WRITEBL =                                                0x0722,
+	CMD_MIFAREU_WRITEBL_COMPAT =                                         0x0723,
+	
 	CMD_MIFARE_CHKKEYS =                                                 0x0623,
 
 	CMD_MIFARE_SNIFFER =                                                 0x0630,
 
+	--//ultralightC
+	CMD_MIFAREUC_AUTH1 =						                         0x0724,
+	CMD_MIFAREUC_AUTH2 =						                         0x0725,
+	CMD_MIFAREUC_READCARD =		   					                     0x0726,
+
+	--// mifare desfire
+	CMD_MIFARE_DESFIRE_READBL =                                          0x0728,
+	CMD_MIFARE_DESFIRE_WRITEBL =                                         0x0729,
+	CMD_MIFARE_DESFIRE_AUTH1 =                                           0x072a,
+	CMD_MIFARE_DESFIRE_AUTH2 =                                           0x072b,
+	CMD_MIFARE_DES_READER =                                              0x072c,
+	CMD_MIFARE_DESFIRE_INFO =                                            0x072d,
+	CMD_MIFARE_DESFIRE =                                                 0x072e,
+	
 	CMD_UNKNOWN =                                                        0xFFFF,
 }
 

@@ -114,7 +114,6 @@ typedef struct {
 #define CMD_SIMULATE_TAG_LEGIC_RF                                         0x0387
 #define CMD_READER_LEGIC_RF                                               0x0388
 #define CMD_WRITER_LEGIC_RF                                               0x0389
-
 #define CMD_EPA_PACE_COLLECT_NONCE                                        0x038A
 //#define CMD_EPA_                                                          0x038B
 
@@ -157,9 +156,9 @@ typedef struct {
 #define CMD_MIFAREU_READCARD						                      0x0721
 
 #define CMD_MIFARE_WRITEBL                                                0x0622
-#define CMD_MIFAREU_WRITEBL_COMPAT					                      0x0722
+#define CMD_MIFAREU_WRITEBL						                          0x0722
+#define CMD_MIFAREU_WRITEBL_COMPAT					                      0x0723
 
-#define CMD_MIFAREU_WRITEBL						                          0x0723
 #define CMD_MIFARE_CHKKEYS                                                0x0623
 
 #define CMD_MIFARE_SNIFFER                                                0x0630

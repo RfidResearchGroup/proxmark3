@@ -7,27 +7,32 @@ The official Proxmark repository is found here: https://github.com/Proxmark/prox
 
 NEWS:      
 
-Whats in this fork?  I have scraped the web for different enhancements to the PM3 sourcecode and not all of them ever found their way to the master branch. 
+Whats in this fork?  I have scraped the web for different enhancements to the PM3 source code and not all of them ever found their way to the master branch. 
 Among the stuff is
-	* jonor's hf 14a raw timing patch
+
+	* Jonor's hf 14a raw timing patch
 	* Piwi's updates. (usually gets into the master)
-	* Holimans iclass, (usually gets into the master)
-	* Marshmellows LF fixes (will go into the master)
-	* Midnitesnakes Ultralight,  Ultralight-c enhancements
-	* My desfire, Ultralight extras, LF T55xx enhancements, bugs fixes (filelength, hf mf commands ), TNP3xxx lua scripts,  Awid26,  skidata scripts (will come)
-	* other osbscury patches like for the sammy-mode,  (offline you know), tagidentifications, defaultkeys. 
+	* Holiman's iclass, (usually gets into the master)
+	* Marshmellow's LF fixes
+	* Midnitesnake's Ultralight,  Ultralight-c enhancements
+	* Izsh's lf peak modification / iir-filtering
+	* Aspers's tips and tricks from inside the PM3-gui-tool, settings.xml and other stuff.
+	* My own desfire, Ultralight extras, LF T55xx enhancements, bugs fixes (filelength, hf mf commands ), TNP3xxx lua scripts,  Awid26,  skidata scripts (will come)
+	* other obscure patches like for the sammy-mode,  (offline you know), tagidentifications, defaultkeys. 
 	
 Give me a hint, and I'll see if I can't merge in the stuff you have. 
+
+I don't actually know how to make small pull-request to github :( and that is the number one reason for me not pushing a lot of things back to the PM3 master.
 	
 PM3 GUI:
 
-I do tend to rename and move stuff around, the official PM3-GUI from Gaucho will not work so good. *sorry*	
+I do tend to rename and move stuff around, the official PM3-GUI from Gaucho will not work so well. *sorry*	
 
 	  
 DEVELOPMENT:
 
 This fork is adjusted to compile on windows/mingw environment with Qt5.3.1 & GCC 4.8
-For people with linux you will need to patch some sourcecode and some small change to one makefile.  If you are lazy, you google the forum and find asper's or holimans makefile or you find your solution below.
+For people with linux you will need to patch some source code and some small change to one makefile.  If you are lazy, you google the forum and find asper's or holimans makefile or you find your solution below.
 
 Common errors linux/macOS finds
 Error:
@@ -55,7 +60,7 @@ Solution
 		QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
 	
 
-And old Qt4 version is found here: http://www.icesql.se/proxmark3/code/linuxmakefile.txt  but this one doesn't have all new files in it. So I don't recommend it.
+An old Qt4 version makefile is found here: http://www.icesql.se/proxmark3/code/linuxmakefile.txt  but this one doesn't have all new files in it. So I don't recommend it.
 
 
 
