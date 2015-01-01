@@ -36,6 +36,7 @@ int CmdHide(const char *Cmd);
 int CmdHpf(const char *Cmd);
 int CmdLoad(const char *Cmd);
 int CmdLtrim(const char *Cmd);
+int CmdRtrim(const char *Cmd);
 int Cmdmandecoderaw(const char *Cmd);
 int CmdManchesterDemod(const char *Cmd);
 int CmdManchesterMod(const char *Cmd);

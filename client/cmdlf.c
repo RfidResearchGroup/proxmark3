@@ -571,8 +571,9 @@ int CmdVchDemod(const char *Cmd)
 //by marshmellow
 int CmdLFfind(const char *Cmd)
 {
+	int ans = 0;
 	char cmdp = param_getchar(Cmd, 0);
-
+	
 	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:  lf search [use data from Graphbuffer]");
 		PrintAndLog("     [use data from Graphbuffer], if not set, try reading data from tag.");
@@ -581,9 +582,8 @@ int CmdLFfind(const char *Cmd)
 		PrintAndLog("          : lf search 1");
 		return 0;
 	}
-	
-	int ans = 0;
-	if (!offline && cmdp != '1' ){
+
+	if (!offline || (cmdp != '1') ){
 		ans = CmdLFRead("");
 	} else if (GraphTraceLen<1000) {
 		PrintAndLog("Data in Graphbuffer was too small.");
@@ -607,7 +607,9 @@ int CmdLFfind(const char *Cmd)
 	ans=CmdIndalaDemod("224");
 	PrintAndLog("Indala (224): %s", (ans)?"YES":"NO" );
 
-	//PrintAndLog("No Known Tags Found!\n");
+	if (!ans)
+		PrintAndLog("No Known Tags Found!\n");
+		
 	return 0;
 }
 
