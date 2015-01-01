@@ -132,6 +132,7 @@ void AcquireRawBitsTI(void);
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol);
 void CmdHIDsimTAG(int hi, int lo, int ledcontrol);
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol);
+void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol);
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol);
 void CopyIOtoT55x7(uint32_t hi, uint32_t lo, uint8_t longFMT); // Clone an ioProx card to T5557/T5567
 void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);

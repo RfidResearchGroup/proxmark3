@@ -23,5 +23,6 @@ int CmdLFSimBidir(const char *Cmd);
 int CmdLFSimManchester(const char *Cmd);
 int CmdLFSnoop(const char *Cmd);
 int CmdVchDemod(const char *Cmd);
+int CmdLFfind(const char *Cmd);
 
 #endif
