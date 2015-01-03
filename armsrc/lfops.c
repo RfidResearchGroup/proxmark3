@@ -793,12 +793,9 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
 		DoAcquisition125k_internal(-1,true);
-		size  = sizeof(BigBuf);
-		//make sure buffer has data
-		if (size < 2000) continue;
 		//fskdemod and get start index
 		WDT_HIT();
-		idx = IOdemodFSK(dest,size);
+        idx = IOdemodFSK(dest,sizeof(BigBuf));
 		if (idx>0){
 			//valid tag found
 
@@ -821,7 +818,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		    Dbprintf("%d%d%d%d%d%d%d%d %d%d",dest[idx+54],dest[idx+55],dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
 			}
 			code = bytebits_to_byte(dest+idx,32);
-	    code2 = bytebits_to_byte(dest+idx+32,32); 
+        code2 = bytebits_to_byte(dest+idx+32,32);
 	    version = bytebits_to_byte(dest+idx+27,8); //14,4
 	    facilitycode = bytebits_to_byte(dest+idx+18,8) ;
 	    number = (bytebits_to_byte(dest+idx+36,8)<<8)|(bytebits_to_byte(dest+idx+45,8)); //36,9
