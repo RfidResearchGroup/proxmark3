@@ -602,7 +602,7 @@ int IOdemodFSK(uint8_t *dest, size_t size)
     }
     idx=0;
     //if not just noise
-    if (testMax>170){
+    if (testMax>20){
         // FSK demodulator
         size = fskdemod(dest, size,64,1,10,8);  //  RF/64 and invert
         if (size < 65) return -1;  //did we get a good demod?
