@@ -42,6 +42,23 @@ int xorbits_8(uint8_t val)
     return res & 1;
 }
 
+void explain(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
+{
+
+    switch(cmd[0])
+    {
+    case 0x0a: snprintf(exp,size,"WUP"); break;
+    case 0x0f: snprintf(exp,size,"SOF"); break;
+    case 0x0c: snprintf(exp,size,"Read config"); break;
+    case 0x81: snprintf(exp,size,"SELECT"); break;
+    case 0x88: snprintf(exp,size,"Read E-purse (CC)"); break;
+    case 0x05: snprintf(exp,size,"Reader challenge"); break;
+    case 0x00: snprintf(exp,size,"End"); break;
+    default: snprintf(exp,size,"?"); break;
+    }
+    return;
+}
+
 int CmdHFiClassList(const char *Cmd)
 {
 	bool ShowWaitCycles = false;
@@ -67,8 +84,8 @@ int CmdHFiClassList(const char *Cmd)
 	PrintAndLog("Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
 	PrintAndLog("All times are in carrier periods (1/13.56Mhz)");
 	PrintAndLog("");
-	PrintAndLog("     Start |       End | Src | Data (! denotes parity error)                                   | CRC ");
-	PrintAndLog("-----------|-----------|-----|-----------------------------------------------------------------------");
+    PrintAndLog("     Start |       End | Src | Data (! denotes parity error)                                   | CRC | Explanation|");
+    PrintAndLog("-----------|-----------|-----|-------------------------------------------------------------------------------------");
 
 	uint16_t tracepos = 0;
 	uint16_t duration;
@@ -78,7 +95,7 @@ int CmdHFiClassList(const char *Cmd)
 	uint32_t timestamp;
 	uint32_t first_timestamp;
 	uint32_t EndOfTransmissionTimestamp;
-	
+    char explanation[20] = {0};
 	for (;;) {
 
 		if(tracepos >= TRACE_SIZE) {
@@ -135,7 +152,7 @@ int CmdHFiClassList(const char *Cmd)
 
 		}
 
-		char *crc = ""; 
+        char *crc = "    ";
 		if (data_len > 2) {
 			uint8_t b1, b2;
 			if(!isResponse && data_len == 4 ) {
@@ -156,20 +173,21 @@ int CmdHFiClassList(const char *Cmd)
 		}
 
 		EndOfTransmissionTimestamp = timestamp + duration;
-		
+        explain(explanation,sizeof(explanation),frame,data_len);
 		int num_lines = (data_len - 1)/16 + 1;
 		for (int j = 0; j < num_lines; j++) {
 			if (j == 0) {
-				PrintAndLog(" %9d | %9d | %s | %-64s| %s",
+                PrintAndLog(" %9d | %9d | %s | %-64s| %s| %s",
 					(timestamp - first_timestamp),
 					(EndOfTransmissionTimestamp - first_timestamp),
 					(isResponse ? "Tag" : "Rdr"),
 					line[j], 
-					(j == num_lines-1)?crc:"");
+                    (j == num_lines-1)?crc:"    ",
+                        explanation);
 			} else {
 				PrintAndLog("           |           |     | %-64s| %s",
 					line[j], 
-					(j == num_lines-1)?crc:"");
+                    (j == num_lines-1)?crc:"    ");
 			}
 		}				
 
@@ -322,7 +340,11 @@ int CmdHFiClassReader(const char *Cmd)
             uint8_t * data  = resp.d.asBytes;
 
             PrintAndLog("isOk:%02x", isOK);
-
+            if( isOK == 0){
+                //Aborted
+                PrintAndLog("Quitting...");
+                return 0;
+            }
             if(isOK > 0)
             {
                 PrintAndLog("CSN: %s",sprint_hex(data,8));

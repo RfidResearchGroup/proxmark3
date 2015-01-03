@@ -1551,6 +1551,9 @@ void ReaderIClass(uint8_t arg0) {
             break;
         }
     }
+
+    cmd_send(CMD_ACK,0,0,0,card_data, 0);
+
     LED_A_OFF();
 }
 
