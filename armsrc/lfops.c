@@ -780,7 +780,6 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
     uint8_t *dest = (uint8_t *)BigBuf;
-    size_t size=0;
     int idx=0;
     uint32_t code=0, code2=0;
     uint8_t version=0;
