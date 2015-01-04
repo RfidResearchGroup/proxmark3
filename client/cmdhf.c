@@ -99,15 +99,15 @@ void annotateIclass(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 
 	switch(cmd[0])
 	{
-	case ICLASS_CMD_ACTALL:            snprintf(exp,size,"ACTALL"); break;
+	case ICLASS_CMD_ACTALL:      snprintf(exp,size,"ACTALL"); break;
 	case ICLASS_CMD_IDENTIFY:    snprintf(exp,size,"IDENTIFY"); break;
-	case ICLASS_CMD_SELECT:         snprintf(exp,size,"SELECT"); break;
-	case ICLASS_CMD_PAGESEL:         snprintf(exp,size,"PAGESEL"); break;
-	case ICLASS_CMD_READCHECK:         snprintf(exp,size,"READCHECK"); break;
-	case ICLASS_CMD_CHECK:         snprintf(exp,size,"CHECK"); break;
-	case ICLASS_CMD_SOF:            snprintf(exp,size,"SOF"); break;
-	case ICLASS_CMD_HALT:            snprintf(exp,size,"HALT"); break;
-	default:                        snprintf(exp,size,"?"); break;
+	case ICLASS_CMD_SELECT:      snprintf(exp,size,"SELECT"); break;
+	case ICLASS_CMD_PAGESEL:     snprintf(exp,size,"PAGESEL"); break;
+	case ICLASS_CMD_READCHECK:   snprintf(exp,size,"READCHECK"); break;
+	case ICLASS_CMD_CHECK:       snprintf(exp,size,"CHECK"); break;
+	case ICLASS_CMD_SOF:         snprintf(exp,size,"SOF"); break;
+	case ICLASS_CMD_HALT:        snprintf(exp,size,"HALT"); break;
+	default:                     snprintf(exp,size,"?"); break;
 	}
 	return;
 }
@@ -266,9 +266,9 @@ int CmdHFList(const char *Cmd)
 	if (errors) {
 		PrintAndLog("List protocol data in trace buffer.");
 		PrintAndLog("Usage:  hf list [14a|iclass] [f]");
-		PrintAndLog("     - interpret data as iso14443a communications");
+		PrintAndLog("    14a    - interpret data as iso14443a communications");
 		PrintAndLog("    iclass - interpret data as iclass communications");
-		PrintAndLog("    f - show frame delay times as well");
+		PrintAndLog("    f      - show frame delay times as well");
 		PrintAndLog("");
 		PrintAndLog("example: hf list 14a f");
 		PrintAndLog("example: hf list iclass");
