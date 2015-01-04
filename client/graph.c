@@ -49,151 +49,69 @@ int ClearGraph(int redraw)
   return gtl;
 }
 
-/*
- * Detect clock rate
- */
- //decommissioned - has difficulty detecting rf/32 
-/*
-int DetectClockOld(int peak)
+void SetGraphBuf(uint8_t *buff, int size) 
 {
-  int i;
-  int clock = 0xFFFF;
-  int lastpeak = 0;
-
-  // Detect peak if we don't have one 
-  if (!peak)
-    for (i = 0; i < GraphTraceLen; ++i)
-      if (GraphBuffer[i] > peak)
-        peak = GraphBuffer[i];
-
- // peak=(int)(peak*.75);
-  for (i = 1; i < GraphTraceLen; ++i)
-  {
-    // If this is the beginning of a peak 
-    if (GraphBuffer[i - 1] != GraphBuffer[i] && GraphBuffer[i] >= peak)
-    {
-      // Find lowest difference between peaks 
-      if (lastpeak && i - lastpeak < clock)
-        clock = i - lastpeak;
-      lastpeak = i;
-    }
-  }
+	if ( buff == NULL ) return;
 	
-		return clock;
+	uint16_t i = 0;  
+	if ( size > MAX_GRAPH_TRACE_LEN )
+		size = MAX_GRAPH_TRACE_LEN;
+	ClearGraph(0);
+	for (; i < size; ++i){
+		GraphBuffer[i] = buff[i];
+	}
+	GraphTraceLen = size;
+	RepaintGraphWindow();
+	return;
 }
-*/
-/*
-NOW IN LFDEMOD.C
 
-// by marshmellow
-// not perfect especially with lower clocks or VERY good antennas (heavy wave clipping)
-// maybe somehow adjust peak trimming value based on samples to fix?
-int DetectASKClock(int peak)
-	{
-  int i=0;
-  int low=0;
-  int clk[]={16,32,40,50,64,100,128,256};
-  int loopCnt = 256;
-  if (GraphTraceLen<loopCnt) loopCnt = GraphTraceLen;
-  if (!peak){
-    for (i=0;i<loopCnt;++i){
-      if(GraphBuffer[i]>peak){
-        peak = GraphBuffer[i]; 
-      }
-      if(GraphBuffer[i]<low){
-        low = GraphBuffer[i];
-      }
-    }
-    peak=(int)(peak*.75);
-    low= (int)(low*.75);
-  }
-  int ii;
-  int clkCnt;
-  int tol = 0;
-  int bestErr=1000;
-  int errCnt[]={0,0,0,0,0,0,0,0};
-  for(clkCnt=0; clkCnt<6;++clkCnt){
-    if (clk[clkCnt]==32){
-      tol=1;
-    }else{
-      tol=0;
-    }
-    bestErr=1000;
-    for (ii=0; ii<loopCnt; ++ii){
-      if ((GraphBuffer[ii]>=peak) || (GraphBuffer[ii]<=low)){
-        errCnt[clkCnt]=0;
-        for (i=0; i<((int)(GraphTraceLen/clk[clkCnt])-1); ++i){
-          if (GraphBuffer[ii+(i*clk[clkCnt])]>=peak || GraphBuffer[ii+(i*clk[clkCnt])]<=low){
-          }else if(GraphBuffer[ii+(i*clk[clkCnt])-tol]>=peak || GraphBuffer[ii+(i*clk[clkCnt])-tol]<=low){
-          }else if(GraphBuffer[ii+(i*clk[clkCnt])+tol]>=peak || GraphBuffer[ii+(i*clk[clkCnt])+tol]<=low){
-          }else{  //error no peak detected
-            errCnt[clkCnt]++;
-          }    
-        }
-        if(errCnt[clkCnt]==0) return clk[clkCnt];
-        if(errCnt[clkCnt]<bestErr) bestErr=errCnt[clkCnt];
-      }
-    } 
-  }
-  int iii=0;
-  int best=0;
-  for (iii=0; iii<6;++iii){
-    if (errCnt[iii]<errCnt[best]){
-      best = iii;
-    }
-  }
-  // PrintAndLog("DEBUG: clkCnt: %d, ii: %d, i: %d peak: %d, low: %d, errcnt: %d, errCnt64: %d",clkCnt,ii,i,peak,low,errCnt[best],errCnt[4]);
-  return clk[best];
-}
-*/
-void setGraphBuf(uint8_t *buff,int size) 
+// Copies grahpbuff to buff. 
+// while triming values to the range -127 -- 127.
+int GetFromGraphBuf(uint8_t *buff)
 {
-  int i=0;
-  ClearGraph(0);
-  for (; i < size; ++i){
-    GraphBuffer[i]=buff[i];
-  }
-  GraphTraceLen=size;
-  RepaintGraphWindow();
-  return;
-}
-int getFromGraphBuf(uint8_t *buff)
-{
-  uint32_t i;
-  for (i=0;i<GraphTraceLen;++i){
-    if (GraphBuffer[i]>127) GraphBuffer[i]=127; //trim
-    if (GraphBuffer[i]<-127) GraphBuffer[i]=-127; //trim
-    buff[i]=(uint8_t)(GraphBuffer[i]+128);
-  }
-  return i;
+	if ( buff == NULL ) return -1;
+	uint32_t i = 0;
+	
+	for (; i < GraphTraceLen; ++i){
+	
+		// trim upper and lower values.
+		if (GraphBuffer[i] > 127) 
+			GraphBuffer[i] = 127;
+		else if (GraphBuffer[i] < -127)
+			GraphBuffer[i] = -127;
+			
+		buff[i] = (uint8_t)(GraphBuffer[i] + 128);
+	}
+	return i;
 }
 /* Get or auto-detect clock rate */
-int GetClock(const char *str, int peak, int verbose)
+int GetClock(const char *str, int verbose)
 {
-  int clock;
+	int clock;
 
-  sscanf(str, "%i", &clock);
-  if (!strcmp(str, ""))
-    clock = 0;
+	sscanf(str, "%i", &clock);
+	if (!strcmp(str, ""))
+		clock = 0;
 
-  /* Auto-detect clock */
-  if (!clock)
-  {
-    uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
-    int size = getFromGraphBuf(grph);
-    clock = DetectASKClock(grph,size,0);
-    //clock2 = DetectClock2(peak);
-    /* Only print this message if we're not looping something */
-    if (!verbose)
-      PrintAndLog("Auto-detected clock rate: %d", clock);
-  }
+	/* Auto-detect clock */
+	if (!clock) {
 
-  return clock;
+		uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0x00};
+		int size = GetFromGraphBuf(grph);
+		if ( size < 0 ) {
+			PrintAndLog("Failed to copy from graphbuffer");
+			return -1;
+		}
+		clock = DetectASKClock(grph, size, 0);
+
+		/* Only print this message if we're not looping something */
+		if (verbose)
+			PrintAndLog("Auto-detected clock rate: %d", clock);
+		}
+	return clock;
 }
 
-
-/* A simple test to see if there is any data inside Graphbuffer. 
-*/
+// A simple test to see if there is any data inside Graphbuffer. 
 bool HasGraphData(){
 
 	if ( GraphTraceLen <= 0) {
@@ -201,4 +119,26 @@ bool HasGraphData(){
 		return false;
 	}
 	return true;	
+}
+
+// Detect high and lows in Grapbuffer.
+// Only loops the first 256 values. 
+void DetectHighLowInGraph(int *high, int *low, bool addFuzz) {
+
+	uint8_t loopMax = 255;
+	if ( loopMax > GraphTraceLen)
+		loopMax = GraphTraceLen;
+  
+	for (uint8_t i = 0; i < loopMax; ++i) {
+		if (GraphBuffer[i] > *high)
+			*high = GraphBuffer[i];
+		else if (GraphBuffer[i] < *low)
+			*low = GraphBuffer[i];
+	}
+	
+	//12% fuzz in case highs and lows aren't clipped
+	if (addFuzz) {
+		*high = (int)(*high * .88);
+		*low  = (int)(*low  * .88);
+	}
 }

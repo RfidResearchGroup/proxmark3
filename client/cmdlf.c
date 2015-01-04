@@ -375,6 +375,8 @@ int CmdLFRead(const char *Cmd)
   
   // load samples 
   CmdSamples("");
+  // show plot
+  ShowGraphWindow();
   return 0;
 }
 
@@ -460,36 +462,38 @@ int CmdLFSimManchester(const char *Cmd)
 
 int CmdLFSnoop(const char *Cmd)
 {
-  UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES};
-  // 'h' means higher-low-frequency, 134 kHz
-  c.arg[0] = 0;
-  c.arg[1] = -1;
-  if (*Cmd == 0) {
-    // empty
-  } else if (*Cmd == 'l') {
-    sscanf(Cmd, "l %"lli, &c.arg[1]);
-  } else if(*Cmd == 'h') {
-    c.arg[0] = 1;
-    sscanf(Cmd, "h %"lli, &c.arg[1]);
-  } else if (sscanf(Cmd, "%"lli" %"lli, &c.arg[0], &c.arg[1]) < 1) {
-    PrintAndLog("use 'snoop' or 'snoop {l,h} [trigger threshold]', or 'snoop <divisor> [trigger threshold]'");
-    return 0;
-  }
-  SendCommand(&c);
-  WaitForResponse(CMD_ACK,NULL);
-  
-  size_t BUFF_SIZE = 8000;
-  uint8_t data[BUFF_SIZE];
+	UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES};
 
-  GetFromBigBuf(data,BUFF_SIZE,3560);  //3560 -- should be offset..
-  WaitForResponseTimeout(CMD_ACK,NULL, 1500);
+	// 'h' means higher-low-frequency, 134 kHz
+	c.arg[0] = 0;
+	c.arg[1] = -1;
+
+	if (*Cmd == 'l') {
+		sscanf(Cmd, "l %"lli, &c.arg[1]);
+	} else if (*Cmd == 'h') {
+		c.arg[0] = 1;
+		sscanf(Cmd, "h %"lli, &c.arg[1]);
+	} else if (sscanf(Cmd, "%"lli" %"lli, &c.arg[0], &c.arg[1]) < 1) {
+		PrintAndLog("use 'snoop' or 'snoop {l,h} [trigger threshold]', or 'snoop <divisor> [trigger threshold]'");
+		return 0;
+	}
+
+	SendCommand(&c);
+	WaitForResponse(CMD_ACK,NULL);
+
+	size_t BUFF_SIZE = 8000;
+	uint8_t data[BUFF_SIZE];
+
+	GetFromBigBuf(data,BUFF_SIZE,0);  //3560 -- should be offset..
+	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
 	for (int j = 0; j < BUFF_SIZE; j++) {
 		GraphBuffer[j] = ((int)data[j]);
 	}
+
 	GraphTraceLen = BUFF_SIZE;
-  
-  return 0;
+
+	return 0;
 }
 
 int CmdVchDemod(const char *Cmd)
@@ -575,8 +579,8 @@ int CmdLFfind(const char *Cmd)
 	char cmdp = param_getchar(Cmd, 0);
 	
 	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  lf search [use data from Graphbuffer]");
-		PrintAndLog("     [use data from Graphbuffer], if not set, try reading data from tag.");
+		PrintAndLog("Usage:  lf search <0|1>");
+		PrintAndLog("     <use data from Graphbuffer>, if not set, try reading data from tag.");
 		PrintAndLog("");
 		PrintAndLog("    sample: lf search");
 		PrintAndLog("          : lf search 1");
@@ -585,7 +589,7 @@ int CmdLFfind(const char *Cmd)
 
 	if (!offline || (cmdp != '1') ){
 		ans = CmdLFRead("");
-	} else if (GraphTraceLen<1000) {
+	} else if (GraphTraceLen < 1000) {
 		PrintAndLog("Data in Graphbuffer was too small.");
 		return 0;
 	}

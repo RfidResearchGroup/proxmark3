@@ -321,7 +321,7 @@ void* mifare_cryto_postprocess_data (desfiretag_t tag, void *data, ssize_t *nbyt
                     *nbytes = -1;
                     res = NULL;
 #ifdef WITH_DEBUG
-                    printf ("No room for MAC!");
+                    Dbprintf ("No room for MAC!");
 #endif
                     break;
                 }
@@ -336,7 +336,7 @@ void* mifare_cryto_postprocess_data (desfiretag_t tag, void *data, ssize_t *nbyt
 
                 if (0 != memcmp ((uint8_t *)data + *nbytes - 1, (uint8_t *)edata + edl - 8, 4)) {
 #ifdef WITH_DEBUG
-                    printf ("MACing not verified");
+                    Dbprintf ("MACing not verified");
                     hexdump ((uint8_t *)data + *nbytes - 1, key_macing_length (key), "Expect ", 0);
                     hexdump ((uint8_t *)edata + edl - 8, key_macing_length (key), "Actual ", 0);
 #endif
@@ -366,7 +366,7 @@ void* mifare_cryto_postprocess_data (desfiretag_t tag, void *data, ssize_t *nbyt
                 ((uint8_t *)data)[*nbytes - 9] = first_cmac_byte;
                 if (0 != memcmp (DESFIRE (tag)->cmac, (uint8_t *)data + *nbytes - 9, 8)) {
 #ifdef WITH_DEBUG
-                    printf ("CMAC NOT verified :-(");
+                    Dbprintf ("CMAC NOT verified :-(");
                     hexdump ((uint8_t *)data + *nbytes - 9, 8, "Expect ", 0);
                     hexdump (DESFIRE (tag)->cmac, 8, "Actual ", 0);
 #endif

@@ -28,19 +28,15 @@ char *global_em410xId;
 
 static int CmdHelp(const char *Cmd);
 
-
-
 int CmdEMdemodASK(const char *Cmd)
 {
-  int findone=0;
-  UsbCommand c={CMD_EM410X_DEMOD};
-  if(Cmd[0]=='1') findone=1;
-  c.arg[0]=findone;
-  SendCommand(&c);
-  return 0;
+	char cmdp = param_getchar(Cmd, 0);
+	int findone = (cmdp == '1') ? 1 : 0;	
+	UsbCommand c = { CMD_EM410X_DEMOD };
+	c.arg[0] = findone;
+	SendCommand(&c);
+	return 0;
 }
-
-
 
 /* Read the ID of an EM410x tag.
  * Format:
@@ -54,29 +50,25 @@ int CmdEM410xRead(const char *Cmd)
 {
   int i, j, clock, header, rows, bit, hithigh, hitlow, first, bit2idx, high, low;
   int parity[4];
-  char id[11];
-  char id2[11];
+  char id[11] = {0x00};
+  char id2[11] = {0x00};
   int retested = 0;
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN];
   high = low = 0;
 
-  /* Detect high and lows and clock */
-  for (i = 0; i < GraphTraceLen; i++)
-  {
-    if (GraphBuffer[i] > high)
-      high = GraphBuffer[i];
-    else if (GraphBuffer[i] < low)
-      low = GraphBuffer[i];
-  }
+  // get clock 
+  clock = GetClock(Cmd, 0);
+  
+  // Detect high and lows and clock 
+  DetectHighLowInGraph( &high, &low, TRUE);
 
-  /* get clock */
-  clock = GetClock(Cmd, high, 0);
-   
-  /* parity for our 4 columns */
+  PrintAndLog("NUMNUM");
+  
+  // parity for our 4 columns
   parity[0] = parity[1] = parity[2] = parity[3] = 0;
   header = rows = 0;
 
-  /* manchester demodulate */
+  // manchester demodulate
   bit = bit2idx = 0;
   for (i = 0; i < (int)(GraphTraceLen / clock); i++)
   {
@@ -87,9 +79,9 @@ int CmdEM410xRead(const char *Cmd)
     /* Find out if we hit both high and low peaks */
     for (j = 0; j < clock; j++)
     {
-      if (GraphBuffer[(i * clock) + j] == high)
+      if (GraphBuffer[(i * clock) + j] >= high)
         hithigh = 1;
-      else if (GraphBuffer[(i * clock) + j] == low)
+      else if (GraphBuffer[(i * clock) + j] <= low)
         hitlow = 1;
 
       /* it doesn't count if it's the first part of our read
@@ -109,7 +101,7 @@ int CmdEM410xRead(const char *Cmd)
 
     BitStream[bit2idx++] = bit;
   }
-
+  
 retest:
   /* We go till 5 before the graph ends because we'll get that far below */
   for (i = 0; i < bit2idx - 5; i++)
@@ -189,13 +181,14 @@ retest:
   }
 
   /* if we've already retested after flipping bits, return */
-  if (retested++){
-    return 0;
+	if (retested++){
+		PrintAndLog("Failed to decode");
+		return 0;
 	}
 
   /* if this didn't work, try flipping bits */
-  for (i = 0; i < bit2idx; i++)
-    BitStream[i] ^= 1;
+	for (i = 0; i < bit2idx; i++)
+		BitStream[i] ^= 1;
 
   goto retest;
 }
@@ -290,7 +283,8 @@ int CmdEM410xSim(const char *Cmd)
 */
 int CmdEM410xWatch(const char *Cmd)
 {
-	int read_h = (*Cmd == 'h');
+	char cmdp = param_getchar(Cmd, 0);
+	int read_h = (cmdp == 'h');
 	do
 	{
 		if (ukbhit()) {
@@ -551,7 +545,7 @@ int CmdReadWord(const char *Cmd)
 
 	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
 
-	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
+	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,0);  //3560 -- should be offset..
 	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
 	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
@@ -591,7 +585,7 @@ int CmdReadWordPWD(const char *Cmd)
 		
 	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
 
-	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
+	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,0);  //3560 -- should be offset..
 	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
 	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {

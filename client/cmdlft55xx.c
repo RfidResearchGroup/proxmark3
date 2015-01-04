@@ -22,7 +22,7 @@
 #include "data.h"
 
 
-#define LF_TRACE_BUFF_SIZE 12000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
+#define LF_TRACE_BUFF_SIZE 20000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
 #define LF_BITSSTREAM_LEN 1000 // more then 1000 bits shouldn't happend..  8block * 4 bytes * 8bits = 
 static int CmdHelp(const char *Cmd);
 
@@ -48,7 +48,7 @@ int CmdReadBlk(const char *Cmd)
 	
 	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
 	
-	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
+	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,0);  //3560 -- should be offset..
 	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
 	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
@@ -85,7 +85,7 @@ int CmdReadBlkPWD(const char *Cmd)
 		
 	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
 
-	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
+	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,0);  //3560 -- should be offset..
 	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
 	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
@@ -166,7 +166,7 @@ int CmdReadTrace(const char *Cmd)
 
 		uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
 
-		GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
+		GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,0);  //3560 -- should be offset..
 		WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
 		for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
@@ -249,32 +249,31 @@ int CmdInfo(const char *Cmd){
 		return 0;
 	}
 
-	if ( strlen(Cmd)==0){
+	if ( strlen(Cmd) == 0 ){
 		CmdReadBlk("0");
 	}	
 
 	uint8_t bits[LF_BITSSTREAM_LEN] = {0x00};
-	uint8_t * bitstream = bits;
-	
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream, LF_BITSSTREAM_LEN);
+
+	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bits, LF_BITSSTREAM_LEN);
 	
 	uint8_t si = 5;
-	uint32_t bl0      = PackBits(si, 32, bitstream);
+	uint32_t bl0      = PackBits(si, 32, bits);
 	
-	uint32_t safer    = PackBits(si, 4, bitstream); si += 4;	
-	uint32_t resv     = PackBits(si, 7, bitstream); si += 7;
-	uint32_t dbr      = PackBits(si, 3, bitstream); si += 3;
-	uint32_t extend   = PackBits(si, 1, bitstream); si += 1;
-	uint32_t datamodulation   = PackBits(si, 5, bitstream); si += 5;
-	uint32_t pskcf    = PackBits(si, 2, bitstream); si += 2;
-	uint32_t aor      = PackBits(si, 1, bitstream); si += 1;	
-	uint32_t otp      = PackBits(si, 1, bitstream); si += 1;	
-	uint32_t maxblk   = PackBits(si, 3, bitstream); si += 3;
-	uint32_t pwd      = PackBits(si, 1, bitstream); si += 1;	
-	uint32_t sst      = PackBits(si, 1, bitstream); si += 1;	
-	uint32_t fw       = PackBits(si, 1, bitstream); si += 1;
-	uint32_t inv      = PackBits(si, 1, bitstream); si += 1;	
-	uint32_t por      = PackBits(si, 1, bitstream); si += 1;
+	uint32_t safer    = PackBits(si, 4, bits); si += 4;	
+	uint32_t resv     = PackBits(si, 7, bits); si += 7;
+	uint32_t dbr      = PackBits(si, 3, bits); si += 3;
+	uint32_t extend   = PackBits(si, 1, bits); si += 1;
+	uint32_t datamodulation   = PackBits(si, 5, bits); si += 5;
+	uint32_t pskcf    = PackBits(si, 2, bits); si += 2;
+	uint32_t aor      = PackBits(si, 1, bits); si += 1;	
+	uint32_t otp      = PackBits(si, 1, bits); si += 1;	
+	uint32_t maxblk   = PackBits(si, 3, bits); si += 3;
+	uint32_t pwd      = PackBits(si, 1, bits); si += 1;	
+	uint32_t sst      = PackBits(si, 1, bits); si += 1;	
+	uint32_t fw       = PackBits(si, 1, bits); si += 1;
+	uint32_t inv      = PackBits(si, 1, bits); si += 1;	
+	uint32_t por      = PackBits(si, 1, bits); si += 1;
 		
 	PrintAndLog("");
 	PrintAndLog("-- T55xx Configuration --------------------------------------");
@@ -295,7 +294,7 @@ int CmdInfo(const char *Cmd){
 	PrintAndLog(" POR-Delay                 : %s", (por) ? "Yes":"No");
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" Raw Data - Page 0");
-	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(bitstream+5,32) );
+	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(bits+5,32) );
 	PrintAndLog("-------------------------------------------------------------");
 	
 	return 0;
@@ -357,8 +356,10 @@ int ManchesterDemod(int blockNum){
 	uint8_t  bits[LF_BITSSTREAM_LEN] = {0x00};
 	uint8_t * bitstream = bits;
 	
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream, LF_BITSSTREAM_LEN);	
-    blockData = PackBits(offset, sizebyte, bitstream);
+	//manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream, LF_BITSSTREAM_LEN);	
+	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bits, LF_BITSSTREAM_LEN);	
+    //blockData = PackBits(offset, sizebyte, bitstream);
+	blockData = PackBits(offset, sizebyte, bits);
 
 	if ( blockNum < 0)
 		PrintAndLog(" Decoded     : 0x%08X  %s", blockData, sprint_bin(bitstream+offset,sizebyte) );

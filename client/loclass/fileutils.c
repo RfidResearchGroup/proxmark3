@@ -49,8 +49,14 @@
  * @return
  */
 int fileExists(const char *filename) {
+
+#ifdef _WIN32
 	struct _stat fileStat;
 	int result = _stat(filename, &fileStat);
+#else
+	struct stat fileStat;
+	int result = stat(filename, &fileStat);
+#endif
 	return result == 0;
 }
 

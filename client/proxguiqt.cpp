@@ -280,7 +280,7 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 
 ProxWidget::ProxWidget(QWidget *parent) : QWidget(parent), GraphStart(0), GraphPixelsPerPoint(1)
 {
-	resize(600, 500);
+	resize(600, 300);
 
 	QPalette palette(QColor(0,0,0,0));
 	palette.setColor(QPalette::WindowText, QColor(255,255,255));

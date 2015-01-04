@@ -64,9 +64,9 @@ void SnoopLFRawAdcSamples(int divisor, int trigger_threshold)
 // split into two routines so we can avoid timing issues after sending commands //
 void DoAcquisition125k_internal(int trigger_threshold, bool silent)
 {
-	uint8_t *dest = get_bigbufptr_recvrespbuf();
+	uint8_t *dest = (uint8_t *)BigBuf;
 	uint16_t i = 0;
-	memset(dest, 0x00, FREE_BUFFER_SIZE);
+	memset(dest, 0x00, BIGBUF_SIZE);
 
 	for(;;) {
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
@@ -80,7 +80,7 @@ void DoAcquisition125k_internal(int trigger_threshold, bool silent)
 				continue;
 			else
 				trigger_threshold = -1;
-			if (++i >= FREE_BUFFER_SIZE) break;
+			if (++i >= BIGBUF_SIZE) break;
 		}
 	}
 	if (!silent){
@@ -161,8 +161,6 @@ void ReadTItag(void)
 
 	signed char *dest = (signed char *)BigBuf;
 	int n = sizeof(BigBuf);
-//	int *dest = GraphBuffer;
-//	int n = GraphTraceLen;
 
 	// 128 bit shift register [shift3:shift2:shift1:shift0]
 	uint32_t shift3 = 0, shift2 = 0, shift1 = 0, shift0 = 0;
@@ -569,8 +567,6 @@ void SimulateTagLowFrequency( uint16_t period, uint32_t gap, uint8_t ledcontrol)
 
 void SimulateTagLowFrequencyA(int len, int gap)
 {
-	//Dbprintf("LEN %d || Gap %d",len, gap);
-
 	uint8_t *buf = (uint8_t *)BigBuf;
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -624,7 +620,7 @@ static void fc(int c, uint16_t *n) {
 	int idx;
 
 	// for when we want an fc8 pattern every 4 logical bits
-	if(c==0) {
+	if(c == 0) {
 		dest[((*n)++)]=1;
 		dest[((*n)++)]=1;
 		dest[((*n)++)]=0;
@@ -635,7 +631,7 @@ static void fc(int c, uint16_t *n) {
 		dest[((*n)++)]=0;
 	}
 	//	an fc/8  encoded bit is a bit pattern of  11000000  x6 = 48 samples
-	if(c==8) {
+	if(c == 8) {
 		for (idx=0; idx<6; idx++) {
 			dest[((*n)++)]=1;
 			dest[((*n)++)]=1;
@@ -649,8 +645,8 @@ static void fc(int c, uint16_t *n) {
 	}
 
 	//	an fc/10 encoded bit is a bit pattern of 1110000000 x5 = 50 samples
-	if(c==10) {
-		for (idx=0; idx<5; idx++) {
+	if(c == 10) {
+		for (idx = 0; idx < 5; idx++) {
 			dest[((*n)++)]=1;
 			dest[((*n)++)]=1;
 			dest[((*n)++)]=1;
@@ -669,7 +665,7 @@ static void fc(int c, uint16_t *n) {
 // simulate a HID tag until the button is pressed
 void CmdHIDsimTAG(int hi, int lo, uint8_t ledcontrol)
 {
-	uint16_t n=0, i=0;
+	uint16_t n = 0, i = 0;
 	/*
 	 HID tag bitstream format
 	 The tag contains a 44bit unique code. This is sent out MSB first in sets of 4 bits
@@ -680,11 +676,11 @@ void CmdHIDsimTAG(int hi, int lo, uint8_t ledcontrol)
 	 nor 1 bits, they are special patterns (a = set of 12 fc8 and b = set of 10 fc10)
 	*/
 
-	if (hi>0xFFF) {
+	if (hi > 0xFFF) {
 		DbpString("Tags can only have 44 bits.");
 		return;
 	}
-	fc(0,&n);
+	fc(0, &n);
 	// special start of frame marker containing invalid bit sequences
 	fc(8,  &n);	fc(8,  &n);	// invalid
 	fc(8,  &n);	fc(10, &n); // logical 0
@@ -693,9 +689,9 @@ void CmdHIDsimTAG(int hi, int lo, uint8_t ledcontrol)
 
 	WDT_HIT();
 	// manchester encode bits 43 to 32
-	for (i=11; i>=0; i--) {
-		if ((i%4)==3) fc(0,&n);
-		if ((hi>>i)&1) {
+	for (i = 11; i >= 0; i--) {
+		if ((i % 4) == 3) fc(0, &n);
+		if ((hi >> i) & 1) {
 			fc(10, &n);	fc(8,  &n);		// low-high transition
 		} else {
 			fc(8,  &n);	fc(10, &n);		// high-low transition
@@ -704,9 +700,9 @@ void CmdHIDsimTAG(int hi, int lo, uint8_t ledcontrol)
 
 	WDT_HIT();
 	// manchester encode bits 31 to 0
-	for (i=31; i>=0; i--) {
-		if ((i%4)==3) fc(0,&n);
-		if ((lo>>i)&1) {
+	for (i = 31; i >= 0; i--) {
+		if ((i % 4 ) == 3) fc(0, &n);
+		if ((lo >> i ) & 1) {
 			fc(10, &n);	fc(8,  &n);		// low-high transition
 		} else {
 			fc(8,  &n);	fc(10, &n);		// high-low transition
@@ -725,10 +721,8 @@ void CmdHIDsimTAG(int hi, int lo, uint8_t ledcontrol)
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
-	uint8_t *dest = get_bigbufptr_recvrespbuf();
-
-	size_t size=0; //, found=0;
-	uint32_t hi2=0, hi=0, lo=0;
+	uint8_t *dest = (uint8_t *)BigBuf;
+	uint32_t hi2 = 0, hi = 0, lo = 0;
 
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(0, true);
@@ -739,77 +733,84 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		if (ledcontrol) LED_A_ON();
 
 		DoAcquisition125k_internal(-1,true);
-		size  = sizeof(BigBuf);
-    if (size < 2000) continue; 
-		// FSK demodulator
 
-		int bitLen = HIDdemodFSK(dest,size,&hi2,&hi,&lo);
+		// FSK demodulator
+		int bitLen = HIDdemodFSK(dest,BIGBUF_SIZE,&hi2,&hi,&lo);
 
 		WDT_HIT();
 
-		if (bitLen>0 && lo>0){
+		if (bitLen > 0 && lo > 0){
+
 		// final loop, go over previously decoded manchester data and decode into usable tag ID
 		// 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
-						if (hi2 != 0){ //extra large HID tags
-							Dbprintf("TAG ID: %x%08x%08x (%d)",
-								 (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
-			}else {  //standard HID tags <38 bits
-							//Dbprintf("TAG ID: %x%08x (%d)",(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF); //old print cmd
-							uint8_t bitlen = 0;
-							uint32_t fc = 0;
-							uint32_t cardnum = 0;
-							if (((hi>>5)&1)==1){//if bit 38 is set then < 37 bit format is used
-								uint32_t lo2=0;
-								lo2=(((hi & 31) << 12) | (lo>>20)); //get bits 21-37 to check for format len bit
-								uint8_t idx3 = 1;
-								while(lo2>1){ //find last bit set to 1 (format len bit)
-									lo2=lo2>>1;
-									idx3++;
-								}
-								bitlen =idx3+19;  
-								fc =0;
-								cardnum=0;
-								if(bitlen==26){
-									cardnum = (lo>>1)&0xFFFF;
-									fc = (lo>>17)&0xFF;
-								}
-								if(bitlen==37){
-									cardnum = (lo>>1)&0x7FFFF;
-									fc = ((hi&0xF)<<12)|(lo>>20);
-								}
-								if(bitlen==34){
-									cardnum = (lo>>1)&0xFFFF;
-									fc= ((hi&1)<<15)|(lo>>17);
-								}
-								if(bitlen==35){
-									cardnum = (lo>>1)&0xFFFFF;
-									fc = ((hi&1)<<11)|(lo>>21);
-								}
-							}
-							else { //if bit 38 is not set then 37 bit format is used
-								bitlen= 37;
-								fc =0;
-								cardnum=0;
-								if(bitlen==37){
-									cardnum = (lo>>1)&0x7FFFF;
-									fc = ((hi&0xF)<<12)|(lo>>20);
-								}
-							}
-									//Dbprintf("TAG ID: %x%08x (%d)",
-							// (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);				
-							Dbprintf("TAG ID: %x%08x (%d) - Format Len: %dbit - FC: %d - Card: %d",
-								(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF,
-								(unsigned int) bitlen, (unsigned int) fc, (unsigned int) cardnum);
-						}
-						if (findone){
-							if (ledcontrol)	LED_A_OFF();
-							return;
+
+			if (hi2 != 0){ 
+				//extra large HID tags
+				Dbprintf("TAG ID: %x%08x%08x (%d)",
+					 (unsigned int) hi2,
+					 (unsigned int) hi,
+					 (unsigned int) lo,
+					 (unsigned int) (lo >> 1) & 0xFFFF);
+					 
+			} else {
+				//standard HID tags <38 bits
+				uint8_t bitlen = 0;
+				uint32_t fc = 0;
+				uint32_t cardnum = 0;
+
+				if ((( hi >> 5 ) & 1) ==1){//if bit 38 is set then < 37 bit format is used
+					uint32_t lo2 = 0;
+					lo2 = (((hi & 31) << 12) | (lo >> 20)); //get bits 21-37 to check for format len bit					
+					uint8_t idx3 = 1;
+					while(lo2 > 1){ //find last bit set to 1 (format len bit)
+						lo2 = lo2 >> 1;
+						idx3++;
+					}
+					bitlen =idx3 + 19;  
+					fc = 0;
+					cardnum = 0;
+					if(bitlen == 26){
+						cardnum = (lo >> 1) & 0xFFFF;
+						fc = (lo >> 17) & 0xFF;
+					}
+					if(bitlen == 37){
+						cardnum = (lo >> 1) & 0x7FFFF;
+						fc = ((hi & 0xF) << 12)|( lo >> 20);
+					}
+					if(bitlen == 34){
+						cardnum = (lo >> 1) & 0xFFFF;
+						fc = ((hi & 1) << 15) | (lo >> 17);
+					}
+					if(bitlen == 35){
+						cardnum = (lo >> 1 ) & 0xFFFFF;
+						fc = ((hi & 1) << 11 ) | ( lo >> 21);
+					}
 				}
-				// reset
-				hi2 = hi = lo = 0;
+				else { //if bit 38 is not set then 37 bit format is used
+					bitlen = 37;
+					fc = 0;
+					cardnum = 0;
+					if(bitlen == 37){
+						cardnum = ( lo >> 1) & 0x7FFFF;
+						fc = ((hi & 0xF) << 12 ) |(lo >> 20);
+					}
+				}
+				Dbprintf("TAG ID: %x%08x (%d) - Format Len: %dbit - FC: %d - Card: %d",
+					(unsigned int) hi,
+					(unsigned int) lo,
+					(unsigned int) (lo >> 1) & 0xFFFF,
+					(unsigned int) bitlen,
+					(unsigned int) fc,
+					(unsigned int) cardnum);
+			}
+			if (findone){
+				if (ledcontrol)	LED_A_OFF();
+				return;
+			}
+			// reset
+			hi2 = hi = lo = 0;
 		}
 		WDT_HIT();
-		//SpinDelay(50);
 	}	
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
@@ -818,13 +819,12 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = (uint8_t *)BigBuf;
-
-	size_t size=0; //, found=0;
-	uint32_t bitLen=0;
-	int clk=0, invert=0, errCnt=0;
-	uint64_t lo=0;
+	uint32_t bitLen = 0;
+	int clk = 0, invert = 0, errCnt  = 0;
+	uint64_t lo = 0;
+	
 	// Configure to go in 125Khz listen mode
-	LFSetupFPGAForADC(95, true);
+	LFSetupFPGAForADC(0, true);
 
 	while(!BUTTON_PRESS()) {
 
@@ -832,37 +832,33 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 		if (ledcontrol) LED_A_ON();
 
 		DoAcquisition125k_internal(-1,true);
-		size  = sizeof(BigBuf);
-    if (size < 2000) continue; 
+	
 		// FSK demodulator
-     //int askmandemod(uint8_t *BinStream,uint32_t *BitLen,int *clk, int *invert);
-    bitLen=size;
-    //Dbprintf("DEBUG: Buffer got");
-    errCnt = askmandemod(dest,&bitLen,&clk,&invert); //HIDdemodFSK(dest,size,&hi2,&hi,&lo);
-		//Dbprintf("DEBUG: ASK Got");
-		WDT_HIT();
+		bitLen = BIGBUF_SIZE;
+		errCnt = askmandemod(dest,&bitLen,&clk,&invert); 
+		if ( errCnt < 0 ) continue;
 
-		if (errCnt>=0){
-			lo = Em410xDecode(dest,bitLen);
-			//Dbprintf("DEBUG: EM GOT");
-  		//printEM410x(lo);
-  		if (lo>0){
-    		Dbprintf("EM TAG ID: %02x%08x - (%05d_%03d_%08d)",(uint32_t)(lo>>32),(uint32_t)lo,(uint32_t)(lo&0xFFFF),(uint32_t)((lo>>16LL) & 0xFF),(uint32_t)(lo & 0xFFFFFF));
-    	}
-			if (findone){
-				if (ledcontrol)	LED_A_OFF();
-				return;
-			}
-			} else {
-			//Dbprintf("DEBUG: No Tag");
-		}
 		WDT_HIT();
-		lo = 0;
-		clk=0;
-    invert=0;
-		errCnt=0;
-		size=0;
-		//SpinDelay(50);
+		
+		lo = Em410xDecode(dest,bitLen);
+		
+		if ( lo <= 0) continue;
+				
+		Dbprintf("EM TAG ID: %02x%08x - (%05d_%03d_%08d)",
+			(uint32_t)(lo >> 32),
+			(uint32_t)lo,
+			(uint32_t)(lo & 0xFFFF),
+			(uint32_t)((lo >> 16LL) & 0xFF),
+			(uint32_t)(lo & 0xFFFFFF)
+		);
+
+		if (findone){
+			if (ledcontrol)	LED_A_OFF();
+				return;
+		}
+		
+		WDT_HIT();
+		lo = clk = invert = errCnt = 0;
 	}
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
@@ -871,30 +867,27 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = (uint8_t *)BigBuf;
-	size_t size=0;
-	int idx=0;
-	uint32_t code=0, code2=0;
-  uint8_t version=0;
-  uint8_t facilitycode=0;
-  uint16_t number=0;
-	// Configure to go in 125Khz listen mode
+	int idx = 0;
+	uint32_t code = 0, code2 = 0;
+	uint8_t version = 0;
+	uint8_t facilitycode = 0;
+	uint16_t number = 0;
+
 	LFSetupFPGAForADC(0, true);
 
 	while(!BUTTON_PRESS()) {
 
 		WDT_HIT();
-		
 		if (ledcontrol) LED_A_ON();
 
-		DoAcquisition125k_internal(-1,true);
-		size  = sizeof(BigBuf);
-		//make sure buffer has data
-		if (size < 2000) continue;
-		//fskdemod and get start index
-			WDT_HIT();
-		idx = IOdemodFSK(dest,size);
-		if (idx>0){
-			//valid tag found
+		DoAcquisition125k_internal(-1, true);
+
+		idx = IOdemodFSK(dest, BIGBUF_SIZE);
+		
+		if ( idx < 0 )
+			continue;
+			
+		WDT_HIT();
 
 		//Index map
 		//0 10 20 30 40 50 60
@@ -905,34 +898,34 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		//
 		//XSF(version)facility:codeone+codetwo
 		//Handle the data
-				if(findone){ //only print binary if we are doing one
-					Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx], dest[idx+1], dest[idx+2],dest[idx+3],dest[idx+4],dest[idx+5],dest[idx+6],dest[idx+7],dest[idx+8]);
-					Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+9], dest[idx+10],dest[idx+11],dest[idx+12],dest[idx+13],dest[idx+14],dest[idx+15],dest[idx+16],dest[idx+17]);
-					Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+18],dest[idx+19],dest[idx+20],dest[idx+21],dest[idx+22],dest[idx+23],dest[idx+24],dest[idx+25],dest[idx+26]);
-					Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+27],dest[idx+28],dest[idx+29],dest[idx+30],dest[idx+31],dest[idx+32],dest[idx+33],dest[idx+34],dest[idx+35]);
-					Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+36],dest[idx+37],dest[idx+38],dest[idx+39],dest[idx+40],dest[idx+41],dest[idx+42],dest[idx+43],dest[idx+44]);
-					Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+45],dest[idx+46],dest[idx+47],dest[idx+48],dest[idx+49],dest[idx+50],dest[idx+51],dest[idx+52],dest[idx+53]);
-					Dbprintf("%d%d%d%d%d%d%d%d %d%d",dest[idx+54],dest[idx+55],dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
-				}
-				code = bytebits_to_byte(dest+idx,32);
-				code2 = bytebits_to_byte(dest+idx+32,32);
-	    version = bytebits_to_byte(dest+idx+27,8); //14,4
-	    facilitycode = bytebits_to_byte(dest+idx+18,8) ;
-	    number = (bytebits_to_byte(dest+idx+36,8)<<8)|(bytebits_to_byte(dest+idx+45,8)); //36,9
 
-	    Dbprintf("XSF(%02d)%02x:%05d (%08x%08x)",version,facilitycode,number,code,code2);			
-				// if we're only looking for one tag
-				if (findone){
-					if (ledcontrol) LED_A_OFF();
-				return;
-			}
-			code=code2=0;
-			version=facilitycode=0;
-			number=0;
-			idx=0;
+		if(findone){ //only print binary if we are doing one
+			Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx], dest[idx+1], dest[idx+2],dest[idx+3],dest[idx+4],dest[idx+5],dest[idx+6],dest[idx+7],dest[idx+8]);
+			Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+9], dest[idx+10],dest[idx+11],dest[idx+12],dest[idx+13],dest[idx+14],dest[idx+15],dest[idx+16],dest[idx+17]);
+			Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+18],dest[idx+19],dest[idx+20],dest[idx+21],dest[idx+22],dest[idx+23],dest[idx+24],dest[idx+25],dest[idx+26]);
+			Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+27],dest[idx+28],dest[idx+29],dest[idx+30],dest[idx+31],dest[idx+32],dest[idx+33],dest[idx+34],dest[idx+35]);
+			Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+36],dest[idx+37],dest[idx+38],dest[idx+39],dest[idx+40],dest[idx+41],dest[idx+42],dest[idx+43],dest[idx+44]);
+			Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+45],dest[idx+46],dest[idx+47],dest[idx+48],dest[idx+49],dest[idx+50],dest[idx+51],dest[idx+52],dest[idx+53]);
+			Dbprintf("%d%d%d%d%d%d%d%d %d%d",dest[idx+54],dest[idx+55],dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
 		}
-		WDT_HIT();
+
+		code = bytebits_to_byte(dest+idx,32);
+		code2 = bytebits_to_byte(dest+idx+32,32);
+		version = bytebits_to_byte(dest+idx+27,8); //14,4
+		facilitycode = bytebits_to_byte(dest+idx+18,8) ;
+		number = (bytebits_to_byte(dest+idx+36,8)<<8)|(bytebits_to_byte(dest+idx+45,8)); //36,9
+
+		Dbprintf("XSF(%02d)%02x:%05d (%08x%08x)", version, facilitycode, number, code, code2);			
+		if (findone){
+			if (ledcontrol) LED_A_OFF();
+				return;
+		}
+		code = code2 = 0;
+		version = facilitycode = 0;
+		number = 0;
+		idx = 0;
 	}
+
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
 }

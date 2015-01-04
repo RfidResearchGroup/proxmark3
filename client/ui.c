@@ -20,13 +20,14 @@
 #include "ui.h"
 #include "cmdmain.h"
 #include "cmddata.h"
+#include "graph.h"
 //#include <liquid/liquid.h>
 #define M_PI 3.14159265358979323846264338327
 
 double CursorScaleFactor;
 int PlotGridX, PlotGridY, PlotGridXdefault= 64, PlotGridYdefault= 64;
 int offline;
-int flushAfterWrite = 0;  //buzzy
+int flushAfterWrite = 0;
 extern pthread_mutex_t print_lock;
 
 static char *logfilename = "proxmark3.log";
@@ -37,13 +38,13 @@ void PrintAndLog(char *fmt, ...)
 	int saved_point;
 	va_list argptr, argptr2;
 	static FILE *logfile = NULL;
-	static int logging=1;
+	static int logging = 1;
 
 	// lock this section to avoid interlacing prints from different threats
 	pthread_mutex_lock(&print_lock);
   
 	if (logging && !logfile) {
-		logfile=fopen(logfilename, "a");
+		logfile = fopen(logfilename, "a");
 		if (!logfile) {
 			fprintf(stderr, "Can't open logfile, logging disabled!\n");
 			logging=0;
@@ -82,8 +83,7 @@ void PrintAndLog(char *fmt, ...)
 	}
 	va_end(argptr2);
 
-	if (flushAfterWrite == 1)  //buzzy
-	{
+	if (flushAfterWrite == 1) {
 		fflush(NULL);
 	}
 	//release lock
@@ -98,74 +98,35 @@ void SetLogFilename(char *fn)
 int manchester_decode( int * data, const size_t len, uint8_t * dataout,  size_t dataoutlen){
 	
 	int bitlength = 0;
-	int i, clock, high, low, startindex;
+	int clock, high, low, startindex;
 	low = startindex = 0;
 	high = 1;
 	uint8_t * bitStream =  (uint8_t* ) malloc(sizeof(uint8_t) * dataoutlen);	
 	memset(bitStream, 0x00, dataoutlen);	
 	
 	/* Detect high and lows */
-	for (i = 0; i < len; i++) {
-		if (data[i] > high)
-			high = data[i];
-		else if (data[i] < low)
-			low = data[i];
-	}
-	
+	DetectHighLowInGraph(&high, &low, TRUE); 
+
 	/* get clock */
-	clock = GetT55x7Clock( data, len, high );	
+	clock = GetClock("", 0);	
+
 	startindex = DetectFirstTransition(data, len, high);
   
-	//PrintAndLog(" Clock       : %d", clock);
-
 	if (high != 1)
+		// decode "raw"
 		bitlength = ManchesterConvertFrom255(data, len, bitStream, dataoutlen, high, low, clock, startindex);
 	else
-		bitlength= ManchesterConvertFrom1(data, len, bitStream, dataoutlen, clock, startindex);
+		// decode manchester
+		bitlength = ManchesterConvertFrom1(data, len, bitStream, dataoutlen, clock, startindex);
 
 	memcpy(dataout, bitStream, bitlength);
 	free(bitStream);
 	return bitlength;
 }
-
- int GetT55x7Clock( const int * data, const size_t len, int peak ){ 
- 
- 	int i,lastpeak,clock;
-	clock = 0xFFFF;
-	lastpeak = 0;
-	
-	/* Detect peak if we don't have one */
-	if (!peak) {
-		for (i = 0; i < len; ++i) {
-			if (data[i] > peak) {
-				peak = data[i];
-			}
-		}
-	}
-	
-	for (i = 1; i < len; ++i) {
-		/* if this is the beginning of a peak */
-		if ( data[i-1] != data[i] &&  data[i] == peak) {
-		  /* find lowest difference between peaks */
-			if (lastpeak && i - lastpeak < clock)
-				clock = i - lastpeak;
-			lastpeak = i;
-		}
-	}
-	
-	// When detected clock is 31 or 33 then then return 
-	int clockmod = clock%8;
-	if ( clockmod == 0) return clock;
-	
-	if ( clockmod == 7 ) clock += 1;
-	else if ( clockmod == 1 ) clock -= 1;
-	
-	return clock;
- }
  
  int DetectFirstTransition(const int * data, const size_t len, int threshold){
 
-	int i =0;
+	int i = 0;
 	/* now look for the first threshold */
 	for (; i < len; ++i) {
 		if (data[i] == threshold) {
