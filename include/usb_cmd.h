@@ -167,7 +167,8 @@ typedef struct {
 
 
 //Iclass reader flags
-#define FLAG_ICLASS_READER_ONLY_ONCE 0x01
+#define FLAG_ICLASS_READER_ONLY_ONCE    0x01
+#define FLAG_ICLASS_READER_GET_CC       0x02
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
 /* Whether a bootloader that understands the common_area is present */

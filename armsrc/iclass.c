@@ -1474,100 +1474,133 @@ void setupIclassReader()
 
 }
 
+size_t sendCmdGetResponseWithRetries(uint8_t* command, size_t cmdsize, uint8_t* resp, uint8_t expected_size, uint8_t retries)
+{
+	while(retries-- > 0)
+	{
+		ReaderTransmitIClass(command, cmdsize);
+		if(expected_size == ReaderReceiveIClass(resp)){
+			return 0;
+		}
+	}
+	return 1;//Error
+}
+
+/**
+ * @brief Talks to an iclass tag, sends the commands to get CSN and CC.
+ * @param card_data where the CSN and CC are stored for return
+ * @return 0 = fail
+ *         1 = Got CSN
+ *         2 = Got CSN and CC
+ */
+uint8_t handshakeIclassTag(uint8_t *card_data)
+{
+	static uint8_t act_all[]     = { 0x0a };
+	static uint8_t identify[]    = { 0x0c };
+	static uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	static uint8_t readcheck_cc[]= { 0x88, 0x02 };
+	uint8_t *resp = (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);
+
+	uint8_t read_status = 0;
+
+	// Send act_all
+	ReaderTransmitIClass(act_all, 1);
+	// Card present?
+	if(!ReaderReceiveIClass(resp)) return read_status;//Fail
+	//Send Identify
+	ReaderTransmitIClass(identify, 1);
+	//We expect a 10-byte response here, 8 byte anticollision-CSN and 2 byte CRC
+	uint8_t len  = ReaderReceiveIClass(resp);
+	if(len != 10) return read_status;//Fail
+
+	//Copy the Anti-collision CSN to our select-packet
+	memcpy(&select[1],resp,8);
+	//Select the card
+	ReaderTransmitIClass(select, sizeof(select));
+	//We expect a 10-byte response here, 8 byte CSN and 2 byte CRC
+	len  = ReaderReceiveIClass(resp);
+	if(len != 10) return read_status;//Fail
+
+	//Success - level 1, we got CSN
+	//Save CSN in response data
+	memcpy(card_data,resp,8);
+
+	//Flag that we got to at least stage 1, read CSN
+	read_status = 1;
+
+	// Card selected, now read e-purse (cc)
+	ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
+	if(ReaderReceiveIClass(resp) == 8) {
+		//Save CC (e-purse) in response data
+		memcpy(card_data+8,resp,8);
+
+		//Got both
+		read_status = 2;
+	}
+
+	return read_status;
+}
+
 // Reader iClass Anticollission
 void ReaderIClass(uint8_t arg0) {
-    uint8_t act_all[]     = { 0x0a };
-    uint8_t identify[]    = { 0x0c };
-    uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    uint8_t readcheck_cc[]= { 0x88, 0x02 };
 
     uint8_t card_data[24]={0};
     uint8_t last_csn[8]={0};
-
-    uint8_t *resp = (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);
 	
     int read_status= 0;
     bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;
+	bool get_cc = arg0 & FLAG_ICLASS_READER_GET_CC;
 
     setupIclassReader();
 
     size_t datasize = 0;
     while(!BUTTON_PRESS())
     {
-        WDT_HIT();
 
-        // Send act_all
-        ReaderTransmitIClass(act_all, 1);
-        // Card present?
-        if(ReaderReceiveIClass(resp)) {
+		if(traceLen > TRACE_SIZE) {
+			DbpString("Trace full");
+			break;
+		}
+		WDT_HIT();
 
-            ReaderTransmitIClass(identify, 1);
+		read_status = handshakeIclassTag(card_data);
 
-            if(ReaderReceiveIClass(resp) == 10) {
-                //Copy the Anti-collision CSN to our select-packet
-                memcpy(&select[1],resp,8);
-                //Dbprintf("Anti-collision CSN: %02x %02x %02x %02x %02x %02x %02x %02x",resp[0], resp[1], resp[2],
-                //        resp[3], resp[4], resp[5],
-                //        resp[6], resp[7]);
-                //Select the card
-                ReaderTransmitIClass(select, sizeof(select));
+		if(read_status == 0) continue;
+		if(read_status == 1) datasize = 8;
+		if(read_status == 2) datasize = 16;
 
-                if(ReaderReceiveIClass(resp) == 10) {
-                    //Save CSN in response data
-                    memcpy(card_data,resp,8);
-                    datasize += 8;
-                    //Flag that we got to at least stage 1, read CSN
-                    read_status = 1;
+		LED_B_ON();
+		//Send back to client, but don't bother if we already sent this
+		if(memcmp(last_csn, card_data, 8) != 0)
+		{
 
-                    // Card selected
-                    //Dbprintf("Readcheck on Sector 2");
-                    ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
-                    if(ReaderReceiveIClass(resp) == 8) {
-                        //Save CC (e-purse) in response data
-                        memcpy(card_data+8,resp,8);
-                        datasize += 8;
-                        //Got both
-                        read_status = 2;
-                    }
-
-                    LED_B_ON();
-                    //Send back to client, but don't bother if we already sent this
-                    if(memcmp(last_csn, card_data, 8) != 0)
-                        cmd_send(CMD_ACK,read_status,0,0,card_data,datasize);
-
-                    //Save that we already sent this....
-                    if(read_status ==  2)
-                        memcpy(last_csn, card_data, 8);
-
-                    LED_B_OFF();
-
-                    if(abort_after_read) break;
-                }
-            }
-        }
-
-        if(traceLen > TRACE_SIZE) {
-            DbpString("Trace full");
-            break;
-        }
+			if(!get_cc || (get_cc && read_status == 2))
+			{
+				cmd_send(CMD_ACK,read_status,0,0,card_data,datasize);
+				if(abort_after_read) {
+					LED_A_OFF();
+					return;
+				}
+				//Save that we already sent this....
+				memcpy(last_csn, card_data, 8);
+			}
+			//If 'get_cc' was specified and we didn't get a CC, we'll just keep trying...
+		}
+		LED_B_OFF();
     }
-
     cmd_send(CMD_ACK,0,0,0,card_data, 0);
-
     LED_A_OFF();
 }
 
 void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
-	uint8_t act_all[]     = { 0x0a };
-	uint8_t identify[]    = { 0x0c };
-	uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	uint8_t readcheck_cc[]= { 0x88, 0x02 };
+
+	uint8_t card_data[24]={0};
+
 	uint8_t check[]       = { 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	uint8_t read[]        = { 0x0c, 0x00, 0x00, 0x00 };
 	
     uint16_t crc = 0;
 	uint8_t cardsize=0;
-	bool read_success=false;
 	uint8_t mem=0;
 	
 	static struct memory_t{
@@ -1583,102 +1616,73 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
     setupIclassReader();
 
 
-	for(int i=0;i<1;i++) {
+	while(!BUTTON_PRESS()) {
 	
 		if(traceLen > TRACE_SIZE) {
 			DbpString("Trace full");
 			break;
 		}
 		
-		if (BUTTON_PRESS()) break;
 
-		// Send act_all
-		ReaderTransmitIClass(act_all, 1);
-		// Card present?
-		if(ReaderReceiveIClass(resp)) {
-			ReaderTransmitIClass(identify, 1);
-			if(ReaderReceiveIClass(resp) == 10) {
-				// Select card          
-				memcpy(&select[1],resp,8);
-				ReaderTransmitIClass(select, sizeof(select));
+		uint8_t read_status = handshakeIclassTag(card_data);
+		if(read_status < 2) continue;
 
-				if(ReaderReceiveIClass(resp) == 10) {
-					Dbprintf("     Selected CSN: %02x %02x %02x %02x %02x %02x %02x %02x",
-					resp[0], resp[1], resp[2],
-					resp[3], resp[4], resp[5],
-					resp[6], resp[7]);
-				}
-				// Card selected
-				Dbprintf("Readcheck on Sector 2");
-				ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
-				if(ReaderReceiveIClass(resp) == 8) {
-				   Dbprintf("     CC: %02x %02x %02x %02x %02x %02x %02x %02x",
-					resp[0], resp[1], resp[2],
-					resp[3], resp[4], resp[5],
-					resp[6], resp[7]);
-				}else return;
-				Dbprintf("Authenticate");
-				//for now replay captured auth (as cc not updated)
-				memcpy(check+5,MAC,4);
-                //Dbprintf("     AA: %02x %02x %02x %02x",
-                //	check[5], check[6], check[7],check[8]);
-				ReaderTransmitIClass(check, sizeof(check));
-				if(ReaderReceiveIClass(resp) == 4) {
-				   Dbprintf("     AR: %02x %02x %02x %02x",
-					resp[0], resp[1], resp[2],resp[3]);
-				}else {
-				  Dbprintf("Error: Authentication Fail!");
-				  return;
-				}
-				Dbprintf("Dump Contents");
-				//first get configuration block
-				read_success=false;
-				read[1]=1;
-				uint8_t *blockno=&read[1];
-				crc = iclass_crc16((char *)blockno,1);
-				read[2] = crc >> 8;
-				read[3] = crc & 0xff;
-				while(!read_success){
-				      ReaderTransmitIClass(read, sizeof(read));
-				      if(ReaderReceiveIClass(resp) == 10) {
-					 read_success=true;
-					 mem=resp[5];
-					 memory.k16= (mem & 0x80);
-					 memory.book= (mem & 0x20);
-					 memory.k2= (mem & 0x8);
-					 memory.lockauth= (mem & 0x2);
-					 memory.keyaccess= (mem & 0x1);
+		//for now replay captured auth (as cc not updated)
+		memcpy(check+5,MAC,4);
 
-				      }
-				}
-				if (memory.k16){
-				  cardsize=255;
-				}else cardsize=32;
-				//then loop around remaining blocks
-				for(uint8_t j=0; j<cardsize; j++){
-				    read_success=false;
-				    uint8_t *blockno=&j;
-				    //crc_data[0]=j;
-				    read[1]=j;
-				    crc = iclass_crc16((char *)blockno,1);
-				    read[2] = crc >> 8;
-				    read[3] = crc & 0xff;
-				    while(!read_success){
-				      ReaderTransmitIClass(read, sizeof(read));
-				      if(ReaderReceiveIClass(resp) == 10) {
-					 read_success=true;
-				         Dbprintf("     %02x: %02x %02x %02x %02x %02x %02x %02x %02x",
-					  j, resp[0], resp[1], resp[2],
-					  resp[3], resp[4], resp[5],
-					  resp[6], resp[7]);
-				      }
-				    }
-				}
+		if(sendCmdGetResponseWithRetries(check, sizeof(check),resp, 4, 5))
+		{
+			Dbprintf("Error: Authentication Fail!");
+			continue;
+		}
+
+		//first get configuration block
+		read[1]=1;
+		uint8_t *blockno=&read[1];
+		crc = iclass_crc16((char *)blockno,1);
+		read[2] = crc >> 8;
+		read[3] = crc & 0xff;
+
+		if(sendCmdGetResponseWithRetries(read, sizeof(read),resp, 10, 10))
+		{
+			Dbprintf("Dump config block failed");
+			continue;
+		}
+
+		mem=resp[5];
+		memory.k16= (mem & 0x80);
+		memory.book= (mem & 0x20);
+		memory.k2= (mem & 0x8);
+		memory.lockauth= (mem & 0x2);
+		memory.keyaccess= (mem & 0x1);
+
+		cardsize = memory.k16 ? 255 : 32;
+		WDT_HIT();
+
+		//then loop around remaining blocks
+		for(char block=0; block < cardsize; block++){
+
+			read[1]= block;
+			crc = iclass_crc16(&block ,1);
+			read[2] = crc >> 8;
+			read[3] = crc & 0xff;
+
+			if(!sendCmdGetResponseWithRetries(read, sizeof(read), resp, 10, 10))
+			{
+				Dbprintf("     %02x: %02x %02x %02x %02x %02x %02x %02x %02x",
+						 block, resp[0], resp[1], resp[2],
+						resp[3], resp[4], resp[5],
+						resp[6], resp[7]);
+
+			}else{
+				Dbprintf("Failed to dump block %d", block);
+
 			}
 		}
+		//If we got here, let's break
+		break;
 		WDT_HIT();
 	}
-	
 	LED_A_OFF();
 }
 

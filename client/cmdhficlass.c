@@ -42,19 +42,38 @@ int xorbits_8(uint8_t val)
     return res & 1;
 }
 
+#define ICLASS_CMD_ACTALL 0x0A
+#define ICLASS_CMD_IDENTIFY 0x0C
+#define ICLASS_CMD_READ 0x0C
+
+#define ICLASS_CMD_SELECT 0x81
+#define ICLASS_CMD_PAGESEL 0x84
+#define ICLASS_CMD_READCHECK 0x88
+#define ICLASS_CMD_CHECK 0x05
+#define ICLASS_CMD_SOF 0x0F
+#define ICLASS_CMD_HALT 0x00
+
+
 void explain(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 {
 
+	if(cmdsize > 1 && cmd[0] == ICLASS_CMD_READ)
+	{
+		  snprintf(exp,size,"READ(%d)",cmd[1]);
+		  return;
+	}
+
     switch(cmd[0])
     {
-    case 0x0a: snprintf(exp,size,"WUP"); break;
-    case 0x0f: snprintf(exp,size,"SOF"); break;
-    case 0x0c: snprintf(exp,size,"Read config"); break;
-    case 0x81: snprintf(exp,size,"SELECT"); break;
-    case 0x88: snprintf(exp,size,"Read E-purse (CC)"); break;
-    case 0x05: snprintf(exp,size,"Reader challenge"); break;
-    case 0x00: snprintf(exp,size,"End"); break;
-    default: snprintf(exp,size,"?"); break;
+	case ICLASS_CMD_ACTALL:            snprintf(exp,size,"ACTALL"); break;
+	case ICLASS_CMD_IDENTIFY:    snprintf(exp,size,"IDENTIFY"); break;
+	case ICLASS_CMD_SELECT:         snprintf(exp,size,"SELECT"); break;
+	case ICLASS_CMD_PAGESEL:         snprintf(exp,size,"PAGESEL"); break;
+	case ICLASS_CMD_READCHECK:         snprintf(exp,size,"READCHECK"); break;
+	case ICLASS_CMD_CHECK:         snprintf(exp,size,"CHECK"); break;
+	case ICLASS_CMD_SOF:            snprintf(exp,size,"SOF"); break;
+	case ICLASS_CMD_HALT:            snprintf(exp,size,"HALT"); break;
+	default:                        snprintf(exp,size,"?"); break;
     }
     return;
 }
@@ -447,7 +466,7 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 
 
   UsbCommand c = {CMD_READER_ICLASS, {0}};
-  c.arg[0] = FLAG_ICLASS_READER_ONLY_ONCE;
+  c.arg[0] = FLAG_ICLASS_READER_ONLY_ONCE| FLAG_ICLASS_READER_GET_CC;
   if(!fake_dummy_test)   
     SendCommand(&c);
   
