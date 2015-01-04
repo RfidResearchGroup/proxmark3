@@ -220,12 +220,12 @@ int Cmdaskmandemod(const char *Cmd)
 	PrintAndLog("ASK/Manchester decoded bitstream:");
 
 	printBitStream(bits, len);
-	uint64_t lo = Em410xDecode(bits, len);
 
-	if (lo > 0){
-		SetGraphBuf(bits,len); 
-		PrintAndLog("EM410x pattern found: ");
-		printEM410x(lo);
+	uint64_t tagid = Em410xDecode(bits, len);
+
+	if (tagid > 0){
+		SetGraphBuf(bits, len); 
+		printEM410x(tagid);
 		return 1;
 	}
 	return 0;

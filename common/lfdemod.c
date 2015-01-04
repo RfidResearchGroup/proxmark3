@@ -538,8 +538,6 @@ int fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t 
 	size = fsk_wave_demod(dest, size, fchigh, fclow);
 	if ( size > 0 )
 		size = aggregate_bits(dest, size, rfLen, 192, invert, fchigh, fclow);
-	else
-		return -1;
 	return size;
 }
 

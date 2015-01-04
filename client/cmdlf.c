@@ -48,385 +48,386 @@ int CmdLFCommandRead(const char *Cmd)
 
 int CmdFlexdemod(const char *Cmd)
 {
-  int i;
-  for (i = 0; i < GraphTraceLen; ++i) {
-    if (GraphBuffer[i] < 0) {
-      GraphBuffer[i] = -1;
-    } else {
-      GraphBuffer[i] = 1;
-    }
-  }
+	int i;
+	for (i = 0; i < GraphTraceLen; ++i) {
+		if (GraphBuffer[i] < 0) {
+			GraphBuffer[i] = -1;
+		} else {
+			GraphBuffer[i] = 1;
+		}
+	}
 
-#define LONG_WAIT 100
-  int start;
-  for (start = 0; start < GraphTraceLen - LONG_WAIT; start++) {
-    int first = GraphBuffer[start];
-    for (i = start; i < start + LONG_WAIT; i++) {
-      if (GraphBuffer[i] != first) {
-        break;
-      }
-    }
-    if (i == (start + LONG_WAIT)) {
-      break;
-    }
-  }
-  if (start == GraphTraceLen - LONG_WAIT) {
-    PrintAndLog("nothing to wait for");
-    return 0;
-  }
+	#define LONG_WAIT 100
+	int start;
+	for (start = 0; start < GraphTraceLen - LONG_WAIT; start++) {
+		int first = GraphBuffer[start];
+		for (i = start; i < start + LONG_WAIT; i++) {
+			if (GraphBuffer[i] != first) {
+				break;
+			}
+		}
+		if (i == (start + LONG_WAIT)) {
+		break;
+		}
+	}
+	if (start == GraphTraceLen - LONG_WAIT) {
+		//PrintAndLog("nothing to wait for");
+		return 0;
+	}
 
-  GraphBuffer[start] = 2;
-  GraphBuffer[start+1] = -2;
+	GraphBuffer[start] = 2;
+	GraphBuffer[start+1] = -2;
+	uint8_t bits[64] = {0x00};
 
-  uint8_t bits[64];
+	int bit, sum;
+	i = start;
+	for (bit = 0; bit < 64; bit++) {
+		sum = 0;
+		for (int j = 0; j < 16; j++) {
+			sum += GraphBuffer[i++];
+		}
 
-  int bit;
-  i = start;
-  for (bit = 0; bit < 64; bit++) {
-    int j;
-    int sum = 0;
-    for (j = 0; j < 16; j++) {
-      sum += GraphBuffer[i++];
-    }
-    if (sum > 0) {
-      bits[bit] = 1;
-    } else {
-      bits[bit] = 0;
-    }
-    PrintAndLog("bit %d sum %d", bit, sum);
-  }
+		bits[bit] = (sum > 0) ? 1 : 0;
 
-  for (bit = 0; bit < 64; bit++) {
-    int j;
-    int sum = 0;
-    for (j = 0; j < 16; j++) {
-      sum += GraphBuffer[i++];
-    }
-    if (sum > 0 && bits[bit] != 1) {
-      PrintAndLog("oops1 at %d", bit);
-    }
-    if (sum < 0 && bits[bit] != 0) {
-      PrintAndLog("oops2 at %d", bit);
-    }
-  }
+		PrintAndLog("bit %d sum %d", bit, sum);
+	}
 
-  GraphTraceLen = 32*64;
-  i = 0;
-  int phase = 0;
-  for (bit = 0; bit < 64; bit++) {
-    if (bits[bit] == 0) {
-      phase = 0;
-    } else {
-      phase = 1;
-    }
-    int j;
-    for (j = 0; j < 32; j++) {
-      GraphBuffer[i++] = phase;
-      phase = !phase;
-    }
-  }
+	for (bit = 0; bit < 64; bit++) {
+		int j;
+		int sum = 0;
+		for (j = 0; j < 16; j++) {
+			sum += GraphBuffer[i++];
+		}
+		if (sum > 0 && bits[bit] != 1) {
+			PrintAndLog("oops1 at %d", bit);
+		}
+		if (sum < 0 && bits[bit] != 0) {
+			PrintAndLog("oops2 at %d", bit);
+		}
+	}
 
-  RepaintGraphWindow();
-  return 0;
+	// HACK writing back to graphbuffer.
+	GraphTraceLen = 32*64;
+	i = 0;
+	int phase = 0;
+	for (bit = 0; bit < 64; bit++) {
+	
+		phase = (bits[bit] == 0) ? 0 : 1;
+		
+		int j;
+		for (j = 0; j < 32; j++) {
+			GraphBuffer[i++] = phase;
+			phase = !phase;
+		}
+	}
+
+	RepaintGraphWindow();
+	return 0;
 }
   
 int CmdIndalaDemod(const char *Cmd)
 {
-  // Usage: recover 64bit UID by default, specify "224" as arg to recover a 224bit UID
+	// Usage: recover 64bit UID by default, specify "224" as arg to recover a 224bit UID
 
-  int state = -1;
-  int count = 0;
-  int i, j;
-  // worst case with GraphTraceLen=64000 is < 4096
-  // under normal conditions it's < 2048
-  uint8_t rawbits[4096];
-  int rawbit = 0;
-  int worst = 0, worstPos = 0;
-  PrintAndLog("Expecting a bit less than %d raw bits", GraphTraceLen / 32);
-  for (i = 0; i < GraphTraceLen-1; i += 2) {
-    count += 1;
-    if ((GraphBuffer[i] > GraphBuffer[i + 1]) && (state != 1)) {
-      if (state == 0) {
-        for (j = 0; j <  count - 8; j += 16) {
-          rawbits[rawbit++] = 0;
-        }
-        if ((abs(count - j)) > worst) {
-          worst = abs(count - j);
-          worstPos = i;
-        }
-      }
-      state = 1;
-      count = 0;
-    } else if ((GraphBuffer[i] < GraphBuffer[i + 1]) && (state != 0)) {
-      if (state == 1) {
-        for (j = 0; j <  count - 8; j += 16) {
-          rawbits[rawbit++] = 1;
-        }
-        if ((abs(count - j)) > worst) {
-          worst = abs(count - j);
-          worstPos = i;
-        }
-      }
-      state = 0;
-      count = 0;
-    }
-  }
-  if (rawbit>0){
-    PrintAndLog("Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
-  PrintAndLog("worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
-  } else return 0;
-  // Finding the start of a UID
-  int uidlen, long_wait;
-  if (strcmp(Cmd, "224") == 0) {
-    uidlen = 224;
-    long_wait = 30;
-  } else {
-    uidlen = 64;
-    long_wait = 29;
-  }
-  int start;
-  int first = 0;
-  for (start = 0; start <= rawbit - uidlen; start++) {
-    first = rawbits[start];
-    for (i = start; i < start + long_wait; i++) {
-      if (rawbits[i] != first) {
-        break;
-      }
-    }
-    if (i == (start + long_wait)) {
-      break;
-    }
-  }
-  if (start == rawbit - uidlen + 1) {
-    PrintAndLog("nothing to wait for");
-    return 0;
-  }
+	int state = -1;
+	int count = 0;
+	int i, j;
 
-  // Inverting signal if needed
-  if (first == 1) {
-    for (i = start; i < rawbit; i++) {
-      rawbits[i] = !rawbits[i];
-    }
-  }
+	// worst case with GraphTraceLen=64000 is < 4096
+	// under normal conditions it's < 2048
 
-  // Dumping UID
-  uint8_t bits[224];
-  char showbits[225];
-  showbits[uidlen]='\0';
-  int bit;
-  i = start;
-  int times = 0;
-  if (uidlen > rawbit) {
-    PrintAndLog("Warning: not enough raw bits to get a full UID");
-    for (bit = 0; bit < rawbit; bit++) {
-      bits[bit] = rawbits[i++];
-      // As we cannot know the parity, let's use "." and "/"
-      showbits[bit] = '.' + bits[bit];
-    }
-    showbits[bit+1]='\0';
-    PrintAndLog("Partial UID=%s", showbits);
-    return 0;
-  } else {
-    for (bit = 0; bit < uidlen; bit++) {
-      bits[bit] = rawbits[i++];
-      showbits[bit] = '0' + bits[bit];
-    }
-    times = 1;
-  }
+	uint8_t rawbits[4096];
+	int rawbit = 0;
+	int worst = 0, worstPos = 0;
   
-  //convert UID to HEX
-  uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
-  int idx;
-  uid1=0;
-  uid2=0;
-  if (uidlen==64){
-    for( idx=0; idx<64; idx++) {
-        if (showbits[idx] == '0') {
-        uid1=(uid1<<1)|(uid2>>31);
-        uid2=(uid2<<1)|0;
-        } else {
-        uid1=(uid1<<1)|(uid2>>31);
-        uid2=(uid2<<1)|1;
-        } 
-      }
-    PrintAndLog("UID=%s (%x%08x)", showbits, uid1, uid2);
-  }
-  else {
-    uid3=0;
-    uid4=0;
-    uid5=0;
-    uid6=0;
-    uid7=0;
-    for( idx=0; idx<224; idx++) {
-        uid1=(uid1<<1)|(uid2>>31);
-        uid2=(uid2<<1)|(uid3>>31);
-        uid3=(uid3<<1)|(uid4>>31);
-        uid4=(uid4<<1)|(uid5>>31);
-        uid5=(uid5<<1)|(uid6>>31);
-        uid6=(uid6<<1)|(uid7>>31);
-        if (showbits[idx] == '0') uid7=(uid7<<1)|0;
-        else uid7=(uid7<<1)|1;
-      }
-    PrintAndLog("UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
-  }
+	PrintAndLog("Expecting a bit less than %d raw bits", GraphTraceLen / 32);
+  
+	for (i = 0; i < GraphTraceLen-1; i += 2) {
+		count += 1;
+		if ((GraphBuffer[i] > GraphBuffer[i + 1]) && (state != 1)) {
+			if (state == 0) {
+				for (j = 0; j <  count - 8; j += 16) {
+					rawbits[rawbit++] = 0;
+				}
+				if ((abs(count - j)) > worst) {
+					worst = abs(count - j);
+					worstPos = i;
+				}
+			}
+			state = 1;
+			count = 0;
+			} else if ((GraphBuffer[i] < GraphBuffer[i + 1]) && (state != 0)) {
+				if (state == 1) {
+					for (j = 0; j <  count - 8; j += 16) {
+						rawbits[rawbit++] = 1;
+					}
+					if ((abs(count - j)) > worst) {
+						worst = abs(count - j);
+						worstPos = i;
+					}
+				}
+				state = 0;
+				count = 0;
+			}
+	}
+  
+	if (rawbit>0){
+		PrintAndLog("Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
+		PrintAndLog("worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
+	} else {
+		return 0;
+	}
 
-  // Checking UID against next occurrences
-  for (; i + uidlen <= rawbit;) {
-    int failed = 0;
-    for (bit = 0; bit < uidlen; bit++) {
-      if (bits[bit] != rawbits[i++]) {
-        failed = 1;
-        break;
-      }
-    }
-    if (failed == 1) {
-      break;
-    }
-    times += 1;
-  }
-  PrintAndLog("Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
+	// Finding the start of a UID
+	int uidlen, long_wait;
+	if (strcmp(Cmd, "224") == 0) {
+		uidlen = 224;
+		long_wait = 30;
+	} else {
+		uidlen = 64;
+		long_wait = 29;
+	}
 
-  // Remodulating for tag cloning
-  GraphTraceLen = 32*uidlen;
-  i = 0;
-  int phase = 0;
-  for (bit = 0; bit < uidlen; bit++) {
-    if (bits[bit] == 0) {
-      phase = 0;
-    } else {
-      phase = 1;
-    }
-    int j;
-    for (j = 0; j < 32; j++) {
-      GraphBuffer[i++] = phase;
-      phase = !phase;
-    }
-  }
+	int start;
+	int first = 0;
+	for (start = 0; start <= rawbit - uidlen; start++) {
+		first = rawbits[start];
+		for (i = start; i < start + long_wait; i++) {
+			if (rawbits[i] != first) {
+				break;
+			}
+		}
+		if (i == (start + long_wait)) {
+			break;
+		}
+	}
+  
+	if (start == rawbit - uidlen + 1) {
+		//PrintAndLog("nothing to wait for");
+		return 0;
+	}
 
-  RepaintGraphWindow();
-  return 1;
+	// Inverting signal if needed
+	if (first == 1) {
+		for (i = start; i < rawbit; i++) {
+			rawbits[i] = !rawbits[i];
+		}
+	}
+
+	// Dumping UID
+	uint8_t bits[224] = {0x00};
+	char showbits[225] = {0x00};
+	int bit;
+	i = start;
+	int times = 0;
+	
+	if (uidlen > rawbit) {
+		PrintAndLog("Warning: not enough raw bits to get a full UID");
+		for (bit = 0; bit < rawbit; bit++) {
+			bits[bit] = rawbits[i++];
+			// As we cannot know the parity, let's use "." and "/"
+			showbits[bit] = '.' + bits[bit];
+		}
+		showbits[bit+1]='\0';
+		PrintAndLog("Partial UID=%s", showbits);
+		return 0;
+	} else {
+		for (bit = 0; bit < uidlen; bit++) {
+			bits[bit] = rawbits[i++];
+			showbits[bit] = '0' + bits[bit];
+		}
+		times = 1;
+	}
+  
+	//convert UID to HEX
+	uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
+	int idx;
+	uid1 = uid2 = 0;
+	
+	if (uidlen == 64){
+		for( idx=0; idx<64; idx++) {
+			if (showbits[idx] == '0') {
+				uid1 = (uid1<<1) | (uid2>>31);
+				uid2 = (uid2<<1) | 0;
+			} else {
+				uid1 = (uid1<<1) | (uid2>>31);
+				uid2 = (uid2<<1) | 1;
+			}
+		}
+		PrintAndLog("UID=%s (%x%08x)", showbits, uid1, uid2);
+	}
+	else {
+		uid3 = uid4 = uid5 = uid6 = uid7 = 0;
+
+		for( idx=0; idx<224; idx++) {
+			uid1 = (uid1<<1) | (uid2>>31);
+			uid2 = (uid2<<1) | (uid3>>31);
+			uid3 = (uid3<<1) | (uid4>>31);
+			uid4 = (uid4<<1) | (uid5>>31);
+			uid5 = (uid5<<1) | (uid6>>31);
+			uid6 = (uid6<<1) | (uid7>>31);
+			
+			if (showbits[idx] == '0') 
+				uid7 = (uid7<<1) | 0;
+			else 
+				uid7 = (uid7<<1) | 1;
+		}
+		PrintAndLog("UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+	}
+
+	// Checking UID against next occurrences
+	int failed = 0;
+	for (; i + uidlen <= rawbit;) {
+		failed = 0;
+		for (bit = 0; bit < uidlen; bit++) {
+			if (bits[bit] != rawbits[i++]) {
+				failed = 1;
+				break;
+			}
+		}
+		if (failed == 1) {
+			break;
+		}
+		times += 1;
+	}
+
+	PrintAndLog("Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
+
+	// Remodulating for tag cloning
+	// HACK: 2015-01-04 this will have an impact on our new way of seening lf commands (demod) 
+	// since this changes graphbuffer data.
+	GraphTraceLen = 32 * uidlen;
+	i = 0;
+	int phase = 0;
+	for (bit = 0; bit < uidlen; bit++) {
+		if (bits[bit] == 0) {
+		  phase = 0;
+		} else {
+		  phase = 1;
+		}
+		int j;
+		for (j = 0; j < 32; j++) {
+		  GraphBuffer[i++] = phase;
+		  phase = !phase;
+		}
+	}
+
+	RepaintGraphWindow();
+	return 1;
 }
 
 int CmdIndalaClone(const char *Cmd)
 {
-  unsigned int uid1, uid2, uid3, uid4, uid5, uid6, uid7;
-  UsbCommand c;
-  uid1=0;
-  uid2=0;
-  uid3=0;
-  uid4=0;
-  uid5=0;
-  uid6=0;
-  uid7=0;  
-  int n = 0, i = 0;
+	UsbCommand c;
+	unsigned int uid1, uid2, uid3, uid4, uid5, uid6, uid7;
 
-  if (strchr(Cmd,'l') != 0) {
-    while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
-      uid1 = (uid1 << 4) | (uid2 >> 28);
-      uid2 = (uid2 << 4) | (uid3 >> 28);
-      uid3 = (uid3 << 4) | (uid4 >> 28);
-      uid4 = (uid4 << 4) | (uid5 >> 28);
-      uid5 = (uid5 << 4) | (uid6 >> 28);
-      uid6 = (uid6 << 4) | (uid7 >> 28);
-    	uid7 = (uid7 << 4) | (n & 0xf);
-    }
-    PrintAndLog("Cloning 224bit tag with UID %x%08x%08x%08x%08x%08x%08x", uid1, uid2, uid3, uid4, uid5, uid6, uid7);
-    c.cmd = CMD_INDALA_CLONE_TAG_L;
-    c.d.asDwords[0] = uid1;
-    c.d.asDwords[1] = uid2;
-    c.d.asDwords[2] = uid3;
-    c.d.asDwords[3] = uid4;
-    c.d.asDwords[4] = uid5;
-    c.d.asDwords[5] = uid6;
-    c.d.asDwords[6] = uid7;
-  } 
-  else 
-  {
-    while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
-      uid1 = (uid1 << 4) | (uid2 >> 28);
-      uid2 = (uid2 << 4) | (n & 0xf);
-    }
-    PrintAndLog("Cloning 64bit tag with UID %x%08x", uid1, uid2);
-    c.cmd = CMD_INDALA_CLONE_TAG;
-    c.arg[0] = uid1;
-    c.arg[1] = uid2;
-  }
+	uid1 =  uid2 = uid3 = uid4 = uid5 = uid6 = uid7 = 0;
+	int n = 0, i = 0;
 
-  SendCommand(&c);
-  return 0;
+	if (strchr(Cmd,'l') != 0) {
+		while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
+			uid1 = (uid1 << 4) | (uid2 >> 28);
+			uid2 = (uid2 << 4) | (uid3 >> 28);
+			uid3 = (uid3 << 4) | (uid4 >> 28);
+			uid4 = (uid4 << 4) | (uid5 >> 28);
+			uid5 = (uid5 << 4) | (uid6 >> 28);
+			uid6 = (uid6 << 4) | (uid7 >> 28);
+			uid7 = (uid7 << 4) | (n & 0xf);
+		}
+		PrintAndLog("Cloning 224bit tag with UID %x%08x%08x%08x%08x%08x%08x", uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+		c.cmd = CMD_INDALA_CLONE_TAG_L;
+		c.d.asDwords[0] = uid1;
+		c.d.asDwords[1] = uid2;
+		c.d.asDwords[2] = uid3;
+		c.d.asDwords[3] = uid4;
+		c.d.asDwords[4] = uid5;
+		c.d.asDwords[5] = uid6;
+		c.d.asDwords[6] = uid7;
+	} else {
+		while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
+			uid1 = (uid1 << 4) | (uid2 >> 28);
+			uid2 = (uid2 << 4) | (n & 0xf);
+		}
+		PrintAndLog("Cloning 64bit tag with UID %x%08x", uid1, uid2);
+		c.cmd = CMD_INDALA_CLONE_TAG;
+		c.arg[0] = uid1;
+		c.arg[1] = uid2;
+	}
+
+	SendCommand(&c);
+	return 0;
 }
 
 int CmdLFRead(const char *Cmd)
 {
-  UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K};
-  // 'h' means higher-low-frequency, 134 kHz
-  if(*Cmd == 'h') {
-    c.arg[0] = 1;
-  } else if (*Cmd == '\0') {
-    c.arg[0] = 0;
-  } else if (sscanf(Cmd, "%"lli, &c.arg[0]) != 1) {
-    PrintAndLog("Samples 1: 'lf read'");
-	PrintAndLog("        2: 'lf read h'");
-	PrintAndLog("        3: 'lf read <divisor>'");
-    return 0;
-  }
-  SendCommand(&c);
-  WaitForResponse(CMD_ACK,NULL);
-  
-  // load samples 
-  CmdSamples("");
-  // show plot
-  ShowGraphWindow();
-  return 0;
+	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K};
+
+	// 'h' means higher-low-frequency, 134 kHz
+	if(*Cmd == 'h') {
+		c.arg[0] = 1;
+	} else if (*Cmd == '\0') {
+		c.arg[0] = 0;
+	} else if (sscanf(Cmd, "%"lli, &c.arg[0]) != 1) {
+		PrintAndLog("Samples 1: 'lf read'");
+		PrintAndLog("        2: 'lf read h'");
+		PrintAndLog("        3: 'lf read <divisor>'");
+		return 0;
+	}
+	SendCommand(&c);
+	WaitForResponse(CMD_ACK,NULL);
+
+	CmdSamples("");
+	ShowGraphWindow();
+	return 0;
 }
 
 static void ChkBitstream(const char *str)
 {
-  int i;
+	int i;
 
-  /* convert to bitstream if necessary */
-  for (i = 0; i < (int)(GraphTraceLen / 2); i++)
-  {
-    if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0)
-    {
-      CmdBitstream(str);
-      break;
-    }
-  }
+	/* convert to bitstream if necessary */
+	for (i = 0; i < (int)(GraphTraceLen / 2); i++){
+		if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
+			CmdBitstream(str);
+			break;
+		}
+	}
 }
 
 int CmdLFSim(const char *Cmd)
 {
-  int i,j;
-  
-  static int gap;
+	int i,j;
+	static int gap;
 
-  sscanf(Cmd, "%i", &gap);
+	sscanf(Cmd, "%i", &gap);
 
-  /* convert to bitstream if necessary */
-  ChkBitstream(Cmd);
+	/* convert to bitstream if necessary */
+	ChkBitstream(Cmd);
 
-  printf("Sending [%d bytes]", GraphTraceLen);
-  for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
-    UsbCommand c={CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
+	printf("Sending [%d bytes]", GraphTraceLen);
+	for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
+		UsbCommand c={CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
 
-    for (j = 0; j < USB_CMD_DATA_SIZE; j++) {
-      c.d.asBytes[j] = GraphBuffer[i+j];
-    }
-    SendCommand(&c);
-    WaitForResponse(CMD_ACK,NULL);
-	printf(".");
-  }
-  printf("\n");
-  PrintAndLog("Starting to simulate");
-  UsbCommand c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
-  SendCommand(&c);
-  return 0;
+		for (j = 0; j < USB_CMD_DATA_SIZE; j++) {
+			c.d.asBytes[j] = GraphBuffer[i+j];
+		}
+		SendCommand(&c);
+		WaitForResponse(CMD_ACK,NULL);
+		printf(".");
+	}
+	
+	printf("\n");
+	PrintAndLog("Starting to simulate");
+	UsbCommand c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
+	SendCommand(&c);
+	return 0;
 }
 
 int CmdLFSimBidir(const char *Cmd)
 {
-  /* Set ADC to twice the carrier for a slight supersampling */
+  // Set ADC to twice the carrier for a slight supersampling
+  // HACK: not implemented in ARMSRC.
+  PrintAndLog("Not implemented yet.");
   UsbCommand c = {CMD_LF_SIMULATE_BIDIR, {47, 384, 0}};
   SendCommand(&c);
   return 0;
@@ -435,29 +436,23 @@ int CmdLFSimBidir(const char *Cmd)
 /* simulate an LF Manchester encoded tag with specified bitstream, clock rate and inter-id gap */
 int CmdLFSimManchester(const char *Cmd)
 {
-  static int clock, gap;
-  static char data[1024], gapstring[8];
+	static int clock, gap;
+	static char data[1024], gapstring[8];
 
-  /* get settings/bits */
-  sscanf(Cmd, "%i %s %i", &clock, &data[0], &gap);
+	sscanf(Cmd, "%i %s %i", &clock, &data[0], &gap);
 
-  /* clear our graph */
-  ClearGraph(0);
+	ClearGraph(0);
 
-  /* fill it with our bitstream */
-  for (int i = 0; i < strlen(data) ; ++i)
-    AppendGraph(0, clock, data[i]- '0');
+	for (int i = 0; i < strlen(data) ; ++i)
+		AppendGraph(0, clock, data[i]- '0');
 
-  /* modulate */
-  CmdManchesterMod("");
+	CmdManchesterMod("");
 
-  /* show what we've done */
-  RepaintGraphWindow();
+	RepaintGraphWindow();
 
-  /* simulate */
-  sprintf(&gapstring[0], "%i", gap);
-  CmdLFSim(gapstring);
-  return 0;
+	sprintf(&gapstring[0], "%i", gap);
+	CmdLFSim(gapstring);
+	return 0;
 }
 
 int CmdLFSnoop(const char *Cmd)
@@ -474,24 +469,22 @@ int CmdLFSnoop(const char *Cmd)
 		c.arg[0] = 1;
 		sscanf(Cmd, "h %"lli, &c.arg[1]);
 	} else if (sscanf(Cmd, "%"lli" %"lli, &c.arg[0], &c.arg[1]) < 1) {
-		PrintAndLog("use 'snoop' or 'snoop {l,h} [trigger threshold]', or 'snoop <divisor> [trigger threshold]'");
+		PrintAndLog("usage 1:  snoop");
+		PrintAndLog("      2:  snoop {l,h} [trigger threshold]");
+		PrintAndLog("      3:  snoop <divisor> [trigger threshold]");
 		return 0;
 	}
 
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK,NULL);
 
-	size_t BUFF_SIZE = 8000;
-	uint8_t data[BUFF_SIZE];
+	#define BUFF_SIZE 8000
+	uint8_t data[BUFF_SIZE] = {0x00};
 
-	GetFromBigBuf(data,BUFF_SIZE,0);  //3560 -- should be offset..
+	GetFromBigBuf(data,BUFF_SIZE,0);
 	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
-	for (int j = 0; j < BUFF_SIZE; j++) {
-		GraphBuffer[j] = ((int)data[j]);
-	}
-
-	GraphTraceLen = BUFF_SIZE;
+	SetGraphBuf(data, BUFF_SIZE);
 
 	return 0;
 }
@@ -596,24 +589,30 @@ int CmdLFfind(const char *Cmd)
 
 	PrintAndLog("Checking for known tags:");
 
-	ans=Cmdaskmandemod("");
-	PrintAndLog("ASK_MAN: %s", (ans)?"YES":"NO" );
+	ans = Cmdaskmandemod("");
+	PrintAndLog("ASK_MAN: %s", (ans) ? "YES":"NO" );
 
-	ans=CmdFSKdemodHID("");
-	PrintAndLog("HID: %s", (ans)?"YES":"NO" );
+	ans = CmdFSKdemodHID("");
+	PrintAndLog("HID: %s", (ans) ? "YES":"NO" );
 
-	ans=CmdFSKdemodIO("");
-	PrintAndLog("IO prox: %s", (ans)?"YES":"NO" );
+	ans = CmdFSKdemodIO("");
+	PrintAndLog("IO prox: %s", (ans) ? "YES":"NO" );
 
-	ans=CmdIndalaDemod("");
-	PrintAndLog("Indala (64): %s", (ans)?"YES":"NO" );
+	ans = CmdIndalaDemod("");
+	PrintAndLog("Indala (64): %s", (ans) ? "YES":"NO" );
 
-	ans=CmdIndalaDemod("224");
-	PrintAndLog("Indala (224): %s", (ans)?"YES":"NO" );
+	ans = CmdIndalaDemod("224");
+	PrintAndLog("Indala (224): %s", (ans) ? "YES":"NO" );
 
+	// ans = CmdVchDemod("");
+	// PrintAndLog("VeriChip: %s", (ans) ? "YES":"NO" );
+
+	// ans = CmdFlexdemod("");
+	// PrintAndLog("FlexPass: %s", (ans) ? "YES":"NO" );
+	
 	if (!ans)
 		PrintAndLog("No Known Tags Found!\n");
-		
+
 	return 0;
 }
 
