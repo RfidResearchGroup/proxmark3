@@ -1595,6 +1595,15 @@ void ReaderIClass(uint8_t arg0) {
 void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 
 	uint8_t card_data[24]={0};
+	uint16_t block_crc_LUT[255] = {0};
+
+	{//Generate a lookup table for block crc
+		for(int block = 0; block < 255; block++){
+			char bl = block;
+			block_crc_LUT[block] = iclass_crc16(&bl ,1);
+		}
+	}
+	//Dbprintf("Lookup table: %02x %02x %02x" ,block_crc_LUT[0],block_crc_LUT[1],block_crc_LUT[2]);
 
 	uint8_t check[]       = { 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	uint8_t read[]        = { 0x0c, 0x00, 0x00, 0x00 };
@@ -1618,12 +1627,13 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 
 	while(!BUTTON_PRESS()) {
 	
+		WDT_HIT();
+
 		if(traceLen > TRACE_SIZE) {
 			DbpString("Trace full");
 			break;
 		}
 		
-
 		uint8_t read_status = handshakeIclassTag(card_data);
 		if(read_status < 2) continue;
 
@@ -1636,16 +1646,15 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 			continue;
 		}
 
-		//first get configuration block
+		//first get configuration block (block 1)
+		crc = block_crc_LUT[1];
 		read[1]=1;
-		uint8_t *blockno=&read[1];
-		crc = iclass_crc16((char *)blockno,1);
 		read[2] = crc >> 8;
 		read[3] = crc & 0xff;
 
 		if(sendCmdGetResponseWithRetries(read, sizeof(read),resp, 10, 10))
 		{
-			Dbprintf("Dump config block failed");
+			Dbprintf("Dump config (block 1) failed");
 			continue;
 		}
 
@@ -1660,10 +1669,10 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 		WDT_HIT();
 
 		//then loop around remaining blocks
-		for(char block=0; block < cardsize; block++){
+		for(int block=0; block < cardsize; block++){
 
 			read[1]= block;
-			crc = iclass_crc16(&block ,1);
+			crc = block_crc_LUT[block];
 			read[2] = crc >> 8;
 			read[3] = crc & 0xff;
 
@@ -1681,7 +1690,6 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 		}
 		//If we got here, let's break
 		break;
-		WDT_HIT();
 	}
 	LED_A_OFF();
 }
