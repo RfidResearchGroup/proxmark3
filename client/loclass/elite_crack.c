@@ -526,7 +526,7 @@ int bruteforceFile(const char *filename, uint16_t keytable[])
 	fseek(f, 0, SEEK_SET);
 
 	uint8_t *dump = malloc(fsize);
-    size_t bytes_read = fread(dump, fsize, 1, f);
+	size_t bytes_read = fread(dump, 1, fsize, f);
 
 	fclose(f);
     if (bytes_read < fsize)
@@ -577,9 +577,18 @@ int _testBruteforce()
 			**** The 64-bit HS Custom Key Value = 5B7C62C491C11B39 ****
 		**/
 		uint16_t keytable[128] = {0};
-		//save some time...
-		startvalue = 0x7B0000;
-		errors |= bruteforceFile("iclass_dump.bin",keytable);
+
+		//Test a few variants
+		if(fileExists("iclass_dump.bin"))
+		{
+			errors |= bruteforceFile("iclass_dump.bin",keytable);
+		}else if(fileExists("loclass/iclass_dump.bin")){
+			errors |= bruteforceFile("loclass/iclass_dump.bin",keytable);
+		}else if(fileExists("client/loclass/iclass_dump.bin")){
+			errors |= bruteforceFile("client/loclass/iclass_dump.bin",keytable);
+		}else{
+			prnlog("Error: The file iclass_dump.bin was not found!");
+		}
 	}
 	return errors;
 }
