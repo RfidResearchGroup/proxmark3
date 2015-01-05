@@ -18,6 +18,10 @@
  * Flavio D. Garcia, Gerhard de Koning Gans, Roel Verdult and
  * Milosch Meriac in the paper "Dismantling IClass".
  *
+ * This is a reference implementation of iclass key diversification. I'm sure it can be
+ * optimized heavily. It is written for ease of understanding and correctness, please take it
+ * and tweak it and make a super fast version instead, using this for testing and verification.
+
  * Copyright (C) 2014 Martin Holst Swende
  *
  * This is free software: you can redistribute it and/or modify
@@ -30,12 +34,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * 
- * 
+ * along with IClassCipher.  If not, see <http://www.gnu.org/licenses/>.
  ****************************************************************************/
-
 /**
 
 
@@ -403,7 +403,7 @@ void diversifyKey(uint8_t csn[8], uint8_t key[8], uint8_t div_key[8])
 
 	//Calculate HASH0(DES))
     uint64_t crypt_csn = x_bytes_to_num(crypted_csn, 8);
-	uint64_t crypted_csn_swapped = swapZvalues(crypt_csn);
+    //uint64_t crypted_csn_swapped = swapZvalues(crypt_csn);
 
 	hash0(crypt_csn,div_key);
 }

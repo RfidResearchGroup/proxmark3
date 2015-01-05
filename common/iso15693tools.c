@@ -66,11 +66,11 @@ char* Iso15693sprintUID(char *target,uint8_t *uid) {
   return target;
 }
 
-unsigned short iclass_crc16(char *data_p, unsigned short length)
+uint16_t iclass_crc16(char *data_p, unsigned short length)
 {
       unsigned char i;
       unsigned int data;
-      unsigned int crc = 0xffff;
+	  uint16_t crc = 0xffff;
 
       if (length == 0)
             return (~crc);

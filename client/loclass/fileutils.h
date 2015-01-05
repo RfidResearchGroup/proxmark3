@@ -64,7 +64,7 @@ int loadFile(const char *fileName, void* data, size_t datalen);
  * Utility function to print to console. This is used consistently within the library instead
  * of printf, but it actually only calls printf. The reason to have this method is to
  *make it simple to plug this library into proxmark, which has this function already to
- * write also to a logfile. When doing so, just delete this function.
+ * write also to a logfile. When doing so, just point this function to use PrintAndLog
  * @param fmt
  */
 void prnlog(char *fmt, ...);

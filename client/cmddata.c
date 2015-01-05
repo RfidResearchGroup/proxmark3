@@ -100,6 +100,7 @@ int Cmdaskdemod(const char *Cmd)
 		 * low for long periods, others just reach the peak and go
 		 * down)
 		 */
+    //[marhsmellow] change == to >= for high and <= for low for fuzz
 		if ((GraphBuffer[i] == high) && (GraphBuffer[i - 1] == c)) {
 		  GraphBuffer[i] = 1 - c;
 		} else if ((GraphBuffer[i] == low) && (GraphBuffer[i - 1] == (1 - c))){

@@ -139,9 +139,7 @@ int CmdIndalaDemod(const char *Cmd)
 	uint8_t rawbits[4096];
 	int rawbit = 0;
 	int worst = 0, worstPos = 0;
-  
-	PrintAndLog("Expecting a bit less than %d raw bits", GraphTraceLen / 32);
-  
+ // PrintAndLog("Expecting a bit less than %d raw bits", GraphTraceLen / 32);
 	for (i = 0; i < GraphTraceLen-1; i += 2) {
 		count += 1;
 		if ((GraphBuffer[i] > GraphBuffer[i + 1]) && (state != 1)) {

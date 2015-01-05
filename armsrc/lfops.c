@@ -1879,7 +1879,7 @@ void EM4xLogin(uint32_t Password) {
 
 void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
   
-  	uint8_t *dest =  get_bigbufptr_recvrespbuf();
+  	uint8_t *dest =   (uint8_t *)BigBuf;
 	uint16_t bufferlength = 12000;
 	uint32_t i = 0;
 

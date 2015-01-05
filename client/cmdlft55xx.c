@@ -26,7 +26,6 @@
 #define LF_BITSSTREAM_LEN 1000 // more then 1000 bits shouldn't happend..  8block * 4 bytes * 8bits = 
 static int CmdHelp(const char *Cmd);
 
-
 int CmdReadBlk(const char *Cmd)
 {
 	int block = -1;

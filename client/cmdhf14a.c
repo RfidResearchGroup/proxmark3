@@ -509,7 +509,7 @@ int CmdHF14ASnoop(const char *Cmd) {
 	
 	if (param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("It get data from the field and saves it into command buffer.");
-		PrintAndLog("Buffer accessible from command hf 14a list.");
+		PrintAndLog("Buffer accessible from command hf list 14a.");
 		PrintAndLog("Usage:  hf 14a snoop [c][r]");
 		PrintAndLog("c - triggered by first data from card");
 		PrintAndLog("r - triggered by first 7-bit request from reader (REQ,WUP,...)");
@@ -694,7 +694,7 @@ static void waitCmd(uint8_t iSelect)
 static command_t CommandTable[] = 
 {
   {"help",   CmdHelp,              1, "This help"},
-  {"list",   CmdHF14AList,         0, "List ISO 14443a history"},
+  {"list",   CmdHF14AList,         0, "[Deprecated] List ISO 14443a history"},
   {"reader", CmdHF14AReader,       0, "Act like an ISO14443 Type A reader"},
   {"cuids",  CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443 Type A UIDs in one go"},
   {"sim",    CmdHF14ASim,          0, "<UID> -- Fake ISO 14443a tag"},

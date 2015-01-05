@@ -79,6 +79,7 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
 	FILE *fh=fopen(fileName,"wb");
 	if(!fh) {
 		PrintAndLog("Failed to write to file '%s'", fileName);
+		free(fh);
 		return 1;
 	}
 	fwrite(data, 1,	datalen, fh);
@@ -94,10 +95,12 @@ int loadFile(const char *fileName, void* data, size_t datalen)
 	FILE *filehandle = fopen(fileName, "rb");
 	if(!filehandle) {
 		PrintAndLog("Failed to read from file '%s'", fileName);
+		free(filehandle);
 		return 1;
 	}
 	fread(data,datalen,1,filehandle);
 	fclose(filehandle);
+	free(filehandle);
 	return 0;
 }
 /**

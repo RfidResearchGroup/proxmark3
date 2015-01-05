@@ -1223,9 +1223,6 @@ int CmdHF14AMfELoad(const char *Cmd)
 		return 1;
 	}
 	
-//		for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
-//		for(blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
-	
 	blockNum = 0;
 	while(!feof(f)){
 		memset(buf, 0, sizeof(buf));
@@ -1243,6 +1240,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 			if(strlen(buf) && feof(f))
 				break;
 			PrintAndLog("File content error. Block data must include 32 HEX symbols");
+			fclose(f);
 			return 2;
 		}
 		
@@ -1252,6 +1250,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 		
 		if (mfEmlSetMem(buf8, blockNum, 1)) {
 			PrintAndLog("Cant set emul block: %3d", blockNum);
+			fclose(f);
 			return 3;
 		}
 		blockNum++;
@@ -1262,7 +1261,6 @@ int CmdHF14AMfELoad(const char *Cmd)
 	
 	if ((blockNum != numBlocks)) {
 		PrintAndLog("File content error. Got %d must be %d blocks.",blockNum, numBlocks);
-		fclose(f);
 		return 4;
 	}
 	PrintAndLog("Loaded %d blocks from file: %s", blockNum, filename);
