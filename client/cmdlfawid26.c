@@ -57,11 +57,12 @@ int CmdClone(const char *Cmd)
 // convert 96 bit AWID FSK data to 8 digit BCD UID
 bool awid26_hex_to_uid(unsigned char *response, char *awid26)
 {
-	uint8_t i, tmp[96], tmp1[7];
-    int site;
-    int id;
+	//uint8_t i, tmp[96], tmp1[7];
+	//uint8_t tmp[96] = {0x00};
+    //int site;
+    //int id;
 	
-    if(!hextobinarray(tmp, awid26))
+    //if(!hextobinarray(tmp, awid26))
         return false;
 
     // // data is in blocks of 4 bits - every 4th bit is parity, except the first
