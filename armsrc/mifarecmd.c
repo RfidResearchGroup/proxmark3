@@ -2,6 +2,9 @@
 // Merlok - June 2011, 2012
 // Gerhard de Koning Gans - May 2008
 // Hagen Fritsch - June 2010
+// Midnitesnake - Dec 2013
+// Andy Davies  - Apr 2014
+// Iceman - May 2014
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -36,8 +39,6 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 	// clear trace
  	iso14a_clear_trace();
-//	iso14a_set_tracing(false);
-
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	LED_A_ON();
@@ -81,8 +82,6 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-//  iso14a_set_tracing(TRUE);
-
 }
 
 void MifareUReadBlock(uint8_t arg0,uint8_t *datain)
@@ -129,13 +128,9 @@ void MifareUReadBlock(uint8_t arg0,uint8_t *datain)
 	LED_B_ON();
     cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,16);
 	LED_B_OFF();
-    
-    
-    // Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
-
 
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag. 
@@ -150,7 +145,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	ui64Key = bytes_to_num(datain, 6);
 	
 	// variables
-	byte_t isOK;
+	byte_t isOK = 0;
 	byte_t dataoutbuf[16 * 16];
 	uint8_t uid[10];
 	uint32_t cuid;
@@ -160,7 +155,6 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 	// clear trace
  	iso14a_clear_trace();
-//	iso14a_set_tracing(false);
 
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -192,7 +186,6 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
 	}
 
-	
 	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
 	
@@ -205,7 +198,6 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-//  iso14a_set_tracing(TRUE);
 }
 
 
@@ -288,7 +280,6 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 	// clear trace
 	iso14a_clear_trace();
-//  iso14a_set_tracing(false);
 
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -334,10 +325,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-//  iso14a_set_tracing(TRUE);
-
 }
-
 
 void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 {
@@ -355,7 +343,6 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 
         // clear trace
         iso14a_clear_trace();
-	//  iso14a_set_tracing(false);
 
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -396,7 +383,6 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 //  iso14a_set_tracing(TRUE);
 }
 
-
 void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 {
 	// params
@@ -412,7 +398,6 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 
 	// clear trace
 	iso14a_clear_trace();
-	//  iso14a_set_tracing(false);
 
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -446,14 +431,10 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
 	LED_B_OFF();
 
-
 	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-//  iso14a_set_tracing(TRUE);
-
 }
-
 
 // Return 1 if the nonce is invalid else return 0
 int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity) {
@@ -510,6 +491,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	// statistics on nonce distance
 	if (calibrate) {	// for first call only. Otherwise reuse previous calibration
 		LED_B_ON();
+		WDT_HIT();
 
 		davg = dmax = 0;
 		dmin = 2000;
@@ -733,7 +715,6 @@ void MifareChkKeys(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
     cmd_send(CMD_ACK,isOK,0,0,datain + i * 6,6);
 	LED_B_OFF();
 
-  // Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 
@@ -750,7 +731,6 @@ void MifareSetDbgLvl(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	Dbprintf("Debug level: %d", MF_DBGLEVEL);
 }
 
-
 //-----------------------------------------------------------------------------
 // Work with emulator memory
 // 
@@ -759,22 +739,18 @@ void MifareEMemClr(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 	emlClearMem();
 }
 
-
 void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
 	emlSetMem(datain, arg0, arg1); // data, block num, blocks count
 }
 
-
 void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
-
-	byte_t buf[48];
+	byte_t buf[USB_CMD_DATA_SIZE];
 	emlGetMem(buf, arg0, arg1); // data, block num, blocks count (max 4)
 
 	LED_B_ON();
-	cmd_send(CMD_ACK,arg0,arg1,0,buf,48);
+	cmd_send(CMD_ACK,arg0,arg1,0,buf,USB_CMD_DATA_SIZE);
 	LED_B_OFF();
 }
-
 
 //-----------------------------------------------------------------------------
 // Load a card into the emulator memory
@@ -884,32 +860,26 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	
 	// variables
 	byte_t isOK = 0;
-	uint8_t uid[10];
-	uint8_t d_block[18];
+	uint8_t uid[10] = {0x00};
+	uint8_t d_block[18] = {0x00};
 	uint32_t cuid;
 	
-	memset(uid, 0x00, 10);
 	uint8_t *receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 
+	// reset FPGA and LED
 	if (workFlags & 0x08) {
-		// clear trace
-		iso14a_clear_trace();
-		iso14a_set_tracing(TRUE);
-
-		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
 		LED_A_ON();
 		LED_B_OFF();
 		LED_C_OFF();
 	
-		SpinDelay(300);
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-		SpinDelay(100);
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+		iso14a_clear_trace();
+		iso14a_set_tracing(TRUE);
+		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	}
 
 	while (true) {
+
 		// get UID from chip
 		if (workFlags & 0x01) {
 			if(!iso14443a_select_card(uid, NULL, &cuid)) {
@@ -988,7 +958,6 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	LED_B_OFF();
 
 	if ((workFlags & 0x10) || (!isOK)) {
-		// Thats it...
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
 	}
@@ -1011,28 +980,20 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	
 	// variables
 	byte_t isOK = 0;
-	uint8_t data[18];
+	uint8_t data[18] = {0x00};
 	uint32_t cuid = 0;
 	
-	memset(data, 0x00, 18);
 	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 	
 	if (workFlags & 0x08) {
-		// clear trace
-		iso14a_clear_trace();
-		iso14a_set_tracing(TRUE);
-
-		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
 		LED_A_ON();
 		LED_B_OFF();
 		LED_C_OFF();
 	
-		SpinDelay(300);
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-		SpinDelay(100);
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+		iso14a_clear_trace();
+		iso14a_set_tracing(TRUE);
+		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	}
 
 	while (true) {
@@ -1073,9 +1034,40 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	LED_B_OFF();
 
 	if ((workFlags & 0x10) || (!isOK)) {
-		// Thats it...
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
 	}
 }
 
+void MifareCIdent(){
+  
+	// card commands
+	uint8_t wupC1[]       = { 0x40 }; 
+	uint8_t wupC2[]       = { 0x43 }; 
+	
+	// variables
+	byte_t isOK = 1;
+	
+	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
+
+	ReaderTransmitBitsPar(wupC1,7,0, NULL);
+	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+		isOK = 0;
+	};
+
+	ReaderTransmit(wupC2, sizeof(wupC2), NULL);
+	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+		isOK = 0;
+	};
+
+	if (mifare_classic_halt(NULL, 0)) {
+		isOK = 0;
+	};
+
+	cmd_send(CMD_ACK,isOK,0,0,0,0);
+}
+
+			//
+// DESFIRE
+//

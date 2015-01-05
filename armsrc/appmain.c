@@ -82,40 +82,12 @@ void DbpString(char *str)
 {
   byte_t len = strlen(str);
   cmd_send(CMD_DEBUG_PRINT_STRING,len,0,0,(byte_t*)str,len);
-//	/* this holds up stuff unless we're connected to usb */
-//	if (!UsbConnected())
-//		return;
-//
-//	UsbCommand c;
-//	c.cmd = CMD_DEBUG_PRINT_STRING;
-//	c.arg[0] = strlen(str);
-//	if(c.arg[0] > sizeof(c.d.asBytes)) {
-//		c.arg[0] = sizeof(c.d.asBytes);
-//	}
-//	memcpy(c.d.asBytes, str, c.arg[0]);
-//
-//	UsbSendPacket((uint8_t *)&c, sizeof(c));
-//	// TODO fix USB so stupid things like this aren't req'd
-//	SpinDelay(50);
 }
 
 #if 0
 void DbpIntegers(int x1, int x2, int x3)
 {
   cmd_send(CMD_DEBUG_PRINT_INTEGERS,x1,x2,x3,0,0);
-//	/* this holds up stuff unless we're connected to usb */
-//	if (!UsbConnected())
-//		return;
-//
-//	UsbCommand c;
-//	c.cmd = CMD_DEBUG_PRINT_INTEGERS;
-//	c.arg[0] = x1;
-//	c.arg[1] = x2;
-//	c.arg[2] = x3;
-//
-//	UsbSendPacket((uint8_t *)&c, sizeof(c));
-//	// XXX
-//	SpinDelay(50);
 }
 #endif
 
@@ -332,7 +304,7 @@ extern struct version_information version_information;
 extern char *_bootphase1_version_pointer, _flash_start, _flash_end;
 void SendVersion(void)
 {
-	char temp[256]; /* Limited data payload in USB packets */
+	char temp[512]; /* Limited data payload in USB packets */
 	DbpString("Prox/RFID mark3 RFID instrument");
 
 	/* Try to find the bootrom version information. Expect to find a pointer at
@@ -381,13 +353,13 @@ void SamyRun()
 
 	int selected = 0;
 	int playing = 0;
+	int cardRead = 0;
 
 	// Turn on selected LED
 	LED(selected + 1, 0);
 
 	for (;;)
 	{
-//		UsbPoll(FALSE);
 		usb_poll();
     WDT_HIT();
 
@@ -396,7 +368,7 @@ void SamyRun()
 		SpinDelay(300);
 
 		// Button was held for a second, begin recording
-		if (button_pressed > 0)
+		if (button_pressed > 0 && cardRead == 0)
 		{
 			LEDsoff();
 			LED(selected + 1, 0);
@@ -422,6 +394,40 @@ void SamyRun()
 			// If we were previously playing, set playing off
 			// so next button push begins playing what we recorded
 			playing = 0;
+			
+			cardRead = 1;
+	
+		}
+
+		else if (button_pressed > 0 && cardRead == 1)
+		{
+					LEDsoff();
+					LED(selected + 1, 0);
+					LED(LED_ORANGE, 0);
+
+					// record
+					Dbprintf("Cloning %x %x %x", selected, high[selected], low[selected]);
+
+					// wait for button to be released
+					while(BUTTON_PRESS())
+						WDT_HIT();
+
+					/* need this delay to prevent catching some weird data */
+					SpinDelay(500);
+
+					CopyHIDtoT55x7(high[selected], low[selected], 0, 0);
+					Dbprintf("Cloned %x %x %x", selected, high[selected], low[selected]);
+
+					LEDsoff();
+					LED(selected + 1, 0);
+					// Finished recording
+
+					// If we were previously playing, set playing off
+					// so next button push begins playing what we recorded
+					playing = 0;
+					
+					cardRead = 0;
+			
 		}
 
 		// Change where to record (or begin playing)
@@ -635,18 +641,18 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		case CMD_HID_DEMOD_FSK:
-			CmdHIDdemodFSK(c->arg[0], 0, 0, 1);					// Demodulate HID tag
+			CmdHIDdemodFSK(c->arg[0], 0, 0, 1);
 			break;
 		case CMD_HID_SIM_TAG:
-			CmdHIDsimTAG(c->arg[0], c->arg[1], 1);					// Simulate HID tag by ID
+			CmdHIDsimTAG(c->arg[0], c->arg[1], 1);
 			break;
-		case CMD_HID_CLONE_TAG: // Clone HID tag by ID to T55x7
+		case CMD_HID_CLONE_TAG:
 			CopyHIDtoT55x7(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
 			break;
 		case CMD_IO_DEMOD_FSK:
-			CmdIOdemodFSK(c->arg[0], 0, 0, 1);					// Demodulate IO tag
+			CmdIOdemodFSK(c->arg[0], 0, 0, 1);
 			break;
-		case CMD_IO_CLONE_TAG: // Clone IO tag by ID to T55x7
+		case CMD_IO_CLONE_TAG:
 			CopyIOtoT55x7(c->arg[0], c->arg[1], c->d.asBytes[0]);
 			break;
 		case CMD_EM410X_DEMOD:
@@ -669,10 +675,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_LF_SIMULATE_BIDIR:
 			SimulateTagLowFrequencyBidir(c->arg[0], c->arg[1]);
 			break;
-		case CMD_INDALA_CLONE_TAG:					// Clone Indala 64-bit tag by UID to T55x7
+		case CMD_INDALA_CLONE_TAG:
 			CopyIndala64toT55x7(c->arg[0], c->arg[1]);					
 			break;
-		case CMD_INDALA_CLONE_TAG_L:					// Clone Indala 224-bit tag by UID to T55x7
+		case CMD_INDALA_CLONE_TAG_L:
 			CopyIndala224toT55x7(c->d.asDwords[0], c->d.asDwords[1], c->d.asDwords[2], c->d.asDwords[3], c->d.asDwords[4], c->d.asDwords[5], c->d.asDwords[6]);
 			break;
 		case CMD_T55XX_READ_BLOCK:
@@ -681,13 +687,12 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_T55XX_WRITE_BLOCK:
 			T55xxWriteBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
 			break;
-		case CMD_T55XX_READ_TRACE: // Clone HID tag by ID to T55x7
+		case CMD_T55XX_READ_TRACE:
 			T55xxReadTrace();
 			break;
-		case CMD_PCF7931_READ: // Read PCF7931 tag
+		case CMD_PCF7931_READ:
 			ReadPCF7931();
 			cmd_send(CMD_ACK,0,0,0,0,0);
-//      	UsbSendPacket((uint8_t*)&ack, sizeof(ack));
 			break;
 		case CMD_EM4X_READ_WORD:
 			EM4xReadWord(c->arg[1], c->arg[2],c->d.asBytes[0]);
@@ -733,7 +738,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			ReaderIso15693(c->arg[0]);
 			break;
 		case CMD_SIMTAG_ISO_15693:
-			SimTagIso15693(c->arg[0]);
+			SimTagIso15693(c->arg[0], c->d.asBytes);
 			break;
 #endif
 
@@ -782,6 +787,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_SIMULATE_TAG_ISO_14443a:
 			SimulateIso14443aTag(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);  // ## Simulate iso14443a tag - pass tag type & UID
 			break;
+			
 		case CMD_EPA_PACE_COLLECT_NONCE:
 			EPA_PACE_Collect_Nonce(c);
 			break;
@@ -838,11 +844,14 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 			
 		// Work with "magic Chinese" card
-		case CMD_MIFARE_EML_CSETBLOCK:
+		case CMD_MIFARE_CSETBLOCK:
 			MifareCSetBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
-		case CMD_MIFARE_EML_CGETBLOCK:
+		case CMD_MIFARE_CGETBLOCK:
 			MifareCGetBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+		case CMD_MIFARE_CIDENT:
+			MifareCIdent();
 			break;
 			
 		// mifare sniffer
@@ -894,18 +903,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 
 		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K:
-//			UsbCommand n;
-//			if(c->cmd == CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K) {
-//				n.cmd = CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K;
-//			} else {
-//				n.cmd = CMD_DOWNLOADED_RAW_BITS_TI_TYPE;
-//			}
-//			n.arg[0] = c->arg[0];
-      //			memcpy(n.d.asBytes, BigBuf+c->arg[0], 48); // 12*sizeof(uint32_t)
-      //			LED_B_ON();
-      //      usb_write((uint8_t *)&n, sizeof(n));
-      //			UsbSendPacket((uint8_t *)&n, sizeof(n));
-      //			LED_B_OFF();
 
 			LED_B_ON();
 			for(size_t i=0; i<c->arg[1]; i += USB_CMD_DATA_SIZE) {
@@ -919,9 +916,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
 			uint8_t *b = (uint8_t *)BigBuf;
-			memcpy(b+c->arg[0], c->d.asBytes, 48);
-			//Dbprintf("copied 48 bytes to %i",b+c->arg[0]);
-//			UsbSendPacket((uint8_t*)&ack, sizeof(ack));
+			memcpy(b+c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		}	
@@ -979,7 +974,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_DEVICE_INFO: {
 			uint32_t dev_info = DEVICE_INFO_FLAG_OSIMAGE_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_OS;
 			if(common_area.flags.bootrom_present) dev_info |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
-//			UsbSendPacket((uint8_t*)&c, sizeof(c));
 			cmd_send(CMD_DEVICE_INFO,dev_info,0,0,0,0);	
 			break;
 		}
@@ -1006,9 +1000,8 @@ void  __attribute__((noreturn)) AppMain(void)
 	LED_B_OFF();
 	LED_A_OFF();
 
-  // Init USB device`
+	// Init USB device
   usb_enable();
-//	UsbStart();
 
 	// The FPGA gets its clock from us from PCK0 output, so set that up.
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_PCK0;
@@ -1044,8 +1037,6 @@ void  __attribute__((noreturn)) AppMain(void)
         UsbPacketReceived(rx,rx_len);
       }
     }
-//		UsbPoll(FALSE);
-
 		WDT_HIT();
 
 #ifdef WITH_LF

@@ -10,7 +10,6 @@
 
 #include <stdio.h>
 #include <string.h>
-//#include "proxusb.h"
 #include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"
@@ -41,8 +40,8 @@ int CmdHIDDemod(const char *Cmd)
 int CmdHIDDemodFSK(const char *Cmd)
 {
   int findone=0;
+	if(Cmd[0]=='1') findone=1;
   UsbCommand c={CMD_HID_DEMOD_FSK};
-  if(Cmd[0]=='1') findone=1;
   c.arg[0]=findone;
   SendCommand(&c);
   return 0;
@@ -59,6 +58,7 @@ int CmdHIDSim(const char *Cmd)
   }
 
   PrintAndLog("Emulating tag with ID %x%16x", hi, lo);
+  PrintAndLog("Press pm3-button to abort simulation");
 
   UsbCommand c = {CMD_HID_SIM_TAG, {hi, lo, 0}};
   SendCommand(&c);

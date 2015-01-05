@@ -185,6 +185,7 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
 	    || response_apdu[rapdu_length - 4] != 0x90
 	    || response_apdu[rapdu_length - 3] != 0x00)
 	{
+		Dbprintf("epa - no select cardaccess");
 		return -1;
 	}
 	
@@ -196,6 +197,7 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
 	    || response_apdu[rapdu_length - 4] != 0x90
 	    || response_apdu[rapdu_length - 3] != 0x00)
 	{
+		Dbprintf("epa - no read cardaccess");
 		return -1;
 	}
 	
@@ -223,7 +225,6 @@ static void EPA_PACE_Collect_Nonce_Abort(uint8_t step, int func_return)
 	
 	// send the USB packet
   cmd_send(CMD_ACK,step,func_return,0,0,0);
-//UsbSendPacket((void *)ack, sizeof(UsbCommand));
 }
 
 //-----------------------------------------------------------------------------
@@ -243,7 +244,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
 	 */
 
 	// return value of a function
-	int func_return;
+	int func_return = 0;
 
 //	// initialize ack with 0s
 //	memset(ack->arg, 0, 12);
@@ -301,7 +302,6 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
 	// save received information
 //	ack->arg[1] = func_return;
 //	memcpy(ack->d.asBytes, nonce, func_return);
-//	UsbSendPacket((void *)ack, sizeof(UsbCommand));
   cmd_send(CMD_ACK,0,func_return,0,nonce,func_return);
 }
 
@@ -416,25 +416,27 @@ int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
 //-----------------------------------------------------------------------------
 int EPA_Setup()
 {
-	// return code
+
 	int return_code = 0;
-	// card UID
 	uint8_t uid[10];
-	// card select information
+	uint8_t pps_response[3];
+	uint8_t pps_response_par[1];
 	iso14a_card_select_t card_select_info;
+
 	// power up the field
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
+	iso14a_set_timeout(10500);
+	
 	// select the card
 	return_code = iso14443a_select_card(uid, &card_select_info, NULL);
 	if (return_code != 1) {
+		Dbprintf("Epa: Can't select card");
 		return 1;
 	}
 
 	// send the PPS request
 	ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
-	uint8_t pps_response[3];
-	uint8_t pps_response_par[1];
 	return_code = ReaderReceive(pps_response, pps_response_par);
 	if (return_code != 3 || pps_response[0] != 0xD0) {
 		return return_code == 0 ? 2 : return_code;

@@ -179,8 +179,6 @@ void ReadTItag(void)
 
     signed char *dest = (signed char *)BigBuf;
     int n = sizeof(BigBuf);
-    //	int *dest = GraphBuffer;
-    //	int n = GraphTraceLen;
 
     // 128 bit shift register [shift3:shift2:shift1:shift0]
     uint32_t shift3 = 0, shift2 = 0, shift1 = 0, shift0 = 0;
@@ -625,6 +623,7 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 
     if (ledcontrol)
         LED_A_ON();
+	
     SimulateTagLowFrequency(n, 0, ledcontrol);
 
     if (ledcontrol)
@@ -718,7 +717,6 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
             hi2 = hi = lo = 0;
         }
         WDT_HIT();
-        //SpinDelay(50);
     }
     DbpString("Stopped");
     if (ledcontrol) LED_A_OFF();
@@ -1337,7 +1335,6 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo)
 // Clone Indala 64-bit tag by UID to T55x7
 void CopyIndala64toT55x7(int hi, int lo)
 {
-
     //Program the 2 data blocks for supplied 64bit UID
     // and the block 0 for Indala64 format
     T55xxWriteBlock(hi,1,0,0);
@@ -1351,12 +1348,10 @@ void CopyIndala64toT55x7(int hi, int lo)
     //	T5567WriteBlock(0x603E1042,0);
 
     DbpString("DONE!");
-
 }	
 
 void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int uid6, int uid7)
 {
-
     //Program the 7 data blocks for supplied 224bit UID
     // and the block 0 for Indala224 format
     T55xxWriteBlock(uid1,1,0,0);
@@ -1375,7 +1370,6 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
     //	T5567WriteBlock(0x603E10E2,0);
 
     DbpString("DONE!");
-
 }
 
 
@@ -1525,7 +1519,6 @@ int IsBlock1PCF7931(uint8_t *Block) {
 
     return 0;
 }
-
 #define ALLOC 16
 
 void ReadPCF7931() {
@@ -1784,6 +1777,7 @@ void SendForward(uint8_t fwd_bit_count) {
         }
     }
 }
+
 
 void EM4xLogin(uint32_t Password) {
 

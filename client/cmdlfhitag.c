@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "data.h"
-//#include "proxusb.h"
 #include "proxmark3.h"
 #include "ui.h"
 #include "cmdparser.h"
@@ -225,7 +224,7 @@ int CmdLFHitagReader(const char *Cmd) {
   return 0;
 }
 
-static command_t CommandTableHitag[] = 
+static command_t CommandTable[] = 
 {
   {"help",    CmdHelp,           1, "This help"},
   {"list",    CmdLFHitagList,    1, "List Hitag trace history"},
@@ -237,12 +236,12 @@ static command_t CommandTableHitag[] =
 
 int CmdLFHitag(const char *Cmd)
 {
-  CmdsParse(CommandTableHitag, Cmd);
+  CmdsParse(CommandTable, Cmd);
   return 0;
 }
 
 int CmdHelp(const char *Cmd)
 {
-  CmdsHelp(CommandTableHitag);
+  CmdsHelp(CommandTable);
   return 0;
 }

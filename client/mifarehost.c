@@ -26,15 +26,12 @@ int compar_int(const void * a, const void * b) {
 	else return -1;
 }
 
-
-
 // Compare 16 Bits out of cryptostate
 int Compare16Bits(const void * a, const void * b) {
 	if ((*(uint64_t*)b & 0x00ff000000ff0000) == (*(uint64_t*)a & 0x00ff000000ff0000)) return 0;
 	else if ((*(uint64_t*)b & 0x00ff000000ff0000) > (*(uint64_t*)a & 0x00ff000000ff0000)) return 1;
 	else return -1;
 }
-
 
 typedef 
 	struct {
@@ -70,16 +67,12 @@ void* nested_worker_thread(void *arg)
 	return statelist->head.slhead;
 }
 
-
-
-
 int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t * resultKey, bool calibrate) 
 {
 	uint16_t i, len;
 	uint32_t uid;
 	UsbCommand resp;
 
-	
 	StateList_t statelists[2];
 	struct Crypto1State *p1, *p2, *p3, *p4;
 	
@@ -239,12 +232,11 @@ int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 // "MAGIC" CARD
 
 int mfCSetUID(uint8_t *uid, uint8_t *oldUID, bool wantWipe) {
-	uint8_t block0[16];
-	memset(block0, 0, 16);
+	uint8_t block0[16] = {0x00};
 	memcpy(block0, uid, 4); 
 	block0[4] = block0[0]^block0[1]^block0[2]^block0[3]; // Mifare UID BCC
 	// mifare classic SAK(byte 5) and ATQA(byte 6 and 7)
-	block0[5] = 0x88;
+	block0[5] = 0x08;
 	block0[6] = 0x04;
 	block0[7] = 0x00;
 	
@@ -252,9 +244,9 @@ int mfCSetUID(uint8_t *uid, uint8_t *oldUID, bool wantWipe) {
 }
 
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, bool wantWipe, uint8_t params) {
-	uint8_t isOK = 0;
 
-	UsbCommand c = {CMD_MIFARE_EML_CSETBLOCK, {wantWipe, params & (0xFE | (uid == NULL ? 0:1)), blockNo}};
+	uint8_t isOK = 0;
+	UsbCommand c = {CMD_MIFARE_CSETBLOCK, {wantWipe, params & (0xFE | (uid == NULL ? 0:1)), blockNo}};
 	memcpy(c.d.asBytes, data, 16); 
 	SendCommand(&c);
 
@@ -273,7 +265,7 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, bool wantWipe, uin
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
 	uint8_t isOK = 0;
 
-	UsbCommand c = {CMD_MIFARE_EML_CGETBLOCK, {params, 0, blockNo}};
+	UsbCommand c = {CMD_MIFARE_CGETBLOCK, {params, 0, blockNo}};
 	SendCommand(&c);
 
   UsbCommand resp;
@@ -296,7 +288,7 @@ static uint8_t trailerAccessBytes[4] = {0x08, 0x77, 0x8F, 0x00};
 // variables
 char logHexFileName[200] = {0x00};
 static uint8_t traceCard[4096] = {0x00};
-static char traceFileName[200] = {0};
+static char traceFileName[200] = {0x00};
 static int traceState = TRACE_IDLE;
 static uint8_t traceCurBlock = 0;
 static uint8_t traceCurKey = 0;
@@ -522,7 +514,6 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 	case TRACE_AUTH1: 
 		if (len == 4) {
 			traceState = TRACE_AUTH2;
-
 			nt = bytes_to_num(data, 4);
 			return 0;
 		} else {
@@ -558,6 +549,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			lfsr_rollback_word(revstate, 0, 0);
 			lfsr_rollback_word(revstate, nr_enc, 1);
 			lfsr_rollback_word(revstate, uid ^ nt, 0);
+
 			crypto1_get_lfsr(revstate, &lfsr);
 			printf("key> %x%x\n", (unsigned int)((lfsr & 0xFFFFFFFF00000000) >> 32), (unsigned int)(lfsr & 0xFFFFFFFF));
 			AddLogUint64(logHexFileName, "key> ", lfsr); 

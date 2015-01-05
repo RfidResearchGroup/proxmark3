@@ -18,7 +18,6 @@
 #include "proxmark3.h"
 #include "iso14443crc.h"
 #include "data.h"
-//#include "proxusb.h"
 #include "ui.h"
 #include "cmdparser.h"
 #include "common.h"

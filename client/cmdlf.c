@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-//#include "proxusb.h"
 #include "proxmark3.h"
 #include "data.h"
 #include "graph.h"
@@ -77,22 +76,18 @@ int CmdFlexdemod(const char *Cmd)
 
   GraphBuffer[start] = 2;
   GraphBuffer[start+1] = -2;
+	uint8_t bits[64] = {0x00};
 
-  uint8_t bits[64];
-
-  int bit;
+	int bit, sum;
   i = start;
   for (bit = 0; bit < 64; bit++) {
-    int j;
-    int sum = 0;
-    for (j = 0; j < 16; j++) {
+		sum = 0;
+		for (int j = 0; j < 16; j++) {
       sum += GraphBuffer[i++];
     }
-    if (sum > 0) {
-      bits[bit] = 1;
-    } else {
-      bits[bit] = 0;
-    }
+
+		bits[bit] = (sum > 0) ? 1 : 0;
+
     PrintAndLog("bit %d sum %d", bit, sum);
   }
 
@@ -110,15 +105,14 @@ int CmdFlexdemod(const char *Cmd)
     }
   }
 
+	// HACK writing back to graphbuffer.
   GraphTraceLen = 32*64;
   i = 0;
   int phase = 0;
   for (bit = 0; bit < 64; bit++) {
-    if (bits[bit] == 0) {
-      phase = 0;
-    } else {
-      phase = 1;
-    }
+	
+		phase = (bits[bit] == 0) ? 0 : 1;
+		
     int j;
     for (j = 0; j < 32; j++) {
       GraphBuffer[i++] = phase;
@@ -137,8 +131,10 @@ int CmdIndalaDemod(const char *Cmd)
   int state = -1;
   int count = 0;
   int i, j;
+
   // worst case with GraphTraceLen=64000 is < 4096
   // under normal conditions it's < 2048
+
   uint8_t rawbits[4096];
   int rawbit = 0;
   int worst = 0, worstPos = 0;
@@ -171,10 +167,14 @@ int CmdIndalaDemod(const char *Cmd)
       count = 0;
     }
   }
+  
   if (rawbit>0){
     PrintAndLog("Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
     PrintAndLog("worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
-  } else return 0;
+	} else {
+		return 0;
+	}
+
   // Finding the start of a UID
   int uidlen, long_wait;
   if (strcmp(Cmd, "224") == 0) {
@@ -184,6 +184,7 @@ int CmdIndalaDemod(const char *Cmd)
     uidlen = 64;
     long_wait = 29;
   }
+
   int start;
   int first = 0;
   for (start = 0; start <= rawbit - uidlen; start++) {
@@ -197,6 +198,7 @@ int CmdIndalaDemod(const char *Cmd)
       break;
     }
   }
+  
   if (start == rawbit - uidlen + 1) {
     PrintAndLog("nothing to wait for");
     return 0;
@@ -210,12 +212,12 @@ int CmdIndalaDemod(const char *Cmd)
   }
 
   // Dumping UID
-  uint8_t bits[224];
-  char showbits[225];
-  showbits[uidlen]='\0';
+	uint8_t bits[224] = {0x00};
+	char showbits[225] = {0x00};
   int bit;
   i = start;
   int times = 0;
+	
   if (uidlen > rawbit) {
     PrintAndLog("Warning: not enough raw bits to get a full UID");
     for (bit = 0; bit < rawbit; bit++) {
@@ -237,8 +239,8 @@ int CmdIndalaDemod(const char *Cmd)
   //convert UID to HEX
   uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
   int idx;
-  uid1=0;
-  uid2=0;
+	uid1 = uid2 = 0;
+	
   if (uidlen==64){
     for( idx=0; idx<64; idx++) {
         if (showbits[idx] == '0') {
@@ -252,11 +254,8 @@ int CmdIndalaDemod(const char *Cmd)
     PrintAndLog("UID=%s (%x%08x)", showbits, uid1, uid2);
   }
   else {
-    uid3=0;
-    uid4=0;
-    uid5=0;
-    uid6=0;
-    uid7=0;
+		uid3 = uid4 = uid5 = uid6 = uid7 = 0;
+
     for( idx=0; idx<224; idx++) {
         uid1=(uid1<<1)|(uid2>>31);
         uid2=(uid2<<1)|(uid3>>31);
@@ -264,15 +263,19 @@ int CmdIndalaDemod(const char *Cmd)
         uid4=(uid4<<1)|(uid5>>31);
         uid5=(uid5<<1)|(uid6>>31);
         uid6=(uid6<<1)|(uid7>>31);
-        if (showbits[idx] == '0') uid7=(uid7<<1)|0;
-        else uid7=(uid7<<1)|1;
+			
+			if (showbits[idx] == '0') 
+				uid7 = (uid7<<1) | 0;
+			else 
+				uid7 = (uid7<<1) | 1;
       }
     PrintAndLog("UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
   }
 
   // Checking UID against next occurrences
-  for (; i + uidlen <= rawbit;) {
     int failed = 0;
+	for (; i + uidlen <= rawbit;) {
+		failed = 0;
     for (bit = 0; bit < uidlen; bit++) {
       if (bits[bit] != rawbits[i++]) {
         failed = 1;
@@ -284,9 +287,12 @@ int CmdIndalaDemod(const char *Cmd)
     }
     times += 1;
   }
+
   PrintAndLog("Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
 
   // Remodulating for tag cloning
+	// HACK: 2015-01-04 this will have an impact on our new way of seening lf commands (demod) 
+	// since this changes graphbuffer data.
   GraphTraceLen = 32*uidlen;
   i = 0;
   int phase = 0;
@@ -309,15 +315,10 @@ int CmdIndalaDemod(const char *Cmd)
 
 int CmdIndalaClone(const char *Cmd)
 {
-  unsigned int uid1, uid2, uid3, uid4, uid5, uid6, uid7;
   UsbCommand c;
-  uid1=0;
-  uid2=0;
-  uid3=0;
-  uid4=0;
-  uid5=0;
-  uid6=0;
-  uid7=0;  
+	unsigned int uid1, uid2, uid3, uid4, uid5, uid6, uid7;
+
+	uid1 =  uid2 = uid3 = uid4 = uid5 = uid6 = uid7 = 0;
   int n = 0, i = 0;
 
   if (strchr(Cmd,'l') != 0) {
@@ -339,9 +340,7 @@ int CmdIndalaClone(const char *Cmd)
     c.d.asDwords[4] = uid5;
     c.d.asDwords[5] = uid6;
     c.d.asDwords[6] = uid7;
-  } 
-  else 
-  {
+	} else {
     while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
       uid1 = (uid1 << 4) | (uid2 >> 28);
       uid2 = (uid2 << 4) | (n & 0xf);
@@ -359,13 +358,16 @@ int CmdIndalaClone(const char *Cmd)
 int CmdLFRead(const char *Cmd)
 {
   UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K};
+
   // 'h' means higher-low-frequency, 134 kHz
   if(*Cmd == 'h') {
     c.arg[0] = 1;
   } else if (*Cmd == '\0') {
     c.arg[0] = 0;
   } else if (sscanf(Cmd, "%"lli, &c.arg[0]) != 1) {
-    PrintAndLog("use 'read' or 'read h', or 'read <divisor>'");
+		PrintAndLog("Samples 1: 'lf read'");
+		PrintAndLog("        2: 'lf read h'");
+		PrintAndLog("        3: 'lf read <divisor>'");
     return 0;
   }
   SendCommand(&c);
@@ -417,7 +419,9 @@ int CmdLFSim(const char *Cmd)
 
 int CmdLFSimBidir(const char *Cmd)
 {
-  /* Set ADC to twice the carrier for a slight supersampling */
+  // Set ADC to twice the carrier for a slight supersampling
+  // HACK: not implemented in ARMSRC.
+  PrintAndLog("Not implemented yet.");
   UsbCommand c = {CMD_LF_SIMULATE_BIDIR, {47, 384, 0}};
   SendCommand(&c);
   return 0;
@@ -429,23 +433,17 @@ int CmdLFSimManchester(const char *Cmd)
   static int clock, gap;
   static char data[1024], gapstring[8];
 
-  /* get settings/bits */
   sscanf(Cmd, "%i %s %i", &clock, &data[0], &gap);
 
-  /* clear our graph */
   ClearGraph(0);
 
-  /* fill it with our bitstream */
   for (int i = 0; i < strlen(data) ; ++i)
     AppendGraph(0, clock, data[i]- '0');
 
-  /* modulate */
   CmdManchesterMod("");
 
-  /* show what we've done */
   RepaintGraphWindow();
 
-  /* simulate */
   sprintf(&gapstring[0], "%i", gap);
   CmdLFSim(gapstring);
   return 0;
@@ -454,20 +452,23 @@ int CmdLFSimManchester(const char *Cmd)
 int CmdLFSnoop(const char *Cmd)
 {
   UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES};
+
   // 'h' means higher-low-frequency, 134 kHz
   c.arg[0] = 0;
   c.arg[1] = -1;
-  if (*Cmd == 0) {
-    // empty
-  } else if (*Cmd == 'l') {
+
+	if (*Cmd == 'l') {
     sscanf(Cmd, "l %"lli, &c.arg[1]);
   } else if(*Cmd == 'h') {
     c.arg[0] = 1;
     sscanf(Cmd, "h %"lli, &c.arg[1]);
   } else if (sscanf(Cmd, "%"lli" %"lli, &c.arg[0], &c.arg[1]) < 1) {
-    PrintAndLog("use 'snoop' or 'snoop {l,h} [trigger threshold]', or 'snoop <divisor> [trigger threshold]'");
+		PrintAndLog("usage 1:  snoop");
+		PrintAndLog("      2:  snoop {l,h} [trigger threshold]");
+		PrintAndLog("      3:  snoop <divisor> [trigger threshold]");
     return 0;
   }
+
   SendCommand(&c);
   WaitForResponse(CMD_ACK,NULL);
   return 0;

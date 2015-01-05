@@ -14,14 +14,15 @@
 #include <string.h>
 #include <stdint.h>
 #include "iso14443crc.h"
-//#include "proxusb.h"
 #include "proxmark3.h"
 #include "data.h"
 #include "graph.h"
+#include "util.h"
 #include "ui.h"
 #include "cmdparser.h"
 #include "cmdhf14b.h"
 #include "cmdmain.h"
+
 
 static int CmdHelp(const char *Cmd);
 
@@ -387,6 +388,66 @@ int CmdHF14BCmdRaw (const char *cmd) {
     return 0;
 }
 
+int CmdHF14BWrite( const char *Cmd){
+
+/*
+ * For SRIX4K  blocks 00 - 7F
+ * hf 14b raw -c -p 09 $srix4kwblock $srix4kwdata
+ *
+ * For SR512  blocks 00 - 0F
+ * hf 14b raw -c -p 09 $sr512wblock $sr512wdata
+ * 
+ * Special block FF =  otp_lock_reg block.
+ * Data len 4 bytes-
+ */
+ 	char cmdp = param_getchar(Cmd, 0);
+	uint8_t blockno = -1;
+	uint8_t data[4] = {0x00};
+	bool isSrix4k = true;
+	char str[20];	
+
+	if (cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  hf 14b write <1|2> <BLOCK> <DATA>");
+		PrintAndLog("");
+		PrintAndLog("     sample: hf 14b write 1 127 11223344");
+		PrintAndLog("     sample: hf 14b write 1 255 11223344");
+		PrintAndLog("     sample: hf 14b write 2 15 11223344");
+		PrintAndLog("     sample: hf 14b write 2 255 11223344");
+		return 0;
+	}
+
+	if ( param_getchar(Cmd, 0) == '2' )
+		isSrix4k = false;
+	
+	blockno = param_get8(Cmd, 1);
+	
+	if ( isSrix4k ){
+		if ( blockno > 0x7f && blockno != 0xff ){
+			PrintAndLog("Block number out of range");
+			return 0;
+		}		
+	} else {
+		if ( blockno > 0x0f && blockno != 0xff ){
+			PrintAndLog("Block number out of range");
+			return 0;
+		}		
+	}
+	
+	if (param_gethex(Cmd, 2, data, 8)) {
+		PrintAndLog("Data must include 8 HEX symbols");
+		return 0;
+	}
+ 
+	if ( blockno == 0xff)
+		PrintAndLog("Writing to special block %02X [ %s]", blockno,  sprint_hex(data,4) );
+	else
+		PrintAndLog("Writing to block %02X [ %s]", blockno,  sprint_hex(data,4) );
+ 
+	sprintf(str, "-c -p 09 %02x %02x%02x%02x%02x", blockno, data[0], data[1], data[2], data[3]);
+	CmdHF14BCmdRaw(str);
+	return 0;
+}
+
 static command_t CommandTable[] = 
 {
   {"help",        CmdHelp,        1, "This help"},
@@ -399,6 +460,7 @@ static command_t CommandTable[] =
   {"sri512read",  CmdSri512Read,  0, "Read contents of a SRI512 tag"},
   {"srix4kread",  CmdSrix4kRead,  0, "Read contents of a SRIX4K tag"},
   {"raw",         CmdHF14BCmdRaw, 0, "Send raw hex data to tag"},
+  {"write",       CmdHF14BWrite,  0, "Write data to a SRI512 | SRIX4K tag"},
   {NULL, NULL, 0, NULL}
 };
 

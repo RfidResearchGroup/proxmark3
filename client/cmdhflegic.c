@@ -10,7 +10,6 @@
 
 #include <stdio.h>
 #include <string.h>
-//#include "proxusb.h"
 #include "proxmark3.h"
 #include "data.h"
 #include "ui.h"
@@ -266,7 +265,6 @@ int CmdLegicSave(const char *Cmd)
     int remainder = requested % 8;
     requested = requested + 8 - remainder;
   }
-  
   if (offset + requested > sizeof(got)) {
     PrintAndLog("Tried to read past end of buffer, <bytes> + <offset> > 1024");
     return 0;

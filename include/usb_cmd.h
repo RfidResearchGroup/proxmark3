@@ -81,7 +81,7 @@ typedef struct {
 #define CMD_EM4X_WRITE_WORD                                               0x0219
 #define CMD_IO_DEMOD_FSK                                                  0x021A
 #define CMD_IO_CLONE_TAG                                                  0x021B
-#define CMD_EM410X_DEMOD  																								0x021C
+#define CMD_EM410X_DEMOD  												  0x021c
 
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
@@ -137,8 +137,11 @@ typedef struct {
 #define CMD_MIFARE_EML_MEMSET                                             0x0602
 #define CMD_MIFARE_EML_MEMGET                                             0x0603
 #define CMD_MIFARE_EML_CARDLOAD                                           0x0604
-#define CMD_MIFARE_EML_CSETBLOCK                                          0x0605
-#define CMD_MIFARE_EML_CGETBLOCK                                          0x0606
+
+// magic chinese card commands
+#define CMD_MIFARE_CSETBLOCK                                              0x0605
+#define CMD_MIFARE_CGETBLOCK                                              0x0606
+#define CMD_MIFARE_CIDENT                                                 0x0607
 
 #define CMD_SIMULATE_MIFARE_CARD                                          0x0610
 
@@ -150,11 +153,25 @@ typedef struct {
 #define CMD_MIFARE_READSC                                                 0x0621
 #define CMD_MIFAREU_READCARD						  0x0721
 #define CMD_MIFARE_WRITEBL                                                0x0622
-#define CMD_MIFAREU_WRITEBL_COMPAT					  0x0722
-#define CMD_MIFAREU_WRITEBL						  0x0723
+#define CMD_MIFAREU_WRITEBL						                          0x0722
+#define CMD_MIFAREU_WRITEBL_COMPAT					                      0x0723
+
 #define CMD_MIFARE_CHKKEYS                                                0x0623
 
 #define CMD_MIFARE_SNIFFER                                                0x0630
+//ultralightC
+#define CMD_MIFAREUC_AUTH1						                          0x0724
+#define CMD_MIFAREUC_AUTH2						                          0x0725
+#define CMD_MIFAREUC_READCARD						                      0x0726
+
+// mifare desfire
+#define CMD_MIFARE_DESFIRE_READBL                                         0x0728
+#define CMD_MIFARE_DESFIRE_WRITEBL                                        0x0729
+#define CMD_MIFARE_DESFIRE_AUTH1                                          0x072a
+#define CMD_MIFARE_DESFIRE_AUTH2                                          0x072b
+#define CMD_MIFARE_DES_READER                                             0x072c
+#define CMD_MIFARE_DESFIRE_INFO                                           0x072d
+#define CMD_MIFARE_DESFIRE                                                0x072e
 
 #define CMD_UNKNOWN                                                       0xFFFF
 

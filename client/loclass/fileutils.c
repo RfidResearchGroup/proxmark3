@@ -11,8 +11,14 @@
  * @return
  */
 int fileExists(const char *filename) {
+
+#ifdef _WIN32
+	struct _stat st;
+	int result = _stat(filename, &st);
+#else
 	struct stat st;
 	int result = stat(filename, &st);
+#endif
 	return result == 0;
 }
 

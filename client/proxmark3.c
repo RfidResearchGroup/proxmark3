@@ -66,21 +66,6 @@ struct main_loop_arg {
   char *script_cmds_file;
 };
 
-//static void *usb_receiver(void *targ) {
-//  struct receiver_arg *arg = (struct receiver_arg*)targ;
-//  UsbCommand cmdbuf;
-//
-//  while (arg->run) {
-//    if (ReceiveCommandPoll(&cmdbuf)) {
-//      UsbCommandReceived(&cmdbuf);
-//      fflush(NULL);
-//    }
-//  }
-//
-//  pthread_exit(NULL);
-//  return NULL;
-//}
-
 byte_t rx[0x1000000];
 byte_t* prx = rx;
 
@@ -129,7 +114,7 @@ static void *main_loop(void *targ) {
   }
   
   FILE *script_file = NULL;
-  char script_cmd_buf[256];
+  char script_cmd_buf[256];  // iceman, needs lua script the same file_path_buffer as the rest
   
   if (arg->script_cmds_file)
   {
@@ -211,14 +196,6 @@ static void *main_loop(void *targ) {
   return NULL;
 }
 
-//static void dumpHelp(char  *parent, ...)
-//{
-//  printf("## %s\n\n", parent);
-//  CommandReceived(parent);
-//  
-//  printf("\n");
-//}
-
 static void dumpAllHelp(int markdown)
 {
   printf("\n%sProxmark3 command dump%s\n\n",markdown?"# ":"",markdown?"":"\n======================");
@@ -258,17 +235,6 @@ int main(int argc, char* argv[]) {
 	};
 	pthread_t main_loop_t;
 
-/*
-  usb_init();
-  if (!OpenProxmark(1)) {
-    fprintf(stderr,"PROXMARK3: NOT FOUND!\n");
-    marg.usb_present = 0;
-    offline = 1;
-  } else {
-    marg.usb_present = 1;
-    offline = 0;
-  }
-*/
   
 	sp = uart_open(argv[1]);
 	if (sp == INVALID_SERIAL_PORT) {
@@ -308,10 +274,6 @@ int main(int argc, char* argv[]) {
 	MainGraphics();
 
 	pthread_join(main_loop_t, NULL);
-
-//  if (marg.usb_present == 1) {
-//    CloseProxmark();
-//  }
 
 	// Clean up the port
 	uart_close(sp);

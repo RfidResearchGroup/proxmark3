@@ -45,7 +45,7 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 		SendCommand(&c);
 		UsbCommand resp;
     
-    WaitForResponse(CMD_ACK,&resp);
+		WaitForResponse(CMD_ACK,&resp);
 
 		// check if command failed
 		if (resp.arg[0] != 0) {

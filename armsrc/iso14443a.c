@@ -144,7 +144,6 @@ const uint8_t OddByteParity[256] = {
   1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1
 };
 
-
 void iso14a_set_trigger(bool enable) {
 	trigger = enable;
 }
@@ -310,6 +309,7 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 	Uart.twoBits = (Uart.twoBits << 8) | bit;
 	
 	if (Uart.state == STATE_UNSYNCD) {												// not yet synced
+	
 		if (Uart.highCnt < 7) {													// wait for a stable unmodulated signal
 			if (Uart.twoBits == 0xffff) {
 				Uart.highCnt++;
@@ -399,7 +399,7 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 					if (Uart.len) {
 						return TRUE;											// we are finished with decoding the raw data sequence
 					} else {
-						UartReset();											// Nothing received - try again
+						UartReset();					// Nothing receiver - start over
 					}
 				}
 				if (Uart.state == STATE_START_OF_COMMUNICATION) {				// error - must not follow directly after SOC
@@ -472,7 +472,6 @@ void DemodReset()
 	Demod.startTime = 0;
 	Demod.endTime = 0;
 }
-
 
 void DemodInit(uint8_t *data, uint8_t *parity)
 {
@@ -763,7 +762,6 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *par
 	
 	// Send startbit
 	ToSend[++ToSendMax] = SEC_D;
-	
 	LastProxToAirDuration = 8 * ToSendMax - 4;
 
 	for(uint16_t i = 0; i < len; i++) {
@@ -990,6 +988,12 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 			response1[1] = 0x00;
 			sak = 0x28;
 		} break;
+		case 5: { // MIFARE TNP3XXX
+			// Says: I am a toy
+			response1[0] = 0x01;
+			response1[1] = 0x0f;
+			sak = 0x01;
+		} break;		
 		default: {
 			Dbprintf("Error: unkown tagtype (%d)",tagType);
 			return;
@@ -1123,7 +1127,7 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 			// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
 			p_response = NULL;
 		} else if(receivedCmd[0] == 0x50) {	// Received a HALT
-//			DbpString("Reader requested we HALT!:");
+
 			if (tracing) {
 				LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
 			}
@@ -1228,6 +1232,7 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 			// do the tracing for the previous reader request and this tag answer:
 			uint8_t par[MAX_PARITY_SIZE];
 			GetParity(p_response->response, p_response->response_n, par);
+	
 			EmLogTrace(Uart.output, 
 						Uart.len, 
 						Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, 
@@ -1308,13 +1313,6 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 	// clear TXRDY
 	AT91C_BASE_SSC->SSC_THR = SEC_Y;
 
-	// for(uint16_t c = 0; c < 10;) {	// standard delay for each transfer (allow tag to be ready after last transmission)
-		// if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-			// AT91C_BASE_SSC->SSC_THR = SEC_Y;	
-			// c++;
-		// }
-	// }
-
 	uint16_t c = 0;
 	for(;;) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
@@ -1327,7 +1325,6 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 	}
 	
 	NextTransferTime = MAX(NextTransferTime, LastTimeProxToAirStart + REQUEST_GUARD_TIME);
-	
 }
 
 
@@ -1669,7 +1666,6 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
 
 void ReaderTransmitBitsPar(uint8_t* frame, uint16_t bits, uint8_t *par, uint32_t *timing)
 {
-
 	CodeIso14443aBitsAsReaderPar(frame, bits, par);
   
 	// Send command to tag
@@ -1744,7 +1740,6 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 	
 	// Receive the ATQA
 	if(!ReaderReceive(resp, resp_par)) return 0;
-	//Dbprintf("atqa: %02x %02x",resp[1],resp[0]);
 
 	if(p_hi14a_card) {
 		memcpy(p_hi14a_card->atqa, resp, 2);
@@ -1800,7 +1795,6 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 			memcpy(uid_resp, resp, 4);
 		}
 		uid_resp_len = 4;
-		//Dbprintf("uid: %02x %02x %02x %02x",uid_resp[0],uid_resp[1],uid_resp[2],uid_resp[3]);
 
 		// calculate crypto UID. Always use last 4 Bytes.
 		if(cuid_ptr) {
@@ -1822,11 +1816,6 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 		if ((sak & 0x04) /* && uid_resp[0] == 0x88 */) {
 			// Remove first byte, 0x88 is not an UID byte, it CT, see page 3 of:
 			// http://www.nxp.com/documents/application_note/AN10927.pdf
-			// This was earlier:
-			//memcpy(uid_resp, uid_resp + 1, 3);
-			// But memcpy should not be used for overlapping arrays, 
-			// and memmove appears to not be available in the arm build. 
-			// Therefore:
 			uid_resp[0] = uid_resp[1];
 			uid_resp[1] = uid_resp[2];
 			uid_resp[2] = uid_resp[3]; 
@@ -1849,9 +1838,8 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 		p_hi14a_card->ats_len = 0;
 	}
 
-	if( (sak & 0x20) == 0) {
-		return 2; // non iso14443a compliant tag
-	}
+	// non iso14443a compliant tag
+	if( (sak & 0x20) == 0) return 2; 
 
 	// Request for answer to select
 	AppendCrc14443a(rats, 2);
@@ -1859,6 +1847,7 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 
 	if (!(len = ReaderReceive(resp, resp_par))) return 0;
 
+	
 	if(p_hi14a_card) {
 		memcpy(p_hi14a_card->ats, resp, sizeof(p_hi14a_card->ats));
 		p_hi14a_card->ats_len = len;
@@ -1866,7 +1855,6 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 
 	// reset the PCB block number
 	iso14_pcb_blocknum = 0;
-	
 	return 1;	
 }
 
@@ -1957,7 +1945,7 @@ void ReaderIso14443a(UsbCommand *c)
 	}
 
 	if(param & ISO14A_SET_TIMEOUT) {
-		iso14a_timeout = c->arg[2];
+		iso14a_set_timeout(c->arg[2]);
 	}
 
 	if(param & ISO14A_APDU) {
@@ -2047,8 +2035,8 @@ void ReaderMifare(bool first_try)
 	uint32_t nt = 0;
 	uint32_t previous_nt = 0;
 	static uint32_t nt_attacked = 0;
-	byte_t par_list[8] = {0,0,0,0,0,0,0,0};
-	byte_t ks_list[8] = {0,0,0,0,0,0,0,0};
+	byte_t par_list[8] = {0x00};
+	byte_t ks_list[8] = {0x00};
 
 	static uint32_t sync_time;
 	static uint32_t sync_cycles;
@@ -2056,8 +2044,6 @@ void ReaderMifare(bool first_try)
 	int last_catch_up = 0;
 	uint16_t consecutive_resyncs = 0;
 	int isOK = 0;
-
-
 
 	if (first_try) { 
 		mf_nr_ar3 = 0;

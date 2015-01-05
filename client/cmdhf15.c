@@ -26,11 +26,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-//#include "proxusb.h"
+
 #include "proxmark3.h"
 #include "data.h"
 #include "graph.h"
 #include "ui.h"
+#include "util.h"
 #include "cmdparser.h"
 #include "cmdhf15.h"
 #include "iso15693tools.h"
@@ -58,8 +59,10 @@ const productName uidmapping[] = {
 	{ 0xE001000000000000LL, 16, "Motorola" },
 	{ 0xE002000000000000LL, 16, "ST Microelectronics" },
 	{ 0xE003000000000000LL, 16, "Hitachi" },
-	{ 0xE004000000000000LL, 16, "Philips" },
-	{ 0xE004010000000000LL, 24, "Philips; IC SL2 ICS20" },
+	{ 0xE004000000000000LL, 16, "NXP(Philips)" },
+	{ 0xE004010000000000LL, 24, "NXP(Philips); IC SL2 ICS20/ICS21(SLI) ICS2002/ICS2102(SLIX)" },
+	{ 0xE004020000000000LL, 24, "NXP(Philips); IC SL2 ICS53/ICS54(SLI-S) ICS5302/ICS5402(SLIX-S)" },
+	{ 0xE004030000000000LL, 24, "NXP(Philips); IC SL2 ICS50/ICS51(SLI-L) ICS5002/ICS5102(SLIX-L)" },
 	{ 0xE005000000000000LL, 16, "Infineon" },
 	{ 0xE005400000000000LL, 24, "Infineon; 56x32bit" },
 	{ 0xE006000000000000LL, 16, "Cylinc" },
@@ -273,7 +276,28 @@ int CmdHF15Reader(const char *Cmd)
 // Simulation is still not working very good
 int CmdHF15Sim(const char *Cmd)
 {
-	UsbCommand c = {CMD_SIMTAG_ISO_15693, {strtol(Cmd, NULL, 0), 0, 0}};
+	char cmdp = param_getchar(Cmd, 0);
+	uint8_t uid[8] = {0x00};
+
+	//E0 16 24 00 00 00 00 00
+	if (cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  hf 15 sim <UID>");
+		PrintAndLog("");
+		PrintAndLog("     sample: hf 15 sim E016240000000000");
+		return 0;
+	}
+
+	if (param_gethex(Cmd, 0, uid, 16)) {
+		PrintAndLog("UID must include 16 HEX symbols");
+		return 0;
+	}
+	
+	PrintAndLog("Starting simulating UID %02X %02X %02X %02X %02X %02X %02X %02X",
+			uid[0],uid[1],uid[2],uid[3],uid[4], uid[5], uid[6], uid[7]);
+
+	UsbCommand c = {CMD_SIMTAG_ISO_15693, {0, 0, 0}};
+	memcpy(c.d.asBytes,uid,8);
+	
 	SendCommand(&c);
 	return 0;
 }
@@ -324,7 +348,7 @@ int CmdHF15DumpMem(const char*Cmd) {
 				if (!(recv[0] & ISO15_RES_ERROR)) {
 					retry=0;
 					*output=0; // reset outputstring
-					sprintf(output, "Block %2i   ",blocknum);
+					sprintf(output, "Block %02x   ",blocknum);
 					for ( int i=1; i<resp.arg[0]-2; i++) { // data in hex
 						sprintf(output+strlen(output),"%02X ",recv[i]);
 					}					
@@ -421,8 +445,9 @@ int CmdHF15CmdInquiry(const char *Cmd)
 int CmdHF15CmdDebug( const char *cmd) {
 	int debug=atoi(cmd);
 	if (strlen(cmd)<1) {
-		PrintAndLog("Usage: hf 15 cmd debug  <0/1>");
-		PrintAndLog("	0..no debugging output  1..turn debugging on");	
+		PrintAndLog("Usage: hf 15 cmd debug  <0|1>");
+		PrintAndLog("	0 no debugging");
+		PrintAndLog("	1 turn debugging on");	
 		return 0;
 	}
 
@@ -536,7 +561,7 @@ int CmdHF15CmdRaw (const char *cmd) {
 int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd[], int iso15cmdlen) {
 	int temp;
 	uint8_t *req=c->d.asBytes;
-	uint8_t uid[8] = {0};
+	uint8_t uid[8] = {0x00};
 	uint32_t reqlen=0;
 
 	// strip

@@ -11,9 +11,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-//#include "proxusb.h"
 #include "proxmark3.h"
 #include "ui.h"
+#include "util.h"
 #include "graph.h"
 #include "cmdparser.h"
 #include "cmddata.h"
@@ -22,19 +22,15 @@
 
 static int CmdHelp(const char *Cmd);
 
-
-
 int CmdEMdemodASK(const char *Cmd)
 {
-  int findone=0;
+	char cmdp = param_getchar(Cmd, 0);
+	int findone = (cmdp == '1') ? 1 : 0;	
   UsbCommand c={CMD_EM410X_DEMOD};
-  if(Cmd[0]=='1') findone=1;
   c.arg[0]=findone;
   SendCommand(&c);
   return 0;
 }
-
-
 
 /* Read the ID of an EM410x tag.
  * Format:
@@ -48,8 +44,8 @@ int CmdEM410xRead(const char *Cmd)
 {
   int i, j, clock, header, rows, bit, hithigh, hitlow, first, bit2idx, high, low;
   int parity[4];
-  char id[11];
-  char id2[11];
+  char id[11] = {0x00};
+  char id2[11] = {0x00};
   int retested = 0;
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN];
   high = low = 0;
@@ -201,7 +197,25 @@ retest:
  */
 int CmdEM410xSim(const char *Cmd)
 {
-  int i, n, j, h, binary[4], parity[4];
+	int i, n, j, binary[4], parity[4];
+
+	char cmdp = param_getchar(Cmd, 0);
+	uint8_t uid[5] = {0x00};
+
+	if (cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  lf em4x 410xsim <UID>");
+		PrintAndLog("");
+		PrintAndLog("     sample: lf em4x 410xsim 0F0368568B");
+		return 0;
+	}
+
+	if (param_gethex(Cmd, 0, uid, 10)) {
+		PrintAndLog("UID must include 10 HEX symbols");
+		return 0;
+	}
+	
+	PrintAndLog("Starting simulating UID %02X%02X%02X%02X%02X", uid[0],uid[1],uid[2],uid[3],uid[4]);
+	PrintAndLog("Press pm3-button to about simulation");
 
   /* clock is 64 in EM410x tags */
   int clock = 64;
@@ -209,9 +223,6 @@ int CmdEM410xSim(const char *Cmd)
   /* clear our graph */
   ClearGraph(0);
 
-  /* write it out a few times */
-  for (h = 0; h < 4; h++)
-  {
     /* write 9 start bits */
     for (i = 0; i < 9; i++)
       AppendGraph(0, clock, 1);
@@ -248,38 +259,38 @@ int CmdEM410xSim(const char *Cmd)
     AppendGraph(0, clock, parity[3]);
 
     /* stop bit */
-    AppendGraph(0, clock, 0);
-  }
-
-  /* modulate that biatch */
-  CmdManchesterMod("");
-
-  /* booyah! */
-  RepaintGraphWindow();
-  
-  CmdLFSim("");
+  AppendGraph(1, clock, 0);
+ 
+  CmdLFSim("240"); //240 start_gap.
   return 0;
 }
 
-/* Function is equivalent of loread + losamples + em410xread
- * looped until an EM410x tag is detected */
+/* Function is equivalent of lf read + data samples + em410xread
+ * looped until an EM410x tag is detected 
+ * 
+ * Why is CmdSamples("16000")?
+ *  TBD: Auto-grow sample size based on detected sample rate.  IE: If the
+ *       rate gets lower, then grow the number of samples
+ *  Changed by martin, 4000 x 4 = 16000, 
+ *  see http://www.proxmark.org/forum/viewtopic.php?pid=7235#p7235
+
+*/
 int CmdEM410xWatch(const char *Cmd)
 {
-  int read_h = (*Cmd == 'h');
-  do
-  {
-    CmdLFRead(read_h ? "h" : "");
-    // 2000 samples is OK for clock=64, but not clock=32.  Probably want
-		//   8000 for clock=16.  Don't want to go too high since old HID driver
-		//   is very slow
-		// TBD: Auto-grow sample size based on detected sample rate.  IE: If the
-		//   rate gets lower, then grow the number of samples
-
-    // Changed by martin, 4000 x 4 = 16000, 
-    // see http://www.proxmark.org/forum/viewtopic.php?pid=7235#p7235
-		CmdSamples("16000");
- } while ( ! CmdEM410xRead(""));
-  return 0;
+	char cmdp = param_getchar(Cmd, 0);
+	int read_h = (cmdp == 'h');
+	do {
+		if (ukbhit()) {
+			printf("\naborted via keyboard!\n");
+			break;
+		}
+		
+		CmdLFRead(read_h ? "h" : "");
+		CmdSamples("6000");		
+	} while (
+		!CmdEM410xRead("") 
+	);
+	return 0;
 }
 
 /* Read the transmitted data of an EM4x50 tag

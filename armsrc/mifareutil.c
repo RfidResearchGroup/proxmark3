@@ -54,10 +54,12 @@ void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, uint16_t len, u
 	uint8_t bt = 0;
 	int i;
 	par[0] = 0;
+	
 	for (i = 0; i < len; i++) {
 		bt = data[i];
 		data[i] = crypto1_byte(pcs, 0x00, 0) ^ data[i];
-		if((i&0x0007) == 0) par[i>>3] = 0;
+		if((i&0x0007) == 0) 
+			par[i>>3] = 0;
 		par[i>>3] |= (((filter(pcs->odd) ^ oddparity(bt)) & 0x01)<<(7-(i&0x0007)));
 	}	
 	return;
@@ -81,9 +83,7 @@ int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd,
 
 int mifare_sendcmd_short_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t* data, uint8_t* answer, uint8_t *answer_parity, uint32_t *timing)
 {
-    uint8_t dcmd[8];//, ecmd[4];
-    //uint32_t par=0;
-
+	uint8_t dcmd[8];
     dcmd[0] = cmd;
     dcmd[1] = data[0];
 	dcmd[2] = data[1];
@@ -91,10 +91,6 @@ int mifare_sendcmd_short_special(struct Crypto1State *pcs, uint8_t crypted, uint
 	dcmd[4] = data[3];
 	dcmd[5] = data[4];
 	AppendCrc14443a(dcmd, 6);
-	//Dbprintf("Data command: %02x", dcmd[0]);
-	//Dbprintf("Data R: %02x %02x %02x %02x %02x %02x %02x", dcmd[1],dcmd[2],dcmd[3],dcmd[4],dcmd[5],dcmd[6],dcmd[7]);
-
-        //memcpy(ecmd, dcmd, sizeof(dcmd));
 	ReaderTransmit(dcmd, sizeof(dcmd), NULL);
 	int len = ReaderReceive(answer, answer_parity);
 	if(!len)
@@ -165,7 +161,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	int len;	
 	uint32_t pos;
 	uint8_t tmp4[4];
-	uint8_t par[1] = {0};
+	uint8_t par[1] = {0x00};
 	byte_t nr[4];
 	uint32_t nt, ntpp; // Supplied tag nonce
 	
@@ -210,7 +206,6 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	if (ntptr)
 		*ntptr = nt;
 
-		
 	// Generate (encrypted) nr+parity by loading it into the cipher (Nr)
 	par[0] = 0;
 	for (pos = 0; pos < 4; pos++)
@@ -292,6 +287,7 @@ int mifare_ultra_readblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
 	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t* receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 	
+	
 	// command MIFARE_CLASSIC_READBLOCK
 	len = mifare_sendcmd_short(NULL, 1, 0x30, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 	if (len == 1) {
@@ -318,7 +314,7 @@ int mifare_ultra_readblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData) 
 {
 	// variables
-	int len, i;	
+	uint16_t len, i;	
 	uint32_t pos;
 	uint8_t par[3] = {0};		// enough for 18 Bytes to send
 	byte_t res;
@@ -367,7 +363,6 @@ int mifare_ultra_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
     // variables
     uint16_t len;     
     uint8_t par[3] = {0};  // enough for 18 parity bits
-        
     uint8_t d_block[18];
     uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t* receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
@@ -400,7 +395,6 @@ int mifare_ultra_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
 int mifare_ultra_special_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
 {
     uint16_t len;
-
     uint8_t d_block[8];
     uint8_t *receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
@@ -418,16 +412,12 @@ int mifare_ultra_special_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *bloc
         if (MF_DBGLEVEL >= 1)   Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0],len);
         return 1;
     }
-
-    return 0;
+    return 0;
 }
 
 int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid) 
 {
-	// variables
 	uint16_t len;	
-	
-	// Mifare HALT
 	uint8_t *receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
 
@@ -443,8 +433,6 @@ int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid)
 int mifare_ultra_halt(uint32_t uid)
 {
 	uint16_t len;
-	
-	// Mifare HALT
 	uint8_t *receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
     
@@ -481,19 +469,16 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo)
 // work with emulator memory
 void emlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 	uint8_t* emCARD = get_bigbufptr_emlcardmem();
-	
 	memcpy(emCARD + blockNum * 16, data, blocksCount * 16);
 }
 
 void emlGetMem(uint8_t *data, int blockNum, int blocksCount) {
 	uint8_t* emCARD = get_bigbufptr_emlcardmem();
-	
 	memcpy(data, emCARD + blockNum * 16, blocksCount * 16);
 }
 
 void emlGetMemBt(uint8_t *data, int bytePtr, int byteCount) {
 	uint8_t* emCARD = get_bigbufptr_emlcardmem();
-	
 	memcpy(data, emCARD + bytePtr, byteCount);
 }
 
@@ -522,7 +507,6 @@ int emlGetValBl(uint32_t *blReg, uint8_t *blBlock, int blockNum) {
 	
 	memcpy(blReg, data, 4);
 	*blBlock = data[12];
-	
 	return 0;
 }
 

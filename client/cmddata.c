@@ -329,7 +329,7 @@ int CmdBiphaseDecodeRaw(const char *Cmd)
 //prints binary found and saves in graphbuffer for further commands
 int Cmdaskrawdemod(const char *Cmd)
 {
-  uint32_t i;
+  
   int invert=0; 
   int clk=0; 
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
@@ -340,7 +340,7 @@ int Cmdaskrawdemod(const char *Cmd)
   }
   int BitLen = getFromGraphBuf(BitStream);
   int errCnt=0;
-  errCnt = askrawdemod(BitStream, &BitLen,&clk,&invert);
+  errCnt = askrawdemod(BitStream, &BitLen, &clk, &invert);
   if (errCnt==-1){  //throw away static - allow 1 and -1 (in case of threshold command first)
     PrintAndLog("no data found"); 
     return 0;
@@ -349,19 +349,14 @@ int Cmdaskrawdemod(const char *Cmd)
   PrintAndLog("Using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
     //PrintAndLog("Data start pos:%d, lastBit:%d, stop pos:%d, numBits:%d",iii,lastBit,i,bitnum);
     //move BitStream back to GraphBuffer
-    
-  ClearGraph(0);
-  for (i=0; i < BitLen; ++i){
-    GraphBuffer[i]=BitStream[i];
-  }
-  GraphTraceLen=BitLen;
-  RepaintGraphWindow();
-    
-    //output
+	setGraphBuf(BitStream, BitLen);
+	
   if (errCnt>0){
     PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
   }
+
   PrintAndLog("ASK demoded bitstream:");
+	
   // Now output the bitstream to the scrollback by line of 16 bits
   printBitStream(BitStream,BitLen);
   
@@ -477,10 +472,6 @@ int CmdBitstream(const char *Cmd)
       bit ^= 1;
 
     AppendGraph(0, clock, bit);
-  //    for (j = 0; j < (int)(clock/2); j++)
-  //      GraphBuffer[(i * clock) + j] = bit ^ 1;
-  //    for (j = (int)(clock/2); j < clock; j++)
-  //      GraphBuffer[(i * clock) + j] = bit;
   }
 
   RepaintGraphWindow();
@@ -510,8 +501,6 @@ int CmdDec(const char *Cmd)
 int CmdDetectClockRate(const char *Cmd)
 {
   GetClock("",0,0);
-  //int clock = DetectASKClock(0);
-  //PrintAndLog("Auto-detected clock rate: %d", clock);
   return 0;
 }
 
@@ -773,8 +762,7 @@ int CmdFSKdemod(const char *Cmd) //old CmdFSKdemod needs updating
   PrintAndLog("actual data bits start at sample %d", maxPos);
   PrintAndLog("length %d/%d", highLen, lowLen);
 
-  uint8_t bits[46];
-  bits[sizeof(bits)-1] = '\0';
+  uint8_t bits[46] = {0x00};
 
   // find bit pairs and manchester decode them
   for (i = 0; i < arraylen(bits) - 1; ++i) {
@@ -881,22 +869,21 @@ int CmdHpf(const char *Cmd)
 
 int CmdSamples(const char *Cmd)
 {
-  int cnt = 0;
-  int n;
-  uint8_t got[40000];
+	uint8_t got[40000] = {0x00};
 
-  n = strtol(Cmd, NULL, 0);
-  if (n == 0) n = 6000;
-  if (n > sizeof(got)) n = sizeof(got);
+	int n = strtol(Cmd, NULL, 0);
+	if (n == 0) 
+		n = 20000;
+		
+	if (n > sizeof(got)) 
+		n = sizeof(got);
   
-  PrintAndLog("Reading %d samples\n", n);
+	PrintAndLog("Reading %d samples from device memory\n", n);
   GetFromBigBuf(got,n,0);
   WaitForResponse(CMD_ACK,NULL);
-  for (int j = 0; j < n; j++) {
-    GraphBuffer[cnt++] = ((int)got[j]) - 128;
+	for (int j = 0; j < n; ++j) {
+		GraphBuffer[j] = ((int)got[j]) - 128;
   }
-  
-  PrintAndLog("Done!\n");
   GraphTraceLen = n;
   RepaintGraphWindow();
   return 0;
@@ -1340,8 +1327,8 @@ static command_t CommandTable[] =
   {"help",          CmdHelp,            1, "This help"},
   {"amp",           CmdAmp,             1, "Amplify peaks"},
   {"askdemod",      Cmdaskdemod,        1, "<0 or 1> -- Attempt to demodulate simple ASK tags"},
-  {"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert<0 or 1>] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional[clock will try Auto-detect])"},
-  {"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0 or 1>] -- Attempt to demodulate ASK tags and output binary (args optional[clock will try Auto-detect])"},
+  {"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert <0|1>] -- Attempt to demodulate ASK/Manchester tags and output binary"},
+  {"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert <0|1>] -- Attempt to demodulate ASK tags and output binary"},
   {"autocorr",      CmdAutoCorr,        1, "<window length> -- Autocorrelation over window"},
   {"biphaserawdecode",CmdBiphaseDecodeRaw,1,"[offset] Biphase decode binary stream already in graph buffer (offset = bit to start decode from)"},
   {"bitsamples",    CmdBitsamples,      0, "Get raw samples as bitstring"},

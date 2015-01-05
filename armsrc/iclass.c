@@ -433,7 +433,6 @@ static RAMFUNC int ManchesterDecoding(int v)
 	else {
 		modulation = bit & Demod.syncBit;
 		modulation |= ((bit << 1) ^ ((Demod.buffer & 0x08) >> 3)) & Demod.syncBit;
-		//modulation = ((bit << 1) ^ ((Demod.buffer & 0x08) >> 3)) & Demod.syncBit;
 
 		Demod.samples += 4;
 
@@ -842,10 +841,7 @@ static int GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen)
         }
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			/*if(OutOfNDecoding((b & 0xf0) >> 4)) {
-				*len = Uart.byteCnt;
-				return TRUE;
-			}*/
+
 			if(OutOfNDecoding(b & 0x0f)) {
 				*len = Uart.byteCnt;
 				return TRUE;
@@ -1001,8 +997,6 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
  */
 int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader_mac_buf)
 {
-
-
 	// CSN followed by two CRC bytes
 	uint8_t response2[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	uint8_t response3[] = { 0,0,0,0,0,0,0,0,0,0};
@@ -1106,6 +1100,7 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 		//Signal tracer
 		// Can be used to get a trigger for an oscilloscope..
 		LED_C_OFF();
+
 		if(!GetIClassCommandFromReader(receivedCmd, &len, 100)) {
 			buttonPressed = true;
 			break;
@@ -1368,7 +1363,6 @@ void ReaderTransmitIClass(uint8_t* frame, int len)
 	int samples = 0;
 
 	// This is tied to other size changes
-	// 	uint8_t* frame_addr = ((uint8_t*)BigBuf) + 2024;
 	CodeIClassCommand(frame,len);
 
 	// Select the card
@@ -1423,10 +1417,7 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
 			b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			skip = !skip;
 			if(skip) continue;
-			/*if(ManchesterDecoding((b>>4) & 0xf)) {
-				*samples = ((c - 1) << 3) + 4;
-				return TRUE;
-			}*/
+		
 			if(ManchesterDecoding(b & 0x0f)) {
 				*samples = c << 3;
 				return  TRUE;

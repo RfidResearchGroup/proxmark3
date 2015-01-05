@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "crc16.h"
-//#include "proxusb.h"
 #include "proxmark3.h"
 #include "data.h"
 #include "ui.h"

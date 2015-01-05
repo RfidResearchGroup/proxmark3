@@ -263,13 +263,10 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *w
 //-----------------------------------------------------------------------------
 static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int *wait)
 {
-    int c;
-
-//	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR);	// No requirement to energise my coils
+    int c = 0;
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR|FPGA_HF_SIMULATOR_MODULATE_424K);
 	if(*wait < 10) { *wait = 10; }
 
-    c = 0;
     for(;;) {
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c];
@@ -464,8 +461,7 @@ static int GetIso15693AnswerFromSniff(uint8_t *receivedResponse, int maxLen, int
 			AT91C_BASE_SSC->SSC_THR = 0x43;
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			int8_t b;
-			b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
+			int8_t b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
 
 			// The samples are correlations against I and Q versions of the
 			// tone that the tag AM-modulates, so every other sample is I,
@@ -600,10 +596,10 @@ static void BuildIdentifyRequest(void);
 //-----------------------------------------------------------------------------
 void AcquireRawAdcSamplesIso15693(void)
 {
-	int c = 0;
 	uint8_t *dest = (uint8_t *)BigBuf;
-	int getNext = 0;
 
+	int c = 0;
+	int getNext = 0;
 	int8_t prev = 0;
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -682,10 +678,10 @@ void AcquireRawAdcSamplesIso15693(void)
 
 void RecordRawAdcSamplesIso15693(void)
 {
-	int c = 0;
-	uint8_t *dest = (uint8_t *)BigBuf;
-	int getNext = 0;
+	uint8_t *dest =  (uint8_t *)BigBuf;
 
+	int c = 0;
+	int getNext = 0;
 	int8_t prev = 0;
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -836,24 +832,25 @@ static void BuildReadBlockRequest(uint8_t *uid, uint8_t blockNumber )
 }
 
 // Now the VICC>VCD responses when we are simulating a tag
- static void BuildInventoryResponse(void)
+ static void BuildInventoryResponse( uint8_t *uid)
 {
 	uint8_t cmd[12];
 
 	uint16_t crc;
 	// one sub-carrier, inventory, 1 slot, fast rate
 	// AFI is at bit 5 (1<<4) when doing an INVENTORY
-	cmd[0] = 0; //(1 << 2) | (1 << 5) | (1 << 1);
-	cmd[1] = 0;
+    //(1 << 2) | (1 << 5) | (1 << 1);
+	cmd[0] = 0; // 
+	cmd[1] = 0; // DSFID (data storage format identifier).  0x00 = not supported
 	// 64-bit UID
-	cmd[2] = 0x32;
-	cmd[3]= 0x4b;
-	cmd[4] = 0x03;
-	cmd[5] = 0x01;
-	cmd[6] = 0x00;
-	cmd[7] = 0x10;
-	cmd[8] = 0x05;
-	cmd[9]= 0xe0;
+	cmd[2] = uid[7]; //0x32;
+	cmd[3] = uid[6]; //0x4b;
+	cmd[4] = uid[5]; //0x03;
+	cmd[5] = uid[4]; //0x01;
+	cmd[6] = uid[3]; //0x00;
+	cmd[7] = uid[2]; //0x10;
+	cmd[8] = uid[1]; //0x05;
+	cmd[9] = uid[0]; //0xe0;
 	//Now the CRC
 	crc = Crc(cmd, 10);
 	cmd[10] = crc & 0xff;
@@ -1002,32 +999,33 @@ void ReaderIso15693(uint32_t parameter)
 	LED_C_OFF();
 	LED_D_OFF();
 
-//DbpString(parameter);
-
-	//uint8_t *answer0 = (((uint8_t *)BigBuf) + 3560); // allow 100 bytes per reponse (way too much)
 	uint8_t *answer1 = (((uint8_t *)BigBuf) + 3660); //
 	uint8_t *answer2 = (((uint8_t *)BigBuf) + 3760);
 	uint8_t *answer3 = (((uint8_t *)BigBuf) + 3860);
-	//uint8_t *TagUID= (((uint8_t *)BigBuf) + 3960);		// where we hold the uid for hi15reader
-//	int answerLen0 = 0;
+
 	int answerLen1 = 0;
 	int answerLen2 = 0;
 	int answerLen3 = 0;
-	int i=0; // counter
+	int i = 0;
+	int samples = 0;
+	int tsamples = 0;
+	int wait = 0;
+	int elapsed = 0;
+	uint8_t TagUID[8] = {0x00};
+
 
 	// Blank arrays
-	memset(BigBuf + 3660, 0, 300);
+	memset(BigBuf + 3660, 0x00, 300);
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	// Setup SSC
 	FpgaSetupSsc();
 
 	// Start from off (no field generated)
     	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     	SpinDelay(200);
-
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-	FpgaSetupSsc();
 
 	// Give the tags time to energize
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
@@ -1038,44 +1036,19 @@ void ReaderIso15693(uint32_t parameter)
 	LED_C_OFF();
 	LED_D_OFF();
 
-	int samples = 0;
-	int tsamples = 0;
-	int wait = 0;
-	int elapsed = 0;
-
 	// FIRST WE RUN AN INVENTORY TO GET THE TAG UID
 	// THIS MEANS WE CAN PRE-BUILD REQUESTS TO SAVE CPU TIME
-	 uint8_t TagUID[8] = {0, 0, 0, 0, 0, 0, 0, 0};		// where we hold the uid for hi15reader
-
-//	BuildIdentifyRequest();
-//	//TransmitTo15693Tag(ToSend,ToSendMax+3,&tsamples, &wait);
-//	TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
-//	// Now wait for a response
-//	responseLen0 = GetIso15693AnswerFromTag(receivedAnswer0, 100, &samples, &elapsed) ;
-//	if (responseLen0 >=12) // we should do a better check than this
-//	{
-//		// really we should check it is a valid mesg
-//		// but for now just grab what we think is the uid
-//		TagUID[0] = receivedAnswer0[2];
-//		TagUID[1] = receivedAnswer0[3];
-//		TagUID[2] = receivedAnswer0[4];
-//		TagUID[3] = receivedAnswer0[5];
-//		TagUID[4] = receivedAnswer0[6];
-//		TagUID[5] = receivedAnswer0[7];
-//		TagUID[6] = receivedAnswer0[8]; // IC Manufacturer code
-//	DbpIntegers(TagUID[6],TagUID[5],TagUID[4]);
-//}
 
 	// Now send the IDENTIFY command
 	BuildIdentifyRequest();
-	//TransmitTo15693Tag(ToSend,ToSendMax+3,&tsamples, &wait);
-	TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
+	
+	TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);
+	
 	// Now wait for a response
 	answerLen1 = GetIso15693AnswerFromTag(answer1, 100, &samples, &elapsed) ;
 
 	if (answerLen1 >=12) // we should do a better check than this
 	{
-
 		TagUID[0] = answer1[2];
 		TagUID[1] = answer1[3];
 		TagUID[2] = answer1[4];
@@ -1085,23 +1058,6 @@ void ReaderIso15693(uint32_t parameter)
 		TagUID[6] = answer1[8]; // IC Manufacturer code
 		TagUID[7] = answer1[9]; // always E0
 
-		// Now send the SELECT command
-		// since the SELECT command is optional, we should not rely on it.
-////				BuildSelectRequest(TagUID);
-//		TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
-		// Now wait for a response
-///		answerLen2 = GetIso15693AnswerFromTag(answer2, 100, &samples, &elapsed);
-
-		// Now send the MULTI READ command
-//		BuildArbitraryRequest(*TagUID,parameter);
-///		BuildArbitraryCustomRequest(TagUID,parameter);
-//		BuildReadBlockRequest(*TagUID,parameter);
-//		BuildSysInfoRequest(*TagUID);
-		//TransmitTo15693Tag(ToSend,ToSendMax+3,&tsamples, &wait);
-///		TransmitTo15693Tag(ToSend,ToSendMax,&tsamples, &wait);	// No longer ToSendMax+3
-		// Now wait for a response
-///		answerLen3 = GetIso15693AnswerFromTag(answer3, 100, &samples, &elapsed) ;
-
 	}
 
 	Dbprintf("%d octets read from IDENTIFY request:", answerLen1);
@@ -1110,9 +1066,9 @@ void ReaderIso15693(uint32_t parameter)
 
 	// UID is reverse
 	if (answerLen1>=12) 
-		//Dbprintf("UID = %*D",8,TagUID," ");
-		Dbprintf("UID = %02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX",TagUID[7],TagUID[6],TagUID[5],
-			TagUID[4],TagUID[3],TagUID[2],TagUID[1],TagUID[0]);
+		Dbprintf("UID = %02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX",
+			TagUID[7],TagUID[6],TagUID[5],TagUID[4],
+			TagUID[3],TagUID[2],TagUID[1],TagUID[0]);
 
 
 	Dbprintf("%d octets read from SELECT request:", answerLen2);
@@ -1123,7 +1079,6 @@ void ReaderIso15693(uint32_t parameter)
 	DbdecodeIso15693Answer(answerLen3,answer3);
 	Dbhexdump(answerLen3,answer3,true);
 
- 
 	// read all pages
 	if (answerLen1>=12 && DEBUG) {
 		i=0;			
@@ -1141,13 +1096,6 @@ void ReaderIso15693(uint32_t parameter)
 		} 
 	}
 
-//	str2[0]=0;
-//	for(i = 0; i < responseLen3; i++) {
-//		itoa(str1,receivedAnswer3[i]);
-//		strncat(str2,str1,8);
-//	}
-//	DbpString(str2);
-
 	LED_A_OFF();
 	LED_B_OFF();
 	LED_C_OFF();
@@ -1156,32 +1104,31 @@ void ReaderIso15693(uint32_t parameter)
 
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
 // all demodulation performed in arm rather than host. - greg
-void SimTagIso15693(uint32_t parameter)
+void SimTagIso15693(uint32_t parameter, uint8_t *uid)
 {
 	LED_A_ON();
 	LED_B_ON();
 	LED_C_OFF();
 	LED_D_OFF();
 
-	uint8_t *answer1 = (((uint8_t *)BigBuf) + 3660); //
+	uint8_t *buf = (((uint8_t *)BigBuf) + 3660); //
+	
 	int answerLen1 = 0;
+	int samples = 0;
+	int tsamples = 0;
+	int wait = 0;
+	int elapsed = 0;
 
-	// Blank arrays
-	memset(answer1, 0, 100);
+	memset(buf, 0x00, 100);
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	// Setup SSC
+
+	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+
 	FpgaSetupSsc();
 
 	// Start from off (no field generated)
     	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    	SpinDelay(200);
-
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-	FpgaSetupSsc();
-
-	// Give the tags time to energize
-//	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);	// NO GOOD FOR SIM TAG!!!!
 	SpinDelay(200);
 
 	LED_A_OFF();
@@ -1189,24 +1136,26 @@ void SimTagIso15693(uint32_t parameter)
 	LED_C_ON();
 	LED_D_OFF();
 
-	int samples = 0;
-	int tsamples = 0;
-	int wait = 0;
-	int elapsed = 0;
-
-	answerLen1 = GetIso15693AnswerFromSniff(answer1, 100, &samples, &elapsed) ;
+	// Listen to reader
+	answerLen1 = GetIso15693AnswerFromSniff(buf, 100, &samples, &elapsed) ;
 
 	if (answerLen1 >=1) // we should do a better check than this
 	{
 		// Build a suitable reponse to the reader INVENTORY cocmmand
-		BuildInventoryResponse();
+		// not so obsvious, but in the call to BuildInventoryResponse,  the command is copied to the global ToSend buffer used below.
+		
+		BuildInventoryResponse(uid);
+	
 		TransmitTo15693Reader(ToSend,ToSendMax, &tsamples, &wait);
 	}
 
 	Dbprintf("%d octets read from reader command: %x %x %x %x %x %x %x %x %x", answerLen1,
-		answer1[0], answer1[1], answer1[2],
-		answer1[3], answer1[4], answer1[5],
-		answer1[6], answer1[7], answer1[8]);
+		buf[0], buf[1], buf[2],	buf[3],
+		buf[4], buf[5],	buf[6], buf[7], buf[8]);
+
+	Dbprintf("Simulationg uid: %x %x %x %x %x %x %x %x",
+		uid[0], uid[1], uid[2],	uid[3],
+		uid[4], uid[5],	uid[6], uid[7]);
 
 	LED_A_OFF();
 	LED_B_OFF();
@@ -1275,12 +1224,8 @@ void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8
 	recvlen=SendDataTag(data,datalen,1,speed,(recv?&recvbuf:NULL));
 
 	if (recv) { 
-//		n.cmd=/* CMD_ISO_15693_COMMAND_DONE */ CMD_ACK;
-//		n.arg[0]=recvlen>48?48:recvlen;
-//		memcpy(n.d.asBytes, recvbuf, 48);
 		LED_B_ON();
     cmd_send(CMD_ACK,recvlen>48?48:recvlen,0,0,recvbuf,48);
-//		UsbSendPacket((uint8_t *)&n, sizeof(n));
 		LED_B_OFF();	
 		
 		if (DEBUG) {

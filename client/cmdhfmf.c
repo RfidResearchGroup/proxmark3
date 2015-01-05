@@ -36,7 +36,6 @@ start:
 	//flush queue
 	while (ukbhit())	getchar();
 
-	
 	// wait cycle
 	while (true) {
         printf(".");
@@ -78,6 +77,7 @@ start:
 		num_to_bytes(r_key, 6, keyBlock);
 		isOK = mfCheckKeys(0, 0, 1, keyBlock, &r_key);
 	}
+	
 	if (!isOK) 
 		PrintAndLog("Found valid key:%012"llx, r_key);
 	else
@@ -88,6 +88,7 @@ start:
 		goto start;
 	}
 	
+	PrintAndLog("");
 	return 0;
 }
 
@@ -437,7 +438,6 @@ int CmdHF14AMfRdSc(const char *Cmd)
   return 0;
 }
 
-
 uint8_t FirstBlockOfSector(uint8_t sectorNo)
 {
 	if (sectorNo < 32) {
@@ -447,7 +447,6 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo)
 	}
 }
 
-
 uint8_t NumBlocksPerSector(uint8_t sectorNo)
 {
 	if (sectorNo < 32) {
@@ -456,7 +455,6 @@ uint8_t NumBlocksPerSector(uint8_t sectorNo)
 		return 16;
 	}
 }
-
 
 int CmdHF14AMfDump(const char *Cmd)
 {
@@ -497,8 +495,7 @@ int CmdHF14AMfDump(const char *Cmd)
 		return 1;
 	}
 	
-	// Read key file
-
+	// Read keys A from file
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		if (fread( keyA[sectorNo], 1, 6, fin ) == 0) {
 			PrintAndLog("File reading error.");
@@ -507,6 +504,7 @@ int CmdHF14AMfDump(const char *Cmd)
 		}
 	}
 	
+	// Read keys B from file
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		if (fread( keyB[sectorNo], 1, 6, fin ) == 0) {
 			PrintAndLog("File reading error.");
@@ -556,6 +554,7 @@ int CmdHF14AMfDump(const char *Cmd)
 	for (sectorNo = 0; isOK && sectorNo < numSectors; sectorNo++) {
 		for (blockNo = 0; isOK && blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
 			bool received = false;
+			
 			if (blockNo == NumBlocksPerSector(sectorNo) - 1) {		// sector trailer. At least the Access Conditions can always be read with key A. 
 				UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}};
 				memcpy(c.d.asBytes, keyA[sectorNo], 6);
@@ -610,7 +609,6 @@ int CmdHF14AMfDump(const char *Cmd)
 				break;
 			}
 		}
-
 	}
 
 	if (isOK) {
@@ -627,10 +625,8 @@ int CmdHF14AMfDump(const char *Cmd)
 	return 0;
 }
 
-
 int CmdHF14AMfRestore(const char *Cmd)
 {
-
 	uint8_t sectorNo,blockNo;
 	uint8_t keyType = 0;
 	uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -736,7 +732,6 @@ int CmdHF14AMfRestore(const char *Cmd)
 	fclose(fdump);
 	return 0;
 }
-
 
 int CmdHF14AMfNested(const char *Cmd)
 {
@@ -886,6 +881,7 @@ int CmdHF14AMfNested(const char *Cmd)
 					PrintAndLog("-----------------------------------------------");
 					if(mfnested(blockNo, keyType, key, FirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate)) {
 						PrintAndLog("Nested error.\n");
+						free(e_sector);
 						return 2;
 					}
 					else {
@@ -960,10 +956,8 @@ int CmdHF14AMfNested(const char *Cmd)
 		
 		free(e_sector);
 	}
-
 	return 0;
 }
-
 
 int CmdHF14AMfChk(const char *Cmd)
 {
@@ -994,7 +988,6 @@ int CmdHF14AMfChk(const char *Cmd)
 	int transferToEml = 0;
 	int createDumpFile = 0;
 
-
 	keyBlock = calloc(stKeyBlock, 6);
 	if (keyBlock == NULL) return 1;
 
@@ -1020,7 +1013,6 @@ int CmdHF14AMfChk(const char *Cmd)
 	{
 		num_to_bytes(defaultKeys[defaultKeyCounter], 6, (uint8_t*)(keyBlock + defaultKeyCounter * 6));
 	}
-	
 	
 	if (param_getchar(Cmd, 0)=='*') {
 		blockNo = 3;
@@ -1114,6 +1106,7 @@ int CmdHF14AMfChk(const char *Cmd)
 				PrintAndLog("File: %s: not found or locked.", filename);
 				free(keyBlock);
 				return 1;
+			
 			}
 		}
 	}
@@ -1191,10 +1184,9 @@ int CmdHF14AMfChk(const char *Cmd)
 	}
 
 	free(keyBlock);
-
+	PrintAndLog("");
 	return 0;
 }
-
 
 int CmdHF14AMf1kSim(const char *Cmd)
 {
@@ -1261,7 +1253,6 @@ int CmdHF14AMf1kSim(const char *Cmd)
 	return 0;
 }
 
-
 int CmdHF14AMfDbg(const char *Cmd)
 {
 	int dbgMode = param_get32ex(Cmd, 0, 0, 10);
@@ -1286,7 +1277,6 @@ int CmdHF14AMfDbg(const char *Cmd)
   return 0;
 }
 
-
 int CmdHF14AMfEGet(const char *Cmd)
 {
 	uint8_t blockNo = 0;
@@ -1309,7 +1299,6 @@ int CmdHF14AMfEGet(const char *Cmd)
 
   return 0;
 }
-
 
 int CmdHF14AMfEClear(const char *Cmd)
 {
@@ -1383,7 +1372,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 	// open file
 	f = fopen(filename, "r");
 	if (f == NULL) {
-		PrintAndLog("File not found or locked.");
+		PrintAndLog("File %s not found or locked", filename);
 		return 1;
 	}
 	
@@ -1407,8 +1396,8 @@ int CmdHF14AMfELoad(const char *Cmd)
 		}
 		for (i = 0; i < 32; i += 2) {
 			sscanf(&buf[i], "%02x", (unsigned int *)&buf8[i / 2]);
-//			PrintAndLog("data[%02d]:%s", blockNum, sprint_hex(buf8, 16));
 		}
+		
 		if (mfEmlSetMem(buf8, blockNum, 1)) {
 			PrintAndLog("Cant set emul block: %3d", blockNum);
 			fclose(f);
@@ -1476,7 +1465,7 @@ int CmdHF14AMfESave(const char *Cmd)
 			break;
 		}
 		for (j = 0; j < 16; j++)
-			fprintf(f, "%02x", buf[j]); 
+			fprintf(f, "%02X", buf[j]); 
 		fprintf(f,"\n");
 	}
 	fclose(f);
@@ -1554,8 +1543,8 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 int CmdHF14AMfCSetUID(const char *Cmd)
 {
 	uint8_t wipeCard = 0;
-	uint8_t uid[8] = {0};
-	uint8_t oldUid[8]= {0};
+	uint8_t uid[8] = {0x00};
+	uint8_t oldUid[8] = {0x00};
 	int res;
 
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
@@ -1583,9 +1572,9 @@ int CmdHF14AMfCSetUID(const char *Cmd)
 		}
 	
 	PrintAndLog("old UID:%s", sprint_hex(oldUid, 4));
+	PrintAndLog("new UID:%s", sprint_hex(uid, 4));
 	return 0;
 }
-
 
 int CmdHF14AMfCSetBlk(const char *Cmd)
 {
@@ -1720,7 +1709,6 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		return 0;
 	}
 }
-
 
 int CmdHF14AMfCGetBlk(const char *Cmd) {
 	uint8_t memBlock[16];
@@ -1877,7 +1865,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 
 
 int CmdHF14AMfSniff(const char *Cmd){
-	// params
+
 	bool wantLogToFile = 0;
 	bool wantDecrypt = 0;
 	//bool wantSaveToEml = 0; TODO
@@ -1904,8 +1892,8 @@ int CmdHF14AMfSniff(const char *Cmd){
 		PrintAndLog("    l - save encrypted sequence to logfile `uid.log`");
 		PrintAndLog("    d - decrypt sequence and put it to log file `uid.log`");
 		PrintAndLog(" n/a   e - decrypt sequence, collect read and write commands and save the result of the sequence to emulator memory");
-		PrintAndLog("    r - decrypt sequence, collect read and write commands and save the result of the sequence to emulator dump file `uid.eml`");
-		PrintAndLog("Usage:  hf mf sniff [l][d][e][r]");
+		PrintAndLog("    f - decrypt sequence, collect read and write commands and save the result of the sequence to emulator dump file `uid.eml`");
+		PrintAndLog("Usage:  hf mf sniff [l][d][e][f]");
 		PrintAndLog("  sample: hf mf sniff l d e");
 		return 0;
 	}	
@@ -1961,8 +1949,9 @@ int CmdHF14AMfSniff(const char *Cmd){
 				PrintAndLog("received trace len: %d packages: %d", blockLen, pckNum);
 				num = 0;
 				while (bufPtr - buf < blockLen) {
-					bufPtr += 6;	// ignore void timing information
+					bufPtr += 6;
 					len = *((uint16_t *)bufPtr);
+
 					if(len & 0x8000) {
 						isTag = true;
 						len &= 0x7fff;
@@ -1971,6 +1960,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 					}
 					bufPtr += 2;
 					if ((len == 14) && (bufPtr[0] == 0xff) && (bufPtr[1] == 0xff) && (bufPtr[12] == 0xff) && (bufPtr[13] == 0xff)) {
+					
 						memcpy(uid, bufPtr + 2, 7);
 						memcpy(atqa, bufPtr + 2 + 7, 2);
 						uid_len = (atqa[0] & 0xC0) == 0x40 ? 7 : 4;
@@ -1985,18 +1975,21 @@ int CmdHF14AMfSniff(const char *Cmd){
 							FillFileNameByUID(logHexFileName, uid + (7 - uid_len), ".log", uid_len);
 							AddLogCurrentDT(logHexFileName);
 						}						
-						if (wantDecrypt) mfTraceInit(uid, atqa, sak, wantSaveToEmlFile);
+						if (wantDecrypt) 
+							mfTraceInit(uid, atqa, sak, wantSaveToEmlFile);
 					} else {
 						PrintAndLog("%s(%d):%s", isTag ? "TAG":"RDR", num, sprint_hex(bufPtr, len));
-						if (wantLogToFile) AddLogHex(logHexFileName, isTag ? "TAG: ":"RDR: ", bufPtr, len);
-						if (wantDecrypt) mfTraceDecode(bufPtr, len, wantSaveToEmlFile);
+						if (wantLogToFile) 
+							AddLogHex(logHexFileName, isTag ? "TAG: ":"RDR: ", bufPtr, len);
+						if (wantDecrypt) 
+							mfTraceDecode(bufPtr, len, wantSaveToEmlFile);
 					}
 					bufPtr += len;
 					bufPtr += ((len-1)/8+1);	// ignore parity
 					num++;
 				}
 			}
-		} // resp not NILL
+		} // resp not NULL
 	} // while (true)
 	
 	return 0;

@@ -3,7 +3,6 @@
 #include <string.h>
 #include <inttypes.h>
 #include <limits.h>
-//#include "proxusb.h"
 #include "proxmark3.h"
 #include "data.h"
 #include "graph.h"
@@ -19,26 +18,21 @@ int CmdIODemodFSK(const char *Cmd)
 {
   int findone=0;
   if(Cmd[0]=='1') findone=1;
+	
   UsbCommand c={CMD_IO_DEMOD_FSK};
   c.arg[0]=findone;
   SendCommand(&c);
   return 0;
 }
 
-
 int CmdIOProxDemod(const char *Cmd){
   if (GraphTraceLen < 4800) {
     PrintAndLog("too short; need at least 4800 samples");
     return 0;
   }
-
   GraphTraceLen = 4800;
   for (int i = 0; i < GraphTraceLen; ++i) {
-    if (GraphBuffer[i] < 0) {
-      GraphBuffer[i] = 0;
-    } else {
-      GraphBuffer[i] = 1;
-    }
+    GraphBuffer[i] = (GraphBuffer[i] < 0) ? 0 : 1;
   }
   RepaintGraphWindow();
   return 0;
@@ -61,7 +55,7 @@ int CmdIOClone(const char *Cmd)
   }
 
   PrintAndLog("Cloning tag with ID %08x %08x", hi, lo);
-
+  PrintAndLog("Press pm3-button to abort simulation");
   c.cmd = CMD_IO_CLONE_TAG;
   c.arg[0] = hi;
   c.arg[1] = lo;

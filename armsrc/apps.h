@@ -192,12 +192,13 @@ void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);  // Work with "magic Chinese" card
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
+void MifareCIdent();  // is "magic chinese" card?
 
 /// iso15693.h
 void RecordRawAdcSamplesIso15693(void);
 void AcquireRawAdcSamplesIso15693(void);
 void ReaderIso15693(uint32_t parameter);	// Simulate an ISO15693 reader - greg
-void SimTagIso15693(uint32_t parameter);	// simulate an ISO15693 tag - greg
+void SimTagIso15693(uint32_t parameter, uint8_t *uid);	// simulate an ISO15693 tag - greg
 void BruteforceIso15693Afi(uint32_t speed); // find an AFI of a tag - atrox
 void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8_t data[]); // send arbitrary commands from CLI - atrox 
 void SetDebugIso15693(uint32_t flag);

@@ -67,6 +67,7 @@ int CmdHF14AReader(const char *Cmd)
 
 	switch (card.sak) {
 		case 0x00: PrintAndLog("TYPE : NXP MIFARE Ultralight | Ultralight C"); break;
+		case 0x01: PrintAndLog("TYPE : NXP TNP3xxx Activision Game Appliance"); break;
 		case 0x04: PrintAndLog("TYPE : NXP MIFARE (various !DESFire !DESFire EV1)"); break;
 		case 0x08: PrintAndLog("TYPE : NXP MIFARE CLASSIC 1k | Plus 2k SL1"); break;
 		case 0x09: PrintAndLog("TYPE : NXP MIFARE Mini 0.3k"); break;
@@ -301,6 +302,7 @@ int CmdHF14ASim(const char *Cmd)
 		PrintAndLog("           2 = MIFARE Ultralight");
 		PrintAndLog("           3 = MIFARE DESFIRE");
 		PrintAndLog("           4 = ISO/IEC 14443-4");
+		PrintAndLog("           5 = MIFARE TNP3XXX");		
 		PrintAndLog("");
 		return 1;
 	}
@@ -328,10 +330,6 @@ int CmdHF14ASim(const char *Cmd)
 		// At lease save the mandatory first part of the UID
 		c.arg[0] = long_uid & 0xffffffff;
 
-	
-	// At lease save the mandatory first part of the UID
-	c.arg[0] = long_uid & 0xffffffff;
-	
 	if (c.arg[1] == 0) {
 		PrintAndLog("Emulating ISO/IEC 14443 type A tag with UID %01d %08x %08x",c.arg[0],c.arg[1],c.arg[2]);
 	}
