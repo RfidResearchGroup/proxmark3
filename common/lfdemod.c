@@ -592,41 +592,40 @@ uint32_t bytebits_to_byte(uint8_t* src, int numbits)
 
 int IOdemodFSK(uint8_t *dest, size_t size)
 {
+	static const uint8_t THRESHOLD = 170;
     uint32_t idx=0;
     //make sure buffer has data
     if (size < 66) return -1;
     //test samples are not just noise
-    uint8_t testMax=0;
-    for(idx=0;idx<65;idx++){
-        if (testMax<dest[idx]) testMax=dest[idx];
-    }
-    idx=0;
-    //if not just noise
-    if (testMax>20){
-        // FSK demodulator
-        size = fskdemod(dest, size,64,1,10,8);  //  RF/64 and invert
-        if (size < 65) return -1;  //did we get a good demod?
-        //Index map
-        //0           10          20          30          40          50          60
-        //|           |           |           |           |           |           |
-        //01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
-        //-----------------------------------------------------------------------------
-        //00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
-        //
-        //XSF(version)facility:codeone+codetwo
-        //Handle the data
-        uint8_t mask[] = {0,0,0,0,0,0,0,0,0,1};
-        for( idx=0; idx < (size - 65); idx++) {
-            if ( memcmp(dest + idx, mask, sizeof(mask))==0) {
-                //frame marker found
-                if (!dest[idx+8] && dest[idx+17]==1 && dest[idx+26]==1 && dest[idx+35]==1 && dest[idx+44]==1 && dest[idx+53]==1){
-                    //confirmed proper separator bits found
-                    //return start position
-                    return (int) idx;
-                }
-            }
-        }
-    }
+	uint8_t justNoise = 1;
+	for(idx=0;idx< size && justNoise ;idx++){
+		justNoise = dest[idx] > THRESHOLD;
+	}
+	if(justNoise) return 0;
+
+	// FSK demodulator
+	size = fskdemod(dest, size,64,1,10,8);  //  RF/64 and invert
+	if (size < 65) return -1;  //did we get a good demod?
+	//Index map
+	//0           10          20          30          40          50          60
+	//|           |           |           |           |           |           |
+	//01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
+	//-----------------------------------------------------------------------------
+	//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
+	//
+	//XSF(version)facility:codeone+codetwo
+	//Handle the data
+	uint8_t mask[] = {0,0,0,0,0,0,0,0,0,1};
+	for( idx=0; idx < (size - 65); idx++) {
+		if ( memcmp(dest + idx, mask, sizeof(mask))==0) {
+			//frame marker found
+			if (!dest[idx+8] && dest[idx+17]==1 && dest[idx+26]==1 && dest[idx+35]==1 && dest[idx+44]==1 && dest[idx+53]==1){
+				//confirmed proper separator bits found
+				//return start position
+				return (int) idx;
+			}
+		}
+	}
     return 0;
 }
 
