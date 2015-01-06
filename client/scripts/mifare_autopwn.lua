@@ -133,6 +133,8 @@ function nested(key,sak)
 		typ = 0
 	elseif  0x10 == sak then-- "NXP MIFARE Plus 2k"
 		typ = 2
+	elseif  0x01 == sak then-- "NXP MIFARE TNP3xxx 1K"
+		typ = 1
 	else
 		print("I don't know how many sectors there are on this type of card, defaulting to 16")
 	end

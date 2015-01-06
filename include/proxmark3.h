@@ -14,6 +14,7 @@
 // Might as well have the hardware-specific defines everywhere.
 #include "at91sam7s512.h"
 #include "config_gpio.h"
+#include "usb_cmd.h"
 
 #define WDT_HIT()								AT91C_BASE_WDTC->WDTC_WDCR = 0xa5000001
 
@@ -66,8 +67,6 @@
 
 #define TRUE 1
 #define FALSE 0
-
-#include <usb_cmd.h>
 
 //#define PACKED __attribute__((__packed__))
 

@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-//#include "proxusb.h"
+
 #include "proxmark3.h"
 #include "proxgui.h"
 #include "cmdmain.h"
@@ -34,16 +34,11 @@ static UsbCommand txcmd;
 volatile static bool txcmd_pending = false;
 
 void SendCommand(UsbCommand *c) {
-#if 0
-  printf("Sending %d bytes\n", sizeof(UsbCommand));
-#endif
-/*
-  if (txcmd_pending) {
-    ERR("Sending command failed, previous command is still pending");
-  }
-*/
-  if(offline)
-    {
+	#if 0
+		printf("Sending %d bytes\n", sizeof(UsbCommand));
+	#endif
+
+	if (offline) {
       PrintAndLog("Sending bytes to proxmark failed - offline");
       return;
     }
@@ -52,122 +47,119 @@ void SendCommand(UsbCommand *c) {
 	or disconnected. The main console thread is alive, but comm thread just spins here.
 	Not good.../holiman
 	**/
-  while(txcmd_pending);
-  txcmd = *c;
-  txcmd_pending = true;
+	while(txcmd_pending);
+	txcmd = *c;
+	txcmd_pending = true;
 }
 
 struct receiver_arg {
-  int run;
+	int run;
 };
 
 struct main_loop_arg {
-  int usb_present;
-  char *script_cmds_file;
+	int usb_present;
+	char *script_cmds_file;
 };
 
 byte_t rx[0x1000000];
 byte_t* prx = rx;
 
 static void *uart_receiver(void *targ) {
-  struct receiver_arg *arg = (struct receiver_arg*)targ;
-  size_t rxlen;
-  size_t cmd_count;
-  
-  while (arg->run) {
-    rxlen = sizeof(UsbCommand);
-    if (uart_receive(sp,prx,&rxlen)) {
-      prx += rxlen;
-      if (((prx-rx) % sizeof(UsbCommand)) != 0) {
-        continue;
-      }
-      cmd_count = (prx-rx) / sizeof(UsbCommand);
-      //      printf("received %d bytes, which represents %d commands\n",(prx-rx), cmd_count);
-      for (size_t i=0; i<cmd_count; i++) {
-        UsbCommandReceived((UsbCommand*)(rx+(i*sizeof(UsbCommand))));
-      }
-    }
-    prx = rx;
-    
-    if(txcmd_pending) {
-      if (!uart_send(sp,(byte_t*)&txcmd,sizeof(UsbCommand))) {
-        PrintAndLog("Sending bytes to proxmark failed");
-      }
-      txcmd_pending = false;
-    }
-  }
-  
-  pthread_exit(NULL);
-  return NULL;
+	struct receiver_arg *arg = (struct receiver_arg*)targ;
+	size_t rxlen;
+	size_t cmd_count;
+
+	while (arg->run) {
+		rxlen = sizeof(UsbCommand);
+		if (uart_receive(sp, prx, &rxlen)) {
+			prx += rxlen;
+			if (((prx-rx) % sizeof(UsbCommand)) != 0) {
+				continue;
+			}
+			cmd_count = (prx-rx) / sizeof(UsbCommand);
+
+			for (size_t i = 0; i < cmd_count; i++) {
+				UsbCommandReceived((UsbCommand*)(rx+(i*sizeof(UsbCommand))));
+			}
+		}
+		prx = rx;
+
+		if(txcmd_pending) {
+			if (!uart_send(sp, (byte_t*) &txcmd, sizeof(UsbCommand))) {
+				PrintAndLog("Sending bytes to proxmark failed");
+			}
+			txcmd_pending = false;
+		}
+	}
+
+	pthread_exit(NULL);
+	return NULL;
 }
 
 static void *main_loop(void *targ) {
-  struct main_loop_arg *arg = (struct main_loop_arg*)targ;
-  struct receiver_arg rarg;
-  char *cmd = NULL;
-  pthread_t reader_thread;
+	struct main_loop_arg *arg = (struct main_loop_arg*)targ;
+	struct receiver_arg rarg;
+	char *cmd = NULL;
+	pthread_t reader_thread;
   
-  if (arg->usb_present == 1) {
-    rarg.run=1;
-    // pthread_create(&reader_thread, NULL, &usb_receiver, &rarg);
-    pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
-  }
-  
-  FILE *script_file = NULL;
-  char script_cmd_buf[256];  // iceman, needs lua script the same file_path_buffer as the rest
-  
-  if (arg->script_cmds_file)
-  {
-    script_file = fopen(arg->script_cmds_file, "r");
-    if (script_file)
-    {
-      printf("using 'scripting' commands file %s\n", arg->script_cmds_file);
-    }
-  }
+	if (arg->usb_present == 1) {
+		rarg.run = 1;
+		pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
+	}
+
+	FILE *script_file = NULL;
+	char script_cmd_buf[256];  // iceman, needs lua script the same file_path_buffer as the rest
+
+	if (arg->script_cmds_file) {
+		script_file = fopen(arg->script_cmds_file, "r");
+		if (script_file) {
+			printf("using 'scripting' commands file %s\n", arg->script_cmds_file);
+		}
+	}
 
 	read_history(".history");
-	while(1)
-  {
-    // If there is a script file
-    if (script_file)
-    {
-      if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), script_file))
-      {
-        fclose(script_file);
-        script_file = NULL;
-      }
-      else
-      {
-        char *nl;
-        nl = strrchr(script_cmd_buf, '\r');
-        if (nl) *nl = '\0';
-        nl = strrchr(script_cmd_buf, '\n');
-        if (nl) *nl = '\0';
-        
-        if ((cmd = (char*) malloc(strlen(script_cmd_buf) + 1)) != NULL)
-        {
-          memset(cmd, 0, strlen(script_cmd_buf));
-          strcpy(cmd, script_cmd_buf);
-          printf("%s\n", cmd);
-        }
-      }
-    }
-		
-		if (!script_file)
+
+	while(1)  {
+
+		// If there is a script file
+		if (script_file)
 		{
-      cmd = readline(PROXPROMPT);
+			if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), script_file)) {
+				fclose(script_file);
+				script_file = NULL;
+			} else {
+				char *nl;
+				nl = strrchr(script_cmd_buf, '\r');
+				if (nl) *nl = '\0';
+				
+				nl = strrchr(script_cmd_buf, '\n');
+				if (nl) *nl = '\0';
+
+				if ((cmd = (char*) malloc(strlen(script_cmd_buf) + 1)) != NULL) {
+					memset(cmd, 0, strlen(script_cmd_buf));
+					strcpy(cmd, script_cmd_buf);
+					printf("%s\n", cmd);
+				}
+			}
 		}
 		
+		if (!script_file) {
+			PrintAndLog("FOO!!");
+			cmd = readline(PROXPROMPT);
+			PrintAndLog("BAR!!");
+		}
+		
+		PrintAndLog("SNAFU!!");
 		if (cmd) {
+
 			while(cmd[strlen(cmd) - 1] == ' ')
-        cmd[strlen(cmd) - 1] = 0x00;
+				cmd[strlen(cmd) - 1] = 0x00;
 			
 			if (cmd[0] != 0x00) {
 				if (strncmp(cmd, "quit", 4) == 0) {
 					exit(0);
 					break;
 				}
-				
 				CommandReceived(cmd);
 				add_history(cmd);
 			}
@@ -180,20 +172,19 @@ static void *main_loop(void *targ) {
   
 	write_history(".history");
   
-  if (arg->usb_present == 1) {
-    rarg.run = 0;
-    pthread_join(reader_thread, NULL);
-  }
-  
-  if (script_file)
-  {
-    fclose(script_file);
-    script_file = NULL;
-  }
-  
-  ExitGraphics();
-  pthread_exit(NULL);
-  return NULL;
+	if (arg->usb_present == 1) {
+		rarg.run = 0;
+		pthread_join(reader_thread, NULL);
+	}
+
+	if (script_file) {
+		fclose(script_file);
+		script_file = NULL;
+	}
+
+	ExitGraphics();
+	pthread_exit(NULL);
+	return NULL;
 }
 
 static void dumpAllHelp(int markdown)

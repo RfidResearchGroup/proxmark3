@@ -133,15 +133,14 @@ bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeou
   
   UsbCommand resp;
 
-  if (response == NULL) {
+	if (response == NULL)
     response = &resp;
-  }
+
 
   // Wait until the command is received
   for(size_t dm_seconds=0; dm_seconds < ms_timeout/10; dm_seconds++) {
 
-      while(getCommand(response))
-      {
+		while(getCommand(response)) {
           if(response->cmd == cmd){
           return true;
           }
@@ -173,30 +172,30 @@ void CommandReceived(char *Cmd) {
 //-----------------------------------------------------------------------------
 void UsbCommandReceived(UsbCommand *UC)
 {
-  switch(UC->cmd) {
-      // First check if we are handling a debug message
-    case CMD_DEBUG_PRINT_STRING: {
-		  char s[USB_CMD_DATA_SIZE+1] = {0x00};
-      size_t len = MIN(UC->arg[0],USB_CMD_DATA_SIZE);
-      memcpy(s,UC->d.asBytes,len);
-      PrintAndLog("#db# %s       ", s);
-      return;
-    } break;
+	switch(UC->cmd) {
+		// First check if we are handling a debug message
+		case CMD_DEBUG_PRINT_STRING: {
+			char s[USB_CMD_DATA_SIZE+1] = {0x00};
+			size_t len = MIN(UC->arg[0],USB_CMD_DATA_SIZE);
+			memcpy(s,UC->d.asBytes,len);
+			PrintAndLog("#db# %s       ", s);
+			return;
+		} break;
 
-    case CMD_DEBUG_PRINT_INTEGERS: {
-      PrintAndLog("#db# %08x, %08x, %08x       \r\n", UC->arg[0], UC->arg[1], UC->arg[2]);
-      return;
-    } break;
+		case CMD_DEBUG_PRINT_INTEGERS: {
+			PrintAndLog("#db# %08x, %08x, %08x       \r\n", UC->arg[0], UC->arg[1], UC->arg[2]);
+			return;
+		} break;
 
-    case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K: {
-      sample_buf_len += UC->arg[1];
-      memcpy(sample_buf+(UC->arg[0]),UC->d.asBytes,UC->arg[1]);
-    } break;
+		case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K: {
+			sample_buf_len += UC->arg[1];
+			memcpy(sample_buf+(UC->arg[0]),UC->d.asBytes,UC->arg[1]);
+		} break;
 
 		default:
-      break;
-  }
+			break;
+	}
 
-  storeCommand(UC);
+	storeCommand(UC);
 }
 

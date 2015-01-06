@@ -90,8 +90,10 @@ function GetCardInfo()
 	elseif 0x09 == result.sak then -- NXP MIFARE Mini 0.3k
 		-- MIFARE Classic mini offers 320 bytes split into five sectors.
 		numSectors = 5
-	elseif  0x10 == result.sak then-- "NXP MIFARE Plus 2k"
+	elseif  0x10 == result.sak then -- NXP MIFARE Plus 2k
 		numSectors = 32
+	elseif  0x01 == sak then        -- NXP MIFARE TNP3xxx 1K
+		numSectors = 16
 	else
 		print("I don't know how many sectors there are on this type of card, defaulting to 16")
 	end	
