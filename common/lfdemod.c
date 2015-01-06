@@ -592,14 +592,14 @@ uint32_t bytebits_to_byte(uint8_t* src, int numbits)
 
 int IOdemodFSK(uint8_t *dest, size_t size)
 {
-	static const uint8_t THRESHOLD = 170;
+	static const uint8_t THRESHOLD = 140;
     uint32_t idx=0;
     //make sure buffer has data
     if (size < 66) return -1;
     //test samples are not just noise
 	uint8_t justNoise = 1;
 	for(idx=0;idx< size && justNoise ;idx++){
-		justNoise = dest[idx] > THRESHOLD;
+		justNoise = dest[idx] < THRESHOLD;
 	}
 	if(justNoise) return 0;
 
