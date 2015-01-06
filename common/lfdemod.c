@@ -14,7 +14,7 @@
 
 //by marshmellow
 //takes 1s and 0s and searches for EM410x format - output EM ID
-uint64_t Em410xDecode(uint8_t *BitStream,uint32_t BitLen)
+uint64_t Em410xDecode(uint8_t *BitStream, int BitLen)
 {
   //no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
   //  otherwise could be a void with no arguments
@@ -82,7 +82,7 @@ uint64_t Em410xDecode(uint8_t *BitStream,uint32_t BitLen)
 //takes 2 arguments - clock and invert both as integers
 //attempts to demodulate ask while decoding manchester 
 //prints binary found and saves in graphbuffer for further commands
-int askmandemod(uint8_t * BinStream,uint32_t *BitLen,int *clk, int *invert)
+int askmandemod(uint8_t * BinStream, int *BitLen,int *clk, int *invert)
 {
   int i;
   int high = 0, low = 128;
@@ -655,13 +655,13 @@ int DetectASKClock(uint8_t dest[], size_t size, int clock)
       low = dest[i];
     }
   }
-  peak=(int)((peak-128)*.75)+128;
-  low= (int)((low-128)*.75)+128;
+  peak=(int)(((peak-128)*.75)+128);
+  low= (int)(((low-128)*.75)+128);
   int ii;
   int clkCnt;
   int tol = 0;
-  int bestErr=1000;
-  int errCnt[]={0,0,0,0,0,0,0,0};
+  int bestErr[]={1000,1000,1000,1000,1000,1000,1000,1000};
+  int errCnt=0;
   //test each valid clock from smallest to greatest to see which lines up
   for(clkCnt=0; clkCnt<6;++clkCnt){
     if (clk[clkCnt]==32){
@@ -669,33 +669,487 @@ int DetectASKClock(uint8_t dest[], size_t size, int clock)
     }else{
       tol=0;
     }
-    bestErr=1000;
+    bestErr[clkCnt]=1000;
     //try lining up the peaks by moving starting point (try first 256) 
     for (ii=0; ii<loopCnt; ++ii){
       if ((dest[ii]>=peak) || (dest[ii]<=low)){
-        errCnt[clkCnt]=0;
+        errCnt=0;
         // now that we have the first one lined up test rest of wave array
         for (i=0; i<((int)(size/clk[clkCnt])-1); ++i){
           if (dest[ii+(i*clk[clkCnt])]>=peak || dest[ii+(i*clk[clkCnt])]<=low){
           }else if(dest[ii+(i*clk[clkCnt])-tol]>=peak || dest[ii+(i*clk[clkCnt])-tol]<=low){
           }else if(dest[ii+(i*clk[clkCnt])+tol]>=peak || dest[ii+(i*clk[clkCnt])+tol]<=low){
           }else{  //error no peak detected
-            errCnt[clkCnt]++;
+            errCnt++;
           }    
         }
         //if we found no errors this is correct one - return this clock
-        if(errCnt[clkCnt]==0) return clk[clkCnt];
+        if(errCnt==0) return clk[clkCnt];
         //if we found errors see if it is lowest so far and save it as best run
-        if(errCnt[clkCnt]<bestErr) bestErr=errCnt[clkCnt];
+        if(errCnt<bestErr[clkCnt]) bestErr[clkCnt]=errCnt;
       }
     } 
   }
   int iii=0;
   int best=0;
-  for (iii=0; iii<6;++iii){
-    if (errCnt[iii]<errCnt[best]){
-      best = iii;
+  for (iii=0; iii<7;++iii){
+    if (bestErr[iii]<bestErr[best]){
+      //                current best bit to error ratio     vs  new bit to error ratio
+      if (((size/clk[best])/bestErr[best]<(size/clk[iii])/bestErr[iii]) ){
+        best = iii;
+      }
     }
   }
   return clk[best];
 }
+int DetectpskNRZClock(uint8_t dest[], size_t size, int clock)
+{ 
+  int i=0;
+  int peak=0;
+  int low=128;
+  int clk[]={16,32,40,50,64,100,128,256};
+  int loopCnt = 2048;  //don't need to loop through entire array...
+  if (size<loopCnt) loopCnt = size;
+
+  //if we already have a valid clock quit
+  for (;i<8;++i)
+    if (clk[i]==clock) return clock;
+
+  //get high and low peak
+  for (i=0;i<loopCnt;++i){
+    if(dest[i]>peak){
+      peak = dest[i]; 
+    }
+    if(dest[i]<low){
+      low = dest[i];
+    }
+  }
+  peak=(int)(((peak-128)*.90)+128);
+  low= (int)(((low-128)*.90)+128);
+  //PrintAndLog("DEBUG: peak: %d, low: %d",peak,low);
+  int ii;
+  int clkCnt;
+  int tol = 0;
+  int peakcnt=0;
+  int errCnt=0;
+  int bestErr[]={1000,1000,1000,1000,1000,1000,1000,1000,1000};
+  int peaksdet[]={0,0,0,0,0,0,0,0,0};
+  //test each valid clock from smallest to greatest to see which lines up
+  for(clkCnt=0; clkCnt<6;++clkCnt){
+    if (clk[clkCnt]==32){
+      tol=0;
+    }else{
+      tol=0;
+    }
+    //try lining up the peaks by moving starting point (try first 256) 
+    for (ii=0; ii<loopCnt; ++ii){
+      if ((dest[ii]>=peak) || (dest[ii]<=low)){
+        errCnt=0;
+        peakcnt=0;
+        // now that we have the first one lined up test rest of wave array
+        for (i=0; i<((int)(size/clk[clkCnt])-1); ++i){
+          if (dest[ii+(i*clk[clkCnt])]>=peak || dest[ii+(i*clk[clkCnt])]<=low){
+            peakcnt++;
+          }else if(dest[ii+(i*clk[clkCnt])-tol]>=peak || dest[ii+(i*clk[clkCnt])-tol]<=low){
+            peakcnt++;
+          }else if(dest[ii+(i*clk[clkCnt])+tol]>=peak || dest[ii+(i*clk[clkCnt])+tol]<=low){
+            peakcnt++;
+          }else{  //error no peak detected
+            errCnt++;
+          }    
+        }
+        if(peakcnt>peaksdet[clkCnt]) {
+          peaksdet[clkCnt]=peakcnt;
+          bestErr[clkCnt]=errCnt;
+        } 
+      } 
+    } 
+  }
+  int iii=0;
+  int best=0;
+  //int ratio2;  //debug
+  int ratio;
+  //int bits;
+  for (iii=0; iii<7;++iii){
+    ratio=1000;
+    //ratio2=1000;  //debug
+    //bits=size/clk[iii];  //debug
+    if (peaksdet[iii]>0){
+      ratio=bestErr[iii]/peaksdet[iii];
+      if (((bestErr[best]/peaksdet[best])>(ratio)+1)){
+        best = iii;    
+      }     
+      //ratio2=bits/peaksdet[iii]; //debug
+    } 
+    //PrintAndLog("DEBUG: Clk: %d, peaks: %d, errs: %d, bestClk: %d, ratio: %d, bits: %d, peakbitr: %d",clk[iii],peaksdet[iii],bestErr[iii],clk[best],ratio, bits,ratio2);
+  }
+  return clk[best];
+}
+
+/*
+int DetectNRZpskClock(uint8_t dest[], size_t size, int clock)
+{
+	int i=0;
+  int peak=0;
+  int low=128;
+  int clk[]={16,32,40,50,64,100,128,256};
+  int loopCnt = 1500;  //don't need to loop through entire array...
+  if (size<loopCnt) loopCnt = size;
+
+  //if we already have a valid clock quit
+  for (;i<8;++i)
+  	if (clk[i]==clock) return clock;
+
+  //get high and low peak
+  for (i=0;i<loopCnt;++i){
+    if(dest[i]>peak){
+      peak = dest[i]; 
+    }
+    if(dest[i]<low){
+      low = dest[i];
+    }
+  }
+  peak=(int)((peak-128)*.75)+128;
+  low= (int)((low-128)*.75)+128;
+  int ii;
+  int clkCnt;
+  int tol = 0;
+  int bestErr=1000;
+  int errCnt[]={0,0,0,0,0,0,0,0};
+  int lastClk = 0;
+  uint8_t bitHigh=0;
+  uint8_t ignorewin;
+  int lowBitCnt[]={0,0,0,0,0,0,0,0};
+  int BestLowBit=0;
+  //test each valid clock from smallest to greatest to see which lines up
+  for(clkCnt=0; clkCnt<6;++clkCnt){
+    if (clk[clkCnt]==32){
+      tol=1;
+    }else{
+      tol=0;
+    }
+    ignorewin = clk[clkCnt]/8;
+    bestErr=1000;
+    //try lining up the peaks by moving starting point (try first 256) 
+    for (ii=1; ii<loopCnt; ++ii){
+      if ((dest[ii]>=peak) || (dest[ii]<=low)){
+      	lastClk = ii-*clk;
+        errCnt[clkCnt]=0;
+        // now that we have the first one lined up test rest of wave array
+        for (i=ii; i<size; ++i){
+          if ((dest[i]>=peak || dest[i]<=low) && (i>=lastClk+*clk-tol && i<=lastClk+*clk+tol)){
+          	bitHigh=1;
+          	lastClk=lastClk+*clk;
+            ignorewin=clk[clkCnt]/8;
+          }else if(dest[i]<peak && dest[i]>low) {
+          	if (ignorewin==0){
+              bitHigh=0;  
+            }else ignorewin--;
+            if (i>=lastClk+*clk+tol){ //past possible bar
+              lowBitCnt[clkCnt]++;
+            }
+          }else if ((dest[i]>=peak || dest[i]<=low) && (i<lastClk+*clk-tol || i>=lastClk+*clk+tol) && (bitHigh==0)){
+          	//error bar found no clock...
+          	errCnt[clkCnt]++;
+          }    
+        }
+        //if we found no errors this is correct one - return this clock
+        if(errCnt[clkCnt]==0 && lowBitCnt[clkCnt]==0) return clk[clkCnt];
+        //if we found errors see if it is lowest so far and save it as best run
+        if(errCnt[clkCnt]<bestErr) bestErr=errCnt[clkCnt];
+        if(lowBitCnt[clkCnt]<BestLowBit && errCnt[clkCnt]==bestErr) BestLowBit=lowBitCnt[clkCnt];
+      }
+    } 
+  }
+  int iii=0;
+  int best=0;
+  int best2=0;
+  //get best run
+  for (iii=0; iii<7;++iii){
+    if (errCnt[iii]<errCnt[best]){
+      best = iii;
+    }
+    if (lowBitCnt[iii]<lowBitCnt[best2]){
+      best2=iii;
+    }
+  }
+  //adjust best to one with least low bit counts (as long as no errors)
+  if (best!=best2){
+    if (errCnt[best]==errCnt[best2]) best = best2;
+  }
+  return clk[best];
+}
+*/
+
+//by marshmellow (attempt to get rid of high immediately after a low)
+void pskCleanWave(uint8_t *bitStream, int bitLen)
+{
+  int i;
+  int low=128;
+  int high=0;
+  int gap = 4;
+ // int loopMax = 2048;
+  int newLow=0;
+  int newHigh=0;
+  for (i=0; i<bitLen; ++i){
+    if (bitStream[i]<low) low=bitStream[i];
+    if (bitStream[i]>high) high=bitStream[i];
+  }
+  high = (int)(((high-128)*.80)+128); 
+  low = (int)(((low-128)*.90)+128); 
+  //low = (uint8_t)(((int)(low)-128)*.80)+128;
+  for (i=0; i<bitLen; ++i){
+    if (newLow==1){
+      bitStream[i]=low+8;
+      gap--;
+      if (gap==0){
+        newLow=0;
+        gap=4;
+      } 
+    }else if (newHigh==1){
+      bitStream[i]=high-8;
+      gap--;
+      if (gap==0){
+        newHigh=0;
+        gap=4;
+      }
+    }
+    if (bitStream[i]<=low) newLow=1;
+    if (bitStream[i]>=high) newHigh=1;
+  }
+  return;
+}
+
+int indala26decode(uint8_t *bitStream, int *bitLen, uint8_t *invert)
+{
+  //26 bit 40134 format  (don't know other formats)
+ // Finding the start of a UID
+  int i;
+  int long_wait;
+    //uidlen = 64;
+    long_wait = 29;//29 leading zeros in format  
+  int start;
+  int first = 0;
+  int first2 = 0;
+  int bitCnt = 0;
+  int ii;
+  for (start = 0; start <= *bitLen - 250; start++) {
+    first = bitStream[start];
+    for (i = start; i < start + long_wait; i++) {
+      if (bitStream[i] != first) {
+        break;
+      }
+    }
+    if (i == (start + long_wait)) {
+      break;
+    }
+  }
+  if (start == *bitLen - 250 + 1) {
+    // did not find start sequence
+    return -1;
+  } 
+  //found start once now test length by finding next one
+  // Inverting signal if needed
+  if (first == 1) {
+    for (i = start; i < *bitLen; i++) {
+      bitStream[i] = !bitStream[i];
+    }
+    *invert = 1;
+  }else *invert=0;
+ 
+  int iii;
+  for (ii=start+29; ii <= *bitLen - 250; ii++) {
+    first2 = bitStream[ii];
+    for (iii = ii; iii < ii + long_wait; iii++) {
+      if (bitStream[iii] != first2) {
+        break;
+      }
+    }
+    if (iii == (ii + long_wait)) {
+      break;
+    }
+  }
+  if (ii== *bitLen - 250 + 1){
+    // did not find second start sequence
+    return -2;
+  }
+  bitCnt=ii-start;
+
+  // Dumping UID
+  i = start;
+  for (ii = 0; ii < bitCnt; ii++) {
+    bitStream[ii] = bitStream[i++];
+    //showbits[bit] = '0' + bits[bit];
+  }
+  *bitLen=bitCnt;
+  return 1;
+}
+
+int pskNRZrawDemod(uint8_t *dest, int *bitLen, int *clk, int *invert)
+{
+  pskCleanWave(dest,*bitLen);
+  int clk2 = DetectpskNRZClock(dest, *bitLen, *clk);
+	*clk=clk2;
+  uint32_t i;
+	uint8_t high=0, low=128;
+  uint32_t gLen = *bitLen;
+  if (gLen > 1280) gLen=1280;
+	// get high
+ 	for (i=0; i<gLen; ++i){
+		if (dest[i]>high) high = dest[i];
+		if (dest[i]<low) low=dest[i];
+	}
+	//fudge high/low bars by 25%
+	high = (uint8_t)((((int)(high)-128)*.75)+128);
+	low = (uint8_t)((((int)(low)-128)*.80)+128);
+
+	//PrintAndLog("DEBUG - valid high: %d - valid low: %d",high,low);
+  int lastBit = 0;  //set first clock check
+  uint32_t bitnum = 0;     //output counter
+  uint8_t tol = 0;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
+  if (*clk==32)tol=2;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely 
+  uint32_t iii = 0;
+  uint8_t errCnt =0;
+  uint32_t bestStart = *bitLen;
+  uint32_t maxErr = (*bitLen/1000);
+  uint32_t bestErrCnt = maxErr;
+  //uint8_t midBit=0;
+  uint8_t curBit=0;
+  uint8_t bitHigh=0;
+  uint8_t ignorewin=*clk/8;
+  //PrintAndLog("DEBUG - lastbit - %d",lastBit);
+  //loop to find first wave that works - align to clock
+  for (iii=0; iii < gLen; ++iii){
+    if ((dest[iii]>=high)||(dest[iii]<=low)){
+      lastBit=iii-*clk;    
+      //loop through to see if this start location works
+      for (i = iii; i < *bitLen; ++i) {
+      	//if we found a high bar and we are at a clock bit  
+ 				if ((dest[i]>=high ) && (i>=lastBit+*clk-tol && i<=lastBit+*clk+tol)){
+        	bitHigh=1;
+        	lastBit+=*clk;
+   				//curBit=1-*invert;
+   				//dest[bitnum]=curBit;
+          ignorewin=*clk/8;
+   				bitnum++;
+   			//else if low bar found and we are at a clock point
+      	}else if ((dest[i]<=low ) && (i>=lastBit+*clk-tol && i<=lastBit+*clk+tol)){
+        	bitHigh=1;
+        	lastBit+=*clk;
+          ignorewin=*clk/8;
+      		//curBit=*invert;
+      		//dest[bitnum]=curBit;
+      		bitnum++;
+      	//else if no bars found
+        }else if(dest[i]<high && dest[i]>low) {
+          if (ignorewin==0){
+            bitHigh=0;
+          }else ignorewin--;
+                  	//if we are past a clock point
+        	if (i>=lastBit+*clk+tol){ //clock val
+						//dest[bitnum]=curBit;
+		        lastBit+=*clk;
+    				bitnum++;
+        	}
+        //else if bar found but we are not at a clock bit and we did not just have a clock bit
+        }else if ((dest[i]>=high || dest[i]<=low) && (i<lastBit+*clk-tol || i>lastBit+*clk+tol) && (bitHigh==0)){
+        	//error bar found no clock...
+        	errCnt++;
+        }   
+        if (bitnum>=1000) break;
+      }
+      //we got more than 64 good bits and not all errors
+      if ((bitnum > (64+errCnt)) && (errCnt<(maxErr))) {
+        //possible good read
+        if (errCnt==0){
+          bestStart = iii;
+          bestErrCnt=errCnt;
+          break;  //great read - finish 
+        }
+        if (bestStart == iii) break;  //if current run == bestErrCnt run (after exhausted testing) then finish 
+        if (errCnt<bestErrCnt){  //set this as new best run
+          bestErrCnt=errCnt;
+          bestStart = iii;
+        }
+      }
+    }
+  }
+  if (bestErrCnt<maxErr){
+  	//best run is good enough set to best run and set overwrite BinStream
+  	iii=bestStart;
+  	lastBit=bestStart-*clk;
+  	bitnum=0;
+    for (i = iii; i < *bitLen; ++i) {   
+	    //if we found a high bar and we are at a clock bit  
+ 			if ((dest[i]>=high ) && (i>=lastBit+*clk-tol && i<=lastBit+*clk+tol)){
+      	bitHigh=1;
+      	lastBit+=*clk;
+ 				curBit=1-*invert;
+ 				dest[bitnum]=curBit;
+        ignorewin=*clk/8;
+      	bitnum++;
+ 			//else if low bar found and we are at a clock point
+    	}else if ((dest[i]<=low ) && (i>=lastBit+*clk-tol && i<=lastBit+*clk+tol)){
+      	bitHigh=1;
+      	lastBit+=*clk;
+    		curBit=*invert;
+    		dest[bitnum]=curBit;
+        ignorewin=*clk/8;
+     		bitnum++;
+    	//else if no bars found
+      }else if(dest[i]<high && dest[i]>low) {
+      	if (ignorewin==0){
+          bitHigh=0;
+        }else ignorewin--;
+       	//if we are past a clock point
+      	if (i>=lastBit+*clk+tol){ //clock val
+		      lastBit+=*clk;
+    			dest[bitnum]=curBit;
+					bitnum++;
+      	}
+      //else if bar found but we are not at a clock bit and we did not just have a clock bit
+      }else if ((dest[i]>=high || dest[i]<=low) && ((i<lastBit+*clk-tol) || (i>lastBit+*clk+tol)) && (bitHigh==0)){
+      	//error bar found no clock...
+      	bitHigh=1;
+      	dest[bitnum]=77;
+      	bitnum++;
+      	errCnt++;
+      }
+      if (bitnum >=1000) break;
+    }
+    *bitLen=bitnum;
+	} else{
+    *bitLen=bitnum;
+    *clk=bestStart;
+  	return -1; 
+  }
+
+  if (bitnum>16){    
+    *bitLen=bitnum;
+  } else return -1;
+  return errCnt;
+}
+
+
+  /*not needed?
+	uint32_t i;
+	uint8_t high=0, low=128;
+	uint32_t loopMax = 1280; //20 raw bits 
+	
+	// get high
+	if (size<loopMax) return -1;
+	for (i=0; i<loopMax; ++i){
+		if (dest[i]>high) high = dest[i];
+		if (dest[i]<low) low=dest[i];
+	}
+	//fudge high/low bars by 25%
+  high = (uint8_t)(((int)(high)-128)*.75)+128;
+  low = (uint8_t)(((int)(low)-128)*.75)+128;
+
+	//clean waves
+	for (i=0;i<size; ++i){
+		if (dest[i]>=high) dest[i]=high;
+		else if(dest[i]<=low) dest[i]=low;
+		else dest[i]=0;
+	}
+	*/

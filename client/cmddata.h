@@ -14,7 +14,7 @@
 command_t * CmdDataCommands();
 
 int CmdData(const char *Cmd);
-
+void printDemodBuff();
 int CmdAmp(const char *Cmd);
 int Cmdaskdemod(const char *Cmd);
 int Cmdaskrawdemod(const char *Cmd);
@@ -30,6 +30,8 @@ int CmdFSKdemod(const char *Cmd);
 int CmdFSKdemodHID(const char *Cmd);
 int CmdFSKdemodIO(const char *Cmd);
 int CmdFSKrawdemod(const char *Cmd);
+int CmdDetectNRZpskClockRate(const char *Cmd);
+int CmdpskNRZrawDemod(const char *Cmd);
 int CmdGrid(const char *Cmd);
 int CmdHexsamples(const char *Cmd);
 int CmdHide(const char *Cmd);
@@ -49,5 +51,10 @@ int CmdScale(const char *Cmd);
 int CmdThreshold(const char *Cmd);
 int CmdDirectionalThreshold(const char *Cmd);
 int CmdZerocrossings(const char *Cmd);
+int CmdIndalaDecode(const char *Cmd);
+
+#define MAX_DEMOD_BUF_LEN (1024*128)
+extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
+extern int DemodBufferLen;
 
 #endif

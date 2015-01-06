@@ -17,6 +17,7 @@ int ClearGraph(int redraw);
 //int DetectClock(int peak);
 int getFromGraphBuf(uint8_t *buff);
 int GetClock(const char *str, int peak, int verbose);
+int GetNRZpskClock(const char *str, int peak, int verbose);
 void setGraphBuf(uint8_t *buff,int size);
 
 #define MAX_GRAPH_TRACE_LEN (1024*128)

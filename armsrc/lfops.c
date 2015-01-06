@@ -729,7 +729,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 	uint8_t *dest = (uint8_t *)BigBuf;
 
 	size_t size=0; //, found=0;
-	uint32_t bitLen=0;
+	int bitLen=0;
 	int clk=0, invert=0, errCnt=0;
 	uint64_t lo=0;
 	// Configure to go in 125Khz listen mode

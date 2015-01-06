@@ -15,3 +15,10 @@ Transit999-best.pm3: Transit 999 format (UID 99531670)
 The files 'modulation-'... are all encoded with identical data (hex 00 01 02 03 04 05 06 07 08 09 0A 0B)
 for the purpose of recognition and testing of demodulation schemes. They were created by writing Q5 tags
 appropriately configured. The raw data is in 'modulation-data.dat'.
+
+ata5577-HIDemu-FC1-C9.pm3: ata5577 in hid prox 26 bit emulation facility code:1 card#:9
+casi-12ed825c29.pm3: casi rusco 40 bit (EM410x ID: 12ed825c29)
+EM4102-Fob.pm3: (ID: 0400193cbe)
+ioprox-XSF-01-3B-44725.pm3: IO Prox FSK RF/64 ID in name
+ioprox-XSF-01-BE-03011.pm3: IO Prox FSK RF/64 ID in name
+indala-504278295.pm3: PSK 26 bit indala 

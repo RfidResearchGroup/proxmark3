@@ -57,7 +57,7 @@ int CmdFlexdemod(const char *Cmd)
     }
   }
 
-#define LONG_WAIT 100
+  #define LONG_WAIT 100
   int start;
   for (start = 0; start < GraphTraceLen - LONG_WAIT; start++) {
     int first = GraphBuffer[start];
@@ -558,18 +558,32 @@ int CmdLFfind(const char *Cmd)
     ans=CmdSamples("20000");
   }
   if (GraphTraceLen<1000) return 0;
+  PrintAndLog("NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
   PrintAndLog("Checking for known tags:");
+
   ans=Cmdaskmandemod("");
-  if (ans>0) return 1;
+  if (ans>0) {
+    PrintAndLog("Valid EM410x ID Found!");
+    return 1;
+  }
   ans=CmdFSKdemodHID("");
-  if (ans>0) return 1;
+  if (ans>0) {
+    PrintAndLog("Valid HID Prox ID Found!");
+    return 1;
+  }
   ans=CmdFSKdemodIO("");
-  if (ans>0) return 1;
+  if (ans>0) {
+    PrintAndLog("Valid IO Prox ID Found!");
+    return 1;
+  }
   //add psk and indala
-  ans=CmdIndalaDemod("");
-  if (ans>0) return 1;
-  ans=CmdIndalaDemod("224");
-  if (ans>0) return 1;
+  ans=CmdIndalaDecode("");
+  if (ans>0) {
+    PrintAndLog("Valid Indala ID Found!");
+    return 1;
+  }
+ // ans=CmdIndalaDemod("224");
+ // if (ans>0) return 1;
   PrintAndLog("No Known Tags Found!\n");
   return 0;
 }
