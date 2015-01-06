@@ -47,7 +47,7 @@
 // different initial value (CRC_ICLASS)
 #include "../common/iso14443crc.h"
 #include "../common/iso15693tools.h"
-#include "iso15693tools.h"
+//#include "iso15693tools.h"
 
 
 static int timeout = 4096;

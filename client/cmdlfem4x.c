@@ -285,8 +285,7 @@ int CmdEM410xWatch(const char *Cmd)
 {
 	char cmdp = param_getchar(Cmd, 0);
 	int read_h = (cmdp == 'h');
-	do
-	{
+	do {
 		if (ukbhit()) {
 			printf("\naborted via keyboard!\n");
 			break;
@@ -294,7 +293,6 @@ int CmdEM410xWatch(const char *Cmd)
 		
 		CmdLFRead(read_h ? "h" : "");
 		CmdSamples("6000");
-		
 	} while (
 		!CmdEM410xRead("") 
 	);

@@ -51,11 +51,11 @@
 int fileExists(const char *filename) {
 
 #ifdef _WIN32
-	struct _stat fileStat;
-	int result = _stat(filename, &fileStat);
+	struct _stat st;
+	int result = _stat(filename, &st);
 #else
-	struct stat fileStat;
-	int result = stat(filename, &fileStat);
+	struct stat st;
+	int result = stat(filename, &st);
 #endif
 	return result == 0;
 }
@@ -113,11 +113,11 @@ int loadFile(const char *fileName, void* data, size_t datalen)
  */
 void prnlog(char *fmt, ...)
 {
-
+	char buffer[2048] = {0};
 	va_list args;
 	va_start(args,fmt);
-    PrintAndLog(fmt, args);
-    //vprintf(fmt,args);
+	vsprintf (buffer,fmt, args);
 	va_end(args);
-    //printf("\n");
+	PrintAndLog(buffer);
+
 }

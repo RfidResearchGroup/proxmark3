@@ -68,4 +68,5 @@ int loadFile(const char *fileName, void* data, size_t datalen);
  * @param fmt
  */
 void prnlog(char *fmt, ...);
+int fileExists(const char *filename);
 #endif // FILEUTILS_H

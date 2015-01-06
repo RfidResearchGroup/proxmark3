@@ -27,137 +27,111 @@
 static int CmdHelp(const char *Cmd);
 static void waitCmd(uint8_t iLen);
 
+
+// structure and database for uid -> tagtype lookups 
+typedef struct { 
+	uint8_t uid;
+	char* desc;
+} manufactureName; 
+
+const manufactureName manufactureMapping[] = {
+	// ID,  "Vendor Country"
+	{ 0x01, "Motorola UK" },
+	{ 0x02, "ST Microelectronics SA France" },
+	{ 0x03, "Hitachi, Ltd Japan" }, 
+	{ 0x04, "NXP Semiconductors Germany" }, 
+	{ 0x05, "Infineon Technologies AG Germany" }, 
+	{ 0x06, "Cylink USA" }, 
+	{ 0x07, "Texas Instrument France" },
+	{ 0x08, "Fujitsu Limited Japan" }, 
+	{ 0x09, "Matsushita Electronics Corporation, Semiconductor Company Japan" }, 
+	{ 0x0A, "NEC Japan" }, 
+	{ 0x0B, "Oki Electric Industry Co. Ltd Japan" },
+	{ 0x0C, "Toshiba Corp. Japan" },
+	{ 0x0D, "Mitsubishi Electric Corp. Japan" },
+	{ 0x0E, "Samsung Electronics Co. Ltd Korea" },
+	{ 0x0F, "Hynix / Hyundai, Korea" },
+	{ 0x10, "LG-Semiconductors Co. Ltd Korea" },
+	{ 0x11, "Emosyn-EM Microelectronics USA" },
+	{ 0x12, "INSIDE Technology France" },
+	{ 0x13, "ORGA Kartensysteme GmbH Germany" },
+	{ 0x14, "SHARP Corporation Japan" },
+	{ 0x15, "ATMEL France" },
+	{ 0x16, "EM Microelectronic-Marin SA Switzerland" },
+	{ 0x17, "KSW Microtec GmbH Germany" },
+	{ 0x18, "ZMD AG Germany" },
+	{ 0x19, "XICOR, Inc. USA" },
+	{ 0x1A, "Sony Corporation Japan Identifier Company Country" },
+	{ 0x1B, "Malaysia Microelectronic Solutions Sdn. Bhd Malaysia" },
+	{ 0x1C, "Emosyn USA" },
+	{ 0x1D, "Shanghai Fudan Microelectronics Co. Ltd. P.R. China" },
+	{ 0x1E, "Magellan Technology Pty Limited Australia" },
+	{ 0x1F, "Melexis NV BO Switzerland" },
+	{ 0x20, "Renesas Technology Corp. Japan" },
+	{ 0x21, "TAGSYS France" },
+	{ 0x22, "Transcore USA" },
+	{ 0x23, "Shanghai belling corp., ltd. China" },
+	{ 0x24, "Masktech Germany Gmbh Germany" },
+	{ 0x25, "Innovision Research and Technology Plc UK" },
+	{ 0x26, "Hitachi ULSI Systems Co., Ltd. Japan" },
+	{ 0x27, "Cypak AB Sweden" },
+	{ 0x28, "Ricoh Japan" },
+	{ 0x29, "ASK France" },
+	{ 0x2A, "Unicore Microsystems, LLC Russian Federation" },
+	{ 0x2B, "Dallas Semiconductor/Maxim USA" },
+	{ 0x2C, "Impinj, Inc. USA" },
+	{ 0x2D, "RightPlug Alliance USA" },
+	{ 0x2E, "Broadcom Corporation USA" },
+	{ 0x2F, "MStar Semiconductor, Inc Taiwan, ROC" },
+	{ 0x30, "BeeDar Technology Inc. USA" },
+	{ 0x31, "RFIDsec Denmark" },
+	{ 0x32, "Schweizer Electronic AG Germany" },
+	{ 0x33, "AMIC Technology Corp Taiwan" }, 
+	{ 0x34, "Mikron JSC Russia" },
+	{ 0x35, "Fraunhofer Institute for Photonic Microsystems Germany" },
+	{ 0x36, "IDS Microchip AG Switzerland" },
+	{ 0x37, "Kovio USA" },
+	{ 0x38, "HMT Microelectronic Ltd Switzerland Identifier Company Country" },
+	{ 0x39, "Silicon Craft Technology Thailand" },
+	{ 0x3A, "Advanced Film Device Inc. Japan" },
+	{ 0x3B, "Nitecrest Ltd UK" },
+	{ 0x3C, "Verayo Inc. USA" },
+	{ 0x3D, "HID Global USA" },
+	{ 0x3E, "Productivity Engineering Gmbh Germany" },
+	{ 0x3F, "Austriamicrosystems AG (reserved) Austria" }, 
+	{ 0x40, "Gemalto SA France" },
+	{ 0x41, "Renesas Electronics Corporation Japan" },
+	{ 0x42, "3Alogics Inc Korea" },
+	{ 0x43, "Top TroniQ Asia Limited Hong Kong" },
+	{ 0x44, "Gentag Inc (USA) USA" },
+	{ 0x00, "no tag-info available" } // must be the last entry
+};
+
+
+// get a product description based on the UID
+//		uid[8] 	tag uid
+// returns description of the best match	
+static char* getTagInfo(uint8_t uid) {
+
+	int i, best = -1;	
+	int len = sizeof(manufactureMapping) / sizeof(manufactureName);
+	
+	for ( i = 0; i < len; ++i ) {
+		if ( uid == manufactureMapping[i].uid) {
+			if (best == -1) { 
+				best = i;
+			} 
+		} 
+	} 
+
+	if (best>=0) return manufactureMapping[best].desc;
+	
+	return manufactureMapping[i].desc; 
+}
+
 int CmdHF14AList(const char *Cmd)
 {
-	bool ShowWaitCycles = false;
-	char param = param_getchar(Cmd, 0);
-	
-	if (param == 'h' || (param != 0 && param != 'f')) {
-		PrintAndLog("List data in trace buffer.");
-		PrintAndLog("Usage:  hf 14a list [f]");
-		PrintAndLog("f - show frame delay times as well");
-		PrintAndLog("sample: hf 14a list f");
-		return 0;
-	}	
-
-	ShowWaitCycles = (param == 'f');
-		
-// for the time being. Need better Bigbuf handling.	
-#define TRACE_SIZE 3000	
-
-	uint8_t trace[TRACE_SIZE];
-	GetFromBigBuf(trace, TRACE_SIZE, 0);
-	WaitForResponse(CMD_ACK,NULL);
-
-	PrintAndLog("Recorded Activity");
-	PrintAndLog("");
-	PrintAndLog("Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
-	PrintAndLog("All times are in carrier periods (1/13.56Mhz)");
-	PrintAndLog("");
-	PrintAndLog("     Start |       End | Src | Data (! denotes parity error)                                   | CRC ");
-	PrintAndLog("-----------|-----------|-----|-----------------------------------------------------------------------");
-
-	uint16_t tracepos = 0;
-	uint16_t duration;
-	uint16_t data_len;
-	uint16_t parity_len;
-	bool isResponse;
-	uint32_t timestamp;
-	uint32_t first_timestamp;
-	uint32_t EndOfTransmissionTimestamp;
-	
-	for (;;) {
-	
-		if(tracepos >= TRACE_SIZE) break;
-	
-		timestamp = *((uint32_t *)(trace + tracepos));
-		
-		// Break and stick with current result if buffer was not completely full
-		if (timestamp == 0x44444444) break; 
-
-		if(tracepos == 0) {
-			first_timestamp = timestamp;
-		}
-		
-		tracepos += 4;
-		duration = *((uint16_t *)(trace + tracepos));
-		tracepos += 2;
-		data_len = *((uint16_t *)(trace + tracepos));
-		tracepos += 2;
-
-		isResponse = false;
-		if (data_len & 0x8000) {
-			data_len &= 0x7fff;
-			isResponse = true;
-		}
-		
-		parity_len = (data_len-1)/8 + 1;
-		
-		if (tracepos + data_len + parity_len >= TRACE_SIZE) break;
-
-		uint8_t *frame = trace + tracepos;
-		tracepos += data_len;
-		uint8_t *parityBytes = trace + tracepos;
-		tracepos += parity_len;
-		
-		char line[16][110];
-		for (int j = 0; j < data_len; j++) {
-			int oddparity = 0x01;
-			int k;
-
-			for (k=0;k<8;k++) {
-				oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
-			}
-
-			uint8_t parityBits = parityBytes[j>>3];
-			if (isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
-				sprintf(line[j/16]+((j%16)*4), "%02x! ", frame[j]);
-			} else {
-				sprintf(line[j/16]+((j%16)*4), "%02x  ", frame[j]);	
-			}
-		}
-		
-		char crc[5] = {0x00}; 
-		if (data_len > 2) {
-			uint8_t b1, b2;
-			ComputeCrc14443(CRC_14443_A, frame, data_len-2, &b1, &b2);
-			if (b1 != frame[data_len-2] || b2 != frame[data_len-1]) {
-				sprintf(crc, (isResponse & (data_len < 6)) ? "" : "!crc");
-			} 
-		}
-		
-		EndOfTransmissionTimestamp = timestamp + duration;
-		int num_lines = (data_len - 1)/16 + 1;
-				
-		for (int j = 0; j < num_lines; j++) {
-			if (j == 0) {
-				PrintAndLog(" %9d | %9d | %s | %-64s| %s",
-					(timestamp - first_timestamp),
-					(EndOfTransmissionTimestamp - first_timestamp),
-					(isResponse ? "Tag" : "Rdr"),
-					line[j], 
-					(j == num_lines-1)?crc:""
-					);
-			} else {
-				PrintAndLog("           |           |     | %-64s| %s",
-					line[j], 
-					(j == num_lines-1)?crc:"");
-			}
-		}				
-	
-		bool next_isResponse = *((uint16_t *)(trace + tracepos + 6)) & 0x8000;
-		
-		if (ShowWaitCycles && !isResponse && next_isResponse) {
-			uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
-			if (next_timestamp != 0x44444444) {
-				PrintAndLog(" %9d | %9d | %s | fdt (Frame Delay Time): %d",
-					(EndOfTransmissionTimestamp - first_timestamp),
-					(next_timestamp - first_timestamp),
-					" ",
-					(next_timestamp - EndOfTransmissionTimestamp));				
-			}
-		}	
-	}
+	PrintAndLog("Deprecated command, use 'hf list 14a' instead");
 	return 0;
 }
 
@@ -192,6 +166,11 @@ int CmdHF14AReader(const char *Cmd)
 	PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
 	PrintAndLog(" UID : %s", sprint_hex(card.uid, card.uidlen));
 	PrintAndLog(" SAK : %02x [%d]", card.sak, resp.arg[0]);
+	
+	// Double & triple sized UID, can be mapped to a manufacturer.
+	if ( card.uidlen > 4 ) {
+		PrintAndLog("MANUFACTURER : %s", getTagInfo(card.uid[0]));
+	}
 
 	switch (card.sak) {
 		case 0x00: PrintAndLog("TYPE : NXP MIFARE Ultralight | Ultralight C"); break;
@@ -210,7 +189,6 @@ int CmdHF14AReader(const char *Cmd)
 		case 0x98: PrintAndLog("TYPE : Gemplus MPCOS"); break;
 		default: ;
 	}
-
 	
 	// try to request ATS even if tag claims not to support it
 	if (select_status == 2) {

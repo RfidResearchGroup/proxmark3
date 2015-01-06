@@ -47,7 +47,7 @@ static command_t CommandTable[] =
   {"hf",    	CmdHF,    	1, "{ High Frequency commands... }"},
   {"hw",    	CmdHW,    	1, "{ Hardware commands... }"},
   {"lf",    	CmdLF,    	1, "{ Low Frequency commands... }"},
-  {"script", 	CmdScript,	1,"{ Scripting commands }"},
+  {"script", 	CmdScript,	1, "{ Scripting commands }"},
   {"quit",  	CmdQuit,  	1, "Exit program"},
   {"exit",  	CmdQuit,  	1, "Exit program"},
   {NULL, NULL, 0, NULL}
@@ -140,7 +140,7 @@ bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeou
 	// Wait until the command is received
 	for(size_t dm_seconds=0; dm_seconds < ms_timeout/10; dm_seconds++) {
 
-		while(getCommand(response)) {
+		while (getCommand(response)) {
 			if(response->cmd == cmd){
 				return true;
 			}

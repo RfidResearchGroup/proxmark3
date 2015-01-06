@@ -405,11 +405,13 @@ int CmdHF14BWrite( const char *Cmd){
 
 	if (cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:  hf 14b write <1|2> <BLOCK> <DATA>");
-		PrintAndLog("");
+		PrintAndLog("    [1 = SRIX4K]");
+		PrintAndLog("    [2 = SRIX4K]");
+		PrintAndLog("    [BLOCK number depends on which tag, special block == 255]");
 		PrintAndLog("     sample: hf 14b write 1 127 11223344");
-		PrintAndLog("     sample: hf 14b write 1 255 11223344");
-		PrintAndLog("     sample: hf 14b write 2 15 11223344");
-		PrintAndLog("     sample: hf 14b write 2 255 11223344");
+		PrintAndLog("           : hf 14b write 1 255 11223344");
+		PrintAndLog("           : hf 14b write 2 15 11223344");
+		PrintAndLog("           : hf 14b write 2 255 11223344");
 		return 0;
 	}
 

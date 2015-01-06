@@ -20,7 +20,6 @@
 #include "string.h"
 #include <stdarg.h>
 
-
 #include "legicrf.h"
 #include "../include/hitag2.h"
 

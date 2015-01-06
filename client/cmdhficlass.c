@@ -469,7 +469,51 @@ int CmdHFiClass_iso14443A_write(const char *Cmd)
   }
   return 0;
 }
+int CmdHFiClass_loclass(const char *Cmd)
+{
+	char opt = param_getchar(Cmd, 0);
 
+	if (strlen(Cmd)<1 || opt == 'h') {
+		PrintAndLog("Usage: hf iclass loclass [options]");
+		PrintAndLog("Options:");
+		PrintAndLog("h             Show this help");
+		PrintAndLog("t             Perform self-test");
+		PrintAndLog("f <filename>  Bruteforce iclass dumpfile");
+		PrintAndLog("                   An iclass dumpfile is assumed to consist of an arbitrary number of");
+		PrintAndLog("                   malicious CSNs, and their protocol responses");
+		PrintAndLog("                   The the binary format of the file is expected to be as follows: ");
+		PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+		PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+		PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+		PrintAndLog("                  ... totalling N*24 bytes");
+		return 0;
+	}
+	char fileName[255] = {0};
+	if(opt == 'f')
+	{
+			if(param_getstr(Cmd, 1, fileName) > 0)
+			{
+				return bruteforceFileNoKeys(fileName);
+			}else
+			{
+				PrintAndLog("You must specify a filename");
+			}
+	}
+	else if(opt == 't')
+	{
+		int errors = testCipherUtils();
+		errors += testMAC();
+		errors += doKeyTests(0);
+		errors += testElite();
+		if(errors)
+		{
+			prnlog("OBS! There were errors!!!");
+		}
+		return errors;
+	}
+
+	return 0;
+}
 
 static command_t CommandTable[] = 
 {
@@ -481,6 +525,7 @@ static command_t CommandTable[] =
   {"replay",  CmdHFiClassReader_Replay, 0, "Read an iClass tag via Reply Attack"},
   {"dump",	  CmdHFiClassReader_Dump, 0, "Authenticate and Dump iClass tag"},
   {"write",	CmdHFiClass_iso14443A_write,	0,	"Authenticate and Write iClass block"},
+	{"loclass",	CmdHFiClass_loclass,	1,	"Use loclass to perform bruteforce of reader attack dump"},
   {NULL, NULL, 0, NULL}
 };
 

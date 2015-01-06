@@ -1816,11 +1816,7 @@ int iso14443a_select_card(byte_t* uid_ptr, iso14a_card_select_t* p_hi14a_card, u
     ReaderTransmit(sel_uid,sizeof(sel_uid), NULL);
 
     // Receive the SAK
-    if (!ReaderReceive(resp, resp_par)){
-		return 0;
-	}
-	
-	
+		if (!ReaderReceive(resp, resp_par)) return 0;
     sak = resp[0];
 	
     // Test if more parts of the uid are coming
