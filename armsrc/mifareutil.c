@@ -19,7 +19,7 @@
 #include "crapto1.h"
 #include "mifareutil.h"
 
-int MF_DBGLEVEL = MF_DBG_ALL;
+int MF_DBGLEVEL = MF_DBG_ERROR;
 
 // memory management
 uint8_t* get_bigbufptr_recvrespbuf(void) {
@@ -511,7 +511,7 @@ int mifare_ultra_halt(uint32_t uid)
 		if (MF_DBGLEVEL >= 1)	Dbprintf("halt error. response len: %x", len);
 		return 1;
 	}
-    
+
 	return 0;
 }
 
@@ -638,7 +638,7 @@ int mifare_sendcmd_special(struct Crypto1State *pcs, uint8_t crypted, uint8_t cm
 	int len = ReaderReceive(answer, answer_parity);
 	if(!len) {
 		if (MF_DBGLEVEL >= 1)   Dbprintf("Authentication failed. Card timeout.");
-			return 2;
+			return 1;
     }
 	return len;
 }
@@ -654,7 +654,7 @@ int mifare_sendcmd_special2(struct Crypto1State *pcs, uint8_t crypted, uint8_t c
 	int len = ReaderReceive(answer, answer_parity);
 	if(!len){
         if (MF_DBGLEVEL >= 1)   Dbprintf("Authentication failed. Card timeout.");
-			return 2;
+			return 1;
     }
 	return len;
 }
@@ -662,7 +662,7 @@ int mifare_sendcmd_special2(struct Crypto1State *pcs, uint8_t crypted, uint8_t c
 int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData){
 	// variables
 	int len;
-	//           load key, keynumber
+	// load key, keynumber
 	uint8_t data[2]={0x0a, 0x00};
 	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
 	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
@@ -688,7 +688,8 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData){
 int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData){
 	// variables
 	int len;
-	uint8_t data[17]={0xaf,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t data[17] = {0x00};
+	data[0] = 0xAF;
 	memcpy(data+1,key,16);
 	
 	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
@@ -697,7 +698,7 @@ int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData){
 	// command MIFARE_CLASSIC_READBLOCK
 	len = mifare_sendcmd_special2(NULL, 1, 0x03, data, receivedAnswer, receivedAnswerPar ,NULL);
 	
-	if ((receivedAnswer[0] == 0x03)&&(receivedAnswer[1] == 0xae)) {
+	if ((receivedAnswer[0] == 0x03) && (receivedAnswer[1] == 0xae)) {
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Auth Error: %02x %02x", receivedAnswer[0], receivedAnswer[1]);
 		return 1;
 	}

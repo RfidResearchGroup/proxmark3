@@ -1,5 +1,6 @@
 #include "cmdhfmf.h"
 
+
 //standard ultralight
 int CmdHF14AMfUWrBl(const char *Cmd);
 int CmdHF14AMfURdBl(const char *Cmd);
@@ -14,3 +15,4 @@ void rol (uint8_t *data, const size_t len);
 
 //general stuff
 int CmdHFMFUltra(const char *Cmd);
+int CmdHF14AMfUInfo(const char *Cmd)

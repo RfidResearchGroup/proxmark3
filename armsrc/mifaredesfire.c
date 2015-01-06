@@ -18,13 +18,9 @@ static  uint8_t deselect_cmd[] = {0xc2,0xe0,0xb4};
 //static uint8_t __res[MAX_FRAME_SIZE];
 
 bool InitDesfireCard(){
-
-	// Make sure it is off.
-//	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-//	SpinDelay(300);
 	
-	byte_t cardbuf[USB_CMD_DATA_SIZE];
-	memset(cardbuf,0,sizeof(cardbuf));
+	byte_t cardbuf[USB_CMD_DATA_SIZE] = {0x00};
+
 	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
 	
 	iso14a_set_tracing(TRUE);
@@ -99,13 +95,9 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 void MifareDesfireGetInformation(){
 		
 	int len = 0;
-	uint8_t resp[USB_CMD_DATA_SIZE];
-	uint8_t dataout[USB_CMD_DATA_SIZE];
-	byte_t cardbuf[USB_CMD_DATA_SIZE];
-	
-	memset(resp,0,sizeof(resp));
-	memset(dataout,0, sizeof(dataout));
-	memset(cardbuf,0,sizeof(cardbuf));
+	uint8_t resp[USB_CMD_DATA_SIZE] = {0x00};
+	uint8_t dataout[USB_CMD_DATA_SIZE] = {0x00};
+	byte_t cardbuf[USB_CMD_DATA_SIZE] = {0x00};
 	
 	/*
 		1 = PCB					1
@@ -191,7 +183,6 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 	//uint8_t new_key_data8[8]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77};
 	//uint8_t new_key_data16[16]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF};
 
-	//uint8_t* bigbuffer = get_bigbufptr_recvrespbuf();
 	uint8_t resp[256] = {0x00};
 	uint8_t IV[16] = {0x00};
 
@@ -219,7 +210,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
         case 1:{
             if (algo == 1) {
 
-            uint8_t keybytes[8];
+            uint8_t keybytes[8] = {0x00};
             uint8_t RndA[8] = {0x00};
             uint8_t RndB[8] = {0x00};
             
@@ -268,7 +259,6 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             
             for (int x = 0; x < 8; x++) {
                 decRndB[x] = decRndB[x] ^ encRndA[x];
-
             }
             
             des_dec(&encRndB, &decRndB, key->data);
@@ -366,14 +356,14 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 		case 3:{
 		
 			//defaultkey
-			uint8_t keybytes[16];
+			uint8_t keybytes[16] = {0x00};
 			if (datain[1] == 0xff){
 				memcpy(keybytes,PICC_MASTER_KEY16,16); 
 			} else{
 				memcpy(keybytes, datain+1, datalen);
 			}
 			
-			struct desfire_key defaultkey = {0};
+			struct desfire_key defaultkey = {0x00};
 			desfirekey_t key = &defaultkey;
 			Desfire_aes_key_new( keybytes, key);
 		

@@ -20,6 +20,57 @@ uint8_t key5_ones_data[16] = { 0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01
 
 static int CmdHelp(const char *Cmd);
 
+int CmdHF14AMfUInfo(const char *Cmd){
+
+    uint8_t datatemp[7] = {0x00};
+    uint8_t isOK  = 0;
+    uint8_t *data = NULL;
+
+    UsbCommand c = {CMD_MIFAREU_READCARD, {0, 4}};
+    SendCommand(&c);
+    UsbCommand resp;
+
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+        isOK  = resp.arg[0] & 0xff;
+        data  = resp.d.asBytes;
+
+        if (!isOK) {
+			PrintAndLog("Error reading from tag");
+			return -1;
+		}
+	} else {
+		PrintAndLog("Command execute timed out");
+		return -1;
+	}
+	
+	// UID
+	memcpy( datatemp, data,3);
+	memcpy( datatemp+3, data+4, 4);
+	PrintAndLog("        UID :%s ", sprint_hex(datatemp, 7));
+	// BBC
+	// CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2 
+	int crc0 = 0x88 ^ data[0] ^ data[1] ^data[2];
+	if ( data[3] == crc0 )
+		PrintAndLog("       BCC0 :%02x - Ok", data[3]);
+	else
+		PrintAndLog("       BCC0 :%02x - crc should be %02x", data[3], crc0);
+		
+	int crc1 = data[4] ^ data[5] ^ data[6] ^data[7];
+	if ( data[8] == crc1 )
+		PrintAndLog("       BCC1 :%02x - Ok", data[8]);
+	else
+		PrintAndLog("       BCC1 :%02x - crc should be %02x", data[8], crc1 );
+	
+	PrintAndLog("   Internal :%s ", sprint_hex(data + 9, 1));
+	
+	memcpy(datatemp, data+10, 2);
+	PrintAndLog("       Lock :%s - %s", sprint_hex(datatemp, 2),printBits( 2, &datatemp) );
+	PrintAndLog(" OneTimePad :%s ", sprint_hex(data + 3*4, 4));
+	PrintAndLog("");
+
+	return 0;
+}
+
 //
 //  Mifare Ultralight Write Single Block
 //
@@ -172,19 +223,18 @@ int CmdHF14AMfURdBl(const char *Cmd){
 int CmdHF14AMfURdCard(const char *Cmd){
     int i;
     uint8_t BlockNo = 0;
-    int pages=16;
-    uint8_t *lockbytes_t=NULL;
-    uint8_t lockbytes[2]={0x00};
-    bool bit[16]={0x00};
-    bool dump=false;
-    uint8_t datatemp[7]= {0x00};
-        
+    int pages = 16;
+    uint8_t *lockbytes_t = NULL;
+    uint8_t lockbytes[2] = {0x00};
+    bool bit[16] = {0x00};
+    bool dump = false;
+    uint8_t datatemp[7] = {0x00};        
     uint8_t isOK  = 0;
     uint8_t * data  = NULL;
     FILE *fout = NULL;
 
     if (strchr(Cmd,'x') != 0){
-        dump=true;
+        dump = true;
         if ((fout = fopen("dump_ultralight_data.bin","wb")) == NULL) { 
             PrintAndLog("Could not create file name dumpdata.bin");
             return 1;	
@@ -201,36 +251,6 @@ int CmdHF14AMfURdCard(const char *Cmd){
         data  = resp.d.asBytes;
         PrintAndLog("isOk:%02x", isOK);
         if (isOK) {
-		
-			// UID
-			memcpy( datatemp, data,3);
-			memcpy( datatemp+3, data+4, 4);
-			PrintAndLog("        UID :%s ", sprint_hex(datatemp, 7));
-			// BBC
-			// CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2 
-			int crc0 = 0x88 ^ data[0] ^ data[1] ^data[2];
-			if ( data[3] == crc0 ) {
-				PrintAndLog("       BCC0 :%02x - Ok", data[3]);
-			}
-			else{
-				PrintAndLog("       BCC0 :%02x - crc should be %02x", data[3], crc0);
-			}
-			
-			int crc1 = data[4] ^ data[5] ^ data[6] ^data[7];
-			if ( data[8] == crc1 ){
-				PrintAndLog("       BCC1 :%02x - Ok", data[8]);
-				}
-			else{
-				PrintAndLog("       BCC1 :%02x - crc should be %02x", data[8], crc1 );
-			}
-			
-			PrintAndLog("   Internal :%s ", sprint_hex(data + 9, 1));
-			
-			memcpy(datatemp, data+10, 2);
-			PrintAndLog("       Lock :%s - %s", sprint_hex(datatemp, 2),printBits( 2, &datatemp) );
-			
-			PrintAndLog(" OneTimePad :%s ", sprint_hex(data + 3*4, 4));
-			PrintAndLog("");
 			
             for (i = 0; i < pages; i++) {
                 switch(i){
@@ -320,7 +340,7 @@ int CmdHF14AMfURdCard(const char *Cmd){
             }
 		}
     } else {                
-        PrintAndLog("Command1 execute timeout");
+        PrintAndLog("Command execute timeout");
     }
     if (dump) fclose(fout);
     return 0;
@@ -1131,17 +1151,18 @@ int CmdHF14AMfUCWrBl(const char *Cmd){
 //------------------------------------
 static command_t CommandTable[] =
 {
-    {"help",    CmdHelp,		    1,"This help"},
-    {"dbg",     CmdHF14AMfDbg,		0,"Set default debug mode"},
-    {"urdbl",   CmdHF14AMfURdBl,    0,"Read MIFARE Ultralight block"},
-    {"urdcard", CmdHF14AMfURdCard,  0,"Read MIFARE Ultralight Card"},
-    {"udump",   CmdHF14AMfUDump,	0,"Dump MIFARE Ultralight tag to binary file"},
-    {"uwrbl",   CmdHF14AMfUWrBl,	0,"Write MIFARE Ultralight block"},
-    {"ucrdbl",  CmdHF14AMfUCRdBl,   0,"Read MIFARE Ultralight C block"},
-    {"ucrdcard",CmdHF14AMfUCRdCard, 0,"Read MIFARE Ultralight C Card"},
-    {"ucdump",  CmdHF14AMfUCDump,	0,"Dump MIFARE Ultralight C tag to binary file"},
-    {"ucwrbl",  CmdHF14AMfUCWrBl,	0,"Write MIFARE Ultralight C block"},
-    {"auth",    CmdHF14AMfucAuth,	0,"Ultralight C Authentication"},
+    {"help",	CmdHelp,			1,"This help"},
+    {"dbg",		CmdHF14AMfDbg,		0,"Set default debug mode"},
+	{"info",	CmdHF14AMfUInfo,	0,"Taginfo"},
+    {"rdbl",	CmdHF14AMfURdBl,	0,"Read block - MIFARE Ultralight"},
+    {"rdcard",	CmdHF14AMfURdCard,	0,"Read card - MIFARE Ultralight"},
+    {"dump",	CmdHF14AMfUDump,	0,"Dump MIFARE Ultralight tag to binary file"},
+    {"wrbl",	CmdHF14AMfUWrBl,	0,"Write block - MIFARE Ultralight"},
+    {"crdbl",	CmdHF14AMfUCRdBl,	0,"Read block - MIFARE Ultralight C"},
+    {"crdcard",	CmdHF14AMfUCRdCard,	0,"Read card - MIFARE Ultralight C"},
+    {"cdump",	CmdHF14AMfUCDump,	0,"Dump MIFARE Ultralight C tag to binary file"},
+    {"cwrbl",	CmdHF14AMfUCWrBl,	0,"Write MIFARE Ultralight C block"},
+    {"cauth",	CmdHF14AMfucAuth,	0,"try a Ultralight C Authentication"},
     {NULL, NULL, 0, NULL}
 };
 

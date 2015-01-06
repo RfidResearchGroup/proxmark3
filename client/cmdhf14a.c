@@ -649,7 +649,7 @@ static void waitCmd(uint8_t iSelect)
     UsbCommand resp;
     char *hexout;
 
-    if (WaitForResponseTimeout(CMD_ACK,&resp,10000)) {
+    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
         recv = resp.d.asBytes;
         uint8_t iLen = iSelect ? resp.arg[1] : resp.arg[0];
         PrintAndLog("received %i octets",iLen);
