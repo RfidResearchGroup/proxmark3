@@ -168,6 +168,7 @@ int CmdHF14AReader(const char *Cmd)
 	PrintAndLog(" SAK : %02x [%d]", card.sak, resp.arg[0]);
 	
 	// Double & triple sized UID, can be mapped to a manufacturer.
+	// HACK: does this apply for Ultralight cards?
 	if ( card.uidlen > 4 ) {
 		PrintAndLog("MANUFACTURER : %s", getTagInfo(card.uid[0]));
 	}

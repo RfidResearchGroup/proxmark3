@@ -31,6 +31,7 @@
 #include "data.h"
 #include "graph.h"
 #include "ui.h"
+#include "util.h"
 #include "cmdparser.h"
 #include "cmdhf15.h"
 #include "../common/iso15693tools.h"
