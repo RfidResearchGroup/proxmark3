@@ -44,150 +44,7 @@ int xorbits_8(uint8_t val)
 
 int CmdHFiClassList(const char *Cmd)
 {
-	bool ShowWaitCycles = false;
-	char param = param_getchar(Cmd, 0);
-	
-	if (param != 0) {
-		PrintAndLog("List data in trace buffer.");
-		PrintAndLog("Usage:  hf iclass list");
-		PrintAndLog("h - help");
-		PrintAndLog("sample: hf iclass list");
-		return 0;
-	}
-
-// for the time being. Need better Bigbuf handling.	
-#define TRACE_SIZE 3000	
-
-	uint8_t trace[TRACE_SIZE];
-	GetFromBigBuf(trace, TRACE_SIZE, 0);
-	WaitForResponse(CMD_ACK, NULL);
-
-	PrintAndLog("Recorded Activity");
-	PrintAndLog("");
-	PrintAndLog("Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
-	PrintAndLog("All times are in carrier periods (1/13.56Mhz)");
-	PrintAndLog("");
-	PrintAndLog("     Start |       End | Src | Data (! denotes parity error)                                   | CRC ");
-	PrintAndLog("-----------|-----------|-----|-----------------------------------------------------------------------");
-
-	uint16_t tracepos = 0;
-	uint16_t duration;
-	uint16_t data_len;
-	uint16_t parity_len;
-	bool isResponse;
-	uint32_t timestamp;
-	uint32_t first_timestamp;
-	uint32_t EndOfTransmissionTimestamp;
-	
-	for (;;) {
-
-		if(tracepos >= TRACE_SIZE) {
-			break;
-		}
-
-		timestamp = *((uint32_t *)(trace + tracepos));
-		if(tracepos == 0) {
-			first_timestamp = timestamp;
-		}
-
-		// Break and stick with current result if buffer was not completely full
-		if (timestamp == 0x44444444) break; 
-
-		tracepos += 4;
-		duration = *((uint16_t *)(trace + tracepos));
-		tracepos += 2;
-		data_len = *((uint16_t *)(trace + tracepos));
-		tracepos += 2;
-		
-		if (data_len & 0x8000) {
-		  data_len &= 0x7fff;
-		  isResponse = true;
-		} else {
-		  isResponse = false;
-		}
-
-		parity_len = (data_len-1)/8 + 1;
-
-		if (tracepos + data_len + parity_len >= TRACE_SIZE) {
-			break;
-		}
-		
-		uint8_t *frame = trace + tracepos;
-		tracepos += data_len;
-		uint8_t *parityBytes = trace + tracepos;
-		tracepos += parity_len;
-
-		char line[16][110];
-		for (int j = 0; j < data_len; j++) {
-			int oddparity = 0x01;
-			int k;
-			
-			for (k=0;k<8;k++) {
-				oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
-			}
-
-			uint8_t parityBits = parityBytes[j>>3];
-			if (isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
-				sprintf(line[j/16]+((j%16)*4), "%02x! ", frame[j]);
-			} else {
-				sprintf(line[j/16]+((j%16)*4), "%02x  ", frame[j]);
-			}
-
-		}
-
-		char *crc = ""; 
-		if (data_len > 2) {
-			uint8_t b1, b2;
-			if(!isResponse && data_len == 4 ) {
-				// Rough guess that this is a command from the reader
-				// For iClass the command byte is not part of the CRC
-				ComputeCrc14443(CRC_ICLASS, &frame[1], data_len-3, &b1, &b2);
-				if (b1 != frame[data_len-2] || b2 != frame[data_len-1]) {
-					crc = "!crc";
-				}
-			}
-			else {
-				// For other data.. CRC might not be applicable (UPDATE commands etc.)
-				ComputeCrc14443(CRC_ICLASS, frame, data_len-2, &b1, &b2);
-				if (b1 != frame[data_len-2] || b2 != frame[data_len-1]) {
-					crc = "!crc";
-				}
-			}
-		}
-
-		EndOfTransmissionTimestamp = timestamp + duration;
-		
-		int num_lines = (data_len - 1)/16 + 1;
-		for (int j = 0; j < num_lines; j++) {
-			if (j == 0) {
-				PrintAndLog(" %9d | %9d | %s | %-64s| %s",
-					(timestamp - first_timestamp),
-					(EndOfTransmissionTimestamp - first_timestamp),
-					(isResponse ? "Tag" : "Rdr"),
-					line[j], 
-					(j == num_lines-1)?crc:"");
-			} else {
-				PrintAndLog("           |           |     | %-64s| %s",
-					line[j], 
-					(j == num_lines-1)?crc:"");
-			}
-		}				
-
-		bool next_isResponse = *((uint16_t *)(trace + tracepos + 6)) & 0x8000;
-		
-		if (ShowWaitCycles && !isResponse && next_isResponse) {
-			uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
-			if (next_timestamp != 0x44444444) {
-				PrintAndLog(" %9d | %9d | %s | fdt (Frame Delay Time): %d",
-					(EndOfTransmissionTimestamp - first_timestamp),
-					(next_timestamp - first_timestamp),
-					"   ",
-					(next_timestamp - EndOfTransmissionTimestamp));
-			}
-		}
-			
-	}
-	
+	PrintAndLog("Deprecated command, use 'hf list iclass' instead");
 	return 0;
 }
 
@@ -322,7 +179,11 @@ int CmdHFiClassReader(const char *Cmd)
             uint8_t * data  = resp.d.asBytes;
 
             PrintAndLog("isOk:%02x", isOK);
-
+            if( isOK == 0){
+                //Aborted
+                PrintAndLog("Quitting...");
+                return 0;
+            }
             if(isOK > 0)
             {
                 PrintAndLog("CSN: %s",sprint_hex(data,8));
@@ -425,7 +286,7 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 
 
   UsbCommand c = {CMD_READER_ICLASS, {0}};
-  c.arg[0] = FLAG_ICLASS_READER_ONLY_ONCE;
+  c.arg[0] = FLAG_ICLASS_READER_ONLY_ONCE| FLAG_ICLASS_READER_GET_CC;
   if(!fake_dummy_test)   
     SendCommand(&c);
   
@@ -573,19 +434,64 @@ int CmdHFiClass_iso14443A_write(const char *Cmd)
   }
   return 0;
 }
+int CmdHFiClass_loclass(const char *Cmd)
+{
+	char opt = param_getchar(Cmd, 0);
 
+	if (strlen(Cmd)<1 || opt == 'h') {
+		PrintAndLog("Usage: hf iclass loclass [options]");
+		PrintAndLog("Options:");
+		PrintAndLog("h             Show this help");
+		PrintAndLog("t             Perform self-test");
+		PrintAndLog("f <filename>  Bruteforce iclass dumpfile");
+		PrintAndLog("                   An iclass dumpfile is assumed to consist of an arbitrary number of");
+		PrintAndLog("                   malicious CSNs, and their protocol responses");
+		PrintAndLog("                   The the binary format of the file is expected to be as follows: ");
+		PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+		PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+		PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+		PrintAndLog("                  ... totalling N*24 bytes");
+		return 0;
+	}
+	char fileName[255] = {0};
+	if(opt == 'f')
+	{
+			if(param_getstr(Cmd, 1, fileName) > 0)
+			{
+				return bruteforceFileNoKeys(fileName);
+			}else
+			{
+				PrintAndLog("You must specify a filename");
+			}
+	}
+	else if(opt == 't')
+	{
+		int errors = testCipherUtils();
+		errors += testMAC();
+		errors += doKeyTests(0);
+		errors += testElite();
+		if(errors)
+		{
+			prnlog("OBS! There were errors!!!");
+		}
+		return errors;
+	}
+
+	return 0;
+}
 
 static command_t CommandTable[] = 
 {
-  {"help",	CmdHelp,			1,	"This help"},
-  {"list",	CmdHFiClassList,	0,	"List iClass history"},
-  {"snoop",	CmdHFiClassSnoop,	0,	"Eavesdrop iClass communication"},
-  {"sim",	CmdHFiClassSim,		0,	"Simulate iClass tag"},
-  {"reader",CmdHFiClassReader,	0,	"Read an iClass tag"},
-  {"replay",CmdHFiClassReader_Replay,	0,	"Read an iClass tag via Reply Attack"},
-  {"dump",	CmdHFiClassReader_Dump,	0,		"Authenticate and Dump iClass tag"},
-  {"write",	CmdHFiClass_iso14443A_write,	0,	"Authenticate and Write iClass block"},
-  {NULL, NULL, 0, NULL}
+	{"help",	CmdHelp,			1,	"This help"},
+	{"list",	CmdHFiClassList,	0,	"[Deprecated] List iClass history"},
+	{"snoop",	CmdHFiClassSnoop,	0,	"Eavesdrop iClass communication"},
+	{"sim",	CmdHFiClassSim,		0,	"Simulate iClass tag"},
+	{"reader",CmdHFiClassReader,	0,	"Read an iClass tag"},
+	{"replay",CmdHFiClassReader_Replay,	0,	"Read an iClass tag via Reply Attack"},
+	{"dump",	CmdHFiClassReader_Dump,	0,		"Authenticate and Dump iClass tag"},
+	{"write",	CmdHFiClass_iso14443A_write,	0,	"Authenticate and Write iClass block"},
+	{"loclass",	CmdHFiClass_loclass,	1,	"Use loclass to perform bruteforce of reader attack dump"},
+	{NULL, NULL, 0, NULL}
 };
 
 int CmdHFiClass(const char *Cmd)

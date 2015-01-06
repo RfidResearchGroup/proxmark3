@@ -21,4 +21,5 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
  * @param fmt
  */
 void prnlog(char *fmt, ...);
+int fileExists(const char *filename);
 #endif // FILEUTILS_H

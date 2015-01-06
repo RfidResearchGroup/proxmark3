@@ -13,5 +13,5 @@
 
 int CmdHF(const char *Cmd);
 int CmdHFTune(const char *Cmd);
-
+int CmdHFList(const char *Cmd);
 #endif

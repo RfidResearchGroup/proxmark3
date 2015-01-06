@@ -29,145 +29,7 @@ static void waitCmd(uint8_t iLen);
 
 int CmdHF14AList(const char *Cmd)
 {
-	bool ShowWaitCycles = false;
-	char param = param_getchar(Cmd, 0);
-	
-	if (param == 'h' || (param != 0 && param != 'f')) {
-		PrintAndLog("List data in trace buffer.");
-		PrintAndLog("Usage:  hf 14a list [f]");
-		PrintAndLog("f - show frame delay times as well");
-		PrintAndLog("sample: hf 14a list f");
-		return 0;
-	}	
-
-	if (param == 'f') {
-		ShowWaitCycles = true;
-	}
-
-// for the time being. Need better Bigbuf handling.	
-#define TRACE_SIZE 3000	
-
-	uint8_t trace[TRACE_SIZE];
-	GetFromBigBuf(trace, TRACE_SIZE, 0);
-	WaitForResponse(CMD_ACK, NULL);
-
-	PrintAndLog("Recorded Activity");
-	PrintAndLog("");
-	PrintAndLog("Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
-	PrintAndLog("All times are in carrier periods (1/13.56Mhz)");
-	PrintAndLog("");
-	PrintAndLog("     Start |       End | Src | Data (! denotes parity error)                                   | CRC ");
-	PrintAndLog("-----------|-----------|-----|-----------------------------------------------------------------------");
-
-	uint16_t tracepos = 0;
-	uint16_t duration;
-	uint16_t data_len;
-	uint16_t parity_len;
-	bool isResponse;
-	uint32_t timestamp;
-	uint32_t first_timestamp;
-	uint32_t EndOfTransmissionTimestamp;
-	
-	for (;;) {
-
-		if(tracepos >= TRACE_SIZE) {
-			break;
-		}
-
-		timestamp = *((uint32_t *)(trace + tracepos));
-		if(tracepos == 0) {
-			first_timestamp = timestamp;
-		}
-
-		// Break and stick with current result if buffer was not completely full
-		if (timestamp == 0x44444444) break; 
-
-		tracepos += 4;
-		duration = *((uint16_t *)(trace + tracepos));
-		tracepos += 2;
-		data_len = *((uint16_t *)(trace + tracepos));
-		tracepos += 2;
-		
-		if (data_len & 0x8000) {
-		  data_len &= 0x7fff;
-		  isResponse = true;
-		} else {
-		  isResponse = false;
-		}
-
-		parity_len = (data_len-1)/8 + 1;
-
-		if (tracepos + data_len + parity_len >= TRACE_SIZE) {
-			break;
-		}
-		
-		uint8_t *frame = trace + tracepos;
-		tracepos += data_len;
-		uint8_t *parityBytes = trace + tracepos;
-		tracepos += parity_len;
-
-		char line[16][110];
-		for (int j = 0; j < data_len; j++) {
-			int oddparity = 0x01;
-			int k;
-			
-			for (k=0;k<8;k++) {
-				oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
-			}
-
-			uint8_t parityBits = parityBytes[j>>3];
-			if (isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
-				sprintf(line[j/16]+((j%16)*4), "%02x! ", frame[j]);
-			} else {
-				sprintf(line[j/16]+((j%16)*4), "%02x  ", frame[j]);
-			}
-
-		}
-
-		char crc[5] = ""; 
-		if (data_len > 2) {
-		uint8_t b1, b2;
-			ComputeCrc14443(CRC_14443_A, frame, data_len-2, &b1, &b2);
-			if (b1 != frame[data_len-2] || b2 != frame[data_len-1]) {
-				sprintf(crc, (isResponse & (data_len < 6)) ? "" : "!crc");
-			} else {
-				sprintf(crc, "");
-			}
-		}
-
-		EndOfTransmissionTimestamp = timestamp + duration;
-		
-		int num_lines = (data_len - 1)/16 + 1;
-		for (int j = 0; j < num_lines; j++) {
-			if (j == 0) {
-				PrintAndLog(" %9d | %9d | %s | %-64s| %s",
-					(timestamp - first_timestamp),
-					(EndOfTransmissionTimestamp - first_timestamp),
-					(isResponse ? "Tag" : "Rdr"),
-					line[j], 
-					(j == num_lines-1)?crc:"");
-			} else {
-				PrintAndLog("           |           |     | %-64s| %s",
-					line[j], 
-					(j == num_lines-1)?crc:"");
-			}
-		}				
-
-		bool next_isResponse = *((uint16_t *)(trace + tracepos + 6)) & 0x8000;
-		
-		if (ShowWaitCycles && !isResponse && next_isResponse) {
-			uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
-			if (next_timestamp != 0x44444444) {
-				PrintAndLog(" %9d | %9d | %s | fdt (Frame Delay Time): %d",
-					(EndOfTransmissionTimestamp - first_timestamp),
-					(next_timestamp - first_timestamp),
-					"   ",
-					(next_timestamp - EndOfTransmissionTimestamp));
-			}
-		}
-			
-	}
-	
+	PrintAndLog("Deprecated command, use 'hf list 14a' instead");
 	return 0;
 }
 
@@ -510,7 +372,7 @@ int CmdHF14ASnoop(const char *Cmd) {
 	
 	if (param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("It get data from the field and saves it into command buffer.");
-		PrintAndLog("Buffer accessible from command hf 14a list.");
+		PrintAndLog("Buffer accessible from command hf list 14a.");
 		PrintAndLog("Usage:  hf 14a snoop [c][r]");
 		PrintAndLog("c - triggered by first data from card");
 		PrintAndLog("r - triggered by first 7-bit request from reader (REQ,WUP,...)");
@@ -671,7 +533,7 @@ static void waitCmd(uint8_t iSelect)
 static command_t CommandTable[] = 
 {
   {"help",   CmdHelp,              1, "This help"},
-  {"list",   CmdHF14AList,         0, "List ISO 14443a history"},
+  {"list",   CmdHF14AList,         0, "[Deprecated] List ISO 14443a history"},
   {"reader", CmdHF14AReader,       0, "Act like an ISO14443 Type A reader"},
   {"cuids",  CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443 Type A UIDs in one go"},
   {"sim",    CmdHF14ASim,          0, "<UID> -- Fake ISO 14443a tag"},

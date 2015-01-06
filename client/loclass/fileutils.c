@@ -57,11 +57,11 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
  */
 void prnlog(char *fmt, ...)
 {
-
+	char buffer[2048] = {0};
 	va_list args;
 	va_start(args,fmt);
-    PrintAndLog(fmt, args);
-    //vprintf(fmt,args);
+	vsprintf (buffer,fmt, args);
 	va_end(args);
-    //printf("\n");
+	PrintAndLog(buffer);
+
 }
