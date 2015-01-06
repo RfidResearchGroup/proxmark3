@@ -275,7 +275,7 @@ int CmdInfo(const char *Cmd){
 	uint32_t por      = PackBits(si, 1, bits); si += 1;
 		
 	PrintAndLog("");
-	PrintAndLog("-- T55xx Configuration --------------------------------------");
+	PrintAndLog("-- T55xx Configuration & Tag Information --------------------");
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" Safer key                 : %s", GetSaferStr(safer));
 	PrintAndLog(" reserved                  : %d", resv);

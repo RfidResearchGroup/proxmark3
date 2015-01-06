@@ -54,8 +54,8 @@ CORESRCS = 	uart.c \
 
 
 CMDSRCS = 	nonce2key/crapto1.c\
-		nonce2key/crypto1.c\
-		nonce2key/nonce2key.c\
+			nonce2key/crypto1.c\
+			nonce2key/nonce2key.c\
 			loclass/cipher.c \
 			loclass/cipherutils.c \
 			loclass/des.c \

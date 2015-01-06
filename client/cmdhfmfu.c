@@ -9,14 +9,15 @@
 //-----------------------------------------------------------------------------
 #include <openssl/des.h>
 #include "cmdhfmf.h"
+#include "cmdhf14a.h"
 
-uint8_t MAX_ULTRA_BLOCKS= 0x0f;
-uint8_t MAX_ULTRAC_BLOCKS= 0x2c;
-uint8_t key1_blnk_data[16] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
+uint8_t MAX_ULTRA_BLOCKS   = 0x0f;
+uint8_t MAX_ULTRAC_BLOCKS  = 0x2c;
+uint8_t key1_blnk_data[16] = { 0x00 };
 uint8_t key2_defa_data[16] = { 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f };
 uint8_t key3_3des_data[16] = { 0x49,0x45,0x4D,0x4B,0x41,0x45,0x52,0x42,0x21,0x4E,0x41,0x43,0x55,0x4F,0x59,0x46 };
 uint8_t key4_nfc_data[16]  = { 0x42,0x52,0x45,0x41,0x4b,0x4d,0x45,0x49,0x46,0x59,0x4f,0x55,0x43,0x41,0x4e,0x21 };
-uint8_t key5_ones_data[16] = { 0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01 };
+uint8_t key5_ones_data[16] = { 0x01 };
 
 static int CmdHelp(const char *Cmd);
 
@@ -43,29 +44,35 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		return -1;
 	}
 	
+	PrintAndLog("");
+	PrintAndLog("-- Mifare Ultralight / Ultralight-C Tag Information ---------");
+	PrintAndLog("-------------------------------------------------------------");
+
 	// UID
-	memcpy( datatemp, data,3);
+	memcpy( datatemp, data, 3);
 	memcpy( datatemp+3, data+4, 4);
-	PrintAndLog("        UID :%s ", sprint_hex(datatemp, 7));
+	
+	PrintAndLog("MANUFACTURER : %s", getTagInfo(datatemp[0]));
+	PrintAndLog("         UID : %s ", sprint_hex(datatemp, 7));
 	// BBC
 	// CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2 
 	int crc0 = 0x88 ^ data[0] ^ data[1] ^data[2];
 	if ( data[3] == crc0 )
-		PrintAndLog("       BCC0 :%02x - Ok", data[3]);
+		PrintAndLog("        BCC0 : %02x - Ok", data[3]);
 	else
-		PrintAndLog("       BCC0 :%02x - crc should be %02x", data[3], crc0);
+		PrintAndLog("        BCC0 : %02x - crc should be %02x", data[3], crc0);
 		
 	int crc1 = data[4] ^ data[5] ^ data[6] ^data[7];
 	if ( data[8] == crc1 )
-		PrintAndLog("       BCC1 :%02x - Ok", data[8]);
+		PrintAndLog("        BCC1 : %02x - Ok", data[8]);
 	else
-		PrintAndLog("       BCC1 :%02x - crc should be %02x", data[8], crc1 );
+		PrintAndLog("        BCC1 : %02x - crc should be %02x", data[8], crc1 );
 	
-	PrintAndLog("   Internal :%s ", sprint_hex(data + 9, 1));
+	PrintAndLog("    Internal : %s ", sprint_hex(data + 9, 1));
 	
 	memcpy(datatemp, data+10, 2);
-	PrintAndLog("       Lock :%s - %s", sprint_hex(datatemp, 2),printBits( 2, &datatemp) );
-	PrintAndLog(" OneTimePad :%s ", sprint_hex(data + 3*4, 4));
+	PrintAndLog("        Lock : %s - %s", sprint_hex(datatemp, 2),printBits( 2, &datatemp) );
+	PrintAndLog("  OneTimePad : %s ", sprint_hex(data + 3*4, 4));
 	PrintAndLog("");
 
 	return 0;
@@ -81,7 +88,11 @@ int CmdHF14AMfUWrBl(const char *Cmd){
     UsbCommand resp;
         
     if (strlen(Cmd)<3) {
-        PrintAndLog("Usage:  hf mfu uwrbl <block number> <block data (8 hex symbols)> [w]");
+        PrintAndLog("Usage:  hf mfu uwrbl <block number> <block data > [w]");
+		PrintAndLog("       [block number] ");
+		PrintAndLog("       [block data] - (8 hex symbols)");
+		PrintAndLog("       [w] - Chinese magic ultralight-c tag ");
+		PrintAndLog("");
         PrintAndLog("        sample: hf mfu uwrbl 0 01020304");
         return 0;
     }       
@@ -187,7 +198,7 @@ int CmdHF14AMfURdBl(const char *Cmd){
     uint8_t blockNo = 0;	
         
     if (strlen(Cmd)<1) {
-        PrintAndLog("Usage:  hf mfu urdbl    <block number>");
+        PrintAndLog("Usage:  hf mfu urdbl <block number>");
         PrintAndLog("        sample: hfu mfu urdbl 0");
         return 0;
     }       
@@ -218,253 +229,182 @@ int CmdHF14AMfURdBl(const char *Cmd){
 }
 
 //
-//  Mifare Ultralight Read (Dump) Card Contents
+//  Mifare Ultralight / Ultralight-C;  Read and Dump Card Contents
 //
-int CmdHF14AMfURdCard(const char *Cmd){
-    int i;
-    uint8_t BlockNo = 0;
-    int pages = 16;
+int CmdHF14AMfUDump(const char *Cmd){
+
+    FILE *fout;
+	char filename[FILE_PATH_SIZE] = {0x00};
+	char * fnameptr = filename;
+	
     uint8_t *lockbytes_t = NULL;
     uint8_t lockbytes[2] = {0x00};
-    bool bit[16] = {0x00};
-    bool dump = false;
-    uint8_t datatemp[7] = {0x00};        
-    uint8_t isOK  = 0;
-    uint8_t * data  = NULL;
-    FILE *fout = NULL;
+	
+    uint8_t *lockbytes_t2 = NULL;
+    uint8_t lockbytes2[2] = {0x00};
 
-    if (strchr(Cmd,'x') != 0){
-        dump = true;
-        if ((fout = fopen("dump_ultralight_data.bin","wb")) == NULL) { 
-            PrintAndLog("Could not create file name dumpdata.bin");
-            return 1;	
-        }
-        PrintAndLog("Dumping Ultralight Card Data...");
-    }
-    PrintAndLog("Attempting to Read Ultralight... ");
-    UsbCommand c = {CMD_MIFAREU_READCARD, {BlockNo, pages}};
-    SendCommand(&c);
-    UsbCommand resp;
-
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-        isOK  = resp.arg[0] & 0xff;
-        data  = resp.d.asBytes;
-        PrintAndLog("isOk:%02x", isOK);
-        if (isOK) {
-			
-            for (i = 0; i < pages; i++) {
-                switch(i){
-                    case 2:
-                        //process lock bytes
-                        lockbytes_t=data+(i*4);
-                        lockbytes[0]=lockbytes_t[2];
-                        lockbytes[1]=lockbytes_t[3];
-                        for(int j=0; j<16; j++){
-                            bit[j]=lockbytes[j/8] & ( 1 <<(7-j%8));
-                        }
-                        PrintAndLog("Block %02x:%s ", i,sprint_hex(data + i * 4, 4));
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                       break; 
-                    case 3: 
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[4]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 4:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[3]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 5:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[2]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 6:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[1]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 7:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[0]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 8:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[15]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 9:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[14]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 10:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[13]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 11:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[12]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 12:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[11]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 13:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[10]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 14:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[9]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 15:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[8]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                   default:
-                        PrintAndLog("Block %02x:%s ", i,sprint_hex(data + i * 4, 4));
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                  }
-            }
-		}
-    } else {                
-        PrintAndLog("Command execute timeout");
-    }
-    if (dump) fclose(fout);
-    return 0;
-}
-
-int CmdHF14AMfUDump(const char *Cmd){
+    bool bit[16]  = {0x00};
+	bool bit2[16] = {0x00};
+	
     int i;
     uint8_t BlockNo      = 0;
     int Pages            = 16;
-    uint8_t *lockbytes_t = NULL;
-    uint8_t lockbytes[2] = {0x00};
-    bool bit[16]         = {0x00};
-    uint8_t datatemp[5]  = {0x00};
-	bool dump            = true;
-    uint8_t isOK         = 0;
-    uint8_t * data       = NULL;
-    FILE *fout;
 
-    if ((fout = fopen("dump_ultralight_data.bin","wb")) == NULL) { 
-        PrintAndLog("Could not create file name dumpdata.bin");
-        return 1;	
-    }
-    PrintAndLog("Dumping Ultralight Card Data...");
+	bool tmplockbit		 = false;
+    uint8_t isOK         = 0;
+    uint8_t *data       = NULL;
+
+ 	char cmdp = param_getchar(Cmd, 0);
+	
+	if (cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Reads all pages from Mifare Ultralight or Ultralight-C tag.");
+		PrintAndLog("It saves binary dump into the file `filename.bin` or `cardUID.bin`");		
+		PrintAndLog("Usage:  hf mfu dump <c> <filename w/o .bin>");
+		PrintAndLog("     <c>  optional cardtype c == Ultralight-C, if not defaults to Ultralight");
+		PrintAndLog("     sample: hf mfu dump");
+		PrintAndLog("           : hf mfu dump myfile");
+		PrintAndLog("           : hf mfu dump c myfile");
+		return 0;
+	}
+
+	// UL or UL-C?
+	Pages = (cmdp == 'c' || cmdp == 'C') ? 44 : 16;
+	
+	PrintAndLog("Dumping Ultralight%s Card Data...", (Pages ==16)?"":"-C");
     	
-    PrintAndLog("Attempting to Read Ultralight... ");
     UsbCommand c = {CMD_MIFAREU_READCARD, {BlockNo,Pages}};
     SendCommand(&c);
     UsbCommand resp;
 
     if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-        isOK  = resp.arg[0] & 0xff;
-        data  = resp.d.asBytes;
-        PrintAndLog("isOk:%02x", isOK);
-        if (isOK) 
-            for (i = 0; i < Pages; i++) {
-                switch(i){
-                    case 2:
-                        //process lock bytes
-                        lockbytes_t=data+(i*4);
-                        lockbytes[0]=lockbytes_t[2];
-                        lockbytes[1]=lockbytes_t[3];
-                        for(int j=0; j<16; j++){
-                            bit[j]=lockbytes[j/8] & ( 1 <<(7-j%8));
-                        }
-                        PrintAndLog("Block %02x:%s ", i,sprint_hex(data + i * 4, 4));
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                       break; 
-                    case 3: 
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[4]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 4:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[3]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 5:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[2]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 6:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[1]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 7:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[0]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 8:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[15]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 9:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[14]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 10:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[13]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 11:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[12]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 12:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[11]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 13:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[10]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 14:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[9]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 15:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[8]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                   default:
-                        PrintAndLog("Block %02x:%s ", i,sprint_hex(data + i * 4, 4));
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                }
-            }  
-    } else {                
-        PrintAndLog("Command1 execute timeout");
+		isOK  = resp.arg[0] & 0xff;
+        if (!isOK) {                
+			PrintAndLog("Command error");
+			return 0;
+		}
+		data  = resp.d.asBytes;
+	} else {
+		PrintAndLog("Command execute timeout");
+		return 0;
 	}
-    if (dump) fclose(fout);
+		
+	// Load lock bytes.
+	int j = 0;
+	
+	lockbytes_t = data + 8;
+	lockbytes[0] = lockbytes_t[2];
+	lockbytes[1] = lockbytes_t[3];
+	for(j = 0; j < 16; j++){
+		bit[j] = lockbytes[j/8] & ( 1 <<(7-j%8));
+	}		
+	
+	// Load bottom lockbytes if available
+	if ( Pages == 44 ) {
+		
+		lockbytes_t2 = data + (40*4);
+		lockbytes2[0] = lockbytes_t2[2];
+		lockbytes2[1] = lockbytes_t2[3];
+		for (j = 0; j < 16; j++) {
+			bit2[j] = lockbytes2[j/8] & ( 1 <<(7-j%8));
+		}
+	}
+
+	for (i = 0; i < Pages; ++i) {
+		
+		if ( i < 3 ) {
+			PrintAndLog("Block %02x:%s ", i,sprint_hex(data + i * 4, 4));
+			continue;
+		}
+			
+		switch(i){
+			case 3: tmplockbit = bit[4]; break;
+			case 4:	tmplockbit = bit[3]; break;
+			case 5:	tmplockbit = bit[2]; break;
+			case 6:	tmplockbit = bit[1]; break;
+			case 7:	tmplockbit = bit[0]; break;
+			case 8:	tmplockbit = bit[15]; break;
+			case 9: tmplockbit = bit[14]; break;
+			case 10: tmplockbit = bit[13]; break;
+			case 11: tmplockbit = bit[12]; break;
+			case 12: tmplockbit = bit[11]; break;
+			case 13: tmplockbit = bit[10]; break;
+			case 14: tmplockbit = bit[9]; break;
+			case 15: tmplockbit = bit[8]; break;
+			case 16:
+			case 17:
+			case 18:
+			case 19: tmplockbit = bit2[6]; break;
+			case 20:
+			case 21:
+			case 22:
+			case 23: tmplockbit = bit2[5]; break; 
+			case 24:
+			case 25:
+			case 26:
+			case 27: tmplockbit = bit2[4]; break; 		    
+			case 28:
+			case 29:
+			case 30:
+			case 31: tmplockbit = bit2[2]; break;
+			case 32:
+			case 33:
+			case 34:
+			case 35: tmplockbit = bit2[1]; break; 
+			case 36:
+			case 37:
+			case 38:
+			case 39: tmplockbit = bit2[0]; break; 
+			case 40: tmplockbit = bit2[12]; break;
+			case 41: tmplockbit = bit2[11]; break;
+			case 42: tmplockbit = bit2[10]; break; //auth0
+			case 43: tmplockbit = bit2[9]; break;  //auth1
+			default: break;
+		}
+		PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),tmplockbit);
+	}  
+	
+	int len = 0;
+	if ( Pages == 16 )
+		len = param_getstr(Cmd,0,filename);
+	else
+		len = param_getstr(Cmd,1,filename);
+
+	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+
+	// user supplied filename?
+	if (len < 1) {
+	
+		// UID = data 0-1-2 4-5-6-7  (skips a beat)
+		sprintf(fnameptr, "%02X", data[0]);
+		fnameptr += 2;
+		sprintf(fnameptr, "%02X", data[1]);
+		fnameptr += 2;
+		sprintf(fnameptr, "%02X", data[2]);
+		fnameptr += 2;
+		sprintf(fnameptr, "%02X", data[4]);
+		fnameptr += 2;
+		sprintf(fnameptr, "%02X", data[5]);
+		fnameptr += 2;
+		sprintf(fnameptr, "%02X", data[6]);
+		fnameptr += 2;
+		sprintf(fnameptr, "%02X", data[7]);
+		fnameptr += 2;
+
+	} else {
+		fnameptr += len;
+	}
+
+	// add file extension
+	sprintf(fnameptr, ".bin"); 
+
+	if ((fout = fopen(filename,"wb")) == NULL) { 
+		PrintAndLog("Could not create file name %s", filename);
+		return 1;	
+	}
+	fwrite( data, 1, Pages*4, fout );
+	fclose(fout);
+	
+	PrintAndLog("Dumped %d pages, wrote %d bytes to %s", Pages, Pages*4, filename);
     return 0;
 }
 
@@ -486,9 +426,9 @@ void rol (uint8_t *data, const size_t len){
 //
 int CmdHF14AMfucAuth(const char *Cmd){
         
-    uint8_t blockNo = 0, keyNo=0;
+    uint8_t blockNo = 0, keyNo = 0;
     uint8_t e_RndB[8] = {0x00};
-    uint32_t cuid=0;
+    uint32_t cuid = 0;
     unsigned char RndARndB[16] = {0x00};
     uint8_t key[16] = {0x00};
     DES_cblock RndA, RndB;
@@ -591,7 +531,7 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
     uint8_t blockNo = 0;
         
     if (strlen(Cmd)<1) {
-        PrintAndLog("Usage:  hf mfu ucrdbl    <block number>");
+        PrintAndLog("Usage:  hf mfu ucrdbl  <block number>");
         PrintAndLog("        sample: hf mfu ucrdbl 0");
         return 0;
     }       
@@ -617,423 +557,6 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
         } else {
             PrintAndLog("Command execute timeout");
         }
-    return 0;
-}
-
-//
-// Ultralight C Read (or Dump) Card Contents
-//
-int CmdHF14AMfUCRdCard(const char *Cmd){
-    int i;
-    uint8_t BlockNo = 0;
-    int Pages=44;
-    uint8_t *lockbytes_t=NULL;
-    uint8_t lockbytes[2]={0x00};
-    uint8_t *lockbytes_t2=NULL;
-    uint8_t lockbytes2[2]={0x00};
-    bool bit[16]={0x00};
-    bool bit2[16]={0x00};
-    bool dump=false;
-    uint8_t datatemp[5]={0x00};
-    uint8_t isOK  = 0;
-    uint8_t * data  = NULL;
-    FILE *fout = NULL;
-
-    if (strchr(Cmd,'x') != 0){
-        dump=true;
-        if ((fout = fopen("dump_ultralightc_data.bin","wb")) == NULL) { 
-            PrintAndLog("Could not create file name dumpdata.bin");
-            return 1;	
-      }
-      PrintAndLog("Dumping Ultralight C Card Data...");
-    }
-    PrintAndLog("Attempting to Read Ultralight C... ");
-    UsbCommand c = {CMD_MIFAREUC_READCARD, {BlockNo, Pages}};
-    SendCommand(&c);
-    UsbCommand resp;
-
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-        isOK  = resp.arg[0] & 0xff;
-        data  = resp.d.asBytes;
-
-        PrintAndLog("isOk:%02x", isOK);
-        if (isOK) 
-            for (i = 0; i < Pages; i++) {
-                switch(i){
-                    case 2:
-                        //process lock bytes
-                        lockbytes_t=data+(i*4);
-                        lockbytes[0]=lockbytes_t[2];
-                        lockbytes[1]=lockbytes_t[3];
-                        for(int j=0; j<16; j++){
-                            bit[j]=lockbytes[j/8] & ( 1 <<(7-j%8));
-                        }
-                        //might as well read bottom lockbytes too
-                        lockbytes_t2=data+(40*4);
-                        lockbytes2[0]=lockbytes_t2[2];
-                        lockbytes2[1]=lockbytes_t2[3];
-                        for(int j=0; j<16; j++){
-                            bit2[j]=lockbytes2[j/8] & ( 1 <<(7-j%8));
-                        }
-                        PrintAndLog("Block %02x:%s ", i,sprint_hex(data + i * 4, 4));
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 3: 
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[4]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 4:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[3]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 5:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[2]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 6:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[1]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 7:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[0]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 8:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[15]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 9:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[14]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 10:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[13]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 11:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[12]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 12:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[11]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 13:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[10]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 14:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[9]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 15:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[8]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 16:
-                    case 17:
-                    case 18:
-                    case 19:  
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[6]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 20:
-                    case 21:
-                    case 22:
-                    case 23:  
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[5]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break; 
-                    case 24:
-                    case 25:
-                    case 26:
-                    case 27:  
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[4]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break; 		    
-                    case 28:
-                    case 29:
-                    case 30:
-                    case 31:  
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[2]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 32:
-                    case 33:
-                    case 34:
-                    case 35:  
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[1]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break; 
-                    case 36:
-                    case 37:
-                    case 38:
-                    case 39:  
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[0]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break; 
-                    case 40:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[12]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 41:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[11]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 42:
-                        //auth0
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[10]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 43:  
-                        //auth1
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[9]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break; 
-                    default:
-                        PrintAndLog("Block %02x:%s ", i,sprint_hex(data + i * 4, 4));
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;	    
-                   } 
-            }
-      
-        } else {                
-            PrintAndLog("Command1 execute timeout");
-        }
-    if (dump) fclose(fout);
-    return 0;
-}
-
-//
-// Ultralight C Dump Card Contents to file
-//
-int CmdHF14AMfUCDump(const char *Cmd){
-    int i;
-    uint8_t BlockNo = 0;
-    int Pages=44;
-    uint8_t *lockbytes_t=NULL;
-    uint8_t lockbytes[2]={0x00};
-    uint8_t *lockbytes_t2=NULL;
-    uint8_t lockbytes2[2]={0x00};
-    bool bit[16]={0x00};
-    bool bit2[16]={0x00};
-    bool dump=true;
-    uint8_t datatemp[5]={0x00};
-        
-    uint8_t isOK  = 0;
-    uint8_t * data  = NULL;
-    FILE *fout;
-
-	if ((fout = fopen("dump_ultralightc_data.bin","wb")) == NULL) { 
-		PrintAndLog("Could not create file name dumpdata.bin");
-		return 1;	
-	}
-	PrintAndLog("Dumping Ultralight C Card Data...");
-    PrintAndLog("Attempting to Read Ultralight C... ");
-    UsbCommand c = {CMD_MIFAREU_READCARD, {BlockNo,Pages}};
-    SendCommand(&c);
-    UsbCommand resp;
-
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-        isOK  = resp.arg[0] & 0xff;
-        data  = resp.d.asBytes;
-        PrintAndLog("isOk:%02x", isOK);
-        if (isOK) 
-            for (i = 0; i < Pages; i++) {
-                switch(i){
-                    case 2:
-                        //process lock bytes
-                        lockbytes_t=data+(i*4);
-                        lockbytes[0]=lockbytes_t[2];
-                        lockbytes[1]=lockbytes_t[3];
-                        for(int j=0; j<16; j++){
-                            bit[j]=lockbytes[j/8] & ( 1 <<(7-j%8));
-
-                        }
-                        //might as well read bottom lockbytes too
-                        lockbytes_t2=data+(40*4);
-                        lockbytes2[0]=lockbytes_t2[2];
-                        lockbytes2[1]=lockbytes_t2[3];
-                        for(int j=0; j<16; j++){
-                            bit2[j]=lockbytes2[j/8] & ( 1 <<(7-j%8));
-                        }
-
-                        PrintAndLog("Block %02x:%s ", i,sprint_hex(data + i * 4, 4));
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 3: 
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[4]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 4:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[3]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 5:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[2]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 6:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[1]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 7:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[0]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 8:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[15]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 9:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[14]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 10:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[13]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 11:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[12]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 12:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[11]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 13:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[10]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 14:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[9]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 15:
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[8]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 16:
-                    case 17:
-                    case 18:
-                    case 19:  
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[6]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break;
-                    case 20:
-                    case 21:
-                    case 22:
-                    case 23:  
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[5]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break; 
-                    case 24:
-                    case 25:
-                    case 26:
-                    case 27:  
-                        PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[4]);
-                        memcpy(datatemp,data + i * 4,4);
-                        if (dump) fwrite ( datatemp, 1, 4, fout );
-                        break; 		    
-                   case 28:
-                   case 29:
-                   case 30:
-                   case 31:  
-                       PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[2]);
-                       memcpy(datatemp,data + i * 4,4);
-                       if (dump) fwrite ( datatemp, 1, 4, fout );
-                       break;
-                   case 32:
-                   case 33:
-                   case 34:
-                   case 35:  
-                       PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[1]);
-                       memcpy(datatemp,data + i * 4,4);
-                       if (dump) fwrite ( datatemp, 1, 4, fout );
-                       break; 
-                   case 36:
-                   case 37:
-                   case 38:
-                   case 39:  
-                       PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[0]);
-                       memcpy(datatemp,data + i * 4,4);
-                       if (dump) fwrite ( datatemp, 1, 4, fout );
-                       break; 
-                   case 40:
-                       PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[12]);
-                       memcpy(datatemp,data + i * 4,4);
-                       if (dump) fwrite ( datatemp, 1, 4, fout );
-                       break;
-                   case 41:
-                       PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[11]);
-                       memcpy(datatemp,data + i * 4,4);
-                       if (dump) fwrite ( datatemp, 1, 4, fout );
-                       break;
-                   case 42:
-                       //auth0
-                       PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[10]);
-                       memcpy(datatemp,data + i * 4,4);
-                       if (dump) fwrite ( datatemp, 1, 4, fout );
-                       break;
-                   case 43:  
-                       //auth1
-                       PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),bit2[9]);
-                       memcpy(datatemp,data + i * 4,4);
-                       if (dump) fwrite ( datatemp, 1, 4, fout );
-                       break; 
-                   default:
-                       PrintAndLog("Block %02x:%s ", i,sprint_hex(data + i * 4, 4));
-                       memcpy(datatemp,data + i * 4,4);
-                       if (dump) fwrite ( datatemp, 1, 4, fout );
-                       break;	    
-                   } 
-            }
-      
-        } else {                
-            PrintAndLog("Command1 execute timeout");
-	}
-    if (dump) fclose(fout);
     return 0;
 }
 
@@ -1155,12 +678,9 @@ static command_t CommandTable[] =
     {"dbg",		CmdHF14AMfDbg,		0,"Set default debug mode"},
 	{"info",	CmdHF14AMfUInfo,	0,"Taginfo"},
     {"rdbl",	CmdHF14AMfURdBl,	0,"Read block - MIFARE Ultralight"},
-    {"rdcard",	CmdHF14AMfURdCard,	0,"Read card - MIFARE Ultralight"},
-    {"dump",	CmdHF14AMfUDump,	0,"Dump MIFARE Ultralight tag to binary file"},
+    {"dump",	CmdHF14AMfUDump,	0,"Dump MIFARE Ultralight / Ultralight-C tag to binary file"},
     {"wrbl",	CmdHF14AMfUWrBl,	0,"Write block - MIFARE Ultralight"},
     {"crdbl",	CmdHF14AMfUCRdBl,	0,"Read block - MIFARE Ultralight C"},
-    {"crdcard",	CmdHF14AMfUCRdCard,	0,"Read card - MIFARE Ultralight C"},
-    {"cdump",	CmdHF14AMfUCDump,	0,"Dump MIFARE Ultralight C tag to binary file"},
     {"cwrbl",	CmdHF14AMfUCWrBl,	0,"Write MIFARE Ultralight C block"},
     {"cauth",	CmdHF14AMfucAuth,	0,"try a Ultralight C Authentication"},
     {NULL, NULL, 0, NULL}

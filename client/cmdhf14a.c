@@ -27,7 +27,6 @@
 static int CmdHelp(const char *Cmd);
 static void waitCmd(uint8_t iLen);
 
-
 // structure and database for uid -> tagtype lookups 
 typedef struct { 
 	uint8_t uid;
@@ -111,7 +110,7 @@ const manufactureName manufactureMapping[] = {
 // get a product description based on the UID
 //		uid[8] 	tag uid
 // returns description of the best match	
-static char* getTagInfo(uint8_t uid) {
+char* getTagInfo(uint8_t uid) {
 
 	int i, best = -1;	
 	int len = sizeof(manufactureMapping) / sizeof(manufactureName);

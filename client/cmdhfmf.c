@@ -1282,7 +1282,7 @@ int CmdHF14AMfESave(const char *Cmd)
 
 	char ctmp = param_getchar(Cmd, 0);
 	
-	if ( ctmp == 'h') {
+	if ( ctmp == 'h' || ctmp == 'H') {
 		PrintAndLog("It saves emul dump into the file `filename.eml` or `cardID.eml`");		
 		PrintAndLog(" Usage:  hf mf esave [card memory] [file name w/o `.eml`]");
 		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
@@ -1327,7 +1327,12 @@ int CmdHF14AMfESave(const char *Cmd)
 	
 	// open file
 	f = fopen(filename, "w+");
-
+	
+	if ( !f ) {
+		PrintAndLog("Can't open file %s ", filename);
+		return 1;
+	}
+	
 	// put hex
 	for (i = 0; i < numBlocks; i++) {
 		if (mfEmlGetMem(buf, i, 1)) {
@@ -1506,15 +1511,15 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 int CmdHF14AMfCLoad(const char *Cmd)
 {
 	FILE * f;
-	char filename[FILE_PATH_SIZE];
+	char filename[FILE_PATH_SIZE] = {0x00};
 	char * fnameptr = filename;
-	char buf[64];
-	uint8_t buf8[64];
+	char buf[64] = {0x00};
+	uint8_t buf8[64] = {0x00};
 	uint8_t fillFromEmulator = 0;
 	int i, len, blockNum, flags;
 	
-	memset(filename, 0, sizeof(filename));
-	memset(buf, 0, sizeof(buf));
+	// memset(filename, 0, sizeof(filename));
+	// memset(buf, 0, sizeof(buf));
 
 	if (param_getchar(Cmd, 0) == 'h' || param_getchar(Cmd, 0)== 0x00) {
 		PrintAndLog("It loads magic Chinese card (only works with!!!) from the file `filename.eml`");
@@ -1670,14 +1675,14 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 int CmdHF14AMfCSave(const char *Cmd) {
 
 	FILE * f;
-	char filename[FILE_PATH_SIZE];
+	char filename[FILE_PATH_SIZE] = {0x00};
 	char * fnameptr = filename;
 	uint8_t fillFromEmulator = 0;
-	uint8_t buf[64];
+	uint8_t buf[64] = {0x00};
 	int i, j, len, flags;
 	
-	memset(filename, 0, sizeof(filename));
-	memset(buf, 0, sizeof(buf));
+	// memset(filename, 0, sizeof(filename));
+	// memset(buf, 0, sizeof(buf));
 
 	if (param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("It saves `magic Chinese` card dump into the file `filename.eml` or `cardID.eml`");
@@ -1731,6 +1736,11 @@ int CmdHF14AMfCSave(const char *Cmd) {
 	
 		// open file
 		f = fopen(filename, "w+");
+		
+		if (f == NULL) {
+			PrintAndLog("File not found or locked.");
+			return 1;
+		}
 
 		// put hex
 		flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;
