@@ -18,6 +18,8 @@
 #include "util.h"
 #include "nonce2key/nonce2key.h"
 #include "../common/iso15693tools.h"
+#include <openssl/aes.h>   
+#include "../common/crc16.h"
 /**
  * The following params expected:
  *  UsbCommand c
@@ -224,6 +226,54 @@ static int l_iso15693_crc(lua_State *L)
     return 1;
 }
 
+/*
+ Simple AES 128 cbc hook up to OpenSSL.
+ params:  key, input
+*/
+static int l_aes(lua_State *L)
+{
+	//Check number of arguments
+	int i;
+    size_t size;
+    const char *p_key = luaL_checklstring(L, 1, &size);
+    if(size != 32)  return returnToLuaWithError(L,"Wrong size of key, got %d bytes, expected 32", (int) size);
+
+    const char *p_encTxt = luaL_checklstring(L, 2, &size);
+    
+	unsigned char indata[AES_BLOCK_SIZE] = {0x00};
+	unsigned char outdata[AES_BLOCK_SIZE] = {0x00};
+    unsigned char aes_key[AES_BLOCK_SIZE] = {0x00};
+	unsigned char iv[AES_BLOCK_SIZE] = {0x00};
+	
+	// convert key to bytearray
+	for (i = 0; i < 32; i += 2) {
+		sscanf(&p_encTxt[i], "%02x", (unsigned int *)&indata[i / 2]);
+	}
+	
+	// convert input to bytearray
+	for (i = 0; i < 32; i += 2) {
+		sscanf(&p_key[i], "%02x", (unsigned int *)&aes_key[i / 2]);
+	}
+	
+	AES_KEY key;
+	AES_set_decrypt_key(aes_key, 128, &key);
+    AES_cbc_encrypt(indata, outdata, sizeof(indata), &key, iv, AES_DECRYPT);
+
+    //Push decrypted array as a string
+	lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
+	return 1;// return 1 to signal one return value
+}
+
+static int l_crc16(lua_State *L)
+{
+	size_t size;
+	const char *p_str = luaL_checklstring(L, 1, &size);
+		
+	uint16_t retval = crc16_ccitt( (uint8_t*) p_str, size);
+    lua_pushinteger(L, (int) retval);
+    return 1;
+}
+
 /**
  * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
  * able to do "require('foobar')" if foobar.lua is within lualibs folder.
@@ -261,6 +311,8 @@ int set_pm3_libraries(lua_State *L)
         {"clearCommandBuffer",          l_clearCommandBuffer},
         {"console",                      l_CmdConsole},
         {"iso15693_crc",                 l_iso15693_crc},
+		{"aes",                         l_aes},
+		{"crc16",                       l_crc16},
         {NULL, NULL}
     };
 

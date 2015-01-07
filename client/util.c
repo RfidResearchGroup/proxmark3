@@ -46,12 +46,18 @@ int ukbhit(void) {
 #endif
 
 // log files functions
-void AddLogLine(char *fileName, char *extData, char *c) {
+void AddLogLine(char *file, char *extData, char *c) {
 	FILE *fLog = NULL;
+    char filename[FILE_PATH_SIZE] = {0x00};
+    int len = 0;
 
-	fLog = fopen(fileName, "a");
+    len = strlen(file);
+    if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+    memcpy(filename, file, len);
+   
+	fLog = fopen(filename, "a");
 	if (!fLog) {
-		printf("Could not append log file %s", fileName);
+		printf("Could not append log file %s", filename);
 		return;
 	}
 
@@ -103,11 +109,13 @@ void print_hex(const uint8_t * data, const size_t len)
 }
 
 char * sprint_hex(const uint8_t * data, const size_t len) {
+	
+	int maxLen = ( len > 1024/3) ? 1024/3 : len;
 	static char buf[1024];
 	char * tmp = buf;
 	size_t i;
 
-	for (i=0; i < len && i < 1024/3; i++, tmp += 3)
+	for (i=0; i < maxLen; ++i, tmp += 3)
 		sprintf(tmp, "%02x ", data[i]);
 
 	return buf;

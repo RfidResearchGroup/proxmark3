@@ -507,12 +507,12 @@ int CmdEM410xWrite(const char *Cmd)
 
 int CmdReadWord(const char *Cmd)
 {
-  int Word = 16; //default to invalid word
+	int Word = -1; //default to invalid word
   UsbCommand c;
   
   sscanf(Cmd, "%d", &Word);
   
-  if (Word > 15) {
+	if ( (Word > 15) | (Word < 0) ) {
     PrintAndLog("Word must be between 0 and 15");
     return 1;
   }
@@ -530,13 +530,13 @@ int CmdReadWord(const char *Cmd)
 
 int CmdReadWordPWD(const char *Cmd)
 {
-  int Word = 16; //default to invalid word
+	int Word = -1; //default to invalid word
   int Password = 0xFFFFFFFF; //default to blank password
   UsbCommand c;
   
   sscanf(Cmd, "%d %x", &Word, &Password);
   
-  if (Word > 15) {
+	if ( (Word > 15) | (Word < 0) ) {
     PrintAndLog("Word must be between 0 and 15");
     return 1;
   }
@@ -565,7 +565,7 @@ int CmdWriteWord(const char *Cmd)
     return 1;
   }
   
-  PrintAndLog("Writting word %d with data %08X", Word, Data);
+  PrintAndLog("Writing word %d with data %08X", Word, Data);
   
   c.cmd = CMD_EM4X_WRITE_WORD;
   c.d.asBytes[0] = 0x0; //Normal mode
@@ -578,7 +578,7 @@ int CmdWriteWord(const char *Cmd)
 
 int CmdWriteWordPWD(const char *Cmd)
 {
-  int Word = 8; //default to invalid word
+  int Word = 16; //default to invalid word
   int Data = 0xFFFFFFFF; //default to blank data
   int Password = 0xFFFFFFFF; //default to blank password
   UsbCommand c;
@@ -590,7 +590,7 @@ int CmdWriteWordPWD(const char *Cmd)
     return 1;
   }
   
-  PrintAndLog("Writting word %d with data %08X and password %08X", Word, Data, Password);
+  PrintAndLog("Writing word %d with data %08X and password %08X", Word, Data, Password);
   
   c.cmd = CMD_EM4X_WRITE_WORD;
   c.d.asBytes[0] = 0x1; //Password mode
@@ -600,8 +600,6 @@ int CmdWriteWordPWD(const char *Cmd)
   SendCommand(&c);
   return 0;
 }
-
-
 
 static command_t CommandTable[] =
 {

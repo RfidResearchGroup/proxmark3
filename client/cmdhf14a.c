@@ -111,7 +111,7 @@ const manufactureName manufactureMapping[] = {
 // get a product description based on the UID
 //		uid[8] 	tag uid
 // returns description of the best match	
-static char* getTagInfo(uint8_t uid) {
+char* getTagInfo(uint8_t uid) {
 
 	int i, best = -1;	
 	int len = sizeof(manufactureMapping) / sizeof(manufactureName);
@@ -168,6 +168,7 @@ int CmdHF14AReader(const char *Cmd)
 	PrintAndLog(" SAK : %02x [%d]", card.sak, resp.arg[0]);
 
 	// Double & triple sized UID, can be mapped to a manufacturer.
+	// HACK: does this apply for Ultralight cards?
 	if ( card.uidlen > 4 ) {
 		PrintAndLog("MANUFACTURER : %s", getTagInfo(card.uid[0]));
 	}
@@ -624,7 +625,7 @@ static void waitCmd(uint8_t iSelect)
     UsbCommand resp;
     char *hexout;
 
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
         recv = resp.d.asBytes;
         uint8_t iLen = iSelect ? resp.arg[1] : resp.arg[0];
         PrintAndLog("received %i octets",iLen);

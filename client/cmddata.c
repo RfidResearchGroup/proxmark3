@@ -696,7 +696,7 @@ int CmdFSKdemod(const char *Cmd) //old CmdFSKdemod needs updating
 
   int lowLen = sizeof (LowTone) / sizeof (int);
   int highLen = sizeof (HighTone) / sizeof (int);
-  int convLen = (highLen > lowLen) ? highLen : lowLen; //if highlen > lowLen then highlen else lowlen
+  int convLen = (highLen > lowLen) ? highLen : lowLen;
   uint32_t hi = 0, lo = 0;
 
   int i, j;
@@ -942,9 +942,16 @@ int CmdTuneSamples(const char *Cmd)
 
 int CmdLoad(const char *Cmd)
 {
-  FILE *f = fopen(Cmd, "r");
+   char filename[FILE_PATH_SIZE] = {0x00};
+   int len = 0;
+
+   len = strlen(Cmd);
+   if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+   memcpy(filename, Cmd, len);
+	
+   FILE *f = fopen(filename, "r");
   if (!f) {
-    PrintAndLog("couldn't open '%s'", Cmd);
+     PrintAndLog("couldn't open '%s'", filename);
     return 0;
   }
 
@@ -1250,9 +1257,17 @@ int CmdPlot(const char *Cmd)
 
 int CmdSave(const char *Cmd)
 {
-  FILE *f = fopen(Cmd, "w");
+   char filename[FILE_PATH_SIZE] = {0x00};
+   int len = 0;
+
+   len = strlen(Cmd);
+   if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+   memcpy(filename, Cmd, len);
+   
+
+  FILE *f = fopen(filename, "w");
   if(!f) {
-    PrintAndLog("couldn't open '%s'", Cmd);
+    PrintAndLog("couldn't open '%s'", filename);
     return 0;
   }
   int i;

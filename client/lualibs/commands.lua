@@ -104,8 +104,11 @@ local _commands = {
 	CMD_MIFARE_EML_MEMSET =                                              0x0602,
 	CMD_MIFARE_EML_MEMGET =                                              0x0603,
 	CMD_MIFARE_EML_CARDLOAD =                                            0x0604,
-	CMD_MIFARE_EML_CSETBLOCK =                                           0x0605,
-	CMD_MIFARE_EML_CGETBLOCK =                                           0x0606,
+	
+	--// magic chinese card commands
+	CMD_MIFARE_CSETBLOCK =                                               0x0605,
+	CMD_MIFARE_CGETBLOCK =                                               0x0606,
+	CMD_MIFARE_CIDENT =                                                  0x0607,
 
 	CMD_SIMULATE_MIFARE_CARD =                                           0x0610,
 

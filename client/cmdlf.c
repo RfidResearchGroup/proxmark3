@@ -380,10 +380,8 @@ static void ChkBitstream(const char *str)
   int i;
 
   /* convert to bitstream if necessary */
-  for (i = 0; i < (int)(GraphTraceLen / 2); i++)
-  {
-    if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0)
-    {
+	for (i = 0; i < (int)(GraphTraceLen / 2); i++){
+		if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
       CmdBitstream(str);
       break;
     }
@@ -556,11 +554,25 @@ int CmdVchDemod(const char *Cmd)
 int CmdLFfind(const char *Cmd)
 {
   int ans=0;
-  if (!offline){
+	char cmdp = param_getchar(Cmd, 0);
+	
+	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  lf search <0|1>");
+		PrintAndLog("     <use data from Graphbuffer>, if not set, try reading data from tag.");
+		PrintAndLog("");
+		PrintAndLog("    sample: lf search");
+		PrintAndLog("          : lf search 1");
+		return 0;
+	}
+
+	if (!offline || (cmdp != '1') ){
     ans=CmdLFRead("");
-    ans=CmdSamples("20000");
+	ans=CmdSamples("20000");
+	} else if (GraphTraceLen < 1000) {
+		PrintAndLog("Data in Graphbuffer was too small.");
+		return 0;
   }
-  if (GraphTraceLen<1000) return 0;
+
   PrintAndLog("Checking for known tags:");
   ans=Cmdaskmandemod("");
   if (ans>0) return 1;

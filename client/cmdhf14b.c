@@ -23,7 +23,6 @@
 #include "cmdhf14b.h"
 #include "cmdmain.h"
 
-
 static int CmdHelp(const char *Cmd);
 
 int CmdHF14BDemod(const char *Cmd)
@@ -146,7 +145,7 @@ demodError:
 
 int CmdHF14BList(const char *Cmd)
 {
-  uint8_t got[960];
+  uint8_t got[TRACE_BUFFER_SIZE];
   GetFromBigBuf(got,sizeof(got),0);
   WaitForResponse(CMD_ACK,NULL);
 
@@ -158,9 +157,8 @@ int CmdHF14BList(const char *Cmd)
   int prev = -1;
 
   for(;;) {
-    if(i >= 900) {
-      break;
-    }
+    
+	if(i >= TRACE_BUFFER_SIZE) { break; }
 
     bool isResponse;
     int timestamp = *((uint32_t *)(got+i));
@@ -177,7 +175,7 @@ int CmdHF14BList(const char *Cmd)
     if(len > 100) {
       break;
     }
-    if(i + len >= 900) {
+    if(i + len >= TRACE_BUFFER_SIZE) {
       break;
     }
 
