@@ -1585,7 +1585,7 @@ void ReaderIClass(uint8_t arg0) {
 
 void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 
-	uint8_t card_data[24]={0};
+	uint8_t card_data[USB_CMD_DATA_SIZE]={0};
 	uint16_t block_crc_LUT[255] = {0};
 
 	{//Generate a lookup table for block crc
@@ -1658,7 +1658,10 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 
 		cardsize = memory.k16 ? 255 : 32;
 		WDT_HIT();
-
+		//Set card_data to all zeroes, we'll fill it with data
+		memset(card_data,0x0,USB_CMD_DATA_SIZE);
+		uint8_t failedRead =0;
+		uint8_t stored_data_length =0;
 		//then loop around remaining blocks
 		for(int block=0; block < cardsize; block++){
 
@@ -1674,14 +1677,47 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 						resp[3], resp[4], resp[5],
 						resp[6], resp[7]);
 
-			}else{
-				Dbprintf("Failed to dump block %d", block);
+				//Fill up the buffer
+				memcpy(card_data+stored_data_length,resp,8);
+				stored_data_length += 8;
 
+				if(stored_data_length +8 > USB_CMD_DATA_SIZE)
+				{//Time to send this off and start afresh
+					cmd_send(CMD_ACK,
+							 stored_data_length,//data length
+							 failedRead,//Failed blocks?
+							 0,//Not used ATM
+							 card_data, stored_data_length);
+					//reset
+					stored_data_length = 0;
+					failedRead = 0;
+				}
+
+			}else{
+				failedRead = 1;
+				stored_data_length +=8;//Otherwise, data becomes misaligned
+				Dbprintf("Failed to dump block %d", block);
 			}
+		}
+		//Send off any remaining data
+		if(stored_data_length > 0)
+		{
+			cmd_send(CMD_ACK,
+					 stored_data_length,//data length
+					 failedRead,//Failed blocks?
+					 0,//Not used ATM
+					 card_data, stored_data_length);
 		}
 		//If we got here, let's break
 		break;
 	}
+	//Signal end of transmission
+	cmd_send(CMD_ACK,
+			 0,//data length
+			 0,//Failed blocks?
+			 0,//Not used ATM
+			 card_data, 0);
+
 	LED_A_OFF();
 }
 
