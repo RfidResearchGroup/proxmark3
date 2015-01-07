@@ -1089,23 +1089,55 @@ int CmdSamples(const char *Cmd)
 
 int CmdTuneSamples(const char *Cmd)
 {
-	int cnt = 0;
-	int n = 255;
-	uint8_t got[255];
+	int timeout = 0;
+	printf("\nMeasuring antenna characteristics, please wait...");
 
-	PrintAndLog("Reading %d samples\n", n);
-	GetFromBigBuf(got,n,7256); // armsrc/apps.h: #define FREE_BUFFER_OFFSET 7256
-	WaitForResponse(CMD_ACK,NULL);
-	for (int j = 0; j < n; j++) {
-		GraphBuffer[cnt++] = ((int)got[j]) - 128;
+	UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING};
+	SendCommand(&c);
+
+	UsbCommand resp;
+	while(!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING,&resp,1000)) {
+		timeout++;
+		printf(".");
+		if (timeout > 7) {
+			PrintAndLog("\nNo response from Proxmark. Aborting...");
+			return 1;
+		}
+	}
+
+	int peakv, peakf;
+	int vLf125, vLf134, vHf;
+	vLf125 = resp.arg[0] & 0xffff;
+	vLf134 = resp.arg[0] >> 16;
+	vHf = resp.arg[1] & 0xffff;;
+	peakf = resp.arg[2] & 0xffff;
+	peakv = resp.arg[2] >> 16;
+	PrintAndLog("");
+	PrintAndLog("# LF antenna: %5.2f V @   125.00 kHz", vLf125/1000.0);
+	PrintAndLog("# LF antenna: %5.2f V @   134.00 kHz", vLf134/1000.0);
+	PrintAndLog("# LF optimal: %5.2f V @%9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
+	PrintAndLog("# HF antenna: %5.2f V @    13.56 MHz", vHf/1000.0);
+	if (peakv<2000)
+		PrintAndLog("# Your LF antenna is unusable.");
+	else if (peakv<10000)
+		PrintAndLog("# Your LF antenna is marginal.");
+	if (vHf<2000)
+		PrintAndLog("# Your HF antenna is unusable.");
+	else if (vHf<5000)
+		PrintAndLog("# Your HF antenna is marginal.");
+
+	for (int i = 0; i < 256; i++) {
+		GraphBuffer[i] = resp.d.asBytes[i] - 128;
 	}
 
 	PrintAndLog("Done! Divisor 89 is 134khz, 95 is 125khz.\n");
 	PrintAndLog("\n");
-	GraphTraceLen = n;
-	RepaintGraphWindow();
-	return 0;
+	GraphTraceLen = 256;
+	ShowGraphWindow();
+
+  return 0;
 }
+
 
 int CmdLoad(const char *Cmd)
 {
