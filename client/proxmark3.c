@@ -144,12 +144,9 @@ static void *main_loop(void *targ) {
 		}
 		
 		if (!script_file) {
-			PrintAndLog("FOO!!");
 			cmd = readline(PROXPROMPT);
-			PrintAndLog("BAR!!");
 		}
 		
-		PrintAndLog("SNAFU!!");
 		if (cmd) {
 
 			while(cmd[strlen(cmd) - 1] == ' ')
