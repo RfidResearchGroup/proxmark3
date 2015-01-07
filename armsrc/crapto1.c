@@ -44,12 +44,12 @@ static void quicksort(uint32_t* const start, uint32_t* const stop)
 		else if(*rit > *start)
 			--rit;
 		else
-			*it ^= (*it ^= *rit, *rit ^= *it);
+			*it ^= ( (*it ^= *rit ), *rit ^= *it);
 
 	if(*rit >= *start)
 		--rit;
 	if(rit != start)
-		*rit ^= (*rit ^= *start, *start ^= *rit);
+		*rit ^= ( (*rit ^= *start), *start ^= *rit);
 
 	quicksort(start, rit - 1);
 	quicksort(rit + 1, stop);

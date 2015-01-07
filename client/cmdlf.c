@@ -392,7 +392,7 @@ static void ChkBitstream(const char *str)
 
 int CmdLFSim(const char *Cmd)
 {
-  int i;
+	int i,j;
   static int gap;
 
   sscanf(Cmd, "%i", &gap);
@@ -400,18 +400,20 @@ int CmdLFSim(const char *Cmd)
   /* convert to bitstream if necessary */
   ChkBitstream(Cmd);
 
-  PrintAndLog("Sending data, please wait...");
-  for (i = 0; i < GraphTraceLen; i += 48) {
+	printf("Sending [%d bytes]", GraphTraceLen);
+	for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
     UsbCommand c={CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
-    int j;
-    for (j = 0; j < 48; j++) {
+
+		for (j = 0; j < USB_CMD_DATA_SIZE; j++) {
       c.d.asBytes[j] = GraphBuffer[i+j];
     }
     SendCommand(&c);
     WaitForResponse(CMD_ACK,NULL);
+		printf(".");
   }
 
-  PrintAndLog("Starting simulator...");
+	printf("\n");
+	PrintAndLog("Starting to simulate");
   UsbCommand c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
   SendCommand(&c);
   return 0;

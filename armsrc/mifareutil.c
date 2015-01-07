@@ -412,7 +412,8 @@ int mifare_ultra_special_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *bloc
         if (MF_DBGLEVEL >= 1)   Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0],len);
         return 1;
     }
-    return 0;
+
+    return 0;
 }
 
 int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid) 

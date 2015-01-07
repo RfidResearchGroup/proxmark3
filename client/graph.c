@@ -36,6 +36,8 @@ void AppendGraph(int redraw, int clock, int bit)
 int ClearGraph(int redraw)
 {
   int gtl = GraphTraceLen;
+  memset(GraphBuffer, 0x00, GraphTraceLen);
+
   GraphTraceLen = 0;
 
   if (redraw)

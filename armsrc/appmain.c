@@ -18,7 +18,6 @@
 #include "util.h"
 #include "printf.h"
 #include "string.h"
-
 #include <stdarg.h>
 
 #include "legicrf.h"

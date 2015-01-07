@@ -988,6 +988,7 @@ int CmdHF14AMfChk(const char *Cmd)
 	int transferToEml = 0;
 	int createDumpFile = 0;
 
+
 	keyBlock = calloc(stKeyBlock, 6);
 	if (keyBlock == NULL) return 1;
 

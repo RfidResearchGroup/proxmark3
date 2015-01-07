@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-
+//#include "proxusb.h"
 #include "proxmark3.h"
 #include "proxgui.h"
 #include "cmdmain.h"

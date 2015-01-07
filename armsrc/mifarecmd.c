@@ -214,7 +214,6 @@ void MifareUReadCard(uint8_t arg0, uint8_t *datain)
 
         // clear trace
         iso14a_clear_trace();
-//      iso14a_set_tracing(false);
 
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
