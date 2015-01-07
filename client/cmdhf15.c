@@ -353,17 +353,6 @@ int CmdHF15Read(const char *Cmd)
 {
 	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693};
 	SendCommand(&c);
-
-	uint8_t data[TRACE_BUFF_SIZE] = {0x00};
-	
-	GetFromBigBuf(data,TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
-	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
-
-	for (int j = 0; j < TRACE_BUFF_SIZE; j++) {
-		GraphBuffer[j] = ((int)data[j]) ;
-	}
-	GraphTraceLen = TRACE_BUFF_SIZE;
-	RepaintGraphWindow();
 	return 0;
 }
 
@@ -372,17 +361,6 @@ int CmdHF15Record(const char *Cmd)
 {
 	UsbCommand c = {CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693};
 	SendCommand(&c);
-
-	uint8_t data[TRACE_BUFF_SIZE] = {0x00};
-	
-	GetFromBigBuf(data,TRACE_BUFF_SIZE,3560);  //3560 -- should be offset..
-	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
-
-	for (int j = 0; j < TRACE_BUFF_SIZE; j++) {
-		GraphBuffer[j] = ((int)data[j]) ;
-	}
-	GraphTraceLen = TRACE_BUFF_SIZE;
-	RepaintGraphWindow();
 	return 0;
 }
 

@@ -41,42 +41,6 @@ int xorbits_8(uint8_t val)
 	return res & 1;
 }
 
-#define ICLASS_CMD_ACTALL 0x0A
-#define ICLASS_CMD_IDENTIFY 0x0C
-#define ICLASS_CMD_READ 0x0C
-
-#define ICLASS_CMD_SELECT 0x81
-#define ICLASS_CMD_PAGESEL 0x84
-#define ICLASS_CMD_READCHECK 0x88
-#define ICLASS_CMD_CHECK 0x05
-#define ICLASS_CMD_SOF 0x0F
-#define ICLASS_CMD_HALT 0x00
-
-
-void explain(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
-{
-
-	if(cmdsize > 1 && cmd[0] == ICLASS_CMD_READ)
-	{
-		  snprintf(exp,size,"READ(%d)",cmd[1]);
-		  return;
-	}
-
-    switch(cmd[0])
-    {
-	case ICLASS_CMD_ACTALL:            snprintf(exp,size,"ACTALL"); break;
-	case ICLASS_CMD_IDENTIFY:    snprintf(exp,size,"IDENTIFY"); break;
-	case ICLASS_CMD_SELECT:         snprintf(exp,size,"SELECT"); break;
-	case ICLASS_CMD_PAGESEL:         snprintf(exp,size,"PAGESEL"); break;
-	case ICLASS_CMD_READCHECK:         snprintf(exp,size,"READCHECK"); break;
-	case ICLASS_CMD_CHECK:         snprintf(exp,size,"CHECK"); break;
-	case ICLASS_CMD_SOF:            snprintf(exp,size,"SOF"); break;
-	case ICLASS_CMD_HALT:            snprintf(exp,size,"HALT"); break;
-	default:                        snprintf(exp,size,"?"); break;
-    }
-    return;
-}
-
 int CmdHFiClassList(const char *Cmd)
 {
 	PrintAndLog("Deprecated command, use 'hf list iclass' instead");
@@ -307,27 +271,18 @@ int CmdHFiClassReader_Dump(const char *Cmd)
   uint8_t key_sel[8] = {0};
   uint8_t key_sel_p[8] = { 0 };
 
-  //HACK -- Below is for testing without access to a tag
-  uint8_t fake_dummy_test = false;
-  if(fake_dummy_test)
-  {
-    uint8_t xdata[16] = {0x01,0x02,0x03,0x04,0xF7,0xFF,0x12,0xE0, //CSN from http://www.proxmark.org/forum/viewtopic.php?pid=11230#p11230
-                        0xFE,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}; // Just a random CC. Would be good to add a real testcase here
-    memcpy(resp.d.asBytes,xdata, 16);
-    resp.arg[0] = 2;    
-  }
-  
-  //End hack
-
-
   UsbCommand c = {CMD_READER_ICLASS, {0}};
   c.arg[0] = FLAG_ICLASS_READER_ONLY_ONCE| FLAG_ICLASS_READER_GET_CC;
-  if(!fake_dummy_test)   
   SendCommand(&c);
   
 
 
-  if (fake_dummy_test || WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
+  if (!WaitForResponseTimeout(CMD_ACK,&resp,4500))
+  {
+	  PrintAndLog("Command execute timeout");
+	  return 0;
+  }
+
         uint8_t isOK    = resp.arg[0] & 0xff;
         uint8_t * data  = resp.d.asBytes;
 
@@ -340,8 +295,12 @@ int CmdHFiClassReader_Dump(const char *Cmd)
         {
             PrintAndLog("CSN: %s",sprint_hex(CSN,8));
         }
-        if(isOK > 1)
-        {
+	if(isOK <= 1){
+		PrintAndLog("Failed to obtain CC! Aborting");
+		return 0;
+	}
+	//Status 2 or higher
+
             if(elite)
             {
                 //Get the key index (hash1)
@@ -357,16 +316,7 @@ int CmdHFiClassReader_Dump(const char *Cmd)
                 permutekey_rev(key_sel,key_sel_p);
                 used_key = key_sel_p;
             }else{
-                //Perhaps this should also be permuted to std format?
-                // Something like the code below? I have no std system
-                // to test this with /Martin
-
-                //uint8_t key_sel_p[8] = { 0 };
-                //permutekey_rev(KEY,key_sel_p);
-                //used_key = key_sel_p;
-
                 used_key = KEY;
-
             }
 
             PrintAndLog("Pre-fortified key that would be needed by the OmniKey reader to talk to above CSN:");
@@ -378,16 +328,54 @@ int CmdHFiClassReader_Dump(const char *Cmd)
             doMAC(CCNR,12,div_key, MAC);
             printvar("MAC", MAC, 4);
 
+	uint8_t iclass_data[32000] = {0};
+	uint8_t iclass_datalen = 0;
+	uint8_t iclass_blocksFailed = 0;//Set to 1 if dump was incomplete
+
             UsbCommand d = {CMD_READER_ICLASS_REPLAY, {readerType}};
             memcpy(d.d.asBytes, MAC, 4);
-            if(!fake_dummy_test) SendCommand(&d);
+	clearCommandBuffer();
+	SendCommand(&d);
+	PrintAndLog("Waiting for device to dump data. Press button on device and key on keyboard to abort...");
+	while (true) {
+		printf(".");
+		if (ukbhit()) {
+			getchar();
+			printf("\naborted via keyboard!\n");
+			break;
+		}
+		if(WaitForResponseTimeout(CMD_ACK,&resp,4500))
+		{
+			uint64_t dataLength = resp.arg[0];
+			iclass_blocksFailed |= resp.arg[1];
 
-        }else{
-            PrintAndLog("Failed to obtain CC! Aborting");
-        }
-    } else {
-        PrintAndLog("Command execute timeout");
-    }
+			if(dataLength > 0)
+			{
+				memcpy(iclass_data, resp.d.asBytes,dataLength);
+				iclass_datalen += dataLength;
+			}else
+			{//Last transfer, datalength 0 means the dump is finished
+				PrintAndLog("Dumped %d bytes of data from tag. ", iclass_datalen);
+				if(iclass_blocksFailed)
+				{
+					PrintAndLog("OBS! Some blocks failed to be dumped correctly!");
+				}
+				if(iclass_datalen > 0)
+				{
+					char filename[100] = {0};
+					//create a preferred filename
+					snprintf(filename, 100,"iclass_tagdump-%02x%02x%02x%02x%02x%02x%02x%02x",
+							 CSN[0],CSN[1],CSN[2],CSN[3],
+							 CSN[4],CSN[5],CSN[6],CSN[7]);
+					saveFile(filename,"bin",iclass_data, iclass_datalen );
+
+				}
+				//Aaaand we're finished
+				return 0;
+			}
+		}
+	}
+
 
   return 0;
 }

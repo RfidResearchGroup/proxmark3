@@ -131,6 +131,7 @@ static void *main_loop(void *targ) {
         char *nl;
         nl = strrchr(script_cmd_buf, '\r');
         if (nl) *nl = '\0';
+				
         nl = strrchr(script_cmd_buf, '\n');
         if (nl) *nl = '\0';
         

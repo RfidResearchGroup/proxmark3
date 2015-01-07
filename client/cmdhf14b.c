@@ -17,6 +17,7 @@
 #include "proxmark3.h"
 #include "data.h"
 #include "graph.h"
+#include "util.h"
 #include "ui.h"
 #include "cmdparser.h"
 #include "cmdhf14b.h"
@@ -356,7 +357,7 @@ int CmdHF14BCmdRaw (const char *cmd) {
     SendCommand(&c);
     
     if (reply) {
-        if (WaitForResponseTimeout(CMD_ACK,&resp,10000)) {
+        if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
             recv = resp.d.asBytes;
             PrintAndLog("received %i octets",resp.arg[0]);
             if(!resp.arg[0])
