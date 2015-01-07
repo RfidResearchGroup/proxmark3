@@ -19,7 +19,7 @@
 #include "crapto1.h"
 #include "mifareutil.h"
 
-int MF_DBGLEVEL = MF_DBG_ERROR;
+int MF_DBGLEVEL = MF_DBG_ALL;
 
 // memory management
 uint8_t* get_bigbufptr_recvrespbuf(void) {
