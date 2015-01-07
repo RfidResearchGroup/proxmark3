@@ -148,48 +148,40 @@ void MifareUC_Auth2(uint32_t arg0, uint8_t *datain){
 
 void MifareUReadBlock(uint8_t arg0,uint8_t *datain)
 {
-    // params
 	uint8_t blockNo = arg0;
-	
-	// variables
-	byte_t isOK = 0;
-	byte_t dataoutbuf[16] = {0x00};
+	byte_t dataout[16] = {0x00};
 	uint8_t uid[10] = {0x00};
 	uint32_t cuid;
-    
-	// clear trace
-	iso14a_clear_trace();
-	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     
 	LED_A_ON();
 	LED_B_OFF();
 	LED_C_OFF();
+
+	iso14a_clear_trace();
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     
-	while (true) {
-		if(!iso14443a_select_card(uid, NULL, &cuid)) {
-            if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
-			break;
-		};
-        
-		if(mifare_ultra_readblock(cuid, blockNo, dataoutbuf)) {
-            if (MF_DBGLEVEL >= 1)	Dbprintf("Read block error");
-			break;
-		};
-        
-		if(mifare_ultra_halt(cuid)) {
-            if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
-			break;
-		};
-		
-		isOK = 1;
-		break;
-	}
+	int len = iso14443a_select_card(uid, NULL, &cuid);
+	if(!len) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Can't select card");
+		OnError(1);
+		return;
+	};
 	
-	if (MF_DBGLEVEL >= 2)	DbpString("READ BLOCK FINISHED");
-    
-	LED_B_ON();
-    cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,16);
-	LED_B_OFF();
+	len = mifare_ultra_readblock(cuid, blockNo, dataout);
+	if(len) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Read block error");
+		OnError(2);
+		return;
+	};
+	
+	len = mifare_ultra_halt(cuid);
+	if(len) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Halt error");
+		OnError(3);
+		return;
+	};
+		
+    cmd_send(CMD_ACK,1,0,0,dataout,16);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
@@ -268,58 +260,62 @@ void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain)
 	uint8_t sectorNo = arg0;
 	int Pages = arg1;
 	int count_Pages = 0;
-	byte_t dataoutbuf[176] = {0x00};;
+	byte_t dataout[176] = {0x00};;
 	uint8_t uid[10] = {0x00};
 	uint32_t cuid;
-
-	iso14a_clear_trace();
-	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
+	
 	LED_A_ON();
 	LED_B_OFF();
 	LED_C_OFF();
-	
+
 	if (MF_DBGLEVEL >= MF_DBG_ALL) 
 		Dbprintf("Pages %d",Pages);
 	
-	if (!iso14443a_select_card(uid, NULL, &cuid)) {
+	iso14a_clear_trace();
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+
+	int len = iso14443a_select_card(uid, NULL, &cuid);
+	
+	if (!len) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)
 			Dbprintf("Can't select card");
-		OnError();
+		OnError(1);
 		return;
 	}
 	
 	for (int i = 0; i < Pages; i++){
-		if (mifare_ultra_readblock(cuid, sectorNo * 4 + i, dataoutbuf + 4 * i)) {
+	
+		len = mifare_ultra_readblock(cuid, sectorNo * 4 + i, dataout + 4 * i);
+		
+		if (len) {
 			if (MF_DBGLEVEL >= MF_DBG_ERROR)
 				Dbprintf("Read block %d error",i);
-			OnError();
+			OnError(2);
 			return;
 		} else {
 			count_Pages++;
 		}
 	}
 		
-	if (mifare_ultra_halt(cuid)) {
+	len = mifare_ultra_halt(cuid);
+	if (len) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)
 			Dbprintf("Halt error");
-		OnError();
+		OnError(3);
 		return;
 	}
 	
 	if (MF_DBGLEVEL >= MF_DBG_ALL) {
-		Dbprintf("Pages read %d",count_Pages);
-		DbpString("Read card finished");
+		Dbprintf("Pages read %d", count_Pages);
 	}
 
-	int len = 16*4; //64 bytes
+	len = 16*4; //64 bytes
 	
 	// Read a UL-C
 	if (Pages == 44 && count_Pages > 16) 
 		len = 176;
 
-	cmd_send(CMD_ACK, 1, 0, 0, dataoutbuf, len);
-	
+	cmd_send(CMD_ACK, 1, 0, 0, dataout, len);	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
@@ -1132,13 +1128,12 @@ void MifareCIdent(){
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
 }
 
-			//
+//
 // DESFIRE
 //
 
 void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain){
-	// variables
-	byte_t isOK = 0;
+
 	byte_t dataout[11] = {0x00};
 	uint8_t uid[10] = {0x00};
 	uint32_t cuid;
@@ -1146,19 +1141,24 @@ void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain){
 	iso14a_clear_trace();
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
-	if(!iso14443a_select_card(uid, NULL, &cuid)) {
-          if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card, something went wrong before auth");
+	int len = iso14443a_select_card(uid, NULL, &cuid);
+	if(!len) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)	
+			Dbprintf("Can't select card");
+		OnError(1);
+		return;
 	};
 
 	if(mifare_desfire_des_auth1(cuid, dataout)){
-	  if (MF_DBGLEVEL >= 1)	
-		Dbprintf("Authentication part1: Fail."); 
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)	
+			Dbprintf("Authentication part1: Fail.");
+		OnError(4);
+		return;
 	}
 
-	isOK = 1;
-	if (MF_DBGLEVEL >= 2) DbpString("AUTH 1 FINISHED");
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) DbpString("AUTH 1 FINISHED");
     
-    cmd_send(CMD_ACK,isOK,cuid,0,dataout, sizeof(dataout));
+    cmd_send(CMD_ACK,1,cuid,0,dataout, sizeof(dataout));
 }
 
 void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain){
@@ -1169,24 +1169,20 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain){
 	byte_t dataout[12] = {0x00};
     
 	memcpy(key, datain, 16);
-   
-	LED_A_ON();
-	LED_B_OFF();
-	LED_C_OFF();
 	
 	isOK = mifare_desfire_des_auth2(cuid, key, dataout);
 	
-	if(isOK){
-		if (MF_DBGLEVEL >= 2) 
-			DbpString("AUTH 2 FINISHED");
-		cmd_send(CMD_ACK,isOK,0,0,dataout,sizeof(dataout));
-	}
-	else {
-	    if (MF_DBGLEVEL >= 2) 
+	if( isOK) {
+	    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) 
 			Dbprintf("Authentication part2: Failed");  
-		OnError();
+		OnError(4);
+		return;
 	}
 
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) 
+		DbpString("AUTH 2 FINISHED");
+
+	cmd_send(CMD_ACK, isOK, 0, 0, dataout, sizeof(dataout));
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }

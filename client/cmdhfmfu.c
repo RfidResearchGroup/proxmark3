@@ -88,12 +88,12 @@ int CmdHF14AMfUWrBl(const char *Cmd){
     UsbCommand resp;
         
     if (strlen(Cmd)<3) {
-        PrintAndLog("Usage:  hf mfu uwrbl <block number> <block data > [w]");
+        PrintAndLog("Usage:  hf mfu wrbl <block number> <block data > [w]");
 		PrintAndLog("       [block number] ");
 		PrintAndLog("       [block data] - (8 hex symbols)");
 		PrintAndLog("       [w] - Chinese magic ultralight-c tag ");
 		PrintAndLog("");
-        PrintAndLog("        sample: hf mfu uwrbl 0 01020304");
+        PrintAndLog("        sample: hf mfu wrbl 0 01020304");
         return 0;
     }       
     blockNo = param_get8(Cmd, 0);
@@ -198,8 +198,8 @@ int CmdHF14AMfURdBl(const char *Cmd){
     uint8_t blockNo = 0;	
         
     if (strlen(Cmd)<1) {
-        PrintAndLog("Usage:  hf mfu urdbl <block number>");
-        PrintAndLog("        sample: hfu mfu urdbl 0");
+        PrintAndLog("Usage:  hf mfu rdbl <block number>");
+        PrintAndLog("        sample: hfu mfu rdbl 0");
         return 0;
     }       
         
@@ -436,60 +436,70 @@ int CmdHF14AMfucAuth(const char *Cmd){
     DES_key_schedule ks1,ks2;
     DES_cblock key1,key2;
 
+	char cmdp = param_getchar(Cmd, 0);
 	// 
 	memset(iv, 0, 8);
 	
-    if (strlen(Cmd)<1) {
+    if (cmdp == 'h' || cmdp == 'H') {
         PrintAndLog("Usage:  hf mfu auth k <key number>");
-        PrintAndLog("        sample: hf mfu auth k 0");
+		PrintAndLog("      1 = all zeros key");
+		PrintAndLog("      2 = 0x00-0x0F key");
+		PrintAndLog("      3 = nfc key");
+		PrintAndLog("      4 = all ones key");
+		PrintAndLog("      defaults to 3DES standard key");
+        PrintAndLog("        sample : hf mfu auth k");
+		PrintAndLog("               : hf mfu auth k 3");
         return 0;
     } 
     
     //Change key to user defined one
-    if (strchr(Cmd,'k') != 0){
-        //choose a key
-        keyNo = param_get8(Cmd, 1);
-        switch(keyNo){
+    if (cmdp == 'k' || cmdp == 'K'){
+
+		keyNo = param_get8(Cmd, 1);
+        
+		switch(keyNo){
             case 0:
                 memcpy(key,key1_blnk_data,16);
                 break;
             case 1:
                 memcpy(key,key2_defa_data,16);
                 break;
-	    case 2:
+			case 2:	
                 memcpy(key,key4_nfc_data,16);
                 break;
-		case 3: 
+			case 3: 
 				memcpy(key,key5_ones_data,16);
                 break;
             default:
                 memcpy(key,key3_3des_data,16);
                 break;
         }
-    }else{
+    } else {
         memcpy(key,key3_3des_data,16);  
     }
+	
     memcpy(key1,key,8);
     memcpy(key2,key+8,8);
     DES_set_key((DES_cblock *)key1,&ks1);
     DES_set_key((DES_cblock *)key2,&ks2);
         
-    //Auth1
-    UsbCommand c = {CMD_MIFAREUC_AUTH1, {blockNo}};
-    SendCommand(&c);
-    UsbCommand resp;
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-        uint8_t isOK  = resp.arg[0] & 0xff;
-	        cuid  = resp.arg[1];
-        uint8_t * data= resp.d.asBytes;
+	//Auth1
+	UsbCommand c = {CMD_MIFAREUC_AUTH1, {blockNo}};
+	SendCommand(&c);
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		uint8_t isOK  = resp.arg[0] & 0xff;
+		cuid  = resp.arg[1];
+		uint8_t * data= resp.d.asBytes;
 
-         if (isOK){
-             PrintAndLog("enc(RndB):%s", sprint_hex(data+1, 8));
-             memcpy(e_RndB,data+1,8);
+		if (isOK){
+			PrintAndLog("enc(RndB):%s", sprint_hex(data+1, 8));
+			memcpy(e_RndB,data+1,8);
+		}
+	} else {
+		PrintAndLog("Command execute timeout");
+		return 0;
 	}
-    } else {
-        PrintAndLog("Command execute timeout");
-    }
        
     //Do crypto magic
     DES_random_key(&RndA);
@@ -508,18 +518,18 @@ int CmdHF14AMfucAuth(const char *Cmd){
     memcpy(d.d.asBytes,RndARndB, 16);
     SendCommand(&d);
 
-    UsbCommand respb;
-    if (WaitForResponseTimeout(CMD_ACK,&respb,1500)) {
-        uint8_t  isOK  = respb.arg[0] & 0xff;
-        uint8_t * data2= respb.d.asBytes;
+	UsbCommand respb;
+	if (WaitForResponseTimeout(CMD_ACK,&respb,1500)) {
+		uint8_t  isOK  = respb.arg[0] & 0xff;
+		uint8_t * data2= respb.d.asBytes;
 
-        if (isOK){
-            PrintAndLog("enc(RndA'):%s", sprint_hex(data2+1, 8));
-	}
-                 
-    } else {
-        PrintAndLog("Command execute timeout");
-    } 
+		if (isOK){
+			PrintAndLog("enc(RndA'):%s", sprint_hex(data2+1, 8));
+		}
+	} else {
+		PrintAndLog("Command execute timeout");
+		return 0;
+	} 
     return 1;
 }
 
@@ -531,8 +541,8 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
     uint8_t blockNo = 0;
         
     if (strlen(Cmd)<1) {
-        PrintAndLog("Usage:  hf mfu ucrdbl  <block number>");
-        PrintAndLog("        sample: hf mfu ucrdbl 0");
+        PrintAndLog("Usage:  hf mfu crdbl  <block number>");
+        PrintAndLog("        sample: hf mfu crdbl 0");
         return 0;
     }       
         
@@ -571,8 +581,8 @@ int CmdHF14AMfUCWrBl(const char *Cmd){
     UsbCommand resp;
         
     if (strlen(Cmd)<3) {
-        PrintAndLog("Usage:  hf mfu ucwrbl <block number> <block data (8 hex symbols)> [w]");
-        PrintAndLog("        sample: hf mfu uwrbl 0 01020304");
+        PrintAndLog("Usage:  hf mfu cwrbl <block number> <block data (8 hex symbols)> [w]");
+        PrintAndLog("        sample: hf mfu wrbl 0 01020304");
         return 0;
     }       
     blockNo = param_get8(Cmd, 0);

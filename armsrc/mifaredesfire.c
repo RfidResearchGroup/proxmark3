@@ -29,8 +29,9 @@ bool InitDesfireCard(){
 	int len = iso14443a_select_card(NULL,card,NULL);
 
 	if (!len) {
-		if (MF_DBGLEVEL >= 1) Dbprintf("Can't select card");
-		OnError();
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)
+			Dbprintf("Can't select card");
+		OnError(1);
 		return false;
 	}
 	return true;
@@ -78,7 +79,7 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 	}
 
 	if ( !len ) {
-		OnError();
+		OnError(2);
 		return;
 	}
 	
@@ -116,10 +117,10 @@ void MifareDesfireGetInformation(){
 	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
 	byte_t isOK = iso14443a_select_card(NULL, card, NULL);
 	if ( isOK == 0) {
-		if (MF_DBGLEVEL >= 1) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) {
 			Dbprintf("Can't select card");
 		}
-		OnError();
+		OnError(1);
 		return;
 	}
 
@@ -135,7 +136,7 @@ void MifareDesfireGetInformation(){
 	len =  DesfireAPDU(cmd, cmd_len, resp);
 	if ( !len ) {
 		print_result("ERROR <--: ", resp, len);	
-		OnError();
+		OnError(2);
 		return;
 	}
 	
@@ -148,7 +149,7 @@ void MifareDesfireGetInformation(){
 	len =  DesfireAPDU(cmd, cmd_len, resp);
 	if ( !len ) {
 		print_result("ERROR <--: ", resp, len);	
-		OnError();
+		OnError(2);
 		return;
 	}	
 	
@@ -160,7 +161,7 @@ void MifareDesfireGetInformation(){
 	len =  DesfireAPDU(cmd, cmd_len, resp);
 	if ( !len ) {
 		print_result("ERROR <--: ", resp, len);	
-		OnError();
+		OnError(2);
 		return;
 	}
 	
@@ -196,10 +197,6 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 	uint8_t encBoth[32] = {0x00};
 
 	InitDesfireCard();
-
-	LED_A_ON();
-	LED_B_OFF();
-	LED_C_OFF();
 	
 	// 3 olika sätt att authenticera.   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
 	// 4 olika crypto algo   DES, 3DES, 3K3DES, AES
@@ -228,17 +225,17 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             cmd[1] = keyno;  //keynumber
             len = DesfireAPDU(cmd, 2, resp);
             if ( !len ) {
-                if (MF_DBGLEVEL >= 1) {
+                if (MF_DBGLEVEL >= MF_DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
                 }
-                OnError();
+                OnError(3);
                 return;
             }
             
             if ( resp[2] == 0xaf ){
             } else {
                 DbpString("Authetication failed. Invalid key number.");
-                OnError();
+                OnError(3);
                 return;
             }
             
@@ -270,10 +267,10 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             
             len = DesfireAPDU(cmd, 17, resp);
             if ( !len ) {
-                if (MF_DBGLEVEL >= 1) {
+                if (MF_DBGLEVEL >= MF_DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
                 }
-                OnError();
+                OnError(3);
                 return;
             }
             
@@ -290,7 +287,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 for (int x = 0; x < 8; x++) {
                     if (decRndA[x] != encRndA[x]) {
                         DbpString("Authetication failed. Cannot varify PICC.");
-                        OnError();
+                        OnError(4);
                         return;
                     }
                 }
@@ -343,7 +340,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 
             } else {
                 DbpString("Authetication failed.");
-                OnError();
+                OnError(6);
                 return;
             }
             
@@ -372,7 +369,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 				if( MF_DBGLEVEL >= 4) {
 					Dbprintf("AES context failed to init");
 				}
-				OnError();
+				OnError(7);
 				return;
 			}
 			
@@ -380,10 +377,10 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 			cmd[1] = 0x00;  //keynumber
 			len = DesfireAPDU(cmd, 2, resp);
 			if ( !len ) {
-				if (MF_DBGLEVEL >= 1) {
+				if (MF_DBGLEVEL >= MF_DBG_ERROR) {
 					DbpString("Authentication failed. Card timeout.");
 				}
-				OnError();
+				OnError(3);
 				return;
 			}
 			
@@ -401,10 +398,10 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 			
 			len = DesfireAPDU(cmd, 33, resp);  // 1 + 32 == 33
 			if ( !len ) {
-				if (MF_DBGLEVEL >= 1) {
+				if (MF_DBGLEVEL >= MF_DBG_ERROR) {
 					DbpString("Authentication failed. Card timeout.");
 				}
-                OnError();
+                OnError(3);
 				return;
 			}
 			
@@ -416,10 +413,9 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 				print_result("SESSION : ", skey->data, 16);
 			} else {
 				DbpString("Authetication failed.");
-				OnError();
+				OnError(7);
 				return;
 			}
-			
 			break;
 		}	
 	}
@@ -502,10 +498,10 @@ void OnSuccess(){
 	LEDsoff();
 }
 
-void OnError(){
+void OnError(uint8_t reason){
 	pcb_blocknum = 0;
 	ReaderTransmit(deselect_cmd, 3 , NULL);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	cmd_send(CMD_ACK,0,0,0,0,0);
+	cmd_send(CMD_ACK,0,reason,0,0,0);
 	LEDsoff();
 }

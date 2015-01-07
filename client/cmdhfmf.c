@@ -1956,7 +1956,7 @@ int GetCardSize()
 	if ( ((atqa & 0xffff) == 0x0008) && (sak == 0x38) ) return 4;
 
 	
-	PrintAndLog("BEFOOO  1K %02X",  (atqa & 0xff0f));
+	//PrintAndLog("BEFOOO  1K %02X",  (atqa & 0xff0f));
 	
 	// MIFARE Plus (4 Byte UID or 4 Byte RID)
 	// MIFARE Plus (7 Byte UID)

@@ -50,9 +50,11 @@ int CmdHFTune(const char *Cmd)
 #define iso14443_CMD_WUPA       0x52
 #define iso14443_CMD_SELECT     0x93
 #define iso14443_CMD_SELECT_2   0x95
+#define iso14443_CMD_SELECT_3   0x97
 #define iso14443_CMD_REQ        0x26
 #define iso14443_CMD_READBLOCK  0x30
 #define iso14443_CMD_WRITEBLOCK 0xA0
+#define iso14443_CMD_WRITE		0xA2
 #define iso14443_CMD_INC        0xC0
 #define iso14443_CMD_DEC        0xC1
 #define iso14443_CMD_RESTORE    0xC2
@@ -60,6 +62,15 @@ int CmdHFTune(const char *Cmd)
 #define iso14443_CMD_HALT       0x50
 #define iso14443_CMD_RATS       0xE0
 
+#define iso14443_CMD_AUTH_KEYA	0x60
+#define iso14443_CMD_AUTH_KEYB	0x61
+
+#define iso14443_CMD_AUTH_STEP1	0x1A
+#define iso14443_CMD_AUTH_STEP2	0xAA
+#define iso14443_CMD_AUTH_RESPONSE	0xAF
+
+#define CHINESE_BACKDOOR_INIT   0x40 
+#define CHINESE_BACKDOOR_STEP2   0x43 
 
 void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 {
@@ -79,12 +90,22 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	case iso14443_CMD_REQ:         snprintf(exp,size,"REW"); break;
 	case iso14443_CMD_READBLOCK:   snprintf(exp,size,"READBLOCK(%d)",cmd[1]); break;
 	case iso14443_CMD_WRITEBLOCK:  snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); break;
+	case iso14443_CMD_WRITE:	   snprintf(exp,size,"WRITE"); break;
 	case iso14443_CMD_INC:         snprintf(exp,size,"INC(%d)",cmd[1]); break;
 	case iso14443_CMD_DEC:         snprintf(exp,size,"DEC(%d)",cmd[1]); break;
 	case iso14443_CMD_RESTORE:     snprintf(exp,size,"RESTORE(%d)",cmd[1]); break;
 	case iso14443_CMD_TRANSFER:    snprintf(exp,size,"TRANSFER(%d)",cmd[1]); break;
 	case iso14443_CMD_HALT:        snprintf(exp,size,"HALT"); break;
 	case iso14443_CMD_RATS:        snprintf(exp,size,"RATS"); break;
+	
+	case iso14443_CMD_AUTH_KEYA:   snprintf(exp,size,"AUTH KEY A"); break;
+	case iso14443_CMD_AUTH_KEYB:   snprintf(exp,size,"AUTH KEY B"); break;
+	case iso14443_CMD_AUTH_STEP1:  snprintf(exp,size,"AUTH REQ NONCE"); break;
+	case iso14443_CMD_AUTH_STEP2:  snprintf(exp,size,"AUTH STEP 2"); break;
+	case iso14443_CMD_AUTH_RESPONSE:  snprintf(exp,size,"AUTH RESPONSE"); break;
+	
+	case CHINESE_BACKDOOR_INIT:    snprintf(exp,size,"BACKDOOR INIT");break;
+	case CHINESE_BACKDOOR_STEP2:    snprintf(exp,size,"BACKDOOR STEP2");break;
 	default:                       snprintf(exp,size,"?"); break;
 	}
 	return;
@@ -92,7 +113,6 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 
 void annotateIclass(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 {
-
 	if(cmdsize > 1 && cmd[0] == ICLASS_CMD_READ)
 	{
 		  snprintf(exp,size,"READ(%d)",cmd[1]);
@@ -113,7 +133,6 @@ void annotateIclass(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	}
 	return;
 }
-
 
 
 uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, bool iclass, bool showWaitCycles)
@@ -181,8 +200,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, bool iclass, bool sho
 				// Rough guess that this is a command from the reader
 				// For iClass the command byte is not part of the CRC
 				ComputeCrc14443(CRC_ICLASS, &frame[1], data_len-3, &b1, &b2);
-			}
-			else {
+			} else {
 				// For other data.. CRC might not be applicable (UPDATE commands etc.)
 				ComputeCrc14443(CRC_ICLASS, frame, data_len-2, &b1, &b2);
 			}
@@ -191,7 +209,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, bool iclass, bool sho
 				crcError = true;
 			}
 
-		}else{//Iso 14443a
+		} else {//Iso 14443a
 
 			ComputeCrc14443(CRC_14443_A, frame, data_len-2, &b1, &b2);
 
@@ -202,7 +220,6 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, bool iclass, bool sho
 				}
 			}
 		}
-
 	}
 	char *crc = crcError ? "!crc" :"    ";
 
@@ -210,8 +227,10 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, bool iclass, bool sho
 
 	if(!isResponse)
 	{
-		if(iclass)	annotateIclass(explanation,sizeof(explanation),frame,data_len);
-		else annotateIso14443a(explanation,sizeof(explanation),frame,data_len);
+		if(iclass)
+			annotateIclass(explanation,sizeof(explanation),frame,data_len);
+		else 
+			annotateIso14443a(explanation,sizeof(explanation),frame,data_len);
 	}
 
 	int num_lines = (data_len - 1)/16 + 1;
@@ -227,7 +246,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, bool iclass, bool sho
 		} else {
 			PrintAndLog("           |           |     | %-64s| %s| %s",
 				line[j],
-				(j == num_lines-1)?crc:"    ",
+				(j == num_lines-1) ? crc : "    ",
 				(j == num_lines-1) ? explanation : "");
 		}
 	}
