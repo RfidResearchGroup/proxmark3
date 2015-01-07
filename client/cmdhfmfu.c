@@ -13,8 +13,9 @@
 #include "cmdhf14a.h"
 
 
-uint8_t MAX_ULTRA_BLOCKS   = 0x0f;
-uint8_t MAX_ULTRAC_BLOCKS  = 0x2c;
+#define MAX_ULTRA_BLOCKS   0x0f
+#define MAX_ULTRAC_BLOCKS  0x2f
+//#define MAX_ULTRAC_BLOCKS  0x2c
 uint8_t key1_blnk_data[16] = { 0x00 };
 uint8_t key2_defa_data[16] = { 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f };
 uint8_t key3_3des_data[16] = { 0x49,0x45,0x4D,0x4B,0x41,0x45,0x52,0x42,0x21,0x4E,0x41,0x43,0x55,0x4F,0x59,0x46 };
@@ -88,7 +89,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 //  Mifare Ultralight Write Single Block
 //
 int CmdHF14AMfUWrBl(const char *Cmd){
-    uint8_t blockNo    = 0;
+    uint8_t blockNo    = -1;
     bool chinese_card  = FALSE;
     uint8_t bldata[16] = {0x00};
     UsbCommand resp;
@@ -106,6 +107,7 @@ int CmdHF14AMfUWrBl(const char *Cmd){
     }       
     
 	blockNo = param_get8(Cmd, 0);
+
     if (blockNo > MAX_ULTRA_BLOCKS){
         PrintAndLog("Error: Maximum number of blocks is 15 for Ultralight Cards!");
         return 1;
@@ -157,7 +159,7 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 //
 int CmdHF14AMfURdBl(const char *Cmd){
   
-    uint8_t blockNo = 0;	
+    uint8_t blockNo = -1;	
 
  	char cmdp = param_getchar(Cmd, 0);
 	
@@ -168,10 +170,12 @@ int CmdHF14AMfURdBl(const char *Cmd){
     }       
         
     blockNo = param_get8(Cmd, 0);
-    // if (blockNo>MAX_ULTRA_BLOCKS){
-       // PrintAndLog("Error: Maximum number of blocks is 15 for Ultralight Cards!");
-       // return 1;
-    // }
+
+    if (blockNo > MAX_ULTRA_BLOCKS){
+       PrintAndLog("Error: Maximum number of blocks is 15 for Ultralight Cards!");
+       return 1;
+    }
+	
     PrintAndLog("--block no:0x%02X (%d)", (int)blockNo, blockNo);
     UsbCommand c = {CMD_MIFAREU_READBL, {blockNo}};
     SendCommand(&c);
@@ -521,7 +525,7 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
 		return 1;
 	}
 	
-    if (blockNo > (MAX_ULTRAC_BLOCKS+4) ){
+    if (blockNo > MAX_ULTRAC_BLOCKS ){
         PrintAndLog("Error: Maximum number of readable blocks is 47 for Ultralight-C Cards!");
         return 1;
     } 
@@ -551,7 +555,7 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
 //
 int CmdHF14AMfUCWrBl(const char *Cmd){
     
-    uint8_t blockNo = 0;
+    uint8_t blockNo = -1;
     bool chinese_card = FALSE;
     uint8_t bldata[16] = {0x00};
     UsbCommand resp;
@@ -570,7 +574,7 @@ int CmdHF14AMfUCWrBl(const char *Cmd){
     }
 	
     blockNo = param_get8(Cmd, 0);
-    if (blockNo > (MAX_ULTRAC_BLOCKS+4) ){
+    if (blockNo > MAX_ULTRAC_BLOCKS ){
         PrintAndLog("Error: Maximum number of blocks is 47 for Ultralight-C Cards!");
         return 1;
     }
