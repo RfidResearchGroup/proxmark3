@@ -47,6 +47,18 @@ local function save_HTML(javascript, filename)
 
 end
 
+local function save_TEXT(data,filename)
+	-- Open the output file
+	local outfile = io.open(filename, "wb")
+	if outfile == nil then 
+		return oops(string.format("Could not write to file %s",tostring(filename)))
+	end
+	
+	outfile:write(data)
+	io.close(outfile)
+	return filename   
+end
+
 local function save_BIN(data, filename)
 	-- Open the output file
 	
@@ -181,4 +193,6 @@ return {
 	convert_bin_to_html = convert_bin_to_html,
 	convert_eml_to_html = convert_eml_to_html,
     convert_eml_to_bin = convert_eml_to_bin,	
+    SaveAsBinary = save_BIN,
+	SaveAsText = save_TEXT,
 }
