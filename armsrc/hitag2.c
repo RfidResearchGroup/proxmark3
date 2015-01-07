@@ -1158,7 +1158,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
       
 		case RHT2F_CRYPTO: {
 			DbpString("Authenticating using key:");
-			memcpy(key,htd->crypto.key,6);	// 4 or 6 ??
+			memcpy(key,htd->crypto.key,4);	  //HACK; 4 or 6??  I read both in the code.
 			Dbhexdump(6,key,false);
       blocknr = 0;
 			bQuiet = false;

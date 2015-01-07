@@ -37,13 +37,8 @@ void SendCommand(UsbCommand *c) {
 #if 0
   printf("Sending %d bytes\n", sizeof(UsbCommand));
 #endif
-/*
-  if (txcmd_pending) {
-    ERR("Sending command failed, previous command is still pending");
-  }
-*/
-  if(offline)
-    {
+
+	if (offline) {
       PrintAndLog("Sending bytes to proxmark failed - offline");
       return;
     }
@@ -82,7 +77,7 @@ static void *uart_receiver(void *targ) {
         continue;
       }
       cmd_count = (prx-rx) / sizeof(UsbCommand);
-      //      printf("received %d bytes, which represents %d commands\n",(prx-rx), cmd_count);
+
       for (size_t i=0; i<cmd_count; i++) {
         UsbCommandReceived((UsbCommand*)(rx+(i*sizeof(UsbCommand))));
       }
@@ -109,43 +104,37 @@ static void *main_loop(void *targ) {
   
   if (arg->usb_present == 1) {
     rarg.run=1;
-    // pthread_create(&reader_thread, NULL, &usb_receiver, &rarg);
     pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
   }
   
   FILE *script_file = NULL;
   char script_cmd_buf[256];  // iceman, needs lua script the same file_path_buffer as the rest
   
-  if (arg->script_cmds_file)
-  {
+	if (arg->script_cmds_file) {
     script_file = fopen(arg->script_cmds_file, "r");
-    if (script_file)
-    {
+		if (script_file) {
       printf("using 'scripting' commands file %s\n", arg->script_cmds_file);
     }
   }
 
 	read_history(".history");
-	while(1)
-  {
+
+	while(1)  {
+
     // If there is a script file
     if (script_file)
     {
-      if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), script_file))
-      {
+			if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), script_file)) {
         fclose(script_file);
         script_file = NULL;
-      }
-      else
-      {
+			} else {
         char *nl;
         nl = strrchr(script_cmd_buf, '\r');
         if (nl) *nl = '\0';
         nl = strrchr(script_cmd_buf, '\n');
         if (nl) *nl = '\0';
         
-        if ((cmd = (char*) malloc(strlen(script_cmd_buf) + 1)) != NULL)
-        {
+				if ((cmd = (char*) malloc(strlen(script_cmd_buf) + 1)) != NULL) {
           memset(cmd, 0, strlen(script_cmd_buf));
           strcpy(cmd, script_cmd_buf);
           printf("%s\n", cmd);
@@ -153,12 +142,12 @@ static void *main_loop(void *targ) {
       }
     }
 		
-		if (!script_file)
-		{
+		if (!script_file) {
       cmd = readline(PROXPROMPT);
 		}
 		
 		if (cmd) {
+
 			while(cmd[strlen(cmd) - 1] == ' ')
         cmd[strlen(cmd) - 1] = 0x00;
 			
@@ -167,7 +156,6 @@ static void *main_loop(void *targ) {
 					exit(0);
 					break;
 				}
-				
 				CommandReceived(cmd);
 				add_history(cmd);
 			}
@@ -185,8 +173,7 @@ static void *main_loop(void *targ) {
     pthread_join(reader_thread, NULL);
   }
   
-  if (script_file)
-  {
+	if (script_file) {
     fclose(script_file);
     script_file = NULL;
   }

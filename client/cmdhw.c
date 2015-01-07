@@ -18,6 +18,7 @@
 #include "cmddata.h"
 #include "cmdhw.h"
 #include "cmdmain.h"
+#include "cmddata.h"
 
 /* low-level hardware control */
 

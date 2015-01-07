@@ -460,7 +460,7 @@ int CmdHF14AMfRestore(const char *Cmd)
 		default:   numSectors = 16;
 	}	
 
-	if (cmdp == 'h' || cmdp == 'H') {
+	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:   hf mf restore [card memory]");
 		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
 		PrintAndLog("");
