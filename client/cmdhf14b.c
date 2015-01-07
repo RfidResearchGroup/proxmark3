@@ -403,10 +403,10 @@ int CmdHF14BWrite( const char *Cmd){
 	bool isSrix4k = true;
 	char str[20];	
 
-	if (cmdp == 'h' || cmdp == 'H') {
+	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:  hf 14b write <1|2> <BLOCK> <DATA>");
 		PrintAndLog("    [1 = SRIX4K]");
-		PrintAndLog("    [2 = SRIX4K]");
+		PrintAndLog("    [2 = SRI512]");
 		PrintAndLog("    [BLOCK number depends on which tag, special block == 255]");
 		PrintAndLog("     sample: hf 14b write 1 127 11223344");
 		PrintAndLog("           : hf 14b write 1 255 11223344");

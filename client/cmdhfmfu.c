@@ -8,8 +8,10 @@
 // High frequency MIFARE ULTRALIGHT (C) commands
 //-----------------------------------------------------------------------------
 #include <openssl/des.h>
+#include "cmdhfmfu.h"
 #include "cmdhfmf.h"
 #include "cmdhf14a.h"
+
 
 uint8_t MAX_ULTRA_BLOCKS   = 0x0f;
 uint8_t MAX_ULTRAC_BLOCKS  = 0x2c;
@@ -75,6 +77,10 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	PrintAndLog("  OneTimePad : %s ", sprint_hex(data + 3*4, 4));
 	PrintAndLog("");
 
+	int len = CmdHF14AMfucAuth("K 0");
+//	PrintAndLog("CODE: %d",len);
+	
+	PrintAndLog("Seems to be a Ultralight %s", (len==0) ? "-C" :"");
 	return 0;
 }
 
@@ -83,109 +89,65 @@ int CmdHF14AMfUInfo(const char *Cmd){
 //
 int CmdHF14AMfUWrBl(const char *Cmd){
     uint8_t blockNo    = 0;
-    bool chinese_card  = 0;
+    bool chinese_card  = FALSE;
     uint8_t bldata[16] = {0x00};
     UsbCommand resp;
-        
-    if (strlen(Cmd)<3) {
-        PrintAndLog("Usage:  hf mfu wrbl <block number> <block data > [w]");
-		PrintAndLog("       [block number] ");
+
+ 	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H') {
+        PrintAndLog("Usage:  hf mfu wrbl <block number> <block data (8 hex symbols)> [w]");
+		PrintAndLog("       [block number]");
 		PrintAndLog("       [block data] - (8 hex symbols)");
-		PrintAndLog("       [w] - Chinese magic ultralight-c tag ");
+		PrintAndLog("       [w] - Chinese magic ultralight tag");
 		PrintAndLog("");
         PrintAndLog("        sample: hf mfu wrbl 0 01020304");
+		PrintAndLog("");		
         return 0;
     }       
-    blockNo = param_get8(Cmd, 0);
-    if (blockNo>MAX_ULTRA_BLOCKS){
+    
+	blockNo = param_get8(Cmd, 0);
+    if (blockNo > MAX_ULTRA_BLOCKS){
         PrintAndLog("Error: Maximum number of blocks is 15 for Ultralight Cards!");
         return 1;
     }
+	
     if (param_gethex(Cmd, 1, bldata, 8)) {
         PrintAndLog("Block data must include 8 HEX symbols");
         return 1;
     }
-    if (strchr(Cmd,'w') != 0) {
-        chinese_card=1; 
+	
+    if (strchr(Cmd,'w') != 0  || strchr(Cmd,'W') != 0 ) {
+        chinese_card = TRUE; 
     }
-    switch(blockNo){
-        case 0:
-            if (!chinese_card){
-                PrintAndLog("Access Denied");
-            }else{
-                PrintAndLog("--specialblock no:%02x", blockNo);
-                PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-                UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
-                memcpy(d.d.asBytes,bldata, 4);
-                SendCommand(&d);
-                if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-                    uint8_t isOK  = resp.arg[0] & 0xff;
-                    PrintAndLog("isOk:%02x", isOK);
-                } else {
-                    PrintAndLog("Command execute timeout");
-                }  
-            }
-            break;
-        case 1:
-	    if (!chinese_card){
-	        PrintAndLog("Access Denied");
-	    }else{	
-	        PrintAndLog("--specialblock no:%02x", blockNo);
-                PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-                UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
-                memcpy(d.d.asBytes,bldata, 4);
-                SendCommand(&d);
-                if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-                    uint8_t isOK  = resp.arg[0] & 0xff;
-                    PrintAndLog("isOk:%02x", isOK);
-                } else {
-                    PrintAndLog("Command execute timeout");
-                }
-	    }
-	    break;
-	case 2:
-	    if (!chinese_card){
-	        PrintAndLog("Access Denied");
-	    }else{	
-	        PrintAndLog("--specialblock no:%02x", blockNo);
-                PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-                UsbCommand c = {CMD_MIFAREU_WRITEBL, {blockNo}};
-                memcpy(c.d.asBytes, bldata, 4);
-                SendCommand(&c);
-                if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-                    uint8_t isOK  = resp.arg[0] & 0xff;
-                    PrintAndLog("isOk:%02x", isOK);
-                } else {
-                    PrintAndLog("Command execute timeout");
-                }
-	    }
-	    break;
-	case 3:
-	    PrintAndLog("--specialblock no:%02x", blockNo);
-            PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-            UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
-            memcpy(d.d.asBytes,bldata, 4);
-            SendCommand(&d);
-            if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-                uint8_t isOK  = resp.arg[0] & 0xff;
-                PrintAndLog("isOk:%02x", isOK);
-            } else {
-                PrintAndLog("Command execute timeout");
-            }
-            break;
-	default: 
+	
+    if ( blockNo <= 3) {
+		if (!chinese_card){
+			PrintAndLog("Access Denied");
+		} else {
+			PrintAndLog("--specialblock no:%02x", blockNo);
+			PrintAndLog("--data: %s", sprint_hex(bldata, 4));
+			UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
+			memcpy(d.d.asBytes,bldata, 4);
+			SendCommand(&d);
+			if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+				uint8_t isOK  = resp.arg[0] & 0xff;
+				PrintAndLog("isOk:%02x", isOK);
+			} else {
+				PrintAndLog("Command execute timeout");
+			}  
+		}
+	} else {
 	    PrintAndLog("--block no:%02x", blockNo);
 	    PrintAndLog("--data: %s", sprint_hex(bldata, 4));        	
 	    UsbCommand e = {CMD_MIFAREU_WRITEBL, {blockNo}};
-            memcpy(e.d.asBytes,bldata, 4);
-            SendCommand(&e);
+		memcpy(e.d.asBytes,bldata, 4);
+		SendCommand(&e);
         if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
             uint8_t isOK  = resp.arg[0] & 0xff;
             PrintAndLog("isOk:%02x", isOK);
         } else {
             PrintAndLog("Command execute timeout");
         }
-        break;
     }
     return 0;
 }
@@ -196,8 +158,10 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 int CmdHF14AMfURdBl(const char *Cmd){
   
     uint8_t blockNo = 0;	
-        
-    if (strlen(Cmd)<1) {
+
+ 	char cmdp = param_getchar(Cmd, 0);
+	
+	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') {	
         PrintAndLog("Usage:  hf mfu rdbl <block number>");
         PrintAndLog("        sample: hfu mfu rdbl 0");
         return 0;
@@ -208,7 +172,7 @@ int CmdHF14AMfURdBl(const char *Cmd){
        // PrintAndLog("Error: Maximum number of blocks is 15 for Ultralight Cards!");
        // return 1;
     // }
-    PrintAndLog("--block no:%02x", (int)blockNo);
+    PrintAndLog("--block no:0x%02X (%d)", (int)blockNo, blockNo);
     UsbCommand c = {CMD_MIFAREU_READBL, {blockNo}};
     SendCommand(&c);
 
@@ -216,13 +180,12 @@ int CmdHF14AMfURdBl(const char *Cmd){
     if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
         uint8_t isOK    = resp.arg[0] & 0xff;
         uint8_t * data  = resp.d.asBytes;
-
+		
+		PrintAndLog("isOk: %02x", isOK);
+			
         if (isOK)
-            PrintAndLog("isOk:%02x data:%s", isOK, sprint_hex(data, 4));
-        else
-			PrintAndLog("isOk:%02x", isOK);
-        }
-	else {
+            PrintAndLog("Data: %s", sprint_hex(data, 4));
+	} else {
         PrintAndLog("Command execute timeout");
     }
     return 0;
@@ -441,14 +404,14 @@ int CmdHF14AMfucAuth(const char *Cmd){
 	memset(iv, 0, 8);
 	
     if (cmdp == 'h' || cmdp == 'H') {
-        PrintAndLog("Usage:  hf mfu auth k <key number>");
+        PrintAndLog("Usage:  hf mfu cauth k <key number>");
 		PrintAndLog("      1 = all zeros key");
 		PrintAndLog("      2 = 0x00-0x0F key");
 		PrintAndLog("      3 = nfc key");
 		PrintAndLog("      4 = all ones key");
 		PrintAndLog("      defaults to 3DES standard key");
-        PrintAndLog("        sample : hf mfu auth k");
-		PrintAndLog("               : hf mfu auth k 3");
+        PrintAndLog("        sample : hf mfu cauth k");
+		PrintAndLog("               : hf mfu cauth k 3");
         return 0;
     } 
     
@@ -495,10 +458,12 @@ int CmdHF14AMfucAuth(const char *Cmd){
 		if (isOK){
 			PrintAndLog("enc(RndB):%s", sprint_hex(data+1, 8));
 			memcpy(e_RndB,data+1,8);
-		}
+		} else {
+			return 2; // auth failed.
+		}		
 	} else {
 		PrintAndLog("Command execute timeout");
-		return 0;
+		return 1;
 	}
        
     //Do crypto magic
@@ -525,12 +490,15 @@ int CmdHF14AMfucAuth(const char *Cmd){
 
 		if (isOK){
 			PrintAndLog("enc(RndA'):%s", sprint_hex(data2+1, 8));
+		} else {
+			return 2;
 		}
+		
 	} else {
 		PrintAndLog("Command execute timeout");
-		return 0;
+		return 1;
 	} 
-    return 1;
+    return 0;
 }
 
 //
@@ -538,35 +506,43 @@ int CmdHF14AMfucAuth(const char *Cmd){
 //
 int CmdHF14AMfUCRdBl(const char *Cmd)
 {
-    uint8_t blockNo = 0;
-        
-    if (strlen(Cmd)<1) {
+    uint8_t blockNo = -1;
+ 	char cmdp = param_getchar(Cmd, 0);
+	
+	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') {
         PrintAndLog("Usage:  hf mfu crdbl  <block number>");
         PrintAndLog("        sample: hf mfu crdbl 0");
         return 0;
     }       
         
     blockNo = param_get8(Cmd, 0);
-    if (blockNo>MAX_ULTRAC_BLOCKS){
-        PrintAndLog("Error: Maximum number of readable blocks is 44 for Ultralight Cards!");
+	if (blockNo < 0) {
+		PrintAndLog("Wrong block number");
+		return 1;
+	}
+	
+    if (blockNo > (MAX_ULTRAC_BLOCKS+4) ){
+        PrintAndLog("Error: Maximum number of readable blocks is 47 for Ultralight-C Cards!");
         return 1;
-    }
-    PrintAndLog("--block no:%02x", (int)blockNo);
+    } 
+	
+    PrintAndLog("--block no: 0x%02X (%d)", (int)blockNo, blockNo);
 
     //Read Block
     UsbCommand e = {CMD_MIFAREU_READBL, {blockNo}};
     SendCommand(&e);
     UsbCommand resp_c;
     if (WaitForResponseTimeout(CMD_ACK,&resp_c,1500)) {
-        uint8_t                isOK  = resp_c.arg[0] & 0xff;
-        uint8_t              * data  = resp_c.d.asBytes;
+        uint8_t isOK = resp_c.arg[0] & 0xff;
+        uint8_t *data = resp_c.d.asBytes;
+		
+		PrintAndLog("isOk: %02x", isOK);
         if (isOK)
-            PrintAndLog("isOk:%02x data:%s", isOK, sprint_hex(data, 4));
-        else
-            PrintAndLog("isOk:%02x", isOK);
-        } else {
-            PrintAndLog("Command execute timeout");
-        }
+            PrintAndLog("Data: %s", sprint_hex(data, 4));
+			
+	} else {
+		PrintAndLog("Command execute timeout");
+	}
     return 0;
 }
 
@@ -576,107 +552,68 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
 int CmdHF14AMfUCWrBl(const char *Cmd){
     
     uint8_t blockNo = 0;
-    bool chinese_card = 0;
+    bool chinese_card = FALSE;
     uint8_t bldata[16] = {0x00};
     UsbCommand resp;
-        
-    if (strlen(Cmd)<3) {
+
+ 	char cmdp = param_getchar(Cmd, 0);
+	
+	if (strlen(Cmd) < 3 || cmdp == 'h' || cmdp == 'H') {	
         PrintAndLog("Usage:  hf mfu cwrbl <block number> <block data (8 hex symbols)> [w]");
-        PrintAndLog("        sample: hf mfu wrbl 0 01020304");
+		PrintAndLog("       [block number]");
+		PrintAndLog("       [block data] - (8 hex symbols)");
+		PrintAndLog("       [w] - Chinese magic ultralight tag");
+		PrintAndLog("");
+        PrintAndLog("        sample: hf mfu cwrbl 0 01020304");
+		PrintAndLog("");
         return 0;
-    }       
+    }
+	
     blockNo = param_get8(Cmd, 0);
-    if (blockNo>(MAX_ULTRAC_BLOCKS+4)){
-        PrintAndLog("Error: Maximum number of blocks is 47 for Ultralight Cards!");
+    if (blockNo > (MAX_ULTRAC_BLOCKS+4) ){
+        PrintAndLog("Error: Maximum number of blocks is 47 for Ultralight-C Cards!");
         return 1;
     }
+	
     if (param_gethex(Cmd, 1, bldata, 8)) {
         PrintAndLog("Block data must include 8 HEX symbols");
         return 1;
     }
-    if (strchr(Cmd,'w') != 0) {
-        chinese_card=1; 
+	
+    if (strchr(Cmd,'w') != 0  || strchr(Cmd,'W') != 0 ) {
+        chinese_card = TRUE; 
     }
-    switch(blockNo){
-        case 0:
-            if (!chinese_card){
-                 PrintAndLog("Access Denied");  
-            }else{
-                PrintAndLog("--specialblock no:%02x", blockNo);
-                PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-                UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
-                memcpy(d.d.asBytes,bldata, 4);
-                SendCommand(&d);
-                if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-                    uint8_t isOK  = resp.arg[0] & 0xff;
-                    PrintAndLog("isOk:%02x", isOK);
-                } else {
-                    PrintAndLog("Command execute timeout");
-                }  
-            }
-            break;
-        case 1:
-            if (!chinese_card){
-                PrintAndLog("Access Denied");
-            }else{	
-                PrintAndLog("--specialblock no:%02x", blockNo);
-                PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-                UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
-                memcpy(d.d.asBytes,bldata, 4);
-                SendCommand(&d);
-                if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-                    uint8_t isOK  = resp.arg[0] & 0xff;
-                    PrintAndLog("isOk:%02x", isOK);
-                } else {
-                    PrintAndLog("Command execute timeout");
-                }
-           }
-           break;
-        case 2:
-            if (!chinese_card){
-                PrintAndLog("Access Denied");
-            }else{	
-                PrintAndLog("--specialblock no:%02x", blockNo);
-                PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-                UsbCommand c = {CMD_MIFAREU_WRITEBL, {blockNo}};
-                memcpy(c.d.asBytes, bldata, 4);
-                SendCommand(&c);
-                if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-                    uint8_t isOK  = resp.arg[0] & 0xff;
-                    PrintAndLog("isOk:%02x", isOK);
-                } else {
-                    PrintAndLog("Command execute timeout");
-                }
-            }
-            break;
-        case 3:
-            PrintAndLog("--specialblock no:%02x", blockNo);
-            PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-            UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
-            memcpy(d.d.asBytes,bldata, 4);
-            SendCommand(&d);
-            if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-                uint8_t isOK  = resp.arg[0] & 0xff;
-                PrintAndLog("isOk:%02x", isOK);
-            } else {
-                PrintAndLog("Command execute timeout");
-            }
-            break;
-        default: 
-            PrintAndLog("--block no:%02x", blockNo);
-            PrintAndLog("--data: %s", sprint_hex(bldata, 4));        	
+	
+	if ( blockNo <= 3 ) {
+		if (!chinese_card){
+			 PrintAndLog("Access Denied");  
+		} else {
+			PrintAndLog("--Special block no: 0x%02x", blockNo);
+			PrintAndLog("--Data: %s", sprint_hex(bldata, 4));
+			UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
+			memcpy(d.d.asBytes,bldata, 4);
+			SendCommand(&d);
+			if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+				uint8_t isOK  = resp.arg[0] & 0xff;
+				PrintAndLog("isOk:%02x", isOK);
+			} else {
+				PrintAndLog("Command execute timeout");
+			}  
+		}	
+	} else {
+            PrintAndLog("--Block no : 0x%02x", blockNo);
+            PrintAndLog("--Data: %s", sprint_hex(bldata, 4));        	
             UsbCommand e = {CMD_MIFAREU_WRITEBL, {blockNo}};
             memcpy(e.d.asBytes,bldata, 4);
             SendCommand(&e);
             if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
                 uint8_t isOK  = resp.arg[0] & 0xff;
-                PrintAndLog("isOk:%02x", isOK);
+                PrintAndLog("isOk : %02x", isOK);
             } else {
                 PrintAndLog("Command execute timeout");
             }
-            break;
-        }
-        return 0;
+	}
+	return 0;
 }
 
 //------------------------------------
@@ -687,12 +624,12 @@ static command_t CommandTable[] =
     {"help",	CmdHelp,			1,"This help"},
     {"dbg",		CmdHF14AMfDbg,		0,"Set default debug mode"},
 	{"info",	CmdHF14AMfUInfo,	0,"Taginfo"},
+	{"dump",	CmdHF14AMfUDump,	0,"Dump MIFARE Ultralight / Ultralight-C tag to binary file"},
     {"rdbl",	CmdHF14AMfURdBl,	0,"Read block - MIFARE Ultralight"},
-    {"dump",	CmdHF14AMfUDump,	0,"Dump MIFARE Ultralight / Ultralight-C tag to binary file"},
-    {"wrbl",	CmdHF14AMfUWrBl,	0,"Write block - MIFARE Ultralight"},
+    {"wrbl",	CmdHF14AMfUWrBl,	0,"Write block - MIFARE Ultralight"},    
     {"crdbl",	CmdHF14AMfUCRdBl,	0,"Read block - MIFARE Ultralight C"},
-    {"cwrbl",	CmdHF14AMfUCWrBl,	0,"Write MIFARE Ultralight C block"},
-    {"cauth",	CmdHF14AMfucAuth,	0,"try a Ultralight C Authentication"},
+    {"cwrbl",	CmdHF14AMfUCWrBl,	0,"Write MIFARE Ultralight C block"},   
+	{"cauth",	CmdHF14AMfucAuth,	0,"try a Ultralight C Authentication"},
     {NULL, NULL, 0, NULL}
 };
 

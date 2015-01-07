@@ -88,35 +88,38 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 
 void MifareUC_Auth1(uint8_t arg0, uint8_t *datain){
-	// variables
+
 	byte_t isOK = 0;
 	byte_t dataoutbuf[16] = {0x00};
 	uint8_t uid[10] = {0x00};
 	uint32_t cuid;
-    
-	// clear trace
-	iso14a_clear_trace();
-	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-    
+
 	LED_A_ON();
 	LED_B_OFF();
 	LED_C_OFF();
-	
+    
+	iso14a_clear_trace();
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	if(!iso14443a_select_card(uid, NULL, &cuid)) {
-          if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card, something went wrong before auth");
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)
+			Dbprintf("Can't select card");
+		OnError(0);
+		return;
 	};
 	
 	if(mifare_ultra_auth1(cuid, dataoutbuf)){
-	  if (MF_DBGLEVEL >= 1)	Dbprintf("Authentication part1: Fail.");    
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)	
+			Dbprintf("Authentication part1: Fail.");
+		OnError(1);
+		return;
 	}
 
-	isOK=1;
-	if (MF_DBGLEVEL >= 2)	DbpString("AUTH 1 FINISHED");
+	isOK = 1;
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED)
+		DbpString("AUTH 1 FINISHED");
     
-	LED_B_ON();
     cmd_send(CMD_ACK,isOK,cuid,0,dataoutbuf,11);
-	  
 	LEDsoff();
 }
 void MifareUC_Auth2(uint32_t arg0, uint8_t *datain){
@@ -133,15 +136,17 @@ void MifareUC_Auth2(uint32_t arg0, uint8_t *datain){
 	LED_C_OFF();
 	
 	if(mifare_ultra_auth2(cuid, key, dataoutbuf)){
-	    if (MF_DBGLEVEL >= 1) Dbprintf("Authentication part2: Fail...");    
+	    if (MF_DBGLEVEL >= MF_DBG_ERROR) 
+			Dbprintf("Authentication part2: Fail...");
+		OnError(1);
+		return;			
 	}
+	
 	isOK = 1;
-	if (MF_DBGLEVEL >= 2)	DbpString("AUTH 2 FINISHED");
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED)
+		DbpString("AUTH 2 FINISHED");
     
-	LED_B_ON();
 	cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,11);
-	LED_B_OFF();
-    
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
