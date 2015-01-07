@@ -647,15 +647,12 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
         if (ledcontrol) LED_A_ON();
 
         DoAcquisition125k_internal(-1,true);
-        size  = sizeof(BigBuf);
-        if (size < 2000) continue;
         // FSK demodulator
-
-        int bitLen = HIDdemodFSK(dest,size,&hi2,&hi,&lo);
+		size = HIDdemodFSK(dest, sizeof(BigBuf), &hi2, &hi, &lo);
 
         WDT_HIT();
 
-        if (bitLen>0 && lo>0){
+		if (size>0 && lo>0){
             // final loop, go over previously decoded manchester data and decode into usable tag ID
             // 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
             if (hi2 != 0){ //extra large HID tags
@@ -726,8 +723,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 {
     uint8_t *dest = (uint8_t *)BigBuf;
 
-    size_t size=0; //, found=0;
-    uint32_t bitLen=0;
+	size_t size=0;
     int clk=0, invert=0, errCnt=0;
     uint64_t lo=0;
     // Configure to go in 125Khz listen mode
@@ -740,21 +736,22 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 
         DoAcquisition125k_internal(-1,true);
         size  = sizeof(BigBuf);
-        if (size < 2000) continue;
-        // FSK demodulator
-        //int askmandemod(uint8_t *BinStream,uint32_t *BitLen,int *clk, int *invert);
-        bitLen=size;
         //Dbprintf("DEBUG: Buffer got");
-        errCnt = askmandemod(dest,&bitLen,&clk,&invert); //HIDdemodFSK(dest,size,&hi2,&hi,&lo);
+		//askdemod and manchester decode
+		errCnt = askmandemod(dest, &size, &clk, &invert);
         //Dbprintf("DEBUG: ASK Got");
         WDT_HIT();
 
         if (errCnt>=0){
-            lo = Em410xDecode(dest,bitLen);
+			lo = Em410xDecode(dest,size);
             //Dbprintf("DEBUG: EM GOT");
-            //printEM410x(lo);
             if (lo>0){
-                Dbprintf("EM TAG ID: %02x%08x - (%05d_%03d_%08d)",(uint32_t)(lo>>32),(uint32_t)lo,(uint32_t)(lo&0xFFFF),(uint32_t)((lo>>16LL) & 0xFF),(uint32_t)(lo & 0xFFFFFF));
+				Dbprintf("EM TAG ID: %02x%08x - (%05d_%03d_%08d)",
+				    (uint32_t)(lo>>32),
+				    (uint32_t)lo,
+				    (uint32_t)(lo&0xFFFF),
+				    (uint32_t)((lo>>16LL) & 0xFF),
+				    (uint32_t)(lo & 0xFFFFFF));
             }
             if (findone){
                 if (ledcontrol)	LED_A_OFF();
@@ -769,7 +766,6 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
         invert=0;
         errCnt=0;
         size=0;
-        //SpinDelay(50);
     }
     DbpString("Stopped");
     if (ledcontrol) LED_A_OFF();
@@ -1519,6 +1515,7 @@ int IsBlock1PCF7931(uint8_t *Block) {
 
     return 0;
 }
+
 #define ALLOC 16
 
 void ReadPCF7931() {
@@ -1777,7 +1774,6 @@ void SendForward(uint8_t fwd_bit_count) {
         }
     }
 }
-
 
 void EM4xLogin(uint32_t Password) {
 
