@@ -404,20 +404,27 @@ int CmdHF14BWrite( const char *Cmd){
 	bool isSrix4k = true;
 	char str[20];	
 
-	if (cmdp == 'h' || cmdp == 'H') {
+	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:  hf 14b write <1|2> <BLOCK> <DATA>");
-		PrintAndLog("");
-		PrintAndLog("     sample: hf 14b write 1 127 11223344");
-		PrintAndLog("     sample: hf 14b write 1 255 11223344");
-		PrintAndLog("     sample: hf 14b write 2 15 11223344");
-		PrintAndLog("     sample: hf 14b write 2 255 11223344");
+		PrintAndLog("    [1 = SRIX4K]");
+		PrintAndLog("    [2 = SRI512]");
+		PrintAndLog("    [BLOCK number depends on tag, special block == FF]");
+		PrintAndLog("     sample: hf 14b write 1 7F 11223344");
+		PrintAndLog("           : hf 14b write 1 FF 11223344");
+		PrintAndLog("           : hf 14b write 2 15 11223344");
+		PrintAndLog("           : hf 14b write 2 FF 11223344");
 		return 0;
 	}
 
-	if ( param_getchar(Cmd, 0) == '2' )
+	if ( cmdp == '2' )
 		isSrix4k = false;
 	
-	blockno = param_get8(Cmd, 1);
+	//blockno = param_get8(Cmd, 1);
+	
+	if ( param_gethex(Cmd,1, &blockno, 2) ) {
+		PrintAndLog("Block number must include 2 HEX symbols");
+		return 0;
+	}
 	
 	if ( isSrix4k ){
 		if ( blockno > 0x7f && blockno != 0xff ){
@@ -437,11 +444,12 @@ int CmdHF14BWrite( const char *Cmd){
 	}
  
 	if ( blockno == 0xff)
-		PrintAndLog("Writing to special block %02X [ %s]", blockno,  sprint_hex(data,4) );
+		PrintAndLog("[%s] Write special block %02X [ %s ]", (isSrix4k)?"SRIX4K":"SRI512" , blockno,  sprint_hex(data,4) );
 	else
-		PrintAndLog("Writing to block %02X [ %s]", blockno,  sprint_hex(data,4) );
+		PrintAndLog("[%s] Write block %02X [ %s ]", (isSrix4k)?"SRIX4K":"SRI512", blockno,  sprint_hex(data,4) );
  
 	sprintf(str, "-c -p 09 %02x %02x%02x%02x%02x", blockno, data[0], data[1], data[2], data[3]);
+
 	CmdHF14BCmdRaw(str);
 	return 0;
 }
