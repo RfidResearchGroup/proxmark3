@@ -13,6 +13,7 @@
 #ifndef _WIN32
 #include <termios.h>
 #include <sys/ioctl.h> 
+
 int ukbhit(void)
 {
   int cnt = 0;
@@ -112,6 +113,19 @@ char * sprint_hex(const uint8_t * data, const size_t len) {
 	return buf;
 }
 
+char * sprint_bin(const uint8_t * data, const size_t len) {
+	
+	int maxLen = ( len > 1024) ? 1024 : len;
+	static char buf[1024];
+	char * tmp = buf;
+	size_t i;
+
+	for (i=0; i < maxLen; ++i, ++tmp)
+		sprintf(tmp, "%u", data[i]);
+
+	return buf;
+}
+
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
 {
 	while (len--) {
@@ -129,6 +143,28 @@ uint64_t bytes_to_num(uint8_t* src, size_t len)
 		src++;
 	}
 	return num;
+}
+
+//assumes little endian
+char * printBits(size_t const size, void const * const ptr)
+{
+    unsigned char *b = (unsigned char*) ptr;	
+    unsigned char byte;
+	static char buf[1024];
+	char * tmp = buf;
+    int i, j;
+
+    for (i=size-1;i>=0;i--)
+    {
+        for (j=7;j>=0;j--)
+        {
+            byte = b[i] & (1<<j);
+            byte >>= j;
+            sprintf(tmp, "%u", byte);
+			tmp++;
+        }
+    }
+	return buf;
 }
 
 //  -------------------------------------------------------------------------
@@ -247,4 +283,103 @@ int param_getstr(const char *line, int paramnum, char * str)
 	str[en - bg + 1] = 0;
 	
 	return en - bg + 1;
+}
+
+/*
+The following methods comes from Rfidler sourcecode.
+https://github.com/ApertureLabsLtd/RFIDler/blob/master/firmware/Pic32/RFIDler.X/src/
+*/
+
+// convert hex to sequence of 0/1 bit values
+// returns number of bits converted
+int hextobinarray(char *target, char *source)
+{
+    int length, i, count= 0;
+    char x;
+
+    length = strlen(source);
+    // process 4 bits (1 hex digit) at a time
+    while(length--)
+    {
+        x= *(source++);
+        // capitalize
+        if (x >= 'a' && x <= 'f')
+            x -= 32;
+        // convert to numeric value
+        if (x >= '0' && x <= '9')
+            x -= '0';
+        else if (x >= 'A' && x <= 'F')
+            x -= 'A' - 10;
+        else
+            return 0;
+        // output
+        for(i= 0 ; i < 4 ; ++i, ++count)
+            *(target++)= (x >> (3 - i)) & 1;
+    }
+    
+    return count;
+}
+
+// convert hex to human readable binary string
+int hextobinstring(char *target, char *source)
+{
+    int length;
+
+    if(!(length= hextobinarray(target, source)))
+        return 0;
+    binarraytobinstring(target, target, length);
+    return length;
+}
+
+// convert binary array of 0x00/0x01 values to hex (safe to do in place as target will always be shorter than source)
+// return number of bits converted
+int binarraytohex(char *target, char *source, int length)
+{
+    unsigned char i, x;
+    int j = length;
+
+    if(j % 4)
+        return 0;
+
+    while(j)
+    {
+        for(i= x= 0 ; i < 4 ; ++i)
+            x +=  ( source[i] << (3 - i));
+        sprintf(target,"%X", x);
+        ++target;
+        source += 4;
+        j -= 4;
+    }
+    return length;
+}
+
+// convert binary array to human readable binary
+void binarraytobinstring(char *target, char *source,  int length)
+{
+    int i;
+
+    for(i= 0 ; i < length ; ++i)
+        *(target++)= *(source++) + '0';
+    *target= '\0';
+}
+
+// return parity bit required to match type
+uint8_t GetParity( char *bits, uint8_t type, int length)
+{
+    int x;
+
+    for(x= 0 ; length > 0 ; --length)
+        x += bits[length - 1];
+    x %= 2;
+
+    return x ^ type;
+}
+
+// add HID parity to binary array: EVEN prefix for 1st half of ID, ODD suffix for 2nd half
+void wiegand_add_parity(char *target, char *source, char length)
+{
+    *(target++)= GetParity(source, EVEN, length / 2);
+    memcpy(target, source, length);
+    target += length;
+    *(target)= GetParity(source + length / 2, ODD, length / 2);
 }
