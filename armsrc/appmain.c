@@ -667,9 +667,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			WriteTItag(c->arg[0],c->arg[1],c->arg[2]);
 			break;
 		case CMD_SIMULATE_TAG_125K:
-			LED_A_ON();
 			SimulateTagLowFrequency(c->arg[0], c->arg[1], 1);
-			LED_A_OFF();
 			break;
 		case CMD_LF_SIMULATE_BIDIR:
 			SimulateTagLowFrequencyBidir(c->arg[0], c->arg[1]);

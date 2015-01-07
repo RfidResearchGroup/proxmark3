@@ -15,6 +15,7 @@
 
 #include "mifarecmd.h"
 #include "apps.h"
+#include "util.h"
 
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag. 
@@ -86,48 +87,40 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 void MifareUReadBlock(uint8_t arg0,uint8_t *datain)
 {
-    // params
 	uint8_t blockNo = arg0;
-	
-	// variables
-	byte_t isOK = 0;
-	byte_t dataoutbuf[16];
-	uint8_t uid[10];
+	byte_t dataout[16] = {0x00};
+	uint8_t uid[10] = {0x00};
 	uint32_t cuid;
-    
-	// clear trace
-	iso14a_clear_trace();
-	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     
 	LED_A_ON();
 	LED_B_OFF();
 	LED_C_OFF();
     
-	while (true) {
-		if(!iso14443a_select_card(uid, NULL, &cuid)) {
-            if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
-			break;
+	iso14a_clear_trace();
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    
+	int len = iso14443a_select_card(uid, NULL, &cuid);
+	if(!len) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Can't select card");
+		OnError(1);
+		return;
 		};
         
-		if(mifare_ultra_readblock(cuid, blockNo, dataoutbuf)) {
-            if (MF_DBGLEVEL >= 1)	Dbprintf("Read block error");
-			break;
+	len = mifare_ultra_readblock(cuid, blockNo, dataout);
+	if(len) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Read block error");
+		OnError(2);
+		return;
 		};
         
-		if(mifare_ultra_halt(cuid)) {
-            if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
-			break;
+	len = mifare_ultra_halt(cuid);
+	if(len) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Halt error");
+		OnError(3);
+		return;
 		};
 		
-		isOK = 1;
-		break;
-	}
-	
-	if (MF_DBGLEVEL >= 2)	DbpString("READ BLOCK FINISHED");
-    
-	LED_B_ON();
-    cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,16);
-	LED_B_OFF();
+    cmd_send(CMD_ACK,1,0,0,dataout,16);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
@@ -200,57 +193,70 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LEDsoff();
 }
 
-
-void MifareUReadCard(uint8_t arg0, uint8_t *datain)
+void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain)
 {
   // params
         uint8_t sectorNo = arg0;
-        
-        // variables
-        byte_t isOK = 0;
-        byte_t dataoutbuf[16 * 4];
-        uint8_t uid[10];
+	int Pages = arg1;
+	int count_Pages = 0;
+	byte_t dataout[176] = {0x00};;
+	uint8_t uid[10] = {0x00};
         uint32_t cuid;
-
-        // clear trace
-        iso14a_clear_trace();
-
-		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
         LED_A_ON();
         LED_B_OFF();
         LED_C_OFF();
 
-        while (true) {
-                if(!iso14443a_select_card(uid, NULL, &cuid)) {
-                if (MF_DBGLEVEL >= 1)   Dbprintf("Can't select card");
-                        break;
-                };
-		for(int sec=0;sec<16;sec++){
-                    if(mifare_ultra_readblock(cuid, sectorNo * 4 + sec, dataoutbuf + 4 * sec)) {
-                    if (MF_DBGLEVEL >= 1)   Dbprintf("Read block %d error",sec);
-                        break;
-                    };
-                }
-                if(mifare_ultra_halt(cuid)) {
-                if (MF_DBGLEVEL >= 1)   Dbprintf("Halt error");
-                        break;
-                };
+	if (MF_DBGLEVEL >= MF_DBG_ALL) 
+		Dbprintf("Pages %d",Pages);
+	
+	iso14a_clear_trace();
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
-                isOK = 1;
-                break;
-        }
-        
-        if (MF_DBGLEVEL >= 2) DbpString("READ CARD FINISHED");
+	int len = iso14443a_select_card(uid, NULL, &cuid);
+	
+	if (!len) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)
+			Dbprintf("Can't select card");
+		OnError(1);
+		return;
+	}
+	
+	for (int i = 0; i < Pages; i++){
+	
+		len = mifare_ultra_readblock(cuid, sectorNo * 4 + i, dataout + 4 * i);
+		
+		if (len) {
+			if (MF_DBGLEVEL >= MF_DBG_ERROR)
+				Dbprintf("Read block %d error",i);
+			OnError(2);
+			return;
+		} else {
+			count_Pages++;
+		}
+	}
+		
+	len = mifare_ultra_halt(cuid);
+	if (len) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)
+			Dbprintf("Halt error");
+		OnError(3);
+		return;
+	}
+	
+	if (MF_DBGLEVEL >= MF_DBG_ALL) {
+		Dbprintf("Pages read %d", count_Pages);
+	}
 
-        LED_B_ON();
-		cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,64);
-        LED_B_OFF();
+	len = 16*4; //64 bytes
+	
+	// Read a UL-C
+	if (Pages == 44 && count_Pages > 16) 
+		len = 176;
 
-        // Thats it...
+	cmd_send(CMD_ACK, 1, 0, 0, dataout, len);	
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         LEDsoff();
-
 }
 
 
@@ -330,19 +336,16 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 {
         // params
         uint8_t blockNo = arg0;
-        byte_t blockdata[16];
+	byte_t blockdata[16] = {0x00};
 
-        memset(blockdata,'\0',16);
         memcpy(blockdata, datain,16);
         
         // variables
         byte_t isOK = 0;
-        uint8_t uid[10];
+	uint8_t uid[10] = {0x00};
         uint32_t cuid;
 
-        // clear trace
         iso14a_clear_trace();
-
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
         LED_A_ON();
@@ -371,33 +374,25 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
         
         if (MF_DBGLEVEL >= 2)   DbpString("WRITE BLOCK FINISHED");
 
-        LED_B_ON();
 		cmd_send(CMD_ACK,isOK,0,0,0,0);
-        LED_B_OFF();
-
-
-        // Thats it...
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         LEDsoff();
-//  iso14a_set_tracing(TRUE);
 }
 
 void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 {
 	// params
 	uint8_t blockNo = arg0;
-	byte_t blockdata[4];
+	byte_t blockdata[4] = {0x00};
 	
 	memcpy(blockdata, datain,4);
 
 	// variables
 	byte_t isOK = 0;
-	uint8_t uid[10];
+	uint8_t uid[10] = {0x00};
 	uint32_t cuid;
 
-	// clear trace
 	iso14a_clear_trace();
-
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	LED_A_ON();
@@ -426,11 +421,7 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 
 	if (MF_DBGLEVEL >= 2)   DbpString("WRITE BLOCK FINISHED");
 
-	LED_B_ON();
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
-	LED_B_OFF();
-
-	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
