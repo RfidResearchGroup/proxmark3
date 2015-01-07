@@ -40,7 +40,7 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
 	}
 	fwrite(data, 1,	datalen, fileHandle);
 	fclose(fileHandle);
-	PrintAndLog(">Saved data to '%s'", fileName);
+	PrintAndLog("Saved data to '%s'", fileName);
 
 	free(fileName);
 
