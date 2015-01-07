@@ -27,7 +27,6 @@
 static int CmdHelp(const char *Cmd);
 static void waitCmd(uint8_t iLen);
 
-
 // structure and database for uid -> tagtype lookups 
 typedef struct { 
 	uint8_t uid;
@@ -515,19 +514,22 @@ int CmdHF14ACmdRaw(const char *cmd) {
     uint8_t active=0;
     uint8_t active_select=0;
     uint16_t numbits=0;
+	uint16_t timeout=0;
+	uint8_t bTimeout=0;
     char buf[5]="";
     int i=0;
-    uint8_t data[100];
+    uint8_t data[USB_CMD_DATA_SIZE];
     unsigned int datalen=0, temp;
 
     if (strlen(cmd)<2) {
-        PrintAndLog("Usage: hf 14a raw [-r] [-c] [-p] [-f] [-b] <number of bits> <0A 0B 0C ... hex>");
+        PrintAndLog("Usage: hf 14a raw [-r] [-c] [-p] [-f] [-b] [-t] <number of bits> <0A 0B 0C ... hex>");
         PrintAndLog("       -r    do not read response");
         PrintAndLog("       -c    calculate and append CRC");
         PrintAndLog("       -p    leave the signal field ON after receive");
         PrintAndLog("       -a    active signal field ON without select");
         PrintAndLog("       -s    active signal field ON with select");
         PrintAndLog("       -b    number of bits to send. Useful for send partial byte");
+		PrintAndLog("       -t    timeout");
         return 0;
     }
 
@@ -560,6 +562,14 @@ int CmdHF14ACmdRaw(const char *cmd) {
                     while(cmd[i]!=' ' && cmd[i]!='\0') { i++; }
                     i-=2;
                     break;
+				case 't':
+					bTimeout=1;
+					sscanf(cmd+i+2,"%d",&temp);
+					timeout = temp & 0xFFFF;
+					i+=3;
+					while(cmd[i]!=' ' && cmd[i]!='\0') { i++; }
+					i+=2;
+					break;
                 default:
                     PrintAndLog("Invalid option");
                     return 0;
@@ -577,15 +587,19 @@ int CmdHF14ACmdRaw(const char *cmd) {
             if (strlen(buf)>=2) {
                 sscanf(buf,"%x",&temp);
                 data[datalen]=(uint8_t)(temp & 0xff);
-                datalen++;
                 *buf=0;
+				if (++datalen>sizeof(data)){
+					if (crc)
+						PrintAndLog("Buffer is full, we can't add CRC to your data");
+					break;
+				}
             }
             continue;
         }
         PrintAndLog("Invalid char on input");
         return 0;
     }
-    if(crc && datalen>0)
+    if(crc && datalen>0 && datalen<sizeof(data)-2)
     {
         uint8_t first, second;
         ComputeCrc14443(CRC_14443_A, data, datalen, &first, &second);
@@ -599,13 +613,22 @@ int CmdHF14ACmdRaw(const char *cmd) {
         if(active)
             c.arg[0] |= ISO14A_NO_SELECT;
     }
+	if(bTimeout){
+	    #define MAX_TIMEOUT 624*105 // max timeout is 624 ms
+        c.arg[0] |= ISO14A_SET_TIMEOUT;
+        c.arg[2] = timeout * 105; // each bit is about 9.4 us
+        if(c.arg[2]>MAX_TIMEOUT) {
+            c.arg[2] = MAX_TIMEOUT;
+            PrintAndLog("Set timeout to 624 ms. The max we can wait for response");
+        }
+	}
     if(power)
         c.arg[0] |= ISO14A_NO_DISCONNECT;
     if(datalen>0)
         c.arg[0] |= ISO14A_RAW;
 
-    c.arg[1] = datalen;
-    c.arg[2] = numbits;
+	// Max buffer is USB_CMD_DATA_SIZE
+    c.arg[1] = (datalen & 0xFFFF) | (numbits << 16);
     memcpy(c.d.asBytes,data,datalen);
 
     SendCommand(&c);
