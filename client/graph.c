@@ -166,7 +166,6 @@ size_t getFromGraphBuf(uint8_t *buff)
 int GetClock(const char *str, int peak, int verbose)
 {
 	int clock;
-//  int clock2;
 	sscanf(str, "%i", &clock);
 	if (!strcmp(str, ""))
 		clock = 0;
@@ -177,46 +176,18 @@ int GetClock(const char *str, int peak, int verbose)
 		uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
 		size_t size = getFromGraphBuf(grph);
 		clock = DetectASKClock(grph,size,0);
-		//clock2 = DetectClock2(peak);
 		/* Only print this message if we're not looping something */
 		if (!verbose){
 			PrintAndLog("Auto-detected clock rate: %d", clock);
-			//PrintAndLog("clock2: %d",clock2);
 		}
 	}
 
 	return clock;
 }
-int GetNRZpskClock(const char *str, int peak, int verbose)
-{
- // return GetClock(str,peak,verbose);
-	int clock;
-	//  int clock2;
-	sscanf(str, "%i", &clock);
-	if (!strcmp(str, ""))
-		clock = 0;
 
-	/* Auto-detect clock */
-	if (!clock)
-	{
-		uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
-		size_t size = getFromGraphBuf(grph);
-		clock = DetectpskNRZClock(grph,size,0);
-		//clock2 = DetectClock2(peak);
-		/* Only print this message if we're not looping something */
-		if (!verbose){
-			PrintAndLog("Auto-detected clock rate: %d", clock);
-			//PrintAndLog("clock2: %d",clock2);
-		}
-	}
-	return clock;
-}
-// Get or auto-detect clock rate
-/*
 int GetNRZpskClock(const char *str, int peak, int verbose)
 {
 	int clock;
-//  int clock2;
 	sscanf(str, "%i", &clock);
 	if (!strcmp(str, ""))
 		clock = 0;
@@ -225,15 +196,12 @@ int GetNRZpskClock(const char *str, int peak, int verbose)
 	if (!clock)
 	{
 		uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
-		int size = getFromGraphBuf(grph);
-		clock = DetectASKClock(grph,size,0);
-		//clock2 = DetectClock2(peak);
+		size_t size = getFromGraphBuf(grph);
+		clock = DetectpskNRZClock(grph,size,0);
 		// Only print this message if we're not looping something
 		if (!verbose){
 			PrintAndLog("Auto-detected clock rate: %d", clock);
-			//PrintAndLog("clock2: %d",clock2);
 		}
 	}
 	return clock;
 }
-*/

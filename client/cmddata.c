@@ -932,35 +932,6 @@ int CmdIndalaDecode(const char *Cmd)
 	return 1;
 }
 
-/*
-//by marshmellow (attempt to get rid of high immediately after a low)
-void pskCleanWave2(uint8_t *bitStream, int bitLen)
-{
-	int i;
-	int low=128;
-	int gap = 4;
- // int loopMax = 2048;
-	int newLow=0;
-
-	for (i=0; i<bitLen; ++i)
-		if (bitStream[i]<low) low=bitStream[i];
-
-	low = (int)(((low-128)*.80)+128);
-	PrintAndLog("low: %d",low);
-	for (i=0; i<bitLen; ++i){
-		if (newLow==1){
-			bitStream[i]=low+5;
-			gap--;
-			if (gap==0){
-				newLow=0;
-				gap=4;
-			}
-		}
-		if (bitStream[i]<=low) newLow=1;
-	}
-	return;
-}
-*/
 int CmdPskClean(const char *Cmd)
 {
 	uint8_t bitStream[MAX_GRAPH_TRACE_LEN]={0};
@@ -988,8 +959,6 @@ int CmdpskNRZrawDemod(const char *Cmd)
 
 	return 1;
 }
-
-
 
 int CmdGrid(const char *Cmd)
 {
@@ -1066,22 +1035,21 @@ int CmdHpf(const char *Cmd)
 
 int CmdSamples(const char *Cmd)
 {
-	int cnt = 0;
-	int n;
 	uint8_t got[40000];
 
-	n = strtol(Cmd, NULL, 0);
-	if (n == 0) n = 6000;
-	if (n > sizeof(got)) n = sizeof(got);
+	int n = strtol(Cmd, NULL, 0);
+	if (n == 0)
+		n = 20000;
 
-	PrintAndLog("Reading %d samples\n", n);
+	if (n > sizeof(got))
+		n = sizeof(got);
+
+	PrintAndLog("Reading %d samples from device memory\n", n);
 	GetFromBigBuf(got,n,0);
 	WaitForResponse(CMD_ACK,NULL);
 	for (int j = 0; j < n; j++) {
-		GraphBuffer[cnt++] = ((int)got[j]) - 128;
+		GraphBuffer[j] = ((int)got[j]) - 128;
 	}
-
-	PrintAndLog("Done!\n");
 	GraphTraceLen = n;
 	RepaintGraphWindow();
 	return 0;
@@ -1558,8 +1526,8 @@ static command_t CommandTable[] =
 	{"help",          CmdHelp,            1, "This help"},
 	{"amp",           CmdAmp,             1, "Amplify peaks"},
 	{"askdemod",      Cmdaskdemod,        1, "<0 or 1> -- Attempt to demodulate simple ASK tags"},
-	{"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert<0 or 1>] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional[clock will try Auto-detect])"},
-	{"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0 or 1>] -- Attempt to demodulate ASK tags and output binary (args optional[clock will try Auto-detect])"},
+	{"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert<0|1>] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional[clock will try Auto-detect])"},
+	{"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0|1>] -- Attempt to demodulate ASK tags and output binary (args optional[clock will try Auto-detect])"},
 	{"autocorr",      CmdAutoCorr,        1, "<window length> -- Autocorrelation over window"},
 	{"biphaserawdecode",CmdBiphaseDecodeRaw,1,"[offset] Biphase decode binary stream already in graph buffer (offset = bit to start decode from)"},
 	{"bitsamples",    CmdBitsamples,      0, "Get raw samples as bitstring"},
@@ -1570,7 +1538,7 @@ static command_t CommandTable[] =
 	{"fskdemod",      CmdFSKdemod,        1, "Demodulate graph window as a HID FSK"},
 	{"fskhiddemod",   CmdFSKdemodHID,     1, "Demodulate graph window as a HID FSK using raw"},
 	{"fskiodemod",    CmdFSKdemodIO,      1, "Demodulate graph window as an IO Prox FSK using raw"},
-	{"fskrawdemod",   CmdFSKrawdemod,     1, "[clock rate] [invert] [rchigh] [rclow] Demodulate graph window from FSK to binary (clock = 50)(invert = 1 or 0)(rchigh = 10)(rclow=8)"},
+	{"fskrawdemod",   CmdFSKrawdemod,     1, "[clock rate] [invert] [rchigh] [rclow] Demodulate graph window from FSK to binary (clock = 50)(invert = 1|0)(rchigh = 10)(rclow=8)"},
 	{"grid",          CmdGrid,            1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
 	{"hexsamples",    CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
 	{"hide",          CmdHide,            1, "Hide graph window"},
@@ -1585,8 +1553,8 @@ static command_t CommandTable[] =
 	{"plot",          CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
 	{"pskclean",      CmdPskClean,        1, "Attempt to clean psk wave"},
 	{"pskdetectclock",CmdDetectNRZpskClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
-	{"pskindalademod",CmdIndalaDecode,    1, "[clock] [invert<0 or 1>] -- Attempt to demodulate psk indala tags and output ID binary & hex (args optional[clock will try Auto-detect])"},
-	{"psknrzrawdemod",CmdpskNRZrawDemod,  1, "[clock] [invert<0 or 1>] -- Attempt to demodulate psk or nrz tags and output binary (args optional[clock will try Auto-detect])"},
+	{"pskindalademod",CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Attempt to demodulate psk indala tags and output ID binary & hex (args optional[clock will try Auto-detect])"},
+	{"psknrzrawdemod",CmdpskNRZrawDemod,  1, "[clock] [invert<0|1>] -- Attempt to demodulate psk or nrz tags and output binary (args optional[clock will try Auto-detect])"},
 	{"samples",       CmdSamples,         0, "[512 - 40000] -- Get raw samples for graph window"},
 	{"save",          CmdSave,            1, "<filename> -- Save trace (from graph window)"},
 	{"scale",         CmdScale,           1, "<int> -- Set cursor display scale"},
