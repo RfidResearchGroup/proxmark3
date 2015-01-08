@@ -19,6 +19,7 @@
 #include "cmdparser.h"
 #include "cmdmain.h"
 #include "cmddata.h"
+#include "util.h"
 #include "cmdlf.h"
 #include "cmdlfhid.h"
 #include "cmdlfti.h"
