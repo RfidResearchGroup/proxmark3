@@ -300,7 +300,7 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert)
 		else if (BinStream[i] < low)
 			low = BinStream[i];
 	}
-	if ((high < 158)){  //throw away static
+	if ((high < 134)){  //throw away static  high has to be more than 6 on graph. noise <= -10 here
 		//   PrintAndLog("no data found");
 		return -2;
 	}
@@ -407,21 +407,11 @@ size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow
 {
 	uint32_t last_transition = 0;
 	uint32_t idx = 1;
-	uint32_t maxVal=0;
+	//uint32_t maxVal=0;
 	if (fchigh==0) fchigh=10;
 	if (fclow==0) fclow=8;
-	// we do care about the actual theshold value as sometimes near the center of the
-	// wave we may get static that changes direction of wave for one value
-	// if our value is too low it might affect the read.  and if our tag or
-	// antenna is weak a setting too high might not see anything. [marshmellow]
-	if (size<100) return 0;
-	for(idx=1; idx<100; idx++){
-		if(maxVal<dest[idx]) maxVal = dest[idx];
-	}
-	// set close to the top of the wave threshold with 25% margin for error
-	// less likely to get a false transition up there.
-	// (but have to be careful not to go too high and miss some short waves)
-	uint8_t threshold_value = (uint8_t)(((maxVal-128)*.75)+128);
+	//set the threshold close to 0 (graph) to avoid static
+	uint8_t threshold_value = 134; //(uint8_t)(((maxVal-128)*.75)+128);
 
 	// sync to first lo-hi transition, and threshold
 
@@ -573,7 +563,7 @@ uint32_t bytebits_to_byte(uint8_t* src, size_t numbits)
 
 int IOdemodFSK(uint8_t *dest, size_t size)
 {
-	static const uint8_t THRESHOLD = 140;
+	static const uint8_t THRESHOLD = 134;
 	uint32_t idx=0;
 	//make sure buffer has data
 	if (size < 66) return -1;
@@ -707,8 +697,8 @@ int DetectpskNRZClock(uint8_t dest[], size_t size, int clock)
 			low = dest[i];
 		}
 	}
-	peak=(int)(((peak-128)*.90)+128);
-	low= (int)(((low-128)*.90)+128);
+	peak=(int)(((peak-128)*.75)+128);
+	low= (int)(((low-128)*.75)+128);
 	//PrintAndLog("DEBUG: peak: %d, low: %d",peak,low);
 	int ii;
 	uint8_t clkCnt;
@@ -720,7 +710,7 @@ int DetectpskNRZClock(uint8_t dest[], size_t size, int clock)
 	//test each valid clock from smallest to greatest to see which lines up
 	for(clkCnt=0; clkCnt < 6; ++clkCnt){
 		if (clk[clkCnt] == 32){
-			tol=0;
+			tol=1;
 		}else{
 			tol=0;
 		}

@@ -870,8 +870,12 @@ int PSKnrzDemod(const char *Cmd){
 // optional arguments - same as CmdpskNRZrawDemod (clock & invert)
 int CmdIndalaDecode(const char *Cmd)
 {
+	int ans;
+	if (strlen(Cmd)>0)
+		ans=PSKnrzDemod(Cmd);
+	else
+		ans=PSKnrzDemod("32");
 
-	int ans=PSKnrzDemod(Cmd);
 	if (ans < 0){
 		PrintAndLog("Error1: %d",ans);
 		return 0;

@@ -110,9 +110,9 @@ int CmdFlexdemod(const char *Cmd)
   i = 0;
   int phase = 0;
   for (bit = 0; bit < 64; bit++) {
-	
+
 		phase = (bits[bit] == 0) ? 0 : 1;
-		
+
     int j;
     for (j = 0; j < 32; j++) {
       GraphBuffer[i++] = phase;
@@ -123,7 +123,7 @@ int CmdFlexdemod(const char *Cmd)
   RepaintGraphWindow();
   return 0;
 }
-  
+
 int CmdIndalaDemod(const char *Cmd)
 {
   // Usage: recover 64bit UID by default, specify "224" as arg to recover a 224bit UID
@@ -167,7 +167,7 @@ int CmdIndalaDemod(const char *Cmd)
       count = 0;
     }
   }
-  
+
   if (rawbit>0){
     PrintAndLog("Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
     PrintAndLog("worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
@@ -198,7 +198,7 @@ int CmdIndalaDemod(const char *Cmd)
       break;
     }
   }
-  
+
   if (start == rawbit - uidlen + 1) {
     PrintAndLog("nothing to wait for");
     return 0;
@@ -217,7 +217,7 @@ int CmdIndalaDemod(const char *Cmd)
   int bit;
   i = start;
   int times = 0;
-	
+
   if (uidlen > rawbit) {
     PrintAndLog("Warning: not enough raw bits to get a full UID");
     for (bit = 0; bit < rawbit; bit++) {
@@ -235,12 +235,12 @@ int CmdIndalaDemod(const char *Cmd)
     }
     times = 1;
   }
-  
+
   //convert UID to HEX
   uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
   int idx;
 	uid1 = uid2 = 0;
-	
+
   if (uidlen==64){
     for( idx=0; idx<64; idx++) {
         if (showbits[idx] == '0') {
@@ -249,7 +249,7 @@ int CmdIndalaDemod(const char *Cmd)
         } else {
         uid1=(uid1<<1)|(uid2>>31);
         uid2=(uid2<<1)|1;
-        } 
+        }
       }
     PrintAndLog("UID=%s (%x%08x)", showbits, uid1, uid2);
   }
@@ -263,10 +263,10 @@ int CmdIndalaDemod(const char *Cmd)
         uid4=(uid4<<1)|(uid5>>31);
         uid5=(uid5<<1)|(uid6>>31);
         uid6=(uid6<<1)|(uid7>>31);
-			
-			if (showbits[idx] == '0') 
+
+			if (showbits[idx] == '0')
 				uid7 = (uid7<<1) | 0;
-			else 
+			else
 				uid7 = (uid7<<1) | 1;
       }
     PrintAndLog("UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
@@ -291,7 +291,7 @@ int CmdIndalaDemod(const char *Cmd)
   PrintAndLog("Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
 
   // Remodulating for tag cloning
-	// HACK: 2015-01-04 this will have an impact on our new way of seening lf commands (demod) 
+	// HACK: 2015-01-04 this will have an impact on our new way of seening lf commands (demod)
 	// since this changes graphbuffer data.
   GraphTraceLen = 32*uidlen;
   i = 0;
@@ -559,23 +559,37 @@ int CmdLFfind(const char *Cmd)
     ans=CmdSamples("20000");
   }
   if (GraphTraceLen<1000) return 0;
+  PrintAndLog("NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
   PrintAndLog("Checking for known tags:");
+
   ans=Cmdaskmandemod("");
-  if (ans>0) return 1;
+  if (ans>0) {
+    PrintAndLog("Valid EM410x ID Found!");
+    return 1;
+  }
   ans=CmdFSKdemodHID("");
-  if (ans>0) return 1;
+  if (ans>0) {
+    PrintAndLog("Valid HID Prox ID Found!");
+    return 1;
+  }
   ans=CmdFSKdemodIO("");
-  if (ans>0) return 1;
+  if (ans>0) {
+    PrintAndLog("Valid IO Prox ID Found!");
+    return 1;
+  }
   //add psk and indala
-  ans=CmdIndalaDemod("");
-  if (ans>0) return 1;
-  ans=CmdIndalaDemod("224");
-  if (ans>0) return 1;
+  ans=CmdIndalaDecode("");
+  if (ans>0) {
+    PrintAndLog("Valid Indala ID Found!");
+    return 1;
+  }
+ // ans=CmdIndalaDemod("224");
+ // if (ans>0) return 1;
   PrintAndLog("No Known Tags Found!\n");
   return 0;
 }
 
-static command_t CommandTable[] = 
+static command_t CommandTable[] =
 {
   {"help",        CmdHelp,            1, "This help"},
   {"cmdread",     CmdLFCommandRead,   0, "<off period> <'0' period> <'1' period> <command> ['h'] -- Modulate LF reader field to send command before read (all periods in microseconds) (option 'h' for 134)"},
@@ -602,7 +616,7 @@ static command_t CommandTable[] =
 int CmdLF(const char *Cmd)
 {
   CmdsParse(CommandTable, Cmd);
-  return 0; 
+  return 0;
 }
 
 int CmdHelp(const char *Cmd)
