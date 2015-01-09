@@ -13,7 +13,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
-#include "../common/iso14443crc.h"
+#include "iso14443crc.h"
 #include "proxmark3.h"
 #include "data.h"
 #include "graph.h"
@@ -275,12 +275,12 @@ int CmdHF14BCmdRaw (const char *cmd) {
     UsbCommand resp;
     uint8_t *recv;
     UsbCommand c = {CMD_ISO_14443B_COMMAND, {0, 0, 0}}; // len,recv?
-    uint8_t reply=1;
-    uint8_t crc=0;
-    uint8_t power=0;
-    char buf[5]="";
-    int i=0;
-    uint8_t data[100];
+    uint8_t reply = 1;
+    uint8_t crc = 0;
+    uint8_t power = 0;
+    char buf[5] = "";
+    int i = 0;
+    uint8_t data[100] = {0x00};
     unsigned int datalen=0, temp;
     char *hexout;
     
@@ -301,15 +301,15 @@ int CmdHF14BCmdRaw (const char *cmd) {
             switch (cmd[i+1]) {
                 case 'r': 
                 case 'R': 
-                    reply=0;
+                    reply = 0;
                     break;
                 case 'c':
                 case 'C':                
-                    crc=1;
+                    crc = 1;
                     break;
                 case 'p': 
                 case 'P': 
-                    power=1;
+                    power = 1;
                     break;
                 default:
                     PrintAndLog("Invalid option");
@@ -334,15 +334,15 @@ int CmdHF14BCmdRaw (const char *cmd) {
             continue;
         }
         PrintAndLog("Invalid char on input");
-        return 0;
+        return 1;
     }
-    if (datalen == 0)
-    {
+	
+    if (datalen == 0) {
       PrintAndLog("Missing data input");
-      return 0;
+      return 1;
     }
-    if(crc)
-    {
+	
+    if(crc) {
         uint8_t first, second;
         ComputeCrc14443(CRC_14443_B, data, datalen, &first, &second);
         data[datalen++] = first;
@@ -448,7 +448,7 @@ int CmdHF14BWrite( const char *Cmd){
 	else
 		PrintAndLog("[%s] Write block %02X [ %s ]", (isSrix4k)?"SRIX4K":"SRI512", blockno,  sprint_hex(data,4) );
  
-	sprintf(str, "-c -p 09 %02x %02x%02x%02x%02x", blockno, data[0], data[1], data[2], data[3]);
+	sprintf(str, "-c 09 %02x %02x%02x%02x%02x", blockno, data[0], data[1], data[2], data[3]);
 
 	CmdHF14BCmdRaw(str);
 	return 0;
