@@ -18,8 +18,8 @@
 
 
 /**
-* Does the sample acquisition. If threshold is specified, the actual sampling 
-* is not commenced until the threshold has been reached. 
+* Does the sample acquisition. If threshold is specified, the actual sampling
+* is not commenced until the threshold has been reached.
 * @param trigger_threshold - the threshold
 * @param silent - is true, now outputs are made. If false, dbprints the status
 */
@@ -54,7 +54,7 @@ void DoAcquisition125k_internal(int trigger_threshold,bool silent)
     }
 }
 /**
-* Perform sample aquisition. 
+* Perform sample aquisition.
 */
 void DoAcquisition125k(int trigger_threshold)
 {
@@ -62,11 +62,11 @@ void DoAcquisition125k(int trigger_threshold)
 }
 
 /**
-* Setup the FPGA to listen for samples. This method downloads the FPGA bitstream 
-* if not already loaded, sets divisor and starts up the antenna. 
+* Setup the FPGA to listen for samples. This method downloads the FPGA bitstream
+* if not already loaded, sets divisor and starts up the antenna.
 * @param divisor : 1, 88> 255 or negative ==> 134.8 KHz
 * 				   0 or 95 ==> 125 KHz
-* 				   
+*
 **/
 void LFSetupFPGAForADC(int divisor, bool lf_field)
 {
@@ -88,7 +88,7 @@ void LFSetupFPGAForADC(int divisor, bool lf_field)
     FpgaSetupSsc();
 }
 /**
-* Initializes the FPGA, and acquires the samples. 
+* Initializes the FPGA, and acquires the samples.
 **/
 void AcquireRawAdcSamples125k(int divisor)
 {
@@ -97,7 +97,7 @@ void AcquireRawAdcSamples125k(int divisor)
     DoAcquisition125k_internal(-1,false);
 }
 /**
-* Initializes the FPGA for snoop-mode, and acquires the samples. 
+* Initializes the FPGA for snoop-mode, and acquires the samples.
 **/
 
 void SnoopLFRawAdcSamples(int divisor, int trigger_threshold)
@@ -173,13 +173,12 @@ void ReadTItag(void)
     // when we read a TI tag we sample the zerocross line at 2Mhz
     // TI tags modulate a 1 as 16 cycles of 123.2Khz
     // TI tags modulate a 0 as 16 cycles of 134.2Khz
-#define FSAMPLE 2000000
-#define FREQLO 123200
-#define FREQHI 134200
+ #define FSAMPLE 2000000
+ #define FREQLO 123200
+ #define FREQHI 134200
 
     signed char *dest = (signed char *)BigBuf;
     int n = sizeof(BigBuf);
-
     // 128 bit shift register [shift3:shift2:shift1:shift0]
     uint32_t shift3 = 0, shift2 = 0, shift1 = 0, shift0 = 0;
 
@@ -261,10 +260,10 @@ void ReadTItag(void)
         shift2 = ((shift2>>24) | (shift3 << 8)) & 0x0ffff;
 
         // if r/w tag, check ident match
-        if ( shift3&(1<<15) ) {
+		if (shift3 & (1<<15) ) {
             DbpString("Info: TI tag is rewriteable");
             // only 15 bits compare, last bit of ident is not valid
-            if ( ((shift3>>16)^shift0)&0x7fff ) {
+			if (((shift3 >> 16) ^ shift0) & 0x7fff ) {
                 DbpString("Error: Ident mismatch!");
             } else {
                 DbpString("Info: TI tag ident is valid");
@@ -328,7 +327,7 @@ void AcquireTiType(void)
     int i, j, n;
     // tag transmission is <20ms, sampling at 2M gives us 40K samples max
     // each sample is 1 bit stuffed into a uint32_t so we need 1250 uint32_t
-#define TIBUFLEN 1250
+ #define TIBUFLEN 1250
 
     // clear buffer
     memset(BigBuf,0,sizeof(BigBuf));
@@ -469,18 +468,18 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
     int i;
     uint8_t *tab = (uint8_t *)BigBuf;
-    
+
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-    
+
     AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
-    
+
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
     AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
-    
+
 #define SHORT_COIL()	LOW(GPIO_SSC_DOUT)
 #define OPEN_COIL()		HIGH(GPIO_SSC_DOUT)
-    
+
     i = 0;
     for(;;) {
         while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
@@ -490,18 +489,18 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
             }
             WDT_HIT();
         }
-        
+
         if (ledcontrol)
             LED_D_ON();
-        
+
         if(tab[i])
             OPEN_COIL();
         else
             SHORT_COIL();
-        
+
         if (ledcontrol)
             LED_D_OFF();
-        
+
         while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
             if(BUTTON_PRESS()) {
                 DbpString("Stopped");
@@ -509,7 +508,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
             }
             WDT_HIT();
         }
-        
+
         i++;
         if(i == period) {
             i = 0;
@@ -623,7 +622,6 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 
     if (ledcontrol)
         LED_A_ON();
-	
     SimulateTagLowFrequency(n, 0, ledcontrol);
 
     if (ledcontrol)
@@ -663,30 +661,30 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
                 uint8_t bitlen = 0;
                 uint32_t fc = 0;
                 uint32_t cardnum = 0;
-                if (((hi>>5)&1)==1){//if bit 38 is set then < 37 bit format is used
+				if (((hi>>5)&1) == 1){//if bit 38 is set then < 37 bit format is used
                     uint32_t lo2=0;
                     lo2=(((hi & 31) << 12) | (lo>>20)); //get bits 21-37 to check for format len bit
                     uint8_t idx3 = 1;
-                    while(lo2>1){ //find last bit set to 1 (format len bit)
-                        lo2=lo2>>1;
+					while(lo2 > 1){ //find last bit set to 1 (format len bit)
+						lo2=lo2 >> 1;
                         idx3++;
                     }
-                    bitlen =idx3+19;
+					bitlen = idx3+19;
                     fc =0;
                     cardnum=0;
-                    if(bitlen==26){
+					if(bitlen == 26){
                         cardnum = (lo>>1)&0xFFFF;
                         fc = (lo>>17)&0xFF;
                     }
-                    if(bitlen==37){
+					if(bitlen == 37){
                         cardnum = (lo>>1)&0x7FFFF;
                         fc = ((hi&0xF)<<12)|(lo>>20);
                     }
-                    if(bitlen==34){
+					if(bitlen == 34){
                         cardnum = (lo>>1)&0xFFFF;
                         fc= ((hi&1)<<15)|(lo>>17);
                     }
-                    if(bitlen==35){
+					if(bitlen == 35){
                         cardnum = (lo>>1)&0xFFFFF;
                         fc = ((hi&1)<<11)|(lo>>21);
                     }
@@ -1204,7 +1202,7 @@ void CopyIOtoT55x7(uint32_t hi, uint32_t lo, uint8_t longFMT)
 
     data1 = hi;  // load preamble
     data2 = lo;
-    
+
     LED_D_ON();
     // Program the data blocks for supplied ID
     // and the block 0 for HID format
@@ -1331,6 +1329,7 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo)
 // Clone Indala 64-bit tag by UID to T55x7
 void CopyIndala64toT55x7(int hi, int lo)
 {
+
     //Program the 2 data blocks for supplied 64bit UID
     // and the block 0 for Indala64 format
     T55xxWriteBlock(hi,1,0,0);
@@ -1344,10 +1343,12 @@ void CopyIndala64toT55x7(int hi, int lo)
     //	T5567WriteBlock(0x603E1042,0);
 
     DbpString("DONE!");
-}	
+
+}
 
 void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int uid6, int uid7)
 {
+
     //Program the 7 data blocks for supplied 224bit UID
     // and the block 0 for Indala224 format
     T55xxWriteBlock(uid1,1,0,0);
@@ -1366,6 +1367,7 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
     //	T5567WriteBlock(0x603E10E2,0);
 
     DbpString("DONE!");
+
 }
 
 
