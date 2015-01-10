@@ -74,7 +74,7 @@ local function main(args)
 	local outputTemplate = os.date("testtest_%Y-%m-%d_%H%M%S")
 
 	-- Arguments for the script
-	for o, arg in getopt.getopt(args, 'hk:no:') do
+	for o, arg in getopt.getopt(args, 'ho:') do
 		if o == "h" then return help() end		
 		if o == "o" then outputTemplate = arg end		
 	end
@@ -95,7 +95,7 @@ local function main(args)
 		table.insert(files, file)
 	end
 
-	local cmdLFSEARCH = "lf search" 
+	local cmdLFSEARCH = "lf search 1" 
 	
 	-- main loop
 	io.write('Starting to test traces > ')
