@@ -112,20 +112,15 @@ const manufactureName manufactureMapping[] = {
 // returns description of the best match	
 char* getTagInfo(uint8_t uid) {
 
-	int i, best = -1;	
+	int i;
 	int len = sizeof(manufactureMapping) / sizeof(manufactureName);
 	
-	for ( i = 0; i < len; ++i ) {
-		if ( uid == manufactureMapping[i].uid) {
-			if (best == -1) { 
-				best = i;
-			} 
-		} 
-	} 
+	for ( i = 0; i < len; ++i ) 
+		if ( uid == manufactureMapping[i].uid) 
+			return manufactureMapping[i].desc;
 
-	if (best>=0) return manufactureMapping[best].desc;
-	
-	return manufactureMapping[i].desc; 
+	//No match, return default
+	return manufactureMapping[len-1].desc; 
 }
 
 int CmdHF14AList(const char *Cmd)
