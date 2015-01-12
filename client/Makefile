@@ -13,9 +13,9 @@ CXX=g++
 VPATH = ../common
 OBJDIR = obj
 
-LDLIBS = -L/opt/local/lib -L/usr/local/lib ../liblua/liblua.a -lreadline -lpthread -lm -lcrypto
+LDLIBS = -L/opt/local/lib -L/usr/local/lib ../liblua/liblua.a -lreadline -lpthread -lm
 LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=c99 -lcrypto -I. -I../include -I../common -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O4 
+CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O4 
 LUAPLATFORM = generic
 
 ifneq (,$(findstring MINGW,$(platform)))
@@ -94,6 +94,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			scripting.c\
 			cmdscript.c\
 			pm3_bitlib.c\
+			aes.c\
 
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)

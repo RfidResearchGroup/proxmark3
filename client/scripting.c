@@ -18,8 +18,8 @@
 #include "util.h"
 #include "nonce2key/nonce2key.h"
 #include "../common/iso15693tools.h"
-#include <openssl/aes.h>   
 #include "../common/crc16.h"
+#include "aes.h"
 /**
  * The following params expected:
  *  UsbCommand c
@@ -240,10 +240,10 @@ static int l_aes(lua_State *L)
 
     const char *p_encTxt = luaL_checklstring(L, 2, &size);
     
-	unsigned char indata[AES_BLOCK_SIZE] = {0x00};
-	unsigned char outdata[AES_BLOCK_SIZE] = {0x00};
-    unsigned char aes_key[AES_BLOCK_SIZE] = {0x00};
-	unsigned char iv[AES_BLOCK_SIZE] = {0x00};
+	unsigned char indata[16] = {0x00};
+	unsigned char outdata[16] = {0x00};
+    unsigned char aes_key[16] = {0x00};
+	unsigned char iv[16] = {0x00};
 	
 	// convert key to bytearray
 	for (i = 0; i < 32; i += 2) {
@@ -255,10 +255,14 @@ static int l_aes(lua_State *L)
 		sscanf(&p_key[i], "%02x", (unsigned int *)&aes_key[i / 2]);
 	}
 	
-	AES_KEY key;
-	AES_set_decrypt_key(aes_key, 128, &key);
-    AES_cbc_encrypt(indata, outdata, sizeof(indata), &key, iv, AES_DECRYPT);
+	//AES_KEY key;
+    //AES_set_decrypt_key(aes_key, 128, &key);
+    //AES_cbc_encrypt(indata, outdata, sizeof(indata), &key, iv, AES_DECRYPT);
 
+    aes_context ctx;
+    aes_init(&ctx);
+    aes_setkey_enc(&ctx,(const unsigned char *)p_key,128);
+	aes_crypt_cbc(&ctx,AES_DECRYPT,sizeof(indata), iv, indata,outdata );
     //Push decrypted array as a string
 	lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
 	return 1;// return 1 to signal one return value
