@@ -27,6 +27,102 @@
 static int CmdHelp(const char *Cmd);
 static void waitCmd(uint8_t iLen);
 
+// structure and database for uid -> tagtype lookups 
+typedef struct { 
+	uint8_t uid;
+	char* desc;
+} manufactureName; 
+
+const manufactureName manufactureMapping[] = {
+	// ID,  "Vendor Country"
+	{ 0x01, "Motorola UK" },
+	{ 0x02, "ST Microelectronics SA France" },
+	{ 0x03, "Hitachi, Ltd Japan" }, 
+	{ 0x04, "NXP Semiconductors Germany" }, 
+	{ 0x05, "Infineon Technologies AG Germany" }, 
+	{ 0x06, "Cylink USA" }, 
+	{ 0x07, "Texas Instrument France" },
+	{ 0x08, "Fujitsu Limited Japan" }, 
+	{ 0x09, "Matsushita Electronics Corporation, Semiconductor Company Japan" }, 
+	{ 0x0A, "NEC Japan" }, 
+	{ 0x0B, "Oki Electric Industry Co. Ltd Japan" },
+	{ 0x0C, "Toshiba Corp. Japan" },
+	{ 0x0D, "Mitsubishi Electric Corp. Japan" },
+	{ 0x0E, "Samsung Electronics Co. Ltd Korea" },
+	{ 0x0F, "Hynix / Hyundai, Korea" },
+	{ 0x10, "LG-Semiconductors Co. Ltd Korea" },
+	{ 0x11, "Emosyn-EM Microelectronics USA" },
+	{ 0x12, "INSIDE Technology France" },
+	{ 0x13, "ORGA Kartensysteme GmbH Germany" },
+	{ 0x14, "SHARP Corporation Japan" },
+	{ 0x15, "ATMEL France" },
+	{ 0x16, "EM Microelectronic-Marin SA Switzerland" },
+	{ 0x17, "KSW Microtec GmbH Germany" },
+	{ 0x18, "ZMD AG Germany" },
+	{ 0x19, "XICOR, Inc. USA" },
+	{ 0x1A, "Sony Corporation Japan Identifier Company Country" },
+	{ 0x1B, "Malaysia Microelectronic Solutions Sdn. Bhd Malaysia" },
+	{ 0x1C, "Emosyn USA" },
+	{ 0x1D, "Shanghai Fudan Microelectronics Co. Ltd. P.R. China" },
+	{ 0x1E, "Magellan Technology Pty Limited Australia" },
+	{ 0x1F, "Melexis NV BO Switzerland" },
+	{ 0x20, "Renesas Technology Corp. Japan" },
+	{ 0x21, "TAGSYS France" },
+	{ 0x22, "Transcore USA" },
+	{ 0x23, "Shanghai belling corp., ltd. China" },
+	{ 0x24, "Masktech Germany Gmbh Germany" },
+	{ 0x25, "Innovision Research and Technology Plc UK" },
+	{ 0x26, "Hitachi ULSI Systems Co., Ltd. Japan" },
+	{ 0x27, "Cypak AB Sweden" },
+	{ 0x28, "Ricoh Japan" },
+	{ 0x29, "ASK France" },
+	{ 0x2A, "Unicore Microsystems, LLC Russian Federation" },
+	{ 0x2B, "Dallas Semiconductor/Maxim USA" },
+	{ 0x2C, "Impinj, Inc. USA" },
+	{ 0x2D, "RightPlug Alliance USA" },
+	{ 0x2E, "Broadcom Corporation USA" },
+	{ 0x2F, "MStar Semiconductor, Inc Taiwan, ROC" },
+	{ 0x30, "BeeDar Technology Inc. USA" },
+	{ 0x31, "RFIDsec Denmark" },
+	{ 0x32, "Schweizer Electronic AG Germany" },
+	{ 0x33, "AMIC Technology Corp Taiwan" }, 
+	{ 0x34, "Mikron JSC Russia" },
+	{ 0x35, "Fraunhofer Institute for Photonic Microsystems Germany" },
+	{ 0x36, "IDS Microchip AG Switzerland" },
+	{ 0x37, "Kovio USA" },
+	{ 0x38, "HMT Microelectronic Ltd Switzerland Identifier Company Country" },
+	{ 0x39, "Silicon Craft Technology Thailand" },
+	{ 0x3A, "Advanced Film Device Inc. Japan" },
+	{ 0x3B, "Nitecrest Ltd UK" },
+	{ 0x3C, "Verayo Inc. USA" },
+	{ 0x3D, "HID Global USA" },
+	{ 0x3E, "Productivity Engineering Gmbh Germany" },
+	{ 0x3F, "Austriamicrosystems AG (reserved) Austria" }, 
+	{ 0x40, "Gemalto SA France" },
+	{ 0x41, "Renesas Electronics Corporation Japan" },
+	{ 0x42, "3Alogics Inc Korea" },
+	{ 0x43, "Top TroniQ Asia Limited Hong Kong" },
+	{ 0x44, "Gentag Inc (USA) USA" },
+	{ 0x00, "no tag-info available" } // must be the last entry
+};
+
+
+// get a product description based on the UID
+//		uid[8] 	tag uid
+// returns description of the best match	
+char* getTagInfo(uint8_t uid) {
+
+	int i;
+	int len = sizeof(manufactureMapping) / sizeof(manufactureName);
+	
+	for ( i = 0; i < len; ++i ) 
+		if ( uid == manufactureMapping[i].uid) 
+			return manufactureMapping[i].desc;
+
+	//No match, return default
+	return manufactureMapping[len-1].desc; 
+}
+
 int CmdHF14AList(const char *Cmd)
 {
 	PrintAndLog("Deprecated command, use 'hf list 14a' instead");
@@ -65,6 +161,12 @@ int CmdHF14AReader(const char *Cmd)
 	PrintAndLog(" UID : %s", sprint_hex(card.uid, card.uidlen));
 	PrintAndLog(" SAK : %02x [%d]", card.sak, resp.arg[0]);
 
+	// Double & triple sized UID, can be mapped to a manufacturer.
+	// HACK: does this apply for Ultralight cards?
+	if ( card.uidlen > 4 ) {
+		PrintAndLog("MANUFACTURER : %s", getTagInfo(card.uid[0]));
+	}
+
 	switch (card.sak) {
 		case 0x00: PrintAndLog("TYPE : NXP MIFARE Ultralight | Ultralight C"); break;
 		case 0x01: PrintAndLog("TYPE : NXP TNP3xxx Activision Game Appliance"); break;
@@ -83,7 +185,6 @@ int CmdHF14AReader(const char *Cmd)
 		default: ;
 	}
 
-	
 	// try to request ATS even if tag claims not to support it
 	if (select_status == 2) {
 		uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
@@ -98,13 +199,6 @@ int CmdHF14AReader(const char *Cmd)
 		card.ats_len = resp.arg[0];				// note: ats_len includes CRC Bytes
 	} 
 
-	// disconnect
-	c.arg[0] = 0;
-	c.arg[1] = 0;
-	c.arg[2] = 0;
-	SendCommand(&c);
-
-	
 	if(card.ats_len >= 3) {			// a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
 		bool ta1 = 0, tb1 = 0, tc1 = 0;
 		int pos;
@@ -242,6 +336,24 @@ int CmdHF14AReader(const char *Cmd)
 	} else {
 		PrintAndLog("proprietary non iso14443-4 card found, RATS not supported");
 	}
+
+	
+	// try to see if card responses to "chinese magic backdoor" commands.
+	c.cmd = CMD_MIFARE_CIDENT;
+	c.arg[0] = 0;
+	c.arg[1] = 0;
+	c.arg[2] = 0;	
+	SendCommand(&c);
+	WaitForResponse(CMD_ACK,&resp);
+	uint8_t isOK  = resp.arg[0] & 0xff;
+	PrintAndLog(" Answers to chinese magic backdoor commands: %s", (isOK ? "YES" : "NO") );
+	
+	// disconnect
+	c.cmd = CMD_READER_ISO_14443a;
+	c.arg[0] = 0;
+	c.arg[1] = 0;
+	c.arg[2] = 0;
+	SendCommand(&c);
 
 	return select_status;
 }
@@ -397,19 +509,22 @@ int CmdHF14ACmdRaw(const char *cmd) {
     uint8_t active=0;
     uint8_t active_select=0;
     uint16_t numbits=0;
+	uint16_t timeout=0;
+	uint8_t bTimeout=0;
     char buf[5]="";
     int i=0;
-    uint8_t data[100];
+    uint8_t data[USB_CMD_DATA_SIZE];
     unsigned int datalen=0, temp;
 
     if (strlen(cmd)<2) {
-        PrintAndLog("Usage: hf 14a raw [-r] [-c] [-p] [-f] [-b] <number of bits> <0A 0B 0C ... hex>");
+        PrintAndLog("Usage: hf 14a raw [-r] [-c] [-p] [-f] [-b] [-t] <number of bits> <0A 0B 0C ... hex>");
         PrintAndLog("       -r    do not read response");
         PrintAndLog("       -c    calculate and append CRC");
         PrintAndLog("       -p    leave the signal field ON after receive");
         PrintAndLog("       -a    active signal field ON without select");
         PrintAndLog("       -s    active signal field ON with select");
         PrintAndLog("       -b    number of bits to send. Useful for send partial byte");
+		PrintAndLog("       -t    timeout");
         return 0;
     }
 
@@ -442,6 +557,14 @@ int CmdHF14ACmdRaw(const char *cmd) {
                     while(cmd[i]!=' ' && cmd[i]!='\0') { i++; }
                     i-=2;
                     break;
+				case 't':
+					bTimeout=1;
+					sscanf(cmd+i+2,"%d",&temp);
+					timeout = temp & 0xFFFF;
+					i+=3;
+					while(cmd[i]!=' ' && cmd[i]!='\0') { i++; }
+					i+=2;
+					break;
                 default:
                     PrintAndLog("Invalid option");
                     return 0;
@@ -459,15 +582,19 @@ int CmdHF14ACmdRaw(const char *cmd) {
             if (strlen(buf)>=2) {
                 sscanf(buf,"%x",&temp);
                 data[datalen]=(uint8_t)(temp & 0xff);
-                datalen++;
                 *buf=0;
+				if (++datalen>sizeof(data)){
+					if (crc)
+						PrintAndLog("Buffer is full, we can't add CRC to your data");
+					break;
+				}
             }
             continue;
         }
         PrintAndLog("Invalid char on input");
         return 0;
     }
-    if(crc && datalen>0)
+    if(crc && datalen>0 && datalen<sizeof(data)-2)
     {
         uint8_t first, second;
         ComputeCrc14443(CRC_14443_A, data, datalen, &first, &second);
@@ -481,13 +608,22 @@ int CmdHF14ACmdRaw(const char *cmd) {
         if(active)
             c.arg[0] |= ISO14A_NO_SELECT;
     }
+	if(bTimeout){
+	    #define MAX_TIMEOUT 624*105 // max timeout is 624 ms
+        c.arg[0] |= ISO14A_SET_TIMEOUT;
+        c.arg[2] = timeout * 105; // each bit is about 9.4 us
+        if(c.arg[2]>MAX_TIMEOUT) {
+            c.arg[2] = MAX_TIMEOUT;
+            PrintAndLog("Set timeout to 624 ms. The max we can wait for response");
+        }
+	}
     if(power)
         c.arg[0] |= ISO14A_NO_DISCONNECT;
     if(datalen>0)
         c.arg[0] |= ISO14A_RAW;
 
-    c.arg[1] = datalen;
-    c.arg[2] = numbits;
+	// Max buffer is USB_CMD_DATA_SIZE
+    c.arg[1] = (datalen & 0xFFFF) | (numbits << 16);
     memcpy(c.d.asBytes,data,datalen);
 
     SendCommand(&c);
@@ -507,7 +643,7 @@ static void waitCmd(uint8_t iSelect)
     UsbCommand resp;
     char *hexout;
 
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
         recv = resp.d.asBytes;
         uint8_t iLen = iSelect ? resp.arg[1] : resp.arg[0];
         PrintAndLog("received %i octets",iLen);

@@ -19,6 +19,7 @@
 #include "cmdparser.h"
 #include "cmdmain.h"
 #include "cmddata.h"
+#include "util.h"
 #include "cmdlf.h"
 #include "cmdlfhid.h"
 #include "cmdlfti.h"
@@ -380,10 +381,8 @@ static void ChkBitstream(const char *str)
   int i;
 
   /* convert to bitstream if necessary */
-  for (i = 0; i < (int)(GraphTraceLen / 2); i++)
-  {
-    if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0)
-    {
+	for (i = 0; i < (int)(GraphTraceLen / 2); i++){
+		if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
       CmdBitstream(str);
       break;
     }
@@ -392,7 +391,7 @@ static void ChkBitstream(const char *str)
 
 int CmdLFSim(const char *Cmd)
 {
-  int i;
+	int i,j;
   static int gap;
 
   sscanf(Cmd, "%i", &gap);
@@ -400,18 +399,20 @@ int CmdLFSim(const char *Cmd)
   /* convert to bitstream if necessary */
   ChkBitstream(Cmd);
 
-  PrintAndLog("Sending data, please wait...");
-  for (i = 0; i < GraphTraceLen; i += 48) {
+	printf("Sending [%d bytes]", GraphTraceLen);
+	for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
     UsbCommand c={CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
-    int j;
-    for (j = 0; j < 48; j++) {
+
+		for (j = 0; j < USB_CMD_DATA_SIZE; j++) {
       c.d.asBytes[j] = GraphBuffer[i+j];
     }
     SendCommand(&c);
     WaitForResponse(CMD_ACK,NULL);
+		printf(".");
   }
 
-  PrintAndLog("Starting simulator...");
+	printf("\n");
+	PrintAndLog("Starting to simulate");
   UsbCommand c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
   SendCommand(&c);
   return 0;
@@ -554,11 +555,25 @@ int CmdVchDemod(const char *Cmd)
 int CmdLFfind(const char *Cmd)
 {
   int ans=0;
-  if (!offline){
+	char cmdp = param_getchar(Cmd, 0);
+	
+	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  lf search <0|1>");
+		PrintAndLog("     <use data from Graphbuffer>, if not set, try reading data from tag.");
+		PrintAndLog("");
+		PrintAndLog("    sample: lf search");
+		PrintAndLog("          : lf search 1");
+		return 0;
+	}
+
+	if (!offline || (cmdp != '1') ){
     ans=CmdLFRead("");
-    ans=CmdSamples("20000");
+	ans=CmdSamples("20000");
+	} else if (GraphTraceLen < 1000) {
+		PrintAndLog("Data in Graphbuffer was too small.");
+		return 0;
   }
-  if (GraphTraceLen<1000) return 0;
+
   PrintAndLog("Checking for known tags:");
   ans=Cmdaskmandemod("");
   if (ans>0) return 1;

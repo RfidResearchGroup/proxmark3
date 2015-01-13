@@ -34,8 +34,6 @@
 #include "string.h"
 #include "proxmark3.h"
 
-//static UsbCommand txcmd;
-
 bool cmd_receive(UsbCommand* cmd) {
  
   // Check if there is a usb packet available

@@ -132,7 +132,7 @@ int getCommand(UsbCommand* response)
 bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeout) {
   
   UsbCommand resp;
-
+	
 	if (response == NULL)
     response = &resp;
 

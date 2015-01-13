@@ -20,74 +20,76 @@ int GraphTraceLen;
 /* write a bit to the graph */
 void AppendGraph(int redraw, int clock, int bit)
 {
-	int i;
+  int i;
 
-	for (i = 0; i < (int)(clock / 2); ++i)
-		GraphBuffer[GraphTraceLen++] = bit ^ 1;
+  for (i = 0; i < (int)(clock / 2); ++i)
+    GraphBuffer[GraphTraceLen++] = bit ^ 1;
 
-	for (i = (int)(clock / 2); i < clock; ++i)
-		GraphBuffer[GraphTraceLen++] = bit;
+  for (i = (int)(clock / 2); i < clock; ++i)
+    GraphBuffer[GraphTraceLen++] = bit;
 
-	if (redraw)
-		RepaintGraphWindow();
+  if (redraw)
+    RepaintGraphWindow();
 }
 
 // clear out our graph window
 int ClearGraph(int redraw)
 {
-	int gtl = GraphTraceLen;
-	GraphTraceLen = 0;
+  int gtl = GraphTraceLen;
+  memset(GraphBuffer, 0x00, GraphTraceLen);
 
-	if (redraw)
-		RepaintGraphWindow();
+  GraphTraceLen = 0;
 
-	return gtl;
+  if (redraw)
+    RepaintGraphWindow();
+
+  return gtl;
 }
 
 // DETECT CLOCK NOW IN LFDEMOD.C
 
 void setGraphBuf(uint8_t *buff, size_t size)
 {
-	int i=0;
-	ClearGraph(0);
-	for (; i < size; ++i){
+  int i=0;
+  ClearGraph(0);
+  for (; i < size; ++i){
 		GraphBuffer[i]=buff[i]-128;
-	}
-	GraphTraceLen=size;
-	RepaintGraphWindow();
-	return;
+  }
+  GraphTraceLen=size;
+  RepaintGraphWindow();
+  return;
 }
 size_t getFromGraphBuf(uint8_t *buff)
 {
-	uint32_t i;
-	for (i=0;i<GraphTraceLen;++i){
-		if (GraphBuffer[i]>127) GraphBuffer[i]=127; //trim
-		if (GraphBuffer[i]<-127) GraphBuffer[i]=-127; //trim
-		buff[i]=(uint8_t)(GraphBuffer[i]+128);
-	}
-	return i;
+  uint32_t i;
+  for (i=0;i<GraphTraceLen;++i){
+    if (GraphBuffer[i]>127) GraphBuffer[i]=127; //trim
+    if (GraphBuffer[i]<-127) GraphBuffer[i]=-127; //trim
+    buff[i]=(uint8_t)(GraphBuffer[i]+128);
+  }
+  return i;
 }
 // Get or auto-detect clock rate
 int GetClock(const char *str, int peak, int verbose)
 {
-	int clock;
-	sscanf(str, "%i", &clock);
-	if (!strcmp(str, ""))
-		clock = 0;
+  int clock;
+  sscanf(str, "%i", &clock);
+  if (!strcmp(str, ""))
+    clock = 0;
 
 	// Auto-detect clock
-	if (!clock)
-	{
-		uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
+  if (!clock)
+  {
+    uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
 		size_t size = getFromGraphBuf(grph);
-		clock = DetectASKClock(grph,size,0);
+    clock = DetectASKClock(grph,size,0);
 		// Only print this message if we're not looping something
-		if (!verbose){
-			PrintAndLog("Auto-detected clock rate: %d", clock);
-		}
-	}
+    if (!verbose){
+      PrintAndLog("Auto-detected clock rate: %d", clock);
+    }
+  }
 
-	return clock;
+  return clock;
 }
 
 int GetNRZpskClock(const char *str, int peak, int verbose)

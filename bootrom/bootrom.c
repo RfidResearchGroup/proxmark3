@@ -103,13 +103,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
   switch(c->cmd) {
     case CMD_DEVICE_INFO: {
       dont_ack = 1;
-//      c->cmd = CMD_DEVICE_INFO;
       arg0 = DEVICE_INFO_FLAG_BOOTROM_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
       DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH;
       if(common_area.flags.osimage_present) {
         arg0 |= DEVICE_INFO_FLAG_OSIMAGE_PRESENT;
       }
-//      UsbSendPacket(packet, len);
       cmd_send(CMD_DEVICE_INFO,arg0,1,2,0,0);
     } break;
       
@@ -125,10 +123,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
       
     case CMD_FINISH_WRITE: {
       uint32_t* flash_mem = (uint32_t*)(&_flash_start);
-//      p = (volatile uint32_t *)&_flash_start;
       for (size_t j=0; j<2; j++) {
         for(i = 0+(64*j); i < 64+(64*j); i++) {
-          //p[i+60] = c->d.asDwords[i];
           flash_mem[i] = c->d.asDwords[i];
         }
         
@@ -138,8 +134,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         if( ((flash_address+AT91C_IFLASH_PAGE_SIZE-1) >= end_addr) || (flash_address < start_addr) ) {
           /* Disallow write */
           dont_ack = 1;
-          //        c->cmd = CMD_NACK;
-          //        UsbSendPacket(packet, len);
           cmd_send(CMD_NACK,0,0,0,0,0);
         } else {
           uint32_t page_n = (flash_address - ((uint32_t)flash_mem)) / AT91C_IFLASH_PAGE_SIZE;
@@ -147,7 +141,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
           AT91C_BASE_EFC0->EFC_FCR = MC_FLASH_COMMAND_KEY |
           MC_FLASH_COMMAND_PAGEN(page_n) |
           AT91C_MC_FCMD_START_PROG;
-          //        arg0 = (address - ((uint32_t)flash_s));
         }
         
         // Wait until flashing of page finishes
@@ -155,15 +148,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         while(!((sr = AT91C_BASE_EFC0->EFC_FSR) & AT91C_MC_FRDY));
         if(sr & (AT91C_MC_LOCKE | AT91C_MC_PROGE)) {
           dont_ack = 1;
-          //        c->cmd = CMD_NACK;
           cmd_send(CMD_NACK,0,0,0,0,0);
-          //        UsbSendPacket(packet, len);
         }
       }
     } break;
       
     case CMD_HARDWARE_RESET: {
-//      USB_D_PLUS_PULLUP_OFF();
       usb_disable();
       AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
     } break;
@@ -189,8 +179,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         } else {
           start_addr = end_addr = 0;
           dont_ack = 1;
-//          c->cmd = CMD_NACK;
-//          UsbSendPacket(packet, len);
           cmd_send(CMD_NACK,0,0,0,0,0);
         }
       }
@@ -202,8 +190,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
   }
   
   if(!dont_ack) {
-//    c->cmd = CMD_ACK;
-//    UsbSendPacket(packet, len);
     cmd_send(CMD_ACK,arg0,0,0,0,0);
   }
 }
@@ -219,23 +205,18 @@ static void flash_mode(int externally_entered)
   usb_enable();
   for (volatile size_t i=0; i<0x100000; i++);
 
-//	UsbStart();
 	for(;;) {
 		WDT_HIT();
 
     if (usb_poll()) {
       rx_len = usb_read(rx,sizeof(UsbCommand));
       if (rx_len) {
-//        DbpString("starting to flash");
         UsbPacketReceived(rx,rx_len);
       }
     }
 
-//		UsbPoll(TRUE);
-
 		if(!externally_entered && !BUTTON_PRESS()) {
 			/* Perform a reset to leave flash mode */
-//			USB_D_PLUS_PULLUP_OFF();
       usb_disable();
 			LED_B_ON();
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;

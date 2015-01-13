@@ -52,11 +52,8 @@ void ReceiveCommand(UsbCommand* rxcmd) {
   while (true) {
     rxlen = sizeof(UsbCommand) - (prx-prxcmd);
     if (uart_receive(sp,prx,&rxlen)) {
-//      printf("received [%zd] bytes\n",rxlen);
       prx += rxlen;
       if ((prx-prxcmd) >= sizeof(UsbCommand)) {
-//        printf("received: ");
-//        cmd_debug(rxcmd);
         return;
       }
     }

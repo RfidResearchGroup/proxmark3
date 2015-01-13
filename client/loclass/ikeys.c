@@ -725,7 +725,6 @@ int doTestsWithKnownInputs()
 
 int readKeyFile(uint8_t key[8])
 {
-
 	FILE *f;
 	int retval = 1;
 	f = fopen("iclass_key.bin", "rb");
@@ -738,7 +737,6 @@ int readKeyFile(uint8_t key[8])
 		fclose(f);
 	}
 	return retval;
-
 }
 
 

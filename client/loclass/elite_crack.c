@@ -514,7 +514,6 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[])
  */
 int bruteforceFile(const char *filename, uint16_t keytable[])
 {
-
 	FILE *f = fopen(filename, "rb");
 	if(!f) {
 		prnlog("Failed to read from file '%s'", filename);
