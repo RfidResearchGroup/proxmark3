@@ -141,6 +141,24 @@ local _keys = {
 	'200000000000',
 	'a00000000000',
 	'b00000000000',	
+	
+	--[[
+    Should be for Mifare TNP3xxx tags A KEY.
+    --]]
+	'4b0b20107ccb',
+
+	--[[
+    Kiev metro cards
+    --]]	
+	'8fe644038790',
+	'f14ee7cae863',
+	'632193be1c3c',
+	'569369c5a0e5',
+	'9de89e070277',
+	'eff603e1efe9',
+	'644672bd4afe',
+
+	'b5ff67cba951',
   }
 
 ---

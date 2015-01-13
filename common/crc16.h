@@ -5,10 +5,11 @@
 //-----------------------------------------------------------------------------
 // CRC16
 //-----------------------------------------------------------------------------
+#include <stdint.h>
 
 #ifndef __CRC16_H
 #define __CRC16_H
-
 unsigned short update_crc16(unsigned short crc, unsigned char c);
-
+uint16_t crc16(uint8_t const *message, int length, uint16_t remainder, uint16_t polynomial);
+uint16_t crc16_ccitt(uint8_t const *message, int length);
 #endif

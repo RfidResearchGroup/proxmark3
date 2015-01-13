@@ -223,7 +223,6 @@ byte_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
 void usb_disable() {
   // Disconnect the USB device
   AT91C_BASE_PIOA->PIO_ODR = GPIO_USB_PU;
-//  SpinDelay(100);
   
   // Clear all lingering interrupts
   if(pUdp->UDP_ISR & AT91C_UDP_ENDBUSRES) {
@@ -257,7 +256,6 @@ void usb_enable() {
   
   // Wait for a short while
   for (volatile size_t i=0; i<0x100000; i++);
-//  SpinDelay(100);
 
   // Reconnect USB reconnect
   AT91C_BASE_PIOA->PIO_SODR = GPIO_USB_PU;
@@ -304,8 +302,7 @@ uint32_t usb_read(byte_t* data, size_t len) {
 	uint32_t packetSize, nbBytesRcv = 0;
   uint32_t time_out = 0;
   
-	while (len)
-  {
+	while (len)  {
 		if (!usb_check()) break;
 
 		if ( pUdp->UDP_CSR[AT91C_EP_OUT] & bank ) {
@@ -314,8 +311,7 @@ uint32_t usb_read(byte_t* data, size_t len) {
 			while(packetSize--)
 				data[nbBytesRcv++] = pUdp->UDP_FDR[AT91C_EP_OUT];
 			pUdp->UDP_CSR[AT91C_EP_OUT] &= ~(bank);
-			if (bank == AT91C_UDP_RX_DATA_BK0)
-      {
+			if (bank == AT91C_UDP_RX_DATA_BK0) {
 				bank = AT91C_UDP_RX_DATA_BK1;
       } else {
 				bank = AT91C_UDP_RX_DATA_BK0;

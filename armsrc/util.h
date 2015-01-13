@@ -27,10 +27,14 @@
 #define BUTTON_DOUBLE_CLICK -2
 #define BUTTON_ERROR -99
 
+void print_result(char *name, uint8_t *buf, size_t len);
 size_t nbytes(size_t nbits);
 uint32_t SwapBits(uint32_t value, int nrbits);
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
 uint64_t bytes_to_num(uint8_t* src, size_t len);
+void rol(uint8_t *data, const size_t len);
+void lsl (uint8_t *data, size_t len);
+int32_t le24toh (uint8_t data[3]);
 
 void SpinDelay(int ms);
 void SpinDelayUs(int us);

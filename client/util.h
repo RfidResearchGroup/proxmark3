@@ -15,6 +15,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#include "data.h"
 
 #ifndef MIN
 # define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -22,6 +23,10 @@
 #ifndef MAX
 # define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
+#define TRUE                        1
+#define FALSE                       0
+#define EVEN                        0
+#define ODD                         1
 
 int ukbhit(void);
 
@@ -33,9 +38,11 @@ void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext, int byteCount);
 
 void print_hex(const uint8_t * data, const size_t len);
 char * sprint_hex(const uint8_t * data, const size_t len);
+char * sprint_bin(const uint8_t * data, const size_t len);
 
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
 uint64_t bytes_to_num(uint8_t* src, size_t len);
+char * printBits(size_t const size, void const * const ptr);
 
 char param_getchar(const char *line, int paramnum);
 uint8_t param_get8(const char *line, int paramnum);
@@ -44,4 +51,11 @@ uint32_t param_get32ex(const char *line, int paramnum, int deflt, int base);
 uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base);
 int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt);
 int param_getstr(const char *line, int paramnum, char * str);
+
+ int hextobinarray( char *target,  char *source);
+ int hextobinstring( char *target,  char *source);
+ int binarraytohex( char *target,  char *source,  int length);
+void binarraytobinstring(char *target,  char *source,  int length);
+uint8_t GetParity( char *string, uint8_t type,  int length);
+void wiegand_add_parity(char *target, char *source, char length);
 

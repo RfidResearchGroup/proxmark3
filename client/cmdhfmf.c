@@ -66,8 +66,7 @@ start:
 	if (isOK != 1) return 1;
 	
 	// execute original function from util nonce2key
-	if (nonce2key(uid, nt, nr, par_list, ks_list, &r_key))
-	{
+	if (nonce2key(uid, nt, nr, par_list, ks_list, &r_key)) {
 		isOK = 2;
 		PrintAndLog("Key not found (lfsr_common_prefix list is null). Nt=%08x", nt);	
 	} else {
@@ -512,8 +511,8 @@ int CmdHF14AMfDump(const char *Cmd)
 			return 2;
 		}
 	}
+	
 	fclose(fin);
-	// Read access rights to sectors
 
 	PrintAndLog("|-----------------------------------------|");
 	PrintAndLog("|------ Reading sector access bits...-----|");
@@ -543,8 +542,6 @@ int CmdHF14AMfDump(const char *Cmd)
 			rights[sectorNo][3] = 0x01;
 		}
 	}
-	
-	// Read blocks and print to file
 	
 	PrintAndLog("|-----------------------------------------|");
 	PrintAndLog("|----- Dumping all blocks to file... -----|");
@@ -629,8 +626,8 @@ int CmdHF14AMfRestore(const char *Cmd)
 {
 	uint8_t sectorNo,blockNo;
 	uint8_t keyType = 0;
-	uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-	uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t key[6] = {0xFF};
+	uint8_t bldata[16] = {0x00};
 	uint8_t keyA[40][6];
 	uint8_t keyB[40][6];
 	uint8_t numSectors;
@@ -657,20 +654,15 @@ int CmdHF14AMfRestore(const char *Cmd)
 		return 0;
 	}
 
-	if ((fdump = fopen("dumpdata.bin","rb")) == NULL) {
-		PrintAndLog("Could not find file dumpdata.bin");
-		return 1;
-	}
 	if ((fkeys = fopen("dumpkeys.bin","rb")) == NULL) {
 		PrintAndLog("Could not find file dumpkeys.bin");
-		fclose(fdump);
 		return 1;
 	}
 	
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		if (fread(keyA[sectorNo], 1, 6, fkeys) == 0) {
 			PrintAndLog("File reading error (dumpkeys.bin).");
-			fclose(fdump);
+
 			fclose(fkeys);
 			return 2;
 		}
@@ -679,13 +671,17 @@ int CmdHF14AMfRestore(const char *Cmd)
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		if (fread(keyB[sectorNo], 1, 6, fkeys) == 0) {
 			PrintAndLog("File reading error (dumpkeys.bin).");
-			fclose(fdump);
 			fclose(fkeys);
 			return 2;
 		}
 	}
+
 	fclose(fkeys);
 
+	if ((fdump = fopen("dumpdata.bin","rb")) == NULL) {
+		PrintAndLog("Could not find file dumpdata.bin");
+		return 1;
+	}	
 	PrintAndLog("Restoring dumpdata.bin to card");
 
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
@@ -743,7 +739,7 @@ int CmdHF14AMfNested(const char *Cmd)
 	uint8_t trgKeyType = 0;
 	uint8_t SectorsCnt = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-	uint8_t keyBlock[6*6];
+	uint8_t keyBlock[13*6];
 	uint64_t key64 = 0;
 	bool transferToEml = false;
 	
@@ -773,11 +769,15 @@ int CmdHF14AMfNested(const char *Cmd)
 	cmdp = param_getchar(Cmd, 0);
 	blockNo = param_get8(Cmd, 1);
 	ctmp = param_getchar(Cmd, 2);
+	
 	if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
 		PrintAndLog("Key type must be A or B");
 		return 1;
 	}
-	if (ctmp != 'A' && ctmp != 'a') keyType = 1;
+	
+	if (ctmp != 'A' && ctmp != 'a') 
+		keyType = 1;
+		
 	if (param_gethex(Cmd, 3, key, 12)) {
 		PrintAndLog("Key must include 12 HEX symbols");
 		return 1;
@@ -791,8 +791,10 @@ int CmdHF14AMfNested(const char *Cmd)
 			PrintAndLog("Target key type must be A or B");
 			return 1;
 		}
-		if (ctmp != 'A' && ctmp != 'a') trgKeyType = 1;
+		if (ctmp != 'A' && ctmp != 'a') 
+			trgKeyType = 1;
 	} else {
+				
 		switch (cmdp) {
 			case '0': SectorsCnt = 05; break;
 			case '1': SectorsCnt = 16; break;
@@ -854,6 +856,14 @@ int CmdHF14AMfNested(const char *Cmd)
 		num_to_bytes(0xa0a1a2a3a4a5, 6, (uint8_t*)(keyBlock + 3 * 6));
 		num_to_bytes(0xb0b1b2b3b4b5, 6, (uint8_t*)(keyBlock + 4 * 6));
 		num_to_bytes(0xaabbccddeeff, 6, (uint8_t*)(keyBlock + 5 * 6));
+		num_to_bytes(0x4d3a99c351dd, 6, (uint8_t*)(keyBlock + 6 * 6));
+		num_to_bytes(0x1a982c7e459a, 6, (uint8_t*)(keyBlock + 7 * 6));
+		num_to_bytes(0xd3f7d3f7d3f7, 6, (uint8_t*)(keyBlock + 8 * 6));
+		num_to_bytes(0x714c5c886e97, 6, (uint8_t*)(keyBlock + 9 * 6));
+		num_to_bytes(0x587ee5f9350f, 6, (uint8_t*)(keyBlock + 10 * 6));
+		num_to_bytes(0xa0478cc39091, 6, (uint8_t*)(keyBlock + 11 * 6));
+		num_to_bytes(0x533cb6c723f6, 6, (uint8_t*)(keyBlock + 12 * 6));
+		num_to_bytes(0x8fd0a4f256e9, 6, (uint8_t*)(keyBlock + 13 * 6));
 
 		PrintAndLog("Testing known keys. Sector count=%d", SectorsCnt);
 		for (i = 0; i < SectorsCnt; i++) {
@@ -869,7 +879,6 @@ int CmdHF14AMfNested(const char *Cmd)
 			}
 		}
 		
-		
 		// nested sectors
 		iterations = 0;
 		PrintAndLog("nested...");
@@ -882,8 +891,7 @@ int CmdHF14AMfNested(const char *Cmd)
 					if(mfnested(blockNo, keyType, key, FirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate)) {
 						PrintAndLog("Nested error.\n");
 						free(e_sector);
-						return 2;
-					}
+						return 2;					}
 					else {
 						calibrate = false;
 					}
@@ -972,7 +980,7 @@ int CmdHF14AMfChk(const char *Cmd)
 	}	
 
 	FILE * f;
-	char filename[256]={0};
+	char filename[FILE_PATH_SIZE]={0};
 	char buf[13];
 	uint8_t *keyBlock = NULL, *p;
 	uint8_t stKeyBlock = 20;
@@ -1064,7 +1072,7 @@ int CmdHF14AMfChk(const char *Cmd)
 			keycnt++;
 		} else {
 			// May be a dic file
-			if ( param_getstr(Cmd, 2 + i,filename) > 255 ) {
+			if ( param_getstr(Cmd, 2 + i,filename) >= FILE_PATH_SIZE ) {
 				PrintAndLog("File name too long");
 				free(keyBlock);
 				return 2;
@@ -1345,26 +1353,44 @@ int CmdHF14AMfESet(const char *Cmd)
 int CmdHF14AMfELoad(const char *Cmd)
 {
 	FILE * f;
-	char filename[20];
+	char filename[FILE_PATH_SIZE];
 	char *fnameptr = filename;
 	char buf[64];
 	uint8_t buf8[64];
-	int i, len, blockNum;
+	int i, len, blockNum, numBlocks;
+	int nameParamNo = 1;
 	
 	memset(filename, 0, sizeof(filename));
 	memset(buf, 0, sizeof(buf));
 
-	if (param_getchar(Cmd, 0) == 'h' || param_getchar(Cmd, 0)== 0x00) {
+	char ctmp = param_getchar(Cmd, 0);
+		
+	if ( ctmp == 'h' || ctmp == 0x00) {
 		PrintAndLog("It loads emul dump from the file `filename.eml`");
-		PrintAndLog("Usage:  hf mf eload <file name w/o `.eml`>");
+		PrintAndLog("Usage:  hf mf eload [card memory] <file name w/o `.eml`>");
+		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+		PrintAndLog("");
 		PrintAndLog(" sample: hf mf eload filename");
+		PrintAndLog("         hf mf eload 4 filename");
 		return 0;
 	}	
 
-	len = strlen(Cmd);
-	if (len > 14) len = 14;
+	switch (ctmp) {
+		case '0' : numBlocks = 5*4; break;
+		case '1' : 
+		case '\0': numBlocks = 16*4; break;
+		case '2' : numBlocks = 32*4; break;
+		case '4' : numBlocks = 256; break;
+		default:  {
+			numBlocks = 16*4;
+			nameParamNo = 0;
+		}
+	}
 
-	memcpy(filename, Cmd, len);
+	len = param_getstr(Cmd,nameParamNo,filename);
+	
+	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+
 	fnameptr += len;
 
 	sprintf(fnameptr, ".eml"); 
@@ -1379,14 +1405,16 @@ int CmdHF14AMfELoad(const char *Cmd)
 	blockNum = 0;
 	while(!feof(f)){
 		memset(buf, 0, sizeof(buf));
+		
 		if (fgets(buf, sizeof(buf), f) == NULL) {
-			if((blockNum == 16*4) || (blockNum == 32*4 + 8*16)) {	// supports both old (1K) and new (4K) .eml files)
-				break;
-			}
+			
+			if (blockNum >= numBlocks) break;
+			
 			PrintAndLog("File reading error.");
 			fclose(f);
 			return 2;
 		}
+		
 		if (strlen(buf) < 32){
 			if(strlen(buf) && feof(f))
 				break;
@@ -1394,6 +1422,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 			fclose(f);
 			return 2;
 		}
+		
 		for (i = 0; i < 32; i += 2) {
 			sscanf(&buf[i], "%02x", (unsigned int *)&buf8[i / 2]);
 		}
@@ -1405,12 +1434,12 @@ int CmdHF14AMfELoad(const char *Cmd)
 		}
 		blockNum++;
 		
-		if (blockNum >= 32*4 + 8*16) break;
+		if (blockNum >= numBlocks) break;
 	}
 	fclose(f);
 	
-	if ((blockNum != 16*4) && (blockNum != 32*4 + 8*16)) {
-		PrintAndLog("File content error. There must be 64 or 256 blocks.");
+	if ((blockNum != numBlocks)) {
+		PrintAndLog("File content error. Got %d must be %d blocks.",blockNum, numBlocks);
 		return 4;
 	}
 	PrintAndLog("Loaded %d blocks from file: %s", blockNum, filename);
@@ -1421,45 +1450,70 @@ int CmdHF14AMfELoad(const char *Cmd)
 int CmdHF14AMfESave(const char *Cmd)
 {
 	FILE * f;
-	char filename[20];
+	char filename[FILE_PATH_SIZE];
 	char * fnameptr = filename;
 	uint8_t buf[64];
-	int i, j, len;
+	int i, j, len, numBlocks;
+	int nameParamNo = 1;
 	
 	memset(filename, 0, sizeof(filename));
 	memset(buf, 0, sizeof(buf));
 
-	if (param_getchar(Cmd, 0) == 'h') {
+	char ctmp = param_getchar(Cmd, 0);
+	
+	if ( ctmp == 'h' || ctmp == 'H') {
 		PrintAndLog("It saves emul dump into the file `filename.eml` or `cardID.eml`");
-		PrintAndLog("Usage:  hf mf esave [file name w/o `.eml`]");
+		PrintAndLog(" Usage:  hf mf esave [card memory] [file name w/o `.eml`]");
+		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+		PrintAndLog("");
 		PrintAndLog(" sample: hf mf esave ");
-		PrintAndLog("         hf mf esave filename");
+		PrintAndLog("         hf mf esave 4");
+		PrintAndLog("         hf mf esave 4 filename");
 		return 0;
 	}	
 
-	len = strlen(Cmd);
-	if (len > 14) len = 14;
+	switch (ctmp) {
+		case '0' : numBlocks = 5*4; break;
+		case '1' : 
+		case '\0': numBlocks = 16*4; break;
+		case '2' : numBlocks = 32*4; break;
+		case '4' : numBlocks = 256; break;
+		default:  {
+			numBlocks = 16*4;
+			nameParamNo = 0;
+		}
+	}
+
+	len = param_getstr(Cmd,nameParamNo,filename);
 	
+	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+	
+	// user supplied filename?
 	if (len < 1) {
-		// get filename
+		// get filename (UID from memory)
 		if (mfEmlGetMem(buf, 0, 1)) {
-			PrintAndLog("Cant get block: %d", 0);
-			return 1;
+			PrintAndLog("Can\'t get UID from block: %d", 0);
+			sprintf(filename, "dump.eml"); 
 		}
 		for (j = 0; j < 7; j++, fnameptr += 2)
-			sprintf(fnameptr, "%02x", buf[j]); 
+			sprintf(fnameptr, "%02X", buf[j]); 
 	} else {
-		memcpy(filename, Cmd, len);
 		fnameptr += len;
 	}
 
+	// add file extension
 	sprintf(fnameptr, ".eml"); 
 	
 	// open file
 	f = fopen(filename, "w+");
 
+	if ( !f ) {
+		PrintAndLog("Can't open file %s ", filename);
+		return 1;
+	}
+	
 	// put hex
-	for (i = 0; i < 32*4 + 8*16; i++) {
+	for (i = 0; i < numBlocks; i++) {
 		if (mfEmlGetMem(buf, i, 1)) {
 			PrintAndLog("Cant get block: %d", i);
 			break;
@@ -1470,7 +1524,7 @@ int CmdHF14AMfESave(const char *Cmd)
 	}
 	fclose(f);
 	
-	PrintAndLog("Saved to file: %s", filename);
+	PrintAndLog("Saved %d blocks to file: %s", numBlocks, filename);
 	
   return 0;
 }
@@ -1519,13 +1573,34 @@ int CmdHF14AMfECFill(const char *Cmd)
 int CmdHF14AMfEKeyPrn(const char *Cmd)
 {
 	int i;
+	uint8_t numSectors;
 	uint8_t data[16];
 	uint64_t keyA, keyB;
+	
+	if (param_getchar(Cmd, 0) == 'h') {
+		PrintAndLog("It prints the keys loaded in the emulator memory");
+		PrintAndLog("Usage:  hf mf ekeyprn [card memory]");
+		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+		PrintAndLog("");
+		PrintAndLog(" sample: hf mf ekeyprn 1");
+		return 0;
+	}	
+
+	char cmdp = param_getchar(Cmd, 0);
+	
+	switch (cmdp) {
+		case '0' : numSectors = 5; break;
+		case '1' : 
+		case '\0': numSectors = 16; break;
+		case '2' : numSectors = 32; break;
+		case '4' : numSectors = 40; break;
+		default:   numSectors = 16;
+	}		
 	
 	PrintAndLog("|---|----------------|----------------|");
 	PrintAndLog("|sec|key A           |key B           |");
 	PrintAndLog("|---|----------------|----------------|");
-	for (i = 0; i < 40; i++) {
+	for (i = 0; i < numSectors; i++) {
 		if (mfEmlGetMem(data, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1)) {
 			PrintAndLog("error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
 			break;
@@ -1615,15 +1690,15 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 int CmdHF14AMfCLoad(const char *Cmd)
 {
 	FILE * f;
-	char filename[20];
+	char filename[FILE_PATH_SIZE] = {0x00};
 	char * fnameptr = filename;
-	char buf[64];
-	uint8_t buf8[64];
+	char buf[64] = {0x00};
+	uint8_t buf8[64] = {0x00};
 	uint8_t fillFromEmulator = 0;
 	int i, len, blockNum, flags;
 	
-	memset(filename, 0, sizeof(filename));
-	memset(buf, 0, sizeof(buf));
+	// memset(filename, 0, sizeof(filename));
+	// memset(buf, 0, sizeof(buf));
 
 	if (param_getchar(Cmd, 0) == 'h' || param_getchar(Cmd, 0)== 0x00) {
 		PrintAndLog("It loads magic Chinese card (only works with!!!) from the file `filename.eml`");
@@ -1656,7 +1731,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		return 0;
 	} else {
 		len = strlen(Cmd);
-		if (len > 14) len = 14;
+		if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
 
 		memcpy(filename, Cmd, len);
 		fnameptr += len;
@@ -1701,7 +1776,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		}
 		fclose(f);
 	
-		if (blockNum != 16 * 4){
+		if (blockNum != 16 * 4 && blockNum != 32 * 4 + 8 * 16){
 			PrintAndLog("File content error. There must be 64 blocks");
 			return 4;
 		}
@@ -1779,14 +1854,14 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 int CmdHF14AMfCSave(const char *Cmd) {
 
 	FILE * f;
-	char filename[20];
+	char filename[FILE_PATH_SIZE] = {0x00};
 	char * fnameptr = filename;
 	uint8_t fillFromEmulator = 0;
-	uint8_t buf[64];
+	uint8_t buf[64] = {0x00};
 	int i, j, len, flags;
 	
-	memset(filename, 0, sizeof(filename));
-	memset(buf, 0, sizeof(buf));
+	// memset(filename, 0, sizeof(filename));
+	// memset(buf, 0, sizeof(buf));
 
 	if (param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("It saves `magic Chinese` card dump into the file `filename.eml` or `cardID.eml`");
@@ -1821,7 +1896,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		return 0;
 	} else {
 		len = strlen(Cmd);
-		if (len > 14) len = 14;
+		if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
 	
 		if (len < 1) {
 			// get filename
@@ -1840,6 +1915,11 @@ int CmdHF14AMfCSave(const char *Cmd) {
 	
 		// open file
 		f = fopen(filename, "w+");
+
+		if (f == NULL) {
+			PrintAndLog("File not found or locked.");
+			return 1;
+		}
 
 		// put hex
 		flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;
@@ -2020,9 +2100,9 @@ static command_t CommandTable[] =
   {"ecfill",	CmdHF14AMfECFill,		0, "Fill simulator memory with help of keys from simulator"},
   {"ekeyprn",	CmdHF14AMfEKeyPrn,		0, "Print keys from simulator memory"},
   {"csetuid",	CmdHF14AMfCSetUID,		0, "Set UID for magic Chinese card"},
-  {"csetblk",	CmdHF14AMfCSetBlk,		0, "Write block into magic Chinese card"},
-  {"cgetblk",	CmdHF14AMfCGetBlk,		0, "Read block from magic Chinese card"},
-  {"cgetsc",	CmdHF14AMfCGetSc,		0, "Read sector from magic Chinese card"},
+  {"csetblk",	CmdHF14AMfCSetBlk,		0, "Write block - Magic Chinese card"},
+  {"cgetblk",	CmdHF14AMfCGetBlk,		0, "Read block - Magic Chinese card"},
+  {"cgetsc",	CmdHF14AMfCGetSc,		0, "Read sector - Magic Chinese card"},
   {"cload",		CmdHF14AMfCLoad,		0, "Load dump into magic Chinese card"},
   {"csave",		CmdHF14AMfCSave,		0, "Save dump from magic Chinese card into file or emulator"},
   {NULL, NULL, 0, NULL}
