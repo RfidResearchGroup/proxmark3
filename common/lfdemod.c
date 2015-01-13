@@ -19,21 +19,9 @@ uint64_t Em410xDecode(uint8_t *BitStream, size_t size)
 	//no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
 	//  otherwise could be a void with no arguments
 	//set defaults
-	int high=0, low=255;
 	uint64_t lo=0;
-
 	uint32_t i = 0;
-	uint32_t initLoopMax = 65;
-	if (initLoopMax>size) initLoopMax=size;
-
-	for (;i < initLoopMax; ++i) //65 samples should be plenty to find high and low values
-	{
-		if (BitStream[i] > high)
-			high = BitStream[i];
-		else if (BitStream[i] < low)
-			low = BitStream[i];
-	}
-	if (((high !=1)||(low !=0))){  //allow only 1s and 0s
+	if (BitStream[10]>1){  //allow only 1s and 0s
 		// PrintAndLog("no data found");
 		return 0;
 	}
@@ -51,9 +39,9 @@ uint64_t Em410xDecode(uint8_t *BitStream, size_t size)
 			idx+=9;
 			for (i=0; i<10;i++){
 				for(ii=0; ii<5; ++ii){
-					parityTest += BitStream[(i*5)+ii+idx];
+					parityTest ^= BitStream[(i*5)+ii+idx];
 				}
-				if (parityTest== ((parityTest>>1)<<1)){
+				if (!parityTest){
 					parityTest=0;
 					for (ii=0; ii<4;++ii){
 						lo=(lo<<1LL)|(BitStream[(i*5)+ii+idx]);
@@ -63,7 +51,7 @@ uint64_t Em410xDecode(uint8_t *BitStream, size_t size)
 					//PrintAndLog("DEBUG: EM parity failed parity val: %d, i:%d, ii:%d,idx:%d, Buffer: %d%d%d%d%d",parityTest,i,ii,idx,BitStream[idx+ii+(i*5)-5],BitStream[idx+ii+(i*5)-4],BitStream[idx+ii+(i*5)-3],BitStream[idx+ii+(i*5)-2],BitStream[idx+ii+(i*5)-1]);
 					parityTest=0;
 					idx-=8;
-					if (resetCnt>5)return 0;
+					if (resetCnt>5)return 0; //try 5 times
 					resetCnt++;
 					goto restart;//continue;
 				}
