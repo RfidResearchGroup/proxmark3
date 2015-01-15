@@ -857,57 +857,93 @@ static int GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen)
     }
 }
 
+static uint8_t encode4Bits(const uint8_t b)
+{
+	uint8_t c = b & 0xF;
+	// OTA, the least significant bits first
+	//         The columns are
+	//               1 - Bit value to send
+	//               2 - Reversed (big-endian)
+	//               3 - Encoded
+	//               4 - Hex values
+
+	switch(c){
+	//                          1       2         3         4
+	  case 15: return 0x55; // 1111 -> 1111 -> 01010101 -> 0x55
+	  case 14: return 0x95; // 1110 -> 0111 -> 10010101 -> 0x95
+	  case 13: return 0x65; // 1101 -> 1011 -> 01100101 -> 0x65
+	  case 12: return 0xa5; // 1100 -> 0011 -> 10100101 -> 0xa5
+	  case 11: return 0x59; // 1011 -> 1101 -> 01011001 -> 0x59
+	  case 10: return 0x99; // 1010 -> 0101 -> 10011001 -> 0x99
+	  case 9:  return 0x69; // 1001 -> 1001 -> 01101001 -> 0x69
+	  case 8:  return 0xa9; // 1000 -> 0001 -> 10101001 -> 0xa9
+	  case 7:  return 0x56; // 0111 -> 1110 -> 01010110 -> 0x56
+	  case 6:  return 0x96; // 0110 -> 0110 -> 10010110 -> 0x96
+	  case 5:  return 0x66; // 0101 -> 1010 -> 01100110 -> 0x66
+	  case 4:  return 0xa6; // 0100 -> 0010 -> 10100110 -> 0xa6
+	  case 3:  return 0x5a; // 0011 -> 1100 -> 01011010 -> 0x5a
+	  case 2:  return 0x9a; // 0010 -> 0100 -> 10011010 -> 0x9a
+	  case 1:  return 0x6a; // 0001 -> 1000 -> 01101010 -> 0x6a
+	  default: return 0xaa; // 0000 -> 0000 -> 10101010 -> 0xaa
+
+	}
+}
 
 //-----------------------------------------------------------------------------
 // Prepare tag messages
 //-----------------------------------------------------------------------------
 static void CodeIClassTagAnswer(const uint8_t *cmd, int len)
 {
-	//So far a dummy implementation, not used
-	//int lastProxToAirDuration =0;
+
+	/*
+	 * SOF comprises 3 parts;
+	 * * An unmodulated time of 56.64 us
+	 * * 24 pulses of 423.75 KHz (fc/32)
+	 * * A logic 1, which starts with an unmodulated time of 18.88us
+	 *   followed by 8 pulses of 423.75kHz (fc/32)
+	 *
+	 *
+	 * EOF comprises 3 parts:
+	 * - A logic 0 (which starts with 8 pulses of fc/32 followed by an unmodulated
+	 *   time of 18.88us.
+	 * - 24 pulses of fc/32
+	 * - An unmodulated time of 56.64 us
+	 *
+	 *
+	 * A logic 0 starts with 8 pulses of fc/32
+	 * followed by an unmodulated time of 256/fc (~18,88us).
+	 *
+	 * A logic 0 starts with unmodulated time of 256/fc (~18,88us) followed by
+	 * 8 pulses of fc/32 (also 18.88us)
+	 *
+	 * The mode FPGA_HF_SIMULATOR_MODULATE_424K_8BIT which we use to simulate tag,
+	 * works like this.
+	 * - A 1-bit input to the FPGA becomes 8 pulses on 423.5kHz (fc/32) (18.88us).
+	 * - A 0-bit inptu to the FPGA becomes an unmodulated time of 18.88us
+	 *
+	 * In thist mode the SOF can be written as 00011101 = 0x1D
+	 * The EOF can be written as 10111000 = 0xb8
+	 * A logic 1 is 01
+	 * A logic 0 is 10
+	 *
+	 * */
+
 	int i;
 
 	ToSendReset();
 
 	// Send SOF
-	ToSend[++ToSendMax] = 0x00;
-	ToSend[++ToSendMax] = 0x00;
-	ToSend[++ToSendMax] = 0x00;
-	ToSend[++ToSendMax] = 0xff;//Proxtoair duration starts here
-	ToSend[++ToSendMax] = 0xff;
-	ToSend[++ToSendMax] = 0xff;
-	ToSend[++ToSendMax] = 0x00;
-	ToSend[++ToSendMax] = 0xff;
+	ToSend[++ToSendMax] = 0x1D;
 
 	for(i = 0; i < len; i++) {
-		int j;
 		uint8_t b = cmd[i];
-
-		// Data bits
-		for(j = 0; j < 8; j++) {
-			if(b & 1) {
-				ToSend[++ToSendMax] = 0x00;
-				ToSend[++ToSendMax] = 0xff;
-			} else {
-				ToSend[++ToSendMax] = 0xff;
-				ToSend[++ToSendMax] = 0x00;
-			}
-			b >>= 1;
-		}
+		ToSend[++ToSendMax] = encode4Bits(b & 0xF); //Least significant half
+		ToSend[++ToSendMax] = encode4Bits((b >>4) & 0xF);//Most significant half
 	}
 
 	// Send EOF
-	ToSend[++ToSendMax] = 0xff;
-	ToSend[++ToSendMax] = 0x00;
-	ToSend[++ToSendMax] = 0xff;
-	ToSend[++ToSendMax] = 0xff;
-	ToSend[++ToSendMax] = 0xff;	
-	ToSend[++ToSendMax] = 0x00;
-	ToSend[++ToSendMax] = 0x00;
-	ToSend[++ToSendMax] = 0x00;
-
+	ToSend[++ToSendMax] = 0xB8;
 	//lastProxToAirDuration  = 8*ToSendMax - 3*8 - 3*8;//Not counting zeroes in the beginning or end
-
 	// Convert from last byte pos to length
 	ToSendMax++;
 }
@@ -920,18 +956,9 @@ static void CodeIClassTagSOF()
 
 	ToSendReset();
 	// Send SOF
-	ToSend[++ToSendMax] = 0x00;
-	ToSend[++ToSendMax] = 0x00;
-	ToSend[++ToSendMax] = 0x00;
-	ToSend[++ToSendMax] = 0xff;
-	ToSend[++ToSendMax] = 0xff;
-	ToSend[++ToSendMax] = 0xff;
-	ToSend[++ToSendMax] = 0x00;
-	ToSend[++ToSendMax] = 0xff;
-
+	ToSend[++ToSendMax] = 0x1D;
 //	lastProxToAirDuration  = 8*ToSendMax - 3*8;//Not counting zeroes in the beginning
 
-	
 	// Convert from last byte pos to length
 	ToSendMax++;
 }
@@ -984,6 +1011,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 			memcpy(csn_crc, datain+(i*8), 8);
 			if(doIClassSimulation(csn_crc,1,mac_responses+i*8))
 			{
+				cmd_send(CMD_ACK,CMD_SIMULATE_TAG_ICLASS,i,0,mac_responses,i*8);
 				return; // Button pressed
 			}
 		}
@@ -1036,23 +1064,23 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 	int trace_data_size = 0;
 	//uint8_t sof = 0x0f;
 
-	// Respond SOF -- takes 8 bytes
+	// Respond SOF -- takes 1 bytes
 	uint8_t *resp1 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
 	int resp1Len;
 
 	// Anticollision CSN (rotated CSN)
-	// 176: Takes 16 bytes for SOF/EOF and 10 * 16 = 160 bytes (2 bytes/bit)
-	uint8_t *resp2 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 10);
+	// 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
+	uint8_t *resp2 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 2);
 	int resp2Len;
 
 	// CSN
-	// 176: Takes 16 bytes for SOF/EOF and 10 * 16 = 160 bytes (2 bytes/bit)
-	uint8_t *resp3 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 190);
+	// 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
+	uint8_t *resp3 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 30);
 	int resp3Len;
 
 	// e-Purse
-	// 144: Takes 16 bytes for SOF/EOF and 8 * 16 = 128 bytes (2 bytes/bit)
-	uint8_t *resp4 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 370);
+	// 18: Takes 2 bytes for SOF/EOF and 8 * 2 = 16 bytes (2 bytes/byte)
+	uint8_t *resp4 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 60);
 	int resp4Len;
 
 	// + 1720..
@@ -1195,7 +1223,7 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 		A legit tag has about 380us.
 		**/
 		if(modulated_response_size > 0) {
-			SendIClassAnswer(modulated_response, modulated_response_size, timeout);
+			SendIClassAnswer(modulated_response, modulated_response_size, 1);
 			t2r_time = GetCountSspClk();
 		}
 
@@ -1232,7 +1260,8 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, int delay)
 	int i = 0, d=0;//, u = 0, d = 0;
 	uint8_t b = 0;
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR|FPGA_HF_SIMULATOR_MODULATE_424K);
+	//FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR|FPGA_HF_SIMULATOR_MODULATE_424K);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR|FPGA_HF_SIMULATOR_MODULATE_424K_8BIT);
 
 	AT91C_BASE_SSC->SSC_THR = 0x00;
 	FpgaSetupSsc();
@@ -1256,7 +1285,8 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, int delay)
 			AT91C_BASE_SSC->SSC_THR = b;
 		}
 
-		if (i > respLen +4) break;
+//		if (i > respLen +4) break;
+		if (i > respLen +1) break;
 	}
 
 	return 0;
