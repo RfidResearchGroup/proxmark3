@@ -198,7 +198,7 @@ void ReaderMifare(bool first_try);
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
 void MifareUReadBlock(uint8_t arg0,uint8_t *datain);
-void MifareUReadCard(uint8_t arg0,uint8_t *datain);
+void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain);
 void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareUWriteBlock(uint8_t arg0,uint8_t *datain);

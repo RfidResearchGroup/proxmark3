@@ -1812,7 +1812,7 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 		if (!ReaderReceive(resp, resp_par)) return 0;
 		sak = resp[0];
 
-		// Test if more parts of the uid are comming
+    // Test if more parts of the uid are coming
 		if ((sak & 0x04) /* && uid_resp[0] == 0x88 */) {
 			// Remove first byte, 0x88 is not an UID byte, it CT, see page 3 of:
 			// http://www.nxp.com/documents/application_note/AN10927.pdf

@@ -16,7 +16,7 @@
 #include "cmdparser.h"
 #include "cmdhflegic.h"
 #include "cmdmain.h"
-
+#include "util.h"
 static int CmdHelp(const char *Cmd);
 
 static command_t CommandTable[] = 
@@ -218,7 +218,24 @@ int CmdLegicRFRead(const char *Cmd)
 
 int CmdLegicLoad(const char *Cmd)
 {
-    FILE *f = fopen(Cmd, "r");
+	char filename[FILE_PATH_SIZE] = {0x00};
+	int len = 0;
+	
+	if (param_getchar(Cmd, 0) == 'h' || param_getchar(Cmd, 0)== 0x00) {
+		PrintAndLog("It loads datasamples from the file `filename`");
+		PrintAndLog("Usage:  hf legic load <file name>");
+		PrintAndLog(" sample: hf legic load filename");
+		return 0;
+	}
+
+	len = strlen(Cmd);	
+	if (len > FILE_PATH_SIZE) {
+		PrintAndLog("Filepath too long (was %s bytes), max allowed is %s ", len, FILE_PATH_SIZE);
+		return 0;
+	}
+	memcpy(filename, Cmd, len);
+
+    FILE *f = fopen(filename, "r");
     if(!f) {
         PrintAndLog("couldn't open '%s'", Cmd);
         return -1;
@@ -251,7 +268,7 @@ int CmdLegicSave(const char *Cmd)
   int requested = 1024;
   int offset = 0;
   int delivered = 0;
-  char filename[1024];
+  char filename[FILE_PATH_SIZE];
   uint8_t got[1024];
   
   sscanf(Cmd, " %s %i %i", filename, &requested, &offset);

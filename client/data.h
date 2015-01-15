@@ -13,6 +13,9 @@
 
 #include <stdint.h>
 
+//trace buffer size as defined in armsrc/apps.h TRACE_SIZE
+#define TRACE_BUFFER_SIZE 4096
+#define FILE_PATH_SIZE 1000
 #define SAMPLE_BUFFER_SIZE 64
 
 extern uint8_t* sample_buf;

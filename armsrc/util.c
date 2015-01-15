@@ -13,6 +13,26 @@
 #include "string.h"
 #include "apps.h"
 
+
+
+void print_result(char *name, uint8_t *buf, size_t len) {
+   uint8_t *p = buf;
+
+   if ( len % 16 == 0 ) {
+	   for(; p-buf < len; p += 16)
+       Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+				name,
+				p-buf,
+				len,
+				p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]
+	   );
+   }
+   else {
+   for(; p-buf < len; p += 8)
+       Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x", name, p-buf, len, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+   }
+}
+
 size_t nbytes(size_t nbits) {
 	return (nbits/8)+((nbits%8)>0);
 }
@@ -43,6 +63,26 @@ uint64_t bytes_to_num(uint8_t* src, size_t len)
 		src++;
 	}
 	return num;
+}
+
+// RotateLeft - Ultralight, Desfire
+void rol(uint8_t *data, const size_t len){
+    uint8_t first = data[0];
+    for (size_t i = 0; i < len-1; i++) {
+        data[i] = data[i+1];
+    }
+    data[len-1] = first;
+}
+void lsl (uint8_t *data, size_t len) {
+    for (size_t n = 0; n < len - 1; n++) {
+        data[n] = (data[n] << 1) | (data[n+1] >> 7);
+    }
+    data[len - 1] <<= 1;
+}
+
+int32_t le24toh (uint8_t data[3])
+{
+    return (data[2] << 16) | (data[1] << 8) | data[0];
 }
 
 void LEDsoff()

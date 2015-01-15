@@ -19,6 +19,7 @@
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "cmdlfem4x.h"
+char *global_em410xId;
 
 static int CmdHelp(const char *Cmd);
 
@@ -66,7 +67,7 @@ int CmdEM410xRead(const char *Cmd)
   parity[0] = parity[1] = parity[2] = parity[3] = 0;
   header = rows = 0;
 
-  /* manchester demodulate */
+  // manchester demodulate
   bit = bit2idx = 0;
   for (i = 0; i < (int)(GraphTraceLen / clock); i++)
   {
@@ -77,9 +78,9 @@ int CmdEM410xRead(const char *Cmd)
     /* Find out if we hit both high and low peaks */
     for (j = 0; j < clock; j++)
     {
-      if (GraphBuffer[(i * clock) + j] == high)
+      if (GraphBuffer[(i * clock) + j] >= high)
         hithigh = 1;
-      else if (GraphBuffer[(i * clock) + j] == low)
+      else if (GraphBuffer[(i * clock) + j] <= low)
         hitlow = 1;
 
       /* it doesn't count if it's the first part of our read
@@ -149,6 +150,8 @@ retest:
         PrintAndLog("EM410x Tag ID: %s", id);
         PrintAndLog("Unique Tag ID: %s", id2);
 
+		global_em410xId = id;
+		
         /* Stop any loops */
         return 1;
       }
@@ -177,8 +180,10 @@ retest:
   }
 
   /* if we've already retested after flipping bits, return */
-  if (retested++)
+	if (retested++){
+		PrintAndLog("Failed to decode");
     return 0;
+	}
 
   /* if this didn't work, try flipping bits */
   for (i = 0; i < bit2idx; i++)
@@ -291,6 +296,14 @@ int CmdEM410xWatch(const char *Cmd)
 		!CmdEM410xRead("") 
 	);
 	return 0;
+}
+
+int CmdEM410xWatchnSpoof(const char *Cmd)
+{
+	CmdEM410xWatch(Cmd);
+    PrintAndLog("# Replaying : %s",global_em410xId);
+    CmdEM410xSim(global_em410xId);
+  return 0;
 }
 
 /* Read the transmitted data of an EM4x50 tag
@@ -507,12 +520,12 @@ int CmdEM410xWrite(const char *Cmd)
 
 int CmdReadWord(const char *Cmd)
 {
-  int Word = 16; //default to invalid word
+	int Word = -1; //default to invalid word
   UsbCommand c;
   
   sscanf(Cmd, "%d", &Word);
   
-  if (Word > 15) {
+	if ( (Word > 15) | (Word < 0) ) {
     PrintAndLog("Word must be between 0 and 15");
     return 1;
   }
@@ -530,13 +543,13 @@ int CmdReadWord(const char *Cmd)
 
 int CmdReadWordPWD(const char *Cmd)
 {
-  int Word = 16; //default to invalid word
+	int Word = -1; //default to invalid word
   int Password = 0xFFFFFFFF; //default to blank password
   UsbCommand c;
   
   sscanf(Cmd, "%d %x", &Word, &Password);
   
-  if (Word > 15) {
+	if ( (Word > 15) | (Word < 0) ) {
     PrintAndLog("Word must be between 0 and 15");
     return 1;
   }
@@ -565,7 +578,7 @@ int CmdWriteWord(const char *Cmd)
     return 1;
   }
   
-  PrintAndLog("Writting word %d with data %08X", Word, Data);
+  PrintAndLog("Writing word %d with data %08X", Word, Data);
   
   c.cmd = CMD_EM4X_WRITE_WORD;
   c.d.asBytes[0] = 0x0; //Normal mode
@@ -578,7 +591,7 @@ int CmdWriteWord(const char *Cmd)
 
 int CmdWriteWordPWD(const char *Cmd)
 {
-  int Word = 8; //default to invalid word
+  int Word = 16; //default to invalid word
   int Data = 0xFFFFFFFF; //default to blank data
   int Password = 0xFFFFFFFF; //default to blank password
   UsbCommand c;
@@ -590,7 +603,7 @@ int CmdWriteWordPWD(const char *Cmd)
     return 1;
   }
   
-  PrintAndLog("Writting word %d with data %08X and password %08X", Word, Data, Password);
+  PrintAndLog("Writing word %d with data %08X and password %08X", Word, Data, Password);
   
   c.cmd = CMD_EM4X_WRITE_WORD;
   c.d.asBytes[0] = 0x1; //Password mode
@@ -601,8 +614,6 @@ int CmdWriteWordPWD(const char *Cmd)
   return 0;
 }
 
-
-
 static command_t CommandTable[] =
 {
   {"help", CmdHelp, 1, "This help"},
@@ -610,6 +621,7 @@ static command_t CommandTable[] =
   {"em410xread", CmdEM410xRead, 1, "[clock rate] -- Extract ID from EM410x tag"},
   {"em410xsim", CmdEM410xSim, 0, "<UID> -- Simulate EM410x tag"},
   {"em410xwatch", CmdEM410xWatch, 0, "['h'] -- Watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
+  {"em410xspoof", CmdEM410xWatchnSpoof, 0, "['h'] --- Watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
   {"em410xwrite", CmdEM410xWrite, 1, "<UID> <'0' T5555> <'1' T55x7> [clock rate] -- Write EM410x UID to T5555(Q5) or T55x7 tag, optionally setting clock rate"},
   {"em4x50read", CmdEM4x50Read, 1, "Extract data from EM4x50 tag"},
   {"readword", CmdReadWord, 1, "<Word> -- Read EM4xxx word data"},

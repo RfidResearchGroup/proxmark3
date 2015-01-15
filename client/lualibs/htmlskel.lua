@@ -55,6 +55,7 @@ local skel_1 = [[
 			return "UNKNOWN"
 		}
 
+		add("04,,,Mifare TNP3xxx Activision 1K,0f01,01");
 		add("04,,,Mifare Mini,0004,09");
 		add("04,,,Mifare Classic 1k/Mifare Plus(4 byte UID) 2K SL1,0004,08");
 		add("04,,,Mifare Plus (4 byte UID) 2K SL2,0004,10");

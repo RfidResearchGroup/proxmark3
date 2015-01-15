@@ -342,8 +342,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, bool iclass, bool sho
 				// Rough guess that this is a command from the reader
 				// For iClass the command byte is not part of the CRC
 				ComputeCrc14443(CRC_ICLASS, &frame[1], data_len-3, &b1, &b2);
-			}
-			else {
+			} else {
 				// For other data.. CRC might not be applicable (UPDATE commands etc.)
 				ComputeCrc14443(CRC_ICLASS, frame, data_len-2, &b1, &b2);
 			}
@@ -363,7 +362,6 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, bool iclass, bool sho
 				}
 			}
 		}
-
 	}
 	char *crc = crcError ? "!crc" :"    ";
 
@@ -371,8 +369,10 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, bool iclass, bool sho
 
 	if(!isResponse)
 	{
-		if(iclass)	annotateIclass(explanation,sizeof(explanation),frame,data_len);
-		else annotateIso14443a(explanation,sizeof(explanation),frame,data_len);
+		if(iclass)
+			annotateIclass(explanation,sizeof(explanation),frame,data_len);
+		else 
+			annotateIso14443a(explanation,sizeof(explanation),frame,data_len);
 	}
 
 	int num_lines = (data_len - 1)/16 + 1;

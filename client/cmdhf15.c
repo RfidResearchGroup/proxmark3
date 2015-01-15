@@ -55,38 +55,135 @@ typedef struct {
 
 
 const productName uidmapping[] = {
+
 	// UID, #significant Bits, "Vendor(+Product)"
-	{ 0xE001000000000000LL, 16, "Motorola" },
-	{ 0xE002000000000000LL, 16, "ST Microelectronics" },
-	{ 0xE003000000000000LL, 16, "Hitachi" },
-	{ 0xE004000000000000LL, 16, "NXP(Philips)" },
+	{ 0xE001000000000000LL, 16, "Motorola UK" },
+	
+	// E0 02 xx
+	//   02 = ST Microelectronics
+	//   XX = IC id (Chip ID Family)
+	{ 0xE002000000000000LL, 16, "ST Microelectronics SA France" },
+	{ 0xE002050000000000LL, 24, "ST Microelectronics; LRI64   [IC id = 05]"},
+	{ 0xE002080000000000LL, 24, "ST Microelectronics; LRI2K   [IC id = 08]"},
+	{ 0xE0020A0000000000LL, 24, "ST Microelectronics; LRIS2K  [IC id = 10]"},
+	{ 0xE002440000000000LL, 24, "ST Microelectronics; LRIS64K [IC id = 68]"},
+
+	{ 0xE003000000000000LL, 16, "Hitachi, Ltd Japan" }, 
+	
+	// E0 04 xx
+	//   04 = Manufacturer code (Philips/NXP)
+	//   XX = IC id (Chip ID Family)
+	//I-Code SLI SL2 ICS20 [IC id = 01]
+	//I-Code SLI-S         [IC id = 02]
+	//I-Code SLI-L         [IC id = 03]
+	//I-Code SLIX          [IC id = 01 + bit36 set to 1 (starting from bit0 - different from normal SLI)]
+	//I-Code SLIX-S        [IC id = 02 + bit36 set to 1]
+	//I-Code SLIX-L        [IC id = 03 + bit36 set to 1]
+	{ 0xE004000000000000LL, 16, "NXP Semiconductors Germany (Philips)" }, 
 	{ 0xE004010000000000LL, 24, "NXP(Philips); IC SL2 ICS20/ICS21(SLI) ICS2002/ICS2102(SLIX)" },
 	{ 0xE004020000000000LL, 24, "NXP(Philips); IC SL2 ICS53/ICS54(SLI-S) ICS5302/ICS5402(SLIX-S)" },
 	{ 0xE004030000000000LL, 24, "NXP(Philips); IC SL2 ICS50/ICS51(SLI-L) ICS5002/ICS5102(SLIX-L)" },
-	{ 0xE005000000000000LL, 16, "Infineon" },
-	{ 0xE005400000000000LL, 24, "Infineon; 56x32bit" },
-	{ 0xE006000000000000LL, 16, "Cylinc" },
-	{ 0xE007000000000000LL, 16, "Texas Instrument; " },
+
+	// E0 05 XX .. .. ..
+	//   05 = Manufacturer code (Infineon)
+	//   XX = IC id (Chip ID Family)
+	{ 0xE005000000000000LL, 16, "Infineon Technologies AG Germany" }, 
+	{ 0xE005A10000000000LL, 24, "Infineon; SRF55V01P [IC id = 161] plain mode 1kBit"},
+	{ 0xE005A80000000000LL, 24, "Infineon; SRF55V01P [IC id = 168] pilot series 1kBit"},
+	{ 0xE005400000000000LL, 24, "Infineon; SRF55V02P [IC id = 64]  plain mode 2kBit"},
+	{ 0xE005000000000000LL, 24, "Infineon; SRF55V10P [IC id = 00]  plain mode 10KBit"},
+	{ 0xE005500000000000LL, 24, "Infineon; SRF55V02S [IC id = 80]  secure mode 2kBit"},
+	{ 0xE005100000000000LL, 24, "Infineon; SRF55V10S [IC id = 16]  secure mode 10KBit"},
+	{ 0xE0051E0000000000LL, 23, "Infineon; SLE66r01P [IC id = 3x = My-d Move or My-d move NFC]"},
+	{ 0xE005200000000000LL, 21, "Infineon; SLE66r01P [IC id = 3x = My-d Move or My-d move NFC]"},
+	
+	{ 0xE006000000000000LL, 16, "Cylink USA" }, 
+	
+	
+	// E0 07 xx
+	//   07 = Texas Instruments
+	//   XX = from bit 41 to bit 43 = product configuration - from bit 44 to bit 47 IC id (Chip ID Family)
+	//Tag IT RFIDType-I Plus, 2kBit, TI Inlay
+	//Tag-it HF-I Plus Inlay             [IC id = 00] -> b'0000 000 2kBit
+	//Tag-it HF-I Plus Chip              [IC id = 64] -> b'1000 000 2kBit
+	//Tag-it HF-I Standard Chip / Inlays [IC id = 96] -> b'1100 000 256Bit
+	//Tag-it HF-I Pro Chip / Inlays      [IC id = 98] -> b'1100 010 256Bit, Password protection
+	{ 0xE007000000000000LL, 16, "Texas Instrument France" },
 	{ 0xE007000000000000LL, 20, "Texas Instrument; Tag-it HF-I Plus Inlay; 64x32bit" },
 	{ 0xE007100000000000LL, 20, "Texas Instrument; Tag-it HF-I Plus Chip; 64x32bit" },
 	{ 0xE007800000000000LL, 23, "Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)" },
 	{ 0xE007C00000000000LL, 23, "Texas Instrument; Tag-it HF-I Standard; 8x32bit" },
 	{ 0xE007C40000000000LL, 23, "Texas Instrument; Tag-it HF-I Pro; 8x23bit; password" },	
-	{ 0xE008000000000000LL, 16, "Fujitsu" },
-	{ 0xE009000000000000LL, 16, "Matsushita" },
-	{ 0xE00A000000000000LL, 16, "NEC" },
-	{ 0xE00B000000000000LL, 16, "Oki Electric" },
-	{ 0xE00C000000000000LL, 16, "Toshiba" },
-	{ 0xE00D000000000000LL, 16, "Mitsubishi" },
-	{ 0xE00E000000000000LL, 16, "Samsung" },
-	{ 0xE00F000000000000LL, 16, "Hyundai" },
-	{ 0xE010000000000000LL, 16, "LG-Semiconductors" },
+
+	{ 0xE008000000000000LL, 16, "Fujitsu Limited Japan" }, 
+	{ 0xE009000000000000LL, 16, "Matsushita Electronics Corporation, Semiconductor Company Japan" }, 
+	{ 0xE00A000000000000LL, 16, "NEC Japan" }, 
+	{ 0xE00B000000000000LL, 16, "Oki Electric Industry Co. Ltd Japan" },
+	{ 0xE00C000000000000LL, 16, "Toshiba Corp. Japan" },
+	{ 0xE00D000000000000LL, 16, "Mitsubishi Electric Corp. Japan" },
+	{ 0xE00E000000000000LL, 16, "Samsung Electronics Co. Ltd Korea" },
+	{ 0xE00F000000000000LL, 16, "Hynix / Hyundai, Korea" },
+	{ 0xE010000000000000LL, 16, "LG-Semiconductors Co. Ltd Korea" },
+	{ 0xE011000000000000LL, 16, "Emosyn-EM Microelectronics USA" },
+
 	{ 0xE012000000000000LL, 16, "HID Corporation" },
-	{ 0xE016000000000000LL, 16, "EM-Marin SA (Skidata)" },
+	{ 0xE012000000000000LL, 16, "INSIDE Technology France" },
+	{ 0xE013000000000000LL, 16, "ORGA Kartensysteme GmbH Germany" },
+	{ 0xE014000000000000LL, 16, "SHARP Corporation Japan" },
+	{ 0xE015000000000000LL, 16, "ATMEL France" },
+	
+	{ 0xE016000000000000LL, 16, "EM Microelectronic-Marin SA Switzerland (Skidata)" },
 	{ 0xE016040000000000LL, 24, "EM-Marin SA (Skidata Keycard-eco); EM4034? no 'read', just 'readmulti'" },
 	{ 0xE0160c0000000000LL, 24, "EM-Marin SA; EM4035?" },
 	{ 0xE016100000000000LL, 24, "EM-Marin SA (Skidata); EM4135; 36x64bit start page 13" },
 	{ 0xE016940000000000LL, 24, "EM-Marin SA (Skidata); 51x64bit" },
+	
+	{ 0xE017000000000000LL, 16, "KSW Microtec GmbH Germany" },
+	{ 0xE018000000000000LL, 16, "ZMD AG Germany" },
+	{ 0xE019000000000000LL, 16, "XICOR, Inc. USA" },
+	{ 0xE01A000000000000LL, 16, "Sony Corporation Japan Identifier Company Country" },
+	{ 0xE01B000000000000LL, 16, "Malaysia Microelectronic Solutions Sdn. Bhd Malaysia" },
+	{ 0xE01C000000000000LL, 16, "Emosyn USA" },
+	{ 0xE01D000000000000LL, 16, "Shanghai Fudan Microelectronics Co. Ltd. P.R. China" },
+	{ 0xE01E000000000000LL, 16, "Magellan Technology Pty Limited Australia" },
+	{ 0xE01F000000000000LL, 16, "Melexis NV BO Switzerland" },
+	{ 0xE020000000000000LL, 16, "Renesas Technology Corp. Japan" },
+	{ 0xE021000000000000LL, 16, "TAGSYS France" },
+	{ 0xE022000000000000LL, 16, "Transcore USA" },
+	{ 0xE023000000000000LL, 16, "Shanghai belling corp., ltd. China" },
+	{ 0xE024000000000000LL, 16, "Masktech Germany Gmbh Germany" },
+	{ 0xE025000000000000LL, 16, "Innovision Research and Technology Plc UK" },
+	{ 0xE026000000000000LL, 16, "Hitachi ULSI Systems Co., Ltd. Japan" },
+	{ 0xE027000000000000LL, 16, "Cypak AB Sweden" },
+	{ 0xE028000000000000LL, 16, "Ricoh Japan" },
+	{ 0xE029000000000000LL, 16, "ASK France" },
+	{ 0xE02A000000000000LL, 16, "Unicore Microsystems, LLC Russian Federation" },
+	{ 0xE02B000000000000LL, 16, "Dallas Semiconductor/Maxim USA" },
+	{ 0xE02C000000000000LL, 16, "Impinj, Inc. USA" },
+	{ 0xE02D000000000000LL, 16, "RightPlug Alliance USA" },
+	{ 0xE02E000000000000LL, 16, "Broadcom Corporation USA" },
+	{ 0xE02F000000000000LL, 16, "MStar Semiconductor, Inc Taiwan, ROC" },
+	{ 0xE030000000000000LL, 16, "BeeDar Technology Inc. USA" },
+	{ 0xE031000000000000LL, 16, " RFIDsec Denmark" },
+	{ 0xE032000000000000LL, 16, " Schweizer Electronic AG Germany" },
+	{ 0xE033000000000000LL, 16, " AMIC Technology Corp Taiwan" }, 
+	{ 0xE034000000000000LL, 16, "Mikron JSC Russia" },
+	{ 0xE035000000000000LL, 16, "Fraunhofer Institute for Photonic Microsystems Germany" },
+	{ 0xE036000000000000LL, 16, "IDS Microchip AG Switzerland" },
+	{ 0xE037000000000000LL, 16, "Kovio USA" },
+	{ 0xE038000000000000LL, 16, "HMT Microelectronic Ltd Switzerland Identifier Company Country" },
+	{ 0xE039000000000000LL, 16, "Silicon Craft Technology Thailand" },
+	{ 0xE03A000000000000LL, 16, "Advanced Film Device Inc. Japan" },
+	{ 0xE03B000000000000LL, 16, "Nitecrest Ltd UK" },
+	{ 0xE03C000000000000LL, 16, "Verayo Inc. USA" },
+	{ 0xE03D000000000000LL, 16, "HID Global USA" },
+	{ 0xE03E000000000000LL, 16, "Productivity Engineering Gmbh Germany" },
+	{ 0xE03F000000000000LL, 16, "Austriamicrosystems AG (reserved) Austria" }, 
+	{ 0xE040000000000000LL, 16, "Gemalto SA France" },
+	{ 0xE041000000000000LL, 16, "Renesas Electronics Corporation Japan" },
+	{ 0xE042000000000000LL, 16, "3Alogics Inc Korea" },
+	{ 0xE043000000000000LL, 16, "Top TroniQ Asia Limited Hong Kong" },
+	{ 0xE044000000000000LL, 16, "Gentag Inc (USA) USA" },
 	{ 0,0,"no tag-info available" } // must be the last entry
 };
 

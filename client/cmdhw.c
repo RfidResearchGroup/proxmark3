@@ -13,7 +13,6 @@
 #include <string.h>
 #include <limits.h>
 #include "ui.h"
-//#include "proxusb.h"
 #include "proxmark3.h"
 #include "cmdparser.h"
 #include "cmdhw.h"
@@ -418,7 +417,7 @@ static command_t CommandTable[] =
   {"setlfdivisor",  CmdSetDivisor,  0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
   {"setmux",        CmdSetMux,      0, "<loraw|hiraw|lopkd|hipkd> -- Set the ADC mux to a specific value"},
   {"tune",          CmdTune,        0, "Measure antenna tuning"},
-  {"version",       CmdVersion,     0, "Show version inforation about the connected Proxmark"},
+  {"version",       CmdVersion,     0, "Show version information about the connected Proxmark"},
   {NULL, NULL, 0, NULL}
 };
 
