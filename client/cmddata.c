@@ -618,7 +618,7 @@ int CmdFSKdemodHID(const char *Cmd)
     uint32_t cardnum = 0;
     if (((hi>>5)&1)==1){//if bit 38 is set then < 37 bit format is used
       uint32_t lo2=0;
-      lo2=(((hi & 15) << 12) | (lo>>20)); //get bits 21-37 to check for format len bit
+      lo2=(((hi & 31) << 12) | (lo>>20)); //get bits 21-37 to check for format len bit
       uint8_t idx3 = 1;
       while(lo2>1){ //find last bit set to 1 (format len bit)
         lo2=lo2>>1;
@@ -631,10 +631,6 @@ int CmdFSKdemodHID(const char *Cmd)
         cardnum = (lo>>1)&0xFFFF;
         fc = (lo>>17)&0xFF;
       }
-      if(fmtLen==37){
-        cardnum = (lo>>1)&0x7FFFF;
-        fc = ((hi&0xF)<<12)|(lo>>20);
-      }
       if(fmtLen==34){
         cardnum = (lo>>1)&0xFFFF;
         fc= ((hi&1)<<15)|(lo>>17);
@@ -645,10 +641,10 @@ int CmdFSKdemodHID(const char *Cmd)
       }
     }
     else { //if bit 38 is not set then 37 bit format is used
-      fmtLen= 37;
-      fc =0;
-      cardnum=0;
-      if(fmtLen==37){
+      fmtLen = 37;
+      fc = 0;
+      cardnum = 0;
+      if(fmtLen == 37){
         cardnum = (lo>>1)&0x7FFFF;
         fc = ((hi&0xF)<<12)|(lo>>20);
       }
@@ -870,20 +866,35 @@ int PSKnrzDemod(const char *Cmd){
 // optional arguments - same as CmdpskNRZrawDemod (clock & invert)
 int CmdIndalaDecode(const char *Cmd)
 {
+  uint8_t verbose = 1;
+  int ans;
+  if (strlen(Cmd)>0){
+    if (Cmd[0]=='0'){
+      verbose=0;
+      ans = PSKnrzDemod("32");
+    }else{
+      ans = PSKnrzDemod(Cmd);
+    }
+  } else{ //default to RF/32
+    ans = PSKnrzDemod("32");
+  }
 
-	int ans=PSKnrzDemod(Cmd);
 	if (ans < 0){
-		PrintAndLog("Error1: %d",ans);
+		if (verbose) 
+      PrintAndLog("Error1: %d",ans);
 		return 0;
 	}
 	uint8_t invert=0;
 	ans = indala26decode(DemodBuffer,(size_t *) &DemodBufferLen, &invert);
 	if (ans < 1) {
-		PrintAndLog("Error2: %d",ans);
+		if (verbose)
+      PrintAndLog("Error2: %d",ans);
 		return -1;
 	}
 	char showbits[251];
-	if(invert==1) PrintAndLog("Had to invert bits");
+	if (invert)
+    if (verbose)
+      PrintAndLog("Had to invert bits");
 	//convert UID to HEX
 	uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
 	int idx;
@@ -947,11 +958,19 @@ int CmdPskClean(const char *Cmd)
 //prints binary found and saves in graphbuffer for further commands
 int CmdpskNRZrawDemod(const char *Cmd)
 {
-	int errCnt= PSKnrzDemod(Cmd);
+  uint8_t verbose = 1;
+  int errCnt;
+  if (strlen(Cmd)>0){
+    if (Cmd[0]=='0')
+      verbose=0;
+  }
+
+  errCnt = PSKnrzDemod(Cmd);
 	//output
 	if (errCnt<0) return 0;
 	if (errCnt>0){
-		PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
+		if (verbose)
+      PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
 	}
 	PrintAndLog("PSK or NRZ demoded bitstream:");
 	// Now output the bitstream to the scrollback by line of 16 bits
