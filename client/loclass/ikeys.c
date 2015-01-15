@@ -1,15 +1,23 @@
 /*****************************************************************************
- * This file is part of iClassCipher. It is a reconstructon of the cipher engine
+ * WARNING
+ *
+ * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. 
+ * 
+ * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL 
+ * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, 
+ * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. 
+ * 
+ * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. 
+ *
+ *****************************************************************************
+ *
+ * This file is part of loclass. It is a reconstructon of the cipher engine
  * used in iClass, and RFID techology.
  *
  * The implementation is based on the work performed by
  * Flavio D. Garcia, Gerhard de Koning Gans, Roel Verdult and
  * Milosch Meriac in the paper "Dismantling IClass".
  *
- * This is a reference implementation of iclass key diversification. I'm sure it can be
- * optimized heavily. It is written for ease of understanding and correctness, please take it
- * and tweak it and make a super fast version instead, using this for testing and verification.
-
  * Copyright (C) 2014 Martin Holst Swende
  *
  * This is free software: you can redistribute it and/or modify
@@ -22,8 +30,12 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with IClassCipher.  If not, see <http://www.gnu.org/licenses/>.
+ * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * 
+ * 
  ****************************************************************************/
+
 /**
 
 
