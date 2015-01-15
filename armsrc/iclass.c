@@ -921,7 +921,7 @@ static void CodeIClassTagAnswer(const uint8_t *cmd, int len)
 	 * - A 1-bit input to the FPGA becomes 8 pulses on 423.5kHz (fc/32) (18.88us).
 	 * - A 0-bit inptu to the FPGA becomes an unmodulated time of 18.88us
 	 *
-	 * In thist mode the SOF can be written as 00011101 = 0x1D
+	 * In this mode the SOF can be written as 00011101 = 0x1D
 	 * The EOF can be written as 10111000 = 0xb8
 	 * A logic 1 is 01
 	 * A logic 0 is 10
@@ -1215,12 +1215,7 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 			cmdsRecvd++;
 		}
 		/**
-		After changes to parity calculation
-		Time between reader EOT and pm3 SOF
-		delay	21 -> 480uS
-		delay	10 -> 220us
-		delay	16 -> 388us
-		A legit tag has about 380us.
+		A legit tag has about 380us delay between reader EOT and tag SOF.
 		**/
 		if(modulated_response_size > 0) {
 			SendIClassAnswer(modulated_response, modulated_response_size, 1);
