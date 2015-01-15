@@ -123,14 +123,19 @@ NXP/Philips CUSTOM COMMANDS
 	40 = Long Range CMD (Standard ISO/TR7003:1990)
 		*/
 
-#define ICLASS_CMD_ACTALL 0x0A
+#define ICLASS_CMD_ACTALL           0x0A
 #define ICLASS_CMD_READ_OR_IDENTIFY 0x0C
-#define ICLASS_CMD_SELECT 0x81
-#define ICLASS_CMD_PAGESEL 0x84
-#define ICLASS_CMD_READCHECK 0x88
-#define ICLASS_CMD_CHECK 0x05
-#define ICLASS_CMD_SOF 0x0F
-#define ICLASS_CMD_HALT 0x00
+#define ICLASS_CMD_SELECT           0x81
+#define ICLASS_CMD_PAGESEL          0x84
+#define ICLASS_CMD_READCHECK_KD     0x88
+#define ICLASS_CMD_READCHECK_KC     0x18
+#define ICLASS_CMD_CHECK            0x05
+#define ICLASS_CMD_DETECT           0x0F
+#define ICLASS_CMD_HALT             0x00
+#define ICLASS_CMD_UPDATE			0x87
+#define ICLASS_CMD_ACT              0x8E
+#define ICLASS_CMD_READ4            0x06
+
 
 #define ISO14443_CMD_REQA       0x26
 #define ISO14443_CMD_READBLOCK  0x30
@@ -235,11 +240,15 @@ void annotateIclass(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 		break;
 	}
 	case ICLASS_CMD_SELECT:      snprintf(exp,size,"SELECT"); break;
-	case ICLASS_CMD_PAGESEL:     snprintf(exp,size,"PAGESEL"); break;
-	case ICLASS_CMD_READCHECK:   snprintf(exp,size,"READCHECK"); break;
+	case ICLASS_CMD_PAGESEL:     snprintf(exp,size,"PAGESEL(%d)", cmd[1]); break;
+	case ICLASS_CMD_READCHECK_KC:snprintf(exp,size,"READCHECK[Kc](%d)", cmd[1]); break;
+	case ICLASS_CMD_READCHECK_KD:snprintf(exp,size,"READCHECK[Kd](%d)", cmd[1]); break;
 	case ICLASS_CMD_CHECK:       snprintf(exp,size,"CHECK"); break;
-	case ICLASS_CMD_SOF:         snprintf(exp,size,"SOF"); break;
+	case ICLASS_CMD_DETECT:      snprintf(exp,size,"DETECT"); break;
 	case ICLASS_CMD_HALT:        snprintf(exp,size,"HALT"); break;
+	case ICLASS_CMD_UPDATE:      snprintf(exp,size,"UPDATE(%d)",cmd[1]); break;
+	case ICLASS_CMD_ACT:         snprintf(exp,size,"ACT"); break;
+	case ICLASS_CMD_READ4:       snprintf(exp,size,"READ4(%d)",cmd[1]); break;
 	default:                     snprintf(exp,size,"?"); break;
 	}
 	return;
@@ -274,6 +283,66 @@ void annotateIso15693(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 		case ISO15693_READ_MULTI_SECSTATUS :snprintf(exp, size, "READ_MULTI_SECSTATUS");break;
 		default:                     snprintf(exp,size,"?"); break;
 		}
+	}
+}
+/**
+ * @brief iclass_CRC_Ok Checks CRC in command or response
+ * @param isResponse
+ * @param data
+ * @param len
+ * @return  0 : CRC-command, CRC not ok
+ *	        1 : CRC-command, CRC ok
+ *          2 : Not crc-command
+ */
+uint8_t iclass_CRC_Ok(bool isResponse, uint8_t* data, uint8_t len)
+{
+	if(len < 4) return 2;//CRC commands (and responses) are all at least 4 bytes
+
+	uint8_t b1, b2;
+
+	if(!isResponse)//Commands to tag
+	{
+		/**
+		  These commands should have CRC. Total length leftmost
+		  4	READ
+		  4 READ4
+		  12 UPDATE - unsecured, ends with CRC16
+		  14 UPDATE - secured, ends with signature instead
+		  4 PAGESEL
+		  **/
+		if(len == 4 || len == 12)//Covers three of them
+		{
+			//Don't include the command byte
+			ComputeCrc14443(CRC_ICLASS, (data+1), len-3, &b1, &b2);
+			return b1 == data[len -2] && b2 == data[len-1];
+		}
+		return 2;
+	}else{
+		/**
+		These tag responses should have CRC. Total length leftmost
+
+		10  READ		data[8] crc[2]
+		34  READ4		data[32]crc[2]
+		10  UPDATE	data[8] crc[2]
+		10 SELECT	csn[8] crc[2]
+		10  IDENTIFY  asnb[8] crc[2]
+		10  PAGESEL   block1[8] crc[2]
+		10  DETECT    csn[8] crc[2]
+
+		These should not
+
+		4  CHECK		chip_response[4]
+		8  READCHECK data[8]
+		1  ACTALL    sof[1]
+		1  ACT	     sof[1]
+
+		In conclusion, without looking at the command; any response
+		of length 10 or 34 should have CRC
+		  **/
+		if(len != 10 && len != 34) return true;
+
+		ComputeCrc14443(CRC_ICLASS, data, len-2, &b1, &b2);
+		return b1 == data[len -2] && b2 == data[len-1];
 	}
 }
 
@@ -332,24 +401,14 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, bool iclass, bool sho
 		}
 	}
 	//--- Draw the CRC column
-	bool crcError = false;
+	uint8_t crcStatus = 2;
 
 	if (data_len > 2) {
 		uint8_t b1, b2;
 		if(iclass)
 		{
-			if(!isResponse && data_len == 4 ) {
-				// Rough guess that this is a command from the reader
-				// For iClass the command byte is not part of the CRC
-				ComputeCrc14443(CRC_ICLASS, &frame[1], data_len-3, &b1, &b2);
-			} else {
-				// For other data.. CRC might not be applicable (UPDATE commands etc.)
-				ComputeCrc14443(CRC_ICLASS, frame, data_len-2, &b1, &b2);
-			}
-
-			if (b1 != frame[data_len-2] || b2 != frame[data_len-1]) {
-				crcError = true;
-			}
+			//The following commands have crc
+			crcStatus = iclass_CRC_Ok(isResponse, frame, data_len);
 
 		}else{//Iso 14443a
 
@@ -358,12 +417,15 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, bool iclass, bool sho
 			if (b1 != frame[data_len-2] || b2 != frame[data_len-1]) {
 				if(!(isResponse & (data_len < 6)))
 				{
-						crcError = true;
+						crcStatus = 0;
 				}
 			}
 		}
 	}
-	char *crc = crcError ? "!crc" :"    ";
+	//0 CRC-command, CRC not ok
+	//1 CRC-command, CRC ok
+	//2 Not crc-command
+	char *crc = (crcStatus == 0 ? "!crc" : (crcStatus == 1 ? " ok " : "    "));
 
 	EndOfTransmissionTimestamp = timestamp + duration;
 
