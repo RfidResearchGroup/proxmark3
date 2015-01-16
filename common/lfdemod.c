@@ -19,21 +19,9 @@ uint64_t Em410xDecode(uint8_t *BitStream, size_t size)
 	//no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
 	//  otherwise could be a void with no arguments
 	//set defaults
-	int high=0, low=128;
 	uint64_t lo=0;
-
 	uint32_t i = 0;
-	uint32_t initLoopMax = 65;
-	if (initLoopMax>size) initLoopMax=size;
-
-	for (;i < initLoopMax; ++i) //65 samples should be plenty to find high and low values
-	{
-		if (BitStream[i] > high)
-			high = BitStream[i];
-		else if (BitStream[i] < low)
-			low = BitStream[i];
-	}
-	if (((high !=1)||(low !=0))){  //allow only 1s and 0s
+	if (BitStream[10]>1){  //allow only 1s and 0s
 		// PrintAndLog("no data found");
 		return 0;
 	}
@@ -51,9 +39,9 @@ uint64_t Em410xDecode(uint8_t *BitStream, size_t size)
 			idx+=9;
 			for (i=0; i<10;i++){
 				for(ii=0; ii<5; ++ii){
-					parityTest += BitStream[(i*5)+ii+idx];
+					parityTest ^= BitStream[(i*5)+ii+idx];
 				}
-				if (parityTest== ((parityTest>>1)<<1)){
+				if (!parityTest){
 					parityTest=0;
 					for (ii=0; ii<4;++ii){
 						lo=(lo<<1LL)|(BitStream[(i*5)+ii+idx]);
@@ -63,7 +51,7 @@ uint64_t Em410xDecode(uint8_t *BitStream, size_t size)
 					//PrintAndLog("DEBUG: EM parity failed parity val: %d, i:%d, ii:%d,idx:%d, Buffer: %d%d%d%d%d",parityTest,i,ii,idx,BitStream[idx+ii+(i*5)-5],BitStream[idx+ii+(i*5)-4],BitStream[idx+ii+(i*5)-3],BitStream[idx+ii+(i*5)-2],BitStream[idx+ii+(i*5)-1]);
 					parityTest=0;
 					idx-=8;
-					if (resetCnt>5)return 0;
+					if (resetCnt>5)return 0; //try 5 times
 					resetCnt++;
 					goto restart;//continue;
 				}
@@ -84,7 +72,7 @@ uint64_t Em410xDecode(uint8_t *BitStream, size_t size)
 int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert)
 {
 	int i;
-	int high = 0, low = 128;
+	int high = 0, low = 255;
 	*clk=DetectASKClock(BinStream, *size, *clk); //clock default
 
 	if (*clk<8) *clk =64;
@@ -100,7 +88,7 @@ int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert)
 		else if (BinStream[i] < low)
 			low = BinStream[i];
 	}
-	if ((high < 158) ){  //throw away static
+	if ((high < 129) ){  //throw away static (anything < 1 graph)
 		//PrintAndLog("no data found");
 		return -2;
 	}
@@ -283,7 +271,7 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert)
 {
 	uint32_t i;
 	// int invert=0;  //invert default
-	int high = 0, low = 128;
+	int high = 0, low = 255;
 	*clk=DetectASKClock(BinStream, *size, *clk); //clock default
 	uint8_t BitStream[502] = {0};
 
@@ -300,7 +288,8 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert)
 		else if (BinStream[i] < low)
 			low = BinStream[i];
 	}
-	if ((high < 158)){  //throw away static
+	if ((high < 129)){  //throw away static  high has to be more than 0 on graph. 
+													//noise <= -10 here
 		//   PrintAndLog("no data found");
 		return -2;
 	}
@@ -407,21 +396,11 @@ size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow
 {
 	uint32_t last_transition = 0;
 	uint32_t idx = 1;
-	uint32_t maxVal=0;
+	//uint32_t maxVal=0;
 	if (fchigh==0) fchigh=10;
 	if (fclow==0) fclow=8;
-	// we do care about the actual theshold value as sometimes near the center of the
-	// wave we may get static that changes direction of wave for one value
-	// if our value is too low it might affect the read.  and if our tag or
-	// antenna is weak a setting too high might not see anything. [marshmellow]
-	if (size<100) return 0;
-	for(idx=1; idx<100; idx++){
-		if(maxVal<dest[idx]) maxVal = dest[idx];
-	}
-	// set close to the top of the wave threshold with 25% margin for error
-	// less likely to get a false transition up there.
-	// (but have to be careful not to go too high and miss some short waves)
-	uint8_t threshold_value = (uint8_t)(((maxVal-128)*.75)+128);
+	//set the threshold close to 0 (graph) or 128 std to avoid static
+	uint8_t threshold_value = 123; 
 
 	// sync to first lo-hi transition, and threshold
 
@@ -481,7 +460,7 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t maxCons
 		if ( dest[idx-1]==1 ) {
 			n=myround2((float)(n+1)/((float)(rfLen)/(float)fclow));
 		} else {// 0->1 crossing
-			n=myround2((float)(n+1)/((float)(rfLen-2)/(float)fchigh));  //-2 for fudge factor
+			n=myround2((float)(n+1)/((float)(rfLen-1)/(float)fchigh));  //-1 for fudge factor
 		}
 		if (n == 0) n = 1;
 
@@ -573,7 +552,7 @@ uint32_t bytebits_to_byte(uint8_t* src, size_t numbits)
 
 int IOdemodFSK(uint8_t *dest, size_t size)
 {
-	static const uint8_t THRESHOLD = 140;
+	static const uint8_t THRESHOLD = 129;
 	uint32_t idx=0;
 	//make sure buffer has data
 	if (size < 66) return -1;
@@ -617,7 +596,7 @@ int DetectASKClock(uint8_t dest[], size_t size, int clock)
 {
 	int i=0;
 	int peak=0;
-	int low=128;
+	int low=255;
 	int clk[]={16,32,40,50,64,100,128,256};
 	int loopCnt = 256;  //don't need to loop through entire array...
 	if (size<loopCnt) loopCnt = size;
@@ -689,7 +668,7 @@ int DetectpskNRZClock(uint8_t dest[], size_t size, int clock)
 {
 	int i=0;
 	int peak=0;
-	int low=128;
+	int low=255;
 	int clk[]={16,32,40,50,64,100,128,256};
 	int loopCnt = 2048;  //don't need to loop through entire array...
 	if (size<loopCnt) loopCnt = size;
@@ -707,8 +686,8 @@ int DetectpskNRZClock(uint8_t dest[], size_t size, int clock)
 			low = dest[i];
 		}
 	}
-	peak=(int)(((peak-128)*.90)+128);
-	low= (int)(((low-128)*.90)+128);
+	peak=(int)(((peak-128)*.75)+128);
+	low= (int)(((low-128)*.75)+128);
 	//PrintAndLog("DEBUG: peak: %d, low: %d",peak,low);
 	int ii;
 	uint8_t clkCnt;
@@ -720,7 +699,7 @@ int DetectpskNRZClock(uint8_t dest[], size_t size, int clock)
 	//test each valid clock from smallest to greatest to see which lines up
 	for(clkCnt=0; clkCnt < 6; ++clkCnt){
 		if (clk[clkCnt] == 32){
-			tol=0;
+			tol=1;
 		}else{
 			tol=0;
 		}
@@ -773,7 +752,7 @@ int DetectpskNRZClock(uint8_t dest[], size_t size, int clock)
 void pskCleanWave(uint8_t *bitStream, size_t size)
 {
 	int i;
-	int low=128;
+	int low=255;
 	int high=0;
 	int gap = 4;
  // int loopMax = 2048;
@@ -815,8 +794,7 @@ int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert)
 {
 	//26 bit 40134 format  (don't know other formats)
 	int i;
-	int long_wait;
-	long_wait = 29;//29 leading zeros in format
+	int long_wait=29;//29 leading zeros in format
 	int start;
 	int first = 0;
 	int first2 = 0;
@@ -838,7 +816,6 @@ int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert)
 		// did not find start sequence
 		return -1;
 	}
-	//found start once now test length by finding next one
 	// Inverting signal if needed
 	if (first == 1) {
 		for (i = start; i < *size; i++) {
@@ -848,6 +825,7 @@ int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert)
 	}else *invert=0;
 
 	int iii;
+	//found start once now test length by finding next one
 	for (ii=start+29; ii <= *size - 250; ii++) {
 		first2 = bitStream[ii];
 		for (iii = ii; iii < ii + long_wait; iii++) {
@@ -883,7 +861,7 @@ int pskNRZrawDemod(uint8_t *dest, size_t *size, int *clk, int *invert)
 	int clk2 = DetectpskNRZClock(dest, *size, *clk);
 	*clk=clk2;
 	uint32_t i;
-	uint8_t high=0, low=128;
+	uint8_t high=0, low=255;
 	uint32_t gLen = *size;
 	if (gLen > 1280) gLen=1280;
 	// get high
@@ -899,7 +877,7 @@ int pskNRZrawDemod(uint8_t *dest, size_t *size, int *clk, int *invert)
 	int lastBit = 0;  //set first clock check
 	uint32_t bitnum = 0;     //output counter
 	uint8_t tol = 0;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
-	if (*clk==32)tol=2;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely
+	if (*clk==32) tol = 2;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely
 	uint32_t iii = 0;
 	uint8_t errCnt =0;
 	uint32_t bestStart = *size;
