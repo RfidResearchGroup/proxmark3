@@ -29,8 +29,12 @@ bool bAuthenticating;
 bool bPwd;
 bool bSuccessful;
 
+
 int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int bReader)
 {
+  static uint16_t traceLen = 0;
+  uint8_t *trace = BigBuf_get_addr();
+
   // Return when trace is full
   if (traceLen >= TRACE_SIZE) return FALSE;
   
@@ -92,7 +96,6 @@ static struct hitag2_tag tag = {
 
 #define AUTH_TABLE_OFFSET FREE_BUFFER_OFFSET
 #define AUTH_TABLE_LENGTH FREE_BUFFER_SIZE
-byte_t* auth_table = (byte_t *)BigBuf+AUTH_TABLE_OFFSET;
 size_t auth_table_pos = 0;
 size_t auth_table_len = AUTH_TABLE_LENGTH;
 
@@ -302,6 +305,8 @@ static void hitag_send_frame(const byte_t* frame, size_t frame_len)
 
 void hitag2_handle_reader_command(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen)
 {
+    byte_t* auth_table;
+    auth_table = (byte_t *)BigBuf_get_addr() + AUTH_TABLE_OFFSET;
 	byte_t rx_air[HITAG_FRAME_LEN];
 	
 	// Copy the (original) received frame how it is send over the air
@@ -664,6 +669,10 @@ bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txl
 }
 
 bool hitag2_test_auth_attempts(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+
+    byte_t* auth_table;
+    auth_table = (byte_t *)BigBuf_get_addr() + AUTH_TABLE_OFFSET;
+
 	// Reset the transmission frame length 
 	*txlen = 0;
 	
@@ -736,6 +745,8 @@ void SnoopHitag(uint32_t type) {
 
 	auth_table_len = 0;
 	auth_table_pos = 0;
+    byte_t* auth_table;
+    auth_table = (byte_t *)BigBuf_get_addr() + AUTH_TABLE_OFFSET;
 	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 	
 	DbpString("Starting Hitag2 snoop");
@@ -941,10 +952,12 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	bQuiet = false;
 	
 	// Clean up trace and prepare it for storing frames
-  iso14a_set_tracing(TRUE);
-  iso14a_clear_trace();
+	iso14a_set_tracing(TRUE);
+	iso14a_clear_trace();
 	auth_table_len = 0;
 	auth_table_pos = 0;
+    byte_t* auth_table;
+    auth_table = (byte_t *)BigBuf_get_addr() + AUTH_TABLE_OFFSET;
 	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 
 	DbpString("Starting Hitag2 simulation");
@@ -1131,8 +1144,11 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
   bSuccessful = false;
   
 	// Clean up trace and prepare it for storing frames
-  iso14a_set_tracing(TRUE);
-  iso14a_clear_trace();
+	iso14a_set_tracing(TRUE);
+	iso14a_clear_trace();
+    byte_t* auth_table;
+    auth_table = (byte_t *)BigBuf_get_addr() + AUTH_TABLE_OFFSET;
+
 	DbpString("Starting Hitag reader family");
 
 	// Check configuration

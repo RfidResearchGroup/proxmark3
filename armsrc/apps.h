@@ -17,50 +17,10 @@
 #include "common.h"
 #include "hitag2.h"
 #include "mifare.h"
-
 #include "../common/crc32.h"
-
-// The large multi-purpose buffer, typically used to hold A/D samples,
-// maybe processed in some way.
-#define BIGBUF_SIZE				40000
-uint32_t BigBuf[BIGBUF_SIZE / sizeof(uint32_t)];
-#define TRACE_OFFSET			0
-#define TRACE_SIZE				3000
-#define RECV_CMD_OFFSET			(TRACE_OFFSET + TRACE_SIZE)
-#define MAX_FRAME_SIZE			256
-#define MAX_PARITY_SIZE			((MAX_FRAME_SIZE + 1)/ 8)
-#define RECV_CMD_PAR_OFFSET		(RECV_CMD_OFFSET + MAX_FRAME_SIZE)
-#define RECV_RESP_OFFSET		(RECV_CMD_PAR_OFFSET + MAX_PARITY_SIZE)
-#define RECV_RESP_PAR_OFFSET 	(RECV_RESP_OFFSET + MAX_FRAME_SIZE)
-#define CARD_MEMORY_OFFSET		(RECV_RESP_PAR_OFFSET + MAX_PARITY_SIZE)
-#define CARD_MEMORY_SIZE		4096	
-#define DMA_BUFFER_OFFSET  		CARD_MEMORY_OFFSET
-#define DMA_BUFFER_SIZE    		CARD_MEMORY_SIZE
-#define FREE_BUFFER_OFFSET 		(CARD_MEMORY_OFFSET + CARD_MEMORY_SIZE)
-#define FREE_BUFFER_SIZE   		(BIGBUF_SIZE - FREE_BUFFER_OFFSET - 1)
-
-/*
-The statements above translates into this :
-BIGBUF_SIZE         = 40000
-TRACE_OFFSET        = 0
-TRACE_SIZE          = 3000
-RECV_CMD_OFFSET     = 3000
-MAX_FRAME_SIZE      = 256
-MAX_PARITY_SIZE     = 32
-RECV_CMD_PAR_OFFSET = 3256
-RECV_RESP_OFFSET    = 3288
-RECV_RESP_PAR_OFFSET= 3544
-CARD_MEMORY_OFFSET  = 3576
-CARD_MEMORY_SIZE    = 4096
-DMA_BUFFER_OFFSET   = 3576
-DMA_BUFFER_SIZE     = 4096
-FREE_BUFFER_OFFSET  = 7672
-FREE_BUFFER_SIZE    = 32327
- */
+#include "BigBuf.h"
 
 extern const uint8_t OddByteParity[256];
-extern uint8_t *trace; // = (uint8_t *) BigBuf;
-extern int traceLen;   // = 0;
 extern int rsamples;   // = 0;
 extern int tracing;    // = TRUE;
 extern uint8_t trigger;
@@ -88,7 +48,6 @@ void SnoopLFRawAdcSamples(int divisor, int trigger_threshold);
 void DoAcquisition125k(int trigger_threshold);
 extern int ToSendMax;
 extern uint8_t ToSend[];
-extern uint32_t BigBuf[];
 
 /// fpga.h
 void FpgaSendCommand(uint16_t cmd, uint16_t v);

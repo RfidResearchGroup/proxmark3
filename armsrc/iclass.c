@@ -640,9 +640,9 @@ void RAMFUNC SnoopIClass(void)
     // The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.
 	// So 32 should be enough!
-	uint8_t *readerToTagCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
+	uint8_t *readerToTagCmd = BigBuf_get_addr() + RECV_CMD_OFFSET;
     // The response (tag -> reader) that we're receiving.
-	uint8_t *tagToReaderResponse = (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);
+	uint8_t *tagToReaderResponse = BigBuf_get_addr() + RECV_RESP_OFFSET;
 	
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
  
@@ -652,9 +652,9 @@ void RAMFUNC SnoopIClass(void)
     iso14a_set_trigger(FALSE);
 
     // The DMA buffer, used to stream samples from the FPGA
-    int8_t *dmaBuf = ((int8_t *)BigBuf) + DMA_BUFFER_OFFSET;
+    uint8_t *dmaBuf = BigBuf_get_addr() + DMA_BUFFER_OFFSET;
     int lastRxCounter;
-    int8_t *upTo;
+    uint8_t *upTo;
     int smpl;
     int maxBehindBy = 0;
 
@@ -1065,26 +1065,26 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 	//uint8_t sof = 0x0f;
 
 	// Respond SOF -- takes 1 bytes
-	uint8_t *resp1 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
+	uint8_t *resp1 = (BigBuf_get_addr() + FREE_BUFFER_OFFSET);
 	int resp1Len;
 
 	// Anticollision CSN (rotated CSN)
 	// 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-	uint8_t *resp2 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 2);
+	uint8_t *resp2 = (BigBuf_get_addr() + FREE_BUFFER_OFFSET + 2);
 	int resp2Len;
 
 	// CSN
 	// 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-	uint8_t *resp3 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 30);
+	uint8_t *resp3 = (BigBuf_get_addr() + FREE_BUFFER_OFFSET + 30);
 	int resp3Len;
 
 	// e-Purse
 	// 18: Takes 2 bytes for SOF/EOF and 8 * 2 = 16 bytes (2 bytes/byte)
-	uint8_t *resp4 = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + 60);
+	uint8_t *resp4 = (BigBuf_get_addr() + FREE_BUFFER_OFFSET + 60);
 	int resp4Len;
 
 	// + 1720..
-	uint8_t *receivedCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
+	uint8_t *receivedCmd = BigBuf_get_addr() + RECV_CMD_OFFSET;
 	memset(receivedCmd, 0x44, MAX_FRAME_SIZE);
 	int len;
 
@@ -1529,7 +1529,7 @@ uint8_t handshakeIclassTag(uint8_t *card_data)
 	static uint8_t identify[]    = { 0x0c };
 	static uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	static uint8_t readcheck_cc[]= { 0x88, 0x02 };
-	uint8_t *resp = (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);
+	uint8_t *resp = BigBuf_get_addr() + RECV_RESP_OFFSET;
 
 	uint8_t read_status = 0;
 
@@ -1650,7 +1650,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	  int keyaccess;
 	} memory;
 	
-	uint8_t* resp = (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);
+	uint8_t* resp = BigBuf_get_addr() + RECV_RESP_OFFSET;
 	
     setupIclassReader();
 

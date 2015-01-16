@@ -151,7 +151,8 @@ bool intMfSniffSend() {
 	int pckSize = 0;
 	int pckLen = traceLen;
 	int pckNum = 0;
-
+	uint8_t *trace = BigBuf_get_addr();
+	
 	FpgaDisableSscDma();
 	while (pckLen > 0) {
 		pckSize = MIN(USB_CMD_DATA_SIZE, pckLen);

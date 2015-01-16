@@ -23,13 +23,13 @@ int MF_DBGLEVEL = MF_DBG_ALL;
 
 // memory management
 uint8_t* get_bigbufptr_recvrespbuf(void) {
-	return (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);	
+	return BigBuf_get_addr() + RECV_RESP_OFFSET;	
 }
 uint8_t* get_bigbufptr_recvcmdbuf(void) {
-	return (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);	
+	return BigBuf_get_addr() + RECV_CMD_OFFSET;	
 }
 uint8_t* get_bigbufptr_emlcardmem(void) {
-	return (((uint8_t *)BigBuf) + CARD_MEMORY_OFFSET);
+	return BigBuf_get_addr() + CARD_MEMORY_OFFSET;
 }
 
 // crypto1 helpers

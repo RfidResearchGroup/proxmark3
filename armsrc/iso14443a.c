@@ -22,9 +22,7 @@
 #include "mifareutil.h"
 
 static uint32_t iso14a_timeout;
-uint8_t *trace = (uint8_t *) BigBuf+TRACE_OFFSET;
 int rsamples = 0;
-int traceLen = 0;
 int tracing = TRUE;
 uint8_t trigger = 0;
 // the block number for the ISO14443-4 PCB
@@ -149,6 +147,7 @@ void iso14a_set_trigger(bool enable) {
 }
 
 void iso14a_clear_trace() {
+	uint8_t *trace = BigBuf_get_addr();
 	memset(trace, 0x44, TRACE_SIZE);
 	traceLen = 0;
 }
@@ -204,6 +203,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 {
 	if (!tracing) return FALSE;
 	
+	uint8_t *trace = BigBuf_get_addr();
 	uint16_t num_paritybytes = (iLen-1)/8 + 1;	// number of valid paritybytes in *parity
 	uint16_t duration = timestamp_end - timestamp_start;
 
@@ -604,19 +604,19 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 	// The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.
 	// So 32 should be enough!
-	uint8_t *receivedCmd = ((uint8_t *)BigBuf) + RECV_CMD_OFFSET;
-	uint8_t *receivedCmdPar = ((uint8_t *)BigBuf) + RECV_CMD_PAR_OFFSET;
+	uint8_t *receivedCmd = BigBuf_get_addr() + RECV_CMD_OFFSET;
+	uint8_t *receivedCmdPar = BigBuf_get_addr() + RECV_CMD_PAR_OFFSET;
 	
 	// The response (tag -> reader) that we're receiving.
-	uint8_t *receivedResponse = ((uint8_t *)BigBuf) + RECV_RESP_OFFSET;
-	uint8_t *receivedResponsePar = ((uint8_t *)BigBuf) + RECV_RESP_PAR_OFFSET;
+	uint8_t *receivedResponse = BigBuf_get_addr() + RECV_RESP_OFFSET;
+	uint8_t *receivedResponsePar = BigBuf_get_addr() + RECV_RESP_PAR_OFFSET;
 	
 	// As we receive stuff, we copy it from receivedCmd or receivedResponse
 	// into trace, along with its length and other annotations.
 	//uint8_t *trace = (uint8_t *)BigBuf;
 	
 	// The DMA buffer, used to stream samples from the FPGA
-	uint8_t *dmaBuf = ((uint8_t *)BigBuf) + DMA_BUFFER_OFFSET;
+	uint8_t *dmaBuf = BigBuf_get_addr() + DMA_BUFFER_OFFSET;
 	uint8_t *data = dmaBuf;
 	uint8_t previous_data = 0;
 	int maxDataLen = 0;
@@ -885,7 +885,7 @@ int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
 				 uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
 
-static uint8_t* free_buffer_pointer = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
+static uint8_t* free_buffer_pointer;
 
 typedef struct {
   uint8_t* response;
@@ -896,7 +896,7 @@ typedef struct {
 } tag_response_info_t;
 
 void reset_free_buffer() {
-  free_buffer_pointer = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
+  free_buffer_pointer = BigBuf_get_addr() + FREE_BUFFER_OFFSET;
 }
 
 bool prepare_tag_modulation(tag_response_info_t* response_info, size_t max_buffer_size) {
@@ -936,7 +936,7 @@ bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
   response_info->modulation = free_buffer_pointer;
   
   // Determine the maximum size we can use from our buffer
-  size_t max_buffer_size = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + FREE_BUFFER_SIZE) - free_buffer_pointer;
+  size_t max_buffer_size = BigBuf_get_addr() + FREE_BUFFER_OFFSET + FREE_BUFFER_SIZE - free_buffer_pointer;
   
   // Forward the prepare tag modulation function to the inner function
   if (prepare_tag_modulation(response_info,max_buffer_size)) {
@@ -1091,8 +1091,8 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 	iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
 	// buffers used on software Uart:
-	uint8_t *receivedCmd = ((uint8_t *)BigBuf) + RECV_CMD_OFFSET;
-	uint8_t *receivedCmdPar = ((uint8_t *)BigBuf) + RECV_CMD_PAR_OFFSET;
+	uint8_t *receivedCmd = BigBuf_get_addr() + RECV_CMD_OFFSET;
+	uint8_t *receivedCmdPar = BigBuf_get_addr() + RECV_CMD_PAR_OFFSET;
 
 	cmdsRecvd = 0;
 	tag_response_info_t* p_response;
@@ -1727,8 +1727,8 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 	uint8_t sel_all[]    = { 0x93,0x20 };
 	uint8_t sel_uid[]    = { 0x93,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 	uint8_t rats[]       = { 0xE0,0x80,0x00,0x00 }; // FSD=256, FSDI=8, CID=0
-	uint8_t *resp = ((uint8_t *)BigBuf) + RECV_RESP_OFFSET;
-	uint8_t *resp_par = ((uint8_t *)BigBuf) + RECV_RESP_PAR_OFFSET;
+	uint8_t *resp = BigBuf_get_addr() + RECV_RESP_OFFSET;
+	uint8_t *resp_par = BigBuf_get_addr() + RECV_RESP_PAR_OFFSET;
 	byte_t uid_resp[4];
 	size_t uid_resp_len;
 
@@ -2020,8 +2020,8 @@ void ReaderMifare(bool first_try)
 	uint8_t mf_nr_ar[]   = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
 	static uint8_t mf_nr_ar3;
 
-	uint8_t* receivedAnswer = (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);
-	uint8_t* receivedAnswerPar = (((uint8_t *)BigBuf) + RECV_RESP_PAR_OFFSET);
+	uint8_t* receivedAnswer = BigBuf_get_addr() + RECV_RESP_OFFSET;
+	uint8_t* receivedAnswerPar = BigBuf_get_addr() + RECV_RESP_PAR_OFFSET;
 
 	iso14a_clear_trace();
 	iso14a_set_tracing(TRUE);
@@ -2722,18 +2722,18 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.
 	// So 32 should be enough!
-	uint8_t *receivedCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
-	uint8_t *receivedCmdPar = ((uint8_t *)BigBuf) + RECV_CMD_PAR_OFFSET;
+	uint8_t *receivedCmd = BigBuf_get_addr() + RECV_CMD_OFFSET;
+	uint8_t *receivedCmdPar = BigBuf_get_addr() + RECV_CMD_PAR_OFFSET;
 	// The response (tag -> reader) that we're receiving.
-	uint8_t *receivedResponse = (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);
-	uint8_t *receivedResponsePar = ((uint8_t *)BigBuf) + RECV_RESP_PAR_OFFSET;
+	uint8_t *receivedResponse = BigBuf_get_addr() + RECV_RESP_OFFSET;
+	uint8_t *receivedResponsePar = BigBuf_get_addr() + RECV_RESP_PAR_OFFSET;
 
 	// As we receive stuff, we copy it from receivedCmd or receivedResponse
 	// into trace, along with its length and other annotations.
 	//uint8_t *trace = (uint8_t *)BigBuf;
 	
 	// The DMA buffer, used to stream samples from the FPGA
-	uint8_t *dmaBuf = ((uint8_t *)BigBuf) + DMA_BUFFER_OFFSET;
+	uint8_t *dmaBuf = BigBuf_get_addr() + DMA_BUFFER_OFFSET;
 	uint8_t *data = dmaBuf;
 	uint8_t previous_data = 0;
 	int maxDataLen = 0;

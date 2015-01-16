@@ -41,8 +41,8 @@ ARMSRC = fpgaloader.c \
 	$(SRC_CRAPTO1) \
 	$(SRC_CRC) \
 	legic_prng.c \
-	iclass.c
-
+	iclass.c \
+	BigBuf.c \
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant
 APP_CFLAGS += -I.
