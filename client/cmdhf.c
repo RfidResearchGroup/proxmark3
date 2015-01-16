@@ -519,15 +519,34 @@ int CmdHFList(const char *Cmd)
 	int tlen = param_getstr(Cmd,0,type);
 	char param = param_getchar(Cmd, 1);
 	bool errors = false;
-	uint8_t protocol = false;
+	uint8_t protocol = 0;
 	//Validate params
-	if(tlen == 0 || (strcmp(type, "iclass") != 0 && strcmp(type,"14a") != 0))
+	if(tlen == 0)
 	{
 		errors = true;
 	}
 	if(param == 'h' || (param !=0 && param != 'f'))
 	{
 		errors = true;
+	}
+	if(!errors)
+	{
+		if(strcmp(type, "iclass") == 0)
+		{
+			protocol = ICLASS;
+		}else if(strcmp(type, "14a") == 0)
+		{
+			protocol = ISO_14443A;
+		}
+		else if(strcmp(type, "14b") == 0)
+		{
+			protocol = ISO_14443B;
+		}else if(strcmp(type,"raw")== 0)
+		{
+			protocol = -1;//No crc, no annotations
+		}else{
+			errors = true;
+		}
 	}
 
 	if (errors) {
@@ -543,20 +562,7 @@ int CmdHFList(const char *Cmd)
 		PrintAndLog("example: hf list iclass");
 		return 0;
 	}
-	if(strcmp(type, "iclass") == 0)
-	{
-		protocol = ICLASS;
-	}else if(strcmp(type, "14a") == 0)
-	{
-		protocol = ISO_14443A;
-	}
-	else if(strcmp(type, "14b") == 0)
-	{
-		protocol = ISO_14443B;
-	}else if(strcmp(type,"raw")== 0)
-	{
-		protocol = -1;//No crc, no annotations
-	}
+
 
 	if (param == 'f') {
 		showWaitCycles = true;
