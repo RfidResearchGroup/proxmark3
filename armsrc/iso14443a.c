@@ -199,60 +199,6 @@ void AppendCrc14443a(uint8_t* data, int len)
 	ComputeCrc14443(CRC_14443_A,data,len,data+len,data+len+1);
 }
 
-// The function LogTrace() is also used by the iClass implementation in iClass.c
-bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag)
-{
-	if (!tracing) return FALSE;
-	
-	uint16_t num_paritybytes = (iLen-1)/8 + 1;	// number of valid paritybytes in *parity
-	uint16_t duration = timestamp_end - timestamp_start;
-
-	// Return when trace is full
-	if (traceLen + sizeof(iLen) + sizeof(timestamp_start) + sizeof(duration) + num_paritybytes + iLen >= TRACE_SIZE) {
-		tracing = FALSE;	// don't trace any more
-		return FALSE;
-	}
-	
-	// Traceformat:
-	// 32 bits timestamp (little endian)
-	// 16 bits duration (little endian)
-	// 16 bits data length (little endian, Highest Bit used as readerToTag flag)
-	// y Bytes data
-	// x Bytes parity (one byte per 8 bytes data)
-	
-	// timestamp (start)
-	trace[traceLen++] = ((timestamp_start >> 0) & 0xff);
-	trace[traceLen++] = ((timestamp_start >> 8) & 0xff);
-	trace[traceLen++] = ((timestamp_start >> 16) & 0xff);
-	trace[traceLen++] = ((timestamp_start >> 24) & 0xff);
-	
-	// duration
-	trace[traceLen++] = ((duration >> 0) & 0xff);
-	trace[traceLen++] = ((duration >> 8) & 0xff);
-
-	// data length
-	trace[traceLen++] = ((iLen >> 0) & 0xff);
-	trace[traceLen++] = ((iLen >> 8) & 0xff);
-
-	// readerToTag flag
-	if (!readerToTag) {
-		trace[traceLen - 1] |= 0x80;
-	}
-
-	// data bytes
-	if (btBytes != NULL && iLen != 0) {
-		memcpy(trace + traceLen, btBytes, iLen);
-	}
-	traceLen += iLen;
-
-	// parity bytes
-	if (parity != NULL && iLen != 0) {
-		memcpy(trace + traceLen, parity, num_paritybytes);
-	}
-	traceLen += num_paritybytes;
-
-	return TRUE;
-}
 
 //=============================================================================
 // ISO 14443 Type A - Miller decoder
