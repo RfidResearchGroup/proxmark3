@@ -87,7 +87,4 @@ extern int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *resp_da
 extern void iso14a_set_trigger(bool enable);
 extern void iso14a_set_timeout(uint32_t timeout);
 
-extern void iso14a_clear_trace();
-extern void iso14a_set_tracing(bool enable);
-
 #endif /* __ISO14443A_H */

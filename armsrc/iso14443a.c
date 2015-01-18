@@ -148,14 +148,6 @@ void iso14a_set_trigger(bool enable) {
 	trigger = enable;
 }
 
-void iso14a_clear_trace() {
-	memset(trace, 0x44, TRACE_SIZE);
-	traceLen = 0;
-}
-
-void iso14a_set_tracing(bool enable) {
-	tracing = enable;
-}
 
 void iso14a_set_timeout(uint32_t timeout) {
 	iso14a_timeout = timeout;

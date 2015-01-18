@@ -427,6 +427,22 @@ uint32_t RAMFUNC GetCountSspClk(){
 		return tmp_count;
 	}
 }
+void iso14a_clear_trace() {
+	clear_trace();
+}
+
+void iso14a_set_tracing(bool enable) {
+	set_tracing(enable);
+}
+
+void clear_trace() {
+	memset(trace, 0x44, TRACE_SIZE);
+	traceLen = 0;
+}
+
+void set_tracing(bool enable) {
+	tracing = enable;
+}
 
 /**
   This is a function to store traces. All protocols can use this generic tracer-function.

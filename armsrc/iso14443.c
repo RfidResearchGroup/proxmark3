@@ -618,7 +618,7 @@ static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
 }
 
 /*
- *  Demodulate the samples we received from the tag
+ *  Demodulate the samples we received from the tag, also log to tracebuffer
  *  weTx: set to 'TRUE' if we behave like a reader
  *        set to 'FALSE' if we behave like a snooper
  *  quiet: set to 'TRUE' to disable debug output
@@ -698,6 +698,12 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
     }
     AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
     if (!quiet) Dbprintf("%x %x %x", max, gotFrame, Demod.len);
+	//Tracing
+	if (tracing && Demod.len > 0) {
+		uint8_t parity[MAX_PARITY_SIZE];
+		GetParity(Demod.output , Demod.len, parity);
+		LogTrace(Demod.output,Demod.len, 0, 0, parity, FALSE);
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -853,6 +859,20 @@ void AcquireRawAdcSamplesIso14443(uint32_t parameter)
     SendRawCommand14443B(sizeof(cmd1),1,1,cmd1);
 }
 
+/**
+  Convenience function to encode, transmit and trace iso 14443b comms
+  **/
+static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len)
+{
+	CodeIso14443bAsReader(cmd, len);
+	TransmitFor14443();
+	if (tracing) {
+		uint8_t parity[MAX_PARITY_SIZE];
+		GetParity(cmd, len, parity);
+		LogTrace(cmd,len, 0, 0, parity, TRUE);
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Read a SRI512 ISO 14443 tag.
 //
@@ -864,6 +884,9 @@ void AcquireRawAdcSamplesIso14443(uint32_t parameter)
 //-----------------------------------------------------------------------------
 void ReadSTMemoryIso14443(uint32_t dwLast)
 {
+	clear_trace();
+	set_tracing(TRUE);
+
     uint8_t i = 0x00;
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -885,8 +908,8 @@ void ReadSTMemoryIso14443(uint32_t dwLast)
 
     // First command: wake up the tag using the INITIATE command
     uint8_t cmd1[] = { 0x06, 0x00, 0x97, 0x5b};
-    CodeIso14443bAsReader(cmd1, sizeof(cmd1));
-    TransmitFor14443();
+
+	CodeAndTransmit14443bAsReader(cmd1, sizeof(cmd1));
 //    LED_A_ON();
     GetSamplesFor14443Demod(TRUE, 2000,TRUE);
 //    LED_A_OFF();
@@ -903,8 +926,8 @@ void ReadSTMemoryIso14443(uint32_t dwLast)
     cmd1[0] = 0x0E; // 0x0E is SELECT
     cmd1[1] = Demod.output[0];
     ComputeCrc14443(CRC_14443_B, cmd1, 2, &cmd1[2], &cmd1[3]);
-    CodeIso14443bAsReader(cmd1, sizeof(cmd1));
-    TransmitFor14443();
+	CodeAndTransmit14443bAsReader(cmd1, sizeof(cmd1));
+
 //    LED_A_ON();
     GetSamplesFor14443Demod(TRUE, 2000,TRUE);
 //    LED_A_OFF();
@@ -927,8 +950,8 @@ void ReadSTMemoryIso14443(uint32_t dwLast)
     // First get the tag's UID:
     cmd1[0] = 0x0B;
     ComputeCrc14443(CRC_14443_B, cmd1, 1 , &cmd1[1], &cmd1[2]);
-    CodeIso14443bAsReader(cmd1, 3); // Only first three bytes for this one
-    TransmitFor14443();
+	CodeAndTransmit14443bAsReader(cmd1, 3); // Only first three bytes for this one
+
 //    LED_A_ON();
     GetSamplesFor14443Demod(TRUE, 2000,TRUE);
 //    LED_A_OFF();
@@ -959,8 +982,8 @@ void ReadSTMemoryIso14443(uint32_t dwLast)
 	    }
 	    cmd1[1] = i;
 	    ComputeCrc14443(CRC_14443_B, cmd1, 2, &cmd1[2], &cmd1[3]);
-	    CodeIso14443bAsReader(cmd1, sizeof(cmd1));
-	    TransmitFor14443();
+		CodeAndTransmit14443bAsReader(cmd1, sizeof(cmd1));
+
 //	    LED_A_ON();
 	    GetSamplesFor14443Demod(TRUE, 2000,TRUE);
 //	    LED_A_OFF();
@@ -1097,20 +1120,15 @@ void RAMFUNC SnoopIso14443(void)
         samples += 2;
 
 #define HANDLE_BIT_IF_BODY \
-            if(triggered) { \
-                trace[traceLen++] = ((samples >>  0) & 0xff); \
-                trace[traceLen++] = ((samples >>  8) & 0xff); \
-                trace[traceLen++] = ((samples >> 16) & 0xff); \
-                trace[traceLen++] = ((samples >> 24) & 0xff); \
-                trace[traceLen++] = 0; \
-                trace[traceLen++] = 0; \
-                trace[traceLen++] = 0; \
-                trace[traceLen++] = 0; \
-                trace[traceLen++] = Uart.byteCnt; \
-                memcpy(trace+traceLen, receivedCmd, Uart.byteCnt); \
-                traceLen += Uart.byteCnt; \
-                if(traceLen > 1000) break; \
-            } \
+			if(triggered && tracing) {\
+				uint8_t parity[MAX_PARITY_SIZE];\
+				GetParity(receivedCmd, Uart.byteCnt, parity);\
+				LogTrace(receivedCmd,Uart.byteCnt,samples, samples,parity,TRUE);\
+				if(!tracing) {\
+					DbpString("Reached trace limit");\
+					break;\
+				}\
+			}\
             /* And ready to receive another command. */ \
             memset(&Uart, 0, sizeof(Uart)); \
             Uart.output = receivedCmd; \
@@ -1130,28 +1148,18 @@ void RAMFUNC SnoopIso14443(void)
         }
 
         if(Handle14443SamplesDemod(ci, cq)) {
-            // timestamp, as a count of samples
-            trace[traceLen++] = ((samples >>  0) & 0xff);
-            trace[traceLen++] = ((samples >>  8) & 0xff);
-            trace[traceLen++] = ((samples >> 16) & 0xff);
-            trace[traceLen++] = 0x80 | ((samples >> 24) & 0xff);
-            // correlation metric (~signal strength estimate)
-            if(Demod.metricN != 0) {
-                Demod.metric /= Demod.metricN;
-            }
-            trace[traceLen++] = ((Demod.metric >>  0) & 0xff);
-            trace[traceLen++] = ((Demod.metric >>  8) & 0xff);
-            trace[traceLen++] = ((Demod.metric >> 16) & 0xff);
-            trace[traceLen++] = ((Demod.metric >> 24) & 0xff);
-            // length
-            trace[traceLen++] = Demod.len;
-            memcpy(trace+traceLen, receivedResponse, Demod.len);
-            traceLen += Demod.len;
-            if(traceLen > DEMOD_TRACE_SIZE) {
-				DbpString("Reached trace limit");
-				goto done;
-			}
 
+			//Use samples as a time measurement
+			if(tracing)
+			{
+				uint8_t parity[MAX_PARITY_SIZE];
+				GetParity(receivedResponse, Demod.len, parity);
+				LogTrace(receivedResponse,Demod.len,samples, samples,parity,FALSE);
+				if(!tracing) {
+					DbpString("Reached trace limit");
+					break;
+				}
+			}
             triggered = TRUE;
             LED_A_OFF();
             LED_B_ON();
@@ -1175,7 +1183,7 @@ done:
 	LED_C_OFF();
   AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 	DbpString("Snoop statistics:");
-  Dbprintf("  Max behind by: %i", maxBehindBy);
+	Dbprintf("  Max behind by: %i", maxBehindBy);
 	Dbprintf("  Uart State: %x", Uart.state);
 	Dbprintf("  Uart ByteCnt: %i", Uart.byteCnt);
 	Dbprintf("  Uart ByteCntMax: %i", Uart.byteCntMax);
@@ -1220,8 +1228,8 @@ void SendRawCommand14443B(uint32_t datalen, uint32_t recv,uint8_t powerfield, ui
         SpinDelay(200);
     }
 
-    CodeIso14443bAsReader(data, datalen);
-    TransmitFor14443();
+	CodeAndTransmit14443bAsReader(data, datalen);
+
     if(recv)
     {
         uint16_t iLen = MIN(Demod.len,USB_CMD_DATA_SIZE);
