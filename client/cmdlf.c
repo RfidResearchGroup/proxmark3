@@ -388,7 +388,7 @@ static void ChkBitstream(const char *str)
     }
   }
 }
-
+//appears to attempt to simulate manchester
 int CmdLFSim(const char *Cmd)
 {
 	int i,j;
@@ -579,6 +579,16 @@ int CmdLFfind(const char *Cmd)
   ans=CmdFSKdemodIO("");
   if (ans>0) {
     PrintAndLog("Valid IO Prox ID Found!");
+    return 1;
+  }
+  ans=CmdFSKdemodPyramid("0");
+  if (ans>0) {
+    PrintAndLog("Valid Pyramid ID Found!");
+    return 1;
+  }
+  ans=CmdFSKdemodAWID("0");
+  if (ans>0) {
+    PrintAndLog("Valid AWID ID Found!");
     return 1;
   }
   ans=CmdFSKdemodHID("");

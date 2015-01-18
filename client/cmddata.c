@@ -327,7 +327,8 @@ int Cmdmandecoderaw(const char *Cmd)
 //by marshmellow
 //biphase decode
 //take 01 or 10 = 0 and 11 or 00 = 1
-//takes 1 argument "offset" default = 0 if 1 it will shift the decode by one bit
+//takes 2 arguments "offset" default = 0 if 1 it will shift the decode by one bit
+// and "invert" default = 0 if 1 it will invert output
 //  since it is not like manchester and doesn't have an incorrect bit pattern we
 //  cannot determine if our decode is correct or if it should be shifted by one bit
 //  the argument offset allows us to manually shift if the output is incorrect
@@ -339,8 +340,9 @@ int CmdBiphaseDecodeRaw(const char *Cmd)
   int errCnt=0;
 	size_t size=0;
   int offset=0;
+  int invert=0;
   int high=0, low=0;
-	sscanf(Cmd, "%i", &offset);
+	sscanf(Cmd, "%i %i", &offset, &invert);
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
   //get graphbuffer & high and low
 	for (;i<DemodBufferLen;++i){
@@ -353,7 +355,7 @@ int CmdBiphaseDecodeRaw(const char *Cmd)
     return 0;
   }
 	size=i;
-	errCnt=BiphaseRawDecode(BitStream, &size, offset);
+	errCnt=BiphaseRawDecode(BitStream, &size, offset, invert);
   if (errCnt>=20){
     PrintAndLog("Too many errors attempting to decode: %d",errCnt);
     return 0;
@@ -714,6 +716,228 @@ int CmdFSKdemodIO(const char *Cmd)
 	DemodBufferLen=64;
   return 1;
 }
+
+
+//by marshmellow
+//AWID Prox demod - FSK RF/50 with preamble of 00000001  (always a 96 bit data stream)
+//print full AWID Prox ID and some bit format details if found
+int CmdFSKdemodAWID(const char *Cmd)
+{
+
+  int verbose=1;
+  sscanf(Cmd, "%i", &verbose);
+
+  //raw fsk demod no manchester decoding no start bit finding just get binary from wave
+  uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
+  size_t size = getFromGraphBuf(BitStream);
+
+  //get binary from fsk wave
+  int idx = AWIDdemodFSK(BitStream, size);
+  if (idx<=0){
+    if (verbose){
+      if (idx == -1)
+        PrintAndLog("Error: not enough samples");
+      else if (idx == -2)
+        PrintAndLog("Error: only noise found - no waves");
+      else if (idx == -3)
+        PrintAndLog("Error: problem during FSK demod");
+    //  else if (idx == -3)
+    //    PrintAndLog("Error: thought we had a tag but the parity failed");
+      else if (idx == -4)
+        PrintAndLog("Error: AWID preamble not found");
+    }
+    return 0;
+  }
+
+  // Index map
+  // 0            10            20            30              40            50              60
+  // |            |             |             |               |             |               |
+  // 01234567 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 - to 96
+  // -----------------------------------------------------------------------------
+  // 00000001 000 1 110 1 101 1 011 1 101 1 010 0 000 1 000 1 010 0 001 0 110 1 100 0 000 1 000 1
+  // premable bbb o bbb o bbw o fff o fff o ffc o ccc o ccc o ccc o ccc o ccc o wxx o xxx o xxx o - to 96
+  //          |---26 bit---|    |-----117----||-------------142-------------|
+  // b = format bit len, o = odd parity of last 3 bits
+  // f = facility code, c = card number
+  // w = wiegand parity
+  // (26 bit format shown)
+ 
+  //get raw ID before removing parities
+  uint32_t rawLo = bytebits_to_byte(BitStream+idx+64,32);
+  uint32_t rawHi = bytebits_to_byte(BitStream+idx+32,32);
+  uint32_t rawHi2 = bytebits_to_byte(BitStream+idx,32);
+  size = removeParity(BitStream, idx+8, 4, 1, 88);
+  if (size != 66){
+    if (verbose) PrintAndLog("Error: at parity check-tag size does not match AWID format");
+    return 0;
+  }
+  // ok valid card found!
+
+  // Index map
+  // 0           10         20        30          40        50        60
+  // |           |          |         |           |         |         |
+  // 01234567 8 90123456 7890123456789012 3 456789012345678901234567890123456
+  // -----------------------------------------------------------------------------
+  // 00011010 1 01110101 0000000010001110 1 000000000000000000000000000000000
+  // bbbbbbbb w ffffffff cccccccccccccccc w xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  // |26 bit|   |-117--| |-----142------|
+  // b = format bit len, o = odd parity of last 3 bits
+  // f = facility code, c = card number
+  // w = wiegand parity
+  // (26 bit format shown)
+
+  uint32_t fc = 0;
+  uint32_t cardnum = 0;
+  uint32_t code1 = 0;
+  uint32_t code2 = 0;
+  uint8_t fmtLen = bytebits_to_byte(BitStream,8);
+  if (fmtLen==26){
+    fc = bytebits_to_byte(BitStream+9, 8);
+    cardnum = bytebits_to_byte(BitStream+17, 16);
+    code1 = bytebits_to_byte(BitStream+8,fmtLen);
+    PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
+  } else {
+    cardnum = bytebits_to_byte(BitStream+8+(fmtLen-17), 16);
+    if (fmtLen>32){
+      code1 = bytebits_to_byte(BitStream+8,fmtLen-32);
+      code2 = bytebits_to_byte(BitStream+8+(fmtLen-32),32);
+      PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x%08x, Raw: %x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+    } else{
+      code1 = bytebits_to_byte(BitStream+8,fmtLen);
+      PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x, Raw: %x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
+    }
+  }
+
+  //todo - convert hi2, hi, lo to demodbuffer for future sim/clone commands
+
+  return 1;
+}
+
+//by marshmellow
+//Pyramid Prox demod - FSK RF/50 with preamble of 0000000000000001  (always a 128 bit data stream)
+//print full Farpointe Data/Pyramid Prox ID and some bit format details if found
+int CmdFSKdemodPyramid(const char *Cmd)
+{
+
+  int verbose=1;
+  sscanf(Cmd, "%i", &verbose);
+
+  //raw fsk demod no manchester decoding no start bit finding just get binary from wave
+  uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
+  size_t size = getFromGraphBuf(BitStream);
+
+  //get binary from fsk wave
+  int idx = PyramiddemodFSK(BitStream, size);
+  if (idx < 0){
+    if (verbose){
+      if (idx == -5)
+        PrintAndLog("Error: not enough samples");
+      else if (idx == -1)
+        PrintAndLog("Error: only noise found - no waves");
+      else if (idx == -2)
+        PrintAndLog("Error: problem during FSK demod");
+      //else if (idx == -3)
+      //  PrintAndLog("Error: thought we had a tag but the parity failed");
+      else if (idx == -4)
+        PrintAndLog("Error: AWID preamble not found");
+    }
+    PrintAndLog("idx: %d",idx);
+    return 0;
+  }
+  //PrintAndLog("DEBUG: idx: %d",idx);
+ 
+  // Index map
+  // 0           10          20          30            40          50          60
+  // |           |           |           |             |           |           |
+  // 0123456 7 8901234 5 6789012 3 4567890 1 2345678 9 0123456 7 8901234 5 6789012 3
+  // -----------------------------------------------------------------------------
+  // 0000000 0 0000000 1 0000000 1 0000000 1 0000000 1 0000000 1 0000000 1 0000000 1
+  // premable  xxxxxxx o xxxxxxx o xxxxxxx o xxxxxxx o xxxxxxx o xxxxxxx o xxxxxxx o
+
+  // 64    70            80          90          100         110           120
+  // |     |             |           |           |           |             |
+  // 4567890 1 2345678 9 0123456 7 8901234 5 6789012 3 4567890 1 2345678 9 0123456 7
+  // -----------------------------------------------------------------------------
+  // 0000000 1 0000000 1 0000000 1 0110111 0 0011000 1 0000001 0 0001100 1 1001010 0
+  // xxxxxxx o xxxxxxx o xxxxxxx o xswffff o ffffccc o ccccccc o ccccccw o ppppppp o
+  //                                  |---115---||---------71---------|
+  // s = format start bit, o = odd parity of last 7 bits
+  // f = facility code, c = card number
+  // w = wiegand parity, x = extra space for other formats
+  // p = unknown checksum
+  // (26 bit format shown)
+  
+  //get raw ID before removing parities
+  uint32_t rawLo = bytebits_to_byte(BitStream+idx+96,32);
+  uint32_t rawHi = bytebits_to_byte(BitStream+idx+64,32);
+  uint32_t rawHi2 = bytebits_to_byte(BitStream+idx+32,32);
+  uint32_t rawHi3 = bytebits_to_byte(BitStream+idx,32);
+  size = removeParity(BitStream, idx+8, 8, 1, 120);
+  if (size != 105){
+    if (verbose) PrintAndLog("Error: at parity check-tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %x",size, idx, rawHi3);
+    return 0;
+  }
+
+  // ok valid card found!
+
+  // Index map
+  // 0         10        20        30        40        50        60        70
+  // |         |         |         |         |         |         |         |
+  // 01234567890123456789012345678901234567890123456789012345678901234567890
+  // -----------------------------------------------------------------------
+  // 00000000000000000000000000000000000000000000000000000000000000000000000
+  // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+  // 71         80         90          100
+  // |          |          |           |
+  // 1 2 34567890 1234567890123456 7 8901234
+  // ---------------------------------------
+  // 1 1 01110011 0000000001000110 0 1001010
+  // s w ffffffff cccccccccccccccc w ppppppp
+  //     |--115-| |------71------|
+  // s = format start bit, o = odd parity of last 7 bits
+  // f = facility code, c = card number
+  // w = wiegand parity, x = extra space for other formats
+  // p = unknown checksum
+  // (26 bit format shown)
+
+  //find start bit to get fmtLen
+  idx = 0;
+  int j;
+  for (j=0; j<size; j++){
+    if(BitStream[idx+j]) break;
+  }
+  uint8_t fmtLen = size-j-8;
+  uint32_t fc = 0;
+  uint32_t cardnum = 0;
+  uint32_t code1 = 0;
+  //uint32_t code2 = 0;
+  if (fmtLen==26){
+    fc = bytebits_to_byte(BitStream+73, 8);
+    cardnum = bytebits_to_byte(BitStream+81, 16);
+    code1 = bytebits_to_byte(BitStream+72,fmtLen);
+    PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %x%08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi3, rawHi2, rawHi, rawLo);
+  } else if (fmtLen==45){
+    fmtLen=42; //end = 10 bits not 7 like 26 bit fmt
+    fc = bytebits_to_byte(BitStream+53, 10);
+    cardnum = bytebits_to_byte(BitStream+63, 32);
+    PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %d - Raw: %x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+  } else {
+    cardnum = bytebits_to_byte(BitStream+81, 16);
+    if (fmtLen>32){
+      //code1 = bytebits_to_byte(BitStream+(size-fmtLen),fmtLen-32);
+      //code2 = bytebits_to_byte(BitStream+(size-32),32);
+      PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d), Raw: %x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+    } else{
+      //code1 = bytebits_to_byte(BitStream+(size-fmtLen),fmtLen);
+      PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d), Raw: %x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+    }
+  }
+  //todo - convert hi2, hi, lo to demodbuffer for future sim/clone commands
+
+  return 1;
+}
+
 int CmdFSKdemod(const char *Cmd) //old CmdFSKdemod needs updating
 {
   static const int LowTone[]  = {
@@ -831,6 +1055,21 @@ int CmdFSKdemod(const char *Cmd) //old CmdFSKdemod needs updating
   PrintAndLog("bits: '%s'", bits);
   PrintAndLog("hex: %08x %08x", hi, lo);
   return 0;
+}
+
+int CmdFSKfcDetect(const char *Cmd)
+{
+  uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
+  size_t size = getFromGraphBuf(BitStream);
+
+
+  uint32_t ans = countFC(BitStream, size);
+  int fc1, fc2, rf1;
+  fc1 = (ans >> 8) & 0xFF;
+  fc2 = ans & 0xFF;
+  rf1 = (ans >>16) & 0xFF;
+  PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
+  return 1;
 }
 
 int CmdDetectNRZpskClockRate(const char *Cmd)
@@ -1560,19 +1799,22 @@ static command_t CommandTable[] =
   {"help",          CmdHelp,            1, "This help"},
   {"amp",           CmdAmp,             1, "Amplify peaks"},
   {"askdemod",      Cmdaskdemod,        1, "<0 or 1> -- Attempt to demodulate simple ASK tags"},
-	{"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert<0|1>] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional[clock will try Auto-detect])"},
-	{"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0|1>] -- Attempt to demodulate ASK tags and output binary (args optional[clock will try Auto-detect])"},
+	{"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert<0|1>] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional)"},
+	{"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0|1>] -- Attempt to demodulate ASK tags and output bin (args optional)"},
   {"autocorr",      CmdAutoCorr,        1, "<window length> -- Autocorrelation over window"},
-  {"biphaserawdecode",CmdBiphaseDecodeRaw,1,"[offset] Biphase decode binary stream already in graph buffer (offset = bit to start decode from)"},
+  {"biphaserawdecode",CmdBiphaseDecodeRaw,1,"[offset] [invert<0|1>] Biphase decode bin stream in demod buffer (offset = 0|1 bits to shift the decode start)"},
   {"bitsamples",    CmdBitsamples,      0, "Get raw samples as bitstring"},
   {"bitstream",     CmdBitstream,       1, "[clock rate] -- Convert waveform into a bitstream"},
   {"buffclear",     CmdBuffClear,       1, "Clear sample buffer and graph window"},
   {"dec",           CmdDec,             1, "Decimate samples"},
 	{"detectclock",   CmdDetectClockRate, 1, "Detect ASK clock rate"},
   {"fskdemod",      CmdFSKdemod,        1, "Demodulate graph window as a HID FSK"},
-  {"fskhiddemod",   CmdFSKdemodHID,     1, "Demodulate graph window as a HID FSK using raw"},
-  {"fskiodemod",    CmdFSKdemodIO,      1, "Demodulate graph window as an IO Prox FSK using raw"},
-	{"fskrawdemod",   CmdFSKrawdemod,     1, "[clock rate] [invert] [rchigh] [rclow] Demodulate graph window from FSK to binary (clock = 50)(invert = 1|0)(rchigh = 10)(rclow=8)"},
+  {"fskawiddemod",  CmdFSKdemodAWID,    1, "Demodulate graph window as an AWID FSK tag using raw"},
+  {"fskfcdetect",   CmdFSKfcDetect,     1, "Try to detect the Field Clock of an FSK wave"},
+  {"fskhiddemod",   CmdFSKdemodHID,     1, "Demodulate graph window as a HID FSK tag using raw"},
+  {"fskiodemod",    CmdFSKdemodIO,      1, "Demodulate graph window as an IO Prox tag FSK using raw"},
+  {"fskpyramiddemod",CmdFSKdemodPyramid,1, "Demodulate graph window as a Pyramid FSK tag using raw"},
+  {"fskrawdemod",   CmdFSKrawdemod,     1, "[clock rate] [invert] [rchigh] [rclow] Demodulate graph window from FSK to bin (clock = 50)(invert = 1|0)(rchigh = 10)(rclow=8)"},
   {"grid",          CmdGrid,            1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
 	{"hexsamples",    CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
   {"hide",          CmdHide,            1, "Hide graph window"},
@@ -1587,8 +1829,8 @@ static command_t CommandTable[] =
   {"plot",          CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
 	{"pskclean",      CmdPskClean,        1, "Attempt to clean psk wave"},
 	{"pskdetectclock",CmdDetectNRZpskClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
-	{"pskindalademod",CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Attempt to demodulate psk indala tags and output ID binary & hex (args optional[clock will try Auto-detect])"},
-	{"psknrzrawdemod",CmdpskNRZrawDemod,  1, "[clock] [invert<0|1>] -- Attempt to demodulate psk or nrz tags and output binary (args optional[clock will try Auto-detect])"},
+	{"pskindalademod",CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Attempt to demodulate psk indala tags and output ID binary & hex (args optional)"},
+	{"psknrzrawdemod",CmdpskNRZrawDemod,  1, "[clock] [invert<0|1>] -- Attempt to demodulate psk or nrz tags and output binary (args optional)"},
   {"samples",       CmdSamples,         0, "[512 - 40000] -- Get raw samples for graph window"},
   {"save",          CmdSave,            1, "<filename> -- Save trace (from graph window)"},
   {"scale",         CmdScale,           1, "<int> -- Set cursor display scale"},
