@@ -1772,7 +1772,7 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 				Dbprintf("Multiple tags detected. Collision after Bit %d", Demod.collisionPos);
 				for (uint16_t i = collision_answer_offset; i < Demod.collisionPos; i++, uid_resp_bits++) {	// add valid UID bits before collision point
 					uint16_t UIDbit = (resp[i/8] >> (i % 8)) & 0x01;
-					uid_resp[uid_resp_bits & 0xf8] |= UIDbit << (uid_resp_bits % 8);
+					uid_resp[uid_resp_bits / 8] |= UIDbit << (uid_resp_bits % 8);
 				}
 				uid_resp[uid_resp_bits/8] |= 1 << (uid_resp_bits % 8);					// next time select the card(s) with a 1 in the collision position
 				uid_resp_bits++;

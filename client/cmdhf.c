@@ -123,23 +123,28 @@ NXP/Philips CUSTOM COMMANDS
 	40 = Long Range CMD (Standard ISO/TR7003:1990)
 		*/
 
-#define ICLASS_CMD_ACTALL 0x0A
+#define ICLASS_CMD_ACTALL           0x0A
 #define ICLASS_CMD_READ_OR_IDENTIFY 0x0C
-#define ICLASS_CMD_SELECT 0x81
-#define ICLASS_CMD_PAGESEL 0x84
-#define ICLASS_CMD_READCHECK 0x88
-#define ICLASS_CMD_CHECK 0x05
-#define ICLASS_CMD_SOF 0x0F
-#define ICLASS_CMD_HALT 0x00
+#define ICLASS_CMD_SELECT           0x81
+#define ICLASS_CMD_PAGESEL          0x84
+#define ICLASS_CMD_READCHECK_KD     0x88
+#define ICLASS_CMD_READCHECK_KC     0x18
+#define ICLASS_CMD_CHECK            0x05
+#define ICLASS_CMD_DETECT           0x0F
+#define ICLASS_CMD_HALT             0x00
+#define ICLASS_CMD_UPDATE			0x87
+#define ICLASS_CMD_ACT              0x8E
+#define ICLASS_CMD_READ4            0x06
 
-#define ISO14443_CMD_REQA       0x26
-#define ISO14443_CMD_READBLOCK  0x30
-#define ISO14443_CMD_WUPA       0x52
-#define ISO14443_CMD_ANTICOLL_OR_SELECT     0x93
-#define ISO14443_CMD_ANTICOLL_OR_SELECT_2   0x95
-#define ISO14443_CMD_WRITEBLOCK 0xA0 // or 0xA2 ?
-#define ISO14443_CMD_HALT       0x50
-#define ISO14443_CMD_RATS       0xE0
+
+#define ISO14443A_CMD_REQA       0x26
+#define ISO14443A_CMD_READBLOCK  0x30
+#define ISO14443A_CMD_WUPA       0x52
+#define ISO14443A_CMD_ANTICOLL_OR_SELECT     0x93
+#define ISO14443A_CMD_ANTICOLL_OR_SELECT_2   0x95
+#define ISO14443A_CMD_WRITEBLOCK 0xA0 // or 0xA2 ?
+#define ISO14443A_CMD_HALT       0x50
+#define ISO14443A_CMD_RATS       0xE0
 
 #define MIFARE_AUTH_KEYA	    0x60
 #define MIFARE_AUTH_KEYB	    0x61
@@ -175,14 +180,17 @@ NXP/Philips CUSTOM COMMANDS
 #define ISO15693_READ_MULTI_SECSTATUS 0x2C
 
 
+#define ISO_14443A 0
+#define ICLASS     1
+#define ISO_14443B 2
 
 
 void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 {
 	switch(cmd[0])
 	{
-	case ISO14443_CMD_WUPA:        snprintf(exp,size,"WUPA"); break;
-	case ISO14443_CMD_ANTICOLL_OR_SELECT:{
+	case ISO14443A_CMD_WUPA:        snprintf(exp,size,"WUPA"); break;
+	case ISO14443A_CMD_ANTICOLL_OR_SELECT:{
 		// 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
 		// 93 70 = Select (usage: 9370+5bytes 9320 answer - answer: 1byte SAK)
 		if(cmd[2] == 0x70)
@@ -193,7 +201,7 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 			snprintf(exp,size,"ANTICOLL"); break;
 		}
 	}
-	case ISO14443_CMD_ANTICOLL_OR_SELECT_2:{
+	case ISO14443A_CMD_ANTICOLL_OR_SELECT_2:{
 		//95 20 = Anticollision of cascade level2
 		//95 70 = Select of cascade level2
 		if(cmd[2] == 0x70)
@@ -204,11 +212,11 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 			snprintf(exp,size,"ANTICOLL-2"); break;
 		}
 	}
-	case ISO14443_CMD_REQA:       snprintf(exp,size,"REQA"); break;
-	case ISO14443_CMD_READBLOCK:  snprintf(exp,size,"READBLOCK(%d)",cmd[1]); break;
-	case ISO14443_CMD_WRITEBLOCK: snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); break;
-	case ISO14443_CMD_HALT:       snprintf(exp,size,"HALT"); break;
-	case ISO14443_CMD_RATS:       snprintf(exp,size,"RATS"); break;
+	case ISO14443A_CMD_REQA:       snprintf(exp,size,"REQA"); break;
+	case ISO14443A_CMD_READBLOCK:  snprintf(exp,size,"READBLOCK(%d)",cmd[1]); break;
+	case ISO14443A_CMD_WRITEBLOCK: snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); break;
+	case ISO14443A_CMD_HALT:       snprintf(exp,size,"HALT"); break;
+	case ISO14443A_CMD_RATS:       snprintf(exp,size,"RATS"); break;
 	case MIFARE_CMD_INC:          snprintf(exp,size,"INC(%d)",cmd[1]); break;
 	case MIFARE_CMD_DEC:          snprintf(exp,size,"DEC(%d)",cmd[1]); break;
 	case MIFARE_CMD_RESTORE:      snprintf(exp,size,"RESTORE(%d)",cmd[1]); break;
@@ -235,11 +243,15 @@ void annotateIclass(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 		break;
 	}
 	case ICLASS_CMD_SELECT:      snprintf(exp,size,"SELECT"); break;
-	case ICLASS_CMD_PAGESEL:     snprintf(exp,size,"PAGESEL"); break;
-	case ICLASS_CMD_READCHECK:   snprintf(exp,size,"READCHECK"); break;
+	case ICLASS_CMD_PAGESEL:     snprintf(exp,size,"PAGESEL(%d)", cmd[1]); break;
+	case ICLASS_CMD_READCHECK_KC:snprintf(exp,size,"READCHECK[Kc](%d)", cmd[1]); break;
+	case ICLASS_CMD_READCHECK_KD:snprintf(exp,size,"READCHECK[Kd](%d)", cmd[1]); break;
 	case ICLASS_CMD_CHECK:       snprintf(exp,size,"CHECK"); break;
-	case ICLASS_CMD_SOF:         snprintf(exp,size,"SOF"); break;
+	case ICLASS_CMD_DETECT:      snprintf(exp,size,"DETECT"); break;
 	case ICLASS_CMD_HALT:        snprintf(exp,size,"HALT"); break;
+	case ICLASS_CMD_UPDATE:      snprintf(exp,size,"UPDATE(%d)",cmd[1]); break;
+	case ICLASS_CMD_ACT:         snprintf(exp,size,"ACT"); break;
+	case ICLASS_CMD_READ4:       snprintf(exp,size,"READ4(%d)",cmd[1]); break;
 	default:                     snprintf(exp,size,"?"); break;
 	}
 	return;
@@ -272,12 +284,106 @@ void annotateIso15693(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 		case ISO15693_LOCK_DSFID           :snprintf(exp, size, "LOCK_DSFID");break;
 		case ISO15693_GET_SYSTEM_INFO      :snprintf(exp, size, "GET_SYSTEM_INFO");break;
 		case ISO15693_READ_MULTI_SECSTATUS :snprintf(exp, size, "READ_MULTI_SECSTATUS");break;
-		default:                     snprintf(exp,size,"?"); break;
+		default:                            snprintf(exp,size,"?"); break;
 		}
 	}
 }
+void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
+{
+	switch(cmd[0]){
+	case ISO14443B_REQB   : snprintf(exp,size,"REQB");break;
+	case ISO14443B_ATTRIB : snprintf(exp,size,"ATTRIB");break;
+	case ISO14443B_HALT   : snprintf(exp,size,"HALT");break;
+	default:                snprintf(exp,size ,"?");break;
+	}
 
-uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, bool iclass, bool showWaitCycles)
+}
+
+/**
+ * @brief iso14443B_CRC_Ok Checks CRC in command or response
+ * @param isResponse
+ * @param data
+ * @param len
+ * @return  0 : CRC-command, CRC not ok
+ *          1 : CRC-command, CRC ok
+ *          2 : Not crc-command
+ */
+
+uint8_t iso14443B_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
+{
+	uint8_t b1,b2;
+
+	if(len <= 2) return 2;
+
+	ComputeCrc14443(CRC_14443_B, data, len-2, &b1, &b2);
+	if(b1 != data[len-2] || b2 != data[len-1]) {
+	  return 0;
+	}
+	return 1;
+}
+
+/**
+ * @brief iclass_CRC_Ok Checks CRC in command or response
+ * @param isResponse
+ * @param data
+ * @param len
+ * @return  0 : CRC-command, CRC not ok
+ *	        1 : CRC-command, CRC ok
+ *          2 : Not crc-command
+ */
+uint8_t iclass_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
+{
+	if(len < 4) return 2;//CRC commands (and responses) are all at least 4 bytes
+
+	uint8_t b1, b2;
+
+	if(!isResponse)//Commands to tag
+	{
+		/**
+		  These commands should have CRC. Total length leftmost
+		  4	READ
+		  4 READ4
+		  12 UPDATE - unsecured, ends with CRC16
+		  14 UPDATE - secured, ends with signature instead
+		  4 PAGESEL
+		  **/
+		if(len == 4 || len == 12)//Covers three of them
+		{
+			//Don't include the command byte
+			ComputeCrc14443(CRC_ICLASS, (data+1), len-3, &b1, &b2);
+			return b1 == data[len -2] && b2 == data[len-1];
+		}
+		return 2;
+	}else{
+		/**
+		These tag responses should have CRC. Total length leftmost
+
+		10  READ		data[8] crc[2]
+		34  READ4		data[32]crc[2]
+		10  UPDATE	data[8] crc[2]
+		10 SELECT	csn[8] crc[2]
+		10  IDENTIFY  asnb[8] crc[2]
+		10  PAGESEL   block1[8] crc[2]
+		10  DETECT    csn[8] crc[2]
+
+		These should not
+
+		4  CHECK		chip_response[4]
+		8  READCHECK data[8]
+		1  ACTALL    sof[1]
+		1  ACT	     sof[1]
+
+		In conclusion, without looking at the command; any response
+		of length 10 or 34 should have CRC
+		  **/
+		if(len != 10 && len != 34) return true;
+
+		ComputeCrc14443(CRC_ICLASS, data, len-2, &b1, &b2);
+		return b1 == data[len -2] && b2 == data[len-1];
+	}
+}
+
+uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, uint8_t protocol, bool showWaitCycles)
 {
 	bool isResponse;
 	uint16_t duration, data_len,parity_len;
@@ -332,47 +438,45 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, bool iclass, bool sho
 		}
 	}
 	//--- Draw the CRC column
-	bool crcError = false;
+	uint8_t crcStatus = 2;
 
 	if (data_len > 2) {
 		uint8_t b1, b2;
-		if(iclass)
+		if(protocol == ICLASS)
 		{
-			if(!isResponse && data_len == 4 ) {
-				// Rough guess that this is a command from the reader
-				// For iClass the command byte is not part of the CRC
-				ComputeCrc14443(CRC_ICLASS, &frame[1], data_len-3, &b1, &b2);
-			} else {
-				// For other data.. CRC might not be applicable (UPDATE commands etc.)
-				ComputeCrc14443(CRC_ICLASS, frame, data_len-2, &b1, &b2);
-			}
+			crcStatus = iclass_CRC_check(isResponse, frame, data_len);
 
-			if (b1 != frame[data_len-2] || b2 != frame[data_len-1]) {
-				crcError = true;
-			}
-
-		}else{//Iso 14443a
+		}else if (protocol == ISO_14443B)
+		{
+			crcStatus = iso14443B_CRC_check(isResponse, frame, data_len);
+		}
+		else if (protocol == ISO_14443A){//Iso 14443a
 
 			ComputeCrc14443(CRC_14443_A, frame, data_len-2, &b1, &b2);
 
 			if (b1 != frame[data_len-2] || b2 != frame[data_len-1]) {
 				if(!(isResponse & (data_len < 6)))
 				{
-						crcError = true;
+						crcStatus = 0;
 				}
 			}
 		}
 	}
-	char *crc = crcError ? "!crc" :"    ";
+	//0 CRC-command, CRC not ok
+	//1 CRC-command, CRC ok
+	//2 Not crc-command
+	char *crc = (crcStatus == 0 ? "!crc" : (crcStatus == 1 ? " ok " : "    "));
 
 	EndOfTransmissionTimestamp = timestamp + duration;
 
 	if(!isResponse)
 	{
-		if(iclass)
+		if(protocol == ICLASS)
 			annotateIclass(explanation,sizeof(explanation),frame,data_len);
-		else 
+		else if (protocol == ISO_14443A)
 			annotateIso14443a(explanation,sizeof(explanation),frame,data_len);
+		else if(protocol == ISO_14443B)
+			annotateIso14443b(explanation,sizeof(explanation),frame,data_len);
 	}
 
 	int num_lines = (data_len - 1)/16 + 1;
@@ -415,9 +519,9 @@ int CmdHFList(const char *Cmd)
 	int tlen = param_getstr(Cmd,0,type);
 	char param = param_getchar(Cmd, 1);
 	bool errors = false;
-	bool iclass = false;
+	uint8_t protocol = 0;
 	//Validate params
-	if(tlen == 0 || (strcmp(type, "iclass") != 0 && strcmp(type,"14a") != 0))
+	if(tlen == 0)
 	{
 		errors = true;
 	}
@@ -425,22 +529,40 @@ int CmdHFList(const char *Cmd)
 	{
 		errors = true;
 	}
+	if(!errors)
+	{
+		if(strcmp(type, "iclass") == 0)
+		{
+			protocol = ICLASS;
+		}else if(strcmp(type, "14a") == 0)
+		{
+			protocol = ISO_14443A;
+		}
+		else if(strcmp(type, "14b") == 0)
+		{
+			protocol = ISO_14443B;
+		}else if(strcmp(type,"raw")== 0)
+		{
+			protocol = -1;//No crc, no annotations
+		}else{
+			errors = true;
+		}
+	}
 
 	if (errors) {
 		PrintAndLog("List protocol data in trace buffer.");
-		PrintAndLog("Usage:  hf list [14a|iclass] [f]");
+		PrintAndLog("Usage:  hf list [14a|14b|iclass] [f]");
 		PrintAndLog("    14a    - interpret data as iso14443a communications");
+		PrintAndLog("    14b    - interpret data as iso14443b communications");
 		PrintAndLog("    iclass - interpret data as iclass communications");
+		PrintAndLog("    raw    - just show raw data");
 		PrintAndLog("    f      - show frame delay times as well");
 		PrintAndLog("");
 		PrintAndLog("example: hf list 14a f");
 		PrintAndLog("example: hf list iclass");
 		return 0;
 	}
-	if(strcmp(type, "iclass") == 0)
-	{
-		iclass = true;
-	}
+
 
 	if (param == 'f') {
 		showWaitCycles = true;
@@ -463,7 +585,7 @@ int CmdHFList(const char *Cmd)
 
 	while(tracepos < TRACE_SIZE)
 	{
-		tracepos = printTraceLine(tracepos, trace, iclass, showWaitCycles);
+		tracepos = printTraceLine(tracepos, trace, protocol, showWaitCycles);
 	}
 	return 0;
 }

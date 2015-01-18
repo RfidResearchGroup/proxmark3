@@ -1,3 +1,41 @@
+/*****************************************************************************
+ * WARNING
+ *
+ * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY. 
+ * 
+ * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL 
+ * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL, 
+ * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES. 
+ * 
+ * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS. 
+ *
+ *****************************************************************************
+ *
+ * This file is part of loclass. It is a reconstructon of the cipher engine
+ * used in iClass, and RFID techology.
+ *
+ * The implementation is based on the work performed by
+ * Flavio D. Garcia, Gerhard de Koning Gans, Roel Verdult and
+ * Milosch Meriac in the paper "Dismantling IClass".
+ *
+ * Copyright (C) 2014 Martin Holst Swende
+ *
+ * This is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as published
+ * by the Free Software Foundation.
+ *
+ * This file is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * 
+ * 
+ ****************************************************************************/
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -514,6 +552,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[])
  */
 int bruteforceFile(const char *filename, uint16_t keytable[])
 {
+
 	FILE *f = fopen(filename, "rb");
 	if(!f) {
 		prnlog("Failed to read from file '%s'", filename);
@@ -621,6 +660,21 @@ int _test_iclass_key_permutation()
 	prnlog("[+] Iclass key permutation OK!");
 	return 0;
 }
+int _testHash1()
+{
+    uint8_t csn[8]= {0x01,0x02,0x03,0x04,0xF7,0xFF,0x12,0xE0};
+    uint8_t k[8] = {0};
+    hash1(csn, k);
+    uint8_t expected[8] = {0x7E,0x72,0x2F,0x40,0x2D,0x02,0x51,0x42};
+    if(memcmp(k,expected,8) != 0)
+    {
+        prnlog("Error with hash1!");
+        printarr("calculated", k, 8);
+        printarr("expected", expected, 8);
+        return 1;
+    }
+    return 0;
+}
 
 int testElite()
 {
@@ -653,11 +707,13 @@ int testElite()
         prnlog("[+] Hash2 looks fine...");
     }
 
-    prnlog("[+] Testing key diversification ...");
-
 	int errors = 0 ;
-	errors +=_test_iclass_key_permutation();
+    prnlog("[+] Testing hash1...");
+    errors += _testHash1();
+    prnlog("[+] Testing key diversification ...");
+    errors +=_test_iclass_key_permutation();
 	errors += _testBruteforce();
+
 	return errors;
 
 }

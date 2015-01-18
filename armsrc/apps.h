@@ -37,6 +37,25 @@ uint32_t BigBuf[BIGBUF_SIZE / sizeof(uint32_t)];
 #define FREE_BUFFER_OFFSET 		(CARD_MEMORY_OFFSET + CARD_MEMORY_SIZE)
 #define FREE_BUFFER_SIZE   		(BIGBUF_SIZE - FREE_BUFFER_OFFSET - 1)
 
+/*
+The statements above translates into this :
+BIGBUF_SIZE         = 40000
+TRACE_OFFSET        = 0
+TRACE_SIZE          = 3000
+RECV_CMD_OFFSET     = 3000
+MAX_FRAME_SIZE      = 256
+MAX_PARITY_SIZE     = 32
+RECV_CMD_PAR_OFFSET = 3256
+RECV_RESP_OFFSET    = 3288
+RECV_RESP_PAR_OFFSET= 3544
+CARD_MEMORY_OFFSET  = 3576
+CARD_MEMORY_SIZE    = 4096
+DMA_BUFFER_OFFSET   = 3576
+DMA_BUFFER_SIZE     = 4096
+FREE_BUFFER_OFFSET  = 7672
+FREE_BUFFER_SIZE    = 32327
+ */
+
 extern const uint8_t OddByteParity[256];
 extern uint8_t *trace; // = (uint8_t *) BigBuf;
 extern int traceLen;   // = 0;
@@ -115,6 +134,8 @@ void SetAdcMuxFor(uint32_t whichGpio);
 #define FPGA_HF_SIMULATOR_MODULATE_BPSK				(1<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_212K				(2<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_424K				(4<<0)
+#define FPGA_HF_SIMULATOR_MODULATE_424K_8BIT		0x5//101
+
 // Options for ISO14443A
 #define FPGA_HF_ISO14443A_SNIFFER				(0<<0)
 #define FPGA_HF_ISO14443A_TAGSIM_LISTEN				(1<<0)
