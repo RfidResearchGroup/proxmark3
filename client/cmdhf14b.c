@@ -448,7 +448,7 @@ int CmdHF14BWrite( const char *Cmd){
 	else
 		PrintAndLog("[%s] Write block %02X [ %s ]", (isSrix4k)?"SRIX4K":"SRI512", blockno,  sprint_hex(data,4) );
  
-	sprintf(str, "-c -p 09 %02x %02x%02x%02x%02x", blockno, data[0], data[1], data[2], data[3]);
+	sprintf(str, "-c 09 %02x %02x%02x%02x%02x", blockno, data[0], data[1], data[2], data[3]);
 
 	CmdHF14BCmdRaw(str);
 	return 0;
