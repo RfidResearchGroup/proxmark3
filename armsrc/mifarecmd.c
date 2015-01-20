@@ -104,14 +104,14 @@ void MifareUC_Auth1(uint8_t arg0, uint8_t *datain){
 	if(!iso14443a_select_card(uid, NULL, &cuid)) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)
 			Dbprintf("Can't select card");
-		OnError(0);
+		//OnError(0);
 		return;
 	};
 	
 	if(mifare_ultra_auth1(cuid, dataoutbuf)){
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)	
 			Dbprintf("Authentication part1: Fail.");
-		OnError(1);
+		//OnError(1);
 		return;
 	}
 
@@ -138,7 +138,7 @@ void MifareUC_Auth2(uint32_t arg0, uint8_t *datain){
 	if(mifare_ultra_auth2(cuid, key, dataoutbuf)){
 	    if (MF_DBGLEVEL >= MF_DBG_ERROR) 
 			Dbprintf("Authentication part2: Fail...");
-		OnError(1);
+		//OnError(1);
 		return;			
 	}
 	
@@ -1141,14 +1141,14 @@ void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain){
 	if(!len) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)	
 			Dbprintf("Can't select card");
-		OnError(1);
+		//OnError(1);
 		return;
 	};
 
 	if(mifare_desfire_des_auth1(cuid, dataout)){
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)	
 			Dbprintf("Authentication part1: Fail.");
-		OnError(4);
+		//OnError(4);
 		return;
 	}
 
@@ -1171,7 +1171,7 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain){
 	if( isOK) {
 	    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) 
 			Dbprintf("Authentication part2: Failed");  
-		OnError(4);
+		//OnError(4);
 		return;
 	}
 

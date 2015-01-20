@@ -13,10 +13,10 @@
 
 static int sniffState = SNF_INIT;
 static uint8_t sniffUIDType;
-static uint8_t sniffUID[8];
-static uint8_t sniffATQA[2];
+static uint8_t sniffUID[8] = {0x00};
+static uint8_t sniffATQA[2] = {0x00};
 static uint8_t sniffSAK;
-static uint8_t sniffBuf[16];
+static uint8_t sniffBuf[16] = {0x00};
 static uint32_t timerData = 0;
 
 
