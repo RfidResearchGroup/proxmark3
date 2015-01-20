@@ -467,6 +467,9 @@ int CmdLFSnoop(const char *Cmd)
 		PrintAndLog("usage 1:  snoop");
 		PrintAndLog("      2:  snoop <l|h> [trigger threshold]");
 		PrintAndLog("      3:  snoop <divisor> [trigger threshold]");
+		PrintAndLog("");
+		PrintAndLog("Sample: lf snoop l 200");
+		PrintAndLog("      : lf snoop 95 200");
     return 0;
   }
 
