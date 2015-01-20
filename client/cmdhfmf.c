@@ -778,12 +778,14 @@ int CmdHF14AMfNested(const char *Cmd)
 int CmdHF14AMfChk(const char *Cmd)
 {
 	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+		PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
 		PrintAndLog("          * - all sectors");
 		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
 		PrintAndLog("d - write keys to binary file\n");
+		PrintAndLog("t - write keys to emulator memory");
 		PrintAndLog("      sample: hf mf chk 0 A 1234567890ab keys.dic");
 		PrintAndLog("              hf mf chk *1 ? t");
+		PrintAndLog("              hf mf chk *1 ? d");
 		return 0;
 	}	
 
@@ -1010,12 +1012,16 @@ int CmdHF14AMf1kSim(const char *Cmd)
 	uint8_t exitAfterNReads = 0;
 	uint8_t flags = 0;
 
-	if (param_getchar(Cmd, 0) == 'h') {
+	uint8_t cmdp = param_getchar(Cmd, 0);
+	
+	if (cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:  hf mf sim  u <uid (8 hex symbols)> n <numreads> i x");
+		PrintAndLog("           h    this help");
 		PrintAndLog("           u    (Optional) UID. If not specified, the UID from emulator memory will be used");
 		PrintAndLog("           n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
 		PrintAndLog("           i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
 		PrintAndLog("           x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a legitimate reader, fishes out the key(s)");
+		PrintAndLog("");
 		PrintAndLog("           sample: hf mf sim u 0a0a0a0a ");
 		return 0;
 	}
@@ -1445,7 +1451,7 @@ int CmdHF14AMfCSetUID(const char *Cmd)
 	char ctmp = param_getchar(Cmd, 1);
 	if (ctmp == 'w' || ctmp == 'W') wipeCard = 1;
 	
-	PrintAndLog("--wipe card:%02x uid:%s", wipeCard, sprint_hex(uid, 4));
+	PrintAndLog("--wipe card:%s  uid:%s", (wipeCard)?"YES":"NO", sprint_hex(uid, 4));
 
 	res = mfCSetUID(uid, oldUid, wipeCard);
 	if (res) {
@@ -1488,7 +1494,6 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 			return 1;
 		}
 	
-	PrintAndLog("UID:%s", sprint_hex(uid, 4));
 	return 0;
 }
 
@@ -1503,11 +1508,8 @@ int CmdHF14AMfCLoad(const char *Cmd)
 	uint8_t fillFromEmulator = 0;
 	int i, len, blockNum, flags;
 	
-	// memset(filename, 0, sizeof(filename));
-	// memset(buf, 0, sizeof(buf));
-
 	if (param_getchar(Cmd, 0) == 'h' || param_getchar(Cmd, 0)== 0x00) {
-		PrintAndLog("It loads magic Chinese card (only works with!!!) from the file `filename.eml`");
+		PrintAndLog("It loads magic Chinese card from the file `filename.eml`");
 		PrintAndLog("or from emulator memory (option `e`)");
 		PrintAndLog("Usage:  hf mf cload <file name w/o `.eml`>");
 		PrintAndLog("   or:  hf mf cload e ");
@@ -1554,7 +1556,9 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		blockNum = 0;
 		flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;
 		while(!feof(f)){
+		
 			memset(buf, 0, sizeof(buf));
+			
 			if (fgets(buf, sizeof(buf), f) == NULL) {
 				PrintAndLog("File reading error.");
 				return 2;
@@ -1589,6 +1593,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		PrintAndLog("Loaded from file: %s", filename);
 		return 0;
 	}
+	return 0;
 }
 
 int CmdHF14AMfCGetBlk(const char *Cmd) {
@@ -1770,7 +1775,8 @@ int CmdHF14AMfSniff(const char *Cmd){
 	uint8_t buf[3000] = {0x00};
 	uint8_t * bufPtr = buf;
 	
-	if (param_getchar(Cmd, 0) == 'h') {
+	char ctmp = param_getchar(Cmd, 0);
+	if ( ctmp == 'h' || ctmp == 'H' ) {
 		PrintAndLog("It continuously gets data from the field and saves it to: log, emulator, emulator file.");
 		PrintAndLog("You can specify:");
 		PrintAndLog("    l - save encrypted sequence to logfile `uid.log`");
@@ -1783,7 +1789,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 	}	
 	
 	for (int i = 0; i < 4; i++) {
-		char ctmp = param_getchar(Cmd, i);
+		ctmp = param_getchar(Cmd, i);
 		if (ctmp == 'l' || ctmp == 'L') wantLogToFile = true;
 		if (ctmp == 'd' || ctmp == 'D') wantDecrypt = true;
 		//if (ctmp == 'e' || ctmp == 'E') wantSaveToEml = true; TODO
