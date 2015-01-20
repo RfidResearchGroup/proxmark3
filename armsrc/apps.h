@@ -39,6 +39,25 @@ uint32_t BigBuf[BIGBUF_SIZE / sizeof(uint32_t)];
 #define FREE_BUFFER_OFFSET 		(CARD_MEMORY_OFFSET + CARD_MEMORY_SIZE)
 #define FREE_BUFFER_SIZE   		(BIGBUF_SIZE - FREE_BUFFER_OFFSET - 1)
 
+/*
+The statements above translates into this :
+BIGBUF_SIZE         = 40000
+TRACE_OFFSET        = 0
+TRACE_SIZE          = 3000
+RECV_CMD_OFFSET     = 3000
+MAX_FRAME_SIZE      = 256
+MAX_PARITY_SIZE     = 32
+RECV_CMD_PAR_OFFSET = 3256
+RECV_RESP_OFFSET    = 3288
+RECV_RESP_PAR_OFFSET= 3544
+CARD_MEMORY_OFFSET  = 3576
+CARD_MEMORY_SIZE    = 4096
+DMA_BUFFER_OFFSET   = 3576
+DMA_BUFFER_SIZE     = 4096
+FREE_BUFFER_OFFSET  = 7672
+FREE_BUFFER_SIZE    = 32327
+ */
+
 extern const uint8_t OddByteParity[256];
 extern uint8_t *trace; // = (uint8_t *) BigBuf;
 extern int traceLen;   // = 0;
@@ -117,6 +136,8 @@ void SetAdcMuxFor(uint32_t whichGpio);
 #define FPGA_HF_SIMULATOR_MODULATE_BPSK				(1<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_212K				(2<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_424K				(4<<0)
+#define FPGA_HF_SIMULATOR_MODULATE_424K_8BIT		0x5//101
+
 // Options for ISO14443A
 #define FPGA_HF_ISO14443A_SNIFFER				(0<<0)
 #define FPGA_HF_ISO14443A_TAGSIM_LISTEN				(1<<0)
@@ -179,9 +200,7 @@ void ReaderMifare(bool first_try);
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
 void MifareUReadBlock(uint8_t arg0,uint8_t *datain);
-void MifareUC_Auth1(uint8_t arg0, uint8_t *datain);
-void MifareUC_Auth2(uint32_t arg0, uint8_t *datain);
-void MifareUReadCard(uint8_t arg0, int Pages, uint8_t *datain);
+void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain);
 void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareUWriteBlock(uint8_t arg0,uint8_t *datain);

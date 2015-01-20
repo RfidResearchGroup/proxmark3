@@ -150,10 +150,8 @@ typedef struct {
 
 #define CMD_MIFARE_READBL                                                 0x0620
 #define CMD_MIFAREU_READBL						  0x0720
-
 #define CMD_MIFARE_READSC                                                 0x0621
 #define CMD_MIFAREU_READCARD						  0x0721
-
 #define CMD_MIFARE_WRITEBL                                                0x0622
 #define CMD_MIFAREU_WRITEBL						                          0x0722
 #define CMD_MIFAREU_WRITEBL_COMPAT					                      0x0723

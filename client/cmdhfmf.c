@@ -662,6 +662,8 @@ int CmdHF14AMfRestore(const char *Cmd)
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		if (fread(keyA[sectorNo], 1, 6, fkeys) == 0) {
 			PrintAndLog("File reading error (dumpkeys.bin).");
+
+			fclose(fkeys);
 			return 2;
 		}
 	}
@@ -669,6 +671,7 @@ int CmdHF14AMfRestore(const char *Cmd)
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		if (fread(keyB[sectorNo], 1, 6, fkeys) == 0) {
 			PrintAndLog("File reading error (dumpkeys.bin).");
+			fclose(fkeys);
 			return 2;
 		}
 	}

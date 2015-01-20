@@ -19,6 +19,7 @@
 #include "cmdparser.h"
 #include "cmdmain.h"
 #include "cmddata.h"
+#include "util.h"
 #include "cmdlf.h"
 #include "cmdlfhid.h"
 #include "cmdlfti.h"
@@ -565,26 +566,37 @@ int CmdLFfind(const char *Cmd)
 		return 0;
 	}
 
-	if (!offline || (cmdp != '1') ){
+	if (!offline && (cmdp != '1')){
     ans=CmdLFRead("");
-	ans=CmdSamples("20000");
+    ans=CmdSamples("20000");
 	} else if (GraphTraceLen < 1000) {
 		PrintAndLog("Data in Graphbuffer was too small.");
 		return 0;
   }
 
+  PrintAndLog("NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
   PrintAndLog("Checking for known tags:");
-  ans=Cmdaskmandemod("");
-  if (ans>0) return 1;
-  ans=CmdFSKdemodHID("");
-  if (ans>0) return 1;
   ans=CmdFSKdemodIO("");
-  if (ans>0) return 1;
+  if (ans>0) {
+    PrintAndLog("Valid IO Prox ID Found!");
+    return 1;
+  }
+  ans=CmdFSKdemodHID("");
+  if (ans>0) {
+    PrintAndLog("Valid HID Prox ID Found!");
+    return 1;
+  }
   //add psk and indala
-  ans=CmdIndalaDemod("");
-  if (ans>0) return 1;
-  ans=CmdIndalaDemod("224");
-  if (ans>0) return 1;
+  ans=CmdIndalaDecode("0");
+  if (ans>0) {
+    PrintAndLog("Valid Indala ID Found!");
+    return 1;
+  }
+  ans=Cmdaskmandemod("");
+  if (ans>0) {
+    PrintAndLog("Valid EM410x ID Found!");
+    return 1;
+  }
   PrintAndLog("No Known Tags Found!\n");
   return 0;
 }

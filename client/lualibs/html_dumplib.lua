@@ -49,7 +49,7 @@ end
 
 local function save_TEXT(data,filename)
 	-- Open the output file
-	local outfile = io.open(filename, "wb")
+	local outfile = io.open(filename, "w")
 	if outfile == nil then 
 		return oops(string.format("Could not write to file %s",tostring(filename)))
 	end

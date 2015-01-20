@@ -168,21 +168,21 @@ void MifareUReadBlock(uint8_t arg0,uint8_t *datain)
 	int len = iso14443a_select_card(uid, NULL, &cuid);
 	if(!len) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Can't select card");
-		OnError(1);
+		//OnError(1);
 		return;
 		};
         
 	len = mifare_ultra_readblock(cuid, blockNo, dataout);
 	if(len) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Read block error");
-		OnError(2);
+		//OnError(2);
 		return;
 		};
         
 	len = mifare_ultra_halt(cuid);
 	if(len) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Halt error");
-		OnError(3);
+		//OnError(3);
 		return;
 		};
 		
@@ -267,11 +267,11 @@ void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain)
 	int count_Pages = 0;
 	byte_t dataout[176] = {0x00};;
 	uint8_t uid[10] = {0x00};
-        uint32_t cuid;
+	uint32_t cuid;
 
-        LED_A_ON();
-        LED_B_OFF();
-        LED_C_OFF();
+	LED_A_ON();
+	LED_B_OFF();
+	LED_C_OFF();
 
 	if (MF_DBGLEVEL >= MF_DBG_ALL) 
 		Dbprintf("Pages %d",Pages);
@@ -284,7 +284,7 @@ void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain)
 	if (!len) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)
 			Dbprintf("Can't select card");
-		OnError(1);
+		//OnError(1);
 		return;
 	}
 	
@@ -295,7 +295,7 @@ void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain)
 		if (len) {
 			if (MF_DBGLEVEL >= MF_DBG_ERROR)
 				Dbprintf("Read block %d error",i);
-			OnError(2);
+			//OnError(2);
 			return;
 		} else {
 			count_Pages++;
@@ -306,7 +306,7 @@ void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain)
 	if (len) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)
 			Dbprintf("Halt error");
-		OnError(3);
+		//OnError(3);
 		return;
 	}
 	
@@ -321,8 +321,8 @@ void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain)
 		len = 176;
 
 	cmd_send(CMD_ACK, 1, 0, 0, dataout, len);	
-        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        LEDsoff();
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
 }
 
 

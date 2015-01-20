@@ -15,7 +15,6 @@
 #include "ui.h"
 #include "proxmark3.h"
 #include "cmdparser.h"
-#include "cmddata.h"
 #include "cmdhw.h"
 #include "cmdmain.h"
 #include "cmddata.h"
