@@ -30,6 +30,7 @@ int CmdFSKdemodAWID(const char *Cmd);
 int CmdFSKdemod(const char *Cmd);
 int CmdFSKdemodHID(const char *Cmd);
 int CmdFSKdemodIO(const char *Cmd);
+int CmdFSKdemodParadox(const char *Cmd);
 int CmdFSKdemodPyramid(const char *Cmd);
 int CmdFSKrawdemod(const char *Cmd);
 int CmdDetectNRZpskClockRate(const char *Cmd);

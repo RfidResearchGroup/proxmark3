@@ -17,11 +17,12 @@
 
 int DetectASKClock(uint8_t dest[], size_t size, int clock);
 int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert);
-uint64_t Em410xDecode(uint8_t *BitStream,size_t size);
+uint64_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx);
+int ManchesterEncode(uint8_t *BitStream, size_t size);
 int manrawdecode(uint8_t *BitStream, size_t *size);
 int BiphaseRawDecode(uint8_t * BitStream, size_t *size, int offset, int invert);
 int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert);
-int HIDdemodFSK(uint8_t *dest, size_t size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);
+int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);
 int IOdemodFSK(uint8_t *dest, size_t size);
 int fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow);
 uint32_t bytebits_to_byte(uint8_t* src, size_t numbits);
@@ -34,5 +35,6 @@ int AWIDdemodFSK(uint8_t *dest, size_t size);
 size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen);
 uint32_t countFC(uint8_t *BitStream, size_t size);
 int getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo);
+size_t ParadoxdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);
 
 #endif

@@ -22,19 +22,28 @@
 #include "cmddata.h"
 #include "lfdemod.h"
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
+uint8_t g_debugMode;
 int DemodBufferLen;
 static int CmdHelp(const char *Cmd);
 
 //set the demod buffer with given array of binary (one bit per byte)
 //by marshmellow
-void setDemodBuf(uint8_t *buff,int size)
+void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx)
 {
-	int i=0;
-	for (; i < size; ++i){
-		DemodBuffer[i]=buff[i];
+	size_t i = 0;
+	for (; i < size; i++){
+		DemodBuffer[i]=buff[startIdx++];
 	}
 	DemodBufferLen=size;
 	return;
+}
+
+int CmdSetDebugMode(const char *Cmd)
+{
+  int demod=0;
+  sscanf(Cmd, "%i", &demod);
+  g_debugMode=(uint8_t)demod;
+  return 1;
 }
 
 //by marshmellow
@@ -206,7 +215,7 @@ void printEM410x(uint64_t id)
 {
   if (id !=0){
       uint64_t iii=1;
-      uint64_t id2lo=0; //id2hi=0,
+      uint64_t id2lo=0;
       uint32_t ii=0;
       uint32_t i=0;
       for (ii=5; ii>0;ii--){
@@ -216,7 +225,7 @@ void printEM410x(uint64_t id)
       }
       //output em id
       PrintAndLog("EM TAG ID    : %010llx", id);
-      PrintAndLog("Unique TAG ID: %010llx",  id2lo); //id2hi,
+      PrintAndLog("Unique TAG ID: %010llx",  id2lo);
       PrintAndLog("DEZ 8        : %08lld",id & 0xFFFFFF);
       PrintAndLog("DEZ 10       : %010lld",id & 0xFFFFFF);
       PrintAndLog("DEZ 5.5      : %05lld.%05lld",(id>>16LL) & 0xFFFF,(id & 0xFFFF));
@@ -233,12 +242,17 @@ void printEM410x(uint64_t id)
 int CmdEm410xDecode(const char *Cmd)
 {
   uint64_t id=0;
- // uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
- // uint32_t i=0;
- // i=getFromGraphBuf(BitStream);
-	id = Em410xDecode(DemodBuffer,DemodBufferLen);
-  printEM410x(id);
-  if (id>0) return 1;
+  size_t size = DemodBufferLen, idx=0;
+ 	id = Em410xDecode(DemodBuffer, &size, &idx);
+  if (id>0){
+    setDemodBuf(DemodBuffer, size, idx);
+    if (g_debugMode){
+      PrintAndLog("DEBUG: Printing demod buffer:");
+      printDemodBuff();
+    }
+    printEM410x(id);
+    return 1; 
+  }
   return 0;
 }
 
@@ -249,7 +263,7 @@ int CmdEm410xDecode(const char *Cmd)
 //prints binary found and saves in graphbuffer for further commands
 int Cmdaskmandemod(const char *Cmd)
 {
-	int invert=0;
+  int invert=0;
 	int clk=0;
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	sscanf(Cmd, "%i %i", &clk, &invert);
@@ -259,11 +273,11 @@ int Cmdaskmandemod(const char *Cmd)
   }
 
 	size_t BitLen = getFromGraphBuf(BitStream);
-  //  PrintAndLog("DEBUG: Bitlen from grphbuff: %d",BitLen);
+  if (g_debugMode==1) PrintAndLog("DEBUG: Bitlen from grphbuff: %d",BitLen);
   int errCnt=0;
    errCnt = askmandemod(BitStream, &BitLen,&clk,&invert);
 	if (errCnt<0||BitLen<16){  //if fatal error (or -1)
-		// PrintAndLog("no data found %d, errors:%d, bitlen:%d, clock:%d",errCnt,invert,BitLen,clk);
+		if (g_debugMode==1) PrintAndLog("no data found %d, errors:%d, bitlen:%d, clock:%d",errCnt,invert,BitLen,clk);
     return 0;
 	}
   PrintAndLog("\nUsing Clock: %d - Invert: %d - Bits Found: %d",clk,invert,BitLen);
@@ -274,17 +288,22 @@ int Cmdaskmandemod(const char *Cmd)
   }
   PrintAndLog("ASK/Manchester decoded bitstream:");
   // Now output the bitstream to the scrollback by line of 16 bits
-	setDemodBuf(BitStream,BitLen);
+	setDemodBuf(BitStream,BitLen,0);
 	printDemodBuff();
   uint64_t lo =0;
-  lo = Em410xDecode(BitStream,BitLen);
+  size_t idx=0;
+  lo = Em410xDecode(BitStream, &BitLen, &idx);
   if (lo>0){
     //set GraphBuffer for clone or sim command
+    setDemodBuf(BitStream, BitLen, idx);
+    if (g_debugMode){
+      PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, BitLen);
+      printDemodBuff();
+    }
     PrintAndLog("EM410x pattern found: ");
     printEM410x(lo);
     return 1;
   }
-  //if (BitLen>16) return 1;
   return 0;
 }
 
@@ -317,9 +336,14 @@ int Cmdmandecoderaw(const char *Cmd)
 	printBitStream(BitStream, size);
   if (errCnt==0){
 		uint64_t id = 0;
-		id = Em410xDecode(BitStream, size);
-		if (id>0) setDemodBuf(BitStream, size);
-		printEM410x(id);
+    size_t idx=0;
+		id = Em410xDecode(BitStream, &size, &idx);
+		if (id>0){
+      //need to adjust to set bitstream back to manchester encoded data
+      //setDemodBuf(BitStream, size, idx);
+
+      printEM410x(id);
+    }
   }
   return 1;
 }
@@ -366,7 +390,6 @@ int CmdBiphaseDecodeRaw(const char *Cmd)
   return 1;
 }
 
-
 //by marshmellow
 //takes 2 arguments - clock and invert both as integers
 //attempts to demodulate ask only
@@ -386,14 +409,15 @@ int Cmdaskrawdemod(const char *Cmd)
 	errCnt = askrawdemod(BitStream, &BitLen,&clk,&invert);
 	if (errCnt==-1||BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
 		PrintAndLog("no data found");
+    if (g_debugMode==1) PrintAndLog("errCnt: %d, BitLen: %d, clk: %d, invert: %d", errCnt, BitLen, clk, invert);
     return 0;
 	}
   PrintAndLog("Using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
-    //PrintAndLog("Data start pos:%d, lastBit:%d, stop pos:%d, numBits:%d",iii,lastBit,i,bitnum);
-		//move BitStream back to DemodBuffer
-	setDemodBuf(BitStream,BitLen);
+  
+  //move BitStream back to DemodBuffer
+	setDemodBuf(BitStream,BitLen,0);
 
-		//output
+	//output
   if (errCnt>0){
     PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
   }
@@ -541,6 +565,27 @@ int CmdDec(const char *Cmd)
   return 0;
 }
 
+//by marshmellow
+//shift graph zero up or down based on input + or -
+int CmdGraphShiftZero(const char *Cmd)
+{
+
+  int shift=0;
+  //set options from parameters entered with the command
+  sscanf(Cmd, "%i", &shift);
+  int shiftedVal=0;
+  for(int i = 0; i<GraphTraceLen; i++){
+    shiftedVal=GraphBuffer[i]+shift;
+    if (shiftedVal>127) 
+      shiftedVal=127;
+    else if (shiftedVal<-127) 
+      shiftedVal=-127;
+    GraphBuffer[i]= shiftedVal;
+  }
+  CmdNorm("");
+  return 0;
+}
+
 /* Print our clock rate */
 // uses data from graphbuffer
 int CmdDetectClockRate(const char *Cmd)
@@ -567,7 +612,6 @@ int CmdFSKrawdemod(const char *Cmd)
 	sscanf(Cmd, "%i %i %i %i", &rfLen, &invert, &fchigh, &fclow);
 
   if (strlen(Cmd)>0 && strlen(Cmd)<=2) {
-     //rfLen=param_get8(Cmd, 0); //if rfLen option only is used
      if (rfLen==1){
       invert=1;   //if invert option only is used
       rfLen = 50;
@@ -579,7 +623,7 @@ int CmdFSKrawdemod(const char *Cmd)
 	int size  = fskdemod(BitStream,BitLen,(uint8_t)rfLen,(uint8_t)invert,(uint8_t)fchigh,(uint8_t)fclow);
   if (size>0){
     PrintAndLog("FSK decoded bitstream:");
-		setDemodBuf(BitStream,size);
+		setDemodBuf(BitStream,size,0);
 
     // Now output the bitstream to the scrollback by line of 16 bits
     if(size > (8*32)+2) size = (8*32)+2; //only output a max of 8 blocks of 32 bits  most tags will have full bit stream inside that sample size
@@ -601,20 +645,20 @@ int CmdFSKdemodHID(const char *Cmd)
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t BitLen = getFromGraphBuf(BitStream);
   //get binary from fsk wave
-	size_t size  = HIDdemodFSK(BitStream,BitLen,&hi2,&hi,&lo);
-  if (size<0){
-    PrintAndLog("Error demoding fsk");
+	size_t idx  = HIDdemodFSK(BitStream,&BitLen,&hi2,&hi,&lo);
+  if (idx<0){
+    if (g_debugMode) PrintAndLog("DEBUG: Error demoding fsk");
     return 0;
   }
-  if (hi2==0 && hi==0 && lo==0) return 0;
+  if (hi2==0 && hi==0 && lo==0) {
+    if (g_debugMode) PrintAndLog("DEBUG: Error - no values found");
+    return 0;
+  }
   if (hi2 != 0){ //extra large HID tags
 		PrintAndLog("HID Prox TAG ID: %x%08x%08x (%d)",
        (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
-		setDemodBuf(BitStream,BitLen);
-    return 1;
   }
   else {  //standard HID tags <38 bits
-    //Dbprintf("TAG ID: %x%08x (%d)",(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF); //old print cmd
     uint8_t fmtLen = 0;
     uint32_t fc = 0;
     uint32_t cardnum = 0;
@@ -654,11 +698,48 @@ int CmdFSKdemodHID(const char *Cmd)
 		PrintAndLog("HID Prox TAG ID: %x%08x (%d) - Format Len: %dbit - FC: %d - Card: %d",
       (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF,
       (unsigned int) fmtLen, (unsigned int) fc, (unsigned int) cardnum);
-		setDemodBuf(BitStream,BitLen);
-    return 1;
   }
-  return 0;
+  setDemodBuf(BitStream,BitLen,idx);
+  if (g_debugMode){ 
+    PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, BitLen);
+    printDemodBuff();
+  }
+  return 1;
 }
+
+//by marshmellow (based on existing demod + holiman's refactor)
+//Paradox Prox demod - FSK RF/50 with preamble of 00011101 (then manchester encoded)
+//print full Paradox Prox ID and some bit format details if found
+int CmdFSKdemodParadox(const char *Cmd)
+{
+  //raw fsk demod no manchester decoding no start bit finding just get binary from wave
+  uint32_t hi2=0, hi=0, lo=0;
+
+  uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
+  size_t BitLen = getFromGraphBuf(BitStream);
+  //get binary from fsk wave
+  size_t idx = ParadoxdemodFSK(BitStream,&BitLen,&hi2,&hi,&lo);
+  if (idx<0){
+    if (g_debugMode) PrintAndLog("DEBUG: Error demoding fsk");
+    return 0;
+  }
+  if (hi2==0 && hi==0 && lo==0){
+    if (g_debugMode) PrintAndLog("DEBUG: Error - no value found");
+    return 0;
+  }
+  uint32_t fc = ((hi & 0x3)<<6) | (lo>>26);
+  uint32_t cardnum = (lo>>10)&0xFFFF;
+  
+  PrintAndLog("Paradox TAG ID: %x%08x - FC: %d - Card: %d - Checksum: %02x",
+    hi>>10, (hi & 0x3)<<26 | (lo>>10), fc, cardnum, (lo>>2) & 0xFF );
+  setDemodBuf(BitStream,BitLen,idx);
+  if (g_debugMode){ 
+    PrintAndLog("DEBUG: idx: %d, len: %d, Printing Demod Buffer:", idx, BitLen);
+    printDemodBuff();
+  }
+  return 1;
+}
+
 
 //by marshmellow
 //IO-Prox demod - FSK RF/64 with preamble of 000000001
@@ -668,21 +749,25 @@ int CmdFSKdemodIO(const char *Cmd)
   //raw fsk demod no manchester decoding no start bit finding just get binary from wave
   //set defaults
 	int idx=0;
-  //something in graphbuffer
-  if (GraphTraceLen < 65) return 0;
-  uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
-	size_t BitLen = getFromGraphBuf(BitStream);
-  //get binary from fsk wave
- // PrintAndLog("DEBUG: got buff");
-	idx = IOdemodFSK(BitStream,BitLen);
-  if (idx<0){
-    //PrintAndLog("Error demoding fsk");
+  //something in graphbuffer?
+  if (GraphTraceLen < 65) {
+    if (g_debugMode)PrintAndLog("DEBUG: not enough samples in GraphBuffer");
     return 0;
   }
- // PrintAndLog("DEBUG: Got IOdemodFSK");
+  uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
+	size_t BitLen = getFromGraphBuf(BitStream);
+
+  //get binary from fsk wave
+	idx = IOdemodFSK(BitStream,BitLen);
+  if (idx<0){
+    if (g_debugMode==1) PrintAndLog("DEBUG: demoding fsk error: %d", idx);
+    return 0;
+  }
   if (idx==0){
-    //PrintAndLog("IO Prox Data not found - FSK Data:");
-    //if (BitLen > 92) printBitStream(BitStream,92);
+    if (g_debugMode==1){
+      PrintAndLog("DEBUG: IO Prox Data not found - FSK Bits: %d",BitLen);
+      if (BitLen > 92) printBitStream(BitStream,92);
+    } 
     return 0;
   }
     //Index map
@@ -694,7 +779,10 @@ int CmdFSKdemodIO(const char *Cmd)
     //
     //XSF(version)facility:codeone+codetwo (raw)
     //Handle the data
-  if (idx+64>BitLen) return 0;
+  if (idx+64>BitLen) {
+    if (g_debugMode==1) PrintAndLog("not enough bits found - bitlen: %d",BitLen);
+    return 0;
+  }
   PrintAndLog("%d%d%d%d%d%d%d%d %d",BitStream[idx],    BitStream[idx+1],  BitStream[idx+2], BitStream[idx+3], BitStream[idx+4], BitStream[idx+5], BitStream[idx+6], BitStream[idx+7], BitStream[idx+8]);
 	PrintAndLog("%d%d%d%d%d%d%d%d %d",BitStream[idx+9],  BitStream[idx+10], BitStream[idx+11],BitStream[idx+12],BitStream[idx+13],BitStream[idx+14],BitStream[idx+15],BitStream[idx+16],BitStream[idx+17]);
   PrintAndLog("%d%d%d%d%d%d%d%d %d facility",BitStream[idx+18], BitStream[idx+19], BitStream[idx+20],BitStream[idx+21],BitStream[idx+22],BitStream[idx+23],BitStream[idx+24],BitStream[idx+25],BitStream[idx+26]);
@@ -709,12 +797,12 @@ int CmdFSKdemodIO(const char *Cmd)
   uint8_t facilitycode = bytebits_to_byte(BitStream+idx+18,8) ;
   uint16_t number = (bytebits_to_byte(BitStream+idx+36,8)<<8)|(bytebits_to_byte(BitStream+idx+45,8)); //36,9
 	PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x)",version,facilitycode,number,code,code2);
-	int i;
-	for (i=0;i<64;++i)
-		DemodBuffer[i]=BitStream[idx++];
-
-	DemodBufferLen=64;
-  return 1;
+  setDemodBuf(BitStream,64,idx);
+	if (g_debugMode){
+    PrintAndLog("DEBUG: idx: %d, Len: %d, Printing demod buffer:",idx,64);
+    printDemodBuff();
+  }
+	return 1;
 }
 
 
@@ -724,8 +812,8 @@ int CmdFSKdemodIO(const char *Cmd)
 int CmdFSKdemodAWID(const char *Cmd)
 {
 
-  int verbose=1;
-  sscanf(Cmd, "%i", &verbose);
+  //int verbose=1;
+  //sscanf(Cmd, "%i", &verbose);
 
   //raw fsk demod no manchester decoding no start bit finding just get binary from wave
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
@@ -734,17 +822,21 @@ int CmdFSKdemodAWID(const char *Cmd)
   //get binary from fsk wave
   int idx = AWIDdemodFSK(BitStream, size);
   if (idx<=0){
-    if (verbose){
+    if (g_debugMode==1){
       if (idx == -1)
-        PrintAndLog("Error: not enough samples");
+        PrintAndLog("DEBUG: Error - not enough samples");
       else if (idx == -2)
-        PrintAndLog("Error: only noise found - no waves");
+        PrintAndLog("DEBUG: Error - only noise found - no waves");
       else if (idx == -3)
-        PrintAndLog("Error: problem during FSK demod");
+        PrintAndLog("DEBUG: Error - problem during FSK demod");
     //  else if (idx == -3)
     //    PrintAndLog("Error: thought we had a tag but the parity failed");
       else if (idx == -4)
-        PrintAndLog("Error: AWID preamble not found");
+        PrintAndLog("DEBUG: Error - AWID preamble not found");
+      else if (idx == -5)
+        PrintAndLog("DEBUG: Error - Second AWID preamble not found");
+      else
+        PrintAndLog("DEBUG: Error %d",idx);
     }
     return 0;
   }
@@ -766,9 +858,11 @@ int CmdFSKdemodAWID(const char *Cmd)
   uint32_t rawLo = bytebits_to_byte(BitStream+idx+64,32);
   uint32_t rawHi = bytebits_to_byte(BitStream+idx+32,32);
   uint32_t rawHi2 = bytebits_to_byte(BitStream+idx,32);
+  setDemodBuf(BitStream,96,idx);
+
   size = removeParity(BitStream, idx+8, 4, 1, 88);
   if (size != 66){
-    if (verbose) PrintAndLog("Error: at parity check-tag size does not match AWID format");
+    if (g_debugMode==1) PrintAndLog("DEBUG: Error - at parity check-tag size does not match AWID format");
     return 0;
   }
   // ok valid card found!
@@ -807,9 +901,11 @@ int CmdFSKdemodAWID(const char *Cmd)
       PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x, Raw: %x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
     }
   }
-
+  if (g_debugMode){
+    PrintAndLog("DEBUG: idx: %d, Len: %d Printing Demod Buffer:", idx, 96);
+    printDemodBuff();
+  }
   //todo - convert hi2, hi, lo to demodbuffer for future sim/clone commands
-
   return 1;
 }
 
@@ -818,10 +914,6 @@ int CmdFSKdemodAWID(const char *Cmd)
 //print full Farpointe Data/Pyramid Prox ID and some bit format details if found
 int CmdFSKdemodPyramid(const char *Cmd)
 {
-
-  int verbose=1;
-  sscanf(Cmd, "%i", &verbose);
-
   //raw fsk demod no manchester decoding no start bit finding just get binary from wave
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
   size_t size = getFromGraphBuf(BitStream);
@@ -829,23 +921,22 @@ int CmdFSKdemodPyramid(const char *Cmd)
   //get binary from fsk wave
   int idx = PyramiddemodFSK(BitStream, size);
   if (idx < 0){
-    if (verbose){
+    if (g_debugMode==1){
       if (idx == -5)
-        PrintAndLog("Error: not enough samples");
+        PrintAndLog("DEBUG: Error - not enough samples");
       else if (idx == -1)
-        PrintAndLog("Error: only noise found - no waves");
+        PrintAndLog("DEBUG: Error - only noise found - no waves");
       else if (idx == -2)
-        PrintAndLog("Error: problem during FSK demod");
-      //else if (idx == -3)
-      //  PrintAndLog("Error: thought we had a tag but the parity failed");
+        PrintAndLog("DEBUG: Error - problem during FSK demod");
+      else if (idx == -3)
+        PrintAndLog("DEBUG: Error - Second Pyramid preamble not found");
       else if (idx == -4)
-        PrintAndLog("Error: AWID preamble not found");
+        PrintAndLog("DEBUG: Error - Pyramid preamble not found");
+      else
+        PrintAndLog("DEBUG: Error - idx: %d",idx);
     }
-    PrintAndLog("idx: %d",idx);
     return 0;
   }
-  //PrintAndLog("DEBUG: idx: %d",idx);
- 
   // Index map
   // 0           10          20          30            40          50          60
   // |           |           |           |             |           |           |
@@ -872,9 +963,11 @@ int CmdFSKdemodPyramid(const char *Cmd)
   uint32_t rawHi = bytebits_to_byte(BitStream+idx+64,32);
   uint32_t rawHi2 = bytebits_to_byte(BitStream+idx+32,32);
   uint32_t rawHi3 = bytebits_to_byte(BitStream+idx,32);
+  setDemodBuf(BitStream,128,idx);
+
   size = removeParity(BitStream, idx+8, 8, 1, 120);
   if (size != 105){
-    if (verbose) PrintAndLog("Error: at parity check-tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %x",size, idx, rawHi3);
+    if (g_debugMode==1) PrintAndLog("DEBUG: Error at parity check-tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %x",size, idx, rawHi3);
     return 0;
   }
 
@@ -902,10 +995,9 @@ int CmdFSKdemodPyramid(const char *Cmd)
   // (26 bit format shown)
 
   //find start bit to get fmtLen
-  idx = 0;
   int j;
   for (j=0; j<size; j++){
-    if(BitStream[idx+j]) break;
+    if(BitStream[j]) break;
   }
   uint8_t fmtLen = size-j-8;
   uint32_t fc = 0;
@@ -916,25 +1008,28 @@ int CmdFSKdemodPyramid(const char *Cmd)
     fc = bytebits_to_byte(BitStream+73, 8);
     cardnum = bytebits_to_byte(BitStream+81, 16);
     code1 = bytebits_to_byte(BitStream+72,fmtLen);
-    PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %x%08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi3, rawHi2, rawHi, rawLo);
+    PrintAndLog("Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %x%08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi3, rawHi2, rawHi, rawLo);
   } else if (fmtLen==45){
     fmtLen=42; //end = 10 bits not 7 like 26 bit fmt
     fc = bytebits_to_byte(BitStream+53, 10);
     cardnum = bytebits_to_byte(BitStream+63, 32);
-    PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %d - Raw: %x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+    PrintAndLog("Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Raw: %x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
   } else {
     cardnum = bytebits_to_byte(BitStream+81, 16);
     if (fmtLen>32){
       //code1 = bytebits_to_byte(BitStream+(size-fmtLen),fmtLen-32);
       //code2 = bytebits_to_byte(BitStream+(size-32),32);
-      PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d), Raw: %x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+      PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
     } else{
       //code1 = bytebits_to_byte(BitStream+(size-fmtLen),fmtLen);
-      PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d), Raw: %x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+      PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
     }
   }
   //todo - convert hi2, hi, lo to demodbuffer for future sim/clone commands
-
+  if (g_debugMode){
+    PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
+    printDemodBuff();
+  }
   return 1;
 }
 
@@ -1057,6 +1152,8 @@ int CmdFSKdemod(const char *Cmd) //old CmdFSKdemod needs updating
   return 0;
 }
 
+//by marshmellow
+//attempt to detect the field clock and bit clock for FSK
 int CmdFSKfcDetect(const char *Cmd)
 {
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
@@ -1078,7 +1175,8 @@ int CmdDetectNRZpskClockRate(const char *Cmd)
 	return 0;
 }
 
-int PSKnrzDemod(const char *Cmd){
+int PSKnrzDemod(const char *Cmd)
+{
 	int invert=0;
 	int clk=0;
 	sscanf(Cmd, "%i %i", &clk, &invert);
@@ -1091,13 +1189,13 @@ int PSKnrzDemod(const char *Cmd){
 	int errCnt=0;
 	errCnt = pskNRZrawDemod(BitStream, &BitLen,&clk,&invert);
 	if (errCnt<0|| BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
-		//PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
+		if (g_debugMode==1) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
 		return -1;
 	}
 	PrintAndLog("Tried PSK/NRZ Demod using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
 
 	//prime demod buffer for output
-	setDemodBuf(BitStream,BitLen);
+	setDemodBuf(BitStream,BitLen,0);
 	return errCnt;
 }
 // Indala 26 bit decode
@@ -1105,35 +1203,30 @@ int PSKnrzDemod(const char *Cmd){
 // optional arguments - same as CmdpskNRZrawDemod (clock & invert)
 int CmdIndalaDecode(const char *Cmd)
 {
-  uint8_t verbose = 1;
   int ans;
   if (strlen(Cmd)>0){
-    if (Cmd[0]=='0'){
-      verbose=0;
-      ans = PSKnrzDemod("32");
-    }else{
-      ans = PSKnrzDemod(Cmd);
-    }
+    ans = PSKnrzDemod(Cmd);
   } else{ //default to RF/32
     ans = PSKnrzDemod("32");
   }
 
 	if (ans < 0){
-		if (verbose) 
+		if (g_debugMode==1) 
       PrintAndLog("Error1: %d",ans);
 		return 0;
 	}
 	uint8_t invert=0;
 	ans = indala26decode(DemodBuffer,(size_t *) &DemodBufferLen, &invert);
 	if (ans < 1) {
-		if (verbose)
+		if (g_debugMode==1)
       PrintAndLog("Error2: %d",ans);
 		return -1;
 	}
 	char showbits[251];
 	if (invert)
-    if (verbose)
+    if (g_debugMode==1)
       PrintAndLog("Had to invert bits");
+
 	//convert UID to HEX
 	uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
 	int idx;
@@ -1197,25 +1290,28 @@ int CmdPskClean(const char *Cmd)
 //prints binary found and saves in graphbuffer for further commands
 int CmdpskNRZrawDemod(const char *Cmd)
 {
-  uint8_t verbose = 1;
   int errCnt;
-  if (strlen(Cmd)>0){
-    if (Cmd[0]=='0')
-      verbose=0;
-  }
-
+ 
   errCnt = PSKnrzDemod(Cmd);
 	//output
-	if (errCnt<0) return 0;
+	if (errCnt<0){
+    if (g_debugMode) PrintAndLog("Error demoding: %d",errCnt);  
+    return 0;
+  } 
 	if (errCnt>0){
-		if (verbose)
+		if (g_debugMode){
       PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
-	}
-	PrintAndLog("PSK or NRZ demoded bitstream:");
-	// Now output the bitstream to the scrollback by line of 16 bits
-	printDemodBuff();
-
-	return 1;
+      PrintAndLog("PSK or NRZ demoded bitstream:");
+      // Now output the bitstream to the scrollback by line of 16 bits
+      printDemodBuff();
+    }
+	}else{
+    PrintAndLog("PSK or NRZ demoded bitstream:");
+    // Now output the bitstream to the scrollback by line of 16 bits
+    printDemodBuff();  
+    return 1;
+  }
+  return 0;
 }
 
 int CmdGrid(const char *Cmd)
@@ -1367,14 +1463,14 @@ int CmdTuneSamples(const char *Cmd)
 
 int CmdLoad(const char *Cmd)
 {
-   char filename[FILE_PATH_SIZE] = {0x00};
-   int len = 0;
+  char filename[FILE_PATH_SIZE] = {0x00};
+  int len = 0;
 
-   len = strlen(Cmd);
-   if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
-   memcpy(filename, Cmd, len);
+  len = strlen(Cmd);
+  if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+  memcpy(filename, Cmd, len);
 	
-   FILE *f = fopen(filename, "r");
+  FILE *f = fopen(filename, "r");
   if (!f) {
      PrintAndLog("couldn't open '%s'", filename);
     return 0;
@@ -1403,6 +1499,8 @@ int CmdLtrim(const char *Cmd)
   RepaintGraphWindow();
   return 0;
 }
+
+// trim graph to input argument length
 int CmdRtrim(const char *Cmd)
 {
   int ds = atoi(Cmd);
@@ -1683,12 +1781,12 @@ int CmdPlot(const char *Cmd)
 
 int CmdSave(const char *Cmd)
 {
-   char filename[FILE_PATH_SIZE] = {0x00};
-   int len = 0;
+  char filename[FILE_PATH_SIZE] = {0x00};
+  int len = 0;
 
-   len = strlen(Cmd);
-   if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
-   memcpy(filename, Cmd, len);
+  len = strlen(Cmd);
+  if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+  memcpy(filename, Cmd, len);
    
 
   FILE *f = fopen(filename, "w");
@@ -1814,6 +1912,7 @@ static command_t CommandTable[] =
   {"fskhiddemod",   CmdFSKdemodHID,     1, "Demodulate graph window as a HID FSK tag using raw"},
   {"fskiodemod",    CmdFSKdemodIO,      1, "Demodulate graph window as an IO Prox tag FSK using raw"},
   {"fskpyramiddemod",CmdFSKdemodPyramid,1, "Demodulate graph window as a Pyramid FSK tag using raw"},
+  {"fskparadoxdemod",CmdFSKdemodParadox,1, "Demodulate graph window as a Paradox FSK tag using raw"},
   {"fskrawdemod",   CmdFSKrawdemod,     1, "[clock rate] [invert] [rchigh] [rclow] Demodulate graph window from FSK to bin (clock = 50)(invert = 1|0)(rchigh = 10)(rclow=8)"},
   {"grid",          CmdGrid,            1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
 	{"hexsamples",    CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
@@ -1834,6 +1933,8 @@ static command_t CommandTable[] =
   {"samples",       CmdSamples,         0, "[512 - 40000] -- Get raw samples for graph window"},
   {"save",          CmdSave,            1, "<filename> -- Save trace (from graph window)"},
   {"scale",         CmdScale,           1, "<int> -- Set cursor display scale"},
+  {"setdebugmode",  CmdSetDebugMode,    1, "<0|1> -- Turn on or off Debugging Mode for demods"},
+  {"shiftgraphzero",CmdGraphShiftZero,  1, "<shift> -- Shift 0 for Graphed wave + or - shift value"},
   {"threshold",     CmdThreshold,       1, "<threshold> -- Maximize/minimize every value in the graph window depending on threshold"},
 	{"dirthreshold",  CmdDirectionalThreshold,   1, "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
 	{"tune",          CmdTuneSamples,     0, "Get hw tune samples for graph window"},

@@ -31,7 +31,7 @@ int getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi
 
 //by marshmellow
 //takes 1s and 0s and searches for EM410x format - output EM ID
-uint64_t Em410xDecode(uint8_t *BitStream, size_t size)
+uint64_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx)
 {
 	//no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
 	//  otherwise could be a void with no arguments
@@ -48,17 +48,18 @@ uint64_t Em410xDecode(uint8_t *BitStream, size_t size)
 	uint32_t idx = 0;
 	uint32_t ii=0;
 	uint8_t resetCnt = 0;
-	while( (idx + 64) < size) {
+	while( (idx + 64) < *size) {
  restart:
 		// search for a start of frame marker
 		if ( memcmp(BitStream+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
 		{ // frame marker found
+			*startIdx=idx;
 			idx+=9;
 			for (i=0; i<10;i++){
 				for(ii=0; ii<5; ++ii){
 					parityTest ^= BitStream[(i*5)+ii+idx];
 				}
-				if (!parityTest){
+				if (!parityTest){ //even parity
 					parityTest=0;
 					for (ii=0; ii<4;++ii){
 						lo=(lo<<1LL)|(BitStream[(i*5)+ii+idx]);
@@ -74,6 +75,7 @@ uint64_t Em410xDecode(uint8_t *BitStream, size_t size)
 				}
 			}
 			//skip last 5 bit parity test for simplicity.
+			*size = 64;
 			return lo;
 		}else{
 			idx++;
@@ -89,10 +91,12 @@ uint64_t Em410xDecode(uint8_t *BitStream, size_t size)
 int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert)
 {
 	int i;
+	int clk2=*clk;
 	*clk=DetectASKClock(BinStream, *size, *clk); //clock default
 
-	if (*clk<8) *clk =64;
-	if (*clk<32) *clk=32;
+	// if autodetected too low then adjust  //MAY NEED ADJUSTMENT
+	if (clk2==0 && *clk<8) *clk =64;
+	if (clk2==0 && *clk<32) *clk=32;
 	if (*invert != 0 && *invert != 1) *invert=0;
 	uint32_t initLoopMax = 200;
 	if (initLoopMax > *size) initLoopMax=*size;
@@ -106,7 +110,7 @@ int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert)
 	int lastBit = 0;  //set first clock check
 	uint32_t bitnum = 0;     //output counter
 	int tol = 0;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
-	if (*clk==32)tol=1;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely
+	if (*clk<=32)tol=1;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely
 	int iii = 0;
 	uint32_t gLen = *size;
 	if (gLen > 3000) gLen=3000;
@@ -199,6 +203,22 @@ int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert)
 }
 
 //by marshmellow
+//encode binary data into binary manchester 
+int ManchesterEncode(uint8_t *BitStream, size_t size)
+{
+	size_t modIdx=20000, i=0;
+	if (size>modIdx) return -1;
+  for (size_t idx=0; idx < size; idx++){
+  	BitStream[idx+modIdx++] = BitStream[idx];
+  	BitStream[idx+modIdx++] = BitStream[idx]^1;
+  }
+  for (; i<(size*2); i++){
+  	BitStream[i] = BitStream[i+20000];
+  }
+  return i;
+}
+
+//by marshmellow
 //take 10 and 01 and manchester decode
 //run through 2 times and take least errCnt
 int manrawdecode(uint8_t * BitStream, size_t *size)
@@ -245,7 +265,6 @@ int manrawdecode(uint8_t * BitStream, size_t *size)
 	return errCnt;
 }
 
-
 //by marshmellow
 //take 01 or 10 = 0 and 11 or 00 = 1
 int BiphaseRawDecode(uint8_t *BitStream, size_t *size, int offset, int invert)
@@ -282,8 +301,8 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert)
 	//uint8_t BitStream[502] = {0};
 
 	//HACK: if clock not detected correctly - default
-	if (*clk<8) *clk =64;
-	if (*clk<32 && clk2==0) *clk=32;
+	if (clk2==0 && *clk<8) *clk =64;
+	if (clk2==0 && *clk<32 && clk2==0) *clk=32;
 	if (*invert != 0 && *invert != 1) *invert =0;
 	uint32_t initLoopMax = 200;
 	if (initLoopMax > *size) initLoopMax=*size;
@@ -534,12 +553,13 @@ int fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t 
 	return size;
 }
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
-int HIDdemodFSK(uint8_t *dest, size_t size, uint32_t *hi2, uint32_t *hi, uint32_t *lo)
+int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo)
 {
 
-	size_t idx=0; //, found=0; //size=0,
+	size_t idx=0, size2=*size, startIdx=0; 
 	// FSK demodulator
-	size = fskdemod(dest, size,50,0,10,8);
+
+	*size = fskdemod(dest, size2,50,0,10,8);
 
 	// final loop, go over previously decoded manchester data and decode into usable tag ID
 	// 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
@@ -547,12 +567,13 @@ int HIDdemodFSK(uint8_t *dest, size_t size, uint32_t *hi2, uint32_t *hi, uint32_
 	int numshifts = 0;
 	idx = 0;
 	//one scan
-	while( idx + sizeof(frame_marker_mask) < size) {
+	while( idx + sizeof(frame_marker_mask) < *size) {
 		// search for a start of frame marker
 		if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
 		{ // frame marker found
+			startIdx=idx;
 			idx+=sizeof(frame_marker_mask);
-			while(dest[idx] != dest[idx+1] && idx < size-2)
+			while(dest[idx] != dest[idx+1] && idx < *size-2)
 			{
 				// Keep going until next frame marker (or error)
 				// Shift in a bit. Start by shifting high registers
@@ -567,12 +588,13 @@ int HIDdemodFSK(uint8_t *dest, size_t size, uint32_t *hi2, uint32_t *hi, uint32_
 				idx += 2;
 			}
 			// Hopefully, we read a tag and	 hit upon the next frame marker
-			if(idx + sizeof(frame_marker_mask) < size)
+			if(idx + sizeof(frame_marker_mask) < *size)
 			{
 				if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
 				{
 					//good return
-					return idx;
+					*size=idx-startIdx;
+					return startIdx;
 				}
 			}
 			// reset
@@ -583,6 +605,61 @@ int HIDdemodFSK(uint8_t *dest, size_t size, uint32_t *hi2, uint32_t *hi, uint32_
 		}
 	}
 	return -1;
+}
+
+// loop to get raw paradox waveform then FSK demodulate the TAG ID from it
+size_t ParadoxdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo)
+{
+
+	size_t idx=0, size2=*size;
+	// FSK demodulator
+
+	*size = fskdemod(dest, size2,50,1,10,8);
+
+	// final loop, go over previously decoded manchester data and decode into usable tag ID
+	// 00001111 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
+	uint8_t frame_marker_mask[] = {0,0,0,0,1,1,1,1};
+	uint16_t numshifts = 0;
+	idx = 0;
+	//one scan
+	while( idx + sizeof(frame_marker_mask) < *size) {
+		// search for a start of frame marker
+		if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
+		{ // frame marker found
+			size2=idx;
+			idx+=sizeof(frame_marker_mask);
+			while(dest[idx] != dest[idx+1] && idx < *size-2)
+			{
+				// Keep going until next frame marker (or error)
+				// Shift in a bit. Start by shifting high registers
+				*hi2 = (*hi2<<1)|(*hi>>31);
+				*hi = (*hi<<1)|(*lo>>31);
+				//Then, shift in a 0 or one into low
+				if (dest[idx] && !dest[idx+1])	// 1 0
+					*lo=(*lo<<1)|1;
+				else // 0 1
+					*lo=(*lo<<1)|0;
+				numshifts++;
+				idx += 2;
+			}
+			// Hopefully, we read a tag and	 hit upon the next frame marker and got enough bits
+			if(idx + sizeof(frame_marker_mask) < *size && numshifts > 40)
+			{
+				if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
+				{
+					//good return - return start grid position and bits found
+					*size = ((numshifts*2)+8);
+					return size2;
+				}
+			}
+			// reset
+			*hi2 = *hi = *lo = 0;
+			numshifts = 0;
+		}else	{
+			idx++;
+		}
+	}
+	return 0;
 }
 
 uint32_t bytebits_to_byte(uint8_t* src, size_t numbits)
@@ -638,10 +715,10 @@ int IOdemodFSK(uint8_t *dest, size_t size)
 // by marshmellow
 // pass bits to be tested in bits, length bits passed in bitLen, and parity type (even=0 | odd=1) in pType
 // returns 1 if passed
-int parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType)
+uint8_t parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType)
 {
 	uint8_t ans = 0;
-	for (int i = 0; i < bitLen; i++){
+	for (uint8_t i = 0; i < bitLen; i++){
 		ans ^= ((bits >> i) & 1);
 	}
   //PrintAndLog("DEBUG: ans: %d, ptype: %d",ans,pType);
@@ -676,7 +753,7 @@ size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t p
 int AWIDdemodFSK(uint8_t *dest, size_t size)
 {
 	static const uint8_t THRESHOLD = 123;
-	uint32_t idx=0;
+	uint32_t idx=0, idx2=0;
 	//make sure buffer has data
 	if (size < 96*50) return -1;
 	//test samples are not just noise
@@ -694,9 +771,12 @@ int AWIDdemodFSK(uint8_t *dest, size_t size)
 	for( idx=0; idx < (size - 96); idx++) {
 		if ( memcmp(dest + idx, mask, sizeof(mask))==0) {
 			// frame marker found
-			//return ID start index and size
-			return idx;  
-			//size should always be 96
+			//return ID start index
+			if (idx2 == 0) idx2=idx;
+			else if(idx-idx2==96) return idx2;
+			else return -5;
+
+			// should always get 96 bits if it is awid
 		}
 	}
 	//never found mask
@@ -708,8 +788,8 @@ int AWIDdemodFSK(uint8_t *dest, size_t size)
 int PyramiddemodFSK(uint8_t *dest, size_t size)
 {
   static const uint8_t THRESHOLD = 123;
-  uint32_t idx=0;
- // size_t size2 = size;
+  uint32_t idx=0, idx2=0;
+  // size_t size2 = size;
   //make sure buffer has data
   if (size < 128*50) return -5;
   //test samples are not just noise
@@ -727,77 +807,84 @@ int PyramiddemodFSK(uint8_t *dest, size_t size)
   for( idx=0; idx < (size - 128); idx++) {
     if ( memcmp(dest + idx, mask, sizeof(mask))==0) {
       // frame marker found
-      return idx;
+      if (idx2==0) idx2=idx;
+      else if (idx-idx2==128) return idx2;
+      else return -3;
     }
   }
   //never found mask
   return -4;
 }
 
+
 // by marshmellow
 // not perfect especially with lower clocks or VERY good antennas (heavy wave clipping)
 // maybe somehow adjust peak trimming value based on samples to fix?
 int DetectASKClock(uint8_t dest[], size_t size, int clock)
 {
-	int i=0;
-	int clk[]={8,16,32,40,50,64,100,128,256};
-	int loopCnt = 256;  //don't need to loop through entire array...
-	if (size<loopCnt) loopCnt = size;
+  int i=0;
+  int clk[]={8,16,32,40,50,64,100,128,256};
+  int loopCnt = 256;  //don't need to loop through entire array...
+  if (size<loopCnt) loopCnt = size;
 
-	//if we already have a valid clock quit
-	
-	for (;i<8;++i)
-		if (clk[i] == clock) return clock;
+  //if we already have a valid clock quit
+  
+  for (;i<8;++i)
+    if (clk[i] == clock) return clock;
 
-	//get high and low peak
-	int peak, low;
-	getHiLo(dest, loopCnt, &peak, &low, 75, 75);
-	
-	int ii;
-	int clkCnt;
-	int tol = 0;
-	int bestErr[]={1000,1000,1000,1000,1000,1000,1000,1000,1000};
-	int errCnt=0;
-	//test each valid clock from smallest to greatest to see which lines up
-	for(clkCnt=0; clkCnt < 6; ++clkCnt){
-		if (clk[clkCnt] == 32){
-			tol=1;
-		}else{
-			tol=0;
-		}
-		bestErr[clkCnt]=1000;
-		//try lining up the peaks by moving starting point (try first 256)
-		for (ii=0; ii< loopCnt; ++ii){
-			if ((dest[ii] >= peak) || (dest[ii] <= low)){
-				errCnt=0;
-				// now that we have the first one lined up test rest of wave array
-				for (i=0; i<((int)(size/clk[clkCnt])-1); ++i){
-					if (dest[ii+(i*clk[clkCnt])]>=peak || dest[ii+(i*clk[clkCnt])]<=low){
-					}else if(dest[ii+(i*clk[clkCnt])-tol]>=peak || dest[ii+(i*clk[clkCnt])-tol]<=low){
-					}else if(dest[ii+(i*clk[clkCnt])+tol]>=peak || dest[ii+(i*clk[clkCnt])+tol]<=low){
-					}else{  //error no peak detected
-						errCnt++;
-					}
-				}
-				//if we found no errors this is correct one - return this clock
-				if(errCnt==0) return clk[clkCnt];
-				//if we found errors see if it is lowest so far and save it as best run
-				if(errCnt<bestErr[clkCnt]) bestErr[clkCnt]=errCnt;
-			}
-		}
-	}
-	int iii=0;
-	int best=0;
-	for (iii=0; iii<8;++iii){
-		if (bestErr[iii]<bestErr[best]){
-			//                current best bit to error ratio     vs  new bit to error ratio
-			if (((size/clk[best])/bestErr[best] < (size/clk[iii])/bestErr[iii]) ){
-				best = iii;
-			}
-		}
-	}
-	return clk[best];
+  //get high and low peak
+  int peak, low;
+  getHiLo(dest, loopCnt, &peak, &low, 75, 75);
+  
+  int ii;
+  int clkCnt;
+  int tol = 0;
+  int bestErr[]={1000,1000,1000,1000,1000,1000,1000,1000,1000};
+  int errCnt=0;
+  //test each valid clock from smallest to greatest to see which lines up
+  for(clkCnt=0; clkCnt < 8; ++clkCnt){
+    if (clk[clkCnt] == 32){
+      tol=1;
+    }else{
+      tol=0;
+    }
+    bestErr[clkCnt]=1000;
+    //try lining up the peaks by moving starting point (try first 256)
+    for (ii=0; ii < loopCnt; ++ii){
+      if ((dest[ii] >= peak) || (dest[ii] <= low)){
+        errCnt=0;
+        // now that we have the first one lined up test rest of wave array
+        for (i=0; i<((int)((size-ii-tol)/clk[clkCnt])-1); ++i){
+          if (dest[ii+(i*clk[clkCnt])]>=peak || dest[ii+(i*clk[clkCnt])]<=low){
+          }else if(dest[ii+(i*clk[clkCnt])-tol]>=peak || dest[ii+(i*clk[clkCnt])-tol]<=low){
+          }else if(dest[ii+(i*clk[clkCnt])+tol]>=peak || dest[ii+(i*clk[clkCnt])+tol]<=low){
+          }else{  //error no peak detected
+            errCnt++;
+          }
+        }
+        //if we found no errors then we can stop here
+        //  this is correct one - return this clock
+            //PrintAndLog("DEBUG: clk %d, err %d, ii %d, i %d",clk[clkCnt],errCnt,ii,i);
+        if(errCnt==0 && clkCnt<6) return clk[clkCnt];
+        //if we found errors see if it is lowest so far and save it as best run
+        if(errCnt<bestErr[clkCnt]) bestErr[clkCnt]=errCnt;
+      }
+    }
+  }
+  uint8_t iii=0;
+  uint8_t best=0;
+  for (iii=0; iii<8; ++iii){
+    if (bestErr[iii]<bestErr[best]){
+      if (bestErr[iii]==0) bestErr[iii]=1;
+      // current best bit to error ratio     vs  new bit to error ratio
+      if (((size/clk[best])/bestErr[best] < (size/clk[iii])/bestErr[iii]) ){
+        best = iii;
+      }
+    }
+  }
+  return clk[best];
 }
+
 
 //by marshmellow
 //detect psk clock by reading #peaks vs no peaks(or errors)
@@ -809,7 +896,7 @@ int DetectpskNRZClock(uint8_t dest[], size_t size, int clock)
 	if (size<loopCnt) loopCnt = size;
 
 	//if we already have a valid clock quit
-	for (; i < 8; ++i)
+	for (; i < 7; ++i)
 		if (clk[i] == clock) return clock;
 
 	//get high and low peak
@@ -822,11 +909,11 @@ int DetectpskNRZClock(uint8_t dest[], size_t size, int clock)
 	uint8_t tol = 0;
 	int peakcnt=0;
 	int errCnt=0;
-	int bestErr[]={1000,1000,1000,1000,1000,1000,1000,1000,1000};
-	int peaksdet[]={0,0,0,0,0,0,0,0,0};
+	int bestErr[]={1000,1000,1000,1000,1000,1000,1000,1000};
+	int peaksdet[]={0,0,0,0,0,0,0,0};
 	//test each valid clock from smallest to greatest to see which lines up
-	for(clkCnt=0; clkCnt < 6; ++clkCnt){
-		if (clk[clkCnt] >= 32){
+	for(clkCnt=0; clkCnt < 7; ++clkCnt){
+		if (clk[clkCnt] <= 32){
 			tol=1;
 		}else{
 			tol=0;
@@ -837,7 +924,7 @@ int DetectpskNRZClock(uint8_t dest[], size_t size, int clock)
 				errCnt=0;
 				peakcnt=0;
 				// now that we have the first one lined up test rest of wave array
-				for (i=0; i < ((int)(size/clk[clkCnt])-1); ++i){
+				for (i=0; i < ((int)((size-ii-tol)/clk[clkCnt])-1); ++i){
 					if (dest[ii+(i*clk[clkCnt])]>=peak || dest[ii+(i*clk[clkCnt])]<=low){
 						peakcnt++;
 					}else if(dest[ii+(i*clk[clkCnt])-tol]>=peak || dest[ii+(i*clk[clkCnt])-tol]<=low){

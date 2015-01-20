@@ -575,36 +575,41 @@ int CmdLFfind(const char *Cmd)
   }
 
   PrintAndLog("NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
-  PrintAndLog("Checking for known tags:");
+  PrintAndLog("\nChecking for known tags:\n");
   ans=CmdFSKdemodIO("");
   if (ans>0) {
-    PrintAndLog("Valid IO Prox ID Found!");
+    PrintAndLog("\nValid IO Prox ID Found!");
     return 1;
   }
-  ans=CmdFSKdemodPyramid("0");
+  ans=CmdFSKdemodPyramid("");
   if (ans>0) {
-    PrintAndLog("Valid Pyramid ID Found!");
+    PrintAndLog("\nValid Pyramid ID Found!");
     return 1;
   }
-  ans=CmdFSKdemodAWID("0");
+  ans=CmdFSKdemodParadox("");
   if (ans>0) {
-    PrintAndLog("Valid AWID ID Found!");
+    PrintAndLog("\nValid Paradox ID Found!");
+    return 1;
+  }
+  ans=CmdFSKdemodAWID("");
+  if (ans>0) {
+    PrintAndLog("\nValid AWID ID Found!");
     return 1;
   }
   ans=CmdFSKdemodHID("");
   if (ans>0) {
-    PrintAndLog("Valid HID Prox ID Found!");
+    PrintAndLog("\nValid HID Prox ID Found!");
     return 1;
   }
   //add psk and indala
-  ans=CmdIndalaDecode("0");
+  ans=CmdIndalaDecode("");
   if (ans>0) {
-    PrintAndLog("Valid Indala ID Found!");
+    PrintAndLog("\nValid Indala ID Found!");
     return 1;
   }
   ans=Cmdaskmandemod("");
   if (ans>0) {
-    PrintAndLog("Valid EM410x ID Found!");
+    PrintAndLog("\nValid EM410x ID Found!");
     return 1;
   }
   PrintAndLog("No Known Tags Found!\n");
