@@ -301,9 +301,9 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
 static uint8_t trailerAccessBytes[4] = {0x08, 0x77, 0x8F, 0x00};
 
 // variables
-char logHexFileName[200] = {0x00};
+char logHexFileName[FILE_PATH_SIZE] = {0x00};
 static uint8_t traceCard[4096] = {0x00};
-static char traceFileName[200] = {0x00};
+static char traceFileName[FILE_PATH_SIZE] = {0x00};
 static int traceState = TRACE_IDLE;
 static uint8_t traceCurBlock = 0;
 static uint8_t traceCurKey = 0;
@@ -351,10 +351,15 @@ int loadTraceCard(uint8_t *tuid) {
 	FillFileNameByUID(traceFileName, tuid, ".eml", 7);
 
 	f = fopen(traceFileName, "r");
-	if (!f) return 1;
+	if (!f) {
+		fclose(f);
+		return 1;
+	}
 	
 	blockNum = 0;
+		
 	while(!feof(f)){
+	
 		memset(buf, 0, sizeof(buf));
 		if (fgets(buf, sizeof(buf), f) == NULL) {
 			PrintAndLog("File reading error.");
@@ -386,13 +391,17 @@ int saveTraceCard(void) {
 	if ((!strlen(traceFileName)) || (isTraceCardEmpty())) return 0;
 	
 	f = fopen(traceFileName, "w+");
+	if ( !f ) {
+		fclose(f);
+		return 1;
+	}
+	
 	for (int i = 0; i < 64; i++) {  // blocks
 		for (int j = 0; j < 16; j++)  // bytes
 			fprintf(f, "%02x", *(traceCard + i * 16 + j)); 
 		fprintf(f,"\n");
 	}
 	fclose(f);
-
 	return 0;
 }
 
