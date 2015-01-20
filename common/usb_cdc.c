@@ -370,7 +370,7 @@ uint32_t usb_write(const byte_t* data, const size_t len) {
 //* \fn    AT91F_USB_SendData
 //* \brief Send Data through the control endpoint
 //*----------------------------------------------------------------------------
-unsigned int csrTab[100];
+unsigned int csrTab[100] = {0x00};
 unsigned char csrIdx = 0;
 
 static void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length) {

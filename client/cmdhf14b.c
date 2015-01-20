@@ -280,7 +280,7 @@ int CmdHF14BCmdRaw (const char *cmd) {
     uint8_t power=0;
     char buf[5]="";
     int i=0;
-    uint8_t data[100];
+    uint8_t data[100] = {0x00};
     unsigned int datalen=0, temp;
     char *hexout;
     
@@ -334,7 +334,7 @@ int CmdHF14BCmdRaw (const char *cmd) {
             continue;
         }
         PrintAndLog("Invalid char on input");
-        return 0;
+        return 1;
     }
     if (datalen == 0)
     {

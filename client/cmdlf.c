@@ -465,7 +465,7 @@ int CmdLFSnoop(const char *Cmd)
     sscanf(Cmd, "h %"lli, &c.arg[1]);
   } else if (sscanf(Cmd, "%"lli" %"lli, &c.arg[0], &c.arg[1]) < 1) {
 		PrintAndLog("usage 1:  snoop");
-		PrintAndLog("      2:  snoop {l,h} [trigger threshold]");
+		PrintAndLog("      2:  snoop <l|h> [trigger threshold]");
 		PrintAndLog("      3:  snoop <divisor> [trigger threshold]");
     return 0;
   }

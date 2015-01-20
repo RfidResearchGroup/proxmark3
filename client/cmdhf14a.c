@@ -412,9 +412,9 @@ int CmdHF14ASim(const char *Cmd)
 		PrintAndLog("   syntax: hf 14a sim <type> <uid>");
 		PrintAndLog("    types: 1 = MIFARE Classic");
 		PrintAndLog("           2 = MIFARE Ultralight");
-		PrintAndLog("           3 = MIFARE DESFIRE");
+		PrintAndLog("           3 = MIFARE Desfire");
 		PrintAndLog("           4 = ISO/IEC 14443-4");
-		PrintAndLog("           5 = MIFARE TNP3XXX");		
+		PrintAndLog("           5 = MIFARE Tnp3xxx");		
 		PrintAndLog("");
 		return 1;
 	}
