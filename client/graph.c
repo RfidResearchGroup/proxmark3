@@ -79,26 +79,27 @@ size_t getFromGraphBuf(uint8_t *buff)
 // Get or auto-detect clock rate
 int GetClock(const char *str, int peak, int verbose)
 {
-  int clock;
-  sscanf(str, "%i", &clock);
-  if (!strcmp(str, ""))
-    clock = 0;
+	int clock;
+	sscanf(str, "%i", &clock);
+	if (!strcmp(str, ""))
+		clock = 0;
 
 	// Auto-detect clock
-  if (!clock)
-  {
-    uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
+	if (!clock)
+	{
+		uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
 		size_t size = getFromGraphBuf(grph);
 		if ( size < 0 ) {
 			PrintAndLog("Failed to copy from graphbuffer");
 			return -1;
 		}
-    clock = DetectASKClock(grph,size,0);
+		clock = DetectASKClock(grph,size,0);
 		// Only print this message if we're not looping something
-    if (!verbose){
-      PrintAndLog("Auto-detected clock rate: %d", clock);
-    }
-  return clock;
+		if (!verbose){
+			PrintAndLog("Auto-detected clock rate: %d", clock);
+		}
+	}
+	return clock;
 }
 
 // A simple test to see if there is any data inside Graphbuffer. 
