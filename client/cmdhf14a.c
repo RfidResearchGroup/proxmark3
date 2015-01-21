@@ -480,7 +480,8 @@ int CmdHF14ASim(const char *Cmd)
 int CmdHF14ASnoop(const char *Cmd) {
 	int param = 0;
 	
-	if (param_getchar(Cmd, 0) == 'h') {
+	uint8_t ctmp = param_getchar(Cmd, 0) ;
+	if (ctmp == 'h' || ctmp == 'H') {
 		PrintAndLog("It get data from the field and saves it into command buffer.");
 		PrintAndLog("Buffer accessible from command hf list 14a.");
 		PrintAndLog("Usage:  hf 14a snoop [c][r]");
@@ -491,7 +492,7 @@ int CmdHF14ASnoop(const char *Cmd) {
 	}	
 	
 	for (int i = 0; i < 2; i++) {
-		char ctmp = param_getchar(Cmd, i);
+		ctmp = param_getchar(Cmd, i);
 		if (ctmp == 'c' || ctmp == 'C') param |= 0x01;
 		if (ctmp == 'r' || ctmp == 'R') param |= 0x02;
 	}
@@ -670,7 +671,7 @@ static command_t CommandTable[] =
   {"list",   CmdHF14AList,         0, "[Deprecated] List ISO 14443a history"},
   {"reader", CmdHF14AReader,       0, "Act like an ISO14443 Type A reader"},
   {"cuids",  CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443 Type A UIDs in one go"},
-  {"sim",    CmdHF14ASim,          0, "<UID> -- Fake ISO 14443a tag"},
+  {"sim",    CmdHF14ASim,          0, "<UID> -- Simulate ISO 14443a tag"},
   {"snoop",  CmdHF14ASnoop,        0, "Eavesdrop ISO 14443 Type A"},
   {"raw",    CmdHF14ACmdRaw,       0, "Send raw hex data to tag"},
   {NULL, NULL, 0, NULL}
