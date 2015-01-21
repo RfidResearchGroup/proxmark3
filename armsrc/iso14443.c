@@ -628,30 +628,26 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
     int max = 0;
     int gotFrame = FALSE;
 
-//#   define DMA_BUFFER_SIZE 8
-    int8_t *dmaBuf;
-
     int lastRxCounter;
-    int8_t *upTo;
 
     int ci, cq;
 
     int samples = 0;
 
     // Clear out the state of the "UART" that receives from the tag.
-    memset(BigBuf, 0x00, 400);
-    Demod.output = (uint8_t *)BigBuf;
+	memset(Demod.output, 0x00, MAX_FRAME_SIZE);
+	Demod.output = ((uint8_t *)BigBuf) + RECV_RESP_OFFSET;
     Demod.len = 0;
     Demod.state = DEMOD_UNSYNCD;
 
     // And the UART that receives from the reader
-    Uart.output = (((uint8_t *)BigBuf) + 1024);
-    Uart.byteCntMax = 100;
+	Uart.output = ((uint8_t *)BigBuf) + RECV_CMD_OFFSET;
+	Uart.byteCntMax = MAX_FRAME_SIZE;
     Uart.state = STATE_UNSYNCD;
 
-    // Setup for the DMA.
-    dmaBuf = (int8_t *)(BigBuf + 32);
-    upTo = dmaBuf;
+	// The DMA buffer, used to stream samples from the FPGA
+	int8_t *dmaBuf = ((int8_t *)BigBuf) + DMA_BUFFER_OFFSET;
+	int8_t *upTo= dmaBuf;
     lastRxCounter = DEMOD_DMA_BUFFER_SIZE;
     FpgaSetupSscDma((uint8_t *)dmaBuf, DEMOD_DMA_BUFFER_SIZE);
 

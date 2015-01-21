@@ -413,15 +413,18 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, uint8_t protocol, boo
 	if (tracepos + data_len + parity_len >= TRACE_SIZE) {
 		return TRACE_SIZE;
 	}
-
 	uint8_t *frame = trace + tracepos;
 	tracepos += data_len;
 	uint8_t *parityBytes = trace + tracepos;
 	tracepos += parity_len;
 
+
 	//--- Draw the data column
+	//char line[16][110];
 	char line[16][110];
-	for (int j = 0; j < data_len; j++) {
+
+	for (int j = 0; j < data_len && j/16 < 16; j++) {
+
 		int oddparity = 0x01;
 		int k;
 
@@ -430,11 +433,17 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, uint8_t protocol, boo
 		}
 
 		uint8_t parityBits = parityBytes[j>>3];
-
 		if (isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
-			sprintf(line[j/16]+((j%16)*4), "%02x! ", frame[j]);
+			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x! ", frame[j]);
+
 		} else {
-			sprintf(line[j/16]+((j%16)*4), "%02x  ", frame[j]);
+			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x! ", frame[j]);
+		}
+	}
+	if(data_len == 0)
+	{
+		if(data_len == 0){
+			sprintf(line[0],"<empty trace - possible error>");
 		}
 	}
 	//--- Draw the CRC column
@@ -479,8 +488,8 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, uint8_t protocol, boo
 			annotateIso14443b(explanation,sizeof(explanation),frame,data_len);
 	}
 
-	int num_lines = (data_len - 1)/16 + 1;
-	for (int j = 0; j < num_lines; j++) {
+	int num_lines = MIN((data_len - 1)/16 + 1, 16);
+	for (int j = 0; j < num_lines ; j++) {
 		if (j == 0) {
 			PrintAndLog(" %9d | %9d | %s | %-64s| %s| %s",
 				(timestamp - first_timestamp),
@@ -573,7 +582,6 @@ int CmdHFList(const char *Cmd)
 	uint16_t tracepos = 0;
 	GetFromBigBuf(trace, TRACE_SIZE, 0);
 	WaitForResponse(CMD_ACK, NULL);
-
 	PrintAndLog("Recorded Activity");
 	PrintAndLog("");
 	PrintAndLog("Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");

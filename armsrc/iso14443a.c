@@ -22,10 +22,7 @@
 #include "mifareutil.h"
 
 static uint32_t iso14a_timeout;
-uint8_t *trace = (uint8_t *) BigBuf+TRACE_OFFSET;
 int rsamples = 0;
-int traceLen = 0;
-int tracing = TRUE;
 uint8_t trigger = 0;
 // the block number for the ISO14443-4 PCB
 static uint8_t iso14_pcb_blocknum = 0;

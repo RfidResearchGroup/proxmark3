@@ -13,6 +13,9 @@
 #include "string.h"
 #include "apps.h"
 
+uint8_t *trace = (uint8_t *) BigBuf+TRACE_OFFSET;
+int traceLen = 0;
+int tracing = TRUE;
 
 
 void print_result(char *name, uint8_t *buf, size_t len) {
@@ -463,7 +466,6 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 		tracing = FALSE;	// don't trace any more
 		return FALSE;
 	}
-
 	// Traceformat:
 	// 32 bits timestamp (little endian)
 	// 16 bits duration (little endian)
@@ -501,6 +503,11 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 		memcpy(trace + traceLen, parity, num_paritybytes);
 	}
 	traceLen += num_paritybytes;
+
+	if(traceLen +4 < TRACE_SIZE)
+	{	//If it hadn't been cleared, for whatever reason..
+		memset(trace+traceLen,0x44, 4);
+	}
 
 	return TRUE;
 }

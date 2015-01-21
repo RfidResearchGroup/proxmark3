@@ -986,7 +986,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 void  __attribute__((noreturn)) AppMain(void)
 {
 	SpinDelay(100);
-
+	clear_trace();
 	if(common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
 		/* Initialize common area */
 		memset(&common_area, 0, sizeof(common_area));
