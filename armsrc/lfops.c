@@ -8,7 +8,6 @@
 // Also routines for raw mode reading/simulating of LF waveform
 //-----------------------------------------------------------------------------
 
-#include <stdlib.h>
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
@@ -62,9 +61,9 @@ void DoAcquisition(int decimation, int quantization, int trigger_threshold, bool
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			sample_total_numbers++;
 			if (trigger_threshold != -1 && sample < trigger_threshold)
 				continue;
+			sample_total_numbers++;
 
 			LED_D_OFF();
 			trigger_threshold = -1;
@@ -87,7 +86,7 @@ void DoAcquisition(int decimation, int quantization, int trigger_threshold, bool
 			if(quantization < 2)	pushBit(&data, sample & 0x02);
 			if(quantization < 1)	pushBit(&data, sample & 0x01);
 
-			if(data.numbits +1  >= bufsize) break;
+			if((data.numbits / 8) +1  >= bufsize) break;
 		}
 	}
 	Dbprintf("Done, saved %l out of %l seen samples.",sample_total_saved, sample_total_numbers);
