@@ -66,7 +66,7 @@ void setGraphBuf(uint8_t *buff, size_t size)
 }
 size_t getFromGraphBuf(uint8_t *buff)
 {
-	if ( buff == NULL ) return -1;
+	if ( buff == NULL ) return 0;
 	
   uint32_t i;
   for (i=0;i<GraphTraceLen;++i){
@@ -89,7 +89,7 @@ int GetClock(const char *str, int peak, int verbose)
 	{
 		uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
 		size_t size = getFromGraphBuf(grph);
-		if ( size < 0 ) {
+		if ( size == 0 ) {
 			PrintAndLog("Failed to copy from graphbuffer");
 			return -1;
 		}
@@ -146,6 +146,10 @@ int GetNRZpskClock(const char *str, int peak, int verbose)
 	{
 		uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
 		size_t size = getFromGraphBuf(grph);
+		if ( size == 0 ) {
+			PrintAndLog("Failed to copy from graphbuffer");
+			return -1;
+		}
 		clock = DetectpskNRZClock(grph,size,0);
 		// Only print this message if we're not looping something
 		if (!verbose){
