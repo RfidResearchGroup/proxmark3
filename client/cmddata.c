@@ -604,22 +604,40 @@ int CmdFSKrawdemod(const char *Cmd)
 {
   //raw fsk demod  no manchester decoding no start bit finding just get binary from wave
   //set defaults
-  int rfLen = 50;
+  int rfLen = 0;
   int invert=0;
-  int fchigh=10;
-  int fclow=8;
+  int fchigh=0;
+  int fclow=0;
   //set options from parameters entered with the command
 	sscanf(Cmd, "%i %i %i %i", &rfLen, &invert, &fchigh, &fclow);
 
   if (strlen(Cmd)>0 && strlen(Cmd)<=2) {
      if (rfLen==1){
       invert=1;   //if invert option only is used
-      rfLen = 50;
-     } else if(rfLen==0) rfLen=50;
+      rfLen = 0;
+     }
 	}
-  PrintAndLog("Args invert: %d - Clock:%d - fchigh:%d - fclow: %d",invert,rfLen,fchigh, fclow);
+
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t BitLen = getFromGraphBuf(BitStream);
+  //get field clock lengths
+  uint16_t fcs=0;
+  if (fchigh==0 || fclow == 0){
+    fcs=countFC(BitStream, BitLen);
+    if (fcs==0){
+      fchigh=10;
+      fclow=8;
+    }else{
+      fchigh = (fcs >> 8) & 0xFF;
+      fclow = fcs & 0xFF;
+    }
+  }
+  //get bit clock length
+  if (rfLen==0){
+    rfLen = detectFSKClk(BitStream, BitLen, fchigh, fclow);
+    if (rfLen == 0) rfLen = 50;
+  }
+  PrintAndLog("Args invert: %d - Clock:%d - fchigh:%d - fclow: %d",invert,rfLen,fchigh, fclow);
 	int size  = fskdemod(BitStream,BitLen,(uint8_t)rfLen,(uint8_t)invert,(uint8_t)fchigh,(uint8_t)fclow);
   if (size>0){
     PrintAndLog("FSK decoded bitstream:");
@@ -1159,12 +1177,20 @@ int CmdFSKfcDetect(const char *Cmd)
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
   size_t size = getFromGraphBuf(BitStream);
 
-
-  uint32_t ans = countFC(BitStream, size);
-  int fc1, fc2, rf1;
+  uint16_t ans = countFC(BitStream, size); 
+  if (ans==0) {
+    if (g_debugMode) PrintAndLog("DEBUG: No data found");
+    return 0;
+  }
+  uint8_t fc1, fc2;
   fc1 = (ans >> 8) & 0xFF;
   fc2 = ans & 0xFF;
-  rf1 = (ans >>16) & 0xFF;
+
+  uint8_t rf1 = detectFSKClk(BitStream, size, fc1, fc2);
+  if (rf1==0) {
+    if (g_debugMode) PrintAndLog("DEBUG: Clock detect error");
+    return 0;
+  }
   PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
   return 1;
 }

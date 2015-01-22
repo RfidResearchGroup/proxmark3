@@ -33,7 +33,8 @@ void pskCleanWave(uint8_t *bitStream, size_t size);
 int PyramiddemodFSK(uint8_t *dest, size_t size);
 int AWIDdemodFSK(uint8_t *dest, size_t size);
 size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen);
-uint32_t countFC(uint8_t *BitStream, size_t size);
+uint16_t countFC(uint8_t *BitStream, size_t size);
+uint8_t detectFSKClk(uint8_t *BitStream, size_t size, uint8_t fcHigh, uint8_t fcLow);
 int getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo);
 size_t ParadoxdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);
 

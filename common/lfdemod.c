@@ -1200,96 +1200,64 @@ int pskNRZrawDemod(uint8_t *dest, size_t *size, int *clk, int *invert)
 
 
 //by marshmellow
-//countFC is to detect the field clock and bit clock rates.
-//for fsk or ask not psk or nrz
-uint32_t countFC(uint8_t *BitStream, size_t size)
+//detects the bit clock for FSK given the high and low Field Clocks
+uint8_t detectFSKClk(uint8_t *BitStream, size_t size, uint8_t fcHigh, uint8_t fcLow)
 {
-  // get high/low thresholds
-  int high, low;
-  getHiLo(BitStream,10, &high, &low, 100, 100);
-  // get zero crossing
-  uint8_t zeroC = (high-low)/2+low;
-  uint8_t clk[]={8,16,32,40,50,64,100,128};
-  uint8_t fcLens[] = {0,0,0,0,0,0,0,0,0,0};
-  uint16_t fcCnts[] = {0,0,0,0,0,0,0,0,0,0};
-  uint8_t rfLens[] = {0,0,0,0,0,0,0,0,0,0,0};
-  // uint8_t rfCnts[] = {0,0,0,0,0,0,0,0,0,0};
-  uint8_t fcLensFnd = 0;
+  uint8_t clk[] = {8,16,32,40,50,64,100,128,0};
+  uint16_t rfLens[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  uint8_t rfCnts[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
   uint8_t rfLensFnd = 0;
-  uint8_t lastBit=0;
-  uint8_t curBit=0;
   uint8_t lastFCcnt=0;
-  uint32_t errCnt=0;
   uint32_t fcCounter = 0;
-  uint32_t rfCounter = 0;
+  uint16_t rfCounter = 0;
   uint8_t firstBitFnd = 0;
-  int i;
-  
+  size_t i;
+
+  uint8_t fcTol = (uint8_t)(0.5+(float)(fcHigh-fcLow)/2);
+  rfLensFnd=0;
+  fcCounter=0;
+  rfCounter=0;
+  firstBitFnd=0;
+  //PrintAndLog("DEBUG: fcTol: %d",fcTol);
   // prime i to first up transition
-  for (i = 1; i < size; i++)
-    if (BitStream[i]>=zeroC && BitStream[i-1]<zeroC)
+  for (i = 1; i < size-1; i++)
+    if (BitStream[i] > BitStream[i-1] && BitStream[i]>=BitStream[i+1])
       break;
 
-  for (; i < size; i++){
-    curBit = BitStream[i];
-    lastBit = BitStream[i-1];
-    if (lastBit<zeroC && curBit >= zeroC){
-      // new up transition
+  for (; i < size-1; i++){
+    if (BitStream[i] > BitStream[i-1] && BitStream[i]>=BitStream[i+1]){
+      // new peak 
       fcCounter++;
       rfCounter++;
-      if (fcCounter > 3 && fcCounter < 256){ 
-        //we've counted enough that it could be a valid field clock
-  
-        //if we had 5 and now have 9 then go back to 8 (for when we get a fc 9 instead of an 8)
-        if (lastFCcnt==5 && fcCounter==9) fcCounter--;
-        //if odd and not rc/5 add one (for when we get a fc 9 instead of 10)
-        if ((fcCounter==9 && fcCounter & 1) || fcCounter==4) fcCounter++;
+      // if we got less than the small fc + tolerance then set it to the small fc
+      if (fcCounter < fcLow+fcTol) 
+        fcCounter = fcLow;
+      else //set it to the large fc
+        fcCounter = fcHigh;
      
-        //look for bit clock  (rf/xx)
-        if ((fcCounter<lastFCcnt || fcCounter>lastFCcnt)){
-          //not the same size as the last wave - start of new bit sequence
+      //look for bit clock  (rf/xx)
+      if ((fcCounter<lastFCcnt || fcCounter>lastFCcnt)){
+        //not the same size as the last wave - start of new bit sequence
 
-          if (firstBitFnd>1){ //skip first wave change - probably not a complete bit
-            for (int ii=0; ii<10; ii++){
-              if (rfLens[ii]==rfCounter){
-                //rfCnts[ii]++;
-                rfCounter=0;
-                break;
-              }
+        if (firstBitFnd>1){ //skip first wave change - probably not a complete bit
+          for (int ii=0; ii<15; ii++){
+            if (rfLens[ii]==rfCounter){
+              rfCnts[ii]++;
+              rfCounter=0;
+              break;
             }
-            if (rfCounter>0 && rfLensFnd<10){
-              //PrintAndLog("DEBUG: rfCntr %d, fcCntr %d",rfCounter,fcCounter);
-              //rfCnts[rfLensFnd]++;
-              rfLens[rfLensFnd++]=rfCounter;
-            }
-          } else {
-            //PrintAndLog("DEBUG i: %d",i);
-            firstBitFnd++;
           }
-          rfCounter=0;
-          lastFCcnt=fcCounter;
-        }
-
-        // save last field clock count  (fc/xx)
-        // find which fcLens to save it to:
-        for (int ii=0; ii<10; ii++){
-          if (fcLens[ii]==fcCounter){
-            fcCnts[ii]++;
-            fcCounter=0;
-            break;
+          if (rfCounter>0 && rfLensFnd<15){
+            //PrintAndLog("DEBUG: rfCntr %d, fcCntr %d",rfCounter,fcCounter);
+            rfCnts[rfLensFnd]++;
+            rfLens[rfLensFnd++]=rfCounter;
           }
+        } else {
+          firstBitFnd++;
         }
-        if (fcCounter>0 && fcLensFnd<10){
-          //add new fc length 
-          //PrintAndLog("FCCntr %d",fcCounter);
-          fcCnts[fcLensFnd]++;
-          fcLens[fcLensFnd++]=fcCounter;
-        }
-      } else{
-        // hmmm this should not happen often - count them
-        errCnt++;
+        rfCounter=0;
+        lastFCcnt=fcCounter;
       }
-      // reset counter
       fcCounter=0;
     } else {
       // count sample
@@ -1297,15 +1265,99 @@ uint32_t countFC(uint8_t *BitStream, size_t size)
       rfCounter++;
     }
   }
-  // if too many errors return errors as negative number (IS THIS NEEDED?)
-  if (errCnt>100) return -1*errCnt;
-  
-  uint8_t maxCnt1=0, best1=9, best2=9, best3=9, rfHighest=10, rfHighest2=10, rfHighest3=10;
+  uint8_t rfHighest=15, rfHighest2=15, rfHighest3=15;
 
+  for (i=0; i<15; i++){
+    //PrintAndLog("DEBUG: RF %d, cnts %d",rfLens[i], rfCnts[i]);
+    //get highest 2 RF values  (might need to get more values to compare or compare all?)
+    if (rfCnts[i]>rfCnts[rfHighest]){
+      rfHighest3=rfHighest2;
+      rfHighest2=rfHighest;
+      rfHighest=i;
+    } else if(rfCnts[i]>rfCnts[rfHighest2]){
+      rfHighest3=rfHighest2;
+      rfHighest2=i;
+    } else if(rfCnts[i]>rfCnts[rfHighest3]){
+      rfHighest3=i;
+    }
+  }  
+  // set allowed clock remainder tolerance to be 1 large field clock length+1 
+  //   we could have mistakenly made a 9 a 10 instead of an 8 or visa versa so rfLens could be 1 FC off  
+  uint8_t tol1 = fcHigh+1; 
+  
+  //PrintAndLog("DEBUG: hightest: 1 %d, 2 %d, 3 %d",rfLens[rfHighest],rfLens[rfHighest2],rfLens[rfHighest3]);
+
+  // loop to find the highest clock that has a remainder less than the tolerance
+  //   compare samples counted divided by
+  int ii=7;
+  for (; ii>=0; ii--){
+    if (rfLens[rfHighest] % clk[ii] < tol1 || rfLens[rfHighest] % clk[ii] > clk[ii]-tol1){
+      if (rfLens[rfHighest2] % clk[ii] < tol1 || rfLens[rfHighest2] % clk[ii] > clk[ii]-tol1){
+        if (rfLens[rfHighest3] % clk[ii] < tol1 || rfLens[rfHighest3] % clk[ii] > clk[ii]-tol1){
+          break;
+        }
+      }
+    }
+  }
+
+  if (ii<0) return 0; // oops we went too far
+
+  return clk[ii];
+}
+
+//by marshmellow
+//countFC is to detect the field clock lengths.
+//counts and returns the 2 most common wave lengths
+uint16_t countFC(uint8_t *BitStream, size_t size)
+{
+  uint8_t fcLens[] = {0,0,0,0,0,0,0,0,0,0};
+  uint16_t fcCnts[] = {0,0,0,0,0,0,0,0,0,0};
+  uint8_t fcLensFnd = 0;
+  uint8_t lastFCcnt=0;
+  uint32_t fcCounter = 0;
+  size_t i;
+  
+  // prime i to first up transition
+  for (i = 1; i < size-1; i++)
+    if (BitStream[i] > BitStream[i-1] && BitStream[i] >= BitStream[i+1])
+      break;
+
+  for (; i < size-1; i++){
+    if (BitStream[i] > BitStream[i-1] && BitStream[i] >= BitStream[i+1]){
+    	// new up transition
+    	fcCounter++;
+    	
+      //if we had 5 and now have 9 then go back to 8 (for when we get a fc 9 instead of an 8)
+      if (lastFCcnt==5 && fcCounter==9) fcCounter--;
+      //if odd and not rc/5 add one (for when we get a fc 9 instead of 10)
+      if ((fcCounter==9 && fcCounter & 1) || fcCounter==4) fcCounter++;
+
+      // save last field clock count  (fc/xx)
+      // find which fcLens to save it to:
+      for (int ii=0; ii<10; ii++){
+        if (fcLens[ii]==fcCounter){
+          fcCnts[ii]++;
+          fcCounter=0;
+          break;
+        }
+      }
+      if (fcCounter>0 && fcLensFnd<10){
+        //add new fc length 
+        fcCnts[fcLensFnd]++;
+        fcLens[fcLensFnd++]=fcCounter;
+      }
+      fcCounter=0;
+    } else {
+      // count sample
+      fcCounter++;
+    }
+  }
+  
+  uint8_t best1=9, best2=9, best3=9;
+  uint16_t maxCnt1=0;
   // go through fclens and find which ones are bigest 2  
   for (i=0; i<10; i++){
-    // PrintAndLog("DEBUG: FC %d, Cnt %d, Errs %d, RF %d",fcLens[i],fcCnts[i],errCnt,rfLens[i]);
-    
+    // PrintAndLog("DEBUG: FC %d, Cnt %d, Errs %d",fcLens[i],fcCnts[i],errCnt);    
     // get the 3 best FC values
     if (fcCnts[i]>maxCnt1) {
       best3=best2;
@@ -1318,49 +1370,20 @@ uint32_t countFC(uint8_t *BitStream, size_t size)
     } else if(fcCnts[i]>fcCnts[best3]){
       best3=i;
     }
-    //get highest 2 RF values  (might need to get more values to compare or compare all?)
-    if (rfLens[i]>rfLens[rfHighest]){
-      rfHighest3=rfHighest2;
-      rfHighest2=rfHighest;
-      rfHighest=i;
-    } else if(rfLens[i]>rfLens[rfHighest2]){
-      rfHighest3=rfHighest2;
-      rfHighest2=i;
-    } else if(rfLens[i]>rfLens[rfHighest3]){
-      rfHighest3=i;
-    }
   }
-
-  // set allowed clock remainder tolerance to be 1 large field clock length 
-  //   we could have mistakenly made a 9 a 10 instead of an 8 or visa versa so rfLens could be 1 FC off
-  int tol1 = (fcLens[best1]>fcLens[best2]) ? fcLens[best1] : fcLens[best2]; 
-  
-  // loop to find the highest clock that has a remainder less than the tolerance
-  //   compare samples counted divided by 
-  int ii=7;
-  for (; ii>=0; ii--){
-    if (rfLens[rfHighest] % clk[ii] < tol1 || rfLens[rfHighest] % clk[ii] > clk[ii]-tol1){
-      if (rfLens[rfHighest2] % clk[ii] < tol1 || rfLens[rfHighest2] % clk[ii] > clk[ii]-tol1){
-        if (rfLens[rfHighest3] % clk[ii] < tol1 || rfLens[rfHighest3] % clk[ii] > clk[ii]-tol1){
-          break;
-        }
-      }
-    }
+  uint8_t fcH=0, fcL=0;
+  if (fcLens[best1]>fcLens[best2]){
+    fcH=fcLens[best1];
+    fcL=fcLens[best2];
+  } else{
+    fcH=fcLens[best2];
+    fcL=fcLens[best1];
   }
-
-  if (ii<0) ii=7; // oops we went too far
-
+ 
   // TODO: take top 3 answers and compare to known Field clocks to get top 2
 
-  uint32_t fcs=0;
-  // PrintAndLog("DEBUG: Best %d  best2 %d best3 %d, clk %d, clk2 %d",fcLens[best1],fcLens[best2],fcLens[best3],clk[i],clk[ii]);
-  //
-
-  if (fcLens[best1]>fcLens[best2]){
-    fcs = (((uint32_t)clk[ii])<<16) | (((uint32_t)fcLens[best1])<<8) | ((fcLens[best2]));
-  } else {
-    fcs = (((uint32_t)clk[ii])<<16) | (((uint32_t)fcLens[best2])<<8) | ((fcLens[best1]));    
-  }
-
+  uint16_t fcs = (((uint16_t)fcH)<<8) | fcL;
+  // PrintAndLog("DEBUG: Best %d  best2 %d best3 %d",fcLens[best1],fcLens[best2],fcLens[best3]);
+  
   return fcs;
 }
