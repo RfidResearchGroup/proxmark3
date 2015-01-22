@@ -8,6 +8,7 @@
 // Also routines for raw mode reading/simulating of LF waveform
 //-----------------------------------------------------------------------------
 
+#include <stdlib.h>
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
@@ -15,6 +16,83 @@
 #include "crc16.h"
 #include "string.h"
 #include "lfdemod.h"
+
+typedef struct {
+	uint8_t * buffer;
+	uint32_t numbits;
+	uint8_t position;
+} BitstreamOut;
+/**
+ * @brief Pushes bit onto the stream
+ * @param stream
+ * @param bit
+ */
+void pushBit( BitstreamOut* stream, bool bit)
+{
+	int bytepos = stream->position >> 3; // divide by 8
+	int bitpos = stream->position & 7;
+	*(stream->buffer+bytepos) |= (bit & 1) <<  (7 - bitpos);
+	stream->position++;
+	stream->numbits++;
+}
+void DoAcquisition(int decimation, int quantization, int trigger_threshold, bool averaging)
+{
+	//A decimation of 2 means we keep every 2nd sample
+	//A decimation of 3 means we keep 1 in 3 samples.
+	//A quantization of 1 means one bit is discarded from the sample (division by 2).
+	uint8_t *dest = (uint8_t *)BigBuf;
+	int bufsize = BIGBUF_SIZE;
+	memset(dest, 0, bufsize);
+	// You can't decimate 8 bits more than 7 times
+	if(quantization > 7) quantization = 7;
+	// Use a bit stream to handle the output
+	BitstreamOut data = { dest , 0, 0};
+	int sample_counter = 0;
+	uint8_t sample = 0;
+	//If we want to do averaging
+	uint32_t sample_sum =0 ;
+	uint32_t sample_total_numbers =0 ;
+	uint32_t sample_total_saved =0 ;
+
+	for(;;) {
+		WDT_HIT();
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+			AT91C_BASE_SSC->SSC_THR = 0x43;
+			LED_D_ON();
+		}
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+			sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+			sample_total_numbers++;
+			if (trigger_threshold != -1 && sample < trigger_threshold)
+				continue;
+
+			LED_D_OFF();
+			trigger_threshold = -1;
+			sample_counter++;
+			sample_sum += sample;
+			//Check decimation
+			if(sample_counter < decimation) continue;
+			//Averaging
+			if(averaging) sample = sample_sum / decimation;
+
+			sample_counter = 0;
+			sample_sum =0;
+			sample_total_saved ++;
+			pushBit(&data, sample & 0x80);
+			if(quantization < 7)	pushBit(&data, sample & 0x40);
+			if(quantization < 6)	pushBit(&data, sample & 0x20);
+			if(quantization < 5)	pushBit(&data, sample & 0x10);
+			if(quantization < 4)	pushBit(&data, sample & 0x08);
+			if(quantization < 3)	pushBit(&data, sample & 0x04);
+			if(quantization < 2)	pushBit(&data, sample & 0x02);
+			if(quantization < 1)	pushBit(&data, sample & 0x01);
+
+			if(data.numbits +1  >= bufsize) break;
+		}
+	}
+	Dbprintf("Done, saved %l out of %l seen samples.",sample_total_saved, sample_total_numbers);
+
+}
 
 
 /**
