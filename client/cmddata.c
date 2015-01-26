@@ -721,8 +721,8 @@ int CmdFSKdemodHID(const char *Cmd)
   return 1;
 }
 
-//by marshmellow (based on existing demod + holiman's refactor)
-//Paradox Prox demod - FSK RF/50 with preamble of 00011101 (then manchester encoded)
+//by marshmellow
+//Paradox Prox demod - FSK RF/50 with preamble of 00001111 (then manchester encoded)
 //print full Paradox Prox ID and some bit format details if found
 int CmdFSKdemodParadox(const char *Cmd)
 {
@@ -1196,7 +1196,7 @@ int CmdDetectNRZpskClockRate(const char *Cmd)
 	return 0;
 }
 
-int PSKnrzDemod(const char *Cmd)
+int PSKnrzDemod(const char *Cmd, uint8_t verbose)
 {
 	int invert=0;
 	int clk=0;
@@ -1213,7 +1213,7 @@ int PSKnrzDemod(const char *Cmd)
 		if (g_debugMode==1) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
 		return -1;
 	}
-	PrintAndLog("Tried PSK/NRZ Demod using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
+  if (verbose) PrintAndLog("Tried PSK/NRZ Demod using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
 
 	//prime demod buffer for output
 	setDemodBuf(BitStream,BitLen,0);
@@ -1226,9 +1226,9 @@ int CmdIndalaDecode(const char *Cmd)
 {
   int ans;
   if (strlen(Cmd)>0){
-    ans = PSKnrzDemod(Cmd);
+    ans = PSKnrzDemod(Cmd, 0);
   } else{ //default to RF/32
-    ans = PSKnrzDemod("32");
+    ans = PSKnrzDemod("32", 0);
   }
 
 	if (ans < 0){
@@ -1305,15 +1305,15 @@ int CmdPskClean(const char *Cmd)
 	return 0;
 }
 
-//by marshmellow
-//takes 2 arguments - clock and invert both as integers
-//attempts to demodulate ask only
-//prints binary found and saves in graphbuffer for further commands
+// by marshmellow
+// takes 2 arguments - clock and invert both as integers
+// attempts to demodulate psk only
+// prints binary found and saves in demodbuffer for further commands
 int CmdpskNRZrawDemod(const char *Cmd)
 {
   int errCnt;
  
-  errCnt = PSKnrzDemod(Cmd);
+  errCnt = PSKnrzDemod(Cmd, 1);
 	//output
 	if (errCnt<0){
     if (g_debugMode) PrintAndLog("Error demoding: %d",errCnt);  
@@ -1333,6 +1333,32 @@ int CmdpskNRZrawDemod(const char *Cmd)
     return 1;
   }
   return 0;
+}
+
+// by marshmellow
+// takes same args as cmdpsknrzrawdemod
+int CmdPSK2rawDemod(const char *Cmd)
+{
+  int errCnt=0;
+  errCnt=PSKnrzDemod(Cmd, 1);
+  if (errCnt<0){
+    if (g_debugMode) PrintAndLog("Error demoding: %d",errCnt);  
+    return 0;
+  } 
+  psk1TOpsk2(DemodBuffer, DemodBufferLen);
+  if (errCnt>0){
+    if (g_debugMode){
+      PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
+      PrintAndLog("PSK2 demoded bitstream:");
+      // Now output the bitstream to the scrollback by line of 16 bits
+      printDemodBuff();
+    }
+  }else{
+    PrintAndLog("PSK2 demoded bitstream:");
+    // Now output the bitstream to the scrollback by line of 16 bits
+    printDemodBuff();  
+  }
+  return 1;
 }
 
 int CmdGrid(const char *Cmd)
@@ -1949,8 +1975,9 @@ static command_t CommandTable[] =
   {"plot",          CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
 	{"pskclean",      CmdPskClean,        1, "Attempt to clean psk wave"},
 	{"pskdetectclock",CmdDetectNRZpskClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
-	{"pskindalademod",CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Attempt to demodulate psk indala tags and output ID binary & hex (args optional)"},
-	{"psknrzrawdemod",CmdpskNRZrawDemod,  1, "[clock] [invert<0|1>] -- Attempt to demodulate psk or nrz tags and output binary (args optional)"},
+	{"pskindalademod",CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Attempt to demodulate psk1 indala tags and output ID binary & hex (args optional)"},
+	{"psk1nrzrawdemod",CmdpskNRZrawDemod, 1, "[clock] [invert<0|1>] -- Attempt to demodulate psk1 or nrz tags and output binary (args optional)"},
+  {"psk2rawdemod",  CmdPSK2rawDemod,    1, "[clock] [invert<0|1>] -- Attempt to demodulate psk2 tags and output binary (args optional)"},
   {"samples",       CmdSamples,         0, "[512 - 40000] -- Get raw samples for graph window"},
   {"save",          CmdSave,            1, "<filename> -- Save trace (from graph window)"},
   {"scale",         CmdScale,           1, "<int> -- Set cursor display scale"},

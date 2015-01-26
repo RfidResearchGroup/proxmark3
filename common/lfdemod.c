@@ -816,7 +816,6 @@ int PyramiddemodFSK(uint8_t *dest, size_t size)
   return -4;
 }
 
-
 // by marshmellow
 // not perfect especially with lower clocks or VERY good antennas (heavy wave clipping)
 // maybe somehow adjust peak trimming value based on samples to fix?
@@ -884,7 +883,6 @@ int DetectASKClock(uint8_t dest[], size_t size, int clock)
   }
   return clk[best];
 }
-
 
 //by marshmellow
 //detect psk clock by reading #peaks vs no peaks(or errors)
@@ -963,7 +961,7 @@ int DetectpskNRZClock(uint8_t dest[], size_t size, int clock)
 	return clk[best];
 }
 
-//by marshmellow (attempt to get rid of high immediately after a low)
+// by marshmellow (attempt to get rid of high immediately after a low)
 void pskCleanWave(uint8_t *BitStream, size_t size)
 {
 	int i;
@@ -999,9 +997,26 @@ void pskCleanWave(uint8_t *BitStream, size_t size)
 	return;
 }
 
+// by marshmellow
+// convert psk1 demod to psk2 demod
+// only transition waves are 1s
+void psk1TOpsk2(uint8_t *BitStream, size_t size)
+{
+	size_t i=1;
+	uint8_t lastBit=BitStream[0];
+	for (; i<size; i++){
+		if (lastBit!=BitStream[i]){
+			lastBit=BitStream[i];
+			BitStream[i]=1;
+		} else {
+			BitStream[i]=0;
+		}
+	}
+	return;
+}
 
-//redesigned by marshmellow adjusted from existing decode functions
-//indala id decoding - only tested on 26 bit tags, but attempted to make it work for more
+// redesigned by marshmellow adjusted from existing decode functions
+// indala id decoding - only tested on 26 bit tags, but attempted to make it work for more
 int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert)
 {
 	//26 bit 40134 format  (don't know other formats)
@@ -1064,9 +1079,8 @@ int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert)
 	return 1;
 }
 
-
-//by marshmellow - demodulate PSK1 wave or NRZ wave (both similar enough)
-//peaks switch bit (high=1 low=0) each clock cycle = 1 bit determined by last peak
+// by marshmellow - demodulate PSK1 wave or NRZ wave (both similar enough)
+// peaks invert bit (high=1 low=0) each clock cycle = 1 bit determined by last peak
 int pskNRZrawDemod(uint8_t *dest, size_t *size, int *clk, int *invert)
 {
 	pskCleanWave(dest,*size);
@@ -1087,7 +1101,6 @@ int pskNRZrawDemod(uint8_t *dest, size_t *size, int *clk, int *invert)
 	uint32_t bestStart = *size;
 	uint32_t maxErr = (*size/1000);
 	uint32_t bestErrCnt = maxErr;
-	//uint8_t midBit=0;
 	uint8_t curBit=0;
 	uint8_t bitHigh=0;
 	uint8_t ignorewin=*clk/8;
@@ -1197,7 +1210,6 @@ int pskNRZrawDemod(uint8_t *dest, size_t *size, int *clk, int *invert)
 	} else return -1;
 	return errCnt;
 }
-
 
 //by marshmellow
 //detects the bit clock for FSK given the high and low Field Clocks
