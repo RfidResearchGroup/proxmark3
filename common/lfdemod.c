@@ -336,30 +336,20 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert)
 			for (i = iii; i < *size; ++i) {
 				if ((BinStream[i] >= high) && ((i-lastBit)>(*clk-tol))){
 					lastBit+=*clk;
-					//BitStream[bitnum] = *invert;
-					//bitnum++;
 					midBit=0;
 				} else if ((BinStream[i] <= low) && ((i-lastBit)>(*clk-tol))){
 					//low found and we are expecting a bar
 					lastBit+=*clk;
-					//BitStream[bitnum] = 1- *invert;
-					//bitnum++;
 					midBit=0;
 				} else if ((BinStream[i]<=low) && (midBit==0) && ((i-lastBit)>((*clk/2)-tol))){
 					//mid bar?
 					midBit=1;
-					//BitStream[bitnum]= 1- *invert;
-					//bitnum++;
 				} else if ((BinStream[i]>=high) && (midBit==0) && ((i-lastBit)>((*clk/2)-tol))){
 					//mid bar?
 					midBit=1;
-					//BitStream[bitnum]= *invert;
-					//bitnum++;
 				} else if ((i-lastBit)>((*clk/2)+tol) && (midBit==0)){
 					//no mid bar found
 					midBit=1;
-					//BitStream[bitnum]= BitStream[bitnum-1];
-					//bitnum++;
 				} else {
 					//mid value found or no bar supposed to be here
 
@@ -367,16 +357,11 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert)
 						//should have hit a high or low based on clock!!
 						//debug
 						//PrintAndLog("DEBUG - no wave in expected area - location: %d, expected: %d-%d, lastBit: %d - resetting search",i,(lastBit+(clk-((int)(tol)))),(lastBit+(clk+((int)(tol)))),lastBit);
-						//if (bitnum > 0){
-						//	BitStream[bitnum]=77;
-						//	bitnum++;
-						//}
 
 						errCnt++;
 						lastBit+=*clk;//skip over until hit too many errors
 						if (errCnt > ((*size/1000))){  //allow 1 error for every 1000 samples else start over
 							errCnt=0;
-							//	bitnum=0;//start over
 							break;
 						}
 					}

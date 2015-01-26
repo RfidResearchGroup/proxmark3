@@ -1190,12 +1190,17 @@ int CmdFSKfcDetect(const char *Cmd)
   return 1;
 }
 
+//by marshmellow
+//attempt to detect the bit clock for PSK or NRZ modulations
 int CmdDetectNRZpskClockRate(const char *Cmd)
 {
 	GetNRZpskClock("",0,0);
 	return 0;
 }
 
+//by marshmellow
+//attempt to psk1 or nrz demod graph buffer
+//NOTE CURRENTLY RELIES ON PEAKS :(
 int PSKnrzDemod(const char *Cmd, uint8_t verbose)
 {
 	int invert=0;
@@ -1296,6 +1301,9 @@ int CmdIndalaDecode(const char *Cmd)
 	return 1;
 }
 
+//by marshmellow
+//attempt to clean psk wave noise after a peak 
+//NOTE RELIES ON PEAKS :(
 int CmdPskClean(const char *Cmd)
 {
 	uint8_t bitStream[MAX_GRAPH_TRACE_LEN]={0};
