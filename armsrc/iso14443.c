@@ -19,11 +19,11 @@
 
 //static void GetSamplesFor14443(int weTx, int n);
 
-#define DEMOD_TRACE_SIZE 4096
+/*#define DEMOD_TRACE_SIZE 4096
 #define READER_TAG_BUFFER_SIZE 2048
 #define TAG_READER_BUFFER_SIZE 2048
 #define DEMOD_DMA_BUFFER_SIZE 1024
-
+*/
 //=============================================================================
 // An ISO 14443 Type B tag. We listen for commands from the reader, using
 // a UART kind of thing that's implemented in software. When we get a
@@ -617,6 +617,24 @@ static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
     return FALSE;
 }
 
+static void DemodReset()
+{
+	// Clear out the state of the "UART" that receives from the tag.
+	Demod.output = ((uint8_t *)BigBuf) + RECV_RESP_OFFSET;
+	Demod.len = 0;
+	Demod.state = DEMOD_UNSYNCD;
+	memset(Demod.output, 0x00, MAX_FRAME_SIZE);
+
+}
+
+static void UartReset()
+{
+	// And the UART that receives from the reader
+	Uart.output = ((uint8_t *)BigBuf) + RECV_CMD_OFFSET;
+	Uart.byteCntMax = MAX_FRAME_SIZE;
+	Uart.state = STATE_UNSYNCD;
+}
+
 /*
  *  Demodulate the samples we received from the tag, also log to tracebuffer
  *  weTx: set to 'TRUE' if we behave like a reader
@@ -634,22 +652,14 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
 
     int samples = 0;
 
-    // Clear out the state of the "UART" that receives from the tag.
-	memset(Demod.output, 0x00, MAX_FRAME_SIZE);
-	Demod.output = ((uint8_t *)BigBuf) + RECV_RESP_OFFSET;
-    Demod.len = 0;
-    Demod.state = DEMOD_UNSYNCD;
-
-    // And the UART that receives from the reader
-	Uart.output = ((uint8_t *)BigBuf) + RECV_CMD_OFFSET;
-	Uart.byteCntMax = MAX_FRAME_SIZE;
-    Uart.state = STATE_UNSYNCD;
+	DemodReset();
+	UartReset();
 
 	// The DMA buffer, used to stream samples from the FPGA
 	int8_t *dmaBuf = ((int8_t *)BigBuf) + DMA_BUFFER_OFFSET;
 	int8_t *upTo= dmaBuf;
-    lastRxCounter = DEMOD_DMA_BUFFER_SIZE;
-    FpgaSetupSscDma((uint8_t *)dmaBuf, DEMOD_DMA_BUFFER_SIZE);
+	lastRxCounter = DMA_BUFFER_SIZE;
+	FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE);
 
     // Signal field is ON with the appropriate LED:
     if (weTx) LED_D_ON(); else LED_D_OFF();
@@ -662,20 +672,20 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
         int behindBy = lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR;
         if(behindBy > max) max = behindBy;
 
-        while(((lastRxCounter-AT91C_BASE_PDC_SSC->PDC_RCR) & (DEMOD_DMA_BUFFER_SIZE-1))
+		while(((lastRxCounter-AT91C_BASE_PDC_SSC->PDC_RCR) & (DMA_BUFFER_SIZE-1))
                     > 2)
         {
             ci = upTo[0];
             cq = upTo[1];
             upTo += 2;
-            if(upTo - dmaBuf > DEMOD_DMA_BUFFER_SIZE) {
-                upTo -= DEMOD_DMA_BUFFER_SIZE;
+			if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
+				upTo -= DMA_BUFFER_SIZE;
                 AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
-                AT91C_BASE_PDC_SSC->PDC_RNCR = DEMOD_DMA_BUFFER_SIZE;
+				AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
             }
             lastRxCounter -= 2;
             if(lastRxCounter <= 0) {
-                lastRxCounter += DEMOD_DMA_BUFFER_SIZE;
+				lastRxCounter += DMA_BUFFER_SIZE;
             }
 
             samples += 2;
@@ -1031,18 +1041,18 @@ void RAMFUNC SnoopIso14443(void)
     int triggered = TRUE;
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    // The command (reader -> tag) that we're working on receiving.
-    uint8_t *receivedCmd = (uint8_t *)(BigBuf) + DEMOD_TRACE_SIZE;
-    // The response (tag -> reader) that we're working on receiving.
-    uint8_t *receivedResponse = (uint8_t *)(BigBuf) + DEMOD_TRACE_SIZE + READER_TAG_BUFFER_SIZE;
 
-    // As we receive stuff, we copy it from receivedCmd or receivedResponse
-    // into trace, along with its length and other annotations.
-    uint8_t *trace = (uint8_t *)BigBuf;
-    int traceLen = 0;
+	clear_trace();
+	set_tracing(TRUE);
+
+	// The command (reader -> tag) that we're receiving.
+	uint8_t *receivedCmd = ((uint8_t *)BigBuf) + RECV_CMD_OFFSET;
+
+	// The response (tag -> reader) that we're receiving.
+	uint8_t *receivedResponse = ((uint8_t *)BigBuf) + RECV_RESP_OFFSET;
 
     // The DMA buffer, used to stream samples from the FPGA.
-    int8_t *dmaBuf = (int8_t *)(BigBuf) + DEMOD_TRACE_SIZE + READER_TAG_BUFFER_SIZE + TAG_READER_BUFFER_SIZE;
+	int8_t *dmaBuf = ((int8_t *)BigBuf) + DMA_BUFFER_OFFSET;
     int lastRxCounter;
     int8_t *upTo;
     int ci, cq;
@@ -1052,30 +1062,20 @@ void RAMFUNC SnoopIso14443(void)
     // information in the trace buffer.
     int samples = 0;
 
-    // Initialize the trace buffer
-    memset(trace, 0x44, DEMOD_TRACE_SIZE);
-
-    // Set up the demodulator for tag -> reader responses.
-    Demod.output = receivedResponse;
-    Demod.len = 0;
-    Demod.state = DEMOD_UNSYNCD;
-
-    // And the reader -> tag commands
-    memset(&Uart, 0, sizeof(Uart));
-    Uart.output = receivedCmd;
-    Uart.byteCntMax = 100;
-    Uart.state = STATE_UNSYNCD;
+	DemodReset();
+	UartReset();
 
     // Print some debug information about the buffer sizes
     Dbprintf("Snooping buffers initialized:");
-    Dbprintf("  Trace: %i bytes", DEMOD_TRACE_SIZE);
-    Dbprintf("  Reader -> tag: %i bytes", READER_TAG_BUFFER_SIZE);
-    Dbprintf("  tag -> Reader: %i bytes", TAG_READER_BUFFER_SIZE);
-    Dbprintf("  DMA: %i bytes", DEMOD_DMA_BUFFER_SIZE);
+	Dbprintf("  Trace: %i bytes", TRACE_SIZE);
+	Dbprintf("  Reader -> tag: %i bytes", MAX_FRAME_SIZE);
+	Dbprintf("  tag -> Reader: %i bytes", MAX_FRAME_SIZE);
+	Dbprintf("  DMA: %i bytes", DMA_BUFFER_SIZE);
 
-    // And put the FPGA in the appropriate mode
-    // Signal field is off with the appropriate LED
-    LED_D_OFF();
+	// Signal field is off with the appropriate LED
+	LED_D_OFF();
+
+	// And put the FPGA in the appropriate mode
     FpgaWriteConfWord(
     	FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ |
     	FPGA_HF_READER_RX_XCORR_SNOOP);
@@ -1084,20 +1084,20 @@ void RAMFUNC SnoopIso14443(void)
     // Setup for the DMA.
     FpgaSetupSsc();
     upTo = dmaBuf;
-    lastRxCounter = DEMOD_DMA_BUFFER_SIZE;
-    FpgaSetupSscDma((uint8_t *)dmaBuf, DEMOD_DMA_BUFFER_SIZE);
-		
+	lastRxCounter = DMA_BUFFER_SIZE;
+	FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE);
+	uint8_t parity[MAX_PARITY_SIZE];
     LED_A_ON();
 		
     // And now we loop, receiving samples.
     for(;;) {
     	int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) &
-                                (DEMOD_DMA_BUFFER_SIZE-1);
+								(DMA_BUFFER_SIZE-1);
         if(behindBy > maxBehindBy) {
             maxBehindBy = behindBy;
-            if(behindBy > (DEMOD_DMA_BUFFER_SIZE-2)) { // TODO: understand whether we can increase/decrease as we want or not?
+			if(behindBy > (DMA_BUFFER_SIZE-2)) { // TODO: understand whether we can increase/decrease as we want or not?
                 Dbprintf("blew circular buffer! behindBy=0x%x", behindBy);
-                goto done;
+				break;
             }
         }
         if(behindBy < 2) continue;
@@ -1106,42 +1106,37 @@ void RAMFUNC SnoopIso14443(void)
         cq = upTo[1];
         upTo += 2;
         lastRxCounter -= 2;
-        if(upTo - dmaBuf > DEMOD_DMA_BUFFER_SIZE) {
-            upTo -= DEMOD_DMA_BUFFER_SIZE;
-            lastRxCounter += DEMOD_DMA_BUFFER_SIZE;
+		if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
+			upTo -= DMA_BUFFER_SIZE;
+			lastRxCounter += DMA_BUFFER_SIZE;
             AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DEMOD_DMA_BUFFER_SIZE;
+			AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
         }
 
         samples += 2;
 
-#define HANDLE_BIT_IF_BODY \
-			if(triggered && tracing) {\
-				uint8_t parity[MAX_PARITY_SIZE];\
-				GetParity(receivedCmd, Uart.byteCnt, parity);\
-				LogTrace(receivedCmd,Uart.byteCnt,samples, samples,parity,TRUE);\
-				if(!tracing) {\
-					DbpString("Reached trace limit");\
-					break;\
-				}\
-			}\
-            /* And ready to receive another command. */ \
-            memset(&Uart, 0, sizeof(Uart)); \
-            Uart.output = receivedCmd; \
-            Uart.byteCntMax = 100; \
-            Uart.state = STATE_UNSYNCD; \
-            /* And also reset the demod code, which might have been */ \
-            /* false-triggered by the commands from the reader. */ \
-            memset(&Demod, 0, sizeof(Demod)); \
-            Demod.output = receivedResponse; \
-            Demod.state = DEMOD_UNSYNCD; \
-
         if(Handle14443UartBit(ci & 1)) {
-            HANDLE_BIT_IF_BODY
-        }
+			if(triggered && tracing) {
+				GetParity(receivedCmd, Uart.byteCnt, parity);
+				LogTrace(receivedCmd,Uart.byteCnt,samples, samples,parity,TRUE);
+			}
+			/* And ready to receive another command. */
+			UartReset();
+			/* And also reset the demod code, which might have been */
+			/* false-triggered by the commands from the reader. */
+			DemodReset();
+		}
         if(Handle14443UartBit(cq & 1)) {
-            HANDLE_BIT_IF_BODY
-        }
+			if(triggered && tracing) {
+				GetParity(receivedCmd, Uart.byteCnt, parity);
+				LogTrace(receivedCmd,Uart.byteCnt,samples, samples,parity,TRUE);
+			}
+			/* And ready to receive another command. */
+			UartReset();
+			/* And also reset the demod code, which might have been */
+			/* false-triggered by the commands from the reader. */
+			DemodReset();
+		}
 
         if(Handle14443SamplesDemod(ci, cq)) {
 
@@ -1151,33 +1146,31 @@ void RAMFUNC SnoopIso14443(void)
 				uint8_t parity[MAX_PARITY_SIZE];
 				GetParity(receivedResponse, Demod.len, parity);
 				LogTrace(receivedResponse,Demod.len,samples, samples,parity,FALSE);
-				if(!tracing) {
-					DbpString("Reached trace limit");
-					break;
-				}
 			}
             triggered = TRUE;
             LED_A_OFF();
             LED_B_ON();
 
             // And ready to receive another response.
-            memset(&Demod, 0, sizeof(Demod));
-            Demod.output = receivedResponse;
-            Demod.state = DEMOD_UNSYNCD;
+			DemodReset();
         }
-	WDT_HIT();
+		WDT_HIT();
+
+		if(!tracing) {
+			DbpString("Reached trace limit");
+			break;
+		}
 
         if(BUTTON_PRESS()) {
             DbpString("cancelled");
-            goto done;
+			break;
         }
     }
-
-done:
+	FpgaDisableSscDma();
 	LED_A_OFF();
 	LED_B_OFF();
 	LED_C_OFF();
-  AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
+	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 	DbpString("Snoop statistics:");
 	Dbprintf("  Max behind by: %i", maxBehindBy);
 	Dbprintf("  Uart State: %x", Uart.state);
