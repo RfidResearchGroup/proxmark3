@@ -34,7 +34,19 @@ void pushBit( BitstreamOut* stream, bool bit)
 	stream->position++;
 	stream->numbits++;
 }
-void DoAcquisition(int decimation, int quantization, int trigger_threshold, bool averaging)
+/**
+ * @brief Does LF sample acquisition, this method implements decimation and quantization in order to
+ * be able to provide longer sample traces.
+ * @param decimation - how much should the signal be decimated. A decimation of 1 means every sample, 2 means
+ * every other sample, etc.
+ * @param bits_per_sample - bits per sample. Max 8, min 1 bit per sample.
+ * @param trigger_threshold - a threshold. The sampling won't commence until this threshold has been reached. Set
+ * to -1 to ignore threshold.
+ * @param averaging If set to true, decimation will use averaging, so that if e.g. decimation is 3, the sample
+ * value that will be used is the average value of the three samples.
+ * @return the number of bits occupied by the samples.
+ */
+uint8_t DoAcquisition(int decimation, int bits_per_sample, int trigger_threshold, bool averaging)
 {
 	//A decimation of 2 means we keep every 2nd sample
 	//A decimation of 3 means we keep 1 in 3 samples.
@@ -42,8 +54,9 @@ void DoAcquisition(int decimation, int quantization, int trigger_threshold, bool
 	uint8_t *dest = (uint8_t *)BigBuf;
 	int bufsize = BIGBUF_SIZE;
 	memset(dest, 0, bufsize);
-	// You can't decimate 8 bits more than 7 times
-	if(quantization > 7) quantization = 7;
+	if(bits_per_sample < 1) bits_per_sample = 1;
+	if(bits_per_sample > 8) bits_per_sample = 8;
+
 	// Use a bit stream to handle the output
 	BitstreamOut data = { dest , 0, 0};
 	int sample_counter = 0;
@@ -78,19 +91,20 @@ void DoAcquisition(int decimation, int quantization, int trigger_threshold, bool
 			sample_sum =0;
 			sample_total_saved ++;
 			pushBit(&data, sample & 0x80);
-			if(quantization < 7)	pushBit(&data, sample & 0x40);
-			if(quantization < 6)	pushBit(&data, sample & 0x20);
-			if(quantization < 5)	pushBit(&data, sample & 0x10);
-			if(quantization < 4)	pushBit(&data, sample & 0x08);
-			if(quantization < 3)	pushBit(&data, sample & 0x04);
-			if(quantization < 2)	pushBit(&data, sample & 0x02);
-			if(quantization < 1)	pushBit(&data, sample & 0x01);
+			if(bits_per_sample > 1)	pushBit(&data, sample & 0x40);
+			if(bits_per_sample > 2)	pushBit(&data, sample & 0x20);
+			if(bits_per_sample > 3)	pushBit(&data, sample & 0x10);
+			if(bits_per_sample > 4)	pushBit(&data, sample & 0x08);
+			if(bits_per_sample > 5)	pushBit(&data, sample & 0x04);
+			if(bits_per_sample > 6)	pushBit(&data, sample & 0x02);
+			if(bits_per_sample > 7)	pushBit(&data, sample & 0x01);
 
-			if((data.numbits / 8) +1  >= bufsize) break;
+			if((data.numbits >> 3) +1  >= bufsize) break;
 		}
 	}
 	Dbprintf("Done, saved %l out of %l seen samples.",sample_total_saved, sample_total_numbers);
 
+	return data.numbits;
 }
 
 
