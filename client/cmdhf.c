@@ -22,6 +22,7 @@
 #include "cmdhflegic.h"
 #include "cmdhficlass.h"
 #include "cmdhfmf.h"
+#include "cmdhfmfu.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -601,6 +602,7 @@ static command_t CommandTable[] =
   {"legic",       CmdHFLegic,       0, "{ LEGIC RFIDs... }"},
   {"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs... }"},
   {"mf",      		CmdHFMF,		1, "{ MIFARE RFIDs... }"},
+  {"mfu",			CmdHFMFUltra,		1, "{ MIFARE Ultralight RFIDs... }"},
   {"tune",        CmdHFTune,        0, "Continuously measure HF antenna tuning"},
   {"list",       CmdHFList,         1, "List protocol data in trace buffer"},
 	{NULL, NULL, 0, NULL}

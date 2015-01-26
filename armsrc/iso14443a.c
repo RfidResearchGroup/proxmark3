@@ -1001,10 +1001,11 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 	}
 	
 	// The second response contains the (mandatory) first 24 bits of the UID
-	uint8_t response2[5];
+	uint8_t response2[5] = {0x00};
 
 	// Check if the uid uses the (optional) part
-	uint8_t response2a[5];
+	uint8_t response2a[5] = {0x00};
+	
 	if (uid_2nd) {
 		response2[0] = 0x88;
 		num_to_bytes(uid_1st,3,response2+1);
@@ -1025,12 +1026,12 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 	response2[4] = response2[0] ^ response2[1] ^ response2[2] ^ response2[3];
 
 	// Prepare the mandatory SAK (for 4 and 7 byte UID)
-	uint8_t response3[3];
+	uint8_t response3[3]  = {0x00};
 	response3[0] = sak;
 	ComputeCrc14443(CRC_14443_A, response3, 1, &response3[1], &response3[2]);
 
 	// Prepare the optional second SAK (for 7 byte UID), drop the cascade bit
-	uint8_t response3a[3];
+	uint8_t response3a[3]  = {0x00};
 	response3a[0] = sak & 0xFB;
 	ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 

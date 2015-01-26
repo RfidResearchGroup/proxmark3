@@ -33,8 +33,8 @@
 #ifndef _PROXMARK_CMD_H_
 #define _PROXMARK_CMD_H_
 
-#include <common.h>
-#include <usb_cmd.h>
+#include "common.h"
+#include "usb_cmd.h"
 #include "usb_cdc.h"
 
 bool cmd_receive(UsbCommand* cmd);

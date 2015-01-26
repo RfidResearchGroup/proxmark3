@@ -140,117 +140,6 @@ int CmdHF14AMfWrBl(const char *Cmd)
 	return 0;
 }
 
-int CmdHF14AMfUWrBl(const char *Cmd)
-{
-	uint8_t blockNo = 0;
-	bool chinese_card=0;
-	uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-	UsbCommand resp;
-       
-	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf mf uwrbl    <block number> <block data (8 hex symbols)> <w>");
-		PrintAndLog("        sample: hf mf uwrbl 0 01020304");
-		return 0;
-	}      
-
-	blockNo = param_get8(Cmd, 0);
-	if (param_gethex(Cmd, 1, bldata, 8)) {
-		PrintAndLog("Block data must include 8 HEX symbols");
-		return 1;
-	}
-       
-	if (strchr(Cmd,'w') != 0) {
-	  chinese_card=1;
-	}
-       
-	switch(blockNo){
-		case 0:
-			if (!chinese_card){
-				PrintAndLog("Access Denied");
-			}else{
-				PrintAndLog("--specialblock no:%d", blockNo);
-				PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-				UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
-				memcpy(d.d.asBytes,bldata, 4);
-				SendCommand(&d);
-
-				if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-					uint8_t isOK  = resp.arg[0] & 0xff;
-					PrintAndLog("isOk:%02x", isOK);
-				} else {
-					PrintAndLog("Command execute timeout");
-			      }
-			}
-			break;
-		case 1:
-			  if (!chinese_card){
-				PrintAndLog("Access Denied");
-			  }else{
-				PrintAndLog("--specialblock no:%d", blockNo);
-				PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-				UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
-				memcpy(d.d.asBytes,bldata, 4);
-				SendCommand(&d);
-
-				if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-				uint8_t isOK  = resp.arg[0] & 0xff;
-				PrintAndLog("isOk:%02x", isOK);
-				} else {
-					PrintAndLog("Command execute timeout");
-				}
-			}
-			break;
-		case 2:
-			if (!chinese_card){
-				PrintAndLog("Access Denied");
-			}else{
-				PrintAndLog("--specialblock no:%d", blockNo);
-				PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-				UsbCommand c = {CMD_MIFAREU_WRITEBL, {blockNo}};
-				memcpy(c.d.asBytes, bldata, 4);
-				SendCommand(&c);
-
-				if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-					uint8_t isOK  = resp.arg[0] & 0xff;
-					PrintAndLog("isOk:%02x", isOK);
-				} else {
-					PrintAndLog("Command execute timeout");
-				}
-			}
-			break;
-		case 3:
-			PrintAndLog("--specialblock no:%d", blockNo);
-			PrintAndLog("--data: %s", sprint_hex(bldata, 4));
-			UsbCommand d = {CMD_MIFAREU_WRITEBL, {blockNo}};
-			memcpy(d.d.asBytes,bldata, 4);
-			SendCommand(&d);
-
-			if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-				uint8_t isOK  = resp.arg[0] & 0xff;
-				PrintAndLog("isOk:%02x", isOK);
-			} else {
-				PrintAndLog("Command execute timeout");
-			}
-			break;
-		default: 
-			PrintAndLog("--block no:%d", blockNo);
-			PrintAndLog("--data: %s", sprint_hex(bldata, 4));        	
-			UsbCommand e = {CMD_MIFAREU_WRITEBL, {blockNo}};
-			memcpy(e.d.asBytes,bldata, 4);
-			SendCommand(&e);
-
-			if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-				uint8_t isOK  = resp.arg[0] & 0xff;
-				PrintAndLog("isOk:%02x", isOK);
-			} else {
-				PrintAndLog("Command execute timeout");
-		      }
-		      break;
-	}
-	return 0;
-}
-
-
 int CmdHF14AMfRdBl(const char *Cmd)
 {
 	uint8_t blockNo = 0;
@@ -298,87 +187,6 @@ int CmdHF14AMfRdBl(const char *Cmd)
 
   return 0;
 }
-
-int CmdHF14AMfURdBl(const char *Cmd)
-{
-	uint8_t blockNo = 0;
-
-    if (strlen(Cmd)<1) {
-		PrintAndLog("Usage:  hf mf urdbl    <block number>");
-		PrintAndLog("        sample: hf mf urdbl 0");
-        return 0;
-    }       
-        
-    blockNo = param_get8(Cmd, 0);
-    PrintAndLog("--block no:%d", blockNo);
-        
-	UsbCommand c = {CMD_MIFAREU_READBL, {blockNo}};
-	SendCommand(&c);
-
-    UsbCommand resp;
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-		uint8_t isOK = resp.arg[0] & 0xff;
-        uint8_t *data = resp.d.asBytes;
-
-        if (isOK)
-            PrintAndLog("isOk:%02x data:%s", isOK, sprint_hex(data, 4));
-        else
-            PrintAndLog("isOk:%02x", isOK);
-    } else {
-        PrintAndLog("Command execute timeout");
-    }
-
-	return 0;
-}
-
-
-int CmdHF14AMfURdCard(const char *Cmd)
-{
-    int i;
-    uint8_t sectorNo = 0;
-	uint8_t *lockbytes_t=NULL;
-	uint8_t lockbytes[2]={0,0};
-	bool bit[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-        
-    uint8_t isOK  = 0;
-    uint8_t * data  = NULL;
-
-    PrintAndLog("Attempting to Read Ultralight... ");
-        
-  	UsbCommand c = {CMD_MIFAREU_READCARD, {sectorNo}};
-  	SendCommand(&c);
-
-    UsbCommand resp;
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-        isOK = resp.arg[0] & 0xff;
-        data = resp.d.asBytes;
-
-        PrintAndLog("isOk:%02x", isOK);
-        if (isOK) 
-        	{	// bit 0 and 1
-				PrintAndLog("Block %3d:%s ", 0,sprint_hex(data + 0 * 4, 4));
-				PrintAndLog("Block %3d:%s ", 1,sprint_hex(data + 1 * 4, 4));
-				// bit 2
-				//process lock bytes
-				lockbytes_t=data+(2*4);
-				lockbytes[0]=lockbytes_t[2];
-				lockbytes[1]=lockbytes_t[3];
-				for(int j=0; j<16; j++){
-					bit[j]=lockbytes[j/8] & ( 1 <<(7-j%8));
-				}
-				//remaining
-	            for (i = 3; i < 16; i++) {
-	            	int bitnum = (23-i) % 16;
-					PrintAndLog("Block %3d:%s [%d]", i,sprint_hex(data + i * 4, 4),bit[bitnum]);
-	            }
-
-        	}
-        } else {
-                PrintAndLog("Command execute timeout");
-        }
-  return 0;
-}
-
 
 int CmdHF14AMfRdSc(const char *Cmd)
 {
@@ -970,12 +778,14 @@ int CmdHF14AMfNested(const char *Cmd)
 int CmdHF14AMfChk(const char *Cmd)
 {
 	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+		PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
 		PrintAndLog("          * - all sectors");
 		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
 		PrintAndLog("d - write keys to binary file\n");
+		PrintAndLog("t - write keys to emulator memory");
 		PrintAndLog("      sample: hf mf chk 0 A 1234567890ab keys.dic");
 		PrintAndLog("              hf mf chk *1 ? t");
+		PrintAndLog("              hf mf chk *1 ? d");
 		return 0;
 	}	
 
@@ -1202,12 +1012,16 @@ int CmdHF14AMf1kSim(const char *Cmd)
 	uint8_t exitAfterNReads = 0;
 	uint8_t flags = 0;
 
-	if (param_getchar(Cmd, 0) == 'h') {
+	uint8_t cmdp = param_getchar(Cmd, 0);
+	
+	if (cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:  hf mf sim  u <uid (8 hex symbols)> n <numreads> i x");
+		PrintAndLog("           h    this help");
 		PrintAndLog("           u    (Optional) UID. If not specified, the UID from emulator memory will be used");
 		PrintAndLog("           n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
 		PrintAndLog("           i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
 		PrintAndLog("           x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a legitimate reader, fishes out the key(s)");
+		PrintAndLog("");
 		PrintAndLog("           sample: hf mf sim u 0a0a0a0a ");
 		return 0;
 	}
@@ -1288,7 +1102,7 @@ int CmdHF14AMfDbg(const char *Cmd)
 int CmdHF14AMfEGet(const char *Cmd)
 {
 	uint8_t blockNo = 0;
-	uint8_t data[16];
+	uint8_t data[16] = {0x00};
 
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("Usage:  hf mf eget <block number>");
@@ -1355,14 +1169,11 @@ int CmdHF14AMfELoad(const char *Cmd)
 	FILE * f;
 	char filename[FILE_PATH_SIZE];
 	char *fnameptr = filename;
-	char buf[64];
-	uint8_t buf8[64];
+	char buf[64] = {0x00};
+	uint8_t buf8[64] = {0x00};
 	int i, len, blockNum, numBlocks;
 	int nameParamNo = 1;
 	
-	memset(filename, 0, sizeof(filename));
-	memset(buf, 0, sizeof(buf));
-
 	char ctmp = param_getchar(Cmd, 0);
 		
 	if ( ctmp == 'h' || ctmp == 0x00) {
@@ -1432,11 +1243,13 @@ int CmdHF14AMfELoad(const char *Cmd)
 			fclose(f);
 			return 3;
 		}
+		printf(".");
 		blockNum++;
 		
 		if (blockNum >= numBlocks) break;
 	}
 	fclose(f);
+	printf("\n");
 	
 	if ((blockNum != numBlocks)) {
 		PrintAndLog("File content error. Got %d must be %d blocks.",blockNum, numBlocks);
@@ -1638,7 +1451,7 @@ int CmdHF14AMfCSetUID(const char *Cmd)
 	char ctmp = param_getchar(Cmd, 1);
 	if (ctmp == 'w' || ctmp == 'W') wipeCard = 1;
 	
-	PrintAndLog("--wipe card:%02x uid:%s", wipeCard, sprint_hex(uid, 4));
+	PrintAndLog("--wipe card:%s  uid:%s", (wipeCard)?"YES":"NO", sprint_hex(uid, 4));
 
 	res = mfCSetUID(uid, oldUid, wipeCard);
 	if (res) {
@@ -1653,11 +1466,10 @@ int CmdHF14AMfCSetUID(const char *Cmd)
 
 int CmdHF14AMfCSetBlk(const char *Cmd)
 {
-	uint8_t uid[8];
-	uint8_t memBlock[16];
+	uint8_t uid[8] = {0x00};
+	uint8_t memBlock[16] = {0x00};
 	uint8_t blockNo = 0;
 	int res;
-	memset(memBlock, 0x00, sizeof(memBlock));
 
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("Usage:  hf mf csetblk <block number> <block data (32 hex symbols)>");
@@ -1682,7 +1494,6 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 			return 1;
 		}
 	
-	PrintAndLog("UID:%s", sprint_hex(uid, 4));
 	return 0;
 }
 
@@ -1697,11 +1508,8 @@ int CmdHF14AMfCLoad(const char *Cmd)
 	uint8_t fillFromEmulator = 0;
 	int i, len, blockNum, flags;
 	
-	// memset(filename, 0, sizeof(filename));
-	// memset(buf, 0, sizeof(buf));
-
 	if (param_getchar(Cmd, 0) == 'h' || param_getchar(Cmd, 0)== 0x00) {
-		PrintAndLog("It loads magic Chinese card (only works with!!!) from the file `filename.eml`");
+		PrintAndLog("It loads magic Chinese card from the file `filename.eml`");
 		PrintAndLog("or from emulator memory (option `e`)");
 		PrintAndLog("Usage:  hf mf cload <file name w/o `.eml`>");
 		PrintAndLog("   or:  hf mf cload e ");
@@ -1748,7 +1556,9 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		blockNum = 0;
 		flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;
 		while(!feof(f)){
+		
 			memset(buf, 0, sizeof(buf));
+			
 			if (fgets(buf, sizeof(buf), f) == NULL) {
 				PrintAndLog("File reading error.");
 				return 2;
@@ -1783,6 +1593,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		PrintAndLog("Loaded from file: %s", filename);
 		return 0;
 	}
+	return 0;
 }
 
 int CmdHF14AMfCGetBlk(const char *Cmd) {
@@ -1814,10 +1625,9 @@ int CmdHF14AMfCGetBlk(const char *Cmd) {
 
 
 int CmdHF14AMfCGetSc(const char *Cmd) {
-	uint8_t memBlock[16];
+	uint8_t memBlock[16] = {0x00};
 	uint8_t sectorNo = 0;
 	int i, res, flags;
-	memset(memBlock, 0x00, sizeof(memBlock));
 
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("Usage:  hf mf cgetsc <sector number>");
@@ -1957,16 +1767,16 @@ int CmdHF14AMfSniff(const char *Cmd){
 	int blockLen = 0;
 	int num = 0;
 	int pckNum = 0;
-	uint8_t uid[7];
+	uint8_t uid[7] = {0x00};
 	uint8_t uid_len;
-	uint8_t atqa[2];
+	uint8_t atqa[2] = {0x00};
 	uint8_t sak;
 	bool isTag;
-	uint8_t buf[3000];
+	uint8_t buf[3000] = {0x00};
 	uint8_t * bufPtr = buf;
-	memset(buf, 0x00, 3000);
 	
-	if (param_getchar(Cmd, 0) == 'h') {
+	char ctmp = param_getchar(Cmd, 0);
+	if ( ctmp == 'h' || ctmp == 'H' ) {
 		PrintAndLog("It continuously gets data from the field and saves it to: log, emulator, emulator file.");
 		PrintAndLog("You can specify:");
 		PrintAndLog("    l - save encrypted sequence to logfile `uid.log`");
@@ -1979,7 +1789,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 	}	
 	
 	for (int i = 0; i < 4; i++) {
-		char ctmp = param_getchar(Cmd, i);
+		ctmp = param_getchar(Cmd, i);
 		if (ctmp == 'l' || ctmp == 'L') wantLogToFile = true;
 		if (ctmp == 'd' || ctmp == 'D') wantDecrypt = true;
 		//if (ctmp == 'e' || ctmp == 'E') wantSaveToEml = true; TODO
@@ -2080,9 +1890,6 @@ static command_t CommandTable[] =
   {"help",		CmdHelp,				1, "This help"},
   {"dbg",		CmdHF14AMfDbg,			0, "Set default debug mode"},
   {"rdbl",		CmdHF14AMfRdBl,			0, "Read MIFARE classic block"},
-  {"urdbl",     CmdHF14AMfURdBl,        0, "Read MIFARE Ultralight block"},
-  {"urdcard",   CmdHF14AMfURdCard,      0,"Read MIFARE Ultralight Card"},
-  {"uwrbl",		CmdHF14AMfUWrBl,		0,"Write MIFARE Ultralight block"},
   {"rdsc",		CmdHF14AMfRdSc,			0, "Read MIFARE classic sector"},
   {"dump",		CmdHF14AMfDump,			0, "Dump MIFARE classic tag to binary file"},
   {"restore",	CmdHF14AMfRestore,		0, "Restore MIFARE classic binary file to BLANK tag"},

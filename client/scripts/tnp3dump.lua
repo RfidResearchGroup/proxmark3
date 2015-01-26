@@ -249,17 +249,18 @@ local function main(args)
 		end
 	end 
 	
-	-- Write dump to files
-	if not DEBUG then
-		local foo = dumplib.SaveAsBinary(bindata, outputTemplate..'.bin')
-		print(("Wrote a BIN dump to the file %s"):format(foo))
-		local bar = dumplib.SaveAsText(emldata, outputTemplate..'.eml')
-		print(("Wrote a EML dump to the file %s"):format(bar))
-	end
 
 	local uid = block0:sub(1,8)
 	local itemtype = block1:sub(1,4)
 	local cardid = block1:sub(9,24)
+	
+	-- Write dump to files
+	if not DEBUG then
+		local foo = dumplib.SaveAsBinary(bindata, outputTemplate..'_uid_'..uid..'.bin')
+		print(("Wrote a BIN dump to the file %s"):format(foo))
+		local bar = dumplib.SaveAsText(emldata, outputTemplate..'_uid_'..uid..'.eml')
+		print(("Wrote a EML dump to the file %s"):format(bar))
+	end
 
 	-- Show info 
 	print( string.rep('--',20) )
