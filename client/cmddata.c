@@ -511,10 +511,6 @@ int CmdBitstream(const char *Cmd)
       bit ^= 1;
 
     AppendGraph(0, clock, bit);
-	//    for (j = 0; j < (int)(clock/2); j++)
-	//      GraphBuffer[(i * clock) + j] = bit ^ 1;
-	//    for (j = (int)(clock/2); j < clock; j++)
-	//      GraphBuffer[(i * clock) + j] = bit;
   }
 
   RepaintGraphWindow();
@@ -800,8 +796,7 @@ int CmdFSKdemod(const char *Cmd) //old CmdFSKdemod needs updating
   PrintAndLog("actual data bits start at sample %d", maxPos);
   PrintAndLog("length %d/%d", highLen, lowLen);
 
-	uint8_t bits[46];
-	bits[sizeof(bits)-1] = '\0';
+  uint8_t bits[46] = {0x00};
 
   // find bit pairs and manchester decode them
   for (i = 0; i < arraylen(bits) - 1; ++i) {
@@ -1054,7 +1049,7 @@ int CmdHpf(const char *Cmd)
 
 int CmdSamples(const char *Cmd)
 {
-	uint8_t got[40000];
+	uint8_t got[40000] = {0x00};
 
 	int n = strtol(Cmd, NULL, 0);
 	if (n == 0)
