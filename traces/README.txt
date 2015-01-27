@@ -21,6 +21,4 @@ casi-12ed825c29.pm3: casi rusco 40 bit (EM410x ID: 12ed825c29)
 EM4102-Fob.pm3: (ID: 0400193cbe)
 ioprox-XSF-01-3B-44725.pm3: IO Prox FSK RF/64 ID in name
 ioprox-XSF-01-BE-03011.pm3: IO Prox FSK RF/64 ID in name
-indala-504278295.pm3: PSK 26 bit indala
-AWID-15-259.pm3: AWID FSK RF/50 FC: 15 Card: 259 
-HID-weak-fob-11647.pm3: HID 32bit Prox Card#: 11647.  very weak tag/read but just readable.
+indala-504278295.pm3: PSK 26 bit indala 
