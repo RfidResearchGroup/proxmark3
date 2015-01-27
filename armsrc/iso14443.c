@@ -633,6 +633,8 @@ static void UartReset()
 	Uart.output = ((uint8_t *)BigBuf) + RECV_CMD_OFFSET;
 	Uart.byteCntMax = MAX_FRAME_SIZE;
 	Uart.state = STATE_UNSYNCD;
+	Uart.byteCnt = 0;
+	Uart.bitCnt = 0;
 }
 
 /*
@@ -1109,11 +1111,13 @@ void RAMFUNC SnoopIso14443(void)
 
         samples += 2;
 
-        if(Handle14443UartBit(ci & 1)) {
+		if(Handle14443UartBit(ci & 1)) {
 			if(triggered && tracing) {
 				GetParity(Uart.output, Uart.byteCnt, parity);
 				LogTrace(Uart.output,Uart.byteCnt,samples, samples,parity,TRUE);
 			}
+			if(Uart.byteCnt==0) Dbprintf("[1] Error, Uart.byteCnt==0, Uart.bitCnt=%d", Uart.bitCnt);
+
 			/* And ready to receive another command. */
 			UartReset();
 			/* And also reset the demod code, which might have been */
@@ -1125,6 +1129,8 @@ void RAMFUNC SnoopIso14443(void)
 				GetParity(Uart.output, Uart.byteCnt, parity);
 				LogTrace(Uart.output,Uart.byteCnt,samples, samples,parity,TRUE);
 			}
+			if(Uart.byteCnt==0) Dbprintf("[2] Error, Uart.byteCnt==0, Uart.bitCnt=%d", Uart.bitCnt);
+
 			/* And ready to receive another command. */
 			UartReset();
 			/* And also reset the demod code, which might have been */
