@@ -633,9 +633,9 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
     uint8_t *dest = (uint8_t *)BigBuf;
 
-    size_t size=sizeof(BigBuf), idx=0; //, found=0;
+    size_t size=sizeof(BigBuf); 
     uint32_t hi2=0, hi=0, lo=0;
-
+    int idx=0;
     // Configure to go in 125Khz listen mode
     LFSetupFPGAForADC(95, true);
 
@@ -646,10 +646,11 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
         DoAcquisition125k_internal(-1,true);
         // FSK demodulator
-		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo);
-
         WDT_HIT();
+        size = sizeof(BigBuf);
 
+		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo);
+        
 		if (idx>0 && lo>0){
             // final loop, go over previously decoded manchester data and decode into usable tag ID
             // 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0

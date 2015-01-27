@@ -659,9 +659,21 @@ int CmdFSKdemodHID(const char *Cmd)
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t BitLen = getFromGraphBuf(BitStream);
   //get binary from fsk wave
-	size_t idx  = HIDdemodFSK(BitStream,&BitLen,&hi2,&hi,&lo);
+	int idx  = HIDdemodFSK(BitStream,&BitLen,&hi2,&hi,&lo);
   if (idx<0){
-    if (g_debugMode) PrintAndLog("DEBUG: Error demoding fsk");
+    if (g_debugMode){
+      if (idx==-1){
+        PrintAndLog("DEBUG: Just Noise Detected");     
+      } else if (idx == -2) {
+        PrintAndLog("DEBUG: Error demoding fsk");
+      } else if (idx == -3) {
+        PrintAndLog("DEBUG: Preamble not found");
+      } else if (idx == -4) {
+        PrintAndLog("DEBUG: Error in Manchester data, SIZE: %d", BitLen);
+      } else {
+        PrintAndLog("DEBUG: Error demoding fsk %d", idx);
+      }   
+    }
     return 0;
   }
   if (hi2==0 && hi==0 && lo==0) {
@@ -732,9 +744,21 @@ int CmdFSKdemodParadox(const char *Cmd)
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
   size_t BitLen = getFromGraphBuf(BitStream);
   //get binary from fsk wave
-  size_t idx = ParadoxdemodFSK(BitStream,&BitLen,&hi2,&hi,&lo);
+  int idx = ParadoxdemodFSK(BitStream,&BitLen,&hi2,&hi,&lo);
   if (idx<0){
-    if (g_debugMode) PrintAndLog("DEBUG: Error demoding fsk");
+    if (g_debugMode){
+      if (idx==-1){
+        PrintAndLog("DEBUG: Just Noise Detected");     
+      } else if (idx == -2) {
+        PrintAndLog("DEBUG: Error demoding fsk");
+      } else if (idx == -3) {
+        PrintAndLog("DEBUG: Preamble not found");
+      } else if (idx == -4) {
+        PrintAndLog("DEBUG: Error in Manchester data");
+      } else {
+        PrintAndLog("DEBUG: Error demoding fsk %d", idx);
+      }
+    }
     return 0;
   }
   if (hi2==0 && hi==0 && lo==0){
@@ -774,7 +798,21 @@ int CmdFSKdemodIO(const char *Cmd)
   //get binary from fsk wave
 	idx = IOdemodFSK(BitStream,BitLen);
   if (idx<0){
-    if (g_debugMode==1) PrintAndLog("DEBUG: demoding fsk error: %d", idx);
+    if (g_debugMode){
+      if (idx==-1){
+        PrintAndLog("DEBUG: Just Noise Detected");     
+      } else if (idx == -2) {
+        PrintAndLog("DEBUG: not enough samples");
+      } else if (idx == -3) {
+        PrintAndLog("DEBUG: error during fskdemod");        
+      } else if (idx == -4) {
+        PrintAndLog("DEBUG: Preamble not found");
+      } else if (idx == -5) {
+        PrintAndLog("DEBUG: Separator bits not found");
+      } else {
+        PrintAndLog("DEBUG: Error demoding fsk %d", idx);
+      }
+    }
     return 0;
   }
   if (idx==0){
@@ -834,13 +872,13 @@ int CmdFSKdemodAWID(const char *Cmd)
   size_t size = getFromGraphBuf(BitStream);
 
   //get binary from fsk wave
-  int idx = AWIDdemodFSK(BitStream, size);
+  int idx = AWIDdemodFSK(BitStream, &size);
   if (idx<=0){
     if (g_debugMode==1){
       if (idx == -1)
         PrintAndLog("DEBUG: Error - not enough samples");
       else if (idx == -2)
-        PrintAndLog("DEBUG: Error - only noise found - no waves");
+        PrintAndLog("DEBUG: Error - only noise found");
       else if (idx == -3)
         PrintAndLog("DEBUG: Error - problem during FSK demod");
     //  else if (idx == -3)
@@ -848,7 +886,7 @@ int CmdFSKdemodAWID(const char *Cmd)
       else if (idx == -4)
         PrintAndLog("DEBUG: Error - AWID preamble not found");
       else if (idx == -5)
-        PrintAndLog("DEBUG: Error - Second AWID preamble not found");
+        PrintAndLog("DEBUG: Error - Size not correct: %d", size);
       else
         PrintAndLog("DEBUG: Error %d",idx);
     }
@@ -933,17 +971,17 @@ int CmdFSKdemodPyramid(const char *Cmd)
   size_t size = getFromGraphBuf(BitStream);
 
   //get binary from fsk wave
-  int idx = PyramiddemodFSK(BitStream, size);
+  int idx = PyramiddemodFSK(BitStream, &size);
   if (idx < 0){
     if (g_debugMode==1){
       if (idx == -5)
         PrintAndLog("DEBUG: Error - not enough samples");
       else if (idx == -1)
-        PrintAndLog("DEBUG: Error - only noise found - no waves");
+        PrintAndLog("DEBUG: Error - only noise found");
       else if (idx == -2)
         PrintAndLog("DEBUG: Error - problem during FSK demod");
       else if (idx == -3)
-        PrintAndLog("DEBUG: Error - Second Pyramid preamble not found");
+        PrintAndLog("DEBUG: Error - Size not correct: %d", size);
       else if (idx == -4)
         PrintAndLog("DEBUG: Error - Pyramid preamble not found");
       else
@@ -1039,7 +1077,6 @@ int CmdFSKdemodPyramid(const char *Cmd)
       PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
     }
   }
-  //todo - convert hi2, hi, lo to demodbuffer for future sim/clone commands
   if (g_debugMode){
     PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
     printDemodBuff();
@@ -1248,7 +1285,7 @@ int CmdIndalaDecode(const char *Cmd)
       PrintAndLog("Error2: %d",ans);
 		return -1;
 	}
-	char showbits[251];
+	char showbits[251]={0x00};
 	if (invert)
     if (g_debugMode==1)
       PrintAndLog("Had to invert bits");
@@ -1298,6 +1335,10 @@ int CmdIndalaDecode(const char *Cmd)
 		showbits[idx]='\0';
 		PrintAndLog("Indala UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
 	}
+  if (g_debugMode){
+    PrintAndLog("DEBUG: printing demodbuffer:");
+    printDemodBuff();
+  }
 	return 1;
 }
 
