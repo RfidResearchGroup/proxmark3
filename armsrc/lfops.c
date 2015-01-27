@@ -633,7 +633,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
     uint8_t *dest = (uint8_t *)BigBuf;
 
-    size_t size=0; //, found=0;
+    size_t size=sizeof(BigBuf), idx=0; //, found=0;
     uint32_t hi2=0, hi=0, lo=0;
 
     // Configure to go in 125Khz listen mode
@@ -646,11 +646,11 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
         DoAcquisition125k_internal(-1,true);
         // FSK demodulator
-		size = HIDdemodFSK(dest, sizeof(BigBuf), &hi2, &hi, &lo);
+		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo);
 
         WDT_HIT();
 
-		if (size>0 && lo>0){
+		if (idx>0 && lo>0){
             // final loop, go over previously decoded manchester data and decode into usable tag ID
             // 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
             if (hi2 != 0){ //extra large HID tags
@@ -721,7 +721,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 {
     uint8_t *dest = (uint8_t *)BigBuf;
 
-	size_t size=0;
+	size_t size=0, idx=0;
     int clk=0, invert=0, errCnt=0;
     uint64_t lo=0;
     // Configure to go in 125Khz listen mode
@@ -741,7 +741,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
         WDT_HIT();
 
         if (errCnt>=0){
-			lo = Em410xDecode(dest,size);
+			lo = Em410xDecode(dest, &size, &idx);
             //Dbprintf("DEBUG: EM GOT");
             if (lo>0){
 				Dbprintf("EM TAG ID: %02x%08x - (%05d_%03d_%08d)",

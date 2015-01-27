@@ -76,6 +76,8 @@ size_t getFromGraphBuf(uint8_t *buff)
   }
   return i;
 }
+
+
 // Get or auto-detect clock rate
 int GetClock(const char *str, int peak, int verbose)
 {
