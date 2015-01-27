@@ -154,7 +154,7 @@ static struct {
 static int Handle14443UartBit(int bit)
 {
     switch(Uart.state) {
-        case STATE_UNSYNCD:
+		case STATE_UNSYNCD:
         	LED_A_OFF();
             if(!bit) {
                 // we went low, so this could be the beginning
@@ -1045,12 +1045,6 @@ void RAMFUNC SnoopIso14443(void)
 	clear_trace();
 	set_tracing(TRUE);
 
-	// The command (reader -> tag) that we're receiving.
-	uint8_t *receivedCmd = ((uint8_t *)BigBuf) + RECV_CMD_OFFSET;
-
-	// The response (tag -> reader) that we're receiving.
-	uint8_t *receivedResponse = ((uint8_t *)BigBuf) + RECV_RESP_OFFSET;
-
     // The DMA buffer, used to stream samples from the FPGA.
 	int8_t *dmaBuf = ((int8_t *)BigBuf) + DMA_BUFFER_OFFSET;
     int lastRxCounter;
@@ -1117,8 +1111,8 @@ void RAMFUNC SnoopIso14443(void)
 
         if(Handle14443UartBit(ci & 1)) {
 			if(triggered && tracing) {
-				GetParity(receivedCmd, Uart.byteCnt, parity);
-				LogTrace(receivedCmd,Uart.byteCnt,samples, samples,parity,TRUE);
+				GetParity(Uart.output, Uart.byteCnt, parity);
+				LogTrace(Uart.output,Uart.byteCnt,samples, samples,parity,TRUE);
 			}
 			/* And ready to receive another command. */
 			UartReset();
@@ -1128,8 +1122,8 @@ void RAMFUNC SnoopIso14443(void)
 		}
         if(Handle14443UartBit(cq & 1)) {
 			if(triggered && tracing) {
-				GetParity(receivedCmd, Uart.byteCnt, parity);
-				LogTrace(receivedCmd,Uart.byteCnt,samples, samples,parity,TRUE);
+				GetParity(Uart.output, Uart.byteCnt, parity);
+				LogTrace(Uart.output,Uart.byteCnt,samples, samples,parity,TRUE);
 			}
 			/* And ready to receive another command. */
 			UartReset();
@@ -1144,8 +1138,8 @@ void RAMFUNC SnoopIso14443(void)
 			if(tracing)
 			{
 				uint8_t parity[MAX_PARITY_SIZE];
-				GetParity(receivedResponse, Demod.len, parity);
-				LogTrace(receivedResponse,Demod.len,samples, samples,parity,FALSE);
+				GetParity(Demod.output, Demod.len, parity);
+				LogTrace(Demod.output,Demod.len,samples, samples,parity,FALSE);
 			}
             triggered = TRUE;
             LED_A_OFF();
