@@ -158,9 +158,28 @@ NXP/Philips CUSTOM COMMANDS
 #define MIFARE_ULC_AUTH_1       0x1A
 #define MIFARE_ULC_AUTH_2        0xAF
 
+/**
+06 00 = INITIATE
+0E xx = SELECT ID (xx = Chip-ID)
+0B = Get UID
+08 yy = Read Block (yy = block number)
+09 yy dd dd dd dd = Write Block (yy = block number; dd dd dd dd = data to be written)
+0C = Reset to Inventory
+0F = Completion
+0A 11 22 33 44 55 66 = Authenticate (11 22 33 44 55 66 = data to authenticate)
+**/
+
 #define ISO14443B_REQB         0x05
 #define ISO14443B_ATTRIB       0x1D
 #define ISO14443B_HALT         0x50
+#define ISO14443B_INITIATE     0x06
+#define ISO14443B_SELECT       0x0E
+#define ISO14443B_GET_UID      0x0B
+#define ISO14443B_READ_BLK     0x08
+#define ISO14443B_WRITE_BLK    0x09
+#define ISO14443B_RESET        0x0C
+#define ISO14443B_COMPLETION   0x0F
+#define ISO14443B_AUTHENTICATE 0x0A
 
 //First byte is 26
 #define ISO15693_INVENTORY     0x01
@@ -288,13 +307,33 @@ void annotateIso15693(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 		}
 	}
 }
+
+/**
+06 00 = INITIATE
+0E xx = SELECT ID (xx = Chip-ID)
+0B = Get UID
+08 yy = Read Block (yy = block number)
+09 yy dd dd dd dd = Write Block (yy = block number; dd dd dd dd = data to be written)
+0C = Reset to Inventory
+0F = Completion
+0A 11 22 33 44 55 66 = Authenticate (11 22 33 44 55 66 = data to authenticate)
+**/
+
 void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 {
 	switch(cmd[0]){
 	case ISO14443B_REQB   : snprintf(exp,size,"REQB");break;
 	case ISO14443B_ATTRIB : snprintf(exp,size,"ATTRIB");break;
 	case ISO14443B_HALT   : snprintf(exp,size,"HALT");break;
-	default:                snprintf(exp,size ,"?");break;
+	case ISO14443B_INITIATE     : snprintf(exp,size,"INITIATE");break;
+	case ISO14443B_SELECT       : snprintf(exp,size,"SELECT(%d)",cmd[1]);break;
+	case ISO14443B_GET_UID      : snprintf(exp,size,"GET UID");break;
+	case ISO14443B_READ_BLK     : snprintf(exp,size,"READ_BLK(%d)", cmd[1]);break;
+	case ISO14443B_WRITE_BLK    : snprintf(exp,size,"WRITE_BLK(%d)",cmd[1]);break;
+	case ISO14443B_RESET        : snprintf(exp,size,"RESET");break;
+	case ISO14443B_COMPLETION   : snprintf(exp,size,"COMPLETION");break;
+	case ISO14443B_AUTHENTICATE : snprintf(exp,size,"AUTHENTICATE");break;
+	default                     : snprintf(exp,size ,"?");break;
 	}
 
 }
