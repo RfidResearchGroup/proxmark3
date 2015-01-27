@@ -194,7 +194,7 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	case ISO14443A_CMD_ANTICOLL_OR_SELECT:{
 		// 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
 		// 93 70 = Select (usage: 9370+5bytes 9320 answer - answer: 1byte SAK)
-		if(cmd[2] == 0x70)
+		if(cmd[1] == 0x70)
 		{
 			snprintf(exp,size,"SELECT_UID"); break;
 		}else
@@ -222,8 +222,8 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	case MIFARE_CMD_DEC:          snprintf(exp,size,"DEC(%d)",cmd[1]); break;
 	case MIFARE_CMD_RESTORE:      snprintf(exp,size,"RESTORE(%d)",cmd[1]); break;
 	case MIFARE_CMD_TRANSFER:     snprintf(exp,size,"TRANSFER(%d)",cmd[1]); break;
-	case MIFARE_AUTH_KEYA:        snprintf(exp,size,"AUTH-A"); break;
-	case MIFARE_AUTH_KEYB:        snprintf(exp,size,"AUTH-B"); break;
+	case MIFARE_AUTH_KEYA:        snprintf(exp,size,"AUTH-A(%d)",cmd[1]); break;
+	case MIFARE_AUTH_KEYB:        snprintf(exp,size,"AUTH-B(%d)",cmd[1]); break;
 	case MIFARE_MAGICMODE:        snprintf(exp,size,"MAGIC"); break;
 	default:                      snprintf(exp,size,"?"); break;
 	}
