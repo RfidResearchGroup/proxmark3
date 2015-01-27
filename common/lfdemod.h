@@ -31,12 +31,15 @@ void psk1TOpsk2(uint8_t *BitStream, size_t size);
 int DetectpskNRZClock(uint8_t dest[], size_t size, int clock);
 int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert);
 void pskCleanWave(uint8_t *bitStream, size_t size);
-int PyramiddemodFSK(uint8_t *dest, size_t size);
-int AWIDdemodFSK(uint8_t *dest, size_t size);
+int PyramiddemodFSK(uint8_t *dest, size_t *size);
+int AWIDdemodFSK(uint8_t *dest, size_t *size);
 size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen);
 uint16_t countFC(uint8_t *BitStream, size_t size);
 uint8_t detectFSKClk(uint8_t *BitStream, size_t size, uint8_t fcHigh, uint8_t fcLow);
 int getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo);
-size_t ParadoxdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);
+int ParadoxdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);
+uint8_t preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx);
+uint8_t parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType);
+uint8_t justNoise(uint8_t *BitStream, size_t size);
 
 #endif

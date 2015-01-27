@@ -12,6 +12,18 @@
 #include <string.h>
 #include "lfdemod.h"
 
+
+uint8_t justNoise(uint8_t *BitStream, size_t size)
+{
+	static const uint8_t THRESHOLD = 123;
+	//test samples are not just noise
+	uint8_t justNoise1 = 1;
+	for(size_t idx=0; idx < size && justNoise1 ;idx++){
+		justNoise1 = BitStream[idx] < THRESHOLD;
+	}
+	return justNoise1;
+}
+
 //by marshmellow
 //get high and low with passed in fuzz factor. also return noise test = 1 for passed or 0 for only noise
 int getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo)
@@ -29,59 +41,82 @@ int getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi
 	return 1;
 }
 
+// by marshmellow
+// pass bits to be tested in bits, length bits passed in bitLen, and parity type (even=0 | odd=1) in pType
+// returns 1 if passed
+uint8_t parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType)
+{
+	uint8_t ans = 0;
+	for (uint8_t i = 0; i < bitLen; i++){
+		ans ^= ((bits >> i) & 1);
+	}
+  //PrintAndLog("DEBUG: ans: %d, ptype: %d",ans,pType);
+	return (ans == pType);
+}
+
+//by marshmellow
+//search for given preamble in given BitStream and return startIndex and length
+uint8_t preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx)
+{
+  uint8_t foundCnt=0;
+  for (int idx=0; idx < *size - pLen; idx++){
+    if (memcmp(BitStream+idx, preamble, pLen) == 0){
+      //first index found
+      foundCnt++;
+      if (foundCnt == 1){
+        *startIdx = idx;
+      }
+      if (foundCnt == 2){
+        *size = idx - *startIdx;
+        return 1;
+      }
+    }
+  }
+  return 0;
+}
+
+
 //by marshmellow
 //takes 1s and 0s and searches for EM410x format - output EM ID
 uint64_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx)
 {
-	//no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
-	//  otherwise could be a void with no arguments
-	//set defaults
-	uint64_t lo=0;
-	uint32_t i = 0;
-	if (BitStream[10]>1){  //allow only 1s and 0s
-		// PrintAndLog("no data found");
-		return 0;
-	}
-	uint8_t parityTest=0;
-	// 111111111 bit pattern represent start of frame
-	uint8_t frame_marker_mask[] = {1,1,1,1,1,1,1,1,1};
-	uint32_t idx = 0;
-	uint32_t ii=0;
-	uint8_t resetCnt = 0;
-	while( (idx + 64) < *size) {
- restart:
-		// search for a start of frame marker
-		if ( memcmp(BitStream+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
-		{ // frame marker found
-			*startIdx=idx;
-			idx+=9;
-			for (i=0; i<10;i++){
-				for(ii=0; ii<5; ++ii){
-					parityTest ^= BitStream[(i*5)+ii+idx];
-				}
-				if (!parityTest){ //even parity
-					parityTest=0;
-					for (ii=0; ii<4;++ii){
-						lo=(lo<<1LL)|(BitStream[(i*5)+ii+idx]);
-					}
-					//PrintAndLog("DEBUG: EM parity passed parity val: %d, i:%d, ii:%d,idx:%d, Buffer: %d%d%d%d%d,lo: %d",parityTest,i,ii,idx,BitStream[idx+ii+(i*5)-5],BitStream[idx+ii+(i*5)-4],BitStream[idx+ii+(i*5)-3],BitStream[idx+ii+(i*5)-2],BitStream[idx+ii+(i*5)-1],lo);
-				}else {//parity failed
-					//PrintAndLog("DEBUG: EM parity failed parity val: %d, i:%d, ii:%d,idx:%d, Buffer: %d%d%d%d%d",parityTest,i,ii,idx,BitStream[idx+ii+(i*5)-5],BitStream[idx+ii+(i*5)-4],BitStream[idx+ii+(i*5)-3],BitStream[idx+ii+(i*5)-2],BitStream[idx+ii+(i*5)-1]);
-					parityTest=0;
-					idx-=8;
-					if (resetCnt>5)return 0; //try 5 times
-					resetCnt++;
-					goto restart;//continue;
-				}
-			}
-			//skip last 5 bit parity test for simplicity.
-			*size = 64;
-			return lo;
-		}else{
-			idx++;
-		}
-	}
-	return 0;
+  //no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
+  //  otherwise could be a void with no arguments
+  //set defaults
+  uint64_t lo=0;
+  uint32_t i = 0;
+  if (BitStream[1]>1){  //allow only 1s and 0s
+    // PrintAndLog("no data found");
+    return 0;
+  }
+  // 111111111 bit pattern represent start of frame
+  uint8_t preamble[] = {1,1,1,1,1,1,1,1,1};
+  uint32_t idx = 0;
+  uint32_t parityBits = 0;
+  uint8_t errChk = 0;
+  *startIdx = 0;
+  for (uint8_t extraBitChk=0; extraBitChk<5; extraBitChk++){
+    errChk = preambleSearch(BitStream+extraBitChk+*startIdx, preamble, sizeof(preamble), size, startIdx);
+    if (errChk == 0) return 0;
+    idx = *startIdx + 9;
+    for (i=0; i<10;i++){ //loop through 10 sets of 5 bits (50-10p = 40 bits)
+      parityBits = bytebits_to_byte(BitStream+(i*5)+idx,5);
+      //check even parity
+      if (parityTest(parityBits, 5, 0) == 0){
+        //parity failed try next bit (in the case of 1111111111) but last 9 = preamble
+        startIdx++;
+        errChk = 0;
+        break;
+      }
+      for (uint8_t ii=0; ii<4; ii++){
+        lo = (lo << 1LL) | (BitStream[(i*5)+ii+idx]);
+      }
+    }
+    if (errChk != 0) return lo;
+    //skip last 5 bit parity test for simplicity.
+    // *size = 64;
+  }
+  return 0;
 }
 
 //by marshmellow
@@ -537,114 +572,69 @@ int fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t 
 	size = aggregate_bits(dest, size, rfLen, 192, invert, fchigh, fclow);
 	return size;
 }
+
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo)
 {
+  if (justNoise(dest, *size)) return -1;
 
-	size_t idx=0, size2=*size, startIdx=0; 
-	// FSK demodulator
+  size_t numStart=0, size2=*size, startIdx=0; 
+  // FSK demodulator
+  *size = fskdemod(dest, size2,50,1,10,8); //fsk2a
+  if (*size < 96) return -2;
+  // 00011101 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
+  uint8_t preamble[] = {0,0,0,1,1,1,0,1};
+  // find bitstring in array  
+  uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
+  if (errChk == 0) return -3; //preamble not found
 
-	*size = fskdemod(dest, size2,50,0,10,8);
-
-	// final loop, go over previously decoded manchester data and decode into usable tag ID
-	// 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
-	uint8_t frame_marker_mask[] = {1,1,1,0,0,0};
-	int numshifts = 0;
-	idx = 0;
-	//one scan
-	while( idx + sizeof(frame_marker_mask) < *size) {
-		// search for a start of frame marker
-		if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
-		{ // frame marker found
-			startIdx=idx;
-			idx+=sizeof(frame_marker_mask);
-			while(dest[idx] != dest[idx+1] && idx < *size-2)
-			{
-				// Keep going until next frame marker (or error)
-				// Shift in a bit. Start by shifting high registers
-				*hi2 = (*hi2<<1)|(*hi>>31);
-				*hi = (*hi<<1)|(*lo>>31);
-				//Then, shift in a 0 or one into low
-				if (dest[idx] && !dest[idx+1])	// 1 0
-					*lo=(*lo<<1)|0;
-				else // 0 1
-					*lo=(*lo<<1)|1;
-				numshifts++;
-				idx += 2;
-			}
-			// Hopefully, we read a tag and	 hit upon the next frame marker
-			if(idx + sizeof(frame_marker_mask) < *size)
-			{
-				if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
-				{
-					//good return
-					*size=idx-startIdx;
-					return startIdx;
-				}
-			}
-			// reset
-			*hi2 = *hi = *lo = 0;
-			numshifts = 0;
-		}else	{
-			idx++;
-		}
-	}
-	return -1;
+  numStart = startIdx + sizeof(preamble);
+  // final loop, go over previously decoded FSK data and manchester decode into usable tag ID
+  for (size_t idx = numStart; (idx-numStart) < *size - sizeof(preamble); idx+=2){
+    if (dest[idx] == dest[idx+1]){
+      return -4; //not manchester data
+    }
+    *hi2 = (*hi2<<1)|(*hi>>31);
+    *hi = (*hi<<1)|(*lo>>31);
+    //Then, shift in a 0 or one into low
+    if (dest[idx] && !dest[idx+1])  // 1 0
+      *lo=(*lo<<1)|1;
+    else // 0 1
+      *lo=(*lo<<1)|0;
+  }
+  return (int)startIdx;
 }
 
 // loop to get raw paradox waveform then FSK demodulate the TAG ID from it
-size_t ParadoxdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo)
+int ParadoxdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo)
 {
-
-	size_t idx=0, size2=*size;
+	if (justNoise(dest, *size)) return -1;
+	
+	size_t numStart=0, size2=*size, startIdx=0;
 	// FSK demodulator
+	*size = fskdemod(dest, size2,50,1,10,8); //fsk2a
+	if (*size < 96) return -2;
 
-	*size = fskdemod(dest, size2,50,1,10,8);
+	// 00001111 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
+	uint8_t preamble[] = {0,0,0,0,1,1,1,1};
 
-	// final loop, go over previously decoded manchester data and decode into usable tag ID
-	// 00001111 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
-	uint8_t frame_marker_mask[] = {0,0,0,0,1,1,1,1};
-	uint16_t numshifts = 0;
-	idx = 0;
-	//one scan
-	while( idx + sizeof(frame_marker_mask) < *size) {
-		// search for a start of frame marker
-		if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
-		{ // frame marker found
-			size2=idx;
-			idx+=sizeof(frame_marker_mask);
-			while(dest[idx] != dest[idx+1] && idx < *size-2)
-			{
-				// Keep going until next frame marker (or error)
-				// Shift in a bit. Start by shifting high registers
-				*hi2 = (*hi2<<1)|(*hi>>31);
-				*hi = (*hi<<1)|(*lo>>31);
-				//Then, shift in a 0 or one into low
-				if (dest[idx] && !dest[idx+1])	// 1 0
-					*lo=(*lo<<1)|1;
-				else // 0 1
-					*lo=(*lo<<1)|0;
-				numshifts++;
-				idx += 2;
-			}
-			// Hopefully, we read a tag and	 hit upon the next frame marker and got enough bits
-			if(idx + sizeof(frame_marker_mask) < *size && numshifts > 40)
-			{
-				if ( memcmp(dest+idx, frame_marker_mask, sizeof(frame_marker_mask)) == 0)
-				{
-					//good return - return start grid position and bits found
-					*size = ((numshifts*2)+8);
-					return size2;
-				}
-			}
-			// reset
-			*hi2 = *hi = *lo = 0;
-			numshifts = 0;
-		}else	{
-			idx++;
-		}
+	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
+	if (errChk == 0) return -3; //preamble not found
+
+	numStart = startIdx + sizeof(preamble);
+	// final loop, go over previously decoded FSK data and manchester decode into usable tag ID
+	for (size_t idx = numStart; (idx-numStart) < *size - sizeof(preamble); idx+=2){
+		if (dest[idx] == dest[idx+1]) 
+			return -4; //not manchester data
+		*hi2 = (*hi2<<1)|(*hi>>31);
+		*hi = (*hi<<1)|(*lo>>31);
+		//Then, shift in a 0 or one into low
+		if (dest[idx] && !dest[idx+1])	// 1 0
+			*lo=(*lo<<1)|1;
+		else // 0 1
+			*lo=(*lo<<1)|0;
 	}
-	return 0;
+	return (int)startIdx;
 }
 
 uint32_t bytebits_to_byte(uint8_t* src, size_t numbits)
@@ -660,20 +650,12 @@ uint32_t bytebits_to_byte(uint8_t* src, size_t numbits)
 
 int IOdemodFSK(uint8_t *dest, size_t size)
 {
-	static const uint8_t THRESHOLD = 129;
-	uint32_t idx=0;
+	if (justNoise(dest, size)) return -1;
 	//make sure buffer has data
-	if (size < 66) return -1;
-	//test samples are not just noise
-	uint8_t justNoise = 1;
-	for(idx=0;idx< size && justNoise ;idx++){
-		justNoise = dest[idx] < THRESHOLD;
-	}
-	if(justNoise) return 0;
-
+	if (size < 66*64) return -2;
 	// FSK demodulator
-	size = fskdemod(dest, size, 64, 1, 10, 8);  //  RF/64 and invert
-	if (size < 65) return -1;  //did we get a good demod?
+	size = fskdemod(dest, size, 64, 1, 10, 8);  // FSK2a RF/64 
+	if (size < 65) return -3;  //did we get a good demod?
 	//Index map
 	//0           10          20          30          40          50          60
 	//|           |           |           |           |           |           |
@@ -683,31 +665,17 @@ int IOdemodFSK(uint8_t *dest, size_t size)
 	//
 	//XSF(version)facility:codeone+codetwo
 	//Handle the data
-	uint8_t mask[] = {0,0,0,0,0,0,0,0,0,1};
-	for( idx=0; idx < (size - 65); idx++) {
-		if ( memcmp(dest + idx, mask, sizeof(mask))==0) {
-			//frame marker found
-			if (!dest[idx+8] && dest[idx+17]==1 && dest[idx+26]==1 && dest[idx+35]==1 && dest[idx+44]==1 && dest[idx+53]==1){
-				//confirmed proper separator bits found
-				//return start position
-				return (int) idx;
-			}
-		}
-	}
-	return 0;
-}
+	size_t startIdx = 0;
+	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,1};
+	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), &size, &startIdx);
+	if (errChk == 0) return -4; //preamble not found
 
-// by marshmellow
-// pass bits to be tested in bits, length bits passed in bitLen, and parity type (even=0 | odd=1) in pType
-// returns 1 if passed
-uint8_t parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType)
-{
-	uint8_t ans = 0;
-	for (uint8_t i = 0; i < bitLen; i++){
-		ans ^= ((bits >> i) & 1);
+	if (!dest[startIdx+8] && dest[startIdx+17]==1 && dest[startIdx+26]==1 && dest[startIdx+35]==1 && dest[startIdx+44]==1 && dest[startIdx+53]==1){
+		//confirmed proper separator bits found
+		//return start position
+		return (int) startIdx;
 	}
-  //PrintAndLog("DEBUG: ans: %d, ptype: %d",ans,pType);
-	return (ans == pType);
+	return -5;
 }
 
 // by marshmellow
@@ -735,70 +703,45 @@ size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t p
 
 // by marshmellow
 // FSK Demod then try to locate an AWID ID
-int AWIDdemodFSK(uint8_t *dest, size_t size)
+int AWIDdemodFSK(uint8_t *dest, size_t *size)
 {
-	static const uint8_t THRESHOLD = 123;
-	uint32_t idx=0, idx2=0;
-	//make sure buffer has data
-	if (size < 96*50) return -1;
-	//test samples are not just noise
-	uint8_t justNoise = 1;
-	for(idx=0; idx < size && justNoise ;idx++){
-		justNoise = dest[idx] < THRESHOLD;
-	}
-	if(justNoise) return -2;
+	//make sure buffer has enough data
+	if (*size < 96*50) return -1;
+
+	if (justNoise(dest, *size)) return -2;
 
 	// FSK demodulator
-	size = fskdemod(dest, size, 50, 1, 10, 8);  //  RF/64 and invert
-	if (size < 96) return -3;  //did we get a good demod?
+	*size = fskdemod(dest, *size, 50, 1, 10, 8);  // fsk2a RF/50 
+	if (*size < 96) return -3;  //did we get a good demod?
 
-	uint8_t mask[] = {0,0,0,0,0,0,0,1};
-	for( idx=0; idx < (size - 96); idx++) {
-		if ( memcmp(dest + idx, mask, sizeof(mask))==0) {
-			// frame marker found
-			//return ID start index
-			if (idx2 == 0) idx2=idx;
-			else if(idx-idx2==96) return idx2;
-			else return -5;
-
-			// should always get 96 bits if it is awid
-		}
-	}
-	//never found mask
-	return -4;
+	uint8_t preamble[] = {0,0,0,0,0,0,0,1};
+	size_t startIdx = 0;
+	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
+	if (errChk == 0) return -4; //preamble not found
+	if (*size != 96) return -5;
+	return (int)startIdx;
 }
 
 // by marshmellow
 // FSK Demod then try to locate an Farpointe Data (pyramid) ID
-int PyramiddemodFSK(uint8_t *dest, size_t size)
+int PyramiddemodFSK(uint8_t *dest, size_t *size)
 {
-  static const uint8_t THRESHOLD = 123;
-  uint32_t idx=0, idx2=0;
-  // size_t size2 = size;
   //make sure buffer has data
-  if (size < 128*50) return -5;
+  if (*size < 128*50) return -5;
+
   //test samples are not just noise
-  uint8_t justNoise = 1;
-  for(idx=0; idx < size && justNoise ;idx++){
-    justNoise = dest[idx] < THRESHOLD;
-  }
-  if(justNoise) return -1;
+  if (justNoise(dest, *size)) return -1;
 
   // FSK demodulator
-  size = fskdemod(dest, size, 50, 1, 10, 8);  //  RF/64 and invert
-  if (size < 128) return -2;  //did we get a good demod?
+  *size = fskdemod(dest, *size, 50, 1, 10, 8);  // fsk2a RF/50 
+  if (*size < 128) return -2;  //did we get a good demod?
 
-  uint8_t mask[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
-  for( idx=0; idx < (size - 128); idx++) {
-    if ( memcmp(dest + idx, mask, sizeof(mask))==0) {
-      // frame marker found
-      if (idx2==0) idx2=idx;
-      else if (idx-idx2==128) return idx2;
-      else return -3;
-    }
-  }
-  //never found mask
-  return -4;
+  uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+	size_t startIdx = 0;
+	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
+	if (errChk == 0) return -4; //preamble not found
+	if (*size != 128) return -3;
+	return (int)startIdx;
 }
 
 // by marshmellow
@@ -1068,6 +1011,7 @@ int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert)
 // peaks invert bit (high=1 low=0) each clock cycle = 1 bit determined by last peak
 int pskNRZrawDemod(uint8_t *dest, size_t *size, int *clk, int *invert)
 {
+	if (justNoise(dest, *size)) return -1;
 	pskCleanWave(dest,*size);
 	int clk2 = DetectpskNRZClock(dest, *size, *clk);
 	*clk=clk2;
