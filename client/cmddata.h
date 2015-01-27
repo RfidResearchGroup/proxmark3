@@ -60,4 +60,6 @@ int CmdIndalaDecode(const char *Cmd);
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 extern int DemodBufferLen;
 
+#define BIGBUF_SIZE 40000
+
 #endif

@@ -240,7 +240,10 @@ void MeasureAntennaTuningHf(void)
 
 void SimulateTagHfListen(void)
 {
-	uint8_t *dest = BigBuf_get_addr() + FREE_BUFFER_OFFSET;
+	// ToDo: historically this used the free buffer, which was 2744 Bytes long. 
+	// There might be a better size to be defined:
+	#define HF_14B_SNOOP_BUFFER_SIZE 2744
+	uint8_t *dest = BigBuf_malloc(HF_14B_SNOOP_BUFFER_SIZE);
 	uint8_t v = 0;
 	int i;
 	int p = 0;
@@ -275,7 +278,7 @@ void SimulateTagHfListen(void)
 				p = 0;
 				i++;
 
-				if(i >= FREE_BUFFER_SIZE) {
+				if(i >= HF_14B_SNOOP_BUFFER_SIZE) {
 					break;
 				}
 			}
@@ -912,10 +915,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			uint8_t *BigBuf = BigBuf_get_addr();
 			for(size_t i=0; i<c->arg[1]; i += USB_CMD_DATA_SIZE) {
 				size_t len = MIN((c->arg[1] - i),USB_CMD_DATA_SIZE);
-				cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,0,BigBuf+c->arg[0]+i,len);
+				cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,traceLen,BigBuf+c->arg[0]+i,len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
-			cmd_send(CMD_ACK,0,0,0,0,0);
+			cmd_send(CMD_ACK,0,0,traceLen,0,0);
 			LED_B_OFF();
 			break;
 

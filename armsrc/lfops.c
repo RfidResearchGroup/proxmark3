@@ -26,7 +26,7 @@
 void DoAcquisition125k_internal(int trigger_threshold,bool silent)
 {
     uint8_t *dest = BigBuf_get_addr();
-    int n = BigBuf_max_trace_len();
+    int n = BigBuf_max_traceLen();
     int i;
 
     memset(dest, 0, n);
@@ -178,7 +178,7 @@ void ReadTItag(void)
  #define FREQHI 134200
 
     signed char *dest = (signed char *)BigBuf_get_addr();
-    uint16_t n = BigBuf_max_trace_len();
+    uint16_t n = BigBuf_max_traceLen();
     // 128 bit shift register [shift3:shift2:shift1:shift0]
     uint32_t shift3 = 0, shift2 = 0, shift1 = 0, shift0 = 0;
 
@@ -331,7 +331,7 @@ void AcquireTiType(void)
 
     // clear buffer
 	uint32_t *BigBuf = (uint32_t *)BigBuf_get_addr();
-    memset(BigBuf,0,BigBuf_max_trace_len()/sizeof(uint32_t));
+    memset(BigBuf,0,BigBuf_max_traceLen()/sizeof(uint32_t));
 
     // Set up the synchronous serial port
     AT91C_BASE_PIOA->PIO_PDR = GPIO_SSC_DIN;
@@ -634,7 +634,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
     uint8_t *dest = BigBuf_get_addr();
 
-    size_t size=sizeof(BigBuf); 
+    size_t size = BigBuf_max_traceLen(); 
     uint32_t hi2=0, hi=0, lo=0;
     int idx=0;
     // Configure to go in 125Khz listen mode
@@ -647,10 +647,6 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
         DoAcquisition125k_internal(-1,true);
         // FSK demodulator
-		idx = HIDdemodFSK(dest, BigBuf_max_trace_len(), &hi2, &hi, &lo);
-        WDT_HIT();
-        size = sizeof(BigBuf);
-
 		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo);
         
 		if (idx>0 && lo>0){
@@ -736,7 +732,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
         if (ledcontrol) LED_A_ON();
 
         DoAcquisition125k_internal(-1,true);
-        size  = BigBuf_max_trace_len();
+        size  = BigBuf_max_traceLen();
         //Dbprintf("DEBUG: Buffer got");
 		//askdemod and manchester decode
 		errCnt = askmandemod(dest, &size, &clk, &invert);
@@ -789,7 +785,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
         DoAcquisition125k_internal(-1,true);
         //fskdemod and get start index
         WDT_HIT();
-        idx = IOdemodFSK(dest, BigBuf_max_trace_len());
+        idx = IOdemodFSK(dest, BigBuf_max_traceLen());
         if (idx>0){
             //valid tag found
 
@@ -965,7 +961,7 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
     //int m=0, i=0; //enio adjustment 12/10/14
     uint32_t m=0, i=0;
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    m = BigBuf_max_trace_len();
+    m = BigBuf_max_traceLen();
     // Clear destination buffer before sending the command
     memset(dest, 128, m);
     // Connect the A/D to the peak-detected low-frequency path.
@@ -1030,7 +1026,7 @@ void T55xxReadTrace(void){
     int m=0, i=0;
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    m = BigBuf_max_trace_len();
+    m = BigBuf_max_traceLen();
     // Clear destination buffer before sending the command
     memset(dest, 128, m);
     // Connect the A/D to the peak-detected low-frequency path.
@@ -1381,7 +1377,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
     uint8_t BitStream[256];
     uint8_t Blocks[8][16];
     uint8_t *GraphBuffer = BigBuf_get_addr();
-    int GraphTraceLen = BigBuf_max_trace_len();
+    int GraphTraceLen = BigBuf_max_traceLen();
     int i, j, lastval, bitidx, half_switch;
     int clock = 64;
     int tolerance = clock / 8;
@@ -1808,7 +1804,7 @@ void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
     fwd_bit_count = Prepare_Cmd( FWD_CMD_READ );
     fwd_bit_count += Prepare_Addr( Address );
 
-    m = BigBuf_max_trace_len();
+    m = BigBuf_max_traceLen();
     // Clear destination buffer before sending the command
     memset(dest, 128, m);
     // Connect the A/D to the peak-detected low-frequency path.

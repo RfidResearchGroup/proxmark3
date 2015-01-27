@@ -1765,15 +1765,16 @@ int CmdHF14AMfSniff(const char *Cmd){
 	int res = 0;
 	int len = 0;
 	int blockLen = 0;
-	int num = 0;
 	int pckNum = 0;
-	uint8_t uid[7] = {0x00};
+	int num = 0;
+	uint8_t uid[7];
 	uint8_t uid_len;
 	uint8_t atqa[2] = {0x00};
 	uint8_t sak;
 	bool isTag;
-	uint8_t buf[3000] = {0x00};
-	uint8_t * bufPtr = buf;
+	uint8_t *buf = NULL;
+	uint16_t bufsize = 0;
+	uint8_t *bufPtr = NULL;
 	
 	char ctmp = param_getchar(Cmd, 0);
 	if ( ctmp == 'h' || ctmp == 'H' ) {
@@ -1816,32 +1817,47 @@ int CmdHF14AMfSniff(const char *Cmd){
 			break;
 		}
 		
-    UsbCommand resp;
-    if (WaitForResponseTimeout(CMD_ACK,&resp,2000)) {
+		UsbCommand resp;
+		if (WaitForResponseTimeout(CMD_ACK,&resp,2000)) {
 			res = resp.arg[0] & 0xff;
-			len = resp.arg[1];
-			num = resp.arg[2];
-			
-			if (res == 0) return 0;
-			if (res == 1) {
-				if (num ==0) {
+			uint16_t traceLen = resp.arg[1];
+			len = resp.arg[2];
+
+			if (res == 0) return 0;						// we are done
+
+			if (res == 1) {								// there is (more) data to be transferred
+				if (pckNum == 0) {						// first packet, (re)allocate necessary buffer
+					if (traceLen > bufsize) {
+						uint8_t *p;
+						if (buf == NULL) {				// not yet allocated
+							p = malloc(traceLen);
+						} else {						// need more memory
+							p = realloc(buf, traceLen);
+						}
+						if (p == NULL) {
+							PrintAndLog("Cannot allocate memory for trace");
+							free(buf);
+							return 2;
+						}
+						buf = p;
+					}
 					bufPtr = buf;
-					memset(buf, 0x00, 3000);
+					bufsize = traceLen;
+					memset(buf, 0x00, traceLen);
 				}
 				memcpy(bufPtr, resp.d.asBytes, len);
 				bufPtr += len;
 				pckNum++;
 			}
-			if (res == 2) {
+
+			if (res == 2) {								// received all data, start displaying
 				blockLen = bufPtr - buf;
 				bufPtr = buf;
 				printf(">\n");
 				PrintAndLog("received trace len: %d packages: %d", blockLen, pckNum);
-				num = 0;
 				while (bufPtr - buf < blockLen) {
-					bufPtr += 6;
+					bufPtr += 6;						// skip (void) timing information
 					len = *((uint16_t *)bufPtr);
-
 					if(len & 0x8000) {
 						isTag = true;
 						len &= 0x7fff;
@@ -1850,12 +1866,10 @@ int CmdHF14AMfSniff(const char *Cmd){
 					}
 					bufPtr += 2;
 					if ((len == 14) && (bufPtr[0] == 0xff) && (bufPtr[1] == 0xff) && (bufPtr[12] == 0xff) && (bufPtr[13] == 0xff)) {
-					
 						memcpy(uid, bufPtr + 2, 7);
 						memcpy(atqa, bufPtr + 2 + 7, 2);
 						uid_len = (atqa[0] & 0xC0) == 0x40 ? 7 : 4;
 						sak = bufPtr[11];
-						
 						PrintAndLog("tag select uid:%s atqa:0x%02x%02x sak:0x%02x", 
 							sprint_hex(uid + (7 - uid_len), uid_len),
 							atqa[1], 
@@ -1873,17 +1887,20 @@ int CmdHF14AMfSniff(const char *Cmd){
 							AddLogHex(logHexFileName, isTag ? "TAG: ":"RDR: ", bufPtr, len);
 						if (wantDecrypt) 
 							mfTraceDecode(bufPtr, len, wantSaveToEmlFile);
+						num++;	
 					}
 					bufPtr += len;
 					bufPtr += ((len-1)/8+1);	// ignore parity
-					num++;
 				}
+				pckNum = 0;
 			}
 		} // resp not NULL
 	} // while (true)
-	
+
+	free(buf);
 	return 0;
 }
+
 
 static command_t CommandTable[] =
 {

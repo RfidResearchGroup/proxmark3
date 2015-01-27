@@ -145,11 +145,25 @@ demodError:
 
 int CmdHF14BList(const char *Cmd)
 {
-  uint8_t got[TRACE_BUFFER_SIZE];
-  GetFromBigBuf(got,sizeof(got),0);
-  WaitForResponse(CMD_ACK,NULL);
+	uint8_t *got = malloc(USB_CMD_DATA_SIZE);
 
-  PrintAndLog("recorded activity:");
+	// Query for the actual size of the trace
+	UsbCommand response;
+	GetFromBigBuf(got, USB_CMD_DATA_SIZE, 0);
+	WaitForResponse(CMD_ACK, &response);
+	uint16_t traceLen = response.arg[2];
+	if (traceLen > USB_CMD_DATA_SIZE) {
+		uint8_t *p = realloc(got, traceLen);
+		if (p == NULL) {
+			PrintAndLog("Cannot allocate memory for trace");
+			free(got);
+			return 2;
+		}
+		got = p;
+		GetFromBigBuf(got, traceLen, 0);
+		WaitForResponse(CMD_ACK,NULL);
+	}
+  PrintAndLog("recorded activity: (TraceLen = %d bytes)", traceLen);
   PrintAndLog(" time  :rssi: who bytes");
   PrintAndLog("---------+----+----+-----------");
 
@@ -158,7 +172,7 @@ int CmdHF14BList(const char *Cmd)
 
   for(;;) {
     
-	if(i >= TRACE_BUFFER_SIZE) { break; }
+	if(i >= traceLen) { break; }
 
     bool isResponse;
     int timestamp = *((uint32_t *)(got+i));
@@ -175,7 +189,7 @@ int CmdHF14BList(const char *Cmd)
     if(len > 100) {
       break;
     }
-    if(i + len >= TRACE_BUFFER_SIZE) {
+    if(i + len >= traceLen) {
       break;
     }
 
@@ -218,6 +232,7 @@ int CmdHF14BList(const char *Cmd)
     prev = timestamp;
     i += (len + 9);
   }
+  free(got);
   return 0;
 }
 

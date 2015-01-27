@@ -640,20 +640,24 @@ void RAMFUNC SnoopIClass(void)
     // The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.
 	// So 32 should be enough!
-	uint8_t *readerToTagCmd = BigBuf_get_addr() + RECV_CMD_OFFSET;
+	#define ICLASS_BUFFER_SIZE 32
+	uint8_t readerToTagCmd[ICLASS_BUFFER_SIZE];
     // The response (tag -> reader) that we're receiving.
-	uint8_t *tagToReaderResponse = BigBuf_get_addr() + RECV_RESP_OFFSET;
+	uint8_t tagToReaderResponse[ICLASS_BUFFER_SIZE];
 	
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
  
-    // reset traceLen to 0
+ 	// free all BigBuf memory
+	BigBuf_free();
+    // The DMA buffer, used to stream samples from the FPGA
+    uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
+ 
+	// reset traceLen to 0
     iso14a_set_tracing(TRUE);
     iso14a_clear_trace();
     iso14a_set_trigger(FALSE);
 
-    // The DMA buffer, used to stream samples from the FPGA
-    uint8_t *dmaBuf = BigBuf_get_addr() + DMA_BUFFER_OFFSET;
-    int lastRxCounter;
+	int lastRxCounter;
     uint8_t *upTo;
     int smpl;
     int maxBehindBy = 0;
@@ -703,7 +707,7 @@ void RAMFUNC SnoopIClass(void)
                                 (DMA_BUFFER_SIZE-1);
         if(behindBy > maxBehindBy) {
             maxBehindBy = behindBy;
-            if(behindBy > 400) {
+            if(behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
                 Dbprintf("blew circular buffer! behindBy=0x%x", behindBy);
                 goto done;
             }
@@ -1064,27 +1068,28 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 	int trace_data_size = 0;
 	//uint8_t sof = 0x0f;
 
+	// free eventually allocated BigBuf memory
+	BigBuf_free();
 	// Respond SOF -- takes 1 bytes
-	uint8_t *resp1 = (BigBuf_get_addr() + FREE_BUFFER_OFFSET);
+	uint8_t *resp1 = BigBuf_malloc(2);
 	int resp1Len;
 
 	// Anticollision CSN (rotated CSN)
 	// 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-	uint8_t *resp2 = (BigBuf_get_addr() + FREE_BUFFER_OFFSET + 2);
+	uint8_t *resp2 = BigBuf_malloc(28);
 	int resp2Len;
 
 	// CSN
 	// 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-	uint8_t *resp3 = (BigBuf_get_addr() + FREE_BUFFER_OFFSET + 30);
+	uint8_t *resp3 = BigBuf_malloc(30);
 	int resp3Len;
 
 	// e-Purse
-	// 18: Takes 2 bytes for SOF/EOF and 8 * 2 = 16 bytes (2 bytes/byte)
-	uint8_t *resp4 = (BigBuf_get_addr() + FREE_BUFFER_OFFSET + 60);
+	// 144: Takes 16 bytes for SOF/EOF and 8 * 16 = 128 bytes (2 bytes/bit)
+	uint8_t *resp4 = BigBuf_malloc(150);
 	int resp4Len;
 
-	// + 1720..
-	uint8_t *receivedCmd = BigBuf_get_addr() + RECV_CMD_OFFSET;
+	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
 	memset(receivedCmd, 0x44, MAX_FRAME_SIZE);
 	int len;
 
@@ -1529,7 +1534,7 @@ uint8_t handshakeIclassTag(uint8_t *card_data)
 	static uint8_t identify[]    = { 0x0c };
 	static uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	static uint8_t readcheck_cc[]= { 0x88, 0x02 };
-	uint8_t *resp = BigBuf_get_addr() + RECV_RESP_OFFSET;
+	uint8_t resp[ICLASS_BUFFER_SIZE];
 
 	uint8_t read_status = 0;
 
@@ -1587,7 +1592,7 @@ void ReaderIClass(uint8_t arg0) {
     while(!BUTTON_PRESS())
     {
 
-		if(traceLen > TRACE_SIZE) {
+		if(traceLen > BigBuf_max_traceLen()) {
 			DbpString("Trace full");
 			break;
 		}
@@ -1650,7 +1655,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	  int keyaccess;
 	} memory;
 	
-	uint8_t* resp = BigBuf_get_addr() + RECV_RESP_OFFSET;
+	uint8_t resp[ICLASS_BUFFER_SIZE];
 	
     setupIclassReader();
 
@@ -1659,7 +1664,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	
 		WDT_HIT();
 
-		if(traceLen > TRACE_SIZE) {
+		if(traceLen > BigBuf_max_traceLen()) {
 			DbpString("Trace full");
 			break;
 		}

@@ -529,11 +529,13 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
-	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
+	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
 
 	uint32_t auth1_time, auth2_time;
 	static uint16_t delta_time;
 
+	// free eventually allocated BigBuf memory
+	BigBuf_free();
 	// clear trace
 	iso14a_clear_trace();
 	iso14a_set_tracing(false);
@@ -920,8 +922,8 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	uint8_t d_block[18] = {0x00};
 	uint32_t cuid;
 	
-	uint8_t *receivedAnswer = get_bigbufptr_recvrespbuf();
-	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
+	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
+	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
 
 	// reset FPGA and LED
 	if (workFlags & 0x08) {
@@ -1039,8 +1041,8 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	uint8_t data[18] = {0x00};
 	uint32_t cuid = 0;
 	
-	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
-	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
+	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
+	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
 	
 	if (workFlags & 0x08) {
 		LED_A_ON();
@@ -1104,8 +1106,8 @@ void MifareCIdent(){
 	// variables
 	byte_t isOK = 1;
 	
-	uint8_t* receivedAnswer = get_bigbufptr_recvrespbuf();
-	uint8_t *receivedAnswerPar = receivedAnswer + MAX_FRAME_SIZE;
+	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
+	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
 
 	ReaderTransmitBitsPar(wupC1,7,0, NULL);
 	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {

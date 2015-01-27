@@ -157,7 +157,7 @@ bool intMfSniffSend() {
 	while (pckLen > 0) {
 		pckSize = MIN(USB_CMD_DATA_SIZE, pckLen);
 		LED_B_ON();
-		cmd_send(CMD_ACK, 1, pckSize, pckNum, trace + traceLen - pckLen, pckSize);
+		cmd_send(CMD_ACK, 1, traceLen, pckSize, trace + traceLen - pckLen, pckSize);
 		LED_B_OFF();
 
 		pckLen -= pckSize;

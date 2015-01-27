@@ -1426,7 +1426,7 @@ int CmdHexsamples(const char *Cmd)
   int offset = 0;
   char string_buf[25];
   char* string_ptr = string_buf;
-  uint8_t got[40000];
+  uint8_t got[BIGBUF_SIZE];
 
   sscanf(Cmd, "%i %i", &requested, &offset);
 
@@ -1435,7 +1435,7 @@ int CmdHexsamples(const char *Cmd)
     requested = 8;
   }
   if (offset + requested > sizeof(got)) {
-    PrintAndLog("Tried to read past end of buffer, <bytes> + <offset> > 40000");
+    PrintAndLog("Tried to read past end of buffer, <bytes> + <offset> > %d", BIGBUF_SIZE);
     return 0;
 	}
 
@@ -1485,7 +1485,7 @@ int CmdHpf(const char *Cmd)
 
 int CmdSamples(const char *Cmd)
 {
-	uint8_t got[40000] = {0x00};
+	uint8_t got[BIGBUF_SIZE] = {0x00};
 
 	int n = strtol(Cmd, NULL, 0);
 	if (n == 0)
@@ -1495,14 +1495,14 @@ int CmdSamples(const char *Cmd)
 		n = sizeof(got);
 
 	PrintAndLog("Reading %d samples from device memory\n", n);
-  GetFromBigBuf(got,n,0);
-  WaitForResponse(CMD_ACK,NULL);
+	GetFromBigBuf(got,n,0);
+	WaitForResponse(CMD_ACK,NULL);
 	for (int j = 0; j < n; j++) {
 		GraphBuffer[j] = ((int)got[j]) - 128;
-  }
-  GraphTraceLen = n;
-  RepaintGraphWindow();
-  return 0;
+	}
+	GraphTraceLen = n;
+	RepaintGraphWindow();
+	return 0;
 }
 
 int CmdTuneSamples(const char *Cmd)
