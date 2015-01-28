@@ -706,6 +706,8 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
             }
             if (findone){
                 if (ledcontrol)	LED_A_OFF();
+                *high = hi;
+                *low = lo;
                 return;
             }
             // reset
@@ -753,6 +755,8 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
             }
             if (findone){
                 if (ledcontrol)	LED_A_OFF();
+                *high=lo>>32;
+                *low=lo & 0xFFFFFFFF;
                 return;
             }
         } else{
@@ -819,6 +823,8 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
             if (findone){
                 if (ledcontrol)	LED_A_OFF();
                 //LED_A_OFF();
+                *high=code;
+                *low=code2;
                 return;
             }
             code=code2=0;
