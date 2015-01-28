@@ -633,8 +633,8 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
     uint8_t *dest = BigBuf_get_addr();
-
-    size_t size = BigBuf_max_traceLen(); 
+    const size_t sizeOfBigBuff = BigBuf_max_traceLen();
+    size_t size = 0; 
     uint32_t hi2=0, hi=0, lo=0;
     int idx=0;
     // Configure to go in 125Khz listen mode
@@ -647,6 +647,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
         DoAcquisition125k_internal(-1,true);
         // FSK demodulator
+        size = sizeOfBigBuff;  //variable size will change after demod so re initialize it before use
 		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo);
         
 		if (idx>0 && lo>0){
