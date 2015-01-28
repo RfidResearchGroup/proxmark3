@@ -356,24 +356,91 @@ int CmdIndalaClone(const char *Cmd)
   return 0;
 }
 
+int CmdLFReadUsage()
+{
+	PrintAndLog("Usage: lf read [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
+	PrintAndLog("Options:        ");
+	PrintAndLog("       h            This help");
+	PrintAndLog("       H            High frequency (134 KHz). Defaults to 125 KHz");
+	PrintAndLog("       <divisor>    Manually set divisor. 88-> 134KHz, 95-> 125 Hz");
+	PrintAndLog("       b <bps>      Sets resolution of bits per sample. Default (max): 8");
+	PrintAndLog("       d <decim>    Sets decimation. A value of N saves only 1 in N samples. Default: 1");
+	PrintAndLog("       a [0|1]      Averaging - if set, will average the stored sample value when decimating. Default: 1");
+	PrintAndLog("Examples:");
+	PrintAndLog("      lf read");
+	PrintAndLog("                    Samples at 125KHz, 8bps.");
+	PrintAndLog("      lf read h b 4 d 3");
+	PrintAndLog("                    Samples at 134KHz, averages three samples into one, stored with ");
+	PrintAndLog("                    a resolution of 4 bits per sample.");
+	return 0;
+}
 int CmdLFRead(const char *Cmd)
 {
-  UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K};
+	uint8_t divisor =  95;//Frequency divisor
+	uint8_t bps = 8; // Bits per sample
+	uint8_t decimation = 1; //How many to keep
+	bool averaging = 1; // Should we use averaging when discarding samples?
+	bool errors = FALSE;
 
-  // 'h' means higher-low-frequency, 134 kHz
-  if(*Cmd == 'h') {
-    c.arg[0] = 1;
-  } else if (*Cmd == '\0') {
-    c.arg[0] = 0;
-  } else if (sscanf(Cmd, "%"lli, &c.arg[0]) != 1) {
-		PrintAndLog("Samples 1: 'lf read'");
-		PrintAndLog("        2: 'lf read h'");
-		PrintAndLog("        3: 'lf read <divisor>'");
-    return 0;
-  }
-  SendCommand(&c);
-  WaitForResponse(CMD_ACK,NULL);
-  return 0;
+	uint8_t cmdp =0;
+	if(param_getchar(Cmd, cmdp) == 'h')
+	{
+		return CmdLFReadUsage();
+	}
+
+	// Divisor
+	if(param_getchar(Cmd, cmdp) == 'H') {
+		divisor = 88;
+		cmdp++;
+	}else if(param_isdec(Cmd,cmdp) )
+	{
+		errors |= param_getdec(Cmd,cmdp, &divisor);
+	}
+	//BPS
+	if(param_getchar(Cmd, cmdp) == 'b') {
+		errors |= param_getdec(Cmd,cmdp+1,&bps);
+		cmdp+=2;
+	}
+	//Decimation
+	if(param_getchar(Cmd, cmdp) == 'd')
+	{
+		errors |= param_getdec(Cmd,cmdp+1,&decimation);
+		cmdp+=2;
+	}
+	//Averaging
+	if(param_getchar(Cmd, cmdp) == 'a')
+	{
+		averaging = param_getchar(Cmd,cmdp+1) == '1';
+		cmdp+=2;
+	}
+	//Validations
+	if(errors)
+	{
+		return CmdLFReadUsage();
+	}
+
+	//Bps is limited to 8, so fits in lower half of arg1
+	if(bps > 8) bps = 8;
+
+	//Feedback
+	PrintAndLog("Sampling config: ");
+	PrintAndLog("   divisor:    %d ", divisor);
+	PrintAndLog("   bps:        %d ", bps);
+	PrintAndLog("   decimation: %d ", decimation);
+	PrintAndLog("   averaging:  %d ", averaging);
+	PrintAndLog("OBS, this is sticky on the device and affects all LF listening operations");
+	PrintAndLog("To reset, issue 'lf read'");
+
+	//And ship it to device
+	//Averaging is a flag on high-bit of arg[1]
+	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K};
+	c.arg[0] = divisor;
+	c.arg[1] = bps | (averaging << 7) ;
+	c.arg[2] = decimation;
+
+	SendCommand(&c);
+	WaitForResponse(CMD_ACK,NULL);
+	return 0;
 }
 
 static void ChkBitstream(const char *str)

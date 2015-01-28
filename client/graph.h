@@ -20,7 +20,8 @@ int GetClock(const char *str, int peak, int verbose);
 int GetNRZpskClock(const char *str, int peak, int verbose);
 void setGraphBuf(uint8_t *buff, size_t size);
 
-#define MAX_GRAPH_TRACE_LEN (1024*128)
+// Max graph trace len: 40000 (bigbuf) * 8 (at 1 bit per sample)
+#define MAX_GRAPH_TRACE_LEN (40000 * 8 )
 extern int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 extern int GraphTraceLen;
 

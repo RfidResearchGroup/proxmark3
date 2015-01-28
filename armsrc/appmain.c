@@ -630,7 +630,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 	switch(c->cmd) {
 #ifdef WITH_LF
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K:
-			AcquireRawAdcSamples125k(c->arg[0]);
+			AcquireRawAdcSamples125k(c->arg[0], c->arg[1], c->arg[2]);
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
@@ -910,7 +910,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 				cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,0,((byte_t*)BigBuf)+c->arg[0]+i,len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
-			cmd_send(CMD_ACK,0,0,0,0,0);
+			cmd_send(CMD_ACK,bits_per_sample,decimation,0,0,0);
 			LED_B_OFF();
 			break;
 

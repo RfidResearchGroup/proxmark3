@@ -16,46 +16,57 @@
 #include "string.h"
 #include "lfdemod.h"
 
+uint8_t decimation  = 1;
+uint8_t bits_per_sample = 8;
+bool averaging = 1;
+
+
 typedef struct {
 	uint8_t * buffer;
 	uint32_t numbits;
-	uint8_t position;
+	uint32_t position;
 } BitstreamOut;
 /**
  * @brief Pushes bit onto the stream
  * @param stream
  * @param bit
  */
-void pushBit( BitstreamOut* stream, bool bit)
+void pushBit( BitstreamOut* stream, uint8_t bit)
 {
 	int bytepos = stream->position >> 3; // divide by 8
 	int bitpos = stream->position & 7;
-	*(stream->buffer+bytepos) |= (bit & 1) <<  (7 - bitpos);
+	*(stream->buffer+bytepos) |= (bit > 0) <<  (7 - bitpos);
 	stream->position++;
 	stream->numbits++;
 }
+
 /**
- * @brief Does LF sample acquisition, this method implements decimation and quantization in order to
+ * Does the sample acquisition. If threshold is specified, the actual sampling
+ * is not commenced until the threshold has been reached.
+ * This method implements decimation and quantization in order to
  * be able to provide longer sample traces.
- * @param decimation - how much should the signal be decimated. A decimation of 1 means every sample, 2 means
- * every other sample, etc.
- * @param bits_per_sample - bits per sample. Max 8, min 1 bit per sample.
+ * Uses the following global settings:
+ * - decimation - how much should the signal be decimated. A decimation of N means we keep 1 in N samples, etc.
+ * - bits_per_sample - bits per sample. Max 8, min 1 bit per sample.
+ * - averaging If set to true, decimation will use averaging, so that if e.g. decimation is 3, the sample
+ * value that will be used is the average value of the three samples.
+ *
  * @param trigger_threshold - a threshold. The sampling won't commence until this threshold has been reached. Set
  * to -1 to ignore threshold.
- * @param averaging If set to true, decimation will use averaging, so that if e.g. decimation is 3, the sample
- * value that will be used is the average value of the three samples.
+ * @param silent - is true, now outputs are made. If false, dbprints the status
  * @return the number of bits occupied by the samples.
  */
-uint8_t DoAcquisition(int decimation, int bits_per_sample, int trigger_threshold, bool averaging)
+uint32_t DoAcquisition125k_internal(int trigger_threshold,bool silent)
 {
-	//A decimation of 2 means we keep every 2nd sample
-	//A decimation of 3 means we keep 1 in 3 samples.
-	//A quantization of 1 means one bit is discarded from the sample (division by 2).
+	//.
 	uint8_t *dest = (uint8_t *)BigBuf;
 	int bufsize = BIGBUF_SIZE;
 	memset(dest, 0, bufsize);
+
 	if(bits_per_sample < 1) bits_per_sample = 1;
 	if(bits_per_sample > 8) bits_per_sample = 8;
+
+	if(decimation < 1) decimation = 1;
 
 	// Use a bit stream to handle the output
 	BitstreamOut data = { dest , 0, 0};
@@ -66,7 +77,7 @@ uint8_t DoAcquisition(int decimation, int bits_per_sample, int trigger_threshold
 	uint32_t sample_total_numbers =0 ;
 	uint32_t sample_total_saved =0 ;
 
-	for(;;) {
+	while(!BUTTON_PRESS()) {
 		WDT_HIT();
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
@@ -74,75 +85,58 @@ uint8_t DoAcquisition(int decimation, int bits_per_sample, int trigger_threshold
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+			LED_D_OFF();
 			if (trigger_threshold != -1 && sample < trigger_threshold)
 				continue;
+
+			trigger_threshold = -1;
 			sample_total_numbers++;
 
-			LED_D_OFF();
-			trigger_threshold = -1;
-			sample_counter++;
-			sample_sum += sample;
+			if(averaging)
+			{
+				sample_sum += sample;
+			}
 			//Check decimation
-			if(sample_counter < decimation) continue;
+			if(decimation > 1)
+			{
+				sample_counter++;
+				if(sample_counter < decimation) continue;
+				sample_counter = 0;
+			}
 			//Averaging
-			if(averaging) sample = sample_sum / decimation;
-
-			sample_counter = 0;
-			sample_sum =0;
+			if(averaging && decimation > 1) {
+				sample = sample_sum / decimation;
+				sample_sum =0;
+			}
+			//Store the sample
 			sample_total_saved ++;
-			pushBit(&data, sample & 0x80);
-			if(bits_per_sample > 1)	pushBit(&data, sample & 0x40);
-			if(bits_per_sample > 2)	pushBit(&data, sample & 0x20);
-			if(bits_per_sample > 3)	pushBit(&data, sample & 0x10);
-			if(bits_per_sample > 4)	pushBit(&data, sample & 0x08);
-			if(bits_per_sample > 5)	pushBit(&data, sample & 0x04);
-			if(bits_per_sample > 6)	pushBit(&data, sample & 0x02);
-			if(bits_per_sample > 7)	pushBit(&data, sample & 0x01);
-
-			if((data.numbits >> 3) +1  >= bufsize) break;
+			if(bits_per_sample == 8){
+				dest[sample_total_saved-1] = sample;
+				data.numbits = sample_total_saved << 3;//Get the return value correct
+				if(sample_total_saved >= bufsize) break;
+			}
+			else{
+				pushBit(&data, sample & 0x80);
+				if(bits_per_sample > 1)	pushBit(&data, sample & 0x40);
+				if(bits_per_sample > 2)	pushBit(&data, sample & 0x20);
+				if(bits_per_sample > 3)	pushBit(&data, sample & 0x10);
+				if(bits_per_sample > 4)	pushBit(&data, sample & 0x08);
+				if(bits_per_sample > 5)	pushBit(&data, sample & 0x04);
+				if(bits_per_sample > 6)	pushBit(&data, sample & 0x02);
+				//Not needed, 8bps is covered above
+				//if(bits_per_sample > 7)	pushBit(&data, sample & 0x01);
+				if((data.numbits >> 3) +1  >= bufsize) break;
+			}
 		}
 	}
-	Dbprintf("Done, saved %l out of %l seen samples.",sample_total_saved, sample_total_numbers);
 
+	if(!silent)
+	{
+		Dbprintf("Done, saved %d out of %d seen samples at %d bits/sample",sample_total_saved, sample_total_numbers,bits_per_sample);
+		Dbprintf("buffer samples: %02x %02x %02x %02x %02x %02x %02x %02x ...",
+					dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
+	}
 	return data.numbits;
-}
-
-
-/**
-* Does the sample acquisition. If threshold is specified, the actual sampling
-* is not commenced until the threshold has been reached.
-* @param trigger_threshold - the threshold
-* @param silent - is true, now outputs are made. If false, dbprints the status
-*/
-void DoAcquisition125k_internal(int trigger_threshold,bool silent)
-{
-    uint8_t *dest = (uint8_t *)BigBuf;
-    int n = sizeof(BigBuf);
-    int i;
-
-    memset(dest, 0, n);
-    i = 0;
-    for(;;) {
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-            AT91C_BASE_SSC->SSC_THR = 0x43;
-            LED_D_ON();
-        }
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-            dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-            LED_D_OFF();
-            if (trigger_threshold != -1 && dest[i] < trigger_threshold)
-                continue;
-            else
-                trigger_threshold = -1;
-            if (++i >= n) break;
-        }
-    }
-    if(!silent)
-    {
-        Dbprintf("buffer samples: %02x %02x %02x %02x %02x %02x %02x %02x ...",
-                 dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
-
-    }
 }
 /**
 * Perform sample aquisition.
@@ -181,11 +175,27 @@ void LFSetupFPGAForADC(int divisor, bool lf_field)
 /**
 * Initializes the FPGA, and acquires the samples.
 **/
-void AcquireRawAdcSamples125k(int divisor)
+void AcquireRawAdcSamples125k(int divisor,int arg1, int arg2)
 {
-    LFSetupFPGAForADC(divisor, true);
-    // Now call the acquisition routine
-    DoAcquisition125k_internal(-1,false);
+	if (arg1 != 0)
+	{
+		averaging = (arg1 & 0x80) != 0;
+		bits_per_sample = (arg1 & 0x0F);
+	}
+	if(arg2 != 0)
+	{
+		decimation = arg2;
+	}
+
+	Dbprintf("Sampling config: ");
+	Dbprintf("   divisor:    %d ", divisor);
+	Dbprintf("   bps:        %d ", bits_per_sample);
+	Dbprintf("   decimation: %d ", decimation);
+	Dbprintf("   averaging:  %d ", averaging);
+
+	LFSetupFPGAForADC(divisor, true);
+	// Now call the acquisition routine
+	DoAcquisition125k_internal(-1,false);
 }
 /**
 * Initializes the FPGA for snoop-mode, and acquires the samples.
@@ -1479,7 +1489,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
     int lmin=128, lmax=128;
     uint8_t dir;
 
-    AcquireRawAdcSamples125k(0);
+	AcquireRawAdcSamples125k(0,0,0);
 
     lmin = 64;
     lmax = 192;

@@ -227,6 +227,34 @@ uint8_t param_get8(const char *line, int paramnum)
 	return param_get8ex(line, paramnum, 10, 0);
 }
 
+/**
+ * @brief Reads a decimal integer
+ * @param line
+ * @param paramnum
+ * @return
+ */
+uint8_t param_getdec(const char *line, int paramnum, uint8_t *destination)
+{
+	uint8_t val = param_get8ex(line, paramnum, 10, 10);
+	(*destination) = val;
+	return 0;
+}
+/**
+ * @brief Checks if param is decimal
+ * @param line
+ * @param paramnum
+ * @return
+ */
+uint8_t param_isdec(const char *line, int paramnum)
+{
+	int bg, en;
+	//TODO, check more thorougly
+	if (!param_getptr(line, &bg, &en, paramnum)) return 1;
+		//		return strtoul(&line[bg], NULL, 10) & 0xff;
+
+	return 0;
+}
+
 uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base)
 {
 	int bg, en;

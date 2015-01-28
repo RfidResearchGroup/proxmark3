@@ -1051,6 +1051,29 @@ int CmdHpf(const char *Cmd)
   RepaintGraphWindow();
   return 0;
 }
+typedef struct {
+	uint8_t * buffer;
+	uint32_t numbits;
+	uint32_t position;
+}BitstreamOut;
+
+bool _headBit( BitstreamOut *stream)
+{
+	int bytepos = stream->position >> 3; // divide by 8
+	int bitpos = (stream->position++) & 7; // mask out 00000111
+	return (*(stream->buffer + bytepos) >> (7-bitpos)) & 1;
+}
+
+uint8_t getByte(uint8_t bits_per_sample, BitstreamOut* b)
+{
+	int i;
+	uint8_t val = 0;
+	for(i =0 ; i < bits_per_sample; i++)
+	{
+		val |= (_headBit(b) << (7-i));
+	}
+	return val;
+}
 
 int CmdSamples(const char *Cmd)
 {
@@ -1063,15 +1086,35 @@ int CmdSamples(const char *Cmd)
 	if (n > sizeof(got))
 		n = sizeof(got);
 
-	PrintAndLog("Reading %d samples from device memory\n", n);
-  GetFromBigBuf(got,n,0);
-  WaitForResponse(CMD_ACK,NULL);
-	for (int j = 0; j < n; j++) {
-		GraphBuffer[j] = ((int)got[j]) - 128;
-  }
-  GraphTraceLen = n;
-  RepaintGraphWindow();
-  return 0;
+	PrintAndLog("Reading %d bytes from device memory\n", n);
+	GetFromBigBuf(got,n,0);
+	PrintAndLog("Data fetched");
+	UsbCommand response;
+	WaitForResponse(CMD_ACK, &response);
+	uint8_t bits_per_sample = response.arg[0];
+	PrintAndLog("Samples packed at %d bits per sample", bits_per_sample);
+	if(bits_per_sample < 8)
+	{
+		PrintAndLog("Unpacking...");
+		BitstreamOut bout = { got, bits_per_sample * n,  0};
+		int j =0;
+		for (j = 0; j * bits_per_sample < n * 8 && j < GraphTraceLen; j++) {
+			uint8_t sample = getByte(bits_per_sample, &bout);
+			GraphBuffer[j] = ((int) sample )- 128;
+		}
+		GraphTraceLen = j;
+		PrintAndLog("Unpacked %d samples" , j );
+	}else
+	{
+		for (int j = 0; j < n; j++) {
+			GraphBuffer[j] = ((int)got[j]) - 128;
+		}
+		GraphTraceLen = n;
+
+	}
+
+	RepaintGraphWindow();
+	return 0;
 }
 
 int CmdTuneSamples(const char *Cmd)
