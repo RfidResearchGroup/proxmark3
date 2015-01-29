@@ -554,12 +554,13 @@ int CmdHFList(const char *Cmd)
 
 	if (errors) {
 		PrintAndLog("List protocol data in trace buffer.");
-		PrintAndLog("Usage:  hf list [14a|14b|iclass] [f]");
+		PrintAndLog("Usage:  hf list <protocol> [f]");
+		PrintAndLog("    f      - show frame delay times as well");
+		PrintAndLog("Supported <protocol> values:");
+		PrintAndLog("    raw    - just show raw data without annotations");
 		PrintAndLog("    14a    - interpret data as iso14443a communications");
 		PrintAndLog("    14b    - interpret data as iso14443b communications");
 		PrintAndLog("    iclass - interpret data as iclass communications");
-		PrintAndLog("    raw    - just show raw data");
-		PrintAndLog("    f      - show frame delay times as well");
 		PrintAndLog("");
 		PrintAndLog("example: hf list 14a f");
 		PrintAndLog("example: hf list iclass");
