@@ -30,6 +30,12 @@ static int CmdHelp(const char *Cmd);
 //by marshmellow
 void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx)
 {
+	if (buff == NULL) 
+		return;
+	
+	if ( size >= MAX_DEMOD_BUF_LEN)
+		size = MAX_DEMOD_BUF_LEN;
+	
 	size_t i = 0;
 	for (; i < size; i++){
 		DemodBuffer[i]=buff[startIdx++];
@@ -56,6 +62,11 @@ void printDemodBuff()
 		return;
 	}
 	if (bitLen>512) bitLen=512; //max output to 512 bits if we have more - should be plenty
+		
+	// equally divided by 16
+	if ( bitLen % 16 > 0)
+		bitLen = (bitlen/16);
+	
 	for (i = 0; i <= (bitLen-16); i+=16) {
 		PrintAndLog("%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i",
 			DemodBuffer[i],
