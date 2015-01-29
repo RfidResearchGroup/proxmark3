@@ -65,7 +65,7 @@ void printDemodBuff()
 		
 	// equally divided by 16
 	if ( bitLen % 16 > 0)
-		bitLen = (bitlen/16);
+		bitLen = (bitLen/16);
 	
 	for (i = 0; i <= (bitLen-16); i+=16) {
 		PrintAndLog("%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i",
