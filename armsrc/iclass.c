@@ -1085,8 +1085,8 @@ int doIClassSimulation(uint8_t csn[], int breakAfterMacReceived, uint8_t *reader
 	int resp3Len;
 
 	// e-Purse
-	// 144: Takes 16 bytes for SOF/EOF and 8 * 16 = 128 bytes (2 bytes/bit)
-	uint8_t *resp4 = BigBuf_malloc(150);
+	// 18: Takes 2 bytes for SOF/EOF and 8 * 2 = 16 bytes (2 bytes/bit)
+	uint8_t *resp4 = BigBuf_malloc(20);
 	int resp4Len;
 
 	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
