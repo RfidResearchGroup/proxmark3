@@ -39,12 +39,12 @@ int CmdHIDDemod(const char *Cmd)
 
 int CmdHIDDemodFSK(const char *Cmd)
 {
-	int findone = 0;
+  int findone=0;
 	if(Cmd[0]=='1') findone=1;
-	UsbCommand c = {CMD_HID_DEMOD_FSK};
-	c.arg[0]=findone;
-	SendCommand(&c);
-	return 0;
+  UsbCommand c={CMD_HID_DEMOD_FSK};
+  c.arg[0]=findone;
+  SendCommand(&c);
+  return 0;
 }
 
 int CmdHIDSim(const char *Cmd)

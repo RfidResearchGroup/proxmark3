@@ -16,7 +16,7 @@
 #include "flash.h"
 #include "elf.h"
 #include "proxendian.h"
-#include "../include/usb_cmd.h"
+#include "usb_cmd.h"
 
 void SendCommand(UsbCommand* txcmd);
 void ReceiveCommand(UsbCommand* rxcmd);
@@ -275,7 +275,7 @@ static int get_proxmark_state(uint32_t *state)
 {
 	UsbCommand c;
 	c.cmd = CMD_DEVICE_INFO;
-	SendCommand(&c);
+  SendCommand(&c);
 	UsbCommand resp;
 	ReceiveCommand(&resp);
 
@@ -404,11 +404,11 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length)
 
 	memset(block_buf, 0xFF, BLOCK_SIZE);
 	memcpy(block_buf, data, length);
-	UsbCommand c;
+  UsbCommand c;
 	c.cmd = CMD_FINISH_WRITE;
 	c.arg[0] = address;
 	memcpy(c.d.asBytes, block_buf, length);
-	SendCommand(&c);
+  SendCommand(&c);
   return wait_for_ack();
 }
 
@@ -469,7 +469,7 @@ void flash_free(flash_file_t *ctx)
 // just reset the unit
 int flash_stop_flashing(void) {
 	UsbCommand c = {CMD_HARDWARE_RESET};
-	SendCommand(&c);
-	msleep(100);
-	return 0;
+  SendCommand(&c);
+  msleep(100);
+  return 0;
 }

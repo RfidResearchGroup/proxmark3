@@ -1,4 +1,4 @@
- //-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -13,17 +13,12 @@
 #include <inttypes.h>
 #include "proxmark3.h"
 #include "ui.h"
+#include "util.h"
 #include "graph.h"
-#include "cmdmain.h"
 #include "cmdparser.h"
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "cmdlfem4x.h"
-#include "util.h"
-#include "data.h"
-#define LF_TRACE_BUFF_SIZE 12000
-#define LF_BITSSTREAM_LEN 1000
-
 char *global_em410xId;
 
 static int CmdHelp(const char *Cmd);
@@ -32,10 +27,10 @@ int CmdEMdemodASK(const char *Cmd)
 {
 	char cmdp = param_getchar(Cmd, 0);
 	int findone = (cmdp == '1') ? 1 : 0;	
-	UsbCommand c = { CMD_EM410X_DEMOD };
-	c.arg[0] = findone;
-	SendCommand(&c);
-	return 0;
+  UsbCommand c={CMD_EM410X_DEMOD};
+  c.arg[0]=findone;
+  SendCommand(&c);
+  return 0;
 }
 
 /* Read the ID of an EM410x tag.
@@ -56,15 +51,19 @@ int CmdEM410xRead(const char *Cmd)
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN];
   high = low = 0;
 
-  // get clock 
-  clock = GetClock(Cmd, 0);
-  
-  // Detect high and lows and clock 
-  DetectHighLowInGraph( &high, &low, TRUE);
+  /* Detect high and lows and clock */
+  for (i = 0; i < GraphTraceLen; i++)
+  {
+    if (GraphBuffer[i] > high)
+      high = GraphBuffer[i];
+    else if (GraphBuffer[i] < low)
+      low = GraphBuffer[i];
+  }
 
-  PrintAndLog("NUMNUM");
-  
-  // parity for our 4 columns
+  /* get clock */
+  clock = GetClock(Cmd, high, 0);
+
+  /* parity for our 4 columns */
   parity[0] = parity[1] = parity[2] = parity[3] = 0;
   header = rows = 0;
 
@@ -101,10 +100,10 @@ int CmdEM410xRead(const char *Cmd)
 
     BitStream[bit2idx++] = bit;
   }
-  
+
 retest:
   /* We go till 5 before the graph ends because we'll get that far below */
-  for (i = 0; i < bit2idx - 5; i++)
+  for (i = 1; i < bit2idx - 5; i++)
   {
     /* Step 2: We have our header but need our tag ID */
     if (header == 9 && rows < 10)
@@ -133,7 +132,7 @@ retest:
         PrintAndLog("Thought we had a valid tag but failed at word %d (i=%d)", rows + 1, i);
 
         /* Start back rows * 5 + 9 header bits, -1 to not start at same place */
-        i -= 9 + (5 * rows) -5;
+        i -= 9 + (5 * rows) - 5;
 
         rows = header = 0;
       }
@@ -183,12 +182,12 @@ retest:
   /* if we've already retested after flipping bits, return */
 	if (retested++){
 		PrintAndLog("Failed to decode");
-		return 0;
+    return 0;
 	}
 
   /* if this didn't work, try flipping bits */
-	for (i = 0; i < bit2idx; i++)
-		BitStream[i] ^= 1;
+  for (i = 0; i < bit2idx; i++)
+    BitStream[i] ^= 1;
 
   goto retest;
 }
@@ -202,7 +201,7 @@ retest:
  *   0                     <-- stop bit, end of tag
  */
 int CmdEM410xSim(const char *Cmd)
-{	
+{
 	int i, n, j, binary[4], parity[4];
 
 	char cmdp = param_getchar(Cmd, 0);
@@ -222,13 +221,13 @@ int CmdEM410xSim(const char *Cmd)
 	
 	PrintAndLog("Starting simulating UID %02X%02X%02X%02X%02X", uid[0],uid[1],uid[2],uid[3],uid[4]);
 	PrintAndLog("Press pm3-button to about simulation");
-  
+
   /* clock is 64 in EM410x tags */
   int clock = 64;
 
   /* clear our graph */
   ClearGraph(0);
-  
+
     /* write 9 start bits */
     for (i = 0; i < 9; i++)
       AppendGraph(0, clock, 1);
@@ -264,7 +263,7 @@ int CmdEM410xSim(const char *Cmd)
     AppendGraph(0, clock, parity[2]);
     AppendGraph(0, clock, parity[3]);
 
-  /* stop bit */
+    /* stop bit */
   AppendGraph(1, clock, 0);
  
   CmdLFSim("240"); //240 start_gap.
@@ -292,7 +291,7 @@ int CmdEM410xWatch(const char *Cmd)
 		}
 		
 		CmdLFRead(read_h ? "h" : "");
-		CmdSamples("6000");
+		CmdSamples("6000");		
 	} while (
 		!CmdEM410xRead("") 
 	);
@@ -522,79 +521,47 @@ int CmdEM410xWrite(const char *Cmd)
 int CmdReadWord(const char *Cmd)
 {
 	int Word = -1; //default to invalid word
-	UsbCommand c;
+  UsbCommand c;
   
-	sscanf(Cmd, "%d", &Word);
+  sscanf(Cmd, "%d", &Word);
   
 	if ( (Word > 15) | (Word < 0) ) {
-		PrintAndLog("Word must be between 0 and 15");
-		return 1;
-	}
+    PrintAndLog("Word must be between 0 and 15");
+    return 1;
+  }
   
-	PrintAndLog("Reading word %d", Word);
+  PrintAndLog("Reading word %d", Word);
   
-	c.cmd = CMD_EM4X_READ_WORD;
-	c.d.asBytes[0] = 0x0; //Normal mode
-	c.arg[0] = 0;
-	c.arg[1] = Word;
-	c.arg[2] = 0;
-	SendCommand(&c);
-	WaitForResponse(CMD_ACK, NULL);
-
-	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
-
-	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,0);  //3560 -- should be offset..
-	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
-
-	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
-		GraphBuffer[j] = ((int)data[j]);
-	}
-	GraphTraceLen = LF_TRACE_BUFF_SIZE;
-	
-	uint8_t bits[LF_BITSSTREAM_LEN] = {0x00};
-	uint8_t * bitstream = bits;
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream,LF_BITSSTREAM_LEN);
-	RepaintGraphWindow();
+  c.cmd = CMD_EM4X_READ_WORD;
+  c.d.asBytes[0] = 0x0; //Normal mode
+  c.arg[0] = 0;
+  c.arg[1] = Word;
+  c.arg[2] = 0;
+  SendCommand(&c);
   return 0;
 }
 
 int CmdReadWordPWD(const char *Cmd)
 {
 	int Word = -1; //default to invalid word
-	int Password = 0xFFFFFFFF; //default to blank password
-	UsbCommand c;
-
-	sscanf(Cmd, "%d %x", &Word, &Password);
-
-	if ( (Word > 15) | (Word < 0) ) {
-		PrintAndLog("Word must be between 0 and 15");
-		return 1;
-	}
+  int Password = 0xFFFFFFFF; //default to blank password
+  UsbCommand c;
   
-	PrintAndLog("Reading word %d with password %08X", Word, Password);
-
-	c.cmd = CMD_EM4X_READ_WORD;
-	c.d.asBytes[0] = 0x1; //Password mode
-	c.arg[0] = 0;
-	c.arg[1] = Word;
-	c.arg[2] = Password;
-	SendCommand(&c);
-	WaitForResponse(CMD_ACK, NULL);
-		
-	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
-
-	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,0);  //3560 -- should be offset..
-	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
-
-	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
-		GraphBuffer[j] = ((int)data[j]);
-	}
-	GraphTraceLen = LF_TRACE_BUFF_SIZE;
-	
-	uint8_t bits[LF_BITSSTREAM_LEN] = {0x00};
-	uint8_t * bitstream = bits;	
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream, LF_BITSSTREAM_LEN);
-	RepaintGraphWindow();
+  sscanf(Cmd, "%d %x", &Word, &Password);
+  
+	if ( (Word > 15) | (Word < 0) ) {
+    PrintAndLog("Word must be between 0 and 15");
+    return 1;
+  }
+  
+  PrintAndLog("Reading word %d with password %08X", Word, Password);
+  
+  c.cmd = CMD_EM4X_READ_WORD;
+  c.d.asBytes[0] = 0x1; //Password mode
+  c.arg[0] = 0;
+  c.arg[1] = Word;
+  c.arg[2] = Password;
+  SendCommand(&c);
   return 0;
 }
 
@@ -650,279 +617,19 @@ int CmdWriteWordPWD(const char *Cmd)
 static command_t CommandTable[] =
 {
   {"help", CmdHelp, 1, "This help"},
-  {"410xdemod", CmdEMdemodASK, 0, "[clock rate] -- Extract ID from EM410x tag"},    
-  {"410xread", CmdEM410xRead, 1, "[clock rate] -- Extract ID from EM410x tag"},
-  {"410xsim", CmdEM410xSim, 0, "<UID> -- Simulate EM410x tag"},
-  {"replay",  MWRem4xReplay, 0, "Watches for tag and simulates manchester encoded em4x tag"},
-  {"410xwatch", CmdEM410xWatch, 0, "['h'] -- Watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
-  {"410xspoof", CmdEM410xWatchnSpoof, 0, "['h'] --- Watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
-  {"410xwrite", CmdEM410xWrite, 1, "<UID> <'0' T5555> <'1' T55x7> [clock rate] -- Write EM410x UID to T5555(Q5) or T55x7 tag, optionally setting clock rate"},
-  {"4x50read", CmdEM4x50Read, 1, "Extract data from EM4x50 tag"},
-  {"rd", CmdReadWord, 1, "<Word 1-15> -- Read EM4xxx word data"},
-  {"rdpwd", CmdReadWordPWD, 1, "<Word 1-15> <Password> -- Read EM4xxx word data  in password mode "},
-  {"wr", CmdWriteWord, 1, "<Data> <Word 1-15> -- Write EM4xxx word data"},
-  {"wrpwd", CmdWriteWordPWD, 1, "<Data> <Word 1-15> <Password> -- Write EM4xxx word data in password mode"},
+  {"em410xdemod", CmdEMdemodASK, 0, "[findone] -- Extract ID from EM410x tag (option 0 for continuous loop, 1 for only 1 tag)"},  
+  {"em410xread", CmdEM410xRead, 1, "[clock rate] -- Extract ID from EM410x tag"},
+  {"em410xsim", CmdEM410xSim, 0, "<UID> -- Simulate EM410x tag"},
+  {"em410xwatch", CmdEM410xWatch, 0, "['h'] -- Watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
+  {"em410xspoof", CmdEM410xWatchnSpoof, 0, "['h'] --- Watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
+  {"em410xwrite", CmdEM410xWrite, 1, "<UID> <'0' T5555> <'1' T55x7> [clock rate] -- Write EM410x UID to T5555(Q5) or T55x7 tag, optionally setting clock rate"},
+  {"em4x50read", CmdEM4x50Read, 1, "Extract data from EM4x50 tag"},
+  {"readword", CmdReadWord, 1, "<Word> -- Read EM4xxx word data"},
+  {"readwordPWD", CmdReadWordPWD, 1, "<Word> <Password> -- Read EM4xxx word data in password mode"},
+  {"writeword", CmdWriteWord, 1, "<Data> <Word> -- Write EM4xxx word data"},
+  {"writewordPWD", CmdWriteWordPWD, 1, "<Data> <Word> <Password> -- Write EM4xxx word data in password mode"},
   {NULL, NULL, 0, NULL}
 };
-
-
-//Confirms the parity of a bitstream as well as obtaining the data (TagID) from within the appropriate memory space.
-//Arguments:
-// Pointer to a string containing the desired bitsream
-// Pointer to a string that will receive the decoded tag ID
-// Length of the bitsream pointed at in the first argument, char* _strBitStream
-//Retuns:
-//1 Parity confirmed
-//0 Parity not confirmed
-int ConfirmEm410xTagParity( char* _strBitStream, char* pID, int LengthOfBitstream )
-{
-	int i = 0;
-	int rows = 0;
-	int Parity[4] = {0x00};
-	char ID[11] = {0x00};
-	int k = 0;
-	int BitStream[70] = {0x00};
-	int counter = 0;
-	//prepare variables
-	for ( i = 0; i <= LengthOfBitstream; i++)
-	{
-		if (_strBitStream[i] == '1')
-		{
-			k =1;
-			memcpy(&BitStream[i], &k,4);
-		}
-		else if (_strBitStream[i] == '0')
-		{
-			k = 0;
-			memcpy(&BitStream[i], &k,4);
-		}
-	}
-	while ( counter < 2 )
-	{
-		//set/reset variables and counters
-		memset(ID,0x00,sizeof(ID));
-		memset(Parity,0x00,sizeof(Parity));
-		rows = 0;
-		for ( i = 9; i <= LengthOfBitstream; i++)
-		{
-			if ( rows < 10 )
-			{
-				if ((BitStream[i] ^ BitStream[i+1] ^ BitStream[i+2] ^ BitStream[i+3]) == BitStream[i+4])
-				{
-					sprintf(ID+rows, "%x", (8 * BitStream[i]) + (4 * BitStream[i+1]) + (2 * BitStream[i+2]) + (1 * BitStream[i+3]));
-					rows++;
-					/* Keep parity info and move four bits ahead*/
-					Parity[0] ^= BitStream[i];
-					Parity[1] ^= BitStream[i+1];
-					Parity[2] ^= BitStream[i+2];
-					Parity[3] ^= BitStream[i+3];
-					i += 4;
-				}
-			}
-			if ( rows == 10 )
-			{
-				if (	BitStream[i] == Parity[0] && BitStream[i+1] == Parity[1] &&
-					BitStream[i+2] == Parity[2] && BitStream[i+3] == Parity[3] &&
-					BitStream[i+4] == 0)
-				{
-					memcpy(pID,ID,strlen(ID));
-					return 1;
-				}
-			}
-		}
-		printf("[PARITY ->]Failed. Flipping Bits, and rechecking parity for bitstream:\n[PARITY ->]");  
-		for (k = 0; k < LengthOfBitstream; k++)
-		{
-			BitStream[k] ^= 1;
-			printf("%i", BitStream[k]);
-		}
-		puts(" ");
-		counter++;
-	}
-	return 0;
-}
-//Reads and demodulates an em410x RFID tag. It further allows slight modification to the decoded bitstream
-//Once a suitable bitstream has been identified, and if needed, modified, it is replayed. Allowing emulation of the
-//"stolen" rfid tag.
-//No meaningful returns or arguments.
-int MWRem4xReplay(const char* Cmd)
-{
-	// //header traces
-	// static char ArrayTraceZero[] = { '0','0','0','0','0','0','0','0','0' };
-	// static char ArrayTraceOne[] =  { '1','1','1','1','1','1','1','1','1' };
-	// //local string variables
-	// char strClockRate[10] = {0x00};
-	// char strAnswer[4] = {0x00};
-	// char strTempBufferMini[2] = {0x00}; 
-	// //our outbound bit-stream
-	// char strSimulateBitStream[65] = {0x00};
-	// //integers
-	// int iClockRate = 0;
-	// int needle = 0;
-	// int j = 0;
-	// int iFirstHeaderOffset = 0x00000000;
-	// int numManchesterDemodBits=0;
-	// //boolean values
-	// bool bInverted = false;
-	// //pointers to strings. memory will be allocated.
-	// char* pstrInvertBitStream = 0x00000000;
-	// char* pTempBuffer = 0x00000000;
-	// char* pID = 0x00000000;
-	// char* strBitStreamBuffer = 0x00000000;
-		
-
-	// puts("###################################");
-	// puts("#### Em4x Replay                 ##");
-	// puts("#### R.A.M.           June 2013  ##");
-	// puts("###################################");
-	// //initialize
-	// CmdLFRead("");
-	// //Collect ourselves 10,000 samples
-	// CmdSamples("10000");
-	// puts("[->]preforming ASK demodulation\n");
-	// //demodulate ask
-	// Cmdaskdemod("0");
-	// iClockRate = DetectClock(0);
-	// sprintf(strClockRate, "%i\n",iClockRate);
-	// printf("[->]Detected ClockRate: %s\n", strClockRate);
-	
-	// //If detected clock rate is something completely unreasonable, dont go ahead
-	// if ( iClockRate < 0xFFFE )
-	// {  
-	    // pTempBuffer = (char*)malloc(MAX_GRAPH_TRACE_LEN);
-	    // if (pTempBuffer == 0x00000000)
-	      // return 0;
-	    // memset(pTempBuffer,0x00,MAX_GRAPH_TRACE_LEN);
-	    // //Preform manchester de-modulation and display in a single line.
-	    // numManchesterDemodBits = CmdManchesterDemod( strClockRate ); 
-	    // //note: numManchesterDemodBits is set above in CmdManchesterDemod()
-	    // if ( numManchesterDemodBits == 0 )
-	      // return 0;
-	    // strBitStreamBuffer = malloc(numManchesterDemodBits+1);
-	    // if ( strBitStreamBuffer == 0x00000000 )
-		// return 0;
-	    // memset(strBitStreamBuffer, 0x00, (numManchesterDemodBits+1));
-	    // //fill strBitStreamBuffer with demodulated, string formatted bits.
-	    // for ( j = 0; j <= numManchesterDemodBits; j++ )
-	    // {
-		// sprintf(strTempBufferMini, "%i",BitStream[j]);
-		// strcat(strBitStreamBuffer,strTempBufferMini);
-	    // }
-	    // printf("[->]Demodulated Bitstream: \n%s\n", strBitStreamBuffer);
-	    // //Reset counter and select most probable bit stream
-	    // j = 0;
-		// while ( j < numManchesterDemodBits )
-		// {
-		    // memset(strSimulateBitStream,0x00,64);
-		    // //search for header of nine (9) 0's : 000000000 or nine (9) 1's : 1111 1111 1
-			// if ( ( strncmp(strBitStreamBuffer+j, ArrayTraceZero, sizeof(ArrayTraceZero)) == 0 ) ||
-			    // ( strncmp(strBitStreamBuffer+j, ArrayTraceOne, sizeof(ArrayTraceOne)) == 0  ) )
-			// {
-				// iFirstHeaderOffset = j;
-			    // memcpy(strSimulateBitStream, strBitStreamBuffer+j,64);
-			    // printf("[->]Offset of Header");
-				// if ( strncmp(strBitStreamBuffer+iFirstHeaderOffset, "0", 1) == 0 )
-					// printf("'%s'", ArrayTraceZero );
-				// else
-					// printf("'%s'", ArrayTraceOne );
-				// printf(": %i\nHighlighted string : %s\n",iFirstHeaderOffset,strSimulateBitStream);
-			    // //allow us to escape loop or choose another frame
-			    // puts("[<-]Are we happy with this sample? [Y]es/[N]o");
-			    // gets(strAnswer);
-			    // if ( ( strncmp(strAnswer,"y",1) == 0 )  || ( strncmp(strAnswer,"Y",1) == 0 ) )
-			    // {
-				    // j = numManchesterDemodBits+1;
-				    // break;
-			    // }
-			// }
-			// j++;
-		// }
-	// }
-	// else return 0;
-	
-	// //Do we want the buffer inverted?
-	// memset(strAnswer, 0x00, sizeof(strAnswer));
-	// printf("[<-]Do you wish to invert the highlighted bitstream? [Y]es/[N]o\n");
-	// gets(strAnswer);
-	// if ( ( strncmp("y", strAnswer,1) == 0 )  || ( strncmp("Y", strAnswer, 1 ) == 0 ) )
-	// {
-		// //allocate heap memory
-		// pstrInvertBitStream = (char*)malloc(numManchesterDemodBits);
-		// if ( pstrInvertBitStream != 0x00000000 )
-		// {
-			// memset(pstrInvertBitStream,0x00,numManchesterDemodBits);
-			// bInverted = true;
-			// //Invert Bitstream
-			// for ( needle = 0; needle <= numManchesterDemodBits; needle++ )
-			// {
-				// if (strSimulateBitStream[needle] == '0')
-					// strcat(pstrInvertBitStream,"1");
-				// else if (strSimulateBitStream[needle] == '1')
-					// strcat(pstrInvertBitStream,"0");
-			// }
-			// printf("[->]Inverted bitstream: %s\n", pstrInvertBitStream);
-		// }
-	// }    
-    // //Confirm parity of selected string
-	// pID = (char*)malloc(11);
-	// if (pID != 0x00000000)
-	// {
-		// memset(pID, 0x00, 11);
-		// if (ConfirmEm410xTagParity(strSimulateBitStream,pID, 64) == 1)
-		// {
-			// printf("[->]Parity confirmed for selected bitstream!\n");
-			// printf("[->]Tag ID was detected as: [hex]:%s\n",pID );
-		// }
-		// else
-			// printf("[->]Parity check failed for the selected bitstream!\n");	
-	// }
-	
-	// //Spoof
-	// memset(strAnswer, 0x00, sizeof(strAnswer));  
-	// printf("[<-]Do you wish to continue with the EM4x simulation? [Y]es/[N]o\n");
-	// gets(strAnswer);
-	// if ( ( strncmp(strAnswer,"y",1) == 0 )  || ( strncmp(strAnswer,"Y",1) == 0 ) )
-	// {
-		// strcat(pTempBuffer, strClockRate);
-		// strcat(pTempBuffer, " ");
-		// if (bInverted == true)
-			// strcat(pTempBuffer,pstrInvertBitStream);
-		// if (bInverted == false)
-			// strcat(pTempBuffer,strSimulateBitStream);
-		// //inform the user
-		// puts("[->]Starting simulation now: \n");
-		// //Simulate tag with prepared buffer.
-		// CmdLFSimManchester(pTempBuffer);
-	// }
-	// else if ( ( strcmp("n", strAnswer) == 0 )  || ( strcmp("N", strAnswer ) == 0 ) )
-		// printf("[->]Exiting procedure now...\n");
-	// else
-		// printf("[->]Erroneous selection\nExiting procedure now....\n");
-	
-	// //Clean up -- Exit function
-	// //clear memory, then release pointer.
-	// if ( pstrInvertBitStream != 0x00000000 )
-	// {
-	    // memset(pstrInvertBitStream,0x00,numManchesterDemodBits);
-	    // free(pstrInvertBitStream);
-	// }
-	// if ( pTempBuffer != 0x00000000 )
-	// {
-	    // memset(pTempBuffer,0x00,MAX_GRAPH_TRACE_LEN);
-	    // free(pTempBuffer);
-	// }
-	// if ( pID != 0x00000000 )
-	// {
-	    // memset(pID,0x00,11);
-	    // free(pID);
-	// }
-	// if ( strBitStreamBuffer != 0x00000000 )
-	// {
-	    // memset(strBitStreamBuffer,0x00,numManchesterDemodBits);
-	    // free(strBitStreamBuffer);
-	// }
-	return 0;
-}
 
 int CmdLFEM4X(const char *Cmd)
 {

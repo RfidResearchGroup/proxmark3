@@ -16,13 +16,13 @@ static int CmdHelp(const char *Cmd);
 
 int CmdIODemodFSK(const char *Cmd)
 {
-	int findone = 0;
-	if (Cmd[0] =='1') findone = 1;
+  int findone=0;
+  if(Cmd[0]=='1') findone=1;
 	
-	UsbCommand c={CMD_IO_DEMOD_FSK};
-	c.arg[0] = findone;
-	SendCommand(&c);
-	return 0;
+  UsbCommand c={CMD_IO_DEMOD_FSK};
+  c.arg[0]=findone;
+  SendCommand(&c);
+  return 0;
 }
 
 int CmdIOProxDemod(const char *Cmd){
@@ -66,10 +66,10 @@ int CmdIOClone(const char *Cmd)
 
 static command_t CommandTable[] = 
 {
-  {"help",      CmdHelp,         1, "This help"},
-  {"demod",	    CmdIOProxDemod,  1, "Demodulate Stream"},
-  {"fskdemod",  CmdIODemodFSK,   0, "['1'] Realtime IO FSK demodulator (option '1' for one tag only)"},
-  {"clone",	    CmdIOClone,      0, "Clone ioProx Tag"},
+  {"help",        CmdHelp,            1, "This help"},
+  {"demod",	  CmdIOProxDemod,     1, "Demodulate Stream"},
+  {"fskdemod",    CmdIODemodFSK,      0, "['1'] Realtime IO FSK demodulator (option '1' for one tag only)"},
+  {"clone",	  CmdIOClone,         0, "Clone ioProx Tag"},
   {NULL, NULL, 0, NULL}
 };
 

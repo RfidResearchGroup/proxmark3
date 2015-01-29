@@ -34,15 +34,15 @@ static UsbCommand txcmd;
 volatile static bool txcmd_pending = false;
 
 void SendCommand(UsbCommand *c) {
-#if 0
+	#if 0
   printf("Sending %d bytes\n", sizeof(UsbCommand));
-#endif
+	#endif
 
 	if (offline) {
       PrintAndLog("Sending bytes to proxmark failed - offline");
       return;
     }
-	/**
+  /**
 	The while-loop below causes hangups at times, when the pm3 unit is unresponsive
 	or disconnected. The main console thread is alive, but comm thread just spins here.
 	Not good.../holiman
@@ -68,30 +68,30 @@ static void *uart_receiver(void *targ) {
   struct receiver_arg *arg = (struct receiver_arg*)targ;
   size_t rxlen;
   size_t cmd_count;
-  
+
   while (arg->run) {
     rxlen = sizeof(UsbCommand);
-    if (uart_receive(sp,prx,&rxlen)) {
+		if (uart_receive(sp, prx, &rxlen)) {
       prx += rxlen;
       if (((prx-rx) % sizeof(UsbCommand)) != 0) {
         continue;
       }
       cmd_count = (prx-rx) / sizeof(UsbCommand);
 
-      for (size_t i=0; i<cmd_count; i++) {
+			for (size_t i = 0; i < cmd_count; i++) {
         UsbCommandReceived((UsbCommand*)(rx+(i*sizeof(UsbCommand))));
       }
     }
     prx = rx;
-    
+
     if(txcmd_pending) {
-      if (!uart_send(sp,(byte_t*)&txcmd,sizeof(UsbCommand))) {
+			if (!uart_send(sp, (byte_t*) &txcmd, sizeof(UsbCommand))) {
         PrintAndLog("Sending bytes to proxmark failed");
       }
       txcmd_pending = false;
     }
   }
-  
+
   pthread_exit(NULL);
   return NULL;
 }
@@ -103,13 +103,13 @@ static void *main_loop(void *targ) {
   pthread_t reader_thread;
   
   if (arg->usb_present == 1) {
-    rarg.run=1;
+		rarg.run = 1;
     pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
   }
-  
+
   FILE *script_file = NULL;
-  char script_cmd_buf[256];  // iceman, needs lua script the same file_path_buffer as the rest
-  
+	char script_cmd_buf[256];  // iceman, needs lua script the same file_path_buffer as the rest
+
 	if (arg->script_cmds_file) {
     script_file = fopen(arg->script_cmds_file, "r");
 		if (script_file) {
@@ -134,7 +134,7 @@ static void *main_loop(void *targ) {
 				
         nl = strrchr(script_cmd_buf, '\n');
         if (nl) *nl = '\0';
-        
+
 				if ((cmd = (char*) malloc(strlen(script_cmd_buf) + 1)) != NULL) {
           memset(cmd, 0, strlen(script_cmd_buf));
           strcpy(cmd, script_cmd_buf);
@@ -173,12 +173,12 @@ static void *main_loop(void *targ) {
     rarg.run = 0;
     pthread_join(reader_thread, NULL);
   }
-  
+
 	if (script_file) {
     fclose(script_file);
     script_file = NULL;
   }
-  
+
   ExitGraphics();
   pthread_exit(NULL);
   return NULL;

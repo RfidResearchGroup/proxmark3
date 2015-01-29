@@ -20,7 +20,7 @@
 #include "ui.h"
 #include "cmdparser.h"
 #include "cmdhficlass.h"
-#include "../include/common.h"
+#include "common.h"
 #include "util.h"
 #include "cmdmain.h"
 #include "loclass/des.h"
@@ -34,17 +34,17 @@ static int CmdHelp(const char *Cmd);
 
 int xorbits_8(uint8_t val)
 {
-	uint8_t res = val ^ (val >> 1); //1st pass
-	res = res ^ (res >> 1); 		// 2nd pass
-	res = res ^ (res >> 2); 		// 3rd pass
-	res = res ^ (res >> 4); 			// 4th pass
-	return res & 1;
+    uint8_t res = val ^ (val >> 1); //1st pass
+    res = res ^ (res >> 1); 		// 2nd pass
+    res = res ^ (res >> 2); 		// 3rd pass
+    res = res ^ (res >> 4); 			// 4th pass
+    return res & 1;
 }
 
 int CmdHFiClassList(const char *Cmd)
 {
 	PrintAndLog("Deprecated command, use 'hf list iclass' instead");
-  return 0;
+	return 0;
 }
 
 int CmdHFiClassSnoop(const char *Cmd)
@@ -104,24 +104,24 @@ int CmdHFiClassSim(const char *Cmd)
 			 0x0c,0x90,0x32,0xf3,0x5d,0xff,0x12,0xe0 };
 */
       
-	uint8_t csns[8*NUM_CSNS] = {
-	 0x00, 0x0B, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x04, 0x0E, 0x08, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x09, 0x0D, 0x05, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x0A, 0x0C, 0x06, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x0F, 0x0B, 0x03, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x08, 0x0A, 0x0C, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x0D, 0x09, 0x09, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x0E, 0x08, 0x0A, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x03, 0x07, 0x17, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x3C, 0x06, 0xE0, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x01, 0x05, 0x1D, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x02, 0x04, 0x1E, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x07, 0x03, 0x1B, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x00, 0x02, 0x24, 0xF7, 0xFF, 0x12, 0xE0,
-	 0x00, 0x05, 0x01, 0x21, 0xF7, 0xFF, 0x12, 0xE0 };
-	
-	 memcpy(c.d.asBytes, csns, 8*NUM_CSNS);
+       uint8_t csns[8*NUM_CSNS] = {
+        0x00, 0x0B, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x04, 0x0E, 0x08, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x09, 0x0D, 0x05, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x0A, 0x0C, 0x06, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x0F, 0x0B, 0x03, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x08, 0x0A, 0x0C, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x0D, 0x09, 0x09, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x0E, 0x08, 0x0A, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x03, 0x07, 0x17, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x3C, 0x06, 0xE0, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x01, 0x05, 0x1D, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x02, 0x04, 0x1E, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x07, 0x03, 0x1B, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x00, 0x02, 0x24, 0xF7, 0xFF, 0x12, 0xE0,
+        0x00, 0x05, 0x01, 0x21, 0xF7, 0xFF, 0x12, 0xE0 };
+
+		memcpy(c.d.asBytes, csns, 8*NUM_CSNS);
 
 		SendCommand(&c);
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, -1)) {
@@ -130,7 +130,7 @@ int CmdHFiClassSim(const char *Cmd)
 		}
 
 		uint8_t num_mac_responses  = resp.arg[1];
-		PrintAndLog("Mac responses: %d MACs obtained (should be %d)", num_mac_responses, NUM_CSNS);
+		PrintAndLog("Mac responses: %d MACs obtained (should be %d)", num_mac_responses,NUM_CSNS);
 
 		size_t datalen = NUM_CSNS*24;
 		/*
@@ -209,7 +209,7 @@ int CmdHFiClassReader_Replay(const char *Cmd)
   if (strlen(Cmd)<1) {
     PrintAndLog("Usage:  hf iclass replay <MAC>");
     PrintAndLog("        sample: hf iclass replay 00112233");
-	return 0;
+    return 0;
   }
 
   if (param_gethex(Cmd, 0, MAC, 8)) {
@@ -283,57 +283,57 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 	  return 0;
   }
 
-        uint8_t isOK    = resp.arg[0] & 0xff;
-        uint8_t * data  = resp.d.asBytes;
+	uint8_t isOK    = resp.arg[0] & 0xff;
+	uint8_t * data  = resp.d.asBytes;
 
-        memcpy(CSN,data,8);
-        memcpy(CCNR,data+8,8);
+	memcpy(CSN,data,8);
+	memcpy(CCNR,data+8,8);
 
-        PrintAndLog("isOk:%02x", isOK);
+	PrintAndLog("isOk:%02x", isOK);
 
-        if(isOK > 0)
-        {
-            PrintAndLog("CSN: %s",sprint_hex(CSN,8));
-        }
+	if(isOK > 0)
+	{
+		PrintAndLog("CSN: %s",sprint_hex(CSN,8));
+	}
 	if(isOK <= 1){
 		PrintAndLog("Failed to obtain CC! Aborting");
 		return 0;
 	}
 	//Status 2 or higher
 
-            if(elite)
-            {
-                //Get the key index (hash1)
-                uint8_t key_index[8] = {0};
+	if(elite)
+	{
+		//Get the key index (hash1)
+		uint8_t key_index[8] = {0};
 
-                hash1(CSN, key_index);
-                printvar("hash1", key_index,8);
-                for(i = 0; i < 8 ; i++)
-                    key_sel[i] = keytable[key_index[i]] & 0xFF;
-                PrintAndLog("Pre-fortified 'permuted' HS key that would be needed by an iclass reader to talk to above CSN:");
-                printvar("k_sel", key_sel,8);
-                //Permute from iclass format to standard format
-                permutekey_rev(key_sel,key_sel_p);
-                used_key = key_sel_p;
-            }else{
-                used_key = KEY;
-            }
+		hash1(CSN, key_index);
+		printvar("hash1", key_index,8);
+		for(i = 0; i < 8 ; i++)
+			key_sel[i] = keytable[key_index[i]] & 0xFF;
+		PrintAndLog("Pre-fortified 'permuted' HS key that would be needed by an iclass reader to talk to above CSN:");
+		printvar("k_sel", key_sel,8);
+		//Permute from iclass format to standard format
+		permutekey_rev(key_sel,key_sel_p);
+		used_key = key_sel_p;
+	}else{
+		used_key = KEY;
+	}
 
-            PrintAndLog("Pre-fortified key that would be needed by the OmniKey reader to talk to above CSN:");
-            printvar("Used key",used_key,8);
-            diversifyKey(CSN,used_key, div_key);
-            PrintAndLog("Hash0, a.k.a diversified key, that is computed using Ksel and stored in the card (Block 3):");
-            printvar("Div key", div_key, 8);
-            printvar("CC_NR:",CCNR,12);
-            doMAC(CCNR,12,div_key, MAC);
-            printvar("MAC", MAC, 4);
+	PrintAndLog("Pre-fortified key that would be needed by the OmniKey reader to talk to above CSN:");
+	printvar("Used key",used_key,8);
+	diversifyKey(CSN,used_key, div_key);
+	PrintAndLog("Hash0, a.k.a diversified key, that is computed using Ksel and stored in the card (Block 3):");
+	printvar("Div key", div_key, 8);
+	printvar("CC_NR:",CCNR,12);
+	doMAC(CCNR,12,div_key, MAC);
+	printvar("MAC", MAC, 4);
 
 	uint8_t iclass_data[32000] = {0};
 	uint8_t iclass_datalen = 0;
 	uint8_t iclass_blocksFailed = 0;//Set to 1 if dump was incomplete
 
-            UsbCommand d = {CMD_READER_ICLASS_REPLAY, {readerType}};
-            memcpy(d.d.asBytes, MAC, 4);
+	UsbCommand d = {CMD_READER_ICLASS_REPLAY, {readerType}};
+	memcpy(d.d.asBytes, MAC, 4);
 	clearCommandBuffer();
 	SendCommand(&d);
 	PrintAndLog("Waiting for device to dump data. Press button on device and key on keyboard to abort...");
@@ -505,16 +505,16 @@ int CmdHFiClass_loclass(const char *Cmd)
 
 static command_t CommandTable[] = 
 {
-  {"help",    CmdHelp,        1, "This help"},
-  {"list",	CmdHFiClassList,	0,	"[Deprecated] List iClass history"},
-  {"snoop",   CmdHFiClassSnoop,  0, "Eavesdrop iClass communication"},
-  {"sim",     CmdHFiClassSim,    0, "Simulate iClass tag"},
-  {"reader",CmdHFiClassReader,	0,	"Read an iClass tag"},
-  {"replay",  CmdHFiClassReader_Replay, 0, "Read an iClass tag via Reply Attack"},
-  {"dump",	  CmdHFiClassReader_Dump, 0, "Authenticate and Dump iClass tag"},
-  {"write",	CmdHFiClass_iso14443A_write,	0,	"Authenticate and Write iClass block"},
+	{"help",	CmdHelp,			1,	"This help"},
+	{"list",	CmdHFiClassList,	0,	"[Deprecated] List iClass history"},
+	{"snoop",	CmdHFiClassSnoop,	0,	"Eavesdrop iClass communication"},
+	{"sim",	CmdHFiClassSim,		0,	"Simulate iClass tag"},
+	{"reader",CmdHFiClassReader,	0,	"Read an iClass tag"},
+	{"replay",CmdHFiClassReader_Replay,	0,	"Read an iClass tag via Reply Attack"},
+	{"dump",	CmdHFiClassReader_Dump,	0,		"Authenticate and Dump iClass tag"},
+	{"write",	CmdHFiClass_iso14443A_write,	0,	"Authenticate and Write iClass block"},
 	{"loclass",	CmdHFiClass_loclass,	1,	"Use loclass to perform bruteforce of reader attack dump"},
-  {NULL, NULL, 0, NULL}
+	{NULL, NULL, 0, NULL}
 };
 
 int CmdHFiClass(const char *Cmd)
@@ -526,5 +526,5 @@ int CmdHFiClass(const char *Cmd)
 int CmdHelp(const char *Cmd)
 {
   CmdsHelp(CommandTable);
-	return 0;
+  return 0;
 }

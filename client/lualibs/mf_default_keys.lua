@@ -159,6 +159,20 @@ local _keys = {
 	'644672bd4afe',
 
 	'b5ff67cba951',
+  }
+
+	--[[
+    Kiev metro cards
+    --]]	
+	'8fe644038790',
+	'f14ee7cae863',
+	'632193be1c3c',
+	'569369c5a0e5',
+	'9de89e070277',
+	'eff603e1efe9',
+	'644672bd4afe',
+
+	'b5ff67cba951',
 }
 
 ---

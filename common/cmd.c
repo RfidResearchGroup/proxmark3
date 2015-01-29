@@ -32,7 +32,7 @@
 
 #include "cmd.h"
 #include "string.h"
-#include "../include/proxmark3.h"
+#include "proxmark3.h"
 
 bool cmd_receive(UsbCommand* cmd) {
  

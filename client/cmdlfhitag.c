@@ -15,9 +15,9 @@
 #include "proxmark3.h"
 #include "ui.h"
 #include "cmdparser.h"
-#include "../include/common.h"
+#include "common.h"
 #include "util.h"
-#include "../include/hitag2.h"
+#include "hitag2.h"
 #include "sleep.h"
 #include "cmdmain.h"
 
@@ -29,110 +29,125 @@ size_t nbytes(size_t nbits) {
 
 int CmdLFHitagList(const char *Cmd)
 {
-  uint8_t got[TRACE_BUFFER_SIZE];
-  GetFromBigBuf(got,sizeof(got),0);
-  WaitForResponse(CMD_ACK,NULL);
+ 	uint8_t *got = malloc(USB_CMD_DATA_SIZE);
 
-  PrintAndLog("recorded activity:");
-  PrintAndLog(" ETU     :nbits: who bytes");
-  PrintAndLog("---------+-----+----+-----------");
-
-  int i = 0;
-  int prev = -1;
-  int len = strlen(Cmd);
-
-  char filename[FILE_PATH_SIZE]  = { 0x00 };
-  FILE* pf = NULL;
-  	
-  if (len > FILE_PATH_SIZE) 
-     len = FILE_PATH_SIZE;
-  memcpy(filename, Cmd, len);
-   
-  if (strlen(filename) > 0) {
-	if ((pf = fopen(filename,"wb")) == NULL) {
-		PrintAndLog("Error: Could not open file [%s]",filename);
-		return 1;
+	// Query for the actual size of the trace
+	UsbCommand response;
+	GetFromBigBuf(got, USB_CMD_DATA_SIZE, 0);
+	WaitForResponse(CMD_ACK, &response);
+	uint16_t traceLen = response.arg[2];
+	if (traceLen > USB_CMD_DATA_SIZE) {
+		uint8_t *p = realloc(got, traceLen);
+		if (p == NULL) {
+			PrintAndLog("Cannot allocate memory for trace");
+			free(got);
+			return 2;
+		}
+		got = p;
+		GetFromBigBuf(got, traceLen, 0);
+		WaitForResponse(CMD_ACK,NULL);
 	}
-  }
-  
-  for (;;) {
-  
-    if(i >= TRACE_BUFFER_SIZE) { break; }
-
-    bool isResponse;
-    int timestamp = *((uint32_t *)(got+i));
-    if (timestamp & 0x80000000) {
-      timestamp &= 0x7fffffff;
-      isResponse = 1;
-    } else {
-      isResponse = 0;
-    }
-
-    int parityBits = *((uint32_t *)(got+i+4));
-    // 4 bytes of additional information...
-    // maximum of 32 additional parity bit information
-    //
-    // TODO:
-    // at each quarter bit period we can send power level (16 levels)
-    // or each half bit period in 256 levels.
-
-    int bits = got[i+8];
-    int len = nbytes(got[i+8]);
-
-    if (len > 100) {
-      break;
-    }
-    if (i + len >= TRACE_BUFFER_SIZE) { break;}
-
-    uint8_t *frame = (got+i+9);
-
-    // Break and stick with current result if buffer was not completely full
-    if (frame[0] == 0x44 && frame[1] == 0x44 && frame[3] == 0x44) { break; }
-
-    char line[1000] = "";
-    int j;
-    for (j = 0; j < len; j++) {
-      int oddparity = 0x01;
-      int k;
-
-      for (k=0;k<8;k++) {
-        oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
-      }
-
-      //if((parityBits >> (len - j - 1)) & 0x01) {
-      if (isResponse && (oddparity != ((parityBits >> (len - j - 1)) & 0x01))) {
-        sprintf(line+(j*4), "%02x!  ", frame[j]);
-      }
-      else {
-        sprintf(line+(j*4), "%02x   ", frame[j]);
-      }
-    }
-
-    PrintAndLog(" +%7d:  %3d: %s %s",
-      (prev < 0 ? 0 : (timestamp - prev)),
-      bits,
-      (isResponse ? "TAG" : "   "),
-      line);
-
-
-   if (pf) {
-      fprintf(pf," +%7d:  %3d: %s %s\n",
-					(prev < 0 ? 0 : (timestamp - prev)),
-					bits,
-					(isResponse ? "TAG" : "   "),
-					line);
-    }
 	
-    prev = timestamp;
-    i += (len + 9);
-  }
+	PrintAndLog("recorded activity (TraceLen = %d bytes):");
+	PrintAndLog(" ETU     :nbits: who bytes");
+	PrintAndLog("---------+-----+----+-----------");
+
+	int i = 0;
+	int prev = -1;
+	int len = strlen(Cmd);
+
+	char filename[FILE_PATH_SIZE]  = { 0x00 };
+	FILE* pf = NULL;
+  	
+	if (len > FILE_PATH_SIZE) 
+		len = FILE_PATH_SIZE;
+	memcpy(filename, Cmd, len);
+   
+	if (strlen(filename) > 0) {
+		if ((pf = fopen(filename,"wb")) == NULL) {
+			PrintAndLog("Error: Could not open file [%s]",filename);
+			return 1;
+		}
+	}
+
+	for (;;) {
   
-  if (pf) {
-    fclose(pf);
-	PrintAndLog("Recorded activity succesfully written to file: %s", filename);
-  }
-	
-  return 0;
+		if(i > traceLen) { break; }
+
+		bool isResponse;
+		int timestamp = *((uint32_t *)(got+i));
+		if (timestamp & 0x80000000) {
+			timestamp &= 0x7fffffff;
+			isResponse = 1;
+		} else {
+			isResponse = 0;
+		}
+
+		int parityBits = *((uint32_t *)(got+i+4));
+		// 4 bytes of additional information...
+		// maximum of 32 additional parity bit information
+		//
+		// TODO:
+		// at each quarter bit period we can send power level (16 levels)
+		// or each half bit period in 256 levels.
+
+		int bits = got[i+8];
+		int len = nbytes(got[i+8]);
+
+		if (len > 100) {
+		  break;
+		}
+		if (i + len > traceLen) { break;}
+
+		uint8_t *frame = (got+i+9);
+
+		// Break and stick with current result if buffer was not completely full
+		if (frame[0] == 0x44 && frame[1] == 0x44 && frame[3] == 0x44) { break; }
+
+		char line[1000] = "";
+		int j;
+		for (j = 0; j < len; j++) {
+		  int oddparity = 0x01;
+		  int k;
+
+		  for (k=0;k<8;k++) {
+			oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
+		  }
+
+		  //if((parityBits >> (len - j - 1)) & 0x01) {
+		  if (isResponse && (oddparity != ((parityBits >> (len - j - 1)) & 0x01))) {
+			sprintf(line+(j*4), "%02x!  ", frame[j]);
+		  }
+		  else {
+			sprintf(line+(j*4), "%02x   ", frame[j]);
+		  }
+		}
+
+		PrintAndLog(" +%7d:  %3d: %s %s",
+			(prev < 0 ? 0 : (timestamp - prev)),
+			bits,
+			(isResponse ? "TAG" : "   "),
+			line);
+
+		if (pf) {
+			fprintf(pf," +%7d:  %3d: %s %s\n",
+				(prev < 0 ? 0 : (timestamp - prev)),
+				bits,
+				(isResponse ? "TAG" : "   "),
+				line);
+		}
+		
+		prev = timestamp;
+		i += (len + 9);
+	}
+  
+	if (pf) {
+		fclose(pf);
+		PrintAndLog("Recorded activity succesfully written to file: %s", filename);
+	}
+
+	free(got);
+	return 0;
 }
 
 int CmdLFHitagSnoop(const char *Cmd) {
@@ -143,14 +158,14 @@ int CmdLFHitagSnoop(const char *Cmd) {
 
 int CmdLFHitagSim(const char *Cmd) {
     
-	UsbCommand c = {CMD_SIMULATE_HITAG};
+  UsbCommand c = {CMD_SIMULATE_HITAG};
 	char filename[FILE_PATH_SIZE] = { 0x00 };
 	FILE* pf;
 	bool tag_mem_supplied;
 	int len = strlen(Cmd);
 	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
 	memcpy(filename, Cmd, len);
-   
+	
 	if (strlen(filename) > 0) {
 		if ((pf = fopen(filename,"rb+")) == NULL) {
 			PrintAndLog("Error: Could not open file [%s]",filename);
@@ -158,10 +173,10 @@ int CmdLFHitagSim(const char *Cmd) {
 		}
 		tag_mem_supplied = true;
 		if (fread(c.d.asBytes,48,1,pf) == 0) {
-            PrintAndLog("Error: File reading error");
+      PrintAndLog("Error: File reading error");
       fclose(pf);
 			return 1;
-         }
+    }
 		fclose(pf);
 	} else {
 		tag_mem_supplied = false;
@@ -249,7 +264,7 @@ static command_t CommandTable[] =
   {"reader",  CmdLFHitagReader,  1, "Act like a Hitag Reader"},
   {"sim",     CmdLFHitagSim,     1, "<infile> Simulate Hitag transponder"},
   {"snoop",   CmdLFHitagSnoop,   1, "Eavesdrop Hitag communication"},
-  {NULL, NULL, 0, NULL}
+		{NULL, NULL, 0, NULL}
 };
 
 int CmdLFHitag(const char *Cmd)

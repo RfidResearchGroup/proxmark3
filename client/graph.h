@@ -10,12 +10,16 @@
 
 #ifndef GRAPH_H__
 #define GRAPH_H__
+#include <stdint.h>
 
 void AppendGraph(int redraw, int clock, int bit);
 int ClearGraph(int redraw);
-int GetFromGraphBuf(uint8_t *buff);
-int GetClock(const char *str, int verbose);
-void SetGraphBuf(uint8_t *buff,int size);
+//int DetectClock(int peak);
+size_t getFromGraphBuf(uint8_t *buff);
+int GetClock(const char *str, int peak, int verbose);
+int GetNRZpskClock(const char *str, int peak, int verbose);
+void setGraphBuf(uint8_t *buff, size_t size);
+
 bool HasGraphData();
 void DetectHighLowInGraph(int *high, int *low, bool addFuzz); 
 

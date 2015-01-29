@@ -30,8 +30,12 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with IClassCipher.  If not, see <http://www.gnu.org/licenses/>.
+ * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * 
+ * 
  ****************************************************************************/
+
 
 #ifndef CIPHERUTILS_H
 #define CIPHERUTILS_H

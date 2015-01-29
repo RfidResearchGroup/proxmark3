@@ -22,92 +22,85 @@ int GraphTraceLen;
 void AppendGraph(int redraw, int clock, int bit)
 {
   int i;
-  int half = (int)(clock/2);
-  int firstbit = bit ^ 1;
- 
-  for (i = 0; i < half; ++i)
-    GraphBuffer[GraphTraceLen++] = firstbit;
-  
-  for (i = 0; i <= half; ++i)
+
+  for (i = 0; i < (int)(clock / 2); ++i)
+    GraphBuffer[GraphTraceLen++] = bit ^ 1;
+
+  for (i = (int)(clock / 2); i < clock; ++i)
     GraphBuffer[GraphTraceLen++] = bit;
 
   if (redraw)
     RepaintGraphWindow();
 }
 
-/* clear out our graph window */
+// clear out our graph window
 int ClearGraph(int redraw)
 {
   int gtl = GraphTraceLen;
   memset(GraphBuffer, 0x00, GraphTraceLen);
 
   GraphTraceLen = 0;
- 
+
   if (redraw)
     RepaintGraphWindow();
 
   return gtl;
 }
 
-void SetGraphBuf(uint8_t *buff, int size) 
+// DETECT CLOCK NOW IN LFDEMOD.C
+
+void setGraphBuf(uint8_t *buff, size_t size)
 {
 	if ( buff == NULL ) return;
 	
 	uint16_t i = 0;  
 	if ( size > MAX_GRAPH_TRACE_LEN )
 		size = MAX_GRAPH_TRACE_LEN;
-	ClearGraph(0);
-	for (; i < size; ++i){
-		GraphBuffer[i] = buff[i];
-	}
-	GraphTraceLen = size;
-	RepaintGraphWindow();
-	return;
+  ClearGraph(0);
+  for (; i < size; ++i){
+		GraphBuffer[i]=buff[i]-128;
+  }
+  GraphTraceLen=size;
+  RepaintGraphWindow();
+  return;
+}
+size_t getFromGraphBuf(uint8_t *buff)
+{
+	if ( buff == NULL ) return 0;
+	
+  uint32_t i;
+  for (i=0;i<GraphTraceLen;++i){
+    if (GraphBuffer[i]>127) GraphBuffer[i]=127; //trim
+    if (GraphBuffer[i]<-127) GraphBuffer[i]=-127; //trim
+    buff[i]=(uint8_t)(GraphBuffer[i]+128);
+  }
+  return i;
 }
 
-// Copies grahpbuff to buff. 
-// while triming values to the range -127 -- 127.
-int GetFromGraphBuf(uint8_t *buff)
-{
-	if ( buff == NULL ) return -1;
-	uint32_t i = 0;
-	
-	for (; i < GraphTraceLen; ++i){
-	
-		// trim upper and lower values.
-		if (GraphBuffer[i] > 127) 
-			GraphBuffer[i] = 127;
-		else if (GraphBuffer[i] < -127)
-			GraphBuffer[i] = -127;
-			
-		buff[i] = (uint8_t)(GraphBuffer[i] + 128);
-	}
-	return i;
-}
-/* Get or auto-detect clock rate */
-int GetClock(const char *str, int verbose)
+
+// Get or auto-detect clock rate
+int GetClock(const char *str, int peak, int verbose)
 {
 	int clock;
-
 	sscanf(str, "%i", &clock);
 	if (!strcmp(str, ""))
 		clock = 0;
 
-	/* Auto-detect clock */
-	if (!clock) {
-
-		uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0x00};
-		int size = GetFromGraphBuf(grph);
-		if ( size < 0 ) {
+	// Auto-detect clock
+	if (!clock)
+	{
+		uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
+		size_t size = getFromGraphBuf(grph);
+		if ( size == 0 ) {
 			PrintAndLog("Failed to copy from graphbuffer");
 			return -1;
 		}
-		clock = DetectASKClock(grph, size, 0);
-
-		/* Only print this message if we're not looping something */
-		if (verbose)
+		clock = DetectASKClock(grph,size,0);
+		// Only print this message if we're not looping something
+		if (!verbose){
 			PrintAndLog("Auto-detected clock rate: %d", clock);
 		}
+	}
 	return clock;
 }
 
@@ -141,4 +134,29 @@ void DetectHighLowInGraph(int *high, int *low, bool addFuzz) {
 		*high = (int)(*high * .88);
 		*low  = (int)(*low  * .88);
 	}
+}
+
+int GetNRZpskClock(const char *str, int peak, int verbose)
+{
+	int clock;
+	sscanf(str, "%i", &clock);
+	if (!strcmp(str, ""))
+		clock = 0;
+
+	// Auto-detect clock
+	if (!clock)
+	{
+		uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
+		size_t size = getFromGraphBuf(grph);
+		if ( size == 0 ) {
+			PrintAndLog("Failed to copy from graphbuffer");
+			return -1;
+		}
+		clock = DetectpskNRZClock(grph,size,0);
+		// Only print this message if we're not looping something
+		if (!verbose){
+			PrintAndLog("Auto-detected clock rate: %d", clock);
+		}
+	}
+	return clock;
 }

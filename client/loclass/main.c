@@ -38,7 +38,6 @@
 
 
 #include <stdio.h>
-#include <cipherutils.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -56,11 +55,15 @@ int unitTests()
 	errors += testMAC();
 	errors += doKeyTests(0);
 	errors += testElite();
+    if(errors)
+    {
+        prnlog("OBS! There were errors!!!");
+    }
 	return errors;
 }
 int showHelp()
 {
-	prnlog("Usage: iclazz [options]");
+    prnlog("Usage: loclass [options]");
 	prnlog("Options:");
 	prnlog("-t                 Perform self-test");
 	prnlog("-h                 Show this help");

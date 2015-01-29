@@ -552,6 +552,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[])
  */
 int bruteforceFile(const char *filename, uint16_t keytable[])
 {
+
 	FILE *f = fopen(filename, "rb");
 	if(!f) {
 		prnlog("Failed to read from file '%s'", filename);
@@ -618,7 +619,7 @@ int _testBruteforce()
 		//Test a few variants
 		if(fileExists("iclass_dump.bin"))
 		{
-		errors |= bruteforceFile("iclass_dump.bin",keytable);
+			errors |= bruteforceFile("iclass_dump.bin",keytable);
 		}else if(fileExists("loclass/iclass_dump.bin")){
 			errors |= bruteforceFile("loclass/iclass_dump.bin",keytable);
 		}else if(fileExists("client/loclass/iclass_dump.bin")){
@@ -659,6 +660,21 @@ int _test_iclass_key_permutation()
 	prnlog("[+] Iclass key permutation OK!");
 	return 0;
 }
+int _testHash1()
+{
+    uint8_t csn[8]= {0x01,0x02,0x03,0x04,0xF7,0xFF,0x12,0xE0};
+    uint8_t k[8] = {0};
+    hash1(csn, k);
+    uint8_t expected[8] = {0x7E,0x72,0x2F,0x40,0x2D,0x02,0x51,0x42};
+    if(memcmp(k,expected,8) != 0)
+    {
+        prnlog("Error with hash1!");
+        printarr("calculated", k, 8);
+        printarr("expected", expected, 8);
+        return 1;
+    }
+    return 0;
+}
 
 int testElite()
 {
@@ -691,11 +707,13 @@ int testElite()
         prnlog("[+] Hash2 looks fine...");
     }
 
-    prnlog("[+] Testing key diversification ...");
-
 	int errors = 0 ;
-	errors +=_test_iclass_key_permutation();
+    prnlog("[+] Testing hash1...");
+    errors += _testHash1();
+    prnlog("[+] Testing key diversification ...");
+    errors +=_test_iclass_key_permutation();
 	errors += _testBruteforce();
+
 	return errors;
 
 }

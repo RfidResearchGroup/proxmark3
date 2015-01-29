@@ -84,17 +84,19 @@ local function main(args)
 	local files = {}
 	
 	-- Find a set of traces staring with EM
-	local p = io.popen(tracesEM)
+	local p = assert( io.popen(tracesEM))
 	for file in p:lines() do
 		table.insert(files, file)
 	end
+	p.close();
 	
 	-- Find a set of traces staring with MOD
-	p = io.popen(tracesMOD)
+	p = assert( io.popen(tracesMOD) )
 	for file in p:lines() do
 		table.insert(files, file)
 	end
-
+	p.close();
+	
 	local cmdLFSEARCH = "lf search 1" 
 	
 	-- main loop

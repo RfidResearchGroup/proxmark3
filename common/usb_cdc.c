@@ -33,7 +33,7 @@
  */
 
 #include "usb_cdc.h"
-#include "../include/config_gpio.h"
+#include "config_gpio.h"
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -235,31 +235,31 @@ void usb_disable() {
 //* \brief This function Activates the USB device
 //*----------------------------------------------------------------------------
 void usb_enable() {
-	// Set the PLL USB Divider
-	AT91C_BASE_CKGR->CKGR_PLLR |= AT91C_CKGR_USBDIV_1 ;
-
-	// Specific Chip USB Initialisation
-	// Enables the 48MHz USB clock UDPCK and System Peripheral USB Clock
-	AT91C_BASE_PMC->PMC_SCER = AT91C_PMC_UDP;
-	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_UDP);
-
-	// Enable UDP PullUp (USB_DP_PUP) : enable & Clear of the corresponding PIO
-	// Set in PIO mode and Configure in Output
-	AT91C_BASE_PIOA->PIO_PER = GPIO_USB_PU; // Set in PIO mode
+  // Set the PLL USB Divider
+  AT91C_BASE_CKGR->CKGR_PLLR |= AT91C_CKGR_USBDIV_1 ;
+  
+  // Specific Chip USB Initialisation
+  // Enables the 48MHz USB clock UDPCK and System Peripheral USB Clock
+  AT91C_BASE_PMC->PMC_SCER = AT91C_PMC_UDP;
+  AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_UDP);
+  
+  // Enable UDP PullUp (USB_DP_PUP) : enable & Clear of the corresponding PIO
+  // Set in PIO mode and Configure in Output
+  AT91C_BASE_PIOA->PIO_PER = GPIO_USB_PU; // Set in PIO mode
 	AT91C_BASE_PIOA->PIO_OER = GPIO_USB_PU; // Configure as Output
-
-	// Clear for set the Pullup resistor
+  
+  // Clear for set the Pullup resistor
 	AT91C_BASE_PIOA->PIO_CODR = GPIO_USB_PU;
+  
+  // Disconnect and reconnect USB controller for 100ms
+  usb_disable();
+  
+  // Wait for a short while
+  for (volatile size_t i=0; i<0x100000; i++);
 
-	// Disconnect and reconnect USB controller for 100ms
-	usb_disable();
-
-	// Wait for a short while
-	for (volatile size_t i=0; i<0x100000; i++);
-
-	// Reconnect USB reconnect
-	AT91C_BASE_PIOA->PIO_SODR = GPIO_USB_PU;
-	AT91C_BASE_PIOA->PIO_OER = GPIO_USB_PU;
+  // Reconnect USB reconnect
+  AT91C_BASE_PIOA->PIO_SODR = GPIO_USB_PU;
+  AT91C_BASE_PIOA->PIO_OER = GPIO_USB_PU;
 }
 
 //*----------------------------------------------------------------------------
@@ -298,26 +298,26 @@ bool usb_poll()
 //* \brief Read available data from Endpoint OUT
 //*----------------------------------------------------------------------------
 uint32_t usb_read(byte_t* data, size_t len) {
-	byte_t bank = btReceiveBank;
+  byte_t bank = btReceiveBank;
 	uint32_t packetSize, nbBytesRcv = 0;
-	uint32_t time_out = 0;
+  uint32_t time_out = 0;
   
 	while (len)  {
 		if (!usb_check()) break;
 
 		if ( pUdp->UDP_CSR[AT91C_EP_OUT] & bank ) {
 			packetSize = MIN(pUdp->UDP_CSR[AT91C_EP_OUT] >> 16, len);
-			len -= packetSize;
+      len -= packetSize;
 			while(packetSize--)
 				data[nbBytesRcv++] = pUdp->UDP_FDR[AT91C_EP_OUT];
 			pUdp->UDP_CSR[AT91C_EP_OUT] &= ~(bank);
 			if (bank == AT91C_UDP_RX_DATA_BK0) {
 				bank = AT91C_UDP_RX_DATA_BK1;
-			} else {
+      } else {
 				bank = AT91C_UDP_RX_DATA_BK0;
-			}
+      }
 		}
-		if (time_out++ == 0x1fff) break;
+    if (time_out++ == 0x1fff) break;
 	}
 
 	btReceiveBank = bank;
@@ -349,7 +349,7 @@ uint32_t usb_write(const byte_t* data, const size_t len) {
 		// Wait for the the first bank to be sent
 		while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {
 			if (!usb_check()) return length;
-		}
+    }
 		pUdp->UDP_CSR[AT91C_EP_IN] &= ~(AT91C_UDP_TXCOMP);
 		while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP);
 		pUdp->UDP_CSR[AT91C_EP_IN] |= AT91C_UDP_TXPKTRDY;
@@ -370,7 +370,7 @@ uint32_t usb_write(const byte_t* data, const size_t len) {
 //* \fn    AT91F_USB_SendData
 //* \brief Send Data through the control endpoint
 //*----------------------------------------------------------------------------
-unsigned int csrTab[100];
+unsigned int csrTab[100] = {0x00};
 unsigned char csrIdx = 0;
 
 static void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length) {

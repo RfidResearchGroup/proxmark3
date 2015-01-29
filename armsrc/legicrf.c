@@ -98,13 +98,14 @@ static uint32_t get_key_stream(int skip, int count)
   }
 
   /* Write Time Data into LOG */
+  uint8_t *BigBuf = BigBuf_get_addr();
   if(count == 6) { i = -1; } else { i = legic_read_count; }
-  ((uint8_t*)BigBuf)[OFFSET_LOG+128+i] = legic_prng_count();
-  ((uint8_t*)BigBuf)[OFFSET_LOG+256+i*4]   = (legic_prng_bc >> 0) & 0xff;
-  ((uint8_t*)BigBuf)[OFFSET_LOG+256+i*4+1] = (legic_prng_bc >> 8) & 0xff;
-  ((uint8_t*)BigBuf)[OFFSET_LOG+256+i*4+2] = (legic_prng_bc >>16) & 0xff;
-  ((uint8_t*)BigBuf)[OFFSET_LOG+256+i*4+3] = (legic_prng_bc >>24) & 0xff;
-  ((uint8_t*)BigBuf)[OFFSET_LOG+384+i] = count;
+  BigBuf[OFFSET_LOG+128+i] = legic_prng_count();
+  BigBuf[OFFSET_LOG+256+i*4]   = (legic_prng_bc >> 0) & 0xff;
+  BigBuf[OFFSET_LOG+256+i*4+1] = (legic_prng_bc >> 8) & 0xff;
+  BigBuf[OFFSET_LOG+256+i*4+2] = (legic_prng_bc >>16) & 0xff;
+  BigBuf[OFFSET_LOG+256+i*4+3] = (legic_prng_bc >>24) & 0xff;
+  BigBuf[OFFSET_LOG+384+i] = count;
 
   /* Generate KeyStream */
   for(i=0; i<count; i++) {
@@ -426,6 +427,7 @@ int LegicRfReader(int offset, int bytes) {
 
 	LegicCommonInit();
 
+	uint8_t *BigBuf = BigBuf_get_addr();
 	memset(BigBuf, 0, 1024);
 
 	DbpString("setting up legic card");
@@ -465,7 +467,7 @@ int LegicRfReader(int offset, int bytes) {
        		LED_C_OFF();
 	        return -1;
 		}
-		((uint8_t*)BigBuf)[byte_index] = r;
+		BigBuf[byte_index] = r;
         WDT_HIT();
 		byte_index++;
 		if(byte_index & 0x10) LED_C_ON(); else LED_C_OFF();
@@ -480,7 +482,8 @@ int LegicRfReader(int offset, int bytes) {
 
 void LegicRfWriter(int bytes, int offset) {
 	int byte_index=0, addr_sz=0;
-	
+	uint8_t *BigBuf = BigBuf_get_addr();
+
 	LegicCommonInit();
 	
 	DbpString("setting up legic card");
@@ -512,7 +515,7 @@ void LegicRfWriter(int bytes, int offset) {
 	perform_setup_phase_rwd(SESSION_IV);
     legic_prng_forward(2);
 	while(byte_index < bytes) {
-		int r = legic_write_byte(((uint8_t*)BigBuf)[byte_index+offset], byte_index+offset, addr_sz);
+		int r = legic_write_byte(BigBuf[byte_index+offset], byte_index+offset, addr_sz);
 		if((r != 0) || BUTTON_PRESS()) {
 			Dbprintf("operation aborted @ 0x%03.3x", byte_index);
 			switch_off_tag_rwd();
@@ -534,6 +537,8 @@ int timestamp;
 /* Handle (whether to respond) a frame in tag mode */
 static void frame_handle_tag(struct legic_frame const * const f)
 {
+	uint8_t *BigBuf = BigBuf_get_addr();
+
    /* First Part of Handshake (IV) */
    if(f->bits == 7) {
      if(f->data == SESSION_IV) {
@@ -582,9 +587,9 @@ static void frame_handle_tag(struct legic_frame const * const f)
       if(legic_state == STATE_CON) {
          int key   = get_key_stream(-1, 11); //legic_phase_drift, 11);
          int addr  = f->data ^ key; addr = addr >> 1;
-         int data = ((uint8_t*)BigBuf)[addr];
+         int data = BigBuf[addr];
          int hash = LegicCRC(addr, data, 11) << 8;
-         ((uint8_t*)BigBuf)[OFFSET_LOG+legic_read_count] = (uint8_t)addr;
+         BigBuf[OFFSET_LOG+legic_read_count] = (uint8_t)addr;
          legic_read_count++;
 
          //Dbprintf("Data:%03.3x, key:%03.3x, addr: %03.3x, read_c:%u", f->data, key, addr, read_c);
@@ -619,19 +624,19 @@ static void frame_handle_tag(struct legic_frame const * const f)
       int i;
       Dbprintf("IV: %03.3x", legic_prng_iv);
       for(i = 0; i<legic_read_count; i++) {
-         Dbprintf("Read Nb: %u, Addr: %u", i, ((uint8_t*)BigBuf)[OFFSET_LOG+i]);
+         Dbprintf("Read Nb: %u, Addr: %u", i, BigBuf[OFFSET_LOG+i]);
       }
 
       for(i = -1; i<legic_read_count; i++) {
          uint32_t t;
-         t  = ((uint8_t*)BigBuf)[OFFSET_LOG+256+i*4];
-         t |= ((uint8_t*)BigBuf)[OFFSET_LOG+256+i*4+1] << 8;
-         t |= ((uint8_t*)BigBuf)[OFFSET_LOG+256+i*4+2] <<16;
-         t |= ((uint8_t*)BigBuf)[OFFSET_LOG+256+i*4+3] <<24;
+         t  = BigBuf[OFFSET_LOG+256+i*4];
+         t |= BigBuf[OFFSET_LOG+256+i*4+1] << 8;
+         t |= BigBuf[OFFSET_LOG+256+i*4+2] <<16;
+         t |= BigBuf[OFFSET_LOG+256+i*4+3] <<24;
 
          Dbprintf("Cycles: %u, Frame Length: %u, Time: %u", 
-            ((uint8_t*)BigBuf)[OFFSET_LOG+128+i],
-            ((uint8_t*)BigBuf)[OFFSET_LOG+384+i],
+            BigBuf[OFFSET_LOG+128+i],
+            BigBuf[OFFSET_LOG+384+i],
             t);
       }
    }

@@ -28,8 +28,8 @@ typedef struct {
 	uint16_t bitCount;
 	uint16_t collisionPos;
 	uint16_t syncBit;
-	uint8_t parityBits;
-	uint8_t parityLen;
+	uint8_t  parityBits;
+	uint8_t  parityLen;
 	uint16_t shiftReg;
 	uint16_t samples;
 	uint16_t len;
@@ -61,8 +61,8 @@ typedef struct {
 	uint16_t byteCntMax;
 	uint16_t posCnt;
 	uint16_t syncBit;
-	uint8_t parityBits;
-	uint8_t parityLen;
+	uint8_t  parityBits;
+	uint8_t  parityLen;
 	uint16_t highCnt;
 	uint16_t twoBits;
 	uint32_t startTime, endTime;

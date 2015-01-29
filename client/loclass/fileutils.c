@@ -78,31 +78,18 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
 	/*Opening file for writing in binary mode*/
 	FILE *fileHandle=fopen(fileName,"wb");
 	if(!fileHandle) {
-		PrintAndLog("Failed to write to file '%s'", fileName);
+		prnlog("Failed to write to file '%s'", fileName);
 		free(fileName);
 		return 1;
 	}
 	fwrite(data, 1,	datalen, fileHandle);
 	fclose(fileHandle);
-	PrintAndLog("Saved data to '%s'", fileName);
+	prnlog("Saved data to '%s'", fileName);
 	free(fileName);
 
 	return 0;
 }
 
-int loadFile(const char *fileName, void* data, size_t datalen)
-{
-	FILE *filehandle = fopen(fileName, "rb");
-	if(!filehandle) {
-		PrintAndLog("Failed to read from file '%s'", fileName);
-		free(filehandle);
-		return 1;
-	}
-	fread(data,datalen,1,filehandle);
-	fclose(filehandle);
-	free(filehandle);
-	return 0;
-}
 /**
  * Utility function to print to console. This is used consistently within the library instead
  * of printf, but it actually only calls printf (and adds a linebreak).

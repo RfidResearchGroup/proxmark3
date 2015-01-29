@@ -18,40 +18,10 @@
 #include <sys/types.h>
 #include <string.h>
 #include <strings.h>
-
-#include "../include/common.h"
-#include "../include/hitag2.h"
-#include "../include/mifare.h"
-
-//#include <openssl/des.h>
-//#include <openssl/aes.h>
-//#include "des.h"
-//#include "aes.h"
-#include "../common/desfire.h"
 #include "../common/crc32.h"
-
-// The large multi-purpose buffer, typically used to hold A/D samples,
-// maybe processed in some way.
-#define BIGBUF_SIZE	40000      
-uint32_t BigBuf[BIGBUF_SIZE / sizeof(uint32_t)];
-#define TRACE_OFFSET	0
-#define TRACE_SIZE	3000
-#define RECV_CMD_OFFSET	(TRACE_OFFSET + TRACE_SIZE)
-#define MAX_FRAME_SIZE	256
-#define MAX_PARITY_SIZE	((MAX_FRAME_SIZE + 1)/ 8)
-#define RECV_CMD_PAR_OFFSET	(RECV_CMD_OFFSET + MAX_FRAME_SIZE)
-#define RECV_RESP_OFFSET	(RECV_CMD_PAR_OFFSET + MAX_PARITY_SIZE)
-#define RECV_RESP_PAR_OFFSET (RECV_RESP_OFFSET + MAX_FRAME_SIZE)
-#define CARD_MEMORY_OFFSET	(RECV_RESP_PAR_OFFSET + MAX_PARITY_SIZE)
-#define CARD_MEMORY_SIZE	4096	
-#define DMA_BUFFER_OFFSET CARD_MEMORY_OFFSET
-#define DMA_BUFFER_SIZE CARD_MEMORY_SIZE
-#define FREE_BUFFER_OFFSET (CARD_MEMORY_OFFSET + CARD_MEMORY_SIZE)
-#define FREE_BUFFER_SIZE (BIGBUF_SIZE - FREE_BUFFER_OFFSET - 1)
+#include "BigBuf.h"
 
 extern const uint8_t OddByteParity[256];
-extern uint8_t *trace; // = (uint8_t *) BigBuf;
-extern int traceLen;   // = 0;
 extern int rsamples;   // = 0;
 extern int tracing;    // = TRUE;
 extern uint8_t trigger;
@@ -82,7 +52,6 @@ void DoAcquisition125k();
 
 extern int ToSendMax;
 extern uint8_t ToSend[];
-extern uint32_t BigBuf[];
 
 /// fpga.h
 void FpgaSendCommand(uint16_t cmd, uint16_t v);
@@ -130,6 +99,8 @@ void SetAdcMuxFor(uint32_t whichGpio);
 #define FPGA_HF_SIMULATOR_MODULATE_BPSK				(1<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_212K				(2<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_424K				(4<<0)
+#define FPGA_HF_SIMULATOR_MODULATE_424K_8BIT		0x5//101
+
 // Options for ISO14443A
 #define FPGA_HF_ISO14443A_SNIFFER				(0<<0)
 #define FPGA_HF_ISO14443A_TAGSIM_LISTEN				(1<<0)
@@ -181,7 +152,7 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data);
 void ReaderIso14443a(UsbCommand * c);
 // Also used in iclass.c
 bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t len, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
-void GetParity(const uint8_t * pbtCmd, uint16_t len, uint8_t *parity);
+void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *parity);
 void iso14a_set_trigger(bool enable);
 void iso14a_clear_trace();
 void iso14a_set_tracing(bool enable);
@@ -231,17 +202,6 @@ void 	OnError(uint8_t reason);
 
 
 
-// desfire_crypto.h
-void	*mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes, off_t offset, int communication_settings);
-void    *mifare_cryto_postprocess_data (desfiretag_t tag, void *data, ssize_t *nbytes, int communication_settings);
-void    mifare_cypher_single_block (desfirekey_t  key, uint8_t *data, uint8_t *ivect, MifareCryptoDirection direction, MifareCryptoOperation operation, size_t block_size);
-void    mifare_cypher_blocks_chained (desfiretag_t tag, desfirekey_t key, uint8_t *ivect, uint8_t *data, size_t data_size, MifareCryptoDirection direction, MifareCryptoOperation operation);
-size_t  key_block_size (const desfirekey_t  key);
-size_t  padded_data_length (const size_t nbytes, const size_t block_size);
-size_t  maced_data_length (const desfirekey_t  key, const size_t nbytes);
-size_t  enciphered_data_length (const desfiretag_t tag, const size_t nbytes, int communication_settings);
-void    cmac_generate_subkeys (desfirekey_t key);
-void    cmac (const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
 
 
 /// iso15693.h

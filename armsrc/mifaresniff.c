@@ -13,10 +13,10 @@
 
 static int sniffState = SNF_INIT;
 static uint8_t sniffUIDType;
-static uint8_t sniffUID[8];
-static uint8_t sniffATQA[2];
+static uint8_t sniffUID[8] = {0x00};
+static uint8_t sniffATQA[2] = {0x00};
 static uint8_t sniffSAK;
-static uint8_t sniffBuf[16];
+static uint8_t sniffBuf[16] = {0x00};
 static uint32_t timerData = 0;
 
 
@@ -151,12 +151,13 @@ bool intMfSniffSend() {
 	int pckSize = 0;
 	int pckLen = traceLen;
 	int pckNum = 0;
-
+	uint8_t *trace = BigBuf_get_addr();
+	
 	FpgaDisableSscDma();
 	while (pckLen > 0) {
 		pckSize = MIN(USB_CMD_DATA_SIZE, pckLen);
 		LED_B_ON();
-		cmd_send(CMD_ACK, 1, pckSize, pckNum, trace + traceLen - pckLen, pckSize);
+		cmd_send(CMD_ACK, 1, traceLen, pckSize, trace + traceLen - pckLen, pckSize);
 		LED_B_OFF();
 
 		pckLen -= pckSize;

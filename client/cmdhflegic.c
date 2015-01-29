@@ -16,7 +16,7 @@
 #include "cmdparser.h"
 #include "cmdhflegic.h"
 #include "cmdmain.h"
-
+#include "util.h"
 static int CmdHelp(const char *Cmd);
 
 static command_t CommandTable[] = 

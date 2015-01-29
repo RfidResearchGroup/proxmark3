@@ -69,6 +69,8 @@ INCLUDES = ../include/proxmark3.h ../include/at91sam7s512.h ../include/config_gp
 CFLAGS =  -c $(INCLUDE) -Wall -Werror -pedantic -std=c99 $(APP_CFLAGS) -Os
 LDFLAGS = -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
 
+LIBS = -lgcc
+
 LIBS = -lgcc 
 
 THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(THUMBSRC))

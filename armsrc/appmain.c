@@ -36,17 +36,11 @@
 // is the order in which they go out on the wire.
 //=============================================================================
 
-#define TOSEND_BUFFER_SIZE (9*MAX_FRAME_SIZE + 1 + 1 + 2) // 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits
+#define TOSEND_BUFFER_SIZE (9*MAX_FRAME_SIZE + 1 + 1 + 2)  // 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits 
 uint8_t ToSend[TOSEND_BUFFER_SIZE];
 int ToSendMax;
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
-
-void BufferClear(void)
-{
-	memset(BigBuf,0,sizeof(BigBuf));
-	Dbprintf("Buffer cleared (%i bytes)",sizeof(BigBuf));
-}
 
 void ToSendReset(void)
 {
@@ -68,7 +62,7 @@ void ToSendStuffBit(int b)
 
 	ToSendBit++;
 
-	if(ToSendMax  >= sizeof(ToSend)) {
+	if(ToSendMax >= sizeof(ToSend)) {
 		ToSendBit = 0;
 		DbpString("ToSendStuffBit overflowed!");
 	}
@@ -246,7 +240,10 @@ void MeasureAntennaTuningHf(void)
 
 void SimulateTagHfListen(void)
 {
-	uint8_t *dest = (uint8_t *)BigBuf+FREE_BUFFER_OFFSET;
+	// ToDo: historically this used the free buffer, which was 2744 Bytes long. 
+	// There might be a better size to be defined:
+	#define HF_14B_SNOOP_BUFFER_SIZE 2744
+	uint8_t *dest = BigBuf_malloc(HF_14B_SNOOP_BUFFER_SIZE);
 	uint8_t v = 0;
 	int i;
 	int p = 0;
@@ -281,7 +278,7 @@ void SimulateTagHfListen(void)
 				p = 0;
 				i++;
 
-				if(i >= FREE_BUFFER_SIZE) {
+				if(i >= HF_14B_SNOOP_BUFFER_SIZE) {
 					break;
 				}
 			}
@@ -811,11 +808,11 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			MifareUC_Auth2(c->arg[0],c->d.asBytes);
 			break;
 		case CMD_MIFAREU_READCARD:
-			MifareUReadCard(c->arg[0],c->arg[1],c->d.asBytes);
+			MifareUReadCard(c->arg[0], c->arg[1], c->d.asBytes);
                         break;
 		case CMD_MIFAREUC_READCARD:
-			MifareUReadCard(c->arg[0],c->arg[1],c->d.asBytes);
-                        break;
+			MifareUReadCard(c->arg[0], c->arg[1], c->d.asBytes);
+			break;
 		case CMD_MIFARE_READSC:
 			MifareReadSector(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
@@ -870,27 +867,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MIFARE_SNIFFER:
 			SniffMifare(c->arg[0]);
 			break;
-			
-		// mifare desfire
-		case CMD_MIFARE_DESFIRE_READBL:
-			break;
-		case CMD_MIFARE_DESFIRE_WRITEBL:
-			break;
-		case CMD_MIFARE_DESFIRE_AUTH1:
-			MifareDES_Auth1(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
-			break;
-		case CMD_MIFARE_DESFIRE_AUTH2:
-			//MifareDES_Auth2(c->arg[0],c->d.asBytes);
-			break;
-		// case CMD_MIFARE_DES_READER:
-			// ReaderMifareDES(c->arg[0], c->arg[1], c->d.asBytes);
-			//break;
-		case CMD_MIFARE_DESFIRE_INFO:
-			MifareDesfireGetInformation();
-			break;
-		case CMD_MIFARE_DESFIRE:
-			MifareSendCommand(c->arg[0], c->arg[1], c->d.asBytes);
-			break;
 
 #endif
 
@@ -915,7 +891,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 
 		case CMD_BUFF_CLEAR:
-			BufferClear();
+			BigBuf_Clear();
 			break;
 
 		case CMD_MEASURE_ANTENNA_TUNING:
@@ -939,17 +915,18 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K:
 
 			LED_B_ON();
+			uint8_t *BigBuf = BigBuf_get_addr();
 			for(size_t i=0; i<c->arg[1]; i += USB_CMD_DATA_SIZE) {
 				size_t len = MIN((c->arg[1] - i),USB_CMD_DATA_SIZE);
-				cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,0,((byte_t*)BigBuf)+c->arg[0]+i,len);
+				cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,traceLen,BigBuf+c->arg[0]+i,len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
-			cmd_send(CMD_ACK,0,0,0,0,0);
+			cmd_send(CMD_ACK,0,0,traceLen,0,0);
 			LED_B_OFF();
 			break;
 
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
-			uint8_t *b = (uint8_t *)BigBuf;
+			uint8_t *b = BigBuf_get_addr();
 			memcpy(b+c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;

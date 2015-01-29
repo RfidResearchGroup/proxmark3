@@ -48,7 +48,7 @@ local _commands = {
 	CMD_EM4X_READ_WORD =                                                 0x0218,
 	CMD_EM4X_WRITE_WORD =                                                0x0219,
 	CMD_IO_DEMOD_FSK =                                                   0x021A,
-	CMD_IO_CLONE_TAG =                                                   0x021B,
+  CMD_IO_CLONE_TAG =                                                   0x021B,
 	CMD_EM410X_DEMOD = 												     0x021c,
 	--/* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
@@ -109,7 +109,7 @@ local _commands = {
 	CMD_MIFARE_CSETBLOCK =                                               0x0605,
 	CMD_MIFARE_CGETBLOCK =                                               0x0606,
 	CMD_MIFARE_CIDENT =                                                  0x0607,
-	
+
 	CMD_SIMULATE_MIFARE_CARD =                                           0x0610,
 
 	CMD_READER_MIFARE =                                                  0x0611,
@@ -212,7 +212,6 @@ function Command:getBytes()
 	local data  = self.data
 	local cmd = self.cmd 
 	local arg1, arg2, arg3 = self.arg1, self.arg2, self.arg3
-
 	return bin.pack("LLLLH",cmd, arg1, arg2, arg3,data);
 end
 return _commands

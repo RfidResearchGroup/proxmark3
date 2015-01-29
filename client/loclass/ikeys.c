@@ -18,10 +18,6 @@
  * Flavio D. Garcia, Gerhard de Koning Gans, Roel Verdult and
  * Milosch Meriac in the paper "Dismantling IClass".
  *
- * This is a reference implementation of iclass key diversification. I'm sure it can be
- * optimized heavily. It is written for ease of understanding and correctness, please take it
- * and tweak it and make a super fast version instead, using this for testing and verification.
-
  * Copyright (C) 2014 Martin Holst Swende
  *
  * This is free software: you can redistribute it and/or modify
@@ -34,8 +30,12 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with IClassCipher.  If not, see <http://www.gnu.org/licenses/>.
+ * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * 
+ * 
  ****************************************************************************/
+
 /**
 
 

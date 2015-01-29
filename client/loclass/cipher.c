@@ -30,8 +30,12 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with IClassCipher.  If not, see <http://www.gnu.org/licenses/>.
+ * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * 
+ * 
  ****************************************************************************/
+
 
 #include "cipher.h"
 #include "cipherutils.h"

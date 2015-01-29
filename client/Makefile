@@ -9,18 +9,16 @@ include ../common/Makefile.common
 CC=gcc
 CXX=g++
 #COMMON_FLAGS = -m32
-
 VPATH = ../common
 OBJDIR = obj
 
-LDLIBS =  -L/mingw/lib -L/opt/local/lib -L/usr/local/lib ../liblua/liblua.a -lm -lreadline -lpthread -lcrypto -lgdi32
+LDLIBS = -L/opt/local/lib -L/usr/local/lib ../liblua/liblua.a -lreadline -lpthread -lm
 LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=c99 -lcrypto -I. -I../include -I../common -I/mingw/include -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O4
+CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O4
 LUAPLATFORM = generic
-
 ifneq (,$(findstring MINGW,$(platform)))
-CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui -I$(QTDIR)/include/QtWidgets  -I/mingw/include
-QTLDLIBS = -L$(QTDIR)/lib  -lQt5Core -lQt5Gui -lQt5Widgets 
+CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
+QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
 MOC = $(QTDIR)/bin/moc
 LUAPLATFORM = mingw
 else ifeq ($(platform),Darwin)
@@ -54,16 +52,15 @@ CORESRCS = 	uart.c \
 
 
 CMDSRCS = 	nonce2key/crapto1.c\
-			nonce2key/crypto1.c\
-			nonce2key/nonce2key.c\
-			loclass/cipher.c \
-			loclass/cipherutils.c \
-			loclass/des.c \
-			loclass/ikeys.c \
-			loclass/elite_crack.c \
-			loclass/fileutils.c \
-			loclass/hash1_brute.c \
-			mifarehost.c \
+		nonce2key/crypto1.c\
+		nonce2key/nonce2key.c\
+		loclass/cipher.c \
+		loclass/cipherutils.c \
+		loclass/des.c \
+		loclass/ikeys.c \
+		loclass/elite_crack.c\
+		loclass/fileutils.c\
+			mifarehost.c\
 			crc16.c \
 			iso14443crc.c \
 			iso15693tools.c \
@@ -80,12 +77,9 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			cmdhflegic.c \
 			cmdhficlass.c \
 			cmdhfmf.c \
-			cmdhfmfu.c \
-			cmdhfmfdes.c \
-            cmdhfdes.c \
+            cmdhfmfu.c \
 			cmdhw.c \
 			cmdlf.c \
-			cmdlfawid26.c \
 			cmdlfio.c \
 			cmdlfhid.c \
 			cmdlfem4x.c \
@@ -99,6 +93,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			scripting.c\
 			cmdscript.c\
 			pm3_bitlib.c\
+			aes.c\
 
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)

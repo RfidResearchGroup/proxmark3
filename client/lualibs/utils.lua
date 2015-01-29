@@ -108,6 +108,24 @@ local Utils =
 		return retval
 	end,
 	
+	-- input parameter is a string
+	-- Swaps the endianess and returns a string,  
+	-- IE:  'cd7a' -> '7acd'  -> 0x7acd
+	SwapEndiannessStr = function(s, len)
+		if s == nil then return nil end
+		if #s == 0 then return '' end
+		if  type(s) ~= 'string' then return nil end
+		
+		local retval
+		if len == 16 then
+			retval = s:sub(3,4)..s:sub(1,2)
+		elseif len == 24 then
+			retval = s:sub(5,6)..s:sub(3,4)..s:sub(1,2)
+		elseif len == 32 then
+			retval = s:sub(7,8)..s:sub(5,6)..s:sub(3,4)..s:sub(1,2)
+		end
+		return retval
+	end,	
 	------------ CONVERSIONS
 	
 	--
@@ -116,7 +134,7 @@ local Utils =
 		local B,K,OUT,I,D=16,"0123456789ABCDEF","",0
 		while IN>0 do
 			I=I+1
-			IN,D=math.floor(IN/B),math.mod(IN,B)+1
+			IN , D = math.floor(IN/B), math.modf(IN,B)+1
 			OUT=string.sub(K,D,D)..OUT
 		end
 		return OUT

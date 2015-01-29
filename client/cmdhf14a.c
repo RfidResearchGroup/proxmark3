@@ -14,15 +14,15 @@
 #include <string.h>
 #include <unistd.h>
 #include "util.h"
-#include "../common/iso14443crc.h"
+#include "iso14443crc.h"
 #include "data.h"
 #include "proxmark3.h"
 #include "ui.h"
 #include "cmdparser.h"
 #include "cmdhf14a.h"
-#include "../include/common.h"
+#include "common.h"
 #include "cmdmain.h"
-#include "../include/mifare.h"
+#include "mifare.h"
 
 static int CmdHelp(const char *Cmd);
 static void waitCmd(uint8_t iLen);
@@ -112,20 +112,15 @@ const manufactureName manufactureMapping[] = {
 // returns description of the best match	
 char* getTagInfo(uint8_t uid) {
 
-	int i, best = -1;	
+	int i;
 	int len = sizeof(manufactureMapping) / sizeof(manufactureName);
 	
-	for ( i = 0; i < len; ++i ) {
-		if ( uid == manufactureMapping[i].uid) {
-			if (best == -1) { 
-				best = i;
-			} 
-		} 
-	} 
+	for ( i = 0; i < len; ++i ) 
+		if ( uid == manufactureMapping[i].uid) 
+			return manufactureMapping[i].desc;
 
-	if (best>=0) return manufactureMapping[best].desc;
-	
-	return manufactureMapping[i].desc; 
+	//No match, return default
+	return manufactureMapping[len-1].desc; 
 }
 
 int CmdHF14AList(const char *Cmd)
@@ -165,7 +160,7 @@ int CmdHF14AReader(const char *Cmd)
 	PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
 	PrintAndLog(" UID : %s", sprint_hex(card.uid, card.uidlen));
 	PrintAndLog(" SAK : %02x [%d]", card.sak, resp.arg[0]);
-	
+
 	// Double & triple sized UID, can be mapped to a manufacturer.
 	// HACK: does this apply for Ultralight cards?
 	if ( card.uidlen > 4 ) {
@@ -189,7 +184,7 @@ int CmdHF14AReader(const char *Cmd)
 		case 0x98: PrintAndLog("TYPE : Gemplus MPCOS"); break;
 		default: ;
 	}
-	
+
 	// try to request ATS even if tag claims not to support it
 	if (select_status == 2) {
 		uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
@@ -203,7 +198,7 @@ int CmdHF14AReader(const char *Cmd)
 	    memcpy(&card.ats, resp.d.asBytes, resp.arg[0]);
 		card.ats_len = resp.arg[0];				// note: ats_len includes CRC Bytes
 	} 
-	
+
 	if(card.ats_len >= 3) {			// a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
 		bool ta1 = 0, tb1 = 0, tc1 = 0;
 		int pos;
@@ -359,7 +354,7 @@ int CmdHF14AReader(const char *Cmd)
 	c.arg[1] = 0;
 	c.arg[2] = 0;
 	SendCommand(&c);
-	
+
 	return select_status;
 }
 
@@ -417,9 +412,9 @@ int CmdHF14ASim(const char *Cmd)
 		PrintAndLog("   syntax: hf 14a sim <type> <uid>");
 		PrintAndLog("    types: 1 = MIFARE Classic");
 		PrintAndLog("           2 = MIFARE Ultralight");
-		PrintAndLog("           3 = MIFARE DESFIRE");
+		PrintAndLog("           3 = MIFARE Desfire");
 		PrintAndLog("           4 = ISO/IEC 14443-4");
-		PrintAndLog("           5 = MIFARE TNP3XXX");		
+		PrintAndLog("           5 = MIFARE Tnp3xxx");		
 		PrintAndLog("");
 		return 1;
 	}
@@ -485,7 +480,8 @@ int CmdHF14ASim(const char *Cmd)
 int CmdHF14ASnoop(const char *Cmd) {
 	int param = 0;
 	
-	if (param_getchar(Cmd, 0) == 'h') {
+	uint8_t ctmp = param_getchar(Cmd, 0) ;
+	if (ctmp == 'h' || ctmp == 'H') {
 		PrintAndLog("It get data from the field and saves it into command buffer.");
 		PrintAndLog("Buffer accessible from command hf list 14a.");
 		PrintAndLog("Usage:  hf 14a snoop [c][r]");
@@ -496,7 +492,7 @@ int CmdHF14ASnoop(const char *Cmd) {
 	}	
 	
 	for (int i = 0; i < 2; i++) {
-		char ctmp = param_getchar(Cmd, i);
+		ctmp = param_getchar(Cmd, i);
 		if (ctmp == 'c' || ctmp == 'C') param |= 0x01;
 		if (ctmp == 'r' || ctmp == 'R') param |= 0x02;
 	}
@@ -675,7 +671,7 @@ static command_t CommandTable[] =
   {"list",   CmdHF14AList,         0, "[Deprecated] List ISO 14443a history"},
   {"reader", CmdHF14AReader,       0, "Act like an ISO14443 Type A reader"},
   {"cuids",  CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443 Type A UIDs in one go"},
-  {"sim",    CmdHF14ASim,          0, "<UID> -- Fake ISO 14443a tag"},
+  {"sim",    CmdHF14ASim,          0, "<UID> -- Simulate ISO 14443a tag"},
   {"snoop",  CmdHF14ASnoop,        0, "Eavesdrop ISO 14443 Type A"},
   {"raw",    CmdHF14ACmdRaw,       0, "Send raw hex data to tag"},
   {NULL, NULL, 0, NULL}
