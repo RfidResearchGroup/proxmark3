@@ -64,8 +64,9 @@ void printDemodBuff()
 	if (bitLen>512) bitLen=512; //max output to 512 bits if we have more - should be plenty
 		
 	// equally divided by 16
+	
 	if ( bitLen % 16 > 0)
-		bitLen = (bitLen/16);
+		bitLen = (bitLen/16)*16;
 	
 	for (i = 0; i <= (bitLen-16); i+=16) {
 		PrintAndLog("%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i",
