@@ -540,6 +540,35 @@ int CmdDec(const char *Cmd)
   RepaintGraphWindow();
   return 0;
 }
+/**
+ * Undecimate - I'd call it 'interpolate', but we'll save that
+ * name until someone does an actual interpolation command, not just
+ * blindly repeating samples
+ * @param Cmd
+ * @return
+ */
+int CmdUndec(const char *Cmd)
+{
+	//We have memory, don't we?
+	int swap[MAX_GRAPH_TRACE_LEN] = { 0 };
+	uint32_t i = 0 ,j = 0;
+	while(j+1 < MAX_GRAPH_TRACE_LEN && i < GraphTraceLen)
+	{
+		swap[j] = GraphBuffer[i];
+		swap[j+1] = GraphBuffer[i];
+		i++;
+		j+=2;
+	}
+	memcpy(GraphBuffer,swap, j);
+	GraphTraceLen = j;
+	PrintAndLog("Undecimated by 2");
+	RepaintGraphWindow();
+
+	/*
+	 * Something is not right here, need to look into it,
+	 * the undec seems to only operate on half the values **/
+	return 0;
+}
 
 /* Print our clock rate */
 // uses data from graphbuffer
@@ -1651,7 +1680,8 @@ static command_t CommandTable[] =
   {"threshold",     CmdThreshold,       1, "<threshold> -- Maximize/minimize every value in the graph window depending on threshold"},
 	{"dirthreshold",  CmdDirectionalThreshold,   1, "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
 	{"tune",          CmdTuneSamples,     0, "Get hw tune samples for graph window"},
-  {"zerocrossings", CmdZerocrossings,   1, "Count time between zero-crossings"},
+	{"undec",         CmdUndec,         1, "Un-decimate samples by 2"},
+	{"zerocrossings", CmdZerocrossings,   1, "Count time between zero-crossings"},
   {NULL, NULL, 0, NULL}
 };
 
