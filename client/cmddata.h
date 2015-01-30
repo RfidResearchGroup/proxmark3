@@ -14,7 +14,9 @@
 command_t * CmdDataCommands();
 
 int CmdData(const char *Cmd);
+void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx);
 void printDemodBuff();
+void printBitStream(uint8_t BitStream[], uint32_t bitLen);
 int CmdAmp(const char *Cmd);
 int Cmdaskdemod(const char *Cmd);
 int Cmdaskrawdemod(const char *Cmd);
@@ -60,6 +62,7 @@ int CmdIndalaDecode(const char *Cmd);
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 extern int DemodBufferLen;
 
+extern uint8_t g_debugMode;
 #define BIGBUF_SIZE 40000
 
 #endif
