@@ -21,6 +21,8 @@
 #include "cmdmain.h"
 #include "cmddata.h"
 #include "lfdemod.h"
+#include "usb_cmd.h"
+
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 int DemodBufferLen;
 static int CmdHelp(const char *Cmd);
@@ -1077,11 +1079,15 @@ uint8_t getByte(uint8_t bits_per_sample, BitstreamOut* b)
 
 int CmdSamples(const char *Cmd)
 {
-	uint8_t got[40000];
+	//If we get all but the last byte in bigbuf,
+	// we don't have to worry about remaining trash
+	// in the last byte in case the bits-per-sample
+	// does not line up on byte boundaries
+	uint8_t got[40000-1];
 
 	int n = strtol(Cmd, NULL, 0);
 	if (n == 0)
-		n = 20000;
+		n = sizeof(got);
 
 	if (n > sizeof(got))
 		n = sizeof(got);
@@ -1091,14 +1097,22 @@ int CmdSamples(const char *Cmd)
 	PrintAndLog("Data fetched");
 	UsbCommand response;
 	WaitForResponse(CMD_ACK, &response);
-	uint8_t bits_per_sample = response.arg[0];
-	PrintAndLog("Samples packed at %d bits per sample", bits_per_sample);
+	uint8_t bits_per_sample = 8;
+
+	//Old devices without this feature would send 0 at arg[0]
+	if(response.arg[0] > 0)
+	{
+		sample_config *sc = (sample_config *) response.d.asBytes;
+		PrintAndLog("Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample
+					, sc->decimation);
+		bits_per_sample = sc->bits_per_sample;
+	}
 	if(bits_per_sample < 8)
 	{
 		PrintAndLog("Unpacking...");
 		BitstreamOut bout = { got, bits_per_sample * n,  0};
 		int j =0;
-		for (j = 0; j * bits_per_sample < n * 8 && j < GraphTraceLen; j++) {
+		for (j = 0; j * bits_per_sample < n * 8 && j < sizeof(GraphBuffer); j++) {
 			uint8_t sample = getByte(bits_per_sample, &bout);
 			GraphBuffer[j] = ((int) sample )- 128;
 		}
@@ -1110,7 +1124,6 @@ int CmdSamples(const char *Cmd)
 			GraphBuffer[j] = ((int)got[j]) - 128;
 		}
 		GraphTraceLen = n;
-
 	}
 
 	RepaintGraphWindow();

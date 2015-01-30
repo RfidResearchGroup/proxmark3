@@ -356,88 +356,152 @@ int CmdIndalaClone(const char *Cmd)
   return 0;
 }
 
-int CmdLFReadUsage()
+int usage_lf_read()
 {
-	PrintAndLog("Usage: lf read [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
+	PrintAndLog("Usage: lf read");
 	PrintAndLog("Options:        ");
 	PrintAndLog("       h            This help");
-	PrintAndLog("       H            High frequency (134 KHz). Defaults to 125 KHz");
-	PrintAndLog("       <divisor>    Manually set divisor. 88-> 134KHz, 95-> 125 Hz");
-	PrintAndLog("       b <bps>      Sets resolution of bits per sample. Default (max): 8");
-	PrintAndLog("       d <decim>    Sets decimation. A value of N saves only 1 in N samples. Default: 1");
-	PrintAndLog("       a [0|1]      Averaging - if set, will average the stored sample value when decimating. Default: 1");
-	PrintAndLog("Examples:");
-	PrintAndLog("      lf read");
-	PrintAndLog("                    Samples at 125KHz, 8bps.");
-	PrintAndLog("      lf read h b 4 d 3");
-	PrintAndLog("                    Samples at 134KHz, averages three samples into one, stored with ");
-	PrintAndLog("                    a resolution of 4 bits per sample.");
+	PrintAndLog("This function takes no arguments. ");
+	PrintAndLog("Use 'lf config' to set parameters.");
 	return 0;
 }
+int usage_lf_snoop()
+{
+	PrintAndLog("Usage: lf snoop");
+	PrintAndLog("Options:        ");
+	PrintAndLog("       h            This help");
+	PrintAndLog("This function takes no arguments. ");
+	PrintAndLog("Use 'lf config' to set parameters.");
+	return 0;
+}
+
+int usage_lf_config()
+{
+	PrintAndLog("Usage: lf config [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
+	PrintAndLog("Options:        ");
+	PrintAndLog("       h             This help");
+	PrintAndLog("       L             Low frequency (125 KHz)");
+	PrintAndLog("       H             High frequency (134 KHz)");
+	PrintAndLog("       q <divisor>   Manually set divisor. 88-> 134KHz, 95-> 125 Hz");
+	PrintAndLog("       b <bps>       Sets resolution of bits per sample. Default (max): 8");
+	PrintAndLog("       d <decim>     Sets decimation. A value of N saves only 1 in N samples. Default: 1");
+	PrintAndLog("       a [0|1]       Averaging - if set, will average the stored sample value when decimating. Default: 1");
+	PrintAndLog("       t <threshold> Sets trigger threshold. 0 means no threshold");
+	PrintAndLog("Examples:");
+	PrintAndLog("      lf config b 8 L");
+	PrintAndLog("                    Samples at 125KHz, 8bps.");
+	PrintAndLog("      lf config H b 4 d 3");
+	PrintAndLog("                    Samples at 134KHz, averages three samples into one, stored with ");
+	PrintAndLog("                    a resolution of 4 bits per sample.");
+	PrintAndLog("      lf read");
+	PrintAndLog("                    Performs a read (active field)");
+	PrintAndLog("      lf snoop");
+	PrintAndLog("                    Performs a snoop (no active field)");
+	return 0;
+}
+
+int CmdLFSetConfig(const char *Cmd)
+{
+
+	uint8_t divisor =  0;//Frequency divisor
+	uint8_t bps = 0; // Bits per sample
+	uint8_t decimation = 0; //How many to keep
+	bool averaging = 1; // Defaults to true
+	bool errors = FALSE;
+	int trigger_threshold =-1;//Means no change
+	uint8_t unsigned_trigg = 0;
+
+	uint8_t cmdp =0;
+	while(param_getchar(Cmd, cmdp) != 0x00)
+	{
+		PrintAndLog("working %c", param_getchar(Cmd, cmdp));
+		switch(param_getchar(Cmd, cmdp))
+		{
+		case 'h':
+			return usage_lf_config();
+		case 'H':
+			divisor = 88;
+			cmdp++;
+			break;
+		case 'L':
+			divisor = 95;
+			cmdp++;
+			break;
+		case 'q':
+			errors |= param_getdec(Cmd,cmdp+1,&divisor);
+			cmdp+=2;
+			break;
+		case 't':
+			errors |= param_getdec(Cmd,cmdp+1,&unsigned_trigg);
+			cmdp+=2;
+			if(!errors) trigger_threshold = unsigned_trigg;
+			break;
+		case 'b':
+			errors |= param_getdec(Cmd,cmdp+1,&bps);
+			cmdp+=2;
+			break;
+		case 'd':
+			errors |= param_getdec(Cmd,cmdp+1,&decimation);
+			cmdp+=2;
+			break;
+		case 'a':
+			averaging = param_getchar(Cmd,cmdp+1) == '1';
+			cmdp+=2;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = 1;
+			break;
+		}
+		if(errors) break;
+	}
+	if(cmdp == 0)
+	{
+		errors = 1;// No args
+	}
+
+	//Validations
+	if(errors)
+	{
+		return usage_lf_config();
+	}
+	//Bps is limited to 8, so fits in lower half of arg1
+	if(bps >> 8) bps = 8;
+
+	sample_config config = {
+		decimation,bps,averaging,divisor,trigger_threshold
+	};
+	//Averaging is a flag on high-bit of arg[1]
+	UsbCommand c = {CMD_SET_LF_SAMPLING_CONFIG};
+	memcpy(c.d.asBytes,&config,sizeof(sample_config));
+	SendCommand(&c);
+	return 0;
+}
+
 int CmdLFRead(const char *Cmd)
 {
-	uint8_t divisor =  95;//Frequency divisor
-	uint8_t bps = 8; // Bits per sample
-	uint8_t decimation = 1; //How many to keep
-	bool averaging = 1; // Should we use averaging when discarding samples?
-	bool errors = FALSE;
 
 	uint8_t cmdp =0;
 	if(param_getchar(Cmd, cmdp) == 'h')
 	{
-		return CmdLFReadUsage();
+		return usage_lf_read();
 	}
-
-	// Divisor
-	if(param_getchar(Cmd, cmdp) == 'H') {
-		divisor = 88;
-		cmdp++;
-	}else if(param_isdec(Cmd,cmdp) )
-	{
-		errors |= param_getdec(Cmd,cmdp, &divisor);
-	}
-	//BPS
-	if(param_getchar(Cmd, cmdp) == 'b') {
-		errors |= param_getdec(Cmd,cmdp+1,&bps);
-		cmdp+=2;
-	}
-	//Decimation
-	if(param_getchar(Cmd, cmdp) == 'd')
-	{
-		errors |= param_getdec(Cmd,cmdp+1,&decimation);
-		cmdp+=2;
-	}
-	//Averaging
-	if(param_getchar(Cmd, cmdp) == 'a')
-	{
-		averaging = param_getchar(Cmd,cmdp+1) == '1';
-		cmdp+=2;
-	}
-	//Validations
-	if(errors)
-	{
-		return CmdLFReadUsage();
-	}
-
-	//Bps is limited to 8, so fits in lower half of arg1
-	if(bps > 8) bps = 8;
-
-	//Feedback
-	PrintAndLog("Sampling config: ");
-	PrintAndLog("   divisor:    %d ", divisor);
-	PrintAndLog("   bps:        %d ", bps);
-	PrintAndLog("   decimation: %d ", decimation);
-	PrintAndLog("   averaging:  %d ", averaging);
-	PrintAndLog("OBS, this is sticky on the device and affects all LF listening operations");
-	PrintAndLog("To reset, issue 'lf read'");
-
 	//And ship it to device
-	//Averaging is a flag on high-bit of arg[1]
 	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K};
-	c.arg[0] = divisor;
-	c.arg[1] = bps | (averaging << 7) ;
-	c.arg[2] = decimation;
+	SendCommand(&c);
+	WaitForResponse(CMD_ACK,NULL);
+	return 0;
+}
 
+int CmdLFSnoop(const char *Cmd)
+{
+	uint8_t cmdp =0;
+	if(param_getchar(Cmd, cmdp) == 'h')
+	{
+		return usage_lf_snoop();
+	}
+
+	UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES};
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK,NULL);
 	return 0;
@@ -517,30 +581,6 @@ int CmdLFSimManchester(const char *Cmd)
   return 0;
 }
 
-int CmdLFSnoop(const char *Cmd)
-{
-  UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES};
-
-  // 'h' means higher-low-frequency, 134 kHz
-  c.arg[0] = 0;
-  c.arg[1] = -1;
-
-	if (*Cmd == 'l') {
-    sscanf(Cmd, "l %"lli, &c.arg[1]);
-  } else if(*Cmd == 'h') {
-    c.arg[0] = 1;
-    sscanf(Cmd, "h %"lli, &c.arg[1]);
-  } else if (sscanf(Cmd, "%"lli" %"lli, &c.arg[0], &c.arg[1]) < 1) {
-		PrintAndLog("usage 1:  snoop");
-		PrintAndLog("      2:  snoop {l,h} [trigger threshold]");
-		PrintAndLog("      3:  snoop <divisor> [trigger threshold]");
-    return 0;
-  }
-
-  SendCommand(&c);
-  WaitForResponse(CMD_ACK,NULL);
-  return 0;
-}
 
 int CmdVchDemod(const char *Cmd)
 {
@@ -673,12 +713,13 @@ static command_t CommandTable[] =
   {"help",        CmdHelp,            1, "This help"},
   {"cmdread",     CmdLFCommandRead,   0, "<off period> <'0' period> <'1' period> <command> ['h'] -- Modulate LF reader field to send command before read (all periods in microseconds) (option 'h' for 134)"},
   {"em4x",        CmdLFEM4X,          1, "{ EM4X RFIDs... }"},
+  {"config",      CmdLFSetConfig,     0, "Set config for LF sampling, bit/sample, decimation, frequency"},
   {"flexdemod",   CmdFlexdemod,       1, "Demodulate samples for FlexPass"},
   {"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
   {"io",       	  CmdLFIO,	          1, "{ ioProx tags... }"},
   {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
   {"indalaclone", CmdIndalaClone,     0, "<UID> ['l']-- Clone Indala to T55x7 (tag must be in antenna)(UID in HEX)(option 'l' for 224 UID"},
-  {"read",        CmdLFRead,          0, "['h' or <divisor>] -- Read 125/134 kHz LF ID-only tag (option 'h' for 134, alternatively: f=12MHz/(divisor+1))"},
+  {"read",        CmdLFRead,          0, "Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
   {"search",      CmdLFfind,          1, "Read and Search for valid known tag (in offline mode it you can load first then search)"},
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
   {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},

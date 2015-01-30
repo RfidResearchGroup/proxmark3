@@ -15,206 +15,18 @@
 #include "crc16.h"
 #include "string.h"
 #include "lfdemod.h"
-
-uint8_t decimation  = 1;
-uint8_t bits_per_sample = 8;
-bool averaging = 1;
+#include "lfsampling.h"
 
 
-typedef struct {
-	uint8_t * buffer;
-	uint32_t numbits;
-	uint32_t position;
-} BitstreamOut;
 /**
- * @brief Pushes bit onto the stream
- * @param stream
- * @param bit
+ * Function to do a modulation and then get samples.
+ * @param delay_off
+ * @param period_0
+ * @param period_1
+ * @param command
  */
-void pushBit( BitstreamOut* stream, uint8_t bit)
-{
-	int bytepos = stream->position >> 3; // divide by 8
-	int bitpos = stream->position & 7;
-	*(stream->buffer+bytepos) |= (bit > 0) <<  (7 - bitpos);
-	stream->position++;
-	stream->numbits++;
-}
-
-/**
- * Does the sample acquisition. If threshold is specified, the actual sampling
- * is not commenced until the threshold has been reached.
- * This method implements decimation and quantization in order to
- * be able to provide longer sample traces.
- * Uses the following global settings:
- * - decimation - how much should the signal be decimated. A decimation of N means we keep 1 in N samples, etc.
- * - bits_per_sample - bits per sample. Max 8, min 1 bit per sample.
- * - averaging If set to true, decimation will use averaging, so that if e.g. decimation is 3, the sample
- * value that will be used is the average value of the three samples.
- *
- * @param trigger_threshold - a threshold. The sampling won't commence until this threshold has been reached. Set
- * to -1 to ignore threshold.
- * @param silent - is true, now outputs are made. If false, dbprints the status
- * @return the number of bits occupied by the samples.
- */
-uint32_t DoAcquisition125k_internal(int trigger_threshold,bool silent)
-{
-	//.
-	uint8_t *dest = (uint8_t *)BigBuf;
-	int bufsize = BIGBUF_SIZE;
-	memset(dest, 0, bufsize);
-
-	if(bits_per_sample < 1) bits_per_sample = 1;
-	if(bits_per_sample > 8) bits_per_sample = 8;
-
-	if(decimation < 1) decimation = 1;
-
-	// Use a bit stream to handle the output
-	BitstreamOut data = { dest , 0, 0};
-	int sample_counter = 0;
-	uint8_t sample = 0;
-	//If we want to do averaging
-	uint32_t sample_sum =0 ;
-	uint32_t sample_total_numbers =0 ;
-	uint32_t sample_total_saved =0 ;
-
-	while(!BUTTON_PRESS()) {
-		WDT_HIT();
-		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-			AT91C_BASE_SSC->SSC_THR = 0x43;
-			LED_D_ON();
-		}
-		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-			sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			LED_D_OFF();
-			if (trigger_threshold != -1 && sample < trigger_threshold)
-				continue;
-
-			trigger_threshold = -1;
-			sample_total_numbers++;
-
-			if(averaging)
-			{
-				sample_sum += sample;
-			}
-			//Check decimation
-			if(decimation > 1)
-			{
-				sample_counter++;
-				if(sample_counter < decimation) continue;
-				sample_counter = 0;
-			}
-			//Averaging
-			if(averaging && decimation > 1) {
-				sample = sample_sum / decimation;
-				sample_sum =0;
-			}
-			//Store the sample
-			sample_total_saved ++;
-			if(bits_per_sample == 8){
-				dest[sample_total_saved-1] = sample;
-				data.numbits = sample_total_saved << 3;//Get the return value correct
-				if(sample_total_saved >= bufsize) break;
-			}
-			else{
-				pushBit(&data, sample & 0x80);
-				if(bits_per_sample > 1)	pushBit(&data, sample & 0x40);
-				if(bits_per_sample > 2)	pushBit(&data, sample & 0x20);
-				if(bits_per_sample > 3)	pushBit(&data, sample & 0x10);
-				if(bits_per_sample > 4)	pushBit(&data, sample & 0x08);
-				if(bits_per_sample > 5)	pushBit(&data, sample & 0x04);
-				if(bits_per_sample > 6)	pushBit(&data, sample & 0x02);
-				//Not needed, 8bps is covered above
-				//if(bits_per_sample > 7)	pushBit(&data, sample & 0x01);
-				if((data.numbits >> 3) +1  >= bufsize) break;
-			}
-		}
-	}
-
-	if(!silent)
-	{
-		Dbprintf("Done, saved %d out of %d seen samples at %d bits/sample",sample_total_saved, sample_total_numbers,bits_per_sample);
-		Dbprintf("buffer samples: %02x %02x %02x %02x %02x %02x %02x %02x ...",
-					dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
-	}
-	return data.numbits;
-}
-/**
-* Perform sample aquisition.
-*/
-void DoAcquisition125k(int trigger_threshold)
-{
-    DoAcquisition125k_internal(trigger_threshold, false);
-}
-
-/**
-* Setup the FPGA to listen for samples. This method downloads the FPGA bitstream
-* if not already loaded, sets divisor and starts up the antenna.
-* @param divisor : 1, 88> 255 or negative ==> 134.8 KHz
-* 				   0 or 95 ==> 125 KHz
-*
-**/
-void LFSetupFPGAForADC(int divisor, bool lf_field)
-{
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    if ( (divisor == 1) || (divisor < 0) || (divisor > 255) )
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-    else if (divisor == 0)
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-    else
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor);
-
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | (lf_field ? FPGA_LF_ADC_READER_FIELD : 0));
-
-    // Connect the A/D to the peak-detected low-frequency path.
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-    // Give it a bit of time for the resonant antenna to settle.
-    SpinDelay(50);
-    // Now set up the SSC to get the ADC samples that are now streaming at us.
-    FpgaSetupSsc();
-}
-/**
-* Initializes the FPGA, and acquires the samples.
-**/
-void AcquireRawAdcSamples125k(int divisor,int arg1, int arg2)
-{
-	if (arg1 != 0)
-	{
-		averaging = (arg1 & 0x80) != 0;
-		bits_per_sample = (arg1 & 0x0F);
-	}
-	if(arg2 != 0)
-	{
-		decimation = arg2;
-	}
-
-	Dbprintf("Sampling config: ");
-	Dbprintf("   divisor:    %d ", divisor);
-	Dbprintf("   bps:        %d ", bits_per_sample);
-	Dbprintf("   decimation: %d ", decimation);
-	Dbprintf("   averaging:  %d ", averaging);
-
-	LFSetupFPGAForADC(divisor, true);
-	// Now call the acquisition routine
-	DoAcquisition125k_internal(-1,false);
-}
-/**
-* Initializes the FPGA for snoop-mode, and acquires the samples.
-**/
-
-void SnoopLFRawAdcSamples(int divisor, int trigger_threshold)
-{
-    LFSetupFPGAForADC(divisor, false);
-    DoAcquisition125k(trigger_threshold);
-}
-
 void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, uint8_t *command)
 {
-
-    /* Make sure the tag is reset */
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    SpinDelay(2500);
-
 
     int divisor_used = 95; // 125 KHz
     // see if 'h' was specified
@@ -222,24 +34,25 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
     if (command[strlen((char *) command) - 1] == 'h')
         divisor_used = 88; // 134.8 KHz
 
+	sample_config sc = { 0,0,1, divisor_used, 0};
+	setSamplingConfig(&sc);
 
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-    // Give it a bit of time for the resonant antenna to settle.
-    SpinDelay(50);
+	/* Make sure the tag is reset */
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelay(2500);
 
-    // And a little more time for the tag to fully power up
-    SpinDelay(2000);
+	LFSetupFPGAForADC(sc.divisor, 1);
 
-    // Now set up the SSC to get the ADC samples that are now streaming at us.
-    FpgaSetupSsc();
+	// And a little more time for the tag to fully power up
+	SpinDelay(2000);
 
     // now modulate the reader field
     while(*command != '\0' && *command != ' ') {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         LED_D_OFF();
         SpinDelayUs(delay_off);
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used);
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc.divisor);
 
         FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
         LED_D_ON();
@@ -251,13 +64,15 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LED_D_OFF();
     SpinDelayUs(delay_off);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used);
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc.divisor);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
     // now do the read
-    DoAcquisition125k(-1);
+	DoAcquisition_config(false);
 }
+
+
 
 /* blank r/w tag data stream
 ...0000000000000000 01111111
@@ -745,8 +560,8 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
 
-        DoAcquisition125k_internal(-1,true);
-        // FSK demodulator
+		DoAcquisition_default(-1,true);
+		// FSK demodulator
 		size = HIDdemodFSK(dest, sizeof(BigBuf), &hi2, &hi, &lo);
 
         WDT_HIT();
@@ -833,8 +648,8 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
 
-        DoAcquisition125k_internal(-1,true);
-        size  = sizeof(BigBuf);
+		DoAcquisition_default(-1,true);
+		size  = sizeof(BigBuf);
         //Dbprintf("DEBUG: Buffer got");
 		//askdemod and manchester decode
 		errCnt = askmandemod(dest, &size, &clk, &invert);
@@ -884,8 +699,8 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
     while(!BUTTON_PRESS()) {
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
-        DoAcquisition125k_internal(-1,true);
-        //fskdemod and get start index
+		DoAcquisition_default(-1,true);
+		//fskdemod and get start index
         WDT_HIT();
         idx = IOdemodFSK(dest,sizeof(BigBuf));
         if (idx>0){
@@ -1489,7 +1304,9 @@ int DemodPCF7931(uint8_t **outBlocks) {
     int lmin=128, lmax=128;
     uint8_t dir;
 
-	AcquireRawAdcSamples125k(0,0,0);
+	LFSetupFPGAForADC(95, true);
+	DoAcquisition_default(0, 0);
+
 
     lmin = 64;
     lmax = 192;
