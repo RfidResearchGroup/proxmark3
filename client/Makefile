@@ -37,6 +37,15 @@ LDLIBS +=  -ldl
 LUAPLATFORM = linux
 endif
 
+# QT version,  4 or 5
+qtplatform = $(shell $(MOC) -v)
+ifneq (, $(findstring moc 5,$(qtplatform)))
+   CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui -I$(QTDIR)/include/QtWidgets  -I/mingw/include
+   QTLDLIBS = -L$(QTDIR)/lib  -lQt5Core -lQt5Gui -lQt5Widgets 
+else
+   CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
+   QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
+endif
 
 ifneq ($(QTLDLIBS),)
 QTGUI = $(OBJDIR)/proxgui.o $(OBJDIR)/proxguiqt.o $(OBJDIR)/proxguiqt.moc.o
