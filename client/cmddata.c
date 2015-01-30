@@ -56,6 +56,10 @@ void printDemodBuff()
 		return;
 	}
 	if (bitLen>512) bitLen=512; //max output to 512 bits if we have more - should be plenty
+		
+	// ensure equally divided by 16
+ 	bitLen &= 0xfff0;
+	
 	for (i = 0; i <= (bitLen-16); i+=16) {
 		PrintAndLog("%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i",
 			DemodBuffer[i],
@@ -188,6 +192,11 @@ void printBitStream(uint8_t BitStream[], uint32_t bitLen)
     return;
   }
   if (bitLen>512) bitLen=512;
+  
+  	// ensure equally divided by 16
+ 	bitLen &= 0xfff0;
+
+
    for (i = 0; i <= (bitLen-16); i+=16) {
     PrintAndLog("%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i%i",
       BitStream[i],
