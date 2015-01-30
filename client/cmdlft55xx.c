@@ -20,50 +20,94 @@
 #include "cmdlft55xx.h"
 #include "util.h"
 #include "data.h"
+#include "lfdemod.h"
 
 
 #define LF_TRACE_BUFF_SIZE 20000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
 #define LF_BITSSTREAM_LEN 1000 // more then 1000 bits shouldn't happend..  8block * 4 bytes * 8bits = 
 static int CmdHelp(const char *Cmd);
 
+// int CmdReadBlk(const char *Cmd)
+// {
+	// int block = -1;
+	// sscanf(Cmd, "%d", &block);
+
+	// if ((block > 7) | (block < 0)) {
+		// PrintAndLog("Block must be between 0 and 7");
+		// return 1;
+	// }	
+
+	// UsbCommand c;
+	// c.cmd = CMD_T55XX_READ_BLOCK;
+	// c.d.asBytes[0] = 0x00;
+	// c.arg[0] = 0;
+	// c.arg[1] = block;
+	// c.arg[2] = 0;
+	// SendCommand(&c);
+	// WaitForResponse(CMD_ACK, NULL);
+	
+	// uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
+	
+	// GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,0);  //3560 -- should be offset..
+	// WaitForResponseTimeout(CMD_ACK,NULL, 1500);
+
+	// for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
+		// GraphBuffer[j] = (int)data[j];
+	// }
+	// GraphTraceLen = LF_TRACE_BUFF_SIZE;
+	// ManchesterDemod(block);
+	// RepaintGraphWindow();
+  // return 0;
+// }
+
 int CmdReadBlk(const char *Cmd)
 {
+	int invert = 0;
+	int clk = 0;
 	int block = -1;
-	sscanf(Cmd, "%d", &block);
+	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
 
+	sscanf(Cmd, "%d", &block);
+	
 	if ((block > 7) | (block < 0)) {
 		PrintAndLog("Block must be between 0 and 7");
 		return 1;
-	}	
-
-	UsbCommand c;
-	c.cmd = CMD_T55XX_READ_BLOCK;
-	c.d.asBytes[0] = 0x00;
-	c.arg[0] = 0;
-	c.arg[1] = block;
-	c.arg[2] = 0;
-	SendCommand(&c);
-	WaitForResponse(CMD_ACK, NULL);
-	
-	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
-	
-	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,0);  //3560 -- should be offset..
-	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
-
-	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
-		GraphBuffer[j] = (int)data[j];
 	}
-	GraphTraceLen = LF_TRACE_BUFF_SIZE;
-	ManchesterDemod(block);
-	RepaintGraphWindow();
-  return 0;
+
+	UsbCommand c = { CMD_T55XX_READ_BLOCK, { 0, block, 0 } };
+	SendCommand(&c);
+	if ( !WaitForResponseTimeout(CMD_ACK,NULL,1500) ) {
+		PrintAndLog("command execution time out");
+		return 1;
+	}
+	
+	CmdSamples("");
+
+	size_t bitlen = getFromGraphBuf(bits);
+	
+	int errCnt = askrawdemod(bits, &bitlen, &clk, &invert);
+	
+	//throw away static - allow 1 and -1 (in case of threshold command first)
+	if ( errCnt == -1 || bitlen < 16 ){  
+		PrintAndLog("no data found");
+		if (g_debugMode) 
+			PrintAndLog("errCnt: %d, bitlen: %d, clk: %d, invert: %d", errCnt, bitlen, clk, invert);
+		return 0;
+	}
+	if (g_debugMode) 
+		PrintAndLog("Using Clock: %d - invert: %d - Bits Found: %d", clk, invert, bitlen);
+
+	//move bits back to DemodBuffer
+	setDemodBuf(bits, bitlen, 0);
+	printBitStream(bits,bitlen);
+	return 0;
 }
 
 int CmdReadBlkPWD(const char *Cmd)
 {
 	int Block = -1; //default to invalid block
 	int Password = 0xFFFFFFFF; //default to blank Block 7
-	UsbCommand c;
+
 
 	sscanf(Cmd, "%d %x", &Block, &Password);
 
@@ -74,17 +118,14 @@ int CmdReadBlkPWD(const char *Cmd)
 
 	PrintAndLog("Reading page 0 block %d pwd %08X", Block, Password);
 
-	c.cmd = CMD_T55XX_READ_BLOCK;
+	UsbCommand c = {CMD_T55XX_READ_BLOCK, {0, Block, Password} };
 	c.d.asBytes[0] = 0x1; //Password mode
-	c.arg[0] = 0;
-	c.arg[1] = Block;
-	c.arg[2] = Password;
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK, NULL);
 		
 	uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
 
-	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,0);  //3560 -- should be offset..
+	GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,0);
 	WaitForResponseTimeout(CMD_ACK,NULL, 1500);
 
 	for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
@@ -92,6 +133,7 @@ int CmdReadBlkPWD(const char *Cmd)
 	}
 	GraphTraceLen = LF_TRACE_BUFF_SIZE;
 	ManchesterDemod(Block);	
+
 	RepaintGraphWindow();
   return 0;
 }
@@ -100,22 +142,18 @@ int CmdWriteBlk(const char *Cmd)
 {
   int Block = 8; //default to invalid block
   int Data = 0xFFFFFFFF; //default to blank Block 
-  UsbCommand c;
 
-  sscanf(Cmd, "%x %d", &Data, &Block);
+	sscanf(Cmd, "%d %x", &Block, &Data);
 
   if (Block > 7) {
   	PrintAndLog("Block must be between 0 and 7");
   	return 1;
   }	
 
-  PrintAndLog("Writting block %d with data %08X", Block, Data);
+	PrintAndLog("Writing block %d  data %08X", Block, Data);
 
-  c.cmd = CMD_T55XX_WRITE_BLOCK;
+	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {Data, Block, 0}};
   c.d.asBytes[0] = 0x0; //Normal mode
-  c.arg[0] = Data;
-  c.arg[1] = Block;
-  c.arg[2] = 0;
   SendCommand(&c);
   return 0;
 }
@@ -125,22 +163,19 @@ int CmdWriteBlkPWD(const char *Cmd)
   int Block = 8; //default to invalid block
   int Data = 0xFFFFFFFF; //default to blank Block 
   int Password = 0xFFFFFFFF; //default to blank Block 7
-  UsbCommand c;
 
-  sscanf(Cmd, "%x %d %x", &Data, &Block, &Password);
+
+	sscanf(Cmd, "%d %x %x",&Block, &Data, &Password);
 
   if (Block > 7) {
   	PrintAndLog("Block must be between 0 and 7");
   	return 1;
   }	
 
-  PrintAndLog("Writting block %d with data %08X and password %08X", Block, Data, Password);
+	PrintAndLog("Writing block %d  data %08X  password %08X", Block, Data, Password);
 
-  c.cmd = CMD_T55XX_WRITE_BLOCK;
+	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {Data, Block, Password}};
   c.d.asBytes[0] = 0x1; //Password mode
-  c.arg[0] = Data;
-  c.arg[1] = Block;
-  c.arg[2] = Password;
   SendCommand(&c);
   return 0;
 }
@@ -154,11 +189,12 @@ int CmdReadTrace(const char *Cmd)
 		PrintAndLog("     [use data from Graphbuffer], if not set, try reading data from tag.");
 		PrintAndLog("");
 		PrintAndLog("     sample: lf t55xx trace");
-		PrintAndLog("     sample: lf t55xx trace 1");
+		PrintAndLog("           : lf t55xx trace 1");
 		return 0;
 	}
 
 	if ( strlen(Cmd)==0){
+	
 		UsbCommand c = {CMD_T55XX_READ_TRACE, {0, 0, 0}};
 		SendCommand(&c);
 		WaitForResponse(CMD_ACK, NULL);
@@ -315,7 +351,7 @@ int CmdDump(const char *Cmd){
 	if ( hasPwd ){
 		if (param_gethex(Cmd, 0, pwd, 8)) {
 			PrintAndLog("password must include 8 HEX symbols");
-			return 0;
+			return 1;
 		}
 	}
 	
@@ -483,8 +519,8 @@ static command_t CommandTable[] =
   {"help",   CmdHelp,        1, "This help"},
   {"rd",     CmdReadBlk,     0, "<block> -- Read T55xx block data (page 0)"},
   {"rdpwd",  CmdReadBlkPWD,  0, "<block> <password> -- Read T55xx block data with password mode"},
-  {"wr",     CmdWriteBlk,    0, "<data> <block> -- Write T55xx block data (page 0)"},
-  {"wrpwd",  CmdWriteBlkPWD, 0, "<data> <block> <password> -- Write T55xx block data with password"},
+  {"wr",     CmdWriteBlk,    0, "<block> <data> -- Write T55xx block data (page 0)"},
+  {"wrpwd",  CmdWriteBlkPWD, 0, "<block> <password> <data> -- Write T55xx block data with password"},
   {"trace",  CmdReadTrace,   0, "[1] Read T55xx traceability data (page 1/ blk 0-1)"},
   {"info",   CmdInfo,        0, "[1] Read T55xx configuration data (page 0/ blk 0)"},
   {"dump",   CmdDump,        0, "[password] Dump T55xx card block 0-7. optional with password"},
