@@ -549,24 +549,32 @@ int CmdDec(const char *Cmd)
  */
 int CmdUndec(const char *Cmd)
 {
+	if(param_getchar(Cmd, 0) == 'h')
+	{
+		PrintAndLog("Usage: data undec [factor]");
+		PrintAndLog("This function performs un-decimation, by repeating each sample N times");
+		PrintAndLog("Options:        ");
+		PrintAndLog("       h            This help");
+		PrintAndLog("       factor       The number of times to repeat each sample.[default:2]");
+		PrintAndLog("Example: 'data undec 3'");
+		return 0;
+	}
+
+	uint8_t factor = param_get8ex(Cmd, 0,2, 10);
 	//We have memory, don't we?
 	int swap[MAX_GRAPH_TRACE_LEN] = { 0 };
-	uint32_t i = 0 ,j = 0;
-	while(j+1 < MAX_GRAPH_TRACE_LEN && i < GraphTraceLen)
+	uint32_t g_index = 0 ,s_index = 0;
+	while(g_index < GraphTraceLen && s_index < MAX_GRAPH_TRACE_LEN)
 	{
-		swap[j] = GraphBuffer[i];
-		swap[j+1] = GraphBuffer[i];
-		i++;
-		j+=2;
+		int count = 0;
+		for(count = 0; count < factor && s_index+count < MAX_GRAPH_TRACE_LEN; count ++)
+			swap[s_index+count] = GraphBuffer[g_index];
+		s_index+=count;
 	}
-	memcpy(GraphBuffer,swap, j);
-	GraphTraceLen = j;
-	PrintAndLog("Undecimated by 2");
-	RepaintGraphWindow();
 
-	/*
-	 * Something is not right here, need to look into it,
-	 * the undec seems to only operate on half the values **/
+	memcpy(GraphBuffer,swap, s_index * sizeof(int));
+	GraphTraceLen = s_index;
+	RepaintGraphWindow();
 	return 0;
 }
 
