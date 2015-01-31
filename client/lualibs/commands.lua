@@ -49,7 +49,7 @@ local _commands = {
 	CMD_EM4X_WRITE_WORD =                                                0x0219,
 	CMD_IO_DEMOD_FSK =                                                   0x021A,
   CMD_IO_CLONE_TAG =                                                   0x021B,
-  CMD_EM410X_DEMOD =    																							 0x021C,
+	CMD_EM410X_DEMOD = 												     0x021c,
 	--/* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
 	--// For the 13.56 MHz tags

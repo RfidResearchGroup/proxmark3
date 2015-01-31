@@ -232,14 +232,27 @@ int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 // "MAGIC" CARD
 
 int mfCSetUID(uint8_t *uid, uint8_t *oldUID, bool wantWipe) {
+	
+	uint8_t oldblock0[16] = {0x00};
 	uint8_t block0[16] = {0x00};
 	memcpy(block0, uid, 4); 
 	block0[4] = block0[0]^block0[1]^block0[2]^block0[3]; // Mifare UID BCC
 	// mifare classic SAK(byte 5) and ATQA(byte 6 and 7)
-	block0[5] = 0x08;
-	block0[6] = 0x04;
-	block0[7] = 0x00;
+	//block0[5] = 0x08;
+	//block0[6] = 0x04;
+	//block0[7] = 0x00;
 	
+	block0[5] = 0x01;  //sak
+	block0[6] = 0x01;
+	block0[7] = 0x0f;
+	
+	int old = mfCGetBlock(0, oldblock0, CSETBLOCK_SINGLE_OPER);
+	if ( old == 0) {
+		memcpy(block0+8, oldblock0+8, 8);
+		PrintAndLog("block 0:  %s", sprint_hex(block0,16));
+	} else {
+		PrintAndLog("Couldn't get olddata. Will write over the last bytes of Block 0.");
+	}
 	return mfCSetBlock(0, block0, oldUID, wantWipe, CSETBLOCK_SINGLE_OPER);
 }
 
@@ -253,8 +266,10 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, bool wantWipe, uin
   UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
 		isOK  = resp.arg[0] & 0xff;
-		if (uid != NULL) memcpy(uid, resp.d.asBytes, 4);
-		if (!isOK) return 2;
+		if (uid != NULL) 
+			memcpy(uid, resp.d.asBytes, 4);
+		if (!isOK) 
+			return 2;
 	} else {
 		PrintAndLog("Command execute timeout");
 		return 1;
@@ -286,9 +301,9 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
 static uint8_t trailerAccessBytes[4] = {0x08, 0x77, 0x8F, 0x00};
 
 // variables
-char logHexFileName[200] = {0x00};
+char logHexFileName[FILE_PATH_SIZE] = {0x00};
 static uint8_t traceCard[4096] = {0x00};
-static char traceFileName[200] = {0x00};
+static char traceFileName[FILE_PATH_SIZE] = {0x00};
 static int traceState = TRACE_IDLE;
 static uint8_t traceCurBlock = 0;
 static uint8_t traceCurKey = 0;
@@ -323,20 +338,28 @@ int isBlockTrailer(int blockN) {
 
 int loadTraceCard(uint8_t *tuid) {
 	FILE * f;
-	char buf[64];
-	uint8_t buf8[64];
+	char buf[64] = {0x00};
+	uint8_t buf8[64] = {0x00};
 	int i, blockNum;
 	
-	if (!isTraceCardEmpty()) saveTraceCard();
+	if (!isTraceCardEmpty()) 
+		saveTraceCard();
+		
 	memset(traceCard, 0x00, 4096);
 	memcpy(traceCard, tuid + 3, 4);
+
 	FillFileNameByUID(traceFileName, tuid, ".eml", 7);
 
 	f = fopen(traceFileName, "r");
-	if (!f) return 1;
+	if (!f) {
+		fclose(f);
+		return 1;
+	}
 	
 	blockNum = 0;
+		
 	while(!feof(f)){
+	
 		memset(buf, 0, sizeof(buf));
 		if (fgets(buf, sizeof(buf), f) == NULL) {
 			PrintAndLog("File reading error.");
@@ -368,22 +391,30 @@ int saveTraceCard(void) {
 	if ((!strlen(traceFileName)) || (isTraceCardEmpty())) return 0;
 	
 	f = fopen(traceFileName, "w+");
+	if ( !f ) {
+		fclose(f);
+		return 1;
+	}
+	
 	for (int i = 0; i < 64; i++) {  // blocks
 		for (int j = 0; j < 16; j++)  // bytes
 			fprintf(f, "%02x", *(traceCard + i * 16 + j)); 
 		fprintf(f,"\n");
 	}
 	fclose(f);
-
 	return 0;
 }
 
 int mfTraceInit(uint8_t *tuid, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile) {
 
-	if (traceCrypto1) crypto1_destroy(traceCrypto1);
+	if (traceCrypto1) 
+		crypto1_destroy(traceCrypto1);
+
 	traceCrypto1 = NULL;
 
-	if (wantSaveToEmlFile) loadTraceCard(tuid);
+	if (wantSaveToEmlFile) 
+		loadTraceCard(tuid);
+		
 	traceCard[4] = traceCard[0] ^ traceCard[1] ^ traceCard[2] ^ traceCard[3];
 	traceCard[5] = sak;
 	memcpy(&traceCard[6], atqa, 2);

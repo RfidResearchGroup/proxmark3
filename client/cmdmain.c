@@ -188,7 +188,6 @@ void UsbCommandReceived(UsbCommand *UC)
 		} break;
 
 		case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K: {
-			sample_buf_len += UC->arg[1];
 			memcpy(sample_buf+(UC->arg[0]),UC->d.asBytes,UC->arg[1]);
 		} break;
 

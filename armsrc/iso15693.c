@@ -296,7 +296,7 @@ static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int
 static int GetIso15693AnswerFromTag(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed)
 {
 	int c = 0;
-	uint8_t *dest = (uint8_t *)BigBuf;
+	uint8_t *dest = BigBuf_get_addr();
 	int getNext = 0;
 
 	int8_t prev = 0;
@@ -446,7 +446,7 @@ static int GetIso15693AnswerFromTag(uint8_t *receivedResponse, int maxLen, int *
 static int GetIso15693AnswerFromSniff(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed)
 {
 	int c = 0;
-	uint8_t *dest = (uint8_t *)BigBuf;
+	uint8_t *dest = BigBuf_get_addr();
 	int getNext = 0;
 
 	int8_t prev = 0;
@@ -596,7 +596,7 @@ static void BuildIdentifyRequest(void);
 //-----------------------------------------------------------------------------
 void AcquireRawAdcSamplesIso15693(void)
 {
-	uint8_t *dest = (uint8_t *)BigBuf;
+	uint8_t *dest = BigBuf_get_addr();
 
 	int c = 0;
 	int getNext = 0;
@@ -678,7 +678,7 @@ void AcquireRawAdcSamplesIso15693(void)
 
 void RecordRawAdcSamplesIso15693(void)
 {
-	uint8_t *dest =  (uint8_t *)BigBuf;
+	uint8_t *dest = BigBuf_get_addr();
 
 	int c = 0;
 	int getNext = 0;
@@ -878,8 +878,8 @@ int SendDataTag(uint8_t *send, int sendlen, int init, int speed, uint8_t **recv)
 	LED_D_OFF();
 	
 	int answerLen=0;
-	uint8_t *answer = (((uint8_t *)BigBuf) + 3660);
-	if (recv!=NULL) memset(BigBuf + 3660, 0, 100);
+	uint8_t *answer = BigBuf_get_addr() + 3660;
+	if (recv != NULL) memset(answer, 0, 100);
 
 	if (init) Iso15693InitReader();
 	
@@ -999,9 +999,9 @@ void ReaderIso15693(uint32_t parameter)
 	LED_C_OFF();
 	LED_D_OFF();
 
-	uint8_t *answer1 = (((uint8_t *)BigBuf) + 3660); //
-	uint8_t *answer2 = (((uint8_t *)BigBuf) + 3760);
-	uint8_t *answer3 = (((uint8_t *)BigBuf) + 3860);
+	uint8_t *answer1 = BigBuf_get_addr() + 3660;
+	uint8_t *answer2 = BigBuf_get_addr() + 3760;
+	uint8_t *answer3 = BigBuf_get_addr() + 3860;
 
 	int answerLen1 = 0;
 	int answerLen2 = 0;
@@ -1015,7 +1015,7 @@ void ReaderIso15693(uint32_t parameter)
 
 
 	// Blank arrays
-	memset(BigBuf + 3660, 0x00, 300);
+	memset(answer1, 0x00, 300);
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
@@ -1111,7 +1111,7 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid)
 	LED_C_OFF();
 	LED_D_OFF();
 
-	uint8_t *buf = (((uint8_t *)BigBuf) + 3660); //
+	uint8_t *buf = BigBuf_get_addr() + 3660;
 	
 	int answerLen1 = 0;
 	int samples = 0;
@@ -1213,7 +1213,7 @@ void BruteforceIso15693Afi(uint32_t speed)
 void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8_t data[]) {
 
 	int recvlen=0;
-	uint8_t *recvbuf=(uint8_t *)BigBuf;
+	uint8_t *recvbuf = BigBuf_get_addr();
 //	UsbCommand n;
 	
 	if (DEBUG) {

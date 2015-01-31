@@ -26,9 +26,12 @@ int CmdBitstream(const char *Cmd);
 int CmdBuffClear(const char *Cmd);
 int CmdDec(const char *Cmd);
 int CmdDetectClockRate(const char *Cmd);
+int CmdFSKdemodAWID(const char *Cmd);
 int CmdFSKdemod(const char *Cmd);
 int CmdFSKdemodHID(const char *Cmd);
 int CmdFSKdemodIO(const char *Cmd);
+int CmdFSKdemodParadox(const char *Cmd);
+int CmdFSKdemodPyramid(const char *Cmd);
 int CmdFSKrawdemod(const char *Cmd);
 int CmdDetectNRZpskClockRate(const char *Cmd);
 int CmdpskNRZrawDemod(const char *Cmd);
@@ -56,5 +59,7 @@ int CmdIndalaDecode(const char *Cmd);
 #define MAX_DEMOD_BUF_LEN (1024*128)
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 extern int DemodBufferLen;
+
+#define BIGBUF_SIZE 40000
 
 #endif

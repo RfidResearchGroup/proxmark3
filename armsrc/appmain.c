@@ -42,12 +42,6 @@ int ToSendMax;
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
 
-void BufferClear(void)
-{
-	memset(BigBuf,0,sizeof(BigBuf));
-	Dbprintf("Buffer cleared (%i bytes)",sizeof(BigBuf));
-}
-
 void ToSendReset(void)
 {
 	ToSendMax = -1;
@@ -246,7 +240,10 @@ void MeasureAntennaTuningHf(void)
 
 void SimulateTagHfListen(void)
 {
-	uint8_t *dest = (uint8_t *)BigBuf+FREE_BUFFER_OFFSET;
+	// ToDo: historically this used the free buffer, which was 2744 Bytes long. 
+	// There might be a better size to be defined:
+	#define HF_14B_SNOOP_BUFFER_SIZE 2744
+	uint8_t *dest = BigBuf_malloc(HF_14B_SNOOP_BUFFER_SIZE);
 	uint8_t v = 0;
 	int i;
 	int p = 0;
@@ -281,7 +278,7 @@ void SimulateTagHfListen(void)
 				p = 0;
 				i++;
 
-				if(i >= FREE_BUFFER_SIZE) {
+				if(i >= HF_14B_SNOOP_BUFFER_SIZE) {
 					break;
 				}
 			}
@@ -802,9 +799,18 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MIFAREU_READBL:
 			MifareUReadBlock(c->arg[0],c->d.asBytes);
 			break;
+		case CMD_MIFAREUC_AUTH1:
+			MifareUC_Auth1(c->arg[0],c->d.asBytes);
+			break;
+		case CMD_MIFAREUC_AUTH2:
+			MifareUC_Auth2(c->arg[0],c->d.asBytes);
+			break;
 		case CMD_MIFAREU_READCARD:
 			MifareUReadCard(c->arg[0], c->arg[1], c->d.asBytes);
-                        break;
+			break;
+		case CMD_MIFAREUC_READCARD:
+			MifareUReadCard(c->arg[0], c->arg[1], c->d.asBytes);
+			break;
 		case CMD_MIFARE_READSC:
 			MifareReadSector(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
@@ -859,6 +865,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MIFARE_SNIFFER:
 			SniffMifare(c->arg[0]);
 			break;
+
 #endif
 
 #ifdef WITH_ICLASS
@@ -882,7 +889,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 
 		case CMD_BUFF_CLEAR:
-			BufferClear();
+			BigBuf_Clear();
 			break;
 
 		case CMD_MEASURE_ANTENNA_TUNING:
@@ -906,18 +913,18 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K:
 
 			LED_B_ON();
+			uint8_t *BigBuf = BigBuf_get_addr();
 			for(size_t i=0; i<c->arg[1]; i += USB_CMD_DATA_SIZE) {
 				size_t len = MIN((c->arg[1] - i),USB_CMD_DATA_SIZE);
-				cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,0,((byte_t*)BigBuf)+c->arg[0]+i,len);
+				cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,traceLen,BigBuf+c->arg[0]+i,len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
-			// We put a 1 in arg[0] to alert the host we're also sending sample_config
-			cmd_send(CMD_ACK,1,0,0,getSamplingConfig(),sizeof(sample_config));
+			cmd_send(CMD_ACK,1,0,traceLen,getSamplingConfig(),sizeof(sample_config));
 			LED_B_OFF();
 			break;
 
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
-			uint8_t *b = (uint8_t *)BigBuf;
+			uint8_t *b = BigBuf_get_addr();
 			memcpy(b+c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;

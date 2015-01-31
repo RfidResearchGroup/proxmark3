@@ -93,8 +93,8 @@ void ReadTItag(void)
  #define FREQLO 123200
  #define FREQHI 134200
 
-    signed char *dest = (signed char *)BigBuf;
-    int n = sizeof(BigBuf);
+    signed char *dest = (signed char *)BigBuf_get_addr();
+    uint16_t n = BigBuf_max_traceLen();
     // 128 bit shift register [shift3:shift2:shift1:shift0]
     uint32_t shift3 = 0, shift2 = 0, shift1 = 0, shift0 = 0;
 
@@ -246,7 +246,8 @@ void AcquireTiType(void)
  #define TIBUFLEN 1250
 
     // clear buffer
-    memset(BigBuf,0,sizeof(BigBuf));
+	uint32_t *BigBuf = (uint32_t *)BigBuf_get_addr();
+    memset(BigBuf,0,BigBuf_max_traceLen()/sizeof(uint32_t));
 
     // Set up the synchronous serial port
     AT91C_BASE_PIOA->PIO_PDR = GPIO_SSC_DIN;
@@ -294,7 +295,7 @@ void AcquireTiType(void)
     AT91C_BASE_PIOA->PIO_PDR = GPIO_SSC_DOUT;
     AT91C_BASE_PIOA->PIO_ASR = GPIO_SSC_DIN | GPIO_SSC_DOUT;
 
-    char *dest = (char *)BigBuf;
+    char *dest = (char *)BigBuf_get_addr();
     n = TIBUFLEN*32;
     // unpack buffer
     for (i=TIBUFLEN-1; i>=0; i--) {
@@ -383,7 +384,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
     int i;
-    uint8_t *tab = (uint8_t *)BigBuf;
+    uint8_t *tab = BigBuf_get_addr();
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
@@ -443,7 +444,7 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 
 // compose fc/8 fc/10 waveform
 static void fc(int c, int *n) {
-    uint8_t *dest = (uint8_t *)BigBuf;
+    uint8_t *dest = BigBuf_get_addr();
     int idx;
 
     // for when we want an fc8 pattern every 4 logical bits
@@ -547,11 +548,11 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
-    uint8_t *dest = (uint8_t *)BigBuf;
-
-    size_t size=0; //, found=0;
+    uint8_t *dest = BigBuf_get_addr();
+    const size_t sizeOfBigBuff = BigBuf_max_traceLen();
+    size_t size = 0; 
     uint32_t hi2=0, hi=0, lo=0;
-
+    int idx=0;
     // Configure to go in 125Khz listen mode
     LFSetupFPGAForADC(95, true);
 
@@ -562,11 +563,10 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
 		DoAcquisition_default(-1,true);
 		// FSK demodulator
-		size = HIDdemodFSK(dest, sizeof(BigBuf), &hi2, &hi, &lo);
-
-        WDT_HIT();
-
-		if (size>0 && lo>0){
+        size = sizeOfBigBuff;  //variable size will change after demod so re initialize it before use
+		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo);
+        
+		if (idx>0 && lo>0){
             // final loop, go over previously decoded manchester data and decode into usable tag ID
             // 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
             if (hi2 != 0){ //extra large HID tags
@@ -622,6 +622,8 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
             }
             if (findone){
                 if (ledcontrol)	LED_A_OFF();
+                *high = hi;
+                *low = lo;
                 return;
             }
             // reset
@@ -635,9 +637,9 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
 void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 {
-    uint8_t *dest = (uint8_t *)BigBuf;
+    uint8_t *dest = BigBuf_get_addr();
 
-	size_t size=0;
+	size_t size=0, idx=0;
     int clk=0, invert=0, errCnt=0;
     uint64_t lo=0;
     // Configure to go in 125Khz listen mode
@@ -649,7 +651,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
         if (ledcontrol) LED_A_ON();
 
 		DoAcquisition_default(-1,true);
-		size  = sizeof(BigBuf);
+		size  = BigBuf_max_traceLen();
         //Dbprintf("DEBUG: Buffer got");
 		//askdemod and manchester decode
 		errCnt = askmandemod(dest, &size, &clk, &invert);
@@ -657,7 +659,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
         WDT_HIT();
 
         if (errCnt>=0){
-			lo = Em410xDecode(dest,size);
+			lo = Em410xDecode(dest, &size, &idx);
             //Dbprintf("DEBUG: EM GOT");
             if (lo>0){
 				Dbprintf("EM TAG ID: %02x%08x - (%05d_%03d_%08d)",
@@ -669,6 +671,8 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
             }
             if (findone){
                 if (ledcontrol)	LED_A_OFF();
+                *high=lo>>32;
+                *low=lo & 0xFFFFFFFF;
                 return;
             }
         } else{
@@ -687,7 +691,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
-    uint8_t *dest = (uint8_t *)BigBuf;
+    uint8_t *dest = BigBuf_get_addr();
     int idx=0;
     uint32_t code=0, code2=0;
     uint8_t version=0;
@@ -702,7 +706,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		DoAcquisition_default(-1,true);
 		//fskdemod and get start index
         WDT_HIT();
-        idx = IOdemodFSK(dest,sizeof(BigBuf));
+        idx = IOdemodFSK(dest, BigBuf_max_traceLen());
         if (idx>0){
             //valid tag found
 
@@ -735,6 +739,8 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
             if (findone){
                 if (ledcontrol)	LED_A_OFF();
                 //LED_A_OFF();
+                *high=code;
+                *low=code2;
                 return;
             }
             code=code2=0;
@@ -874,11 +880,11 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 // Read one card block in page 0
 void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 {
-    uint8_t *dest = (uint8_t *)BigBuf;
+    uint8_t *dest = BigBuf_get_addr();
     //int m=0, i=0; //enio adjustment 12/10/14
     uint32_t m=0, i=0;
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    m = sizeof(BigBuf);
+    m = BigBuf_max_traceLen();
     // Clear destination buffer before sending the command
     memset(dest, 128, m);
     // Connect the A/D to the peak-detected low-frequency path.
@@ -939,11 +945,11 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 
 // Read card traceability data (page 1)
 void T55xxReadTrace(void){
-    uint8_t *dest = (uint8_t *)BigBuf;
+    uint8_t *dest = BigBuf_get_addr();
     int m=0, i=0;
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    m = sizeof(BigBuf);
+    m = BigBuf_max_traceLen();
     // Clear destination buffer before sending the command
     memset(dest, 128, m);
     // Connect the A/D to the peak-detected low-frequency path.
@@ -1293,8 +1299,8 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
 int DemodPCF7931(uint8_t **outBlocks) {
     uint8_t BitStream[256];
     uint8_t Blocks[8][16];
-    uint8_t *GraphBuffer = (uint8_t *)BigBuf;
-    int GraphTraceLen = sizeof(BigBuf);
+    uint8_t *GraphBuffer = BigBuf_get_addr();
+    int GraphTraceLen = BigBuf_max_traceLen();
     int i, j, lastval, bitidx, half_switch;
     int clock = 64;
     int tolerance = clock / 8;
@@ -1713,7 +1719,7 @@ void EM4xLogin(uint32_t Password) {
 void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
 
     uint8_t fwd_bit_count;
-    uint8_t *dest = (uint8_t *)BigBuf;
+    uint8_t *dest = BigBuf_get_addr();
     int m=0, i=0;
 
     //If password mode do login
@@ -1723,7 +1729,7 @@ void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
     fwd_bit_count = Prepare_Cmd( FWD_CMD_READ );
     fwd_bit_count += Prepare_Addr( Address );
 
-    m = sizeof(BigBuf);
+    m = BigBuf_max_traceLen();
     // Clear destination buffer before sending the command
     memset(dest, 128, m);
     // Connect the A/D to the peak-detected low-frequency path.

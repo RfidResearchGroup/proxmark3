@@ -22,6 +22,7 @@
 #include "cmdhflegic.h"
 #include "cmdhficlass.h"
 #include "cmdhfmf.h"
+#include "cmdhfmfu.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -31,8 +32,6 @@ int CmdHFTune(const char *Cmd)
   SendCommand(&c);
   return 0;
 }
-// for the time being. Need better Bigbuf handling.
-#define TRACE_SIZE 3000
 
 //The following data is taken from http://www.proxmark.org/forum/viewtopic.php?pid=13501#p13501
 /*
@@ -193,7 +192,7 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	case ISO14443A_CMD_ANTICOLL_OR_SELECT:{
 		// 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
 		// 93 70 = Select (usage: 9370+5bytes 9320 answer - answer: 1byte SAK)
-		if(cmd[2] == 0x70)
+		if(cmd[1] == 0x70)
 		{
 			snprintf(exp,size,"SELECT_UID"); break;
 		}else
@@ -221,8 +220,8 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	case MIFARE_CMD_DEC:          snprintf(exp,size,"DEC(%d)",cmd[1]); break;
 	case MIFARE_CMD_RESTORE:      snprintf(exp,size,"RESTORE(%d)",cmd[1]); break;
 	case MIFARE_CMD_TRANSFER:     snprintf(exp,size,"TRANSFER(%d)",cmd[1]); break;
-	case MIFARE_AUTH_KEYA:        snprintf(exp,size,"AUTH-A"); break;
-	case MIFARE_AUTH_KEYB:        snprintf(exp,size,"AUTH-B"); break;
+	case MIFARE_AUTH_KEYA:        snprintf(exp,size,"AUTH-A(%d)",cmd[1]); break;
+	case MIFARE_AUTH_KEYB:        snprintf(exp,size,"AUTH-B(%d)",cmd[1]); break;
 	case MIFARE_MAGICMODE:        snprintf(exp,size,"MAGIC"); break;
 	default:                      snprintf(exp,size,"?"); break;
 	}
@@ -383,18 +382,18 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
 	}
 }
 
-uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, uint8_t protocol, bool showWaitCycles)
+uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol, bool showWaitCycles)
 {
 	bool isResponse;
-	uint16_t duration, data_len,parity_len;
+	uint16_t duration, data_len, parity_len;
 
 	uint32_t timestamp, first_timestamp, EndOfTransmissionTimestamp;
 	char explanation[30] = {0};
 
+	if (tracepos + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) > traceLen) return traceLen;
+	
 	first_timestamp = *((uint32_t *)(trace));
 	timestamp = *((uint32_t *)(trace + tracepos));
-	// Break and stick with current result if buffer was not completely full
-	if (timestamp == 0x44444444) return TRACE_SIZE;
 
 	tracepos += 4;
 	duration = *((uint16_t *)(trace + tracepos));
@@ -410,8 +409,8 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, uint8_t protocol, boo
 	}
 	parity_len = (data_len-1)/8 + 1;
 
-	if (tracepos + data_len + parity_len >= TRACE_SIZE) {
-		return TRACE_SIZE;
+	if (tracepos + data_len + parity_len > traceLen) {
+		return traceLen;
 	}
 
 	uint8_t *frame = trace + tracepos;
@@ -497,6 +496,8 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, uint8_t protocol, boo
 		}
 	}
 
+	if (tracepos + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) > traceLen) return traceLen;
+	
 	bool next_isResponse = *((uint16_t *)(trace + tracepos + 6)) & 0x8000;
 
 	if (showWaitCycles && !isResponse && next_isResponse) {
@@ -509,8 +510,10 @@ uint16_t printTraceLine(uint16_t tracepos, uint8_t* trace, uint8_t protocol, boo
 				(next_timestamp - EndOfTransmissionTimestamp));
 		}
 	}
+
 	return tracepos;
 }
+
 
 int CmdHFList(const char *Cmd)
 {
@@ -551,12 +554,13 @@ int CmdHFList(const char *Cmd)
 
 	if (errors) {
 		PrintAndLog("List protocol data in trace buffer.");
-		PrintAndLog("Usage:  hf list [14a|14b|iclass] [f]");
+		PrintAndLog("Usage:  hf list <protocol> [f]");
+		PrintAndLog("    f      - show frame delay times as well");
+		PrintAndLog("Supported <protocol> values:");
+		PrintAndLog("    raw    - just show raw data without annotations");
 		PrintAndLog("    14a    - interpret data as iso14443a communications");
 		PrintAndLog("    14b    - interpret data as iso14443b communications");
 		PrintAndLog("    iclass - interpret data as iclass communications");
-		PrintAndLog("    raw    - just show raw data");
-		PrintAndLog("    f      - show frame delay times as well");
 		PrintAndLog("");
 		PrintAndLog("example: hf list 14a f");
 		PrintAndLog("example: hf list iclass");
@@ -569,12 +573,28 @@ int CmdHFList(const char *Cmd)
 	}
 
 
-	uint8_t trace[TRACE_SIZE];
+	uint8_t *trace;
 	uint16_t tracepos = 0;
-	GetFromBigBuf(trace, TRACE_SIZE, 0);
-	WaitForResponse(CMD_ACK, NULL);
+	trace = malloc(USB_CMD_DATA_SIZE);
 
-	PrintAndLog("Recorded Activity");
+	// Query for the size of the trace
+	UsbCommand response;
+	GetFromBigBuf(trace, USB_CMD_DATA_SIZE, 0);
+	WaitForResponse(CMD_ACK, &response);
+	uint16_t traceLen = response.arg[2];
+	if (traceLen > USB_CMD_DATA_SIZE) {
+		uint8_t *p = realloc(trace, traceLen);
+		if (p == NULL) {
+			PrintAndLog("Cannot allocate memory for trace");
+			free(trace);
+			return 2;
+		}
+		trace = p;
+		GetFromBigBuf(trace, traceLen, 0);
+		WaitForResponse(CMD_ACK, NULL);
+	}
+	
+	PrintAndLog("Recorded Activity (TraceLen = %d bytes)", traceLen);
 	PrintAndLog("");
 	PrintAndLog("Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
 	PrintAndLog("iso14443a - All times are in carrier periods (1/13.56Mhz)");
@@ -583,10 +603,12 @@ int CmdHFList(const char *Cmd)
 	PrintAndLog("     Start |       End | Src | Data (! denotes parity error)                                   | CRC | Annotation         |");
 	PrintAndLog("-----------|-----------|-----|-----------------------------------------------------------------|-----|--------------------|");
 
-	while(tracepos < TRACE_SIZE)
+	while(tracepos < traceLen)
 	{
-		tracepos = printTraceLine(tracepos, trace, protocol, showWaitCycles);
+		tracepos = printTraceLine(tracepos, traceLen, trace, protocol, showWaitCycles);
 	}
+
+	free(trace);
 	return 0;
 }
 
@@ -601,6 +623,7 @@ static command_t CommandTable[] =
   {"legic",       CmdHFLegic,       0, "{ LEGIC RFIDs... }"},
   {"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs... }"},
   {"mf",      		CmdHFMF,		1, "{ MIFARE RFIDs... }"},
+  {"mfu",			CmdHFMFUltra,		1, "{ MIFARE Ultralight RFIDs... }"},
   {"tune",        CmdHFTune,        0, "Continuously measure HF antenna tuning"},
   {"list",       CmdHFList,         1, "List protocol data in trace buffer"},
 	{NULL, NULL, 0, NULL}

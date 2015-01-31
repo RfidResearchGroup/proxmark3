@@ -124,8 +124,9 @@ void LFSetupFPGAForADC(int divisor, bool lf_field)
 uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold,bool silent)
 {
 	//.
-	uint8_t *dest = (uint8_t *)BigBuf;
-	int bufsize = BIGBUF_SIZE;
+	uint8_t *dest = BigBuf_get_addr();
+    int bufsize = BigBuf_max_traceLen();
+
 	memset(dest, 0, bufsize);
 
 	if(bits_per_sample < 1) bits_per_sample = 1;
