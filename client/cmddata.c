@@ -21,6 +21,8 @@
 #include "cmdmain.h"
 #include "cmddata.h"
 #include "lfdemod.h"
+#include "usb_cmd.h"
+
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 uint8_t g_debugMode;
 int DemodBufferLen;
@@ -568,6 +570,43 @@ int CmdDec(const char *Cmd)
   PrintAndLog("decimated by 2");
   RepaintGraphWindow();
   return 0;
+}
+/**
+ * Undecimate - I'd call it 'interpolate', but we'll save that
+ * name until someone does an actual interpolation command, not just
+ * blindly repeating samples
+ * @param Cmd
+ * @return
+ */
+int CmdUndec(const char *Cmd)
+{
+	if(param_getchar(Cmd, 0) == 'h')
+	{
+		PrintAndLog("Usage: data undec [factor]");
+		PrintAndLog("This function performs un-decimation, by repeating each sample N times");
+		PrintAndLog("Options:        ");
+		PrintAndLog("       h            This help");
+		PrintAndLog("       factor       The number of times to repeat each sample.[default:2]");
+		PrintAndLog("Example: 'data undec 3'");
+		return 0;
+	}
+
+	uint8_t factor = param_get8ex(Cmd, 0,2, 10);
+	//We have memory, don't we?
+	int swap[MAX_GRAPH_TRACE_LEN] = { 0 };
+	uint32_t g_index = 0 ,s_index = 0;
+	while(g_index < GraphTraceLen && s_index < MAX_GRAPH_TRACE_LEN)
+	{
+		int count = 0;
+		for(count = 0; count < factor && s_index+count < MAX_GRAPH_TRACE_LEN; count ++)
+			swap[s_index+count] = GraphBuffer[g_index];
+		s_index+=count;
+	}
+
+	memcpy(GraphBuffer,swap, s_index * sizeof(int));
+	GraphTraceLen = s_index;
+	RepaintGraphWindow();
+	return 0;
 }
 
 //by marshmellow
@@ -1491,25 +1530,79 @@ int CmdHpf(const char *Cmd)
   RepaintGraphWindow();
   return 0;
 }
+typedef struct {
+	uint8_t * buffer;
+	uint32_t numbits;
+	uint32_t position;
+}BitstreamOut;
+
+bool _headBit( BitstreamOut *stream)
+{
+	int bytepos = stream->position >> 3; // divide by 8
+	int bitpos = (stream->position++) & 7; // mask out 00000111
+	return (*(stream->buffer + bytepos) >> (7-bitpos)) & 1;
+}
+
+uint8_t getByte(uint8_t bits_per_sample, BitstreamOut* b)
+{
+	int i;
+	uint8_t val = 0;
+	for(i =0 ; i < bits_per_sample; i++)
+	{
+		val |= (_headBit(b) << (7-i));
+	}
+	return val;
+}
 
 int CmdSamples(const char *Cmd)
 {
-	uint8_t got[BIGBUF_SIZE] = {0x00};
+	//If we get all but the last byte in bigbuf,
+	// we don't have to worry about remaining trash
+	// in the last byte in case the bits-per-sample
+	// does not line up on byte boundaries
+	uint8_t got[BIGBUF_SIZE-1] = { 0 };
 
 	int n = strtol(Cmd, NULL, 0);
 	if (n == 0)
-		n = 20000;
+		n = sizeof(got);
 
 	if (n > sizeof(got))
 		n = sizeof(got);
 
-	PrintAndLog("Reading %d samples from device memory\n", n);
+	PrintAndLog("Reading %d bytes from device memory\n", n);
 	GetFromBigBuf(got,n,0);
-	WaitForResponse(CMD_ACK,NULL);
-	for (int j = 0; j < n; j++) {
-		GraphBuffer[j] = ((int)got[j]) - 128;
+	PrintAndLog("Data fetched");
+	UsbCommand response;
+	WaitForResponse(CMD_ACK, &response);
+	uint8_t bits_per_sample = 8;
+
+	//Old devices without this feature would send 0 at arg[0]
+	if(response.arg[0] > 0)
+	{
+		sample_config *sc = (sample_config *) response.d.asBytes;
+		PrintAndLog("Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample
+					, sc->decimation);
+		bits_per_sample = sc->bits_per_sample;
 	}
-	GraphTraceLen = n;
+	if(bits_per_sample < 8)
+	{
+		PrintAndLog("Unpacking...");
+		BitstreamOut bout = { got, bits_per_sample * n,  0};
+		int j =0;
+		for (j = 0; j * bits_per_sample < n * 8 && j < sizeof(GraphBuffer); j++) {
+			uint8_t sample = getByte(bits_per_sample, &bout);
+			GraphBuffer[j] = ((int) sample )- 128;
+		}
+		GraphTraceLen = j;
+		PrintAndLog("Unpacked %d samples" , j );
+	}else
+	{
+		for (int j = 0; j < n; j++) {
+			GraphBuffer[j] = ((int)got[j]) - 128;
+		}
+		GraphTraceLen = n;
+	}
+
 	RepaintGraphWindow();
 	return 0;
 }
@@ -2044,7 +2137,8 @@ static command_t CommandTable[] =
   {"threshold",     CmdThreshold,       1, "<threshold> -- Maximize/minimize every value in the graph window depending on threshold"},
 	{"dirthreshold",  CmdDirectionalThreshold,   1, "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
 	{"tune",          CmdTuneSamples,     0, "Get hw tune samples for graph window"},
-  {"zerocrossings", CmdZerocrossings,   1, "Count time between zero-crossings"},
+	{"undec",         CmdUndec,         1, "Un-decimate samples by 2"},
+	{"zerocrossings", CmdZerocrossings,   1, "Count time between zero-crossings"},
   {NULL, NULL, 0, NULL}
 };
 

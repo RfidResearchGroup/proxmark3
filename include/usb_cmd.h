@@ -33,6 +33,14 @@ typedef struct {
     uint32_t asDwords[USB_CMD_DATA_SIZE/4];
   } d;
 } PACKED UsbCommand;
+// A struct used to send sample-configs over USB
+typedef struct{
+	uint8_t decimation;
+	uint8_t bits_per_sample;
+	bool averaging;
+	int divisor;
+	int trigger_threshold;
+} sample_config;
 
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
@@ -82,6 +90,8 @@ typedef struct {
 #define CMD_IO_DEMOD_FSK                                                  0x021A
 #define CMD_IO_CLONE_TAG                                                  0x021B
 #define CMD_EM410X_DEMOD  												  0x021c
+// Sampling configuration for LF reader/snooper
+#define CMD_SET_LF_SAMPLING_CONFIG                                        0x021d
 
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
@@ -186,6 +196,7 @@ typedef struct {
 //Iclass reader flags
 #define FLAG_ICLASS_READER_ONLY_ONCE    0x01
 #define FLAG_ICLASS_READER_GET_CC       0x02
+
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
 /* Whether a bootloader that understands the common_area is present */
