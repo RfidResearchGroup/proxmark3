@@ -65,8 +65,12 @@ int CmdReadBlk(const char *Cmd)
 	int invert = 0;
 	int clk = 0;
 	int block = -1;
+	int errCnt;
+	size_t bitlen;
+	//int decodedBitlen;
+	uint32_t blockData;
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
-
+	
 	sscanf(Cmd, "%d", &block);
 	
 	if ((block > 7) | (block < 0)) {
@@ -78,21 +82,21 @@ int CmdReadBlk(const char *Cmd)
 	SendCommand(&c);
 	if ( !WaitForResponseTimeout(CMD_ACK,NULL,1500) ) {
 		PrintAndLog("command execution time out");
-		return 1;
+		return 2;
 	}
 	
-	CmdSamples("");
+	CmdSamples("12000");
 
-	size_t bitlen = getFromGraphBuf(bits);
+	bitlen = getFromGraphBuf(bits);
 	
-	int errCnt = askrawdemod(bits, &bitlen, &clk, &invert);
+	errCnt = askrawdemod(bits, &bitlen, &clk, &invert);
 	
 	//throw away static - allow 1 and -1 (in case of threshold command first)
 	if ( errCnt == -1 || bitlen < 16 ){  
 		PrintAndLog("no data found");
 		if (g_debugMode) 
 			PrintAndLog("errCnt: %d, bitlen: %d, clk: %d, invert: %d", errCnt, bitlen, clk, invert);
-		return 0;
+		return 3;
 	}
 	if (g_debugMode) 
 		PrintAndLog("Using Clock: %d - invert: %d - Bits Found: %d", clk, invert, bitlen);
@@ -100,6 +104,23 @@ int CmdReadBlk(const char *Cmd)
 	//move bits back to DemodBuffer
 	setDemodBuf(bits, bitlen, 0);
 	printBitStream(bits,bitlen);
+	
+	// bits has the manchester encoded data.
+	errCnt = manrawdecode(bits, &bitlen);	
+	if ( errCnt == -1 || bitlen < 16 ){  
+		PrintAndLog("no data found");
+		if (g_debugMode) 
+			PrintAndLog("errCnt: %d, bitlen: %d, clk: %d, invert: %d", errCnt, bitlen, clk, invert);
+		return 4;
+	}
+
+	blockData = PackBits(0, 32, bits);
+
+	if ( block < 0)
+		PrintAndLog(" Decoded     : 0x%08X  %s", blockData, sprint_bin(bits,32) );
+	else
+		PrintAndLog(" Block %d    : 0x%08X  %s", block, blockData, sprint_bin(bits,32) );
+	
 	return 0;
 }
 
@@ -391,9 +412,7 @@ int ManchesterDemod(int blockNum){
 	uint8_t  bits[LF_BITSSTREAM_LEN] = {0x00};
 	uint8_t * bitstream = bits;
 	
-	//manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream, LF_BITSSTREAM_LEN);	
 	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bits, LF_BITSSTREAM_LEN);	
-    //blockData = PackBits(offset, sizebyte, bitstream);
 	blockData = PackBits(offset, sizebyte, bits);
 
 	if ( blockNum < 0)
@@ -524,7 +543,7 @@ static command_t CommandTable[] =
   {"trace",  CmdReadTrace,   0, "[1] Read T55xx traceability data (page 1/ blk 0-1)"},
   {"info",   CmdInfo,        0, "[1] Read T55xx configuration data (page 0/ blk 0)"},
   {"dump",   CmdDump,        0, "[password] Dump T55xx card block 0-7. optional with password"},
-  {"fsk",    CmdIceFsk,      0, "FSK demod"},
+  //{"fsk",    CmdIceFsk,      0, "FSK demod"},
   {"man",    CmdIceManchester,      0, "Manchester demod (with SST)"},
   {NULL, NULL, 0, NULL}
 };

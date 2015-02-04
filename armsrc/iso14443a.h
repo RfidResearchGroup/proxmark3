@@ -13,6 +13,7 @@
 #ifndef __ISO14443A_H
 #define __ISO14443A_H
 #include "../include/common.h"
+#include "../include/mifare.h"
 #include "mifaresniff.h"
 
 typedef struct {

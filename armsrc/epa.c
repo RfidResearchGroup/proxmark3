@@ -15,6 +15,7 @@
 #include "epa.h"
 #include "../common/cmd.h"
 
+
 // Protocol and Parameter Selection Request
 // use regular (1x) speed in both directions
 // CRC is already included

@@ -20,6 +20,7 @@
 #include <strings.h>
 #include "../common/crc32.h"
 #include "BigBuf.h"
+#include "../include/hitag2.h"
 
 extern const uint8_t OddByteParity[256];
 extern int rsamples;   // = 0;
@@ -116,9 +117,9 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc);
 void AcquireTiType(void);
 void AcquireRawBitsTI(void);
 void SimulateTagLowFrequency( uint16_t period, uint32_t gap, uint8_t ledcontrol);
-void SimulateTagLowFrequencyA(int period, int gap);
+//void SimulateTagLowFrequencyA(int period, int gap);
 
-void CmdHIDsimTAG(int hi, int lo, uint8_t ledcontrol);
+void CmdHIDsimTAG(int hi, int lo, int ledcontrol);
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol);
 void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol);
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol);

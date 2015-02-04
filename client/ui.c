@@ -213,8 +213,6 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout,  size_t 
  
  int ManchesterConvertFrom1(const int * data, const size_t len, uint8_t * dataout,int dataoutlen, int clock, int startIndex){
 
-	PrintAndLog(" Path B");
- 
 	int i,j, bitindex, lc, tolerance, warnings;
 	warnings = 0;
 	int upperlimit = len*2/clock+8;
