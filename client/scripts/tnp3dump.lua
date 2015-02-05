@@ -253,6 +253,7 @@ local function main(args)
 	local uid = block0:sub(1,8)
 	local itemtype = block1:sub(1,4)
 	local cardid = block1:sub(9,24)
+	local traptype = block1:sub(25,28)
 	
 	-- Write dump to files
 	if not DEBUG then
@@ -264,9 +265,11 @@ local function main(args)
 
 	-- Show info 
 	print( string.rep('--',20) )
-	print( (' ITEM TYPE : 0x%s - %s'):format(itemtype, toyNames[itemtype]) )
-	print( ('       UID : 0x%s'):format(uid) )
-	print( ('    CARDID : 0x%s'):format(cardid ) )	
+	print( ('            ITEM TYPE : 0x%s - %s'):format(itemtype, toyNames[itemtype]) )
+	print( (' Alter ego / traptype : 0x%s'):format(traptype) )
+	print( ('                  UID : 0x%s'):format(uid) )
+	print( ('               CARDID : 0x%s'):format(cardid ) )
+	
 	print( string.rep('--',20) )
 
 end
