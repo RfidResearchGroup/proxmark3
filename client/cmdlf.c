@@ -559,13 +559,17 @@ int CmdLFfind(const char *Cmd)
 {
   int ans=0;
 	char cmdp = param_getchar(Cmd, 0);
-	
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  lf search <0|1>");
-		PrintAndLog("     <use data from Graphbuffer>, if not set, try reading data from tag.");
+	char testRaw = param_getchar(Cmd, 1);
+	if (strlen(Cmd) > 2 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  lf search <0|1> [u]");
+		PrintAndLog("     <use data from Graphbuffer> , if not set, try reading data from tag.");
+    PrintAndLog("     [Search for Unknown tags] , if not set, reads only known tags.");
 		PrintAndLog("");
-		PrintAndLog("    sample: lf search");
-		PrintAndLog("          : lf search 1");
+		PrintAndLog("    sample: lf search     = try reading data from tag & search for known tags");
+		PrintAndLog("          : lf search 1   = use data from GraphBuffer & search for known tags");
+    PrintAndLog("          : lf search u   = try reading data from tag & search for known and unknown tags");
+    PrintAndLog("          : lf search 1 u = use data from GraphBuffer & search for known and unknown tags");
+
 		return 0;
 	}
 
@@ -576,8 +580,9 @@ int CmdLFfind(const char *Cmd)
 		PrintAndLog("Data in Graphbuffer was too small.");
 		return 0;
   }
-
+  if (cmdp == 'u' || cmdp == 'U') testRaw = 'u';
   PrintAndLog("NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
+  PrintAndLog("False Positives ARE possible\n");  
   PrintAndLog("\nChecking for known tags:\n");
   ans=CmdFSKdemodIO("");
   if (ans>0) {
@@ -610,12 +615,37 @@ int CmdLFfind(const char *Cmd)
     PrintAndLog("\nValid Indala ID Found!");
     return 1;
   }
-  ans=Cmdaskmandemod("");
+  ans=CmdAskEM410xDemod("");
   if (ans>0) {
     PrintAndLog("\nValid EM410x ID Found!");
     return 1;
   }
-  PrintAndLog("No Known Tags Found!\n");
+  PrintAndLog("\nNo Known Tags Found!\n");
+  if (testRaw=='u' || testRaw=='U'){
+    //test unknown tag formats (raw mode)
+    PrintAndLog("\nChecking for Unknown tags:\n");
+    ans=CmdFSKfcDetect("");
+    if (ans == 1){ //fsk
+      ans=CmdFSKrawdemod("");
+      if (ans>0) {
+        PrintAndLog("\nUnknown FSK Modulated Tag Found!");
+        return 1;
+      }      
+    }
+    ans=Cmdaskmandemod("");
+    if (ans>0) {
+      PrintAndLog("\nUnknown ASK Modulated and Manchester encoded Tag Found!");
+      return 1;
+    }  
+    ans=CmdPSK1rawDemod("");
+    if (ans>0) {
+      PrintAndLog("Possible unknown PSK1 Modulated Tag Found above!\n\nCould also be PSK2 - try 'data psk2rawdemod'");
+      PrintAndLog("\nCould also be PSK3 - [currently not supported]");
+      PrintAndLog("\nCould also be NRZ - try 'data nrzrawdemod");
+      return 1;
+    }          
+    PrintAndLog("\nNo Data Found!\n");
+  }
   return 0;
 }
 

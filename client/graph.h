@@ -17,7 +17,8 @@ int ClearGraph(int redraw);
 //int DetectClock(int peak);
 size_t getFromGraphBuf(uint8_t *buff);
 int GetClock(const char *str, int peak, int verbose);
-int GetNRZpskClock(const char *str, int peak, int verbose);
+int GetPskClock(const char *str, int peak, int verbose);
+int GetNrzClock(const char *str, int peak, int verbose);
 void setGraphBuf(uint8_t *buff, size_t size);
 
 bool HasGraphData();

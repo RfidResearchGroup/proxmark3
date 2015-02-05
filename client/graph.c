@@ -66,8 +66,7 @@ void setGraphBuf(uint8_t *buff, size_t size)
 }
 size_t getFromGraphBuf(uint8_t *buff)
 {
-	if ( buff == NULL ) return 0;
-	
+	if (buff == NULL ) return 0;
   uint32_t i;
   for (i=0;i<GraphTraceLen;++i){
     if (GraphBuffer[i]>127) GraphBuffer[i]=127; //trim
@@ -95,7 +94,7 @@ int GetClock(const char *str, int peak, int verbose)
 			PrintAndLog("Failed to copy from graphbuffer");
 			return -1;
 		}
-		clock = DetectASKClock(grph,size,0);
+		clock = DetectASKClock(grph,size,0,20);
 		// Only print this message if we're not looping something
 		if (!verbose){
 			PrintAndLog("Auto-detected clock rate: %d", clock);
@@ -136,7 +135,7 @@ void DetectHighLowInGraph(int *high, int *low, bool addFuzz) {
 	}
 }
 
-int GetNRZpskClock(const char *str, int peak, int verbose)
+int GetPskClock(const char *str, int peak, int verbose)
 {
 	int clock;
 	sscanf(str, "%i", &clock);
@@ -152,7 +151,32 @@ int GetNRZpskClock(const char *str, int peak, int verbose)
 			PrintAndLog("Failed to copy from graphbuffer");
 			return -1;
 		}
-		clock = DetectpskNRZClock(grph,size,0);
+		clock = DetectPSKClock(grph,size,0);
+		// Only print this message if we're not looping something
+		if (!verbose){
+			PrintAndLog("Auto-detected clock rate: %d", clock);
+		}
+	}
+	return clock;
+}
+
+int GetNrzClock(const char *str, int peak, int verbose)
+{
+	int clock;
+	sscanf(str, "%i", &clock);
+	if (!strcmp(str, ""))
+		clock = 0;
+
+	// Auto-detect clock
+	if (!clock)
+	{
+		uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
+		size_t size = getFromGraphBuf(grph);
+		if ( size == 0 ) {
+			PrintAndLog("Failed to copy from graphbuffer");
+			return -1;
+		}
+		clock = DetectNRZClock(grph,size,0);
 		// Only print this message if we're not looping something
 		if (!verbose){
 			PrintAndLog("Auto-detected clock rate: %d", clock);
