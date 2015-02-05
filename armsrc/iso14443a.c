@@ -1534,7 +1534,7 @@ static int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen, bool correctionNe
 	AT91C_BASE_SSC->SSC_THR = SEC_F;
 
 	// send cycle
-	for(; i <= respLen; ) {
+	for(; i < respLen; ) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = resp[i++];
 			FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
