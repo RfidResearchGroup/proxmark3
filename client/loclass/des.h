@@ -28,7 +28,13 @@
 #define POLARSSL_DES_H
 
 //#include "config.h"
-
+/**
+ * \def POLARSSL_CIPHER_MODE_CBC
+ *
+ * Enable Cipher Block Chaining mode (CBC) for symmetric ciphers.
+ */
+#define POLARSSL_CIPHER_MODE_CBC
+ 
 #include <string.h>
 
 #if defined(_MSC_VER) && !defined(EFIX64) && !defined(EFI32)

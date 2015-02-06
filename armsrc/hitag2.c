@@ -24,15 +24,19 @@
 
 static bool bQuiet;
 
-bool bCrypto;
-bool bAuthenticating;
-bool bPwd;
-bool bSuccessful;
+static bool bCrypto;
+static bool bAuthenticating;
+static bool bPwd;
+static bool bSuccessful;
 
-int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int bReader)
+
+static int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int bReader)
 {
+  static uint16_t traceLen = 0;
+  uint8_t *trace = BigBuf_get_addr();
+
   // Return when trace is full
-  if (traceLen >= TRACE_SIZE) return FALSE;
+  if (traceLen + sizeof(rsamples) + sizeof(dwParity) + sizeof(iBits) + nbytes(iBits) > BigBuf_max_traceLen()) return FALSE;
   
   // Trace the random, i'm curious
   rsamples += iSamples;
@@ -85,21 +89,17 @@ static struct hitag2_tag tag = {
     },
 };
 
-//#define TRACE_LENGTH 3000
-//uint8_t *trace = (uint8_t *) BigBuf;
-//int traceLen = 0;
-//int rsamples = 0;
+// ToDo: define a meaningful maximum size for auth_table. The bigger this is, the lower will be the available memory for traces. 
+// Historically it used to be FREE_BUFFER_SIZE, which was 2744.
+#define AUTH_TABLE_LENGTH 2744
+static byte_t* auth_table;
+static size_t auth_table_pos = 0;
+static size_t auth_table_len = AUTH_TABLE_LENGTH;
 
-#define AUTH_TABLE_OFFSET FREE_BUFFER_OFFSET
-#define AUTH_TABLE_LENGTH FREE_BUFFER_SIZE
-byte_t* auth_table = (byte_t *)BigBuf+AUTH_TABLE_OFFSET;
-size_t auth_table_pos = 0;
-size_t auth_table_len = AUTH_TABLE_LENGTH;
-
-byte_t password[4];
-byte_t NrAr[8];
-byte_t key[8];
-uint64_t cipher_state;
+static byte_t password[4];
+static byte_t NrAr[8];
+static byte_t key[8];
+static uint64_t cipher_state;
 
 /* Following is a modified version of cryptolib.com/ciphers/hitag2/ */
 // Software optimized 48-bit Philips/NXP Mifare Hitag2 PCF7936/46/47/52 stream cipher algorithm by I.C. Wiener 2006-2007.
@@ -177,14 +177,14 @@ static u32 _hitag2_byte (u64 * x)
 	return c;
 }
 
-int hitag2_reset(void)
+static int hitag2_reset(void)
 {
 	tag.state = TAG_STATE_RESET;
 	tag.crypto_active = 0;
 	return 0;
 }
 
-int hitag2_init(void)
+static int hitag2_init(void)
 {
 //	memcpy(&tag, &resetdata, sizeof(tag));
 	hitag2_reset();
@@ -300,7 +300,8 @@ static void hitag_send_frame(const byte_t* frame, size_t frame_len)
 	LOW(GPIO_SSC_DOUT);
 }
 
-void hitag2_handle_reader_command(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen)
+
+static void hitag2_handle_reader_command(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen)
 {
 	byte_t rx_air[HITAG_FRAME_LEN];
 	
@@ -457,6 +458,7 @@ static void hitag_reader_send_bit(int bit) {
 	LED_A_OFF();
 }
 
+
 static void hitag_reader_send_frame(const byte_t* frame, size_t frame_len)
 {
 	// Send the content of the frame
@@ -475,7 +477,7 @@ static void hitag_reader_send_frame(const byte_t* frame, size_t frame_len)
 
 size_t blocknr;
 
-bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+static bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
 	// Reset the transmission frame length
 	*txlen = 0;
 	
@@ -530,7 +532,7 @@ bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) 
 	return true;
 }
 
-bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+static bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
 	// Reset the transmission frame length
 	*txlen = 0;
 	
@@ -623,7 +625,7 @@ bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
 }
 
 
-bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+static bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
 	// Reset the transmission frame length 
 	*txlen = 0;
 	
@@ -663,7 +665,9 @@ bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txl
 	return true;
 }
 
-bool hitag2_test_auth_attempts(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+
+static bool hitag2_test_auth_attempts(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+
 	// Reset the transmission frame length 
 	*txlen = 0;
 	
@@ -675,17 +679,17 @@ bool hitag2_test_auth_attempts(byte_t* rx, const size_t rxlen, byte_t* tx, size_
 			if (bCrypto) {
 				Dbprintf("auth: %02x%02x%02x%02x%02x%02x%02x%02x Failed, removed entry!",NrAr[0],NrAr[1],NrAr[2],NrAr[3],NrAr[4],NrAr[5],NrAr[6],NrAr[7]);
 
-        // Removing failed entry from authentiations table
-        memcpy(auth_table+auth_table_pos,auth_table+auth_table_pos+8,8);
-        auth_table_len -= 8;
+				// Removing failed entry from authentiations table
+				memcpy(auth_table+auth_table_pos,auth_table+auth_table_pos+8,8);
+				auth_table_len -= 8;
 
-        // Return if we reached the end of the authentiactions table
+				// Return if we reached the end of the authentications table
 				bCrypto = false;
 				if (auth_table_pos == auth_table_len) {
 					return false;
 				}
-        
-        // Copy the next authentication attempt in row (at the same position, b/c we removed last failed entry)
+
+				// Copy the next authentication attempt in row (at the same position, b/c we removed last failed entry)
 				memcpy(NrAr,auth_table+auth_table_pos,8);
 			}
 			*txlen = 5;
@@ -718,6 +722,7 @@ bool hitag2_test_auth_attempts(byte_t* rx, const size_t rxlen, byte_t* tx, size_
 	return true;
 }
 
+
 void SnoopHitag(uint32_t type) {
 	int frame_count;
 	int response;
@@ -730,13 +735,15 @@ void SnoopHitag(uint32_t type) {
 	byte_t rx[HITAG_FRAME_LEN];
 	size_t rxlen=0;
 	
+	auth_table_len = 0;
+	auth_table_pos = 0;
+	BigBuf_free();
+    auth_table = (byte_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
+	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
+
 	// Clean up trace and prepare it for storing frames
 	iso14a_set_tracing(TRUE);
 	iso14a_clear_trace();
-
-	auth_table_len = 0;
-	auth_table_pos = 0;
-	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 	
 	DbpString("Starting Hitag2 snoop");
 	LED_D_ON();
@@ -760,7 +767,7 @@ void SnoopHitag(uint32_t type) {
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
 	AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 	
-  // Disable timer during configuration	
+	// Disable timer during configuration	
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 	
 	// Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
@@ -940,12 +947,16 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	bool bQuitTraceFull = false;
 	bQuiet = false;
 	
-	// Clean up trace and prepare it for storing frames
-  iso14a_set_tracing(TRUE);
-  iso14a_clear_trace();
 	auth_table_len = 0;
 	auth_table_pos = 0;
+    byte_t* auth_table;
+	BigBuf_free();
+    auth_table = (byte_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
 	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
+
+	// Clean up trace and prepare it for storing frames
+	iso14a_set_tracing(TRUE);
+	iso14a_clear_trace();
 
 	DbpString("Starting Hitag2 simulation");
 	LED_D_ON();
@@ -1126,19 +1137,20 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	bool bStop;
 	bool bQuitTraceFull = false;
   
-  FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-  // Reset the return status
-  bSuccessful = false;
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	// Reset the return status
+	bSuccessful = false;
   
 	// Clean up trace and prepare it for storing frames
-  iso14a_set_tracing(TRUE);
-  iso14a_clear_trace();
+	iso14a_set_tracing(TRUE);
+	iso14a_clear_trace();
+
 	DbpString("Starting Hitag reader family");
 
 	// Check configuration
 	switch(htf) {
 		case RHT2F_PASSWORD: {
-      Dbprintf("List identifier in password mode");
+			Dbprintf("List identifier in password mode");
 			memcpy(password,htd->pwd.password,4);
       		blocknr = 0;
 			bQuitTraceFull = false;
@@ -1152,7 +1164,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 			Dbhexdump(8,NrAr,false);
 			bQuiet = false;
 			bCrypto = false;
-      bAuthenticating = false;
+			bAuthenticating = false;
 			bQuitTraceFull = true;
 		} break;
       
@@ -1160,17 +1172,17 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 			DbpString("Authenticating using key:");
 			memcpy(key,htd->crypto.key,4);	  //HACK; 4 or 6??  I read both in the code.
 			Dbhexdump(6,key,false);
-      blocknr = 0;
+			blocknr = 0;
 			bQuiet = false;
 			bCrypto = false;
-      bAuthenticating = false;
+			bAuthenticating = false;
 			bQuitTraceFull = true;
 		} break;
 
 		case RHT2F_TEST_AUTH_ATTEMPTS: {
 			Dbprintf("Testing %d authentication attempts",(auth_table_len/8));
 			auth_table_pos = 0;
-			memcpy(NrAr,auth_table,8);
+			memcpy(NrAr, auth_table, 8);
 			bQuitTraceFull = false;
 			bQuiet = false;
 			bCrypto = false;

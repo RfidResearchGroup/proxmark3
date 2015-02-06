@@ -146,6 +146,7 @@ demodError:
 int CmdHF14BList(const char *Cmd)
 {
 	PrintAndLog("Deprecated command, use 'hf list 14b' instead");
+
 	return 0;
 }
 int CmdHF14BRead(const char *Cmd)
@@ -207,7 +208,7 @@ int CmdHF14BCmdRaw (const char *cmd) {
     uint8_t power=0;
     char buf[5]="";
     int i=0;
-    uint8_t data[100];
+    uint8_t data[100] = {0x00};
     unsigned int datalen=0, temp;
     char *hexout;
     
@@ -261,7 +262,7 @@ int CmdHF14BCmdRaw (const char *cmd) {
             continue;
         }
         PrintAndLog("Invalid char on input");
-        return 0;
+        return 1;
     }
     if (datalen == 0)
     {
@@ -375,7 +376,7 @@ int CmdHF14BWrite( const char *Cmd){
 	else
 		PrintAndLog("[%s] Write block %02X [ %s ]", (isSrix4k)?"SRIX4K":"SRI512", blockno,  sprint_hex(data,4) );
  
-	sprintf(str, "-c -p 09 %02x %02x%02x%02x%02x", blockno, data[0], data[1], data[2], data[3]);
+	sprintf(str, "-c 09 %02x %02x%02x%02x%02x", blockno, data[0], data[1], data[2], data[3]);
 
 	CmdHF14BCmdRaw(str);
 	return 0;

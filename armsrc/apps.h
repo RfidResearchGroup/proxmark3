@@ -17,48 +17,10 @@
 #include "common.h"
 #include "hitag2.h"
 #include "mifare.h"
-
-// The large multi-purpose buffer, typically used to hold A/D samples,
-// maybe processed in some way.
-#define BIGBUF_SIZE				40000
-uint32_t BigBuf[BIGBUF_SIZE / sizeof(uint32_t)];
-#define TRACE_OFFSET			0
-#define TRACE_SIZE				3000
-#define RECV_CMD_OFFSET			(TRACE_OFFSET + TRACE_SIZE)
-#define MAX_FRAME_SIZE			256
-#define MAX_PARITY_SIZE			((MAX_FRAME_SIZE + 1)/ 8)
-#define RECV_CMD_PAR_OFFSET		(RECV_CMD_OFFSET + MAX_FRAME_SIZE)
-#define RECV_RESP_OFFSET		(RECV_CMD_PAR_OFFSET + MAX_PARITY_SIZE)
-#define RECV_RESP_PAR_OFFSET 	(RECV_RESP_OFFSET + MAX_FRAME_SIZE)
-#define CARD_MEMORY_OFFSET		(RECV_RESP_PAR_OFFSET + MAX_PARITY_SIZE)
-#define CARD_MEMORY_SIZE		4096	
-#define DMA_BUFFER_OFFSET  		CARD_MEMORY_OFFSET
-#define DMA_BUFFER_SIZE    		CARD_MEMORY_SIZE
-#define FREE_BUFFER_OFFSET 		(CARD_MEMORY_OFFSET + CARD_MEMORY_SIZE)
-#define FREE_BUFFER_SIZE   		(BIGBUF_SIZE - FREE_BUFFER_OFFSET - 1)
-
-/*
-The statements above translates into this :
-BIGBUF_SIZE         = 40000
-TRACE_OFFSET        = 0
-TRACE_SIZE          = 3000
-RECV_CMD_OFFSET     = 3000
-MAX_FRAME_SIZE      = 256
-MAX_PARITY_SIZE     = 32
-RECV_CMD_PAR_OFFSET = 3256
-RECV_RESP_OFFSET    = 3288
-RECV_RESP_PAR_OFFSET= 3544
-CARD_MEMORY_OFFSET  = 3576
-CARD_MEMORY_SIZE    = 4096
-DMA_BUFFER_OFFSET   = 3576
-DMA_BUFFER_SIZE     = 4096
-FREE_BUFFER_OFFSET  = 7672
-FREE_BUFFER_SIZE    = 32327
- */
+#include "../common/crc32.h"
+#include "BigBuf.h"
 
 extern const uint8_t OddByteParity[256];
-extern uint8_t *trace; // = (uint8_t *) BigBuf;
-extern int traceLen;   // = 0;
 extern int rsamples;   // = 0;
 extern int tracing;    // = TRUE;
 extern uint8_t trigger;
@@ -81,12 +43,8 @@ int AvgAdc(int ch);
 void ToSendStuffBit(int b);
 void ToSendReset(void);
 void ListenReaderField(int limit);
-void AcquireRawAdcSamples125k(int at134khz);
-void SnoopLFRawAdcSamples(int divisor, int trigger_threshold);
-void DoAcquisition125k(int trigger_threshold);
 extern int ToSendMax;
 extern uint8_t ToSend[];
-extern uint32_t BigBuf[];
 
 /// fpga.h
 void FpgaSendCommand(uint16_t cmd, uint16_t v);
@@ -144,6 +102,10 @@ void SetAdcMuxFor(uint32_t whichGpio);
 #define FPGA_HF_ISO14443A_READER_MOD				(4<<0)
 
 /// lfops.h
+extern uint8_t decimation;
+extern uint8_t bits_per_sample ;
+extern bool averaging;
+
 void AcquireRawAdcSamples125k(int divisor);
 void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,uint8_t *command);
 void ReadTItag(void);
@@ -198,7 +160,9 @@ void ReaderMifare(bool first_try);
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
 void MifareUReadBlock(uint8_t arg0,uint8_t *datain);
-void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain);
+void MifareUC_Auth1(uint8_t arg0, uint8_t *datain);
+void MifareUC_Auth2(uint32_t arg0, uint8_t *datain);
+void MifareUReadCard(uint8_t arg0, int Pages, uint8_t *datain);
 void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareUWriteBlock(uint8_t arg0,uint8_t *datain);
@@ -214,6 +178,25 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);  // Work with "magic Chinese" card
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void MifareCIdent();  // is "magic chinese" card?
+
+//desfire
+void Mifare_DES_Auth1(uint8_t arg0,uint8_t *datain);
+void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain);					   
+
+// mifaredesfire.h
+bool 	InitDesfireCard();
+void	MifareSendCommand(uint8_t arg0,uint8_t arg1, uint8_t *datain);
+void 	MifareDesfireGetInformation();
+void 	MifareDES_Auth1(uint8_t arg0,uint8_t arg1,uint8_t arg2, uint8_t *datain);
+void 	ReaderMifareDES(uint32_t param, uint32_t param2, uint8_t * datain);
+int 	DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout);
+size_t	CreateAPDU( uint8_t *datain, size_t len, uint8_t *dataout);
+void 	OnSuccess();
+void 	OnError(uint8_t reason);
+
+
+
+
 
 /// iso15693.h
 void RecordRawAdcSamplesIso15693(void);

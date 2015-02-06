@@ -12,9 +12,8 @@
 #include "util.h"
 #include "string.h"
 #include "apps.h"
+#include "BigBuf.h"
 
-uint8_t *trace = (uint8_t *) BigBuf+TRACE_OFFSET;
-int traceLen = 0;
 int tracing = TRUE;
 
 
@@ -439,7 +438,9 @@ void iso14a_set_tracing(bool enable) {
 }
 
 void clear_trace() {
-	memset(trace, 0x44, TRACE_SIZE);
+	uint8_t *trace = BigBuf_get_addr();
+	uint16_t max_traceLen = BigBuf_max_traceLen();
+	memset(trace, 0x44, max_traceLen);
 	traceLen = 0;
 }
 
@@ -458,11 +459,15 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 {
 	if (!tracing) return FALSE;
 
+	uint8_t *trace = BigBuf_get_addr();
+
 	uint16_t num_paritybytes = (iLen-1)/8 + 1;	// number of valid paritybytes in *parity
 	uint16_t duration = timestamp_end - timestamp_start;
 
 	// Return when trace is full
-	if (traceLen + sizeof(iLen) + sizeof(timestamp_start) + sizeof(duration) + num_paritybytes + iLen >= TRACE_SIZE) {
+	uint16_t max_traceLen = BigBuf_max_traceLen();
+
+	if (traceLen + sizeof(iLen) + sizeof(timestamp_start) + sizeof(duration) + num_paritybytes + iLen >= max_traceLen) {
 		tracing = FALSE;	// don't trace any more
 		return FALSE;
 	}
@@ -504,7 +509,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 	}
 	traceLen += num_paritybytes;
 
-	if(traceLen +4 < TRACE_SIZE)
+	if(traceLen +4 < max_traceLen)
 	{	//If it hadn't been cleared, for whatever reason..
 		memset(trace+traceLen,0x44, 4);
 	}

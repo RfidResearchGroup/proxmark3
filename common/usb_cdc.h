@@ -35,7 +35,7 @@
 #ifndef _USB_CDC_H_
 #define _USB_CDC_H_
 
-#include <common.h>
+#include "common.h"
 
 void usb_disable();
 void usb_enable();

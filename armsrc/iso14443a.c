@@ -146,6 +146,7 @@ void iso14a_set_trigger(bool enable) {
 }
 
 
+
 void iso14a_set_timeout(uint32_t timeout) {
 	iso14a_timeout = timeout;
 }
@@ -187,7 +188,6 @@ void AppendCrc14443a(uint8_t* data, int len)
 {
 	ComputeCrc14443(CRC_14443_A,data,len,data+len,data+len+1);
 }
-
 
 //=============================================================================
 // ISO 14443 Type A - Miller decoder
@@ -526,9 +526,6 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 	// bit 1 - trigger from first reader 7-bit request
 	
 	LEDsoff();
-	// init trace buffer
-	iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
 
 	// We won't start recording the frames that we acquire until we trigger;
 	// a good trigger condition to get started is probably when we see a
@@ -536,22 +533,25 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 	// triggered == FALSE -- to wait first for card
 	bool triggered = !(param & 0x03); 
 	
+	// Allocate memory from BigBuf for some buffers
+	// free all previous allocations first
+	BigBuf_free();
+
 	// The command (reader -> tag) that we're receiving.
-	// The length of a received command will in most cases be no more than 18 bytes.
-	// So 32 should be enough!
-	uint8_t *receivedCmd = ((uint8_t *)BigBuf) + RECV_CMD_OFFSET;
-	uint8_t *receivedCmdPar = ((uint8_t *)BigBuf) + RECV_CMD_PAR_OFFSET;
+	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
+	uint8_t *receivedCmdPar = BigBuf_malloc(MAX_PARITY_SIZE);
 	
 	// The response (tag -> reader) that we're receiving.
-	uint8_t *receivedResponse = ((uint8_t *)BigBuf) + RECV_RESP_OFFSET;
-	uint8_t *receivedResponsePar = ((uint8_t *)BigBuf) + RECV_RESP_PAR_OFFSET;
-	
-	// As we receive stuff, we copy it from receivedCmd or receivedResponse
-	// into trace, along with its length and other annotations.
-	//uint8_t *trace = (uint8_t *)BigBuf;
+	uint8_t *receivedResponse = BigBuf_malloc(MAX_FRAME_SIZE);
+	uint8_t *receivedResponsePar = BigBuf_malloc(MAX_PARITY_SIZE);
 	
 	// The DMA buffer, used to stream samples from the FPGA
-	uint8_t *dmaBuf = ((uint8_t *)BigBuf) + DMA_BUFFER_OFFSET;
+	uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
+
+	// init trace buffer
+	iso14a_clear_trace();
+	iso14a_set_tracing(TRUE);
+
 	uint8_t *data = dmaBuf;
 	uint8_t previous_data = 0;
 	int maxDataLen = 0;
@@ -591,7 +591,7 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 		// test for length of buffer
 		if(dataLen > maxDataLen) {
 			maxDataLen = dataLen;
-			if(dataLen > 400) {
+			if(dataLen > (9 * DMA_BUFFER_SIZE / 10)) {
 				Dbprintf("blew circular buffer! dataLen=%d", dataLen);
 				break;
 			}
@@ -820,7 +820,7 @@ int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
 				 uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
 
-static uint8_t* free_buffer_pointer = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
+static uint8_t* free_buffer_pointer;
 
 typedef struct {
   uint8_t* response;
@@ -829,10 +829,6 @@ typedef struct {
   size_t   modulation_n;
   uint32_t ProxToAirDuration;
 } tag_response_info_t;
-
-void reset_free_buffer() {
-  free_buffer_pointer = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET);
-}
 
 bool prepare_tag_modulation(tag_response_info_t* response_info, size_t max_buffer_size) {
 	// Example response, answer to MIFARE Classic read block will be 16 bytes + 2 CRC = 18 bytes
@@ -845,7 +841,8 @@ bool prepare_tag_modulation(tag_response_info_t* response_info, size_t max_buffe
 	// ----------- +
 	//    166 bytes, since every bit that needs to be send costs us a byte
 	//
-  
+ 
+ 
   // Prepare the tag modulation bits from the message
   CodeIso14443aAsTag(response_info->response,response_info->response_n);
   
@@ -866,15 +863,22 @@ bool prepare_tag_modulation(tag_response_info_t* response_info, size_t max_buffe
   return true;
 }
 
+
+// "precompile" responses. There are 7 predefined responses with a total of 28 bytes data to transmit.
+// Coded responses need one byte per bit to transfer (data, parity, start, stop, correction) 
+// 28 * 8 data bits, 28 * 1 parity bits, 7 start bits, 7 stop bits, 7 correction bits
+// -> need 273 bytes buffer
+#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 273
+
 bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
   // Retrieve and store the current buffer index
   response_info->modulation = free_buffer_pointer;
   
   // Determine the maximum size we can use from our buffer
-  size_t max_buffer_size = (((uint8_t *)BigBuf) + FREE_BUFFER_OFFSET + FREE_BUFFER_SIZE) - free_buffer_pointer;
+  size_t max_buffer_size = ALLOCATED_TAG_MODULATION_BUFFER_SIZE;
   
   // Forward the prepare tag modulation function to the inner function
-  if (prepare_tag_modulation(response_info,max_buffer_size)) {
+  if (prepare_tag_modulation(response_info, max_buffer_size)) {
     // Update the free buffer offset
     free_buffer_pointer += ToSendMax;
     return true;
@@ -889,10 +893,6 @@ bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
 //-----------------------------------------------------------------------------
 void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 {
-	// Enable and clear the trace
-	iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
-
 	uint8_t sak;
 
 	// The first response contains the ATQA (note: bytes are transmitted in reverse order).
@@ -936,10 +936,11 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 	}
 	
 	// The second response contains the (mandatory) first 24 bits of the UID
-	uint8_t response2[5];
+	uint8_t response2[5] = {0x00};
 
 	// Check if the uid uses the (optional) part
-	uint8_t response2a[5];
+	uint8_t response2a[5] = {0x00};
+	
 	if (uid_2nd) {
 		response2[0] = 0x88;
 		num_to_bytes(uid_1st,3,response2+1);
@@ -960,12 +961,12 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 	response2[4] = response2[0] ^ response2[1] ^ response2[2] ^ response2[3];
 
 	// Prepare the mandatory SAK (for 4 and 7 byte UID)
-	uint8_t response3[3];
+	uint8_t response3[3]  = {0x00};
 	response3[0] = sak;
 	ComputeCrc14443(CRC_14443_A, response3, 1, &response3[1], &response3[2]);
 
 	// Prepare the optional second SAK (for 7 byte UID), drop the cascade bit
-	uint8_t response3a[3];
+	uint8_t response3a[3]  = {0x00};
 	response3a[0] = sak & 0xFB;
 	ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 
@@ -1001,9 +1002,17 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 		.modulation_n = 0
 	};
   
-	// Reset the offset pointer of the free buffer
-	reset_free_buffer();
-  
+	BigBuf_free_keep_EM();
+
+	// allocate buffers:
+	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
+	uint8_t *receivedCmdPar = BigBuf_malloc(MAX_PARITY_SIZE);
+	free_buffer_pointer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
+
+	// clear trace
+    iso14a_clear_trace();
+	iso14a_set_tracing(TRUE);
+
 	// Prepare the responses of the anticollision phase
 	// there will be not enough time to do this at the moment the reader sends it REQA
 	for (size_t i=0; i<TAG_RESPONSE_COUNT; i++) {
@@ -1023,10 +1032,6 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 
 	// We need to listen to the high-frequency, peak-detected path.
 	iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
-
-	// buffers used on software Uart:
-	uint8_t *receivedCmd = ((uint8_t *)BigBuf) + RECV_CMD_OFFSET;
-	uint8_t *receivedCmdPar = ((uint8_t *)BigBuf) + RECV_CMD_PAR_OFFSET;
 
 	cmdsRecvd = 0;
 	tag_response_info_t* p_response;
@@ -1188,6 +1193,7 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 
 	Dbprintf("%x %x %x", happened, happened2, cmdsRecvd);
 	LED_A_OFF();
+	BigBuf_free_keep_EM();
 }
 
 
@@ -1461,7 +1467,7 @@ static int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen, bool correctionNe
 	AT91C_BASE_SSC->SSC_THR = SEC_F;
 
 	// send cycle
-	for(; i <= respLen; ) {
+	for(; i < respLen; ) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = resp[i++];
 			FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -1661,8 +1667,8 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 	uint8_t sel_all[]    = { 0x93,0x20 };
 	uint8_t sel_uid[]    = { 0x93,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 	uint8_t rats[]       = { 0xE0,0x80,0x00,0x00 }; // FSD=256, FSDI=8, CID=0
-	uint8_t *resp = ((uint8_t *)BigBuf) + RECV_RESP_OFFSET;
-	uint8_t *resp_par = ((uint8_t *)BigBuf) + RECV_RESP_PAR_OFFSET;
+	uint8_t resp[MAX_FRAME_SIZE]; // theoretically. A usual RATS will be much smaller
+	uint8_t resp_par[MAX_PARITY_SIZE];
 	byte_t uid_resp[4];
 	size_t uid_resp_len;
 
@@ -1954,9 +1960,12 @@ void ReaderMifare(bool first_try)
 	uint8_t mf_nr_ar[]   = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
 	static uint8_t mf_nr_ar3;
 
-	uint8_t* receivedAnswer = (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);
-	uint8_t* receivedAnswerPar = (((uint8_t *)BigBuf) + RECV_RESP_PAR_OFFSET);
+	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
+	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
 
+	// free eventually allocated BigBuf memory. We want all for tracing.
+	BigBuf_free();
+	
 	iso14a_clear_trace();
 	iso14a_set_tracing(TRUE);
 
@@ -2166,10 +2175,10 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
 	uint32_t numReads = 0;//Counts numer of times reader read a block
-	uint8_t* receivedCmd = get_bigbufptr_recvcmdbuf();
-	uint8_t* receivedCmd_par = receivedCmd + MAX_FRAME_SIZE;
-	uint8_t* response = get_bigbufptr_recvrespbuf();
-	uint8_t* response_par = response + MAX_FRAME_SIZE;
+	uint8_t receivedCmd[MAX_MIFARE_FRAME_SIZE];
+	uint8_t receivedCmd_par[MAX_MIFARE_PARITY_SIZE];
+	uint8_t response[MAX_MIFARE_FRAME_SIZE];
+	uint8_t response_par[MAX_MIFARE_PARITY_SIZE];
 	
 	uint8_t rATQA[] = {0x04, 0x00}; // Mifare classic 1k 4BUID
 	uint8_t rUIDBCC1[] = {0xde, 0xad, 0xbe, 0xaf, 0x62};
@@ -2186,6 +2195,8 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	uint32_t ar_nr_responses[] = {0,0,0,0,0,0,0,0};
 	uint8_t ar_nr_collected = 0;
 
+	// free eventually allocated BigBuf memory but keep Emulator Memory
+	BigBuf_free_keep_EM();
 	// clear trace
     iso14a_clear_trace();
 	iso14a_set_tracing(TRUE);
@@ -2656,18 +2667,20 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.
 	// So 32 should be enough!
-	uint8_t *receivedCmd = (((uint8_t *)BigBuf) + RECV_CMD_OFFSET);
-	uint8_t *receivedCmdPar = ((uint8_t *)BigBuf) + RECV_CMD_PAR_OFFSET;
+	uint8_t receivedCmd[MAX_MIFARE_FRAME_SIZE];
+	uint8_t receivedCmdPar[MAX_MIFARE_PARITY_SIZE];
 	// The response (tag -> reader) that we're receiving.
-	uint8_t *receivedResponse = (((uint8_t *)BigBuf) + RECV_RESP_OFFSET);
-	uint8_t *receivedResponsePar = ((uint8_t *)BigBuf) + RECV_RESP_PAR_OFFSET;
+	uint8_t receivedResponse[MAX_MIFARE_FRAME_SIZE];
+	uint8_t receivedResponsePar[MAX_MIFARE_PARITY_SIZE];
 
 	// As we receive stuff, we copy it from receivedCmd or receivedResponse
 	// into trace, along with its length and other annotations.
 	//uint8_t *trace = (uint8_t *)BigBuf;
 	
-	// The DMA buffer, used to stream samples from the FPGA
-	uint8_t *dmaBuf = ((uint8_t *)BigBuf) + DMA_BUFFER_OFFSET;
+	// free eventually allocated BigBuf memory
+	BigBuf_free();
+	// allocate the DMA buffer, used to stream samples from the FPGA
+	uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
 	uint8_t *data = dmaBuf;
 	uint8_t previous_data = 0;
 	int maxDataLen = 0;
@@ -2726,7 +2739,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		// test for length of buffer
 		if(dataLen > maxDataLen) {					// we are more behind than ever...
 			maxDataLen = dataLen;					
-			if(dataLen > 400) {
+			if(dataLen > (9 * DMA_BUFFER_SIZE / 10)) {
 				Dbprintf("blew circular buffer! dataLen=0x%x", dataLen);
 				break;
 			}

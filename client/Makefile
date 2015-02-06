@@ -9,15 +9,13 @@ include ../common/Makefile.common
 CC=gcc
 CXX=g++
 #COMMON_FLAGS = -m32
-
 VPATH = ../common
 OBJDIR = obj
 
 LDLIBS = -L/opt/local/lib -L/usr/local/lib ../liblua/liblua.a -lreadline -lpthread -lm
 LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O4 
+CFLAGS = -std=c99 -I. -I../include -I../common -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O4
 LUAPLATFORM = generic
-
 ifneq (,$(findstring MINGW,$(platform)))
 CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
 QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
@@ -79,6 +77,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			cmdhflegic.c \
 			cmdhficlass.c \
 			cmdhfmf.c \
+            cmdhfmfu.c \
 			cmdhw.c \
 			cmdlf.c \
 			cmdlfio.c \
@@ -137,17 +136,6 @@ clean:
 
 tarbin: $(BINS)
 	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%)
-
-# must be run as root
-install_kext: Info.plist
-	mkdir -p /System/Library/Extensions/Proxmark3.kext/Contents
-	cp Info.plist /System/Library/Extensions/Proxmark3.kext/Contents
-	chown -R root:wheel /System/Library/Extensions/Proxmark3.kext
-	chmod 755 /System/Library/Extensions/Proxmark3.kext /System/Library/Extensions/Proxmark3.kext/Contents
-	chmod 644 /System/Library/Extensions/Proxmark3.kext/Contents/Info.plist
-	rm -rf /System/Library/Caches/com.apple.kext.caches
-	touch /System/Library/Extensions
-	@echo "*** You may need to reboot for the kext to take effect."
 
 lua_build:
 	@echo Compiling liblua, using platform $(LUAPLATFORM)

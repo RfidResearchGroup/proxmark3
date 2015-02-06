@@ -10,15 +10,16 @@ APP_INCLUDES = apps.h
 
 #remove one of the following defines and comment out the relevant line
 #in the next section to remove that particular feature from compilation  
-APP_CFLAGS	= -DWITH_LF -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b -DWITH_ICLASS -DWITH_LEGICRF -DWITH_HITAG	-fno-strict-aliasing
+APP_CFLAGS	= -DWITH_LF -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b -DWITH_ICLASS -DWITH_LEGICRF -DWITH_HITAG  -DWITH_CRC -fno-strict-aliasing
 #-DWITH_LCD 
 
 #SRC_LCD = fonts.c LCD.c
-SRC_LF = lfops.c hitag2.c
+SRC_LF = lfops.c hitag2.c lfsampling.c
 SRC_ISO15693 = iso15693.c iso15693tools.c 
 SRC_ISO14443a = epa.c iso14443a.c mifareutil.c mifarecmd.c mifaresniff.c
 SRC_ISO14443b = iso14443.c
-SRC_CRAPTO1 = crapto1.c crypto1.c
+SRC_CRAPTO1 = crapto1.c crypto1.c des.c aes.c 
+SRC_CRC = iso14443crc.c crc.c crc16.c crc32.c 
 
 THUMBSRC = start.c \
 	$(SRC_LCD) \
@@ -34,15 +35,14 @@ THUMBSRC = start.c \
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
 	legicrf.c \
-	iso14443crc.c \
-	crc16.c \
 	lfdemod.c \
 	$(SRC_ISO14443a) \
 	$(SRC_ISO14443b) \
 	$(SRC_CRAPTO1) \
+	$(SRC_CRC) \
 	legic_prng.c \
 	iclass.c \
-	crc.c
+	BigBuf.c \
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant
 APP_CFLAGS += -I.

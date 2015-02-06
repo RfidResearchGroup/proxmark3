@@ -241,18 +241,20 @@ local function main(args)
 	local cmdSetDbgOff = "hf mf dbg 0"
 	core.console( cmdSetDbgOff) 
 	
-	-- Look for tag present on reader,
-	result, err = lib14a.read1443a(false)
-	if not result then return oops(err)	end
+	-- if not loadFromDump then
+		-- -- Look for tag present on reader,
+		-- result, err = lib14a.read1443a(false)
+		-- if not result then return oops(err)	end
 
-	core.clearCommandBuffer()
+		-- core.clearCommandBuffer()
 	
-	if 0x01 ~= result.sak then -- NXP MIFARE TNP3xxx
-		return oops('This is not a TNP3xxx tag. aborting.')
-	end	
+		-- if 0x01 ~= result.sak then -- NXP MIFARE TNP3xxx
+			-- return oops('This is not a TNP3xxx tag. aborting.')
+		-- end	
 
-	-- Show tag info
-	print((' Found tag : %s'):format(result.name))
+		-- -- Show tag info
+		-- print((' Found tag : %s'):format(result.name))
+	-- end
 	
 	-- Load dump.bin file
 	print( (' Load data from %s'):format(inputTemplate))
@@ -349,7 +351,7 @@ local function main(args)
 		err = LoadEmulator(blocks)
 		if err then return oops(err) end	
 		core.clearCommandBuffer()
-		print('The simulation is now prepared.\n --> run \"hf mf sim 5 '..uid..'\" <--')
+		print('The simulation is now prepared.\n --> run \"hf mf sim u '..uid..' x\" <--')
 	end
 end
 main(args)
