@@ -23,7 +23,7 @@
 
 #include "legicrf.h"
 #include <hitag2.h>
-
+#include "lfsampling.h"
 #ifdef WITH_LCD
  #include "LCD.h"
 #endif
@@ -626,16 +626,17 @@ void UsbPacketReceived(uint8_t *packet, int len)
   
 	switch(c->cmd) {
 #ifdef WITH_LF
+		case CMD_SET_LF_SAMPLING_CONFIG:
+			setSamplingConfig((sample_config *) c->d.asBytes);
+			break;
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K:
-			AcquireRawAdcSamples125k(c->arg[0]);
-			cmd_send(CMD_ACK,0,0,0,0,0);
+			cmd_send(CMD_ACK,SampleLF(),0,0,0,0);
 			break;
 		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			ModThenAcquireRawAdcSamples125k(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
 			break;
 		case CMD_LF_SNOOP_RAW_ADC_SAMPLES:
-			SnoopLFRawAdcSamples(c->arg[0], c->arg[1]);
-			cmd_send(CMD_ACK,0,0,0,0,0);
+			cmd_send(CMD_ACK,SnoopLF(),0,0,0,0);
 			break;
 		case CMD_HID_DEMOD_FSK:
 			CmdHIDdemodFSK(c->arg[0], 0, 0, 1);
@@ -918,7 +919,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 				cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,traceLen,BigBuf+c->arg[0]+i,len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
-			cmd_send(CMD_ACK,0,0,traceLen,0,0);
+			cmd_send(CMD_ACK,1,0,traceLen,getSamplingConfig(),sizeof(sample_config));
 			LED_B_OFF();
 			break;
 

@@ -213,6 +213,7 @@ int param_getptr(const char *line, int *bg, int *en, int paramnum)
 	return 0;
 }
 
+
 char param_getchar(const char *line, int paramnum)
 {
 	int bg, en;
@@ -225,6 +226,36 @@ char param_getchar(const char *line, int paramnum)
 uint8_t param_get8(const char *line, int paramnum)
 {
 	return param_get8ex(line, paramnum, 10, 0);
+}
+
+/**
+ * @brief Reads a decimal integer (actually, 0-254, not 255)
+ * @param line
+ * @param paramnum
+ * @return -1 if error
+ */
+uint8_t param_getdec(const char *line, int paramnum, uint8_t *destination)
+{
+	uint8_t val =  param_get8ex(line, paramnum, 255, 10);
+	printf("read %i", (int8_t ) val);
+	if( (int8_t) val == -1) return 1;
+	(*destination) = val;
+	return 0;
+}
+/**
+ * @brief Checks if param is decimal
+ * @param line
+ * @param paramnum
+ * @return
+ */
+uint8_t param_isdec(const char *line, int paramnum)
+{
+	int bg, en;
+	//TODO, check more thorougly
+	if (!param_getptr(line, &bg, &en, paramnum)) return 1;
+		//		return strtoul(&line[bg], NULL, 10) & 0xff;
+
+	return 0;
 }
 
 uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base)

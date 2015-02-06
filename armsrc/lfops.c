@@ -15,105 +15,18 @@
 #include "crc16.h"
 #include "string.h"
 #include "lfdemod.h"
+#include "lfsampling.h"
 
 
 /**
-* Does the sample acquisition. If threshold is specified, the actual sampling
-* is not commenced until the threshold has been reached.
-* @param trigger_threshold - the threshold
-* @param silent - is true, now outputs are made. If false, dbprints the status
-*/
-void DoAcquisition125k_internal(int trigger_threshold,bool silent)
-{
-    uint8_t *dest = BigBuf_get_addr();
-    int n = BigBuf_max_traceLen();
-    int i;
-
-    memset(dest, 0, n);
-    i = 0;
-    for(;;) {
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-            AT91C_BASE_SSC->SSC_THR = 0x43;
-            LED_D_ON();
-        }
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-            dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-            LED_D_OFF();
-            if (trigger_threshold != -1 && dest[i] < trigger_threshold)
-                continue;
-            else
-                trigger_threshold = -1;
-            if (++i >= n) break;
-        }
-    }
-    if(!silent)
-    {
-        Dbprintf("buffer samples: %02x %02x %02x %02x %02x %02x %02x %02x ...",
-                 dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
-
-    }
-}
-/**
-* Perform sample aquisition.
-*/
-void DoAcquisition125k(int trigger_threshold)
-{
-    DoAcquisition125k_internal(trigger_threshold, false);
-}
-
-/**
-* Setup the FPGA to listen for samples. This method downloads the FPGA bitstream
-* if not already loaded, sets divisor and starts up the antenna.
-* @param divisor : 1, 88> 255 or negative ==> 134.8 KHz
-* 				   0 or 95 ==> 125 KHz
-*
-**/
-void LFSetupFPGAForADC(int divisor, bool lf_field)
-{
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    if ( (divisor == 1) || (divisor < 0) || (divisor > 255) )
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
-    else if (divisor == 0)
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-    else
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor);
-
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | (lf_field ? FPGA_LF_ADC_READER_FIELD : 0));
-
-    // Connect the A/D to the peak-detected low-frequency path.
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-    // Give it a bit of time for the resonant antenna to settle.
-    SpinDelay(50);
-    // Now set up the SSC to get the ADC samples that are now streaming at us.
-    FpgaSetupSsc();
-}
-/**
-* Initializes the FPGA, and acquires the samples.
-**/
-void AcquireRawAdcSamples125k(int divisor)
-{
-    LFSetupFPGAForADC(divisor, true);
-    // Now call the acquisition routine
-    DoAcquisition125k_internal(-1,false);
-}
-/**
-* Initializes the FPGA for snoop-mode, and acquires the samples.
-**/
-
-void SnoopLFRawAdcSamples(int divisor, int trigger_threshold)
-{
-    LFSetupFPGAForADC(divisor, false);
-    DoAcquisition125k(trigger_threshold);
-}
-
+ * Function to do a modulation and then get samples.
+ * @param delay_off
+ * @param period_0
+ * @param period_1
+ * @param command
+ */
 void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, uint8_t *command)
 {
-
-    /* Make sure the tag is reset */
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    SpinDelay(2500);
-
 
     int divisor_used = 95; // 125 KHz
     // see if 'h' was specified
@@ -121,24 +34,25 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
     if (command[strlen((char *) command) - 1] == 'h')
         divisor_used = 88; // 134.8 KHz
 
+	sample_config sc = { 0,0,1, divisor_used, 0};
+	setSamplingConfig(&sc);
 
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-    // Give it a bit of time for the resonant antenna to settle.
-    SpinDelay(50);
+	/* Make sure the tag is reset */
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelay(2500);
 
-    // And a little more time for the tag to fully power up
-    SpinDelay(2000);
+	LFSetupFPGAForADC(sc.divisor, 1);
 
-    // Now set up the SSC to get the ADC samples that are now streaming at us.
-    FpgaSetupSsc();
+	// And a little more time for the tag to fully power up
+	SpinDelay(2000);
 
     // now modulate the reader field
     while(*command != '\0' && *command != ' ') {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         LED_D_OFF();
         SpinDelayUs(delay_off);
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used);
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc.divisor);
 
         FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
         LED_D_ON();
@@ -150,13 +64,15 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LED_D_OFF();
     SpinDelayUs(delay_off);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor_used);
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc.divisor);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
     // now do the read
-    DoAcquisition125k(-1);
+	DoAcquisition_config(false);
 }
+
+
 
 /* blank r/w tag data stream
 ...0000000000000000 01111111
@@ -645,8 +561,8 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
 
-        DoAcquisition125k_internal(-1,true);
-        // FSK demodulator
+		DoAcquisition_default(-1,true);
+		// FSK demodulator
         size = sizeOfBigBuff;  //variable size will change after demod so re initialize it before use
 		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo);
         
@@ -734,8 +650,8 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
 
-        DoAcquisition125k_internal(-1,true);
-        size  = BigBuf_max_traceLen();
+		DoAcquisition_default(-1,true);
+		size  = BigBuf_max_traceLen();
         //Dbprintf("DEBUG: Buffer got");
 		//askdemod and manchester decode
 		errCnt = askmandemod(dest, &size, &clk, &invert, maxErr);
@@ -787,8 +703,8 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
     while(!BUTTON_PRESS()) {
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
-        DoAcquisition125k_internal(-1,true);
-        //fskdemod and get start index
+		DoAcquisition_default(-1,true);
+		//fskdemod and get start index
         WDT_HIT();
         idx = IOdemodFSK(dest, BigBuf_max_traceLen());
         if (idx>0){
@@ -1394,7 +1310,9 @@ int DemodPCF7931(uint8_t **outBlocks) {
     int lmin=128, lmax=128;
     uint8_t dir;
 
-    AcquireRawAdcSamples125k(0);
+	LFSetupFPGAForADC(95, true);
+	DoAcquisition_default(0, 0);
+
 
     lmin = 64;
     lmax = 192;

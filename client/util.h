@@ -49,6 +49,8 @@ uint8_t param_get8(const char *line, int paramnum);
 uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base);
 uint32_t param_get32ex(const char *line, int paramnum, int deflt, int base);
 uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base);
+uint8_t param_getdec(const char *line, int paramnum, uint8_t *destination);
+uint8_t param_isdec(const char *line, int paramnum);
 int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt);
 int param_getstr(const char *line, int paramnum, char * str);
 
