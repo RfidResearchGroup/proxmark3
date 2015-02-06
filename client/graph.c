@@ -94,7 +94,7 @@ int GetClock(const char *str, int peak, int verbose)
 			PrintAndLog("Failed to copy from graphbuffer");
 			return -1;
 		}
-		clock = DetectASKClock(grph,size,0,20);
+		DetectASKClock(grph,size,&clock,20);
 		// Only print this message if we're not looping something
 		if (!verbose){
 			PrintAndLog("Auto-detected clock rate: %d", clock);

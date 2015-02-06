@@ -247,26 +247,6 @@ void printEM410x(uint64_t id)
 }
 
 //by marshmellow
-//take binary from demod buffer and see if we can find an EM410x ID
-int CmdEm410xDecode(const char *Cmd)
-{
-  uint64_t id=0;
-  size_t size = DemodBufferLen, idx=0;
- 	id = Em410xDecode(DemodBuffer, &size, &idx);
-  if (id>0){
-    setDemodBuf(DemodBuffer, size, idx);
-    if (g_debugMode){
-      PrintAndLog("DEBUG: Printing demod buffer:");
-      printDemodBuff();
-    }
-    printEM410x(id);
-    return 1; 
-  }
-  return 0;
-}
-
-
-//by marshmellow
 //takes 3 arguments - clock, invert and maxErr as integers
 //attempts to demodulate ask while decoding manchester
 //prints binary found and saves in graphbuffer for further commands
@@ -276,7 +256,7 @@ int CmdAskEM410xDemod(const char *Cmd)
   int clk=0;
   int maxErr=100;
   char cmdp = param_getchar(Cmd, 0);
-  if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') {
+  if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
     PrintAndLog("Usage:  data askem410xdemod [clock] <0|1> [maxError]");
     PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLog("     <invert>, 1 for invert output");
@@ -345,7 +325,7 @@ int Cmdaskmandemod(const char *Cmd)
 	int clk=0;
   int maxErr=100;
   char cmdp = param_getchar(Cmd, 0);
-  if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') {
+  if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
     PrintAndLog("Usage:  data askmandemod [clock] <0|1> [maxError]");
     PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLog("     <invert>, 1 for invert output");
@@ -364,6 +344,10 @@ int Cmdaskmandemod(const char *Cmd)
   if (invert != 0 && invert != 1) {
     PrintAndLog("Invalid argument: %s", Cmd);
     return 0;
+  }
+  if (clk==1){
+    invert=1;
+    clk=0;
   }
 	size_t BitLen = getFromGraphBuf(BitStream);
   if (g_debugMode==1) PrintAndLog("DEBUG: Bitlen from grphbuff: %d",BitLen);
@@ -409,6 +393,7 @@ int Cmdmandecoderaw(const char *Cmd)
   int i =0;
   int errCnt=0;
 	size_t size=0;
+  size_t maxErr = 20;
   char cmdp = param_getchar(Cmd, 0);
   if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
     PrintAndLog("Usage:  data manrawdecode");
@@ -432,7 +417,7 @@ int Cmdmandecoderaw(const char *Cmd)
   }
 	size=i;
 	errCnt=manrawdecode(BitStream, &size);
-  if (errCnt>=20){
+  if (errCnt>=maxErr){
     PrintAndLog("Too many errors: %d",errCnt);
     return 0;
   }
@@ -471,7 +456,7 @@ int CmdBiphaseDecodeRaw(const char *Cmd)
   int invert=0;
   int high=0, low=0;
   char cmdp = param_getchar(Cmd, 0);
-  if (strlen(Cmd) > 2 || cmdp == 'h' || cmdp == 'H') {
+  if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') {
     PrintAndLog("Usage:  data biphaserawdecode [offset] <invert>");
     PrintAndLog("     Converts 10 or 01 to 0 and 11 or 00 to 1");
     PrintAndLog("     --must have binary sequence in demodbuffer (run data askrawdemod first)");   
@@ -509,7 +494,7 @@ int CmdBiphaseDecodeRaw(const char *Cmd)
 }
 
 //by marshmellow
-//takes 3 arguments - clock, invert, maxErr as integers
+//takes 4 arguments - clock, invert, maxErr as integers and amplify as char
 //attempts to demodulate ask only
 //prints binary found and saves in graphbuffer for further commands
 int Cmdaskrawdemod(const char *Cmd)
@@ -517,30 +502,40 @@ int Cmdaskrawdemod(const char *Cmd)
 	int invert=0;
 	int clk=0;
   int maxErr=100;
+  uint8_t askAmp = 0;
+  char amp = param_getchar(Cmd, 0);
   char cmdp = param_getchar(Cmd, 0);
-  if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') {
-    PrintAndLog("Usage:  data askrawdemod [clock] <0|1> [maxError]");
-    PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
-    PrintAndLog("     <invert>, 1 for invert output");
-    PrintAndLog("     [set maximum allowed errors], default = 100.");
+  if (strlen(Cmd) > 12 || cmdp == 'h' || cmdp == 'H') {
+    PrintAndLog("Usage:  data askrawdemod [clock] <invert> [maxError] [amplify]");
+    PrintAndLog("     [set clock as integer] optional, if not set, autodetect");
+    PrintAndLog("     <invert>, 1 to invert output");
+    PrintAndLog("     [set maximum allowed errors], default = 100");
+    PrintAndLog("     <amplify>, 'a' to attempt demod with ask amplification, default = no amp");
     PrintAndLog("");
-    PrintAndLog("    sample: data askrawdemod        = demod an ask tag from GraphBuffer");
-    PrintAndLog("          : data askrawdemod 32     = demod an ask tag from GraphBuffer using a clock of RF/32");
-    PrintAndLog("          : data askrawdemod 32 1   = demod an ask tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLog("          : data askrawdemod 1      = demod an ask tag from GraphBuffer while inverting data");
-    PrintAndLog("          : data askrawdemod 64 1 0 = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLog("    sample: data askrawdemod          = demod an ask tag from GraphBuffer");
+    PrintAndLog("          : data askrawdemod a        = demod an ask tag from GraphBuffer, amplified");
+    PrintAndLog("          : data askrawdemod 32       = demod an ask tag from GraphBuffer using a clock of RF/32");
+    PrintAndLog("          : data askrawdemod 32 1     = demod an ask tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLog("          : data askrawdemod 1        = demod an ask tag from GraphBuffer while inverting data");
+    PrintAndLog("          : data askrawdemod 64 1 0   = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLog("          : data askrawdemod 64 1 0 a = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
     return 0;
   }
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
-	sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
+	sscanf(Cmd, "%i %i %i %c", &clk, &invert, &maxErr, &amp);
   if (invert != 0 && invert != 1) {
     PrintAndLog("Invalid argument: %s", Cmd);
     return 0;
   }
+  if (clk==1){
+    invert=1;
+    clk=0;
+  }
+  if (amp == 'a' || amp == 'A') askAmp=1; 
 	size_t BitLen = getFromGraphBuf(BitStream);
   if (BitLen==0) return 0;
   int errCnt=0;
-	errCnt = askrawdemod(BitStream, &BitLen, &clk, &invert, maxErr);
+	errCnt = askrawdemod(BitStream, &BitLen, &clk, &invert, maxErr, askAmp);
 	if (errCnt==-1||BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
 		PrintAndLog("no data found");
     if (g_debugMode==1) PrintAndLog("errCnt: %d, BitLen: %d, clk: %d, invert: %d", errCnt, BitLen, clk, invert);
@@ -716,6 +711,35 @@ int CmdGraphShiftZero(const char *Cmd)
   return 0;
 }
 
+//by marshmellow
+//use large jumps in read samples to identify edges of waves and then amplify that wave to max
+//similar to dirtheshold, threshold, and askdemod commands 
+//takes a threshold length which is the measured length between two samples then determines an edge
+int CmdAskEdgeDetect(const char *Cmd)
+{
+  int thresLen = 25;
+  sscanf(Cmd, "%i", &thresLen); 
+  int shift = 127;
+  int shiftedVal=0;
+  for(int i = 1; i<GraphTraceLen; i++){
+    if (GraphBuffer[i]-GraphBuffer[i-1]>=thresLen) //large jump up
+      shift=127;
+    else if(GraphBuffer[i]-GraphBuffer[i-1]<=-1*thresLen) //large jump down
+      shift=-127;
+
+    shiftedVal=GraphBuffer[i]+shift;
+
+    if (shiftedVal>127) 
+      shiftedVal=127;
+    else if (shiftedVal<-127) 
+      shiftedVal=-127;
+    GraphBuffer[i-1] = shiftedVal;
+  }
+  RepaintGraphWindow();
+  //CmdNorm("");
+  return 0;
+}
+
 /* Print our clock rate */
 // uses data from graphbuffer
 int CmdDetectClockRate(const char *Cmd)
@@ -726,8 +750,8 @@ int CmdDetectClockRate(const char *Cmd)
 
 //by marshmellow
 //fsk raw demod and print binary
-//takes 4 arguments - Clock, invert, rchigh, rclow
-//defaults: clock = 50, invert=0, rchigh=10, rclow=8 (RF/10 RF/8 (fsk2a))
+//takes 4 arguments - Clock, invert, fchigh, fclow
+//defaults: clock = 50, invert=1, fchigh=10, fclow=8 (RF/10 RF/8 (fsk2a))
 int CmdFSKrawdemod(const char *Cmd)
 {
   //raw fsk demod  no manchester decoding no start bit finding just get binary from wave
@@ -737,15 +761,16 @@ int CmdFSKrawdemod(const char *Cmd)
   int fchigh=0;
   int fclow=0;
   char cmdp = param_getchar(Cmd, 0);
-  if (strlen(Cmd) > 4 || cmdp == 'h' || cmdp == 'H') {
-    PrintAndLog("Usage:  data fskrawdemod [clock] <0|1> [rchigh] [rclow]");
-    PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
-    PrintAndLog("     <invert>, 1 for invert output");
-
-    PrintAndLog("     [set maximum allowed errors], default = 100.");
+  if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
+    PrintAndLog("Usage:  data fskrawdemod [clock] <invert> [fchigh] [fclow]");
+    PrintAndLog("     [set clock as integer] optional, omit for autodetect.");
+    PrintAndLog("     <invert>, 1 for invert output, can be used even if the clock is omitted");
+    PrintAndLog("     [fchigh], larger field clock length, omit for autodetect");
+    PrintAndLog("     [fclow], small field clock length, omit for autodetect");
     PrintAndLog("");
     PrintAndLog("    sample: data fskrawdemod           = demod an fsk tag from GraphBuffer using autodetect");
     PrintAndLog("          : data fskrawdemod 32        = demod an fsk tag from GraphBuffer using a clock of RF/32, autodetect fc");
+    PrintAndLog("          : data fskrawdemod 1         = demod an fsk tag from GraphBuffer using autodetect, invert output");   
     PrintAndLog("          : data fskrawdemod 32 1      = demod an fsk tag from GraphBuffer using a clock of RF/32, invert output, autodetect fc");
     PrintAndLog("          : data fskrawdemod 64 0 8 5  = demod an fsk1 RF/64 tag from GraphBuffer");
     PrintAndLog("          : data fskrawdemod 50 0 10 8 = demod an fsk2 RF/50 tag from GraphBuffer");
@@ -1381,10 +1406,8 @@ int CmdFSKfcDetect(const char *Cmd)
     return 0;
   }
   if ((fc1==10 && fc2==8) || (fc1==8 && fc2==5)){
-    if (g_debugMode){
-      PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
-      return 1;
-    }
+    PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
+    return 1;
   }
   if (g_debugMode){
     PrintAndLog("DEBUG: unknown fsk field clock detected");
@@ -1550,7 +1573,7 @@ int CmdNRZrawDemod(const char *Cmd)
   int clk=0;
   int maxErr=100;
   char cmdp = param_getchar(Cmd, 0);
-  if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') {
+  if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
     PrintAndLog("Usage:  data nrzrawdemod [clock] <0|1> [maxError]");
     PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLog("     <invert>, 1 for invert output");
@@ -1609,7 +1632,7 @@ int CmdPSK1rawDemod(const char *Cmd)
 {
   int errCnt;
   char cmdp = param_getchar(Cmd, 0);
-  if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') {
+  if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
     PrintAndLog("Usage:  data psk1rawdemod [clock] <0|1> [maxError]");
     PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLog("     <invert>, 1 for invert output");
@@ -1644,7 +1667,7 @@ int CmdPSK2rawDemod(const char *Cmd)
 {
   int errCnt=0;
   char cmdp = param_getchar(Cmd, 0);
-  if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') {
+  if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
     PrintAndLog("Usage:  data psk2rawdemod [clock] <0|1> [maxError]");
     PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLog("     <invert>, 1 for invert output");
@@ -2261,6 +2284,7 @@ static command_t CommandTable[] =
   {"help",          CmdHelp,            1, "This help"},
   {"amp",           CmdAmp,             1, "Amplify peaks"},
   {"askdemod",      Cmdaskdemod,        1, "<0 or 1> -- Attempt to demodulate simple ASK tags"},
+  {"askedgedetect", CmdAskEdgeDetect,   1, "[threshold] Adjust Graph for manual ask demod using length of sample differences to detect the edge of a wave - default = 25"},
   {"askem410xdemod",CmdAskEM410xDemod,  1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional)"},
 	{"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional)"},
 	{"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0|1>] -- Attempt to demodulate ASK tags and output bin (args optional)"},
