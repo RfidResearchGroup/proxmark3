@@ -21,6 +21,7 @@
 #include "util.h"
 #include "hitag2.h"
 #include "string.h"
+#include "BigBuf.h"
 
 static bool bQuiet;
 
@@ -30,32 +31,6 @@ static bool bPwd;
 static bool bSuccessful;
 
 
-static int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int bReader)
-{
-  static uint16_t traceLen = 0;
-  uint8_t *trace = BigBuf_get_addr();
-
-  // Return when trace is full
-  if (traceLen + sizeof(rsamples) + sizeof(dwParity) + sizeof(iBits) + nbytes(iBits) > BigBuf_max_traceLen()) return FALSE;
-  
-  // Trace the random, i'm curious
-  rsamples += iSamples;
-  trace[traceLen++] = ((rsamples >> 0) & 0xff);
-  trace[traceLen++] = ((rsamples >> 8) & 0xff);
-  trace[traceLen++] = ((rsamples >> 16) & 0xff);
-  trace[traceLen++] = ((rsamples >> 24) & 0xff);
-  if (!bReader) {
-    trace[traceLen - 1] |= 0x80;
-  }
-  trace[traceLen++] = ((dwParity >> 0) & 0xff);
-  trace[traceLen++] = ((dwParity >> 8) & 0xff);
-  trace[traceLen++] = ((dwParity >> 16) & 0xff);
-  trace[traceLen++] = ((dwParity >> 24) & 0xff);
-  trace[traceLen++] = iBits;
-  memcpy(trace + traceLen, btBytes, nbytes(iBits));
-  traceLen += nbytes(iBits);
-  return TRUE;
-}
 
 struct hitag2_tag {
 	uint32_t uid;
