@@ -183,8 +183,12 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 
 	return TRUE;
 }
-int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int bReader)
+int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int readerToTag)
 {
+	/**
+	  Todo, rewrite the logger to use the generic functionality instead. It should be noted, however,
+	  that this logger takes number of bits as argument, not number of bytes.
+	  **/
 
 	if (!tracing) return FALSE;
 
@@ -196,7 +200,7 @@ int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwP
 	//Hitag traces appear to use this traceformat:
 	// 32 bits timestamp (little endian,Highest Bit used as readerToTag flag)
 	// 32 bits parity
-	// 8 bits size (number of bits in the trace entry)
+	// 8 bits size (number of bits in the trace entry, not number of bytes)
 	// y Bytes data
 
 	rsamples += iSamples;
@@ -205,7 +209,7 @@ int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwP
 	trace[traceLen++] = ((rsamples >> 16) & 0xff);
 	trace[traceLen++] = ((rsamples >> 24) & 0xff);
 
-	if (!bReader) {
+	if (!readerToTag) {
 		trace[traceLen - 1] |= 0x80;
 	}
 
