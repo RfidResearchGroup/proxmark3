@@ -185,27 +185,38 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 }
 int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int bReader)
 {
-	static uint16_t traceLen = 0;
+
+	if (!tracing) return FALSE;
+
 	uint8_t *trace = BigBuf_get_addr();
-
+	uint16_t iLen = nbytes(iBits);
 	// Return when trace is full
-	if (traceLen + sizeof(rsamples) + sizeof(dwParity) + sizeof(iBits) + nbytes(iBits) > BigBuf_max_traceLen()) return FALSE;
+	if (traceLen + sizeof(rsamples) + sizeof(dwParity) + sizeof(iBits) + iLen > BigBuf_max_traceLen()) return FALSE;
 
-	// Trace the random, i'm curious
+	//Hitag traces appear to use this traceformat:
+	// 32 bits timestamp (little endian,Highest Bit used as readerToTag flag)
+	// 32 bits parity
+	// 8 bits size (number of bits in the trace entry)
+	// y Bytes data
+
 	rsamples += iSamples;
 	trace[traceLen++] = ((rsamples >> 0) & 0xff);
 	trace[traceLen++] = ((rsamples >> 8) & 0xff);
 	trace[traceLen++] = ((rsamples >> 16) & 0xff);
 	trace[traceLen++] = ((rsamples >> 24) & 0xff);
+
 	if (!bReader) {
-	trace[traceLen - 1] |= 0x80;
+		trace[traceLen - 1] |= 0x80;
 	}
+
 	trace[traceLen++] = ((dwParity >> 0) & 0xff);
 	trace[traceLen++] = ((dwParity >> 8) & 0xff);
 	trace[traceLen++] = ((dwParity >> 16) & 0xff);
 	trace[traceLen++] = ((dwParity >> 24) & 0xff);
 	trace[traceLen++] = iBits;
-	memcpy(trace + traceLen, btBytes, nbytes(iBits));
-	traceLen += nbytes(iBits);
+
+	memcpy(trace + traceLen, btBytes, iLen);
+	traceLen += iLen;
+
 	return TRUE;
 }

@@ -35,7 +35,7 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 }
 
 size_t nbytes(size_t nbits) {
-	return (nbits/8)+((nbits%8)>0);
+	return (nbits >> 3)+((nbits % 8) > 0);
 }
 
 uint32_t SwapBits(uint32_t value, int nrbits) {
