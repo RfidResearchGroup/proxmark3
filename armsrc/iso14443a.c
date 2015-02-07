@@ -20,7 +20,7 @@
 #include "iso14443a.h"
 #include "crapto1.h"
 #include "mifareutil.h"
-
+#include "BigBuf.h"
 static uint32_t iso14a_timeout;
 int rsamples = 0;
 uint8_t trigger = 0;
@@ -549,8 +549,8 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 	uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
 
 	// init trace buffer
-	iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
+	clear_trace();
+	set_tracing(TRUE);
 
 	uint8_t *data = dmaBuf;
 	uint8_t previous_data = 0;
@@ -674,7 +674,7 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 
 	FpgaDisableSscDma();
 	Dbprintf("maxDataLen=%d, Uart.state=%x, Uart.len=%d", maxDataLen, Uart.state, Uart.len);
-	Dbprintf("traceLen=%d, Uart.output[0]=%08x", traceLen, (uint32_t)Uart.output[0]);
+	Dbprintf("traceLen=%d, Uart.output[0]=%08x", BigBuf_get_traceLen(), (uint32_t)Uart.output[0]);
 	LEDsoff();
 }
 
@@ -1010,8 +1010,8 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 	free_buffer_pointer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
 
 	// clear trace
-    iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
+	clear_trace();
+	set_tracing(TRUE);
 
 	// Prepare the responses of the anticollision phase
 	// there will be not enough time to do this at the moment the reader sends it REQA
@@ -1867,10 +1867,10 @@ void ReaderIso14443a(UsbCommand *c)
 	uint8_t par[MAX_PARITY_SIZE];
   
 	if(param & ISO14A_CONNECT) {
-		iso14a_clear_trace();
+		clear_trace();
 	}
 
-	iso14a_set_tracing(TRUE);
+	set_tracing(TRUE);
 
 	if(param & ISO14A_REQUEST_TRIGGER) {
 		iso14a_set_trigger(TRUE);
@@ -1966,8 +1966,8 @@ void ReaderMifare(bool first_try)
 	// free eventually allocated BigBuf memory. We want all for tracing.
 	BigBuf_free();
 	
-	iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
+	clear_trace();
+	set_tracing(TRUE);
 
 	byte_t nt_diff = 0;
 	uint8_t par[1] = {0};	// maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
@@ -2140,7 +2140,7 @@ void ReaderMifare(bool first_try)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 
-	iso14a_set_tracing(FALSE);
+	set_tracing(FALSE);
 }
 
 /**
@@ -2198,8 +2198,8 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	// free eventually allocated BigBuf memory but keep Emulator Memory
 	BigBuf_free_keep_EM();
 	// clear trace
-    iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
+	clear_trace();
+	set_tracing(TRUE);
 
 	// Authenticate response - nonce
 	uint32_t nonce = bytes_to_num(rAUTH_NT, 4);
@@ -2644,7 +2644,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 			}
 		}
 	}
-	if (MF_DBGLEVEL >= 1)	Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ",	tracing, traceLen);
+	if (MF_DBGLEVEL >= 1)	Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ",	tracing, BigBuf_get_traceLen());
 }
 
 
@@ -2661,8 +2661,8 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// C(red) A(yellow) B(green)
 	LEDsoff();
 	// init trace buffer
-	iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
+	clear_trace();
+	set_tracing(TRUE);
 
 	// The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.

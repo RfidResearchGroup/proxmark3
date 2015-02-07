@@ -139,7 +139,7 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 }
 
 bool RAMFUNC MfSniffSend(uint16_t maxTimeoutMs) {
-	if (traceLen && (GetTickCount() > timerData + maxTimeoutMs)) {
+	if (BigBuf_get_traceLen() && (GetTickCount() > timerData + maxTimeoutMs)) {
 		return intMfSniffSend();
 	}
 	return FALSE;
@@ -149,7 +149,7 @@ bool RAMFUNC MfSniffSend(uint16_t maxTimeoutMs) {
 bool intMfSniffSend() {
 
 	int pckSize = 0;
-	int pckLen = traceLen;
+	int pckLen = BigBuf_get_traceLen();
 	int pckNum = 0;
 	uint8_t *trace = BigBuf_get_addr();
 	
@@ -157,7 +157,7 @@ bool intMfSniffSend() {
 	while (pckLen > 0) {
 		pckSize = MIN(USB_CMD_DATA_SIZE, pckLen);
 		LED_B_ON();
-		cmd_send(CMD_ACK, 1, traceLen, pckSize, trace + traceLen - pckLen, pckSize);
+		cmd_send(CMD_ACK, 1, BigBuf_get_traceLen(), pckSize, trace + BigBuf_get_traceLen() - pckLen, pckSize);
 		LED_B_OFF();
 
 		pckLen -= pckSize;
@@ -168,7 +168,7 @@ bool intMfSniffSend() {
 	cmd_send(CMD_ACK,2,0,0,0,0);
 	LED_B_OFF();
 
-	iso14a_clear_trace();
+	clear_trace();
 	
 	return TRUE;
 }

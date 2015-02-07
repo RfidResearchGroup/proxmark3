@@ -14,7 +14,6 @@
 #include "apps.h"
 #include "BigBuf.h"
 
-int tracing = TRUE;
 
 
 void print_result(char *name, uint8_t *buf, size_t len) {
@@ -428,92 +427,5 @@ uint32_t RAMFUNC GetCountSspClk(){
 	else {
 		return tmp_count;
 	}
-}
-void iso14a_clear_trace() {
-	clear_trace();
-}
-
-void iso14a_set_tracing(bool enable) {
-	set_tracing(enable);
-}
-
-void clear_trace() {
-	uint8_t *trace = BigBuf_get_addr();
-	uint16_t max_traceLen = BigBuf_max_traceLen();
-	memset(trace, 0x44, max_traceLen);
-	traceLen = 0;
-}
-
-void set_tracing(bool enable) {
-	tracing = enable;
-}
-
-/**
-  This is a function to store traces. All protocols can use this generic tracer-function.
-  The traces produced by calling this function can be fetched on the client-side
-  by 'hf list raw', alternatively 'hf list <proto>' for protocol-specific
-  annotation of commands/responses.
-
-**/
-bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag)
-{
-	if (!tracing) return FALSE;
-
-	uint8_t *trace = BigBuf_get_addr();
-
-	uint16_t num_paritybytes = (iLen-1)/8 + 1;	// number of valid paritybytes in *parity
-	uint16_t duration = timestamp_end - timestamp_start;
-
-	// Return when trace is full
-	uint16_t max_traceLen = BigBuf_max_traceLen();
-
-	if (traceLen + sizeof(iLen) + sizeof(timestamp_start) + sizeof(duration) + num_paritybytes + iLen >= max_traceLen) {
-		tracing = FALSE;	// don't trace any more
-		return FALSE;
-	}
-	// Traceformat:
-	// 32 bits timestamp (little endian)
-	// 16 bits duration (little endian)
-	// 16 bits data length (little endian, Highest Bit used as readerToTag flag)
-	// y Bytes data
-	// x Bytes parity (one byte per 8 bytes data)
-
-	// timestamp (start)
-	trace[traceLen++] = ((timestamp_start >> 0) & 0xff);
-	trace[traceLen++] = ((timestamp_start >> 8) & 0xff);
-	trace[traceLen++] = ((timestamp_start >> 16) & 0xff);
-	trace[traceLen++] = ((timestamp_start >> 24) & 0xff);
-
-	// duration
-	trace[traceLen++] = ((duration >> 0) & 0xff);
-	trace[traceLen++] = ((duration >> 8) & 0xff);
-
-	// data length
-	trace[traceLen++] = ((iLen >> 0) & 0xff);
-	trace[traceLen++] = ((iLen >> 8) & 0xff);
-
-	// readerToTag flag
-	if (!readerToTag) {
-		trace[traceLen - 1] |= 0x80;
-	}
-
-	// data bytes
-	if (btBytes != NULL && iLen != 0) {
-		memcpy(trace + traceLen, btBytes, iLen);
-	}
-	traceLen += iLen;
-
-	// parity bytes
-	if (parity != NULL && iLen != 0) {
-		memcpy(trace + traceLen, parity, num_paritybytes);
-	}
-	traceLen += num_paritybytes;
-
-	if(traceLen +4 < max_traceLen)
-	{	//If it hadn't been cleared, for whatever reason..
-		memset(trace+traceLen,0x44, 4);
-	}
-
-	return TRUE;
 }
 

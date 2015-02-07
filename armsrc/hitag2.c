@@ -742,8 +742,8 @@ void SnoopHitag(uint32_t type) {
 	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 
 	// Clean up trace and prepare it for storing frames
-	iso14a_set_tracing(TRUE);
-	iso14a_clear_trace();
+	set_tracing(TRUE);
+	clear_trace();
 	
 	DbpString("Starting Hitag2 snoop");
 	LED_D_ON();
@@ -955,8 +955,8 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 
 	// Clean up trace and prepare it for storing frames
-	iso14a_set_tracing(TRUE);
-	iso14a_clear_trace();
+	set_tracing(TRUE);
+	clear_trace();
 
 	DbpString("Starting Hitag2 simulation");
 	LED_D_ON();
@@ -1142,8 +1142,8 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	bSuccessful = false;
   
 	// Clean up trace and prepare it for storing frames
-	iso14a_set_tracing(TRUE);
-	iso14a_clear_trace();
+	set_tracing(TRUE);
+	clear_trace();
 
 	DbpString("Starting Hitag reader family");
 

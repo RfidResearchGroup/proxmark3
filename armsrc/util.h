@@ -43,15 +43,6 @@ void LEDsoff();
 int BUTTON_CLICKED(int ms);
 int BUTTON_HELD(int ms);
 void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_information);
-// @deprecated
-void iso14a_clear_trace();
-// @deprecated
-void iso14a_set_tracing(bool enable);
-void clear_trace();
-void set_tracing(bool enable);
-
-// The function LogTrace() is also used by the iClass implementation in iclass.c and both iso14443a, iso14443b and mifare
-bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
 
 void StartTickCount();
 uint32_t RAMFUNC GetTickCount();

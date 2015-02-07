@@ -652,9 +652,8 @@ void RAMFUNC SnoopIClass(void)
     // The DMA buffer, used to stream samples from the FPGA
     uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
  
-	// reset traceLen to 0
-    iso14a_set_tracing(TRUE);
-    iso14a_clear_trace();
+	set_tracing(TRUE);
+	clear_trace();
     iso14a_set_trigger(FALSE);
 
 	int lastRxCounter;
@@ -805,12 +804,12 @@ void RAMFUNC SnoopIClass(void)
     DbpString("COMMAND FINISHED");
 
     Dbprintf("%x %x %x", maxBehindBy, Uart.state, Uart.byteCnt);
-    Dbprintf("%x %x %x", Uart.byteCntMax, traceLen, (int)Uart.output[0]);
+	Dbprintf("%x %x %x", Uart.byteCntMax, BigBuf_get_traceLen(), (int)Uart.output[0]);
 
 done:
     AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
     Dbprintf("%x %x %x", maxBehindBy, Uart.state, Uart.byteCnt);
-    Dbprintf("%x %x %x", Uart.byteCntMax, traceLen, (int)Uart.output[0]);
+	Dbprintf("%x %x %x", Uart.byteCntMax, BigBuf_get_traceLen(), (int)Uart.output[0]);
     LED_A_OFF();
     LED_B_OFF();
     LED_C_OFF();
@@ -987,8 +986,8 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	// Enable and clear the trace
-	iso14a_set_tracing(TRUE);
-	iso14a_clear_trace();
+	set_tracing(TRUE);
+	clear_trace();
 
 	uint8_t csn_crc[] = { 0x03, 0x1f, 0xec, 0x8a, 0xf7, 0xff, 0x12, 0xe0, 0x00, 0x00 };
 	if(simType == 0) {
@@ -1488,8 +1487,8 @@ void setupIclassReader()
 {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     // Reset trace buffer
-    iso14a_set_tracing(TRUE);
-    iso14a_clear_trace();
+	set_tracing(TRUE);
+	clear_trace();
 
     // Setup SSC
     FpgaSetupSsc();
@@ -1585,14 +1584,14 @@ void ReaderIClass(uint8_t arg0) {
     int read_status= 0;
     bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;
 	bool get_cc = arg0 & FLAG_ICLASS_READER_GET_CC;
-
+	set_tracing(TRUE);
     setupIclassReader();
 
     size_t datasize = 0;
     while(!BUTTON_PRESS())
     {
 
-		if(traceLen > BigBuf_max_traceLen()) {
+		if(!tracing) {
 			DbpString("Trace full");
 			break;
 		}
@@ -1658,13 +1657,13 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	uint8_t resp[ICLASS_BUFFER_SIZE];
 	
     setupIclassReader();
-
+	set_tracing(TRUE);
 
 	while(!BUTTON_PRESS()) {
 	
 		WDT_HIT();
 
-		if(traceLen > BigBuf_max_traceLen()) {
+		if(!tracing) {
 			DbpString("Trace full");
 			break;
 		}

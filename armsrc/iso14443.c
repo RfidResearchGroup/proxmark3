@@ -1192,7 +1192,7 @@ void RAMFUNC SnoopIso14443(void)
 	Dbprintf("  Uart State: %x", Uart.state);
 	Dbprintf("  Uart ByteCnt: %i", Uart.byteCnt);
 	Dbprintf("  Uart ByteCntMax: %i", Uart.byteCntMax);
-	Dbprintf("  Trace length: %i", traceLen);
+	Dbprintf("  Trace length: %i", BigBuf_get_traceLen());
 }
 
 /*
