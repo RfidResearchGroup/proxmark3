@@ -56,24 +56,24 @@ void setGraphBuf(uint8_t *buff, size_t size)
 	uint16_t i = 0;  
 	if ( size > MAX_GRAPH_TRACE_LEN )
 		size = MAX_GRAPH_TRACE_LEN;
-  ClearGraph(0);
-  for (; i < size; ++i){
+	ClearGraph(0);
+	for (; i < size; ++i){
 		GraphBuffer[i]=buff[i]-128;
-  }
-  GraphTraceLen=size;
-  RepaintGraphWindow();
-  return;
+	}
+	GraphTraceLen=size;
+	RepaintGraphWindow();
+	return;
 }
 size_t getFromGraphBuf(uint8_t *buff)
 {
 	if (buff == NULL ) return 0;
-  uint32_t i;
-  for (i=0;i<GraphTraceLen;++i){
-    if (GraphBuffer[i]>127) GraphBuffer[i]=127; //trim
-    if (GraphBuffer[i]<-127) GraphBuffer[i]=-127; //trim
-    buff[i]=(uint8_t)(GraphBuffer[i]+128);
-  }
-  return i;
+	uint32_t i;
+	for (i=0;i<GraphTraceLen;++i){
+		if (GraphBuffer[i]>127) GraphBuffer[i]=127; //trim
+		if (GraphBuffer[i]<-127) GraphBuffer[i]=-127; //trim
+		buff[i]=(uint8_t)(GraphBuffer[i]+128);
+	}
+	return i;
 }
 
 

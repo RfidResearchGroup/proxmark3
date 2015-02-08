@@ -662,27 +662,27 @@ int CmdVchDemod(const char *Cmd)
 int CmdLFfind(const char *Cmd)
 {
   int ans=0;
-	char cmdp = param_getchar(Cmd, 0);
-	char testRaw = param_getchar(Cmd, 1);
-	if (strlen(Cmd) > 2 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  lf search <0|1> [u]");
-		PrintAndLog("     <use data from Graphbuffer> , if not set, try reading data from tag.");
+  char cmdp = param_getchar(Cmd, 0);
+  char testRaw = param_getchar(Cmd, 1);
+  if (strlen(Cmd) > 2 || cmdp == 'h' || cmdp == 'H') {
+    PrintAndLog("Usage:  lf search <0|1> [u]");
+    PrintAndLog("     <use data from Graphbuffer> , if not set, try reading data from tag.");
     PrintAndLog("     [Search for Unknown tags] , if not set, reads only known tags.");
-		PrintAndLog("");
-		PrintAndLog("    sample: lf search     = try reading data from tag & search for known tags");
-		PrintAndLog("          : lf search 1   = use data from GraphBuffer & search for known tags");
+    PrintAndLog("");
+    PrintAndLog("    sample: lf search     = try reading data from tag & search for known tags");
+    PrintAndLog("          : lf search 1   = use data from GraphBuffer & search for known tags");
     PrintAndLog("          : lf search u   = try reading data from tag & search for known and unknown tags");
     PrintAndLog("          : lf search 1 u = use data from GraphBuffer & search for known and unknown tags");
 
-		return 0;
-	}
+    return 0;
+  }
 
-	if (!offline && (cmdp != '1')){
+  if (!offline && (cmdp != '1')){
     ans=CmdLFRead("");
     ans=CmdSamples("20000");
-	} else if (GraphTraceLen < 1000) {
-		PrintAndLog("Data in Graphbuffer was too small.");
-		return 0;
+  } else if (GraphTraceLen < 1000) {
+    PrintAndLog("Data in Graphbuffer was too small.");
+    return 0;
   }
   if (cmdp == 'u' || cmdp == 'U') testRaw = 'u';
   PrintAndLog("NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
@@ -734,20 +734,20 @@ int CmdLFfind(const char *Cmd)
       if (ans>0) {
         PrintAndLog("\nUnknown FSK Modulated Tag Found!");
         return 1;
-      }      
+      }
     }
     ans=Cmdaskmandemod("");
     if (ans>0) {
       PrintAndLog("\nUnknown ASK Modulated and Manchester encoded Tag Found!");
       return 1;
-    }  
+    }
     ans=CmdPSK1rawDemod("");
     if (ans>0) {
       PrintAndLog("Possible unknown PSK1 Modulated Tag Found above!\n\nCould also be PSK2 - try 'data psk2rawdemod'");
       PrintAndLog("\nCould also be PSK3 - [currently not supported]");
       PrintAndLog("\nCould also be NRZ - try 'data nrzrawdemod");
       return 1;
-    }          
+    }
     PrintAndLog("\nNo Data Found!\n");
   }
   return 0;
@@ -765,7 +765,7 @@ static command_t CommandTable[] =
   {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
   {"indalaclone", CmdIndalaClone,     0, "<UID> ['l']-- Clone Indala to T55x7 (tag must be in antenna)(UID in HEX)(option 'l' for 224 UID"},
   {"read",        CmdLFRead,          0, "Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
-  {"search",      CmdLFfind,          1, "Read and Search for valid known tag (in offline mode it you can load first then search)"},
+  {"search",      CmdLFfind,          1, "[offline] ['u'] Read and Search for valid known tag (in offline mode it you can load first then search) - 'u' to search for unknown tags"},
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
   {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
   {"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
