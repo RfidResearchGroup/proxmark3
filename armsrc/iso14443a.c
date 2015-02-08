@@ -310,26 +310,27 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 
 	Uart.twoBits = (Uart.twoBits << 8) | bit;
 	
-	if (Uart.state == STATE_UNSYNCD) {												// not yet synced
+	if (Uart.state == STATE_UNSYNCD) {											// not yet synced
 	
-		if (Uart.highCnt < 7) {													// wait for a stable unmodulated signal
+		if (Uart.highCnt < 2) {													// wait for a stable unmodulated signal
 			if (Uart.twoBits == 0xffff) {
 				Uart.highCnt++;
 			} else {
 				Uart.highCnt = 0;
 			}
 		} else {	
-			Uart.syncBit = 0xFFFF; // not set
-			// look for 00xx1111 (the start bit)
-			if 		((Uart.twoBits & 0x6780) == 0x0780) Uart.syncBit = 7; 
-			else if ((Uart.twoBits & 0x33C0) == 0x03C0) Uart.syncBit = 6;
-			else if ((Uart.twoBits & 0x19E0) == 0x01E0) Uart.syncBit = 5;
-			else if ((Uart.twoBits & 0x0CF0) == 0x00F0) Uart.syncBit = 4;
-			else if ((Uart.twoBits & 0x0678) == 0x0078) Uart.syncBit = 3;
-			else if ((Uart.twoBits & 0x033C) == 0x003C) Uart.syncBit = 2;
-			else if ((Uart.twoBits & 0x019E) == 0x001E) Uart.syncBit = 1;
-			else if ((Uart.twoBits & 0x00CF) == 0x000F) Uart.syncBit = 0;
-			if (Uart.syncBit != 0xFFFF) {
+			Uart.syncBit = 0xFFFF; 												// not set
+																				// we look for a ...1111111100x11111xxxxxx pattern (the start bit)
+			if 		((Uart.twoBits & 0xDF00) == 0x1F00) Uart.syncBit = 8;   	// mask is   11x11111 xxxxxxxx, 
+																				// check for 00x11111 xxxxxxxx
+			else if	((Uart.twoBits & 0xEF80) == 0x8F80) Uart.syncBit = 7;		// both masks shifted right one bit, left padded with '1'
+			else if ((Uart.twoBits & 0xF7C0) == 0xC7C0) Uart.syncBit = 6;		// ...
+			else if ((Uart.twoBits & 0xFBE0) == 0xE3E0) Uart.syncBit = 5;
+			else if ((Uart.twoBits & 0xFDF0) == 0xF1F0) Uart.syncBit = 4;
+			else if ((Uart.twoBits & 0xFEF8) == 0xF8F8) Uart.syncBit = 3;
+			else if ((Uart.twoBits & 0xFF7C) == 0xFC7C) Uart.syncBit = 2;
+			else if ((Uart.twoBits & 0xFFBE) == 0xFE3E) Uart.syncBit = 1;
+			if (Uart.syncBit != 0xFFFF) {										// found a sync bit
 				Uart.startTime = non_real_time?non_real_time:(GetCountSspClk() & 0xfffffff8);
 				Uart.startTime -= Uart.syncBit;
 				Uart.endTime = Uart.startTime;
@@ -342,11 +343,9 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 		if (IsMillerModulationNibble1(Uart.twoBits >> Uart.syncBit)) {			
 			if (IsMillerModulationNibble2(Uart.twoBits >> Uart.syncBit)) {		// Modulation in both halves - error
 				UartReset();
-				Uart.highCnt = 6;
 			} else {															// Modulation in first half = Sequence Z = logic "0"
 				if (Uart.state == STATE_MILLER_X) {								// error - must not follow after X
 					UartReset();
-					Uart.highCnt = 6;
 				} else {
 					Uart.bitCount++;
 					Uart.shiftReg = (Uart.shiftReg >> 1);						// add a 0 to the shiftreg
@@ -401,12 +400,13 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 					if (Uart.len) {
 						return TRUE;											// we are finished with decoding the raw data sequence
 					} else {
-						UartReset();					// Nothing receiver - start over
+						UartReset();											// Nothing received - start over
+						Uart.highCnt = 1;
 					}
 				}
 				if (Uart.state == STATE_START_OF_COMMUNICATION) {				// error - must not follow directly after SOC
 					UartReset();
-					Uart.highCnt = 6;
+					Uart.highCnt = 1;
 				} else {														// a logic "0"
 					Uart.bitCount++;
 					Uart.shiftReg = (Uart.shiftReg >> 1);						// add a 0 to the shiftreg
@@ -1425,6 +1425,7 @@ void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *p
   CodeIso14443aBitsAsReaderPar(cmd, len*8, parity);
 }
 
+
 //-----------------------------------------------------------------------------
 // Wait for commands from reader
 // Stop when button is pressed (return 1) or field was gone (return 2)
@@ -1447,9 +1448,9 @@ static int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity)
 	// Set ADC to read field strength
 	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
 	AT91C_BASE_ADC->ADC_MR =
-				ADC_MODE_PRESCALE(32) |
-				ADC_MODE_STARTUP_TIME(16) |
-				ADC_MODE_SAMPLE_HOLD_TIME(8);
+				ADC_MODE_PRESCALE(63) |
+				ADC_MODE_STARTUP_TIME(1) |
+				ADC_MODE_SAMPLE_HOLD_TIME(15);
 	AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ADC_CHAN_HF);
 	// start ADC
 	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
@@ -1459,7 +1460,7 @@ static int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity)
 
 	// Clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-
+	
 	for(;;) {
 		WDT_HIT();
 
@@ -1471,7 +1472,7 @@ static int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity)
 			analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF];
 			AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
 			if (analogCnt >= 32) {
-				if ((33000 * (analogAVG / analogCnt) >> 10) < MF_MINFIELDV) {
+				if ((MAX_ADC_HF_VOLTAGE * (analogAVG / analogCnt) >> 10) < MF_MINFIELDV) {
 					vtime = GetTickCount();
 					if (!timer) timer = vtime;
 					// 50ms no field --> card to idle state
@@ -1546,14 +1547,15 @@ static int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen, bool correctionNe
 	}
 
 	// Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again:
-	for (i = 0; i < 2 ; ) {
+	uint8_t fpga_queued_bits = FpgaSendQueueDelay >> 3;
+	for (i = 0; i <= fpga_queued_bits/8 + 1; ) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = SEC_F;
 			FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			i++;
 		}
 	}
-	
+
 	LastTimeProxToAirStart = ThisTransferTime + (correctionNeeded?8:0);
 
 	return 0;
@@ -1655,7 +1657,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
 
 	// clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-	
+
 	c = 0;
 	for(;;) {
 		WDT_HIT();
@@ -2264,6 +2266,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 	// free eventually allocated BigBuf memory but keep Emulator Memory
 	BigBuf_free_keep_EM();
+
 	// clear trace
     iso14a_clear_trace();
 	iso14a_set_tracing(TRUE);
@@ -2328,10 +2331,8 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		WDT_HIT();
 
 		// find reader field
-		// Vref = 3300mV, and an 10:1 voltage divider on the input
-		// can measure voltages up to 33000 mV
 		if (cardSTATE == MFEMUL_NOFIELD) {
-			vHf = (33000 * AvgAdc(ADC_CHAN_HF)) >> 10;
+			vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 			if (vHf > MF_MINFIELDV) {
 				cardSTATE_TO_IDLE();
 				LED_A_ON();
@@ -2406,6 +2407,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 					LogTrace(Uart.output, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
 					break;
 				}
+
 				uint32_t ar = bytes_to_num(receivedCmd, 4);
 				uint32_t nr = bytes_to_num(&receivedCmd[4], 4);
 
@@ -2512,6 +2514,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 						ans = nonce ^ crypto1_word(pcs, cuid ^ nonce, 0); 
 						num_to_bytes(ans, 4, rAUTH_AT);
 					}
+
 					EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
 					//Dbprintf("Sending rAUTH %02x%02x%02x%02x", rAUTH_AT[0],rAUTH_AT[1],rAUTH_AT[2],rAUTH_AT[3]);
 					cardSTATE = MFEMUL_AUTH1;
@@ -2692,7 +2695,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		if(ar_nr_collected > 1) {
 			Dbprintf("Collected two pairs of AR/NR which can be used to extract keys from reader:");
 			Dbprintf("../tools/mfkey/mfkey32 %08x %08x %08x %08x %08x %08x",
-					 ar_nr_responses[0], // UID
+					ar_nr_responses[0], // UID
 					ar_nr_responses[1], //NT
 					ar_nr_responses[2], //AR1
 					ar_nr_responses[3], //NR1
@@ -2712,6 +2715,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		}
 	}
 	if (MF_DBGLEVEL >= 1)	Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ",	tracing, traceLen);
+	
 }
 
 
