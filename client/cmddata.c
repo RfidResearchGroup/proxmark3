@@ -1874,23 +1874,30 @@ int CmdTuneSamples(const char *Cmd)
 	PrintAndLog("# LF antenna: %5.2f V @   134.00 kHz", vLf134/1000.0);
 	PrintAndLog("# LF optimal: %5.2f V @%9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
 	PrintAndLog("# HF antenna: %5.2f V @    13.56 MHz", vHf/1000.0);
-	if (peakv<2000)
+
+#define LF_UNUSABLE_V		2948		// was 2000. Changed due to bugfix in voltage measurements. LF results are now 47% higher.
+#define LF_MARGINAL_V		14739		// was 10000. Changed due to bugfix bug in voltage measurements. LF results are now 47% higher.
+#define HF_UNUSABLE_V		3167		// was 2000. Changed due to bugfix in voltage measurements. HF results are now 58% higher.
+#define HF_MARGINAL_V		7917		// was 5000. Changed due to bugfix in voltage measurements. HF results are now 58% higher.
+
+	if (peakv < LF_UNUSABLE_V)
 		PrintAndLog("# Your LF antenna is unusable.");
-	else if (peakv<10000)
+	else if (peakv < LF_MARGINAL_V)
 		PrintAndLog("# Your LF antenna is marginal.");
-	if (vHf<2000)
+	if (vHf < HF_UNUSABLE_V)
 		PrintAndLog("# Your HF antenna is unusable.");
-	else if (vHf<5000)
+	else if (vHf < HF_MARGINAL_V)
 		PrintAndLog("# Your HF antenna is marginal.");
 
-	for (int i = 0; i < 256; i++) {
-		GraphBuffer[i] = resp.d.asBytes[i] - 128;
+	if (peakv >= LF_UNUSABLE_V)	{
+		for (int i = 0; i < 256; i++) {
+			GraphBuffer[i] = resp.d.asBytes[i] - 128;
+		}
+		PrintAndLog("Displaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n");
+		PrintAndLog("\n");
+		GraphTraceLen = 256;
+		ShowGraphWindow();
 	}
-
-	PrintAndLog("Done! Divisor 89 is 134khz, 95 is 125khz.\n");
-	PrintAndLog("\n");
-	GraphTraceLen = 256;
-	ShowGraphWindow();
 
 	return 0;
 }
