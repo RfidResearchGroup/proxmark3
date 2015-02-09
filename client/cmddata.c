@@ -636,7 +636,7 @@ int CmdBitstream(const char *Cmd)
   }
 
   /* Get our clock */
-  clock = GetClock(Cmd, high, 1);
+  clock = GetAskClock(Cmd, high, 1);
   gtl = ClearGraph(0);
 
   bit = 0;
@@ -781,10 +781,33 @@ int CmdAskEdgeDetect(const char *Cmd)
 
 /* Print our clock rate */
 // uses data from graphbuffer
+// adjusted to take char parameter for type of modulation to find the clock - by marshmellow.
 int CmdDetectClockRate(const char *Cmd)
 {
-  int ans = GetClock("",0,0);
-  return ans;
+	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) > 3 || strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  data detectclock [modulation]");
+		PrintAndLog("     [modulation as char], specify the modulation type you want to detect the clock of");
+		PrintAndLog("       'a' = ask, 'f' = fsk, 'n' = nrz/direct, 'p' = psk");
+		PrintAndLog("");
+		PrintAndLog("    sample: data detectclock a    = detect the clock of an ask modulated wave in the GraphBuffer");
+		PrintAndLog("            data detectclock f    = detect the clock of an fsk modulated wave in the GraphBuffer");
+		PrintAndLog("            data detectclock p    = detect the clock of an psk modulated wave in the GraphBuffer");
+		PrintAndLog("            data detectclock n    = detect the clock of an nrz/direct modulated wave in the GraphBuffer");
+	}
+	int ans=0;
+	if (cmdp == 'a'){
+		ans = GetAskClock("", true, false);
+	} else if (cmdp == 'f'){
+		ans = GetFskClock("", true, false);
+	} else if (cmdp == 'n'){
+		ans = GetNrzClock("", true, false);
+	} else if (cmdp == 'p'){
+		ans = GetPskClock("", true, false);
+	} else {
+		PrintAndLog ("Please specify a valid modulation to detect the clock of - see option h for help");
+	}
+	return ans;
 }
 
 //by marshmellow
@@ -995,7 +1018,6 @@ int CmdFSKdemodParadox(const char *Cmd)
   return 1;
 }
 
-
 //by marshmellow
 //IO-Prox demod - FSK RF/64 with preamble of 000000001
 //print ioprox ID and some format details
@@ -1074,7 +1096,6 @@ int CmdFSKdemodIO(const char *Cmd)
   }
   return 1;
 }
-
 
 //by marshmellow
 //AWID Prox demod - FSK RF/50 with preamble of 00000001  (always a 96 bit data stream)
@@ -1421,55 +1442,6 @@ int CmdFSKdemod(const char *Cmd) //old CmdFSKdemod needs updating
 }
 
 //by marshmellow
-//attempt to detect the field clock and bit clock for FSK
-int CmdFSKfcDetect(const char *Cmd)
-{
-  uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
-  size_t size = getFromGraphBuf(BitStream);
-  if (size==0) return 0;
-  uint8_t dummy = 0;
-  uint16_t ans = countFC(BitStream, size, &dummy); 
-  if (ans==0) {
-    if (g_debugMode) PrintAndLog("DEBUG: No data found");
-    return 0;
-  }
-  uint8_t fc1, fc2;
-  fc1 = (ans >> 8) & 0xFF;
-  fc2 = ans & 0xFF;
-
-  uint8_t rf1 = detectFSKClk(BitStream, size, fc1, fc2);
-  if (rf1==0) {
-    if (g_debugMode) PrintAndLog("DEBUG: Clock detect error");
-    return 0;
-  }
-  if ((fc1==10 && fc2==8) || (fc1==8 && fc2==5)){
-    PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
-    return 1;
-  }
-  if (g_debugMode){
-    PrintAndLog("DEBUG: unknown fsk field clock detected");
-    PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
-  }
-  return 0;
-}
-
-//by marshmellow
-//attempt to detect the bit clock for PSK modulations
-int CmdDetectPSKClockRate(const char *Cmd)
-{
-	GetPskClock("",0,0);
-	return 0;
-}
-
-//by marshmellow
-//attempt to detect the bit clock for NRZ modulations
-int CmdDetectNRZClockRate(const char *Cmd)
-{
-  GetNrzClock("",0,0);
-  return 0;
-}
-
-//by marshmellow
 //attempt to psk1 demod graph buffer
 int PSKDemod(const char *Cmd, uint8_t verbose)
 {
@@ -1503,7 +1475,6 @@ int PSKDemod(const char *Cmd, uint8_t verbose)
   setDemodBuf(BitStream,BitLen,0);
   return errCnt;
 }
-
 
 // Indala 26 bit decode
 // by marshmellow
@@ -1585,20 +1556,6 @@ int CmdIndalaDecode(const char *Cmd)
 	}
 	return 1;
 }
-
-/*
-//by marshmellow
-//attempt to clean psk wave noise after a peak 
-//NOTE RELIES ON PEAKS :(
-int CmdPskClean(const char *Cmd)
-{
-	uint8_t bitStream[MAX_GRAPH_TRACE_LEN]={0};
-	size_t bitLen = getFromGraphBuf(bitStream);
-	pskCleanWave(bitStream, bitLen);
-	setGraphBuf(bitStream, bitLen);
-	return 0;
-}
-*/
 
 // by marshmellow
 // takes 3 arguments - clock, invert, maxErr as integers
@@ -2046,7 +2003,7 @@ int CmdManchesterDemod(const char *Cmd)
   }
 
   /* Get our clock */
-  clock = GetClock(Cmd, high, 1);
+  clock = GetAskClock(Cmd, high, 1);
 
   int tolerance = clock/4;
 
@@ -2206,7 +2163,7 @@ int CmdManchesterMod(const char *Cmd)
   int bit, lastbit, wave;
 
   /* Get our clock */
-  clock = GetClock(Cmd, 0, 1);
+  clock = GetAskClock(Cmd, 0, 1);
 
   wave = 0;
   lastbit = 1;
@@ -2385,10 +2342,10 @@ static command_t CommandTable[] =
   {"bitstream",     CmdBitstream,       1, "[clock rate] -- Convert waveform into a bitstream"},
   {"buffclear",     CmdBuffClear,       1, "Clear sample buffer and graph window"},
   {"dec",           CmdDec,             1, "Decimate samples"},
-  {"detectclock",   CmdDetectClockRate, 1, "Detect ASK clock rate"},
+  {"detectclock",   CmdDetectClockRate, 1, "[modulation] Detect clock rate (options: 'a','f','n','p' for ask, fsk, nrz, psk respectively)"},
   {"fskdemod",      CmdFSKdemod,        1, "Demodulate graph window as a HID FSK"},
   {"fskawiddemod",  CmdFSKdemodAWID,    1, "Demodulate graph window as an AWID FSK tag using raw"},
-  {"fskfcdetect",   CmdFSKfcDetect,     1, "Try to detect the Field Clock of an FSK wave"},
+  //{"fskfcdetect",   CmdFSKfcDetect,     1, "Try to detect the Field Clock of an FSK wave"},
   {"fskhiddemod",   CmdFSKdemodHID,     1, "Demodulate graph window as a HID FSK tag using raw"},
   {"fskiodemod",    CmdFSKdemodIO,      1, "Demodulate graph window as an IO Prox tag FSK using raw"},
   {"fskpyramiddemod",CmdFSKdemodPyramid,1, "Demodulate graph window as a Pyramid FSK tag using raw"},
@@ -2405,10 +2362,10 @@ static command_t CommandTable[] =
   {"manrawdecode",  Cmdmandecoderaw,    1, "Manchester decode binary stream already in graph buffer"},
   {"manmod",        CmdManchesterMod,   1, "[clock rate] -- Manchester modulate a binary stream"},
   {"norm",          CmdNorm,            1, "Normalize max/min to +/-128"},
-  {"nrzdetectclock",CmdDetectNRZClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
+  //{"nrzdetectclock",CmdDetectNRZClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
   {"nrzrawdemod",   CmdNRZrawDemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate nrz tags and output binary (args optional)"},
   {"plot",          CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
-  {"pskdetectclock",CmdDetectPSKClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
+  //{"pskdetectclock",CmdDetectPSKClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
   {"pskindalademod",CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Attempt to demodulate psk1 indala tags and output ID binary & hex (args optional)"},
   {"psk1rawdemod",  CmdPSK1rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk1 tags and output binary (args optional)"},
   {"psk2rawdemod",  CmdPSK2rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk2 tags and output binary (args optional)"},

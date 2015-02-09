@@ -728,8 +728,8 @@ int CmdLFfind(const char *Cmd)
   if (testRaw=='u' || testRaw=='U'){
     //test unknown tag formats (raw mode)
     PrintAndLog("\nChecking for Unknown tags:\n");
-    ans=CmdFSKfcDetect("");
-    if (ans == 1){ //fsk
+    ans=CmdDetectClockRate("f");
+    if (ans != 0){ //fsk
       ans=CmdFSKrawdemod("");
       if (ans>0) {
         PrintAndLog("\nUnknown FSK Modulated Tag Found!");
