@@ -16,8 +16,10 @@ void AppendGraph(int redraw, int clock, int bit);
 int ClearGraph(int redraw);
 //int DetectClock(int peak);
 size_t getFromGraphBuf(uint8_t *buff);
-int GetClock(const char *str, int peak, int verbose);
-int GetNRZpskClock(const char *str, int peak, int verbose);
+int GetAskClock(const char str[], bool printAns, bool verbose);
+int GetPskClock(const char str[], bool printAns, bool verbose);
+uint8_t GetNrzClock(const char str[], bool printAns, bool verbose);
+uint8_t GetFskClock(const char str[], bool printAns, bool verbose);
 void setGraphBuf(uint8_t *buff, size_t size);
 
 bool HasGraphData();
