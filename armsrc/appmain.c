@@ -24,6 +24,7 @@
 #include "legicrf.h"
 #include <hitag2.h>
 #include "lfsampling.h"
+#include "BigBuf.h"
 #ifdef WITH_LCD
  #include "LCD.h"
 #endif
@@ -933,10 +934,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			uint8_t *BigBuf = BigBuf_get_addr();
 			for(size_t i=0; i<c->arg[1]; i += USB_CMD_DATA_SIZE) {
 				size_t len = MIN((c->arg[1] - i),USB_CMD_DATA_SIZE);
-				cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,traceLen,BigBuf+c->arg[0]+i,len);
+				cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,BigBuf_get_traceLen(),BigBuf+c->arg[0]+i,len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
-			cmd_send(CMD_ACK,1,0,traceLen,getSamplingConfig(),sizeof(sample_config));
+			cmd_send(CMD_ACK,1,0,BigBuf_get_traceLen(),getSamplingConfig(),sizeof(sample_config));
 			LED_B_OFF();
 			break;
 
@@ -1012,7 +1013,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 void  __attribute__((noreturn)) AppMain(void)
 {
 	SpinDelay(100);
-
+	clear_trace();
 	if(common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
 		/* Initialize common area */
 		memset(&common_area, 0, sizeof(common_area));

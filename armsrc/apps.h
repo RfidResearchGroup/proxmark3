@@ -152,8 +152,7 @@ void ReaderIso14443a(UsbCommand * c);
 bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t len, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
 void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *parity);
 void iso14a_set_trigger(bool enable);
-void iso14a_clear_trace();
-void iso14a_set_tracing(bool enable);
+
 void RAMFUNC SniffMifare(uint8_t param);
 
 /// epa.h

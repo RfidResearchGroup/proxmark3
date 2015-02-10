@@ -26,10 +26,9 @@ static uint16_t BigBuf_hi = BIGBUF_SIZE;
 // pointer to the emulator memory.
 static uint8_t *emulator_memory = NULL;
 
-// trace related global variables
-// (only one left). ToDo: make this static as well?
-uint16_t traceLen = 0;
-
+// trace related variables
+static uint16_t traceLen = 0;
+int tracing = 1; //Last global one.. todo static?
 
 // get the address of BigBuf
 uint8_t *BigBuf_get_addr(void)
@@ -94,4 +93,134 @@ void BigBuf_free_keep_EM(void)
 uint16_t BigBuf_max_traceLen(void)
 {
 	return BigBuf_hi;
+}
+
+void clear_trace() {
+	uint8_t *trace = BigBuf_get_addr();
+	uint16_t max_traceLen = BigBuf_max_traceLen();
+	memset(trace, 0x44, max_traceLen);
+	traceLen = 0;
+}
+
+void set_tracing(bool enable) {
+	tracing = enable;
+}
+
+/**
+ * Get the number of bytes traced
+ * @return
+ */
+uint16_t BigBuf_get_traceLen(void)
+{
+	return traceLen;
+}
+
+/**
+  This is a function to store traces. All protocols can use this generic tracer-function.
+  The traces produced by calling this function can be fetched on the client-side
+  by 'hf list raw', alternatively 'hf list <proto>' for protocol-specific
+  annotation of commands/responses.
+
+**/
+bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag)
+{
+	if (!tracing) return FALSE;
+
+	uint8_t *trace = BigBuf_get_addr();
+
+	uint16_t num_paritybytes = (iLen-1)/8 + 1;	// number of valid paritybytes in *parity
+	uint16_t duration = timestamp_end - timestamp_start;
+
+	// Return when trace is full
+	uint16_t max_traceLen = BigBuf_max_traceLen();
+
+	if (traceLen + sizeof(iLen) + sizeof(timestamp_start) + sizeof(duration) + num_paritybytes + iLen >= max_traceLen) {
+		tracing = FALSE;	// don't trace any more
+		return FALSE;
+	}
+	// Traceformat:
+	// 32 bits timestamp (little endian)
+	// 16 bits duration (little endian)
+	// 16 bits data length (little endian, Highest Bit used as readerToTag flag)
+	// y Bytes data
+	// x Bytes parity (one byte per 8 bytes data)
+
+	// timestamp (start)
+	trace[traceLen++] = ((timestamp_start >> 0) & 0xff);
+	trace[traceLen++] = ((timestamp_start >> 8) & 0xff);
+	trace[traceLen++] = ((timestamp_start >> 16) & 0xff);
+	trace[traceLen++] = ((timestamp_start >> 24) & 0xff);
+
+	// duration
+	trace[traceLen++] = ((duration >> 0) & 0xff);
+	trace[traceLen++] = ((duration >> 8) & 0xff);
+
+	// data length
+	trace[traceLen++] = ((iLen >> 0) & 0xff);
+	trace[traceLen++] = ((iLen >> 8) & 0xff);
+
+	// readerToTag flag
+	if (!readerToTag) {
+		trace[traceLen - 1] |= 0x80;
+	}
+
+	// data bytes
+	if (btBytes != NULL && iLen != 0) {
+		memcpy(trace + traceLen, btBytes, iLen);
+	}
+	traceLen += iLen;
+
+	// parity bytes
+	if (parity != NULL && iLen != 0) {
+		memcpy(trace + traceLen, parity, num_paritybytes);
+	}
+	traceLen += num_paritybytes;
+
+	if(traceLen +4 < max_traceLen)
+	{	//If it hadn't been cleared, for whatever reason..
+		memset(trace+traceLen,0x44, 4);
+	}
+
+	return TRUE;
+}
+int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int readerToTag)
+{
+	/**
+	  Todo, rewrite the logger to use the generic functionality instead. It should be noted, however,
+	  that this logger takes number of bits as argument, not number of bytes.
+	  **/
+
+	if (!tracing) return FALSE;
+
+	uint8_t *trace = BigBuf_get_addr();
+	uint16_t iLen = nbytes(iBits);
+	// Return when trace is full
+	if (traceLen + sizeof(rsamples) + sizeof(dwParity) + sizeof(iBits) + iLen > BigBuf_max_traceLen()) return FALSE;
+
+	//Hitag traces appear to use this traceformat:
+	// 32 bits timestamp (little endian,Highest Bit used as readerToTag flag)
+	// 32 bits parity
+	// 8 bits size (number of bits in the trace entry, not number of bytes)
+	// y Bytes data
+
+	rsamples += iSamples;
+	trace[traceLen++] = ((rsamples >> 0) & 0xff);
+	trace[traceLen++] = ((rsamples >> 8) & 0xff);
+	trace[traceLen++] = ((rsamples >> 16) & 0xff);
+	trace[traceLen++] = ((rsamples >> 24) & 0xff);
+
+	if (!readerToTag) {
+		trace[traceLen - 1] |= 0x80;
+	}
+
+	trace[traceLen++] = ((dwParity >> 0) & 0xff);
+	trace[traceLen++] = ((dwParity >> 8) & 0xff);
+	trace[traceLen++] = ((dwParity >> 16) & 0xff);
+	trace[traceLen++] = ((dwParity >> 24) & 0xff);
+	trace[traceLen++] = iBits;
+
+	memcpy(trace + traceLen, btBytes, iLen);
+	traceLen += iLen;
+
+	return TRUE;
 }
