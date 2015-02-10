@@ -38,6 +38,10 @@ void DbpString(char *str);
 void Dbprintf(const char *fmt, ...);
 void Dbhexdump(int len, uint8_t *d, bool bAsci);
 
+// ADC Vref = 3300mV, and an (10M+1M):1M voltage divider on the HF input can measure voltages up to 36300 mV
+#define MAX_ADC_HF_VOLTAGE 36300
+// ADC Vref = 3300mV, and an (10000k+240k):240k voltage divider on the LF input can measure voltages up to 140800 mV
+#define MAX_ADC_LF_VOLTAGE 140800
 int AvgAdc(int ch);
 
 void ToSendStuffBit(int b);

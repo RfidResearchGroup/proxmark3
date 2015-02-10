@@ -61,7 +61,7 @@ int CmdEM410xRead(const char *Cmd)
   }
 
   /* get clock */
-  clock = GetClock(Cmd, high, 0);
+  clock = GetAskClock(Cmd, false, false);
 
   /* parity for our 4 columns */
   parity[0] = parity[1] = parity[2] = parity[3] = 0;

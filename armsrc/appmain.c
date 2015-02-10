@@ -136,12 +136,25 @@ static int ReadAdc(int ch)
 
 	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
 	AT91C_BASE_ADC->ADC_MR =
-		ADC_MODE_PRESCALE(32) |
-		ADC_MODE_STARTUP_TIME(16) |
-		ADC_MODE_SAMPLE_HOLD_TIME(8);
+		ADC_MODE_PRESCALE(63  /* was 32 */) |							// ADC_CLK = MCK / ((63+1) * 2) = 48MHz / 128 = 375kHz
+		ADC_MODE_STARTUP_TIME(1  /* was 16 */) |						// Startup Time = (1+1) * 8 / ADC_CLK = 16 / 375kHz = 42,7us     Note: must be > 20us
+		ADC_MODE_SAMPLE_HOLD_TIME(15  /* was 8 */); 					// Sample & Hold Time SHTIM = 15 / ADC_CLK = 15 / 375kHz = 40us
+
+	// Note: ADC_MODE_PRESCALE and ADC_MODE_SAMPLE_HOLD_TIME are set to the maximum allowed value. 
+	// Both AMPL_LO and AMPL_HI are very high impedance (10MOhm) outputs, the input capacitance of the ADC is 12pF (typical). This results in a time constant
+	// of RC = 10MOhm * 12pF = 120us. Even after the maximum configurable sample&hold time of 40us the input capacitor will not be fully charged. 
+	// 
+	// The maths are:
+	// If there is a voltage v_in at the input, the voltage v_cap at the capacitor (this is what we are measuring) will be
+	//
+	//       v_cap = v_in * (1 - exp(-RC/SHTIM))  =   v_in * (1 - exp(-3))  =  v_in * 0,95                   (i.e. an error of 5%)
+	// 
+	// Note: with the "historic" values in the comments above, the error was 34%  !!!
+	
 	AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ch);
 
 	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+
 	while(!(AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ch)))
 		;
 	d = AT91C_BASE_ADC->ADC_CDR[ch];
@@ -184,9 +197,7 @@ void MeasureAntennaTuning(void)
     WDT_HIT();
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
 		SpinDelay(20);
-		// Vref = 3.3V, and a 10000:240 voltage divider on the input
-		// can measure voltages up to 137500 mV
-		adcval = ((137500 * AvgAdc(ADC_CHAN_LF)) >> 10);
+		adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
 		if (i==95) 	vLf125 = adcval; // voltage at 125Khz
 		if (i==89) 	vLf134 = adcval; // voltage at 134Khz
 
@@ -206,11 +217,9 @@ void MeasureAntennaTuning(void)
   	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 	SpinDelay(20);
-	// Vref = 3300mV, and an 10:1 voltage divider on the input
-	// can measure voltages up to 33000 mV
-	vHf = (33000 * AvgAdc(ADC_CHAN_HF)) >> 10;
+	vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 
-	cmd_send(CMD_MEASURED_ANTENNA_TUNING,vLf125|(vLf134<<16),vHf,peakf|(peakv<<16),LF_Results,256);
+	cmd_send(CMD_MEASURED_ANTENNA_TUNING, vLf125 | (vLf134<<16), vHf, peakf | (peakv<<16), LF_Results, 256);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LED_A_OFF();
 	LED_B_OFF();
@@ -223,19 +232,21 @@ void MeasureAntennaTuningHf(void)
 
 	DbpString("Measuring HF antenna, press button to exit");
 
+	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
+
 	for (;;) {
-		// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
-		FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 		SpinDelay(20);
-		// Vref = 3300mV, and an 10:1 voltage divider on the input
-		// can measure voltages up to 33000 mV
-		vHf = (33000 * AvgAdc(ADC_CHAN_HF)) >> 10;
+		vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 
 		Dbprintf("%d mV",vHf);
 		if (BUTTON_PRESS()) break;
 	}
 	DbpString("cancelled");
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
 }
 
 
@@ -513,26 +524,32 @@ static const int LIGHT_LEN = sizeof(LIGHT_SCHEME)/sizeof(LIGHT_SCHEME[0]);
 
 void ListenReaderField(int limit)
 {
-	int lf_av, lf_av_new, lf_baseline= 0, lf_count= 0, lf_max;
-	int hf_av, hf_av_new,  hf_baseline= 0, hf_count= 0, hf_max;
+	int lf_av, lf_av_new, lf_baseline= 0, lf_max;
+	int hf_av, hf_av_new,  hf_baseline= 0, hf_max;
 	int mode=1, display_val, display_max, i;
 
-#define LF_ONLY		1
-#define HF_ONLY		2
+#define LF_ONLY						1
+#define HF_ONLY						2
+#define REPORT_CHANGE			 	10    // report new values only if they have changed at least by REPORT_CHANGE
+
+
+	// switch off FPGA - we don't want to measure our own signal
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
 	LEDsoff();
 
-	lf_av=lf_max=ReadAdc(ADC_CHAN_LF);
+	lf_av = lf_max = AvgAdc(ADC_CHAN_LF);
 
 	if(limit != HF_ONLY) {
-		Dbprintf("LF 125/134 Baseline: %d", lf_av);
+		Dbprintf("LF 125/134kHz Baseline: %dmV", (MAX_ADC_LF_VOLTAGE * lf_av) >> 10);
 		lf_baseline = lf_av;
 	}
 
-	hf_av=hf_max=ReadAdc(ADC_CHAN_HF);
+	hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
 
 	if (limit != LF_ONLY) {
-		Dbprintf("HF 13.56 Baseline: %d", hf_av);
+		Dbprintf("HF 13.56MHz Baseline: %dmV", (MAX_ADC_HF_VOLTAGE * hf_av) >> 10);
 		hf_baseline = hf_av;
 	}
 
@@ -555,38 +572,38 @@ void ListenReaderField(int limit)
 		WDT_HIT();
 
 		if (limit != HF_ONLY) {
-			if(mode==1) {
-				if (abs(lf_av - lf_baseline) > 10) LED_D_ON();
-				else                               LED_D_OFF();
+			if(mode == 1) {
+				if (abs(lf_av - lf_baseline) > REPORT_CHANGE) 
+					LED_D_ON();
+				else
+					LED_D_OFF();
 			}
 
-			++lf_count;
-			lf_av_new= ReadAdc(ADC_CHAN_LF);
+			lf_av_new = AvgAdc(ADC_CHAN_LF);
 			// see if there's a significant change
-			if(abs(lf_av - lf_av_new) > 10) {
-				Dbprintf("LF 125/134 Field Change: %x %x %x", lf_av, lf_av_new, lf_count);
+			if(abs(lf_av - lf_av_new) > REPORT_CHANGE) {
+				Dbprintf("LF 125/134kHz Field Change: %5dmV", (MAX_ADC_LF_VOLTAGE * lf_av_new) >> 10);
 				lf_av = lf_av_new;
 				if (lf_av > lf_max)
 					lf_max = lf_av;
-				lf_count= 0;
 			}
 		}
 
 		if (limit != LF_ONLY) {
 			if (mode == 1){
-				if (abs(hf_av - hf_baseline) > 10) LED_B_ON();
-				else                               LED_B_OFF();
+				if (abs(hf_av - hf_baseline) > REPORT_CHANGE) 	
+					LED_B_ON();
+				else
+					LED_B_OFF();
 			}
 
-			++hf_count;
-			hf_av_new= ReadAdc(ADC_CHAN_HF);
+			hf_av_new = AvgAdc(ADC_CHAN_HF);
 			// see if there's a significant change
-			if(abs(hf_av - hf_av_new) > 10) {
-				Dbprintf("HF 13.56 Field Change: %x %x %x", hf_av, hf_av_new, hf_count);
+			if(abs(hf_av - hf_av_new) > REPORT_CHANGE) {
+				Dbprintf("HF 13.56MHz Field Change: %5dmV", (MAX_ADC_HF_VOLTAGE * hf_av_new) >> 10);
 				hf_av = hf_av_new;
 				if (hf_av > hf_max)
 					hf_max = hf_av;
-				hf_count= 0;
 			}
 		}
 

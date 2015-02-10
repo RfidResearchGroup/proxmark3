@@ -231,28 +231,31 @@ int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 
 // "MAGIC" CARD
 
-int mfCSetUID(uint8_t *uid, uint8_t *oldUID, bool wantWipe) {
-	
+int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, bool wantWipe) {
 	uint8_t oldblock0[16] = {0x00};
 	uint8_t block0[16] = {0x00};
-	memcpy(block0, uid, 4); 
-	block0[4] = block0[0]^block0[1]^block0[2]^block0[3]; // Mifare UID BCC
-	// mifare classic SAK(byte 5) and ATQA(byte 6 and 7)
-	//block0[5] = 0x08;
-	//block0[6] = 0x04;
-	//block0[7] = 0x00;
-	
-	block0[5] = 0x01;  //sak
-	block0[6] = 0x01;
-	block0[7] = 0x0f;
-	
+
 	int old = mfCGetBlock(0, oldblock0, CSETBLOCK_SINGLE_OPER);
-	if ( old == 0) {
-		memcpy(block0+8, oldblock0+8, 8);
-		PrintAndLog("block 0:  %s", sprint_hex(block0,16));
+	if (old == 0) {
+		memcpy(block0, oldblock0, 16);
+		PrintAndLog("old block 0:  %s", sprint_hex(block0,16));
 	} else {
-		PrintAndLog("Couldn't get olddata. Will write over the last bytes of Block 0.");
+		PrintAndLog("Couldn't get old data. Will write over the last bytes of Block 0.");
 	}
+
+	// fill in the new values
+	// UID
+	memcpy(block0, uid, 4); 
+	// Mifare UID BCC
+	block0[4] = block0[0]^block0[1]^block0[2]^block0[3];
+	// mifare classic SAK(byte 5) and ATQA(byte 6 and 7, reversed)
+	if (sak!=NULL)
+		block0[5]=sak[0];
+	if (atqa!=NULL) {
+		block0[6]=atqa[1];
+		block0[7]=atqa[0];
+	}
+	PrintAndLog("new block 0:  %s", sprint_hex(block0,16));
 	return mfCSetBlock(0, block0, oldUID, wantWipe, CSETBLOCK_SINGLE_OPER);
 }
 

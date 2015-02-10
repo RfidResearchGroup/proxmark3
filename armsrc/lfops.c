@@ -640,7 +640,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
     uint8_t *dest = BigBuf_get_addr();
 
 	size_t size=0, idx=0;
-    int clk=0, invert=0, errCnt=0;
+    int clk=0, invert=0, errCnt=0, maxErr=20;
     uint64_t lo=0;
     // Configure to go in 125Khz listen mode
     LFSetupFPGAForADC(95, true);
@@ -654,7 +654,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 		size  = BigBuf_max_traceLen();
         //Dbprintf("DEBUG: Buffer got");
 		//askdemod and manchester decode
-		errCnt = askmandemod(dest, &size, &clk, &invert);
+		errCnt = askmandemod(dest, &size, &clk, &invert, maxErr);
         //Dbprintf("DEBUG: ASK Got");
         WDT_HIT();
 
