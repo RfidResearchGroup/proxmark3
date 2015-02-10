@@ -45,12 +45,6 @@ int AvgAdc(int ch);
 void ToSendStuffBit(int b);
 void ToSendReset(void);
 void ListenReaderField(int limit);
-void AcquireRawAdcSamples125k(int at134khz);
-void SnoopLFRawAdcSamples(int divisor, int trigger_threshold);
-void DoAcquisition125k_internal(int trigger_threshold, bool silent);
-void DoAcquisition125k_threshold(int trigger_threshold);
-void DoAcquisition125k();
-
 extern int ToSendMax;
 extern uint8_t ToSend[];
 
@@ -110,6 +104,10 @@ void SetAdcMuxFor(uint32_t whichGpio);
 #define FPGA_HF_ISO14443A_READER_MOD				(4<<0)
 
 /// lfops.h
+extern uint8_t decimation;
+extern uint8_t bits_per_sample ;
+extern bool averaging;
+
 void AcquireRawAdcSamples125k(int divisor);
 void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,uint8_t *command);
 void ReadTItag(void);
