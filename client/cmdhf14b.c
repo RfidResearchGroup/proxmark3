@@ -145,97 +145,10 @@ demodError:
 
 int CmdHF14BList(const char *Cmd)
 {
-	uint8_t *got = malloc(USB_CMD_DATA_SIZE);
+	PrintAndLog("Deprecated command, use 'hf list 14b' instead");
 
-	// Query for the actual size of the trace
-	UsbCommand response;
-	GetFromBigBuf(got, USB_CMD_DATA_SIZE, 0);
-	WaitForResponse(CMD_ACK, &response);
-	uint16_t traceLen = response.arg[2];
-	if (traceLen > USB_CMD_DATA_SIZE) {
-		uint8_t *p = realloc(got, traceLen);
-		if (p == NULL) {
-			PrintAndLog("Cannot allocate memory for trace");
-			free(got);
-			return 2;
-		}
-		got = p;
-		GetFromBigBuf(got, traceLen, 0);
-		WaitForResponse(CMD_ACK,NULL);
-	}
-  PrintAndLog("recorded activity: (TraceLen = %d bytes)", traceLen);
-  PrintAndLog(" time  :rssi: who bytes");
-  PrintAndLog("---------+----+----+-----------");
-
-  int i = 0;
-  int prev = -1;
-
-  for(;;) {
-    
-	if(i >= traceLen) { break; }
-
-    bool isResponse;
-    int timestamp = *((uint32_t *)(got+i));
-    if(timestamp & 0x80000000) {
-      timestamp &= 0x7fffffff;
-      isResponse = 1;
-    } else {
-      isResponse = 0;
-    }
-    int metric = *((uint32_t *)(got+i+4));
-
-    int len = got[i+8];
-
-    if(len > 100) {
-      break;
-    }
-    if(i + len >= traceLen) {
-      break;
-    }
-
-    uint8_t *frame = (got+i+9);
-
-	// Break and stick with current result if buffer was not completely full
-	if (frame[0] == 0x44 && frame[1] == 0x44 && frame[2] == 0x44 && frame[3] == 0x44) break; 
-	
-    char line[1000] = "";
-    int j;
-    for(j = 0; j < len; j++) {
-      sprintf(line+(j*3), "%02x  ", frame[j]);
-    }
-
-    char *crc;
-    if(len > 2) {
-      uint8_t b1, b2;
-      ComputeCrc14443(CRC_14443_B, frame, len-2, &b1, &b2);
-      if(b1 != frame[len-2] || b2 != frame[len-1]) {
-        crc = "**FAIL CRC**";
-      } else {
-        crc = "";
-      }
-    } else {
-      crc = "(SHORT)";
-    }
-
-    char metricString[100];
-    if(isResponse) {
-      sprintf(metricString, "%3d", metric);
-    } else {
-      strcpy(metricString, "   ");
-    }
-
-    PrintAndLog(" +%7d: %s: %s %s %s",
-      (prev < 0 ? 0 : timestamp - prev),
-      metricString,
-      (isResponse ? "TAG" : "   "), line, crc);
-
-    prev = timestamp;
-    i += (len + 9);
-  }
-  free(got);
-  return 0;
+	return 0;
 }
-
 int CmdHF14BRead(const char *Cmd)
 {
   UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443, {strtol(Cmd, NULL, 0), 0, 0}};
@@ -473,7 +386,7 @@ static command_t CommandTable[] =
 {
   {"help",        CmdHelp,        1, "This help"},
   {"demod",       CmdHF14BDemod,  1, "Demodulate ISO14443 Type B from tag"},
-  {"list",        CmdHF14BList,   0, "List ISO 14443 history"},
+  {"list",        CmdHF14BList,   0, "[Deprecated] List ISO 14443b history"},
   {"read",        CmdHF14BRead,   0, "Read HF tag (ISO 14443)"},
   {"sim",         CmdHF14Sim,     0, "Fake ISO 14443 tag"},
   {"simlisten",   CmdHFSimlisten, 0, "Get HF samples as fake tag"},

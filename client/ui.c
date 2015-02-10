@@ -108,7 +108,7 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout,  size_t 
 	DetectHighLowInGraph(&high, &low, TRUE); 
 
 	/* get clock */
-	clock = GetClock("",0, 0);	
+	clock = GetAskClock("",false, false);
 
 	startindex = DetectFirstTransition(data, len, high);
   
