@@ -1433,27 +1433,60 @@ int CmdHF14AMfCSetUID(const char *Cmd)
 	uint8_t wipeCard = 0;
 	uint8_t uid[8] = {0x00};
 	uint8_t oldUid[8] = {0x00};
+	uint8_t atqa[2] = {0x00};
+	uint8_t sak[1] = {0x00};
+	uint8_t atqaPresent = 1;
 	int res;
+	char ctmp;
+	int argi=0;
 
-	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
-		PrintAndLog("Usage:  hf mf csetuid <UID 8 hex symbols> <w>");
-		PrintAndLog("sample:  hf mf csetuid 01020304 w");
-		PrintAndLog("Set UID for magic Chinese card (only works with!!!)");
-		PrintAndLog("If you want wipe card then add 'w' into command line. \n");
+	if (strlen(Cmd) < 1 || param_getchar(Cmd, argi) == 'h') {
+		PrintAndLog("Usage:  hf mf csetuid <UID 8 hex symbols> [ATQA 4 hex symbols SAK 2 hex symbols] [w]");
+		PrintAndLog("sample:  hf mf csetuid 01020304");
+		PrintAndLog("sample:  hf mf csetuid 01020304 0004 08 w");
+		PrintAndLog("Set UID, ATQA, and SAK for magic Chinese card (only works with such cards)");
+		PrintAndLog("If you also want to wipe the card then add 'w' at the end of the command line.");
 		return 0;
-	}	
+	}
 
-	if (param_getchar(Cmd, 0) && param_gethex(Cmd, 0, uid, 8)) {
+	if (param_getchar(Cmd, argi) && param_gethex(Cmd, argi, uid, 8)) {
 		PrintAndLog("UID must include 8 HEX symbols");
 		return 1;
 	}
+	argi++;
 
-	char ctmp = param_getchar(Cmd, 1);
-	if (ctmp == 'w' || ctmp == 'W') wipeCard = 1;
-	
+	ctmp = param_getchar(Cmd, argi);
+	if (ctmp == 'w' || ctmp == 'W') {
+		wipeCard = 1;
+		atqaPresent = 0;
+	}
+
+	if (atqaPresent) {
+		if (param_getchar(Cmd, argi)) {
+			if (param_gethex(Cmd, argi, atqa, 4)) {
+				PrintAndLog("ATQA must include 4 HEX symbols");
+				return 1;
+			}
+			argi++;
+			if (!param_getchar(Cmd, argi) || param_gethex(Cmd, argi, sak, 2)) {
+				PrintAndLog("SAK must include 2 HEX symbols");
+				return 1;
+			}
+			argi++;
+		} else
+			atqaPresent = 0;
+	}
+
+	if(!wipeCard) {
+		ctmp = param_getchar(Cmd, argi);
+		if (ctmp == 'w' || ctmp == 'W') {
+			wipeCard = 1;
+		}
+	}
+
 	PrintAndLog("--wipe card:%s  uid:%s", (wipeCard)?"YES":"NO", sprint_hex(uid, 4));
 
-	res = mfCSetUID(uid, oldUid, wipeCard);
+	res = mfCSetUID(uid, (atqaPresent)?atqa:NULL, (atqaPresent)?sak:NULL, oldUid, wipeCard);
 	if (res) {
 			PrintAndLog("Can't set UID. error=%d", res);
 			return 1;
