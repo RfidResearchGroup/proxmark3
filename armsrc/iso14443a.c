@@ -141,15 +141,39 @@ const uint8_t OddByteParity[256] = {
   1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1
 };
 
+
 void iso14a_set_trigger(bool enable) {
 	trigger = enable;
 }
 
 
-
 void iso14a_set_timeout(uint32_t timeout) {
 	iso14a_timeout = timeout;
+	if(MF_DBGLEVEL >= 3) Dbprintf("ISO14443A Timeout set to %ld (%dms)", iso14a_timeout, iso14a_timeout / 106);
 }
+
+
+void iso14a_set_ATS_timeout(uint8_t *ats) {
+
+	uint8_t tb1;
+	uint8_t fwi; 
+	uint32_t fwt;
+	
+	if (ats[0] > 1) {							// there is a format byte T0
+		if ((ats[1] & 0x20) == 0x20) {			// there is an interface byte TB(1)
+			if ((ats[1] & 0x10) == 0x10) {		// there is an interface byte TA(1) preceding TB(1)
+				tb1 = ats[3];
+			} else {
+				tb1 = ats[2];
+			}
+			fwi = (tb1 & 0xf0) >> 4;			// frame waiting indicator (FWI)
+			fwt = 256 * 16 * (1 << fwi);		// frame waiting time (FWT) in 1/fc
+			
+			iso14a_set_timeout(fwt/(8*16));
+		}
+	}
+}
+
 
 //-----------------------------------------------------------------------------
 // Generate the parity value for a byte sequence
@@ -1600,7 +1624,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
 			if(ManchesterDecoding(b, offset, 0)) {
 				NextTransferTime = MAX(NextTransferTime, Demod.endTime - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/16 + FRAME_DELAY_TIME_PICC_TO_PCD);
 				return TRUE;
-			} else if (c++ > iso14a_timeout) {
+			} else if (c++ > iso14a_timeout && Demod.state == DEMOD_UNSYNCD) {
 				return FALSE; 
 			}
 		}
@@ -1798,6 +1822,10 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 
 	// reset the PCB block number
 	iso14_pcb_blocknum = 0;
+
+	// set default timeout based on ATS
+	iso14a_set_ATS_timeout(resp);
+
 	return 1;	
 }
 
