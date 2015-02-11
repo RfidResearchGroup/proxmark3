@@ -64,7 +64,6 @@ int usage_t55xx_info() {
 	PrintAndLog("");
 	return 0;
 }
-
 int usage_t55xx_dump(){
 	PrintAndLog("Usage:  lf t55xx dump <password>");
     PrintAndLog("     <password>, OPTIONAL password 4bytes (8 hex characters)");
@@ -74,6 +73,7 @@ int usage_t55xx_dump(){
 	PrintAndLog("");
 	return 0;
 }
+
 static int CmdHelp(const char *Cmd);
 
 int CmdReadBlk(const char *Cmd)
@@ -85,7 +85,7 @@ int CmdReadBlk(const char *Cmd)
 	int errCnt;
 	size_t bitlen;
 	int maxErr = 100;
-    uint8_t askAmp = 0;
+    //uint8_t askAmp = 0;
 	uint32_t blockData;
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
 	
@@ -127,7 +127,8 @@ int CmdReadBlk(const char *Cmd)
 
 	bitlen = getFromGraphBuf(bits);
 	
-	errCnt = askrawdemod(bits, &bitlen, &clk, &invert, maxErr, askAmp);
+	//errCnt = askrawdemod(bits, &bitlen, &clk, &invert, maxErr, askAmp);
+	errCnt = askmandemod(bits, &bitlen, &clk, &invert, maxErr);
 	
 	//throw away static - allow 1 and -1 (in case of threshold command first)
 	if ( errCnt == -1 || bitlen < 16 ){  
@@ -152,12 +153,12 @@ int CmdReadBlk(const char *Cmd)
 		return 4;
 	}
 
-	blockData = PackBits(0, 32, bits);
+	blockData = PackBits(1, 32, bits);
 
 	if ( block < 0)
-		PrintAndLog(" Decoded     : 0x%08X  %s", blockData, sprint_bin(bits,32) );
+		PrintAndLog(" Decoded     : 0x%08X  %s", blockData, sprint_bin(bits+1,32) );
 	else
-		PrintAndLog(" Block %d    : 0x%08X  %s", block, blockData, sprint_bin(bits,32) );
+		PrintAndLog(" Block %d    : 0x%08X  %s", block, blockData, sprint_bin(bits+1,32) );
 	
 	return 0;
 }
@@ -204,8 +205,15 @@ int CmdWriteBlk(const char *Cmd)
 
 int CmdReadTrace(const char *Cmd)
 {
-	char cmdp = param_getchar(Cmd, 0);
+	int invert = 0;
+	int clk = 0;
+	int errCnt;
+	size_t bitlen;
+	int maxErr = 100;
+	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
 
+	char cmdp = param_getchar(Cmd, 0);
+	
 	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
 		usage_t55xx_trace();
 		return 0;
@@ -217,36 +225,51 @@ int CmdReadTrace(const char *Cmd)
 		SendCommand(&c);
 		WaitForResponse(CMD_ACK, NULL);
 
-		uint8_t data[LF_TRACE_BUFF_SIZE] = {0x00};
-
-		GetFromBigBuf(data,LF_TRACE_BUFF_SIZE,0);  //3560 -- should be offset..
-		WaitForResponseTimeout(CMD_ACK,NULL, 1500);
-
-		for (int j = 0; j < LF_TRACE_BUFF_SIZE; j++) {
-			GraphBuffer[j] = ((int)data[j]);
-		}
-		GraphTraceLen = LF_TRACE_BUFF_SIZE;
+		CmdSamples("12000");
 	}
 	
-	uint8_t bits[LF_BITSSTREAM_LEN] = {0x00};
-	uint8_t * bitstream = bits;
+	bitlen = getFromGraphBuf(bits);
+
+	//errCnt = askrawdemod(bits, &bitlen, &clk, &invert, maxErr, askAmp);
+	errCnt = askmandemod(bits, &bitlen, &clk, &invert, maxErr);
 	
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bitstream, LF_BITSSTREAM_LEN);
+	//throw away static - allow 1 and -1 (in case of threshold command first)
+	if ( errCnt == -1 || bitlen < 16 ){  
+		PrintAndLog("no data found");
+		if (g_debugMode) 
+			PrintAndLog("errCnt: %d, bitlen: %d, clk: %d, invert: %d", errCnt, bitlen, clk, invert);
+		return 3;
+	}
+	if (g_debugMode) 
+		PrintAndLog("Using Clock: %d - invert: %d - Bits Found: %d", clk, invert, bitlen);
+
+	//move bits back to DemodBuffer
+	setDemodBuf(bits, bitlen, 0);
+	
+	// bits has the manchester encoded data.
+	errCnt = manrawdecode(bits, &bitlen);	
+	if ( errCnt == -1 || bitlen < 16 ){  
+		PrintAndLog("no data found");
+		if (g_debugMode) 
+			PrintAndLog("errCnt: %d, bitlen: %d, clk: %d, invert: %d", errCnt, bitlen, clk, invert);
+		return 4;
+	}
+
 	RepaintGraphWindow();
 
 	uint8_t si = 5;
-	uint32_t bl0     = PackBits(si, 32, bitstream);
-	uint32_t bl1     = PackBits(si+32, 32, bitstream);
+	uint32_t bl0     = PackBits(si, 32, bits);
+	uint32_t bl1     = PackBits(si+32, 32, bits);
 	
-	uint32_t acl     = PackBits(si,  8, bitstream); si += 8;
-	uint32_t mfc     = PackBits(si, 8, bitstream); si += 8;
-	uint32_t cid     = PackBits(si, 5, bitstream); si += 5;
-	uint32_t icr     = PackBits(si, 3, bitstream); si += 3;
-	uint32_t year    = PackBits(si, 4, bitstream); si += 4;
-	uint32_t quarter = PackBits(si, 2, bitstream); si += 2;
-	uint32_t lotid    = PackBits(si, 12, bitstream); si += 12;
-	uint32_t wafer   = PackBits(si, 5, bitstream); si += 5;
-	uint32_t dw      = PackBits(si, 15, bitstream); 
+	uint32_t acl     = PackBits(si,  8, bits); si += 8;
+	uint32_t mfc     = PackBits(si, 8, bits); si += 8;
+	uint32_t cid     = PackBits(si, 5, bits); si += 5;
+	uint32_t icr     = PackBits(si, 3, bits); si += 3;
+	uint32_t year    = PackBits(si, 4, bits); si += 4;
+	uint32_t quarter = PackBits(si, 2, bits); si += 2;
+	uint32_t lotid    = PackBits(si, 12, bits); si += 12;
+	uint32_t wafer   = PackBits(si, 5, bits); si += 5;
+	uint32_t dw      = PackBits(si, 15, bits); 
 	
 	PrintAndLog("");
 	PrintAndLog("-- T55xx Trace Information ----------------------------------");
@@ -262,8 +285,8 @@ int CmdReadTrace(const char *Cmd)
 	PrintAndLog("     Die Number   : %d", dw);
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" Raw Data - Page 1");
-	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(bitstream+5,32) );
-	PrintAndLog("     Block 0  : 0x%08X  %s", bl1, sprint_bin(bitstream+37,32) );
+	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(bits+5,32) );
+	PrintAndLog("     Block 0  : 0x%08X  %s", bl1, sprint_bin(bits+37,32) );
 	PrintAndLog("-------------------------------------------------------------");
 	/*
 	TRACE - BLOCK O

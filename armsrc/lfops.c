@@ -982,7 +982,7 @@ void TurnReadLFOn(){
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	// Give it a bit of time for the resonant antenna to settle.
 	//SpinDelay(30);
-	SpinDelayUs(8*150);
+	SpinDelayUs(9*150);
 }
 
 /*-------------- Cloning routines -----------*/
