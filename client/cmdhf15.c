@@ -136,6 +136,7 @@ const productName uidmapping[] = {
 	{ 0xE016040000000000LL, 24, "EM-Marin SA (Skidata Keycard-eco); EM4034? no 'read', just 'readmulti'" },
 	{ 0xE0160c0000000000LL, 24, "EM-Marin SA; EM4035?" },
 	{ 0xE016100000000000LL, 24, "EM-Marin SA (Skidata); EM4135; 36x64bit start page 13" },
+	{ 0xE016240000000000LL, 24, "EM-Marin SA (Skidata); EM4233;" },
 	{ 0xE016940000000000LL, 24, "EM-Marin SA (Skidata); 51x64bit" },
 	
 	{ 0xE017000000000000LL, 16, "KSW Microtec GmbH Germany" },
