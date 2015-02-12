@@ -475,7 +475,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x! ", frame[j]);
 
 		} else {
-			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x! ", frame[j]);
+			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x  ", frame[j]);
 		}
 	}
 	if(data_len == 0)
