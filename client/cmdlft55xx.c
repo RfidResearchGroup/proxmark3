@@ -76,6 +76,19 @@ int usage_t55xx_dump(){
 
 static int CmdHelp(const char *Cmd);
 
+/*
+FSK1 / FSK1a
+size = fskdemod(dest, size, 32, 0, 8, 10);  // fsk1 RF/32 
+size = fskdemod(dest, size, 32, 1, 8, 10);  // fsk1a RF/32 
+
+FSK2 / FSK2a
+size = fskdemod(dest, size, 32, 0, 10, 8);  // fsk2 RF/32 
+size = fskdemod(dest, size, 32, 1, 10, 8);  // fsk2a RF/32 
+size = fskdemod(dest, size, 50, 1, 10, 8);  // fsk2a RF/50 
+size = fskdemod(dest, size, 64, 1, 10, 8);  // FSK2a RF/64 
+
+*/
+
 int CmdReadBlk(const char *Cmd)
 {
 	int invert = 0;

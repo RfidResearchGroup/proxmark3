@@ -259,10 +259,6 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
 		return;
 	}
 
-	// increase the timeout (at least some cards really do need this!)
-	iso14a_set_timeout(0x0002FFFF);
-	Dbprintf("epa: Epic!");
-	
 	// read the CardAccess file
 	// this array will hold the CardAccess file
 	uint8_t card_access[256] = {0};
@@ -433,8 +429,6 @@ int EPA_Setup()
 
 	// power up the field
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-	
-	iso14a_set_timeout(10500);
 	
 	iso14a_set_timeout(10500);
 	
