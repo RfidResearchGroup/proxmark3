@@ -76,29 +76,11 @@ int usage_t55xx_dump(){
 
 static int CmdHelp(const char *Cmd);
 
-/*
-FSK1 / FSK1a
-size = fskdemod(dest, size, 32, 0, 8, 10);  // fsk1 RF/32 
-size = fskdemod(dest, size, 32, 1, 8, 10);  // fsk1a RF/32 
-
-FSK2 / FSK2a
-size = fskdemod(dest, size, 32, 0, 10, 8);  // fsk2 RF/32 
-size = fskdemod(dest, size, 32, 1, 10, 8);  // fsk2a RF/32 
-size = fskdemod(dest, size, 50, 1, 10, 8);  // fsk2a RF/50 
-size = fskdemod(dest, size, 64, 1, 10, 8);  // FSK2a RF/64 
-
-*/
-
 int CmdReadBlk(const char *Cmd)
 {
-	int invert = 0;
-	int clk = 0;
 	int block = -1;
 	int password = 0xFFFFFFFF; //default to blank Block 7
-	int errCnt;
 	size_t bitlen;
-	int maxErr = 100;
-    //uint8_t askAmp = 0;
 	uint32_t blockData;
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
 	
@@ -139,32 +121,22 @@ int CmdReadBlk(const char *Cmd)
 	CmdSamples("12000");
 
 	bitlen = getFromGraphBuf(bits);
-	
-	//errCnt = askrawdemod(bits, &bitlen, &clk, &invert, maxErr, askAmp);
-	errCnt = askmandemod(bits, &bitlen, &clk, &invert, maxErr);
-	
-	//throw away static - allow 1 and -1 (in case of threshold command first)
-	if ( errCnt == -1 || bitlen < 16 ){  
-		PrintAndLog("no data found");
-		if (g_debugMode) 
-			PrintAndLog("errCnt: %d, bitlen: %d, clk: %d, invert: %d", errCnt, bitlen, clk, invert);
-		return 3;
-	}
-	if (g_debugMode) 
-		PrintAndLog("Using Clock: %d - invert: %d - Bits Found: %d", clk, invert, bitlen);
 
+	if ( !tryDemod(bits, bitlen) )
+		return 3;
+	
 	//move bits back to DemodBuffer
 	setDemodBuf(bits, bitlen, 0);
-	printBitStream(bits,bitlen);
+	printBitStream(bits, bitlen);
 	
-	// bits has the manchester encoded data.
-	errCnt = manrawdecode(bits, &bitlen);	
-	if ( errCnt == -1 || bitlen < 16 ){  
-		PrintAndLog("no data found");
-		if (g_debugMode) 
-			PrintAndLog("errCnt: %d, bitlen: %d, clk: %d, invert: %d", errCnt, bitlen, clk, invert);
-		return 4;
-	}
+	// // bits has the manchester encoded data.
+	// errCnt = manrawdecode(bits, &bitlen);	
+	// if ( errCnt == -1 || bitlen < 32 ){  
+		// PrintAndLog("no data found");
+		// if (g_debugMode) 
+			// PrintAndLog("errCnt: %d, bitlen: %d, clk: %d, invert: %d", errCnt, bitlen, clk, invert);
+		// return 4;
+	// }
 
 	blockData = PackBits(1, 32, bits);
 
@@ -174,6 +146,69 @@ int CmdReadBlk(const char *Cmd)
 		PrintAndLog(" Block %d    : 0x%08X  %s", block, blockData, sprint_bin(bits+1,32) );
 	
 	return 0;
+}
+
+
+/*
+FSK1 / FSK1a
+size = fskdemod(dest, size, 32, 0, 8, 10);  // fsk1 RF/32 
+size = fskdemod(dest, size, 32, 1, 8, 10);  // fsk1a RF/32 
+
+FSK2 / FSK2a
+size = fskdemod(dest, size, 32, 0, 10, 8);  // fsk2 RF/32 
+size = fskdemod(dest, size, 32, 1, 10, 8);  // fsk2a RF/32 
+size = fskdemod(dest, size, 50, 1, 10, 8);  // fsk2a RF/50 
+size = fskdemod(dest, size, 64, 1, 10, 8);  // FSK2a RF/64 
+
+PSK1
+errCnt = pskRawDemod(bits, &bitlen, 32, 0);
+*/
+bool tryDemod(uint8_t bits[], size_t bitlen) {
+	
+	int invert = 0;
+	int clk = 0;
+	int errCnt, size;
+	int maxErr = 100;
+	uint8_t rflen, fchigh, fclow, dummy = 0;
+	uint16_t fcs=0;
+
+	// ASK - manchester demod
+	errCnt = askmandemod(bits, &bitlen, &clk, &invert, maxErr);
+	if ( analyseDemod(errCnt, bitlen, clk, invert) ) 
+		return true;
+
+	// FSK demod
+	fcs = countFC(bits, bitlen, &dummy);
+	if (fcs == 0){
+	  fchigh = 10;
+	  fclow = 8;
+	}else{
+	  fchigh = (fcs >> 8) & 0xFF;
+	  fclow = fcs & 0xFF;
+	}
+	//get bit clock length
+	rflen = detectFSKClk(bits, bitlen, fchigh, fclow);
+	rflen = (rflen == 0) ? 50 : rflen;
+
+	size = fskdemod(bits, bitlen, rflen, invert, fchigh, fclow);
+	if ( analyseDemod(size, bitlen, clk, invert) ) 
+		return true;	
+	
+	// PSK demod
+	return false;
+}
+
+bool analyseDemod( int errCnt, size_t bitlen, uint8_t clock, uint8_t invert){
+	if (g_debugMode) 
+		PrintAndLog("ErrorCount: %d, Bits Found: %d, Clock: %d, invert: %d", errCnt, bitlen, clock, invert);
+	  //PrintAndLog("Args invert: %d - Clock:%d - fchigh:%d - fclow: %d",invert,rfLen,fchigh, fclow);
+	  
+	//throw away static - allow 1 and -1 (in case of threshold command first)
+	if ( errCnt == -1 || bitlen < 32 ){  
+		PrintAndLog("no success demod");
+		return false;
+	}
+	return true;
 }
 
 int CmdWriteBlk(const char *Cmd)
