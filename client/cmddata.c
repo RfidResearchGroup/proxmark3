@@ -328,7 +328,7 @@ int Cmdaskmandemod(const char *Cmd)
   int maxErr=100;
   char cmdp = param_getchar(Cmd, 0);
   if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
-    PrintAndLog("Usage:  data askmandemod [clock] <0|1> [maxError]");
+    PrintAndLog("Usage:  data rawdemod am [clock] <0|1> [maxError]");
     PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLog("     <invert>, 1 for invert output");
     PrintAndLog("     [set maximum allowed errors], default = 100.");
@@ -508,7 +508,7 @@ int Cmdaskrawdemod(const char *Cmd)
   char amp = param_getchar(Cmd, 0);
   char cmdp = param_getchar(Cmd, 0);
   if (strlen(Cmd) > 12 || cmdp == 'h' || cmdp == 'H') {
-    PrintAndLog("Usage:  data askrawdemod [clock] <invert> [maxError] [amplify]");
+    PrintAndLog("Usage:  data rawdemod ar [clock] <invert> [maxError] [amplify]");
     PrintAndLog("     [set clock as integer] optional, if not set, autodetect");
     PrintAndLog("     <invert>, 1 to invert output");
     PrintAndLog("     [set maximum allowed errors], default = 100");
@@ -824,7 +824,7 @@ int CmdFSKrawdemod(const char *Cmd)
   int fclow=0;
   char cmdp = param_getchar(Cmd, 0);
   if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
-    PrintAndLog("Usage:  data fskrawdemod [clock] <invert> [fchigh] [fclow]");
+    PrintAndLog("Usage:  data rawdemod fs [clock] <invert> [fchigh] [fclow]");
     PrintAndLog("     [set clock as integer] optional, omit for autodetect.");
     PrintAndLog("     <invert>, 1 for invert output, can be used even if the clock is omitted");
     PrintAndLog("     [fchigh], larger field clock length, omit for autodetect");
@@ -1568,7 +1568,7 @@ int CmdNRZrawDemod(const char *Cmd)
   int maxErr=100;
   char cmdp = param_getchar(Cmd, 0);
   if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
-    PrintAndLog("Usage:  data nrzrawdemod [clock] <0|1> [maxError]");
+    PrintAndLog("Usage:  data rawdemod nr [clock] <0|1> [maxError]");
     PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLog("     <invert>, 1 for invert output");
     PrintAndLog("     [set maximum allowed errors], default = 100.");
@@ -1627,7 +1627,7 @@ int CmdPSK1rawDemod(const char *Cmd)
   int errCnt;
   char cmdp = param_getchar(Cmd, 0);
   if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
-    PrintAndLog("Usage:  data psk1rawdemod [clock] <0|1> [maxError]");
+    PrintAndLog("Usage:  data rawdemod p1 [clock] <0|1> [maxError]");
     PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLog("     <invert>, 1 for invert output");
     PrintAndLog("     [set maximum allowed errors], default = 100.");
@@ -1656,13 +1656,13 @@ int CmdPSK1rawDemod(const char *Cmd)
 }
 
 // by marshmellow
-// takes same args as cmdpsknrzrawdemod
+// takes same args as cmdpsk1rawdemod
 int CmdPSK2rawDemod(const char *Cmd)
 {
   int errCnt=0;
   char cmdp = param_getchar(Cmd, 0);
   if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
-    PrintAndLog("Usage:  data psk2rawdemod [clock] <0|1> [maxError]");
+    PrintAndLog("Usage:  data rawdemod p2 [clock] <0|1> [maxError]");
     PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
     PrintAndLog("     <invert>, 1 for invert output");
     PrintAndLog("     [set maximum allowed errors], default = 100.");
@@ -1693,6 +1693,46 @@ int CmdPSK2rawDemod(const char *Cmd)
     printDemodBuff();  
   }
   return 1;
+}
+
+// by marshmellow - combines all raw demod functions into one menu command
+int CmdRawDemod(const char *Cmd)
+{
+	char cmdp = Cmd[0]; //param_getchar(Cmd, 0);
+
+	if (strlen(Cmd) > 14 || cmdp == 'h' || cmdp == 'H' || strlen(Cmd)<2) {
+		PrintAndLog("Usage:  data rawdemod [modulation] <help>|<options>");
+		PrintAndLog("   [modulation] as 2 char, 'am' for ask/manchester, 'ar' for ask/raw, 'fs' for fsk, 'nr' for nrz/direct, 'p1' for psk1, 'p2' for psk2");		
+		PrintAndLog("   <help> as 'h', prints the help for the specific modulation");	
+		PrintAndLog("   <options> see specific modulation help for optional parameters");				
+		PrintAndLog("");
+		PrintAndLog("    sample: data rawdemod fs h         = print help for ask/raw demod");
+		PrintAndLog("          : data rawdemod fs           = demod GraphBuffer using: fsk - autodetect");
+		PrintAndLog("          : data rawdemod am           = demod GraphBuffer using: ask/manchester - autodetect");
+		PrintAndLog("          : data rawdemod ar           = demod GraphBuffer using: ask/raw - autodetect");
+		PrintAndLog("          : data rawdemod nr           = demod GraphBuffer using: nrz/direct - autodetect");
+		PrintAndLog("          : data rawdemod p1           = demod GraphBuffer using: psk1 - autodetect");
+		PrintAndLog("          : data rawdemod p2           = demod GraphBuffer using: psk2 - autodetect");
+		return 0;
+	}
+	char cmdp2 = Cmd[1];
+	int ans = 0;
+	if (cmdp == 'f' && cmdp2 == 's'){
+		ans = CmdFSKrawdemod(Cmd+3);
+	} else if(cmdp == 'a' && cmdp2 == 'm'){
+		ans = Cmdaskmandemod(Cmd+3);
+	} else if(cmdp == 'a' && cmdp2 == 'r'){
+		ans = Cmdaskrawdemod(Cmd+3);
+	} else if(cmdp == 'n' && cmdp2 == 'r'){
+		ans = CmdNRZrawDemod(Cmd+3);
+	} else if(cmdp == 'p' && cmdp2 == '1'){
+		ans = CmdPSK1rawDemod(Cmd+3);
+	} else if(cmdp == 'p' && cmdp2 == '2'){
+		ans = CmdPSK2rawDemod(Cmd+3);
+	} else { 
+		PrintAndLog("unknown modulation entered - see help ('h') for parameter structure");
+	}
+	return ans;
 }
 
 int CmdGrid(const char *Cmd)
@@ -2338,26 +2378,26 @@ static command_t CommandTable[] =
 {
   {"help",          CmdHelp,            1, "This help"},
   {"amp",           CmdAmp,             1, "Amplify peaks"},
-  {"askdemod",      Cmdaskdemod,        1, "<0 or 1> -- Attempt to demodulate simple ASK tags"},
+  //{"askdemod",      Cmdaskdemod,        1, "<0 or 1> -- Attempt to demodulate simple ASK tags"},
   {"askedgedetect", CmdAskEdgeDetect,   1, "[threshold] Adjust Graph for manual ask demod using length of sample differences to detect the edge of a wave - default = 25"},
   {"askem410xdemod",CmdAskEM410xDemod,  1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional)"},
-  {"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional)"},
-  {"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0|1>] -- Attempt to demodulate ASK tags and output bin (args optional)"},
+  //{"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional)"},
+  //{"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0|1>] -- Attempt to demodulate ASK tags and output bin (args optional)"},
   {"autocorr",      CmdAutoCorr,        1, "<window length> -- Autocorrelation over window"},
   {"biphaserawdecode",CmdBiphaseDecodeRaw,1,"[offset] [invert<0|1>] Biphase decode bin stream in demod buffer (offset = 0|1 bits to shift the decode start)"},
   {"bitsamples",    CmdBitsamples,      0, "Get raw samples as bitstring"},
-  {"bitstream",     CmdBitstream,       1, "[clock rate] -- Convert waveform into a bitstream"},
+  //{"bitstream",     CmdBitstream,       1, "[clock rate] -- Convert waveform into a bitstream"},
   {"buffclear",     CmdBuffClear,       1, "Clear sample buffer and graph window"},
   {"dec",           CmdDec,             1, "Decimate samples"},
   {"detectclock",   CmdDetectClockRate, 1, "[modulation] Detect clock rate (options: 'a','f','n','p' for ask, fsk, nrz, psk respectively)"},
-  {"fskdemod",      CmdFSKdemod,        1, "Demodulate graph window as a HID FSK"},
+  //{"fskdemod",      CmdFSKdemod,        1, "Demodulate graph window as a HID FSK"},
   {"fskawiddemod",  CmdFSKdemodAWID,    1, "Demodulate graph window as an AWID FSK tag using raw"},
   //{"fskfcdetect",   CmdFSKfcDetect,     1, "Try to detect the Field Clock of an FSK wave"},
   {"fskhiddemod",   CmdFSKdemodHID,     1, "Demodulate graph window as a HID FSK tag using raw"},
   {"fskiodemod",    CmdFSKdemodIO,      1, "Demodulate graph window as an IO Prox tag FSK using raw"},
   {"fskpyramiddemod",CmdFSKdemodPyramid,1, "Demodulate graph window as a Pyramid FSK tag using raw"},
   {"fskparadoxdemod",CmdFSKdemodParadox,1, "Demodulate graph window as a Paradox FSK tag using raw"},
-  {"fskrawdemod",   CmdFSKrawdemod,     1, "[clock rate] [invert] [rchigh] [rclow] Demodulate graph window from FSK to bin (clock = 50)(invert = 1|0)(rchigh = 10)(rclow=8)"},
+  //{"fskrawdemod",   CmdFSKrawdemod,     1, "[clock rate] [invert] [rchigh] [rclow] Demodulate graph window from FSK to bin (clock = 50)(invert = 1|0)(rchigh = 10)(rclow=8)"},
   {"grid",          CmdGrid,            1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
   {"hexsamples",    CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
   {"hide",          CmdHide,            1, "Hide graph window"},
@@ -2365,26 +2405,27 @@ static command_t CommandTable[] =
   {"load",          CmdLoad,            1, "<filename> -- Load trace (to graph window"},
   {"ltrim",         CmdLtrim,           1, "<samples> -- Trim samples from left of trace"},
   {"rtrim",         CmdRtrim,           1, "<location to end trace> -- Trim samples from right of trace"},
-  {"mandemod",      CmdManchesterDemod, 1, "[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)"},
+  //{"mandemod",      CmdManchesterDemod, 1, "[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)"},
   {"manrawdecode",  Cmdmandecoderaw,    1, "Manchester decode binary stream already in graph buffer"},
   {"manmod",        CmdManchesterMod,   1, "[clock rate] -- Manchester modulate a binary stream"},
   {"norm",          CmdNorm,            1, "Normalize max/min to +/-128"},
   //{"nrzdetectclock",CmdDetectNRZClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
-  {"nrzrawdemod",   CmdNRZrawDemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate nrz tags and output binary (args optional)"},
+  //{"nrzrawdemod",   CmdNRZrawDemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate nrz tags and output binary (args optional)"},
   {"plot",          CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
   //{"pskdetectclock",CmdDetectPSKClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
   {"pskindalademod",CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Attempt to demodulate psk1 indala tags and output ID binary & hex (args optional)"},
-  {"psk1rawdemod",  CmdPSK1rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk1 tags and output binary (args optional)"},
-  {"psk2rawdemod",  CmdPSK2rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk2 tags and output binary (args optional)"},
+  //{"psk1rawdemod",  CmdPSK1rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk1 tags and output binary (args optional)"},
+  //{"psk2rawdemod",  CmdPSK2rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk2 tags and output binary (args optional)"},
+  {"rawdemod",      CmdRawDemod,        1, "[modulation] ... <options> -see help (h option) - Attempt to demodulate the data in the GraphBuffer and output binary"},  
   {"samples",       CmdSamples,         0, "[512 - 40000] -- Get raw samples for graph window"},
   {"save",          CmdSave,            1, "<filename> -- Save trace (from graph window)"},
   {"scale",         CmdScale,           1, "<int> -- Set cursor display scale"},
   {"setdebugmode",  CmdSetDebugMode,    1, "<0|1> -- Turn on or off Debugging Mode for demods"},
   {"shiftgraphzero",CmdGraphShiftZero,  1, "<shift> -- Shift 0 for Graphed wave + or - shift value"},
-  {"threshold",     CmdThreshold,       1, "<threshold> -- Maximize/minimize every value in the graph window depending on threshold"},
+  //{"threshold",     CmdThreshold,       1, "<threshold> -- Maximize/minimize every value in the graph window depending on threshold"},
   {"dirthreshold",  CmdDirectionalThreshold,   1, "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
   {"tune",          CmdTuneSamples,     0, "Get hw tune samples for graph window"},
-  {"undec",         CmdUndec,         1, "Un-decimate samples by 2"},
+  {"undec",         CmdUndec,           1, "Un-decimate samples by 2"},
   {"zerocrossings", CmdZerocrossings,   1, "Count time between zero-crossings"},
   {NULL, NULL, 0, NULL}
 };
