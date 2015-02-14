@@ -583,7 +583,7 @@ static command_t CommandTable[] =
 	{"reader",CmdHFiClassReader,	0,	"Read an iClass tag"},
 	{"replay",CmdHFiClassReader_Replay,	0,	"Read an iClass tag via Reply Attack"},
 	{"dump",	CmdHFiClassReader_Dump,	0,		"Authenticate and Dump iClass tag"},
-	{"write",	CmdHFiClass_iso14443A_write,	0,	"Authenticate and Write iClass block"},
+//	{"write",	CmdHFiClass_iso14443A_write,	0,	"Authenticate and Write iClass block"},
 	{"loclass",	CmdHFiClass_loclass,	1,	"Use loclass to perform bruteforce of reader attack dump"},
 	{"eload",   CmdHFiClassELoad,    0,     "[experimental] Load data into iclass emulator memory"},
 	{NULL, NULL, 0, NULL}
