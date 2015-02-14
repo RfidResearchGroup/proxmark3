@@ -224,3 +224,16 @@ int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwP
 
 	return TRUE;
 }
+// Emulator memory
+uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length){
+	uint8_t* mem = BigBuf_get_EM_addr();
+	if(offset+length < CARD_MEMORY_SIZE)
+	{
+		memcpy(mem+offset, data, length);
+		return 0;
+	}else
+	{
+		Dbprintf("Error, trying to set memory outside of bounds! %d  > %d", (offset+length), CARD_MEMORY_SIZE);
+		return 1;
+	}
+}

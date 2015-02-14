@@ -34,4 +34,5 @@ void clear_trace();
 void set_tracing(bool enable);
 bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
 int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwParity, int bReader);
+uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length);
 #endif /* __BIGBUF_H */

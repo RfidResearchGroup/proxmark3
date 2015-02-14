@@ -900,6 +900,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_READER_ICLASS_REPLAY:
 		    ReaderIClass_Replay(c->arg[0], c->d.asBytes);
 			break;
+	case CMD_ICLASS_EML_MEMSET:
+			emlSet(c->d.asBytes,c->arg[0], c->arg[1]);
+			break;
 #endif
 
 		case CMD_SIMULATE_TAG_HF_LISTEN:
