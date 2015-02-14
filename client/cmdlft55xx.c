@@ -25,17 +25,17 @@
 #define LF_TRACE_BUFF_SIZE 20000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
 #define LF_BITSSTREAM_LEN 1000 // more then 1000 bits shouldn't happend..  8block * 4 bytes * 8bits = 
 
-int usage_t55xx_rd(){
-	PrintAndLog("Usage:  lf t55xx rd <block> <password>");
+int usage_t55xx_read(){
+	PrintAndLog("Usage:  lf t55xx read <block> <password>");
     PrintAndLog("     <block>, block number to read. Between 0-7");
     PrintAndLog("     <password>, OPTIONAL password (8 hex characters)");
     PrintAndLog("");
-    PrintAndLog("    sample: lf t55xx rd 0           = try reading data from block 0");
-	PrintAndLog("          : lf t55xx rd 0 feedbeef  = try reading data from block 0 using password");
+    PrintAndLog("    sample: lf t55xx read 0           = try reading data from block 0");
+	PrintAndLog("          : lf t55xx read 0 feedbeef  = try reading data from block 0 using password");
 	PrintAndLog("");
 	return 0;
 }
-int usage_t55xx_wr(){
+int usage_t55xx_write(){
 	PrintAndLog("Usage:  lf t55xx wr <block> <data> [password]");
     PrintAndLog("     <block>, block number to read. Between 0-7");
 	PrintAndLog("     <data>,  4 bytes of data to write (8 hex characters)");
@@ -78,23 +78,23 @@ static int CmdHelp(const char *Cmd);
 
 int CmdReadBlk(const char *Cmd)
 {
+	int i = 0;
 	int block = -1;
 	int password = 0xFFFFFFFF; //default to blank Block 7
-	size_t bitlen;
-	uint32_t blockData;
+	size_t bitlen = 0;
+	uint32_t blockData = 0;
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
-	
 	
 	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') {
-		usage_t55xx_rd();
+		usage_t55xx_read();
 		return 0;
 	}
 
 	int res = sscanf(Cmd, "%d %x", &block, &password);
 
 	if ( res < 1 || res > 2 ){
-		usage_t55xx_rd();
+		usage_t55xx_read();
 		return 1;
 	}
 	
@@ -113,31 +113,40 @@ int CmdReadBlk(const char *Cmd)
 	}
 
 	SendCommand(&c);
-	if ( !WaitForResponseTimeout(CMD_ACK,NULL,1500) ) {
+	if ( !WaitForResponseTimeout(CMD_ACK,NULL,2500) ) {
 		PrintAndLog("command execution time out");
 		return 2;
 	}
 	
-	CmdSamples("12000");
+	uint8_t got[12000];
+	GetFromBigBuf(got,sizeof(got),0);
+	WaitForResponse(CMD_ACK,NULL);
 
+	setGraphBuf(got, 12000);
+  	
 	bitlen = getFromGraphBuf(bits);
 
-	if ( !tryDemod(bits, bitlen) )
-		return 3;
+	int ans = 0;
+	ans = CmdFSKrawdemod("");
+	ans = CmdFSKrawdemod("1"); //invert?
+	ans = Cmdaskmandemod("");
+	ans = Cmdaskrawdemod("");
+	ans = CmdNRZrawDemod("");
+	ans = CmdPSK1rawDemod("");
+	ans = CmdPSK2rawDemod("");
 	
-	//move bits back to DemodBuffer
-	setDemodBuf(bits, bitlen, 0);
-	printBitStream(bits, bitlen);
+	// if ( !tryDemod(bits, bitlen) )
+		// return 3;
 	
-	// // bits has the manchester encoded data.
-	// errCnt = manrawdecode(bits, &bitlen);	
-	// if ( errCnt == -1 || bitlen < 32 ){  
-		// PrintAndLog("no data found");
-		// if (g_debugMode) 
-			// PrintAndLog("errCnt: %d, bitlen: %d, clk: %d, invert: %d", errCnt, bitlen, clk, invert);
-		// return 4;
-	// }
-
+	// //move bits back to DemodBuffer
+	// setDemodBuf(bits, bitlen, 0);
+	// printBitStream(bits, bitlen);
+	if ( !DemodBufferLen) 
+		return 0;
+	
+    for (;i<DemodBufferLen;++i)
+		bits[i]=DemodBuffer[i];
+	
 	blockData = PackBits(1, 32, bits);
 
 	if ( block < 0)
@@ -219,14 +228,14 @@ int CmdWriteBlk(const char *Cmd)
 	
 	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') {
-		usage_t55xx_wr();
+		usage_t55xx_write();
 		return 0;
 	}
   
 	int res = sscanf(Cmd, "%d %x %x",&block, &data, &password);
 	
 	if ( res < 2 || res > 3) {
-		usage_t55xx_wr();
+		usage_t55xx_write();
 		return 1;
 	}
 
@@ -238,26 +247,23 @@ int CmdWriteBlk(const char *Cmd)
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {data, block, 0}};
  	c.d.asBytes[0] = 0x0; 
 
-	if (res == 2) {
-		PrintAndLog("Writing block %d  data %08X", block, data);
-	} else {
-		//Password mode
+	PrintAndLog("Writing to T55x7");
+	PrintAndLog("block : %d", block);
+	PrintAndLog("data  : 0x%08X", data);
+
+	//Password mode
+	if (res == 3) {
 		c.arg[2] = password;
 		c.d.asBytes[0] = 0x1; 
-		PrintAndLog("Writing block %d  data %08X  password %08X", block, data, password);
+		PrintAndLog("pwd   : 0x%08X", password);
 	}
-	
 	SendCommand(&c);
 	return 0;
 }
 
 int CmdReadTrace(const char *Cmd)
 {
-	int invert = 0;
-	int clk = 0;
-	int errCnt;
 	size_t bitlen;
-	int maxErr = 100;
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
 
 	char cmdp = param_getchar(Cmd, 0);
@@ -271,37 +277,16 @@ int CmdReadTrace(const char *Cmd)
 	
 		UsbCommand c = {CMD_T55XX_READ_TRACE, {0, 0, 0}};
 		SendCommand(&c);
-		WaitForResponse(CMD_ACK, NULL);
-
-		CmdSamples("12000");
+		if ( !WaitForResponseTimeout(CMD_ACK,NULL,2500) ) {
+			PrintAndLog("command execution time out");
+			return 1;
+		}
+		//darn
+		//CmdSamples("12000");
 	}
 	
 	bitlen = getFromGraphBuf(bits);
 
-	//errCnt = askrawdemod(bits, &bitlen, &clk, &invert, maxErr, askAmp);
-	errCnt = askmandemod(bits, &bitlen, &clk, &invert, maxErr);
-	
-	//throw away static - allow 1 and -1 (in case of threshold command first)
-	if ( errCnt == -1 || bitlen < 16 ){  
-		PrintAndLog("no data found");
-		if (g_debugMode) 
-			PrintAndLog("errCnt: %d, bitlen: %d, clk: %d, invert: %d", errCnt, bitlen, clk, invert);
-		return 3;
-	}
-	if (g_debugMode) 
-		PrintAndLog("Using Clock: %d - invert: %d - Bits Found: %d", clk, invert, bitlen);
-
-	//move bits back to DemodBuffer
-	setDemodBuf(bits, bitlen, 0);
-	
-	// bits has the manchester encoded data.
-	errCnt = manrawdecode(bits, &bitlen);	
-	if ( errCnt == -1 || bitlen < 16 ){  
-		PrintAndLog("no data found");
-		if (g_debugMode) 
-			PrintAndLog("errCnt: %d, bitlen: %d, clk: %d, invert: %d", errCnt, bitlen, clk, invert);
-		return 4;
-	}
 
 	RepaintGraphWindow();
 
@@ -596,12 +581,11 @@ uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits){
 static command_t CommandTable[] =
 {
   {"help",   CmdHelp,        1, "This help"},
-  {"rd",     CmdReadBlk,     0, "<block> [password] -- Read T55xx block data (page 0) [optional password]"},
-  {"wr",     CmdWriteBlk,    0, "<block> <data> [password] -- Write T55xx block data (page 0) [optional password]"},
+  {"read",   CmdReadBlk,     0, "<block> [password] -- Read T55xx block data (page 0) [optional password]"},
+  {"write",  CmdWriteBlk,    0, "<block> <data> [password] -- Write T55xx block data (page 0) [optional password]"},
   {"trace",  CmdReadTrace,   0, "[1] Read T55xx traceability data (page 1/ blk 0-1)"},
   {"info",   CmdInfo,        0, "[1] Read T55xx configuration data (page 0/ blk 0)"},
   {"dump",   CmdDump,        0, "[password] Dump T55xx card block 0-7. [optional password]"},
-  {"man",    CmdIceManchester,      0, "Manchester demod (with SST)"},
   {NULL, NULL, 0, NULL}
 };
 

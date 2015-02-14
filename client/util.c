@@ -237,7 +237,7 @@ uint8_t param_get8(const char *line, int paramnum)
 uint8_t param_getdec(const char *line, int paramnum, uint8_t *destination)
 {
 	uint8_t val =  param_get8ex(line, paramnum, 255, 10);
-	printf("read %i", (int8_t ) val);
+	printf("read %i\n", (int8_t ) val);
 	if( (int8_t) val == -1) return 1;
 	(*destination) = val;
 	return 0;

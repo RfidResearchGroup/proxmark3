@@ -72,8 +72,6 @@ void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, 
 	DoAcquisition_config(false);
 }
 
-
-
 /* blank r/w tag data stream
 ...0000000000000000 01111111
 1010101010101010101010101010101010101010101010101010101010101010
@@ -885,12 +883,13 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 // Read one card block in page 0
 void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 {
-    uint8_t *dest = BigBuf_get_addr();
-    //uint16_t bufferlength = BigBuf_max_traceLen();
-	uint16_t bufferlength = T55xx_SAMPLES_SIZE;
     uint32_t i = 0;
-	// Clear destination buffer before sending the command  0x80 = average.
-	memset(dest, 0x80, bufferlength);	   
+    uint8_t *dest = BigBuf_get_addr();
+    uint16_t bufferlength = BigBuf_max_traceLen();
+	if ( bufferlength > T55xx_SAMPLES_SIZE )
+		bufferlength = T55xx_SAMPLES_SIZE;
+
+	memset(dest, 0x80, bufferlength);
 	
 	// Set up FPGA, 125kHz
 	// Wait for config.. (192+8190xPOW)x8 == 67ms
@@ -920,7 +919,6 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
     for(;;) {
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
             AT91C_BASE_SSC->SSC_THR = 0x43;
-			//AT91C_BASE_SSC->SSC_THR = 0xff;
 			LED_D_ON();
         }
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
@@ -938,12 +936,13 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 
 // Read card traceability data (page 1)
 void T55xxReadTrace(void){
-    uint8_t *dest = BigBuf_get_addr();
-    //uint16_t bufferlength = BigBuf_max_traceLen();
-	uint16_t bufferlength = T55xx_SAMPLES_SIZE;
-	uint32_t i = 0;
 
-	// Clear destination buffer before sending the command 0x80 = average
+	uint32_t i = 0;
+    uint8_t *dest = BigBuf_get_addr();
+    uint16_t bufferlength = BigBuf_max_traceLen();
+	if ( bufferlength > T55xx_SAMPLES_SIZE )
+		bufferlength = T55xx_SAMPLES_SIZE;
+
 	memset(dest, 0x80, bufferlength);  
   
 	LFSetupFPGAForADC(0, true);
@@ -978,7 +977,7 @@ void T55xxReadTrace(void){
 }
 
 void TurnReadLFOn(){
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	//FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	// Give it a bit of time for the resonant antenna to settle.
 	//SpinDelay(30);
