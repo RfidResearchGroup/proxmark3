@@ -329,8 +329,8 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 	printvar("MAC", MAC, 4);
 
 	uint8_t iclass_data[32000] = {0};
-	uint8_t iclass_datalen = 0;
-	uint8_t iclass_blocksFailed = 0;//Set to 1 if dump was incomplete
+	uint32_t iclass_datalen = 0;
+	uint32_t iclass_blocksFailed = 0;//Set to 1 if dump was incomplete
 
 	UsbCommand d = {CMD_READER_ICLASS_REPLAY, {readerType}};
 	memcpy(d.d.asBytes, MAC, 4);
@@ -346,11 +346,11 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 		}
 		if(WaitForResponseTimeout(CMD_ACK,&resp,4500))
 		{
-			uint64_t dataLength = resp.arg[0];
+			uint32_t dataLength = resp.arg[0];
 			iclass_blocksFailed |= resp.arg[1];
-
 			if(dataLength > 0)
 			{
+				PrintAndLog("Got %d bytes data (total so far %d)" ,dataLength,iclass_datalen);
 				memcpy(iclass_data, resp.d.asBytes,dataLength);
 				iclass_datalen += dataLength;
 			}else
@@ -368,7 +368,6 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 							 CSN[0],CSN[1],CSN[2],CSN[3],
 							 CSN[4],CSN[5],CSN[6],CSN[7]);
 					saveFile(filename,"bin",iclass_data, iclass_datalen );
-
 				}
 				//Aaaand we're finished
 				return 0;

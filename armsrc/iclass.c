@@ -1704,7 +1704,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 		//Set card_data to all zeroes, we'll fill it with data
 		memset(card_data,0x0,USB_CMD_DATA_SIZE);
 		uint8_t failedRead =0;
-		uint8_t stored_data_length =0;
+		uint32_t stored_data_length =0;
 		//then loop around remaining blocks
 		for(int block=0; block < cardsize; block++){
 
@@ -1723,7 +1723,6 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 				//Fill up the buffer
 				memcpy(card_data+stored_data_length,resp,8);
 				stored_data_length += 8;
-
 				if(stored_data_length +8 > USB_CMD_DATA_SIZE)
 				{//Time to send this off and start afresh
 					cmd_send(CMD_ACK,
@@ -1742,6 +1741,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 				Dbprintf("Failed to dump block %d", block);
 			}
 		}
+
 		//Send off any remaining data
 		if(stored_data_length > 0)
 		{
