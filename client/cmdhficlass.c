@@ -379,6 +379,78 @@ int CmdHFiClassReader_Dump(const char *Cmd)
   return 0;
 }
 
+int hf_iclass_eload_usage()
+{
+	PrintAndLog("Loads iclass tag-dump into emulator memory on device");
+	PrintAndLog("Usage:  hf iclass eload f <filename>");
+	PrintAndLog("");
+	PrintAndLog("Example: hf iclass eload f iclass_tagdump-aa162d30f8ff12f1.bin");
+	return 0;
+
+}
+
+int iclassEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
+	UsbCommand c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, 0}};
+	memcpy(c.d.asBytes, data, blocksCount * 16);
+	SendCommand(&c);
+	return 0;
+}
+int CmdHFiClassELoad(const char *Cmd)
+{
+
+	char opt = param_getchar(Cmd, 0);
+	if (strlen(Cmd)<1 || opt == 'h')
+		return hf_iclass_eload_usage();
+
+	//File handling and reading
+	FILE *f;
+	char filename[FILE_PATH_SIZE];
+	if(opt == 'f' && param_getstr(Cmd, 1, filename) > 0)
+	{
+		f = fopen(filename, "rb");
+	}else{
+		return hf_iclass_eload_usage();
+	}
+
+	if(!f) {
+		PrintAndLog("Failed to read from file '%s'", filename);
+		return 1;
+	}
+
+	fseek(f, 0, SEEK_END);
+	long fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
+
+	uint8_t *dump = malloc(fsize);
+	size_t bytes_read = fread(dump, 1, fsize, f);
+	fclose(f);
+
+	//Validate
+
+	if (bytes_read < fsize)
+	{
+		prnlog("Error, could only read %d bytes (should be %d)",bytes_read, fsize );
+		free(dump);
+		return 1;
+	}
+	//Send to device
+	uint32_t bytes_sent = 0;
+	uint32_t bytes_remaining  = bytes_read;
+
+	while(bytes_remaining > 0){
+		uint32_t bytes_in_packet = MIN(USB_CMD_DATA_SIZE, bytes_remaining);
+		UsbCommand c = {CMD_ICLASS_EML_MEMSET, {bytes_sent,bytes_in_packet,0}};
+		memcpy(c.d.asBytes, dump, bytes_in_packet);
+		SendCommand(&c);
+		bytes_remaining -= bytes_in_packet;
+		bytes_sent += bytes_in_packet;
+	}
+	free(dump);
+	PrintAndLog("Sent %d bytes of data to device emulator memory", bytes_sent);
+	return 0;
+}
+
+
 int CmdHFiClass_iso14443A_write(const char *Cmd)
 {
   uint8_t readerType = 0;
@@ -427,7 +499,7 @@ int CmdHFiClass_iso14443A_write(const char *Cmd)
     memcpy(CSN,data,8);
     memcpy(CCNR,data+8,8);
     PrintAndLog("DEBUG: %s",sprint_hex(CSN,8));
-    PrintAndLog("DEBUG: %s",sprint_hex(CCNR,8));
+	PrintAndLog("DEBUG: %s",sprint_hex(CCNR,8));
 	PrintAndLog("isOk:%02x", isOK);
   } else {
 	PrintAndLog("Command execute timeout");
@@ -513,6 +585,7 @@ static command_t CommandTable[] =
 	{"dump",	CmdHFiClassReader_Dump,	0,		"Authenticate and Dump iClass tag"},
 	{"write",	CmdHFiClass_iso14443A_write,	0,	"Authenticate and Write iClass block"},
 	{"loclass",	CmdHFiClass_loclass,	1,	"Use loclass to perform bruteforce of reader attack dump"},
+	{"eload",   CmdHFiClassELoad,    0,     "[experimental] Load data into iclass emulator memory"},
 	{NULL, NULL, 0, NULL}
 };
 
