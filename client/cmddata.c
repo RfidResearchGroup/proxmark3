@@ -333,11 +333,11 @@ int Cmdaskmandemod(const char *Cmd)
     PrintAndLog("     <invert>, 1 for invert output");
     PrintAndLog("     [set maximum allowed errors], default = 100.");
     PrintAndLog("");
-    PrintAndLog("    sample: data askmandemod        = demod an ask/manchester tag from GraphBuffer");
-    PrintAndLog("          : data askmandemod 32     = demod an ask/manchester tag from GraphBuffer using a clock of RF/32");
-    PrintAndLog("          : data askmandemod 32 1   = demod an ask/manchester tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLog("          : data askmandemod 1      = demod an ask/manchester tag from GraphBuffer while inverting data");
-    PrintAndLog("          : data askmandemod 64 1 0 = demod an ask/manchester tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLog("    sample: data rawdemod am        = demod an ask/manchester tag from GraphBuffer");
+    PrintAndLog("          : data rawdemod am 32     = demod an ask/manchester tag from GraphBuffer using a clock of RF/32");
+    PrintAndLog("          : data rawdemod am 32 1   = demod an ask/manchester tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLog("          : data rawdemod am 1      = demod an ask/manchester tag from GraphBuffer while inverting data");
+    PrintAndLog("          : data rawdemod am 64 1 0 = demod an ask/manchester tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
 
     return 0;
   }
@@ -514,13 +514,13 @@ int Cmdaskrawdemod(const char *Cmd)
     PrintAndLog("     [set maximum allowed errors], default = 100");
     PrintAndLog("     <amplify>, 'a' to attempt demod with ask amplification, default = no amp");
     PrintAndLog("");
-    PrintAndLog("    sample: data askrawdemod          = demod an ask tag from GraphBuffer");
-    PrintAndLog("          : data askrawdemod a        = demod an ask tag from GraphBuffer, amplified");
-    PrintAndLog("          : data askrawdemod 32       = demod an ask tag from GraphBuffer using a clock of RF/32");
-    PrintAndLog("          : data askrawdemod 32 1     = demod an ask tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLog("          : data askrawdemod 1        = demod an ask tag from GraphBuffer while inverting data");
-    PrintAndLog("          : data askrawdemod 64 1 0   = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-    PrintAndLog("          : data askrawdemod 64 1 0 a = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
+    PrintAndLog("    sample: data rawdemod ar          = demod an ask tag from GraphBuffer");
+    PrintAndLog("          : data rawdemod ar a        = demod an ask tag from GraphBuffer, amplified");
+    PrintAndLog("          : data rawdemod ar 32       = demod an ask tag from GraphBuffer using a clock of RF/32");
+    PrintAndLog("          : data rawdemod ar 32 1     = demod an ask tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLog("          : data rawdemod ar 1        = demod an ask tag from GraphBuffer while inverting data");
+    PrintAndLog("          : data rawdemod ar 64 1 0   = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLog("          : data rawdemod ar 64 1 0 a = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
     return 0;
   }
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
@@ -830,13 +830,13 @@ int CmdFSKrawdemod(const char *Cmd)
     PrintAndLog("     [fchigh], larger field clock length, omit for autodetect");
     PrintAndLog("     [fclow], small field clock length, omit for autodetect");
     PrintAndLog("");
-    PrintAndLog("    sample: data fskrawdemod           = demod an fsk tag from GraphBuffer using autodetect");
-    PrintAndLog("          : data fskrawdemod 32        = demod an fsk tag from GraphBuffer using a clock of RF/32, autodetect fc");
-    PrintAndLog("          : data fskrawdemod 1         = demod an fsk tag from GraphBuffer using autodetect, invert output");   
-    PrintAndLog("          : data fskrawdemod 32 1      = demod an fsk tag from GraphBuffer using a clock of RF/32, invert output, autodetect fc");
-    PrintAndLog("          : data fskrawdemod 64 0 8 5  = demod an fsk1 RF/64 tag from GraphBuffer");
-    PrintAndLog("          : data fskrawdemod 50 0 10 8 = demod an fsk2 RF/50 tag from GraphBuffer");
-    PrintAndLog("          : data fskrawdemod 50 1 10 8 = demod an fsk2a RF/50 tag from GraphBuffer");
+    PrintAndLog("    sample: data rawdemod fs           = demod an fsk tag from GraphBuffer using autodetect");
+    PrintAndLog("          : data rawdemod fs 32        = demod an fsk tag from GraphBuffer using a clock of RF/32, autodetect fc");
+    PrintAndLog("          : data rawdemod fs 1         = demod an fsk tag from GraphBuffer using autodetect, invert output");   
+    PrintAndLog("          : data rawdemod fs 32 1      = demod an fsk tag from GraphBuffer using a clock of RF/32, invert output, autodetect fc");
+    PrintAndLog("          : data rawdemod fs 64 0 8 5  = demod an fsk1 RF/64 tag from GraphBuffer");
+    PrintAndLog("          : data rawdemod fs 50 0 10 8 = demod an fsk2 RF/50 tag from GraphBuffer");
+    PrintAndLog("          : data rawdemod fs 50 1 10 8 = demod an fsk2a RF/50 tag from GraphBuffer");
     return 0;
   }
   //set options from parameters entered with the command
@@ -1937,6 +1937,7 @@ int CmdTuneSamples(const char *Cmd)
 		PrintAndLog("\n");
 		GraphTraceLen = 256;
 		ShowGraphWindow();
+		RepaintGraphWindow();
 	}
 
 	return 0;
