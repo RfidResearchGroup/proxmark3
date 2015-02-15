@@ -129,11 +129,6 @@ int CmdHF14AList(const char *Cmd)
 	return 0;
 }
 
-void iso14a_set_timeout(uint32_t timeout) {
-	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_SET_TIMEOUT, 0, timeout}};
-	SendCommand(&c);
-}
-
 int CmdHF14AReader(const char *Cmd)
 {
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
@@ -346,7 +341,7 @@ int CmdHF14AReader(const char *Cmd)
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK,&resp);
 	uint8_t isOK  = resp.arg[0] & 0xff;
-	PrintAndLog(" Answers to chinese magic backdoor commands: %s", (isOK ? "YES" : "NO") );
+	PrintAndLog("Answers to chinese magic backdoor commands: %s", (isOK ? "YES" : "NO") );
 	
 	// disconnect
 	c.cmd = CMD_READER_ISO_14443a;
@@ -510,12 +505,13 @@ int CmdHF14ACmdRaw(const char *cmd) {
     uint8_t active=0;
     uint8_t active_select=0;
     uint16_t numbits=0;
-	uint16_t timeout=0;
+	uint32_t timeout=0;
 	uint8_t bTimeout=0;
     char buf[5]="";
     int i=0;
     uint8_t data[USB_CMD_DATA_SIZE];
-    unsigned int datalen=0, temp;
+	uint16_t datalen=0;
+	uint32_t temp;
 
     if (strlen(cmd)<2) {
         PrintAndLog("Usage: hf 14a raw [-r] [-c] [-p] [-f] [-b] [-t] <number of bits> <0A 0B 0C ... hex>");
@@ -525,7 +521,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
         PrintAndLog("       -a    active signal field ON without select");
         PrintAndLog("       -s    active signal field ON with select");
         PrintAndLog("       -b    number of bits to send. Useful for send partial byte");
-		PrintAndLog("       -t    timeout");
+		PrintAndLog("       -t    timeout in ms");
         return 0;
     }
 
@@ -561,7 +557,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
 				case 't':
 					bTimeout=1;
 					sscanf(cmd+i+2,"%d",&temp);
-					timeout = temp & 0xFFFF;
+					timeout = temp;
 					i+=3;
 					while(cmd[i]!=' ' && cmd[i]!='\0') { i++; }
 					i+=2;
@@ -610,13 +606,13 @@ int CmdHF14ACmdRaw(const char *cmd) {
             c.arg[0] |= ISO14A_NO_SELECT;
     }
 	if(bTimeout){
-	    #define MAX_TIMEOUT 624*105 // max timeout is 624 ms
+	    #define MAX_TIMEOUT 40542464 	// (2^32-1) * (8*16) / 13560000Hz * 1000ms/s = 
         c.arg[0] |= ISO14A_SET_TIMEOUT;
-        c.arg[2] = timeout * 105; // each bit is about 9.4 us
-        if(c.arg[2]>MAX_TIMEOUT) {
-            c.arg[2] = MAX_TIMEOUT;
-            PrintAndLog("Set timeout to 624 ms. The max we can wait for response");
+        if(timeout > MAX_TIMEOUT) {
+            timeout = MAX_TIMEOUT;
+            PrintAndLog("Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
         }
+        c.arg[2] = 13560000 / 1000 / (8*16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
 	}
     if(power)
         c.arg[0] |= ISO14A_NO_DISCONNECT;

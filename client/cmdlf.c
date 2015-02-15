@@ -414,7 +414,6 @@ int CmdLFSetConfig(const char *Cmd)
 	uint8_t cmdp =0;
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
-		PrintAndLog("working %c", param_getchar(Cmd, cmdp));
 		switch(param_getchar(Cmd, cmdp))
 		{
 		case 'h':

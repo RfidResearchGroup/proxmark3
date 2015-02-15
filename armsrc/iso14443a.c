@@ -20,10 +20,9 @@
 #include "iso14443a.h"
 #include "crapto1.h"
 #include "mifareutil.h"
-
+#include "BigBuf.h"
 static uint32_t iso14a_timeout;
 int rsamples = 0;
-int tracing = TRUE;
 uint8_t trigger = 0;
 // the block number for the ISO14443-4 PCB
 static uint8_t iso14_pcb_blocknum = 0;
@@ -142,24 +141,39 @@ const uint8_t OddByteParity[256] = {
   1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1
 };
 
+
 void iso14a_set_trigger(bool enable) {
 	trigger = enable;
 }
 
-void iso14a_clear_trace() {
-	uint8_t *trace = BigBuf_get_addr();
-	uint16_t max_traceLen = BigBuf_max_traceLen();
-	memset(trace, 0x44, max_traceLen);
-	traceLen = 0;
-}
-
-void iso14a_set_tracing(bool enable) {
-	tracing = enable;
-}
 
 void iso14a_set_timeout(uint32_t timeout) {
 	iso14a_timeout = timeout;
+	if(MF_DBGLEVEL >= 3) Dbprintf("ISO14443A Timeout set to %ld (%dms)", iso14a_timeout, iso14a_timeout / 106);
 }
+
+
+void iso14a_set_ATS_timeout(uint8_t *ats) {
+
+	uint8_t tb1;
+	uint8_t fwi; 
+	uint32_t fwt;
+	
+	if (ats[0] > 1) {							// there is a format byte T0
+		if ((ats[1] & 0x20) == 0x20) {			// there is an interface byte TB(1)
+			if ((ats[1] & 0x10) == 0x10) {		// there is an interface byte TA(1) preceding TB(1)
+				tb1 = ats[3];
+			} else {
+				tb1 = ats[2];
+			}
+			fwi = (tb1 & 0xf0) >> 4;			// frame waiting indicator (FWI)
+			fwt = 256 * 16 * (1 << fwi);		// frame waiting time (FWT) in 1/fc
+			
+			iso14a_set_timeout(fwt/(8*16));
+		}
+	}
+}
+
 
 //-----------------------------------------------------------------------------
 // Generate the parity value for a byte sequence
@@ -197,63 +211,6 @@ void GetParity(const uint8_t *pbtCmd, uint16_t iLen, uint8_t *par)
 void AppendCrc14443a(uint8_t* data, int len)
 {
 	ComputeCrc14443(CRC_14443_A,data,len,data+len,data+len+1);
-}
-
-// The function LogTrace() is also used by the iClass implementation in iClass.c
-bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag)
-{
-	if (!tracing) return FALSE;
-	
-	uint8_t *trace = BigBuf_get_addr();
-	uint16_t num_paritybytes = (iLen-1)/8 + 1;	// number of valid paritybytes in *parity
-	uint16_t duration = timestamp_end - timestamp_start;
-
-	// Return when trace is full
-	uint16_t max_traceLen = BigBuf_max_traceLen();
-	if (traceLen + sizeof(iLen) + sizeof(timestamp_start) + sizeof(duration) + num_paritybytes + iLen >= max_traceLen) {
-		tracing = FALSE;	// don't trace any more
-		return FALSE;
-	}
-	
-	// Traceformat:
-	// 32 bits timestamp (little endian)
-	// 16 bits duration (little endian)
-	// 16 bits data length (little endian, Highest Bit used as readerToTag flag)
-	// y Bytes data
-	// x Bytes parity (one byte per 8 bytes data)
-	
-	// timestamp (start)
-	trace[traceLen++] = ((timestamp_start >> 0) & 0xff);
-	trace[traceLen++] = ((timestamp_start >> 8) & 0xff);
-	trace[traceLen++] = ((timestamp_start >> 16) & 0xff);
-	trace[traceLen++] = ((timestamp_start >> 24) & 0xff);
-	
-	// duration
-	trace[traceLen++] = ((duration >> 0) & 0xff);
-	trace[traceLen++] = ((duration >> 8) & 0xff);
-
-	// data length
-	trace[traceLen++] = ((iLen >> 0) & 0xff);
-	trace[traceLen++] = ((iLen >> 8) & 0xff);
-
-	// readerToTag flag
-	if (!readerToTag) {
-		trace[traceLen - 1] |= 0x80;
-	}
-
-	// data bytes
-	if (btBytes != NULL && iLen != 0) {
-		memcpy(trace + traceLen, btBytes, iLen);
-	}
-	traceLen += iLen;
-
-	// parity bytes
-	if (parity != NULL && iLen != 0) {
-		memcpy(trace + traceLen, parity, num_paritybytes);
-	}
-	traceLen += num_paritybytes;
-
-	return TRUE;
 }
 
 //=============================================================================
@@ -616,8 +573,8 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 	uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
 
 	// init trace buffer
-	iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
+	clear_trace();
+	set_tracing(TRUE);
 
 	uint8_t *data = dmaBuf;
 	uint8_t previous_data = 0;
@@ -741,7 +698,7 @@ void RAMFUNC SnoopIso14443a(uint8_t param) {
 
 	FpgaDisableSscDma();
 	Dbprintf("maxDataLen=%d, Uart.state=%x, Uart.len=%d", maxDataLen, Uart.state, Uart.len);
-	Dbprintf("traceLen=%d, Uart.output[0]=%08x", traceLen, (uint32_t)Uart.output[0]);
+	Dbprintf("traceLen=%d, Uart.output[0]=%08x", BigBuf_get_traceLen(), (uint32_t)Uart.output[0]);
 	LEDsoff();
 }
 
@@ -1077,8 +1034,8 @@ void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data)
 	free_buffer_pointer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
 
 	// clear trace
-    iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
+	clear_trace();
+	set_tracing(TRUE);
 
 	// Prepare the responses of the anticollision phase
 	// there will be not enough time to do this at the moment the reader sends it REQA
@@ -1667,7 +1624,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
 			if(ManchesterDecoding(b, offset, 0)) {
 				NextTransferTime = MAX(NextTransferTime, Demod.endTime - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/16 + FRAME_DELAY_TIME_PICC_TO_PCD);
 				return TRUE;
-			} else if (c++ > iso14a_timeout) {
+			} else if (c++ > iso14a_timeout && Demod.state == DEMOD_UNSYNCD) {
 				return FALSE; 
 			}
 		}
@@ -1865,6 +1822,10 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 
 	// reset the PCB block number
 	iso14_pcb_blocknum = 0;
+
+	// set default timeout based on ATS
+	iso14a_set_ATS_timeout(resp);
+
 	return 1;	
 }
 
@@ -1936,10 +1897,10 @@ void ReaderIso14443a(UsbCommand *c)
 	uint8_t par[MAX_PARITY_SIZE];
   
 	if(param & ISO14A_CONNECT) {
-		iso14a_clear_trace();
+		clear_trace();
 	}
 
-	iso14a_set_tracing(TRUE);
+	set_tracing(TRUE);
 
 	if(param & ISO14A_REQUEST_TRIGGER) {
 		iso14a_set_trigger(TRUE);
@@ -2035,8 +1996,8 @@ void ReaderMifare(bool first_try)
 	// free eventually allocated BigBuf memory. We want all for tracing.
 	BigBuf_free();
 	
-	iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
+	clear_trace();
+	set_tracing(TRUE);
 
 	byte_t nt_diff = 0;
 	uint8_t par[1] = {0};	// maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
@@ -2209,7 +2170,7 @@ void ReaderMifare(bool first_try)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 
-	iso14a_set_tracing(FALSE);
+	set_tracing(FALSE);
 }
 
 /**
@@ -2268,8 +2229,8 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	BigBuf_free_keep_EM();
 
 	// clear trace
-    iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
+	clear_trace();
+	set_tracing(TRUE);
 
 	// Authenticate response - nonce
 	uint32_t nonce = bytes_to_num(rAUTH_NT, 4);
@@ -2714,7 +2675,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 			}
 		}
 	}
-	if (MF_DBGLEVEL >= 1)	Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ",	tracing, traceLen);
+	if (MF_DBGLEVEL >= 1)	Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ",	tracing, BigBuf_get_traceLen());
 	
 }
 
@@ -2732,8 +2693,8 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// C(red) A(yellow) B(green)
 	LEDsoff();
 	// init trace buffer
-	iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
+	clear_trace();
+	set_tracing(TRUE);
 
 	// The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.

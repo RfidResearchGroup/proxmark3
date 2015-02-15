@@ -13,7 +13,7 @@
 
 #include "lfsampling.h"
 
-sample_config config = { 1, 8, 1, 88, 0 } ;
+sample_config config = { 1, 8, 1, 95, 0 } ;
 
 void printConfig()
 {

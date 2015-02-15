@@ -570,7 +570,7 @@ assign pwr_oe3 = 1'b0;
 // TAGSIM_MOD: short circuit antenna with different resistances (modulated by sub_carrier modulated by mod_sig_coil)
 // for pwr_oe4 = 1 (tristate): antenna load = 10k || 33			= 32,9 Ohms
 // for pwr_oe4 = 0 (active):   antenna load = 10k || 33 || 33  	= 16,5 Ohms
-assign pwr_oe4 = ~(mod_sig_coil & sub_carrier & (mod_type == `TAGSIM_MOD));
+assign pwr_oe4 = mod_sig_coil & sub_carrier & (mod_type == `TAGSIM_MOD);
 
 // This is all LF, so doesn't matter.
 assign pwr_oe2 = 1'b0;
