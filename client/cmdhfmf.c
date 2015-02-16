@@ -1499,7 +1499,7 @@ int CmdHF14AMfCSetUID(const char *Cmd)
 
 int CmdHF14AMfCSetBlk(const char *Cmd)
 {
-	uint8_t uid[8] = {0x00};
+	//uint8_t uid[8] = {0x00};
 	uint8_t memBlock[16] = {0x00};
 	uint8_t blockNo = 0;
 	int res;
@@ -1521,7 +1521,8 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 
 	PrintAndLog("--block number:%2d data:%s", blockNo, sprint_hex(memBlock, 16));
 
-	res = mfCSetBlock(blockNo, memBlock, uid, 0, CSETBLOCK_SINGLE_OPER);
+	//res = mfCSetBlock(blockNo, memBlock, uid, 0, CSETBLOCK_SINGLE_OPER);
+	res = mfCSetBlock(blockNo, memBlock, NULL, 0, CSETBLOCK_SINGLE_OPER);
 	if (res) {
 			PrintAndLog("Can't write block. error=%d", res);
 			return 1;
