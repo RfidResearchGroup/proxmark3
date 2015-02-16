@@ -1286,9 +1286,10 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
 #define max(x,y) ( x<y ? y:x)
 
 int DemodPCF7931(uint8_t **outBlocks) {
-    uint8_t BitStream[256];
-    uint8_t Blocks[8][16];
-    uint8_t *GraphBuffer = BigBuf_get_addr();
+
+    uint8_t BitStream[256] = {0x00};
+	uint8_t Blocks[8][16] = [0x00};
+    uint8_t *dest = BigBuf_get_addr();
     int GraphTraceLen = BigBuf_max_traceLen();
     int i, j, lastval, bitidx, half_switch;
     int clock = 64;
@@ -1300,8 +1301,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
     uint8_t dir;
 
 	LFSetupFPGAForADC(95, true);
-	DoAcquisition_default(0, 0);
-
+	DoAcquisition_default(0, true);
 
     lmin = 64;
     lmax = 192;
@@ -1309,9 +1309,9 @@ int DemodPCF7931(uint8_t **outBlocks) {
     i = 2;
 
     /* Find first local max/min */
-    if(GraphBuffer[1] > GraphBuffer[0]) {
+    if(dest[1] > dest[0]) {
         while(i < GraphTraceLen) {
-            if( !(GraphBuffer[i] > GraphBuffer[i-1]) && GraphBuffer[i] > lmax)
+            if( !(dest[i] > dest[i-1]) && dest[i] > lmax)
                 break;
             i++;
         }
@@ -1319,7 +1319,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
     }
     else {
         while(i < GraphTraceLen) {
-            if( !(GraphBuffer[i] < GraphBuffer[i-1]) && GraphBuffer[i] < lmin)
+            if( !(dest[i] < dest[i-1]) && v[i] < lmin)
                 break;
             i++;
         }
@@ -1333,7 +1333,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
 
     for (bitidx = 0; i < GraphTraceLen; i++)
     {
-        if ( (GraphBuffer[i-1] > GraphBuffer[i] && dir == 1 && GraphBuffer[i] > lmax) || (GraphBuffer[i-1] < GraphBuffer[i] && dir == 0 && GraphBuffer[i] < lmin))
+        if ( (dest[i-1] > dest[i] && dir == 1 && dest[i] > lmax) || (dest[i-1] < dest[i] && dir == 0 && dest[i] < lmin))
         {
             lc = i - lastval;
             lastval = i;
@@ -1400,7 +1400,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
             }
             if(i < GraphTraceLen)
             {
-                if (GraphBuffer[i-1] > GraphBuffer[i]) dir=0;
+                if (dest[i-1] > dest[i]) dir=0;
                 else dir = 1;
             }
         }
