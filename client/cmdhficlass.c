@@ -451,11 +451,12 @@ int usage_hf_iclass_decrypt()
 {
 	PrintAndLog("Usage: hf iclass decrypt f <tagdump> o ");
 	PrintAndLog("");
-	PrintAndLog("In order to use this function, the file 'iclass_decryptionkey.bin must reside");
+	PrintAndLog("OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
 	PrintAndLog("in the working directory. The file should be 16 bytes binary data");
+	PrintAndLog("");
 	PrintAndLog("example: hf iclass decrypt tagdump_12312342343.bin");
 	PrintAndLog("");
-	PrintAndLog("OBS! This is pretty stupid implementation, it tries to decrypt every block after block 5. ");
+	PrintAndLog("OBS! This is pretty stupid implementation, it tries to decrypt every block after block 6. ");
 	PrintAndLog("Correct behaviour would be to decrypt only the application areas where the key is valid,");
 	PrintAndLog("which is defined by the configuration block.");
 	return 1;
@@ -527,7 +528,7 @@ int CmdHFiClassDecrypt(const char *Cmd)
 	size_t blocknum =0;
 	while(bytes_read == 8)
 	{
-		if(blocknum < 6)
+		if(blocknum < 7)
 		{
 			memcpy(decrypted+(blocknum*8), enc_dump, 8);
 		}else{
