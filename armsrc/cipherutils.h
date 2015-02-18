@@ -36,32 +36,41 @@
  * 
  ****************************************************************************/
 
-#ifndef FILEUTILS_H
-#define FILEUTILS_H
 
+#ifndef CIPHERUTILS_H
+#define CIPHERUTILS_H
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdlib.h>
+
+typedef struct {
+	uint8_t * buffer;
+	uint8_t numbits;
+	uint8_t position;
+} BitstreamIn;
+
+typedef struct {
+	uint8_t * buffer;
+	uint8_t numbits;
+	uint8_t position;
+}BitstreamOut;
+
+bool headBit( BitstreamIn *stream);
+bool tailBit( BitstreamIn *stream);
+void pushBit( BitstreamOut *stream, bool bit);
+int bitsLeft( BitstreamIn *stream);
 #ifndef ON_DEVICE
-
-/**
- * @brief Utility function to save data to a file. This method takes a preferred name, but if that
- * file already exists, it tries with another name until it finds something suitable.
- * E.g. dumpdata-15.txt
- * @param preferredName
- * @param suffix the file suffix. Leave out the ".".
- * @param data The binary data to write to the file
- * @param datalen the length of the data
- * @return 0 for ok, 1 for failz
- */
-int saveFile(const char *preferredName, const char *suffix, const void* data, size_t datalen);
-
-int fileExists(const char *filename);
-#endif //ON_DEVICE
-
-/**
- * Utility function to print to console. This is used consistently within the library instead
- * of printf, but it actually only calls printf. The reason to have this method is to
- *make it simple to plug this library into proxmark, which has this function already to
- * write also to a logfile. When doing so, just point this function to use PrintAndLog
- * @param fmt
- */
-void prnlog(char *fmt, ...);
-#endif // FILEUTILS_H
+int testCipherUtils(void);
+int testMAC();
+void printarr(char * name, uint8_t* arr, int len);
+void printvar(char * name, uint8_t* arr, int len);
+void printarr_human_readable(char * title, uint8_t* arr, int len);
+#endif
+void push6bits( BitstreamOut* stream, uint8_t bits);
+void EncryptDES(bool key[56], bool outBlk[64], bool inBlk[64], int verbose) ;
+void x_num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
+uint64_t x_bytes_to_num(uint8_t* src, size_t len);
+uint8_t reversebytes(uint8_t b);
+void reverse_arraybytes(uint8_t* arr, size_t len);
+void reverse_arraycopy(uint8_t* arr, uint8_t* dest, size_t len);
+#endif // CIPHERUTILS_H

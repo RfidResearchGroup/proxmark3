@@ -364,6 +364,8 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 					snprintf(filename, 100,"iclass_tagdump-%02x%02x%02x%02x%02x%02x%02x%02x",
 							 CSN[0],CSN[1],CSN[2],CSN[3],
 							CSN[4],CSN[5],CSN[6],CSN[7]);
+					//Place the div_key in block 3
+					memcpy(iclass_data+(3*8), div_key, 8);
 					saveFile(filename,"bin",iclass_data, iclass_datalen );
 				}
 				//Aaaand we're finished
