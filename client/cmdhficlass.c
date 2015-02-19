@@ -29,6 +29,7 @@
 #include "loclass/ikeys.h"
 #include "loclass/elite_crack.h"
 #include "loclass/fileutils.h"
+#include "protocols.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -75,10 +76,9 @@ int CmdHFiClassSim(const char *Cmd)
 	uint8_t CSN[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 	if (strlen(Cmd)<1) {
-		usage_hf_iclass_sim();
+		return usage_hf_iclass_sim();
 	}
-
-	simType = param_get8(Cmd, 0);
+	simType = param_get8ex(Cmd, 0, 0, 10);
 
 	if(simType == 0)
 	{
@@ -322,7 +322,7 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 	PrintAndLog("Hash0, a.k.a diversified key, that is computed using Ksel and stored in the card (Block 3):");
 	printvar("Div key", div_key, 8);
 	printvar("CC_NR:",CCNR,12);
-	doMAC(CCNR,12,div_key, MAC);
+	doMAC(CCNR,div_key, MAC);
 	printvar("MAC", MAC, 4);
 
 	uint8_t iclass_data[32000] = {0};
@@ -421,9 +421,12 @@ int CmdHFiClassELoad(const char *Cmd)
 	fseek(f, 0, SEEK_SET);
 
 	uint8_t *dump = malloc(fsize);
+
+
 	size_t bytes_read = fread(dump, 1, fsize, f);
 	fclose(f);
 
+	printIclassDumpInfo(dump);
 	//Validate
 
 	if (bytes_read < fsize)
@@ -456,7 +459,7 @@ int usage_hf_iclass_decrypt()
 	PrintAndLog("OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
 	PrintAndLog("in the working directory. The file should be 16 bytes binary data");
 	PrintAndLog("");
-	PrintAndLog("example: hf iclass decrypt tagdump_12312342343.bin");
+	PrintAndLog("example: hf iclass decrypt f tagdump_12312342343.bin");
 	PrintAndLog("");
 	PrintAndLog("OBS! This is pretty stupid implementation, it tries to decrypt every block after block 6. ");
 	PrintAndLog("Correct behaviour would be to decrypt only the application areas where the key is valid,");
@@ -604,7 +607,7 @@ int CmdHFiClass_iso14443A_write(const char *Cmd)
 	diversifyKey(CSN,KEY, div_key);
 
 	PrintAndLog("Div Key: %s",sprint_hex(div_key,8));
-	doMAC(CCNR, 12,div_key, MAC);
+	doMAC(CCNR, div_key, MAC);
 
 	UsbCommand c2 = {CMD_ICLASS_ISO14443A_WRITE, {readerType,blockNo}};
 	memcpy(c2.d.asBytes, bldata, 8);

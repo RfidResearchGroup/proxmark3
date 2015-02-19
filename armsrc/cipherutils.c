@@ -39,8 +39,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "fileutils.h"
 #include "cipherutils.h"
+#ifndef ON_DEVICE
+#include "fileutils.h"
+#endif
 /**
  *
  * @brief Return and remove the first bit (x0) in the stream : <x0 x1 x2 x3 ... xn >

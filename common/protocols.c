@@ -1,7 +1,14 @@
 #include <stdio.h>
 #include <strings.h>
+#include <string.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include "protocols.h"
+#ifndef ON_DEVICE
+#include "ui.h"
+#define prnt PrintAndLog
+#endif
+
 
 
 typedef struct {
@@ -25,17 +32,9 @@ typedef struct {
 
 }picopass_hdr;
 
-#define FUSE_FPERS   0x80
-#define FUSE_CODING1 0x40
-#define FUSE_CODING0 0x20
-#define FUSE_CRYPT1  0x10
-#define FUSE_CRYPT0  0x08
-#define FUSE_FPROD1  0x04
-#define FUSE_FPROD0  0x02
-#define FUSE_RA      0x01
 
 //#define prnt printf
-void prnt(char *fmt,...)
+/*void prnt(char *fmt,...)
 {
 	va_list argptr;
 	va_start(argptr, fmt);
@@ -44,7 +43,7 @@ void prnt(char *fmt,...)
 	va_end(argptr);
 	printf("\n");
 }
-
+*/
 uint8_t isset(uint8_t val, uint8_t mask)
 {
 	return (val & mask);
@@ -95,6 +94,14 @@ void print_picopass_info(const picopass_hdr *hdr)
 	mem_config(hdr);
 	applimit_config(hdr);
 }
+void printIclassDumpInfo(uint8_t* iclass_dump)
+{
+//	picopass_hdr hdr;
+//	memcpy(&hdr, iclass_dump, sizeof(picopass_hdr));
+	print_picopass_info((picopass_hdr *) iclass_dump);
+}
+
+/*
 void test()
 {
 	picopass_hdr hdr = {0x27,0xaf,0x48,0x01,0xf9,0xff,0x12,0xe0,0x12,0xff,0xff,0xff,0x7f,0x1f,0xff,0x3c};
@@ -106,3 +113,4 @@ int main(int argc, char *argv[])
 	test();
 	return 0;
 }
+*/

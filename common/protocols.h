@@ -170,5 +170,17 @@ NXP/Philips CUSTOM COMMANDS
 #define ICLASS     1
 #define ISO_14443B 2
 
+//-- Picopass fuses
+#define FUSE_FPERS   0x80
+#define FUSE_CODING1 0x40
+#define FUSE_CODING0 0x20
+#define FUSE_CRYPT1  0x10
+#define FUSE_CRYPT0  0x08
+#define FUSE_FPROD1  0x04
+#define FUSE_FPROD0  0x02
+#define FUSE_RA      0x01
+
+
+void printIclassDumpInfo(uint8_t* iclass_dump);
 
 #endif // PROTOCOLS_H
