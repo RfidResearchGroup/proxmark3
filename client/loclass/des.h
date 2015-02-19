@@ -78,6 +78,25 @@ typedef struct
 	uint32_t sk[96];            /*!<  3DES subkeys      */
 }
 des3_context;
+/*
+ * Triple-DES key schedule (112-bit, encryption)
+ */
+int des3_set2key_enc( des3_context *ctx, const unsigned char key[DES_KEY_SIZE * 2] );
+
+/*
+ * Triple-DES key schedule (112-bit, decryption)
+ */
+int des3_set2key_dec( des3_context *ctx, const unsigned char key[DES_KEY_SIZE * 2] );
+
+/*
+ * Triple-DES key schedule (168-bit, encryption)
+ */
+int des3_set3key_enc( des3_context *ctx, const unsigned char key[DES_KEY_SIZE * 3] );
+
+/*
+ * Triple-DES key schedule (168-bit, decryption)
+ */
+int des3_set3key_dec( des3_context *ctx, const unsigned char key[DES_KEY_SIZE * 3] );
 
 /**
  * \brief          Set key parity on the given key to odd.

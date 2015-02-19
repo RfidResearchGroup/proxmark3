@@ -39,8 +39,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "fileutils.h"
 #include "cipherutils.h"
+#ifndef ON_DEVICE
+#include "fileutils.h"
+#endif
 /**
  *
  * @brief Return and remove the first bit (x0) in the stream : <x0 x1 x2 x3 ... xn >
@@ -155,7 +157,7 @@ void reverse_arraycopy(uint8_t* arr, uint8_t* dest, size_t len)
 		dest[i] = reversebytes(arr[i]);
 	}
 }
-
+#ifndef ON_DEVICE
 void printarr(char * name, uint8_t* arr, int len)
 {
 	int cx;
@@ -209,7 +211,7 @@ void printarr_human_readable(char * title, uint8_t* arr, int len)
 	prnlog(output);
 	free(output);
 }
-
+#endif
 //-----------------------------
 // Code for testing below
 //-----------------------------

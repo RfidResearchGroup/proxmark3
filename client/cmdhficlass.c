@@ -29,6 +29,7 @@
 #include "loclass/ikeys.h"
 #include "loclass/elite_crack.h"
 #include "loclass/fileutils.h"
+#include "protocols.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -53,6 +54,21 @@ int CmdHFiClassSnoop(const char *Cmd)
 	SendCommand(&c);
 	return 0;
 }
+int usage_hf_iclass_sim()
+{
+	PrintAndLog("Usage:  hf iclass sim <option> [CSN]");
+	PrintAndLog("        options");
+	PrintAndLog("                0 <CSN> simulate the given CSN");
+	PrintAndLog("                1       simulate default CSN");
+	PrintAndLog("                2       Reader-attack, gather reader responses to extract elite key");
+	PrintAndLog("                3       Full simulation using emulator memory (see 'hf iclass eload')");
+	PrintAndLog("        example: hf iclass sim 0 031FEC8AF7FF12E0");
+	PrintAndLog("        example: hf iclass sim 2");
+	PrintAndLog("        example: hf iclass eload 'tagdump.bin'");
+	PrintAndLog("                 hf iclass sim 3");
+	return 0;
+}
+
 #define NUM_CSNS 15
 int CmdHFiClassSim(const char *Cmd)
 {
@@ -60,49 +76,30 @@ int CmdHFiClassSim(const char *Cmd)
 	uint8_t CSN[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 	if (strlen(Cmd)<1) {
-		PrintAndLog("Usage:  hf iclass sim [0 <CSN>] | x");
-		PrintAndLog("        options");
-		PrintAndLog("                0 <CSN> simulate the given CSN");
-		PrintAndLog("                1       simulate default CSN");
-		PrintAndLog("                2       iterate CSNs, gather MACs");
-		PrintAndLog("        sample: hf iclass sim 0 031FEC8AF7FF12E0");
-		PrintAndLog("        sample: hf iclass sim 2");
-		return 0;
+		return usage_hf_iclass_sim();
 	}
-
-	simType = param_get8(Cmd, 0);
+	simType = param_get8ex(Cmd, 0, 0, 10);
 
 	if(simType == 0)
 	{
 		if (param_gethex(Cmd, 1, CSN, 16)) {
 			PrintAndLog("A CSN should consist of 16 HEX symbols");
-			return 1;
+			return usage_hf_iclass_sim();
 		}
-		PrintAndLog("--simtype:%02x csn:%s", simType, sprint_hex(CSN, 8));
 
+		PrintAndLog("--simtype:%02x csn:%s", simType, sprint_hex(CSN, 8));
 	}
-	if(simType > 2)
+	if(simType > 3)
 	{
 		PrintAndLog("Undefined simptype %d", simType);
-		return 1;
+		return usage_hf_iclass_sim();
 	}
-	uint8_t numberOfCSNs=0;
 
+	uint8_t numberOfCSNs=0;
 	if(simType == 2)
 	{
 		UsbCommand c = {CMD_SIMULATE_TAG_ICLASS, {simType,NUM_CSNS}};
 		UsbCommand resp = {0};
-
-		/*uint8_t csns[8 * NUM_CSNS] = {
-			 0x00,0x0B,0x0F,0xFF,0xF7,0xFF,0x12,0xE0 ,
-			 0x00,0x13,0x94,0x7e,0x76,0xff,0x12,0xe0 ,
-			 0x2a,0x99,0xac,0x79,0xec,0xff,0x12,0xe0 ,
-			 0x17,0x12,0x01,0xfd,0xf7,0xff,0x12,0xe0 ,
-			 0xcd,0x56,0x01,0x7c,0x6f,0xff,0x12,0xe0 ,
-			 0x4b,0x5e,0x0b,0x72,0xef,0xff,0x12,0xe0 ,
-			 0x00,0x73,0xd8,0x75,0x58,0xff,0x12,0xe0 ,
-			 0x0c,0x90,0x32,0xf3,0x5d,0xff,0x12,0xe0 };
-*/
 
 		uint8_t csns[8*NUM_CSNS] = {
 			0x00, 0x0B, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
@@ -325,7 +322,7 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 	PrintAndLog("Hash0, a.k.a diversified key, that is computed using Ksel and stored in the card (Block 3):");
 	printvar("Div key", div_key, 8);
 	printvar("CC_NR:",CCNR,12);
-	doMAC(CCNR,12,div_key, MAC);
+	doMAC(CCNR,div_key, MAC);
 	printvar("MAC", MAC, 4);
 
 	uint8_t iclass_data[32000] = {0};
@@ -367,6 +364,8 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 					snprintf(filename, 100,"iclass_tagdump-%02x%02x%02x%02x%02x%02x%02x%02x",
 							 CSN[0],CSN[1],CSN[2],CSN[3],
 							CSN[4],CSN[5],CSN[6],CSN[7]);
+					//Place the div_key in block 3
+					memcpy(iclass_data+(3*8), div_key, 8);
 					saveFile(filename,"bin",iclass_data, iclass_datalen );
 				}
 				//Aaaand we're finished
@@ -422,9 +421,12 @@ int CmdHFiClassELoad(const char *Cmd)
 	fseek(f, 0, SEEK_SET);
 
 	uint8_t *dump = malloc(fsize);
+
+
 	size_t bytes_read = fread(dump, 1, fsize, f);
 	fclose(f);
 
+	printIclassDumpInfo(dump);
 	//Validate
 
 	if (bytes_read < fsize)
@@ -450,6 +452,103 @@ int CmdHFiClassELoad(const char *Cmd)
 	return 0;
 }
 
+int usage_hf_iclass_decrypt()
+{
+	PrintAndLog("Usage: hf iclass decrypt f <tagdump> o ");
+	PrintAndLog("");
+	PrintAndLog("OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
+	PrintAndLog("in the working directory. The file should be 16 bytes binary data");
+	PrintAndLog("");
+	PrintAndLog("example: hf iclass decrypt f tagdump_12312342343.bin");
+	PrintAndLog("");
+	PrintAndLog("OBS! This is pretty stupid implementation, it tries to decrypt every block after block 6. ");
+	PrintAndLog("Correct behaviour would be to decrypt only the application areas where the key is valid,");
+	PrintAndLog("which is defined by the configuration block.");
+	return 1;
+}
+
+int readKeyfile(const char *filename, size_t len, uint8_t* buffer)
+{
+	FILE *f = fopen(filename, "rb");
+	if(!f) {
+		PrintAndLog("Failed to read from file '%s'", filename);
+		return 1;
+	}
+	fseek(f, 0, SEEK_END);
+	long fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	size_t bytes_read = fread(buffer, 1, len, f);
+	fclose(f);
+	if(fsize != len)
+	{
+		PrintAndLog("Warning, file size is %d, expected %d", fsize, len);
+		return 1;
+	}
+	if(bytes_read != len)
+	{
+		PrintAndLog("Warning, could only read %d bytes, expected %d" ,bytes_read, len);
+		return 1;
+	}
+	return 0;
+}
+
+int CmdHFiClassDecrypt(const char *Cmd)
+{
+	uint8_t key[16] = { 0 };
+	if(readKeyfile("iclass_decryptionkey.bin", 16, key))
+	{
+		usage_hf_iclass_decrypt();
+		return 1;
+	}
+	PrintAndLog("Decryption file found... ");
+	char opt = param_getchar(Cmd, 0);
+	if (strlen(Cmd)<1 || opt == 'h')
+		return usage_hf_iclass_decrypt();
+
+	//Open the tagdump-file
+	FILE *f;
+	char filename[FILE_PATH_SIZE];
+	if(opt == 'f' && param_getstr(Cmd, 1, filename) > 0)
+	{
+		f = fopen(filename, "rb");
+	}else{
+		return usage_hf_iclass_decrypt();
+	}
+
+	fseek(f, 0, SEEK_END);
+	long fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	uint8_t enc_dump[8] = {0};
+	uint8_t *decrypted = malloc(fsize);
+	des3_context ctx = { DES_DECRYPT ,{ 0 } };
+	des3_set2key_dec( &ctx, key);
+	size_t bytes_read = fread(enc_dump, 1, 8, f);
+
+	//Use the first block (CSN) for filename
+	char outfilename[FILE_PATH_SIZE] = { 0 };
+	snprintf(outfilename,FILE_PATH_SIZE,"iclass_tagdump-%02x%02x%02x%02x%02x%02x%02x%02x-decrypted",
+			 enc_dump[0],enc_dump[1],enc_dump[2],enc_dump[3],
+			 enc_dump[4],enc_dump[5],enc_dump[6],enc_dump[7]);
+
+	size_t blocknum =0;
+	while(bytes_read == 8)
+	{
+		if(blocknum < 7)
+		{
+			memcpy(decrypted+(blocknum*8), enc_dump, 8);
+		}else{
+			des3_crypt_ecb(&ctx, enc_dump,decrypted +(blocknum*8) );
+		}
+		printvar("decrypted block", decrypted +(blocknum*8), 8);
+		bytes_read = fread(enc_dump, 1, 8, f);
+		blocknum++;
+	}
+	fclose(f);
+
+	saveFile(outfilename,"bin", decrypted, blocknum*8);
+
+	return 0;
+}
 
 int CmdHFiClass_iso14443A_write(const char *Cmd)
 {
@@ -508,7 +607,7 @@ int CmdHFiClass_iso14443A_write(const char *Cmd)
 	diversifyKey(CSN,KEY, div_key);
 
 	PrintAndLog("Div Key: %s",sprint_hex(div_key,8));
-	doMAC(CCNR, 12,div_key, MAC);
+	doMAC(CCNR, div_key, MAC);
 
 	UsbCommand c2 = {CMD_ICLASS_ISO14443A_WRITE, {readerType,blockNo}};
 	memcpy(c2.d.asBytes, bldata, 8);
@@ -586,6 +685,7 @@ static command_t CommandTable[] =
 //	{"write",	CmdHFiClass_iso14443A_write,	0,	"Authenticate and Write iClass block"},
 	{"loclass",	CmdHFiClass_loclass,	1,	"Use loclass to perform bruteforce of reader attack dump"},
 	{"eload",   CmdHFiClassELoad,    0,     "[experimental] Load data into iclass emulator memory"},
+	{"decrypt", CmdHFiClassDecrypt,  1,     "Decrypt tagdump" },
 	{NULL, NULL, 0, NULL}
 };
 

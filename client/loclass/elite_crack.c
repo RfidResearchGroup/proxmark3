@@ -394,7 +394,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[])
 		//Diversify
 		diversifyKey(item.csn, key_sel_p, div_key);
 		//Calc mac
-        doMAC(item.cc_nr,12, div_key,calculated_MAC);
+		doMAC(item.cc_nr, div_key,calculated_MAC);
 
 		if(memcmp(calculated_MAC, item.mac, 4) == 0)
 		{

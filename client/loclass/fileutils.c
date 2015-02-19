@@ -35,6 +35,7 @@
  * 
  * 
  ****************************************************************************/
+#ifndef ON_DEVICE
 
 #include <stdio.h>
 #include <string.h>
@@ -108,3 +109,10 @@ void prnlog(char *fmt, ...)
 	PrintAndLog(buffer);
 
 }
+#else //if we're on ARM
+void prnlog(char *fmt,...)
+{
+	return;
+}
+
+#endif

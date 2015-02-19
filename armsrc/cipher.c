@@ -219,7 +219,7 @@ void MAC(uint8_t* k, BitstreamIn input, BitstreamOut out)
 	BitstreamIn input_32_zeroes = {zeroes_32,sizeof(zeroes_32)*8,0};
 	State initState = suc(k,init(k),&input);
 	output(k,initState,&input_32_zeroes,&out);
-}	 
+}
 
 void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4])
 {
@@ -229,15 +229,15 @@ void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4])
 
 	memcpy(cc_nr,cc_nr_p,12);
     memcpy(div_key,div_key_p,8);
-    
+
 	reverse_arraybytes(cc_nr,12);
 	BitstreamIn bitstream = {cc_nr,12 * 8,0};
-	uint8_t dest []= {0,0,0,0,0,0,0,0};
-	BitstreamOut out = { dest, sizeof(dest)*8, 0 };
-	MAC(div_key,bitstream, out);
-	//The output MAC must also be reversed
-	reverse_arraybytes(dest, sizeof(dest));
-	memcpy(mac,dest,4);
+    uint8_t dest []= {0,0,0,0,0,0,0,0};
+    BitstreamOut out = { dest, sizeof(dest)*8, 0 };
+    MAC(div_key,bitstream, out);
+    //The output MAC must also be reversed
+    reverse_arraybytes(dest, sizeof(dest));
+    memcpy(mac, dest, 4);
 	//free(cc_nr);
     return;
 }
@@ -264,8 +264,8 @@ int testMAC()
 		prnlog("[+] FAILED: MAC calculation failed:");
 		printarr("    Calculated_MAC", calculated_mac, 4);
 		printarr("    Correct_MAC   ", correct_MAC, 4);
-	return 1;
-}
+		return 1;
+	}
 
 	return 0;
 }
