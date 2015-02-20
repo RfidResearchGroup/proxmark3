@@ -19,8 +19,6 @@ int CmdIndalaDemod(const char *Cmd);
 int CmdIndalaClone(const char *Cmd);
 int CmdLFRead(const char *Cmd);
 int CmdLFSim(const char *Cmd);
-int CmdLFaskSim(const char *Cmd);
-int CmdLFfskSim(const char *Cmd);
 int CmdLFSimBidir(const char *Cmd);
 int CmdLFSimManchester(const char *Cmd);
 int CmdLFSnoop(const char *Cmd);

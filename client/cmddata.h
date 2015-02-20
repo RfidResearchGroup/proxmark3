@@ -14,8 +14,7 @@
 command_t * CmdDataCommands();
 
 int CmdData(const char *Cmd);
-void printDemodBuff(void);
-void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx);
+void printDemodBuff();
 int CmdAmp(const char *Cmd);
 int Cmdaskdemod(const char *Cmd);
 int CmdAskEM410xDemod(const char *Cmd);

@@ -49,7 +49,7 @@ int CmdSetDebugMode(const char *Cmd)
 }
 
 //by marshmellow
-void printDemodBuff(void)
+void printDemodBuff()
 {
 	uint32_t i = 0;
 	int bitLen = DemodBufferLen;
@@ -221,7 +221,7 @@ void printBitStream(uint8_t BitStream[], uint32_t bitLen)
 	return;
 }
 //by marshmellow
-//print 64 bit EM410x ID in multiple formats
+//print EM410x ID in multiple formats
 void printEM410x(uint64_t id)
 {
   if (id !=0){
@@ -311,7 +311,6 @@ int CmdAskEM410xDemod(const char *Cmd)
       printDemodBuff();
     }
     PrintAndLog("EM410x pattern found: ");
-    if (BitLen > 64) PrintAndLog("\nWarning! Length not what is expected - Length: %d bits\n",BitLen);
     printEM410x(lo);
     return 1;
   }
@@ -1008,12 +1007,9 @@ int CmdFSKdemodParadox(const char *Cmd)
   }
   uint32_t fc = ((hi & 0x3)<<6) | (lo>>26);
   uint32_t cardnum = (lo>>10)&0xFFFF;
-  uint32_t rawLo = bytebits_to_byte(BitStream+idx+64,32);
-  uint32_t rawHi = bytebits_to_byte(BitStream+idx+32,32);
-  uint32_t rawHi2 = bytebits_to_byte(BitStream+idx,32);
-
-  PrintAndLog("Paradox TAG ID: %x%08x - FC: %d - Card: %d - Checksum: %02x - RAW: %08x%08x%08x",
-    hi>>10, (hi & 0x3)<<26 | (lo>>10), fc, cardnum, (lo>>2) & 0xFF, rawHi2, rawHi, rawLo);
+  
+  PrintAndLog("Paradox TAG ID: %x%08x - FC: %d - Card: %d - Checksum: %02x",
+    hi>>10, (hi & 0x3)<<26 | (lo>>10), fc, cardnum, (lo>>2) & 0xFF );
   setDemodBuf(BitStream,BitLen,idx);
   if (g_debugMode){ 
     PrintAndLog("DEBUG: idx: %d, len: %d, Printing Demod Buffer:", idx, BitLen);
@@ -1183,16 +1179,16 @@ int CmdFSKdemodAWID(const char *Cmd)
     fc = bytebits_to_byte(BitStream+9, 8);
     cardnum = bytebits_to_byte(BitStream+17, 16);
     code1 = bytebits_to_byte(BitStream+8,fmtLen);
-    PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
+    PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
   } else {
     cardnum = bytebits_to_byte(BitStream+8+(fmtLen-17), 16);
     if (fmtLen>32){
       code1 = bytebits_to_byte(BitStream+8,fmtLen-32);
       code2 = bytebits_to_byte(BitStream+8+(fmtLen-32),32);
-      PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+      PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x%08x, Raw: %x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
     } else{
       code1 = bytebits_to_byte(BitStream+8,fmtLen);
-      PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
+      PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x, Raw: %x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
     }
   }
   if (g_debugMode){
@@ -1303,21 +1299,21 @@ int CmdFSKdemodPyramid(const char *Cmd)
     fc = bytebits_to_byte(BitStream+73, 8);
     cardnum = bytebits_to_byte(BitStream+81, 16);
     code1 = bytebits_to_byte(BitStream+72,fmtLen);
-    PrintAndLog("Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi3, rawHi2, rawHi, rawLo);
+    PrintAndLog("Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %x%08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi3, rawHi2, rawHi, rawLo);
   } else if (fmtLen==45){
     fmtLen=42; //end = 10 bits not 7 like 26 bit fmt
     fc = bytebits_to_byte(BitStream+53, 10);
     cardnum = bytebits_to_byte(BitStream+63, 32);
-    PrintAndLog("Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+    PrintAndLog("Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Raw: %x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
   } else {
     cardnum = bytebits_to_byte(BitStream+81, 16);
     if (fmtLen>32){
       //code1 = bytebits_to_byte(BitStream+(size-fmtLen),fmtLen-32);
       //code2 = bytebits_to_byte(BitStream+(size-32),32);
-      PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+      PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
     } else{
       //code1 = bytebits_to_byte(BitStream+(size-fmtLen),fmtLen);
-      PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+      PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
     }
   }
   if (g_debugMode){

@@ -18,14 +18,14 @@
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 int GraphTraceLen;
 
-/* write a manchester bit to the graph */
+/* write a bit to the graph */
 void AppendGraph(int redraw, int clock, int bit)
 {
   int i;
-  //set first half the clock bit (all 1's or 0's for a 0 or 1 bit) 
+
   for (i = 0; i < (int)(clock / 2); ++i)
     GraphBuffer[GraphTraceLen++] = bit ^ 1;
-  //set second half of the clock bit (all 0's or 1's for a 0 or 1 bit)
+
   for (i = (int)(clock / 2); i < clock; ++i)
     GraphBuffer[GraphTraceLen++] = bit;
 
@@ -193,22 +193,6 @@ uint8_t GetFskClock(const char str[], bool printAns, bool verbose)
 		clock = 0;
 	if (clock != 0) return (uint8_t)clock;
 
-
-	uint8_t fc1=0, fc2=0, rf1=0;
-	uint8_t ans = fskClocks(&fc1, &fc2, &rf1, verbose);
-	if (ans == 0) return 0;
-	if ((fc1==10 && fc2==8) || (fc1==8 && fc2==5)){
-		if (printAns) PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
-		return rf1;
-	}
-	if (verbose){
-		PrintAndLog("DEBUG: unknown fsk field clock detected");
-		PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
-	}
-	return 0;
-}
-uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose)
-{
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t size = getFromGraphBuf(BitStream);
 	if (size==0) return 0;
@@ -218,13 +202,22 @@ uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose)
 		if (verbose) PrintAndLog("DEBUG: No data found");
 		return 0;
 	}
-	*fc1 = (ans >> 8) & 0xFF;
-	*fc2 = ans & 0xFF;
+	uint8_t fc1, fc2;
+	fc1 = (ans >> 8) & 0xFF;
+	fc2 = ans & 0xFF;
 
-	*rf1 = detectFSKClk(BitStream, size, *fc1, *fc2);
-	if (*rf1==0) {
+	uint8_t rf1 = detectFSKClk(BitStream, size, fc1, fc2);
+	if (rf1==0) {
 		if (verbose) PrintAndLog("DEBUG: Clock detect error");
 		return 0;
 	}
-	return 1;
+	if ((fc1==10 && fc2==8) || (fc1==8 && fc2==5)){
+		if (printAns) PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
+		return rf1;
+	}
+	if (verbose){
+		PrintAndLog("DEBUG: unknown fsk field clock detected");
+		PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
+	}
+	return 0;
 }
