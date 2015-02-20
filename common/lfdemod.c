@@ -108,6 +108,7 @@ uint64_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx)
         errChk = 0;
         break;
       }
+      //set uint64 with ID from BitStream
       for (uint8_t ii=0; ii<4; ii++){
         lo = (lo << 1LL) | (BitStream[(i*5)+ii+idx]);
       }
