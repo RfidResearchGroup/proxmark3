@@ -394,8 +394,8 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
     AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 
-#define SHORT_COIL()	LOW(GPIO_SSC_DOUT)
-#define OPEN_COIL()		HIGH(GPIO_SSC_DOUT)
+ #define SHORT_COIL()	LOW(GPIO_SSC_DOUT)
+ #define OPEN_COIL()		HIGH(GPIO_SSC_DOUT)
 
     i = 0;
     for(;;) {
@@ -417,7 +417,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 
         if (ledcontrol)
             LED_D_OFF();
-
+        //wait for next sample time
         while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
             if(BUTTON_PRESS()) {
                 DbpString("Stopped");
@@ -442,8 +442,9 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 {
 }
 
-// compose fc/8 fc/10 waveform
-static void fc(int c, int *n) {
+// compose fc/8 fc/10 waveform (FSK2)
+static void fc(int c, int *n)
+{
     uint8_t *dest = BigBuf_get_addr();
     int idx;
 
@@ -451,20 +452,21 @@ static void fc(int c, int *n) {
     if(c==0) {
         dest[((*n)++)]=1;
         dest[((*n)++)]=1;
-        dest[((*n)++)]=0;
-        dest[((*n)++)]=0;
+        dest[((*n)++)]=1;
+        dest[((*n)++)]=1;
         dest[((*n)++)]=0;
         dest[((*n)++)]=0;
         dest[((*n)++)]=0;
         dest[((*n)++)]=0;
     }
+  
     //	an fc/8  encoded bit is a bit pattern of  11000000  x6 = 48 samples
     if(c==8) {
         for (idx=0; idx<6; idx++) {
             dest[((*n)++)]=1;
             dest[((*n)++)]=1;
-            dest[((*n)++)]=0;
-            dest[((*n)++)]=0;
+            dest[((*n)++)]=1;
+            dest[((*n)++)]=1;
             dest[((*n)++)]=0;
             dest[((*n)++)]=0;
             dest[((*n)++)]=0;
@@ -478,13 +480,44 @@ static void fc(int c, int *n) {
             dest[((*n)++)]=1;
             dest[((*n)++)]=1;
             dest[((*n)++)]=1;
+            dest[((*n)++)]=1;
+            dest[((*n)++)]=1;
             dest[((*n)++)]=0;
             dest[((*n)++)]=0;
             dest[((*n)++)]=0;
             dest[((*n)++)]=0;
             dest[((*n)++)]=0;
-            dest[((*n)++)]=0;
-            dest[((*n)++)]=0;
+        }
+    }
+}
+// compose fc/X fc/Y waveform (FSKx)
+static void fcAll(uint8_t c, int *n, uint8_t clock) 
+{
+    uint8_t *dest = BigBuf_get_addr();
+    uint8_t idx;
+    uint8_t fcCnt;
+    // c = count of field clock for this bit
+
+    int mod = clock % c;
+    // loop through clock - step field clock
+    for (idx=0; idx < (uint8_t) clock/c; idx++){
+        // loop through field clock length - put 1/2 FC length 1's and 1/2 0's per field clock wave (to create the wave)
+        for (fcCnt=0; fcCnt < c; fcCnt++){
+            if (fcCnt < c/2){
+                dest[((*n)++)]=1;
+            } else {
+                dest[((*n)++)]=0;    
+            }
+        }
+    }
+    Dbprintf("mod: %d",mod);
+    if (mod>0){ //for FC counts that don't add up to a full clock cycle padd with extra wave
+        for (idx=0; idx < mod; idx++){
+            if (idx < mod/2) {
+                dest[((*n)++)]=1;
+            } else {
+                dest[((*n)++)]=0;
+            }
         }
     }
 }
@@ -536,6 +569,114 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
             fc(8,  &n);	fc(10, &n);		// high-low transition
         }
     }
+
+    if (ledcontrol)
+        LED_A_ON();
+    SimulateTagLowFrequency(n, 0, ledcontrol);
+
+    if (ledcontrol)
+        LED_A_OFF();
+}
+
+// prepare a waveform pattern in the buffer based on the ID given then
+// simulate a FSK tag until the button is pressed
+// arg1 contains fcHigh and fcLow, arg2 contains invert and clock
+void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
+{
+    int ledcontrol=1;
+    int n=0, i=0;
+    uint8_t fcHigh = arg1 >> 8;
+    uint8_t fcLow = arg1 & 0xFF;
+    //spacer bit
+    uint8_t clk = arg2 & 0xFF;
+    uint8_t invert = (arg2 >> 8) & 1;
+    //fcAll(0, &n, clk);
+    
+    WDT_HIT();
+    for (i=0; i<size; i++){
+        //if ((i%4==3) fcAll(0,&n));
+        if (BitStream[i] == invert){
+            fcAll(fcLow, &n, clk);
+        } else {
+            fcAll(fcHigh, &n, clk);
+        }
+    }
+    Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, invert: %d, n: %d",fcHigh, fcLow, clk, invert, n);
+    //Dbprintf("First 64:");
+    //uint8_t *dest = BigBuf_get_addr();
+    //i=0;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    //i+=16;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    //i+=16;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    //i+=16;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+           
+    if (ledcontrol)
+        LED_A_ON();
+    SimulateTagLowFrequency(n, 0, ledcontrol);
+
+    if (ledcontrol)
+        LED_A_OFF();
+}
+
+// compose ask waveform for one bit(ASK)
+static void askSimBit(uint8_t c, int *n, uint8_t clock, uint8_t manchester) 
+{
+    uint8_t *dest = BigBuf_get_addr();
+    uint8_t idx;
+    // c = current bit 1 or 0
+    int i = 0;
+    // for when we want a separator
+    if (c==2) { //separator
+        for (i=0; i<clock/2; i++){
+            dest[((*n)++)]=0;
+        }
+    } else {
+        if (manchester){
+            for (idx=0; idx < (uint8_t) clock/2; idx++){
+                dest[((*n)++)]=c;    
+            }
+            for (idx=0; idx < (uint8_t) clock/2; idx++){
+                dest[((*n)++)]=c^1;    
+            }
+        } else {
+            for (idx=0; idx < (uint8_t) clock; idx++){
+                dest[((*n)++)]=c;    
+            }
+        }        
+    }
+}
+
+// args clock, ask/man or askraw, invert, transmission separator
+void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
+{
+    int ledcontrol = 1;
+    int n=0, i=0;
+    uint8_t clk = (arg1 >> 8) & 0xFF;
+    uint8_t manchester = arg1 & 1;
+    uint8_t separator = arg2 & 1;
+    uint8_t invert = (arg2 >> 8) & 1;
+    WDT_HIT();
+    for (i=0; i<size; i++){
+        askSimBit(BitStream[i]^invert, &n, clk, manchester);
+    }
+    if (separator==1) Dbprintf("sorry but separator option not yet available"); //askSimBit(2, &n, clk, manchester);
+
+    Dbprintf("Simulating with clk: %d, invert: %d, manchester: %d, separator: %d, n: %d",clk, invert, manchester, separator, n);
+    //DEBUG
+    //Dbprintf("First 64:");
+    //uint8_t *dest = BigBuf_get_addr();
+    //i=0;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    //i+=16;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    //i+=16;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    //i+=16;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+
 
     if (ledcontrol)
         LED_A_ON();
@@ -1539,7 +1680,7 @@ void ReadPCF7931() {
         tries++;
         if (BUTTON_PRESS()) return;
     } while (num_blocks != max_blocks);
-end:
+ end:
     Dbprintf("-----------------------------------------");
     Dbprintf("Memory content:");
     Dbprintf("-----------------------------------------");
