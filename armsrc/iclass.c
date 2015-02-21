@@ -1085,7 +1085,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 	// Tag    CSN
 
 	uint8_t *modulated_response;
-	int modulated_response_size;
+	int modulated_response_size = 0;
 	uint8_t* trace_data = NULL;
 	int trace_data_size = 0;
 
@@ -1132,8 +1132,10 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 	CodeIClassTagAnswer(card_challenge_data, sizeof(card_challenge_data));
 	memcpy(resp_cc, ToSend, ToSendMax); resp_cc_len = ToSendMax;
 
-	//This is used for responding to READ-block commands
+	//This is used for responding to READ-block commands or other data which is dynamically generated
 	uint8_t *data_response = BigBuf_malloc(8 * 2 + 2);
+	//This is used for responding to READ-block commands or other data which is dynamically generated
+	uint8_t *data_generic_trace = BigBuf_malloc(8 * 2 + 2);
 
 	// Start from off (no field generated)
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1201,7 +1203,8 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 				//Reader just sent us NR and MAC(k,cc * nr)
 				//The diversified key should be stored on block 3
 				//However, from a typical dump, the key will not be there
-				uint8_t *diversified_key = { 0 };
+				uint8_t diversified_key[8] = { 0 };
+
 				//Get the diversified key from emulator memory
 				memcpy(diversified_key, emulator+(8*3),8);
 				uint8_t ccnr[12] = { 0 };
@@ -1210,7 +1213,8 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 				//Put nr there
 				memcpy(ccnr+8, receivedCmd+1,4);
 				//Now, calc MAC
-				doMAC(ccnr,diversified_key, trace_data);
+				doMAC(ccnr,diversified_key, data_generic_trace);
+				trace_data = data_generic_trace;
 				trace_data_size = 4;
 				CodeIClassTagAnswer(trace_data , trace_data_size);
 				memcpy(data_response, ToSend, ToSendMax);
@@ -1252,6 +1256,13 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 			memcpy(data_response, ToSend, ToSendMax);
 			modulated_response = data_response;
 			modulated_response_size = ToSendMax;
+		}
+		else if(receivedCmd[0] == ICLASS_CMD_PAGESEL)
+		{//Pagesel
+			//Pagesel enables to select a page in the selected chip memory and return its configuration block
+			//Chips with a single page will not answer to this command
+			// It appears we're fine ignoring this.
+			//Otherwise, we should answer 8bytes (block) + 2bytes CRC
 		}
 		else {
 			//#db# Unknown command received from reader (len=5): 26 1 0 f6 a 44 44 44 44
