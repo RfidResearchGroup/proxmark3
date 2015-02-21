@@ -1591,27 +1591,12 @@ int CmdIndalaDecode(const char *Cmd)
 // takes 3 arguments - clock, invert, maxErr as integers
 // attempts to demodulate nrz only
 // prints binary found and saves in demodbuffer for further commands
-int CmdNRZrawDemod(const char *Cmd)
+
+int NRZrawDemod(const char *Cmd, bool verbose)
 {
   int invert=0;
   int clk=0;
   int maxErr=100;
-  char cmdp = param_getchar(Cmd, 0);
-  if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
-    PrintAndLog("Usage:  data rawdemod nr [clock] <0|1> [maxError]");
-    PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
-    PrintAndLog("     <invert>, 1 for invert output");
-    PrintAndLog("     [set maximum allowed errors], default = 100.");
-    PrintAndLog("");
-    PrintAndLog("    sample: data nrzrawdemod        = demod a nrz/direct tag from GraphBuffer");
-    PrintAndLog("          : data nrzrawdemod 32     = demod a nrz/direct tag from GraphBuffer using a clock of RF/32");
-    PrintAndLog("          : data nrzrawdemod 32 1   = demod a nrz/direct tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLog("          : data nrzrawdemod 1      = demod a nrz/direct tag from GraphBuffer while inverting data");
-    PrintAndLog("          : data nrzrawdemod 64 1 0 = demod a nrz/direct tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-
-    return 0;
-  }
- 
   sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
   if (clk==1){
     invert=1;
@@ -1627,25 +1612,45 @@ int CmdNRZrawDemod(const char *Cmd)
   int errCnt=0;
   errCnt = nrzRawDemod(BitStream, &BitLen, &clk, &invert, maxErr);
   if (errCnt > maxErr){
-    if (g_debugMode==1) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
+    if (g_debugMode==1 && verbose) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
     return 0;
   } 
   if (errCnt<0|| BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
-    if (g_debugMode==1) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
+    if (g_debugMode==1 && verbose) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
     return 0;
   }
   PrintAndLog("Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
   //prime demod buffer for output
   setDemodBuf(BitStream,BitLen,0);
 
-  if (errCnt>0){
+  if (errCnt>0 && verbose){
     PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
-  }else{
   }
-  PrintAndLog("NRZ demoded bitstream:");
-  // Now output the bitstream to the scrollback by line of 16 bits
-  printDemodBuff();
-  return 1;
+  if (verbose) {
+    PrintAndLog("NRZ demoded bitstream:");
+    // Now output the bitstream to the scrollback by line of 16 bits
+    printDemodBuff();
+  }
+  return 1; 
+}
+
+int CmdNRZrawDemod(const char *Cmd)
+{
+  char cmdp = param_getchar(Cmd, 0);
+  if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
+    PrintAndLog("Usage:  data rawdemod nr [clock] <0|1> [maxError]");
+    PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
+    PrintAndLog("     <invert>, 1 for invert output");
+    PrintAndLog("     [set maximum allowed errors], default = 100.");
+    PrintAndLog("");
+    PrintAndLog("    sample: data nrzrawdemod        = demod a nrz/direct tag from GraphBuffer");
+    PrintAndLog("          : data nrzrawdemod 32     = demod a nrz/direct tag from GraphBuffer using a clock of RF/32");
+    PrintAndLog("          : data nrzrawdemod 32 1   = demod a nrz/direct tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLog("          : data nrzrawdemod 1      = demod a nrz/direct tag from GraphBuffer while inverting data");
+    PrintAndLog("          : data nrzrawdemod 64 1 0 = demod a nrz/direct tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    return 0;
+  }
+  return NRZrawDemod(Cmd, TRUE);
 }
 
 // by marshmellow

@@ -63,6 +63,7 @@ int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch);
 int ASKrawDemod(const char *Cmd, bool verbose);
 int FSKrawDemod(const char *Cmd, bool verbose);
 int PSKDemod(const char *Cmd, bool verbose);
+int NRZrawDemod(const char *Cmd, bool verbose);
 
 #define MAX_DEMOD_BUF_LEN (1024*128)
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
