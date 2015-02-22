@@ -94,6 +94,7 @@ typedef struct{
 #define CMD_SET_LF_SAMPLING_CONFIG                                        0x021d
 #define CMD_FSK_SIM_TAG                                                   0x021E
 #define CMD_ASK_SIM_TAG                                                   0x021F
+#define CMD_PSK_SIM_TAG                                                   0x0220
 
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 

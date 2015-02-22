@@ -25,7 +25,7 @@ uint8_t justNoise(uint8_t *BitStream, size_t size)
 }
 
 //by marshmellow
-//get high and low with passed in fuzz factor. also return noise test = 1 for passed or 0 for only noise
+//get high and low values of a wave with passed in fuzz factor. also return noise test = 1 for passed or 0 for only noise
 int getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo)
 {
 	*high=0;

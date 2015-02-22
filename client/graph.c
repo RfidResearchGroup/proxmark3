@@ -134,6 +134,26 @@ int GetAskClock(const char str[], bool printAns, bool verbose)
 	return clock;
 }
 
+uint8_t GetPskCarrier(const char str[], bool printAns, bool verbose)
+{
+	uint8_t carrier=0;
+	uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
+	size_t size = getFromGraphBuf(grph);
+	if ( size == 0 ) {
+		if (verbose) 
+			PrintAndLog("Failed to copy from graphbuffer");
+		return 0;
+	}
+	//uint8_t countPSK_FC(uint8_t *BitStream, size_t size)
+
+	carrier = countPSK_FC(grph,size);
+	// Only print this message if we're not looping something
+	if (printAns){
+		PrintAndLog("Auto-detected PSK carrier rate: %d", carrier);
+	}
+	return carrier;
+}
+
 int GetPskClock(const char str[], bool printAns, bool verbose)
 {
 	int clock;

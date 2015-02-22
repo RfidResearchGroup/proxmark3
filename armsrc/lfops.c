@@ -594,7 +594,6 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
     
     WDT_HIT();
     for (i=0; i<size; i++){
-        //if ((i%4==3) fcAll(0,&n));
         if (BitStream[i] == invert){
             fcAll(fcLow, &n, clk);
         } else {
@@ -678,6 +677,72 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
     //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
 
 
+    if (ledcontrol)
+        LED_A_ON();
+    SimulateTagLowFrequency(n, 0, ledcontrol);
+
+    if (ledcontrol)
+        LED_A_OFF();
+}
+
+//carrier can be 2,4 or 8
+static void pskSimBit(uint8_t waveLen, int *n, uint8_t clk, uint8_t *curPhase, bool phaseChg)
+{
+    uint8_t *dest = BigBuf_get_addr();
+    uint8_t idx;
+    int i = 0;
+    if (phaseChg){
+        // write phase change
+        for (i=0; i < waveLen/2; i++){
+            dest[((*n)++)] = *curPhase^1;
+        }
+        for (i=0; i < waveLen/2; i++){
+            dest[((*n)++)] = *curPhase;
+        }
+        *curPhase ^= 1;
+    }
+    //write each normal clock wave for the clock duration
+    for (; i < clk; i+=waveLen){
+        for (idx=0; idx<waveLen/2; idx++){
+            dest[((*n)++)] = *curPhase;
+        }
+        for (idx=0; idx<waveLen/2; idx++){
+            dest[((*n)++)] = *curPhase^1;
+        }
+    }
+}
+
+// args clock, carrier, invert,
+void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
+{
+    int ledcontrol=1;
+    int n=0, i=0;
+    uint8_t clk = arg1 >> 8;
+    uint8_t carrier = arg1 & 0xFF;
+    uint8_t invert = arg2 & 0xFF;
+    uint8_t phase = carrier/2; //extra phase changing bits = 1/2 a carrier wave to change the phase
+    //uint8_t invert = (arg2 >> 8) & 1;
+    uint8_t curPhase = 0;
+    WDT_HIT();
+    for (i=0; i<size; i++){
+        if (BitStream[i] == curPhase){
+            pskSimBit(carrier, &n, clk, &curPhase, FALSE);
+        } else {
+            pskSimBit(phase, &n, clk, &curPhase, TRUE);
+        }            
+    }
+    Dbprintf("Simulating with Carrier: %d, clk: %d, invert: %d, n: %d",carrier, clk, invert, n);
+    Dbprintf("First 64:");
+    uint8_t *dest = BigBuf_get_addr();
+    i=0;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+           
     if (ledcontrol)
         LED_A_ON();
     SimulateTagLowFrequency(n, 0, ledcontrol);
