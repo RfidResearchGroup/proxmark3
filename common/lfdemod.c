@@ -1068,6 +1068,23 @@ void psk1TOpsk2(uint8_t *BitStream, size_t size)
 	return;
 }
 
+// by marshmellow
+// convert psk2 demod to psk1 demod
+// from only transition waves are 1s to phase shifts change bit
+void psk2TOpsk1(uint8_t *BitStream, size_t size)
+{
+	size_t i;
+	uint8_t phase=BitStream[0];
+	//uint8_t lastBit=BitStream[0];
+	for (i=1; i<size; i++){
+		if (phase!=BitStream[i]){
+			phase ^=1;
+		}
+		BitStream[i]=phase;
+	}
+	return;
+}
+
 // redesigned by marshmellow adjusted from existing decode functions
 // indala id decoding - only tested on 26 bit tags, but attempted to make it work for more
 int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert)

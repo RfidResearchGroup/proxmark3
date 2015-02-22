@@ -28,6 +28,7 @@ int fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t 
 uint32_t bytebits_to_byte(uint8_t* src, size_t numbits);
 int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int maxErr);
 void psk1TOpsk2(uint8_t *BitStream, size_t size);
+void psk2TOpsk1(uint8_t *BitStream, size_t size);
 int DetectNRZClock(uint8_t dest[], size_t size, int clock);
 int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert);
 void pskCleanWave(uint8_t *bitStream, size_t size);

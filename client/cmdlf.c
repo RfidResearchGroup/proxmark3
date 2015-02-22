@@ -28,6 +28,7 @@
 #include "cmdlft55xx.h"
 #include "cmdlfpcf7931.h"
 #include "cmdlfio.h"
+#include "lfdemod.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -853,13 +854,20 @@ int CmdLFpskSim(const char *Cmd)
   }
   if (dataLen == 0){ //using DemodBuffer
     if (clk==0) clk = GetPskClock(NULL, FALSE, FALSE);
-    if (!carrier) carrier = GetPskCarrier(NULL, FALSE, FALSE);
+    if (!carrier) carrier = GetPskCarrier(NULL, FALSE, FALSE); 
   } else {
     setDemodBuf(data, dataLen, 0);
   }
   if (clk <= 0) clk = 32;
   if (carrier == 0) carrier = 2;
-
+  if (pskType != 1){
+    if (pskType == 2){
+      //need to convert psk2 to psk1 data before sim
+      psk2TOpsk1(DemodBuffer, DemodBufferLen);
+    } else {
+      PrintAndLog("Sorry, PSK3 not yet available");
+    }
+  }
   uint16_t arg1, arg2;
   arg1 = clk << 8 | carrier;
   arg2 = invert;
