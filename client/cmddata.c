@@ -880,6 +880,7 @@ int FSKrawDemod(const char *Cmd, bool verbose)
       PrintAndLog("FSK decoded bitstream:");
       printBitStream(BitStream,size);
     }
+
     return 1;
   } else{
     if (verbose) PrintAndLog("no FSK data found");
@@ -1489,9 +1490,14 @@ int PSKDemod(const char *Cmd, bool verbose)
   }
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
   size_t BitLen = getFromGraphBuf(BitStream);
-  if (BitLen==0) return 0;
+  if (BitLen==0) return -1;
+  uint8_t carrier=countPSK_FC(BitStream, BitLen);
+  if (carrier!=2 && carrier!=4 || carrier!=8){
+    //invalid carrier
+    return -1
+  }
   int errCnt=0;
-  errCnt = pskRawDemod(BitStream, &BitLen,&clk,&invert);
+  errCnt = pskRawDemod(BitStream, &BitLen, &clk, &invert);
   if (errCnt > maxErr){
     if (g_debugMode==1 && verbose) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
     return -1;
@@ -1708,7 +1714,7 @@ int CmdPSK2rawDemod(const char *Cmd)
     PrintAndLog("          : data psk2rawdemod 64 1 0 = demod a psk2 tag from GraphBuffer using a clock of RF/64, inverting output and allowing 0 demod errors");
     return 0;
   }
-  errCnt=PSKDemod(Cmd, 1);
+  errCnt=PSKDemod(Cmd, TRUE);
   if (errCnt<0){
     if (g_debugMode) PrintAndLog("Error demoding: %d",errCnt);  
     return 0;
