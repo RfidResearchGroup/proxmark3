@@ -1492,9 +1492,9 @@ int PSKDemod(const char *Cmd, bool verbose)
   size_t BitLen = getFromGraphBuf(BitStream);
   if (BitLen==0) return -1;
   uint8_t carrier=countPSK_FC(BitStream, BitLen);
-  if (carrier!=2 && carrier!=4 || carrier!=8){
+  if (carrier!=2 && carrier!=4 && carrier!=8){
     //invalid carrier
-    return -1
+    return -1;
   }
   int errCnt=0;
   errCnt = pskRawDemod(BitStream, &BitLen, &clk, &invert);
