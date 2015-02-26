@@ -333,11 +333,11 @@ int Cmdaskmandemod(const char *Cmd)
     PrintAndLog("     <invert>, 1 for invert output");
     PrintAndLog("     [set maximum allowed errors], default = 100.");
     PrintAndLog("");
-    PrintAndLog("    sample: data askmandemod        = demod an ask/manchester tag from GraphBuffer");
-    PrintAndLog("          : data askmandemod 32     = demod an ask/manchester tag from GraphBuffer using a clock of RF/32");
-    PrintAndLog("          : data askmandemod 32 1   = demod an ask/manchester tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLog("          : data askmandemod 1      = demod an ask/manchester tag from GraphBuffer while inverting data");
-    PrintAndLog("          : data askmandemod 64 1 0 = demod an ask/manchester tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLog("    sample: data rawdemod am        = demod an ask/manchester tag from GraphBuffer");
+    PrintAndLog("          : data rawdemod am 32     = demod an ask/manchester tag from GraphBuffer using a clock of RF/32");
+    PrintAndLog("          : data rawdemod am 32 1   = demod an ask/manchester tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLog("          : data rawdemod am 1      = demod an ask/manchester tag from GraphBuffer while inverting data");
+    PrintAndLog("          : data rawdemod am 64 1 0 = demod an ask/manchester tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
 
     return 0;
   }
@@ -514,13 +514,13 @@ int Cmdaskrawdemod(const char *Cmd)
     PrintAndLog("     [set maximum allowed errors], default = 100");
     PrintAndLog("     <amplify>, 'a' to attempt demod with ask amplification, default = no amp");
     PrintAndLog("");
-    PrintAndLog("    sample: data askrawdemod          = demod an ask tag from GraphBuffer");
-    PrintAndLog("          : data askrawdemod a        = demod an ask tag from GraphBuffer, amplified");
-    PrintAndLog("          : data askrawdemod 32       = demod an ask tag from GraphBuffer using a clock of RF/32");
-    PrintAndLog("          : data askrawdemod 32 1     = demod an ask tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLog("          : data askrawdemod 1        = demod an ask tag from GraphBuffer while inverting data");
-    PrintAndLog("          : data askrawdemod 64 1 0   = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-    PrintAndLog("          : data askrawdemod 64 1 0 a = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
+    PrintAndLog("    sample: data rawdemod ar          = demod an ask tag from GraphBuffer");
+    PrintAndLog("          : data rawdemod ar a        = demod an ask tag from GraphBuffer, amplified");
+    PrintAndLog("          : data rawdemod ar 32       = demod an ask tag from GraphBuffer using a clock of RF/32");
+    PrintAndLog("          : data rawdemod ar 32 1     = demod an ask tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLog("          : data rawdemod ar 1        = demod an ask tag from GraphBuffer while inverting data");
+    PrintAndLog("          : data rawdemod ar 64 1 0   = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLog("          : data rawdemod ar 64 1 0 a = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
     return 0;
   }
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
@@ -830,13 +830,13 @@ int CmdFSKrawdemod(const char *Cmd)
     PrintAndLog("     [fchigh], larger field clock length, omit for autodetect");
     PrintAndLog("     [fclow], small field clock length, omit for autodetect");
     PrintAndLog("");
-    PrintAndLog("    sample: data fskrawdemod           = demod an fsk tag from GraphBuffer using autodetect");
-    PrintAndLog("          : data fskrawdemod 32        = demod an fsk tag from GraphBuffer using a clock of RF/32, autodetect fc");
-    PrintAndLog("          : data fskrawdemod 1         = demod an fsk tag from GraphBuffer using autodetect, invert output");   
-    PrintAndLog("          : data fskrawdemod 32 1      = demod an fsk tag from GraphBuffer using a clock of RF/32, invert output, autodetect fc");
-    PrintAndLog("          : data fskrawdemod 64 0 8 5  = demod an fsk1 RF/64 tag from GraphBuffer");
-    PrintAndLog("          : data fskrawdemod 50 0 10 8 = demod an fsk2 RF/50 tag from GraphBuffer");
-    PrintAndLog("          : data fskrawdemod 50 1 10 8 = demod an fsk2a RF/50 tag from GraphBuffer");
+    PrintAndLog("    sample: data rawdemod fs           = demod an fsk tag from GraphBuffer using autodetect");
+    PrintAndLog("          : data rawdemod fs 32        = demod an fsk tag from GraphBuffer using a clock of RF/32, autodetect fc");
+    PrintAndLog("          : data rawdemod fs 1         = demod an fsk tag from GraphBuffer using autodetect, invert output");   
+    PrintAndLog("          : data rawdemod fs 32 1      = demod an fsk tag from GraphBuffer using a clock of RF/32, invert output, autodetect fc");
+    PrintAndLog("          : data rawdemod fs 64 0 8 5  = demod an fsk1 RF/64 tag from GraphBuffer");
+    PrintAndLog("          : data rawdemod fs 50 0 10 8 = demod an fsk2 RF/50 tag from GraphBuffer");
+    PrintAndLog("          : data rawdemod fs 50 1 10 8 = demod an fsk2a RF/50 tag from GraphBuffer");
     return 0;
   }
   //set options from parameters entered with the command
@@ -1937,6 +1937,7 @@ int CmdTuneSamples(const char *Cmd)
 		PrintAndLog("\n");
 		GraphTraceLen = 256;
 		ShowGraphWindow();
+		RepaintGraphWindow();
 	}
 
 	return 0;
@@ -2379,24 +2380,24 @@ static command_t CommandTable[] =
   {"help",          CmdHelp,            1, "This help"},
   {"amp",           CmdAmp,             1, "Amplify peaks"},
   //{"askdemod",      Cmdaskdemod,        1, "<0 or 1> -- Attempt to demodulate simple ASK tags"},
-  {"askedgedetect", CmdAskEdgeDetect,   1, "[threshold] Adjust Graph for manual ask demod using length of sample differences to detect the edge of a wave - default = 25"},
-  {"askem410xdemod",CmdAskEM410xDemod,  1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional)"},
+  {"askedgedetect", CmdAskEdgeDetect,   1, "[threshold] Adjust Graph for manual ask demod using length of sample differences to detect the edge of a wave (default = 25)"},
+  {"askem410xdemod",CmdAskEM410xDemod,  1, "[clock] [invert<0|1>] [maxErr] -- Demodulate an EM410x tag from GraphBuffer (args optional)"},
   //{"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional)"},
   //{"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0|1>] -- Attempt to demodulate ASK tags and output bin (args optional)"},
   {"autocorr",      CmdAutoCorr,        1, "<window length> -- Autocorrelation over window"},
-  {"biphaserawdecode",CmdBiphaseDecodeRaw,1,"[offset] [invert<0|1>] Biphase decode bin stream in demod buffer (offset = 0|1 bits to shift the decode start)"},
+  {"biphaserawdecode",CmdBiphaseDecodeRaw,1,"[offset] [invert<0|1>] Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
   {"bitsamples",    CmdBitsamples,      0, "Get raw samples as bitstring"},
   //{"bitstream",     CmdBitstream,       1, "[clock rate] -- Convert waveform into a bitstream"},
   {"buffclear",     CmdBuffClear,       1, "Clear sample buffer and graph window"},
   {"dec",           CmdDec,             1, "Decimate samples"},
-  {"detectclock",   CmdDetectClockRate, 1, "[modulation] Detect clock rate (options: 'a','f','n','p' for ask, fsk, nrz, psk respectively)"},
+  {"detectclock",   CmdDetectClockRate, 1, "[modulation] Detect clock rate of wave in GraphBuffer (options: 'a','f','n','p' for ask, fsk, nrz, psk respectively)"},
   //{"fskdemod",      CmdFSKdemod,        1, "Demodulate graph window as a HID FSK"},
-  {"fskawiddemod",  CmdFSKdemodAWID,    1, "Demodulate graph window as an AWID FSK tag using raw"},
+  {"fskawiddemod",  CmdFSKdemodAWID,    1, "Demodulate an AWID FSK tag from GraphBuffer"},
   //{"fskfcdetect",   CmdFSKfcDetect,     1, "Try to detect the Field Clock of an FSK wave"},
-  {"fskhiddemod",   CmdFSKdemodHID,     1, "Demodulate graph window as a HID FSK tag using raw"},
-  {"fskiodemod",    CmdFSKdemodIO,      1, "Demodulate graph window as an IO Prox tag FSK using raw"},
-  {"fskpyramiddemod",CmdFSKdemodPyramid,1, "Demodulate graph window as a Pyramid FSK tag using raw"},
-  {"fskparadoxdemod",CmdFSKdemodParadox,1, "Demodulate graph window as a Paradox FSK tag using raw"},
+  {"fskhiddemod",   CmdFSKdemodHID,     1, "Demodulate a HID FSK tag from GraphBuffer"},
+  {"fskiodemod",    CmdFSKdemodIO,      1, "Demodulate an IO Prox FSK tag from GraphBuffer"},
+  {"fskpyramiddemod",CmdFSKdemodPyramid,1, "Demodulate a Pyramid FSK tag from GraphBuffer"},
+  {"fskparadoxdemod",CmdFSKdemodParadox,1, "Demodulate a Paradox FSK tag from GraphBuffer"},
   //{"fskrawdemod",   CmdFSKrawdemod,     1, "[clock rate] [invert] [rchigh] [rclow] Demodulate graph window from FSK to bin (clock = 50)(invert = 1|0)(rchigh = 10)(rclow=8)"},
   {"grid",          CmdGrid,            1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
   {"hexsamples",    CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
@@ -2406,18 +2407,18 @@ static command_t CommandTable[] =
   {"ltrim",         CmdLtrim,           1, "<samples> -- Trim samples from left of trace"},
   {"rtrim",         CmdRtrim,           1, "<location to end trace> -- Trim samples from right of trace"},
   //{"mandemod",      CmdManchesterDemod, 1, "[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)"},
-  {"manrawdecode",  Cmdmandecoderaw,    1, "Manchester decode binary stream already in graph buffer"},
+  {"manrawdecode",  Cmdmandecoderaw,    1, "Manchester decode binary stream in DemodBuffer"},
   {"manmod",        CmdManchesterMod,   1, "[clock rate] -- Manchester modulate a binary stream"},
   {"norm",          CmdNorm,            1, "Normalize max/min to +/-128"},
   //{"nrzdetectclock",CmdDetectNRZClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
   //{"nrzrawdemod",   CmdNRZrawDemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate nrz tags and output binary (args optional)"},
   {"plot",          CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
   //{"pskdetectclock",CmdDetectPSKClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
-  {"pskindalademod",CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Attempt to demodulate psk1 indala tags and output ID binary & hex (args optional)"},
+  {"pskindalademod",CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Demodulate an indala tag (PSK1) from GraphBuffer (args optional)"},
   //{"psk1rawdemod",  CmdPSK1rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk1 tags and output binary (args optional)"},
   //{"psk2rawdemod",  CmdPSK2rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk2 tags and output binary (args optional)"},
-  {"rawdemod",      CmdRawDemod,        1, "[modulation] ... <options> -see help (h option) - Attempt to demodulate the data in the GraphBuffer and output binary"},  
-  {"samples",       CmdSamples,         0, "[512 - 40000] -- Get raw samples for graph window"},
+  {"rawdemod",      CmdRawDemod,        1, "[modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary"},  
+  {"samples",       CmdSamples,         0, "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
   {"save",          CmdSave,            1, "<filename> -- Save trace (from graph window)"},
   {"scale",         CmdScale,           1, "<int> -- Set cursor display scale"},
   {"setdebugmode",  CmdSetDebugMode,    1, "<0|1> -- Turn on or off Debugging Mode for demods"},
