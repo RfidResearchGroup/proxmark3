@@ -47,8 +47,9 @@
 // different initial value (CRC_ICLASS)
 #include "iso14443crc.h"
 #include "iso15693tools.h"
-#include "cipher.h"
 #include "protocols.h"
+#include "optimized_cipher.h"
+
 static int timeout = 4096;
 
 
@@ -1213,13 +1214,14 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 				//Put nr there
 				memcpy(ccnr+8, receivedCmd+1,4);
 				//Now, calc MAC
-				doMAC(ccnr,diversified_key, data_generic_trace);
+				opt_doMAC(ccnr,diversified_key, data_generic_trace);
 				trace_data = data_generic_trace;
 				trace_data_size = 4;
 				CodeIClassTagAnswer(trace_data , trace_data_size);
 				memcpy(data_response, ToSend, ToSendMax);
 				modulated_response = data_response;
 				modulated_response_size = ToSendMax;
+				//exitLoop = true;
 			}else
 			{	//Not fullsim, we don't respond
 				// We do not know what to answer, so lets keep quiet

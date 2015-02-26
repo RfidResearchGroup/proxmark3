@@ -43,8 +43,7 @@ ARMSRC = fpgaloader.c \
 	legic_prng.c \
 	iclass.c \
 	BigBuf.c \
-	cipher.c \
-	cipherutils.c\
+	optimized_cipher.c
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant
 APP_CFLAGS += -I.

@@ -12,7 +12,7 @@
 #include "string.h"
 
 #include "lfsampling.h"
-#include "cipherutils.h"
+
 sample_config config = { 1, 8, 1, 95, 0 } ;
 
 void printConfig()
@@ -55,20 +55,19 @@ sample_config* getSamplingConfig()
 {
 	return &config;
 }
-/*
+
 typedef struct {
 	uint8_t * buffer;
 	uint32_t numbits;
 	uint32_t position;
 } BitstreamOut;
 
-*/
 /**
  * @brief Pushes bit onto the stream
  * @param stream
  * @param bit
  */
-/*void pushBit( BitstreamOut* stream, uint8_t bit)
+void pushBit( BitstreamOut* stream, uint8_t bit)
 {
 	int bytepos = stream->position >> 3; // divide by 8
 	int bitpos = stream->position & 7;
@@ -76,7 +75,7 @@ typedef struct {
 	stream->position++;
 	stream->numbits++;
 }
-*/
+
 /**
 * Setup the FPGA to listen for samples. This method downloads the FPGA bitstream
 * if not already loaded, sets divisor and starts up the antenna.
