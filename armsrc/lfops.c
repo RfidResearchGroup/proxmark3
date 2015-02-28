@@ -399,6 +399,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 
     i = 0;
     for(;;) {
+        //wait until SSC_CLK goes HIGH
         while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
             if(BUTTON_PRESS()) {
                 DbpString("Stopped");
@@ -406,7 +407,6 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
             }
             WDT_HIT();
         }
-
         if (ledcontrol)
             LED_D_ON();
 
@@ -417,17 +417,18 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 
         if (ledcontrol)
             LED_D_OFF();
-        //wait for next sample time
+        //wait until SSC_CLK goes LOW
         while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
             if(BUTTON_PRESS()) {
                 DbpString("Stopped");
                 return;
             }
             WDT_HIT();
-        }
-
+        }    
+               
         i++;
         if(i == period) {
+      
             i = 0;
             if (gap) {
                 SHORT_COIL();
@@ -435,6 +436,68 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
             }
         }
     }
+}
+
+//Testing to fix timing issues
+void SimulateTagLowFrequencyTest(int period, int gap, int ledcontrol)
+{
+    int i;
+    uint8_t *tab = BigBuf_get_addr();
+
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+
+    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
+
+    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+    AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
+
+ #define SHORT_COIL()   LOW(GPIO_SSC_DOUT)
+ #define OPEN_COIL()        HIGH(GPIO_SSC_DOUT)
+
+    i = 0;
+    while(!BUTTON_PRESS()) {
+
+        WDT_HIT();
+        //wait until reader carrier is HIGH
+        while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
+            WDT_HIT();
+        }
+        if (i>0 && tab[i]!=tab[i-1]){
+            // transition
+            if (ledcontrol)
+                LED_D_ON();
+
+            // modulate coil
+            if(tab[i])
+                OPEN_COIL();
+            else
+                SHORT_COIL();
+
+            if (ledcontrol)
+                LED_D_OFF();      
+        } else { //no transition
+            //NOTE: it appears the COIL transition messes with the detection of the carrier, so if a transition happened
+            //  skip test for readers Carrier = LOW, otherwise we get a bit behind
+            
+            //wait until reader carrier is LOW
+            while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+                WDT_HIT();
+            }                
+        }        
+               
+        i++;
+        if(i == period) {      
+            // end of data stream, gap then repeat
+            i = 0;
+            if (gap) {
+                SHORT_COIL();
+                SpinDelayUs(gap);
+            }
+        }
+    }
+    DbpString("Stopped");
+    return;
 }
 
 #define DEBUG_FRAME_CONTENTS 1
@@ -491,27 +554,43 @@ static void fc(int c, int *n)
     }
 }
 // compose fc/X fc/Y waveform (FSKx)
-static void fcAll(uint8_t c, int *n, uint8_t clock) 
+static void fcAll(uint8_t c, int *n, uint8_t clock, uint16_t *modCnt) 
 {
     uint8_t *dest = BigBuf_get_addr();
     uint8_t idx;
     uint8_t fcCnt;
     // c = count of field clock for this bit
-
-    int mod = clock % c;
+    uint8_t mod = clock % c;
+    uint8_t modAdj = c/mod;
+    bool modAdjOk=FALSE;
+    if (c % mod==0) modAdjOk=TRUE;
     // loop through clock - step field clock
     for (idx=0; idx < (uint8_t) clock/c; idx++){
         // loop through field clock length - put 1/2 FC length 1's and 1/2 0's per field clock wave (to create the wave)
-        for (fcCnt=0; fcCnt < c; fcCnt++){
+        for (fcCnt=0; fcCnt < c; fcCnt++){  //fudge slow transition from low to high - shorten wave by 1
             if (fcCnt < c/2){
                 dest[((*n)++)]=1;
             } else {
+                //fudge low to high transition
+                //if (idx==clock/c && dest[*n-1]==1 && mod>0) dest[((*n++))]=0; 
                 dest[((*n)++)]=0;    
             }
         }
     }
-    Dbprintf("mod: %d",mod);
-    if (mod>0){ //for FC counts that don't add up to a full clock cycle padd with extra wave
+    if (mod>0) (*modCnt)++;
+    if ((mod>0) && modAdjOk){  //fsk2
+        if ((*modCnt % modAdj) == 0){
+            for (fcCnt=0; fcCnt < c; fcCnt++){  //fudge slow transition from low to high - shorten wave by 1
+                if (fcCnt < c/2){
+                    dest[((*n)++)]=1;
+                } else {
+                    dest[((*n)++)]=0;    
+                }
+            }       
+        }
+    }
+    //Dbprintf("mod: %d, modAdj %d, modc %d",mod, modAdj, c % mod);
+    if (mod>0 && !modAdjOk){  //fsk1
         for (idx=0; idx < mod; idx++){
             if (idx < mod/2) {
                 dest[((*n)++)]=1;
@@ -587,6 +666,7 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
     int n=0, i=0;
     uint8_t fcHigh = arg1 >> 8;
     uint8_t fcLow = arg1 & 0xFF;
+    uint16_t modCnt = 0;
     //spacer bit
     uint8_t clk = arg2 & 0xFF;
     uint8_t invert = (arg2 >> 8) & 1;
@@ -595,26 +675,48 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
     WDT_HIT();
     for (i=0; i<size; i++){
         if (BitStream[i] == invert){
-            fcAll(fcLow, &n, clk);
+            fcAll(fcLow, &n, clk, &modCnt);
         } else {
-            fcAll(fcHigh, &n, clk);
+            fcAll(fcHigh, &n, clk, &modCnt);
         }
     }
     Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, invert: %d, n: %d",fcHigh, fcLow, clk, invert, n);
-    //Dbprintf("First 64:");
-    //uint8_t *dest = BigBuf_get_addr();
-    //i=0;
-    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    //i+=16;
-    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    //i+=16;
-    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    //i+=16;
-    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    Dbprintf("First 64:");
+    uint8_t *dest = BigBuf_get_addr();
+    i=0;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
            
     if (ledcontrol)
         LED_A_ON();
-    SimulateTagLowFrequency(n, 0, ledcontrol);
+    SimulateTagLowFrequencyTest(n, 0, ledcontrol);
 
     if (ledcontrol)
         LED_A_OFF();
@@ -679,7 +781,7 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 
     if (ledcontrol)
         LED_A_ON();
-    SimulateTagLowFrequency(n, 0, ledcontrol);
+    SimulateTagLowFrequencyTest(n, 0, ledcontrol);
 
     if (ledcontrol)
         LED_A_OFF();
@@ -720,7 +822,7 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
     uint8_t clk = arg1 >> 8;
     uint8_t carrier = arg1 & 0xFF;
     uint8_t invert = arg2 & 0xFF;
-    uint8_t phase = carrier/2; //extra phase changing bits = 1/2 a carrier wave to change the phase
+    //uint8_t phase = carrier/2; //extra phase changing bits = 1/2 a carrier wave to change the phase
     //uint8_t invert = (arg2 >> 8) & 1;
     uint8_t curPhase = 0;
     WDT_HIT();
@@ -728,13 +830,21 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
         if (BitStream[i] == curPhase){
             pskSimBit(carrier, &n, clk, &curPhase, FALSE);
         } else {
-            pskSimBit(phase, &n, clk, &curPhase, TRUE);
+            pskSimBit(carrier, &n, clk, &curPhase, TRUE);
         }            
     }
     Dbprintf("Simulating with Carrier: %d, clk: %d, invert: %d, n: %d",carrier, clk, invert, n);
-    Dbprintf("First 64:");
+    Dbprintf("First 128:");
     uint8_t *dest = BigBuf_get_addr();
     i=0;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
     Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
     i+=16;
     Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
@@ -745,7 +855,7 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
            
     if (ledcontrol)
         LED_A_ON();
-    SimulateTagLowFrequency(n, 0, ledcontrol);
+    SimulateTagLowFrequencyTest(n, 0, ledcontrol);
 
     if (ledcontrol)
         LED_A_OFF();
