@@ -1053,6 +1053,8 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 	// free eventually allocated BigBuf memory
 	BigBuf_free_keep_EM();
 
+	State cipher_state;
+//	State cipher_state_reserve;
 	uint8_t *csn = BigBuf_get_EM_addr();
 	uint8_t *emulator = csn;
 	uint8_t sof_data[] = { 0x0F} ;
@@ -1069,12 +1071,18 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 	ComputeCrc14443(CRC_ICLASS, anticoll_data, 8, &anticoll_data[8], &anticoll_data[9]);
 	ComputeCrc14443(CRC_ICLASS, csn_data, 8, &csn_data[8], &csn_data[9]);
 
+	//The diversified key should be stored on block 3
+	uint8_t diversified_key[8] = { 0 };
+	//Get the diversified key from emulator memory
+	memcpy(diversified_key, emulator+(8*3),8);
 	// e-Purse
 	uint8_t card_challenge_data[8] = { 0x00 };
 	if(simulationMode == MODE_FULLSIM)
 	{
 		//Card challenge, a.k.a e-purse is on block 2
 		memcpy(card_challenge_data,emulator + (8 * 2) , 8);
+		//Precalculate the cipher state, feeding it the CC
+		opt_doTagMAC_1(card_challenge_data,diversified_key);
 	}
 
 	int exitLoop = 0;
@@ -1200,21 +1208,10 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 		} else if(receivedCmd[0] == ICLASS_CMD_CHECK) {
 			// Reader random and reader MAC!!!
 			if(simulationMode == MODE_FULLSIM)
-			{	//This is what we must do..
-				//Reader just sent us NR and MAC(k,cc * nr)
-				//The diversified key should be stored on block 3
-				//However, from a typical dump, the key will not be there
-				uint8_t diversified_key[8] = { 0 };
+			{
+				//NR, from reader, is in receivedCmd +1
+				opt_doTagMAC_2(cipher_state,receivedCmd+1,data_generic_trace,diversified_key);
 
-				//Get the diversified key from emulator memory
-				memcpy(diversified_key, emulator+(8*3),8);
-				uint8_t ccnr[12] = { 0 };
-				//Put our cc there (block 2)
-				memcpy(ccnr, emulator + (8 * 2), 8);
-				//Put nr there
-				memcpy(ccnr+8, receivedCmd+1,4);
-				//Now, calc MAC
-				opt_doMAC(ccnr,diversified_key, data_generic_trace);
 				trace_data = data_generic_trace;
 				trace_data_size = 4;
 				CodeIClassTagAnswer(trace_data , trace_data_size);

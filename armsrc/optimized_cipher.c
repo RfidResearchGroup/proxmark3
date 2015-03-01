@@ -68,21 +68,6 @@
 #include <stdint.h>
 #include <time.h>
 
-/**
-* Definition 1 (Cipher state). A cipher state of iClass s is an element of F 40/2
-* consisting of the following four components:
-* 	1. the left register l = (l 0 . . . l 7 ) ∈ F 8/2 ;
-* 	2. the right register r = (r 0 . . . r 7 ) ∈ F 8/2 ;
-* 	3. the top register t = (t 0 . . . t 15 ) ∈ F 16/2 .
-* 	4. the bottom register b = (b 0 . . . b 7 ) ∈ F 8/2 .
-**/
-typedef struct {
-	uint8_t l;
-	uint8_t r;
-	uint8_t b;
-	uint16_t t;
-} State;
-
 
 #define opt_T(s) (0x1 & ((s->t >> 15) ^ (s->t >> 14)^ (s->t >> 10)^ (s->t >> 8)^ (s->t >> 5)^ (s->t >> 4)^ (s->t >> 1)^ s->t))
 
@@ -118,7 +103,7 @@ uint8_t xopt__select(bool x, bool y, uint8_t r)
 }
 */
 
-void opt_successor(uint8_t* k, State *s, bool y, State* successor)
+void opt_successor(const uint8_t* k, State *s, bool y, State* successor)
 {
 
 	uint8_t Tt = 1 & opt_T(s);
@@ -134,12 +119,12 @@ void opt_successor(uint8_t* k, State *s, bool y, State* successor)
 
 }
 
-void opt_suc(uint8_t* k,State* s, uint8_t *in)
+void opt_suc(const uint8_t* k,State* s, uint8_t *in, uint8_t length, bool add32Zeroes)
 {
 	State x2;
 	int i;
 	uint8_t head = 0;
-	for(i =0 ; i < 12 ; i++)
+	for(i =0 ; i < length  ; i++)
 	{
 		head = 1 & (in[i] >> 7);
 		opt_successor(k,s,head,&x2);
@@ -166,10 +151,16 @@ void opt_suc(uint8_t* k,State* s, uint8_t *in)
 		opt_successor(k,&x2,head,s);
 
 	}
-
+	//For tag MAC, an additional 32 zeroes
+	if(add32Zeroes)
+		for(i =0 ; i < 16 ; i++)
+		{
+			opt_successor(k,s,0,&x2);
+			opt_successor(k,&x2,0,s);
+		}
 }
 
-void opt_output(uint8_t* k,State* s,  uint8_t *buffer)
+void opt_output(const uint8_t* k,State* s,  uint8_t *buffer)
 {
 	uint8_t times = 0;
 	uint8_t bout = 0;
@@ -207,7 +198,7 @@ void opt_MAC(uint8_t* k, uint8_t* input, uint8_t* out)
 			0xE012 // t
 			};
 
-	opt_suc(k,&_init,input);
+	opt_suc(k,&_init,input,12, false);
 	//printf("\noutp ");
 	opt_output(k,&_init, out);
 }
@@ -224,16 +215,74 @@ void opt_reverse_arraybytecpy(uint8_t* dest, uint8_t *src, size_t len)
 		dest[i] = rev_byte(src[i]);
 }
 
-void opt_doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4])
+void opt_doReaderMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4])
 {
-	static uint8_t cc_nr[13];
-	static uint8_t div_key[8];
+	static uint8_t cc_nr[12];
 
 	opt_reverse_arraybytecpy(cc_nr, cc_nr_p,12);
-	memcpy(div_key,div_key_p,8);
 	uint8_t dest []= {0,0,0,0,0,0,0,0};
-	opt_MAC(div_key,cc_nr, dest);
+	opt_MAC(div_key_p,cc_nr, dest);
 	//The output MAC must also be reversed
-	opt_reverse_arraybytecpy(mac, dest,12);
+	opt_reverse_arraybytecpy(mac, dest,4);
+	return;
+}
+void opt_doTagMAC(uint8_t *cc_p, const uint8_t *div_key_p, uint8_t mac[4])
+{
+	static uint8_t cc_nr[8+4+4];
+	opt_reverse_arraybytecpy(cc_nr, cc_p,12);
+	State _init  =  {
+			((div_key_p[0] ^ 0x4c) + 0xEC) & 0xFF,// l
+			((div_key_p[0] ^ 0x4c) + 0x21) & 0xFF,// r
+			0x4c, // b
+			0xE012 // t
+			};
+	opt_suc(div_key_p,&_init,cc_nr, 12,true);
+	uint8_t dest []= {0,0,0,0};
+	opt_output(div_key_p,&_init, dest);
+	//The output MAC must also be reversed
+	opt_reverse_arraybytecpy(mac, dest,4);
+	return;
+
+}
+/**
+ * The tag MAC can be divided (both can, but no point in dividing the reader mac) into
+ * two functions, since the first 8 bytes are known, we can pre-calculate the state
+ * reached after feeding CC to the cipher.
+ * @param cc_p
+ * @param div_key_p
+ * @return the cipher state
+ */
+State opt_doTagMAC_1(uint8_t *cc_p, const uint8_t *div_key_p)
+{
+	static uint8_t cc_nr[8];
+	opt_reverse_arraybytecpy(cc_nr, cc_p,8);
+	State _init  =  {
+			((div_key_p[0] ^ 0x4c) + 0xEC) & 0xFF,// l
+			((div_key_p[0] ^ 0x4c) + 0x21) & 0xFF,// r
+			0x4c, // b
+			0xE012 // t
+			};
+	opt_suc(div_key_p,&_init,cc_nr, 8,false);
+	return _init;
+}
+/**
+ * The second part of the tag MAC calculation, since the CC is already calculated into the state,
+ * this function is fed only the NR, and internally feeds the remaining 32 0-bits to generate the tag
+ * MAC response.
+ * @param _init - precalculated cipher state
+ * @param nr - the reader challenge
+ * @param mac - where to store the MAC
+ * @param div_key_p - the key to use
+ */
+void opt_doTagMAC_2(State _init,  uint8_t* nr, uint8_t mac[4], const uint8_t* div_key_p)
+{
+	static uint8_t _nr [4];
+	opt_reverse_arraybytecpy(_nr, nr, 4);
+	opt_suc(div_key_p,&_init,_nr, 4, true);
+	//opt_suc(div_key_p,&_init,nr, 4, false);
+	uint8_t dest []= {0,0,0,0};
+	opt_output(div_key_p,&_init, dest);
+	//The output MAC must also be reversed
+	opt_reverse_arraybytecpy(mac, dest,4);
 	return;
 }
