@@ -1042,6 +1042,10 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	Dbprintf("Done...");
 
 }
+void AppendCrc(uint8_t* data, int len)
+{
+	ComputeCrc14443(CRC_ICLASS,data,len,data+len,data+len+1);
+}
 
 /**
  * @brief Does the actual simulation
@@ -1144,9 +1148,11 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 	memcpy(resp_cc, ToSend, ToSendMax); resp_cc_len = ToSendMax;
 
 	//This is used for responding to READ-block commands or other data which is dynamically generated
-	uint8_t *data_response = BigBuf_malloc(8 * 2 + 2);
-	//This is used for responding to READ-block commands or other data which is dynamically generated
-	uint8_t *data_generic_trace = BigBuf_malloc(8 * 2 + 2);
+	//First the 'trace'-data, not encoded for FPGA
+	uint8_t *data_generic_trace = BigBuf_malloc(8 + 2);//8 bytes data + 2byte CRC is max tag answer
+	//Then storage for the modulated data
+	//Each bit is doubled when modulated for FPGA, and we also have SOF and EOF (2 bytes)
+	uint8_t *data_response = BigBuf_malloc( (8+2) * 2 + 2);
 
 	// Start from off (no field generated)
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1252,8 +1258,28 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 		} else if(simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 4){
 			//Read block
 			uint16_t blk = receivedCmd[1];
-			trace_data = emulator+(blk << 3);
-			trace_data_size = 8;
+			//Take the data...
+			memcpy(data_generic_trace, emulator+(blk << 3),8);
+			//Add crc
+			AppendCrc(data_generic_trace, 8);
+			trace_data = data_generic_trace;
+			trace_data_size = 10;
+			CodeIClassTagAnswer(trace_data , trace_data_size);
+			memcpy(data_response, ToSend, ToSendMax);
+			modulated_response = data_response;
+			modulated_response_size = ToSendMax;
+		}else if(receivedCmd[0] == ICLASS_CMD_UPDATE && simulationMode == MODE_FULLSIM)
+		{//Probably the reader wants to update the nonce. Let's just ignore that for now.
+			// OBS! If this is implemented, don't forget to regenerate the cipher_state
+			//We're expected to respond with the data+crc, exactly what's already in the receivedcmd
+			//receivedcmd is now UPDATE 1b | ADDRESS 1b| DATA 8b| Signature 4b or CRC 2b|
+
+			//Take the data...
+			memcpy(data_generic_trace, receivedCmd+2,8);
+			//Add crc
+			AppendCrc(data_generic_trace, 8);
+			trace_data = data_generic_trace;
+			trace_data_size = 10;
 			CodeIClassTagAnswer(trace_data , trace_data_size);
 			memcpy(data_response, ToSend, ToSendMax);
 			modulated_response = data_response;
