@@ -1071,18 +1071,20 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 	ComputeCrc14443(CRC_ICLASS, anticoll_data, 8, &anticoll_data[8], &anticoll_data[9]);
 	ComputeCrc14443(CRC_ICLASS, csn_data, 8, &csn_data[8], &csn_data[9]);
 
-	//The diversified key should be stored on block 3
 	uint8_t diversified_key[8] = { 0 };
-	//Get the diversified key from emulator memory
-	memcpy(diversified_key, emulator+(8*3),8);
 	// e-Purse
 	uint8_t card_challenge_data[8] = { 0x00 };
 	if(simulationMode == MODE_FULLSIM)
 	{
+		//The diversified key should be stored on block 3
+		//Get the diversified key from emulator memory
+		memcpy(diversified_key, emulator+(8*3),8);
+
 		//Card challenge, a.k.a e-purse is on block 2
 		memcpy(card_challenge_data,emulator + (8 * 2) , 8);
 		//Precalculate the cipher state, feeding it the CC
-		opt_doTagMAC_1(card_challenge_data,diversified_key);
+		cipher_state = opt_doTagMAC_1(card_challenge_data,diversified_key);
+
 	}
 
 	int exitLoop = 0;
@@ -1164,9 +1166,9 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 
 	LED_A_ON();
 	bool buttonPressed = false;
-
+	uint8_t response_delay = 1;
 	while(!exitLoop) {
-
+		response_delay = 1;
 		LED_B_OFF();
 		//Signal tracer
 		// Can be used to get a trigger for an oscilloscope..
@@ -1218,6 +1220,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 				memcpy(data_response, ToSend, ToSendMax);
 				modulated_response = data_response;
 				modulated_response_size = ToSendMax;
+				response_delay = 0;//We need to hurry here...
 				//exitLoop = true;
 			}else
 			{	//Not fullsim, we don't respond
@@ -1288,7 +1291,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 		A legit tag has about 380us delay between reader EOT and tag SOF.
 		**/
 		if(modulated_response_size > 0) {
-			SendIClassAnswer(modulated_response, modulated_response_size, 1);
+			SendIClassAnswer(modulated_response, modulated_response_size, response_delay);
 			t2r_time = GetCountSspClk();
 		}
 
