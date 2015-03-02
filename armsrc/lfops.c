@@ -438,8 +438,8 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
     }
 }
 
-//Testing to fix timing issues
-void SimulateTagLowFrequencyTest(int period, int gap, int ledcontrol)
+//Testing to fix timing issues by marshmellow (MM)
+void SimulateTagLowFrequencyMM(int period, int gap, int ledcontrol)
 {
     int i;
     uint8_t *tab = BigBuf_get_addr();
@@ -463,7 +463,31 @@ void SimulateTagLowFrequencyTest(int period, int gap, int ledcontrol)
         while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
             WDT_HIT();
         }
-        if (i>0 && tab[i]!=tab[i-1]){
+        if (i>0){
+            if (tab[i]!=tab[i-1]){
+                // transition
+                if (ledcontrol)
+                    LED_D_ON();
+
+                // modulate coil
+                if(tab[i])
+                    OPEN_COIL();
+                else
+                    SHORT_COIL();
+
+                if (ledcontrol)
+                    LED_D_OFF();
+
+            } else { //no transition
+                //NOTE: it appears the COIL transition messes with the detection of the carrier, so if a transition happened
+                //  skip test for readers Carrier = LOW, otherwise we get a bit behind
+                
+                //wait until reader carrier is LOW
+                while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+                    WDT_HIT();
+                }                
+            }
+        } else {
             // transition
             if (ledcontrol)
                 LED_D_ON();
@@ -475,16 +499,10 @@ void SimulateTagLowFrequencyTest(int period, int gap, int ledcontrol)
                 SHORT_COIL();
 
             if (ledcontrol)
-                LED_D_OFF();      
-        } else { //no transition
-            //NOTE: it appears the COIL transition messes with the detection of the carrier, so if a transition happened
-            //  skip test for readers Carrier = LOW, otherwise we get a bit behind
-            
-            //wait until reader carrier is LOW
-            while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
-                WDT_HIT();
-            }                
-        }        
+                LED_D_OFF();
+        }
+        WDT_HIT();
+      
                
         i++;
         if(i == period) {      
@@ -568,23 +586,25 @@ static void fcAll(uint8_t c, int *n, uint8_t clock, uint16_t *modCnt)
     for (idx=0; idx < (uint8_t) clock/c; idx++){
         // loop through field clock length - put 1/2 FC length 1's and 1/2 0's per field clock wave (to create the wave)
         for (fcCnt=0; fcCnt < c; fcCnt++){  //fudge slow transition from low to high - shorten wave by 1
-            if (fcCnt < c/2){
-                dest[((*n)++)]=1;
+            if (fcCnt < c/2+1){
+                dest[((*n)++)]=0;
             } else {
                 //fudge low to high transition
-                //if (idx==clock/c && dest[*n-1]==1 && mod>0) dest[((*n++))]=0; 
-                dest[((*n)++)]=0;    
+                //if (idx==clock/c && dest[*n-1]==1 && mod>0) dest[((*n++))]=0;
+                //if (c==8 && fcCnt==5) continue; 
+                dest[((*n)++)]=1;   
             }
         }
     }
     if (mod>0) (*modCnt)++;
-    if ((mod>0) && modAdjOk){  //fsk2
-        if ((*modCnt % modAdj) == 0){
+    if ((mod>0) && modAdjOk){  //fsk2 
+        if ((*modCnt % modAdj) == 0){ //if 4th 8 length wave in a rf/50 add extra 8 length wave
             for (fcCnt=0; fcCnt < c; fcCnt++){  //fudge slow transition from low to high - shorten wave by 1
-                if (fcCnt < c/2){
-                    dest[((*n)++)]=1;
+                if (fcCnt < c/2+1){
+                    dest[((*n)++)]=0;
                 } else {
-                    dest[((*n)++)]=0;    
+                    //if (c==8 && fcCnt==5) continue; 
+                    dest[((*n)++)]=1;    
                 }
             }       
         }
@@ -593,9 +613,9 @@ static void fcAll(uint8_t c, int *n, uint8_t clock, uint16_t *modCnt)
     if (mod>0 && !modAdjOk){  //fsk1
         for (idx=0; idx < mod; idx++){
             if (idx < mod/2) {
-                dest[((*n)++)]=1;
-            } else {
                 dest[((*n)++)]=0;
+            } else {
+                dest[((*n)++)]=1;
             }
         }
     }
@@ -716,7 +736,7 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
            
     if (ledcontrol)
         LED_A_ON();
-    SimulateTagLowFrequencyTest(n, 0, ledcontrol);
+    SimulateTagLowFrequencyMM(n, 0, ledcontrol);
 
     if (ledcontrol)
         LED_A_OFF();
@@ -781,7 +801,7 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 
     if (ledcontrol)
         LED_A_ON();
-    SimulateTagLowFrequencyTest(n, 0, ledcontrol);
+    SimulateTagLowFrequencyMM(n, 0, ledcontrol);
 
     if (ledcontrol)
         LED_A_OFF();
@@ -855,7 +875,7 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
            
     if (ledcontrol)
         LED_A_ON();
-    SimulateTagLowFrequencyTest(n, 0, ledcontrol);
+    SimulateTagLowFrequencyMM(n, 0, ledcontrol);
 
     if (ledcontrol)
         LED_A_OFF();

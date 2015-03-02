@@ -19,6 +19,7 @@ void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx);
 int CmdAmp(const char *Cmd);
 int Cmdaskdemod(const char *Cmd);
 int CmdAskEM410xDemod(const char *Cmd);
+int CmdG_Prox_II_Demod(const char *Cmd);
 int Cmdaskrawdemod(const char *Cmd);
 int Cmdaskmandemod(const char *Cmd);
 int CmdAutoCorr(const char *Cmd);

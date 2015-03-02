@@ -766,16 +766,19 @@ int CmdLFaskSim(const char *Cmd)
     setDemodBuf(data, dataLen, 0);
   }
   if (clk == 0) clk = 64;
-
+  if (manchester == 0) clk = clk/2; //askraw needs to double the clock speed
   uint16_t arg1, arg2;
+  size_t size=DemodBufferLen;
   arg1 = clk << 8 | manchester;
   arg2 = invert << 8 | separator;
-  UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, DemodBufferLen}};
-  if (DemodBufferLen > USB_CMD_DATA_SIZE) {
-    PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", DemodBufferLen, USB_CMD_DATA_SIZE);
+  if (size > USB_CMD_DATA_SIZE) {
+    PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
+    size = USB_CMD_DATA_SIZE;
   }
-  PrintAndLog("preparing to sim ask data: %d bits", DemodBufferLen);
-  memcpy(c.d.asBytes, DemodBuffer, DemodBufferLen);
+  UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
+
+  PrintAndLog("preparing to sim ask data: %d bits", size);
+  memcpy(c.d.asBytes, DemodBuffer, size);
   SendCommand(&c);
   return 0;
 }
@@ -853,11 +856,15 @@ int CmdLFpskSim(const char *Cmd)
     return usage_lf_simpsk();
   }
   if (dataLen == 0){ //using DemodBuffer
-    if (clk==0) clk = GetPskClock(NULL, FALSE, FALSE);
-    if (!carrier) carrier = GetPskCarrier(NULL, FALSE, FALSE); 
+    PrintAndLog("Getting Clocks");
+    if (clk==0) clk = GetPskClock("", FALSE, FALSE);
+    PrintAndLog("clk: %d",clk);
+    if (!carrier) carrier = GetPskCarrier("", FALSE, FALSE); 
+    PrintAndLog("carrier: %d", carrier);
   } else {
     setDemodBuf(data, dataLen, 0);
   }
+
   if (clk <= 0) clk = 32;
   if (carrier == 0) carrier = 2;
   if (pskType != 1){
@@ -875,6 +882,7 @@ int CmdLFpskSim(const char *Cmd)
   if (DemodBufferLen > USB_CMD_DATA_SIZE) {
     PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", DemodBufferLen, USB_CMD_DATA_SIZE);
   }
+  PrintAndLog("DEBUG: Sending DemodBuffer Length: %d", DemodBufferLen);
   memcpy(c.d.asBytes, DemodBuffer, DemodBufferLen);
   SendCommand(&c);
   return 0;
@@ -1053,6 +1061,11 @@ int CmdLFfind(const char *Cmd)
   ans=CmdAskEM410xDemod("");
   if (ans>0) {
     PrintAndLog("\nValid EM410x ID Found!");
+    return 1;
+  }
+  ans=CmdG_Prox_II_Demod("");
+  if (ans>0) {
+    PrintAndLog("\nValid G Prox II ID Found!");
     return 1;
   }
   PrintAndLog("\nNo Known Tags Found!\n");

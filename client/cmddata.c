@@ -84,7 +84,11 @@ void printDemodBuff(void)
 	return;
 }
 
-
+int CmdPrintDemodBuff(const char *Cmd)
+{
+  printDemodBuff();
+  return 1;
+}
 int CmdAmp(const char *Cmd)
 {
   int i, rising, falling;
@@ -503,6 +507,29 @@ int CmdBiphaseDecodeRaw(const char *Cmd)
 	return 1;
 }
 
+// set demod buffer back to raw after biphase demod
+void setBiphaseDemodBuf(uint8_t *BitStream, size_t size)
+{
+  uint8_t rawStream[512]={0x00};
+  size_t i=0;
+  uint8_t curPhase=0;
+  if (size > 256) {
+    PrintAndLog("ERROR - Biphase Demod Buffer overrun");
+    return;
+  }
+  for (size_t idx=0; idx<size; idx++){
+    if(BitStream[idx]){
+      rawStream[i++] = curPhase;
+      rawStream[i++] = curPhase;
+      curPhase ^= 1; 
+    } else {
+      rawStream[i++] = curPhase;
+      rawStream[i++] = curPhase ^ 1;
+    }
+  }
+  setDemodBuf(rawStream,i,0);
+  return;
+}
 //by marshmellow
 //takes 4 arguments - clock, invert, maxErr as integers and amplify as char
 //attempts to demodulate ask only
@@ -548,6 +575,100 @@ int ASKrawDemod(const char *Cmd, bool verbose)
     // Now output the bitstream to the scrollback by line of 16 bits
     printBitStream(BitStream,BitLen);
   } 
+  return 1;
+}
+
+//by marshmellow
+//attempts to demodulate and identify a G_Prox_II verex/chubb card
+//WARNING: if it fails during some points it will destroy the DemodBuffer data
+// but will leave the GraphBuffer intact.
+//if successful it will push askraw data back to demod buffer ready for emulation
+int CmdG_Prox_II_Demod(const char *Cmd)
+{
+  int ans = ASKrawDemod(Cmd, FALSE);
+  if (ans <= 0) {
+    if (g_debugMode) PrintAndLog("Error AskrawDemod: %d",ans);
+    return ans;
+  }
+  size_t size = DemodBufferLen;
+  ans = BiphaseRawDecode(DemodBuffer, &size, 0, 0); 
+  if (ans !=0) {
+    if (g_debugMode) PrintAndLog("Error BiphaseRawDecode: %d",ans);
+    return ans;
+  }
+  //call lfdemod.c demod for gProxII
+  ans = gProxII_Demod(DemodBuffer, &size);
+  if (ans < 0){
+    if (g_debugMode) PrintAndLog("Error gProxII_Demod 1st Try: %d",ans);
+    //try biphase again
+    ans = BiphaseRawDecode(DemodBuffer, &size, 1, 0); 
+    if (ans != 0) {
+      if (g_debugMode) PrintAndLog("Error BiphaseRawDecode: %d",ans);
+      return ans;
+    }
+    ans = gProxII_Demod(DemodBuffer, &size);
+    if (ans < 0) {
+      if (g_debugMode) PrintAndLog("Error gProxII_Demod 1st Try: %d",ans);
+      return ans;
+    }
+  }
+  //got a good demod
+  uint32_t ByteStream[65] = {0x00};
+  uint8_t xorKey=0;
+  uint8_t keyCnt=0;
+  uint8_t bitCnt=0;
+  uint8_t ByteCnt=0;
+  size_t startIdx = ans + 6; //start after preamble
+  for (size_t idx = 0; idx<size-6; idx++){
+    if ((idx+1) % 5 == 0){
+      //spacer bit - should be 0
+      if (DemodBuffer[startIdx+idx] != 0) {
+        if (g_debugMode) PrintAndLog("Error spacer not 0: %d, pos: %d",DemodBuffer[startIdx+idx],startIdx+idx);
+        return -1;
+      }
+      continue;
+    } 
+    if (keyCnt<8){ //lsb first
+      xorKey = xorKey | (DemodBuffer[startIdx+idx]<<keyCnt);
+      keyCnt++;
+      if (keyCnt==8 && g_debugMode) PrintAndLog("xorKey Found: %02x", xorKey);
+      continue;
+    }
+    //lsb first
+    ByteStream[ByteCnt] = ByteStream[ByteCnt] | (DemodBuffer[startIdx+idx]<<bitCnt);
+    bitCnt++;
+    if (bitCnt % 8 == 0){
+      if (g_debugMode) PrintAndLog("byte %d: %02x",ByteCnt,ByteStream[ByteCnt]);
+      bitCnt=0;
+      ByteCnt++;
+    }
+  }
+  for (uint8_t i = 0; i < ByteCnt; i++){
+    ByteStream[i] ^= xorKey; //xor
+    if (g_debugMode) PrintAndLog("byte %d after xor: %02x", i, ByteStream[i]);
+  }
+  //now ByteStream contains 64 bytes of decrypted raw tag data
+  // 
+  uint8_t fmtLen = ByteStream[0]>>2;
+  uint32_t FC = 0;
+  uint32_t Card = 0;
+  uint32_t raw1 = bytebits_to_byte(DemodBuffer+ans,32);
+  uint32_t raw2 = bytebits_to_byte(DemodBuffer+ans+32, 32);
+  uint32_t raw3 = bytebits_to_byte(DemodBuffer+ans+64, 32);
+
+  if (fmtLen==36){
+    FC = ((ByteStream[3] & 0x7F)<<7) | (ByteStream[4]>>1);
+    Card = ((ByteStream[4]&1)<<19) | (ByteStream[5]<<11) | (ByteStream[6]<<3) | (ByteStream[7]>>5);
+    PrintAndLog("G-Prox-II Found: FmtLen %d, FC %d, Card %d",fmtLen,FC,Card);
+  } else if(fmtLen==26){
+    FC = ((ByteStream[3] & 0x7F)<<1) | (ByteStream[4]>>7);
+    Card = ((ByteStream[4]&0x7F)<<9) | (ByteStream[5]<<1) | (ByteStream[6]>>7);
+    PrintAndLog("G-Prox-II Found: FmtLen %d, FC %d, Card %d",fmtLen,FC,Card);    
+  } else {
+    PrintAndLog("Unknown G-Prox-II Fmt Found: FmtLen %d",fmtLen);
+  }
+  PrintAndLog("Raw: %08x%08x%08x", raw1,raw2,raw3);
+  setBiphaseDemodBuf(DemodBuffer+ans, 96);
   return 1;
 }
 
@@ -2422,6 +2543,7 @@ static command_t CommandTable[] =
   //{"askdemod",      Cmdaskdemod,        1, "<0 or 1> -- Attempt to demodulate simple ASK tags"},
   {"askedgedetect", CmdAskEdgeDetect,   1, "[threshold] Adjust Graph for manual ask demod using length of sample differences to detect the edge of a wave (default = 25)"},
   {"askem410xdemod",CmdAskEM410xDemod,  1, "[clock] [invert<0|1>] [maxErr] -- Demodulate an EM410x tag from GraphBuffer (args optional)"},
+  {"askgproxiidemod",CmdG_Prox_II_Demod,1, "Demodulate a G Prox II tag from GraphBuffer"},
   //{"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional)"},
   //{"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0|1>] -- Attempt to demodulate ASK tags and output bin (args optional)"},
   {"autocorr",      CmdAutoCorr,        1, "<window length> -- Autocorrelation over window"},
@@ -2454,6 +2576,7 @@ static command_t CommandTable[] =
   //{"nrzrawdemod",   CmdNRZrawDemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate nrz tags and output binary (args optional)"},
   {"plot",          CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
   //{"pskdetectclock",CmdDetectPSKClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
+  {"printdemodbuffer",CmdPrintDemodBuff,1, "[clock] [invert<0|1>] -- Demodulate an indala tag (PSK1) from GraphBuffer (args optional)"},
   {"pskindalademod",CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Demodulate an indala tag (PSK1) from GraphBuffer (args optional)"},
   //{"psk1rawdemod",  CmdPSK1rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk1 tags and output binary (args optional)"},
   //{"psk2rawdemod",  CmdPSK2rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk2 tags and output binary (args optional)"},
