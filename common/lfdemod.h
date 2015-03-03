@@ -22,6 +22,7 @@ int ManchesterEncode(uint8_t *BitStream, size_t size);
 int manrawdecode(uint8_t *BitStream, size_t *size);
 int BiphaseRawDecode(uint8_t * BitStream, size_t *size, int offset, int invert);
 int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp);
+int gProxII_Demod(uint8_t BitStream[], size_t *size);
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);
 int IOdemodFSK(uint8_t *dest, size_t size);
 int fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow);
