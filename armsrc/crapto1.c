@@ -1,21 +1,21 @@
 /*  crapto1.c
 
-    This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU General Public License
-    as published by the Free Software Foundation; either version 2
-    of the License, or (at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor,
-    Boston, MA  02110-1301, US$
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor,
+	Boston, MA  02110-1301, US$
 
-    Copyright (C) 2008-2008 bla <blapost@gmail.com>
+	Copyright (C) 2008-2008 bla <blapost@gmail.com>
 */
 #include "crapto1.h"
 #include <stdlib.h>
@@ -24,9 +24,9 @@
 static uint8_t filterlut[1 << 20];
 static void __attribute__((constructor)) fill_lut()
 {
-        uint32_t i;
-        for(i = 0; i < 1 << 20; ++i)
-                filterlut[i] = filter(i);
+	uint32_t i;
+	for(i = 0; i < 1 << 20; ++i)
+		filterlut[i] = filter(i);
 }
 #define filter(x) (filterlut[(x) & 0xfffff])
 #endif
@@ -34,6 +34,7 @@ static void __attribute__((constructor)) fill_lut()
 static void quicksort(uint32_t* const start, uint32_t* const stop)
 {
 	uint32_t *it = start + 1, *rit = stop;
+	uint32_t tmp;
 
 	if(it > rit)
 		return;
@@ -43,13 +44,19 @@ static void quicksort(uint32_t* const start, uint32_t* const stop)
 			++it;
 		else if(*rit > *start)
 			--rit;
-		else
-			*it ^= (*it ^= *rit, *rit ^= *it);
+		else {
+			tmp = *it;
+			*it = *rit;
+			*rit = tmp;
+		}
 
 	if(*rit >= *start)
 		--rit;
-	if(rit != start)
-		*rit ^= (*rit ^= *start, *start ^= *rit);
+	if(rit != start) {
+		tmp = *rit;
+		*rit = *start;
+		*start = tmp;
+	}
 
 	quicksort(start, rit - 1);
 	quicksort(rit + 1, stop);
@@ -145,12 +152,12 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 		eks >>= 1;
 		in >>= 2;
 		extend_table(o_head, &o_tail, oks & 1, LF_POLY_EVEN << 1 | 1,
-			     LF_POLY_ODD << 1, 0);
+				 LF_POLY_ODD << 1, 0);
 		if(o_head > o_tail)
 			return sl;
 
 		extend_table(e_head, &e_tail, eks & 1, LF_POLY_ODD,
-			     LF_POLY_EVEN << 1 | 1, in & 3);
+				 LF_POLY_EVEN << 1 | 1, in & 3);
 		if(e_head > e_tail)
 			return sl;
 	}
@@ -163,7 +170,7 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 			o_tail = binsearch(o_head, o = o_tail);
 			e_tail = binsearch(e_head, e = e_tail);
 			sl = recover(o_tail--, o, oks,
-				     e_tail--, e, eks, rem, sl, in);
+					 e_tail--, e, eks, rem, sl, in);
 		}
 		else if(*o_tail > *e_tail)
 			o_tail = binsearch(o_head, o_tail) - 1;
@@ -319,9 +326,12 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
 {
 	int out;
 	uint8_t ret;
+	uint32_t tmp;
 
 	s->odd &= 0xffffff;
-	s->odd ^= (s->odd ^= s->even, s->even ^= s->odd);
+	tmp = s->odd;
+	s->odd = s->even;
+	s->even = tmp;
 
 	out = s->even & 1;
 	out ^= LF_POLY_EVEN & (s->even >>= 1);
@@ -414,7 +424,7 @@ uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
  */
 static struct Crypto1State*
 check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8],
-          	uint32_t odd, uint32_t even, struct Crypto1State* sl)
+		uint32_t odd, uint32_t even, struct Crypto1State* sl)
 {
 	uint32_t ks1, nr, ks2, rr, ks3, c, good = 1;
 
@@ -440,7 +450,7 @@ check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8],
 	}
 
 	return sl + good;
-} 
+}
 
 
 /** lfsr_common_prefix
@@ -459,7 +469,7 @@ lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
 	if(!s || !odd || !even) {
 		free(statelist);
 		statelist = 0;
-                goto out;
+		goto out;
 	}
 
 	for(o = odd; *o + 1; ++o)
