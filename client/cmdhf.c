@@ -288,35 +288,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	uint8_t *parityBytes = trace + tracepos;
 	tracepos += parity_len;
 
-
-	//--- Draw the data column
-	//char line[16][110];
-	char line[16][110];
-
-	for (int j = 0; j < data_len && j/16 < 16; j++) {
-
-		int oddparity = 0x01;
-		int k;
-
-		for (k=0 ; k<8 ; k++) {
-			oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
-		}
-
-		uint8_t parityBits = parityBytes[j>>3];
-		if (isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
-			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x! ", frame[j]);
-
-		} else {
-			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x  ", frame[j]);
-		}
-	}
-	if(data_len == 0)
-	{
-		if(data_len == 0){
-			sprintf(line[0],"<empty trace - possible error>");
-		}
-	}
-	//--- Draw the CRC column
+	//Check the CRC status
 	uint8_t crcStatus = 2;
 
 	if (data_len > 2) {
@@ -344,6 +316,43 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	//0 CRC-command, CRC not ok
 	//1 CRC-command, CRC ok
 	//2 Not crc-command
+
+	//--- Draw the data column
+	//char line[16][110];
+	char line[16][110];
+
+	for (int j = 0; j < data_len && j/16 < 16; j++) {
+
+		int oddparity = 0x01;
+		int k;
+
+		for (k=0 ; k<8 ; k++) {
+			oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
+		}
+		uint8_t parityBits = parityBytes[j>>3];
+		if (isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
+			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x! ", frame[j]);
+
+		} else {
+			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x  ", frame[j]);
+		}
+
+	}
+	if(crcStatus == 1)
+	{//CRC-command
+		char *pos1 = line[(data_len-2)/16]+(((data_len-2) % 16) * 4)-1;
+		(*pos1) = '[';
+		char *pos2 = line[(data_len)/16]+(((data_len) % 16) * 4)-2;
+		(*pos2) = ']';
+	}
+	if(data_len == 0)
+	{
+		if(data_len == 0){
+			sprintf(line[0],"<empty trace - possible error>");
+		}
+	}
+	//--- Draw the CRC column
+
 	char *crc = (crcStatus == 0 ? "!crc" : (crcStatus == 1 ? " ok " : "    "));
 
 	EndOfTransmissionTimestamp = timestamp + duration;

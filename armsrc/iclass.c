@@ -47,8 +47,9 @@
 // different initial value (CRC_ICLASS)
 #include "iso14443crc.h"
 #include "iso15693tools.h"
-#include "cipher.h"
 #include "protocols.h"
+#include "optimized_cipher.h"
+
 static int timeout = 4096;
 
 
@@ -1041,6 +1042,10 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	Dbprintf("Done...");
 
 }
+void AppendCrc(uint8_t* data, int len)
+{
+	ComputeCrc14443(CRC_ICLASS,data,len,data+len,data+len+1);
+}
 
 /**
  * @brief Does the actual simulation
@@ -1052,6 +1057,8 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 	// free eventually allocated BigBuf memory
 	BigBuf_free_keep_EM();
 
+	State cipher_state;
+//	State cipher_state_reserve;
 	uint8_t *csn = BigBuf_get_EM_addr();
 	uint8_t *emulator = csn;
 	uint8_t sof_data[] = { 0x0F} ;
@@ -1068,12 +1075,20 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 	ComputeCrc14443(CRC_ICLASS, anticoll_data, 8, &anticoll_data[8], &anticoll_data[9]);
 	ComputeCrc14443(CRC_ICLASS, csn_data, 8, &csn_data[8], &csn_data[9]);
 
+	uint8_t diversified_key[8] = { 0 };
 	// e-Purse
 	uint8_t card_challenge_data[8] = { 0x00 };
 	if(simulationMode == MODE_FULLSIM)
 	{
+		//The diversified key should be stored on block 3
+		//Get the diversified key from emulator memory
+		memcpy(diversified_key, emulator+(8*3),8);
+
 		//Card challenge, a.k.a e-purse is on block 2
 		memcpy(card_challenge_data,emulator + (8 * 2) , 8);
+		//Precalculate the cipher state, feeding it the CC
+		cipher_state = opt_doTagMAC_1(card_challenge_data,diversified_key);
+
 	}
 
 	int exitLoop = 0;
@@ -1085,7 +1100,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 	// Tag    CSN
 
 	uint8_t *modulated_response;
-	int modulated_response_size;
+	int modulated_response_size = 0;
 	uint8_t* trace_data = NULL;
 	int trace_data_size = 0;
 
@@ -1132,8 +1147,12 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 	CodeIClassTagAnswer(card_challenge_data, sizeof(card_challenge_data));
 	memcpy(resp_cc, ToSend, ToSendMax); resp_cc_len = ToSendMax;
 
-	//This is used for responding to READ-block commands
-	uint8_t *data_response = BigBuf_malloc(8 * 2 + 2);
+	//This is used for responding to READ-block commands or other data which is dynamically generated
+	//First the 'trace'-data, not encoded for FPGA
+	uint8_t *data_generic_trace = BigBuf_malloc(8 + 2);//8 bytes data + 2byte CRC is max tag answer
+	//Then storage for the modulated data
+	//Each bit is doubled when modulated for FPGA, and we also have SOF and EOF (2 bytes)
+	uint8_t *data_response = BigBuf_malloc( (8+2) * 2 + 2);
 
 	// Start from off (no field generated)
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1153,9 +1172,9 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 
 	LED_A_ON();
 	bool buttonPressed = false;
-
+	uint8_t response_delay = 1;
 	while(!exitLoop) {
-
+		response_delay = 1;
 		LED_B_OFF();
 		//Signal tracer
 		// Can be used to get a trigger for an oscilloscope..
@@ -1197,25 +1216,18 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 		} else if(receivedCmd[0] == ICLASS_CMD_CHECK) {
 			// Reader random and reader MAC!!!
 			if(simulationMode == MODE_FULLSIM)
-			{	//This is what we must do..
-				//Reader just sent us NR and MAC(k,cc * nr)
-				//The diversified key should be stored on block 3
-				//However, from a typical dump, the key will not be there
-				uint8_t *diversified_key = { 0 };
-				//Get the diversified key from emulator memory
-				memcpy(diversified_key, emulator+(8*3),8);
-				uint8_t ccnr[12] = { 0 };
-				//Put our cc there (block 2)
-				memcpy(ccnr, emulator + (8 * 2), 8);
-				//Put nr there
-				memcpy(ccnr+8, receivedCmd+1,4);
-				//Now, calc MAC
-				doMAC(ccnr,diversified_key, trace_data);
+			{
+				//NR, from reader, is in receivedCmd +1
+				opt_doTagMAC_2(cipher_state,receivedCmd+1,data_generic_trace,diversified_key);
+
+				trace_data = data_generic_trace;
 				trace_data_size = 4;
 				CodeIClassTagAnswer(trace_data , trace_data_size);
 				memcpy(data_response, ToSend, ToSendMax);
 				modulated_response = data_response;
 				modulated_response_size = ToSendMax;
+				response_delay = 0;//We need to hurry here...
+				//exitLoop = true;
 			}else
 			{	//Not fullsim, we don't respond
 				// We do not know what to answer, so lets keep quiet
@@ -1246,12 +1258,39 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 		} else if(simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 4){
 			//Read block
 			uint16_t blk = receivedCmd[1];
-			trace_data = emulator+(blk << 3);
-			trace_data_size = 8;
+			//Take the data...
+			memcpy(data_generic_trace, emulator+(blk << 3),8);
+			//Add crc
+			AppendCrc(data_generic_trace, 8);
+			trace_data = data_generic_trace;
+			trace_data_size = 10;
 			CodeIClassTagAnswer(trace_data , trace_data_size);
 			memcpy(data_response, ToSend, ToSendMax);
 			modulated_response = data_response;
 			modulated_response_size = ToSendMax;
+		}else if(receivedCmd[0] == ICLASS_CMD_UPDATE && simulationMode == MODE_FULLSIM)
+		{//Probably the reader wants to update the nonce. Let's just ignore that for now.
+			// OBS! If this is implemented, don't forget to regenerate the cipher_state
+			//We're expected to respond with the data+crc, exactly what's already in the receivedcmd
+			//receivedcmd is now UPDATE 1b | ADDRESS 1b| DATA 8b| Signature 4b or CRC 2b|
+
+			//Take the data...
+			memcpy(data_generic_trace, receivedCmd+2,8);
+			//Add crc
+			AppendCrc(data_generic_trace, 8);
+			trace_data = data_generic_trace;
+			trace_data_size = 10;
+			CodeIClassTagAnswer(trace_data , trace_data_size);
+			memcpy(data_response, ToSend, ToSendMax);
+			modulated_response = data_response;
+			modulated_response_size = ToSendMax;
+		}
+		else if(receivedCmd[0] == ICLASS_CMD_PAGESEL)
+		{//Pagesel
+			//Pagesel enables to select a page in the selected chip memory and return its configuration block
+			//Chips with a single page will not answer to this command
+			// It appears we're fine ignoring this.
+			//Otherwise, we should answer 8bytes (block) + 2bytes CRC
 		}
 		else {
 			//#db# Unknown command received from reader (len=5): 26 1 0 f6 a 44 44 44 44
@@ -1278,7 +1317,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 		A legit tag has about 380us delay between reader EOT and tag SOF.
 		**/
 		if(modulated_response_size > 0) {
-			SendIClassAnswer(modulated_response, modulated_response_size, 1);
+			SendIClassAnswer(modulated_response, modulated_response_size, response_delay);
 			t2r_time = GetCountSspClk();
 		}
 
