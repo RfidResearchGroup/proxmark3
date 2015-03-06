@@ -1,21 +1,21 @@
 /*  crypto1.c
 
-    This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU General Public License
-    as published by the Free Software Foundation; either version 2
-    of the License, or (at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-    MA  02110-1301, US
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+	MA  02110-1301, US
 
-    Copyright (C) 2008-2008 bla <blapost@gmail.com>
+	Copyright (C) 2008-2008 bla <blapost@gmail.com>
 */
 #include "crapto1.h"
 #include <stdlib.h>
@@ -49,6 +49,7 @@ void crypto1_get_lfsr(struct Crypto1State *state, uint64_t *lfsr)
 uint8_t crypto1_bit(struct Crypto1State *s, uint8_t in, int is_encrypted)
 {
 	uint32_t feedin;
+	uint32_t tmp;
 	uint8_t ret = filter(s->odd);
 
 	feedin  = ret & !!is_encrypted;
@@ -57,7 +58,9 @@ uint8_t crypto1_bit(struct Crypto1State *s, uint8_t in, int is_encrypted)
 	feedin ^= LF_POLY_EVEN & s->even;
 	s->even = s->even << 1 | parity(feedin);
 
-	s->odd ^= (s->odd ^= s->even, s->even ^= s->odd);
+	tmp = s->odd;
+	s->odd = s->even;
+	s->even = tmp;
 
 	return ret;
 }

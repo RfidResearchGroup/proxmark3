@@ -1,21 +1,21 @@
 /*  crapto1.c
 
-    This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU General Public License
-    as published by the Free Software Foundation; either version 2
-    of the License, or (at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor,
-    Boston, MA  02110-1301, US$
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor,
+	Boston, MA  02110-1301, US$
 
-    Copyright (C) 2008-2008 bla <blapost@gmail.com>
+	Copyright (C) 2008-2008 bla <blapost@gmail.com>
 */
 #include "crapto1.h"
 #include <stdlib.h>
@@ -24,9 +24,9 @@
 static uint8_t filterlut[1 << 20];
 static void __attribute__((constructor)) fill_lut()
 {
-        uint32_t i;
-        for(i = 0; i < 1 << 20; ++i)
-                filterlut[i] = filter(i);
+		uint32_t i;
+		for(i = 0; i < 1 << 20; ++i)
+				filterlut[i] = filter(i);
 }
 #define filter(x) (filterlut[(x) & 0xfffff])
 #endif
@@ -46,7 +46,7 @@ typedef struct bucket_info {
 		} bucket_info[2][0x100];
 		uint32_t numbuckets;
 	} bucket_info_t;
-	
+
 
 static void bucket_sort_intersect(uint32_t* const estart, uint32_t* const estop,
 								  uint32_t* const ostart, uint32_t* const ostop,
@@ -55,28 +55,28 @@ static void bucket_sort_intersect(uint32_t* const estart, uint32_t* const estop,
 	uint32_t *p1, *p2;
 	uint32_t *start[2];
 	uint32_t *stop[2];
-	
+
 	start[0] = estart;
 	stop[0] = estop;
 	start[1] = ostart;
 	stop[1] = ostop;
-	
+
 	// init buckets to be empty
 	for (uint32_t i = 0; i < 2; i++) {
 		for (uint32_t j = 0x00; j <= 0xff; j++) {
 			bucket[i][j].bp = bucket[i][j].head;
 		}
 	}
-	
+
 	// sort the lists into the buckets based on the MSB (contribution bits)
-	for (uint32_t i = 0; i < 2; i++) { 
+	for (uint32_t i = 0; i < 2; i++) {
 		for (p1 = start[i]; p1 <= stop[i]; p1++) {
 			uint32_t bucket_index = (*p1 & 0xff000000) >> 24;
 			*(bucket[i][bucket_index].bp++) = *p1;
 		}
 	}
 
-	
+
 	// write back intersecting buckets as sorted list.
 	// fill in bucket_info with head and tail of the bucket contents in the list and number of non-empty buckets.
 	uint32_t nonempty_bucket;
@@ -147,9 +147,9 @@ extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in
 			*p ^= in;
 		} else {										// drop
 			*p-- = *(*end)--;
-		} 
+		}
 	}
-	
+
 }
 
 
@@ -159,7 +159,7 @@ extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in
 static inline void
 extend_table_simple(uint32_t *tbl, uint32_t **end, int bit)
 {
-	for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1)	
+	for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1)
 		if(filter(*tbl) ^ filter(*tbl | 1)) {	// replace
 			*tbl |= filter(*tbl) ^ bit;
 		} else if(filter(*tbl) == bit) {		// insert
@@ -206,13 +206,13 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 	}
 
 	bucket_sort_intersect(e_head, e_tail, o_head, o_tail, &bucket_info, bucket);
-	
+
 	for (int i = bucket_info.numbuckets - 1; i >= 0; i--) {
 		sl = recover(bucket_info.bucket_info[1][i].head, bucket_info.bucket_info[1][i].tail, oks,
-				     bucket_info.bucket_info[0][i].head, bucket_info.bucket_info[0][i].tail, eks,
+					 bucket_info.bucket_info[0][i].head, bucket_info.bucket_info[0][i].tail, eks,
 					 rem, sl, in, bucket);
 	}
-	
+
 	return sl;
 }
 /** lfsr_recovery
@@ -251,7 +251,7 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 			}
 		}
 
-	
+
 	// initialize statelists: add all possible states which would result into the rightmost 2 bits of the keystream
 	for(i = 1 << 20; i >= 0; --i) {
 		if(filter(i) == (oks & 1))
@@ -282,7 +282,7 @@ out:
 	for (uint32_t i = 0; i < 2; i++)
 		for (uint32_t j = 0; j <= 0xff; j++)
 			free(bucket[i][j].head);
-	
+
 	return statelist;
 }
 
@@ -382,9 +382,12 @@ struct Crypto1State* lfsr_recovery64(uint32_t ks2, uint32_t ks3)
 void lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
 {
 	int out;
+	uint32_t tmp;
 
 	s->odd &= 0xffffff;
-	s->odd ^= (s->odd ^= s->even, s->even ^= s->odd);
+	tmp = s->odd;
+	s->odd = s->even;
+	s->even = tmp;
 
 	out = s->even & 1;
 	out ^= LF_POLY_EVEN & (s->even >>= 1);
@@ -481,7 +484,7 @@ uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
  */
 static struct Crypto1State*
 brute_top(uint32_t prefix, uint32_t rresp, unsigned char parities[8][8],
-          uint32_t odd, uint32_t even, struct Crypto1State* sl, uint8_t no_chk)
+		  uint32_t odd, uint32_t even, struct Crypto1State* sl, uint8_t no_chk)
 {
 	struct Crypto1State s;
 	uint32_t ks1, nr, ks2, rr, ks3, good, c;
@@ -489,20 +492,20 @@ brute_top(uint32_t prefix, uint32_t rresp, unsigned char parities[8][8],
 	for(c = 0; c < 8; ++c) {
 		s.odd = odd ^ fastfwd[1][c];
 		s.even = even ^ fastfwd[0][c];
-		
+
 		lfsr_rollback_bit(&s, 0, 0);
 		lfsr_rollback_bit(&s, 0, 0);
 		lfsr_rollback_bit(&s, 0, 0);
-		
+
 		lfsr_rollback_word(&s, 0, 0);
 		lfsr_rollback_word(&s, prefix | c << 5, 1);
-		
+
 		sl->odd = s.odd;
 		sl->even = s.even;
-		
+
 		if (no_chk)
 			break;
-	
+
 		ks1 = crypto1_word(&s, prefix | c << 5, 1);
 		ks2 = crypto1_word(&s,0,0);
 		ks3 = crypto1_word(&s, 0,0);
@@ -521,7 +524,7 @@ brute_top(uint32_t prefix, uint32_t rresp, unsigned char parities[8][8],
 	}
 
 	return ++sl;
-} 
+}
 
 
 /** lfsr_common_prefix
@@ -542,13 +545,13 @@ lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8], 
 	odd = lfsr_prefix_ks(ks, 1);
 	even = lfsr_prefix_ks(ks, 0);
 
-	statelist = malloc((sizeof *statelist) << 21);	//how large should be? 
+	statelist = malloc((sizeof *statelist) << 21);	//how large should be?
 	if(!statelist || !odd || !even)
 	{
 				free(statelist);
 				free(odd);
 				free(even);
-                return 0;
+				return 0;
 	}
 
 	s = statelist;
@@ -560,7 +563,7 @@ lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8], 
 				s = brute_top(pfx, rr, par, *o, *e, s, no_par);
 			}
 
-	s->odd = s->even = -1;	
+	s->odd = s->even = -1;
 	//printf("state count = %d\n",s-statelist);
 
 	free(odd);
