@@ -24,10 +24,10 @@ void AppendGraph(int redraw, int clock, int bit)
   int i;
   //set first half the clock bit (all 1's or 0's for a 0 or 1 bit) 
   for (i = 0; i < (int)(clock / 2); ++i)
-    GraphBuffer[GraphTraceLen++] = bit ;
+    GraphBuffer[GraphTraceLen++] = bit ^ 1;
   //set second half of the clock bit (all 0's or 1's for a 0 or 1 bit)
   for (i = (int)(clock / 2); i < clock; ++i)
-    GraphBuffer[GraphTraceLen++] = bit ^ 1;
+    GraphBuffer[GraphTraceLen++] = bit;
 
   if (redraw)
     RepaintGraphWindow();

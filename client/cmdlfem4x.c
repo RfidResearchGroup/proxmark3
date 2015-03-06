@@ -266,7 +266,7 @@ int CmdEM410xSim(const char *Cmd)
     /* stop bit */
   AppendGraph(1, clock, 0);
  
-  CmdLFSim("0"); //240 start_gap.
+  CmdLFSim("240"); //240 start_gap.
   return 0;
 }
 
