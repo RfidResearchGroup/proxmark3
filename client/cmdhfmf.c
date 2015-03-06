@@ -1023,6 +1023,7 @@ int CmdHF14AMf1kSim(const char *Cmd)
 		PrintAndLog("           x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a legitimate reader, fishes out the key(s)");
 		PrintAndLog("");
 		PrintAndLog("           sample: hf mf sim u 0a0a0a0a ");
+		PrintAndLog("                 : hf mf sim u 0a0a0a0a i x");
 		return 0;
 	}
 	uint8_t pnr = 0;

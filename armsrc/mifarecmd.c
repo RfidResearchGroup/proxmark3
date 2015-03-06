@@ -942,12 +942,12 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		if (workFlags & 0x01) {
 			if(!iso14443a_select_card(uid, NULL, &cuid)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
-				break;
+				//break;
 			};
 
 			if(mifare_classic_halt(NULL, cuid)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
-				break;
+				//break;
 			};
 		};
 	

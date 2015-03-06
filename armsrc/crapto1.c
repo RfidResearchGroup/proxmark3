@@ -34,6 +34,7 @@ static void __attribute__((constructor)) fill_lut()
 static void quicksort(uint32_t* const start, uint32_t* const stop)
 {
 	uint32_t *it = start + 1, *rit = stop;
+	uint32_t tmp;
 
 	if(it > rit)
 		return;
@@ -43,13 +44,19 @@ static void quicksort(uint32_t* const start, uint32_t* const stop)
 			++it;
 		else if(*rit > *start)
 			--rit;
-		else
-			*it ^= ( (*it ^= *rit ), *rit ^= *it);
+		else {
+			tmp = *it;
+			*it = *rit;
+			*rit = tmp;
+		}
 
 	if(*rit >= *start)
 		--rit;
-	if(rit != start)
-		*rit ^= ( (*rit ^= *start), *start ^= *rit);
+	if(rit != start) {
+		tmp = *rit;
+		*rit = *start;
+		*start = tmp;
+	}
 
 	quicksort(start, rit - 1);
 	quicksort(rit + 1, stop);
@@ -319,9 +326,12 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
 {
 	int out;
 	uint8_t ret;
+	uint32_t tmp;
 
 	s->odd &= 0xffffff;
-	s->odd ^= (s->odd ^= s->even, s->even ^= s->odd);
+	tmp = s->odd;
+	s->odd = s->even;
+	s->even = tmp;
 
 	out = s->even & 1;
 	out ^= LF_POLY_EVEN & (s->even >>= 1);
@@ -440,7 +450,7 @@ check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8],
 	}
 
 	return sl + good;
-} 
+}
 
 
 /** lfsr_common_prefix

@@ -16,7 +16,7 @@ command_t * CmdDataCommands();
 int CmdData(const char *Cmd);
 void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx);
 void printDemodBuff();
-void printBitStream(uint8_t BitStream[], uint32_t bitLen);
+
 int CmdAmp(const char *Cmd);
 int Cmdaskdemod(const char *Cmd);
 int CmdAskEM410xDemod(const char *Cmd);
@@ -60,6 +60,11 @@ int CmdThreshold(const char *Cmd);
 int CmdDirectionalThreshold(const char *Cmd);
 int CmdZerocrossings(const char *Cmd);
 int CmdIndalaDecode(const char *Cmd);
+int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch);
+int ASKrawDemod(const char *Cmd, bool verbose);
+int FSKrawDemod(const char *Cmd, bool verbose);
+int PSKDemod(const char *Cmd, bool verbose);
+int NRZrawDemod(const char *Cmd, bool verbose);
 
 #define MAX_DEMOD_BUF_LEN (1024*128)
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];

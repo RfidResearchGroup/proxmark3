@@ -668,9 +668,9 @@ int CmdHF15CmdRaw (const char *cmd) {
  */
 int prepareHF15Cmd(char **cmd, UsbCommand *c, uint8_t iso15cmd[], int iso15cmdlen) {
 	int temp;
-	uint8_t *req=c->d.asBytes;
+	uint8_t *req = c->d.asBytes;
 	uint8_t uid[8] = {0x00};
-	uint32_t reqlen=0;
+	uint32_t reqlen = 0;
 
 	// strip
 	while (**cmd==' ' || **cmd=='\t') (*cmd)++;
@@ -763,10 +763,10 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 	UsbCommand resp;
 	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
-	uint8_t *req=c.d.asBytes;
-	int reqlen=0;
+	uint8_t *req = c.d.asBytes;
+	int reqlen = 0;
 	char cmdbuf[100];
-	char *cmd=cmdbuf;
+	char *cmd = cmdbuf;
 	char output[2048]="";
 	int i;
 	
@@ -782,13 +782,11 @@ int CmdHF15CmdSysinfo(const char *Cmd) {
 		PrintAndLog("               s         selected tag");
 		PrintAndLog("               u         unaddressed mode");
 		PrintAndLog("               *         scan for tag");
-		PrintAndLog("           start#:       page number to start 0-255");  
-		PrintAndLog("           count#:       number of pages");  
 		return 0;
 	}	
 	
 	prepareHF15Cmd(&cmd, &c,(uint8_t[]){ISO15_CMD_SYSINFO},1);	
-	reqlen=c.arg[0];
+	reqlen = c.arg[0];
 	
 	reqlen=AddCrc(req,reqlen);
 	c.arg[0]=reqlen;
