@@ -510,11 +510,11 @@ int CmdLFSnoop(const char *Cmd)
 static void ChkBitstream(const char *str)
 {
   int i;
-
+ 
   /* convert to bitstream if necessary */
 	for (i = 0; i < (int)(GraphTraceLen / 2); i++){
 		if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
-      CmdBitstream(str);
+      CmdGetBitStream("");
       break;
     }
   }
@@ -528,6 +528,7 @@ int CmdLFSim(const char *Cmd)
   sscanf(Cmd, "%i", &gap);
 
   /* convert to bitstream if necessary */
+
   ChkBitstream(Cmd);
 
   //can send 512 bits at a time (1 byte sent per bit...)
@@ -878,6 +879,7 @@ int CmdLFpskSim(const char *Cmd)
   uint16_t arg1, arg2;
   arg1 = clk << 8 | carrier;
   arg2 = invert;
+
   UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, DemodBufferLen}};
   if (DemodBufferLen > USB_CMD_DATA_SIZE) {
     PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", DemodBufferLen, USB_CMD_DATA_SIZE);
@@ -885,6 +887,7 @@ int CmdLFpskSim(const char *Cmd)
   PrintAndLog("DEBUG: Sending DemodBuffer Length: %d", DemodBufferLen);
   memcpy(c.d.asBytes, DemodBuffer, DemodBufferLen);
   SendCommand(&c);
+  
   return 0;
 }
 
@@ -899,6 +902,7 @@ int CmdLFSimBidir(const char *Cmd)
 }
 
 /* simulate an LF Manchester encoded tag with specified bitstream, clock rate and inter-id gap */
+/*
 int CmdLFSimManchester(const char *Cmd)
 {
   static int clock, gap;
@@ -919,7 +923,7 @@ int CmdLFSimManchester(const char *Cmd)
   CmdLFSim(gapstring);
   return 0;
 }
-
+*/
 
 int CmdVchDemod(const char *Cmd)
 {
@@ -1111,11 +1115,11 @@ static command_t CommandTable[] =
   {"read",        CmdLFRead,          0, "Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
   {"search",      CmdLFfind,          1, "[offline] ['u'] Read and Search for valid known tag (in offline mode it you can load first then search) - 'u' to search for unknown tags"},
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
-  {"simask",      CmdLFaskSim,        0, "[clock] [invert <1|0>] [manchester/raw <'m'|'r'>] [trs separator 's'] [d <hexdata>] -- Simulate LF ASK tag from demodbuffer or input"},
+  {"simask",      CmdLFaskSim,        0, "[clock] [invert <1|0>] [manchester/raw <'m'|'r'>] [msg separator 's'] [d <hexdata>] -- Simulate LF ASK tag from demodbuffer or input"},
   {"simfsk",      CmdLFfskSim,        0, "[c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>] -- Simulate LF FSK tag from demodbuffer or input"},
   {"simpsk",      CmdLFpskSim,        0, "[1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>] -- Simulate LF PSK tag from demodbuffer or input"},
   {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
-  {"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
+  //{"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
   {"snoop",       CmdLFSnoop,         0, "['l'|'h'|<divisor>] [trigger threshold]-- Snoop LF (l:125khz, h:134khz)"},
   {"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
   {"hitag",       CmdLFHitag,         1, "{ Hitag tags and transponders... }"},

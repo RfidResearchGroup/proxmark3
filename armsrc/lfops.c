@@ -438,86 +438,6 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
     }
 }
 
-//Testing to fix timing issues by marshmellow (MM)
-void SimulateTagLowFrequencyMM(int period, int gap, int ledcontrol)
-{
-    int i;
-    uint8_t *tab = BigBuf_get_addr();
-
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
-
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
-
- #define SHORT_COIL()   LOW(GPIO_SSC_DOUT)
- #define OPEN_COIL()        HIGH(GPIO_SSC_DOUT)
-
-    i = 0;
-    while(!BUTTON_PRESS()) {
-
-        WDT_HIT();
-        //wait until reader carrier is HIGH
-        while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
-            WDT_HIT();
-        }
-        if (i>0){
-            if (tab[i]!=tab[i-1]){
-                // transition
-                if (ledcontrol)
-                    LED_D_ON();
-
-                // modulate coil
-                if(tab[i])
-                    OPEN_COIL();
-                else
-                    SHORT_COIL();
-
-                if (ledcontrol)
-                    LED_D_OFF();
-
-            } else { //no transition
-                //NOTE: it appears the COIL transition messes with the detection of the carrier, so if a transition happened
-                //  skip test for readers Carrier = LOW, otherwise we get a bit behind
-                
-                //wait until reader carrier is LOW
-                while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
-                    WDT_HIT();
-                }                
-            }
-        } else {
-            // transition
-            if (ledcontrol)
-                LED_D_ON();
-
-            // modulate coil
-            if(tab[i])
-                OPEN_COIL();
-            else
-                SHORT_COIL();
-
-            if (ledcontrol)
-                LED_D_OFF();
-        }
-        WDT_HIT();
-      
-               
-        i++;
-        if(i == period) {      
-            // end of data stream, gap then repeat
-            i = 0;
-            if (gap) {
-                SHORT_COIL();
-                SpinDelayUs(gap);
-            }
-        }
-    }
-    DbpString("Stopped");
-    return;
-}
-
 #define DEBUG_FRAME_CONTENTS 1
 void SimulateTagLowFrequencyBidir(int divisor, int t0)
 {
@@ -586,7 +506,7 @@ static void fcAll(uint8_t c, int *n, uint8_t clock, uint16_t *modCnt)
     for (idx=0; idx < (uint8_t) clock/c; idx++){
         // loop through field clock length - put 1/2 FC length 1's and 1/2 0's per field clock wave (to create the wave)
         for (fcCnt=0; fcCnt < c; fcCnt++){  //fudge slow transition from low to high - shorten wave by 1
-            if (fcCnt < c/2+1){
+            if (fcCnt < c/2){
                 dest[((*n)++)]=0;
             } else {
                 //fudge low to high transition
@@ -600,7 +520,7 @@ static void fcAll(uint8_t c, int *n, uint8_t clock, uint16_t *modCnt)
     if ((mod>0) && modAdjOk){  //fsk2 
         if ((*modCnt % modAdj) == 0){ //if 4th 8 length wave in a rf/50 add extra 8 length wave
             for (fcCnt=0; fcCnt < c; fcCnt++){  //fudge slow transition from low to high - shorten wave by 1
-                if (fcCnt < c/2+1){
+                if (fcCnt < c/2){
                     dest[((*n)++)]=0;
                 } else {
                     //if (c==8 && fcCnt==5) continue; 
@@ -637,7 +557,7 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
     */
 
     if (hi>0xFFF) {
-        DbpString("Tags can only have 44 bits.");
+        DbpString("Tags can only have 44 bits. - USE lf simfsk for larger tags");
         return;
     }
     fc(0,&n);
@@ -701,7 +621,8 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
         }
     }
     Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, invert: %d, n: %d",fcHigh, fcLow, clk, invert, n);
-    Dbprintf("First 64:");
+     WDT_HIT();
+    /*Dbprintf("First 64:");
     uint8_t *dest = BigBuf_get_addr();
     i=0;
     Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
@@ -733,10 +654,10 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
     Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
     i+=16;
     Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-           
+    */     
     if (ledcontrol)
         LED_A_ON();
-    SimulateTagLowFrequencyMM(n, 0, ledcontrol);
+    SimulateTagLowFrequency(n, 0, ledcontrol);
 
     if (ledcontrol)
         LED_A_OFF();
@@ -779,7 +700,6 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
     uint8_t manchester = arg1 & 1;
     uint8_t separator = arg2 & 1;
     uint8_t invert = (arg2 >> 8) & 1;
-    WDT_HIT();
     for (i=0; i<size; i++){
         askSimBit(BitStream[i]^invert, &n, clk, manchester);
     }
@@ -801,7 +721,7 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 
     if (ledcontrol)
         LED_A_ON();
-    SimulateTagLowFrequencyMM(n, 0, ledcontrol);
+    SimulateTagLowFrequency(n, 0, ledcontrol);
 
     if (ledcontrol)
         LED_A_OFF();
@@ -815,13 +735,14 @@ static void pskSimBit(uint8_t waveLen, int *n, uint8_t clk, uint8_t *curPhase, b
     int i = 0;
     if (phaseChg){
         // write phase change
-        for (i=0; i < waveLen/2; i++){
+        for (idx=0; idx < waveLen/2; idx++){
             dest[((*n)++)] = *curPhase^1;
         }
-        for (i=0; i < waveLen/2; i++){
+        for (idx=0; idx < waveLen/2; idx++){
             dest[((*n)++)] = *curPhase;
         }
         *curPhase ^= 1;
+        i+=waveLen;
     }
     //write each normal clock wave for the clock duration
     for (; i < clk; i+=waveLen){
@@ -844,8 +765,8 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
     uint8_t invert = arg2 & 0xFF;
     //uint8_t phase = carrier/2; //extra phase changing bits = 1/2 a carrier wave to change the phase
     //uint8_t invert = (arg2 >> 8) & 1;
-    uint8_t curPhase = 0;
     WDT_HIT();
+    uint8_t curPhase = 0;
     for (i=0; i<size; i++){
         if (BitStream[i] == curPhase){
             pskSimBit(carrier, &n, clk, &curPhase, FALSE);
@@ -854,6 +775,7 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
         }            
     }
     Dbprintf("Simulating with Carrier: %d, clk: %d, invert: %d, n: %d",carrier, clk, invert, n);
+    WDT_HIT();
     Dbprintf("First 128:");
     uint8_t *dest = BigBuf_get_addr();
     i=0;
@@ -875,7 +797,7 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
            
     if (ledcontrol)
         LED_A_ON();
-    SimulateTagLowFrequencyMM(n, 0, ledcontrol);
+    SimulateTagLowFrequency(n, 0, ledcontrol);
 
     if (ledcontrol)
         LED_A_OFF();

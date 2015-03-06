@@ -133,20 +133,19 @@ int CmdAmp(const char *Cmd)
  * Updates the Graph trace with 0/1 values
  *
  * Arguments:
- * c : 0 or 1
+ * c : 0 or 1  (or invert)
  */
- //this method is dependant on all highs and lows to be the same(or clipped)  this creates issues[marshmellow] it also ignores the clock
+ //this method ignores the clock
+
+ //this function strictly converts highs and lows to 1s and 0s for each sample in the graphbuffer
 int Cmdaskdemod(const char *Cmd)
 {
   int i;
   int c, high = 0, low = 0;
 
-  // TODO: complain if we do not give 2 arguments here !
-  // (AL - this doesn't make sense! we're only using one argument!!!)
   sscanf(Cmd, "%i", &c);
 
-  /* Detect high and lows and clock */
-	// (AL - clock???)
+  /* Detect high and lows */
   for (i = 0; i < GraphTraceLen; ++i)
   {
     if (GraphBuffer[i] > high)
@@ -176,9 +175,9 @@ int Cmdaskdemod(const char *Cmd)
      * down)
      */
     //[marhsmellow] change == to >= for high and <= for low for fuzz
-    if ((GraphBuffer[i] == high) && (GraphBuffer[i - 1] == c)) {
+    if ((GraphBuffer[i] >= high) && (GraphBuffer[i - 1] == c)) {
       GraphBuffer[i] = 1 - c;
-    } else if ((GraphBuffer[i] == low) && (GraphBuffer[i - 1] == (1 - c))){
+    } else if ((GraphBuffer[i] <= low) && (GraphBuffer[i - 1] == (1 - c))){
       GraphBuffer[i] = c;
     } else {
       /* No transition */
@@ -188,6 +187,23 @@ int Cmdaskdemod(const char *Cmd)
   RepaintGraphWindow();
   return 0;
 }
+
+//this function strictly converts >1 to 1 and <1 to 0 for each sample in the graphbuffer
+int CmdGetBitStream(const char *Cmd)
+{
+  int i;
+  CmdHpf(Cmd);
+  for (i = 0; i < GraphTraceLen; i++) {
+    if (GraphBuffer[i] >= 1) {
+      GraphBuffer[i] = 1;
+    } else {
+      GraphBuffer[i] = 0;
+    }
+  }
+  RepaintGraphWindow();
+  return 0;
+}
+
 
 //by marshmellow
 void printBitStream(uint8_t BitStream[], uint32_t bitLen)
@@ -1954,6 +1970,7 @@ int CmdHide(const char *Cmd)
   return 0;
 }
 
+//zero mean GraphBuffer
 int CmdHpf(const char *Cmd)
 {
   int i;
@@ -2561,6 +2578,7 @@ static command_t CommandTable[] =
   {"fskpyramiddemod",CmdFSKdemodPyramid,1, "Demodulate a Pyramid FSK tag from GraphBuffer"},
   {"fskparadoxdemod",CmdFSKdemodParadox,1, "Demodulate a Paradox FSK tag from GraphBuffer"},
   //{"fskrawdemod",   CmdFSKrawdemod,     1, "[clock rate] [invert] [rchigh] [rclow] Demodulate graph window from FSK to bin (clock = 50)(invert = 1|0)(rchigh = 10)(rclow=8)"},
+  {"getbitstream",  CmdGetBitStream,    1, "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
   {"grid",          CmdGrid,            1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
   {"hexsamples",    CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
   {"hide",          CmdHide,            1, "Hide graph window"},
