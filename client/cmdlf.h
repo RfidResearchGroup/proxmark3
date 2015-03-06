@@ -23,7 +23,7 @@ int CmdLFaskSim(const char *Cmd);
 int CmdLFfskSim(const char *Cmd);
 int CmdLFpskSim(const char *Cmd);
 int CmdLFSimBidir(const char *Cmd);
-int CmdLFSimManchester(const char *Cmd);
+//int CmdLFSimManchester(const char *Cmd);
 int CmdLFSnoop(const char *Cmd);
 int CmdVchDemod(const char *Cmd);
 int CmdLFfind(const char *Cmd);
