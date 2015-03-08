@@ -15,6 +15,7 @@ command_t * CmdDataCommands();
 
 int CmdData(const char *Cmd);
 void printDemodBuff(void);
+void printBitStream(uint8_t BitStream[], uint32_t bitLen);
 void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx);
 int CmdAmp(const char *Cmd);
 int Cmdaskdemod(const char *Cmd);

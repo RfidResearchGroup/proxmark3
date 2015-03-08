@@ -461,7 +461,7 @@ static void fc(int c, int *n)
         dest[((*n)++)]=0;
     }
   
-    //	an fc/8  encoded bit is a bit pattern of  11000000  x6 = 48 samples
+    //	an fc/8  encoded bit is a bit pattern of  11110000  x6 = 48 samples
     if(c==8) {
         for (idx=0; idx<6; idx++) {
             dest[((*n)++)]=1;
@@ -475,7 +475,7 @@ static void fc(int c, int *n)
         }
     }
 
-    //	an fc/10 encoded bit is a bit pattern of 1110000000 x5 = 50 samples
+    //	an fc/10 encoded bit is a bit pattern of 1111100000 x5 = 50 samples
     if(c==10) {
         for (idx=0; idx<5; idx++) {
             dest[((*n)++)]=1;
@@ -492,52 +492,33 @@ static void fc(int c, int *n)
     }
 }
 // compose fc/X fc/Y waveform (FSKx)
-static void fcAll(uint8_t c, int *n, uint8_t clock, uint16_t *modCnt) 
+static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) 
 {
     uint8_t *dest = BigBuf_get_addr();
-    uint8_t idx;
-    uint8_t fcCnt;
-    // c = count of field clock for this bit
-    uint8_t mod = clock % c;
-    uint8_t modAdj = c/mod;
-    bool modAdjOk=FALSE;
-    if (c % mod==0) modAdjOk=TRUE;
+    uint8_t halfFC = fc/2;
+    uint8_t wavesPerClock = clock/fc;
+    uint8_t mod = clock % fc;    //modifier
+    uint8_t modAdj = fc/mod;     //how often to apply modifier
+    bool modAdjOk = !(fc % mod); //if (fc % mod==0) modAdjOk=TRUE;
     // loop through clock - step field clock
-    for (idx=0; idx < (uint8_t) clock/c; idx++){
-        // loop through field clock length - put 1/2 FC length 1's and 1/2 0's per field clock wave (to create the wave)
-        for (fcCnt=0; fcCnt < c; fcCnt++){  //fudge slow transition from low to high - shorten wave by 1
-            if (fcCnt < c/2){
-                dest[((*n)++)]=0;
-            } else {
-                //fudge low to high transition
-                //if (idx==clock/c && dest[*n-1]==1 && mod>0) dest[((*n++))]=0;
-                //if (c==8 && fcCnt==5) continue; 
-                dest[((*n)++)]=1;   
-            }
-        }
+    for (uint8_t idx=0; idx < wavesPerClock; idx++){
+        // put 1/2 FC length 1's and 1/2 0's per field clock wave (to create the wave)
+        memset(dest+(*n), 0, fc-halfFC);  //in case of odd number use extra here
+        memset(dest+(*n)+(fc-halfFC), 1, halfFC);
+        *n += fc;
     }
     if (mod>0) (*modCnt)++;
     if ((mod>0) && modAdjOk){  //fsk2 
         if ((*modCnt % modAdj) == 0){ //if 4th 8 length wave in a rf/50 add extra 8 length wave
-            for (fcCnt=0; fcCnt < c; fcCnt++){  //fudge slow transition from low to high - shorten wave by 1
-                if (fcCnt < c/2){
-                    dest[((*n)++)]=0;
-                } else {
-                    //if (c==8 && fcCnt==5) continue; 
-                    dest[((*n)++)]=1;    
-                }
-            }       
+            memset(dest+(*n), 0, fc-halfFC);
+            memset(dest+(*n)+(fc-halfFC), 1, halfFC);
+            *n += fc;
         }
     }
-    //Dbprintf("mod: %d, modAdj %d, modc %d",mod, modAdj, c % mod);
     if (mod>0 && !modAdjOk){  //fsk1
-        for (idx=0; idx < mod; idx++){
-            if (idx < mod/2) {
-                dest[((*n)++)]=0;
-            } else {
-                dest[((*n)++)]=1;
-            }
-        }
+        memset(dest+(*n), 0, mod-(mod/2));
+        memset(dest+(*n)+(mod-(mod/2)), 1, mod/2);
+        *n += mod;
     }
 }
 
@@ -607,12 +588,9 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
     uint8_t fcHigh = arg1 >> 8;
     uint8_t fcLow = arg1 & 0xFF;
     uint16_t modCnt = 0;
-    //spacer bit
     uint8_t clk = arg2 & 0xFF;
     uint8_t invert = (arg2 >> 8) & 1;
-    //fcAll(0, &n, clk);
-    
-    WDT_HIT();
+
     for (i=0; i<size; i++){
         if (BitStream[i] == invert){
             fcAll(fcLow, &n, clk, &modCnt);
@@ -621,42 +599,16 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
         }
     }
     Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, invert: %d, n: %d",fcHigh, fcLow, clk, invert, n);
-     WDT_HIT();
-    /*Dbprintf("First 64:");
+    /*Dbprintf("DEBUG: First 32:");
     uint8_t *dest = BigBuf_get_addr();
     i=0;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
     Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
     i+=16;
     Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
     */     
     if (ledcontrol)
         LED_A_ON();
+
     SimulateTagLowFrequency(n, 0, ledcontrol);
 
     if (ledcontrol)
@@ -667,28 +619,15 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 static void askSimBit(uint8_t c, int *n, uint8_t clock, uint8_t manchester) 
 {
     uint8_t *dest = BigBuf_get_addr();
-    uint8_t idx;
+    uint8_t halfClk = clock/2;
     // c = current bit 1 or 0
-    int i = 0;
-    // for when we want a separator
-    if (c==2) { //separator
-        for (i=0; i<clock/2; i++){
-            dest[((*n)++)]=0;
-        }
+    if (manchester){
+        memset(dest+(*n), c, halfClk);
+        memset(dest+(*n) + halfClk, c^1, halfClk);
     } else {
-        if (manchester){
-            for (idx=0; idx < (uint8_t) clock/2; idx++){
-                dest[((*n)++)]=c;    
-            }
-            for (idx=0; idx < (uint8_t) clock/2; idx++){
-                dest[((*n)++)]=c^1;    
-            }
-        } else {
-            for (idx=0; idx < (uint8_t) clock; idx++){
-                dest[((*n)++)]=c;    
-            }
-        }        
+        memset(dest+(*n), c, clock);
     }
+    *n += clock;        
 }
 
 // args clock, ask/man or askraw, invert, transmission separator
@@ -703,24 +642,20 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
     for (i=0; i<size; i++){
         askSimBit(BitStream[i]^invert, &n, clk, manchester);
     }
-    if (separator==1) Dbprintf("sorry but separator option not yet available"); //askSimBit(2, &n, clk, manchester);
+    if (separator==1) Dbprintf("sorry but separator option not yet available"); 
 
     Dbprintf("Simulating with clk: %d, invert: %d, manchester: %d, separator: %d, n: %d",clk, invert, manchester, separator, n);
     //DEBUG
-    //Dbprintf("First 64:");
+    //Dbprintf("First 32:");
     //uint8_t *dest = BigBuf_get_addr();
     //i=0;
     //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
     //i+=16;
     //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    //i+=16;
-    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    //i+=16;
-    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-
 
     if (ledcontrol)
         LED_A_ON();
+    
     SimulateTagLowFrequency(n, 0, ledcontrol);
 
     if (ledcontrol)
@@ -731,27 +666,22 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 static void pskSimBit(uint8_t waveLen, int *n, uint8_t clk, uint8_t *curPhase, bool phaseChg)
 {
     uint8_t *dest = BigBuf_get_addr();
-    uint8_t idx;
+    uint8_t halfWave = waveLen/2;
+    //uint8_t idx;
     int i = 0;
     if (phaseChg){
         // write phase change
-        for (idx=0; idx < waveLen/2; idx++){
-            dest[((*n)++)] = *curPhase^1;
-        }
-        for (idx=0; idx < waveLen/2; idx++){
-            dest[((*n)++)] = *curPhase;
-        }
+        memset(dest+(*n), *curPhase^1, halfWave);
+        memset(dest+(*n) + halfWave, *curPhase, halfWave);
+        *n += waveLen;
         *curPhase ^= 1;
-        i+=waveLen;
+        i += waveLen;
     }
     //write each normal clock wave for the clock duration
     for (; i < clk; i+=waveLen){
-        for (idx=0; idx<waveLen/2; idx++){
-            dest[((*n)++)] = *curPhase;
-        }
-        for (idx=0; idx<waveLen/2; idx++){
-            dest[((*n)++)] = *curPhase^1;
-        }
+        memset(dest+(*n), *curPhase, halfWave);
+        memset(dest+(*n) + halfWave, *curPhase^1, halfWave);
+        *n += waveLen;
     }
 }
 
@@ -763,9 +693,6 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
     uint8_t clk = arg1 >> 8;
     uint8_t carrier = arg1 & 0xFF;
     uint8_t invert = arg2 & 0xFF;
-    //uint8_t phase = carrier/2; //extra phase changing bits = 1/2 a carrier wave to change the phase
-    //uint8_t invert = (arg2 >> 8) & 1;
-    WDT_HIT();
     uint8_t curPhase = 0;
     for (i=0; i<size; i++){
         if (BitStream[i] == curPhase){
@@ -775,25 +702,12 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
         }            
     }
     Dbprintf("Simulating with Carrier: %d, clk: %d, invert: %d, n: %d",carrier, clk, invert, n);
-    WDT_HIT();
-    Dbprintf("First 128:");
-    uint8_t *dest = BigBuf_get_addr();
-    i=0;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-    i+=16;
-    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    //Dbprintf("DEBUG: First 32:");
+    //uint8_t *dest = BigBuf_get_addr();
+    //i=0;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    //i+=16;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
            
     if (ledcontrol)
         LED_A_ON();

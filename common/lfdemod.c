@@ -1094,11 +1094,9 @@ void psk1TOpsk2(uint8_t *BitStream, size_t size)
 // from only transition waves are 1s to phase shifts change bit
 void psk2TOpsk1(uint8_t *BitStream, size_t size)
 {
-	size_t i;
-	uint8_t phase=BitStream[0];
-	//uint8_t lastBit=BitStream[0];
-	for (i=1; i<size; i++){
-		if (phase!=BitStream[i]){
+	uint8_t phase=0;
+	for (size_t i=0; i<size; i++){
+		if (BitStream[i]==1){
 			phase ^=1;
 		}
 		BitStream[i]=phase;

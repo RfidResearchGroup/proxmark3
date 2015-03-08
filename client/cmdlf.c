@@ -522,7 +522,7 @@ static void ChkBitstream(const char *str)
 //appears to attempt to simulate manchester
 int CmdLFSim(const char *Cmd)
 {
-	int i,j;
+  int i,j;
   static int gap;
 
   sscanf(Cmd, "%i", &gap);
@@ -532,20 +532,20 @@ int CmdLFSim(const char *Cmd)
   ChkBitstream(Cmd);
 
   //can send 512 bits at a time (1 byte sent per bit...)
-	printf("Sending [%d bytes]", GraphTraceLen);
-	for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
+  printf("Sending [%d bytes]", GraphTraceLen);
+  for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
     UsbCommand c={CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
 
-		for (j = 0; j < USB_CMD_DATA_SIZE; j++) {
+    for (j = 0; j < USB_CMD_DATA_SIZE; j++) {
       c.d.asBytes[j] = GraphBuffer[i+j];
     }
     SendCommand(&c);
     WaitForResponse(CMD_ACK,NULL);
-		printf(".");
+    printf(".");
   }
 
-	printf("\n");
-	PrintAndLog("Starting to simulate");
+  printf("\n");
+  PrintAndLog("Starting to simulate");
   UsbCommand c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
   SendCommand(&c);
   return 0;
@@ -597,6 +597,7 @@ int usage_lf_simpsk(void)
   PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
   return 0;
 }
+
 // by marshmellow - sim ask data given clock, fcHigh, fcLow, invert 
 // - allow pull data from DemodBuffer
 int CmdLFfskSim(const char *Cmd)
