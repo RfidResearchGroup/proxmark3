@@ -1786,11 +1786,11 @@ int CmdNRZrawDemod(const char *Cmd)
     PrintAndLog("     <invert>, 1 for invert output");
     PrintAndLog("     [set maximum allowed errors], default = 100.");
     PrintAndLog("");
-    PrintAndLog("    sample: data nrzrawdemod        = demod a nrz/direct tag from GraphBuffer");
-    PrintAndLog("          : data nrzrawdemod 32     = demod a nrz/direct tag from GraphBuffer using a clock of RF/32");
-    PrintAndLog("          : data nrzrawdemod 32 1   = demod a nrz/direct tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLog("          : data nrzrawdemod 1      = demod a nrz/direct tag from GraphBuffer while inverting data");
-    PrintAndLog("          : data nrzrawdemod 64 1 0 = demod a nrz/direct tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLog("    sample: data rawdemod nr        = demod a nrz/direct tag from GraphBuffer");
+    PrintAndLog("          : data rawdemod nr 32     = demod a nrz/direct tag from GraphBuffer using a clock of RF/32");
+    PrintAndLog("          : data rawdemod nr 32 1   = demod a nrz/direct tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLog("          : data rawdemod nr 1      = demod a nrz/direct tag from GraphBuffer while inverting data");
+    PrintAndLog("          : data rawdemod nr 64 1 0 = demod a nrz/direct tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
     return 0;
   }
   return NRZrawDemod(Cmd, TRUE);
@@ -1810,11 +1810,11 @@ int CmdPSK1rawDemod(const char *Cmd)
     PrintAndLog("     <invert>, 1 for invert output");
     PrintAndLog("     [set maximum allowed errors], default = 100.");
     PrintAndLog("");
-    PrintAndLog("    sample: data psk1rawdemod        = demod a psk1 tag from GraphBuffer");
-    PrintAndLog("          : data psk1rawdemod 32     = demod a psk1 tag from GraphBuffer using a clock of RF/32");
-    PrintAndLog("          : data psk1rawdemod 32 1   = demod a psk1 tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLog("          : data psk1rawdemod 1      = demod a psk1 tag from GraphBuffer while inverting data");
-    PrintAndLog("          : data psk1rawdemod 64 1 0 = demod a psk1 tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLog("    sample: data rawdemod p1        = demod a psk1 tag from GraphBuffer");
+    PrintAndLog("          : data rawdemod p1 32     = demod a psk1 tag from GraphBuffer using a clock of RF/32");
+    PrintAndLog("          : data rawdemod p1 32 1   = demod a psk1 tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLog("          : data rawdemod p1 1      = demod a psk1 tag from GraphBuffer while inverting data");
+    PrintAndLog("          : data rawdemod p1 64 1 0 = demod a psk1 tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
     return 0;
   }
   errCnt = PSKDemod(Cmd, TRUE);
@@ -1844,11 +1844,11 @@ int CmdPSK2rawDemod(const char *Cmd)
     PrintAndLog("     <invert>, 1 for invert output");
     PrintAndLog("     [set maximum allowed errors], default = 100.");
     PrintAndLog("");
-    PrintAndLog("    sample: data psk2rawdemod        = demod a psk2 tag from GraphBuffer, autodetect clock");
-    PrintAndLog("          : data psk2rawdemod 32     = demod a psk2 tag from GraphBuffer using a clock of RF/32");
-    PrintAndLog("          : data psk2rawdemod 32 1   = demod a psk2 tag from GraphBuffer using a clock of RF/32 and inverting output");
-    PrintAndLog("          : data psk2rawdemod 1      = demod a psk2 tag from GraphBuffer, autodetect clock and invert output");
-    PrintAndLog("          : data psk2rawdemod 64 1 0 = demod a psk2 tag from GraphBuffer using a clock of RF/64, inverting output and allowing 0 demod errors");
+    PrintAndLog("    sample: data rawdemod p2         = demod a psk2 tag from GraphBuffer, autodetect clock");
+    PrintAndLog("          : data rawdemod p2 32      = demod a psk2 tag from GraphBuffer using a clock of RF/32");
+    PrintAndLog("          : data rawdemod p2 32 1    = demod a psk2 tag from GraphBuffer using a clock of RF/32 and inverting output");
+    PrintAndLog("          : data rawdemod p2 1       = demod a psk2 tag from GraphBuffer, autodetect clock and invert output");
+    PrintAndLog("          : data rawdemod p2 64 1 0  = demod a psk2 tag from GraphBuffer using a clock of RF/64, inverting output and allowing 0 demod errors");
     return 0;
   }
   errCnt=PSKDemod(Cmd, TRUE);
