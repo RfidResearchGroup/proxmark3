@@ -112,34 +112,26 @@ end
 // for noise reduction and edge detection.
 // store 4 previous samples:
 reg [7:0] input_prev_4, input_prev_3, input_prev_2, input_prev_1;
-// convert to signed signals (and multiply by two for samples at t-4 and t)
-wire signed [10:0] input_prev_4_times_2 = {0, 0, input_prev_4, 0};
-wire signed [10:0] input_prev_3_times_1 = {0, 0, 0, input_prev_3};
-wire signed [10:0] input_prev_1_times_1 = {0, 0, 0, input_prev_1};
-wire signed [10:0] adc_d_times_2 = {0, 0, adc_d, 0}; 
 
-wire signed [10:0] tmp_1, tmp_2;
-wire signed [10:0] adc_d_filtered;
-integer i;
-
-assign	tmp_1 = input_prev_4_times_2 + input_prev_3_times_1;
-assign	tmp_2 = input_prev_1_times_1 + adc_d_times_2;
-	
 always @(negedge adc_clk)
 begin
-	// for (i = 3; i > 0; i = i - 1)
-	// begin
-		// input_shift[i] <= input_shift[i-1];
-	// end
-	// input_shift[0] <= adc_d;
 	input_prev_4 <= input_prev_3;
 	input_prev_3 <= input_prev_2;
 	input_prev_2 <= input_prev_1;
 	input_prev_1 <= adc_d;
 end	
 
-// assign adc_d_filtered = (input_shift[3] << 1) + input_shift[2] - input_shift[0] - (adc_d << 1);
-assign adc_d_filtered = tmp_1 - tmp_2;
+// adc_d_filtered = 2*input_prev4 + 1*input_prev3 + 0*input_prev2 - 1*input_prev1 - 2*input
+//					= (2*input_prev4 + input_prev3) - (2*input + input_prev1) 
+wire [8:0] input_prev_4_times_2 = input_prev_4 << 1;
+wire [8:0] adc_d_times_2 		= adc_d << 1;
+
+wire [9:0] tmp1 = input_prev_4_times_2 + input_prev_3;
+wire [9:0] tmp2 = adc_d_times_2 + input_prev_1;
+
+// convert intermediate signals to signed and calculate the filter output
+wire signed [10:0] adc_d_filtered = {1'b0, tmp1} - {1'b0, tmp2};
+
 
 	
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -194,11 +186,13 @@ reg [3:0] mod_detect_reset_time;
 always @(negedge adc_clk)
 begin
 	if (mod_type == `READER_LISTEN) 
-	// (our) reader signal changes at t=1, tag response expected n*16+4 ticks later, further delayed by
-	// 3 ticks ADC conversion.
-	// 1 + 4 + 3 = 8
+	// (our) reader signal changes at negedge_cnt[3:0]=9, tag response expected to start n*16+4 ticks later, further delayed by
+	// 3 ticks ADC conversion. The maximum filter output (edge detected) will be detected after subcarrier zero crossing (+7 ticks).
+	// To allow some timing variances, we want to have the maximum filter outputs well within the detection window, i.e.
+	// at mod_detect_reset_time+4 and mod_detect_reset_time+12  (-4 ticks).
+	// 9 + 4 + 3 + 7 - 4  = 19.    19 mod 16 = 3
 	begin
-		mod_detect_reset_time <= 4'd8;
+		mod_detect_reset_time <= 4'd4;
 	end
 	else
 	if (mod_type == `SNIFFER)
@@ -207,10 +201,10 @@ begin
 		if (~pre_after_hysteresis && after_hysteresis && deep_modulation)
 		// reader signal rising edge detected at negedge_cnt[3:0]. This signal had been delayed 
 		// 9 ticks by the RF part + 3 ticks by the A/D converter + 1 tick to assign to after_hysteresis.
-		// The tag will respond n*16 + 4 ticks later + 3 ticks A/D converter delay.
-		// - 9 - 3 - 1 + 4 + 3 = -6
+		// Then the same as above.
+		// - 9 - 3 - 1 + 4 + 3 + 7 - 4 = -3
 		begin
-			mod_detect_reset_time <= negedge_cnt[3:0] - 4'd4;
+			mod_detect_reset_time <= negedge_cnt[3:0] - 4'd3;
 		end
 	end
 end
@@ -224,12 +218,14 @@ reg signed [10:0] rx_mod_falling_edge_max;
 reg signed [10:0] rx_mod_rising_edge_max;
 reg curbit;
 
+`define EDGE_DETECT_THRESHOLD	5
+
 always @(negedge adc_clk)
 begin
 	if(negedge_cnt[3:0] == mod_detect_reset_time)
 	begin
 		// detect modulation signal: if modulating, there must have been a falling AND a rising edge
-		if (rx_mod_falling_edge_max > 5 && rx_mod_rising_edge_max > 5)
+		if ((rx_mod_falling_edge_max > `EDGE_DETECT_THRESHOLD) && (rx_mod_rising_edge_max < -`EDGE_DETECT_THRESHOLD))
 				curbit <= 1'b1;	// modulation
 			else
 				curbit <= 1'b0;	// no modulation
@@ -246,8 +242,8 @@ begin
 		end
 		else
 		begin
-			if (-adc_d_filtered > rx_mod_rising_edge_max)
-				rx_mod_rising_edge_max <= -adc_d_filtered;
+			if (adc_d_filtered < rx_mod_rising_edge_max)
+				rx_mod_rising_edge_max <= adc_d_filtered;
 		end
 	end
 
@@ -273,7 +269,7 @@ end
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// PM3 -> Tag:
+// PM3 -> Reader:
 // a delay line to ensure that we send the (emulated) tag's answer at the correct time according to ISO14443-3
 reg [31:0] mod_sig_buf;
 reg [4:0] mod_sig_ptr;
@@ -297,7 +293,7 @@ end
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// PM3 -> Tag, internal timing:
+// PM3 -> Reader, internal timing:
 // a timer for the 1172 cycles fdt (Frame Delay Time). Start the timer with a rising edge of the reader's signal.
 // set fdt_elapsed when we no longer need to delay data. Set fdt_indicator when we can start sending data.
 // Note: the FPGA only takes care for the 1172 delay. To achieve an additional 1236-1172=64 ticks delay, the ARM must send
@@ -477,11 +473,10 @@ end
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// FPGA -> ARM communication:
+// FPGA <-> ARM communication:
 // generate a ssp clock and ssp frame signal for the synchronous transfer from/to the ARM
 reg ssp_clk;
 reg ssp_frame;
-reg [2:0] ssp_frame_counter;
 
 always @(negedge adc_clk)
 begin
