@@ -25,7 +25,7 @@ uint8_t justNoise(uint8_t *BitStream, size_t size)
 }
 
 //by marshmellow
-//get high and low with passed in fuzz factor. also return noise test = 1 for passed or 0 for only noise
+//get high and low values of a wave with passed in fuzz factor. also return noise test = 1 for passed or 0 for only noise
 int getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo)
 {
 	*high=0;
@@ -108,6 +108,7 @@ uint64_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx)
         errChk = 0;
         break;
       }
+      //set uint64 with ID from BitStream
       for (uint8_t ii=0; ii<4; ii++){
         lo = (lo << 1LL) | (BitStream[(i*5)+ii+idx]);
       }
@@ -353,7 +354,6 @@ void askAmp(uint8_t *BitStream, size_t size)
 //by marshmellow
 //takes 3 arguments - clock, invert and maxErr as integers
 //attempts to demodulate ask only
-//prints binary found and saves in graphbuffer for further commands
 int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp)
 {
 	uint32_t i;
@@ -500,6 +500,28 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 	}
 	return bestErrCnt;
 }
+
+// demod gProxIIDemod 
+// error returns as -x 
+// success returns start position in BitStream
+// BitStream must contain previously askrawdemod and biphasedemoded data
+int gProxII_Demod(uint8_t BitStream[], size_t *size)
+{
+	size_t startIdx=0;
+	uint8_t preamble[] = {1,1,1,1,1,0};
+
+	uint8_t errChk = preambleSearch(BitStream, preamble, sizeof(preamble), size, &startIdx);
+	if (errChk == 0) return -3; //preamble not found
+	if (*size != 96) return -2; //should have found 96 bits
+	//check first 6 spacer bits to verify format
+	if (!BitStream[startIdx+5] && !BitStream[startIdx+10] && !BitStream[startIdx+15] && !BitStream[startIdx+20] && !BitStream[startIdx+25] && !BitStream[startIdx+30]){
+		//confirmed proper separator bits found
+		//return start position
+		return (int) startIdx;
+	}
+	return -5;
+}
+
 //translate wave to 11111100000 (1 for each short wave 0 for each long wave)
 size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow)
 {
@@ -1067,6 +1089,21 @@ void psk1TOpsk2(uint8_t *BitStream, size_t size)
 	return;
 }
 
+// by marshmellow
+// convert psk2 demod to psk1 demod
+// from only transition waves are 1s to phase shifts change bit
+void psk2TOpsk1(uint8_t *BitStream, size_t size)
+{
+	uint8_t phase=0;
+	for (size_t i=0; i<size; i++){
+		if (BitStream[i]==1){
+			phase ^=1;
+		}
+		BitStream[i]=phase;
+	}
+	return;
+}
+
 // redesigned by marshmellow adjusted from existing decode functions
 // indala id decoding - only tested on 26 bit tags, but attempted to make it work for more
 int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert)
@@ -1561,7 +1598,7 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
   *clock = DetectPSKClock(dest, *size, *clock);
   if (*clock==0) return -1;
   int avgWaveVal=0, lastAvgWaveVal=0;
-  //find first full wave
+  //find first phase shift
   for (i=0; i<loopCnt; i++){
     if (dest[i]+fc < dest[i+1] && dest[i+1] >= dest[i+2]){
       if (waveStart == 0) {

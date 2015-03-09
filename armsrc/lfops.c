@@ -394,11 +394,12 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
     AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 
-#define SHORT_COIL()	LOW(GPIO_SSC_DOUT)
-#define OPEN_COIL()		HIGH(GPIO_SSC_DOUT)
+ #define SHORT_COIL()	LOW(GPIO_SSC_DOUT)
+ #define OPEN_COIL()		HIGH(GPIO_SSC_DOUT)
 
     i = 0;
     for(;;) {
+        //wait until SSC_CLK goes HIGH
         while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
             if(BUTTON_PRESS()) {
                 DbpString("Stopped");
@@ -406,7 +407,6 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
             }
             WDT_HIT();
         }
-
         if (ledcontrol)
             LED_D_ON();
 
@@ -417,17 +417,18 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 
         if (ledcontrol)
             LED_D_OFF();
-
+        //wait until SSC_CLK goes LOW
         while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
             if(BUTTON_PRESS()) {
                 DbpString("Stopped");
                 return;
             }
             WDT_HIT();
-        }
-
+        }    
+               
         i++;
         if(i == period) {
+      
             i = 0;
             if (gap) {
                 SHORT_COIL();
@@ -442,8 +443,9 @@ void SimulateTagLowFrequencyBidir(int divisor, int t0)
 {
 }
 
-// compose fc/8 fc/10 waveform
-static void fc(int c, int *n) {
+// compose fc/8 fc/10 waveform (FSK2)
+static void fc(int c, int *n)
+{
     uint8_t *dest = BigBuf_get_addr();
     int idx;
 
@@ -451,20 +453,21 @@ static void fc(int c, int *n) {
     if(c==0) {
         dest[((*n)++)]=1;
         dest[((*n)++)]=1;
-        dest[((*n)++)]=0;
-        dest[((*n)++)]=0;
+        dest[((*n)++)]=1;
+        dest[((*n)++)]=1;
         dest[((*n)++)]=0;
         dest[((*n)++)]=0;
         dest[((*n)++)]=0;
         dest[((*n)++)]=0;
     }
-    //	an fc/8  encoded bit is a bit pattern of  11000000  x6 = 48 samples
+  
+    //	an fc/8  encoded bit is a bit pattern of  11110000  x6 = 48 samples
     if(c==8) {
         for (idx=0; idx<6; idx++) {
             dest[((*n)++)]=1;
             dest[((*n)++)]=1;
-            dest[((*n)++)]=0;
-            dest[((*n)++)]=0;
+            dest[((*n)++)]=1;
+            dest[((*n)++)]=1;
             dest[((*n)++)]=0;
             dest[((*n)++)]=0;
             dest[((*n)++)]=0;
@@ -472,20 +475,50 @@ static void fc(int c, int *n) {
         }
     }
 
-    //	an fc/10 encoded bit is a bit pattern of 1110000000 x5 = 50 samples
+    //	an fc/10 encoded bit is a bit pattern of 1111100000 x5 = 50 samples
     if(c==10) {
         for (idx=0; idx<5; idx++) {
             dest[((*n)++)]=1;
             dest[((*n)++)]=1;
             dest[((*n)++)]=1;
-            dest[((*n)++)]=0;
-            dest[((*n)++)]=0;
+            dest[((*n)++)]=1;
+            dest[((*n)++)]=1;
             dest[((*n)++)]=0;
             dest[((*n)++)]=0;
             dest[((*n)++)]=0;
             dest[((*n)++)]=0;
             dest[((*n)++)]=0;
         }
+    }
+}
+// compose fc/X fc/Y waveform (FSKx)
+static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) 
+{
+    uint8_t *dest = BigBuf_get_addr();
+    uint8_t halfFC = fc/2;
+    uint8_t wavesPerClock = clock/fc;
+    uint8_t mod = clock % fc;    //modifier
+    uint8_t modAdj = fc/mod;     //how often to apply modifier
+    bool modAdjOk = !(fc % mod); //if (fc % mod==0) modAdjOk=TRUE;
+    // loop through clock - step field clock
+    for (uint8_t idx=0; idx < wavesPerClock; idx++){
+        // put 1/2 FC length 1's and 1/2 0's per field clock wave (to create the wave)
+        memset(dest+(*n), 0, fc-halfFC);  //in case of odd number use extra here
+        memset(dest+(*n)+(fc-halfFC), 1, halfFC);
+        *n += fc;
+    }
+    if (mod>0) (*modCnt)++;
+    if ((mod>0) && modAdjOk){  //fsk2 
+        if ((*modCnt % modAdj) == 0){ //if 4th 8 length wave in a rf/50 add extra 8 length wave
+            memset(dest+(*n), 0, fc-halfFC);
+            memset(dest+(*n)+(fc-halfFC), 1, halfFC);
+            *n += fc;
+        }
+    }
+    if (mod>0 && !modAdjOk){  //fsk1
+        memset(dest+(*n), 0, mod-(mod/2));
+        memset(dest+(*n)+(mod-(mod/2)), 1, mod/2);
+        *n += mod;
     }
 }
 
@@ -505,7 +538,7 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
     */
 
     if (hi>0xFFF) {
-        DbpString("Tags can only have 44 bits.");
+        DbpString("Tags can only have 44 bits. - USE lf simfsk for larger tags");
         return;
     }
     fc(0,&n);
@@ -537,6 +570,150 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
         }
     }
 
+    if (ledcontrol)
+        LED_A_ON();
+    SimulateTagLowFrequency(n, 0, ledcontrol);
+
+    if (ledcontrol)
+        LED_A_OFF();
+}
+
+// prepare a waveform pattern in the buffer based on the ID given then
+// simulate a FSK tag until the button is pressed
+// arg1 contains fcHigh and fcLow, arg2 contains invert and clock
+void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
+{
+    int ledcontrol=1;
+    int n=0, i=0;
+    uint8_t fcHigh = arg1 >> 8;
+    uint8_t fcLow = arg1 & 0xFF;
+    uint16_t modCnt = 0;
+    uint8_t clk = arg2 & 0xFF;
+    uint8_t invert = (arg2 >> 8) & 1;
+
+    for (i=0; i<size; i++){
+        if (BitStream[i] == invert){
+            fcAll(fcLow, &n, clk, &modCnt);
+        } else {
+            fcAll(fcHigh, &n, clk, &modCnt);
+        }
+    }
+    Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, invert: %d, n: %d",fcHigh, fcLow, clk, invert, n);
+    /*Dbprintf("DEBUG: First 32:");
+    uint8_t *dest = BigBuf_get_addr();
+    i=0;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    i+=16;
+    Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    */     
+    if (ledcontrol)
+        LED_A_ON();
+
+    SimulateTagLowFrequency(n, 0, ledcontrol);
+
+    if (ledcontrol)
+        LED_A_OFF();
+}
+
+// compose ask waveform for one bit(ASK)
+static void askSimBit(uint8_t c, int *n, uint8_t clock, uint8_t manchester) 
+{
+    uint8_t *dest = BigBuf_get_addr();
+    uint8_t halfClk = clock/2;
+    // c = current bit 1 or 0
+    if (manchester){
+        memset(dest+(*n), c, halfClk);
+        memset(dest+(*n) + halfClk, c^1, halfClk);
+    } else {
+        memset(dest+(*n), c, clock);
+    }
+    *n += clock;        
+}
+
+// args clock, ask/man or askraw, invert, transmission separator
+void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
+{
+    int ledcontrol = 1;
+    int n=0, i=0;
+    uint8_t clk = (arg1 >> 8) & 0xFF;
+    uint8_t manchester = arg1 & 1;
+    uint8_t separator = arg2 & 1;
+    uint8_t invert = (arg2 >> 8) & 1;
+    for (i=0; i<size; i++){
+        askSimBit(BitStream[i]^invert, &n, clk, manchester);
+    }
+    if (manchester==0 && BitStream[0]==BitStream[size-1]){ //run a second set inverted (for biphase phase)
+        for (i=0; i<size; i++){
+            askSimBit(BitStream[i]^invert^1, &n, clk, manchester);
+        }    
+    }
+    if (separator==1) Dbprintf("sorry but separator option not yet available"); 
+
+    Dbprintf("Simulating with clk: %d, invert: %d, manchester: %d, separator: %d, n: %d",clk, invert, manchester, separator, n);
+    //DEBUG
+    //Dbprintf("First 32:");
+    //uint8_t *dest = BigBuf_get_addr();
+    //i=0;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    //i+=16;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+
+    if (ledcontrol)
+        LED_A_ON();
+    
+    SimulateTagLowFrequency(n, 0, ledcontrol);
+
+    if (ledcontrol)
+        LED_A_OFF();
+}
+
+//carrier can be 2,4 or 8
+static void pskSimBit(uint8_t waveLen, int *n, uint8_t clk, uint8_t *curPhase, bool phaseChg)
+{
+    uint8_t *dest = BigBuf_get_addr();
+    uint8_t halfWave = waveLen/2;
+    //uint8_t idx;
+    int i = 0;
+    if (phaseChg){
+        // write phase change
+        memset(dest+(*n), *curPhase^1, halfWave);
+        memset(dest+(*n) + halfWave, *curPhase, halfWave);
+        *n += waveLen;
+        *curPhase ^= 1;
+        i += waveLen;
+    }
+    //write each normal clock wave for the clock duration
+    for (; i < clk; i+=waveLen){
+        memset(dest+(*n), *curPhase, halfWave);
+        memset(dest+(*n) + halfWave, *curPhase^1, halfWave);
+        *n += waveLen;
+    }
+}
+
+// args clock, carrier, invert,
+void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
+{
+    int ledcontrol=1;
+    int n=0, i=0;
+    uint8_t clk = arg1 >> 8;
+    uint8_t carrier = arg1 & 0xFF;
+    uint8_t invert = arg2 & 0xFF;
+    uint8_t curPhase = 0;
+    for (i=0; i<size; i++){
+        if (BitStream[i] == curPhase){
+            pskSimBit(carrier, &n, clk, &curPhase, FALSE);
+        } else {
+            pskSimBit(carrier, &n, clk, &curPhase, TRUE);
+        }            
+    }
+    Dbprintf("Simulating with Carrier: %d, clk: %d, invert: %d, n: %d",carrier, clk, invert, n);
+    //Dbprintf("DEBUG: First 32:");
+    //uint8_t *dest = BigBuf_get_addr();
+    //i=0;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+    //i+=16;
+    //Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
+           
     if (ledcontrol)
         LED_A_ON();
     SimulateTagLowFrequency(n, 0, ledcontrol);
@@ -1539,7 +1716,7 @@ void ReadPCF7931() {
         tries++;
         if (BUTTON_PRESS()) return;
     } while (num_blocks != max_blocks);
-end:
+ end:
     Dbprintf("-----------------------------------------");
     Dbprintf("Memory content:");
     Dbprintf("-----------------------------------------");

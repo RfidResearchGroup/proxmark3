@@ -18,16 +18,16 @@
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 int GraphTraceLen;
 
-/* write a bit to the graph */
+/* write a manchester bit to the graph */
 void AppendGraph(int redraw, int clock, int bit)
 {
   int i;
-
+  //set first half the clock bit (all 1's or 0's for a 0 or 1 bit) 
   for (i = 0; i < (int)(clock / 2); ++i)
-    GraphBuffer[GraphTraceLen++] = bit ^ 1;
-
+    GraphBuffer[GraphTraceLen++] = bit ;
+  //set second half of the clock bit (all 0's or 1's for a 0 or 1 bit)
   for (i = (int)(clock / 2); i < clock; ++i)
-    GraphBuffer[GraphTraceLen++] = bit;
+    GraphBuffer[GraphTraceLen++] = bit ^ 1;
 
   if (redraw)
     RepaintGraphWindow();
@@ -134,6 +134,26 @@ int GetAskClock(const char str[], bool printAns, bool verbose)
 	return clock;
 }
 
+uint8_t GetPskCarrier(const char str[], bool printAns, bool verbose)
+{
+	uint8_t carrier=0;
+	uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
+	size_t size = getFromGraphBuf(grph);
+	if ( size == 0 ) {
+		if (verbose) 
+			PrintAndLog("Failed to copy from graphbuffer");
+		return 0;
+	}
+	//uint8_t countPSK_FC(uint8_t *BitStream, size_t size)
+
+	carrier = countPSK_FC(grph,size);
+	// Only print this message if we're not looping something
+	if (printAns){
+		PrintAndLog("Auto-detected PSK carrier rate: %d", carrier);
+	}
+	return carrier;
+}
+
 int GetPskClock(const char str[], bool printAns, bool verbose)
 {
 	int clock;
@@ -193,24 +213,10 @@ uint8_t GetFskClock(const char str[], bool printAns, bool verbose)
 		clock = 0;
 	if (clock != 0) return (uint8_t)clock;
 
-	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
-	size_t size = getFromGraphBuf(BitStream);
-	if (size==0) return 0;
-	uint8_t dummy = 0;
-	uint16_t ans = countFC(BitStream, size, &dummy); 
-	if (ans==0) {
-		if (verbose) PrintAndLog("DEBUG: No data found");
-		return 0;
-	}
-	uint8_t fc1, fc2;
-	fc1 = (ans >> 8) & 0xFF;
-	fc2 = ans & 0xFF;
 
-	uint8_t rf1 = detectFSKClk(BitStream, size, fc1, fc2);
-	if (rf1==0) {
-		if (verbose) PrintAndLog("DEBUG: Clock detect error");
-		return 0;
-	}
+	uint8_t fc1=0, fc2=0, rf1=0;
+	uint8_t ans = fskClocks(&fc1, &fc2, &rf1, verbose);
+	if (ans == 0) return 0;
 	if ((fc1==10 && fc2==8) || (fc1==8 && fc2==5)){
 		if (printAns) PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
 		return rf1;
@@ -220,4 +226,25 @@ uint8_t GetFskClock(const char str[], bool printAns, bool verbose)
 		PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
 	}
 	return 0;
+}
+uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose)
+{
+	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
+	size_t size = getFromGraphBuf(BitStream);
+	if (size==0) return 0;
+	uint8_t dummy = 0;
+	uint16_t ans = countFC(BitStream, size, &dummy); 
+	if (ans==0) {
+		if (verbose) PrintAndLog("DEBUG: No data found");
+		return 0;
+	}
+	*fc1 = (ans >> 8) & 0xFF;
+	*fc2 = ans & 0xFF;
+
+	*rf1 = detectFSKClk(BitStream, size, *fc1, *fc2);
+	if (*rf1==0) {
+		if (verbose) PrintAndLog("DEBUG: Clock detect error");
+		return 0;
+	}
+	return 1;
 }

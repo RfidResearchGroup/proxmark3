@@ -28,6 +28,7 @@
 #include "cmdlft55xx.h"
 #include "cmdlfpcf7931.h"
 #include "cmdlfio.h"
+#include "lfdemod.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -509,11 +510,11 @@ int CmdLFSnoop(const char *Cmd)
 static void ChkBitstream(const char *str)
 {
   int i;
-
+ 
   /* convert to bitstream if necessary */
 	for (i = 0; i < (int)(GraphTraceLen / 2); i++){
 		if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
-      CmdBitstream(str);
+      CmdGetBitStream("");
       break;
     }
   }
@@ -521,30 +522,376 @@ static void ChkBitstream(const char *str)
 //appears to attempt to simulate manchester
 int CmdLFSim(const char *Cmd)
 {
-	int i,j;
+  int i,j;
   static int gap;
 
   sscanf(Cmd, "%i", &gap);
 
   /* convert to bitstream if necessary */
+
   ChkBitstream(Cmd);
 
-	printf("Sending [%d bytes]", GraphTraceLen);
-	for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
+  //can send 512 bits at a time (1 byte sent per bit...)
+  printf("Sending [%d bytes]", GraphTraceLen);
+  for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
     UsbCommand c={CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
 
-		for (j = 0; j < USB_CMD_DATA_SIZE; j++) {
+    for (j = 0; j < USB_CMD_DATA_SIZE; j++) {
       c.d.asBytes[j] = GraphBuffer[i+j];
     }
     SendCommand(&c);
     WaitForResponse(CMD_ACK,NULL);
-		printf(".");
+    printf(".");
   }
 
-	printf("\n");
-	PrintAndLog("Starting to simulate");
+  printf("\n");
+  PrintAndLog("Starting to simulate");
   UsbCommand c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
   SendCommand(&c);
+  return 0;
+}
+
+int usage_lf_simfsk(void)
+{
+  //print help
+  PrintAndLog("Usage: lf simfsk [c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
+  PrintAndLog("Options:        ");
+  PrintAndLog("       h              This help");
+  PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
+  PrintAndLog("       i              invert data");
+  PrintAndLog("       H <fcHigh>     Manually set the larger Field Clock");
+  PrintAndLog("       L <fcLow>      Manually set the smaller Field Clock");
+  //PrintAndLog("       s              TBD- -to enable a gap between playback repetitions - default: no gap");
+  PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
+  PrintAndLog("\n  NOTE: if you set one clock manually set them all manually");
+  return 0;
+}
+
+int usage_lf_simask(void)
+{
+  //print help
+  PrintAndLog("Usage: lf simask [c <clock>] [i] [m|r] [s] [d <raw hex to sim>]");
+  PrintAndLog("Options:        ");
+  PrintAndLog("       h              This help");
+  PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
+  PrintAndLog("       i              invert data");
+  PrintAndLog("       m              sim ask/manchester");
+  PrintAndLog("       r              sim ask/raw");
+  PrintAndLog("       s              TBD- -to enable a gap between playback repetitions - default: no gap");
+  PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
+  return 0;
+}
+
+int usage_lf_simpsk(void)
+{
+  //print help
+  PrintAndLog("Usage: lf simpsk [1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>]");
+  PrintAndLog("Options:        ");
+  PrintAndLog("       h              This help");
+  PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
+  PrintAndLog("       i              invert data");
+  PrintAndLog("       1              set PSK1 (default)");
+  PrintAndLog("       2              set PSK2");
+  PrintAndLog("       3              set PSK3");
+  PrintAndLog("       r <carrier>    2|4|8 are valid carriers: default = 2");
+  PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
+  return 0;
+}
+
+// by marshmellow - sim ask data given clock, fcHigh, fcLow, invert 
+// - allow pull data from DemodBuffer
+int CmdLFfskSim(const char *Cmd)
+{
+  //might be able to autodetect FC and clock from Graphbuffer if using demod buffer
+  //will need FChigh, FClow, Clock, and bitstream
+  uint8_t fcHigh=0, fcLow=0, clk=0;
+  uint8_t invert=0;
+  bool errors = FALSE;
+  char hexData[32] = {0x00}; // store entered hex data
+  uint8_t data[255] = {0x00}; 
+  int dataLen = 0;
+  uint8_t cmdp = 0;
+  while(param_getchar(Cmd, cmdp) != 0x00)
+  {
+    switch(param_getchar(Cmd, cmdp))
+    {
+    case 'h':
+      return usage_lf_simfsk();
+    case 'i':
+      invert = 1;
+      cmdp++;
+      break;
+    case 'c':
+      errors |= param_getdec(Cmd,cmdp+1,&clk);
+      cmdp+=2;
+      break;
+    case 'H':
+      errors |= param_getdec(Cmd,cmdp+1,&fcHigh);
+      cmdp+=2;
+      break;
+    case 'L':
+      errors |= param_getdec(Cmd,cmdp+1,&fcLow);
+      cmdp+=2;
+      break;
+    //case 's':
+    //  separator=1;
+    //  cmdp++;
+    //  break;
+    case 'd':
+      dataLen = param_getstr(Cmd, cmdp+1, hexData);
+      if (dataLen==0) {
+        errors=TRUE; 
+      } else {
+        dataLen = hextobinarray((char *)data, hexData);
+      }   
+      if (dataLen==0) errors=TRUE; 
+      if (errors) PrintAndLog ("Error getting hex data");
+      cmdp+=2;
+      break;
+    default:
+      PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+      errors = TRUE;
+      break;
+    }
+    if(errors) break;
+  }
+  if(cmdp == 0 && DemodBufferLen == 0)
+  {
+    errors = TRUE;// No args
+  }
+
+  //Validations
+  if(errors)
+  {
+    return usage_lf_simfsk();
+  }
+
+  if (dataLen == 0){ //using DemodBuffer 
+    if (clk==0 || fcHigh==0 || fcLow==0){ //manual settings must set them all
+      uint8_t ans = fskClocks(&fcHigh, &fcLow, &clk, 0);
+      if (ans==0){
+        if (!fcHigh) fcHigh=10;
+        if (!fcLow) fcLow=8;
+        if (!clk) clk=50;
+      }
+    }
+  } else {
+    setDemodBuf(data, dataLen, 0);
+  }
+  if (clk == 0) clk = 50;
+  if (fcHigh == 0) fcHigh = 10;
+  if (fcLow == 0) fcLow = 8;
+
+  uint16_t arg1, arg2;
+  arg1 = fcHigh << 8 | fcLow;
+  arg2 = invert << 8 | clk;
+  size_t size = DemodBufferLen;
+  if (size > USB_CMD_DATA_SIZE) {
+    PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
+    size = USB_CMD_DATA_SIZE;
+  } 
+  UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
+
+  memcpy(c.d.asBytes, DemodBuffer, size);
+  SendCommand(&c);
+  return 0;
+}
+
+// by marshmellow - sim ask data given clock, invert, manchester or raw, separator 
+// - allow pull data from DemodBuffer
+int CmdLFaskSim(const char *Cmd)
+{
+  //autodetect clock from Graphbuffer if using demod buffer
+  //will need clock, invert, manchester/raw as m or r, separator as s, and bitstream
+  uint8_t manchester = 1, separator = 0;
+  //char cmdp = Cmd[0], par3='m', par4=0;
+  uint8_t clk=0, invert=0;
+  bool errors = FALSE;
+  char hexData[32] = {0x00}; 
+  uint8_t data[255]= {0x00}; // store entered hex data
+  int dataLen = 0;
+  uint8_t cmdp = 0;
+  while(param_getchar(Cmd, cmdp) != 0x00)
+  {
+    switch(param_getchar(Cmd, cmdp))
+    {
+    case 'h':
+      return usage_lf_simask();
+    case 'i':
+      invert = 1;
+      cmdp++;
+      break;
+    case 'c':
+      errors |= param_getdec(Cmd,cmdp+1,&clk);
+      cmdp+=2;
+      break;
+    case 'm':
+      manchester=1;
+      cmdp++;
+      break;
+    case 'r':
+      manchester=0;
+      cmdp++;
+      break;
+    case 's':
+      separator=1;
+      cmdp++;
+      break;
+    case 'd':
+      dataLen = param_getstr(Cmd, cmdp+1, hexData);
+      if (dataLen==0) {
+        errors=TRUE; 
+      } else {
+        dataLen = hextobinarray((char *)data, hexData);
+      }
+      if (dataLen==0) errors=TRUE; 
+      if (errors) PrintAndLog ("Error getting hex data, datalen: %d",dataLen);
+        cmdp+=2;
+      break;
+    default:
+      PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+      errors = TRUE;
+      break;
+    }
+    if(errors) break;
+  }
+  if(cmdp == 0 && DemodBufferLen == 0)
+  {
+    errors = TRUE;// No args
+  }
+
+  //Validations
+  if(errors)
+  {
+    return usage_lf_simask();
+  }
+  if (dataLen == 0){ //using DemodBuffer
+    if (clk == 0) clk = GetAskClock("0", false, false);
+  } else {
+    setDemodBuf(data, dataLen, 0);
+  }
+  if (clk == 0) clk = 64;
+  if (manchester == 0) clk = clk/2; //askraw needs to double the clock speed
+  uint16_t arg1, arg2;
+  size_t size=DemodBufferLen;
+  arg1 = clk << 8 | manchester;
+  arg2 = invert << 8 | separator;
+  if (size > USB_CMD_DATA_SIZE) {
+    PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
+    size = USB_CMD_DATA_SIZE;
+  }
+  UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
+  PrintAndLog("preparing to sim ask data: %d bits", size);
+  memcpy(c.d.asBytes, DemodBuffer, size);
+  SendCommand(&c);
+  return 0;
+}
+
+// by marshmellow - sim psk data given carrier, clock, invert 
+// - allow pull data from DemodBuffer or parameters
+int CmdLFpskSim(const char *Cmd)
+{
+  //might be able to autodetect FC and clock from Graphbuffer if using demod buffer
+  //will need carrier, Clock, and bitstream
+  uint8_t carrier=0, clk=0;
+  uint8_t invert=0;
+  bool errors = FALSE;
+  char hexData[32] = {0x00}; // store entered hex data
+  uint8_t data[255] = {0x00}; 
+  int dataLen = 0;
+  uint8_t cmdp = 0;
+  uint8_t pskType = 1;
+  while(param_getchar(Cmd, cmdp) != 0x00)
+  {
+    switch(param_getchar(Cmd, cmdp))
+    {
+    case 'h':
+      return usage_lf_simpsk();
+    case 'i':
+      invert = 1;
+      cmdp++;
+      break;
+    case 'c':
+      errors |= param_getdec(Cmd,cmdp+1,&clk);
+      cmdp+=2;
+      break;
+    case 'r':
+      errors |= param_getdec(Cmd,cmdp+1,&carrier);
+      cmdp+=2;
+      break;
+    case '1':
+      pskType=1;
+      cmdp++;
+      break;
+    case '2':
+      pskType=2;
+      cmdp++;
+      break;
+    case '3':
+      pskType=3;
+      cmdp++;
+      break;
+    case 'd':
+      dataLen = param_getstr(Cmd, cmdp+1, hexData);
+      if (dataLen==0) {
+        errors=TRUE; 
+      } else {
+        dataLen = hextobinarray((char *)data, hexData);
+      }    
+      if (dataLen==0) errors=TRUE; 
+      if (errors) PrintAndLog ("Error getting hex data");
+      cmdp+=2;
+      break;
+    default:
+      PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+      errors = TRUE;
+      break;
+    }
+    if (errors) break;
+  }
+  if (cmdp == 0 && DemodBufferLen == 0)
+  {
+    errors = TRUE;// No args
+  }
+
+  //Validations
+  if (errors)
+  {
+    return usage_lf_simpsk();
+  }
+  if (dataLen == 0){ //using DemodBuffer
+    PrintAndLog("Getting Clocks");
+    if (clk==0) clk = GetPskClock("", FALSE, FALSE);
+    PrintAndLog("clk: %d",clk);
+    if (!carrier) carrier = GetPskCarrier("", FALSE, FALSE); 
+    PrintAndLog("carrier: %d", carrier);
+  } else {
+    setDemodBuf(data, dataLen, 0);
+  }
+
+  if (clk <= 0) clk = 32;
+  if (carrier == 0) carrier = 2;
+  if (pskType != 1){
+    if (pskType == 2){
+      //need to convert psk2 to psk1 data before sim
+      psk2TOpsk1(DemodBuffer, DemodBufferLen);
+    } else {
+      PrintAndLog("Sorry, PSK3 not yet available");
+    }
+  }
+  uint16_t arg1, arg2;
+  arg1 = clk << 8 | carrier;
+  arg2 = invert;
+  size_t size=DemodBufferLen;
+  if (size > USB_CMD_DATA_SIZE) {
+    PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
+    size=USB_CMD_DATA_SIZE;
+  }
+  UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};
+  PrintAndLog("DEBUG: Sending DemodBuffer Length: %d", size);
+  memcpy(c.d.asBytes, DemodBuffer, size);
+  SendCommand(&c);
+  
   return 0;
 }
 
@@ -559,6 +906,7 @@ int CmdLFSimBidir(const char *Cmd)
 }
 
 /* simulate an LF Manchester encoded tag with specified bitstream, clock rate and inter-id gap */
+/*
 int CmdLFSimManchester(const char *Cmd)
 {
   static int clock, gap;
@@ -579,7 +927,7 @@ int CmdLFSimManchester(const char *Cmd)
   CmdLFSim(gapstring);
   return 0;
 }
-
+*/
 
 int CmdVchDemod(const char *Cmd)
 {
@@ -723,6 +1071,11 @@ int CmdLFfind(const char *Cmd)
     PrintAndLog("\nValid EM410x ID Found!");
     return 1;
   }
+  ans=CmdG_Prox_II_Demod("");
+  if (ans>0) {
+    PrintAndLog("\nValid G Prox II ID Found!");
+    return 1;
+  }
   PrintAndLog("\nNo Known Tags Found!\n");
   if (testRaw=='u' || testRaw=='U'){
     //test unknown tag formats (raw mode)
@@ -766,8 +1119,11 @@ static command_t CommandTable[] =
   {"read",        CmdLFRead,          0, "Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
   {"search",      CmdLFfind,          1, "[offline] ['u'] Read and Search for valid known tag (in offline mode it you can load first then search) - 'u' to search for unknown tags"},
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
+  {"simask",      CmdLFaskSim,        0, "[clock] [invert <1|0>] [manchester/raw <'m'|'r'>] [msg separator 's'] [d <hexdata>] -- Simulate LF ASK tag from demodbuffer or input"},
+  {"simfsk",      CmdLFfskSim,        0, "[c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>] -- Simulate LF FSK tag from demodbuffer or input"},
+  {"simpsk",      CmdLFpskSim,        0, "[1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>] -- Simulate LF PSK tag from demodbuffer or input"},
   {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
-  {"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
+  //{"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
   {"snoop",       CmdLFSnoop,         0, "['l'|'h'|<divisor>] [trigger threshold]-- Snoop LF (l:125khz, h:134khz)"},
   {"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
   {"hitag",       CmdLFHitag,         1, "{ Hitag tags and transponders... }"},
