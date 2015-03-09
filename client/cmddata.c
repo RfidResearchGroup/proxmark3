@@ -86,7 +86,24 @@ void printDemodBuff(void)
 
 int CmdPrintDemodBuff(const char *Cmd)
 {
-  printDemodBuff();
+  char hex;
+  char printBuff[512]={0x00};
+  uint8_t numBits = DemodBufferLen & 0xFFF0;
+  sscanf(Cmd, "%c", &hex);
+  if (hex == 'h'){
+    PrintAndLog("Usage: data printdemodbuffer [x]");
+    PrintAndLog("Options:        ");
+    PrintAndLog("       h       This help");
+    PrintAndLog("       x       output in hex (omit for binary output)");
+    return 0;
+  }
+  if (hex == 'x'){
+    numBits = binarraytohex(printBuff, (char *)DemodBuffer, numBits);
+    if (numBits==0) return 0;
+    PrintAndLog("DemodBuffer: %s",printBuff);
+  } else {
+    printDemodBuff();
+  }
   return 1;
 }
 int CmdAmp(const char *Cmd)
@@ -2595,7 +2612,7 @@ static command_t CommandTable[] =
   //{"nrzrawdemod",   CmdNRZrawDemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate nrz tags and output binary (args optional)"},
   {"plot",          CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
   //{"pskdetectclock",CmdDetectPSKClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
-  {"printdemodbuffer",CmdPrintDemodBuff,1, "[clock] [invert<0|1>] -- Demodulate an indala tag (PSK1) from GraphBuffer (args optional)"},
+  {"printdemodbuffer",CmdPrintDemodBuff,1, "[x] -- print the data in the DemodBuffer - 'x' for hex output"},
   {"pskindalademod",CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Demodulate an indala tag (PSK1) from GraphBuffer (args optional)"},
   //{"psk1rawdemod",  CmdPSK1rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk1 tags and output binary (args optional)"},
   //{"psk2rawdemod",  CmdPSK2rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk2 tags and output binary (args optional)"},

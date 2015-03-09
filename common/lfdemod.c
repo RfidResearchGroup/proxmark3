@@ -1598,7 +1598,7 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
   *clock = DetectPSKClock(dest, *size, *clock);
   if (*clock==0) return -1;
   int avgWaveVal=0, lastAvgWaveVal=0;
-  //find first full wave
+  //find first phase shift
   for (i=0; i<loopCnt; i++){
     if (dest[i]+fc < dest[i+1] && dest[i+1] >= dest[i+2]){
       if (waveStart == 0) {
