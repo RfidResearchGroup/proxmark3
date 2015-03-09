@@ -685,11 +685,14 @@ int CmdLFfskSim(const char *Cmd)
   uint16_t arg1, arg2;
   arg1 = fcHigh << 8 | fcLow;
   arg2 = invert << 8 | clk;
-  UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, DemodBufferLen}};
-  if (DemodBufferLen > USB_CMD_DATA_SIZE) {
-    PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", DemodBufferLen, USB_CMD_DATA_SIZE);
-  }
-  memcpy(c.d.asBytes, DemodBuffer, DemodBufferLen);
+  size_t size = DemodBufferLen;
+  if (size > USB_CMD_DATA_SIZE) {
+    PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
+    size = USB_CMD_DATA_SIZE;
+  } 
+  UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
+
+  memcpy(c.d.asBytes, DemodBuffer, size);
   SendCommand(&c);
   return 0;
 }
@@ -778,7 +781,6 @@ int CmdLFaskSim(const char *Cmd)
     size = USB_CMD_DATA_SIZE;
   }
   UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
-
   PrintAndLog("preparing to sim ask data: %d bits", size);
   memcpy(c.d.asBytes, DemodBuffer, size);
   SendCommand(&c);
@@ -880,13 +882,14 @@ int CmdLFpskSim(const char *Cmd)
   uint16_t arg1, arg2;
   arg1 = clk << 8 | carrier;
   arg2 = invert;
-
-  UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, DemodBufferLen}};
-  if (DemodBufferLen > USB_CMD_DATA_SIZE) {
-    PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", DemodBufferLen, USB_CMD_DATA_SIZE);
+  size_t size=DemodBufferLen;
+  if (size > USB_CMD_DATA_SIZE) {
+    PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
+    size=USB_CMD_DATA_SIZE;
   }
-  PrintAndLog("DEBUG: Sending DemodBuffer Length: %d", DemodBufferLen);
-  memcpy(c.d.asBytes, DemodBuffer, DemodBufferLen);
+  UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};
+  PrintAndLog("DEBUG: Sending DemodBuffer Length: %d", size);
+  memcpy(c.d.asBytes, DemodBuffer, size);
   SendCommand(&c);
   
   return 0;
