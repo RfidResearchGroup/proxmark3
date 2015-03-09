@@ -642,6 +642,11 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
     for (i=0; i<size; i++){
         askSimBit(BitStream[i]^invert, &n, clk, manchester);
     }
+    if (manchester==0 && BitStream[0]==BitStream[size-1]){ //run a second set inverted (for biphase phase)
+        for (i=0; i<size; i++){
+            askSimBit(BitStream[i]^invert^1, &n, clk, manchester);
+        }    
+    }
     if (separator==1) Dbprintf("sorry but separator option not yet available"); 
 
     Dbprintf("Simulating with clk: %d, invert: %d, manchester: %d, separator: %d, n: %d",clk, invert, manchester, separator, n);

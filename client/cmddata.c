@@ -520,6 +520,7 @@ int CmdBiphaseDecodeRaw(const char *Cmd)
 	PrintAndLog("Biphase Decoded using offset: %d - # errors:%d - data:",offset,errCnt);
 	printBitStream(BitStream, size);
 	PrintAndLog("\nif bitstream does not look right try offset=1");
+  if (offset == 1) setDemodBuf(DemodBuffer,DemodBufferLen-1,1);  //remove first bit from raw demod
 	return 1;
 }
 
@@ -534,7 +535,7 @@ void setBiphaseDemodBuf(uint8_t *BitStream, size_t size)
     return;
   }
   for (size_t idx=0; idx<size; idx++){
-    if(BitStream[idx]){
+    if(!BitStream[idx]){
       rawStream[i++] = curPhase;
       rawStream[i++] = curPhase;
       curPhase ^= 1; 
