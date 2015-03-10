@@ -122,6 +122,9 @@ void SimulateTagLowFrequency( uint16_t period, uint32_t gap, uint8_t ledcontrol)
 //void SimulateTagLowFrequencyA(int period, int gap);
 
 void CmdHIDsimTAG(int hi, int lo, int ledcontrol);
+void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream);
+void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream);
+void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream);
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol);
 void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol);
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol);

@@ -2301,8 +2301,6 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		} 
 		if(cardSTATE == MFEMUL_NOFIELD) continue;
 
-		//Now, get data
-
 		res = EmGetCmd(receivedCmd, &len, receivedCmd_par);
 		if (res == 2) { //Field is off!
 			cardSTATE = MFEMUL_NOFIELD;
@@ -2373,7 +2371,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				uint32_t nr = bytes_to_num(&receivedCmd[4], 4);
 
 				//Collect AR/NR
-				if(ar_nr_collected < 2){
+				if(ar_nr_collected < 2 && cardAUTHSC == 2){
 					if(ar_nr_responses[2] != ar)
 					{// Avoid duplicates... probably not necessary, ar should vary. 
 						ar_nr_responses[ar_nr_collected*4] = cuid;
@@ -2381,6 +2379,11 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 						ar_nr_responses[ar_nr_collected*4+2] = ar;
 						ar_nr_responses[ar_nr_collected*4+3] = nr;
 						ar_nr_collected++;
+					}						
+					// Interactive mode flag, means we need to send ACK
+					if(flags & FLAG_INTERACTIVE && ar_nr_collected == 2)
+					{
+						finished = true;
 					}
 				}
 
@@ -2528,7 +2531,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 					mf_crypto1_encrypt(pcs, response, 18, response_par);
 					EmSendCmdPar(response, 18, response_par);
 					numReads++;
-					if(exitAfterNReads > 0 && numReads == exitAfterNReads) {
+					if(exitAfterNReads > 0 && numReads >= exitAfterNReads) {
 						Dbprintf("%d reads done, exiting", numReads);
 						finished = true;
 					}
@@ -2648,12 +2651,12 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	if(flags & FLAG_INTERACTIVE)// Interactive mode flag, means we need to send ACK
 	{
 		//May just aswell send the collected ar_nr in the response aswell
-		cmd_send(CMD_ACK,CMD_SIMULATE_MIFARE_CARD,0,0,&ar_nr_responses,ar_nr_collected*4*4);
+		cmd_send(CMD_ACK,CMD_SIMULATE_MIFARE_CARD,1,0,&ar_nr_responses,ar_nr_collected*4*4);
 	}
 
-	if(flags & FLAG_NR_AR_ATTACK)
+	if(flags & FLAG_NR_AR_ATTACK && MF_DBGLEVEL >= 1 )
 	{
-		if(ar_nr_collected > 1) {
+		if(ar_nr_collected > 1 ) {
 			Dbprintf("Collected two pairs of AR/NR which can be used to extract keys from reader:");
 			Dbprintf("../tools/mfkey/mfkey32 %08x %08x %08x %08x %08x %08x",
 					ar_nr_responses[0], // UID
@@ -2665,7 +2668,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 					);
 		} else {
 			Dbprintf("Failed to obtain two AR/NR pairs!");
-			if(ar_nr_collected >0) {
+			if(ar_nr_collected > 0 ) {
 				Dbprintf("Only got these: UID=%08x, nonce=%08x, AR1=%08x, NR1=%08x",
 						ar_nr_responses[0], // UID
 						ar_nr_responses[1], //NT

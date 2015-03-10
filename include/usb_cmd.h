@@ -89,9 +89,12 @@ typedef struct{
 #define CMD_EM4X_WRITE_WORD                                               0x0219
 #define CMD_IO_DEMOD_FSK                                                  0x021A
 #define CMD_IO_CLONE_TAG                                                  0x021B
-#define CMD_EM410X_DEMOD  												  0x021c
+#define CMD_EM410X_DEMOD                                                  0x021c
 // Sampling configuration for LF reader/snooper
 #define CMD_SET_LF_SAMPLING_CONFIG                                        0x021d
+#define CMD_FSK_SIM_TAG                                                   0x021E
+#define CMD_ASK_SIM_TAG                                                   0x021F
+#define CMD_PSK_SIM_TAG                                                   0x0220
 
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
