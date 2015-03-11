@@ -19,6 +19,7 @@
 #include "nonce2key/nonce2key.h"
 #include "../common/iso15693tools.h"
 #include "../common/crc16.h"
+#include "../common/crc64.h"
 #include "aes.h"
 /**
  * The following params expected:
@@ -278,6 +279,28 @@ static int l_crc16(lua_State *L)
     return 1;
 }
 
+static int l_crc64(lua_State *L)
+{
+	size_t size;
+	uint64_t crc = 0; 
+	unsigned char outdata[8] = {0x00};
+
+	const char *p_str = luaL_checklstring(L, 1, &size);
+	
+	crc64( (uint8_t*) p_str, size, &crc);
+
+	outdata[0] = (uint8_t)(crc >> 56) & 0xff;
+	outdata[1] = (uint8_t)(crc >> 48) & 0xff;
+	outdata[2] = (uint8_t)(crc >> 40) & 0xff;
+	outdata[3] = (uint8_t)(crc >> 32) & 0xff;
+	outdata[4] = (uint8_t)(crc >> 24) & 0xff;
+	outdata[5] = (uint8_t)(crc >> 16) & 0xff;
+	outdata[6] = (uint8_t)(crc >> 8) & 0xff;
+	outdata[7] = crc & 0xff;
+	lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
+    return 1;
+}
+
 /**
  * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
  * able to do "require('foobar')" if foobar.lua is within lualibs folder.
@@ -317,6 +340,7 @@ int set_pm3_libraries(lua_State *L)
         {"iso15693_crc",                l_iso15693_crc},
 		{"aes",                         l_aes},
 		{"crc16",                       l_crc16},
+		{"crc64",						l_crc64},
         {NULL, NULL}
     };
 
