@@ -560,7 +560,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
 					timeout = temp;
 					i+=3;
 					while(cmd[i]!=' ' && cmd[i]!='\0') { i++; }
-					i+=2;
+					i-=2;
 					break;
                 default:
                     PrintAndLog("Invalid option");
@@ -605,6 +605,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
         if(active)
             c.arg[0] |= ISO14A_NO_SELECT;
     }
+
 	if(bTimeout){
 	    #define MAX_TIMEOUT 40542464 	// (2^32-1) * (8*16) / 13560000Hz * 1000ms/s = 
         c.arg[0] |= ISO14A_SET_TIMEOUT;
@@ -612,7 +613,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
             timeout = MAX_TIMEOUT;
             PrintAndLog("Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
         }
-        c.arg[2] = 13560000 / 1000 / (8*16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+		c.arg[2] = 13560000 / 1000 / (8*16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
 	}
     if(power)
         c.arg[0] |= ISO14A_NO_DISCONNECT;
