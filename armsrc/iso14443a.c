@@ -1890,8 +1890,9 @@ void ReaderIso14443a(UsbCommand *c)
 {
 	iso14a_command_t param = c->arg[0];
 	uint8_t *cmd = c->d.asBytes;
-	size_t len = c->arg[1];
-	size_t lenbits = c->arg[2];
+	size_t len = c->arg[1] & 0xffff;
+	size_t lenbits = c->arg[1] >> 16;
+	uint32_t timeout = c->arg[2];
 	uint32_t arg0 = 0;
 	byte_t buf[USB_CMD_DATA_SIZE];
 	uint8_t par[MAX_PARITY_SIZE];
@@ -1916,7 +1917,7 @@ void ReaderIso14443a(UsbCommand *c)
 	}
 
 	if(param & ISO14A_SET_TIMEOUT) {
-		iso14a_set_timeout(c->arg[2]);
+		iso14a_set_timeout(timeout);
 	}
 
 	if(param & ISO14A_APDU) {
