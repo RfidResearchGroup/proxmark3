@@ -10,6 +10,7 @@
 #define __CRC_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef struct crc {
 	uint32_t state;
@@ -35,6 +36,9 @@ extern void crc_clear(crc_t *crc);
 
 /* Get the result of the crc calculation */
 extern uint32_t crc_finish(crc_t *crc);
+
+// Calculate CRC-8/Maxim checksum
+int CRC8Maxim(uint8_t *buff, size_t size  );
 
 /* Static initialization of a crc structure */
 #define CRC_INITIALIZER(_order, _polynom, _initial_value, _final_xor) { \

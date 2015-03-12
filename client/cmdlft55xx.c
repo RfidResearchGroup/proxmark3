@@ -21,10 +21,60 @@
 #include "util.h"
 #include "data.h"
 #include "lfdemod.h"
+#include "../common/crc.h"
 
 #define LF_TRACE_BUFF_SIZE 20000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
 #define LF_BITSSTREAM_LEN 1000 // more then 1000 bits shouldn't happend..  8block * 4 bytes * 8bits = 
 
+//  0 = FSK
+//  1 = ASK
+//  2 = PSK
+//  4 = NZR (direct)
+typedef struct {
+	uint8_t modulation;
+	bool inversed;
+	uint32_t block0;
+} t55xx_conf_block;
+
+// Default configuration: FSK, not inversed.
+t55xx_conf_block config = {0x00, FALSE, 0x00};
+
+	// FSK
+	// FSK inverted
+	//FSKrawDemod("", FALSE)
+	//FSKrawDemod("1", FALSE)
+
+	// ASK/MAN
+	// ASK/MAN inverted
+	//ASKmanDemod("", FALSE, FALSE)
+	
+	// NZR (autoclock, normal, maxerrors 1)
+	// NZR (autoclock, inverse, maxerrors 1)
+	//NRZrawDemod("0 0 1", FALSE) ) {
+		
+	// PSK (autoclock, normal, maxerrors 1)
+	// PSK (autoclock, inverse, maxerrors 1)
+	//PSKDemod("0 0 1", FALSE)
+
+int usage_t55xx_config(){
+	PrintAndLog("Usage: lf t55xx config [d <demodulation>] [i 0|1]");
+	PrintAndLog("Options:        ");
+	PrintAndLog("       h             This help");
+	PrintAndLog("       d <>          Set demodulation FSK / ASK / PSK / NZR");
+	PrintAndLog("       i [0|1]       Inverse data signal, Default: 0");
+	PrintAndLog("Examples:");
+	PrintAndLog("      lf t55xx config d FSK ");
+	PrintAndLog("                    FSK demodulation");
+	PrintAndLog("      lf t55xx config d FSK i 1");
+	PrintAndLog("                    FSK demodulation, inverse data");
+	PrintAndLog("      lf dump");
+	PrintAndLog("                    Dumps all block from tag");
+	PrintAndLog("      lf trace");
+	PrintAndLog("                    Read trace block and decode it");
+	PrintAndLog("      lf info");
+	PrintAndLog("                    Read configuration and decode it");
+	return 0;
+}
 int usage_t55xx_read(){
 	PrintAndLog("Usage:  lf t55xx read <block> <password>");
     PrintAndLog("     <block>, block number to read. Between 0-7");
@@ -76,20 +126,33 @@ int usage_t55xx_dump(){
 
 static int CmdHelp(const char *Cmd);
 
+int CmdT55xxSetConfig(const char *Cmd){
+	
+	uint8_t paramNum =0;
+	if(param_getchar(Cmd, paramNum) == 'h')
+	{
+		return usage_t55xx_config();
+	}
+
+	uint8_t buff[] = { 0x01, 0x01, 0x01, 0x01,
+					   0x01, 0x01, 0x01, 0x01,
+					   0x01, 0x40, 0x01, 0x01, 0x04 };
+	PrintAndLog("CRC-8: %x",CRC8Maxim(buff, 13));
+
+	//config = { 0, FALSE};
+	return 0;
+}
+
+// detect configuration?
+
 int CmdReadBlk(const char *Cmd)
 {
-	int i = 0;
 	int block = -1;
 	int password = 0xFFFFFFFF; //default to blank Block 7
-	size_t bitlen = 0;
-	uint32_t blockData = 0;
-	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
-	
+
 	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') {
-		usage_t55xx_read();
-		return 0;
-	}
+	if (cmdp == 'h' || cmdp == 'H')
+		return usage_t55xx_read();
 
 	int res = sscanf(Cmd, "%d %x", &block, &password);
 
@@ -123,40 +186,62 @@ int CmdReadBlk(const char *Cmd)
 	WaitForResponse(CMD_ACK,NULL);
 
 	setGraphBuf(got, 12000);
-  	
-	bitlen = getFromGraphBuf(bits);
 
-	int ans = 0;
-	ans = CmdFSKrawdemod("");
-	ans = CmdFSKrawdemod("1"); //invert?
-	ans = Cmdaskmandemod("");
-	ans = Cmdaskrawdemod("");
-	ans = CmdNRZrawDemod("");
-	ans = CmdPSK1rawDemod("");
-	ans = CmdPSK2rawDemod("");
+	if (block == 0){
+		// try a detection.
+		
+	}
 	
-	// if ( !tryDemod(bits, bitlen) )
-		// return 3;
+	if (CmdDetectClockRate("f")){ //wave is almost certainly FSK
+      //call FSK DEMOD
+	  	// FSK
+		if ( FSKrawDemod("", FALSE))
+			printT55xx("FSK");
+		// FSK inverted
+		if ( FSKrawDemod("1", FALSE)) 
+			printT55xx("FSK inv");
+    } else {
+		// ASK/MAN (autoclock, normal, maxerrors 1)
+		if ( ASKmanDemod("0 0 1", FALSE, FALSE) )
+			printT55xx("ASK/MAN");
+		
+		// ASK/MAN (autoclock, inverted, maxerrors 1)
+		if ( ASKmanDemod("0 1 1", FALSE, FALSE) )
+			printT55xx("ASK/MAN Inv");
+
+		// NZR (autoclock, normal, maxerrors 1)
+		if  ( NRZrawDemod("0 0 1", FALSE) )
+			printT55xx("NZR");
+		// NZR (autoclock, inverted, maxerrors 1)
+		if  ( NRZrawDemod("0 1 1", FALSE) )
+			printT55xx("NZR inv");
+		
+		// PSK (autoclock, normal, maxerrors 1)
+		if (!PSKDemod("0 0 1", FALSE))
+			printT55xx("PSK");
+
+		// PSK (autoclock, inverted, maxerrors 1)
+		if (!PSKDemod("0 1 1", FALSE))
+			printT55xx("PSK inv");
+	}
+	return 0;
+}
+
+void printT55xx(const char *demodStr){
 	
-	// //move bits back to DemodBuffer
-	// setDemodBuf(bits, bitlen, 0);
-	// printBitStream(bits, bitlen);
+	uint32_t blockData = 0;
+	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
+		
 	if ( !DemodBufferLen) 
-		return 0;
+		return;
 	
+	int i =0;
     for (;i<DemodBufferLen;++i)
 		bits[i]=DemodBuffer[i];
 	
 	blockData = PackBits(1, 32, bits);
-
-	if ( block < 0)
-		PrintAndLog(" Decoded     : 0x%08X  %s", blockData, sprint_bin(bits+1,32) );
-	else
-		PrintAndLog(" Block %d    : 0x%08X  %s", block, blockData, sprint_bin(bits+1,32) );
-	
-	return 0;
+	PrintAndLog("0x%08X  %s [%s]", blockData, sprint_bin(bits+1,32), demodStr );
 }
-
 
 /*
 FSK1 / FSK1a
@@ -172,54 +257,6 @@ size = fskdemod(dest, size, 64, 1, 10, 8);  // FSK2a RF/64
 PSK1
 errCnt = pskRawDemod(bits, &bitlen, 32, 0);
 */
-bool tryDemod(uint8_t bits[], size_t bitlen) {
-	
-	int invert = 0;
-	int clk = 0;
-	int errCnt, size;
-	int maxErr = 100;
-	uint8_t rflen, fchigh, fclow, dummy = 0;
-	uint16_t fcs=0;
-
-	// ASK - manchester demod
-	errCnt = askmandemod(bits, &bitlen, &clk, &invert, maxErr);
-	if ( analyseDemod(errCnt, bitlen, clk, invert) ) 
-		return true;
-
-	// FSK demod
-	fcs = countFC(bits, bitlen, &dummy);
-	if (fcs == 0){
-	  fchigh = 10;
-	  fclow = 8;
-	}else{
-	  fchigh = (fcs >> 8) & 0xFF;
-	  fclow = fcs & 0xFF;
-	}
-	//get bit clock length
-	rflen = detectFSKClk(bits, bitlen, fchigh, fclow);
-	rflen = (rflen == 0) ? 50 : rflen;
-
-	size = fskdemod(bits, bitlen, rflen, invert, fchigh, fclow);
-	if ( analyseDemod(size, bitlen, clk, invert) ) 
-		return true;	
-	
-	// PSK demod
-	return false;
-}
-
-bool analyseDemod( int errCnt, size_t bitlen, uint8_t clock, uint8_t invert){
-	if (g_debugMode) 
-		PrintAndLog("ErrorCount: %d, Bits Found: %d, Clock: %d, invert: %d", errCnt, bitlen, clock, invert);
-	  //PrintAndLog("Args invert: %d - Clock:%d - fchigh:%d - fclow: %d",invert,rfLen,fchigh, fclow);
-	  
-	//throw away static - allow 1 and -1 (in case of threshold command first)
-	if ( errCnt == -1 || bitlen < 32 ){  
-		PrintAndLog("no success demod");
-		return false;
-	}
-	return true;
-}
-
 int CmdWriteBlk(const char *Cmd)
 {
 	int block = 8; //default to invalid block
@@ -263,7 +300,6 @@ int CmdWriteBlk(const char *Cmd)
 
 int CmdReadTrace(const char *Cmd)
 {
-	size_t bitlen;
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
 
 	char cmdp = param_getchar(Cmd, 0);
@@ -285,9 +321,10 @@ int CmdReadTrace(const char *Cmd)
 		//CmdSamples("12000");
 	}
 	
-	bitlen = getFromGraphBuf(bits);
-
-
+	size_t bitlen = getFromGraphBuf(bits);
+	if ( bitlen == 0 )
+		return 2;
+	
 	RepaintGraphWindow();
 
 	uint8_t si = 5;
@@ -349,18 +386,17 @@ int CmdInfo(const char *Cmd){
 	*/
 	char cmdp = param_getchar(Cmd, 0);
 
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
-		usage_t55xx_info();
-		return 0;
+	if (cmdp == 'h' || cmdp == 'H') {
+		return usage_t55xx_info();
 	} else {
 		CmdReadBlk("0");
 	}	
 
+	// config
+	
 	uint8_t bits[LF_BITSSTREAM_LEN] = {0x00};
 
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bits, LF_BITSSTREAM_LEN);
-	
-	uint8_t si = 5;
+	uint8_t si = 1;
 	uint32_t bl0      = PackBits(si, 32, bits);
 	
 	uint32_t safer    = PackBits(si, 4, bits); si += 4;	
@@ -433,40 +469,6 @@ int CmdDump(const char *Cmd){
 	}
 	return 0;
 }
-
-int CmdIceFsk(const char *Cmd){
-
-	if (!HasGraphData()) return 0;
-
-	iceFsk3(GraphBuffer, LF_TRACE_BUFF_SIZE);
-	RepaintGraphWindow();
-	return 0;
-}
-int CmdIceManchester(const char *Cmd){
-	ManchesterDemod( -1);
-	return 0;
-}
-int ManchesterDemod(int blockNum){
-
-	if (!HasGraphData()) return 0;
-		
-	uint8_t sizebyte = 32;
-	// the value 5 was selected during empirical studies of the decoded data. Some signal noise to skip.
-	uint8_t offset = 5;
-	uint32_t blockData;
-	uint8_t  bits[LF_BITSSTREAM_LEN] = {0x00};
-	uint8_t * bitstream = bits;
-	
-	manchester_decode(GraphBuffer, LF_TRACE_BUFF_SIZE, bits, LF_BITSSTREAM_LEN);	
-	blockData = PackBits(offset, sizebyte, bits);
-
-	if ( blockNum < 0)
-		PrintAndLog(" Decoded     : 0x%08X  %s", blockData, sprint_bin(bitstream+offset,sizebyte) );
-		else
-		PrintAndLog(" Block %d    : 0x%08X  %s", blockNum, blockData, sprint_bin(bitstream+offset,sizebyte) );
-	
-	return 0;
-} 
 
 char * GetBitRateStr(uint32_t id){
  	static char buf[40];
@@ -563,7 +565,6 @@ char * GetModulationStr( uint32_t id){
 	return buf;
 }
 
-
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits){
 	
 	int i = start;
@@ -580,12 +581,13 @@ uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits){
 
 static command_t CommandTable[] =
 {
-  {"help",   CmdHelp,        1, "This help"},
-  {"read",   CmdReadBlk,     0, "<block> [password] -- Read T55xx block data (page 0) [optional password]"},
-  {"write",  CmdWriteBlk,    0, "<block> <data> [password] -- Write T55xx block data (page 0) [optional password]"},
-  {"trace",  CmdReadTrace,   0, "[1] Read T55xx traceability data (page 1/ blk 0-1)"},
-  {"info",   CmdInfo,        0, "[1] Read T55xx configuration data (page 0/ blk 0)"},
-  {"dump",   CmdDump,        0, "[password] Dump T55xx card block 0-7. [optional password]"},
+  {"help",   CmdHelp,           1, "This help"},
+  {"config", CmdT55xxSetConfig, 1, "Set T55XX config for modulation, inversed data"},
+  {"read",   CmdReadBlk,        0, "<block> [password] -- Read T55xx block data (page 0) [optional password]"},
+  {"write",  CmdWriteBlk,       0, "<block> <data> [password] -- Write T55xx block data (page 0) [optional password]"},
+  {"trace",  CmdReadTrace,      0, "[1] Read T55xx traceability data (page 1/ blk 0-1)"},
+  {"info",   CmdInfo,           0, "[1] Read T55xx configuration data (page 0/ blk 0)"},
+  {"dump",   CmdDump,           0, "[password] Dump T55xx card block 0-7. [optional password]"},
   {NULL, NULL, 0, NULL}
 };
 

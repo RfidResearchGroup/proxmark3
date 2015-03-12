@@ -11,18 +11,15 @@
 #define CMDLFT55XX_H__
 
 int CmdLFT55XX(const char *Cmd);
-
+int CmdT55xxSetConfig(const char *Cmd);
 int CmdReadBlk(const char *Cmd);
 int CmdWriteBlk(const char *Cmd);
 int CmdReadTrace(const char *Cmd);
 int CmdInfo(const char *Cmd);
-int CmdIceFsk(const char *Cmd);
-int CmdIceManchester(const char *Cmd);
-int ManchesterDemod(int block);
+
 char * GetBitRateStr(uint32_t id);
 char * GetSaferStr(uint32_t id);
 char * GetModulationStr( uint32_t id);
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bitstream);
-bool tryDemod(uint8_t bits[], uint32_t bitlen);
-bool analyseDemod( int errCnt, size_t bitlen, uint8_t clock, uint8_t invert);
+void printT55xx(const char *demodStr);
 #endif
