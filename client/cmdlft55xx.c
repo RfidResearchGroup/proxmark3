@@ -218,44 +218,66 @@ int CmdReadBlk(const char *Cmd)
 	
 	if (CmdDetectClockRate("f")){ //wave is almost certainly FSK
 	  	// FSK
-		if ( FSKrawDemod("0 0", FALSE))
+		if ( FSKrawDemod("0 0", FALSE) && test())
 			printT55xx("FSK");
 		// FSK inverted
-		if ( FSKrawDemod("0 1", FALSE)) 
+		if ( FSKrawDemod("0 1", FALSE) && test()) 
 			printT55xx("FSK inv");
     } else {
 		// ASK/MAN (autoclock, normal, maxerrors 1)
-		if ( ASKmanDemod("0 0 1", FALSE, FALSE) )
+		if ( ASKmanDemod("0 0 1", FALSE, FALSE) && test()) 
 			printT55xx("ASK/MAN");
 		
 		// ASK/MAN (autoclock, inverted, maxerrors 1)
-		if ( ASKmanDemod("0 1 1", FALSE, FALSE) )
+		if ( ASKmanDemod("0 1 1", FALSE, FALSE)  && test()) 
 			printT55xx("ASK/MAN Inv");
 
 		// NZR (autoclock, normal, maxerrors 1)
-		if  ( NRZrawDemod("0 0 1", FALSE) )
+		if ( NRZrawDemod("0 0 1", FALSE)  && test()) 
 			printT55xx("NZR");
 		// NZR (autoclock, inverted, maxerrors 1)
-		if  ( NRZrawDemod("0 1 1", FALSE) )
+		if ( NRZrawDemod("0 1 1", FALSE)  && test()) 
 			printT55xx("NZR inv");
 		
 		// PSK (autoclock, normal, maxerrors 1)
-		if (!PSKDemod("0 0 1", FALSE))
+		if ( PSKDemod("0 0 1", FALSE)  && test()) 
 			printT55xx("PSK");
 
 		// PSK (autoclock, inverted, maxerrors 1)
-		if (!PSKDemod("0 1 1", FALSE))
+		if ( PSKDemod("0 1 1", FALSE) && test()) 
 			printT55xx("PSK inv");
 		
 		//PSK2?
 		
-		// if (!BiphaseRawDecode("0",FALSE))
+		// if (!BiphaseRawDecode("0",FALSE)  && test()) 
 			// printT55xx("BIPHASE");
 		
-		// if (!BiphaseRawDecode("1",FALSE))
+		// if (!BiphaseRawDecode("1",FALSE) && test()) 
 			// printT55xx("BIPHASE inv");
 	}
 	return 0;
+}
+bool test(){
+
+	if ( !DemodBufferLen) 
+		return false;
+	
+	uint8_t si = 1;
+	uint8_t safer    = PackBits(si, 4, DemodBuffer); si += 4;	
+	uint8_t resv     = PackBits(si, 7, DemodBuffer); si += 7+3;
+	uint8_t extend   = PackBits(si, 1, DemodBuffer); si += 1;
+
+	//PrintAndLog("test: %X %X %X ", safer, resv, extend);
+	
+	// 2nibble must be zeroed.
+	if ( resv > 0x00) return FALSE;
+
+	if ( safer == 0x6 || safer == 0x9){
+		if ( extend == 0x00)
+			return TRUE;
+	}
+	if ( resv== 0x00) return TRUE;
+	return FALSE;
 }
 
 void printT55xx(const char *demodStr){
@@ -434,7 +456,7 @@ int CmdInfo(const char *Cmd){
 	uint32_t resv     = PackBits(si, 7, bits); si += 7;
 	uint32_t dbr      = PackBits(si, 3, bits); si += 3;
 	uint32_t extend   = PackBits(si, 1, bits); si += 1;
-	uint32_t datamodulation   = PackBits(si, 5, bits); si += 5;
+	uint32_t datamod  = PackBits(si, 5, bits); si += 5;
 	uint32_t pskcf    = PackBits(si, 2, bits); si += 2;
 	uint32_t aor      = PackBits(si, 1, bits); si += 1;	
 	uint32_t otp      = PackBits(si, 1, bits); si += 1;	
@@ -452,14 +474,14 @@ int CmdInfo(const char *Cmd){
 	PrintAndLog(" reserved                  : %d", resv);
 	PrintAndLog(" Data bit rate             : %s", GetBitRateStr(dbr));
 	PrintAndLog(" eXtended mode             : %s", (extend) ? "Yes - Warning":"No");
-	PrintAndLog(" Modulation                : %s", GetModulationStr(datamodulation) );
+	PrintAndLog(" Modulation                : %s", GetModulationStr(datamod));
 	PrintAndLog(" PSK clock freq            : %d", pskcf);
 	PrintAndLog(" AOR - Answer on Request   : %s", (aor) ? "Yes":"No");
 	PrintAndLog(" OTP - One Time Pad        : %s", (otp) ? "Yes - Warning":"No" );
 	PrintAndLog(" Max block                 : %d", maxblk);
 	PrintAndLog(" Password mode             : %s", (pwd) ? "Yes":"No");
 	PrintAndLog(" Sequence Start Terminator : %s", (sst) ? "Yes":"No");
-	PrintAndLog(" Fast Write                : %s", (fw) ? "Yes":"No");
+	PrintAndLog(" Fast Write                : %s", (fw)  ? "Yes":"No");
 	PrintAndLog(" Inverse data              : %s", (inv) ? "Yes":"No");
 	PrintAndLog(" POR-Delay                 : %s", (por) ? "Yes":"No");
 	PrintAndLog("-------------------------------------------------------------");
@@ -543,10 +565,10 @@ char * GetSaferStr(uint32_t id){
 	
 	sprintf(retStr,"%d",id);
 	if (id == 6) {
-		sprintf(retStr,"%d - pasdwd",id);
+		sprintf(retStr,"%d - passwd",id);
 	}
 	if (id == 9 ){
-		sprintf(retStr,"%d - testmode ",id);
+		sprintf(retStr,"%d - testmode",id);
 	}
 	
 	return buf;

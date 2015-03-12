@@ -22,4 +22,5 @@ char * GetSaferStr(uint32_t id);
 char * GetModulationStr( uint32_t id);
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bitstream);
 void printT55xx(const char *demodStr);
+bool test();
 #endif
