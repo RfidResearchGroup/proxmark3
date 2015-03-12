@@ -71,8 +71,8 @@ local Utils =
 		return outResults
 	end,
 	
-	------------ CRC-16 ccitt checksums
 	
+	------------ CRC-16 ccitt checksums
 	-- Takes a hex string and calculates a crc16
 	Crc16 = function(s)
 		if s == nil then return nil end
@@ -85,7 +85,22 @@ local Utils =
 		end
 		return nil
 	end,
-
+	
+	------------ CRC-64 ecma checksums
+	-- Takes a hex string and calculates a crc64 ecma
+	Crc64 = function(s)
+		if s == nil then return nil end
+		if #s == 0 then return nil end
+		if  type(s) == 'string' then
+			local utils = require('utils')
+			local asc = utils.ConvertHexToAscii(s)
+			local hash = core.crc64(asc)
+			return hash
+		end
+		return nil
+	end,
+	
+	
 	-- input parameter is a string
 	-- Swaps the endianess and returns a number,  
 	-- IE:  'cd7a' -> '7acd'  -> 0x7acd
@@ -171,16 +186,28 @@ local Utils =
 		end
 		return t
 	end,
-	ConvertAsciiToBytes = function(s)
-		local t={}
+	ConvertAsciiToBytes = function(s, reverse)
+		local t = {}
 		if s == nil then return t end
 		if #s == 0 then return t end
 		
 		for k in s:gmatch"(.)" do
 			table.insert(t, string.byte(k))
 		end
-		return t
+		
+		if not reverse then
+			return t
+		end
+	
+		local rev = {}
+		if reverse then
+			for i = #t, 1,-1 do
+				table.insert(rev, t[i] )
+			end
+		end
+		return rev
 	end,
+	
 	ConvertHexToAscii = function(s)
 		local t={}
 		if s == nil then return t end
