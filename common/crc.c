@@ -42,13 +42,11 @@ uint32_t crc_finish(crc_t *crc)
 	return ( crc->state ^ crc->final_xor ) & crc->mask;
 }
 
-int CRC8Maxim(uint8_t *buff, size_t size  ) {
+uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
 	
 	crc_t crc;
-	crc_init(&crc, 8, 0x31, 0x00, 0x00);
-	crc_clear(&crc);
-
-	for ( int i=0; i < size; ++i){
+	crc_init(&crc, 9, 0x8c, 0x00, 0x00);
+	for ( uint8_t i = 0; i < size; ++i){
 		crc_update(&crc, buff[i], 8);
 	}
 	return crc_finish(&crc);
