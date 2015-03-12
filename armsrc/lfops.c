@@ -1465,7 +1465,7 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
 int DemodPCF7931(uint8_t **outBlocks) {
 
     uint8_t BitStream[256] = {0x00};
-	uint8_t Blocks[8][16] = [0x00};
+	uint8_t Blocks[8][16];
     uint8_t *dest = BigBuf_get_addr();
     int GraphTraceLen = BigBuf_max_traceLen();
     int i, j, lastval, bitidx, half_switch;
@@ -1496,7 +1496,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
     }
     else {
         while(i < GraphTraceLen) {
-            if( !(dest[i] < dest[i-1]) && v[i] < lmin)
+            if( !(dest[i] < dest[i-1]) && dest[i] < lmin)
                 break;
             i++;
         }
