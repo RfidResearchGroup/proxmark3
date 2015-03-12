@@ -34,45 +34,22 @@ typedef struct {
 	uint8_t modulation;
 	bool inversed;
 	uint32_t block0;
-} t55xx_conf_block;
+} t55xx_conf_block_t;
 
 // Default configuration: FSK, not inversed.
-t55xx_conf_block config = {0x00, FALSE, 0x00};
-
-	// FSK
-	// FSK inverted
-	//FSKrawDemod("", FALSE)
-	//FSKrawDemod("1", FALSE)
-
-	// ASK/MAN
-	// ASK/MAN inverted
-	//ASKmanDemod("", FALSE, FALSE)
-	
-	// NZR (autoclock, normal, maxerrors 1)
-	// NZR (autoclock, inverse, maxerrors 1)
-	//NRZrawDemod("0 0 1", FALSE) ) {
-		
-	// PSK (autoclock, normal, maxerrors 1)
-	// PSK (autoclock, inverse, maxerrors 1)
-	//PSKDemod("0 0 1", FALSE)
+t55xx_conf_block_t config = { .modulation = 0, .inversed = FALSE, .block0 = 0x00};
 
 int usage_t55xx_config(){
-	PrintAndLog("Usage: lf t55xx config [d <demodulation>] [i 0|1]");
+	PrintAndLog("Usage: lf t55xx config [d <demodulation>] [i 1]");
 	PrintAndLog("Options:        ");
-	PrintAndLog("       h             This help");
-	PrintAndLog("       d <>          Set demodulation FSK / ASK / PSK / NZR");
-	PrintAndLog("       i [0|1]       Inverse data signal, Default: 0");
+	PrintAndLog("       h                        This help");
+	PrintAndLog("       d <FSK|ASK|PSK|NZ|BI>    Set demodulation FSK / ASK / PSK / NZ / Biphase");
+	PrintAndLog("       i [1]                    Inverse data signal, defaults to normal");
+	PrintAndLog("");
 	PrintAndLog("Examples:");
-	PrintAndLog("      lf t55xx config d FSK ");
-	PrintAndLog("                    FSK demodulation");
-	PrintAndLog("      lf t55xx config d FSK i 1");
-	PrintAndLog("                    FSK demodulation, inverse data");
-	PrintAndLog("      lf dump");
-	PrintAndLog("                    Dumps all block from tag");
-	PrintAndLog("      lf trace");
-	PrintAndLog("                    Read trace block and decode it");
-	PrintAndLog("      lf info");
-	PrintAndLog("                    Read configuration and decode it");
+	PrintAndLog("      lf t55xx config d FSK     - FSK demodulation");
+	PrintAndLog("      lf t55xx config d FSK i 1 - FSK demodulation, inverse data");
+	PrintAndLog("");
 	return 0;
 }
 int usage_t55xx_read(){
@@ -80,8 +57,9 @@ int usage_t55xx_read(){
     PrintAndLog("     <block>, block number to read. Between 0-7");
     PrintAndLog("     <password>, OPTIONAL password (8 hex characters)");
     PrintAndLog("");
-    PrintAndLog("    sample: lf t55xx read 0           = try reading data from block 0");
-	PrintAndLog("          : lf t55xx read 0 feedbeef  = try reading data from block 0 using password");
+	PrintAndLog("Examples:");
+    PrintAndLog("      lf t55xx read 0           - read data from block 0");
+	PrintAndLog("      lf t55xx read 0 feedbeef  - read data from block 0 password feedbeef");
 	PrintAndLog("");
 	return 0;
 }
@@ -91,35 +69,39 @@ int usage_t55xx_write(){
 	PrintAndLog("     <data>,  4 bytes of data to write (8 hex characters)");
     PrintAndLog("     [password], OPTIONAL password 4bytes (8 hex characters)");
     PrintAndLog("");
-    PrintAndLog("    sample: lf t55xx wd 3 11223344  = try writing data 11223344 to block 3");
-	PrintAndLog("          : lf t55xx wd 3 11223344 feedbeef  = try writing data 11223344 to block 3 using password feedbeef");
+	PrintAndLog("Examples:");
+    PrintAndLog("      lf t55xx wd 3 11223344           - write 11223344 to block 3");
+	PrintAndLog("      lf t55xx wd 3 11223344 feedbeef  - write 11223344 to block 3 password feedbeef");
 	PrintAndLog("");
 	return 0;
 }
 int usage_t55xx_trace() {
-	PrintAndLog("Usage:  lf t55xx trace  [graph buffer data]");
+	PrintAndLog("Usage:  lf t55xx trace [1]");
 	PrintAndLog("     [graph buffer data], if set, use Graphbuffer otherwise read data from tag.");
 	PrintAndLog("");
-	PrintAndLog("     sample: lf t55xx trace");
-	PrintAndLog("           : lf t55xx trace 1");
+	PrintAndLog("Examples:");
+	PrintAndLog("      lf t55xx trace");
+	PrintAndLog("      lf t55xx trace 1");
 	PrintAndLog("");
 	return 0;
 }
 int usage_t55xx_info() {
-	PrintAndLog("Usage:  lf t55xx info [graph buffer data]");
+	PrintAndLog("Usage:  lf t55xx info [1]");
 	PrintAndLog("     [graph buffer data], if set, use Graphbuffer otherwise read data from tag.");
 	PrintAndLog("");
-	PrintAndLog("    sample: lf t55xx info");
-	PrintAndLog("          : lf t55xx info 1");
+	PrintAndLog("Examples:");
+	PrintAndLog("      lf t55xx info");
+	PrintAndLog("      lf t55xx info 1");
 	PrintAndLog("");
 	return 0;
 }
 int usage_t55xx_dump(){
 	PrintAndLog("Usage:  lf t55xx dump <password>");
-    PrintAndLog("     <password>, OPTIONAL password 4bytes (8 hex characters)");
+    PrintAndLog("     <password>, OPTIONAL password 4bytes (8 hex symbols)");
 	PrintAndLog("");
-	PrintAndLog("        sample: lf t55xx dump");
-	PrintAndLog("              : lf t55xx dump feedbeef");
+	PrintAndLog("Examples:");
+	PrintAndLog("      lf t55xx dump");
+	PrintAndLog("      lf t55xx dump feedbeef");
 	PrintAndLog("");
 	return 0;
 }
@@ -127,22 +109,65 @@ int usage_t55xx_dump(){
 static int CmdHelp(const char *Cmd);
 
 int CmdT55xxSetConfig(const char *Cmd){
+
+	int len;
+	bool inverse;
+	bool errors = FALSE;
+	uint8_t cmdp = 0;
+	char modulation[4] = {0x00};
 	
-	uint8_t paramNum =0;
-	if(param_getchar(Cmd, paramNum) == 'h')
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors)
 	{
-		return usage_t55xx_config();
+		switch(param_getchar(Cmd, cmdp))
+		{
+		case 'h':
+		case 'H':
+			return usage_t55xx_config();
+		case 'd':
+			len = param_getstr(Cmd, cmdp+1, modulation);
+			cmdp+= len+1;
+			//FSK|ASK|PSK|NZ|BI
+			if ( strcmp(modulation, "FSK" ) == 0)
+				len = 1;
+			else if ( strcmp(modulation, "ASK" ) == 0)
+				len = 2;
+			else if ( strcmp(modulation, "PSK" ) == 0)
+				len = 3;
+			else if ( strcmp(modulation, "NZ" ) == 0)
+				len = 4;
+			else if ( strcmp(modulation, "BI" ) == 0)
+				len = 5;
+			else {
+				PrintAndLog("Unknown modulation '%s'", modulation);
+				errors = TRUE;
+			}
+			break;
+		case 'i':
+			inverse = param_getchar(Cmd,cmdp+1) == '1';
+			cmdp+=2;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = TRUE;
+			break;
+		}
 	}
-
-	uint8_t buff[] = { 0x01, 0x01, 0x01, 0x01,
-					   0x01, 0x01, 0x01, 0x01,
-					   0x01, 0x40, 0x01, 0x01, 0x04 };
-	PrintAndLog("CRC-8: %x",CRC8Maxim(buff, 13));
-
-	//config = { 0, FALSE};
+	// No args
+	if (cmdp == 0) {
+		PrintAndLog("Modulation: %d", config.modulation);
+		PrintAndLog("Invert    : %d", config.inversed);
+		PrintAndLog("Block0    : %08X", config.block0);
+		return 0;
+	}
+	//Validations
+	if (errors)
+		return usage_t55xx_config();
+ 
+	config.modulation = len;
+	config.inversed = inverse;
+	config.block0 = 0;
 	return 0;
 }
-
 // detect configuration?
 
 int CmdReadBlk(const char *Cmd)
@@ -188,17 +213,15 @@ int CmdReadBlk(const char *Cmd)
 	setGraphBuf(got, 12000);
 
 	if (block == 0){
-		// try a detection.
-		
+		// try a detection.	
 	}
 	
 	if (CmdDetectClockRate("f")){ //wave is almost certainly FSK
-      //call FSK DEMOD
 	  	// FSK
-		if ( FSKrawDemod("", FALSE))
+		if ( FSKrawDemod("0 0", FALSE))
 			printT55xx("FSK");
 		// FSK inverted
-		if ( FSKrawDemod("1", FALSE)) 
+		if ( FSKrawDemod("0 1", FALSE)) 
 			printT55xx("FSK inv");
     } else {
 		// ASK/MAN (autoclock, normal, maxerrors 1)
@@ -223,6 +246,14 @@ int CmdReadBlk(const char *Cmd)
 		// PSK (autoclock, inverted, maxerrors 1)
 		if (!PSKDemod("0 1 1", FALSE))
 			printT55xx("PSK inv");
+		
+		//PSK2?
+		
+		// if (!BiphaseRawDecode("0",FALSE))
+			// printT55xx("BIPHASE");
+		
+		// if (!BiphaseRawDecode("1",FALSE))
+			// printT55xx("BIPHASE inv");
 	}
 	return 0;
 }
