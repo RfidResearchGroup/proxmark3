@@ -1485,6 +1485,7 @@ int CmdFSKdemodPyramid(const char *Cmd)
     csBuff[i] = bytebits_to_byte(BitStream + idx + 16 + (i*8), 8);
   }
   //check checksum calc
+  //checksum calc thanks to ICEMAN!!
   uint32_t checkCS =  CRC8Maxim(csBuff,13);
 
   //get raw ID before removing parities
