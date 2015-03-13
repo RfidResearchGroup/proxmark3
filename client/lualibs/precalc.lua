@@ -35,19 +35,10 @@ shifts[9]= { 0xD, 0xB, 0x0, 0x6, 0x6, 0x0, 0xB, 0xD, 0xA, 0xC, 0x7, 0x1, 0x1, 0x
 shifts[10]= { 0xe, 0x1, 0x1, 0xe, 0x1, 0xe, 0xe, 0x1, 0x1, 0xe, 0xe, 0x1, 0xe, 0x1, 0x1, 0xe }
 
 local function ApplyPermutationAndShifts( pos, value, nibble)
-	local el2bytes = shifts[pos]
-	local el2 = el2bytes[nibble+1] --one indexed
-	local shiftInit = el2bytes[1]
-	local permrow   = perm[shiftInit+1]
-	local j = 1
-	for i = 1,16 do
-		if permrow[i] == el2 then
-			j = i
-			break 
-		end
-	end
-	local rsbytes = perm[value+1]
-	local rs = rsbytes[j]
+	local shiftbytes = shifts[pos]
+	local shiftElem = shiftbytes[nibble+1] --one indexed
+	local shiftOne = shiftbytes[1]
+	local rs = bit32.bxor(value, bit32.bxor(shiftOne, shiftElem))
 	return rs
 end
 
