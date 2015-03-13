@@ -320,14 +320,14 @@ bool tryDetectModulation(){
 			++hits;
 			}
 		
-		if ( PSKDemod("0 0 1", FALSE)  && test()) {
+		if ( PSKDemod("0 0 1", FALSE) >= 0 && test()) {
 			tests[hits].modulation = DEMOD_PSK;
 			tests[hits].inversed = FALSE;
 			++hits;
 		}
 		
-		if ( PSKDemod("0 1 1", FALSE) && test()) {
-			tests[++hits].modulation = DEMOD_PSK;
+		if ( PSKDemod("0 1 1", FALSE) >= 0 && test()) {
+			tests[hits].modulation = DEMOD_PSK;
 			tests[hits].inversed = TRUE;
 			++hits;
 		}
@@ -351,6 +351,7 @@ bool tryDetectModulation(){
 	if ( hits > 1) {
 		PrintAndLog("Found [%d] possible matches for modulation.",hits);
 		for(int i=0; i<hits; ++i){
+			PrintAndLog("--[%d]---------------", i+1);
 			printConfiguration( tests[i] );
 		}
 	}
