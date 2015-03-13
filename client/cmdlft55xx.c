@@ -216,7 +216,7 @@ int CmdReadBlk(const char *Cmd)
 		// try a detection.	
 	}
 	
-	if (CmdDetectClockRate("f")){ //wave is almost certainly FSK
+	if (GetFskClock("", FALSE, FALSE)){ //wave is almost certainly FSK
 	  	// FSK
 		if ( FSKrawDemod("0 0", FALSE) && test())
 			printT55xx("FSK");
