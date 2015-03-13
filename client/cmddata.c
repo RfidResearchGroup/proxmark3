@@ -774,20 +774,34 @@ int AutoCorrelate(int window, bool SaveGrph, bool verbose)
   return Correlation;
 }
 
+int usage_data_autocorr(void)
+{
+  //print help
+  PrintAndLog("Usage: data autocorr [window] [g]");
+  PrintAndLog("Options:        ");
+  PrintAndLog("       h              This help");
+  PrintAndLog("       [window]       window length for correlation - default = 4000");
+  PrintAndLog("       g              save back to GraphBuffer (overwrite)");
+  return 0;
+}
+
 int CmdAutoCorr(const char *Cmd)
 {
-  int window = atoi(Cmd);
+  char cmdp = param_getchar(Cmd, 0);
+  if (cmdp == 'h' || cmdp == 'H') 
+    return usage_data_autocorr();
+  int window = 4000; //set default
+  char grph=0;
+  bool updateGrph = FALSE;
+  sscanf(Cmd, "%i %c", &window, &grph);
 
-  if (window == 0) {
-    PrintAndLog("needs a window");
-    return 0;
-  }
   if (window >= GraphTraceLen) {
     PrintAndLog("window must be smaller than trace (%d samples)",
       GraphTraceLen);
     return 0;
   }
-  return AutoCorrelate(window, TRUE, TRUE);
+  if (grph == 'g') updateGrph=TRUE;
+  return AutoCorrelate(window, updateGrph, TRUE);
 }
 
 int CmdBitsamples(const char *Cmd)
@@ -1471,7 +1485,7 @@ int CmdFSKdemodPyramid(const char *Cmd)
     csBuff[i] = bytebits_to_byte(BitStream + idx + 16 + (i*8), 8);
   }
   //check checksum calc
-  int checkCS =  CRC8Maxim(csBuff,13);
+  uint32_t checkCS =  CRC8Maxim(csBuff,13);
 
   //get raw ID before removing parities
   uint32_t rawLo = bytebits_to_byte(BitStream+idx+96,32);
@@ -2625,7 +2639,7 @@ static command_t CommandTable[] =
   {"askgproxiidemod",CmdG_Prox_II_Demod,1, "Demodulate a G Prox II tag from GraphBuffer"},
   //{"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional)"},
   //{"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0|1>] -- Attempt to demodulate ASK tags and output bin (args optional)"},
-  {"autocorr",      CmdAutoCorr,        1, "<window length> -- Autocorrelation over window"},
+  {"autocorr",      CmdAutoCorr,        1, "[window length] [g] -- Autocorrelation over window - g to save back to GraphBuffer (overwrite)"},
   {"biphaserawdecode",CmdBiphaseDecodeRaw,1,"[offset] [invert<0|1>] Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
   {"bitsamples",    CmdBitsamples,      0, "Get raw samples as bitstring"},
   //{"bitstream",     CmdBitstream,       1, "[clock rate] -- Convert waveform into a bitstream"},
