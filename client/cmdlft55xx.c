@@ -189,10 +189,9 @@ int CmdT55xxReadBlock(const char *Cmd)
 
 	int res = sscanf(Cmd, "%d %x", &block, &password);
 
-	if ( res < 1 || res > 2 ){
-		usage_t55xx_read();
-		return 1;
-	}
+	if ( res < 1 || res > 2 )
+		return usage_t55xx_read();
+
 	
 	if ((block < 0) | (block > 7)) {
 		PrintAndLog("Block must be between 0 and 7");
@@ -220,9 +219,7 @@ int CmdT55xxReadBlock(const char *Cmd)
 	setGraphBuf(got, 12000);
 
 	DecodeT55xxBlock();
-	PrintAndLog("FIRE");
 	printT55xxBlock("");
-
 	return 0;
 }
 
@@ -284,7 +281,9 @@ int CmdT55xxDetect(const char *Cmd){
 	WaitForResponse(CMD_ACK,NULL);
 	setGraphBuf(got, 12000);
 	
-	tryDetectModulation();
+	if ( !tryDetectModulation() ){
+		PrintAndLog("Could not detect modulation automatically. Try setting it manually with \'lf t55xx config\'");
+	}
 	return 0;
 }
 
@@ -292,62 +291,78 @@ int CmdT55xxDetect(const char *Cmd){
 bool tryDetectModulation(){
 	
 	uint8_t hits = 0;
+	t55xx_conf_block_t tests[10];
 	
-	//IF true, the wave is almost certainly FSK
 	if (GetFskClock("", FALSE, FALSE)){ 
-
 		if ( FSKrawDemod("0 0", FALSE) && test()){
-			printT55xxBlock("FSK");
+			tests[hits].modulation = 1;
+			tests[hits].inversed = 0;
 			++hits;
 		}
 		if ( FSKrawDemod("0 1", FALSE) && test()) {
-			printT55xxBlock("FSK inv");
+			tests[hits].modulation = 1;
+			tests[hits].inversed = 1;
 			++hits;
-		}
+			}
     } else {
 		if ( ASKmanDemod("0 0 1", FALSE, FALSE) && test()) {
-			printT55xxBlock("ASK/MAN");
+			tests[hits].modulation = 2;
+			tests[hits].inversed = 0;
 			++hits;
-		}
+			}
 
 		if ( ASKmanDemod("0 1 1", FALSE, FALSE)  && test()) {
-			printT55xxBlock("ASK/MAN Inv");
+			tests[hits].modulation = 2;
+			tests[hits].inversed = 1;
 			++hits;
-		}
+			}
 		
 		if ( NRZrawDemod("0 0 1", FALSE)  && test()) {
-			printT55xxBlock("NZR");
+			tests[hits].modulation = 3;
+			tests[hits].inversed = 0;
 			++hits;
 		}
 
 		if ( NRZrawDemod("0 1 1", FALSE)  && test()) {
-			printT55xxBlock("NZR inv");
+			tests[hits].modulation = 3;
+			tests[hits].inversed = 1;
 			++hits;
-		}
+			}
 		
 		if ( PSKDemod("0 0 1", FALSE)  && test()) {
-			printT55xxBlock("PSK");
+			tests[hits].modulation = 4;
+			tests[hits].inversed = 0;
 			++hits;
 		}
 		
 		if ( PSKDemod("0 1 1", FALSE) && test()) {
-			printT55xxBlock("PSK inv");
+			tests[++hits].modulation = 4;
+			tests[hits].inversed = 1;
 			++hits;
 		}
 		//PSK2?
 		// if (!BiphaseRawDecode("0",FALSE)  && test()) {
-			// printT55xx("BIPHASE");
+		//	tests[++hits].modulation = 5;
+		//	tests[hits].inversed = 0;
 		//}
 		// if (!BiphaseRawDecode("1",FALSE) && test()) {
-			// printT55xx("BIPHASE inv");
+		//	tests[++hits].modulation = 5;
+		//	tests[hits].inversed = 1;
 		// }
 	}		
-	if ( hits == 1) 
+	if ( hits == 1) {
+		PrintAndLog("Modulation: %d  Inverse: %d", tests[0].modulation, tests[0].inversed);
+		config.modulation = tests[0].modulation;
+		config.inversed = tests[0].inversed;
 		return TRUE;
+	}
 	
-	if ( hits > 1)
+	if ( hits > 1) {
 		PrintAndLog("Found [%d] possible matches for modulation.",hits);
-
+		for(int i=0; i<hits; ++i){
+			PrintAndLog("Modulation: %d  Inverse: %d", tests[i].modulation, tests[i].inversed);
+		}
+	}
 	return FALSE;
 }
 
@@ -447,14 +462,10 @@ int CmdT55xxWriteBlock(const char *Cmd)
 
 int CmdT55xxReadTrace(const char *Cmd)
 {
-	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
-
 	char cmdp = param_getchar(Cmd, 0);
 	
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
-		usage_t55xx_trace();
-		return 0;
-	}
+	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') 
+		return usage_t55xx_trace();
 
 	if ( strlen(Cmd)==0){
 	
@@ -464,29 +475,35 @@ int CmdT55xxReadTrace(const char *Cmd)
 			PrintAndLog("command execution time out");
 			return 1;
 		}
-		//darn
-		//CmdSamples("12000");
+
+		uint8_t got[12000];
+		GetFromBigBuf(got,sizeof(got),0);
+		WaitForResponse(CMD_ACK,NULL);
+		setGraphBuf(got, 12000);
 	}
 	
-	size_t bitlen = getFromGraphBuf(bits);
-	if ( bitlen == 0 )
+	DecodeT55xxBlock();
+
+	if ( !DemodBufferLen) 
 		return 2;
 	
 	RepaintGraphWindow();
 
 	uint8_t si = 5;
-	uint32_t bl0     = PackBits(si, 32, bits);
-	uint32_t bl1     = PackBits(si+32, 32, bits);
+	uint32_t bl0     = PackBits(si, 32, DemodBuffer);
+	uint32_t bl1     = PackBits(si+32, 32, DemodBuffer);
 	
-	uint32_t acl     = PackBits(si,  8, bits); si += 8;
-	uint32_t mfc     = PackBits(si, 8, bits); si += 8;
-	uint32_t cid     = PackBits(si, 5, bits); si += 5;
-	uint32_t icr     = PackBits(si, 3, bits); si += 3;
-	uint32_t year    = PackBits(si, 4, bits); si += 4;
-	uint32_t quarter = PackBits(si, 2, bits); si += 2;
-	uint32_t lotid    = PackBits(si, 12, bits); si += 12;
-	uint32_t wafer   = PackBits(si, 5, bits); si += 5;
-	uint32_t dw      = PackBits(si, 15, bits); 
+	uint32_t acl     = PackBits(si,  8, DemodBuffer); si += 8;
+	uint32_t mfc     = PackBits(si, 8, DemodBuffer); si += 8;
+	uint32_t cid     = PackBits(si, 5, DemodBuffer); si += 5;
+	uint32_t icr     = PackBits(si, 3, DemodBuffer); si += 3;
+	uint32_t year    = PackBits(si, 4, DemodBuffer); si += 4;
+	uint32_t quarter = PackBits(si, 2, DemodBuffer); si += 2;
+	uint32_t lotid    = PackBits(si, 12, DemodBuffer); si += 12;
+	uint32_t wafer   = PackBits(si, 5, DemodBuffer); si += 5;
+	uint32_t dw      = PackBits(si, 15, DemodBuffer); 
+	
+	year += 2000;
 	
 	PrintAndLog("");
 	PrintAndLog("-- T55xx Trace Information ----------------------------------");
@@ -496,14 +513,14 @@ int CmdT55xxReadTrace(const char *Cmd)
 	PrintAndLog(" CID                                     : 0x%02X (%d)", cid, cid);
 	PrintAndLog(" ICR IC Revision                         : %d",icr );
 	PrintAndLog(" Manufactured");
-	PrintAndLog("     Year/Quarter : %d/%d",2000+year, quarter );
+	PrintAndLog("     Year/Quarter : %d/%d",year, quarter );
 	PrintAndLog("     Lot ID       : %d", lotid );
 	PrintAndLog("     Wafer number : %d", wafer);
 	PrintAndLog("     Die Number   : %d", dw);
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" Raw Data - Page 1");
-	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(bits+5,32) );
-	PrintAndLog("     Block 0  : 0x%08X  %s", bl1, sprint_bin(bits+37,32) );
+	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(DemodBuffer+5,32) );
+	PrintAndLog("     Block 0  : 0x%08X  %s", bl1, sprint_bin(DemodBuffer+37,32) );
 	PrintAndLog("-------------------------------------------------------------");
 	/*
 	TRACE - BLOCK O
@@ -533,33 +550,56 @@ int CmdT55xxInfo(const char *Cmd){
 	*/
 	char cmdp = param_getchar(Cmd, 0);
 
-	if (cmdp == 'h' || cmdp == 'H') {
+	if (cmdp == 'h' || cmdp == 'H')
 		return usage_t55xx_info();
-	} else {
-		CmdT55xxReadBlock("0");
-	}	
-
-	// config
 	
-	uint8_t bits[LF_BITSSTREAM_LEN] = {0x00};
+	if (strlen(Cmd)==0){
+		
+		// read block 0, Page 0. Configuration.
+		UsbCommand c = {CMD_T55XX_READ_BLOCK, {0, 0, 0}};
+		c.d.asBytes[0] = 0x0; 
 
+		//Password mode
+		// if ( res == 2 ) {
+			// c.arg[2] = password;
+			// c.d.asBytes[0] = 0x1; 
+		// }
+
+		SendCommand(&c);
+		if ( !WaitForResponseTimeout(CMD_ACK,NULL,2500) ) {
+			PrintAndLog("command execution time out");
+			return 1;
+		}
+
+		uint8_t got[12000];
+		GetFromBigBuf(got,sizeof(got),0);
+		WaitForResponse(CMD_ACK,NULL);
+		setGraphBuf(got, 12000);
+	}
+	
+	DecodeT55xxBlock();
+
+	if ( !DemodBufferLen) 
+		return 2;
+	
+	
 	uint8_t si = 1;
-	uint32_t bl0      = PackBits(si, 32, bits);
+	uint32_t bl0      = PackBits(si, 32, DemodBuffer);
 	
-	uint32_t safer    = PackBits(si, 4, bits); si += 4;	
-	uint32_t resv     = PackBits(si, 7, bits); si += 7;
-	uint32_t dbr      = PackBits(si, 3, bits); si += 3;
-	uint32_t extend   = PackBits(si, 1, bits); si += 1;
-	uint32_t datamod  = PackBits(si, 5, bits); si += 5;
-	uint32_t pskcf    = PackBits(si, 2, bits); si += 2;
-	uint32_t aor      = PackBits(si, 1, bits); si += 1;	
-	uint32_t otp      = PackBits(si, 1, bits); si += 1;	
-	uint32_t maxblk   = PackBits(si, 3, bits); si += 3;
-	uint32_t pwd      = PackBits(si, 1, bits); si += 1;	
-	uint32_t sst      = PackBits(si, 1, bits); si += 1;	
-	uint32_t fw       = PackBits(si, 1, bits); si += 1;
-	uint32_t inv      = PackBits(si, 1, bits); si += 1;	
-	uint32_t por      = PackBits(si, 1, bits); si += 1;
+	uint32_t safer    = PackBits(si, 4, DemodBuffer); si += 4;	
+	uint32_t resv     = PackBits(si, 7, DemodBuffer); si += 7;
+	uint32_t dbr      = PackBits(si, 3, DemodBuffer); si += 3;
+	uint32_t extend   = PackBits(si, 1, DemodBuffer); si += 1;
+	uint32_t datamod  = PackBits(si, 5, DemodBuffer); si += 5;
+	uint32_t pskcf    = PackBits(si, 2, DemodBuffer); si += 2;
+	uint32_t aor      = PackBits(si, 1, DemodBuffer); si += 1;	
+	uint32_t otp      = PackBits(si, 1, DemodBuffer); si += 1;	
+	uint32_t maxblk   = PackBits(si, 3, DemodBuffer); si += 3;
+	uint32_t pwd      = PackBits(si, 1, DemodBuffer); si += 1;	
+	uint32_t sst      = PackBits(si, 1, DemodBuffer); si += 1;	
+	uint32_t fw       = PackBits(si, 1, DemodBuffer); si += 1;
+	uint32_t inv      = PackBits(si, 1, DemodBuffer); si += 1;	
+	uint32_t por      = PackBits(si, 1, DemodBuffer); si += 1;
 		
 	PrintAndLog("");
 	PrintAndLog("-- T55xx Configuration & Tag Information --------------------");
@@ -580,7 +620,7 @@ int CmdT55xxInfo(const char *Cmd){
 	PrintAndLog(" POR-Delay                 : %s", (por) ? "Yes":"No");
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" Raw Data - Page 0");
-	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(bits+5,32) );
+	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(DemodBuffer+5,32) );
 	PrintAndLog("-------------------------------------------------------------");
 	
 	return 0;
