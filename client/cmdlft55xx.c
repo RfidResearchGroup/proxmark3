@@ -119,8 +119,9 @@ static int CmdHelp(const char *Cmd);
 
 int CmdT55xxSetConfig(const char *Cmd){
 
-	int len;
-	bool inverse;
+	int len = 0;
+	int foundModulation = 2;
+	bool inverse = FALSE;
 	bool errors = FALSE;
 	uint8_t cmdp = 0;
 	char modulation[4] = {0x00};
@@ -137,15 +138,15 @@ int CmdT55xxSetConfig(const char *Cmd){
 			cmdp+= len+1;
 			//FSK|ASK|PSK|NZ|BI
 			if ( strcmp(modulation, "FSK" ) == 0)
-				len = 1;
+				foundModulation = 1;
 			else if ( strcmp(modulation, "ASK" ) == 0)
-				len = 2;
+				foundModulation = 2;
 			else if ( strcmp(modulation, "PSK" ) == 0)
-				len = 3;
+				foundModulation = 3;
 			else if ( strcmp(modulation, "NZ" ) == 0)
-				len = 4;
+				foundModulation = 4;
 			else if ( strcmp(modulation, "BI" ) == 0)
-				len = 5;
+				foundModulation = 5;
 			else {
 				PrintAndLog("Unknown modulation '%s'", modulation);
 				errors = TRUE;
@@ -172,7 +173,7 @@ int CmdT55xxSetConfig(const char *Cmd){
 	if (errors)
 		return usage_t55xx_config();
  
-	config.modulation = len;
+	config.modulation = foundModulation;
 	config.inversed = inverse;
 	config.block0 = 0;
 	return 0;
@@ -237,7 +238,6 @@ void DecodeT55xxBlock(){
 		case 2:
 			sprintf(cmdStr,"0 %d 1", config.inversed );
 			ASKmanDemod(cmdStr, FALSE, FALSE);
-			PrintAndLog("ice");
 			break;
 		case 3:
 			sprintf(cmdStr,"0 %d 1", config.inversed );
