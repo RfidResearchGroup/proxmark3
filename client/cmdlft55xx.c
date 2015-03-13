@@ -26,17 +26,9 @@
 #define LF_TRACE_BUFF_SIZE 20000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
 #define LF_BITSSTREAM_LEN 1000 // more then 1000 bits shouldn't happend..  8block * 4 bytes * 8bits = 
 
-//  0 = FSK
-//  1 = ASK
-//  2 = PSK
-//  4 = NZR (direct)
-typedef struct {
-	uint8_t modulation;
-	bool inversed;
-	uint32_t block0;
-} t55xx_conf_block_t;
 
-// Default configuration: FSK, not inversed.
+
+// Default configuration: ASK, not inversed.
 t55xx_conf_block_t config = { .modulation = 2, .inversed = FALSE, .block0 = 0x00};
 
 int usage_t55xx_config(){
@@ -164,9 +156,7 @@ int CmdT55xxSetConfig(const char *Cmd){
 	}
 	// No args
 	if (cmdp == 0) {
-		PrintAndLog("Modulation: %d", config.modulation);
-		PrintAndLog("Invert    : %d", config.inversed);
-		PrintAndLog("Block0    : %08X", config.block0);
+		printConfiguration( config );
 		return 0;
 	}
 	//Validations
@@ -351,16 +341,16 @@ bool tryDetectModulation(){
 		// }
 	}		
 	if ( hits == 1) {
-		PrintAndLog("Modulation: %d  Inverse: %d", tests[0].modulation, tests[0].inversed);
 		config.modulation = tests[0].modulation;
 		config.inversed = tests[0].inversed;
+		printConfiguration( config );
 		return TRUE;
 	}
 	
 	if ( hits > 1) {
 		PrintAndLog("Found [%d] possible matches for modulation.",hits);
 		for(int i=0; i<hits; ++i){
-			PrintAndLog("Modulation: %d  Inverse: %d", tests[i].modulation, tests[i].inversed);
+			printConfiguration( tests[i] );
 		}
 	}
 	return FALSE;
@@ -403,6 +393,13 @@ void printT55xxBlock(const char *demodStr){
 	
 	blockData = PackBits(1, 32, bits);
 	PrintAndLog("0x%08X  %s [%s]", blockData, sprint_bin(bits+1,32), demodStr);
+}
+
+void printConfiguration( t55xx_conf_block_t b){
+	PrintAndLog("Modulation : %s", GetSelectedModulationStr(b.modulation) );
+	PrintAndLog("Inverted   : %s", (b.inversed) ? "Yes" : "No" );
+	PrintAndLog("Block0     : %08X", b.block0);
+	PrintAndLog("");
 }
 
 /*
@@ -747,6 +744,34 @@ char * GetModulationStr( uint32_t id){
 			break;
 		default:
 			sprintf(retStr,"0x%02X (Unknown)",id);
+			break;
+		}
+	return buf;
+}
+
+char * GetSelectedModulationStr( uint8_t id){
+
+ 	static char buf[16];
+	char *retStr = buf;
+	
+	switch (id){
+		case 1:
+			sprintf(retStr,"FSK (%d)",id);
+			break;
+		case 2:		
+			sprintf(retStr,"ASK (%d)",id);
+			break;
+		case 3:
+			sprintf(retStr,"DIRECT/NRZ (%d)",id);
+			break;
+		case 4:
+			sprintf(retStr,"PSK (%d)",id);
+			break;
+		case 5:
+			sprintf(retStr,"BIPHASE (%d)",id);
+			break;
+		default:
+			sprintf(retStr,"(Unknown)");
 			break;
 		}
 	return buf;
