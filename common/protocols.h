@@ -115,7 +115,9 @@ NXP/Philips CUSTOM COMMANDS
 
 #define MIFARE_AUTH_KEYA	    0x60
 #define MIFARE_AUTH_KEYB	    0x61
-#define MIFARE_MAGICMODE	    0x40
+#define MIFARE_MAGICWUPC1	    0x40
+#define MIFARE_MAGICWUPC2		0x43
+#define MIFARE_MAGICWIPEC		0x41
 #define MIFARE_CMD_INC          0xC0
 #define MIFARE_CMD_DEC          0xC1
 #define MIFARE_CMD_RESTORE      0xC2

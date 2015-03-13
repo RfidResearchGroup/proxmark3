@@ -62,19 +62,21 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 			snprintf(exp,size,"ANTICOLL-2"); break;
 		}
 	}
-	case ISO14443A_CMD_REQA:       snprintf(exp,size,"REQA"); break;
-	case ISO14443A_CMD_READBLOCK:  snprintf(exp,size,"READBLOCK(%d)",cmd[1]); break;
-	case ISO14443A_CMD_WRITEBLOCK: snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); break;
-	case ISO14443A_CMD_HALT:       snprintf(exp,size,"HALT"); break;
-	case ISO14443A_CMD_RATS:       snprintf(exp,size,"RATS"); break;
-	case MIFARE_CMD_INC:          snprintf(exp,size,"INC(%d)",cmd[1]); break;
-	case MIFARE_CMD_DEC:          snprintf(exp,size,"DEC(%d)",cmd[1]); break;
-	case MIFARE_CMD_RESTORE:      snprintf(exp,size,"RESTORE(%d)",cmd[1]); break;
-	case MIFARE_CMD_TRANSFER:     snprintf(exp,size,"TRANSFER(%d)",cmd[1]); break;
-	case MIFARE_AUTH_KEYA:        snprintf(exp,size,"AUTH-A(%d)",cmd[1]); break;
-	case MIFARE_AUTH_KEYB:        snprintf(exp,size,"AUTH-B(%d)",cmd[1]); break;
-	case MIFARE_MAGICMODE:        snprintf(exp,size,"MAGIC"); break;
-	default:                      snprintf(exp,size,"?"); break;
+	case ISO14443A_CMD_REQA:		snprintf(exp,size,"REQA"); break;
+	case ISO14443A_CMD_READBLOCK:	snprintf(exp,size,"READBLOCK(%d)",cmd[1]); break;
+	case ISO14443A_CMD_WRITEBLOCK:	snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); break;
+	case ISO14443A_CMD_HALT:		snprintf(exp,size,"HALT"); break;
+	case ISO14443A_CMD_RATS:		snprintf(exp,size,"RATS"); break;
+	case MIFARE_CMD_INC:			snprintf(exp,size,"INC(%d)",cmd[1]); break;
+	case MIFARE_CMD_DEC:			snprintf(exp,size,"DEC(%d)",cmd[1]); break;
+	case MIFARE_CMD_RESTORE:		snprintf(exp,size,"RESTORE(%d)",cmd[1]); break;
+	case MIFARE_CMD_TRANSFER:		snprintf(exp,size,"TRANSFER(%d)",cmd[1]); break;
+	case MIFARE_AUTH_KEYA:			snprintf(exp,size,"AUTH-A(%d)",cmd[1]); break;
+	case MIFARE_AUTH_KEYB:			snprintf(exp,size,"AUTH-B(%d)",cmd[1]); break;
+	case MIFARE_MAGICWUPC1:			snprintf(exp,size,"MAGIC WUPC1"); break;
+	case MIFARE_MAGICWUPC2:			snprintf(exp,size,"MAGIC WUPC2"); break;
+	case MIFARE_MAGICWIPEC:			snprintf(exp,size,"MAGIC WIPEC"); break;
+	default:						snprintf(exp,size,"?"); break;
 	}
 	return;
 }

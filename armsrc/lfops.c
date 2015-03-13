@@ -16,6 +16,7 @@
 #include "string.h"
 #include "lfdemod.h"
 #include "lfsampling.h"
+#include "usb_cdc.h"
 
 
 /**
@@ -401,7 +402,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
     for(;;) {
         //wait until SSC_CLK goes HIGH
         while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
-            if(BUTTON_PRESS()) {
+			if(BUTTON_PRESS() || usb_poll()) {
                 DbpString("Stopped");
                 return;
             }

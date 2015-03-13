@@ -1554,15 +1554,14 @@ int CmdHF14AMfCLoad(const char *Cmd)
 	if (ctmp == 'e' || ctmp == 'E') fillFromEmulator = 1;
 	
 	if (fillFromEmulator) {
-		flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;
 		for (blockNum = 0; blockNum < 16 * 4; blockNum += 1) {
 			if (mfEmlGetMem(buf8, blockNum, 1)) {
 				PrintAndLog("Cant get block: %d", blockNum);
 				return 2;
 			}
-			
-			if (blockNum == 2) flags = 0;
-			if (blockNum == 16 * 4 - 1) flags = CSETBLOCK_HALT + CSETBLOCK_RESET_FIELD;
+			if (blockNum == 0) flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;				// switch on field and send magic sequence
+			if (blockNum == 1) flags = 0;													// just write
+			if (blockNum == 16 * 4 - 1) flags = CSETBLOCK_HALT + CSETBLOCK_RESET_FIELD;		// Done. Magic Halt and switch off field.
 
 			if (mfCSetBlock(blockNum, buf8, NULL, 0, flags)) {
 				PrintAndLog("Cant set magic card block: %d", blockNum);
@@ -1587,7 +1586,6 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		}
 	
 		blockNum = 0;
-		flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;
 		while(!feof(f)){
 		
 			memset(buf, 0, sizeof(buf));
@@ -1597,7 +1595,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 				return 2;
 			}
 
-			if (strlen(buf) < 32){
+			if (strlen(buf) < 32) {
 				if(strlen(buf) && feof(f))
 					break;
 				PrintAndLog("File content error. Block data must include 32 HEX symbols");
@@ -1606,8 +1604,9 @@ int CmdHF14AMfCLoad(const char *Cmd)
 			for (i = 0; i < 32; i += 2)
 				sscanf(&buf[i], "%02x", (unsigned int *)&buf8[i / 2]);
 
-			if (blockNum == 2) flags = 0;
-			if (blockNum == 16 * 4 - 1) flags = CSETBLOCK_HALT + CSETBLOCK_RESET_FIELD;
+			if (blockNum == 0) flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;				// switch on field and send magic sequence
+			if (blockNum == 1) flags = 0;													// just write
+			if (blockNum == 16 * 4 - 1) flags = CSETBLOCK_HALT + CSETBLOCK_RESET_FIELD;		// Done. Switch off field.
 
 			if (mfCSetBlock(blockNum, buf8, NULL, 0, flags)) {
 				PrintAndLog("Can't set magic card block: %d", blockNum);
