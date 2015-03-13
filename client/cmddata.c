@@ -623,13 +623,13 @@ int CmdG_Prox_II_Demod(const char *Cmd)
   int ans = ASKrawDemod(Cmd, FALSE);
   if (ans <= 0) {
     if (g_debugMode) PrintAndLog("Error AskrawDemod: %d",ans);
-    return ans;
+    return 0; //ans;
   }
   size_t size = DemodBufferLen;
   ans = BiphaseRawDecode(DemodBuffer, &size, 0, 0); 
   if (ans !=0) {
     if (g_debugMode) PrintAndLog("Error BiphaseRawDecode: %d",ans);
-    return ans;
+    return 0; //ans;
   }
   //call lfdemod.c demod for gProxII
   ans = gProxII_Demod(DemodBuffer, &size);
@@ -639,7 +639,7 @@ int CmdG_Prox_II_Demod(const char *Cmd)
     ans = BiphaseRawDecode(DemodBuffer, &size, 1, 0); 
     if (ans != 0) {
       if (g_debugMode) PrintAndLog("Error BiphaseRawDecode: %d",ans);
-      return ans;
+      return 0;//ans;
     }
     ans = gProxII_Demod(DemodBuffer, &size);
     if (ans < 0) {
