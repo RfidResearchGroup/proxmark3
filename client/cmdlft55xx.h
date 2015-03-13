@@ -12,15 +12,18 @@
 
 int CmdLFT55XX(const char *Cmd);
 int CmdT55xxSetConfig(const char *Cmd);
-int CmdReadBlk(const char *Cmd);
-int CmdWriteBlk(const char *Cmd);
-int CmdReadTrace(const char *Cmd);
-int CmdInfo(const char *Cmd);
+int CmdT55xxReadBlock(const char *Cmd);
+int CmdT55xxWriteBlock(const char *Cmd);
+int CmdT55xxReadTrace(const char *Cmd);
+int CmdT55xxInfo(const char *Cmd);
+int CmdT55xxDetect(const char *Cmd);
 
 char * GetBitRateStr(uint32_t id);
 char * GetSaferStr(uint32_t id);
 char * GetModulationStr( uint32_t id);
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bitstream);
-void printT55xx(const char *demodStr);
+void printT55xxBlock(const char *demodStr);
+void DecodeT55xxBlock();
+bool tryDetectModulation();
 bool test();
 #endif

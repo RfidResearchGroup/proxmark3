@@ -37,7 +37,7 @@ typedef struct {
 } t55xx_conf_block_t;
 
 // Default configuration: FSK, not inversed.
-t55xx_conf_block_t config = { .modulation = 0, .inversed = FALSE, .block0 = 0x00};
+t55xx_conf_block_t config = { .modulation = 2, .inversed = FALSE, .block0 = 0x00};
 
 int usage_t55xx_config(){
 	PrintAndLog("Usage: lf t55xx config [d <demodulation>] [i 1]");
@@ -105,6 +105,15 @@ int usage_t55xx_dump(){
 	PrintAndLog("");
 	return 0;
 }
+int usage_t55xx_detect(){
+	PrintAndLog("Usage:  lf t55xx detect");
+	PrintAndLog("");
+	PrintAndLog("Examples:");
+	PrintAndLog("      lf t55xx detect");
+	PrintAndLog("      lf t55xx detect 1");
+	PrintAndLog("");
+	return 0;
+}
 
 static int CmdHelp(const char *Cmd);
 
@@ -168,9 +177,8 @@ int CmdT55xxSetConfig(const char *Cmd){
 	config.block0 = 0;
 	return 0;
 }
-// detect configuration?
 
-int CmdReadBlk(const char *Cmd)
+int CmdT55xxReadBlock(const char *Cmd)
 {
 	int block = -1;
 	int password = 0xFFFFFFFF; //default to blank Block 7
@@ -209,54 +217,140 @@ int CmdReadBlk(const char *Cmd)
 	uint8_t got[12000];
 	GetFromBigBuf(got,sizeof(got),0);
 	WaitForResponse(CMD_ACK,NULL);
-
 	setGraphBuf(got, 12000);
 
-	if (block == 0){
-		// try a detection.	
-	}
-	
-	if (GetFskClock("", FALSE, FALSE)){ //wave is almost certainly FSK
-	  	// FSK
-		if ( FSKrawDemod("0 0", FALSE) && test())
-			printT55xx("FSK");
-		// FSK inverted
-		if ( FSKrawDemod("0 1", FALSE) && test()) 
-			printT55xx("FSK inv");
-    } else {
-		// ASK/MAN (autoclock, normal, maxerrors 1)
-		if ( ASKmanDemod("0 0 1", FALSE, FALSE) && test()) 
-			printT55xx("ASK/MAN");
-		
-		// ASK/MAN (autoclock, inverted, maxerrors 1)
-		if ( ASKmanDemod("0 1 1", FALSE, FALSE)  && test()) 
-			printT55xx("ASK/MAN Inv");
+	DecodeT55xxBlock();
+	PrintAndLog("FIRE");
+	printT55xxBlock("");
 
-		// NZR (autoclock, normal, maxerrors 1)
-		if ( NRZrawDemod("0 0 1", FALSE)  && test()) 
-			printT55xx("NZR");
-		// NZR (autoclock, inverted, maxerrors 1)
-		if ( NRZrawDemod("0 1 1", FALSE)  && test()) 
-			printT55xx("NZR inv");
-		
-		// PSK (autoclock, normal, maxerrors 1)
-		if ( PSKDemod("0 0 1", FALSE)  && test()) 
-			printT55xx("PSK");
-
-		// PSK (autoclock, inverted, maxerrors 1)
-		if ( PSKDemod("0 1 1", FALSE) && test()) 
-			printT55xx("PSK inv");
-		
-		//PSK2?
-		
-		// if (!BiphaseRawDecode("0",FALSE)  && test()) 
-			// printT55xx("BIPHASE");
-		
-		// if (!BiphaseRawDecode("1",FALSE) && test()) 
-			// printT55xx("BIPHASE inv");
-	}
 	return 0;
 }
+
+void DecodeT55xxBlock(){
+	
+	char buf[6] = {0x00};
+	char *cmdStr = buf;
+
+	// use the configuration
+	switch( config.modulation ){
+		case 1:
+			sprintf(cmdStr,"0 %d", config.inversed );
+			FSKrawDemod(cmdStr, FALSE);
+			break;
+		case 2:
+			sprintf(cmdStr,"0 %d 1", config.inversed );
+			ASKmanDemod(cmdStr, FALSE, FALSE);
+			PrintAndLog("ice");
+			break;
+		case 3:
+			sprintf(cmdStr,"0 %d 1", config.inversed );
+			PSKDemod(cmdStr, FALSE);
+			break;
+		case 4:
+			sprintf(cmdStr,"0 %d 1", config.inversed );
+			NRZrawDemod(cmdStr, FALSE);
+			break;
+		case 5:
+			//BiphaseRawDecode("0",FALSE);
+			break;
+		default:
+		return;
+	}
+}
+
+int CmdT55xxDetect(const char *Cmd){
+	char cmdp = param_getchar(Cmd, 0);
+	if (cmdp == 'h' || cmdp == 'H')
+		return usage_t55xx_detect();
+	
+	// read block 0, Page 0. Configuration.
+	UsbCommand c = {CMD_T55XX_READ_BLOCK, {0, 0, 0}};
+ 	c.d.asBytes[0] = 0x0; 
+
+	//Password mode
+	// if ( res == 2 ) {
+		// c.arg[2] = password;
+		// c.d.asBytes[0] = 0x1; 
+	// }
+
+	SendCommand(&c);
+	if ( !WaitForResponseTimeout(CMD_ACK,NULL,2500) ) {
+		PrintAndLog("command execution time out");
+		return FALSE;
+	}
+	
+	uint8_t got[12000];
+	GetFromBigBuf(got,sizeof(got),0);
+	WaitForResponse(CMD_ACK,NULL);
+	setGraphBuf(got, 12000);
+	
+	tryDetectModulation();
+	return 0;
+}
+
+// detect configuration?
+bool tryDetectModulation(){
+	
+	uint8_t hits = 0;
+	
+	//IF true, the wave is almost certainly FSK
+	if (GetFskClock("", FALSE, FALSE)){ 
+
+		if ( FSKrawDemod("0 0", FALSE) && test()){
+			printT55xxBlock("FSK");
+			++hits;
+		}
+		if ( FSKrawDemod("0 1", FALSE) && test()) {
+			printT55xxBlock("FSK inv");
+			++hits;
+		}
+    } else {
+		if ( ASKmanDemod("0 0 1", FALSE, FALSE) && test()) {
+			printT55xxBlock("ASK/MAN");
+			++hits;
+		}
+
+		if ( ASKmanDemod("0 1 1", FALSE, FALSE)  && test()) {
+			printT55xxBlock("ASK/MAN Inv");
+			++hits;
+		}
+		
+		if ( NRZrawDemod("0 0 1", FALSE)  && test()) {
+			printT55xxBlock("NZR");
+			++hits;
+		}
+
+		if ( NRZrawDemod("0 1 1", FALSE)  && test()) {
+			printT55xxBlock("NZR inv");
+			++hits;
+		}
+		
+		if ( PSKDemod("0 0 1", FALSE)  && test()) {
+			printT55xxBlock("PSK");
+			++hits;
+		}
+		
+		if ( PSKDemod("0 1 1", FALSE) && test()) {
+			printT55xxBlock("PSK inv");
+			++hits;
+		}
+		//PSK2?
+		// if (!BiphaseRawDecode("0",FALSE)  && test()) {
+			// printT55xx("BIPHASE");
+		//}
+		// if (!BiphaseRawDecode("1",FALSE) && test()) {
+			// printT55xx("BIPHASE inv");
+		// }
+	}		
+	if ( hits == 1) 
+		return TRUE;
+	
+	if ( hits > 1)
+		PrintAndLog("Found [%d] possible matches for modulation.",hits);
+
+	return FALSE;
+}
+
 bool test(){
 
 	if ( !DemodBufferLen) 
@@ -280,7 +374,7 @@ bool test(){
 	return FALSE;
 }
 
-void printT55xx(const char *demodStr){
+void printT55xxBlock(const char *demodStr){
 	
 	uint32_t blockData = 0;
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
@@ -293,7 +387,7 @@ void printT55xx(const char *demodStr){
 		bits[i]=DemodBuffer[i];
 	
 	blockData = PackBits(1, 32, bits);
-	PrintAndLog("0x%08X  %s [%s]", blockData, sprint_bin(bits+1,32), demodStr );
+	PrintAndLog("0x%08X  %s [%s]", blockData, sprint_bin(bits+1,32), demodStr);
 }
 
 /*
@@ -310,7 +404,7 @@ size = fskdemod(dest, size, 64, 1, 10, 8);  // FSK2a RF/64
 PSK1
 errCnt = pskRawDemod(bits, &bitlen, 32, 0);
 */
-int CmdWriteBlk(const char *Cmd)
+int CmdT55xxWriteBlock(const char *Cmd)
 {
 	int block = 8; //default to invalid block
 	int data = 0xFFFFFFFF; //default to blank Block 
@@ -351,7 +445,7 @@ int CmdWriteBlk(const char *Cmd)
 	return 0;
 }
 
-int CmdReadTrace(const char *Cmd)
+int CmdT55xxReadTrace(const char *Cmd)
 {
 	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
 
@@ -431,7 +525,7 @@ int CmdReadTrace(const char *Cmd)
   return 0;
 }
 
-int CmdInfo(const char *Cmd){
+int CmdT55xxInfo(const char *Cmd){
 	/*
 		Page 0 Block 0 Configuration data.
 		Normal mode
@@ -442,7 +536,7 @@ int CmdInfo(const char *Cmd){
 	if (cmdp == 'h' || cmdp == 'H') {
 		return usage_t55xx_info();
 	} else {
-		CmdReadBlk("0");
+		CmdT55xxReadBlock("0");
 	}	
 
 	// config
@@ -492,7 +586,7 @@ int CmdInfo(const char *Cmd){
 	return 0;
 }
 
-int CmdDump(const char *Cmd){
+int CmdT55xxDump(const char *Cmd){
 
 	char s[20] = {0x00};
 	uint8_t pwd[4] = {0x00};
@@ -518,7 +612,7 @@ int CmdDump(const char *Cmd){
 		} else {
 			sprintf(s,"%d", i);
 		}
-		CmdReadBlk(s);
+		CmdT55xxReadBlock(s);
 	}
 	return 0;
 }
@@ -636,11 +730,12 @@ static command_t CommandTable[] =
 {
   {"help",   CmdHelp,           1, "This help"},
   {"config", CmdT55xxSetConfig, 1, "Set T55XX config for modulation, inversed data"},
-  {"read",   CmdReadBlk,        0, "<block> [password] -- Read T55xx block data (page 0) [optional password]"},
-  {"write",  CmdWriteBlk,       0, "<block> <data> [password] -- Write T55xx block data (page 0) [optional password]"},
-  {"trace",  CmdReadTrace,      0, "[1] Read T55xx traceability data (page 1/ blk 0-1)"},
-  {"info",   CmdInfo,           0, "[1] Read T55xx configuration data (page 0/ blk 0)"},
-  {"dump",   CmdDump,           0, "[password] Dump T55xx card block 0-7. [optional password]"},
+  {"detect", CmdT55xxDetect,    0, "Try detecting the tag modulation from reading the configuration block."},
+  {"read",   CmdT55xxReadBlock, 0, "<block> [password] -- Read T55xx block data (page 0) [optional password]"},
+  {"write",  CmdT55xxWriteBlock,0, "<block> <data> [password] -- Write T55xx block data (page 0) [optional password]"},
+  {"trace",  CmdT55xxReadTrace, 0, "[1] Show T55xx traceability data (page 1/ blk 0-1)"},
+  {"info",   CmdT55xxInfo,      0, "[1] Show T55xx configuration data (page 0/ blk 0)"},
+  {"dump",   CmdT55xxDump,      0, "[password] Dump T55xx card block 0-7. [optional password]"},
   {NULL, NULL, 0, NULL}
 };
 
