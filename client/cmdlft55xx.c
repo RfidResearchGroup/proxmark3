@@ -26,8 +26,6 @@
 #define LF_TRACE_BUFF_SIZE 20000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
 #define LF_BITSSTREAM_LEN 1000 // more then 1000 bits shouldn't happend..  8block * 4 bytes * 8bits = 
 
-
-
 // Default configuration: ASK, not inversed.
 t55xx_conf_block_t config = { .modulation = 2, .inversed = FALSE, .block0 = 0x00};
 
@@ -219,6 +217,9 @@ void DecodeT55xxBlock(){
 	char buf[6] = {0x00};
 	char *cmdStr = buf;
 
+	// clearing the DemodBuffer.
+	DemodBufferLen = 0x00;
+	
 	// use the configuration
 	switch( config.modulation ){
 		case 1:
@@ -285,59 +286,59 @@ bool tryDetectModulation(){
 	
 	if (GetFskClock("", FALSE, FALSE)){ 
 		if ( FSKrawDemod("0 0", FALSE) && test()){
-			tests[hits].modulation = 1;
-			tests[hits].inversed = 0;
+			tests[hits].modulation = DEMOD_FSK;
+			tests[hits].inversed = FALSE;
 			++hits;
 		}
 		if ( FSKrawDemod("0 1", FALSE) && test()) {
-			tests[hits].modulation = 1;
-			tests[hits].inversed = 1;
+			tests[hits].modulation = DEMOD_FSK;
+			tests[hits].inversed = TRUE;
 			++hits;
 			}
     } else {
 		if ( ASKmanDemod("0 0 1", FALSE, FALSE) && test()) {
-			tests[hits].modulation = 2;
-			tests[hits].inversed = 0;
+			tests[hits].modulation = DEMOD_ASK;
+			tests[hits].inversed = FALSE;
 			++hits;
 			}
 
 		if ( ASKmanDemod("0 1 1", FALSE, FALSE)  && test()) {
-			tests[hits].modulation = 2;
-			tests[hits].inversed = 1;
+			tests[hits].modulation = DEMOD_ASK;
+			tests[hits].inversed = TRUE;
 			++hits;
 			}
 		
 		if ( NRZrawDemod("0 0 1", FALSE)  && test()) {
-			tests[hits].modulation = 3;
-			tests[hits].inversed = 0;
+			tests[hits].modulation = DEMOD_NZR;
+			tests[hits].inversed = FALSE;
 			++hits;
 		}
 
 		if ( NRZrawDemod("0 1 1", FALSE)  && test()) {
-			tests[hits].modulation = 3;
-			tests[hits].inversed = 1;
+			tests[hits].modulation = DEMOD_NZR;
+			tests[hits].inversed = TRUE;
 			++hits;
 			}
 		
 		if ( PSKDemod("0 0 1", FALSE)  && test()) {
-			tests[hits].modulation = 4;
-			tests[hits].inversed = 0;
+			tests[hits].modulation = DEMOD_PSK;
+			tests[hits].inversed = FALSE;
 			++hits;
 		}
 		
 		if ( PSKDemod("0 1 1", FALSE) && test()) {
-			tests[++hits].modulation = 4;
-			tests[hits].inversed = 1;
+			tests[++hits].modulation = DEMOD_PSK;
+			tests[hits].inversed = TRUE;
 			++hits;
 		}
 		//PSK2?
 		// if (!BiphaseRawDecode("0",FALSE)  && test()) {
-		//	tests[++hits].modulation = 5;
-		//	tests[hits].inversed = 0;
+		//	tests[++hits].modulation = DEMOD_BI;
+		//	tests[hits].inversed = FALSE;
 		//}
 		// if (!BiphaseRawDecode("1",FALSE) && test()) {
-		//	tests[++hits].modulation = 5;
-		//	tests[hits].inversed = 1;
+		//	tests[++hits].modulation = DEMOD_BI;
+		//	tests[hits].inversed = TRUE;
 		// }
 	}		
 	if ( hits == 1) {
@@ -402,20 +403,6 @@ void printConfiguration( t55xx_conf_block_t b){
 	PrintAndLog("");
 }
 
-/*
-FSK1 / FSK1a
-size = fskdemod(dest, size, 32, 0, 8, 10);  // fsk1 RF/32 
-size = fskdemod(dest, size, 32, 1, 8, 10);  // fsk1a RF/32 
-
-FSK2 / FSK2a
-size = fskdemod(dest, size, 32, 0, 10, 8);  // fsk2 RF/32 
-size = fskdemod(dest, size, 32, 1, 10, 8);  // fsk2a RF/32 
-size = fskdemod(dest, size, 50, 1, 10, 8);  // fsk2a RF/50 
-size = fskdemod(dest, size, 64, 1, 10, 8);  // FSK2a RF/64 
-
-PSK1
-errCnt = pskRawDemod(bits, &bitlen, 32, 0);
-*/
 int CmdT55xxWriteBlock(const char *Cmd)
 {
 	int block = 8; //default to invalid block
@@ -517,7 +504,7 @@ int CmdT55xxReadTrace(const char *Cmd)
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" Raw Data - Page 1");
 	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(DemodBuffer+5,32) );
-	PrintAndLog("     Block 0  : 0x%08X  %s", bl1, sprint_bin(DemodBuffer+37,32) );
+	PrintAndLog("     Block 1  : 0x%08X  %s", bl1, sprint_bin(DemodBuffer+37,32) );
 	PrintAndLog("-------------------------------------------------------------");
 	/*
 	TRACE - BLOCK O
@@ -755,19 +742,19 @@ char * GetSelectedModulationStr( uint8_t id){
 	char *retStr = buf;
 	
 	switch (id){
-		case 1:
+		case DEMOD_FSK:
 			sprintf(retStr,"FSK (%d)",id);
 			break;
-		case 2:		
+		case DEMOD_ASK:		
 			sprintf(retStr,"ASK (%d)",id);
 			break;
-		case 3:
+		case DEMOD_NZR:
 			sprintf(retStr,"DIRECT/NRZ (%d)",id);
 			break;
-		case 4:
+		case DEMOD_PSK:
 			sprintf(retStr,"PSK (%d)",id);
 			break;
-		case 5:
+		case DEMOD_BI:
 			sprintf(retStr,"BIPHASE (%d)",id);
 			break;
 		default:

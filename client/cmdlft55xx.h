@@ -11,7 +11,13 @@
 #define CMDLFT55XX_H__
 
 typedef struct {
-	uint8_t modulation;
+	enum {
+		DEMOD_FSK = 0x01,     
+		DEMOD_ASK = 0x02,
+		DEMOD_NZR = 0x03,    
+		DEMOD_PSK = 0x04,
+		DEMOD_BI  = 0x05,
+	}  modulation;
 	bool inversed;
 	uint32_t block0;
 } t55xx_conf_block_t;
