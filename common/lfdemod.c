@@ -1589,7 +1589,7 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
   if (*size<loopCnt) loopCnt = *size;
 
   uint8_t curPhase = *invert;
-  size_t i, waveStart=0, waveEnd=0, firstFullWave=0, lastClkBit=0;
+  size_t i, waveStart=1, waveEnd=0, firstFullWave=0, lastClkBit=0;
   uint8_t fc=0, fullWaveLen=0, tol=1;
   uint16_t errCnt=0, waveLenCnt=0;
   fc = countPSK_FC(dest, *size);
@@ -1601,27 +1601,21 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
   //find first phase shift
   for (i=0; i<loopCnt; i++){
     if (dest[i]+fc < dest[i+1] && dest[i+1] >= dest[i+2]){
-      if (waveStart == 0) {
-        waveStart = i+1;
-        avgWaveVal=dest[i+1];
-        //PrintAndLog("DEBUG: waveStart: %d",waveStart);
-      } else {
-        waveEnd = i+1;
-        //PrintAndLog("DEBUG: waveEnd: %d",waveEnd);
-        waveLenCnt = waveEnd-waveStart;
-        lastAvgWaveVal = avgWaveVal/waveLenCnt;
-        if (waveLenCnt > fc){
-          firstFullWave = waveStart;
-          fullWaveLen=waveLenCnt;
-          //if average wave value is > graph 0 then it is an up wave or a 1
-          if (lastAvgWaveVal > 128) curPhase^=1;
-          break;
-        } 
-        waveStart=0;
-        avgWaveVal=0;
-      }
+      waveEnd = i+1;
+      //PrintAndLog("DEBUG: waveEnd: %d",waveEnd);
+      waveLenCnt = waveEnd-waveStart;
+      if (waveLenCnt > fc && waveStart > fc){ //not first peak and is a large wave 
+        lastAvgWaveVal = avgWaveVal/(waveLenCnt);
+        firstFullWave = waveStart;
+        fullWaveLen=waveLenCnt;
+        //if average wave value is > graph 0 then it is an up wave or a 1
+        if (lastAvgWaveVal > 123) curPhase^=1;  //fudge graph 0 a little 123 vs 128
+        break;
+      } 
+      waveStart = i+1;
+      avgWaveVal = 0;
     }
-    avgWaveVal+=dest[i+1];
+    avgWaveVal+=dest[i+2];
   }
   //PrintAndLog("DEBUG: firstFullWave: %d, waveLen: %d",firstFullWave,fullWaveLen);  
   lastClkBit = firstFullWave; //set start of wave as clock align
@@ -1629,7 +1623,7 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
   errCnt=0;
   size_t numBits=0;
   //PrintAndLog("DEBUG: clk: %d, lastClkBit: %d", *clock, lastClkBit);
-
+  dest[numBits++] = curPhase; //set first read bit
   for (i = firstFullWave+fullWaveLen-1; i < *size-3; i++){
     //top edge of wave = start of new wave 
     if (dest[i]+fc < dest[i+1] && dest[i+1] >= dest[i+2]){
@@ -1641,26 +1635,23 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
         waveEnd = i+1;
         waveLenCnt = waveEnd-waveStart;
         lastAvgWaveVal = avgWaveVal/waveLenCnt;
-        if (waveLenCnt > fc){ 
+        if (waveLenCnt > fc){  
           //PrintAndLog("DEBUG: avgWaveVal: %d, waveSum: %d",lastAvgWaveVal,avgWaveVal);
           //if this wave is a phase shift
           //PrintAndLog("DEBUG: phase shift at: %d, len: %d, nextClk: %d, i: %d, fc: %d",waveStart,waveLenCnt,lastClkBit+*clock-tol,i+1,fc);
           if (i+1 >= lastClkBit + *clock - tol){ //should be a clock bit
             curPhase^=1;
-            dest[numBits] = curPhase;
-            numBits++;
+            dest[numBits++] = curPhase;
             lastClkBit += *clock;
-          } else if (i<lastClkBit+10){
+          } else if (i<lastClkBit+10+fc){
             //noise after a phase shift - ignore
           } else { //phase shift before supposed to based on clock
             errCnt++;
-            dest[numBits] = 77;
-            numBits++;
+            dest[numBits++] = 77;
           }
         } else if (i+1 > lastClkBit + *clock + tol + fc){
           lastClkBit += *clock; //no phase shift but clock bit
-          dest[numBits] = curPhase;
-          numBits++;
+          dest[numBits++] = curPhase;
         }
         avgWaveVal=0;
         waveStart=i+1;

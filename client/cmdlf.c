@@ -1080,7 +1080,9 @@ int CmdLFfind(const char *Cmd)
   if (testRaw=='u' || testRaw=='U'){
     //test unknown tag formats (raw mode)
     PrintAndLog("\nChecking for Unknown tags:\n");
-    ans=CmdDetectClockRate("f");
+    ans=AutoCorrelate(4000, FALSE, FALSE);
+    if (ans > 0) PrintAndLog("Possible Auto Correlation of %d repeating samples",ans);
+    ans=CmdDetectClockRate("F"); //GetFSKClock("",TRUE,FALSE);
     if (ans != 0){ //fsk
       ans=CmdFSKrawdemod("");
       if (ans>0) {

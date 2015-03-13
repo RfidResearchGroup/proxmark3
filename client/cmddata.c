@@ -22,6 +22,7 @@
 #include "cmddata.h"
 #include "lfdemod.h"
 #include "usb_cmd.h"
+#include "crc.h"
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 uint8_t g_debugMode;
@@ -729,10 +730,52 @@ int Cmdaskrawdemod(const char *Cmd)
   return ASKrawDemod(Cmd, TRUE);
 }
 
-int CmdAutoCorr(const char *Cmd)
+int AutoCorrelate(int window, bool SaveGrph, bool verbose)
 {
   static int CorrelBuffer[MAX_GRAPH_TRACE_LEN];
+  size_t Correlation = 0;
+  int maxSum = 0;
+  int lastMax = 0;
+  if (verbose) PrintAndLog("performing %d correlations", GraphTraceLen - window);
+  for (int i = 0; i < GraphTraceLen - window; ++i) {
+    int sum = 0;
+    for (int j = 0; j < window; ++j) {
+      sum += (GraphBuffer[j]*GraphBuffer[i + j]) / 256;
+    }
+    CorrelBuffer[i] = sum;
+    if (sum >= maxSum-100 && sum <= maxSum+100){
+      //another max
+      Correlation = i-lastMax;
+      lastMax = i;
+      if (sum > maxSum) maxSum = sum;
+    } else if (sum > maxSum){
+      maxSum=sum;
+      lastMax = i;
+    }
+  }
+  if (Correlation==0){
+    //try again with wider margin
+    for (int i = 0; i < GraphTraceLen - window; i++){
+      if (CorrelBuffer[i] >= maxSum-(maxSum*0.05) && CorrelBuffer[i] <= maxSum+(maxSum*0.05)){
+        //another max
+        Correlation = i-lastMax;
+        lastMax = i;
+        //if (CorrelBuffer[i] > maxSum) maxSum = sum;
+      }
+    }
+  }
+  if (verbose && Correlation > 0) PrintAndLog("Possible Correlation: %d samples",Correlation);
 
+  if (SaveGrph){
+    GraphTraceLen = GraphTraceLen - window;
+    memcpy(GraphBuffer, CorrelBuffer, GraphTraceLen * sizeof (int));
+    RepaintGraphWindow();  
+  }
+  return Correlation;
+}
+
+int CmdAutoCorr(const char *Cmd)
+{
   int window = atoi(Cmd);
 
   if (window == 0) {
@@ -744,21 +787,7 @@ int CmdAutoCorr(const char *Cmd)
       GraphTraceLen);
     return 0;
   }
-
-  PrintAndLog("performing %d correlations", GraphTraceLen - window);
-
-  for (int i = 0; i < GraphTraceLen - window; ++i) {
-    int sum = 0;
-    for (int j = 0; j < window; ++j) {
-      sum += (GraphBuffer[j]*GraphBuffer[i + j]) / 256;
-    }
-    CorrelBuffer[i] = sum;
-  }
-  GraphTraceLen = GraphTraceLen - window;
-  memcpy(GraphBuffer, CorrelBuffer, GraphTraceLen * sizeof (int));
-
-  RepaintGraphWindow();
-  return 0;
+  return AutoCorrelate(window, TRUE, TRUE);
 }
 
 int CmdBitsamples(const char *Cmd)
@@ -1434,7 +1463,16 @@ int CmdFSKdemodPyramid(const char *Cmd)
   // w = wiegand parity, x = extra space for other formats
   // p = unknown checksum
   // (26 bit format shown)
-  
+
+  //get bytes for checksum calc
+  uint8_t checksum = bytebits_to_byte(BitStream + idx + 120, 8);
+  uint8_t csBuff[14] = {0x00};
+  for (uint8_t i = 0; i < 13; i++){
+    csBuff[i] = bytebits_to_byte(BitStream + idx + 16 + (i*8), 8);
+  }
+  //check checksum calc
+  int checkCS =  CRC8Maxim(csBuff,13);
+
   //get raw ID before removing parities
   uint32_t rawLo = bytebits_to_byte(BitStream+idx+96,32);
   uint32_t rawHi = bytebits_to_byte(BitStream+idx+64,32);
@@ -1444,7 +1482,8 @@ int CmdFSKdemodPyramid(const char *Cmd)
 
   size = removeParity(BitStream, idx+8, 8, 1, 120);
   if (size != 105){
-    if (g_debugMode==1) PrintAndLog("DEBUG: Error at parity check-tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %x",size, idx, rawHi3);
+    if (g_debugMode==1) 
+      PrintAndLog("DEBUG: Error at parity check - tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %x",size, idx, rawHi3);
     return 0;
   }
 
@@ -1502,6 +1541,11 @@ int CmdFSKdemodPyramid(const char *Cmd)
       PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
     }
   }
+  if (checksum == checkCS)
+    PrintAndLog("Checksum %02x passed", checksum);
+  else
+    PrintAndLog("Checksum %02x failed - should have been %02x", checksum, checkCS);
+
   if (g_debugMode){
     PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
     printDemodBuff();
