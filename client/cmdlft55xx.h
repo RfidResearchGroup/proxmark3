@@ -19,6 +19,7 @@ typedef struct {
 		DEMOD_BI  = 0x05,
 	}  modulation;
 	bool inversed;
+	uint8_t offset;
 	uint32_t block0;
 } t55xx_conf_block_t;
 
@@ -42,4 +43,5 @@ void printConfiguration( t55xx_conf_block_t b);
 void DecodeT55xxBlock();
 bool tryDetectModulation();
 bool test();
+int special(const char *Cmd);
 #endif

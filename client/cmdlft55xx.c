@@ -22,23 +22,23 @@
 #include "data.h"
 #include "lfdemod.h"
 #include "../common/crc.h"
+#include "../common/iso14443crc.h"
 
-#define LF_TRACE_BUFF_SIZE 20000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
-#define LF_BITSSTREAM_LEN 1000 // more then 1000 bits shouldn't happend..  8block * 4 bytes * 8bits = 
-
-// Default configuration: ASK, not inversed.
-t55xx_conf_block_t config = { .modulation = 2, .inversed = FALSE, .block0 = 0x00};
+// Default configuration
+t55xx_conf_block_t config = { .modulation = DEMOD_ASK, .inversed = FALSE, .offset = 0x00, .block0 = 0x00};
 
 int usage_t55xx_config(){
-	PrintAndLog("Usage: lf t55xx config [d <demodulation>] [i 1]");
+	PrintAndLog("Usage: lf t55xx config [d <demodulation>] [i 1] [o <offset>]");
 	PrintAndLog("Options:        ");
 	PrintAndLog("       h                        This help");
 	PrintAndLog("       d <FSK|ASK|PSK|NZ|BI>    Set demodulation FSK / ASK / PSK / NZ / Biphase");
 	PrintAndLog("       i [1]                    Inverse data signal, defaults to normal");
+	PrintAndLog("       o [offsett]              Set offset, where data should start decode from in bitstream");
 	PrintAndLog("");
 	PrintAndLog("Examples:");
-	PrintAndLog("      lf t55xx config d FSK     - FSK demodulation");
-	PrintAndLog("      lf t55xx config d FSK i 1 - FSK demodulation, inverse data");
+	PrintAndLog("      lf t55xx config d FSK          - FSK demodulation");
+	PrintAndLog("      lf t55xx config d FSK i 1      - FSK demodulation, inverse data");
+	PrintAndLog("      lf t55xx config d FSK i 1 o 3  - FSK demodulation, inverse data, offset=3,start from bitpos 3 to decode data");
 	PrintAndLog("");
 	return 0;
 }
@@ -109,8 +109,13 @@ static int CmdHelp(const char *Cmd);
 
 int CmdT55xxSetConfig(const char *Cmd){
 
+	uint8_t data[] = {0x78,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t cmd[]  = {0x00,0x00};
+	ComputeCrc14443(CRC_14443_B, data, 7 , &cmd[0], &cmd[1]);
+	PrintAndLog("%02X %02X",cmd[0], cmd[1]);
 	int len = 0;
 	int foundModulation = 2;
+	uint8_t offset = 0;
 	bool inverse = FALSE;
 	bool errors = FALSE;
 	uint8_t cmdp = 0;
@@ -146,6 +151,14 @@ int CmdT55xxSetConfig(const char *Cmd){
 			inverse = param_getchar(Cmd,cmdp+1) == '1';
 			cmdp+=2;
 			break;
+		case 'o':
+			errors |= param_getdec(Cmd, cmdp+1,&offset);
+			if ( offset >= 32 ){
+				PrintAndLog("Offset must be smaller than 32");
+				errors = TRUE;
+			}
+			cmdp+=2;
+			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = TRUE;
@@ -163,6 +176,7 @@ int CmdT55xxSetConfig(const char *Cmd){
  
 	config.modulation = foundModulation;
 	config.inversed = inverse;
+	config.offset = offset;
 	config.block0 = 0;
 	return 0;
 }
@@ -320,13 +334,13 @@ bool tryDetectModulation(){
 			++hits;
 			}
 		
-		if ( PSKDemod("0 0 1", FALSE) >= 0 && test()) {
+		if ( PSKDemod("0 0 1", FALSE) && test()) {
 			tests[hits].modulation = DEMOD_PSK;
 			tests[hits].inversed = FALSE;
 			++hits;
 		}
 		
-		if ( PSKDemod("0 1 1", FALSE) >= 0 && test()) {
+		if ( PSKDemod("0 1 1", FALSE) && test()) {
 			tests[hits].modulation = DEMOD_PSK;
 			tests[hits].inversed = TRUE;
 			++hits;
@@ -384,22 +398,48 @@ bool test(){
 void printT55xxBlock(const char *demodStr){
 	
 	uint32_t blockData = 0;
-	uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0x00};
+	uint8_t bits[64] = {0x00};
 		
 	if ( !DemodBufferLen) 
 		return;
 	
-	int i =0;
-    for (;i<DemodBufferLen;++i)
+	if ( config.offset > DemodBufferLen){
+		PrintAndLog("The configured offset is to big. (%d > %d)", config.offset, DemodBufferLen);
+		return;
+	}
+	
+	int i = config.offset;
+	int pos = 32 + config.offset;
+    for (; i < pos; ++i)
 		bits[i]=DemodBuffer[i];
 	
-	blockData = PackBits(1, 32, bits);
-	PrintAndLog("0x%08X  %s [%s]", blockData, sprint_bin(bits+1,32), demodStr);
+	blockData = PackBits(0, 32, bits);
+	PrintAndLog("0x%08X  %s [%s]", blockData, sprint_bin(bits,32), demodStr);
+}
+
+int special(const char *Cmd) {
+	uint32_t blockData = 0;
+	uint8_t bits[64] = {0x00};
+
+	PrintAndLog("[OFFSET] [DATA] [BINARY]");
+	PrintAndLog("----------------------------------------------------");
+	int i,j = 0;
+	for (; j < 32; ++j){
+		
+		for (i = 0; i < 32; ++i)
+			bits[i]=DemodBuffer[j+i];
+	
+		blockData = PackBits(0, 32, bits);
+		PrintAndLog("[%d] 0x%08X  %s",j , blockData, sprint_bin(bits,32));	
+	}
+	
+	return 0;
 }
 
 void printConfiguration( t55xx_conf_block_t b){
 	PrintAndLog("Modulation : %s", GetSelectedModulationStr(b.modulation) );
 	PrintAndLog("Inverted   : %s", (b.inversed) ? "Yes" : "No" );
+	PrintAndLog("Offset     : %d", b.offset);
 	PrintAndLog("Block0     : %08X", b.block0);
 	PrintAndLog("");
 }
@@ -789,6 +829,7 @@ static command_t CommandTable[] =
   {"trace",  CmdT55xxReadTrace, 0, "[1] Show T55xx traceability data (page 1/ blk 0-1)"},
   {"info",   CmdT55xxInfo,      0, "[1] Show T55xx configuration data (page 0/ blk 0)"},
   {"dump",   CmdT55xxDump,      0, "[password] Dump T55xx card block 0-7. [optional password]"},
+  {"special", special,           0, "Shows how a datablock changes with 32 different offsets"},
   {NULL, NULL, 0, NULL}
 };
 

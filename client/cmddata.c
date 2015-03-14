@@ -1647,7 +1647,7 @@ int PSKDemod(const char *Cmd, bool verbose)
   }
   if (invert != 0 && invert != 1) {
     if (verbose) PrintAndLog("Invalid argument: %s", Cmd);
-    return -1;
+    return 0;
   }
   uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
   size_t BitLen = getFromGraphBuf(BitStream);
@@ -1655,22 +1655,27 @@ int PSKDemod(const char *Cmd, bool verbose)
   uint8_t carrier=countPSK_FC(BitStream, BitLen);
   if (carrier!=2 && carrier!=4 && carrier!=8){
     //invalid carrier
-    return -1;
+    return 0;
   }
   int errCnt=0;
   errCnt = pskRawDemod(BitStream, &BitLen, &clk, &invert);
   if (errCnt > maxErr){
     if (g_debugMode==1 && verbose) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
-    return -1;
+    return 0;
   } 
   if (errCnt<0|| BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
     if (g_debugMode==1 && verbose) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
-    return -1;
+    return 0;
   }
-  if (verbose) PrintAndLog("Tried PSK Demod using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
+  if (verbose) {
+	  PrintAndLog("Tried PSK Demod using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
+	  if (errCnt>0){
+			PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
+	  }
+  }
   //prime demod buffer for output
   setDemodBuf(BitStream,BitLen,0);
-  return errCnt;
+  return 1;
 }
 
 // Indala 26 bit decode
@@ -1685,7 +1690,7 @@ int CmdIndalaDecode(const char *Cmd)
 		ans = PSKDemod("32", 0);
 	}
 
-	if (ans < 0){
+	if ( !ans ){
 		if (g_debugMode==1) 
 			PrintAndLog("Error1: %d",ans);
 		return 0;
@@ -1827,7 +1832,7 @@ int CmdNRZrawDemod(const char *Cmd)
 // prints binary found and saves in demodbuffer for further commands
 int CmdPSK1rawDemod(const char *Cmd)
 {
-  int errCnt;
+  int ans;
   char cmdp = param_getchar(Cmd, 0);
   if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
     PrintAndLog("Usage:  data rawdemod p1 [clock] <0|1> [maxError]");
@@ -1842,14 +1847,11 @@ int CmdPSK1rawDemod(const char *Cmd)
     PrintAndLog("          : data rawdemod p1 64 1 0 = demod a psk1 tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
     return 0;
   }
-  errCnt = PSKDemod(Cmd, TRUE);
+  ans = PSKDemod(Cmd, TRUE);
   //output
-  if (errCnt<0){
-    if (g_debugMode) PrintAndLog("Error demoding: %d",errCnt); 
+  if ( !ans){
+    if (g_debugMode) PrintAndLog("Error demoding: %d",ans); 
     return 0;
-  }
-  if (errCnt>0){
-    PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
   }
   PrintAndLog("PSK demoded bitstream:");
   // Now output the bitstream to the scrollback by line of 16 bits
@@ -1861,7 +1863,7 @@ int CmdPSK1rawDemod(const char *Cmd)
 // takes same args as cmdpsk1rawdemod
 int CmdPSK2rawDemod(const char *Cmd)
 {
-  int errCnt=0;
+  int ans=0;
   char cmdp = param_getchar(Cmd, 0);
   if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
     PrintAndLog("Usage:  data rawdemod p2 [clock] <0|1> [maxError]");
@@ -1876,24 +1878,15 @@ int CmdPSK2rawDemod(const char *Cmd)
     PrintAndLog("          : data rawdemod p2 64 1 0  = demod a psk2 tag from GraphBuffer using a clock of RF/64, inverting output and allowing 0 demod errors");
     return 0;
   }
-  errCnt=PSKDemod(Cmd, TRUE);
-  if (errCnt<0){
-    if (g_debugMode) PrintAndLog("Error demoding: %d",errCnt);  
+  ans=PSKDemod(Cmd, TRUE);
+  if (!ans){
+    if (g_debugMode) PrintAndLog("Error demoding: %d",ans);  
     return 0;
   } 
   psk1TOpsk2(DemodBuffer, DemodBufferLen);
-  if (errCnt>0){
-    if (g_debugMode){
-      PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
-      PrintAndLog("PSK2 demoded bitstream:");
-      // Now output the bitstream to the scrollback by line of 16 bits
-      printDemodBuff();
-    }
-  }else{
-    PrintAndLog("PSK2 demoded bitstream:");
-    // Now output the bitstream to the scrollback by line of 16 bits
-    printDemodBuff();  
-  }
+  PrintAndLog("PSK2 demoded bitstream:");
+  // Now output the bitstream to the scrollback by line of 16 bits
+  printDemodBuff();  
   return 1;
 }
 
