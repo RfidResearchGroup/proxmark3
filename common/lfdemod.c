@@ -1079,7 +1079,9 @@ void psk1TOpsk2(uint8_t *BitStream, size_t size)
 	size_t i=1;
 	uint8_t lastBit=BitStream[0];
 	for (; i<size; i++){
-		if (lastBit!=BitStream[i]){
+		if (BitStream[i]==77){
+			//ignore errors
+		} else if (lastBit!=BitStream[i]){
 			lastBit=BitStream[i];
 			BitStream[i]=1;
 		} else {
@@ -1619,10 +1621,13 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
   }
   //PrintAndLog("DEBUG: firstFullWave: %d, waveLen: %d",firstFullWave,fullWaveLen);  
   lastClkBit = firstFullWave; //set start of wave as clock align
+  //PrintAndLog("DEBUG: clk: %d, lastClkBit: %d", *clock, lastClkBit);
   waveStart = 0;
   errCnt=0;
   size_t numBits=0;
-  //PrintAndLog("DEBUG: clk: %d, lastClkBit: %d", *clock, lastClkBit);
+  //set skipped bits
+  memset(dest+numBits,curPhase^1,firstFullWave / *clock);
+  numBits += (firstFullWave / *clock);
   dest[numBits++] = curPhase; //set first read bit
   for (i = firstFullWave+fullWaveLen-1; i < *size-3; i++){
     //top edge of wave = start of new wave 
