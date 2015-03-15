@@ -33,7 +33,7 @@ int usage_t55xx_config(){
 	PrintAndLog("       h                        This help");
 	PrintAndLog("       d <FSK|ASK|PSK|NZ|BI>    Set demodulation FSK / ASK / PSK / NZ / Biphase");
 	PrintAndLog("       i [1]                    Inverse data signal, defaults to normal");
-	PrintAndLog("       o [offsett]              Set offset, where data should start decode from in bitstream");
+	PrintAndLog("       o [offset]               Set offset, where data should start decode in bitstream");
 	PrintAndLog("");
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf t55xx config d FSK          - FSK demodulation");
@@ -109,61 +109,51 @@ static int CmdHelp(const char *Cmd);
 
 int CmdT55xxSetConfig(const char *Cmd){
 
-	uint8_t data[] = {0x78,0x00,0x00,0x00,0x00,0x00,0x00};
-	uint8_t cmd[]  = {0x00,0x00};
-	ComputeCrc14443(CRC_14443_B, data, 7 , &cmd[0], &cmd[1]);
-	PrintAndLog("%02X %02X",cmd[0], cmd[1]);
-	int len = 0;
-	int foundModulation = 2;
 	uint8_t offset = 0;
-	bool inverse = FALSE;
 	bool errors = FALSE;
 	uint8_t cmdp = 0;
 	char modulation[4] = {0x00};
+	char tmp = 0x00;
 	
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors)
 	{
-		switch(param_getchar(Cmd, cmdp))
+		tmp = param_getchar(Cmd, cmdp);
+		switch(tmp)
 		{
 		case 'h':
 		case 'H':
 			return usage_t55xx_config();
 		case 'd':
-			len = param_getstr(Cmd, cmdp+1, modulation);
-			cmdp+= len+1;
-			//FSK|ASK|PSK|NZ|BI
-			if ( strcmp(modulation, "FSK" ) == 0)
-				foundModulation = 1;
-			else if ( strcmp(modulation, "ASK" ) == 0)
-				foundModulation = 2;
-			else if ( strcmp(modulation, "PSK" ) == 0)
-				foundModulation = 3;
-			else if ( strcmp(modulation, "NZ" ) == 0)
-				foundModulation = 4;
-			else if ( strcmp(modulation, "BI" ) == 0)
-				foundModulation = 5;
+			param_getstr(Cmd, cmdp+1, modulation);
+			cmdp += 2;
+			
+			if ( strcmp(modulation, "FSK" ) == 0)       config.modulation = DEMOD_FSK;
+			else if ( strcmp(modulation, "ASK" ) == 0)  config.modulation = DEMOD_ASK;
+			else if ( strcmp(modulation, "PSK" ) == 0)  config.modulation = DEMOD_PSK;
+			else if ( strcmp(modulation, "NZ" ) == 0)	config.modulation = DEMOD_NZR;
+			else if ( strcmp(modulation, "BI" ) == 0)	config.modulation = DEMOD_BI;
 			else {
 				PrintAndLog("Unknown modulation '%s'", modulation);
 				errors = TRUE;
 			}
 			break;
 		case 'i':
-			inverse = param_getchar(Cmd,cmdp+1) == '1';
+			config.inversed = param_getchar(Cmd,cmdp+1) == '1';
 			cmdp+=2;
 			break;
 		case 'o':
 			errors |= param_getdec(Cmd, cmdp+1,&offset);
-			if ( offset >= 32 ){
-				PrintAndLog("Offset must be smaller than 32");
-				errors = TRUE;
-			}
-			cmdp+=2;
+			if ( !errors )
+				config.offset = offset;
+			cmdp += 2;
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = TRUE;
 			break;
 		}
+		
+		PrintAndLog(" %c  %d  [%d]", param_getchar(Cmd, cmdp) , errors, cmdp);
 	}
 	// No args
 	if (cmdp == 0) {
@@ -174,10 +164,8 @@ int CmdT55xxSetConfig(const char *Cmd){
 	if (errors)
 		return usage_t55xx_config();
  
-	config.modulation = foundModulation;
-	config.inversed = inverse;
-	config.offset = offset;
 	config.block0 = 0;
+	printConfiguration( config );
 	return 0;
 }
 
@@ -377,7 +365,11 @@ bool test(){
 	if ( !DemodBufferLen) 
 		return false;
 	
-	uint8_t si = 1;
+	if ( PackBits(0, 32, DemodBuffer) == 0x00 )
+		return FALSE;
+	
+	uint8_t si = 0;
+	
 	uint8_t safer    = PackBits(si, 4, DemodBuffer); si += 4;	
 	uint8_t resv     = PackBits(si, 7, DemodBuffer); si += 7+3;
 	uint8_t extend   = PackBits(si, 1, DemodBuffer); si += 1;
@@ -411,7 +403,7 @@ void printT55xxBlock(const char *demodStr){
 	int i = config.offset;
 	int pos = 32 + config.offset;
     for (; i < pos; ++i)
-		bits[i]=DemodBuffer[i];
+		bits[i - config.offset]=DemodBuffer[i];
 	
 	blockData = PackBits(0, 32, bits);
 	PrintAndLog("0x%08X  %s [%s]", blockData, sprint_bin(bits,32), demodStr);
@@ -419,12 +411,12 @@ void printT55xxBlock(const char *demodStr){
 
 int special(const char *Cmd) {
 	uint32_t blockData = 0;
-	uint8_t bits[64] = {0x00};
+	uint8_t bits[32] = {0x00};
 
 	PrintAndLog("[OFFSET] [DATA] [BINARY]");
 	PrintAndLog("----------------------------------------------------");
 	int i,j = 0;
-	for (; j < 32; ++j){
+	for (; j < 128; ++j){
 		
 		for (i = 0; i < 32; ++i)
 			bits[i]=DemodBuffer[j+i];
@@ -514,7 +506,7 @@ int CmdT55xxReadTrace(const char *Cmd)
 	
 	RepaintGraphWindow();
 
-	uint8_t si = 5;
+	uint8_t si = config.offset;
 	uint32_t bl0     = PackBits(si, 32, DemodBuffer);
 	uint32_t bl1     = PackBits(si+32, 32, DemodBuffer);
 	
@@ -608,7 +600,7 @@ int CmdT55xxInfo(const char *Cmd){
 		return 2;
 	
 	
-	uint8_t si = 1;
+	uint8_t si = config.offset;
 	uint32_t bl0      = PackBits(si, 32, DemodBuffer);
 	
 	uint32_t safer    = PackBits(si, 4, DemodBuffer); si += 4;	
