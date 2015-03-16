@@ -17,7 +17,8 @@
 
 int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr);
 int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr);
-uint64_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx);
+uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo);
+//uint64_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx);
 int ManchesterEncode(uint8_t *BitStream, size_t size);
 int manrawdecode(uint8_t *BitStream, size_t *size);
 int BiphaseRawDecode(uint8_t * BitStream, size_t *size, int offset, int invert);

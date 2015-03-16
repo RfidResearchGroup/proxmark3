@@ -55,7 +55,7 @@ uint8_t parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType)
 }
 
 //by marshmellow
-//search for given preamble in given BitStream and return startIndex and length
+//search for given preamble in given BitStream and return success=1 or fail=0 and startIndex and length
 uint8_t preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx)
 {
   uint8_t foundCnt=0;
@@ -78,7 +78,7 @@ uint8_t preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_
 
 //by marshmellow
 //takes 1s and 0s and searches for EM410x format - output EM ID
-uint64_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx)
+uint64_t Em410xDecodeOld(uint8_t *BitStream, size_t *size, size_t *startIdx)
 {
   //no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
   //  otherwise could be a void with no arguments
@@ -121,6 +121,52 @@ uint64_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx)
 }
 
 //by marshmellow
+//takes 1s and 0s and searches for EM410x format - output EM ID
+uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo)
+{
+  //no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
+  //  otherwise could be a void with no arguments
+  //set defaults
+  uint32_t i = 0;
+  if (BitStream[1]>1){  //allow only 1s and 0s
+    // PrintAndLog("no data found");
+    return 0;
+  }
+  // 111111111 bit pattern represent start of frame
+  uint8_t preamble[] = {1,1,1,1,1,1,1,1,1};
+  uint32_t idx = 0;
+  uint32_t parityBits = 0;
+  uint8_t errChk = 0;
+  uint8_t FmtLen = 10;
+  *startIdx = 0;
+  for (uint8_t extraBitChk=0; extraBitChk<5; extraBitChk++){
+    errChk = preambleSearch(BitStream+extraBitChk+*startIdx, preamble, sizeof(preamble), size, startIdx);
+    if (errChk == 0) return 0;
+    if (*size>64) FmtLen = 22;
+    idx = *startIdx + 9;
+    for (i=0; i<FmtLen; i++){ //loop through 10 or 22 sets of 5 bits (50-10p = 40 bits or 88 bits)
+      parityBits = bytebits_to_byte(BitStream+(i*5)+idx,5);
+      //check even parity
+      if (parityTest(parityBits, 5, 0) == 0){
+        //parity failed try next bit (in the case of 1111111111) but last 9 = preamble
+        startIdx++;
+        errChk = 0;
+        break;
+      }
+      //set uint64 with ID from BitStream
+      for (uint8_t ii=0; ii<4; ii++){
+        *hi = (*hi << 1) | (*lo >> 63);
+        *lo = (*lo << 1) | (BitStream[(i*5)+ii+idx]);
+      }
+    }
+    if (errChk != 0) return 1;
+    //skip last 5 bit parity test for simplicity.
+    // *size = 64 | 128;
+  }
+  return 0;
+}
+
+//by marshmellow
 //takes 3 arguments - clock, invert, maxErr as integers
 //attempts to demodulate ask while decoding manchester
 //prints binary found and saves in graphbuffer for further commands
@@ -151,6 +197,8 @@ int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 	int iii = 0;
 	uint32_t gLen = *size;
 	if (gLen > 3000) gLen=3000;
+	//if 0 errors allowed then only try first 2 clock cycles as we want a low tolerance
+	if (!maxErr) gLen=*clk*2; 
 	uint8_t errCnt =0;
 	uint16_t MaxBits = 500;
 	uint32_t bestStart = *size;
@@ -305,16 +353,29 @@ int manrawdecode(uint8_t * BitStream, size_t *size)
 }
 
 //by marshmellow
-//take 01 or 10 = 0 and 11 or 00 = 1
+//take 01 or 10 = 1 and 11 or 00 = 0
+//check for phase errors - should never have 111 or 000 should be 01001011 or 10110100 for 1010
 int BiphaseRawDecode(uint8_t *BitStream, size_t *size, int offset, int invert)
 {
 	uint16_t bitnum=0;
 	uint32_t errCnt =0;
-	uint32_t i;
-	uint16_t MaxBits=500;
-	i=offset;
-	if (size == 0) return -1;
-	for (;i<*size-2; i+=2){
+	size_t i=offset;
+	uint16_t MaxBits=512;
+	//if not enough samples - error
+	if (*size < 51) return -1;
+	//check for phase change faults - skip one sample if faulty
+	uint8_t offsetA = 1, offsetB = 1;
+	for (; i<48; i+=2){
+		if (BitStream[i+1]==BitStream[i+2]) offsetA=0; 
+		if (BitStream[i+2]==BitStream[i+3]) offsetB=0;					
+	}
+	if (!offsetA && offsetB) offset++;
+	for (i=offset; i<*size-3; i+=2){
+		//check for phase error
+		if (i<*size-3 && BitStream[i+1]==BitStream[i+2]) {
+			BitStream[bitnum++]=77;
+			errCnt++;
+		}
 		if((BitStream[i]==1 && BitStream[i+1]==0) || (BitStream[i]==0 && BitStream[i+1]==1)){
 			BitStream[bitnum++]=1^invert;
 		} else if((BitStream[i]==0 && BitStream[i+1]==0) || (BitStream[i]==1 && BitStream[i+1]==1)){
@@ -381,6 +442,8 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 	uint32_t iii = 0;
 	uint32_t gLen = *size;
 	if (gLen > 500) gLen=500;
+	//if 0 errors allowed then only try first 2 clock cycles as we want a low tolerance
+	if (!maxErr) gLen=*clk*2; 
 	uint8_t errCnt =0;
 	uint32_t bestStart = *size;
 	uint32_t bestErrCnt = maxErr; //(*size/1000);
