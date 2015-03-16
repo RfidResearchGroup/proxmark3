@@ -1028,7 +1028,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
  * To compensate antenna falling times shorten the write times
  * and enlarge the gap ones.
  */
-#define START_GAP 30*8 // 10 - 50fc 250
+#define START_GAP 50*8 // 10 - 50fc 250
 #define WRITE_GAP 20*8 //  8 - 30fc
 #define WRITE_0   24*8 // 16 - 31fc 24fc 192
 #define WRITE_1   54*8 // 48 - 63fc 54fc 432 for T55x7; 448 for E5550
@@ -1198,7 +1198,7 @@ void TurnReadLFOn(){
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	// Give it a bit of time for the resonant antenna to settle.
 	//SpinDelay(30);
-	SpinDelayUs(9*150);
+	SpinDelayUs(8*150);
 }
 
 /*-------------- Cloning routines -----------*/
