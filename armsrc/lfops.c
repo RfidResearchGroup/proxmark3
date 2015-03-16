@@ -620,7 +620,7 @@ static void askSimBit(uint8_t c, int *n, uint8_t clock, uint8_t manchester)
     uint8_t *dest = BigBuf_get_addr();
     uint8_t halfClk = clock/2;
     // c = current bit 1 or 0
-    if (manchester){
+    if (manchester==1){
         memset(dest+(*n), c, halfClk);
         memset(dest+(*n) + halfClk, c^1, halfClk);
     } else {
@@ -629,26 +629,54 @@ static void askSimBit(uint8_t c, int *n, uint8_t clock, uint8_t manchester)
     *n += clock;        
 }
 
+static void biphaseSimBit(uint8_t c, int *n, uint8_t clock, uint8_t *phase)
+{
+    uint8_t *dest = BigBuf_get_addr();
+    uint8_t halfClk = clock/2;
+    if (c){
+        memset(dest+(*n), c ^ 1 ^ *phase, halfClk);
+        memset(dest+(*n) + halfClk, c ^ *phase, halfClk);        
+    } else {
+        memset(dest+(*n), c ^ *phase, clock);
+        *phase ^= 1;
+    }
+
+}
+
 // args clock, ask/man or askraw, invert, transmission separator
 void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 {
     int ledcontrol = 1;
     int n=0, i=0;
     uint8_t clk = (arg1 >> 8) & 0xFF;
-    uint8_t manchester = arg1 & 1;
+    uint8_t encoding = arg1 & 1;
     uint8_t separator = arg2 & 1;
     uint8_t invert = (arg2 >> 8) & 1;
+
+    if (encoding==2){  //biphase
+        uint8_t phase=0;
     for (i=0; i<size; i++){
-        askSimBit(BitStream[i]^invert, &n, clk, manchester);
+            biphaseSimBit(BitStream[i]^invert, &n, clk, &phase);
     }
-    if (manchester==0 && BitStream[0]==BitStream[size-1]){ //run a second set inverted (for biphase phase)
+        if (BitStream[0]==BitStream[size-1]){ //run a second set inverted to keep phase in check
         for (i=0; i<size; i++){
-            askSimBit(BitStream[i]^invert^1, &n, clk, manchester);
+                biphaseSimBit(BitStream[i]^invert, &n, clk, &phase);
+            }
+        }
+    } else {  // ask/manchester || ask/raw
+        for (i=0; i<size; i++){
+            askSimBit(BitStream[i]^invert, &n, clk, encoding);
+        }
+        if (encoding==0 && BitStream[0]==BitStream[size-1]){ //run a second set inverted (for biphase phase)
+            for (i=0; i<size; i++){
+                askSimBit(BitStream[i]^invert^1, &n, clk, encoding);
+        }    
         }    
     }
+    
     if (separator==1) Dbprintf("sorry but separator option not yet available"); 
 
-    Dbprintf("Simulating with clk: %d, invert: %d, manchester: %d, separator: %d, n: %d",clk, invert, manchester, separator, n);
+    Dbprintf("Simulating with clk: %d, invert: %d, encoding: %d, separator: %d, n: %d",clk, invert, encoding, separator, n);
     //DEBUG
     //Dbprintf("First 32:");
     //uint8_t *dest = BigBuf_get_addr();
@@ -817,6 +845,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 
 	size_t size=0, idx=0;
     int clk=0, invert=0, errCnt=0, maxErr=20;
+    uint32_t hi=0;
     uint64_t lo=0;
     // Configure to go in 125Khz listen mode
     LFSetupFPGAForADC(95, true);
@@ -835,15 +864,25 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
         WDT_HIT();
 
         if (errCnt>=0){
-			lo = Em410xDecode(dest, &size, &idx);
+            errCnt = Em410xDecode(dest, &size, &idx, &hi, &lo);
             //Dbprintf("DEBUG: EM GOT");
-            if (lo>0){
+            if (errCnt){
+                if (size>64){
+                    Dbprintf("EM XL TAG ID: %06x%08x%08x - (%05d_%03d_%08d)",
+                        hi,
+                        (uint32_t)(lo>>32),
+                        (uint32_t)lo,
+                        (uint32_t)(lo&0xFFFF),
+                        (uint32_t)((lo>>16LL) & 0xFF),
+                        (uint32_t)(lo & 0xFFFFFF));
+                } else {
 				Dbprintf("EM TAG ID: %02x%08x - (%05d_%03d_%08d)",
 				    (uint32_t)(lo>>32),
 				    (uint32_t)lo,
 				    (uint32_t)(lo&0xFFFF),
 				    (uint32_t)((lo>>16LL) & 0xFF),
 				    (uint32_t)(lo & 0xFFFFFF));
+            }
             }
             if (findone){
                 if (ledcontrol)	LED_A_OFF();
