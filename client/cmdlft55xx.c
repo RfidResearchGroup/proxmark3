@@ -23,6 +23,7 @@
 #include "lfdemod.h"
 #include "../common/crc.h"
 #include "../common/iso14443crc.h"
+#include "cmdhf14a.h"
 
 // Default configuration
 t55xx_conf_block_t config = { .modulation = DEMOD_ASK, .inversed = FALSE, .offset = 0x00, .block0 = 0x00};
@@ -31,7 +32,7 @@ int usage_t55xx_config(){
 	PrintAndLog("Usage: lf t55xx config [d <demodulation>] [i 1] [o <offset>]");
 	PrintAndLog("Options:        ");
 	PrintAndLog("       h                        This help");
-	PrintAndLog("       d <FSK|ASK|PSK|NZ|BI>    Set demodulation FSK / ASK / PSK / NZ / Biphase");
+	PrintAndLog("       d <FSK|ASK|PSK1|PSK2|NZ|BI>    Set demodulation FSK / ASK / PSK / NZ / Biphase");
 	PrintAndLog("       i [1]                    Inverse data signal, defaults to normal");
 	PrintAndLog("       o [offset]               Set offset, where data should start decode in bitstream");
 	PrintAndLog("");
@@ -112,7 +113,7 @@ int CmdT55xxSetConfig(const char *Cmd){
 	uint8_t offset = 0;
 	bool errors = FALSE;
 	uint8_t cmdp = 0;
-	char modulation[4] = {0x00};
+	char modulation[5] = {0x00};
 	char tmp = 0x00;
 	
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors)
@@ -127,11 +128,18 @@ int CmdT55xxSetConfig(const char *Cmd){
 			param_getstr(Cmd, cmdp+1, modulation);
 			cmdp += 2;
 			
-			if ( strcmp(modulation, "FSK" ) == 0)       config.modulation = DEMOD_FSK;
-			else if ( strcmp(modulation, "ASK" ) == 0)  config.modulation = DEMOD_ASK;
-			else if ( strcmp(modulation, "PSK" ) == 0)  config.modulation = DEMOD_PSK;
-			else if ( strcmp(modulation, "NZ" ) == 0)	config.modulation = DEMOD_NZR;
-			else if ( strcmp(modulation, "BI" ) == 0)	config.modulation = DEMOD_BI;
+			if ( strcmp(modulation, "FSK" ) == 0)
+				config.modulation = DEMOD_FSK;
+			else if ( strcmp(modulation, "ASK" ) == 0)
+				config.modulation = DEMOD_ASK;
+			else if ( strcmp(modulation, "NRZ" ) == 0)
+				config.modulation = DEMOD_NRZ;
+			else if ( strcmp(modulation, "PSK1" ) == 0)
+				config.modulation = DEMOD_PSK1;
+			else if ( strcmp(modulation, "PSK2" ) == 0)
+				config.modulation = DEMOD_PSK2;
+			else if ( strcmp(modulation, "BI" ) == 0)
+				config.modulation = DEMOD_BI;
 			else {
 				PrintAndLog("Unknown modulation '%s'", modulation);
 				errors = TRUE;
@@ -152,9 +160,8 @@ int CmdT55xxSetConfig(const char *Cmd){
 			errors = TRUE;
 			break;
 		}
-		
-		PrintAndLog(" %c  %d  [%d]", param_getchar(Cmd, cmdp) , errors, cmdp);
 	}
+
 	// No args
 	if (cmdp == 0) {
 		printConfiguration( config );
@@ -163,7 +170,6 @@ int CmdT55xxSetConfig(const char *Cmd){
 	//Validations
 	if (errors)
 		return usage_t55xx_config();
- 
 	config.block0 = 0;
 	printConfiguration( config );
 	return 0;
@@ -216,7 +222,7 @@ int CmdT55xxReadBlock(const char *Cmd)
 
 void DecodeT55xxBlock(){
 	
-	char buf[6] = {0x00};
+	char buf[8] = {0x00};
 	char *cmdStr = buf;
 
 	// clearing the DemodBuffer.
@@ -224,24 +230,36 @@ void DecodeT55xxBlock(){
 	
 	// use the configuration
 	switch( config.modulation ){
-		case 1:
+		case DEMOD_FSK:
 			sprintf(cmdStr,"0 %d", config.inversed );
 			FSKrawDemod(cmdStr, FALSE);
 			break;
-		case 2:
+		case DEMOD_ASK:
 			sprintf(cmdStr,"0 %d 1", config.inversed );
 			ASKmanDemod(cmdStr, FALSE, FALSE);
 			break;
-		case 3:
+		case DEMOD_PSK1:
 			sprintf(cmdStr,"0 %d 1", config.inversed );
 			PSKDemod(cmdStr, FALSE);
 			break;
-		case 4:
+		case DEMOD_PSK2:
+			sprintf(cmdStr,"0 %d 1", config.inversed );
+			PSKDemod(cmdStr, FALSE);
+			psk1TOpsk2(DemodBuffer, DemodBufferLen);
+			break;
+		case DEMOD_PSK3:
+			sprintf(cmdStr,"0 %d 1", config.inversed );
+			PSKDemod(cmdStr, FALSE);
+			psk1TOpsk2(DemodBuffer, DemodBufferLen);
+			break;
+		case DEMOD_NRZ:
 			sprintf(cmdStr,"0 %d 1", config.inversed );
 			NRZrawDemod(cmdStr, FALSE);
 			break;
-		case 5:
-			//BiphaseRawDecode("0",FALSE);
+		case DEMOD_BI:
+			sprintf(cmdStr,"0 0 %d 1", config.inversed );
+			// DEPENDS ON NEW CODE IN MARSHMELLOWS PULL REQUEST
+			//ASKbiphDemod(cmdStr, FALSE);
 			break;
 		default:
 		return;
@@ -284,68 +302,92 @@ int CmdT55xxDetect(const char *Cmd){
 bool tryDetectModulation(){
 	
 	uint8_t hits = 0;
-	t55xx_conf_block_t tests[10];
+	t55xx_conf_block_t tests[11];
 	
 	if (GetFskClock("", FALSE, FALSE)){ 
-		if ( FSKrawDemod("0 0", FALSE) && test()){
+		if ( FSKrawDemod("0 0", FALSE) && test(DEMOD_FSK, &tests[hits].offset)){
 			tests[hits].modulation = DEMOD_FSK;
 			tests[hits].inversed = FALSE;
 			++hits;
 		}
-		if ( FSKrawDemod("0 1", FALSE) && test()) {
+		if ( FSKrawDemod("0 1", FALSE) && test(DEMOD_FSK, &tests[hits].offset)) {
 			tests[hits].modulation = DEMOD_FSK;
 			tests[hits].inversed = TRUE;
 			++hits;
 			}
     } else {
-		if ( ASKmanDemod("0 0 1", FALSE, FALSE) && test()) {
+		if ( ASKmanDemod("0 0 1", FALSE, FALSE) && test(DEMOD_ASK, &tests[hits].offset)) {
 			tests[hits].modulation = DEMOD_ASK;
 			tests[hits].inversed = FALSE;
 			++hits;
 			}
 
-		if ( ASKmanDemod("0 1 1", FALSE, FALSE)  && test()) {
+		if ( ASKmanDemod("0 1 1", FALSE, FALSE)  && test(DEMOD_ASK, &tests[hits].offset)) {
 			tests[hits].modulation = DEMOD_ASK;
 			tests[hits].inversed = TRUE;
 			++hits;
 			}
 		
-		if ( NRZrawDemod("0 0 1", FALSE)  && test()) {
-			tests[hits].modulation = DEMOD_NZR;
+		if ( NRZrawDemod("0 0 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset)) {
+			tests[hits].modulation = DEMOD_NRZ;
 			tests[hits].inversed = FALSE;
 			++hits;
 		}
 
-		if ( NRZrawDemod("0 1 1", FALSE)  && test()) {
-			tests[hits].modulation = DEMOD_NZR;
+		if ( NRZrawDemod("0 1 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset)) {
+			tests[hits].modulation = DEMOD_NRZ;
 			tests[hits].inversed = TRUE;
 			++hits;
 			}
 		
-		if ( PSKDemod("0 0 1", FALSE) && test()) {
-			tests[hits].modulation = DEMOD_PSK;
+		if ( PSKDemod("0 0 1", FALSE) && test(DEMOD_PSK1, &tests[hits].offset)) {
+			tests[hits].modulation = DEMOD_PSK1;
 			tests[hits].inversed = FALSE;
 			++hits;
 		}
 		
-		if ( PSKDemod("0 1 1", FALSE) && test()) {
-			tests[hits].modulation = DEMOD_PSK;
+		if ( PSKDemod("0 1 1", FALSE) && test(DEMOD_PSK1, &tests[hits].offset)) {
+			tests[hits].modulation = DEMOD_PSK1;
 			tests[hits].inversed = TRUE;
 			++hits;
 		}
-		//PSK2?
-		// if (!BiphaseRawDecode("0",FALSE)  && test()) {
-		//	tests[++hits].modulation = DEMOD_BI;
-		//	tests[hits].inversed = FALSE;
-		//}
-		// if (!BiphaseRawDecode("1",FALSE) && test()) {
-		//	tests[++hits].modulation = DEMOD_BI;
-		//	tests[hits].inversed = TRUE;
-		// }
+
+		//PSK2
+		if ( PSKDemod("0 0 1", FALSE)) {
+			psk1TOpsk2(DemodBuffer, DemodBufferLen);
+			if (test(DEMOD_PSK2, &tests[hits].offset)){
+				tests[hits].modulation = DEMOD_PSK2;
+				tests[hits].inversed = FALSE;
+				++hits;
+			}
+		}
+		if ( PSKDemod("0 1 1", FALSE)) {
+			psk1TOpsk2(DemodBuffer, DemodBufferLen);
+			if (test(DEMOD_PSK2, &tests[hits].offset)){
+				tests[hits].modulation = DEMOD_PSK2;
+				tests[hits].inversed = TRUE;
+				++hits;
+			}
+		}
+
+		/* DEPENDANT ON NEW CODE IN MARSHMELLOWS pull request
+		//biphase //offset, clock, invert, maxErr
+		if ( ASKbiphaseDemod("0 0 0 1", FALSE) && test(DEMOD_BI, &tests[hits].offset) ) {
+			tests[hits].modulation = DEMOD_BI;
+			tests[hits].inversed = FALSE;
+			++hits;
+		}
+		if ( ASKbiphaseDemod("0 0 1 1", FALSE) && test(DEMOD_BI, &tests[hits].offset) ) {
+			tests[hits].modulation = DEMOD_BI;
+			tests[hits].inversed = TRUE;
+			++hits;
+		}
+		*/
 	}		
 	if ( hits == 1) {
 		config.modulation = tests[0].modulation;
 		config.inversed = tests[0].inversed;
+		config.offset = tests[0].offset;
 		printConfiguration( config );
 		return TRUE;
 	}
@@ -360,30 +402,72 @@ bool tryDetectModulation(){
 	return FALSE;
 }
 
-bool test(){
+bool testModulation(uint8_t mode, uint8_t modread){
+	switch( mode ){
+		case DEMOD_FSK:
+			if (modread > 3 && modread < 8) return TRUE;
+			break;
+		case DEMOD_ASK:
+			if (modread == 8) return TRUE;
+			break;
+		case DEMOD_PSK1:
+			if (modread == 1) return TRUE;
+			break;
+		case DEMOD_PSK2:
+			if (modread == 2) return TRUE;
+			break;
+		case DEMOD_PSK3:
+			if (modread == 3) return TRUE;
+			break;
+		case DEMOD_NRZ:
+			if (!modread) return TRUE;
+			break;
+		case DEMOD_BI:
+			if (modread == 16) return TRUE;
+			break;
+		default:
+			return FALSE;
+	}
+	return FALSE;
+}
+
+bool test(uint8_t mode, uint8_t *offset){
 
 	if ( !DemodBufferLen) 
-		return false;
-	
+		return FALSE;
 	if ( PackBits(0, 32, DemodBuffer) == 0x00 )
 		return FALSE;
-	
-	uint8_t si = 0;
-	
-	uint8_t safer    = PackBits(si, 4, DemodBuffer); si += 4;	
-	uint8_t resv     = PackBits(si, 7, DemodBuffer); si += 7+3;
-	uint8_t extend   = PackBits(si, 1, DemodBuffer); si += 1;
+	for (uint8_t idx=1; idx<33; idx++){
+		uint8_t si = idx;
+		uint8_t safer    = PackBits(si, 4, DemodBuffer); si += 4;	    //master key
+		uint8_t resv     = PackBits(si, 4, DemodBuffer); si += 4;     //was 7 & +=7+3 //should be only 4 bits if extended mode
+		uint8_t xtRate   = PackBits(si, 3, DemodBuffer); si += 3+3;   //new
+		//uint8_t bitRate  = PackBits(si, 3, DemodBuffer); si += 3;   //new  could check bit rate
+		uint8_t extend   = PackBits(si, 1, DemodBuffer); si += 1;     //bit 15 extended mode
+		uint8_t modread  = PackBits(si, 5, DemodBuffer); si += 5+2+1; //new
+		//uint8_t pskcr   = PackBits(si, 2, DemodBuffer); si += 2+1;  //new  could check psk cr
+		uint8_t nml01    = PackBits(si, 1, DemodBuffer); si += 1+5;   //bit 24 , 30, 31 could be tested for 0 if not extended mode
+		uint8_t nml02    = PackBits(si, 2, DemodBuffer); si += 2;
+		
+		bool extMode = FALSE;
 
 	//PrintAndLog("test: %X %X %X ", safer, resv, extend);
 	
 	// 2nibble must be zeroed.
-	if ( resv > 0x00) return FALSE;
+		if ( resv > 0x00) continue;
 
-	if ( safer == 0x6 || safer == 0x9){
-		if ( extend == 0x00)
+		//if extended mode
+		if ( (safer == 0x6 || safer == 0x9) && extend) extMode = TRUE;
+
+		if (!extMode){
+			if (nml01 || nml02 || xtRate) continue;
+		}
+
+		//test modulation
+		if (!testModulation(mode, modread)) continue;
+		*offset = idx;
 			return TRUE;
 	}
-	if ( resv== 0x00) return TRUE;
 	return FALSE;
 }
 
@@ -395,8 +479,8 @@ void printT55xxBlock(const char *demodStr){
 	if ( !DemodBufferLen) 
 		return;
 	
-	if ( config.offset > DemodBufferLen){
-		PrintAndLog("The configured offset is to big. (%d > %d)", config.offset, DemodBufferLen);
+	if ( config.offset + 32 > DemodBufferLen){
+		PrintAndLog("The configured offset is too big. (%d > %d)", config.offset, DemodBufferLen);
 		return;
 	}
 	
@@ -505,8 +589,9 @@ int CmdT55xxReadTrace(const char *Cmd)
 		return 2;
 	
 	RepaintGraphWindow();
-
-	uint8_t si = config.offset;
+	uint8_t repeat = 0;
+	if (config.offset > 5) repeat = 32;
+	uint8_t si = config.offset+repeat;
 	uint32_t bl0     = PackBits(si, 32, DemodBuffer);
 	uint32_t bl1     = PackBits(si+32, 32, DemodBuffer);
 	
@@ -526,8 +611,8 @@ int CmdT55xxReadTrace(const char *Cmd)
 	PrintAndLog("-- T55xx Trace Information ----------------------------------");
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" ACL Allocation class (ISO/IEC 15963-1)  : 0x%02X (%d)", acl, acl);
-	PrintAndLog(" MFC Manufacturer ID (ISO/IEC 7816-6)    : 0x%02X (%d)", mfc, mfc);
-	PrintAndLog(" CID                                     : 0x%02X (%d)", cid, cid);
+	PrintAndLog(" MFC Manufacturer ID (ISO/IEC 7816-6)    : 0x%02X (%d) - %s", mfc, mfc, getTagInfo(mfc));
+	PrintAndLog(" CID                                     : 0x%02X (%d) - %s", cid, cid, GetModelStrFromCID(cid));
 	PrintAndLog(" ICR IC Revision                         : %d",icr );
 	PrintAndLog(" Manufactured");
 	PrintAndLog("     Year/Quarter : %d/%d",year, quarter );
@@ -536,8 +621,8 @@ int CmdT55xxReadTrace(const char *Cmd)
 	PrintAndLog("     Die Number   : %d", dw);
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" Raw Data - Page 1");
-	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(DemodBuffer+5,32) );
-	PrintAndLog("     Block 1  : 0x%08X  %s", bl1, sprint_bin(DemodBuffer+37,32) );
+	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(DemodBuffer+config.offset+repeat,32) );
+	PrintAndLog("     Block 1  : 0x%08X  %s", bl1, sprint_bin(DemodBuffer+config.offset+repeat+32,32) );
 	PrintAndLog("-------------------------------------------------------------");
 	/*
 	TRACE - BLOCK O
@@ -637,7 +722,7 @@ int CmdT55xxInfo(const char *Cmd){
 	PrintAndLog(" POR-Delay                 : %s", (por) ? "Yes":"No");
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" Raw Data - Page 0");
-	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(DemodBuffer+5,32) );
+	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(DemodBuffer+config.offset,32) );
 	PrintAndLog("-------------------------------------------------------------");
 	
 	return 0;
@@ -769,6 +854,16 @@ char * GetModulationStr( uint32_t id){
 	return buf;
 }
 
+char * GetModelStrFromCID(uint32_t cid){
+		
+	static char buf[10];
+	char *retStr = buf;
+	
+	if (cid == 1) sprintf(retStr,"ATA5577M1");
+	if (cid == 2) sprintf(retStr,"ATA5577M2");	
+	return buf;
+}
+
 char * GetSelectedModulationStr( uint8_t id){
 
  	static char buf[16];
@@ -781,11 +876,14 @@ char * GetSelectedModulationStr( uint8_t id){
 		case DEMOD_ASK:		
 			sprintf(retStr,"ASK (%d)",id);
 			break;
-		case DEMOD_NZR:
+		case DEMOD_NRZ:
 			sprintf(retStr,"DIRECT/NRZ (%d)",id);
 			break;
-		case DEMOD_PSK:
-			sprintf(retStr,"PSK (%d)",id);
+		case DEMOD_PSK1:
+			sprintf(retStr,"PSK1 (%d)",id);
+			break;
+		case DEMOD_PSK2:
+			sprintf(retStr,"PSK2 (%d)",id);
 			break;
 		case DEMOD_BI:
 			sprintf(retStr,"BIPHASE (%d)",id);
