@@ -63,6 +63,7 @@ int CmdThreshold(const char *Cmd);
 int CmdDirectionalThreshold(const char *Cmd);
 int CmdZerocrossings(const char *Cmd);
 int CmdIndalaDecode(const char *Cmd);
+int ASKbiphaseDemod(const char *Cmd, bool verbose);
 int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch);
 int ASKrawDemod(const char *Cmd, bool verbose);
 int FSKrawDemod(const char *Cmd, bool verbose);
