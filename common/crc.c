@@ -5,8 +5,9 @@
 //-----------------------------------------------------------------------------
 // Generic CRC calculation code.
 //-----------------------------------------------------------------------------
-
 #include "crc.h"
+#include <stdint.h>
+#include <stddef.h>
 
 void crc_init(crc_t *crc, int order, uint32_t polynom, uint32_t initial_value, uint32_t final_xor)
 {
@@ -39,4 +40,17 @@ void crc_clear(crc_t *crc)
 uint32_t crc_finish(crc_t *crc)
 {
 	return ( crc->state ^ crc->final_xor ) & crc->mask;
+}
+
+//credits to iceman
+uint32_t CRC8Maxim(uint8_t *buff, size_t size) 
+{
+	crc_t crc;
+	crc_init(&crc, 9, 0x8c, 0x00, 0x00);
+	crc_clear(&crc);
+
+	for (size_t i=0; i < size; ++i){
+		crc_update(&crc, buff[i], 8);
+	}
+	return crc_finish(&crc);
 }

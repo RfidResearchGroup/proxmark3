@@ -570,12 +570,13 @@ int usage_lf_simfsk(void)
 int usage_lf_simask(void)
 {
   //print help
-  PrintAndLog("Usage: lf simask [c <clock>] [i] [m|r] [s] [d <raw hex to sim>]");
+  PrintAndLog("Usage: lf simask [c <clock>] [i] [b|m|r] [s] [d <raw hex to sim>]");
   PrintAndLog("Options:        ");
   PrintAndLog("       h              This help");
   PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
   PrintAndLog("       i              invert data");
-  PrintAndLog("       m              sim ask/manchester");
+  PrintAndLog("       b              sim ask/biphase");
+  PrintAndLog("       m              sim ask/manchester - Default");
   PrintAndLog("       r              sim ask/raw");
   PrintAndLog("       s              TBD- -to enable a gap between playback repetitions - default: no gap");
   PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
@@ -703,7 +704,7 @@ int CmdLFaskSim(const char *Cmd)
 {
   //autodetect clock from Graphbuffer if using demod buffer
   //will need clock, invert, manchester/raw as m or r, separator as s, and bitstream
-  uint8_t manchester = 1, separator = 0;
+  uint8_t encoding = 1, separator = 0;
   //char cmdp = Cmd[0], par3='m', par4=0;
   uint8_t clk=0, invert=0;
   bool errors = FALSE;
@@ -725,12 +726,16 @@ int CmdLFaskSim(const char *Cmd)
       errors |= param_getdec(Cmd,cmdp+1,&clk);
       cmdp+=2;
       break;
+    case 'b':
+      encoding=2; //biphase
+      cmdp++;
+      break;
     case 'm':
-      manchester=1;
+      encoding=1;
       cmdp++;
       break;
     case 'r':
-      manchester=0;
+      encoding=0;
       cmdp++;
       break;
     case 's':
@@ -771,10 +776,10 @@ int CmdLFaskSim(const char *Cmd)
     setDemodBuf(data, dataLen, 0);
   }
   if (clk == 0) clk = 64;
-  if (manchester == 0) clk = clk/2; //askraw needs to double the clock speed
+  if (encoding == 0) clk = clk/2; //askraw needs to double the clock speed
   uint16_t arg1, arg2;
   size_t size=DemodBufferLen;
-  arg1 = clk << 8 | manchester;
+  arg1 = clk << 8 | encoding;
   arg2 = invert << 8 | separator;
   if (size > USB_CMD_DATA_SIZE) {
     PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
@@ -1080,24 +1085,30 @@ int CmdLFfind(const char *Cmd)
   if (testRaw=='u' || testRaw=='U'){
     //test unknown tag formats (raw mode)
     PrintAndLog("\nChecking for Unknown tags:\n");
-    ans=CmdDetectClockRate("f");
+    ans=AutoCorrelate(4000, FALSE, FALSE);
+    if (ans > 0) PrintAndLog("Possible Auto Correlation of %d repeating samples",ans);
+    ans=GetFskClock("",FALSE,FALSE); //CmdDetectClockRate("F"); //
     if (ans != 0){ //fsk
-      ans=CmdFSKrawdemod("");
+      ans=FSKrawDemod("",FALSE);
       if (ans>0) {
         PrintAndLog("\nUnknown FSK Modulated Tag Found!");
+        printDemodBuff();
         return 1;
       }
     }
-    ans=Cmdaskmandemod("");
+    ans=ASKmanDemod("",FALSE,FALSE);
     if (ans>0) {
       PrintAndLog("\nUnknown ASK Modulated and Manchester encoded Tag Found!");
+      PrintAndLog("\nif it does not look right it could instead be ASK/Biphase - try 'data rawdemod ab'");
+      printDemodBuff();
       return 1;
     }
     ans=CmdPSK1rawDemod("");
     if (ans>0) {
-      PrintAndLog("Possible unknown PSK1 Modulated Tag Found above!\n\nCould also be PSK2 - try 'data psk2rawdemod'");
+      PrintAndLog("Possible unknown PSK1 Modulated Tag Found above!\n\nCould also be PSK2 - try 'data rawdemod p2'");
       PrintAndLog("\nCould also be PSK3 - [currently not supported]");
       PrintAndLog("\nCould also be NRZ - try 'data nrzrawdemod");
+      printDemodBuff();
       return 1;
     }
     PrintAndLog("\nNo Data Found!\n");

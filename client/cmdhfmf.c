@@ -1539,7 +1539,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 	char buf[64] = {0x00};
 	uint8_t buf8[64] = {0x00};
 	uint8_t fillFromEmulator = 0;
-	int i, len, blockNum, flags;
+	int i, len, blockNum, flags=0;
 	
 	if (param_getchar(Cmd, 0) == 'h' || param_getchar(Cmd, 0)== 0x00) {
 		PrintAndLog("It loads magic Chinese card from the file `filename.eml`");
