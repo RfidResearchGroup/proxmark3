@@ -276,8 +276,8 @@ int CmdT55xxDetect(const char *Cmd){
 	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') 
 		return usage_t55xx_detect();
 
-	if ( strlen(Cmd)==0)
-		AquireData(CONFIGURATION_BLOCK);
+	if (strlen(Cmd)==0)
+		AquireData( CONFIGURATION_BLOCK );
 	
 	if ( !tryDetectModulation() )
 		PrintAndLog("Could not detect modulation automatically. Try setting it manually with \'lf t55xx config\'");
@@ -534,7 +534,6 @@ int special(const char *Cmd) {
 		//PrintAndLog("[%02d] 0x%08X  %s %s",j , blockData, sprint_bin(bits,32), indicate);	
 		PrintAndLog("[%02d] 0x%08X  %s",j , blockData, sprint_bin(bits,32));	
 	}
-	
 	return 0;
 }
 
@@ -566,16 +565,14 @@ int CmdT55xxWriteBlock(const char *Cmd)
 	}
 
 	if (block > 7) {
-		PrintAndLog("Block must be between 0 and 7");
+		PrintAndLog("Block number must be between 0 and 7");
 		return 1;
 	}
 	
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {data, block, 0}};
  	c.d.asBytes[0] = 0x0; 
 
-	PrintAndLog("Writing to T55x7");
-	PrintAndLog("block : %d", block);
-	PrintAndLog("data  : 0x%08X", data);
+	PrintAndLog("Writing to block: %d  data: 0x%08X", block, data);
 
 	//Password mode
 	if (res == 3) {
@@ -594,9 +591,8 @@ int CmdT55xxReadTrace(const char *Cmd)
 	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') 
 		return usage_t55xx_trace();
 
-	if ( strlen(Cmd)==0){
+	if (strlen(Cmd)==0)
 		AquireData( TRACE_BLOCK );
-	}
 	
 	DecodeT55xxBlock();
 
