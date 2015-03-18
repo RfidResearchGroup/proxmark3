@@ -217,6 +217,6 @@ function Command:getBytes()
 	local data  = self.data
 	local cmd = self.cmd 
 	local arg1, arg2, arg3 = self.arg1, self.arg2, self.arg3
-	return bin.pack("LLLLH",cmd, arg1, arg2, arg3,data);
+	return bin.pack("LLLLH",cmd, arg1, arg2, arg3, data);
 end
 return _commands

@@ -43,9 +43,6 @@ Arguments:
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = true -- the debug flag
 
---BLOCK 0 = 00088040 PSK
-local config1 = '0014'
-local config2 = '40'
 	
 -- local procedurecmds = {
 	-- [1] = '%s%s%s%s',
@@ -57,8 +54,15 @@ local config2 = '40'
 	-- [6] = 'data pskindalademod',
 -- }
 
+-- --BLOCK 0 = 00 08 80 40 PSK
+             -- -----------
+			   -- 08------- bitrate
+				  -- 8----- modulation PSK1
+				   -- 0---- PSK ClockRate
+				      -- 40 max 2 blocks
+
 local procedurecmds = {
-	[1] = '%s%s%s%s',
+	[1] = '00%02X%X%X40',
 	[2] = 'lf t55xx detect',
 	--[3] = '',
 	[3] = 'lf t55xx info',
@@ -102,31 +106,36 @@ function ExitMsg(msg)
 end
 
 function test(modulation)
-	local y
-	for y = 0, 8, 4 do
-		for _ = 1, #procedurecmds do
-			local cmd = procedurecmds[_]
-			
-			if #cmd == 0 then  
-			
-			elseif _ == 1 then
+	local bitrate
+	local clockrate
+	for bitrate = 0x0, 0x1d, 0x4 do
+	
+		for clockrate = 0,8,4 do
 
-				dbg("Writing to T55x7 TAG")
-		
-				local config = cmd:format( config1, modulation , y, config2)				
-				dbg(('lf t55xx write 0 %s'):format(config))
+			for _ = 1, #procedurecmds do
+				local cmd = procedurecmds[_]
 				
-				config = tonumber(config,16) 
-				local writecommand = Command:new{cmd = cmds.CMD_T55XX_WRITE_BLOCK, arg1 = config ,arg2 = 0, arg3 = 0}
-				local err = core.SendCommand(writecommand:getBytes())
-				if err then return oops(err) end
-				local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
-			else
-				dbg(cmd)
-				core.console( cmd )
+				if #cmd == 0 then  
+				
+				elseif _ == 1 then
+
+					dbg("Writing to T55x7 TAG")
+
+					local config = cmd:format(bitrate, modulation, clockrate)
+					dbg(('lf t55xx write 0 %s'):format(config))
+					
+					config = tonumber(config,16) 
+					local writecommand = Command:new{cmd = cmds.CMD_T55XX_WRITE_BLOCK, arg1 = config ,arg2 = 0, arg3 = 0}
+					local err = core.SendCommand(writecommand:getBytes())
+					if err then return oops(err) end
+					local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
+				else
+					dbg(cmd)
+					core.console( cmd )
+				end
 			end
+			core.clearCommandBuffer()	
 		end
-		core.clearCommandBuffer()	
 	end
 	print( string.rep('--',20) )
 end
@@ -143,10 +152,9 @@ local function main(args)
 
 	core.clearCommandBuffer()
 
-	test(1)
-	test(2)
-	test(3)
-	test(8)
+	test(1)  -- PSK1
+	--test(2) -- PSK2
+	--test(3) -- PSK3
 	
 	print( string.rep('--',20) )
 end
