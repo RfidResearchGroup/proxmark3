@@ -601,12 +601,16 @@ int CmdTestDES(const char * cmd)
 //
 int CmdHF14AMfUCRdBl(const char *Cmd)
 {
+	bool hasPwd = FALSE;
 	uint8_t blockNo = -1;
+	unsigned char key[16];
 	char cmdp = param_getchar(Cmd, 0);
 	
 	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  hf mfu crdbl  <block number>");
-		PrintAndLog("        sample: hf mfu crdbl 0");
+		PrintAndLog("Usage:  hf mfu crdbl  <block number> <password>");
+		PrintAndLog("");
+		PrintAndLog("sample: hf mfu crdbl 0");
+		PrintAndLog("        hf mfu crdbl 0 1122334455667788");
 		return 0;
 	}       
 		
@@ -621,15 +625,32 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
 		return 1;
 	} 
 	
-	PrintAndLog("--block no: 0x%02X (%d)", (int)blockNo, blockNo);
+	// key
+	if ( strlen(Cmd) > 3){
+		if (param_gethex(Cmd, 1, key, 16)) {
+			PrintAndLog("Key must include %d HEX symbols", 16);
+			return 1;
+		} else {
+			hasPwd = TRUE;
+		}	
+	}
+	
+	if ( hasPwd ) 
+		PrintAndLog("--block no: 0x%02X (%d) PWD: %s", (int)blockNo, blockNo, key);
+	else
+		PrintAndLog("--block no: 0x%02X (%d)", (int)blockNo, blockNo);
 
 	//Read Block
-	UsbCommand e = {CMD_MIFAREU_READBL, {blockNo}};
-	SendCommand(&e);
-	UsbCommand resp_c;
-	if (WaitForResponseTimeout(CMD_ACK,&resp_c,1500)) {
-		uint8_t isOK = resp_c.arg[0] & 0xff;
-		uint8_t *data = resp_c.d.asBytes;
+	UsbCommand c = {CMD_MIFAREU_READBL, {blockNo}};
+	if ( hasPwd ) {
+		c.arg[1] = 1;
+		memcpy(c.d.asBytes,key,16);
+	}
+	SendCommand(&c);
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		uint8_t isOK = resp.arg[0] & 0xff;
+		uint8_t *data = resp.d.asBytes;
 		
 		PrintAndLog("isOk: %02x", isOK);
 		if (isOK)
