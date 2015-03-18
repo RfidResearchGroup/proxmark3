@@ -142,6 +142,7 @@ uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_
   for (uint8_t extraBitChk=0; extraBitChk<5; extraBitChk++){
     errChk = preambleSearch(BitStream+extraBitChk+*startIdx, preamble, sizeof(preamble), size, startIdx);
     if (errChk == 0) return 0;
+	if (*size<64) return 0;
     if (*size>64) FmtLen = 22;
     idx = *startIdx + 9;
     for (i=0; i<FmtLen; i++){ //loop through 10 or 22 sets of 5 bits (50-10p = 40 bits or 88 bits)

@@ -1021,7 +1021,7 @@ int CmdLFfind(const char *Cmd)
   int ans=0;
   char cmdp = param_getchar(Cmd, 0);
   char testRaw = param_getchar(Cmd, 1);
-  if (strlen(Cmd) > 2 || cmdp == 'h' || cmdp == 'H') {
+  if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') {
     PrintAndLog("Usage:  lf search <0|1> [u]");
     PrintAndLog("     <use data from Graphbuffer> , if not set, try reading data from tag.");
     PrintAndLog("     [Search for Unknown tags] , if not set, reads only known tags.");
@@ -1030,7 +1030,6 @@ int CmdLFfind(const char *Cmd)
     PrintAndLog("          : lf search 1   = use data from GraphBuffer & search for known tags");
     PrintAndLog("          : lf search u   = try reading data from tag & search for known and unknown tags");
     PrintAndLog("          : lf search 1 u = use data from GraphBuffer & search for known and unknown tags");
-
     return 0;
   }
 
@@ -1042,29 +1041,36 @@ int CmdLFfind(const char *Cmd)
     return 0;
   }
   if (cmdp == 'u' || cmdp == 'U') testRaw = 'u';
+  
   PrintAndLog("NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
   PrintAndLog("False Positives ARE possible\n");  
   PrintAndLog("\nChecking for known tags:\n");
+  
   ans=CmdFSKdemodIO("");
+  
   if (ans>0) {
     PrintAndLog("\nValid IO Prox ID Found!");
     return 1;
   }
+  
   ans=CmdFSKdemodPyramid("");
   if (ans>0) {
     PrintAndLog("\nValid Pyramid ID Found!");
     return 1;
   }
+  
   ans=CmdFSKdemodParadox("");
   if (ans>0) {
     PrintAndLog("\nValid Paradox ID Found!");
     return 1;
   }
+  
   ans=CmdFSKdemodAWID("");
   if (ans>0) {
     PrintAndLog("\nValid AWID ID Found!");
     return 1;
   }
+  
   ans=CmdFSKdemodHID("");
   if (ans>0) {
     PrintAndLog("\nValid HID Prox ID Found!");
@@ -1091,7 +1097,33 @@ int CmdLFfind(const char *Cmd)
     //test unknown tag formats (raw mode)
     PrintAndLog("\nChecking for Unknown tags:\n");
     ans=AutoCorrelate(4000, FALSE, FALSE);
-    if (ans > 0) PrintAndLog("Possible Auto Correlation of %d repeating samples",ans);
+	
+    if (ans > 0) {
+
+		PrintAndLog("Possible Auto Correlation of %d repeating samples",ans);
+
+		if ( ans % 8 == 0)  {
+			int bytes = (ans / 8);
+			PrintAndLog("Possible %d bytes", bytes);
+			int blocks = 0;
+			if ( bytes % 2 == 0) {
+				blocks = (bytes / 2);	
+				PrintAndLog("Possible  2 blocks, width %d", blocks);
+			}
+			if ( bytes % 4 == 0) {
+				blocks = (bytes / 4);	
+				PrintAndLog("Possible  4 blocks, width %d", blocks);
+			}
+			if ( bytes % 8 == 0) {
+				blocks = (bytes / 8);	
+				PrintAndLog("Possible  8 blocks, width %d", blocks);
+			}
+			if ( bytes % 16 == 0) {
+				blocks = (bytes / 16);	
+				PrintAndLog("Possible 16 blocks, width %d", blocks);
+			}
+		}
+	}
     ans=GetFskClock("",FALSE,FALSE); //CmdDetectClockRate("F"); //
     if (ans != 0){ //fsk
       ans=FSKrawDemod("",FALSE);
