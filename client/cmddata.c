@@ -286,9 +286,11 @@ void printEM410x(uint32_t hi, uint64_t id)
     PrintAndLog("EM TAG ID    : %010llx", id);
     PrintAndLog("Unique TAG ID: %010llx",  id2lo);
     PrintAndLog("DEZ 8        : %08lld",id & 0xFFFFFF);
-    PrintAndLog("DEZ 10       : %010lld",id & 0xFFFFFF);
+    PrintAndLog("DEZ 10       : %010lld",id & 0xFFFFFFFF);
     PrintAndLog("DEZ 5.5      : %05lld.%05lld",(id>>16LL) & 0xFFFF,(id & 0xFFFF));
     PrintAndLog("DEZ 3.5A     : %03lld.%05lld",(id>>32ll),(id & 0xFFFF));
+	PrintAndLog("DEZ 3.5B     : %03lld.%05lld",(id & 0xFF000000) >> 24,(id & 0xFFFF));
+	PrintAndLog("DEZ 3.5C     : %03lld.%05lld",(id & 0xFF0000) >> 16,(id & 0xFFFF));
     PrintAndLog("DEZ 14/IK2   : %014lld",id);
     PrintAndLog("DEZ 15/IK3   : %015lld",id2lo);
     PrintAndLog("Other        : %05lld_%03lld_%08lld",(id&0xFFFF),((id>>16LL) & 0xFF),(id & 0xFFFFFF));  
@@ -304,7 +306,6 @@ void printEM410x(uint32_t hi, uint64_t id)
 			(id2lo & 0x00000000f0) >> 4,
 			(id2lo & 0x000000000f)
 			);
-			
   }
   }
   return;
