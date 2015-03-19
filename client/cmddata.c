@@ -291,7 +291,20 @@ void printEM410x(uint32_t hi, uint64_t id)
     PrintAndLog("DEZ 3.5A     : %03lld.%05lld",(id>>32ll),(id & 0xFFFF));
     PrintAndLog("DEZ 14/IK2   : %014lld",id);
     PrintAndLog("DEZ 15/IK3   : %015lld",id2lo);
-      PrintAndLog("Other        : %05lld_%03lld_%08lld",(id&0xFFFF),((id>>16LL) & 0xFF),(id & 0xFFFFFF));  
+    PrintAndLog("Other        : %05lld_%03lld_%08lld",(id&0xFFFF),((id>>16LL) & 0xFF),(id & 0xFFFFFF));  
+	PrintAndLog("DEZ 20/ZK    : %02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld",
+			(id2lo & 0xf000000000) >> 36,
+			(id2lo & 0x0f00000000) >> 32,
+			(id2lo & 0x00f0000000) >> 28,
+			(id2lo & 0x000f000000) >> 24,
+			(id2lo & 0x0000f00000) >> 20,
+			(id2lo & 0x00000f0000) >> 16,
+			(id2lo & 0x000000f000) >> 12,
+			(id2lo & 0x0000000f00) >> 8,
+			(id2lo & 0x00000000f0) >> 4,
+			(id2lo & 0x000000000f)
+			);
+			
   }
   }
   return;
