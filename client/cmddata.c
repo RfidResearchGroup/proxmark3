@@ -285,6 +285,10 @@ void printEM410x(uint32_t hi, uint64_t id)
       //output 40 bit em id
     PrintAndLog("EM TAG ID    : %010llx", id);
     PrintAndLog("Unique TAG ID: %010llx",  id2lo);
+	
+	PrintAndLog("");
+	PrintAndLog("Possible de-scramble patterns");
+	PrintAndLog("HoneyWell IdentKey");
     PrintAndLog("DEZ 8        : %08lld",id & 0xFFFFFF);
     PrintAndLog("DEZ 10       : %010lld",id & 0xFFFFFFFF);
     PrintAndLog("DEZ 5.5      : %05lld.%05lld",(id>>16LL) & 0xFFFF,(id & 0xFFFF));
@@ -306,7 +310,57 @@ void printEM410x(uint32_t hi, uint64_t id)
 			(id2lo & 0x00000000f0) >> 4,
 			(id2lo & 0x000000000f)
 			);
-  }
+
+	PrintAndLog("");			
+	uint64_t paxton = (((id>>32) << 24) | (id & 0xffffff))  + 0x143e00;
+	PrintAndLog("Pattern Paxton  : %0d", paxton);	
+
+	uint32_t p1id = (id & 0xFFFFFF);
+	uint8_t arr[32] = {0x00};
+	int i =0; 
+	int j = 23;
+	for (; i < 24; ++i, --j	){
+		arr[i] = (p1id >> i) & 1;
+	}
+
+	uint32_t p1  = 0;	
+
+	p1 |= arr[23] << 21;
+	p1 |= arr[22] << 23;
+	p1 |= arr[21] << 20;
+	p1 |= arr[20] << 22;
+	
+	p1 |= arr[19] << 18;
+	p1 |= arr[18] << 16;
+	p1 |= arr[17] << 19;
+	p1 |= arr[16] << 17;
+	
+	p1 |= arr[15] << 13;
+	p1 |= arr[14] << 15;
+	p1 |= arr[13] << 12;
+	p1 |= arr[12] << 14;	
+
+	p1 |= arr[11] << 6;
+	p1 |= arr[10] << 2;
+	p1 |= arr[9]  << 7;
+	p1 |= arr[8]  << 1;
+	
+	p1 |= arr[7]  << 0;
+	p1 |= arr[6]  << 8;
+	p1 |= arr[5]  << 11;
+	p1 |= arr[4]  << 3;	
+	
+	p1 |= arr[3]  << 10;
+	p1 |= arr[2]  << 4;
+	p1 |= arr[1]  << 5;
+	p1 |= arr[0]  << 9;	
+	PrintAndLog("Pattern 1       : 0x%X - %d", p1, p1);
+
+	uint16_t sebury1 = id & 0xFFFF;
+	uint8_t  sebury2 = (id >> 16) & 0x7F;
+	uint32_t sebury3 = id & 0x7FFFFF;
+	PrintAndLog("Pattern Sebury  : %d %d %d  (hex: %X %X %X)", sebury1, sebury2, sebury3, sebury1, sebury2, sebury3);
+	}
   }
   return;
 }
