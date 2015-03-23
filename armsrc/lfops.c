@@ -1054,15 +1054,11 @@ void T55xxWriteBit(int bit)
 // Write one card block in page 0, no lock
 void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 {
-    uint32_t i;
+    uint32_t i = 0;
 
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-
-    // Give it a bit of time for the resonant antenna to settle.
-    // And for the tag to fully power up
-    //SpinDelay(150);
+    // Set up FPGA, 125kHz
+    // Wait for config.. (192+8190xPOW)x8 == 67ms
+    LFSetupFPGAForADC(0, true);
 
     // Now start writting
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

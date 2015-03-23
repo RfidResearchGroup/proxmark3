@@ -246,7 +246,7 @@ int CmdT55xxReadBlock(const char *Cmd) {
 	WaitForResponse(CMD_ACK,NULL);
 	setGraphBuf(got, 12000);
 	DemodBufferLen=0;
-	if (!DecodeT55xxBlock()) return 0;
+	if (!DecodeT55xxBlock()) return 3;
 	char blk[10]={0};
 	sprintf(blk,"%d", block);
 	printT55xxBlock(blk);
@@ -1009,7 +1009,7 @@ char * GetModulationStr( uint32_t id){
 			sprintf(retStr,"%d - Biphase",id);
 			break;
 		case 0x18:
-			sprintf(retStr,"%d - Biphase a",id);
+			sprintf(retStr,"%d - Biphase a - AKA Conditional Dephase Encoding(CDP)",id);
 			break;
 		case 17:
 			sprintf(retStr,"%d - Reserved",id);
@@ -1071,7 +1071,7 @@ char * GetSelectedModulationStr( uint8_t id){
 			sprintf(retStr,"BIPHASE");
 			break;
 		case DEMOD_BIa:
-			sprintf(retStr,"BIPHASEa");
+			sprintf(retStr,"BIPHASEa - (CDP)");
 			break;
 		default:
 			sprintf(retStr,"(Unknown)");

@@ -375,34 +375,39 @@ int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int 
 			smplCnt++;
 		} else if (BinStream[i] <= low && !waveHigh){
 			smplCnt++;
-		} else { //not high or low or a transition
-			if (smplCnt > clk-(clk/4)) { //full clock
-				if (smplCnt > clk + (clk/4)) { //too many samples
-					errCnt++;
-					BinStream[bitCnt++]=77;
-				} else if (waveHigh) {
-					BinStream[bitCnt++] = invert;
-					BinStream[bitCnt++] = invert;
-				} else if (!waveHigh) {
-					BinStream[bitCnt++] = invert ^ 1;
-					BinStream[bitCnt++] = invert ^ 1;
+		} else { //transition
+			if ((BinStream[i] >= high && !waveHigh) || (BinStream[i] <= low && waveHigh)){
+				if (smplCnt > clk-(clk/4)-1) { //full clock
+					if (smplCnt > clk + (clk/4)+1) { //too many samples
+						errCnt++;
+						BinStream[bitCnt++]=77;
+					} else if (waveHigh) {
+						BinStream[bitCnt++] = invert;
+						BinStream[bitCnt++] = invert;
+					} else if (!waveHigh) {
+						BinStream[bitCnt++] = invert ^ 1;
+						BinStream[bitCnt++] = invert ^ 1;
+					}
+					waveHigh ^= 1;  
+					smplCnt = 0;
+				} else if (smplCnt > (clk/2) - (clk/4)-1) {
+					if (waveHigh) {
+						BinStream[bitCnt++] = invert;
+					} else if (!waveHigh) {
+						BinStream[bitCnt++] = invert ^ 1;
+					}
+					waveHigh ^= 1;  
+					smplCnt = 0;
+				} else if (!bitCnt) {
+					//first bit
+					waveHigh = (BinStream[i] >= high);
+					smplCnt = 1;
+				} else {
+					smplCnt++;
+					//transition bit oops
 				}
-				waveHigh ^= 1;  
-				smplCnt = 0;
-			} else if (smplCnt > (clk/2) - (clk/5)) {
-				if (waveHigh) {
-					BinStream[bitCnt++] = invert;
-				} else if (!waveHigh) {
-					BinStream[bitCnt++] = invert ^ 1;
-				}
-				waveHigh ^= 1;  
-				smplCnt = 0;
-			} else if (!bitCnt) {
-				//first bit
-				waveHigh = (BinStream[i] >= high);
-				smplCnt = 1;
-			} else {
-				//transition bit? ignore
+			} else { //haven't hit new high or new low yet
+				smplCnt++;
 			}
 		}
 	}
@@ -888,16 +893,18 @@ int PyramiddemodFSK(uint8_t *dest, size_t *size)
 
 uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, int high, int low)
 {
-	uint8_t allPeaks=1;
+	uint16_t allPeaks=1;
 	uint16_t cntPeaks=0;
-	for (size_t i=30; i<255; i++){
+	size_t loopEnd = 572;
+	if (loopEnd > size) loopEnd = size;
+	for (size_t i=60; i<loopEnd; i++){
 		if (dest[i]>low && dest[i]<high) 
 			allPeaks=0;
 		else
 			cntPeaks++;
 	}
-	if (allPeaks==0){
-		if (cntPeaks>210) return 1;
+	if (allPeaks == 0){
+		if (cntPeaks > 300) return 1;
 	}
 	return allPeaks;
 }
@@ -939,10 +946,12 @@ int DetectStrongAskClock(uint8_t dest[], size_t size)
 			}
 		}
 	}
+	uint8_t tol;
 	for (idx=8; idx>0; idx--){
-		if (clk[idx] >= highCnt && clk[idx] <= highCnt+2)
+		tol = clk[idx]/8;
+		if (clk[idx] >= highCnt - tol && clk[idx] <= highCnt + tol)
 			return clk[idx];
-		if (clk[idx] >= highCnt2 && clk[idx] <= highCnt2+2)
+		if (clk[idx] >= highCnt2 - tol && clk[idx] <= highCnt2 + tol)
 			return clk[idx];
 	}
 	return -1;

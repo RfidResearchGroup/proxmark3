@@ -362,6 +362,7 @@ int usage_lf_read()
 	PrintAndLog("Usage: lf read");
 	PrintAndLog("Options:        ");
 	PrintAndLog("       h            This help");
+	PrintAndLog("       s            silent run no printout");
 	PrintAndLog("This function takes no arguments. ");
 	PrintAndLog("Use 'lf config' to set parameters.");
 	return 0;
@@ -481,13 +482,15 @@ int CmdLFSetConfig(const char *Cmd)
 int CmdLFRead(const char *Cmd)
 {
 
-	uint8_t cmdp =0;
-	if(param_getchar(Cmd, cmdp) == 'h')
+	uint8_t cmdp = 0;
+	bool arg1 = false;
+	if (param_getchar(Cmd, cmdp) == 'h')
 	{
 		return usage_lf_read();
 	}
+	if (param_getchar(Cmd, cmdp) == 's') arg1 = true; //suppress print
 	//And ship it to device
-	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K};
+	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, {arg1,0,0}};
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK,NULL);
 	return 0;
@@ -1137,7 +1140,7 @@ static command_t CommandTable[] =
   {"io",       	  CmdLFIO,	          1, "{ ioProx tags... }"},
   {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
   {"indalaclone", CmdIndalaClone,     0, "<UID> ['l']-- Clone Indala to T55x7 (tag must be in antenna)(UID in HEX)(option 'l' for 224 UID"},
-  {"read",        CmdLFRead,          0, "Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
+  {"read",        CmdLFRead,          0, "['s' silent] Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
   {"search",      CmdLFfind,          1, "[offline] ['u'] Read and Search for valid known tag (in offline mode it you can load first then search) - 'u' to search for unknown tags"},
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
   {"simask",      CmdLFaskSim,        0, "[clock] [invert <1|0>] [manchester/raw <'m'|'r'>] [msg separator 's'] [d <hexdata>] -- Simulate LF ASK tag from demodbuffer or input"},

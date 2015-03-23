@@ -42,6 +42,7 @@ Arguments:
 
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = true -- the debug flag
+
 	
 -- local procedurecmds = {
 	-- [1] = '%s%s%s%s',
@@ -54,11 +55,11 @@ local DEBUG = true -- the debug flag
 -- }
 
 -- --BLOCK 0 = 00 08 80 40 PSK
-						-- -----------
-							--  08------- bitrate
-									-- 8----- modulation PSK1
-									 -- 0---- PSK ClockRate
-										 -- 40 max 2 blocks
+             -- -----------
+			   -- 08------- bitrate
+				  -- 8----- modulation PSK1
+				   -- 0---- PSK ClockRate
+				      -- 40 max 2 blocks
 
 local procedurecmds = {
 	[1] = '00%02X%X%X40',
@@ -110,26 +111,30 @@ function test(modulation)
 	for bitrate = 0x0, 0x1d, 0x4 do
 	
 		for clockrate = 0,8,4 do
-			local cmd = procedurecmds[_]
 
-			if #cmd == 0 then
-
-			elseif _ == 1 then
-
-				dbg("Writing to T55x7 TAG")
-
-				local config = cmd:format(bitrate, modulation, clockrate)
-				dbg(('lf t55xx write 0 %s'):format(config))
+			for _ = 1, #procedurecmds do
+				local cmd = procedurecmds[_]
 				
-				config = tonumber(config,16) 
-				local writecommand = Command:new{cmd = cmds.CMD_T55XX_WRITE_BLOCK, arg1 = config ,arg2 = 0, arg3 = 0}
-				local err = core.SendCommand(writecommand:getBytes())
-				if err then return oops(err) end
-				local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
-			else
-				dbg(cmd)
-				core.console( cmd )
+				if #cmd == 0 then  
+				
+				elseif _ == 1 then
+
+					dbg("Writing to T55x7 TAG")
+
+					local config = cmd:format(bitrate, modulation, clockrate)
+					dbg(('lf t55xx write 0 %s'):format(config))
+					
+					config = tonumber(config,16) 
+					local writecommand = Command:new{cmd = cmds.CMD_T55XX_WRITE_BLOCK, arg1 = config ,arg2 = 0, arg3 = 0}
+					local err = core.SendCommand(writecommand:getBytes())
+					if err then return oops(err) end
+					local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
+				else
+					dbg(cmd)
+					core.console( cmd )
+				end
 			end
+			core.clearCommandBuffer()	
 		end
 	end
 	print( string.rep('--',20) )
@@ -147,10 +152,20 @@ local function main(args)
 
 	core.clearCommandBuffer()
 
-	test(1) --PSK1
-	-- test(2) --PSK2
-	-- test(3) --PSK3
+	test(1)  -- PSK1
+	--test(2) -- PSK2
+	--test(3) -- PSK3
 	
 	print( string.rep('--',20) )
 end
 main(args)
+
+-- Where it iterates over 
+  -- xxxx8xxx = PSK RF/2 with Manchester modulation
+  -- xxxx1xxx = PSK RF/2 with PSK1 modulation (phase change when input changes)
+  -- xxxx2xxx = PSK RF/2 with PSk2 modulation (phase change on bitclk if input high)
+  -- xxxx3xxx = PSK RF/2 with PSk3 modulation (phase change on rising edge of input)
+
+    -- XXXXX0XX = PSK RF/2
+    -- XXXXX4XX = PSK RF/4
+    -- XXXXX8XX = PSK RF/8

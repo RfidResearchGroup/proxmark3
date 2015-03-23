@@ -558,6 +558,7 @@ int CmdBiphaseDecodeRaw(const char *Cmd)
 		PrintAndLog("Usage:  data biphaserawdecode [offset] [invert] [maxErr]");
 		PrintAndLog("     Converts 10 or 01 to 1 and 11 or 00 to 0");
 		PrintAndLog("     --must have binary sequence in demodbuffer (run data askrawdemod first)");
+    PrintAndLog("     --invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester");
 		PrintAndLog("");
 		PrintAndLog("     [offset <0|1>], set to 0 not to adjust start position or to 1 to adjust decode start position");
 		PrintAndLog("     [invert <0|1>], set to 1 to invert output");
@@ -719,6 +720,8 @@ int Cmdaskbiphdemod(const char *Cmd)
     PrintAndLog("     NOTE: <invert>  can be entered as second or third argument");
     PrintAndLog("     NOTE: <amplify> can be entered as first, second or last argument");
     PrintAndLog("     NOTE: any other arg must have previous args set to work");
+    PrintAndLog("");
+    PrintAndLog("     NOTE: --invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester");
     PrintAndLog("");
     PrintAndLog("    sample: data rawdemod ab            = demod an ask/biph tag from GraphBuffer");
     PrintAndLog("          : data rawdemod ab a          = demod an ask/biph tag from GraphBuffer, amplified");
@@ -1420,7 +1423,20 @@ int CmdFSKdemodIO(const char *Cmd)
   uint8_t version = bytebits_to_byte(BitStream+idx+27,8); //14,4
   uint8_t facilitycode = bytebits_to_byte(BitStream+idx+18,8) ;
   uint16_t number = (bytebits_to_byte(BitStream+idx+36,8)<<8)|(bytebits_to_byte(BitStream+idx+45,8)); //36,9
-  PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x)",version,facilitycode,number,code,code2);
+  uint8_t crc = bytebits_to_byte(BitStream+idx+54,8);
+  uint16_t calccrc = 0;
+
+  for (uint8_t i=1; i<6; ++i){
+    calccrc += bytebits_to_byte(BitStream+idx+9*i,8);
+    PrintAndLog("%d", calccrc);
+  }
+  calccrc &= 0xff;
+  calccrc = 0xff - calccrc;
+
+  char *crcStr = (crc == calccrc) ? "crc ok": "!crc";
+
+  PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x) [%02x %s]",version,facilitycode,number,code,code2, crc, crcStr);
+  //PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x)",version,facilitycode,number,code,code2);
   setDemodBuf(BitStream,64,idx);
   if (g_debugMode){
     PrintAndLog("DEBUG: idx: %d, Len: %d, Printing demod buffer:",idx,64);
@@ -2056,7 +2072,7 @@ int CmdRawDemod(const char *Cmd)
 		PrintAndLog("   <help> as 'h', prints the help for the specific modulation");	
 		PrintAndLog("   <options> see specific modulation help for optional parameters");				
 		PrintAndLog("");
-		PrintAndLog("    sample: data rawdemod fs h         = print help for ask/raw demod");
+		PrintAndLog("    sample: data rawdemod fs h         = print help specific to fsk demod");
 		PrintAndLog("          : data rawdemod fs           = demod GraphBuffer using: fsk - autodetect");
 		PrintAndLog("          : data rawdemod ab           = demod GraphBuffer using: ask/biphase - autodetect");
 		PrintAndLog("          : data rawdemod am           = demod GraphBuffer using: ask/manchester - autodetect");
@@ -2185,57 +2201,64 @@ uint8_t getByte(uint8_t bits_per_sample, BitstreamOut* b)
 	return val;
 }
 
+int getSamples(const char *Cmd, bool silent)
+{
+  //If we get all but the last byte in bigbuf,
+  // we don't have to worry about remaining trash
+  // in the last byte in case the bits-per-sample
+  // does not line up on byte boundaries
+
+  uint8_t got[BIGBUF_SIZE-1] = { 0 };
+
+  int n = strtol(Cmd, NULL, 0);
+
+  if (n == 0)
+    n = sizeof(got);
+
+  if (n > sizeof(got))
+    n = sizeof(got);
+
+  PrintAndLog("Reading %d bytes from device memory\n", n);
+  GetFromBigBuf(got,n,0);
+  PrintAndLog("Data fetched");
+  UsbCommand response;
+  WaitForResponse(CMD_ACK, &response);
+  uint8_t bits_per_sample = 8;
+
+  //Old devices without this feature would send 0 at arg[0]
+  if(response.arg[0] > 0)
+  {
+    sample_config *sc = (sample_config *) response.d.asBytes;
+    PrintAndLog("Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample
+          , sc->decimation);
+    bits_per_sample = sc->bits_per_sample;
+  }
+  if(bits_per_sample < 8)
+  {
+    PrintAndLog("Unpacking...");
+    BitstreamOut bout = { got, bits_per_sample * n,  0};
+    int j =0;
+    for (j = 0; j * bits_per_sample < n * 8 && j < sizeof(GraphBuffer); j++) {
+      uint8_t sample = getByte(bits_per_sample, &bout);
+      GraphBuffer[j] = ((int) sample )- 128;
+    }
+    GraphTraceLen = j;
+    PrintAndLog("Unpacked %d samples" , j );
+  }else
+  {
+    for (int j = 0; j < n; j++) {
+      GraphBuffer[j] = ((int)got[j]) - 128;
+    }
+    GraphTraceLen = n;
+  }
+
+  RepaintGraphWindow();
+  return 0;
+}
+
 int CmdSamples(const char *Cmd)
 {
-	//If we get all but the last byte in bigbuf,
-	// we don't have to worry about remaining trash
-	// in the last byte in case the bits-per-sample
-	// does not line up on byte boundaries
-	uint8_t got[BIGBUF_SIZE-1] = { 0 };
-
-	int n = strtol(Cmd, NULL, 0);
-	if (n == 0)
-		n = sizeof(got);
-
-	if (n > sizeof(got))
-		n = sizeof(got);
-
-	PrintAndLog("Reading %d bytes from device memory\n", n);
-	GetFromBigBuf(got,n,0);
-	PrintAndLog("Data fetched");
-	UsbCommand response;
-	WaitForResponse(CMD_ACK, &response);
-	uint8_t bits_per_sample = 8;
-
-	//Old devices without this feature would send 0 at arg[0]
-	if(response.arg[0] > 0)
-	{
-		sample_config *sc = (sample_config *) response.d.asBytes;
-		PrintAndLog("Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample
-					, sc->decimation);
-		bits_per_sample = sc->bits_per_sample;
-	}
-	if(bits_per_sample < 8)
-	{
-		PrintAndLog("Unpacking...");
-		BitstreamOut bout = { got, bits_per_sample * n,  0};
-		int j =0;
-		for (j = 0; j * bits_per_sample < n * 8 && j < sizeof(GraphBuffer); j++) {
-			uint8_t sample = getByte(bits_per_sample, &bout);
-			GraphBuffer[j] = ((int) sample )- 128;
-		}
-		GraphTraceLen = j;
-		PrintAndLog("Unpacked %d samples" , j );
-	}else
-	{
-		for (int j = 0; j < n; j++) {
-			GraphBuffer[j] = ((int)got[j]) - 128;
-		}
-		GraphTraceLen = n;
-	}
-
-	RepaintGraphWindow();
-	return 0;
+  return getSamples(Cmd, false);
 }
 
 int CmdTuneSamples(const char *Cmd)

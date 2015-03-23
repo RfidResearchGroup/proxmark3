@@ -53,8 +53,9 @@ int CmdEM410xRead(const char *Cmd)
     PrintAndLog ("EM410x XL pattern found");
     return 0;
   }
-  char id[11] = {0x00};
-  sprintf(id, "%010x", lo);
+  char id[12] = {0x00};
+  sprintf(id, "%010llx",lo);
+  
   global_em410xId = id;
   return 1;
 }
@@ -148,8 +149,8 @@ int CmdEM410xWatch(const char *Cmd)
 			break;
 		}
 		
-		CmdLFRead("");
-		CmdSamples("6000");		
+		CmdLFRead("s");
+		getSamples("8192",true); //capture enough to get 2 full messages		
 	} while (!CmdEM410xRead(""));
 
 	return 0;
@@ -158,9 +159,9 @@ int CmdEM410xWatch(const char *Cmd)
 int CmdEM410xWatchnSpoof(const char *Cmd)
 {
 	CmdEM410xWatch(Cmd);
-    PrintAndLog("# Replaying captured ID: %s",global_em410xId);
-    CmdLFaskSim("");
-  return 0;
+	PrintAndLog("# Replaying captured ID: %s",global_em410xId);
+	CmdLFaskSim("");
+	return 0;
 }
 
 /* Read the transmitted data of an EM4x50 tag
