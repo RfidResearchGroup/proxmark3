@@ -912,6 +912,8 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
     uint8_t version=0;
     uint8_t facilitycode=0;
     uint16_t number=0;
+	uint8_t crc = 0;
+	uint16_t calccrc = 0;
     // Configure to go in 125Khz listen mode
     LFSetupFPGAForADC(95, true);
 
@@ -930,8 +932,17 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
             //|           |           |           |           |           |           |
             //01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
             //-----------------------------------------------------------------------------
-            //00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
+            //00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 checksum 11
             //
+			//Checksum:  
+			//00000000 0 11110000 1 11100000 1 00000001 1 00000011 1 10110110 1 01110101 11
+			//preamble      F0         E0         01         03         B6         75
+			// How to calc checksum,
+			// http://www.proxmark.org/forum/viewtopic.php?id=364&p=6
+			//   F0 + E0 + 01 + 03 + B6 = 28A
+			//   28A & FF = 8A
+			//   FF - 8A = 75
+			// Checksum: 0x75
             //XSF(version)facility:codeone+codetwo
             //Handle the data
             if(findone){ //only print binary if we are doing one
@@ -949,7 +960,15 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
             facilitycode = bytebits_to_byte(dest+idx+18,8) ;
             number = (bytebits_to_byte(dest+idx+36,8)<<8)|(bytebits_to_byte(dest+idx+45,8)); //36,9
 
-            Dbprintf("XSF(%02d)%02x:%05d (%08x%08x)",version,facilitycode,number,code,code2);
+			crc = bytebits_to_byte(dest+idx+54,8);
+			for (uint8_t i=1; i<6; ++i)
+				calccrc += bytebits_to_byte(dest+idx+9*i,8);
+			calccrc &= 0xff;
+			calccrc = 0xff - calccrc;
+			
+			char *crcStr = (crc == calccrc) ? "ok":"!crc";
+
+            Dbprintf("IO Prox XSF(%02d)%02x:%05d (%08x%08x)  [%02x %s]",version,facilitycode,number,code,code2, crc, crcStr);
             // if we're only looking for one tag
             if (findone){
                 if (ledcontrol)	LED_A_OFF();
@@ -1040,6 +1059,12 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
 //  These timings work for 4469/4269/4305 (with the 55*8 above)
 //  WRITE_0 = 23*8 , 9*8  SpinDelayUs(23*8); 
+
+// Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
+// TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
+// Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
+// T0 = TIMER_CLOCK1 / 125000 = 192
+// 1 Cycle = 8 microseconds(us)
 
 #define T55xx_SAMPLES_SIZE		12000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
 
@@ -1504,10 +1529,15 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
 
 int DemodPCF7931(uint8_t **outBlocks) {
 
-    uint8_t BitStream[256] = {0x00};
-	uint8_t Blocks[8][16];
+    uint8_t bits[256] = {0x00};
+	uint8_t blocks[8][16];
     uint8_t *dest = BigBuf_get_addr();
-    int GraphTraceLen = BigBuf_max_traceLen();
+    
+	int GraphTraceLen = BigBuf_max_traceLen();
+	if (  GraphTraceLen > 18000 )
+		GraphTraceLen = 18000;
+	
+	
     int i, j, lastval, bitidx, half_switch;
     int clock = 64;
     int tolerance = clock / 8;
@@ -1579,14 +1609,14 @@ int DemodPCF7931(uint8_t **outBlocks) {
                     block_done = 1;
                 }
                 else if(half_switch == 1) {
-                    BitStream[bitidx++] = 0;
+                    bits[bitidx++] = 0;
                     half_switch = 0;
                 }
                 else
                     half_switch++;
             } else if (abs(lc-clock) < tolerance) {
                 // 64TO
-                BitStream[bitidx++] = 1;
+                bits[bitidx++] = 1;
             } else {
                 // Error
                 warnings++;
@@ -1600,14 +1630,15 @@ int DemodPCF7931(uint8_t **outBlocks) {
             if(block_done == 1) {
                 if(bitidx == 128) {
                     for(j=0; j<16; j++) {
-                        Blocks[num_blocks][j] = 128*BitStream[j*8+7]+
-                                64*BitStream[j*8+6]+
-                                32*BitStream[j*8+5]+
-                                16*BitStream[j*8+4]+
-                                8*BitStream[j*8+3]+
-                                4*BitStream[j*8+2]+
-                                2*BitStream[j*8+1]+
-                                BitStream[j*8];
+                        blocks[num_blocks][j] = 128*bits[j*8+7]+
+                                64*bits[j*8+6]+
+                                32*bits[j*8+5]+
+                                16*bits[j*8+4]+
+                                8*bits[j*8+3]+
+                                4*bits[j*8+2]+
+                                2*bits[j*8+1]+
+                                bits[j*8];
+						
                     }
                     num_blocks++;
                 }
@@ -1616,17 +1647,14 @@ int DemodPCF7931(uint8_t **outBlocks) {
                 half_switch = 0;
             }
             if(i < GraphTraceLen)
-            {
-                if (dest[i-1] > dest[i]) dir=0;
-                else dir = 1;
-            }
+                dir =(dest[i-1] > dest[i]) ? 0 : 1;
         }
         if(bitidx==255)
             bitidx=0;
         warnings = 0;
         if(num_blocks == 4) break;
     }
-    memcpy(outBlocks, Blocks, 16*num_blocks);
+    memcpy(outBlocks, blocks, 16*num_blocks);
     return num_blocks;
 }
 

@@ -297,7 +297,6 @@ void printEM410x(uint32_t hi, uint64_t id)
 	PrintAndLog("DEZ 3.5C     : %03lld.%05lld",(id & 0xFF0000) >> 16,(id & 0xFFFF));
     PrintAndLog("DEZ 14/IK2   : %014lld",id);
     PrintAndLog("DEZ 15/IK3   : %015lld",id2lo);
-    PrintAndLog("Other        : %05lld_%03lld_%08lld",(id&0xFFFF),((id>>16LL) & 0xFF),(id & 0xFFFFFF));  
 	PrintAndLog("DEZ 20/ZK    : %02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld",
 			(id2lo & 0xf000000000) >> 36,
 			(id2lo & 0x0f00000000) >> 32,
@@ -310,10 +309,10 @@ void printEM410x(uint32_t hi, uint64_t id)
 			(id2lo & 0x00000000f0) >> 4,
 			(id2lo & 0x000000000f)
 			);
-
+    PrintAndLog("Other        : %05lld_%03lld_%08lld",(id&0xFFFF),((id>>16LL) & 0xFF),(id & 0xFFFFFF));  
 	PrintAndLog("");			
 	uint64_t paxton = (((id>>32) << 24) | (id & 0xffffff))  + 0x143e00;
-	PrintAndLog("Pattern Paxton  : %0d", paxton);	
+	PrintAndLog("Pattern Paxton  : %lld (hex %08llX)", paxton, paxton);	
 
 	uint32_t p1id = (id & 0xFFFFFF);
 	uint8_t arr[32] = {0x00};
@@ -354,12 +353,12 @@ void printEM410x(uint32_t hi, uint64_t id)
 	p1 |= arr[2]  << 4;
 	p1 |= arr[1]  << 5;
 	p1 |= arr[0]  << 9;	
-	PrintAndLog("Pattern 1       : 0x%X - %d", p1, p1);
+	PrintAndLog("Pattern 1       : %d (hex %X)", p1, p1);
 
 	uint16_t sebury1 = id & 0xFFFF;
 	uint8_t  sebury2 = (id >> 16) & 0x7F;
 	uint32_t sebury3 = id & 0x7FFFFF;
-	PrintAndLog("Pattern Sebury  : %d %d %d  (hex: %X %X %X)", sebury1, sebury2, sebury3, sebury1, sebury2, sebury3);
+	PrintAndLog("Pattern Sebury  : %010d %03d %d  (hex: %X %X %X)", sebury3, sebury2, sebury1, sebury3, sebury2, sebury1);
 	}
   }
   return;
@@ -1267,6 +1266,7 @@ int CmdFSKdemodHID(const char *Cmd)
       if(fmtLen==34){
         cardnum = (lo>>1)&0xFFFF;
         fc= ((hi&1)<<15)|(lo>>17);
+		// this could also be QUADRAKEY.  Uses 34bit HID. 
       }
       if(fmtLen==35){
         cardnum = (lo>>1)&0xFFFFF;
@@ -1413,7 +1413,21 @@ int CmdFSKdemodIO(const char *Cmd)
   uint8_t version = bytebits_to_byte(BitStream+idx+27,8); //14,4
   uint8_t facilitycode = bytebits_to_byte(BitStream+idx+18,8) ;
   uint16_t number = (bytebits_to_byte(BitStream+idx+36,8)<<8)|(bytebits_to_byte(BitStream+idx+45,8)); //36,9
-  PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x)",version,facilitycode,number,code,code2);
+
+  uint8_t crc = bytebits_to_byte(BitStream+idx+54,8);
+  uint16_t calccrc = 0;
+ 
+  for (uint8_t i=1; i<6; ++i){
+	calccrc += bytebits_to_byte(BitStream+idx+9*i,8);
+	PrintAndLog("%d", calccrc);
+  }
+  calccrc &= 0xff;
+  calccrc = 0xff - calccrc;
+
+  char *crcStr = (crc == calccrc) ? "ok": "!crc";
+
+  PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x)  [%02x %s]",version,facilitycode,number,code,code2, crc, crcStr);
+  
   setDemodBuf(BitStream,64,idx);
   if (g_debugMode){
     PrintAndLog("DEBUG: idx: %d, Len: %d, Printing demod buffer:",idx,64);
