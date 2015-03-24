@@ -5,7 +5,7 @@
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SampleLF();
+uint32_t SampleLF(bool silent);
 
 /**
 * Initializes the FPGA for snoop-mode (field off), and acquires the samples.

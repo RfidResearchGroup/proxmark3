@@ -6,19 +6,20 @@ local dumplib = require('html_dumplib')
 
 example =[[
 	1. script run tracetest
-	2. script run tracetest -o 
-
 ]]
 author = "Iceman"
-usage = "script run tracetest -o <filename>"
+usage = "script run tracetest"
 desc =[[
 This script will load several traces files in ../traces/ folder and do 
 "data load"
-"lf search" 
+"lf search 1 u" 
+
+The following tracefiles will be loaded:  
+   em*.pm3
+   m*.pm3
 
 Arguments:
 	-h             : this help
-	-o             : logfile name
 ]]
 
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
@@ -71,14 +72,14 @@ local function main(args)
 	local tracesEM = "find '../traces/' -iname 'em*.pm3' -type f"
 	local tracesMOD = "find '../traces/' -iname 'm*.pm3' -type f"
 
+	local write2File = false
 	local outputTemplate = os.date("testtest_%Y-%m-%d_%H%M%S")
 
 	-- Arguments for the script
-	for o, arg in getopt.getopt(args, 'ho:') do
+	for o, arg in getopt.getopt(args, 'h') do
 		if o == "h" then return help() end		
-		if o == "o" then outputTemplate = arg end		
 	end
-
+	
 	core.clearCommandBuffer()
 	
 	local files = {}
@@ -97,7 +98,7 @@ local function main(args)
 	end
 	p.close();
 	
-	local cmdLFSEARCH = "lf search 1" 
+	local cmdLFSEARCH = "lf search 1 u" 
 	
 	-- main loop
 	io.write('Starting to test traces > ')
@@ -119,13 +120,6 @@ local function main(args)
 	end
 	io.write('\n')
 
-	-- Write dump to files
-	if not DEBUG then
-		local bar = dumplib.SaveAsText(emldata, outputTemplate..'.txt')
-		print(("Wrote output to:  %s"):format(bar))
-	end
-
-	-- Show info 
 	print( string.rep('--',20) )
 
 end

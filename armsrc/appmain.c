@@ -648,7 +648,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			setSamplingConfig((sample_config *) c->d.asBytes);
 			break;
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K:
-			cmd_send(CMD_ACK,SampleLF(),0,0,0,0);
+			cmd_send(CMD_ACK,SampleLF(c->arg[0]),0,0,0,0);
 			break;
 		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			ModThenAcquireRawAdcSamples125k(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);

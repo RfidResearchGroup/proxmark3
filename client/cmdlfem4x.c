@@ -43,163 +43,24 @@ int CmdEMdemodASK(const char *Cmd)
  */
 int CmdEM410xRead(const char *Cmd)
 {
-  int i, j, clock, header, rows, bit, hithigh, hitlow, first, bit2idx, high, low;
-  int parity[4];
-  char id[11] = {0x00};
-  char id2[11] = {0x00};
-  int retested = 0;
-  uint8_t BitStream[MAX_GRAPH_TRACE_LEN];
-  high = low = 0;
+  uint32_t hi=0;
+  uint64_t lo=0;
 
-  /* Detect high and lows and clock */
-  for (i = 0; i < GraphTraceLen; i++)
-  {
-    if (GraphBuffer[i] > high)
-      high = GraphBuffer[i];
-    else if (GraphBuffer[i] < low)
-      low = GraphBuffer[i];
-  }
-
-  /* get clock */
-  clock = GetAskClock(Cmd, false, false);
-
-  /* parity for our 4 columns */
-  parity[0] = parity[1] = parity[2] = parity[3] = 0;
-  header = rows = 0;
-
-  // manchester demodulate
-  bit = bit2idx = 0;
-  for (i = 0; i < (int)(GraphTraceLen / clock); i++)
-  {
-    hithigh = 0;
-    hitlow = 0;
-    first = 1;
-
-    /* Find out if we hit both high and low peaks */
-    for (j = 0; j < clock; j++)
-    {
-      if (GraphBuffer[(i * clock) + j] >= high)
-        hithigh = 1;
-      else if (GraphBuffer[(i * clock) + j] <= low)
-        hitlow = 1;
-
-      /* it doesn't count if it's the first part of our read
-       because it's really just trailing from the last sequence */
-      if (first && (hithigh || hitlow))
-        hithigh = hitlow = 0;
-      else
-        first = 0;
-
-      if (hithigh && hitlow)
-        break;
-    }
-
-    /* If we didn't hit both high and low peaks, we had a bit transition */
-    if (!hithigh || !hitlow)
-      bit ^= 1;
-
-    BitStream[bit2idx++] = bit;
-  }
-
-retest:
-  /* We go till 5 before the graph ends because we'll get that far below */
-  for (i = 1; i < bit2idx - 5; i++)
-  {
-    /* Step 2: We have our header but need our tag ID */
-    if (header == 9 && rows < 10)
-    {
-      /* Confirm parity is correct */
-      if ((BitStream[i] ^ BitStream[i+1] ^ BitStream[i+2] ^ BitStream[i+3]) == BitStream[i+4])
-      {
-        /* Read another byte! */
-        sprintf(id+rows, "%x", (8 * BitStream[i]) + (4 * BitStream[i+1]) + (2 * BitStream[i+2]) + (1 * BitStream[i+3]));
-        sprintf(id2+rows, "%x", (8 * BitStream[i+3]) + (4 * BitStream[i+2]) + (2 * BitStream[i+1]) + (1 * BitStream[i]));
-        rows++;
-
-        /* Keep parity info */
-        parity[0] ^= BitStream[i];
-        parity[1] ^= BitStream[i+1];
-        parity[2] ^= BitStream[i+2];
-        parity[3] ^= BitStream[i+3];
-
-        /* Move 4 bits ahead */
-        i += 4;
-      }
-
-      /* Damn, something wrong! reset */
-      else
-      {
-        PrintAndLog("Thought we had a valid tag but failed at word %d (i=%d)", rows + 1, i);
-
-        /* Start back rows * 5 + 9 header bits, -1 to not start at same place */
-        i -= 9 + (5 * rows) - 5;
-
-        rows = header = 0;
-      }
-    }
-
-    /* Step 3: Got our 40 bits! confirm column parity */
-    else if (rows == 10)
-    {
-      /* We need to make sure our 4 bits of parity are correct and we have a stop bit */
-      if (BitStream[i] == parity[0] && BitStream[i+1] == parity[1] &&
-        BitStream[i+2] == parity[2] && BitStream[i+3] == parity[3] &&
-        BitStream[i+4] == 0)
-      {
-        /* Sweet! */
-        PrintAndLog("EM410x Tag ID: %s", id);
-        PrintAndLog("Unique Tag ID: %s", id2);
-
-		global_em410xId = id;
-		
-        /* Stop any loops */
-        return 1;
-      }
-
-      /* Crap! Incorrect parity or no stop bit, start all over */
-      else
-      {
-        rows = header = 0;
-
-        /* Go back 59 bits (9 header bits + 10 rows at 4+1 parity) */
-        i -= 59;
-      }
-    }
-
-    /* Step 1: get our header */
-    else if (header < 9)
-    {
-      /* Need 9 consecutive 1's */
-      if (BitStream[i] == 1)
-        header++;
-
-      /* We don't have a header, not enough consecutive 1 bits */
-      else
-        header = 0;
-    }
-  }
-
-  /* if we've already retested after flipping bits, return */
-	if (retested++){
-		PrintAndLog("Failed to decode");
+  if(!AskEm410xDemod("", &hi, &lo)) return 0;
+  PrintAndLog("EM410x pattern found: ");
+  printEM410x(hi, lo);
+  if (hi){
+    PrintAndLog ("EM410x XL pattern found");
     return 0;
-	}
-
-  /* if this didn't work, try flipping bits */
-  for (i = 0; i < bit2idx; i++)
-    BitStream[i] ^= 1;
-
-  goto retest;
+  }
+  char id[12] = {0x00};
+  sprintf(id, "%010llx",lo);
+  
+  global_em410xId = id;
+  return 1;
 }
 
-/* emulate an EM410X tag
- * Format:
- *   1111 1111 1           <-- standard non-repeatable header
- *   XXXX [row parity bit] <-- 10 rows of 5 bits for our 40 bit tag ID
- *   ....
- *   CCCC                  <-- each bit here is parity for the 10 bits above in corresponding column
- *   0                     <-- stop bit, end of tag
- */
+// emulate an EM410X tag
 int CmdEM410xSim(const char *Cmd)
 {
 	int i, n, j, binary[4], parity[4];
@@ -282,28 +143,25 @@ int CmdEM410xSim(const char *Cmd)
 */
 int CmdEM410xWatch(const char *Cmd)
 {
-	char cmdp = param_getchar(Cmd, 0);
-	int read_h = (cmdp == 'h');
 	do {
 		if (ukbhit()) {
 			printf("\naborted via keyboard!\n");
 			break;
 		}
 		
-		CmdLFRead(read_h ? "h" : "");
-		CmdSamples("6000");		
-	} while (
-		!CmdEM410xRead("") 
-	);
+		CmdLFRead("s");
+		getSamples("8192",true); //capture enough to get 2 full messages		
+	} while (!CmdEM410xRead(""));
+
 	return 0;
 }
 
 int CmdEM410xWatchnSpoof(const char *Cmd)
 {
 	CmdEM410xWatch(Cmd);
-    PrintAndLog("# Replaying : %s",global_em410xId);
-    CmdEM410xSim(global_em410xId);
-  return 0;
+	PrintAndLog("# Replaying captured ID: %s",global_em410xId);
+	CmdLFaskSim("");
+	return 0;
 }
 
 /* Read the transmitted data of an EM4x50 tag

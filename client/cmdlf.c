@@ -362,6 +362,7 @@ int usage_lf_read()
 	PrintAndLog("Usage: lf read");
 	PrintAndLog("Options:        ");
 	PrintAndLog("       h            This help");
+	PrintAndLog("       s            silent run no printout");
 	PrintAndLog("This function takes no arguments. ");
 	PrintAndLog("Use 'lf config' to set parameters.");
 	return 0;
@@ -481,13 +482,15 @@ int CmdLFSetConfig(const char *Cmd)
 int CmdLFRead(const char *Cmd)
 {
 
-	uint8_t cmdp =0;
-	if(param_getchar(Cmd, cmdp) == 'h')
+	uint8_t cmdp = 0;
+	bool arg1 = false;
+	if (param_getchar(Cmd, cmdp) == 'h')
 	{
 		return usage_lf_read();
 	}
+	if (param_getchar(Cmd, cmdp) == 's') arg1 = true; //suppress print
 	//And ship it to device
-	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K};
+	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, {arg1,0,0}};
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK,NULL);
 	return 0;
@@ -1016,7 +1019,7 @@ int CmdLFfind(const char *Cmd)
   int ans=0;
   char cmdp = param_getchar(Cmd, 0);
   char testRaw = param_getchar(Cmd, 1);
-  if (strlen(Cmd) > 2 || cmdp == 'h' || cmdp == 'H') {
+  if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') {
     PrintAndLog("Usage:  lf search <0|1> [u]");
     PrintAndLog("     <use data from Graphbuffer> , if not set, try reading data from tag.");
     PrintAndLog("     [Search for Unknown tags] , if not set, reads only known tags.");
@@ -1037,50 +1040,60 @@ int CmdLFfind(const char *Cmd)
     return 0;
   }
   if (cmdp == 'u' || cmdp == 'U') testRaw = 'u';
+
   PrintAndLog("NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
   PrintAndLog("False Positives ARE possible\n");  
   PrintAndLog("\nChecking for known tags:\n");
+
   ans=CmdFSKdemodIO("");
   if (ans>0) {
     PrintAndLog("\nValid IO Prox ID Found!");
     return 1;
   }
+
   ans=CmdFSKdemodPyramid("");
   if (ans>0) {
     PrintAndLog("\nValid Pyramid ID Found!");
     return 1;
   }
+
   ans=CmdFSKdemodParadox("");
   if (ans>0) {
     PrintAndLog("\nValid Paradox ID Found!");
     return 1;
   }
+
   ans=CmdFSKdemodAWID("");
   if (ans>0) {
     PrintAndLog("\nValid AWID ID Found!");
     return 1;
   }
+
   ans=CmdFSKdemodHID("");
   if (ans>0) {
     PrintAndLog("\nValid HID Prox ID Found!");
     return 1;
   }
+
   //add psk and indala
   ans=CmdIndalaDecode("");
   if (ans>0) {
     PrintAndLog("\nValid Indala ID Found!");
     return 1;
   }
+
   ans=CmdAskEM410xDemod("");
   if (ans>0) {
     PrintAndLog("\nValid EM410x ID Found!");
     return 1;
   }
+
   ans=CmdG_Prox_II_Demod("");
   if (ans>0) {
     PrintAndLog("\nValid G Prox II ID Found!");
     return 1;
   }
+
   PrintAndLog("\nNo Known Tags Found!\n");
   if (testRaw=='u' || testRaw=='U'){
     //test unknown tag formats (raw mode)
@@ -1127,7 +1140,7 @@ static command_t CommandTable[] =
   {"io",       	  CmdLFIO,	          1, "{ ioProx tags... }"},
   {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
   {"indalaclone", CmdIndalaClone,     0, "<UID> ['l']-- Clone Indala to T55x7 (tag must be in antenna)(UID in HEX)(option 'l' for 224 UID"},
-  {"read",        CmdLFRead,          0, "Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
+  {"read",        CmdLFRead,          0, "['s' silent] Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
   {"search",      CmdLFfind,          1, "[offline] ['u'] Read and Search for valid known tag (in offline mode it you can load first then search) - 'u' to search for unknown tags"},
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
   {"simask",      CmdLFaskSim,        0, "[clock] [invert <1|0>] [manchester/raw <'m'|'r'>] [msg separator 's'] [d <hexdata>] -- Simulate LF ASK tag from demodbuffer or input"},

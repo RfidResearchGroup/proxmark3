@@ -1030,10 +1030,12 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
  * To compensate antenna falling times shorten the write times
  * and enlarge the gap ones.
  */
-#define START_GAP 250
-#define WRITE_GAP 160
-#define WRITE_0   144 // 192
-#define WRITE_1   400 // 432 for T55x7; 448 for E5550
+#define START_GAP 50*8 // 10 - 50fc 250
+#define WRITE_GAP 20*8 //    - 30fc 160
+#define WRITE_0   24*8 // 16 - 63fc 54fc 144
+#define WRITE_1   54*8 // 48 - 63fc 54fc 432 for T55x7; 448 for E5550 //400
+
+#define T55xx_SAMPLES_SIZE      12000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
 
 // Write one bit to card
 void T55xxWriteBit(int bit)
@@ -1052,16 +1054,11 @@ void T55xxWriteBit(int bit)
 // Write one card block in page 0, no lock
 void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 {
-    //unsigned int i;  //enio adjustment 12/10/14
-    uint32_t i;
+    uint32_t i = 0;
 
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-
-    // Give it a bit of time for the resonant antenna to settle.
-    // And for the tag to fully power up
-    SpinDelay(150);
+    // Set up FPGA, 125kHz
+    // Wait for config.. (192+8190xPOW)x8 == 67ms
+    LFSetupFPGAForADC(0, true);
 
     // Now start writting
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1094,30 +1091,28 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 
+void TurnReadLFOn(){
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+    // Give it a bit of time for the resonant antenna to settle.
+    SpinDelayUs(8*150);
+}
+
+
 // Read one card block in page 0
 void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 {
+    uint32_t i = 0;
     uint8_t *dest = BigBuf_get_addr();
-    //int m=0, i=0; //enio adjustment 12/10/14
-    uint32_t m=0, i=0;
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    m = BigBuf_max_traceLen();
+    uint16_t bufferlength = BigBuf_max_traceLen();
+    if ( bufferlength > T55xx_SAMPLES_SIZE )
+        bufferlength = T55xx_SAMPLES_SIZE;
+
     // Clear destination buffer before sending the command
-    memset(dest, 128, m);
-    // Connect the A/D to the peak-detected low-frequency path.
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-    // Now set up the SSC to get the ADC samples that are now streaming at us.
-    FpgaSetupSsc();
+    memset(dest, 0x80, bufferlength);
 
-    LED_D_ON();
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-
-    // Give it a bit of time for the resonant antenna to settle.
-    // And for the tag to fully power up
-    SpinDelay(150);
-
-    // Now start writting
+    // Set up FPGA, 125kHz
+    // Wait for config.. (192+8190xPOW)x8 == 67ms
+    LFSetupFPGAForADC(0, true);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     SpinDelayUs(START_GAP);
 
@@ -1136,53 +1131,40 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
         T55xxWriteBit(Block & i);
 
     // Turn field on to read the response
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-
+    TurnReadLFOn();
     // Now do the acquisition
     i = 0;
     for(;;) {
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
             AT91C_BASE_SSC->SSC_THR = 0x43;
+            LED_D_ON();
         }
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-            // we don't care about actual value, only if it's more or less than a
-            // threshold essentially we capture zero crossings for later analysis
-            //			if(dest[i] < 127) dest[i] = 0; else dest[i] = 1;
             i++;
-            if (i >= m) break;
+            LED_D_OFF();
+            if (i >= bufferlength) break;
         }
     }
 
+    cmd_send(CMD_ACK,0,0,0,0,0);    
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
     LED_D_OFF();
-    DbpString("DONE!");
 }
 
 // Read card traceability data (page 1)
 void T55xxReadTrace(void){
+    
+    uint32_t i = 0;
     uint8_t *dest = BigBuf_get_addr();
-    int m=0, i=0;
+    uint16_t bufferlength = BigBuf_max_traceLen();
+    if ( bufferlength > T55xx_SAMPLES_SIZE )
+        bufferlength= T55xx_SAMPLES_SIZE;
 
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    m = BigBuf_max_traceLen();
     // Clear destination buffer before sending the command
-    memset(dest, 128, m);
-    // Connect the A/D to the peak-detected low-frequency path.
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-    // Now set up the SSC to get the ADC samples that are now streaming at us.
-    FpgaSetupSsc();
+    memset(dest, 0x80, bufferlength);
 
-    LED_D_ON();
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-
-    // Give it a bit of time for the resonant antenna to settle.
-    // And for the tag to fully power up
-    SpinDelay(150);
-
-    // Now start writting
+    LFSetupFPGAForADC(0, true);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     SpinDelayUs(START_GAP);
 
@@ -1191,25 +1173,26 @@ void T55xxReadTrace(void){
     T55xxWriteBit(1); //Page 1
 
     // Turn field on to read the response
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+    TurnReadLFOn();
 
     // Now do the acquisition
-    i = 0;
     for(;;) {
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
             AT91C_BASE_SSC->SSC_THR = 0x43;
+            LED_D_ON();
         }
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
             i++;
-            if (i >= m) break;
+            LED_D_OFF();
+
+            if (i >= bufferlength) break;
         }
     }
 
+    cmd_send(CMD_ACK,0,0,0,0,0);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
     LED_D_OFF();
-    DbpString("DONE!");
 }
 
 /*-------------- Cloning routines -----------*/

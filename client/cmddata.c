@@ -33,6 +33,12 @@ static int CmdHelp(const char *Cmd);
 //by marshmellow
 void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx)
 {
+	if (buff == NULL) 
+		return;
+
+	if ( size >= MAX_DEMOD_BUF_LEN)
+		size = MAX_DEMOD_BUF_LEN;
+
 	size_t i = 0;
 	for (; i < size; i++){
 		DemodBuffer[i]=buff[startIdx++];
@@ -279,18 +285,101 @@ void printEM410x(uint32_t hi, uint64_t id)
       //output 40 bit em id
       PrintAndLog("EM TAG ID    : %010llx", id);
       PrintAndLog("Unique TAG ID: %010llx",  id2lo);
+      PrintAndLog("");
+      PrintAndLog("Possible de-scramble patterns");
+      PrintAndLog("HoneyWell IdentKey");
       PrintAndLog("DEZ 8        : %08lld",id & 0xFFFFFF);
-      PrintAndLog("DEZ 10       : %010lld",id & 0xFFFFFF);
+      PrintAndLog("DEZ 10       : %010lld",id & 0xFFFFFFFF);
       PrintAndLog("DEZ 5.5      : %05lld.%05lld",(id>>16LL) & 0xFFFF,(id & 0xFFFF));
       PrintAndLog("DEZ 3.5A     : %03lld.%05lld",(id>>32ll),(id & 0xFFFF));
+      PrintAndLog("DEZ 3.5B     : %03lld.%05lld",(id & 0xFF000000) >> 24,(id & 0xFFFF));
+      PrintAndLog("DEZ 3.5C     : %03lld.%05lld",(id & 0xFF0000) >> 16,(id & 0xFFFF));
       PrintAndLog("DEZ 14/IK2   : %014lld",id);
       PrintAndLog("DEZ 15/IK3   : %015lld",id2lo);
       PrintAndLog("Other        : %05lld_%03lld_%08lld",(id&0xFFFF),((id>>16LL) & 0xFF),(id & 0xFFFFFF));  
+      PrintAndLog("DEZ 20/ZK    : %02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld",
+        (id2lo & 0xf000000000) >> 36,
+        (id2lo & 0x0f00000000) >> 32,
+        (id2lo & 0x00f0000000) >> 28,
+        (id2lo & 0x000f000000) >> 24,
+        (id2lo & 0x0000f00000) >> 20,
+        (id2lo & 0x00000f0000) >> 16,
+        (id2lo & 0x000000f000) >> 12,
+        (id2lo & 0x0000000f00) >> 8,
+        (id2lo & 0x00000000f0) >> 4,
+        (id2lo & 0x000000000f)
+      );
+
+      PrintAndLog("");			
+      uint64_t paxton = (((id>>32) << 24) | (id & 0xffffff))  + 0x143e00;
+      PrintAndLog("Pattern Paxton  : %0d", paxton);	
+
+      uint32_t p1id = (id & 0xFFFFFF);
+      uint8_t arr[32] = {0x00};
+      int i =0; 
+      int j = 23;
+      for (; i < 24; ++i, --j	){
+      	arr[i] = (p1id >> i) & 1;
+      }
+
+      uint32_t p1  = 0;	
+
+      p1 |= arr[23] << 21;
+      p1 |= arr[22] << 23;
+      p1 |= arr[21] << 20;
+      p1 |= arr[20] << 22;
+      	
+      p1 |= arr[19] << 18;
+      p1 |= arr[18] << 16;
+      p1 |= arr[17] << 19;
+      p1 |= arr[16] << 17;
+      	
+      p1 |= arr[15] << 13;
+      p1 |= arr[14] << 15;
+      p1 |= arr[13] << 12;
+      p1 |= arr[12] << 14;	
+
+      p1 |= arr[11] << 6;
+      p1 |= arr[10] << 2;
+      p1 |= arr[9]  << 7;
+      p1 |= arr[8]  << 1;
+
+      p1 |= arr[7]  << 0;
+      p1 |= arr[6]  << 8;
+      p1 |= arr[5]  << 11;
+      p1 |= arr[4]  << 3;	
+
+      p1 |= arr[3]  << 10;
+      p1 |= arr[2]  << 4;
+      p1 |= arr[1]  << 5;
+      p1 |= arr[0]  << 9;	
+      PrintAndLog("Pattern 1       : 0x%X - %d", p1, p1);
+
+      uint16_t sebury1 = id & 0xFFFF;
+      uint8_t  sebury2 = (id >> 16) & 0x7F;
+      uint32_t sebury3 = id & 0x7FFFFF;
+      PrintAndLog("Pattern Sebury  : %d %d %d  (hex: %X %X %X)", sebury1, sebury2, sebury3, sebury1, sebury2, sebury3);
     }
   }
   return;
 }
 
+
+int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo)
+{
+  int ans = ASKmanDemod(Cmd, FALSE, FALSE);
+  if (!ans) return 0;
+
+  size_t idx=0;
+  if (Em410xDecode(DemodBuffer,(size_t *) &DemodBufferLen, &idx, hi, lo)){
+    if (g_debugMode){
+      PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, DemodBufferLen);
+      printDemodBuff();
+    }
+    return 1;
+  }
+  return 0;	
+}
 //by marshmellow
 //takes 3 arguments - clock, invert and maxErr as integers
 //attempts to demodulate ask while decoding manchester
@@ -311,17 +400,9 @@ int CmdAskEM410xDemod(const char *Cmd)
     PrintAndLog("          : data askem410xdemod 64 1 0 = demod an EM410x Tag ID from GraphBuffer using a clock of RF/64 and inverting data and allowing 0 demod errors");
     return 0;
   }
-  int ans = ASKmanDemod(Cmd, FALSE, FALSE);
-  if (!ans) return 0;
-
-  uint64_t lo =0;
-  uint32_t hi =0;
-  size_t idx=0;
-  if (Em410xDecode(DemodBuffer,(size_t *) &DemodBufferLen, &idx, &hi, &lo)){
-    if (g_debugMode){
-      PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, DemodBufferLen);
-      printDemodBuff();
-    }
+  uint32_t hi;
+  uint64_t lo;
+  if (AskEm410xDemod(Cmd, &hi, &lo)) {
     PrintAndLog("EM410x pattern found: ");
     printEM410x(hi, lo);
     return 1;
@@ -477,6 +558,7 @@ int CmdBiphaseDecodeRaw(const char *Cmd)
 		PrintAndLog("Usage:  data biphaserawdecode [offset] [invert] [maxErr]");
 		PrintAndLog("     Converts 10 or 01 to 1 and 11 or 00 to 0");
 		PrintAndLog("     --must have binary sequence in demodbuffer (run data askrawdemod first)");
+    PrintAndLog("     --invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester");
 		PrintAndLog("");
 		PrintAndLog("     [offset <0|1>], set to 0 not to adjust start position or to 1 to adjust decode start position");
 		PrintAndLog("     [invert <0|1>], set to 1 to invert output");
@@ -638,6 +720,8 @@ int Cmdaskbiphdemod(const char *Cmd)
     PrintAndLog("     NOTE: <invert>  can be entered as second or third argument");
     PrintAndLog("     NOTE: <amplify> can be entered as first, second or last argument");
     PrintAndLog("     NOTE: any other arg must have previous args set to work");
+    PrintAndLog("");
+    PrintAndLog("     NOTE: --invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester");
     PrintAndLog("");
     PrintAndLog("    sample: data rawdemod ab            = demod an ask/biph tag from GraphBuffer");
     PrintAndLog("          : data rawdemod ab a          = demod an ask/biph tag from GraphBuffer, amplified");
@@ -1339,7 +1423,19 @@ int CmdFSKdemodIO(const char *Cmd)
   uint8_t version = bytebits_to_byte(BitStream+idx+27,8); //14,4
   uint8_t facilitycode = bytebits_to_byte(BitStream+idx+18,8) ;
   uint16_t number = (bytebits_to_byte(BitStream+idx+36,8)<<8)|(bytebits_to_byte(BitStream+idx+45,8)); //36,9
-  PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x)",version,facilitycode,number,code,code2);
+  uint8_t crc = bytebits_to_byte(BitStream+idx+54,8);
+  uint16_t calccrc = 0;
+
+  for (uint8_t i=1; i<6; ++i){
+    calccrc += bytebits_to_byte(BitStream+idx+9*i,8);
+    //PrintAndLog("%d", calccrc);
+  }
+  calccrc &= 0xff;
+  calccrc = 0xff - calccrc;
+
+  char *crcStr = (crc == calccrc) ? "crc ok": "!crc";
+
+  PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x) [%02x %s]",version,facilitycode,number,code,code2, crc, crcStr);
   setDemodBuf(BitStream,64,idx);
   if (g_debugMode){
     PrintAndLog("DEBUG: idx: %d, Len: %d, Printing demod buffer:",idx,64);
@@ -1859,21 +1955,19 @@ int NRZrawDemod(const char *Cmd, bool verbose)
   int errCnt=0;
   errCnt = nrzRawDemod(BitStream, &BitLen, &clk, &invert, maxErr);
   if (errCnt > maxErr){
-    if (g_debugMode==1 && verbose) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
+    if (g_debugMode) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
     return 0;
   } 
   if (errCnt<0|| BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
-    if (g_debugMode==1 && verbose) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
+    if (g_debugMode) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
     return 0;
   }
-  PrintAndLog("Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
+  if (verbose || g_debugMode) PrintAndLog("Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
   //prime demod buffer for output
   setDemodBuf(BitStream,BitLen,0);
 
-  if (errCnt>0 && verbose){
-    PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
-  }
-  if (verbose) {
+  if (errCnt>0 && (verbose || g_debugMode)) PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
+  if (verbose || g_debugMode) {
     PrintAndLog("NRZ demoded bitstream:");
     // Now output the bitstream to the scrollback by line of 16 bits
     printDemodBuff();
@@ -1977,7 +2071,7 @@ int CmdRawDemod(const char *Cmd)
 		PrintAndLog("   <help> as 'h', prints the help for the specific modulation");	
 		PrintAndLog("   <options> see specific modulation help for optional parameters");				
 		PrintAndLog("");
-		PrintAndLog("    sample: data rawdemod fs h         = print help for ask/raw demod");
+		PrintAndLog("    sample: data rawdemod fs h         = print help specific to fsk demod");
 		PrintAndLog("          : data rawdemod fs           = demod GraphBuffer using: fsk - autodetect");
 		PrintAndLog("          : data rawdemod ab           = demod GraphBuffer using: ask/biphase - autodetect");
 		PrintAndLog("          : data rawdemod am           = demod GraphBuffer using: ask/manchester - autodetect");
@@ -2106,57 +2200,64 @@ uint8_t getByte(uint8_t bits_per_sample, BitstreamOut* b)
 	return val;
 }
 
+int getSamples(const char *Cmd, bool silent)
+{
+  //If we get all but the last byte in bigbuf,
+  // we don't have to worry about remaining trash
+  // in the last byte in case the bits-per-sample
+  // does not line up on byte boundaries
+
+  uint8_t got[BIGBUF_SIZE-1] = { 0 };
+
+  int n = strtol(Cmd, NULL, 0);
+
+  if (n == 0)
+    n = sizeof(got);
+
+  if (n > sizeof(got))
+    n = sizeof(got);
+
+  PrintAndLog("Reading %d bytes from device memory\n", n);
+  GetFromBigBuf(got,n,0);
+  PrintAndLog("Data fetched");
+  UsbCommand response;
+  WaitForResponse(CMD_ACK, &response);
+  uint8_t bits_per_sample = 8;
+
+  //Old devices without this feature would send 0 at arg[0]
+  if(response.arg[0] > 0)
+  {
+    sample_config *sc = (sample_config *) response.d.asBytes;
+    PrintAndLog("Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample
+          , sc->decimation);
+    bits_per_sample = sc->bits_per_sample;
+  }
+  if(bits_per_sample < 8)
+  {
+    PrintAndLog("Unpacking...");
+    BitstreamOut bout = { got, bits_per_sample * n,  0};
+    int j =0;
+    for (j = 0; j * bits_per_sample < n * 8 && j < sizeof(GraphBuffer); j++) {
+      uint8_t sample = getByte(bits_per_sample, &bout);
+      GraphBuffer[j] = ((int) sample )- 128;
+    }
+    GraphTraceLen = j;
+    PrintAndLog("Unpacked %d samples" , j );
+  }else
+  {
+    for (int j = 0; j < n; j++) {
+      GraphBuffer[j] = ((int)got[j]) - 128;
+    }
+    GraphTraceLen = n;
+  }
+
+  RepaintGraphWindow();
+  return 0;
+}
+
 int CmdSamples(const char *Cmd)
 {
-	//If we get all but the last byte in bigbuf,
-	// we don't have to worry about remaining trash
-	// in the last byte in case the bits-per-sample
-	// does not line up on byte boundaries
-	uint8_t got[BIGBUF_SIZE-1] = { 0 };
-
-	int n = strtol(Cmd, NULL, 0);
-	if (n == 0)
-		n = sizeof(got);
-
-	if (n > sizeof(got))
-		n = sizeof(got);
-
-	PrintAndLog("Reading %d bytes from device memory\n", n);
-	GetFromBigBuf(got,n,0);
-	PrintAndLog("Data fetched");
-	UsbCommand response;
-	WaitForResponse(CMD_ACK, &response);
-	uint8_t bits_per_sample = 8;
-
-	//Old devices without this feature would send 0 at arg[0]
-	if(response.arg[0] > 0)
-	{
-		sample_config *sc = (sample_config *) response.d.asBytes;
-		PrintAndLog("Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample
-					, sc->decimation);
-		bits_per_sample = sc->bits_per_sample;
-	}
-	if(bits_per_sample < 8)
-	{
-		PrintAndLog("Unpacking...");
-		BitstreamOut bout = { got, bits_per_sample * n,  0};
-		int j =0;
-		for (j = 0; j * bits_per_sample < n * 8 && j < sizeof(GraphBuffer); j++) {
-			uint8_t sample = getByte(bits_per_sample, &bout);
-			GraphBuffer[j] = ((int) sample )- 128;
-		}
-		GraphTraceLen = j;
-		PrintAndLog("Unpacked %d samples" , j );
-	}else
-	{
-		for (int j = 0; j < n; j++) {
-			GraphBuffer[j] = ((int)got[j]) - 128;
-		}
-		GraphTraceLen = n;
-	}
-
-	RepaintGraphWindow();
-	return 0;
+  return getSamples(Cmd, false);
 }
 
 int CmdTuneSamples(const char *Cmd)
@@ -2652,60 +2753,52 @@ int CmdZerocrossings(const char *Cmd)
 
 static command_t CommandTable[] =
 {
-  {"help",          CmdHelp,            1, "This help"},
-  {"amp",           CmdAmp,             1, "Amplify peaks"},
+  {"help",            CmdHelp,            1, "This help"},
+  {"amp",             CmdAmp,             1, "Amplify peaks"},
   //{"askdemod",      Cmdaskdemod,        1, "<0 or 1> -- Attempt to demodulate simple ASK tags"},
-  {"askedgedetect", CmdAskEdgeDetect,   1, "[threshold] Adjust Graph for manual ask demod using length of sample differences to detect the edge of a wave (default = 25)"},
-  {"askem410xdemod",CmdAskEM410xDemod,  1, "[clock] [invert<0|1>] [maxErr] -- Demodulate an EM410x tag from GraphBuffer (args optional)"},
-  {"askgproxiidemod",CmdG_Prox_II_Demod,1, "Demodulate a G Prox II tag from GraphBuffer"},
-  //{"askmandemod",   Cmdaskmandemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate ASK/Manchester tags and output binary (args optional)"},
-  //{"askrawdemod",   Cmdaskrawdemod,     1, "[clock] [invert<0|1>] -- Attempt to demodulate ASK tags and output bin (args optional)"},
-  {"autocorr",      CmdAutoCorr,        1, "[window length] [g] -- Autocorrelation over window - g to save back to GraphBuffer (overwrite)"},
+  {"askedgedetect",   CmdAskEdgeDetect,   1, "[threshold] Adjust Graph for manual ask demod using length of sample differences to detect the edge of a wave (default = 25)"},
+  {"askem410xdemod",  CmdAskEM410xDemod,  1, "[clock] [invert<0|1>] [maxErr] -- Demodulate an EM410x tag from GraphBuffer (args optional)"},
+  {"askgproxiidemod", CmdG_Prox_II_Demod, 1, "Demodulate a G Prox II tag from GraphBuffer"},
+  {"autocorr",        CmdAutoCorr,        1, "[window length] [g] -- Autocorrelation over window - g to save back to GraphBuffer (overwrite)"},
   {"biphaserawdecode",CmdBiphaseDecodeRaw,1,"[offset] [invert<0|1>] Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
-  {"bitsamples",    CmdBitsamples,      0, "Get raw samples as bitstring"},
+  {"bitsamples",      CmdBitsamples,      0, "Get raw samples as bitstring"},
   //{"bitstream",     CmdBitstream,       1, "[clock rate] -- Convert waveform into a bitstream"},
-  {"buffclear",     CmdBuffClear,       1, "Clear sample buffer and graph window"},
-  {"dec",           CmdDec,             1, "Decimate samples"},
-  {"detectclock",   CmdDetectClockRate, 1, "[modulation] Detect clock rate of wave in GraphBuffer (options: 'a','f','n','p' for ask, fsk, nrz, psk respectively)"},
+  {"buffclear",       CmdBuffClear,       1, "Clear sample buffer and graph window"},
+  {"dec",             CmdDec,             1, "Decimate samples"},
+  {"detectclock",     CmdDetectClockRate, 1, "[modulation] Detect clock rate of wave in GraphBuffer (options: 'a','f','n','p' for ask, fsk, nrz, psk respectively)"},
   //{"fskdemod",      CmdFSKdemod,        1, "Demodulate graph window as a HID FSK"},
-  {"fskawiddemod",  CmdFSKdemodAWID,    1, "Demodulate an AWID FSK tag from GraphBuffer"},
+  {"fskawiddemod",    CmdFSKdemodAWID,    1, "Demodulate an AWID FSK tag from GraphBuffer"},
   //{"fskfcdetect",   CmdFSKfcDetect,     1, "Try to detect the Field Clock of an FSK wave"},
-  {"fskhiddemod",   CmdFSKdemodHID,     1, "Demodulate a HID FSK tag from GraphBuffer"},
-  {"fskiodemod",    CmdFSKdemodIO,      1, "Demodulate an IO Prox FSK tag from GraphBuffer"},
-  {"fskpyramiddemod",CmdFSKdemodPyramid,1, "Demodulate a Pyramid FSK tag from GraphBuffer"},
-  {"fskparadoxdemod",CmdFSKdemodParadox,1, "Demodulate a Paradox FSK tag from GraphBuffer"},
-  //{"fskrawdemod",   CmdFSKrawdemod,     1, "[clock rate] [invert] [rchigh] [rclow] Demodulate graph window from FSK to bin (clock = 50)(invert = 1|0)(rchigh = 10)(rclow=8)"},
-  {"getbitstream",  CmdGetBitStream,    1, "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
-  {"grid",          CmdGrid,            1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
-  {"hexsamples",    CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
-  {"hide",          CmdHide,            1, "Hide graph window"},
-  {"hpf",           CmdHpf,             1, "Remove DC offset from trace"},
-  {"load",          CmdLoad,            1, "<filename> -- Load trace (to graph window"},
-  {"ltrim",         CmdLtrim,           1, "<samples> -- Trim samples from left of trace"},
-  {"rtrim",         CmdRtrim,           1, "<location to end trace> -- Trim samples from right of trace"},
+  {"fskhiddemod",     CmdFSKdemodHID,     1, "Demodulate a HID FSK tag from GraphBuffer"},
+  {"fskiodemod",      CmdFSKdemodIO,      1, "Demodulate an IO Prox FSK tag from GraphBuffer"},
+  {"fskpyramiddemod", CmdFSKdemodPyramid, 1, "Demodulate a Pyramid FSK tag from GraphBuffer"},
+  {"fskparadoxdemod", CmdFSKdemodParadox, 1, "Demodulate a Paradox FSK tag from GraphBuffer"},
+  {"getbitstream",    CmdGetBitStream,    1, "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
+  {"grid",            CmdGrid,            1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
+  {"hexsamples",      CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
+  {"hide",            CmdHide,            1, "Hide graph window"},
+  {"hpf",             CmdHpf,             1, "Remove DC offset from trace"},
+  {"load",            CmdLoad,            1, "<filename> -- Load trace (to graph window"},
+  {"ltrim",           CmdLtrim,           1, "<samples> -- Trim samples from left of trace"},
+  {"rtrim",           CmdRtrim,           1, "<location to end trace> -- Trim samples from right of trace"},
   //{"mandemod",      CmdManchesterDemod, 1, "[i] [clock rate] -- Manchester demodulate binary stream (option 'i' to invert output)"},
-  {"manrawdecode",  Cmdmandecoderaw,    1, "Manchester decode binary stream in DemodBuffer"},
-  {"manmod",        CmdManchesterMod,   1, "[clock rate] -- Manchester modulate a binary stream"},
-  {"norm",          CmdNorm,            1, "Normalize max/min to +/-128"},
-  //{"nrzdetectclock",CmdDetectNRZClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
-  //{"nrzrawdemod",   CmdNRZrawDemod,     1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate nrz tags and output binary (args optional)"},
-  {"plot",          CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
-  //{"pskdetectclock",CmdDetectPSKClockRate, 1, "Detect ASK, PSK, or NRZ clock rate"},
-  {"printdemodbuffer",CmdPrintDemodBuff,1, "[x] -- print the data in the DemodBuffer - 'x' for hex output"},
-  {"pskindalademod",CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Demodulate an indala tag (PSK1) from GraphBuffer (args optional)"},
-  //{"psk1rawdemod",  CmdPSK1rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk1 tags and output binary (args optional)"},
-  //{"psk2rawdemod",  CmdPSK2rawDemod,    1, "[clock] [invert<0|1>] [maxErr] -- Attempt to demodulate psk2 tags and output binary (args optional)"},
-  {"rawdemod",      CmdRawDemod,        1, "[modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary"},  
-  {"samples",       CmdSamples,         0, "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
-  {"save",          CmdSave,            1, "<filename> -- Save trace (from graph window)"},
-  {"scale",         CmdScale,           1, "<int> -- Set cursor display scale"},
-  {"setdebugmode",  CmdSetDebugMode,    1, "<0|1> -- Turn on or off Debugging Mode for demods"},
-  {"shiftgraphzero",CmdGraphShiftZero,  1, "<shift> -- Shift 0 for Graphed wave + or - shift value"},
+  {"manrawdecode",    Cmdmandecoderaw,    1, "Manchester decode binary stream in DemodBuffer"},
+  {"manmod",          CmdManchesterMod,   1, "[clock rate] -- Manchester modulate a binary stream"},
+  {"norm",            CmdNorm,            1, "Normalize max/min to +/-128"},
+  {"plot",            CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
+  {"printdemodbuffer",CmdPrintDemodBuff,  1, "[x] -- print the data in the DemodBuffer - 'x' for hex output"},
+  {"pskindalademod",  CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Demodulate an indala tag (PSK1) from GraphBuffer (args optional)"},
+  {"rawdemod",        CmdRawDemod,        1, "[modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary"},  
+  {"samples",         CmdSamples,         0, "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
+  {"save",            CmdSave,            1, "<filename> -- Save trace (from graph window)"},
+  {"scale",           CmdScale,           1, "<int> -- Set cursor display scale"},
+  {"setdebugmode",    CmdSetDebugMode,    1, "<0|1> -- Turn on or off Debugging Mode for demods"},
+  {"shiftgraphzero",  CmdGraphShiftZero,  1, "<shift> -- Shift 0 for Graphed wave + or - shift value"},
   //{"threshold",     CmdThreshold,       1, "<threshold> -- Maximize/minimize every value in the graph window depending on threshold"},
-  {"dirthreshold",  CmdDirectionalThreshold,   1, "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
-  {"tune",          CmdTuneSamples,     0, "Get hw tune samples for graph window"},
-  {"undec",         CmdUndec,           1, "Un-decimate samples by 2"},
-  {"zerocrossings", CmdZerocrossings,   1, "Count time between zero-crossings"},
+  {"dirthreshold",    CmdDirectionalThreshold,   1, "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
+  {"tune",            CmdTuneSamples,     0, "Get hw tune samples for graph window"},
+  {"undec",           CmdUndec,           1, "Un-decimate samples by 2"},
+  {"zerocrossings",   CmdZerocrossings,   1, "Count time between zero-crossings"},
   {NULL, NULL, 0, NULL}
 };
 
