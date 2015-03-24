@@ -18,7 +18,7 @@ SRC_LF = lfops.c hitag2.c lfsampling.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = epa.c iso14443a.c mifareutil.c mifarecmd.c mifaresniff.c
 SRC_ISO14443b = iso14443.c
-SRC_CRAPTO1 = crapto1.c crypto1.c des.c aes.c 
+SRC_CRAPTO1 = crapto1.c crypto1.c des.c aes.c desfire_key.c desfire_crypto.c mifaredesfire.c
 SRC_CRC = iso14443crc.c crc.c crc16.c crc32.c 
 
 THUMBSRC = start.c \

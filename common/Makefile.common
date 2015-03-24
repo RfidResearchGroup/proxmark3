@@ -71,8 +71,6 @@ LDFLAGS = -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
 
 LIBS = -lgcc
 
-LIBS = -lgcc 
-
 THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(THUMBSRC))
 ARMOBJ   = $(ARMSRC:%.c=$(OBJDIR)/%.o)
 ASMOBJ   = $(patsubst %.s,$(OBJDIR)/%.o,$(ASMSRC))

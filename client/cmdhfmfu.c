@@ -7,7 +7,6 @@
 //-----------------------------------------------------------------------------
 // High frequency MIFARE ULTRALIGHT (C) commands
 //-----------------------------------------------------------------------------
-//#include <openssl/des.h>
 #include "loclass/des.h"
 #include "cmdhfmfu.h"
 #include "cmdhfmf.h"
@@ -391,7 +390,7 @@ int CmdHF14AMfucAuth(const char *Cmd){
 	//Change key to user defined one
 	if (cmdp == 'k' || cmdp == 'K'){
 		keyNo = param_get8(Cmd, 1);
-		if(keyNo >= 4) errors = true;
+		if(keyNo > 4) errors = true;
 	}
 
 	if (cmdp == 'h' || cmdp == 'H') {
@@ -430,7 +429,6 @@ int CmdHF14AMfucAuth(const char *Cmd){
 		uint8_t * data= resp.d.asBytes;
 
 		if (isOK){
-			PrintAndLog("enc(RndB):%s", sprint_hex(data+1, 8));
 			memcpy(enc_random_b,data+1,8);
 		} else {
 			PrintAndLog("Auth failed");
@@ -440,10 +438,7 @@ int CmdHF14AMfucAuth(const char *Cmd){
 		PrintAndLog("Command execute timeout");
 		return 1;
 	}
-
 	uint8_t iv[8]           = { 0 };
-	// Do we need random ? Right now we use all ones, is that random enough ?
-//    DES_random_key(&RndA);
 
 	PrintAndLog("     RndA  :%s",sprint_hex(random_a, 8));
 	PrintAndLog("     e_RndB:%s",sprint_hex(enc_random_b, 8));
@@ -490,6 +485,23 @@ int CmdHF14AMfucAuth(const char *Cmd){
 
 		if (isOK){
 			PrintAndLog("enc(RndA'):%s", sprint_hex(data2+1, 8));
+			
+			uint8_t foo[8] = { 0 };
+			uint8_t bar[8] = { 0 };
+			memcpy(foo, data2+1, 8);
+			des3_set2key_enc(&ctx, key);
+
+			des3_crypt_cbc(&ctx    // des3_context *ctx
+				, DES_DECRYPT      // int mode
+				, 8      // size_t length
+				, enc_random_b     // unsigned char iv[8]
+				, foo           // const unsigned char *input
+				, bar   // unsigned char *output
+			);
+
+			PrintAndLog("BAR:%s",sprint_hex(bar, 8));
+
+			
 		} else {
 			return 2;
 		}

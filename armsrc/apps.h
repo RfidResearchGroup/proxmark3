@@ -21,6 +21,13 @@
 #include "../common/crc32.h"
 #include "BigBuf.h"
 #include "../include/hitag2.h"
+#include "../include/mifare.h"
+//#include <openssl/des.h>
+//#include <openssl/aes.h>
+//#include "des.h"
+//#include "aes.h"
+#include "desfire.h"
+
 
 extern const uint8_t OddByteParity[256];
 extern int rsamples;   // = 0;
@@ -170,7 +177,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand * c);
 void ReaderMifare(bool first_try);
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
-void MifareUReadBlock(uint8_t arg0,uint8_t *datain);
+void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 void MifareUC_Auth1(uint8_t arg0, uint8_t *datain);
 void MifareUC_Auth2(uint32_t arg0, uint8_t *datain);
 void MifareUReadCard(uint8_t arg0, int Pages, uint8_t *datain);
@@ -207,6 +214,17 @@ void 	OnError(uint8_t reason);
 
 
 
+// desfire_crypto.h
+void	*mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes, off_t offset, int communication_settings);
+void    *mifare_cryto_postprocess_data (desfiretag_t tag, void *data, ssize_t *nbytes, int communication_settings);
+void    mifare_cypher_single_block (desfirekey_t  key, uint8_t *data, uint8_t *ivect, MifareCryptoDirection direction, MifareCryptoOperation operation, size_t block_size);
+void    mifare_cypher_blocks_chained (desfiretag_t tag, desfirekey_t key, uint8_t *ivect, uint8_t *data, size_t data_size, MifareCryptoDirection direction, MifareCryptoOperation operation);
+size_t  key_block_size (const desfirekey_t  key);
+size_t  padded_data_length (const size_t nbytes, const size_t block_size);
+size_t  maced_data_length (const desfirekey_t  key, const size_t nbytes);
+size_t  enciphered_data_length (const desfiretag_t tag, const size_t nbytes, int communication_settings);
+void    cmac_generate_subkeys (desfirekey_t key);
+void    cmac (const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
 
 
 /// iso15693.h

@@ -12,7 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <openssl/des.h>
+//#include <openssl/des.h>
+#include "loclass/des.h"
 #include "cmdmain.h"
 #include "proxmark3.h"
 #include "../include/common.h"
@@ -236,7 +237,7 @@ char * GetCardSizeStr( uint8_t fsize ){
 	uint16_t lsize = 1 << (fsize >>1);
 	
 	// is  LSB set?
-	if (  fsize & (1 << 0 ) )
+	if (  fsize & 1 )
 		sprintf(retStr, "0x%02X (%d - %d bytes)",fsize, usize, lsize);
 	else 
 		sprintf(retStr, "0x%02X (%d bytes)", fsize, lsize);		
@@ -251,7 +252,7 @@ char * GetProtocolStr(uint8_t id){
 	if ( id == 0x05)
 		sprintf(retStr,"0x%02X (ISO 14443-3, 14443-4)", id);
 	else
-		sprintf(retStr,"0x%02X", id);	
+		sprintf(retStr,"0x%02X (Unknown)", id);	
 	return buf;
 }
 

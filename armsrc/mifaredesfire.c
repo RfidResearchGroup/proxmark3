@@ -1,5 +1,6 @@
 #include "mifaredesfire.h"
 #include "des.h"
+#include "BigBuf.h"
 
 #define MAX_APPLICATION_COUNT 28
 #define MAX_FILE_COUNT 16
@@ -23,7 +24,7 @@ bool InitDesfireCard(){
 
 	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
 	
-	iso14a_set_tracing(TRUE);
+	set_tracing(TRUE);
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	
 	int len = iso14443a_select_card(NULL,card,NULL);
@@ -65,7 +66,7 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 	}
 	
 	if ( flags & CLEARTRACE ){
-		iso14a_clear_trace();
+		clear_trace();
 	}
 	
 	if ( flags & INIT ){
@@ -109,8 +110,8 @@ void MifareDesfireGetInformation(){
 		PCB == 0x0A because sending CID byte.
 		CID == 0x00 first card?		
 	*/
-	iso14a_clear_trace();
-	iso14a_set_tracing(TRUE);
+	clear_trace();
+	set_tracing(TRUE);
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	// card select - information
@@ -434,8 +435,8 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 	size_t wrappedLen = 0;
 	uint8_t wCmd[USB_CMD_DATA_SIZE] = {0};
 	
-	uint8_t *resp = ((uint8_t *)BigBuf) + RECV_RESP_OFFSET;
-    uint8_t *resp_par = ((uint8_t *)BigBuf) + RECV_RESP_PAR_OFFSET;
+	uint8_t resp[MAX_FRAME_SIZE];
+    uint8_t par[MAX_PARITY_SIZE];
 	
 	wrappedLen = CreateAPDU( cmd, cmd_len, wCmd);
 	
@@ -444,7 +445,7 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 	}
 	ReaderTransmit( wCmd, wrappedLen, NULL);
 
-	len = ReaderReceive(resp, resp_par);
+	len = ReaderReceive(resp, par);
 	
 	if( len == 0x00 ){
 		if (MF_DBGLEVEL >= 4) {

@@ -26,14 +26,15 @@ typedef struct {
 } __attribute__((__packed__)) iso14a_card_select_t;
 
 typedef enum ISO14A_COMMAND {
-	ISO14A_CONNECT = 1,
-	ISO14A_NO_DISCONNECT = 2,
-	ISO14A_APDU = 4,
-	ISO14A_RAW = 8,
-	ISO14A_REQUEST_TRIGGER = 0x10,
-	ISO14A_APPEND_CRC = 0x20,
-	ISO14A_SET_TIMEOUT = 0x40,
-	ISO14A_NO_SELECT = 0x80
+	ISO14A_CONNECT = 			(1 << 0),
+	ISO14A_NO_DISCONNECT =		(1 << 1),
+	ISO14A_APDU = 				(1 << 2),
+	ISO14A_RAW =				(1 << 3),
+	ISO14A_REQUEST_TRIGGER =	(1 << 4),
+	ISO14A_APPEND_CRC =			(1 << 5),
+	ISO14A_SET_TIMEOUT =		(1 << 6),
+	ISO14A_NO_SELECT =			(1 << 7),
+	ISO14A_TOPAZMODE =			(1 << 8)
 } iso14a_command_t;
 
 #endif // _MIFARE_H_

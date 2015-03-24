@@ -1085,11 +1085,11 @@ void T55xxWriteBit(int bit)
 // Write one card block in page 0, no lock
 void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 {
-	uint32_t i = 0;
+    uint32_t i = 0;
 
-	// Set up FPGA, 125kHz
-	// Wait for config.. (192+8190xPOW)x8 == 67ms
-	LFSetupFPGAForADC(0, true);
+    // Set up FPGA, 125kHz
+    // Wait for config.. (192+8190xPOW)x8 == 67ms
+    LFSetupFPGAForADC(0, true);
 
     // Now start writting
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1122,20 +1122,28 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 
+void TurnReadLFOn(){
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+    // Give it a bit of time for the resonant antenna to settle.
+    SpinDelayUs(8*150);
+}
+
+
 // Read one card block in page 0
 void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 {
     uint32_t i = 0;
     uint8_t *dest = BigBuf_get_addr();
     uint16_t bufferlength = BigBuf_max_traceLen();
-	if ( bufferlength > T55xx_SAMPLES_SIZE )
-		bufferlength = T55xx_SAMPLES_SIZE;
+    if ( bufferlength > T55xx_SAMPLES_SIZE )
+        bufferlength = T55xx_SAMPLES_SIZE;
 
-	memset(dest, 0x80, bufferlength);
-	
-	// Set up FPGA, 125kHz
-	// Wait for config.. (192+8190xPOW)x8 == 67ms
-	LFSetupFPGAForADC(0, true);
+    // Clear destination buffer before sending the command
+    memset(dest, 0x80, bufferlength);
+
+    // Set up FPGA, 125kHz
+    // Wait for config.. (192+8190xPOW)x8 == 67ms
+    LFSetupFPGAForADC(0, true);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     SpinDelayUs(START_GAP);
 
@@ -1154,40 +1162,40 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
         T55xxWriteBit(Block & i);
 
     // Turn field on to read the response
-	TurnReadLFOn();
-
+    TurnReadLFOn();
     // Now do the acquisition
     i = 0;
     for(;;) {
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
             AT91C_BASE_SSC->SSC_THR = 0x43;
-			LED_D_ON();
+            LED_D_ON();
         }
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			++i;
-			LED_D_OFF();
-			if (i >= bufferlength) break;
+            i++;
+            LED_D_OFF();
+            if (i >= bufferlength) break;
         }
     }
 
-	cmd_send(CMD_ACK,0,0,0,0,0);
+    cmd_send(CMD_ACK,0,0,0,0,0);    
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
     LED_D_OFF();
 }
 
 // Read card traceability data (page 1)
 void T55xxReadTrace(void){
-
-	uint32_t i = 0;
+    
+    uint32_t i = 0;
     uint8_t *dest = BigBuf_get_addr();
     uint16_t bufferlength = BigBuf_max_traceLen();
-	if ( bufferlength > T55xx_SAMPLES_SIZE )
-		bufferlength = T55xx_SAMPLES_SIZE;
+    if ( bufferlength > T55xx_SAMPLES_SIZE )
+        bufferlength= T55xx_SAMPLES_SIZE;
 
-	memset(dest, 0x80, bufferlength);  
-  
-	LFSetupFPGAForADC(0, true);
+    // Clear destination buffer before sending the command
+    memset(dest, 0x80, bufferlength);
+
+    LFSetupFPGAForADC(0, true);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     SpinDelayUs(START_GAP);
 
@@ -1196,24 +1204,25 @@ void T55xxReadTrace(void){
     T55xxWriteBit(1); //Page 1
 
     // Turn field on to read the response
-	TurnReadLFOn();
+    TurnReadLFOn();
 
     // Now do the acquisition
     for(;;) {
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
             AT91C_BASE_SSC->SSC_THR = 0x43;
-			LED_D_ON();
+            LED_D_ON();
         }
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			++i;
-			LED_D_OFF();
-		
-			if (i >= bufferlength) break;
+            i++;
+            LED_D_OFF();
+
+            if (i >= bufferlength) break;
 		}
 	}
   
 	cmd_send(CMD_ACK,0,0,0,0,0);
+    cmd_send(CMD_ACK,0,0,0,0,0);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
     LED_D_OFF();
 }

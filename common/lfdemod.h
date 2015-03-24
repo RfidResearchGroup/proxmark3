@@ -16,6 +16,7 @@
 #include <stdint.h>
 
 int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr);
+uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, int high, int low);
 int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr);
 uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo);
 //uint64_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx);
@@ -47,5 +48,6 @@ uint8_t justNoise(uint8_t *BitStream, size_t size);
 uint8_t countPSK_FC(uint8_t *BitStream, size_t size);
 int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert);
 int DetectPSKClock(uint8_t dest[], size_t size, int clock);
+void askAmp(uint8_t *BitStream, size_t size);
 
 #endif

@@ -224,21 +224,21 @@ uint32_t DoAcquisition_config( bool silent)
 				  ,silent);
 }
 
-uint32_t ReadLF(bool activeField)
+uint32_t ReadLF(bool activeField, bool silent)
 {
-	printConfig();
+	if (!silent) printConfig();
 	LFSetupFPGAForADC(config.divisor, activeField);
 	// Now call the acquisition routine
-	return DoAcquisition_config(false);
+	return DoAcquisition_config(silent);
 }
 
 /**
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SampleLF()
+uint32_t SampleLF(bool printCfg)
 {
-	return ReadLF(true);
+	return ReadLF(true, printCfg);
 }
 /**
 * Initializes the FPGA for snoop-mode (field off), and acquires the samples.
@@ -247,5 +247,5 @@ uint32_t SampleLF()
 
 uint32_t SnoopLF()
 {
-	return ReadLF(false);
+	return ReadLF(false, true);
 }

@@ -140,7 +140,7 @@ int CmdHF14AReader(const char *Cmd)
 	iso14a_card_select_t card;
 	memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
 
-	uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS
+	uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 	
 	if(select_status == 0) {
 		PrintAndLog("iso14443a card select failed");
@@ -151,6 +151,18 @@ int CmdHF14AReader(const char *Cmd)
 		SendCommand(&c);
 		return 0;
 	}
+
+	if(select_status == 3) {
+		PrintAndLog("Card doesn't support standard iso14443-3 anticollision");
+	PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
+		// disconnect
+		c.arg[0] = 0;
+		c.arg[1] = 0;
+		c.arg[2] = 0;
+		SendCommand(&c);
+		return 0;
+	}
+
 
 	PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
 	PrintAndLog(" UID : %s", sprint_hex(card.uid, card.uidlen));
@@ -497,16 +509,18 @@ int CmdHF14ASnoop(const char *Cmd) {
   return 0;
 }
 
+
 int CmdHF14ACmdRaw(const char *cmd) {
     UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}};
-    uint8_t reply=1;
-    uint8_t crc=0;
-    uint8_t power=0;
-    uint8_t active=0;
-    uint8_t active_select=0;
+    bool reply=1;
+    bool crc = FALSE;
+    bool power = FALSE;
+    bool active = FALSE;
+    bool active_select = FALSE;
     uint16_t numbits=0;
+	bool bTimeout = FALSE;
 	uint32_t timeout=0;
-	uint8_t bTimeout=0;
+	bool topazmode = FALSE;
     char buf[5]="";
     int i=0;
     uint8_t data[USB_CMD_DATA_SIZE];
@@ -522,8 +536,10 @@ int CmdHF14ACmdRaw(const char *cmd) {
         PrintAndLog("       -s    active signal field ON with select");
         PrintAndLog("       -b    number of bits to send. Useful for send partial byte");
 		PrintAndLog("       -t    timeout in ms");
+		PrintAndLog("       -T    use Topaz protocol to send command");
         return 0;
     }
+
 
     // strip
     while (*cmd==' ' || *cmd=='\t') cmd++;
@@ -533,19 +549,19 @@ int CmdHF14ACmdRaw(const char *cmd) {
         if (cmd[i]=='-') {
             switch (cmd[i+1]) {
                 case 'r': 
-                    reply=0;
+                    reply = FALSE;
                     break;
                 case 'c':
-                    crc=1;
+                    crc = TRUE;
                     break;
                 case 'p':
-                    power=1;
+                    power = TRUE;
                     break;
                 case 'a':
-                    active=1;
+                    active = TRUE;
                     break;
                 case 's':
-                    active_select=1;
+                    active_select = TRUE;
                     break;
                 case 'b': 
                     sscanf(cmd+i+2,"%d",&temp);
@@ -555,12 +571,15 @@ int CmdHF14ACmdRaw(const char *cmd) {
                     i-=2;
                     break;
 				case 't':
-					bTimeout=1;
+					bTimeout = TRUE;
 					sscanf(cmd+i+2,"%d",&temp);
 					timeout = temp;
 					i+=3;
 					while(cmd[i]!=' ' && cmd[i]!='\0') { i++; }
 					i-=2;
+					break;
+                case 'T':
+					topazmode = TRUE;
 					break;
                 default:
                     PrintAndLog("Invalid option");
@@ -591,10 +610,15 @@ int CmdHF14ACmdRaw(const char *cmd) {
         PrintAndLog("Invalid char on input");
         return 0;
     }
+
     if(crc && datalen>0 && datalen<sizeof(data)-2)
     {
         uint8_t first, second;
+		if (topazmode) {
+			ComputeCrc14443(CRC_14443_B, data, datalen, &first, &second);
+		} else {
         ComputeCrc14443(CRC_14443_A, data, datalen, &first, &second);
+		}
         data[datalen++] = first;
         data[datalen++] = second;
     }
@@ -607,7 +631,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
     }
 
 	if(bTimeout){
-	    #define MAX_TIMEOUT 40542464 	// (2^32-1) * (8*16) / 13560000Hz * 1000ms/s = 
+	    #define MAX_TIMEOUT 40542464 	// = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
         c.arg[0] |= ISO14A_SET_TIMEOUT;
         if(timeout > MAX_TIMEOUT) {
             timeout = MAX_TIMEOUT;
@@ -615,11 +639,16 @@ int CmdHF14ACmdRaw(const char *cmd) {
         }
 		c.arg[2] = 13560000 / 1000 / (8*16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
 	}
+
     if(power)
         c.arg[0] |= ISO14A_NO_DISCONNECT;
+
     if(datalen>0)
         c.arg[0] |= ISO14A_RAW;
 
+	if(topazmode)
+		c.arg[0] |= ISO14A_TOPAZMODE;
+		
 	// Max buffer is USB_CMD_DATA_SIZE
     c.arg[1] = (datalen & 0xFFFF) | (numbits << 16);
     memcpy(c.d.asBytes,data,datalen);
@@ -634,6 +663,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
     } // if reply
     return 0;
 }
+
 
 static void waitCmd(uint8_t iSelect)
 {
