@@ -1428,7 +1428,7 @@ int CmdFSKdemodIO(const char *Cmd)
 
   for (uint8_t i=1; i<6; ++i){
     calccrc += bytebits_to_byte(BitStream+idx+9*i,8);
-    PrintAndLog("%d", calccrc);
+    //PrintAndLog("%d", calccrc);
   }
   calccrc &= 0xff;
   calccrc = 0xff - calccrc;
@@ -1436,7 +1436,6 @@ int CmdFSKdemodIO(const char *Cmd)
   char *crcStr = (crc == calccrc) ? "crc ok": "!crc";
 
   PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x) [%02x %s]",version,facilitycode,number,code,code2, crc, crcStr);
-  //PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x)",version,facilitycode,number,code,code2);
   setDemodBuf(BitStream,64,idx);
   if (g_debugMode){
     PrintAndLog("DEBUG: idx: %d, Len: %d, Printing demod buffer:",idx,64);
