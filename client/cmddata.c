@@ -400,8 +400,8 @@ int CmdAskEM410xDemod(const char *Cmd)
     PrintAndLog("          : data askem410xdemod 64 1 0 = demod an EM410x Tag ID from GraphBuffer using a clock of RF/64 and inverting data and allowing 0 demod errors");
     return 0;
   }
-  uint32_t hi;
-  uint64_t lo;
+  uint32_t hi = 0;
+  uint64_t lo = 0;
   if (AskEm410xDemod(Cmd, &hi, &lo)) {
     PrintAndLog("EM410x pattern found: ");
     printEM410x(hi, lo);

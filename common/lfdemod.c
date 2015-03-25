@@ -88,37 +88,34 @@ uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_
     return 0;
   }
   // 111111111 bit pattern represent start of frame
-  uint8_t preamble[] = {1,1,1,1,1,1,1,1,1};
+  //  include 0 in front to help get start pos
+  uint8_t preamble[] = {0,1,1,1,1,1,1,1,1,1};
   uint32_t idx = 0;
   uint32_t parityBits = 0;
   uint8_t errChk = 0;
   uint8_t FmtLen = 10;
   *startIdx = 0;
-  for (uint8_t extraBitChk=0; extraBitChk<5; extraBitChk++){
-    errChk = preambleSearch(BitStream+extraBitChk+*startIdx, preamble, sizeof(preamble), size, startIdx);
-    if (errChk == 0) return 0;
-    if (*size>64) FmtLen = 22;
-    if (*size<64) return 0;
-    idx = *startIdx + 9;
-    for (i=0; i<FmtLen; i++){ //loop through 10 or 22 sets of 5 bits (50-10p = 40 bits or 88 bits)
-      parityBits = bytebits_to_byte(BitStream+(i*5)+idx,5);
-      //check even parity
-      if (parityTest(parityBits, 5, 0) == 0){
-        //parity failed try next bit (in the case of 1111111111) but last 9 = preamble
-        startIdx++;
-        errChk = 0;
-        break;
-      }
-      //set uint64 with ID from BitStream
-      for (uint8_t ii=0; ii<4; ii++){
-        *hi = (*hi << 1) | (*lo >> 63);
-        *lo = (*lo << 1) | (BitStream[(i*5)+ii+idx]);
-      }
+  errChk = preambleSearch(BitStream, preamble, sizeof(preamble), size, startIdx);
+  if (errChk == 0 || *size < 64) return 0;
+  if (*size > 64) FmtLen = 22;
+  *startIdx += 1; //get rid of 0 from preamble
+  idx = *startIdx + 9;
+  for (i=0; i<FmtLen; i++){ //loop through 10 or 22 sets of 5 bits (50-10p = 40 bits or 88 bits)
+    parityBits = bytebits_to_byte(BitStream+(i*5)+idx,5);
+    //check even parity
+    if (parityTest(parityBits, 5, 0) == 0){
+      //parity failed quit
+    	return 0;
     }
-    if (errChk != 0) return 1;
-    //skip last 5 bit parity test for simplicity.
-    // *size = 64 | 128;
+    //set uint64 with ID from BitStream
+    for (uint8_t ii=0; ii<4; ii++){
+      *hi = (*hi << 1) | (*lo >> 63);
+      *lo = (*lo << 1) | (BitStream[(i*5)+ii+idx]);
+    }
   }
+  if (errChk != 0) return 1;
+  //skip last 5 bit parity test for simplicity.
+  // *size = 64 | 128;
   return 0;
 }
 
