@@ -896,6 +896,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
             //Dbprintf("DEBUG: No Tag");
         }
         WDT_HIT();
+        hi = 0;
         lo = 0;
         clk=0;
         invert=0;
