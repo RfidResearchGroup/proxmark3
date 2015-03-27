@@ -755,8 +755,8 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = BigBuf_get_addr();
-	const size_t sizeOfBigBuff = BigBuf_max_traceLen();
-	size_t size = 0; 
+	//const size_t sizeOfBigBuff = BigBuf_max_traceLen();
+	size_t size; 
 	uint32_t hi2=0, hi=0, lo=0;
 	int idx=0;
 	// Configure to go in 125Khz listen mode
@@ -769,16 +769,16 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
 		DoAcquisition_default(-1,true);
 		// FSK demodulator
-		size = sizeOfBigBuff;  //variable size will change after demod so re initialize it before use
+		//size = sizeOfBigBuff;  //variable size will change after demod so re initialize it before use
+		size = 50*128*2; //big enough to catch 2 sequences of largest format
 		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo);
 		
-		if (idx>0 && lo>0){
-			// final loop, go over previously decoded manchester data and decode into usable tag ID
-			// 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
-			if (hi2 != 0){ //extra large HID tags
+		if (idx>0 && lo>0 && (size==96 || size==192)){
+			// go over previously decoded manchester data and decode into usable tag ID
+			if (hi2 != 0){ //extra large HID tags  88/192 bits
 				Dbprintf("TAG ID: %x%08x%08x (%d)",
 				  (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
-			}else {  //standard HID tags <38 bits
+			}else {  //standard HID tags 44/96 bits
 				//Dbprintf("TAG ID: %x%08x (%d)",(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF); //old print cmd
 				uint8_t bitlen = 0;
 				uint32_t fc = 0;
@@ -833,8 +833,8 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				return;
 			}
 			// reset
-			hi2 = hi = lo = 0;
 		}
+		hi2 = hi = lo = idx = 0;
 		WDT_HIT();
 	}
 	DbpString("Stopped");
@@ -859,49 +859,42 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 
 		DoAcquisition_default(-1,true);
 		size  = BigBuf_max_traceLen();
-		//Dbprintf("DEBUG: Buffer got");
 		//askdemod and manchester decode
+		if (size > 16385) size = 16385; //big enough to catch 2 sequences of largest format
 		errCnt = askmandemod(dest, &size, &clk, &invert, maxErr);
-		//Dbprintf("DEBUG: ASK Got");
 		WDT_HIT();
 
-		if (errCnt>=0){
-			errCnt = Em410xDecode(dest, &size, &idx, &hi, &lo);
-			//Dbprintf("DEBUG: EM GOT");
-			if (errCnt){
-				if (size>64){
-					Dbprintf("EM XL TAG ID: %06x%08x%08x - (%05d_%03d_%08d)",
-					  hi,
-					  (uint32_t)(lo>>32),
-					  (uint32_t)lo,
-					  (uint32_t)(lo&0xFFFF),
-					  (uint32_t)((lo>>16LL) & 0xFF),
-					  (uint32_t)(lo & 0xFFFFFF));
-				} else {
-					Dbprintf("EM TAG ID: %02x%08x - (%05d_%03d_%08d)",
-					  (uint32_t)(lo>>32),
-					  (uint32_t)lo,
-					  (uint32_t)(lo&0xFFFF),
-					  (uint32_t)((lo>>16LL) & 0xFF),
-					  (uint32_t)(lo & 0xFFFFFF));
-				}
+		if (errCnt<0) continue;
+	
+		errCnt = Em410xDecode(dest, &size, &idx, &hi, &lo);
+		if (errCnt){
+			if (size>64){
+				Dbprintf("EM XL TAG ID: %06x%08x%08x - (%05d_%03d_%08d)",
+				  hi,
+				  (uint32_t)(lo>>32),
+				  (uint32_t)lo,
+				  (uint32_t)(lo&0xFFFF),
+				  (uint32_t)((lo>>16LL) & 0xFF),
+				  (uint32_t)(lo & 0xFFFFFF));
+			} else {
+				Dbprintf("EM TAG ID: %02x%08x - (%05d_%03d_%08d)",
+				  (uint32_t)(lo>>32),
+				  (uint32_t)lo,
+				  (uint32_t)(lo&0xFFFF),
+				  (uint32_t)((lo>>16LL) & 0xFF),
+				  (uint32_t)(lo & 0xFFFFFF));
 			}
+
 			if (findone){
 				if (ledcontrol) LED_A_OFF();
 				*high=lo>>32;
 				*low=lo & 0xFFFFFFFF;
 				return;
 			}
-		} else{
-			//Dbprintf("DEBUG: No Tag");
 		}
 		WDT_HIT();
-		hi = 0;
-		lo = 0;
-		clk=0;
-		invert=0;
-		errCnt=0;
-		size=0;
+		hi = lo = size = idx = 0;
+		clk = invert = errCnt = 0;
 	}
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
@@ -925,47 +918,47 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		//fskdemod and get start index
 		WDT_HIT();
 		idx = IOdemodFSK(dest, BigBuf_max_traceLen());
-		if (idx>0){
-			//valid tag found
+		if (idx<0) continue;
+		//valid tag found
 
-			//Index map
-			//0           10          20          30          40          50          60
-			//|           |           |           |           |           |           |
-			//01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
-			//-----------------------------------------------------------------------------
-			//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
-			//
-			//XSF(version)facility:codeone+codetwo
-			//Handle the data
-			if(findone){ //only print binary if we are doing one
-				Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx],   dest[idx+1],   dest[idx+2],dest[idx+3],dest[idx+4],dest[idx+5],dest[idx+6],dest[idx+7],dest[idx+8]);
-				Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+9], dest[idx+10],dest[idx+11],dest[idx+12],dest[idx+13],dest[idx+14],dest[idx+15],dest[idx+16],dest[idx+17]);
-				Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+18],dest[idx+19],dest[idx+20],dest[idx+21],dest[idx+22],dest[idx+23],dest[idx+24],dest[idx+25],dest[idx+26]);
-				Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+27],dest[idx+28],dest[idx+29],dest[idx+30],dest[idx+31],dest[idx+32],dest[idx+33],dest[idx+34],dest[idx+35]);
-				Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+36],dest[idx+37],dest[idx+38],dest[idx+39],dest[idx+40],dest[idx+41],dest[idx+42],dest[idx+43],dest[idx+44]);
-				Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+45],dest[idx+46],dest[idx+47],dest[idx+48],dest[idx+49],dest[idx+50],dest[idx+51],dest[idx+52],dest[idx+53]);
-				Dbprintf("%d%d%d%d%d%d%d%d %d%d",dest[idx+54],dest[idx+55],dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
-			}
-			code = bytebits_to_byte(dest+idx,32);
-			code2 = bytebits_to_byte(dest+idx+32,32);
-			version = bytebits_to_byte(dest+idx+27,8); //14,4
-			facilitycode = bytebits_to_byte(dest+idx+18,8) ;
-			number = (bytebits_to_byte(dest+idx+36,8)<<8)|(bytebits_to_byte(dest+idx+45,8)); //36,9
-
-			Dbprintf("XSF(%02d)%02x:%05d (%08x%08x)",version,facilitycode,number,code,code2);
-			// if we're only looking for one tag
-			if (findone){
-				if (ledcontrol)	LED_A_OFF();
-				//LED_A_OFF();
-				*high=code;
-				*low=code2;
-				return;
-			}
-			code=code2=0;
-			version=facilitycode=0;
-			number=0;
-			idx=0;
+		//Index map
+		//0           10          20          30          40          50          60
+		//|           |           |           |           |           |           |
+		//01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
+		//-----------------------------------------------------------------------------
+		//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
+		//
+		//XSF(version)facility:codeone+codetwo
+		//Handle the data
+		if(findone){ //only print binary if we are doing one
+			Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx],   dest[idx+1],   dest[idx+2],dest[idx+3],dest[idx+4],dest[idx+5],dest[idx+6],dest[idx+7],dest[idx+8]);
+			Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+9], dest[idx+10],dest[idx+11],dest[idx+12],dest[idx+13],dest[idx+14],dest[idx+15],dest[idx+16],dest[idx+17]);
+			Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+18],dest[idx+19],dest[idx+20],dest[idx+21],dest[idx+22],dest[idx+23],dest[idx+24],dest[idx+25],dest[idx+26]);
+			Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+27],dest[idx+28],dest[idx+29],dest[idx+30],dest[idx+31],dest[idx+32],dest[idx+33],dest[idx+34],dest[idx+35]);
+			Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+36],dest[idx+37],dest[idx+38],dest[idx+39],dest[idx+40],dest[idx+41],dest[idx+42],dest[idx+43],dest[idx+44]);
+			Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+45],dest[idx+46],dest[idx+47],dest[idx+48],dest[idx+49],dest[idx+50],dest[idx+51],dest[idx+52],dest[idx+53]);
+			Dbprintf("%d%d%d%d%d%d%d%d %d%d",dest[idx+54],dest[idx+55],dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
 		}
+		code = bytebits_to_byte(dest+idx,32);
+		code2 = bytebits_to_byte(dest+idx+32,32);
+		version = bytebits_to_byte(dest+idx+27,8); //14,4
+		facilitycode = bytebits_to_byte(dest+idx+18,8);
+		number = (bytebits_to_byte(dest+idx+36,8)<<8)|(bytebits_to_byte(dest+idx+45,8)); //36,9
+
+		Dbprintf("XSF(%02d)%02x:%05d (%08x%08x)",version,facilitycode,number,code,code2);
+		// if we're only looking for one tag
+		if (findone){
+			if (ledcontrol)	LED_A_OFF();
+			//LED_A_OFF();
+			*high=code;
+			*low=code2;
+			return;
+		}
+		code=code2=0;
+		version=facilitycode=0;
+		number=0;
+		idx=0;
+
 		WDT_HIT();
 	}
 	DbpString("Stopped");

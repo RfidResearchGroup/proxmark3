@@ -1146,7 +1146,7 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 
 	if (strlen(Cmd)>0 && strlen(Cmd)<=2) {
 		 if (rfLen==1){
-			invert=1;   //if invert option only is used
+			invert = 1;   //if invert option only is used
 			rfLen = 0;
 		 }
 	}
@@ -1156,9 +1156,8 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 	if (BitLen==0) return 0;
 	//get field clock lengths
 	uint16_t fcs=0;
-	uint8_t dummy=0;
 	if (fchigh==0 || fclow == 0){
-		fcs = countFC(BitStream, BitLen, &dummy);
+		fcs = countFC(BitStream, BitLen, 1);
 		if (fcs==0){
 			fchigh=10;
 			fclow=8;
@@ -1822,7 +1821,7 @@ int PSKDemod(const char *Cmd, bool verbose)
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t BitLen = getFromGraphBuf(BitStream);
 	if (BitLen==0) return -1;
-	uint8_t carrier=countPSK_FC(BitStream, BitLen);
+	uint8_t carrier=countFC(BitStream, BitLen, 0);
 	if (carrier!=2 && carrier!=4 && carrier!=8){
 		//invalid carrier
 		return 0;
@@ -1957,7 +1956,7 @@ int NRZrawDemod(const char *Cmd, bool verbose)
 		if (g_debugMode) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
 		return 0;
 	} 
-	if (errCnt<0|| BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
+	if (errCnt<0 || BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
 		if (g_debugMode) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
 		return 0;
 	}

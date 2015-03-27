@@ -146,7 +146,7 @@ uint8_t GetPskCarrier(const char str[], bool printAns, bool verbose)
 	}
 	//uint8_t countPSK_FC(uint8_t *BitStream, size_t size)
 
-	carrier = countPSK_FC(grph,size);
+	carrier = countFC(grph,size,0);
 	// Only print this message if we're not looping something
 	if (printAns){
 		PrintAndLog("Auto-detected PSK carrier rate: %d", carrier);
@@ -232,8 +232,7 @@ uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose)
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t size = getFromGraphBuf(BitStream);
 	if (size==0) return 0;
-	uint8_t dummy = 0;
-	uint16_t ans = countFC(BitStream, size, &dummy); 
+	uint16_t ans = countFC(BitStream, size, 1); 
 	if (ans==0) {
 		if (verbose) PrintAndLog("DEBUG: No data found");
 		return 0;
