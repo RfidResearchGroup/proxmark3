@@ -414,7 +414,10 @@ int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch)
 	int invert=0;
 	int clk=0;
 	int maxErr=100;
-	
+	//param_getdec(Cmd, 0, &clk);
+	//param_getdec(Cmd, 1, &invert);
+	//maxErr = param_get32ex(Cmd, 2, 0xFFFFFFFF, 10);
+	//if (maxErr == 0xFFFFFFFF) maxErr=100;
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
 	if (invert != 0 && invert != 1) {
@@ -675,7 +678,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	int offset=0, clk=0, invert=0, maxErr=0, ans=0;
 	ans = sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 	if (ans>0)
-		ans = ASKrawDemod(Cmd+2, FALSE);
+		ans = ASKrawDemod(Cmd+1, FALSE);
 	else
 		ans = ASKrawDemod(Cmd, FALSE);
 	if (!ans) {
@@ -2082,19 +2085,19 @@ int CmdRawDemod(const char *Cmd)
 	char cmdp2 = Cmd[1];
 	int ans = 0;
 	if (cmdp == 'f' && cmdp2 == 's'){
-		ans = CmdFSKrawdemod(Cmd+3);
+		ans = CmdFSKrawdemod(Cmd+2);
 	} else if(cmdp == 'a' && cmdp2 == 'b'){
-		ans = Cmdaskbiphdemod(Cmd+3);
+		ans = Cmdaskbiphdemod(Cmd+2);
 	} else if(cmdp == 'a' && cmdp2 == 'm'){
-		ans = Cmdaskmandemod(Cmd+3);
+		ans = Cmdaskmandemod(Cmd+2);
 	} else if(cmdp == 'a' && cmdp2 == 'r'){
-		ans = Cmdaskrawdemod(Cmd+3);
+		ans = Cmdaskrawdemod(Cmd+2);
 	} else if(cmdp == 'n' && cmdp2 == 'r'){
-		ans = CmdNRZrawDemod(Cmd+3);
+		ans = CmdNRZrawDemod(Cmd+2);
 	} else if(cmdp == 'p' && cmdp2 == '1'){
-		ans = CmdPSK1rawDemod(Cmd+3);
+		ans = CmdPSK1rawDemod(Cmd+2);
 	} else if(cmdp == 'p' && cmdp2 == '2'){
-		ans = CmdPSK2rawDemod(Cmd+3);
+		ans = CmdPSK2rawDemod(Cmd+2);
 	} else { 
 		PrintAndLog("unknown modulation entered - see help ('h') for parameter structure");
 	}
