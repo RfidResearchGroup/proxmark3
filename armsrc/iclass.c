@@ -1627,7 +1627,10 @@ uint8_t handshakeIclassTag(uint8_t *card_data)
 	static uint8_t act_all[]     = { 0x0a };
 	static uint8_t identify[]    = { 0x0c };
 	static uint8_t select[]      = { 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	static uint8_t readcheck_cc[]= { 0x88, 0x02 };
+
+
+	static uint8_t readcheck_cc[]= { 0x88, 0x02,};
+
 	uint8_t resp[ICLASS_BUFFER_SIZE];
 
 	uint8_t read_status = 0;
@@ -1662,28 +1665,33 @@ uint8_t handshakeIclassTag(uint8_t *card_data)
 	if(ReaderReceiveIClass(resp) == 8) {
 		//Save CC (e-purse) in response data
 		memcpy(card_data+8,resp,8);
-
-		//Got both
-		read_status = 2;
+		read_status++;
 	}
 
 	return read_status;
 }
 
+
 // Reader iClass Anticollission
 void ReaderIClass(uint8_t arg0) {
 
-    uint8_t card_data[24]={0};
+	uint8_t card_data[6 * 8]={0xFF};
     uint8_t last_csn[8]={0};
 	
+	//Read conf block CRC(0x01) => 0xfa 0x22
+	uint8_t readConf[] = { ICLASS_CMD_READ_OR_IDENTIFY,0x01, 0xfa, 0x22};
+	//Read conf block CRC(0x05) => 0xde  0x64
+	uint8_t readAA[] = { ICLASS_CMD_READ_OR_IDENTIFY,0x05, 0xde, 0x64};
+
+
     int read_status= 0;
+	uint8_t result_status = 0;
     bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;
-	bool get_cc = arg0 & FLAG_ICLASS_READER_GET_CC;
+
 	set_tracing(TRUE);
     setupIclassReader();
 
-    size_t datasize = 0;
-    while(!BUTTON_PRESS())
+	while(!BUTTON_PRESS())
     {
 
 		if(!tracing) {
@@ -1695,15 +1703,40 @@ void ReaderIClass(uint8_t arg0) {
 		read_status = handshakeIclassTag(card_data);
 
 		if(read_status == 0) continue;
-		if(read_status == 1) datasize = 8;
-		if(read_status == 2) datasize = 16;
+		if(read_status == 1) result_status = FLAG_ICLASS_READER_CSN;
+		if(read_status == 2) result_status = FLAG_ICLASS_READER_CSN|FLAG_ICLASS_READER_CC;
 
-		//Todo, read the public blocks 1,5 aswell:
-		//
-		// 0 : CSN (we already have)
+		// handshakeIclass returns CSN|CC, but the actual block
+		// layout is CSN|CONFIG|CC, so here we reorder the data,
+		// moving CC forward 8 bytes
+		memcpy(card_data+16,card_data+8, 8);
+		//Read block 1, config
+		if(arg0 & FLAG_ICLASS_READER_CONF)
+		{
+			if(sendCmdGetResponseWithRetries(readConf, sizeof(readConf),card_data+8, 10, 10))
+			{
+				Dbprintf("Failed to dump config block");
+			}else
+			{
+				result_status |= FLAG_ICLASS_READER_CONF;
+			}
+		}
+
+		//Read block 5, AA
+		if(arg0 & FLAG_ICLASS_READER_AA){
+			if(sendCmdGetResponseWithRetries(readAA, sizeof(readAA),card_data+(8*4), 10, 10))
+			{
+//				Dbprintf("Failed to dump AA block");
+			}else
+			{
+				result_status |= FLAG_ICLASS_READER_AA;
+			}
+		}
+
+		// 0 : CSN
 		// 1 : Configuration
-		// 2 : e-purse (we already have)
-		// (3,4 write-only)
+		// 2 : e-purse
+		// (3,4 write-only, kc and kd)
 		// 5 Application issuer area
 		//
 		//Then we can 'ship' back the 8 * 5 bytes of data,
@@ -1713,10 +1746,10 @@ void ReaderIClass(uint8_t arg0) {
 		//Send back to client, but don't bother if we already sent this
 		if(memcmp(last_csn, card_data, 8) != 0)
 		{
-
-			if(!get_cc || (get_cc && read_status == 2))
+			// If caller requires that we get CC, continue until we got it
+			if( (arg0 & read_status & FLAG_ICLASS_READER_CC) || !(arg0 & FLAG_ICLASS_READER_CC))
 			{
-				cmd_send(CMD_ACK,read_status,0,0,card_data,datasize);
+				cmd_send(CMD_ACK,result_status,0,0,card_data,sizeof(card_data));
 				if(abort_after_read) {
 					LED_A_OFF();
 					return;
@@ -1724,7 +1757,7 @@ void ReaderIClass(uint8_t arg0) {
 				//Save that we already sent this....
 				memcpy(last_csn, card_data, 8);
 			}
-			//If 'get_cc' was specified and we didn't get a CC, we'll just keep trying...
+
 		}
 		LED_B_OFF();
     }

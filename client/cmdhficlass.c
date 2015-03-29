@@ -30,6 +30,7 @@
 #include "loclass/elite_crack.h"
 #include "loclass/fileutils.h"
 #include "protocols.h"
+#include "usb_cmd.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -166,29 +167,25 @@ int CmdHFiClassSim(const char *Cmd)
 
 int CmdHFiClassReader(const char *Cmd)
 {
-	UsbCommand c = {CMD_READER_ICLASS, {0}};
+	UsbCommand c = {CMD_READER_ICLASS, {FLAG_ICLASS_READER_CSN|
+					FLAG_ICLASS_READER_CONF|FLAG_ICLASS_READER_AA}};
 	SendCommand(&c);
 	UsbCommand resp;
 	while(!ukbhit()){
 		if (WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
-			uint8_t isOK    = resp.arg[0] & 0xff;
+			uint8_t readStatus    = resp.arg[0] & 0xff;
 			uint8_t * data  = resp.d.asBytes;
 
-			PrintAndLog("isOk:%02x", isOK);
-			if( isOK == 0){
+			PrintAndLog("Readstatus:%02x", readStatus);
+			if( readStatus == 0){
 				//Aborted
 				PrintAndLog("Quitting...");
 				return 0;
 			}
-			if(isOK > 0)
-			{
-				PrintAndLog("CSN: %s",sprint_hex(data,8));
-			}
-			if(isOK >= 1)
-			{
-				PrintAndLog("CC: %s",sprint_hex(data+8,8));
-			}else{
-				PrintAndLog("No CC obtained");
+			if( readStatus & FLAG_ICLASS_READER_CSN) PrintAndLog("CSN: %s",sprint_hex(data,8));
+			if( readStatus & FLAG_ICLASS_READER_CC)  PrintAndLog("CC: %s",sprint_hex(data+16,8));
+			if( readStatus & FLAG_ICLASS_READER_CONF){
+				printIclassDumpInfo(data);
 			}
 		} else {
 			PrintAndLog("Command execute timeout");
@@ -269,7 +266,7 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 	uint8_t key_sel_p[8] = { 0 };
 
 	UsbCommand c = {CMD_READER_ICLASS, {0}};
-	c.arg[0] = FLAG_ICLASS_READER_ONLY_ONCE| FLAG_ICLASS_READER_GET_CC;
+	c.arg[0] = FLAG_ICLASS_READER_ONLY_ONCE| FLAG_ICLASS_READER_CC;
 	SendCommand(&c);
 
 
@@ -284,7 +281,7 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 	uint8_t * data  = resp.d.asBytes;
 
 	memcpy(CSN,data,8);
-	memcpy(CCNR,data+8,8);
+	memcpy(CCNR,data+16,8);
 
 	PrintAndLog("isOk:%02x", isOK);
 
