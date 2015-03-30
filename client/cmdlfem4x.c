@@ -69,9 +69,9 @@ int CmdEM410xSim(const char *Cmd)
 	uint8_t uid[5] = {0x00};
 
 	if (cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  lf em4x 410xsim <UID>");
+		PrintAndLog("Usage:  lf em4x em410xsim <UID>");
 		PrintAndLog("");
-		PrintAndLog("     sample: lf em4x 410xsim 0F0368568B");
+		PrintAndLog("     sample: lf em4x em410xsim 0F0368568B");
 		return 0;
 	}
 
