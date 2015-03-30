@@ -15,7 +15,6 @@
 #include "util.h"
 #include "string.h"
 #include "cmd.h"
-
 #include "iso14443crc.h"
 #include "iso14443a.h"
 #include "crapto1.h"
@@ -260,6 +259,10 @@ void UartReset()
 	Uart.parityBits = 0;				// holds 8 parity bits
 	Uart.startTime = 0;
 	Uart.endTime = 0;
+	
+	Uart.byteCntMax = 0;
+	Uart.posCnt = 0;
+	Uart.syncBit = 9999;
 }
 
 void UartInit(uint8_t *data, uint8_t *parity)
@@ -279,12 +282,19 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time)
 	if (Uart.state == STATE_UNSYNCD) {											// not yet synced
 	
 		Uart.syncBit = 9999; 													// not set
+		
+		// 00x11111 2|3 ticks pause followed by 6|5 ticks unmodulated	 	Sequence Z (a "0" or "start of communication")
+		// 11111111 8 ticks unmodulation									Sequence Y (a "0" or "end of communication" or "no information")
+		// 111100x1 4 ticks unmodulated followed by 2|3 ticks pause			Sequence X (a "1")
+
 		// The start bit is one ore more Sequence Y followed by a Sequence Z (... 11111111 00x11111). We need to distinguish from
-		// Sequence X followed by Sequence Y followed by Sequence Z (111100x1 11111111 00x11111)
-		// we therefore look for a ...xx11111111111100x11111xxxxxx... pattern 
+		// Sequence X followed by Sequence Y followed by Sequence Z     (111100x1 11111111 00x11111)
+		// we therefore look for a ...xx1111 11111111 00x11111xxxxxx... pattern 
 		// (12 '1's followed by 2 '0's, eventually followed by another '0', followed by 5 '1's)
-#define ISO14443A_STARTBIT_MASK		0x07FFEF80									// mask is    00000111 11111111 11101111 10000000
-#define ISO14443A_STARTBIT_PATTERN	0x07FF8F80									// pattern is 00000111 11111111 10001111 10000000
+		//
+#define ISO14443A_STARTBIT_MASK		0x07FFEF80		// mask is    00001111 11111111 1110 1111 10000000
+#define ISO14443A_STARTBIT_PATTERN	0x07FF8F80		// pattern is 00001111 11111111 1000 1111 10000000
+
 		if		((Uart.fourBits & (ISO14443A_STARTBIT_MASK >> 0)) == ISO14443A_STARTBIT_PATTERN >> 0) Uart.syncBit = 7;
 		else if ((Uart.fourBits & (ISO14443A_STARTBIT_MASK >> 1)) == ISO14443A_STARTBIT_PATTERN >> 1) Uart.syncBit = 6;
 		else if ((Uart.fourBits & (ISO14443A_STARTBIT_MASK >> 2)) == ISO14443A_STARTBIT_PATTERN >> 2) Uart.syncBit = 5;
@@ -434,6 +444,11 @@ void DemodReset()
 	Demod.highCnt = 0;
 	Demod.startTime = 0;
 	Demod.endTime = 0;
+	
+	//
+	Demod.bitCount = 0;
+	Demod.syncBit = 0xFFFF;
+	Demod.samples = 0;
 }
 
 void DemodInit(uint8_t *data, uint8_t *parity)
@@ -532,9 +547,7 @@ static RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non
 				}
 			}
 		}
-			
 	} 
-
     return FALSE;	// not finished yet, need more data
 }
 
@@ -1608,7 +1621,7 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 //-----------------------------------------------------------------------------
 static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receivedResponsePar, uint16_t offset)
 {
-	uint32_t c;
+	uint32_t c = 0x00;
 	
 	// Set FPGA mode to "reader listen mode", no modulation (listen
 	// only, since we are receiving, not transmitting).
@@ -1622,7 +1635,6 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
 	// clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-	c = 0;
 	for(;;) {
 		WDT_HIT();
 
@@ -1867,7 +1879,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 	DemodReset();
 	UartReset();
 	NextTransferTime = 2*DELAY_ARM2AIR_AS_READER;
-	iso14a_set_timeout(50*106); // 10ms default
+	iso14a_set_timeout(10*106); // 10ms default
 }
 
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
@@ -2863,6 +2875,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
 					// And ready to receive another response.
 					DemodReset();
+
 					// And reset the Miller decoder including its (now outdated) input buffer
 					UartInit(receivedCmd, receivedCmdPar);
 				}
