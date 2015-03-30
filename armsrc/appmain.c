@@ -12,18 +12,17 @@
 
 #include "../common/usb_cdc.h"
 #include "../common/cmd.h"
-
 #include "../include/proxmark3.h"
+#include "../include/hitag2.h"
 #include "apps.h"
 #include "util.h"
 #include "printf.h"
 #include "string.h"
 #include <stdarg.h>
-
 #include "legicrf.h"
-#include "../include/hitag2.h"
 #include "lfsampling.h"
 #include "BigBuf.h"
+
 #ifdef WITH_LCD
  #include "LCD.h"
 #endif
@@ -826,7 +825,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			MifareReadBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
 		case CMD_MIFAREU_READBL:
-			MifareUReadBlock(c->arg[0],c->d.asBytes);
+			MifareUReadBlock(c->arg[0],c->arg[1], c->d.asBytes);
 			break;
 		case CMD_MIFAREUC_AUTH1:
 			MifareUC_Auth1(c->arg[0],c->d.asBytes);
@@ -836,10 +835,16 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		case CMD_MIFAREU_READCARD:
 			MifareUReadCard(c->arg[0], c->arg[1], c->d.asBytes);
-                        break;
+            break;
 		case CMD_MIFAREUC_READCARD:
 			MifareUReadCard(c->arg[0], c->arg[1], c->d.asBytes);
+			break;		
+		case CMD_MIFAREUC_SETPWD: 
+			MifareUSetPwd(c->arg[0], c->d.asBytes);
 			break;
+		//case CMD_MIFAREU_SETUID: 
+			//MifareUSetUid(c->arg[0], c->d.asBytes);
+			//break;		
 		case CMD_MIFARE_READSC:
 			MifareReadSector(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
@@ -848,10 +853,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		case CMD_MIFAREU_WRITEBL_COMPAT:
 			MifareUWriteBlock(c->arg[0], c->d.asBytes);
-                        break;
+            break;
 		case CMD_MIFAREU_WRITEBL:
-                        MifareUWriteBlock_Special(c->arg[0], c->d.asBytes);
-                        break;
+			MifareUWriteBlock_Special(c->arg[0], c->d.asBytes);
+			break;
 		case CMD_MIFARE_NESTED:
 			MifareNested(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
@@ -893,6 +898,25 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		// mifare sniffer
 		case CMD_MIFARE_SNIFFER:
 			SniffMifare(c->arg[0]);
+			break;
+
+		//mifare desfire
+		case CMD_MIFARE_DESFIRE_READBL:	break;
+		case CMD_MIFARE_DESFIRE_WRITEBL: break;
+		case CMD_MIFARE_DESFIRE_AUTH1:
+			MifareDES_Auth1(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			break;
+		case CMD_MIFARE_DESFIRE_AUTH2:
+			//MifareDES_Auth2(c->arg[0],c->d.asBytes);
+			break;
+		case CMD_MIFARE_DES_READER:
+			//readermifaredes(c->arg[0], c->arg[1], c->d.asBytes);
+			break;
+		case CMD_MIFARE_DESFIRE_INFO:
+			MifareDesfireGetInformation();
+			break;
+		case CMD_MIFARE_DESFIRE:
+			MifareSendCommand(c->arg[0], c->arg[1], c->d.asBytes);
 			break;
 
 #endif

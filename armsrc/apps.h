@@ -22,8 +22,6 @@
 #include "BigBuf.h"
 #include "../include/hitag2.h"
 #include "../include/mifare.h"
-//#include <openssl/des.h>
-//#include <openssl/aes.h>
 //#include "des.h"
 //#include "aes.h"
 #include "desfire.h"
@@ -196,6 +194,7 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);  // Work with "magic Chinese" card
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void MifareCIdent();  // is "magic chinese" card?
+void MifareUSetPwd(uint8_t arg0, uint8_t *datain);
 
 //desfire
 void Mifare_DES_Auth1(uint8_t arg0,uint8_t *datain);

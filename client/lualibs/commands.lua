@@ -138,6 +138,8 @@ local _commands = {
 	CMD_MIFAREUC_AUTH1 =						                         0x0724,
 	CMD_MIFAREUC_AUTH2 =						                         0x0725,
 	CMD_MIFAREUC_READCARD =		   					                     0x0726,
+	CMD_MIFAREUC_SETPWD =												 0x0727,
+	CMD_MIFAREU_SETUID = 							                     0x0728,
 
 	--// mifare desfire
 	CMD_MIFARE_DESFIRE_READBL =                                          0x0728,
