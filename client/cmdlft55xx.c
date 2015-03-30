@@ -264,35 +264,30 @@ bool DecodeT55xxBlock(){
 
 	switch( config.modulation ){
 		case DEMOD_FSK:
-			//CmdLtrim("26");
 			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
 			CmdLtrim(cmdStr);			
 			sprintf(cmdStr,"%d %d", bitRate[config.bitrate], config.inverted );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK1:
-			//CmdLtrim("26");
 			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
 			CmdLtrim(cmdStr);			
 			sprintf(cmdStr,"%d 1 8 5", bitRate[config.bitrate] );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK1a:
-			//CmdLtrim("26");
 			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
 			CmdLtrim(cmdStr);			
 			sprintf(cmdStr,"%d 0 8 5", bitRate[config.bitrate] );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK2:
-			//CmdLtrim("26");
 			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
 			CmdLtrim(cmdStr);			
 			sprintf(cmdStr,"%d 0 10 8", bitRate[config.bitrate] );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK2a:
-			//CmdLtrim("26");
 			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
 			CmdLtrim(cmdStr);			
 			sprintf(cmdStr,"%d 1 10 8", bitRate[config.bitrate] );
