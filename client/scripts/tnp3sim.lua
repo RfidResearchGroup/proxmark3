@@ -26,7 +26,7 @@ Arguments:
 ]]
 
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
-local DEBUG = false -- the debug flag
+local DEBUG = true -- the debug flag
 
 
 local band = bit32.band
@@ -302,25 +302,25 @@ function DivideByK(msw, lsw)
 	remainder = num % RADIX
 	return remainder, highLSW, lowLSW
 	
-	            uint num = 0 | (msw >> 16) & 0xffff;
+	            -- uint num = 0 | (msw >> 16) & 0xffff;
  
-            highLSW = 0 | (num / RADIX) << 16;
-            remainder = num % RADIX;
+            -- highLSW = 0 | (num / RADIX) << 16;
+            -- remainder = num % RADIX;
 
-            num = (remainder << 16) | (msw & 0xffff);
+            -- num = (remainder << 16) | (msw & 0xffff);
  
-            highLSW |= num / RADIX;
-            remainder = num % RADIX;
+            -- highLSW |= num / RADIX;
+            -- remainder = num % RADIX;
 
-            num = (remainder << 16) | ((lsw >> 16) & 0xffff);
+            -- num = (remainder << 16) | ((lsw >> 16) & 0xffff);
 
-            lowLSW = 0 | (num / RADIX) << 16;
-            remainder = num % RADIX;
+            -- lowLSW = 0 | (num / RADIX) << 16;
+            -- remainder = num % RADIX;
 
-            num = (remainder << 16) | (lsw & 0xffff);
+            -- num = (remainder << 16) | (lsw & 0xffff);
 
-            lowLSW |= num / RADIX;
-            remainder = num % RADIX;
+            -- lowLSW |= num / RADIX;
+            -- remainder = num % RADIX;
 
 end
 
@@ -397,7 +397,8 @@ local function main(args)
 	print( ('       UID : 0x%s'):format(uid) )
 	print( ('    CARDID : 0x%s %s [%s]'):format(
 								cardidMsw,cardidLsw, 
-								Num2Card(cardidMsw, cardidLsw))
+								--Num2Card(cardidMsw, cardidLsw))
+								'')
 								)
 	print( string.rep('--',20) )
 

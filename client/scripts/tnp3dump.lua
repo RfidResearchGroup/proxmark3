@@ -148,7 +148,7 @@ local function main(args)
 	core.clearCommandBuffer()
 	
 	if 0x01 ~= result.sak then -- NXP MIFARE TNP3xxx
-		return oops('This is not a TNP3xxx tag. aborting.')
+	--	return oops('This is not a TNP3xxx tag. aborting.')
 	end	
 
 	-- Show tag info
@@ -215,7 +215,9 @@ local function main(args)
 		local blockdata, err = waitCmd()
 		if err then return oops(err) end		
 
+
 		if  blockNo%4 ~= 3 then
+		
 			if blockNo < 8 then
 				-- Block 0-7 not encrypted
 				blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
