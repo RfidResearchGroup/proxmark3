@@ -34,8 +34,8 @@ int getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi
 		if (BitStream[i] < *low) *low = BitStream[i];
 	}
 	if (*high < 123) return -1; // just noise
-	*high = (int)(((*high-128)*(((float)fuzzHi)/100))+128);
-	*low = (int)(((*low-128)*(((float)fuzzLo)/100))+128);
+	*high = ((*high-128)*fuzzHi + 12800)/100;
+	*low = ((*low-128)*fuzzLo + 12800)/100;
 	return 1;
 }
 
@@ -559,28 +559,26 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen,
 	size_t idx=0;
 	size_t numBits=0;
 	uint32_t n=1;
-	uint16_t lowWaves = ((rfLen*100/fclow));  // (((float)(rfLen))/((float)fclow));
-	uint16_t highWaves = ((rfLen*100/fchigh)); // (((float)(rfLen))/((float)fchigh));
 	for( idx=1; idx < size; idx++) {
 		n++;
 		if (dest[idx]==lastval) continue; 
 		
 		//if lastval was 1, we have a 1->0 crossing
 		if (dest[idx-1]==1) {
-			if (!numBits && n < lowWaves/100) {
+			if (!numBits && n < rfLen/fclow) {
 				n=0;
 				lastval = dest[idx];
 				continue;
 			}
-			n = (size_t)((((n*1000)/lowWaves)+5)/10);
+			n = (n * fclow + rfLen/2) / rfLen;
 		} else {// 0->1 crossing 
 			//test first bitsample too small
-			if (!numBits && n < highWaves/100) {
+			if (!numBits && n < rfLen/fchigh) {
 				n=0;
 				lastval = dest[idx];
 				continue;
 			}
-			n = (((n*1000)/highWaves)+5)/10; 
+			n = (n * fchigh + rfLen/2) / rfLen; 
 		}
 		if (n == 0) n = 1;
 
@@ -590,11 +588,11 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen,
 		lastval=dest[idx];
 	}//end for
 	// if valid extra bits at the end were all the same frequency - add them in
-	if (n > highWaves/100) {
+	if (n > rfLen/fchigh) {
 		if (dest[idx-2]==1) {
-			n=(((n*1000)/lowWaves)+5)/10;
+			n = (n * fclow + rfLen/2) / rfLen;
 		} else {
-			n=(((n*1000)/highWaves)+5)/10;
+			n = (n * fchigh + rfLen/2) / rfLen;
 		}
 		memset(dest+numBits, dest[idx-1]^invert , n);
 		numBits += n;
