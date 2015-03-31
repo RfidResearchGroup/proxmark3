@@ -1,6 +1,7 @@
 /*
 -----------------------------------------------------------------------------
- This code is licensed to you under the terms of the GNU GPL, version 2 or,
+ This code is licensed to you under the ter 
+ms of the GNU GPL, version 2 or,
  at your option, any later version. See the LICENSE.txt file for the text of
  the license.
 -----------------------------------------------------------------------------
@@ -13,8 +14,7 @@ MEMORY
 {
 	bootphase1 : ORIGIN = 0x00100000, LENGTH = 0x200             /* Phase 1 bootloader: Copies real bootloader to RAM */
 	bootphase2 : ORIGIN = 0x00100200, LENGTH = 0x2000 - 0x200    /* Main bootloader code, stored in Flash, executed from RAM */
-	fpgaimage  : ORIGIN = 0x00102000, LENGTH = 96k - 0x2000      /* Place where the FPGA image will end up */
-	osimage    : ORIGIN = 0x00118000, LENGTH = 256K - 96k        /* Place where the main OS will end up */
+	osimage    : ORIGIN = 0x00102000, LENGTH = 256K - 0x2000     /* Place where the main OS will end up */
 	ram        : ORIGIN = 0x00200000, LENGTH = 64K - 0x20        /* RAM, minus small common area */
 	commonarea : ORIGIN = 0x00200000 + 64K - 0x20, LENGTH = 0x20 /* Communication between bootloader and main OS */
 }

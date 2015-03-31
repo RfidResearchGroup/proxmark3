@@ -11,8 +11,7 @@ INCLUDE ../common/ldscript.common
 
 PHDRS
 {
-	fpgaimage PT_LOAD FLAGS(4);
-	text PT_LOAD;
+	text PT_LOAD FLAGS(5);
 	data PT_LOAD;
 	bss PT_LOAD;
 }
@@ -20,11 +19,6 @@ PHDRS
 ENTRY(Vector)
 SECTIONS
 {
-	.fpgaimage : {
-		*(fpga_lf_bit.data)
-		*(fpga_hf_bit.data)
-	} >fpgaimage :fpgaimage
-
 	.start : {
 		*(.startos)
 	} >osimage :text
@@ -40,6 +34,8 @@ SECTIONS
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)
+		*(fpga_lf_bit.data)
+		*(fpga_hf_bit.data)
 		KEEP(*(.version_information))
 	} >osimage :text
 
