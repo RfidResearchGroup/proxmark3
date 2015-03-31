@@ -36,8 +36,8 @@ int getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi
 		if (BitStream[i] < *low) *low = BitStream[i];
 	}
 	if (*high < 123) return -1; // just noise
-	*high = ((*high-128)*fuzzHi + 12800)/100;
-	*low =  ((*low-128)*fuzzLo + 12800)/100;
+	*high = (int)(((*high-128)*(((float)fuzzHi)/100))+128);
+	*low = (int)(((*low-128)*(((float)fuzzLo)/100))+128);
 	return 1;
 }
 
@@ -639,6 +639,12 @@ size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow
 	return numBits; //Actually, it returns the number of bytes, but each byte represents a bit: 1 or 0
 }
 
+uint32_t myround2(float f)
+{
+	if (f >= 2000) return 2000;//something bad happened
+	return (uint32_t) (f + (float)0.5);
+}
+
 //translate 11111100000 to 10
 size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t maxConsequtiveBits,
 		uint8_t invert, uint8_t fchigh, uint8_t fclow)
@@ -647,6 +653,8 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t maxCons
 	uint32_t idx=0;
 	size_t numBits=0;
 	uint32_t n=1;
+	float lowWaves = (((float)(rfLen))/((float)fclow));
+	float highWaves = (((float)(rfLen))/((float)fchigh));
 	for( idx=1; idx < size; idx++) {
 
 		if (dest[idx]==lastval) {
@@ -656,20 +664,20 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t maxCons
 		n++;
 		//if lastval was 1, we have a 1->0 crossing
 		if (dest[idx-1]==1) {
-			if (!numBits && n < rfLen/fclow) {
+			if (!numBits && n < (uint8_t)lowWaves) {
 				n=0;
 				lastval = dest[idx];
 				continue;
 			}
-			n = (n * fclow + rfLen/2) / rfLen;
+			n=myround2(((float)n)/lowWaves);
 		} else {// 0->1 crossing 
 			//test first bitsample too small
-			if (!numBits && n < rfLen/fchigh) {
+			if (!numBits && n < (uint8_t)highWaves) {
 				n=0;
 				lastval = dest[idx];
 				continue;
 			}
-			n = (n * fchigh + rfLen/2) / rfLen;  //-1 for fudge factor
+			n = myround2(((float)n)/highWaves);  //-1 for fudge factor
 		}
 		if (n == 0) n = 1;
 
@@ -687,11 +695,11 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t maxCons
 	}//end for
 
 	// if valid extra bits at the end were all the same frequency - add them in
-	if (n > rfLen/fclow && n > rfLen/fchigh) {
+	if (n > lowWaves && n > highWaves) {
 		if (dest[idx-2]==1) {
-			n = ((n+1) * fclow + rfLen/2) / rfLen;
- 		} else {// 0->1 crossing
-			n = ((n+1) * fchigh + (rfLen-1)/2) / (rfLen-1);  //-1 for fudge factor
+			n=myround2((float)(n+1)/((float)(rfLen)/(float)fclow));
+		} else {
+			n=myround2((float)(n+1)/((float)(rfLen-1)/(float)fchigh));  //-1 for fudge factor			
 		}
 		memset(dest, dest[idx-1]^invert , n);
 		numBits += n;
