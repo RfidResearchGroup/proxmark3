@@ -752,11 +752,9 @@ int CmdT55xxReadTrace(const char *Cmd)
 	uint32_t icr     = PackBits(si, 3, DemodBuffer); si += 3;
 	uint32_t year    = PackBits(si, 4, DemodBuffer); si += 4;
 	uint32_t quarter = PackBits(si, 2, DemodBuffer); si += 2;
-	uint32_t lotid    = PackBits(si, 12, DemodBuffer); si += 12;
+	uint32_t lotid    = PackBits(si, 14, DemodBuffer); si += 14;
 	uint32_t wafer   = PackBits(si, 5, DemodBuffer); si += 5;
 	uint32_t dw      = PackBits(si, 15, DemodBuffer); 
-	
-	year += 2000;
 	
 	PrintAndLog("");
 	PrintAndLog("-- T55xx Trace Information ----------------------------------");
@@ -766,7 +764,7 @@ int CmdT55xxReadTrace(const char *Cmd)
 	PrintAndLog(" CID                                     : 0x%02X (%d) - %s", cid, cid, GetModelStrFromCID(cid));
 	PrintAndLog(" ICR IC Revision                         : %d",icr );
 	PrintAndLog(" Manufactured");
-	PrintAndLog("     Year/Quarter : %d/%d",year, quarter );
+	PrintAndLog("     Year/Quarter : 20?%d/%d",year, quarter);
 	PrintAndLog("     Lot ID       : %d", lotid );
 	PrintAndLog("     Wafer number : %d", wafer);
 	PrintAndLog("     Die Number   : %d", dw);

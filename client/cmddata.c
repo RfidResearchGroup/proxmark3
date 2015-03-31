@@ -414,7 +414,10 @@ int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch)
 	int invert=0;
 	int clk=0;
 	int maxErr=100;
-	
+	//param_getdec(Cmd, 0, &clk);
+	//param_getdec(Cmd, 1, &invert);
+	//maxErr = param_get32ex(Cmd, 2, 0xFFFFFFFF, 10);
+	//if (maxErr == 0xFFFFFFFF) maxErr=100;
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
 	if (invert != 0 && invert != 1) {
@@ -675,7 +678,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	int offset=0, clk=0, invert=0, maxErr=0, ans=0;
 	ans = sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 	if (ans>0)
-		ans = ASKrawDemod(Cmd+2, FALSE);
+		ans = ASKrawDemod(Cmd+1, FALSE);
 	else
 		ans = ASKrawDemod(Cmd, FALSE);
 	if (!ans) {
@@ -1146,7 +1149,7 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 
 	if (strlen(Cmd)>0 && strlen(Cmd)<=2) {
 		 if (rfLen==1){
-			invert=1;   //if invert option only is used
+			invert = 1;   //if invert option only is used
 			rfLen = 0;
 		 }
 	}
@@ -1156,9 +1159,8 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 	if (BitLen==0) return 0;
 	//get field clock lengths
 	uint16_t fcs=0;
-	uint8_t dummy=0;
 	if (fchigh==0 || fclow == 0){
-		fcs = countFC(BitStream, BitLen, &dummy);
+		fcs = countFC(BitStream, BitLen, 1);
 		if (fcs==0){
 			fchigh=10;
 			fclow=8;
@@ -1822,7 +1824,7 @@ int PSKDemod(const char *Cmd, bool verbose)
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t BitLen = getFromGraphBuf(BitStream);
 	if (BitLen==0) return -1;
-	uint8_t carrier=countPSK_FC(BitStream, BitLen);
+	uint8_t carrier=countFC(BitStream, BitLen, 0);
 	if (carrier!=2 && carrier!=4 && carrier!=8){
 		//invalid carrier
 		return 0;
@@ -1957,7 +1959,7 @@ int NRZrawDemod(const char *Cmd, bool verbose)
 		if (g_debugMode) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
 		return 0;
 	} 
-	if (errCnt<0|| BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
+	if (errCnt<0 || BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
 		if (g_debugMode) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
 		return 0;
 	}
@@ -2083,19 +2085,19 @@ int CmdRawDemod(const char *Cmd)
 	char cmdp2 = Cmd[1];
 	int ans = 0;
 	if (cmdp == 'f' && cmdp2 == 's'){
-		ans = CmdFSKrawdemod(Cmd+3);
+		ans = CmdFSKrawdemod(Cmd+2);
 	} else if(cmdp == 'a' && cmdp2 == 'b'){
-		ans = Cmdaskbiphdemod(Cmd+3);
+		ans = Cmdaskbiphdemod(Cmd+2);
 	} else if(cmdp == 'a' && cmdp2 == 'm'){
-		ans = Cmdaskmandemod(Cmd+3);
+		ans = Cmdaskmandemod(Cmd+2);
 	} else if(cmdp == 'a' && cmdp2 == 'r'){
-		ans = Cmdaskrawdemod(Cmd+3);
+		ans = Cmdaskrawdemod(Cmd+2);
 	} else if(cmdp == 'n' && cmdp2 == 'r'){
-		ans = CmdNRZrawDemod(Cmd+3);
+		ans = CmdNRZrawDemod(Cmd+2);
 	} else if(cmdp == 'p' && cmdp2 == '1'){
-		ans = CmdPSK1rawDemod(Cmd+3);
+		ans = CmdPSK1rawDemod(Cmd+2);
 	} else if(cmdp == 'p' && cmdp2 == '2'){
-		ans = CmdPSK2rawDemod(Cmd+3);
+		ans = CmdPSK2rawDemod(Cmd+2);
 	} else { 
 		PrintAndLog("unknown modulation entered - see help ('h') for parameter structure");
 	}
