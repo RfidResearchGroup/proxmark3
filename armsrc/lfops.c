@@ -953,7 +953,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 			code = bytebits_to_byte(dest+idx,32);
 			code2 = bytebits_to_byte(dest+idx+32,32);
 			version = bytebits_to_byte(dest+idx+27,8); //14,4
-			facilitycode = bytebits_to_byte(dest+idx+18,8) ;
+		facilitycode = bytebits_to_byte(dest+idx+18,8);
 			number = (bytebits_to_byte(dest+idx+36,8)<<8)|(bytebits_to_byte(dest+idx+45,8)); //36,9
 
 			crc = bytebits_to_byte(dest+idx+54,8);

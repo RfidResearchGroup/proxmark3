@@ -414,7 +414,10 @@ int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch)
 	int invert=0;
 	int clk=0;
 	int maxErr=100;
-	
+	//param_getdec(Cmd, 0, &clk);
+	//param_getdec(Cmd, 1, &invert);
+	//maxErr = param_get32ex(Cmd, 2, 0xFFFFFFFF, 10);
+	//if (maxErr == 0xFFFFFFFF) maxErr=100;
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
 	if (invert != 0 && invert != 1) {
@@ -677,7 +680,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	ans = sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 
 	if (ans>0)
-		ans = ASKrawDemod(Cmd+2, FALSE);
+		ans = ASKrawDemod(Cmd+1, FALSE);
 	else
 		ans = ASKrawDemod(Cmd, FALSE);
 	if (!ans) {
@@ -1148,7 +1151,7 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 
 	if (strlen(Cmd)>0 && strlen(Cmd)<=2) {
 		 if (rfLen==1){
-			invert=1;   //if invert option only is used
+			invert = 1;   //if invert option only is used
 			rfLen = 0;
 		 }
 	}
@@ -1958,7 +1961,7 @@ int NRZrawDemod(const char *Cmd, bool verbose)
 		if (g_debugMode) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
 		return 0;
 	} 
-	if (errCnt<0|| BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
+	if (errCnt<0 || BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
 		if (g_debugMode) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
 		return 0;
 	}

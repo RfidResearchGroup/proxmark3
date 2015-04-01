@@ -23,8 +23,8 @@ help:
 	@echo +	all           - Make bootrom, armsrc and the OS-specific host directory
 	@echo + client        - Make only the OS-specific host directory
 	@echo + flash-bootrom - Make bootrom and flash it
-	@echo + flash-os      - Make armsrc and flash os
-	@echo + flash-fpga    - Make armsrc and flash fpga
+	@echo + flash-os      - Make armsrc and flash os (includes fpga)
+	@echo + flash-fpga    - (Deprecated:) Make armsrc and flash fpga
 	@echo + flash-both    - Make armsrc and flash os and fpga image
 	@echo + flash-all     - Make bootrom and armsrc and flash bootrom, os and fpga image
 	@echo +	clean         - Clean in bootrom, armsrc and the OS-specific host directory
@@ -37,13 +37,13 @@ flash-bootrom: bootrom/obj/bootrom.elf $(FLASH_TOOL)
 flash-os: armsrc/obj/osimage.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) $(FLASH_PORT) $(subst /,$(PATHSEP),$<)
 
-flash-fpga: armsrc/obj/fpgaimage.elf $(FLASH_TOOL)
-	$(FLASH_TOOL) $(FLASH_PORT) $(subst /,$(PATHSEP),$<)
+#flash-fpga: armsrc/obj/fpgaimage.elf $(FLASH_TOOL)
+#	$(FLASH_TOOL) $(FLASH_PORT) $(subst /,$(PATHSEP),$<)
 
-flash-both: armsrc/obj/osimage.elf armsrc/obj/fpgaimage.elf $(FLASH_TOOL)
+flash-both: armsrc/obj/osimage.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) $(FLASH_PORT) $(subst /,$(PATHSEP),$(filter-out $(FLASH_TOOL),$^))
 
-flash-all: bootrom/obj/bootrom.elf armsrc/obj/osimage.elf armsrc/obj/fpgaimage.elf $(FLASH_TOOL)
+flash-all: bootrom/obj/bootrom.elf armsrc/obj/osimage.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) $(FLASH_PORT) -b $(subst /,$(PATHSEP),$(filter-out $(FLASH_TOOL),$^))
 
 newtarbin:
