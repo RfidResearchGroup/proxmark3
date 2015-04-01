@@ -311,7 +311,7 @@ void printEM410x(uint32_t hi, uint64_t id)
 			);
 			uint64_t paxton = (((id>>32) << 24) | (id & 0xffffff))  + 0x143e00;
 			PrintAndLog("}\nOther          : %05lld_%03lld_%08lld",(id&0xFFFF),((id>>16LL) & 0xFF),(id & 0xFFFFFF));  
-			PrintAndLog("Pattern Paxton : %0d", paxton);
+      PrintAndLog("Pattern Paxton  : %lld [0x%llX]", paxton, paxton);
 
 			uint32_t p1id = (id & 0xFFFFFF);
 			uint8_t arr[32] = {0x00};
@@ -352,12 +352,12 @@ void printEM410x(uint32_t hi, uint64_t id)
 			p1 |= arr[2]  << 4;
 			p1 |= arr[1]  << 5;
 			p1 |= arr[0]  << 9;
-			PrintAndLog("Pattern 1      : 0x%X - %d", p1, p1);
+	PrintAndLog("Pattern 1      : %d [0x%X]", p1, p1);
 
 			uint16_t sebury1 = id & 0xFFFF;
 			uint8_t  sebury2 = (id >> 16) & 0x7F;
 			uint32_t sebury3 = id & 0x7FFFFF;
-			PrintAndLog("Pattern Sebury : %d %d %d  (hex: %X %X %X)", sebury1, sebury2, sebury3, sebury1, sebury2, sebury3);
+      PrintAndLog("Pattern Sebury  : %d %d %d  [0x%X 0x%X 0x%X]", sebury1, sebury2, sebury3, sebury1, sebury2, sebury3);
 		}
 	}
 	return;
@@ -513,7 +513,7 @@ int Cmdmandecoderaw(const char *Cmd)
 		BitStream[i]=DemodBuffer[i];
 	}
 	if (high>1 || low <0 ){
-		PrintAndLog("Error: please raw demod the wave first then mancheseter raw decode");
+    PrintAndLog("Error: please raw demod the wave first then manchester raw decode");
 		return 0;
 	}
 	size=i;
@@ -632,6 +632,7 @@ int ASKrawDemod(const char *Cmd, bool verbose)
 	char amp = param_getchar(Cmd, 0);
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	sscanf(Cmd, "%i %i %i %c", &clk, &invert, &maxErr, &amp);
+		
 	if (invert != 0 && invert != 1) {
 		if (verbose || g_debugMode) PrintAndLog("Invalid argument: %s", Cmd);
 		return 0;
@@ -674,6 +675,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	//ask raw demod GraphBuffer first
 	int offset=0, clk=0, invert=0, maxErr=0, ans=0;
 	ans = sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
+
 	if (ans>0)
 		ans = ASKrawDemod(Cmd+2, FALSE);
 	else
@@ -1156,9 +1158,8 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 	if (BitLen==0) return 0;
 	//get field clock lengths
 	uint16_t fcs=0;
-	uint8_t dummy=0;
 	if (fchigh==0 || fclow == 0){
-		fcs = countFC(BitStream, BitLen, &dummy);
+		fcs = countFC(BitStream, BitLen, 1);
 		if (fcs==0){
 			fchigh=10;
 			fclow=8;
@@ -1822,7 +1823,7 @@ int PSKDemod(const char *Cmd, bool verbose)
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t BitLen = getFromGraphBuf(BitStream);
 	if (BitLen==0) return -1;
-	uint8_t carrier=countPSK_FC(BitStream, BitLen);
+	uint8_t carrier=countFC(BitStream, BitLen, 0);
 	if (carrier!=2 && carrier!=4 && carrier!=8){
 		//invalid carrier
 		return 0;
@@ -2083,19 +2084,19 @@ int CmdRawDemod(const char *Cmd)
 	char cmdp2 = Cmd[1];
 	int ans = 0;
 	if (cmdp == 'f' && cmdp2 == 's'){
-		ans = CmdFSKrawdemod(Cmd+3);
+		ans = CmdFSKrawdemod(Cmd+2);
 	} else if(cmdp == 'a' && cmdp2 == 'b'){
-		ans = Cmdaskbiphdemod(Cmd+3);
+		ans = Cmdaskbiphdemod(Cmd+2);
 	} else if(cmdp == 'a' && cmdp2 == 'm'){
-		ans = Cmdaskmandemod(Cmd+3);
+		ans = Cmdaskmandemod(Cmd+2);
 	} else if(cmdp == 'a' && cmdp2 == 'r'){
-		ans = Cmdaskrawdemod(Cmd+3);
+		ans = Cmdaskrawdemod(Cmd+2);
 	} else if(cmdp == 'n' && cmdp2 == 'r'){
-		ans = CmdNRZrawDemod(Cmd+3);
+		ans = CmdNRZrawDemod(Cmd+2);
 	} else if(cmdp == 'p' && cmdp2 == '1'){
-		ans = CmdPSK1rawDemod(Cmd+3);
+		ans = CmdPSK1rawDemod(Cmd+2);
 	} else if(cmdp == 'p' && cmdp2 == '2'){
-		ans = CmdPSK2rawDemod(Cmd+3);
+		ans = CmdPSK2rawDemod(Cmd+2);
 	} else { 
 		PrintAndLog("unknown modulation entered - see help ('h') for parameter structure");
 	}
