@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <time.h>
 #include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"
@@ -255,7 +256,7 @@ int CmdT55xxReadBlock(const char *Cmd) {
 
 bool DecodeT55xxBlock(){
 	
-	char buf[8] = {0x00};
+	char buf[9] = {0x00};
 	char *cmdStr = buf;
 	int ans = 0;
 	uint8_t bitRate[8] = {8,16,32,40,50,64,100,128};
@@ -270,27 +271,17 @@ bool DecodeT55xxBlock(){
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK1:
+		case DEMOD_FSK1a:		
 			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
 			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d 1 8 5", bitRate[config.bitrate] );
-			ans = FSKrawDemod(cmdStr, FALSE);
-			break;
-		case DEMOD_FSK1a:
-			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
-			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d 0 8 5", bitRate[config.bitrate] );
+			sprintf(cmdStr,"%d %d 8 5", bitRate[config.bitrate], config.inverted  );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK2:
-			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
-			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d 0 10 8", bitRate[config.bitrate] );
-			ans = FSKrawDemod(cmdStr, FALSE);
-			break;
 		case DEMOD_FSK2a:
 			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
 			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d 1 10 8", bitRate[config.bitrate] );
+			sprintf(cmdStr,"%d %d 10 8", bitRate[config.bitrate], config.inverted  );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_ASK:
@@ -302,7 +293,7 @@ bool DecodeT55xxBlock(){
 			ans = PSKDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_PSK2:
-			sprintf(cmdStr,"%d 1", bitRate[config.bitrate] );
+			sprintf(cmdStr,"%d %d 1", bitRate[config.bitrate], config.inverted );
 			ans = PSKDemod(cmdStr, FALSE);
 			psk1TOpsk2(DemodBuffer, DemodBufferLen);
 			break;
@@ -316,11 +307,8 @@ bool DecodeT55xxBlock(){
 			ans = NRZrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_BI:
-			sprintf(cmdStr,"0 %d 0 1", bitRate[config.bitrate] );
-			ans = ASKbiphaseDemod(cmdStr, FALSE);
-			break;
 		case DEMOD_BIa:
-			sprintf(cmdStr,"0 %d 1 1", bitRate[config.bitrate] );
+			sprintf(cmdStr,"0 %d %d 1", bitRate[config.bitrate], config.inverted );
 			ans = ASKbiphaseDemod(cmdStr, FALSE);
 			break;
 		default:
@@ -581,6 +569,7 @@ bool testBitRate(uint8_t readRate, uint8_t mod){
 			}
 			break;
 		case DEMOD_BI:
+		case DEMOD_BIa:
 			detRate = GetAskClock("",FALSE, FALSE); 
 			if (expected[readRate] == detRate) {
 				config.bitrate = readRate;
@@ -599,7 +588,7 @@ bool test(uint8_t mode, uint8_t *offset){
 	uint8_t si = 0;
 	for (uint8_t idx = 0; idx < 64; idx++){
 		si = idx;
-		if ( PackBits(si, 32, DemodBuffer) == 0x00 ) continue;
+		if ( PackBits(si, 32, DemodBuffer) == 0x00 ) continue;		// configuration block with only zeros is impossible.
 
 		uint8_t safer    = PackBits(si, 4, DemodBuffer); si += 4;	    //master key
 		uint8_t resv     = PackBits(si, 4, DemodBuffer); si += 4;     //was 7 & +=7+3 //should be only 4 bits if extended mode
@@ -631,7 +620,7 @@ bool test(uint8_t mode, uint8_t *offset){
 	return FALSE;
 }
 
-void printT55xxBlock(const char *demodStr){
+void printT55xxBlock(const char *blockNum){
 	
 	uint8_t i = config.offset;
 	uint8_t endpos = 32 + i;
@@ -649,7 +638,7 @@ void printT55xxBlock(const char *demodStr){
 		bits[i - config.offset]=DemodBuffer[i];
 
 	blockData = PackBits(0, 32, bits);
-	PrintAndLog("0x%08X  %s [%s]", blockData, sprint_bin(bits,32), demodStr);
+	PrintAndLog("[%s] 0x%08X  %s", blockNum, blockData, sprint_bin(bits,32));
 }
 
 int special(const char *Cmd) {
@@ -740,6 +729,7 @@ int CmdT55xxReadTrace(const char *Cmd)
 	uint8_t si = config.offset+repeat;
 	uint32_t bl0     = PackBits(si, 32, DemodBuffer);
 	uint32_t bl1     = PackBits(si+32, 32, DemodBuffer);
+	// uint32_t bl2     = PackBits(si+64, 32, DemodBuffer);
 	
 	uint32_t acl     = PackBits(si,  8, DemodBuffer); si += 8;
 	uint32_t mfc     = PackBits(si, 8, DemodBuffer); si += 8;
@@ -747,13 +737,23 @@ int CmdT55xxReadTrace(const char *Cmd)
 	uint32_t icr     = PackBits(si, 3, DemodBuffer); si += 3;
 	uint32_t year    = PackBits(si, 4, DemodBuffer); si += 4;
 	uint32_t quarter = PackBits(si, 2, DemodBuffer); si += 2;
-	uint32_t lotid    = PackBits(si, 12, DemodBuffer); si += 12;
+	uint32_t lotid   = PackBits(si, 14, DemodBuffer); si += 14;
 	uint32_t wafer   = PackBits(si, 5, DemodBuffer); si += 5;
 	uint32_t dw      = PackBits(si, 15, DemodBuffer); 
 	
-	year += 2000;
 	
-	PrintAndLog("");
+	time_t t = time(NULL);
+	struct tm tm = *localtime(&t);
+	if ( year > tm.tm_year-110)
+		year += 2000;
+	else
+		year += 2010;
+
+	if ( acl != 0xE0 ) {
+		PrintAndLog("The modulation is most likely wrong since the ACL is not 0xE0. ");
+		return 1;
+	}
+
 	PrintAndLog("-- T55xx Trace Information ----------------------------------");
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" ACL Allocation class (ISO/IEC 15963-1)  : 0x%02X (%d)", acl, acl);
@@ -769,10 +769,10 @@ int CmdT55xxReadTrace(const char *Cmd)
 	PrintAndLog(" Raw Data - Page 1");
 	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(DemodBuffer+config.offset+repeat,32) );
 	PrintAndLog("     Block 1  : 0x%08X  %s", bl1, sprint_bin(DemodBuffer+config.offset+repeat+32,32) );
+	//PrintAndLog("     Block 2  : 0x%08X  %s", bl2, sprint_bin(DemodBuffer+config.offset+repeat+64,32) );
 	PrintAndLog("-------------------------------------------------------------");
 
-	if ( acl != 0xE0 )
-		PrintAndLog("The modulation is most likely wrong since the ACL is not 0xE0. ");
+
 	/*
 	TRACE - BLOCK O
 		Bits	Definition								HEX
@@ -919,7 +919,7 @@ int AquireData( uint8_t block ){
 }
 
 char * GetBitRateStr(uint32_t id){
- 	static char buf[40];
+ 	static char buf[20];
 	char *retStr = buf;
 		switch (id){
 		case 0: 
@@ -955,7 +955,7 @@ char * GetBitRateStr(uint32_t id){
 }
 
 char * GetSaferStr(uint32_t id){
-	static char buf[40];
+	static char buf[20];
 	char *retStr = buf;
 	
 	sprintf(retStr,"%d",id);
@@ -969,7 +969,7 @@ char * GetSaferStr(uint32_t id){
 	return buf;
 }
 char * GetModulationStr( uint32_t id){
-	static char buf[40];
+	static char buf[60];
 	char *retStr = buf;
 	
 	switch (id){
