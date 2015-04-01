@@ -856,12 +856,12 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	des3_context ctx = { 0x00 };
 	des3_set2key_enc(&ctx, masterkey);
 
-	des3_crypt_cbc(&ctx     // des3_context *ctx
-		, DES_ENCRYPT       // int mode
-		, sizeof(mix)    // size_t length
-		, iv                // unsigned char iv[8]
-		, mix            // const unsigned char *input
-		, divkey           // unsigned char *output
+	des3_crypt_cbc(&ctx  // des3_context
+		, DES_ENCRYPT    // int mode
+		, sizeof(mix)    // length
+		, iv             // iv[8]
+		, mix            // input
+		, divkey         // output
 		);
 
 	PrintAndLog("3DES version");
