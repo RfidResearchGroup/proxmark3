@@ -379,10 +379,10 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 	AcquireTiType();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	DbpString("Now use tiread to check");
+	DbpString("Now use 'lf ti read' to check");
 }
 
-void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
+void SimulateTagLowFrequency(uint16_t period, uint32_t gap, uint8_t ledcontrol)
 {
 	int i;
 	uint8_t *tab = BigBuf_get_addr();
@@ -755,7 +755,7 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = BigBuf_get_addr();
-	const size_t sizeOfBigBuff = BigBuf_max_traceLen();
+	//const size_t sizeOfBigBuff = BigBuf_max_traceLen();
 	size_t size = 0; 
 	uint32_t hi2=0, hi=0, lo=0;
 	int idx=0;
@@ -769,16 +769,16 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
 		DoAcquisition_default(-1,true);
 		// FSK demodulator
-		size = sizeOfBigBuff;  //variable size will change after demod so re initialize it before use
+		//size = sizeOfBigBuff;  //variable size will change after demod so re initialize it before use
+		size = 50*128*2; //big enough to catch 2 sequences of largest format
 		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo);
 		
-		if (idx>0 && lo>0){
-			// final loop, go over previously decoded manchester data and decode into usable tag ID
-			// 111000 bit pattern represent start of frame, 01 pattern represents a 1 and 10 represents a 0
-			if (hi2 != 0){ //extra large HID tags
+		if (idx>0 && lo>0 && (size==96 || size==192)){
+			// go over previously decoded manchester data and decode into usable tag ID
+			if (hi2 != 0){ //extra large HID tags  88/192 bits
 				Dbprintf("TAG ID: %x%08x%08x (%d)",
 				  (unsigned int) hi2, (unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF);
-			}else {  //standard HID tags <38 bits
+			}else {  //standard HID tags 44/96 bits
 				//Dbprintf("TAG ID: %x%08x (%d)",(unsigned int) hi, (unsigned int) lo, (unsigned int) (lo>>1) & 0xFFFF); //old print cmd
 				uint8_t bitlen = 0;
 				uint32_t fc = 0;
@@ -833,8 +833,8 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				return;
 			}
 			// reset
-			hi2 = hi = lo = 0;
 		}
+		hi2 = hi = lo = idx = 0;
 		WDT_HIT();
 	}
 	DbpString("Stopped");
@@ -859,15 +859,14 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 
 		DoAcquisition_default(-1,true);
 		size  = BigBuf_max_traceLen();
-		//Dbprintf("DEBUG: Buffer got");
 		//askdemod and manchester decode
+		if (size > 16385) size = 16385; //big enough to catch 2 sequences of largest format
 		errCnt = askmandemod(dest, &size, &clk, &invert, maxErr);
-		//Dbprintf("DEBUG: ASK Got");
 		WDT_HIT();
 
-		if (errCnt>=0){
+		if (errCnt<0) continue;
+	
 			errCnt = Em410xDecode(dest, &size, &idx, &hi, &lo);
-			//Dbprintf("DEBUG: EM GOT");
 			if (errCnt){
 				if (size>64){
 					Dbprintf("EM XL TAG ID: %06x%08x%08x - (%05d_%03d_%08d)",
@@ -885,23 +884,17 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 					  (uint32_t)((lo>>16LL) & 0xFF),
 					  (uint32_t)(lo & 0xFFFFFF));
 				}
-			}
+
 			if (findone){
 				if (ledcontrol) LED_A_OFF();
 				*high=lo>>32;
 				*low=lo & 0xFFFFFFFF;
 				return;
 			}
-		} else{
-			//Dbprintf("DEBUG: No Tag");
 		}
 		WDT_HIT();
-		hi = 0;
-		lo = 0;
-		clk=0;
-		invert=0;
-		errCnt=0;
-		size=0;
+		hi = lo = size = idx = 0;
+		clk = invert = errCnt = 0;
 	}
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
@@ -915,6 +908,8 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	uint8_t version=0;
 	uint8_t facilitycode=0;
 	uint16_t number=0;
+	uint8_t crc = 0;
+	uint16_t calccrc = 0;
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
 
@@ -925,7 +920,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		//fskdemod and get start index
 		WDT_HIT();
 		idx = IOdemodFSK(dest, BigBuf_max_traceLen());
-		if (idx>0){
+		if (idx<0) continue;
 			//valid tag found
 
 			//Index map
@@ -933,8 +928,17 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 			//|           |           |           |           |           |           |
 			//01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
 			//-----------------------------------------------------------------------------
-			//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
+            //00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 checksum 11
 			//
+			//Checksum:  
+			//00000000 0 11110000 1 11100000 1 00000001 1 00000011 1 10110110 1 01110101 11
+			//preamble      F0         E0         01         03         B6         75
+			// How to calc checksum,
+			// http://www.proxmark.org/forum/viewtopic.php?id=364&p=6
+			//   F0 + E0 + 01 + 03 + B6 = 28A
+			//   28A & FF = 8A
+			//   FF - 8A = 75
+			// Checksum: 0x75
 			//XSF(version)facility:codeone+codetwo
 			//Handle the data
 			if(findone){ //only print binary if we are doing one
@@ -952,7 +956,15 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 			facilitycode = bytebits_to_byte(dest+idx+18,8) ;
 			number = (bytebits_to_byte(dest+idx+36,8)<<8)|(bytebits_to_byte(dest+idx+45,8)); //36,9
 
-			Dbprintf("XSF(%02d)%02x:%05d (%08x%08x)",version,facilitycode,number,code,code2);
+			crc = bytebits_to_byte(dest+idx+54,8);
+			for (uint8_t i=1; i<6; ++i)
+				calccrc += bytebits_to_byte(dest+idx+9*i,8);
+			calccrc &= 0xff;
+			calccrc = 0xff - calccrc;
+			
+			char *crcStr = (crc == calccrc) ? "ok":"!crc";
+
+            Dbprintf("IO Prox XSF(%02d)%02x:%05d (%08x%08x)  [%02x %s]",version,facilitycode,number,code,code2, crc, crcStr);
 			// if we're only looking for one tag
 			if (findone){
 				if (ledcontrol)	LED_A_OFF();
@@ -965,7 +977,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 			version=facilitycode=0;
 			number=0;
 			idx=0;
-		}
+
 		WDT_HIT();
 	}
 	DbpString("Stopped");
@@ -1032,9 +1044,23 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
  * and enlarge the gap ones.
  */
 #define START_GAP 50*8 // 10 - 50fc 250
-#define WRITE_GAP 20*8 //    - 30fc 160
-#define WRITE_0   24*8 // 16 - 63fc 54fc 144
-#define WRITE_1   54*8 // 48 - 63fc 54fc 432 for T55x7; 448 for E5550 //400
+#define WRITE_GAP 20*8 //  8 - 30fc
+#define WRITE_0   24*8 // 16 - 31fc 24fc 192
+#define WRITE_1   54*8 // 48 - 63fc 54fc 432 for T55x7; 448 for E5550
+
+//  VALUES TAKEN FROM EM4x function: SendForward
+//  START_GAP = 440;       (55*8) cycles at 125Khz (8us = 1cycle)
+//  WRITE_GAP = 128;       (16*8)
+//  WRITE_1   = 256 32*8;  (32*8) 
+
+//  These timings work for 4469/4269/4305 (with the 55*8 above)
+//  WRITE_0 = 23*8 , 9*8  SpinDelayUs(23*8); 
+
+// Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
+// TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
+// Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
+// T0 = TIMER_CLOCK1 / 125000 = 192
+// 1 Cycle = 8 microseconds(us)
 
 #define T55xx_SAMPLES_SIZE      12000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
 
@@ -1044,7 +1070,7 @@ void T55xxWriteBit(int bit)
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-	if (bit == 0)
+	if (!bit)
 		SpinDelayUs(WRITE_0);
 	else
 		SpinDelayUs(WRITE_1);
@@ -1498,10 +1524,16 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
 #define max(x,y) ( x<y ? y:x)
 
 int DemodPCF7931(uint8_t **outBlocks) {
-	uint8_t BitStream[256];
-	uint8_t Blocks[8][16];
-	uint8_t *GraphBuffer = BigBuf_get_addr();
+
+    uint8_t bits[256] = {0x00};
+	uint8_t blocks[8][16];
+    uint8_t *dest = BigBuf_get_addr();
+    
 	int GraphTraceLen = BigBuf_max_traceLen();
+	if (  GraphTraceLen > 18000 )
+		GraphTraceLen = 18000;
+	
+	
 	int i, j, lastval, bitidx, half_switch;
 	int clock = 64;
 	int tolerance = clock / 8;
@@ -1512,8 +1544,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
 	uint8_t dir;
 
 	LFSetupFPGAForADC(95, true);
-	DoAcquisition_default(0, 0);
-
+	DoAcquisition_default(0, true);
 
 	lmin = 64;
 	lmax = 192;
@@ -1521,9 +1552,9 @@ int DemodPCF7931(uint8_t **outBlocks) {
 	i = 2;
 
 	/* Find first local max/min */
-	if(GraphBuffer[1] > GraphBuffer[0]) {
+    if(dest[1] > dest[0]) {
 		while(i < GraphTraceLen) {
-			if( !(GraphBuffer[i] > GraphBuffer[i-1]) && GraphBuffer[i] > lmax)
+            if( !(dest[i] > dest[i-1]) && dest[i] > lmax)
 				break;
 			i++;
 		}
@@ -1531,7 +1562,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
 	}
 	else {
 		while(i < GraphTraceLen) {
-			if( !(GraphBuffer[i] < GraphBuffer[i-1]) && GraphBuffer[i] < lmin)
+            if( !(dest[i] < dest[i-1]) && dest[i] < lmin)
 				break;
 			i++;
 		}
@@ -1545,7 +1576,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
 
 	for (bitidx = 0; i < GraphTraceLen; i++)
 	{
-		if ( (GraphBuffer[i-1] > GraphBuffer[i] && dir == 1 && GraphBuffer[i] > lmax) || (GraphBuffer[i-1] < GraphBuffer[i] && dir == 0 && GraphBuffer[i] < lmin))
+        if ( (dest[i-1] > dest[i] && dir == 1 && dest[i] > lmax) || (dest[i-1] < dest[i] && dir == 0 && dest[i] < lmin))
 		{
 			lc = i - lastval;
 			lastval = i;
@@ -1574,14 +1605,14 @@ int DemodPCF7931(uint8_t **outBlocks) {
 					block_done = 1;
 				}
 				else if(half_switch == 1) {
-					BitStream[bitidx++] = 0;
+                    bits[bitidx++] = 0;
 					half_switch = 0;
 				}
 				else
 					half_switch++;
 			} else if (abs(lc-clock) < tolerance) {
 				// 64TO
-				BitStream[bitidx++] = 1;
+                bits[bitidx++] = 1;
 			} else {
 				// Error
 				warnings++;
@@ -1595,14 +1626,15 @@ int DemodPCF7931(uint8_t **outBlocks) {
 			if(block_done == 1) {
 				if(bitidx == 128) {
 					for(j=0; j<16; j++) {
-						Blocks[num_blocks][j] = 128*BitStream[j*8+7]+
-								64*BitStream[j*8+6]+
-								32*BitStream[j*8+5]+
-								16*BitStream[j*8+4]+
-								8*BitStream[j*8+3]+
-								4*BitStream[j*8+2]+
-								2*BitStream[j*8+1]+
-								BitStream[j*8];
+                        blocks[num_blocks][j] = 128*bits[j*8+7]+
+                                64*bits[j*8+6]+
+                                32*bits[j*8+5]+
+                                16*bits[j*8+4]+
+                                8*bits[j*8+3]+
+                                4*bits[j*8+2]+
+                                2*bits[j*8+1]+
+                                bits[j*8];
+						
 					}
 					num_blocks++;
 				}
@@ -1611,17 +1643,14 @@ int DemodPCF7931(uint8_t **outBlocks) {
 				half_switch = 0;
 			}
 			if(i < GraphTraceLen)
-			{
-				if (GraphBuffer[i-1] > GraphBuffer[i]) dir=0;
-				else dir = 1;
-			}
+                dir =(dest[i-1] > dest[i]) ? 0 : 1;
 		}
 		if(bitidx==255)
 			bitidx=0;
 		warnings = 0;
 		if(num_blocks == 4) break;
 	}
-	memcpy(outBlocks, Blocks, 16*num_blocks);
+    memcpy(outBlocks, blocks, 16*num_blocks);
 	return num_blocks;
 }
 
@@ -1919,9 +1948,14 @@ void EM4xLogin(uint32_t Password) {
 
 void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
 
-	uint8_t fwd_bit_count;
 	uint8_t *dest = BigBuf_get_addr();
-	int m=0, i=0;
+	uint16_t bufferlength = BigBuf_max_traceLen();
+	uint32_t i = 0;
+
+	// Clear destination buffer before sending the command  0x80 = average.
+	memset(dest, 0x80, bufferlength);
+	
+    uint8_t fwd_bit_count;
 
 	//If password mode do login
 	if (PwdMode == 1) EM4xLogin(Pwd);
@@ -1930,9 +1964,6 @@ void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
 	fwd_bit_count = Prepare_Cmd( FWD_CMD_READ );
 	fwd_bit_count += Prepare_Addr( Address );
 
-	m = BigBuf_max_traceLen();
-	// Clear destination buffer before sending the command
-	memset(dest, 128, m);
 	// Connect the A/D to the peak-detected low-frequency path.
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
@@ -1948,10 +1979,12 @@ void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			i++;
-			if (i >= m) break;
+			++i;
+			if (i >= bufferlength) break;
 		}
 	}
+  
+	cmd_send(CMD_ACK,0,0,0,0,0);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 	LED_D_OFF();
 }
