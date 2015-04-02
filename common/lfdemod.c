@@ -114,6 +114,57 @@ uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_
 	return 0;
 }
 
+// demodulates strong heavily clipped samples
+int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int high, int low)
+{
+	size_t bitCnt=0, smplCnt=0, errCnt=0;
+	uint8_t waveHigh = 0;
+	//PrintAndLog("clk: %d", clk);
+	for (size_t i=0; i < *size; i++){
+		if (BinStream[i] >= high && waveHigh){
+			smplCnt++;
+		} else if (BinStream[i] <= low && !waveHigh){
+			smplCnt++;
+		} else { //transition
+			if ((BinStream[i] >= high && !waveHigh) || (BinStream[i] <= low && waveHigh)){
+				if (smplCnt > clk-(clk/4)-1) { //full clock
+					if (smplCnt > clk + (clk/4)+1) { //too many samples
+						errCnt++;
+						BinStream[bitCnt++]=77;
+					} else if (waveHigh) {
+						BinStream[bitCnt++] = invert;
+						BinStream[bitCnt++] = invert;
+					} else if (!waveHigh) {
+						BinStream[bitCnt++] = invert ^ 1;
+						BinStream[bitCnt++] = invert ^ 1;
+					}
+					waveHigh ^= 1;  
+					smplCnt = 0;
+				} else if (smplCnt > (clk/2) - (clk/4)-1) {
+					if (waveHigh) {
+						BinStream[bitCnt++] = invert;
+					} else if (!waveHigh) {
+						BinStream[bitCnt++] = invert ^ 1;
+					}
+					waveHigh ^= 1;  
+					smplCnt = 0;
+				} else if (!bitCnt) {
+					//first bit
+					waveHigh = (BinStream[i] >= high);
+					smplCnt = 1;
+				} else {
+					smplCnt++;
+					//transition bit oops
+				}
+			} else { //haven't hit new high or new low yet
+				smplCnt++;
+			}
+		}
+	}
+	*size = bitCnt;
+	return errCnt;
+}
+
 //by marshmellow
 //takes 3 arguments - clock, invert, maxErr as integers
 //attempts to demodulate ask while decoding manchester
@@ -131,6 +182,13 @@ int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 	int high, low;
 	if (getHiLo(BinStream, initLoopMax, &high, &low, 75, 75) < 1) return -2; //just noise
 
+	// if clean clipped waves detected run alternate demod
+	if (DetectCleanAskWave(BinStream, *size, high, low)) {
+		cleanAskRawDemod(BinStream, size, *clk, *invert, high, low);
+		return manrawdecode(BinStream, size);	
+	}
+
+
 	// PrintAndLog("DEBUG - valid high: %d - valid low: %d",high,low);
 	int lastBit = 0;  //set first clock check
 	uint16_t bitnum = 0;     //output counter
@@ -138,7 +196,7 @@ int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 	if (*clk <= 32) tol=1;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely
 	size_t iii = 0;
 	//if 0 errors allowed then only try first 2 clock cycles as we want a low tolerance
-	if (!maxErr) initLoopMax = *clk * 2; 
+	if (!maxErr && initLoopMax > *clk*3) initLoopMax = *clk * 3; 
 	uint16_t errCnt = 0, MaxBits = 512;
 	uint16_t bestStart = start;
 	uint16_t bestErrCnt = 0;
@@ -147,7 +205,7 @@ int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 	if (start <= 0 || start > initLoopMax){
 		bestErrCnt = maxErr+1;
 		// loop to find first wave that works
-		for (iii=0; iii < initLoopMax; ++iii){
+		for (iii=0; iii < initLoopMax-tol-*clk; ++iii){
 			// if no peak skip
 			if (BinStream[iii] < high && BinStream[iii] > low) continue;
 
@@ -163,7 +221,7 @@ int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 				if ((i-iii) > (MaxBits * *clk) || errCnt > maxErr) break; //got plenty of bits or too many errors
 			}
 			//we got more than 64 good bits and not all errors
-			if ((((i-iii)/ *clk) > (64)) && (errCnt<=maxErr)) {
+			if ((((i-iii)/ *clk) > (32)) && (errCnt<=maxErr)) {
 				//possible good read
 				if (!errCnt || errCnt < bestErrCnt){
 					bestStart = iii; //set this as new best run
@@ -242,19 +300,17 @@ int manrawdecode(uint8_t * BitStream, size_t *size)
 		}
 		errCnt=0;
 	}
-	if (bestErr<20){
-		for (i=bestRun; i < *size-2; i+=2){
-			if(BitStream[i] == 1 && (BitStream[i+1] == 0)){
-				BitStream[bitnum++]=0;
-			} else if((BitStream[i] == 0) && BitStream[i+1] == 1){
-				BitStream[bitnum++]=1;
-			} else {
-				BitStream[bitnum++]=77;
-			}
-			if(bitnum>MaxBits) break;
+	for (i=bestRun; i < *size-2; i+=2){
+		if(BitStream[i] == 1 && (BitStream[i+1] == 0)){
+			BitStream[bitnum++]=0;
+		} else if((BitStream[i] == 0) && BitStream[i+1] == 1){
+			BitStream[bitnum++]=1;
+		} else {
+			BitStream[bitnum++]=77;
 		}
-		*size=bitnum;
+		if(bitnum>MaxBits) break;
 	}
+	*size=bitnum;
 	return bestErr;
 }
 
@@ -319,57 +375,6 @@ void askAmp(uint8_t *BitStream, size_t size)
 	return;
 }
 
-// demodulates strong heavily clipped samples
-int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int high, int low)
-{
-	size_t bitCnt=0, smplCnt=0, errCnt=0;
-	uint8_t waveHigh = 0;
-	//PrintAndLog("clk: %d", clk);
-	for (size_t i=0; i < *size; i++){
-		if (BinStream[i] >= high && waveHigh){
-			smplCnt++;
-		} else if (BinStream[i] <= low && !waveHigh){
-			smplCnt++;
-		} else { //transition
-			if ((BinStream[i] >= high && !waveHigh) || (BinStream[i] <= low && waveHigh)){
-				if (smplCnt > clk-(clk/4)-1) { //full clock
-					if (smplCnt > clk + (clk/4)+1) { //too many samples
-						errCnt++;
-						BinStream[bitCnt++]=77;
-					} else if (waveHigh) {
-						BinStream[bitCnt++] = invert;
-						BinStream[bitCnt++] = invert;
-					} else if (!waveHigh) {
-						BinStream[bitCnt++] = invert ^ 1;
-						BinStream[bitCnt++] = invert ^ 1;
-					}
-					waveHigh ^= 1;  
-					smplCnt = 0;
-				} else if (smplCnt > (clk/2) - (clk/4)-1) {
-					if (waveHigh) {
-						BinStream[bitCnt++] = invert;
-					} else if (!waveHigh) {
-						BinStream[bitCnt++] = invert ^ 1;
-					}
-					waveHigh ^= 1;  
-					smplCnt = 0;
-				} else if (!bitCnt) {
-					//first bit
-					waveHigh = (BinStream[i] >= high);
-					smplCnt = 1;
-				} else {
-					smplCnt++;
-					//transition bit oops
-				}
-			} else { //haven't hit new high or new low yet
-				smplCnt++;
-			}
-		}
-	}
-	*size = bitCnt;
-	return errCnt;
-}
-
 //by marshmellow
 //takes 3 arguments - clock, invert and maxErr as integers
 //attempts to demodulate ask only
@@ -401,13 +406,13 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 	size_t MaxBits = 1024;
 
 	//if 0 errors allowed then only try first 2 clock cycles as we want a low tolerance
-	if (!maxErr) initLoopMax = *clk * 2; 
+	if (!maxErr && initLoopMax > *clk*3) initLoopMax = *clk * 3; 
 	//if best start not already found by detectclock
 	if (start <= 0 || start > initLoopMax){
 		bestErrCnt = maxErr+1;
 		//PrintAndLog("DEBUG - lastbit - %d",lastBit);
 		//loop to find first wave that works
-		for (iii=0; iii < initLoopMax; ++iii){
+		for (iii=0; iii < initLoopMax - *clk; ++iii){
 			if ((BinStream[iii] >= high) || (BinStream[iii] <= low)){
 				lastBit = iii - *clk;
 				//loop through to see if this start location works
@@ -427,8 +432,8 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 					}
 					if ((i-iii)>(MaxBits * *clk)) break; //got enough bits
 				}
-				//we got more than 64 good bits and not all errors
-				if ((((i-iii)/ *clk) > 64) && (errCnt<=maxErr)) {
+				//we got more than 32 good bits and not all errors
+				if ((((i-iii)/ *clk) > 32) && (errCnt<=maxErr)) {
 					//possible good read
 					if (errCnt==0){
 						bestStart=iii;
@@ -859,7 +864,8 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 	size_t i=0;
 	uint8_t clk[]={8,16,32,40,50,64,100,128,255};
 	uint8_t loopCnt = 255;  //don't need to loop through entire array...
-	if (size <= loopCnt) return -1; //not enough samples
+	if (size==0) return -1;
+	if (size <= loopCnt) loopCnt = size-1; //not enough samples
 	//if we already have a valid clock quit
 	
 	for (;i<8;++i)
@@ -892,10 +898,10 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 		}else{
 			tol=0;
 		}
-		if (!maxErr) loopCnt=clk[clkCnt]*2;
+		if (!maxErr && loopCnt>clk[clkCnt]*2) loopCnt=clk[clkCnt]*2;
 		bestErr[clkCnt]=1000;
 		//try lining up the peaks by moving starting point (try first 256)
-		for (ii=0; ii < loopCnt; ii++){
+		for (ii=0; ii < loopCnt-tol-clk[clkCnt]; ii++){
 			if (dest[ii] < peak && dest[ii] > low) continue;
 
 			errCnt=0;

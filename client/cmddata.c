@@ -96,7 +96,7 @@ int CmdPrintDemodBuff(const char *Cmd)
 {
 	char hex;
 	char printBuff[512]={0x00};
-	uint8_t numBits = DemodBufferLen & 0xFFF0;
+	uint8_t numBits = DemodBufferLen & 0xFFFC;
 	sscanf(Cmd, "%c", &hex);
 	if (hex == 'h'){
 		PrintAndLog("Usage: data printdemodbuffer [x]");
@@ -414,12 +414,13 @@ int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch)
 	int invert=0;
 	int clk=0;
 	int maxErr=100;
+	int maxLen=512*64;
 	//param_getdec(Cmd, 0, &clk);
 	//param_getdec(Cmd, 1, &invert);
 	//maxErr = param_get32ex(Cmd, 2, 0xFFFFFFFF, 10);
 	//if (maxErr == 0xFFFFFFFF) maxErr=100;
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
-	sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
+	sscanf(Cmd, "%i %i %i %i", &clk, &invert, &maxErr, &maxLen);
 	if (invert != 0 && invert != 1) {
 		PrintAndLog("Invalid argument: %s", Cmd);
 		return 0;
@@ -432,6 +433,7 @@ int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch)
 	if (g_debugMode==1) PrintAndLog("DEBUG: Bitlen from grphbuff: %d",BitLen);
 	if (BitLen==0) return 0;
 	int errCnt=0;
+	if (maxLen<BitLen && maxLen != 0) BitLen = maxLen;
 	errCnt = askmandemod(BitStream, &BitLen, &clk, &invert, maxErr);
 	if (errCnt<0||BitLen<16){  //if fatal error (or -1)
 		if (g_debugMode==1) PrintAndLog("no data found %d, errors:%d, bitlen:%d, clock:%d",errCnt,invert,BitLen,clk);
@@ -473,11 +475,12 @@ int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch)
 int Cmdaskmandemod(const char *Cmd)
 {
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  data rawdemod am [clock] <0|1> [maxError]");
+	if (strlen(Cmd) > 20 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  data rawdemod am [clock] <0|1> [maxError] [setSmplLen]");
 		PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
 		PrintAndLog("     <invert>, 1 for invert output");
 		PrintAndLog("     [set maximum allowed errors], default = 100.");
+		PrintAndLog("     [set maximum Samples to read], default = 32768 (512 bits at rf/64).");
 		PrintAndLog("");
 		PrintAndLog("    sample: data rawdemod am        = demod an ask/manchester tag from GraphBuffer");
 		PrintAndLog("          : data rawdemod am 32     = demod an ask/manchester tag from GraphBuffer using a clock of RF/32");
@@ -2065,7 +2068,7 @@ int CmdRawDemod(const char *Cmd)
 {
 	char cmdp = Cmd[0]; //param_getchar(Cmd, 0);
 
-	if (strlen(Cmd) > 14 || cmdp == 'h' || cmdp == 'H' || strlen(Cmd)<2) {
+	if (strlen(Cmd) > 20 || cmdp == 'h' || cmdp == 'H' || strlen(Cmd)<2) {
 		PrintAndLog("Usage:  data rawdemod [modulation] <help>|<options>");
 		PrintAndLog("   [modulation] as 2 char, 'ab' for ask/biphase, 'am' for ask/manchester, 'ar' for ask/raw, 'fs' for fsk, ...");		
 		PrintAndLog("         'nr' for nrz/direct, 'p1' for psk1, 'p2' for psk2");

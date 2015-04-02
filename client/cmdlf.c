@@ -1094,6 +1094,11 @@ int CmdLFfind(const char *Cmd)
 		return 1;
 	}
 
+	ans=EM4x50Read("", false);
+	if (ans>0) {
+		PrintAndLog("\nValid EM4x50 ID Found!");
+		return 1;
+	}	
 	PrintAndLog("\nNo Known Tags Found!\n");
 	if (testRaw=='u' || testRaw=='U'){
 		//test unknown tag formats (raw mode)

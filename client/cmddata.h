@@ -54,6 +54,7 @@ int CmdManchesterMod(const char *Cmd);
 int CmdNorm(const char *Cmd);
 int CmdNRZrawDemod(const char *Cmd);
 int CmdPlot(const char *Cmd);
+int CmdPrintDemodBuff(const char *Cmd);
 int CmdRawDemod(const char *Cmd);
 int CmdSamples(const char *Cmd);
 int CmdTuneSamples(const char *Cmd);
@@ -77,7 +78,7 @@ int getSamples(const char *Cmd, bool silent);
 #define MAX_DEMOD_BUF_LEN (1024*128)
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 extern int DemodBufferLen;
-
+extern uint8_t g_debugMode;
 #define BIGBUF_SIZE 40000
 
 #endif

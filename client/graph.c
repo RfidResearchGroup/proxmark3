@@ -17,7 +17,6 @@
 
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 int GraphTraceLen;
-
 /* write a manchester bit to the graph */
 void AppendGraph(int redraw, int clock, int bit)
 {
@@ -45,6 +44,23 @@ int ClearGraph(int redraw)
     RepaintGraphWindow();
 
   return gtl;
+}
+// option '1' to save GraphBuffer any other to restore
+void save_restoreGB(uint8_t saveOpt)
+{
+	static int SavedGB[MAX_GRAPH_TRACE_LEN];
+	static int SavedGBlen;
+	static bool GB_Saved = false;
+
+	if (saveOpt==1) { //save
+		memcpy(SavedGB,GraphBuffer, sizeof(GraphBuffer));
+		SavedGBlen = GraphTraceLen;
+		GB_Saved=true;
+	} else if (GB_Saved){
+		memcpy(GraphBuffer,SavedGB, sizeof(GraphBuffer));
+		GraphTraceLen = SavedGBlen;
+	}
+	return;
 }
 
 // DETECT CLOCK NOW IN LFDEMOD.C
