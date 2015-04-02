@@ -311,7 +311,7 @@ void printEM410x(uint32_t hi, uint64_t id)
 			);
 			uint64_t paxton = (((id>>32) << 24) | (id & 0xffffff))  + 0x143e00;
 			PrintAndLog("}\nOther          : %05lld_%03lld_%08lld",(id&0xFFFF),((id>>16LL) & 0xFF),(id & 0xFFFFFF));  
-      PrintAndLog("Pattern Paxton  : %lld [0x%llX]", paxton, paxton);
+			PrintAndLog("Pattern Paxton  : %lld [0x%llX]", paxton, paxton);
 
 			uint32_t p1id = (id & 0xFFFFFF);
 			uint8_t arr[32] = {0x00};
@@ -352,12 +352,12 @@ void printEM410x(uint32_t hi, uint64_t id)
 			p1 |= arr[2]  << 4;
 			p1 |= arr[1]  << 5;
 			p1 |= arr[0]  << 9;
-	PrintAndLog("Pattern 1      : %d [0x%X]", p1, p1);
+			PrintAndLog("Pattern 1      : %d [0x%X]", p1, p1);
 
 			uint16_t sebury1 = id & 0xFFFF;
 			uint8_t  sebury2 = (id >> 16) & 0x7F;
 			uint32_t sebury3 = id & 0x7FFFFF;
-      PrintAndLog("Pattern Sebury  : %d %d %d  [0x%X 0x%X 0x%X]", sebury1, sebury2, sebury3, sebury1, sebury2, sebury3);
+			PrintAndLog("Pattern Sebury  : %d %d %d  [0x%X 0x%X 0x%X]", sebury1, sebury2, sebury3, sebury1, sebury2, sebury3);
 		}
 	}
 	return;
@@ -414,10 +414,7 @@ int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch)
 	int invert=0;
 	int clk=0;
 	int maxErr=100;
-	//param_getdec(Cmd, 0, &clk);
-	//param_getdec(Cmd, 1, &invert);
-	//maxErr = param_get32ex(Cmd, 2, 0xFFFFFFFF, 10);
-	//if (maxErr == 0xFFFFFFFF) maxErr=100;
+	
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
 	if (invert != 0 && invert != 1) {
@@ -429,20 +426,23 @@ int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch)
 		clk=0;
 	}
 	size_t BitLen = getFromGraphBuf(BitStream);
-	if (g_debugMode==1) PrintAndLog("DEBUG: Bitlen from grphbuff: %d",BitLen);
+	if (g_debugMode) PrintAndLog("DEBUG: Bitlen from graphbuffer: %d",BitLen);
+	
 	if (BitLen==0) return 0;
-	int errCnt=0;
-	errCnt = askmandemod(BitStream, &BitLen, &clk, &invert, maxErr);
+	
+	int errCnt = askmandemod(BitStream, &BitLen, &clk, &invert, maxErr);
+	
 	if (errCnt<0||BitLen<16){  //if fatal error (or -1)
-		if (g_debugMode==1) PrintAndLog("no data found %d, errors:%d, bitlen:%d, clock:%d",errCnt,invert,BitLen,clk);
+		if (g_debugMode) PrintAndLog("DEBUG: no data found %d, errors:%d, bitlen:%d, clock:%d",errCnt,invert,BitLen,clk);
 		return 0;
 	}
+
 	if (verbose || g_debugMode) PrintAndLog("\nUsing Clock: %d - Invert: %d - Bits Found: %d",clk,invert,BitLen);
 
-	//output
 	if (errCnt>0){
-		if (verbose || g_debugMode) PrintAndLog("# Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
+		if (verbose || g_debugMode) PrintAndLog("DEBUG: Errors during Demoding (shown as 77 in bit stream): %d",errCnt);
 	}
+	
 	if (verbose || g_debugMode) PrintAndLog("ASK/Manchester decoded bitstream:");
 	// Now output the bitstream to the scrollback by line of 16 bits
 	setDemodBuf(BitStream,BitLen,0);
@@ -635,7 +635,7 @@ int ASKrawDemod(const char *Cmd, bool verbose)
 	char amp = param_getchar(Cmd, 0);
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	sscanf(Cmd, "%i %i %i %c", &clk, &invert, &maxErr, &amp);
-		
+	
 	if (invert != 0 && invert != 1) {
 		if (verbose || g_debugMode) PrintAndLog("Invalid argument: %s", Cmd);
 		return 0;
@@ -680,7 +680,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	ans = sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 
 	if (ans>0)
-		ans = ASKrawDemod(Cmd+1, FALSE);
+		ans = ASKrawDemod(Cmd+2, FALSE);
 	else
 		ans = ASKrawDemod(Cmd, FALSE);
 	if (!ans) {
