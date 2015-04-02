@@ -51,20 +51,31 @@ local function waitCmd()
 	return nil, "No response from device"
 end
 
-local function readblock( keyA )
+local function readblock( blocknum, keyA )
 	-- Read block 0
-	cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = 0,arg2 = 0,arg3 = 0, data = keyA}
+	cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = blocknum, arg2 = 0, arg3 = 0, data = keyA}
 	err = core.SendCommand(cmd:getBytes())
-	if err then return oops(err) end
+	if err then return nil, err end
 	local block0, err = waitCmd()
-	if err then return oops(err) end
+	if err then return nil, err end
+	return block0
+end
+local function readmagicblock( blocknum )
+	-- Read block 0
+	local CSETBLOCK_SINGLE_OPERATION = 0x1F
+	cmd = Command:new{cmd = cmds.CMD_MIFARE_CGETBLOCK, arg1 = CSETBLOCK_SINGLE_OPERATION, arg2 = 0, arg3 = blocknum}
+	err = core.SendCommand(cmd:getBytes())
+	if err then return nil, err end
+	local block0, err = waitCmd()
+	if err then return nil, err end
 	return block0
 end
 
 local function main(args)
 
 	local numBlocks = 64
-    local cset = 'hf mf csetbl'
+    local cset = 'hf mf csetbl '
+	local cget = 'hf mf cgetbl '
 	local empty = '00000000000000000000000000000000'
 	local AccAndKeyB = '7F078869000000000000'
 	-- Defaults to Gusto
@@ -89,13 +100,21 @@ local function main(args)
 	local akeys  = pre.GetAll(result.uid)
 	local  keyA = akeys:sub(1, 12 ) 
 
-	local b0 = readblock(keyA)
+	local b0 = readblock(0,keyA)
+	if not b0 then
+		print('failed reading block with factorydefault key.  Trying chinese magic read.')
+	    b0, err = readmagicblock(0)
+		if not b0 then 
+			oops(err) 
+			return oops('failed reading block with chinese magic command.  quitting...')
+		end
+	end
 	local b1 = toytype..'000000000000000000000000'
 	
 	local calc = utils.Crc16(b0..b1)
 	local calcEndian = bor(rsh(calc,8), lsh(band(calc, 0xff), 8))
 	
-	local cmd  = ('hf mf csetbl 1 %s%04x'):format( b1, calcEndian)	
+	local cmd  = (cset..'1 %s%04x'):format( b1, calcEndian)	
 	core.console( cmd) 
 	
 	local pos, key
