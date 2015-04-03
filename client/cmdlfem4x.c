@@ -166,6 +166,74 @@ int CmdEM410xWatchnSpoof(const char *Cmd)
 	return 0;
 }
 
+int CmdEM410xWrite(const char *Cmd)
+{
+	uint64_t id = 0xFFFFFFFFFFFFFFFF; // invalid id value
+	int card = 0xFF; // invalid card value
+	unsigned int clock = 0; // invalid clock value
+
+	sscanf(Cmd, "%" PRIx64 " %d %d", &id, &card, &clock);
+
+	// Check ID
+	if (id == 0xFFFFFFFFFFFFFFFF) {
+		PrintAndLog("Error! ID is required.\n");
+		return 0;
+	}
+	if (id >= 0x10000000000) {
+		PrintAndLog("Error! Given EM410x ID is longer than 40 bits.\n");
+		return 0;
+	}
+
+	// Check Card
+	if (card == 0xFF) {
+		PrintAndLog("Error! Card type required.\n");
+		return 0;
+	}
+	if (card < 0) {
+		PrintAndLog("Error! Bad card type selected.\n");
+		return 0;
+	}
+
+	// Check Clock
+	if (card == 1)
+	{
+		// Default: 64
+		if (clock == 0)
+			clock = 64;
+
+		// Allowed clock rates: 16, 32 and 64
+		if ((clock != 16) && (clock != 32) && (clock != 64)) {
+			PrintAndLog("Error! Clock rate %d not valid. Supported clock rates are 16, 32 and 64.\n", clock);
+			return 0;
+		}
+	}
+	else if (clock != 0)
+	{
+		PrintAndLog("Error! Clock rate is only supported on T55x7 tags.\n");
+		return 0;
+	}
+
+	if (card == 1) {
+		PrintAndLog("Writing %s tag with UID 0x%010" PRIx64 " (clock rate: %d)", "T55x7", id, clock);
+		// NOTE: We really should pass the clock in as a separate argument, but to
+		//   provide for backwards-compatibility for older firmware, and to avoid
+		//   having to add another argument to CMD_EM410X_WRITE_TAG, we just store
+		//   the clock rate in bits 8-15 of the card value
+		card = (card & 0xFF) | (((uint64_t)clock << 8) & 0xFF00);
+	}
+	else if (card == 0)
+		PrintAndLog("Writing %s tag with UID 0x%010" PRIx64, "T5555", id, clock);
+	else {
+		PrintAndLog("Error! Bad card type selected.\n");
+		return 0;
+	}
+
+	UsbCommand c = {CMD_EM410X_WRITE_TAG, {card, (uint32_t)(id >> 32), (uint32_t)id}};
+	SendCommand(&c);
+
+	return 0;
+}
+
 bool EM_EndParityTest(uint8_t *BitStream, size_t size, uint8_t rows, uint8_t cols, uint8_t pType)
 {
 	if (rows*cols>size) return false;
@@ -300,7 +368,7 @@ int EM4x50Read(const char *Cmd, bool verbose)
 				break;
 			}
 		}
-	}
+	} else tol = clk/8;
 
 	// look for data start - should be 2 pairs of LW (pulses of clk*3,clk*2)
 	start= -1;
@@ -424,74 +492,6 @@ int EM4x50Read(const char *Cmd, bool verbose)
 int CmdEM4x50Read(const char *Cmd)
 {
 	return EM4x50Read(Cmd, true);
-}
-
-int CmdEM410xWrite(const char *Cmd)
-{
-	uint64_t id = 0xFFFFFFFFFFFFFFFF; // invalid id value
-	int card = 0xFF; // invalid card value
-	unsigned int clock = 0; // invalid clock value
-
-	sscanf(Cmd, "%" PRIx64 " %d %d", &id, &card, &clock);
-
-	// Check ID
-	if (id == 0xFFFFFFFFFFFFFFFF) {
-		PrintAndLog("Error! ID is required.\n");
-		return 0;
-	}
-	if (id >= 0x10000000000) {
-		PrintAndLog("Error! Given EM410x ID is longer than 40 bits.\n");
-		return 0;
-	}
-
-	// Check Card
-	if (card == 0xFF) {
-		PrintAndLog("Error! Card type required.\n");
-		return 0;
-	}
-	if (card < 0) {
-		PrintAndLog("Error! Bad card type selected.\n");
-		return 0;
-	}
-
-	// Check Clock
-	if (card == 1)
-	{
-		// Default: 64
-		if (clock == 0)
-			clock = 64;
-
-		// Allowed clock rates: 16, 32 and 64
-		if ((clock != 16) && (clock != 32) && (clock != 64)) {
-			PrintAndLog("Error! Clock rate %d not valid. Supported clock rates are 16, 32 and 64.\n", clock);
-			return 0;
-		}
-	}
-	else if (clock != 0)
-	{
-		PrintAndLog("Error! Clock rate is only supported on T55x7 tags.\n");
-		return 0;
-	}
-
-	if (card == 1) {
-		PrintAndLog("Writing %s tag with UID 0x%010" PRIx64 " (clock rate: %d)", "T55x7", id, clock);
-		// NOTE: We really should pass the clock in as a separate argument, but to
-		//   provide for backwards-compatibility for older firmware, and to avoid
-		//   having to add another argument to CMD_EM410X_WRITE_TAG, we just store
-		//   the clock rate in bits 8-15 of the card value
-		card = (card & 0xFF) | (((uint64_t)clock << 8) & 0xFF00);
-	}
-	else if (card == 0)
-		PrintAndLog("Writing %s tag with UID 0x%010" PRIx64, "T5555", id, clock);
-	else {
-		PrintAndLog("Error! Bad card type selected.\n");
-		return 0;
-	}
-
-	UsbCommand c = {CMD_EM410X_WRITE_TAG, {card, (uint32_t)(id >> 32), (uint32_t)id}};
-	SendCommand(&c);
-
-	return 0;
 }
 
 int CmdReadWord(const char *Cmd)
