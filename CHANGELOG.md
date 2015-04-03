@@ -4,10 +4,12 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [Unreleased][unreleased]
 ### Changed
+- Improved LF manchester and biphase demodulation and ask clock detection especially for reads with heavy clipping. (marshmellow)
 - Iclass read, `hf iclass read` now also reads tag config and prints configuration. (holiman)
 
 ### Fixed
-- Fixed issue #19, problems with LF T55xx commands (marshmellow)
+- Fixed EM4x50 read/demod of the tags broadcasted memory blocks. 'lf em4x em4x50read' (not page read) (marshmellow)
+- Fixed issue #19, problems with LF T55xx commands (iceman1001, marshmellow)
 
 ### Added
 - Added changelog
