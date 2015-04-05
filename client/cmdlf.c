@@ -522,7 +522,8 @@ static void ChkBitstream(const char *str)
 		}
 	}
 }
-//appears to attempt to simulate manchester
+//Attempt to simulate any wave in buffer (one bit per output sample)
+// converts GraphBuffer to bitstream (based on zero crossings) if needed.
 int CmdLFSim(const char *Cmd)
 {
 	int i,j;
@@ -530,11 +531,11 @@ int CmdLFSim(const char *Cmd)
 
 	sscanf(Cmd, "%i", &gap);
 
-	/* convert to bitstream if necessary */
+	// convert to bitstream if necessary 
 
 	ChkBitstream(Cmd);
 
-	//can send 512 bits at a time (1 byte sent per bit...)
+	//can send only 512 bits at a time (1 byte sent per bit...)
 	printf("Sending [%d bytes]", GraphTraceLen);
 	for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
 		UsbCommand c={CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
@@ -606,8 +607,8 @@ int usage_lf_simpsk(void)
 // - allow pull data from DemodBuffer
 int CmdLFfskSim(const char *Cmd)
 {
-	//might be able to autodetect FC and clock from Graphbuffer if using demod buffer
-	//will need FChigh, FClow, Clock, and bitstream
+	//might be able to autodetect FCs and clock from Graphbuffer if using demod buffer
+	// otherwise will need FChigh, FClow, Clock, and bitstream
 	uint8_t fcHigh=0, fcLow=0, clk=0;
 	uint8_t invert=0;
 	bool errors = FALSE;
@@ -682,6 +683,8 @@ int CmdLFfskSim(const char *Cmd)
 	} else {
 		setDemodBuf(data, dataLen, 0);
 	}
+
+	//default if not found
 	if (clk == 0) clk = 50;
 	if (fcHigh == 0) fcHigh = 10;
 	if (fcLow == 0) fcLow = 8;
@@ -706,9 +709,8 @@ int CmdLFfskSim(const char *Cmd)
 int CmdLFaskSim(const char *Cmd)
 {
 	//autodetect clock from Graphbuffer if using demod buffer
-	//will need clock, invert, manchester/raw as m or r, separator as s, and bitstream
+	// needs clock, invert, manchester/raw as m or r, separator as s, and bitstream
 	uint8_t encoding = 1, separator = 0;
-	//char cmdp = Cmd[0], par3='m', par4=0;
 	uint8_t clk=0, invert=0;
 	bool errors = FALSE;
 	char hexData[32] = {0x00}; 
@@ -913,30 +915,6 @@ int CmdLFSimBidir(const char *Cmd)
 	return 0;
 }
 
-/* simulate an LF Manchester encoded tag with specified bitstream, clock rate and inter-id gap */
-/*
-int CmdLFSimManchester(const char *Cmd)
-{
-	static int clock, gap;
-	static char data[1024], gapstring[8];
-
-	sscanf(Cmd, "%i %s %i", &clock, &data[0], &gap);
-
-	ClearGraph(0);
-
-	for (int i = 0; i < strlen(data) ; ++i)
-		AppendGraph(0, clock, data[i]- '0');
-
-	CmdManchesterMod("");
-
-	RepaintGraphWindow();
-
-	sprintf(&gapstring[0], "%i", gap);
-	CmdLFSim(gapstring);
-	return 0;
-}
-*/
-
 int CmdVchDemod(const char *Cmd)
 {
 	// Is this the entire sync pattern, or does this also include some
@@ -1033,8 +1011,8 @@ int CmdLFfind(const char *Cmd)
 	}
 
 	if (!offline && (cmdp != '1')){
-		ans=CmdLFRead("");
-		ans=CmdSamples("20000");
+		CmdLFRead("s");
+		getSamples("30000",false);
 	} else if (GraphTraceLen < 1000) {
 		PrintAndLog("Data in Graphbuffer was too small.");
 		return 0;
@@ -1105,20 +1083,18 @@ int CmdLFfind(const char *Cmd)
 		PrintAndLog("\nChecking for Unknown tags:\n");
 		ans=AutoCorrelate(4000, FALSE, FALSE);
 		if (ans > 0) PrintAndLog("Possible Auto Correlation of %d repeating samples",ans);
-		ans=GetFskClock("",FALSE,FALSE); //CmdDetectClockRate("F"); //
+		ans=GetFskClock("",FALSE,FALSE); 
 		if (ans != 0){ //fsk
-			ans=FSKrawDemod("",FALSE);
+			ans=FSKrawDemod("",TRUE);
 			if (ans>0) {
 				PrintAndLog("\nUnknown FSK Modulated Tag Found!");
-				printDemodBuff();
 				return 1;
 			}
 		}
-		ans=ASKmanDemod("",FALSE,FALSE);
+		ans=ASKmanDemod("0 0 0",TRUE,FALSE);
 		if (ans>0) {
 			PrintAndLog("\nUnknown ASK Modulated and Manchester encoded Tag Found!");
 			PrintAndLog("\nif it does not look right it could instead be ASK/Biphase - try 'data rawdemod ab'");
-			printDemodBuff();
 			return 1;
 		}
 		ans=CmdPSK1rawDemod("");
@@ -1126,7 +1102,6 @@ int CmdLFfind(const char *Cmd)
 			PrintAndLog("Possible unknown PSK1 Modulated Tag Found above!\n\nCould also be PSK2 - try 'data rawdemod p2'");
 			PrintAndLog("\nCould also be PSK3 - [currently not supported]");
 			PrintAndLog("\nCould also be NRZ - try 'data nrzrawdemod");
-			printDemodBuff();
 			return 1;
 		}
 		PrintAndLog("\nNo Data Found!\n");
@@ -1152,7 +1127,6 @@ static command_t CommandTable[] =
 	{"simfsk",      CmdLFfskSim,        0, "[c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>] -- Simulate LF FSK tag from demodbuffer or input"},
 	{"simpsk",      CmdLFpskSim,        0, "[1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>] -- Simulate LF PSK tag from demodbuffer or input"},
 	{"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
-	//{"simman",      CmdLFSimManchester, 0, "<Clock> <Bitstream> [GAP] Simulate arbitrary Manchester LF tag"},
 	{"snoop",       CmdLFSnoop,         0, "['l'|'h'|<divisor>] [trigger threshold]-- Snoop LF (l:125khz, h:134khz)"},
 	{"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
 	{"hitag",       CmdLFHitag,         1, "{ Hitag tags and transponders... }"},

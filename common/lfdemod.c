@@ -81,10 +81,8 @@ uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_
 	//  otherwise could be a void with no arguments
 	//set defaults
 	uint32_t i = 0;
-	if (BitStream[1]>1){  //allow only 1s and 0s
-		// PrintAndLog("no data found");
-		return 0;
-	}
+	if (BitStream[1]>1) return 0;  //allow only 1s and 0s
+
 	// 111111111 bit pattern represent start of frame
 	//  include 0 in front to help get start pos
 	uint8_t preamble[] = {0,1,1,1,1,1,1,1,1,1};
@@ -130,7 +128,7 @@ int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int 
 				if (smplCnt > clk-(clk/4)-1) { //full clock
 					if (smplCnt > clk + (clk/4)+1) { //too many samples
 						errCnt++;
-						BinStream[bitCnt++]=77;
+						BinStream[bitCnt++]=7;
 					} else if (waveHigh) {
 						BinStream[bitCnt++] = invert;
 						BinStream[bitCnt++] = invert;
@@ -208,7 +206,7 @@ int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 			//should have hit a high or low based on clock!!
 			//PrintAndLog("DEBUG - no wave in expected area - location: %d, expected: %d-%d, lastBit: %d - resetting search",i,(lastBit+(clk-((int)(tol)))),(lastBit+(clk+((int)(tol)))),lastBit);
 			if (bitnum > 0) {
-				BinStream[bitnum++] = 77;
+				BinStream[bitnum++] = 7;
 				errCnt++;
 			}		
 			lastBit += *clk;//skip over error
@@ -244,6 +242,7 @@ int manrawdecode(uint8_t * BitStream, size_t *size)
 	size_t i, ii;
 	uint16_t bestErr = 1000, bestRun = 0;
 	if (size == 0) return -1;
+	//find correct start position [alignment]
 	for (ii=0;ii<2;++ii){
 		for (i=ii; i<*size-2; i+=2)
 			if (BitStream[i]==BitStream[i+1])
@@ -255,13 +254,14 @@ int manrawdecode(uint8_t * BitStream, size_t *size)
 		}
 		errCnt=0;
 	}
+	//decode
 	for (i=bestRun; i < *size-2; i+=2){
 		if(BitStream[i] == 1 && (BitStream[i+1] == 0)){
 			BitStream[bitnum++]=0;
 		} else if((BitStream[i] == 0) && BitStream[i+1] == 1){
 			BitStream[bitnum++]=1;
 		} else {
-			BitStream[bitnum++]=77;
+			BitStream[bitnum++]=7;
 		}
 		if(bitnum>MaxBits) break;
 	}
@@ -291,7 +291,7 @@ int BiphaseRawDecode(uint8_t *BitStream, size_t *size, int offset, int invert)
 	for (i=offset; i<*size-3; i+=2){
 		//check for phase error
 		if (BitStream[i+1]==BitStream[i+2]) {
-			BitStream[bitnum++]=77;
+			BitStream[bitnum++]=7;
 			errCnt++;
 		}
 		if((BitStream[i]==1 && BitStream[i+1]==0) || (BitStream[i]==0 && BitStream[i+1]==1)){
@@ -299,7 +299,7 @@ int BiphaseRawDecode(uint8_t *BitStream, size_t *size, int offset, int invert)
 		} else if((BitStream[i]==0 && BitStream[i+1]==0) || (BitStream[i]==1 && BitStream[i+1]==1)){
 			BitStream[bitnum++]=invert;
 		} else {
-			BitStream[bitnum++]=77;
+			BitStream[bitnum++]=7;
 			errCnt++;
 		}
 		if(bitnum>MaxBits) break;
@@ -367,7 +367,7 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 				BinStream[bitnum++] = *invert ^ 1;
 			} else {
 				if (bitnum > 0) {
-					BinStream[bitnum++]=77;
+					BinStream[bitnum++]=7;
 					errCnt++;						
 				} 
 			}
@@ -784,8 +784,9 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 		for (i=8; i>1; i--){
 			if (clk[i] == ans) {
 				*clock = ans;
-				clockFnd = i;
-				break; //clock found but continue to find best startpos
+				//clockFnd = i;
+				return 0;  // for strong waves i don't use the 'best start position' yet...
+				//break; //clock found but continue to find best startpos [not yet]
 			}
 		}
 	}
@@ -806,10 +807,11 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 		}else{
 			tol=0;
 		}
-		if (!maxErr && loopCnt>clk[clkCnt]*3) loopCnt=clk[clkCnt]*3;
+		//if no errors allowed - keep start within the first clock
+		if (!maxErr && size > clk[clkCnt]*3 + tol) loopCnt=clk[clkCnt]*2;
 		bestErr[clkCnt]=1000;
 		//try lining up the peaks by moving starting point (try first few clocks)
-		for (ii=0; ii < loopCnt-tol-clk[clkCnt]; ii++){
+		for (ii=0; ii < loopCnt-clk[clkCnt]; ii++){
 			if (dest[ii] < peak && dest[ii] > low) continue;
 
 			errCnt=0;
@@ -849,7 +851,7 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 			}
 		}
 	}
-	if (bestErr[best] > maxErr) return -1;
+	//if (bestErr[best] > maxErr) return -1;
 	*clock = clk[best];
 	return bestStart[best];
 }
@@ -1029,7 +1031,7 @@ void psk1TOpsk2(uint8_t *BitStream, size_t size)
 	size_t i=1;
 	uint8_t lastBit=BitStream[0];
 	for (; i<size; i++){
-		if (BitStream[i]==77){
+		if (BitStream[i]==7){
 			//ignore errors
 		} else if (lastBit!=BitStream[i]){
 			lastBit=BitStream[i];
@@ -1222,7 +1224,7 @@ int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int maxErr)
 			if (ignoreCnt == 0){
 				bitHigh = 0;
 				if (errBitHigh == 1){
-					dest[bitnum++] = 77;
+					dest[bitnum++] = 7;
 					errCnt++;
 				}
 				errBitHigh=0;
@@ -1497,7 +1499,7 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
 						//noise after a phase shift - ignore
 					} else { //phase shift before supposed to based on clock
 						errCnt++;
-						dest[numBits++] = 77;
+						dest[numBits++] = 7;
 					}
 				} else if (i+1 > lastClkBit + *clock + tol + fc){
 					lastClkBit += *clock; //no phase shift but clock bit

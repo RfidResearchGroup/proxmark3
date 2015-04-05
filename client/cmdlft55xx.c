@@ -147,31 +147,37 @@ int CmdT55xxSetConfig(const char *Cmd) {
 			param_getstr(Cmd, cmdp+1, modulation);
 			cmdp += 2;
 
-			if ( strcmp(modulation, "FSK" ) == 0)
+			if ( strcmp(modulation, "FSK" ) == 0) {
 				config.modulation = DEMOD_FSK;
-			else if ( strcmp(modulation, "FSK1" ) == 0)
+			} else if ( strcmp(modulation, "FSK1" ) == 0) {
 				config.modulation = DEMOD_FSK1;
-			else if ( strcmp(modulation, "FSK1a" ) == 0)
+				config.inverted=1;
+			} else if ( strcmp(modulation, "FSK1a" ) == 0) {
 				config.modulation = DEMOD_FSK1a;
-			else if ( strcmp(modulation, "FSK2" ) == 0)
+				config.inverted=0;
+			} else if ( strcmp(modulation, "FSK2" ) == 0) {
 				config.modulation = DEMOD_FSK2;
-			else if ( strcmp(modulation, "FSK2a" ) == 0)
+				config.inverted=0;
+			} else if ( strcmp(modulation, "FSK2a" ) == 0) {
 				config.modulation = DEMOD_FSK2a;
-			else if ( strcmp(modulation, "ASK" ) == 0)
+				config.inverted=1;
+			} else if ( strcmp(modulation, "ASK" ) == 0) {
 				config.modulation = DEMOD_ASK;
-			else if ( strcmp(modulation, "NRZ" ) == 0)
+			} else if ( strcmp(modulation, "NRZ" ) == 0) {
 				config.modulation = DEMOD_NRZ;
-			else if ( strcmp(modulation, "PSK1" ) == 0)
+			} else if ( strcmp(modulation, "PSK1" ) == 0) {
 				config.modulation = DEMOD_PSK1;
-			else if ( strcmp(modulation, "PSK2" ) == 0)
+			} else if ( strcmp(modulation, "PSK2" ) == 0) {
 				config.modulation = DEMOD_PSK2;
-			else if ( strcmp(modulation, "PSK3" ) == 0)
+			} else if ( strcmp(modulation, "PSK3" ) == 0) {
 				config.modulation = DEMOD_PSK3;
-			else if ( strcmp(modulation, "BIa" ) == 0)
+			} else if ( strcmp(modulation, "BIa" ) == 0) {
 				config.modulation = DEMOD_BIa;
-			else if ( strcmp(modulation, "BI" ) == 0)
+				config.inverted=1;
+			} else if ( strcmp(modulation, "BI" ) == 0) {
 				config.modulation = DEMOD_BI;
-			else {
+				config.inverted=0;
+			} else {
 				PrintAndLog("Unknown modulation '%s'", modulation);
 				errors = TRUE;
 			}
@@ -264,55 +270,36 @@ bool DecodeT55xxBlock(){
 
 	switch( config.modulation ){
 		case DEMOD_FSK:
-			//CmdLtrim("26");
 			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
 			CmdLtrim(cmdStr);			
 			sprintf(cmdStr,"%d %d", bitRate[config.bitrate], config.inverted );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK1:
-			//CmdLtrim("26");
-			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
-			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d 1 8 5", bitRate[config.bitrate] );
-			ans = FSKrawDemod(cmdStr, FALSE);
-			break;
 		case DEMOD_FSK1a:
-			//CmdLtrim("26");
 			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
 			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d 0 8 5", bitRate[config.bitrate] );
+			sprintf(cmdStr,"%d %d 8 5", bitRate[config.bitrate], config.inverted );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK2:
-			//CmdLtrim("26");
-			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
-			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d 0 10 8", bitRate[config.bitrate] );
-			ans = FSKrawDemod(cmdStr, FALSE);
-			break;
 		case DEMOD_FSK2a:
-			//CmdLtrim("26");
 			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
 			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d 1 10 8", bitRate[config.bitrate] );
+			sprintf(cmdStr,"%d %d 10 8", bitRate[config.bitrate], config.inverted );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_ASK:
-			sprintf(cmdStr,"%d %d 1", bitRate[config.bitrate], config.inverted );
+			sprintf(cmdStr,"%d %d 0", bitRate[config.bitrate], config.inverted );
 			ans = ASKmanDemod(cmdStr, FALSE, FALSE);
 			break;
 		case DEMOD_PSK1:
-			sprintf(cmdStr,"%d %d 1", bitRate[config.bitrate], config.inverted );
+			sprintf(cmdStr,"%d %d 0", bitRate[config.bitrate], config.inverted );
 			ans = PSKDemod(cmdStr, FALSE);
 			break;
-		case DEMOD_PSK2:
-			sprintf(cmdStr,"%d 1", bitRate[config.bitrate] );
-			ans = PSKDemod(cmdStr, FALSE);
-			psk1TOpsk2(DemodBuffer, DemodBufferLen);
-			break;
-		case DEMOD_PSK3:
-			sprintf(cmdStr,"%d %d 1", bitRate[config.bitrate], config.inverted );
+		case DEMOD_PSK2: //inverted won't affect this
+		case DEMOD_PSK3: //not fully implemented
+			sprintf(cmdStr,"%d 0 1", bitRate[config.bitrate] );
 			ans = PSKDemod(cmdStr, FALSE);
 			psk1TOpsk2(DemodBuffer, DemodBufferLen);
 			break;
@@ -321,11 +308,8 @@ bool DecodeT55xxBlock(){
 			ans = NRZrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_BI:
-			sprintf(cmdStr,"0 %d 0 1", bitRate[config.bitrate] );
-			ans = ASKbiphaseDemod(cmdStr, FALSE);
-			break;
 		case DEMOD_BIa:
-			sprintf(cmdStr,"0 %d 1 1", bitRate[config.bitrate] );
+			sprintf(cmdStr,"0 %d %d 0", bitRate[config.bitrate], config.inverted );
 			ans = ASKbiphaseDemod(cmdStr, FALSE);
 			break;
 		default:
@@ -516,33 +500,9 @@ bool testBitRate(uint8_t readRate, uint8_t mod){
 	uint8_t detRate = 0;
 	switch( mod ){
 		case DEMOD_FSK:
-			detRate = GetFskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
-			break;
 		case DEMOD_FSK1:
-			detRate = GetFskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
-			break;
 		case DEMOD_FSK1a:
-			detRate = GetFskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
-			break;
 		case DEMOD_FSK2:
-			detRate = GetFskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
-			break;
 		case DEMOD_FSK2a:
 			detRate = GetFskClock("",FALSE, FALSE); 
 			if (expected[readRate] == detRate) {
@@ -551,6 +511,8 @@ bool testBitRate(uint8_t readRate, uint8_t mod){
 			}
 			break;
 		case DEMOD_ASK:
+		case DEMOD_BI:
+		case DEMOD_BIa:
 			detRate = GetAskClock("",FALSE, FALSE); 
 			if (expected[readRate] == detRate) {
 				config.bitrate = readRate;
@@ -558,19 +520,7 @@ bool testBitRate(uint8_t readRate, uint8_t mod){
 			}
 			break;
 		case DEMOD_PSK1:
-			detRate = GetPskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
-			break;
 		case DEMOD_PSK2:
-			detRate = GetPskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
-			break;
 		case DEMOD_PSK3:
 			detRate = GetPskClock("",FALSE, FALSE); 
 			if (expected[readRate] == detRate) {
@@ -580,13 +530,6 @@ bool testBitRate(uint8_t readRate, uint8_t mod){
 			break;
 		case DEMOD_NRZ:
 			detRate = GetNrzClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
-			break;
-		case DEMOD_BI:
-			detRate = GetAskClock("",FALSE, FALSE); 
 			if (expected[readRate] == detRate) {
 				config.bitrate = readRate;
 				return TRUE;
@@ -606,18 +549,18 @@ bool test(uint8_t mode, uint8_t *offset){
 		si = idx;
 		if ( PackBits(si, 32, DemodBuffer) == 0x00 ) continue;
 
-		uint8_t safer    = PackBits(si, 4, DemodBuffer); si += 4;	    //master key
+		uint8_t safer    = PackBits(si, 4, DemodBuffer); si += 4;     //master key
 		uint8_t resv     = PackBits(si, 4, DemodBuffer); si += 4;     //was 7 & +=7+3 //should be only 4 bits if extended mode
 		// 2nibble must be zeroed.
 		// moved test to here, since this gets most faults first.
 		if ( resv > 0x00) continue;
 
-		uint8_t xtRate   = PackBits(si, 3, DemodBuffer); si += 3;   //new
-		uint8_t bitRate  = PackBits(si, 3, DemodBuffer); si += 3;   //new  could check bit rate
+		uint8_t xtRate   = PackBits(si, 3, DemodBuffer); si += 3;     //extended mode part of rate
+		uint8_t bitRate  = PackBits(si, 3, DemodBuffer); si += 3;     //bit rate
 		uint8_t extend   = PackBits(si, 1, DemodBuffer); si += 1;     //bit 15 extended mode
-		uint8_t modread  = PackBits(si, 5, DemodBuffer); si += 5+2+1; //new
-		//uint8_t pskcr   = PackBits(si, 2, DemodBuffer); si += 2+1;  //new  could check psk cr
-		uint8_t nml01    = PackBits(si, 1, DemodBuffer); si += 1+5;   //bit 24 , 30, 31 could be tested for 0 if not extended mode
+		uint8_t modread  = PackBits(si, 5, DemodBuffer); si += 5+2+1; 
+		//uint8_t pskcr   = PackBits(si, 2, DemodBuffer); si += 2+1;  //could check psk cr
+		uint8_t nml01    = PackBits(si, 1, DemodBuffer); si += 1+5;   //bit 24, 30, 31 could be tested for 0 if not extended mode
 		uint8_t nml02    = PackBits(si, 2, DemodBuffer); si += 2;
 		
 		//if extended mode
@@ -628,9 +571,8 @@ bool test(uint8_t mode, uint8_t *offset){
 		}
 		//test modulation
 		if (!testModulation(mode, modread)) continue;
-
-		*offset = idx;
 		if (!testBitRate(bitRate, mode)) continue;
+		*offset = idx;
 		return TRUE;
 	}
 	return FALSE;
@@ -922,7 +864,7 @@ int AquireData( uint8_t block ){
 }
 
 char * GetBitRateStr(uint32_t id){
- 	static char buf[40];
+ 	static char buf[20];
 	char *retStr = buf;
 		switch (id){
 		case 0: 
@@ -957,7 +899,6 @@ char * GetBitRateStr(uint32_t id){
 	return buf;
 }
 
-
 char * GetSaferStr(uint32_t id){
 	static char buf[40];
 	char *retStr = buf;
@@ -974,7 +915,7 @@ char * GetSaferStr(uint32_t id){
 }
 
 char * GetModulationStr( uint32_t id){
-	static char buf[40];
+	static char buf[60];
 	char *retStr = buf;
 	
 	switch (id){

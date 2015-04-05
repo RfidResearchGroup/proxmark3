@@ -140,7 +140,6 @@ int CmdEM410xSim(const char *Cmd)
  *       rate gets lower, then grow the number of samples
  *  Changed by martin, 4000 x 4 = 16000, 
  *  see http://www.proxmark.org/forum/viewtopic.php?pid=7235#p7235
-
 */
 int CmdEM410xWatch(const char *Cmd)
 {
@@ -151,7 +150,7 @@ int CmdEM410xWatch(const char *Cmd)
 		}
 		
 		CmdLFRead("s");
-		getSamples("8192",true); //capture enough to get 2 full messages		
+		getSamples("8201",true); //capture enough to get 2 complete preambles (4096*2+9)	
 	} while (!CmdEM410xRead(""));
 
 	return 0;

@@ -53,11 +53,11 @@ void save_restoreGB(uint8_t saveOpt)
 	static bool GB_Saved = false;
 
 	if (saveOpt==1) { //save
-		memcpy(SavedGB,GraphBuffer, sizeof(GraphBuffer));
+		memcpy(SavedGB, GraphBuffer, sizeof(GraphBuffer));
 		SavedGBlen = GraphTraceLen;
 		GB_Saved=true;
 	} else if (GB_Saved){
-		memcpy(GraphBuffer,SavedGB, sizeof(GraphBuffer));
+		memcpy(GraphBuffer, SavedGB, sizeof(GraphBuffer));
 		GraphTraceLen = SavedGBlen;
 	}
 	return;

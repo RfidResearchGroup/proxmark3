@@ -17,7 +17,7 @@
 #include "cmdlfhid.h"
 
 static int CmdHelp(const char *Cmd);
-
+/*
 int CmdHIDDemod(const char *Cmd)
 {
   if (GraphTraceLen < 4800) {
@@ -36,7 +36,7 @@ int CmdHIDDemod(const char *Cmd)
   RepaintGraphWindow();
   return 0;
 }
-
+*/
 int CmdHIDDemodFSK(const char *Cmd)
 {
   int findone=0;
@@ -106,7 +106,7 @@ int CmdHIDClone(const char *Cmd)
 static command_t CommandTable[] = 
 {
   {"help",      CmdHelp,        1, "This help"},
-  {"demod",     CmdHIDDemod,    1, "Demodulate HID Prox Card II (not optimal)"},
+  //{"demod",     CmdHIDDemod,    1, "Demodulate HID Prox Card II (not optimal)"},
   {"fskdemod",  CmdHIDDemodFSK, 0, "['1'] Realtime HID FSK demodulator (option '1' for one tag only)"},
   {"sim",       CmdHIDSim,      0, "<ID> -- HID tag simulator"},
   {"clone",     CmdHIDClone,    0, "<ID> ['l'] -- Clone HID to T55x7 (tag must be in antenna)(option 'l' for 84bit ID)"},

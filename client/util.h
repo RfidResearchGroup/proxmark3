@@ -39,6 +39,7 @@ void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext, int byteCount);
 void print_hex(const uint8_t * data, const size_t len);
 char * sprint_hex(const uint8_t * data, const size_t len);
 char * sprint_bin(const uint8_t * data, const size_t len);
+char * sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks);
 
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
 uint64_t bytes_to_num(uint8_t* src, size_t len);
