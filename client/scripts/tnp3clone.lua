@@ -109,24 +109,28 @@ local function main(args)
 			return oops('failed reading block with chinese magic command.  quitting...')
 		end
 	end
-	local b1 = toytype..'000000000000000000000000'
 	
+	-- wipe card.
+	local cmd  = (cset..' %s 0004 08 w'):format( b0)	
+	core.console(cmd) 
+
+	
+	local b1 = toytype..'000000000000000000000000'
 	local calc = utils.Crc16(b0..b1)
 	local calcEndian = bor(rsh(calc,8), lsh(band(calc, 0xff), 8))
 	
 	local cmd  = (cset..'1 %s%04x'):format( b1, calcEndian)	
-	core.console( cmd) 
+	core.console(cmd) 
 	
 	local pos, key
 	for blockNo = 2, numBlocks-1, 1 do
 		pos = (math.floor( blockNo / 4 ) * 12)+1
 		key = akeys:sub(pos, pos + 11 )
-		if  blockNo%4 ~= 3 then
-			cmd =  ('%s %d %s'):format(cset,blockNo,empty) 
-		else
+		if  blockNo%4 == 3 then
 			cmd =  ('%s %d %s%s'):format(cset,blockNo,key,AccAndKeyB) 
-		end
-		core.console(cmd)
+			core.console(cmd)
+		end		
 	end 
+	core.clearCommandBuffer()
 end
 main(args)
