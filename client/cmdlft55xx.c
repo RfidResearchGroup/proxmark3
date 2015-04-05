@@ -308,7 +308,7 @@ bool DecodeT55xxBlock(){
 			break;
 		case DEMOD_BI:
 		case DEMOD_BIa:
-			sprintf(cmdStr,"0 %d %d 1", bitRate[config.bitrate], config.inverted );
+			sprintf(cmdStr,"0 %d %d 0", bitRate[config.bitrate], config.inverted );
 			ans = ASKbiphaseDemod(cmdStr, FALSE);
 			break;
 		default:
@@ -954,7 +954,6 @@ char * GetBitRateStr(uint32_t id){
 	return buf;
 }
 
-
 char * GetSaferStr(uint32_t id){
 	static char buf[20];
 	char *retStr = buf;
@@ -1023,8 +1022,8 @@ char * GetModelStrFromCID(uint32_t cid){
 	static char buf[10];
 	char *retStr = buf;
 	
-	if (cid == 1) sprintf(retStr,"ATA5577M1");
-	if (cid == 2) sprintf(retStr,"ATA5577M2");	
+	if (cid == 1) snprintf(retStr, sizeof(buf),"ATA5577M1");
+	if (cid == 2) snprintf(retStr, sizeof(buf),"ATA5577M2");	
 	return buf;
 }
 
