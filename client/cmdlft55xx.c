@@ -926,94 +926,96 @@ char * GetBitRateStr(uint32_t id){
 	char *retStr = buf;
 		switch (id){
 		case 0: 
-			sprintf(retStr,"%d - RF/8",id);
+			snprintf(retStr,sizeof(buf),"%d - RF/8",id);
 			break;
 		case 1:
-			sprintf(retStr,"%d - RF/16",id);
+			snprintf(retStr,sizeof(buf),"%d - RF/16",id);
 			break;
 		case 2:		
-			sprintf(retStr,"%d - RF/32",id);
+			snprintf(retStr,sizeof(buf),"%d - RF/32",id);
 			break;
 		case 3:
-			sprintf(retStr,"%d - RF/40",id);
+			snprintf(retStr,sizeof(buf),"%d - RF/40",id);
 			break;
 		case 4:
-			sprintf(retStr,"%d - RF/50",id);
+			snprintf(retStr,sizeof(buf),"%d - RF/50",id);
 			break;
 		case 5:
-			sprintf(retStr,"%d - RF/64",id);
+			snprintf(retStr,sizeof(buf),"%d - RF/64",id);
 			break;
 		case 6:
-			sprintf(retStr,"%d - RF/100",id);
+			snprintf(retStr,sizeof(buf),"%d - RF/100",id);
 			break;
 		case 7:
-			sprintf(retStr,"%d - RF/128",id);
+			snprintf(retStr,sizeof(buf),"%d - RF/128",id);
 			break;
 		default:
-			sprintf(retStr,"%d - (Unknown)",id);
+			snprintf(retStr,sizeof(buf),"%d - (Unknown)",id);
 			break;
 		}
 
 	return buf;
 }
 
+
 char * GetSaferStr(uint32_t id){
 	static char buf[40];
 	char *retStr = buf;
 	
-	sprintf(retStr,"%d",id);
+	snprintf(retStr,sizeof(buf),"%d",id);
 	if (id == 6) {
-		sprintf(retStr,"%d - passwd",id);
+		snprintf(retStr,sizeof(buf),"%d - passwd",id);
 	}
 	if (id == 9 ){
-		sprintf(retStr,"%d - testmode",id);
+		snprintf(retStr,sizeof(buf),"%d - testmode",id);
 	}
 	
 	return buf;
 }
+
 char * GetModulationStr( uint32_t id){
 	static char buf[40];
 	char *retStr = buf;
 	
 	switch (id){
 		case 0: 
-			sprintf(retStr,"%d - DIRECT (ASK/NRZ)",id);
+			snprintf(retStr,sizeof(buf),"%d - DIRECT (ASK/NRZ)",id);
 			break;
 		case 1:
-			sprintf(retStr,"%d - PSK 1 phase change when input changes",id);
+			snprintf(retStr,sizeof(buf),"%d - PSK 1 phase change when input changes",id);
 			break;
 		case 2:		
-			sprintf(retStr,"%d - PSK 2 phase change on bitclk if input high",id);
+			snprintf(retStr,sizeof(buf),"%d - PSK 2 phase change on bitclk if input high",id);
 			break;
 		case 3:
-			sprintf(retStr,"%d - PSK 3 phase change on rising edge of input",id);
+			snprintf(retStr,sizeof(buf),"%d - PSK 3 phase change on rising edge of input",id);
 			break;
 		case 4:
-			sprintf(retStr,"%d - FSK 1 RF/8  RF/5",id);
+			snprintf(retStr,sizeof(buf),"%d - FSK 1 RF/8  RF/5",id);
 			break;
 		case 5:
-			sprintf(retStr,"%d - FSK 2 RF/8  RF/10",id);
+			snprintf(retStr,sizeof(buf),"%d - FSK 2 RF/8  RF/10",id);
 			break;
 		case 6:
-			sprintf(retStr,"%d - FSK 1a RF/5  RF/8",id);
+			snprintf(retStr,sizeof(buf),"%d - FSK 1a RF/5  RF/8",id);
 			break;
 		case 7:
-			sprintf(retStr,"%d - FSK 2a RF/10  RF/8",id);
+			snprintf(retStr,sizeof(buf),"%d - FSK 2a RF/10  RF/8",id);
 			break;
 		case 8:
-			sprintf(retStr,"%d - Manschester",id);
+			snprintf(retStr,sizeof(buf),"%d - Manschester",id);
 			break;
 		case 16:
-			sprintf(retStr,"%d - Biphase",id);
+			snprintf(retStr,sizeof(buf),"%d - Biphase",id);
 			break;
 		case 0x18:
-			sprintf(retStr,"%d - Biphase a - AKA Conditional Dephase Encoding(CDP)",id);
+			snprintf(retStr,sizeof(buf),"%d - Biphase a - AKA Conditional Dephase Encoding(CDP)",id);
 			break;
 		case 17:
-			sprintf(retStr,"%d - Reserved",id);
+			snprintf(retStr,sizeof(buf),"%d - Reserved",id);
 			break;
 		default:
-			sprintf(retStr,"0x%02X (Unknown)",id);
+			snprintf(retStr,sizeof(buf),"0x%02X (Unknown)",id);
 			break;
 		}
 	return buf;
@@ -1031,48 +1033,48 @@ char * GetModelStrFromCID(uint32_t cid){
 
 char * GetSelectedModulationStr( uint8_t id){
 
-	static char buf[16];
+	static char buf[20];
 	char *retStr = buf;
 
 	switch (id){
 		case DEMOD_FSK:
-			sprintf(retStr,"FSK");
+			snprintf(retStr,sizeof(buf),"FSK");
 			break;
 		case DEMOD_FSK1:
-			sprintf(retStr,"FSK1");
+			snprintf(retStr,sizeof(buf),"FSK1");
 			break;
 		case DEMOD_FSK1a:
-			sprintf(retStr,"FSK1a");
+			snprintf(retStr,sizeof(buf),"FSK1a");
 			break;
 		case DEMOD_FSK2:
-			sprintf(retStr,"FSK2");
+			snprintf(retStr,sizeof(buf),"FSK2");
 			break;
 		case DEMOD_FSK2a:
-			sprintf(retStr,"FSK2a");
+			snprintf(retStr,sizeof(buf),"FSK2a");
 			break;
 		case DEMOD_ASK:		
-			sprintf(retStr,"ASK");
+			snprintf(retStr,sizeof(buf),"ASK");
 			break;
 		case DEMOD_NRZ:
-			sprintf(retStr,"DIRECT/NRZ");
+			snprintf(retStr,sizeof(buf),"DIRECT/NRZ");
 			break;
 		case DEMOD_PSK1:
-			sprintf(retStr,"PSK1");
+			snprintf(retStr,sizeof(buf),"PSK1");
 			break;
 		case DEMOD_PSK2:
-			sprintf(retStr,"PSK2");
+			snprintf(retStr,sizeof(buf),"PSK2");
 			break;
 		case DEMOD_PSK3:
-			sprintf(retStr,"PSK3");
+			snprintf(retStr,sizeof(buf),"PSK3");
 			break;
 		case DEMOD_BI:
-			sprintf(retStr,"BIPHASE");
+			snprintf(retStr,sizeof(buf),"BIPHASE");
 			break;
 		case DEMOD_BIa:
-			sprintf(retStr,"BIPHASEa - (CDP)");
+			snprintf(retStr,sizeof(buf),"BIPHASEa - (CDP)");
 			break;
 		default:
-			sprintf(retStr,"(Unknown)");
+			snprintf(retStr,sizeof(buf),"(Unknown)");
 			break;
 		}
 	return buf;
