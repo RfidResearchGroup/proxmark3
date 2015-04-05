@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <time.h>
 #include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"
@@ -261,7 +262,7 @@ int CmdT55xxReadBlock(const char *Cmd) {
 
 bool DecodeT55xxBlock(){
 	
-	char buf[8] = {0x00};
+	char buf[10] = {0x00};
 	char *cmdStr = buf;
 	int ans = 0;
 	uint8_t bitRate[8] = {8,16,32,40,50,64,100,128};
@@ -270,46 +271,46 @@ bool DecodeT55xxBlock(){
 
 	switch( config.modulation ){
 		case DEMOD_FSK:
-			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
+			snprintf(cmdStr, sizeof(buf),"%d", bitRate[config.bitrate]/2 );
 			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d %d", bitRate[config.bitrate], config.inverted );
+			snprintf(cmdStr, sizeof(buf),"%d %d", bitRate[config.bitrate], config.inverted );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK1:
 		case DEMOD_FSK1a:
-			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
+			snprintf(cmdStr, sizeof(buf),"%d", bitRate[config.bitrate]/2 );
 			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d %d 8 5", bitRate[config.bitrate], config.inverted );
+			snprintf(cmdStr, sizeof(buf),"%d %d 8 5", bitRate[config.bitrate], config.inverted );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK2:
 		case DEMOD_FSK2a:
-			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
+			snprintf(cmdStr, sizeof(buf),"%d", bitRate[config.bitrate]/2 );
 			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d %d 10 8", bitRate[config.bitrate], config.inverted );
+			snprintf(cmdStr, sizeof(buf),"%d %d 10 8", bitRate[config.bitrate], config.inverted );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_ASK:
-			sprintf(cmdStr,"%d %d 0", bitRate[config.bitrate], config.inverted );
+			snprintf(cmdStr, sizeof(buf),"%d %d 0", bitRate[config.bitrate], config.inverted );
 			ans = ASKmanDemod(cmdStr, FALSE, FALSE);
 			break;
 		case DEMOD_PSK1:
-			sprintf(cmdStr,"%d %d 0", bitRate[config.bitrate], config.inverted );
+			snprintf(cmdStr, sizeof(buf),"%d %d 0", bitRate[config.bitrate], config.inverted );
 			ans = PSKDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_PSK2: //inverted won't affect this
 		case DEMOD_PSK3: //not fully implemented
-			sprintf(cmdStr,"%d 0 1", bitRate[config.bitrate] );
+			snprintf(cmdStr, sizeof(buf),"%d 0 1", bitRate[config.bitrate] );
 			ans = PSKDemod(cmdStr, FALSE);
 			psk1TOpsk2(DemodBuffer, DemodBufferLen);
 			break;
 		case DEMOD_NRZ:
-			sprintf(cmdStr,"%d %d 1", bitRate[config.bitrate], config.inverted );
+			snprintf(cmdStr, sizeof(buf),"%d %d 1", bitRate[config.bitrate], config.inverted );
 			ans = NRZrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_BI:
 		case DEMOD_BIa:
-			sprintf(cmdStr,"0 %d %d 0", bitRate[config.bitrate], config.inverted );
+			snprintf(cmdStr, sizeof(buf),"0 %d %d 0", bitRate[config.bitrate], config.inverted );
 			ans = ASKbiphaseDemod(cmdStr, FALSE);
 			break;
 		default:
@@ -578,7 +579,7 @@ bool test(uint8_t mode, uint8_t *offset){
 	return FALSE;
 }
 
-void printT55xxBlock(const char *demodStr){
+void printT55xxBlock(const char *blockNum){
 	
 	uint8_t i = config.offset;
 	uint8_t endpos = 32 + i;
@@ -596,7 +597,7 @@ void printT55xxBlock(const char *demodStr){
 		bits[i - config.offset]=DemodBuffer[i];
 
 	blockData = PackBits(0, 32, bits);
-	PrintAndLog("0x%08X  %s [%s]", blockData, sprint_bin(bits,32), demodStr);
+	PrintAndLog("[%s] 0x%08X  %s", blockNum, blockData, sprint_bin(bits,32));
 }
 
 int special(const char *Cmd) {
@@ -688,16 +689,28 @@ int CmdT55xxReadTrace(const char *Cmd)
 	uint32_t bl0     = PackBits(si, 32, DemodBuffer);
 	uint32_t bl1     = PackBits(si+32, 32, DemodBuffer);
 	
-	uint32_t acl     = PackBits(si,  8, DemodBuffer); si += 8;
-	uint32_t mfc     = PackBits(si, 8, DemodBuffer); si += 8;
-	uint32_t cid     = PackBits(si, 5, DemodBuffer); si += 5;
-	uint32_t icr     = PackBits(si, 3, DemodBuffer); si += 3;
-	uint32_t year    = PackBits(si, 4, DemodBuffer); si += 4;
-	uint32_t quarter = PackBits(si, 2, DemodBuffer); si += 2;
-	uint32_t lotid    = PackBits(si, 14, DemodBuffer); si += 14;
-	uint32_t wafer   = PackBits(si, 5, DemodBuffer); si += 5;
+	uint32_t acl     = PackBits(si, 8,  DemodBuffer); si += 8;
+	uint32_t mfc     = PackBits(si, 8,  DemodBuffer); si += 8;
+	uint32_t cid     = PackBits(si, 5,  DemodBuffer); si += 5;
+	uint32_t icr     = PackBits(si, 3,  DemodBuffer); si += 3;
+	uint32_t year    = PackBits(si, 4,  DemodBuffer); si += 4;
+	uint32_t quarter = PackBits(si, 2,  DemodBuffer); si += 2;
+	uint32_t lotid   = PackBits(si, 14, DemodBuffer); si += 14;
+	uint32_t wafer   = PackBits(si, 5,  DemodBuffer); si += 5;
 	uint32_t dw      = PackBits(si, 15, DemodBuffer); 
 	
+	time_t t = time(NULL);
+	struct tm tm = *localtime(&t);
+	if ( year > tm.tm_year-110)
+		year += 2000;
+	else
+		year += 2010;
+
+	if ( acl != 0xE0 ) {
+		PrintAndLog("The modulation is most likely wrong since the ACL is not 0xE0. ");
+		return 1;
+	}
+
 	PrintAndLog("");
 	PrintAndLog("-- T55xx Trace Information ----------------------------------");
 	PrintAndLog("-------------------------------------------------------------");
@@ -716,8 +729,6 @@ int CmdT55xxReadTrace(const char *Cmd)
 	PrintAndLog("     Block 1  : 0x%08X  %s", bl1, sprint_bin(DemodBuffer+config.offset+repeat+32,32) );
 	PrintAndLog("-------------------------------------------------------------");
 
-	if ( acl != 0xE0 )
-		PrintAndLog("The modulation is most likely wrong since the ACL is not 0xE0. ");
 	/*
 	TRACE - BLOCK O
 		Bits	Definition								HEX
@@ -967,8 +978,8 @@ char * GetModelStrFromCID(uint32_t cid){
 	static char buf[10];
 	char *retStr = buf;
 	
-	if (cid == 1) sprintf(retStr,"ATA5577M1");
-	if (cid == 2) sprintf(retStr,"ATA5577M2");	
+	if (cid == 1) snprintf(retStr, sizeof(buf),"ATA5577M1");
+	if (cid == 2) snprintf(retStr, sizeof(buf),"ATA5577M2");	
 	return buf;
 }
 
