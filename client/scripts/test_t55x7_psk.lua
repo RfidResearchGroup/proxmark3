@@ -108,6 +108,7 @@ end
 function test(modulation)
 	local bitrate
 	local clockrate
+	local block = "00"
 	for bitrate = 0x0, 0x1d, 0x4 do
 	
 		for clockrate = 0,8,4 do
@@ -125,8 +126,8 @@ function test(modulation)
 					dbg(('lf t55xx write 0 %s'):format(config))
 					
 					config = tonumber(config,16) 
-					local writecommand = Command:new{cmd = cmds.CMD_T55XX_WRITE_BLOCK, arg1 = config ,arg2 = 0, arg3 = 0}
-					local err = core.SendCommand(writecommand:getBytes())
+					local writecmd = Command:new{cmd = cmds.CMD_T55XX_WRITE_BLOCK,arg1 = config, arg2 = block, arg3 = "00", data = "00"}
+					local err = core.SendCommand(writecmd:getBytes())
 					if err then return oops(err) end
 					local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
 				else
