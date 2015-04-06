@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [Unreleased][unreleased]
 ### Changed
 - Iclass read, `hf iclass read` now also reads tag config and prints configuration. (holiman)
+- *bootrom* needs to be flashed, due to new address boundaries between os and fpga, after a size optimization (piwi)
 
 ### Fixed
 - Fixed issue #19, problems with LF T55xx commands (marshmellow)
