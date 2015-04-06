@@ -350,10 +350,11 @@ int Cmdmandecoderaw(const char *Cmd)
 	size_t size=0;
 	size_t maxErr = 20;
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  data manrawdecode");
+	if (strlen(Cmd) > 5 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  data manrawdecode [maxErr]");
 		PrintAndLog("     Takes 10 and 01 and converts to 0 and 1 respectively");
 		PrintAndLog("     --must have binary sequence in demodbuffer (run data askrawdemod first)");
+		PrintAndLog("  [maxErr]  set number of errors allowed (default = 20)");		
 		PrintAndLog("");
 		PrintAndLog("    sample: data manrawdecode   = decode manchester bitstream from the demodbuffer");
 		return 0;
@@ -366,10 +367,12 @@ int Cmdmandecoderaw(const char *Cmd)
 		else if(DemodBuffer[i]<low) low=DemodBuffer[i];
 		BitStream[i]=DemodBuffer[i];
 	}
-	if (high>1 || low <0 ){
+	if (high>7 || low <0 ){
 		PrintAndLog("Error: please raw demod the wave first then manchester raw decode");
 		return 0;
 	}
+
+	sscanf(Cmd, "%i", &maxErr);
 	size=i;
 	errCnt=manrawdecode(BitStream, &size);
 	if (errCnt>=maxErr){
@@ -2172,7 +2175,7 @@ static command_t CommandTable[] =
 	{"askem410xdemod",  CmdAskEM410xDemod,  1, "[clock] [invert<0|1>] [maxErr] -- Demodulate an EM410x tag from GraphBuffer (args optional)"},
 	{"askgproxiidemod", CmdG_Prox_II_Demod, 1, "Demodulate a G Prox II tag from GraphBuffer"},
 	{"autocorr",        CmdAutoCorr,        1, "[window length] [g] -- Autocorrelation over window - g to save back to GraphBuffer (overwrite)"},
-	{"biphaserawdecode",CmdBiphaseDecodeRaw,1,"[offset] [invert<0|1>] Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
+	{"biphaserawdecode",CmdBiphaseDecodeRaw,1,"[offset] [invert<0|1>] [maxErr] -- Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
 	{"bitsamples",      CmdBitsamples,      0, "Get raw samples as bitstring"},
 	{"buffclear",       CmdBuffClear,       1, "Clear sample buffer and graph window"},
 	{"dec",             CmdDec,             1, "Decimate samples"},
@@ -2191,7 +2194,7 @@ static command_t CommandTable[] =
 	{"load",            CmdLoad,            1, "<filename> -- Load trace (to graph window"},
 	{"ltrim",           CmdLtrim,           1, "<samples> -- Trim samples from left of trace"},
 	{"rtrim",           CmdRtrim,           1, "<location to end trace> -- Trim samples from right of trace"},
-	{"manrawdecode",    Cmdmandecoderaw,    1, "Manchester decode binary stream in DemodBuffer"},
+	{"manrawdecode",    Cmdmandecoderaw,    1, "[maxErr] -- Manchester decode binary stream in DemodBuffer"},
 	{"norm",            CmdNorm,            1, "Normalize max/min to +/-128"},
 	{"plot",            CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
 	{"printdemodbuffer",CmdPrintDemodBuff,  1, "[x] -- print the data in the DemodBuffer - 'x' for hex output"},
