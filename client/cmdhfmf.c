@@ -550,12 +550,10 @@ int CmdHF14AMfNested(const char *Cmd)
 	uint8_t keyBlock[13*6];
 	uint64_t key64 = 0;
 	bool transferToEml = false;
-	
 	bool createDumpFile = false;
 	FILE *fkeys;
 	uint8_t standart[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-	
 	char cmdp, ctmp;
 
 	if (strlen(Cmd)<3) {
@@ -684,9 +682,6 @@ int CmdHF14AMfNested(const char *Cmd)
 					e_sector[i].Key[j] = key64;
 					e_sector[i].foundKey[j] = 1;
 				}
-			}
-		}
-		
 		// nested sectors
 		iterations = 0;
 		PrintAndLog("nested...");
@@ -1500,16 +1495,16 @@ int CmdHF14AMfCSetUID(const char *Cmd)
 
 int CmdHF14AMfCSetBlk(const char *Cmd)
 {
-	//uint8_t uid[8] = {0x00};
 	uint8_t memBlock[16] = {0x00};
 	uint8_t blockNo = 0;
-	int res;
+	bool wipeCard = FALSE;
+	int res = 0;	
 
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
-		PrintAndLog("Usage:  hf mf csetblk <block number> <block data (32 hex symbols)>");
+		PrintAndLog("Usage:  hf mf csetblk <block number> <block data (32 hex symbols)> [w]");
 		PrintAndLog("sample:  hf mf csetblk 1 01020304050607080910111213141516");
-		PrintAndLog("Set block data for magic Chinese card (only works with!!!)");
-		PrintAndLog("If you want wipe card then add 'w' into command line. \n");
+		PrintAndLog("Set block data for magic Chinese card (only works with such cards)");
+		PrintAndLog("If you also want to wipe the card then add 'w' at the end of the command line.");
 		return 0;
 	}	
 
@@ -1520,15 +1515,16 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 		return 1;
 	}
 
+	char ctmp = param_getchar(Cmd, 2);
+	wipeCard = (ctmp == 'w' || ctmp == 'W');
+
 	PrintAndLog("--block number:%2d data:%s", blockNo, sprint_hex(memBlock, 16));
 
-	//res = mfCSetBlock(blockNo, memBlock, uid, 0, CSETBLOCK_SINGLE_OPER);
-	res = mfCSetBlock(blockNo, memBlock, NULL, 0, CSETBLOCK_SINGLE_OPER);
+	res = mfCSetBlock(blockNo, memBlock, NULL, wipeCard, CSETBLOCK_SINGLE_OPER);
 	if (res) {
-			PrintAndLog("Can't write block. error=%d", res);
-			return 1;
-		}
-	
+		PrintAndLog("Can't write block. error=%d", res);
+		return 1;
+	}	
 	return 0;
 }
 
@@ -1639,7 +1635,7 @@ int CmdHF14AMfCGetBlk(const char *Cmd) {
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("Usage:  hf mf cgetblk <block number>");
 		PrintAndLog("sample:  hf mf cgetblk 1");
-		PrintAndLog("Get block data from magic Chinese card (only works with!!!)\n");
+		PrintAndLog("Get block data from magic Chinese card (only works with such cards)\n");
 		return 0;
 	}	
 
@@ -1666,7 +1662,7 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("Usage:  hf mf cgetsc <sector number>");
 		PrintAndLog("sample:  hf mf cgetsc 0");
-		PrintAndLog("Get sector data from magic Chinese card (only works with!!!)\n");
+		PrintAndLog("Get sector data from magic Chinese card (only works with such cards)\n");
 		return 0;
 	}	
 
