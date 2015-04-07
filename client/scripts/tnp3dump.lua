@@ -5,7 +5,7 @@ local lib14a = require('read14a')
 local utils = require('utils')
 local md5 = require('md5')
 local dumplib = require('html_dumplib')
-local toys = require('default_toys2')
+local toys = require('default_toys')
 
 example =[[
 	script run tnp3dump

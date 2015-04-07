@@ -3,7 +3,7 @@ local getopt = require('getopt')
 local lib14a = require('read14a')
 local utils = require('utils')
 local pre = require('precalc')
-local toys = require('default_toys2')
+local toys = require('default_toys')
 
 local lsh = bit32.lshift
 local rsh = bit32.rshift
