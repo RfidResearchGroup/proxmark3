@@ -323,6 +323,7 @@ int EM4x50Read(const char *Cmd, bool verbose)
 	uint32_t Code[6];
 	char tmp[6];
 	char tmp2[20];
+	int phaseoff;
 	high = low = 0;
 	memset(tmpbuff, 0, MAX_GRAPH_TRACE_LEN / 64);
 
@@ -396,9 +397,11 @@ int EM4x50Read(const char *Cmd, bool verbose)
 	startblock = i + 4;
 
 	// skip over the remainder of LW
-	skip += tmpbuff[i+1] + tmpbuff[i+2] + clk + clk/8;
-	int phaseoff = tmpbuff[i+3]-clk;
-
+	skip += tmpbuff[i+1] + tmpbuff[i+2] + clk;
+	if (tmpbuff[i+3]>clk) 
+		phaseoff = tmpbuff[i+3]-clk;
+	else
+		phaseoff = 0;
 	// now do it again to find the end
 	end = skip;
 	for (i += 3; i < j - 4 ; ++i) {
@@ -423,12 +426,6 @@ int EM4x50Read(const char *Cmd, bool verbose)
 			PrintAndLog("  or after a 'data askedge' command to clean up the read");
 			return 0;
 		}
-		if (!complete)
-		{
-			PrintAndLog("*** Warning!");
-			PrintAndLog("Partial data - no end found!");
-			PrintAndLog("Try again with more samples.");
-		}
 	} else if (start < 0) return 0;
 	start = skip;
 	snprintf(tmp2, sizeof(tmp2),"%d %d 1000 %d", clk, invert, clk*47);
@@ -451,8 +448,12 @@ int EM4x50Read(const char *Cmd, bool verbose)
 				if (tmpbuff[i+1] >= clk-tol)
 					break;
 		}
+		if (i >= j-4) break; //next LW not found
 		skip += clk;
-		phaseoff = tmpbuff[i+1]-clk;
+		if (tmpbuff[i+1]>clk)
+			phaseoff = tmpbuff[i+1]-clk;
+		else
+			phaseoff = 0;
 		i += 2;
 		if (ASKmanDemod(tmp2, false, false) < 1) {
 			save_restoreGB(0);
@@ -475,16 +476,22 @@ int EM4x50Read(const char *Cmd, bool verbose)
 	}
 	//print full code:
 	if (verbose || g_debugMode || AllPTest){
+		if (!complete) {
+			PrintAndLog("*** Warning!");
+			PrintAndLog("Partial data - no end found!");
+			PrintAndLog("Try again with more samples.");
+		}
 		PrintAndLog("Found data at sample: %i - using clock: %i", start, clk);    
 		end = block;
 		for (block=0; block < end; block++){
 			PrintAndLog("Block %d: %08x",block,Code[block]);
 		}
-		if (AllPTest)
+		if (AllPTest) {
 			PrintAndLog("Parities Passed");
-		else
+		} else {
 			PrintAndLog("Parities Failed");
 			PrintAndLog("Try cleaning the read samples with 'data askedge'");
+		}
 	}
 
 	//restore GraphBuffer

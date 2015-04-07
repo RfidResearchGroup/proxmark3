@@ -56,9 +56,10 @@ void save_restoreGB(uint8_t saveOpt)
 		memcpy(SavedGB, GraphBuffer, sizeof(GraphBuffer));
 		SavedGBlen = GraphTraceLen;
 		GB_Saved=true;
-	} else if (GB_Saved){
+	} else if (GB_Saved){ //restore
 		memcpy(GraphBuffer, SavedGB, sizeof(GraphBuffer));
 		GraphTraceLen = SavedGBlen;
+		RepaintGraphWindow();
 	}
 	return;
 }

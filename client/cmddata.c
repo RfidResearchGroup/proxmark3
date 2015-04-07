@@ -850,23 +850,14 @@ int CmdAskEdgeDetect(const char *Cmd)
 	int thresLen = 25;
 	sscanf(Cmd, "%i", &thresLen); 
 	int shift = 127;
-	int shiftedVal=0;
+
 	for(int i = 1; i<GraphTraceLen; i++){
 		if (GraphBuffer[i]-GraphBuffer[i-1]>=thresLen) //large jump up
-			shift=127;
+			GraphBuffer[i-1] = 127;
 		else if(GraphBuffer[i]-GraphBuffer[i-1]<=-1*thresLen) //large jump down
-			shift=-127;
-
-		shiftedVal=GraphBuffer[i]+shift;
-
-		if (shiftedVal>127) 
-			shiftedVal=127;
-		else if (shiftedVal<-127) 
-			shiftedVal=-127;
-		GraphBuffer[i-1] = shiftedVal;
+			GraphBuffer[i-1] = -127;
 	}
 	RepaintGraphWindow();
-	//CmdNorm("");
 	return 0;
 }
 
@@ -2171,7 +2162,7 @@ int CmdZerocrossings(const char *Cmd)
 static command_t CommandTable[] =
 {
 	{"help",            CmdHelp,            1, "This help"},
-	{"askedgedetect",   CmdAskEdgeDetect,   1, "[threshold] Adjust Graph for manual ask demod using length of sample differences to detect the edge of a wave (default = 25)"},
+	{"askedgedetect",   CmdAskEdgeDetect,   1, "[threshold] Adjust Graph for manual ask demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
 	{"askem410xdemod",  CmdAskEM410xDemod,  1, "[clock] [invert<0|1>] [maxErr] -- Demodulate an EM410x tag from GraphBuffer (args optional)"},
 	{"askgproxiidemod", CmdG_Prox_II_Demod, 1, "Demodulate a G Prox II tag from GraphBuffer"},
 	{"autocorr",        CmdAutoCorr,        1, "[window length] [g] -- Autocorrelation over window - g to save back to GraphBuffer (overwrite)"},
