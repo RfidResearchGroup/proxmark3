@@ -269,24 +269,22 @@ bool DecodeT55xxBlock(){
 
 	DemodBufferLen = 0x00;
 
+	//trim 1/2 a clock from beginning
+	snprintf(cmdStr, sizeof(buf),"%d", bitRate[config.bitrate]/2 );
+	CmdLtrim(cmdStr);
+
 	switch( config.modulation ){
 		case DEMOD_FSK:
-			snprintf(cmdStr, sizeof(buf),"%d", bitRate[config.bitrate]/2 );
-			CmdLtrim(cmdStr);			
 			snprintf(cmdStr, sizeof(buf),"%d %d", bitRate[config.bitrate], config.inverted );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK1:
 		case DEMOD_FSK1a:
-			snprintf(cmdStr, sizeof(buf),"%d", bitRate[config.bitrate]/2 );
-			CmdLtrim(cmdStr);			
 			snprintf(cmdStr, sizeof(buf),"%d %d 8 5", bitRate[config.bitrate], config.inverted );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK2:
 		case DEMOD_FSK2a:
-			snprintf(cmdStr, sizeof(buf),"%d", bitRate[config.bitrate]/2 );
-			CmdLtrim(cmdStr);			
 			snprintf(cmdStr, sizeof(buf),"%d %d 10 8", bitRate[config.bitrate], config.inverted );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
@@ -719,7 +717,7 @@ int CmdT55xxReadTrace(const char *Cmd)
 	PrintAndLog(" CID                                     : 0x%02X (%d) - %s", cid, cid, GetModelStrFromCID(cid));
 	PrintAndLog(" ICR IC Revision                         : %d",icr );
 	PrintAndLog(" Manufactured");
-	PrintAndLog("     Year/Quarter : 20?%d/%d",year, quarter);
+	PrintAndLog("     Year/Quarter : %d/%d",year, quarter);
 	PrintAndLog("     Lot ID       : %d", lotid );
 	PrintAndLog("     Wafer number : %d", wafer);
 	PrintAndLog("     Die Number   : %d", dw);
@@ -955,7 +953,7 @@ char * GetModulationStr( uint32_t id){
 			snprintf(retStr,sizeof(buf),"%d - FSK 2a RF/10  RF/8",id);
 			break;
 		case 8:
-			snprintf(retStr,sizeof(buf),"%d - Manschester",id);
+			snprintf(retStr,sizeof(buf),"%d - Manchester",id);
 			break;
 		case 16:
 			snprintf(retStr,sizeof(buf),"%d - Biphase",id);

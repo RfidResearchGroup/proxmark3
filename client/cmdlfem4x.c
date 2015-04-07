@@ -27,7 +27,7 @@ static int CmdHelp(const char *Cmd);
 int CmdEMdemodASK(const char *Cmd)
 {
 	char cmdp = param_getchar(Cmd, 0);
-	int findone = (cmdp == '1') ? 1 : 0;	
+	int findone = (cmdp == '1') ? 1 : 0;
 	UsbCommand c={CMD_EM410X_DEMOD};
 	c.arg[0]=findone;
 	SendCommand(&c);
@@ -237,7 +237,7 @@ bool EM_EndParityTest(uint8_t *BitStream, size_t size, uint8_t rows, uint8_t col
 {
 	if (rows*cols>size) return false;
 	uint8_t colP=0;
-	//assume last row is a parity row and do not test
+	//assume last col is a parity and do not test
 	for (uint8_t colNum = 0; colNum < cols-1; colNum++) {
 		for (uint8_t rowNum = 0; rowNum < rows; rowNum++) {
 			colP ^= BitStream[(rowNum*cols)+colNum];
@@ -270,7 +270,7 @@ uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool 
 	code = code<<8 | bytebits_to_byte(BitStream+27,8);
 	if (verbose || g_debugMode){
 		for (uint8_t i = 0; i<5; i++){
-			if (i == 4) PrintAndLog("");
+			if (i == 4) PrintAndLog(""); //parity byte spacer
 			PrintAndLog("%d%d%d%d%d%d%d%d %d -> 0x%02x",
 			    BitStream[i*9],
 			    BitStream[i*9+1],
@@ -289,7 +289,6 @@ uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool 
 		else
 			PrintAndLog("Parity Failed");
 	}
-	//PrintAndLog("Code: %08x",code);
 	return code;
 }
 /* Read the transmitted data of an EM4x50 tag
@@ -311,95 +310,103 @@ uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool 
  * is stored in the blocks defined in the control word First and Last
  * Word Read values. UID is stored in block 32.
  */
+ //completed by Marshmellow
 int EM4x50Read(const char *Cmd, bool verbose)
 {
-	uint8_t fndClk[]={0,8,16,32,40,50,64};
+	uint8_t fndClk[] = {8,16,32,40,50,64,128};
 	int clk = 0; 
 	int invert = 0;
-	sscanf(Cmd, "%i %i", &clk, &invert);
 	int tol = 0;
 	int i, j, startblock, skip, block, start, end, low, high, minClk;
-	bool complete= false;
+	bool complete = false;
 	int tmpbuff[MAX_GRAPH_TRACE_LEN / 64];
-	save_restoreGB(1);
 	uint32_t Code[6];
 	char tmp[6];
-
 	char tmp2[20];
-	high= low= 0;
+	high = low = 0;
 	memset(tmpbuff, 0, MAX_GRAPH_TRACE_LEN / 64);
-		
+
+	// get user entry if any
+	sscanf(Cmd, "%i %i", &clk, &invert);
+	
+	// save GraphBuffer - to restore it later	
+	save_restoreGB(1);
+
 	// first get high and low values
-	for (i = 0; i < GraphTraceLen; i++)
-	{
+	for (i = 0; i < GraphTraceLen; i++) {
 		if (GraphBuffer[i] > high)
 			high = GraphBuffer[i];
 		else if (GraphBuffer[i] < low)
 			low = GraphBuffer[i];
 	}
 
-	// populate a buffer with pulse lengths
-	i= 0;
-	j= 0;
-	minClk= 255;
-	while (i < GraphTraceLen)
-	{
+	i = 0;
+	j = 0;
+	minClk = 255;
+	// get to first full low to prime loop and skip incomplete first pulse
+	while ((GraphBuffer[i] < high) && (i < GraphTraceLen))
+		++i;
+	while ((GraphBuffer[i] > low) && (i < GraphTraceLen))
+		++i;
+	skip = i;
+
+	// populate tmpbuff buffer with pulse lengths
+	while (i < GraphTraceLen) {
 		// measure from low to low
-		while ((GraphBuffer[i] > low) && (i<GraphTraceLen))
+		while ((GraphBuffer[i] > low) && (i < GraphTraceLen))
 			++i;
 		start= i;
-		while ((GraphBuffer[i] < high) && (i<GraphTraceLen))
+		while ((GraphBuffer[i] < high) && (i < GraphTraceLen))
 			++i;
-		while ((GraphBuffer[i] > low) && (i<GraphTraceLen))
+		while ((GraphBuffer[i] > low) && (i < GraphTraceLen))
 			++i;
 		if (j>=(MAX_GRAPH_TRACE_LEN/64)) {
 			break;
 		}
 		tmpbuff[j++]= i - start;
-		if (i-start < minClk) minClk = i-start;
+		if (i-start < minClk && i < GraphTraceLen) {
+			minClk = i - start;
+		}
 	}
 	// set clock
-	if (!clk){
+	if (!clk) {
 		for (uint8_t clkCnt = 0; clkCnt<7; clkCnt++) {
 			tol = fndClk[clkCnt]/8;
-			if (fndClk[clkCnt]-tol >= minClk) { 
+			if (minClk >= fndClk[clkCnt]-tol && minClk <= fndClk[clkCnt]+1) { 
 				clk=fndClk[clkCnt];
 				break;
 			}
 		}
+		if (!clk) return 0;
 	} else tol = clk/8;
 
 	// look for data start - should be 2 pairs of LW (pulses of clk*3,clk*2)
-	start= -1;
-	skip= 0;
-	for (i= 0; i < j - 4 ; ++i)
-	{
+	start = -1;
+	for (i= 0; i < j - 4 ; ++i) {
 		skip += tmpbuff[i];
-		if (tmpbuff[i] >= clk*3-tol && tmpbuff[i] <= clk*3+tol)
-			if (tmpbuff[i+1] >= clk*2-tol && tmpbuff[i+1] <= clk*2+tol)
-				if (tmpbuff[i+2] >= clk*3-tol && tmpbuff[i+2] <= clk*3+tol)
-					if (tmpbuff[i+3] >= clk-tol)
+		if (tmpbuff[i] >= clk*3-tol && tmpbuff[i] <= clk*3+tol)  //3 clocks
+			if (tmpbuff[i+1] >= clk*2-tol && tmpbuff[i+1] <= clk*2+tol)  //2 clocks
+				if (tmpbuff[i+2] >= clk*3-tol && tmpbuff[i+2] <= clk*3+tol) //3 clocks
+					if (tmpbuff[i+3] >= clk-tol)  //1.5 to 2 clocks - depends on bit following
 					{
 						start= i + 4;
 						break;
 					}
 	}
-	startblock= i + 4;
+	startblock = i + 4;
 
 	// skip over the remainder of LW
 	skip += tmpbuff[i+1] + tmpbuff[i+2] + clk + clk/8;
-	
 	int phaseoff = tmpbuff[i+3]-clk;
 
 	// now do it again to find the end
 	end = skip;
-	for (i += 3; i < j - 4 ; ++i)
-	{
+	for (i += 3; i < j - 4 ; ++i) {
 		end += tmpbuff[i];
-		if (tmpbuff[i] >= clk*3-tol && tmpbuff[i] <= clk*3 + tol)
-			if (tmpbuff[i+1] >= clk*2-tol && tmpbuff[i+1] <= clk*2 + tol)
-				if (tmpbuff[i+2] >= clk*3-tol && tmpbuff[i+2] <= clk*3 + tol)
-					if (tmpbuff[i+3] >= clk-tol)
+		if (tmpbuff[i] >= clk*3-tol && tmpbuff[i] <= clk*3+tol)  //3 clocks
+			if (tmpbuff[i+1] >= clk*2-tol && tmpbuff[i+1] <= clk*2+tol)  //2 clocks
+				if (tmpbuff[i+2] >= clk*3-tol && tmpbuff[i+2] <= clk*3+tol) //3 clocks
+					if (tmpbuff[i+3] >= clk-tol)  //1.5 to 2 clocks - depends on bit following
 					{
 						complete= true;
 						break;
@@ -409,15 +416,11 @@ int EM4x50Read(const char *Cmd, bool verbose)
 	// report back
 	if (verbose || g_debugMode) {
 		if (start >= 0) {
-			PrintAndLog("\nNote: should print 45 bits then 0177 (end of block)");
-			PrintAndLog("      for each block");
-			PrintAndLog("      Also, sometimes the demod gets out of sync and ");
-			PrintAndLog("      inverts the output - when this happens the 0177");
-			PrintAndLog("      will be 3 extra 1's at the end");
-			PrintAndLog("        'data askedge' command may fix that");
+			PrintAndLog("\nNote: one block = 50 bits (32 data, 12 parity, 6 marker)");
 		}	else {
-			PrintAndLog("No data found!");
+			PrintAndLog("No data found!, clock tried:%d",clk);
 			PrintAndLog("Try again with more samples.");
+			PrintAndLog("  or after a 'data askedge' command to clean up the read");
 			return 0;
 		}
 		if (!complete)
@@ -427,24 +430,22 @@ int EM4x50Read(const char *Cmd, bool verbose)
 			PrintAndLog("Try again with more samples.");
 		}
 	} else if (start < 0) return 0;
-	start=skip;
+	start = skip;
 	snprintf(tmp2, sizeof(tmp2),"%d %d 1000 %d", clk, invert, clk*47);
 	// get rid of leading crap 
-	snprintf(tmp, sizeof(tmp),"%i",skip);
+	snprintf(tmp, sizeof(tmp), "%i", skip);
 	CmdLtrim(tmp);
 	bool pTest;
-	bool AllPTest=true;
+	bool AllPTest = true;
 	// now work through remaining buffer printing out data blocks
 	block = 0;
 	i = startblock;
-	while (block < 6)
-	{
+	while (block < 6) {
 		if (verbose || g_debugMode) PrintAndLog("\nBlock %i:", block);
 		skip = phaseoff;
 		
 		// look for LW before start of next block
-		for ( ; i < j - 4 ; ++i)
-		{
+		for ( ; i < j - 4 ; ++i) {
 			skip += tmpbuff[i];
 			if (tmpbuff[i] >= clk*3-tol && tmpbuff[i] <= clk*3+tol)
 				if (tmpbuff[i+1] >= clk-tol)
@@ -453,7 +454,10 @@ int EM4x50Read(const char *Cmd, bool verbose)
 		skip += clk;
 		phaseoff = tmpbuff[i+1]-clk;
 		i += 2;
-		if (ASKmanDemod(tmp2, false, false)<1) return 0;
+		if (ASKmanDemod(tmp2, false, false) < 1) {
+			save_restoreGB(0);
+			return 0;
+		}
 		//set DemodBufferLen to just one block
 		DemodBufferLen = skip/clk;
 		//test parities
@@ -461,26 +465,26 @@ int EM4x50Read(const char *Cmd, bool verbose)
 		pTest &= EM_EndParityTest(DemodBuffer,DemodBufferLen,5,9,0);
 		AllPTest &= pTest;
 		//get output
-		Code[block]=OutputEM4x50_Block(DemodBuffer,DemodBufferLen,verbose, pTest);
-		if (g_debugMode) PrintAndLog("\nskipping %d samples, bits:%d",start, skip/clk);
+		Code[block] = OutputEM4x50_Block(DemodBuffer,DemodBufferLen,verbose, pTest);
+		if (g_debugMode) PrintAndLog("\nskipping %d samples, bits:%d", skip, skip/clk);
 		//skip to start of next block
 		snprintf(tmp,sizeof(tmp),"%i",skip);
 		CmdLtrim(tmp);
 		block++;
-		if (i>=end) break; //in case chip doesn't output 6 blocks
+		if (i >= end) break; //in case chip doesn't output 6 blocks
 	}
 	//print full code:
 	if (verbose || g_debugMode || AllPTest){
-		PrintAndLog("Found data at sample: %i - using clock: %i",skip,clk);    
-		//PrintAndLog("\nSummary:");
-		end=block;
-		for (block=0; block<end; block++){
+		PrintAndLog("Found data at sample: %i - using clock: %i", start, clk);    
+		end = block;
+		for (block=0; block < end; block++){
 			PrintAndLog("Block %d: %08x",block,Code[block]);
 		}
 		if (AllPTest)
 			PrintAndLog("Parities Passed");
 		else
 			PrintAndLog("Parities Failed");
+			PrintAndLog("Try cleaning the read samples with 'data askedge'");
 	}
 
 	//restore GraphBuffer

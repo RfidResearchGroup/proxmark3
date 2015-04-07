@@ -117,7 +117,6 @@ int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int 
 {
 	size_t bitCnt=0, smplCnt=0, errCnt=0;
 	uint8_t waveHigh = 0;
-	//PrintAndLog("clk: %d", clk);
 	for (size_t i=0; i < *size; i++){
 		if (BinStream[i] >= high && waveHigh){
 			smplCnt++;
@@ -360,7 +359,7 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 	lastBit = start - *clk;
 
 	for (i = start; i < *size; ++i) {
-		if (i - lastBit > *clk){
+		if (i - lastBit == *clk){
 			if (BinStream[i] >= high) {
 				BinStream[bitnum++] = *invert;
 			} else if (BinStream[i] <= low) {
@@ -373,13 +372,12 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 			}
 			midBit = 0;
 			lastBit += *clk;
-		} else if (i-lastBit > (*clk/2) && midBit == 0){
+		} else if (i-lastBit == (*clk/2) && midBit == 0){
 			if (BinStream[i] >= high) {
 				BinStream[bitnum++] = *invert;
 			} else if (BinStream[i] <= low) {
 				BinStream[bitnum++] = *invert ^ 1;
 			} else {
-
 				BinStream[bitnum] = BinStream[bitnum-1];
 				bitnum++;
 			}
@@ -687,11 +685,11 @@ int PyramiddemodFSK(uint8_t *dest, size_t *size)
 }
 
 
-uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, int high, int low)
+uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, uint8_t high, uint8_t low)
 {
 	uint16_t allPeaks=1;
 	uint16_t cntPeaks=0;
-	size_t loopEnd = 572;
+	size_t loopEnd = 512+60;
 	if (loopEnd > size) loopEnd = size;
 	for (size_t i=60; i<loopEnd; i++){
 		if (dest[i]>low && dest[i]<high) 
@@ -707,53 +705,39 @@ uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, int high, int low)
 
 // by marshmellow
 // to help detect clocks on heavily clipped samples
-// based on counts between zero crossings
-int DetectStrongAskClock(uint8_t dest[], size_t size)
+// based on count of low to low
+int DetectStrongAskClock(uint8_t dest[], size_t size, uint8_t high, uint8_t low)
 {
-	int clk[]={0,8,16,32,40,50,64,100,128};
-	size_t idx = 40;
-	uint8_t high=0;
-	size_t cnt = 0;
-	size_t highCnt = 0;
-	size_t highCnt2 = 0;
-	for (;idx < size; idx++){
-		if (dest[idx]>128) {
-			if (!high){
-				high=1;
-				if (cnt > highCnt){
-					if (highCnt != 0) highCnt2 = highCnt;
-					highCnt = cnt;
-				} else if (cnt > highCnt2) {
-					highCnt2 = cnt;
-				}
-				cnt=1;
-			} else {
-				cnt++;
-			}
-		} else if (dest[idx] <= 128){
-			if (high) {
-				high=0;
-				if (cnt > highCnt) {
-					if (highCnt != 0) highCnt2 = highCnt;
-					highCnt = cnt;
-				} else if (cnt > highCnt2) {
-					highCnt2 = cnt;
-				}
-				cnt=1;
-			} else {
-				cnt++;
-			}
-		}
+	uint8_t fndClk[] = {8,16,32,40,50,64,128};
+	size_t startwave;
+	size_t i = 0;
+	size_t minClk = 255;
+		// get to first full low to prime loop and skip incomplete first pulse
+	while ((dest[i] < high) && (i < size))
+		++i;
+	while ((dest[i] > low) && (i < size))
+		++i;
+
+	// loop through all samples
+	while (i < size) {
+		// measure from low to low
+		while ((dest[i] > low) && (i < size))
+			++i;
+		startwave= i;
+		while ((dest[i] < high) && (i < size))
+			++i;
+		while ((dest[i] > low) && (i < size))
+			++i;
+		//get minimum measured distance
+		if (i-startwave < minClk && i < size)
+			minClk = i - startwave;
 	}
-	uint8_t tol;
-	for (idx=8; idx>0; idx--){
-		tol = clk[idx]/8;
-		if (clk[idx] >= highCnt - tol && clk[idx] <= highCnt + tol)
-			return clk[idx];
-		if (clk[idx] >= highCnt2 - tol && clk[idx] <= highCnt2 + tol)
-			return clk[idx];
+	// set clock
+	for (uint8_t clkCnt = 0; clkCnt<7; clkCnt++) {
+		if (minClk >= fndClk[clkCnt]-(fndClk[clkCnt]/8) && minClk <= fndClk[clkCnt]+1)
+			return fndClk[clkCnt];
 	}
-	return -1;
+	return 0;
 }
 
 // by marshmellow
@@ -763,15 +747,15 @@ int DetectStrongAskClock(uint8_t dest[], size_t size)
 int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 {
 	size_t i=1;
-	uint8_t clk[]={255,8,16,32,40,50,64,100,128,255};
+	uint8_t clk[] = {255,8,16,32,40,50,64,100,128,255};
+	uint8_t clkEnd = 9;
 	uint8_t loopCnt = 255;  //don't need to loop through entire array...
-	if (size==0) return -1;
-	if (size <= loopCnt) loopCnt = size-1; //not enough samples
+	if (size <= loopCnt) return -1; //not enough samples
 
 	//if we already have a valid clock
 	uint8_t clockFnd=0;
-	for (;i<9;++i)
-		if (clk[i] == *clock) clockFnd=i;
+	for (;i<clkEnd;++i)
+		if (clk[i] == *clock) clockFnd = i;
 		//clock found but continue to find best startpos
 
 	//get high and low peak
@@ -779,39 +763,45 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 	if (getHiLo(dest, loopCnt, &peak, &low, 75, 75) < 1) return -1;
 	
 	//test for large clean peaks
-	if (DetectCleanAskWave(dest, size, peak, low)==1){
-		int ans = DetectStrongAskClock(dest, size);
-		for (i=8; i>1; i--){
-			if (clk[i] == ans) {
-				*clock = ans;
-				//clockFnd = i;
-				return 0;  // for strong waves i don't use the 'best start position' yet...
-				//break; //clock found but continue to find best startpos [not yet]
+	if (!clockFnd){
+		if (DetectCleanAskWave(dest, size, peak, low)==1){
+			int ans = DetectStrongAskClock(dest, size, peak, low);
+			for (i=clkEnd-1; i>0; i--){
+				if (clk[i] == ans) {
+					*clock = ans;
+					//clockFnd = i;
+					return 0;  // for strong waves i don't use the 'best start position' yet...
+					//break; //clock found but continue to find best startpos [not yet]
+				}
 			}
 		}
 	}
+	
 	uint8_t ii;
 	uint8_t clkCnt, tol = 0;
 	uint16_t bestErr[]={1000,1000,1000,1000,1000,1000,1000,1000,1000};
 	uint8_t bestStart[]={0,0,0,0,0,0,0,0,0};
 	size_t errCnt = 0;
 	size_t arrLoc, loopEnd;
-	//test each valid clock from smallest to greatest to see which lines up
-	uint8_t clkEnd=9;
-	if (clockFnd>0) clkEnd=clockFnd+1;
-	else clockFnd=1;
 
-	for(clkCnt=clockFnd; clkCnt < clkEnd; clkCnt++){
+	if (clockFnd>0) {
+		clkCnt = clockFnd;
+		clkEnd = clockFnd+1;
+	}
+	else clkCnt=1;
+
+	//test each valid clock from smallest to greatest to see which lines up
+	for(; clkCnt < clkEnd; clkCnt++){
 		if (clk[clkCnt] == 32){
 			tol=1;
 		}else{
 			tol=0;
 		}
 		//if no errors allowed - keep start within the first clock
-		if (!maxErr && size > clk[clkCnt]*3 + tol) loopCnt=clk[clkCnt]*2;
+		if (!maxErr && size > clk[clkCnt]*2 + tol && clk[clkCnt]<128) loopCnt=clk[clkCnt]*2;
 		bestErr[clkCnt]=1000;
 		//try lining up the peaks by moving starting point (try first few clocks)
-		for (ii=0; ii < loopCnt-clk[clkCnt]; ii++){
+		for (ii=0; ii < loopCnt; ii++){
 			if (dest[ii] < peak && dest[ii] > low) continue;
 
 			errCnt=0;
@@ -826,11 +816,11 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 					errCnt++;
 				}
 			}
-			//if we found no errors then we can stop here
+			//if we found no errors then we can stop here and a low clock (common clocks)
 			//  this is correct one - return this clock
 					//PrintAndLog("DEBUG: clk %d, err %d, ii %d, i %d",clk[clkCnt],errCnt,ii,i);
-			if(errCnt==0 && clkCnt<6) {
-				*clock = clk[clkCnt];
+			if(errCnt==0 && clkCnt<7) { 
+				if (!clockFnd) *clock = clk[clkCnt];
 				return ii;
 			}
 			//if we found errors see if it is lowest so far and save it as best run
@@ -840,9 +830,9 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 			}
 		}
 	}
-	uint8_t iii=0;
+	uint8_t iii;
 	uint8_t best=0;
-	for (iii=0; iii<8; ++iii){
+	for (iii=1; iii<clkEnd; ++iii){
 		if (bestErr[iii] < bestErr[best]){
 			if (bestErr[iii] == 0) bestErr[iii]=1;
 			// current best bit to error ratio     vs  new bit to error ratio
@@ -852,7 +842,7 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 		}
 	}
 	//if (bestErr[best] > maxErr) return -1;
-	*clock = clk[best];
+	if (!clockFnd) *clock = clk[best];
 	return bestStart[best];
 }
 

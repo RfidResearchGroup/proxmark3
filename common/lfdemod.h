@@ -16,7 +16,8 @@
 #include <stdint.h>
 
 int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr);
-uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, int high, int low);
+uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, uint8_t high, uint8_t low);
+int DetectStrongAskClock(uint8_t dest[], size_t size, uint8_t high, uint8_t low);
 int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr);
 uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo);
 int ManchesterEncode(uint8_t *BitStream, size_t size);

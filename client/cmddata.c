@@ -2020,7 +2020,7 @@ int CmdLoad(const char *Cmd)
 int CmdLtrim(const char *Cmd)
 {
 	int ds = atoi(Cmd);
-
+	if (GraphTraceLen<=0) return 0;
 	for (int i = ds; i < GraphTraceLen; ++i)
 		GraphBuffer[i-ds] = GraphBuffer[i];
 	GraphTraceLen -= ds;
