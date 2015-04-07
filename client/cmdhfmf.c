@@ -96,8 +96,7 @@ int CmdHF14AMfWrBl(const char *Cmd)
 	uint8_t blockNo = 0;
 	uint8_t keyType = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-	uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-	
+	uint8_t bldata[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};	
 	char cmdp	= 0x00;
 
 	if (strlen(Cmd)<3) {
@@ -124,10 +123,10 @@ int CmdHF14AMfWrBl(const char *Cmd)
 	PrintAndLog("--block no:%d, key type:%c, key:%s", blockNo, keyType?'B':'A', sprint_hex(key, 6));
 	PrintAndLog("--data: %s", sprint_hex(bldata, 16));
 	
-  UsbCommand c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}};
+	UsbCommand c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
 	memcpy(c.d.asBytes + 10, bldata, 16);
-  SendCommand(&c);
+	SendCommand(&c);
 
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
@@ -144,10 +143,8 @@ int CmdHF14AMfRdBl(const char *Cmd)
 {
 	uint8_t blockNo = 0;
 	uint8_t keyType = 0;
-	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-	
+	uint8_t key[6] = {0, 0, 0, 0, 0, 0};	
 	char cmdp	= 0x00;
-
 
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:  hf mf rdbl    <block number> <key A/B> <key (12 hex symbols)>");
@@ -168,9 +165,9 @@ int CmdHF14AMfRdBl(const char *Cmd)
 	}
 	PrintAndLog("--block no:%d, key type:%c, key:%s ", blockNo, keyType?'B':'A', sprint_hex(key, 6));
 	
-  UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}};
+	UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
-  SendCommand(&c);
+	SendCommand(&c);
 
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
@@ -432,13 +429,13 @@ int CmdHF14AMfDump(const char *Cmd)
 
 int CmdHF14AMfRestore(const char *Cmd)
 {
-	uint8_t sectorNo,blockNo;
+	uint8_t sectorNo,blockNo = 0;
 	uint8_t keyType = 0;
-	uint8_t key[6] = {0xFF};
+	uint8_t key[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 	uint8_t bldata[16] = {0x00};
 	uint8_t keyA[40][6];
 	uint8_t keyB[40][6];
-	uint8_t numSectors;
+	uint8_t numSectors = 0;
 	
 	FILE *fdump;
 	FILE *fkeys;
@@ -682,6 +679,8 @@ int CmdHF14AMfNested(const char *Cmd)
 					e_sector[i].Key[j] = key64;
 					e_sector[i].foundKey[j] = 1;
 				}
+			}
+		}
 		// nested sectors
 		iterations = 0;
 		PrintAndLog("nested...");
@@ -786,7 +785,7 @@ int CmdHF14AMfChk(const char *Cmd)
 
 	FILE * f;
 	char filename[FILE_PATH_SIZE]={0};
-	char buf[13];
+	char buf[13]  = {0x00};
 	uint8_t *keyBlock = NULL, *p;
 	uint8_t stKeyBlock = 20;
 	
@@ -1134,10 +1133,8 @@ int CmdHF14AMfEClear(const char *Cmd)
 
 int CmdHF14AMfESet(const char *Cmd)
 {
-	uint8_t memBlock[16];
+	uint8_t memBlock[16] = {0x00};
 	uint8_t blockNo = 0;
-
-	memset(memBlock, 0x00, sizeof(memBlock));
 
 	if (strlen(Cmd) < 3 || param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("Usage:  hf mf eset <block number> <block data (32 hex symbols)>");
@@ -1163,7 +1160,7 @@ int CmdHF14AMfESet(const char *Cmd)
 int CmdHF14AMfELoad(const char *Cmd)
 {
 	FILE * f;
-	char filename[FILE_PATH_SIZE];
+	char filename[FILE_PATH_SIZE] = {0x00};
 	char *fnameptr = filename;
 	char buf[64] = {0x00};
 	uint8_t buf8[64] = {0x00};
@@ -1259,9 +1256,9 @@ int CmdHF14AMfELoad(const char *Cmd)
 int CmdHF14AMfESave(const char *Cmd)
 {
 	FILE * f;
-	char filename[FILE_PATH_SIZE];
+	char filename[FILE_PATH_SIZE] = {0x00};
 	char * fnameptr = filename;
-	uint8_t buf[64];
+	uint8_t buf[64] = {0x00};
 	int i, j, len, numBlocks;
 	int nameParamNo = 1;
 	
@@ -1383,8 +1380,8 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 {
 	int i;
 	uint8_t numSectors;
-	uint8_t data[16];
-	uint64_t keyA, keyB;
+	uint8_t data[16] = {0x00};
+	uint64_t keyA, keyB = 0;
 	
 	if (param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("It prints the keys loaded in the emulator memory");
@@ -1627,10 +1624,9 @@ int CmdHF14AMfCLoad(const char *Cmd)
 }
 
 int CmdHF14AMfCGetBlk(const char *Cmd) {
-	uint8_t memBlock[16];
+	uint8_t memBlock[16] = {0x00};
 	uint8_t blockNo = 0;
 	int res;
-	memset(memBlock, 0x00, sizeof(memBlock));
 
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
 		PrintAndLog("Usage:  hf mf cgetblk <block number>");
@@ -1797,7 +1793,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 	int blockLen = 0;
 	int pckNum = 0;
 	int num = 0;
-	uint8_t uid[7];
+	uint8_t uid[7] = {0x00};
 	uint8_t uid_len;
 	uint8_t atqa[2] = {0x00};
 	uint8_t sak;
