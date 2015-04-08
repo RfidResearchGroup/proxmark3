@@ -35,6 +35,7 @@ int CmdFSKdemodPyramid(const char *Cmd);
 int CmdFSKrawdemod(const char *Cmd);
 int CmdPSK1rawDemod(const char *Cmd);
 int CmdPSK2rawDemod(const char *Cmd);
+int CmdPSKNexWatch(const char *Cmd);
 int CmdGrid(const char *Cmd);
 int CmdGetBitStream(const char *Cmd);
 int CmdHexsamples(const char *Cmd);
