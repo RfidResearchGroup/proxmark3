@@ -434,7 +434,7 @@ int CmdHF14AMfRestore(const char *Cmd)
 {
 	uint8_t sectorNo,blockNo;
 	uint8_t keyType = 0;
-	uint8_t key[6] = {0xFF};
+	uint8_t key[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 	uint8_t bldata[16] = {0x00};
 	uint8_t keyA[40][6];
 	uint8_t keyB[40][6];

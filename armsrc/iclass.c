@@ -1675,7 +1675,8 @@ uint8_t handshakeIclassTag(uint8_t *card_data)
 // Reader iClass Anticollission
 void ReaderIClass(uint8_t arg0) {
 
-	uint8_t card_data[6 * 8]={0xFF};
+	uint8_t card_data[6 * 8]={0};
+	memset(card_data, 0xFF, sizeof(card_data));
     uint8_t last_csn[8]={0};
 	
 	//Read conf block CRC(0x01) => 0xfa 0x22

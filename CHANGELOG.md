@@ -6,6 +6,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ### Changed
 - Improved LF manchester and biphase demodulation and ask clock detection especially for reads with heavy clipping. (marshmellow)
 - Iclass read, `hf iclass read` now also reads tag config and prints configuration. (holiman)
+- *bootrom* needs to be flashed, due to new address boundaries between os and fpga, after a size optimization (piwi)
 
 ### Fixed
 - Fixed EM4x50 read/demod of the tags broadcasted memory blocks. 'lf em4x em4x50read' (not page read) (marshmellow)
