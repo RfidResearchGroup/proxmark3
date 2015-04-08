@@ -208,22 +208,34 @@ void printEM410x(uint32_t hi, uint64_t id)
 	return;
 }
 
-
-int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo)
+int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo )
 {
-	int ans = ASKmanDemod(Cmd, FALSE, FALSE);
-	if (!ans) return 0;
-
-	size_t idx=0;
-	if (Em410xDecode(DemodBuffer,(size_t *) &DemodBufferLen, &idx, hi, lo)){
+	size_t idx = 0;
+	size_t BitLen = DemodBufferLen;
+	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
+	memcpy(BitStream, DemodBuffer, BitLen); 
+	if (Em410xDecode(BitStream, &BitLen, &idx, hi, lo)){
+		//set GraphBuffer for clone or sim command
+		setDemodBuf(BitStream, BitLen, idx);
 		if (g_debugMode){
-			PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, DemodBufferLen);
+			PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, BitLen);
 			printDemodBuff();
+		}
+		if (verbose){
+			PrintAndLog("EM410x pattern found: ");
+			printEM410x(*hi, *lo);
 		}
 		return 1;
 	}
 	return 0;
 }
+
+int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose)
+{
+	if (!ASKDemod(Cmd, FALSE, FALSE, 1)) return 0;
+	return AskEm410xDecode(verbose, hi, lo);
+}
+
 //by marshmellow
 //takes 3 arguments - clock, invert and maxErr as integers
 //attempts to demodulate ask while decoding manchester
@@ -244,28 +256,28 @@ int CmdAskEM410xDemod(const char *Cmd)
 		PrintAndLog("          : data askem410xdemod 64 1 0 = demod an EM410x Tag ID from GraphBuffer using a clock of RF/64 and inverting data and allowing 0 demod errors");
 		return 0;
 	}
-	uint32_t hi = 0;
 	uint64_t lo = 0;
-	if (AskEm410xDemod(Cmd, &hi, &lo)) {
-		PrintAndLog("EM410x pattern found: ");
-		printEM410x(hi, lo);
-		return 1;
-	}
-	return 0;
+	uint32_t hi = 0;
+	return AskEm410xDemod(Cmd, &hi, &lo, true);
 }
 
-int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch)
+//by marshmellow
+//Cmd Args: Clock, invert, maxErr, maxLen as integers and amplify as char == 'a'
+//   (amp may not be needed anymore)
+//verbose will print results and demoding messages
+//emSearch will auto search for EM410x format in bitstream
+//askType switches decode: ask/raw = 0, ask/manchester = 1 
+int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType)
 {
 	int invert=0;
 	int clk=0;
 	int maxErr=100;
-	int maxLen=512*64;
-	//param_getdec(Cmd, 0, &clk);
-	//param_getdec(Cmd, 1, &invert);
-	//maxErr = param_get32ex(Cmd, 2, 0xFFFFFFFF, 10);
-	//if (maxErr == 0xFFFFFFFF) maxErr=100;
+	int maxLen=0;
+	uint8_t askAmp = 0;
+	char amp = param_getchar(Cmd, 0);
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
-	sscanf(Cmd, "%i %i %i %i", &clk, &invert, &maxErr, &maxLen);
+	sscanf(Cmd, "%i %i %i %i %c", &clk, &invert, &maxErr, &maxLen, &amp);
+	if (!maxLen) maxLen = 512*64;
 	if (invert != 0 && invert != 1) {
 		PrintAndLog("Invalid argument: %s", Cmd);
 		return 0;
@@ -274,12 +286,14 @@ int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch)
 		invert=1;
 		clk=0;
 	}
+	if (amp == 'a' || amp == 'A') askAmp=1; 
 	size_t BitLen = getFromGraphBuf(BitStream);
 	if (g_debugMode) PrintAndLog("DEBUG: Bitlen from grphbuff: %d",BitLen);
-	if (!BitLen) return 0;
+	if (BitLen<255) return 0;
 	if (maxLen<BitLen && maxLen != 0) BitLen = maxLen;
-	int errCnt = askmandemod(BitStream, &BitLen, &clk, &invert, maxErr);
-	if (errCnt<0||BitLen<16){  //if fatal error (or -1)
+
+	int errCnt = askdemod(BitStream, &BitLen, &clk, &invert, maxErr, askAmp, askType);
+	if (errCnt<0 || BitLen<16){  //if fatal error (or -1)
 		if (g_debugMode) PrintAndLog("DEBUG: no data found %d, errors:%d, bitlen:%d, clock:%d",errCnt,invert,BitLen,clk);
 		return 0;
 	}
@@ -290,45 +304,37 @@ int ASKmanDemod(const char *Cmd, bool verbose, bool emSearch)
 	if (verbose || g_debugMode) PrintAndLog("\nUsing Clock:%d, Invert:%d, Bits Found:%d",clk,invert,BitLen);
 
 	//output
-	if (errCnt>0){
-		if (verbose || g_debugMode) PrintAndLog("# Errors during Demoding (shown as 7 in bit stream): %d",errCnt);
-	}
-	if (verbose || g_debugMode) PrintAndLog("ASK/Manchester decoded bitstream:");
-	// Now output the bitstream to the scrollback by line of 16 bits
 	setDemodBuf(BitStream,BitLen,0);
-	if (verbose || g_debugMode) printDemodBuff();
-	uint64_t lo =0;
-	uint32_t hi =0;
-	size_t idx=0;
+	if (verbose || g_debugMode){
+		if (errCnt>0) PrintAndLog("# Errors during Demoding (shown as 7 in bit stream): %d",errCnt);
+		if (askType) PrintAndLog("ASK/Manchester decoded bitstream:");
+		else PrintAndLog("ASK/Raw decoded bitstream:");
+		// Now output the bitstream to the scrollback by line of 16 bits
+		printDemodBuff();
+		
+	}
+	uint64_t lo = 0;
+	uint32_t hi = 0;
 	if (emSearch){
-		if (Em410xDecode(BitStream, &BitLen, &idx, &hi, &lo)){
-			//set GraphBuffer for clone or sim command
-			setDemodBuf(BitStream, BitLen, idx);
-			if (g_debugMode){
-				PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, BitLen);
-				printDemodBuff();
-			}
-			if (verbose) PrintAndLog("EM410x pattern found: ");
-			if (verbose) printEM410x(hi, lo);
-			return 1;
-		}
+		AskEm410xDecode(true, &hi, &lo);
 	}
 	return 1;
 }
 
 //by marshmellow
-//takes 3 arguments - clock, invert, maxErr as integers
+//takes 5 arguments - clock, invert, maxErr, maxLen as integers and amplify as char == 'a'
 //attempts to demodulate ask while decoding manchester
 //prints binary found and saves in graphbuffer for further commands
 int Cmdaskmandemod(const char *Cmd)
 {
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 20 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  data rawdemod am [clock] <0|1> [maxError] [setSmplLen]");
-		PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
-		PrintAndLog("     <invert>, 1 for invert output");
-		PrintAndLog("     [set maximum allowed errors], default = 100.");
-		PrintAndLog("     [set maximum Samples to read], default = 32768 (512 bits at rf/64).");
+	if (strlen(Cmd) > 25 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  data rawdemod am [clock] <invert> [maxError] [maxLen] [amplify]");
+		PrintAndLog("     [set clock as integer] optional, if not set, autodetect");
+		PrintAndLog("     <invert>, 1 to invert output");
+		PrintAndLog("     [set maximum allowed errors], default = 100");
+		PrintAndLog("     [set maximum Samples to read], default = 32768 (512 bits at rf/64)");
+		PrintAndLog("     <amplify>, 'a' to attempt demod with ask amplification, default = no amp");
 		PrintAndLog("");
 		PrintAndLog("    sample: data rawdemod am        = demod an ask/manchester tag from GraphBuffer");
 		PrintAndLog("          : data rawdemod am 32     = demod an ask/manchester tag from GraphBuffer using a clock of RF/32");
@@ -337,7 +343,7 @@ int Cmdaskmandemod(const char *Cmd)
 		PrintAndLog("          : data rawdemod am 64 1 0 = demod an ask/manchester tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
 		return 0;
 	}
-	return ASKmanDemod(Cmd, TRUE, TRUE);
+	return ASKDemod(Cmd, TRUE, TRUE, 1);
 }
 
 //by marshmellow
@@ -348,12 +354,14 @@ int Cmdmandecoderaw(const char *Cmd)
 	int i =0;
 	int errCnt=0;
 	size_t size=0;
+	int invert=0;
 	size_t maxErr = 20;
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) > 5 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  data manrawdecode [maxErr]");
+		PrintAndLog("Usage:  data manrawdecode [invert] [maxErr]");
 		PrintAndLog("     Takes 10 and 01 and converts to 0 and 1 respectively");
 		PrintAndLog("     --must have binary sequence in demodbuffer (run data askrawdemod first)");
+		PrintAndLog("  [invert]  invert output");		
 		PrintAndLog("  [maxErr]  set number of errors allowed (default = 20)");		
 		PrintAndLog("");
 		PrintAndLog("    sample: data manrawdecode   = decode manchester bitstream from the demodbuffer");
@@ -372,9 +380,9 @@ int Cmdmandecoderaw(const char *Cmd)
 		return 0;
 	}
 
-	sscanf(Cmd, "%i", &maxErr);
+	sscanf(Cmd, "%i %i", &invert, &maxErr);
 	size=i;
-	errCnt=manrawdecode(BitStream, &size);
+	errCnt=manrawdecode(BitStream, &size, invert);
 	if (errCnt>=maxErr){
 		PrintAndLog("Too many errors: %d",errCnt);
 		return 0;
@@ -449,59 +457,6 @@ int CmdBiphaseDecodeRaw(const char *Cmd)
 }
 
 //by marshmellow
-//takes 4 arguments - clock, invert, maxErr as integers and amplify as char
-//attempts to demodulate ask only
-//prints binary found and saves in graphbuffer for further commands
-int ASKrawDemod(const char *Cmd, bool verbose)
-{
-	int invert=0;
-	int clk=0;
-	int maxErr=100;
-	uint8_t askAmp = 0;
-	char amp = param_getchar(Cmd, 0);
-	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
-	sscanf(Cmd, "%i %i %i %c", &clk, &invert, &maxErr, &amp);
-	if (invert != 0 && invert != 1) {
-		if (verbose || g_debugMode) PrintAndLog("Invalid argument: %s", Cmd);
-		return 0;
-	}
-	if (clk==1){
-		invert=1;
-		clk=0;
-	}
-	if (amp == 'a' || amp == 'A') askAmp=1; 
-	size_t BitLen = getFromGraphBuf(BitStream);
-	if (BitLen==0) return 0;
-	int errCnt = askrawdemod(BitStream, &BitLen, &clk, &invert, maxErr, askAmp);
-	if (errCnt==-1||BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
-		if (verbose || g_debugMode) PrintAndLog("no data found");
-		if (g_debugMode) PrintAndLog("errCnt: %d, BitLen: %d, clk: %d, invert: %d", errCnt, BitLen, clk, invert);
-		return 0;
-	}
-	if (errCnt>maxErr) {
-		if (g_debugMode) 
-			PrintAndLog("Too many errors found, errCnt: %d, BitLen: %d, clk: %d, invert: %d", errCnt, BitLen, clk, invert);
-		return 0;
-	}
-	if (verbose || g_debugMode) 
-		PrintAndLog("Using Clock: %d - invert: %d - Bits Found: %d", clk, invert, BitLen);
-	
-	//move BitStream back to DemodBuffer
-	setDemodBuf(BitStream,BitLen,0);
-
-	//output
-	if (errCnt>0 && (verbose || g_debugMode)){
-		PrintAndLog("# Errors during Demoding (shown as 7 in bit stream): %d", errCnt);
-	}
-	if (verbose || g_debugMode){
-		PrintAndLog("ASK demoded bitstream:");
-		// Now output the bitstream to the scrollback by line of 16 bits
-		printDemodBuff();
-	} 
-	return 1;
-}
-
-//by marshmellow
 // - ASK Demod then Biphase decode GraphBuffer samples
 int ASKbiphaseDemod(const char *Cmd, bool verbose)
 {
@@ -509,11 +464,11 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	int offset=0, clk=0, invert=0, maxErr=0, ans=0;
 	ans = sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 	if (ans>0)
-		ans = ASKrawDemod(Cmd+1, FALSE);
+		ans = ASKDemod(Cmd+1, FALSE, FALSE, 0);
 	else
-		ans = ASKrawDemod(Cmd, FALSE);
+		ans = ASKDemod(Cmd, FALSE, FALSE, 0);
 	if (!ans) {
-		if (g_debugMode || verbose) PrintAndLog("Error AskrawDemod: %d", ans);
+		if (g_debugMode || verbose) PrintAndLog("Error AskDemod: %d", ans);
 		return 0;
 	}
 
@@ -521,8 +476,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	size_t size = DemodBufferLen;
 	uint8_t BitStream[MAX_DEMOD_BUF_LEN];
 	memcpy(BitStream, DemodBuffer, DemodBufferLen); 
-
-	int errCnt = BiphaseRawDecode(BitStream, &size, offset, invert);
+	int errCnt = BiphaseRawDecode(BitStream, &size, offset, 0);
 	if (errCnt < 0){
 		if (g_debugMode || verbose) PrintAndLog("Error BiphaseRawDecode: %d", errCnt);
 		return 0;
@@ -543,12 +497,13 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 int Cmdaskbiphdemod(const char *Cmd)
 {
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 12 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  data rawdemod ab [offset] [clock] <invert> [maxError] <amplify>");
+	if (strlen(Cmd) > 25 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  data rawdemod ab [offset] [clock] <invert> [maxError] [maxLen] <amplify>");
 		PrintAndLog("     [offset], offset to begin biphase, default=0");
 		PrintAndLog("     [set clock as integer] optional, if not set, autodetect");
 		PrintAndLog("     <invert>, 1 to invert output");
 		PrintAndLog("     [set maximum allowed errors], default = 100");
+		PrintAndLog("     [set maximum Samples to read], default = 32768 (512 bits at rf/64)");
 		PrintAndLog("     <amplify>, 'a' to attempt demod with ask amplification, default = no amp");
 		PrintAndLog("     NOTE: <invert>  can be entered as second or third argument");
 		PrintAndLog("     NOTE: <amplify> can be entered as first, second or last argument");
@@ -556,13 +511,13 @@ int Cmdaskbiphdemod(const char *Cmd)
 		PrintAndLog("");
 		PrintAndLog("     NOTE: --invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester");
 		PrintAndLog("");
-		PrintAndLog("    sample: data rawdemod ab            = demod an ask/biph tag from GraphBuffer");
-		PrintAndLog("          : data rawdemod ab a          = demod an ask/biph tag from GraphBuffer, amplified");
-		PrintAndLog("          : data rawdemod ab 1 32       = demod an ask/biph tag from GraphBuffer using an offset of 1 and a clock of RF/32");
-		PrintAndLog("          : data rawdemod ab 0 32 1     = demod an ask/biph tag from GraphBuffer using a clock of RF/32 and inverting data");
-		PrintAndLog("          : data rawdemod ab 0 1        = demod an ask/biph tag from GraphBuffer while inverting data");
-		PrintAndLog("          : data rawdemod ab 0 64 1 0   = demod an ask/biph tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-		PrintAndLog("          : data rawdemod ab 0 64 1 0 a = demod an ask/biph tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
+		PrintAndLog("    sample: data rawdemod ab              = demod an ask/biph tag from GraphBuffer");
+		PrintAndLog("          : data rawdemod ab 0 a          = demod an ask/biph tag from GraphBuffer, amplified");
+		PrintAndLog("          : data rawdemod ab 1 32         = demod an ask/biph tag from GraphBuffer using an offset of 1 and a clock of RF/32");
+		PrintAndLog("          : data rawdemod ab 0 32 1       = demod an ask/biph tag from GraphBuffer using a clock of RF/32 and inverting data");
+		PrintAndLog("          : data rawdemod ab 0 1          = demod an ask/biph tag from GraphBuffer while inverting data");
+		PrintAndLog("          : data rawdemod ab 0 64 1 0     = demod an ask/biph tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+		PrintAndLog("          : data rawdemod ab 0 64 1 0 0 a = demod an ask/biph tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
 		return 0;
 	}
 	return ASKbiphaseDemod(Cmd, TRUE);
@@ -646,27 +601,28 @@ int CmdG_Prox_II_Demod(const char *Cmd)
 	return 1;
 }
 
-//by marshmellow - see ASKrawDemod
+//by marshmellow - see ASKDemod
 int Cmdaskrawdemod(const char *Cmd)
 {
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 12 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  data rawdemod ar [clock] <invert> [maxError] [amplify]");
+	if (strlen(Cmd) > 25 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  data rawdemod ar [clock] <invert> [maxError] [maxLen] [amplify]");
 		PrintAndLog("     [set clock as integer] optional, if not set, autodetect");
 		PrintAndLog("     <invert>, 1 to invert output");
 		PrintAndLog("     [set maximum allowed errors], default = 100");
+		PrintAndLog("     [set maximum Samples to read], default = 32768 (1024 bits at rf/64)");
 		PrintAndLog("     <amplify>, 'a' to attempt demod with ask amplification, default = no amp");
 		PrintAndLog("");
-		PrintAndLog("    sample: data rawdemod ar          = demod an ask tag from GraphBuffer");
-		PrintAndLog("          : data rawdemod ar a        = demod an ask tag from GraphBuffer, amplified");
-		PrintAndLog("          : data rawdemod ar 32       = demod an ask tag from GraphBuffer using a clock of RF/32");
-		PrintAndLog("          : data rawdemod ar 32 1     = demod an ask tag from GraphBuffer using a clock of RF/32 and inverting data");
-		PrintAndLog("          : data rawdemod ar 1        = demod an ask tag from GraphBuffer while inverting data");
-		PrintAndLog("          : data rawdemod ar 64 1 0   = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-		PrintAndLog("          : data rawdemod ar 64 1 0 a = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
+		PrintAndLog("    sample: data rawdemod ar            = demod an ask tag from GraphBuffer");
+		PrintAndLog("          : data rawdemod ar a          = demod an ask tag from GraphBuffer, amplified");
+		PrintAndLog("          : data rawdemod ar 32         = demod an ask tag from GraphBuffer using a clock of RF/32");
+		PrintAndLog("          : data rawdemod ar 32 1       = demod an ask tag from GraphBuffer using a clock of RF/32 and inverting data");
+		PrintAndLog("          : data rawdemod ar 1          = demod an ask tag from GraphBuffer while inverting data");
+		PrintAndLog("          : data rawdemod ar 64 1 0     = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+		PrintAndLog("          : data rawdemod ar 64 1 0 0 a = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
 		return 0;
 	}
-	return ASKrawDemod(Cmd, TRUE);
+	return ASKDemod(Cmd, TRUE, FALSE, 0);
 }
 
 int AutoCorrelate(int window, bool SaveGrph, bool verbose)
@@ -849,7 +805,6 @@ int CmdAskEdgeDetect(const char *Cmd)
 {
 	int thresLen = 25;
 	sscanf(Cmd, "%i", &thresLen); 
-	int shift = 127;
 
 	for(int i = 1; i<GraphTraceLen; i++){
 		if (GraphBuffer[i]-GraphBuffer[i-1]>=thresLen) //large jump up
@@ -867,9 +822,10 @@ int CmdAskEdgeDetect(const char *Cmd)
 int CmdDetectClockRate(const char *Cmd)
 {
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 3 || strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  data detectclock [modulation]");
+	if (strlen(Cmd) > 6 || strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') {
+		PrintAndLog("Usage:  data detectclock [modulation] <clock>");
 		PrintAndLog("     [modulation as char], specify the modulation type you want to detect the clock of");
+		PrintAndLog("     <clock>             , specify the clock (optional - to get best start position only)");
 		PrintAndLog("       'a' = ask, 'f' = fsk, 'n' = nrz/direct, 'p' = psk");
 		PrintAndLog("");
 		PrintAndLog("    sample: data detectclock a    = detect the clock of an ask modulated wave in the GraphBuffer");
@@ -879,7 +835,7 @@ int CmdDetectClockRate(const char *Cmd)
 	}
 	int ans=0;
 	if (cmdp == 'a'){
-		ans = GetAskClock("", true, false);
+		ans = GetAskClock(Cmd+1, true, false);
 	} else if (cmdp == 'f'){
 		ans = GetFskClock("", true, false);
 	} else if (cmdp == 'n'){
@@ -2166,7 +2122,7 @@ static command_t CommandTable[] =
 	{"askem410xdemod",  CmdAskEM410xDemod,  1, "[clock] [invert<0|1>] [maxErr] -- Demodulate an EM410x tag from GraphBuffer (args optional)"},
 	{"askgproxiidemod", CmdG_Prox_II_Demod, 1, "Demodulate a G Prox II tag from GraphBuffer"},
 	{"autocorr",        CmdAutoCorr,        1, "[window length] [g] -- Autocorrelation over window - g to save back to GraphBuffer (overwrite)"},
-	{"biphaserawdecode",CmdBiphaseDecodeRaw,1,"[offset] [invert<0|1>] [maxErr] -- Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
+	{"biphaserawdecode",CmdBiphaseDecodeRaw,1, "[offset] [invert<0|1>] [maxErr] -- Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
 	{"bitsamples",      CmdBitsamples,      0, "Get raw samples as bitstring"},
 	{"buffclear",       CmdBuffClear,       1, "Clear sample buffer and graph window"},
 	{"dec",             CmdDec,             1, "Decimate samples"},
@@ -2185,7 +2141,7 @@ static command_t CommandTable[] =
 	{"load",            CmdLoad,            1, "<filename> -- Load trace (to graph window"},
 	{"ltrim",           CmdLtrim,           1, "<samples> -- Trim samples from left of trace"},
 	{"rtrim",           CmdRtrim,           1, "<location to end trace> -- Trim samples from right of trace"},
-	{"manrawdecode",    Cmdmandecoderaw,    1, "[maxErr] -- Manchester decode binary stream in DemodBuffer"},
+	{"manrawdecode",    Cmdmandecoderaw,    1, "[invert] [maxErr] -- Manchester decode binary stream in DemodBuffer"},
 	{"norm",            CmdNorm,            1, "Normalize max/min to +/-128"},
 	{"plot",            CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
 	{"printdemodbuffer",CmdPrintDemodBuff,  1, "[x] -- print the data in the DemodBuffer - 'x' for hex output"},

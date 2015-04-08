@@ -112,7 +112,8 @@ uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_
 	return 0;
 }
 
-// demodulates strong heavily clipped samples
+//by marshmellow
+//demodulates strong heavily clipped samples
 int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int high, int low)
 {
 	size_t bitCnt=0, smplCnt=0, errCnt=0;
@@ -163,57 +164,122 @@ int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int 
 }
 
 //by marshmellow
-//takes 3 arguments - clock, invert, maxErr as integers
-//attempts to demodulate ask while decoding manchester
-//prints binary found and saves in graphbuffer for further commands
-int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr)
+void askAmp(uint8_t *BitStream, size_t size)
 {
-	size_t i;
+	for(size_t i = 1; i<size; i++){
+		if (BitStream[i]-BitStream[i-1]>=30) //large jump up
+			BitStream[i]=127;
+		else if(BitStream[i]-BitStream[i-1]<=-20) //large jump down
+			BitStream[i]=-127;
+	}
+	return;
+}
+
+//by marshmellow
+//attempts to demodulate ask modulations, askType == 0 for ask/raw, askType==1 for ask/manchester
+int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType)
+{
+	if (*size==0) return -1;
 	int start = DetectASKClock(BinStream, *size, clk, maxErr); //clock default
 	if (*clk==0 || start < 0) return -3;
-	if (*invert != 1) *invert=0;
+	if (*invert != 1) *invert = 0;
+	if (amp==1) askAmp(BinStream, *size);
+
 	uint8_t initLoopMax = 255;
 	if (initLoopMax > *size) initLoopMax = *size;
 	// Detect high and lows
-	// 25% fuzz in case highs and lows aren't clipped [marshmellow]
+	//25% clip in case highs and lows aren't clipped [marshmellow]
 	int high, low;
-	if (getHiLo(BinStream, initLoopMax, &high, &low, 75, 75) < 1) return -2; //just noise
+	if (getHiLo(BinStream, initLoopMax, &high, &low, 75, 75) < 1) 
+		return -2; //just noise
 
+	size_t errCnt = 0;
 	// if clean clipped waves detected run alternate demod
 	if (DetectCleanAskWave(BinStream, *size, high, low)) {
-		cleanAskRawDemod(BinStream, size, *clk, *invert, high, low);
-		return manrawdecode(BinStream, size);	
+		errCnt = cleanAskRawDemod(BinStream, size, *clk, *invert, high, low);
+		if (askType) //askman
+			return manrawdecode(BinStream, size, 0);	
+		else //askraw
+			return errCnt;
 	}
 
-	// PrintAndLog("DEBUG - valid high: %d - valid low: %d",high,low);
-	int lastBit;  //set first clock check
-	uint16_t bitnum = 0;     //output counter
+	int lastBit;  //set first clock check - can go negative
+	size_t i, bitnum = 0;     //output counter
+	uint8_t midBit = 0;
 	uint8_t tol = 0;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
-	if (*clk <= 32) tol=1;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely
-	uint16_t errCnt = 0, MaxBits = 512;
+	if (*clk <= 32) tol = 1;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely
+	size_t MaxBits = 1024;
 	lastBit = start - *clk;
+
 	for (i = start; i < *size; ++i) {
-		if ((BinStream[i] >= high) && ((i-lastBit) > (*clk-tol))){
-			//high found and we are expecting a bar
+		if (i-lastBit >= *clk-tol){
+			if (BinStream[i] >= high) {
+				BinStream[bitnum++] = *invert;
+			} else if (BinStream[i] <= low) {
+				BinStream[bitnum++] = *invert ^ 1;
+			} else if (i-lastBit >= *clk+tol) {
+				if (bitnum > 0) {
+					BinStream[bitnum++]=7;
+					errCnt++;						
+				} 
+			} else { //in tolerance - looking for peak
+				continue;
+			}
+			midBit = 0;
 			lastBit += *clk;
-			BinStream[bitnum++] = *invert;
-		} else if ((BinStream[i] <= low) && ((i-lastBit) > (*clk-tol))){
-			//low found and we are expecting a bar
-			lastBit += *clk;
-			BinStream[bitnum++] = *invert ^ 1;
-		} else if ((i-lastBit)>(*clk+tol)){
-			//should have hit a high or low based on clock!!
-			//PrintAndLog("DEBUG - no wave in expected area - location: %d, expected: %d-%d, lastBit: %d - resetting search",i,(lastBit+(clk-((int)(tol)))),(lastBit+(clk+((int)(tol)))),lastBit);
-			if (bitnum > 0) {
-				BinStream[bitnum++] = 7;
-				errCnt++;
-			}		
-			lastBit += *clk;//skip over error
+		} else if (i-lastBit >= (*clk/2-tol) && !midBit && !askType){
+			if (BinStream[i] >= high) {
+				BinStream[bitnum++] = *invert;
+			} else if (BinStream[i] <= low) {
+				BinStream[bitnum++] = *invert ^ 1;
+			} else if (i-lastBit >= *clk/2+tol) {
+				BinStream[bitnum] = BinStream[bitnum-1];
+				bitnum++;
+			} else { //in tolerance - looking for peak
+				continue;
+			}
+			midBit = 1;
 		}
 		if (bitnum >= MaxBits) break;
 	}
 	*size = bitnum;
 	return errCnt;
+}
+
+//by marshmellow
+//take 10 and 01 and manchester decode
+//run through 2 times and take least errCnt
+int manrawdecode(uint8_t * BitStream, size_t *size, uint8_t invert)
+{
+	uint16_t bitnum=0, MaxBits = 512, errCnt = 0;
+	size_t i, ii;
+	uint16_t bestErr = 1000, bestRun = 0;
+	if (*size < 16) return -1;
+	//find correct start position [alignment]
+	for (ii=0;ii<2;++ii){
+		for (i=ii; i<*size-3; i+=2)
+			if (BitStream[i]==BitStream[i+1])
+				errCnt++;
+
+		if (bestErr>errCnt){
+			bestErr=errCnt;
+			bestRun=ii;
+		}
+		errCnt=0;
+	}
+	//decode
+	for (i=bestRun; i < *size-3; i+=2){
+		if(BitStream[i] == 1 && (BitStream[i+1] == 0)){
+			BitStream[bitnum++]=invert;
+		} else if((BitStream[i] == 0) && BitStream[i+1] == 1){
+			BitStream[bitnum++]=invert^1;
+		} else {
+			BitStream[bitnum++]=7;
+		}
+		if(bitnum>MaxBits) break;
+	}
+	*size=bitnum;
+	return bestErr;
 }
 
 //by marshmellow
@@ -230,42 +296,6 @@ int ManchesterEncode(uint8_t *BitStream, size_t size)
 		BitStream[i] = BitStream[i+20000];
 	}
 	return i;
-}
-
-//by marshmellow
-//take 10 and 01 and manchester decode
-//run through 2 times and take least errCnt
-int manrawdecode(uint8_t * BitStream, size_t *size)
-{
-	uint16_t bitnum=0, MaxBits = 512, errCnt = 0;
-	size_t i, ii;
-	uint16_t bestErr = 1000, bestRun = 0;
-	if (size == 0) return -1;
-	//find correct start position [alignment]
-	for (ii=0;ii<2;++ii){
-		for (i=ii; i<*size-2; i+=2)
-			if (BitStream[i]==BitStream[i+1])
-				errCnt++;
-
-		if (bestErr>errCnt){
-			bestErr=errCnt;
-			bestRun=ii;
-		}
-		errCnt=0;
-	}
-	//decode
-	for (i=bestRun; i < *size-2; i+=2){
-		if(BitStream[i] == 1 && (BitStream[i+1] == 0)){
-			BitStream[bitnum++]=0;
-		} else if((BitStream[i] == 0) && BitStream[i+1] == 1){
-			BitStream[bitnum++]=1;
-		} else {
-			BitStream[bitnum++]=7;
-		}
-		if(bitnum>MaxBits) break;
-	}
-	*size=bitnum;
-	return bestErr;
 }
 
 //by marshmellow
@@ -307,88 +337,7 @@ int BiphaseRawDecode(uint8_t *BitStream, size_t *size, int offset, int invert)
 	return errCnt;
 }
 
-//by marshmellow
-void askAmp(uint8_t *BitStream, size_t size)
-{
-	int shift = 127;
-	int shiftedVal=0;
-	for(size_t i = 1; i<size; i++){
-		if (BitStream[i]-BitStream[i-1]>=30) //large jump up
-			shift=127;
-		else if(BitStream[i]-BitStream[i-1]<=-20) //large jump down
-			shift=-127;
-
-		shiftedVal=BitStream[i]+shift;
-
-		if (shiftedVal>255) 
-			shiftedVal=255;
-		else if (shiftedVal<0) 
-			shiftedVal=0;
-		BitStream[i-1] = shiftedVal;
-	}
-	return;
-}
-
-//by marshmellow
-//takes 3 arguments - clock, invert and maxErr as integers
-//attempts to demodulate ask only
-int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp)
-{
-	if (*size==0) return -1;
-	int start = DetectASKClock(BinStream, *size, clk, maxErr); //clock default
-	if (*clk==0 || start < 0) return -1;
-	if (*invert != 1) *invert = 0;
-	if (amp==1) askAmp(BinStream, *size);
-
-	uint8_t initLoopMax = 255;
-	if (initLoopMax > *size) initLoopMax = *size;
-	// Detect high and lows
-	//25% clip in case highs and lows aren't clipped [marshmellow]
-	int high, low;
-	if (getHiLo(BinStream, initLoopMax, &high, &low, 75, 75) < 1) 
-		return -1; //just noise
-
-	// if clean clipped waves detected run alternate demod
-	if (DetectCleanAskWave(BinStream, *size, high, low))
-		return cleanAskRawDemod(BinStream, size, *clk, *invert, high, low);
-
-	int lastBit;  //set first clock check - can go negative
-	size_t i, errCnt = 0, bitnum = 0;     //output counter
-	uint8_t midBit = 0;
-	size_t MaxBits = 1024;
-	lastBit = start - *clk;
-
-	for (i = start; i < *size; ++i) {
-		if (i - lastBit == *clk){
-			if (BinStream[i] >= high) {
-				BinStream[bitnum++] = *invert;
-			} else if (BinStream[i] <= low) {
-				BinStream[bitnum++] = *invert ^ 1;
-			} else {
-				if (bitnum > 0) {
-					BinStream[bitnum++]=7;
-					errCnt++;						
-				} 
-			}
-			midBit = 0;
-			lastBit += *clk;
-		} else if (i-lastBit == (*clk/2) && midBit == 0){
-			if (BinStream[i] >= high) {
-				BinStream[bitnum++] = *invert;
-			} else if (BinStream[i] <= low) {
-				BinStream[bitnum++] = *invert ^ 1;
-			} else {
-				BinStream[bitnum] = BinStream[bitnum-1];
-				bitnum++;
-			}
-			midBit = 1;
-		}
-		if (bitnum >= MaxBits) break;
-	}
-	*size = bitnum;
-	return errCnt;
-}
-
+// by marshmellow
 // demod gProxIIDemod 
 // error returns as -x 
 // success returns start position in BitStream
@@ -684,7 +633,8 @@ int PyramiddemodFSK(uint8_t *dest, size_t *size)
 	return (int)startIdx;
 }
 
-
+// by marshmellow
+// to detect a wave that has heavily clipped (clean) samples
 uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, uint8_t high, uint8_t low)
 {
 	uint16_t allPeaks=1;
@@ -792,7 +742,7 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 
 	//test each valid clock from smallest to greatest to see which lines up
 	for(; clkCnt < clkEnd; clkCnt++){
-		if (clk[clkCnt] == 32){
+		if (clk[clkCnt] <= 32){
 			tol=1;
 		}else{
 			tol=0;

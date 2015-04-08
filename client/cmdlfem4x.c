@@ -47,7 +47,7 @@ int CmdEM410xRead(const char *Cmd)
 	uint32_t hi=0;
 	uint64_t lo=0;
 
-	if(!AskEm410xDemod("", &hi, &lo)) return 0;
+	if(!AskEm410xDemod("", &hi, &lo, false)) return 0;
 	PrintAndLog("EM410x pattern found: ");
 	printEM410x(hi, lo);
 	if (hi){
@@ -455,7 +455,7 @@ int EM4x50Read(const char *Cmd, bool verbose)
 		else
 			phaseoff = 0;
 		i += 2;
-		if (ASKmanDemod(tmp2, false, false) < 1) {
+		if (ASKDemod(tmp2, false, false, 1) < 1) {
 			save_restoreGB(0);
 			return 0;
 		}

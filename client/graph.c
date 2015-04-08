@@ -143,10 +143,10 @@ int GetAskClock(const char str[], bool printAns, bool verbose)
 			PrintAndLog("Failed to copy from graphbuffer");
 		return -1;
 	}
-	DetectASKClock(grph, size, &clock, 20);
+	int start = DetectASKClock(grph, size, &clock, 20);
 	// Only print this message if we're not looping something
 	if (printAns){
-		PrintAndLog("Auto-detected clock rate: %d", clock);
+		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
 	}
 	return clock;
 }

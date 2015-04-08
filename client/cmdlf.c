@@ -1091,7 +1091,7 @@ int CmdLFfind(const char *Cmd)
 				return 1;
 			}
 		}
-		ans=ASKmanDemod("0 0 0",TRUE,FALSE);
+		ans=ASKDemod("0 0 0",TRUE,FALSE,1);
 		if (ans>0) {
 			PrintAndLog("\nUnknown ASK Modulated and Manchester encoded Tag Found!");
 			PrintAndLog("\nif it does not look right it could instead be ASK/Biphase - try 'data rawdemod ab'");
