@@ -370,28 +370,28 @@ bool tryDetectModulation(){
 		if (clk>0) {
 			sprintf(cmdStr,"%d", clk/2);
 			CmdLtrim(cmdStr);
-			if ( ASKDemod("0 0 1", FALSE, FALSE, 1) && test(DEMOD_ASK, &tests[hits].offset, &bitRate)) {
+			if ( ASKDemod("0 0 0", FALSE, FALSE, 1) && test(DEMOD_ASK, &tests[hits].offset, &bitRate)) {
 				tests[hits].modulation = DEMOD_ASK;
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = FALSE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
 				++hits;
 			}
-			if ( ASKDemod("0 1 1", FALSE, FALSE, 1)  && test(DEMOD_ASK, &tests[hits].offset, &bitRate)) {
+			if ( ASKDemod("0 1 0", FALSE, FALSE, 1)  && test(DEMOD_ASK, &tests[hits].offset, &bitRate)) {
 				tests[hits].modulation = DEMOD_ASK;
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = TRUE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
 				++hits;
 			}
-			if ( ASKbiphaseDemod("0 0 0 1", FALSE) && test(DEMOD_BI, &tests[hits].offset, &bitRate) ) {
+			if ( ASKbiphaseDemod("0 0 0 0", FALSE) && test(DEMOD_BI, &tests[hits].offset, &bitRate) ) {
 				tests[hits].modulation = DEMOD_BI;
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = FALSE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
 				++hits;
 			}
-			if ( ASKbiphaseDemod("0 0 1 1", FALSE) && test(DEMOD_BIa, &tests[hits].offset, &bitRate) ) {
+			if ( ASKbiphaseDemod("0 0 1 0", FALSE) && test(DEMOD_BIa, &tests[hits].offset, &bitRate) ) {
 				tests[hits].modulation = DEMOD_BIa;
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = TRUE;

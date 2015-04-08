@@ -1077,6 +1077,13 @@ int CmdLFfind(const char *Cmd)
 		PrintAndLog("\nValid EM4x50 ID Found!");
 		return 1;
 	}	
+
+	ans=CmdPSKNexWatch("");
+	if (ans>0) {
+		PrintAndLog("\nValid NexWatch ID Found!");
+		return 1;
+	}
+
 	PrintAndLog("\nNo Known Tags Found!\n");
 	if (testRaw=='u' || testRaw=='U'){
 		//test unknown tag formats (raw mode)

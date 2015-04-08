@@ -1547,11 +1547,49 @@ int CmdIndalaDecode(const char *Cmd)
 	return 1;
 }
 
+int CmdPSKNexWatch(const char *Cmd)
+{
+	if (!PSKDemod("", false)) return 0;
+	uint8_t preamble[28] = {0,0,0,0,0,1,0,1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	size_t startIdx = 0, size = DemodBufferLen; 
+	bool invert = false;
+	if (!preambleSearch(DemodBuffer, preamble, sizeof(preamble), &size, &startIdx)){
+		// if didn't find preamble try again inverting
+		if (!PSKDemod("1", false)) return 0; 
+		size = DemodBufferLen;
+		if (!preambleSearch(DemodBuffer, preamble, sizeof(preamble), &size, &startIdx)) return 0;
+		invert = true;
+	} 
+	if (size != 128) return 0;
+	setDemodBuf(DemodBuffer, size, startIdx+4);
+	startIdx = 8+32; //4 = extra i added, 8 = preamble, 32 = reserved bits (always 0)
+	//get ID
+	uint32_t ID = 0;
+	for (uint8_t wordIdx=0; wordIdx<4; wordIdx++){
+		for (uint8_t idx=0; idx<8; idx++){
+			ID = (ID << 1) | DemodBuffer[startIdx+wordIdx+(idx*4)];
+		}	
+	}
+	//parity check (TBD)
+
+	//checksum check (TBD)
+
+	//output
+	PrintAndLog("NexWatch ID: %d", ID);
+	if (invert){
+		PrintAndLog("Had to Invert - probably NexKey");
+		for (uint8_t idx=0; idx<size; idx++)
+			DemodBuffer[idx] ^= 1;
+	} 
+
+	CmdPrintDemodBuff("x");
+	return 1;
+}
+
 // by marshmellow
 // takes 3 arguments - clock, invert, maxErr as integers
 // attempts to demodulate nrz only
 // prints binary found and saves in demodbuffer for further commands
-
 int NRZrawDemod(const char *Cmd, bool verbose)
 {
 	int invert=0;
@@ -2146,6 +2184,7 @@ static command_t CommandTable[] =
 	{"plot",            CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
 	{"printdemodbuffer",CmdPrintDemodBuff,  1, "[x] -- print the data in the DemodBuffer - 'x' for hex output"},
 	{"pskindalademod",  CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Demodulate an indala tag (PSK1) from GraphBuffer (args optional)"},
+	{"psknexwatchdemod",CmdPSKNexWatch,     1, "Demodulate a NexWatch tag (nexkey, quadrakey) (PSK1) from GraphBuffer"},
 	{"rawdemod",        CmdRawDemod,        1, "[modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary"},  
 	{"samples",         CmdSamples,         0, "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
 	{"save",            CmdSave,            1, "<filename> -- Save trace (from graph window)"},

@@ -5,8 +5,7 @@ local lib14a = require('read14a')
 local utils = require('utils')
 local md5 = require('md5')
 local dumplib = require('html_dumplib')
-local toyNames = require('default_toys')
-
+local toys = require('default_toys')
 
 example =[[
 	script run tnp3dump
@@ -129,7 +128,7 @@ local function main(args)
 		if o == "p" then usePreCalc = true end
 		if o == "o" then outputTemplate = a end		
 	end
-
+	
 	-- validate input args.
 	keyA =  keyA or '4b0b20107ccb'
 	if #(keyA) ~= 12 then
@@ -261,13 +260,16 @@ local function main(args)
 			bindata[#bindata+1] = c
 		end
 	end 
+
+	print( string.rep('--',20) )
+
 	
 	local uid = block0:sub(1,8)
-	local itemtype = block1:sub(1,4)
+	local toytype = block1:sub(1,4)
 	local cardidLsw = block1:sub(9,16)
 	local cardidMsw = block1:sub(16,24)
 	local cardid = block1:sub(9,24)
-	local traptype = block1:sub(25,28)
+	local subtype = block1:sub(25,28)
 	
 	-- Write dump to files
 	if not DEBUG then
@@ -277,13 +279,15 @@ local function main(args)
 		print(("Wrote a EML dump to:  %s"):format(bar))
 	end
 
-	local itemtypename = toyNames[itemtype]
-	if itemtypename == nil then
-		itemtypename = toyNames[utils.SwapEndiannessStr(itemtype,16)]
+	local item = toys.Find(toytype, subtype)
+	if item then
+		local itemStr = ('%s - %s (%s)'):format(item[6],item[5], item[4])
+		print('            ITEM TYPE : '..itemStr )
+	else
+		print(('            ITEM TYPE : 0x%s 0x%s'):format(toytype, subtype))
 	end
+	
 	-- Show info 
-	print( string.rep('--',20) )
-	print( ('            ITEM TYPE : 0x%s - %s'):format(itemtype, itemtypename) )
 	print( (' Alter ego / traptype : 0x%s'):format(traptype) )
 	print( ('                  UID : 0x%s'):format(uid) )
 	print( ('               CARDID : 0x%s'):format(cardid ) )

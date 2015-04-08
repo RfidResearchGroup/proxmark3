@@ -4,7 +4,7 @@ local bin = require('bin')
 local lib14a = require('read14a')
 local utils = require('utils')
 local md5 = require('md5')
-local toyNames = require('default_toys')
+local toys = require('default_toys')
 
 example =[[
 	1. script run tnp3sim
@@ -382,18 +382,22 @@ local function main(args)
 	print( string.rep('--',20) )	
 	print(' Gathering info')
 	local uid = blocks[0]:sub(1,8)
-	local itemtype = blocks[1]:sub(1,4)
+	local toytype = blocks[1]:sub(1,4)
 	local cardidLsw = blocks[1]:sub(9,16)
 	local cardidMsw = blocks[1]:sub(17,24)
+	local subtype  = blocks[1]:sub(25,28)
 
-	local itemtypename = toyNames[itemtype]
-	if itemtypename == nil then
-		itemtypename = toyNames[utils.SwapEndiannessStr(itemtype,16)]
-	end
-	
 	-- Show info 
 	print( string.rep('--',20) )
-	print( (' ITEM TYPE : 0x%s - %s'):format(itemtype, itemtypename) )
+	
+	local item = toys.Find( toytype, subtype)
+	if item then
+		local itemStr = ('%s - %s (%s)'):format(item[6],item[5], item[4])
+		print(' ITEM TYPE :'..itemStr )
+	else
+		print( (' ITEM TYPE : 0x%s 0x%s'):format(toytype, subtype) )
+	end	
+	
 	print( ('       UID : 0x%s'):format(uid) )
 	print( ('    CARDID : 0x%s %s [%s]'):format(
 								cardidMsw,cardidLsw, 

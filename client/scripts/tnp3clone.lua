@@ -3,6 +3,7 @@ local getopt = require('getopt')
 local lib14a = require('read14a')
 local utils = require('utils')
 local pre = require('precalc')
+local toys = require('default_toys')
 
 local lsh = bit32.lshift
 local rsh = bit32.rshift
@@ -10,19 +11,20 @@ local bor = bit32.bor
 local band = bit32.band
 
 example =[[
-	script run tnp3dump
-	script run tnp3dump -h
-	script run tnp3dump -t aa00
+	script run tnp3clone
+	script run tnp3clone -h
+	script run tnp3clone -t aa00 -s 0030
 
 ]]
 author = "Iceman"
-usage = "script run tnp3clone -t <toytype>"
+usage = "script run tnp3clone -t <toytype> -s <subtype>"
 desc =[[
 This script will try making a barebone clone of a tnp3 tag on to a magic generation1 card.
 
 Arguments:
 	-h             : this help
-	-k <key>       : toytype id,  4 hex symbols.
+	-t <data>      : toytype id, 4hex symbols.
+	-s <data>      : subtype id, 4hex symbols		
 ]]
 
 
@@ -73,28 +75,44 @@ end
 
 local function main(args)
 
+	print( string.rep('--',20) )
+	print( string.rep('--',20) )
+	
 	local numBlocks = 64
     local cset = 'hf mf csetbl '
+	local csetuid = 'hf mf csetuid '
 	local cget = 'hf mf cgetbl '
 	local empty = '00000000000000000000000000000000'
 	local AccAndKeyB = '7F078869000000000000'
 	-- Defaults to Gusto
 	local toytype = 'C201'
+	local subtype = '0030'
+	local DEBUG = true
 	
 	-- Arguments for the script
-	for o, a in getopt.getopt(args, 'ht:') do
+	for o, a in getopt.getopt(args, 'ht:s:') do
 		if o == "h" then return help() end		
 		if o == "t" then toytype = a end
+		if o == "s" then subtype = a end
 	end
 	
-	if #toytype ~= 4 then return oops('Wrong size in toytype. (4hex symbols)') end	
+	if #toytype ~= 4 then return oops('Wrong size - toytype. (4hex symbols)') end	
+	if #subtype ~= 4 then return oops('Wrong size - subtype. (4hex symbols)') end	
+
+	-- look up type, find & validate types
+	local item = toys.Find( toytype, subtype)
+	if item then
+		print( (' Looking up input: Found %s - %s (%s)'):format(item[6],item[5], item[4]) )
+	else
+		print('Didn\'t find item type. If you are sure about it, report it in')
+	end
+	--15,16
+	--13-14 
+
 	
 	-- find tag
 	result, err = lib14a.read1443a(false)
 	if not result then return oops(err)	end
-
-	-- Show tag info
-	print((' Found tag %s'):format(result.name))
 
 	-- load keys
 	local akeys  = pre.GetAll(result.uid)
@@ -111,11 +129,10 @@ local function main(args)
 	end
 	
 	-- wipe card.
-	local cmd  = (cset..' %s 0004 08 w'):format( b0)	
+	local cmd  = (csetuid..'%s 0004 08 w'):format(result.uid)	
 	core.console(cmd) 
-
 	
-	local b1 = toytype..'000000000000000000000000'
+	local b1 = toytype..'00000000000000000000'..subtype
 	local calc = utils.Crc16(b0..b1)
 	local calcEndian = bor(rsh(calc,8), lsh(band(calc, 0xff), 8))
 	
