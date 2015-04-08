@@ -271,7 +271,6 @@ bool DecodeT55xxBlock(){
 	//trim 1/2 a clock from beginning
 	snprintf(cmdStr, sizeof(buf),"%d", bitRate[config.bitrate]/2 );
 	CmdLtrim(cmdStr);
-
 	switch( config.modulation ){
 		case DEMOD_FSK:
 			snprintf(cmdStr, sizeof(buf),"%d %d", bitRate[config.bitrate], config.inverted );
@@ -337,8 +336,9 @@ bool tryDetectModulation(){
 	uint8_t hits = 0;
 	t55xx_conf_block_t tests[15];
 	int bitRate=0;
+	uint8_t fc1 = 0, fc2 = 0, clk=0;
+	save_restoreGB(1);
 	if (GetFskClock("", FALSE, FALSE)){ 
-		uint8_t fc1 = 0, fc2 = 0, clk=0;
 		fskClocks(&fc1, &fc2, &clk, FALSE);
 		sprintf(cmdStr,"%d", clk/2);
 		CmdLtrim(cmdStr);
@@ -366,91 +366,105 @@ bool tryDetectModulation(){
 			++hits;
 		}
 	} else {
-		if ( ASKDemod("0 0 1", FALSE, FALSE, 1) && test(DEMOD_ASK, &tests[hits].offset, &bitRate)) {
-			tests[hits].modulation = DEMOD_ASK;
-			tests[hits].bitrate = bitRate;
-			tests[hits].inverted = FALSE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
-		}
-
-		if ( ASKDemod("0 1 1", FALSE, FALSE, 1)  && test(DEMOD_ASK, &tests[hits].offset, &bitRate)) {
-			tests[hits].modulation = DEMOD_ASK;
-			tests[hits].bitrate = bitRate;
-			tests[hits].inverted = TRUE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
-		}
-		
-		if ( NRZrawDemod("0 0 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate)) {
-			tests[hits].modulation = DEMOD_NRZ;
-			tests[hits].bitrate = bitRate;
-			tests[hits].inverted = FALSE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
-		}
-
-		if ( NRZrawDemod("0 1 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate)) {
-			tests[hits].modulation = DEMOD_NRZ;
-			tests[hits].bitrate = bitRate;
-			tests[hits].inverted = TRUE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
-		}
-		
-		if ( PSKDemod("0 0 1", FALSE) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate)) {
-			tests[hits].modulation = DEMOD_PSK1;
-			tests[hits].bitrate = bitRate;
-			tests[hits].inverted = FALSE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
-		}
-		
-		if ( PSKDemod("0 1 1", FALSE) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate)) {
-			tests[hits].modulation = DEMOD_PSK1;
-			tests[hits].bitrate = bitRate;
-			tests[hits].inverted = TRUE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
-		}
-
-		// PSK2 - needs a call to psk1TOpsk2.
-		if ( PSKDemod("0 0 1", FALSE)) {
-			psk1TOpsk2(DemodBuffer, DemodBufferLen);
-			if (test(DEMOD_PSK2, &tests[hits].offset, &bitRate)){
-				tests[hits].modulation = DEMOD_PSK2;
+		clk = GetAskClock("", FALSE, FALSE);
+		if (clk>0) {
+			sprintf(cmdStr,"%d", clk/2);
+			CmdLtrim(cmdStr);
+			if ( ASKDemod("0 0 1", FALSE, FALSE, 1) && test(DEMOD_ASK, &tests[hits].offset, &bitRate)) {
+				tests[hits].modulation = DEMOD_ASK;
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = FALSE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
 				++hits;
 			}
-		} // inverse waves does not affect this demod
-
-		// PSK3 - needs a call to psk1TOpsk2.
-		if ( PSKDemod("0 0 1", FALSE)) {
-			psk1TOpsk2(DemodBuffer, DemodBufferLen);
-			if (test(DEMOD_PSK3, &tests[hits].offset, &bitRate)){
-				tests[hits].modulation = DEMOD_PSK3;
+			if ( ASKDemod("0 1 1", FALSE, FALSE, 1)  && test(DEMOD_ASK, &tests[hits].offset, &bitRate)) {
+				tests[hits].modulation = DEMOD_ASK;
+				tests[hits].bitrate = bitRate;
+				tests[hits].inverted = TRUE;
+				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				++hits;
+			}
+			if ( ASKbiphaseDemod("0 0 0 1", FALSE) && test(DEMOD_BI, &tests[hits].offset, &bitRate) ) {
+				tests[hits].modulation = DEMOD_BI;
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = FALSE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
 				++hits;
 			}
-		} // inverse waves does not affect this demod
-	
-		if ( ASKbiphaseDemod("0 0 0 1", FALSE) && test(DEMOD_BI, &tests[hits].offset, &bitRate) ) {
-			tests[hits].modulation = DEMOD_BI;
-			tests[hits].bitrate = bitRate;
-			tests[hits].inverted = FALSE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
+			if ( ASKbiphaseDemod("0 0 1 1", FALSE) && test(DEMOD_BIa, &tests[hits].offset, &bitRate) ) {
+				tests[hits].modulation = DEMOD_BIa;
+				tests[hits].bitrate = bitRate;
+				tests[hits].inverted = TRUE;
+				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				++hits;
+			}
 		}
-		if ( ASKbiphaseDemod("0 0 1 1", FALSE) && test(DEMOD_BIa, &tests[hits].offset, &bitRate) ) {
-			tests[hits].modulation = DEMOD_BIa;
-			tests[hits].bitrate = bitRate;
-			tests[hits].inverted = TRUE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
+		//undo trim from ask
+		save_restoreGB(0);
+		clk = GetNrzClock("", FALSE, FALSE);
+		if (clk>0) {
+			sprintf(cmdStr,"%d", clk/2);
+			CmdLtrim(cmdStr);
+			if ( NRZrawDemod("0 0 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate)) {
+				tests[hits].modulation = DEMOD_NRZ;
+				tests[hits].bitrate = bitRate;
+				tests[hits].inverted = FALSE;
+				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				++hits;
+			}
+
+			if ( NRZrawDemod("0 1 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate)) {
+				tests[hits].modulation = DEMOD_NRZ;
+				tests[hits].bitrate = bitRate;
+				tests[hits].inverted = TRUE;
+				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				++hits;
+			}
+		}
+		
+		//undo trim from nrz
+		save_restoreGB(0);
+		clk = GetPskClock("", FALSE, FALSE);
+		if (clk>0) {
+			PrintAndLog("clk %d",clk);
+			sprintf(cmdStr,"%d", clk/2);
+			CmdLtrim(cmdStr);	
+			if ( PSKDemod("0 0 1", FALSE) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate)) {
+				tests[hits].modulation = DEMOD_PSK1;
+				tests[hits].bitrate = bitRate;
+				tests[hits].inverted = FALSE;
+				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				++hits;
+			}
+			if ( PSKDemod("0 1 1", FALSE) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate)) {
+				tests[hits].modulation = DEMOD_PSK1;
+				tests[hits].bitrate = bitRate;
+				tests[hits].inverted = TRUE;
+				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				++hits;
+			}
+			// PSK2 - needs a call to psk1TOpsk2.
+			if ( PSKDemod("0 0 1", FALSE)) {
+				psk1TOpsk2(DemodBuffer, DemodBufferLen);
+				if (test(DEMOD_PSK2, &tests[hits].offset, &bitRate)){
+					tests[hits].modulation = DEMOD_PSK2;
+					tests[hits].bitrate = bitRate;
+					tests[hits].inverted = FALSE;
+					tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+					++hits;
+				}
+			} // inverse waves does not affect this demod
+			// PSK3 - needs a call to psk1TOpsk2.
+			if ( PSKDemod("0 0 1", FALSE)) {
+				psk1TOpsk2(DemodBuffer, DemodBufferLen);
+				if (test(DEMOD_PSK3, &tests[hits].offset, &bitRate)){
+					tests[hits].modulation = DEMOD_PSK3;
+					tests[hits].bitrate = bitRate;
+					tests[hits].inverted = FALSE;
+					tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+					++hits;
+				}
+			} // inverse waves does not affect this demod
 		}
 	}		
 	if ( hits == 1) {
