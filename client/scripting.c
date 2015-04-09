@@ -231,7 +231,7 @@ static int l_iso15693_crc(lua_State *L)
  Simple AES 128 cbc hook up to OpenSSL.
  params:  key, input
 */
-static int l_aes(lua_State *L)
+static int l_aes128decrypt(lua_State *L)
 {
 	//Check number of arguments
 	int i;
@@ -245,26 +245,46 @@ static int l_aes(lua_State *L)
 	unsigned char outdata[16] = {0x00};
     unsigned char aes_key[16] = {0x00};
 	unsigned char iv[16] = {0x00};
-	
-	// convert key to bytearray
+
 	for (i = 0; i < 32; i += 2) {
 		sscanf(&p_encTxt[i], "%02x", (unsigned int *)&indata[i / 2]);
-	}
-	
-	// convert input to bytearray
-	for (i = 0; i < 32; i += 2) {
 		sscanf(&p_key[i], "%02x", (unsigned int *)&aes_key[i / 2]);
 	}
-	
-	//AES_KEY key;
-    //AES_set_decrypt_key(aes_key, 128, &key);
-    //AES_cbc_encrypt(indata, outdata, sizeof(indata), &key, iv, AES_DECRYPT);
 
     aes_context ctx;
     aes_init(&ctx);
-    aes_setkey_enc(&ctx,(const unsigned char *)p_key,128);
-	aes_crypt_cbc(&ctx,AES_DECRYPT,sizeof(indata), iv, indata,outdata );
+    //aes_setkey_enc(&ctx, (const unsigned char *)aes_key, 128);
+	aes_setkey_dec(&ctx, aes_key, 128);
+	aes_crypt_cbc(&ctx, AES_DECRYPT, sizeof(indata), iv, indata, outdata );
     //Push decrypted array as a string
+	lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
+	return 1;// return 1 to signal one return value
+}
+static int l_aes128encrypt(lua_State *L)
+{
+	//Check number of arguments
+	int i;
+    size_t size;
+    const char *p_key = luaL_checklstring(L, 1, &size);
+    if(size != 32)  return returnToLuaWithError(L,"Wrong size of key, got %d bytes, expected 32", (int) size);
+
+    const char *p_txt = luaL_checklstring(L, 2, &size);
+    
+	unsigned char indata[16] = {0x00};
+	unsigned char outdata[16] = {0x00};
+    unsigned char aes_key[16] = {0x00};
+	unsigned char iv[16] = {0x00};
+	
+	for (i = 0; i < 32; i += 2) {
+		sscanf(&p_txt[i], "%02x", (unsigned int *)&indata[i / 2]);
+		sscanf(&p_key[i], "%02x", (unsigned int *)&aes_key[i / 2]);
+	}
+
+    aes_context ctx;
+    aes_init(&ctx);
+    aes_setkey_enc(&ctx, aes_key, 128);
+	aes_crypt_cbc(&ctx, AES_ENCRYPT, sizeof(indata), iv, indata, outdata );
+    //Push encrypted array as a string
 	lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
 	return 1;// return 1 to signal one return value
 }
@@ -338,7 +358,8 @@ int set_pm3_libraries(lua_State *L)
         {"clearCommandBuffer",          l_clearCommandBuffer},
         {"console",                     l_CmdConsole},
         {"iso15693_crc",                l_iso15693_crc},
-		{"aes",                         l_aes},
+		{"aes128_decrypt",              l_aes128decrypt},
+		{"aes128_encrypt",              l_aes128encrypt},
 		{"crc16",                       l_crc16},
 		{"crc64",						l_crc64},
         {NULL, NULL}
