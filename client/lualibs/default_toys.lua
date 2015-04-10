@@ -45,6 +45,7 @@ local _names = {
 --{"26", "1a00", "0030", "life", "regular", "Elite Stealth Elf"},
 --{"26", "1a00", "0030", "life", "regular", "Dark Stealth Elf"},
 {"27", "1b00", "0030", "life", "regular", "Stump Smash"},
+{"27", "1b00", "0118", "life", "regular", "Stump Smash"},
 --{"27", "1b00", "0030", "life", "regular", "Autumn Stump Smash"},
 {"28", "1c00", "0030", "magic", "regular", "Dark Spyro"},
 --{"28", "1c00", "0030", "magic", "regular", "Elite Spyro"},
@@ -70,7 +71,7 @@ local _names = {
 --{"107", "6b00", "0030", "water", "giant", "Admiral Thumpback"},
 {"108", "6c00", "0030", "magic", "giant", "Pop Fizz"},
 --{"108", "6c00", "0030", "magic", "giant", "Hoppity Pop Fizz"},
---{"108", "6c00", "0030", "magic", "giant", "Love Potion Pop Fizz"},
+{"108", "6c00", "023c", "magic", "giant", "Love Potion Pop Fizz"},
 --{"108", "6c00", "0030", "magic", "giant", "Punch Pop Fizz"},
 {"109", "6d00", "0030", "magic", "giant", "Nin Jini"},
 {"110", "6e00", "0030", "tech", "giant", "Bouncer"},
@@ -174,8 +175,8 @@ local _names = {
 {"304", "3001", "0030", "none", "location", "Volcanic Vault"},
 {"305", "3101", "0030", "none", "location", "Mirror Of Mystery"},
 {"306", "3201", "0030", "none", "location", "Nightmare Express"},
-{"307", "3301", "0030", "none", "location", "Sunscraper Spire"},
-{"308", "3401", "0030", "none", "location", "Midnight Museum"},
+{"307", "3301", "0030", "light", "location", "Sunscraper Spire"},
+{"308", "3401", "0030", "dark", "location", "Midnight Museum"},
 
 {"404", "9401", "0030", "earth", "legendary","Bash"},
 {"416", "a001", "0030", "magic", "legendary", "Spyro"},
@@ -219,7 +220,7 @@ local _names = {
 {"461", "cd01", "0030", "fire", "regular", "Torch"},
 {"462", "ce01", "0030", "water", "trapmaster", "Snap Shot"},
 {"462", "ce01", "0234", "water", "trapmaster", "Dark Snap Shot"},
---, "water", "trapmaster", "Instant Snap Shot"},
+{"462", "6c00", "023c", "water", "trapmaster", "Instant Snap Shot"},
 --, "water", "trapmaster", "Merry Snap Shot"},
 {"463", "cf01", "0030", "water", "trapmaster", "Lob Star"},
 {"463", "cf01", "0234", "water", "trapmaster", "Winterfest Lob Star"},
@@ -245,6 +246,7 @@ local _names = {
 {"475", "db01", "0030", "life", "trapmaster", "Tuff Luck"},
 --{"475", "db01", "0234", "life", "trapmaster", "Special Tuff Luck"},
 {"476", "dc01", "0030", "life", "regular", "Food Fight"},
+{"476", "dc01", "0612", "life", "regular", "LightCore Food Fight"},
 --{"476", "dc01", "0030", "life", "regular", "Dark Food Fight"},
 --{"476", "dc01", "0030", "life", "regular", "Frosted Food Fight"},
 --{"476", "dc01", "0030", "life", "regular", "Instant Food Fight"},
@@ -255,6 +257,7 @@ local _names = {
 --{"479", "df01", "0234", "undead", "trapmaster", "Special Short Cut"},
 {"480", "e001", "0030", "undead", "regular", "Bat Spin"},
 {"481", "e101", "0030", "undead", "regular", "Funny Bone"},
+{"481", "e101", "0612", "undead", "regular", "LightCore Funny Bone"},
 --{"481", "e101", "0030", "undead", "regular", "Fortune Funny Bone"},
 {"482", "e201", "0030", "light", "trapmaster", "Knight light"},
 --{"482", "e201", "0234", "light", "trapmaster", "Special Knight light"},
@@ -292,6 +295,7 @@ local _names = {
 --{"3002", "ba0b", "0030", "earth", "SWAPFORCE", "Dark Slobber Tooth"},
 --{"3002", "ba0b", "0030", "earth", "SWAPFORCE", "Sundae Slobber Tooth"},
 {"3003", "bb0b", "0030", "earth", "SWAPFORCE", "Scorp"},
+{"3004", "bc0b", "0030", "fire", "SWAPFORCE", "Fryno"},
 {"3004", "bc0b", "0138", "fire", "SWAPFORCE", "Hog Wild Fryno"},
 --{"3004", "bc0b", "0138", "fire", "SWAPFORCE", "Flip flop Fryno"},
 {"3005", "bd0b", "0030", "fire", "SWAPFORCE", "Smolderdash"},
@@ -314,9 +318,10 @@ local _names = {
 }
 
 local function find( main, sub)
-    
+    main = main:lower()
+	sub = sub:lower()
     for k, v in pairs(_names) do
-		if ( v[2] == main  and v[3] == sub) then
+		if ( v[2]:lower()  == main  and v[3]:lower() == sub) then
 			return v
 		end
 	end

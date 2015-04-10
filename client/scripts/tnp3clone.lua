@@ -25,6 +25,14 @@ Arguments:
 	-h             : this help
 	-t <data>      : toytype id, 4hex symbols.
 	-s <data>      : subtype id, 4hex symbols		
+	
+	For fun,  try the following subtype id: 
+	0612 - Lightcore
+	0118 - Series 1
+	0138 - Series 2
+	0234 - Special
+	023c - Special
+	
 ]]
 
 

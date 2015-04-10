@@ -604,11 +604,11 @@ static command_t CommandTable[] =
 {
 	{"help", CmdHelp, 1, "This help"},
 	{"em410xdemod", CmdEMdemodASK, 0, "[findone] -- Extract ID from EM410x tag (option 0 for continuous loop, 1 for only 1 tag)"},  
-	{"em410xread", CmdEM410xRead, 1, "[clock rate] -- Extract ID from EM410x tag"},
+	{"em410xread", CmdEM410xRead, 1, "[clock rate] -- Extract ID from EM410x tag in GraphBuffer"},
 	{"em410xsim", CmdEM410xSim, 0, "<UID> -- Simulate EM410x tag"},
 	{"em410xwatch", CmdEM410xWatch, 0, "['h'] -- Watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
 	{"em410xspoof", CmdEM410xWatchnSpoof, 0, "['h'] --- Watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
-	{"em410xwrite", CmdEM410xWrite, 1, "<UID> <'0' T5555> <'1' T55x7> [clock rate] -- Write EM410x UID to T5555(Q5) or T55x7 tag, optionally setting clock rate"},
+	{"em410xwrite", CmdEM410xWrite, 0, "<UID> <'0' T5555> <'1' T55x7> [clock rate] -- Write EM410x UID to T5555(Q5) or T55x7 tag, optionally setting clock rate"},
 	{"em4x50read", CmdEM4x50Read, 1, "Extract data from EM4x50 tag"},
 	{"readword", CmdReadWord, 1, "<Word> -- Read EM4xxx word data"},
 	{"readwordPWD", CmdReadWordPWD, 1, "<Word> <Password> -- Read EM4xxx word data in password mode"},

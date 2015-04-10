@@ -30,9 +30,7 @@ Arguments:
 	-p             : Use the precalc to find all keys
 	-o             : filename for the saved dumps
 ]]
-
-local HASHCONSTANT = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
-
+local RANDOM = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = false -- the debug flag
 local numBlocks = 64
@@ -96,16 +94,6 @@ local function waitCmd()
 	return nil, "No response from device"
 end
 
-local function computeCrc16(s)
-	local hash = core.crc16(utils.ConvertHexToAscii(s))	
-	return hash
-end
-
-local function reverseCrcBytes(crc)
-	crc2 = crc:sub(3,4)..crc:sub(1,2)
-	return tonumber(crc2,16)
-end
-
 local function main(args)
 
 	print( string.rep('--',20) )
@@ -146,10 +134,6 @@ local function main(args)
 
 	core.clearCommandBuffer()
 	
-	if 0x01 ~= result.sak then -- NXP MIFARE TNP3xxx
-	--	return oops('This is not a TNP3xxx tag. aborting.')
-	end	
-
 	-- Show tag info
 	print((' Found tag %s'):format(result.name))
 
@@ -189,6 +173,8 @@ local function main(args)
 	local block1, err = waitCmd()
 	if err then return oops(err) end
 
+	local tmpHash = block0..block1..'%02x'..RANDOM
+
 	local key
 	local pos = 0
 	local blockNo
@@ -221,20 +207,16 @@ local function main(args)
 				-- Block 0-7 not encrypted
 				blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
 			else
-				local base = ('%s%s%02x%s'):format(block0, block1, blockNo, HASHCONSTANT)	
-				local baseStr = utils.ConvertHexToAscii(base)
-				local md5hash = md5.sumhexa(baseStr)
-				local aestest = core.aes(md5hash, blockdata)
-
-				local hex = utils.ConvertAsciiToBytes(aestest)
-				hex = utils.ConvertBytesToHex(hex)
-
 				-- blocks with zero not encrypted.
 				if string.find(blockdata, '^0+$') then
 					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
 				else
-					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,hex)
-					io.write( blockNo..',')
+					local baseStr = utils.ConvertHexToAscii(tmpHash:format(blockNo))
+					local key = md5.sumhexa(baseStr)
+					local aestest = core.aes128_decrypt(key, blockdata)
+					local hex = utils.ConvertAsciiToBytes(aestest)					
+					hex = utils.ConvertBytesToHex(hex)
+					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,hex)					
 				end		
 			end
 		else
@@ -258,11 +240,10 @@ local function main(args)
 		emldata = emldata..slice..'\n'
 		for c in (str):gmatch('.') do
 			bindata[#bindata+1] = c
-		end
+		end		
 	end 
 
 	print( string.rep('--',20) )
-
 	
 	local uid = block0:sub(1,8)
 	local toytype = block1:sub(1,4)
@@ -273,26 +254,24 @@ local function main(args)
 	
 	-- Write dump to files
 	if not DEBUG then
-		local foo = dumplib.SaveAsBinary(bindata, outputTemplate..'_uid_'..uid..'.bin')
+		local foo = dumplib.SaveAsBinary(bindata, outputTemplate..'-'..uid..'.bin')
 		print(("Wrote a BIN dump to:  %s"):format(foo))
-		local bar = dumplib.SaveAsText(emldata, outputTemplate..'_uid_'..uid..'.eml')
+		local bar = dumplib.SaveAsText(emldata, outputTemplate..'-'..uid..'.eml')
 		print(("Wrote a EML dump to:  %s"):format(bar))
 	end
+	
+	print( string.rep('--',20) )
+	-- Show info 
 
 	local item = toys.Find(toytype, subtype)
 	if item then
-		local itemStr = ('%s - %s (%s)'):format(item[6],item[5], item[4])
-		print('            ITEM TYPE : '..itemStr )
+		print(('            ITEM TYPE : %s - %s (%s)'):format(item[6],item[5], item[4]) )
 	else
 		print(('            ITEM TYPE : 0x%s 0x%s'):format(toytype, subtype))
 	end
-	
-	-- Show info 
-	print( (' Alter ego / traptype : 0x%s'):format(traptype) )
+
 	print( ('                  UID : 0x%s'):format(uid) )
 	print( ('               CARDID : 0x%s'):format(cardid ) )
-	
 	print( string.rep('--',20) )
-
 end
 main(args)
