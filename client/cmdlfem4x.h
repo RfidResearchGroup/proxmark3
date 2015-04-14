@@ -11,7 +11,6 @@
 #ifndef CMDLFEM4X_H__
 #define CMDLFEM4X_H__
 
-int CmdLFEM4X(const char *Cmd);
 int CmdEMdemodASK(const char *Cmd);
 int CmdEM410xRead(const char *Cmd);
 int CmdEM410xSim(const char *Cmd);
@@ -19,9 +18,11 @@ int CmdEM410xWatch(const char *Cmd);
 int CmdEM410xWatchnSpoof(const char *Cmd);
 int CmdEM410xWrite(const char *Cmd);
 int CmdEM4x50Read(const char *Cmd);
+int CmdLFEM4X(const char *Cmd);
 int CmdReadWord(const char *Cmd);
 int CmdReadWordPWD(const char *Cmd);
 int CmdWriteWord(const char *Cmd);
 int CmdWriteWordPWD(const char *Cmd);
+int EM4x50Read(const char *Cmd, bool verbose);
 
 #endif

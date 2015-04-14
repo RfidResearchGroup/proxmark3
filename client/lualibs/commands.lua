@@ -138,6 +138,8 @@ local _commands = {
 	CMD_MIFAREUC_AUTH1 =						                         0x0724,
 	CMD_MIFAREUC_AUTH2 =						                         0x0725,
 	CMD_MIFAREUC_READCARD =		   					                     0x0726,
+	CMD_MIFAREUC_SETPWD =												 0x0727,
+	CMD_MIFAREU_SETUID = 							                     0x0728,
 
 	--// mifare desfire
 	CMD_MIFARE_DESFIRE_READBL =                                          0x0728,
@@ -153,10 +155,10 @@ local _commands = {
 
 
 local _reverse_lookup,k,v = {}
-for k, v in pairs(_commands) do
-	_reverse_lookup[v] =  k
-end
-_commands.tostring = function(command)
+	for k, v in pairs(_commands) do
+		_reverse_lookup[v] =  k
+	end
+	_commands.tostring = function(command)
 	if(type(command) == 'number') then
 		return ("%s (%d)"):format(_reverse_lookup[command]or "ERROR UNDEFINED!", command) 
 	end
@@ -217,7 +219,6 @@ function Command:getBytes()
 	local data  = self.data
 	local cmd = self.cmd 
 	local arg1, arg2, arg3 = self.arg1, self.arg2, self.arg3
-	
-	return bin.pack("LLLLH",cmd, arg1, arg2, arg3,data);
+	return bin.pack("LLLLH",cmd, arg1, arg2, arg3, data);
 end
 return _commands

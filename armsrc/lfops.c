@@ -861,7 +861,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 		size  = BigBuf_max_traceLen();
 		//askdemod and manchester decode
 		if (size > 16385) size = 16385; //big enough to catch 2 sequences of largest format
-		errCnt = askmandemod(dest, &size, &clk, &invert, maxErr);
+		errCnt = askdemod(dest, &size, &clk, &invert, maxErr, 0, 1);
 		WDT_HIT();
 
 		if (errCnt<0) continue;

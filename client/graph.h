@@ -23,6 +23,7 @@ uint8_t GetNrzClock(const char str[], bool printAns, bool verbose);
 uint8_t GetFskClock(const char str[], bool printAns, bool verbose);
 uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose);
 void setGraphBuf(uint8_t *buff, size_t size);
+void save_restoreGB(uint8_t saveOpt);
 
 bool HasGraphData();
 void DetectHighLowInGraph(int *high, int *low, bool addFuzz); 

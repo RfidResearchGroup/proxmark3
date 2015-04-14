@@ -205,7 +205,7 @@ local function main( args)
 
 	-- NDEF compliant?
 	if b3chars[1] ~= 0xE1 then 
-		return oops("This tag is not NDEF-Complian")
+		return oops("This tag is not NDEF-Compliant")
 	end 
 
 	local ndefVersion = b3chars[2] 	

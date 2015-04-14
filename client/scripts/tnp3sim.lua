@@ -4,7 +4,7 @@ local bin = require('bin')
 local lib14a = require('read14a')
 local utils = require('utils')
 local md5 = require('md5')
-local toyNames = require('default_toys')
+local toys = require('default_toys')
 
 example =[[
 	1. script run tnp3sim
@@ -27,6 +27,17 @@ Arguments:
 
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = true -- the debug flag
+
+
+local band = bit32.band
+local bor = bit32.bor
+local lshift = bit32.lshift
+local rshift = bit32.rshift
+local byte = string.byte
+local char = string.char
+local sub = string.sub
+local format = string.format
+
 --- 
 -- A debug printout-function
 function dbg(args)
@@ -64,7 +75,6 @@ function ExitMsg(msg)
 	print(msg)
 	print()
 end
-
 
 local function writedumpfile(infile)
 	 t = infile:read("*all")
@@ -187,7 +197,6 @@ local function ValidateCheckSums(blocks)
 	io.write( ('TYPE 3 area 2: %04x = %04x -- %s\n'):format(crc,calc,isOk))
 end
 
-
 local function LoadEmulator(blocks)
 	local HASHCONSTANT = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
 	local cmd
@@ -217,6 +226,102 @@ local function LoadEmulator(blocks)
 		end
 	end
 	io.write('\n')
+end
+
+local function Num2Card(m, l)
+
+	local k = {
+		0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,0x42, 0x43, 0x44, 0x46, 0x47, 0x48, 0x4A, 0x4B,
+		0x4C, 0x4D, 0x4E, 0x50, 0x51, 0x52, 0x53, 0x54,0x56, 0x57, 0x58, 0x59, 0x5A, 0x00
+	}
+	local msw = tonumber(utils.SwapEndiannessStr(m,32),16)
+	local lsw = tonumber(utils.SwapEndiannessStr(l,32),16)
+
+	if msw > 0x17ea1 then
+		return "too big"
+	end
+
+	if msw == 0x17ea1 and lsw > 0x8931fee8 then
+		return "out of range"
+	end
+
+	local s = ""
+	local index
+	for i = 1,10 do
+		index, msw, lsw = DivideByK( msw, lsw)
+		if ( index <= 1 ) then
+			s = char(k[index]) .. s
+		else
+			s = char(k[index-1]) .. s
+		end 
+		print (index-1, msw, lsw)
+	end
+    return s
+end
+--33LRT-LM9Q9
+--7, 122, 3474858630
+--20, 4, 1008436634
+--7, 0, 627182959
+--17, 0, 21626998
+--16, 0, 745758
+--23, 0, 25715
+--21, 0, 886
+--16, 0, 30
+--1, 0, 1
+--1, 0, 0
+
+function DivideByK(msw, lsw)
+
+	local lowLSW
+	local highLSW
+	local remainder = 0
+	local RADIX = 29
+
+	--local num = 0 | band( rshift(msw,16), 0xffff)
+	local num = band( rshift(msw, 16), 0xffff)
+ 
+	--highLSW = 0 | lshift( (num / RADIX) , 16)
+	highLSW = lshift( (num / RADIX) , 16)
+	remainder = num % RADIX
+
+	num =  bor( lshift(remainder,16), band(msw, 0xffff))
+
+	--highLSW |= num / RADIX
+	highLSW = highLSW or (num / RADIX)
+	remainder = num % RADIX
+
+	num =  bor( lshift(remainder,16), ( band(rshift(lsw,16), 0xffff)))
+
+	--lowLSW = 0 | (num / RADIX) << 16
+	lowLSW = 0 or (lshift( (num / RADIX), 16))
+	remainder = num % RADIX
+
+	num =  bor( lshift(remainder,16) , band(lsw, 0xffff) )
+
+	lowLSW = bor(lowLSW, (num / RADIX))
+	remainder = num % RADIX
+	return remainder, highLSW, lowLSW
+	
+	            -- uint num = 0 | (msw >> 16) & 0xffff;
+ 
+            -- highLSW = 0 | (num / RADIX) << 16;
+            -- remainder = num % RADIX;
+
+            -- num = (remainder << 16) | (msw & 0xffff);
+ 
+            -- highLSW |= num / RADIX;
+            -- remainder = num % RADIX;
+
+            -- num = (remainder << 16) | ((lsw >> 16) & 0xffff);
+
+            -- lowLSW = 0 | (num / RADIX) << 16;
+            -- remainder = num % RADIX;
+
+            -- num = (remainder << 16) | (lsw & 0xffff);
+
+            -- lowLSW |= num / RADIX;
+            -- remainder = num % RADIX;
+
 end
 
 local function main(args)
@@ -277,15 +382,30 @@ local function main(args)
 	print( string.rep('--',20) )	
 	print(' Gathering info')
 	local uid = blocks[0]:sub(1,8)
-	local itemtype = blocks[1]:sub(1,4)
-	local cardid = blocks[1]:sub(9,24)
+	local toytype = blocks[1]:sub(1,4)
+	local cardidLsw = blocks[1]:sub(9,16)
+	local cardidMsw = blocks[1]:sub(17,24)
+	local subtype  = blocks[1]:sub(25,28)
 
 	-- Show info 
 	print( string.rep('--',20) )
-	print( (' ITEM TYPE : 0x%s - %s'):format(itemtype, toyNames[itemtype]) )
+	
+	local item = toys.Find( toytype, subtype)
+	if item then
+		local itemStr = ('%s - %s (%s)'):format(item[6],item[5], item[4])
+		print(' ITEM TYPE :'..itemStr )
+	else
+		print( (' ITEM TYPE : 0x%s 0x%s'):format(toytype, subtype) )
+	end	
+	
 	print( ('       UID : 0x%s'):format(uid) )
-	print( ('    CARDID : 0x%s'):format(cardid ) )	
+	print( ('    CARDID : 0x%s %s [%s]'):format(
+								cardidMsw,cardidLsw, 
+								--Num2Card(cardidMsw, cardidLsw))
+								'')
+								)
 	print( string.rep('--',20) )
+
 
 	-- lets do something.
 	-- 
@@ -351,7 +471,7 @@ local function main(args)
 		err = LoadEmulator(blocks)
 		if err then return oops(err) end	
 		core.clearCommandBuffer()
-		print('The simulation is now prepared.\n --> run \"hf mf sim u '..uid..' x\" <--')
+		print('The simulation is now prepared.\n --> run \"hf mf sim u '..uid..'\" <--')
 	end
 end
 main(args)
