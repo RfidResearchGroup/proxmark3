@@ -95,6 +95,7 @@ end
 
 function test()
 	local y
+	local block = "00"
 	for y = 0x0, 0x1d, 0x4 do
 		for _ = 1, #procedurecmds do
 			local pcmd = procedurecmds[_]
@@ -107,7 +108,7 @@ function test()
 				dbg(('lf t55xx write 0 %s'):format(config))			
 				config = tonumber(config,16) 
 				
-				local writecmd = Command:new{cmd = cmds.CMD_T55XX_WRITE_BLOCK, arg1 = config}			
+				local writecmd = Command:new{cmd = cmds.CMD_T55XX_WRITE_BLOCK,arg1 = config, arg2 = block, arg3 = "00", data = "00"}
 				local err = core.SendCommand(writecmd:getBytes())
 				if err then return oops(err) end
 				local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)

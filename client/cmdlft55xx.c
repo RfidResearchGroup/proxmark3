@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <time.h>
 #include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"
@@ -147,31 +148,37 @@ int CmdT55xxSetConfig(const char *Cmd) {
 			param_getstr(Cmd, cmdp+1, modulation);
 			cmdp += 2;
 
-			if ( strcmp(modulation, "FSK" ) == 0)
+			if ( strcmp(modulation, "FSK" ) == 0) {
 				config.modulation = DEMOD_FSK;
-			else if ( strcmp(modulation, "FSK1" ) == 0)
+			} else if ( strcmp(modulation, "FSK1" ) == 0) {
 				config.modulation = DEMOD_FSK1;
-			else if ( strcmp(modulation, "FSK1a" ) == 0)
+				config.inverted=1;
+			} else if ( strcmp(modulation, "FSK1a" ) == 0) {
 				config.modulation = DEMOD_FSK1a;
-			else if ( strcmp(modulation, "FSK2" ) == 0)
+				config.inverted=0;
+			} else if ( strcmp(modulation, "FSK2" ) == 0) {
 				config.modulation = DEMOD_FSK2;
-			else if ( strcmp(modulation, "FSK2a" ) == 0)
+				config.inverted=0;
+			} else if ( strcmp(modulation, "FSK2a" ) == 0) {
 				config.modulation = DEMOD_FSK2a;
-			else if ( strcmp(modulation, "ASK" ) == 0)
+				config.inverted=1;
+			} else if ( strcmp(modulation, "ASK" ) == 0) {
 				config.modulation = DEMOD_ASK;
-			else if ( strcmp(modulation, "NRZ" ) == 0)
+			} else if ( strcmp(modulation, "NRZ" ) == 0) {
 				config.modulation = DEMOD_NRZ;
-			else if ( strcmp(modulation, "PSK1" ) == 0)
+			} else if ( strcmp(modulation, "PSK1" ) == 0) {
 				config.modulation = DEMOD_PSK1;
-			else if ( strcmp(modulation, "PSK2" ) == 0)
+			} else if ( strcmp(modulation, "PSK2" ) == 0) {
 				config.modulation = DEMOD_PSK2;
-			else if ( strcmp(modulation, "PSK3" ) == 0)
+			} else if ( strcmp(modulation, "PSK3" ) == 0) {
 				config.modulation = DEMOD_PSK3;
-			else if ( strcmp(modulation, "BIa" ) == 0)
+			} else if ( strcmp(modulation, "BIa" ) == 0) {
 				config.modulation = DEMOD_BIa;
-			else if ( strcmp(modulation, "BI" ) == 0)
+				config.inverted=1;
+			} else if ( strcmp(modulation, "BI" ) == 0) {
 				config.modulation = DEMOD_BI;
-			else {
+				config.inverted=0;
+			} else {
 				PrintAndLog("Unknown modulation '%s'", modulation);
 				errors = TRUE;
 			}
@@ -255,77 +262,51 @@ int CmdT55xxReadBlock(const char *Cmd) {
 
 bool DecodeT55xxBlock(){
 	
-	char buf[8] = {0x00};
+	char buf[30] = {0x00};
 	char *cmdStr = buf;
 	int ans = 0;
 	uint8_t bitRate[8] = {8,16,32,40,50,64,100,128};
-
 	DemodBufferLen = 0x00;
 
+	//trim 1/2 a clock from beginning
+	snprintf(cmdStr, sizeof(buf),"%d", bitRate[config.bitrate]/2 );
+	CmdLtrim(cmdStr);
 	switch( config.modulation ){
 		case DEMOD_FSK:
-			//CmdLtrim("26");
-			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
-			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d %d", bitRate[config.bitrate], config.inverted );
+			snprintf(cmdStr, sizeof(buf),"%d %d", bitRate[config.bitrate], config.inverted );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK1:
-			//CmdLtrim("26");
-			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
-			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d 1 8 5", bitRate[config.bitrate] );
-			ans = FSKrawDemod(cmdStr, FALSE);
-			break;
 		case DEMOD_FSK1a:
-			//CmdLtrim("26");
-			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
-			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d 0 8 5", bitRate[config.bitrate] );
+			snprintf(cmdStr, sizeof(buf),"%d %d 8 5", bitRate[config.bitrate], config.inverted );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_FSK2:
-			//CmdLtrim("26");
-			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
-			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d 0 10 8", bitRate[config.bitrate] );
-			ans = FSKrawDemod(cmdStr, FALSE);
-			break;
 		case DEMOD_FSK2a:
-			//CmdLtrim("26");
-			sprintf(cmdStr,"%d", bitRate[config.bitrate]/2 );
-			CmdLtrim(cmdStr);			
-			sprintf(cmdStr,"%d 1 10 8", bitRate[config.bitrate] );
+			snprintf(cmdStr, sizeof(buf),"%d %d 10 8", bitRate[config.bitrate], config.inverted );
 			ans = FSKrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_ASK:
-			sprintf(cmdStr,"%d %d 1", bitRate[config.bitrate], config.inverted );
-			ans = ASKmanDemod(cmdStr, FALSE, FALSE);
+			snprintf(cmdStr, sizeof(buf),"%d %d 0", bitRate[config.bitrate], config.inverted );
+			ans = ASKDemod(cmdStr, FALSE, FALSE, 1);
 			break;
 		case DEMOD_PSK1:
-			sprintf(cmdStr,"%d %d 1", bitRate[config.bitrate], config.inverted );
+			snprintf(cmdStr, sizeof(buf),"%d %d 0", bitRate[config.bitrate], config.inverted );
 			ans = PSKDemod(cmdStr, FALSE);
 			break;
-		case DEMOD_PSK2:
-			sprintf(cmdStr,"%d 1", bitRate[config.bitrate] );
-			ans = PSKDemod(cmdStr, FALSE);
-			psk1TOpsk2(DemodBuffer, DemodBufferLen);
-			break;
-		case DEMOD_PSK3:
-			sprintf(cmdStr,"%d %d 1", bitRate[config.bitrate], config.inverted );
+		case DEMOD_PSK2: //inverted won't affect this
+		case DEMOD_PSK3: //not fully implemented
+			snprintf(cmdStr, sizeof(buf),"%d 0 1", bitRate[config.bitrate] );
 			ans = PSKDemod(cmdStr, FALSE);
 			psk1TOpsk2(DemodBuffer, DemodBufferLen);
 			break;
 		case DEMOD_NRZ:
-			sprintf(cmdStr,"%d %d 1", bitRate[config.bitrate], config.inverted );
+			snprintf(cmdStr, sizeof(buf),"%d %d 1", bitRate[config.bitrate], config.inverted );
 			ans = NRZrawDemod(cmdStr, FALSE);
 			break;
 		case DEMOD_BI:
-			sprintf(cmdStr,"0 %d 0 1", bitRate[config.bitrate] );
-			ans = ASKbiphaseDemod(cmdStr, FALSE);
-			break;
 		case DEMOD_BIa:
-			sprintf(cmdStr,"0 %d 1 1", bitRate[config.bitrate] );
+			snprintf(cmdStr, sizeof(buf),"0 %d %d 0", bitRate[config.bitrate], config.inverted );
 			ans = ASKbiphaseDemod(cmdStr, FALSE);
 			break;
 		default:
@@ -354,114 +335,141 @@ bool tryDetectModulation(){
 	char cmdStr[8] = {0};
 	uint8_t hits = 0;
 	t55xx_conf_block_t tests[15];
-	
+	int bitRate=0;
+	uint8_t fc1 = 0, fc2 = 0, clk=0;
+	save_restoreGB(1);
 	if (GetFskClock("", FALSE, FALSE)){ 
-		uint8_t fc1 = 0, fc2 = 0, clk=0;
 		fskClocks(&fc1, &fc2, &clk, FALSE);
 		sprintf(cmdStr,"%d", clk/2);
 		CmdLtrim(cmdStr);
-		if ( FSKrawDemod("0 0", FALSE) && test(DEMOD_FSK, &tests[hits].offset)){
+		if ( FSKrawDemod("0 0", FALSE) && test(DEMOD_FSK, &tests[hits].offset, &bitRate)){
 			tests[hits].modulation = DEMOD_FSK;
 			if (fc1==8 && fc2 == 5)
 				tests[hits].modulation = DEMOD_FSK1a;
 			else if (fc1==10 && fc2 == 8)
 				tests[hits].modulation = DEMOD_FSK2;
-
+			tests[hits].bitrate = bitRate;
 			tests[hits].inverted = FALSE;
 			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
 			++hits;
 		}
-		if ( FSKrawDemod("0 1", FALSE) && test(DEMOD_FSK, &tests[hits].offset)) {
+		if ( FSKrawDemod("0 1", FALSE) && test(DEMOD_FSK, &tests[hits].offset, &bitRate)) {
 			tests[hits].modulation = DEMOD_FSK;
-			if (fc1==8 && fc2 == 5)
+			if (fc1 == 8 && fc2 == 5)
 				tests[hits].modulation = DEMOD_FSK1;
-			else if (fc1==10 && fc2 == 8)
+			else if (fc1 == 10 && fc2 == 8)
 				tests[hits].modulation = DEMOD_FSK2a;
 
+			tests[hits].bitrate = bitRate;
 			tests[hits].inverted = TRUE;
 			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
 			++hits;
 		}
 	} else {
-		if ( ASKmanDemod("0 0 1", FALSE, FALSE) && test(DEMOD_ASK, &tests[hits].offset)) {
-			tests[hits].modulation = DEMOD_ASK;
-			tests[hits].inverted = FALSE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
-			}
-
-		if ( ASKmanDemod("0 1 1", FALSE, FALSE)  && test(DEMOD_ASK, &tests[hits].offset)) {
-			tests[hits].modulation = DEMOD_ASK;
-			tests[hits].inverted = TRUE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
-			}
-		
-		if ( NRZrawDemod("0 0 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset)) {
-			tests[hits].modulation = DEMOD_NRZ;
-			tests[hits].inverted = FALSE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
-		}
-
-		if ( NRZrawDemod("0 1 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset)) {
-			tests[hits].modulation = DEMOD_NRZ;
-			tests[hits].inverted = TRUE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
-			}
-		
-		if ( PSKDemod("0 0 1", FALSE) && test(DEMOD_PSK1, &tests[hits].offset)) {
-			tests[hits].modulation = DEMOD_PSK1;
-			tests[hits].inverted = FALSE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
-		}
-		
-		if ( PSKDemod("0 1 1", FALSE) && test(DEMOD_PSK1, &tests[hits].offset)) {
-			tests[hits].modulation = DEMOD_PSK1;
-			tests[hits].inverted = TRUE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
-		}
-
-		// PSK2 - needs a call to psk1TOpsk2.
-		if ( PSKDemod("0 0 1", FALSE)) {
-			psk1TOpsk2(DemodBuffer, DemodBufferLen);
-			if (test(DEMOD_PSK2, &tests[hits].offset)){
-				tests[hits].modulation = DEMOD_PSK2;
+		clk = GetAskClock("", FALSE, FALSE);
+		if (clk>0) {
+			sprintf(cmdStr,"%d", clk/2);
+			CmdLtrim(cmdStr);
+			if ( ASKDemod("0 0 0", FALSE, FALSE, 1) && test(DEMOD_ASK, &tests[hits].offset, &bitRate)) {
+				tests[hits].modulation = DEMOD_ASK;
+				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = FALSE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
 				++hits;
 			}
-		} // inverse waves does not affect this demod
-
-		// PSK3 - needs a call to psk1TOpsk2.
-		if ( PSKDemod("0 0 1", FALSE)) {
-			psk1TOpsk2(DemodBuffer, DemodBufferLen);
-			if (test(DEMOD_PSK3, &tests[hits].offset)){
-				tests[hits].modulation = DEMOD_PSK3;
+			if ( ASKDemod("0 1 0", FALSE, FALSE, 1)  && test(DEMOD_ASK, &tests[hits].offset, &bitRate)) {
+				tests[hits].modulation = DEMOD_ASK;
+				tests[hits].bitrate = bitRate;
+				tests[hits].inverted = TRUE;
+				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				++hits;
+			}
+			if ( ASKbiphaseDemod("0 0 0 0", FALSE) && test(DEMOD_BI, &tests[hits].offset, &bitRate) ) {
+				tests[hits].modulation = DEMOD_BI;
+				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = FALSE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
 				++hits;
 			}
-		} // inverse waves does not affect this demod
-	
-		if ( ASKbiphaseDemod("0 0 0 1", FALSE) && test(DEMOD_BI, &tests[hits].offset) ) {
-			tests[hits].modulation = DEMOD_BI;
-			tests[hits].inverted = FALSE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
+			if ( ASKbiphaseDemod("0 0 1 0", FALSE) && test(DEMOD_BIa, &tests[hits].offset, &bitRate) ) {
+				tests[hits].modulation = DEMOD_BIa;
+				tests[hits].bitrate = bitRate;
+				tests[hits].inverted = TRUE;
+				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				++hits;
+			}
 		}
-		if ( ASKbiphaseDemod("0 0 1 1", FALSE) && test(DEMOD_BIa, &tests[hits].offset) ) {
-			tests[hits].modulation = DEMOD_BIa;
-			tests[hits].inverted = TRUE;
-			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-			++hits;
+		//undo trim from ask
+		save_restoreGB(0);
+		clk = GetNrzClock("", FALSE, FALSE);
+		if (clk>0) {
+			sprintf(cmdStr,"%d", clk/2);
+			CmdLtrim(cmdStr);
+			if ( NRZrawDemod("0 0 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate)) {
+				tests[hits].modulation = DEMOD_NRZ;
+				tests[hits].bitrate = bitRate;
+				tests[hits].inverted = FALSE;
+				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				++hits;
+			}
+
+			if ( NRZrawDemod("0 1 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate)) {
+				tests[hits].modulation = DEMOD_NRZ;
+				tests[hits].bitrate = bitRate;
+				tests[hits].inverted = TRUE;
+				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				++hits;
+			}
+		}
+		
+		//undo trim from nrz
+		save_restoreGB(0);
+		clk = GetPskClock("", FALSE, FALSE);
+		if (clk>0) {
+			PrintAndLog("clk %d",clk);
+			sprintf(cmdStr,"%d", clk/2);
+			CmdLtrim(cmdStr);	
+			if ( PSKDemod("0 0 1", FALSE) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate)) {
+				tests[hits].modulation = DEMOD_PSK1;
+				tests[hits].bitrate = bitRate;
+				tests[hits].inverted = FALSE;
+				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				++hits;
+			}
+			if ( PSKDemod("0 1 1", FALSE) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate)) {
+				tests[hits].modulation = DEMOD_PSK1;
+				tests[hits].bitrate = bitRate;
+				tests[hits].inverted = TRUE;
+				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				++hits;
+			}
+			// PSK2 - needs a call to psk1TOpsk2.
+			if ( PSKDemod("0 0 1", FALSE)) {
+				psk1TOpsk2(DemodBuffer, DemodBufferLen);
+				if (test(DEMOD_PSK2, &tests[hits].offset, &bitRate)){
+					tests[hits].modulation = DEMOD_PSK2;
+					tests[hits].bitrate = bitRate;
+					tests[hits].inverted = FALSE;
+					tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+					++hits;
+				}
+			} // inverse waves does not affect this demod
+			// PSK3 - needs a call to psk1TOpsk2.
+			if ( PSKDemod("0 0 1", FALSE)) {
+				psk1TOpsk2(DemodBuffer, DemodBufferLen);
+				if (test(DEMOD_PSK3, &tests[hits].offset, &bitRate)){
+					tests[hits].modulation = DEMOD_PSK3;
+					tests[hits].bitrate = bitRate;
+					tests[hits].inverted = FALSE;
+					tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+					++hits;
+				}
+			} // inverse waves does not affect this demod
 		}
 	}		
 	if ( hits == 1) {
 		config.modulation = tests[0].modulation;
+		config.bitrate = tests[0].bitrate;
 		config.inverted = tests[0].inverted;
 		config.offset = tests[0].offset;
 		config.block0 = tests[0].block0;
@@ -516,81 +524,32 @@ bool testBitRate(uint8_t readRate, uint8_t mod){
 	uint8_t detRate = 0;
 	switch( mod ){
 		case DEMOD_FSK:
-			detRate = GetFskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
-			break;
 		case DEMOD_FSK1:
-			detRate = GetFskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
-			break;
 		case DEMOD_FSK1a:
-			detRate = GetFskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
-			break;
 		case DEMOD_FSK2:
-			detRate = GetFskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
-			break;
 		case DEMOD_FSK2a:
 			detRate = GetFskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
+			if (expected[readRate] == detRate) 
 				return TRUE;
-			}
 			break;
 		case DEMOD_ASK:
+		case DEMOD_BI:
+		case DEMOD_BIa:
 			detRate = GetAskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
+			if (expected[readRate] == detRate) 
 				return TRUE;
-			}
 			break;
 		case DEMOD_PSK1:
-			detRate = GetPskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
-			break;
 		case DEMOD_PSK2:
-			detRate = GetPskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
-			break;
 		case DEMOD_PSK3:
 			detRate = GetPskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
+			if (expected[readRate] == detRate)
 				return TRUE;
-			}
 			break;
 		case DEMOD_NRZ:
 			detRate = GetNrzClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
+			if (expected[readRate] == detRate)
 				return TRUE;
-			}
-			break;
-		case DEMOD_BI:
-			detRate = GetAskClock("",FALSE, FALSE); 
-			if (expected[readRate] == detRate) {
-				config.bitrate = readRate;
-				return TRUE;
-			}
 			break;
 		default:
 			return FALSE;
@@ -598,26 +557,27 @@ bool testBitRate(uint8_t readRate, uint8_t mod){
 	return FALSE;
 }
 
-bool test(uint8_t mode, uint8_t *offset){
+bool test(uint8_t mode, uint8_t *offset, int *fndBitRate){
 
-	if ( !DemodBufferLen) return FALSE;
+	if ( DemodBufferLen < 64 ) return FALSE;
 	uint8_t si = 0;
 	for (uint8_t idx = 0; idx < 64; idx++){
 		si = idx;
 		if ( PackBits(si, 32, DemodBuffer) == 0x00 ) continue;
 
-		uint8_t safer    = PackBits(si, 4, DemodBuffer); si += 4;	    //master key
+		uint8_t safer    = PackBits(si, 4, DemodBuffer); si += 4;     //master key
 		uint8_t resv     = PackBits(si, 4, DemodBuffer); si += 4;     //was 7 & +=7+3 //should be only 4 bits if extended mode
 		// 2nibble must be zeroed.
 		// moved test to here, since this gets most faults first.
 		if ( resv > 0x00) continue;
 
-		uint8_t xtRate   = PackBits(si, 3, DemodBuffer); si += 3;   //new
-		uint8_t bitRate  = PackBits(si, 3, DemodBuffer); si += 3;   //new  could check bit rate
+		uint8_t xtRate   = PackBits(si, 3, DemodBuffer); si += 3;     //extended mode part of rate
+		int bitRate  = PackBits(si, 3, DemodBuffer); si += 3;     //bit rate
+		if (bitRate > 7) continue;
 		uint8_t extend   = PackBits(si, 1, DemodBuffer); si += 1;     //bit 15 extended mode
-		uint8_t modread  = PackBits(si, 5, DemodBuffer); si += 5+2+1; //new
-		//uint8_t pskcr   = PackBits(si, 2, DemodBuffer); si += 2+1;  //new  could check psk cr
-		uint8_t nml01    = PackBits(si, 1, DemodBuffer); si += 1+5;   //bit 24 , 30, 31 could be tested for 0 if not extended mode
+		uint8_t modread  = PackBits(si, 5, DemodBuffer); si += 5+2+1; 
+		//uint8_t pskcr   = PackBits(si, 2, DemodBuffer); si += 2+1;  //could check psk cr
+		uint8_t nml01    = PackBits(si, 1, DemodBuffer); si += 1+5;   //bit 24, 30, 31 could be tested for 0 if not extended mode
 		uint8_t nml02    = PackBits(si, 2, DemodBuffer); si += 2;
 		
 		//if extended mode
@@ -628,15 +588,15 @@ bool test(uint8_t mode, uint8_t *offset){
 		}
 		//test modulation
 		if (!testModulation(mode, modread)) continue;
-
-		*offset = idx;
 		if (!testBitRate(bitRate, mode)) continue;
+		*fndBitRate = bitRate;
+		*offset = idx;
 		return TRUE;
 	}
 	return FALSE;
 }
 
-void printT55xxBlock(const char *demodStr){
+void printT55xxBlock(const char *blockNum){
 	
 	uint8_t i = config.offset;
 	uint8_t endpos = 32 + i;
@@ -654,7 +614,7 @@ void printT55xxBlock(const char *demodStr){
 		bits[i - config.offset]=DemodBuffer[i];
 
 	blockData = PackBits(0, 32, bits);
-	PrintAndLog("0x%08X  %s [%s]", blockData, sprint_bin(bits,32), demodStr);
+	PrintAndLog("[%s] 0x%08X  %s", blockNum, blockData, sprint_bin(bits,32));
 }
 
 int special(const char *Cmd) {
@@ -746,16 +706,28 @@ int CmdT55xxReadTrace(const char *Cmd)
 	uint32_t bl0     = PackBits(si, 32, DemodBuffer);
 	uint32_t bl1     = PackBits(si+32, 32, DemodBuffer);
 	
-	uint32_t acl     = PackBits(si,  8, DemodBuffer); si += 8;
-	uint32_t mfc     = PackBits(si, 8, DemodBuffer); si += 8;
-	uint32_t cid     = PackBits(si, 5, DemodBuffer); si += 5;
-	uint32_t icr     = PackBits(si, 3, DemodBuffer); si += 3;
-	uint32_t year    = PackBits(si, 4, DemodBuffer); si += 4;
-	uint32_t quarter = PackBits(si, 2, DemodBuffer); si += 2;
-	uint32_t lotid    = PackBits(si, 14, DemodBuffer); si += 14;
-	uint32_t wafer   = PackBits(si, 5, DemodBuffer); si += 5;
+	uint32_t acl     = PackBits(si, 8,  DemodBuffer); si += 8;
+	uint32_t mfc     = PackBits(si, 8,  DemodBuffer); si += 8;
+	uint32_t cid     = PackBits(si, 5,  DemodBuffer); si += 5;
+	uint32_t icr     = PackBits(si, 3,  DemodBuffer); si += 3;
+	uint32_t year    = PackBits(si, 4,  DemodBuffer); si += 4;
+	uint32_t quarter = PackBits(si, 2,  DemodBuffer); si += 2;
+	uint32_t lotid   = PackBits(si, 14, DemodBuffer); si += 14;
+	uint32_t wafer   = PackBits(si, 5,  DemodBuffer); si += 5;
 	uint32_t dw      = PackBits(si, 15, DemodBuffer); 
 	
+	time_t t = time(NULL);
+	struct tm tm = *localtime(&t);
+	if ( year > tm.tm_year-110)
+		year += 2000;
+	else
+		year += 2010;
+
+	if ( acl != 0xE0 ) {
+		PrintAndLog("The modulation is most likely wrong since the ACL is not 0xE0. ");
+		return 1;
+	}
+
 	PrintAndLog("");
 	PrintAndLog("-- T55xx Trace Information ----------------------------------");
 	PrintAndLog("-------------------------------------------------------------");
@@ -764,7 +736,7 @@ int CmdT55xxReadTrace(const char *Cmd)
 	PrintAndLog(" CID                                     : 0x%02X (%d) - %s", cid, cid, GetModelStrFromCID(cid));
 	PrintAndLog(" ICR IC Revision                         : %d",icr );
 	PrintAndLog(" Manufactured");
-	PrintAndLog("     Year/Quarter : 20?%d/%d",year, quarter);
+	PrintAndLog("     Year/Quarter : %d/%d",year, quarter);
 	PrintAndLog("     Lot ID       : %d", lotid );
 	PrintAndLog("     Wafer number : %d", wafer);
 	PrintAndLog("     Die Number   : %d", dw);
@@ -774,8 +746,6 @@ int CmdT55xxReadTrace(const char *Cmd)
 	PrintAndLog("     Block 1  : 0x%08X  %s", bl1, sprint_bin(DemodBuffer+config.offset+repeat+32,32) );
 	PrintAndLog("-------------------------------------------------------------");
 
-	if ( acl != 0xE0 )
-		PrintAndLog("The modulation is most likely wrong since the ACL is not 0xE0. ");
 	/*
 	TRACE - BLOCK O
 		Bits	Definition								HEX
@@ -809,10 +779,10 @@ int CmdT55xxInfo(const char *Cmd){
 	
 	if (strlen(Cmd)==0)
 		AquireData( CONFIGURATION_BLOCK );
-	
+
 	if (!DecodeT55xxBlock()) return 1;
 
-	if ( !DemodBufferLen) return 1;
+	if ( DemodBufferLen < 32) return 1;
 
 	uint8_t si = config.offset;
 	uint32_t bl0      = PackBits(si, 32, DemodBuffer);
@@ -922,7 +892,8 @@ int AquireData( uint8_t block ){
 }
 
 char * GetBitRateStr(uint32_t id){
- 	static char buf[40];
+ 	static char buf[25];
+
 	char *retStr = buf;
 		switch (id){
 		case 0: 
@@ -957,7 +928,6 @@ char * GetBitRateStr(uint32_t id){
 	return buf;
 }
 
-
 char * GetSaferStr(uint32_t id){
 	static char buf[40];
 	char *retStr = buf;
@@ -974,7 +944,7 @@ char * GetSaferStr(uint32_t id){
 }
 
 char * GetModulationStr( uint32_t id){
-	static char buf[40];
+	static char buf[60];
 	char *retStr = buf;
 	
 	switch (id){
@@ -1003,7 +973,7 @@ char * GetModulationStr( uint32_t id){
 			snprintf(retStr,sizeof(buf),"%d - FSK 2a RF/10  RF/8",id);
 			break;
 		case 8:
-			snprintf(retStr,sizeof(buf),"%d - Manschester",id);
+			snprintf(retStr,sizeof(buf),"%d - Manchester",id);
 			break;
 		case 16:
 			snprintf(retStr,sizeof(buf),"%d - Biphase",id);
@@ -1026,8 +996,8 @@ char * GetModelStrFromCID(uint32_t cid){
 	static char buf[10];
 	char *retStr = buf;
 	
-	if (cid == 1) sprintf(retStr,"ATA5577M1");
-	if (cid == 2) sprintf(retStr,"ATA5577M2");	
+	if (cid == 1) snprintf(retStr, sizeof(buf),"ATA5577M1");
+	if (cid == 2) snprintf(retStr, sizeof(buf),"ATA5577M2");	
 	return buf;
 }
 

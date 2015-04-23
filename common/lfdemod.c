@@ -81,10 +81,8 @@ uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_
 	//  otherwise could be a void with no arguments
 	//set defaults
 	uint32_t i = 0;
-	if (BitStream[1]>1){  //allow only 1s and 0s
-		// PrintAndLog("no data found");
-		return 0;
-	}
+	if (BitStream[1]>1) return 0;  //allow only 1s and 0s
+
 	// 111111111 bit pattern represent start of frame
 	//  include 0 in front to help get start pos
 	uint8_t preamble[] = {0,1,1,1,1,1,1,1,1,1};
@@ -115,216 +113,11 @@ uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_
 }
 
 //by marshmellow
-//takes 3 arguments - clock, invert, maxErr as integers
-//attempts to demodulate ask while decoding manchester
-//prints binary found and saves in graphbuffer for further commands
-int askmandemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr)
-{
-	size_t i;
-	int start = DetectASKClock(BinStream, *size, clk, 20); //clock default
-	if (*clk==0 || start < 0) return -3;
-	if (*invert != 1) *invert=0;
-	uint8_t initLoopMax = 255;
-	if (initLoopMax > *size) initLoopMax = *size;
-	// Detect high and lows
-	// 25% fuzz in case highs and lows aren't clipped [marshmellow]
-	int high, low;
-	if (getHiLo(BinStream, initLoopMax, &high, &low, 75, 75) < 1) return -2; //just noise
-
-	// PrintAndLog("DEBUG - valid high: %d - valid low: %d",high,low);
-	int lastBit = 0;  //set first clock check
-	uint16_t bitnum = 0;     //output counter
-	uint8_t tol = 0;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
-	if (*clk <= 32) tol=1;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely
-	size_t iii = 0;
-	//if 0 errors allowed then only try first 2 clock cycles as we want a low tolerance
-	if (!maxErr) initLoopMax = *clk * 2; 
-	uint16_t errCnt = 0, MaxBits = 512;
-	uint16_t bestStart = start;
-	uint16_t bestErrCnt = 0;
-	// PrintAndLog("DEBUG - lastbit - %d",lastBit);
-	// if best start position not already found by detect clock then
-	if (start <= 0 || start > initLoopMax){
-		bestErrCnt = maxErr+1;
-		// loop to find first wave that works
-		for (iii=0; iii < initLoopMax; ++iii){
-			// if no peak skip
-			if (BinStream[iii] < high && BinStream[iii] > low) continue;
-
-			lastBit = iii - *clk;
-			// loop through to see if this start location works
-			for (i = iii; i < *size; ++i) {
-				if ((i-lastBit) > (*clk-tol) && (BinStream[i] >= high || BinStream[i] <= low)) {
-						lastBit += *clk;
-				} else if ((i-lastBit) > (*clk+tol)) {
-					errCnt++;
-					lastBit += *clk;
-				}
-				if ((i-iii) > (MaxBits * *clk) || errCnt > maxErr) break; //got plenty of bits or too many errors
-			}
-			//we got more than 64 good bits and not all errors
-			if ((((i-iii)/ *clk) > (64)) && (errCnt<=maxErr)) {
-				//possible good read
-				if (!errCnt || errCnt < bestErrCnt){
-					bestStart = iii; //set this as new best run
-					bestErrCnt = errCnt;
-					if (!errCnt) break;  //great read - finish
-				}
-			}
-			errCnt = 0;
-		}
-	}
-	if (bestErrCnt > maxErr){
-		*invert = bestStart;
-		*clk = iii;
-		return -1;
-	}		
-	//best run is good enough set to best run and set overwrite BinStream
-	lastBit = bestStart - *clk;
-	errCnt = 0;
-	for (i = bestStart; i < *size; ++i) {
-		if ((BinStream[i] >= high) && ((i-lastBit) > (*clk-tol))){
-			//high found and we are expecting a bar
-			lastBit += *clk;
-			BinStream[bitnum++] = *invert;
-		} else if ((BinStream[i] <= low) && ((i-lastBit) > (*clk-tol))){
-			//low found and we are expecting a bar
-			lastBit += *clk;
-			BinStream[bitnum++] = *invert ^ 1;
-		} else if ((i-lastBit)>(*clk+tol)){
-			//should have hit a high or low based on clock!!
-			//PrintAndLog("DEBUG - no wave in expected area - location: %d, expected: %d-%d, lastBit: %d - resetting search",i,(lastBit+(clk-((int)(tol)))),(lastBit+(clk+((int)(tol)))),lastBit);
-			if (bitnum > 0) {
-				BinStream[bitnum++] = 77;
-				errCnt++;
-			}		
-			lastBit += *clk;//skip over error
-		}
-		if (bitnum >= MaxBits) break;
-	}
-	*size = bitnum;
-	return bestErrCnt;
-}
-
-//by marshmellow
-//encode binary data into binary manchester 
-int ManchesterEncode(uint8_t *BitStream, size_t size)
-{
-	size_t modIdx=20000, i=0;
-	if (size>modIdx) return -1;
-	for (size_t idx=0; idx < size; idx++){
-		BitStream[idx+modIdx++] = BitStream[idx];
-		BitStream[idx+modIdx++] = BitStream[idx]^1;
-	}
-	for (; i<(size*2); i++){
-		BitStream[i] = BitStream[i+20000];
-	}
-	return i;
-}
-
-//by marshmellow
-//take 10 and 01 and manchester decode
-//run through 2 times and take least errCnt
-int manrawdecode(uint8_t * BitStream, size_t *size)
-{
-	uint16_t bitnum=0, MaxBits = 512, errCnt = 0;
-	size_t i, ii;
-	uint16_t bestErr = 1000, bestRun = 0;
-	if (size == 0) return -1;
-	for (ii=0;ii<2;++ii){
-		for (i=ii; i<*size-2; i+=2)
-			if (BitStream[i]==BitStream[i+1])
-				errCnt++;
-
-		if (bestErr>errCnt){
-			bestErr=errCnt;
-			bestRun=ii;
-		}
-		errCnt=0;
-	}
-	if (bestErr<20){
-		for (i=bestRun; i < *size-2; i+=2){
-			if(BitStream[i] == 1 && (BitStream[i+1] == 0)){
-				BitStream[bitnum++]=0;
-			} else if((BitStream[i] == 0) && BitStream[i+1] == 1){
-				BitStream[bitnum++]=1;
-			} else {
-				BitStream[bitnum++]=77;
-			}
-			if(bitnum>MaxBits) break;
-		}
-		*size=bitnum;
-	}
-	return bestErr;
-}
-
-//by marshmellow
-//take 01 or 10 = 1 and 11 or 00 = 0
-//check for phase errors - should never have 111 or 000 should be 01001011 or 10110100 for 1010
-//decodes biphase or if inverted it is AKA conditional dephase encoding AKA differential manchester encoding
-int BiphaseRawDecode(uint8_t *BitStream, size_t *size, int offset, int invert)
-{
-	uint16_t bitnum = 0;
-	uint16_t errCnt = 0;
-	size_t i = offset;
-	uint16_t MaxBits=512;
-	//if not enough samples - error
-	if (*size < 51) return -1;
-	//check for phase change faults - skip one sample if faulty
-	uint8_t offsetA = 1, offsetB = 1;
-	for (; i<48; i+=2){
-		if (BitStream[i+1]==BitStream[i+2]) offsetA=0; 
-		if (BitStream[i+2]==BitStream[i+3]) offsetB=0;					
-	}
-	if (!offsetA && offsetB) offset++;
-	for (i=offset; i<*size-3; i+=2){
-		//check for phase error
-		if (BitStream[i+1]==BitStream[i+2]) {
-			BitStream[bitnum++]=77;
-			errCnt++;
-		}
-		if((BitStream[i]==1 && BitStream[i+1]==0) || (BitStream[i]==0 && BitStream[i+1]==1)){
-			BitStream[bitnum++]=1^invert;
-		} else if((BitStream[i]==0 && BitStream[i+1]==0) || (BitStream[i]==1 && BitStream[i+1]==1)){
-			BitStream[bitnum++]=invert;
-		} else {
-			BitStream[bitnum++]=77;
-			errCnt++;
-		}
-		if(bitnum>MaxBits) break;
-	}
-	*size=bitnum;
-	return errCnt;
-}
-
-//by marshmellow
-void askAmp(uint8_t *BitStream, size_t size)
-{
-	int shift = 127;
-	int shiftedVal=0;
-	for(size_t i = 1; i<size; i++){
-		if (BitStream[i]-BitStream[i-1]>=30) //large jump up
-			shift=127;
-		else if(BitStream[i]-BitStream[i-1]<=-20) //large jump down
-			shift=-127;
-
-		shiftedVal=BitStream[i]+shift;
-
-		if (shiftedVal>255) 
-			shiftedVal=255;
-		else if (shiftedVal<0) 
-			shiftedVal=0;
-		BitStream[i-1] = shiftedVal;
-	}
-	return;
-}
-
-// demodulates strong heavily clipped samples
+//demodulates strong heavily clipped samples
 int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int high, int low)
 {
 	size_t bitCnt=0, smplCnt=0, errCnt=0;
 	uint8_t waveHigh = 0;
-	//PrintAndLog("clk: %d", clk);
 	for (size_t i=0; i < *size; i++){
 		if (BinStream[i] >= high && waveHigh){
 			smplCnt++;
@@ -335,7 +128,7 @@ int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int 
 				if (smplCnt > clk-(clk/4)-1) { //full clock
 					if (smplCnt > clk + (clk/4)+1) { //too many samples
 						errCnt++;
-						BinStream[bitCnt++]=77;
+						BinStream[bitCnt++]=7;
 					} else if (waveHigh) {
 						BinStream[bitCnt++] = invert;
 						BinStream[bitCnt++] = invert;
@@ -371,111 +164,79 @@ int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int 
 }
 
 //by marshmellow
-//takes 3 arguments - clock, invert and maxErr as integers
-//attempts to demodulate ask only
-int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp)
+void askAmp(uint8_t *BitStream, size_t size)
+{
+	for(size_t i = 1; i<size; i++){
+		if (BitStream[i]-BitStream[i-1]>=30) //large jump up
+			BitStream[i]=127;
+		else if(BitStream[i]-BitStream[i-1]<=-20) //large jump down
+			BitStream[i]=-127;
+	}
+	return;
+}
+
+//by marshmellow
+//attempts to demodulate ask modulations, askType == 0 for ask/raw, askType==1 for ask/manchester
+int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType)
 {
 	if (*size==0) return -1;
-	int start = DetectASKClock(BinStream, *size, clk, 20); //clock default
-	if (*clk==0 || start < 0) return -1;
+	int start = DetectASKClock(BinStream, *size, clk, maxErr); //clock default
+	if (*clk==0 || start < 0) return -3;
 	if (*invert != 1) *invert = 0;
 	if (amp==1) askAmp(BinStream, *size);
 
 	uint8_t initLoopMax = 255;
-	if (initLoopMax > *size) initLoopMax=*size;
+	if (initLoopMax > *size) initLoopMax = *size;
 	// Detect high and lows
 	//25% clip in case highs and lows aren't clipped [marshmellow]
 	int high, low;
 	if (getHiLo(BinStream, initLoopMax, &high, &low, 75, 75) < 1) 
-		return -1; //just noise
+		return -2; //just noise
 
+	size_t errCnt = 0;
 	// if clean clipped waves detected run alternate demod
-	if (DetectCleanAskWave(BinStream, *size, high, low))
-		return cleanAskRawDemod(BinStream, size, *clk, *invert, high, low);
+	if (DetectCleanAskWave(BinStream, *size, high, low)) {
+		errCnt = cleanAskRawDemod(BinStream, size, *clk, *invert, high, low);
+		if (askType) //askman
+			return manrawdecode(BinStream, size, 0);	
+		else //askraw
+			return errCnt;
+	}
 
-	int lastBit = 0;  //set first clock check - can go negative
-	size_t i, iii = 0;
-	size_t errCnt = 0, bitnum = 0;     //output counter
+	int lastBit;  //set first clock check - can go negative
+	size_t i, bitnum = 0;     //output counter
 	uint8_t midBit = 0;
-	size_t bestStart = start, bestErrCnt = 0; //(*size/1000);
+	uint8_t tol = 0;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
+	if (*clk <= 32) tol = 1;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely
 	size_t MaxBits = 1024;
+	lastBit = start - *clk;
 
-	//if 0 errors allowed then only try first 2 clock cycles as we want a low tolerance
-	if (!maxErr) initLoopMax = *clk * 2; 
-	//if best start not already found by detectclock
-	if (start <= 0 || start > initLoopMax){
-		bestErrCnt = maxErr+1;
-		//PrintAndLog("DEBUG - lastbit - %d",lastBit);
-		//loop to find first wave that works
-		for (iii=0; iii < initLoopMax; ++iii){
-			if ((BinStream[iii] >= high) || (BinStream[iii] <= low)){
-				lastBit = iii - *clk;
-				//loop through to see if this start location works
-				for (i = iii; i < *size; ++i) {
-					if (i-lastBit > *clk && (BinStream[i] >= high || BinStream[i] <= low)){
-						lastBit += *clk;
-						midBit = 0;
-					} else if (i-lastBit > (*clk/2) && midBit == 0) {
-						midBit = 1;
-					} else if ((i-lastBit) > *clk) {
-						//should have hit a high or low based on clock!!
-						//PrintAndLog("DEBUG - no wave in expected area - location: %d, expected: %d-%d, lastBit: %d - resetting search",i,(lastBit+(clk-((int)(tol)))),(lastBit+(clk+((int)(tol)))),lastBit);
-						errCnt++;
-						lastBit += *clk;//skip over until hit too many errors
-						if (errCnt > maxErr) 
-							break;
-					}
-					if ((i-iii)>(MaxBits * *clk)) break; //got enough bits
-				}
-				//we got more than 64 good bits and not all errors
-				if ((((i-iii)/ *clk) > 64) && (errCnt<=maxErr)) {
-					//possible good read
-					if (errCnt==0){
-						bestStart=iii;
-						bestErrCnt=errCnt;
-						break;  //great read - finish
-					} 
-					if (errCnt<bestErrCnt){  //set this as new best run
-						bestErrCnt=errCnt;
-						bestStart = iii;
-					}
-				}
-				errCnt=0;
-			}
-		}
-	}
-	if (bestErrCnt > maxErr){
-		*invert = bestStart;
-		*clk = iii;
-		return -1;
-	}
-	//best run is good enough - set to best run and overwrite BinStream
-	lastBit = bestStart - *clk - 1;
-	errCnt = 0;
-
-	for (i = bestStart; i < *size; ++i) {
-		if (i - lastBit > *clk){
+	for (i = start; i < *size; ++i) {
+		if (i-lastBit >= *clk-tol){
 			if (BinStream[i] >= high) {
 				BinStream[bitnum++] = *invert;
 			} else if (BinStream[i] <= low) {
 				BinStream[bitnum++] = *invert ^ 1;
-			} else {
+			} else if (i-lastBit >= *clk+tol) {
 				if (bitnum > 0) {
-					BinStream[bitnum++]=77;
+					BinStream[bitnum++]=7;
 					errCnt++;						
 				} 
+			} else { //in tolerance - looking for peak
+				continue;
 			}
 			midBit = 0;
 			lastBit += *clk;
-		} else if (i-lastBit > (*clk/2) && midBit == 0){
+		} else if (i-lastBit >= (*clk/2-tol) && !midBit && !askType){
 			if (BinStream[i] >= high) {
 				BinStream[bitnum++] = *invert;
 			} else if (BinStream[i] <= low) {
 				BinStream[bitnum++] = *invert ^ 1;
-			} else {
-
+			} else if (i-lastBit >= *clk/2+tol) {
 				BinStream[bitnum] = BinStream[bitnum-1];
 				bitnum++;
+			} else { //in tolerance - looking for peak
+				continue;
 			}
 			midBit = 1;
 		}
@@ -485,6 +246,98 @@ int askrawdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int max
 	return errCnt;
 }
 
+//by marshmellow
+//take 10 and 01 and manchester decode
+//run through 2 times and take least errCnt
+int manrawdecode(uint8_t * BitStream, size_t *size, uint8_t invert)
+{
+	uint16_t bitnum=0, MaxBits = 512, errCnt = 0;
+	size_t i, ii;
+	uint16_t bestErr = 1000, bestRun = 0;
+	if (*size < 16) return -1;
+	//find correct start position [alignment]
+	for (ii=0;ii<2;++ii){
+		for (i=ii; i<*size-3; i+=2)
+			if (BitStream[i]==BitStream[i+1])
+				errCnt++;
+
+		if (bestErr>errCnt){
+			bestErr=errCnt;
+			bestRun=ii;
+		}
+		errCnt=0;
+	}
+	//decode
+	for (i=bestRun; i < *size-3; i+=2){
+		if(BitStream[i] == 1 && (BitStream[i+1] == 0)){
+			BitStream[bitnum++]=invert;
+		} else if((BitStream[i] == 0) && BitStream[i+1] == 1){
+			BitStream[bitnum++]=invert^1;
+		} else {
+			BitStream[bitnum++]=7;
+		}
+		if(bitnum>MaxBits) break;
+	}
+	*size=bitnum;
+	return bestErr;
+}
+
+//by marshmellow
+//encode binary data into binary manchester 
+int ManchesterEncode(uint8_t *BitStream, size_t size)
+{
+	size_t modIdx=20000, i=0;
+	if (size>modIdx) return -1;
+	for (size_t idx=0; idx < size; idx++){
+		BitStream[idx+modIdx++] = BitStream[idx];
+		BitStream[idx+modIdx++] = BitStream[idx]^1;
+	}
+	for (; i<(size*2); i++){
+		BitStream[i] = BitStream[i+20000];
+	}
+	return i;
+}
+
+//by marshmellow
+//take 01 or 10 = 1 and 11 or 00 = 0
+//check for phase errors - should never have 111 or 000 should be 01001011 or 10110100 for 1010
+//decodes biphase or if inverted it is AKA conditional dephase encoding AKA differential manchester encoding
+int BiphaseRawDecode(uint8_t *BitStream, size_t *size, int offset, int invert)
+{
+	uint16_t bitnum = 0;
+	uint16_t errCnt = 0;
+	size_t i = offset;
+	uint16_t MaxBits=512;
+	//if not enough samples - error
+	if (*size < 51) return -1;
+	//check for phase change faults - skip one sample if faulty
+	uint8_t offsetA = 1, offsetB = 1;
+	for (; i<48; i+=2){
+		if (BitStream[i+1]==BitStream[i+2]) offsetA=0; 
+		if (BitStream[i+2]==BitStream[i+3]) offsetB=0;					
+	}
+	if (!offsetA && offsetB) offset++;
+	for (i=offset; i<*size-3; i+=2){
+		//check for phase error
+		if (BitStream[i+1]==BitStream[i+2]) {
+			BitStream[bitnum++]=7;
+			errCnt++;
+		}
+		if((BitStream[i]==1 && BitStream[i+1]==0) || (BitStream[i]==0 && BitStream[i+1]==1)){
+			BitStream[bitnum++]=1^invert;
+		} else if((BitStream[i]==0 && BitStream[i+1]==0) || (BitStream[i]==1 && BitStream[i+1]==1)){
+			BitStream[bitnum++]=invert;
+		} else {
+			BitStream[bitnum++]=7;
+			errCnt++;
+		}
+		if(bitnum>MaxBits) break;
+	}
+	*size=bitnum;
+	return errCnt;
+}
+
+// by marshmellow
 // demod gProxIIDemod 
 // error returns as -x 
 // success returns start position in BitStream
@@ -780,12 +633,13 @@ int PyramiddemodFSK(uint8_t *dest, size_t *size)
 	return (int)startIdx;
 }
 
-
-uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, int high, int low)
+// by marshmellow
+// to detect a wave that has heavily clipped (clean) samples
+uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, uint8_t high, uint8_t low)
 {
 	uint16_t allPeaks=1;
 	uint16_t cntPeaks=0;
-	size_t loopEnd = 572;
+	size_t loopEnd = 512+60;
 	if (loopEnd > size) loopEnd = size;
 	for (size_t i=60; i<loopEnd; i++){
 		if (dest[i]>low && dest[i]<high) 
@@ -801,53 +655,39 @@ uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, int high, int low)
 
 // by marshmellow
 // to help detect clocks on heavily clipped samples
-// based on counts between zero crossings
-int DetectStrongAskClock(uint8_t dest[], size_t size)
+// based on count of low to low
+int DetectStrongAskClock(uint8_t dest[], size_t size, uint8_t high, uint8_t low)
 {
-	int clk[]={0,8,16,32,40,50,64,100,128};
-	size_t idx = 40;
-	uint8_t high=0;
-	size_t cnt = 0;
-	size_t highCnt = 0;
-	size_t highCnt2 = 0;
-	for (;idx < size; idx++){
-		if (dest[idx]>128) {
-			if (!high){
-				high=1;
-				if (cnt > highCnt){
-					if (highCnt != 0) highCnt2 = highCnt;
-					highCnt = cnt;
-				} else if (cnt > highCnt2) {
-					highCnt2 = cnt;
-				}
-				cnt=1;
-			} else {
-				cnt++;
-			}
-		} else if (dest[idx] <= 128){
-			if (high) {
-				high=0;
-				if (cnt > highCnt) {
-					if (highCnt != 0) highCnt2 = highCnt;
-					highCnt = cnt;
-				} else if (cnt > highCnt2) {
-					highCnt2 = cnt;
-				}
-				cnt=1;
-			} else {
-				cnt++;
-			}
-		}
+	uint8_t fndClk[] = {8,16,32,40,50,64,128};
+	size_t startwave;
+	size_t i = 0;
+	size_t minClk = 255;
+		// get to first full low to prime loop and skip incomplete first pulse
+	while ((dest[i] < high) && (i < size))
+		++i;
+	while ((dest[i] > low) && (i < size))
+		++i;
+
+	// loop through all samples
+	while (i < size) {
+		// measure from low to low
+		while ((dest[i] > low) && (i < size))
+			++i;
+		startwave= i;
+		while ((dest[i] < high) && (i < size))
+			++i;
+		while ((dest[i] > low) && (i < size))
+			++i;
+		//get minimum measured distance
+		if (i-startwave < minClk && i < size)
+			minClk = i - startwave;
 	}
-	uint8_t tol;
-	for (idx=8; idx>0; idx--){
-		tol = clk[idx]/8;
-		if (clk[idx] >= highCnt - tol && clk[idx] <= highCnt + tol)
-			return clk[idx];
-		if (clk[idx] >= highCnt2 - tol && clk[idx] <= highCnt2 + tol)
-			return clk[idx];
+	// set clock
+	for (uint8_t clkCnt = 0; clkCnt<7; clkCnt++) {
+		if (minClk >= fndClk[clkCnt]-(fndClk[clkCnt]/8) && minClk <= fndClk[clkCnt]+1)
+			return fndClk[clkCnt];
 	}
-	return -1;
+	return 0;
 }
 
 // by marshmellow
@@ -856,45 +696,61 @@ int DetectStrongAskClock(uint8_t dest[], size_t size)
 // return start index of best starting position for that clock and return clock (by reference)
 int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 {
-	size_t i=0;
-	uint8_t clk[]={8,16,32,40,50,64,100,128,255};
+	size_t i=1;
+	uint8_t clk[] = {255,8,16,32,40,50,64,100,128,255};
+	uint8_t clkEnd = 9;
 	uint8_t loopCnt = 255;  //don't need to loop through entire array...
 	if (size <= loopCnt) return -1; //not enough samples
-	//if we already have a valid clock quit
-	
-	for (;i<8;++i)
-		if (clk[i] == *clock) return 0;
+
+	//if we already have a valid clock
+	uint8_t clockFnd=0;
+	for (;i<clkEnd;++i)
+		if (clk[i] == *clock) clockFnd = i;
+		//clock found but continue to find best startpos
 
 	//get high and low peak
 	int peak, low;
 	if (getHiLo(dest, loopCnt, &peak, &low, 75, 75) < 1) return -1;
 	
 	//test for large clean peaks
-	if (DetectCleanAskWave(dest, size, peak, low)==1){
-		int ans = DetectStrongAskClock(dest, size);
-		for (i=7; i>0; i--){
-			if (clk[i] == ans) {
-				*clock = ans;
-				return 0;
+	if (!clockFnd){
+		if (DetectCleanAskWave(dest, size, peak, low)==1){
+			int ans = DetectStrongAskClock(dest, size, peak, low);
+			for (i=clkEnd-1; i>0; i--){
+				if (clk[i] == ans) {
+					*clock = ans;
+					//clockFnd = i;
+					return 0;  // for strong waves i don't use the 'best start position' yet...
+					//break; //clock found but continue to find best startpos [not yet]
+				}
 			}
 		}
 	}
+	
 	uint8_t ii;
 	uint8_t clkCnt, tol = 0;
 	uint16_t bestErr[]={1000,1000,1000,1000,1000,1000,1000,1000,1000};
 	uint8_t bestStart[]={0,0,0,0,0,0,0,0,0};
 	size_t errCnt = 0;
 	size_t arrLoc, loopEnd;
+
+	if (clockFnd>0) {
+		clkCnt = clockFnd;
+		clkEnd = clockFnd+1;
+	}
+	else clkCnt=1;
+
 	//test each valid clock from smallest to greatest to see which lines up
-	for(clkCnt=0; clkCnt < 8; clkCnt++){
-		if (clk[clkCnt] == 32){
+	for(; clkCnt < clkEnd; clkCnt++){
+		if (clk[clkCnt] <= 32){
 			tol=1;
 		}else{
 			tol=0;
 		}
-		if (!maxErr) loopCnt=clk[clkCnt]*2;
+		//if no errors allowed - keep start within the first clock
+		if (!maxErr && size > clk[clkCnt]*2 + tol && clk[clkCnt]<128) loopCnt=clk[clkCnt]*2;
 		bestErr[clkCnt]=1000;
-		//try lining up the peaks by moving starting point (try first 256)
+		//try lining up the peaks by moving starting point (try first few clocks)
 		for (ii=0; ii < loopCnt; ii++){
 			if (dest[ii] < peak && dest[ii] > low) continue;
 
@@ -910,11 +766,11 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 					errCnt++;
 				}
 			}
-			//if we found no errors then we can stop here
+			//if we found no errors then we can stop here and a low clock (common clocks)
 			//  this is correct one - return this clock
 					//PrintAndLog("DEBUG: clk %d, err %d, ii %d, i %d",clk[clkCnt],errCnt,ii,i);
-			if(errCnt==0 && clkCnt<6) {
-				*clock = clk[clkCnt];
+			if(errCnt==0 && clkCnt<7) { 
+				if (!clockFnd) *clock = clk[clkCnt];
 				return ii;
 			}
 			//if we found errors see if it is lowest so far and save it as best run
@@ -924,9 +780,9 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 			}
 		}
 	}
-	uint8_t iii=0;
+	uint8_t iii;
 	uint8_t best=0;
-	for (iii=0; iii<8; ++iii){
+	for (iii=1; iii<clkEnd; ++iii){
 		if (bestErr[iii] < bestErr[best]){
 			if (bestErr[iii] == 0) bestErr[iii]=1;
 			// current best bit to error ratio     vs  new bit to error ratio
@@ -935,8 +791,8 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 			}
 		}
 	}
-	if (bestErr[best] > maxErr) return -1;
-	*clock = clk[best];
+	//if (bestErr[best] > maxErr) return -1;
+	if (!clockFnd) *clock = clk[best];
 	return bestStart[best];
 }
 
@@ -1115,7 +971,7 @@ void psk1TOpsk2(uint8_t *BitStream, size_t size)
 	size_t i=1;
 	uint8_t lastBit=BitStream[0];
 	for (; i<size; i++){
-		if (BitStream[i]==77){
+		if (BitStream[i]==7){
 			//ignore errors
 		} else if (lastBit!=BitStream[i]){
 			lastBit=BitStream[i];
@@ -1308,7 +1164,7 @@ int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int maxErr)
 			if (ignoreCnt == 0){
 				bitHigh = 0;
 				if (errBitHigh == 1){
-					dest[bitnum++] = 77;
+					dest[bitnum++] = 7;
 					errCnt++;
 				}
 				errBitHigh=0;
@@ -1583,7 +1439,7 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
 						//noise after a phase shift - ignore
 					} else { //phase shift before supposed to based on clock
 						errCnt++;
-						dest[numBits++] = 77;
+						dest[numBits++] = 7;
 					}
 				} else if (i+1 > lastClkBit + *clock + tol + fc){
 					lastClkBit += *clock; //no phase shift but clock bit

@@ -24,7 +24,7 @@ int CmdIODemodFSK(const char *Cmd)
   SendCommand(&c);
   return 0;
 }
-
+/*
 int CmdIOProxDemod(const char *Cmd){
   if (GraphTraceLen < 4800) {
     PrintAndLog("too short; need at least 4800 samples");
@@ -37,7 +37,7 @@ int CmdIOProxDemod(const char *Cmd){
   RepaintGraphWindow();
   return 0;
 }  
-
+*/
 int CmdIOClone(const char *Cmd)
 {
   unsigned int hi = 0, lo = 0;
@@ -67,7 +67,7 @@ int CmdIOClone(const char *Cmd)
 static command_t CommandTable[] = 
 {
   {"help",        CmdHelp,            1, "This help"},
-  {"demod",	  CmdIOProxDemod,     1, "Demodulate Stream"},
+  //{"demod",	  CmdIOProxDemod,     1, "Demodulate Stream"},
   {"fskdemod",    CmdIODemodFSK,      0, "['1'] Realtime IO FSK demodulator (option '1' for one tag only)"},
   {"clone",	  CmdIOClone,         0, "Clone ioProx Tag"},
   {NULL, NULL, 0, NULL}

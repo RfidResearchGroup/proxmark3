@@ -17,7 +17,6 @@
 
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 int GraphTraceLen;
-
 /* write a manchester bit to the graph */
 void AppendGraph(int redraw, int clock, int bit)
 {
@@ -45,6 +44,24 @@ int ClearGraph(int redraw)
     RepaintGraphWindow();
 
   return gtl;
+}
+// option '1' to save GraphBuffer any other to restore
+void save_restoreGB(uint8_t saveOpt)
+{
+	static int SavedGB[MAX_GRAPH_TRACE_LEN];
+	static int SavedGBlen;
+	static bool GB_Saved = false;
+
+	if (saveOpt==1) { //save
+		memcpy(SavedGB, GraphBuffer, sizeof(GraphBuffer));
+		SavedGBlen = GraphTraceLen;
+		GB_Saved=true;
+	} else if (GB_Saved){ //restore
+		memcpy(GraphBuffer, SavedGB, sizeof(GraphBuffer));
+		GraphTraceLen = SavedGBlen;
+		RepaintGraphWindow();
+	}
+	return;
 }
 
 // DETECT CLOCK NOW IN LFDEMOD.C
@@ -126,10 +143,10 @@ int GetAskClock(const char str[], bool printAns, bool verbose)
 			PrintAndLog("Failed to copy from graphbuffer");
 		return -1;
 	}
-	DetectASKClock(grph, size, &clock, 20);
+	int start = DetectASKClock(grph, size, &clock, 20);
 	// Only print this message if we're not looping something
 	if (printAns){
-		PrintAndLog("Auto-detected clock rate: %d", clock);
+		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
 	}
 	return clock;
 }

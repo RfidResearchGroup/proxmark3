@@ -5,19 +5,21 @@ local lib14a = require('read14a')
 local utils = require('utils')
 local md5 = require('md5')
 local dumplib = require('html_dumplib')
-local toyNames = require('default_toys')
+local toys = require('default_toys')
 
 example =[[
-	1. script run tnp3dump
-	2. script run tnp3dump -n
-	3. script run tnp3dump -k aabbccddeeff
-	4. script run tnp3dump -k aabbccddeeff -n
-	5. script run tnp3dump -o myfile 
-	6. script run tnp3dump -n -o myfile 
-	7. script run tnp3dump -k aabbccddeeff -n -o myfile 
+	script run tnp3dump
+	script run tnp3dump -n
+	script run tnp3dump -p
+	script run tnp3dump -k aabbccddeeff
+	script run tnp3dump -k aabbccddeeff -n
+	script run tnp3dump -o myfile 
+	script run tnp3dump -n -o myfile 
+	script run tnp3dump -p -o myfile 
+	script run tnp3dump -k aabbccddeeff -n -o myfile 
 ]]
 author = "Iceman"
-usage = "script run tnp3dump -k <key> -n -o <filename>"
+usage = "script run tnp3dump -k <key> -n -p -o <filename>"
 desc =[[
 This script will try to dump the contents of a Mifare TNP3xxx card.
 It will need a valid KeyA in order to find the other keys and decode the card.
@@ -25,11 +27,10 @@ Arguments:
 	-h             : this help
 	-k <key>       : Sector 0 Key A.
 	-n             : Use the nested cmd to find all keys
+	-p             : Use the precalc to find all keys
 	-o             : filename for the saved dumps
 ]]
-
-local HASHCONSTANT = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
-
+local RANDOM = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = false -- the debug flag
 local numBlocks = 64
@@ -93,16 +94,6 @@ local function waitCmd()
 	return nil, "No response from device"
 end
 
-local function computeCrc16(s)
-	local hash = core.crc16(utils.ConvertHexToAscii(s))	
-	return hash
-end
-
-local function reverseCrcBytes(crc)
-	crc2 = crc:sub(3,4)..crc:sub(1,2)
-	return tonumber(crc2,16)
-end
-
 local function main(args)
 
 	print( string.rep('--',20) )
@@ -112,18 +103,20 @@ local function main(args)
 	local cmd
 	local err
 	local useNested = false
+	local usePreCalc = false
 	local cmdReadBlockString = 'hf mf rdbl %d A %s'
 	local input = "dumpkeys.bin"
 	local outputTemplate = os.date("toydump_%Y-%m-%d_%H%M%S");
 
 	-- Arguments for the script
-	for o, a in getopt.getopt(args, 'hk:no:') do
+	for o, a in getopt.getopt(args, 'hk:npo:') do
 		if o == "h" then return help() end		
 		if o == "k" then keyA = a end
 		if o == "n" then useNested = true end
+		if o == "p" then usePreCalc = true end
 		if o == "o" then outputTemplate = a end		
 	end
-
+	
 	-- validate input args.
 	keyA =  keyA or '4b0b20107ccb'
 	if #(keyA) ~= 12 then
@@ -141,30 +134,31 @@ local function main(args)
 
 	core.clearCommandBuffer()
 	
-	if 0x01 ~= result.sak then -- NXP MIFARE TNP3xxx
-		return oops('This is not a TNP3xxx tag. aborting.')
-	end	
-
 	-- Show tag info
-	print((' Found tag : %s'):format(result.name))
-	print(('Using keyA : %s'):format(keyA))
+	print((' Found tag %s'):format(result.name))
+
+	dbg(('Using keyA : %s'):format(keyA))
 
 	--Trying to find the other keys
 	if useNested then
 	  core.console( ('hf mf nested 1 0 A %s d'):format(keyA) )
 	end
-	
+
 	core.clearCommandBuffer()
 	
-	-- Loading keyfile
-	print('Loading dumpkeys.bin')
-	local hex, err = utils.ReadDumpFile(input)
-	if not hex then
-		return oops(err)
+	local akeys = ''
+	if usePreCalc then
+		local pre = require('precalc')
+		akeys = pre.GetAll(result.uid)
+	else
+		print('Loading dumpkeys.bin')
+		local hex, err = utils.ReadDumpFile(input)
+		if not hex then
+			return oops(err)
+		end
+		akeys = hex:sub(0,12*16)
 	end
-
-	local akeys = hex:sub(0,12*16)
-
+	
 	-- Read block 0
 	cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = 0,arg2 = 0,arg3 = 0, data = keyA}
 	err = core.SendCommand(cmd:getBytes())
@@ -179,6 +173,8 @@ local function main(args)
 	local block1, err = waitCmd()
 	if err then return oops(err) end
 
+	local tmpHash = block0..block1..'%02x'..RANDOM
+
 	local key
 	local pos = 0
 	local blockNo
@@ -188,7 +184,7 @@ local function main(args)
 	core.clearCommandBuffer()
 		
 	-- main loop
-	io.write('Decrypting blocks > ')
+	io.write('Reading blocks > ')
 	for blockNo = 0, numBlocks-1, 1 do
 
 		if core.ukbhit() then
@@ -204,25 +200,23 @@ local function main(args)
 		local blockdata, err = waitCmd()
 		if err then return oops(err) end		
 
+
 		if  blockNo%4 ~= 3 then
+		
 			if blockNo < 8 then
 				-- Block 0-7 not encrypted
 				blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
 			else
-				local base = ('%s%s%02x%s'):format(block0, block1, blockNo, HASHCONSTANT)	
-				local baseStr = utils.ConvertHexToAscii(base)
-				local md5hash = md5.sumhexa(baseStr)
-				local aestest = core.aes(md5hash, blockdata)
-
-				local hex = utils.ConvertAsciiToBytes(aestest)
-				hex = utils.ConvertBytesToHex(hex)
-
 				-- blocks with zero not encrypted.
 				if string.find(blockdata, '^0+$') then
 					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
 				else
-					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,hex)
-					io.write( blockNo..',')
+					local baseStr = utils.ConvertHexToAscii(tmpHash:format(blockNo))
+					local key = md5.sumhexa(baseStr)
+					local aestest = core.aes128_decrypt(key, blockdata)
+					local hex = utils.ConvertAsciiToBytes(aestest)					
+					hex = utils.ConvertBytesToHex(hex)
+					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,hex)					
 				end		
 			end
 		else
@@ -246,31 +240,38 @@ local function main(args)
 		emldata = emldata..slice..'\n'
 		for c in (str):gmatch('.') do
 			bindata[#bindata+1] = c
-		end
+		end		
 	end 
-	
 
+	print( string.rep('--',20) )
+	
 	local uid = block0:sub(1,8)
-	local itemtype = block1:sub(1,4)
+	local toytype = block1:sub(1,4)
+	local cardidLsw = block1:sub(9,16)
+	local cardidMsw = block1:sub(16,24)
 	local cardid = block1:sub(9,24)
-	local traptype = block1:sub(25,28)
+	local subtype = block1:sub(25,28)
 	
 	-- Write dump to files
 	if not DEBUG then
-		local foo = dumplib.SaveAsBinary(bindata, outputTemplate..'_uid_'..uid..'.bin')
-		print(("Wrote a BIN dump to the file %s"):format(foo))
-		local bar = dumplib.SaveAsText(emldata, outputTemplate..'_uid_'..uid..'.eml')
-		print(("Wrote a EML dump to the file %s"):format(bar))
+		local foo = dumplib.SaveAsBinary(bindata, outputTemplate..'-'..uid..'.bin')
+		print(("Wrote a BIN dump to:  %s"):format(foo))
+		local bar = dumplib.SaveAsText(emldata, outputTemplate..'-'..uid..'.eml')
+		print(("Wrote a EML dump to:  %s"):format(bar))
 	end
-
-	-- Show info 
-	print( string.rep('--',20) )
-	print( ('            ITEM TYPE : 0x%s - %s'):format(itemtype, toyNames[itemtype]) )
-	print( (' Alter ego / traptype : 0x%s'):format(traptype) )
-	print( ('                  UID : 0x%s'):format(uid) )
-	print( ('               CARDID : 0x%s'):format(cardid ) )
 	
 	print( string.rep('--',20) )
+	-- Show info 
 
+	local item = toys.Find(toytype, subtype)
+	if item then
+		print(('            ITEM TYPE : %s - %s (%s)'):format(item[6],item[5], item[4]) )
+	else
+		print(('            ITEM TYPE : 0x%s 0x%s'):format(toytype, subtype))
+	end
+
+	print( ('                  UID : 0x%s'):format(uid) )
+	print( ('               CARDID : 0x%s'):format(cardid ) )
+	print( string.rep('--',20) )
 end
 main(args)

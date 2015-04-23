@@ -121,19 +121,24 @@ char * sprint_hex(const uint8_t * data, const size_t len) {
 	return buf;
 }
 
-char * sprint_bin(const uint8_t * data, const size_t len) {
+char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
 	
 	int maxLen = ( len > 1024) ? 1024 : len;
 	static char buf[1024];
-	char * tmp = buf;
-	size_t i;
+	char *tmp = buf;
 
-	for (i=0; i < maxLen; ++i, ++tmp)
-		sprintf(tmp, "%u", data[i]);
+	for (size_t i=0; i < maxLen; ++i){
+		sprintf(tmp++, "%u", data[i]);
+		if (breaks > 0 && !((i+1) % breaks))
+			sprintf(tmp++, "%s","\n");
+	}
 
 	return buf;
 }
 
+char *sprint_bin(const uint8_t *data, const size_t len) {
+	return sprint_bin_break(data, len, 0);
+}
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
 {
 	while (len--) {
