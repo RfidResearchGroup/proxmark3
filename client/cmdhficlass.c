@@ -345,7 +345,7 @@ int CmdHFiClassReader_Dump(const char *Cmd)
 			if(dataLength > 0)
 			{
 				PrintAndLog("Got %d bytes data (total so far %d)" ,dataLength,iclass_datalen);
-				memcpy(iclass_data, resp.d.asBytes,dataLength);
+				memcpy(iclass_data+iclass_datalen, resp.d.asBytes,dataLength);
 				iclass_datalen += dataLength;
 			}else
 			{//Last transfer, datalength 0 means the dump is finished
