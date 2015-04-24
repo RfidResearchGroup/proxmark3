@@ -840,16 +840,20 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	uint8_t block = 0x07;
 	
 	uint8_t uid[] = { 0xF4,0xEA, 0x54, 0x8E };
-	uint8_t mifarekey[] = { 0xA0,0xA1,0xA2,0xA3,0xA4,0xA5 };
+	uint8_t mifarekeyA[] = { 0xA0,0xA1,0xA2,0xA3,0xA4,0xA5 };
+	uint8_t mifarekeyB[] = { 0xB0,0xB1,0xB2,0xB3,0xB4,0xB5 };
+	uint8_t dkeyA[8] = { 0x00 };
+	uint8_t dkeyB[8] = { 0x00 };
+	
 	uint8_t masterkey[] = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff };
 	
 	uint8_t mix[8] = { 0x00 };
 	uint8_t divkey[8] = { 0x00 };
 	
-	memcpy(mix, mifarekey, 4);
+	memcpy(mix, mifarekeyA, 4);
 	
-	mix[4] = mifarekey[4] ^ uid[0];
-	mix[5] = mifarekey[5] ^ uid[1];
+	mix[4] = mifarekeyA[4] ^ uid[0];
+	mix[5] = mifarekeyA[5] ^ uid[1];
 	mix[6] = block ^ uid[2];
 	mix[7] = uid[3];
 	
@@ -868,14 +872,50 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	PrintAndLog("Masterkey    :\t %s", sprint_hex(masterkey,sizeof(masterkey)));
 	PrintAndLog("UID          :\t %s", sprint_hex(uid, sizeof(uid)));
 	PrintAndLog("Sector       :\t %0d", block);
-	PrintAndLog("Mifare key   :\t %s", sprint_hex(mifarekey, sizeof(mifarekey)));
+	PrintAndLog("Mifare key   :\t %s", sprint_hex(mifarekeyA, sizeof(mifarekeyA)));
 	PrintAndLog("Message      :\t %s", sprint_hex(mix, sizeof(mix)));
 	PrintAndLog("Diversified key: %s", sprint_hex(divkey+1, 6));
 		
+	PrintAndLog("\n DES version");
+	
+	for (int i=0; i < sizeof(mifarekeyA); ++i){
+		dkeyA[i] = (mifarekeyA[i] << 1) & 0xff;
+		dkeyA[6] |=  ((mifarekeyA[i] >> 7) & 1) << (i+1);
+	}
+	
+	for (int i=0; i < sizeof(mifarekeyB); ++i){
+		dkeyB[1] |=  ((mifarekeyB[i] >> 7) & 1) << (i+1);
+		dkeyB[2+i] = (mifarekeyB[i] << 1) & 0xff;
+	}
+	
+	uint8_t zeros[8] = {0x00};
+	uint8_t newpwd[8] = {0x00};
+	uint8_t dmkey[24] = {0x00};
+	memcpy(dmkey, dkeyA, 8);
+	memcpy(dmkey+8, dkeyB, 8);
+	memcpy(dmkey+16, dkeyA, 8);
+	memset(iv, 0x00, 8);
+	
+	des3_set3key_enc(&ctx, dmkey);
+
+	des3_crypt_cbc(&ctx  // des3_context
+		, DES_ENCRYPT    // int mode
+		, sizeof(newpwd) // length
+		, iv             // iv[8]
+		, zeros         // input
+		, newpwd         // output
+		);
+	
+	PrintAndLog("Mifare dkeyA :\t %s", sprint_hex(dkeyA, sizeof(dkeyA)));
+	PrintAndLog("Mifare dkeyB :\t %s", sprint_hex(dkeyB, sizeof(dkeyB)));
+	PrintAndLog("Mifare ABA   :\t %s", sprint_hex(dmkey, sizeof(dmkey)));
+	PrintAndLog("Mifare Pwd   :\t %s", sprint_hex(newpwd, sizeof(newpwd)));
+	
 	return 0;
 }
 
-// uint8_t * diversify_key(uint8_t * key){
+// static uint8_t * diversify_key(uint8_t * key){
+	
  // for(int i=0; i<16; i++){
    // if(i<=6) key[i]^=cuid[i];
    // if(i>6) key[i]^=cuid[i%7];
