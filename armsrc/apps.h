@@ -19,6 +19,7 @@
 #include <string.h>
 #include <strings.h>
 #include "../common/crc32.h"
+#include "../common/lfdemod.h"
 #include "BigBuf.h"
 #include "../include/hitag2.h"
 #include "../include/mifare.h"
@@ -195,6 +196,8 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void MifareCIdent();  // is "magic chinese" card?
 void MifareUSetPwd(uint8_t arg0, uint8_t *datain);
+
+void MifareCollectNonces(uint32_t arg0, uint32_t arg1);
 
 //desfire
 void Mifare_DES_Auth1(uint8_t arg0,uint8_t *datain);

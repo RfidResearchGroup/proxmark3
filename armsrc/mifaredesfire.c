@@ -433,7 +433,7 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 
 	size_t len = 0;
 	size_t wrappedLen = 0;
-	uint8_t wCmd[USB_CMD_DATA_SIZE] = {0};
+	uint8_t wCmd[USB_CMD_DATA_SIZE] = {0x00};
 	
 	uint8_t resp[MAX_FRAME_SIZE];
     uint8_t par[MAX_PARITY_SIZE];

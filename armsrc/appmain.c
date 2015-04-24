@@ -919,6 +919,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			MifareSendCommand(c->arg[0], c->arg[1], c->d.asBytes);
 			break;
 
+		case CMD_MIFARE_COLLECT_NONCES:
+			MifareCollectNonces(c->arg[0], c->[1]);
+			break;
 #endif
 
 #ifdef WITH_ICLASS

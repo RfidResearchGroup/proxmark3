@@ -1218,7 +1218,75 @@ void MifareCIdent(){
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
 }
 
-			//
+void MifareCollectNonces(uint32_t arg0, uint32_t arg1){
+
+	BigBuf_free();
+
+	uint32_t iterations = arg0;
+	uint8_t uid[10] = {0x00};
+
+	uint8_t *response = BigBuf_malloc(MAX_MIFARE_FRAME_SIZE);
+	uint8_t *responsePar = BigBuf_malloc(MAX_MIFARE_PARITY_SIZE);
+
+	uint8_t mf_auth[] = { 0x60,0x00,0xf5,0x7b };
+	
+	// get memory from BigBuf.
+	uint8_t *nonces = BigBuf_malloc(iterations * 4);
+
+	LED_A_ON();
+	LED_B_OFF();
+	LED_C_OFF();
+
+	clear_trace();
+	set_tracing(TRUE);
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+	
+	for (int i = 0; i < iterations; i++) {
+						
+		WDT_HIT();
+
+		// Test if the action was cancelled
+		if(BUTTON_PRESS()) break;
+		
+		//		if(mifare_classic_halt(pcs, cuid)) {
+		//			if (MF_DBGLEVEL >= 1) Dbprintf("Halt error");
+		//}
+
+		if(!iso14443a_select_card(uid, NULL, NULL)) {
+			if (MF_DBGLEVEL >= 1) Dbprintf("Can't select card");
+			continue;
+		};
+
+		// Transmit MIFARE_CLASSIC_AUTH.
+		ReaderTransmit(mf_auth, sizeof(mf_auth), NULL);
+
+		// Receive the (4 Byte) "random" nonce
+		if (!ReaderReceive(response, responsePar)) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("Couldn't receive tag nonce");
+			continue;
+		}	
+		
+		nonces[i*4] = bytes_to_num(response, 4);
+	}
+		
+	int packLen =  iterations * 4;
+	int packSize = 0;
+	int packNum = 0;
+	while (packLen > 0) {
+		packSize = MIN(USB_CMD_DATA_SIZE, packLen);
+		LED_B_ON();
+		cmd_send(CMD_ACK, 77, 0, packSize, nonces - packLen, packSize);
+		LED_B_OFF();
+
+		packLen -= packSize;
+		packNum++;
+	}
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
+}
+
+//
 // DESFIRE
 //
 

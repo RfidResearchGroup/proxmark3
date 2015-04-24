@@ -193,6 +193,8 @@ typedef struct{
 #define CMD_MIFARE_DESFIRE_INFO                                           0x072d
 #define CMD_MIFARE_DESFIRE                                                0x072e
 
+#define CMD_MIFARE_COLLECT_NONCES										  0x072f
+
 #define CMD_UNKNOWN                                                       0xFFFF
 
 
