@@ -39,6 +39,17 @@ local char = string.char
 local sub = string.sub
 local format = string.format
 
+
+
+local band = bit32.band
+local bor = bit32.bor
+local lshift = bit32.lshift
+local rshift = bit32.rshift
+local byte = string.byte
+local char = string.char
+local sub = string.sub
+local format = string.format
+
 --- 
 -- A debug printout-function
 function dbg(args)
@@ -197,8 +208,6 @@ local function ValidateCheckSums(blocks)
 	if crc == calc then isOk='Ok' else isOk = 'Error' end	
 	io.write( ('TYPE 3 area 2: %04x = %04x -- %s\n'):format(crc,calc,isOk))
 end
-
-local function LoadEmulator(blocks)
 
 	local cmd
 	local blockdata
@@ -421,7 +430,7 @@ local function main(args)
 
 	local level = blocks[13]:sub(27,28)
 	print(('LEVEL : %d'):format( tonumber(level,16)))
-	--h√§lsa: 667 029b  
+	--h‰lsa: 667 029b  
 	--local health = blocks[]:sub();
 	--print(('Health : %d'):format( tonumber(health,16))
 	
