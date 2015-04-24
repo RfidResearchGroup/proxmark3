@@ -154,7 +154,7 @@ int CmdHF14AReader(const char *Cmd)
 
 	if(select_status == 3) {
 		PrintAndLog("Card doesn't support standard iso14443-3 anticollision");
-	PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
+		PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
 		// disconnect
 		c.arg[0] = 0;
 		c.arg[1] = 0;
@@ -175,7 +175,27 @@ int CmdHF14AReader(const char *Cmd)
 	}
 
 	switch (card.sak) {
-		case 0x00: PrintAndLog("TYPE : NXP MIFARE Ultralight | Ultralight C"); break;
+		case 0x00: 
+			// check if the tag answers to GETVERSION (0x60)
+			c.arg[0] = ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT;
+			c.arg[1] = 1;
+			c.arg[2] = 0;
+			c.d.asBytes[0] = 0x60;
+			SendCommand(&c);
+			WaitForResponse(CMD_ACK,&resp);
+		
+			uint8_t version[8] = {0x00};
+			memcpy(&version, resp.d.asBytes, resp.arg[0]);
+			uint8_t isOK  = resp.arg[0] & 0xff;
+			if ( isOK ){			
+				// size of tag, check version[4] == 0x0b == smaller.
+				PrintAndLog("TYPE : NXP MIFARE Ultralight EV1 %d bytes", (version[6] == 0xB) ? 48 : 128);
+			}
+			else {
+				PrintAndLog("TYPE : NXP MIFARE Ultralight | Ultralight C");
+			}
+			
+			break;
 		case 0x01: PrintAndLog("TYPE : NXP TNP3xxx Activision Game Appliance"); break;
 		case 0x04: PrintAndLog("TYPE : NXP MIFARE (various !DESFire !DESFire EV1)"); break;
 		case 0x08: PrintAndLog("TYPE : NXP MIFARE CLASSIC 1k | Plus 2k SL1"); break;
