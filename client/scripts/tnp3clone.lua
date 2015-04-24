@@ -32,7 +32,7 @@ Arguments:
 	0138 - Series 2
 	0234 - Special
 	023c - Special
-	
+	0020 - Swapforce
 ]]
 
 
