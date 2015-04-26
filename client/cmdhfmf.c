@@ -781,8 +781,8 @@ int CmdHF14AMfChk(const char *Cmd)
 		PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
 		PrintAndLog("          * - all sectors");
 		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
-		PrintAndLog("d - write keys to binary file\n");
-		PrintAndLog("t - write keys to emulator memory");
+		PrintAndLog("d - write keys to binary file");
+		PrintAndLog("t - write keys to emulator memory\n");
 		PrintAndLog("      sample: hf mf chk 0 A 1234567890ab keys.dic");
 		PrintAndLog("              hf mf chk *1 ? t");
 		PrintAndLog("              hf mf chk *1 ? d");
