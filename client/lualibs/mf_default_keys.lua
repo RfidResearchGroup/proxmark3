@@ -157,8 +157,14 @@ local _keys = {
 	'9de89e070277',
 	'eff603e1efe9',
 	'644672bd4afe',
-
 	'b5ff67cba951',
+	
+	--[[
+    hotel system cards,
+	http://www.proxmark.org/forum/viewtopic.php?id=2430
+    --]]	
+	  '44ab09010845',
+      '85fed980ea5a',
 }
 
 ---
