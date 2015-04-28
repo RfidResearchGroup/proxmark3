@@ -261,7 +261,7 @@ static int l_aes(lua_State *L)
 
     aes_context ctx;
     aes_init(&ctx);
-    aes_setkey_enc(&ctx,(const unsigned char *)p_key,128);
+    aes_setkey_dec(&ctx, aes_key, 128);
 	aes_crypt_cbc(&ctx,AES_DECRYPT,sizeof(indata), iv, indata,outdata );
     //Push decrypted array as a string
 	lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
