@@ -11,6 +11,7 @@
 #include "cmdhfmfu.h"
 #include "cmdhfmf.h"
 #include "cmdhf14a.h"
+#include "mifare.h"
 
 #define MAX_ULTRA_BLOCKS   0x0f
 #define MAX_ULTRAC_BLOCKS  0x2f
@@ -22,7 +23,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 
 	uint8_t datatemp[7] = {0x00};
 	uint8_t isOK  = 0;
-	uint8_t *data = NULL;
+	uint8_t data[16] = {0x00};
 
 	UsbCommand c = {CMD_MIFAREU_READCARD, {0, 4}};
 	SendCommand(&c);
@@ -30,7 +31,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 		isOK  = resp.arg[0] & 0xff;
-		data  = resp.d.asBytes;
+		memcpy(data, resp.d.asBytes, sizeof(data));
 
 		if (!isOK) {
 			PrintAndLog("Error reading from tag");
@@ -40,11 +41,35 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		PrintAndLog("Command execute timed out");
 		return -1;
 	}
-	
-	PrintAndLog("");
-	PrintAndLog("-- Mifare Ultralight / Ultralight-C Tag Information ---------");
-	PrintAndLog("-------------------------------------------------------------");
 
+	PrintAndLog("\n-- Tag Information ---------");
+	PrintAndLog("-------------------------------------------------------------");
+	
+	UsbCommand cmd = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC , 1, 0}};
+	cmd.d.asBytes[0] = 0x60;
+	SendCommand(&cmd);
+	WaitForResponse(CMD_ACK, &resp);
+	
+	if ( resp.arg[0] ) {
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+
+			uint8_t version[8] = {0,0,0,0,0,0,0,0};
+			memcpy(&version, resp.d.asBytes, sizeof(version));
+			uint8_t len  = resp.arg[0] & 0xff;
+			switch (len) {
+			// todo, identify "Magic UL-C tags".  // they usually have a static nonce response to 0x1A command.
+			// UL-EV1, size, check version[6] == 0x0b (smaller)  0x0b * 4 == 48
+				case 0x0A:PrintAndLog("        TYPE : NXP MIFARE Ultralight EV1 %d bytes", (version[6] == 0xB) ? 48 : 128);	break;				
+				case 0x01:PrintAndLog("        TYPE : NXP MIFARE Ultralight C");break;
+				case 0x00:PrintAndLog("        TYPE : NXP MIFARE Ultralight");break;
+			}
+		}
+	}
+	// TODO:
+	// Answers to 0x1A == UL-C
+	// NONCE seems to be fixed for my Magic UL-C.  How to detect a Magic UL?
+	// maybe read Block0, change 1 byte, write back, and see if it failes or not.  If magic,  revert changes made?
+	
 	// UID
 	memcpy( datatemp, data, 3);
 	memcpy( datatemp+3, data+4, 4);
@@ -71,14 +96,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	PrintAndLog("        Lock : %s - %s", sprint_hex(datatemp, 2),printBits( 2, &datatemp) );
 	PrintAndLog("  OneTimePad : %s ", sprint_hex(data + 3*4, 4));
 	PrintAndLog("");
-
-	int len = CmdHF14AMfucAuth("K 0");
-//	PrintAndLog("CODE: %d",len);
-// Fix reading UL-C 's password higher blocks.
-	
-	PrintAndLog("Seems to be a Ultralight %s", (len==0) ? "-C" :"");
-	
-	
 	return 0;
 }
 
@@ -797,12 +814,15 @@ int CmdHF14AMfucSetPwd(const char *Cmd){
 //
 int CmdHF14AMfucSetUid(const char *Cmd){
 
+	UsbCommand c;
+	UsbCommand resp;
 	uint8_t uid[7] = {0x00};
 	char cmdp = param_getchar(Cmd, 0);
 	
 	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') {	
 		PrintAndLog("Usage:  hf mfu setuid <uid (14 hex symbols)>");
 		PrintAndLog("       [uid] - (14 hex symbols)");
+		PrintAndLog("\nThis only works for Magic Ultralight tags.");
 		PrintAndLog("");
 		PrintAndLog("sample: hf mfu setuid 11223344556677");
 		PrintAndLog("");
@@ -810,27 +830,60 @@ int CmdHF14AMfucSetUid(const char *Cmd){
 	}
 	
 	if (param_gethex(Cmd, 0, uid, 14)) {
-		PrintAndLog("Password must include 14 HEX symbols");
+		PrintAndLog("UID must include 14 HEX symbols");
 		return 1;
 	}
 
-	UsbCommand c = {CMD_MIFAREU_SETUID};	
-	memcpy( c.d.asBytes, uid, 14);
+	// read block2. 
+	c.cmd = CMD_MIFAREU_READBL;
+	c.arg[0] = 2;
 	SendCommand(&c);
+	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		PrintAndLog("Command execute timeout");
+		return 2;
+	}
+	
+	// save old block2.
+	uint8_t oldblock2[4] = {0x00};
+	memcpy(resp.d.asBytes, oldblock2, 4);
+	
+	// block 0.
+	c.cmd = CMD_MIFAREU_WRITEBL;
+	c.arg[0] = 0;
+	c.d.asBytes[0] = uid[0];
+	c.d.asBytes[1] = uid[1];
+	c.d.asBytes[2] = uid[2];
+	c.d.asBytes[3] =  0x88 ^ uid[0] ^ uid[1] ^ uid[2];
+	SendCommand(&c);
+	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+		PrintAndLog("Command execute timeout");
+		return 3;
+	}
+	
+	// block 1.
+	c.arg[0] = 1;
+	c.d.asBytes[0] = uid[3];
+	c.d.asBytes[1] = uid[4];
+	c.d.asBytes[2] = uid[5];
+	c.d.asBytes[3] = uid[6];
+	SendCommand(&c);
+	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
+		PrintAndLog("Command execute timeout");
+		return 4;
+	}
 
-	UsbCommand resp;	
-	if (WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
-		if ( (resp.arg[0] & 0xff) == 1)
-			PrintAndLog("New UID: %s", sprint_hex(uid,14));
-		else{
-			PrintAndLog("Failed writing new uid");
-			return 1;
-		}
+	// block 2.
+	c.arg[0] = 2;
+	c.d.asBytes[0] = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
+	c.d.asBytes[1] = oldblock2[1];
+	c.d.asBytes[2] = oldblock2[2];
+	c.d.asBytes[3] = oldblock2[3];
+	SendCommand(&c);
+	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
+		PrintAndLog("Command execute timeout");
+		return 5;
 	}
-	else {
-		PrintAndLog("command execution time out");
-		return 1;
-	}
+	
 	return 0;
 }
 
@@ -839,6 +892,9 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	uint8_t iv[8] = { 0x00 };
 	uint8_t block = 0x07;
 	
+	// UL-EV1
+	//04 57 b6 e2 05 3f 80 UID
+	//4a f8 4b 19   PWD
 	uint8_t uid[] = { 0xF4,0xEA, 0x54, 0x8E };
 	uint8_t mifarekeyA[] = { 0xA0,0xA1,0xA2,0xA3,0xA4,0xA5 };
 	uint8_t mifarekeyB[] = { 0xB0,0xB1,0xB2,0xB3,0xB4,0xB5 };
