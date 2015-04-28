@@ -24,6 +24,8 @@
 #include "cmdparser.h"
 #include "util.h"
 #include "cmdhfmfdes.h"
+#include "cmdhf14a.h"
+
 
 uint8_t CMDPOS = 0;
 uint8_t LENPOS = 1;
@@ -158,7 +160,7 @@ int CmdHF14ADesInfo(const char *Cmd){
 	PrintAndLog("  Production date    : week %02x, 20%02x",resp.d.asBytes[33], resp.d.asBytes[34]);
 	PrintAndLog("  -----------------------------------------------------------");
 	PrintAndLog("  Hardware Information");
-	PrintAndLog("      Vendor Id      : %s", GetVendorStr(resp.d.asBytes[7]));
+	PrintAndLog("      Vendor Id      : %s", getTagInfo(resp.d.asBytes[7]));
 	PrintAndLog("      Type           : 0x%02X",resp.d.asBytes[8]);
 	PrintAndLog("      Subtype        : 0x%02X",resp.d.asBytes[9]);
 	PrintAndLog("      Version        : %d.%d",resp.d.asBytes[10], resp.d.asBytes[11]);
@@ -166,7 +168,7 @@ int CmdHF14ADesInfo(const char *Cmd){
 	PrintAndLog("      Protocol       : %s",GetProtocolStr(resp.d.asBytes[13]));
 	PrintAndLog("  -----------------------------------------------------------");
 	PrintAndLog("  Software Information");
-	PrintAndLog("      Vendor Id      : %s",GetVendorStr(resp.d.asBytes[14]));
+	PrintAndLog("      Vendor Id      : %s", getTagInfo(resp.d.asBytes[14]));
 	PrintAndLog("      Type           : 0x%02X",resp.d.asBytes[15]);
 	PrintAndLog("      Subtype        : 0x%02X",resp.d.asBytes[16]);
 	PrintAndLog("      Version        : %d.%d",resp.d.asBytes[17], resp.d.asBytes[18]);
@@ -209,17 +211,6 @@ int CmdHF14ADesInfo(const char *Cmd){
 	*/
 	
     return 1;
-}
-
-char * GetVendorStr( uint8_t id){
- 	static char buf[30];
-	char *retStr = buf;
-	
-	if ( id == 0x04 )
-		sprintf(retStr, "0x%02X (NXP)",id);
-	else 
-		sprintf(retStr,"0x%02X (Unknown)",id);
-	return buf;
 }
 
 /*

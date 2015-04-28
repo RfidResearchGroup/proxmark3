@@ -16,7 +16,6 @@ int CmdHF14ADesInfo(const char *Cmd);
 int CmdHF14ADesEnumApplications(const char *Cmd);
 
 char * GetCardSizeStr( uint8_t fsize );
-char * GetVendorStr( uint8_t id);
 char * GetProtocolStr(uint8_t id);
 void GetKeySettings( uint8_t * aid);
 
