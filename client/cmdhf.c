@@ -89,10 +89,26 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	case MIFARE_ULC_AUTH_2 : 		snprintf(exp,size,"AUTH_ANSW"); break;
 	case MIFARE_ULEV1_AUTH :		snprintf(exp,size,"PWD-AUTH"); break;
 
-	case MIFARE_ULEV1_FASTREAD :	snprintf(exp,size,"READ RANGE (%d-%d)",cmd[1],cmd[2]); break;
-	case MIFARE_ULEV1_WRITE :		snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); break;
-	case MIFARE_ULEV1_READ_CNT :	snprintf(exp,size,"READ CNT(%d)",cmd[1]); break;
-	case MIFARE_ULEV1_INCR_CNT :	snprintf(exp,size,"INC(%d)",cmd[1]); break;
+	case MIFARE_ULEV1_FASTREAD : {
+		if ( cmd[2] < 0x21)
+			snprintf(exp,size,"READ RANGE (%d-%d)",cmd[1],cmd[2]); 
+		break;
+	}
+	case MIFARE_ULEV1_WRITE : {
+		if ( cmd[1] < 0x21 )
+			snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); 
+		break;
+	}
+	case MIFARE_ULEV1_READ_CNT :{
+		if ( cmd[1] < 5 )
+			snprintf(exp,size,"READ CNT(%d)",cmd[1]);
+		break;
+	}
+	case MIFARE_ULEV1_INCR_CNT : {
+		if ( cmd[1] < 5 )
+		snprintf(exp,size,"INC(%d)",cmd[1]);
+		break;
+	}
 	case MIFARE_ULEV1_READSIG :		snprintf(exp,size,"READ_SIG"); break;
 	case MIFARE_ULEV1_CHECKTEAR : 	snprintf(exp,size,"CHK_TEARING(%d)",cmd[1]); break;
 	case MIFARE_ULEV1_VCSL :		snprintf(exp,size,"VCSL"); break;
