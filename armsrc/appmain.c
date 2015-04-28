@@ -842,9 +842,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MIFAREUC_SETPWD: 
 			MifareUSetPwd(c->arg[0], c->d.asBytes);
 			break;
-		//case CMD_MIFAREU_SETUID: 
-			//MifareUSetUid(c->arg[0], c->d.asBytes);
-			//break;		
 		case CMD_MIFARE_READSC:
 			MifareReadSector(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
