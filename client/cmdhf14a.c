@@ -163,16 +163,9 @@ int CmdHF14AReader(const char *Cmd)
 		return 0;
 	}
 
-
-	PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
 	PrintAndLog(" UID : %s", sprint_hex(card.uid, card.uidlen));
+	PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
 	PrintAndLog(" SAK : %02x [%d]", card.sak, resp.arg[0]);
-
-	// Double & triple sized UID, can be mapped to a manufacturer.
-	// HACK: does this apply for Ultralight cards?
-	if ( card.uidlen > 4 ) {
-		PrintAndLog("MANUFACTURER : %s", getTagInfo(card.uid[0]));
-	}
 
 	switch (card.sak) {
 		case 0x00: 
@@ -186,13 +179,13 @@ int CmdHF14AReader(const char *Cmd)
 		
 			uint8_t version[8] = {0x00};
 			memcpy(&version, resp.d.asBytes, resp.arg[0]);
-			uint8_t isOK  = resp.arg[0] & 0xff;
-			if ( isOK ){			
-				// size of tag, check version[4] == 0x0b == smaller.
-				PrintAndLog("TYPE : NXP MIFARE Ultralight EV1 %d bytes", (version[6] == 0xB) ? 48 : 128);
-			}
-			else {
-				PrintAndLog("TYPE : NXP MIFARE Ultralight | Ultralight C");
+			uint8_t len  = resp.arg[0] & 0xff;
+			switch ( len){
+				// todo, identify "Magic UL-C tags".  // they usually have a static nonce response to 0x1A command.
+				// UL-EV1, size, check version[6] == 0x0b (smaller)  0x0b * 4 == 48
+				case 0x0A:PrintAndLog("TYPE : NXP MIFARE Ultralight EV1 %d bytes", (version[6] == 0xB) ? 48 : 128);	break;				
+				case 0x01:PrintAndLog("TYPE : NXP MIFARE Ultralight C");break;
+				case 0x00:PrintAndLog("TYPE : NXP MIFARE Ultralight");break;
 			}
 			
 			break;
@@ -212,6 +205,12 @@ int CmdHF14AReader(const char *Cmd)
 		default: ;
 	}
 
+	// Double & triple sized UID, can be mapped to a manufacturer.
+	// HACK: does this apply for Ultralight cards?
+	if ( card.uidlen > 4 ) {
+		PrintAndLog("MANUFACTURER : %s", getTagInfo(card.uid[0]));
+	}
+	
 	// try to request ATS even if tag claims not to support it
 	if (select_status == 2) {
 		uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
