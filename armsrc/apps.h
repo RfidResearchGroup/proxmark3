@@ -165,7 +165,7 @@ void EPA_PACE_Collect_Nonce(UsbCommand * c);
 void ReaderMifare(bool first_try);
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
-void MifareUReadBlock(uint8_t arg0,uint8_t *datain);
+void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 void MifareUC_Auth1(uint8_t arg0, uint8_t *datain);
 void MifareUC_Auth2(uint32_t arg0, uint8_t *datain);
 void MifareUReadCard(uint8_t arg0, int Pages, uint8_t *datain);
@@ -184,6 +184,7 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);  // Work with "magic Chinese" card
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void MifareCIdent();  // is "magic chinese" card?
+void MifareUSetPwd(uint8_t arg0, uint8_t *datain);
 
 //desfire
 void Mifare_DES_Auth1(uint8_t arg0,uint8_t *datain);

@@ -378,6 +378,45 @@ void tdes_dec(void* out, void* in, const uint8_t* key){
 	des_dec(out, out, (uint8_t*)key + 0);
 }
 
+void tdes_2key_enc(void* out, const void* in, size_t length, const void* key){
+
+	if( length % 8 ) return; 
+	
+	uint8_t* tin = (uint8_t*) in;
+	uint8_t* tout = (uint8_t*) out;
+	
+	while( length > 0 )
+	{
+		des_enc(tout,  tin, (uint8_t*)key + 0);
+		des_dec(tout, tout, (uint8_t*)key + 8);
+		des_enc(tout, tout, (uint8_t*)key + 0);
+		
+		tin  += 8;
+		tout += 8;
+		length -= 8;
+	}
+}
+
+void tdes_2key_dec(void* out, const void* in, size_t length, const void* key){
+	
+	if( length % 8 ) return; 
+
+	uint8_t* tin = (uint8_t*) in;
+	uint8_t* tout = (uint8_t*) out;
+	
+	while( length > 0 )
+	{
+		des_dec(tout,  tin, (uint8_t*)key + 0);
+		des_enc(tout, tout, (uint8_t*)key + 8);
+		des_dec(tout, tout, (uint8_t*)key + 0);	 	 
+
+		tin  += 8;
+		tout += 8;
+		length -= 8;
+	}
+}
+
+
 /******************************************************************************/
 
 
