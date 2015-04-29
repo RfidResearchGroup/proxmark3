@@ -17,6 +17,9 @@ int CmdHF14AMfucAuth(const char *Cmd);
 int CmdHF14AMfUDump(const char *Cmd);
 void rol (uint8_t *data, const size_t len);
 
+uint8_t requestAuthentication( uint8_t *nonce);
+int try3DesAuthentication( uint8_t *key);
+
 int CmdHFMFUltra(const char *Cmd);
 int CmdHF14AMfUInfo(const char *Cmd);
 #endif

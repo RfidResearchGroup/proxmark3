@@ -13,14 +13,60 @@
 #include "cmdhf14a.h"
 #include "mifare.h"
 
-#define MAX_ULTRA_BLOCKS   0x0f
-#define MAX_ULTRAC_BLOCKS  0x2f
-//#define MAX_ULTRAC_BLOCKS  0x2c
+#define MAX_UL_BLOCKS   0x0f
+#define MAX_ULC_BLOCKS  0x2f
+#define MAX_ULEV1a_BLOCKS 0x0b;
+#define MAX_ULEV1b_BLOCKS 0x20;
 
+uint8_t default_3des_keys[7][16] = {
+		{ 0x42,0x52,0x45,0x41,0x4b,0x4d,0x45,0x49,0x46,0x59,0x4f,0x55,0x43,0x41,0x4e,0x21 },// 3des std key
+		{ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },// all zeroes
+		{ 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f },// 0x00-0x0F
+		{ 0x49,0x45,0x4D,0x4B,0x41,0x45,0x52,0x42,0x21,0x4E,0x41,0x43,0x55,0x4F,0x59,0x46 },// NFC-key
+		{ 0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01 },// all ones
+		{ 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF },// all FF
+		{ 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF }	// 11 22 33
+	};
+	
 static int CmdHelp(const char *Cmd);
+
+// return 1 if tag responded to 0x1A.
+uint8_t requestAuthentication( uint8_t* nonce){
+
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC ,2 ,0}};
+	c.d.asBytes[0] = 0x1A;
+	c.d.asBytes[1] = 0x00;
+	SendCommand(&c);
+	UsbCommand resp;	
+	WaitForResponse(CMD_ACK, &resp);  // skip select answer.
+
+	if ( !(resp.arg[0] & 0xff) ) 
+		return 0;
+	
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+	
+		if ( resp.arg[0] & 0xff ) {
+			memcpy(nonce, resp.d.asBytes+1, 8);
+			return 1;
+		}
+	} 
+	return 0;
+}
+
+typedef enum TAGTYPE_UL {
+	UNKNOWN		= 0x00,
+	UL			= 0x01,
+	UL_C 		= 0x02,
+	UL_EV1_48 	= 0x04,
+	UL_EV1_128 	= 0x08,
+	UL_MAGIC 	= 0x10,
+	UL_C_MAGIC 	= 0x14,
+} TagTypeUL_t;
 
 int CmdHF14AMfUInfo(const char *Cmd){
 
+	TagTypeUL_t tagtype = UNKNOWN;
+	
 	uint8_t datatemp[7] = {0x00};
 	uint8_t isOK  = 0;
 	uint8_t data[16] = {0x00};
@@ -45,9 +91,12 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	PrintAndLog("\n-- Tag Information ---------");
 	PrintAndLog("-------------------------------------------------------------");
 	
-	UsbCommand cmd = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC , 1, 0}};
-	cmd.d.asBytes[0] = 0x60;
-	SendCommand(&cmd);
+	c.cmd = CMD_READER_ISO_14443a;
+	c.arg[0] = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC;
+	c.arg[1] = 1;
+	c.arg[2] = 0;
+	c.d.asBytes[0] = 0x60;
+	SendCommand(&c);
 	WaitForResponse(CMD_ACK, &resp);
 	
 	if ( resp.arg[0] ) {
@@ -56,46 +105,93 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			uint8_t version[8] = {0,0,0,0,0,0,0,0};
 			memcpy(&version, resp.d.asBytes, sizeof(version));
 			uint8_t len  = resp.arg[0] & 0xff;
-			switch (len) {
-			// todo, identify "Magic UL-C tags".  // they usually have a static nonce response to 0x1A command.
-			// UL-EV1, size, check version[6] == 0x0b (smaller)  0x0b * 4 == 48
-				case 0x0A:PrintAndLog("        TYPE : NXP MIFARE Ultralight EV1 %d bytes", (version[6] == 0xB) ? 48 : 128);	break;				
-				case 0x01:PrintAndLog("        TYPE : NXP MIFARE Ultralight C");break;
-				case 0x00:PrintAndLog("        TYPE : NXP MIFARE Ultralight");break;
-			}
+			
+			if ( len == 0x0A && version[6] == 0x0B ) 
+				tagtype = UL_EV1_48;
+			else if ( len == 0x0A && version[6] != 0x0B ) 
+				tagtype = UL_EV1_128;
+			else if ( len == 0x01 )
+				tagtype = UL_C | UL_C_MAGIC;
+			else if ( len == 0x00 )
+				tagtype = UL | UL_MAGIC | UL_C_MAGIC;		
 		}
 	}
-	// TODO:
-	// Answers to 0x1A == UL-C
-	// NONCE seems to be fixed for my Magic UL-C.  How to detect a Magic UL?
-	// maybe read Block0, change 1 byte, write back, and see if it failes or not.  If magic,  revert changes made?
+	
+	// Magic UL-C, mine have a static nonce response to 0x1A command.
+	uint8_t nonce1[8] = {0,0,0,0,0,0,0,0};
+	uint8_t nonce2[8] = {0,0,0,0,0,0,0,0};
+	uint8_t status = requestAuthentication(nonce1);
+	if ( status ) {
+		requestAuthentication(nonce2);
+		if ( !memcmp(nonce1, nonce2, 8) )
+			tagtype = UL_C_MAGIC;
+	} else {
+		
+		//remove UL_C_MAGIC 
+		tagtype = tagtype & UL_C_MAGIC;
+		
+		// Magic Ultralight test here
+	}
+
+	switch(tagtype){
+		case UNKNOWN	: PrintAndLog("      TYPE : Unknown"); return 0;
+		case UL			: PrintAndLog("      TYPE : MIFARE Ultralight");break;
+		case UL_C		: PrintAndLog("      TYPE : MIFARE Ultralight C");break;
+		case UL_EV1_48	: PrintAndLog("      TYPE : MIFARE Ultralight EV1 48 bytes"); break;
+		case UL_EV1_128	: PrintAndLog("      TYPE : MIFARE Ultralight EV1 128 bytes"); break;
+		case UL_MAGIC	: PrintAndLog("      TYPE : MIFARE Ultralight (MAGIC)");break;
+		case UL_C_MAGIC	: PrintAndLog("      TYPE : MIFARE Ultralight-C (MAGIC)");break;
+	}
 	
 	// UID
 	memcpy( datatemp, data, 3);
 	memcpy( datatemp+3, data+4, 4);
 	
-	PrintAndLog("MANUFACTURER : %s", getTagInfo(datatemp[0]));
-	PrintAndLog("         UID : %s ", sprint_hex(datatemp, 7));
+	PrintAndLog("       UID : %s ", sprint_hex(datatemp, 7));
+	PrintAndLog("      UID[0] (Manufacturer Byte) = %02x, Manufacturer: %s",  datatemp[0], getTagInfo(datatemp[0]) );
+	
 	// BBC
 	// CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2 
 	int crc0 = 0x88 ^ data[0] ^ data[1] ^data[2];
 	if ( data[3] == crc0 )
-		PrintAndLog("        BCC0 : %02x - Ok", data[3]);
+		PrintAndLog("      BCC0 : %02x - Ok", data[3]);
 	else
-		PrintAndLog("        BCC0 : %02x - crc should be %02x", data[3], crc0);
+		PrintAndLog("      BCC0 : %02x - crc should be %02x", data[3], crc0);
 		
 	int crc1 = data[4] ^ data[5] ^ data[6] ^data[7];
 	if ( data[8] == crc1 )
-		PrintAndLog("        BCC1 : %02x - Ok", data[8]);
+		PrintAndLog("      BCC1 : %02x - Ok", data[8]);
 	else
-		PrintAndLog("        BCC1 : %02x - crc should be %02x", data[8], crc1 );
+		PrintAndLog("      BCC1 : %02x - crc should be %02x", data[8], crc1 );
 	
-	PrintAndLog("    Internal : %s ", sprint_hex(data + 9, 1));
+	PrintAndLog("  Internal : %s ", sprint_hex(data + 9, 1));
 	
 	memcpy(datatemp, data+10, 2);
-	PrintAndLog("        Lock : %s - %s", sprint_hex(datatemp, 2),printBits( 2, &datatemp) );
-	PrintAndLog("  OneTimePad : %s ", sprint_hex(data + 3*4, 4));
+	PrintAndLog("      Lock : %s - %s", sprint_hex(datatemp, 2),printBits( 2, &datatemp) );
+	PrintAndLog("OneTimePad : %s ", sprint_hex(data + 3*4, 4));
 	PrintAndLog("");
+	
+	
+	PrintAndLog("--- ");
+	if ( (tagtype & UL_C) == UL_C || (tagtype & UL_C_MAGIC) == UL_C_MAGIC	){
+		
+		PrintAndLog("Trying some default 3des keys");
+		uint8_t *key;
+		
+		for (uint8_t i = 0; i < 5; ++i ){
+			key = default_3des_keys[i];
+			if (try3DesAuthentication(key)){
+				PrintAndLog("Found default 3des key: %s", sprint_hex(key,16));
+				return 0;
+			}
+		}		
+	}
+	else if (
+		(tagtype & UL_EV1_48) == UL_EV1_48 ||
+		(tagtype & UL_EV1_128) == UL_EV1_128 
+		) {
+		PrintAndLog("Trying some known EV1 passwords.");
+	}
 	return 0;
 }
 
@@ -122,7 +218,7 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	
 	blockNo = param_get8(Cmd, 0);
 
-	if (blockNo > MAX_ULTRA_BLOCKS){
+	if (blockNo > MAX_UL_BLOCKS){
 		PrintAndLog("Error: Maximum number of blocks is 15 for Ultralight Cards!");
 		return 1;
 	}
@@ -185,7 +281,7 @@ int CmdHF14AMfURdBl(const char *Cmd){
 		
 	blockNo = param_get8(Cmd, 0);
 
-	if (blockNo > MAX_ULTRA_BLOCKS){
+	if (blockNo > MAX_UL_BLOCKS){
 	   PrintAndLog("Error: Maximum number of blocks is 15 for Ultralight");
 	   return 1;
 	}
@@ -394,30 +490,21 @@ void rol (uint8_t *data, const size_t len){
 //
 int CmdHF14AMfucAuth(const char *Cmd){
 
-	uint8_t default_keys[7][16] = {
-		{ 0x42,0x52,0x45,0x41,0x4b,0x4d,0x45,0x49,0x46,0x59,0x4f,0x55,0x43,0x41,0x4e,0x21 },// 3des std key
-		{ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },// all zeroes
-		{ 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f },// 0x00-0x0F
-		{ 0x49,0x45,0x4D,0x4B,0x41,0x45,0x52,0x42,0x21,0x4E,0x41,0x43,0x55,0x4F,0x59,0x46 },// NFC-key
-		{ 0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01 },// all ones
-		{ 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF },// all FF
-		{ 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF }	// 11 22 33
-	};
-
-	char cmdp = param_getchar(Cmd, 0);
-	
 	uint8_t keyNo = 0;
 	bool errors = false;
+
+	char cmdp = param_getchar(Cmd, 0);
+
 	//Change key to user defined one
 	if (cmdp == 'k' || cmdp == 'K'){
 		keyNo = param_get8(Cmd, 1);
-		if(keyNo > 6) errors = true;
+		if(keyNo > 6) 
+			errors = true;
 	}
 
-	if (cmdp == 'h' || cmdp == 'H') {
+	if (cmdp == 'h' || cmdp == 'H')
 		errors = true;
-	}
-
+	
 	if (errors) {
 		PrintAndLog("Usage:  hf mfu cauth k <key number>");
 		PrintAndLog("      0 (default): 3DES standard key");
@@ -432,109 +519,78 @@ int CmdHF14AMfucAuth(const char *Cmd){
 		return 0;
 	} 
 
-	uint8_t random_a[8]     = { 1,1,1,1,1,1,1,1 };
-	//uint8_t enc_random_a[8] = { 0 };
-	uint8_t random_b[8]     = { 0 };
-	uint8_t enc_random_b[8] = { 0 };
-	uint8_t random_a_and_b[16] = { 0 };
-	des3_context ctx        = { 0 };
-	uint8_t *key = default_keys[keyNo];
+	uint8_t *key = default_3des_keys[keyNo];
+	if (try3DesAuthentication(key))
+		PrintAndLog("Authentication successful. 3des key: %s",sprint_hex(key, 8));
+	else
+		PrintAndLog("Authentication failed");
+			
+	return 0;
+}
+
+int try3DesAuthentication( uint8_t *key){
+	
 	uint8_t blockNo = 0;
 	uint32_t cuid = 0;
 
-	//Auth1
+	des3_context ctx = { 0 };
+	
+	uint8_t random_a[8] = { 1,1,1,1,1,1,1,1 };
+	uint8_t random_b[8] = { 0 };
+	uint8_t enc_random_b[8] = { 0 };
+	uint8_t rnd_ab[16] = { 0 };
+	uint8_t iv[8] = { 0 };
+
 	UsbCommand c = {CMD_MIFAREUC_AUTH1, {blockNo}};
 	SendCommand(&c);
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-		uint8_t isOK  = resp.arg[0] & 0xff;
-		cuid  = resp.arg[1];
-		uint8_t * data= resp.d.asBytes;
-
-		if (isOK){
-			memcpy(enc_random_b,data+1,8);
-		} else {
-			PrintAndLog("Auth failed");
-			return 2;
-		}		
-	} else {
-		PrintAndLog("Command execute timeout");
-		return 1;
-	}
-	uint8_t iv[8]           = { 0 };
-
-	PrintAndLog("     RndA  :%s",sprint_hex(random_a, 8));
-	PrintAndLog("     enc(RndB):%s",sprint_hex(enc_random_b, 8));
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) 	return -1;
+	if ( !(resp.arg[0] & 0xff) ) return -2;
+	
+	cuid  = resp.arg[1];	
+	memcpy(enc_random_b,resp.d.asBytes+1,8);
 
 	des3_set2key_dec(&ctx, key);
-
-	des3_crypt_cbc(&ctx      // des3_context *ctx
-		, DES_DECRYPT        // int mode
-		, sizeof(random_b)   // size_t length
-		, iv                 // unsigned char iv[8]
-		, enc_random_b       // const unsigned char *input
-		, random_b           // unsigned char *output
-		);
-
-	PrintAndLog("     RndB:%s",sprint_hex(random_b, 8));
+	// context, mode, length, IV, input, output 
+	des3_crypt_cbc( &ctx, DES_DECRYPT, sizeof(random_b), iv , enc_random_b , random_b);
 
 	rol(random_b,8);
-	memcpy(random_a_and_b  ,random_a,8);
-	memcpy(random_a_and_b+8,random_b,8);
-	
-	PrintAndLog("     A+B:%s",sprint_hex(random_a_and_b, 16));
+	memcpy(rnd_ab  ,random_a,8);
+	memcpy(rnd_ab+8,random_b,8);
 
 	des3_set2key_enc(&ctx, key);
-
-	des3_crypt_cbc(&ctx          // des3_context *ctx
-		, DES_ENCRYPT            // int mode
-		, sizeof(random_a_and_b)   // size_t length
-		, enc_random_b           // unsigned char iv[8]
-		, random_a_and_b         // const unsigned char *input
-		, random_a_and_b         // unsigned char *output
-		);
-
-	PrintAndLog("enc(A+B):%s",sprint_hex(random_a_and_b, 16));
+	// context, mode, length, IV, input, output 
+	des3_crypt_cbc(&ctx, DES_ENCRYPT, sizeof(rnd_ab), enc_random_b, rnd_ab, rnd_ab);
 
 	//Auth2
-	UsbCommand d = {CMD_MIFAREUC_AUTH2, {cuid}};
-	memcpy(d.d.asBytes,random_a_and_b, 16);
-	SendCommand(&d);
+	c.cmd = CMD_MIFAREUC_AUTH2;
+	c.arg[0] = cuid;
+	memcpy(c.d.asBytes, rnd_ab, 16);
+	SendCommand(&c);
 
-	UsbCommand respb;
-	if (WaitForResponseTimeout(CMD_ACK,&respb,1500)) {
-		uint8_t  isOK  = respb.arg[0] & 0xff;
-		uint8_t * data2= respb.d.asBytes;
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;				
+	if ( !(resp.arg[0] & 0xff)) return -2;
+	
+	uint8_t enc_resp[8] = { 0 };
+	uint8_t resp_random_a[8] = { 0 };
+	memcpy(enc_resp, resp.d.asBytes+1, 8);
 
-		if (isOK){
-			PrintAndLog("enc(RndA'):%s", sprint_hex(data2+1, 8));
-			
-			uint8_t foo[8] = { 0 };
-			uint8_t bar[8] = { 0 };
-			memcpy(foo, data2+1, 8);
-			des3_set2key_dec(&ctx, key);
+	des3_set2key_dec(&ctx, key);
+	// context, mode, length, IV, input, output
+	des3_crypt_cbc( &ctx, DES_DECRYPT, 8, enc_random_b, enc_resp, resp_random_a);
 
-			des3_crypt_cbc(&ctx    // des3_context *ctx
-				, DES_DECRYPT      // int mode
-				, 8      // size_t length
-				, enc_random_b     // unsigned char iv[8]
-				, foo           // const unsigned char *input
-				, bar   // unsigned char *output
-			);
-
-			PrintAndLog("--> : %s  : <-- Should be equal to our RndA",sprint_hex(bar, 8));
-
-			
-		} else {
-			return 2;
-		}
-		
-	} else {
-		PrintAndLog("Command execute timeout");
-		return 1;
-	} 
+	if ( !memcmp(resp_random_a, random_a, 8))
+		return 1;	
 	return 0;
+	
+	//PrintAndLog("      RndA  :%s", sprint_hex(random_a, 8));
+	//PrintAndLog("  enc(RndB) :%s", sprint_hex(enc_random_b, 8));
+	//PrintAndLog("       RndB :%s", sprint_hex(random_b, 8));
+	//PrintAndLog("        A+B :%s", sprint_hex(random_a_and_b, 16));
+	//PrintAndLog("   enc(A+B) :%s", sprint_hex(random_a_and_b, 16));
+	//PrintAndLog(" enc(RndA') :%s", sprint_hex(data2+1, 8));
 }
+
 /**
 A test function to validate that the polarssl-function works the same 
 was as the openssl-implementation. 
@@ -656,7 +712,7 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
 		return 1;
 	}
 	
-	if (blockNo > MAX_ULTRAC_BLOCKS ){
+	if (blockNo > MAX_ULC_BLOCKS ){
 		PrintAndLog("Error: Maximum number of blocks is 47 for Ultralight-C");
 		return 1;
 	} 
@@ -718,7 +774,7 @@ int CmdHF14AMfUCWrBl(const char *Cmd){
 	}
 	
 	blockNo = param_get8(Cmd, 0);
-	if (blockNo > MAX_ULTRAC_BLOCKS ){
+	if (blockNo > MAX_ULC_BLOCKS ){
 		PrintAndLog("Error: Maximum number of blocks is 47 for Ultralight-C Cards!");
 		return 1;
 	}
@@ -1000,10 +1056,9 @@ static command_t CommandTable[] =
 	{"crdbl",	CmdHF14AMfUCRdBl,	0,"Read block  - MIFARE Ultralight C"},
 	{"cwrbl",	CmdHF14AMfUCWrBl,	0,"Write block - MIFARE Ultralight C"},
 	{"cauth",	CmdHF14AMfucAuth,	0,"Ultralight C Authentication"},
-	//{"testdes", CmdTestDES ,        1, "Test DES"},
-	{"setpwd", CmdHF14AMfucSetPwd , 1, "Set 3des password [Ultralight-C only]"},
-	{"setuid", CmdHF14AMfucSetUid , 1, "Set UID"},
-	{"gen", CmdHF14AMfuGenDiverseKeys , 1, "Generate 3des mifare diversified keys"},
+	{"setpwd",	CmdHF14AMfucSetPwd , 1, "Set 3des password [Ultralight-C only]"},
+	{"setuid",	CmdHF14AMfucSetUid , 1, "Set UID"},
+	{"gen",		CmdHF14AMfuGenDiverseKeys , 1, "Generate 3des mifare diversified keys"},
 	{NULL, NULL, 0, NULL}
 };
 
