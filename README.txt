@@ -40,7 +40,7 @@ your operating system. Please refer to the Wiki for details.
 
 OBTAINING HARDWARE:
 
-The Proxmark 3 is available for purcahse (assembled and tested) from the
+The Proxmark 3 is available for purchase (assembled and tested) from the
 following locations:
 
    * http://proxmark3.com/
