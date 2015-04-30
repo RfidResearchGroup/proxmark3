@@ -540,8 +540,8 @@ int CmdHF14AMfucAuth(const char *Cmd){
 	} 
 
 	uint8_t *key = default_3des_keys[keyNo];
-	if (try3DesAuthentication(key))
-		PrintAndLog("Authentication successful. 3des key: %s",sprint_hex(key, 8));
+	if (try3DesAuthentication(key)>0)
+		PrintAndLog("Authentication successful. 3des key: %s",sprint_hex(key, 16));
 	else
 		PrintAndLog("Authentication failed");
 			
