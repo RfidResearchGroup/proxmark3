@@ -19,6 +19,9 @@ void rol (uint8_t *data, const size_t len);
 
 uint8_t requestAuthentication( uint8_t *nonce);
 int try3DesAuthentication( uint8_t *key);
+uint8_t GetHF14AMfU_Type(void);
+
+int usage_hf_mfu_dump(void);
 
 int CmdHFMFUltra(const char *Cmd);
 int CmdHF14AMfUInfo(const char *Cmd);
