@@ -59,18 +59,88 @@ typedef enum TAGTYPE_UL {
 	UL_C 		= 0x02,
 	UL_EV1_48 	= 0x04,
 	UL_EV1_128 	= 0x08,
-	UL_MAGIC 	= 0x10,
-	UL_C_MAGIC 	= 0x14,
+	MAGIC		= 0x10,
+	UL_MAGIC	= UL | MAGIC,
+	UL_C_MAGIC	= UL_C | MAGIC,
+	UL_ERROR	= 0xFF,
 } TagTypeUL_t;
+
+uint8_t GetHF14AMfU_Type(){
+
+	TagTypeUL_t tagtype = UNKNOWN;
+	iso14a_card_select_t card;
+
+	// select and run 0x60 (GET_VERSION - EV1 command)
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC, 1, 0}};
+	c.d.asBytes[0] = 0x60;
+	SendCommand(&c);
+	UsbCommand resp;
+	WaitForResponse(CMD_ACK, &resp);
+
+	if ( resp.arg[0] == 0 ) return UL_ERROR;
+		
+	memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
+	
+	// Ultralight - ATQA / SAK 
+	if ( card.atqa[1] != 0x00 && card.atqa[0] != 0x44 && card.sak != 0x00 ) return UL_ERROR;
+
+	// EV1 GetVersion
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+
+		uint8_t version[8] = {0,0,0,0,0,0,0,0};
+		memcpy(&version, resp.d.asBytes, sizeof(version));
+		uint8_t len  = resp.arg[0] & 0xff;
+		
+		if ( len == 0x0A && version[6] == 0x0B ) 
+			tagtype = UL_EV1_48;
+		else if ( len == 0x0A && version[6] != 0x0B ) 
+			tagtype = UL_EV1_128;
+		else if ( len == 0x01 )
+			tagtype = UL_C; 
+		else if ( len == 0x00 )
+			tagtype = UL;
+	}
+	
+	// Magic UL-C, mine have a static nonce response to 0x1A command.
+	uint8_t nonce1[8] = {0,0,0,0,0,0,0,0};
+	uint8_t nonce2[8] = {0,0,0,0,0,0,0,0};
+	uint8_t status = requestAuthentication(nonce1);
+	if ( status ) {
+		requestAuthentication(nonce2);
+		if ( !memcmp(nonce1, nonce2, 8) ){
+			tagtype = UL_C_MAGIC;
+		}
+	} else {
+		//TODO: Magic Ultralight test here
+	}
+	return tagtype;
+}	
 
 int CmdHF14AMfUInfo(const char *Cmd){
 
-	TagTypeUL_t tagtype = UNKNOWN;
-	
 	uint8_t datatemp[7] = {0x00};
 	uint8_t isOK  = 0;
 	uint8_t data[16] = {0x00};
+	uint8_t *key;
+	
+	TagTypeUL_t tagtype = GetHF14AMfU_Type();
+	if (tagtype == UL_ERROR) return -1;
+	
+	PrintAndLog("\n-- Tag Information ---------");
+	PrintAndLog("-------------------------------------------------------------");
 
+	if ( tagtype & UL )	
+		PrintAndLog("      TYPE : MIFARE Ultralight %s", (tagtype & MAGIC)?"(magic)":"");
+	else if ( tagtype & UL_C)
+		PrintAndLog("      TYPE : MIFARE Ultralight C %s", (tagtype & MAGIC)?"(magic)":"" );
+	else if ( tagtype & UL_EV1_48)
+		PrintAndLog("      TYPE : MIFARE Ultralight EV1 48 bytes"); 
+	else if ( tagtype & UL_EV1_128)	
+		PrintAndLog("      TYPE : MIFARE Ultralight EV1 128 bytes");
+	else 
+		PrintAndLog("      TYPE : Unknown %x",tagtype);
+
+	// read pages 0,1,2,4
 	UsbCommand c = {CMD_MIFAREU_READCARD, {0, 4}};
 	SendCommand(&c);
 	UsbCommand resp;
@@ -86,61 +156,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	} else {
 		PrintAndLog("Command execute timed out");
 		return -1;
-	}
-
-	PrintAndLog("\n-- Tag Information ---------");
-	PrintAndLog("-------------------------------------------------------------");
-	
-	c.cmd = CMD_READER_ISO_14443a;
-	c.arg[0] = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC;
-	c.arg[1] = 1;
-	c.arg[2] = 0;
-	c.d.asBytes[0] = 0x60;
-	SendCommand(&c);
-	WaitForResponse(CMD_ACK, &resp);
-	
-	if ( resp.arg[0] ) {
-		if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-
-			uint8_t version[8] = {0,0,0,0,0,0,0,0};
-			memcpy(&version, resp.d.asBytes, sizeof(version));
-			uint8_t len  = resp.arg[0] & 0xff;
-			
-			if ( len == 0x0A && version[6] == 0x0B ) 
-				tagtype = UL_EV1_48;
-			else if ( len == 0x0A && version[6] != 0x0B ) 
-				tagtype = UL_EV1_128;
-			else if ( len == 0x01 )
-				tagtype = UL_C | UL_C_MAGIC;
-			else if ( len == 0x00 )
-				tagtype = UL | UL_MAGIC | UL_C_MAGIC;		
-		}
-	}
-	
-	// Magic UL-C, mine have a static nonce response to 0x1A command.
-	uint8_t nonce1[8] = {0,0,0,0,0,0,0,0};
-	uint8_t nonce2[8] = {0,0,0,0,0,0,0,0};
-	uint8_t status = requestAuthentication(nonce1);
-	if ( status ) {
-		requestAuthentication(nonce2);
-		if ( !memcmp(nonce1, nonce2, 8) )
-			tagtype = UL_C_MAGIC;
-	} else {
-		
-		//remove UL_C_MAGIC 
-		tagtype = tagtype & UL_C_MAGIC;
-		
-		// Magic Ultralight test here
-	}
-
-	switch(tagtype){
-		case UNKNOWN	: PrintAndLog("      TYPE : Unknown"); return 0;
-		case UL			: PrintAndLog("      TYPE : MIFARE Ultralight");break;
-		case UL_C		: PrintAndLog("      TYPE : MIFARE Ultralight C");break;
-		case UL_EV1_48	: PrintAndLog("      TYPE : MIFARE Ultralight EV1 48 bytes"); break;
-		case UL_EV1_128	: PrintAndLog("      TYPE : MIFARE Ultralight EV1 128 bytes"); break;
-		case UL_MAGIC	: PrintAndLog("      TYPE : MIFARE Ultralight (MAGIC)");break;
-		case UL_C_MAGIC	: PrintAndLog("      TYPE : MIFARE Ultralight-C (MAGIC)");break;
 	}
 	
 	// UID
@@ -173,11 +188,10 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	
 	
 	PrintAndLog("--- ");
-	if ( (tagtype & UL_C) == UL_C || (tagtype & UL_C_MAGIC) == UL_C_MAGIC	){
+	if ( tagtype & UL_C ) {
 		
 		PrintAndLog("Trying some default 3des keys");
-		uint8_t *key;
-		
+
 		for (uint8_t i = 0; i < 5; ++i ){
 			key = default_3des_keys[i];
 			if (try3DesAuthentication(key)){
@@ -186,12 +200,17 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			}
 		}		
 	}
-	else if (
-		(tagtype & UL_EV1_48) == UL_EV1_48 ||
-		(tagtype & UL_EV1_128) == UL_EV1_128 
-		) {
-		PrintAndLog("Trying some known EV1 passwords.");
+	else if ((tagtype & (UL_EV1_48 || UL_EV1_128))) {
+		//TODO
+		// --problem, there is a failed pwd tries counter in UL-EV1
+		//PrintAndLog("Trying some known EV1 passwords.");
 	}
+	
+	// disconnect
+	// c.arg[0] = 0;
+	// c.arg[1] = 0;
+	// c.arg[2] = 0;
+	// SendCommand(&c);
 	return 0;
 }
 
@@ -306,66 +325,84 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	return 0;
 }
 
+
+int usage_hf_mfu_dump()
+{
+	PrintAndLog("Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
+	PrintAndLog("and saves binary dump into the file `filename.bin` or `cardUID.bin`");
+	PrintAndLog("It autodetects card type.\n");	
+	PrintAndLog("Usage:  hf mfu dump <filename w/o .bin>");
+	PrintAndLog("   sample : hf mfu dump");
+	PrintAndLog("          : hf mfu dump myfile");
+	PrintAndLog("          : hf mfu dump 1 myfile");
+	return 0;
+}
 //
-//  Mifare Ultralight / Ultralight-C;  Read and Dump Card Contents
+//  Mifare Ultralight / Ultralight-C / Ultralight-EV1
+//  Read and Dump Card Contents,  using auto detection of tag size.
 //
+//  TODO: take a password to read UL-C / UL-EV1 tags.
 int CmdHF14AMfUDump(const char *Cmd){
 
+	char cmdp = param_getchar(Cmd, 0);
+	if (cmdp == 'h' || cmdp == 'H')	
+		return usage_hf_mfu_dump();
+	
 	FILE *fout;
 	char filename[FILE_PATH_SIZE] = {0x00};
 	char * fnameptr = filename;
+	char* str = "Dumping Ultralight%s%s Card Data...";	
 	
 	uint8_t *lockbytes_t = NULL;
 	uint8_t lockbytes[2] = {0x00};
-	
 	uint8_t *lockbytes_t2 = NULL;
 	uint8_t lockbytes2[2] = {0x00};
-
 	bool bit[16]  = {0x00};
 	bool bit2[16] = {0x00};
+	uint8_t data[176] = {0x00};
 	
-	int i;
-	uint8_t BlockNo      = 0;
-	int Pages            = 16;
-
-	bool tmplockbit		 = false;
-	uint8_t isOK         = 0;
-	uint8_t *data       = NULL;
-
-	char cmdp = param_getchar(Cmd, 0);
+	int i = 0;
+	int Pages = 16;
+	bool tmplockbit = false;
 	
-	if (cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Reads all pages from Mifare Ultralight or Ultralight-C tag.");
-		PrintAndLog("It saves binary dump into the file `filename.bin` or `cardUID.bin`");		
-		PrintAndLog("Usage:  hf mfu dump <c> <filename w/o .bin>");
-		PrintAndLog("     <c>  optional cardtype c == Ultralight-C, Defaults to Ultralight");
-		PrintAndLog("     sample: hf mfu dump");
-		PrintAndLog("           : hf mfu dump myfile");
-		PrintAndLog("           : hf mfu dump c myfile");
-		return 0;
+	TagTypeUL_t tagtype = GetHF14AMfU_Type();
+	if (tagtype == UL_ERROR) return -1;
+	
+	if ( tagtype & UL ) {
+		Pages = 16;
+		PrintAndLog(str,"", (tagtype & MAGIC)?" (magic)":"" );
 	}
-
-	// UL or UL-C?
-	Pages = (cmdp == 'c' || cmdp == 'C') ? 44 : 16;
+	else if ( tagtype & UL_C ) {
+		Pages = 44;
+		PrintAndLog(str,"-C", (tagtype & MAGIC)?" (magic)":"" );
+	}
+	else if ( tagtype & UL_EV1_48 ) {
+		Pages = 18; 
+		PrintAndLog(str," EV1_48","");
+	}
+	else if ( tagtype & UL_EV1_128 ) {
+		Pages = 32; 
+		PrintAndLog(str," EV1_128","");
+	} else {
+		Pages = 16;
+		PrintAndLog("Dumping unknown Ultralight, using default values.");
+	}
 	
-	PrintAndLog("Dumping Ultralight%s Card Data...", (Pages ==16)?"":"-C");
-		
-	UsbCommand c = {CMD_MIFAREU_READCARD, {BlockNo,Pages}};
+	UsbCommand c = {CMD_MIFAREU_READCARD, {0,Pages}};
 	SendCommand(&c);
 	UsbCommand resp;
 
-	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-		isOK  = resp.arg[0] & 0xff;
-		if (!isOK) {                
-			PrintAndLog("Command error");
-			return 0;
-		}
-		data  = resp.d.asBytes;
-	} else {
+	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
 		PrintAndLog("Command execute time-out");
 		return 0;
 	}
 		
+	if (!resp.arg[0] ) {                
+		PrintAndLog("Read command failed");
+		return 0;
+	}		
+	memcpy(data, resp.d.asBytes, sizeof(data));
+	
 	// Load lock bytes.
 	int j = 0;
 	
@@ -441,25 +478,16 @@ int CmdHF14AMfUDump(const char *Cmd){
 		PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),tmplockbit);
 	}  
 	
-	int len = 0;
-	if ( Pages == 16 )
-		len = param_getstr(Cmd,0,filename);
-	else
-		len = param_getstr(Cmd,1,filename);
+	int len = param_getstr(Cmd,0,filename);
+	if (len > FILE_PATH_SIZE-5) 
+		len = FILE_PATH_SIZE-5;
 
-	if (len > FILE_PATH_SIZE-5) len = FILE_PATH_SIZE-5;
-
-	// user supplied filename?
 	if (len < 1) {
-	
-		// UID = data 0-1-2 4-5-6-7  (skips a beat)
 		sprintf(fnameptr,"%02X%02X%02X%02X%02X%02X%02X.bin",
-			data[0],data[1], data[2], data[4],data[5],data[6], data[7]);
-
+			data[0], data[1], data[2], data[4], data[5], data[6], data[7]);
 	} else {
 		sprintf(fnameptr + len," .bin");
 	}
-
 
 	if ((fout = fopen(filename,"wb")) == NULL) { 
 		PrintAndLog("Could not create file name %s", filename);
@@ -825,8 +853,7 @@ int CmdHF14AMfUCWrBl(const char *Cmd){
 //
 int CmdHF14AMfucSetPwd(const char *Cmd){
 
-	uint8_t pwd[16] = {0x00};
-	
+	uint8_t pwd[16] = {0x00};	
 	char cmdp = param_getchar(Cmd, 0);
 	
 	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') {	
@@ -859,14 +886,13 @@ int CmdHF14AMfucSetPwd(const char *Cmd){
 	}
 	else {
 		PrintAndLog("command execution time out");
-		return 1;
 	}
 	
 	return 0;
 }
 
 //
-// Mifare Ultraligh - Set UID
+// Magic UL / UL-C tags  - Set UID
 //
 int CmdHF14AMfucSetUid(const char *Cmd){
 
@@ -1042,22 +1068,19 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	// return;
 // }
 
-//------------------------------------
-// Menu Stuff
-//------------------------------------
 static command_t CommandTable[] =
 {
-	{"help",	CmdHelp,			1,"This help"},
-	{"dbg",		CmdHF14AMfDbg,		0,"Set default debug mode"},
-	{"info",	CmdHF14AMfUInfo,	0,"Taginfo"},
-	{"dump",	CmdHF14AMfUDump,	0,"Dump MIFARE Ultralight / Ultralight-C tag to binary file"},
-	{"rdbl",	CmdHF14AMfURdBl,	0,"Read block  - MIFARE Ultralight"},
-	{"wrbl",	CmdHF14AMfUWrBl,	0,"Write block - MIFARE Ultralight"},    
-	{"crdbl",	CmdHF14AMfUCRdBl,	0,"Read block  - MIFARE Ultralight C"},
-	{"cwrbl",	CmdHF14AMfUCWrBl,	0,"Write block - MIFARE Ultralight C"},
-	{"cauth",	CmdHF14AMfucAuth,	0,"Ultralight C Authentication"},
-	{"setpwd",	CmdHF14AMfucSetPwd , 1, "Set 3des password [Ultralight-C only]"},
-	{"setuid",	CmdHF14AMfucSetUid , 1, "Set UID"},
+	{"help",	CmdHelp,			1, "This help"},
+	{"dbg",		CmdHF14AMfDbg,		0, "Set default debug mode"},
+	{"info",	CmdHF14AMfUInfo,	0, "Tag information"},
+	{"dump",	CmdHF14AMfUDump,	0, "Dump Ultralight / Ultralight-C tag to binary file"},
+	{"rdbl",	CmdHF14AMfURdBl,	0, "Read block  - Ultralight"},
+	{"wrbl",	CmdHF14AMfUWrBl,	0, "Write block - Ultralight"},    
+	{"crdbl",	CmdHF14AMfUCRdBl,	0, "Read block        - Ultralight C"},
+	{"cwrbl",	CmdHF14AMfUCWrBl,	0, "Write block       - Ultralight C"},
+	{"cauth",	CmdHF14AMfucAuth,	0, "Authentication    - Ultralight C"},
+	{"setpwd",	CmdHF14AMfucSetPwd, 1, "Set 3des password - Ultralight-C"},
+	{"setuid",	CmdHF14AMfucSetUid, 1, "Set UID - MAGIC tags only"},
 	{"gen",		CmdHF14AMfuGenDiverseKeys , 1, "Generate 3des mifare diversified keys"},
 	{NULL, NULL, 0, NULL}
 };
