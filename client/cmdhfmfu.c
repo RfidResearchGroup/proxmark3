@@ -65,7 +65,7 @@ typedef enum TAGTYPE_UL {
 	UL_ERROR	= 0xFF,
 } TagTypeUL_t;
 
-uint8_t GetHF14AMfU_Type(){
+uint8_t GetHF14AMfU_Type(void){
 
 	TagTypeUL_t tagtype = UNKNOWN;
 	iso14a_card_select_t card;
@@ -163,7 +163,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	memcpy( datatemp+3, data+4, 4);
 	
 	PrintAndLog("       UID : %s ", sprint_hex(datatemp, 7));
-	PrintAndLog("      UID[0] (Manufacturer Byte) = %02x, Manufacturer: %s",  datatemp[0], getTagInfo(datatemp[0]) );
+	PrintAndLog("    UID[0] : (Manufacturer Byte) = %02x, Manufacturer: %s",  datatemp[0], getTagInfo(datatemp[0]) );
 	
 	// BBC
 	// CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2 
@@ -188,7 +188,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	
 	
 	PrintAndLog("--- ");
-	if ( tagtype & UL_C ) {
+	if ((tagtype & UL_C)){
 		
 		PrintAndLog("Trying some default 3des keys");
 
@@ -200,8 +200,8 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			}
 		}		
 	}
-	else if ((tagtype & (UL_EV1_48 || UL_EV1_128))) {
-		//TODO
+	else if ((tagtype & (UL_EV1_48 | UL_EV1_128))) {
+		//********** TODO ********************************
 		// --problem, there is a failed pwd tries counter in UL-EV1
 		//PrintAndLog("Trying some known EV1 passwords.");
 	}
@@ -325,8 +325,7 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	return 0;
 }
 
-
-int usage_hf_mfu_dump()
+int usage_hf_mfu_dump(void)
 {
 	PrintAndLog("Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
 	PrintAndLog("and saves binary dump into the file `filename.bin` or `cardUID.bin`");
@@ -415,7 +414,6 @@ int CmdHF14AMfUDump(const char *Cmd){
 	
 	// Load bottom lockbytes if available
 	if ( Pages == 44 ) {
-		
 		lockbytes_t2 = data + (40*4);
 		lockbytes2[0] = lockbytes_t2[2];
 		lockbytes2[1] = lockbytes_t2[3];
@@ -425,12 +423,10 @@ int CmdHF14AMfUDump(const char *Cmd){
 	}
 
 	for (i = 0; i < Pages; ++i) {
-		
 		if ( i < 3 ) {
 			PrintAndLog("Block %02x:%s ", i,sprint_hex(data + i * 4, 4));
 			continue;
 		}
-
 		switch(i){
 			case 3: tmplockbit = bit[4]; break;
 			case 4:	tmplockbit = bit[3]; break;
@@ -548,8 +544,8 @@ int CmdHF14AMfucAuth(const char *Cmd){
 	} 
 
 	uint8_t *key = default_3des_keys[keyNo];
-	if (try3DesAuthentication(key))
-		PrintAndLog("Authentication successful. 3des key: %s",sprint_hex(key, 8));
+	if (try3DesAuthentication(key)>0)
+		PrintAndLog("Authentication successful. 3des key: %s",sprint_hex(key, 16));
 	else
 		PrintAndLog("Authentication failed");
 			
@@ -585,7 +581,12 @@ int try3DesAuthentication( uint8_t *key){
 	rol(random_b,8);
 	memcpy(rnd_ab  ,random_a,8);
 	memcpy(rnd_ab+8,random_b,8);
-
+	
+	//PrintAndLog("      RndA  :%s", sprint_hex(random_a, 8));
+	//PrintAndLog("  enc(RndB) :%s", sprint_hex(enc_random_b, 8));
+	//PrintAndLog("       RndB :%s", sprint_hex(random_b, 8));
+	//PrintAndLog("        A+B :%s", sprint_hex(rnd_ab, 16));
+	
 	des3_set2key_enc(&ctx, key);
 	// context, mode, length, IV, input, output 
 	des3_crypt_cbc(&ctx, DES_ENCRYPT, sizeof(rnd_ab), enc_random_b, rnd_ab, rnd_ab);
@@ -607,16 +608,12 @@ int try3DesAuthentication( uint8_t *key){
 	// context, mode, length, IV, input, output
 	des3_crypt_cbc( &ctx, DES_DECRYPT, 8, enc_random_b, enc_resp, resp_random_a);
 
+	//PrintAndLog("   enc(A+B) :%s", sprint_hex(rnd_ab, 16));
+	//PrintAndLog(" enc(RndA') :%s", sprint_hex(enc_resp, 8));
+
 	if ( !memcmp(resp_random_a, random_a, 8))
 		return 1;	
 	return 0;
-	
-	//PrintAndLog("      RndA  :%s", sprint_hex(random_a, 8));
-	//PrintAndLog("  enc(RndB) :%s", sprint_hex(enc_random_b, 8));
-	//PrintAndLog("       RndB :%s", sprint_hex(random_b, 8));
-	//PrintAndLog("        A+B :%s", sprint_hex(random_a_and_b, 16));
-	//PrintAndLog("   enc(A+B) :%s", sprint_hex(random_a_and_b, 16));
-	//PrintAndLog(" enc(RndA') :%s", sprint_hex(data2+1, 8));
 }
 
 /**
@@ -730,7 +727,7 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
 		PrintAndLog("Usage:  hf mfu crdbl  <block number> <password>");
 		PrintAndLog("");
 		PrintAndLog("sample: hf mfu crdbl 0");
-		PrintAndLog("        hf mfu crdbl 0 112233445566778899AABBCCDDEEFF");
+		PrintAndLog("        hf mfu crdbl 0 00112233445566778899AABBCCDDEEFF");
 		return 0;
 	}       
 		
@@ -854,6 +851,7 @@ int CmdHF14AMfUCWrBl(const char *Cmd){
 int CmdHF14AMfucSetPwd(const char *Cmd){
 
 	uint8_t pwd[16] = {0x00};	
+	
 	char cmdp = param_getchar(Cmd, 0);
 	
 	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') {	
@@ -886,6 +884,7 @@ int CmdHF14AMfucSetPwd(const char *Cmd){
 	}
 	else {
 		PrintAndLog("command execution time out");
+		return 1;
 	}
 	
 	return 0;
