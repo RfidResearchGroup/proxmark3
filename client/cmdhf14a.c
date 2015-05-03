@@ -177,8 +177,8 @@ int CmdHF14AReader(const char *Cmd)
 			SendCommand(&c);
 			WaitForResponse(CMD_ACK,&resp);
 
-			uint8_t version[8] = {0,0,0,0,0,0,0,0};
-			memcpy(&version, resp.d.asBytes, resp.arg[0]);
+			uint8_t version[10] = {0};
+			memcpy(version, resp.d.asBytes, resp.arg[0] < sizeof(version) ? resp.arg[0] : sizeof(version));
 			uint8_t len = resp.arg[0] & 0xff;
 			switch ( len ){
 				// todo, identify "Magic UL-C tags". // they usually have a static nonce response to 0x1A command.
@@ -221,7 +221,7 @@ int CmdHF14AReader(const char *Cmd)
 		SendCommand(&c);
 		WaitForResponse(CMD_ACK,&resp);
 		
-	    memcpy(&card.ats, resp.d.asBytes, resp.arg[0]);
+	    memcpy(card.ats, resp.d.asBytes, resp.arg[0]);
 		card.ats_len = resp.arg[0];				// note: ats_len includes CRC Bytes
 	} 
 
