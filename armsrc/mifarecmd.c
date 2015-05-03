@@ -171,13 +171,12 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 		// Dbprintf("KEY: %02x %02x %02x %02x %02x %02x %02x %02x", key[0],key[1],key[2],key[3],key[4],key[5],key[6],key[7] );
 		// Dbprintf("KEY: %02x %02x %02x %02x %02x %02x %02x %02x", key[8],key[9],key[10],key[11],key[12],key[13],key[14],key[15] );
 
-		uint8_t a[8] = {1,1,1,1,1,1,1,1 };
-		uint8_t b[8] = {0x00};
-		uint8_t enc_b[8] = {0x00};
-		uint8_t ab[16] = {0x00};
-		uint8_t enc_ab[16] = {0x00};
-		uint8_t enc_key[8] = {0x00};
-		
+		uint8_t random_a[8] = {1,1,1,1,1,1,1,1 };
+		uint8_t random_b[8] = {0x00};
+		uint8_t enc_random_b[8] = {0x00};
+		uint8_t rnd_ab[16] = {0x00};
+		uint8_t IV[8] = {0x00};
+
 		uint16_t len;
 		uint8_t receivedAnswer[MAX_FRAME_SIZE];
 		uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
@@ -188,69 +187,93 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 			OnError(1);
 			return;
 		}
-
+	
 		// tag nonce.
-		memcpy(enc_b,receivedAnswer+1,8);
+		memcpy(enc_random_b,receivedAnswer+1,8);
 
 		// decrypt nonce.
-		tdes_2key_dec(b, enc_b, 8, key );
+		tdes_2key_dec(random_b, enc_random_b, sizeof(random_b), key, IV );
 
-		Dbprintf("enc_B: %02x %02x %02x %02x %02x %02x %02x %02x", enc_b[0],enc_b[1],enc_b[2],enc_b[3],enc_b[4],enc_b[5],enc_b[6],enc_b[7] );
-		Dbprintf("    B: %02x %02x %02x %02x %02x %02x %02x %02x", b[0],b[1],b[2],b[3],b[4],b[5],b[6],b[7] );
-		rol(b,8);
+	
+		rol(random_b,8);
 		
-		memcpy(ab  ,a,8);
-		memcpy(ab+8,b,8);
+		memcpy(rnd_ab  ,random_a,8);
+		memcpy(rnd_ab+8,random_b,8);
 
-		Dbprintf("AB: %02x %02x %02x %02x %02x %02x %02x %02x", ab[0],ab[1],ab[2],ab[3],ab[4],ab[5],ab[6],ab[7] );
-		Dbprintf("AB: %02x %02x %02x %02x %02x %02x %02x %02x", ab[8],ab[9],ab[10],ab[11],ab[12],ab[13],ab[14],ab[15] );
+		if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+			Dbprintf("enc_B: %02x %02x %02x %02x %02x %02x %02x %02x",
+				enc_random_b[0],enc_random_b[1],enc_random_b[2],enc_random_b[3],
+				enc_random_b[4],enc_random_b[5],enc_random_b[6],enc_random_b[7]);
+				
+			Dbprintf("    B: %02x %02x %02x %02x %02x %02x %02x %02x",
+				random_b[0],random_b[1],random_b[2],random_b[3],
+				random_b[4],random_b[5],random_b[6],random_b[7]);
 
-		// encrypt
-		tdes_2key_enc(enc_ab, ab, 16, key);
+			Dbprintf("rnd_ab: %02x %02x %02x %02x %02x %02x %02x %02x",
+					rnd_ab[0],rnd_ab[1],rnd_ab[2],rnd_ab[3],
+					rnd_ab[4],rnd_ab[5],rnd_ab[6],rnd_ab[7]);
+					
+			Dbprintf("rnd_ab: %02x %02x %02x %02x %02x %02x %02x %02x",
+					rnd_ab[8],rnd_ab[9],rnd_ab[10],rnd_ab[11],
+					rnd_ab[12],rnd_ab[13],rnd_ab[14],rnd_ab[15] );
+		}
+		
+		// encrypt    out, in, length, key, iv
+		tdes_2key_enc(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b);
 
-		Dbprintf("e_AB: %02x %02x %02x %02x %02x %02x %02x %02x", enc_ab[0],enc_ab[1],enc_ab[2],enc_ab[3],enc_ab[4],enc_ab[5],enc_ab[6],enc_ab[7] );
-		Dbprintf("e_enc_ab: %02x %02x %02x %02x %02x %02x %02x %02x", enc_ab[8],enc_ab[9],enc_ab[10],enc_ab[11],enc_ab[12],enc_ab[13],enc_ab[14],enc_ab[15] );
-
-		len = mifare_sendcmd_short_mfucauth(NULL, 1, 0xAF, enc_ab, receivedAnswer, receivedAnswerPar, NULL);
+		
+		len = mifare_sendcmd_short_mfucauth(NULL, 1, 0xAF, rnd_ab, receivedAnswer, receivedAnswerPar, NULL);
 		if (len != 11) {
 			if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
 			OnError(1);
 			return;
 		}
 
-		// the tags' encryption of our nonce, A.
-		memcpy(enc_key, receivedAnswer+1, 8);
-		
-		// clear B.
-		memset(b, 0x00, 8);
-
-		// decrypt 
-		tdes_2key_dec(b, enc_key, 8, key );
-		if ( memcmp(a, b, 8) == 0 )
-			Dbprintf("Verified key");
-		else
+		uint8_t enc_resp[8] = { 0 };
+		uint8_t resp_random_a[8] = { 0 };
+		memcpy(enc_resp, receivedAnswer+1, 8);
+	
+		// decrypt    out, in, length, key, iv 
+		tdes_2key_dec(resp_random_a, enc_resp, 8, key, enc_random_b);
+		if ( memcmp(resp_random_a, random_a, 8) != 0 )
 			Dbprintf("failed authentication");
-		
-		Dbprintf("a: %02x %02x %02x %02x %02x %02x %02x %02x", a[0],a[1],a[2],a[3],a[4],a[5],a[6],a[7] );
-		Dbprintf("b: %02x %02x %02x %02x %02x %02x %02x %02x", b[0],b[1],b[2],b[3],b[4],b[5],b[6],b[7] );
-	}
 
+		if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+			Dbprintf("e_AB: %02x %02x %02x %02x %02x %02x %02x %02x", 
+					rnd_ab[0],rnd_ab[1],rnd_ab[2],rnd_ab[3],
+					rnd_ab[4],rnd_ab[5],rnd_ab[6],rnd_ab[7]);
+
+			Dbprintf("e_AB: %02x %02x %02x %02x %02x %02x %02x %02x",
+					rnd_ab[8],rnd_ab[9],rnd_ab[10],rnd_ab[11],
+					rnd_ab[12],rnd_ab[13],rnd_ab[14],rnd_ab[15]);
+
+			Dbprintf("a: %02x %02x %02x %02x %02x %02x %02x %02x",
+					random_a[0],random_a[1],random_a[2],random_a[3],
+					random_a[4],random_a[5],random_a[6],random_a[7]);
+					
+			Dbprintf("b: %02x %02x %02x %02x %02x %02x %02x %02x",
+					resp_random_a[0],resp_random_a[1],resp_random_a[2],resp_random_a[3],
+					resp_random_a[4],resp_random_a[5],resp_random_a[6],resp_random_a[7]);
+		}
+	}
+		
 	if( mifare_ultra_readblock(blockNo, dataout) ) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Read block error");
 		OnError(2);
 		return;
 	}
-
+        
 	if( mifare_ultra_halt() ) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Halt error");
 		OnError(3);
 		return;
 	}
-	
-	cmd_send(CMD_ACK,1,0,0,dataout,16);
+		
+    cmd_send(CMD_ACK,1,0,0,dataout,16);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
+
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag. 
 // read sector (data = 4 x 16 bytes = 64 bytes, or 16 x 16 bytes = 256 bytes)

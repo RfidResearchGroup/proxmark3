@@ -87,7 +87,7 @@ uint8_t GetHF14AMfU_Type(void){
 	// EV1 GetVersion
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 
-		uint8_t version[8] = {0,0,0,0,0,0,0,0};
+		uint8_t version[10] = {0,0,0,0,0,0,0,0};
 		memcpy(&version, resp.d.asBytes, sizeof(version));
 		uint8_t len  = resp.arg[0] & 0xff;
 		
@@ -722,7 +722,7 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
 		PrintAndLog("Usage:  hf mfu crdbl  <block number> <password>");
 		PrintAndLog("");
 		PrintAndLog("sample: hf mfu crdbl 0");
-		PrintAndLog("        hf mfu crdbl 0 112233445566778899AABBCCDDEEFF");
+		PrintAndLog("        hf mfu crdbl 0 00112233445566778899AABBCCDDEEFF");
 		return 0;
 	}       
 		
@@ -803,14 +803,15 @@ int CmdHF14AMfUCWrBl(const char *Cmd){
 		PrintAndLog("Block data must include 8 HEX symbols");
 		return 1;
 	}
-	
+
 	if (strchr(Cmd,'w') != 0  || strchr(Cmd,'W') != 0 ) {
 		chinese_card = TRUE; 
 	}
-	
+
 	if ( blockNo <= 3 ) {
 		if (!chinese_card){
-			 PrintAndLog("Access Denied");  
+			PrintAndLog("Access Denied");  
+			return 1;
 		} else {
 			PrintAndLog("--Special block no: 0x%02x", blockNo);
 			PrintAndLog("--Data: %s", sprint_hex(bldata, 4));
@@ -822,8 +823,9 @@ int CmdHF14AMfUCWrBl(const char *Cmd){
 				PrintAndLog("isOk:%02x", isOK);
 			} else {
 				PrintAndLog("Command execute timeout");
-			}  
-		}	
+				return 1;
+			}
+		}
 	} else {
 			PrintAndLog("--Block no : 0x%02x", blockNo);
 			PrintAndLog("--Data: %s", sprint_hex(bldata, 4));        	
@@ -835,6 +837,7 @@ int CmdHF14AMfUCWrBl(const char *Cmd){
 				PrintAndLog("isOk : %02x", isOK);
 			} else {
 				PrintAndLog("Command execute timeout");
+				return 1;
 			}
 	}
 	return 0;
