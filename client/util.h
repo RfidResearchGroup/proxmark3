@@ -44,6 +44,7 @@ char * sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t bre
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
 uint64_t bytes_to_num(uint8_t* src, size_t len);
 char * printBits(size_t const size, void const * const ptr);
+uint8_t *SwapEndian64(uint8_t *src, size_t len);
 
 char param_getchar(const char *line, int paramnum);
 uint8_t param_get8(const char *line, int paramnum);
