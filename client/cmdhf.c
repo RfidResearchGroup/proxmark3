@@ -77,7 +77,7 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 		if ( cmdsize > 3)
 			snprintf(exp,size,"AUTH-A(%d)",cmd[1]); 
 		else
-			//	case MIFARE_ULEV1_VERS :  both 0x60.
+			//	case MIFARE_ULEV1_VERSION :  both 0x60.
 			snprintf(exp,size,"EV1 VERSION");
 		break;
 	}
