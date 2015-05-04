@@ -12,6 +12,7 @@
 #include "cmdhfmf.h"
 #include "cmdhf14a.h"
 #include "mifare.h"
+#include "util.h"
 
 #define MAX_UL_BLOCKS   0x0f
 #define MAX_ULC_BLOCKS  0x2f
@@ -87,8 +88,8 @@ uint8_t GetHF14AMfU_Type(void){
 	// EV1 GetVersion
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 
-		uint8_t version[10] = {0,0,0,0,0,0,0,0};
-		memcpy(&version, resp.d.asBytes, sizeof(version));
+		uint8_t version[10] = {0,0,0,0,0,0,0,0,0,0};
+		memcpy(version, resp.d.asBytes, resp.arg[0] < sizeof(version) ? resp.arg[0] : sizeof(version));
 		uint8_t len  = resp.arg[0] & 0xff;
 		
 		if ( len == 0x0A && version[6] == 0x0B ) 
@@ -324,10 +325,9 @@ int usage_hf_mfu_dump(void)
 	PrintAndLog("Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
 	PrintAndLog("and saves binary dump into the file `filename.bin` or `cardUID.bin`");
 	PrintAndLog("It autodetects card type.\n");	
-	PrintAndLog("Usage:  hf mfu dump <filename w/o .bin>");
+	PrintAndLog("Usage:  hf mfu dump k <key> n <filename w/o .bin>");
 	PrintAndLog("   sample : hf mfu dump");
-	PrintAndLog("          : hf mfu dump myfile");
-	PrintAndLog("          : hf mfu dump 1 myfile");
+	PrintAndLog("          : hf mfu dump n myfile");
 	return 0;
 }
 //
@@ -337,26 +337,66 @@ int usage_hf_mfu_dump(void)
 //  TODO: take a password to read UL-C / UL-EV1 tags.
 int CmdHF14AMfUDump(const char *Cmd){
 
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H')	
-		return usage_hf_mfu_dump();
-
 	FILE *fout;
 	char filename[FILE_PATH_SIZE] = {0x00};
 	char *fnameptr = filename;
 	char *str = "Dumping Ultralight%s%s Card Data...";
-	
 	uint8_t *lockbytes_t = NULL;
 	uint8_t lockbytes[2] = {0x00};
 	uint8_t *lockbytes_t2 = NULL;
 	uint8_t lockbytes2[2] = {0x00};
 	bool bit[16]  = {0x00};
 	bool bit2[16] = {0x00};
-	uint8_t data[176] = {0x00};
-	
+	uint8_t data[1024] = {0x00};
+	bool hasPwd = false;
 	int i = 0;
 	int Pages = 16;
 	bool tmplockbit = false;
+	uint8_t dataLen=0;
+	uint8_t cmdp =0;
+	uint8_t *key= NULL;
+	size_t fileNlen = 0;
+	bool errors = FALSE;
+
+	while(param_getchar(Cmd, cmdp) != 0x00)
+	{
+		switch(param_getchar(Cmd, cmdp))
+		{
+		case 'h':
+		case 'H':
+			return usage_hf_mfu_dump();
+		case 'k':
+		case 'K':
+			dataLen = param_gethex(Cmd, cmdp+1, data, 32);
+			if (dataLen) {
+				errors = true; 
+			} else {
+				key = SwapEndian64(data, 16);
+				PrintAndLog("3des key: %s",sprint_hex(key, 16));
+			}   
+			cmdp += 2;
+			hasPwd = true;
+			break;
+		case 'n':
+		case 'N':
+			fileNlen = param_getstr(Cmd, cmdp+1, filename);
+			if (!fileNlen) errors = true; 
+			if (fileNlen > FILE_PATH_SIZE-5) fileNlen = FILE_PATH_SIZE-5;
+			cmdp += 2;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+		if(errors) break;
+	}
+
+	//Validations
+	if(errors)
+	{
+		return usage_hf_mfu_dump();
+	}
 
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
@@ -381,20 +421,28 @@ int CmdHF14AMfUDump(const char *Cmd){
 		PrintAndLog("Dumping unknown Ultralight, using default values.");
 	}
 
-	UsbCommand c = {CMD_MIFAREU_READCARD, {0,Pages}};
-	SendCommand(&c);
-	UsbCommand resp;
+	for (uint8_t i = 0; i<Pages; i++){
+		//Read Block
+		UsbCommand c = {CMD_MIFAREU_READBL, {i}};
+		if ( hasPwd ) {
+			c.arg[1] = 1;
+			memcpy(c.d.asBytes,key,16);
+		}
+		SendCommand(&c);
+		UsbCommand resp;
 
-	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-		PrintAndLog("Command execute time-out");
-		return 0;
+		if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+			uint8_t isOK = resp.arg[0] & 0xff;
+			if (isOK) {
+				memcpy(data + (i*4), resp.d.asBytes, 4);
+			}
+			else {
+				PrintAndLog("Failed reading block: (%02x)", i);
+			}
+		} else {
+			PrintAndLog("Command execute time-out");
+		}
 	}
-
-	if (!resp.arg[0] ) {
-		PrintAndLog("Read command failed");
-		return 0;
-	}
-	memcpy(data, resp.d.asBytes, sizeof(data));
 
 	// Load lock bytes.
 	int j = 0;
@@ -416,6 +464,11 @@ int CmdHF14AMfUDump(const char *Cmd){
 		}
 	}
 
+	// add keys
+	if (hasPwd){
+		memcpy(data + Pages*4, key, 16);
+		Pages += 4;
+	}
 	for (i = 0; i < Pages; ++i) {
 		if ( i < 3 ) {
 			PrintAndLog("Block %02x:%s ", i,sprint_hex(data + i * 4, 4));
@@ -468,17 +521,13 @@ int CmdHF14AMfUDump(const char *Cmd){
 		PrintAndLog("Block %02x:%s [%d]", i,sprint_hex(data + i * 4, 4),tmplockbit);
 	}  
 
-	int len = param_getstr(Cmd,0,filename);
-	if (len > FILE_PATH_SIZE-5) 
-		len = FILE_PATH_SIZE-5;
-
 	// user supplied filename?
-	if (len < 1) {
+	if (fileNlen < 1) {
 		// UID = data 0-1-2 4-5-6-7  (skips a beat)
 		sprintf(fnameptr,"%02X%02X%02X%02X%02X%02X%02X.bin",
 			data[0],data[1], data[2], data[4],data[5],data[6], data[7]);
 	} else {
-		sprintf(fnameptr + len," .bin");
+		sprintf(fnameptr + fileNlen," .bin");
 	}
 
 	if ((fout = fopen(filename,"wb")) == NULL) { 
@@ -707,6 +756,7 @@ int CmdTestDES(const char * cmd)
 	return 0;	
 }
 **/
+
 //
 // Ultralight C Read Single Block
 //
@@ -715,7 +765,7 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
 	UsbCommand resp;
 	bool hasPwd = FALSE;
 	uint8_t blockNo = -1;
-	unsigned char key[16];
+	uint8_t key[16];
 	char cmdp = param_getchar(Cmd, 0);
 	
 	if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') {
@@ -746,12 +796,13 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
 			hasPwd = TRUE;
 		}	
 	}	
+	uint8_t *key2 = SwapEndian64(key, 16);
 
 	//Read Block
 	UsbCommand c = {CMD_MIFAREU_READBL, {blockNo}};
 	if ( hasPwd ) {
 		c.arg[1] = 1;
-		memcpy(c.d.asBytes,key,16);
+		memcpy(c.d.asBytes,key2,16);
 	}
 	SendCommand(&c);
 
