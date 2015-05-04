@@ -360,7 +360,6 @@ int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData)
 	return 0;
 }
 
-
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData) 
 {
 	// variables

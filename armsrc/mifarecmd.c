@@ -138,16 +138,18 @@ void MifareUC_Auth2(uint32_t arg0, uint8_t *datain){
 	LEDsoff();
 }
 
+// Arg0 = BlockNo,
+// Arg1 = UsePwd bool
+// datain = PWD bytes,  
 void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 {
 	uint8_t blockNo = arg0;
 	byte_t dataout[16] = {0x00};
 	uint8_t uid[10] = {0x00};
-	uint8_t key[16] = {0x00};
     bool usePwd = (arg1 == 1);
-	
-	LED_A_ON();	LED_B_OFF(); LED_C_OFF();
-    
+
+	LEDsoff();	
+	LED_A_ON();    
 	clear_trace();
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     
@@ -160,7 +162,8 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
        
 	 // authenticate here.
 	if ( usePwd ) {
-		
+
+		uint8_t key[16] = {0x00};	
 		memcpy(key, datain, 16);
 		 
 		uint8_t random_a[8] = {1,1,1,1,1,1,1,1 };
@@ -185,10 +188,7 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 
 		// decrypt nonce.
 		tdes_2key_dec(random_b, enc_random_b, sizeof(random_b), key, IV );
-
-	
 		rol(random_b,8);
-		
 		memcpy(rnd_ab  ,random_a,8);
 		memcpy(rnd_ab+8,random_b,8);
 
@@ -333,11 +333,16 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LEDsoff();
 }
 
-void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain)
+// arg0 = blockNo (start)
+// arg1 = Pages (number of blocks)
+// arg2 = useKey
+// datain = KEY bytes
+void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 {
 	// params
-	uint8_t sectorNo = arg0;
-	int Pages = arg1;
+	uint8_t blockNo = arg0;
+	uint16_t blocks = arg1;
+	bool useKey = (arg2 == 1);
 	int countpages = 0;
 	uint8_t dataout[176] = {0x00};;
 
@@ -353,9 +358,60 @@ void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain)
 		return;
 	}
 	
-	for (int i = 0; i < Pages; i++){
+	// authenticate
+	if ( useKey ) {
+		
+		uint8_t key[16] = {0x00};	
+		memcpy(key, datain, 16);
+		 
+		uint8_t random_a[8] = {1,1,1,1,1,1,1,1 };
+		uint8_t random_b[8] = {0x00};
+		uint8_t enc_random_b[8] = {0x00};
+		uint8_t rnd_ab[16] = {0x00};
+		uint8_t IV[8] = {0x00};
+		
+		uint16_t len;
+		uint8_t receivedAnswer[MAX_FRAME_SIZE];
+		uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
 	
-		len = mifare_ultra_readblock(sectorNo * 4 + i, dataout + 4 * i);
+		len = mifare_sendcmd_short(NULL, 1, 0x1A, 0x00, receivedAnswer,receivedAnswerPar ,NULL);
+		if (len != 11) {
+			if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+			OnError(1);
+			return;
+		}
+	
+		// tag nonce.
+		memcpy(enc_random_b,receivedAnswer+1,8);
+
+		// decrypt nonce.
+		tdes_2key_dec(random_b, enc_random_b, sizeof(random_b), key, IV );
+		rol(random_b,8);
+		memcpy(rnd_ab  ,random_a,8);
+		memcpy(rnd_ab+8,random_b,8);
+	
+		// encrypt    out, in, length, key, iv
+		tdes_2key_enc(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b);
+
+		len = mifare_sendcmd_short_mfucauth(NULL, 1, 0xAF, rnd_ab, receivedAnswer, receivedAnswerPar, NULL);
+		if (len != 11) {
+			OnError(1);
+			return;
+		}
+
+		uint8_t enc_resp[8] = { 0 };
+		uint8_t resp_random_a[8] = { 0 };
+		memcpy(enc_resp, receivedAnswer+1, 8);
+	
+		// decrypt    out, in, length, key, iv 
+		tdes_2key_dec(resp_random_a, enc_resp, 8, key, enc_random_b);
+		if ( memcmp(resp_random_a, random_a, 8) != 0 )
+			Dbprintf("failed authentication");
+	}
+	
+	for (int i = 0; i < blocks; i++){
+	
+		len = mifare_ultra_readblock(blockNo * 4 + i, dataout + 4 * i);
 		
 		if (len) {
 			if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Read block %d error",i);
@@ -372,11 +428,11 @@ void MifareUReadCard(uint8_t arg0, int arg1, uint8_t *datain)
 		return;
 	}
 	
-	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Pages read %d", countpages);
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("blocks read %d", countpages);
 
-		len = Pages*4;
+	len = blocks*4;
 
-	cmd_send(CMD_ACK, 1, 0, 0, dataout, len);	
+	cmd_send(CMD_ACK, 1, len, 0, dataout, len);	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
@@ -495,12 +551,12 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 {
 	uint8_t blockNo = arg0;
 	byte_t blockdata[4] = {0x00};
-	
-	memcpy(blockdata, datain,4);
-
 	uint8_t uid[10] = {0x00};
 	
-	LED_A_ON(); LED_B_OFF(); LED_C_OFF();
+	memcpy(blockdata, datain,4);
+	
+	LEDsoff();
+	LED_A_ON();
 	clear_trace();
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -1294,7 +1350,6 @@ void MifareCollectNonces(uint32_t arg0, uint32_t arg1){
 		packLen -= packSize;
 		packNum++;
 	}
-
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }

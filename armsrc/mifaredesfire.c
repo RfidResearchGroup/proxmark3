@@ -502,6 +502,7 @@ void OnSuccess(){
 void OnError(uint8_t reason){
 	pcb_blocknum = 0;
 	ReaderTransmit(deselect_cmd, 3 , NULL);
+	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,reason,0,0,0);
 	LEDsoff();
