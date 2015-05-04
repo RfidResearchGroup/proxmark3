@@ -382,7 +382,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 	DbpString("Now use 'lf ti read' to check");
 }
 
-void SimulateTagLowFrequency(uint16_t period, uint32_t gap, uint8_t ledcontrol)
+void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
 	int i;
 	uint8_t *tab = BigBuf_get_addr();
