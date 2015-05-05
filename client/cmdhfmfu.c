@@ -207,6 +207,42 @@ static int ulev1_readCounter( uint8_t counter, uint8_t *response, uint16_t respo
 	return len;
 }
 
+static int ul_print_default( uint8_t *data){
+	
+	uint8_t uid[7];
+
+	uid[0] = data[0];
+	uid[1] = data[1];
+	uid[2] = data[2];
+	uid[3] = data[4];
+	uid[4] = data[5];
+	uid[5] = data[6];
+	uid[6] = data[7];
+
+	PrintAndLog("       UID : %s ", sprint_hex(uid, 7));
+	PrintAndLog("    UID[0] : (Manufacturer Byte) = %02x, Manufacturer: %s",  uid[0], getTagInfo(uid[0]) );
+	
+	// BBC
+	// CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2 
+	int crc0 = 0x88 ^ data[0] ^ data[1] ^data[2];
+	if ( data[3] == crc0 )
+		PrintAndLog("      BCC0 : 0x%02X - Ok", data[3]);
+	else
+		PrintAndLog("      BCC0 : 0x%02X - crc should be %02x", data[3], crc0);
+		
+	int crc1 = data[4] ^ data[5] ^ data[6] ^data[7];
+	if ( data[8] == crc1 )
+		PrintAndLog("      BCC1 : 0x%02X - Ok", data[8]);
+	else
+		PrintAndLog("      BCC1 : 0x%02X - crc should be 0x%02X", data[8], crc1 );
+	
+	PrintAndLog("  Internal : 0x%02X - %s default", data[9], (data[9]==0x48)?"":"not" );
+	PrintAndLog("      Lock : %s - %s", sprint_hex(data+10, 2),printBits( 2, data+10) );
+	PrintAndLog("OneTimePad : %s ", sprint_hex(data + 12, 4));
+	PrintAndLog("");
+	return 0;
+}
+
 static int ul_print_CC(uint8_t *data) {
 	if(data[0] != 0xe1) {
 		PrintAndLog("no NDEF message");
@@ -223,7 +259,8 @@ static int ul_print_CC(uint8_t *data) {
 	return 0;				
 }
 
-static int ul_print_version(uint8_t *data){	
+static int ul_print_version(uint8_t *data){		
+	PrintAndLog("\n--- UL-EV1 / NTAG Version");
 	PrintAndLog("Raw version bytes: %s", sprint_hex(data, 8) );
 	PrintAndLog("       Vendor ID : 0x%02X, Manufacturer: %s", data[1], getTagInfo(data[1]));
 	PrintAndLog("    Product type : %s"		, getProductTypeStr(data[2]));
@@ -310,6 +347,16 @@ static int ulev1_print_configuration( uint8_t *data){
 	PrintAndLog("               0x%02X - Virtual Card Type Identifier is %s default", vctid, (vctid==0x05)? "":"not");
 	PrintAndLog(" PWD  [18/0x12]: %s", sprint_hex(data+8, 4));
 	PrintAndLog(" PACK [19/0x13]: %s", sprint_hex(data+12, 4));
+	return 0;
+}
+
+static int ulev1_print_counters(){
+	PrintAndLog("--- UL-EV1 Counters");
+	uint8_t counter[3] = {0,0,0};
+	for ( uint8_t i = 0; i<3; ++i) {
+		ulev1_readCounter(i,counter, sizeof(counter) );
+		PrintAndLog("Counter [%d] : %s", i, sprint_hex(counter,3));
+	}
 	return 0;
 }
 
@@ -402,7 +449,7 @@ uint16_t GetHF14AMfU_Type(void){
 
 int CmdHF14AMfUInfo(const char *Cmd){
 
-	uint8_t datatemp[7] = {0x00};
+
 	uint8_t data[16] = {0x00};
 	iso14a_card_select_t card;
 	uint8_t *key;
@@ -431,33 +478,8 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		return status;
 	}
 	
-	// UID
-	memcpy( datatemp, data, 3);
-	memcpy( datatemp+3, data+4, 4);
-	
-	PrintAndLog("       UID : %s ", sprint_hex(datatemp, 7));
-	PrintAndLog("    UID[0] : (Manufacturer Byte) = %02x, Manufacturer: %s",  datatemp[0], getTagInfo(datatemp[0]) );
-	
-	// BBC
-	// CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2 
-	int crc0 = 0x88 ^ data[0] ^ data[1] ^data[2];
-	if ( data[3] == crc0 )
-		PrintAndLog("      BCC0 : 0x%02X - Ok", data[3]);
-	else
-		PrintAndLog("      BCC0 : 0x%02X - crc should be %02x", data[3], crc0);
-		
-	int crc1 = data[4] ^ data[5] ^ data[6] ^data[7];
-	if ( data[8] == crc1 )
-		PrintAndLog("      BCC1 : 0x%02X - Ok", data[8]);
-	else
-		PrintAndLog("      BCC1 : 0x%02X - crc should be 0x%02X", data[8], crc1 );
-	
-	PrintAndLog("  Internal : 0x%02X - %s default", data[9], (data[9]==0x48)?"":"not" );
-	
-	memcpy(datatemp, data+10, 2);
-	PrintAndLog("      Lock : %s - %s", sprint_hex(datatemp, 2),printBits( 2, &datatemp) );
-	PrintAndLog("OneTimePad : %s ", sprint_hex(data + 3*4, 4));
-	PrintAndLog("");
+	ul_print_default(data);
+
 	
 	if ((tagtype & UL_C)){
 	
@@ -499,14 +521,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128))) {
 		
-		PrintAndLog("--- UL-EV1 Counters");
-		uint8_t counter[3] = {0,0,0};
-		for ( uint8_t i = 0; i<3; ++i) {
-			ulev1_readCounter(i,counter, sizeof(counter) );
-			PrintAndLog("Counter[%d] :: %s", i, sprint_hex(counter,3));
-		}
-		
-
+		ulev1_print_counters();
 		
 		uint8_t startconfigblock = (tagtype & UL_EV1_48) ? 0x10 : 0x24;
 		uint8_t ulev1_conf[16] = {0x00};
@@ -522,8 +537,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216))) {
 
-		PrintAndLog("\n--- UL-EV1 / NTAG Version");
-	
 		uint8_t version[10] = {0x00};
 		status  = ulev1_getVersion(version, sizeof(version));
 		if ( status == -1 ){
@@ -558,7 +571,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			PrintAndLog("Error: tag didn't answer to READ");
 			ul_switch_off_field();
 			return status;
-		}	
+		}
 		ul_print_CC(cc);	
 	}
 	
