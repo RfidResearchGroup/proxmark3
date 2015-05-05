@@ -255,6 +255,64 @@ static int ul_print_type(uint16_t tagtype){
 	return 0;
 }
 
+static int ulc_print_3deskey( uint8_t *data){			
+	PrintAndLog("         deskey1 [44/0x2C]: %s", sprint_hex(data   ,4));
+	PrintAndLog("         deskey1 [45/0x2D]: %s", sprint_hex(data+4 ,4));			
+	PrintAndLog("         deskey2 [46/0x2E]: %s", sprint_hex(data+8 ,4));
+	PrintAndLog("         deskey2 [47/0x2F]: %s", sprint_hex(data+12,4));
+	PrintAndLog(" 3des key : %s", sprint_hex(SwapEndian64(data, 16), 16));
+	return 0;
+}
+
+static int ulc_print_configuration( uint8_t *data){
+		
+	PrintAndLog("--- UL-C Configuration");
+	PrintAndLog(" Higher Lockbits [40/0x28]: %s %s", sprint_hex(data, 4), printBits(2, data));
+	PrintAndLog("         Counter [41/0x29]: %s %s", sprint_hex(data+4, 4), printBits(2, data+4));
+
+	bool validAuth = (data[8] >= 0x03 && data[8] <= 0x30);
+	if ( validAuth )
+		PrintAndLog("           Auth0 [42/0x2A]: %s - Pages above %d needs authentication", sprint_hex(data+8, 4), data[8] );
+	else{
+		if ( data[8] == 0){
+			PrintAndLog("           Auth0 [42/0x2A]: %s - default", sprint_hex(data+8, 4) );
+		} else {
+			PrintAndLog("           Auth0 [42/0x2A]: %s - auth byte is out-of-range", sprint_hex(data+8, 4) );
+		}
+	}
+	PrintAndLog("           Auth1 [43/0x2B]: %s - %s",
+			sprint_hex(data+12, 4),
+			(data[12] & 1) ? "write access restricted": "read and write access restricted"
+			);
+	return 0;
+}
+
+static int ulev1_print_configuration( uint8_t *data){
+
+	PrintAndLog("\n--- UL-EV1 Configuration");	
+
+	bool strg_mod_en = (data[0] & 2);
+	uint8_t authlim = (data[4] & 0x07);
+	bool cfglck = (data[4] & 0x40);
+	bool prot = (data[4] & 0x80);
+	uint8_t vctid = data[5];
+	
+	PrintAndLog(" cfg0 [16/0x10]: %s", sprint_hex(data, 4));
+	PrintAndLog("                    - pages above %d needs authentication",data[3]);
+	PrintAndLog("                    - strong modulation mode %s", (strg_mod_en) ? "enabled":"disabled");
+	PrintAndLog(" cfg1 [17/0x11]: %s", sprint_hex(data+4, 4) );
+	if ( authlim == 0)
+		PrintAndLog("                    - Max number of password attempts is unlimited");
+	else
+		PrintAndLog("                    - Max number of password attempts is %d", authlim);
+	PrintAndLog("                    - user configuration %s", cfglck ? "permanently locked":"writeable");
+	PrintAndLog("                    - %s access is protected with password", prot ? "read and write":"write");
+	PrintAndLog("               0x%02X - Virtual Card Type Identifier is %s default", vctid, (vctid==0x05)? "":"not");
+	PrintAndLog(" PWD  [18/0x12]: %s", sprint_hex(data+8, 4));
+	PrintAndLog(" PACK [19/0x13]: %s", sprint_hex(data+12, 4));
+	return 0;
+}
+
 uint16_t GetHF14AMfU_Type(void){
 
 	TagTypeUL_t tagtype = UNKNOWN;
@@ -394,7 +452,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	else
 		PrintAndLog("      BCC1 : 0x%02X - crc should be 0x%02X", data[8], crc1 );
 	
-	PrintAndLog("  Internal : 0x%02X - %s", data[9], (data[9]==0x48)?"default":"not default" );
+	PrintAndLog("  Internal : 0x%02X - %s default", data[9], (data[9]==0x48)?"":"not" );
 	
 	memcpy(datatemp, data+10, 2);
 	PrintAndLog("      Lock : %s - %s", sprint_hex(datatemp, 2),printBits( 2, &datatemp) );
@@ -411,40 +469,21 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			ul_switch_off_field();
 			return status;
 		}
-	
-		PrintAndLog("--- UL-C Configuration");
-		PrintAndLog(" Higher Lockbits [40/0x28]: %s %s", sprint_hex(ulc_conf, 4), printBits(2, ulc_conf));
-		PrintAndLog("         Counter [41/0x29]: %s %s", sprint_hex(ulc_conf+4, 4), printBits(2, ulc_conf+4));
 
-		bool validAuth = (ulc_conf[8] >= 0x03 && ulc_conf[8] <= 0x30);
-		if ( validAuth )
-			PrintAndLog("           Auth0 [42/0x2A]: %s - Pages above %d needs authentication", sprint_hex(ulc_conf+8, 4), ulc_conf[8] );
-		else{
-			if ( ulc_conf[8] == 0){
-				PrintAndLog("           Auth0 [42/0x2A]: %s - default", sprint_hex(ulc_conf+8, 4) );
-			} else {
-				PrintAndLog("           Auth0 [42/0x2A]: %s - auth byte is out-of-range", sprint_hex(ulc_conf+8, 4) );
-			}
-		}
-		PrintAndLog("           Auth1 [43/0x2B]: %s - %s",
-				sprint_hex(ulc_conf+12, 4),
-				(ulc_conf[12] & 1) ? "write access restricted": "read and write access restricted"
-				);
+		ulc_print_configuration(ulc_conf);
 
 		if ((tagtype & UL_C_MAGIC)){
 
-			uint8_t deskey[16] = {0x00};
-			status = ul_read(0x2C, deskey, sizeof(deskey));
+			uint8_t ulc_deskey[16] = {0x00};
+			status = ul_read(0x2C, ulc_deskey, sizeof(ulc_deskey));
 			if ( status == -1 ){
 				PrintAndLog("Error: tag didn't answer to READ");
 				ul_switch_off_field();
 				return status;
 			}
-			PrintAndLog("         deskey1 [44/0x2C]: %s", sprint_hex(deskey   ,4));
-			PrintAndLog("         deskey1 [45/0x2D]: %s", sprint_hex(deskey+4 ,4));			
-			PrintAndLog("         deskey2 [46/0x2E]: %s", sprint_hex(deskey+8 ,4));
-			PrintAndLog("         deskey2 [47/0x2F]: %s", sprint_hex(deskey+12,4));
-			PrintAndLog(" 3des key : %s", sprint_hex(SwapEndian64(deskey, 16), 16));
+			
+			ulc_print_3deskey(ulc_deskey);
+
 		}
 		else {
 			PrintAndLog("Trying some default 3des keys");
@@ -461,11 +500,24 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128))) {
 		
 		PrintAndLog("--- UL-EV1 Counters");
-		uint8_t counter[4] = {0,0,0,0};
+		uint8_t counter[3] = {0,0,0};
 		for ( uint8_t i = 0; i<3; ++i) {
 			ulev1_readCounter(i,counter, sizeof(counter) );
-			PrintAndLog("Counter[%d] :: %s", i, sprint_hex(counter,4));
+			PrintAndLog("Counter[%d] :: %s", i, sprint_hex(counter,3));
 		}
+		
+
+		
+		uint8_t startconfigblock = (tagtype & UL_EV1_48) ? 0x10 : 0x24;
+		uint8_t ulev1_conf[16] = {0x00};
+		status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
+		if ( status == -1 ){
+			PrintAndLog("Error: tag didn't answer to READ");
+			ul_switch_off_field();
+			return status;
+		}
+		
+		ulev1_print_configuration(ulev1_conf);
 	}
 	
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216))) {
