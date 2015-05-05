@@ -65,7 +65,7 @@ char* getProductTypeStr( uint8_t id){
 		sprintf(retStr, "0x%02X %s", id, "(NTAG)");
 		break;
 	default:
-		sprintf(retStr, "0x%02X ", id, "(unknown)");
+		sprintf(retStr, "0x%02X %s", id, "(unknown)");
 		break;
 	}
 	return buf;
@@ -148,6 +148,7 @@ static int ul_select( iso14a_card_select_t *card ){
 	return resp.arg[0];
 }
 
+// This read command will at least return 16bytes.
 static int ul_read( uint8_t page, uint8_t *response ){
 	
 	uint8_t cmd[] = {ISO14443A_CMD_READBLOCK, page};
@@ -489,7 +490,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	if ((tagtype & (NTAG_213 | NTAG_215 | NTAG_216))){
 		
 		PrintAndLog("--- Trying some NTAG stuff");
-		uint8_t cc[4] = {0x00};
+		uint8_t cc[16] = {0x00};
 		status = ul_read(2, cc);
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ");
