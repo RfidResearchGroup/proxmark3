@@ -71,11 +71,52 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	case MIFARE_CMD_DEC:			snprintf(exp,size,"DEC(%d)",cmd[1]); break;
 	case MIFARE_CMD_RESTORE:		snprintf(exp,size,"RESTORE(%d)",cmd[1]); break;
 	case MIFARE_CMD_TRANSFER:		snprintf(exp,size,"TRANSFER(%d)",cmd[1]); break;
-	case MIFARE_AUTH_KEYA:			snprintf(exp,size,"AUTH-A(%d)",cmd[1]); break;
+	case MIFARE_AUTH_KEYA:{
+		if ( cmdsize > 3)
+			snprintf(exp,size,"AUTH-A(%d)",cmd[1]); 
+		else
+			//	case MIFARE_ULEV1_VERSION :  both 0x60.
+			snprintf(exp,size,"EV1 VERSION");
+		break;
+	}
 	case MIFARE_AUTH_KEYB:			snprintf(exp,size,"AUTH-B(%d)",cmd[1]); break;
 	case MIFARE_MAGICWUPC1:			snprintf(exp,size,"MAGIC WUPC1"); break;
 	case MIFARE_MAGICWUPC2:			snprintf(exp,size,"MAGIC WUPC2"); break;
 	case MIFARE_MAGICWIPEC:			snprintf(exp,size,"MAGIC WIPEC"); break;
+	case MIFARE_ULC_AUTH_1:		snprintf(exp,size,"AUTH "); break;
+	case MIFARE_ULC_AUTH_2:		snprintf(exp,size,"AUTH_ANSW"); break;
+	case MIFARE_ULEV1_AUTH:		snprintf(exp,size,"PWD-AUTH"); break;
+	case MIFARE_ULEV1_FASTREAD:{
+		if ( cmdsize >=3 && cmd[2] < 0x21)
+			snprintf(exp,size,"READ RANGE (%d-%d)",cmd[1],cmd[2]); 
+		else
+			snprintf(exp,size,"?");
+		break;
+	}
+	case MIFARE_ULEV1_WRITE:{
+		if ( cmd[1] < 0x21 )
+			snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); 
+		else
+			snprintf(exp,size,"?");
+		break;
+	}
+	case MIFARE_ULEV1_READ_CNT:{
+		if ( cmd[1] < 5 )
+			snprintf(exp,size,"READ CNT(%d)",cmd[1]);
+		else
+			snprintf(exp,size,"?");
+		break;
+	}
+	case MIFARE_ULEV1_INCR_CNT:{
+		if ( cmd[1] < 5 )
+			snprintf(exp,size,"INCR(%d)",cmd[1]);
+		else
+			snprintf(exp,size,"?");
+		break;
+	}
+	case MIFARE_ULEV1_READSIG:		snprintf(exp,size,"READ_SIG"); break;
+	case MIFARE_ULEV1_CHECKTEAR:	snprintf(exp,size,"CHK_TEARING(%d)",cmd[1]); break;
+	case MIFARE_ULEV1_VCSL:		snprintf(exp,size,"VCSL"); break;
 	default:						snprintf(exp,size,"?"); break;
 	}
 	return;

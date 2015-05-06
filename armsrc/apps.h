@@ -168,7 +168,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
 void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 void MifareUC_Auth1(uint8_t arg0, uint8_t *datain);
 void MifareUC_Auth2(uint32_t arg0, uint8_t *datain);
-void MifareUReadCard(uint8_t arg0, int Pages, uint8_t *datain);
+void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareUWriteBlock(uint8_t arg0,uint8_t *datain);
