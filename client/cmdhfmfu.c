@@ -145,7 +145,7 @@ static int ul_select( iso14a_card_select_t *card ){
 	}
 	
 	if (resp.arg[0] > 0) {
-		memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
+		memcpy(card, resp.d.asBytes, sizeof(iso14a_card_select_t));
 	}
 	return resp.arg[0];
 }
@@ -207,6 +207,15 @@ static int ulev1_readCounter( uint8_t counter, uint8_t *response, uint16_t respo
 	return len;
 }
 
+static int ulev1_readSignature( uint8_t *response, uint16_t responseLength ){
+
+	uint8_t cmd[] = {MIFARE_ULEV1_READSIG, 0x00};
+	int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
+	if (len == -1)
+		ul_switch_off_field();
+	return len;
+}
+
 static int ul_print_default( uint8_t *data){
 	
 	uint8_t uid[7];
@@ -243,7 +252,7 @@ static int ul_print_default( uint8_t *data){
 	return 0;
 }
 
-static int ul_print_CC(uint8_t *data) {
+static int ntag_print_CC(uint8_t *data) {
 	if(data[0] != 0xe1) {
 		PrintAndLog("no NDEF message");
 		return -1;		// no NDEF message
@@ -252,7 +261,14 @@ static int ul_print_CC(uint8_t *data) {
 	PrintAndLog("Capability Container: %s", sprint_hex(data,4) );
 	PrintAndLog("  %02X: NDEF Magic Number", data[0]); 
 	PrintAndLog("  %02X: version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0f);
-	PrintAndLog("  %02X: Physical Memory Size of this tag: %d bytes", data[2], (data[2] + 1) * 8);
+	PrintAndLog("  %02X: Physical Memory Size: %d bytes", data[2], (data[2] + 1) * 8);
+	if ( data[2] == 0x12 )
+		PrintAndLog("  %02X: NDEF Memory Size: &d bytes", data[2], 144);
+	else if ( data[2] == 0x3e )
+		PrintAndLog("  %02X: NDEF Memory Size: &d bytes", data[2], 496);
+	else if ( data[2] == 0x6d )
+		PrintAndLog("  %02X: NDEF Memory Size: &d bytes", data[2], 872);
+	
 	PrintAndLog("  %02X: %s / %s", data[3], 
 				(data[3] & 0xF0) ? "(RFU)" : "Read access granted without any security", 
 				(data[3] & 0x0F)==0 ? "Write access granted without any security" : (data[3] & 0x0F)==0x0F ? "No write access granted at all" : "(RFU)");
@@ -448,8 +464,7 @@ uint16_t GetHF14AMfU_Type(void){
 }	
 
 int CmdHF14AMfUInfo(const char *Cmd){
-
-
+	
 	uint8_t data[16] = {0x00};
 	iso14a_card_select_t card;
 	uint8_t *key;
@@ -523,7 +538,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		
 		ulev1_print_counters();
 		
-		uint8_t startconfigblock = (tagtype & UL_EV1_48) ? 0x10 : 0x24;
+		uint8_t startconfigblock = (tagtype & UL_EV1_48) ? 0x10 : 0x25;
 		uint8_t ulev1_conf[16] = {0x00};
 		status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
 		if ( status == -1 ){
@@ -533,6 +548,18 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		}
 		
 		ulev1_print_configuration(ulev1_conf);
+		
+		uint8_t ulev1_signature[32] = {0x00};
+		status = ulev1_readSignature( ulev1_signature, sizeof(ulev1_signature));
+		if ( status == -1 ){
+			PrintAndLog("Error: tag didn't answer to READ SIGNATURE");
+			ul_switch_off_field();
+			return status;
+		}
+		
+		PrintAndLog(" ECC Signature : %s", sprint_hex(ulev1_signature, sizeof(ulev1_signature)));
+		PrintAndLog(" Verify it with the following 'secp128r1' for Elliptic curve cryptograghy in OpenSSL");
+		
 	}
 	
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216))) {
@@ -572,7 +599,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			ul_switch_off_field();
 			return status;
 		}
-		ul_print_CC(cc);	
+		ntag_print_CC(cc);	
 	}
 	
 	ul_switch_off_field();
