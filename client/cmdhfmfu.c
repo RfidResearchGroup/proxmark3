@@ -49,9 +49,10 @@ uint8_t default_3des_keys[7][16] = {
 		{ 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF }	// 11 22 33
 	};
 
-uint8_t default_pwd_pack[2][4] = {
+uint8_t default_pwd_pack[3][4] = {
 	{0xFF,0xFF,0xFF,0xFF}, // PACK 0x00,0x00 -- factory default
-	{0x4A,0xF8,0x4B,0x19} // PACK 0xE5 0xBE -- italian bus (sniffed.)
+	{0x4A,0xF8,0x4B,0x19}, // PACK 0xE5,0xBE -- italian bus (sniffed)
+	{0x05,0x22,0xE6,0xB4}  // PACK 0x80,0x80 -- Amiiboo (sniffed)
 };	
 	
 static int CmdHelp(const char *Cmd);
@@ -114,7 +115,7 @@ static int ul_send_cmd_raw( uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uin
 	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) return -1;
 	if ( !resp.arg[0] && responseLength) return -1;
 	
-	uint16_t resplen = (resp.arg[0] < responseLength) ? resp.arg[0] : responseLength;	
+	uint16_t resplen = (resp.arg[0] < responseLength) ? resp.arg[0] : responseLength;
 	memcpy(response, resp.d.asBytes, resplen);
 	return resplen;
 }
@@ -160,15 +161,20 @@ static int ul_read( uint8_t page, uint8_t *response, uint16_t responseLength ){
 	return len;
 }
 
-static int ul_write( uint8_t page, uint8_t *data, uint8_t datalen ){
-	uint8_t cmd[] = {MIFARE_ULC_WRITE, page, 0,0,0,0};
+static int ul_comp_write( uint8_t page, uint8_t *data, uint8_t datalen ){
+
+	uint8_t cmd[18];
+	memset(cmd, 0x00, sizeof(cmd));
+	datalen = ( datalen > 16) ? 16 : datalen;
+
+	cmd[0] = ISO14443A_CMD_WRITEBLOCK;
+	cmd[1] = page;
 	memcpy(cmd+2, data, datalen);
+
 	uint8_t response[1] = {0xff};
-	int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, sizeof(response));
+	int len = ul_send_cmd_raw(cmd, 2+datalen, response, sizeof(response));
 	if ( len == -1 )
 		ul_switch_off_field();
-	
-	PrintAndLog("RESP: %02x", response[0]);
 	// ACK
 	if ( response[0] == 0x0a ) return 0;
 	// NACK
@@ -408,6 +414,7 @@ static int ulc_magic_test(){
 	// 1) it seems to have a static nonce response to 0x1A command.
 	// 2) the deskey bytes is not-zero:d out on as datasheet states.
 	// 3) UID - changeable, not only, but pages 0-1-2-3.
+	// 4) use the ul_magic_test !  magic tags answers specially!
 	int returnValue = UL_ERROR;
 	iso14a_card_select_t card;
 	uint8_t nonce1[11] = {0x00};
@@ -432,7 +439,8 @@ static int ulc_magic_test(){
 static int ul_magic_test(){
 	
 	// Magic Ultralight test
-	// It takes present UID, and tries to write it back.
+	// 1) It takes present UID, and tries to write it back. OBSOLETE
+	// 2) make a wrong length write to page0, and see if tag answers with ACK/NACK:
 	iso14a_card_select_t card;
 	int status = ul_select(&card);
 	if ( status < 1 ){
@@ -440,11 +448,7 @@ static int ul_magic_test(){
 		ul_switch_off_field();
 		return UL_ERROR;
 	}
-	uint8_t page0 = 0;
-	uint8_t data[4] = {card.uid[0], card.uid[1], card.uid[2], 0};
-	data[3] = 0x88 ^ card.uid[0] ^ card.uid[1] ^  card.uid[2];
-
-	status = ul_write( page0, data, sizeof(data));
+	status = ul_comp_write(0, NULL, 0);
 	ul_switch_off_field();
 	if ( status == 0) 
 		return UL_MAGIC;
@@ -622,7 +626,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		
 			uint8_t pack[4] = {0,0,0,0};
 			
-			for (uint8_t i = 0; i < 2; ++i ){
+			for (uint8_t i = 0; i < 3; ++i ){
 				key = default_pwd_pack[i];
 				if ( ulev1_requestAuthentication(key, pack, sizeof(pack)) > -1 ){
 					PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
