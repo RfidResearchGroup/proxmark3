@@ -107,7 +107,6 @@ static int ul_send_cmd_raw( uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uin
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
-	if (resp.arg[0] < 1) return	-1;
 
 	uint16_t resplen = (resp.arg[0] < responseLength) ? resp.arg[0] : responseLength;
 	memcpy(response, resp.d.asBytes, resplen);
