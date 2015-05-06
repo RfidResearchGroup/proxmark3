@@ -108,15 +108,16 @@ void print_hex(const uint8_t * data, const size_t len)
 	printf("\n");
 }
 
-char * sprint_hex(const uint8_t * data, const size_t len) {
+char *sprint_hex(const uint8_t *data, const size_t len) {
 	
 	int maxLen = ( len > 1024/3) ? 1024/3 : len;
 	static char buf[1024];
-	char * tmp = buf;
+	memset(buf, 0x00, 1024);
+	char *tmp = buf;
 	size_t i;
 
 	for (i=0; i < maxLen; ++i, tmp += 3)
-		sprintf(tmp, "%02x ", data[i]);
+		sprintf(tmp, "%02X ", data[i]);
 
 	return buf;
 }
@@ -125,6 +126,7 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 	
 	int maxLen = ( len > 1024) ? 1024 : len;
 	static char buf[1024];
+	memset(buf, 0x00, 1024);
 	char *tmp = buf;
 
 	for (size_t i=0; i < maxLen; ++i){
