@@ -48,6 +48,11 @@ uint8_t default_3des_keys[7][16] = {
 		{ 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF },// all FF
 		{ 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF }	// 11 22 33
 	};
+
+uint8_t default_pwd_pack[2][4] = {
+	{0xFF,0xFF,0xFF,0xFF}, // PACK 0x00,0x00 -- factory default
+	{0x4A,0xF8,0x4B,0x19} // PACK 0xE5 0xBE -- italian bus (sniffed.)
+};	
 	
 static int CmdHelp(const char *Cmd);
 
@@ -106,14 +111,12 @@ static int ul_send_cmd_raw( uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uin
 	memcpy(c.d.asBytes, cmd, cmdlen);
 	SendCommand(&c);
 	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) return -1;
+	if ( !resp.arg[0] && responseLength) return -1;
 	
-	if (resp.arg[0] > 0) {
-		uint16_t resplen = (resp.arg[0] < responseLength) ? resp.arg[0] : responseLength;
-		memcpy(response, resp.d.asBytes, resplen);
-		return resplen;
-	} 
-	return -1;
+	uint16_t resplen = (resp.arg[0] < responseLength) ? resp.arg[0] : responseLength;	
+	memcpy(response, resp.d.asBytes, resplen);
+	return resplen;
 }
 /*
 static int ul_send_cmd_raw_crc( uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength, bool append_crc ) {
@@ -155,6 +158,21 @@ static int ul_read( uint8_t page, uint8_t *response, uint16_t responseLength ){
 	if ( len == -1 )
 		ul_switch_off_field();
 	return len;
+}
+
+static int ul_write( uint8_t page, uint8_t *data, uint8_t datalen ){
+	uint8_t cmd[] = {MIFARE_ULC_WRITE, page, 0,0,0,0};
+	memcpy(cmd+2, data, datalen);
+	uint8_t response[1] = {0xff};
+	int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, sizeof(response));
+	if ( len == -1 )
+		ul_switch_off_field();
+	
+	PrintAndLog("RESP: %02x", response[0]);
+	// ACK
+	if ( response[0] == 0x0a ) return 0;
+	// NACK
+	return -1;	
 }
 
 static int ulc_requestAuthentication( uint8_t blockNo, uint8_t *nonce, uint16_t nonceLength ){
@@ -272,9 +290,9 @@ static int ntag_print_CC(uint8_t *data) {
 	return 0;				
 }
 
-static int ul_print_version(uint8_t *data){		
+static int ulev1_print_version(uint8_t *data){		
 	PrintAndLog("\n--- UL-EV1 / NTAG Version");
-	PrintAndLog("Raw version bytes: %s", sprint_hex(data, 8) );
+	PrintAndLog("       Raw bytes : %s", sprint_hex(data, 8) );
 	PrintAndLog("       Vendor ID : 0x%02X, Manufacturer: %s", data[1], getTagInfo(data[1]));
 	PrintAndLog("    Product type : %s"		, getProductTypeStr(data[2]));
 	PrintAndLog(" Product subtype : 0x%02X %s"	, data[3], (data[3]==1) ?"17 pF":"50pF");
@@ -368,13 +386,13 @@ static int ulev1_print_counters(){
 	uint8_t counter[3] = {0,0,0};
 	for ( uint8_t i = 0; i<3; ++i) {
 		ulev1_readCounter(i,counter, sizeof(counter) );
-		PrintAndLog("Counter [%d] : %s", i, sprint_hex(counter,3));
+		PrintAndLog("     [0x%0d] : %s", i, sprint_hex(counter,3));
 	}
 	return 0;
 }
 
 static int ulev1_print_signature( uint8_t *data, uint8_t len){
-			
+	PrintAndLog("\n--- UL-EV1 Signature");	
 	PrintAndLog("IC signature public key name  : NXP NTAG21x 2013");
 	PrintAndLog("IC signature public key value : 04494e1a386d3d3cfe3dc10e5de68a499b1c202db5b132393e89ed19fe5be8bc61");
 	PrintAndLog("    Elliptic curve parameters : secp128r1");
@@ -384,13 +402,60 @@ static int ulev1_print_signature( uint8_t *data, uint8_t len){
 	return 0;
 }
 
+static int ulc_magic_test(){
+	// Magic Ultralight test
+		// Magic UL-C, by observation,
+	// 1) it seems to have a static nonce response to 0x1A command.
+	// 2) the deskey bytes is not-zero:d out on as datasheet states.
+	// 3) UID - changeable, not only, but pages 0-1-2-3.
+	int returnValue = UL_ERROR;
+	iso14a_card_select_t card;
+	uint8_t nonce1[11] = {0x00};
+	uint8_t nonce2[11] = {0x00};
+	int status = ul_select(&card);
+	if ( status < 1 ){
+		PrintAndLog("Error: couldn't select ulc_magic_test");
+		ul_switch_off_field();
+		return UL_ERROR;
+	}
+	status = ulc_requestAuthentication(0, nonce1, sizeof(nonce1));
+	if ( status > 0 ) {
+		status = ulc_requestAuthentication(0, nonce2, sizeof(nonce2));
+		returnValue =  ( !memcmp(nonce1, nonce2, 11) ) ? UL_C_MAGIC : UL_C;
+	} else {
+		returnValue = UL;
+	}	
+	ul_switch_off_field();
+	return returnValue;
+}
+
+static int ul_magic_test(){
+	
+	// Magic Ultralight test
+	// It takes present UID, and tries to write it back.
+	iso14a_card_select_t card;
+	int status = ul_select(&card);
+	if ( status < 1 ){
+		PrintAndLog("Error: couldn't select ul_magic_test");
+		ul_switch_off_field();
+		return UL_ERROR;
+	}
+	uint8_t page0 = 0;
+	uint8_t data[4] = {card.uid[0], card.uid[1], card.uid[2], 0};
+	data[3] = 0x88 ^ card.uid[0] ^ card.uid[1] ^  card.uid[2];
+
+	status = ul_write( page0, data, sizeof(data));
+	ul_switch_off_field();
+	if ( status == 0) 
+		return UL_MAGIC;
+	return UL;
+}
+
 uint16_t GetHF14AMfU_Type(void){
 
 	TagTypeUL_t tagtype = UNKNOWN;
 	iso14a_card_select_t card;
 	uint8_t version[10] = {0x00};
-	uint8_t nonce1[11] = {0x00};
-	uint8_t nonce2[11] = {0x00};
 	int status = 0;
 	int len;
 
@@ -400,9 +465,9 @@ uint16_t GetHF14AMfU_Type(void){
 		ul_switch_off_field();
 		return UL_ERROR;
 	}
-
 	// Ultralight - ATQA / SAK 
-	if ( card.atqa[1] != 0x00 && card.atqa[0] != 0x44 && card.sak != 0x00 ) {
+	if ( card.atqa[1] != 0x00 || card.atqa[0] != 0x44 || card.sak != 0x00 ) {
+		PrintAndLog("Tag is not UL or NTAG. [ATQA: %02X %02x SAK: %02X]", card.atqa[1],card.atqa[0],card.sak);
 		ul_switch_off_field();
 		return UL_ERROR;
 	}
@@ -411,9 +476,6 @@ uint16_t GetHF14AMfU_Type(void){
 	ul_switch_off_field();
 	
 	switch (len) {
-		case -1:
-			tagtype = (UL | UL_C);
-			break;
 		case 0x0A: {
 		
 			if ( version[2] == 0x03 && version[6] == 0x0B ) 
@@ -431,61 +493,31 @@ uint16_t GetHF14AMfU_Type(void){
 			
 			break;
 			}
-		case 0x01:{
-			tagtype = UL_C; 
-			break;
-		}
-		case 0x00: {
-			tagtype = UL;
-			break;
-		}
-		default :{
-			tagtype = UNKNOWN;
-			break;
-		}
+		case 0x01: tagtype = UL_C; break;
+		case 0x00: tagtype = UL; break;
+		case -1:   tagtype = (UL | UL_C); break;
+		default:   tagtype = UNKNOWN; break;
 	}
 
-	if ((tagtype & ( UL_C | UL ))) {
-		// Magic UL-C, by observation,
-		// it seems to have a static nonce response to 0x1A command.
-		status = ul_select(&card);
-		status = ulc_requestAuthentication(0, nonce1, sizeof(nonce1));
-		if ( status > 0 ) {
-
-			status = ulc_requestAuthentication(0, nonce2, sizeof(nonce2));
-			
-			tagtype =( !memcmp(nonce1, nonce2, 11) ) ? UL_C_MAGIC : UL_C;
-				
-		} else {
-			tagtype = UL;
-		}
-		ul_switch_off_field();
-	}
-
-	//PrintAndLog("ICE %d", tagtype);
-	//Magic Ultralight test here.  It takes present UID, and tries to write it back.
-	if ( (tagtype & UL) ){
-		// read 3des key or PWD,  
-		// if response bytes == all zeros its a NORMAL tag.
-		//return UL_MAGIC;
-	}
+	if ((tagtype & ( UL_C | UL ))) tagtype = ulc_magic_test();
+	if ( (tagtype & UL) ) tagtype = ul_magic_test();
 
 	return tagtype;
 }	
 
 int CmdHF14AMfUInfo(const char *Cmd){
 
+	uint8_t authlim = 0xff;
 	uint8_t data[16] = {0x00};
 	iso14a_card_select_t card;
 	uint8_t *key;
 	int status;	
 
-	PrintAndLog("\n--- Tag Information ---------");
-	PrintAndLog("-------------------------------------------------------------");
-	
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
-	
+
+	PrintAndLog("\n--- Tag Information ---------");
+	PrintAndLog("-------------------------------------------------------------");
 	ul_print_type(tagtype);
 	
 	status = ul_select(&card);
@@ -545,9 +577,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	}
 	
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128))) {
-		
-		ulev1_print_counters();
-		
+			
 		uint8_t startconfigblock = (tagtype & UL_EV1_48) ? 0x10 : 0x25;
 		uint8_t ulev1_conf[16] = {0x00};
 		status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
@@ -555,7 +585,10 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			PrintAndLog("Error: tag didn't answer to READ C");
 			ul_switch_off_field();
 			return status;
-		}		
+		}
+		// save AUTHENTICATION LIMITS for later:
+		authlim = (ulev1_conf[4] & 0x07);
+		
 		ulev1_print_configuration(ulev1_conf);
 		
 		uint8_t ulev1_signature[32] = {0x00};
@@ -564,8 +597,10 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			PrintAndLog("Error: tag didn't answer to READ SIGNATURE");
 			ul_switch_off_field();
 			return status;
-		}
+		}		
 		ulev1_print_signature( ulev1_signature, sizeof(ulev1_signature));
+		
+		ulev1_print_counters();
 	}
 	
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216))) {
@@ -577,22 +612,24 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			ul_switch_off_field();
 			return status;
 		}
-		ul_print_version(version);
+		ulev1_print_version(version);
 		
-		//********** TODO ********************************
-		// --problem, there is a failed pwd tries counter in UL-EV1
-		PrintAndLog("\nTrying some known EV1/NTAG passwords.");
-				
-		uint8_t password[4] ={0xff,0xff,0xff,0xff};
-		uint8_t pack[4] = {0,0,0,0};
-		status = ulev1_requestAuthentication(password, pack, sizeof(pack));
-		if ( status == -1 ){
-			PrintAndLog("Error: tag didn't answer to AUTHENTICATE");
+		// AUTHLIMIT, (number of failed authentications)
+		// 0 = limitless.
+		// 1-7 = ...  should we even try then?
+		if ( authlim == 0 ){
+			PrintAndLog("\n--- Known EV1/NTAG passwords.");
+		
+			uint8_t pack[4] = {0,0,0,0};
+			
+			for (uint8_t i = 0; i < 2; ++i ){
+				key = default_pwd_pack[i];
+				if ( ulev1_requestAuthentication(key, pack, sizeof(pack)) > -1 ){
+					PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+				}
+			}
 			ul_switch_off_field();
-			return status;
 		}
-		PrintAndLog("Found default password: %s",sprint_hex(password, sizeof(password)));
-		PrintAndLog("Got PACK : %s", sprint_hex(pack,sizeof(pack)));
 	}
 	
 	if ((tagtype & (NTAG_213 | NTAG_215 | NTAG_216))){
