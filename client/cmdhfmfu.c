@@ -107,12 +107,11 @@ static int ul_send_cmd_raw( uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uin
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
+	if (resp.arg[0] < 1) return	-1;
 
 	uint16_t resplen = (resp.arg[0] < responseLength) ? resp.arg[0] : responseLength;
-	if (resp.arg[0] > 0) {
-		memcpy(response, resp.d.asBytes, resplen);
-		return resplen;
-	} else return -1;
+	memcpy(response, resp.d.asBytes, resplen);
+	return resplen;
 }
 /*
 static int ul_send_cmd_raw_crc( uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength, bool append_crc ) {
@@ -370,9 +369,9 @@ uint16_t GetHF14AMfU_Type(void){
 		ul_switch_off_field();
 		return UL_ERROR;
 	}
-
 	// Ultralight - ATQA / SAK 
-	if ( card.atqa[1] != 0x00 && card.atqa[0] != 0x44 && card.sak != 0x00 ) {
+	if ( card.atqa[1] != 0x00 || card.atqa[0] != 0x44 || card.sak != 0x00 ) {
+		PrintAndLog	("Tag is not UL or NTAG, ATQA1: %x, ATQA0: %x, SAK: %d", card.atqa[1],card.atqa[0],card.sak);
 		ul_switch_off_field();
 		return UL_ERROR;
 	}
@@ -419,13 +418,15 @@ uint16_t GetHF14AMfU_Type(void){
 		// Magic UL-C, by observation,
 		// it seems to have a static nonce response to 0x1A command.
 		status = ul_select(&card);
+		if ( status < 1 ){
+			PrintAndLog("Error: couldn't select B");
+			ul_switch_off_field();
+			return UL_ERROR;
+		}
 		status = ulc_requestAuthentication(0, nonce1, sizeof(nonce1));
 		if ( status > 0 ) {
-
 			status = ulc_requestAuthentication(0, nonce2, sizeof(nonce2));
-
 			tagtype =( !memcmp(nonce1, nonce2, 11) ) ? UL_C_MAGIC : UL_C;
-
 		} else {
 			tagtype = UL;
 		}
@@ -451,12 +452,12 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	uint8_t *key;
 	int status;
 
-	PrintAndLog("\n--- Tag Information ---------");
-	PrintAndLog("-------------------------------------------------------------");
 
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
 
+	PrintAndLog("\n--- Tag Information ---------");
+	PrintAndLog("-------------------------------------------------------------");
 	ul_print_type(tagtype);
 
 	status = ul_select(&card);
@@ -483,11 +484,11 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ - possibly locked");
-			//ul_switch_off_field();
-			//return status;
+			ul_switch_off_field();
+			return status;
+		} 
 
-			//tag may be locked
-		} else ulc_print_configuration(ulc_conf);
+		ulc_print_configuration(ulc_conf);
 
 		if ((tagtype & MAGIC)){
 
