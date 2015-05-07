@@ -93,7 +93,7 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 			snprintf(exp,size,"?");
 		break;
 	}
-	case MIFARE_ULEV1_WRITE:{
+	case MIFARE_ULC_WRITE:{
 		if ( cmd[1] < 0x21 )
 			snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); 
 		else
