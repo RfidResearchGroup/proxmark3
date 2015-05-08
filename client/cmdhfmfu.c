@@ -432,7 +432,7 @@ static int ulc_magic_test(){
 	ul_switch_off_field();
 	return returnValue;
 }
-
+/*
 static int ul_magic_test(){
 
 	// Magic Ultralight tests
@@ -451,7 +451,7 @@ static int ul_magic_test(){
 		return UL_MAGIC;
 	return UL;
 }
-
+*/
 uint16_t GetHF14AMfU_Type(void){
 
 	TagTypeUL_t tagtype = UNKNOWN;
@@ -474,7 +474,7 @@ uint16_t GetHF14AMfU_Type(void){
 	}
 
 	len  = ulev1_getVersion(version, sizeof(version));
-	ul_switch_off_field();
+	if (len > -1) ul_switch_off_field();  //if -1 it is already off
 
 	switch (len) {
 		case 0x0A: {
@@ -496,12 +496,12 @@ uint16_t GetHF14AMfU_Type(void){
 		}
 		case 0x01: tagtype = UL_C; break;
 		case 0x00: tagtype = UL; break;
-		case -1  : tagtype = (UL | UL_C); break;
+		case -1  : tagtype = (UL | UL_C); break;  //when does this happen?
 		default  : tagtype = UNKNOWN; break;
 	}
 
-	if ((tagtype & ( UL_C | UL ))) tagtype = ulc_magic_test();
-	if ((tagtype & UL)) tagtype = ul_magic_test();
+	tagtype = (ul_magic_test() == UL_MAGIC) ? (tagtype | MAGIC) : tagtype;
+	//if ((tagtype & UL)) tagtype = ul_magic_test();
 
 	return tagtype;
 }
@@ -531,7 +531,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	// read pages 0,1,2,4 (should read 4pages)
 	status = ul_read(0, data, sizeof(data));
 	if ( status == -1 ){
-		PrintAndLog("Error: tag didn't answer to READ A");
+		PrintAndLog("Error: tag didn't answer to READ");
 		ul_switch_off_field();
 		return status;
 	}
@@ -545,7 +545,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ - possibly locked");
-			ul_switch_off_field();
 			return status;
 		} 
 
@@ -556,8 +555,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			uint8_t ulc_deskey[16] = {0x00};
 			status = ul_read(0x2C, ulc_deskey, sizeof(ulc_deskey));
 			if ( status == -1 ){
-				PrintAndLog("Error: tag didn't answer to READ B");
-				ul_switch_off_field();
+				PrintAndLog("Error: tag didn't answer to READ magic");
 				return status;
 			}
 			ulc_print_3deskey(ulc_deskey);
@@ -582,8 +580,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		uint8_t ulev1_conf[16] = {0x00};
 		status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
 		if ( status == -1 ){
-			PrintAndLog("Error: tag didn't answer to READ C");
-			ul_switch_off_field();
+			PrintAndLog("Error: tag didn't answer to READ EV1");
 			return status;
 		}
 		// save AUTHENTICATION LIMITS for later:
@@ -595,7 +592,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status = ulev1_readSignature( ulev1_signature, sizeof(ulev1_signature));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ SIGNATURE");
-			ul_switch_off_field();
 			return status;
 		}		
 		ulev1_print_signature( ulev1_signature, sizeof(ulev1_signature));
@@ -609,7 +605,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status  = ulev1_getVersion(version, sizeof(version));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to GETVERSION");
-			ul_switch_off_field();
 			return status;
 		}
 		ulev1_print_version(version);
@@ -621,14 +616,15 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			PrintAndLog("\n--- Known EV1/NTAG passwords.");
 
 			uint8_t pack[4] = {0,0,0,0};
-
+			int len=0; //if len goes to -1 the connection will be turned off.
 			for (uint8_t i = 0; i < 3; ++i ){
 				key = default_pwd_pack[i];
-				if ( ulev1_requestAuthentication(key, pack, sizeof(pack)) > -1 ){
+				if ( len > -1 ){
+					len = ulev1_requestAuthentication(key, pack, sizeof(pack));
 					PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
 				}
 			}
-			ul_switch_off_field();
+			if (len > -1) ul_switch_off_field();
 		}
 	}
 
@@ -638,8 +634,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		uint8_t cc[16] = {0x00};
 		status = ul_read(2, cc, sizeof(cc));
 		if ( status == -1 ){
-			PrintAndLog("Error: tag didn't answer to READ D");
-			ul_switch_off_field();
+			PrintAndLog("Error: tag didn't answer to READ ntag");
 			return status;
 		}
 		ntag_print_CC(cc);
