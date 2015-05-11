@@ -96,9 +96,10 @@ char* getUlev1CardSizeStr( uint8_t fsize ){
 
 	static char buf[40];
 	char *retStr = buf;
+	memset(buf, 0, sizeof(buf));
 
-	uint8_t usize = 1 << ((fsize >>1) + 1);
-	uint8_t lsize = 1 << (fsize >>1);
+	uint16_t usize = 1 << ((fsize >>1) + 1);
+	uint16_t lsize = 1 << (fsize >>1);
 
 	// is  LSB set?
 	if (  fsize & 1 )
@@ -885,6 +886,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 		case 's':
 			swapEndian = true;
 			cmdp++;
+			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
