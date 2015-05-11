@@ -2,6 +2,7 @@
     
 local _keys = {
 
+
     --[[
 
     These keys are from the pm3 c-codebase. 
@@ -165,6 +166,12 @@ local _keys = {
     --]]	
 	  '44ab09010845',
       '85fed980ea5a',
+	  
+	 --[[
+	 VIGIK1
+	 --]]
+	 '314B49474956',
+	 '564c505f4d41',
 }
 
 ---
