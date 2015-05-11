@@ -258,7 +258,7 @@ static int ul_print_default( uint8_t *data){
 	uid[6] = data[7];
 
 	PrintAndLog("       UID : %s ", sprint_hex(uid, 7));
-	PrintAndLog("    UID[0] : %02x, Manufacturer: %s",  uid[0], getTagInfo(uid[0]) );
+	PrintAndLog("    UID[0] : %02X, Manufacturer: %s",  uid[0], getTagInfo(uid[0]) );
 	if ( uid[0] == 0x05 ) {
 		uint8_t chip = (data[8] & 0xC7); // 11000111  mask, bit 3,4,5 RFU
 		switch (chip){
@@ -270,19 +270,20 @@ static int ul_print_default( uint8_t *data){
 	// CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2 
 	int crc0 = 0x88 ^ data[0] ^ data[1] ^data[2];
 	if ( data[3] == crc0 )
-		PrintAndLog("      BCC0 : 0x%02X - Ok", data[3]);
+		PrintAndLog("      BCC0 : %02X - Ok", data[3]);
 	else
-		PrintAndLog("      BCC0 : 0x%02X - crc should be %02x", data[3], crc0);
+		PrintAndLog("      BCC0 : %02X - crc should be %02X", data[3], crc0);
 
 	int crc1 = data[4] ^ data[5] ^ data[6] ^data[7];
 	if ( data[8] == crc1 )
-		PrintAndLog("      BCC1 : 0x%02X - Ok", data[8]);
+		PrintAndLog("      BCC1 : %02X - Ok", data[8]);
 	else
-		PrintAndLog("      BCC1 : 0x%02X - crc should be 0x%02X", data[8], crc1 );
+		PrintAndLog("      BCC1 : %02X - crc should be %02X", data[8], crc1 );
 
-	PrintAndLog("  Internal : 0x%02X - %s default", data[9], (data[9]==0x48)?"":"not" );
+	PrintAndLog("  Internal : %02X - %s default", data[9], (data[9]==0x48)?"":"not" );
 	PrintAndLog("      Lock : %s - %s", sprint_hex(data+10, 2),printBits( 2, data+10) );
 	PrintAndLog("OneTimePad : %s ", sprint_hex(data + 12, 4));
+	PrintAndLog("");
 	return 0;
 }
 
@@ -499,7 +500,7 @@ uint16_t GetHF14AMfU_Type(void){
 	}
 	// Ultralight - ATQA / SAK 
 	if ( card.atqa[1] != 0x00 || card.atqa[0] != 0x44 || card.sak != 0x00 ) {
-		PrintAndLog("Tag is not Ultralight | NTAG | MY-D  [ATQA: %02X %02x SAK: %02X]\n", card.atqa[1], card.atqa[0], card.sak);
+		PrintAndLog("Tag is not Ultralight | NTAG | MY-D  [ATQA: %02X %02X SAK: %02X]\n", card.atqa[1], card.atqa[0], card.sak);
 		ul_switch_off_field();
 		return UL_ERROR;
 	}
