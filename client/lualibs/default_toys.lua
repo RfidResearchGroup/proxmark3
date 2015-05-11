@@ -363,7 +363,15 @@ local function find( main, sub)
 	end
 	return nil
 end
+local function list()
+	print ("Type\tSub\tElement\tGame            Name")
+	print (string.rep('=', 54))
+    for k, v in pairs(_names) do
+		print(("%s\t%s\t%s\t%-9s\t%s"):format(v[2],v[3],v[4], v[5], v[6] ))
+	end 
+end
 
 return {
 	Find = find,
+	List = list,
 }
