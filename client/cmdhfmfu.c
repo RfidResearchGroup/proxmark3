@@ -177,7 +177,7 @@ static int ul_comp_write( uint8_t page, uint8_t *data, uint8_t datalen ){
 	// NACK
 	return -1;
 }
-
+/*
 static int ulc_requestAuthentication( uint8_t blockNo, uint8_t *nonce, uint16_t nonceLength ){
 
 	uint8_t cmd[] = {MIFARE_ULC_AUTH_1, blockNo};
@@ -186,7 +186,7 @@ static int ulc_requestAuthentication( uint8_t blockNo, uint8_t *nonce, uint16_t 
 		ul_switch_off_field();
 	return len;
 }
-
+*/
 static int ulev1_requestAuthentication( uint8_t *pwd, uint8_t *pack, uint16_t packLength ){
 
 	uint8_t cmd[] = {MIFARE_ULEV1_AUTH, pwd[0], pwd[1], pwd[2], pwd[3]};
@@ -281,11 +281,11 @@ static int ntag_print_CC(uint8_t *data) {
 	PrintAndLog("  %02X: version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0f);
 	PrintAndLog("  %02X: Physical Memory Size: %d bytes", data[2], (data[2] + 1) * 8);
 	if ( data[2] == 0x12 )
-		PrintAndLog("  %02X: NDEF Memory Size: &d bytes", data[2], 144);
+		PrintAndLog("  %02X: NDEF Memory Size: %d bytes", data[2], 144);
 	else if ( data[2] == 0x3e )
-		PrintAndLog("  %02X: NDEF Memory Size: &d bytes", data[2], 496);
+		PrintAndLog("  %02X: NDEF Memory Size: %d bytes", data[2], 496);
 	else if ( data[2] == 0x6d )
-		PrintAndLog("  %02X: NDEF Memory Size: &d bytes", data[2], 872);
+		PrintAndLog("  %02X: NDEF Memory Size: %d bytes", data[2], 872);
 	
 	PrintAndLog("  %02X: %s / %s", data[3], 
 				(data[3] & 0xF0) ? "(RFU)" : "Read access granted without any security", 
@@ -404,7 +404,7 @@ static int ulev1_print_signature( uint8_t *data, uint8_t len){
 	//PrintAndLog("IC signature status: %s valid", (iseccvalid() )?"":"not");
 	return 0;
 }
-
+/*
 static int ulc_magic_test(){
 	// Magic Ultralight test
 		// Magic UL-C, by observation,
@@ -432,7 +432,7 @@ static int ulc_magic_test(){
 	ul_switch_off_field();
 	return returnValue;
 }
-/*
+*/
 static int ul_magic_test(){
 
 	// Magic Ultralight tests
@@ -451,7 +451,7 @@ static int ul_magic_test(){
 		return UL_MAGIC;
 	return UL;
 }
-*/
+
 uint16_t GetHF14AMfU_Type(void){
 
 	TagTypeUL_t tagtype = UNKNOWN;
@@ -622,6 +622,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 				if ( len > -1 ){
 					len = ulev1_requestAuthentication(key, pack, sizeof(pack));
 					PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+					break;
 				}
 			}
 			if (len > -1) ul_switch_off_field();
@@ -632,7 +633,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 
 		PrintAndLog("\n--- NTAG NDEF Message");
 		uint8_t cc[16] = {0x00};
-		status = ul_read(2, cc, sizeof(cc));
+		status = ul_read(3, cc, sizeof(cc));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ ntag");
 			return status;
