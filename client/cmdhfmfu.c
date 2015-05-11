@@ -24,22 +24,27 @@
 #define MAX_NTAG_216      0xe6
 
 typedef enum TAGTYPE_UL {
-	UNKNOWN     = 0x0000,
-	UL          = 0x0001,
-	UL_C        = 0x0002,
-	UL_EV1_48   = 0x0004,
-	UL_EV1_128  = 0x0008,
-	NTAG        = 0x0010,
-	NTAG_213    = 0x0020,
-	NTAG_215    = 0x0040,
-	NTAG_216    = 0x0080,
-	MAGIC       = 0x0100,
-	UL_MAGIC    = UL | MAGIC,
-	UL_C_MAGIC  = UL_C | MAGIC,
-	UL_ERROR    = 0xFFFF,
+	UNKNOWN       = 0x0000,
+	UL            = 0x0001,
+	UL_C          = 0x0002,
+	UL_EV1_48     = 0x0004,
+	UL_EV1_128    = 0x0008,
+	NTAG          = 0x0010,
+	NTAG_213      = 0x0020,
+	NTAG_215      = 0x0040,
+	NTAG_216      = 0x0080,
+	MY_D          = 0x0100,
+	MY_D_NFC      = 0x0200,
+	MY_D_MOVE     = 0x0400,
+	MY_D_MOVE_NFC = 0x0800,
+	MAGIC         = 0x1000,
+	UL_MAGIC      = UL | MAGIC,
+	UL_C_MAGIC    = UL_C | MAGIC,
+	UL_ERROR      = 0xFFFF,
 } TagTypeUL_t;
 
-uint8_t default_3des_keys[7][16] = {
+#define KEYS_3DES_COUNT 7
+uint8_t default_3des_keys[KEYS_3DES_COUNT][16] = {
 		{ 0x42,0x52,0x45,0x41,0x4b,0x4d,0x45,0x49,0x46,0x59,0x4f,0x55,0x43,0x41,0x4e,0x21 },// 3des std key
 		{ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },// all zeroes
 		{ 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f },// 0x00-0x0F
@@ -49,10 +54,16 @@ uint8_t default_3des_keys[7][16] = {
 		{ 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF }	// 11 22 33
 };
 
-uint8_t default_pwd_pack[3][4] = {
+#define KEYS_PWD_COUNT 8
+uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 	{0xFF,0xFF,0xFF,0xFF}, // PACK 0x00,0x00 -- factory default
 	{0x4A,0xF8,0x4B,0x19}, // PACK 0xE5,0xBE -- italian bus (sniffed)
-	{0x05,0x22,0xE6,0xB4}  // PACK 0x80,0x80 -- Amiiboo (sniffed)
+	{0x33,0x6B,0xA1,0x19}, // PACK 0x9c,0x2d -- italian bus (sniffed)
+	{0xFF,0x90,0x6C,0xB2}, // PACK 0x12,0x9e -- italian bus (sniffed)	
+	{0x05,0x22,0xE6,0xB4}, // PACK 0x80,0x80 -- Amiiboo (sniffed) pikachu-b UID:
+	{0x7E,0x22,0xE6,0xB4}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
+	{0x02,0xE1,0xEE,0x36}, // PACK 0x80,0x80 -- AMiiboo (sniffed) sonic UID:  04d257 7ae33e8027
+	{0x32,0x0C,0x16,0x17}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
 };
 
 static int CmdHelp(const char *Cmd);
@@ -83,7 +94,7 @@ char* getProductTypeStr( uint8_t id){
 */
 char* getUlev1CardSizeStr( uint8_t fsize ){
 
-	static char buf[30];
+	static char buf[40];
 	char *retStr = buf;
 
 	uint8_t usize = 1 << ((fsize >>1) + 1);
@@ -91,9 +102,9 @@ char* getUlev1CardSizeStr( uint8_t fsize ){
 
 	// is  LSB set?
 	if (  fsize & 1 )
-		sprintf(retStr, "0x%02X (%u - %u bytes)",fsize, usize, lsize);
+		sprintf(retStr, "%02X (%u <-> %u bytes)",fsize, usize, lsize);
 	else 
-		sprintf(retStr, "0x%02X (%u bytes)", fsize, lsize);		
+		sprintf(retStr, "%02X (%u bytes)", fsize, lsize);		
 	return buf;
 }
 
@@ -177,7 +188,7 @@ static int ul_comp_write( uint8_t page, uint8_t *data, uint8_t datalen ){
 	// NACK
 	return -1;
 }
-/*
+
 static int ulc_requestAuthentication( uint8_t blockNo, uint8_t *nonce, uint16_t nonceLength ){
 
 	uint8_t cmd[] = {MIFARE_ULC_AUTH_1, blockNo};
@@ -186,7 +197,7 @@ static int ulc_requestAuthentication( uint8_t blockNo, uint8_t *nonce, uint16_t 
 		ul_switch_off_field();
 	return len;
 }
-*/
+
 static int ulev1_requestAuthentication( uint8_t *pwd, uint8_t *pack, uint16_t packLength ){
 
 	uint8_t cmd[] = {MIFARE_ULEV1_AUTH, pwd[0], pwd[1], pwd[2], pwd[3]};
@@ -247,9 +258,15 @@ static int ul_print_default( uint8_t *data){
 	uid[6] = data[7];
 
 	PrintAndLog("       UID : %s ", sprint_hex(uid, 7));
-	PrintAndLog("    UID[0] : (Manufacturer Byte) = %02x, Manufacturer: %s",  uid[0], getTagInfo(uid[0]) );
-
-	// BBC
+	PrintAndLog("    UID[0] : %02x, Manufacturer: %s",  uid[0], getTagInfo(uid[0]) );
+	if ( uid[0] == 0x05 ) {
+		uint8_t chip = (data[8] & 0xC7); // 11000111  mask, bit 3,4,5 RFU
+		switch (chip){
+			case 0xc2: PrintAndLog("   IC type : SLE 66R04P"); break;
+			case 0xc4: PrintAndLog("   IC type : SLE 66R16P"); break;
+			case 0xc6: PrintAndLog("   IC type : SLE 66R32P"); break;
+		}
+	}
 	// CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2 
 	int crc0 = 0x88 ^ data[0] ^ data[1] ^data[2];
 	if ( data[3] == crc0 )
@@ -266,11 +283,13 @@ static int ul_print_default( uint8_t *data){
 	PrintAndLog("  Internal : 0x%02X - %s default", data[9], (data[9]==0x48)?"":"not" );
 	PrintAndLog("      Lock : %s - %s", sprint_hex(data+10, 2),printBits( 2, data+10) );
 	PrintAndLog("OneTimePad : %s ", sprint_hex(data + 12, 4));
-	PrintAndLog("");
 	return 0;
 }
 
 static int ntag_print_CC(uint8_t *data) {
+
+	PrintAndLog("\n--- NTAG NDEF Message");
+
 	if(data[0] != 0xe1) {
 		PrintAndLog("no NDEF message");
 		return -1;		// no NDEF message
@@ -290,30 +309,17 @@ static int ntag_print_CC(uint8_t *data) {
 	PrintAndLog("  %02X: %s / %s", data[3], 
 				(data[3] & 0xF0) ? "(RFU)" : "Read access granted without any security", 
 				(data[3] & 0x0F)==0 ? "Write access granted without any security" : (data[3] & 0x0F)==0x0F ? "No write access granted at all" : "(RFU)");
-	return 0;				
-}
-
-static int ulev1_print_version(uint8_t *data){
-	PrintAndLog("\n--- UL-EV1 / NTAG Version");
-	PrintAndLog("       Raw bytes : %s", sprint_hex(data, 8) );
-	PrintAndLog("       Vendor ID : 0x%02X, Manufacturer: %s", data[1], getTagInfo(data[1]));
-	PrintAndLog("    Product type : %s"		, getProductTypeStr(data[2]));
-	PrintAndLog(" Product subtype : 0x%02X %s"	, data[3], (data[3]==1) ?"17 pF":"50pF");
-	PrintAndLog("   Major version : 0x%02X"	, data[4]);
-	PrintAndLog("   Minor version : 0x%02X"	, data[5]);
-	PrintAndLog("            Size : %s", getUlev1CardSizeStr(data[6]));
-	PrintAndLog("   Protocol type : 0x%02X"	, data[7]);
 	return 0;
 }
 
 static int ul_print_type(uint16_t tagtype){
 	if ( tagtype & UL )	
-		PrintAndLog("      TYPE : MIFARE Ultralight (MF0ICU1) %s", (tagtype & MAGIC)?"<magic>":"");
+		PrintAndLog("      TYPE : MIFARE Ultralight (MF0ICU1) %s [%x]", (tagtype & MAGIC)?"<magic>":"", tagtype);
 	else if ( tagtype & UL_C)
 		PrintAndLog("      TYPE : MIFARE Ultralight C (MF0ULC) %s [%x]", (tagtype & MAGIC)?"<magic>":"", tagtype );
 	else if ( tagtype & UL_EV1_48)
 		PrintAndLog("      TYPE : MIFARE Ultralight EV1 48bytes (MF0UL1101)"); 
-	else if ( tagtype & UL_EV1_128)	
+	else if ( tagtype & UL_EV1_128)
 		PrintAndLog("      TYPE : MIFARE Ultralight EV1 128bytes (MF0UL2101)");
 	else if ( tagtype & NTAG_213 )
 		PrintAndLog("      TYPE : MIFARE NTAG 213 144bytes (NT2H1311G0DU)");
@@ -321,6 +327,14 @@ static int ul_print_type(uint16_t tagtype){
 		PrintAndLog("      TYPE : MIFARE NTAG 215 504bytes (NT2H1511G0DU)");
 	else if ( tagtype & NTAG_216 )
 		PrintAndLog("      TYPE : MIFARE NTAG 216 888bytes (NT2H1611G0DU)");
+	else if ( tagtype & MY_D )
+		PrintAndLog("      TYPE : INFINEON my-d\x99");
+	else if ( tagtype & MY_D_NFC )
+		PrintAndLog("      TYPE : INFINEON my-d\x99 NFC");
+	else if ( tagtype & MY_D_MOVE )
+		PrintAndLog("      TYPE : INFINEON my-d\x99 move");
+	else if ( tagtype & MY_D_MOVE_NFC )
+		PrintAndLog("      TYPE : INFINEON my-d\x99 move NFC");
 	else
 		PrintAndLog("      TYPE : Unknown %04x",tagtype);
 	return 0;
@@ -338,20 +352,20 @@ static int ulc_print_3deskey( uint8_t *data){
 static int ulc_print_configuration( uint8_t *data){
 
 	PrintAndLog("--- UL-C Configuration");
-	PrintAndLog(" Higher Lockbits [40/0x28]: %s %s", sprint_hex(data, 4), printBits(2, data));
-	PrintAndLog("         Counter [41/0x29]: %s %s", sprint_hex(data+4, 4), printBits(2, data+4));
+	PrintAndLog(" Higher Lockbits [40/0x28]: %s - %s", sprint_hex(data, 4), printBits(2, data));
+	PrintAndLog("         Counter [41/0x29]: %s - %s", sprint_hex(data+4, 4), printBits(2, data+4));
 
 	bool validAuth = (data[8] >= 0x03 && data[8] <= 0x30);
 	if ( validAuth )
-		PrintAndLog("           Auth0 [42/0x2A]: %s - Pages above %d needs authentication", sprint_hex(data+8, 4), data[8] );
+		PrintAndLog("           Auth0 [42/0x2A]: %s Pages above %d needs authentication", sprint_hex(data+8, 4), data[8] );
 	else{
 		if ( data[8] == 0){
-			PrintAndLog("           Auth0 [42/0x2A]: %s - default", sprint_hex(data+8, 4) );
+			PrintAndLog("           Auth0 [42/0x2A]: %s default", sprint_hex(data+8, 4) );
 		} else {
-			PrintAndLog("           Auth0 [42/0x2A]: %s - auth byte is out-of-range", sprint_hex(data+8, 4) );
+			PrintAndLog("           Auth0 [42/0x2A]: %s auth byte is out-of-range", sprint_hex(data+8, 4) );
 		}
 	}
-	PrintAndLog("           Auth1 [43/0x2B]: %s - %s",
+	PrintAndLog("           Auth1 [43/0x2B]: %s %s",
 			sprint_hex(data+12, 4),
 			(data[12] & 1) ? "write access restricted": "read and write access restricted"
 			);
@@ -369,16 +383,19 @@ static int ulev1_print_configuration( uint8_t *data){
 	uint8_t vctid = data[5];
 
 	PrintAndLog(" cfg0 [16/0x10]: %s", sprint_hex(data, 4));
-	PrintAndLog("                    - pages above %d needs authentication",data[3]);
+	if ( data[3] < 0xff )
+		PrintAndLog("                    - pages above %d needs authentication",data[3]);
+	else 
+		PrintAndLog("                    - pages don't need authentication");
 	PrintAndLog("                    - strong modulation mode %s", (strg_mod_en) ? "enabled":"disabled");
 	PrintAndLog(" cfg1 [17/0x11]: %s", sprint_hex(data+4, 4) );
 	if ( authlim == 0)
-		PrintAndLog("                    - Max number of password attempts is unlimited");
+		PrintAndLog("                    - Unlimited password attempts");
 	else
 		PrintAndLog("                    - Max number of password attempts is %d", authlim);
 	PrintAndLog("                    - user configuration %s", cfglck ? "permanently locked":"writeable");
 	PrintAndLog("                    - %s access is protected with password", prot ? "read and write":"write");
-	PrintAndLog("               0x%02X - Virtual Card Type Identifier is %s default", vctid, (vctid==0x05)? "":"not");
+	PrintAndLog("               %02X - Virtual Card Type Identifier is %s default", vctid, (vctid==0x05)? "":"not");
 	PrintAndLog(" PWD  [18/0x12]: %s", sprint_hex(data+8, 4));
 	PrintAndLog(" PACK [19/0x13]: %s", sprint_hex(data+12, 4));
 	return 0;
@@ -389,7 +406,7 @@ static int ulev1_print_counters(){
 	uint8_t counter[3] = {0,0,0};
 	for ( uint8_t i = 0; i<3; ++i) {
 		ulev1_readCounter(i,counter, sizeof(counter) );
-		PrintAndLog("Counter [%d] : %s", i, sprint_hex(counter,3));
+		PrintAndLog("       [%0d] : %s", i, sprint_hex(counter,3));
 	}
 	return 0;
 }
@@ -404,6 +421,20 @@ static int ulev1_print_signature( uint8_t *data, uint8_t len){
 	//PrintAndLog("IC signature status: %s valid", (iseccvalid() )?"":"not");
 	return 0;
 }
+
+static int ulev1_print_version(uint8_t *data){
+	PrintAndLog("\n--- UL-EV1 / NTAG Version");
+	PrintAndLog("       Raw bytes : %s", sprint_hex(data, 8) );
+	PrintAndLog("       Vendor ID : %02X, Manufacturer: %s", data[1], getTagInfo(data[1]));
+	PrintAndLog("    Product type : %s", getProductTypeStr(data[2]));
+	PrintAndLog(" Product subtype : %02X %s", data[3], (data[3]==1) ?"17 pF":"50pF");
+	PrintAndLog("   Major version : %02X", data[4]);
+	PrintAndLog("   Minor version : %02X", data[5]);
+	PrintAndLog("            Size : %s", getUlev1CardSizeStr(data[6]));
+	PrintAndLog("   Protocol type : %02X", data[7]);
+	return 0;
+}
+
 /*
 static int ulc_magic_test(){
 	// Magic Ultralight test
@@ -468,36 +499,63 @@ uint16_t GetHF14AMfU_Type(void){
 	}
 	// Ultralight - ATQA / SAK 
 	if ( card.atqa[1] != 0x00 || card.atqa[0] != 0x44 || card.sak != 0x00 ) {
-		PrintAndLog	("Tag is not UL or NTAG, ATQA1: %x, ATQA0: %x, SAK: %d", card.atqa[1],card.atqa[0],card.sak);
+		PrintAndLog("Tag is not Ultralight | NTAG | MY-D  [ATQA: %02X %02x SAK: %02X]\n", card.atqa[1], card.atqa[0], card.sak);
 		ul_switch_off_field();
 		return UL_ERROR;
 	}
 
-	len  = ulev1_getVersion(version, sizeof(version));
-	if (len > -1) ul_switch_off_field();  //if -1 it is already off
+	if ( card.uid[0] != 0x05) {
 
-	switch (len) {
-		case 0x0A: {
+		len  = ulev1_getVersion(version, sizeof(version));
+		if (len > -1) ul_switch_off_field();  //if -1 it is already off
 
-			if ( version[2] == 0x03 && version[6] == 0x0B )
-				tagtype = UL_EV1_48;
-			else if ( version[2] == 0x03 && version[6] != 0x0B )
-				tagtype = UL_EV1_128;
-			else if ( version[2] == 0x04 && version[6] == 0x0F )
-				tagtype = NTAG_213;
-			else if ( version[2] == 0x04 && version[6] != 0x11 )
-				tagtype = NTAG_215;
-			else if ( version[2] == 0x04 && version[6] == 0x13 )
-				tagtype = NTAG_216;
-			else if ( version[2] == 0x04 )
-				tagtype = NTAG;
+		switch (len) {
+			case 0x0A: {
 
-			break;
+				if ( version[2] == 0x03 && version[6] == 0x0B )
+					tagtype = UL_EV1_48;
+				else if ( version[2] == 0x03 && version[6] != 0x0B )
+					tagtype = UL_EV1_128;
+				else if ( version[2] == 0x04 && version[6] == 0x0F )
+					tagtype = NTAG_213;
+				else if ( version[2] == 0x04 && version[6] == 0x11 )
+					tagtype = NTAG_215;
+				else if ( version[2] == 0x04 && version[6] == 0x13 )
+					tagtype = NTAG_216;
+				else if ( version[2] == 0x04 )
+					tagtype = NTAG;
+
+				break;
+			}
+			case 0x01: tagtype = UL_C; break;
+			case 0x00: tagtype = UL; break;
+			case -1  : tagtype = (UL | UL_C); break;  //when does this happen?
+			default  : tagtype = UNKNOWN; break;
 		}
-		case 0x01: tagtype = UL_C; break;
-		case 0x00: tagtype = UL; break;
-		case -1  : tagtype = (UL | UL_C); break;  //when does this happen?
-		default  : tagtype = UNKNOWN; break;
+		if (tagtype == (UL | UL_C)) {
+			status = ul_select(&card);
+			if ( status < 1 ){
+				PrintAndLog("Error: couldn't select 2");
+				ul_switch_off_field();
+				return UL_ERROR;
+			}
+			uint8_t nonce1[11] = {0x00};
+			status = ulc_requestAuthentication(0, nonce1, sizeof(nonce1));
+			if ( status > 0 )
+				tagtype = UL_C;
+			else
+				tagtype = UL;
+
+			if (status != -1) ul_switch_off_field();
+		}
+	} else {
+		// Infinition MY-D tests   Exam high nibble 
+		uint8_t nib = (card.uid[1] & 0xf0) >> 4;
+		switch ( nib ){
+			case 1:	tagtype =  MY_D; break;
+			case 2:	tagtype = (MY_D | MY_D_NFC); break;
+			case 3:	tagtype = (MY_D_MOVE | MY_D_MOVE_NFC); break;
+		}
 	}
 
 	tagtype = (ul_magic_test() == UL_MAGIC) ? (tagtype | MAGIC) : tagtype;
@@ -532,7 +590,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	status = ul_read(0, data, sizeof(data));
 	if ( status == -1 ){
 		PrintAndLog("Error: tag didn't answer to READ");
-		ul_switch_off_field();
 		return status;
 	}
 
@@ -547,7 +604,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			PrintAndLog("Error: tag didn't answer to READ - possibly locked");
 			return status;
 		} 
-
 		ulc_print_configuration(ulc_conf);
 
 		if ((tagtype & MAGIC)){
@@ -575,7 +631,17 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	}
 
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128))) {
-			
+		//do counters and signature first (don't neet auth)
+		ulev1_print_counters();
+
+		uint8_t ulev1_signature[32] = {0x00};
+		status = ulev1_readSignature( ulev1_signature, sizeof(ulev1_signature));
+		if ( status == -1 ){
+			PrintAndLog("Error: tag didn't answer to READ SIGNATURE");
+			return status;
+		}		
+		ulev1_print_signature( ulev1_signature, sizeof(ulev1_signature));
+
 		uint8_t startconfigblock = (tagtype & UL_EV1_48) ? 0x10 : 0x25;
 		uint8_t ulev1_conf[16] = {0x00};
 		status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
@@ -585,18 +651,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		}
 		// save AUTHENTICATION LIMITS for later:
 		authlim = (ulev1_conf[4] & 0x07);
-		
 		ulev1_print_configuration(ulev1_conf);
-		
-		uint8_t ulev1_signature[32] = {0x00};
-		status = ulev1_readSignature( ulev1_signature, sizeof(ulev1_signature));
-		if ( status == -1 ){
-			PrintAndLog("Error: tag didn't answer to READ SIGNATURE");
-			return status;
-		}		
-		ulev1_print_signature( ulev1_signature, sizeof(ulev1_signature));
-		
-		ulev1_print_counters();
 	}
 
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216))) {
@@ -631,7 +686,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 
 	if ((tagtype & (NTAG_213 | NTAG_215 | NTAG_216))){
 
-		PrintAndLog("\n--- NTAG NDEF Message");
 		uint8_t cc[16] = {0x00};
 		status = ul_read(3, cc, sizeof(cc));
 		if ( status == -1 ){
@@ -642,6 +696,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	}
 	
 	ul_switch_off_field();
+	PrintAndLog("");
 	return 0;
 }
 
