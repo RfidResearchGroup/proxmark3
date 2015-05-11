@@ -39,7 +39,8 @@ typedef enum TAGTYPE_UL {
 	UL_ERROR	= 0xFFFF,
 } TagTypeUL_t;
 
-uint8_t default_3des_keys[7][16] = {
+#define KEYS_3DES_COUNT 7
+uint8_t default_3des_keys[KEYS_3DES_COUNT][16] = {
 		{ 0x42,0x52,0x45,0x41,0x4b,0x4d,0x45,0x49,0x46,0x59,0x4f,0x55,0x43,0x41,0x4e,0x21 },// 3des std key
 		{ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },// all zeroes
 		{ 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f },// 0x00-0x0F
@@ -49,10 +50,17 @@ uint8_t default_3des_keys[7][16] = {
 		{ 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF }	// 11 22 33
 	};
 
-uint8_t default_pwd_pack[3][4] = {
+#define KEYS_PWD_COUNT 8
+uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 	{0xFF,0xFF,0xFF,0xFF}, // PACK 0x00,0x00 -- factory default
 	{0x4A,0xF8,0x4B,0x19}, // PACK 0xE5,0xBE -- italian bus (sniffed)
-	{0x05,0x22,0xE6,0xB4}  // PACK 0x80,0x80 -- Amiiboo (sniffed)
+	{0x33,0x6B,0xA1,0x19}, // PACK 0x9c,0x2d -- italian bus (sniffed)
+	{0xFF,0x90,0x6C,0xB2}, // PACK 0x12,0x9e -- italian bus (sniffed)	
+	{0x05,0x22,0xE6,0xB4}, // PACK 0x80,0x80 -- Amiiboo (sniffed) pikachu-b UID:
+	{0x7E,0x22,0xE6,0xB4}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
+	{0x02,0xE1,0xEE,0x36}, // PACK 0x80,0x80 -- AMiiboo (sniffed) sonic UID:  04d257 7ae33e8027
+	{0x32,0x0C,0x16,0x17}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
+
 };	
 	
 static int CmdHelp(const char *Cmd);
@@ -121,7 +129,6 @@ static int ul_send_cmd_raw( uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uin
 }
 /*
 static int ul_send_cmd_raw_crc( uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength, bool append_crc ) {
-	
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT , cmdlen, 0}};
 	if (append_crc)
 		c.arg[0] |= ISO14A_APPEND_CRC;
@@ -130,12 +137,11 @@ static int ul_send_cmd_raw_crc( uint8_t *cmd, uint8_t cmdlen, uint8_t *response,
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
+	if (!resp.arg[0] && responseLength) return -1;
 
 	uint16_t resplen = (resp.arg[0] < responseLength) ? resp.arg[0] : responseLength;
-	if (resp.arg[0] > 0) {
 		memcpy(response, resp.d.asBytes, resplen );
 	return resplen;
-	} else return -1;
 }
 */
 static int ul_select( iso14a_card_select_t *card ){
@@ -144,10 +150,9 @@ static int ul_select( iso14a_card_select_t *card ){
 
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
-	if (resp.arg[0] < 0) return -1;
+	if (resp.arg[0] < 1) return -1;
 	
 	memcpy(card, resp.d.asBytes, sizeof(iso14a_card_select_t));
-	
 	return resp.arg[0];
 }
 
@@ -330,10 +335,10 @@ static int ul_print_type(uint16_t tagtype){
 }
 
 static int ulc_print_3deskey( uint8_t *data){			
-	PrintAndLog("         deskey1 [44/0x2C]: %s", sprint_hex(data   ,4));
-	PrintAndLog("         deskey1 [45/0x2D]: %s", sprint_hex(data+4 ,4));			
-	PrintAndLog("         deskey2 [46/0x2E]: %s", sprint_hex(data+8 ,4));
-	PrintAndLog("         deskey2 [47/0x2F]: %s", sprint_hex(data+12,4));
+	PrintAndLog("         deskey1 [44/0x2C]: %s [%.4s]", sprint_hex(data   ,4),data);
+	PrintAndLog("         deskey1 [45/0x2D]: %s [%.4s]", sprint_hex(data+4 ,4),data+4);
+	PrintAndLog("         deskey2 [46/0x2E]: %s [%.4s]", sprint_hex(data+8 ,4),data+8);
+	PrintAndLog("         deskey2 [47/0x2F]: %s [%.4s]", sprint_hex(data+12,4),data+12);
 	PrintAndLog(" 3des key : %s", sprint_hex(SwapEndian64(data, 16), 16));
 	return 0;
 }
@@ -438,8 +443,8 @@ static int ulc_magic_test(){
 
 static int ul_magic_test(){
 	
-	// Magic Ultralight test
-	// 1) It takes present UID, and tries to write it back. OBSOLETE
+	// Magic Ultralight tests
+	// 1) take present UID, and try to write it back. OBSOLETE 
 	// 2) make a wrong length write to page0, and see if tag answers with ACK/NACK:
 	iso14a_card_select_t card;
 	int status = ul_select(&card);
@@ -485,10 +490,10 @@ uint16_t GetHF14AMfU_Type(void){
 			if ( version[2] == 0x03 && version[6] == 0x0B ) 
 				tagtype = UL_EV1_48;
 			else if ( version[2] == 0x03 && version[6] != 0x0B ) 
-				tagtype = UL_EV1_128;			
+				tagtype = UL_EV1_128;					
 			else if ( version[2] == 0x04 && version[6] == 0x0F ) 
 				tagtype = NTAG_213;
-			else if ( version[2] == 0x04 && version[6] != 0x11 ) 
+			else if ( version[2] == 0x04 && version[6] == 0x11 ) 
 				tagtype = NTAG_215;	
 			else if ( version[2] == 0x04 && version[6] == 0x13 ) 
 				tagtype = NTAG_216;
@@ -543,16 +548,16 @@ int CmdHF14AMfUInfo(const char *Cmd){
 
 	if ((tagtype & UL_C)){
 	
-		// lookup lockbits before?
 		// read pages 0x28, 0x29, 0x2A, 0x2B
-		// tag may be locked
 		uint8_t ulc_conf[16] = {0x00};
 		status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ - possibly locked");
-		} else {
-			ulc_print_configuration(ulc_conf);
-		}
+			ul_switch_off_field();
+			return status;
+		} 
+
+		ulc_print_configuration(ulc_conf);
 
 		if ((tagtype & MAGIC)){
 
@@ -563,17 +568,16 @@ int CmdHF14AMfUInfo(const char *Cmd){
 				ul_switch_off_field();
 				return status;
 			}
-			
 			ulc_print_3deskey(ulc_deskey);
 
-		}
-		else {
+		} else {
 			PrintAndLog("Trying some default 3des keys");
 			ul_switch_off_field();
-			for (uint8_t i = 0; i < 7; ++i ){
+			for (uint8_t i = 0; i < KEYS_3DES_COUNT; ++i ){
 				key = default_3des_keys[i];
 				if (try3DesAuthentication(key) == 1){
-					PrintAndLog("Found default 3des key: %s", sprint_hex(key,16));
+					PrintAndLog("Found default 3des key: "); //%s", sprint_hex(key,16));
+					ulc_print_3deskey(SwapEndian64(key,16));
 					return 0;
 				}
 			}
@@ -581,19 +585,8 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	}
 	
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128))) {
-			
-		uint8_t startconfigblock = (tagtype & UL_EV1_48) ? 0x10 : 0x25;
-		uint8_t ulev1_conf[16] = {0x00};
-		status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
-		if ( status == -1 ){
-			PrintAndLog("Error: tag didn't answer to READ C");
-			ul_switch_off_field();
-			return status;
-		}
-		// save AUTHENTICATION LIMITS for later:
-		authlim = (ulev1_conf[4] & 0x07);
-		
-		ulev1_print_configuration(ulev1_conf);
+
+		ulev1_print_counters();
 		
 		uint8_t ulev1_signature[32] = {0x00};
 		status = ulev1_readSignature( ulev1_signature, sizeof(ulev1_signature));
@@ -604,7 +597,17 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		}		
 		ulev1_print_signature( ulev1_signature, sizeof(ulev1_signature));
 		
-		ulev1_print_counters();
+		uint8_t startconfigblock = (tagtype & UL_EV1_48) ? 0x10 : 0x25;
+		uint8_t ulev1_conf[16] = {0x00};
+		status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
+		if ( status == -1 ){
+			PrintAndLog("Error: tag didn't answer to READ - possibly locked");
+			ul_switch_off_field();
+			//return status;
+		}
+		// save AUTHENTICATION LIMITS for later:
+		authlim = (ulev1_conf[4] & 0x07);
+		ulev1_print_configuration(ulev1_conf);
 	}
 	
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216))) {
@@ -621,12 +624,13 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		// AUTHLIMIT, (number of failed authentications)
 		// 0 = limitless.
 		// 1-7 = ...  should we even try then?
+		authlim = 1;
 		if ( authlim == 0 ){
 			PrintAndLog("\n--- Known EV1/NTAG passwords.");
 		
 			uint8_t pack[4] = {0,0,0,0};
 			
-			for (uint8_t i = 0; i < 3; ++i ){
+			for (uint8_t i = 0; i < KEYS_PWD_COUNT; ++i ){
 				key = default_pwd_pack[i];
 				if ( ulev1_requestAuthentication(key, pack, sizeof(pack)) > -1 ){
 					PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
@@ -640,7 +644,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		
 		PrintAndLog("\n--- NTAG NDEF Message");
 		uint8_t cc[16] = {0x00};
-		status = ul_read(2, cc, sizeof(cc));
+		status = ul_read(3, cc, sizeof(cc));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ D");
 			ul_switch_off_field();
@@ -837,6 +841,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 		case 's':
 			swapEndian = true;
 			cmdp++;
+			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 			errors = true;
@@ -1017,7 +1022,7 @@ int CmdHF14AMfucAuth(const char *Cmd){
 	//Change key to user defined one
 	if (cmdp == 'k' || cmdp == 'K'){
 		keyNo = param_get8(Cmd, 1);
-		if(keyNo > 6) 
+		if(keyNo > KEYS_3DES_COUNT) 
 			errors = true;
 	}
 
