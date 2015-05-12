@@ -15,6 +15,7 @@ int CmdHF15(const char *Cmd);
 
 int CmdHF15Demod(const char *Cmd);
 int CmdHF15Read(const char *Cmd);
+int HF15Reader(const char *Cmd, bool verbose);
 int CmdHF15Reader(const char *Cmd);
 int CmdHF15Sim(const char *Cmd);
 int CmdHF15Record(const char *Cmd);

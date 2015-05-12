@@ -165,34 +165,47 @@ int CmdHFiClassSim(const char *Cmd)
 	return 0;
 }
 
-int CmdHFiClassReader(const char *Cmd)
+int HFiClassReader(const char *Cmd, bool loop, bool verbose)
 {
+	bool tagFound = false;
 	UsbCommand c = {CMD_READER_ICLASS, {FLAG_ICLASS_READER_CSN|
 					FLAG_ICLASS_READER_CONF|FLAG_ICLASS_READER_AA}};
+	if (!loop) c.arg[0] |= FLAG_ICLASS_READER_ONLY_ONCE | FLAG_ICLASS_READER_ONE_TRY;
 	SendCommand(&c);
 	UsbCommand resp;
 	while(!ukbhit()){
-		if (WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
-			uint8_t readStatus    = resp.arg[0] & 0xff;
-			uint8_t * data  = resp.d.asBytes;
+		if (WaitForResponseTimeout(CMD_ACK,&resp, 4500)) {
+			uint8_t readStatus = resp.arg[0] & 0xff;
+			uint8_t *data = resp.d.asBytes;
 
-			PrintAndLog("Readstatus:%02x", readStatus);
+			if (verbose)
+				PrintAndLog("Readstatus:%02x", readStatus);
 			if( readStatus == 0){
 				//Aborted
-				PrintAndLog("Quitting...");
+				if (verbose) PrintAndLog("Quitting...");
 				return 0;
 			}
-			if( readStatus & FLAG_ICLASS_READER_CSN) PrintAndLog("CSN: %s",sprint_hex(data,8));
+			if( readStatus & FLAG_ICLASS_READER_CSN){
+				PrintAndLog("CSN: %s",sprint_hex(data,8));
+				tagFound = true;
+			}
 			if( readStatus & FLAG_ICLASS_READER_CC)  PrintAndLog("CC: %s",sprint_hex(data+16,8));
 			if( readStatus & FLAG_ICLASS_READER_CONF){
 				printIclassDumpInfo(data);
 			}
+			if (tagFound && !loop) return 1;
 		} else {
-			PrintAndLog("Command execute timeout");
+			if (verbose) PrintAndLog("Command execute timeout");
 		}
+		if (!loop) break;
 	}
-
 	return 0;
+
+}
+
+int CmdHFiClassReader(const char *Cmd)
+{
+	return HFiClassReader(Cmd, true, true);
 }
 
 int CmdHFiClassReader_Replay(const char *Cmd)

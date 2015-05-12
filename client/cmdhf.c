@@ -87,7 +87,7 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	case MIFARE_ULC_AUTH_2:		snprintf(exp,size,"AUTH_ANSW"); break;
 	case MIFARE_ULEV1_AUTH:		snprintf(exp,size,"PWD-AUTH"); break;
 	case MIFARE_ULEV1_FASTREAD:{
-		if ( cmdsize >=3 && cmd[2] < 0x21)
+		if ( cmdsize >=3 && cmd[2] <= 0xE6)
 			snprintf(exp,size,"READ RANGE (%d-%d)",cmd[1],cmd[2]); 
 		else
 			snprintf(exp,size,"?");
@@ -546,17 +546,28 @@ int CmdHFList(const char *Cmd)
 
 int CmdHFSearch(const char *Cmd){
 	int ans = 0;
-	ans = CmdHF14AReader(Cmd);
-	if (ans > 0) return ans;
+	PrintAndLog("");
+	ans = CmdHF14AReader("s");
+	if (ans > 0) {
+		PrintAndLog("\nValid ISO14443A Tag Found - Quiting Search\n");
+		return ans;
+	} 
+	ans = HFiClassReader("", false, false);
+	if (ans) {
+		PrintAndLog("\nValid iClass Tag (or PicoPass Tag) Found - Quiting Search\n");
+		return ans;
+	}
+	ans = HF15Reader("", false);
+	if (ans) {
+		PrintAndLog("\nValid ISO15693 Tag Found - Quiting Search\n");
+		return ans;
+	}
 
-	ans = CmdHF15Reader(Cmd);
-	//if (ans > 0) return ans;	
 
-	ans = CmdHF14BRead(Cmd);
+	//14b has issues currently...
+	//ans = CmdHF14BRead(Cmd);
 	//if (ans > 0) return ans;
 
-	ans = CmdHFiClassReader(Cmd);
-	//if (ans > 0) return ans;
 	return 0;
 }
 
@@ -573,7 +584,7 @@ static command_t CommandTable[] =
   {"mfu",         CmdHFMFUltra,     1, "{ MIFARE Ultralight RFIDs... }"},
   {"tune",        CmdHFTune,        0, "Continuously measure HF antenna tuning"},
   {"list",        CmdHFList,        1, "List protocol data in trace buffer"},
-  {"search",      CmdHFSearch,      1, "Search for known HF tags"},
+  {"search",      CmdHFSearch,      1, "Search for known HF tags [preliminary]"},
 	{NULL, NULL, 0, NULL}
 };
 

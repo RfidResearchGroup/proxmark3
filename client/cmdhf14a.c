@@ -144,7 +144,7 @@ int CmdHF14AReader(const char *Cmd)
 	uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS
 	
 	if(select_status == 0) {
-		PrintAndLog("iso14443a card select failed");
+		if (Cmd[0] != 's') PrintAndLog("iso14443a card select failed");
 		// disconnect
 		c.arg[0] = 0;
 		c.arg[1] = 0;

@@ -1677,7 +1677,7 @@ void ReaderIClass(uint8_t arg0) {
 
 	uint8_t card_data[6 * 8]={0};
 	memset(card_data, 0xFF, sizeof(card_data));
-    uint8_t last_csn[8]={0};
+	uint8_t last_csn[8]={0};
 	
 	//Read conf block CRC(0x01) => 0xfa 0x22
 	uint8_t readConf[] = { ICLASS_CMD_READ_OR_IDENTIFY,0x01, 0xfa, 0x22};
@@ -1685,16 +1685,18 @@ void ReaderIClass(uint8_t arg0) {
 	uint8_t readAA[] = { ICLASS_CMD_READ_OR_IDENTIFY,0x05, 0xde, 0x64};
 
 
-    int read_status= 0;
+	int read_status= 0;
 	uint8_t result_status = 0;
-    bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;
-
+	bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;
+	bool try_once = arg0 & FLAG_ICLASS_READER_ONE_TRY;
 	set_tracing(TRUE);
-    setupIclassReader();
+	setupIclassReader();
 
+	uint16_t tryCnt=0;
 	while(!BUTTON_PRESS())
-    {
-
+	{
+		if (try_once && tryCnt > 5) break; 
+		tryCnt++;
 		if(!tracing) {
 			DbpString("Trace full");
 			break;
@@ -1761,7 +1763,7 @@ void ReaderIClass(uint8_t arg0) {
 
 		}
 		LED_B_OFF();
-    }
+	}
     cmd_send(CMD_ACK,0,0,0,card_data, 0);
     LED_A_OFF();
 }
