@@ -23,26 +23,6 @@
 #define MAX_NTAG_215      0x86
 #define MAX_NTAG_216      0xe6
 
-typedef enum TAGTYPE_UL {
-	UNKNOWN       = 0x0000,
-	UL            = 0x0001,
-	UL_C          = 0x0002,
-	UL_EV1_48     = 0x0004,
-	UL_EV1_128    = 0x0008,
-	NTAG          = 0x0010,
-	NTAG_213      = 0x0020,
-	NTAG_215      = 0x0040,
-	NTAG_216      = 0x0080,
-	MY_D          = 0x0100,
-	MY_D_NFC      = 0x0200,
-	MY_D_MOVE     = 0x0400,
-	MY_D_MOVE_NFC = 0x0800,
-	MAGIC         = 0x1000,
-	UL_MAGIC      = UL | MAGIC,
-	UL_C_MAGIC    = UL_C | MAGIC,
-	UL_ERROR      = 0xFFFF,
-} TagTypeUL_t;
-
 #define KEYS_3DES_COUNT 7
 uint8_t default_3des_keys[KEYS_3DES_COUNT][16] = {
 		{ 0x42,0x52,0x45,0x41,0x4b,0x4d,0x45,0x49,0x46,0x59,0x4f,0x55,0x43,0x41,0x4e,0x21 },// 3des std key
@@ -314,31 +294,35 @@ static int ntag_print_CC(uint8_t *data) {
 	return 0;
 }
 
-static int ul_print_type(uint16_t tagtype){
+int ul_print_type(uint16_t tagtype, uint8_t spaces){
+	char spc[11] = "          ";
+	spc[10]=0x00;
+	char *spacer = spc + (10-spaces);
+
 	if ( tagtype & UL )	
-		PrintAndLog("      TYPE : MIFARE Ultralight (MF0ICU1) %s [%x]", (tagtype & MAGIC)?"<magic>":"", tagtype);
+		PrintAndLog("%sTYPE : MIFARE Ultralight (MF0ICU1) %s [%x]", spacer, (tagtype & MAGIC)?"<magic>":"", tagtype);
 	else if ( tagtype & UL_C)
-		PrintAndLog("      TYPE : MIFARE Ultralight C (MF0ULC) %s [%x]", (tagtype & MAGIC)?"<magic>":"", tagtype );
+		PrintAndLog("%sTYPE : MIFARE Ultralight C (MF0ULC) %s [%x]", spacer, (tagtype & MAGIC)?"<magic>":"", tagtype );
 	else if ( tagtype & UL_EV1_48)
-		PrintAndLog("      TYPE : MIFARE Ultralight EV1 48bytes (MF0UL1101)"); 
+		PrintAndLog("%sTYPE : MIFARE Ultralight EV1 48bytes (MF0UL1101)", spacer); 
 	else if ( tagtype & UL_EV1_128)
-		PrintAndLog("      TYPE : MIFARE Ultralight EV1 128bytes (MF0UL2101)");
+		PrintAndLog("%sTYPE : MIFARE Ultralight EV1 128bytes (MF0UL2101)", spacer);
 	else if ( tagtype & NTAG_213 )
-		PrintAndLog("      TYPE : MIFARE NTAG 213 144bytes (NT2H1311G0DU)");
+		PrintAndLog("%sTYPE : MIFARE NTAG 213 144bytes (NT2H1311G0DU)", spacer);
 	else if ( tagtype & NTAG_215 )
-		PrintAndLog("      TYPE : MIFARE NTAG 215 504bytes (NT2H1511G0DU)");
+		PrintAndLog("%sTYPE : MIFARE NTAG 215 504bytes (NT2H1511G0DU)", spacer);
 	else if ( tagtype & NTAG_216 )
-		PrintAndLog("      TYPE : MIFARE NTAG 216 888bytes (NT2H1611G0DU)");
+		PrintAndLog("%sTYPE : MIFARE NTAG 216 888bytes (NT2H1611G0DU)", spacer);
 	else if ( tagtype & MY_D )
-		PrintAndLog("      TYPE : INFINEON my-d\x99");
+		PrintAndLog("%sTYPE : INFINEON my-d\x99", spacer);
 	else if ( tagtype & MY_D_NFC )
-		PrintAndLog("      TYPE : INFINEON my-d\x99 NFC");
+		PrintAndLog("%sTYPE : INFINEON my-d\x99 NFC", spacer);
 	else if ( tagtype & MY_D_MOVE )
-		PrintAndLog("      TYPE : INFINEON my-d\x99 move");
+		PrintAndLog("%sTYPE : INFINEON my-d\x99 move", spacer);
 	else if ( tagtype & MY_D_MOVE_NFC )
-		PrintAndLog("      TYPE : INFINEON my-d\x99 move NFC");
+		PrintAndLog("%sTYPE : INFINEON my-d\x99 move NFC", spacer);
 	else
-		PrintAndLog("      TYPE : Unknown %04x",tagtype);
+		PrintAndLog("%sTYPE : Unknown %04x", spacer, tagtype);
 	return 0;
 }
 
@@ -579,7 +563,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 
 	PrintAndLog("\n--- Tag Information ---------");
 	PrintAndLog("-------------------------------------------------------------");
-	ul_print_type(tagtype);
+	ul_print_type(tagtype, 6);
 
 	status = ul_select(&card);
 	if ( status < 1 ){

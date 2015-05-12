@@ -23,6 +23,7 @@
 #include "common.h"
 #include "cmdmain.h"
 #include "mifare.h"
+#include "cmdhfmfu.h"
 
 static int CmdHelp(const char *Cmd);
 static void waitCmd(uint8_t iLen);
@@ -169,6 +170,42 @@ int CmdHF14AReader(const char *Cmd)
 
 	switch (card.sak) {
 		case 0x00: 
+
+			//***************************************test****************
+			// disconnect
+			c.arg[0] = 0;
+			c.arg[1] = 0;
+			c.arg[2] = 0;
+			SendCommand(&c);
+			
+			uint16_t tagT = GetHF14AMfU_Type();
+			ul_print_type(tagT, 0);
+
+			//reconnect for further tests
+			c.arg[0] = ISO14A_CONNECT | ISO14A_NO_DISCONNECT;
+			c.arg[1] = 0;
+			c.arg[2] = 0;
+
+			SendCommand(&c);
+
+			UsbCommand resp;
+			WaitForResponse(CMD_ACK,&resp);
+			
+			memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
+
+			select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS
+			
+			if(select_status == 0) {
+				//PrintAndLog("iso14443a card select failed");
+				// disconnect
+				c.arg[0] = 0;
+				c.arg[1] = 0;
+				c.arg[2] = 0;
+				SendCommand(&c);
+				return 0;
+			}
+
+			/*  orig
 			// check if the tag answers to GETVERSION (0x60)
 			c.arg[0] = ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT;
 			c.arg[1] = 1;
@@ -187,7 +224,7 @@ int CmdHF14AReader(const char *Cmd)
 				case 0x01:PrintAndLog("TYPE : NXP MIFARE Ultralight C");break;
 				case 0x00:PrintAndLog("TYPE : NXP MIFARE Ultralight");break;	
 			}
-
+			*/
 			break;
 		case 0x01: PrintAndLog("TYPE : NXP TNP3xxx Activision Game Appliance"); break;
 		case 0x04: PrintAndLog("TYPE : NXP MIFARE (various !DESFire !DESFire EV1)"); break;

@@ -544,6 +544,21 @@ int CmdHFList(const char *Cmd)
 	return 0;
 }
 
+int CmdHFSearch(const char *Cmd){
+	int ans = 0;
+	ans = CmdHF14AReader(Cmd);
+	if (ans > 0) return ans;
+
+	ans = CmdHF15Reader(Cmd);
+	//if (ans > 0) return ans;	
+
+	ans = CmdHF14BRead(Cmd);
+	//if (ans > 0) return ans;
+
+	ans = CmdHFiClassReader(Cmd);
+	//if (ans > 0) return ans;
+	return 0;
+}
 
 static command_t CommandTable[] = 
 {
@@ -554,10 +569,11 @@ static command_t CommandTable[] =
   {"epa",         CmdHFEPA,         1, "{ German Identification Card... }"},
   {"legic",       CmdHFLegic,       0, "{ LEGIC RFIDs... }"},
   {"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs... }"},
-  {"mf",      		CmdHFMF,		1, "{ MIFARE RFIDs... }"},
-  {"mfu",			CmdHFMFUltra,		1, "{ MIFARE Ultralight RFIDs... }"},
+  {"mf",          CmdHFMF,          1, "{ MIFARE RFIDs... }"},
+  {"mfu",         CmdHFMFUltra,     1, "{ MIFARE Ultralight RFIDs... }"},
   {"tune",        CmdHFTune,        0, "Continuously measure HF antenna tuning"},
-  {"list",       CmdHFList,         1, "List protocol data in trace buffer"},
+  {"list",        CmdHFList,        1, "List protocol data in trace buffer"},
+  {"search",      CmdHFSearch,      1, "Search for known HF tags"},
 	{NULL, NULL, 0, NULL}
 };
 
