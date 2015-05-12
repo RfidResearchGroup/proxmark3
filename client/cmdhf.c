@@ -36,6 +36,8 @@ int CmdHFTune(const char *Cmd)
   return 0;
 }
 
+//TODO:
+//void annotateIso15693(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){}
 
 void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 {
@@ -89,7 +91,7 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	case MIFARE_ULC_AUTH_2 : 		snprintf(exp,size,"AUTH_ANSW"); break;
 	case MIFARE_ULEV1_AUTH :		snprintf(exp,size,"PWD-AUTH"); break;
 	case MIFARE_ULEV1_FASTREAD : {
-		if ( cmdsize >=3 && cmd[2] < 0x21)
+		if ( cmdsize >=3 && cmd[2] <= 0xE6)
 			snprintf(exp,size,"READ RANGE (%d-%d)",cmd[1],cmd[2]); 
 		else
 			snprintf(exp,size,"?");
@@ -656,6 +658,21 @@ int CmdHFList(const char *Cmd)
 	return 0;
 }
 
+int CmdHFSearch(const char *Cmd){
+	int ans = 0;
+	ans = CmdHF14AReader(Cmd);
+	if (ans > 0) return ans;
+
+	ans = CmdHF15Reader(Cmd);
+	//if (ans > 0) return ans;	
+
+	ans = CmdHF14BRead(Cmd);
+	//if (ans > 0) return ans;
+
+	ans = CmdHFiClassReader(Cmd);
+	//if (ans > 0) return ans;
+	return 0;
+}
 
 static command_t CommandTable[] = 
 {
@@ -672,6 +689,7 @@ static command_t CommandTable[] =
   {"topaz",			CmdHFTopaz,		1, "{ TOPAZ (NFC Type 1) RFIDs... }"},
   {"tune",			CmdHFTune,      0, "Continuously measure HF antenna tuning"},
   {"list",			CmdHFList,      1, "List protocol data in trace buffer"},
+  {"search",      CmdHFSearch,      1, "Search for known HF tags"},
 	{NULL, NULL, 0, NULL}
 };
 

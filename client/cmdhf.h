@@ -14,4 +14,5 @@
 int CmdHF(const char *Cmd);
 int CmdHFTune(const char *Cmd);
 int CmdHFList(const char *Cmd);
+int CmdHFSearch(const char *Cmd);
 #endif
