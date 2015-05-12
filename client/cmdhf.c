@@ -85,7 +85,12 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	case MIFARE_MAGICWIPEC:			snprintf(exp,size,"MAGIC WIPEC"); break;
 	case MIFARE_ULC_AUTH_1:		snprintf(exp,size,"AUTH "); break;
 	case MIFARE_ULC_AUTH_2:		snprintf(exp,size,"AUTH_ANSW"); break;
-	case MIFARE_ULEV1_AUTH:		snprintf(exp,size,"PWD-AUTH"); break;
+	case MIFARE_ULEV1_AUTH:
+		if ( cmdsize == 7 )
+			snprintf(exp,size,"PWD-AUTH KEY: 0x%02x%02x%02x%02x", cmd[1], cmd[2], cmd[3], cmd[4] );
+		else
+			snprintf(exp,size,"PWD-AUTH");
+		break;
 	case MIFARE_ULEV1_FASTREAD:{
 		if ( cmdsize >=3 && cmd[2] <= 0xE6)
 			snprintf(exp,size,"READ RANGE (%d-%d)",cmd[1],cmd[2]); 

@@ -94,7 +94,7 @@ static void ul_switch_on_field(void) {
 	SendCommand(&c);
 }
 
-static void ul_switch_off_field(void) {
+void ul_switch_off_field(void) {
 	UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}};
 	SendCommand(&c);
 }
@@ -170,9 +170,9 @@ static int ul_comp_write( uint8_t page, uint8_t *data, uint8_t datalen ){
 	return -1;
 }
 
-static int ulc_requestAuthentication( uint8_t blockNo, uint8_t *nonce, uint16_t nonceLength ){
+static int ulc_requestAuthentication( uint8_t *nonce, uint16_t nonceLength ){
 
-	uint8_t cmd[] = {MIFARE_ULC_AUTH_1, blockNo};
+	uint8_t cmd[] = {MIFARE_ULC_AUTH_1, 0x00};
 	int len = ul_send_cmd_raw(cmd, sizeof(cmd), nonce, nonceLength);
 	if ( len == -1 ) 
 		ul_switch_off_field();
@@ -211,6 +211,15 @@ static int ulev1_getVersion( uint8_t *response, uint16_t responseLength ){
 static int ulev1_readCounter( uint8_t counter, uint8_t *response, uint16_t responseLength ){
 
 	uint8_t cmd[] = {MIFARE_ULEV1_READ_CNT, counter};
+	int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
+	if (len == -1)
+		ul_switch_off_field();
+	return len;
+}
+
+static int ulev1_readTearing( uint8_t counter, uint8_t *response, uint16_t responseLength ){
+
+	uint8_t cmd[] = {MIFARE_ULEV1_CHECKTEAR, counter};
 	int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
 	if (len == -1)
 		ul_switch_off_field();
@@ -331,7 +340,7 @@ static int ulc_print_3deskey( uint8_t *data){
 	PrintAndLog("         deskey1 [45/0x2D]: %s [%.4s]", sprint_hex(data+4 ,4),data+4);
 	PrintAndLog("         deskey2 [46/0x2E]: %s [%.4s]", sprint_hex(data+8 ,4),data+8);
 	PrintAndLog("         deskey2 [47/0x2F]: %s [%.4s]", sprint_hex(data+12,4),data+12);
-	PrintAndLog(" 3des key : %s", sprint_hex(SwapEndian64(data, 16), 16));
+	PrintAndLog("\n 3des key : %s", sprint_hex(SwapEndian64(data, 16), 16));
 	return 0;
 }
 
@@ -343,7 +352,7 @@ static int ulc_print_configuration( uint8_t *data){
 
 	bool validAuth = (data[8] >= 0x03 && data[8] <= 0x30);
 	if ( validAuth )
-		PrintAndLog("           Auth0 [42/0x2A]: %s Pages above %d needs authentication", sprint_hex(data+8, 4), data[8] );
+		PrintAndLog("           Auth0 [42/0x2A]: %s Page %d and above need authentication", sprint_hex(data+8, 4), data[8] );
 	else{
 		if ( data[8] == 0){
 			PrintAndLog("           Auth0 [42/0x2A]: %s default", sprint_hex(data+8, 4) );
@@ -370,7 +379,7 @@ static int ulev1_print_configuration( uint8_t *data){
 
 	PrintAndLog(" cfg0 [16/0x10]: %s", sprint_hex(data, 4));
 	if ( data[3] < 0xff )
-		PrintAndLog("                    - pages above %d needs authentication",data[3]);
+		PrintAndLog("                    - page %d and above need authentication",data[3]);
 	else 
 		PrintAndLog("                    - pages don't need authentication");
 	PrintAndLog("                    - strong modulation mode %s", (strg_mod_en) ? "enabled":"disabled");
@@ -389,10 +398,13 @@ static int ulev1_print_configuration( uint8_t *data){
 
 static int ulev1_print_counters(){
 	PrintAndLog("--- UL-EV1 Counters");
+	uint8_t tear[1] = {0};
 	uint8_t counter[3] = {0,0,0};
 	for ( uint8_t i = 0; i<3; ++i) {
+		ulev1_readTearing(i,tear,sizeof(tear));
 		ulev1_readCounter(i,counter, sizeof(counter) );
 		PrintAndLog("       [%0d] : %s", i, sprint_hex(counter,3));
+		PrintAndLog("                    - %02X tearing %s", tear[0], ( tear[0]==0xBD)?"Ok":"failure");
 	}
 	return 0;
 }
@@ -439,9 +451,9 @@ static int ulc_magic_test(){
 		ul_switch_off_field();
 		return UL_ERROR;
 	}
-	status = ulc_requestAuthentication(0, nonce1, sizeof(nonce1));
+	status = ulc_requestAuthentication(nonce1, sizeof(nonce1));
 	if ( status > 0 ) {
-		status = ulc_requestAuthentication(0, nonce2, sizeof(nonce2));
+		status = ulc_requestAuthentication(nonce2, sizeof(nonce2));
 		returnValue =  ( !memcmp(nonce1, nonce2, 11) ) ? UL_C_MAGIC : UL_C;
 	} else {
 		returnValue = UL;
@@ -458,13 +470,13 @@ static int ul_magic_test(){
 	iso14a_card_select_t card;
 	int status = ul_select(&card);
 	if ( status < 1 ){
-		PrintAndLog("Error: couldn't select ul_magic_test");
+		PrintAndLog("iso14443a card select failed");
 		ul_switch_off_field();
 		return UL_ERROR;
 	}
 	status = ul_comp_write(0, NULL, 0);
 	ul_switch_off_field();
-	if ( status == 0) 
+	if ( status == 0 ) 
 		return UL_MAGIC;
 	return UL;
 }
@@ -518,19 +530,17 @@ uint16_t GetHF14AMfU_Type(void){
 			case -1  : tagtype = (UL | UL_C); break;  //when does this happen?
 			default  : tagtype = UNKNOWN; break;
 		}
+		// UL-C test
 		if (tagtype == (UL | UL_C)) {
 			status = ul_select(&card);
 			if ( status < 1 ){
-				PrintAndLog("Error: couldn't select 2");
+				PrintAndLog("iso14443a card select failed (UL-C)");
 				ul_switch_off_field();
 				return UL_ERROR;
 			}
 			uint8_t nonce1[11] = {0x00};
-			status = ulc_requestAuthentication(0, nonce1, sizeof(nonce1));
-			if ( status > 0 )
-				tagtype = UL_C;
-			else
-				tagtype = UL;
+			status = ulc_requestAuthentication(nonce1, sizeof(nonce1));
+			tagtype = ( status > 0 ) ? UL_C : UL;
 
 			if (status != -1) ul_switch_off_field();
 		}
@@ -557,7 +567,51 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	iso14a_card_select_t card;
 	uint8_t *key;
 	int status;
+	bool errors = false;
+	bool hasAuthKey = false;
+	uint8_t cmdp = 0;
+	uint8_t datalen = 0;
+	uint8_t authenticationkey[16] = {0x00};
+	uint8_t pack[4] = {0,0,0,0};
 
+	while(param_getchar(Cmd, cmdp) != 0x00)
+	{
+		switch(param_getchar(Cmd, cmdp))
+		{
+		case 'h':
+		case 'H':
+			return usage_hf_mfu_info();
+		case 'k':
+		case 'K':
+			// EV1/NTAG size key
+			datalen = param_gethex(Cmd, cmdp+1, data, 8);
+			if ( !datalen ) {
+				memcpy(authenticationkey, data, 4);
+				cmdp += 2;
+				hasAuthKey = true;
+				break;
+			}
+			// UL-C size key	
+			datalen = param_gethex(Cmd, cmdp+1, data, 32);
+			if (!datalen){
+				memcpy(authenticationkey, data, 16);
+				cmdp += 2;
+				hasAuthKey = true;
+				break;
+			}
+			errors = true; 
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+		if(errors) break;
+	}
+
+	//Validations
+	if(errors) return usage_hf_mfu_info();
+	
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
 
@@ -567,9 +621,16 @@ int CmdHF14AMfUInfo(const char *Cmd){
 
 	status = ul_select(&card);
 	if ( status < 1 ){
-		PrintAndLog("Error: couldn't select");
+		PrintAndLog("iso14443a card select failed");
 		ul_switch_off_field();
 		return status;
+	}
+
+	if ( hasAuthKey ) {
+		if ((tagtype & UL_C)) 
+			try3DesAuthentication(authenticationkey);
+		else
+			ulev1_requestAuthentication(authenticationkey, pack, sizeof(pack));
 	}
 
 	// read pages 0,1,2,4 (should read 4pages)
@@ -587,7 +648,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		uint8_t ulc_conf[16] = {0x00};
 		status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
 		if ( status == -1 ){
-			PrintAndLog("Error: tag didn't answer to READ - possibly locked");
+			PrintAndLog("Error: tag didn't answer to READ UL-C");
 			return status;
 		} 
 		ulc_print_configuration(ulc_conf);
@@ -603,14 +664,17 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			ulc_print_3deskey(ulc_deskey);
 
 		} else {
+			// if we called info with key, just return 
+			if ( hasAuthKey ) return 1;
+
 			PrintAndLog("Trying some default 3des keys");
 			ul_switch_off_field();
-			for (uint8_t i = 0; i < 7; ++i ){
+			for (uint8_t i = 0; i < KEYS_3DES_COUNT; ++i ){
 				key = default_3des_keys[i];
 				if (try3DesAuthentication(key) == 1){
 					PrintAndLog("Found default 3des key: "); //%s", sprint_hex(key,16));
 					ulc_print_3deskey(SwapEndian64(key,16));
-					return 0;
+					return 1;
 				}
 			}
 		}
@@ -637,6 +701,11 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		}
 		// save AUTHENTICATION LIMITS for later:
 		authlim = (ulev1_conf[4] & 0x07);
+		bool allZeros = true;
+		for (uint8_t idx=0; idx<8; idx++)
+			if (ulev1_conf[idx]) allZeros = false;
+
+		if (allZeros) authlim=7;
 		ulev1_print_configuration(ulev1_conf);
 	}
 
@@ -650,13 +719,15 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		}
 		ulev1_print_version(version);
 
+		// if we called info with key, just return 
+		if ( hasAuthKey ) return 1;
+
 		// AUTHLIMIT, (number of failed authentications)
 		// 0 = limitless.
 		// 1-7 = ...  should we even try then?
 		if ( authlim == 0 ){
 			PrintAndLog("\n--- Known EV1/NTAG passwords.");
 
-			uint8_t pack[4] = {0,0,0,0};
 			int len=0; //if len goes to -1 the connection will be turned off.
 			for (uint8_t i = 0; i < 3; ++i ){
 				key = default_pwd_pack[i];
@@ -683,7 +754,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	
 	ul_switch_off_field();
 	PrintAndLog("");
-	return 0;
+	return 1;
 }
 
 //
@@ -797,12 +868,29 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	return 0;
 }
 
+int usage_hf_mfu_info(void)
+{
+	PrintAndLog("It gathers information about the tag and tries to detect what kind it is.");
+	PrintAndLog("Sometimes the tags are locked down, and you may need a key to be able to read the information");
+	PrintAndLog("The following tags can be identified:\n");
+	PrintAndLog("Ultralight, Ultralight-C, Ultralight EV1");
+	PrintAndLog("NTAG 213, NTAG 215, NTAG 216");
+	PrintAndLog("my-d, my-d NFC, my-d move, my-d move NFC\n");
+	PrintAndLog("Usage:  hf mfu info k <key>");
+	PrintAndLog("  Options : ");
+	PrintAndLog("  k <key> : key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
+	PrintAndLog("");
+	PrintAndLog("   sample : hf mfu info");
+	PrintAndLog("          : hf mfu info k 11223344");
+	return 0;
+}
+
 int usage_hf_mfu_dump(void)
 {
 	PrintAndLog("Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
 	PrintAndLog("and saves binary dump into the file `filename.bin` or `cardUID.bin`");
 	PrintAndLog("It autodetects card type.\n");	
-	PrintAndLog("Usage:  hf mfu dump k <key> n <filename w/o .bin>");
+	PrintAndLog("Usage:  hf mfu dump s k <key> n <filename w/o .bin>");
 	PrintAndLog("  Options : ");
 	PrintAndLog("  k <key> : Enter key for authentication");
 	PrintAndLog("  n <FN > : Enter filename w/o .bin to save the dump as");	
@@ -810,8 +898,10 @@ int usage_hf_mfu_dump(void)
 	PrintAndLog("");
 	PrintAndLog("   sample : hf mfu dump");
 	PrintAndLog("          : hf mfu dump n myfile");
+	PrintAndLog("          : hf mfu dump k 00112233445566778899AABBCCDDEEFF");
 	return 0;
 }
+
 //
 //  Mifare Ultralight / Ultralight-C / Ultralight-EV1
 //  Read and Dump Card Contents,  using auto detection of tag size.
@@ -1083,7 +1173,6 @@ int CmdHF14AMfucAuth(const char *Cmd){
 
 int try3DesAuthentication( uint8_t *key){
 	
-	uint8_t blockNo = 0;
 	uint32_t cuid = 0;
 
 	des3_context ctx = { 0 };
@@ -1094,7 +1183,7 @@ int try3DesAuthentication( uint8_t *key){
 	uint8_t rnd_ab[16] = { 0 };
 	uint8_t iv[8] = { 0 };
 
-	UsbCommand c = {CMD_MIFAREUC_AUTH1, {blockNo}};
+	UsbCommand c = {CMD_MIFAREUC_AUTH1, {0x00}};
 	SendCommand(&c);
 	UsbCommand resp;
 	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) 	return -1;

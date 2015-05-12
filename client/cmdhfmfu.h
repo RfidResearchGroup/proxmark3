@@ -13,19 +13,22 @@ int CmdHF14AMfUCRdBl(const char *Cmd);
 int CmdHF14AMfUCRdCard(const char *Cmd);
 int CmdHF14AMfucAuth(const char *Cmd);
 
-//general stuff
-int CmdHF14AMfUDump(const char *Cmd);
-void rol (uint8_t *data, const size_t len);
-
 uint8_t requestAuthentication( uint8_t *nonce);
 int try3DesAuthentication( uint8_t *key);
+
+//general stuff
+int CmdHF14AMfUDump(const char *Cmd);
+int CmdHF14AMfUInfo(const char *Cmd);
 uint16_t GetHF14AMfU_Type(void);
+
+void rol (uint8_t *data, const size_t len);
 int ul_print_type(uint16_t tagtype, uint8_t spacer);
+void ul_switch_off_field(void);
 
 int usage_hf_mfu_dump(void);
+int usage_hf_mfu_info(void);
 
 int CmdHFMFUltra(const char *Cmd);
-int CmdHF14AMfUInfo(const char *Cmd);
 
 typedef enum TAGTYPE_UL {
 	UNKNOWN       = 0x0000,
