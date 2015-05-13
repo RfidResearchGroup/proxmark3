@@ -633,8 +633,6 @@ static RAMFUNC int ManchesterDecoding(int v)
 //-----------------------------------------------------------------------------
 void RAMFUNC SnoopIClass(void)
 {
-
-
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
     // response from the tag.
@@ -1689,13 +1687,15 @@ void ReaderIClass(uint8_t arg0) {
     int read_status= 0;
 	uint8_t result_status = 0;
     bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;
-
+	bool try_once = arg0 & FLAG_ICLASS_READER_ONE_TRY;
 	set_tracing(TRUE);
     setupIclassReader();
 
+	uint16_t tryCnt=0;
     while(!BUTTON_PRESS())
     {
-
+		if (try_once && tryCnt > 5) break; 
+		tryCnt++;
 		if(!tracing) {
 			DbpString("Trace full");
 			break;

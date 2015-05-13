@@ -211,6 +211,7 @@ typedef struct{
 #define FLAG_ICLASS_READER_CSN		0x04
 #define FLAG_ICLASS_READER_CONF		0x08
 #define FLAG_ICLASS_READER_AA		0x10
+#define FLAG_ICLASS_READER_ONE_TRY      0x20
 
 
 
