@@ -1103,7 +1103,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 		sprintf(fnameptr,"%02X%02X%02X%02X%02X%02X%02X.bin",
 			data[0],data[1], data[2], data[4],data[5],data[6], data[7]);
 	} else {
-		sprintf(fnameptr + fileNlen," .bin");
+		sprintf(fnameptr + fileNlen,".bin");
 	}
 
 	if ((fout = fopen(filename,"wb")) == NULL) { 

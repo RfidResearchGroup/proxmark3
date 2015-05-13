@@ -1892,7 +1892,7 @@ int getSamples(const char *Cmd, bool silent)
 		PrintAndLog("Unpacking...");
 		BitstreamOut bout = { got, bits_per_sample * n,  0};
 		int j =0;
-		for (j = 0; j * bits_per_sample < n * 8 && j < sizeof(GraphBuffer); j++) {
+		for (j = 0; j * bits_per_sample < n * 8 && j < n; j++) {
 			uint8_t sample = getByte(bits_per_sample, &bout);
 			GraphBuffer[j] = ((int) sample )- 128;
 		}

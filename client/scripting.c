@@ -298,6 +298,7 @@ int setLuaPath( lua_State* L, const char* path )
     lua_pushstring( L, buf ); // push the new one
     lua_setfield( L, -2, "path" ); // set the field "path" in table at -2 with value at top of stack
     lua_pop( L, 1 ); // get rid of package table from top of stack
+    free(buf);
     return 0; // all done!
 }
 

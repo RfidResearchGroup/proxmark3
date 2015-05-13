@@ -124,7 +124,7 @@ char * sprint_hex(const uint8_t * data, const size_t len) {
 
 char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
 	
-	int maxLen = ( len > 1024) ? 1024 : len;
+	int maxLen = ( len > 1020) ? 1020 : len;
 	static char buf[1024];
 	memset(buf, 0x00, 1024);
 	char *tmp = buf;

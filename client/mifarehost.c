@@ -354,10 +354,7 @@ int loadTraceCard(uint8_t *tuid) {
 	FillFileNameByUID(traceFileName, tuid, ".eml", 7);
 
 	f = fopen(traceFileName, "r");
-	if (!f) {
-		fclose(f);
-		return 1;
-	}
+	if (!f) return 1;
 	
 	blockNum = 0;
 		
@@ -394,10 +391,7 @@ int saveTraceCard(void) {
 	if ((!strlen(traceFileName)) || (isTraceCardEmpty())) return 0;
 	
 	f = fopen(traceFileName, "w+");
-	if ( !f ) {
-		fclose(f);
-		return 1;
-	}
+	if ( !f ) return 1;
 	
 	for (int i = 0; i < 64; i++) {  // blocks
 		for (int j = 0; j < 16; j++)  // bytes
