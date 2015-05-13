@@ -164,14 +164,16 @@ uint64_t bytes_to_num(uint8_t* src, size_t len)
 // to
 // hh,gg,ff,ee,dd,cc,bb,aa, pp,oo,nn,mm,ll,kk,jj,ii
 // up to 64 bytes or 512 bits
-uint8_t *SwapEndian64(uint8_t *src, size_t len){
-	static uint8_t temp[64]={0};
-	for (uint8_t block=0; block < (uint8_t)len/8; block++){
-		for (size_t i = 0; i < 8; i++){
-			temp[i+(8*block)] = src[(7-i)+(8*block)];
+uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize){
+	static uint8_t buf[64];
+	memset(buf, 0x00, 64);
+	uint8_t *tmp = buf;
+	for (uint8_t block=0; block < (uint8_t)(len/blockSize); block++){
+		for (size_t i = 0; i < blockSize; i++){
+			tmp[i+(blockSize*block)] = src[(blockSize-1-i)+(blockSize*block)];
 		}
 	}
-	return temp;
+	return tmp;
 }
 
 //assumes little endian

@@ -340,7 +340,7 @@ static int ulc_print_3deskey( uint8_t *data){
 	PrintAndLog("         deskey1 [45/0x2D]: %s [%.4s]", sprint_hex(data+4 ,4),data+4);
 	PrintAndLog("         deskey2 [46/0x2E]: %s [%.4s]", sprint_hex(data+8 ,4),data+8);
 	PrintAndLog("         deskey2 [47/0x2F]: %s [%.4s]", sprint_hex(data+12,4),data+12);
-	PrintAndLog("\n 3des key : %s", sprint_hex(SwapEndian64(data, 16), 16));
+	PrintAndLog("\n 3des key : %s", sprint_hex(SwapEndian64(data, 16, 8), 16));
 	return 0;
 }
 
@@ -673,7 +673,9 @@ int CmdHF14AMfUInfo(const char *Cmd){
 				key = default_3des_keys[i];
 				if (try3DesAuthentication(key) == 1){
 					PrintAndLog("Found default 3des key: "); //%s", sprint_hex(key,16));
-					ulc_print_3deskey(SwapEndian64(key,16));
+					uint8_t keySwap[16];
+					memcpy(keySwap, SwapEndian64(key,16,8), 16);
+					ulc_print_3deskey(keySwap);
 					return 1;
 				}
 			}
@@ -973,7 +975,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	if(errors) return usage_hf_mfu_dump();
 
 	if (swapEndian)
-		keyPtr = SwapEndian64(data, 16);
+		keyPtr = SwapEndian64(data, 16, 8);
 
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
@@ -1369,7 +1371,7 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
 			hasPwd = TRUE;
 		}	
 	}	
-	//uint8_t *key2 = SwapEndian64(key, 16);
+	//uint8_t *key2 = SwapEndian64(key, 16, 8);
 
 	//Read Block
 	UsbCommand c = {CMD_MIFAREU_READBL, {blockNo}};

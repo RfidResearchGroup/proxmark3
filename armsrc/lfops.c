@@ -651,7 +651,7 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 	int ledcontrol = 1;
 	int n=0, i=0;
 	uint8_t clk = (arg1 >> 8) & 0xFF;
-	uint8_t encoding = arg1 & 1;
+	uint8_t encoding = arg1 & 0xFF;
 	uint8_t separator = arg2 & 1;
 	uint8_t invert = (arg2 >> 8) & 1;
 
