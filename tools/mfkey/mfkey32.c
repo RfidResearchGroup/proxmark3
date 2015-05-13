@@ -62,9 +62,8 @@ int main (int argc, char *argv[]) {
 		crypto1_word(t, uid ^ nt, 0);
 		crypto1_word(t, nr1_enc, 1);
 		if (ar1_enc == (crypto1_word(t, 0, 0) ^ prng_successor(nt, 64))) {
-      printf("\nFound Key: [%012"llx"]\n\n",key);
-			break;
-		}
+			printf("\nFound Key: [%012"llx"]\n\n",key);
+			break;}
 	}
   free(s);
 
