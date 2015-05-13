@@ -15,6 +15,8 @@
 #include "mifarehost.h"
 #include "proxmark3.h"
 
+#define llx PRIx64
+
 // MIFARE
 int compar_int(const void * a, const void * b) {
 	// didn't work: (the result is truncated to 32 bits)
@@ -312,16 +314,17 @@ static uint8_t traceCurKey = 0;
 
 struct Crypto1State *traceCrypto1 = NULL;
 
-struct Crypto1State *revstate;
-uint64_t lfsr;
-uint32_t ks2;
-uint32_t ks3;
+struct Crypto1State *revstate = NULL;
 
-uint32_t uid;     // serial number
-uint32_t nt;      // tag challenge
-uint32_t nr_enc;  // encrypted reader challenge
-uint32_t ar_enc;  // encrypted reader response
-uint32_t at_enc;  // encrypted tag response
+uint64_t key = 0;
+uint32_t ks2 = 0;
+uint32_t ks3 = 0;
+
+uint32_t uid = 0;     // serial number
+uint32_t nt =0;      // tag challenge
+uint32_t nr_enc =0;  // encrypted reader challenge
+uint32_t ar_enc =0;  // encrypted reader response
+uint32_t at_enc =0;  // encrypted tag response
 
 int isTraceCardEmpty(void) {
 	return ((traceCard[0] == 0) && (traceCard[1] == 0) && (traceCard[2] == 0) && (traceCard[3] == 0));
@@ -364,10 +367,10 @@ int loadTraceCard(uint8_t *tuid) {
 	
 		memset(buf, 0, sizeof(buf));
 		if (fgets(buf, sizeof(buf), f) == NULL) {
-      PrintAndLog("File reading error.");
+			PrintAndLog("File reading error.");
 			fclose(f);
 			return 2;
-    }
+		}
 
 		if (strlen(buf) < 32){
 			if (feof(f)) break;
@@ -583,17 +586,17 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			lfsr_rollback_word(revstate, nr_enc, 1);
 			lfsr_rollback_word(revstate, uid ^ nt, 0);
 
-			crypto1_get_lfsr(revstate, &lfsr);
-			printf("key> %x%x\n", (unsigned int)((lfsr & 0xFFFFFFFF00000000) >> 32), (unsigned int)(lfsr & 0xFFFFFFFF));
-			AddLogUint64(logHexFileName, "key> ", lfsr); 
+			crypto1_get_lfsr(revstate, &key);
+			printf("Key: %012"llx"\n",key);
+			AddLogUint64(logHexFileName, "key: ", key); 
 			
 			int blockShift = ((traceCurBlock & 0xFC) + 3) * 16;
 			if (isBlockEmpty((traceCurBlock & 0xFC) + 3)) memcpy(traceCard + blockShift + 6, trailerAccessBytes, 4);
 			
 			if (traceCurKey) {
-				num_to_bytes(lfsr, 6, traceCard + blockShift + 10);
+				num_to_bytes(key, 6, traceCard + blockShift + 10);
 			} else {
-				num_to_bytes(lfsr, 6, traceCard + blockShift);
+				num_to_bytes(key, 6, traceCard + blockShift);
 			}
 			if (wantSaveToEmlFile) saveTraceCard();
 
@@ -606,7 +609,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			
 //	nt = crypto1_word(traceCrypto1, nt ^ uid, 1) ^ nt;
 
-	/*	traceCrypto1 = crypto1_create(lfsr); // key in lfsr
+	/*	traceCrypto1 = crypto1_create(key); // key in lfsr
 		crypto1_word(traceCrypto1, nt ^ uid, 0);
 		crypto1_word(traceCrypto1, ar, 1);
 		crypto1_word(traceCrypto1, 0, 0);
