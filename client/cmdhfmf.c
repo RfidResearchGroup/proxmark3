@@ -547,7 +547,7 @@ int CmdHF14AMfNested(const char *Cmd)
 	uint8_t trgKeyType = 0;
 	uint8_t SectorsCnt = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-	uint8_t keyBlock[13*6];
+	uint8_t keyBlock[14*6];
 	uint64_t key64 = 0;
 	bool transferToEml = false;
 	
@@ -1311,7 +1311,7 @@ int CmdHF14AMfESave(const char *Cmd)
 		for (j = 0; j < 7; j++, fnameptr += 2)
 			sprintf(fnameptr, "%02X", buf[j]); 
 	} else {
-		fnameptr += len;
+		fnameptr += len-4;
 	}
 
 	// add file extension
@@ -1575,7 +1575,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
 
 		memcpy(filename, Cmd, len);
-		fnameptr += len;
+		fnameptr += len-4;
 
 		sprintf(fnameptr, ".eml"); 
 	
