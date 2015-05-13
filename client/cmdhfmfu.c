@@ -270,11 +270,16 @@ static int ul_print_default( uint8_t *data){
 		PrintAndLog("      BCC1 : %02X, crc should be %02X", data[8], crc1 );
 	
 	PrintAndLog("  Internal : %02X, %sdefault", data[9], (data[9]==0x48)?"":"not " );
-	PrintAndLog("      Lock : %s - %s", sprint_hex(data+10, 2),printBits( 2, data+10) );
 
-	// if Page3 has NDEF magic number, its not a OTP..
-	if ( data[12] != 0xE1 )
-		PrintAndLog("OneTimePad : %s\n", sprint_hex(data + 12, 4));
+	PrintAndLog("      Lock : %s - %s",
+				sprint_hex(data+10, 2),
+				printBits(2, data+10)
+		);
+
+	PrintAndLog("OneTimePad : %s - %s\n",
+				sprint_hex(data + 12, 4),
+				printBits(4, data+12)
+		);
 
 	return 0;
 }
@@ -640,7 +645,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	status = ul_read(0, data, sizeof(data));
 	if ( status == -1 ){
 		PrintAndLog("Error: tag didn't answer to READ A");
-		ul_switch_off_field();
 		return status;
 	}
 
@@ -653,7 +657,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ - possibly locked");
-			ul_switch_off_field();
 			return status;
 		} 
 
@@ -665,7 +668,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			status = ul_read(0x2C, ulc_deskey, sizeof(ulc_deskey));
 			if ( status == -1 ){
 				PrintAndLog("Error: tag didn't answer to READ magic");
-				ul_switch_off_field();
 				return status;
 			}
 			ulc_print_3deskey(ulc_deskey);
@@ -696,7 +698,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status = ulev1_readSignature( ulev1_signature, sizeof(ulev1_signature));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ SIGNATURE");
-			ul_switch_off_field();
 			return status;
 		}		
 		ulev1_print_signature( ulev1_signature, sizeof(ulev1_signature));
@@ -724,7 +725,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status  = ulev1_getVersion(version, sizeof(version));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to GET_VERSION");
-			ul_switch_off_field();
 			return status;
 		}
 		ulev1_print_version(version);
@@ -758,7 +758,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status = ul_read(3, cc, sizeof(cc));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ ntag");
-			ul_switch_off_field();
 			return status;
 		}
 		ntag_print_CC(cc);	
