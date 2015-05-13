@@ -271,9 +271,14 @@ static int ul_print_default( uint8_t *data){
 		PrintAndLog("      BCC1 : %02X - crc should be %02X", data[8], crc1 );
 
 	PrintAndLog("  Internal : %02X - %s default", data[9], (data[9]==0x48)?"":"not" );
-	PrintAndLog("      Lock : %s - %s", sprint_hex(data+10, 2),printBits( 2, data+10) );
-	PrintAndLog("OneTimePad : %s ", sprint_hex(data + 12, 4));
-	PrintAndLog("");
+	PrintAndLog("      Lock : %s - %s",
+				sprint_hex(data+10, 2),
+				printBits(2, data+10)
+		);
+	PrintAndLog("OneTimePad : %s - %s\n",
+				sprint_hex(data + 12, 4),
+				printBits(4, data+12)
+		);
 	return 0;
 }
 
