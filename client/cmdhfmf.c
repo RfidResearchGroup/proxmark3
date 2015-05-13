@@ -1202,7 +1202,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 	
 	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
 
-	fnameptr += len;
+	fnameptr += len-4;
 
 	sprintf(fnameptr, ".eml"); 
 	
@@ -1593,6 +1593,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 			
 			if (fgets(buf, sizeof(buf), f) == NULL) {
 				PrintAndLog("File reading error.");
+				fclose(f);
 				return 2;
 			}
 
@@ -1600,6 +1601,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 				if(strlen(buf) && feof(f))
 					break;
 				PrintAndLog("File content error. Block data must include 32 HEX symbols");
+				fclose(f);
 				return 2;
 			}
 			for (i = 0; i < 32; i += 2)
