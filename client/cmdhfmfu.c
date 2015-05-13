@@ -355,7 +355,7 @@ static int ulc_print_configuration( uint8_t *data){
 
 	bool validAuth = (data[8] >= 0x03 && data[8] <= 0x30);
 	if ( validAuth )
-		PrintAndLog("           Auth0 [42/0x2A]: %s Pages above %d/0x%02X needs authentication", sprint_hex(data+8, 4), data[8],data[8] );
+		PrintAndLog("           Auth0 [42/0x2A]: %s page %d/0x%02X and above need authentication", sprint_hex(data+8, 4), data[8],data[8] );
 	else{
 		if ( data[8] == 0){
 			PrintAndLog("           Auth0 [42/0x2A]: %s default", sprint_hex(data+8, 4) );
@@ -382,7 +382,7 @@ static int ulev1_print_configuration( uint8_t *data){
 	 
 	PrintAndLog(" cfg0 [16/0x10]: %s", sprint_hex(data, 4));
 	if ( data[3] < 0xff )
-		PrintAndLog("                    - pages above %d needs authentication",data[3]);
+		PrintAndLog("                    - page %d and above need authentication",data[3]);
 	else 
 		PrintAndLog("                    - pages don't need authentication");
 	PrintAndLog("                    - strong modulation mode %s", (strg_mod_en) ? "enabled":"disabled");
@@ -473,7 +473,7 @@ static int ul_magic_test(){
 	iso14a_card_select_t card;
 	int status = ul_select(&card);
 	if ( status < 1 ){
-		PrintAndLog("Error: couldn't select ul_magic_test");
+		PrintAndLog("iso14443a card select failed");
 		ul_switch_off_field();
 		return UL_ERROR;
 	}
@@ -673,7 +673,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		} else {
 			
 			// if we called info with key, just return 
-			if ( hasAuthKey ) return 0;
+			if ( hasAuthKey ) return 1;
 			
 			PrintAndLog("Trying some default 3des keys");
 			ul_switch_off_field();
@@ -682,7 +682,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 				if (try3DesAuthentication(key) == 1){
 					PrintAndLog("Found default 3des key: "); //%s", sprint_hex(key,16));
 					ulc_print_3deskey(SwapEndian64(key,16));
-					return 0;
+					return 1;
 				}
 			}
 		}
@@ -710,6 +710,11 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		}
 		// save AUTHENTICATION LIMITS for later:
 		authlim = (ulev1_conf[4] & 0x07);
+		bool allZeros = true;
+		for (uint8_t idx=0; idx<8; idx++)
+			if (ulev1_conf[idx]) allZeros = false;
+
+		if (allZeros) authlim=7;
 		ulev1_print_configuration(ulev1_conf);
 	}
 	
@@ -725,7 +730,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		ulev1_print_version(version);
 
 		// if we called info with key, just return 
-		if ( hasAuthKey ) return 0;
+		if ( hasAuthKey ) return 1;
 		
 		// AUTHLIMIT, (number of failed authentications)
 		// 0 = limitless.
@@ -761,7 +766,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	
 	ul_switch_off_field();
 	PrintAndLog("");
-	return 0;
+	return 1;
 }
 
 //
