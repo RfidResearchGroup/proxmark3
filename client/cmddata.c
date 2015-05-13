@@ -26,7 +26,7 @@
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 uint8_t g_debugMode;
-int DemodBufferLen;
+size_t DemodBufferLen;
 static int CmdHelp(const char *Cmd);
 
 //set the demod buffer with given array of binary (one bit per byte)
@@ -1484,7 +1484,7 @@ int CmdIndalaDecode(const char *Cmd)
 		return 0;
 	}
 	uint8_t invert=0;
-	ans = indala26decode(DemodBuffer,(size_t *) &DemodBufferLen, &invert);
+	ans = indala26decode(DemodBuffer, &DemodBufferLen, &invert);
 	if (ans < 1) {
 		if (g_debugMode==1)
 			PrintAndLog("Error2: %d",ans);

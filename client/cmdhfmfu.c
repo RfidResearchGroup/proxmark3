@@ -347,8 +347,7 @@ static int ulc_print_3deskey( uint8_t *data){
 	PrintAndLog("         deskey1 [45/0x2D]: %s [%.4s]", sprint_hex(data+4 ,4),data+4);
 	PrintAndLog("         deskey2 [46/0x2E]: %s [%.4s]", sprint_hex(data+8 ,4),data+8);
 	PrintAndLog("         deskey2 [47/0x2F]: %s [%.4s]", sprint_hex(data+12,4),data+12);
-	
-	PrintAndLog("\n 3des key : %s", sprint_hex(SwapEndian64(data, 16), 16));
+	PrintAndLog("\n 3des key : %s", sprint_hex(SwapEndian64(data, 16, 8), 16));
 	return 0;
 }
 
@@ -656,10 +655,9 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		uint8_t ulc_conf[16] = {0x00};
 		status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
 		if ( status == -1 ){
-			PrintAndLog("Error: tag didn't answer to READ - possibly locked");
+			PrintAndLog("Error: tag didn't answer to READ UL-C");
 			return status;
 		} 
-
 		ulc_print_configuration(ulc_conf);
 
 		if ((tagtype & MAGIC)){
@@ -673,17 +671,19 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			ulc_print_3deskey(ulc_deskey);
 
 		} else {
-			
 			// if we called info with key, just return 
 			if ( hasAuthKey ) return 1;
 			
+			// also try to diversify default keys..  look into CmdHF14AMfuGenDiverseKeys
 			PrintAndLog("Trying some default 3des keys");
 			ul_switch_off_field();
 			for (uint8_t i = 0; i < KEYS_3DES_COUNT; ++i ){
 				key = default_3des_keys[i];
 				if (try3DesAuthentication(key) == 1){
 					PrintAndLog("Found default 3des key: "); //%s", sprint_hex(key,16));
-					ulc_print_3deskey(SwapEndian64(key,16));
+					uint8_t keySwap[16];
+					memcpy(keySwap, SwapEndian64(key,16,8), 16);
+					ulc_print_3deskey(keySwap);
 					return 1;
 				}
 			}
@@ -984,7 +984,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	if(errors) return usage_hf_mfu_dump();
 	
 	if (swapEndian)
-		keyPtr = SwapEndian64(data, 16);
+		keyPtr = SwapEndian64(data, 16, 8);
 
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;

@@ -70,7 +70,7 @@ int getSamples(const char *Cmd, bool silent);
 
 #define MAX_DEMOD_BUF_LEN (1024*128)
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
-extern int DemodBufferLen;
+extern size_t DemodBufferLen;
 extern uint8_t g_debugMode;
 #define BIGBUF_SIZE 40000
 
