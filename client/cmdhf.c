@@ -36,9 +36,6 @@ int CmdHFTune(const char *Cmd)
   return 0;
 }
 
-//TODO:
-//void annotateIso15693(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){}
-
 void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 {
 	switch(cmd[0])
@@ -457,11 +454,11 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	if (data_len > 2) {
 		switch (protocol) {
 			case ICLASS:
-			crcStatus = iclass_CRC_check(isResponse, frame, data_len);
+				crcStatus = iclass_CRC_check(isResponse, frame, data_len);
 				break;
 			case ISO_14443B:
 			case TOPAZ:
-			crcStatus = iso14443B_CRC_check(isResponse, frame, data_len);
+				crcStatus = iso14443B_CRC_check(isResponse, frame, data_len);
 				break;
 			case ISO_14443A:
 				crcStatus = iso14443A_CRC_check(isResponse, frame, data_len);
@@ -475,7 +472,6 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	//2 Not crc-command
 
 	//--- Draw the data column
-	//char line[16][110];
 	char line[16][110];
 
 	for (int j = 0; j < data_len && j/16 < 16; j++) {
@@ -492,27 +488,22 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 		} else {
 			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x  ", frame[j]);
 		}
-
 	}
 
 	if (markCRCBytes) {
-		if(crcStatus == 0 || crcStatus == 1)
-	{//CRC-command
+		//CRC-command
+		if(crcStatus == 0 || crcStatus == 1) {
 			char *pos1 = line[(data_len-2)/16]+(((data_len-2) % 16) * 4);
-		(*pos1) = '[';
+			(*pos1) = '[';
 			char *pos2 = line[(data_len)/16]+(((data_len) % 16) * 4);
 			sprintf(pos2, "%c", ']');
 		}
 	}
 
-	if(data_len == 0)
-	{
-		if(data_len == 0){
-			sprintf(line[0],"<empty trace - possible error>");
-		}
+	if(data_len == 0){
+		sprintf(line[0],"<empty trace - possible error>");
 	}
 	//--- Draw the CRC column
-
 	char *crc = (crcStatus == 0 ? "!crc" : (crcStatus == 1 ? " ok " : "    "));
 
 	EndOfTransmissionTimestamp = timestamp + duration;
@@ -539,9 +530,9 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 				(j == num_lines-1) ? crc : "    ",
 				(j == num_lines-1) ? explanation : "");
 		} else {
-			PrintAndLog("           |           |     | %-64s| %s| %s",
+			PrintAndLog("            |            |     |%-64s | %s| %s",
 				line[j],
-				(j == num_lines-1)?crc:"    ",
+				(j == num_lines-1) ? crc : "    ",
 				(j == num_lines-1) ? explanation : "");
 		}
 	}
@@ -550,7 +541,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	
 	if (showWaitCycles && !isResponse && next_record_is_response(tracepos, trace)) {
 		uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
-			PrintAndLog(" %9d | %9d | %s | fdt (Frame Delay Time): %d",
+			PrintAndLog(" %10d | %10d | %s |fdt (Frame Delay Time): %d",
 				(EndOfTransmissionTimestamp - first_timestamp),
 				(next_timestamp - first_timestamp),
 				"   ",
@@ -666,17 +657,28 @@ int CmdHFList(const char *Cmd)
 
 int CmdHFSearch(const char *Cmd){
 	int ans = 0;
-	ans = CmdHF14AReader(Cmd);
-	if (ans > 0) return ans;
+	PrintAndLog("");
+	ans = CmdHF14AReader("s");
+	if (ans > 0) {
+		PrintAndLog("\nValid ISO14443A Tag Found - Quiting Search\n");
+		return ans;
+	} 
+	ans = HFiClassReader("", false, false);
+	if (ans) {
+		PrintAndLog("\nValid iClass Tag (or PicoPass Tag) Found - Quiting Search\n");
+		return ans;
+	}
+	ans = HF15Reader("", false);
+	if (ans) {
+		PrintAndLog("\nValid ISO15693 Tag Found - Quiting Search\n");
+		return ans;
+	}
 
-	ans = CmdHF15Reader(Cmd);
+
+	//14b has issues currently...
+	//ans = CmdHF14BRead(Cmd);
 	//if (ans > 0) return ans;	
 
-	ans = CmdHF14BRead(Cmd);
-	//if (ans > 0) return ans;
-
-	ans = CmdHFiClassReader(Cmd);
-	//if (ans > 0) return ans;
 	return 0;
 }
 
@@ -695,7 +697,7 @@ static command_t CommandTable[] =
   {"topaz",			CmdHFTopaz,		1, "{ TOPAZ (NFC Type 1) RFIDs... }"},
   {"tune",			CmdHFTune,      0, "Continuously measure HF antenna tuning"},
   {"list",			CmdHFList,      1, "List protocol data in trace buffer"},
-  {"search",      CmdHFSearch,      1, "Search for known HF tags"},
+  {"search",      CmdHFSearch,      1, "Search for known HF tags [preliminary]"},
 	{NULL, NULL, 0, NULL}
 };
 
