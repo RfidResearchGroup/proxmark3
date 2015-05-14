@@ -23,10 +23,22 @@ Arguments:
 	-h             : this help
 	-m             : Maxed out items (experimental)
 	-i             : filename for the datadump to read (bin)
-]]
+
+	]]
 
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
-local DEBUG = true -- the debug flag
+local DEBUG = false -- the debug flag
+local RANDOM = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
+
+local band = bit32.band
+local bor = bit32.bor
+local lshift = bit32.lshift
+local rshift = bit32.rshift
+local byte = string.byte
+local char = string.char
+local sub = string.sub
+local format = string.format
+
 
 
 local band = bit32.band
@@ -197,8 +209,6 @@ local function ValidateCheckSums(blocks)
 	io.write( ('TYPE 3 area 2: %04x = %04x -- %s\n'):format(crc,calc,isOk))
 end
 
-local function LoadEmulator(blocks)
-	local HASHCONSTANT = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
 	local cmd
 	local blockdata
 	for _,b in pairs(blocks) do 
@@ -207,10 +217,10 @@ local function LoadEmulator(blocks)
 		
 		if  _%4 ~= 3 then
 			if (_ >= 8 and _<=21)  or  (_ >= 36 and _<=49) then
-				local base = ('%s%s%02x%s'):format(blocks[0], blocks[1], _ , HASHCONSTANT)	
+				local base = ('%s%s%02x%s'):format(blocks[0], blocks[1], _ , RANDOM)	
 				local baseStr = utils.ConvertHexToAscii(base)
 				local key = md5.sumhexa(baseStr)
-				local enc = core.aes(key, blockdata)
+				local enc = core.aes128_encrypt(key, blockdata)
 				local hex = utils.ConvertAsciiToBytes(enc)
 				hex = utils.ConvertBytesToHex(hex)
 			
@@ -346,21 +356,6 @@ local function main(args)
 	local cmdSetDbgOff = "hf mf dbg 0"
 	core.console( cmdSetDbgOff) 
 	
-	-- if not loadFromDump then
-		-- -- Look for tag present on reader,
-		-- result, err = lib14a.read1443a(false)
-		-- if not result then return oops(err)	end
-
-		-- core.clearCommandBuffer()
-	
-		-- if 0x01 ~= result.sak then -- NXP MIFARE TNP3xxx
-			-- return oops('This is not a TNP3xxx tag. aborting.')
-		-- end	
-
-		-- -- Show tag info
-		-- print((' Found tag : %s'):format(result.name))
-	-- end
-	
 	-- Load dump.bin file
 	print( (' Load data from %s'):format(inputTemplate))
 	hex, err = utils.ReadDumpFile(inputTemplate)
@@ -374,7 +369,7 @@ local function main(args)
 	end
 
 	if DEBUG then
-		print('Validating checksums in the loaded datadump')
+		print(' Validating checksums')
 		ValidateCheckSums(blocks)
 	end
 	
@@ -393,7 +388,7 @@ local function main(args)
 	local item = toys.Find( toytype, subtype)
 	if item then
 		local itemStr = ('%s - %s (%s)'):format(item[6],item[5], item[4])
-		print(' ITEM TYPE :'..itemStr )
+		print(' ITEM TYPE : '..itemStr )
 	else
 		print( (' ITEM TYPE : 0x%s 0x%s'):format(toytype, subtype) )
 	end	
@@ -407,12 +402,19 @@ local function main(args)
 	print( string.rep('--',20) )
 
 
-	-- lets do something.
-	-- 
+	-- Experience should be:  	
 	local experience = blocks[8]:sub(1,6)
-	print(('Experience  : %d'):format(utils.SwapEndianness(experience,24)))
+	print(('Experience  : %d'):format(utils.SwapEndianness(experience,16)))
+	
 	local money = blocks[8]:sub(7,10)
 	print(('Money       : %d'):format(utils.SwapEndianness(money,16)))
+
+	-- 
+	
+	-- Sequence number
+	local seqnum = blocks[8]:sub(18,19)
+	print(('Sequence number : %d'):format( tonumber(seqnum,16)))
+	
 	local fairy = blocks[9]:sub(1,8)
 	--FD0F = Left, FF0F = Right
 	local path = 'not choosen'
@@ -425,6 +427,12 @@ local function main(args)
 	
 	local hat = blocks[9]:sub(8,11)
 	print(('Hat         : %d'):format(utils.SwapEndianness(hat,16)))
+
+	local level = blocks[13]:sub(27,28)
+	print(('LEVEL : %d'):format( tonumber(level,16)))
+	--hälsa: 667 029b  
+	--local health = blocks[]:sub();
+	--print(('Health : %d'):format( tonumber(health,16))
 	
 	--0x0D    0x29    0x0A    0x02    16-bit hero points value. Maximum 100.
 	local heropoints = blocks[13]:sub(20,23)
@@ -433,6 +441,11 @@ local function main(args)
 	--0x10    0x2C    0x0C    0x04    32 bit flag value indicating heroic challenges completed.
 	local challenges = blocks[16]:sub(25,32)
 	print(('Finished hero challenges : %d'):format(utils.SwapEndianness(challenges,32)))
+	
+	-- Character Name
+	local name1 = blocks[10]:sub(1,32)
+	local name2 = blocks[12]:sub(1,32)
+	print('Custom name : '..utils.ConvertHexToAscii(name1..name2))
 	
 	if maxed then
 		print('Lets try to max out some values')

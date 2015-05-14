@@ -80,14 +80,14 @@ function GetCardInfo()
 
 	core.clearCommandBuffer()
 	
-	if 0x18 == result.sak then --NXP MIFARE Classic 4k | Plus 4k
+	if 0x18 == result.sak then -- NXP MIFARE Classic 4k | Plus 4k
 		-- IFARE Classic 4K offers 4096 bytes split into forty sectors, 
 		-- of which 32 are same size as in the 1K with eight more that are quadruple size sectors. 
 		numSectors = 40
-	elseif 0x08 == result.sak then -- NXP MIFARE CLASSIC 1k | Plus 2k
+	elseif 0x08 == result.sak then  -- NXP MIFARE CLASSIC 1k | Plus 2k
 		-- 1K offers 1024 bytes of data storage, split into 16 sector
 		numSectors = 16
-	elseif 0x09 == result.sak then -- NXP MIFARE Mini 0.3k
+	elseif 0x09 == result.sak then  -- NXP MIFARE Mini 0.3k
 		-- MIFARE Classic mini offers 320 bytes split into five sectors.
 		numSectors = 5
 	elseif  0x10 == result.sak then -- NXP MIFARE Plus 2k

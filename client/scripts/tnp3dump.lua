@@ -205,18 +205,19 @@ local function main(args)
 		
 			if blockNo < 8 then
 				-- Block 0-7 not encrypted
-				blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
+				blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata)
 			else
 				-- blocks with zero not encrypted.
 				if string.find(blockdata, '^0+$') then
-					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata) 
+					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,blockdata)
 				else
 					local baseStr = utils.ConvertHexToAscii(tmpHash:format(blockNo))
 					local key = md5.sumhexa(baseStr)
 					local aestest = core.aes128_decrypt(key, blockdata)
-					local hex = utils.ConvertAsciiToBytes(aestest)					
+					local hex = utils.ConvertAsciiToBytes(aestest)
 					hex = utils.ConvertBytesToHex(hex)
-					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,hex)					
+					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,hex)
+					io.write(blockNo..',')
 				end		
 			end
 		else
@@ -273,5 +274,7 @@ local function main(args)
 	print( ('                  UID : 0x%s'):format(uid) )
 	print( ('               CARDID : 0x%s'):format(cardid ) )
 	print( string.rep('--',20) )
+	
+	core.clearCommandBuffer()
 end
 main(args)
