@@ -2,6 +2,7 @@
     
 local _keys = {
 
+
     --[[
 
     These keys are from the pm3 c-codebase. 
@@ -157,9 +158,30 @@ local _keys = {
 	'9de89e070277',
 	'eff603e1efe9',
 	'644672bd4afe',
-
 	'b5ff67cba951',
-  }
+	
+	--[[
+    hotel system cards,
+	http://www.proxmark.org/forum/viewtopic.php?id=2430
+    --]]	
+	  '44ab09010845',
+      '85fed980ea5a',
+	  
+	 --[[
+	 VIGIK1
+	 --]]
+	 '314B49474956',
+	 '564c505f4d41',
+	 
+	 --[[
+	 BCARD keyB
+	 --]]
+	 'f4a9ef2afc6d',
+	 
+	 --[[	 
+	 --]]
+	 'a9f953def0a3',
+}
 
 ---
 --    The keys above have just been pasted in, for completeness sake. They contain duplicates. 

@@ -192,7 +192,7 @@ end
 return {
 	convert_bin_to_html = convert_bin_to_html,
 	convert_eml_to_html = convert_eml_to_html,
-    convert_eml_to_bin = convert_eml_to_bin,	
-    SaveAsBinary = save_BIN,
+	convert_eml_to_bin = convert_eml_to_bin,
+	SaveAsBinary = save_BIN,
 	SaveAsText = save_TEXT,
 }
