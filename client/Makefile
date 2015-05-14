@@ -68,6 +68,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			mifarehost.c\
 			crc.c \
 			crc16.c \
+			crc64.c \
 			iso14443crc.c \
 			iso15693tools.c \
 			data.c \
