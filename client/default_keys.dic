@@ -11,7 +11,7 @@ d3f7d3f7d3f7,
 587ee5f9350f,
 a0478cc39091,
 533cb6c723f6,
-8fd0a4f256e9
+8fd0a4f256e9,
 # more Keys from mf_default_keys.lua
 000000000001,
 000000000002,
@@ -42,6 +42,7 @@ a0478cc39091,
 47524f555041,--RKFJOJOGROUPKeyA
 47524f555042,--RKFJOJOGROUPKeyB
 4AF9D7ADEBE4,--DirectoryandeventlogKeyA
+4b0b20107ccb,--TNP3xxx
 505249564141,--RKFJOJOPRIVAKeyA
 505249564142,--RKFJOJOPRIVAKeyB
 505249565441,
@@ -49,14 +50,19 @@ a0478cc39091,
 54726176656c,--VästtrafikenKeyA
 555555555555,
 55f5a5dd38c9,
+569369c5a0e5,--kiev
 5c598c9c58b5,--RKFSLKeyB
+632193be1c3c,--kiev
+644672bd4afe,--kiev
 666666666666,
 722bfcc5375f,--RKFRejskortDanmarkKeyA
 776974687573,--VästtrafikenKeyB
 777777777777,
 888888888888,
+8fe644038790,--kiev
 999999999999,
 99c636334433,
+9de89e070277,--kiev
 a00000000000,
 a053a292a4af,
 a64598a77478,--RKFSLKeyA
@@ -65,6 +71,7 @@ aaaaaaaaaaaa,
 abcdef123456,--Keyfromladyada.net
 b00000000000,
 b127c6f41436,
+b5ff67cba951,--kiev
 bbbbbbbbbbbb,
 bd493a3962b6,
 c934fe34d934,
@@ -73,7 +80,15 @@ dddddddddddd,
 e4d2770a89be,--RKFSLKeyB
 ee0042f88840,--VästtrafikenKeyB
 eeeeeeeeeeee,
+eff603e1efe9,--kiev
+f14ee7cae863,--kiev
 f1a97341a9fc,
 f1d83f964314,--RKFRejskortDanmarkKeyB
 fc00018778f7,--VästtrafikenKeyA
 fc0001877bf7,--RKFÖstgötaTrafikenKeyA
+44ab09010845,-- hotel system
+85fed980ea5a,-- hotel system
+314B49474956,--VIGIK1KeyA
+564c505f4d41,--VIGIK1KeyB
+f4a9ef2afc6d,--BCARD KeyB
+a9f953def0a3,--
