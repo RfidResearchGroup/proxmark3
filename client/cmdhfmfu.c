@@ -17,7 +17,7 @@
 
 #define MAX_UL_BLOCKS     0x0f
 #define MAX_ULC_BLOCKS    0x2f
-#define MAX_ULEV1a_BLOCKS 0x0b
+#define MAX_ULEV1a_BLOCKS 0x12
 #define MAX_ULEV1b_BLOCKS 0x20
 #define MAX_NTAG_213      0x2c
 #define MAX_NTAG_215      0x86
@@ -45,6 +45,14 @@ uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 	{0x02,0xE1,0xEE,0x36}, // PACK 0x80,0x80 -- AMiiboo (sniffed) sonic UID:  04d257 7ae33e8027
 	{0x32,0x0C,0x16,0x17}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
 };
+
+#define MAX_UL_TYPES 13
+uint16_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {UNKNOWN, UL, UL_C, UL_EV1_48, UL_EV1_128, 
+	    NTAG, NTAG_213, NTAG_215, NTAG_216, MY_D, MY_D_NFC, MY_D_MOVE, MY_D_MOVE_NFC};
+uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_BLOCKS, 
+	    MAX_ULEV1a_BLOCKS, MAX_ULEV1b_BLOCKS, MAX_NTAG_213, MAX_NTAG_213, MAX_NTAG_215,
+	    MAX_NTAG_216, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS};
+
 
 static int CmdHelp(const char *Cmd);
 
@@ -919,7 +927,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	FILE *fout;
 	char filename[FILE_PATH_SIZE] = {0x00};
 	char *fnameptr = filename;
-	char *str = "Dumping Ultralight%s%s Card Data...";
+	//char *str = "Dumping Ultralight%s%s Card Data...";
 	uint8_t *lockbytes_t = NULL;
 	uint8_t lockbytes[2] = {0x00};
 	uint8_t *lockbytes_t2 = NULL;
@@ -985,6 +993,13 @@ int CmdHF14AMfUDump(const char *Cmd){
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
 
+	for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++)
+		if (tagtype & UL_TYPES_ARRAY[idx])
+			Pages = UL_MEMORY_ARRAY[idx]+1;
+	
+	ul_print_type(tagtype, 0);
+	PrintAndLog("Dumping tag memory...");
+	/*
 	if ( tagtype & UL ) {
 		Pages = 16;
 		PrintAndLog(str,"", (tagtype & MAGIC)?" (magic)":"" );
@@ -1004,7 +1019,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 		Pages = 16;
 		PrintAndLog("Dumping unknown Ultralight, using default values.");
 	}
-
+	*/
 	UsbCommand c = {CMD_MIFAREUC_READCARD, {0,Pages}};
 	if ( hasPwd ) {
 		c.arg[2] = 1;
