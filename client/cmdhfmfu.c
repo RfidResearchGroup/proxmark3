@@ -946,7 +946,8 @@ int CmdHF14AMfUDump(const char *Cmd){
 	size_t fileNlen = 0;
 	bool errors = false;
 	bool swapEndian = false;
-
+	bool manualPages = false;
+	uint8_t startPage = 0;
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
 		switch(param_getchar(Cmd, cmdp))
@@ -972,9 +973,28 @@ int CmdHF14AMfUDump(const char *Cmd){
 			if (fileNlen > FILE_PATH_SIZE-5) fileNlen = FILE_PATH_SIZE-5;
 			cmdp += 2;
 			break;
+		case 'p':
+		case 'P':
+			startPage = param_get8(Cmd, cmdp+1);
+			manualPages = true;
+			cmdp += 2;
+			break;
+		case 'q':
+		case 'Q':
+			Pages = param_get8(Cmd, cmdp+1);
+			cmdp += 2;
+			manualPages = true;
+			break;
 		case 's':
+		case 'S':
 			swapEndian = true;
 			cmdp++;
+			break;
+		case 't':
+		case 'T':
+			//key type  - ul-c or ev1/ntag
+			//TODO
+			cmdp += 2;
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -993,12 +1013,13 @@ int CmdHF14AMfUDump(const char *Cmd){
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
 
-	for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++)
-		if (tagtype & UL_TYPES_ARRAY[idx])
-			Pages = UL_MEMORY_ARRAY[idx]+1;
-	
+	if (!manualPages)
+		for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++)
+			if (tagtype & UL_TYPES_ARRAY[idx])
+				Pages = UL_MEMORY_ARRAY[idx]+1;
+
 	ul_print_type(tagtype, 0);
-	PrintAndLog("Dumping tag memory...");
+	PrintAndLog("Reading tag memory...");
 	/*
 	if ( tagtype & UL ) {
 		Pages = 16;
@@ -1020,24 +1041,29 @@ int CmdHF14AMfUDump(const char *Cmd){
 		PrintAndLog("Dumping unknown Ultralight, using default values.");
 	}
 	*/
-	UsbCommand c = {CMD_MIFAREUC_READCARD, {0,Pages}};
-	if ( hasPwd ) {
-		c.arg[2] = 1;
-		memcpy(c.d.asBytes, key, 16);
-	}
-	SendCommand(&c);
-	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp,1500)) {
-		PrintAndLog("Command execute time-out");
-		return 1;
-	}
-	PrintAndLog	("%u,%u",resp.arg[0],resp.arg[1]);
-	uint8_t isOK = resp.arg[0] & 0xff;
-	if (isOK) {
-		memcpy(data, resp.d.asBytes, resp.arg[1]);
+	if (!hasPwd || (tagtype & UL_C)){
+		UsbCommand c = {CMD_MIFAREUC_READCARD, {startPage,Pages}};
+		if ( hasPwd ) {
+			c.arg[2] = 1;
+			memcpy(c.d.asBytes, key, 16);
+		}
+		SendCommand(&c);
+		UsbCommand resp;
+		if (!WaitForResponseTimeout(CMD_ACK, &resp,1500)) {
+			PrintAndLog("Command execute time-out");
+			return 1;
+		}
+		PrintAndLog	("%u,%u",resp.arg[0],resp.arg[1]);
+		uint8_t isOK = resp.arg[0] & 0xff;
+		if (isOK) {
+			memcpy(data, resp.d.asBytes, resp.arg[1]);
+		} else {
+			PrintAndLog("Failed reading block: (%02x)", i);
+			return 1;
+		}	
 	} else {
-		PrintAndLog("Failed reading block: (%02x)", i);
-		return 1;
+		PrintAndLog("EV1 and NTAG pwd mode not ready yet");
+		return 0;
 	}
 
 	// Load lock bytes.
