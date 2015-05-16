@@ -18,7 +18,9 @@ int CmdHF14AList(const char *Cmd);
 int CmdHF14AMifare(const char *Cmd);
 int CmdHF14AReader(const char *Cmd);
 int CmdHF14ASim(const char *Cmd);
-int CmdHF14ASnoop(const char *Cmd);
+int CmdHF14ASniff(const char *Cmd);
 
 char* getTagInfo(uint8_t uid);
+int tryMfk32(uint64_t myuid, uint8_t *data, uint8_t *outputkey );
+int tryMfk64(uint64_t myuid, uint8_t *data, uint8_t *outputkey );
 #endif
