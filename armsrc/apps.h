@@ -157,7 +157,7 @@ void RAMFUNC SnoopIso14443(void);
 void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
 
 /// iso14443a.h
-void RAMFUNC SnoopIso14443a(uint8_t param);
+void RAMFUNC SniffIso14443a(uint8_t param);
 void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data);
 void ReaderIso14443a(UsbCommand * c);
 // Also used in iclass.c
@@ -175,8 +175,7 @@ void ReaderMifare(bool first_try);
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
 void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
-void MifareUC_Auth1(uint8_t arg0, uint8_t *datain);
-void MifareUC_Auth2(uint32_t arg0, uint8_t *datain);
+void MifareUC_Auth(uint8_t arg0, uint8_t *datain);
 void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
