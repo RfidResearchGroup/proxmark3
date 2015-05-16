@@ -25,6 +25,7 @@
 #include "cmdmain.h"
 #include "util.h"
 #include "cmdscript.h"
+#include "cmdcrc.h"
 
 
 unsigned int current_command = CMD_UNKNOWN;
@@ -42,15 +43,16 @@ static int cmd_tail;//Starts as 0
 
 static command_t CommandTable[] = 
 {
-  {"help",  CmdHelp,  1, "This help. Use '<command> help' for details of a particular command."},
-  {"data",  CmdData,  1, "{ Plot window / data buffer manipulation... }"},
-  {"hf",    	CmdHF,    	1, "{ High Frequency commands... }"},
-  {"hw",    CmdHW,    1, "{ Hardware commands... }"},
-  {"lf",    	CmdLF,    	1, "{ Low Frequency commands... }"},
-  {"script", CmdScript,   1,"{ Scripting commands }"},
-  {"quit",  CmdQuit,  1, "Exit program"},
-  {"exit",  CmdQuit,  1, "Exit program"},
-  {NULL, NULL, 0, NULL}
+	{"help",	CmdHelp,	1, "This help. Use '<command> help' for details of a particular command."},
+	{"crc",		CmdCrc,		1, "Crc calculations from the software reveng1-30"},
+	{"data",	CmdData,	1, "{ Plot window / data buffer manipulation... }"},
+	{"hf",		CmdHF,		1, "{ High Frequency commands... }"},
+	{"hw",		CmdHW,		1, "{ Hardware commands... }"},
+	{"lf",		CmdLF,		1, "{ Low Frequency commands... }"},
+	{"script",	CmdScript,	1, "{ Scripting commands }"},
+	{"quit",	CmdQuit,	1, "Exit program"},
+	{"exit",	CmdQuit,	1, "Exit program"},
+	{NULL, NULL, 0, NULL}
 };
 
 command_t* getTopLevelCommandTable()
