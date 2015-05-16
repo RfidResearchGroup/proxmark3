@@ -384,7 +384,7 @@ static command_t CommandTable[] =
 	{"help",	CmdHelp,			1, "This help"},
 	{"reader",	CmdHFTopazReader,	0, "Act like a Topaz reader"},
 	{"sim",		CmdHFTopazSim,		0, "<UID> -- Simulate Topaz tag"},
-	{"snoop",	CmdHF14ASnoop,		0, "Eavesdrop a Topaz reader-tag communication"},
+	{"sniff",	CmdHF14ASniff,		0, "Sniff Topaz reader-tag communication"},
 	{"raw",		CmdHFTopazCmdRaw,	0, "Send raw hex data to tag"},
 	{NULL,		NULL,				0, NULL}
 };
