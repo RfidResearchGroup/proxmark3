@@ -17,11 +17,11 @@
 
 #define MAX_UL_BLOCKS		0x0f
 #define MAX_ULC_BLOCKS		0x2f
-#define MAX_ULEV1a_BLOCKS	0x0b
+#define MAX_ULEV1a_BLOCKS   0x12
 #define MAX_ULEV1b_BLOCKS	0x20
 #define MAX_NTAG_213		0x2c
 #define MAX_NTAG_215		0x86
-#define MAX_NTAG_216      0xe6
+#define MAX_NTAG_216        0xe6
 
 #define KEYS_3DES_COUNT 7
 uint8_t default_3des_keys[KEYS_3DES_COUNT][16] = {
@@ -31,21 +31,33 @@ uint8_t default_3des_keys[KEYS_3DES_COUNT][16] = {
 		{ 0x49,0x45,0x4D,0x4B,0x41,0x45,0x52,0x42,0x21,0x4E,0x41,0x43,0x55,0x4F,0x59,0x46 },// NFC-key
 		{ 0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01 },// all ones
 		{ 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF },// all FF
-		{ 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF }	// 11 22 33
+		{ 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF },	// 11 22 33
 	};
 
-#define KEYS_PWD_COUNT 8
+#define KEYS_PWD_COUNT 10
 uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 	{0xFF,0xFF,0xFF,0xFF}, // PACK 0x00,0x00 -- factory default
+	
 	{0x4A,0xF8,0x4B,0x19}, // PACK 0xE5,0xBE -- italian bus (sniffed)
 	{0x33,0x6B,0xA1,0x19}, // PACK 0x9c,0x2d -- italian bus (sniffed)
 	{0xFF,0x90,0x6C,0xB2}, // PACK 0x12,0x9e -- italian bus (sniffed)	
+	{0x46,0x1c,0xA3,0x19}, // PACK 0xE9,0x5A -- italian bus (sniffed)
+	{0x35,0x1C,0xD0,0x19}, // PACK 0x9A,0x5a -- italian bus (sniffed)
+	
 	{0x05,0x22,0xE6,0xB4}, // PACK 0x80,0x80 -- Amiiboo (sniffed) pikachu-b UID:
 	{0x7E,0x22,0xE6,0xB4}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
 	{0x02,0xE1,0xEE,0x36}, // PACK 0x80,0x80 -- AMiiboo (sniffed) sonic UID:  04d257 7ae33e8027
 	{0x32,0x0C,0x16,0x17}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
 };	
 	
+#define MAX_UL_TYPES 13
+uint16_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {UNKNOWN, UL, UL_C, UL_EV1_48, UL_EV1_128, 
+	    NTAG, NTAG_213, NTAG_215, NTAG_216, MY_D, MY_D_NFC, MY_D_MOVE, MY_D_MOVE_NFC};
+uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_BLOCKS, 
+	    MAX_ULEV1a_BLOCKS, MAX_ULEV1b_BLOCKS, MAX_NTAG_213, MAX_NTAG_213, MAX_NTAG_215,
+	    MAX_NTAG_216, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS};
+
+
 static int CmdHelp(const char *Cmd);
 
 char* getProductTypeStr( uint8_t id){
@@ -179,6 +191,18 @@ static int ulc_requestAuthentication( uint8_t *nonce, uint16_t nonceLength ){
 	return len;
 }
 
+static int ulc_authentication( uint8_t *key, bool switch_off_field ){
+	
+	UsbCommand c = {CMD_MIFAREUC_AUTH, {switch_off_field}};
+	memcpy(c.d.asBytes, key, 16);	
+	SendCommand(&c);
+	UsbCommand resp;
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) 	return -1;
+	if ( resp.arg[0] == 1 ) return 0;
+	
+	return -2;
+}
+
 static int ulev1_requestAuthentication( uint8_t *pwd, uint8_t *pack, uint16_t packLength ){
 	
 	uint8_t cmd[] = {MIFARE_ULEV1_AUTH, pwd[0], pwd[1], pwd[2], pwd[3]};
@@ -289,7 +313,7 @@ static int ntag_print_CC(uint8_t *data) {
 	PrintAndLog("\n--- NTAG NDEF Message");
 	
 	if(data[0] != 0xe1) {
-		PrintAndLog("no NDEF message found");
+		PrintAndLog("no NDEF message");
 		return -1;		// no NDEF message
 	}
 
@@ -580,6 +604,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	uint8_t datalen = 0;
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t pack[4] = {0,0,0,0};
+	int len=0;
 				
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
@@ -634,13 +659,26 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	}
 	
 	if ( hasAuthKey ) {
-		if ((tagtype & UL_C)) 
-			try3DesAuthentication(authenticationkey);
-		else
-			ulev1_requestAuthentication(authenticationkey, pack, sizeof(pack));
+		if ((tagtype & UL_C)) {
+			ul_switch_off_field();
+			//will select card automatically
+			if (ulc_authentication(authenticationkey, false) != 1) {
+				ul_switch_off_field();
+				PrintAndLog("Error: Authentication Failed UL-C");
+				return 0;
+			}
+		} else {
+			len = ulev1_requestAuthentication(authenticationkey, pack, sizeof(pack));
+			if (len < 1) {
+				if (!len) ul_switch_off_field();
+				PrintAndLog("Error: Authentication Failed UL-EV1/NTAG");
+				return 0;
+			}
+		}
 	}
-	
-	// read pages 0,1,2,3 (should read 4pages)
+
+
+	// read pages 0,1,2,4 (should read 4pages)
 	status = ul_read(0, data, sizeof(data));
 	if ( status == -1 ){
 		PrintAndLog("Error: tag didn't answer to READ A");
@@ -676,10 +714,10 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			
 			// also try to diversify default keys..  look into CmdHF14AMfuGenDiverseKeys
 			PrintAndLog("Trying some default 3des keys");
-			ul_switch_off_field();
+			ul_switch_off_field(); //will select again in try3DesAuth...
 			for (uint8_t i = 0; i < KEYS_3DES_COUNT; ++i ){
 				key = default_3des_keys[i];
-				if (try3DesAuthentication(key) == 1){
+				if (ulc_authentication(key, true) == 0){
 					PrintAndLog("Found default 3des key: "); //%s", sprint_hex(key,16));
 					uint8_t keySwap[16];
 					memcpy(keySwap, SwapEndian64(key,16,8), 16);
@@ -687,6 +725,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 					return 1;
 				}
 			}
+			return 1; //return even if key not found (UL_C is done)
 		}
 	}
 	
@@ -901,11 +940,14 @@ int usage_hf_mfu_dump(void)
 	PrintAndLog("Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
 	PrintAndLog("and saves binary dump into the file `filename.bin` or `cardUID.bin`");
 	PrintAndLog("It autodetects card type.\n");	
-	PrintAndLog("Usage:  hf mfu dump s k <key> n <filename w/o .bin>");
+	PrintAndLog("Usage:  hf mfu dump l k <key> n <filename w/o .bin> p <> q <>");
 	PrintAndLog("  Options : ");
-	PrintAndLog("  k <key> : Enter key for authentication");
-	PrintAndLog("  n <FN > : Enter filename w/o .bin to save the dump as");	
-	PrintAndLog("        s : Swap entered key's endianness for auth");
+	PrintAndLog("  k <key> : key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
+	PrintAndLog("  l       : swap entered key's endianness for auth");
+	PrintAndLog("  n <FN > : filename w/o .bin to save the dump as");	
+	PrintAndLog("  p <Pg > : starting Page number to manually set a page to start the dump at");	
+	PrintAndLog("  q <qty> : number of Pages to manually set how many pages to dump");	
+
 	PrintAndLog("");
 	PrintAndLog("   sample : hf mfu dump");
 	PrintAndLog("          : hf mfu dump n myfile");
@@ -923,7 +965,6 @@ int CmdHF14AMfUDump(const char *Cmd){
 	FILE *fout;
 	char filename[FILE_PATH_SIZE] = {0x00};
 	char * fnameptr = filename;
-	char* str = "Dumping Ultralight%s%s Card Data...";	
 	uint8_t *lockbytes_t = NULL;
 	uint8_t lockbytes[2] = {0x00};
 	uint8_t *lockbytes_t2 = NULL;
@@ -932,6 +973,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	bool bit2[16] = {0x00};
 	uint8_t data[1024] = {0x00};
 	bool hasPwd = false;
+	bool hasKey = false;
 	int i = 0;
 	int Pages = 16;
 	bool tmplockbit = false;
@@ -942,6 +984,9 @@ int CmdHF14AMfUDump(const char *Cmd){
 	size_t fileNlen = 0;
 	bool errors = false;
 	bool swapEndian = false;
+	bool manualPages = false;
+	uint8_t startPage = 0;
+	char tempStr[50];
 
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
@@ -952,14 +997,24 @@ int CmdHF14AMfUDump(const char *Cmd){
 			return usage_hf_mfu_dump();
 		case 'k':
 		case 'K':
-			dataLen = param_gethex(Cmd, cmdp+1, data, 32);
-			if (dataLen) {
+			dataLen = param_getstr(Cmd, cmdp+1, tempStr);
+			if (dataLen == 32) {
+				errors = param_gethex(tempStr, 0, key, dataLen);
+				hasKey = true;
+			}
+			else if (dataLen == 8) {
+				errors = param_gethex(tempStr, 0, key, dataLen);
+				hasPwd = true;
+			}
+			else
 				errors = true; 
-			} else {
-				memcpy(key, data, 16);
-			}   
+				
 			cmdp += 2;
-			hasPwd = true;
+			break;
+		case 'l':
+		case 'L':
+			swapEndian = true;
+			cmdp++;
 			break;
 		case 'n':
 		case 'N':
@@ -968,9 +1023,17 @@ int CmdHF14AMfUDump(const char *Cmd){
 			if (fileNlen > FILE_PATH_SIZE-5) fileNlen = FILE_PATH_SIZE-5;
 			cmdp += 2;
 			break;
-		case 's':
-			swapEndian = true;
-			cmdp++;
+		case 'p':
+		case 'P':
+			startPage = param_get8(Cmd, cmdp+1);
+			manualPages = true;
+			cmdp += 2;
+			break;
+		case 'q':
+		case 'Q':
+			Pages = param_get8(Cmd, cmdp+1);
+			cmdp += 2;
+			manualPages = true;
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -983,37 +1046,31 @@ int CmdHF14AMfUDump(const char *Cmd){
 	//Validations
 	if(errors) return usage_hf_mfu_dump();
 	
-	if (swapEndian)
-		keyPtr = SwapEndian64(data, 16, 8);
+	//if (swapEndian && hasKey )
+	//	keyPtr = SwapEndian64(data, 16, 8);
 
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
 	
-	if ( tagtype & UL ) {
-		Pages = 16;
-		PrintAndLog(str,"", (tagtype & MAGIC)?" (magic)":"" );
-	}
-	else if ( tagtype & UL_C ) {
-		Pages = 44;
-		PrintAndLog(str,"-C", (tagtype & MAGIC)?" (magic)":"" );
-	}
-	else if ( tagtype & UL_EV1_48 ) {
-		Pages = 18; 
-		PrintAndLog(str," EV1_48","");
-	}
-	else if ( tagtype & UL_EV1_128 ) {
-		Pages = 32; 
-		PrintAndLog(str," EV1_128","");
-	} else {
-		Pages = 16;
-		PrintAndLog("Dumping unknown Ultralight, using default values.");
-	}
+	if (!manualPages)
+		for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++)
+			if (tagtype & UL_TYPES_ARRAY[idx])
+				Pages = UL_MEMORY_ARRAY[idx]+1;
+
+	ul_print_type(tagtype, 0);
+	PrintAndLog("Reading tag memory...");
+
+	UsbCommand c = {CMD_MIFAREUC_READCARD, {startPage, Pages}};
 	
-	UsbCommand c = {CMD_MIFAREUC_READCARD, {0,Pages}};
-	if ( hasPwd ) {
-		c.arg[2] = 1;
+	if ( hasKey ) { 
+		c.arg[2] = 1; 
 		memcpy(c.d.asBytes, key, 16);
 	}
+	if ( hasPwd ) { 
+		c.arg[2] = 2;
+		memcpy(c.d.asBytes, key, 4);
+	}
+	
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
@@ -1040,6 +1097,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	}		
 	
 	// Load bottom lockbytes if available
+	// HOW DOES THIS APPLY TO EV1 and/or NTAG???
 	if ( Pages == 44 ) {
 		lockbytes_t2 = data + (40*4);
 		lockbytes2[0] = lockbytes_t2[2];
@@ -1049,11 +1107,19 @@ int CmdHF14AMfUDump(const char *Cmd){
 		}
 	}
 
-	// add keys
-	if (hasPwd){
+	// add keys UL_C
+	if (hasKey ){ 
 		memcpy(data + Pages*4, key, 16);
 		Pages += 4;
 	}
+	// add keys ULEV1 / NTAG
+	if (hasPwd ){ 
+		memcpy(data + Pages*4, key, 4);
+		Pages += 1;
+	}
+	
+	//TODO add key MEM location for other tags
+
 	for (i = 0; i < Pages; ++i) {
 		if ( i < 3 ) {
 			PrintAndLog("Block %02x:%s ", i,sprint_hex(data + i * 4, 4));
@@ -1126,14 +1192,14 @@ int CmdHF14AMfUDump(const char *Cmd){
 	return 0;
 }
 
-// Needed to Authenticate to Ultralight C tags
-void rol (uint8_t *data, const size_t len){
-	uint8_t first = data[0];
-	for (size_t i = 0; i < len-1; i++) {
-		data[i] = data[i+1];
-	}
-	data[len-1] = first;
-}
+// // Needed to Authenticate to Ultralight C tags
+// void rol (uint8_t *data, const size_t len){
+	// uint8_t first = data[0];
+	// for (size_t i = 0; i < len-1; i++) {
+		// data[i] = data[i+1];
+	// }
+	// data[len-1] = first;
+// }
 
 //-------------------------------------------------------------------------------
 // Ultralight C Methods
@@ -1174,7 +1240,7 @@ int CmdHF14AMfucAuth(const char *Cmd){
 	} 
 
 	uint8_t *key = default_3des_keys[keyNo];
-	if (try3DesAuthentication(key)>0)
+	if (ulc_authentication(key, true) == 0)
 		PrintAndLog("Authentication successful. 3des key: %s",sprint_hex(key, 16));
 	else
 		PrintAndLog("Authentication failed");
@@ -1182,68 +1248,6 @@ int CmdHF14AMfucAuth(const char *Cmd){
 	return 0;
 }
 
-int try3DesAuthentication( uint8_t *key){
-	
-	uint32_t cuid = 0;
-
-	des3_context ctx = { 0 };
-	
-	uint8_t random_a[8] = { 1,1,1,1,1,1,1,1 };
-	uint8_t random_b[8] = { 0 };
-	uint8_t enc_random_b[8] = { 0 };
-	uint8_t rnd_ab[16] = { 0 };
-	uint8_t iv[8] = { 0 };
-
-	UsbCommand c = {CMD_MIFAREUC_AUTH1, {0x00}};
-	SendCommand(&c);
-	UsbCommand resp;
-	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) 	return -1;
-	if ( !(resp.arg[0] & 0xff) ) return -2;
-	
-	cuid  = resp.arg[1];	
-	memcpy(enc_random_b,resp.d.asBytes+1,8);
-
-	des3_set2key_dec(&ctx, key);
-	// context, mode, length, IV, input, output 
-	des3_crypt_cbc( &ctx, DES_DECRYPT, sizeof(random_b), iv , enc_random_b , random_b);
-
-	rol(random_b,8);
-	memcpy(rnd_ab  ,random_a,8);
-	memcpy(rnd_ab+8,random_b,8);
-	
-	//PrintAndLog("      RndA  :%s", sprint_hex(random_a, 8));
-	//PrintAndLog("  enc(RndB) :%s", sprint_hex(enc_random_b, 8));
-	//PrintAndLog("       RndB :%s", sprint_hex(random_b, 8));
-	//PrintAndLog("        A+B :%s", sprint_hex(rnd_ab, 16));
-	
-	des3_set2key_enc(&ctx, key);
-	// context, mode, length, IV, input, output 
-	des3_crypt_cbc(&ctx, DES_ENCRYPT, sizeof(rnd_ab), enc_random_b, rnd_ab, rnd_ab);
-
-	//Auth2
-	c.cmd = CMD_MIFAREUC_AUTH2;
-	c.arg[0] = cuid;
-	memcpy(c.d.asBytes, rnd_ab, 16);
-	SendCommand(&c);
-
-	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;				
-	if ( !(resp.arg[0] & 0xff)) return -2;
-	
-	uint8_t enc_resp[8] = { 0 };
-	uint8_t resp_random_a[8] = { 0 };
-	memcpy(enc_resp, resp.d.asBytes+1, 8);
-
-	des3_set2key_dec(&ctx, key);
-	// context, mode, length, IV, input, output
-	des3_crypt_cbc( &ctx, DES_DECRYPT, 8, enc_random_b, enc_resp, resp_random_a);
-
-	//PrintAndLog("   enc(A+B) :%s", sprint_hex(rnd_ab, 16));
-	//PrintAndLog(" enc(RndA') :%s", sprint_hex(enc_resp, 8));
-
-	if ( !memcmp(resp_random_a, random_a, 8))
-		return 1;	
-	return 0;
-}
 
 /**
 A test function to validate that the polarssl-function works the same 
