@@ -14,7 +14,7 @@ int CmdHF14AMfUCRdCard(const char *Cmd);
 int CmdHF14AMfucAuth(const char *Cmd);
 
 uint8_t requestAuthentication( uint8_t *nonce);
-int try3DesAuthentication( uint8_t *key);
+int try3DesAuthentication( uint8_t *key, bool switch_off_field);
 
 //general stuff
 int CmdHF14AMfUDump(const char *Cmd);

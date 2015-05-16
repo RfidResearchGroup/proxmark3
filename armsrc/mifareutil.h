@@ -61,7 +61,8 @@ int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cm
 
 int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested);
 int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t * ntptr, uint32_t *timing);
-int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData); 
+int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData);
+int mifare_ul_ev1_auth(uint8_t *key, uint8_t *pack);
 int mifare_ultra_auth1(uint8_t *blockData);
 int mifare_ultra_auth2(uint8_t *key, uint8_t *blockData);
 int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData);

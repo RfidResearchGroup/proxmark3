@@ -288,6 +288,26 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 }
 
 // mifare ultralight commands
+int mifare_ul_ev1_auth(uint8_t *key, uint8_t *pack){
+
+	uint16_t len;
+	uint8_t receivedAnswer[MAX_FRAME_SIZE];
+	uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
+	
+	len = mifare_sendcmd_short_mfucauth(NULL, 0, 0x1B, key, receivedAnswer, receivedAnswerPar, NULL);
+	if (len != 4) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: %02x %u", receivedAnswer[0], len);
+		return 1;
+	}
+	
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+		Dbprintf("Auth Resp: %02x%02x%02x%02x",
+			receivedAnswer[0],receivedAnswer[1],receivedAnswer[2],receivedAnswer[3]);
+	}
+	memcpy(pack, receivedAnswer, 4);
+	return 0;
+}
+
 int mifare_ultra_auth1(uint8_t *blockData){
 
 	uint16_t len;
