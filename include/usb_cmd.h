@@ -174,9 +174,8 @@ typedef struct{
 
 #define CMD_MIFARE_SNIFFER                                                0x0630
 //ultralightC
-#define CMD_MIFAREUC_AUTH1                                                0x0724
-#define CMD_MIFAREUC_AUTH2                                                0x0725
-#define CMD_MIFAREUC_READCARD                                             0x0726
+#define CMD_MIFAREUC_AUTH                                                 0x0724
+//0x0725 and 0x0726 no longer used 
 #define CMD_MIFAREUC_SETPWD                                               0x0727
 
 

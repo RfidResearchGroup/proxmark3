@@ -14,9 +14,10 @@
 #include "mifare.h"
 #include "util.h"
 #include "protocols.h"
+#include "data.h"
 
 #define MAX_UL_BLOCKS     0x0f
-#define MAX_ULC_BLOCKS    0x2f
+#define MAX_ULC_BLOCKS    0x2b
 #define MAX_ULEV1a_BLOCKS 0x12
 #define MAX_ULEV1b_BLOCKS 0x20
 #define MAX_NTAG_213      0x2c
@@ -191,10 +192,10 @@ static int ulc_authentication( uint8_t *key, bool switch_off_field ){
 	memcpy(c.d.asBytes, key, 16);
 	SendCommand(&c);
 	UsbCommand resp;
-	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) return -1;
-	if ( resp.arg[0] == 1 ) return 0;
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) return 0;
+	if ( resp.arg[0] == 1 ) return 1;
 
-	return -2;
+	return 0;
 }
 
 static int ulev1_requestAuthentication( uint8_t *pwd, uint8_t *pack, uint16_t packLength ){
@@ -631,22 +632,20 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	PrintAndLog("-------------------------------------------------------------");
 	ul_print_type(tagtype, 6);
 
-	status = ul_select(&card);
-	if ( status < 1 ){
-		PrintAndLog("iso14443a card select failed");
-		ul_switch_off_field();
-		return status;
-	}
-
-	if ( hasAuthKey ) {
-		if ((tagtype & UL_C)) {
-			//will select card automatically
-			if (ulc_authentication(authenticationkey, false) != 0) {
-				ul_switch_off_field();
-				PrintAndLog("Error: Authentication Failed UL-C");
-				return 0;
-			}
-		} else {
+	if ( hasAuthKey && (tagtype & UL_C)) {
+		//will select card automatically and close connection on error
+		if (!ulc_authentication(authenticationkey, false)) {
+			PrintAndLog("Error: Authentication Failed UL-C");
+			return 0;
+		}
+	} else {
+		status = ul_select(&card);
+		if ( status < 1 ){
+			PrintAndLog("iso14443a card select failed");
+			ul_switch_off_field();
+			return status;
+		}
+		if (hasAuthKey) {
 			len = ulev1_requestAuthentication(authenticationkey, pack, sizeof(pack));
 			if (len < 1) {
 				ul_switch_off_field();
@@ -674,6 +673,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ UL-C");
+			ul_switch_off_field();
 			return status;
 		} 
 		ulc_print_configuration(ulc_conf);
@@ -690,22 +690,21 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			ulc_print_3deskey(ulc_deskey);
 
 		} else {
+			ul_switch_off_field();
 			// if we called info with key, just return 
 			if ( hasAuthKey ) return 1;
 
 			PrintAndLog("Trying some default 3des keys");
 			for (uint8_t i = 0; i < KEYS_3DES_COUNT; ++i ){
 				key = default_3des_keys[i];
-				if (ulc_authentication(key, true) == 0){
+				if (ulc_authentication(key, true)){
 					PrintAndLog("Found default 3des key: "); //%s", sprint_hex(key,16));
 					uint8_t keySwap[16];
 					memcpy(keySwap, SwapEndian64(key,16,8), 16);
 					ulc_print_3deskey(keySwap);
-					ul_switch_off_field();
 					return 1;
 				} 
 			}
-			ul_switch_off_field();
 			return 1; //return even if key not found (UL_C is done)
 		}
 	}
@@ -763,14 +762,19 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		// 1-7 = ...  should we even try then?
 		if ( authlim == 0 ){
 			PrintAndLog("\n--- Known EV1/NTAG passwords.");
-
-			for (uint8_t i = 0; i < 3; ++i ){
+			len = 0;
+			for (uint8_t i = 0; i < KEYS_PWD_COUNT; ++i ){
 				key = default_pwd_pack[i];
-				if ( len > -1 ){
-					len = ulev1_requestAuthentication(key, pack, sizeof(pack));
-					if (len == 1) {
-						PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
-						break;
+				len = ulev1_requestAuthentication(key, pack, sizeof(pack));
+				if (len >= 1) {
+					PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+					break;
+				} else {
+					status = ul_select(&card);
+					if ( status < 1 ){
+						PrintAndLog("iso14443a card select failed - ev1 auth");
+						ul_switch_off_field();
+						return status;
 					}
 				}
 			}
@@ -783,6 +787,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status = ul_read(3, cc, sizeof(cc));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ ntag");
+			ul_switch_off_field();
 			return status;
 		}
 		ntag_print_CC(cc);
@@ -988,8 +993,10 @@ int CmdHF14AMfUDump(const char *Cmd){
 				errors = param_gethex(tempStr, 0, key, dataLen);
 			else if (dataLen == 8) //ev1/ntag
 				errors = param_gethex(tempStr, 0, key, dataLen);
-			else
+			else{
+				PrintAndLog("\nERROR: Key is incorrect length\n");
 				errors = true;
+			}
 				
 			cmdp += 2;
 			hasPwd = true;
@@ -1042,8 +1049,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 
 	ul_print_type(tagtype, 0);
 	PrintAndLog("Reading tag memory...");
-
-	UsbCommand c = {CMD_MIFAREUC_READCARD, {startPage,Pages}};
+	UsbCommand c = {CMD_MIFAREU_READCARD, {startPage,Pages}};
 	if ( hasPwd ) {
 		if (tagtype & UL_C)
 			c.arg[2] = 1; //UL_C auth
@@ -1058,15 +1064,20 @@ int CmdHF14AMfUDump(const char *Cmd){
 		PrintAndLog("Command execute time-out");
 		return 1;
 	}
-	PrintAndLog	("%u,%u",resp.arg[0],resp.arg[1]);
-	uint8_t isOK = resp.arg[0] & 0xff;
-	if (isOK) {
-		memcpy(data, resp.d.asBytes, resp.arg[1]);
-	} else {
+	if (resp.arg[0] != 1) {
 		PrintAndLog("Failed reading block: (%02x)", i);
 		return 1;
 	}
 
+	uint32_t bufferSize = resp.arg[1];
+	if (bufferSize > sizeof(data)) {
+		PrintAndLog("Data exceeded Buffer size!");
+		bufferSize = sizeof(data);
+	}
+	GetFromBigBuf(data, bufferSize, 0);
+	WaitForResponse(CMD_ACK,NULL);
+
+	Pages = bufferSize/4;
 	// Load lock bytes.
 	int j = 0;
 
@@ -1088,11 +1099,14 @@ int CmdHF14AMfUDump(const char *Cmd){
 		}
 	}
 
-	// add keys
-	if (hasPwd){ //UL_C
+	// add keys to block dump
+	if (hasPwd && (tagtype & UL_C)){ //UL_C
 		memcpy(data + Pages*4, key, dataLen/2);
 		Pages += 4;
-	} 
+	} else if (hasPwd) { //not sure output is in correct location.
+		memcpy(data + Pages*4, key, dataLen/2);
+		Pages += 1;
+	}
 
 	for (i = 0; i < Pages; ++i) {
 		if ( i < 3 ) {
@@ -1186,7 +1200,7 @@ void rol (uint8_t *data, const size_t len){
 //
 int CmdHF14AMfucAuth(const char *Cmd){
 
-	uint8_t keyNo = 0;
+	uint8_t keyNo = 3;
 	bool errors = false;
 
 	char cmdp = param_getchar(Cmd, 0);
@@ -1216,11 +1230,11 @@ int CmdHF14AMfucAuth(const char *Cmd){
 	} 
 
 	uint8_t *key = default_3des_keys[keyNo];
-	if (ulc_authentication(key, true) == 0)
+	if (ulc_authentication(key, true))
 		PrintAndLog("Authentication successful. 3des key: %s",sprint_hex(key, 16));
 	else
 		PrintAndLog("Authentication failed");
-			
+		
 	return 0;
 }
 

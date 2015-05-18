@@ -322,15 +322,14 @@ int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack){
 	len = mifare_sendcmd_short_mfuev1auth(NULL, 0, 0x1B, key, resp, respPar, NULL);
 	if (len != 4) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: %02x %u", resp[0], len);
-		OnError(1);
-		return 1;
+		return 0;
 	}
 
 	if (MF_DBGLEVEL >= MF_DBG_EXTENDED)
 		Dbprintf("Auth Resp: %02x%02x%02x%02x", resp[0],resp[1],resp[2],resp[3]);
 
 	memcpy(pack, resp, 4);
-	return 0;
+	return 1;
 }
 
 int mifare_ultra_auth(uint8_t *keybytes){
@@ -353,8 +352,7 @@ int mifare_ultra_auth(uint8_t *keybytes){
 	len = mifare_sendcmd_short(NULL, 1, 0x1A, 0x00, resp, respPar ,NULL);
 	if (len != 11) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
-		OnError(1);
-		return 1;
+		return 0;
 	}
 
 	// tag nonce.
@@ -386,8 +384,7 @@ int mifare_ultra_auth(uint8_t *keybytes){
 	len = mifare_sendcmd_short_mfucauth(NULL, 1, 0xAF, rnd_ab, resp, respPar, NULL);
 	if (len != 11) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
-		OnError(1);
-		return 1;
+		return 0;
 	}
 
 	uint8_t enc_resp[8] = { 0,0,0,0,0,0,0,0 };
@@ -398,7 +395,7 @@ int mifare_ultra_auth(uint8_t *keybytes){
 	tdes_2key_dec(resp_random_a, enc_resp, 8, key, enc_random_b);
 	if ( memcmp(resp_random_a, random_a, 8) != 0 ) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("failed authentication");
-		return 1;
+		return 0;
 	}
 
 	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
@@ -418,7 +415,7 @@ int mifare_ultra_auth(uint8_t *keybytes){
 				resp_random_a[0],resp_random_a[1],resp_random_a[2],resp_random_a[3],
 				resp_random_a[4],resp_random_a[5],resp_random_a[6],resp_random_a[7]);
 	}
-	return 0;
+	return 1;
 }
 
 int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData)
