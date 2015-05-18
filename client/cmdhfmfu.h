@@ -14,16 +14,16 @@ int CmdHF14AMfUCRdCard(const char *Cmd);
 int CmdHF14AMfucAuth(const char *Cmd);
 
 //general stuff
-int CmdHF14AMfUInfo(const char *Cmd);
 int CmdHF14AMfUDump(const char *Cmd);
+int CmdHF14AMfUInfo(const char *Cmd);
 uint16_t GetHF14AMfU_Type(void);
 
 //void rol (uint8_t *data, const size_t len);
 int ul_print_type(uint16_t tagtype, uint8_t spacer);
 void ul_switch_off_field(void);
 
-int usage_hf_mfu_info(void);
 int usage_hf_mfu_dump(void);
+int usage_hf_mfu_info(void);
 
 int CmdHFMFUltra(const char *Cmd);
 

@@ -101,18 +101,17 @@ void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes){
 		return;
 	};
 	
-	if(mifare_ultra_auth(keybytes) == 1){
+	if(!mifare_ultra_auth(keybytes)){
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Authentication failed");
 		OnError(1);
 		return;
 	}
     
-	cmd_send(CMD_ACK,1,0,0,0,0);
-
 	if (turnOffField) {
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
 	}	
+	cmd_send(CMD_ACK,1,0,0,0,0);
 }
 
 // Arg0 = BlockNo,
@@ -142,7 +141,7 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 		uint8_t key[16] = {0x00};	
 		memcpy(key, datain, sizeof(key) );
 
-		if ( mifare_ultra_auth(key)  == 1 )	{
+		if ( !mifare_ultra_auth(key) ) {
 			OnError(1);
 			return;			
 		}
@@ -153,8 +152,7 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 		uint8_t pwd[4] = {0x00};
 		memcpy(pwd, datain, 4);
 		uint8_t pack[4] = {0,0,0,0};
-
-		if (mifare_ul_ev1_auth(pwd, pack) == 1){
+		if (!mifare_ul_ev1_auth(pwd, pack)) {
 			OnError(1);
 			return;			
 		}
@@ -176,6 +174,7 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
+
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag. 
 // read sector (data = 4 x 16 bytes = 64 bytes, or 16 x 16 bytes = 256 bytes)
@@ -211,6 +210,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 		isOK = 0;
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
 	}
+	
 	
 	if(isOK && mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_FIRST)) {
 		isOK = 0;
@@ -254,8 +254,8 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 	uint16_t blocks = arg1;
 	bool useKey = (arg2 == 1); //UL_C
 	bool usePwd = (arg2 == 2); //UL_EV1/NTAG
-	int countblocks = 0;
-	uint8_t dataout[176] = {0x00};
+	uint32_t countblocks = 0;
+	uint8_t *dataout = BigBuf_get_addr();
 
 	LEDsoff();
 	LED_A_ON(); 
@@ -274,7 +274,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 		uint8_t key[16] = {0x00};	
 		memcpy(key, datain, sizeof(key) );
 
-		if ( mifare_ultra_auth(key)  == 1 )	{
+		if ( !mifare_ultra_auth(key) ) {
 			OnError(1);
 			return;			
 		}
@@ -286,19 +286,30 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 		memcpy(pwd, datain, sizeof(pwd));
 		uint8_t pack[4] = {0,0,0,0};
 
-		if (mifare_ul_ev1_auth(pwd, pack) == 1){
+		if (!mifare_ul_ev1_auth(pwd, pack)){
 			OnError(1);
 			return;			
 		}
 	}
 	
 	for (int i = 0; i < blocks; i++){
-		len = mifare_ultra_readblock(blockNo * 4 + i, dataout + 4 * i);
+		if ((i*4) + 4 > BigBuf_get_traceLen()) {
+			Dbprintf("Data exceeds buffer!!");
+			break;
+		}
+	
+		len = mifare_ultra_readblock(blockNo + i, dataout + 4 * i);
 		
 		if (len) {
 			if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Read block %d error",i);
+			// if no blocks read - error out
+			if (i==0){
 			OnError(2);
 			return;
+			} else {
+				//stop at last successful read block and return what we got
+				break;
+			}
 		} else {
 			countblocks++;
 		}
@@ -313,9 +324,8 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 	
 	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Blocks read %d", countblocks);
 
-	len = blocks*4;
-
-	cmd_send(CMD_ACK, 1, len, 0, dataout, len);	
+	countblocks *= 4;
+	cmd_send(CMD_ACK, 1, countblocks, countblocks, 0, 0);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
@@ -392,7 +402,6 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LEDsoff();
 }
 
-
 void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 {
     uint8_t blockNo = arg0;
@@ -435,7 +444,6 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 {
 	uint8_t blockNo = arg0;
 	byte_t blockdata[4] = {0x00};
-	uint8_t uid[10] = {0x00};
 	
 	memcpy(blockdata, datain,4);
 	
@@ -444,7 +452,7 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 	clear_trace();
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
-	if(!iso14443a_select_card(uid, NULL, NULL)) {
+	if(!iso14443a_select_card(NULL, NULL, NULL)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Can't select card");
 		OnError(0);
 		return;
