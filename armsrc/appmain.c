@@ -826,11 +826,8 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MIFAREU_READBL:
 			MifareUReadBlock(c->arg[0],c->arg[1], c->d.asBytes);
 			break;
-		case CMD_MIFAREUC_AUTH1:
-			MifareUC_Auth1(c->arg[0],c->d.asBytes);
-			break;
-		case CMD_MIFAREUC_AUTH2:
-			MifareUC_Auth2(c->arg[0],c->d.asBytes);
+		case CMD_MIFAREUC_AUTH:
+			MifareUC_Auth(c->arg[0],c->d.asBytes);
 			break;
 		case CMD_MIFAREU_READCARD:
 		case CMD_MIFAREUC_READCARD:

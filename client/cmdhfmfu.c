@@ -34,12 +34,16 @@ uint8_t default_3des_keys[KEYS_3DES_COUNT][16] = {
 		{ 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF }	// 11 22 33
 };
 
-#define KEYS_PWD_COUNT 8
+#define KEYS_PWD_COUNT 10
 uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 	{0xFF,0xFF,0xFF,0xFF}, // PACK 0x00,0x00 -- factory default
+
 	{0x4A,0xF8,0x4B,0x19}, // PACK 0xE5,0xBE -- italian bus (sniffed)
 	{0x33,0x6B,0xA1,0x19}, // PACK 0x9c,0x2d -- italian bus (sniffed)
 	{0xFF,0x90,0x6C,0xB2}, // PACK 0x12,0x9e -- italian bus (sniffed)	
+	{0x46,0x1c,0xA3,0x19}, // PACK 0xE9,0x5A -- italian bus (sniffed)
+	{0x35,0x1C,0xD0,0x19}, // PACK 0x9A,0x5a -- italian bus (sniffed)
+
 	{0x05,0x22,0xE6,0xB4}, // PACK 0x80,0x80 -- Amiiboo (sniffed) pikachu-b UID:
 	{0x7E,0x22,0xE6,0xB4}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
 	{0x02,0xE1,0xEE,0x36}, // PACK 0x80,0x80 -- AMiiboo (sniffed) sonic UID:  04d257 7ae33e8027
@@ -56,20 +60,20 @@ uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_B
 
 static int CmdHelp(const char *Cmd);
 
-char* getProductTypeStr( uint8_t id){
+char *getProductTypeStr( uint8_t id){
 
 	static char buf[20];
 	char *retStr = buf;
 
 	switch(id) {
 		case 3:
-			sprintf(retStr, "0x%02X %s", id, "(Ultralight)");
+			sprintf(retStr, "%02X %s", id, "(Ultralight)");
 			break;
 		case 4:
-			sprintf(retStr, "0x%02X %s", id, "(NTAG)");
+			sprintf(retStr, "%02X %s", id, "(NTAG)");
 			break;
 		default:
-			sprintf(retStr, "0x%02X %s", id, "(unknown)");
+			sprintf(retStr, "%02X %s", id, "(unknown)");
 			break;
 	}
 	return buf;
@@ -80,7 +84,7 @@ char* getProductTypeStr( uint8_t id){
   the LSBit is set to '0' if the size is exactly 2^n
   and set to '1' if the storage size is between 2^n and 2^(n+1). 
 */
-char* getUlev1CardSizeStr( uint8_t fsize ){
+char *getUlev1CardSizeStr( uint8_t fsize ){
 
 	static char buf[40];
 	char *retStr = buf;
@@ -153,8 +157,6 @@ static int ul_read( uint8_t page, uint8_t *response, uint16_t responseLength ){
 
 	uint8_t cmd[] = {ISO14443A_CMD_READBLOCK, page};
 	int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
-	if ( len == -1 )
-		ul_switch_off_field();
 	return len;
 }
 
@@ -169,9 +171,7 @@ static int ul_comp_write( uint8_t page, uint8_t *data, uint8_t datalen ){
 	memcpy(cmd+2, data, datalen);
 
 	uint8_t response[1] = {0xff};
-	int len = ul_send_cmd_raw(cmd, 2+datalen, response, sizeof(response));
-	if ( len == -1 )
-		ul_switch_off_field();
+	ul_send_cmd_raw(cmd, 2+datalen, response, sizeof(response));
 	// ACK
 	if ( response[0] == 0x0a ) return 0;
 	// NACK
@@ -182,17 +182,25 @@ static int ulc_requestAuthentication( uint8_t *nonce, uint16_t nonceLength ){
 
 	uint8_t cmd[] = {MIFARE_ULC_AUTH_1, 0x00};
 	int len = ul_send_cmd_raw(cmd, sizeof(cmd), nonce, nonceLength);
-	if ( len == -1 ) 
-		ul_switch_off_field();
 	return len;
+}
+
+static int ulc_authentication( uint8_t *key, bool switch_off_field ){
+
+	UsbCommand c = {CMD_MIFAREUC_AUTH, {switch_off_field}};
+	memcpy(c.d.asBytes, key, 16);
+	SendCommand(&c);
+	UsbCommand resp;
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) return -1;
+	if ( resp.arg[0] == 1 ) return 0;
+
+	return -2;
 }
 
 static int ulev1_requestAuthentication( uint8_t *pwd, uint8_t *pack, uint16_t packLength ){
 
 	uint8_t cmd[] = {MIFARE_ULEV1_AUTH, pwd[0], pwd[1], pwd[2], pwd[3]};
 	int len = ul_send_cmd_raw(cmd, sizeof(cmd), pack, packLength);
-	if ( len == -1)
-		ul_switch_off_field();
 	return len;
 }
 
@@ -200,8 +208,6 @@ static int ulev1_getVersion( uint8_t *response, uint16_t responseLength ){
 
 	uint8_t cmd[] = {MIFARE_ULEV1_VERSION};	
 	int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
-	if ( len == -1 )
-		ul_switch_off_field();
 	return len;
 }
 
@@ -210,7 +216,6 @@ static int ulev1_getVersion( uint8_t *response, uint16_t responseLength ){
 	// uint8_t cmd[] = {MIFARE_ULEV1_FASTREAD, startblock, endblock};
 	
 	// if ( !ul_send_cmd_raw(cmd, sizeof(cmd), response)){
-		// ul_switch_off_field();
 		// return -1;
 	// }
 	// return 0;
@@ -220,8 +225,6 @@ static int ulev1_readCounter( uint8_t counter, uint8_t *response, uint16_t respo
 
 	uint8_t cmd[] = {MIFARE_ULEV1_READ_CNT, counter};
 	int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
-	if (len == -1)
-		ul_switch_off_field();
 	return len;
 }
 
@@ -229,8 +232,6 @@ static int ulev1_readTearing( uint8_t counter, uint8_t *response, uint16_t respo
 
 	uint8_t cmd[] = {MIFARE_ULEV1_CHECKTEAR, counter};
 	int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
-	if (len == -1)
-		ul_switch_off_field();
 	return len;
 }
 
@@ -238,15 +239,12 @@ static int ulev1_readSignature( uint8_t *response, uint16_t responseLength ){
 
 	uint8_t cmd[] = {MIFARE_ULEV1_READSIG, 0x00};
 	int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
-	if (len == -1)
-		ul_switch_off_field();
 	return len;
 }
 
 static int ul_print_default( uint8_t *data){
 
 	uint8_t uid[7];
-
 	uid[0] = data[0];
 	uid[1] = data[1];
 	uid[2] = data[2];
@@ -504,7 +502,7 @@ uint16_t GetHF14AMfU_Type(void){
 
 	status = ul_select(&card);
 	if ( status < 1 ){
-		PrintAndLog("Error: couldn't select");
+		PrintAndLog("iso14443a card select failed");
 		ul_switch_off_field();
 		return UL_ERROR;
 	}
@@ -518,7 +516,7 @@ uint16_t GetHF14AMfU_Type(void){
 	if ( card.uid[0] != 0x05) {
 
 		len  = ulev1_getVersion(version, sizeof(version));
-		if (len > -1) ul_switch_off_field();  //if -1 it is already off
+		ul_switch_off_field();
 
 		switch (len) {
 			case 0x0A: {
@@ -551,11 +549,11 @@ uint16_t GetHF14AMfU_Type(void){
 				ul_switch_off_field();
 				return UL_ERROR;
 			}
-			uint8_t nonce1[11] = {0x00};
-			status = ulc_requestAuthentication(nonce1, sizeof(nonce1));
+			uint8_t nonce[11] = {0x00};
+			status = ulc_requestAuthentication(nonce, sizeof(nonce));
 			tagtype = ( status > 0 ) ? UL_C : UL;
 
-			if (status != -1) ul_switch_off_field();
+			ul_switch_off_field();
 		}
 	} else {
 		// Infinition MY-D tests   Exam high nibble 
@@ -642,9 +640,8 @@ int CmdHF14AMfUInfo(const char *Cmd){
 
 	if ( hasAuthKey ) {
 		if ((tagtype & UL_C)) {
-			ul_switch_off_field();
 			//will select card automatically
-			if (try3DesAuthentication(authenticationkey, false) != 1) {
+			if (ulc_authentication(authenticationkey, false) != 0) {
 				ul_switch_off_field();
 				PrintAndLog("Error: Authentication Failed UL-C");
 				return 0;
@@ -652,7 +649,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		} else {
 			len = ulev1_requestAuthentication(authenticationkey, pack, sizeof(pack));
 			if (len < 1) {
-				if (!len) ul_switch_off_field();
+				ul_switch_off_field();
 				PrintAndLog("Error: Authentication Failed UL-EV1/NTAG");
 				return 0;
 			}
@@ -663,6 +660,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	// read pages 0,1,2,4 (should read 4pages)
 	status = ul_read(0, data, sizeof(data));
 	if ( status == -1 ){
+		ul_switch_off_field();
 		PrintAndLog("Error: tag didn't answer to READ");
 		return status;
 	}
@@ -685,6 +683,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			uint8_t ulc_deskey[16] = {0x00};
 			status = ul_read(0x2C, ulc_deskey, sizeof(ulc_deskey));
 			if ( status == -1 ){
+				ul_switch_off_field();
 				PrintAndLog("Error: tag didn't answer to READ magic");
 				return status;
 			}
@@ -695,17 +694,18 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			if ( hasAuthKey ) return 1;
 
 			PrintAndLog("Trying some default 3des keys");
-			ul_switch_off_field(); //will select again in try3DesAuth...
 			for (uint8_t i = 0; i < KEYS_3DES_COUNT; ++i ){
 				key = default_3des_keys[i];
-				if (try3DesAuthentication(key, true) == 1){
+				if (ulc_authentication(key, true) == 0){
 					PrintAndLog("Found default 3des key: "); //%s", sprint_hex(key,16));
 					uint8_t keySwap[16];
 					memcpy(keySwap, SwapEndian64(key,16,8), 16);
 					ulc_print_3deskey(keySwap);
+					ul_switch_off_field();
 					return 1;
 				} 
 			}
+			ul_switch_off_field();
 			return 1; //return even if key not found (UL_C is done)
 		}
 	}
@@ -718,6 +718,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status = ulev1_readSignature( ulev1_signature, sizeof(ulev1_signature));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ SIGNATURE");
+			ul_switch_off_field();
 			return status;
 		}		
 		ulev1_print_signature( ulev1_signature, sizeof(ulev1_signature));
@@ -727,6 +728,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to READ EV1");
+			ul_switch_off_field();
 			return status;
 		}
 		// save AUTHENTICATION LIMITS for later:
@@ -745,12 +747,16 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		status  = ulev1_getVersion(version, sizeof(version));
 		if ( status == -1 ){
 			PrintAndLog("Error: tag didn't answer to GETVERSION");
+			ul_switch_off_field();
 			return status;
 		}
 		ulev1_print_version(version);
 
 		// if we called info with key, just return 
-		if ( hasAuthKey ) return 1;
+		if ( hasAuthKey ) {
+			ul_switch_off_field();
+			return 1;
+		}
 
 		// AUTHLIMIT, (number of failed authentications)
 		// 0 = limitless.
@@ -768,7 +774,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 					}
 				}
 			}
-			if (len > -1) ul_switch_off_field();
 		}
 	}
 
@@ -985,9 +990,6 @@ int CmdHF14AMfUDump(const char *Cmd){
 				errors = param_gethex(tempStr, 0, key, dataLen);
 			else
 				errors = true;
-
-			if (!errors) 
-				memcpy(key, data, dataLen/2);
 				
 			cmdp += 2;
 			hasPwd = true;
@@ -1087,11 +1089,10 @@ int CmdHF14AMfUDump(const char *Cmd){
 	}
 
 	// add keys
-	if (hasPwd && dataLen == 32){ //UL_C
-		memcpy(data + Pages*4, key, 16);
+	if (hasPwd){ //UL_C
+		memcpy(data + Pages*4, key, dataLen/2);
 		Pages += 4;
 	} 
-	//TODO add key MEM location for other tags
 
 	for (i = 0; i < Pages; ++i) {
 		if ( i < 3 ) {
@@ -1165,6 +1166,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	return 0;
 }
 
+/*
 // Needed to Authenticate to Ultralight C tags
 void rol (uint8_t *data, const size_t len){
 	uint8_t first = data[0];
@@ -1173,6 +1175,7 @@ void rol (uint8_t *data, const size_t len){
 	}
 	data[len-1] = first;
 }
+*/
 
 //-------------------------------------------------------------------------------
 // Ultralight C Methods
@@ -1191,7 +1194,7 @@ int CmdHF14AMfucAuth(const char *Cmd){
 	//Change key to user defined one
 	if (cmdp == 'k' || cmdp == 'K'){
 		keyNo = param_get8(Cmd, 1);
-		if(keyNo > 6) 
+		if(keyNo > KEYS_3DES_COUNT) 
 			errors = true;
 	}
 
@@ -1213,74 +1216,12 @@ int CmdHF14AMfucAuth(const char *Cmd){
 	} 
 
 	uint8_t *key = default_3des_keys[keyNo];
-	if (try3DesAuthentication(key, true) > 0)
+	if (ulc_authentication(key, true) == 0)
 		PrintAndLog("Authentication successful. 3des key: %s",sprint_hex(key, 16));
 	else
 		PrintAndLog("Authentication failed");
 			
 	return 0;
-}
-
-int try3DesAuthentication( uint8_t *key, bool switch_off_field ){
-	
-	//uint32_t cuid = 0;
-
-	des3_context ctx = { 0 };
-	
-	uint8_t random_a[8] = { 1,1,1,1,1,1,1,1 };
-	uint8_t random_b[8] = { 0 };
-	uint8_t enc_random_b[8] = { 0 };
-	uint8_t rnd_ab[16] = { 0 };
-	uint8_t iv[8] = { 0 };
-
-	UsbCommand c = {CMD_MIFAREUC_AUTH1, {0x00}};
-	SendCommand(&c);
-	UsbCommand resp;
-	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) 	return -1;
-	if ( !(resp.arg[0] & 0xff) ) return -2;
-	
-	//cuid  = resp.arg[1];	
-	memcpy(enc_random_b,resp.d.asBytes+1,8);
-
-	des3_set2key_dec(&ctx, key);
-	// context, mode, length, IV, input, output 
-	des3_crypt_cbc( &ctx, DES_DECRYPT, sizeof(random_b), iv , enc_random_b , random_b);
-
-	rol(random_b,8);
-	memcpy(rnd_ab  ,random_a,8);
-	memcpy(rnd_ab+8,random_b,8);
-
-	des3_set2key_enc(&ctx, key);
-	// context, mode, length, IV, input, output 
-	des3_crypt_cbc(&ctx, DES_ENCRYPT, sizeof(rnd_ab), enc_random_b, rnd_ab, rnd_ab);
-
-	//Auth2
-	c.cmd = CMD_MIFAREUC_AUTH2;
-	c.arg[0] = switch_off_field;
-	memcpy(c.d.asBytes, rnd_ab, 16);
-	SendCommand(&c);
-
-	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;				
-	if ( !(resp.arg[0] & 0xff)) return -2;
-	
-	uint8_t enc_resp[8] = { 0 };
-	uint8_t resp_random_a[8] = { 0 };
-	memcpy(enc_resp, resp.d.asBytes+1, 8);
-
-	des3_set2key_dec(&ctx, key);
-	// context, mode, length, IV, input, output
-	des3_crypt_cbc( &ctx, DES_DECRYPT, 8, enc_random_b, enc_resp, resp_random_a);
-
-	if ( !memcmp(resp_random_a, random_a, 8))
-		return 1;	
-	return 0;
-	
-	//PrintAndLog("      RndA  :%s", sprint_hex(random_a, 8));
-	//PrintAndLog("  enc(RndB) :%s", sprint_hex(enc_random_b, 8));
-	//PrintAndLog("       RndB :%s", sprint_hex(random_b, 8));
-	//PrintAndLog("        A+B :%s", sprint_hex(random_a_and_b, 16));
-	//PrintAndLog("   enc(A+B) :%s", sprint_hex(random_a_and_b, 16));
-	//PrintAndLog(" enc(RndA') :%s", sprint_hex(data2+1, 8));
 }
 
 /**
@@ -1419,7 +1360,6 @@ int CmdHF14AMfUCRdBl(const char *Cmd)
 			hasPwd = TRUE;
 		}	
 	}	
-	//uint8_t *key2 = SwapEndian64(key, 16, 8);
 
 	//Read Block
 	UsbCommand c = {CMD_MIFAREU_READBL, {blockNo}};
