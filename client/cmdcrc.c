@@ -13,7 +13,7 @@
 #include "cmdparser.h"
 #include "cmdcrc.h"
 //#include "reveng/reveng.h"
-#include "reveng/cli.h"
+//#include "reveng/cli.h"
 static int CmdHelp(const char *Cmd);
 
 int CmdCrcCalc(const char *Cmd)

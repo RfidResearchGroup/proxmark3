@@ -331,12 +331,14 @@ int ul_print_type(uint16_t tagtype, uint8_t spaces){
 		PrintAndLog("%sTYPE : MIFARE Ultralight EV1 48bytes (MF0UL1101)", spacer); 
 	else if ( tagtype & UL_EV1_128)	
 		PrintAndLog("%sTYPE : MIFARE Ultralight EV1 128bytes (MF0UL2101)", spacer);
+	else if ( tagtype & NTAG_203 )
+		PrintAndLog("%sTYPE : NTAG 203 144bytes (NT2H0301G0DU)", spacer);
 	else if ( tagtype & NTAG_213 )
-		PrintAndLog("%sTYPE : MIFARE NTAG 213 144bytes (NT2H1311G0DU)", spacer);
+		PrintAndLog("%sTYPE : NTAG 213 144bytes (NT2H1311G0DU)", spacer);
 	else if ( tagtype & NTAG_215 )
-		PrintAndLog("%sTYPE : MIFARE NTAG 215 504bytes (NT2H1511G0DU)", spacer);
+		PrintAndLog("%sTYPE : NTAG 215 504bytes (NT2H1511G0DU)", spacer);
 	else if ( tagtype & NTAG_216 )
-		PrintAndLog("%sTYPE : MIFARE NTAG 216 888bytes (NT2H1611G0DU)", spacer);
+		PrintAndLog("%sTYPE : NTAG 216 888bytes (NT2H1611G0DU)", spacer);
 	else if ( tagtype & MY_D )
 		PrintAndLog("%sTYPE : INFINEON my-d\x99", spacer);
 	else if ( tagtype & MY_D_NFC )
@@ -559,6 +561,9 @@ uint16_t GetHF14AMfU_Type(void){
 
 			ul_switch_off_field();
 		}
+		
+		//NTAG203 detection here.
+		
 	} else {
 		// Infinition MY-D tests   Exam high nibble 
 		uint8_t nib = (card.uid[1] & 0xf0) >> 4;
