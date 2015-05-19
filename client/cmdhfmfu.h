@@ -13,15 +13,11 @@ int CmdHF14AMfUCRdBl(const char *Cmd);
 int CmdHF14AMfUCRdCard(const char *Cmd);
 int CmdHF14AMfucAuth(const char *Cmd);
 
-uint8_t requestAuthentication( uint8_t *nonce);
-int try3DesAuthentication( uint8_t *key, bool switch_off_field);
-
 //general stuff
 int CmdHF14AMfUDump(const char *Cmd);
 int CmdHF14AMfUInfo(const char *Cmd);
 uint16_t GetHF14AMfU_Type(void);
 
-void rol (uint8_t *data, const size_t len);
 int ul_print_type(uint16_t tagtype, uint8_t spacer);
 void ul_switch_off_field(void);
 

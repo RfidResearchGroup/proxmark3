@@ -278,14 +278,17 @@ static int ul_print_default( uint8_t *data){
 		PrintAndLog("      BCC1 : %02X - crc should be %02X", data[8], crc1 );
 
 	PrintAndLog("  Internal : %02X - %s default", data[9], (data[9]==0x48)?"":"not" );
+
 	PrintAndLog("      Lock : %s - %s",
 				sprint_hex(data+10, 2),
 				printBits(2, data+10)
 		);
+
 	PrintAndLog("OneTimePad : %s - %s\n",
 				sprint_hex(data + 12, 4),
 				printBits(4, data+12)
 		);
+
 	return 0;
 }
 
@@ -364,7 +367,7 @@ static int ulc_print_configuration( uint8_t *data){
 
 	bool validAuth = (data[8] >= 0x03 && data[8] <= 0x30);
 	if ( validAuth )
-		PrintAndLog("           Auth0 [42/0x2A]: %s Page %d and above need authentication", sprint_hex(data+8, 4), data[8] );
+		PrintAndLog("           Auth0 [42/0x2A]: %s page %d/0x%02X and above need authentication", sprint_hex(data+8, 4), data[8], data[8]);
 	else{
 		if ( data[8] == 0){
 			PrintAndLog("           Auth0 [42/0x2A]: %s default", sprint_hex(data+8, 4) );
@@ -539,7 +542,7 @@ uint16_t GetHF14AMfU_Type(void){
 			}
 			case 0x01: tagtype = UL_C; break;
 			case 0x00: tagtype = UL; break;
-			case -1  : tagtype = (UL | UL_C); break;  //when does this happen?
+			case -1  : tagtype = (UL | UL_C); break;  //when does this happen?  -- if getversion fails, it assumes it is either UL/ULC -- but why? magic tags?
 			default  : tagtype = UNKNOWN; break;
 		}
 		// UL-C test
@@ -698,7 +701,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			for (uint8_t i = 0; i < KEYS_3DES_COUNT; ++i ){
 				key = default_3des_keys[i];
 				if (ulc_authentication(key, true)){
-					PrintAndLog("Found default 3des key: "); //%s", sprint_hex(key,16));
+					PrintAndLog("Found default 3des key: ");
 					uint8_t keySwap[16];
 					memcpy(keySwap, SwapEndian64(key,16,8), 16);
 					ulc_print_3deskey(keySwap);
@@ -931,7 +934,7 @@ int usage_hf_mfu_dump(void)
 	PrintAndLog("Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
 	PrintAndLog("and saves binary dump into the file `filename.bin` or `cardUID.bin`");
 	PrintAndLog("It autodetects card type.\n");	
-	PrintAndLog("Usage:  hf mfu dump s k <key> n <filename w/o .bin>");
+	PrintAndLog("Usage:  hf mfu dump l k <key> n <filename w/o .bin>");
 	PrintAndLog("  Options : ");
 	PrintAndLog("  k <key> : key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
 	PrintAndLog("  l       : swap entered key's endianness for auth");
@@ -949,14 +952,11 @@ int usage_hf_mfu_dump(void)
 //
 //  Mifare Ultralight / Ultralight-C / Ultralight-EV1
 //  Read and Dump Card Contents,  using auto detection of tag size.
-//
-//  TODO: take a password to read UL-C / UL-EV1 tags.
 int CmdHF14AMfUDump(const char *Cmd){
 
 	FILE *fout;
 	char filename[FILE_PATH_SIZE] = {0x00};
 	char *fnameptr = filename;
-	//char *str = "Dumping Ultralight%s%s Card Data...";
 	uint8_t *lockbytes_t = NULL;
 	uint8_t lockbytes[2] = {0x00};
 	uint8_t *lockbytes_t2 = NULL;
@@ -1089,7 +1089,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	}
 
 	// Load bottom lockbytes if available
-	// HOW DOES THIS APPLY TO EV1 and/or NTAG???
+	// TODO -- FIGURE OUT LOCK BYTES FOR TO EV1 and/or NTAG
 	if ( Pages == 44 ) {
 		lockbytes_t2 = data + (40*4);
 		lockbytes2[0] = lockbytes_t2[2];
@@ -1179,17 +1179,6 @@ int CmdHF14AMfUDump(const char *Cmd){
 	PrintAndLog("Dumped %d pages, wrote %d bytes to %s", Pages, Pages*4, filename);
 	return 0;
 }
-
-/*
-// Needed to Authenticate to Ultralight C tags
-void rol (uint8_t *data, const size_t len){
-	uint8_t first = data[0];
-	for (size_t i = 0; i < len-1; i++) {
-		data[i] = data[i+1];
-	}
-	data[len-1] = first;
-}
-*/
 
 //-------------------------------------------------------------------------------
 // Ultralight C Methods

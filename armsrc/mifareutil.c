@@ -728,8 +728,8 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData){
 	int len;
 	// load key, keynumber
 	uint8_t data[2]={0x0a, 0x00};
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
+	uint8_t receivedAnswer[MAX_FRAME_SIZE];
+	uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
 	
 	len = mifare_sendcmd_special(NULL, 1, 0x02, data, receivedAnswer,receivedAnswerPar,NULL);
 	if (len == 1) {
