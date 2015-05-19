@@ -250,17 +250,26 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 {
+	// free eventually allocated BigBuf memory
+	BigBuf_free();
+	// clear trace
+	clear_trace();
+
 	// params
 	uint8_t blockNo = arg0;
 	uint16_t blocks = arg1;
 	bool useKey = (arg2 == 1); //UL_C
 	bool usePwd = (arg2 == 2); //UL_EV1/NTAG
 	uint32_t countblocks = 0;
-	uint8_t *dataout = BigBuf_get_addr();
+	uint8_t *dataout = BigBuf_malloc(CARD_MEMORY_SIZE);
+	if (dataout == NULL){
+		Dbprintf("out of memory");
+		OnError(1);
+		return;
+	}
 
 	LEDsoff();
 	LED_A_ON();
-	clear_trace();
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	int len = iso14443a_select_card(NULL, NULL, NULL);
@@ -294,7 +303,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 	}
 
 	for (int i = 0; i < blocks; i++){
-		if ((i*4) + 4 > BigBuf_get_traceLen()) {
+		if ((i*4) + 4 > CARD_MEMORY_SIZE) {
 			Dbprintf("Data exceeds buffer!!");
 			break;
 		}
