@@ -354,7 +354,9 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces){
 	else if ( tagtype & NTAG_216 )
 		PrintAndLog("%sTYPE : NTAG 216 888bytes (NT2H1611G0DU)", spacer);
 	else if ( tagtype & NTAG_I2C_1K )
+		PrintAndLog("%sTYPE : NTAG I%sC 888bytes (NT3H1101FHK)", spacer, "\xFD");
 	else if ( tagtype & NTAG_I2C_2K )	
+		PrintAndLog("%sTYPE : NTAG I%sC 1904bytes (NT3H1201FHK)", spacer, "\xFD");
 	else if ( tagtype & MY_D )
 		PrintAndLog("%sTYPE : INFINEON my-d\x99", spacer);
 	else if ( tagtype & MY_D_NFC )
