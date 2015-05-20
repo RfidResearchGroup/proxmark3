@@ -17,9 +17,12 @@
 #include "data.h"
 
 #define MAX_UL_BLOCKS		0x0f
-#define MAX_ULC_BLOCKS    0x2b
+#define MAX_ULC_BLOCKS		0x2b
 #define MAX_ULEV1a_BLOCKS   0x12
 #define MAX_ULEV1b_BLOCKS	0x20
+#define MAX_NTAG_203		0x2c
+#define MAX_NTAG_210		0x13
+#define MAX_NTAG_212		0x28
 #define MAX_NTAG_213		0x2c
 #define MAX_NTAG_215		0x86
 #define MAX_NTAG_216        0xe6
@@ -51,12 +54,15 @@ uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 	{0x32,0x0C,0x16,0x17}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
 };	
 	
-#define MAX_UL_TYPES 13
+#define MAX_UL_TYPES 16
 uint16_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {UNKNOWN, UL, UL_C, UL_EV1_48, UL_EV1_128, 
-	    NTAG, NTAG_213, NTAG_215, NTAG_216, MY_D, MY_D_NFC, MY_D_MOVE, MY_D_MOVE_NFC};
-uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_BLOCKS, 
-	    MAX_ULEV1a_BLOCKS, MAX_ULEV1b_BLOCKS, MAX_NTAG_213, MAX_NTAG_213, MAX_NTAG_215,
-	    MAX_NTAG_216, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS};
+	    NTAG, NTAG_203, NTAG_210, NTAG_212, NTAG_213, NTAG_215, NTAG_216,
+		MY_D, MY_D_NFC, MY_D_MOVE, MY_D_MOVE_NFC};
+uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {
+		MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_BLOCKS, 
+	    MAX_ULEV1a_BLOCKS, MAX_ULEV1b_BLOCKS,
+		MAX_NTAG_213, MAX_NTAG_203, MAX_NTAG_210, MAX_NTAG_212, MAX_NTAG_213, MAX_NTAG_215, MAX_NTAG_216,
+		MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS};
 
 
 static int CmdHelp(const char *Cmd);
@@ -333,6 +339,10 @@ int ul_print_type(uint16_t tagtype, uint8_t spaces){
 		PrintAndLog("%sTYPE : MIFARE Ultralight EV1 128bytes (MF0UL2101)", spacer);
 	else if ( tagtype & NTAG_203 )
 		PrintAndLog("%sTYPE : NTAG 203 144bytes (NT2H0301G0DU)", spacer);
+	else if ( tagtype & NTAG_210 )
+		PrintAndLog("%sTYPE : NTAG 210 48bytes (NT2L1011G0DU)", spacer);
+		else if ( tagtype & NTAG_212 )
+		PrintAndLog("%sTYPE : NTAG 212 1284bytes (NT2L1011G0DU)", spacer);
 	else if ( tagtype & NTAG_213 )
 		PrintAndLog("%sTYPE : NTAG 213 144bytes (NT2H1311G0DU)", spacer);
 	else if ( tagtype & NTAG_215 )
@@ -531,6 +541,10 @@ uint16_t GetHF14AMfU_Type(void){
 					tagtype = UL_EV1_48;
 				else if ( version[2] == 0x03 && version[6] != 0x0B ) 
 					tagtype = UL_EV1_128;					
+				else if ( version[2] == 0x04 && version[6] == 0x0B ) 
+					tagtype = NTAG_210;
+				else if ( version[2] == 0x04 && version[6] == 0x0E ) 
+					tagtype = NTAG_212;
 				else if ( version[2] == 0x04 && version[6] == 0x0F ) 
 					tagtype = NTAG_213;
 				else if ( version[2] == 0x04 && version[6] == 0x11 ) 
@@ -749,7 +763,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		ulev1_print_configuration(ulev1_conf);
 	}
 	
-	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216))) {
+	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_210 | NTAG_212 | NTAG_213 | NTAG_215 | NTAG_216))) {
 
 		uint8_t version[10] = {0x00};
 		status  = ulev1_getVersion(version, sizeof(version));
