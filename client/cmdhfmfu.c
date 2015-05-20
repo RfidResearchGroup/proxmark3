@@ -150,11 +150,16 @@ static int ul_select( iso14a_card_select_t *card ){
 	ul_switch_on_field();
 
 	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
-	if (resp.arg[0] < 1) return -1;
+	bool ans = false;
+	ans = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
+	if (resp.arg[0] < 1 || !ans) {
+		PrintAndLog("iso14443a card select failed");
+		ul_switch_off_field();
+		return 0;
+	}
 
 	memcpy(card, resp.d.asBytes, sizeof(iso14a_card_select_t));
-	return resp.arg[0];
+	return 1;
 }
 
 // This read command will at least return 16bytes.
@@ -321,7 +326,7 @@ static int ndef_print_CC(uint8_t *data) {
 	return 0;
 }
 
-int ul_print_type(uint16_t tagtype, uint8_t spaces){
+int ul_print_type(uint32_t tagtype, uint8_t spaces){
 	char spc[11] = "          ";
 	spc[10]=0x00;
 	char *spacer = spc + (10-spaces);
@@ -338,9 +343,9 @@ int ul_print_type(uint16_t tagtype, uint8_t spaces){
 		PrintAndLog("%sTYPE : NTAG UNKNOWN", spacer);
 	else if ( tagtype & NTAG_203 )
 		PrintAndLog("%sTYPE : NTAG 203 144bytes (NT2H0301F0DT)", spacer);
-	else if ( tagtype & NTAG_213 )
+	else if ( tagtype & NTAG_210 )
 		PrintAndLog("%sTYPE : NTAG 210  48bytes (NT2L1011G0DU)", spacer);
-	else if ( tagtype & NTAG_213 )
+	else if ( tagtype & NTAG_212 )
 		PrintAndLog("%sTYPE : NTAG 212 128bytes (NT2L1211G0DU)", spacer);
 	else if ( tagtype & NTAG_213 )
 		PrintAndLog("%sTYPE : NTAG 213 144bytes (NT2H1311G0DU)", spacer);
@@ -357,7 +362,7 @@ int ul_print_type(uint16_t tagtype, uint8_t spaces){
 	else if ( tagtype & MY_D_MOVE_NFC )
 		PrintAndLog("%sTYPE : INFINEON my-d\x99 move NFC", spacer);
 	else
-		PrintAndLog("%sTYPE : Unknown %04x", spacer, tagtype);
+		PrintAndLog("%sTYPE : Unknown %06x", spacer, tagtype);
 	return 0;
 }
 
@@ -426,13 +431,16 @@ static int ulev1_print_counters(){
 	PrintAndLog("--- Tag Counters");
 	uint8_t tear[1] = {0};
 	uint8_t counter[3] = {0,0,0};
+	uint16_t len = 0;
 	for ( uint8_t i = 0; i<3; ++i) {
 		ulev1_readTearing(i,tear,sizeof(tear));
-		ulev1_readCounter(i,counter, sizeof(counter) );
-		PrintAndLog("       [%0d] : %s", i, sprint_hex(counter,3));
-		PrintAndLog("                    - %02X tearing %s", tear[0], ( tear[0]==0xBD)?"Ok":"failure");
+		len = ulev1_readCounter(i,counter, sizeof(counter) );
+		if (len == 3) {
+			PrintAndLog("       [%0d] : %s", i, sprint_hex(counter,3));
+			PrintAndLog("                    - %02X tearing %s", tear[0], ( tear[0]==0xBD)?"Ok":"failure");
+		}
 	}
-	return 0;
+	return len;
 }
 
 static int ulev1_print_signature( uint8_t *data, uint8_t len){
@@ -472,9 +480,7 @@ static int ulc_magic_test(){
 	uint8_t nonce1[11] = {0x00};
 	uint8_t nonce2[11] = {0x00};
 	int status = ul_select(&card);
-	if ( status < 1 ){
-		PrintAndLog("Error: couldn't select ulc_magic_test");
-		ul_switch_off_field();
+	if ( !status ){
 		return UL_ERROR;
 	}
 	status = ulc_requestAuthentication(nonce1, sizeof(nonce1));
@@ -494,12 +500,9 @@ static int ul_magic_test(){
 	// 1) take present UID, and try to write it back. OBSOLETE 
 	// 2) make a wrong length write to page0, and see if tag answers with ACK/NACK:
 	iso14a_card_select_t card;
-	int status = ul_select(&card);
-	if ( status < 1 ){
-		PrintAndLog("iso14443a card select failed");
-		ul_switch_off_field();
+	int status;
+	if ( !ul_select(&card) ) 
 		return UL_ERROR;
-	}
 	status = ul_comp_write(0, NULL, 0);
 	ul_switch_off_field();
 	if ( status == 0 ) 
@@ -507,7 +510,7 @@ static int ul_magic_test(){
 	return UL;
 }
 
-uint16_t GetHF14AMfU_Type(void){
+uint32_t GetHF14AMfU_Type(void){
 
 	TagTypeUL_t tagtype = UNKNOWN;
 	iso14a_card_select_t card;
@@ -515,12 +518,8 @@ uint16_t GetHF14AMfU_Type(void){
 	int status = 0;
 	int len;
 
-	status = ul_select(&card);
-	if ( status < 1 ){
-		PrintAndLog("iso14443a card select failed");
-		ul_switch_off_field();
-		return UL_ERROR;
-	}
+	if (!ul_select(&card)) return UL_ERROR;
+
 	// Ultralight - ATQA / SAK 
 	if ( card.atqa[1] != 0x00 || card.atqa[0] != 0x44 || card.sak != 0x00 ) {
 		PrintAndLog("Tag is not Ultralight | NTAG | MY-D  [ATQA: %02X %02X SAK: %02X]\n", card.atqa[1], card.atqa[0], card.sak);
@@ -550,6 +549,11 @@ uint16_t GetHF14AMfU_Type(void){
 					tagtype = NTAG_215;
 				else if ( version[2] == 0x04 && version[3] == 0x02 && version[6] == 0x13 )
 					tagtype = NTAG_216;
+				else if ( version[2] == 0x04 && version[3] == 0x05 && version[6] == 0x13 )
+					tagtype = NTAG_I2C_1K;
+				else if ( version[2] == 0x04 && version[3] == 0x05 && version[6] == 0x15 )
+					tagtype = NTAG_I2C_2K;
+
 				else if ( version[2] == 0x04 )
 					tagtype = NTAG;
 
@@ -562,12 +566,7 @@ uint16_t GetHF14AMfU_Type(void){
 		}
 		// UL vs UL-C vs ntag203 test
 		if (tagtype & (UL | UL_C | NTAG_203)) {
-			status = ul_select(&card);
-			if ( status < 1 ){
-				PrintAndLog("iso14443a card select failed (UL-C)");
-				ul_switch_off_field();
-				return UL_ERROR;
-			}
+			if ( !ul_select(&card) ) return UL_ERROR;
 
 			// do UL_C check first...
 			uint8_t nonce[11] = {0x00};
@@ -577,12 +576,8 @@ uint16_t GetHF14AMfU_Type(void){
 				tagtype = UL_C;
 			} else { 
 				// need to re-select after authentication error
-				status = ul_select(&card);
-				if ( status < 1 ){
-					PrintAndLog("iso14443a card select failed (UL-C)");
-					ul_switch_off_field();
-					return UL_ERROR;
-				}
+				if ( !ul_select(&card) ) return UL_ERROR;
+
 				uint8_t data[16] = {0x00};
 				// read page 0x26-0x29 (last valid ntag203 page)
 				status = ul_read(0x26, data, sizeof(data));
@@ -611,7 +606,7 @@ uint16_t GetHF14AMfU_Type(void){
 	}
 
 	tagtype = (ul_magic_test() == UL_MAGIC) ? (tagtype | MAGIC) : tagtype;
-
+	if (tagtype == (UNKNOWN | MAGIC)) tagtype = (UL | MAGIC);
 	return tagtype;
 }
 
@@ -683,12 +678,8 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			return 0;
 		}
 	} else {
-		status = ul_select(&card);
-		if ( status < 1 ){
-			PrintAndLog("iso14443a card select failed");
-			ul_switch_off_field();
-			return status;
-		}
+		if ( !ul_select(&card) ) return 0;
+
 		if (hasAuthKey) {
 			len = ulev1_requestAuthentication(authenticationkey, pack, sizeof(pack));
 			if (len < 1) {
@@ -754,19 +745,19 @@ int CmdHF14AMfUInfo(const char *Cmd){
 				} 
 			}
 			// reselect for future tests (ntag test)
-			status = ul_select(&card);
-			if ( status < 1 ){
-				PrintAndLog("iso14443a card select failed");
-				ul_switch_off_field();
-				return status;
-			}
+			if ( !ul_select(&card) ) return 0;
 		}
 	}
 
 	// do counters and signature first (don't neet auth) 
 
 	// ul counters are different than ntag counters
-	if ((tagtype & (UL_EV1_48 | UL_EV1_128))) ulev1_print_counters();
+	if ((tagtype & (UL_EV1_48 | UL_EV1_128))) {
+		if (ulev1_print_counters() != 3) {
+			// failed - re-select
+			if ( !ul_select(&card) ) return 0;
+		}
+	}
 
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216	))) {
 		uint8_t ulev1_signature[32] = {0x00};
@@ -777,6 +768,10 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			return status;
 		}
 		if (status == 32) ulev1_print_signature( ulev1_signature, sizeof(ulev1_signature));
+		else {
+			// re-select
+			if ( !ul_select(&card) ) return 0;
+		}
 	}
 
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_210 | NTAG_212 | NTAG_213 | NTAG_215 | NTAG_216))) {
@@ -824,12 +819,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 					PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
 					break;
 				} else {
-					status = ul_select(&card);
-					if ( status < 1 ) {
-						PrintAndLog("iso14443a card select failed - ev1 auth");
-						ul_switch_off_field();
-						return status;
-					}
+					if ( !ul_select(&card) ) return 0;
 				}
 			}
 			if (len < 1) PrintAndLog("password not known");
