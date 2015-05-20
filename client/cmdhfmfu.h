@@ -18,7 +18,7 @@ int CmdHF14AMfUDump(const char *Cmd);
 int CmdHF14AMfUInfo(const char *Cmd);
 uint32_t GetHF14AMfU_Type(void);
 
-int ul_print_type(uint16_t tagtype, uint8_t spacer);
+int ul_print_type(uint32_t tagtype, uint8_t spacer);
 void ul_switch_off_field(void);
 
 int usage_hf_mfu_dump(void);
@@ -48,7 +48,7 @@ typedef enum TAGTYPE_UL {
 	MAGIC         = 0x020000,
 	UL_MAGIC      = UL | MAGIC,
 	UL_C_MAGIC    = UL_C | MAGIC,
-	UL_ERROR      = 0xFFFF,
+	UL_ERROR      = 0xFFFFFF,
 } TagTypeUL_t;
 
 #endif
