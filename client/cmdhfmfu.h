@@ -16,7 +16,7 @@ int CmdHF14AMfucAuth(const char *Cmd);
 //general stuff
 int CmdHF14AMfUDump(const char *Cmd);
 int CmdHF14AMfUInfo(const char *Cmd);
-uint16_t GetHF14AMfU_Type(void);
+uint32_t GetHF14AMfU_Type(void);
 
 int ul_print_type(uint16_t tagtype, uint8_t spacer);
 void ul_switch_off_field(void);

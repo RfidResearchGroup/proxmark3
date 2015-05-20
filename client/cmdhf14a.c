@@ -177,7 +177,7 @@ int CmdHF14AReader(const char *Cmd)
 			//***************************************test****************
 			ul_switch_off_field();
 			
-			uint16_t tagT = GetHF14AMfU_Type();
+			uint32_t tagT = GetHF14AMfU_Type();
 			ul_print_type(tagT, 0);
 
 			//reconnect for further tests

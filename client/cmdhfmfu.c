@@ -359,7 +359,7 @@ int ul_print_type(uint16_t tagtype, uint8_t spaces){
 	else if ( tagtype & MY_D_MOVE_NFC )
 		PrintAndLog("%sTYPE : INFINEON my-d\x99 move NFC", spacer);
 	else
-		PrintAndLog("%sTYPE : Unknown %04x", spacer, tagtype);
+		PrintAndLog("%sTYPE : Unknown %06x", spacer, tagtype);
 	return 0;
 }
 
@@ -509,7 +509,7 @@ static int ul_magic_test(){
 	return UNKNOWN;
 }
 
-uint16_t GetHF14AMfU_Type(void){
+uint32_t GetHF14AMfU_Type(void){
 
 	TagTypeUL_t tagtype = UNKNOWN;
 	iso14a_card_select_t card;
