@@ -928,7 +928,7 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 		if(errors) return usage_hf_mfu_wrbl();
 	}
 
-	if ( blockNo == -1 ) return usage_hf_mfu_rdbl();
+	if ( blockNo == -1 ) return usage_hf_mfu_wrbl();
 	
 	// Swap endianness 
 	if (swapEndian && hasAuthKey) keyPtr = SwapEndian64(authenticationkey, 16, 8);
@@ -1134,7 +1134,8 @@ int usage_hf_mfu_rdbl(void) {
 }
 
 int usage_hf_mfu_wrbl(void) {
-	PrintAndLog("Usage:  hf mfu wrbl <block number> <block data (8 hex symbols)> [w]");
+	PrintAndLog("Write a block. It autodetects card type.\n");		
+	PrintAndLog("Usage:  hf mfu wrbl b <block number> d <data> k <key> l\n");
 	PrintAndLog("  Options:");
 	PrintAndLog("  h        : this help");
 	PrintAndLog("  b <no>   : block to write");
