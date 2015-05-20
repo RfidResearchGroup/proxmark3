@@ -19,7 +19,10 @@
 #define MAX_UL_BLOCKS     0x0f
 #define MAX_ULC_BLOCKS    0x2b
 #define MAX_ULEV1a_BLOCKS 0x12
-#define MAX_ULEV1b_BLOCKS 0x20
+#define MAX_ULEV1b_BLOCKS 0x28
+#define MAX_NTAG_203      0x29
+#define MAX_NTAG_210      0x13
+#define MAX_NTAG_212      0x28
 #define MAX_NTAG_213      0x2c
 #define MAX_NTAG_215      0x86
 #define MAX_NTAG_216      0xe6
@@ -51,12 +54,13 @@ uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 	{0x32,0x0C,0x16,0x17}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
 };
 
-#define MAX_UL_TYPES 13
-uint16_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {UNKNOWN, UL, UL_C, UL_EV1_48, UL_EV1_128, 
-	    NTAG, NTAG_213, NTAG_215, NTAG_216, MY_D, MY_D_NFC, MY_D_MOVE, MY_D_MOVE_NFC};
-uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_BLOCKS, 
-	    MAX_ULEV1a_BLOCKS, MAX_ULEV1b_BLOCKS, MAX_NTAG_213, MAX_NTAG_213, MAX_NTAG_215,
-	    MAX_NTAG_216, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS};
+#define MAX_UL_TYPES 16
+uint16_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {UNKNOWN, UL, UL_C, UL_EV1_48, UL_EV1_128, NTAG, NTAG_203,
+	    NTAG_210, NTAG_212, NTAG_213, NTAG_215, NTAG_216, MY_D, MY_D_NFC, MY_D_MOVE, MY_D_MOVE_NFC};
+
+uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_BLOCKS, MAX_ULEV1a_BLOCKS,
+	    MAX_ULEV1b_BLOCKS, MAX_NTAG_203, MAX_NTAG_203, MAX_NTAG_210, MAX_NTAG_212, MAX_NTAG_213,
+	    MAX_NTAG_215, MAX_NTAG_216, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS};
 
 
 static int CmdHelp(const char *Cmd);
@@ -292,15 +296,14 @@ static int ul_print_default( uint8_t *data){
 	return 0;
 }
 
-static int ntag_print_CC(uint8_t *data) {
-
-	PrintAndLog("\n--- NTAG NDEF Message");
+static int ndef_print_CC(uint8_t *data) {
 
 	if(data[0] != 0xe1) {
-		PrintAndLog("no NDEF message");
+		//PrintAndLog("no NDEF message");
 		return -1;		// no NDEF message
 	}
 
+	PrintAndLog("--- NDEF Message");
 	PrintAndLog("Capability Container: %s", sprint_hex(data,4) );
 	PrintAndLog("  %02X: NDEF Magic Number", data[0]); 
 	PrintAndLog("  %02X: version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0f);
@@ -331,12 +334,20 @@ int ul_print_type(uint16_t tagtype, uint8_t spaces){
 		PrintAndLog("%sTYPE : MIFARE Ultralight EV1 48bytes (MF0UL1101)", spacer); 
 	else if ( tagtype & UL_EV1_128)
 		PrintAndLog("%sTYPE : MIFARE Ultralight EV1 128bytes (MF0UL2101)", spacer);
+	else if ( tagtype & NTAG )
+		PrintAndLog("%sTYPE : NTAG UNKNOWN", spacer);
+	else if ( tagtype & NTAG_203 )
+		PrintAndLog("%sTYPE : NTAG 203 144bytes (NT2H0301F0DT)", spacer);
 	else if ( tagtype & NTAG_213 )
-		PrintAndLog("%sTYPE : MIFARE NTAG 213 144bytes (NT2H1311G0DU)", spacer);
+		PrintAndLog("%sTYPE : NTAG 210  48bytes (NT2L1011G0DU)", spacer);
+	else if ( tagtype & NTAG_213 )
+		PrintAndLog("%sTYPE : NTAG 212 128bytes (NT2L1211G0DU)", spacer);
+	else if ( tagtype & NTAG_213 )
+		PrintAndLog("%sTYPE : NTAG 213 144bytes (NT2H1311G0DU)", spacer);
 	else if ( tagtype & NTAG_215 )
-		PrintAndLog("%sTYPE : MIFARE NTAG 215 504bytes (NT2H1511G0DU)", spacer);
+		PrintAndLog("%sTYPE : NTAG 215 504bytes (NT2H1511G0DU)", spacer);
 	else if ( tagtype & NTAG_216 )
-		PrintAndLog("%sTYPE : MIFARE NTAG 216 888bytes (NT2H1611G0DU)", spacer);
+		PrintAndLog("%sTYPE : NTAG 216 888bytes (NT2H1611G0DU)", spacer);
 	else if ( tagtype & MY_D )
 		PrintAndLog("%sTYPE : INFINEON my-d\x99", spacer);
 	else if ( tagtype & MY_D_NFC )
@@ -384,7 +395,7 @@ static int ulc_print_configuration( uint8_t *data){
 
 static int ulev1_print_configuration( uint8_t *data){
 
-	PrintAndLog("\n--- UL-EV1 Configuration");
+	PrintAndLog("\n--- Tag Configuration");
 
 	bool strg_mod_en = (data[0] & 2);
 	uint8_t authlim = (data[4] & 0x07);
@@ -412,7 +423,7 @@ static int ulev1_print_configuration( uint8_t *data){
 }
 
 static int ulev1_print_counters(){
-	PrintAndLog("--- UL-EV1 Counters");
+	PrintAndLog("--- Tag Counters");
 	uint8_t tear[1] = {0};
 	uint8_t counter[3] = {0,0,0};
 	for ( uint8_t i = 0; i<3; ++i) {
@@ -425,7 +436,7 @@ static int ulev1_print_counters(){
 }
 
 static int ulev1_print_signature( uint8_t *data, uint8_t len){
-	PrintAndLog("\n--- UL-EV1 Signature");	
+	PrintAndLog("\n--- Tag Signature");	
 	PrintAndLog("IC signature public key name  : NXP NTAG21x 2013");
 	PrintAndLog("IC signature public key value : 04494e1a386d3d3cfe3dc10e5de68a499b1c202db5b132393e89ed19fe5be8bc61");
 	PrintAndLog("    Elliptic curve parameters : secp128r1");
@@ -436,7 +447,7 @@ static int ulev1_print_signature( uint8_t *data, uint8_t len){
 }
 
 static int ulev1_print_version(uint8_t *data){
-	PrintAndLog("\n--- UL-EV1 / NTAG Version");
+	PrintAndLog("\n--- Tag Version");
 	PrintAndLog("       Raw bytes : %s", sprint_hex(data, 8) );
 	PrintAndLog("       Vendor ID : %02X, Manufacturer: %s", data[1], getTagInfo(data[1]));
 	PrintAndLog("    Product type : %s", getProductTypeStr(data[2]));
@@ -529,11 +540,15 @@ uint16_t GetHF14AMfU_Type(void){
 					tagtype = UL_EV1_48;
 				else if ( version[2] == 0x03 && version[6] != 0x0B )
 					tagtype = UL_EV1_128;
-				else if ( version[2] == 0x04 && version[6] == 0x0F )
+				else if ( version[2] == 0x04 && version[3] == 0x01 && version[6] == 0x0B )
+					tagtype = NTAG_210;
+				else if ( version[2] == 0x04 && version[3] == 0x01 && version[6] == 0x0E )
+					tagtype = NTAG_212;
+				else if ( version[2] == 0x04 && version[3] == 0x02 && version[6] == 0x0F )
 					tagtype = NTAG_213;
-				else if ( version[2] == 0x04 && version[6] == 0x11 )
+				else if ( version[2] == 0x04 && version[3] == 0x02 && version[6] == 0x11 )
 					tagtype = NTAG_215;
-				else if ( version[2] == 0x04 && version[6] == 0x13 )
+				else if ( version[2] == 0x04 && version[3] == 0x02 && version[6] == 0x13 )
 					tagtype = NTAG_216;
 				else if ( version[2] == 0x04 )
 					tagtype = NTAG;
@@ -542,35 +557,60 @@ uint16_t GetHF14AMfU_Type(void){
 			}
 			case 0x01: tagtype = UL_C; break;
 			case 0x00: tagtype = UL; break;
-			case -1  : tagtype = (UL | UL_C); break;  //when does this happen?  -- if getversion fails, it assumes it is either UL/ULC -- but why? magic tags?
+			case -1  : tagtype = (UL | UL_C | NTAG_203); break;  //when does this happen?  -- if getversion fails, it assumes it is either UL/ULC -- but why? magic tags?
 			default  : tagtype = UNKNOWN; break;
 		}
-		// UL-C test
-		if (tagtype == (UL | UL_C)) {
+		// UL vs UL-C vs ntag203 test
+		if (tagtype & (UL | UL_C | NTAG_203)) {
 			status = ul_select(&card);
 			if ( status < 1 ){
 				PrintAndLog("iso14443a card select failed (UL-C)");
 				ul_switch_off_field();
 				return UL_ERROR;
 			}
+
+			// do UL_C check first...
 			uint8_t nonce[11] = {0x00};
 			status = ulc_requestAuthentication(nonce, sizeof(nonce));
-			tagtype = ( status > 0 ) ? UL_C : UL;
-
 			ul_switch_off_field();
+			if (status > 1) {
+				tagtype = UL_C;
+			} else { 
+				// need to re-select after authentication error
+				status = ul_select(&card);
+				if ( status < 1 ){
+					PrintAndLog("iso14443a card select failed (UL-C)");
+					ul_switch_off_field();
+					return UL_ERROR;
+				}
+				uint8_t data[16] = {0x00};
+				// read page 0x26-0x29 (last valid ntag203 page)
+				status = ul_read(0x26, data, sizeof(data));
+				if ( status <= 1 ) {
+					tagtype = UL;
+				} else {
+					// read page 0x30 (should error if it is a ntag203)
+					status = ul_read(30, data, sizeof(data));
+					if ( status <= 1 ){
+						tagtype = NTAG_203;
+					} else {
+						tagtype = UNKNOWN;
+					}
+				}
+				ul_switch_off_field();
+			}
 		}
 	} else {
 		// Infinition MY-D tests   Exam high nibble 
 		uint8_t nib = (card.uid[1] & 0xf0) >> 4;
 		switch ( nib ){
 			case 1:	tagtype =  MY_D; break;
-			case 2:	tagtype = (MY_D | MY_D_NFC); break;
-			case 3:	tagtype = (MY_D_MOVE | MY_D_MOVE_NFC); break;
+			case 2:	tagtype = (MY_D | MY_D_NFC); break; //notice: we can not currently distinguish between these two
+			case 3:	tagtype = (MY_D_MOVE | MY_D_MOVE_NFC); break; //notice: we can not currently distinguish between these two
 		}
 	}
 
 	tagtype = (ul_magic_test() == UL_MAGIC) ? (tagtype | MAGIC) : tagtype;
-	//if ((tagtype & UL)) tagtype = ul_magic_test();
 
 	return tagtype;
 }
@@ -584,6 +624,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	int status;
 	bool errors = false;
 	bool hasAuthKey = false;
+	bool locked = false;
 	uint8_t cmdp = 0;
 	uint8_t datalen = 0;
 	uint8_t authenticationkey[16] = {0x00};
@@ -658,18 +699,21 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		}
 	}
 
-
-	// read pages 0,1,2,4 (should read 4pages)
+	// read pages 0,1,2,3 (should read 4pages)
 	status = ul_read(0, data, sizeof(data));
-	if ( status == -1 ){
+	if ( status == -1 ) {
 		ul_switch_off_field();
 		PrintAndLog("Error: tag didn't answer to READ");
 		return status;
 	}
+	if (status == 16) {
+		ul_print_default(data);
+		ndef_print_CC(data+12);
 
-	ul_print_default(data);
+	}	else locked = true;
 
-	if ((tagtype & UL_C)){
+	// UL_C Specific
+	if ((tagtype & UL_C)) {
 
 		// read pages 0x28, 0x29, 0x2A, 0x2B
 		uint8_t ulc_conf[16] = {0x00};
@@ -679,18 +723,19 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			ul_switch_off_field();
 			return status;
 		} 
-		ulc_print_configuration(ulc_conf);
+		if (status == 16) ulc_print_configuration(ulc_conf);
+		else locked = true;
 
-		if ((tagtype & MAGIC)){
-
+		if ((tagtype & MAGIC)) {
+			//just read key
 			uint8_t ulc_deskey[16] = {0x00};
 			status = ul_read(0x2C, ulc_deskey, sizeof(ulc_deskey));
-			if ( status == -1 ){
+			if ( status == -1 ) {
 				ul_switch_off_field();
 				PrintAndLog("Error: tag didn't answer to READ magic");
 				return status;
 			}
-			ulc_print_3deskey(ulc_deskey);
+			if (status == 16) ulc_print_3deskey(ulc_deskey);
 
 		} else {
 			ul_switch_off_field();
@@ -698,75 +743,81 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			if ( hasAuthKey ) return 1;
 
 			PrintAndLog("Trying some default 3des keys");
-			for (uint8_t i = 0; i < KEYS_3DES_COUNT; ++i ){
+			for (uint8_t i = 0; i < KEYS_3DES_COUNT; ++i ) {
 				key = default_3des_keys[i];
-				if (ulc_authentication(key, true)){
+				if (ulc_authentication(key, true)) {
 					PrintAndLog("Found default 3des key: ");
 					uint8_t keySwap[16];
 					memcpy(keySwap, SwapEndian64(key,16,8), 16);
 					ulc_print_3deskey(keySwap);
-					return 1;
+					break;
 				} 
 			}
-			return 1; //return even if key not found (UL_C is done)
+			// reselect for future tests (ntag test)
+			status = ul_select(&card);
+			if ( status < 1 ){
+				PrintAndLog("iso14443a card select failed");
+				ul_switch_off_field();
+				return status;
+			}
 		}
 	}
 
-	if ((tagtype & (UL_EV1_48 | UL_EV1_128))) {
-		//do counters and signature first (don't neet auth)
-		ulev1_print_counters();
+	// do counters and signature first (don't neet auth) 
 
+	// ul counters are different than ntag counters
+	if ((tagtype & (UL_EV1_48 | UL_EV1_128))) ulev1_print_counters();
+
+	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216	))) {
 		uint8_t ulev1_signature[32] = {0x00};
 		status = ulev1_readSignature( ulev1_signature, sizeof(ulev1_signature));
-		if ( status == -1 ){
+		if ( status == -1 ) {
 			PrintAndLog("Error: tag didn't answer to READ SIGNATURE");
 			ul_switch_off_field();
 			return status;
-		}		
-		ulev1_print_signature( ulev1_signature, sizeof(ulev1_signature));
-
-		uint8_t startconfigblock = (tagtype & UL_EV1_48) ? 0x10 : 0x25;
-		uint8_t ulev1_conf[16] = {0x00};
-		status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
-		if ( status == -1 ){
-			PrintAndLog("Error: tag didn't answer to READ EV1");
-			ul_switch_off_field();
-			return status;
 		}
-		// save AUTHENTICATION LIMITS for later:
-		authlim = (ulev1_conf[4] & 0x07);
-		bool allZeros = true;
-		for (uint8_t idx=0; idx<8; idx++)
-			if (ulev1_conf[idx]) allZeros = false;
-
-		if (allZeros) authlim=7;
-		ulev1_print_configuration(ulev1_conf);
+		if (status == 32) ulev1_print_signature( ulev1_signature, sizeof(ulev1_signature));
 	}
 
-	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216))) {
-
+	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_210 | NTAG_212 | NTAG_213 | NTAG_215 | NTAG_216))) {
 		uint8_t version[10] = {0x00};
 		status  = ulev1_getVersion(version, sizeof(version));
-		if ( status == -1 ){
+		if ( status == -1 ) {
 			PrintAndLog("Error: tag didn't answer to GETVERSION");
 			ul_switch_off_field();
 			return status;
 		}
-		ulev1_print_version(version);
+		if (status == 10) ulev1_print_version(version);
+		else locked = true;
 
-		// if we called info with key, just return 
-		if ( hasAuthKey ) {
+		uint8_t startconfigblock = 0;
+		uint8_t ulev1_conf[16] = {0x00};
+		// config blocks always are last 4 pages
+		for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++)
+			if (tagtype & UL_TYPES_ARRAY[idx])
+				startconfigblock = UL_MEMORY_ARRAY[idx]-3;
+
+		status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
+		if ( status == -1 ) {
+			PrintAndLog("Error: tag didn't answer to READ EV1");
 			ul_switch_off_field();
-			return 1;
+			return status;
+		} else if (status == 16) {
+			// save AUTHENTICATION LIMITS for later:
+			authlim = (ulev1_conf[4] & 0x07);
+			ulev1_print_configuration(ulev1_conf);
+		} else {
+			authlim=7;
 		}
 
 		// AUTHLIMIT, (number of failed authentications)
 		// 0 = limitless.
-		// 1-7 = ...  should we even try then?
-		if ( authlim == 0 ){
+		// 1-7 = limit. No automatic tries then.
+		// hasAuthKey,  if we was called with key, skip test.
+		if ( !authlim && !hasAuthKey ) {
 			PrintAndLog("\n--- Known EV1/NTAG passwords.");
 			len = 0;
-			for (uint8_t i = 0; i < KEYS_PWD_COUNT; ++i ){
+			for (uint8_t i = 0; i < KEYS_PWD_COUNT; ++i ) {
 				key = default_pwd_pack[i];
 				len = ulev1_requestAuthentication(key, pack, sizeof(pack));
 				if (len >= 1) {
@@ -774,29 +825,19 @@ int CmdHF14AMfUInfo(const char *Cmd){
 					break;
 				} else {
 					status = ul_select(&card);
-					if ( status < 1 ){
+					if ( status < 1 ) {
 						PrintAndLog("iso14443a card select failed - ev1 auth");
 						ul_switch_off_field();
 						return status;
 					}
 				}
 			}
+			if (len < 1) PrintAndLog("password not known");
 		}
 	}
 
-	if ((tagtype & (NTAG_213 | NTAG_215 | NTAG_216))){
-
-		uint8_t cc[16] = {0x00};
-		status = ul_read(3, cc, sizeof(cc));
-		if ( status == -1 ){
-			PrintAndLog("Error: tag didn't answer to READ ntag");
-			ul_switch_off_field();
-			return status;
-		}
-		ntag_print_CC(cc);
-	}
-	
 	ul_switch_off_field();
+	if (locked) PrintAndLog("\nTag appears to be locked, try using the key to get more info");
 	PrintAndLog("");
 	return 1;
 }
@@ -1100,7 +1141,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	}
 
 	// add keys to block dump
-	if (hasPwd && (tagtype & UL_C)){ //UL_C
+	if (hasPwd && (tagtype & UL_C)) { //UL_C
 		memcpy(data + Pages*4, key, dataLen/2);
 		Pages += 4;
 	} else if (hasPwd) { //not sure output is in correct location.
