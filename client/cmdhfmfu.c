@@ -152,7 +152,7 @@ static int ul_select( iso14a_card_select_t *card ){
 	UsbCommand resp;
 	bool ans = false;
 	ans = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
-	if (resp.arg[0] < 1 || !ans) {
+	if (!ans || resp.arg[0] < 1) {
 		PrintAndLog("iso14443a card select failed");
 		ul_switch_off_field();
 		return 0;
@@ -408,22 +408,22 @@ static int ulev1_print_configuration( uint8_t *data){
 	bool prot = (data[4] & 0x80);
 	uint8_t vctid = data[5];
 
-	PrintAndLog(" cfg0 [16/0x10]: %s", sprint_hex(data, 4));
+	PrintAndLog("   cfg0 [16/0x10]: %s", sprint_hex(data, 4));
 	if ( data[3] < 0xff )
 		PrintAndLog("                    - page %d and above need authentication",data[3]);
 	else 
 		PrintAndLog("                    - pages don't need authentication");
 	PrintAndLog("                    - strong modulation mode %s", (strg_mod_en) ? "enabled":"disabled");
-	PrintAndLog(" cfg1 [17/0x11]: %s", sprint_hex(data+4, 4) );
+	PrintAndLog("   cfg1 [17/0x11]: %s", sprint_hex(data+4, 4) );
 	if ( authlim == 0)
 		PrintAndLog("                    - Unlimited password attempts");
 	else
 		PrintAndLog("                    - Max number of password attempts is %d", authlim);
 	PrintAndLog("                    - user configuration %s", cfglck ? "permanently locked":"writeable");
 	PrintAndLog("                    - %s access is protected with password", prot ? "read and write":"write");
-	PrintAndLog("               %02X - Virtual Card Type Identifier is %s default", vctid, (vctid==0x05)? "":"not");
-	PrintAndLog(" PWD  [18/0x12]: %s", sprint_hex(data+8, 4));
-	PrintAndLog(" PACK [19/0x13]: %s", sprint_hex(data+12, 4));
+	PrintAndLog("                 %02X - Virtual Card Type Identifier is %s default", vctid, (vctid==0x05)? "":"not");
+	PrintAndLog("   PWD  [18/0x12]: %s", sprint_hex(data+8, 4));
+	PrintAndLog("   PACK [19/0x13]: %s", sprint_hex(data+12, 4));
 	return 0;
 }
 
