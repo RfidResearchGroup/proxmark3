@@ -292,9 +292,9 @@ static int ul_print_default( uint8_t *data){
 	return 0;
 }
 
-static int ntag_print_CC(uint8_t *data) {
+static int ndef_print_CC(uint8_t *data) {
 
-	PrintAndLog("\n--- NTAG NDEF Message");
+	PrintAndLog("\n--- NDEF Message");
 	
 	if(data[0] != 0xe1) {
 		PrintAndLog("no NDEF message");
@@ -760,16 +760,12 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		}
 		ulev1_print_version(version);
 
-		// if we called info with key, just return 
-		if ( hasAuthKey ) {
-			ul_switch_off_field();
-			return 1;
-		}
-		
+	
 		// AUTHLIMIT, (number of failed authentications)
 		// 0 = limitless.
-		// 1-7 = ...  should we even try then?		
-		if ( authlim == 0 ){
+		// 1-7 = limit. No automatic tries then.
+		// hasAuthKey,  if we was called with key, skip test.
+		if ( authlim == 0 && !hasAuthKey ){
 			PrintAndLog("\n--- Known EV1/NTAG passwords.");
 			len = 0;
 			for (uint8_t i = 0; i < KEYS_PWD_COUNT; ++i ){
@@ -790,17 +786,16 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		}
 	}
 	
-	if ((tagtype & (NTAG_213 | NTAG_215 | NTAG_216))){
-
-		uint8_t cc[16] = {0x00};
-		status = ul_read(3, cc, sizeof(cc));
-		if ( status == -1 ){
-			PrintAndLog("Error: tag didn't answer to READ ntag");
-			ul_switch_off_field();
-			return status;
-		}
-		ntag_print_CC(cc);	
+	// NDEF Message
+	uint8_t cc[16] = {0x00};
+	status = ul_read(3, cc, sizeof(cc));
+	if ( status == -1 ){
+		PrintAndLog("Error: tag didn't answer to READ NDEF");
+		ul_switch_off_field();
+		return status;
 	}
+	ndef_print_CC(cc);
+
 	
 	ul_switch_off_field();
 	PrintAndLog("");
