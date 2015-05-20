@@ -449,12 +449,20 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 	LEDsoff();
 }
 
-void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
+// Arg0   : Block to write to.
+// Arg1   : 0 = use no authentication.
+//          1 = use 0x1A authentication.
+//          2 = use 0x1B authentication.
+// datain : 4 first bytes is data to be written.
+//        : 4/16 next bytes is authentication key.
+void MifareUWriteBlock_Special(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 {
 	uint8_t blockNo = arg0;
+	bool useKey = (arg1 == 1); //UL_C
+	bool usePwd = (arg1 == 2); //UL_EV1/NTAG
 	byte_t blockdata[4] = {0x00};
 	
-	memcpy(blockdata, datain,4);
+	memcpy(blockdata, datain, 4);
 	
 	LEDsoff();
 	LED_A_ON();
@@ -467,6 +475,28 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 		return;
 	};
 
+	// UL-C authentication
+	if ( useKey ) {
+		uint8_t key[16] = {0x00};	
+		memcpy(key, datain+4, sizeof(key) );
+
+		if ( !mifare_ultra_auth(key) ) {
+			OnError(1);
+			return;			
+		}
+	}
+	
+	// UL-EV1 / NTAG authentication
+	if (usePwd) { 
+		uint8_t pwd[4] = {0x00};
+		memcpy(pwd, datain+4, 4);
+		uint8_t pack[4] = {0,0,0,0};
+		if (!mifare_ul_ev1_auth(pwd, pack)) {
+			OnError(1);
+			return;			
+		}
+	}
+	
 	if(mifare_ultra_special_writeblock(blockNo, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(0);
