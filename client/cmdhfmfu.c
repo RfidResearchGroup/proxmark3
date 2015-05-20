@@ -18,7 +18,7 @@
 
 #define MAX_UL_BLOCKS		0x0f
 #define MAX_ULC_BLOCKS		0x2b
-#define MAX_ULEV1a_BLOCKS 0x13
+#define MAX_ULEV1a_BLOCKS	0x13
 #define MAX_ULEV1b_BLOCKS	0x28
 #define MAX_NTAG_203		0x29
 #define MAX_NTAG_210		0x13
@@ -620,12 +620,13 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	int status;	
 	bool errors = false;
 	bool hasAuthKey = false;
+	bool hasPwdKey = false;
 	bool locked = false;
 	uint8_t cmdp = 0;
 	uint8_t datalen = 0;
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t pack[4] = {0,0,0,0};
-	int len=0;
+	int len = 0;
 				
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
@@ -641,7 +642,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			if ( !datalen ) {
 				memcpy(authenticationkey, data, 4);
 				cmdp += 2;
-				hasAuthKey = true;
+				hasPwdKey = true;
 				break;
 			}
 			// UL-C size key	
@@ -672,23 +673,23 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	PrintAndLog("-------------------------------------------------------------");
 	ul_print_type(tagtype, 6);
 	
+	if (!ul_select(&card)) return 0;
+	
 	if ( hasAuthKey && (tagtype & UL_C)) {
 		//will select card automatically and close connection on error
 		if (!ulc_authentication(authenticationkey, false)) {
-				PrintAndLog("Error: Authentication Failed UL-C");
-				return 0;
-			}
-		} else {
-		if ( !ul_select(&card) ) return 0;
-
-		if (hasAuthKey) {
-			len = ulev1_requestAuthentication(authenticationkey, pack, sizeof(pack));
-			if (len < 1) {
-				ul_switch_off_field();
-				PrintAndLog("Error: Authentication Failed UL-EV1/NTAG");
-				return 0;
-			}
+			PrintAndLog("Error: Authentication Failed UL-C");
+			return 0;
 		}
+	}
+	
+	if ( hasPwdKey ) {
+		len = ulev1_requestAuthentication(authenticationkey, pack, sizeof(pack));
+		if (len < 1) {
+			ul_switch_off_field();
+			PrintAndLog("Error: Authentication Failed UL-EV1/NTAG");
+			return 0;
+		} 
 	}
 
 	// read pages 0,1,2,3 (should read 4pages)
@@ -698,6 +699,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		PrintAndLog("Error: tag didn't answer to READ");
 		return status;
 	}
+	
 	if (status == 16) {
 		ul_print_default(data);
 		ndef_print_CC(data+12);
