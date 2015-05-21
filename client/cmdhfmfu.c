@@ -600,7 +600,7 @@ uint32_t GetHF14AMfU_Type(void){
 					tagtype = UL;
 				} else {
 					// read page 0x30 (should error if it is a ntag203)
-					status = ul_read(30, data, sizeof(data));
+					status = ul_read(0x30, data, sizeof(data));
 					if ( status <= 1 ){
 						tagtype = NTAG_203;
 					} else {
@@ -679,7 +679,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 
 	//Validations
 	if(errors) return usage_hf_mfu_info();
-	
+
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
 
@@ -698,7 +698,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	} else if (status == 16) {
 		ul_print_default(data);
 		ndef_print_CC(data+12);
-	}	else {
+	} else {
 		locked = true;
 	}
 
@@ -740,11 +740,10 @@ int CmdHF14AMfUInfo(const char *Cmd){
 					uint8_t keySwap[16];
 					memcpy(keySwap, SwapEndian64(key,16,8), 16);
 					ulc_print_3deskey(keySwap);
-					break;
+					return 1;
 				} 
 			}
-			// reselect for future tests (ntag test)
-			if (!ul_auth_select( &card, tagtype, hasAuthKey, authenticationkey, pack, sizeof(pack))) return -1;
+			return 1;
 		}
 	}
 
@@ -950,8 +949,8 @@ int usage_hf_mfu_info(void)
 	PrintAndLog("It gathers information about the tag and tries to detect what kind it is.");
 	PrintAndLog("Sometimes the tags are locked down, and you may need a key to be able to read the information");
 	PrintAndLog("The following tags can be identified:\n");
-	PrintAndLog("Ultralight, Ultralight-C, Ultralight EV1");
-	PrintAndLog("NTAG 213, NTAG 215, NTAG 216");
+	PrintAndLog("Ultralight, Ultralight-C, Ultralight EV1, NTAG 203, NTAG 210,");
+	PrintAndLog("NTAG 212, NTAG 213, NTAG 215, NTAG 216, NTAG I2C 1K & 2K");
 	PrintAndLog("my-d, my-d NFC, my-d move, my-d move NFC\n");
 	PrintAndLog("Usage:  hf mfu info k <key>");
 	PrintAndLog("  Options : ");
@@ -965,6 +964,7 @@ int usage_hf_mfu_info(void)
 int usage_hf_mfu_dump(void)
 {
 	PrintAndLog("Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
+	PrintAndLog("NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216");
 	PrintAndLog("and saves binary dump into the file `filename.bin` or `cardUID.bin`");
 	PrintAndLog("It autodetects card type.\n");	
 	PrintAndLog("Usage:  hf mfu dump l k <key> n <filename w/o .bin>");
