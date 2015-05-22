@@ -71,8 +71,8 @@ local Utils =
 		return outResults
 	end,
 	
-	------------ CRC-16 ccitt checksums
 	
+	------------ CRC-16 ccitt checksums
 	-- Takes a hex string and calculates a crc16
 	Crc16 = function(s)
 		if s == nil then return nil end
@@ -85,7 +85,22 @@ local Utils =
 		end
 		return nil
 	end,
-
+	
+	------------ CRC-64 ecma checksums
+	-- Takes a hex string and calculates a crc64 ecma
+	Crc64 = function(s)
+		if s == nil then return nil end
+		if #s == 0 then return nil end
+		if  type(s) == 'string' then
+			local utils = require('utils')
+			local asc = utils.ConvertHexToAscii(s)
+			local hash = core.crc64(asc)
+			return hash
+		end
+		return nil
+	end,
+	
+	
 	-- input parameter is a string
 	-- Swaps the endianess and returns a number,  
 	-- IE:  'cd7a' -> '7acd'  -> 0x7acd
@@ -135,7 +150,7 @@ local Utils =
 		while IN>0 do
 			I=I+1
 			IN , D = math.floor(IN/B), math.modf(IN,B)+1
-			OUT=string.sub(K,D,D)..OUT
+			OUT = string.sub(K,D,D)..OUT
 		end
 		return OUT
 	end,
@@ -147,7 +162,7 @@ local Utils =
 		end
 		local s={}
 		for i = 1, #(bytes) do
-			s[i] =   string.format("%02X",bytes[i]) 
+			s[i] = string.format("%02X",bytes[i]) 
 		end
 		return table.concat(s)
 	end,	
@@ -171,16 +186,28 @@ local Utils =
 		end
 		return t
 	end,
-	ConvertAsciiToBytes = function(s)
-		local t={}
+	ConvertAsciiToBytes = function(s, reverse)
+		local t = {}
 		if s == nil then return t end
 		if #s == 0 then return t end
 		
 		for k in s:gmatch"(.)" do
 			table.insert(t, string.byte(k))
 		end
-		return t
+		
+		if not reverse then
+			return t
+		end
+	
+		local rev = {}
+		if reverse then
+			for i = #t, 1,-1 do
+				table.insert(rev, t[i] )
+			end
+		end
+		return rev
 	end,
+	
 	ConvertHexToAscii = function(s)
 		local t={}
 		if s == nil then return t end
@@ -189,6 +216,30 @@ local Utils =
 			table.insert(t, string.char(tonumber(k,16)))
 		end
 		return  table.concat(t)	
+	end,
+	
+	Chars2num = function(s)
+        return (s:byte(1)*16777216)+(s:byte(2)*65536)+(s:byte(3)*256)+(s:byte(4))
+	end,
+	
+	-- use length of string to determine 8,16,32,64 bits
+	bytes_to_int = function(str,endian,signed) 
+		local t={str:byte(1,-1)}
+		if endian=="big" then --reverse bytes
+			local tt={}
+			for k=1,#t do
+				tt[#t-k+1]=t[k]
+			end
+			t=tt
+		end
+		local n=0
+		for k=1,#t do
+			n=n+t[k]*2^((k-1)*8)
+		end
+		if signed then
+			n = (n > 2^(#t*8-1) -1) and (n - 2^(#t*8)) or n -- if last bit set, negative.
+		end
+		return n
 	end,
 	
 	-- function convertStringToBytes(str)

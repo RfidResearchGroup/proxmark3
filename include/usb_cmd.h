@@ -132,8 +132,8 @@ typedef struct{
 #define CMD_SNOOP_ICLASS                                                  0x0392
 #define CMD_SIMULATE_TAG_ICLASS                                           0x0393
 #define CMD_READER_ICLASS                                                 0x0394
-#define CMD_READER_ICLASS_REPLAY					  					  0x0395
-#define CMD_ICLASS_ISO14443A_WRITE										  0x0397
+#define CMD_READER_ICLASS_REPLAY                                          0x0395
+#define CMD_ICLASS_ISO14443A_WRITE                                        0x0397
 #define CMD_ICLASS_EML_MEMSET                                             0x0398
 
 // For measurements of the antenna tuning
@@ -163,20 +163,21 @@ typedef struct{
 #define CMD_MIFARE_NESTED                                                 0x0612
 
 #define CMD_MIFARE_READBL                                                 0x0620
-#define CMD_MIFAREU_READBL						  0x0720
+#define CMD_MIFAREU_READBL                                                0x0720
 #define CMD_MIFARE_READSC                                                 0x0621
-#define CMD_MIFAREU_READCARD						  0x0721
+#define CMD_MIFAREU_READCARD                                              0x0721
 #define CMD_MIFARE_WRITEBL                                                0x0622
-#define CMD_MIFAREU_WRITEBL						                          0x0722
-#define CMD_MIFAREU_WRITEBL_COMPAT					                      0x0723
+#define CMD_MIFAREU_WRITEBL                                               0x0722
+#define CMD_MIFAREU_WRITEBL_COMPAT                                        0x0723
 
 #define CMD_MIFARE_CHKKEYS                                                0x0623
 
 #define CMD_MIFARE_SNIFFER                                                0x0630
 //ultralightC
-#define CMD_MIFAREUC_AUTH1						                          0x0724
-#define CMD_MIFAREUC_AUTH2						                          0x0725
-#define CMD_MIFAREUC_READCARD						                      0x0726
+#define CMD_MIFAREUC_AUTH                                                 0x0724
+//0x0725 and 0x0726 no longer used 
+#define CMD_MIFAREUC_SETPWD                                               0x0727
+
 
 // mifare desfire
 #define CMD_MIFARE_DESFIRE_READBL                                         0x0728
@@ -199,10 +200,11 @@ typedef struct{
 
 //Iclass reader flags
 #define FLAG_ICLASS_READER_ONLY_ONCE    0x01
-#define FLAG_ICLASS_READER_CC       0x02
-#define FLAG_ICLASS_READER_CSN		0x04
-#define FLAG_ICLASS_READER_CONF		0x08
-#define FLAG_ICLASS_READER_AA		0x10
+#define FLAG_ICLASS_READER_CC           0x02
+#define FLAG_ICLASS_READER_CSN          0x04
+#define FLAG_ICLASS_READER_CONF         0x08
+#define FLAG_ICLASS_READER_AA           0x10
+#define FLAG_ICLASS_READER_ONE_TRY      0x20
 
 
 

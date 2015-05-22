@@ -18,6 +18,7 @@
 #include "iso14443a.h"
 #include "crapto1.h"
 #include "mifareutil.h"
+#include "des.h"
 
 int MF_DBGLEVEL = MF_DBG_ALL;
 
@@ -96,6 +97,27 @@ int mifare_sendcmd_short_mfucauth(struct Crypto1State *pcs, uint8_t crypted, uin
     dcmd[0] = cmd;
     memcpy(dcmd+1,data,16);
 	AppendCrc14443a(dcmd, 17);
+	
+	ReaderTransmit(dcmd, sizeof(dcmd), timing);
+	len = ReaderReceive(answer, answer_parity);
+	if(!len) {
+        if (MF_DBGLEVEL >= MF_DBG_ERROR)   Dbprintf("Authentication failed. Card timeout.");
+        len = ReaderReceive(answer,answer_parity);
+    }
+    if(len==1)	{
+		if (MF_DBGLEVEL >= MF_DBG_ERROR)   Dbprintf("NAK - Authentication failed.");
+		return 1;
+        }
+	return len;
+}
+
+int mifare_sendcmd_short_mfuev1auth(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing)
+{
+    uint8_t dcmd[7];
+	int len; 
+    dcmd[0] = cmd;
+    memcpy(dcmd+1,data,4);
+	AppendCrc14443a(dcmd, 5);
 	
 	ReaderTransmit(dcmd, sizeof(dcmd), timing);
 	len = ReaderReceive(answer, answer_parity);
@@ -288,89 +310,141 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 }
 
 // mifare ultralight commands
-int mifare_ultra_auth1(uint32_t uid, uint8_t *blockData){
+int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack){
 
 	uint16_t len;
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
-	
-	len = mifare_sendcmd_short(NULL, 1, 0x1A, 0x00, receivedAnswer,receivedAnswerPar ,NULL);
-	if (len == 1) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)
-			Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
-		return 1;
-	}
-	if (len != 11)
-		return 1;
+	uint8_t resp[4];
+	uint8_t respPar[1];
+	uint8_t key[4] = {0x00};
+	memcpy(key, keybytes, 4);
 
-	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
-		Dbprintf("Auth1 Resp: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-			receivedAnswer[0],receivedAnswer[1],receivedAnswer[2],receivedAnswer[3],receivedAnswer[4],
-			receivedAnswer[5],receivedAnswer[6],receivedAnswer[7],receivedAnswer[8],receivedAnswer[9],
-			receivedAnswer[10]);
-		}
-	memcpy(blockData, receivedAnswer, 11);
-	return 0;
+	Dbprintf("EV1 Auth : %02x%02x%02x%02x",	key[0], key[1], key[2], key[3]);
+	len = mifare_sendcmd_short_mfuev1auth(NULL, 0, 0x1B, key, resp, respPar, NULL);
+	if (len != 4) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: %02x %u", resp[0], len);
+		return 0;
+	}
+
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED)
+		Dbprintf("Auth Resp: %02x%02x%02x%02x", resp[0],resp[1],resp[2],resp[3]);
+
+	memcpy(pack, resp, 4);
+	return 1;
 }
 
-int mifare_ultra_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData){
+int mifare_ultra_auth(uint8_t *keybytes){
+
+	/// 3des2k
+
+	uint8_t random_a[8] = {1,1,1,1,1,1,1,1};
+	uint8_t random_b[8] = {0x00};
+	uint8_t enc_random_b[8] = {0x00};
+	uint8_t rnd_ab[16] = {0x00};
+	uint8_t IV[8] = {0x00};
+	uint8_t key[16] = {0x00};
+	memcpy(key, keybytes, 16);
 
 	uint16_t len;
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
-	
-	len = mifare_sendcmd_short_mfucauth(NULL, 1, 0xAF, key, receivedAnswer, receivedAnswerPar, NULL);
-	if (len == 1) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)
-			Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
-		return 1;
+	uint8_t resp[19] = {0x00};
+	uint8_t respPar[3] = {0,0,0};
+
+	// REQUEST AUTHENTICATION
+	len = mifare_sendcmd_short(NULL, 1, 0x1A, 0x00, resp, respPar ,NULL);
+	if (len != 11) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
+		return 0;
 	}
-	if (len != 11)
-		return 1;	
-	
+
+	// tag nonce.
+	memcpy(enc_random_b,resp+1,8);
+
+	// decrypt nonce.
+	tdes_2key_dec(random_b, enc_random_b, sizeof(random_b), key, IV );
+	rol(random_b,8);
+	memcpy(rnd_ab  ,random_a,8);
+	memcpy(rnd_ab+8,random_b,8);
+
 	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
-		Dbprintf("Auth2 Resp: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-			receivedAnswer[0],receivedAnswer[1],receivedAnswer[2],receivedAnswer[3],receivedAnswer[4],
-			receivedAnswer[5],receivedAnswer[6],receivedAnswer[7],receivedAnswer[8],receivedAnswer[9],
-			receivedAnswer[10]);
+		Dbprintf("enc_B: %02x %02x %02x %02x %02x %02x %02x %02x",
+			enc_random_b[0],enc_random_b[1],enc_random_b[2],enc_random_b[3],enc_random_b[4],enc_random_b[5],enc_random_b[6],enc_random_b[7]);
+
+		Dbprintf("    B: %02x %02x %02x %02x %02x %02x %02x %02x",
+			random_b[0],random_b[1],random_b[2],random_b[3],random_b[4],random_b[5],random_b[6],random_b[7]);
+
+		Dbprintf("rnd_ab: %02x %02x %02x %02x %02x %02x %02x %02x",
+				rnd_ab[0],rnd_ab[1],rnd_ab[2],rnd_ab[3],rnd_ab[4],rnd_ab[5],rnd_ab[6],rnd_ab[7]);
+
+		Dbprintf("rnd_ab: %02x %02x %02x %02x %02x %02x %02x %02x",
+				rnd_ab[8],rnd_ab[9],rnd_ab[10],rnd_ab[11],rnd_ab[12],rnd_ab[13],rnd_ab[14],rnd_ab[15] );
 	}
-	memcpy(blockData, receivedAnswer, 11);
-	return 0;
+
+	// encrypt    out, in, length, key, iv
+	tdes_2key_enc(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b);
+
+	len = mifare_sendcmd_short_mfucauth(NULL, 1, 0xAF, rnd_ab, resp, respPar, NULL);
+	if (len != 11) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
+		return 0;
+	}
+
+	uint8_t enc_resp[8] = { 0,0,0,0,0,0,0,0 };
+	uint8_t resp_random_a[8] = { 0,0,0,0,0,0,0,0 };
+	memcpy(enc_resp, resp+1, 8);
+
+	// decrypt    out, in, length, key, iv 
+	tdes_2key_dec(resp_random_a, enc_resp, 8, key, enc_random_b);
+	if ( memcmp(resp_random_a, random_a, 8) != 0 ) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("failed authentication");
+		return 0;
+	}
+
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+		Dbprintf("e_AB: %02x %02x %02x %02x %02x %02x %02x %02x", 
+				rnd_ab[0],rnd_ab[1],rnd_ab[2],rnd_ab[3],
+				rnd_ab[4],rnd_ab[5],rnd_ab[6],rnd_ab[7]);
+
+		Dbprintf("e_AB: %02x %02x %02x %02x %02x %02x %02x %02x",
+				rnd_ab[8],rnd_ab[9],rnd_ab[10],rnd_ab[11],
+				rnd_ab[12],rnd_ab[13],rnd_ab[14],rnd_ab[15]);
+
+		Dbprintf("a: %02x %02x %02x %02x %02x %02x %02x %02x",
+				random_a[0],random_a[1],random_a[2],random_a[3],
+				random_a[4],random_a[5],random_a[6],random_a[7]);
+
+		Dbprintf("b: %02x %02x %02x %02x %02x %02x %02x %02x",
+				resp_random_a[0],resp_random_a[1],resp_random_a[2],resp_random_a[3],
+				resp_random_a[4],resp_random_a[5],resp_random_a[6],resp_random_a[7]);
+	}
+	return 1;
 }
 
-int mifare_ultra_readblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
+int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData)
 {
 	uint16_t len;
 	uint8_t	bt[2];
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
+	uint8_t receivedAnswer[MAX_FRAME_SIZE];
+	uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
 	
-	
-	// command MIFARE_CLASSIC_READBLOCK
 	len = mifare_sendcmd_short(NULL, 1, 0x30, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 	if (len == 1) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)
-			Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
 		return 1;
 	}
 	if (len != 18) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)
-			Dbprintf("Cmd Error: card timeout. len: %x", len);
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: card timeout. len: %x", len);
 		return 2;
 	}
     
 	memcpy(bt, receivedAnswer + 16, 2);
 	AppendCrc14443a(receivedAnswer, 16);
 	if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)
-			Dbprintf("Cmd CRC response error.");
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd CRC response error.");
 		return 3;
 	}
 	
 	memcpy(blockData, receivedAnswer, 14);
 	return 0;
 }
-
 
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData) 
 {
@@ -419,58 +493,58 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 	return 0;
 }
 
-int mifare_ultra_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData) 
+int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) 
 {
-    uint16_t len;     
-    uint8_t par[3] = {0};  // enough for 18 parity bits
+	uint16_t len;
+	uint8_t par[3] = {0};  // enough for 18 parity bits
 	uint8_t d_block[18] = {0x00};
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
-        
-    // command MIFARE_CLASSIC_WRITEBLOCK
-    len = mifare_sendcmd_short(NULL, true, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL);
+	uint8_t receivedAnswer[MAX_FRAME_SIZE];
+	uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
 
-    if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
+	// command MIFARE_CLASSIC_WRITEBLOCK
+	len = mifare_sendcmd_short(NULL, true, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL);
+
+	if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)
-			Dbprintf("Cmd Addr Error: %02x", receivedAnswer[0]);  
-        return 1;
-    }
+			Dbprintf("Cmd Addr Error: %02x", receivedAnswer[0]);
+		return 1;
+	}
 
 	memcpy(d_block, blockData, 16);
-    AppendCrc14443a(d_block, 16);
+	AppendCrc14443a(d_block, 16);
 
 	ReaderTransmitPar(d_block, sizeof(d_block), par, NULL);
 
-    len = ReaderReceive(receivedAnswer, receivedAnswerPar);    
+	len = ReaderReceive(receivedAnswer, receivedAnswerPar);
 
 	if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)
 			Dbprintf("Cmd Data Error: %02x %d", receivedAnswer[0],len);
-        return 2;
-    }        
-    return 0;
-} 
+		return 2;
+	}
+	return 0;
+}
 
-int mifare_ultra_special_writeblock(uint32_t uid, uint8_t blockNo, uint8_t *blockData)
+int mifare_ultra_special_writeblock(uint8_t blockNo, uint8_t *blockData)
 {
-    uint16_t len;
+	uint16_t len;
 	uint8_t d_block[8] = {0x00};
 	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
 	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
 
-    // command MIFARE_CLASSIC_WRITEBLOCK
+	// command MIFARE_CLASSIC_WRITEBLOCK
 	d_block[0]= blockNo;
 	memcpy(d_block+1,blockData,4);
 	AppendCrc14443a(d_block, 6);
 
-    len = mifare_sendcmd_short_special(NULL, 1, 0xA2, d_block, receivedAnswer, receivedAnswerPar, NULL);
+	len = mifare_sendcmd_short_special(NULL, 1, 0xA2, d_block, receivedAnswer, receivedAnswerPar, NULL);
 
-    if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
+	if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)
 			Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0],len);
-        return 1;
-    }
-    return 0;
+		return 1;
+	}
+	return 0;
 }
 
 int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid) 
@@ -489,7 +563,7 @@ int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid)
 	return 0;
 }
 
-int mifare_ultra_halt(uint32_t uid)
+int mifare_ultra_halt()
 {
 	uint16_t len;
 	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
@@ -654,8 +728,8 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData){
 	int len;
 	// load key, keynumber
 	uint8_t data[2]={0x0a, 0x00};
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
+	uint8_t receivedAnswer[MAX_FRAME_SIZE];
+	uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
 	
 	len = mifare_sendcmd_special(NULL, 1, 0x02, data, receivedAnswer,receivedAnswerPar,NULL);
 	if (len == 1) {

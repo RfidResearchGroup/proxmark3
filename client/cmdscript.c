@@ -83,7 +83,7 @@ int CmdList(const char *Cmd)
     {
         while ((ep = readdir (dp)) != NULL)
         {
-            if(ep->d_name != NULL && str_ends_with(ep->d_name, ".lua"))
+            if(str_ends_with(ep->d_name, ".lua"))
                 PrintAndLog("%-16s %s", ep->d_name, "A script file");
         }
         (void) closedir (dp);

@@ -738,7 +738,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			ReaderHitag((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes);
 			break;
 #endif
-            
+
 #ifdef WITH_ISO15693
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693:
 			AcquireRawAdcSamplesIso15693();
@@ -818,25 +818,22 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 			
 		case CMD_READER_MIFARE:
-            ReaderMifare(c->arg[0]);
+			ReaderMifare(c->arg[0]);
 			break;
 		case CMD_MIFARE_READBL:
 			MifareReadBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
 		case CMD_MIFAREU_READBL:
-			MifareUReadBlock(c->arg[0],c->d.asBytes);
+			MifareUReadBlock(c->arg[0],c->arg[1], c->d.asBytes);
 			break;
-		case CMD_MIFAREUC_AUTH1:
-			MifareUC_Auth1(c->arg[0],c->d.asBytes);
-			break;
-		case CMD_MIFAREUC_AUTH2:
-			MifareUC_Auth2(c->arg[0],c->d.asBytes);
+		case CMD_MIFAREUC_AUTH:
+			MifareUC_Auth(c->arg[0],c->d.asBytes);
 			break;
 		case CMD_MIFAREU_READCARD:
-			MifareUReadCard(c->arg[0], c->arg[1], c->d.asBytes);
+			MifareUReadCard(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
-		case CMD_MIFAREUC_READCARD:
-			MifareUReadCard(c->arg[0], c->arg[1], c->d.asBytes);
+		case CMD_MIFAREUC_SETPWD: 
+			MifareUSetPwd(c->arg[0], c->d.asBytes);
 			break;
 		case CMD_MIFARE_READSC:
 			MifareReadSector(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
@@ -846,10 +843,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		case CMD_MIFAREU_WRITEBL_COMPAT:
 			MifareUWriteBlock(c->arg[0], c->d.asBytes);
-                        break;
+			break;
 		case CMD_MIFAREU_WRITEBL:
-                        MifareUWriteBlock_Special(c->arg[0], c->d.asBytes);
-                        break;
+			MifareUWriteBlock_Special(c->arg[0], c->d.asBytes);
+			break;
 		case CMD_MIFARE_NESTED:
 			MifareNested(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;

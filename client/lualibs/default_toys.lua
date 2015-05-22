@@ -24,6 +24,7 @@ local _names = {
 {"13", "0d00", "0030", "water", "regular", "Wham Shell"},
 {"14", "0e00", "0030", "water", "regular", "Gill Grunt"},
 --{"14", "0e00", "0030", "water", "regular", "Elite Gill Grunt"},
+--{"14", "0e00", "0030", "water", "regular", "Tidal Wave Gill Grunt"},
 {"15", "0f00", "0030", "water", "regular", "Slam Bam"},
 --{"15", "0f00", "0030", "water", "regular", "Surfer Slam Bam"},
 {"16", "1000", "0030", "magic", "regular", "Spyro"},
@@ -43,7 +44,8 @@ local _names = {
 {"25", "1900", "0030", "life", "regular", "Zook"},
 {"26", "1a00", "0030", "life", "regular", "Stealth Elf"},
 --{"26", "1a00", "0030", "life", "regular", "Elite Stealth Elf"},
---{"26", "1a00", "0030", "life", "regular", "Dark Stealth Elf"},
+--{"26", "1a00", "0528", "life", "regular", "Dark Stealth Elf"},
+{"26", "1a00", "0528", "life", "swapforce", "Ninja Stealth Elf"},
 {"27", "1b00", "0030", "life", "regular", "Stump Smash"},
 {"27", "1b00", "0118", "life", "regular", "Stump Smash"},
 --{"27", "1b00", "0030", "life", "regular", "Autumn Stump Smash"},
@@ -59,6 +61,7 @@ local _names = {
 --{"32", "2000", "0030", "undead", "regular", "Skeletal Cynder"},
 
 {"100", "6400", "0030", "air", "giant", "Jet Vac"},
+--{"100", "6400", "0030", "air", "giant", "Full blast Jet Vac"},
 {"101", "6500", "0030", "air", "giant", "Swarm"},
 {"102", "6600", "0030", "earth", "giant", "Crusher"},
 {"103", "6700", "0030", "earth", "giant", "Flashwing"},
@@ -73,12 +76,14 @@ local _names = {
 --{"108", "6c00", "0030", "magic", "giant", "Hoppity Pop Fizz"},
 {"108", "6c00", "023c", "magic", "giant", "Love Potion Pop Fizz"},
 --{"108", "6c00", "0030", "magic", "giant", "Punch Pop Fizz"},
+--{"108", "6c00", "0030", "magic", "giant", "Fizzy Frenzy Pop Fizz"},
 {"109", "6d00", "0030", "magic", "giant", "Nin Jini"},
 {"110", "6e00", "0030", "tech", "giant", "Bouncer"},
 {"111", "6f00", "0030", "tech", "giant", "Sprocket"},
 {"112", "7000", "0030", "life", "giant", "Tree Rex"},
 --{"112", "7000", "0030", "life", "giant", "Gnarly Tree Rex"},
-{"113", "7100", "0030", "life", "giant", "Shroomboom"}, --lightcore
+{"113", "7100", "0030", "life", "giant", "Shroomboom"},
+--{"113", "7100", "0030", "life", "giant", "Sure shot Shroomboom"},
 {"114", "7200", "0030", "undead", "giant", "Eye Broawl"},
 {"115", "7300", "0030", "undead", "giant", "Fright Rider"},
 
@@ -268,27 +273,35 @@ local _names = {
 {"485", "e501", "0030", "dark", "regular", "Blackout"},
 --{"485", "e501", "0234", "dark", "regular", "Special Blackout"},
 
+-- MINI's
 {"502", "f601", "0030", "earth", "mini", "Bop"},
-{"503", "f701", "0030", "magic", "mini", "Spry"},
-{"504", "f801", "0030", "undead", "mini", "Hijinx"},
 {"505", "f901", "0030", "earth", "mini", "Terrabite"},
+
 {"506", "fa01", "0030", "air", "mini", "Breeze"},
-{"507", "fb01", "0030", "fire", "mini", "Weeruptor"},
---{"507", "fb01", "0030", "fire", "mini", "Eggsellent Weeruptor"},
 {"508", "fc01", "0030", "air", "mini", "Pet Vac"},
 --{"508", "fc01", "0030", "air", "mini", "Power Punch Pet Vac"},
+
+{"507", "fb01", "0030", "fire", "mini", "Weeruptor"},
+--{"507", "fb01", "0030", "fire", "mini", "Eggsellent Weeruptor"},
 {"509", "fd01", "0030", "fire", "mini", "Small Fry"},
+
 {"510", "fe01", "0030", "tech", "mini", "Drobit"},
-{"514", "0202", "0030", "water", "mini", "Gill Runt"},
 {"519", "0702", "0030", "tech", "mini", "Trigger Snappy"},
+
 {"526", "0e02", "0030", "life", "mini", "Whisper Elf"},
 {"540", "1c02", "0030", "life", "mini", "Barkley"},
 --{"540", "1c02", "0030", "life", "mini", "Gnarly Barkley"},
+
 {"541", "1d02", "0030", "water", "mini", "Thumpling"},
+{"514", "0202", "0030", "water", "mini", "Gill Runt"},
+
 {"542", "1e02", "0030", "magic", "mini", "mini Jini"},
+{"503", "f701", "0030", "magic", "mini", "Spry"},
+
+{"504", "f801", "0030", "undead", "mini", "Hijinx"},
 {"543", "1f02", "0030", "undead", "mini", "Eye Small"},
 
-{"3000", "b80b", "0030", "air", "SWAPFORCE", "Scratch"},
+{"3000", "b80b", "0030", "air", "mini", "Scratch", "SWAPFORCE"},
 {"3001", "b90b", "0030", "air", "SWAPFORCE", "Pop Thorn"},
 --{"3001", "b90b", "0030", "air", "SWAPFORCE", "Buttered Pop Thorn"},
 {"3002", "ba0b", "0030", "earth", "SWAPFORCE", "Slobber Tooth"},
@@ -315,6 +328,29 @@ local _names = {
 {"3013", "c50b", "0030", "undead", "SWAPFORCE", "Grim Creeper"},
 {"3014", "c60b", "0030", "water", "SWAPFORCE", "Rip Tide"},
 {"3015", "c70b", "0030", "water", "SWAPFORCE", "Punk Shock"},
+
+--{"", "", "0030", "water", "SWAPFORCE", "Hoot Loop"},
+--{"", "", "0030", "water", "SWAPFORCE", "Trap Shadow"},
+--{"", "", "0030", "water", "SWAPFORCE", "Wash Buckler"},
+--{"", "", "0030", "water", "SWAPFORCE", "Freeze Blade"},
+--{"", "", "0030", "fire", "SWAPFORCE", "Magna Charge"},
+--{"", "", "0030", "fire", "SWAPFORCE", "Spy Rise"},
+
+--{"", "", "0030", "fire", "SWAPFORCE", "Doom Stone"},
+--{"", "", "0030", "fire", "SWAPFORCE", "Rubble Rouser"},
+
+--{"", "", "0030", "fire", "SWAPFORCE", "Blast Zone"}
+--{"", "", "0030", "fire", "SWAPFORCE", "Fire Kraken"},
+
+--{"", "", "0030", "fire", "SWAPFORCE", "Rattle Shake"},
+--{"", "", "0030", "fire", "SWAPFORCE", "Night Shift"},
+
+--{"", "", "0030", "life", "SWAPFORCE", "Stink Bomb"},
+--{"", "", "0030", "life", "SWAPFORCE", "Grilla Drilla"},
+
+--{"", "", "0030", "air", "SWAPFORCE", "Free Ranger"},
+--{"", "", "0030", "air", "SWAPFORCE", "Boom Jet"},
+
 }
 
 local function find( main, sub)
@@ -327,7 +363,15 @@ local function find( main, sub)
 	end
 	return nil
 end
+local function list()
+	print ("Type\tSub\tElement\tGame            Name")
+	print (string.rep('=', 54))
+    for k, v in pairs(_names) do
+		print(("%s\t%s\t%s\t%-9s\t%s"):format(v[2],v[3],v[4], v[5], v[6] ))
+	end 
+end
 
 return {
 	Find = find,
+	List = list,
 }

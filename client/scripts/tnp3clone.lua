@@ -13,6 +13,7 @@ local band = bit32.band
 example =[[
 	script run tnp3clone
 	script run tnp3clone -h
+	script run tnp3clone -l
 	script run tnp3clone -t aa00 -s 0030
 
 ]]
@@ -23,7 +24,8 @@ This script will try making a barebone clone of a tnp3 tag on to a magic generat
 
 Arguments:
 	-h             : this help
-	-t <data>      : toytype id, 4hex symbols.
+	-l             : list all known toy tokens
+	-t <data>      : toytype id, 4hex symbols
 	-s <data>      : subtype id, 4hex symbols		
 	
 	For fun,  try the following subtype id: 
@@ -32,7 +34,7 @@ Arguments:
 	0138 - Series 2
 	0234 - Special
 	023c - Special
-	
+	0020 - Swapforce
 ]]
 
 
@@ -74,7 +76,7 @@ local function readmagicblock( blocknum )
 	-- Read block 0
 	local CSETBLOCK_SINGLE_OPERATION = 0x1F
 	cmd = Command:new{cmd = cmds.CMD_MIFARE_CGETBLOCK, arg1 = CSETBLOCK_SINGLE_OPERATION, arg2 = 0, arg3 = blocknum}
-	err = core.SendCommand(cmd:getBytes())
+ 	err = core.SendCommand(cmd:getBytes())
 	if err then return nil, err end
 	local block0, err = waitCmd()
 	if err then return nil, err end
@@ -98,12 +100,13 @@ local function main(args)
 	local DEBUG = true
 	
 	-- Arguments for the script
-	for o, a in getopt.getopt(args, 'ht:s:') do
+	for o, a in getopt.getopt(args, 'ht:s:l') do
 		if o == "h" then return help() end		
 		if o == "t" then toytype = a end
 		if o == "s" then subtype = a end
+		if o == "l" then return toys.List() end
 	end
-	
+
 	if #toytype ~= 4 then return oops('Wrong size - toytype. (4hex symbols)') end	
 	if #subtype ~= 4 then return oops('Wrong size - subtype. (4hex symbols)') end	
 
@@ -139,8 +142,9 @@ local function main(args)
 	-- wipe card.
 	local cmd  = (csetuid..'%s 0004 08 w'):format(result.uid)	
 	core.console(cmd) 
+
+	local b1 = toytype..string.rep('00',10)..subtype
 	
-	local b1 = toytype..'00000000000000000000'..subtype
 	local calc = utils.Crc16(b0..b1)
 	local calcEndian = bor(rsh(calc,8), lsh(band(calc, 0xff), 8))
 	

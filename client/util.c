@@ -112,6 +112,7 @@ char * sprint_hex(const uint8_t * data, const size_t len) {
 	
 	int maxLen = ( len > 1024/3) ? 1024/3 : len;
 	static char buf[1024];
+	memset(buf, 0x00, 1024);
 	char * tmp = buf;
 	size_t i;
 
@@ -123,8 +124,9 @@ char * sprint_hex(const uint8_t * data, const size_t len) {
 
 char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
 	
-	int maxLen = ( len > 1024) ? 1024 : len;
+	int maxLen = ( len > 1020) ? 1020 : len;
 	static char buf[1024];
+	memset(buf, 0x00, 1024);
 	char *tmp = buf;
 
 	for (size_t i=0; i < maxLen; ++i){
@@ -156,6 +158,22 @@ uint64_t bytes_to_num(uint8_t* src, size_t len)
 		src++;
 	}
 	return num;
+}
+
+// aa,bb,cc,dd,ee,ff,gg,hh, ii,jj,kk,ll,mm,nn,oo,pp
+// to
+// hh,gg,ff,ee,dd,cc,bb,aa, pp,oo,nn,mm,ll,kk,jj,ii
+// up to 64 bytes or 512 bits
+uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize){
+	static uint8_t buf[64];
+	memset(buf, 0x00, 64);
+	uint8_t *tmp = buf;
+	for (uint8_t block=0; block < (uint8_t)(len/blockSize); block++){
+		for (size_t i = 0; i < blockSize; i++){
+			tmp[i+(blockSize*block)] = src[(blockSize-1-i)+(blockSize*block)];
+		}
+	}
+	return tmp;
 }
 
 //assumes little endian

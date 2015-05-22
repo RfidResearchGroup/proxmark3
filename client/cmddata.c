@@ -26,7 +26,7 @@
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 uint8_t g_debugMode;
-int DemodBufferLen;
+size_t DemodBufferLen;
 static int CmdHelp(const char *Cmd);
 
 //set the demod buffer with given array of binary (one bit per byte)
@@ -1484,7 +1484,7 @@ int CmdIndalaDecode(const char *Cmd)
 		return 0;
 	}
 	uint8_t invert=0;
-	ans = indala26decode(DemodBuffer,(size_t *) &DemodBufferLen, &invert);
+	ans = indala26decode(DemodBuffer, &DemodBufferLen, &invert);
 	if (ans < 1) {
 		if (g_debugMode==1)
 			PrintAndLog("Error2: %d",ans);
@@ -1892,7 +1892,7 @@ int getSamples(const char *Cmd, bool silent)
 		PrintAndLog("Unpacking...");
 		BitstreamOut bout = { got, bits_per_sample * n,  0};
 		int j =0;
-		for (j = 0; j * bits_per_sample < n * 8 && j < sizeof(GraphBuffer); j++) {
+		for (j = 0; j * bits_per_sample < n * 8 && j < n; j++) {
 			uint8_t sample = getByte(bits_per_sample, &bout);
 			GraphBuffer[j] = ((int) sample )- 128;
 		}

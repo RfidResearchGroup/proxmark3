@@ -374,6 +374,20 @@ int CmdHF15Record(const char *Cmd)
 	return 0;
 }
 
+int HF15Reader(const char *Cmd, bool verbose)
+{
+	uint8_t uid[8];
+
+	if (!getUID(uid)) {
+		if (verbose) PrintAndLog("No Tag found.");
+		return 0;
+	}
+
+	PrintAndLog("Tag UID : %s",sprintUID(NULL,uid));
+	PrintAndLog("Tag Info: %s",getTagInfo(uid));
+	return 1;
+}
+
 int CmdHF15Reader(const char *Cmd)
 {
 	UsbCommand c = {CMD_READER_ISO_15693, {strtol(Cmd, NULL, 0), 0, 0}};
@@ -469,7 +483,7 @@ int CmdHF15DumpMem(const char*Cmd) {
 					// PrintAndLog("bn=%i",blocknum);
 				} else {
 					PrintAndLog("Tag returned Error %i: %s",recv[1],TagErrorStr(recv[1])); 
-					return 0;
+					return 1;
 				}
 			} // else PrintAndLog("crc");
 		} // else PrintAndLog("r null");
@@ -481,7 +495,7 @@ int CmdHF15DumpMem(const char*Cmd) {
 //		PrintAndLog("CRC Failed");
 //	else 
 //		PrintAndLog("Tag returned Error %i: %s",recv[1],TagErrorStr(recv[1])); 
-	return 0;
+	return 1;
 }
 
 
