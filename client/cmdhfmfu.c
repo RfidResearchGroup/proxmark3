@@ -415,7 +415,7 @@ static int ulc_print_configuration( uint8_t *data){
 	return 0;
 }
 
-static int ulev1_print_configuration( uint8_t *data){
+static int ulev1_print_configuration( uint8_t *data, uint8_t startPage){
 
 	PrintAndLog("\n--- Tag Configuration");
 
@@ -425,13 +425,13 @@ static int ulev1_print_configuration( uint8_t *data){
 	bool prot = (data[4] & 0x80);
 	uint8_t vctid = data[5];
 
-	PrintAndLog("  cfg0 [16/0x10] : %s", sprint_hex(data, 4));
+	PrintAndLog("  cfg0 [%u/0x%02X] : %s", startPage, startPage, sprint_hex(data, 4));
 	if ( data[3] < 0xff )
 		PrintAndLog("                    - page %d and above need authentication",data[3]);
 	else 
 		PrintAndLog("                    - pages don't need authentication");
 	PrintAndLog("                    - strong modulation mode %s", (strg_mod_en) ? "enabled":"disabled");
-	PrintAndLog("  cfg1 [17/0x11] : %s", sprint_hex(data+4, 4) );
+	PrintAndLog("  cfg1 [%u/0x%02X] : %s", startPage + 1, startPage + 1,  sprint_hex(data+4, 4) );
 	if ( authlim == 0)
 		PrintAndLog("                    - Unlimited password attempts");
 	else
@@ -439,8 +439,9 @@ static int ulev1_print_configuration( uint8_t *data){
 	PrintAndLog("                    - user configuration %s", cfglck ? "permanently locked":"writeable");
 	PrintAndLog("                    - %s access is protected with password", prot ? "read and write":"write");
 	PrintAndLog("                    - %02X, Virtual Card Type Identifier is %s default", vctid, (vctid==0x05)? "":"not");
-	PrintAndLog("  PWD  [18/0x12] : %s", sprint_hex(data+8, 4));
-	PrintAndLog("  PACK [19/0x13] : %s", sprint_hex(data+12, 4));
+	PrintAndLog("  PWD  [%u/0x%02X] : %s- (cannot be read)", startPage + 2, startPage + 2,  sprint_hex(data+8, 4));
+	PrintAndLog("  PACK [%u/0x%02X] : %s      - (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data+12, 2));
+	PrintAndLog("  RFU  [%u/0x%02X] :       %s- (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data+12, 2));
 	return 0;
 }
 
@@ -806,7 +807,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			} else if (status == 16) {
 				// save AUTHENTICATION LIMITS for later:
 				authlim = (ulev1_conf[4] & 0x07);
-				ulev1_print_configuration(ulev1_conf);
+				ulev1_print_configuration(ulev1_conf, startconfigblock);
 			}
 		}
 
@@ -1137,13 +1138,18 @@ int CmdHF14AMfUDump(const char *Cmd){
 
 	// add keys to block dump
 	if (hasAuthKey) {
-		if (!swapEndian) {
+		if (!swapEndian){
 			authKeyPtr = SwapEndian64(authenticationkey, dataLen, (dataLen == 16) ? 8 : 4);
-			memcpy(data + Pages*4, authKeyPtr, dataLen);
 		} else {
-			memcpy(data + Pages*4, authenticationkey, dataLen);
+			authKeyPtr = authenticationkey;
 		}
-		Pages += dataLen/4;  //not sure output is in correct location for all tag types.
+
+		if (tagtype & UL_C){ //add 4 pages
+			memcpy(data + Pages*4, authKeyPtr, dataLen);
+			Pages += dataLen/4;  
+		} else { // 2nd page from end
+			memcpy(data + (Pages*4) - 8, authenticationkey, dataLen);
+		}
 	}
 
 	for (i = 0; i < Pages; ++i) {
@@ -1195,7 +1201,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 			case 43: tmplockbit = bit2[9]; break;  //auth1
 			default: break;
 		}
-		PrintAndLog("Block %02x:%s [%d] {%.4s}", i, sprint_hex(data + i * 4, 4), tmplockbit, data+i*4);
+		PrintAndLog("Block %02X:%s [%d] {%.4s}", i, sprint_hex(data + i * 4, 4), tmplockbit, data+i*4);
 	}
 
 	// user supplied filename?
