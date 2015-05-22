@@ -757,7 +757,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128))) {
 		if (ulev1_print_counters() != 3) {
 			// failed - re-select
-			if (!ul_auth_select( &card, tagtype, hasAuthKey, authenticationkey, pack, sizeof(pack))) return -1;
+			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
 		}
 	}
 
@@ -772,7 +772,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		if (status == 32) ulev1_print_signature( ulev1_signature, sizeof(ulev1_signature));
 		else {
 			// re-select
-			if (!ul_auth_select( &card, tagtype, hasAuthKey, authenticationkey, pack, sizeof(pack))) return -1;
+			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
 		}
 	}
 
@@ -787,7 +787,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			ulev1_print_version(version);
 		} else {
 			locked = true;
-			if (!ul_auth_select( &card, tagtype, hasAuthKey, authenticationkey, pack, sizeof(pack))) return -1;
+			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
 		}
 
 		uint8_t startconfigblock = 0;
@@ -824,7 +824,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 					PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
 					break;
 				} else {
-					if (!ul_auth_select( &card, tagtype, hasAuthKey, authenticationkey, pack, sizeof(pack))) return -1;
+					if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
 				}
 			}
 			if (len < 1) PrintAndLog("password not known");
