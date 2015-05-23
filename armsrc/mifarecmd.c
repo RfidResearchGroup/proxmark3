@@ -19,12 +19,6 @@
 
 #include "crc.h"
 
-// the block number for the ISO14443-4 PCB
-uint8_t pcb_blocknum = 0;
-// Deselect card by sending a s-block. the crc is precalced for speed
-static  uint8_t deselect_cmd[] = {0xc2,0xe0,0xb4};
-
-
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag. 
 // read block
@@ -116,8 +110,6 @@ void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes){
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
 	}
-	cmd_send(CMD_ACK,1,0,0,0,0);
-	}	
 	cmd_send(CMD_ACK,1,0,0,0,0);
 }
 
@@ -258,7 +250,6 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 {
 	// free eventually allocated BigBuf memory
 	BigBuf_free();
-	// clear trace
 	clear_trace();
 
 	// params
@@ -313,36 +304,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 			Dbprintf("Data exceeds buffer!!");
 			break;
 		}
-	
-	 // UL-C authentication
-	if ( useKey ) {
-		uint8_t key[16] = {0x00};	
-		memcpy(key, datain, sizeof(key) );
 
-		if ( !mifare_ultra_auth(key) ) {
-			OnError(1);
-			return;			
-		}
-	}
-
-	// UL-EV1 / NTAG authentication
-	if (usePwd) { 
-		uint8_t pwd[4] = {0x00};
-		memcpy(pwd, datain, sizeof(pwd));
-		uint8_t pack[4] = {0,0,0,0};
-
-		if (!mifare_ul_ev1_auth(pwd, pack)){
-			OnError(1);
-			return;			
-		}
-	}
-	
-	for (int i = 0; i < blocks; i++){
-		if ((i*4) + 4 > CARD_MEMORY_SIZE) {
-			Dbprintf("Data exceeds buffer!!");
-			break;
-		}
-	
 		len = mifare_ultra_readblock(blockNo + i, dataout + 4 * i);
 		
 		if (len) {
@@ -1372,20 +1334,5 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain){
 
 	cmd_send(CMD_ACK, isOK, 0, 0, dataout, sizeof(dataout));
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	LEDsoff();
-}
-
-void OnSuccess(){
-	pcb_blocknum = 0;
-	ReaderTransmit(deselect_cmd, 3 , NULL);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	LEDsoff();
-}
-
-void OnError(uint8_t reason){
-	pcb_blocknum = 0;
-	ReaderTransmit(deselect_cmd, 3 , NULL);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	cmd_send(CMD_ACK,0,reason,0,0,0);
 	LEDsoff();
 }

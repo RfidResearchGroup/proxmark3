@@ -398,26 +398,6 @@ int mifare_ultra_auth(uint8_t *keybytes){
 		return 0;
 	}
 
-	// encrypt    out, in, length, key, iv
-	tdes_2key_enc(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b);
-
-	len = mifare_sendcmd_short_mfucauth(NULL, 1, 0xAF, rnd_ab, resp, respPar, NULL);
-	if (len != 11) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
-		return 0;
-	}
-
-	uint8_t enc_resp[8] = { 0,0,0,0,0,0,0,0 };
-	uint8_t resp_random_a[8] = { 0,0,0,0,0,0,0,0 };
-	memcpy(enc_resp, resp+1, 8);
-	
-	// decrypt    out, in, length, key, iv 
-	tdes_2key_dec(resp_random_a, enc_resp, 8, key, enc_random_b);
-	if ( memcmp(resp_random_a, random_a, 8) != 0 ) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("failed authentication");
-		return 0;
-	}	
-
 	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
 		Dbprintf("e_AB: %02x %02x %02x %02x %02x %02x %02x %02x", 
 				rnd_ab[0],rnd_ab[1],rnd_ab[2],rnd_ab[3],
