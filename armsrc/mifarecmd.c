@@ -19,6 +19,12 @@
 
 #include "crc.h"
 
+// the block number for the ISO14443-4 PCB
+uint8_t pcb_blocknum = 0;
+// Deselect card by sending a s-block. the crc is precalced for speed
+static  uint8_t deselect_cmd[] = {0xc2,0xe0,0xb4};
+
+
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag. 
 // read block
@@ -86,7 +92,6 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LEDsoff();
 }
 
-
 void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes){
 
 	bool turnOffField = (arg0 == 1);
@@ -106,17 +111,19 @@ void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes){
 		OnError(1);
 		return;
 	}
-    
+
 	if (turnOffField) {
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
+	}
+	cmd_send(CMD_ACK,1,0,0,0,0);
 	}	
 	cmd_send(CMD_ACK,1,0,0,0,0);
 }
 
 // Arg0 = BlockNo,
 // Arg1 = UsePwd bool
-// datain = PWD bytes,  
+// datain = PWD bytes,
 void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 {
 	uint8_t blockNo = arg0;
@@ -124,52 +131,52 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 	bool useKey = (arg1 == 1); //UL_C
 	bool usePwd = (arg1 == 2); //UL_EV1/NTAG
 
-	LEDsoff();	
-	LED_A_ON();    
+	LEDsoff();
+	LED_A_ON();
 	clear_trace();
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-    
+
 	int len = iso14443a_select_card(NULL, NULL, NULL);
 	if(!len) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Can't select card (RC:%02X)",len);
 		OnError(1);
 		return;
 	}
-       
+
 	// UL-C authentication
 	if ( useKey ) {
-		uint8_t key[16] = {0x00};	
+		uint8_t key[16] = {0x00};
 		memcpy(key, datain, sizeof(key) );
 
 		if ( !mifare_ultra_auth(key) ) {
 			OnError(1);
-			return;			
+			return;
 		}
 	}
-	
+
 	// UL-EV1 / NTAG authentication
-	if (usePwd) { 
+	if ( usePwd ) {
 		uint8_t pwd[4] = {0x00};
 		memcpy(pwd, datain, 4);
 		uint8_t pack[4] = {0,0,0,0};
 		if (!mifare_ul_ev1_auth(pwd, pack)) {
 			OnError(1);
-			return;			
+			return;
 		}
-	}
-		
+	}	
+
 	if( mifare_ultra_readblock(blockNo, dataout) ) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Read block error");
 		OnError(2);
 		return;
 	}
-        
+
 	if( mifare_ultra_halt() ) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Halt error");
 		OnError(3);
 		return;
 	}
-		
+
     cmd_send(CMD_ACK,1,0,0,dataout,16);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
@@ -268,7 +275,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 	}
 
 	LEDsoff();
-	LED_A_ON(); 
+	LED_A_ON();
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	int len = iso14443a_select_card(NULL, NULL, NULL);
@@ -277,6 +284,35 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 		OnError(1);
 		return;
 	}
+
+	// UL-C authentication
+	if ( useKey ) {
+		uint8_t key[16] = {0x00};
+		memcpy(key, datain, sizeof(key) );
+
+		if ( !mifare_ultra_auth(key) ) {
+			OnError(1);
+			return;
+		}
+	}
+
+	// UL-EV1 / NTAG authentication
+	if (usePwd) {
+		uint8_t pwd[4] = {0x00};
+		memcpy(pwd, datain, sizeof(pwd));
+		uint8_t pack[4] = {0,0,0,0};
+
+		if (!mifare_ul_ev1_auth(pwd, pack)){
+			OnError(1);
+			return;			
+		}
+	}
+
+	for (int i = 0; i < blocks; i++){
+		if ((i*4) + 4 > CARD_MEMORY_SIZE) {
+			Dbprintf("Data exceeds buffer!!");
+			break;
+		}
 	
 	 // UL-C authentication
 	if ( useKey ) {
@@ -313,7 +349,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 			if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Read block %d error",i);
 			// if no blocks read - error out
 			if (i==0){
-			OnError(2);
+				OnError(2);
 			return;
 			} else {
 				//stop at last successful read block and return what we got
@@ -323,14 +359,14 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 			countblocks++;
 		}
 	}
-		
+
 	len = mifare_ultra_halt();
 	if (len) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Halt error");
 		OnError(3);
 		return;
 	}
-	
+
 	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Blocks read %d", countblocks);
 
 	countblocks *= 4;
@@ -413,15 +449,15 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 {
-    uint8_t blockNo = arg0;
+	uint8_t blockNo = arg0;
 	byte_t blockdata[16] = {0x00};
 
-    memcpy(blockdata, datain, 16);
-        
+	memcpy(blockdata, datain, 16);
+
 	uint8_t uid[10] = {0x00};
 
 	LED_A_ON(); LED_B_OFF(); LED_C_OFF();
-		
+
 	clear_trace();
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -441,7 +477,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 		OnError(0);
 		return;
 	};
-		
+
 	if (MF_DBGLEVEL >= 2)   DbpString("WRITE BLOCK FINISHED");
 
 	cmd_send(CMD_ACK,1,0,0,0,0);
@@ -461,8 +497,8 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 	bool useKey = (arg1 == 1); //UL_C
 	bool usePwd = (arg1 == 2); //UL_EV1/NTAG
 	byte_t blockdata[4] = {0x00};
-	
-	memcpy(blockdata, datain, 4);
+
+	memcpy(blockdata, datain,4);
 	
 	LEDsoff();
 	LED_A_ON();
@@ -1336,5 +1372,20 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain){
 
 	cmd_send(CMD_ACK, isOK, 0, 0, dataout, sizeof(dataout));
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
+}
+
+void OnSuccess(){
+	pcb_blocknum = 0;
+	ReaderTransmit(deselect_cmd, 3 , NULL);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
+}
+
+void OnError(uint8_t reason){
+	pcb_blocknum = 0;
+	ReaderTransmit(deselect_cmd, 3 , NULL);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	cmd_send(CMD_ACK,0,reason,0,0,0);
 	LEDsoff();
 }

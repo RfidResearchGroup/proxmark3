@@ -736,7 +736,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			ReaderHitag((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes);
 			break;
 #endif
-            
+
 #ifdef WITH_ISO15693
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693:
 			AcquireRawAdcSamplesIso15693();
@@ -833,7 +833,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		case CMD_MIFAREU_READCARD:
 			MifareUReadCard(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
-			break;		
+			break;
 		case CMD_MIFAREUC_SETPWD: 
 			MifareUSetPwd(c->arg[0], c->d.asBytes);
 			break;
@@ -845,8 +845,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		case CMD_MIFAREU_WRITEBL_COMPAT:
 			MifareUWriteBlock(c->arg[0], c->d.asBytes);
-            break;
+			break;
 		case CMD_MIFAREU_WRITEBL:
+			MifareUWriteBlock_Special(c->arg[0], c->d.asBytes);
 			MifareUWriteBlock_Special(c->arg[0], c->arg[1], c->d.asBytes);
 			break;
 		case CMD_MIFARE_NESTED:

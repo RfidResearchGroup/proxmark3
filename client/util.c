@@ -113,7 +113,7 @@ char *sprint_hex(const uint8_t *data, const size_t len) {
 	int maxLen = ( len > 1024/3) ? 1024/3 : len;
 	static char buf[1024];
 	memset(buf, 0x00, 1024);
-	char *tmp = buf;
+	char * tmp = buf;
 	size_t i;
 
 	for (i=0; i < maxLen; ++i, tmp += 3)

@@ -36,7 +36,7 @@ For people with linux you will need to patch some source code and some small cha
 
 Common errors linux/macOS finds
 Error:
-	* loclass/fileutils.c:15:2: warning: implicit declaration of function â€˜_statâ€™ [-Wimplicit-function-declaration]
+	* loclass/fileutils.c:15:2: warning: implicit declaration of function ‘_stat’ [-Wimplicit-function-declaration]
 Solution:
 	* Remove the "unscore" sign.   In linux you use without underscore, in windows you need a underscore. 
 	
@@ -62,6 +62,8 @@ Solution
 
 An old Qt4 version makefile is found here: http://www.icesql.se/proxmark3/code/linuxmakefile.txt  but this one doesn't have all new files in it. So I don't recommend it.
 
+The Proxmark 3 is available for purchase (assembled and tested) from the
+following locations:
 
 
 January 2015, Sweden

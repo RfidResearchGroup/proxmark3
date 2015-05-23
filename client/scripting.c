@@ -153,7 +153,7 @@ static int l_nonce2key(lua_State *L){
 
     //Push the retval on the stack
     lua_pushinteger(L,retval);
-  
+
     //Push the key onto the stack
     uint8_t dest_key[8];
     num_to_bytes(key,sizeof(dest_key),dest_key);
@@ -180,10 +180,10 @@ static int l_foobar(lua_State *L)
     printf("foobar called with %d arguments" , n);
     lua_settop(L, 0);
     printf("Arguments discarded, stack now contains %d elements", lua_gettop(L));
-  
+
     // todo: this is not used, where was it intended for?
     // UsbCommand response =  {CMD_MIFARE_READBL, {1337, 1338, 1339}};
-  
+
     printf("Now returning a uint64_t as a string");
     uint64_t x = 0xDEADBEEF;
     uint8_t destination[8];
@@ -240,12 +240,13 @@ static int l_aes128decrypt(lua_State *L)
     if(size != 32)  return returnToLuaWithError(L,"Wrong size of key, got %d bytes, expected 32", (int) size);
 
     const char *p_encTxt = luaL_checklstring(L, 2, &size);
-    
+
 	unsigned char indata[16] = {0x00};
 	unsigned char outdata[16] = {0x00};
     unsigned char aes_key[16] = {0x00};
 	unsigned char iv[16] = {0x00};
 
+	// convert key to bytearray and convert input to bytearray
 	for (i = 0; i < 32; i += 2) {
 		sscanf(&p_encTxt[i], "%02x", (unsigned int *)&indata[i / 2]);
 		sscanf(&p_key[i], "%02x", (unsigned int *)&aes_key[i / 2]);
@@ -282,9 +283,9 @@ static int l_aes128encrypt(lua_State *L)
 
     aes_context ctx;
     aes_init(&ctx);
-    aes_setkey_enc(&ctx, aes_key, 128);
+	aes_setkey_enc(&ctx, aes_key, 128);
 	aes_crypt_cbc(&ctx, AES_ENCRYPT, sizeof(indata), iv, indata, outdata );
-    //Push encrypted array as a string
+	//Push encrypted array as a string
 	lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
 	return 1;// return 1 to signal one return value
 }
@@ -293,7 +294,7 @@ static int l_crc16(lua_State *L)
 {
 	size_t size;
 	const char *p_str = luaL_checklstring(L, 1, &size);
-		
+
 	uint16_t retval = crc16_ccitt( (uint8_t*) p_str, size);
     lua_pushinteger(L, (int) retval);
     return 1;
@@ -306,7 +307,7 @@ static int l_crc64(lua_State *L)
 	unsigned char outdata[8] = {0x00};
 
 	const char *p_str = luaL_checklstring(L, 1, &size);
-	
+
 	crc64( (uint8_t*) p_str, size, &crc);
 
 	outdata[0] = (uint8_t)(crc >> 56) & 0xff;
@@ -318,7 +319,7 @@ static int l_crc64(lua_State *L)
 	outdata[6] = (uint8_t)(crc >> 8) & 0xff;
 	outdata[7] = crc & 0xff;
 	lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
-    return 1;
+	return 1;
 }
 
 /**
@@ -341,7 +342,7 @@ int setLuaPath( lua_State* L, const char* path )
     lua_pushstring( L, buf ); // push the new one
     lua_setfield( L, -2, "path" ); // set the field "path" in table at -2 with value at top of stack
     lua_pop( L, 1 ); // get rid of package table from top of stack
-    free(buf);
+	free(buf);
 	return 0; // all done!
 }
 
@@ -357,12 +358,12 @@ int set_pm3_libraries(lua_State *L)
         {"foobar",                      l_foobar},
         {"ukbhit",                      l_ukbhit},
         {"clearCommandBuffer",          l_clearCommandBuffer},
-        {"console",                     l_CmdConsole},
-        {"iso15693_crc",                l_iso15693_crc},
+		{"console",                     l_CmdConsole},
+		{"iso15693_crc",                l_iso15693_crc},
 		{"aes128_decrypt",              l_aes128decrypt},
 		{"aes128_encrypt",              l_aes128encrypt},
 		{"crc16",                       l_crc16},
-		{"crc64",						l_crc64},
+		{"crc64",                       l_crc64},
         {NULL, NULL}
     };
 

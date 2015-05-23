@@ -677,7 +677,7 @@ int CmdHFSearch(const char *Cmd){
 
 	//14b has issues currently...
 	//ans = CmdHF14BRead(Cmd);
-	//if (ans > 0) return ans;	
+	//if (ans > 0) return ans;
 
 	return 0;
 }
@@ -692,11 +692,11 @@ static command_t CommandTable[] =
   {"legic",       CmdHFLegic,       0, "{ LEGIC RFIDs... }"},
   {"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs... }"},
   {"mf",      		CmdHFMF,		1, "{ MIFARE RFIDs... }"},
-  {"mfu",			CmdHFMFUltra,	1, "{ MIFARE Ultralight RFIDs... }"},
+  {"mfu",         CmdHFMFUltra,     1, "{ MIFARE Ultralight RFIDs... }"},
   {"mfdes",			CmdHFMFDes,		1, "{ MIFARE Desfire RFIDs... }"},
   {"topaz",			CmdHFTopaz,		1, "{ TOPAZ (NFC Type 1) RFIDs... }"},
   {"tune",			CmdHFTune,      0, "Continuously measure HF antenna tuning"},
-  {"list",			CmdHFList,      1, "List protocol data in trace buffer"},
+  {"list",        CmdHFList,        1, "List protocol data in trace buffer"},
   {"search",      CmdHFSearch,      1, "Search for known HF tags [preliminary]"},
 	{NULL, NULL, 0, NULL}
 };

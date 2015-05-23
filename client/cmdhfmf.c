@@ -1592,6 +1592,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 			memset(buf, 0, sizeof(buf));
 			
 			if (fgets(buf, sizeof(buf), f) == NULL) {
+				fclose(f);
 				PrintAndLog("File reading error.");
 				fclose(f);
 				return 2;

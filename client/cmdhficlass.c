@@ -174,9 +174,9 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose)
 	SendCommand(&c);
 	UsbCommand resp;
 	while(!ukbhit()){
-		if (WaitForResponseTimeout(CMD_ACK,&resp,4500)) {
+		if (WaitForResponseTimeout(CMD_ACK,&resp, 4500)) {
 			uint8_t readStatus    = resp.arg[0] & 0xff;
-			uint8_t * data  = resp.d.asBytes;
+			uint8_t *data = resp.d.asBytes;
 
 			if (verbose)
 			PrintAndLog("Readstatus:%02x", readStatus);
