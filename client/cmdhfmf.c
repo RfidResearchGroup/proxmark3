@@ -1200,9 +1200,9 @@ int CmdHF14AMfELoad(const char *Cmd)
 
 	len = param_getstr(Cmd,nameParamNo,filename);
 	
-	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+	if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
 
-	fnameptr += len-4;
+	fnameptr += len;
 
 	sprintf(fnameptr, ".eml"); 
 	
@@ -1299,19 +1299,22 @@ int CmdHF14AMfESave(const char *Cmd)
 
 	len = param_getstr(Cmd,nameParamNo,filename);
 	
-	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+	if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
 	
 	// user supplied filename?
 	if (len < 1) {
 		// get filename (UID from memory)
 		if (mfEmlGetMem(buf, 0, 1)) {
 			PrintAndLog("Can\'t get UID from block: %d", 0);
-			sprintf(filename, "dump.eml"); 
+			len = sprintf(fnameptr, "dump");
+			fnameptr += len;
 		}
-		for (j = 0; j < 7; j++, fnameptr += 2)
-			sprintf(fnameptr, "%02X", buf[j]); 
+		else {
+			for (j = 0; j < 7; j++, fnameptr += 2)
+				sprintf(fnameptr, "%02X", buf[j]);
+		}
 	} else {
-		fnameptr += len-4;
+		fnameptr += len;
 	}
 
 	// add file extension
