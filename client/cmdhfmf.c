@@ -1575,10 +1575,10 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		return 0;
 	} else {
 		len = strlen(Cmd);
-		if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+		if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
 
 		memcpy(filename, Cmd, len);
-		fnameptr += len-4;
+		fnameptr += len;
 
 		sprintf(fnameptr, ".eml"); 
 	
@@ -1744,7 +1744,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		return 0;
 	} else {
 		len = strlen(Cmd);
-		if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+		if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
 	
 		if (len < 1) {
 			// get filename
