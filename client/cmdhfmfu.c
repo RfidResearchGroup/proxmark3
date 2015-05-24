@@ -1106,12 +1106,13 @@ int CmdHF14AMfUDump(const char *Cmd){
 		return 1;
 	}
 
+	uint32_t startindex = resp.arg[2];
 	uint32_t bufferSize = resp.arg[1];
 	if (bufferSize > sizeof(data)) {
 		PrintAndLog("Data exceeded Buffer size!");
 		bufferSize = sizeof(data);
 	}
-	GetFromBigBuf(data, bufferSize, 0);
+	GetFromBigBuf(data, bufferSize, startindex);
 	WaitForResponse(CMD_ACK,NULL);
 
 	Pages = bufferSize/4;
