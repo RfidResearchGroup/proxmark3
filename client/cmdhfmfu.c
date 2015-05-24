@@ -1273,12 +1273,13 @@ int CmdHF14AMfUDump(const char *Cmd){
 		return 1;
 	}
 
+	uint32_t startindex = resp.arg[2];
 	uint32_t bufferSize = resp.arg[1];
 	if (bufferSize > sizeof(data)) {
 		PrintAndLog("Data exceeded Buffer size!");
 		bufferSize = sizeof(data);
 	}
-	GetFromBigBuf(data, bufferSize, 0);
+	GetFromBigBuf(data, bufferSize, startindex);
 	WaitForResponse(CMD_ACK,NULL);
 
 	Pages = bufferSize/4;
@@ -1319,9 +1320,11 @@ int CmdHF14AMfUDump(const char *Cmd){
 		}
 	}
 
+	PrintAndLog("Block#    Data         lck Ascii");
+	PrintAndLog("----------------------------------");
 	for (i = 0; i < Pages; ++i) {
 		if ( i < 3 ) {
-			PrintAndLog("Block %02x:%s ", i,sprint_hex(data + i * 4, 4));
+			PrintAndLog("%02d/0x%02X | %s | |", i, i,sprint_hex(data + i * 4, 4));
 			continue;
 		}
 		switch(i){
@@ -1368,8 +1371,9 @@ int CmdHF14AMfUDump(const char *Cmd){
 			case 43: tmplockbit = bit2[9]; break;  //auth1
 			default: break;
 		}
-		PrintAndLog("Block %02X:%s [%d] {%.4s}", i, sprint_hex(data + i * 4, 4), tmplockbit, data+i*4);
+		PrintAndLog("%02d/0x%02X | %s |%d| %.4s",i , i, sprint_hex(data + i * 4, 4), tmplockbit, data+i*4);
 	}
+	PrintAndLog("----------------------------------");
 
 	// user supplied filename?
 	if (fileNlen < 1) {
