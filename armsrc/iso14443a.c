@@ -1186,7 +1186,6 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 					cmd_send(CMD_ACK,CMD_SIMULATE_MIFARE_CARD,len,0,&ar_nr_responses,len);
 					ar_nr_collected = 0;
 					memset(ar_nr_responses, 0x00, len);
-					Dbprintf("ICE");
 				}
 			}
 		} else {
@@ -2490,7 +2489,8 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				uint32_t nr = bytes_to_num(&receivedCmd[4], 4);
 
 				//Collect AR/NR
-				if(ar_nr_collected < 2 && cardAUTHSC == 2){
+				//if(ar_nr_collected < 2 && cardAUTHSC == 2){
+				if(ar_nr_collected < 2){
 					if(ar_nr_responses[2] != ar)
 					{// Avoid duplicates... probably not necessary, ar should vary. 
 						ar_nr_responses[ar_nr_collected*4] = cuid;
@@ -2503,7 +2503,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 					if(flags & FLAG_INTERACTIVE && ar_nr_collected == 2)
 					{
 						finished = true;
-				}
+					}
 				}
 
 				// --- crypto

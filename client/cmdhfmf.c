@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhfmf.h"
+#include "nonce2key/nonce2key.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -1063,15 +1064,29 @@ int CmdHF14AMf1kSim(const char *Cmd)
 	SendCommand(&c);
 
 	if(flags & FLAG_INTERACTIVE)
-	{
-		UsbCommand resp;
+	{		
+		uint64_t corr_uid =  bytes_to_num(uid,  ( flags & FLAG_4B_UID_IN_DATA ) ? 4 : 7 );
+
 		PrintAndLog("Press pm3-button to abort simulation");
-		while(! WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-			//We're waiting only 1.5 s at a time, otherwise we get the
-			// annoying message about "Waiting for a response... "
+		
+		uint8_t data[40];
+		uint8_t key[6];
+
+		while(!ukbhit()){
+			UsbCommand resp;		
+			WaitForResponseTimeout(CMD_ACK,&resp,1500);
+			PrintAndLog("CMD_SIMULATE_MIFARE_CARD [%04X] -- %04X", CMD_SIMULATE_MIFARE_CARD, resp.arg[0]);			
+			if ( (resp.arg[0] & 0xffff) == CMD_SIMULATE_MIFARE_CARD ){
+				memset(data, 0x00, sizeof(data));
+				memset(key, 0x00, sizeof(key));
+				int len = (resp.arg[1] > sizeof(data)) ? sizeof(data) : resp.arg[1];
+				memcpy(data, resp.d.asBytes, len);
+				tryMfk32(corr_uid, data, key);
+				//tryMfk64(corr_uid, data, key);
+				PrintAndLog("--");
+			}
 		}
 	}
-	
 	return 0;
 }
 
@@ -1200,7 +1215,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 
 	len = param_getstr(Cmd,nameParamNo,filename);
 	
-	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE - 4;
+	if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
 
 	fnameptr += len;
 
@@ -1299,7 +1314,7 @@ int CmdHF14AMfESave(const char *Cmd)
 
 	len = param_getstr(Cmd,nameParamNo,filename);
 	
-	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE - 4;
+	if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
 	
 	// user supplied filename?
 	if (len < 1) {
@@ -1575,7 +1590,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		return 0;
 	} else {
 		len = strlen(Cmd);
-		if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE - 4;
+		if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
 
 		memcpy(filename, Cmd, len);
 		fnameptr += len;
@@ -1745,7 +1760,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		return 0;
 	} else {
 		len = strlen(Cmd);
-		if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE - 4;
+		if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
 	
 		if (len < 1) {
 			// get filename

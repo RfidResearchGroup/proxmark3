@@ -73,7 +73,8 @@ local function convert_to_emulform(hexdata)
 	for i = 1, string.len(hexdata),32 do
 		ascii = ascii  ..string.sub(hexdata,i,i+31).."\n"
 	end
-	return ascii
+	
+	return string.sub(ascii,1,-1)
 end
 
 local function main(args)

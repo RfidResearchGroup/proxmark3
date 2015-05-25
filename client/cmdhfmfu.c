@@ -280,7 +280,7 @@ static int ul_print_default( uint8_t *data){
 	uid[6] = data[7];
 
 	PrintAndLog("       UID : %s ", sprint_hex(uid, 7));
-	PrintAndLog("    UID[0] : %02X, Manufacturer: %s",  uid[0], getTagInfo(uid[0]) );
+	PrintAndLog("    UID[0] : %02X, %s",  uid[0], getTagInfo(uid[0]) );
 	if ( uid[0] == 0x05 ) {
 		uint8_t chip = (data[8] & 0xC7); // 11000111  mask, bit 3,4,5 RFU
 		switch (chip){
@@ -855,7 +855,7 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	uint8_t blockdata[20] = {0x00};
 	uint8_t data[16] = {0x00};
 	uint8_t authenticationkey[16] = {0x00};
-	uint8_t *authkeyptr = authenticationkey;
+	uint8_t *authKeyPtr = authenticationkey;
 	
 	// starting with getting tagtype
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
@@ -896,7 +896,7 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 				uint8_t maxblockno = 0;
 				for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++){
 					if (tagtype & UL_TYPES_ARRAY[idx])
-						maxblockno = UL_MEMORY_ARRAY[idx]+1;
+						maxblockno = UL_MEMORY_ARRAY[idx];
 				}
 		
 				if (blockNo < 0) {
@@ -904,7 +904,7 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 					errors = true;					
 				}
 				if (blockNo > maxblockno){
-					PrintAndLog("block number to large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
+					PrintAndLog("block number too large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
 					errors = true;									
 				}
 				cmdp += 2;
@@ -935,28 +935,25 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	if ( blockNo == -1 ) return usage_hf_mfu_wrbl();
 	
 	// Swap endianness 
-	if (swapEndian && hasAuthKey) authkeyptr = SwapEndian64(authenticationkey, 16, 8);
-	if (swapEndian && hasPwdKey)  authkeyptr = SwapEndian64(authenticationkey, 4, 4);
-
+	if (swapEndian && hasAuthKey) authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
+	if (swapEndian && hasPwdKey)  authKeyPtr = SwapEndian64(authenticationkey, 4, 4);
 
 	if ( blockNo <= 3) 		
 		PrintAndLog("Special Block: %0d (0x%02X) [ %s]", blockNo, blockNo, sprint_hex(blockdata, 4));
 	else
 		PrintAndLog("Block: %0d (0x%02X) [ %s]", blockNo, blockNo, sprint_hex(blockdata, 4));
 	
-	
-
 	//Send write Block
 	UsbCommand c = {CMD_MIFAREU_WRITEBL, {blockNo}};
 	memcpy(c.d.asBytes,blockdata,4);
 
 	if ( hasAuthKey ){
 		c.arg[1] = 1;
-		memcpy(c.d.asBytes+4,authkeyptr,16);
+		memcpy(c.d.asBytes+4,authKeyPtr,16);
 	}
 	else if ( hasPwdKey ) {
 		c.arg[1] = 2;
-		memcpy(c.d.asBytes+4,authkeyptr,4);
+		memcpy(c.d.asBytes+4,authKeyPtr,4);
 	}
 	
 	SendCommand(&c);
@@ -984,7 +981,7 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	uint8_t keylen = 0;
 	uint8_t data[16] = {0x00};
 	uint8_t authenticationkey[16] = {0x00};
-	uint8_t *authkeyptr = authenticationkey;
+	uint8_t *authKeyPtr = authenticationkey;
 		
 	// starting with getting tagtype
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
@@ -1025,7 +1022,7 @@ int CmdHF14AMfURdBl(const char *Cmd){
 				uint8_t maxblockno = 0;
 				for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++){
 					if (tagtype & UL_TYPES_ARRAY[idx])
-						maxblockno = UL_MEMORY_ARRAY[idx]+1;
+						maxblockno = UL_MEMORY_ARRAY[idx];
 				}
 		
 				if (blockNo < 0) {
@@ -1054,18 +1051,18 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	if ( blockNo == -1 ) return usage_hf_mfu_rdbl();
 	
 	// Swap endianness 
-	if (swapEndian && hasAuthKey) authkeyptr = SwapEndian64(authenticationkey, 16, 8);
-	if (swapEndian && hasPwdKey)  authkeyptr = SwapEndian64(authenticationkey, 4, 4);
+	if (swapEndian && hasAuthKey) authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
+	if (swapEndian && hasPwdKey)  authKeyPtr = SwapEndian64(authenticationkey, 4, 4);
 	
 	//Read Block
 	UsbCommand c = {CMD_MIFAREU_READBL, {blockNo}};
 	if ( hasAuthKey ){
 		c.arg[1] = 1;
-		memcpy(c.d.asBytes,authkeyptr,16);
+		memcpy(c.d.asBytes,authKeyPtr,16);
 	}
 	else if ( hasPwdKey ) {
 		c.arg[1] = 2;
-		memcpy(c.d.asBytes,authkeyptr,4);
+		memcpy(c.d.asBytes,authKeyPtr,4);
 	}
 	
 	SendCommand(&c);
@@ -1082,7 +1079,6 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	} else {
 		PrintAndLog("Command execute time-out");
 	}
-
 	return 0;
 }
 
@@ -1156,8 +1152,6 @@ int usage_hf_mfu_wrbl(void) {
 //
 //  Mifare Ultralight / Ultralight-C / Ultralight-EV1
 //  Read and Dump Card Contents,  using auto detection of tag size.
-//
-//  TODO: take a password to read UL-C / UL-EV1 tags.
 int CmdHF14AMfUDump(const char *Cmd){
 
 	FILE *fout;
@@ -1246,10 +1240,10 @@ int CmdHF14AMfUDump(const char *Cmd){
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
 
-	if (!manualPages)
+	if (!manualPages) //get number of pages to read
 		for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++)
 			if (tagtype & UL_TYPES_ARRAY[idx])
-				Pages = UL_MEMORY_ARRAY[idx]+1;
+				Pages = UL_MEMORY_ARRAY[idx]+1; //add one as maxblks starts at 0
 
 	ul_print_type(tagtype, 0);
 	PrintAndLog("Reading tag memory...");
@@ -1320,8 +1314,8 @@ int CmdHF14AMfUDump(const char *Cmd){
 		}
 	}
 
-	PrintAndLog("Block#    Data         lck Ascii");
-	PrintAndLog("----------------------------------");
+	PrintAndLog("Block#  | Data        |lck| Ascii");
+	PrintAndLog("---------------------------------");
 	for (i = 0; i < Pages; ++i) {
 		if ( i < 3 ) {
 			PrintAndLog("%02d/0x%02X | %s | |", i, i,sprint_hex(data + i * 4, 4));
@@ -1373,7 +1367,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 		}
 		PrintAndLog("%02d/0x%02X | %s |%d| %.4s",i , i, sprint_hex(data + i * 4, 4), tmplockbit, data+i*4);
 	}
-	PrintAndLog("----------------------------------");
+	PrintAndLog("---------------------------------");
 
 	// user supplied filename?
 	if (fileNlen < 1) {
@@ -1769,7 +1763,7 @@ static command_t CommandTable[] =
 	{"help",	CmdHelp,			1, "This help"},
 	{"dbg",		CmdHF14AMfDbg,		0, "Set default debug mode"},
 	{"info",	CmdHF14AMfUInfo,	0, "Tag information"},
-	{"dump",	CmdHF14AMfUDump,	0, "Dump Ultralight / Ultralight-C tag to binary file"},
+	{"dump",	CmdHF14AMfUDump,	0, "Dump Ultralight / Ultralight-C / NTAG tag to binary file"},
 	{"rdbl",	CmdHF14AMfURdBl,	0, "Read block"},
 	{"wrbl",	CmdHF14AMfUWrBl,	0, "Write block"},    
 	{"cauth",	CmdHF14AMfucAuth,	0, "Authentication    - Ultralight C"},

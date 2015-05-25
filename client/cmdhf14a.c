@@ -24,7 +24,7 @@
 #include "cmdmain.h"
 #include "mifare.h"
 #include "cmdhfmfu.h"
-#include "nonce2key/crapto1.h"
+#include "nonce2key/nonce2key.h"
 
 #define llx PRIx64
 
@@ -531,122 +531,27 @@ int CmdHF14ASim(const char *Cmd)
 	PrintAndLog("Press pm3-button to abort simulation");
 	
 	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a,{ tagtype, flags, 0 }};
+	
 	num_to_bytes(uid, 7, c.d.asBytes);
 	SendCommand(&c);	
+
+	uint8_t data[40];
+	uint8_t key[6];
 
 	while(!ukbhit()){
 		UsbCommand resp;
 		WaitForResponseTimeout(CMD_ACK,&resp,1500);
-		PrintAndLog("Got %04X %02X", resp.arg[0], resp.arg[0]);
+		PrintAndLog("CMD_SIMULATE_MIFARE_CARD [%04X] -- %04X", CMD_SIMULATE_MIFARE_CARD, resp.arg[0]);
 		if ( (resp.arg[0] & 0xffff) == CMD_SIMULATE_MIFARE_CARD ){
-			uint8_t data[40];
-			uint8_t key[6];
+			memset(data, 0x00, sizeof(data));
+			memset(key, 0x00, sizeof(key));
 			int len = (resp.arg[1] > sizeof(data)) ? sizeof(data) : resp.arg[1];
 			memcpy(data, resp.d.asBytes, len);
 			tryMfk32(uid, data, key);
 			//tryMfk64(uid, data, key);
 			PrintAndLog("--");
-			memset(data,0x00, 40);
 		}
 	}
-	return 0;
-}
-
-int tryMfk32(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
-
-	struct Crypto1State *s,*t;
-	uint64_t key;     // recovered key
-	uint32_t uid;     // serial number
-	uint32_t nt;      // tag challenge
-	uint32_t nr0_enc; // first encrypted reader challenge
-	uint32_t ar0_enc; // first encrypted reader response
-	uint32_t nr1_enc; // second encrypted reader challenge
-	uint32_t ar1_enc; // second encrypted reader response	
-	bool isSuccess = FALSE;
-	int counter = 0;
-	
-	uid 	= myuid;//(uint32_t)bytes_to_num(data +  0, 4);
-	nt 		= *(uint32_t*)(data+8);
-	nr0_enc = *(uint32_t*)(data+12);
-	ar0_enc = *(uint32_t*)(data+16);
-	nr1_enc = *(uint32_t*)(data+32);
-	ar1_enc = *(uint32_t*)(data+36);
-
-	// PrintAndLog("Recovering key for:");
-	// PrintAndLog("    uid: %08x",uid);
-	// PrintAndLog("     nt: %08x",nt);
-	// PrintAndLog(" {nr_0}: %08x",nr0_enc);
-	// PrintAndLog(" {ar_0}: %08x",ar0_enc);
-	// PrintAndLog(" {nr_1}: %08x",nr1_enc);
-	// PrintAndLog(" {ar_1}: %08x",ar1_enc);
-
-	s = lfsr_recovery32(ar0_enc ^ prng_successor(nt, 64), 0);
-  
-	for(t = s; t->odd | t->even; ++t) {
-		lfsr_rollback_word(t, 0, 0);
-		lfsr_rollback_word(t, nr0_enc, 1);
-		lfsr_rollback_word(t, uid ^ nt, 0);
-		crypto1_get_lfsr(t, &key);
-		crypto1_word(t, uid ^ nt, 0);
-		crypto1_word(t, nr1_enc, 1);
-		if (ar1_enc == (crypto1_word(t, 0, 0) ^ prng_successor(nt, 64))) {
-			PrintAndLog("Found Key: [%012"llx"]",key);
-			isSuccess = TRUE;
-			++counter;
-			if (counter==10)
-				break;
-		}
-	}
-	free(s);
-	return isSuccess;
-}
-
-int tryMfk64(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
-
-	struct Crypto1State *revstate;
-	uint64_t key;     // recovered key
-	uint32_t uid;     // serial number
-	uint32_t nt;      // tag challenge
-	uint32_t nr_enc;  // encrypted reader challenge
-	uint32_t ar_enc;  // encrypted reader response
-	uint32_t at_enc;  // encrypted tag response
-	uint32_t ks2;     // keystream used to encrypt reader response
-	uint32_t ks3;     // keystream used to encrypt tag response
-
-	struct Crypto1State mpcs = {0, 0};
-	struct Crypto1State *pcs;
-	pcs = &mpcs;
-	
-
-
-	uid 	= myuid;//(uint32_t)bytes_to_num(data +  0, 4);
-	nt 		= *(uint32_t*)(data+8);
-	nr_enc = *(uint32_t*)(data+12);
-	ar_enc = *(uint32_t*)(data+16);
-	
-	crypto1_word(pcs, nr_enc , 1);
-	at_enc = prng_successor(nt, 96) ^ crypto1_word(pcs, 0, 0);
-
-	// printf("Recovering key for:\n");
-	// printf("  uid: %08x\n",uid);
-	// printf("   nt: %08x\n",nt);
-	// printf(" {nr}: %08x\n",nr_enc);
-	// printf(" {ar}: %08x\n",ar_enc);
-	// printf(" {at}: %08x\n",at_enc);
-
-	// Extract the keystream from the messages
-	ks2 = ar_enc ^ prng_successor(nt, 64);
-	ks3 = at_enc ^ prng_successor(nt, 96);
-
-	revstate = lfsr_recovery64(ks2, ks3);
-	lfsr_rollback_word(revstate, 0, 0);
-	lfsr_rollback_word(revstate, 0, 0);
-	lfsr_rollback_word(revstate, nr_enc, 1);
-	lfsr_rollback_word(revstate, uid ^ nt, 0);
-	crypto1_get_lfsr(revstate, &key);
-	PrintAndLog("Found Key: [%012"llx"]",key);
-	crypto1_destroy(revstate);
-	crypto1_destroy(pcs);
 	return 0;
 }
 

@@ -149,3 +149,99 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	
 	return 1;
 }
+
+int tryMfk32(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
+
+	struct Crypto1State *s,*t;
+	uint64_t key;     // recovered key
+	uint32_t uid;     // serial number
+	uint32_t nt;      // tag challenge
+	uint32_t nr0_enc; // first encrypted reader challenge
+	uint32_t ar0_enc; // first encrypted reader response
+	uint32_t nr1_enc; // second encrypted reader challenge
+	uint32_t ar1_enc; // second encrypted reader response	
+	bool isSuccess = FALSE;
+	int counter = 0;
+	
+	uid 	= myuid;//(uint32_t)bytes_to_num(data +  0, 4);
+	nt 		= *(uint32_t*)(data+8);
+	nr0_enc = *(uint32_t*)(data+12);
+	ar0_enc = *(uint32_t*)(data+16);
+	nr1_enc = *(uint32_t*)(data+32);
+	ar1_enc = *(uint32_t*)(data+36);
+
+	// PrintAndLog("Recovering key for:");
+	// PrintAndLog("    uid: %08x",uid);
+	// PrintAndLog("     nt: %08x",nt);
+	// PrintAndLog(" {nr_0}: %08x",nr0_enc);
+	// PrintAndLog(" {ar_0}: %08x",ar0_enc);
+	// PrintAndLog(" {nr_1}: %08x",nr1_enc);
+	// PrintAndLog(" {ar_1}: %08x",ar1_enc);
+
+	s = lfsr_recovery32(ar0_enc ^ prng_successor(nt, 64), 0);
+  
+	for(t = s; t->odd | t->even; ++t) {
+		lfsr_rollback_word(t, 0, 0);
+		lfsr_rollback_word(t, nr0_enc, 1);
+		lfsr_rollback_word(t, uid ^ nt, 0);
+		crypto1_get_lfsr(t, &key);
+		crypto1_word(t, uid ^ nt, 0);
+		crypto1_word(t, nr1_enc, 1);
+		if (ar1_enc == (crypto1_word(t, 0, 0) ^ prng_successor(nt, 64))) {
+			PrintAndLog("Found Key: [%012"llx"]",key);
+			isSuccess = TRUE;
+			++counter;
+			if (counter==10)
+				break;
+		}
+	}
+	free(s);
+	return isSuccess;
+}
+
+int tryMfk64(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
+
+	struct Crypto1State *revstate;
+	uint64_t key;     // recovered key
+	uint32_t uid;     // serial number
+	uint32_t nt;      // tag challenge
+	uint32_t nr_enc;  // encrypted reader challenge
+	uint32_t ar_enc;  // encrypted reader response
+	uint32_t at_enc;  // encrypted tag response
+	uint32_t ks2;     // keystream used to encrypt reader response
+	uint32_t ks3;     // keystream used to encrypt tag response
+
+	struct Crypto1State mpcs = {0, 0};
+	struct Crypto1State *pcs;
+	pcs = &mpcs;
+	
+	uid 	= myuid;//(uint32_t)bytes_to_num(data +  0, 4);
+	nt 		= *(uint32_t*)(data+8);
+	nr_enc = *(uint32_t*)(data+12);
+	ar_enc = *(uint32_t*)(data+16);
+	
+	crypto1_word(pcs, nr_enc , 1);
+	at_enc = prng_successor(nt, 96) ^ crypto1_word(pcs, 0, 0);
+
+	// printf("Recovering key for:\n");
+	// printf("  uid: %08x\n",uid);
+	// printf("   nt: %08x\n",nt);
+	// printf(" {nr}: %08x\n",nr_enc);
+	// printf(" {ar}: %08x\n",ar_enc);
+	// printf(" {at}: %08x\n",at_enc);
+
+	// Extract the keystream from the messages
+	ks2 = ar_enc ^ prng_successor(nt, 64);
+	ks3 = at_enc ^ prng_successor(nt, 96);
+
+	revstate = lfsr_recovery64(ks2, ks3);
+	lfsr_rollback_word(revstate, 0, 0);
+	lfsr_rollback_word(revstate, 0, 0);
+	lfsr_rollback_word(revstate, nr_enc, 1);
+	lfsr_rollback_word(revstate, uid ^ nt, 0);
+	crypto1_get_lfsr(revstate, &key);
+	PrintAndLog("Found Key: [%012"llx"]",key);
+	crypto1_destroy(revstate);
+	crypto1_destroy(pcs);
+	return 0;
+}
