@@ -16,14 +16,12 @@
 #include "mifarecmd.h"
 #include "apps.h"
 #include "util.h"
-
 #include "crc.h"
 
 // the block number for the ISO14443-4 PCB
 uint8_t pcb_blocknum = 0;
 // Deselect card by sending a s-block. the crc is precalced for speed
 static  uint8_t deselect_cmd[] = {0xc2,0xe0,0xb4};
-
 
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag. 
@@ -248,6 +246,10 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LEDsoff();
 }
 
+// arg0 = blockNo (start)
+// arg1 = Pages (number of blocks)
+// arg2 = useKey
+// datain = KEY bytes
 void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 {
 	// free eventually allocated BigBuf memory
@@ -335,6 +337,13 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Blocks read %d", countblocks);
 
 	countblocks *= 4;
+/*
+	LED_B_ON();
+	for(size_t i=0; i < countblocks; i += USB_CMD_DATA_SIZE) {
+		size_t len = MIN((countblocks - i),USB_CMD_DATA_SIZE);
+		cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,countblocks,dataout+i,len);
+	}
+*/
 	cmd_send(CMD_ACK, 1, countblocks, BigBuf_max_traceLen(), 0, 0);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
@@ -450,9 +459,17 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 	LEDsoff();
 }
 
-void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
+// Arg0   : Block to write to.
+// Arg1   : 0 = use no authentication.
+//          1 = use 0x1A authentication.
+//          2 = use 0x1B authentication.
+// datain : 4 first bytes is data to be written.
+//        : 4/16 next bytes is authentication key.
+void MifareUWriteBlock_Special(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 {
 	uint8_t blockNo = arg0;
+	bool useKey = (arg1 == 1); //UL_C
+	bool usePwd = (arg1 == 2); //UL_EV1/NTAG
 	byte_t blockdata[4] = {0x00};
 
 	memcpy(blockdata, datain,4);
@@ -467,6 +484,28 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 		OnError(0);
 		return;
 	};
+
+	// UL-C authentication
+	if ( useKey ) {
+		uint8_t key[16] = {0x00};
+		memcpy(key, datain+4, sizeof(key) );
+
+		if ( !mifare_ultra_auth(key) ) {
+			OnError(1);
+			return;
+		}
+	}
+	
+	// UL-EV1 / NTAG authentication
+	if (usePwd) {
+		uint8_t pwd[4] = {0x00};
+		memcpy(pwd, datain+4, 4);
+		uint8_t pack[4] = {0,0,0,0};
+		if (!mifare_ul_ev1_auth(pwd, pack)) {
+			OnError(1);
+			return;
+		}
+	}
 
 	if(mifare_ultra_special_writeblock(blockNo, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
