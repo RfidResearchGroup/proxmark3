@@ -1328,7 +1328,6 @@ int CmdHF14AMfESave(const char *Cmd)
 			for (j = 0; j < 7; j++, fnameptr += 2)
 				sprintf(fnameptr, "%02X", buf[j]);
 		}
-		}
 	} else {
 		fnameptr += len;
 	}
