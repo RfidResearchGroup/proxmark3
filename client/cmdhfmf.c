@@ -1750,10 +1750,13 @@ int CmdHF14AMfCSave(const char *Cmd) {
 			// get filename
 			if (mfCGetBlock(0, buf, CSETBLOCK_SINGLE_OPER)) {
 				PrintAndLog("Cant get block: %d", 0);
-				return 1;
+				len = sprintf(fnameptr, "dump");
+				fnameptr += len;
 			}
-			for (j = 0; j < 7; j++, fnameptr += 2)
-				sprintf(fnameptr, "%02x", buf[j]); 
+			else {
+				for (j = 0; j < 7; j++, fnameptr += 2)
+					sprintf(fnameptr, "%02x", buf[j]); 
+			}
 		} else {
 			memcpy(filename, Cmd, len);
 			fnameptr += len;
