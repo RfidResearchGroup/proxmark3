@@ -1321,12 +1321,13 @@ int CmdHF14AMfESave(const char *Cmd)
 		// get filename (UID from memory)
 		if (mfEmlGetMem(buf, 0, 1)) {
 			PrintAndLog("Can\'t get UID from block: %d", 0);
-			len = sprintf(fnameptr, "dump"); 
+			len = sprintf(fnameptr, "dump");
 			fnameptr += len;
 		}
 		else {
 			for (j = 0; j < 7; j++, fnameptr += 2)
-				sprintf(fnameptr, "%02X", buf[j]); 
+				sprintf(fnameptr, "%02X", buf[j]);
+		}
 		}
 	} else {
 		fnameptr += len;
