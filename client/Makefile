@@ -114,6 +114,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			aes.c\
 			protocols.c\
 			cmdcrc.c\
+			sha1.c\
 			# reveng/reveng.c\
 			# reveng/cli.c\
 			# reveng/bmpbit.c\

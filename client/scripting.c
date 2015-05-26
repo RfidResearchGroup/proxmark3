@@ -20,6 +20,7 @@
 #include "../common/iso15693tools.h"
 #include "../common/crc16.h"
 #include "../common/crc64.h"
+#include "../common/sha1.h"
 #include "aes.h"
 /**
  * The following params expected:
@@ -254,7 +255,6 @@ static int l_aes128decrypt(lua_State *L)
 
     aes_context ctx;
     aes_init(&ctx);
-    //aes_setkey_enc(&ctx, (const unsigned char *)aes_key, 128);
 	aes_setkey_dec(&ctx, aes_key, 128);
 	aes_crypt_cbc(&ctx, AES_DECRYPT, sizeof(indata), iv, indata, outdata );
     //Push decrypted array as a string
@@ -322,6 +322,16 @@ static int l_crc64(lua_State *L)
 	return 1;
 }
 
+static int l_sha1(lua_State *L){
+
+	size_t size;
+	const char *p_str = luaL_checklstring(L, 1, &size);	
+	unsigned char outdata[20] = {0x00};                                                                                                                                                                     
+    sha1( (uint8_t*) p_str, size, outdata);                                                                                                                                                                 
+    lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
+    return 1;	
+}
+
 /**
  * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
  * able to do "require('foobar')" if foobar.lua is within lualibs folder.
@@ -364,6 +374,7 @@ int set_pm3_libraries(lua_State *L)
 		{"aes128_encrypt",              l_aes128encrypt},
 		{"crc16",                       l_crc16},
 		{"crc64",                       l_crc64},
+		{"sha1",						l_sha1},
         {NULL, NULL}
     };
 
