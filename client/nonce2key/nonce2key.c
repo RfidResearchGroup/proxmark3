@@ -170,8 +170,8 @@ int tryMfk32(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 	nr1_enc = *(uint32_t*)(data+32);
 	ar1_enc = *(uint32_t*)(data+36);
 
-	// PrintAndLog("Recovering key for:");
-	// PrintAndLog("    uid: %08x",uid);
+	// PrintAndLog("recovering key for:");
+	// PrintAndLog("    uid: %08x   %08x",uid, myuid);
 	// PrintAndLog("     nt: %08x",nt);
 	// PrintAndLog(" {nr_0}: %08x",nr0_enc);
 	// PrintAndLog(" {ar_0}: %08x",ar0_enc);
@@ -191,7 +191,7 @@ int tryMfk32(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 			PrintAndLog("Found Key: [%012"llx"]",key);
 			isSuccess = TRUE;
 			++counter;
-			if (counter==10)
+			if (counter==20)
 				break;
 		}
 	}
