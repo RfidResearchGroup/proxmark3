@@ -1007,7 +1007,7 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 		response2a[0] = data[3];
 		response2a[1] = data[4];
 		response2a[2] = data[5];
-		response2a[3] = data[7];
+		response2a[3] = data[6]; //??
 		response2a[4] = response2a[0] ^ response2a[1] ^ response2a[2] ^ response2a[3];
 
 		// Configure the ATQA and SAK accordingly
@@ -1034,7 +1034,7 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 	response3a[0] = sak & 0xFB;
 	ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 
-	uint8_t response5[] = { 0x00, 0x00, 0x00, 0x00 }; // Very random tag nonce
+	uint8_t response5[] = { 0x01, 0x02, 0x03, 0x04 }; // Very random tag nonce
 	uint8_t response6[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 }; // dummy ATS (pseudo-ATR), answer to RATS: 
 	// Format byte = 0x58: FSCI=0x08 (FSC=256), TA(1) and TC(1) present, 
 	// TA(1) = 0x80: different divisors not supported, DR = 1, DS = 1
@@ -2310,7 +2310,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	uint8_t cardWRBL = 0;
 	uint8_t cardAUTHSC = 0;
 	uint8_t cardAUTHKEY = 0xff;  // no authentication
-	uint32_t cardRr = 0;
+//	uint32_t cardRr = 0;
 	uint32_t cuid = 0;
 	//uint32_t rn_enc = 0;
 	uint32_t ans = 0;
@@ -2328,7 +2328,8 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	uint8_t rATQA[] = {0x04, 0x00}; // Mifare classic 1k 4BUID
 	uint8_t rUIDBCC1[] = {0xde, 0xad, 0xbe, 0xaf, 0x62};
 	uint8_t rUIDBCC2[] = {0xde, 0xad, 0xbe, 0xaf, 0x62}; // !!!
-	uint8_t rSAK[] = {0x08, 0xb6, 0xdd};
+	//uint8_t rSAK[] = {0x08, 0xb6, 0xdd}; // Mifare Classic
+	uint8_t rSAK[] = {0x09, 0x3f, 0xcc };  // Mifare Mini 
 	uint8_t rSAK1[] = {0x04, 0xda, 0x17};
 
 	uint8_t rAUTH_NT[] = {0x01, 0x02, 0x03, 0x04};
@@ -2337,9 +2338,11 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	//Here, we collect UID,NT,AR,NR,UID2,NT2,AR2,NR2
 	// This can be used in a reader-only attack.
 	// (it can also be retrieved via 'hf 14a list', but hey...
-	uint32_t ar_nr_responses[] = {0,0,0,0,0,0,0,0};
+	uint32_t ar_nr_responses[] = {0,0,0,0,0,0,0,0,0,0};
 	uint8_t ar_nr_collected = 0;
 
+	Dbprintf("FIRE");
+	
 	// free eventually allocated BigBuf memory but keep Emulator Memory
 	BigBuf_free_keep_EM();
 
@@ -2347,6 +2350,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	clear_trace();
 	set_tracing(TRUE);
 
+	Dbprintf("ICE");
 	// Authenticate response - nonce
 	uint32_t nonce = bytes_to_num(rAUTH_NT, 4);
 	
@@ -2376,6 +2380,12 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		}
 	}
 
+	Dbprintf("ICE2");
+	// save uid.
+	ar_nr_responses[0*5]   = bytes_to_num(rUIDBCC1+1, 3);
+	if ( _7BUID )
+		ar_nr_responses[0*5+1] = bytes_to_num(rUIDBCC2, 4);
+
 	/*
 	 * Regardless of what method was used to set the UID, set fifth byte and modify
 	 * the ATQA for 4 or 7-byte UID
@@ -2403,6 +2413,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		}
 	}
 
+	Dbprintf("ICE3");
 	bool finished = FALSE;
 	while (!BUTTON_PRESS() && !finished) {
 		WDT_HIT();
@@ -2418,7 +2429,6 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		if(cardSTATE == MFEMUL_NOFIELD) continue;
 
 		//Now, get data
-
 		res = EmGetCmd(receivedCmd, &len, receivedCmd_par);
 		if (res == 2) { //Field is off!
 			cardSTATE = MFEMUL_NOFIELD;
@@ -2493,10 +2503,11 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				if(ar_nr_collected < 2){
 					if(ar_nr_responses[2] != ar)
 					{// Avoid duplicates... probably not necessary, ar should vary. 
-						ar_nr_responses[ar_nr_collected*4] = cuid;
-						ar_nr_responses[ar_nr_collected*4+1] = nonce;
-						ar_nr_responses[ar_nr_collected*4+2] = ar;
-						ar_nr_responses[ar_nr_collected*4+3] = nr;
+						//ar_nr_responses[ar_nr_collected*5]   = 0;
+						//ar_nr_responses[ar_nr_collected*5+1] = 0;
+						ar_nr_responses[ar_nr_collected*5+2] = nonce;
+						ar_nr_responses[ar_nr_collected*5+3] = nr;
+						ar_nr_responses[ar_nr_collected*5+4] = ar;
 						ar_nr_collected++;
 					}						
 					// Interactive mode flag, means we need to send ACK
@@ -2507,22 +2518,23 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				}
 
 				// --- crypto
-				crypto1_word(pcs, ar , 1);
-				cardRr = nr ^ crypto1_word(pcs, 0, 0);
+				//crypto1_word(pcs, ar , 1);
+				//cardRr = nr ^ crypto1_word(pcs, 0, 0);
 
-				// test if auth OK
-				if (cardRr != prng_successor(nonce, 64)){
-					if (MF_DBGLEVEL >= 2) Dbprintf("AUTH FAILED for sector %d with key %c. cardRr=%08x, succ=%08x",
-							cardAUTHSC, cardAUTHKEY == 0 ? 'A' : 'B',
-							cardRr, prng_successor(nonce, 64));
+				//test if auth OK
+				//if (cardRr != prng_successor(nonce, 64)){
+					
+					//if (MF_DBGLEVEL >= 4) Dbprintf("AUTH FAILED for sector %d with key %c. cardRr=%08x, succ=%08x",
+					//	cardAUTHSC, cardAUTHKEY == 0 ? 'A' : 'B',
+					//		cardRr, prng_successor(nonce, 64));
 					// Shouldn't we respond anything here?
 					// Right now, we don't nack or anything, which causes the
 					// reader to do a WUPA after a while. /Martin
 					// -- which is the correct response. /piwi
-					cardSTATE_TO_IDLE();
-					LogTrace(Uart.output, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
-					break;
-				}
+					//cardSTATE_TO_IDLE();
+					//LogTrace(Uart.output, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
+					//break;
+				//}
 
 				ans = prng_successor(nonce, 96) ^ crypto1_word(pcs, 0, 0);
 
@@ -2630,13 +2642,13 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 						|| receivedCmd[0] == 0xB0) { // transfer
 					if (receivedCmd[1] >= 16 * 4) {
 						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-						if (MF_DBGLEVEL >= 2) Dbprintf("Reader tried to operate (0x%02) on out of range block: %d (0x%02x), nacking",receivedCmd[0],receivedCmd[1],receivedCmd[1]);
+						if (MF_DBGLEVEL >= 4) Dbprintf("Reader tried to operate (0x%02) on out of range block: %d (0x%02x), nacking",receivedCmd[0],receivedCmd[1],receivedCmd[1]);
 						break;
 					}
 
 					if (receivedCmd[1] / 4 != cardAUTHSC) {
 						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-						if (MF_DBGLEVEL >= 2) Dbprintf("Reader tried to operate (0x%02) on block (0x%02x) not authenticated for (0x%02x), nacking",receivedCmd[0],receivedCmd[1],cardAUTHSC);
+						if (MF_DBGLEVEL >= 4) Dbprintf("Reader tried to operate (0x%02) on block (0x%02x) not authenticated for (0x%02x), nacking",receivedCmd[0],receivedCmd[1],cardAUTHSC);
 						break;
 					}
 				}
@@ -2668,7 +2680,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				if (receivedCmd[0] == 0xC0 || receivedCmd[0] == 0xC1 || receivedCmd[0] == 0xC2) {
 					if (MF_DBGLEVEL >= 4) Dbprintf("RECV 0x%02x inc(0xC1)/dec(0xC0)/restore(0xC2) block %d (%02x)",receivedCmd[0],receivedCmd[1],receivedCmd[1]);
 					if (emlCheckValBl(receivedCmd[1])) {
-						if (MF_DBGLEVEL >= 2) Dbprintf("Reader tried to operate on block, but emlCheckValBl failed, nacking");
+						if (MF_DBGLEVEL >= 4) Dbprintf("Reader tried to operate on block, but emlCheckValBl failed, nacking");
 						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
 						break;
 					}
@@ -2770,35 +2782,37 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	if(flags & FLAG_INTERACTIVE)// Interactive mode flag, means we need to send ACK
 	{
 		//May just aswell send the collected ar_nr in the response aswell
-		cmd_send(CMD_ACK,CMD_SIMULATE_MIFARE_CARD,1,0,&ar_nr_responses,ar_nr_collected*4*4);
+		uint8_t len = ar_nr_collected*5*4;
+		cmd_send(CMD_ACK, CMD_SIMULATE_MIFARE_CARD, len, 0, &ar_nr_responses, len);
 	}
 
 	if(flags & FLAG_NR_AR_ATTACK && MF_DBGLEVEL >= 1 )
 	{
 		if(ar_nr_collected > 1 ) {
 			Dbprintf("Collected two pairs of AR/NR which can be used to extract keys from reader:");
-			Dbprintf("../tools/mfkey/mfkey32 %08x %08x %08x %08x %08x %08x",
-					ar_nr_responses[0], // UID
-					ar_nr_responses[1], // NT
-					ar_nr_responses[2], // AR1
-					ar_nr_responses[3], // NR1
-					ar_nr_responses[6], // AR2
-					ar_nr_responses[7]  // NR2
+			Dbprintf("../tools/mfkey/mfkey32 %06x%08x %08x %08x %08x %08x %08x",
+					ar_nr_responses[0], // UID1
+					ar_nr_responses[1], // UID2
+					ar_nr_responses[2], // NT
+					ar_nr_responses[3], // AR1
+					ar_nr_responses[4], // NR1
+					ar_nr_responses[8], // AR2
+					ar_nr_responses[9]  // NR2
 					);
 		} else {
 			Dbprintf("Failed to obtain two AR/NR pairs!");
 			if(ar_nr_collected > 0 ) {
-				Dbprintf("Only got these: UID=%08x, nonce=%08x, AR1=%08x, NR1=%08x",
-						ar_nr_responses[0], // UID
-						ar_nr_responses[1], // NT
-						ar_nr_responses[2], // AR1
-						ar_nr_responses[3]  // NR1
+				Dbprintf("Only got these: UID=%07x%08x, nonce=%08x, AR1=%08x, NR1=%08x",
+						ar_nr_responses[0], // UID1
+						ar_nr_responses[1], // UID2
+						ar_nr_responses[2], // NT
+						ar_nr_responses[3], // AR1
+						ar_nr_responses[4]  // NR1
 						);
 			}
 		}
 	}
-	if (MF_DBGLEVEL >= 1)	Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ",	tracing, BigBuf_get_traceLen());
-	
+	if (MF_DBGLEVEL >= 1)	Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
 }
 
 

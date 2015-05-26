@@ -36,9 +36,6 @@ uint8_t key_defa_data[16] = { 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,
 uint8_t key_picc_data[16] = { 0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4a,0x4b,0x4c,0x4d,0x4e,0x4f };
 
 static int CmdHelp(const char *Cmd);
-static void xor(unsigned char * dst, unsigned char * src, size_t len);
-static int32_t le24toh (uint8_t data[3]);
-
 
 int CmdHF14ADesWb(const char *Cmd)
 {
@@ -640,23 +637,14 @@ int CmdHF14ADesAuth(const char *Cmd){
 }
 
 
-static void xor(unsigned char * dst, unsigned char * src, size_t len) {
-   for( ; len > 0; len--,dst++,src++)
-       *dst ^= *src;
-}
-
-static int32_t le24toh (uint8_t data[3]) {
-    return (data[2] << 16) | (data[1] << 8) | data[0];
-}
-
 static command_t CommandTable[] =
 {
   {"help",		CmdHelp,					1, "This help"},
-  {"auth",		CmdHF14ADesAuth,			0, "Tries a MIFARE DesFire Authentication"},
-  {"rb",		CmdHF14ADesRb,				0, "Read MIFARE DesFire block"},
-  {"wb",		CmdHF14ADesWb,				0, "write MIFARE DesFire block"},
   {"info",		CmdHF14ADesInfo,			0, "Get MIFARE DesFire information"},
   {"enum",		CmdHF14ADesEnumApplications,0, "Tries enumerate all applications"},
+  {"auth",		CmdHF14ADesAuth,			0, "Tries a MIFARE DesFire Authentication"},
+  {"rdbl",		CmdHF14ADesRb,				0, "Read MIFARE DesFire block"},
+  {"wrbl",		CmdHF14ADesWb,				0, "write MIFARE DesFire block"},
   {NULL, NULL, 0, NULL}
 };
 

@@ -9,7 +9,7 @@
 // with the linker script.
 //-----------------------------------------------------------------------------
 
-#include "../include/proxmark3.h"
+#include "proxmark3.h"
 #include "apps.h"
 
 extern char __data_start__, __data_src_start__,  __data_end__, __bss_start__, __bss_end__;

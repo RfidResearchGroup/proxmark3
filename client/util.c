@@ -444,3 +444,12 @@ void wiegand_add_parity(char *target, char *source, char length)
     target += length;
     *(target)= GetParity(source + length / 2, ODD, length / 2);
 }
+
+void xor(unsigned char * dst, unsigned char * src, size_t len) {
+   for( ; len > 0; len--,dst++,src++)
+       *dst ^= *src;
+}
+
+int32_t le24toh (uint8_t data[3]) {
+    return (data[2] << 16) | (data[1] << 8) | data[0];
+}

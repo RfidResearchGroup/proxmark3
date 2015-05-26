@@ -8,7 +8,7 @@
 // Utility functions used in many places, not specific to any piece of code.
 //-----------------------------------------------------------------------------
 
-#include "../include/proxmark3.h"
+#include "proxmark3.h"
 #include "util.h"
 #include "string.h"
 #include "apps.h"

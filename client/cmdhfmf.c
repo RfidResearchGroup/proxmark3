@@ -1012,8 +1012,10 @@ int CmdHF14AMf1kSim(const char *Cmd)
 	uint8_t uid[7] = {0, 0, 0, 0, 0, 0, 0};
 	uint8_t exitAfterNReads = 0;
 	uint8_t flags = 0;
-
+	
 	uint8_t cmdp = param_getchar(Cmd, 0);
+
+	clearCommandBuffer();
 	
 	if (cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:  hf mf sim  u <uid (8 hex symbols)> n <numreads> i x");
@@ -1065,25 +1067,38 @@ int CmdHF14AMf1kSim(const char *Cmd)
 
 	if(flags & FLAG_INTERACTIVE)
 	{		
-		uint64_t corr_uid =  bytes_to_num(uid,  ( flags & FLAG_4B_UID_IN_DATA ) ? 4 : 7 );
-
 		PrintAndLog("Press pm3-button to abort simulation");
 		
 		uint8_t data[40];
 		uint8_t key[6];
 
-		while(!ukbhit()){
-			UsbCommand resp;		
-			WaitForResponseTimeout(CMD_ACK,&resp,1500);
-			PrintAndLog("CMD_SIMULATE_MIFARE_CARD [%04X] -- %04X", CMD_SIMULATE_MIFARE_CARD, resp.arg[0]);			
-			if ( (resp.arg[0] & 0xffff) == CMD_SIMULATE_MIFARE_CARD ){
-				memset(data, 0x00, sizeof(data));
-				memset(key, 0x00, sizeof(key));
-				int len = (resp.arg[1] > sizeof(data)) ? sizeof(data) : resp.arg[1];
-				memcpy(data, resp.d.asBytes, len);
-				tryMfk32(corr_uid, data, key);
-				//tryMfk64(corr_uid, data, key);
-				PrintAndLog("--");
+		UsbCommand resp;		
+		while(!ukbhit() ){
+			if ( WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
+				if ( (resp.arg[0] & 0xffff) == CMD_SIMULATE_MIFARE_CARD ){
+					memset(data, 0x00, sizeof(data));
+					memset(key, 0x00, sizeof(key));
+					int len = (resp.arg[1] > sizeof(data)) ? sizeof(data) : resp.arg[1];
+					
+					memcpy(data, resp.d.asBytes, len);
+					
+					uint64_t corr_uid = 0;
+					if ( memcmp(data, "\x00\x00\x00\x00", 4) == 0 ) {
+						corr_uid = (data[3] << 24) | (data[2] << 16) | (data[1] << 8) | data[0];
+					}
+					else {
+						corr_uid |= (uint64_t)data[2] << 48; 
+						corr_uid |= (uint64_t)data[1] << 40; 
+						corr_uid |= (uint64_t)data[0] << 32;
+						corr_uid |= data[7] << 24;
+						corr_uid |= data[6] << 16;
+						corr_uid |= data[5] << 8;
+						corr_uid |= data[4];
+					}
+					tryMfk32(corr_uid, data, key);
+					//tryMfk64(corr_uid, data, key);
+					PrintAndLog("--");
+				}
 			}
 		}
 	}

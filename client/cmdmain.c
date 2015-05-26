@@ -34,7 +34,7 @@ static int CmdHelp(const char *Cmd);
 static int CmdQuit(const char *Cmd);
 
 //For storing command that are received from the device
-#define CMD_BUFFER_SIZE 50
+#define CMD_BUFFER_SIZE 60
 static UsbCommand cmdBuffer[CMD_BUFFER_SIZE];
 //Points to the next empty position to write to
 static int cmd_head;//Starts as 0

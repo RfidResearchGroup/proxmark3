@@ -10,16 +10,17 @@
 // executes.
 //-----------------------------------------------------------------------------
 
-#include "../common/usb_cdc.h"
-#include "../common/cmd.h"
-#include "../include/proxmark3.h"
-#include "../include/hitag2.h"
+#include "usb_cdc.h"
+#include "cmd.h"
+
+#include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
 #include "printf.h"
 #include "string.h"
 #include <stdarg.h>
 #include "legicrf.h"
+#include <hitag2.h>
 #include "lfsampling.h"
 #include "BigBuf.h"
 

@@ -646,6 +646,8 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	int len = 0;
 	char tempStr[50];
 
+	clearCommandBuffer();
+	
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
 		switch(param_getchar(Cmd, cmdp))
@@ -857,6 +859,8 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authKeyPtr = authenticationkey;
 	
+	clearCommandBuffer();
+	
 	// starting with getting tagtype
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
@@ -982,7 +986,9 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	uint8_t data[16] = {0x00};
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authKeyPtr = authenticationkey;
-		
+
+	clearCommandBuffer();
+	
 	// starting with getting tagtype
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
@@ -1179,6 +1185,8 @@ int CmdHF14AMfUDump(const char *Cmd){
 	uint8_t startPage = 0;
 	char tempStr[50];
 
+	clearCommandBuffer();
+	
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
 		switch(param_getchar(Cmd, cmdp))
@@ -1403,6 +1411,8 @@ int CmdHF14AMfucAuth(const char *Cmd){
 
 	char cmdp = param_getchar(Cmd, 0);
 
+	clearCommandBuffer();
+
 	//Change key to user defined one
 	if (cmdp == 'k' || cmdp == 'K'){
 		keyNo = param_get8(Cmd, 1);
@@ -1542,6 +1552,8 @@ int CmdHF14AMfucSetPwd(const char *Cmd){
 	
 	char cmdp = param_getchar(Cmd, 0);
 
+	clearCommandBuffer();
+	
 	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') {	
 		PrintAndLog("Usage:  hf mfu setpwd <password (32 hex symbols)>");
 		PrintAndLog("       [password] - (32 hex symbols)");
@@ -1587,6 +1599,8 @@ int CmdHF14AMfucSetUid(const char *Cmd){
 	UsbCommand resp;
 	uint8_t uid[7] = {0x00};
 	char cmdp = param_getchar(Cmd, 0);
+	
+	clearCommandBuffer();
 	
 	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') {	
 		PrintAndLog("Usage:  hf mfu setuid <uid (14 hex symbols)>");

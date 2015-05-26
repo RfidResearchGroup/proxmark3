@@ -481,6 +481,8 @@ int CmdHF14ASim(const char *Cmd)
 	uint64_t uid = 0;
 	uint8_t cmdp = 0;
 	
+	clearCommandBuffer();
+	
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
 		switch(param_getchar(Cmd, cmdp))
@@ -537,19 +539,18 @@ int CmdHF14ASim(const char *Cmd)
 
 	uint8_t data[40];
 	uint8_t key[6];
-
+	UsbCommand resp;
 	while(!ukbhit()){
-		UsbCommand resp;
-		WaitForResponseTimeout(CMD_ACK,&resp,1500);
-		PrintAndLog("CMD_SIMULATE_MIFARE_CARD [%04X] -- %04X", CMD_SIMULATE_MIFARE_CARD, resp.arg[0]);
-		if ( (resp.arg[0] & 0xffff) == CMD_SIMULATE_MIFARE_CARD ){
-			memset(data, 0x00, sizeof(data));
-			memset(key, 0x00, sizeof(key));
-			int len = (resp.arg[1] > sizeof(data)) ? sizeof(data) : resp.arg[1];
-			memcpy(data, resp.d.asBytes, len);
-			tryMfk32(uid, data, key);
-			//tryMfk64(uid, data, key);
-			PrintAndLog("--");
+		if ( WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
+			if ( (resp.arg[0] & 0xffff) == CMD_SIMULATE_MIFARE_CARD ){
+				memset(data, 0x00, sizeof(data));
+				memset(key, 0x00, sizeof(key));
+				int len = (resp.arg[1] > sizeof(data)) ? sizeof(data) : resp.arg[1];
+				memcpy(data, resp.d.asBytes, len);
+				tryMfk32(uid, data, key);
+				//tryMfk64(uid, data, key);
+				PrintAndLog("--");
+			}
 		}
 	}
 	return 0;
