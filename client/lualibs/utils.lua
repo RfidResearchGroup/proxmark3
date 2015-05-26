@@ -101,7 +101,7 @@ local Utils =
 	end,
 
 	------------ SHA1 hash
-	-- Takes a hex string and calculates a SHA1 hash
+	-- Takes a string and calculates a SHA1 hash
 	Sha1 = function(s)
 		if s == nil then return nil end
 		if #s == 0 then return nil end
@@ -113,6 +113,19 @@ local Utils =
 		end
 		return nil
 	end,	
+	-- Takes a hex string and calculates a SHA1 hash
+	Sha1Hex = function(s)
+		if s == nil then return nil end
+		if #s == 0 then return nil end
+		if  type(s) == 'string' then
+			local utils = require('utils')
+			local asc = utils.ConvertHexToAscii(s)
+			local hash = core.sha1(asc)
+			return hash
+		end
+		return nil
+	end,	
+
 	
 	-- input parameter is a string
 	-- Swaps the endianess and returns a number,  
