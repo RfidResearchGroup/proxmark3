@@ -305,7 +305,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 	}
 
 	for (int i = 0; i < blocks; i++){
-		if ((i*4) + 4 > CARD_MEMORY_SIZE) {
+		if ((i*4) + 4 >= CARD_MEMORY_SIZE) {
 			Dbprintf("Data exceeds buffer!!");
 			break;
 		}
@@ -337,16 +337,11 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Blocks read %d", countblocks);
 
 	countblocks *= 4;
-/*
-	LED_B_ON();
-	for(size_t i=0; i < countblocks; i += USB_CMD_DATA_SIZE) {
-		size_t len = MIN((countblocks - i),USB_CMD_DATA_SIZE);
-		cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,countblocks,dataout+i,len);
-	}
-*/
+
 	cmd_send(CMD_ACK, 1, countblocks, BigBuf_max_traceLen(), 0, 0);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
+	BigBuf_free();
 }
 
 //-----------------------------------------------------------------------------
