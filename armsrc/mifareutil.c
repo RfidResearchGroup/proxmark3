@@ -65,12 +65,6 @@ uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data) {
 	return bt;
 }
 
-// send 2 byte commands
-int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t* answer, uint8_t *answer_parity, uint32_t *timing)
-{
-	return mifare_sendcmd_shortex(pcs, crypted, cmd, data, answer, answer_parity, timing);
-}
-
 // send X byte basic commands
 int mifare_sendcmd(uint8_t cmd, uint8_t* data, uint8_t data_size, uint8_t* answer, uint8_t *answer_parity, uint32_t *timing)
 {
@@ -88,52 +82,8 @@ int mifare_sendcmd(uint8_t cmd, uint8_t* data, uint8_t data_size, uint8_t* answe
 	return len;
 }
 
-/*
-int mifare_sendcmd_short_mfucauth(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing)
-{
-	uint8_t dcmd[19];
-	int len; 
-	dcmd[0] = cmd;
-	memcpy(dcmd+1,data,16);
-	AppendCrc14443a(dcmd, 17);
-	
-	ReaderTransmit(dcmd, sizeof(dcmd), timing);
-	len = ReaderReceive(answer, answer_parity);
-	if(!len) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)   Dbprintf("Authentication failed. Card timeout.");
-			len = ReaderReceive(answer,answer_parity);
-	}
-	if(len==1) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)   Dbprintf("NAK - Authentication failed.");
-		return 1;
-	}
-	return len;
-}
-
-int mifare_sendcmd_short_mfuev1auth(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t *data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing)
-{
-	uint8_t dcmd[7];
-	int len; 
-	dcmd[0] = cmd;
-	memcpy(dcmd+1,data,4);
-	AppendCrc14443a(dcmd, 5);
-
-	ReaderTransmit(dcmd, sizeof(dcmd), timing);
-	len = ReaderReceive(answer, answer_parity);
-	if(!len) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)   Dbprintf("Authentication failed. Card timeout.");
-		len = ReaderReceive(answer,answer_parity);
-	}
-	if(len==1) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)   Dbprintf("NAK - Authentication failed.");
-		return 1;
-	}
-	return len;
-}
-*/
-
 // send 2 byte commands
-int mifare_sendcmd_shortex(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing)
+int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing)
 {
 	uint8_t dcmd[4], ecmd[4];
 	uint16_t pos, res;
@@ -319,7 +269,8 @@ int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack){
 	uint8_t key[4] = {0x00};
 	memcpy(key, keybytes, 4);
 
-	Dbprintf("EV1 Auth : %02x%02x%02x%02x",	key[0], key[1], key[2], key[3]);
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED)
+		Dbprintf("EV1 Auth : %02x%02x%02x%02x",	key[0], key[1], key[2], key[3]);
 	len = mifare_sendcmd(0x1B, key, sizeof(key), resp, respPar, NULL);
 	//len = mifare_sendcmd_short_mfuev1auth(NULL, 0, 0x1B, key, resp, respPar, NULL);
 	if (len != 4) {

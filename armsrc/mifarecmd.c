@@ -717,7 +717,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 		LED_B_OFF();
 	
 	}
-//  -------------------------------------------------------------------------------------------------	
+	//  -------------------------------------------------------------------------------------------------	
 	
 	LED_C_ON();
 
@@ -746,7 +746,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 
 			// nested authentication
 			auth2_time = auth1_time + delta_time;
-			len = mifare_sendcmd_shortex(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, &auth2_time);
+			len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, &auth2_time);
 			if (len != 4) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Auth2 error len=%d", len);
 				continue;
