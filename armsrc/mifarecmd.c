@@ -254,7 +254,6 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 {
 	// free eventually allocated BigBuf memory
 	BigBuf_free();
-	// clear trace
 	clear_trace();
 
 	// params
@@ -416,7 +415,8 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LEDsoff();
 }
 
-void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
+/* // Command not needed but left for future testing 
+void MifareUWriteBlockCompat(uint8_t arg0, uint8_t *datain)
 {
 	uint8_t blockNo = arg0;
 	byte_t blockdata[16] = {0x00};
@@ -436,7 +436,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 		return;
 	};
 
-	if(mifare_ultra_writeblock(blockNo, blockdata)) {
+	if(mifare_ultra_writeblock_compat(blockNo, blockdata)) {
 		if (MF_DBGLEVEL >= 1)   Dbprintf("Write block error");
 		OnError(0);
 		return;	};
@@ -453,6 +453,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
+*/
 
 // Arg0   : Block to write to.
 // Arg1   : 0 = use no authentication.
@@ -460,7 +461,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 //          2 = use 0x1B authentication.
 // datain : 4 first bytes is data to be written.
 //        : 4/16 next bytes is authentication key.
-void MifareUWriteBlock_Special(uint8_t arg0, uint8_t arg1, uint8_t *datain)
+void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 {
 	uint8_t blockNo = arg0;
 	bool useKey = (arg1 == 1); //UL_C
@@ -502,7 +503,7 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 		}
 	}
 
-	if(mifare_ultra_special_writeblock(blockNo, blockdata)) {
+	if(mifare_ultra_writeblock(blockNo, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(0);
 		return;
@@ -542,7 +543,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	blockdata[1] = pwd[6];
 	blockdata[2] = pwd[5];
 	blockdata[3] = pwd[4];
-	if(mifare_ultra_special_writeblock( 44, blockdata)) {
+	if(mifare_ultra_writeblock( 44, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(44);
 		return;
@@ -552,7 +553,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	blockdata[1] = pwd[2];
 	blockdata[2] = pwd[1];
 	blockdata[3] = pwd[0];
-	if(mifare_ultra_special_writeblock( 45, blockdata)) {
+	if(mifare_ultra_writeblock( 45, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(45);
 		return;
@@ -562,7 +563,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	blockdata[1] = pwd[14];
 	blockdata[2] = pwd[13];
 	blockdata[3] = pwd[12];
-	if(mifare_ultra_special_writeblock( 46, blockdata)) {
+	if(mifare_ultra_writeblock( 46, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(46);
 		return;
@@ -572,7 +573,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	blockdata[1] = pwd[10];
 	blockdata[2] = pwd[9];
 	blockdata[3] = pwd[8];
-	if(mifare_ultra_special_writeblock( 47, blockdata)) {
+	if(mifare_ultra_writeblock( 47, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(47);
 		return;
@@ -1265,14 +1266,12 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain){
 	isOK = mifare_desfire_des_auth2(cuid, key, dataout);
 	
 	if( isOK) {
-	    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) 
-			Dbprintf("Authentication part2: Failed");  
-		//OnError(4);
+		if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Authentication part2: Failed");  
+		OnError(4);
 		return;
 	}
 
-	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) 
-		DbpString("AUTH 2 FINISHED");
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) DbpString("AUTH 2 FINISHED");
 
 	cmd_send(CMD_ACK, isOK, 0, 0, dataout, sizeof(dataout));
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
