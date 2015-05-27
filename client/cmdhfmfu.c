@@ -13,7 +13,7 @@
 #include "cmdhf14a.h"
 #include "mifare.h"
 #include "util.h"
-#include "../common/protocols.h"
+#include "protocols.h"
 #include "data.h"
 
 #define MAX_UL_BLOCKS     0x0f
@@ -102,17 +102,20 @@ char *getUlev1CardSizeStr( uint8_t fsize ){
 
 static void ul_switch_on_field(void) {
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
+	clearCommandBuffer();
 	SendCommand(&c);
 }
 
 void ul_switch_off_field(void) {
 	UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}};
+	clearCommandBuffer();
 	SendCommand(&c);
 }
 
 static int ul_send_cmd_raw( uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength ) {
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC, cmdlen, 0}};
 	memcpy(c.d.asBytes, cmd, cmdlen);
+	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
@@ -129,6 +132,7 @@ static int ul_send_cmd_raw_crc( uint8_t *cmd, uint8_t cmdlen, uint8_t *response,
 		c.arg[0] |= ISO14A_APPEND_CRC;
 
 	memcpy(c.d.asBytes, cmd, cmdlen);	
+	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
@@ -193,6 +197,7 @@ static int ulc_authentication( uint8_t *key, bool switch_off_field ){
 
 	UsbCommand c = {CMD_MIFAREUC_AUTH, {switch_off_field}};
 	memcpy(c.d.asBytes, key, 16);
+	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
 	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) return 0;
@@ -209,7 +214,6 @@ static int ulev1_requestAuthentication( uint8_t *pwd, uint8_t *pack, uint16_t pa
 }
 
 static int ul_auth_select( iso14a_card_select_t *card, TagTypeUL_t tagtype, bool hasAuthKey, uint8_t *authenticationkey, uint8_t *pack, uint8_t packSize){
-
 	if ( hasAuthKey && (tagtype & UL_C)) {
 		//will select card automatically and close connection on error
 		if (!ulc_authentication(authenticationkey, false)) {
@@ -646,8 +650,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	int len = 0;
 	char tempStr[50];
 
-	clearCommandBuffer();
-	
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
 		switch(param_getchar(Cmd, cmdp))
@@ -859,8 +861,6 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authKeyPtr = authenticationkey;
 	
-	clearCommandBuffer();
-	
 	// starting with getting tagtype
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
@@ -960,6 +960,7 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 		memcpy(c.d.asBytes+4,authKeyPtr,4);
 	}
 	
+	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
@@ -987,8 +988,6 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authKeyPtr = authenticationkey;
 
-	clearCommandBuffer();
-	
 	// starting with getting tagtype
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
@@ -1054,6 +1053,7 @@ int CmdHF14AMfURdBl(const char *Cmd){
 		//Validations
 		if(errors) return usage_hf_mfu_rdbl();
 	}
+
 	if ( blockNo == -1 ) return usage_hf_mfu_rdbl();
 	
 	// Swap endianness 
@@ -1071,13 +1071,16 @@ int CmdHF14AMfURdBl(const char *Cmd){
 		memcpy(c.d.asBytes,authKeyPtr,4);
 	}
 	
+	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
 		uint8_t isOK = resp.arg[0] & 0xff;
 		if (isOK) {
 			uint8_t *data = resp.d.asBytes;
-			PrintAndLog("Block: %0d (0x%02X) [ %s]", blockNo, blockNo, sprint_hex(data, 4));
+			PrintAndLog("\nBlock#  | Data        | Ascii");
+			PrintAndLog("-----------------------------");
+			PrintAndLog("%02d/0x%02X | %s| %.4s\n", blockNo, blockNo, sprint_hex(data, 4), data);
 		}
 		else {
 			PrintAndLog("Failed reading block: (%02x)", isOK);
@@ -1185,8 +1188,6 @@ int CmdHF14AMfUDump(const char *Cmd){
 	uint8_t startPage = 0;
 	char tempStr[50];
 
-	clearCommandBuffer();
-	
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
 		switch(param_getchar(Cmd, cmdp))
@@ -1264,6 +1265,8 @@ int CmdHF14AMfUDump(const char *Cmd){
 
 		memcpy(c.d.asBytes, authKeyPtr, dataLen);
 	}
+
+	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp,1500)) {
@@ -1322,11 +1325,11 @@ int CmdHF14AMfUDump(const char *Cmd){
 		}
 	}
 
-	PrintAndLog("Block#  | Data        |lck| Ascii");
+	PrintAndLog("\nBlock#  | Data        |lck| Ascii");
 	PrintAndLog("---------------------------------");
 	for (i = 0; i < Pages; ++i) {
 		if ( i < 3 ) {
-			PrintAndLog("%02d/0x%02X | %s | |", i, i,sprint_hex(data + i * 4, 4));
+			PrintAndLog("%02d/0x%02X | %s|   | ", i+startPage, i+startPage, sprint_hex(data + i * 4, 4));
 			continue;
 		}
 		switch(i){
@@ -1373,7 +1376,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 			case 43: tmplockbit = bit2[9]; break;  //auth1
 			default: break;
 		}
-		PrintAndLog("%02d/0x%02X | %s |%d| %.4s",i , i, sprint_hex(data + i * 4, 4), tmplockbit, data+i*4);
+		PrintAndLog("%02d/0x%02X | %s| %d | %.4s", i+startPage, i+startPage, sprint_hex(data + i * 4, 4), tmplockbit, data+i*4);
 	}
 	PrintAndLog("---------------------------------");
 
@@ -1410,8 +1413,6 @@ int CmdHF14AMfucAuth(const char *Cmd){
 	bool errors = false;
 
 	char cmdp = param_getchar(Cmd, 0);
-
-	clearCommandBuffer();
 
 	//Change key to user defined one
 	if (cmdp == 'k' || cmdp == 'K'){
@@ -1552,8 +1553,6 @@ int CmdHF14AMfucSetPwd(const char *Cmd){
 	
 	char cmdp = param_getchar(Cmd, 0);
 
-	clearCommandBuffer();
-	
 	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') {	
 		PrintAndLog("Usage:  hf mfu setpwd <password (32 hex symbols)>");
 		PrintAndLog("       [password] - (32 hex symbols)");
@@ -1570,6 +1569,7 @@ int CmdHF14AMfucSetPwd(const char *Cmd){
 	
 	UsbCommand c = {CMD_MIFAREUC_SETPWD};	
 	memcpy( c.d.asBytes, pwd, 16);
+	clearCommandBuffer();
 	SendCommand(&c);
 
 	UsbCommand resp;
@@ -1600,8 +1600,6 @@ int CmdHF14AMfucSetUid(const char *Cmd){
 	uint8_t uid[7] = {0x00};
 	char cmdp = param_getchar(Cmd, 0);
 	
-	clearCommandBuffer();
-	
 	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') {	
 		PrintAndLog("Usage:  hf mfu setuid <uid (14 hex symbols)>");
 		PrintAndLog("       [uid] - (14 hex symbols)");
@@ -1620,6 +1618,7 @@ int CmdHF14AMfucSetUid(const char *Cmd){
 	// read block2. 
 	c.cmd = CMD_MIFAREU_READBL;
 	c.arg[0] = 2;
+	clearCommandBuffer();
 	SendCommand(&c);
 	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
 		PrintAndLog("Command execute timeout");
@@ -1637,6 +1636,7 @@ int CmdHF14AMfucSetUid(const char *Cmd){
 	c.d.asBytes[1] = uid[1];
 	c.d.asBytes[2] = uid[2];
 	c.d.asBytes[3] =  0x88 ^ uid[0] ^ uid[1] ^ uid[2];
+	clearCommandBuffer();
 	SendCommand(&c);
 	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
 		PrintAndLog("Command execute timeout");
@@ -1649,6 +1649,7 @@ int CmdHF14AMfucSetUid(const char *Cmd){
 	c.d.asBytes[1] = uid[4];
 	c.d.asBytes[2] = uid[5];
 	c.d.asBytes[3] = uid[6];
+	clearCommandBuffer();
 	SendCommand(&c);
 	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
 		PrintAndLog("Command execute timeout");
@@ -1661,6 +1662,7 @@ int CmdHF14AMfucSetUid(const char *Cmd){
 	c.d.asBytes[1] = oldblock2[1];
 	c.d.asBytes[2] = oldblock2[2];
 	c.d.asBytes[3] = oldblock2[3];
+	clearCommandBuffer();
 	SendCommand(&c);
 	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
 		PrintAndLog("Command execute timeout");
