@@ -55,6 +55,15 @@ int CmdSetDebugMode(const char *Cmd)
 	return 1;
 }
 
+int usage_data_printdemodbuf(){
+		PrintAndLog("Usage: data printdemodbuffer x o <offset>");
+		PrintAndLog("Options:        ");
+		PrintAndLog("       h          This help");
+		PrintAndLog("       x          output in hex (omit for binary output)");
+		PrintAndLog("       o <offset> enter offset in # of bits");
+		return 0;	
+}
+
 //by marshmellow
 void printDemodBuff(void)
 {
@@ -73,23 +82,50 @@ void printDemodBuff(void)
 
 int CmdPrintDemodBuff(const char *Cmd)
 {
-	char hex;
-	char printBuff[512]={0x00};
-	uint8_t numBits = DemodBufferLen & 0xFFFC;
-	sscanf(Cmd, "%c", &hex);
-	if (hex == 'h'){
-		PrintAndLog("Usage: data printdemodbuffer [x]");
-		PrintAndLog("Options:        ");
-		PrintAndLog("       h       This help");
-		PrintAndLog("       x       output in hex (omit for binary output)");
-		return 0;
+	char hex[512]={0x00};
+	bool hexMode = false;
+	bool errors = false;
+	uint8_t offset = 0;
+	char cmdp = 0;
+	while(param_getchar(Cmd, cmdp) != 0x00)
+	{
+		switch(param_getchar(Cmd, cmdp))
+		{
+		case 'h':
+		case 'H':
+			return usage_data_printdemodbuf();
+		case 'x':
+		case 'X':
+			hexMode = true;
+			cmdp++;
+			break;
+		case 'o':
+		case 'O':
+			offset = param_get8(Cmd, cmdp+1);
+			if (!offset) errors = true;
+			cmdp += 2;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+		if(errors) break;
 	}
-	if (hex == 'x'){
-		numBits = binarraytohex(printBuff, (char *)DemodBuffer, numBits);
+	//Validations
+	if(errors) return usage_data_printdemodbuf();
+
+	int numBits = (DemodBufferLen-offset) & 0x7FC; //make sure we don't exceed our string
+
+	if (hexMode){
+		char *buf = DemodBuffer + offset;
+		numBits = binarraytohex(hex, buf, numBits);
 		if (numBits==0) return 0;
-		PrintAndLog("DemodBuffer: %s",printBuff);
+		PrintAndLog("DemodBuffer: %s",hex);		
 	} else {
-		printDemodBuff();
+		//setDemodBuf(DemodBuffer, DemodBufferLen-offset, offset);
+		char *bin = sprint_bin_break(DemodBuffer+offset,numBits,16);
+		PrintAndLog("DemodBuffer:\n%s",bin);
 	}
 	return 1;
 }
@@ -2182,7 +2218,7 @@ static command_t CommandTable[] =
 	{"manrawdecode",    Cmdmandecoderaw,    1, "[invert] [maxErr] -- Manchester decode binary stream in DemodBuffer"},
 	{"norm",            CmdNorm,            1, "Normalize max/min to +/-128"},
 	{"plot",            CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
-	{"printdemodbuffer",CmdPrintDemodBuff,  1, "[x] -- print the data in the DemodBuffer - 'x' for hex output"},
+	{"printdemodbuffer",CmdPrintDemodBuff,  1, "[x] [o] <offset> -- print the data in the DemodBuffer - 'x' for hex output"},
 	{"pskindalademod",  CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Demodulate an indala tag (PSK1) from GraphBuffer (args optional)"},
 	{"psknexwatchdemod",CmdPSKNexWatch,     1, "Demodulate a NexWatch tag (nexkey, quadrakey) (PSK1) from GraphBuffer"},
 	{"rawdemod",        CmdRawDemod,        1, "[modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary"},  
