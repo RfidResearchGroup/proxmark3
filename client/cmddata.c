@@ -118,7 +118,7 @@ int CmdPrintDemodBuff(const char *Cmd)
 	int numBits = (DemodBufferLen-offset) & 0x7FC; //make sure we don't exceed our string
 
 	if (hexMode){
-		char *buf = DemodBuffer + offset;
+		char *buf = (char *) (DemodBuffer + offset);
 		numBits = binarraytohex(hex, buf, numBits);
 		if (numBits==0) return 0;
 		PrintAndLog("DemodBuffer: %s",hex);		
