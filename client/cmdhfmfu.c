@@ -617,6 +617,7 @@ uint32_t GetHF14AMfU_Type(void){
 			}
 		}
 	} else {
+		ul_switch_off_field();
 		// Infinition MY-D tests   Exam high nibble 
 		uint8_t nib = (card.uid[1] & 0xf0) >> 4;
 		switch ( nib ){
