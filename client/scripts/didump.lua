@@ -14,6 +14,7 @@ This is a script to dump and decrypt the data of a specific type of Mifare Mini 
 
 Arguments:
 	-h             : this help
+	-t			   : selftest
 	-k <key>       : Mifare Key A.
 ]]
 
@@ -364,14 +365,22 @@ end
 local function selftest()
 	local testdata = '000F42430D0A14000001D11F'..'5D738517'
 	local chksum = getChecksum(testdata)
-	local calc = calculateChecksum( utils.ConvertHexToBytes(testdata:sub(1,24)))	
-	print  ('TESTDATA    :: '..testdata)
-	print  ('DATA        :: '..testdata:sub(1,24))
-	print (('CHKSUM      :: %X'):format(chksum))	
-	print (('CHKSUM CALC :: %X'):format(calc))	
-	print ('UPDATE CHKSUM :: '..updateChecksum(testdata))
-	
-	
+	local calc = calculateChecksum( utils.ConvertHexToBytes(testdata:sub(1,24)))
+	local isValid = false
+	local validStr = "FAIL"
+	if calc == chksum then
+		isValid = true
+		validStr = "OK"
+	end	
+	local newtestdata = updateChecksum(testdata)
+	local revalidated = "FAIL"
+	if newtestdata == testdata then
+		revalidated = "OK"
+	end	
+	print  ('TESTDATA      :: '..testdata)
+	print  ('DATA          :: '..testdata:sub(1,24))	
+	print (('VALID CHKSUM  :: %s'):format(validStr ))	
+	print (('UPDATE CHKSUM :: %s'):format(revalidated))	
 end
 --- 
 -- The main entry point
@@ -382,17 +391,14 @@ function main(args)
 
 	local cmd, result, err, blockNo, keyA
 	local blocks = {}
-	local decryptkey = ''
+	local magic = ''
 	
 	-- Read the parameters
-	for o, a in getopt.getopt(args, 'hk:') do
+	for o, a in getopt.getopt(args, 'hk:t') do
 		if o == "h" then help() return end
 		if o == "k" then keyA = a end
+		if o == "t" then return selftest() end
 	end
-	
-	selftest()
-	
-	local tst2 = '00100100030209094312356432324E34B79A349B'
 	
 	-- validate input args.
 	keyA =  keyA or '6dd747e86975'
@@ -410,15 +416,7 @@ function main(args)
 	if not result then
 		return oops(err)
 	end
-
 	core.clearCommandBuffer()
-
-	print(result.uid, keyA)
-
-	local my = result.uid
-	if 1 == 1 then 
-		return
-	end
 	
 	-- Show tag info
 	print((' Found tag %s'):format(result.name))
@@ -426,11 +424,10 @@ function main(args)
 	local longrandom = RANDOM..result.uid
 	local res = utils.Sha1Hex(longrandom)
 	res  = utils.ConvertBytesToHex(utils.ConvertAsciiToBytes(res:sub(1,16)))
-	decryptkey = utils.SwapEndiannessStr(res:sub(1,8) , 32)
-	decryptkey = decryptkey..utils.SwapEndiannessStr( res:sub(9,16),32)
-	decryptkey = decryptkey..utils.SwapEndiannessStr( res:sub(17,24),32)
-	decryptkey = decryptkey..utils.SwapEndiannessStr( res:sub(25,32),32)
-	print('Decrypt key::',decryptkey)
+	magic = utils.SwapEndiannessStr(res:sub(1,8) , 32)
+	magic = magic..utils.SwapEndiannessStr( res:sub(9,16),32)
+	magic = magic..utils.SwapEndiannessStr( res:sub(17,24),32)
+	magic = magic..utils.SwapEndiannessStr( res:sub(25,32),32)
 	print('Reading card data')
 	print('Raw','Decrypted')
 	for blockNo = 0, numBlocks-1, 1 do
@@ -452,7 +449,7 @@ function main(args)
 			if string.find(blockdata, '^0+$') then
 				print(blockdata, blockdata)
 			else
-				local aes = core.aes128_decrypt_ecb(decryptkey, blockdata)
+				local aes = core.aes128_decrypt_ecb(magic, blockdata)
 				local bytes =  utils.ConvertAsciiToBytes(aes)
 				local hex = utils.ConvertBytesToHex(bytes)
 				print(blockdata , hex)
@@ -465,9 +462,6 @@ function main(args)
 			print(sectortrailer, sectortrailer, blockdata:sub(13,20))
 		end
 	end
-	-- checksum fyra sista bytes i varje rad.  (kanske inte för s0)
-	-- s0b1,s1b0,s2b0,s3b0
-	-- 
 end
 
 main(args)
