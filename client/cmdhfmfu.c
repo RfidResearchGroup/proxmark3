@@ -522,6 +522,7 @@ static int ul_magic_test(){
 	// Magic Ultralight tests
 	// 1) take present UID, and try to write it back. OBSOLETE 
 	// 2) make a wrong length write to page0, and see if tag answers with ACK/NACK:
+	ul_switch_off_field();
 	iso14a_card_select_t card;
 	if ( !ul_select(&card) ) 
 		return UL_ERROR;
