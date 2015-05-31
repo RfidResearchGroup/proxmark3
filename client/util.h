@@ -63,3 +63,5 @@ void binarraytobinstring(char *target,  char *source,  int length);
 uint8_t GetParity( char *string, uint8_t type,  int length);
 void wiegand_add_parity(char *target, char *source, char length);
 
+void xor(unsigned char *dst, unsigned char *src, size_t len);
+int32_t le24toh(uint8_t data[3]);

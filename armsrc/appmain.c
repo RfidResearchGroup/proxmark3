@@ -841,11 +841,11 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MIFARE_WRITEBL:
 			MifareWriteBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
-		case CMD_MIFAREU_WRITEBL_COMPAT:
-			MifareUWriteBlock(c->arg[0], c->d.asBytes);
-			break;
+		//case CMD_MIFAREU_WRITEBL_COMPAT:
+			//MifareUWriteBlockCompat(c->arg[0], c->d.asBytes);
+			//break;
 		case CMD_MIFAREU_WRITEBL:
-			MifareUWriteBlock_Special(c->arg[0], c->d.asBytes);
+			MifareUWriteBlock(c->arg[0], c->arg[1], c->d.asBytes);
 			break;
 		case CMD_MIFARE_NESTED:
 			MifareNested(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);

@@ -2510,13 +2510,13 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 						|| receivedCmd[0] == 0xB0) { // transfer
 					if (receivedCmd[1] >= 16 * 4) {
 						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-						if (MF_DBGLEVEL >= 2) Dbprintf("Reader tried to operate (0x%02) on out of range block: %d (0x%02x), nacking",receivedCmd[0],receivedCmd[1],receivedCmd[1]);
+						if (MF_DBGLEVEL >= 2) Dbprintf("Reader tried to operate (0x%02x) on out of range block: %d (0x%02x), nacking",receivedCmd[0],receivedCmd[1],receivedCmd[1]);
 						break;
 					}
 
 					if (receivedCmd[1] / 4 != cardAUTHSC) {
 						EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-						if (MF_DBGLEVEL >= 2) Dbprintf("Reader tried to operate (0x%02) on block (0x%02x) not authenticated for (0x%02x), nacking",receivedCmd[0],receivedCmd[1],cardAUTHSC);
+						if (MF_DBGLEVEL >= 2) Dbprintf("Reader tried to operate (0x%02x) on block (0x%02x) not authenticated for (0x%02x), nacking",receivedCmd[0],receivedCmd[1],cardAUTHSC);
 						break;
 					}
 				}

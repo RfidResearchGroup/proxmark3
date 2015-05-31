@@ -16,14 +16,12 @@
 #include "mifarecmd.h"
 #include "apps.h"
 #include "util.h"
-
 #include "crc.h"
 
 // the block number for the ISO14443-4 PCB
 uint8_t pcb_blocknum = 0;
 // Deselect card by sending a s-block. the crc is precalced for speed
 static  uint8_t deselect_cmd[] = {0xc2,0xe0,0xb4};
-
 
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag. 
@@ -248,11 +246,14 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LEDsoff();
 }
 
+// arg0 = blockNo (start)
+// arg1 = Pages (number of blocks)
+// arg2 = useKey
+// datain = KEY bytes
 void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 {
 	// free eventually allocated BigBuf memory
 	BigBuf_free();
-	// clear trace
 	clear_trace();
 
 	// params
@@ -303,7 +304,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 	}
 
 	for (int i = 0; i < blocks; i++){
-		if ((i*4) + 4 > CARD_MEMORY_SIZE) {
+		if ((i*4) + 4 >= CARD_MEMORY_SIZE) {
 			Dbprintf("Data exceeds buffer!!");
 			break;
 		}
@@ -335,9 +336,11 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Blocks read %d", countblocks);
 
 	countblocks *= 4;
+
 	cmd_send(CMD_ACK, 1, countblocks, BigBuf_max_traceLen(), 0, 0);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
+	BigBuf_free();
 }
 
 //-----------------------------------------------------------------------------
@@ -412,7 +415,8 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LEDsoff();
 }
 
-void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
+/* // Command not needed but left for future testing 
+void MifareUWriteBlockCompat(uint8_t arg0, uint8_t *datain)
 {
 	uint8_t blockNo = arg0;
 	byte_t blockdata[16] = {0x00};
@@ -432,7 +436,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 		return;
 	};
 
-	if(mifare_ultra_writeblock(blockNo, blockdata)) {
+	if(mifare_ultra_writeblock_compat(blockNo, blockdata)) {
 		if (MF_DBGLEVEL >= 1)   Dbprintf("Write block error");
 		OnError(0);
 		return;	};
@@ -449,10 +453,19 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t *datain)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 }
+*/
 
-void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
+// Arg0   : Block to write to.
+// Arg1   : 0 = use no authentication.
+//          1 = use 0x1A authentication.
+//          2 = use 0x1B authentication.
+// datain : 4 first bytes is data to be written.
+//        : 4/16 next bytes is authentication key.
+void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 {
 	uint8_t blockNo = arg0;
+	bool useKey = (arg1 == 1); //UL_C
+	bool usePwd = (arg1 == 2); //UL_EV1/NTAG
 	byte_t blockdata[4] = {0x00};
 
 	memcpy(blockdata, datain,4);
@@ -468,7 +481,29 @@ void MifareUWriteBlock_Special(uint8_t arg0, uint8_t *datain)
 		return;
 	};
 
-	if(mifare_ultra_special_writeblock(blockNo, blockdata)) {
+	// UL-C authentication
+	if ( useKey ) {
+		uint8_t key[16] = {0x00};
+		memcpy(key, datain+4, sizeof(key) );
+
+		if ( !mifare_ultra_auth(key) ) {
+			OnError(1);
+			return;
+		}
+	}
+	
+	// UL-EV1 / NTAG authentication
+	if (usePwd) {
+		uint8_t pwd[4] = {0x00};
+		memcpy(pwd, datain+4, 4);
+		uint8_t pack[4] = {0,0,0,0};
+		if (!mifare_ul_ev1_auth(pwd, pack)) {
+			OnError(1);
+			return;
+		}
+	}
+
+	if(mifare_ultra_writeblock(blockNo, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(0);
 		return;
@@ -508,7 +543,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	blockdata[1] = pwd[6];
 	blockdata[2] = pwd[5];
 	blockdata[3] = pwd[4];
-	if(mifare_ultra_special_writeblock( 44, blockdata)) {
+	if(mifare_ultra_writeblock( 44, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(44);
 		return;
@@ -518,7 +553,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	blockdata[1] = pwd[2];
 	blockdata[2] = pwd[1];
 	blockdata[3] = pwd[0];
-	if(mifare_ultra_special_writeblock( 45, blockdata)) {
+	if(mifare_ultra_writeblock( 45, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(45);
 		return;
@@ -528,7 +563,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	blockdata[1] = pwd[14];
 	blockdata[2] = pwd[13];
 	blockdata[3] = pwd[12];
-	if(mifare_ultra_special_writeblock( 46, blockdata)) {
+	if(mifare_ultra_writeblock( 46, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(46);
 		return;
@@ -538,7 +573,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	blockdata[1] = pwd[10];
 	blockdata[2] = pwd[9];
 	blockdata[3] = pwd[8];
-	if(mifare_ultra_special_writeblock( 47, blockdata)) {
+	if(mifare_ultra_writeblock( 47, blockdata)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Write block error");
 		OnError(47);
 		return;
@@ -682,7 +717,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 		LED_B_OFF();
 	
 	}
-//  -------------------------------------------------------------------------------------------------	
+	//  -------------------------------------------------------------------------------------------------	
 	
 	LED_C_ON();
 
@@ -711,7 +746,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 
 			// nested authentication
 			auth2_time = auth1_time + delta_time;
-			len = mifare_sendcmd_shortex(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, &auth2_time);
+			len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, &auth2_time);
 			if (len != 4) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Auth2 error len=%d", len);
 				continue;
@@ -1231,14 +1266,12 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain){
 	isOK = mifare_desfire_des_auth2(cuid, key, dataout);
 	
 	if( isOK) {
-	    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) 
-			Dbprintf("Authentication part2: Failed");  
-		//OnError(4);
+		if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Authentication part2: Failed");  
+		OnError(4);
 		return;
 	}
 
-	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) 
-		DbpString("AUTH 2 FINISHED");
+	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) DbpString("AUTH 2 FINISHED");
 
 	cmd_send(CMD_ACK, isOK, 0, 0, dataout, sizeof(dataout));
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

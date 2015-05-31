@@ -108,12 +108,12 @@ void print_hex(const uint8_t * data, const size_t len)
 	printf("\n");
 }
 
-char * sprint_hex(const uint8_t * data, const size_t len) {
+char *sprint_hex(const uint8_t *data, const size_t len) {
 	
 	int maxLen = ( len > 1024/3) ? 1024/3 : len;
 	static char buf[1024];
 	memset(buf, 0x00, 1024);
-	char * tmp = buf;
+	char *tmp = buf;
 	size_t i;
 
 	for (i=0; i < maxLen; ++i, tmp += 3)
@@ -394,7 +394,7 @@ int hextobinstring(char *target, char *source)
 
 // convert binary array of 0x00/0x01 values to hex (safe to do in place as target will always be shorter than source)
 // return number of bits converted
-int binarraytohex(char *target, char *source, int length)
+int binarraytohex(char *target,char *source, int length)
 {
     unsigned char i, x;
     int j = length;
@@ -443,4 +443,13 @@ void wiegand_add_parity(char *target, char *source, char length)
     memcpy(target, source, length);
     target += length;
     *(target)= GetParity(source + length / 2, ODD, length / 2);
+}
+
+void xor(unsigned char *dst, unsigned char *src, size_t len) {
+   for( ; len > 0; len--,dst++,src++)
+       *dst ^= *src;
+}
+
+int32_t le24toh (uint8_t data[3]) {
+    return (data[2] << 16) | (data[1] << 8) | data[0];
 }
