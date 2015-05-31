@@ -61,13 +61,13 @@ int usage_t55xx_read(){
 }
 int usage_t55xx_write(){
 	PrintAndLog("Usage:  lf t55xx wr <block> <data> [password]");
-    PrintAndLog("     <block>, block number to read. Between 0-7");
+	PrintAndLog("     <block>, block number to write. Between 0-7");
 	PrintAndLog("     <data>,  4 bytes of data to write (8 hex characters)");
     PrintAndLog("     [password], OPTIONAL password 4bytes (8 hex characters)");
     PrintAndLog("");
 	PrintAndLog("Examples:");
-    PrintAndLog("      lf t55xx wd 3 11223344           - write 11223344 to block 3");
-	PrintAndLog("      lf t55xx wd 3 11223344 feedbeef  - write 11223344 to block 3 password feedbeef");
+	PrintAndLog("      lf t55xx wr 3 11223344           - write 11223344 to block 3");
+	PrintAndLog("      lf t55xx wr 3 11223344 feedbeef  - write 11223344 to block 3 password feedbeef");
 	PrintAndLog("");
 	return 0;
 }

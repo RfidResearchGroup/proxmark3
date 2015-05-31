@@ -673,6 +673,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 					}
 					/* And ready to receive another command. */
 					UartReset();
+					//UartInit(receivedCmd, receivedCmdPar);
 					/* And also reset the demod code, which might have been */
 					/* false-triggered by the commands from the reader. */
 					DemodReset();
@@ -1034,7 +1035,7 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 	response3a[0] = sak & 0xFB;
 	ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 
-	uint8_t response5[] = { 0x01, 0x02, 0x03, 0x04 }; // Very random tag nonce
+	uint8_t response5[] = { 0x01, 0x01, 0x01, 0x01 }; // Very random tag nonce
 	uint8_t response6[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 }; // dummy ATS (pseudo-ATR), answer to RATS: 
 	// Format byte = 0x58: FSCI=0x08 (FSC=256), TA(1) and TC(1) present, 
 	// TA(1) = 0x80: different divisors not supported, DR = 1, DS = 1
@@ -2332,7 +2333,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	uint8_t rSAK[] = {0x09, 0x3f, 0xcc };  // Mifare Mini 
 	uint8_t rSAK1[] = {0x04, 0xda, 0x17};
 
-	uint8_t rAUTH_NT[] = {0x01, 0x02, 0x03, 0x04};
+	uint8_t rAUTH_NT[] = {0x01, 0x01, 0x01, 0x01};
 	uint8_t rAUTH_AT[] = {0x00, 0x00, 0x00, 0x00};
 		
 	//Here, we collect UID,NT,AR,NR,UID2,NT2,AR2,NR2
@@ -2341,8 +2342,6 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	uint32_t ar_nr_responses[] = {0,0,0,0,0,0,0,0,0,0};
 	uint8_t ar_nr_collected = 0;
 
-	Dbprintf("FIRE");
-	
 	// free eventually allocated BigBuf memory but keep Emulator Memory
 	BigBuf_free_keep_EM();
 
@@ -2350,7 +2349,6 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	clear_trace();
 	set_tracing(TRUE);
 
-	Dbprintf("ICE");
 	// Authenticate response - nonce
 	uint32_t nonce = bytes_to_num(rAUTH_NT, 4);
 	
@@ -2380,7 +2378,6 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		}
 	}
 
-	Dbprintf("ICE2");
 	// save uid.
 	ar_nr_responses[0*5]   = bytes_to_num(rUIDBCC1+1, 3);
 	if ( _7BUID )
@@ -2413,7 +2410,6 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		}
 	}
 
-	Dbprintf("ICE3");
 	bool finished = FALSE;
 	while (!BUTTON_PRESS() && !finished) {
 		WDT_HIT();
@@ -2933,7 +2929,8 @@ void RAMFUNC SniffMifare(uint8_t param) {
 					if (MfSniffLogic(receivedCmd, Uart.len, Uart.parity, Uart.bitCount, TRUE)) break;
 
 					/* And ready to receive another command. */
-					UartInit(receivedCmd, receivedCmdPar);
+					//UartInit(receivedCmd, receivedCmdPar);
+					UartReset();
 					
 					/* And also reset the demod code */
 					DemodReset();

@@ -16,7 +16,6 @@
 #include "cmdmain.h"
 #include "scripting.h"
 #include "util.h"
-#include "ui.h"
 #include "nonce2key/nonce2key.h"
 #include "../common/iso15693tools.h"
 #include "../common/crc16.h"
@@ -347,7 +346,6 @@ static int l_aes128encrypt_ecb(lua_State *L)
 	return 1;// return 1 to signal one return value
 }
 
-
 static int l_crc16(lua_State *L)
 {
 	size_t size;
@@ -380,8 +378,8 @@ static int l_crc64(lua_State *L)
 	return 1;
 }
 
-static int l_sha1(lua_State *L){
-
+static int l_sha1(lua_State *L)
+{
 	size_t size;
 	const char *p_str = luaL_checklstring(L, 1, &size);	
 	unsigned char outdata[20] = {0x00};                                                                                                                                                                     
