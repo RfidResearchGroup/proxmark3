@@ -102,6 +102,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			pm3_bitlib.c\
 			aes.c\
 			protocols.c\
+			sha1.c\
 
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)

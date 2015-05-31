@@ -394,7 +394,7 @@ int hextobinstring(char *target, char *source)
 
 // convert binary array of 0x00/0x01 values to hex (safe to do in place as target will always be shorter than source)
 // return number of bits converted
-int binarraytohex(char *target, char *source, int length)
+int binarraytohex(char *target,char *source, int length)
 {
     unsigned char i, x;
     int j = length;
