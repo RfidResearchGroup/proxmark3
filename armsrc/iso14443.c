@@ -24,6 +24,9 @@
 #define TAG_READER_BUFFER_SIZE 2048
 #define DEMOD_DMA_BUFFER_SIZE 1024
 */
+
+#define RECEIVE_SAMPLES_TIMEOUT 2000
+
 //=============================================================================
 // An ISO 14443 Type B tag. We listen for commands from the reader, using
 // a UART kind of thing that's implemented in software. When we get a
@@ -658,9 +661,6 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
 	// free all previous allocations first
 	BigBuf_free();
 	
-	// The command (reader -> tag) that we're receiving.
-	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
-	
 	// The response (tag -> reader) that we're receiving.
 	uint8_t *receivedResponse = BigBuf_malloc(MAX_FRAME_SIZE);
 	
@@ -669,8 +669,6 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
 
 	// Set up the demodulator for tag -> reader responses.
 	DemodInit(receivedResponse);
-	// Set up the demodulator for the reader -> tag commands
-	UartInit(receivedCmd);
 
 	// Setup and start DMA.
 	FpgaSetupSscDma(dmaBuf, DMA_BUFFER_SIZE);
@@ -695,8 +693,8 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
 			ci = upTo[0];
 			cq = upTo[1];
 			upTo += 2;
-			if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
-				upTo -= DMA_BUFFER_SIZE;
+			if(upTo >= dmaBuf + DMA_BUFFER_SIZE) {
+				upTo = dmaBuf;
 				AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
 				AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
 			}
@@ -707,15 +705,12 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
 
 			samples += 2;
 
-			Handle14443UartBit(1);
-			Handle14443UartBit(1);
-
 			if(Handle14443SamplesDemod(ci, cq)) {
 				gotFrame = 1;
 			}
 		}
 
-		if(samples > 2000) {
+		if(samples > n) {
 			break;
 		}
 	}
@@ -724,8 +719,8 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
 	//Tracing
 	if (tracing && Demod.len > 0) {
 		uint8_t parity[MAX_PARITY_SIZE];
-		GetParity(Demod.output , Demod.len, parity);
-		LogTrace(Demod.output,Demod.len, 0, 0, parity, FALSE);
+		GetParity(Demod.output, Demod.len, parity);
+		LogTrace(Demod.output, Demod.len, 0, 0, parity, FALSE);
 	}
 }
 
@@ -934,7 +929,7 @@ void ReadSTMemoryIso14443(uint32_t dwLast)
 
 	CodeAndTransmit14443bAsReader(cmd1, sizeof(cmd1));
 //    LED_A_ON();
-	GetSamplesFor14443Demod(TRUE, 2000,TRUE);
+	GetSamplesFor14443Demod(TRUE, RECEIVE_SAMPLES_TIMEOUT, TRUE);
 //    LED_A_OFF();
 
 	if (Demod.len == 0) {
@@ -952,7 +947,7 @@ void ReadSTMemoryIso14443(uint32_t dwLast)
 	CodeAndTransmit14443bAsReader(cmd1, sizeof(cmd1));
 
 //    LED_A_ON();
-	GetSamplesFor14443Demod(TRUE, 2000,TRUE);
+	GetSamplesFor14443Demod(TRUE, RECEIVE_SAMPLES_TIMEOUT, TRUE);
 //    LED_A_OFF();
 	if (Demod.len != 3) {
 	Dbprintf("Expected 3 bytes from tag, got %d", Demod.len);
@@ -976,7 +971,7 @@ void ReadSTMemoryIso14443(uint32_t dwLast)
 	CodeAndTransmit14443bAsReader(cmd1, 3); // Only first three bytes for this one
 
 //    LED_A_ON();
-	GetSamplesFor14443Demod(TRUE, 2000,TRUE);
+	GetSamplesFor14443Demod(TRUE, RECEIVE_SAMPLES_TIMEOUT, TRUE);
 //    LED_A_OFF();
 	if (Demod.len != 10) {
 	Dbprintf("Expected 10 bytes from tag, got %d", Demod.len);
@@ -1008,7 +1003,7 @@ void ReadSTMemoryIso14443(uint32_t dwLast)
 		CodeAndTransmit14443bAsReader(cmd1, sizeof(cmd1));
 
 //	    LED_A_ON();
-		GetSamplesFor14443Demod(TRUE, 2000,TRUE);
+		GetSamplesFor14443Demod(TRUE, RECEIVE_SAMPLES_TIMEOUT, TRUE);
 //	    LED_A_OFF();
 		if (Demod.len != 6) { // Check if we got an answer from the tag
 		DbpString("Expected 6 bytes from tag, got less...");
@@ -1118,10 +1113,10 @@ void RAMFUNC SnoopIso14443(void)
 		cq = upTo[1];
 		upTo += 2;
 		lastRxCounter -= 2;
-		if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
-			upTo -= DMA_BUFFER_SIZE;
+		if(upTo >= dmaBuf + DMA_BUFFER_SIZE) {
+			upTo = dmaBuf;
 			lastRxCounter += DMA_BUFFER_SIZE;
-			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
+			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
 			AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
 		}
 
@@ -1237,8 +1232,8 @@ void SendRawCommand14443B(uint32_t datalen, uint32_t recv,uint8_t powerfield, ui
 
 	if(recv)
 	{
+		GetSamplesFor14443Demod(TRUE, RECEIVE_SAMPLES_TIMEOUT, TRUE);
 		uint16_t iLen = MIN(Demod.len,USB_CMD_DATA_SIZE);
-		GetSamplesFor14443Demod(TRUE, 2000, TRUE);
 		cmd_send(CMD_ACK,iLen,0,0,Demod.output,iLen);
 	}
 	if(!powerfield)
