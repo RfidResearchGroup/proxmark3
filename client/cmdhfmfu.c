@@ -16,16 +16,19 @@
 #include "protocols.h"
 #include "data.h"
 
-#define MAX_UL_BLOCKS     0x0f
-#define MAX_ULC_BLOCKS    0x2b
-#define MAX_ULEV1a_BLOCKS 0x13
-#define MAX_ULEV1b_BLOCKS 0x28
-#define MAX_NTAG_203      0x29
-#define MAX_NTAG_210      0x13
-#define MAX_NTAG_212      0x28
-#define MAX_NTAG_213      0x2c
-#define MAX_NTAG_215      0x86
-#define MAX_NTAG_216      0xe6
+#define MAX_UL_BLOCKS      0x0f
+#define MAX_ULC_BLOCKS     0x2b
+#define MAX_ULEV1a_BLOCKS  0x13
+#define MAX_ULEV1b_BLOCKS  0x28
+#define MAX_NTAG_203       0x29
+#define MAX_NTAG_210       0x13
+#define MAX_NTAG_212       0x28
+#define MAX_NTAG_213       0x2c
+#define MAX_NTAG_215       0x86
+#define MAX_NTAG_216       0xe6
+#define MAX_MY_D_NFC       0xff
+#define MAX_MY_D_MOVE      0x25
+#define MAX_MY_D_MOVE_LEAN 0x0f
 
 #define KEYS_3DES_COUNT 7
 uint8_t default_3des_keys[KEYS_3DES_COUNT][16] = {
@@ -54,17 +57,18 @@ uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 	{0x32,0x0C,0x16,0x17}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
 };
 
-#define MAX_UL_TYPES 16
+#define MAX_UL_TYPES 17
 uint16_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {UNKNOWN, UL, UL_C, UL_EV1_48, UL_EV1_128, NTAG, NTAG_203,
-	    NTAG_210, NTAG_212, NTAG_213, NTAG_215, NTAG_216, MY_D, MY_D_NFC, MY_D_MOVE, MY_D_MOVE_NFC};
+	    NTAG_210, NTAG_212, NTAG_213, NTAG_215, NTAG_216, MY_D, MY_D_NFC, MY_D_MOVE, MY_D_MOVE_NFC, MY_D_MOVE_LEAN};
 
 uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_BLOCKS, MAX_ULEV1a_BLOCKS,
 	    MAX_ULEV1b_BLOCKS, MAX_NTAG_203, MAX_NTAG_203, MAX_NTAG_210, MAX_NTAG_212, MAX_NTAG_213,
-	    MAX_NTAG_215, MAX_NTAG_216, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS};
+	    MAX_NTAG_215, MAX_NTAG_216, MAX_UL_BLOCKS, MAX_MY_D_NFC, MAX_MY_D_MOVE, MAX_MY_D_MOVE, MAX_MY_D_MOVE_LEAN};
 
 
 static int CmdHelp(const char *Cmd);
 
+// get version nxp product type 
 char *getProductTypeStr( uint8_t id){
 
 	static char buf[20];
@@ -285,12 +289,12 @@ static int ul_print_default( uint8_t *data){
 
 	PrintAndLog("       UID : %s ", sprint_hex(uid, 7));
 	PrintAndLog("    UID[0] : %02X, %s",  uid[0], getTagInfo(uid[0]) );
-	if ( uid[0] == 0x05 ) {
+	if ( uid[0] == 0x05 && ((uid[1] & 0xf0) >> 4) == 2 ) { // is infineon and 66RxxP
 		uint8_t chip = (data[8] & 0xC7); // 11000111  mask, bit 3,4,5 RFU
 		switch (chip){
-			case 0xc2: PrintAndLog("   IC type : SLE 66R04P"); break;
-			case 0xc4: PrintAndLog("   IC type : SLE 66R16P"); break;
-			case 0xc6: PrintAndLog("   IC type : SLE 66R32P"); break;
+			case 0xc2: PrintAndLog("   IC type : SLE 66R04P 770 Bytes"); break; //77 pages
+			case 0xc4: PrintAndLog("   IC type : SLE 66R16P 2560 Bytes"); break; //256 pages
+			case 0xc6: PrintAndLog("   IC type : SLE 66R32P 5120 Bytes"); break; //512 pages /2 sectors
 		}
 	}
 	// CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2 
@@ -376,13 +380,15 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces){
 	else if ( tagtype & NTAG_I2C_2K )	
 		PrintAndLog("%sTYPE : NTAG I%sC 1904bytes (NT3H1201FHK)", spacer, "\xFD");
 	else if ( tagtype & MY_D )
-		PrintAndLog("%sTYPE : INFINEON my-d\x99", spacer);
+		PrintAndLog("%sTYPE : INFINEON my-d\x99 (SLE 66RxxS)", spacer);
 	else if ( tagtype & MY_D_NFC )
-		PrintAndLog("%sTYPE : INFINEON my-d\x99 NFC", spacer);
+		PrintAndLog("%sTYPE : INFINEON my-d\x99 NFC (SLE 66RxxP)", spacer);
 	else if ( tagtype & MY_D_MOVE )
-		PrintAndLog("%sTYPE : INFINEON my-d\x99 move", spacer);
+		PrintAndLog("%sTYPE : INFINEON my-d\x99 move (SLE 66R01P)", spacer);
 	else if ( tagtype & MY_D_MOVE_NFC )
-		PrintAndLog("%sTYPE : INFINEON my-d\x99 move NFC", spacer);
+		PrintAndLog("%sTYPE : INFINEON my-d\x99 move NFC (SLE 66R01P)", spacer);
+	else if ( tagtype & MY_D_MOVE_LEAN )
+		PrintAndLog("%sTYPE : INFINEON my-d\x99 move lean (SLE 66R01L)", spacer);
 	else
 		PrintAndLog("%sTYPE : Unknown %06x", spacer, tagtype);
 	return 0;
@@ -621,9 +627,11 @@ uint32_t GetHF14AMfU_Type(void){
 		// Infinition MY-D tests   Exam high nibble 
 		uint8_t nib = (card.uid[1] & 0xf0) >> 4;
 		switch ( nib ){
-			case 1:	tagtype =  MY_D; break;
-			case 2:	tagtype = (MY_D | MY_D_NFC); break; //notice: we can not currently distinguish between these two
-			case 3:	tagtype = (MY_D_MOVE | MY_D_MOVE_NFC); break; //notice: we can not currently distinguish between these two
+			// case 0: tagtype =  SLE66R35E7; break; //or SLE 66R35E7 - mifare compat... should have different sak/atqa for mf 1k
+			case 1:	tagtype =  MY_D; break; //or SLE 66RxxS ... up to 512 pages of 8 user bytes...
+			case 2:	tagtype = (MY_D_NFC); break; //or SLE 66RxxP ... up to 512 pages of 8 user bytes... (or in nfc mode FF pages of 4 bytes)
+			case 3:	tagtype = (MY_D_MOVE | MY_D_MOVE_NFC); break; //or SLE 66R01P // 38 pages of 4 bytes //notice: we can not currently distinguish between these two
+			case 7: tagtype =  MY_D_MOVE_LEAN; break; //or SLE 66R01L  // 16 pages of 4 bytes
 		}
 	}
 
