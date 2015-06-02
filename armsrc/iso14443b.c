@@ -619,6 +619,8 @@ static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
 	if (Demod.state == DEMOD_UNSYNCD) LED_C_OFF(); // Not synchronized...
 	return FALSE;
 }
+
+
 static void DemodReset()
 {
 	// Clear out the state of the "UART" that receives from the tag.
@@ -626,11 +628,14 @@ static void DemodReset()
 	Demod.state = DEMOD_UNSYNCD;
 	memset(Demod.output, 0x00, MAX_FRAME_SIZE);
 }
+
+
 static void DemodInit(uint8_t *data)
 {
 	Demod.output = data;
 	DemodReset();
 }
+
 
 static void UartReset()
 {
@@ -639,11 +644,14 @@ static void UartReset()
 	Uart.byteCnt = 0;
 	Uart.bitCnt = 0;
 }
+
+
 static void UartInit(uint8_t *data)
 {
 	Uart.output = data;
 	UartReset();
 }
+
 
 /*
  *  Demodulate the samples we received from the tag, also log to tracebuffer
@@ -665,15 +673,15 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
 	uint8_t *receivedResponse = BigBuf_malloc(MAX_FRAME_SIZE);
 	
 	// The DMA buffer, used to stream samples from the FPGA
-	uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
+	int8_t *dmaBuf = (int8_t*) BigBuf_malloc(DMA_BUFFER_SIZE);
 
 	// Set up the demodulator for tag -> reader responses.
 	DemodInit(receivedResponse);
 
 	// Setup and start DMA.
-	FpgaSetupSscDma(dmaBuf, DMA_BUFFER_SIZE);
+	FpgaSetupSscDma((uint8_t*) dmaBuf, DMA_BUFFER_SIZE);
 
-	uint8_t *upTo= dmaBuf;
+	int8_t *upTo = dmaBuf;
 	lastRxCounter = DMA_BUFFER_SIZE;
 
 	// Signal field is ON with the appropriate LED:
@@ -724,6 +732,7 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
 	}
 }
 
+
 //-----------------------------------------------------------------------------
 // Read the tag's response. We just receive a stream of slightly-processed
 // samples from the FPGA, which we will later do some signal processing on,
@@ -755,6 +764,7 @@ static void GetSamplesFor14443Demod(int weTx, int n, int quiet)
 		}
 	}
 }*/
+
 
 //-----------------------------------------------------------------------------
 // Transmit the command (to the tag) that was placed in ToSend[].
@@ -805,6 +815,7 @@ static void TransmitFor14443(void)
 	}
 	LED_B_OFF(); // Finished sending
 }
+
 
 //-----------------------------------------------------------------------------
 // Code a layer 2 command (string of octets, including CRC) into ToSend[],
@@ -862,6 +873,7 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len)
 	ToSendMax++;
 }
 
+
 //-----------------------------------------------------------------------------
 // Read an ISO 14443 tag. We send it some set of commands, and record the
 // responses.
@@ -877,6 +889,7 @@ void AcquireRawAdcSamplesIso14443(uint32_t parameter)
 	SendRawCommand14443B(sizeof(cmd1),1,1,cmd1);
 }
 
+
 /**
   Convenience function to encode, transmit and trace iso 14443b comms
   **/
@@ -890,6 +903,7 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len)
 		LogTrace(cmd,len, 0, 0, parity, TRUE);
 	}
 }
+
 
 //-----------------------------------------------------------------------------
 // Read a SRI512 ISO 14443 tag.
@@ -1059,9 +1073,9 @@ void RAMFUNC SnoopIso14443(void)
 	set_tracing(TRUE);
 
 	// The DMA buffer, used to stream samples from the FPGA
-	uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
+	int8_t *dmaBuf = (int8_t*) BigBuf_malloc(DMA_BUFFER_SIZE);
 	int lastRxCounter;
-	uint8_t *upTo;
+	int8_t *upTo;
 	int ci, cq;
 	int maxBehindBy = 0;
 
@@ -1092,7 +1106,7 @@ void RAMFUNC SnoopIso14443(void)
 	FpgaSetupSsc();
 	upTo = dmaBuf;
 	lastRxCounter = DMA_BUFFER_SIZE;
-	FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE);
+	FpgaSetupSscDma((uint8_t*) dmaBuf, DMA_BUFFER_SIZE);
 	uint8_t parity[MAX_PARITY_SIZE];
 	LED_A_ON();
 		
@@ -1138,7 +1152,7 @@ void RAMFUNC SnoopIso14443(void)
 		if(Handle14443UartBit(cq & 1)) {
 			if(triggered && tracing) {
 				GetParity(Uart.output, Uart.byteCnt, parity);
-				LogTrace(Uart.output,Uart.byteCnt,samples, samples,parity,TRUE);
+				LogTrace(Uart.output,Uart.byteCnt,samples, samples, parity, TRUE);
 			}
 			if(Uart.byteCnt==0) Dbprintf("[2] Error, Uart.byteCnt==0, Uart.bitCnt=%d", Uart.bitCnt);
 
@@ -1156,7 +1170,7 @@ void RAMFUNC SnoopIso14443(void)
 			{
 				uint8_t parity[MAX_PARITY_SIZE];
 				GetParity(Demod.output, Demod.len, parity);
-				LogTrace(Demod.output,Demod.len,samples, samples,parity,FALSE);
+				LogTrace(Demod.output, Demod.len,samples, samples, parity, FALSE);
 			}
 			triggered = TRUE;
 			LED_A_OFF();
@@ -1190,6 +1204,7 @@ void RAMFUNC SnoopIso14443(void)
 	Dbprintf("  Trace length: %i", BigBuf_get_traceLen());
 }
 
+
 /*
  * Send raw command to tag ISO14443B
  * @Input
@@ -1202,8 +1217,7 @@ void RAMFUNC SnoopIso14443(void)
  * none
  *
  */
-
-void SendRawCommand14443B(uint32_t datalen, uint32_t recv,uint8_t powerfield, uint8_t data[])
+void SendRawCommand14443B(uint32_t datalen, uint32_t recv, uint8_t powerfield, uint8_t data[])
 {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	if(!powerfield)
