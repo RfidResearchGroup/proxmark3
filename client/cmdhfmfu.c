@@ -26,6 +26,9 @@
 #define MAX_NTAG_213      0x2c
 #define MAX_NTAG_215      0x86
 #define MAX_NTAG_216      0xe6
+#define MAX_MY_D_NFC       0xff
+#define MAX_MY_D_MOVE      0x25
+#define MAX_MY_D_MOVE_LEAN 0x0f
 
 #define KEYS_3DES_COUNT 7
 uint8_t default_3des_keys[KEYS_3DES_COUNT][16] = {
@@ -54,17 +57,18 @@ uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 	{0x32,0x0C,0x16,0x17}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
 };
 
-#define MAX_UL_TYPES 16
+#define MAX_UL_TYPES 17
 uint16_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {UNKNOWN, UL, UL_C, UL_EV1_48, UL_EV1_128, NTAG, NTAG_203,
-	    NTAG_210, NTAG_212, NTAG_213, NTAG_215, NTAG_216, MY_D, MY_D_NFC, MY_D_MOVE, MY_D_MOVE_NFC};
+	    NTAG_210, NTAG_212, NTAG_213, NTAG_215, NTAG_216, MY_D, MY_D_NFC, MY_D_MOVE, MY_D_MOVE_NFC, MY_D_MOVE_LEAN};
 
 uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_BLOCKS, MAX_ULEV1a_BLOCKS,
 	    MAX_ULEV1b_BLOCKS, MAX_NTAG_203, MAX_NTAG_203, MAX_NTAG_210, MAX_NTAG_212, MAX_NTAG_213,
-	    MAX_NTAG_215, MAX_NTAG_216, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_UL_BLOCKS};
+	    MAX_NTAG_215, MAX_NTAG_216, MAX_UL_BLOCKS, MAX_MY_D_NFC, MAX_MY_D_MOVE, MAX_MY_D_MOVE, MAX_MY_D_MOVE_LEAN};
 
 
 static int CmdHelp(const char *Cmd);
 
+// get version nxp product type 
 char *getProductTypeStr( uint8_t id){
 
 	static char buf[20];
@@ -125,24 +129,7 @@ static int ul_send_cmd_raw( uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uin
 	memcpy(response, resp.d.asBytes, resplen);
 	return resplen;
 }
-/*
-static int ul_send_cmd_raw_crc( uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength, bool append_crc ) {
-	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT , cmdlen, 0}};
-	if (append_crc)
-		c.arg[0] |= ISO14A_APPEND_CRC;
 
-	memcpy(c.d.asBytes, cmd, cmdlen);	
-	clearCommandBuffer();
-	SendCommand(&c);
-	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
-	if (!resp.arg[0] && responseLength) return -1;
-
-	uint16_t resplen = (resp.arg[0] < responseLength) ? resp.arg[0] : responseLength;
-	memcpy(response, resp.d.asBytes, resplen);
-	return resplen;
-}
-*/
 static int ul_select( iso14a_card_select_t *card ){
 
 	ul_switch_on_field();
@@ -285,12 +272,12 @@ static int ul_print_default( uint8_t *data){
 
 	PrintAndLog("       UID : %s ", sprint_hex(uid, 7));
 	PrintAndLog("    UID[0] : %02X, %s",  uid[0], getTagInfo(uid[0]) );
-	if ( uid[0] == 0x05 ) {
+	if ( uid[0] == 0x05 && ((uid[1] & 0xf0) >> 4) == 2 ) { // is infineon and 66RxxP
 		uint8_t chip = (data[8] & 0xC7); // 11000111  mask, bit 3,4,5 RFU
 		switch (chip){
-			case 0xc2: PrintAndLog("   IC type : SLE 66R04P"); break;
-			case 0xc4: PrintAndLog("   IC type : SLE 66R16P"); break;
-			case 0xc6: PrintAndLog("   IC type : SLE 66R32P"); break;
+			case 0xc2: PrintAndLog("   IC type : SLE 66R04P 770 Bytes"); break; //77 pages
+			case 0xc4: PrintAndLog("   IC type : SLE 66R16P 2560 Bytes"); break; //256 pages
+			case 0xc6: PrintAndLog("   IC type : SLE 66R32P 5120 Bytes"); break; //512 pages /2 sectors
 		}
 	}
 	// CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2 
@@ -331,7 +318,9 @@ static int ndef_print_CC(uint8_t *data) {
 	PrintAndLog("  %02X : NDEF Magic Number", data[0]); 
 	PrintAndLog("  %02X : version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0f);
 	PrintAndLog("  %02X : Physical Memory Size: %d bytes", data[2], (data[2] + 1) * 8);
-	if ( data[2] == 0x12 )
+	if ( data[2] == 0x96 )
+		PrintAndLog("  %02X : NDEF Memory Size: %d bytes", data[2], 48);
+	else if ( data[2] == 0x12 )
 		PrintAndLog("  %02X : NDEF Memory Size: %d bytes", data[2], 144);
 	else if ( data[2] == 0x3e )
 		PrintAndLog("  %02X : NDEF Memory Size: %d bytes", data[2], 496);
@@ -376,13 +365,15 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces){
 	else if ( tagtype & NTAG_I2C_2K )	
 		PrintAndLog("%sTYPE : NTAG I%sC 1904bytes (NT3H1201FHK)", spacer, "\xFD");
 	else if ( tagtype & MY_D )
-		PrintAndLog("%sTYPE : INFINEON my-d\x99", spacer);
+		PrintAndLog("%sTYPE : INFINEON my-d\0153 (SLE 66RxxS)", spacer);
 	else if ( tagtype & MY_D_NFC )
-		PrintAndLog("%sTYPE : INFINEON my-d\x99 NFC", spacer);
+		PrintAndLog("%sTYPE : INFINEON my-d\0153 NFC (SLE 66RxxP)", spacer);
 	else if ( tagtype & MY_D_MOVE )
-		PrintAndLog("%sTYPE : INFINEON my-d\x99 move", spacer);
+		PrintAndLog("%sTYPE : INFINEON my-d\0153 move (SLE 66R01P)", spacer);
 	else if ( tagtype & MY_D_MOVE_NFC )
-		PrintAndLog("%sTYPE : INFINEON my-d\x99 move NFC", spacer);
+		PrintAndLog("%sTYPE : INFINEON my-d\0153 move NFC (SLE 66R01P)", spacer);
+	else if ( tagtype & MY_D_MOVE_LEAN )
+		PrintAndLog("%sTYPE : INFINEON my-d\x99 move lean (SLE 66R01L)", spacer);
 	else
 		PrintAndLog("%sTYPE : Unknown %06x", spacer, tagtype);
 	return 0;
@@ -522,7 +513,6 @@ static int ul_magic_test(){
 	// Magic Ultralight tests
 	// 1) take present UID, and try to write it back. OBSOLETE 
 	// 2) make a wrong length write to page0, and see if tag answers with ACK/NACK:
-	ul_switch_off_field();
 	iso14a_card_select_t card;
 	if ( !ul_select(&card) ) 
 		return UL_ERROR;
@@ -618,12 +608,15 @@ uint32_t GetHF14AMfU_Type(void){
 			}
 		}
 	} else {
+		ul_switch_off_field();
 		// Infinition MY-D tests   Exam high nibble 
 		uint8_t nib = (card.uid[1] & 0xf0) >> 4;
 		switch ( nib ){
-			case 1:	tagtype =  MY_D; break;
-			case 2:	tagtype = (MY_D | MY_D_NFC); break; //notice: we can not currently distinguish between these two
-			case 3:	tagtype = (MY_D_MOVE | MY_D_MOVE_NFC); break; //notice: we can not currently distinguish between these two
+			// case 0: tagtype =  SLE66R35E7; break; //or SLE 66R35E7 - mifare compat... should have different sak/atqa for mf 1k
+			case 1:	tagtype =  MY_D; break; //or SLE 66RxxS ... up to 512 pages of 8 user bytes...
+			case 2:	tagtype = (MY_D_NFC); break; //or SLE 66RxxP ... up to 512 pages of 8 user bytes... (or in nfc mode FF pages of 4 bytes)
+			case 3:	tagtype = (MY_D_MOVE | MY_D_MOVE_NFC); break; //or SLE 66R01P // 38 pages of 4 bytes //notice: we can not currently distinguish between these two
+			case 7: tagtype =  MY_D_MOVE_LEAN; break; //or SLE 66R01L  // 16 pages of 4 bytes
 		}
 	}
 
