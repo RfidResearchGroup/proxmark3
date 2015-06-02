@@ -1627,7 +1627,6 @@ int CmdHF14AMfCLoad(const char *Cmd)
 			if (fgets(buf, sizeof(buf), f) == NULL) {
 				fclose(f);
 				PrintAndLog("File reading error.");
-				fclose(f);
 				return 2;
 			}
 
@@ -1952,7 +1951,6 @@ int CmdHF14AMfSniff(const char *Cmd){
 						}						
 						if (wantDecrypt) 
 							mfTraceInit(uid, atqa, sak, wantSaveToEmlFile);
-
 					} else {
 						PrintAndLog("%s(%d):%s", isTag ? "TAG":"RDR", num, sprint_hex(bufPtr, len));
 						if (wantLogToFile) 
