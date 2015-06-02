@@ -27,8 +27,8 @@ The outlined procedure is as following:
 
 Loop:
 	change the configuretion block 0 with:
-    -xx 00 xxxx = RF/8 
-    -xx 04 xxxx = RF/16
+	-xx 00 xxxx = RF/8 
+	-xx 04 xxxx = RF/16
 	-xx 08 xxxx = RF/32
 	-xx 0C xxxx = RF/40
 	-xx 10 xxxx = RF/50
