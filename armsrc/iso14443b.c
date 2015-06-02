@@ -158,7 +158,6 @@ static int Handle14443UartBit(int bit)
 {
 	switch(Uart.state) {
 		case STATE_UNSYNCD:
-			LED_A_OFF();
 			if(!bit) {
 				// we went low, so this could be the beginning
 				// of an SOF
@@ -272,8 +271,7 @@ static int Handle14443UartBit(int bit)
 			break;
 	}
 
-	// This row make the error blew circular buffer in hf 14b snoop
-	//if (Uart.state == STATE_ERROR_WAIT) LED_A_OFF(); // Error
+	if (Uart.state == STATE_UNSYNCD) LED_A_OFF();
 
 	return FALSE;
 }
@@ -1054,17 +1052,17 @@ void ReadSTMemoryIso14443(uint32_t dwLast)
 //-----------------------------------------------------------------------------
 /*
  * Memory usage for this function, (within BigBuf)
- * 0-4095 : Demodulated samples receive (4096 bytes) - DEMOD_TRACE_SIZE
- * 4096-6143 : Last Received command, 2048 bytes (reader->tag) - READER_TAG_BUFFER_SIZE
- * 6144-8191 : Last Received command, 2048 bytes(tag->reader) - TAG_READER_BUFFER_SIZE
- * 8192-9215 : DMA Buffer, 1024 bytes (samples) - DEMOD_DMA_BUFFER_SIZE
+ * Last Received command (reader->tag) - MAX_FRAME_SIZE
+ * Last Received command (tag->reader) - MAX_FRAME_SIZE
+ * DMA Buffer, 1024 bytes (samples) - DMA_BUFFER_SIZE
+ * Demodulated samples received - all the rest
  */
 void RAMFUNC SnoopIso14443(void)
 {
 	// We won't start recording the frames that we acquire until we trigger;
 	// a good trigger condition to get started is probably when we see a
 	// response from the tag.
-	int triggered = TRUE;
+	int triggered = TRUE;			// TODO: set and evaluate trigger condition
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	BigBuf_free();
@@ -1109,7 +1107,10 @@ void RAMFUNC SnoopIso14443(void)
 	FpgaSetupSscDma((uint8_t*) dmaBuf, DMA_BUFFER_SIZE);
 	uint8_t parity[MAX_PARITY_SIZE];
 	LED_A_ON();
-		
+
+	bool TagIsActive = FALSE;
+	bool ReaderIsActive = FALSE;
+	
 	// And now we loop, receiving samples.
 	for(;;) {
 		int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) &
@@ -1136,49 +1137,56 @@ void RAMFUNC SnoopIso14443(void)
 
 		samples += 2;
 
-		if(Handle14443UartBit(ci & 1)) {
-			if(triggered && tracing) {
-				GetParity(Uart.output, Uart.byteCnt, parity);
-				LogTrace(Uart.output,Uart.byteCnt,samples, samples,parity,TRUE);
+		if (!TagIsActive) {							// no need to try decoding reader data if the tag is sending
+			if(Handle14443UartBit(ci & 0x01)) {
+				if(triggered && tracing) {
+					GetParity(Uart.output, Uart.byteCnt, parity);
+					LogTrace(Uart.output,Uart.byteCnt,samples, samples,parity,TRUE);
+				}
+				if(Uart.byteCnt==0) Dbprintf("[1] Error, Uart.byteCnt==0, Uart.bitCnt=%d", Uart.bitCnt);
+
+				/* And ready to receive another command. */
+				UartReset();
+				/* And also reset the demod code, which might have been */
+				/* false-triggered by the commands from the reader. */
+				DemodReset();
 			}
-			if(Uart.byteCnt==0) Dbprintf("[1] Error, Uart.byteCnt==0, Uart.bitCnt=%d", Uart.bitCnt);
+			if(Handle14443UartBit(cq & 0x01)) {
+				if(triggered && tracing) {
+					GetParity(Uart.output, Uart.byteCnt, parity);
+					LogTrace(Uart.output,Uart.byteCnt,samples, samples, parity, TRUE);
+				}
+				if(Uart.byteCnt==0) Dbprintf("[2] Error, Uart.byteCnt==0, Uart.bitCnt=%d", Uart.bitCnt);
 
-			/* And ready to receive another command. */
-			UartReset();
-			/* And also reset the demod code, which might have been */
-			/* false-triggered by the commands from the reader. */
-			DemodReset();
-		}
-		if(Handle14443UartBit(cq & 1)) {
-			if(triggered && tracing) {
-				GetParity(Uart.output, Uart.byteCnt, parity);
-				LogTrace(Uart.output,Uart.byteCnt,samples, samples, parity, TRUE);
+				/* And ready to receive another command. */
+				UartReset();
+				/* And also reset the demod code, which might have been */
+				/* false-triggered by the commands from the reader. */
+				DemodReset();
 			}
-			if(Uart.byteCnt==0) Dbprintf("[2] Error, Uart.byteCnt==0, Uart.bitCnt=%d", Uart.bitCnt);
-
-			/* And ready to receive another command. */
-			UartReset();
-			/* And also reset the demod code, which might have been */
-			/* false-triggered by the commands from the reader. */
-			DemodReset();
+			ReaderIsActive = (Uart.state != STATE_UNSYNCD);
 		}
 
-		if(Handle14443SamplesDemod(ci, cq)) {
+		if(!ReaderIsActive) {						// no need to try decoding tag data if the reader is sending - and we cannot afford the time
+			if(Handle14443SamplesDemod(ci, cq)) {
 
-			//Use samples as a time measurement
-			if(tracing)
-			{
-				uint8_t parity[MAX_PARITY_SIZE];
-				GetParity(Demod.output, Demod.len, parity);
-				LogTrace(Demod.output, Demod.len,samples, samples, parity, FALSE);
+				//Use samples as a time measurement
+				if(tracing)
+				{
+					uint8_t parity[MAX_PARITY_SIZE];
+					GetParity(Demod.output, Demod.len, parity);
+					LogTrace(Demod.output, Demod.len,samples, samples, parity, FALSE);
+				}
+				triggered = TRUE;
+				LED_A_OFF();
+				LED_B_ON();
+
+				// And ready to receive another response.
+				DemodReset();
 			}
-			triggered = TRUE;
-			LED_A_OFF();
-			LED_B_ON();
-
-			// And ready to receive another response.
-			DemodReset();
+			TagIsActive = (Demod.state != DEMOD_UNSYNCD);
 		}
+
 		WDT_HIT();
 
 		if(!tracing) {
