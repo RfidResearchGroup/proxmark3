@@ -500,7 +500,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	int offset=0, clk=0, invert=0, maxErr=0, ans=0;
 	ans = sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 	if (ans>0)
-		ans = ASKDemod(Cmd+1, FALSE, FALSE, 0);
+		ans = ASKDemod(Cmd+2, FALSE, FALSE, 0);
 	else
 		ans = ASKDemod(Cmd, FALSE, FALSE, 0);
 	if (!ans) {
@@ -512,7 +512,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	size_t size = DemodBufferLen;
 	uint8_t BitStream[MAX_DEMOD_BUF_LEN];
 	memcpy(BitStream, DemodBuffer, DemodBufferLen); 
-	int errCnt = BiphaseRawDecode(BitStream, &size, offset, 0);
+	int errCnt = BiphaseRawDecode(BitStream, &size, offset, invert);
 	if (errCnt < 0){
 		if (g_debugMode || verbose) PrintAndLog("Error BiphaseRawDecode: %d", errCnt);
 		return 0;
@@ -1457,6 +1457,25 @@ int CmdFSKdemodPyramid(const char *Cmd)
 	return 1;
 }
 
+int CmdIso11784demodBI(const char *Cmd){
+	//ASK/Biphase demod,
+	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
+	size_t size = getFromGraphBuf(BitStream);
+	if (size==0) return 0;
+
+	//get binary from Biphase wave
+	int idx = ISO11784demodBI(BitStream, &size);
+	setDemodBuf(BitStream,128,idx);
+
+	size = removeParity(BitStream, idx+8, 4, 1, 88);
+	// if (size != 66){
+		// if (g_debugMode==1) PrintAndLog("DEBUG: Error - at parity check-tag size does not match AWID format");
+		// return 0;
+	// }
+	return 1;
+}
+
+
 //by marshmellow
 //attempt to psk1 demod graph buffer
 int PSKDemod(const char *Cmd, bool verbose)
@@ -2212,6 +2231,7 @@ static command_t CommandTable[] =
 	{"hexsamples",      CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
 	{"hide",            CmdHide,            1, "Hide graph window"},
 	{"hpf",             CmdHpf,             1, "Remove DC offset from trace"},
+	{"iso11784demod",   CmdIso11784demodBI, 1, "Demodulate a ISO11784/85 Biphase tag from GraphBuffer"},
 	{"load",            CmdLoad,            1, "<filename> -- Load trace (to graph window"},
 	{"ltrim",           CmdLtrim,           1, "<samples> -- Trim samples from left of trace"},
 	{"rtrim",           CmdRtrim,           1, "<location to end trace> -- Trim samples from right of trace"},

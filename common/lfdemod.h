@@ -47,5 +47,5 @@ int IOdemodFSK(uint8_t *dest, size_t size);
 int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert);
 int PyramiddemodFSK(uint8_t *dest, size_t *size);
 int ParadoxdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);
-
+int ISO11784demodBI(uint8_t *dest, size_t *size);
 #endif

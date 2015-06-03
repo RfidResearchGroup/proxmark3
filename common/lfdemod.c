@@ -589,6 +589,25 @@ size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t p
 	//return ID start index and size
 	return bitCnt;
 }
+// Ask/Biphase Demod then try to locate an ISO 11784/85 ID
+int ISO11784demodBI(uint8_t *dest, size_t *size)
+{
+	//make sure buffer has enough data
+	if (*size < 128*50) return -1;
+
+	if (justNoise(dest, *size)) return -2;
+
+	// FSK demodulator
+	*size = fskdemod(dest, *size, 50, 1, 10, 8);  // fsk2a RF/50 
+	if (*size < 96) return -3;  //did we get a good demod?
+
+	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,1};
+	size_t startIdx = 0;
+	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
+	if (errChk == 0) return -4; //preamble not found
+	if (*size != 128) return -5;
+	return (int)startIdx;
+}
 
 // by marshmellow
 // FSK Demod then try to locate an AWID ID

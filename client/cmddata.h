@@ -33,6 +33,7 @@ int CmdFSKdemodIO(const char *Cmd);
 int CmdFSKdemodParadox(const char *Cmd);
 int CmdFSKdemodPyramid(const char *Cmd);
 int CmdFSKrawdemod(const char *Cmd);
+int CmdIso11784demodBI(const char *Cmd);
 int CmdPSK1rawDemod(const char *Cmd);
 int CmdPSK2rawDemod(const char *Cmd);
 int CmdPSKNexWatch(const char *Cmd);
