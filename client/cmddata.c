@@ -1463,6 +1463,19 @@ int CmdFSKdemodPyramid(const char *Cmd)
 // NATIONAL CODE, ICAR database
 // COUNTRY CODE (ISO3166) 
 // FLAG (animal/non-animal)
+/*
+38 IDbits   
+10 country code 
+1 extra app bit
+14 reserved bits
+1 animal bit
+16 ccitt CRC chksum over 64bit ID CODE.
+24 appli bits.
+
+-- sample: 985121004515220
+
+Now is nibble shifting, byte shifting.
+*/
 int CmdIso11784demodBI(const char *Cmd){
 
 	int invert = 1;
@@ -1482,44 +1495,41 @@ int CmdIso11784demodBI(const char *Cmd){
 		if (g_debugMode) PrintAndLog("Error BiphaseRawDecode: %d", errCnt);
 		return 0;
 	} 
-
-
 	
 	int preambleIndex = ISO11784demodBI(BitStream, &size);
 	if (preambleIndex < 0){
 		if (g_debugMode) PrintAndLog("Error ISO11784Demod , no startmarker found :: %d",preambleIndex);
 		return 0;
 	}
-
 	
-	size = removeParity(BitStream, preambleIndex + 11, 9, 1, 128);
-	if ( size <= 0 ) {
-		if (g_debugMode) PrintAndLog("Error removeParity:: %d", size);
-		return 0;
-	}
 	PrintAndLog("startmarker %d;   Size %d", preambleIndex, size);
 
-	return 1;
 	//got a good demod
 	uint8_t ByteStream[16] = {0x00};
 	uint8_t bitCnt = 0;
 	uint8_t ByteCnt = 0;
 	size_t startIdx = preambleIndex + 11; //start after preamble
-	for (size_t idx = 0; idx < size-11; idx++){
+	for (size_t idx = 0; idx < size; idx++){
 
+		if ( bitCnt == 9 ){
+			bitCnt = 0;
+			continue;
+		}
 		//lsb first
-		ByteStream[ByteCnt] = ByteStream[ByteCnt] | (BitStream[startIdx+idx] << bitCnt);
+		ByteStream[ByteCnt] |= ( BitStream[startIdx+idx] << bitCnt );
 		bitCnt++;
 		if (bitCnt % 8 == 0){
 			if (g_debugMode) PrintAndLog("byte %d: %02x", ByteCnt, ByteStream[ByteCnt]);
-			bitCnt = 0;
+			bitCnt = 9;
 			ByteCnt++;
 		}
 	}
+	PrintAndLog("DATA:  %s", sprint_hex(ByteStream, 14));
 	//now ByteStream contains 16 bytes of decrypted raw tag data
-	setDemodBuf(ByteStream, 128, 0);
-	//printDemodBuff();
+	setDemodBuf(BitStream+preambleIndex, 128, 0);
+	printDemodBuff();
 	return 1;
+	
 }
 
 
