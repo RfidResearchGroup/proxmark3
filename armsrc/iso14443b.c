@@ -158,7 +158,6 @@ static int Handle14443UartBit(int bit)
 {
 	switch(Uart.state) {
 		case STATE_UNSYNCD:
-			LED_A_OFF();
 			if(!bit) {
 				// we went low, so this could be the beginning
 				// of an SOF
@@ -211,7 +210,6 @@ static int Handle14443UartBit(int bit)
 				Uart.bitCnt = 0;
 				Uart.shiftReg = 0;
 				Uart.state = STATE_RECEIVING_DATA;
-				LED_A_ON(); // Indicate we're receiving
 			}
 			break;
 
@@ -264,6 +262,7 @@ static int Handle14443UartBit(int bit)
 			Uart.posCnt++;
 			if(Uart.posCnt > 10) {
 				Uart.state = STATE_UNSYNCD;
+				LED_A_OFF();
 			}
 			break;
 
@@ -271,9 +270,6 @@ static int Handle14443UartBit(int bit)
 			Uart.state = STATE_UNSYNCD;
 			break;
 	}
-
-	// This row make the error blew circular buffer in hf 14b snoop
-	//if (Uart.state == STATE_ERROR_WAIT) LED_A_OFF(); // Error
 
 	return FALSE;
 }
@@ -550,6 +546,7 @@ static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
 			} else {
 				if(Demod.posCount > 100) {
 					Demod.state = DEMOD_UNSYNCD;
+					LED_C_OFF();
 				}
 			}
 			Demod.posCount++;
@@ -560,6 +557,7 @@ static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
 			if(v > 0) {
 				if(Demod.posCount > 10) {
 					Demod.state = DEMOD_UNSYNCD;
+					LED_C_OFF();
 				}
 			} else {
 				Demod.bitCount = 0;
@@ -598,13 +596,13 @@ static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
 						Demod.output[Demod.len] = b;
 						Demod.len++;
 						Demod.state = DEMOD_AWAITING_START_BIT;
-					} else if(s == 0x000) {
-						// This is EOF
-						LED_C_OFF();
-						Demod.state = DEMOD_UNSYNCD;
-						return TRUE;
 					} else {
 						Demod.state = DEMOD_UNSYNCD;
+						LED_C_OFF();
+						if(s == 0x000) {
+						// This is EOF
+						return TRUE;
+						}
 					}
 				}
 				Demod.posCount = 0;
@@ -613,10 +611,10 @@ static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
 
 		default:
 			Demod.state = DEMOD_UNSYNCD;
+			LED_C_OFF();
 			break;
 	}
 
-	if (Demod.state == DEMOD_UNSYNCD) LED_C_OFF(); // Not synchronized...
 	return FALSE;
 }
 
@@ -1054,17 +1052,17 @@ void ReadSTMemoryIso14443(uint32_t dwLast)
 //-----------------------------------------------------------------------------
 /*
  * Memory usage for this function, (within BigBuf)
- * 0-4095 : Demodulated samples receive (4096 bytes) - DEMOD_TRACE_SIZE
- * 4096-6143 : Last Received command, 2048 bytes (reader->tag) - READER_TAG_BUFFER_SIZE
- * 6144-8191 : Last Received command, 2048 bytes(tag->reader) - TAG_READER_BUFFER_SIZE
- * 8192-9215 : DMA Buffer, 1024 bytes (samples) - DEMOD_DMA_BUFFER_SIZE
+ * Last Received command (reader->tag) - MAX_FRAME_SIZE
+ * Last Received command (tag->reader) - MAX_FRAME_SIZE
+ * DMA Buffer, 1024 bytes (samples) - DMA_BUFFER_SIZE
+ * Demodulated samples received - all the rest
  */
 void RAMFUNC SnoopIso14443(void)
 {
 	// We won't start recording the frames that we acquire until we trigger;
 	// a good trigger condition to get started is probably when we see a
 	// response from the tag.
-	int triggered = TRUE;
+	int triggered = TRUE;			// TODO: set and evaluate trigger condition
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	BigBuf_free();
@@ -1110,6 +1108,9 @@ void RAMFUNC SnoopIso14443(void)
 	uint8_t parity[MAX_PARITY_SIZE];
 	LED_A_ON();
 		
+	bool TagIsActive = FALSE;
+	bool ReaderIsActive = FALSE;
+	
 	// And now we loop, receiving samples.
 	for(;;) {
 		int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) &
@@ -1136,7 +1137,8 @@ void RAMFUNC SnoopIso14443(void)
 
 		samples += 2;
 
-		if(Handle14443UartBit(ci & 1)) {
+		if (!TagIsActive) {							// no need to try decoding reader data if the tag is sending
+			if(Handle14443UartBit(ci & 0x01)) {
 			if(triggered && tracing) {
 				GetParity(Uart.output, Uart.byteCnt, parity);
 				LogTrace(Uart.output,Uart.byteCnt,samples, samples,parity,TRUE);
@@ -1149,7 +1151,7 @@ void RAMFUNC SnoopIso14443(void)
 			/* false-triggered by the commands from the reader. */
 			DemodReset();
 		}
-		if(Handle14443UartBit(cq & 1)) {
+			if(Handle14443UartBit(cq & 0x01)) {
 			if(triggered && tracing) {
 				GetParity(Uart.output, Uart.byteCnt, parity);
 				LogTrace(Uart.output,Uart.byteCnt,samples, samples, parity, TRUE);
@@ -1162,8 +1164,11 @@ void RAMFUNC SnoopIso14443(void)
 			/* false-triggered by the commands from the reader. */
 			DemodReset();
 		}
+			ReaderIsActive = (Uart.state != STATE_UNSYNCD);
+		}
 
-		if(Handle14443SamplesDemod(ci, cq)) {
+		if(!ReaderIsActive) {						// no need to try decoding tag data if the reader is sending - and we cannot afford the time
+			if(Handle14443SamplesDemod(ci & 0xFE, cq & 0xFE)) {
 
 			//Use samples as a time measurement
 			if(tracing)
@@ -1179,6 +1184,9 @@ void RAMFUNC SnoopIso14443(void)
 			// And ready to receive another response.
 			DemodReset();
 		}
+			TagIsActive = (Demod.state != DEMOD_UNSYNCD);
+		}
+
 		WDT_HIT();
 
 		if(!tracing) {

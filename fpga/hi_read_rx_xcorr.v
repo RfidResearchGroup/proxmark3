@@ -99,8 +99,10 @@ end
 reg [5:0] corr_i_cnt;
 reg [5:0] corr_q_cnt;
 // And a couple of registers in which to accumulate the correlations.
-reg signed [15:0] corr_i_accum;
-reg signed [15:0] corr_q_accum;
+// we would add at most 32 times adc_d, the result can be held in 13 bits. 
+// Need one additional bit because it can be negative as well
+reg signed [13:0] corr_i_accum;
+reg signed [13:0] corr_q_accum;
 reg signed [7:0] corr_i_out;
 reg signed [7:0] corr_q_out;
 
@@ -114,12 +116,13 @@ begin
     begin
         if(snoop)
         begin
-            corr_i_out <= {corr_i_accum[12:6], after_hysteresis_prev};
-            corr_q_out <= {corr_q_accum[12:6], after_hysteresis};
+			// highest 7 significant bits of tag signal (signed), 1 bit reader signal:
+            corr_i_out <= {corr_i_accum[13:7], after_hysteresis_prev};
+            corr_q_out <= {corr_q_accum[13:7], after_hysteresis};
         end
         else
         begin
-            // Only correlations need to be delivered.
+            // highest 8 significant bits of tag signal
             corr_i_out <= corr_i_accum[13:6];
             corr_q_out <= corr_q_accum[13:6];
         end
@@ -168,7 +171,9 @@ begin
         end
     end
 
-    if(corr_i_cnt[5:2] == 4'b000 || corr_i_cnt[5:2] == 4'b1000)
+	// set ssp_frame signal for corr_i_cnt = 0..3 and corr_i_cnt = 32..35
+	// (two frames with 8 Bits each)
+    if(corr_i_cnt[5:2] == 4'b0000 || corr_i_cnt[5:2] == 4'b1000)
         ssp_frame = 1'b1;
     else
         ssp_frame = 1'b0;
