@@ -1493,11 +1493,14 @@ int CmdIso11784demodBI(const char *Cmd){
 	setDemodBuf(BitStream, 128, preambleIndex);
 	//printDemodBuff();
 
-	size = removeParity(BitStream, preambleIndex + 11, 9, 1, 117);
-	if ( size <= 0 ) {
+	size = removeParity(BitStream, preambleIndex + 11, 9, 2, 117);
+	if ( size <= 103 ) {
 		if (g_debugMode) PrintAndLog("Error removeParity:: %d", size);
 		return 0;
 	}
+	//char *bin = sprint_bin_break(BitStream,size,16);
+	//PrintAndLog("DEBUG BinStream:\n%s",bin);
+
 	PrintAndLog("startmarker %d;   Size %d", preambleIndex, size);
 
 	//return 1;
@@ -1511,25 +1514,14 @@ int CmdIso11784demodBI(const char *Cmd){
 	uint32_t crc16 = bytebits_to_byteLSBF(BitStream+64,16);
 	uint32_t extended = bytebits_to_byteLSBF(BitStream+80,24);
 
-	PrintAndLog("NationalCode: %x%08x",NationalCodeB,NationalCodeA);
-	//add rest of print code here...
-	/*
-	uint8_t ByteStream[16] = {0x00};
-	uint8_t bitCnt = 0;
-	uint8_t ByteCnt = 0;
-	size_t startIdx = preambleIndex + 11; //start after preamble
-	for (size_t idx = 0; idx < size-11; idx++){
-
-		//lsb first
-		ByteStream[ByteCnt] = ByteStream[ByteCnt] | (BitStream[startIdx+idx] << bitCnt);
-		bitCnt++;
-		if (bitCnt % 8 == 0){
-			if (g_debugMode) PrintAndLog("byte %d: %02x", ByteCnt, ByteStream[ByteCnt]);
-			bitCnt = 0;
-			ByteCnt++;
-		}
-	}
-	*/
+	PrintAndLog("NationalCode: %X%08X",NationalCodeB,NationalCodeA);
+	PrintAndLog("CountryCode:  %d",countryCode);
+	PrintAndLog("dataBlockBit: %d",dataBlockBit);
+	PrintAndLog("reservedCode: %X",reservedCode);
+	PrintAndLog("animalBit:    %d", animalBit);
+	PrintAndLog("CRC:          %02X", crc16);
+	PrintAndLog("Extended:     %x", extended);
+	
 	return 1;
 }
 
@@ -2289,6 +2281,7 @@ static command_t CommandTable[] =
 	{"hexsamples",      CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
 	{"hide",            CmdHide,            1, "Hide graph window"},
 	{"hpf",             CmdHpf,             1, "Remove DC offset from trace"},
+	{"iso11784demod",   CmdIso11784demodBI, 1, "Demodulate a ISO11784/85 Biphase tag from GraphBuffer"},
 	{"load",            CmdLoad,            1, "<filename> -- Load trace (to graph window"},
 	{"ltrim",           CmdLtrim,           1, "<samples> -- Trim samples from left of trace"},
 	{"rtrim",           CmdRtrim,           1, "<location to end trace> -- Trim samples from right of trace"},
