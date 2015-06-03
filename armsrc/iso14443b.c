@@ -210,7 +210,6 @@ static int Handle14443UartBit(int bit)
 				Uart.bitCnt = 0;
 				Uart.shiftReg = 0;
 				Uart.state = STATE_RECEIVING_DATA;
-				LED_A_ON(); // Indicate we're receiving
 			}
 			break;
 
@@ -263,6 +262,7 @@ static int Handle14443UartBit(int bit)
 			Uart.posCnt++;
 			if(Uart.posCnt > 10) {
 				Uart.state = STATE_UNSYNCD;
+				LED_A_OFF();
 			}
 			break;
 
@@ -270,8 +270,6 @@ static int Handle14443UartBit(int bit)
 			Uart.state = STATE_UNSYNCD;
 			break;
 	}
-
-	if (Uart.state == STATE_UNSYNCD) LED_A_OFF();
 
 	return FALSE;
 }
@@ -548,6 +546,7 @@ static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
 			} else {
 				if(Demod.posCount > 100) {
 					Demod.state = DEMOD_UNSYNCD;
+					LED_C_OFF();
 				}
 			}
 			Demod.posCount++;
@@ -558,6 +557,7 @@ static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
 			if(v > 0) {
 				if(Demod.posCount > 10) {
 					Demod.state = DEMOD_UNSYNCD;
+					LED_C_OFF();
 				}
 			} else {
 				Demod.bitCount = 0;
@@ -596,13 +596,13 @@ static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
 						Demod.output[Demod.len] = b;
 						Demod.len++;
 						Demod.state = DEMOD_AWAITING_START_BIT;
-					} else if(s == 0x000) {
-						// This is EOF
-						LED_C_OFF();
-						Demod.state = DEMOD_UNSYNCD;
-						return TRUE;
 					} else {
 						Demod.state = DEMOD_UNSYNCD;
+						LED_C_OFF();
+						if(s == 0x000) {
+							// This is EOF
+							return TRUE;
+						}
 					}
 				}
 				Demod.posCount = 0;
@@ -611,10 +611,10 @@ static RAMFUNC int Handle14443SamplesDemod(int ci, int cq)
 
 		default:
 			Demod.state = DEMOD_UNSYNCD;
+			LED_C_OFF();
 			break;
 	}
 
-	if (Demod.state == DEMOD_UNSYNCD) LED_C_OFF(); // Not synchronized...
 	return FALSE;
 }
 
@@ -1168,14 +1168,14 @@ void RAMFUNC SnoopIso14443(void)
 		}
 
 		if(!ReaderIsActive) {						// no need to try decoding tag data if the reader is sending - and we cannot afford the time
-			if(Handle14443SamplesDemod(ci, cq)) {
+			if(Handle14443SamplesDemod(ci & 0xFE, cq & 0xFE)) {
 
 				//Use samples as a time measurement
 				if(tracing)
 				{
 					uint8_t parity[MAX_PARITY_SIZE];
 					GetParity(Demod.output, Demod.len, parity);
-					LogTrace(Demod.output, Demod.len,samples, samples, parity, FALSE);
+					LogTrace(Demod.output, Demod.len, samples, samples, parity, FALSE);
 				}
 				triggered = TRUE;
 				LED_A_OFF();
