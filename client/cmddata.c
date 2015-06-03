@@ -1457,65 +1457,68 @@ int CmdFSKdemodPyramid(const char *Cmd)
 	return 1;
 }
 
-// ISO11784/85 demod  (aka animal tag)  BIPHASE rf/32,  with preamble of 00000000001 (128bits)
-// 8 databits 1 parity
+// ISO11784/85 demod  (aka animal tag)  BIPHASE, inverted, rf/32,  with preamble of 00000000001 (128bits)
+// 8 databits + 1 parity (1)
 // CIITT 16 chksum
 // NATIONAL CODE, ICAR database
 // COUNTRY CODE (ISO3166) 
 // FLAG (animal/non-animal)
 int CmdIso11784demodBI(const char *Cmd){
-		
-	if (!ASKbiphaseDemod(Cmd, FALSE)){
-		if (g_debugMode) PrintAndLog("ASKbiphaseDemod failed 1st try");
-		return 0;
-	}
-	size_t size = DemodBufferLen;
 
-	int ans = ISO11784demodBI(DemodBuffer, &size);
-	if (ans < 0){
-		if (g_debugMode) PrintAndLog("Error ISO11784Demod");
+	int invert = 1;
+	int clk = 32;		
+	int errCnt = 0;
+	uint8_t BitStream[MAX_DEMOD_BUF_LEN];	
+	size_t size = getFromGraphBuf(BitStream);	
+	
+	errCnt = askdemod(BitStream, &size, &clk, &invert, 0, 0, 0);
+	if ( errCnt<0 ) { 
+		if (g_debugMode) PrintAndLog("DEBUG: no data found %d, clock: 32", errCnt);
 		return 0;
 	}
+
+	errCnt = BiphaseRawDecode(BitStream, &size, 0, 1);
+	if (errCnt < 0){
+		if (g_debugMode) PrintAndLog("Error BiphaseRawDecode: %d", errCnt);
+		return 0;
+	} 
+
+
 	
-	//size = removeParity(BitStream, idx+11, 9, 1, 104);
+	int preambleIndex = ISO11784demodBI(BitStream, &size);
+	if (preambleIndex < 0){
+		if (g_debugMode) PrintAndLog("Error ISO11784Demod , no startmarker found :: %d",preambleIndex);
+		return 0;
+	}
+
 	
+	size = removeParity(BitStream, preambleIndex + 11, 9, 1, 128);
+	if ( size <= 0 ) {
+		if (g_debugMode) PrintAndLog("Error removeParity:: %d", size);
+		return 0;
+	}
+	PrintAndLog("startmarker %d;   Size %d", preambleIndex, size);
+
+	return 1;
 	//got a good demod
-	uint32_t ByteStream[13] = {0x00};
-	uint8_t xorKey=0;
-	uint8_t keyCnt=0;
-	uint8_t bitCnt=0;
-	uint8_t ByteCnt=0;
-	size_t startIdx = ans + 11; //start after preamble
-	for (size_t idx = 0; idx<size-11; idx++){
-		if ((idx+1) % 5 == 0){
-			//spacer bit - should be 0
-			if (DemodBuffer[startIdx+idx] != 0) {
-				if (g_debugMode) PrintAndLog("Error spacer not 0: %d, pos: %d",DemodBuffer[startIdx+idx],startIdx+idx);
-				return 0;
-			}
-			continue;
-		} 
-		if (keyCnt<8){ //lsb first
-			xorKey = xorKey | (DemodBuffer[startIdx+idx]<<keyCnt);
-			keyCnt++;
-			if (keyCnt==8 && g_debugMode) PrintAndLog("xorKey Found: %02x", xorKey);
-			continue;
-		}
+	uint8_t ByteStream[16] = {0x00};
+	uint8_t bitCnt = 0;
+	uint8_t ByteCnt = 0;
+	size_t startIdx = preambleIndex + 11; //start after preamble
+	for (size_t idx = 0; idx < size-11; idx++){
+
 		//lsb first
-		ByteStream[ByteCnt] = ByteStream[ByteCnt] | (DemodBuffer[startIdx+idx]<<bitCnt);
+		ByteStream[ByteCnt] = ByteStream[ByteCnt] | (BitStream[startIdx+idx] << bitCnt);
 		bitCnt++;
 		if (bitCnt % 8 == 0){
-			if (g_debugMode) PrintAndLog("byte %d: %02x",ByteCnt,ByteStream[ByteCnt]);
-			bitCnt=0;
+			if (g_debugMode) PrintAndLog("byte %d: %02x", ByteCnt, ByteStream[ByteCnt]);
+			bitCnt = 0;
 			ByteCnt++;
 		}
 	}
-	for (uint8_t i = 0; i < ByteCnt; i++){
-		ByteStream[i] ^= xorKey; //xor
-		if (g_debugMode) PrintAndLog("byte %d after xor: %02x", i, ByteStream[i]);
-	}
-	//now ByteStream contains 13 bytes of decrypted raw tag data
-	setDemodBuf(DemodBuffer+ans, 104, 0);
+	//now ByteStream contains 16 bytes of decrypted raw tag data
+	setDemodBuf(ByteStream, 128, 0);
+	//printDemodBuff();
 	return 1;
 }
 
