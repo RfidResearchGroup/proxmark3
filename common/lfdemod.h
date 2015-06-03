@@ -19,6 +19,7 @@
 int      askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType);
 int      BiphaseRawDecode(uint8_t * BitStream, size_t *size, int offset, int invert);
 uint32_t bytebits_to_byte(uint8_t* src, size_t numbits);
+uint32_t bytebits_to_byteLSBF(uint8_t* src, size_t numbits);
 uint16_t countFC(uint8_t *BitStream, size_t size, uint8_t fskAdj);
 int      DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr);
 uint8_t  DetectCleanAskWave(uint8_t dest[], size_t size, uint8_t high, uint8_t low);

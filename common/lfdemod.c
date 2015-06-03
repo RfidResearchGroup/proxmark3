@@ -537,6 +537,18 @@ uint32_t bytebits_to_byte(uint8_t* src, size_t numbits)
 	return num;
 }
 
+//least significant bit first
+uint32_t bytebits_to_byteLSBF(uint8_t* src, size_t numbits)
+{
+	uint32_t num = 0;
+	for(int i = 0 ; i < numbits ; i++)
+	{
+		num = (num << 1) | (*src);
+		src++;
+	}
+	return num;
+}
+
 int IOdemodFSK(uint8_t *dest, size_t size)
 {
 	if (justNoise(dest, size)) return -1;
@@ -588,6 +600,21 @@ size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t p
 	// if we got here then all the parities passed
 	//return ID start index and size
 	return bitCnt;
+}
+
+// Ask/Biphase Demod then try to locate an ISO 11784/85 ID
+// BitStream must contain previously askrawdemod and biphasedemoded data
+int ISO11784demodBI(uint8_t *dest, size_t *size)
+{
+	//make sure buffer has enough data
+	if (*size < 128) return -1;
+
+	size_t startIdx = 0;
+	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,1};
+
+	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
+	if (errChk == 0) return -2; //preamble not found
+	return (int)startIdx;
 }
 
 // by marshmellow
