@@ -1457,21 +1457,65 @@ int CmdFSKdemodPyramid(const char *Cmd)
 	return 1;
 }
 
+// ISO11784/85 demod  (aka animal tag)  BIPHASE rf/32,  with preamble of 00000000001 (128bits)
+// 8 databits 1 parity
+// CIITT 16 chksum
+// NATIONAL CODE, ICAR database
+// COUNTRY CODE (ISO3166) 
+// FLAG (animal/non-animal)
 int CmdIso11784demodBI(const char *Cmd){
-	//ASK/Biphase demod,
-	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
-	size_t size = getFromGraphBuf(BitStream);
-	if (size==0) return 0;
+		
+	if (!ASKbiphaseDemod(Cmd, FALSE)){
+		if (g_debugMode) PrintAndLog("ASKbiphaseDemod failed 1st try");
+		return 0;
+	}
+	size_t size = DemodBufferLen;
 
-	//get binary from Biphase wave
-	int idx = ISO11784demodBI(BitStream, &size);
-	setDemodBuf(BitStream,128,idx);
-
-	size = removeParity(BitStream, idx+8, 4, 1, 88);
-	// if (size != 66){
-		// if (g_debugMode==1) PrintAndLog("DEBUG: Error - at parity check-tag size does not match AWID format");
-		// return 0;
-	// }
+	int ans = ISO11784demodBI(DemodBuffer, &size);
+	if (ans < 0){
+		if (g_debugMode) PrintAndLog("Error ISO11784Demod");
+		return 0;
+	}
+	
+	//size = removeParity(BitStream, idx+11, 9, 1, 104);
+	
+	//got a good demod
+	uint32_t ByteStream[13] = {0x00};
+	uint8_t xorKey=0;
+	uint8_t keyCnt=0;
+	uint8_t bitCnt=0;
+	uint8_t ByteCnt=0;
+	size_t startIdx = ans + 11; //start after preamble
+	for (size_t idx = 0; idx<size-11; idx++){
+		if ((idx+1) % 5 == 0){
+			//spacer bit - should be 0
+			if (DemodBuffer[startIdx+idx] != 0) {
+				if (g_debugMode) PrintAndLog("Error spacer not 0: %d, pos: %d",DemodBuffer[startIdx+idx],startIdx+idx);
+				return 0;
+			}
+			continue;
+		} 
+		if (keyCnt<8){ //lsb first
+			xorKey = xorKey | (DemodBuffer[startIdx+idx]<<keyCnt);
+			keyCnt++;
+			if (keyCnt==8 && g_debugMode) PrintAndLog("xorKey Found: %02x", xorKey);
+			continue;
+		}
+		//lsb first
+		ByteStream[ByteCnt] = ByteStream[ByteCnt] | (DemodBuffer[startIdx+idx]<<bitCnt);
+		bitCnt++;
+		if (bitCnt % 8 == 0){
+			if (g_debugMode) PrintAndLog("byte %d: %02x",ByteCnt,ByteStream[ByteCnt]);
+			bitCnt=0;
+			ByteCnt++;
+		}
+	}
+	for (uint8_t i = 0; i < ByteCnt; i++){
+		ByteStream[i] ^= xorKey; //xor
+		if (g_debugMode) PrintAndLog("byte %d after xor: %02x", i, ByteStream[i]);
+	}
+	//now ByteStream contains 13 bytes of decrypted raw tag data
+	setDemodBuf(DemodBuffer+ans, 104, 0);
 	return 1;
 }
 
