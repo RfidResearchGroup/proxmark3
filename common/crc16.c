@@ -43,3 +43,7 @@ uint16_t crc16(uint8_t const *message, int length, uint16_t remainder, uint16_t 
 uint16_t crc16_ccitt(uint8_t const *message, int length) {
     return crc16(message, length, 0xffff, 0x1021);
 }
+
+uint16_t crc16_ccitt_rev(uint8_t const *message, int length) {
+    return crc16(message, length, 0x0000, 0x1021);
+}

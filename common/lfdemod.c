@@ -537,6 +537,17 @@ uint32_t bytebits_to_byte(uint8_t* src, size_t numbits)
 	return num;
 }
 
+//least significant bit first
+uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits)
+{
+	uint32_t num = 0;
+	for(int i = 0 ; i < numbits ; i++)
+	{
+		num = (num << 1) | *(src + (numbits-(i+1)));
+	}
+	return num;
+}
+
 int IOdemodFSK(uint8_t *dest, size_t size)
 {
 	if (justNoise(dest, size)) return -1;
@@ -569,7 +580,7 @@ int IOdemodFSK(uint8_t *dest, size_t size)
 
 // by marshmellow
 // takes a array of binary values, start position, length of bits per parity (includes parity bit),
-//   Parity Type (1 for odd 0 for even), and binary Length (length to run) 
+//   Parity Type (1 for odd; 0 for even; 2 for just drop it), and binary Length (length to run) 
 size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen)
 {
 	uint32_t parityWd = 0;
@@ -581,7 +592,9 @@ size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t p
 		}
 		j--;
 		// if parity fails then return 0
+		if (pType != 2) {
 		if (parityTest(parityWd, pLen, pType) == 0) return -1;
+		}
 		bitCnt+=(pLen-1);
 		parityWd = 0;
 	}
@@ -589,9 +602,10 @@ size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t p
 	//return ID start index and size
 	return bitCnt;
 }
+
 // Ask/Biphase Demod then try to locate an ISO 11784/85 ID
 // BitStream must contain previously askrawdemod and biphasedemoded data
-int ISO11784demodBI(uint8_t *dest, size_t *size)
+int FDXBdemodBI(uint8_t *dest, size_t *size)
 {
 	//make sure buffer has enough data
 	if (*size < 128) return -1;

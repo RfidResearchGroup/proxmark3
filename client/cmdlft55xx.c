@@ -1050,6 +1050,7 @@ char * GetSelectedModulationStr( uint8_t id){
 	return buf;
 }
 
+/*
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits){
 	
 	int i = start;
@@ -1063,7 +1064,7 @@ uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits){
 
 	return tmp;
 }
-
+*/
 static command_t CommandTable[] =
 {
   {"help",   CmdHelp,           1, "This help"},

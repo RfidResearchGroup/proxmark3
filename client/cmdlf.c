@@ -1077,6 +1077,12 @@ int CmdLFfind(const char *Cmd)
     return 1;
   }
 
+	ans=CmdFDXBdemodBI("");
+	if (ans>0) {
+		PrintAndLog("\nValid FDX-B ID Found!");
+		return 1;
+	}
+
 	ans=EM4x50Read("", false);
 	if (ans>0) {
 		PrintAndLog("\nValid EM4x50 ID Found!");
