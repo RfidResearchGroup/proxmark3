@@ -1475,7 +1475,7 @@ int CmdFDXBdemodBI(const char *Cmd){
 	
 	errCnt = askdemod(BitStream, &size, &clk, &invert, maxErr, 0, 0);
 	if ( errCnt < 0 || errCnt > maxErr ) { 
-		if (g_debugMode) PrintAndLog("DEBUG: no data or error found %d, clock: 32", errCnt);
+		if (g_debugMode) PrintAndLog("DEBUG: no data or error found %d, clock: %d", errCnt, clk);
 		return 0;
 	}
 
@@ -1492,8 +1492,8 @@ int CmdFDXBdemodBI(const char *Cmd){
 	}
 
 	setDemodBuf(BitStream, 128, preambleIndex);
-	//printDemodBuff();
 
+	// remove but don't verify parity. (pType = 2)
 	size = removeParity(BitStream, preambleIndex + 11, 9, 2, 117);
 	if ( size <= 103 ) {
 		if (g_debugMode) PrintAndLog("Error removeParity:: %d", size);
@@ -1502,12 +1502,10 @@ int CmdFDXBdemodBI(const char *Cmd){
 	if (g_debugMode) {
 		char *bin = sprint_bin_break(BitStream,size,16);
 		PrintAndLog("DEBUG BinStream:\n%s",bin);
-		PrintAndLog("0x%s", sprint_hex(BitStream,16));
 	}
 	PrintAndLog("\nFDX-B / ISO 11784/5 Animal Tag ID Found:");
 	if (g_debugMode) PrintAndLog("Start marker %d;   Size %d", preambleIndex, size);
 
-	//return 1;
 	//got a good demod
 	uint64_t NationalCode = ((uint64_t)(bytebits_to_byteLSBF(BitStream+32,6)) << 32) | bytebits_to_byteLSBF(BitStream,32);
 	uint32_t countryCode = bytebits_to_byteLSBF(BitStream+38,10);
@@ -1520,14 +1518,14 @@ int CmdFDXBdemodBI(const char *Cmd){
 	uint64_t rawid = ((uint64_t)bytebits_to_byteLSBF(BitStream,32)<<32) | bytebits_to_byteLSBF(BitStream+32,32);
 	uint8_t raw[8];
 	num_to_bytes(rawid, 8, raw);
-	uint8_t *ID = SwapEndian64(raw, 8, 4);
+	uint8_t *raw_ptr = SwapEndian64(raw, 8, 4);
 
-	if (g_debugMode) PrintAndLog("Raw ID Hex: %s", sprint_hex(ID,8));
+	if (g_debugMode) PrintAndLog("Raw ID Hex: %s", sprint_hex(raw_ptr,8));
 
-	uint16_t calcCrc = crc16_ccitt_kermit(ID, 8);
-	PrintAndLog("Animal ID:     %u-%012llu", countryCode, NationalCode);
+	uint16_t calcCrc = crc16_ccitt_kermit(raw_ptr, 8);
+	PrintAndLog("Animal ID:     %04u-%012llu", countryCode, NationalCode);
 	PrintAndLog("National Code: %012llu", NationalCode);
-	PrintAndLog("CountryCode:   %u", countryCode);
+	PrintAndLog("CountryCode:   %04u", countryCode);
 	PrintAndLog("Extended Data: %s", dataBlockBit ? "True" : "False");
 	PrintAndLog("reserved Code: %u", reservedCode);
 	PrintAndLog("Animal Tag:    %s", animalBit ? "True" : "False");
