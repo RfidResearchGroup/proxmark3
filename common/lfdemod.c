@@ -605,7 +605,7 @@ size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t p
 
 // Ask/Biphase Demod then try to locate an ISO 11784/85 ID
 // BitStream must contain previously askrawdemod and biphasedemoded data
-int ISO11784demodBI(uint8_t *dest, size_t *size)
+int FDXBdemodBI(uint8_t *dest, size_t *size)
 {
 	//make sure buffer has enough data
 	if (*size < 128) return -1;

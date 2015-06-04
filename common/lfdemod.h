@@ -41,7 +41,7 @@ void     psk1TOpsk2(uint8_t *BitStream, size_t size);
 size_t   removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen);
 
 //tag specific
-int ISO11784demodBI(uint8_t *dest, size_t *size);
+int FDXBdemodBI(uint8_t *dest, size_t *size);
 int AWIDdemodFSK(uint8_t *dest, size_t *size);
 int gProxII_Demod(uint8_t BitStream[], size_t *size);
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);

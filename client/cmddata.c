@@ -498,7 +498,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 {
 	//ask raw demod GraphBuffer first
 	int offset=0, clk=0, invert=0, maxErr=0, ans=0;
-	ans = sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
+	ans = sscanf(Cmd, "%i %i 0 %i", &offset, &clk, &maxErr);
 	if (ans>0)
 		ans = ASKDemod(Cmd+2, FALSE, FALSE, 0);
 	else
@@ -512,7 +512,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	size_t size = DemodBufferLen;
 	uint8_t BitStream[MAX_DEMOD_BUF_LEN];
 	memcpy(BitStream, DemodBuffer, DemodBufferLen); 
-	int errCnt = BiphaseRawDecode(BitStream, &size, offset, 0);
+	int errCnt = BiphaseRawDecode(BitStream, &size, offset, invert);
 	if (errCnt < 0){
 		if (g_debugMode || verbose) PrintAndLog("Error BiphaseRawDecode: %d", errCnt);
 		return 0;
@@ -1457,13 +1457,13 @@ int CmdFSKdemodPyramid(const char *Cmd)
 	return 1;
 }
 
-// ISO11784/85 demod  (aka animal tag)  BIPHASE, inverted, rf/32,  with preamble of 00000000001 (128bits)
+// FDX-B ISO11784/85 demod  (aka animal tag)  BIPHASE, inverted, rf/32,  with preamble of 00000000001 (128bits)
 // 8 databits + 1 parity (1)
 // CIITT 16 chksum
 // NATIONAL CODE, ICAR database
-// COUNTRY CODE (ISO3166) 
+// COUNTRY CODE (ISO3166) or http://cms.abvma.ca/uploads/ManufacturersISOsandCountryCodes.pdf
 // FLAG (animal/non-animal)
-int CmdIso11784demodBI(const char *Cmd){
+int CmdFDXBdemodBI(const char *Cmd){
 
 	int invert = 1;
 	int clk = 32;		
@@ -1484,9 +1484,9 @@ int CmdIso11784demodBI(const char *Cmd){
 		return 0;
 	} 
 
-	int preambleIndex = ISO11784demodBI(BitStream, &size);
+	int preambleIndex = FDXBdemodBI(BitStream, &size);
 	if (preambleIndex < 0){
-		if (g_debugMode) PrintAndLog("Error ISO11784Demod , no startmarker found :: %d",preambleIndex);
+		if (g_debugMode) PrintAndLog("Error FDXBDemod , no startmarker found :: %d",preambleIndex);
 		return 0;
 	}
 
@@ -1498,15 +1498,16 @@ int CmdIso11784demodBI(const char *Cmd){
 		if (g_debugMode) PrintAndLog("Error removeParity:: %d", size);
 		return 0;
 	}
-	//char *bin = sprint_bin_break(BitStream,size,16);
-	//PrintAndLog("DEBUG BinStream:\n%s",bin);
-
-	PrintAndLog("startmarker %d;   Size %d", preambleIndex, size);
+	if (g_debugMode) {
+		char *bin = sprint_bin_break(BitStream,size,16);
+		PrintAndLog("DEBUG BinStream:\n%s",bin);
+	}
+	PrintAndLog("\nFDX-B / ISO 11784/5 Animal Tag ID Found:");
+	if (g_debugMode) PrintAndLog("startmarker %d;   Size %d", preambleIndex, size);
 
 	//return 1;
 	//got a good demod
-	uint32_t NationalCodeA = bytebits_to_byteLSBF(BitStream,32);
-	uint32_t NationalCodeB = bytebits_to_byteLSBF(BitStream+32,6);
+	uint64_t NationalCode = ((uint64_t)(bytebits_to_byteLSBF(BitStream+32,6)) << 32) | bytebits_to_byteLSBF(BitStream,32);
 	uint32_t countryCode = bytebits_to_byteLSBF(BitStream+38,10);
 	uint8_t dataBlockBit = BitStream[48];
 	uint32_t reservedCode = bytebits_to_byteLSBF(BitStream+49,14);
@@ -1514,13 +1515,14 @@ int CmdIso11784demodBI(const char *Cmd){
 	uint32_t crc16 = bytebits_to_byteLSBF(BitStream+64,16);
 	uint32_t extended = bytebits_to_byteLSBF(BitStream+80,24);
 
-	PrintAndLog("NationalCode: %X%08X",NationalCodeB,NationalCodeA);
-	PrintAndLog("CountryCode:  %d",countryCode);
-	PrintAndLog("dataBlockBit: %d",dataBlockBit);
-	PrintAndLog("reservedCode: %X",reservedCode);
-	PrintAndLog("animalBit:    %d", animalBit);
-	PrintAndLog("CRC:          %02X", crc16);
-	PrintAndLog("Extended:     %x", extended);
+	PrintAndLog("Animal ID:     %u-%012llu", countryCode, NationalCode);
+	PrintAndLog("National Code: %012llu", NationalCode);
+	PrintAndLog("CountryCode:   %u", countryCode);
+	PrintAndLog("Extended Data: %s", dataBlockBit ? "True" : "False");
+	PrintAndLog("reserved Code: %u", reservedCode);
+	PrintAndLog("Animal Tag:    %s", animalBit ? "True" : "False");
+	PrintAndLog("CRC:           0x%02X", crc16);
+	PrintAndLog("Extended:      0x%X", extended);
 	
 	return 1;
 }
@@ -2270,6 +2272,7 @@ static command_t CommandTable[] =
 	{"buffclear",       CmdBuffClear,       1, "Clear sample buffer and graph window"},
 	{"dec",             CmdDec,             1, "Decimate samples"},
 	{"detectclock",     CmdDetectClockRate, 1, "[modulation] Detect clock rate of wave in GraphBuffer (options: 'a','f','n','p' for ask, fsk, nrz, psk respectively)"},
+	{"fdxbdemod",       CmdFDXBdemodBI    , 1, "Demodulate a FDX-B ISO11784/85 Biphase tag from GraphBuffer"},
 	{"fskawiddemod",    CmdFSKdemodAWID,    1, "Demodulate an AWID FSK tag from GraphBuffer"},
 	//{"fskfcdetect",   CmdFSKfcDetect,     1, "Try to detect the Field Clock of an FSK wave"},
 	{"fskhiddemod",     CmdFSKdemodHID,     1, "Demodulate a HID FSK tag from GraphBuffer"},
@@ -2281,7 +2284,6 @@ static command_t CommandTable[] =
 	{"hexsamples",      CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
 	{"hide",            CmdHide,            1, "Hide graph window"},
 	{"hpf",             CmdHpf,             1, "Remove DC offset from trace"},
-	{"iso11784demod",   CmdIso11784demodBI, 1, "Demodulate a ISO11784/85 Biphase tag from GraphBuffer"},
 	{"load",            CmdLoad,            1, "<filename> -- Load trace (to graph window"},
 	{"ltrim",           CmdLtrim,           1, "<samples> -- Trim samples from left of trace"},
 	{"rtrim",           CmdRtrim,           1, "<location to end trace> -- Trim samples from right of trace"},
