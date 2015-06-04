@@ -23,6 +23,7 @@
 #include "lfdemod.h"
 #include "usb_cmd.h"
 #include "crc.h"
+#include "crc16.h"
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 uint8_t g_debugMode;
@@ -1501,9 +1502,10 @@ int CmdFDXBdemodBI(const char *Cmd){
 	if (g_debugMode) {
 		char *bin = sprint_bin_break(BitStream,size,16);
 		PrintAndLog("DEBUG BinStream:\n%s",bin);
+		PrintAndLog("0x%s", sprint_hex(BitStream,16));
 	}
 	PrintAndLog("\nFDX-B / ISO 11784/5 Animal Tag ID Found:");
-	if (g_debugMode) PrintAndLog("startmarker %d;   Size %d", preambleIndex, size);
+	if (g_debugMode) PrintAndLog("Start marker %d;   Size %d", preambleIndex, size);
 
 	//return 1;
 	//got a good demod
@@ -1515,14 +1517,22 @@ int CmdFDXBdemodBI(const char *Cmd){
 	uint32_t crc16 = bytebits_to_byteLSBF(BitStream+64,16);
 	uint32_t extended = bytebits_to_byteLSBF(BitStream+80,24);
 
+	uint64_t rawid = ((uint64_t)bytebits_to_byteLSBF(BitStream,32)<<32) | bytebits_to_byteLSBF(BitStream+32,32);
+	uint8_t raw[8];
+	num_to_bytes(rawid, 8, raw);
+	uint8_t *ID = SwapEndian64(raw, 8, 4);
+
+	if (g_debugMode) PrintAndLog("Raw ID Hex: %s", sprint_hex(ID,8));
+
+	uint16_t calcCrc = crc16_ccitt_kermit(ID, 8);
 	PrintAndLog("Animal ID:     %u-%012llu", countryCode, NationalCode);
 	PrintAndLog("National Code: %012llu", NationalCode);
 	PrintAndLog("CountryCode:   %u", countryCode);
 	PrintAndLog("Extended Data: %s", dataBlockBit ? "True" : "False");
 	PrintAndLog("reserved Code: %u", reservedCode);
 	PrintAndLog("Animal Tag:    %s", animalBit ? "True" : "False");
-	PrintAndLog("CRC:           0x%02X", crc16);
-	PrintAndLog("Extended:      0x%X", extended);
+	PrintAndLog("CRC:           0x%04X - [%04X] - %s", crc16, calcCrc, (calcCrc == crc16) ? "Passed" : "Failed");
+	PrintAndLog("Extended:      0x%X\n", extended);
 	
 	return 1;
 }
