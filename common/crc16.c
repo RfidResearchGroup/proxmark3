@@ -8,7 +8,6 @@
 
 #include "crc16.h"
 
-
 unsigned short update_crc16( unsigned short crc, unsigned char c )
 {
 	unsigned short i, v, tcrc = 0;
@@ -44,16 +43,19 @@ uint16_t crc16_ccitt(uint8_t const *message, int length) {
 }
 
 uint16_t crc16_ccitt_kermit(uint8_t const *message, int length) {
-	if (length == 0) return 0;
-	uint32_t crc = 0, q = 0;
-	uint8_t c;
+	return bit_reverse_uint16(crc16(message, length, 0x0000, 0x1021));
+}
 
-	for (int i = 0; i < length; i++){
-		c = message[i];
-		q = (crc ^ c ) & 0xF;
-		crc = (crc >> 4) ^ (q * 0x1081);
-		q = (crc ^ (c >> 4)) & 0xF;
-		crc = (crc >> 4) ^ (q * 0x1081);
-	}
-	return crc;
+uint16_t bit_reverse_uint16 (uint16_t value) {
+	const uint16_t mask0 = 0x5555;
+	const uint16_t mask1 = 0x3333;
+	const uint16_t mask2 = 0x0F0F;
+	const uint16_t mask3 = 0x00FF;
+
+	value = (((~mask0) & value) >> 1) | ((mask0 & value) << 1);
+	value = (((~mask1) & value) >> 2) | ((mask1 & value) << 2);
+	value = (((~mask2) & value) >> 4) | ((mask2 & value) << 4);
+	value = (((~mask3) & value) >> 8) | ((mask3 & value) << 8);
+
+	return value;
 }

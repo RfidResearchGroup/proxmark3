@@ -1515,14 +1515,13 @@ int CmdFDXBdemodBI(const char *Cmd){
 	uint32_t crc16 = bytebits_to_byteLSBF(BitStream+64,16);
 	uint32_t extended = bytebits_to_byteLSBF(BitStream+80,24);
 
-	uint64_t rawid = ((uint64_t)bytebits_to_byteLSBF(BitStream,32)<<32) | bytebits_to_byteLSBF(BitStream+32,32);
+	uint64_t rawid = ((uint64_t)bytebits_to_byte(BitStream,32)<<32) | bytebits_to_byte(BitStream+32,32);
 	uint8_t raw[8];
 	num_to_bytes(rawid, 8, raw);
-	uint8_t *raw_ptr = SwapEndian64(raw, 8, 4);
 
-	if (g_debugMode) PrintAndLog("Raw ID Hex: %s", sprint_hex(raw_ptr,8));
+	if (g_debugMode) PrintAndLog("Raw ID Hex: %s", sprint_hex(raw,8));
 
-	uint16_t calcCrc = crc16_ccitt_kermit(raw_ptr, 8);
+	uint16_t calcCrc = crc16_ccitt_kermit(raw, 8);
 	PrintAndLog("Animal ID:     %04u-%012llu", countryCode, NationalCode);
 	PrintAndLog("National Code: %012llu", NationalCode);
 	PrintAndLog("CountryCode:   %04u", countryCode);
