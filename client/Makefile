@@ -113,13 +113,14 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			pm3_bitlib.c\
 			aes.c\
 			protocols.c\
-			cmdcrc.c\
 			sha1.c\
-			# reveng/reveng.c\
-			# reveng/cli.c\
-			# reveng/bmpbit.c\
-			# reveng/model.c\
-			# reveng/poly.c\
+			cmdcrc.c\
+			reveng/reveng.c\
+			reveng/cli.c\
+			reveng/bmpbit.c\
+			reveng/model.c\
+			reveng/poly.c\
+			reveng/getopt.c\
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)

@@ -25,7 +25,6 @@
 #include "crc.h"
 #include "crc16.h"
 
-
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 uint8_t g_debugMode;
 size_t DemodBufferLen;
@@ -500,7 +499,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 {
 	//ask raw demod GraphBuffer first
 	int offset=0, clk=0, invert=0, maxErr=0, ans=0;
-	ans = sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
+	ans = sscanf(Cmd, "%i %i 0 %i", &offset, &clk, &maxErr);
 	if (ans>0)
 		ans = ASKDemod(Cmd+2, FALSE, FALSE, 0);
 	else
@@ -1487,7 +1486,7 @@ int CmdFDXBdemodBI(const char *Cmd){
 	
 	errCnt = askdemod(BitStream, &size, &clk, &invert, maxErr, 0, 0);
 	if ( errCnt < 0 || errCnt > maxErr ) { 
-		if (g_debugMode) PrintAndLog("DEBUG: no data or error found %d, clock: 32", errCnt);
+		if (g_debugMode) PrintAndLog("DEBUG: no data or error found %d, clock: %d", errCnt, clk);
 		return 0;
 	}
 
@@ -1505,7 +1504,8 @@ int CmdFDXBdemodBI(const char *Cmd){
 	
 	setDemodBuf(BitStream, 128, preambleIndex);
 
-	size = removeParity(BitStream, preambleIndex + 11, 9, 2, 128-11);
+	// remove but don't verify parity. (pType = 2)
+	size = removeParity(BitStream, preambleIndex + 11, 9, 2, 117);
 	if ( size <= 103 ) {
 		if (g_debugMode) PrintAndLog("Error removeParity:: %d", size);
 		return 0;
@@ -1515,42 +1515,34 @@ int CmdFDXBdemodBI(const char *Cmd){
 		PrintAndLog("DEBUG BinStream:\n%s",bin);
 	}
 	PrintAndLog("\nFDX-B / ISO 11784/5 Animal Tag ID Found:");
-	if (g_debugMode) PrintAndLog("startmarker %d;   Size %d", preambleIndex, size);
+	if (g_debugMode) PrintAndLog("Start marker %d;   Size %d", preambleIndex, size);
 
-	//got a good demod	  
-	
-	//marshmellows
+	//got a good demod
 	uint64_t NationalCode = ((uint64_t)(bytebits_to_byteLSBF(BitStream+32,6)) << 32) | bytebits_to_byteLSBF(BitStream,32);
 	uint32_t countryCode = bytebits_to_byteLSBF(BitStream+38,10);
 	uint8_t dataBlockBit = BitStream[48];
 	uint32_t reservedCode = bytebits_to_byteLSBF(BitStream+49,14);
 	uint8_t animalBit = BitStream[63];
-
-	uint16_t crc16 = bytebits_to_byteLSBF(BitStream+64,16);
+	uint32_t crc16 = bytebits_to_byteLSBF(BitStream+64,16);
 	uint32_t extended = bytebits_to_byteLSBF(BitStream+80,24);
 
-	uint64_t rawid = ((uint64_t)bytebits_to_byte(BitStream+32,32) << 32) | bytebits_to_byte(BitStream,32);
+	uint64_t rawid = ((uint64_t)bytebits_to_byte(BitStream,32)<<32) | bytebits_to_byte(BitStream+32,32);
 	uint8_t raw[8];
 	num_to_bytes(rawid, 8, raw);
-	PrintAndLog("%s", sprint_hex(raw,8));
-	uint16_t crcCalc = crc16_ccitt_rev( raw ,8);
-	
-	PrintAndLog("Animal ID:     %u-%012llu", countryCode, NationalCode);
+
+	if (g_debugMode) PrintAndLog("Raw ID Hex: %s", sprint_hex(raw,8));
+
+	uint16_t calcCrc = crc16_ccitt_kermit(raw, 8);
+	PrintAndLog("Animal ID:     %04u-%012llu", countryCode, NationalCode);
 	PrintAndLog("National Code: %012llu", NationalCode);
-	PrintAndLog("CountryCode:   %u", countryCode);
+	PrintAndLog("CountryCode:   %04u", countryCode);
 	PrintAndLog("Extended Data: %s", dataBlockBit ? "True" : "False");
 	PrintAndLog("reserved Code: %u", reservedCode);
 	PrintAndLog("Animal Tag:    %s", animalBit ? "True" : "False");
-	PrintAndLog("CRC:           0x%02X", crc16);
-	PrintAndLog("CRC : %X == %X  %s", crc16, crcCalc, ( crcCalc == crc16 )?"ok":"!"  );
-	PrintAndLog("Extended:      0x%X", extended);	   
+	PrintAndLog("CRC:           0x%04X - [%04X] - %s", crc16, calcCrc, (calcCrc == crc16) ? "Passed" : "Failed");
+	PrintAndLog("Extended:      0x%X\n", extended);
 	
-/*	
-	//uint16_t crcCalc = crc16_ccitt( ByteStream, 8);
-	PrintAndLog("Application ID: %04X", applicationid);
-	*/
 	return 1;
-	
 }
 
 

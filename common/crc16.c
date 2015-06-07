@@ -7,7 +7,7 @@
 //-----------------------------------------------------------------------------
 
 #include "crc16.h"
-
+#define CRC16_MASK_CCITT 0x1021
 
 unsigned short update_crc16( unsigned short crc, unsigned char c )
 {
@@ -41,9 +41,22 @@ uint16_t crc16(uint8_t const *message, int length, uint16_t remainder, uint16_t 
 }
 
 uint16_t crc16_ccitt(uint8_t const *message, int length) {
-    return crc16(message, length, 0xffff, 0x1021);
+    return crc16(message, length, 0xffff, CRC16_MASK_CCITT);
 }
 
-uint16_t crc16_ccitt_rev(uint8_t const *message, int length) {
-    return crc16(message, length, 0x0000, 0x1021);
+uint16_t crc16_ccitt_kermit(uint8_t const *message, int length) {
+    return bit_reverse_uint16(crc16(message, length, 0x0000, CRC16_MASK_CCITT));
+}
+uint16_t bit_reverse_uint16 (uint16_t value) {
+	const uint16_t mask0 = 0x5555;
+	const uint16_t mask1 = 0x3333;
+	const uint16_t mask2 = 0x0F0F;
+	const uint16_t mask3 = 0x00FF;
+
+	value = (((~mask0) & value) >> 1) | ((mask0 & value) << 1);
+	value = (((~mask1) & value) >> 2) | ((mask1 & value) << 2);
+	value = (((~mask2) & value) >> 4) | ((mask2 & value) << 4);
+	value = (((~mask3) & value) >> 8) | ((mask3 & value) << 8);
+
+	return value;
 }

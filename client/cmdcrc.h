@@ -12,5 +12,4 @@
 #define CMDCRC_H__
 
 int CmdCrc(const char *Cmd);
-int CmdCrcCalc(const char *Cmd);
 #endif

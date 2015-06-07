@@ -10,33 +10,59 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "cmdparser.h"
+//#include <stdlib.h>
+//#include <ctype.h>
+#include "cmdmain.h"
 #include "cmdcrc.h"
-//#include "reveng/reveng.h"
-//#include "reveng/cli.h"
-static int CmdHelp(const char *Cmd);
+#include "reveng/reveng.h"
+#include "ui.h"
+#include "util.h"
 
-int CmdCrcCalc(const char *Cmd)
-{
-	//pm3main(Cmd);
-	return 0;
+#define MAX_ARGS 20
+
+int split(char *str, char *arr[MAX_ARGS]){
+    int beginIndex = 0;
+    int endIndex;
+    int maxWords = MAX_ARGS;
+    int wordCnt = 0;
+
+    while(1){
+        while(isspace(str[beginIndex])){
+            ++beginIndex;
+        }
+        if(str[beginIndex] == '\0')
+            break;
+        endIndex = beginIndex;
+        while (str[endIndex] && !isspace(str[endIndex])){
+            ++endIndex;
+        }
+        int len = endIndex - beginIndex;
+        char *tmp = calloc(len + 1, sizeof(char));
+        memcpy(tmp, &str[beginIndex], len);
+        arr[wordCnt++] = tmp;
+        //PrintAndLog("cnt: %d, %s",wordCnt-1, arr[wordCnt-1]);
+        beginIndex = endIndex;
+        if (wordCnt == maxWords)
+            break;
+    }
+    return wordCnt;
 }
-
-static command_t CommandTable[] = 
-{
-	{"help",	CmdHelp,	1, "This help"},
-	{"calc",	CmdCrcCalc,	1, "{ Calculate CRC's }"},
-	{NULL, NULL, 0, NULL}
-};
 
 int CmdCrc(const char *Cmd)
 {
-  CmdsParse(CommandTable, Cmd);
+	char name[] = {"reveng "};
+	char Cmd2[50 + 7];
+	memcpy(Cmd2, name, 7);
+	memcpy(Cmd2 + 7, Cmd, 50);
+	char *argv[MAX_ARGS];
+	int argc = split(Cmd2, argv);
+	//PrintAndLog("argc: %d, %s %s Cmd: %s",argc, argv[0], Cmd2, Cmd);
+	reveng_main(argc, argv);
+	for(int i = 0; i < argc; ++i){
+		//puts(arr[i]);
+		free(argv[i]);
+	}
+
   return 0; 
 }
 
-int CmdHelp(const char *Cmd)
-{
-  CmdsHelp(CommandTable);
-  return 0;
-}
