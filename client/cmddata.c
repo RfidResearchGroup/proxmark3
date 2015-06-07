@@ -41,7 +41,7 @@ void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx)
 		size = MAX_DEMOD_BUF_LEN;
 
 	size_t i = 0;
-for (; i < size; i++){
+	for (; i < size; i++){
 		DemodBuffer[i]=buff[startIdx++];
 	}
 	DemodBufferLen=size;
@@ -344,8 +344,8 @@ int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType)
 	setDemodBuf(BitStream,BitLen,0);
 	if (verbose || g_debugMode){
 		if (errCnt>0) PrintAndLog("# Errors during Demoding (shown as 7 in bit stream): %d",errCnt);
-		if (askType) PrintAndLog("ASK/Manchester decoded bitstream:");
-		else PrintAndLog("ASK/Raw decoded bitstream:");
+		if (askType) PrintAndLog("ASK/Manchester - Clock: %d - Decoded bitstream:",clk);
+		else PrintAndLog("ASK/Raw - Clock: %d - Decoded bitstream:",clk);
 		// Now output the bitstream to the scrollback by line of 16 bits
 		printDemodBuff();
 		
@@ -499,21 +499,19 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 {
 	//ask raw demod GraphBuffer first
 	int offset=0, clk=0, invert=0, maxErr=0, ans=0;
-	ans = sscanf(Cmd, "%i %i 0 %i", &offset, &clk, &maxErr);
-	if (ans>0)
-		ans = ASKDemod(Cmd+2, FALSE, FALSE, 0);
-	else
-		ans = ASKDemod(Cmd, FALSE, FALSE, 0);
-	if (!ans) {
-		if (g_debugMode || verbose) PrintAndLog("Error AskDemod: %d", ans);
-		return 0;
-	}
+	ans = sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 
-	//attempt to Biphase decode DemodBuffer
-	size_t size = DemodBufferLen;
-	uint8_t BitStream[MAX_DEMOD_BUF_LEN];
-	memcpy(BitStream, DemodBuffer, DemodBufferLen); 
-	int errCnt = BiphaseRawDecode(BitStream, &size, offset, invert);
+	uint8_t BitStream[MAX_DEMOD_BUF_LEN];	  
+	size_t size = getFromGraphBuf(BitStream);	  
+
+	int errCnt = askdemod(BitStream, &size, &clk, 0, maxErr, 0, 0);  
+	if ( errCnt < 0 || errCnt > maxErr ) {   
+		if (g_debugMode) PrintAndLog("DEBUG: no data or error found %d, clock: %d", errCnt, clk);  
+			return 0;  
+	} 
+
+	//attempt to Biphase decode BitStream
+	errCnt = BiphaseRawDecode(BitStream, &size, offset, invert);
 	if (errCnt < 0){
 		if (g_debugMode || verbose) PrintAndLog("Error BiphaseRawDecode: %d", errCnt);
 		return 0;
@@ -525,7 +523,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	//success set DemodBuffer and return
 	setDemodBuf(BitStream, size, 0);
 	if (g_debugMode || verbose){
-		PrintAndLog("Biphase Decoded using offset: %d - # errors:%d - data:",offset,errCnt);
+		PrintAndLog("Biphase Decoded using offset: %d - clock: %d - # errors:%d - data:",offset,clk,errCnt);
 		printDemodBuff();
 	}
 	return 1;
