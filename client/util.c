@@ -248,7 +248,7 @@ char param_getchar(const char *line, int paramnum)
 
 uint8_t param_get8(const char *line, int paramnum)
 {
-	return param_get8ex(line, paramnum, 10, 0);
+	return param_get8ex(line, paramnum, 0, 10);
 }
 
 /**

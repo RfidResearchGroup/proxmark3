@@ -183,8 +183,10 @@ int reveng_main(int argc, char *argv[]) {
 					return 0;
 					//exit(EXIT_FAILURE);
 				}
-				if(c < 0)
+				if(c < 0){
 					uerror("no preset models available");
+					return 0;
+				}
 				/* must set width so that parameter to -ipx is not zeroed */
 				width = plen(model.spoly);
 				rflags |= R_HAVEP | R_HAVEI | R_HAVERI | R_HAVERO | R_HAVEX;
@@ -314,8 +316,10 @@ ippx:
 			break;
 		case 'D': /* D  dump all models */
 			args = mcount();
-			if(!args)
+			if(!args){
 				uerror("no preset models available");
+				return 0;
+			}
 			for(mode = 0; mode < args; ++mode) {
 				mbynum(&model, mode);
 				mcanon(&model);
@@ -327,8 +331,10 @@ ippx:
 			 * either attaching names to arbitrary models or forcing to a preset
 			 * mmatch(&model, M_OVERWR);
 			 */
-			if(~model.flags & P_MULXN)
+			if(~model.flags & P_MULXN){
 				uerror("not a Williams model compliant algorithm");
+				return 0;
+			}
 			string = mtostr(&model);
 			puts(string);
 			free(string);
@@ -348,10 +354,14 @@ ippx:
 			}
 			break;
 		case 's': /* s  search for algorithm */
-			if(!width)
+			if(!width){
 				uerror("must specify positive -k or -w before -s");
-			if(~model.flags & P_MULXN)
+				return 0;
+			}
+			if(~model.flags & P_MULXN){
 				uerror("cannot search for non-Williams compliant models");
+				return 0;
+			}
 			praloc(&model.spoly, width);
 			praloc(&model.init, width);
 			praloc(&model.xorout, width);
@@ -366,8 +376,10 @@ ippx:
 
 			/* allocate argument array */
 			args = argc - optind;
-			if(!(apolys = malloc(args * sizeof(poly_t))))
+			if(!(apolys = malloc(args * sizeof(poly_t)))){
 				uerror("cannot allocate memory for argument list");
+				return 0;
+			}
 
 			for(pptr = apolys; optind < argc; ++optind) {
 				if(uflags & C_INFILE)
@@ -435,8 +447,10 @@ ippx:
 				return 1;
 				//exit(EXIT_SUCCESS);
 			}
-			if(!(model.flags & P_REFIN) != !(model.flags & P_REFOUT))
+			if(!(model.flags & P_REFIN) != !(model.flags & P_REFOUT)){
 				uerror("cannot search for crossed-endian models");
+				return 0;
+			}
 			pass = 0;
 			do {
 				mptr = candmods = reveng(&model, qpoly, rflags, args, apolys);
@@ -465,7 +479,6 @@ ippx:
 			break;
 		default:  /* no mode specified */
 			fprintf(stderr, "%s: no mode switch specified. Use %s -h for help.\n", myname, myname);
-	return 0;
 			//exit(EXIT_FAILURE);
 	}
 

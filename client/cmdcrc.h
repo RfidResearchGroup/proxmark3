@@ -12,4 +12,7 @@
 #define CMDCRC_H__
 
 int CmdCrc(const char *Cmd);
+
+int GetModels(char *Models[], int *count, uint32_t *width);
+int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *result);
 #endif

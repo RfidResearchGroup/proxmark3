@@ -22,6 +22,7 @@
 #include "../common/crc64.h"
 #include "../common/sha1.h"
 #include "aes.h"
+#include "cmdcrc.h"
 /**
  * The following params expected:
  *  UsbCommand c
@@ -388,6 +389,59 @@ static int l_sha1(lua_State *L)
     return 1;	
 }
 
+static int l_reveng_models(lua_State *L){
+
+	char *models[80];
+	int count = 0;
+	lua_Integer  in_width = luaL_checkinteger(L, 1);
+	
+	if( in_width > 89 ) return returnToLuaWithError(L,"Width cannot exceed 89, got %d", in_width);
+
+	uint32_t width = (uint32_t)in_width;
+	int ans = GetModels(models, &count, &width);
+	if (!ans) return 0;
+	
+	lua_newtable(L);
+	
+	for (int i = 0; i < count; i++){
+		lua_pushstring(L,  (const char*)models[i]);
+		lua_rawseti(L,-2,i+1);
+		free(models[i]);
+	}
+
+	return 1;
+}
+
+static int l_reveng_RunModel(lua_State *L){
+	//-c || -v
+	//inModel = valid model name string - CRC-8
+	//inHexStr = input hex string to calculate crc on
+	//reverse = reverse calc option if true
+	//endian = {0 = calc default endian input and output, b = big endian input and output, B = big endian output, r = right justified
+	//          l = little endian input and output, L = little endian output only, t = left justified}
+	//result = calculated crc hex string	
+	char result[50];
+	
+	size_t dataLen;
+	const char *inModel = luaL_checklstring(L, 1, &dataLen);
+	if ( dataLen < 4 ) return returnToLuaWithError(L,"Can't find model, got %s", inModel);
+	
+	const char *inHexStr = luaL_checklstring(L, 2, &dataLen);
+	if ( dataLen < 4 ) return returnToLuaWithError(L,"Hex string too short, got %d", dataLen);
+	
+	int reverse = luaL_checkinteger(L, 3);	
+	const char *endian = luaL_checklstring(L, 4, &dataLen);
+
+	//PrintAndLog("mod: %s, hex: %s, rev %d", inModel, inHexStr, reverse);
+	//int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *result)
+	int ans = RunModel( (char*)inModel, (char*)inHexStr, (bool)reverse, (char*)endian, result);
+	if (!ans) 	
+		return returnToLuaWithError(L,"Reveng failed");
+
+	lua_pushstring(L, (const char*)result); 
+	return 1;
+}
+
 /**
  * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
  * able to do "require('foobar')" if foobar.lua is within lualibs folder.
@@ -433,6 +487,8 @@ int set_pm3_libraries(lua_State *L)
 		{"crc16",                       l_crc16},
 		{"crc64",                       l_crc64},
 		{"sha1",						l_sha1},
+		{"reveng_models",				l_reveng_models},
+		{"reveng_runmodel",				l_reveng_RunModel},
         {NULL, NULL}
     };
 
