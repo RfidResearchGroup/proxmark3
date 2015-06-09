@@ -1,15 +1,15 @@
 local getopt = require('getopt')
 local utils = require('utils')
 
-example = "script calculates many checksums (CRC) over the provided hex input"
+example = "script calculates many different checksums (CRC) over the provided hex input"
 author = "Iceman"
 desc =
 [[
-This script calculates many checksums (CRS) over the provided hex input. 
+This script calculates many checksums (CRC) over the provided hex input. 
 
 Arguments:
 	-b 				data in hex
-	-w				width of the CRC algorithm. <optional> defaults to all known CRC presets.
+	-w				bitwidth of the CRC family of algorithm. <optional> defaults to all known CRC presets.
 Examples : 
 	script run e -b 010203040506070809
 	script run e -b 010203040506070809 -w 16
@@ -45,25 +45,22 @@ function main(args)
 	-- Read the parameters
 	for o, a in getopt.getopt(args, 'hb:w:') do
 		if o == "h" then return help() end
-		if o == "b" then data = utils.ConvertHexToa end
+		if o == "b" then data = a end
 		if o == "w" then width = a end
 	end
 
-	print('Width of CRC: '..width..'  bytes: '..data)
+	print( string.rep('-',60) )
+	print('Bit width of CRC | '..width)
+	print('Bytes            | '..data)
 	print('')
-	print('Model','CRC', 'CRC_Reverse')
-	
+	print( ('%-20s| %-16s| %s'):format('Model','CRC', 'CRC reverse'))
+	print( string.rep('-',60) )
 	local lists = core.reveng_models(width)
 	for _,i in pairs(lists) do
-		local one = core.reveng_runmodel(i, data, 0,0)
-		local two = core.reveng_runmodel(i, data, 1,0)
-		
-		print(i, one, two)
+		local one = core.reveng_runmodel(i, data, false, 0)
+		local two = core.reveng_runmodel(i, data, true, 0)		
+		print( ('%-20s| %-16s| %s'):format(i, one, two) )
 	end
-	
-	if 1 == 1 then
-	 return
-	end 
 end
 
 main(args)
