@@ -393,13 +393,15 @@ static int l_reveng_models(lua_State *L){
 
 	char *models[80];
 	int count = 0;
-	lua_Integer  in_width = luaL_checkinteger(L, 1);
+	int in_width = luaL_checkinteger(L, 1);
 	
 	if( in_width > 89 ) return returnToLuaWithError(L,"Width cannot exceed 89, got %d", in_width);
 
 	uint32_t width = (uint32_t)in_width;
 	int ans = GetModels(models, &count, &width);
-	if (!ans) return 0;
+	if (!ans){
+		return 0;
+	}
 	
 	lua_newtable(L);
 	
@@ -412,6 +414,13 @@ static int l_reveng_models(lua_State *L){
 	return 1;
 }
 
+//Called with 4 parameters.
+// inModel   ,string containing the crc model name: 'CRC-8'
+// inHexStr  ,string containing the hex representation of the data that will be used for CRC calculations.
+// reverse   ,int 0/1  (bool) if 1, calculate the reverse CRC
+// endian    ,char,  'B','b','L','l','t','r' describing if Big-Endian or Little-Endian should be used in different combinations.
+//
+// outputs:  string with hex representation of the CRC result
 static int l_reveng_RunModel(lua_State *L){
 	//-c || -v
 	//inModel = valid model name string - CRC-8
@@ -422,19 +431,14 @@ static int l_reveng_RunModel(lua_State *L){
 	//result = calculated crc hex string	
 	char result[50];
 	
-	size_t dataLen;
-	const char *inModel = luaL_checklstring(L, 1, &dataLen);
-	if ( dataLen < 4 ) return returnToLuaWithError(L,"Can't find model, got %s", inModel);
-	
-	const char *inHexStr = luaL_checklstring(L, 2, &dataLen);
-	if ( dataLen < 4 ) return returnToLuaWithError(L,"Hex string too short, got %d", dataLen);
-	
-	int reverse = luaL_checkinteger(L, 3);	
-	const char *endian = luaL_checklstring(L, 4, &dataLen);
+	const char *inModel = luaL_checkstring(L, 1);
+	const char *inHexStr = luaL_checkstring(L, 2);
+    bool reverse =  lua_toboolean(L, 3);
+	const char endian = luaL_checkstring(L, 4)[0];
 
 	//PrintAndLog("mod: %s, hex: %s, rev %d", inModel, inHexStr, reverse);
-	//int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *result)
-	int ans = RunModel( (char*)inModel, (char*)inHexStr, (bool)reverse, (char*)endian, result);
+	//    int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *result)
+	int ans = RunModel( (char *)inModel, (char *)inHexStr, reverse, endian, result);
 	if (!ans) 	
 		return returnToLuaWithError(L,"Reveng failed");
 

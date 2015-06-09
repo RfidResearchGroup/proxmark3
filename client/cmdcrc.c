@@ -90,9 +90,9 @@ int GetModels(char *Models[], int *count, uint32_t *width){
 		PZERO,		/* check value unused */
 		NULL		/* no model name */
 	};
+
 	int ibperhx = 8;//, obperhx = 8;
 	int rflags = 0, uflags = 0; /* search and UI flags */
-
 	poly_t apoly, crc, qpoly = PZERO, *apolys = NULL, *pptr = NULL, *qptr = NULL;
 	model_t pset = model, *candmods, *mptr;
 
@@ -107,7 +107,6 @@ int GetModels(char *Models[], int *count, uint32_t *width){
 	int Cnt = 0;
 	if (*width == 0) { //reveng -D
 		*count = mcount();
-
 		if(!*count)
 			return uerr("no preset models available");
 
@@ -115,7 +114,6 @@ int GetModels(char *Models[], int *count, uint32_t *width){
 			mbynum(&model, mode);
 			mcanon(&model);
 			size_t size = (model.name && *model.name) ? strlen(model.name) : 6;
-
 			char *tmp = calloc(size+1, sizeof(char));
 			if (tmp==NULL)
 				return uerr("out of memory?");
@@ -123,6 +121,7 @@ int GetModels(char *Models[], int *count, uint32_t *width){
 			memcpy(tmp, model.name, size);
 			Models[mode] = tmp;
 		}
+		mfree(&model);
 	} else { //reveng -s
 
 			if(~model.flags & P_MULXN)
@@ -209,21 +208,16 @@ int GetModels(char *Models[], int *count, uint32_t *width){
 			if(uflags & C_RESULT) {
 				for(qptr = apolys; qptr < pptr; ++qptr)
 					pfree(qptr);
-				return 1;
 			}
 			if(!(model.flags & P_REFIN) != !(model.flags & P_REFOUT))
 				return uerr("cannot search for crossed-endian models");
+
 			pass = 0;
 			do {
 				mptr = candmods = reveng(&model, qpoly, rflags, args, apolys);
 				if(mptr && plen(mptr->spoly))
 					uflags |= C_RESULT;
 				while(mptr && plen(mptr->spoly)) {
-					/* results were printed by the callback
-					 * string = mtostr(mptr);
-					 * puts(string);
-					 * free(string);
-					 */
 					mfree(mptr++);
 				}
 				free(candmods);
@@ -238,29 +232,8 @@ int GetModels(char *Models[], int *count, uint32_t *width){
 			free(apolys);
 			if(~uflags & C_RESULT)
 				return uerr("no models found");
+			mfree(&model);
 
-
-	}
-	return 1;
-}
-
-//test call to GetModels
-int CmdrevengTest(const char *Cmd){
-	char *Models[80];
-	int count = 0;
-	uint32_t width = 0;
-	width = param_get8(Cmd, 0);
-	//PrintAndLog("width: %d",width);
-	if (width > 89)
-		return uerr("Width cannot exceed 89");
-
-	int ans = GetModels(Models, &count, &width);
-	if (!ans) return 0;
-	
-	PrintAndLog("Count: %d",count);
-	for (int i = 0; i < count; i++){
-		PrintAndLog("Model %d: %s",i,Models[i]);
-		free(Models[i]);
 	}
 	return 1;
 }
@@ -298,7 +271,7 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
 	SETBMP();
 	//set model
 	if(!(c = mbynam(&model, inModel))) {
-		fprintf(stderr,"error: preset model '%s' not found.  Use reveng -D to list presets.\n", inModel);
+		PrintAndLog("error: preset model '%s' not found.  Use reveng -D to list presets.", inModel);
 		return 0;
 	}
 	if(c < 0)
