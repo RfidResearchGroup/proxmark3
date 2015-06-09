@@ -39,7 +39,7 @@ end
 -- The main entry point
 function main(args)
 
-	local data = '01020304'
+	local data
 	local width = 0
 
 	-- Read the parameters
@@ -49,6 +49,8 @@ function main(args)
 		if o == "w" then width = a end
 	end
 
+	data = data or '01020304'
+	
 	print( string.rep('-',60) )
 	print('Bit width of CRC | '..width)
 	print('Bytes            | '..data)
@@ -57,9 +59,9 @@ function main(args)
 	print( string.rep('-',60) )
 	local lists = core.reveng_models(width)
 	for _,i in pairs(lists) do
-		local one = core.reveng_runmodel(i, data, false, 0)
-		local two = core.reveng_runmodel(i, data, true, 0)		
-		print( ('%-20s| %-16s| %s'):format(i, one, two) )
+		local one = core.reveng_runmodel(i, data, false, '0')
+		local two = core.reveng_runmodel(i, data, true, '0')
+		print( ('%-20s| %-16s| %s'):format(i, one:upper(), two:upper()) )
 	end
 end
 
