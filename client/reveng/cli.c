@@ -444,7 +444,7 @@ ippx:
 			if(uflags & C_RESULT) {
 				for(qptr = apolys; qptr < pptr; ++qptr)
 					pfree(qptr);
-				return 1;
+				//return 1;
 				//exit(EXIT_SUCCESS);
 			}
 			if(!(model.flags & P_REFIN) != !(model.flags & P_REFOUT)){
