@@ -397,11 +397,10 @@ static int l_reveng_models(lua_State *L){
 	
 	if( in_width > 89 ) return returnToLuaWithError(L,"Width cannot exceed 89, got %d", in_width);
 
-	uint32_t width = (uint32_t)in_width;
-	int ans = GetModels(models, &count, &width);
-	if (!ans){
-		return 0;
-	}
+	uint8_t width[80];
+	width[0] = (uint8_t)in_width;
+	int ans = GetModels(models, &count, width);
+	if (!ans) return 0;
 	
 	lua_newtable(L);
 	
