@@ -288,7 +288,7 @@ int CmdHF14BCmdRaw (const char *cmd) {
         if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
             recv = resp.d.asBytes;
             PrintAndLog("received %i octets",resp.arg[0]);
-            if(!resp.arg[0])
+            if(resp.arg[0] == 0)
                 return 0;
             hexout = (char *)malloc(resp.arg[0] * 3 + 1);
             if (hexout != NULL) {
@@ -298,11 +298,13 @@ int CmdHF14BCmdRaw (const char *cmd) {
                 }
                 PrintAndLog("%s", hexout);
                 free(hexout);
-                ComputeCrc14443(CRC_14443_B, recv, resp.arg[0]-2, &first, &second);
-                if(recv[resp.arg[0]-2]==first && recv[resp.arg[0]-1]==second) {
-                    PrintAndLog("CRC OK");
-                } else {
-                    PrintAndLog("CRC failed");
+				if (resp.arg[0] > 2) {
+					ComputeCrc14443(CRC_14443_B, recv, resp.arg[0]-2, &first, &second);
+					if(recv[resp.arg[0]-2]==first && recv[resp.arg[0]-1]==second) {
+						PrintAndLog("CRC OK");
+					} else {
+						PrintAndLog("CRC failed");
+					}
                 }
             } else {
                 PrintAndLog("malloc failed your client has low memory?");
