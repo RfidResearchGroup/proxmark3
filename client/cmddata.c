@@ -23,6 +23,7 @@
 #include "lfdemod.h"
 #include "usb_cmd.h"
 #include "crc.h"
+#include "crc16.h"
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 uint8_t g_debugMode;
@@ -343,8 +344,8 @@ int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType)
 	setDemodBuf(BitStream,BitLen,0);
 	if (verbose || g_debugMode){
 		if (errCnt>0) PrintAndLog("# Errors during Demoding (shown as 7 in bit stream): %d",errCnt);
-		if (askType) PrintAndLog("ASK/Manchester decoded bitstream:");
-		else PrintAndLog("ASK/Raw decoded bitstream:");
+		if (askType) PrintAndLog("ASK/Manchester - Clock: %d - Decoded bitstream:",clk);
+		else PrintAndLog("ASK/Raw - Clock: %d - Decoded bitstream:",clk);
 		// Now output the bitstream to the scrollback by line of 16 bits
 		printDemodBuff();
 		
@@ -499,20 +500,18 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	//ask raw demod GraphBuffer first
 	int offset=0, clk=0, invert=0, maxErr=0, ans=0;
 	ans = sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
-	if (ans>0)
-		ans = ASKDemod(Cmd+1, FALSE, FALSE, 0);
-	else
-		ans = ASKDemod(Cmd, FALSE, FALSE, 0);
-	if (!ans) {
-		if (g_debugMode || verbose) PrintAndLog("Error AskDemod: %d", ans);
-		return 0;
-	}
 
-	//attempt to Biphase decode DemodBuffer
-	size_t size = DemodBufferLen;
-	uint8_t BitStream[MAX_DEMOD_BUF_LEN];
-	memcpy(BitStream, DemodBuffer, DemodBufferLen); 
-	int errCnt = BiphaseRawDecode(BitStream, &size, offset, 0);
+	uint8_t BitStream[MAX_DEMOD_BUF_LEN];	  
+	size_t size = getFromGraphBuf(BitStream);	  
+
+	int errCnt = askdemod(BitStream, &size, &clk, 0, maxErr, 0, 0);  
+	if ( errCnt < 0 || errCnt > maxErr ) {   
+		if (g_debugMode) PrintAndLog("DEBUG: no data or error found %d, clock: %d", errCnt, clk);  
+			return 0;  
+	} 
+
+	//attempt to Biphase decode BitStream
+	errCnt = BiphaseRawDecode(BitStream, &size, offset, invert);
 	if (errCnt < 0){
 		if (g_debugMode || verbose) PrintAndLog("Error BiphaseRawDecode: %d", errCnt);
 		return 0;
@@ -524,7 +523,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	//success set DemodBuffer and return
 	setDemodBuf(BitStream, size, 0);
 	if (g_debugMode || verbose){
-		PrintAndLog("Biphase Decoded using offset: %d - # errors:%d - data:",offset,errCnt);
+		PrintAndLog("Biphase Decoded using offset: %d - clock: %d - # errors:%d - data:",offset,clk,errCnt);
 		printDemodBuff();
 	}
 	return 1;
@@ -1457,6 +1456,83 @@ int CmdFSKdemodPyramid(const char *Cmd)
 	return 1;
 }
 
+// FDX-B ISO11784/85 demod  (aka animal tag)  BIPHASE, inverted, rf/32,  with preamble of 00000000001 (128bits)
+// 8 databits + 1 parity (1)
+// CIITT 16 chksum
+// NATIONAL CODE, ICAR database
+// COUNTRY CODE (ISO3166) or http://cms.abvma.ca/uploads/ManufacturersISOsandCountryCodes.pdf
+// FLAG (animal/non-animal)
+int CmdFDXBdemodBI(const char *Cmd){
+
+	int invert = 1;
+	int clk = 32;		
+	int errCnt = 0;
+	int maxErr = 0;
+	uint8_t BitStream[MAX_DEMOD_BUF_LEN];	
+	size_t size = getFromGraphBuf(BitStream);	
+	
+	errCnt = askdemod(BitStream, &size, &clk, &invert, maxErr, 0, 0);
+	if ( errCnt < 0 || errCnt > maxErr ) { 
+		if (g_debugMode) PrintAndLog("DEBUG: no data or error found %d, clock: %d", errCnt, clk);
+		return 0;
+	}
+
+	errCnt = BiphaseRawDecode(BitStream, &size, maxErr, 1);
+	if (errCnt < 0 || errCnt > maxErr ) {
+		if (g_debugMode) PrintAndLog("Error BiphaseRawDecode: %d", errCnt);
+		return 0;
+	} 
+
+	int preambleIndex = FDXBdemodBI(BitStream, &size);
+	if (preambleIndex < 0){
+		if (g_debugMode) PrintAndLog("Error FDXBDemod , no startmarker found :: %d",preambleIndex);
+		return 0;
+	}
+
+	setDemodBuf(BitStream, 128, preambleIndex);
+
+	// remove but don't verify parity. (pType = 2)
+	size = removeParity(BitStream, preambleIndex + 11, 9, 2, 117);
+	if ( size <= 103 ) {
+		if (g_debugMode) PrintAndLog("Error removeParity:: %d", size);
+		return 0;
+	}
+	if (g_debugMode) {
+		char *bin = sprint_bin_break(BitStream,size,16);
+		PrintAndLog("DEBUG BinStream:\n%s",bin);
+	}
+	PrintAndLog("\nFDX-B / ISO 11784/5 Animal Tag ID Found:");
+	if (g_debugMode) PrintAndLog("Start marker %d;   Size %d", preambleIndex, size);
+
+	//got a good demod
+	uint64_t NationalCode = ((uint64_t)(bytebits_to_byteLSBF(BitStream+32,6)) << 32) | bytebits_to_byteLSBF(BitStream,32);
+	uint32_t countryCode = bytebits_to_byteLSBF(BitStream+38,10);
+	uint8_t dataBlockBit = BitStream[48];
+	uint32_t reservedCode = bytebits_to_byteLSBF(BitStream+49,14);
+	uint8_t animalBit = BitStream[63];
+	uint32_t crc16 = bytebits_to_byteLSBF(BitStream+64,16);
+	uint32_t extended = bytebits_to_byteLSBF(BitStream+80,24);
+
+	uint64_t rawid = ((uint64_t)bytebits_to_byte(BitStream,32)<<32) | bytebits_to_byte(BitStream+32,32);
+	uint8_t raw[8];
+	num_to_bytes(rawid, 8, raw);
+
+	if (g_debugMode) PrintAndLog("Raw ID Hex: %s", sprint_hex(raw,8));
+
+	uint16_t calcCrc = crc16_ccitt_kermit(raw, 8);
+	PrintAndLog("Animal ID:     %04u-%012llu", countryCode, NationalCode);
+	PrintAndLog("National Code: %012llu", NationalCode);
+	PrintAndLog("CountryCode:   %04u", countryCode);
+	PrintAndLog("Extended Data: %s", dataBlockBit ? "True" : "False");
+	PrintAndLog("reserved Code: %u", reservedCode);
+	PrintAndLog("Animal Tag:    %s", animalBit ? "True" : "False");
+	PrintAndLog("CRC:           0x%04X - [%04X] - %s", crc16, calcCrc, (calcCrc == crc16) ? "Passed" : "Failed");
+	PrintAndLog("Extended:      0x%X\n", extended);
+	
+	return 1;
+}
+
+
 //by marshmellow
 //attempt to psk1 demod graph buffer
 int PSKDemod(const char *Cmd, bool verbose)
@@ -2201,6 +2277,7 @@ static command_t CommandTable[] =
 	{"buffclear",       CmdBuffClear,       1, "Clear sample buffer and graph window"},
 	{"dec",             CmdDec,             1, "Decimate samples"},
 	{"detectclock",     CmdDetectClockRate, 1, "[modulation] Detect clock rate of wave in GraphBuffer (options: 'a','f','n','p' for ask, fsk, nrz, psk respectively)"},
+	{"fdxbdemod",       CmdFDXBdemodBI    , 1, "Demodulate a FDX-B ISO11784/85 Biphase tag from GraphBuffer"},
 	{"fskawiddemod",    CmdFSKdemodAWID,    1, "Demodulate an AWID FSK tag from GraphBuffer"},
 	//{"fskfcdetect",   CmdFSKfcDetect,     1, "Try to detect the Field Clock of an FSK wave"},
 	{"fskhiddemod",     CmdFSKdemodHID,     1, "Demodulate a HID FSK tag from GraphBuffer"},

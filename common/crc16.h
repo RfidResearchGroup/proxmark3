@@ -12,4 +12,6 @@
 unsigned short update_crc16(unsigned short crc, unsigned char c);
 uint16_t crc16(uint8_t const *message, int length, uint16_t remainder, uint16_t polynomial);
 uint16_t crc16_ccitt(uint8_t const *message, int length);
+uint16_t crc16_ccitt_kermit(uint8_t const *message, int length);
+uint16_t bit_reverse_uint16 (uint16_t value);
 #endif

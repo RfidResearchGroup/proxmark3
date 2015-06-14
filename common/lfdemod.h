@@ -19,6 +19,7 @@
 int      askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType);
 int      BiphaseRawDecode(uint8_t * BitStream, size_t *size, int offset, int invert);
 uint32_t bytebits_to_byte(uint8_t* src, size_t numbits);
+uint32_t bytebits_to_byteLSBF(uint8_t* src, size_t numbits);
 uint16_t countFC(uint8_t *BitStream, size_t size, uint8_t fskAdj);
 int      DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr);
 uint8_t  DetectCleanAskWave(uint8_t dest[], size_t size, uint8_t high, uint8_t low);
@@ -40,6 +41,7 @@ void     psk1TOpsk2(uint8_t *BitStream, size_t size);
 size_t   removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen);
 
 //tag specific
+int FDXBdemodBI(uint8_t *dest, size_t *size);
 int AWIDdemodFSK(uint8_t *dest, size_t *size);
 int gProxII_Demod(uint8_t BitStream[], size_t *size);
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);
