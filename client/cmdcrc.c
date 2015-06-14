@@ -271,7 +271,7 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
 	int ibperhx = 8, obperhx = 8;
 	int rflags = 0; // search flags 
 	int c;
-	unsigned long width = 0UL;
+	unsigned long width;
 	poly_t apoly, crc;
 
 	char *string;

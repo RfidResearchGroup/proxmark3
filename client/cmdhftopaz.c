@@ -349,10 +349,16 @@ int CmdHFTopazReader(const char *Cmd)
 
 	PrintAndLog("");
 	bool lock_TLV_present = topaz_print_lock_control_TLVs(&topaz_tag.data_blocks[1][4]);
-
+	if ( lock_TLV_present ) {
+		PrintAndLog("");	
+	}
+	
 	PrintAndLog("");
 	bool reserved_mem_present = topaz_print_reserved_memory_control_TLVs(&topaz_tag.data_blocks[1][4]);
-
+	if (reserved_mem_present) {
+		PrintAndLog("");	
+	}
+	
 	topaz_print_lifecycle_state(&topaz_tag.data_blocks[1][0]);
 
 	topaz_print_NDEF(&topaz_tag.data_blocks[1][0]);
