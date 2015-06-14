@@ -913,7 +913,8 @@ bool prepare_tag_modulation(tag_response_info_t* response_info, size_t max_buffe
 // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction) 
 // 28 * 8 data bits, 28 * 1 parity bits, 7 start bits, 7 stop bits, 7 correction bits
 // -> need 273 bytes buffer
-#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 273
+// 44 * 8 data bits, 44 * 1 parity bits, 9 start bits, 9 stop bits, 9 correction bits
+#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 370  //273
 
 bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
   // Retrieve and store the current buffer index
@@ -947,6 +948,12 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 	
 	uint8_t sak;
 
+	uint8_t blockzeros[512];
+	memset(blockzeros, 0x00, sizeof(blockzeros));
+					
+	// PACK response to PWD AUTH for EV1/NTAG
+	uint8_t response8[4];
+	
 	// The first response contains the ATQA (note: bytes are transmitted in reverse order).
 	uint8_t response1[2];
 	
@@ -959,7 +966,7 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 		} break;
 		case 2: { // MIFARE Ultralight
 			// Says: I am a stupid memory tag, no crypto
-			response1[0] = 0x04;
+			response1[0] = 0x44;
 			response1[1] = 0x00;
 			sak = 0x00;
 		} break;
@@ -987,6 +994,16 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 			response1[1] = 0x00;
 			sak = 0x09;
 		} break;
+		case 7: { // NTAG?
+			// Says: I am a NTAG, 
+			response1[0] = 0x44;
+			response1[1] = 0x00;
+			sak = 0x00;
+			// PACK
+			response8[0] = 0x80;
+			response8[1] = 0x80;
+			ComputeCrc14443(CRC_14443_A, response8, 2, &response8[2], &response8[3]);
+		} break;		
 		default: {
 			Dbprintf("Error: unkown tagtype (%d)",tagType);
 			return;
@@ -1043,7 +1060,11 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 	// TC(1) = 0x02: CID supported, NAD not supported
 	ComputeCrc14443(CRC_14443_A, response6, 4, &response6[4], &response6[5]);
 
-	#define TAG_RESPONSE_COUNT 7
+	// Prepare GET_VERSION (different for EV-1 / NTAG)
+	//uint8_t response7_EV1[] = {0x00, 0x04, 0x03, 0x01, 0x01, 0x00, 0x0b, 0x03, 0xfd, 0xf7};  //EV1 48bytes VERSION.
+	uint8_t response7_NTAG[] = {0x00, 0x04, 0x04, 0x02, 0x01, 0x00, 0x11, 0x03, 0x01, 0x9e}; //NTAG 215
+	
+	#define TAG_RESPONSE_COUNT 9
 	tag_response_info_t responses[TAG_RESPONSE_COUNT] = {
 		{ .response = response1,  .response_n = sizeof(response1)  },  // Answer to request - respond with card type
 		{ .response = response2,  .response_n = sizeof(response2)  },  // Anticollision cascade1 - respond with uid
@@ -1052,6 +1073,8 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 		{ .response = response3a, .response_n = sizeof(response3a) },  // Acknowledge select - cascade 2
 		{ .response = response5,  .response_n = sizeof(response5)  },  // Authentication answer (random nonce)
 		{ .response = response6,  .response_n = sizeof(response6)  },  // dummy ATS (pseudo-ATR), answer to RATS
+		{ .response = response7_NTAG,  .response_n = sizeof(response7_NTAG)  },  // EV1/NTAG GET_VERSION response
+		{ .response = response8,   .response_n = sizeof(response8) },  // EV1/NTAG PACK response
 	};
 
 	// Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
@@ -1127,10 +1150,42 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 		} else if(receivedCmd[1] == 0x70 && receivedCmd[0] == 0x95) {	// Received a SELECT (cascade 2)
 			p_response = &responses[4]; order = 30;
 		} else if(receivedCmd[0] == 0x30) {	// Received a (plain) READ
-			EmSendCmdEx(data+(4*receivedCmd[1]),16,false);
-			// Dbprintf("Read request from reader: %x %x",receivedCmd[0],receivedCmd[1]);
-			// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
-			p_response = NULL;
+			uint8_t block = receivedCmd[1];
+			if ( tagType == 7 ) {
+				
+				if ( block < 4 ) {
+				    //NTAG 215
+					uint8_t start = 4 * block;
+					
+					uint8_t blockdata[50] = {
+					data[0],data[1],data[2], 0x88 ^ data[0] ^ data[1] ^ data[2],
+					data[3],data[4],data[5],data[6],
+					data[3] ^ data[4] ^ data[5] ^ data[6],0x48,0x0f,0xe0,
+					0xe1,0x10,0x12,0x00,
+					0x03,0x00,0xfe,0x00, 
+					0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+					0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+					0x00,0x00,0x00,0x00,
+					0x00,0x00};
+					ComputeCrc14443(CRC_14443_A, blockdata+start, 16, blockdata+start+17, blockdata+start+18);
+					EmSendCmdEx( blockdata+start, 18, false);
+				} else {				
+					ComputeCrc14443(CRC_14443_A, blockzeros,16, blockzeros+17,blockzeros+18);
+					EmSendCmdEx(blockzeros,18,false);
+				}
+				p_response = NULL;
+				
+			} else {			
+				EmSendCmdEx(data+(4*block),16,false);
+				// Dbprintf("Read request from reader: %x %x",receivedCmd[0],receivedCmd[1]);
+				// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
+				p_response = NULL;
+			}
+		} else if(receivedCmd[0] == 0x3A) {	// Received a FAST READ   -- just returns all zeros.
+				uint8_t len = (receivedCmd[2]- receivedCmd[1] ) * 4;
+				ComputeCrc14443(CRC_14443_A, blockzeros,len, blockzeros+len+1, blockzeros+len+2);
+				EmSendCmdEx(blockzeros,len+2,false);				
+				p_response = NULL;			
 		} else if(receivedCmd[0] == 0x50) {	// Received a HALT
 
 			if (tracing) {
@@ -1138,7 +1193,12 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 			}
 			p_response = NULL;
 		} else if(receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61) {	// Received an authentication request
-			p_response = &responses[5]; order = 7;
+					
+			if ( tagType == 7 ) {   // IF NTAG /EV1  0x60 == GET_VERSION, not a authentication request.
+				p_response = &responses[7];
+			} else {
+				p_response = &responses[5]; order = 7;
+			}
 		} else if(receivedCmd[0] == 0xE0) {	// Received a RATS request
 			if (tagType == 1 || tagType == 2) {	// RATS not supported
 				EmSend4bit(CARD_NACK_NA);
@@ -1189,7 +1249,17 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 					memset(ar_nr_responses, 0x00, len);
 				}
 			}
-		} else {
+		} else if (receivedCmd[0] == 0x1a ) // ULC authentication
+		{
+			
+		}
+		else if (receivedCmd[0] == 0x1b) // NTAG / EV-1 authentication
+		{
+			if ( tagType == 7 ) {
+				p_response =  &responses[8]; // PACK response
+			}
+		}
+		else {
 			// Check for ISO 14443A-4 compliant commands, look at left nibble
 			switch (receivedCmd[0]) {
 

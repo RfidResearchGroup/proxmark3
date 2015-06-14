@@ -464,6 +464,7 @@ static int usage_hf_14a_sim(void)
 	PrintAndLog("            4 = ISO/IEC 14443-4");
 	PrintAndLog("            5 = MIFARE Tnp3xxx");
 	PrintAndLog("            6 = MIFARE Mini");
+	PrintAndLog("            7 = AMIIBO (NTAG 215),  pack 0x8080");
 	PrintAndLog("    u     : 4 or 7 byte UID");
 	PrintAndLog("    x     : (Optional) performs the 'reader attack', nr/ar attack against a legitimate reader");
 	PrintAndLog("\n   sample : hf 14a sim t 1 u 1122344");
