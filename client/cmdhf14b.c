@@ -149,12 +149,6 @@ int CmdHF14BList(const char *Cmd)
 
 	return 0;
 }
-int CmdHF14BRead(const char *Cmd)
-{
-  UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443, {strtol(Cmd, NULL, 0), 0, 0}};
-  SendCommand(&c);
-  return 0;
-}
 
 int CmdHF14Sim(const char *Cmd)
 {
@@ -199,20 +193,60 @@ int CmdSrix4kRead(const char *Cmd)
   return 0;
 }
 
-int CmdHF14BCmdRaw (const char *cmd) {
+int HF14BCmdRaw(bool reply, bool *crc, bool power, uint8_t *data, uint8_t *datalen, bool verbose){
     UsbCommand resp;
-    uint8_t *recv;
     UsbCommand c = {CMD_ISO_14443B_COMMAND, {0, 0, 0}}; // len,recv?
-    uint8_t reply=1;
-    uint8_t crc=0;
-    uint8_t power=0;
+  if(*crc)
+  {
+    uint8_t first, second;
+    ComputeCrc14443(CRC_14443_B, data, *datalen, &first, &second);
+    data[*datalen] = first;
+    data[*datalen + 1] = second;
+    *datalen += 2;
+  }
+  
+  c.arg[0] = *datalen;
+  c.arg[1] = reply;
+  c.arg[2] = power;
+  memcpy(c.d.asBytes,data,*datalen);
+  SendCommand(&c);
+  
+  if (!reply) return 1; 
+
+  if (!WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+    if (verbose) PrintAndLog("timeout while waiting for reply.");
+    return 0;
+  }
+  *datalen = resp.arg[0];
+  if (verbose) PrintAndLog("received %i octets", *datalen);
+  if(!*datalen)
+    return 0;
+
+  memcpy(data, resp.d.asBytes, *datalen);
+  if (verbose) PrintAndLog("%s", sprint_hex(data, *datalen));
+
+  uint8_t first, second;
+  ComputeCrc14443(CRC_14443_B, data, *datalen-2, &first, &second);
+  if(data[*datalen-2] == first && data[*datalen-1] == second) {
+    if (verbose) PrintAndLog("CRC OK");
+    *crc = true;
+  } else {
+    if (verbose) PrintAndLog("CRC failed");
+    *crc = false;
+  }
+  return 1;
+}
+
+int CmdHF14BCmdRaw (const char *Cmd) {
+    bool reply = true;
+    bool crc = false;
+    bool power = false;
     char buf[5]="";
-    int i=0;
     uint8_t data[100] = {0x00};
-    unsigned int datalen=0, temp;
-    char *hexout;
-    
-    if (strlen(cmd)<3) {
+    uint8_t datalen = 0;
+    unsigned int temp;
+    int i = 0;
+    if (strlen(Cmd)<3) {
         PrintAndLog("Usage: hf 14b raw [-r] [-c] [-p] <0A 0B 0C ... hex>");
         PrintAndLog("       -r    do not read response");
         PrintAndLog("       -c    calculate and append CRC");
@@ -221,23 +255,23 @@ int CmdHF14BCmdRaw (const char *cmd) {
     }
 
     // strip
-    while (*cmd==' ' || *cmd=='\t') cmd++;
+    while (*Cmd==' ' || *Cmd=='\t') Cmd++;
     
-    while (cmd[i]!='\0') {
-        if (cmd[i]==' ' || cmd[i]=='\t') { i++; continue; }
-        if (cmd[i]=='-') {
-            switch (cmd[i+1]) {
+    while (Cmd[i]!='\0') {
+        if (Cmd[i]==' ' || Cmd[i]=='\t') { i++; continue; }
+        if (Cmd[i]=='-') {
+            switch (Cmd[i+1]) {
                 case 'r': 
                 case 'R': 
-                    reply=0;
+                    reply = false;
                     break;
                 case 'c':
                 case 'C':                
-                    crc=1;
+                    crc = true;
                     break;
                 case 'p': 
                 case 'P': 
-                    power=1;
+                    power = true;
                     break;
                 default:
                     PrintAndLog("Invalid option");
@@ -246,17 +280,16 @@ int CmdHF14BCmdRaw (const char *cmd) {
             i+=2;
             continue;
         }
-        if ((cmd[i]>='0' && cmd[i]<='9') ||
-            (cmd[i]>='a' && cmd[i]<='f') ||
-            (cmd[i]>='A' && cmd[i]<='F') ) {
+        if ((Cmd[i]>='0' && Cmd[i]<='9') ||
+            (Cmd[i]>='a' && Cmd[i]<='f') ||
+            (Cmd[i]>='A' && Cmd[i]<='F') ) {
             buf[strlen(buf)+1]=0;
-            buf[strlen(buf)]=cmd[i];
+            buf[strlen(buf)]=Cmd[i];
             i++;
             
             if (strlen(buf)>=2) {
                 sscanf(buf,"%x",&temp);
-                data[datalen]=(uint8_t)(temp & 0xff);
-                datalen++;
+                data[datalen++]=(uint8_t)(temp & 0xff);
                 *buf=0;
             }
             continue;
@@ -269,48 +302,129 @@ int CmdHF14BCmdRaw (const char *cmd) {
       PrintAndLog("Missing data input");
       return 0;
     }
-    if(crc)
+
+    return HF14BCmdRaw(reply, &crc, power, data, &datalen, true);
+}
+
+
+void print_atqb_resp(uint8_t *data){
+  PrintAndLog ("           UID: %s", sprint_hex(data+1,4));
+  PrintAndLog ("      App Data: %s", sprint_hex(data+5,4));
+  PrintAndLog ("      Protocol: %s", sprint_hex(data+9,3));
+  uint8_t BitRate = data[9];
+  if (!BitRate) 
+    PrintAndLog ("      Bit Rate: 106 kbit/s only PICC <-> PCD");
+  if (BitRate & 0x10)
+    PrintAndLog ("      Bit Rate: 212 kbit/s PICC -> PCD supported");
+  if (BitRate & 0x20)
+    PrintAndLog ("      Bit Rate: 424 kbit/s PICC -> PCD supported"); 
+  if (BitRate & 0x40)
+    PrintAndLog ("      Bit Rate: 847 kbit/s PICC -> PCD supported"); 
+  if (BitRate & 0x01)
+    PrintAndLog ("      Bit Rate: 212 kbit/s PICC <- PCD supported");
+  if (BitRate & 0x02)
+    PrintAndLog ("      Bit Rate: 424 kbit/s PICC <- PCD supported"); 
+  if (BitRate & 0x04)
+    PrintAndLog ("      Bit Rate: 847 kbit/s PICC <- PCD supported"); 
+  if (BitRate & 0x80) 
+    PrintAndLog ("                Same bit rate <-> required");
+
+  uint16_t maxFrame = data[10]>>4;
+  if (maxFrame < 5) 
+    maxFrame = 8*maxFrame + 16;
+  else if (maxFrame == 5)
+    maxFrame = 64;
+  else if (maxFrame == 6)
+    maxFrame = 96;
+  else if (maxFrame == 7)
+    maxFrame = 128;
+  else if (maxFrame == 8)
+    maxFrame = 256;
+  else
+    maxFrame = 257;
+
+  PrintAndLog ("Max Frame Size: %d%s",maxFrame, (maxFrame == 257) ? "+ RFU" : "");
+
+  uint8_t protocolT = data[10] & 0xF;
+  PrintAndLog (" Protocol Type: Protocol is %scompliant with ISO/IEC 14443-4",(protocolT) ? "" : "not " );
+  PrintAndLog ("Frame Wait Int: %d", data[11]>>4);
+  PrintAndLog (" App Data Code: Application is %s",(data[11]&4) ? "Standard" : "Proprietary");
+  PrintAndLog (" Frame Options: NAD is %ssupported",(data[11]&2) ? "" : "not ");
+  PrintAndLog (" Frame Options: CID is %ssupported",(data[11]&1) ? "" : "not ");
+  
+  return;
+}
+
+int HF14BStdRead(uint8_t *data, uint8_t *datalen){
+  bool crc = true;
+  *datalen = 3;
+  //std read cmd
+  data[0] = 0x05;
+  data[1] = 0x00;
+  data[2] = 0x08;
+  //data[3] = 0x39;
+  //data[4] = 0x73;
+
+  int ans = HF14BCmdRaw(true, &crc, false, data, datalen, false);
+
+  if (!ans) return 0;
+  if (data[0] != 0x50  || *datalen < 14 || !crc) return 0;
+
+  PrintAndLog ("\n14443-3b tag found:");
+  print_atqb_resp(data);
+
+  return 1;
+}
+
+int HF14B_ST_Read(uint8_t *data, uint8_t *datalen){
+  bool crc = true;
+  *datalen = 2;
+  //std read cmd
+  data[0] = 0x06;
+  data[1] = 0x00;
+  int ans = HF14BCmdRaw(true, &crc, true, data, datalen, false);
+
+  if (!ans) return 0;
+  if (*datalen < 3 || !crc) return 0;
+
+  uint8_t chipID = data[0];
+  data[0] = 0x0E;
+  data[1] = chipID;
+  *datalen = 2;
+  ans = HF14BCmdRaw(true, &crc, true, data, datalen, false);
+
+  if (!ans) return 0;
+  if (*datalen < 3 || !crc) return 0;
+
+  data[0] = 0x0B;
+  *datalen = 1;
+  ans = HF14BCmdRaw(true, &crc, false, data, datalen, false);
+
+  if (!ans) return 0;
+  if (*datalen < 10 || !crc) return 0;
+
+  PrintAndLog ("14443-3b ST tag found");
+  //uid = first 8 bytes in data
+  PrintAndLog ("UID: %s", sprint_hex(data,8));
+  return 1;
+
+}
+
+int CmdHF14BReader(const char *Cmd)
     {
-        uint8_t first, second;
-        ComputeCrc14443(CRC_14443_B, data, datalen, &first, &second);
-        data[datalen++] = first;
-        data[datalen++] = second;
-    }
-    
-    c.arg[0] = datalen;
-    c.arg[1] = reply;
-    c.arg[2] = power;
-    memcpy(c.d.asBytes,data,datalen);
-    
-    SendCommand(&c);
-    
-    if (reply) {
-        if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
-            recv = resp.d.asBytes;
-            PrintAndLog("received %i octets",resp.arg[0]);
-            if(!resp.arg[0])
-                return 0;
-            hexout = (char *)malloc(resp.arg[0] * 3 + 1);
-            if (hexout != NULL) {
-                uint8_t first, second;
-                for (int i = 0; i < resp.arg[0]; i++) { // data in hex
-                    sprintf(&hexout[i * 3], "%02X ", recv[i]);
-                }
-                PrintAndLog("%s", hexout);
-                free(hexout);
-                ComputeCrc14443(CRC_14443_B, recv, resp.arg[0]-2, &first, &second);
-                if(recv[resp.arg[0]-2]==first && recv[resp.arg[0]-1]==second) {
-                    PrintAndLog("CRC OK");
-                } else {
-                    PrintAndLog("CRC failed");
-                }
-            } else {
-                PrintAndLog("malloc failed your client has low memory?");
-            }
-        } else {
-            PrintAndLog("timeout while waiting for reply.");
-        }
-    } // if reply
+  uint8_t data[100];
+  uint8_t datalen = 5;
+  
+  // try std 14b (atqb)
+  int ans = HF14BStdRead(data, &datalen);
+  if (ans) return 1;
+
+  // try st 14b
+  ans = HF14B_ST_Read(data, &datalen);
+  if (ans) return 1;
+
+  //UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443, {strtol(Cmd, NULL, 0), 0, 0}};
+  //SendCommand(&c);
     return 0;
 }
 
@@ -387,7 +501,7 @@ static command_t CommandTable[] =
   {"help",        CmdHelp,        1, "This help"},
   {"demod",       CmdHF14BDemod,  1, "Demodulate ISO14443 Type B from tag"},
   {"list",        CmdHF14BList,   0, "[Deprecated] List ISO 14443b history"},
-  {"read",        CmdHF14BRead,   0, "Read HF tag (ISO 14443)"},
+  {"reader",      CmdHF14BReader, 0, "Find 14b tag (HF ISO 14443b)"},
   {"sim",         CmdHF14Sim,     0, "Fake ISO 14443 tag"},
   {"simlisten",   CmdHFSimlisten, 0, "Get HF samples as fake tag"},
   {"snoop",       CmdHF14BSnoop,  0, "Eavesdrop ISO 14443"},
