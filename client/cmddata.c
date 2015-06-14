@@ -498,18 +498,12 @@ int CmdBiphaseDecodeRaw(const char *Cmd)
 int ASKbiphaseDemod(const char *Cmd, bool verbose)
 {
 	//ask raw demod GraphBuffer first
-	int offset=0, clk=0, invert=0, maxErr=0, ans=0;
-	ans = sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
-
-	if ( ans < 1) {
-		if (g_debugMode || verbose) PrintAndLog("Error when reading input parameters: %d", ans);
-		return 0;
-	}
+	int offset=0, clk=0, invert=0, maxErr=0;
+	sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 	
 	uint8_t BitStream[MAX_DEMOD_BUF_LEN];
 	size_t size = getFromGraphBuf(BitStream);	  
-
-	int errCnt = askdemod(BitStream, &size, &clk, 0, maxErr, 0, 0);  
+	int errCnt = askdemod(BitStream, &size, &clk, &invert, maxErr, 0, 0);  
 	if ( errCnt < 0 || errCnt > maxErr ) {   
 		if (g_debugMode) PrintAndLog("DEBUG: no data or error found %d, clock: %d", errCnt, clk);  
 			return 0;  
