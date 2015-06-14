@@ -59,9 +59,13 @@ function main(args)
 	print( string.rep('-',60) )
 	local lists = core.reveng_models(width)
 	for _,i in pairs(lists) do
-		local one = core.reveng_runmodel(i, data, false, '0')
-		local two = core.reveng_runmodel(i, data, true, '0')
-		print( ('%-20s| %-16s| %s'):format(i, one:upper(), two:upper()) )
+		local a1 = core.reveng_runmodel(i, data, false, '0')
+		local a2 = core.reveng_runmodel(i, data, true, '0')
+		local a3 = core.reveng_runmodel(i, data, false, 'b')
+		local a4 = core.reveng_runmodel(i, data, false, 'B')
+		local a5 = core.reveng_runmodel(i, data, false, 'l')
+		local a6 = core.reveng_runmodel(i, data, false, 'L')		
+		print( ('%-20s| %-16s| %-16s| %-16s| %-16s| %-16s| %-16s'):format(i, a1:upper(), a2:upper(),a3:upper(),a4:upper(),a5:upper(),a6:upper() ) )
 	end
 end
 
