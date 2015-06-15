@@ -37,9 +37,7 @@ local Utils =
 	------------ FILE READING
 	ReadDumpFile = function (filename)
 	
-		if filename == nil then 
-			return nil, 'Filename is empty'
-		end
+		filename = filename or 'dumpdata.bin'
 		if #filename == 0 then
 			return nil, 'Filename length is zero'
 		end
