@@ -1186,6 +1186,21 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 				ComputeCrc14443(CRC_14443_A, blockzeros,len, blockzeros+len+1, blockzeros+len+2);
 				EmSendCmdEx(blockzeros,len+2,false);				
 				p_response = NULL;			
+		} else if(receivedCmd[0] == 0x3C && tagType == 7) {	// Received a READ SIGNATURE -- 
+				// ECC data,  taken from a NTAG215 amiibo token. might work. LEN: 32, + 2 crc
+				uint8_t data[] = {0x56,0x06,0xa6,0x4f,0x43,0x32,0x53,0x6f,
+								  0x43,0xda,0x45,0xd6,0x61,0x38,0xaa,0x1e,
+								  0xcf,0xd3,0x61,0x36,0xca,0x5f,0xbb,0x05,
+								  0xce,0x21,0x24,0x5b,0xa6,0x7a,0x79,0x07,
+								  0x00,0x00};
+				ComputeCrc14443(CRC_14443_A, data, sizeof(data), data+33, data+34);
+				EmSendCmdEx(data,sizeof(data),false);				
+				p_response = NULL;					
+		} else if(receivedCmd[0] == 0x39 && tagType == 7) {	// Received a READ COUNTER -- 
+				uint8_t data[] =  {0x00,0x00,0x00,0x00,0x00};
+				ComputeCrc14443(CRC_14443_A, data, sizeof(data), data+4, data+5);
+				EmSendCmdEx(data,sizeof(data),false);				
+				p_response = NULL;			
 		} else if(receivedCmd[0] == 0x50) {	// Received a HALT
 
 			if (tracing) {
