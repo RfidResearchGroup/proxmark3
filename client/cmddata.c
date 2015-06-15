@@ -392,7 +392,7 @@ int Cmdmandecoderaw(const char *Cmd)
 	int errCnt=0;
 	size_t size=0;
 	int invert=0;
-	size_t maxErr = 20;
+	int maxErr = 20;
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) > 5 || cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:  data manrawdecode [invert] [maxErr]");

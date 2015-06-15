@@ -20,6 +20,9 @@
 #include "cmdlf.h"
 #include "cmdlfem4x.h"
 #include "lfdemod.h"
+
+#define llx PRIx64
+
 char *global_em410xId;
 
 static int CmdHelp(const char *Cmd);
