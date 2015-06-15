@@ -16,6 +16,7 @@ int CmdHF14B(const char *Cmd);
 int CmdHF14BDemod(const char *Cmd);
 int CmdHF14BList(const char *Cmd);
 int CmdHF14BReader(const char *Cmd);
+int HF14BReader(bool verbose);
 int CmdHF14Sim(const char *Cmd);
 int CmdHFSimlisten(const char *Cmd);
 int CmdHF14BSnoop(const char *Cmd);

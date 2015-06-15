@@ -1225,8 +1225,14 @@ void RAMFUNC SnoopIso14443(void)
  * none
  *
  */
-void SendRawCommand14443B(uint32_t datalen, uint32_t recv, uint8_t powerfield, uint8_t data[])
+void SendRawCommand14443B(uint32_t datalen, uint32_t recv, uint8_t powerfield_trace, uint8_t data[])
 {
+	uint8_t powerfield = powerfield_trace & 1;
+	uint8_t trace = powerfield_trace & 2;
+	if (trace){
+		clear_trace();
+		set_tracing(TRUE);
+	}
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	if(!powerfield)
 	{
