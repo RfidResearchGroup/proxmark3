@@ -81,7 +81,31 @@ Download the ProxSpace environment archive and extract it to C:\
 = Mac OS X =
 ============
 
-macport stuff should do ;)
+Tested on OSX 10.10 Yosemite
+
+1 - Install Xcode and Xcode Command Line Tools
+
+2 - Install Homebrew and dependencies
+    brew install readline
+    brew instal libusb
+
+3 - Download DevKitARM for OSX
+    http://sourceforge.net/projects/devkitpro/files/devkitARM/devkitARM_r44/
+    Unpack devkitARM_r44-osx.tar.bz2 to proxmark3 directory.
+
+4 - Edit proxmark3/client/Makefile adding path to readline
+
+    LDLIBS = -L/usr/local/Cellar/readline/6.3.8/lib/ -L/opt/local/lib -L/usr/local/lib ../liblua/liblua.a -lreadline -lpthread -lm
+    CFLAGS = -std=c99 -I/usr/local/Cellar/readline/6.3.8/include/ -I. -I../include -I../common -I/opt/local/include -I../liblua  -Wall $(COMMON_FLAGS) -g -O4
+
+    Replace path /usr/local/Cellar/readline/6.3.8 with your actuall readline path. See homebrew manuals.
+
+5 - Set Environment
+
+    export DEVKITPRO=$HOME/proxmark3/
+    export DEVKITARM=$DEVKITPRO/devkitARM
+    export PATH=${PATH}:${DEVKITARM}/bin
+
 
 ============
 =   Linux  =

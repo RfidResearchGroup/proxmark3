@@ -4,6 +4,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [Unreleased][unreleased]
 ### Changed
+- Added ultralight/ntag tag type detection to `hf 14a read` (marshmellow)
+- Improved ultralight dump command to auto detect tag type, take authentication, and dump full memory (or subset specified) of known tag types (iceman1001 / marshmellow)
+- Combined ultralight read/write commands and added authentication (iceman1001)
 - Improved LF manchester and biphase demodulation and ask clock detection especially for reads with heavy clipping. (marshmellow)
 - Iclass read, `hf iclass read` now also reads tag config and prints configuration. (holiman)
 - *bootrom* needs to be flashed, due to new address boundaries between os and fpga, after a size optimization (piwi)
@@ -13,6 +16,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed issue #19, problems with LF T55xx commands (iceman1001, marshmellow)
 
 ### Added
+- Added `hf search` - currently tests for 14443a tags, iclass tags, and 15693 tags (marshmellow) 
+- Added `hf mfu info` Ultralight/NTAG info command - reads tag configuration and info, allows authentication if needed (iceman1001, marshmellow)
+- Added Mifare Ultralight C and Ultralight EV1/NTAG authentication. (iceman1001)
 - Added changelog
 
 ## [2.0.0] - 2015-03-25
