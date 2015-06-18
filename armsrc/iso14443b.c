@@ -17,7 +17,6 @@
 #include "iso14443crc.h"
 
 #define RECEIVE_SAMPLES_TIMEOUT 2000
-#define ISO14443B_DMA_BUFFER_SIZE 512
 
 //=============================================================================
 // An ISO 14443 Type B tag. We listen for commands from the reader, using
@@ -768,7 +767,7 @@ static void GetSamplesFor14443bDemod(int n, bool quiet)
 	//Tracing
 	if (tracing && Demod.len > 0) {
 		uint8_t parity[MAX_PARITY_SIZE];
-		GetParity(Demod.output, Demod.len, parity);
+		//GetParity(Demod.output, Demod.len, parity);
 		LogTrace(Demod.output, Demod.len, 0, 0, parity, FALSE);
 	}
 }
@@ -1156,7 +1155,7 @@ void RAMFUNC SnoopIso14443b(void)
 		if (!TagIsActive) {							// no need to try decoding reader data if the tag is sending
 			if(Handle14443bUartBit(ci & 0x01)) {
 				if(triggered && tracing) {
-					GetParity(Uart.output, Uart.byteCnt, parity);
+					//GetParity(Uart.output, Uart.byteCnt, parity);
 					LogTrace(Uart.output, Uart.byteCnt, samples, samples, parity, TRUE);
 				}
 				/* And ready to receive another command. */
@@ -1167,7 +1166,7 @@ void RAMFUNC SnoopIso14443b(void)
 			}
 			if(Handle14443bUartBit(cq & 0x01)) {
 				if(triggered && tracing) {
-					GetParity(Uart.output, Uart.byteCnt, parity);
+					//GetParity(Uart.output, Uart.byteCnt, parity);
 					LogTrace(Uart.output, Uart.byteCnt, samples, samples, parity, TRUE);
 				}
 				/* And ready to receive another command. */
@@ -1186,7 +1185,7 @@ void RAMFUNC SnoopIso14443b(void)
 				if(tracing)
 				{
 					uint8_t parity[MAX_PARITY_SIZE];
-					GetParity(Demod.output, Demod.len, parity);
+					//GetParity(Demod.output, Demod.len, parity);
 					LogTrace(Demod.output, Demod.len, samples, samples, parity, FALSE);
 				}
 				triggered = TRUE;
@@ -1194,7 +1193,7 @@ void RAMFUNC SnoopIso14443b(void)
 				// And ready to receive another response.
 				DemodReset();
 			}
-			TagIsActive = (Demod.state > DEMOD_PHASE_REF_TRAINING);
+			TagIsActive = (Demod.state > DEMOD_GOT_FALLING_EDGE_OF_SOF);
 		}
 
 	}

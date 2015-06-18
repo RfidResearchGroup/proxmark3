@@ -378,7 +378,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
 		}
 		uint8_t parityBits = parityBytes[j>>3];
-		if (isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
+		if (protocol != ISO_14443B && isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
 			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x! ", frame[j]);
 
 		} else {
