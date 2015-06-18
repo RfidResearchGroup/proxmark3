@@ -25,154 +25,23 @@
 
 static int CmdHelp(const char *Cmd);
 
-int CmdHF14BDemod(const char *Cmd)
-{
-  int i, j, iold;
-  int isum, qsum;
-  int outOfWeakAt;
-  bool negateI, negateQ;
-
-  uint8_t data[256];
-  int dataLen = 0;
-
-  // As received, the samples are pairs, correlations against I and Q
-  // square waves. So estimate angle of initial carrier (or just
-  // quadrant, actually), and then do the demod.
-
-  // First, estimate where the tag starts modulating.
-  for (i = 0; i < GraphTraceLen; i += 2) {
-    if (abs(GraphBuffer[i]) + abs(GraphBuffer[i + 1]) > 40) {
-      break;
-    }
-  }
-  if (i >= GraphTraceLen) {
-    PrintAndLog("too weak to sync");
-    return 0;
-  }
-  PrintAndLog("out of weak at %d", i);
-  outOfWeakAt = i;
-
-  // Now, estimate the phase in the initial modulation of the tag
-  isum = 0;
-  qsum = 0;
-  for (; i < (outOfWeakAt + 16); i += 2) {
-    isum += GraphBuffer[i + 0];
-    qsum += GraphBuffer[i + 1];
-  }
-  negateI = (isum < 0);
-  negateQ = (qsum < 0);
-
-  // Turn the correlation pairs into soft decisions on the bit.
-  j = 0;
-  for (i = 0; i < GraphTraceLen / 2; i++) {
-    int si = GraphBuffer[j];
-    int sq = GraphBuffer[j + 1];
-    if (negateI) si = -si;
-    if (negateQ) sq = -sq;
-    GraphBuffer[i] = si + sq;
-    j += 2;
-  }
-  GraphTraceLen = i;
-
-  i = outOfWeakAt / 2;
-  while (GraphBuffer[i] > 0 && i < GraphTraceLen)
-    i++;
-  if (i >= GraphTraceLen) goto demodError;
-
-  iold = i;
-  while (GraphBuffer[i] < 0 && i < GraphTraceLen)
-    i++;
-  if (i >= GraphTraceLen) goto demodError;
-  if ((i - iold) > 23) goto demodError;
-
-  PrintAndLog("make it to demod loop");
-
-  for (;;) {
-    iold = i;
-    while (GraphBuffer[i] >= 0 && i < GraphTraceLen)
-      i++;
-    if (i >= GraphTraceLen) goto demodError;
-    if ((i - iold) > 6) goto demodError;
-
-    uint16_t shiftReg = 0;
-    if (i + 20 >= GraphTraceLen) goto demodError;
-
-    for (j = 0; j < 10; j++) {
-      int soft = GraphBuffer[i] + GraphBuffer[i + 1];
-
-      if (abs(soft) < (abs(isum) + abs(qsum)) / 20) {
-        PrintAndLog("weak bit");
-      }
-
-      shiftReg >>= 1;
-      if(GraphBuffer[i] + GraphBuffer[i+1] >= 0) {
-        shiftReg |= 0x200;
-      }
-
-      i+= 2;
-    }
-
-    if ((shiftReg & 0x200) && !(shiftReg & 0x001))
-    {
-      // valid data byte, start and stop bits okay
-      PrintAndLog("   %02x", (shiftReg >> 1) & 0xff);
-      data[dataLen++] = (shiftReg >> 1) & 0xff;
-      if (dataLen >= sizeof(data)) {
-        return 0;
-      }
-    } else if (shiftReg == 0x000) {
-      // this is EOF
-      break;
-    } else {
-      goto demodError;
-    }
-  }
-
-  uint8_t first, second;
-  ComputeCrc14443(CRC_14443_B, data, dataLen-2, &first, &second);
-  PrintAndLog("CRC: %02x %02x (%s)\n", first, second,
-    (first == data[dataLen-2] && second == data[dataLen-1]) ?
-      "ok" : "****FAIL****");
-
-  RepaintGraphWindow();
-  return 0;
-
-demodError:
-  PrintAndLog("demod error");
-  RepaintGraphWindow();
-  return 0;
-}
-
 int CmdHF14BList(const char *Cmd)
 {
 	PrintAndLog("Deprecated command, use 'hf list 14b' instead");
 
 	return 0;
 }
-int CmdHF14BRead(const char *Cmd)
-{
-  UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443, {strtol(Cmd, NULL, 0), 0, 0}};
-  SendCommand(&c);
-  return 0;
-}
 
-int CmdHF14Sim(const char *Cmd)
+int CmdHF14BSim(const char *Cmd)
 {
-  UsbCommand c={CMD_SIMULATE_TAG_ISO_14443};
-  SendCommand(&c);
-  return 0;
-}
-
-int CmdHFSimlisten(const char *Cmd)
-{
-  UsbCommand c = {CMD_SIMULATE_TAG_HF_LISTEN};
+  UsbCommand c={CMD_SIMULATE_TAG_ISO_14443B};
   SendCommand(&c);
   return 0;
 }
 
 int CmdHF14BSnoop(const char *Cmd)
 {
-  UsbCommand c = {CMD_SNOOP_ISO_14443};
+  UsbCommand c = {CMD_SNOOP_ISO_14443B};
   SendCommand(&c);
   return 0;
 }
@@ -387,12 +256,9 @@ int CmdHF14BWrite( const char *Cmd){
 static command_t CommandTable[] = 
 {
   {"help",        CmdHelp,        1, "This help"},
-  {"demod",       CmdHF14BDemod,  1, "Demodulate ISO14443 Type B from tag"},
   {"list",        CmdHF14BList,   0, "[Deprecated] List ISO 14443b history"},
-  {"read",        CmdHF14BRead,   0, "Read HF tag (ISO 14443)"},
-  {"sim",         CmdHF14Sim,     0, "Fake ISO 14443 tag"},
-  {"simlisten",   CmdHFSimlisten, 0, "Get HF samples as fake tag"},
-  {"snoop",       CmdHF14BSnoop,  0, "Eavesdrop ISO 14443"},
+  {"sim",         CmdHF14BSim,    0, "Fake ISO 14443B tag"},
+  {"snoop",       CmdHF14BSnoop,  0, "Eavesdrop ISO 14443B"},
   {"sri512read",  CmdSri512Read,  0, "Read contents of a SRI512 tag"},
   {"srix4kread",  CmdSrix4kRead,  0, "Read contents of a SRIX4K tag"},
   {"raw",         CmdHF14BCmdRaw, 0, "Send raw hex data to tag"},

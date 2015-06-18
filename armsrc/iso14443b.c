@@ -237,7 +237,11 @@ static int Handle14443bUartBit(int bit)
 				} else if(Uart.shiftReg == 0x000) {
 					// this is an EOF byte
 					LED_A_OFF(); // Finished receiving
-					return TRUE;
+					if (Uart.byteCnt != 0) {
+						return TRUE;
+					}
+					Uart.posCnt = 0;
+					Uart.state = STATE_ERROR_WAIT;
 				} else {
 					// this is an error
 					Uart.posCnt = 0;
@@ -714,16 +718,16 @@ static void GetSamplesFor14443bDemod(int n, bool quiet)
 	uint8_t *receivedResponse = BigBuf_malloc(MAX_FRAME_SIZE);
 	
 	// The DMA buffer, used to stream samples from the FPGA
-	int8_t *dmaBuf = (int8_t*) BigBuf_malloc(ISO14443B_DMA_BUFFER_SIZE);
+	int8_t *dmaBuf = (int8_t*) BigBuf_malloc(DMA_BUFFER_SIZE);
 
 	// Set up the demodulator for tag -> reader responses.
 	DemodInit(receivedResponse);
 
 	// Setup and start DMA.
-	FpgaSetupSscDma((uint8_t*) dmaBuf, ISO14443B_DMA_BUFFER_SIZE);
+	FpgaSetupSscDma((uint8_t*) dmaBuf, DMA_BUFFER_SIZE);
 
 	int8_t *upTo = dmaBuf;
-	lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
+	lastRxCounter = DMA_BUFFER_SIZE;
 
 	// Signal field is ON with the appropriate LED:
 	LED_D_ON();
@@ -734,18 +738,18 @@ static void GetSamplesFor14443bDemod(int n, bool quiet)
 		int behindBy = lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR;
 		if(behindBy > max) max = behindBy;
 
-		while(((lastRxCounter-AT91C_BASE_PDC_SSC->PDC_RCR) & (ISO14443B_DMA_BUFFER_SIZE-1)) > 2) {
+		while(((lastRxCounter-AT91C_BASE_PDC_SSC->PDC_RCR) & (DMA_BUFFER_SIZE-1)) > 2) {
 			ci = upTo[0];
 			cq = upTo[1];
 			upTo += 2;
-			if(upTo >= dmaBuf + ISO14443B_DMA_BUFFER_SIZE) {
+			if(upTo >= dmaBuf + DMA_BUFFER_SIZE) {
 				upTo = dmaBuf;
 				AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
-				AT91C_BASE_PDC_SSC->PDC_RNCR = ISO14443B_DMA_BUFFER_SIZE;
+				AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
 			}
 			lastRxCounter -= 2;
 			if(lastRxCounter <= 0) {
-				lastRxCounter += ISO14443B_DMA_BUFFER_SIZE;
+				lastRxCounter += DMA_BUFFER_SIZE;
 			}
 
 			samples += 2;
@@ -880,22 +884,6 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len)
 }
 
 
-//-----------------------------------------------------------------------------
-// Read an ISO 14443B tag. We send it some set of commands, and record the
-// responses.
-// The command name is misleading, it actually decodes the reponse in HEX
-// into the output buffer (read the result using hexsamples, not hisamples)
-//
-// obsolete function only for test
-//-----------------------------------------------------------------------------
-void AcquireRawAdcSamplesIso14443b(uint32_t parameter)
-{
-	uint8_t cmd1[] = { 0x05, 0x00, 0x08, 0x39, 0x73 };   // REQB with AFI=0, Request All, N=0
-
-	SendRawCommand14443B(sizeof(cmd1),1,1,cmd1);
-}
-
-
 /**
   Convenience function to encode, transmit and trace iso 14443b comms
   **/
@@ -956,7 +944,7 @@ void ReadSTMemoryIso14443b(uint32_t dwLast)
 	DbpString("No response from tag");
 	return;
 	} else {
-	Dbprintf("Randomly generated UID from tag (+ 2 byte CRC): %x %x %x",
+	Dbprintf("Randomly generated UID from tag (+ 2 byte CRC): %02x %02x %02x",
 		Demod.output[0], Demod.output[1], Demod.output[2]);
 	}
 	// There is a response, SELECT the uid
@@ -981,7 +969,7 @@ void ReadSTMemoryIso14443b(uint32_t dwLast)
 	}
 	// Check response from the tag: should be the same UID as the command we just sent:
 	if (cmd1[1] != Demod.output[0]) {
-		Dbprintf("Bad response to SELECT from Tag, aborting: %x %x", cmd1[1], Demod.output[0]);
+		Dbprintf("Bad response to SELECT from Tag, aborting: %02x %02x", cmd1[1], Demod.output[0]);
 		return;
 	}
 	// Tag is now selected,
@@ -1000,7 +988,7 @@ void ReadSTMemoryIso14443b(uint32_t dwLast)
 	// The check the CRC of the answer (use cmd1 as temporary variable):
 	ComputeCrc14443(CRC_14443_B, Demod.output, 8, &cmd1[2], &cmd1[3]);
 	if(cmd1[2] != Demod.output[8] || cmd1[3] != Demod.output[9]) {
-		Dbprintf("CRC Error reading block! - Below: expected, got %x %x",
+		Dbprintf("CRC Error reading block! Expected: %04x got: %04x",
 			(cmd1[2]<<8)+cmd1[3], (Demod.output[8]<<8)+Demod.output[9]);
 		// Do not return;, let's go on... (we should retry, maybe ?)
 	}
@@ -1009,7 +997,7 @@ void ReadSTMemoryIso14443b(uint32_t dwLast)
 		(Demod.output[3]<<24) + (Demod.output[2]<<16) + (Demod.output[1]<<8) + Demod.output[0]);
 
 	// Now loop to read all 16 blocks, address from 0 to last block
-	Dbprintf("Tag memory dump, block 0 to %d",dwLast);
+	Dbprintf("Tag memory dump, block 0 to %d", dwLast);
 	cmd1[0] = 0x08;
 	i = 0x00;
 	dwLast++;
@@ -1032,12 +1020,12 @@ void ReadSTMemoryIso14443b(uint32_t dwLast)
 		// The check the CRC of the answer (use cmd1 as temporary variable):
 		ComputeCrc14443(CRC_14443_B, Demod.output, 4, &cmd1[2], &cmd1[3]);
 		if(cmd1[2] != Demod.output[4] || cmd1[3] != Demod.output[5]) {
-			Dbprintf("CRC Error reading block! - Below: expected, got %x %x",
+			Dbprintf("CRC Error reading block! Expected: %04x got: %04x",
 				(cmd1[2]<<8)+cmd1[3], (Demod.output[4]<<8)+Demod.output[5]);
 			// Do not return;, let's go on... (we should retry, maybe ?)
 		}
 		// Now print out the memory location:
-		Dbprintf("Address=%x, Contents=%x, CRC=%x", i,
+		Dbprintf("Address=%02x, Contents=%08x, CRC=%04x", i,
 			(Demod.output[3]<<24) + (Demod.output[2]<<16) + (Demod.output[1]<<8) + Demod.output[0],
 			(Demod.output[4]<<8)+Demod.output[5]);
 		if (i == 0xff) {
@@ -1062,7 +1050,7 @@ void ReadSTMemoryIso14443b(uint32_t dwLast)
  * Memory usage for this function, (within BigBuf)
  * Last Received command (reader->tag) - MAX_FRAME_SIZE
  * Last Received command (tag->reader) - MAX_FRAME_SIZE
- * DMA Buffer - ISO14443B_DMA_BUFFER_SIZE
+ * DMA Buffer - DMA_BUFFER_SIZE
  * Demodulated samples received - all the rest
  */
 void RAMFUNC SnoopIso14443b(void)
@@ -1079,7 +1067,7 @@ void RAMFUNC SnoopIso14443b(void)
 	set_tracing(TRUE);
 
 	// The DMA buffer, used to stream samples from the FPGA
-	int8_t *dmaBuf = (int8_t*) BigBuf_malloc(ISO14443B_DMA_BUFFER_SIZE);
+	int8_t *dmaBuf = (int8_t*) BigBuf_malloc(DMA_BUFFER_SIZE);
 	int lastRxCounter;
 	int8_t *upTo;
 	int ci, cq;
@@ -1097,7 +1085,7 @@ void RAMFUNC SnoopIso14443b(void)
 	Dbprintf("  Trace: %i bytes", BigBuf_max_traceLen());
 	Dbprintf("  Reader -> tag: %i bytes", MAX_FRAME_SIZE);
 	Dbprintf("  tag -> Reader: %i bytes", MAX_FRAME_SIZE);
-	Dbprintf("  DMA: %i bytes", ISO14443B_DMA_BUFFER_SIZE);
+	Dbprintf("  DMA: %i bytes", DMA_BUFFER_SIZE);
 
 	// Signal field is off, no reader signal, no tag signal
 	LEDsoff();
@@ -1109,8 +1097,8 @@ void RAMFUNC SnoopIso14443b(void)
 	// Setup for the DMA.
 	FpgaSetupSsc();
 	upTo = dmaBuf;
-	lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
-	FpgaSetupSscDma((uint8_t*) dmaBuf, ISO14443B_DMA_BUFFER_SIZE);
+	lastRxCounter = DMA_BUFFER_SIZE;
+	FpgaSetupSscDma((uint8_t*) dmaBuf, DMA_BUFFER_SIZE);
 	uint8_t parity[MAX_PARITY_SIZE];
 
 	bool TagIsActive = FALSE;
@@ -1119,7 +1107,7 @@ void RAMFUNC SnoopIso14443b(void)
 	// And now we loop, receiving samples.
 	for(;;) {
 		int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) &
-								(ISO14443B_DMA_BUFFER_SIZE-1);
+								(DMA_BUFFER_SIZE-1);
 		if(behindBy > maxBehindBy) {
 			maxBehindBy = behindBy;
 		}
@@ -1130,14 +1118,14 @@ void RAMFUNC SnoopIso14443b(void)
 		cq = upTo[1];
 		upTo += 2;
 		lastRxCounter -= 2;
-		if(upTo >= dmaBuf + ISO14443B_DMA_BUFFER_SIZE) {
+		if(upTo >= dmaBuf + DMA_BUFFER_SIZE) {
 			upTo = dmaBuf;
-			lastRxCounter += ISO14443B_DMA_BUFFER_SIZE;
+			lastRxCounter += DMA_BUFFER_SIZE;
 			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
-			AT91C_BASE_PDC_SSC->PDC_RNCR = ISO14443B_DMA_BUFFER_SIZE;
+			AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
 			WDT_HIT();
-			if(behindBy > (9*ISO14443B_DMA_BUFFER_SIZE/10)) { // TODO: understand whether we can increase/decrease as we want or not?
-				Dbprintf("blew circular buffer! behindBy=0x%x", behindBy);
+			if(behindBy > (9*DMA_BUFFER_SIZE/10)) { // TODO: understand whether we can increase/decrease as we want or not?
+				Dbprintf("blew circular buffer! behindBy=%d", behindBy);
 				break;
 			}
 			if(!tracing) {
