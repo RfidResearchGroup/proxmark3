@@ -57,13 +57,13 @@ uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 	{0x32,0x0C,0x16,0x17}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
 };
 
-#define MAX_UL_TYPES 17
-uint16_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {UNKNOWN, UL, UL_C, UL_EV1_48, UL_EV1_128, NTAG, NTAG_203,
-	    NTAG_210, NTAG_212, NTAG_213, NTAG_215, NTAG_216, MY_D, MY_D_NFC, MY_D_MOVE, MY_D_MOVE_NFC, MY_D_MOVE_LEAN};
+#define MAX_UL_TYPES 18
+uint32_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {UNKNOWN, UL, UL_C, UL_EV1_48, UL_EV1_128, NTAG, NTAG_203,
+	    NTAG_210, NTAG_212, NTAG_213, NTAG_215, NTAG_216, MY_D, MY_D_NFC, MY_D_MOVE, MY_D_MOVE_NFC, MY_D_MOVE_LEAN, FUDAN_UL};
 
 uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_BLOCKS, MAX_ULEV1a_BLOCKS,
 	    MAX_ULEV1b_BLOCKS, MAX_NTAG_203, MAX_NTAG_203, MAX_NTAG_210, MAX_NTAG_212, MAX_NTAG_213,
-	    MAX_NTAG_215, MAX_NTAG_216, MAX_UL_BLOCKS, MAX_MY_D_NFC, MAX_MY_D_MOVE, MAX_MY_D_MOVE, MAX_MY_D_MOVE_LEAN};
+	    MAX_NTAG_215, MAX_NTAG_216, MAX_UL_BLOCKS, MAX_MY_D_NFC, MAX_MY_D_MOVE, MAX_MY_D_MOVE, MAX_MY_D_MOVE_LEAN, MAX_UL_BLOCKS};
 
 
 static int CmdHelp(const char *Cmd);
@@ -276,6 +276,25 @@ static int ulev1_readSignature( uint8_t *response, uint16_t responseLength ){
 	return len;
 }
 
+//make sure field is off before calling this function
+static int ul_fudan_check( void ){
+	iso14a_card_select_t card;
+	if ( !ul_select(&card) ) 
+		return UL_ERROR;
+
+	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT, 4, 0}};
+
+	uint8_t cmd[4] = {0x30,0x00,0x02,0xa7}; //wrong crc on purpose  should be 0xa8
+	memcpy(c.d.asBytes, cmd, 4);
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return UL_ERROR;
+	if (resp.arg[0] != 1) return UL_ERROR;
+
+	return (!resp.d.asBytes[0]) ? FUDAN_UL : UL; //if response == 0x00 then Fudan, else Genuine NXP
+}
+
 static int ul_print_default( uint8_t *data){
 
 	uint8_t uid[7];
@@ -389,6 +408,8 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces){
 		PrintAndLog("%sTYPE : INFINEON my-d\x99 move NFC (SLE 66R01P)", spacer);
 	else if ( tagtype & MY_D_MOVE_LEAN )
 		PrintAndLog("%sTYPE : INFINEON my-d\x99 move lean (SLE 66R01L)", spacer);
+	else if ( tagtype & FUDAN_UL )
+		PrintAndLog("%sTYPE : FUDAN Ultralight Compatible (or other compatible) %s", spacer, (tagtype & MAGIC) ? "<magic>" : "" );
 	else
 		PrintAndLog("%sTYPE : Unknown %06x", spacer, tagtype);
 	return 0;
@@ -621,6 +642,10 @@ uint32_t GetHF14AMfU_Type(void){
 				}
 				ul_switch_off_field();
 			}
+		}
+		if (tagtype & UL) {
+			tagtype = ul_fudan_check(); 
+			ul_switch_off_field();
 		}
 	} else {
 		ul_switch_off_field();
