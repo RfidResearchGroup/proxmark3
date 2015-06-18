@@ -150,10 +150,10 @@ void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 
 /// iso14443.h
-void SimulateIso14443Tag(void);
-void AcquireRawAdcSamplesIso14443(uint32_t parameter);
-void ReadSTMemoryIso14443(uint32_t);
-void RAMFUNC SnoopIso14443(void);
+void SimulateIso14443bTag(void);
+void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
+void ReadSTMemoryIso14443b(uint32_t);
+void RAMFUNC SnoopIso14443b(void);
 void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
 
 /// iso14443a.h

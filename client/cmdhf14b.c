@@ -23,7 +23,8 @@
 #include "cmdhf14b.h"
 #include "cmdmain.h"
 #include "cmdhf14a.h"
-#include "sleep.h"
+//#include "sleep.h"
+#include "cmddata.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -155,6 +156,7 @@ int CmdHF14BList(const char *Cmd)
 int CmdHF14Sim(const char *Cmd)
 {
   UsbCommand c={CMD_SIMULATE_TAG_ISO_14443};
+	clearCommandBuffer();
   SendCommand(&c);
   return 0;
 }
@@ -162,6 +164,7 @@ int CmdHF14Sim(const char *Cmd)
 int CmdHFSimlisten(const char *Cmd)
 {
   UsbCommand c = {CMD_SIMULATE_TAG_HF_LISTEN};
+	clearCommandBuffer();
   SendCommand(&c);
   return 0;
 }
@@ -169,6 +172,7 @@ int CmdHFSimlisten(const char *Cmd)
 int CmdHF14BSnoop(const char *Cmd)
 {
   UsbCommand c = {CMD_SNOOP_ISO_14443};
+	clearCommandBuffer();
   SendCommand(&c);
   return 0;
 }
@@ -180,6 +184,7 @@ int CmdHF14BSnoop(const char *Cmd)
 int CmdSri512Read(const char *Cmd)
 {
   UsbCommand c = {CMD_READ_SRI512_TAG, {strtol(Cmd, NULL, 0), 0, 0}};
+	clearCommandBuffer();
   SendCommand(&c);
   return 0;
 }
@@ -191,6 +196,7 @@ int CmdSri512Read(const char *Cmd)
 int CmdSrix4kRead(const char *Cmd)
 {
   UsbCommand c = {CMD_READ_SRIX4K_TAG, {strtol(Cmd, NULL, 0), 0, 0}};
+	clearCommandBuffer();
   SendCommand(&c);
   return 0;
 }
@@ -198,6 +204,7 @@ int CmdSrix4kRead(const char *Cmd)
 int rawClose(void){
     UsbCommand resp;
 	UsbCommand c = {CMD_ISO_14443B_COMMAND, {0, 0, 0}};
+	clearCommandBuffer();
 	SendCommand(&c);
 	if (!WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
 		return 0;
@@ -207,7 +214,7 @@ int rawClose(void){
 
 int HF14BCmdRaw(bool reply, bool *crc, uint8_t power_trace, uint8_t *data, uint8_t *datalen, bool verbose){
 	UsbCommand resp;
-	UsbCommand c = {CMD_ISO_14443B_COMMAND, {0, 0, 0}}; // len,recv,power
+	UsbCommand c = {CMD_ISO_14443B_COMMAND, {0, 0, 0}}; // len,recv,power/trace
   if(*crc)
   {
     uint8_t first, second;
@@ -221,6 +228,7 @@ int HF14BCmdRaw(bool reply, bool *crc, uint8_t power_trace, uint8_t *data, uint8
   c.arg[1] = reply;
 	c.arg[2] = power_trace;
   memcpy(c.d.asBytes,data,*datalen);
+	clearCommandBuffer();
   SendCommand(&c);
   
   if (!reply) return 1; 
@@ -231,8 +239,7 @@ int HF14BCmdRaw(bool reply, bool *crc, uint8_t power_trace, uint8_t *data, uint8
   }
   *datalen = resp.arg[0];
 	if (verbose) PrintAndLog("received %u octets", *datalen);
-  if(!*datalen)
-    return 0;
+	if(*datalen<2) return 0;
 
   memcpy(data, resp.d.asBytes, *datalen);
   if (verbose) PrintAndLog("%s", sprint_hex(data, *datalen));
@@ -400,10 +407,9 @@ int HF14BStdRead(uint8_t *data, uint8_t *datalen){
   data[1] = 0x00;
   data[2] = 0x08;
 
-	int ans = HF14BCmdRaw(true, &crc, 2, data, datalen, false);
+	if (HF14BCmdRaw(true, &crc, 0, data, datalen, false)==0) return 0;
 
-  if (!ans) return 0;
-  if (data[0] != 0x50  || *datalen < 14 || !crc) return 0;
+	if (data[0] != 0x50  || *datalen != 14 || !crc) return 0;
 
   PrintAndLog ("\n14443-3b tag found:");
   print_atqb_resp(data);
@@ -411,46 +417,44 @@ int HF14BStdRead(uint8_t *data, uint8_t *datalen){
   return 1;
 }
 
-
-
 int HF14B_ST_Read(uint8_t *data, uint8_t *datalen){
   bool crc = true;
   *datalen = 2;
 	//wake cmd
   data[0] = 0x06;
   data[1] = 0x00;
-	//power on and reset tracing
-	int ans = HF14BCmdRaw(true, &crc, 3, data, datalen, true);
 
-	if (!ans) return rawClose();
-	if (*datalen < 3 || !crc) return rawClose();
+	//leave power on
+	// verbose on for now for testing - turn off when functional
+	if (HF14BCmdRaw(true, &crc, 1, data, datalen, true)==0) return rawClose();
+
+	if (*datalen != 3 || !crc) return rawClose();
 
   uint8_t chipID = data[0];
 	// select
   data[0] = 0x0E;
   data[1] = chipID;
   *datalen = 2;
-	msleep(100);
-	//power on
-	ans = HF14BCmdRaw(true, &crc, 1, data, datalen, true);
 
-	if (!ans) return rawClose();
-	if (*datalen < 3 || !crc) return rawClose();
+	//leave power on
+	// verbose on for now for testing - turn off when functional
+	if (HF14BCmdRaw(true, &crc, 1, data, datalen, true)==0) return rawClose();
+
+	if (*datalen != 3 || !crc || data[0] != chipID) return rawClose();
 
 	// get uid
   data[0] = 0x0B;
   *datalen = 1;
-	msleep(100);
-	//power off
-	ans = HF14BCmdRaw(true, &crc, 0, data, datalen, true);
 
-  if (!ans) return 0;
-  if (*datalen < 10 || !crc) return 0;
+	//power off
+	// verbose on for now for testing - turn off when functional
+	if (HF14BCmdRaw(true, &crc, 1, data, datalen, true)==0) return 0;
+	rawClose();
+	if (*datalen != 10 || !crc) return 0;
 
 	PrintAndLog("\n14443-3b ST tag found:");
 	print_st_info(data);
   return 1;
-
 }
 
 int HF14BReader(bool verbose){
@@ -458,26 +462,33 @@ int HF14BReader(bool verbose){
   uint8_t datalen = 5;
   
   // try std 14b (atqb)
-  int ans = HF14BStdRead(data, &datalen);
-  if (ans) return 1;
+	if (HF14BStdRead(data, &datalen)) return 1;
 
   // try st 14b
-  ans = HF14B_ST_Read(data, &datalen);
-  if (ans) return 1;
+	if (HF14B_ST_Read(data, &datalen)) return 1;
+
 	if (verbose) PrintAndLog("no 14443B tag found");
 	return 0;
-
 }
 
-int CmdHF14BReader(const char *Cmd)
-{
+int CmdHF14BReader(const char *Cmd){
 	return HF14BReader(true);
-  //UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443, {strtol(Cmd, NULL, 0), 0, 0}};
-  //SendCommand(&c);
+}
+
+int CmdHFRawSamples(const char *Cmd){
+	UsbCommand resp;
+	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443, {strtol(Cmd,NULL,0), 0, 0}};
+	SendCommand(&c);
+
+	if (!WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+		PrintAndLog("timeout while waiting for reply.");
+		return 0;
+	}
+	getSamples("39999", true);
+	return 1;
 }
 
 int CmdHF14BWrite( const char *Cmd){
-
 /*
  * For SRIX4K  blocks 00 - 7F
  * hf 14b raw -c -p 09 $srix4kwblock $srix4kwdata
@@ -548,6 +559,7 @@ static command_t CommandTable[] =
 {
   {"help",        CmdHelp,        1, "This help"},
   {"demod",       CmdHF14BDemod,  1, "Demodulate ISO14443 Type B from tag"},
+	{"getsamples",  CmdHFRawSamples,0, "[atqb=0 or ST=1] Send wake cmd and Get raw HF samples to GraphBuffer"},
   {"list",        CmdHF14BList,   0, "[Deprecated] List ISO 14443b history"},
   {"reader",      CmdHF14BReader, 0, "Find 14b tag (HF ISO 14443b)"},
   {"sim",         CmdHF14Sim,     0, "Fake ISO 14443 tag"},
