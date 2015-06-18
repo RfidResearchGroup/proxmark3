@@ -732,7 +732,7 @@ static void GetSamplesFor14443bDemod(int n, bool quiet)
 	// Signal field is ON with the appropriate LED:
 	LED_D_ON();
 	// And put the FPGA in the appropriate mode
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ);
 
 	for(;;) {
 		int behindBy = lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR;
@@ -929,7 +929,7 @@ void ReadSTMemoryIso14443b(uint32_t dwLast)
 	// Signal field is on with the appropriate LED
 	LED_D_ON();
 	FpgaWriteConfWord(
-		FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
+		FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ);
 	SpinDelay(200);
 
 	// First command: wake up the tag using the INITIATE command
@@ -1091,7 +1091,7 @@ void RAMFUNC SnoopIso14443b(void)
 	LEDsoff();
 
 	// And put the FPGA in the appropriate mode
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_SNOOP);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ | FPGA_HF_READER_RX_XCORR_SNOOP);
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
 	// Setup for the DMA.
@@ -1228,7 +1228,7 @@ void SendRawCommand14443B(uint32_t datalen, uint32_t recv, uint8_t powerfield, u
  */
 
 	// if(!GETBIT(GPIO_LED_D))	{	// if field is off
-		// FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
+		// FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ);
 		// // Signal field is on with the appropriate LED
 		// LED_D_ON();
 		// SpinDelay(200);

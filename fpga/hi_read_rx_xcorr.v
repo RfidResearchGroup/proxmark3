@@ -10,7 +10,7 @@ module hi_read_rx_xcorr(
     ssp_frame, ssp_din, ssp_dout, ssp_clk,
     cross_hi, cross_lo,
     dbg,
-    snoop
+    xcorr_is_848, snoop
 );
     input pck0, ck_1356meg, ck_1356megb;
     output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
@@ -20,7 +20,7 @@ module hi_read_rx_xcorr(
     output ssp_frame, ssp_din, ssp_clk;
     input cross_hi, cross_lo;
     output dbg;
-    input snoop;
+    input xcorr_is_848, snoop;
 
 // Carrier is steady on through this, unless we're snooping.
 assign pwr_hi = ck_1356megb & (~snoop);
@@ -28,8 +28,22 @@ assign pwr_oe1 = 1'b0;
 assign pwr_oe3 = 1'b0;
 assign pwr_oe4 = 1'b0;
 
-wire adc_clk = ck_1356megb;
+(* clock_signal = "yes" *) reg fc_div_2;
+always @(negedge ck_1356megb)
+    fc_div_2 <= fc_div_2 + 1;
 
+(* clock_signal = "yes" *) reg adc_clk;
+always @(xcorr_is_848, ck_1356megb, fc_div_2)
+if (xcorr_is_848)
+	// The subcarrier frequency is fc/16; we will sample at fc, so that 
+	// means the subcarrier is 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 1 1 ...
+	adc_clk <= ck_1356megb;
+else
+    // The subcarrier frequency is fc/32; we will sample at fc/2, and
+    // the subcarrier will look identical.
+    adc_clk <= fc_div_2;
+
+	
 // When we're a reader, we just need to do the BPSK demod; but when we're an
 // eavesdropper, we also need to pick out the commands sent by the reader,
 // using AM. Do this the same way that we do it for the simulated tag.
