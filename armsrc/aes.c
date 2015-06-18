@@ -1,4 +1,3 @@
-#include "stdio.h"
 #include "aes.h"
 
 static const unsigned int Te0[256] = {
@@ -1138,6 +1137,9 @@ int AesDecrypt(AesCtx *pCtx, unsigned char *pCipher, unsigned char *pData, unsig
 //////////////////////////////////////////////////////////////////////////////
 
 #ifndef EMBEDDED
+
+#include <stdio.h>
+
 int main()
 {
     AesCtx ctx;
