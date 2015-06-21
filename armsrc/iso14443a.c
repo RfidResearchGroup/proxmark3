@@ -913,8 +913,9 @@ bool prepare_tag_modulation(tag_response_info_t* response_info, size_t max_buffe
 // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction) 
 // 28 * 8 data bits, 28 * 1 parity bits, 7 start bits, 7 stop bits, 7 correction bits
 // -> need 273 bytes buffer
-// 44 * 8 data bits, 44 * 1 parity bits, 9 start bits, 9 stop bits, 9 correction bits
-#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 370  //273
+// 44 * 8 data bits, 44 * 1 parity bits, 9 start bits, 9 stop bits, 9 correction bits --370
+// 47 * 8 data bits, 47 * 1 parity bits, 10 start bits, 10 stop bits, 10 correction bits 
+#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 453 
 
 bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
   // Retrieve and store the current buffer index
@@ -1064,7 +1065,10 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 	//uint8_t response7_EV1[] = {0x00, 0x04, 0x03, 0x01, 0x01, 0x00, 0x0b, 0x03, 0xfd, 0xf7};  //EV1 48bytes VERSION.
 	uint8_t response7_NTAG[] = {0x00, 0x04, 0x04, 0x02, 0x01, 0x00, 0x11, 0x03, 0x01, 0x9e}; //NTAG 215
 	
-	#define TAG_RESPONSE_COUNT 9
+	// Prepare CHK_TEARING
+	uint8_t response9[] =  {0xBD,0x90,0x3f};
+	
+	#define TAG_RESPONSE_COUNT 10
 	tag_response_info_t responses[TAG_RESPONSE_COUNT] = {
 		{ .response = response1,  .response_n = sizeof(response1)  },  // Answer to request - respond with card type
 		{ .response = response2,  .response_n = sizeof(response2)  },  // Anticollision cascade1 - respond with uid
@@ -1075,6 +1079,7 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 		{ .response = response6,  .response_n = sizeof(response6)  },  // dummy ATS (pseudo-ATR), answer to RATS
 		{ .response = response7_NTAG,  .response_n = sizeof(response7_NTAG)  },  // EV1/NTAG GET_VERSION response
 		{ .response = response8,   .response_n = sizeof(response8) },  // EV1/NTAG PACK response
+		{ .response = response9,   .response_n = sizeof(response9) }  // EV1/NTAG CHK_TEAR response
 	};
 
 	// Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
@@ -1167,10 +1172,11 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 					0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 					0x00,0x00,0x00,0x00,
 					0x00,0x00};
-					ComputeCrc14443(CRC_14443_A, blockdata+start, 16, blockdata+start+17, blockdata+start+18);
+					AppendCrc14443a(blockdata+start, 16);
+					
 					EmSendCmdEx( blockdata+start, 18, false);
 				} else {				
-					ComputeCrc14443(CRC_14443_A, blockzeros,16, blockzeros+17,blockzeros+18);
+					AppendCrc14443a(blockzeros, 16);
 					EmSendCmdEx(blockzeros,18,false);
 				}
 				p_response = NULL;
@@ -1181,9 +1187,9 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 				// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
 				p_response = NULL;
 			}
-		} else if(receivedCmd[0] == 0x3A) {	// Received a FAST READ   -- just returns all zeros.
-				uint8_t len = (receivedCmd[2]- receivedCmd[1] ) * 4;
-				ComputeCrc14443(CRC_14443_A, blockzeros,len, blockzeros+len+1, blockzeros+len+2);
+		} else if(receivedCmd[0] == 0x3A) {	// Received a FAST READ (ranged read) -- just returns all zeros.
+				uint8_t len = (receivedCmd[2] - receivedCmd[1] ) * 4;				
+				AppendCrc14443a(blockzeros,len);
 				EmSendCmdEx(blockzeros,len+2,false);				
 				p_response = NULL;			
 		} else if(receivedCmd[0] == 0x3C && tagType == 7) {	// Received a READ SIGNATURE -- 
@@ -1193,14 +1199,16 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 								  0xcf,0xd3,0x61,0x36,0xca,0x5f,0xbb,0x05,
 								  0xce,0x21,0x24,0x5b,0xa6,0x7a,0x79,0x07,
 								  0x00,0x00};
-				ComputeCrc14443(CRC_14443_A, data, sizeof(data), data+33, data+34);
+				AppendCrc14443a(data, sizeof(data));
 				EmSendCmdEx(data,sizeof(data),false);				
 				p_response = NULL;					
 		} else if(receivedCmd[0] == 0x39 && tagType == 7) {	// Received a READ COUNTER -- 
-				uint8_t data[] =  {0x00,0x00,0x00,0x00,0x00};
-				ComputeCrc14443(CRC_14443_A, data, sizeof(data), data+4, data+5);
+				uint8_t data[] =  {0x00,0x00,0x00,0x14,0xa5};
+				//AppendCrc14443a(data, sizeof(data));
 				EmSendCmdEx(data,sizeof(data),false);				
-				p_response = NULL;			
+				p_response = NULL;
+		} else if(receivedCmd[0] == 0x3E && tagType == 7) {	// Received a CHECK_TEARING_EVENT -- 
+				p_response = &responses[9];				
 		} else if(receivedCmd[0] == 0x50) {	// Received a HALT
 
 			if (tracing) {
@@ -1378,10 +1386,12 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 	}
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	
-	Dbprintf("%x %x %x", happened, happened2, cmdsRecvd);
-	LED_A_OFF();
 	BigBuf_free_keep_EM();
+	LED_A_OFF();
+	
+	Dbprintf("-[ Wake ups after halt [%d]", happened);
+	Dbprintf("-[ Messages after halt [%d]", happened2);
+	Dbprintf("-[ Num of received cmd [%d]", cmdsRecvd);
 }
 
 
