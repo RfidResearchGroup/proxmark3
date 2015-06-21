@@ -948,9 +948,6 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 	uint8_t ar_nr_collected = 0;
 	
 	uint8_t sak;
-
-	uint8_t blockzeros[512];
-	memset(blockzeros, 0x00, sizeof(blockzeros));
 					
 	// PACK response to PWD AUTH for EV1/NTAG
 	uint8_t response8[4];
@@ -1157,11 +1154,10 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 		} else if(receivedCmd[0] == 0x30) {	// Received a (plain) READ
 			uint8_t block = receivedCmd[1];
 			if ( tagType == 7 ) {
+				uint8_t start = 4 * block;
 				
 				if ( block < 4 ) {
 				    //NTAG 215
-					uint8_t start = 4 * block;
-					
 					uint8_t blockdata[50] = {
 					data[0],data[1],data[2], 0x88 ^ data[0] ^ data[1] ^ data[2],
 					data[3],data[4],data[5],data[6],
@@ -1173,11 +1169,12 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 					0x00,0x00,0x00,0x00,
 					0x00,0x00};
 					AppendCrc14443a(blockdata+start, 16);
-					
-					EmSendCmdEx( blockdata+start, 18, false);
-				} else {				
-					AppendCrc14443a(blockzeros, 16);
-					EmSendCmdEx(blockzeros,18,false);
+					EmSendCmdEx( blockdata+start, MAX_MIFARE_FRAME_SIZE, false);
+				} else {	
+					uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
+					emlGetMemBt( emdata, start, 16);
+					AppendCrc14443a(emdata, 16);
+					EmSendCmdEx(emdata, sizeof(emdata), false);				
 				}
 				p_response = NULL;
 				
@@ -1188,10 +1185,15 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 				p_response = NULL;
 			}
 		} else if(receivedCmd[0] == 0x3A) {	// Received a FAST READ (ranged read) -- just returns all zeros.
-				uint8_t len = (receivedCmd[2] - receivedCmd[1] ) * 4;				
-				AppendCrc14443a(blockzeros,len);
-				EmSendCmdEx(blockzeros,len+2,false);				
-				p_response = NULL;			
+				
+				uint8_t emdata[MAX_FRAME_SIZE];
+				int start =  receivedCmd[1] * 4;
+				int len   = (receivedCmd[2] - receivedCmd[1]) * 4;
+				emlGetMemBt( emdata, start, len);
+				AppendCrc14443a(emdata, len);
+				EmSendCmdEx(emdata, len+2, false);				
+				p_response = NULL;
+				
 		} else if(receivedCmd[0] == 0x3C && tagType == 7) {	// Received a READ SIGNATURE -- 
 				// ECC data,  taken from a NTAG215 amiibo token. might work. LEN: 32, + 2 crc
 				uint8_t data[] = {0x56,0x06,0xa6,0x4f,0x43,0x32,0x53,0x6f,
@@ -1199,12 +1201,11 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 								  0xcf,0xd3,0x61,0x36,0xca,0x5f,0xbb,0x05,
 								  0xce,0x21,0x24,0x5b,0xa6,0x7a,0x79,0x07,
 								  0x00,0x00};
-				AppendCrc14443a(data, sizeof(data));
+				AppendCrc14443a(data, sizeof(data)-2);
 				EmSendCmdEx(data,sizeof(data),false);				
 				p_response = NULL;					
 		} else if(receivedCmd[0] == 0x39 && tagType == 7) {	// Received a READ COUNTER -- 
 				uint8_t data[] =  {0x00,0x00,0x00,0x14,0xa5};
-				//AppendCrc14443a(data, sizeof(data));
 				EmSendCmdEx(data,sizeof(data),false);				
 				p_response = NULL;
 		} else if(receivedCmd[0] == 0x3E && tagType == 7) {	// Received a CHECK_TEARING_EVENT -- 
