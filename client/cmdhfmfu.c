@@ -276,7 +276,20 @@ static int ulev1_readSignature( uint8_t *response, uint16_t responseLength ){
 	return len;
 }
 
-//make sure field is off before calling this function
+
+// Fudan check checks for which error is given for a command with incorrect crc
+// NXP UL chip responds with 01, fudan 00.
+// other possible checks:
+//  send a0 + crc 
+//  UL responds with 00, fudan doesn't respond
+//  or
+//  send a200 + crc
+//  UL doesn't respond, fudan responds with 00
+//  or
+//  send 300000 + crc (read with extra byte(s))
+//  UL responds with read of page 0, fudan doesn't respond.
+//
+// make sure field is off before calling this function
 static int ul_fudan_check( void ){
 	iso14a_card_select_t card;
 	if ( !ul_select(&card) ) 
