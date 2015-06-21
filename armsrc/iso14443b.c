@@ -122,8 +122,7 @@ static struct {
 		STATE_UNSYNCD,
 		STATE_GOT_FALLING_EDGE_OF_SOF,
 		STATE_AWAITING_START_BIT,
-		STATE_RECEIVING_DATA,
-		STATE_ERROR_WAIT
+		STATE_RECEIVING_DATA
 	}       state;
 	uint16_t    shiftReg;
 	int     bitCnt;
@@ -145,7 +144,7 @@ static struct {
  * Returns: true if we received a EOF
  *          false if we are still waiting for some more
  */
-static int Handle14443bUartBit(int bit)
+static RAMFUNC int Handle14443bUartBit(uint8_t bit)
 {
 	switch(Uart.state) {
 		case STATE_UNSYNCD:
@@ -172,7 +171,7 @@ static int Handle14443bUartBit(int bit)
 					} else {
 						// didn't stay down long enough
 						// before going high, error
-						Uart.state = STATE_ERROR_WAIT;
+						Uart.state = STATE_UNSYNCD;
 					}
 				} else {
 					// do nothing, keep waiting
@@ -183,7 +182,8 @@ static int Handle14443bUartBit(int bit)
 			if(Uart.bitCnt > 12) {
 				// Give up if we see too many zeros without
 				// a one, too.
-				Uart.state = STATE_ERROR_WAIT;
+				LED_A_OFF();
+				Uart.state = STATE_UNSYNCD;
 			}
 			break;
 
@@ -193,7 +193,7 @@ static int Handle14443bUartBit(int bit)
 				if(Uart.posCnt > 50/2) {	// max 57us between characters = 49 1/fs, max 3 etus after low phase of SOF = 24 1/fs
 					// stayed high for too long between
 					// characters, error
-					Uart.state = STATE_ERROR_WAIT;
+					Uart.state = STATE_UNSYNCD;
 				}
 			} else {
 				// falling edge, this starts the data byte
@@ -227,8 +227,8 @@ static int Handle14443bUartBit(int bit)
 
 					if(Uart.byteCnt >= Uart.byteCntMax) {
 						// Buffer overflowed, give up
-						Uart.posCnt = 0;
-						Uart.state = STATE_ERROR_WAIT;
+						LED_A_OFF();
+						Uart.state = STATE_UNSYNCD;
 					} else {
 						// so get the next byte now
 						Uart.posCnt = 0;
@@ -237,37 +237,43 @@ static int Handle14443bUartBit(int bit)
 				} else if(Uart.shiftReg == 0x000) {
 					// this is an EOF byte
 					LED_A_OFF(); // Finished receiving
+					Uart.state = STATE_UNSYNCD;
 					if (Uart.byteCnt != 0) {
 					return TRUE;
 					}
-					Uart.posCnt = 0;
-					Uart.state = STATE_ERROR_WAIT;
 				} else {
 					// this is an error
-					Uart.posCnt = 0;
-					Uart.state = STATE_ERROR_WAIT;
+					LED_A_OFF();
+				Uart.state = STATE_UNSYNCD;
 				}
 			}
 			break;
 
-		case STATE_ERROR_WAIT:
-			// We're all screwed up, so wait a little while
-			// for whatever went wrong to finish, and then
-			// start over.
-			Uart.posCnt++;
-			if(Uart.posCnt > 10) {
-				Uart.state = STATE_UNSYNCD;
-				LED_A_OFF();
-			}
-			break;
-
 		default:
+			LED_A_OFF();
 			Uart.state = STATE_UNSYNCD;
 			break;
 	}
 
 	return FALSE;
 }
+
+
+static void UartReset()
+{
+	Uart.byteCntMax = MAX_FRAME_SIZE;
+	Uart.state = STATE_UNSYNCD;
+	Uart.byteCnt = 0;
+	Uart.bitCnt = 0;
+}
+
+
+static void UartInit(uint8_t *data)
+{
+	Uart.output = data;
+	UartReset();
+}
+
 
 //-----------------------------------------------------------------------------
 // Receive a command (from the reader to us, where we are the simulated tag),
@@ -278,44 +284,34 @@ static int Handle14443bUartBit(int bit)
 // Assume that we're called with the SSC (to the FPGA) and ADC path set
 // correctly.
 //-----------------------------------------------------------------------------
-static int GetIso14443bCommandFromReader(uint8_t *received, int *len, int maxLen)
+static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len)
 {
-	uint8_t mask;
-	int i, bit;
-
 	// Set FPGA mode to "simulated ISO 14443B tag", no modulation (listen
 	// only, since we are receiving, not transmitting).
 	// Signal field is off with the appropriate LED
 	LED_D_OFF();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_NO_MODULATION);
 
-
 	// Now run a `software UART' on the stream of incoming samples.
-	Uart.output = received;
-	Uart.byteCntMax = maxLen;
-	Uart.state = STATE_UNSYNCD;
+	UartInit(received);
 
 	for(;;) {
 		WDT_HIT();
 
 		if(BUTTON_PRESS()) return FALSE;
 
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-			AT91C_BASE_SSC->SSC_THR = 0x00;
-		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-
-			mask = 0x80;
-			for(i = 0; i < 8; i++, mask >>= 1) {
-				bit = (b & mask);
-				if(Handle14443bUartBit(bit)) {
+			for(uint8_t mask = 0x80; mask != 0x00; mask >>= 1) {
+				if(Handle14443bUartBit(b & mask)) {
 					*len = Uart.byteCnt;
 					return TRUE;
 				}
 			}
 		}
 	}
+	
+	return FALSE;
 }
 
 //-----------------------------------------------------------------------------
@@ -324,9 +320,12 @@ static int GetIso14443bCommandFromReader(uint8_t *received, int *len, int maxLen
 //-----------------------------------------------------------------------------
 void SimulateIso14443bTag(void)
 {
-	// the only command we understand is REQB, AFI=0, Select All, N=0:
+	// the only commands we understand is REQB, AFI=0, Select All, N=0:
 	static const uint8_t cmd1[] = { 0x05, 0x00, 0x08, 0x39, 0x73 };
-	// ... and we respond with ATQB, PUPI = 820de174, Application Data = 0x20381922,
+	// ... and REQB, AFI=0, Normal Request, N=0:
+	static const uint8_t cmd2[] = { 0x05, 0x00, 0x00, 0x71, 0xFF };
+
+	// ... and we always respond with ATQB, PUPI = 820de174, Application Data = 0x20381922,
 	// supports only 106kBit/s in both directions, max frame size = 32Bytes,
 	// supports ISO14443-4, FWI=8 (77ms), NAD supported, CID not supported:
 	static const uint8_t response1[] = {
@@ -334,25 +333,27 @@ void SimulateIso14443bTag(void)
 		0x00, 0x21, 0x85, 0x5e, 0xd7
 	};
 
-	uint8_t *resp;
-	int respLen;
+	clear_trace();
+	set_tracing(TRUE);
+
+	const uint8_t *resp;
+	uint8_t *respCode;
+	uint16_t respLen, respCodeLen;
 
 	// allocate command receive buffer
 	BigBuf_free();
 	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
-	int len;
 
-	int i;
-
-	int cmdsRecvd = 0;
+	uint16_t len;
+	uint16_t cmdsRecvd = 0;
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	// prepare the (only one) tag answer:
 	CodeIso14443bAsTag(response1, sizeof(response1));
-	uint8_t *resp1 = BigBuf_malloc(ToSendMax);
-	memcpy(resp1, ToSend, ToSendMax); 
-	uint16_t resp1Len = ToSendMax;
+	uint8_t *resp1Code = BigBuf_malloc(ToSendMax);
+	memcpy(resp1Code, ToSend, ToSendMax); 
+	uint16_t resp1CodeLen = ToSendMax;
 
 	// We need to listen to the high-frequency, peak-detected path.
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -361,20 +362,28 @@ void SimulateIso14443bTag(void)
 	cmdsRecvd = 0;
 
 	for(;;) {
-		uint8_t b1, b2;
 
-		if(!GetIso14443bCommandFromReader(receivedCmd, &len, 100)) {
+		if(!GetIso14443bCommandFromReader(receivedCmd, &len)) {
 		Dbprintf("button pressed, received %d commands", cmdsRecvd);
 		break;
 		}
 
-		// Good, look at the command now.
+		if (tracing) {
+			uint8_t parity[MAX_PARITY_SIZE];
+			LogTrace(receivedCmd, len, 0, 0, parity, TRUE);
+		}
 
-		if(len == sizeof(cmd1) && memcmp(receivedCmd, cmd1, len)==0) {
-			resp = resp1; respLen = resp1Len;
+		// Good, look at the command now.
+		if ( (len == sizeof(cmd1) && memcmp(receivedCmd, cmd1, len) == 0)
+			|| (len == sizeof(cmd2) && memcmp(receivedCmd, cmd2, len) == 0) ) {
+			resp = response1; 
+			respLen = sizeof(response1);
+			respCode = resp1Code; 
+			respCodeLen = resp1CodeLen;
 		} else {
 			Dbprintf("new cmd from reader: len=%d, cmdsRecvd=%d", len, cmdsRecvd);
 			// And print whether the CRC fails, just for good measure
+			uint8_t b1, b2;
 			ComputeCrc14443(CRC_14443_B, receivedCmd, len-2, &b1, &b2);
 			if(b1 != receivedCmd[len-2] || b2 != receivedCmd[len-1]) {
 				// Not so good, try again.
@@ -392,7 +401,7 @@ void SimulateIso14443bTag(void)
 			break;
 		}
 
-		if(respLen <= 0) continue;
+		if(respCodeLen <= 0) continue;
 
 		// Modulate BPSK
 		// Signal field is off with the appropriate LED
@@ -402,15 +411,15 @@ void SimulateIso14443bTag(void)
 		FpgaSetupSsc();
 
 		// Transmit the response.
-		i = 0;
+		uint16_t i = 0;
 		for(;;) {
 			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-				uint8_t b = resp[i];
+				uint8_t b = respCode[i];
 
 				AT91C_BASE_SSC->SSC_THR = b;
 
 				i++;
-				if(i > respLen) {
+				if(i > respCodeLen) {
 					break;
 				}
 			}
@@ -419,6 +428,13 @@ void SimulateIso14443bTag(void)
 				(void)b;
 			}
 		}
+		
+		// trace the response:
+		if (tracing) {
+			uint8_t parity[MAX_PARITY_SIZE];
+			LogTrace(resp, respLen, 0, 0, parity, FALSE);
+		}
+			
 	}
 }
 
@@ -436,8 +452,7 @@ static struct {
 		DEMOD_AWAITING_FALLING_EDGE_OF_SOF,
 		DEMOD_GOT_FALLING_EDGE_OF_SOF,
 		DEMOD_AWAITING_START_BIT,
-		DEMOD_RECEIVING_DATA,
-		DEMOD_ERROR_WAIT
+		DEMOD_RECEIVING_DATA
 	}       state;
 	int     bitCount;
 	int     posCount;
@@ -681,22 +696,6 @@ static void DemodInit(uint8_t *data)
 {
 	Demod.output = data;
 	DemodReset();
-}
-
-
-static void UartReset()
-{
-	Uart.byteCntMax = MAX_FRAME_SIZE;
-	Uart.state = STATE_UNSYNCD;
-	Uart.byteCnt = 0;
-	Uart.bitCnt = 0;
-}
-
-
-static void UartInit(uint8_t *data)
-{
-	Uart.output = data;
-	UartReset();
 }
 
 
@@ -1165,11 +1164,11 @@ void RAMFUNC SnoopIso14443b(void)
 			/* false-triggered by the commands from the reader. */
 			DemodReset();
 		}
-			ReaderIsActive = (Uart.state != STATE_UNSYNCD);
+			ReaderIsActive = (Uart.state > STATE_GOT_FALLING_EDGE_OF_SOF);
 		}
 
 		if(!ReaderIsActive) {						// no need to try decoding tag data if the reader is sending - and we cannot afford the time
-			if(Handle14443bSamplesDemod(ci, cq)) {
+			if(Handle14443bSamplesDemod(ci | 0x01, cq | 0x01)) {
 
 			//Use samples as a time measurement
 			if(tracing)

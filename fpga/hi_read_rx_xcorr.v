@@ -28,21 +28,11 @@ assign pwr_oe1 = 1'b0;
 assign pwr_oe3 = 1'b0;
 assign pwr_oe4 = 1'b0;
 
-(* clock_signal = "yes" *) reg fc_div_2;
+wire adc_clk = ck_1356megb;
+
+reg fc_div_2;
 always @(negedge ck_1356megb)
     fc_div_2 <= fc_div_2 + 1;
-
-(* clock_signal = "yes" *) reg adc_clk;
-always @(xcorr_is_848, ck_1356megb, fc_div_2)
-	    if(xcorr_is_848)
-	        // The subcarrier frequency is fc/16; we will sample at fc, so that 
-	        // means the subcarrier is 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 1 1 ...
-	adc_clk <= ck_1356megb;
-	    else
-	        // The subcarrier frequency is fc/32; we will sample at fc/2, and
-	        // the subcarrier will look identical.
-	        adc_clk <= fc_div_2;
-
 
 // When we're a reader, we just need to do the BPSK demod; but when we're an
 // eavesdropper, we also need to pick out the commands sent by the reader,
@@ -85,12 +75,16 @@ reg ssp_clk;
 reg ssp_frame;
 
 
+always @(negedge adc_clk)
+begin
+	if (xcorr_is_848 | fc_div_2)
+		corr_i_cnt <= corr_i_cnt + 1;
+end		
+		
 
 // ADC data appears on the rising edge, so sample it on the falling edge
 always @(negedge adc_clk)
 begin
-    corr_i_cnt <= corr_i_cnt + 1;
-
     // These are the correlators: we correlate against in-phase and quadrature
     // versions of our reference signal, and keep the (signed) result to
     // send out later over the SSP.
@@ -98,7 +92,7 @@ begin
     begin
         if(snoop)
         begin
-			// 7 most significant bits of tag signal (signed), 1 bit reader signal:
+			// Send only 7 most significant bits of tag signal (signed), LSB is reader signal:
             corr_i_out <= {corr_i_accum[13:7], after_hysteresis_prev_prev};
             corr_q_out <= {corr_q_accum[13:7], after_hysteresis_prev};
 			after_hysteresis_prev_prev <= after_hysteresis;
