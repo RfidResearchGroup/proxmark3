@@ -36,6 +36,7 @@ int CmdHFTune(const char *Cmd)
   return 0;
 }
 
+
 void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 {
 	switch(cmd[0])
@@ -92,7 +93,6 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 		else
 			snprintf(exp,size,"PWD-AUTH");
 		break;
-
 	case MIFARE_ULEV1_FASTREAD : {
 		if ( cmdsize >=3 && cmd[2] <= 0xE6)
 			snprintf(exp,size,"READ RANGE (%d-%d)",cmd[1],cmd[2]); 
@@ -483,11 +483,13 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
 		}
 		uint8_t parityBits = parityBytes[j>>3];
-		if (isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
+		if (protocol != ISO_14443B && isResponse && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
 			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x! ", frame[j]);
+
 		} else {
 			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x  ", frame[j]);
 		}
+
 	}
 
 	if (markCRCBytes) {
@@ -663,6 +665,11 @@ int CmdHFSearch(const char *Cmd){
 		PrintAndLog("\nValid ISO14443A Tag Found - Quiting Search\n");
 		return ans;
 	} 
+	ans = HF14BReader(false);
+	if (ans) {
+		PrintAndLog("\nValid ISO14443B Tag Found - Quiting Search\n");
+		return ans;
+	}
 	ans = HFiClassReader("", false, false);
 	if (ans) {
 		PrintAndLog("\nValid iClass Tag (or PicoPass Tag) Found - Quiting Search\n");
@@ -673,12 +680,7 @@ int CmdHFSearch(const char *Cmd){
 		PrintAndLog("\nValid ISO15693 Tag Found - Quiting Search\n");
 		return ans;
 	}
-
-
-	//14b has issues currently...
-	//ans = CmdHF14BRead(Cmd);
-	//if (ans > 0) return ans;
-
+	PrintAndLog("\nno known/supported 13.56 MHz tags found\n");
 	return 0;
 }
 
@@ -697,7 +699,7 @@ static command_t CommandTable[] =
   {"topaz",			CmdHFTopaz,		1, "{ TOPAZ (NFC Type 1) RFIDs... }"},
   {"tune",			CmdHFTune,      0, "Continuously measure HF antenna tuning"},
   {"list",        CmdHFList,        1, "List protocol data in trace buffer"},
-  {"search",      CmdHFSearch,      1, "Search for known HF tags [preliminary]"},
+  {"search",      CmdHFSearch,      1, "Search for known HF tags"},
 	{NULL, NULL, 0, NULL}
 };
 

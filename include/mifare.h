@@ -11,7 +11,7 @@
 #ifndef _MIFARE_H_
 #define _MIFARE_H_
 
-#include "../include/common.h"
+#include "common.h"
 
 //-----------------------------------------------------------------------------
 // ISO 14443A

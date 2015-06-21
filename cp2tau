@@ -1,4 +1,0 @@
-cp armsrc/obj/*.elf /z
-cp armsrc/obj/*.s19 /z
-cp bootrom/obj/*.elf /z
-cp bootrom/obj/*.s19 /z

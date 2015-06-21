@@ -100,7 +100,6 @@ typedef struct{
 
 // For the 13.56 MHz tags
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693                             0x0300
-#define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443                             0x0301
 #define CMD_READ_SRI512_TAG                                               0x0303
 #define CMD_READ_SRIX4K_TAG                                               0x0304
 #define CMD_ISO_14443B_COMMAND                                            0x0305
@@ -118,9 +117,8 @@ typedef struct{
 #define CMD_SIMULATE_HITAG                                                0x0371
 #define CMD_READER_HITAG                                                  0x0372
 
-#define CMD_SIMULATE_TAG_HF_LISTEN                                        0x0380
-#define CMD_SIMULATE_TAG_ISO_14443                                        0x0381
-#define CMD_SNOOP_ISO_14443                                               0x0382
+#define CMD_SIMULATE_TAG_ISO_14443B                                       0x0381
+#define CMD_SNOOP_ISO_14443B                                              0x0382
 #define CMD_SNOOP_ISO_14443a                                              0x0383
 #define CMD_SIMULATE_TAG_ISO_14443a                                       0x0384
 #define CMD_READER_ISO_14443a                                             0x0385
@@ -128,7 +126,6 @@ typedef struct{
 #define CMD_READER_LEGIC_RF                                               0x0388
 #define CMD_WRITER_LEGIC_RF                                               0x0389
 #define CMD_EPA_PACE_COLLECT_NONCE                                        0x038A
-//#define CMD_EPA_                                                          0x038B
 
 #define CMD_SNOOP_ICLASS                                                  0x0392
 #define CMD_SIMULATE_TAG_ICLASS                                           0x0393

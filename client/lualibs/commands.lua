@@ -59,7 +59,6 @@ local _commands = {
 
 	--// For the 13.56 MHz tags
 	CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693 =                              0x0300,
-	CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443 =                              0x0301,
 	CMD_READ_SRI512_TAG =                                                0x0303,
 	CMD_READ_SRIX4K_TAG =                                                0x0304,
 	CMD_READER_ISO_15693 =                                               0x0310,
@@ -76,9 +75,8 @@ local _commands = {
 	CMD_SIMULATE_HITAG =                                                 0x0371,
 	CMD_READER_HITAG =                                                   0x0372,
 
-	CMD_SIMULATE_TAG_HF_LISTEN =                                         0x0380,
-	CMD_SIMULATE_TAG_ISO_14443 =                                         0x0381,
-	CMD_SNOOP_ISO_14443 =                                                0x0382,
+	CMD_SIMULATE_TAG_ISO_14443B =                                        0x0381,
+	CMD_SNOOP_ISO_14443B =                                               0x0382,
 	CMD_SNOOP_ISO_14443a =                                               0x0383,
 	CMD_SIMULATE_TAG_ISO_14443a =                                        0x0384,
 	CMD_READER_ISO_14443a =                                              0x0385,
