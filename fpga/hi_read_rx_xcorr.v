@@ -88,7 +88,7 @@ begin
     // These are the correlators: we correlate against in-phase and quadrature
     // versions of our reference signal, and keep the (signed) result to
     // send out later over the SSP.
-    if(corr_i_cnt == 7'd0)
+    if(corr_i_cnt == 6'd0)
     begin
         if(snoop)
         begin
@@ -123,7 +123,7 @@ begin
 
     // The logic in hi_simulate.v reports 4 samples per bit. We report two
     // (I, Q) pairs per bit, so we should do 2 samples per pair.
-    if(corr_i_cnt == 6'd31)
+    if(corr_i_cnt == 6'd32)
         after_hysteresis_prev <= after_hysteresis;
 
     // Then the result from last time is serialized and send out to the ARM.
