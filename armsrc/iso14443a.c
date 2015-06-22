@@ -1188,7 +1188,7 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 				
 				uint8_t emdata[MAX_FRAME_SIZE];
 				int start =  receivedCmd[1] * 4;
-				int len   = (receivedCmd[2] - receivedCmd[1]) * 4;
+				int len   = (receivedCmd[2] - receivedCmd[1] + 1) * 4;
 				emlGetMemBt( emdata, start, len);
 				AppendCrc14443a(emdata, len);
 				EmSendCmdEx(emdata, len+2, false);				
@@ -1202,12 +1202,22 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 								  0xce,0x21,0x24,0x5b,0xa6,0x7a,0x79,0x07,
 								  0x00,0x00};
 				AppendCrc14443a(data, sizeof(data)-2);
-				EmSendCmdEx(data,sizeof(data),false);				
+				EmSendCmdEx(data,sizeof(data),false);
 				p_response = NULL;					
 		} else if(receivedCmd[0] == 0x39 && tagType == 7) {	// Received a READ COUNTER -- 
 				uint8_t data[] =  {0x00,0x00,0x00,0x14,0xa5};
 				EmSendCmdEx(data,sizeof(data),false);				
 				p_response = NULL;
+		} else if(receivedCmd[0] == 0xA5 && tagType == 7) {	// Received a INC COUNTER -- 
+			// number of counter
+			//uint8_t counter = receivedCmd[1];
+			//uint32_t val = bytes_to_num(receivedCmd+2,4);
+			
+			// send ACK
+			uint8_t ack[] = {0x0a};
+			EmSendCmdEx(ack,sizeof(ack),false);
+			p_response = NULL;
+			
 		} else if(receivedCmd[0] == 0x3E && tagType == 7) {	// Received a CHECK_TEARING_EVENT -- 
 				p_response = &responses[9];				
 		} else if(receivedCmd[0] == 0x50) {	// Received a HALT
@@ -1281,6 +1291,8 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 		{
 			if ( tagType == 7 ) {
 				p_response =  &responses[8]; // PACK response
+				uint32_t pwd = bytes_to_num(receivedCmd+1,4);
+				Dbprintf("Auth attempt: %08x", pwd);	
 			}
 		}
 		else {
