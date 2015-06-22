@@ -816,6 +816,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_EPA_PACE_COLLECT_NONCE:
 			EPA_PACE_Collect_Nonce(c);
 			break;
+		case CMD_EPA_PACE_REPLAY:
+			EPA_PACE_Replay(c);
+			break;
 			
 		case CMD_READER_MIFARE:
 			ReaderMifare(c->arg[0]);
