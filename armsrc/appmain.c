@@ -250,55 +250,6 @@ void MeasureAntennaTuningHf(void)
 }
 
 
-void SimulateTagHfListen(void)
-{
-	// ToDo: historically this used the free buffer, which was 2744 Bytes long. 
-	// There might be a better size to be defined:
-	#define HF_14B_SNOOP_BUFFER_SIZE 2744
-	uint8_t *dest = BigBuf_malloc(HF_14B_SNOOP_BUFFER_SIZE);
-	uint8_t v = 0;
-	int i;
-	int p = 0;
-
-	// We're using this mode just so that I can test it out; the simulated
-	// tag mode would work just as well and be simpler.
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ | FPGA_HF_READER_RX_XCORR_SNOOP);
-
-	// We need to listen to the high-frequency, peak-detected path.
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-
-	FpgaSetupSsc();
-
-	i = 0;
-	for(;;) {
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-			AT91C_BASE_SSC->SSC_THR = 0xff;
-		}
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			uint8_t r = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-
-			v <<= 1;
-			if(r & 1) {
-				v |= 1;
-			}
-			p++;
-
-			if(p >= 8) {
-				dest[i] = v;
-				v = 0;
-				p = 0;
-				i++;
-
-				if(i >= HF_14B_SNOOP_BUFFER_SIZE) {
-					break;
-				}
-			}
-		}
-	}
-	DbpString("simulate tag (now type bitsamples)");
-}
-
 void ReadMem(int addr)
 {
 	const uint8_t *data = ((uint8_t *)addr);
@@ -782,20 +733,17 @@ void UsbPacketReceived(uint8_t *packet, int len)
 #endif
 
 #ifdef WITH_ISO14443b
-		case CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_14443:
-			AcquireRawAdcSamplesIso14443(c->arg[0]);
-			break;
 		case CMD_READ_SRI512_TAG:
-			ReadSTMemoryIso14443(0x0F);
+			ReadSTMemoryIso14443b(0x0F);
 			break;
 		case CMD_READ_SRIX4K_TAG:
-			ReadSTMemoryIso14443(0x7F);
+			ReadSTMemoryIso14443b(0x7F);
 			break;
-		case CMD_SNOOP_ISO_14443:
-			SnoopIso14443();
+		case CMD_SNOOP_ISO_14443B:
+			SnoopIso14443b();
 			break;
-		case CMD_SIMULATE_TAG_ISO_14443:
-			SimulateIso14443Tag();
+		case CMD_SIMULATE_TAG_ISO_14443B:
+			SimulateIso14443bTag();
 			break;
 		case CMD_ISO_14443B_COMMAND:
 			SendRawCommand14443B(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
@@ -910,10 +858,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			emlSet(c->d.asBytes,c->arg[0], c->arg[1]);
 			break;
 #endif
-
-		case CMD_SIMULATE_TAG_HF_LISTEN:
-			SimulateTagHfListen();
-			break;
 
 		case CMD_BUFF_CLEAR:
 			BigBuf_Clear();
