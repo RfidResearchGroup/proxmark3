@@ -392,7 +392,7 @@ int Cmdmandecoderaw(const char *Cmd)
 	int errCnt=0;
 	size_t size=0;
 	int invert=0;
-	size_t maxErr = 20;
+	int maxErr = 20;
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) > 5 || cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:  data manrawdecode [invert] [maxErr]");
@@ -1546,12 +1546,12 @@ int PSKDemod(const char *Cmd, bool verbose)
 		clk=0;
 	}
 	if (invert != 0 && invert != 1) {
-		if (verbose) PrintAndLog("Invalid argument: %s", Cmd);
+		if (g_debugMode || verbose) PrintAndLog("Invalid argument: %s", Cmd);
 		return 0;
 	}
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t BitLen = getFromGraphBuf(BitStream);
-	if (BitLen==0) return -1;
+	if (BitLen==0) return 0;
 	uint8_t carrier=countFC(BitStream, BitLen, 0);
 	if (carrier!=2 && carrier!=4 && carrier!=8){
 		//invalid carrier
