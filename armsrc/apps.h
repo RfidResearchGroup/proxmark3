@@ -169,6 +169,7 @@ void RAMFUNC SniffMifare(uint8_t param);
 
 /// epa.h
 void EPA_PACE_Collect_Nonce(UsbCommand * c);
+void EPA_PACE_Replay(UsbCommand *c);
 
 // mifarecmd.h
 void ReaderMifare(bool first_try);

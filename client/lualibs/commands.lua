@@ -84,7 +84,7 @@ local _commands = {
 	CMD_READER_LEGIC_RF =                                                0x0388,
 	CMD_WRITER_LEGIC_RF =                                                0x0389,
 	CMD_EPA_PACE_COLLECT_NONCE =                                         0x038A,
-	--//CMD_EPA_ =                                                         0x038B,
+	CMD_EPA_PACE_REPLAY =                                                0x038B,
 
 	CMD_SNOOP_ICLASS =                                                   0x0392,
 	CMD_SIMULATE_TAG_ICLASS =                                            0x0393,
