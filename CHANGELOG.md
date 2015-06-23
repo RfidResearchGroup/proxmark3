@@ -4,6 +4,11 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [Unreleased][unreleased]
 
+### Added
+- Add PACE replay functionality (frederikmoellers)
+
+### Fixed 
+- t55xx write timing (marshmellow)
 
 
 ## [2.1.0][2015-06-23]
