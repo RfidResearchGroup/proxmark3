@@ -127,7 +127,7 @@ size_t EPA_Parse_CardAccess(uint8_t *data,
                             pace_version_info_t *pace_info)
 {
 	size_t index = 0;
-	
+
 	while (index <= length - 2) {
 		// determine type of element
 		// SET or SEQUENCE
@@ -184,7 +184,7 @@ size_t EPA_Parse_CardAccess(uint8_t *data,
 			index += 2 + data[index + 1];
 		}
 	}
-	
+
 	// TODO: We should check whether we reached the end in error, but for that
 	//       we need a better parser (e.g. with states like IN_SET or IN_PACE_INFO)
 	return 0;
@@ -202,7 +202,7 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
 	// we reserve 262 bytes here just to be safe (256-byte APDU + SW + ISO frame)
 	uint8_t response_apdu[262];
 	int rapdu_length = 0;
-	
+
 	// select the file EF.CardAccess
 	rapdu_length = iso14_apdu((uint8_t *)apdu_select_binary_cardaccess,
 	                          sizeof(apdu_select_binary_cardaccess),
@@ -214,7 +214,7 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
 		Dbprintf("epa - no select cardaccess");
 		return -1;
 	}
-	
+
 	// read the file
 	rapdu_length = iso14_apdu((uint8_t *)apdu_read_binary,
 	                          sizeof(apdu_read_binary),
@@ -226,7 +226,7 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
 		Dbprintf("epa - no read cardaccess");
 		return -1;
 	}
-	
+
 	// copy the content into the buffer
 	// length of data available: apdu_length - 4 (ISO frame) - 2 (SW)
 	size_t to_copy = rapdu_length - 6;
@@ -243,7 +243,7 @@ static void EPA_PACE_Collect_Nonce_Abort(uint8_t step, int func_return)
 {
 	// power down the field
 	EPA_Finish();
-	
+
 	// send the USB packet
 	cmd_send(CMD_ACK,step,func_return,0,0,0);
 }
@@ -294,11 +294,11 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
 		EPA_PACE_Collect_Nonce_Abort(3, func_return);
 		return;
 	}
-	
+
 	// initiate the PACE protocol
 	// use the CAN for the password since that doesn't change
 	func_return = EPA_PACE_MSE_Set_AT(pace_version_info, 2);
-	
+
 	// now get the nonce
 	uint8_t nonce[256] = {0};
 	uint8_t requested_size = (uint8_t)c->arg[0];
@@ -309,10 +309,10 @@ void EPA_PACE_Collect_Nonce(UsbCommand *c)
 		EPA_PACE_Collect_Nonce_Abort(4, func_return);
 		return;
 	}
-  
-  // all done, return
+
+	// all done, return
 	EPA_Finish();
-	
+
 	// save received information
 	cmd_send(CMD_ACK,0,func_return,0,nonce,func_return);
 }
@@ -335,7 +335,7 @@ int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce)
 	       sizeof(apdu_general_authenticate_pace_get_nonce));
 	// append Le (requested length + 2 due to tag/length taking 2 bytes) in RAPDU
 	apdu[sizeof(apdu_general_authenticate_pace_get_nonce)] = requested_length + 4;
-	
+
 	// send it
 	uint8_t response_apdu[262];
 	int send_return = iso14_apdu(apdu,
@@ -348,7 +348,7 @@ int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce)
 	{
 		return -1;
 	}
-	
+
 	// if there is no nonce in the RAPDU, return here
 	if (send_return < 10)
 	{
@@ -363,7 +363,7 @@ int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce)
 	}
 	// copy the nonce
 	memcpy(nonce, response_apdu + 6, nonce_length);
-	
+
 	return nonce_length;
 }
 

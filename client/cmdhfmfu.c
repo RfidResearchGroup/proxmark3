@@ -272,7 +272,7 @@ static int ulev1_readSignature( uint8_t *response, uint16_t responseLength ){
 //  send 300000 + crc (read with extra byte(s))
 //  UL responds with read of page 0, fudan doesn't respond.
 //
-//make sure field is off before calling this function
+// make sure field is off before calling this function
 static int ul_fudan_check( void ){
 	iso14a_card_select_t card;
 	if ( !ul_select(&card) ) 
@@ -892,7 +892,7 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	uint8_t data[16] = {0x00};
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authKeyPtr = authenticationkey;
-	
+
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
 		switch(param_getchar(Cmd, cmdp))
@@ -967,7 +967,7 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 		PrintAndLog("block number too large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
 		return usage_hf_mfu_wrbl();
 	}
-	
+
 	// Swap endianness 
 	if (swapEndian && hasAuthKey) authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
 	if (swapEndian && hasPwdKey)  authKeyPtr = SwapEndian64(authenticationkey, 4, 4);
@@ -1083,7 +1083,7 @@ int CmdHF14AMfURdBl(const char *Cmd){
 		PrintAndLog("block number to large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
 		return usage_hf_mfu_rdbl();
 	}
-	
+
 	// Swap endianness 
 	if (swapEndian && hasAuthKey) authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
 	if (swapEndian && hasPwdKey)  authKeyPtr = SwapEndian64(authenticationkey, 4, 4);

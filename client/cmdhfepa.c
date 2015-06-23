@@ -29,9 +29,9 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 	unsigned int n = 0;
 	// delay between requests
 	unsigned int d = 0;
-	
+
 	sscanf(Cmd, "%u %u %u", &m, &n, &d);
-	
+
 	// values are expected to be > 0
 	m = m > 0 ? m : 1;
 	n = n > 0 ? n : 1;
@@ -44,7 +44,7 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 		UsbCommand c = {CMD_EPA_PACE_COLLECT_NONCE, {(int)m, 0, 0}};
 		SendCommand(&c);
 		UsbCommand resp;
-    
+
 		WaitForResponse(CMD_ACK,&resp);
 
 		// check if command failed
@@ -178,7 +178,7 @@ int CmdHFEPAPACEReplay(const char *Cmd)
 
 // UI-related stuff
 
-static const command_t CommandTable[] = 
+static const command_t CommandTable[] =
 {
   {"help",    CmdHelp,                   1, "This help"},
   {"cnonces", CmdHFEPACollectPACENonces, 0,

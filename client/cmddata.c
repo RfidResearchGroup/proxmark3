@@ -1561,7 +1561,7 @@ int PSKDemod(const char *Cmd, bool verbose)
 	}
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t BitLen = getFromGraphBuf(BitStream);
-	if (BitLen==0) return -1;
+	if (BitLen==0) return 0;
 	uint8_t carrier=countFC(BitStream, BitLen, 0);
 	if (carrier!=2 && carrier!=4 && carrier!=8){
 		//invalid carrier

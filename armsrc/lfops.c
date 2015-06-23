@@ -1043,10 +1043,10 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
  * To compensate antenna falling times shorten the write times
  * and enlarge the gap ones.
  */
-#define START_GAP 31*8 // was 250 // SPEC:   8 - 50fc [15fc]
-#define WRITE_GAP 20*8 // was 160 // SPEC:   8 - 20fc [10fc]
-#define WRITE_0   18*8 // was 144 // SPEC:  16 - 32fc [24fc]  192
-#define WRITE_1   50*8 // was 400 // SPEC:  48 - 64fc [56fc]  432 for T55x7; 448 for E5550
+#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (or 15fc)
+#define WRITE_GAP 20*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (or 10fc)
+#define WRITE_0   18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (or 24fc)
+#define WRITE_1   50*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (or 56fc)  432 for T55x7; 448 for E5550
 
 //  VALUES TAKEN FROM EM4x function: SendForward
 //  START_GAP = 440;       (55*8) cycles at 125Khz (8us = 1cycle)

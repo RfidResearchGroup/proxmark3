@@ -35,16 +35,14 @@ int CmdHF14BList(const char *Cmd)
 
 int CmdHF14BSim(const char *Cmd)
 {
-	UsbCommand c={CMD_SIMULATE_TAG_ISO_14443B};
-	clearCommandBuffer();
+  UsbCommand c={CMD_SIMULATE_TAG_ISO_14443B};
 	SendCommand(&c);
 	return 0;
 }
 
 int CmdHF14BSnoop(const char *Cmd)
 {
-	UsbCommand c = {CMD_SNOOP_ISO_14443B};
-	clearCommandBuffer();
+  UsbCommand c = {CMD_SNOOP_ISO_14443B};
 	SendCommand(&c);
 	return 0;
 }
@@ -246,109 +244,38 @@ char *get_ST_Chip_Model(uint8_t data){
 		case 0xC: sprintf(retStr, "SRT512"); break;
 		default: sprintf(retStr, "Unknown"); break;
 	}
-	return retStr;
-}
-
-static void print_st_info(uint8_t *data){
-	//uid = first 8 bytes in data
-	PrintAndLog(" UID: %s", sprint_hex(SwapEndian64(data,8,8),8));
-	PrintAndLog(" MFG: %02X, %s", data[6], getTagInfo(data[6]));
-	PrintAndLog("Chip: %02X, %s", data[5]>>2, get_ST_Chip_Model(data[5]>>2));
-	return;
-}
-
-int HF14BStdReader(uint8_t *data, uint8_t *datalen){
-
-	//05 00 00 = find one tag in field
-	//1d xx xx xx xx 20 00 08 01 00 = attrib xx=crc
-	//a3 = ?  (resp 03 e2 c2)
-	//02 = ?  (resp 02 6a d3)
-	// 022b (resp 02 67 00 [29  5b])
-	// 0200a40400 (resp 02 67 00 [29 5b])
-	// 0200a4040c07a0000002480300 (resp 02 67 00 [29 5b])
-	// 0200a4040c07a0000002480200 (resp 02 67 00 [29 5b])
-	// 0200a4040006a0000000010100 (resp 02 6a 82 [4b 4c])
-	// 0200a4040c09d27600002545500200 (resp 02 67 00 [29 5b])
-	// 0200a404000cd2760001354b414e4d30310000 (resp 02 6a 82 [4b 4c])
-	// 0200a404000ca000000063504b43532d313500 (resp 02 6a 82 [4b 4c])
-	// 0200a4040010a000000018300301000000000000000000 (resp 02 6a 82 [4b 4c])
-	//03 = ?  (resp 03 [e3 c2])
-	//c2 = ?  (resp c2 [66 15])
-	//b2 = ?  (resp a3 [e9 67])
-	bool crc = true;
-	*datalen = 3;
-	//std read cmd
-	data[0] = 0x05;
-	data[1] = 0x00;
-	data[2] = 0x00;
-
-	if (HF14BCmdRaw(true, &crc, false, data, datalen, false)==0) return 0;
-
-	if (data[0] != 0x50  || *datalen != 14 || !crc) return 0;
-
-	PrintAndLog ("\n14443-3b tag found:");
-	print_atqb_resp(data);
-
-	return 1;
+    
+    c.arg[0] = datalen;
+    c.arg[1] = reply;
+    c.arg[2] = power;
+    memcpy(c.d.asBytes,data,datalen);
+    
+    SendCommand(&c);
+    
+    if (reply) {
+        if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+            recv = resp.d.asBytes;
+            PrintAndLog("received %i octets",resp.arg[0]);
+            if(resp.arg[0] == 0)
+                return 0;
+            hexout = (char *)malloc(resp.arg[0] * 3 + 1);
+            if (hexout != NULL) {
+                uint8_t first, second;
+                for (int i = 0; i < resp.arg[0]; i++) { // data in hex
+                    sprintf(&hexout[i * 3], "%02X ", recv[i]);
 	}
-
-int HF14B_ST_Reader(uint8_t *data, uint8_t *datalen){
-	bool crc = true;
-	*datalen = 2;
-	//wake cmd
-	data[0] = 0x06;
-	data[1] = 0x00;
-
-	//leave power on
-	// verbose on for now for testing - turn off when functional
-	if (HF14BCmdRaw(true, &crc, true, data, datalen, false)==0) return rawClose();
-
-	if (*datalen != 3 || !crc) return rawClose();
-
-	uint8_t chipID = data[0];
-	// select
-	data[0] = 0x0E;
-	data[1] = chipID;
-	*datalen = 2;
-
-	//leave power on
-	// verbose on for now for testing - turn off when functional
-	if (HF14BCmdRaw(true, &crc, true, data, datalen, false)==0) return rawClose();
-
-	if (*datalen != 3 || !crc || data[0] != chipID) return rawClose();
-
-	// get uid
-	data[0] = 0x0B;
-	*datalen = 1;
-
-	//power off
-	// verbose on for now for testing - turn off when functional
-	if (HF14BCmdRaw(true, &crc, true, data, datalen, false)==0) return 0;
-	rawClose();
-	if (*datalen != 10 || !crc) return 0;
-
-	PrintAndLog("\n14443-3b ST tag found:");
-	print_st_info(data);
-	return 1;
-}
-
-// test for other 14b type tags (mimic another reader - don't have tags to identify)
-int HF14B_Other_Reader(uint8_t *data, uint8_t *datalen){
-	bool crc = true;
-	*datalen = 4;
-	//std read cmd
-	data[0] = 0x00;
-	data[1] = 0x0b;
-	data[2] = 0x3f;
-	data[3] = 0x80;
-
-	if (HF14BCmdRaw(true, &crc, false, data, datalen, false)!=0) {
-		if (*datalen > 2 || !crc) {
-			PrintAndLog ("\n14443-3b tag found:");
-			PrintAndLog ("Unknown tag type answered to a 0x000b3f80 command ans:");
-			PrintAndLog ("%s",sprint_hex(data,*datalen));
-			return 1;
-		}
+                PrintAndLog("%s", hexout);
+                free(hexout);
+				if (resp.arg[0] > 2) {
+					ComputeCrc14443(CRC_14443_B, recv, resp.arg[0]-2, &first, &second);
+					if(recv[resp.arg[0]-2]==first && recv[resp.arg[0]-1]==second) {
+						PrintAndLog("CRC OK");
+					} else {
+						PrintAndLog("CRC failed");
+					}
+                }
+            } else {
+                PrintAndLog("malloc failed your client has low memory?");
 	}
 
 	crc = false;
@@ -474,10 +401,8 @@ static command_t CommandTable[] =
 {
 	{"help",        CmdHelp,        1, "This help"},
 	{"list",        CmdHF14BList,   0, "[Deprecated] List ISO 14443b history"},
-	{"reader",      CmdHF14BReader, 0, "Find 14b tag (HF ISO 14443b)"},
-	{"sim",         CmdHF14BSim,     0, "Fake ISO 14443B tag"},
-
-	{"snoop",       CmdHF14BSnoop,  0, "Eavesdrop ISO 14443B"},
+  {"sim",         CmdHF14BSim,    0, "Fake ISO 14443B tag"},
+  {"snoop",       CmdHF14BSnoop,  0, "Eavesdrop ISO 14443B"},
 	{"sri512read",  CmdSri512Read,  0, "Read contents of a SRI512 tag"},
 	{"srix4kread",  CmdSrix4kRead,  0, "Read contents of a SRIX4K tag"},
 	{"raw",         CmdHF14BCmdRaw, 0, "Send raw hex data to tag"},
