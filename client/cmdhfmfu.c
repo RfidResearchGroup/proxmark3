@@ -908,10 +908,6 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authKeyPtr = authenticationkey;
 
-	// starting with getting tagtype
-	TagTypeUL_t tagtype = GetHF14AMfU_Type();
-	if (tagtype == UL_ERROR) return -1;
-
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
 		switch(param_getchar(Cmd, cmdp))
@@ -943,19 +939,8 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 			case 'b':
 			case 'B':
 				blockNo = param_get8(Cmd, cmdp+1);
-				
-				uint8_t maxblockno = 0;
-				for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++){
-					if (tagtype & UL_TYPES_ARRAY[idx])
-						maxblockno = UL_MEMORY_ARRAY[idx];
-				}
-		
 				if (blockNo < 0) {
 					PrintAndLog("Wrong block number");
-					errors = true;
-				}
-				if (blockNo > maxblockno){
-					PrintAndLog("block number too large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
 					errors = true;
 				}
 				cmdp += 2;
@@ -984,6 +969,19 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	}
 
 	if ( blockNo == -1 ) return usage_hf_mfu_wrbl();
+	// starting with getting tagtype
+	TagTypeUL_t tagtype = GetHF14AMfU_Type();
+	if (tagtype == UL_ERROR) return -1;
+
+	uint8_t maxblockno = 0;
+	for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++){
+		if (tagtype & UL_TYPES_ARRAY[idx])
+			maxblockno = UL_MEMORY_ARRAY[idx];
+	}
+	if (blockNo > maxblockno){
+		PrintAndLog("block number too large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
+		return usage_hf_mfu_wrbl();
+	}
 
 	// Swap endianness 
 	if (swapEndian && hasAuthKey) authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
@@ -1035,10 +1033,6 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authKeyPtr = authenticationkey;
 
-	// starting with getting tagtype
-	TagTypeUL_t tagtype = GetHF14AMfU_Type();
-	if (tagtype == UL_ERROR) return -1;
-
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
 		switch(param_getchar(Cmd, cmdp))
@@ -1070,19 +1064,8 @@ int CmdHF14AMfURdBl(const char *Cmd){
 			case 'b':
 			case 'B':
 				blockNo = param_get8(Cmd, cmdp+1);
-
-				uint8_t maxblockno = 0;
-				for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++){
-					if (tagtype & UL_TYPES_ARRAY[idx])
-						maxblockno = UL_MEMORY_ARRAY[idx];
-				}
-
 				if (blockNo < 0) {
 					PrintAndLog("Wrong block number");
-					errors = true;
-				}
-				if (blockNo > maxblockno){
-					PrintAndLog("block number to large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
 					errors = true;
 				}
 				cmdp += 2;
@@ -1102,6 +1085,19 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	}
 
 	if ( blockNo == -1 ) return usage_hf_mfu_rdbl();
+	// start with getting tagtype
+	TagTypeUL_t tagtype = GetHF14AMfU_Type();
+	if (tagtype == UL_ERROR) return -1;
+
+	uint8_t maxblockno = 0;
+	for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++){
+		if (tagtype & UL_TYPES_ARRAY[idx])
+			maxblockno = UL_MEMORY_ARRAY[idx];
+	}
+	if (blockNo > maxblockno){
+		PrintAndLog("block number to large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
+		return usage_hf_mfu_rdbl();
+	}
 
 	// Swap endianness 
 	if (swapEndian && hasAuthKey) authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
