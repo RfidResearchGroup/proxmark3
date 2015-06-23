@@ -3,6 +3,16 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [Unreleased][unreleased]
+
+### Added
+- Add PACE replay functionality (frederikmoellers)
+
+### Fixed 
+- t55xx write timing (marshmellow)
+
+
+## [2.1.0][2015-06-23]
+
 ### Changed
 - Added ultralight/ntag tag type detection to `hf 14a read` (marshmellow)
 - Improved ultralight dump command to auto detect tag type, take authentication, and dump full memory (or subset specified) of known tag types (iceman1001 / marshmellow)
@@ -14,12 +24,14 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ### Fixed
 - Fixed EM4x50 read/demod of the tags broadcasted memory blocks. 'lf em4x em4x50read' (not page read) (marshmellow)
 - Fixed issue #19, problems with LF T55xx commands (iceman1001, marshmellow)
+- Fixed various problems with iso14443b, issue #103 (piwi, marshmellow)
 
 ### Added
 - Added `hf search` - currently tests for 14443a tags, iclass tags, and 15693 tags (marshmellow) 
 - Added `hf mfu info` Ultralight/NTAG info command - reads tag configuration and info, allows authentication if needed (iceman1001, marshmellow)
 - Added Mifare Ultralight C and Ultralight EV1/NTAG authentication. (iceman1001)
-- Added changelog
+- Added changelog			 
+- Added `data fdxbdemod` - Demodulate a FDX-B ISO11784/85 Biphase tag from GraphBuffer aka ANIMAL TAG (marshmellow, iceman1001)
 
 ## [2.0.0] - 2015-03-25
 ### Changed
