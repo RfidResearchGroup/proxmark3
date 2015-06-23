@@ -1556,7 +1556,7 @@ int PSKDemod(const char *Cmd, bool verbose)
 		clk=0;
 	}
 	if (invert != 0 && invert != 1) {
-		if (verbose) PrintAndLog("Invalid argument: %s", Cmd);
+		if (g_debugMode || verbose) PrintAndLog("Invalid argument: %s", Cmd);
 		return 0;
 	}
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};

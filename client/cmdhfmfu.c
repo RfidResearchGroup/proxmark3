@@ -259,6 +259,19 @@ static int ulev1_readSignature( uint8_t *response, uint16_t responseLength ){
 	return len;
 }
 
+
+// Fudan check checks for which error is given for a command with incorrect crc
+// NXP UL chip responds with 01, fudan 00.
+// other possible checks:
+//  send a0 + crc 
+//  UL responds with 00, fudan doesn't respond
+//  or
+//  send a200 + crc
+//  UL doesn't respond, fudan responds with 00
+//  or
+//  send 300000 + crc (read with extra byte(s))
+//  UL responds with read of page 0, fudan doesn't respond.
+//
 //make sure field is off before calling this function
 static int ul_fudan_check( void ){
 	iso14a_card_select_t card;
@@ -880,10 +893,6 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authKeyPtr = authenticationkey;
 	
-	// starting with getting tagtype
-	TagTypeUL_t tagtype = GetHF14AMfU_Type();
-	if (tagtype == UL_ERROR) return -1;
-	
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
 		switch(param_getchar(Cmd, cmdp))
@@ -915,19 +924,8 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 			case 'b':
 			case 'B':
 				blockNo = param_get8(Cmd, cmdp+1);
-				
-				uint8_t maxblockno = 0;
-				for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++){
-					if (tagtype & UL_TYPES_ARRAY[idx])
-						maxblockno = UL_MEMORY_ARRAY[idx];
-				}
-		
 				if (blockNo < 0) {
 					PrintAndLog("Wrong block number");
-					errors = true;					
-				}
-				if (blockNo > maxblockno){
-					PrintAndLog("block number too large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
 					errors = true;									
 				}
 				cmdp += 2;
@@ -956,6 +954,19 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	}
 
 	if ( blockNo == -1 ) return usage_hf_mfu_wrbl();
+	// starting with getting tagtype
+	TagTypeUL_t tagtype = GetHF14AMfU_Type();
+	if (tagtype == UL_ERROR) return -1;
+
+	uint8_t maxblockno = 0;
+	for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++){
+		if (tagtype & UL_TYPES_ARRAY[idx])
+			maxblockno = UL_MEMORY_ARRAY[idx];
+	}
+	if (blockNo > maxblockno){
+		PrintAndLog("block number too large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
+		return usage_hf_mfu_wrbl();
+	}
 	
 	// Swap endianness 
 	if (swapEndian && hasAuthKey) authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
@@ -1007,10 +1018,6 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authKeyPtr = authenticationkey;
 
-	// starting with getting tagtype
-	TagTypeUL_t tagtype = GetHF14AMfU_Type();
-	if (tagtype == UL_ERROR) return -1;
-	
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
 		switch(param_getchar(Cmd, cmdp))
@@ -1042,19 +1049,8 @@ int CmdHF14AMfURdBl(const char *Cmd){
 			case 'b':
 			case 'B':
 				blockNo = param_get8(Cmd, cmdp+1);
-				
-				uint8_t maxblockno = 0;
-				for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++){
-					if (tagtype & UL_TYPES_ARRAY[idx])
-						maxblockno = UL_MEMORY_ARRAY[idx];
-				}
-		
 				if (blockNo < 0) {
 					PrintAndLog("Wrong block number");
-					errors = true;					
-				}
-				if (blockNo > maxblockno){
-					PrintAndLog("block number to large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
 					errors = true;									
 				}
 				cmdp += 2;
@@ -1074,6 +1070,19 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	}
 
 	if ( blockNo == -1 ) return usage_hf_mfu_rdbl();
+	// start with getting tagtype
+	TagTypeUL_t tagtype = GetHF14AMfU_Type();
+	if (tagtype == UL_ERROR) return -1;
+
+	uint8_t maxblockno = 0;
+	for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++){
+		if (tagtype & UL_TYPES_ARRAY[idx])
+			maxblockno = UL_MEMORY_ARRAY[idx];
+	}
+	if (blockNo > maxblockno){
+		PrintAndLog("block number to large. Max block is %u/0x%02X \n", maxblockno,maxblockno);
+		return usage_hf_mfu_rdbl();
+	}
 	
 	// Swap endianness 
 	if (swapEndian && hasAuthKey) authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
@@ -1174,6 +1183,18 @@ int usage_hf_mfu_wrbl(void) {
 	PrintAndLog("");
 	PrintAndLog("    sample : hf mfu wrbl b 0 d 01234567");
 	PrintAndLog("           : hf mfu wrbl b 0 d 01234567 k AABBCCDDD\n");
+	return 0;
+}
+
+int usage_hf_mfu_eload(void) {
+	PrintAndLog("It loads emulator dump from the file `filename.eml`\n");
+	PrintAndLog("Usage:  hf mf eload t <card memory> i <file name w/o `.eml`>\n");
+	PrintAndLog("  Options:");	
+	PrintAndLog("  t <card memory> : Tag memorysize/type");
+	PrintAndLog("  i <file>        : file name w/o `.eml`");
+	PrintAndLog("");
+	PrintAndLog("    sample : hf mfu eload filename");
+	PrintAndLog("           : hf mfu eload 4 filename");
 	return 0;
 }
 
@@ -1790,6 +1811,97 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	// return;
 // }
 
+int CmdHF14AMfuELoad(const char *Cmd)
+{
+	FILE * f;
+	char filename[FILE_PATH_SIZE];
+	char *fnameptr = filename;
+	char buf[64] = {0x00};
+	uint8_t buf8[64] = {0x00};
+	int i, len, blockNum, numBlocks;
+	int nameParamNo = 1;
+	
+	char ctmp = param_getchar(Cmd, 0);
+		
+	if ( ctmp == 'h' || ctmp == 0x00) {
+		return usage_hf_mfu_eload();
+	}	
+/*
+	switch (ctmp) {
+		case '0' : numBlocks = 5*4; break;
+		case '1' : 
+		case '\0': numBlocks = 16*4; break;
+		case '2' : numBlocks = 32*4; break;
+		case '4' : numBlocks = 256; break;
+		default:  {
+			numBlocks = 16*4;
+			nameParamNo = 0;
+		}
+	}
+
+	len = param_getstr(Cmd,nameParamNo,filename);
+	
+	if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
+
+	fnameptr += len;
+
+	sprintf(fnameptr, ".eml"); 
+	
+	// open file
+	f = fopen(filename, "r");
+	if (f == NULL) {
+		PrintAndLog("File %s not found or locked", filename);
+		return 1;
+	}
+	
+	blockNum = 0;
+	while(!feof(f)){
+		memset(buf, 0, sizeof(buf));
+		
+		if (fgets(buf, sizeof(buf), f) == NULL) {
+			
+			if (blockNum >= numBlocks) break;
+			
+			PrintAndLog("File reading error.");
+			fclose(f);
+			return 2;
+		}
+		
+		if (strlen(buf) < 32){
+			if(strlen(buf) && feof(f))
+				break;
+			PrintAndLog("File content error. Block data must include 32 HEX symbols");
+			fclose(f);
+			return 2;
+		}
+		
+		for (i = 0; i < 32; i += 2) {
+			sscanf(&buf[i], "%02x", (unsigned int *)&buf8[i / 2]);
+		}
+		
+		if (mfEmlSetMem(buf8, blockNum, 1)) {
+			PrintAndLog("Cant set emul block: %3d", blockNum);
+			fclose(f);
+			return 3;
+		}
+		printf(".");
+		blockNum++;
+		
+		if (blockNum >= numBlocks) break;
+	}
+	fclose(f);
+	printf("\n");
+	
+	if ((blockNum != numBlocks)) {
+		PrintAndLog("File content error. Got %d must be %d blocks.",blockNum, numBlocks);
+		return 4;
+	}
+	PrintAndLog("Loaded %d blocks from file: %s", blockNum, filename);
+	*/
+	return 0;
+}
+
+
 //------------------------------------
 // Menu Stuff
 //------------------------------------
@@ -1800,7 +1912,8 @@ static command_t CommandTable[] =
 	{"info",	CmdHF14AMfUInfo,	0, "Tag information"},
 	{"dump",	CmdHF14AMfUDump,	0, "Dump Ultralight / Ultralight-C / NTAG tag to binary file"},
 	{"rdbl",	CmdHF14AMfURdBl,	0, "Read block"},
-	{"wrbl",	CmdHF14AMfUWrBl,	0, "Write block"},    
+	{"wrbl",	CmdHF14AMfUWrBl,	0, "Write block"},
+	{"eload",	CmdHF14AMfuELoad,	0, "Load from file emulator dump"},
 	{"cauth",	CmdHF14AMfucAuth,	0, "Authentication    - Ultralight C"},
 	{"setpwd",	CmdHF14AMfucSetPwd, 1, "Set 3des password - Ultralight-C"},
 	{"setuid",	CmdHF14AMfucSetUid, 1, "Set UID - MAGIC tags only"},
