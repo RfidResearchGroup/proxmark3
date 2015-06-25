@@ -23,9 +23,11 @@
 
 static int CmdHelp(const char *Cmd);
 
-static void lookupChipID(uint32_t iChipID)
+static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
 {
 	char asBuff[100];
+	uint32_t mem_avail = 0;
+	
 	switch(iChipID)
 	{
 		case 0x270B0A40:
@@ -103,37 +105,43 @@ static void lookupChipID(uint32_t iChipID)
 	switch((iChipID&0xF00)>>8)
 	{
 		case 0:
-			sprintf(asBuff,"None");
+			mem_avail = 0;
 			break;
 		case 1:
-			sprintf(asBuff,"8K bytes");
+			mem_avail = 8;
 			break;
 		case 2:
-			sprintf(asBuff,"16K bytes");
+			mem_avail = 16;
 			break;
 		case 3:
-			sprintf(asBuff,"32K bytes");
+			mem_avail = 32;
 			break;
 		case 5:
-			sprintf(asBuff,"64K bytes");
+			mem_avail = 64;
 			break;
 		case 7:
-			sprintf(asBuff,"128K bytes");
+			mem_avail = 128;
 			break;
 		case 9:
-			sprintf(asBuff,"256K bytes");
+			mem_avail = 256;
 			break;
 		case 10:
-			sprintf(asBuff,"512K bytes");
+			mem_avail = 512;
 			break;
 		case 12:
-			sprintf(asBuff,"1024K bytes");
+			mem_avail = 1024;
 			break;
 		case 14:
-			sprintf(asBuff,"2048K bytes");
+			mem_avail = 2048;
 			break;
 	}
-	PrintAndLog("Nonvolatile Program Memory Size: %s",asBuff);
+	PrintAndLog("Nonvolatile Program Memory Size: %dK bytes. Used: %d bytes (%2.0f\%). Free: %d bytes (%2.0f\%).", 
+				mem_avail, 
+				mem_used, 
+				mem_avail == 0 ? 0 : (float)mem_used/(mem_avail*1024)*100,
+				mem_avail*1024 - mem_used,
+				mem_avail == 0 ? 0 : (float)(mem_avail*1024-mem_used)/(mem_avail*1024)*100
+				);
 	switch((iChipID&0xF000)>>12)
 	{
 		case 0:
@@ -396,12 +404,23 @@ int CmdTune(const char *Cmd)
 
 int CmdVersion(const char *Cmd)
 {
+
   UsbCommand c = {CMD_VERSION};
-  UsbCommand resp;
+	static UsbCommand resp = {0, {0, 0, 0}};
+	
+	if (resp.arg[0] == 0 && resp.arg[1] == 0) { // no cached information available
   SendCommand(&c);
-  if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
-      lookupChipID(resp.arg[0]);
-  }
+		if (WaitForResponseTimeout(CMD_ACK,&resp,1000) && Cmd != NULL) {
+			PrintAndLog("Prox/RFID mark3 RFID instrument");
+			PrintAndLog((char*)resp.d.asBytes);
+			lookupChipID(resp.arg[0], resp.arg[1]);
+		}
+	} else if (Cmd != NULL) {
+		PrintAndLog("Prox/RFID mark3 RFID instrument");
+		PrintAndLog((char*)resp.d.asBytes);
+		lookupChipID(resp.arg[0], resp.arg[1]);
+	}
+	
   return 0;
 }
 

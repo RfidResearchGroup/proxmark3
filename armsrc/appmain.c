@@ -261,11 +261,11 @@ void ReadMem(int addr)
 /* osimage version information is linked in */
 extern struct version_information version_information;
 /* bootrom version information is pointed to from _bootphase1_version_pointer */
-extern char *_bootphase1_version_pointer, _flash_start, _flash_end;
+extern char *_bootphase1_version_pointer, _flash_start, _flash_end, _bootrom_start, _bootrom_end, __data_src_start__;
 void SendVersion(void)
 {
-	char temp[512]; /* Limited data payload in USB packets */
-	DbpString("Prox/RFID mark3 RFID instrument");
+	char temp[USB_CMD_DATA_SIZE]; /* Limited data payload in USB packets */
+	char VersionString[USB_CMD_DATA_SIZE] = { '\0' };
 
 	/* Try to find the bootrom version information. Expect to find a pointer at
 	 * symbol _bootphase1_version_pointer, perform slight sanity checks on the
@@ -273,19 +273,24 @@ void SendVersion(void)
 	 */
 	char *bootrom_version = *(char**)&_bootphase1_version_pointer;
 	if( bootrom_version < &_flash_start || bootrom_version >= &_flash_end ) {
-		DbpString("bootrom version information appears invalid");
+		strcat(VersionString, "bootrom version information appears invalid\n");
 	} else {
 		FormatVersionInformation(temp, sizeof(temp), "bootrom: ", bootrom_version);
-		DbpString(temp);
+		strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 	}
 
 	FormatVersionInformation(temp, sizeof(temp), "os: ", &version_information);
-	DbpString(temp);
+	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 
-	FpgaGatherVersion(temp, sizeof(temp));
-	DbpString(temp);
-	// Send Chip ID
-	cmd_send(CMD_ACK,*(AT91C_DBGU_CIDR),0,0,NULL,0);
+	FpgaGatherVersion(FPGA_BITSTREAM_LF, temp, sizeof(temp));
+	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
+	FpgaGatherVersion(FPGA_BITSTREAM_HF, temp, sizeof(temp));
+	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
+
+	// Send Chip ID and used flash memory
+	uint32_t text_and_rodata_section_size = (uint32_t)&__data_src_start__ - (uint32_t)&_flash_start;
+	uint32_t compressed_data_section_size = common_area.arg1;
+	cmd_send(CMD_ACK, *(AT91C_DBGU_CIDR), text_and_rodata_section_size + compressed_data_section_size, 0, VersionString, strlen(VersionString));
 }
 
 #ifdef WITH_LF

@@ -25,6 +25,7 @@ CC	= $(CROSS)gcc
 AS	= $(CROSS)as
 LD	= $(CROSS)ld
 OBJCOPY = $(CROSS)objcopy
+GZIP=gzip
 
 OBJDIR	= obj
 
@@ -61,21 +62,19 @@ DETECTED_OS=Windows
 endif
 
 
-# Also search prerequisites in the common directory (for usb.c), and the fpga directory (for fpga.bit)
-VPATH = . ../common/ ../fpga/
+# Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the zlib directory
+VPATH = . ../common ../fpga ../zlib
 
 INCLUDES = ../include/proxmark3.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/usb_cmd.h $(APP_INCLUDES)
 
-# compile hint: -flto to minimise size.
-CFLAGS =  -c $(INCLUDE) -Wall -Werror  -fdata-sections -ffunction-sections -pedantic -std=c99 -Os $(APP_CFLAGS)
-#CFLAGS =  -c $(INCLUDE) -Wall -Werror  -pedantic -std=c99 -Os $(APP_CFLAGS)
+CFLAGS =  -c $(INCLUDE) -Wall -Werror -pedantic -std=c99 $(APP_CFLAGS) -Os
 LDFLAGS = -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
 
 LIBS = -lgcc
 
-THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(THUMBSRC))
-ARMOBJ   = $(ARMSRC:%.c=$(OBJDIR)/%.o)
-ASMOBJ   = $(patsubst %.s,$(OBJDIR)/%.o,$(ASMSRC))
+THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(THUMBSRC)))
+ARMOBJ   = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(ARMSRC)))
+ASMOBJ   = $(patsubst %.s,$(OBJDIR)/%.o,$(notdir $(ASMSRC)))
 VERSIONOBJ = $(OBJDIR)/version.o
 
 $(THUMBOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
@@ -111,6 +110,7 @@ DEPENDENCY_FILES = $(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(THUMBSRC))) \
 	$(patsubst %.s,$(OBJDIR)/%.d,$(notdir $(ASMSRC)))
 
 $(DEPENDENCY_FILES): Makefile ../common/Makefile.common
+
 $(patsubst %.o,%.d,$(THUMBOBJ) $(ARMOBJ)): $(OBJDIR)/%.d: %.c
 	@$(CC) -MM -MT "$(@) $(@:.d=.o)" $(CFLAGS) $< > $@
 $(patsubst %.o,%.d,$(ASMOBJ)):$(OBJDIR)/%.d: %.s

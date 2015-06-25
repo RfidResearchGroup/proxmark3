@@ -268,15 +268,15 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
 	dst[0] = 0;
 	strncat(dst, prefix, len-1);
 	if(v->magic != VERSION_INFORMATION_MAGIC) {
-		strncat(dst, "Missing/Invalid version information", len - strlen(dst) - 1);
+		strncat(dst, "Missing/Invalid version information\n", len - strlen(dst) - 1);
 		return;
 	}
 	if(v->versionversion != 1) {
-		strncat(dst, "Version information not understood", len - strlen(dst) - 1);
+		strncat(dst, "Version information not understood\n", len - strlen(dst) - 1);
 		return;
 	}
 	if(!v->present) {
-		strncat(dst, "Version information not available", len - strlen(dst) - 1);
+		strncat(dst, "Version information not available\n", len - strlen(dst) - 1);
 		return;
 	}
 
@@ -289,6 +289,7 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
 
 	strncat(dst, " ", len - strlen(dst) - 1);
 	strncat(dst, v->buildtime, len - strlen(dst) - 1);
+	strncat(dst, "\n", len - strlen(dst) - 1);
 }
 
 //  -------------------------------------------------------------------------

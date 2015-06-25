@@ -61,10 +61,6 @@
 #define SPI_FPGA_MODE	0
 #define SPI_LCD_MODE	1
 
-#define FPGA_BITSTREAM_ERR 0
-#define FPGA_BITSTREAM_LF 1
-#define FPGA_BITSTREAM_HF 2
-
 #define TRUE 1
 #define FALSE 0
 

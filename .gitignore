@@ -12,6 +12,7 @@
 *.bin
 *.dll
 *.moc.cpp
+*.z
 *.exe
 proxmark
 proxmark3

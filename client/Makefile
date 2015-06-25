@@ -9,12 +9,13 @@ include ../common/Makefile.common
 CC=gcc
 CXX=g++
 #COMMON_FLAGS = -m32
-VPATH = ../common
+VPATH = ../common ../zlib
 OBJDIR = obj
 
-LDLIBS =  -L/mingw/lib -L/opt/local/lib -L/usr/local/lib ../liblua/liblua.a -lm -lreadline -lpthread -lgdi32
+LDLIBS =  -L/mingw/lib -L/opt/local/lib -L/usr/local/lib -lm -lreadline -lpthread -lgdi32
+LUALIB = ../liblua/liblua.a
 LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=c99 -I. -I../include -I../common -I/mingw/include -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O4
+CFLAGS = -std=c99 -I. -I../include -I../common -I../zlib -I/mingw/include -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O4
 LUAPLATFORM = generic
 
 ifneq (,$(findstring MINGW,$(platform)))
@@ -35,8 +36,8 @@ else ifeq ($(platform),Darwin)
 else
     CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
     QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
+    LUALIB +=  -ldl
     MOC = $(shell pkg-config --variable=moc_location QtCore)
-    LDLIBS +=  -ldl
     # Below is a variant you can use if you have problems compiling with QT5 on ubuntu. see http://www.proxmark.org/forum/viewtopic.php?id=1661 for more info. 
     #MOC = /usr/lib/x86_64-linux-gnu/qt4/bin/moc
     LUAPLATFORM = linux
@@ -121,20 +122,26 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			reveng/model.c\
 			reveng/poly.c\
 			reveng/getopt.c\
+	   
+
+ZLIBSRCS = deflate.c adler32.c trees.c zutil.c inflate.c inffast.c inftrees.c
+ZLIB_FLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED 
+#-DDEBUG -Dverbose=1
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
+ZLIBOBJS = $(ZLIBSRCS:%.c=$(OBJDIR)/%.o)
 
 RM = rm -f
-BINS = proxmark3 flasher #snooper cli
-CLEAN = cli cli.exe flasher flasher.exe proxmark3 proxmark3.exe snooper snooper.exe $(CMDOBJS) $(OBJDIR)/*.o *.o *.moc.cpp
+BINS = proxmark3 flasher fpga_compress #snooper cli
+CLEAN = cli cli.exe flasher flasher.exe proxmark3 proxmark3.exe fpga_compress fpga_compress.exe snooper snooper.exe $(CMDOBJS) $(OBJDIR)/*.o *.o *.moc.cpp
 
 all: lua_build $(BINS) 
 
 all-static: LDLIBS:=-static $(LDLIBS)
-all-static: snooper cli flasher
+all-static: snooper cli flasher fpga_compress
 	
-proxmark3: LDLIBS+=$(QTLDLIBS)
+proxmark3: LDLIBS+=$(LUALIB) $(QTLDLIBS)
 proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(QTGUI)
 	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
@@ -147,8 +154,11 @@ cli: $(OBJDIR)/cli.o $(COREOBJS) $(CMDOBJS) $(OBJDIR)/guidummy.o
 flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS)
 	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
+fpga_compress: $(OBJDIR)/fpga_compress.o $(ZLIBOBJS)
+	$(CXX) $(CXXFLAGS) $(ZLIB_FLAGS) $^ $(LDLIBS) -o $@
+
 $(OBJDIR)/%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) $(ZLIB_FLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
@@ -162,17 +172,6 @@ clean:
 
 tarbin: $(BINS)
 	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%)
-
-# must be run as root
-install_kext: Info.plist
-	mkdir -p /System/Library/Extensions/Proxmark3.kext/Contents
-	cp Info.plist /System/Library/Extensions/Proxmark3.kext/Contents
-	chown -R root:wheel /System/Library/Extensions/Proxmark3.kext
-	chmod 755 /System/Library/Extensions/Proxmark3.kext /System/Library/Extensions/Proxmark3.kext/Contents
-	chmod 644 /System/Library/Extensions/Proxmark3.kext/Contents/Info.plist
-	rm -rf /System/Library/Caches/com.apple.kext.caches
-	touch /System/Library/Extensions
-	@echo "*** You may need to reboot for the kext to take effect."
 
 lua_build:
 	@echo Compiling liblua, using platform $(LUAPLATFORM)

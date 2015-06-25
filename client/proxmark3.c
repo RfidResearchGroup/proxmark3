@@ -24,7 +24,7 @@
 #include "ui.h"
 #include "sleep.h"
 #include "cmdparser.h"
-#include "cmdmain.h"
+#include "cmdhw.h"
 
 // a global mutex to prevent interlaced printing from different threads
 pthread_mutex_t print_lock;
@@ -105,6 +105,8 @@ static void *main_loop(void *targ) {
   if (arg->usb_present == 1) {
 		rarg.run = 1;
     pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
+		// cache Version information now:
+		CmdVersion(NULL);
   }
 
   FILE *script_file = NULL;

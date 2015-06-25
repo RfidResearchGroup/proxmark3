@@ -665,7 +665,7 @@ int CmdHFSearch(const char *Cmd){
 		PrintAndLog("\nValid ISO14443A Tag Found - Quiting Search\n");
 		return ans;
 	} 
-	ans = HF14BReader(false);
+	ans = HF14BInfo(false);
 	if (ans) {
 		PrintAndLog("\nValid ISO14443B Tag Found - Quiting Search\n");
 		return ans;
@@ -699,7 +699,7 @@ static command_t CommandTable[] =
   {"topaz",			CmdHFTopaz,		1, "{ TOPAZ (NFC Type 1) RFIDs... }"},
   {"tune",			CmdHFTune,      0, "Continuously measure HF antenna tuning"},
   {"list",        CmdHFList,        1, "List protocol data in trace buffer"},
-  {"search",      CmdHFSearch,      1, "Search for known HF tags"},
+  {"search",      CmdHFSearch,      1, "Search for known HF tags [preliminary]"},
 	{NULL, NULL, 0, NULL}
 };
 
