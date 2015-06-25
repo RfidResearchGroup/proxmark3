@@ -18,7 +18,7 @@ int CmdHF14AMifare(const char *Cmd)
 	uint32_t uid = 0;
 	uint32_t nt = 0, nr = 0;
 	uint64_t par_list = 0, ks_list = 0, r_key = 0;
-	uint8_t isOK = 0;
+	int16_t isOK = 0;
 	uint8_t keyBlock[8] = {0};
 
 	UsbCommand c = {CMD_READER_MIFARE, {true, 0, 0}};
@@ -26,7 +26,7 @@ int CmdHF14AMifare(const char *Cmd)
 	// message
 	printf("-------------------------------------------------------------------------\n");
 	printf("Executing command. Expected execution time: 25sec on average  :-)\n");
-	printf("Press the key on the proxmark3 device to abort both proxmark3 and client.\n");
+	printf("Press button on the proxmark3 device to abort both proxmark3 and client.\n");
 	printf("-------------------------------------------------------------------------\n");
 
 	
@@ -49,14 +49,19 @@ start:
 		
 		UsbCommand resp;
 		if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
-			isOK  = resp.arg[0] & 0xff;
+			isOK  = resp.arg[0];
 			uid = (uint32_t)bytes_to_num(resp.d.asBytes +  0, 4);
 			nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
 			par_list = bytes_to_num(resp.d.asBytes +  8, 8);
 			ks_list = bytes_to_num(resp.d.asBytes +  16, 8);
 			nr = bytes_to_num(resp.d.asBytes + 24, 4);
 			printf("\n\n");
-			if (!isOK) PrintAndLog("Proxmark can't get statistic info. Execution aborted.\n");
+			switch (isOK) {
+				case -1 : PrintAndLog("Button pressed. Aborted.\n"); break;
+				case -2 : PrintAndLog("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).\n"); break;
+				case -3 : PrintAndLog("Card is not vulnerable to Darkside attack (its random number generator is not predictable).\n"); break;
+				default: ;
+			}
 			break;
 		}
 	}	
@@ -623,8 +628,14 @@ int CmdHF14AMfNested(const char *Cmd)
 	
 	if (cmdp == 'o') {
 		PrintAndLog("--target block no:%3d, target key type:%c ", trgBlockNo, trgKeyType?'B':'A');
-		if (mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, true)) {
-			PrintAndLog("Nested error.");
+		int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, true);
+		if (isOK) {
+			switch (isOK) {
+				case -1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
+				case -2 : PrintAndLog("Button pressed. Aborted.\n"); break;
+				case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (random numbers are not predictable).\n"); break;
+				default : PrintAndLog("Unknown Error.\n");
+			}
 			return 2;
 		}
 		key64 = bytes_to_num(keyBlock, 6);
@@ -697,11 +708,17 @@ int CmdHF14AMfNested(const char *Cmd)
 				for (trgKeyType = 0; trgKeyType < 2; trgKeyType++) { 
 					if (e_sector[sectorNo].foundKey[trgKeyType]) continue;
 					PrintAndLog("-----------------------------------------------");
-					if(mfnested(blockNo, keyType, key, FirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate)) {
-						PrintAndLog("Nested error.\n");
+					int16_t isOK = mfnested(blockNo, keyType, key, FirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate);
+					if(isOK) {
+						switch (isOK) {
+							case -1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
+							case -2 : PrintAndLog("Button pressed. Aborted.\n"); break;
+							case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (random numbers are not predictable).\n"); break;
+							default : PrintAndLog("Unknown Error.\n");
+						}
 						free(e_sector);
-						return 2;					}
-					else {
+						return 2;
+					} else {
 						calibrate = false;
 					}
 					

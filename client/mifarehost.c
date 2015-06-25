@@ -71,9 +71,10 @@ void* nested_worker_thread(void *arg)
 
 int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t * resultKey, bool calibrate) 
 {
-	uint16_t i, len;
+	uint16_t i;
 	uint32_t uid;
 	UsbCommand resp;
+
 	StateList_t statelists[2];
 	struct Crypto1State *p1, *p2, *p3, *p4;
 	
@@ -84,26 +85,24 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	memcpy(c.d.asBytes, key, 6);
 	SendCommand(&c);
 
-	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-		len = resp.arg[1];
-		if (len == 2) {	
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+		return -1;
+	}
+
+	if (resp.arg[0]) {
+		return resp.arg[0];  // error during nested
+	}
+		
 			memcpy(&uid, resp.d.asBytes, 4);
-			PrintAndLog("uid:%08x len=%d trgbl=%d trgkey=%x", uid, len, (uint16_t)resp.arg[2] & 0xff, (uint16_t)resp.arg[2] >> 8);
+	PrintAndLog("uid:%08x trgbl=%d trgkey=%x", uid, (uint16_t)resp.arg[2] & 0xff, (uint16_t)resp.arg[2] >> 8);
 			
 			for (i = 0; i < 2; i++) {
 				statelists[i].blockNo = resp.arg[2] & 0xff;
 				statelists[i].keyType = (resp.arg[2] >> 8) & 0xff;
 				statelists[i].uid = uid;
-
 				memcpy(&statelists[i].nt,  (void *)(resp.d.asBytes + 4 + i * 8 + 0), 4);
 				memcpy(&statelists[i].ks1, (void *)(resp.d.asBytes + 4 + i * 8 + 4), 4);
 			}
-		}
-		else {
-			PrintAndLog("Got 0 keys from proxmark."); 
-			return 1;
-		}
-	}
 	
 	// calc keys
 	

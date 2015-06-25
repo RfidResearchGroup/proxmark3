@@ -16,7 +16,6 @@
 #include "mifarecmd.h"
 #include "apps.h"
 #include "util.h"
-
 #include "crc.h"
 
 //-----------------------------------------------------------------------------
@@ -641,6 +640,9 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 
 
 	// statistics on nonce distance
+	int16_t isOK = 0;
+	#define NESTED_MAX_TRIES 12
+	uint16_t unsuccessfull_tries = 0;
 	if (calibrate) {	// for first call only. Otherwise reuse previous calibration
 		LED_B_ON();
 		WDT_HIT();
@@ -650,6 +652,12 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 		delta_time = 0;
 		
 		for (rtr = 0; rtr < 17; rtr++) {
+
+			// Test if the action was cancelled
+			if(BUTTON_PRESS()) {
+				isOK = -2;
+				break;
+			}
 
 			// prepare next select. No need to power down the card.
 			if(mifare_classic_halt(pcs, cuid)) {
@@ -698,14 +706,17 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 					delta_time = auth2_time - auth1_time + 32;  // allow some slack for proper timing
 				}
 				if (MF_DBGLEVEL >= 3) Dbprintf("Nested: calibrating... ntdist=%d", i);
+			} else {
+				unsuccessfull_tries++;
+				if (unsuccessfull_tries > NESTED_MAX_TRIES) {	// card isn't vulnerable to nested attack (random numbers are not predictable)
+					isOK = -3;
+				}
 			}
 		}
-		
-		if (rtr <= 1)	return;
 
 		davg = (davg + (rtr - 1)/2) / (rtr - 1);
 		
-		if (MF_DBGLEVEL >= 3) Dbprintf("min=%d max=%d avg=%d, delta_time=%d", dmin, dmax, davg, delta_time);
+		if (MF_DBGLEVEL >= 3) Dbprintf("rtr=%d isOK=%d min=%d max=%d avg=%d, delta_time=%d", rtr, isOK, dmin, dmax, davg, delta_time);
 
 		dmin = davg - 2;
 		dmax = davg + 2;
@@ -718,7 +729,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	LED_C_ON();
 
 	//  get crypted nonces for target sector
-	for(i=0; i < 2; i++) { // look for exactly two different nonces
+	for(i=0; i < 2 && !isOK; i++) { // look for exactly two different nonces
 
 		target_nt[i] = 0;
 		while(target_nt[i] == 0) { // continue until we have an unambiguous nonce
@@ -796,7 +807,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	memcpy(buf+16, &target_ks[1], 4);
 	
 	LED_B_ON();
-	cmd_send(CMD_ACK, 0, 2, targetBlockNo + (targetKeyType * 0x100), buf, sizeof(buf));
+	cmd_send(CMD_ACK, isOK, 0, targetBlockNo + (targetKeyType * 0x100), buf, sizeof(buf));
 	LED_B_OFF();
 
 	if (MF_DBGLEVEL >= 3)	DbpString("NESTED FINISHED");

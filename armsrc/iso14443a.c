@@ -2175,11 +2175,13 @@ void ReaderIso14443a(UsbCommand *c)
 // Therefore try in alternating directions.
 int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 
+	uint16_t i;
+	uint32_t nttmp1, nttmp2;
+
 	if (nt1 == nt2) return 0;
 
-	uint16_t i;
-	uint32_t nttmp1 = nt1;
-	uint32_t nttmp2 = nt2;
+	nttmp1 = nt1;
+	nttmp2 = nt2;
 	
 	for (i = 1; i < 32768; i++) {
 		nttmp1 = prng_successor(nttmp1, 1);
@@ -2198,27 +2200,28 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 // Cloning MiFare Classic Rail and Building Passes, Anywhere, Anytime"
 // (article by Nicolas T. Courtois, 2009)
 //-----------------------------------------------------------------------------
-void ReaderMifare(bool first_try) {
+void ReaderMifare(bool first_try)
+{
+	// Mifare AUTH
+	uint8_t mf_auth[]    = { 0x60,0x00,0xf5,0x7b };
+	uint8_t mf_nr_ar[]   = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
+	static uint8_t mf_nr_ar3;
+
+	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
+	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
+
 	// free eventually allocated BigBuf memory. We want all for tracing.
 	BigBuf_free();
 	
 	clear_trace();
 	set_tracing(TRUE);
 
-	// Mifare AUTH
-	uint8_t mf_auth[] = { 0x60,0x00,0xf5,0x7b };
-	uint8_t mf_nr_ar[8] = { 0x00 }; //{ 0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01 };
-	static uint8_t mf_nr_ar3 = 0;
-
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = { 0x00 };
-	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = { 0x00 };
-
 	byte_t nt_diff = 0;
 	uint8_t par[1] = {0};	// maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
 	static byte_t par_low = 0;
 	bool led_on = TRUE;
-	uint8_t uid[10] = {0x00};
-	//uint32_t cuid = 0x00;
+	uint8_t uid[10]  ={0};
+	uint32_t cuid;
 
 	uint32_t nt = 0;
 	uint32_t previous_nt = 0;
@@ -2233,8 +2236,6 @@ void ReaderMifare(bool first_try) {
 	uint16_t consecutive_resyncs = 0;
 	int isOK = 0;
 
-	int numWrongDistance = 0;
-	
 	if (first_try) { 
 		mf_nr_ar3 = 0;
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
@@ -2254,22 +2255,23 @@ void ReaderMifare(bool first_try) {
 	LED_A_ON();
 	LED_B_OFF();
 	LED_C_OFF();
-	LED_C_ON();	
+	
+
+	#define DARKSIDE_MAX_TRIES	32		// number of tries to sync on PRNG cycle. Then give up.
+	uint16_t unsuccessfull_tries = 0;
   
 	for(uint16_t i = 0; TRUE; i++) {
 		
+		LED_C_ON();
 		WDT_HIT();
 
 		// Test if the action was cancelled
-		if(BUTTON_PRESS()) break;
-		
-		if (numWrongDistance > 1000) {
-			isOK = 0;
+		if(BUTTON_PRESS()) {
+			isOK = -1;
 			break;
 		}
 		
-		//if(!iso14443a_select_card(uid, NULL, &cuid)) {
-		if(!iso14443a_select_card(uid, NULL, NULL)) {
+		if(!iso14443a_select_card(uid, NULL, &cuid)) {
 			if (MF_DBGLEVEL >= 1)	Dbprintf("Mifare: Can't select card");
 			continue;
 		}
@@ -2303,14 +2305,15 @@ void ReaderMifare(bool first_try) {
 				nt_attacked = nt;
 			}
 			else {
-				
-				// invalid nonce received, try again
-				if (nt_distance == -99999) { 
-					numWrongDistance++;
-					if (MF_DBGLEVEL >= 3) Dbprintf("The two nonces has invalid distance, tag could have good PRNG\n");
-					continue;
+				if (nt_distance == -99999) { // invalid nonce received
+					unsuccessfull_tries++;
+					if (!nt_attacked && unsuccessfull_tries > DARKSIDE_MAX_TRIES) {
+						isOK = -3;		// Card has an unpredictable PRNG. Give up	
+						break;
+					} else {
+						continue;		// continue trying...
+					}
 				}
-				
 				sync_cycles = (sync_cycles - nt_distance);
 				if (MF_DBGLEVEL >= 3) Dbprintf("calibrating in cycle %d. nt_distance=%d, Sync_cycles: %d\n", i, nt_distance, sync_cycles);
 				continue;
@@ -2319,7 +2322,7 @@ void ReaderMifare(bool first_try) {
 
 		if ((nt != nt_attacked) && nt_attacked) { 	// we somehow lost sync. Try to catch up again...
 			catch_up_cycles = -dist_nt(nt_attacked, nt);
-			if (catch_up_cycles >= 99999) {			// invalid nonce received. Don't resync on that one.
+			if (catch_up_cycles == 99999) {			// invalid nonce received. Don't resync on that one.
 				catch_up_cycles = 0;
 				continue;
 			}
@@ -2371,11 +2374,16 @@ void ReaderMifare(bool first_try) {
 			if (nt_diff == 0 && first_try)
 			{
 				par[0]++;
+				if (par[0] == 0x00) {		// tried all 256 possible parities without success. Card doesn't send NACK.
+					isOK = -2;
+					break;
+				}
 			} else {
 				par[0] = ((par[0] & 0x1F) + 1) | par_low;
 			}
 		}
 	}
+
 
 	mf_nr_ar[3] &= 0x1F;
 	
