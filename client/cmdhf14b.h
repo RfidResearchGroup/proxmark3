@@ -13,12 +13,12 @@
 
 int CmdHF14B(const char *Cmd);
 int CmdHF14BList(const char *Cmd);
-int CmdHF14BReader(const char *Cmd);
+int CmdHF14BInfo(const char *Cmd);
 int CmdHF14BSim(const char *Cmd);
 int CmdHF14BSnoop(const char *Cmd);
 int CmdSri512Read(const char *Cmd);
 int CmdSrix4kRead(const char *Cmd);
 int CmdHF14BWrite( const char *cmd);
-int HF14BReader(bool verbose);
+int HF14BInfo(bool verbose);
 
 #endif

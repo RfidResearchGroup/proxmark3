@@ -321,6 +321,9 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len)
 //-----------------------------------------------------------------------------
 void SimulateIso14443bTag(void)
 {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+	BigBuf_free();
+	
 	// the only commands we understand is REQB, AFI=0, Select All, N=0:
 	static const uint8_t cmd1[] = { 0x05, 0x00, 0x08, 0x39, 0x73 };
 	// ... and REQB, AFI=0, Normal Request, N=0:
@@ -340,18 +343,16 @@ void SimulateIso14443bTag(void)
 	const uint8_t *resp;
 	uint8_t *respCode;
 	uint16_t respLen, respCodeLen;
-
-	// allocate command receive buffer
-	BigBuf_free();
-	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
-
 	uint16_t len;
 	uint16_t cmdsRecvd = 0;
 
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+	// allocate command receive buffer
+	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
 
 	// prepare the (only one) tag answer:
 	CodeIso14443bAsTag(response1, sizeof(response1));
+
 	uint8_t *resp1Code = BigBuf_malloc(ToSendMax);
 	memcpy(resp1Code, ToSend, ToSendMax); 
 	uint16_t resp1CodeLen = ToSendMax;
@@ -411,22 +412,34 @@ void SimulateIso14443bTag(void)
 		AT91C_BASE_SSC->SSC_THR = 0xff;
 		FpgaSetupSsc();
 
+		uint8_t c;
+	 	// clear receiving shift register and holding register
+		while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
+		c = AT91C_BASE_SSC->SSC_RHR; (void) c;
+		while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
+		c = AT91C_BASE_SSC->SSC_RHR; (void) c;
+		
+		// Clear TXRDY:
+		AT91C_BASE_SSC->SSC_THR = 0x00;
+		
 		// Transmit the response.
+		uint16_t FpgaSendQueueDelay = 0;
 		uint16_t i = 0;
-		for(;;) {
+		for(;i < respCodeLen; ) {
 			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-				uint8_t b = respCode[i];
-
-				AT91C_BASE_SSC->SSC_THR = b;
-
-				i++;
-				if(i > respCodeLen) {
-					break;
-				}
+				AT91C_BASE_SSC->SSC_THR = respCode[i++];
+				FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			}
-			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-				volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-				(void)b;
+				if(BUTTON_PRESS()) break;
+		}
+		
+		// Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again:
+		uint8_t fpga_queued_bits = FpgaSendQueueDelay >> 3;
+		for (i = 0; i <= fpga_queued_bits/8 + 1; ) {
+			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+				AT91C_BASE_SSC->SSC_THR = 0x00;
+				FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+				i++;
 			}
 		}
 		
@@ -908,18 +921,17 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len)
 //-----------------------------------------------------------------------------
 void ReadSTMemoryIso14443b(uint32_t dwLast)
 {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+	
 	clear_trace();
 	set_tracing(TRUE);
 
 	uint8_t i = 0x00;
 
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	// Make sure that we start from off, since the tags are stateful;
 	// confusing things will happen if we don't reset them between reads.
 	LED_D_OFF();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(200);
-
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
 
@@ -1014,9 +1026,10 @@ void ReadSTMemoryIso14443b(uint32_t dwLast)
 		// Now print out the memory location:
 		Dbprintf("Address=%02x, Contents=%08x, CRC=%04x", i,
 				(Demod.output[3]<<24) + (Demod.output[2]<<16) + (Demod.output[1]<<8) + Demod.output[0],
-			(Demod.output[4]<<8)+Demod.output[5]
-		);
-		if (i == 0xff) break;
+				(Demod.output[4]<<8)+Demod.output[5]);
+		if (i == 0xff) {
+			break;
+		}
 		i++;
 	}
 }
@@ -1090,9 +1103,6 @@ void RAMFUNC SnoopIso14443b(void)
 	bool TagIsActive = FALSE;
 	bool ReaderIsActive = FALSE;
 		
-	bool TagIsActive = FALSE;
-	bool ReaderIsActive = FALSE;
-	
 	// And now we loop, receiving samples.
 	for(;;) {
 		int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) &
@@ -1114,10 +1124,6 @@ void RAMFUNC SnoopIso14443b(void)
 			AT91C_BASE_PDC_SSC->PDC_RNCR = ISO14443B_DMA_BUFFER_SIZE;
 			WDT_HIT();
 			if(behindBy > (9*ISO14443B_DMA_BUFFER_SIZE/10)) { // TODO: understand whether we can increase/decrease as we want or not?
-				Dbprintf("blew circular buffer! behindBy=%d", behindBy);
-				break;
-			WDT_HIT();
-			if(behindBy > (9*DMA_BUFFER_SIZE/10)) { // TODO: understand whether we can increase/decrease as we want or not?
 				Dbprintf("blew circular buffer! behindBy=%d", behindBy);
 				break;
 			}
@@ -1203,6 +1209,7 @@ void RAMFUNC SnoopIso14443b(void)
 void SendRawCommand14443B(uint32_t datalen, uint32_t recv, uint8_t powerfield, uint8_t data[])
 {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+	BigBuf_free();
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
 

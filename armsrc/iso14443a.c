@@ -1685,9 +1685,7 @@ static int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen, bool correctionNe
 			FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 		}
 	
-		if(BUTTON_PRESS()) {
-			break;
-		}
+		if(BUTTON_PRESS()) break;
 	}
 
 	// Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again:
