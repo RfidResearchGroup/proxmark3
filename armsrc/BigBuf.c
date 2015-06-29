@@ -96,9 +96,6 @@ uint16_t BigBuf_max_traceLen(void)
 }
 
 void clear_trace() {
-	uint8_t *trace = BigBuf_get_addr();
-	uint16_t max_traceLen = BigBuf_max_traceLen();
-	memset(trace, 0x44, max_traceLen);
 	traceLen = 0;
 }
 
@@ -171,12 +168,8 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 	traceLen += iLen;
 
 	// parity bytes
-	if (iLen != 0) {
-		if (parity != NULL) {
+	if (parity != NULL && iLen != 0) {
 			memcpy(trace + traceLen, parity, num_paritybytes);
-		} else {
-			memset(trace + traceLen, 0x00, num_paritybytes);
-		}
 	}
 	traceLen += num_paritybytes;
 
@@ -225,8 +218,6 @@ int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwP
 
 	return TRUE;
 }
-
-
 // Emulator memory
 uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length){
 	uint8_t* mem = BigBuf_get_EM_addr();

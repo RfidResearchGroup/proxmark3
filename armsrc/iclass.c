@@ -36,7 +36,7 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "../include/proxmark3.h"
+#include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
 #include "string.h"
@@ -45,9 +45,8 @@
 // Needed for CRC in emulation mode;
 // same construction as in ISO 14443;
 // different initial value (CRC_ICLASS)
-#include "../common/iso14443crc.h"
-#include "../common/iso15693tools.h"
-//#include "iso15693tools.h"
+#include "iso14443crc.h"
+#include "iso15693tools.h"
 #include "protocols.h"
 #include "optimized_cipher.h"
 
@@ -633,6 +632,8 @@ static RAMFUNC int ManchesterDecoding(int v)
 //-----------------------------------------------------------------------------
 void RAMFUNC SnoopIClass(void)
 {
+
+
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
     // response from the tag.
@@ -1124,7 +1125,6 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 	int resp_cc_len;
 
 	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
-	memset(receivedCmd, 0x44, MAX_FRAME_SIZE);
 	int len;
 
 	// Prepare card messages
@@ -1335,7 +1335,6 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 			}
 
 		}
-		memset(receivedCmd, 0x44, MAX_FRAME_SIZE);
 	}
 
 	//Dbprintf("%x", cmdsRecvd);

@@ -436,6 +436,8 @@ void FpgaDownloadAndGo(int bitstream_version)
 	}
 
 	inflateEnd(&compressed_fpga_stream);
+	
+	BigBuf_free();
 }	
 
 

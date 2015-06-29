@@ -16,10 +16,10 @@
 // (c) 2012 Roel Verdult
 //-----------------------------------------------------------------------------
 
-#include "../include/proxmark3.h"
+#include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
-#include "../include/hitag2.h"
+#include "hitag2.h"
 #include "string.h"
 #include "BigBuf.h"
 
@@ -710,22 +710,24 @@ void SnoopHitag(uint32_t type) {
 	byte_t rx[HITAG_FRAME_LEN];
 	size_t rxlen=0;
 	
-	auth_table_len = 0;
-	auth_table_pos = 0;
-	BigBuf_free();
-    auth_table = (byte_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
-	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
 	// Clean up trace and prepare it for storing frames
 	set_tracing(TRUE);
 	clear_trace();
+	
+	auth_table_len = 0;
+	auth_table_pos = 0;
+
+	BigBuf_free();
+    auth_table = (byte_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
+	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 	
 	DbpString("Starting Hitag2 snoop");
 	LED_D_ON();
 	
 	// Set up eavesdropping mode, frequency divisor which will drive the FPGA
 	// and analog mux selection.
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
@@ -922,16 +924,18 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	bool bQuitTraceFull = false;
 	bQuiet = false;
 	
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+
+	// Clean up trace and prepare it for storing frames
+	set_tracing(TRUE);
+	clear_trace();
+
 	auth_table_len = 0;
 	auth_table_pos = 0;
     byte_t* auth_table;
 	BigBuf_free();
     auth_table = (byte_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
 	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
-
-	// Clean up trace and prepare it for storing frames
-	set_tracing(TRUE);
-	clear_trace();
 
 	DbpString("Starting Hitag2 simulation");
 	LED_D_ON();
@@ -953,7 +957,6 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	
 	// Set up simulator mode, frequency divisor which will drive the FPGA
 	// and analog mux selection.
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);

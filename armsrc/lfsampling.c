@@ -119,7 +119,6 @@ void LFSetupFPGAForADC(int divisor, bool lf_field)
  * @param silent - is true, now outputs are made. If false, dbprints the status
  * @return the number of bits occupied by the samples.
  */
-
 uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold,bool silent)
 {
 	//.
@@ -151,7 +150,8 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 			sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			LED_D_OFF();
-			if (trigger_threshold > 0 && sample < trigger_threshold)
+			// threshold either high or low values 128 = center 0.  if trigger = 178 
+			if ((trigger_threshold > 0) && (sample < (trigger_threshold+128)) && (sample > (128-trigger_threshold))) // 
 				continue;
 
 			trigger_threshold = 0;

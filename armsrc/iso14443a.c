@@ -568,11 +568,8 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 	
 	LEDsoff();
 
-	// We won't start recording the frames that we acquire until we trigger;
-	// a good trigger condition to get started is probably when we see a
-	// response from the tag.
-	// triggered == FALSE -- to wait first for card
-	bool triggered = !(param & 0x03); 
+
+	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
 	
 	// Allocate memory from BigBuf for some buffers
 	// free all previous allocations first
@@ -600,8 +597,6 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 	bool TagIsActive = FALSE;
 	bool ReaderIsActive = FALSE;
 	
-	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
-
 	// Set up the demodulator for tag -> reader responses.
 	DemodInit(receivedResponse, receivedResponsePar);
 	
@@ -610,6 +605,12 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 	
 	// Setup and start DMA.
 	FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE);
+	
+	// We won't start recording the frames that we acquire until we trigger;
+	// a good trigger condition to get started is probably when we see a
+	// response from the tag.
+	// triggered == FALSE -- to wait first for card
+	bool triggered = !(param & 0x03); 
 	
 	// And now we loop, receiving samples.
 	for(uint32_t rsamples = 0; TRUE; ) {
@@ -673,7 +674,6 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 					}
 					/* And ready to receive another command. */
 					UartReset();
-					//UartInit(receivedCmd, receivedCmdPar);
 					/* And also reset the demod code, which might have been */
 					/* false-triggered by the commands from the reader. */
 					DemodReset();
@@ -1092,6 +1092,9 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 		.modulation_n = 0
 	};
   
+	// We need to listen to the high-frequency, peak-detected path.
+	iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
+
 	BigBuf_free_keep_EM();
 
 	// allocate buffers:
@@ -1119,9 +1122,6 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 	int happened = 0;
 	int happened2 = 0;
 	int cmdsRecvd = 0;
-
-	// We need to listen to the high-frequency, peak-detected path.
-	iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
 	cmdsRecvd = 0;
 	tag_response_info_t* p_response;
@@ -2210,6 +2210,10 @@ void ReaderMifare(bool first_try)
 	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
 	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
 
+	if (first_try) { 
+		iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
+	}
+	
 	// free eventually allocated BigBuf memory. We want all for tracing.
 	BigBuf_free();
 	
@@ -2238,7 +2242,6 @@ void ReaderMifare(bool first_try)
 
 	if (first_try) { 
 		mf_nr_ar3 = 0;
-		iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 		sync_time = GetCountSspClk() & 0xfffffff8;
 		sync_cycles = 65536;									// theory: Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
 		nt_attacked = 0;
@@ -2397,9 +2400,11 @@ void ReaderMifare(bool first_try)
 		
 	cmd_send(CMD_ACK,isOK,0,0,buf,28);
 
-	set_tracing(FALSE);
+	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
+
+	set_tracing(FALSE);
 }
 
 
@@ -2456,13 +2461,6 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	uint32_t ar_nr_responses[] = {0,0,0,0,0,0,0,0,0,0};
 	uint8_t ar_nr_collected = 0;
 
-	// free eventually allocated BigBuf memory but keep Emulator Memory
-	BigBuf_free_keep_EM();
-
-	// clear trace
-	clear_trace();
-	set_tracing(TRUE);
-
 	// Authenticate response - nonce
 	uint32_t nonce = bytes_to_num(rAUTH_NT, 4);
 	
@@ -2509,10 +2507,6 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		rUIDBCC2[4] = rUIDBCC2[0] ^ rUIDBCC2[1] ^ rUIDBCC2[2] ^ rUIDBCC2[3];
 	}
 
-	// We need to listen to the high-frequency, peak-detected path.
-	iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
-
-
 	if (MF_DBGLEVEL >= 1)	{
 		if (!_7BUID) {
 			Dbprintf("4B UID: %02x%02x%02x%02x", 
@@ -2523,6 +2517,17 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				rUIDBCC2[0], rUIDBCC2[1] ,rUIDBCC2[2], rUIDBCC2[3]);
 		}
 	}
+
+	// We need to listen to the high-frequency, peak-detected path.
+	iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
+
+	// free eventually allocated BigBuf memory but keep Emulator Memory
+	BigBuf_free_keep_EM();
+
+	// clear trace
+	clear_trace();
+	set_tracing(TRUE);
+
 
 	bool finished = FALSE;
 	while (!BUTTON_PRESS() && !finished) {
@@ -2935,9 +2940,6 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// bit 0 - trigger from first card answer
 	// bit 1 - trigger from first reader 7-bit request
 
-	// free eventually allocated BigBuf memory
-	BigBuf_free();
-	
 	// C(red) A(yellow) B(green)
 	LEDsoff();
 	// init trace buffer
@@ -2953,6 +2955,10 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	uint8_t receivedResponse[MAX_MIFARE_FRAME_SIZE];
 	uint8_t receivedResponsePar[MAX_MIFARE_PARITY_SIZE];
 
+	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
+
+	// free eventually allocated BigBuf memory
+	BigBuf_free();
 	// allocate the DMA buffer, used to stream samples from the FPGA
 	uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
 	uint8_t *data = dmaBuf;
@@ -2961,8 +2967,6 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	int dataLen = 0;
 	bool ReaderIsActive = FALSE;
 	bool TagIsActive = FALSE;
-
-	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
 
 	// Set up the demodulator for tag -> reader responses.
 	DemodInit(receivedResponse, receivedResponsePar);
@@ -3043,7 +3047,6 @@ void RAMFUNC SniffMifare(uint8_t param) {
 					if (MfSniffLogic(receivedCmd, Uart.len, Uart.parity, Uart.bitCount, TRUE)) break;
 
 					/* And ready to receive another command. */
-					//UartInit(receivedCmd, receivedCmdPar);
 					UartReset();
 					
 					/* And also reset the demod code */

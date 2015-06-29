@@ -19,13 +19,12 @@ static  uint8_t deselect_cmd[] = {0xc2,0xe0,0xb4};
 //static uint8_t __res[MAX_FRAME_SIZE];
 
 bool InitDesfireCard(){
-	
-	byte_t cardbuf[USB_CMD_DATA_SIZE] = {0x00};
 
-	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
-	
-	set_tracing(TRUE);
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+	set_tracing(TRUE);
+
+	byte_t cardbuf[USB_CMD_DATA_SIZE] = {0x00};
+	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
 	
 	int len = iso14443a_select_card(NULL,card,NULL);
 

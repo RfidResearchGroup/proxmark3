@@ -321,9 +321,6 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len)
 //-----------------------------------------------------------------------------
 void SimulateIso14443bTag(void)
 {
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	BigBuf_free();
-	
 	// the only commands we understand is REQB, AFI=0, Select All, N=0:
 	static const uint8_t cmd1[] = { 0x05, 0x00, 0x08, 0x39, 0x73 };
 	// ... and REQB, AFI=0, Normal Request, N=0:
@@ -337,22 +334,26 @@ void SimulateIso14443bTag(void)
 		0x00, 0x21, 0x85, 0x5e, 0xd7
 	};
 
+	uint8_t parity[MAX_PARITY_SIZE];
+				
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
 	clear_trace();
 	set_tracing(TRUE);
 
 	const uint8_t *resp;
 	uint8_t *respCode;
 	uint16_t respLen, respCodeLen;
+
+	// allocate command receive buffer
+	BigBuf_free();
+	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
+
 	uint16_t len;
 	uint16_t cmdsRecvd = 0;
 
-
-	// allocate command receive buffer
-	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
-
 	// prepare the (only one) tag answer:
 	CodeIso14443bAsTag(response1, sizeof(response1));
-
 	uint8_t *resp1Code = BigBuf_malloc(ToSendMax);
 	memcpy(resp1Code, ToSend, ToSendMax); 
 	uint16_t resp1CodeLen = ToSendMax;
@@ -371,7 +372,6 @@ void SimulateIso14443bTag(void)
 		}
 
 		if (tracing) {
-			uint8_t parity[MAX_PARITY_SIZE];
 			LogTrace(receivedCmd, len, 0, 0, parity, TRUE);
 		}
 
@@ -444,12 +444,9 @@ void SimulateIso14443bTag(void)
 		}
 		
 		// trace the response:
-		if (tracing) {
-			uint8_t parity[MAX_PARITY_SIZE];
-			LogTrace(resp, respLen, 0, 0, parity, FALSE);
-		}
-			
+		if (tracing) LogTrace(resp, respLen, 0, 0, parity, FALSE);			
 	}
+	//FpgaDisableSscDma();
 }
 
 //=============================================================================
@@ -728,13 +725,13 @@ static void GetSamplesFor14443bDemod(int n, bool quiet)
 	BigBuf_free();
 	
 	// The response (tag -> reader) that we're receiving.
-	uint8_t *receivedResponse = BigBuf_malloc(MAX_FRAME_SIZE);
+	uint8_t *resp = BigBuf_malloc(MAX_FRAME_SIZE);
 	
 	// The DMA buffer, used to stream samples from the FPGA
 	int8_t *dmaBuf = (int8_t*) BigBuf_malloc(ISO14443B_DMA_BUFFER_SIZE);
 
 	// Set up the demodulator for tag -> reader responses.
-	DemodInit(receivedResponse);
+	DemodInit(resp);
 
 	// Setup and start DMA.
 	FpgaSetupSscDma((uint8_t*) dmaBuf, ISO14443B_DMA_BUFFER_SIZE);
@@ -746,6 +743,7 @@ static void GetSamplesFor14443bDemod(int n, bool quiet)
 	LED_D_ON();
 	// And put the FPGA in the appropriate mode
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ);
+	SpinDelayUs(151); // T0 time between reader send,  tag answer.  151us.
 
 	for(;;) {
 		int behindBy = lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR;
@@ -922,7 +920,8 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len)
 void ReadSTMemoryIso14443b(uint32_t dwLast)
 {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	
+	BigBuf_free();
+
 	clear_trace();
 	set_tracing(TRUE);
 
@@ -932,6 +931,8 @@ void ReadSTMemoryIso14443b(uint32_t dwLast)
 	// confusing things will happen if we don't reset them between reads.
 	LED_D_OFF();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelay(200);
+
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
 
@@ -1169,8 +1170,8 @@ void RAMFUNC SnoopIso14443b(void)
 			//Use samples as a time measurement
 			if(tracing)
 			{
-				uint8_t parity[MAX_PARITY_SIZE];
-					LogTrace(Demod.output, Demod.len, samples, samples, parity, FALSE);
+				//uint8_t parity[MAX_PARITY_SIZE];
+				LogTrace(Demod.output, Demod.len, samples, samples, parity, FALSE);
 			}
 			triggered = TRUE;
 
@@ -1213,9 +1214,12 @@ void SendRawCommand14443B(uint32_t datalen, uint32_t recv, uint8_t powerfield, u
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
 
-	set_tracing(TRUE);
-	
-	CodeAndTransmit14443bAsReader(data, datalen);
+	if ( datalen == 0 && recv == 0 && powerfield == 0){
+		clear_trace();
+	} else {
+		set_tracing(TRUE);
+		CodeAndTransmit14443bAsReader(data, datalen);
+	}
 
 	if(recv) {
 		GetSamplesFor14443bDemod(RECEIVE_SAMPLES_TIMEOUT, TRUE);
@@ -1227,5 +1231,7 @@ void SendRawCommand14443B(uint32_t datalen, uint32_t recv, uint8_t powerfield, u
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LED_D_OFF();
 	}
+	
+	FpgaDisableSscDma();
 }
 
