@@ -183,7 +183,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 		crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
 		num_to_bytes(key64, 6, keyBlock);
 		key64 = 0;
-		if (!mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, 1, keyBlock, &key64)) {
+		if (!mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, 1, keyBlock, &key64)) {
 			num_to_bytes(key64, 6, resultKey);
 			break;
 		}
@@ -195,11 +195,11 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	return 0;
 }
 
-int mfCheckKeys (uint8_t blockNo, uint8_t keyType, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key){
+int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key){
 
 	*key = 0;
 
-	UsbCommand c = {CMD_MIFARE_CHKKEYS, {blockNo, keyType, keycnt}};
+	UsbCommand c = {CMD_MIFARE_CHKKEYS, {((blockNo & 0xff) | ((keyType&0xff)<<8)), clear_trace, keycnt}};
 	memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
 	SendCommand(&c);
 

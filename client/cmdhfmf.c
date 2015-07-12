@@ -19,7 +19,6 @@ int CmdHF14AMifare(const char *Cmd)
 	uint32_t nt = 0, nr = 0;
 	uint64_t par_list = 0, ks_list = 0, r_key = 0;
 	int16_t isOK = 0;
-	uint8_t keyBlock[8] = {0};
 
 	UsbCommand c = {CMD_READER_MIFARE, {true, 0, 0}};
 
@@ -75,22 +74,13 @@ start:
 	if (nonce2key(uid, nt, nr, par_list, ks_list, &r_key)) {
 		isOK = 2;
 		PrintAndLog("Key not found (lfsr_common_prefix list is null). Nt=%08x", nt);	
-	} else {
-		printf("------------------------------------------------------------------\n");
-		PrintAndLog("Key found:%012"llx" \n", r_key);
-
-		num_to_bytes(r_key, 6, keyBlock);
-		isOK = mfCheckKeys(0, 0, 1, keyBlock, &r_key);
-	}
-	
-	if (!isOK) 
-		PrintAndLog("Found valid key:%012"llx, r_key);
-	else
-	{
-		if (isOK != 2) PrintAndLog("Found invalid key. ");	
 		PrintAndLog("Failing is expected to happen in 25%% of all cases. Trying again with a different reader nonce...");
 		c.arg[0] = false;
 		goto start;
+	} else {
+		isOK = 0;
+		printf("------------------------------------------------------------------\n");
+		PrintAndLog("Found valid key:%012"llx" \n", r_key);
 	}
 	
 	PrintAndLog("");
@@ -690,7 +680,7 @@ int CmdHF14AMfNested(const char *Cmd)
 			for (j = 0; j < 2; j++) {
 				if (e_sector[i].foundKey[j]) continue;
 				
-				res = mfCheckKeys(FirstBlockOfSector(i), j, 6, keyBlock, &key64);
+				res = mfCheckKeys(FirstBlockOfSector(i), j, true, 6, keyBlock, &key64);
 				
 				if (!res) {
 					e_sector[i].Key[j] = key64;
@@ -974,7 +964,7 @@ int CmdHF14AMfChk(const char *Cmd)
 			uint32_t max_keys = keycnt>USB_CMD_DATA_SIZE/6?USB_CMD_DATA_SIZE/6:keycnt;
 			for (uint32_t c = 0; c < keycnt; c+=max_keys) {
 				uint32_t size = keycnt-c>max_keys?max_keys:keycnt-c;
-				res = mfCheckKeys(b, t, size, &keyBlock[6*c], &key64);
+				res = mfCheckKeys(b, t, true, size, &keyBlock[6*c], &key64);
 				if (res != 1) {
 					if (!res) {
 						PrintAndLog("Found valid key:[%012"llx"]",key64);

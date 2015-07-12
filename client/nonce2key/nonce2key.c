@@ -133,7 +133,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 		key64 = *(last_keylist + i);
 		num_to_bytes(key64, 6, keyBlock);
 		key64 = 0;
-		if (!mfCheckKeys(0, 0, 1, keyBlock, &key64)) {
+		if (!mfCheckKeys(0, 0, false, 1, keyBlock, &key64)) {
 			*key = key64;
 			free(last_keylist);
 			last_keylist = NULL;
