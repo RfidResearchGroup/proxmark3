@@ -19,7 +19,7 @@ typedef struct {
 	uint8_t parameter_id;
 } pace_version_info_t;
 
-// note: EPA_PACE_Collect_Nonce is declared in apps.h
+// note: EPA_PACE_Collect_Nonce and EPA_PACE_Replay are declared in apps.h
 
 // general functions
 void EPA_Finish();

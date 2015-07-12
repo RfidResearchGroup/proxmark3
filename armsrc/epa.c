@@ -12,10 +12,11 @@
 //-----------------------------------------------------------------------------
 
 #include "iso14443a.h"
+#include "iso14443b.h"
 #include "epa.h"
 #include "cmd.h"
 
-// Protocol and Parameter Selection Request
+// Protocol and Parameter Selection Request for ISO 14443 type A cards
 // use regular (1x) speed in both directions
 // CRC is already included
 static const uint8_t pps[] = {0xD0, 0x11, 0x00, 0x52, 0xA6};
@@ -100,6 +101,28 @@ static struct {
 // lengths of the replay APDUs
 static uint8_t apdu_lengths_replay[5];
 
+// type of card (ISO 14443 A or B)
+static char iso_type = 0;
+
+//-----------------------------------------------------------------------------
+// Wrapper for sending APDUs to type A and B cards
+//-----------------------------------------------------------------------------
+int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response)
+{
+	switch(iso_type)
+	{
+		case 'a':
+			return iso14_apdu(apdu, (uint16_t) length, response);
+			break;
+		case 'b':
+			return iso14443b_apdu(apdu, length, response);
+			break;
+		default:
+			return 0;
+			break;
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Closes the communication channel and turns off the field
 //-----------------------------------------------------------------------------
@@ -107,6 +130,7 @@ void EPA_Finish()
 {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
+	iso_type = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -204,26 +228,26 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length)
 	int rapdu_length = 0;
 
 	// select the file EF.CardAccess
-	rapdu_length = iso14_apdu((uint8_t *)apdu_select_binary_cardaccess,
+	rapdu_length = EPA_APDU((uint8_t *)apdu_select_binary_cardaccess,
 	                          sizeof(apdu_select_binary_cardaccess),
 	                          response_apdu);
-	if (rapdu_length != 6
+	if (rapdu_length < 6
 	    || response_apdu[rapdu_length - 4] != 0x90
 	    || response_apdu[rapdu_length - 3] != 0x00)
 	{
-		Dbprintf("epa - no select cardaccess");
+		DbpString("Failed to select EF.CardAccess!");
 		return -1;
 	}
 
 	// read the file
-	rapdu_length = iso14_apdu((uint8_t *)apdu_read_binary,
+	rapdu_length = EPA_APDU((uint8_t *)apdu_read_binary,
 	                          sizeof(apdu_read_binary),
 	                          response_apdu);
 	if (rapdu_length <= 6
 	    || response_apdu[rapdu_length - 4] != 0x90
 	    || response_apdu[rapdu_length - 3] != 0x00)
 	{
-		Dbprintf("epa - no read cardaccess");
+		Dbprintf("Failed to read EF.CardAccess!");
 		return -1;
 	}
 
@@ -338,7 +362,7 @@ int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce)
 
 	// send it
 	uint8_t response_apdu[262];
-	int send_return = iso14_apdu(apdu,
+	int send_return = EPA_APDU(apdu,
 	                             sizeof(apdu),
 	                             response_apdu);
 	// check if the command succeeded
@@ -409,7 +433,7 @@ int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
 	apdu[4] = apdu_length - 5;
 	// send it
 	uint8_t response_apdu[6];
-	int send_return = iso14_apdu(apdu,
+	int send_return = EPA_APDU(apdu,
 	                             apdu_length,
 	                             response_apdu);
 	// check if the command succeeded
@@ -469,7 +493,7 @@ void EPA_PACE_Replay(UsbCommand *c)
 	// now replay the data and measure the timings
 	for (int i = 0; i < sizeof(apdu_lengths_replay); i++) {
 		StartCountUS();
-		func_return = iso14_apdu(apdus_replay[i].data,
+		func_return = EPA_APDU(apdus_replay[i].data,
 		                         apdu_lengths_replay[i],
 		                         response_apdu);
 		timings[i] = GetCountUS();
@@ -501,18 +525,33 @@ int EPA_Setup()
 	uint8_t pps_response_par[1];
 	iso14a_card_select_t card_select_info;
 
+	// first, look for type A cards
 	// power up the field
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 	// select the card
 	return_code = iso14443a_select_card(uid, &card_select_info, NULL);
-	if (return_code != 1) {
-		return 1;
-	}
+	if (return_code == 1) {
 	// send the PPS request
 	ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
 	return_code = ReaderReceive(pps_response, pps_response_par);
 	if (return_code != 3 || pps_response[0] != 0xD0) {
 		return return_code == 0 ? 2 : return_code;
 	}
+		Dbprintf("ISO 14443 Type A");
+		iso_type = 'a';
 	return 0;
+	}
+
+	// if we're here, there is no type A card, so we look for type B
+	// power up the field
+	iso14443b_setup();
+	// select the card
+	return_code = iso14443b_select_card();
+	if (return_code == 1) {
+		Dbprintf("ISO 14443 Type B");
+		iso_type = 'b';
+		return 0;
+	}
+	Dbprintf("No card found.");
+	return 1;
 }
