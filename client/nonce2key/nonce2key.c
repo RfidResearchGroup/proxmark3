@@ -199,6 +199,51 @@ int tryMfk32(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 	return isSuccess;
 }
 
+int tryMfk32_moebius(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
+
+	struct Crypto1State *s,*t;
+	uint64_t key;     // recovered key
+	uint32_t uid;     // serial number
+	uint32_t nt0;      // tag challenge first
+	uint32_t nt1;      // tag challenge second
+	uint32_t nr0_enc; // first encrypted reader challenge
+	uint32_t ar0_enc; // first encrypted reader response
+	uint32_t nr1_enc; // second encrypted reader challenge
+	uint32_t ar1_enc; // second encrypted reader response	
+	bool isSuccess = FALSE;
+	int counter = 0;
+	
+	uid 	= myuid;//(uint32_t)bytes_to_num(data +  0, 4);
+	nt0 	= *(uint32_t*)(data+8);
+	nr0_enc = *(uint32_t*)(data+12);
+	ar0_enc = *(uint32_t*)(data+16);
+	nt1 	= *(uint32_t*)(data+8);
+	nr1_enc = *(uint32_t*)(data+32);
+	ar1_enc = *(uint32_t*)(data+36);
+
+	s = lfsr_recovery32(ar0_enc ^ prng_successor(nt0, 64), 0);
+  
+	for(t = s; t->odd | t->even; ++t) {
+		lfsr_rollback_word(t, 0, 0);
+		lfsr_rollback_word(t, nr0_enc, 1);
+		lfsr_rollback_word(t, uid ^ nt0, 0);
+		crypto1_get_lfsr(t, &key);
+		
+		crypto1_word(t, uid ^ nt1, 0);
+		crypto1_word(t, nr1_enc, 1);
+		if (ar1_enc == (crypto1_word(t, 0, 0) ^ prng_successor(nt1, 64))) {
+			PrintAndLog("Found Key: [%012"llx"]",key);
+			isSuccess = TRUE;
+			++counter;
+			if (counter==20)
+				break;
+		}
+	}
+	free(s);
+	return isSuccess;
+}
+
+
 int tryMfk64(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 
 	struct Crypto1State *revstate;

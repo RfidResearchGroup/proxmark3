@@ -20,5 +20,6 @@
 
 int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t * key); 
 int tryMfk32(uint64_t myuid, uint8_t *data, uint8_t *outputkey );
+int tryMfk32_moebius(uint64_t myuid, uint8_t *data, uint8_t *outputkey );
 int tryMfk64(uint64_t myuid, uint8_t *data, uint8_t *outputkey );
 #endif

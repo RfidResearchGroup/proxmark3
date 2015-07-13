@@ -16,7 +16,7 @@
 
 #include "iso14443crc.h"
 
-#define RECEIVE_SAMPLES_TIMEOUT 0x0003FFFF
+#define RECEIVE_SAMPLES_TIMEOUT 0x0004FFFF
 #define ISO14443B_DMA_BUFFER_SIZE 256
 
 uint8_t PowerOn = TRUE;
@@ -799,7 +799,7 @@ static void GetSamplesFor14443bDemod(int n, bool quiet)
 
 			samples += 2;
 
-			if(Handle14443bSamplesDemod(ci, cq)) {
+			if(Handle14443bSamplesDemod(ci | 0x01 , cq | 0x01)) {
 				gotFrame = TRUE;
 				break;
 		}
@@ -1307,6 +1307,7 @@ void RAMFUNC SnoopIso14443b(void)
 		}
 
 		if(!ReaderIsActive) {						// no need to try decoding tag data if the reader is sending - and we cannot afford the time
+			// is this | 0x01 the error?   & 0xfe  in https://github.com/Proxmark/proxmark3/issues/103
 			if(Handle14443bSamplesDemod(ci | 0x01, cq | 0x01)) {
 
 			//Use samples as a time measurement

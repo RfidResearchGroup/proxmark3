@@ -225,7 +225,7 @@ int CmdHF14BCmdRaw (const char *Cmd) {
 		// REQB
 		if (HF14BCmdRaw(true, &crc2, true, cmd2, &cmdLen, false)==0) return rawClose();
 									  
-		PrintAndLog("REQB   : %s", sprint_hex(cmd2, 9));
+		PrintAndLog("REQB   : %s", sprint_hex(cmd2, cmdLen));
 		
 		if ( SRx && (cmdLen != 3 || !crc2) ) return rawClose();
 		else if (cmd2[0] != 0x50 || cmdLen != 14 || !crc2) return rawClose();
@@ -251,7 +251,7 @@ int CmdHF14BCmdRaw (const char *Cmd) {
 		
 		// attrib
 		if (HF14BCmdRaw(true, &crc2, true, cmd2, &cmdLen, false)==0) return rawClose();
-		PrintAndLog("ATTRIB : %s", sprint_hex(cmd2, 3));
+		PrintAndLog("ATTRIB : %s", sprint_hex(cmd2, cmdLen));
 		
 		if (cmdLen != 3 || !crc2) return rawClose();		
 		if (SRx && cmd2[0] != chipID) return rawClose();
