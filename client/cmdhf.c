@@ -189,7 +189,6 @@ void annotateIso15693(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	}
 }
 
-
 void annotateTopaz(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 {
 	switch(cmd[0]) {
@@ -204,10 +203,34 @@ void annotateTopaz(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 		case TOPAZ_READ8					:snprintf(exp, size, "READ8");break;
 		case TOPAZ_WRITE_E8					:snprintf(exp, size, "WRITE-E8");break;
 		case TOPAZ_WRITE_NE8				:snprintf(exp, size, "WRITE-NE8");break;
-		default:                            snprintf(exp,size,"?"); break;
+		default								:snprintf(exp,size,"?"); break;
 	}
 }
 
+void annotateIso7816(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
+
+	int pos = (cmd[0] == 2 ||  cmd[0] == 3) ? 1 : 2;
+
+	switch ( cmd[pos] ){
+		case ISO7816_READ_BINARY				:snprintf(exp, size, "READ BIN");break;
+		case ISO7816_WRITE_BINARY				:snprintf(exp, size, "WRITE BIN");break;
+		case ISO7816_UPDATE_BINARY				:snprintf(exp, size, "UPDATE BIN");break;
+		case ISO7816_ERASE_BINARY				:snprintf(exp, size, "ERASE BIN");break;
+		case ISO7816_READ_RECORDS				:snprintf(exp, size, "READ RECORDS");break;
+		case ISO7816_WRITE_RECORDS				:snprintf(exp, size, "WRITE RECORDS");break;
+		case ISO7816_APPEND_RECORD				:snprintf(exp, size, "APPEND RECORD");break;
+		case ISO7816_UPDATE_RECORD				:snprintf(exp, size, "UPDATE RECORD");break;
+		case ISO7816_GET_DATA					:snprintf(exp, size, "GET DATA");break;
+		case ISO7816_PUT_DATA					:snprintf(exp, size, "PUT DATA");break;
+		case ISO7816_SELECT_FILE				:snprintf(exp, size, "SELECT FILE");break;
+		case ISO7816_VERIFY						:snprintf(exp, size, "VERIFY");break;
+		case ISO7816_INTERNAL_AUTHENTICATION 	:snprintf(exp, size, "INTERNAL AUTH");break;
+		case ISO7816_EXTERNAL_AUTHENTICATION 	:snprintf(exp, size, "EXTERNAL AUTH");break;
+		case ISO7816_GET_CHALLENGE				:snprintf(exp, size, "GET CHALLENGE");break;
+		case ISO7816_MANAGE_CHANNEL				:snprintf(exp, size, "MANAGE CHANNEL");break;
+		default									:snprintf(exp,size,"?"); break;
+ }
+}
 
 /**
 06 00 = INITIATE
@@ -223,20 +246,21 @@ void annotateTopaz(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 {
 	switch(cmd[0]){
-	case ISO14443B_REQB   : snprintf(exp,size,"REQB");break;
-	case ISO14443B_ATTRIB : snprintf(exp,size,"ATTRIB");break;
-	case ISO14443B_HALT   : snprintf(exp,size,"HALT");break;
-	case ISO14443B_INITIATE     : snprintf(exp,size,"INITIATE");break;
-	case ISO14443B_SELECT       : snprintf(exp,size,"SELECT(%d)",cmd[1]);break;
-	case ISO14443B_GET_UID      : snprintf(exp,size,"GET UID");break;
-	case ISO14443B_READ_BLK     : snprintf(exp,size,"READ_BLK(%d)", cmd[1]);break;
-	case ISO14443B_WRITE_BLK    : snprintf(exp,size,"WRITE_BLK(%d)",cmd[1]);break;
-	case ISO14443B_RESET        : snprintf(exp,size,"RESET");break;
-	case ISO14443B_COMPLETION   : snprintf(exp,size,"COMPLETION");break;
-	case ISO14443B_AUTHENTICATE : snprintf(exp,size,"AUTHENTICATE");break;
-	default                     : snprintf(exp,size ,"?");break;
+		case ISO14443B_REQB   		: snprintf(exp,size,"REQB");break;
+		case ISO14443B_ATTRIB 		: snprintf(exp,size,"ATTRIB");break;
+		case ISO14443B_HALT   		: snprintf(exp,size,"HALT");break;
+		case ISO14443B_INITIATE     : snprintf(exp,size,"INITIATE");break;
+		case ISO14443B_SELECT       : snprintf(exp,size,"SELECT(%d)",cmd[1]);break;
+		case ISO14443B_GET_UID      : snprintf(exp,size,"GET UID");break;
+		case ISO14443B_READ_BLK     : snprintf(exp,size,"READ_BLK(%d)", cmd[1]);break;
+		case ISO14443B_WRITE_BLK    : snprintf(exp,size,"WRITE_BLK(%d)",cmd[1]);break;
+		case ISO14443B_RESET        : snprintf(exp,size,"RESET");break;
+		case ISO14443B_COMPLETION   : snprintf(exp,size,"COMPLETION");break;
+		case ISO14443B_AUTHENTICATE : snprintf(exp,size,"AUTHENTICATE");break;
+		case ISO14443B_PING			: snprintf(exp,size,"PING");break;
+		case ISO14443B_PONG			: snprintf(exp,size,"PONG");break;
+		default                     : snprintf(exp,size ,"?");break;
 	}
-
 }
 
 /**
@@ -462,7 +486,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 				break;
 			case ISO_14443A:
 				crcStatus = iso14443A_CRC_check(isResponse, frame, data_len);
-				break;
+				break;				
 			default: 
 				break;
 		}
@@ -517,6 +541,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			case ISO_14443A:	annotateIso14443a(explanation,sizeof(explanation),frame,data_len); break;
 			case ISO_14443B:	annotateIso14443b(explanation,sizeof(explanation),frame,data_len); break;
 			case TOPAZ:			annotateTopaz(explanation,sizeof(explanation),frame,data_len); break;
+			case ISO_7816_4:	annotateIso7816(explanation,sizeof(explanation),frame,data_len); break;
 			default:			break;
 		}
 	}
@@ -585,6 +610,8 @@ int CmdHFList(const char *Cmd)
 			protocol = ISO_14443B;
 		} else if(strcmp(type,"topaz")== 0) {
 			protocol = TOPAZ;
+		} else if(strcmp(type,"7816")== 0) {
+			protocol = ISO_7816_4;			
 		} else if(strcmp(type,"raw")== 0) {
 			protocol = -1;//No crc, no annotations
 		}else{
@@ -603,6 +630,7 @@ int CmdHFList(const char *Cmd)
 		PrintAndLog("    14b    - interpret data as iso14443b communications");
 		PrintAndLog("    iclass - interpret data as iclass communications");
 		PrintAndLog("    topaz  - interpret data as topaz communications");
+		PrintAndLog("    7816   - interpret data as iso7816-4 communications");
 		PrintAndLog("");
 		PrintAndLog("example: hf list 14a f");
 		PrintAndLog("example: hf list iclass");

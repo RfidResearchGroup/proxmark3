@@ -31,6 +31,9 @@ ISO14443B
 	05 = REQB
 	1D = ATTRIB
 	50 = HALT
+	
+	BA = PING (reader -> tag)
+	AB = PONG (tag -> reader)
 SRIX4K (tag does not respond to 05)
 	06 00 = INITIATE
 	0E xx = SELECT ID (xx = Chip-ID)
@@ -88,7 +91,29 @@ NXP/Philips CUSTOM COMMANDS
 	BA = Enable Privacy
 	BB = 64bit Password Protection
 	40 = Long Range CMD (Standard ISO/TR7003:1990)
-		*/
+
+ISO 7816-4 Basic interindustry commands. For command APDU's.
+	B0 = READ BINARY
+	D0 = WRITE BINARY
+	D6 = UPDATE BINARY
+	0E = ERASE BINARY
+	B2 = READ RECORDS
+	D2 = WRITE RECORDS
+	E2 = APPEND RECORD
+	DC = UPDATE RECORD
+	CA = GET DATA
+	DA = PUT DATA
+	A4 = SELECT FILE
+	20 = VERIFY
+	88 = INTERNAL AUTHENTICATION
+	82 = EXTERNAL AUTHENTICATION
+	B4 = GET CHALLENGE
+	70 = MANAGE CHANNEL
+
+	For response APDU's
+	90 00 = OK
+	6x xx = ERROR
+*/
 
 #define ICLASS_CMD_ACTALL           0x0A
 #define ICLASS_CMD_READ_OR_IDENTIFY 0x0C
@@ -159,6 +184,8 @@ NXP/Philips CUSTOM COMMANDS
 #define ISO14443B_RESET        0x0C
 #define ISO14443B_COMPLETION   0x0F
 #define ISO14443B_AUTHENTICATE 0x0A
+#define ISO14443B_PING		   0xBA
+#define ISO14443B_PONG		   0xAB
 
 //First byte is 26
 #define ISO15693_INVENTORY     0x01
@@ -193,10 +220,11 @@ NXP/Philips CUSTOM COMMANDS
 #define TOPAZ_WRITE_NE8					0x1B	// Write-no-erase (eight bytes)
 
 
-#define ISO_14443A 0
-#define ICLASS     1
-#define ISO_14443B 2
+#define ISO_14443A	0
+#define ICLASS		1
+#define ISO_14443B	2
 #define TOPAZ		3
+#define ISO_7816_4  4
 
 //-- Picopass fuses
 #define FUSE_FPERS   0x80
@@ -208,7 +236,28 @@ NXP/Philips CUSTOM COMMANDS
 #define FUSE_FPROD0  0x02
 #define FUSE_RA      0x01
 
+// ISO 7816-4 Basic interindustry commands. For command APDU's.
+#define ISO7816_READ_BINARY 0xB0
+#define ISO7816_WRITE_BINARY 0xD0
+#define ISO7816_UPDATE_BINARY 0xD6
+#define ISO7816_ERASE_BINARY 0x0E
+#define ISO7816_READ_RECORDS 0xB2
+#define ISO7816_WRITE_RECORDS 0xD2
+#define ISO7816_APPEND_RECORD 0xE2
+#define ISO7816_UPDATE_RECORD 0xDC
+#define ISO7816_GET_DATA 0xCA
+#define ISO7816_PUT_DATA 0xDA
+#define ISO7816_SELECT_FILE 0xA4
+#define ISO7816_VERIFY 0x20
+#define ISO7816_INTERNAL_AUTHENTICATION 0x88
+#define ISO7816_EXTERNAL_AUTHENTICATION 0x82
+#define ISO7816_GET_CHALLENGE 0xB4
+#define ISO7816_MANAGE_CHANNEL 0x70
 
+// ISO7816-4	For response APDU's
+#define ISO7816_OK	0x9000
+//	6x xx = ERROR
+	
 void printIclassDumpInfo(uint8_t* iclass_dump);
 
 #endif // PROTOCOLS_H
