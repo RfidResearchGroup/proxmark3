@@ -54,6 +54,7 @@ local _commands = {
 	CMD_FSK_SIM_TAG =                                                    0x021E,
 	CMD_ASK_SIM_TAG =                                                    0x021F,
 	CMD_PSK_SIM_TAG =                                                    0x0220,
+	CMD_AWID_DEMOD_FSK =                                                 0x0221,
 
 	--/* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 

@@ -841,6 +841,96 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	if (ledcontrol) LED_A_OFF();
 }
 
+// loop to get raw HID waveform then FSK demodulate the TAG ID from it
+void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
+{
+	uint8_t *dest = BigBuf_get_addr();
+	//const size_t sizeOfBigBuff = BigBuf_max_traceLen();
+	size_t size; 
+	int idx=0;
+	// Configure to go in 125Khz listen mode
+	LFSetupFPGAForADC(95, true);
+
+	while(!BUTTON_PRESS()) {
+
+		WDT_HIT();
+		if (ledcontrol) LED_A_ON();
+
+		DoAcquisition_default(-1,true);
+		// FSK demodulator
+		//size = sizeOfBigBuff;  //variable size will change after demod so re initialize it before use
+		size = 50*128*2; //big enough to catch 2 sequences of largest format
+		idx = AWIDdemodFSK(dest, &size);
+		
+		if (idx>0 && size==96){
+	        // Index map
+	        // 0            10            20            30              40            50              60
+	        // |            |             |             |               |             |               |
+	        // 01234567 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 - to 96
+	        // -----------------------------------------------------------------------------
+	        // 00000001 000 1 110 1 101 1 011 1 101 1 010 0 000 1 000 1 010 0 001 0 110 1 100 0 000 1 000 1
+	        // premable bbb o bbb o bbw o fff o fff o ffc o ccc o ccc o ccc o ccc o ccc o wxx o xxx o xxx o - to 96
+	        //          |---26 bit---|    |-----117----||-------------142-------------|
+	        // b = format bit len, o = odd parity of last 3 bits
+	        // f = facility code, c = card number
+	        // w = wiegand parity
+	        // (26 bit format shown)
+
+	        //get raw ID before removing parities
+	        uint32_t rawLo = bytebits_to_byte(dest+idx+64,32);
+	        uint32_t rawHi = bytebits_to_byte(dest+idx+32,32);
+	        uint32_t rawHi2 = bytebits_to_byte(dest+idx,32);
+
+	        size = removeParity(dest, idx+8, 4, 1, 88);
+	        // ok valid card found!
+
+	        // Index map
+	        // 0           10         20        30          40        50        60
+	        // |           |          |         |           |         |         |
+	        // 01234567 8 90123456 7890123456789012 3 456789012345678901234567890123456
+	        // -----------------------------------------------------------------------------
+	        // 00011010 1 01110101 0000000010001110 1 000000000000000000000000000000000
+	        // bbbbbbbb w ffffffff cccccccccccccccc w xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	        // |26 bit|   |-117--| |-----142------|
+	        // b = format bit len, o = odd parity of last 3 bits
+	        // f = facility code, c = card number
+	        // w = wiegand parity
+	        // (26 bit format shown)
+
+	        uint32_t fc = 0;
+	        uint32_t cardnum = 0;
+	        uint32_t code1 = 0;
+	        uint32_t code2 = 0;
+	        uint8_t fmtLen = bytebits_to_byte(dest,8);
+	        if (fmtLen==26){
+	                fc = bytebits_to_byte(dest+9, 8);
+	                cardnum = bytebits_to_byte(dest+17, 16);
+	                code1 = bytebits_to_byte(dest+8,fmtLen);
+	                Dbprintf("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
+	        } else {
+	                cardnum = bytebits_to_byte(dest+8+(fmtLen-17), 16);
+	                if (fmtLen>32){
+                        code1 = bytebits_to_byte(dest+8,fmtLen-32);
+                        code2 = bytebits_to_byte(dest+8+(fmtLen-32),32);
+                        Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+                } else{
+                        code1 = bytebits_to_byte(dest+8,fmtLen);
+                        Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
+                }
+			}
+			if (findone){
+				if (ledcontrol)	LED_A_OFF();
+				return;
+			}
+			// reset
+		}
+		idx = 0;
+		WDT_HIT();
+	}
+	DbpString("Stopped");
+	if (ledcontrol) LED_A_OFF();
+}
+
 void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = BigBuf_get_addr();

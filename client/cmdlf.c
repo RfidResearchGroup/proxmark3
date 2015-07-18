@@ -22,6 +22,7 @@
 #include "util.h"
 #include "cmdlf.h"
 #include "cmdlfhid.h"
+#include "cmdlfawid.h"
 #include "cmdlfti.h"
 #include "cmdlfem4x.h"
 #include "cmdlfhitag.h"
@@ -1157,6 +1158,7 @@ static command_t CommandTable[] =
 {
   {"help",        CmdHelp,            1, "This help"},
   {"em4x",        CmdLFEM4X,          1, "{ EM4X RFIDs... }"},
+  {"awid",		CmdLFAWID,		    1, "{ AWID RFIDs... }"},
   {"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
   {"hitag",       CmdLFHitag,         1, "{ HITAG RFIDs... }"},
   {"io",       	  CmdLFIO,	          1, "{ IOPROX RFIDs... }"},

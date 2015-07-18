@@ -22,8 +22,8 @@
 #include "../common/lfdemod.h"
 #include "BigBuf.h"
 #include "fpgaloader.h"
-#include "../include/hitag2.h"
-#include "../include/mifare.h"
+#include "hitag2.h"
+#include "mifare.h"
 //#include "des.h"
 //#include "aes.h"
 #include "desfire.h"
@@ -77,6 +77,7 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream);
 void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream);
 void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol);
+void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol); // Realtime demodulation mode for AWID26
 void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol);
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol);
 void CopyIOtoT55x7(uint32_t hi, uint32_t lo, uint8_t longFMT); // Clone an ioProx card to T5557/T5567

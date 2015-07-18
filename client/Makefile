@@ -101,6 +101,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			cmdlf.c \
 			cmdlfio.c \
 			cmdlfhid.c \
+			cmdlfawid.c \
 			cmdlfem4x.c \
 			cmdlfhitag.c \
 			cmdlfti.c \

@@ -209,7 +209,7 @@ void annotateTopaz(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 
 void annotateIso7816(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 
-	int pos = (cmd[0] == 2 ||  cmd[0] == 3) ? 1 : 2;
+	int pos = (cmd[0] == 2 ||  cmd[0] == 3) ? 2 : 3;
 
 	switch ( cmd[pos] ){
 		case ISO7816_READ_BINARY				:snprintf(exp, size, "READ BIN");break;
