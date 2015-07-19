@@ -207,29 +207,50 @@ void annotateTopaz(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	}
 }
 
+// iso 7816-3 
 void annotateIso7816(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
+	// S-block
+	if ( (cmd[0] & 0xC0) && (cmdsize == 3) ) {		
+		switch ( (cmd[0] & 0x3f)  ) {
+			case 0x00 	: snprintf(exp, size, "S-block RESYNCH req"); break;
+			case 0x20 	: snprintf(exp, size, "S-block RESYNCH resp"); break;
+			case 0x01 	: snprintf(exp, size, "S-block IFS req"); break;
+			case 0x21 	: snprintf(exp, size, "S-block IFS resp"); break;
+			case 0x02	: snprintf(exp, size, "S-block ABORT req"); break;
+			case 0x22	: snprintf(exp, size, "S-block ABORT resp"); break;
+			case 0x03	: snprintf(exp, size, "S-block WTX reqt"); break;
+			case 0x23	: snprintf(exp, size, "S-block WTX resp"); break;
+			default		: snprintf(exp, size, "S-block"); break;
+		}		
+	}
+	// R-block (ack)
+	else if ( ((cmd[0] & 0xD0) == 0x80) && ( cmdsize > 2) ) {
+		snprintf(exp, size, "R-block");
+	}
+	// I-block
+	else {
 
-	int pos = (cmd[0] == 2 ||  cmd[0] == 3) ? 2 : 3;
-
-	switch ( cmd[pos] ){
-		case ISO7816_READ_BINARY				:snprintf(exp, size, "READ BIN");break;
-		case ISO7816_WRITE_BINARY				:snprintf(exp, size, "WRITE BIN");break;
-		case ISO7816_UPDATE_BINARY				:snprintf(exp, size, "UPDATE BIN");break;
-		case ISO7816_ERASE_BINARY				:snprintf(exp, size, "ERASE BIN");break;
-		case ISO7816_READ_RECORDS				:snprintf(exp, size, "READ RECORDS");break;
-		case ISO7816_WRITE_RECORDS				:snprintf(exp, size, "WRITE RECORDS");break;
-		case ISO7816_APPEND_RECORD				:snprintf(exp, size, "APPEND RECORD");break;
-		case ISO7816_UPDATE_RECORD				:snprintf(exp, size, "UPDATE RECORD");break;
-		case ISO7816_GET_DATA					:snprintf(exp, size, "GET DATA");break;
-		case ISO7816_PUT_DATA					:snprintf(exp, size, "PUT DATA");break;
-		case ISO7816_SELECT_FILE				:snprintf(exp, size, "SELECT FILE");break;
-		case ISO7816_VERIFY						:snprintf(exp, size, "VERIFY");break;
-		case ISO7816_INTERNAL_AUTHENTICATION 	:snprintf(exp, size, "INTERNAL AUTH");break;
-		case ISO7816_EXTERNAL_AUTHENTICATION 	:snprintf(exp, size, "EXTERNAL AUTH");break;
-		case ISO7816_GET_CHALLENGE				:snprintf(exp, size, "GET CHALLENGE");break;
-		case ISO7816_MANAGE_CHANNEL				:snprintf(exp, size, "MANAGE CHANNEL");break;
-		default									:snprintf(exp,size,"?"); break;
- }
+		int pos = (cmd[0] == 2 ||  cmd[0] == 3) ? 2 : 3;
+		switch ( cmd[pos] ){
+			case ISO7816_READ_BINARY				:snprintf(exp, size, "READ BIN");break;
+			case ISO7816_WRITE_BINARY				:snprintf(exp, size, "WRITE BIN");break;
+			case ISO7816_UPDATE_BINARY				:snprintf(exp, size, "UPDATE BIN");break;
+			case ISO7816_ERASE_BINARY				:snprintf(exp, size, "ERASE BIN");break;
+			case ISO7816_READ_RECORDS				:snprintf(exp, size, "READ RECORDS");break;
+			case ISO7816_WRITE_RECORDS				:snprintf(exp, size, "WRITE RECORDS");break;
+			case ISO7816_APPEND_RECORD				:snprintf(exp, size, "APPEND RECORD");break;
+			case ISO7816_UPDATE_RECORD				:snprintf(exp, size, "UPDATE RECORD");break;
+			case ISO7816_GET_DATA					:snprintf(exp, size, "GET DATA");break;
+			case ISO7816_PUT_DATA					:snprintf(exp, size, "PUT DATA");break;
+			case ISO7816_SELECT_FILE				:snprintf(exp, size, "SELECT FILE");break;
+			case ISO7816_VERIFY						:snprintf(exp, size, "VERIFY");break;
+			case ISO7816_INTERNAL_AUTHENTICATION 	:snprintf(exp, size, "INTERNAL AUTH");break;
+			case ISO7816_EXTERNAL_AUTHENTICATION 	:snprintf(exp, size, "EXTERNAL AUTH");break;
+			case ISO7816_GET_CHALLENGE				:snprintf(exp, size, "GET CHALLENGE");break;
+			case ISO7816_MANAGE_CHANNEL				:snprintf(exp, size, "MANAGE CHANNEL");break;
+			default									:snprintf(exp,size,"?"); break;
+		}
+	}
 }
 
 /**

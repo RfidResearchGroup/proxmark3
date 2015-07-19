@@ -15,7 +15,7 @@
 #include "string.h"
 #include "iso14443crc.h"
 #include "common.h"
-#define RECEIVE_SAMPLES_TIMEOUT 800000
+#define RECEIVE_SAMPLES_TIMEOUT 600000
 #define ISO14443B_DMA_BUFFER_SIZE 256
 
 
@@ -106,7 +106,7 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len)
 		ToSendStuffBit(0);
 		ToSendStuffBit(0);
 	}
-	for(i = 0; i < 10; i++) {
+	for(i = 0; i < 2; i++) {
 		ToSendStuffBit(1);
 		ToSendStuffBit(1);
 		ToSendStuffBit(1);
@@ -527,13 +527,20 @@ static struct {
  */
 static RAMFUNC int Handle14443bSamplesDemod(int ci, int cq)
 {
-	int v;
-	int ai, aq;
+	int v = 0;
+	int ai = abs(ci);
+	int aq = abs(cq);
+	int halfci = (ai >> 1);
+	int halfcq = (aq >> 1);
 
 // The soft decision on the bit uses an estimate of just the
 // quadrant of the reference angle, not the exact angle.
 #define MAKE_SOFT_DECISION() { \
-		v = (Demod.sumI > 0) ? ci : -ci;\
+		if(Demod.sumI > 0) { \
+			v = ci; \
+		} else { \
+			v = -ci; \
+		} \
 		if(Demod.sumQ > 0) { \
 			v += cq; \
 		} else { \
@@ -543,23 +550,9 @@ static RAMFUNC int Handle14443bSamplesDemod(int ci, int cq)
 
 #define SUBCARRIER_DETECT_THRESHOLD	8
 
-// Subcarrier amplitude v = sqrt(ci^2 + cq^2), approximated here by abs(ci) + abs(cq)
-/* #define CHECK_FOR_SUBCARRIER() { \
-		v = ci; \
-		if(v < 0) v = -v; \
-		if(cq > 0) { \
-			v += cq; \
-		} else { \
-			v -= cq; \
-		} \
-	}		
- */
-
 // Subcarrier amplitude v = sqrt(ci^2 + cq^2), approximated here by max(abs(ci),abs(cq)) + 1/2*min(abs(ci),abs(cq)))
 #define CHECK_FOR_SUBCARRIER() { \
-		ai = (abs(ci) >> 1); \
-		aq = (abs(cq) >> 1); \
-		v = MAX(abs(ci), abs(cq)) + MIN(ai, aq); \
+		v = MAX(ai, aq) + MIN(halfci, halfcq); \
 }
 
 
@@ -575,7 +568,8 @@ static RAMFUNC int Handle14443bSamplesDemod(int ci, int cq)
 			break;
 
 		case DEMOD_PHASE_REF_TRAINING:
-			if(Demod.posCount < 10*2) {
+			if(Demod.posCount < 8) {
+			//if(Demod.posCount < 10*2) {
 				CHECK_FOR_SUBCARRIER();
 				if (v > SUBCARRIER_DETECT_THRESHOLD) {
 					// set the reference phase (will code a logic '1') by averaging over 32 1/fs.
@@ -594,7 +588,7 @@ static RAMFUNC int Handle14443bSamplesDemod(int ci, int cq)
 		case DEMOD_AWAITING_FALLING_EDGE_OF_SOF:
 			MAKE_SOFT_DECISION();
 			//Dbprintf("ICE: %d %d %d %d %d", v, Demod.sumI, Demod.sumQ, ci, cq );
-			if(v < 0) {	// logic '0' detected
+			if(v <= 0) {	// logic '0' detected
 				Demod.state = DEMOD_GOT_FALLING_EDGE_OF_SOF;
 				Demod.posCount = 0;	// start of SOF sequence
 			} else {
@@ -767,7 +761,7 @@ static void GetSamplesFor14443bDemod(int n, bool quiet)
 			}
 			lastRxCounter -= 2;
 			if(lastRxCounter <= 0) {
-				lastRxCounter += ISO14443B_DMA_BUFFER_SIZE;
+				lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
 			}
 
 			samples += 2;
@@ -1012,6 +1006,8 @@ void iso14443b_setup() {
 	// Signal field is on with the appropriate LED
     LED_D_ON();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX | FPGA_HF_READER_TX_SHALLOW_MOD);
+	
+	SpinDelay(100);
 
 	// Start the timer
 	//StartCountSspClk();
