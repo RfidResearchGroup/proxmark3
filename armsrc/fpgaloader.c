@@ -276,9 +276,6 @@ static void DownloadFPGA_byte(unsigned char w)
 // Download the fpga image starting at current stream position with length FpgaImageLen bytes
 static void DownloadFPGA(int bitstream_version, int FpgaImageLen, z_streamp compressed_fpga_stream, uint8_t *output_buffer)
 {
-
-	Dbprintf("DownloadFPGA(len: %d)", FpgaImageLen);
-	
 	int i=0;
 
 	AT91C_BASE_PIOA->PIO_OER = GPIO_FPGA_ON;
