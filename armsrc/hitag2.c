@@ -765,7 +765,7 @@ void SnoopHitag(uint32_t type) {
 	bSkip = true;
 	tag_sof = 4;
 	
-	while(!BUTTON_PRESS()) {
+	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
 		// Watchdog hit
 		WDT_HIT();
 		
@@ -992,7 +992,7 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	// Enable and reset counter
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	
-	while(!BUTTON_PRESS()) {
+	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
 		// Watchdog hit
 		WDT_HIT();
 		

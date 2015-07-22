@@ -21,6 +21,7 @@
 #include "lfdemod.h"
 #include "BigBuf.h"
 #include "fpgaloader.h"
+#include "usb_cdc.h"
 #include "hitag2.h"
 #include "mifare.h"
 //#include "des.h"

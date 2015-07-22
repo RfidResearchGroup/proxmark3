@@ -762,7 +762,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
 
-	while(!BUTTON_PRESS()) {
+	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
 
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
@@ -851,7 +851,7 @@ void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
 
-	while(!BUTTON_PRESS()) {
+	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
 
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
@@ -942,7 +942,7 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
 
-	while(!BUTTON_PRESS()) {
+	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
 
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
@@ -1003,7 +1003,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
 
-	while(!BUTTON_PRESS()) {
+	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
 		DoAcquisition_default(-1,true);

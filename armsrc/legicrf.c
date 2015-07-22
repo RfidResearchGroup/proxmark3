@@ -711,7 +711,7 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
 
    LED_B_ON();
    DbpString("Starting Legic emulator, press button to end");
-   while(!BUTTON_PRESS()) {
+   while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
       int level = !!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
       int time = timer->TC_CV;
                 
