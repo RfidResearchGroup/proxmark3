@@ -225,7 +225,10 @@ void annotateIso7816(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 	}
 	// R-block (ack)
 	else if ( ((cmd[0] & 0xD0) == 0x80) && ( cmdsize > 2) ) {
-		snprintf(exp, size, "R-block");
+		if ( (cmd[0] & 0x10) == 0 ) 
+			snprintf(exp, size, "R-block ACK");
+		else
+			snprintf(exp, size, "R-block NACK");
 	}
 	// I-block
 	else {

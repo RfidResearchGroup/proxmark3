@@ -23,6 +23,8 @@ typedef struct command_s
 
 // Print help for each command in the command array
 void CmdsHelp(const command_t Commands[]);
+// Print each command in the command array without help
+void CmdsLS(const command_t Commands[]);
 // Parse a command line
 void CmdsParse(const command_t Commands[], const char *Cmd);
 void dumpCommandsRecursive(const command_t cmds[], int markdown);

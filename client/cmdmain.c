@@ -33,6 +33,7 @@ unsigned int current_command = CMD_UNKNOWN;
 static int CmdHelp(const char *Cmd);
 static int CmdQuit(const char *Cmd);
 static int CmdRev(const char *Cmd);
+static int CmdLS(const char *Cmd);
 
 //For storing command that are received from the device
 static UsbCommand cmdBuffer[CMD_BUFFER_SIZE];
@@ -44,11 +45,12 @@ static int cmd_tail;//Starts as 0
 static command_t CommandTable[] = 
 {
 	{"help",	CmdHelp,	1, "This help. Use '<command> help' for details of a particular command."},
+	{"ls",		CmdLS,		1, "list commands"},
 	{"data",	CmdData,	1, "{ Plot window / data buffer manipulation... }"},
 	{"hf",		CmdHF,		1, "{ High Frequency commands... }"},
 	{"hw",		CmdHW,		1, "{ Hardware commands... }"},
 	{"lf",		CmdLF,		1, "{ Low Frequency commands... }"},
-  {"reveng",CmdRev,   1, "Crc calculations from the software reveng1-30"},
+	{"reveng",	CmdRev, 	1, "Crc calculations from the software reveng 1.30"},
 	{"script",	CmdScript,	1, "{ Scripting commands }"},
 	{"quit",	CmdQuit,	1, "Exit program"},
 	{"exit",	CmdQuit,	1, "Exit program"},
@@ -63,6 +65,10 @@ int CmdHelp(const char *Cmd)
 {
   CmdsHelp(CommandTable);
   return 0;
+}
+int CmdLS(const char *Cmd){
+	CmdsLS(CommandTable);
+	return 0;
 }
 
 int CmdQuit(const char *Cmd)

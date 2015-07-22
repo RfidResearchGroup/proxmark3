@@ -28,6 +28,18 @@ void CmdsHelp(const command_t Commands[])
   }
 }
 
+void CmdsLS(const command_t Commands[])
+{
+  if (Commands[0].Name == NULL) return;
+  int i = 0;
+  while (Commands[i].Name)
+  {
+    if (!offline || Commands[i].Offline)
+       PrintAndLog("%-16s", Commands[i].Name);
+    ++i;
+  }
+}
+
 void CmdsParse(const command_t Commands[], const char *Cmd)
 {
   if(strcmp( Cmd, "XX_internal_command_dump_XX") == 0)

@@ -1007,7 +1007,7 @@ void iso14443b_setup() {
     LED_D_ON();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX | FPGA_HF_READER_TX_SHALLOW_MOD);
 	
-	SpinDelay(100);
+	//SpinDelay(100);
 
 	// Start the timer
 	//StartCountSspClk();
