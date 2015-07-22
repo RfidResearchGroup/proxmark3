@@ -1813,13 +1813,13 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 
 int CmdHF14AMfuELoad(const char *Cmd)
 {
-	FILE * f;
-	char filename[FILE_PATH_SIZE];
-	char *fnameptr = filename;
-	char buf[64] = {0x00};
-	uint8_t buf8[64] = {0x00};
-	int i, len, blockNum, numBlocks;
-	int nameParamNo = 1;
+	//FILE * f;
+	//char filename[FILE_PATH_SIZE];
+	//char *fnameptr = filename;
+	//char buf[64] = {0x00};
+	//uint8_t buf8[64] = {0x00};
+	//int i, len, blockNum, numBlocks;
+	//int nameParamNo = 1;
 	
 	char ctmp = param_getchar(Cmd, 0);
 		

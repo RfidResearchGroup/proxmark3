@@ -560,3 +560,11 @@ void SetAdcMuxFor(uint32_t whichGpio)
 
 	HIGH(whichGpio);
 }
+
+void Fpga_print_status(void)
+{
+	Dbprintf("Fgpa");
+	if(downloaded_bitstream == FPGA_BITSTREAM_HF) Dbprintf("  mode.............HF");
+	else if(downloaded_bitstream == FPGA_BITSTREAM_LF) Dbprintf("  mode.............LF");
+	else Dbprintf("  mode.............%d", downloaded_bitstream);
+}

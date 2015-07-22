@@ -7,7 +7,7 @@
 //-----------------------------------------------------------------------------
 
 
-#include "../include/proxmark3.h"
+#include "proxmark3.h"
 #include <stdint.h>
 #include <stdlib.h>
 //#include "iso15693tools.h"

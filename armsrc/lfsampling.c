@@ -17,7 +17,7 @@ sample_config config = { 1, 8, 1, 95, 0 } ;
 
 void printConfig()
 {
-	Dbprintf("Sampling config: ");
+	Dbprintf("LF Sampling config: ");
 	Dbprintf("  [q] divisor:           %d ", config.divisor);
 	Dbprintf("  [b] bps:               %d ", config.bits_per_sample);
 	Dbprintf("  [d] decimation:        %d ", config.decimation);

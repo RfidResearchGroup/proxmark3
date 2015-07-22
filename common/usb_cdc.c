@@ -293,6 +293,22 @@ bool usb_poll()
   return (pUdp->UDP_CSR[AT91C_EP_OUT] & btReceiveBank);
 }
 
+/**
+	In github PR #129, some users appears to get a false positive from
+	usb_poll, which returns true, but the usb_read operation
+	still returns 0.
+	This check is basically the same as above, but also checks
+	that the length available to read is non-zero, thus hopefully fixes the
+	bug.
+**/
+bool usb_poll_validate_length()
+{
+
+	if (!usb_check()) return false;
+	if (!(pUdp->UDP_CSR[AT91C_EP_OUT] & btReceiveBank)) return false;
+	return (pUdp->UDP_CSR[AT91C_EP_OUT] >> 16) >  0;
+}
+
 //*----------------------------------------------------------------------------
 //* \fn    usb_read
 //* \brief Read available data from Endpoint OUT

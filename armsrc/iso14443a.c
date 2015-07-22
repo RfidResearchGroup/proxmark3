@@ -565,16 +565,18 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 	// param:
 	// bit 0 - trigger from first card answer
 	// bit 1 - trigger from first reader 7-bit request
-	
 	LEDsoff();
-
 
 	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
 	
 	// Allocate memory from BigBuf for some buffers
 	// free all previous allocations first
 	BigBuf_free();
-
+	
+	// init trace buffer
+	clear_trace();
+	set_tracing(TRUE);
+	
 	// The command (reader -> tag) that we're receiving.
 	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
 	uint8_t *receivedCmdPar = BigBuf_malloc(MAX_PARITY_SIZE);
@@ -585,10 +587,6 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 	
 	// The DMA buffer, used to stream samples from the FPGA
 	uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
-
-	// init trace buffer
-	clear_trace();
-	set_tracing(TRUE);
 
 	uint8_t *data = dmaBuf;
 	uint8_t previous_data = 0;
@@ -715,12 +713,11 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 		}
 	} // main cycle
 
-	DbpString("COMMAND FINISHED");
-
 	FpgaDisableSscDma();
+	LEDsoff();
+
 	Dbprintf("maxDataLen=%d, Uart.state=%x, Uart.len=%d", maxDataLen, Uart.state, Uart.len);
 	Dbprintf("traceLen=%d, Uart.output[0]=%08x", BigBuf_get_traceLen(), (uint32_t)Uart.output[0]);
-	LEDsoff();
 }
 
 //-----------------------------------------------------------------------------
@@ -1276,6 +1273,16 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 								ar_nr_responses[8], // AR2
 								ar_nr_responses[9]  // NR2
 							);
+							Dbprintf("../tools/mfkey/mfkey32v2 %06x%08x %08x %08x %08x %08x %08x %08x",
+								ar_nr_responses[0], // UID1
+								ar_nr_responses[1], // UID2
+								ar_nr_responses[2], // NT1
+								ar_nr_responses[3], // AR1
+								ar_nr_responses[4], // NR1
+								ar_nr_responses[7], // NT2
+								ar_nr_responses[8], // AR2
+								ar_nr_responses[9]  // NR2
+								);
 					}
 					uint8_t len = ar_nr_collected*5*4;
 					cmd_send(CMD_ACK,CMD_SIMULATE_MIFARE_CARD,len,0,&ar_nr_responses,len);
@@ -1298,9 +1305,15 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 		else {
 			// Check for ISO 14443A-4 compliant commands, look at left nibble
 			switch (receivedCmd[0]) {
-
+				case 0x02:
+				case 0x03: {  // IBlock (command no CID)
+					dynamic_response_info.response[0] = receivedCmd[0];
+					dynamic_response_info.response[1] = 0x90;
+					dynamic_response_info.response[2] = 0x00;
+					dynamic_response_info.response_n = 3;
+				} break;
 				case 0x0B:
-				case 0x0A: { // IBlock (command)
+				case 0x0A: { // IBlock (command CID)
 				  dynamic_response_info.response[0] = receivedCmd[0];
 				  dynamic_response_info.response[1] = 0x00;
 				  dynamic_response_info.response[2] = 0x90;
@@ -1320,15 +1333,17 @@ void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
 				  dynamic_response_info.response_n = 2;
 				} break;
 				  
-				case 0xBA: { //
-				  memcpy(dynamic_response_info.response,"\xAB\x00",2);
-				  dynamic_response_info.response_n = 2;
+				case 0xBA: { // ping / pong
+					dynamic_response_info.response[0] = 0xAB;
+					dynamic_response_info.response[1] = 0x00;
+					dynamic_response_info.response_n = 2;
 				} break;
 
 				case 0xCA:
 				case 0xC2: { // Readers sends deselect command
-				  memcpy(dynamic_response_info.response,"\xCA\x00",2);
-				  dynamic_response_info.response_n = 2;
+					dynamic_response_info.response[0] = 0xCA;
+					dynamic_response_info.response[1] = 0x00;
+					dynamic_response_info.response_n = 2;
 				} break;
 
 				default: {
@@ -1815,7 +1830,6 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
 	}
 }
 
-
 void ReaderTransmitBitsPar(uint8_t* frame, uint16_t bits, uint8_t *par, uint32_t *timing)
 {
 	CodeIso14443aBitsAsReaderPar(frame, bits, par);
@@ -1831,12 +1845,10 @@ void ReaderTransmitBitsPar(uint8_t* frame, uint16_t bits, uint8_t *par, uint32_t
 	}
 }
 
-
 void ReaderTransmitPar(uint8_t* frame, uint16_t len, uint8_t *par, uint32_t *timing)
 {
   ReaderTransmitBitsPar(frame, len*8, par, timing);
 }
-
 
 void ReaderTransmitBits(uint8_t* frame, uint16_t len, uint32_t *timing)
 {
@@ -1845,7 +1857,6 @@ void ReaderTransmitBits(uint8_t* frame, uint16_t len, uint32_t *timing)
   GetParity(frame, len/8, par);
   ReaderTransmitBitsPar(frame, len, par, timing);
 }
-
 
 void ReaderTransmit(uint8_t* frame, uint16_t len, uint32_t *timing)
 {
@@ -2914,6 +2925,16 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 					ar_nr_responses[8], // AR2
 					ar_nr_responses[9]  // NR2
 					);
+			Dbprintf("../tools/mfkey/mfkey32v2 %06x%08x %08x %08x %08x %08x %08x %08x",
+					ar_nr_responses[0], // UID1
+					ar_nr_responses[1], // UID2
+					ar_nr_responses[2], // NT1
+					ar_nr_responses[3], // AR1
+					ar_nr_responses[4], // NR1
+					ar_nr_responses[7], // NT2
+					ar_nr_responses[8], // AR2
+					ar_nr_responses[9]  // NR2
+					);
 		} else {
 			Dbprintf("Failed to obtain two AR/NR pairs!");
 			if(ar_nr_collected > 0 ) {
@@ -3067,6 +3088,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
 					// And reset the Miller decoder including its (now outdated) input buffer
 					UartInit(receivedCmd, receivedCmdPar);
+					// why not UartReset?
 				}
 				TagIsActive = (Demod.state != DEMOD_UNSYNCD);
 			}
@@ -3081,11 +3103,8 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
 	} // main cycle
 
-	DbpString("COMMAND FINISHED");
-
 	FpgaDisableSscDma();
 	MfSniffEnd();
-	
-	Dbprintf("maxDataLen=%x, Uart.state=%x, Uart.len=%x", maxDataLen, Uart.state, Uart.len);
 	LEDsoff();
+	Dbprintf("maxDataLen=%x, Uart.state=%x, Uart.len=%x", maxDataLen, Uart.state, Uart.len);
 }

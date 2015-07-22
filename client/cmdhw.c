@@ -405,22 +405,45 @@ int CmdTune(const char *Cmd)
 int CmdVersion(const char *Cmd)
 {
 
+	clearCommandBuffer();
   UsbCommand c = {CMD_VERSION};
 	static UsbCommand resp = {0, {0, 0, 0}};
-	
+
 	if (resp.arg[0] == 0 && resp.arg[1] == 0) { // no cached information available
   SendCommand(&c);
-		if (WaitForResponseTimeout(CMD_ACK,&resp,1000) && Cmd != NULL) {
-			PrintAndLog("Prox/RFID mark3 RFID instrument");
-			PrintAndLog((char*)resp.d.asBytes);
-			lookupChipID(resp.arg[0], resp.arg[1]);
-		}
-	} else if (Cmd != NULL) {
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
 		PrintAndLog("Prox/RFID mark3 RFID instrument");
 		PrintAndLog((char*)resp.d.asBytes);
 		lookupChipID(resp.arg[0], resp.arg[1]);
 	}
-	
+	} else {
+		PrintAndLog("[[[ Cached information ]]]\n");
+		PrintAndLog("Prox/RFID mark3 RFID instrument");
+		PrintAndLog((char*)resp.d.asBytes);
+		lookupChipID(resp.arg[0], resp.arg[1]);
+		PrintAndLog("");
+	}
+	return 0;
+}
+
+int CmdStatus(const char *Cmd)
+{
+	UsbCommand c = {CMD_STATUS};
+	SendCommand(&c);
+	return 0;
+}
+
+int CmdPing(const char *Cmd)
+{
+	clearCommandBuffer();
+	UsbCommand resp;
+	UsbCommand c = {CMD_PING};
+	SendCommand(&c);
+	if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+		PrintAndLog("Ping successfull");
+	}else{
+		PrintAndLog("Ping failed");
+	}
   return 0;
 }
 
@@ -437,6 +460,8 @@ static command_t CommandTable[] =
   {"setmux",        CmdSetMux,      0, "<loraw|hiraw|lopkd|hipkd> -- Set the ADC mux to a specific value"},
   {"tune",          CmdTune,        0, "Measure antenna tuning"},
   {"version",       CmdVersion,     0, "Show version information about the connected Proxmark"},
+	{"status",        CmdStatus,      0, "Show runtime status information about the connected Proxmark"},
+	{"ping",          CmdPing,        0, "Test if the pm3 is responsive"},
   {NULL, NULL, 0, NULL}
 };
 

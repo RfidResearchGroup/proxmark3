@@ -5,16 +5,22 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 
 ### Added
+- ISO14443a stand-alone operation with ARM CFLAG="WITH_ISO14443a_StandAlone". This code can read & emulate two banks of 14a tag UIDs and write to "magic" cards  (Craig Young) 
 - AWID26 command context added as 'lf awid' containing realtime demodulation as well as cloning/simulation based on tag numbers (Craig Young)
+- Added 'hw status'. This command makes the ARM print out some runtime information. (holiman) 
+- Added 'hw ping'. This command just sends a usb packets and checks if the pm3 is responsive. Can be used to abort certain operations which supports abort over usb. (holiman)
 
 ### Changed
 - Changed lf config's `threshold` to a graph (signed) metric and it will trigger on + or - value set to. (example: set to 50 and recording would begin at first graphed value of >= 50 or <= -50) (marshmellow)
 - EPA functions (`hf epa`) now support both ISO 14443-A and 14443-B cards (frederikmoellers)
+- 'hw version' only talks to ARM at startup, after that the info is cached. (pwpiwi)
 
 ## [2.2.0][2015-07-12]
 
+### Changed
+- Added `hf 14b raw -s` option to auto select a 14b std tag before raw command 
 - Changed `hf 14b write` to `hf 14b sriwrite` as it only applied to sri tags (marshmellow)
-- Added `hf 14b reader` to `hf search` (marshmellow)
+- Added `hf 14b info` to `hf search` (marshmellow)
 - Added compression of fpga config and data, *BOOTROM REFLASH REQUIRED* (piwi)
 - Implemented better detection of mifare-tags that are not vulnerable to classic attacks (`hf mf mifare`, `hf mf nested`) (piwi)
 

@@ -409,7 +409,6 @@ void tdes_dec(void* out, void* in, const uint8_t* key){
 
 	uint8_t i;
 	unsigned char temp[8];
-
 	uint8_t* tin = (uint8_t*) in;
 	uint8_t* tout = (uint8_t*) out;
 	
@@ -431,6 +430,7 @@ void tdes_dec(void* out, void* in, const uint8_t* key){
 		length -= 8;
 	}
  }
+
 
 /******************************************************************************/
 

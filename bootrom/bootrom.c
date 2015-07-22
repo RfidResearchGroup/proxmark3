@@ -148,7 +148,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         while(!((sr = AT91C_BASE_EFC0->EFC_FSR) & AT91C_MC_FRDY));
         if(sr & (AT91C_MC_LOCKE | AT91C_MC_PROGE)) {
           dont_ack = 1;
-          cmd_send(CMD_NACK,0,0,0,0,0);
+          cmd_send(CMD_NACK,sr,0,0,0,0);
         }
       }
     } break;

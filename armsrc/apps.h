@@ -15,11 +15,10 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <string.h>
-#include <strings.h>
-#include "../common/crc32.h"
-#include "../common/lfdemod.h"
+#include <sys/types.h> 
+#include "common.h"
+#include "crc32.h"
+#include "lfdemod.h"
 #include "BigBuf.h"
 #include "fpgaloader.h"
 #include "hitag2.h"

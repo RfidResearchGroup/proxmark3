@@ -16,7 +16,7 @@
 #include "cmdparser.h"  // CmdsParse, CmdsHelp
 #include "cmdlfawid.h"  // AWID function declarations
 #include "lfdemod.h"    // parityTest
-
+#include "cmdmain.h"
 static int CmdHelp(const char *Cmd);
 
 
@@ -69,6 +69,7 @@ int CmdAWIDDemodFSK(const char *Cmd)
   if (Cmd[0]=='h' || Cmd[0] == 'H') return usage_lf_awid_fskdemod();
   UsbCommand c={CMD_AWID_DEMOD_FSK};
   c.arg[0]=findone;
+  clearCommandBuffer();
   SendCommand(&c);
   return 0;   
 }
@@ -167,17 +168,18 @@ int CmdAWIDSim(const char *Cmd)
   c.arg[2] = 96; // Bitstream length: 96-bits == 12 bytes
   for (i=0; i < 96; i++)
     c.d.asBytes[i] = (BS[i/8] & (1<<(7-(i%8))))?1:0;
-  SendCommand(&c);
+  clearCommandBuffer();
+    SendCommand(&c);
   return 0;
 }
 
 int CmdAWIDClone(const char *Cmd)
 {
+clearCommandBuffer();
   uint32_t fc=0,cn=0,blocks[4] = {0x00107060, 0, 0, 0x11111111}, i=0;
   uint8_t BitStream[12];
   uint8_t *BS=BitStream;
-  UsbCommand c;
-  
+	UsbCommand c, resp;
 
   if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) {
     return usage_lf_awid_clone();
@@ -206,6 +208,11 @@ int CmdAWIDClone(const char *Cmd)
       c.arg[1] = i;
       c.arg[2] = 0;
       SendCommand(&c);
+			if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)){
+				PrintAndLog("Error occurred, device did not respond during write operation.");
+				return -1;
+			}
+
     }
   }
   return 0;

@@ -17,6 +17,7 @@
 #include "elf.h"
 #include "proxendian.h"
 #include "usb_cmd.h"
+#include "at91sam7s512.h"
 
 void SendCommand(UsbCommand* txcmd);
 void ReceiveCommand(UsbCommand* rxcmd);
@@ -352,12 +353,11 @@ static int enter_bootloader(char *serial_port_name)
 	return -1;
 }
 
-static int wait_for_ack(void)
+static int wait_for_ack(UsbCommand *ack)
 {
-  UsbCommand ack;
-	ReceiveCommand(&ack);
-	if (ack.cmd != CMD_ACK) {
-		printf("Error: Unexpected reply 0x%04"llx" (expected ACK)\n", ack.cmd);
+	ReceiveCommand(ack);
+	if (ack->cmd != CMD_ACK) {
+		printf("Error: Unexpected reply 0x%04"llx" (expected ACK)\n", ack->cmd);
 		return -1;
 	}
 	return 0;
@@ -389,7 +389,7 @@ int flash_start_flashing(int enable_bl_writes,char *serial_port_name)
 			c.arg[2] = 0;
 		}
 		SendCommand(&c);
-		return wait_for_ack();
+		return wait_for_ack(&c);
 	} else {
 		fprintf(stderr, "Note: Your bootloader does not understand the new START_FLASH command\n");
 		fprintf(stderr, "      It is recommended that you update your bootloader\n\n");
@@ -409,7 +409,18 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length)
 	c.arg[0] = address;
 	memcpy(c.d.asBytes, block_buf, length);
   SendCommand(&c);
-  return wait_for_ack();
+	int ret = wait_for_ack(&c);
+	if (ret && c.arg[0]) {
+		uint32_t lock_bits = c.arg[0] >> 16;
+		bool lock_error = c.arg[0] & AT91C_MC_LOCKE;
+		bool prog_error = c.arg[0] & AT91C_MC_PROGE;
+		bool security_bit = c.arg[0] & AT91C_MC_SECURITY;
+		printf("%s", lock_error?"       Lock Error\n":"");
+		printf("%s", prog_error?"       Invalid Command or bad Keyword\n":"");
+		printf("%s", security_bit?"       Security Bit is set!\n":"");
+		printf("       Lock Bits:      0x%04x\n", lock_bits);
+	}
+	return ret;
 }
 
 // Write a file's segments to Flash

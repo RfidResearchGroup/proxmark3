@@ -549,6 +549,7 @@ int CmdHF14ASim(const char *Cmd)
 				int len = (resp.arg[1] > sizeof(data)) ? sizeof(data) : resp.arg[1];
 				memcpy(data, resp.d.asBytes, len);
 				tryMfk32(uid, data, key);
+				tryMfk32_moebius(uid, data, key);
 				//tryMfk64(uid, data, key);
 				PrintAndLog("--");
 			}
@@ -726,6 +727,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
     c.arg[1] = (datalen & 0xFFFF) | (numbits << 16);
     memcpy(c.d.asBytes,data,datalen);
 
+	clearCommandBuffer();
     SendCommand(&c);
 
     if (reply) {

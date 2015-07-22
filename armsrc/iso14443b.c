@@ -525,6 +525,7 @@ static struct {
  *          false if we are still waiting for some more
  *
  */
+ #define abs(x) ( ((x)<0) ? -(x) : (x) )
 static RAMFUNC int Handle14443bSamplesDemod(int ci, int cq)
 {
 	int v = 0;

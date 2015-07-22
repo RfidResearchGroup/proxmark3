@@ -88,10 +88,33 @@ function mfcrack_inner()
 	while not core.ukbhit() do		
 		local result = core.WaitForResponseTimeout(cmds.CMD_ACK,1000)
 		if result then
-			-- Unpacking the three arg-parameters
-			local count,cmd,isOK = bin.unpack('LL',result)
 
-			if isOK ~= 1 then return nil, "Error occurred" end
+			--[[
+			I don't understand, they cmd and args are defined as uint32_t, however, 
+			looking at the returned data, they all look like 64-bit things: 
+
+			print("result", bin.unpack("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH", result))
+
+			FF	00	00	00	00	00	00	00	<-- 64 bits of data
+			FE	FF	FF	FF	00	00	00	00	<-- 64 bits of data
+			00	00	00	00	00	00	00	00	<-- 64 bits of data
+			00	00	00	00	00	00	00	00	<-- 64 bits of data
+			04	7F	12	E2	00             <-- this is where 'data' starts
+
+			So below I use LI to pick out the "FEFF FFFF", don't know why it works.. 
+			--]]
+			-- Unpacking the arg-parameters
+			local count,cmd,isOK = bin.unpack('LI',result)
+			--print("response", isOK)--FF FF FF FF
+			if isOK == 0xFFFFFFFF then
+				return nil, "Button pressed. Aborted."
+			elseif isOK == 0xFFFFFFFE then
+				return nil, "Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests). You can try 'script run mfkeys' or 'hf mf chk' to test various known keys."
+			elseif isOK == 0xFFFFFFFD then
+				return nil, "Card is not vulnerable to Darkside attack (its random number generator is not predictable). You can try 'script run mfkeys' or 'hf mf chk' to test various known keys."
+			elseif isOK ~= 1 then 
+				return nil, "Error occurred" 
+			end
 
 
 			-- The data-part is left
