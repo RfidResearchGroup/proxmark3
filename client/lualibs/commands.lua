@@ -63,6 +63,7 @@ local _commands = {
 	CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693 =                              0x0300,
 	CMD_READ_SRI512_TAG =                                                0x0303,
 	CMD_READ_SRIX4K_TAG =                                                0x0304,
+	CMD_ISO_14443B_COMMAND =											 0x0305,
 	CMD_READER_ISO_15693 =                                               0x0310,
 	CMD_SIMTAG_ISO_15693 =                                               0x0311,
 	CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693 =                               0x0312,

@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-//#include <string.h>
 #include <stdint.h>
 #include "iso14443crc.h"
 #include "proxmark3.h"
@@ -43,7 +42,7 @@ int CmdHF14BSim(const char *Cmd)
 
 int CmdHF14BSnoop(const char *Cmd)
 {
-  UsbCommand c = {CMD_SNOOP_ISO_14443B};
+	UsbCommand c = {CMD_SNOOP_ISO_14443B};
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
