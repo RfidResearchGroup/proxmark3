@@ -39,17 +39,6 @@ local char = string.char
 local sub = string.sub
 local format = string.format
 
-
-
-local band = bit32.band
-local bor = bit32.bor
-local lshift = bit32.lshift
-local rshift = bit32.rshift
-local byte = string.byte
-local char = string.char
-local sub = string.sub
-local format = string.format
-
 --- 
 -- A debug printout-function
 function dbg(args)
@@ -71,6 +60,7 @@ end
 -- This is only meant to be used when errors occur
 function oops(err)
 	print("ERROR: ",err)
+	return nil,err
 end
 --- 
 -- Usage help
