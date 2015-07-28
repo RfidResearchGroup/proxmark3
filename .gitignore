@@ -17,6 +17,7 @@
 proxmark
 proxmark3
 flasher
+fpga_compress
 version.c
 lua
 luac
