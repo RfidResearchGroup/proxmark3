@@ -1275,7 +1275,7 @@ void RAMFUNC SnoopIso14443b(void)
 
 		if(!ReaderIsActive) {						// no need to try decoding tag data if the reader is sending - and we cannot afford the time
 			// is this | 0x01 the error?   & 0xfe  in https://github.com/Proxmark/proxmark3/issues/103
-			if(Handle14443bSamplesDemod(ci | 0x01, cq | 0x01)) {
+			if(Handle14443bSamplesDemod(ci & 0xfe, cq & 0xfe)) {
 
 			//Use samples as a time measurement
 			if(tracing)

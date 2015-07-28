@@ -155,9 +155,7 @@ end
 -- Sends an instruction to do nothing, only disconnect
 function disconnect()
 
-	local command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, 
-									arg1 = 0, -- Nothing 
-									}
+	local command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, arg1 = 0,	}
 	-- We can ignore the response here, no ACK is returned for this command
 	-- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
 	return lib14a.sendToDevice(command,true) 

@@ -34,7 +34,7 @@ int CmdHF14BList(const char *Cmd)
 
 int CmdHF14BSim(const char *Cmd)
 {
-	UsbCommand c={CMD_SIMULATE_TAG_ISO_14443B};
+	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443B};
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;

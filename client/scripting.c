@@ -18,6 +18,7 @@
 #include "util.h"
 #include "nonce2key/nonce2key.h"
 #include "../common/iso15693tools.h"
+#include "iso14443crc.h"
 #include "../common/crc16.h"
 #include "../common/crc64.h"
 #include "../common/sha1.h"
@@ -52,12 +53,11 @@ static int l_SendCommand(lua_State *L){
     const char *data = luaL_checklstring(L, 1, &size);
     if(size != sizeof(UsbCommand))
     {
-        printf("Got data size %d, expected %d" , (int) size,(int) sizeof(UsbCommand));
+        printf("Got data size %d, expected %d" , size, sizeof(UsbCommand));
         lua_pushstring(L,"Wrong data size");
         return 1;
     }
 
-//    UsbCommand c = (*data);
     SendCommand((UsbCommand* )data);
     return 0; // no return values
 }
@@ -100,7 +100,7 @@ static int l_WaitForResponseTimeout(lua_State *L){
     if(WaitForResponseTimeout(cmd, &response, ms_timeout))
     {
         //Push it as a string
-         lua_pushlstring(L,(const char *)&response,sizeof(UsbCommand));
+         lua_pushlstring(L,(const char *)&response, sizeof(UsbCommand));
 
         return 1;// return 1 to signal one return value
     }else{
@@ -226,6 +226,28 @@ static int l_iso15693_crc(lua_State *L)
     const char *v = luaL_checklstring(L, 1, &size);
     uint16_t retval = Iso15693Crc((uint8_t *) v, size);
     lua_pushinteger(L, (int) retval);
+    return 1;
+}
+
+static int l_iso14443b_crc(lua_State *L)
+{
+	/* void ComputeCrc14443(int CrcType,
+                     const unsigned char *Data, int Length,
+                     unsigned char *TransmitFirst,
+                     unsigned char *TransmitSecond)
+	*/
+	unsigned char buf[USB_CMD_DATA_SIZE];
+    size_t len = 0;	
+    const char *data = luaL_checklstring(L, 1, &len);
+	if (USB_CMD_DATA_SIZE < len)
+		len =  USB_CMD_DATA_SIZE-2;
+	
+	for (int i = 0; i < len; i += 2) {
+		sscanf(&data[i], "%02x", (unsigned int *)&buf[i / 2]);
+	}	
+	ComputeCrc14443(CRC_14443_B, buf, len, &buf[len], &buf[len+1]);
+	
+    lua_pushlstring(L, (const char *)&buf, len+2);
     return 1;
 }
 
@@ -483,6 +505,7 @@ int set_pm3_libraries(lua_State *L)
         {"clearCommandBuffer",          l_clearCommandBuffer},
 		{"console",                     l_CmdConsole},
 		{"iso15693_crc",                l_iso15693_crc},
+		{"iso14443b_crc",				l_iso14443b_crc},
 		{"aes128_decrypt",              l_aes128decrypt_cbc},
 		{"aes128_decrypt_ecb",          l_aes128decrypt_ecb},
 		{"aes128_encrypt",              l_aes128encrypt_cbc},		

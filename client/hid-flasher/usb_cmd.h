@@ -23,14 +23,24 @@ typedef BYTE uint8_t;
 #define PACKED __attribute__((packed))
 #endif
 
+#define USB_CMD_DATA_SIZE 512
+
 typedef struct {
-	uint32_t	cmd;
-	uint32_t	arg[3];
+	uint64_t	cmd;
+	uint64_t	arg[3];
 	union {
-		uint8_t		asBytes[48];
-		uint32_t	asDwords[12];
+    uint8_t  asBytes[USB_CMD_DATA_SIZE];
+    uint32_t asDwords[USB_CMD_DATA_SIZE/4];
 	} d;
 } PACKED UsbCommand;
+// A struct used to send sample-configs over USB
+typedef struct{
+	uint8_t decimation;
+	uint8_t bits_per_sample;
+	bool averaging;
+	int divisor;
+	int trigger_threshold;
+} sample_config;
 
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
@@ -53,7 +63,6 @@ typedef struct {
 #define CMD_STATUS														  0x0108
 #define CMD_PING														  0x0109
  
-
 // For low-frequency tags
 #define CMD_READ_TI_TYPE                                                  0x0202
 #define CMD_WRITE_TI_TYPE                                                 0x0203
@@ -83,6 +92,7 @@ typedef struct {
 #define CMD_IO_DEMOD_FSK                                                  0x021A
 #define CMD_IO_CLONE_TAG                                                  0x021B
 #define CMD_EM410X_DEMOD                                                  0x021c
+// Sampling configuration for LF reader/snooper
 #define CMD_SET_LF_SAMPLING_CONFIG                                        0x021d
 #define CMD_FSK_SIM_TAG                                                   0x021E
 #define CMD_ASK_SIM_TAG                                                   0x021F
@@ -95,6 +105,7 @@ typedef struct {
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693                             0x0300
 #define CMD_READ_SRI512_TAG                                               0x0303
 #define CMD_READ_SRIX4K_TAG                                               0x0304
+#define CMD_ISO_14443B_COMMAND                                            0x0305
 #define CMD_READER_ISO_15693                                              0x0310
 #define CMD_SIMTAG_ISO_15693                                              0x0311
 #define CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693                              0x0312
@@ -102,6 +113,7 @@ typedef struct {
 #define CMD_ISO_15693_COMMAND_DONE                                        0x0314
 #define CMD_ISO_15693_FIND_AFI                                            0x0315
 #define CMD_ISO_15693_DEBUG                                               0x0316
+#define CMD_LF_SNOOP_RAW_ADC_SAMPLES                                      0x0317
 
 // For Hitag2 transponders
 #define CMD_SNOOP_HITAG                                                   0x0370
@@ -122,6 +134,9 @@ typedef struct {
 #define CMD_SNOOP_ICLASS                                                  0x0392
 #define CMD_SIMULATE_TAG_ICLASS                                           0x0393
 #define CMD_READER_ICLASS                                                 0x0394
+#define CMD_READER_ICLASS_REPLAY                                          0x0395
+#define CMD_ICLASS_ISO14443A_WRITE										  0x0397
+#define CMD_ICLASS_EML_MEMSET                                             0x0398
 
 // For measurements of the antenna tuning
 #define CMD_MEASURE_ANTENNA_TUNING                                        0x0400
@@ -138,8 +153,11 @@ typedef struct {
 #define CMD_MIFARE_EML_MEMSET                                             0x0602
 #define CMD_MIFARE_EML_MEMGET                                             0x0603
 #define CMD_MIFARE_EML_CARDLOAD                                           0x0604
-#define CMD_MIFARE_EML_CSETBLOCK                                          0x0605
-#define CMD_MIFARE_EML_CGETBLOCK                                          0x0606
+
+// magic chinese card commands
+#define CMD_MIFARE_CSETBLOCK                                              0x0605
+#define CMD_MIFARE_CGETBLOCK                                              0x0606
+#define CMD_MIFARE_CIDENT                                                 0x0607
 
 #define CMD_SIMULATE_MIFARE_CARD                                          0x0610
 
@@ -147,13 +165,52 @@ typedef struct {
 #define CMD_MIFARE_NESTED                                                 0x0612
 
 #define CMD_MIFARE_READBL                                                 0x0620
+#define CMD_MIFAREU_READBL                                                0x0720
 #define CMD_MIFARE_READSC                                                 0x0621
+#define CMD_MIFAREU_READCARD                                              0x0721
 #define CMD_MIFARE_WRITEBL                                                0x0622
+#define CMD_MIFAREU_WRITEBL						                          0x0722
+#define CMD_MIFAREU_WRITEBL_COMPAT					                      0x0723
+
 #define CMD_MIFARE_CHKKEYS                                                0x0623
 
 #define CMD_MIFARE_SNIFFER                                                0x0630
+//ultralightC
+#define CMD_MIFAREUC_AUTH                                                 0x0724
+//0x0725 and 0x0726 no longer used 
+#define CMD_MIFAREUC_SETPWD                                               0x0727
+
+
+// mifare desfire
+#define CMD_MIFARE_DESFIRE_READBL                                         0x0728
+#define CMD_MIFARE_DESFIRE_WRITEBL                                        0x0729
+#define CMD_MIFARE_DESFIRE_AUTH1                                          0x072a
+#define CMD_MIFARE_DESFIRE_AUTH2                                          0x072b
+#define CMD_MIFARE_DES_READER                                             0x072c
+#define CMD_MIFARE_DESFIRE_INFO                                           0x072d
+#define CMD_MIFARE_DESFIRE                                                0x072e
+
+#define CMD_MIFARE_COLLECT_NONCES										  0x072f
 
 #define CMD_UNKNOWN                                                       0xFFFF
+
+
+//Mifare simulation flags
+#define FLAG_INTERACTIVE 0x01
+#define FLAG_4B_UID_IN_DATA 0x02
+#define FLAG_7B_UID_IN_DATA 0x04
+#define FLAG_NR_AR_ATTACK 0x08
+
+
+//Iclass reader flags
+#define FLAG_ICLASS_READER_ONLY_ONCE 0x01
+#define FLAG_ICLASS_READER_CC       0x02
+#define FLAG_ICLASS_READER_CSN		0x04
+#define FLAG_ICLASS_READER_CONF		0x08
+#define FLAG_ICLASS_READER_AA		0x10
+#define FLAG_ICLASS_READER_ONE_TRY      0x20
+
+
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
 /* Whether a bootloader that understands the common_area is present */

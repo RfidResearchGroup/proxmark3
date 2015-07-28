@@ -69,6 +69,18 @@ local Utils =
 		return outResults
 	end,
 	
+	----ISO14443-B CRC
+	Crc14b = function(s)
+		if s == nil then return nil end
+		if #s == 0 then return nil end
+		if  type(s) == 'string' then
+			local utils = require('utils')
+			local ascii = utils.ConvertHexToAscii(s)
+			local hashed = core.iso14443b_crc(ascii)
+			return utils.ConvertAsciiToHex(hashed)
+		end
+		return nil		
+	end,
 	
 	------------ CRC-16 ccitt checksums
 	-- Takes a hex string and calculates a crc16
@@ -181,20 +193,18 @@ local Utils =
 	---
 	-- Convert Byte array to string of hex
 	ConvertBytesToHex = function(bytes)
-		if #bytes == 0 then
-			return ''
-		end
+		if bytes == nil then return '' end
+		if #bytes == 0 then return '' end
 		local s={}
-		for i = 1, #(bytes) do
+		for i = 1, #bytes do
 			s[i] = string.format("%02X",bytes[i]) 
 		end
 		return table.concat(s)
 	end,	
 	-- Convert byte array to string with ascii
     ConvertBytesToAscii = function(bytes)
-		if #bytes == 0 then
-			return ''
-		end
+		if bytes == nil then return '' end
+		if #bytes == 0 then return '' end
 		local s={}
 		for i = 1, #(bytes) do
 			s[i] = string.char(bytes[i]) 
@@ -233,13 +243,23 @@ local Utils =
 	end,
 	
 	ConvertHexToAscii = function(s)
+		if s == nil then return '' end
+		if #s == 0 then return '' end
 		local t={}
-		if s == nil then return t end
-		if #s == 0 then return t end
 		for k in s:gmatch"(%x%x)" do
 			table.insert(t, string.char(tonumber(k,16)))
 		end
-		return  table.concat(t)	
+		return table.concat(t)	
+	end,
+	
+	ConvertAsciiToHex = function(s)		
+		if s == nil then return '' end
+		if #s == 0 then return '' end
+		local t={}
+		for k in s:gmatch"(.)" do
+			table.insert(t, string.format("%02X", string.byte(k)))
+		end
+		return table.concat(t)
 	end,
 	
 	Chars2num = function(s)
