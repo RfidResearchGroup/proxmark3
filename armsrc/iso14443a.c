@@ -935,7 +935,7 @@ bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
 // Main loop of simulated tag: receive commands from reader, decide what
 // response to send, and send it.
 //-----------------------------------------------------------------------------
-void SimulateIso14443aTag(int tagType, int flags, int uid_2nd, byte_t* data)
+void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 {
 
 	//Here, we collect UID,NT,AR,NR,UID2,NT2,AR2,NR2

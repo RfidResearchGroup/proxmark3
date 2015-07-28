@@ -106,7 +106,7 @@ void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
 
 /// iso14443a.h
 void RAMFUNC SniffIso14443a(uint8_t param);
-void SimulateIso14443aTag(int tagType, int uid_1st, int uid_2nd, byte_t* data);
+void SimulateIso14443aTag(int tagType, int flags, byte_t* data);
 void ReaderIso14443a(UsbCommand * c);
 // Also used in iclass.c
 bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t len, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);

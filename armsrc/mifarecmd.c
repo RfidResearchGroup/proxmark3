@@ -1138,6 +1138,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	// bit 2 - need HALT after sequence
 	// bit 3 - need init FPGA and field before sequence
 	// bit 4 - need reset FPGA and LED
+	// bit 5 - need to set datain instead of issuing USB reply (called via ARM for StandAloneMode14a)
 	uint8_t workFlags = arg0;
 	uint8_t blockNo = arg2;
 	
@@ -1197,6 +1198,11 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	}
 	
 	LED_B_ON();
+	if (workFlags & 0x20) {
+		if (isOK)
+			memcpy(datain, data, 18);
+	}
+	else
 	cmd_send(CMD_ACK,isOK,0,0,data,18);
 	LED_B_OFF();
 

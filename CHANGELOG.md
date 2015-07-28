@@ -10,7 +10,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added 'hw status'. This command makes the ARM print out some runtime information. (holiman) 
 - Added 'hw ping'. This command just sends a usb packets and checks if the pm3 is responsive. Can be used to abort certain operations which supports abort over usb. (holiman)
 
-### Changed
+### Changed																		
+- Revised workflow for StandAloneMode14a (Craig Young)
 - Changed lf config's `threshold` to a graph (signed) metric and it will trigger on + or - value set to. (example: set to 50 and recording would begin at first graphed value of >= 50 or <= -50) (marshmellow)
 - EPA functions (`hf epa`) now support both ISO 14443-A and 14443-B cards (frederikmoellers)
 - 'hw version' only talks to ARM at startup, after that the info is cached. (pwpiwi)
