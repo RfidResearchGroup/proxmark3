@@ -276,7 +276,7 @@ static int get_proxmark_state(uint32_t *state)
 {
 	UsbCommand c;
 	c.cmd = CMD_DEVICE_INFO;
-  SendCommand(&c);
+	SendCommand(&c);
 	UsbCommand resp;
 	ReceiveCommand(&resp);
 

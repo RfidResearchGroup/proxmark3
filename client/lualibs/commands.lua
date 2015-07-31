@@ -154,10 +154,10 @@ local _commands = {
 
 
 local _reverse_lookup,k,v = {}
-	for k, v in pairs(_commands) do
-		_reverse_lookup[v] =  k
-	end
-	_commands.tostring = function(command)
+for k, v in pairs(_commands) do
+	_reverse_lookup[v] =  k
+end
+_commands.tostring = function(command)
 	if(type(command) == 'number') then
 		return ("%s (%d)"):format(_reverse_lookup[command]or "ERROR UNDEFINED!", command) 
 	end
@@ -173,7 +173,6 @@ Command = {
 		self.__index = self
 
 		o.cmd = o.cmd or _commands.CMD_UNKNOWN
-		--o.arg1 = "test"
 		o.arg1 = o.arg1 or 0
 		o.arg2 = o.arg2 or 0
 		o.arg3 = o.arg3 or 0 
@@ -195,14 +194,14 @@ Command = {
 		else 
 			print(("WARNING; data was NOT a (hex-) string, but was %s"):format(type(data)))
 		end
-		o.data = data
-		
+		o.data = data	
 		return o
 	end,
-	parse = function (packet)
-		local count,cmd,arg1,arg2,arg3,data = bin.unpack('LLLLH512',packet)
+	parse = function(packet)
+		local count, cmd, arg1, arg2, arg3, data = bin.unpack('LLLLH512', packet)
 		return Command:new{cmd = cmd, arg1 = arg1, arg2 = arg2, arg3 = arg3, data = data}
-	end,
+	end
+
 }
 function Command:__tostring()
 	local output = ("%s\r\nargs : (%s, %s, %s)\r\ndata:\r\n%s\r\n"):format(

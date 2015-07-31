@@ -304,11 +304,12 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
 
 void StartTickCount()
 {
-//  must be 0x40, but on my cpu - included divider is optimal
-//  0x20 - 1 ms / bit 
-//  0x40 - 2 ms / bit
-
-	AT91C_BASE_RTTC->RTTC_RTMR = AT91C_RTTC_RTTRST + 0x001D; // was 0x003B
+	// This timer is based on the slow clock. The slow clock frequency is between 22kHz and 40kHz.
+	// We can determine the actual slow clock frequency by looking at the Main Clock Frequency Register.
+    uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & 0xffff;		// = 16 * main clock frequency (16MHz) / slow clock frequency
+	// set RealTimeCounter divider to count at 1kHz:
+	AT91C_BASE_RTTC->RTTC_RTMR = AT91C_RTTC_RTTRST | ((256000 + (mainf/2)) / mainf);
+	// note: worst case precision is approx 2.5%
 }
 
 /*

@@ -298,18 +298,49 @@ void SendVersion(void)
 	uint32_t compressed_data_section_size = common_area.arg1;
 	cmd_send(CMD_ACK, *(AT91C_DBGU_CIDR), text_and_rodata_section_size + compressed_data_section_size, 0, VersionString, strlen(VersionString));
 }
+
+// measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
+// Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the UsbCommand structure included.
+void printUSBSpeed(uint32_t SpeedTestBufferSize) 
+{
+	Dbprintf("USB Speed:");
+	Dbprintf("  Sending %d bytes payload...", SpeedTestBufferSize);
+
+	uint8_t *test_data = BigBuf_get_addr();
+
+	uint32_t start_time = GetTickCount();
+
+	LED_B_ON();
+	for(size_t i=0; i < SpeedTestBufferSize; i += USB_CMD_DATA_SIZE) {
+		size_t len = MIN((SpeedTestBufferSize - i), USB_CMD_DATA_SIZE);
+		cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,0,len,0,test_data,len);
+	}
+	LED_B_OFF();
+
+	uint32_t end_time = GetTickCount();
+
+	Dbprintf("  Time elapsed: %dms, USB Transfer Speed PM3 -> Client = %d Bytes/s", 
+		end_time - start_time,
+		1000* SpeedTestBufferSize / (end_time - start_time));
+
+}
+	
 /**
   * Prints runtime information about the PM3.
 **/
-void SendStatus(void)
+void SendStatus(uint32_t SpeedTestBufferSize)
 {
 	BigBuf_print_status();
 	Fpga_print_status();
 	printConfig(); //LF Sampling config
+	printUSBSpeed(SpeedTestBufferSize);
 	Dbprintf("Various");
-	Dbprintf("  MF_DBGLEVEL......%d", MF_DBGLEVEL);
-	Dbprintf("  ToSendMax........%d",ToSendMax);
-	Dbprintf("  ToSendBit........%d",ToSendBit);
+	Dbprintf("  MF_DBGLEVEL........%d", MF_DBGLEVEL);
+	Dbprintf("  ToSendMax..........%d", ToSendMax);
+	Dbprintf("  ToSendBit..........%d", ToSendBit);
+	Dbprintf("  ToSend BUFFERSIZE..%d", TOSEND_BUFFER_SIZE);
+
+	cmd_send(CMD_ACK,1,0,0,0,0);
 }
 
 #if defined(WITH_ISO14443a_StandAlone) || defined(WITH_LF)
@@ -1168,7 +1199,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			ReaderIClass(c->arg[0]);
 			break;
 		case CMD_READER_ICLASS_REPLAY:
-		        ReaderIClass_Replay(c->arg[0], c->d.asBytes);
+		    ReaderIClass_Replay(c->arg[0], c->d.asBytes);
 			break;
 	case CMD_ICLASS_EML_MEMSET:
 			emlSet(c->d.asBytes,c->arg[0], c->arg[1]);
@@ -1238,7 +1269,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			SendVersion();
 			break;
 		case CMD_STATUS:
-			SendStatus();
+			SendStatus(c->arg[0]);
 			break;
 		case CMD_PING:
 			cmd_send(CMD_ACK,0,0,0,0,0);
@@ -1255,8 +1286,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_FINISH_WRITE:
 		case CMD_HARDWARE_RESET:
 			usb_disable();
-			SpinDelay(1000);
-			SpinDelay(1000);
+			SpinDelay(2000);
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
 			for(;;) {
 				// We're going to reset, and the bootrom will take control.
@@ -1328,7 +1358,7 @@ void  __attribute__((noreturn)) AppMain(void)
 	LCDInit();
 #endif
 
-  byte_t rx[sizeof(UsbCommand)];
+	byte_t rx[sizeof(UsbCommand)];
 	size_t rx_len;
   
 	for(;;) {

@@ -235,31 +235,32 @@ void usb_disable() {
 //* \brief This function Activates the USB device
 //*----------------------------------------------------------------------------
 void usb_enable() {
-  // Set the PLL USB Divider
-  AT91C_BASE_CKGR->CKGR_PLLR |= AT91C_CKGR_USBDIV_1 ;
-  
-  // Specific Chip USB Initialisation
-  // Enables the 48MHz USB clock UDPCK and System Peripheral USB Clock
-  AT91C_BASE_PMC->PMC_SCER = AT91C_PMC_UDP;
-  AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_UDP);
-  
-  // Enable UDP PullUp (USB_DP_PUP) : enable & Clear of the corresponding PIO
-  // Set in PIO mode and Configure in Output
-  AT91C_BASE_PIOA->PIO_PER = GPIO_USB_PU; // Set in PIO mode
-	AT91C_BASE_PIOA->PIO_OER = GPIO_USB_PU; // Configure as Output
-  
-  // Clear for set the Pullup resistor
-	AT91C_BASE_PIOA->PIO_CODR = GPIO_USB_PU;
-  
-  // Disconnect and reconnect USB controller for 100ms
-  usb_disable();
-  
-  // Wait for a short while
-  for (volatile size_t i=0; i<0x100000; i++);
+	// Set the PLL USB Divider
+	AT91C_BASE_CKGR->CKGR_PLLR |= AT91C_CKGR_USBDIV_1 ;
 
-  // Reconnect USB reconnect
-  AT91C_BASE_PIOA->PIO_SODR = GPIO_USB_PU;
-  AT91C_BASE_PIOA->PIO_OER = GPIO_USB_PU;
+	// Specific Chip USB Initialisation
+	// Enables the 48MHz USB clock UDPCK and System Peripheral USB Clock
+	AT91C_BASE_PMC->PMC_SCER = AT91C_PMC_UDP;
+	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_UDP);
+
+	// Enable UDP PullUp (USB_DP_PUP) : enable & Clear of the corresponding PIO
+	// Set in PIO mode and Configure in Output
+	AT91C_BASE_PIOA->PIO_PER = GPIO_USB_PU; // Set in PIO mode
+	AT91C_BASE_PIOA->PIO_OER = GPIO_USB_PU; // Configure as Output
+
+	// Clear for set the Pullup resistor
+	AT91C_BASE_PIOA->PIO_CODR = GPIO_USB_PU;
+
+	// Disconnect and reconnect USB controller for 100ms
+	usb_disable();
+
+	// Wait for a short while
+	for (volatile size_t i=0; i<0x100000; i++);
+    //sleep(1);
+	
+	// Reconnect USB reconnect
+	AT91C_BASE_PIOA->PIO_SODR = GPIO_USB_PU;
+	AT91C_BASE_PIOA->PIO_OER = GPIO_USB_PU;
 }
 
 //*----------------------------------------------------------------------------

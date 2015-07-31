@@ -370,9 +370,9 @@ serial_port uart_open(const char* pcPortName) {
   memset(&sp->dcb, 0, sizeof(DCB));
   sp->dcb.DCBlength = sizeof(DCB);
   if(!BuildCommDCBA("baud=9600 data=8 parity=N stop=1",&sp->dcb)) {
-    uart_close(sp);
-    return INVALID_SERIAL_PORT;
-  }
+		uart_close(sp);
+		return INVALID_SERIAL_PORT;
+	}
   
   // Update the active serial port
   if(!SetCommState(sp->hPort,&sp->dcb)) {

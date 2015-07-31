@@ -145,27 +145,27 @@ int getCommand(UsbCommand* response)
  */
 bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeout) {
   
-  UsbCommand resp;
-	
+	UsbCommand resp;
+
 	if (response == NULL)
-    response = &resp;
+		response = &resp;
 
 
-  // Wait until the command is received
-  for(size_t dm_seconds=0; dm_seconds < ms_timeout/10; dm_seconds++) {
+	// Wait until the command is received
+	for(size_t dm_seconds=0; dm_seconds < ms_timeout/10; dm_seconds++) {
 
 		while(getCommand(response)) {
-          if(response->cmd == cmd){
-          return true;
-          }
-      }
-        msleep(10); // XXX ugh
-        if (dm_seconds == 200) { // Two seconds elapsed
-          PrintAndLog("Waiting for a response from the proxmark...");
-          PrintAndLog("Don't forget to cancel its operation first by pressing on the button");
-        }
+			if(response->cmd == cmd){
+				return true;
+			}
+		}
+		msleep(10); // XXX ugh
+		if (dm_seconds == 200) { // Two seconds elapsed
+			PrintAndLog("Waiting for a response from the proxmark...");
+			PrintAndLog("Don't forget to cancel its operation first by pressing on the button");
+		}
 	}
-    return false;
+	return false;
 }
 
 bool WaitForResponse(uint32_t cmd, UsbCommand* response) {
@@ -208,7 +208,6 @@ void UsbCommandReceived(UsbCommand *UC)
 		default:
 			break;
 	}
-
 	storeCommand(UC);
 }
 
