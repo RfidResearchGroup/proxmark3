@@ -121,9 +121,8 @@ void storeCommand(UsbCommand *command)
 int getCommand(UsbCommand* response)
 {
     //If head == tail, there's nothing to read, or if we just got initialized
-    if(cmd_head == cmd_tail){
-        return 0;
-    }
+    if(cmd_head == cmd_tail)  return 0;
+
     //Pick out the next unread command
     UsbCommand* last_unread = &cmdBuffer[cmd_tail];
     memcpy(response, last_unread, sizeof(UsbCommand));
@@ -131,7 +130,6 @@ int getCommand(UsbCommand* response)
     cmd_tail = (cmd_tail +1 ) % CMD_BUFFER_SIZE;
 
     return 1;
-
 }
 
 /**
@@ -149,7 +147,6 @@ bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeou
 
 	if (response == NULL)
 		response = &resp;
-
 
 	// Wait until the command is received
 	for(size_t dm_seconds=0; dm_seconds < ms_timeout/10; dm_seconds++) {
@@ -203,10 +200,10 @@ void UsbCommandReceived(UsbCommand *UC)
 
 		case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K: {
 			memcpy(sample_buf+(UC->arg[0]),UC->d.asBytes,UC->arg[1]);
+			return;
 		} break;
 
-		default:
-			break;
+		default: break;
 	}
 	storeCommand(UC);
 }

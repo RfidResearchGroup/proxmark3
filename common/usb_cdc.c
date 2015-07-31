@@ -315,26 +315,27 @@ bool usb_poll_validate_length()
 //* \brief Read available data from Endpoint OUT
 //*----------------------------------------------------------------------------
 uint32_t usb_read(byte_t* data, size_t len) {
-  byte_t bank = btReceiveBank;
+	byte_t bank = btReceiveBank;
 	uint32_t packetSize, nbBytesRcv = 0;
-  uint32_t time_out = 0;
+	uint32_t time_out = 0;
   
 	while (len)  {
 		if (!usb_check()) break;
 
 		if ( pUdp->UDP_CSR[AT91C_EP_OUT] & bank ) {
 			packetSize = MIN(pUdp->UDP_CSR[AT91C_EP_OUT] >> 16, len);
-      len -= packetSize;
+			len -= packetSize;
 			while(packetSize--)
 				data[nbBytesRcv++] = pUdp->UDP_FDR[AT91C_EP_OUT];
+			
 			pUdp->UDP_CSR[AT91C_EP_OUT] &= ~(bank);
-			if (bank == AT91C_UDP_RX_DATA_BK0) {
+			
+			if (bank == AT91C_UDP_RX_DATA_BK0)
 				bank = AT91C_UDP_RX_DATA_BK1;
-      } else {
-				bank = AT91C_UDP_RX_DATA_BK0;
-      }
+			else
+				bank = AT91C_UDP_RX_DATA_BK0;		
 		}
-    if (time_out++ == 0x1fff) break;
+		if (time_out++ == 0x1fff) break;
 	}
 
 	btReceiveBank = bank;
@@ -346,11 +347,11 @@ uint32_t usb_read(byte_t* data, size_t len) {
 //* \brief Send through endpoint 2
 //*----------------------------------------------------------------------------
 uint32_t usb_write(const byte_t* data, const size_t len) {
-  size_t length = len;
+	size_t length = len;
 	uint32_t cpt = 0;
 
-  if (!length) return 0;
-  if (!usb_check()) return 0;
+	if (!length) return 0;
+	if (!usb_check()) return 0;
   
 	// Send the first packet
 	cpt = MIN(length, AT91C_EP_IN_SIZE-1);
@@ -366,16 +367,18 @@ uint32_t usb_write(const byte_t* data, const size_t len) {
 		// Wait for the the first bank to be sent
 		while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {
 			if (!usb_check()) return length;
-    }
+		}
 		pUdp->UDP_CSR[AT91C_EP_IN] &= ~(AT91C_UDP_TXCOMP);
+		
 		while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP);
+		
 		pUdp->UDP_CSR[AT91C_EP_IN] |= AT91C_UDP_TXPKTRDY;
 	}
   
 	// Wait for the end of transfer
 	while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {
 		if (!usb_check()) return length;
-  }
+	}
   
 	pUdp->UDP_CSR[AT91C_EP_IN] &= ~(AT91C_UDP_TXCOMP);
 	while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP);
