@@ -53,6 +53,20 @@ else
    QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
 endif
 
+# easy variable to pass to allow this to build on ubutnu 14.04.2
+ifeq (1,$(UBUNTU_1404_QT4))
+  CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
+  QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
+  LUALIB = ../liblua/liblua.a
+  LUALIB +=  -ldl
+  MOC = $(shell pkg-config --variable=moc_location QtCore)
+  LUAPLATFORM = linux
+
+  # pop out the libgdi/etc strings
+  LDLIBS = -L/mingw/lib -L/opt/local/lib -L/usr/local/lib -lm -lreadline -lpthread 
+  
+endif
+
 ifneq ($(QTLDLIBS),)
     QTGUI = $(OBJDIR)/proxgui.o $(OBJDIR)/proxguiqt.o $(OBJDIR)/proxguiqt.moc.o
     CFLAGS += -DHAVE_GUI

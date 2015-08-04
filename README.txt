@@ -34,11 +34,28 @@ DEVELOPMENT:
 This fork is adjusted to compile on windows/mingw environment with Qt5.3.1 & GCC 4.8
 For people with linux you will need to patch some source code and some small change to one makefile.  If you are lazy, you google the forum and find asper's or holimans makefile or you find your solution below.
 
+GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS.
+	- See https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux
+	- Generally speaking, if you're running a "later" Proxmark, installation is very easy.
+	- Run "sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget"a
+	- Follow these instructions
+Get devkitARM release 41 from SourceForge (choose either the 64/32 ¿bit depending on your architecture, it is assumed you know how to check and recognize your architecture):
+
+(64-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-x86_64-linux.tar.bz2/download
+(32-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-i686-linux.tar.bz2/download
+Extract the contents of the .tar.bz2:
+ tar jxvf devkitARM_r41-<arch>-linux.tar.bz2
+Create a directory for the arm dev kit:
+ sudo mkdir -p /opt/devkitpro/
+Move the ARM developer kit to the newly created directory:
+ sudo mv devkitARM /opt/devkitpro/
+Add the appropriate environment variable:
+ export PATH=${PATH}:/opt/devkitpro/devkitARM/bin/
+Add the environment variable to your profile:
+ echo 'PATH=${PATH}:/opt/devkitpro/devkitARM/bin/ ' >> ~/.bashrc
+	- Use the magic build command "make UBUNTU_1404_QT4=1"
+
 Common errors linux/macOS finds
-Error:
-	* loclass/fileutils.c:15:2: warning: implicit declaration of function ‘_stat’ [-Wimplicit-function-declaration]
-Solution:
-	* Remove the "unscore" sign.   In linux you use without underscore, in windows you need a underscore. 
 	
 Error:  
 	* \client\makefile  the parameter -lgdi32 
