@@ -908,7 +908,8 @@ void MifareEMemClr(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 
 void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	emlSetMem(datain, arg0, arg1); // data, block num, blocks count
+	//emlSetMem(datain, arg0, arg1); // data, block num, blocks count	 
+	emlSetMem_xt(datain, arg0, arg1, arg2); // data, block num, blocks count, block byte width
 }
 
 void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){

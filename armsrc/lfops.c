@@ -90,9 +90,9 @@ void ReadTItag(void)
 	// when we read a TI tag we sample the zerocross line at 2Mhz
 	// TI tags modulate a 1 as 16 cycles of 123.2Khz
 	// TI tags modulate a 0 as 16 cycles of 134.2Khz
- #define FSAMPLE 2000000
- #define FREQLO 123200
- #define FREQHI 134200
+	#define FSAMPLE 2000000
+	#define FREQLO 123200
+	#define FREQHI 134200
 
 	signed char *dest = (signed char *)BigBuf_get_addr();
 	uint16_t n = BigBuf_max_traceLen();
@@ -1080,14 +1080,14 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
  */
 
 /* T55x7 configuration register definitions */
-#define T55x7_POR_DELAY			0x00000001
-#define T55x7_ST_TERMINATOR		0x00000008
-#define T55x7_PWD			0x00000010
+#define T55x7_POR_DELAY				0x00000001
+#define T55x7_ST_TERMINATOR			0x00000008
+#define T55x7_PWD					0x00000010
 #define T55x7_MAXBLOCK_SHIFT		5
-#define T55x7_AOR			0x00000200
-#define T55x7_PSKCF_RF_2		0
-#define T55x7_PSKCF_RF_4		0x00000400
-#define T55x7_PSKCF_RF_8		0x00000800
+#define T55x7_AOR					0x00000200
+#define T55x7_PSKCF_RF_2			0
+#define T55x7_PSKCF_RF_4			0x00000400
+#define T55x7_PSKCF_RF_8			0x00000800
 #define T55x7_MODULATION_DIRECT		0
 #define T55x7_MODULATION_PSK1		0x00001000
 #define T55x7_MODULATION_PSK2		0x00002000
@@ -1098,17 +1098,18 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 #define T55x7_MODULATION_FSK2a		0x00007000
 #define T55x7_MODULATION_MANCHESTER	0x00008000
 #define T55x7_MODULATION_BIPHASE	0x00010000
-#define T55x7_BITRATE_RF_8		0
-#define T55x7_BITRATE_RF_16		0x00040000
-#define T55x7_BITRATE_RF_32		0x00080000
-#define T55x7_BITRATE_RF_40		0x000C0000
-#define T55x7_BITRATE_RF_50		0x00100000
-#define T55x7_BITRATE_RF_64		0x00140000
+//#define T55x7_MODULATION_BIPHASE57	0x00011000
+#define T55x7_BITRATE_RF_8			0
+#define T55x7_BITRATE_RF_16			0x00040000
+#define T55x7_BITRATE_RF_32			0x00080000
+#define T55x7_BITRATE_RF_40			0x000C0000
+#define T55x7_BITRATE_RF_50			0x00100000
+#define T55x7_BITRATE_RF_64			0x00140000
 #define T55x7_BITRATE_RF_100		0x00180000
 #define T55x7_BITRATE_RF_128		0x001C0000
 
 /* T5555 (Q5) configuration register definitions */
-#define T5555_ST_TERMINATOR		0x00000001
+#define T5555_ST_TERMINATOR			0x00000001
 #define T5555_MAXBLOCK_SHIFT		0x00000001
 #define T5555_MODULATION_MANCHESTER	0
 #define T5555_MODULATION_PSK1		0x00000010
@@ -1118,22 +1119,23 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 #define T5555_MODULATION_FSK2		0x00000050
 #define T5555_MODULATION_BIPHASE	0x00000060
 #define T5555_MODULATION_DIRECT		0x00000070
-#define T5555_INVERT_OUTPUT		0x00000080
-#define T5555_PSK_RF_2			0
-#define T5555_PSK_RF_4			0x00000100
-#define T5555_PSK_RF_8			0x00000200
-#define T5555_USE_PWD			0x00000400
-#define T5555_USE_AOR			0x00000800
-#define T5555_BITRATE_SHIFT		12
-#define T5555_FAST_WRITE		0x00004000
-#define T5555_PAGE_SELECT		0x00008000
+#define T5555_INVERT_OUTPUT			0x00000080
+#define T5555_PSK_RF_2				0
+#define T5555_PSK_RF_4				0x00000100
+#define T5555_PSK_RF_8				0x00000200
+#define T5555_USE_PWD				0x00000400
+#define T5555_USE_AOR				0x00000800
+#define T5555_BITRATE_SHIFT			12
+#define T5555_FAST_WRITE			0x00004000
+#define T5555_PAGE_SELECT			0x00008000
 
 /*
  * Relevant times in microsecond
  * To compensate antenna falling times shorten the write times
  * and enlarge the gap ones.
  */
-#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (or 15fc)
+
+#define START_GAP 50*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (or 15fc)
 #define WRITE_GAP 20*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (or 10fc)
 #define WRITE_0   18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (or 24fc)
 #define WRITE_1   50*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (or 56fc)  432 for T55x7; 448 for E5550
@@ -1157,7 +1159,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 // Write one bit to card
 void T55xxWriteBit(int bit)
 {
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	//FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	if (!bit)
@@ -1176,7 +1178,7 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 	// Set up FPGA, 125kHz
 	// Wait for config.. (192+8190xPOW)x8 == 67ms
 	LFSetupFPGAForADC(0, true);
-
+	
 	// Now start writting
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelayUs(START_GAP);
@@ -1211,7 +1213,7 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 void TurnReadLFOn(){
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	// Give it a bit of time for the resonant antenna to settle.
-	SpinDelayUs(8*150);
+	SpinDelayUs(300);
 }
 
 
@@ -1229,7 +1231,21 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 
 	// Set up FPGA, 125kHz
 	// Wait for config.. (192+8190xPOW)x8 == 67ms
-	LFSetupFPGAForADC(0, true);
+	//LFSetupFPGAForADC(0, true);
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+
+	// Connect the A/D to the peak-detected low-frequency path.
+	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+
+	// Now set up the SSC to get the ADC samples that are now streaming at us.
+	FpgaSetupSsc();
+
+	// Give it a bit of time for the resonant antenna to settle.
+	//SpinDelayUs(8*200);  //192FC
+	SpinDelay(50);
+	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelayUs(START_GAP);
 
@@ -2098,3 +2114,14 @@ void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 	LED_D_OFF();
 }
+void CopyViKingtoT55x7(uint32_t block1,uint32_t block2)
+{
+    LED_D_ON();
+    T55xxWriteBlock(block1,1,0,0);
+    T55xxWriteBlock(block2,2,0,0);
+
+    T55xxWriteBlock(T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | 2 << T5555_MAXBLOCK_SHIFT,0,0,1);
+    LED_D_OFF();
+    DbpString("DONE!");
+}
+

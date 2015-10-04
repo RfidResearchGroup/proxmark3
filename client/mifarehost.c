@@ -93,16 +93,16 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 		return resp.arg[0];  // error during nested
 	}
 		
-			memcpy(&uid, resp.d.asBytes, 4);
+	memcpy(&uid, resp.d.asBytes, 4);
 	PrintAndLog("uid:%08x trgbl=%d trgkey=%x", uid, (uint16_t)resp.arg[2] & 0xff, (uint16_t)resp.arg[2] >> 8);
 			
-			for (i = 0; i < 2; i++) {
-				statelists[i].blockNo = resp.arg[2] & 0xff;
-				statelists[i].keyType = (resp.arg[2] >> 8) & 0xff;
-				statelists[i].uid = uid;
-				memcpy(&statelists[i].nt,  (void *)(resp.d.asBytes + 4 + i * 8 + 0), 4);
-				memcpy(&statelists[i].ks1, (void *)(resp.d.asBytes + 4 + i * 8 + 4), 4);
-			}
+	for (i = 0; i < 2; i++) {
+		statelists[i].blockNo = resp.arg[2] & 0xff;
+		statelists[i].keyType = (resp.arg[2] >> 8) & 0xff;
+		statelists[i].uid = uid;
+		memcpy(&statelists[i].nt,  (void *)(resp.d.asBytes + 4 + i * 8 + 0), 4);
+		memcpy(&statelists[i].ks1, (void *)(resp.d.asBytes + 4 + i * 8 + 4), 4);
+	}
 	
 	// calc keys
 	
@@ -190,8 +190,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	}
 	
 	free(statelists[0].head.slhead);
-	free(statelists[1].head.slhead);
-	
+	free(statelists[1].head.slhead);	
 	return 0;
 }
 
@@ -201,8 +200,9 @@ int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t key
 
 	UsbCommand c = {CMD_MIFARE_CHKKEYS, {((blockNo & 0xff) | ((keyType&0xff)<<8)), clear_trace, keycnt}};
 	memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
+	
+	clearCommandBuffer();
 	SendCommand(&c);
-
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK,&resp,3000)) return 1;
 	if ((resp.arg[0] & 0xff) != 0x01) return 2;
@@ -214,8 +214,8 @@ int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t key
 
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
 	UsbCommand c = {CMD_MIFARE_EML_MEMGET, {blockNum, blocksCount, 0}};
+	clearCommandBuffer();
  	SendCommand(&c);
-
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500)) return 1;
 	memcpy(data, resp.d.asBytes, blocksCount * 16);
@@ -223,8 +223,14 @@ int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
 }
 
 int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
-	UsbCommand c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, 0}};
-	memcpy(c.d.asBytes, data, blocksCount * 16); 
+	return mfEmlSetMem_xt(data, blockNum, blocksCount, 16);
+}
+
+int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
+	UsbCommand c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, blockBtWidth}};
+	memcpy(c.d.asBytes, data, blocksCount * blockBtWidth); 
+
+	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
@@ -264,8 +270,9 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, bool wantWipe, uin
 	uint8_t isOK = 0;
 	UsbCommand c = {CMD_MIFARE_CSETBLOCK, {wantWipe, params & (0xFE | (uid == NULL ? 0:1)), blockNo}};
 	memcpy(c.d.asBytes, data, 16); 
-	SendCommand(&c);
 
+	clearCommandBuffer();
+	SendCommand(&c);
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
 		isOK  = resp.arg[0] & 0xff;
@@ -284,9 +291,10 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
 	uint8_t isOK = 0;
 
 	UsbCommand c = {CMD_MIFARE_CGETBLOCK, {params, 0, blockNo}};
+	
+	clearCommandBuffer();
 	SendCommand(&c);
-
-  UsbCommand resp;
+	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
 		isOK  = resp.arg[0] & 0xff;
 		memcpy(data, resp.d.asBytes, 16);

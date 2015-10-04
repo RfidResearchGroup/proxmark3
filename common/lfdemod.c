@@ -1482,3 +1482,30 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
 	*size = numBits;
 	return errCnt;
 }
+// on successful return 1 otherwise return 0
+int VikingDecode(uint8_t *BitStream, 
+					size_t size,
+					size_t *startIdx,
+					uint8_t *id_bits,
+					size_t id_bits_size)
+{
+    //no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
+    //  otherwise could be a void with no arguments
+    //set defaults
+    uint32_t i = 0;
+    uint32_t lastcheckindex = size - (id_bits_size * 2);
+    int found = 0;
+    while (i < lastcheckindex)
+    {
+        if (memcmp(BitStream + i,id_bits,id_bits_size) == 0)
+        {
+            *startIdx = i;
+            found = 1;
+            break;
+        }
+        i++;
+    }
+    return found;
+}
+
+

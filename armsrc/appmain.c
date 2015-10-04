@@ -301,39 +301,42 @@ void SendVersion(void)
 
 // measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the UsbCommand structure included.
-void printUSBSpeed(uint32_t SpeedTestBufferSize) 
+void printUSBSpeed(void) 
 {
 	Dbprintf("USB Speed:");
-	Dbprintf("  Sending %d bytes payload...", SpeedTestBufferSize);
+	Dbprintf("  Sending USB packets to client...");
 
+	#define USB_SPEED_TEST_MIN_TIME	1500	// in milliseconds
 	uint8_t *test_data = BigBuf_get_addr();
+	uint32_t end_time;
 
-	uint32_t start_time = GetTickCount();
+	uint32_t start_time = end_time = GetTickCount();
+	uint32_t bytes_transferred = 0;
 
 	LED_B_ON();
-	for(size_t i=0; i < SpeedTestBufferSize; i += USB_CMD_DATA_SIZE) {
-		size_t len = MIN((SpeedTestBufferSize - i), USB_CMD_DATA_SIZE);
-		cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,0,len,0,test_data,len);
+	while(end_time < start_time + USB_SPEED_TEST_MIN_TIME) {
+		cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, 0, USB_CMD_DATA_SIZE, 0, test_data, USB_CMD_DATA_SIZE);
+		end_time = GetTickCount();
+		bytes_transferred += USB_CMD_DATA_SIZE;
 	}
 	LED_B_OFF();
 
-	uint32_t end_time = GetTickCount();
-
-	Dbprintf("  Time elapsed: %dms, USB Transfer Speed PM3 -> Client = %d Bytes/s", 
-		end_time - start_time,
-		1000* SpeedTestBufferSize / (end_time - start_time));
+	Dbprintf("  Time elapsed:      %dms", end_time - start_time);
+	Dbprintf("  Bytes transferred: %d", bytes_transferred);
+	Dbprintf("  USB Transfer Speed PM3 -> Client = %d Bytes/s", 
+		1000 * bytes_transferred / (end_time - start_time));
 
 }
 	
 /**
   * Prints runtime information about the PM3.
 **/
-void SendStatus(uint32_t SpeedTestBufferSize)
+void SendStatus(void)
 {
 	BigBuf_print_status();
 	Fpga_print_status();
 	printConfig(); //LF Sampling config
-	printUSBSpeed(SpeedTestBufferSize);
+	printUSBSpeed();
 	Dbprintf("Various");
 	Dbprintf("  MF_DBGLEVEL........%d", MF_DBGLEVEL);
 	Dbprintf("  ToSendMax..........%d", ToSendMax);
@@ -998,6 +1001,11 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_AWID_DEMOD_FSK: // Set realtime AWID demodulation
 			CmdAWIDdemodFSK(c->arg[0], 0, 0, 1);
                         break;
+        case CMD_VIKING_CLONE_TAG:
+            CopyViKingtoT55x7(c->arg[0],c->arg[1]);
+            break;
+
+    
 #endif
 
 #ifdef WITH_HITAG
@@ -1232,8 +1240,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 
 			LED_B_ON();
 			uint8_t *BigBuf = BigBuf_get_addr();
+			size_t len = 0;
 			for(size_t i=0; i<c->arg[1]; i += USB_CMD_DATA_SIZE) {
-				size_t len = MIN((c->arg[1] - i),USB_CMD_DATA_SIZE);
+				len = MIN((c->arg[1] - i),USB_CMD_DATA_SIZE);
 				cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K,i,len,BigBuf_get_traceLen(),BigBuf+c->arg[0]+i,len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
@@ -1269,7 +1278,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			SendVersion();
 			break;
 		case CMD_STATUS:
-			SendStatus(c->arg[0]);
+			SendStatus();
 			break;
 		case CMD_PING:
 			cmd_send(CMD_ACK,0,0,0,0,0);

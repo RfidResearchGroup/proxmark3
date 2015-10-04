@@ -368,6 +368,7 @@ bool tryDetectModulation(){
 		}
 	} else {
 		clk = GetAskClock("", FALSE, FALSE);
+		
 		if (clk>0) {
 			sprintf(cmdStr,"%d", clk/2);
 			CmdLtrim(cmdStr);

@@ -272,7 +272,7 @@ int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack){
 	if (MF_DBGLEVEL >= MF_DBG_EXTENDED)
 		Dbprintf("EV1 Auth : %02x%02x%02x%02x",	key[0], key[1], key[2], key[3]);
 	len = mifare_sendcmd(0x1B, key, sizeof(key), resp, respPar, NULL);
-	//len = mifare_sendcmd_short_mfuev1auth(NULL, 0, 0x1B, key, resp, respPar, NULL);
+
 	if (len != 4) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Cmd Error: %02x %u", resp[0], len);
 		return 0;
@@ -556,8 +556,12 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo)
 
 // work with emulator memory
 void emlSetMem(uint8_t *data, int blockNum, int blocksCount) {
+	emlSetMem_xt(data, blockNum, blocksCount, 16);
+}
+
+void emlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
 	uint8_t* emCARD = BigBuf_get_EM_addr();
-	memcpy(emCARD + blockNum * 16, data, blocksCount * 16);
+	memcpy(emCARD + blockNum * blockBtWidth, data, blocksCount * blockBtWidth);
 }
 
 void emlGetMem(uint8_t *data, int blockNum, int blocksCount) {

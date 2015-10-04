@@ -24,6 +24,7 @@
 #include "usb_cmd.h"
 #include "crc.h"
 #include "crc16.h"
+#include "loclass/cipherutils.h"
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 uint8_t g_debugMode=0;
@@ -1881,6 +1882,54 @@ int CmdRawDemod(const char *Cmd)
 	return ans;
 }
 
+int AmVikingDecode(const uint8_t *id){
+    // searching the buffer for the id
+    //uint8_t id_bits[32];
+    // convert 4 bytes of id to 32 bits present in 32 bytes data;
+    //bytes_to_bits(id,4,id_bits,sizeof(id_bits));
+
+    //print_arraybinary(id_bits,sizeof(id_bits));
+	PrintAndLog("   binary: %s", printBits(4, id) );
+
+    //size_t idx = 0;
+    size_t BitLen = DemodBufferLen;
+    uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
+    memcpy(BitStream, DemodBuffer, BitLen);
+    
+    // if (VikingDecode(BitStream,BitLen,&idx,id_bits,sizeof(id_bits)) ==  1)
+    // {
+        // setDemodBuf(BitStream,64, idx);
+        // PrintAndLog("Found Viking tag\n");
+        // CmdPrintDemodBuff("x");
+    // }
+    // else
+    // {
+        // PrintAndLog("Not found Viking tag\n");
+    // }
+    return 0;
+}
+int AMVikingDemod(const uint8_t *id){
+    // demod am clock 32 fail
+    if (!ASKDemod("32",g_debugMode,false,1))
+        return 0;
+    // search for the card id from bitstream.
+    return AmVikingDecode(id);
+}
+//by Gusto
+// takes 1 argument <8 bytes of Hex number on the card
+// print binary found and saves in grapbuffer for further commands
+int CmdAMVikingDemod(const char *Cmd){
+    uint8_t id[4];
+    if (param_gethex(Cmd,0,id,8) == 1)
+    {
+        PrintAndLog("Usage:  data vikingdemod CardID 8 bytes of hex number");
+        return 0;
+    }
+    PrintAndLog("Card ID : %02X%02X%02X%02X\n",id[0],id[1],id[2],id[3]);
+    // try to demod AMViking
+    return AMVikingDemod(id);
+}
+
 int CmdGrid(const char *Cmd)
 {
 	sscanf(Cmd, "%i %i", &PlotGridX, &PlotGridY);
@@ -1954,11 +2003,6 @@ int CmdHpf(const char *Cmd)
 	RepaintGraphWindow();
 	return 0;
 }
-typedef struct {
-	uint8_t * buffer;
-	uint32_t numbits;
-	uint32_t position;
-} BitstreamOut;
 
 bool _headBit( BitstreamOut *stream)
 {
@@ -2276,6 +2320,99 @@ int CmdZerocrossings(const char *Cmd)
 	return 0;
 }
 
+int usage_data_bin2hex(){
+		PrintAndLog("Usage: data bin2hex <binary_digits>");
+		PrintAndLog("       This function will ignore all characters not 1 or 0 (but stop reading on whitespace)");
+		return 0;
+}
+
+/**
+ * @brief Utility for conversion via cmdline.
+ * @param Cmd
+ * @return
+ */
+int Cmdbin2hex(const char *Cmd)
+{
+	int bg =0, en =0;
+	if(param_getptr(Cmd, &bg, &en, 0))
+	{
+		return usage_data_bin2hex();
+	}
+	//Number of digits supplied as argument
+	size_t length = en  - bg +1;
+	size_t bytelen = (length+7) / 8;
+	uint8_t* arr = (uint8_t *) malloc(bytelen);
+	memset(arr, 0, bytelen);
+	BitstreamOut bout = { arr, 0, 0 };
+
+	for(; bg <= en ;bg++)
+	{
+		char c = Cmd[bg];
+		if( c == '1')	pushBit(&bout, 1);
+		else if( c == '0')	pushBit(&bout, 0);
+		else PrintAndLog("Ignoring '%c'", c);
+	}
+
+	if(bout.numbits % 8 != 0)
+	{
+		printf("[padded with %d zeroes]\n", 8-(bout.numbits % 8));
+	}
+
+	//Uses printf instead of PrintAndLog since the latter
+	// adds linebreaks to each printout - this way was more convenient since we don't have to
+	// allocate a string and write to that first...
+	for(size_t x = 0; x  < bytelen ; x++)
+	{
+		printf("%02X", arr[x]);
+	}
+	printf("\n");
+	free(arr);
+	return 0;
+}
+
+int usage_data_hex2bin(){
+
+	PrintAndLog("Usage: data bin2hex <binary_digits>");
+	PrintAndLog("       This function will ignore all non-hexadecimal characters (but stop reading on whitespace)");
+	return 0;
+
+}
+
+int Cmdhex2bin(const char *Cmd)
+{
+	int bg =0, en =0;
+	if(param_getptr(Cmd, &bg, &en, 0))
+	{
+		return usage_data_hex2bin();
+	}
+
+
+	while(bg <= en )
+	{
+		char x = Cmd[bg++];
+		// capitalize
+		if (x >= 'a' && x <= 'f')
+			x -= 32;
+		// convert to numeric value
+		if (x >= '0' && x <= '9')
+			x -= '0';
+		else if (x >= 'A' && x <= 'F')
+			x -= 'A' - 10;
+		else
+			continue;
+
+		//Uses printf instead of PrintAndLog since the latter
+		// adds linebreaks to each printout - this way was more convenient since we don't have to
+		// allocate a string and write to that first...
+
+		for(int i= 0 ; i < 4 ; ++i)
+			printf("%d",(x >> (3 - i)) & 1);
+	}
+	printf("\n");
+
+	return 0;
+}
+
 static command_t CommandTable[] =
 {
 	{"help",            CmdHelp,            1, "This help"},
@@ -2284,12 +2421,14 @@ static command_t CommandTable[] =
 	{"askgproxiidemod", CmdG_Prox_II_Demod, 1, "Demodulate a G Prox II tag from GraphBuffer"},
 	{"autocorr",        CmdAutoCorr,        1, "[window length] [g] -- Autocorrelation over window - g to save back to GraphBuffer (overwrite)"},
 	{"biphaserawdecode",CmdBiphaseDecodeRaw,1, "[offset] [invert<0|1>] [maxErr] -- Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
+	{"bin2hex",         Cmdbin2hex,         1, "bin2hex <digits>     -- Converts binary to hexadecimal"},
 	{"bitsamples",      CmdBitsamples,      0, "Get raw samples as bitstring"},
 	{"buffclear",       CmdBuffClear,       1, "Clear sample buffer and graph window"},
 	{"dec",             CmdDec,             1, "Decimate samples"},
 	{"detectclock",     CmdDetectClockRate, 1, "[modulation] Detect clock rate of wave in GraphBuffer (options: 'a','f','n','p' for ask, fsk, nrz, psk respectively)"},
 	{"fdxbdemod",       CmdFDXBdemodBI    , 1, "Demodulate a FDX-B ISO11784/85 Biphase tag from GraphBuffer"},
 	{"fskawiddemod",    CmdFSKdemodAWID,    1, "Demodulate an AWID FSK tag from GraphBuffer"},
+    {"vikingdemod",     CmdAMVikingDemod,   1, "Demodulate a Viking AM tag from GraphBuffer"},
 	//{"fskfcdetect",   CmdFSKfcDetect,     1, "Try to detect the Field Clock of an FSK wave"},
 	{"fskhiddemod",     CmdFSKdemodHID,     1, "Demodulate a HID FSK tag from GraphBuffer"},
 	{"fskiodemod",      CmdFSKdemodIO,      1, "Demodulate an IO Prox FSK tag from GraphBuffer"},
@@ -2298,6 +2437,7 @@ static command_t CommandTable[] =
 	{"getbitstream",    CmdGetBitStream,    1, "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
 	{"grid",            CmdGrid,            1, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
 	{"hexsamples",      CmdHexsamples,      0, "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
+	{"hex2bin",         Cmdhex2bin,         1, "hex2bin <hexadecimal> -- Converts hexadecimal to binary"},
 	{"hide",            CmdHide,            1, "Hide graph window"},
 	{"hpf",             CmdHpf,             1, "Remove DC offset from trace"},
 	{"load",            CmdLoad,            1, "<filename> -- Load trace (to graph window"},

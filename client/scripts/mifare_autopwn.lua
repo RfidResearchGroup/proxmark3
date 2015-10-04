@@ -112,6 +112,8 @@ function mfcrack_inner()
 				return nil, "Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests). You can try 'script run mfkeys' or 'hf mf chk' to test various known keys."
 			elseif isOK == 0xFFFFFFFD then
 				return nil, "Card is not vulnerable to Darkside attack (its random number generator is not predictable). You can try 'script run mfkeys' or 'hf mf chk' to test various known keys."
+			elseif isOK == 0xFFFFFFFC then
+				return nil, "The card's random number generator is vulnerable but behaves somewhat weird (Mifare clone?). You can try 'script run mfkeys' or 'hf mf chk' to test various known keys."
 			elseif isOK ~= 1 then 
 				return nil, "Error occurred" 
 			end

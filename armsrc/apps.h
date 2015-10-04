@@ -191,6 +191,7 @@ void ReaderIClass(uint8_t arg0);
 void ReaderIClass_Replay(uint8_t arg0,uint8_t *MAC);
 void IClass_iso14443A_GetPublic(uint8_t arg0);
 
+void CopyViKingtoT55x7(uint32_t block1,uint32_t block2);
 // hitag2.h
 void SnoopHitag(uint32_t type);
 void SimulateHitagTag(bool tag_mem_supplied, byte_t* data);

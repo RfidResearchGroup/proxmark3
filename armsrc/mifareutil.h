@@ -90,6 +90,7 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo);
 // emulator functions
 void emlClearMem(void);
 void emlSetMem(uint8_t *data, int blockNum, int blocksCount);
+void emlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth);
 void emlGetMem(uint8_t *data, int blockNum, int blocksCount);
 void emlGetMemBt(uint8_t *data, int bytePtr, int byteCount);
 uint64_t emlGetKey(int sectorNum, int keyType);

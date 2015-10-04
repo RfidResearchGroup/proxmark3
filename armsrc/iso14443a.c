@@ -1047,7 +1047,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 	response3a[0] = sak & 0xFB;
 	ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 
-	uint8_t response5[] = { 0x01, 0x01, 0x01, 0x01 }; // Very random tag nonce
+	uint8_t response5[] = { 0x00, 0x00, 0x00, 0x00 }; // Very random tag nonce
 	uint8_t response6[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 }; // dummy ATS (pseudo-ATR), answer to RATS: 
 	// Format byte = 0x58: FSCI=0x08 (FSC=256), TA(1) and TC(1) present, 
 	// TA(1) = 0x80: different divisors not supported, DR = 1, DS = 1
@@ -1151,9 +1151,9 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 		} else if(receivedCmd[0] == 0x30) {	// Received a (plain) READ
 			uint8_t block = receivedCmd[1];
 			if ( tagType == 7 ) {
-				uint8_t start = 4 * block;
+				uint16_t start = 4 * block;
 				
-				if ( block < 4 ) {
+				/*if ( block < 4 ) {
 				    //NTAG 215
 					uint8_t blockdata[50] = {
 					data[0],data[1],data[2], 0x88 ^ data[0] ^ data[1] ^ data[2],
@@ -1167,12 +1167,12 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 					0x00,0x00};
 					AppendCrc14443a(blockdata+start, 16);
 					EmSendCmdEx( blockdata+start, MAX_MIFARE_FRAME_SIZE, false);
-				} else {	
+				} else {*/	
 					uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
 					emlGetMemBt( emdata, start, 16);
 					AppendCrc14443a(emdata, 16);
 					EmSendCmdEx(emdata, sizeof(emdata), false);				
-				}
+				//}
 				p_response = NULL;
 				
 			} else {			
@@ -1417,9 +1417,11 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 	BigBuf_free_keep_EM();
 	LED_A_OFF();
 	
+	if (MF_DBGLEVEL >= 4){
 	Dbprintf("-[ Wake ups after halt [%d]", happened);
 	Dbprintf("-[ Messages after halt [%d]", happened2);
 	Dbprintf("-[ Num of received cmd [%d]", cmdsRecvd);
+	}
 }
 
 
@@ -2194,7 +2196,7 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 	nttmp1 = nt1;
 	nttmp2 = nt2;
 	
-	for (i = 1; i < 32768; i++) {
+	for (i = 1; i < 0xFFFF; i++) {
 		nttmp1 = prng_successor(nttmp1, 1);
 		if (nttmp1 == nt2) return i;
 		nttmp2 = prng_successor(nttmp2, 1);
@@ -2204,6 +2206,28 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 	return(-99999); // either nt1 or nt2 are invalid nonces
 }
 
+int32_t dist_nt_ex32(uint32_t nt1, uint32_t nt2, bool *result) {
+
+	uint16_t i;
+	uint32_t nttmp1, nttmp2;
+
+	if (nt1 == nt2) return 0;
+
+	nttmp1 = nt1;
+	nttmp2 = nt2;
+	
+	*result = true;
+	for (i = 1; i < 0xFFFFFFFF; i++) {
+		nttmp1 = prng_successor(nttmp1, 1);
+		if (nttmp1 == nt2) return i;
+			
+		nttmp2 = prng_successor(nttmp2, 1);
+			if (nttmp2 == nt1) return -i;
+		}
+	
+	*result = false;
+	return(-99999); // either nt1 or nt2 are invalid nonces
+}
 
 //-----------------------------------------------------------------------------
 // Recover several bits of the cypher stream. This implements (first stages of)
@@ -2244,6 +2268,7 @@ void ReaderMifare(bool first_try)
 	byte_t par_list[8] = {0x00};
 	byte_t ks_list[8] = {0x00};
 
+   #define PRNG_SEQUENCE_LENGTH  (1 << 16);
 	static uint32_t sync_time = 0;
 	static uint32_t sync_cycles = 0;
 	int catch_up_cycles = 0;
@@ -2254,7 +2279,7 @@ void ReaderMifare(bool first_try)
 	if (first_try) { 
 		mf_nr_ar3 = 0;
 		sync_time = GetCountSspClk() & 0xfffffff8;
-		sync_cycles = 65536;									// theory: Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
+		sync_cycles = PRNG_SEQUENCE_LENGTH; //65536;	//0x10000			// theory: Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
 		nt_attacked = 0;
 		nt = 0;
 		par[0] = 0;
@@ -2271,8 +2296,12 @@ void ReaderMifare(bool first_try)
 	LED_C_OFF();
 	
 
-	#define DARKSIDE_MAX_TRIES	32		// number of tries to sync on PRNG cycle. Then give up.
-	uint16_t unsuccessfull_tries = 0;
+	#define MAX_UNEXPECTED_RANDOM	5		// maximum number of unexpected (i.e. real) random numbers when trying to sync. Then give up.
+	#define MAX_SYNC_TRIES			16
+	uint16_t unexpected_random = 0;
+	uint16_t sync_tries = 0;
+	int16_t debug_info_nr = -1;
+	uint32_t debug_info[MAX_SYNC_TRIES];
   
 	for(uint16_t i = 0; TRUE; i++) {
 		
@@ -2290,16 +2319,20 @@ void ReaderMifare(bool first_try)
 			continue;
 		}
 
-		sync_time = (sync_time & 0xfffffff8) + sync_cycles + catch_up_cycles;
-		catch_up_cycles = 0;
+		if (debug_info_nr == -1) {
+			sync_time = (sync_time & 0xfffffff8) + sync_cycles + catch_up_cycles;
+			catch_up_cycles = 0;
 
-		// if we missed the sync time already, advance to the next nonce repeat
-		while(GetCountSspClk() > sync_time) {
-			sync_time = (sync_time & 0xfffffff8) + sync_cycles;
-		}
+			// if we missed the sync time already, advance to the next nonce repeat
+			while(GetCountSspClk() > sync_time) {
+				sync_time = (sync_time & 0xfffffff8) + sync_cycles;
+			}
 
-		// Transmit MIFARE_CLASSIC_AUTH at synctime. Should result in returning the same tag nonce (== nt_attacked) 
-		ReaderTransmit(mf_auth, sizeof(mf_auth), &sync_time);
+			// Transmit MIFARE_CLASSIC_AUTH at synctime. Should result in returning the same tag nonce (== nt_attacked) 
+			ReaderTransmit(mf_auth, sizeof(mf_auth), &sync_time);
+		} else {
+			ReaderTransmit(mf_auth, sizeof(mf_auth), NULL);
+		}			
 
 		// Receive the (4 Byte) "random" nonce
 		if (!ReaderReceive(receivedAnswer, receivedAnswerPar)) {
@@ -2317,19 +2350,32 @@ void ReaderMifare(bool first_try)
 			int nt_distance = dist_nt(previous_nt, nt);
 			if (nt_distance == 0) {
 				nt_attacked = nt;
-			}
-			else {
+			} else {
 				if (nt_distance == -99999) { // invalid nonce received
-					unsuccessfull_tries++;
-					if (!nt_attacked && unsuccessfull_tries > DARKSIDE_MAX_TRIES) {
+					unexpected_random++;
+					if (!nt_attacked && unexpected_random > MAX_UNEXPECTED_RANDOM) {
 						isOK = -3;		// Card has an unpredictable PRNG. Give up	
 						break;
 					} else {
 						continue;		// continue trying...
 					}
 				}
+				if (++sync_tries > MAX_SYNC_TRIES) {
+					if (sync_tries > 2 * MAX_SYNC_TRIES) {
+						isOK = -4; 			// Card's PRNG runs at an unexpected frequency or resets unexpectedly
+						break;
+					} else {				// continue for a while, just to collect some debug info
+						debug_info[++debug_info_nr] = nt_distance;
+						continue;
+					}
+				}
 				sync_cycles = (sync_cycles - nt_distance);
-				if (MF_DBGLEVEL >= 3) Dbprintf("calibrating in cycle %d. nt_distance=%d, Sync_cycles: %d\n", i, nt_distance, sync_cycles);
+				if (sync_cycles <= 0) {
+					sync_cycles += PRNG_SEQUENCE_LENGTH;
+				}
+				if (MF_DBGLEVEL >= 3) {
+					Dbprintf("calibrating in cycle %d. nt_distance=%d, Sync_cycles: %d\n", i, nt_distance, sync_cycles);
+				}
 				continue;
 			}
 		}
@@ -2401,8 +2447,15 @@ void ReaderMifare(bool first_try)
 
 	mf_nr_ar[3] &= 0x1F;
 	
-	byte_t buf[28] = {0x00};
+	if (isOK == -4) {
+		if (MF_DBGLEVEL >= 3) {
+			for(uint16_t i = 0; i < MAX_SYNC_TRIES; i++) {
+				Dbprintf("collected debug info[%d] = %d\n", i, debug_info[i]);
+			}
+		}
+	}
 	
+	byte_t buf[28];
 	memcpy(buf + 0,  uid, 4);
 	num_to_bytes(nt, 4, buf + 4);
 	memcpy(buf + 8,  par_list, 8);
@@ -2418,8 +2471,7 @@ void ReaderMifare(bool first_try)
 	set_tracing(FALSE);
 }
 
-
- /*
+/**
   *MIFARE 1K simulate.
   *
   *@param flags :

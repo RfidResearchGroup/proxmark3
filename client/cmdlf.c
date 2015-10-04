@@ -30,22 +30,69 @@
 #include "cmdlfpcf7931.h"
 #include "cmdlfio.h"
 #include "lfdemod.h"
-
+#include "cmdlfviking.h"
 static int CmdHelp(const char *Cmd);
+
+
+int usage_lf_cmdread()
+{
+	PrintAndLog("Usage: lf cmdread  <delay off>  <zero> <one> <cmdbytes> [H] ");
+	PrintAndLog("Options:        ");
+	PrintAndLog("       h             This help");
+	PrintAndLog("       L             Low frequency (125 KHz)");
+	PrintAndLog("       H             High frequency (134 KHz)");
+	PrintAndLog("       H             delay OFF");
+	PrintAndLog("       H             time period ZERO");
+	PrintAndLog("       H             time period ONE");
+	PrintAndLog("Examples:");
+	PrintAndLog("      lf cmdread 80 100 200 11000");
+	PrintAndLog("      lf cmdread 80 100 100 11000 H");
+	return 0;
+}
 
 /* send a command before reading */
 int CmdLFCommandRead(const char *Cmd)
 {
-  static char dummy[3];
+	static char dummy[3] = {0x20,0x00,0x00};
+	bool errors = FALSE;
+	uint8_t divisor = 0; //125khz
+  	uint8_t cmdp =0;
+	while(param_getchar(Cmd, cmdp) != 0x00)
+	{
+		switch(param_getchar(Cmd, cmdp))
+		{
+		case 'h':
+			return usage_lf_cmdread();
+		case 'H':
+			divisor = 88;
+			cmdp++;
+			break;
+		case 'a':
+			//param_getchar(Cmd, cmdp+1) == '1';
+			cmdp+=2;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = 1;
+			break;
+		}
+		if(errors) break;
+	}
+	// No args
+	if(cmdp == 0) errors = 1;
 
-  dummy[0]= ' ';
+	//Validations
+	if(errors) return usage_lf_cmdread();
+	
+	UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K};
+	sscanf(Cmd, "%"lli" %"lli" %"lli" %s %s", &c.arg[0], &c.arg[1], &c.arg[2],(char*)(&c.d.asBytes),(char*)(&dummy+1));
+	// in case they specified 'h'
+	strcpy((char *)&c.d.asBytes + strlen((char *)c.d.asBytes), dummy);
 
-  UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K};
-  sscanf(Cmd, "%"lli" %"lli" %"lli" %s %s", &c.arg[0], &c.arg[1], &c.arg[2],(char*)(&c.d.asBytes),(char*)(&dummy+1));
-  // in case they specified 'h'
-  strcpy((char *)&c.d.asBytes + strlen((char *)c.d.asBytes), dummy);
-  SendCommand(&c);
-  return 0;
+	PrintAndLog("ICE: %d %s -- %s", strlen((char *)c.d.asBytes) ,dummy, c.d.asBytes);
+	clearCommandBuffer();
+	SendCommand(&c);
+	return 0;
 }
 
 int CmdFlexdemod(const char *Cmd)
@@ -1074,7 +1121,7 @@ int CmdLFfind(const char *Cmd)
 
   ans=CmdG_Prox_II_Demod("");
   if (ans>0) {
-    PrintAndLog("\nValid G Prox II ID Found!");
+    PrintAndLog("\nValid Guardall G-Prox II ID Found!");
     return 1;
   }
 
@@ -1165,7 +1212,7 @@ static command_t CommandTable[] =
   {"pcf7931",     CmdLFPCF7931,       1, "{ PCF7931 RFIDs... }"},
   {"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
   {"t55xx",       CmdLFT55XX,         1, "{ T55X7 RFIDs... }"},
-
+{"viking",      CmdLFViking,        1, "{ Viking RFIDs... }"},
   {"config",      CmdLFSetConfig,     0, "Set config for LF sampling, bit/sample, decimation, frequency"},
  
   {"cmdread",     CmdLFCommandRead,   0, "<off period> <'0' period> <'1' period> <command> ['h' 134] \n\t\t-- Modulate LF reader field to send command before read (all periods in microseconds)"},

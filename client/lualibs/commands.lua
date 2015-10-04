@@ -56,7 +56,8 @@ local _commands = {
 	CMD_ASK_SIM_TAG =                                                    0x021F,
 	CMD_PSK_SIM_TAG =                                                    0x0220,
 	CMD_AWID_DEMOD_FSK =                                                 0x0221,
-
+	CMD_VIKING_CLONE_TAG =                                               0x0222,
+	
 	--/* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
 	--// For the 13.56 MHz tags
@@ -198,7 +199,7 @@ Command = {
 		return o
 	end,
 	parse = function(packet)
-		local count, cmd, arg1, arg2, arg3, data = bin.unpack('LLLLH512', packet)
+		local count, cmd, arg1, arg2, arg3, data = bin.unpack('LLLLH511', packet)
 		return Command:new{cmd = cmd, arg1 = arg1, arg2 = arg2, arg3 = arg3, data = data}
 	end
 

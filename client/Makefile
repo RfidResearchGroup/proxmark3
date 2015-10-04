@@ -119,6 +119,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			cmdlfem4x.c \
 			cmdlfhitag.c \
 			cmdlfti.c \
+			cmdlfviking.c\
 			cmdparser.c \
 			cmdmain.c \
 			cmdlft55xx.c \
@@ -130,6 +131,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			aes.c\
 			protocols.c\
 			sha1.c\
+			sha256.c\
 			cmdcrc.c\
 			reveng/reveng.c\
 			reveng/cli.c\

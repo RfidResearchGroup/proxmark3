@@ -36,6 +36,7 @@ static int CmdRev(const char *Cmd);
 static int CmdLS(const char *Cmd);
 
 //For storing command that are received from the device
+#define CMD_BUFFER_SIZE 50
 static UsbCommand cmdBuffer[CMD_BUFFER_SIZE];
 //Points to the next empty position to write to
 static int cmd_head;//Starts as 0
@@ -149,9 +150,9 @@ bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeou
 		response = &resp;
 
 	// Wait until the command is received
-	for(size_t dm_seconds=0; dm_seconds < ms_timeout/10; dm_seconds++) {
+	for ( size_t dm_seconds = 0; dm_seconds < ms_timeout/10; dm_seconds++ ) {
 
-		while(getCommand(response)) {
+		while( getCommand(response) ) {
 			if(response->cmd == cmd){
 				return true;
 			}
@@ -166,7 +167,7 @@ bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeou
 }
 
 bool WaitForResponse(uint32_t cmd, UsbCommand* response) {
-	return WaitForResponseTimeout(cmd,response,-1);
+	return WaitForResponseTimeout(cmd, response, -1);
 }
 
 //-----------------------------------------------------------------------------
@@ -203,8 +204,10 @@ void UsbCommandReceived(UsbCommand *UC)
 			return;
 		} break;
 
-		default: break;
-	}
+		default:
 	storeCommand(UC);
+			break;
+	}
+
 }
 

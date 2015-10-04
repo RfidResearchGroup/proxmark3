@@ -49,5 +49,6 @@ int IOdemodFSK(uint8_t *dest, size_t size);
 int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert);
 int PyramiddemodFSK(uint8_t *dest, size_t *size);
 int ParadoxdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);
+int  VikingDecode(uint8_t *BitStream, size_t size, size_t *startIdx,uint8_t *id_bit,size_t id_bits_size);
 
 #endif

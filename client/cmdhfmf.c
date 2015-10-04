@@ -34,7 +34,7 @@ start:
     SendCommand(&c);
 	
 	//flush queue
-	while (ukbhit())	getchar();
+	while (ukbhit()) getchar();
 
 	// wait cycle
 	while (true) {
@@ -59,6 +59,7 @@ start:
 				case -1 : PrintAndLog("Button pressed. Aborted.\n"); break;
 				case -2 : PrintAndLog("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).\n"); break;
 				case -3 : PrintAndLog("Card is not vulnerable to Darkside attack (its random number generator is not predictable).\n"); break;
+				case -4 : PrintAndLog("The card's random number generator is vulnerable but behaves somewhat weird (Mifare clone?). This needs to be fixed.\n"); break;
 				default: ;
 			}
 			break;
@@ -80,7 +81,7 @@ start:
 	} else {
 		isOK = 0;
 		printf("------------------------------------------------------------------\n");
-		PrintAndLog("Found valid key:%012"llx" \n", r_key);
+		PrintAndLog("Found valid key: %012"llx" \n", r_key);
 	}
 	
 	PrintAndLog("");
@@ -1210,13 +1211,13 @@ int CmdHF14AMfELoad(const char *Cmd)
 	uint8_t buf8[64] = {0x00};
 	int i, len, blockNum, numBlocks;
 	int nameParamNo = 1;
-	
+	uint8_t blockWidth = 32;
 	char ctmp = param_getchar(Cmd, 0);
 		
 	if ( ctmp == 'h' || ctmp == 0x00) {
 		PrintAndLog("It loads emul dump from the file `filename.eml`");
 		PrintAndLog("Usage:  hf mf eload [card memory] <file name w/o `.eml`>");
-		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL");
 		PrintAndLog("");
 		PrintAndLog(" sample: hf mf eload filename");
 		PrintAndLog("         hf mf eload 4 filename");
@@ -1229,6 +1230,8 @@ int CmdHF14AMfELoad(const char *Cmd)
 		case '\0': numBlocks = 16*4; break;
 		case '2' : numBlocks = 32*4; break;
 		case '4' : numBlocks = 256; break;
+		case 'U' : // fall through
+		case 'u' : numBlocks = 255; blockWidth = 8; break;
 		default:  {
 			numBlocks = 16*4;
 			nameParamNo = 0;
@@ -1263,19 +1266,18 @@ int CmdHF14AMfELoad(const char *Cmd)
 			return 2;
 		}
 		
-		if (strlen(buf) < 32){
+		if (strlen(buf) < blockWidth){
 			if(strlen(buf) && feof(f))
 				break;
-			PrintAndLog("File content error. Block data must include 32 HEX symbols");
+			PrintAndLog("File content error. Block data must include %d HEX symbols", blockWidth);
 			fclose(f);
 			return 2;
 		}
 		
-		for (i = 0; i < 32; i += 2) {
+		for (i = 0; i < blockWidth; i += 2) {
 			sscanf(&buf[i], "%02x", (unsigned int *)&buf8[i / 2]);
 		}
-		
-		if (mfEmlSetMem(buf8, blockNum, 1)) {
+		if (mfEmlSetMem_xt(buf8, blockNum, 1, blockWidth/2)) {
 			PrintAndLog("Cant set emul block: %3d", blockNum);
 			fclose(f);
 			return 3;

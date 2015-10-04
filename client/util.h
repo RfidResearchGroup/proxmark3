@@ -47,6 +47,7 @@ char * printBits(size_t const size, void const * const ptr);
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
 
 char param_getchar(const char *line, int paramnum);
+int param_getptr(const char *line, int *bg, int *en, int paramnum);
 uint8_t param_get8(const char *line, int paramnum);
 uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base);
 uint32_t param_get32ex(const char *line, int paramnum, int deflt, int base);

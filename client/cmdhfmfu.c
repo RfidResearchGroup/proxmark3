@@ -58,12 +58,21 @@ uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 };
 
 #define MAX_UL_TYPES 18
-uint32_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {UNKNOWN, UL, UL_C, UL_EV1_48, UL_EV1_128, NTAG, NTAG_203,
-	    NTAG_210, NTAG_212, NTAG_213, NTAG_215, NTAG_216, MY_D, MY_D_NFC, MY_D_MOVE, MY_D_MOVE_NFC, MY_D_MOVE_LEAN, FUDAN_UL};
+uint32_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {
+		UNKNOWN, UL, UL_C, 
+		UL_EV1_48, UL_EV1_128, NTAG,
+		NTAG_203, NTAG_210, NTAG_212,
+		NTAG_213, NTAG_215, NTAG_216,
+		MY_D, MY_D_NFC, MY_D_MOVE,
+		MY_D_MOVE_NFC, MY_D_MOVE_LEAN, FUDAN_UL};
 
-uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_BLOCKS, MAX_ULEV1a_BLOCKS,
-	    MAX_ULEV1b_BLOCKS, MAX_NTAG_203, MAX_NTAG_203, MAX_NTAG_210, MAX_NTAG_212, MAX_NTAG_213,
-	    MAX_NTAG_215, MAX_NTAG_216, MAX_UL_BLOCKS, MAX_MY_D_NFC, MAX_MY_D_MOVE, MAX_MY_D_MOVE, MAX_MY_D_MOVE_LEAN, MAX_UL_BLOCKS};
+uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {
+		MAX_UL_BLOCKS, MAX_UL_BLOCKS, MAX_ULC_BLOCKS,
+		MAX_ULEV1a_BLOCKS, MAX_ULEV1b_BLOCKS, MAX_NTAG_203,
+		MAX_NTAG_203, MAX_NTAG_210, MAX_NTAG_212,
+		MAX_NTAG_213, MAX_NTAG_215, MAX_NTAG_216, 
+		MAX_UL_BLOCKS, MAX_MY_D_NFC, MAX_MY_D_MOVE,
+		MAX_MY_D_MOVE, MAX_MY_D_MOVE_LEAN, MAX_UL_BLOCKS};
 
 
 static int CmdHelp(const char *Cmd);
@@ -799,6 +808,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		}
 	}
 
+	// Read signature
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216 | NTAG_I2C_1K | NTAG_I2C_2K	))) {
 		uint8_t ulev1_signature[32] = {0x00};
 		status = ulev1_readSignature( ulev1_signature, sizeof(ulev1_signature));
@@ -814,6 +824,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		}
 	}
 
+	// Get Version
 	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_210 | NTAG_212 | NTAG_213 | NTAG_215 | NTAG_216 | NTAG_I2C_1K | NTAG_I2C_2K))) {
 		uint8_t version[10] = {0x00};
 		status  = ulev1_getVersion(version, sizeof(version));

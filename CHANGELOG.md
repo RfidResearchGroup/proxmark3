@@ -9,6 +9,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - AWID26 command context added as 'lf awid' containing realtime demodulation as well as cloning/simulation based on tag numbers (Craig Young)
 - Added 'hw status'. This command makes the ARM print out some runtime information. (holiman) 
 - Added 'hw ping'. This command just sends a usb packets and checks if the pm3 is responsive. Can be used to abort certain operations which supports abort over usb. (holiman)
+- Added `data hex2bin` and `data bin2hex` for command line conversion between binary and hexadecimal (holiman)
 
 ### Changed																		
 - Revised workflow for StandAloneMode14a (Craig Young)

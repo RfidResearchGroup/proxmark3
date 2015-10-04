@@ -29,50 +29,48 @@ int compar_state(const void * a, const void * b) {
 }
 
 int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t * key) {
-  struct Crypto1State *state;
-  uint32_t i, pos, rr, nr_diff, key_count;//, ks1, ks2;
-  byte_t bt, ks3x[8], par[8][8];
-  uint64_t key_recovered;
-  int64_t *state_s;
-  static uint32_t last_uid;
-  static int64_t *last_keylist;
-  rr = 0;
+	struct Crypto1State *state;
+	uint32_t i, pos, rr, nr_diff, key_count;//, ks1, ks2;
+	byte_t bt, ks3x[8], par[8][8];
+	uint64_t key_recovered;
+	int64_t *state_s;
+	static uint32_t last_uid;
+	static int64_t *last_keylist;
+	rr = 0;
   
-  if (last_uid != uid && last_keylist != NULL)
-  {
-	free(last_keylist);
-	last_keylist = NULL;
-  }
-  last_uid = uid;
+	if (last_uid != uid && last_keylist != NULL) {
+		free(last_keylist);
+		last_keylist = NULL;
+	}
+	last_uid = uid;
 
-  // Reset the last three significant bits of the reader nonce
-  nr &= 0xffffff1f;
+	// Reset the last three significant bits of the reader nonce
+	nr &= 0xffffff1f;
   
-  PrintAndLog("\nuid(%08x) nt(%08x) par(%016"llx") ks(%016"llx") nr(%08"llx")\n\n",uid,nt,par_info,ks_info,nr);
+	PrintAndLog("\nuid(%08x) nt(%08x) par(%016"llx") ks(%016"llx") nr(%08"llx")\n\n", uid, nt, par_info, ks_info, nr);
 
-  for (pos=0; pos<8; pos++)
-  {
-    ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
-    bt = (par_info >> (pos*8)) & 0xff;
-    for (i=0; i<8; i++)
-    {
-      par[7-pos][i] = (bt >> i) & 0x01;
-    }
-  }
+	for (pos=0; pos<8; pos++) {
+		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
+		bt = (par_info >> (pos*8)) & 0xff;
+		for (i=0; i<8; i++)	{
+			par[7-pos][i] = (bt >> i) & 0x01;
+		}
+	}
 
-  printf("|diff|{nr}    |ks3|ks3^5|parity         |\n");
-  printf("+----+--------+---+-----+---------------+\n");
-  for (i=0; i<8; i++)
-  {
-    nr_diff = nr | i << 5;
-    printf("| %02x |%08x|",i << 5, nr_diff);
-    printf(" %01x |  %01x  |",ks3x[i], ks3x[i]^5);
-    for (pos=0; pos<7; pos++) printf("%01x,", par[i][pos]);
-    printf("%01x|\n", par[i][7]);
-  }
-  
-	if (par_info==0)
-		PrintAndLog("parity is all zero,try special attack!just wait for few more seconds...");
+	printf("|diff|{nr}    |ks3|ks3^5|parity         |\n");
+	printf("+----+--------+---+-----+---------------+\n");
+	for (i=0; i<8; i++)	{
+		nr_diff = nr | i << 5;
+		printf("| %02x |%08x|", i << 5, nr_diff);
+		printf(" %01x |  %01x  |", ks3x[i], ks3x[i]^5);
+		for (pos=0; pos<7; pos++) 
+			printf("%01x,", par[i][pos]);
+		printf("%01x|\n", par[i][7]);
+	}
+	printf("+----+--------+---+-----+---------------+\n");
+
+	if ( par_info == 0 )
+		PrintAndLog("Parity is all zero, try special attack! Wait for few more seconds...");
   
 	state = lfsr_common_prefix(nr, rr, ks3x, par, par_info==0);
 	state_s = (int64_t*)state;
@@ -97,56 +95,58 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	*(state_s + i) = -1;
 	
 	//Create the intersection:
-	if (par_info == 0 )
-		if ( last_keylist != NULL)
-		{
+	if (par_info == 0 ) {
+		if ( last_keylist != NULL) 	{
 			int64_t *p1, *p2, *p3;
 			p1 = p3 = last_keylist; 
 			p2 = state_s;
 			while ( *p1 != -1 && *p2 != -1 ) {
 				if (compar_state(p1, p2) == 0) {
-					printf("p1:%"llx" p2:%"llx" p3:%"llx" key:%012"llx"\n",(uint64_t)(p1-last_keylist),(uint64_t)(p2-state_s),(uint64_t)(p3-last_keylist),*p1);
+					printf("p1:%"llx" p2:%"llx" p3:%"llx" key:%012"llx"\n",
+						(uint64_t)(p1-last_keylist),
+						(uint64_t)(p2-state_s),
+						(uint64_t)(p3-last_keylist),
+						*p1);
 					*p3++ = *p1++;
 					p2++;
-				}
-				else {
+				} else {
 					while (compar_state(p1, p2) == -1) ++p1;
 					while (compar_state(p1, p2) == 1) ++p2;
 				}
 			}
-			key_count = p3 - last_keylist;;
-		}
-		else
+			key_count = p3 - last_keylist;
+		} else {
 			key_count = 0;
-	else
-	{
+		}
+	} else {
 		last_keylist = state_s;
 		key_count = i;
 	}
 	
-	printf("key_count:%d\n", key_count);
+	printf("key candidates count: %d\n", key_count);
 
 	// The list may still contain several key candidates. Test each of them with mfCheckKeys
+	int res;
+	uint8_t keyBlock[6];
+	uint64_t key64;
 	for (i = 0; i < key_count; i++) {
-		uint8_t keyBlock[6];
-		uint64_t key64;
+
 		key64 = *(last_keylist + i);
 		num_to_bytes(key64, 6, keyBlock);
 		key64 = 0;
-		if (!mfCheckKeys(0, 0, false, 1, keyBlock, &key64)) {
+		res = mfCheckKeys(0, 0, false, 1, keyBlock, &key64);
+		if (!res) {
 			*key = key64;
 			free(last_keylist);
 			last_keylist = NULL;
-			if (par_info ==0)
+			if (par_info == 0)
 				free(state);
 			return 0;
 		}
 	}	
-
 	
 	free(last_keylist);
 	last_keylist = state_s;
-	
 	return 1;
 }
 
@@ -242,7 +242,6 @@ int tryMfk32_moebius(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 	free(s);
 	return isSuccess;
 }
-
 
 int tryMfk64(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 
