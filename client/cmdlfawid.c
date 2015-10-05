@@ -175,66 +175,67 @@ int CmdAWIDSim(const char *Cmd)
 
 int CmdAWIDClone(const char *Cmd)
 {
-clearCommandBuffer();
-  uint32_t fc=0,cn=0,blocks[4] = {0x00107060, 0, 0, 0x11111111}, i=0;
-  uint8_t BitStream[12];
-  uint8_t *BS=BitStream;
+	clearCommandBuffer();
+	uint32_t fc=0,cn=0,blocks[4] = {0x00107060, 0, 0, 0x11111111}, i=0;
+	uint8_t BitStream[12];
+	uint8_t *BS=BitStream;
 	UsbCommand c, resp;
 
-  if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) {
-    return usage_lf_awid_clone();
-  }
+	if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) {
+		return usage_lf_awid_clone();
+	}
 
-  if ((fc & 0xFF) != fc) {
-    fc &= 0xFF;
-    PrintAndLog("Facility-Code Truncated to 8-bits (AWID26): %u", fc);
-  }
-  if ((cn & 0xFFFF) != cn) {
-    cn &= 0xFFFF;
-    PrintAndLog("Card Number Truncated to 16-bits (AWID26): %u", cn);
-  }
-  if (getAWIDBits(fc,cn,BS)) {
-    PrintAndLog("Preparing to clone AWID26 to T55x7 with FC: %u, CN: %u (Raw: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x)", 
-                  fc,cn, BS[0],BS[1],BS[2],BS[3],BS[4],BS[5],BS[6],BS[7],BS[8],BS[9],BS[10],BS[11]);
-    blocks[1] = (BS[0]<<24) + (BS[1]<<16) + (BS[2]<<8) + (BS[3]);
-    blocks[2] = (BS[4]<<24) + (BS[5]<<16) + (BS[6]<<8) + (BS[7]);
-    PrintAndLog("Block 0: 0x%08x", blocks[0]);
-    PrintAndLog("Block 1: 0x%08x", blocks[1]);
-    PrintAndLog("Block 2: 0x%08x", blocks[2]);
-    PrintAndLog("Block 3: 0x%08x", blocks[3]);
-    for (i=0; i<4; i++) {
-      c.cmd = CMD_T55XX_WRITE_BLOCK;
-      c.arg[0] = blocks[i];
-      c.arg[1] = i;
-      c.arg[2] = 0;
-      SendCommand(&c);
+	if ((fc & 0xFF) != fc) {
+		fc &= 0xFF;
+		PrintAndLog("Facility-Code Truncated to 8-bits (AWID26): %u", fc);
+	}
+
+	if ((cn & 0xFFFF) != cn) {
+		cn &= 0xFFFF;
+		PrintAndLog("Card Number Truncated to 16-bits (AWID26): %u", cn);
+	}
+
+	if (getAWIDBits(fc,cn,BS)) {
+		PrintAndLog("Preparing to clone AWID26 to T55x7 with FC: %u, CN: %u (Raw: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x)", 
+					  fc,cn, BS[0],BS[1],BS[2],BS[3],BS[4],BS[5],BS[6],BS[7],BS[8],BS[9],BS[10],BS[11]);
+		blocks[1] = (BS[0]<<24) + (BS[1]<<16) + (BS[2]<<8) + (BS[3]);
+		blocks[2] = (BS[4]<<24) + (BS[5]<<16) + (BS[6]<<8) + (BS[7]);
+		PrintAndLog("Block 0: 0x%08x", blocks[0]);
+		PrintAndLog("Block 1: 0x%08x", blocks[1]);
+		PrintAndLog("Block 2: 0x%08x", blocks[2]);
+		PrintAndLog("Block 3: 0x%08x", blocks[3]);
+		for (i=0; i<4; i++) {
+			c.cmd = CMD_T55XX_WRITE_BLOCK;
+			c.arg[0] = blocks[i];
+			c.arg[1] = i;
+			c.arg[2] = 0;
+			SendCommand(&c);
 			if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)){
 				PrintAndLog("Error occurred, device did not respond during write operation.");
 				return -1;
 			}
-
-    }
-  }
-  return 0;
+		}
+	}
+	return 0;
 }
 
 static command_t CommandTable[] = 
 {
-  {"help",      CmdHelp,        1, "This help"},
-  {"fskdemod",  CmdAWIDDemodFSK, 0, "['1'] Realtime AWID FSK demodulator (option '1' for one tag only)"},
-  {"sim",       CmdAWIDSim,      0, "<Facility-Code> <Card Number> -- AWID tag simulator"},
-  {"clone",     CmdAWIDClone,    0, "<Facility-Code> <Card Number> -- Clone AWID to T55x7 (tag must be in range of antenna)"},
-  {NULL, NULL, 0, NULL}
+	{"help",      CmdHelp,         1, "This help"},
+	{"fskdemod",  CmdAWIDDemodFSK, 0, "['1'] Realtime AWID FSK demodulator (option '1' for one tag only)"},
+	{"sim",       CmdAWIDSim,      0, "<Facility-Code> <Card Number> -- AWID tag simulator"},
+	{"clone",     CmdAWIDClone,    0, "<Facility-Code> <Card Number> -- Clone AWID to T55x7 (tag must be in range of antenna)"},
+	{NULL, NULL, 0, NULL}
 };
 
 int CmdLFAWID(const char *Cmd)
 {
-  CmdsParse(CommandTable, Cmd);
-  return 0;
+	CmdsParse(CommandTable, Cmd);
+	return 0;
 }
 
 int CmdHelp(const char *Cmd)
 {
-  CmdsHelp(CommandTable);
-  return 0;
+	CmdsHelp(CommandTable);
+	return 0;
 }

@@ -2,9 +2,8 @@
 -- Have a look there for further details
 getopt = require('getopt')
 bin = require('bin')
-
-example = "script run dumptoemul -i dumpdata-foobar.bin"
-author = "Martin Holst Swende"
+example = "script run dumptoemul-mfu -i dumpdata-foobar.bin"
+author = "Martin Holst Swende \n @Marshmellow"
 usage = "script run dumptoemul [-i <file>] [-o <file>]"
 desc =[[
 This script takes a dumpfile from 'hf mf dump' and converts it to a format that can be used
@@ -16,11 +15,6 @@ Arguments:
 	-o <filename>	Specifies the output file. If omitted, <uid>.eml is used. 	
 
 ]]
-
--------------------------------
--- Some utilities 
--------------------------------
-
 --- 
 -- A debug printout-function
 function dbg(args)
@@ -34,11 +28,11 @@ function oops(err)
 	print("ERROR: ",err)
 end
 
-
 --- 
 -- Usage help
 function help()
 	print(desc)
+	print(author)
 	print("Example usage")
 	print(example)
 end

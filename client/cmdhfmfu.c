@@ -1199,7 +1199,7 @@ int usage_hf_mfu_wrbl(void) {
 
 int usage_hf_mfu_eload(void) {
 	PrintAndLog("It loads emulator dump from the file `filename.eml`\n");
-	PrintAndLog("Usage:  hf mf eload t <card memory> i <file name w/o `.eml`>\n");
+	PrintAndLog("Usage:  hf mfu eload t <card memory> i <file name w/o `.eml`>\n");
 	PrintAndLog("  Options:");	
 	PrintAndLog("  t <card memory> : Tag memorysize/type");
 	PrintAndLog("  i <file>        : file name w/o `.eml`");

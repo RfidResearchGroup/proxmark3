@@ -46,6 +46,7 @@ local _commands = {
 	CMD_T55XX_WRITE_BLOCK =                                              0x0215,
 	CMD_T55XX_READ_TRACE =                                               0x0216,
 	CMD_PCF7931_READ =                                                   0x0217,
+	CMD_PCF7931_WRITE =                                                  0x0223,
 	CMD_EM4X_READ_WORD =                                                 0x0218,
 	CMD_EM4X_WRITE_WORD =                                                0x0219,
 	CMD_IO_DEMOD_FSK =                                                   0x021A,
