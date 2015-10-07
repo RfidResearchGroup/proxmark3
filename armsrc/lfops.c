@@ -2125,3 +2125,260 @@ void CopyViKingtoT55x7(uint32_t block1,uint32_t block2)
     DbpString("DONE!");
 }
 
+
+#define T0_PCF 8 //period for the pcf7931 in us
+
+/* Write on a byte of a PCF7931 tag
+ * @param address : address of the block to write
+   @param byte : address of the byte to write
+    @param data : data to write
+ */
+void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data)
+{
+
+	uint32_t tab[1024]={0}; // data times frame
+	uint32_t u = 0;
+	uint8_t parity = 0;
+	bool comp = 0;
+
+
+	//BUILD OF THE DATA FRAME
+
+	//alimentation of the tag (time for initializing)
+	AddPatternPCF7931(init_delay, 0, 8192/2*T0_PCF, tab);
+
+	//PMC
+	Dbprintf("Initialization delay : %d us", init_delay);
+	AddPatternPCF7931(8192/2*T0_PCF + 319*T0_PCF+70, 3*T0_PCF, 29*T0_PCF, tab);
+
+	Dbprintf("Offsets : %d us on the low pulses width, %d us on the low pulses positions", l, p);
+
+	//password indication bit
+	AddBitPCF7931(1, tab, l, p);
+
+
+	//password (on 56 bits)
+	Dbprintf("Password (LSB first on each byte) : %02x %02x %02x %02x %02x %02x %02x", pass1,pass2,pass3,pass4,pass5,pass6,pass7);
+	AddBytePCF7931(pass1, tab, l, p);
+	AddBytePCF7931(pass2, tab, l, p);
+	AddBytePCF7931(pass3, tab, l, p);
+	AddBytePCF7931(pass4, tab, l, p);
+	AddBytePCF7931(pass5, tab, l, p);
+	AddBytePCF7931(pass6, tab, l, p);
+	AddBytePCF7931(pass7, tab, l, p);
+
+
+	//programming mode (0 or 1)
+	AddBitPCF7931(0, tab, l, p);
+
+	//block adress on 6 bits
+	Dbprintf("Block address : %02x", address);
+	for (u=0; u<6; u++)
+	{
+		if (address&(1<<u)) {	// bit 1
+			 parity++;
+			 AddBitPCF7931(1, tab, l, p);
+		} else{					// bit 0
+			 AddBitPCF7931(0, tab, l, p);
+		}
+	}
+
+	//byte address on 4 bits
+	Dbprintf("Byte address : %02x", byte);
+	for (u=0; u<4; u++)
+	{
+		if (byte&(1<<u)) {	// bit 1
+			 parity++;
+			 AddBitPCF7931(1, tab, l, p);
+		} else{				// bit 0
+			 AddBitPCF7931(0, tab, l, p);
+		}
+	}
+
+	//data on 8 bits
+	Dbprintf("Data : %02x", data);
+	for (u=0; u<8; u++)
+	{
+		if (data&(1<<u)) {	// bit 1
+			 parity++;
+			 AddBitPCF7931(1, tab, l, p);
+		} else{				//bit 0
+			 AddBitPCF7931(0, tab, l, p);
+		}
+	}
+
+
+	//parity bit
+	if((parity%2)==0){
+	 	AddBitPCF7931(0, tab, l, p); //even parity
+	}else{
+		AddBitPCF7931(1, tab, l, p);//odd parity
+	}
+
+	//time access memory
+	AddPatternPCF7931(5120+2680, 0, 0, tab);
+
+	//conversion of the scale time
+	for(u=0;u<500;u++){
+		tab[u]=(tab[u] * 3)/2;
+	}
+
+
+	//compennsation of the counter reload
+	while (!comp){
+		comp = 1;
+		for(u=0;tab[u]!=0;u++){
+			if(tab[u] > 0xFFFF){
+			  tab[u] -= 0xFFFF;
+			  comp = 0;
+			}
+		}
+	}
+
+	SendCmdPCF7931(tab);
+}
+
+
+
+/* Send a trame to a PCF7931 tags
+ * @param tab : array of the data frame
+ */
+
+void SendCmdPCF7931(uint32_t * tab){
+	uint16_t u=0;
+	uint16_t tempo=0;
+
+	Dbprintf("SENDING DATA FRAME...");
+
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+
+	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU );
+
+	LED_A_ON();
+
+	// steal this pin from the SSP and use it to control the modulation
+	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+
+	//initialization of the timer
+	AT91C_BASE_PMC->PMC_PCER |= (0x1 << 12) | (0x1 << 13) | (0x1 << 14);
+	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS; // timer disable
+	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;  //clock at 48/32 MHz
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;
+	AT91C_BASE_TCB->TCB_BCR = 1;
+
+
+	tempo = AT91C_BASE_TC0->TC_CV;
+	for(u=0;tab[u]!= 0;u+=3){
+
+
+		// modulate antenna
+		HIGH(GPIO_SSC_DOUT);
+		while(tempo !=  tab[u]){
+			tempo = AT91C_BASE_TC0->TC_CV;
+		}
+
+		// stop modulating antenna
+		LOW(GPIO_SSC_DOUT);
+		while(tempo !=  tab[u+1]){
+			tempo = AT91C_BASE_TC0->TC_CV;
+		}
+
+
+		// modulate antenna
+		HIGH(GPIO_SSC_DOUT);
+		while(tempo !=  tab[u+2]){
+			tempo = AT91C_BASE_TC0->TC_CV;
+		}
+
+
+	}
+
+	LED_A_OFF();
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelay(200);
+
+
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS; // timer disable
+	DbpString("FINISH !");
+	DbpString("(Could be usefull to send the same trame many times)");
+	LED(0xFFFF, 1000);
+}
+
+
+/* Add a byte for building the data frame of PCF7931 tags 
+ * @param b : byte to add
+ * @param tab : array of the data frame
+ * @param l : offset on low pulse width
+ * @param p : offset on low pulse positioning
+ */
+
+bool AddBytePCF7931(uint8_t byte, uint32_t * tab, int32_t l, int32_t p){
+
+	uint32_t u;
+	for (u=0; u<8; u++)
+	{
+		if (byte&(1<<u)) {	//bit à 1
+			if(AddBitPCF7931(1, tab, l, p)==1)return 1;
+		} else { //bit à 0
+			if(AddBitPCF7931(0, tab, l, p)==1)return 1;
+		}
+	}
+
+	return 0;
+}
+
+/* Add a bits for building the data frame of PCF7931 tags 
+ * @param b : bit to add
+ * @param tab : array of the data frame
+ * @param l : offset on low pulse width
+ * @param p : offset on low pulse positioning
+ */
+bool AddBitPCF7931(bool b, uint32_t * tab, int32_t l, int32_t p){
+	uint8_t u = 0;
+
+	for(u=0;tab[u]!=0;u+=3){} //we put the cursor at the last value of the array
+	
+
+	if(b==1){	//add a bit 1
+		if(u==0) tab[u] = 34*T0_PCF+p;
+		else 	 tab[u] = 34*T0_PCF+tab[u-1]+p;
+
+		tab[u+1] = 6*T0_PCF+tab[u]+l;
+		tab[u+2] = 88*T0_PCF+tab[u+1]-l-p;
+		return 0;
+	}else{ 		//add a bit 0
+
+		if(u==0) tab[u] = 98*T0_PCF+p;
+		else  	 tab[u] = 98*T0_PCF+tab[u-1]+p;
+
+		tab[u+1] = 6*T0_PCF+tab[u]+l;
+		tab[u+2] = 24*T0_PCF+tab[u+1]-l-p;
+		return 0;
+	}
+
+	
+	return 1;
+}
+
+/* Add a custom pattern in the data frame
+ * @param a : delay of the first high pulse
+ * @param b : delay of the low pulse
+ * @param c : delay of the last high pulse
+ * @param tab : array of the data frame
+ */
+bool AddPatternPCF7931(uint32_t a, uint32_t b, uint32_t c, uint32_t * tab){
+	uint32_t u = 0;
+	for(u=0;tab[u]!=0;u+=3){} //we put the cursor at the last value of the array
+
+	if(u==0) tab[u] = a;
+	else tab[u] = a + tab[u-1];
+
+	tab[u+1] = b+tab[u];
+	tab[u+2] = c+tab[u+1];
+
+	return 0;
+}

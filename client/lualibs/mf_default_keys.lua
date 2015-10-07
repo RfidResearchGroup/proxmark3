@@ -181,6 +181,12 @@ local _keys = {
 	 --[[	 
 	 --]]
 	 'a9f953def0a3',
+	 
+	 --[[
+	 mystery Key A and B for Mifare 1k EV1 (S50) Sector 17!
+	 --]]
+	'75ccb59c9bed',
+	'4b791bea7bcc',
 }
 
 ---

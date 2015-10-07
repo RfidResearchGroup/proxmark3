@@ -1924,7 +1924,7 @@ static command_t CommandTable[] =
 	{"dump",	CmdHF14AMfUDump,	0, "Dump Ultralight / Ultralight-C / NTAG tag to binary file"},
 	{"rdbl",	CmdHF14AMfURdBl,	0, "Read block"},
 	{"wrbl",	CmdHF14AMfUWrBl,	0, "Write block"},
-	{"eload",	CmdHF14AMfuELoad,	0, "Load from file emulator dump"},
+	{"eload",	CmdHF14AMfuELoad,	0, "<not implemented> Load from file emulator dump"},
 	{"cauth",	CmdHF14AMfucAuth,	0, "Authentication    - Ultralight C"},
 	{"setpwd",	CmdHF14AMfucSetPwd, 1, "Set 3des password - Ultralight-C"},
 	{"setuid",	CmdHF14AMfucSetUid, 1, "Set UID - MAGIC tags only"},

@@ -148,6 +148,10 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MIFARE_CMD_RESTORE      0xC2
 #define MIFARE_CMD_TRANSFER     0xB0
 
+#define MIFARE_EV1_PERSONAL_UID 0x40
+#define MIFARE_EV1_SETMODE		0x43
+
+
 #define MIFARE_ULC_WRITE        0xA2
 //#define MIFARE_ULC__COMP_WRITE  0xA0
 #define MIFARE_ULC_AUTH_1       0x1A
@@ -161,6 +165,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MIFARE_ULEV1_READSIG	0x3C
 #define MIFARE_ULEV1_CHECKTEAR	0x3E
 #define MIFARE_ULEV1_VCSL		0x4B
+
+
 
 /**
 06 00 = INITIATE
@@ -259,5 +265,6 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 //	6x xx = ERROR
 	
 void printIclassDumpInfo(uint8_t* iclass_dump);
+void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb);
 
 #endif // PROTOCOLS_H

@@ -992,6 +992,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			ReadPCF7931();
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
+		case CMD_PCF7931_WRITE:
+			WritePCF7931(c->d.asDwords[0],c->d.asDwords[1],c->d.asDwords[2],c->d.asDwords[3],c->d.asDwords[4],c->d.asDwords[5],c->d.asDwords[6], c->d.asDwords[9], c->d.asDwords[7]-128,c->d.asDwords[8]-128, c->arg[0], c->arg[1], c->arg[2]);
+			break;
 		case CMD_EM4X_READ_WORD:
 			EM4xReadWord(c->arg[1], c->arg[2],c->d.asBytes[0]);
 			break;
@@ -1211,6 +1214,24 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 	case CMD_ICLASS_EML_MEMSET:
 			emlSet(c->d.asBytes,c->arg[0], c->arg[1]);
+			break;
+		case CMD_ICLASS_WRITEBLOCK:
+			iClass_WriteBlock(c->arg[0], c->d.asBytes);
+			break;
+		case CMD_ICLASS_READCHECK:  // auth step 1
+			iClass_ReadCheck(c->arg[0], c->arg[1]);
+			break;
+		case CMD_ICLASS_READBLOCK:
+			iClass_ReadBlk(c->arg[0]);
+			break;
+		case CMD_ICLASS_AUTHENTICATION: //check
+			iClass_Authentication(c->d.asBytes);
+			break;
+		case CMD_ICLASS_DUMP:
+			iClass_Dump(c->arg[0], c->arg[1]);
+			break;
+		case CMD_ICLASS_CLONE:
+			iClass_Clone(c->arg[0], c->arg[1], c->d.asBytes);
 			break;
 #endif
 

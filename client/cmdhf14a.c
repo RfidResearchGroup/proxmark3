@@ -602,7 +602,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
 	uint32_t temp;
 
     if (strlen(cmd)<2) {
-        PrintAndLog("Usage: hf 14a raw [-r] [-c] [-p] [-a] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
+        PrintAndLog("Usage: hf 14a raw [-r] [-c] [-p] [-a] [-T] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
         PrintAndLog("       -r    do not read response");
         PrintAndLog("       -c    calculate and append CRC");
         PrintAndLog("       -p    leave the signal field ON after receive");

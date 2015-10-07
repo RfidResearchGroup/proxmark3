@@ -241,6 +241,27 @@ void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4])
 	//free(cc_nr);
     return;
 }
+void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_key_p, uint8_t mac[4])
+{
+	uint8_t *address_data;
+	uint8_t div_key[8];
+	address_data = (uint8_t*) malloc(address_data_size);
+
+	memcpy(address_data, address_data_p, address_data_size);
+	memcpy(div_key, div_key_p, 8);
+
+	reverse_arraybytes(address_data, address_data_size);
+	BitstreamIn bitstream = {address_data, address_data_size * 8, 0};
+	uint8_t dest []= {0,0,0,0,0,0,0,0};
+	BitstreamOut out = { dest, sizeof(dest)*8, 0 };
+	MAC(div_key, bitstream, out);
+	//The output MAC must also be reversed
+	reverse_arraybytes(dest, sizeof(dest));
+	memcpy(mac, dest, 4);
+	free(address_data);
+	return;
+}
+
 #ifndef ON_DEVICE
 int testMAC()
 {

@@ -3,8 +3,18 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+  --trying to fix "hf 14b" command to be able to read CALYPSO card.	 (iceman)
+  --trying to fix "t55x7" read with password bug. (iceman)
+  --
 
 ### Added
+- `hf mf eload u` added an ultralight/ntag option. (marshmellow)
+- `hf iclass managekeys` to save, load and manage iclass keys.  (adjusted most commands to accept a loaded key in memory) (marshmellow)
+- `hf iclass readblk` to select, authenticate, and read 1 block from an iclass card (marshmellow)
+- `hf iclass writeblk` to select, authenticate, and write 1 block to an iclass card (or picopass) (marshmellow + others)
+- `hf iclass clone` to take a saved dump file and clone selected blocks to a new tag (marshmellow + others)
+- `hf iclass calcnewkey` - to calculate the div_key change to change a key - (experimental) (marshmellow + others)
+- `hf iclass encryptblk` - to encrypt a data block hex to prep for writing that block (marshmellow)
 - ISO14443a stand-alone operation with ARM CFLAG="WITH_ISO14443a_StandAlone". This code can read & emulate two banks of 14a tag UIDs and write to "magic" cards  (Craig Young) 
 - AWID26 command context added as 'lf awid' containing realtime demodulation as well as cloning/simulation based on tag numbers (Craig Young)
 - Added 'hw status'. This command makes the ARM print out some runtime information. (holiman) 
@@ -12,8 +22,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `data hex2bin` and `data bin2hex` for command line conversion between binary and hexadecimal (holiman)
 
 ### Changed																		
+- changed `lf config t <threshold>` to be 0 - 128 and will trigger on + or - threshold value (marshmellow) 
+- `hf iclass dump` cli options - can now dump AA1 and AA2 with different keys in one run (does not go to muliple pages for the larger tags yet)
 - Revised workflow for StandAloneMode14a (Craig Young)
-- Changed lf config's `threshold` to a graph (signed) metric and it will trigger on + or - value set to. (example: set to 50 and recording would begin at first graphed value of >= 50 or <= -50) (marshmellow)
 - EPA functions (`hf epa`) now support both ISO 14443-A and 14443-B cards (frederikmoellers)
 - 'hw version' only talks to ARM at startup, after that the info is cached. (pwpiwi)
 
@@ -25,7 +36,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `hf 14b info` to `hf search` (marshmellow)
 - Added compression of fpga config and data, *BOOTROM REFLASH REQUIRED* (piwi)
 - Implemented better detection of mifare-tags that are not vulnerable to classic attacks (`hf mf mifare`, `hf mf nested`) (piwi)
-
 
 ### Added
 - Add `hf 14b reader` to find and print general info about known 14b tags (marshmellow)

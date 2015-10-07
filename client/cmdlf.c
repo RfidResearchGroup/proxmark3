@@ -85,7 +85,9 @@ int CmdLFCommandRead(const char *Cmd)
 	if(errors) return usage_lf_cmdread();
 	
 	UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K};
+	
 	sscanf(Cmd, "%"lli" %"lli" %"lli" %s %s", &c.arg[0], &c.arg[1], &c.arg[2],(char*)(&c.d.asBytes),(char*)(&dummy+1));
+	
 	// in case they specified 'h'
 	strcpy((char *)&c.d.asBytes + strlen((char *)c.d.asBytes), dummy);
 
@@ -1212,7 +1214,7 @@ static command_t CommandTable[] =
   {"pcf7931",     CmdLFPCF7931,       1, "{ PCF7931 RFIDs... }"},
   {"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
   {"t55xx",       CmdLFT55XX,         1, "{ T55X7 RFIDs... }"},
-{"viking",      CmdLFViking,        1, "{ Viking RFIDs... }"},
+  {"viking",      CmdLFViking,        1, "{ Viking RFIDs... }"},
   {"config",      CmdLFSetConfig,     0, "Set config for LF sampling, bit/sample, decimation, frequency"},
  
   {"cmdread",     CmdLFCommandRead,   0, "<off period> <'0' period> <'1' period> <command> ['h' 134] \n\t\t-- Modulate LF reader field to send command before read (all periods in microseconds)"},
@@ -1220,9 +1222,9 @@ static command_t CommandTable[] =
   {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
   {"indalaclone", CmdIndalaClone,     0, "<UID> ['l']-- Clone Indala to T55x7 (tag must be in antenna)(UID in HEX)(option 'l' for 224 UID"},
   {"read",        CmdLFRead,          0, "['s' silent] Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
-  {"search",      CmdLFfind,          1, "[offline] ['u'] Read and Search for valid known tag (in offline mode it you can load first then search) \n\t\t- 'u' to search for unknown tags"},
+  {"search",      CmdLFfind,          1, "[offline] ['u'] Read and Search for valid known tag (in offline mode it you can load first then search) \n\t\t-- 'u' to search for unknown tags"},
   {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
-  {"simask",      CmdLFaskSim,        0, "[clock] [invert <1|0>] [manchester/raw <'m'|'r'>] [msg separator 's'] [d <hexdata>] \n\t\t-- Simulate LF ASK tag from demodbuffer or input"},
+  {"simask",      CmdLFaskSim,        0, "[clock] [invert <1|0>] [biphase/manchester/raw <'b'|'m'|'r'>] [msg separator 's'] [d <hexdata>] \n\t\t-- Simulate LF ASK tag from demodbuffer or input"},
   {"simfsk",      CmdLFfskSim,        0, "[c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>] \n\t\t-- Simulate LF FSK tag from demodbuffer or input"},
   {"simpsk",      CmdLFpskSim,        0, "[1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>] \n\t\t-- Simulate LF PSK tag from demodbuffer or input"},
   {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},

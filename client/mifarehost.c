@@ -630,3 +630,23 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 
 	return 0;
 }
+
+int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len){
+	/*
+	uint32_t nt;      // tag challenge
+	uint32_t ar_enc;  // encrypted reader response
+	uint32_t at_enc;  // encrypted tag response
+	*/
+	if (traceCrypto1) {
+		crypto1_destroy(traceCrypto1);
+	}
+	ks2 = ar_enc ^ prng_successor(nt, 64);
+	ks3 = at_enc ^ prng_successor(nt, 96);
+	traceCrypto1 = lfsr_recovery64(ks2, ks3);
+
+	mf_crypto1_decrypt(traceCrypto1, data, len, 0);
+
+	PrintAndLog("Decrypted data: [%s]", sprint_hex(data,len) );
+	crypto1_destroy(traceCrypto1);
+	return 0;
+}

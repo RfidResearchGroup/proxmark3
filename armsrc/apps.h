@@ -94,6 +94,11 @@ int DemodPCF7931(uint8_t **outBlocks);
 int IsBlock0PCF7931(uint8_t *Block);
 int IsBlock1PCF7931(uint8_t *Block);
 void ReadPCF7931();
+void SendCmdPCF7931(uint32_t * tab);
+bool AddBytePCF7931(uint8_t byte, uint32_t * tab, int32_t l, int32_t p);
+bool AddBitPCF7931(bool b, uint32_t * tab, int32_t l, int32_t p);
+bool AddPatternPCF7931(uint32_t a, uint32_t b, uint32_t c, uint32_t * tab);
+void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data);
 void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 
@@ -190,6 +195,13 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 void ReaderIClass(uint8_t arg0);
 void ReaderIClass_Replay(uint8_t arg0,uint8_t *MAC);
 void IClass_iso14443A_GetPublic(uint8_t arg0);
+void iClass_Authentication(uint8_t *MAC);
+void iClass_WriteBlock(uint8_t blockNo, uint8_t *data);
+void iClass_ReadBlk(uint8_t blockNo);
+bool iClass_ReadBlock(uint8_t blockNo, uint8_t *readdata);
+void iClass_Dump(uint8_t blockno, uint8_t numblks);
+void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data);
+void iClass_ReadCheck(uint8_t	blockNo, uint8_t keyType);
 
 void CopyViKingtoT55x7(uint32_t block1,uint32_t block2);
 // hitag2.h

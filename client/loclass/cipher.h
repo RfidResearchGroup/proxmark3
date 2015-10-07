@@ -42,6 +42,8 @@
 #include <stdint.h>
 
 void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]);
+void doMAC_N(uint8_t *address_data_p,uint8_t address_data_size, uint8_t *div_key_p, uint8_t mac[4]);
+
 #ifndef ON_DEVICE
 int testMAC();
 #endif

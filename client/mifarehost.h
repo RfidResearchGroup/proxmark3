@@ -68,3 +68,4 @@ int isBlockEmpty(int blockN);
 int isBlockTrailer(int blockN);
 int loadTraceCard(uint8_t *tuid);
 int saveTraceCard(void);
+int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len);

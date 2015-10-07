@@ -37,7 +37,7 @@ int usage_t55xx_config(){
 	PrintAndLog("Options:        ");
 	PrintAndLog("       h                        This help");
 	PrintAndLog("       b <8|16|32|40|50|64|100|128>     Set bitrate");
-	PrintAndLog("       d <FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  Set demodulation FSK / ASK / PSK / NZ / Biphase / Biphase A");
+	PrintAndLog("       d <FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  Set demodulation FSK / ASK / PSK / NRZ / Biphase / Biphase A");
 	PrintAndLog("       i [1]                            Invert data signal, defaults to normal");
 	PrintAndLog("       o [offset]                       Set offset, where data should start decode in bitstream");
 	PrintAndLog("");
@@ -1057,6 +1057,12 @@ char * GetSelectedModulationStr( uint8_t id){
 			break;
 		}
 	return buf;
+}
+
+void t55x7_create_config_block( int tagtype ){
+	//switch?
+	
+	
 }
 
 /*

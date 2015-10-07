@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-//#include <openssl/des.h>
 #include "loclass/des.h"
 #include "cmdmain.h"
 #include "proxmark3.h"

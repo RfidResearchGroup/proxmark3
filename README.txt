@@ -1,24 +1,32 @@
-The iceman fork.
-
+The iceman fork
+---------------
 NOTICE:
 
 The official Proxmark repository is found here: https://github.com/Proxmark/proxmark3
 
+NEWS: 
 
-NEWS:      
+::THIS FORK IS HIGHLY EXPERIMENTAL::
+
 
 Whats in this fork?  I have scraped the web for different enhancements to the PM3 source code and not all of them ever found their way to the master branch. 
 Among the stuff is
 
 	* Jonor's hf 14a raw timing patch
 	* Piwi's updates. (usually gets into the master)
+	* Piwi's "topaz" branch (not merged)
 	* Holiman's iclass, (usually gets into the master)
-	* Marshmellow's LF fixes
+	* Marshmellow's fixes (usually gets into the master)
 	* Midnitesnake's Ultralight,  Ultralight-c enhancements
 	* Izsh's lf peak modification / iir-filtering
 	* Aspers's tips and tricks from inside the PM3-gui-tool, settings.xml and other stuff.
 	* My own desfire, Ultralight extras, LF T55xx enhancements, bugs fixes (filelength, hf mf commands ), TNP3xxx lua scripts,  Awid26,  skidata scripts (will come)
 	* other obscure patches like for the sammy-mode,  (offline you know), tagidentifications, defaultkeys. 
+	* Minor textual changes here and there.
+	* Simulation of Ultralight/Ntag.
+	* Marshmellow's and my "RevEng" addon for the client.  Ref: http://reveng.sourceforge.net/
+	* Someone's alterantive bruteforce Mifare changes.. (you need the two other exe to make it work)
+	* 
 	
 Give me a hint, and I'll see if I can't merge in the stuff you have. 
 
@@ -27,6 +35,7 @@ I don't actually know how to make small pull-request to github :( and that is th
 PM3 GUI:
 
 I do tend to rename and move stuff around, the official PM3-GUI from Gaucho will not work so well. *sorry*	
+
 
 	  
 DEVELOPMENT:
@@ -78,10 +87,54 @@ Solution
 	
 
 An old Qt4 version makefile is found here: http://www.icesql.se/proxmark3/code/linuxmakefile.txt  but this one doesn't have all new files in it. So I don't recommend it.
+							   
+
+January 2015, Sweden
+iceman at host iuse.se
+
 
 The Proxmark 3 is available for purchase (assembled and tested) from the
 following locations:
 
+   * http://proxmark3.com/
+   * http://www.xfpga.com/
 
-January 2015, Sweden
-iceman at host iuse.se
+Most of the ultra-low-volume contract assemblers could put
+something like this together with a reasonable yield. A run of around
+a dozen units is probably cost-effective. The BOM includes (possibly-
+outdated) component pricing, and everything is available from Digikey
+and the usual distributors.
+
+If you've never assembled a modern circuit board by hand, then this is
+not a good place to start. Some of the components (e.g. the crystals)
+must not be assembled with a soldering iron, and require hot air.
+
+The schematics are included; the component values given are not
+necessarily correct for all situations, but it should be possible to do
+nearly anything you would want with appropriate population options.
+
+The printed circuit board artwork is also available, as Gerbers and an
+Excellon drill file.
+
+
+LICENSING:
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+
+Jonathan Westhues
+user jwesthues, at host cq.cx
+
+May 2007, Cambridge MA

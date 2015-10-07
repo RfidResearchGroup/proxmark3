@@ -11,13 +11,13 @@
 
 
 typedef struct {
-	uint8_t app_limit;
-	uint8_t otp[2];
-	uint8_t block_writelock;
-	uint8_t chip_config;
-	uint8_t mem_config;
-	uint8_t eas;
-	uint8_t fuses;
+	uint8_t app_limit;      //[8]
+	uint8_t otp[2];         //[9-10]
+	uint8_t block_writelock;//[11]
+	uint8_t chip_config;    //[12]
+	uint8_t mem_config;     //[13]
+	uint8_t eas;            //[14]
+	uint8_t fuses;          //[15]
 }picopass_conf_block;
 
 
@@ -74,24 +74,54 @@ void fuse_config(const picopass_hdr *hdr)
 	if( isset( fuses, FUSE_RA)) prnt("	RA: Read access enabled");
 	else prnt("	RA: Read access not enabled");
 }
-void mem_config(const picopass_hdr *hdr)
+
+void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb) {
+	// mem-bit 5, mem-bit 7, chip-bit 4: defines chip type
+	if(isset(chip_cfg, 0x10) && notset(mem_cfg, 0x80) && notset(mem_cfg, 0x20)) {
+		*kb = 2;
+		*app_areas = 2;
+		*max_blk = 31;
+	} else if(isset(chip_cfg, 0x10) && isset(mem_cfg, 0x80) && notset(mem_cfg, 0x20)) {
+		*kb = 16;
+		*app_areas = 2;
+		*max_blk = 255; //16kb
+	} else if(notset(chip_cfg, 0x10) && notset(mem_cfg, 0x80) && notset(mem_cfg, 0x20)) {
+		*kb = 16;
+		*app_areas = 16;
+		*max_blk = 255; //16kb
+	} else if(isset(chip_cfg, 0x10) && isset(mem_cfg, 0x80) && isset(mem_cfg, 0x20)) {
+		*kb = 32;
+		*app_areas = 3;
+		*max_blk = 255; //16kb
+	} else if(notset(chip_cfg, 0x10) && notset(mem_cfg, 0x80) && isset(mem_cfg, 0x20)) {
+		*kb = 32;
+		*app_areas = 17;
+		*max_blk = 255; //16kb
+	} else {
+		*kb = 32;
+		*app_areas = 2;
+		*max_blk = 255;
+	}
+}
+
+void mem_app_config(const picopass_hdr *hdr)
 {
 	uint8_t mem = hdr->conf.mem_config;
-	if( isset (mem, 0x80)) prnt("	Mem: 16KBits (255 * 8 bytes)");
-	else prnt("	Mem: 2 KBits ( 32 * 8 bytes)");
-
-}
-void applimit_config(const picopass_hdr *hdr)
-{
+	uint8_t chip = hdr->conf.chip_config;
 	uint8_t applimit = hdr->conf.app_limit;
-	prnt("	AA1: blocks 6-%d", applimit);
-	prnt("	AA2: blocks %d-", (applimit+1));
+	if (applimit < 6) applimit = 26;
+	uint8_t kb = 2;
+	uint8_t app_areas = 2;
+	uint8_t max_blk = 31;
+	getMemConfig(mem, chip, &max_blk, &app_areas, &kb);
+	prnt("  Mem: %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
+	prnt("	AA1: blocks 06-%02X", applimit);
+	prnt("	AA2: blocks %02X-%02X", applimit+1, max_blk);
 }
 void print_picopass_info(const picopass_hdr *hdr)
 {
 	fuse_config(hdr);
-	mem_config(hdr);
-	applimit_config(hdr);
+	mem_app_config(hdr);
 }
 void printIclassDumpInfo(uint8_t* iclass_dump)
 {

@@ -91,11 +91,17 @@ local _commands = {
 	CMD_EPA_PACE_COLLECT_NONCE =                                         0x038A,
 	CMD_EPA_PACE_REPLAY =                                                0x038B,
 
+	CMD_ICLASS_READCHECK =                                               0x038F,
+	CMD_ICLASS_CLONE =                                                   0x0390,
+	CMD_ICLASS_DUMP =                                                    0x0391,
 	CMD_SNOOP_ICLASS =                                                   0x0392,
 	CMD_SIMULATE_TAG_ICLASS =                                            0x0393,
 	CMD_READER_ICLASS =                                                  0x0394,
 	CMD_READER_ICLASS_REPLAY =											 0x0395,
-	CMD_ICLASS_ISO14443A_WRITE =										 0x0397,
+	CMD_ICLASS_READBLOCK =                                               0x0396,
+	CMD_ICLASS_WRITEBLOCK =                                              0x0397,
+	CMD_ICLASS_EML_MEMSET =                                              0x0398,
+	CMD_ICLASS_AUTHENTICATION =                                          0x0399,
 
 	--// For measurements of the antenna tuning
 	CMD_MEASURE_ANTENNA_TUNING =                                         0x0400,

@@ -73,10 +73,14 @@ int CmdSrix4kRead(const char *Cmd)
 }
 
 int rawClose(void){
+	UsbCommand resp;
 	UsbCommand c = {CMD_ISO_14443B_COMMAND, {0, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
+	if (!WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
 	return 0;	
+	}
+	return 0;
 }
 
 int HF14BCmdRaw(bool reply, bool *crc, bool power, uint8_t *data, uint8_t *datalen, bool verbose){

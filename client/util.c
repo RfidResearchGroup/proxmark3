@@ -333,7 +333,28 @@ int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt)
 
 	return 0;
 }
+int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt)
+{
+	int bg, en, temp, i;
 
+	//if (hexcnt % 2)
+	//	return 1;
+	
+	if (param_getptr(line, &bg, &en, paramnum)) return 1;
+
+	*hexcnt = en - bg + 1;
+	if (*hexcnt % 2) //error if not complete hex bytes
+		return 1;
+
+	for(i = 0; i < *hexcnt; i += 2) {
+		if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1])) )	return 1;
+		
+		sscanf((char[]){line[bg + i], line[bg + i + 1], 0}, "%X", &temp);
+		data[i / 2] = temp & 0xff;
+	}	
+
+	return 0;
+}
 int param_getstr(const char *line, int paramnum, char * str)
 {
 	int bg, en;

@@ -947,10 +947,10 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 	uint8_t sak;
 					
 	// PACK response to PWD AUTH for EV1/NTAG
-	uint8_t response8[4];
+	uint8_t response8[4] =  {0,0,0,0};
 	
 	// The first response contains the ATQA (note: bytes are transmitted in reverse order).
-	uint8_t response1[2];
+	uint8_t response1[2] =  {0,0};
 	
 	switch (tagType) {
 		case 1: { // MIFARE Classic
@@ -1299,7 +1299,8 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 			if ( tagType == 7 ) {
 				p_response =  &responses[8]; // PACK response
 				uint32_t pwd = bytes_to_num(receivedCmd+1,4);
-				Dbprintf("Auth attempt: %08x", pwd);	
+				
+				if ( MF_DBGLEVEL >= 3)  Dbprintf("Auth attempt: %08x", pwd);	
 			}
 		}
 		else {
@@ -2206,28 +2207,6 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 	return(-99999); // either nt1 or nt2 are invalid nonces
 }
 
-int32_t dist_nt_ex32(uint32_t nt1, uint32_t nt2, bool *result) {
-
-	uint16_t i;
-	uint32_t nttmp1, nttmp2;
-
-	if (nt1 == nt2) return 0;
-
-	nttmp1 = nt1;
-	nttmp2 = nt2;
-	
-	*result = true;
-	for (i = 1; i < 0xFFFFFFFF; i++) {
-		nttmp1 = prng_successor(nttmp1, 1);
-		if (nttmp1 == nt2) return i;
-			
-		nttmp2 = prng_successor(nttmp2, 1);
-			if (nttmp2 == nt1) return -i;
-		}
-	
-	*result = false;
-	return(-99999); // either nt1 or nt2 are invalid nonces
-}
 
 //-----------------------------------------------------------------------------
 // Recover several bits of the cypher stream. This implements (first stages of)
