@@ -20,7 +20,6 @@ int ukbhit(void)
   int error;
   static struct termios Otty, Ntty;
 
-
   tcgetattr( 0, &Otty);
   Ntty = Otty;
 
@@ -347,7 +346,7 @@ int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt)
 		return 1;
 
 	for(i = 0; i < *hexcnt; i += 2) {
-		if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1])) )	return 1;
+		if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1])) ) return 1;
 		
 		sscanf((char[]){line[bg + i], line[bg + i + 1], 0}, "%X", &temp);
 		data[i / 2] = temp & 0xff;
