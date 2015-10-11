@@ -204,9 +204,10 @@ void UsbCommandReceived(UsbCommand *UC)
 			return;
 		} break;
 
-		default:
-	storeCommand(UC);
+		default: {
+			storeCommand(UC);
 			break;
+		}
 	}
 
 }

@@ -907,7 +907,7 @@ void SnoopHitag(uint32_t type) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LED_A_OFF();
-	
+	set_tracing(TRUE);
 //	Dbprintf("frame received: %d",frame_count);
 //	Dbprintf("Authentication Attempts: %d",(auth_table_len/8));
 //	DbpString("All done");
@@ -1096,7 +1096,7 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	
 	DbpString("Sim Stopped");
-	
+	set_tracing(TRUE);
 }
 
 void ReaderHitag(hitag_function htf, hitag_data* htd) {
@@ -1168,6 +1168,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 			
 		default: {
 			Dbprintf("Error, unknown function: %d",htf);
+			set_tracing(FALSE);
 			return;
 		} break;
 	}
@@ -1217,26 +1218,27 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	lastbit = 1;
 	bStop = false;
 
-  // Tag specific configuration settings (sof, timings, etc.)
-  if (htf < 10){
-    // hitagS settings
-    reset_sof = 1;
-    t_wait = 200;
-    DbpString("Configured for hitagS reader");
-  } else if (htf < 20) {
-    // hitag1 settings
-    reset_sof = 1;
-    t_wait = 200;
-    DbpString("Configured for hitag1 reader");
-  } else if (htf < 30) {
-    // hitag2 settings
-    reset_sof = 4;
-    t_wait = HITAG_T_WAIT_2;
-    DbpString("Configured for hitag2 reader");
+	// Tag specific configuration settings (sof, timings, etc.)
+	if (htf < 10){
+		// hitagS settings
+		reset_sof = 1;
+		t_wait = 200;
+		DbpString("Configured for hitagS reader");
+	} else if (htf < 20) {
+		// hitag1 settings
+		reset_sof = 1;
+		t_wait = 200;
+		DbpString("Configured for hitag1 reader");
+	} else if (htf < 30) {
+		// hitag2 settings
+		reset_sof = 4;
+		t_wait = HITAG_T_WAIT_2;
+		DbpString("Configured for hitag2 reader");
 	} else {
-    Dbprintf("Error, unknown hitag reader type: %d",htf);
-    return;
-  }
+		Dbprintf("Error, unknown hitag reader type: %d",htf);
+		set_tracing(FALSE);	
+		return;
+	}
 		
 	while(!bStop && !BUTTON_PRESS()) {
 		// Watchdog hit
@@ -1274,6 +1276,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 			} break;
 			default: {
 				Dbprintf("Error, unknown function: %d",htf);
+				set_tracing(FALSE);
 				return;
 			} break;
 		}
@@ -1381,7 +1384,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	Dbprintf("frame received: %d",frame_count);
-  DbpString("All done");
-  cmd_send(CMD_ACK,bSuccessful,0,0,(byte_t*)tag.sectors,48);
+	Dbprintf("DONE: frame received: %d",frame_count);
+	cmd_send(CMD_ACK,bSuccessful,0,0,(byte_t*)tag.sectors,48);
+  	set_tracing(FALSE);
 }

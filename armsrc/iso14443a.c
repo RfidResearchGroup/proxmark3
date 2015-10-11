@@ -718,6 +718,8 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
 	Dbprintf("maxDataLen=%d, Uart.state=%x, Uart.len=%d", maxDataLen, Uart.state, Uart.len);
 	Dbprintf("traceLen=%d, Uart.output[0]=%08x", BigBuf_get_traceLen(), (uint32_t)Uart.output[0]);
+	
+	set_tracing(FALSE);	
 }
 
 //-----------------------------------------------------------------------------
@@ -1415,13 +1417,14 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 	}
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	set_tracing(FALSE);
 	BigBuf_free_keep_EM();
 	LED_A_OFF();
 	
 	if (MF_DBGLEVEL >= 4){
-	Dbprintf("-[ Wake ups after halt [%d]", happened);
-	Dbprintf("-[ Messages after halt [%d]", happened2);
-	Dbprintf("-[ Num of received cmd [%d]", cmdsRecvd);
+		Dbprintf("-[ Wake ups after halt [%d]", happened);
+		Dbprintf("-[ Messages after halt [%d]", happened2);
+		Dbprintf("-[ Num of received cmd [%d]", cmdsRecvd);
 	}
 }
 
@@ -2180,6 +2183,7 @@ void ReaderIso14443a(UsbCommand *c)
 	}
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	set_tracing(FALSE);
 	LEDsoff();
 }
 
@@ -3029,6 +3033,8 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		}
 	}
 	if (MF_DBGLEVEL >= 1)	Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
+	
+	set_tracing(FALSE);
 }
 
 
@@ -3187,4 +3193,5 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	MfSniffEnd();
 	LEDsoff();
 	Dbprintf("maxDataLen=%x, Uart.state=%x, Uart.len=%x", maxDataLen, Uart.state, Uart.len);
+	set_tracing(FALSE);
 }

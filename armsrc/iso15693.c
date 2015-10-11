@@ -689,8 +689,8 @@ void RecordRawAdcSamplesIso15693(void)
 	FpgaSetupSsc();
 
 	// Start from off (no field generated)
-    	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    	SpinDelay(200);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelay(200);
 
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
@@ -1022,8 +1022,8 @@ void ReaderIso15693(uint32_t parameter)
 	FpgaSetupSsc();
 
 	// Start from off (no field generated)
-    	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    	SpinDelay(200);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelay(200);
 
 	// Give the tags time to energize
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
@@ -1124,7 +1124,7 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid)
 	FpgaSetupSsc();
 
 	// Start from off (no field generated)
-    	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelay(200);
 
 	LED_A_OFF();

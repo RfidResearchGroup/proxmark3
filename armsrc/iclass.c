@@ -816,6 +816,7 @@ done:
     LED_B_OFF();
     LED_C_OFF();
     LED_D_OFF();
+	set_tracing(FALSE);	
 }
 
 void rotateCSN(uint8_t* originalCSN, uint8_t* rotatedCSN) {
@@ -1040,7 +1041,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 		Dbprintf("The mode is not implemented, reserved for future use");
 	}
 	Dbprintf("Done...");
-
+	set_tracing(FALSE);	
 }
 void AppendCrc(uint8_t* data, int len)
 {
@@ -1760,17 +1761,18 @@ void ReaderIClass(uint8_t arg0) {
 				cmd_send(CMD_ACK,result_status,0,0,card_data,sizeof(card_data));
 				if(abort_after_read) {
 					LED_A_OFF();
+					set_tracing(FALSE);	
 					return;
 				}
-                    //Save that we already sent this....
-                        memcpy(last_csn, card_data, 8);
+				//Save that we already sent this....
+				memcpy(last_csn, card_data, 8);
 			}
-
 		}
 		LED_B_OFF();
     }
     cmd_send(CMD_ACK,0,0,0,card_data, 0);
     LED_A_OFF();
+	set_tracing(FALSE);		
 }
 
 void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
@@ -1818,20 +1820,20 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 		uint8_t read_status = handshakeIclassTag(card_data);
 		if(read_status < 2) continue;
 
-				//for now replay captured auth (as cc not updated)
-				memcpy(check+5,MAC,4);
+		//for now replay captured auth (as cc not updated)
+		memcpy(check+5,MAC,4);
 
 		if(!sendCmdGetResponseWithRetries(check, sizeof(check),resp, 4, 5))
 		{
-				  Dbprintf("Error: Authentication Fail!");
+			Dbprintf("Error: Authentication Fail!");
 			continue;
-				}
+		}
 
 		//first get configuration block (block 1)
 		crc = block_crc_LUT[1];
-				read[1]=1;
-				read[2] = crc >> 8;
-				read[3] = crc & 0xff;
+		read[1]=1;
+		read[2] = crc >> 8;
+		read[3] = crc & 0xff;
 
 		if(!sendCmdGetResponseWithRetries(read, sizeof(read),resp, 10, 10))
 		{
@@ -1839,12 +1841,12 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 			continue;
 		}
 
-					 mem=resp[5];
-					 memory.k16= (mem & 0x80);
-					 memory.book= (mem & 0x20);
-					 memory.k2= (mem & 0x8);
-					 memory.lockauth= (mem & 0x2);
-					 memory.keyaccess= (mem & 0x1);
+		 mem=resp[5];
+		 memory.k16= (mem & 0x80);
+		 memory.book= (mem & 0x20);
+		 memory.k2= (mem & 0x8);
+		 memory.lockauth= (mem & 0x2);
+		 memory.keyaccess= (mem & 0x1);
 
 		cardsize = memory.k16 ? 255 : 32;
 		WDT_HIT();
@@ -1857,15 +1859,15 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 
 			read[1]= block;
 			crc = block_crc_LUT[block];
-				    read[2] = crc >> 8;
-				    read[3] = crc & 0xff;
+			read[2] = crc >> 8;
+			read[3] = crc & 0xff;
 
 			if(sendCmdGetResponseWithRetries(read, sizeof(read), resp, 10, 10))
 			{
-				         Dbprintf("     %02x: %02x %02x %02x %02x %02x %02x %02x %02x",
-						 block, resp[0], resp[1], resp[2],
-					  resp[3], resp[4], resp[5],
-					  resp[6], resp[7]);
+				Dbprintf("     %02x: %02x %02x %02x %02x %02x %02x %02x %02x",
+					block, resp[0], resp[1], resp[2],
+					resp[3], resp[4], resp[5],
+					resp[6], resp[7]);
 
 				//Fill up the buffer
 				memcpy(card_data+stored_data_length,resp,8);
@@ -1881,8 +1883,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 					stored_data_length = 0;
 					failedRead = 0;
 				}
-
-			}else{
+			} else {
 				failedRead = 1;
 				stored_data_length +=8;//Otherwise, data becomes misaligned
 				Dbprintf("Failed to dump block %d", block);
@@ -1909,6 +1910,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 			 card_data, 0);
 
 	LED_A_OFF();
+	set_tracing(FALSE);		
 }
 
 void iClass_ReadCheck(uint8_t	blockNo, uint8_t keyType) {

@@ -479,6 +479,7 @@ void SimulateIso14443bTag(void)
 		if (tracing) LogTrace(resp, respLen, 0, 0, parity, FALSE);			
 	}
 	FpgaDisableSscDma();
+	set_tracing(FALSE);	
 }
 
 //=============================================================================
@@ -1058,6 +1059,7 @@ void ReadSTMemoryIso14443b(uint32_t dwLast)
 
 	if (Demod.len == 0) {
 		DbpString("No response from tag");
+		set_tracing(FALSE);	
 		return;
 	} else {
 		Dbprintf("Randomly generated Chip ID (+ 2 byte CRC): %02x %02x %02x",
@@ -1073,17 +1075,20 @@ void ReadSTMemoryIso14443b(uint32_t dwLast)
 	GetSamplesFor14443bDemod(RECEIVE_SAMPLES_TIMEOUT, TRUE);
 	if (Demod.len != 3) {
 		Dbprintf("Expected 3 bytes from tag, got %d", Demod.len);
+		set_tracing(FALSE);	
 		return;
 	}
 	// Check the CRC of the answer:
 	ComputeCrc14443(CRC_14443_B, Demod.output, 1 , &cmd1[2], &cmd1[3]);
 	if(cmd1[2] != Demod.output[1] || cmd1[3] != Demod.output[2]) {
 		DbpString("CRC Error reading select response.");
+		set_tracing(FALSE);	
 		return;
 	}
 	// Check response from the tag: should be the same UID as the command we just sent:
 	if (cmd1[1] != Demod.output[0]) {
 		Dbprintf("Bad response to SELECT from Tag, aborting: %02x %02x", cmd1[1], Demod.output[0]);
+		set_tracing(FALSE);	
 		return;
 	}
 
@@ -1095,6 +1100,7 @@ void ReadSTMemoryIso14443b(uint32_t dwLast)
 	GetSamplesFor14443bDemod(RECEIVE_SAMPLES_TIMEOUT, TRUE);
 	if (Demod.len != 10) {
 		Dbprintf("Expected 10 bytes from tag, got %d", Demod.len);
+		set_tracing(FALSE);	
 		return;
 	}
 	// The check the CRC of the answer (use cmd1 as temporary variable):
@@ -1142,6 +1148,8 @@ void ReadSTMemoryIso14443b(uint32_t dwLast)
 		}
 		i++;
 	}
+	
+	set_tracing(FALSE);
 }
 
 
@@ -1290,11 +1298,12 @@ void RAMFUNC SnoopIso14443b(void)
 		}
 			TagIsActive = (Demod.state > DEMOD_GOT_FALLING_EDGE_OF_SOF);
 		}
-
 	}
 
 	FpgaDisableSscDma();
 	LEDsoff();
+	set_tracing(FALSE);	
+		
 	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 	DbpString("Snoop statistics:");
 	Dbprintf("  Max behind by: %i", maxBehindBy);
@@ -1337,6 +1346,7 @@ void SendRawCommand14443B(uint32_t datalen, uint32_t recv, uint8_t powerfield, u
 	if(!powerfield) {
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		FpgaDisableSscDma();
+		set_tracing(FALSE);
 		LED_D_OFF();
 	}
 }

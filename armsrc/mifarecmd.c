@@ -723,7 +723,6 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 		dmax = davg + 2;
 		
 		LED_B_OFF();
-	
 	}
 //  -------------------------------------------------------------------------------------------------	
 	
@@ -815,6 +814,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
+	set_tracing(FALSE);
 }
 
 //-----------------------------------------------------------------------------
@@ -879,7 +879,8 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-
+	set_tracing(FALSE);
+	
 	// restore debug level
 	MF_DBGLEVEL = OLD_MF_DBGLEVEL;	
 }
@@ -946,7 +947,7 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	
 	clear_trace();
-	set_tracing(false);
+	set_tracing(TRUE);
 	
 	bool isOK = true;
 
@@ -1002,6 +1003,7 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	
 	if (MF_DBGLEVEL >= 2) DbpString("EMUL FILL SECTORS FINISHED");
 
+	set_tracing(FALSE);
 }
 
 
@@ -1128,6 +1130,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	if ((workFlags & 0x10) || (!isOK)) {
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
+		set_tracing(FALSE);
 	}
 }
 
@@ -1210,6 +1213,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	if ((workFlags & 0x10) || (!isOK)) {
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
+		set_tracing(FALSE);
 	}
 }
 
@@ -1261,11 +1265,10 @@ void MifareCollectNonces(uint32_t arg0, uint32_t arg1){
 	LED_B_OFF();
 	LED_C_OFF();
 	
-iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	clear_trace();
 	set_tracing(TRUE);
-	
-	
+		
 	for (int i = 0; i < iterations; i++) {
 						
 		WDT_HIT();
@@ -1308,6 +1311,7 @@ iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	}
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
+	set_tracing(FALSE);
 }
 
 //

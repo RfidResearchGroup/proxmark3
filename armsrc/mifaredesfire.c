@@ -494,6 +494,7 @@ void OnSuccess(){
 	ReaderTransmit(deselect_cmd, 3 , NULL);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
+	set_tracing(FALSE);	
 }
 
 void OnError(uint8_t reason){
@@ -503,4 +504,5 @@ void OnError(uint8_t reason){
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,reason,0,0,0);
 	LEDsoff();
+	set_tracing(FALSE);	
 }
