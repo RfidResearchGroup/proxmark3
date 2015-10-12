@@ -29,26 +29,24 @@ static int CmdHelp(const char *Cmd);
 struct pcf7931_config configPcf = {
 	{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF},
 	PCF7931_DEFAULT_INITDELAY,
-		{
-		PCF7931_DEFAULT_OFFSET_WIDTH, 
-		PCF7931_DEFAULT_OFFSET_POSITION
-		}
+	PCF7931_DEFAULT_OFFSET_WIDTH, 
+	PCF7931_DEFAULT_OFFSET_POSITION
 	};
 
 // Resets the configuration settings to default values.
 int pcf7931_resetConfig(){
 	memset(configPcf.Pwd, 0xFF, sizeof(configPcf.Pwd) );
 	configPcf.InitDelay = PCF7931_DEFAULT_INITDELAY;
-	configPcf.Offset[0] = PCF7931_DEFAULT_OFFSET_WIDTH; 
-	configPcf.Offset[1] = PCF7931_DEFAULT_OFFSET_POSITION; 
+	configPcf.OffsetWidth = PCF7931_DEFAULT_OFFSET_WIDTH; 
+	configPcf.OffsetPosition = PCF7931_DEFAULT_OFFSET_POSITION; 
 	return 0;
 }
 
 int pcf7931_printConfig(){
 	PrintAndLog("Password (LSB first on bytes) : %s", sprint_hex( configPcf.Pwd, sizeof(configPcf.Pwd)));
 	PrintAndLog("Tag initialization delay      : %d us", configPcf.InitDelay);
-	PrintAndLog("Offset low pulses width       : %d us", configPcf.Offset[0]);
-	PrintAndLog("Offset low pulses position    : %d us", configPcf.Offset[1]);
+	PrintAndLog("Offset low pulses width       : %d us", configPcf.OffsetWidth);
+	PrintAndLog("Offset low pulses position    : %d us", configPcf.OffsetPosition);
 	return 0;
 }
 
@@ -121,8 +119,8 @@ int CmdLFPCF7931Config(const char *Cmd){
 	if ( param_gethex(Cmd, 0, configPcf.Pwd, 14) ) return usage_pcf7931_config();
 	
 	configPcf.InitDelay = (param_get32ex(Cmd,1,0,10) & 0xFFFF);
-	configPcf.Offset[0] = (int)(param_get32ex(Cmd,2,0,10) & 0xFFFF);
-	configPcf.Offset[1] = (int)(param_get32ex(Cmd,3,0,10) & 0xFFFF);
+	configPcf.OffsetWidth = (int)(param_get32ex(Cmd,2,0,10) & 0xFFFF);
+	configPcf.OffsetPosition = (int)(param_get32ex(Cmd,3,0,10) & 0xFFFF);
 	
 	pcf7931_printConfig();
 	return 0;
@@ -137,7 +135,11 @@ int CmdLFPCF7931Write(const char *Cmd){
 	uint64_t byteaddress =  param_get64ex(Cmd, 1, 0, 16);
 	uint8_t data = param_get8ex(Cmd,2,0,16);
 
-	PrintAndLog("Please specify the block address in hex");
+	if ( blockaddress == 0 ) {
+		PrintAndLog("Please specify the block address in hex");
+		return 1;
+	}
+
 	PrintAndLog("Please specify the byte address in hex");
 	PrintAndLog("Please specify the data in hex (1 byte)");
 
@@ -145,9 +147,9 @@ int CmdLFPCF7931Write(const char *Cmd){
 	return 3;
 
 	UsbCommand c = {CMD_PCF7931_WRITE, { blockaddress, byteaddress, data} };
-	memcpy(c.d.asDwords, configPcf.Pwd, 7);
-    c.d.asDwords[7] = (configPcf.Offset[0]+128);
-    c.d.asDwords[8] = (configPcf.Offset[1]+128);
+	memcpy(c.d.asDwords, configPcf.Pwd, sizeof(configPcf.Pwd) );
+    c.d.asDwords[7] = (configPcf.OffsetWidth + 128);
+    c.d.asDwords[8] = (configPcf.OffsetPosition + 128);
     c.d.asDwords[9] = configPcf.InitDelay;
 
 	clearCommandBuffer();
