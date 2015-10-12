@@ -13,9 +13,9 @@
 #define CMDLFPCF7931_H__
 
 struct pcf7931_config{
-	uint8_t password[7];
-	uint16_t init_delay;
-	int16_t offset[2];
+	uint8_t Pwd[7];
+	uint16_t InitDelay;
+	int16_t Offset[2];
 };
 
 int CmdLFPCF7931(const char *Cmd);

@@ -122,10 +122,11 @@ int CmdHF14AMfWrBl(const char *Cmd)
 	PrintAndLog("--block no:%d, key type:%c, key:%s", blockNo, keyType?'B':'A', sprint_hex(key, 6));
 	PrintAndLog("--data: %s", sprint_hex(bldata, 16));
 	
-  UsbCommand c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}};
+	UsbCommand c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
 	memcpy(c.d.asBytes + 10, bldata, 16);
-  SendCommand(&c);
+	clearCommandBuffer();
+	SendCommand(&c);
 
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
@@ -166,9 +167,10 @@ int CmdHF14AMfRdBl(const char *Cmd)
 	}
 	PrintAndLog("--block no:%d, key type:%c, key:%s ", blockNo, keyType?'B':'A', sprint_hex(key, 6));
 	
-  UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}};
+	UsbCommand c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
-  SendCommand(&c);
+	clearCommandBuffer();
+	SendCommand(&c);
 
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
@@ -221,6 +223,7 @@ int CmdHF14AMfRdSc(const char *Cmd)
 	
 	UsbCommand c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}};
 	memcpy(c.d.asBytes, key, 6);
+	clearCommandBuffer();
 	SendCommand(&c);
 	PrintAndLog(" ");
 
@@ -327,6 +330,7 @@ int CmdHF14AMfDump(const char *Cmd)
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 0, 0}};
 		memcpy(c.d.asBytes, keyA[sectorNo], 6);
+		clearCommandBuffer();
 		SendCommand(&c);
 
 		if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
@@ -361,6 +365,7 @@ int CmdHF14AMfDump(const char *Cmd)
 			if (blockNo == NumBlocksPerSector(sectorNo) - 1) {		// sector trailer. At least the Access Conditions can always be read with key A. 
 				UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}};
 				memcpy(c.d.asBytes, keyA[sectorNo], 6);
+				clearCommandBuffer();
 				SendCommand(&c);
 				received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
 			} else {												// data block. Check if it can be read with key A or key B
@@ -376,6 +381,7 @@ int CmdHF14AMfDump(const char *Cmd)
 				} else {																				// key A would work
 					UsbCommand c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}};
 					memcpy(c.d.asBytes, keyA[sectorNo], 6);
+					clearCommandBuffer();
 					SendCommand(&c);
 					received = WaitForResponseTimeout(CMD_ACK,&resp,1500);
 				}
@@ -468,7 +474,6 @@ int CmdHF14AMfRestore(const char *Cmd)
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		if (fread(keyA[sectorNo], 1, 6, fkeys) == 0) {
 			PrintAndLog("File reading error (dumpkeys.bin).");
-
 			fclose(fkeys);
 			return 2;
 		}
@@ -519,6 +524,7 @@ int CmdHF14AMfRestore(const char *Cmd)
 			PrintAndLog("Writing to block %3d: %s", FirstBlockOfSector(sectorNo) + blockNo, sprint_hex(bldata, 16));
 			
 			memcpy(c.d.asBytes + 10, bldata, 16);
+			clearCommandBuffer();
 			SendCommand(&c);
 
 			UsbCommand resp;
@@ -1024,8 +1030,6 @@ int CmdHF14AMf1kSim(const char *Cmd)
 	
 	uint8_t cmdp = param_getchar(Cmd, 0);
 
-	clearCommandBuffer();
-	
 	if (cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:  hf mf sim  u <uid (8 hex symbols)> n <numreads> i x");
 		PrintAndLog("           h    this help");
@@ -1072,6 +1076,7 @@ int CmdHF14AMf1kSim(const char *Cmd)
 
 	UsbCommand c = {CMD_SIMULATE_MIFARE_CARD, {flags, exitAfterNReads,0}};
 	memcpy(c.d.asBytes, uid, sizeof(uid));
+	clearCommandBuffer();
 	SendCommand(&c);
 
 	if(flags & FLAG_INTERACTIVE)
@@ -1132,10 +1137,10 @@ int CmdHF14AMfDbg(const char *Cmd)
 		return 0;
 	}	
 
-  UsbCommand c = {CMD_MIFARE_SET_DBGMODE, {dbgMode, 0, 0}};
-  SendCommand(&c);
+	UsbCommand c = {CMD_MIFARE_SET_DBGMODE, {dbgMode, 0, 0}};
+	SendCommand(&c);
 
-  return 0;
+	return 0;
 }
 
 int CmdHF14AMfEGet(const char *Cmd)
@@ -1169,11 +1174,10 @@ int CmdHF14AMfEClear(const char *Cmd)
 		return 0;
 	}	
 
-  UsbCommand c = {CMD_MIFARE_EML_MEMCLR, {0, 0, 0}};
-  SendCommand(&c);
-  return 0;
+	UsbCommand c = {CMD_MIFARE_EML_MEMCLR, {0, 0, 0}};
+	SendCommand(&c);
+	return 0;
 }
-
 
 int CmdHF14AMfESet(const char *Cmd)
 {
@@ -1202,7 +1206,6 @@ int CmdHF14AMfESet(const char *Cmd)
 	return 0;
 }
 
-
 int CmdHF14AMfELoad(const char *Cmd)
 {
 	FILE * f;
@@ -1215,7 +1218,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 	uint8_t blockWidth = 32;
 	char ctmp = param_getchar(Cmd, 0);
 		
-	if ( ctmp == 'h' || ctmp == 0x00) {
+	if ( ctmp == 'h' || ctmp == 'H' || ctmp == 0x00) {
 		PrintAndLog("It loads emul dump from the file `filename.eml`");
 		PrintAndLog("Usage:  hf mf eload [card memory] <file name w/o `.eml`>");
 		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL");
@@ -1298,7 +1301,6 @@ int CmdHF14AMfELoad(const char *Cmd)
 	PrintAndLog("Loaded %d blocks from file: %s", blockNum, filename);
 	return 0;
 }
-
 
 int CmdHF14AMfESave(const char *Cmd)
 {
@@ -1385,7 +1387,6 @@ int CmdHF14AMfESave(const char *Cmd)
   return 0;
 }
 
-
 int CmdHF14AMfECFill(const char *Cmd)
 {
 	uint8_t keyType = 0;
@@ -1425,15 +1426,16 @@ int CmdHF14AMfECFill(const char *Cmd)
 	return 0;
 }
 
-
 int CmdHF14AMfEKeyPrn(const char *Cmd)
 {
 	int i;
 	uint8_t numSectors;
 	uint8_t data[16];
 	uint64_t keyA, keyB;
+
+	char cmdp = param_getchar(Cmd, 0);
 	
-	if (param_getchar(Cmd, 0) == 'h') {
+	if ( cmdp == 'h' || cmdp == 'H' ) {
 		PrintAndLog("It prints the keys loaded in the emulator memory");
 		PrintAndLog("Usage:  hf mf ekeyprn [card memory]");
 		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
@@ -1442,8 +1444,6 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 		return 0;
 	}	
 
-	char cmdp = param_getchar(Cmd, 0);
-	
 	switch (cmdp) {
 		case '0' : numSectors = 5; break;
 		case '1' : 
@@ -1469,7 +1469,6 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 	
 	return 0;
 }
-
 
 int CmdHF14AMfCSetUID(const char *Cmd)
 {
@@ -1574,7 +1573,6 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 	return 0;
 }
 
-
 int CmdHF14AMfCLoad(const char *Cmd)
 {
 	FILE * f;
@@ -1584,8 +1582,10 @@ int CmdHF14AMfCLoad(const char *Cmd)
 	uint8_t buf8[64] = {0x00};
 	uint8_t fillFromEmulator = 0;
 	int i, len, blockNum, flags=0;
+
+	char ctmp = param_getchar(Cmd, 0);
 	
-	if (param_getchar(Cmd, 0) == 'h' || param_getchar(Cmd, 0)== 0x00) {
+	if (ctmp == 'h' || ctmp == 'H' || ctmp == 0x00) {
 		PrintAndLog("It loads magic Chinese card from the file `filename.eml`");
 		PrintAndLog("or from emulator memory (option `e`)");
 		PrintAndLog("Usage:  hf mf cload <file name w/o `.eml`>");
@@ -1594,7 +1594,6 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		return 0;
 	}	
 
-	char ctmp = param_getchar(Cmd, 0);
 	if (ctmp == 'e' || ctmp == 'E') fillFromEmulator = 1;
 	
 	if (fillFromEmulator) {
@@ -1701,7 +1700,6 @@ int CmdHF14AMfCGetBlk(const char *Cmd) {
 	return 0;
 }
 
-
 int CmdHF14AMfCGetSc(const char *Cmd) {
 	uint8_t memBlock[16] = {0x00};
 	uint8_t sectorNo = 0;
@@ -1738,7 +1736,6 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 	return 0;
 }
 
-
 int CmdHF14AMfCSave(const char *Cmd) {
 
 	FILE * f;
@@ -1750,8 +1747,9 @@ int CmdHF14AMfCSave(const char *Cmd) {
 	
 	// memset(filename, 0, sizeof(filename));
 	// memset(buf, 0, sizeof(buf));
-
-	if (param_getchar(Cmd, 0) == 'h') {
+	char ctmp = param_getchar(Cmd, 0);
+	
+	if ( ctmp == 'h' || ctmp == 'H' ) {
 		PrintAndLog("It saves `magic Chinese` card dump into the file `filename.eml` or `cardID.eml`");
 		PrintAndLog("or into emulator memory (option `e`)");
 		PrintAndLog("Usage:  hf mf esave [file name w/o `.eml`][e]");
@@ -1760,8 +1758,6 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		PrintAndLog("         hf mf esave e \n");
 		return 0;
 	}	
-
-	char ctmp = param_getchar(Cmd, 0);
 	if (ctmp == 'e' || ctmp == 'E') fillFromEmulator = 1;
 
 	if (fillFromEmulator) {
@@ -1832,7 +1828,6 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		return 0;
 	}
 }
-
 
 int CmdHF14AMfSniff(const char *Cmd){
 
@@ -1982,7 +1977,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 }
 
 //needs nt, ar, at, Data to decrypt
-int CmdDecryptTraceCmds(const char *Cmd){
+int CmdHf14MfDecryptBytes(const char *Cmd){
 	uint8_t data[50];
 	
 	uint32_t nt 	= param_get32ex(Cmd,0,0,16);
@@ -2028,7 +2023,7 @@ static command_t CommandTable[] =
   {"cgetsc",	CmdHF14AMfCGetSc,		0, "Read sector - Magic Chinese card"},
   {"cload",		CmdHF14AMfCLoad,		0, "Load dump into magic Chinese card"},
   {"csave",		CmdHF14AMfCSave,		0, "Save dump from magic Chinese card into file or emulator"},
-  {"decrypt",   CmdDecryptTraceCmds,    1, "[nt] [ar_enc] [at_enc] [data] - to decrypt snoop or trace"},
+  {"decrypt",   CmdHf14MfDecryptBytes,  1, "[nt] [ar_enc] [at_enc] [data] - to decrypt snoop or trace"},
   {NULL, NULL, 0, NULL}
 };
 

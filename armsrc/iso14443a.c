@@ -939,7 +939,6 @@ bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
 //-----------------------------------------------------------------------------
 void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 {
-
 	//Here, we collect UID,NT,AR,NR,UID2,NT2,AR2,NR2
 	// This can be used in a reader-only attack.
 	// (it can also be retrieved via 'hf 14a list', but hey...
@@ -1436,7 +1435,7 @@ void PrepareDelayedTransfer(uint16_t delay)
 	uint8_t bitmask = 0;
 	uint8_t bits_to_shift = 0;
 	uint8_t bits_shifted = 0;
-	
+
 	delay &= 0x07;
 	if (delay) {
 		for (uint16_t i = 0; i < delay; i++) {

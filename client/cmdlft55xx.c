@@ -219,14 +219,11 @@ int CmdT55xxReadBlock(const char *Cmd) {
 	int password = 0xFFFFFFFF; //default to blank Block 7
 
 	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H')
-		return usage_t55xx_read();
+	if (cmdp == 'h' || cmdp == 'H') return usage_t55xx_read();
 
 	int res = sscanf(Cmd, "%d %x", &block, &password);
 
-	if ( res < 1 || res > 2 )
-		return usage_t55xx_read();
-
+	if ( res < 1 || res > 2 ) return usage_t55xx_read();
 	
 	if ((block < 0) | (block > 7)) {
 		PrintAndLog("Block must be between 0 and 7");
