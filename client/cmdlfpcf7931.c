@@ -65,11 +65,11 @@ int usage_pcf7931_write(){
 	PrintAndLog("This command tries to write a PCF7931 tag.");
 	PrintAndLog("Options:");
 	PrintAndLog("       h 			   This help");
-	PrintAndLog("       blockaddress   Block to save");
-	PrintAndLog("       byteaddress    Index of byte inside block to overwrite");
-	PrintAndLog("       data           one byte of data");
+	PrintAndLog("       blockaddress   Block to save [0-7]");
+	PrintAndLog("       byteaddress    Index of byte inside block to write [0-3]");
+	PrintAndLog("       data           one byte of data (hex)");
 	PrintAndLog("Examples:");
-	PrintAndLog("      lf pcf7931 write 10 1 FF");
+	PrintAndLog("      lf pcf7931 write 2 1 FF");
 	return 0;
 }
 
@@ -131,22 +131,20 @@ int CmdLFPCF7931Write(const char *Cmd){
 	uint8_t ctmp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_pcf7931_write();	
 
-	uint64_t blockaddress = param_get64ex(Cmd, 0, 0, 16);
-	uint64_t byteaddress =  param_get64ex(Cmd, 1, 0, 16);
-	uint8_t data = param_get8ex(Cmd,2,0,16);
+	uint8_t block = 0, bytepos = 0, data = 0;
+	
+	if ( param_getdec(Cmd, 0, &block) ) return usage_pcf7931_write();
+	if ( param_getdec(Cmd, 1, &bytepos) ) return usage_pcf7931_write();
+	
+	if ( (block > 7) || (bytepos > 3) ) return usage_pcf7931_write();
 
-	if ( blockaddress == 0 ) {
-		PrintAndLog("Please specify the block address in hex");
-		return 1;
-	}
+	data 	= param_get8ex(Cmd, 2, 0, 16);
+	
+	PrintAndLog("Writing block: %d", block);
+	PrintAndLog("          pos: %d", bytepos);
+	PrintAndLog("         data: 0x%02X", data);
 
-	PrintAndLog("Please specify the byte address in hex");
-	PrintAndLog("Please specify the data in hex (1 byte)");
-
-	PrintAndLog("", blockaddress, byteaddress, data);
-	return 3;
-
-	UsbCommand c = {CMD_PCF7931_WRITE, { blockaddress, byteaddress, data} };
+	UsbCommand c = {CMD_PCF7931_WRITE, { block, bytepos, data} };
 	memcpy(c.d.asDwords, configPcf.Pwd, sizeof(configPcf.Pwd) );
     c.d.asDwords[7] = (configPcf.OffsetWidth + 128);
     c.d.asDwords[8] = (configPcf.OffsetPosition + 128);
