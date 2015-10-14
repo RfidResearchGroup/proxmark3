@@ -24,6 +24,7 @@
 #include "usb_cdc.h"
 #include "hitag2.h"
 #include "mifare.h"
+#include "pcf7931.h"
 //#include "des.h"
 //#include "aes.h"
 #include "desfire.h"
@@ -90,6 +91,11 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode );
 void T55xxReadTrace(void);
 void TurnReadLFOn();
+void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
+void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
+void CopyViKingtoT55x7(uint32_t block1,uint32_t block2);
+
+/// pcf7931.h
 int DemodPCF7931(uint8_t **outBlocks);
 int IsBlock0PCF7931(uint8_t *Block);
 int IsBlock1PCF7931(uint8_t *Block);
@@ -99,8 +105,6 @@ bool AddBytePCF7931(uint8_t byte, uint32_t * tab, int32_t l, int32_t p);
 bool AddBitPCF7931(bool b, uint32_t * tab, int32_t l, int32_t p);
 bool AddPatternPCF7931(uint32_t a, uint32_t b, uint32_t c, uint32_t * tab);
 void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data);
-void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
-void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 
 /// iso14443.h
 void SimulateIso14443bTag(void);
@@ -166,7 +170,6 @@ void 	OnSuccess();
 void 	OnError(uint8_t reason);
 
 
-
 // desfire_crypto.h
 void	*mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes, off_t offset, int communication_settings);
 void    *mifare_cryto_postprocess_data (desfiretag_t tag, void *data, ssize_t *nbytes, int communication_settings);
@@ -178,7 +181,6 @@ size_t  maced_data_length (const desfirekey_t  key, const size_t nbytes);
 size_t  enciphered_data_length (const desfiretag_t tag, const size_t nbytes, int communication_settings);
 void    cmac_generate_subkeys (desfirekey_t key);
 void    cmac (const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
-
 
 /// iso15693.h
 void RecordRawAdcSamplesIso15693(void);
@@ -203,7 +205,7 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks);
 void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data);
 void iClass_ReadCheck(uint8_t	blockNo, uint8_t keyType);
 
-void CopyViKingtoT55x7(uint32_t block1,uint32_t block2);
+
 // hitag2.h
 void SnoopHitag(uint32_t type);
 void SimulateHitagTag(bool tag_mem_supplied, byte_t* data);

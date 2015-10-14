@@ -26,6 +26,7 @@
 #include "lfsampling.h"
 #include "BigBuf.h"
 #include "mifareutil.h"
+#include "pcf7931.h"
 #ifdef WITH_LCD
  #include "LCD.h"
 #endif
