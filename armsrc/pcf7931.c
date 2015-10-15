@@ -268,7 +268,7 @@ void ReadPCF7931() {
 	}
 	Dbprintf("-----------------------------------------");
 
-	return ;
+	cmd_send(CMD_ACK,0,0,0,0,0);
 }
 
 
@@ -436,18 +436,13 @@ void SendCmdPCF7931(uint32_t * tab){
 		while(tempo !=  tab[u+2]){
 			tempo = AT91C_BASE_TC0->TC_CV;
 		}
-
-
 	}
 
 	LED_A_OFF();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelay(200);
 
-
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS; // timer disable
-	DbpString("FINISH !");
-	DbpString("(Could be usefull to send the same trame many times)");
 	LED(0xFFFF, 1000);
 }
 

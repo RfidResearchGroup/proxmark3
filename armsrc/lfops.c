@@ -1151,14 +1151,10 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 // TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
 // Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
 // T0 = TIMER_CLOCK1 / 125000 = 192
-// 1 Cycle = 8 microseconds(us)
-
+// 1 Cycle = 8 microseconds(us)  == 1 field clock
 
 // Write one bit to card
-void T55xxWriteBit(int bit)
-{
-	//FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+void T55xxWriteBit(int bit) {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	if (!bit)
 		SpinDelayUs(WRITE_0);
@@ -1169,54 +1165,58 @@ void T55xxWriteBit(int bit)
 }
 
 // Write one card block in page 0, no lock
-void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
-{
+void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMode) {
+	LED_A_ON();
+	
 	uint32_t i = 0;
 
 	// Set up FPGA, 125kHz
-	// Wait for config.. (192+8190xPOW)x8 == 67ms
 	LFSetupFPGAForADC(95, true);
 	
-	// Now start writting
+	// Trigger T55x7 in mode.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelayUs(START_GAP);
 
-	// Opcode
+	// Opcode 10
 	T55xxWriteBit(1);
 	T55xxWriteBit(0); //Page 0
+	
 	if (PwdMode == 1){
-		// Pwd
+		// Send pwd
 		for (i = 0x80000000; i != 0; i >>= 1)
 			T55xxWriteBit(Pwd & i);
 	}
-	// Lock bit
+	// Send lock bit
 	T55xxWriteBit(0);
 
-	// Data
+	// Send data
 	for (i = 0x80000000; i != 0; i >>= 1)
 		T55xxWriteBit(Data & i);
 
-	// Block
+	// Send block number
 	for (i = 0x04; i != 0; i >>= 1)
 		T55xxWriteBit(Block & i);
 
-	// Now perform write (nominal is 5.6 ms for T55x7 and 18ms for E5550,
+	// Perform write (nominal is 5.6 ms for T55x7 and 18ms for E5550,
 	// so wait a little more)
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-	SpinDelay(20);
+	TurnReadLFOn(20 * 1000);
+	
+	// field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	cmd_send(CMD_ACK,0,0,0,0,0);
+	LED_A_OFF();	
 }
 
-void TurnReadLFOn(int delay){
+void TurnReadLFOn(int delay) {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	// Give it a bit of time for the resonant antenna to settle.
 	SpinDelayUs(delay);
 }
 
 // Read one card block in page 0
-void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
-{
+void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode) {
+	LED_A_ON();
+	
 	uint32_t i = 0;
 	
 	//make sure block is at max 7
@@ -1234,18 +1234,16 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 	T55xxWriteBit(0); //Page 0
 
 	if (PwdMode == 1){
-		// Pwd
+		// Send pwd
 		for (i = 0x80000000; i != 0; i >>= 1)
 			T55xxWriteBit(Pwd & i);
 	}
-	// zero bit to seperate
+	// Send a zero bit seperation
 	T55xxWriteBit(0);
 	
-	// Block
-	for (i = 0x04; i != 0; i >>= 1) {
+	// Send block number
+	for (i = 0x04; i != 0; i >>= 1)
 		T55xxWriteBit(Block & i);
-		Dbprintf("ice %d",i);
-	}
 
 	// Turn field on to read the response
 	TurnReadLFOn(START_GAP);
@@ -1256,14 +1254,18 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode)
 	// field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,0,0,0,0);    
-	LED_D_OFF();
+	LED_A_OFF();
 }
 
 
 // Read card traceability data (page 1)
 void T55xxReadTrace(void){
+	LED_A_ON();
+
+	// Set up FPGA, 125kHz
+	LFSetupFPGAForADC(95, true);
 	
-	LFSetupFPGAForADC(0, true);
+	// Trigger T55x7 in mode.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelayUs(START_GAP);
 
@@ -1280,7 +1282,7 @@ void T55xxReadTrace(void){
 	// field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,0,0,0,0);
-	LED_D_OFF();
+	LED_A_OFF();
 }
 
 

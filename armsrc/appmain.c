@@ -984,14 +984,12 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		case CMD_T55XX_WRITE_BLOCK:
 			T55xxWriteBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
-			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		case CMD_T55XX_READ_TRACE:
 			T55xxReadTrace();
 			break;
 		case CMD_PCF7931_READ:
 			ReadPCF7931();
-			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		case CMD_PCF7931_WRITE:
 			WritePCF7931(c->d.asBytes[0],c->d.asBytes[1],c->d.asBytes[2],c->d.asBytes[3],c->d.asBytes[4],c->d.asBytes[5],c->d.asBytes[6], c->d.asBytes[9], c->d.asBytes[7]-128,c->d.asBytes[8]-128, c->arg[0], c->arg[1], c->arg[2]);
