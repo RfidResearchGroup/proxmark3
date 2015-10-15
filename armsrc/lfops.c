@@ -1132,6 +1132,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
  * Relevant times in microsecond
  * To compensate antenna falling times shorten the write times
  * and enlarge the gap ones.
+ * Q5 tags seems to have issues when these values changes. 
  */
 
 #define START_GAP 50*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (or 15fc)
@@ -1257,7 +1258,6 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode) {
 	LED_A_OFF();
 }
 
-
 // Read card traceability data (page 1)
 void T55xxReadTrace(void){
 	LED_A_ON();
@@ -1284,7 +1284,6 @@ void T55xxReadTrace(void){
 	cmd_send(CMD_ACK,0,0,0,0,0);
 	LED_A_OFF();
 }
-
 
 /*-------------- Cloning routines -----------*/
 // Copy HID id to card and setup block 0 config
@@ -1542,7 +1541,6 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo)
 // Clone Indala 64-bit tag by UID to T55x7
 void CopyIndala64toT55x7(int hi, int lo)
 {
-
 	//Program the 2 data blocks for supplied 64bit UID
 	// and the block 0 for Indala64 format
 	T55xxWriteBlock(hi,1,0,0);
@@ -1556,12 +1554,10 @@ void CopyIndala64toT55x7(int hi, int lo)
 	//	T5567WriteBlock(0x603E1042,0);
 
 	DbpString("DONE!");
-
 }
 
 void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int uid6, int uid7)
 {
-
 	//Program the 7 data blocks for supplied 224bit UID
 	// and the block 0 for Indala224 format
 	T55xxWriteBlock(uid1,1,0,0);
@@ -1580,7 +1576,6 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
 	//	T5567WriteBlock(0x603E10E2,0);
 
 	DbpString("DONE!");
-
 }
 
 //-----------------------------------
@@ -1591,7 +1586,6 @@ void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int 
 #define FWD_CMD_READ 0x9
 #define FWD_CMD_DISABLE 0x5
 
-
 uint8_t forwardLink_data[64]; //array of forwarded bits
 uint8_t * forward_ptr; //ptr for forward message preparation
 uint8_t fwd_bit_sz; //forwardlink bit counter
@@ -1601,9 +1595,7 @@ uint8_t * fwd_write_ptr; //forwardlink bit pointer
 // prepares command bits
 // see EM4469 spec
 //====================================================================
-//--------------------------------------------------------------------
 uint8_t Prepare_Cmd( uint8_t cmd ) {
-	//--------------------------------------------------------------------
 
 	*forward_ptr++ = 0; //start bit
 	*forward_ptr++ = 0; //second pause for 4050 code
@@ -1623,10 +1615,7 @@ uint8_t Prepare_Cmd( uint8_t cmd ) {
 // prepares address bits
 // see EM4469 spec
 //====================================================================
-
-//--------------------------------------------------------------------
 uint8_t Prepare_Addr( uint8_t addr ) {
-	//--------------------------------------------------------------------
 
 	register uint8_t line_parity;
 
@@ -1647,10 +1636,7 @@ uint8_t Prepare_Addr( uint8_t addr ) {
 // prepares data bits intreleaved with parity bits
 // see EM4469 spec
 //====================================================================
-
-//--------------------------------------------------------------------
 uint8_t Prepare_Data( uint16_t data_low, uint16_t data_hi) {
-	//--------------------------------------------------------------------
 
 	register uint8_t line_parity;
 	register uint8_t column_parity;
@@ -1694,21 +1680,14 @@ void SendForward(uint8_t fwd_bit_count) {
 
 	LED_D_ON();
 
-	//Field on
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-
-	// Give it a bit of time for the resonant antenna to settle.
-	// And for the tag to fully power up
-	SpinDelay(150);
-
+	// Set up FPGA, 125kHz
+	LFSetupFPGAForADC(95, true);
+	
 	// force 1st mod pulse (start gap must be longer for 4305)
 	fwd_bit_sz--; //prepare next bit modulation
 	fwd_write_ptr++;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 	SpinDelayUs(55*8); //55 cycles off (8us each)for 4305
-	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);//field on
 	SpinDelayUs(16*8); //16 cycles on (8us each)
 
@@ -1720,7 +1699,6 @@ void SendForward(uint8_t fwd_bit_count) {
 			//These timings work for 4469/4269/4305 (with the 55*8 above)
 			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 			SpinDelayUs(23*8); //16-4 cycles off (8us each)
-			FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 			FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);//field on
 			SpinDelayUs(9*8); //16 cycles on (8us each)
 		}
@@ -1739,7 +1717,6 @@ void EM4xLogin(uint32_t Password) {
 
 	//Wait for command to complete
 	SpinDelay(20);
-
 }
 
 void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
@@ -1779,9 +1756,9 @@ void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
 			if (i >= bufferlength) break;
 		}
 	}
-  
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off	
 	cmd_send(CMD_ACK,0,0,0,0,0);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 	LED_D_OFF();
 }
 
@@ -1805,13 +1782,15 @@ void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode
 	LED_D_OFF();
 }
 
-void CopyViKingtoT55x7(uint32_t block1,uint32_t block2) {
+void CopyViKingtoT55x7(uint32_t block1, uint32_t block2) {
     LED_D_ON();
     T55xxWriteBlock(block1,1,0,0);
     T55xxWriteBlock(block2,2,0,0);
-
     T55xxWriteBlock(T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | 2 << T5555_MAXBLOCK_SHIFT,0,0,1);
+	// ICEMAN NOTES:
+	// Shouldn't this one be: T55x7_MAXBLOCK_SHIFT  and 0 in password mode
+	// like this:
+	// T55xxWriteBlock(T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | 2 << T55x7_MAXBLOCK_SHIFT,0,0,0);
     LED_D_OFF();
-    DbpString("DONE!");
 }
 

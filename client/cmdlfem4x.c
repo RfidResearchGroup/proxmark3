@@ -232,7 +232,6 @@ int CmdEM410xWrite(const char *Cmd)
 
 	UsbCommand c = {CMD_EM410X_WRITE_TAG, {card, (uint32_t)(id >> 32), (uint32_t)id}};
 	SendCommand(&c);
-
 	return 0;
 }
 
