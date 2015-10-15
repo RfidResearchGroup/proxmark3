@@ -994,7 +994,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
 		case CMD_PCF7931_WRITE:
-			WritePCF7931(c->d.asDwords[0],c->d.asDwords[1],c->d.asDwords[2],c->d.asDwords[3],c->d.asDwords[4],c->d.asDwords[5],c->d.asDwords[6], c->d.asDwords[9], c->d.asDwords[7]-128,c->d.asDwords[8]-128, c->arg[0], c->arg[1], c->arg[2]);
+			WritePCF7931(c->d.asBytes[0],c->d.asBytes[1],c->d.asBytes[2],c->d.asBytes[3],c->d.asBytes[4],c->d.asBytes[5],c->d.asBytes[6], c->d.asBytes[9], c->d.asBytes[7]-128,c->d.asBytes[8]-128, c->arg[0], c->arg[1], c->arg[2]);
 			break;
 		case CMD_EM4X_READ_WORD:
 			EM4xReadWord(c->arg[1], c->arg[2],c->d.asBytes[0]);

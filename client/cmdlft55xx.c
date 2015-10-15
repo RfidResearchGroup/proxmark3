@@ -267,8 +267,8 @@ bool DecodeT55xxBlock(){
 	DemodBufferLen = 0x00;
 
 	//trim 1/2 a clock from beginning
-	snprintf(cmdStr, sizeof(buf),"%d", bitRate[config.bitrate]/2 );
-	CmdLtrim(cmdStr);
+	//snprintf(cmdStr, sizeof(buf),"%d", bitRate[config.bitrate]/2 );
+	//CmdLtrim(cmdStr);
 	switch( config.modulation ){
 		case DEMOD_FSK:
 			snprintf(cmdStr, sizeof(buf),"%d %d", bitRate[config.bitrate], config.inverted );
@@ -330,7 +330,7 @@ int CmdT55xxDetect(const char *Cmd){
 
 // detect configuration?
 bool tryDetectModulation(){
-	char cmdStr[8] = {0};
+	//char cmdStr[8] = {0};
 	uint8_t hits = 0;
 	t55xx_conf_block_t tests[15];
 	int bitRate=0;
@@ -338,8 +338,8 @@ bool tryDetectModulation(){
 	save_restoreGB(1);
 	if (GetFskClock("", FALSE, FALSE)){ 
 		fskClocks(&fc1, &fc2, &clk, FALSE);
-		sprintf(cmdStr,"%d", clk/2);
-		CmdLtrim(cmdStr);
+		//sprintf(cmdStr,"%d", clk/2);
+		//CmdLtrim(cmdStr);
 		if ( FSKrawDemod("0 0", FALSE) && test(DEMOD_FSK, &tests[hits].offset, &bitRate)){
 			tests[hits].modulation = DEMOD_FSK;
 			if (fc1==8 && fc2 == 5)
@@ -365,10 +365,9 @@ bool tryDetectModulation(){
 		}
 	} else {
 		clk = GetAskClock("", FALSE, FALSE);
-		
 		if (clk>0) {
-			sprintf(cmdStr,"%d", clk/2);
-			CmdLtrim(cmdStr);
+			//sprintf(cmdStr,"%d", clk/2);
+			//CmdLtrim(cmdStr);
 			if ( ASKDemod("0 0 0", FALSE, FALSE, 1) && test(DEMOD_ASK, &tests[hits].offset, &bitRate)) {
 				tests[hits].modulation = DEMOD_ASK;
 				tests[hits].bitrate = bitRate;
@@ -402,8 +401,8 @@ bool tryDetectModulation(){
 		save_restoreGB(0);
 		clk = GetNrzClock("", FALSE, FALSE);
 		if (clk>0) {
-			sprintf(cmdStr,"%d", clk/2);
-			CmdLtrim(cmdStr);
+			//sprintf(cmdStr,"%d", clk/2);
+			//CmdLtrim(cmdStr);
 			if ( NRZrawDemod("0 0 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate)) {
 				tests[hits].modulation = DEMOD_NRZ;
 				tests[hits].bitrate = bitRate;
@@ -425,9 +424,9 @@ bool tryDetectModulation(){
 		save_restoreGB(0);
 		clk = GetPskClock("", FALSE, FALSE);
 		if (clk>0) {
-			PrintAndLog("clk %d",clk);
-			sprintf(cmdStr,"%d", clk/2);
-			CmdLtrim(cmdStr);	
+			//PrintAndLog("clk %d",clk);
+			//sprintf(cmdStr,"%d", clk/2);
+			//CmdLtrim(cmdStr);	
 			if ( PSKDemod("0 0 1", FALSE) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate)) {
 				tests[hits].modulation = DEMOD_PSK1;
 				tests[hits].bitrate = bitRate;
@@ -665,7 +664,7 @@ int CmdT55xxWriteBlock(const char *Cmd)
 
 	if (block > 7) {
 		PrintAndLog("Block number must be between 0 and 7");
-		return 2;
+		return 1;
 	}
 	
 	UsbCommand resp;

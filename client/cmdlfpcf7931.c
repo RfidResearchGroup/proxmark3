@@ -66,7 +66,7 @@ int usage_pcf7931_write(){
 	PrintAndLog("Options:");
 	PrintAndLog("       h 			   This help");
 	PrintAndLog("       blockaddress   Block to save [0-7]");
-	PrintAndLog("       byteaddress    Index of byte inside block to write [0-3]");
+	PrintAndLog("       byteaddress    Index of byte inside block to write [0-16]");
 	PrintAndLog("       data           one byte of data (hex)");
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf pcf7931 write 2 1 FF");
@@ -136,7 +136,7 @@ int CmdLFPCF7931Write(const char *Cmd){
 	if ( param_getdec(Cmd, 0, &block) ) return usage_pcf7931_write();
 	if ( param_getdec(Cmd, 1, &bytepos) ) return usage_pcf7931_write();
 	
-	if ( (block > 7) || (bytepos > 3) ) return usage_pcf7931_write();
+	if ( (block > 7) || (bytepos > 16) ) return usage_pcf7931_write();
 
 	data 	= param_get8ex(Cmd, 2, 0, 16);
 	

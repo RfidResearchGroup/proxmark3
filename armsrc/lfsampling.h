@@ -2,6 +2,12 @@
 #define LFSAMPLING_H
 
 /**
+* acquisition of T55x7 LF signal. Similart to other LF, but adjusted with @marshmellows thresholds
+* the data is collected in BigBuf.
+**/
+void doT55x7Acquisition(void);
+
+/**
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
