@@ -28,6 +28,7 @@
 
 #define CONFIGURATION_BLOCK 0x00
 #define TRACE_BLOCK 0x01
+#define T55x7_PWD	0x00000010
 
 // Default configuration
 t55xx_conf_block_t config = { .modulation = DEMOD_ASK, .inverted = FALSE, .offset = 0x00, .block0 = 0x00};
@@ -235,8 +236,20 @@ int CmdT55xxReadBlock(const char *Cmd) {
 
 	//Password mode
 	if ( res == 2 ) {
-		c.arg[2] = password;
-		c.d.asBytes[0] = 0x1; 
+		
+		// try reading the config block and verify that PWD bit is set before doing this!
+		AquireData( CONFIGURATION_BLOCK );
+		if ( !tryDetectModulation() ) {
+			PrintAndLog("Could not detect is PWD bit is set in config block. Exits.");
+			return 1;
+		}
+		//if PWD bit is set,  allow to execute read command with password.
+		if (( config.block0 & T55x7_PWD ) == 1) {
+			c.arg[2] = password;
+			c.d.asBytes[0] = 0x1; 			
+		} else {		
+			PrintAndLog("PWD bit is NOT set in config block. Reading without password...");
+		}
 	}
 
 	clearCommandBuffer();
