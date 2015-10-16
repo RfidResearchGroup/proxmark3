@@ -25,6 +25,7 @@ extern uint8_t *BigBuf_get_addr(void);
 extern uint8_t *BigBuf_get_EM_addr(void);
 extern uint16_t BigBuf_max_traceLen(void);
 extern void BigBuf_Clear(void);
+extern void BigBuf_Clear_ext(bool verbose);
 extern uint8_t *BigBuf_malloc(uint16_t);
 extern void BigBuf_free(void);
 extern void BigBuf_free_keep_EM(void);

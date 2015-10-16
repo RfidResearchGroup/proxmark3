@@ -47,7 +47,6 @@ uint32_t DoAcquisition_config( bool silent);
 **/
 void LFSetupFPGAForADC(int divisor, bool lf_field);
 
-
 /**
  * Called from the USB-handler to set the sampling configuration
  * The sampling config is used for std reading and snooping.

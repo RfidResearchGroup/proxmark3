@@ -262,8 +262,8 @@ int CmdT55xxReadBlock(const char *Cmd) {
 	uint8_t got[12000];
 	GetFromBigBuf(got,sizeof(got),0);
 	WaitForResponse(CMD_ACK,NULL);
-	setGraphBuf(got, 12000);
-	DemodBufferLen=0;
+	setGraphBuf(got, sizeof(got));
+	//DemodBufferLen=0;
 	if (!DecodeT55xxBlock()) return 3;
 	char blk[10]={0};
 	sprintf(blk,"%d", block);
@@ -680,8 +680,8 @@ int CmdT55xxWriteBlock(const char *Cmd)
 		return 1;
 	}
 	
-	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {data, block, 0}};
+	UsbCommand resp;
  	c.d.asBytes[0] = 0x0; 
 
 	PrintAndLog("Writing to block: %d  data  : 0x%08X", block, data);

@@ -51,7 +51,13 @@ uint8_t *BigBuf_get_EM_addr(void)
 // clear ALL of BigBuf
 void BigBuf_Clear(void)
 {
+	BigBuf_Clear_ext(true);
+}
+// clear ALL of BigBuf
+void BigBuf_Clear_ext(bool verbose)
+{
 	memset(BigBuf,0,BIGBUF_SIZE);
+	if (verbose) 
 	Dbprintf("Buffer cleared (%i bytes)",BIGBUF_SIZE);
 }
 

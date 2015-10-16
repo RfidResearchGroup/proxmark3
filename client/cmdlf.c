@@ -36,26 +36,25 @@ static int CmdHelp(const char *Cmd);
 
 int usage_lf_cmdread()
 {
-	PrintAndLog("Usage: lf cmdread  <delay off>  <zero> <one> <cmdbytes> [H] ");
+	PrintAndLog("Usage: lf cmdread  <delay off> <zero> <one> <cmdbytes> [H|L]");
 	PrintAndLog("Options:        ");
 	PrintAndLog("       h             This help");
-	PrintAndLog("       L             Low frequency (125 KHz)");
-	PrintAndLog("       H             High frequency (134 KHz)");
-	PrintAndLog("       H             delay OFF");
-	PrintAndLog("       H             time period ZERO");
-	PrintAndLog("       H             time period ONE");
+	PrintAndLog("      <delay off>    delay offset");
+	PrintAndLog("      <zero>         time period ZERO");
+	PrintAndLog("      <one>          time period ONE");
+	PrintAndLog("      [H|L]          Frequency Low (125 KHz) / High (134 KHz)");
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf cmdread 80 100 200 11000");
 	PrintAndLog("      lf cmdread 80 100 100 11000 H");
 	return 0;
 }
 
-/* send a command before reading */
+/* send a LF command before reading */
 int CmdLFCommandRead(const char *Cmd)
 {
 	static char dummy[3] = {0x20,0x00,0x00};
 	bool errors = FALSE;
-	uint8_t divisor = 0; //125khz
+	uint8_t divisor = 95; //125khz
   	uint8_t cmdp =0;
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{

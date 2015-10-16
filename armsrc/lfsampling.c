@@ -266,7 +266,7 @@ void doT55x7Acquisition(void){
 	if ( bufsize > T55xx_SAMPLES_SIZE )
 		bufsize = T55xx_SAMPLES_SIZE;
 
-	memset(dest, 0, bufsize);
+	//memset(dest, 0, bufsize);
 		
 	uint16_t i = 0;
 	bool startFound = false;

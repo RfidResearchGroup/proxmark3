@@ -66,7 +66,7 @@ int usage_pcf7931_write(){
 	PrintAndLog("Options:");
 	PrintAndLog("       h 			   This help");
 	PrintAndLog("       blockaddress   Block to save [0-7]");
-	PrintAndLog("       byteaddress    Index of byte inside block to write [0-16]");
+	PrintAndLog("       byteaddress    Index of byte inside block to write [0-15]");
 	PrintAndLog("       data           one byte of data (hex)");
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf pcf7931 write 2 1 FF");
@@ -136,7 +136,7 @@ int CmdLFPCF7931Write(const char *Cmd){
 	if ( param_getdec(Cmd, 0, &block) ) return usage_pcf7931_write();
 	if ( param_getdec(Cmd, 1, &bytepos) ) return usage_pcf7931_write();
 	
-	if ( (block > 7) || (bytepos > 16) ) return usage_pcf7931_write();
+	if ( (block > 7) || (bytepos > 15) ) return usage_pcf7931_write();
 
 	data 	= param_get8ex(Cmd, 2, 0, 16);
 	
@@ -159,8 +159,8 @@ int CmdLFPCF7931Write(const char *Cmd){
 static command_t CommandTable[] = 
 {
 	{"help", 	CmdHelp,			1, "This help"},
-	{"read", 	CmdLFPCF7931Read,	1, "Read content of a PCF7931 transponder"},
-	{"write",	CmdLFPCF7931Write,	1, "Write data on a PCF7931 transponder."},
+	{"read",   CmdLFPCF7931Read,   0, "Read content of a PCF7931 transponder"},
+	{"write",  CmdLFPCF7931Write,  0, "Write data on a PCF7931 transponder."},
 	{"config",	CmdLFPCF7931Config, 1, "Configure the password, the tags initialization delay and time offsets (optional)"},
 	{NULL, NULL, 0, NULL}
 };
