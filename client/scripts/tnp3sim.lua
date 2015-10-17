@@ -198,6 +198,8 @@ local function ValidateCheckSums(blocks)
 	if crc == calc then isOk='Ok' else isOk = 'Error' end	
 	io.write( ('TYPE 3 area 2: %04x = %04x -- %s\n'):format(crc,calc,isOk))
 
+end
+local function LoadEmulator(blocks)
 	local cmd
 	local blockdata
 	for _,b in pairs(blocks) do 
