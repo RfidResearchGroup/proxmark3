@@ -220,11 +220,9 @@ local function LoadEmulator(blocks)
 			end
 		end
 
-		cmd = Command:new{cmd = cmds.CMD_MIFARE_EML_MEMSET, arg1 = _ ,arg2 = 1,arg3 = 0, data = blockdata}
+		cmd = Command:new{cmd = cmds.CMD_MIFARE_EML_MEMSET, arg1 = _ ,arg2 = 1,arg3 = 16, data = blockdata}
 		local err = core.SendCommand(cmd:getBytes())
-		if err then 
-			return err
-		end
+		if err then return err end
 	end
 	io.write('\n')
 end
