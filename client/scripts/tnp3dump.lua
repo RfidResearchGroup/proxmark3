@@ -38,9 +38,7 @@ local numSectors = 16
 --- 
 -- A debug printout-function
 function dbg(args)
-	if not DEBUG then
-		return
-	end
+	if not DEBUG then return end
 	
     if type(args) == "table" then
 		local i = 1
@@ -56,6 +54,7 @@ end
 -- This is only meant to be used when errors occur
 function oops(err)
 	print("ERROR: ",err)
+	return nil,err
 end
 --- 
 -- Usage help
@@ -166,6 +165,8 @@ local function main(args)
 	local block0, err = waitCmd()
 	if err then return oops(err) end
 	
+	core.clearCommandBuffer()
+	
 	-- Read block 1
 	cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = 1,arg2 = 0,arg3 = 0, data = keyA}
 	err = core.SendCommand(cmd:getBytes())
@@ -173,16 +174,15 @@ local function main(args)
 	local block1, err = waitCmd()
 	if err then return oops(err) end
 
+	core.clearCommandBuffer()
+	
 	local tmpHash = block0..block1..'%02x'..RANDOM
 
 	local key
 	local pos = 0
 	local blockNo
 	local blocks = {}
-
-	print('Reading card data')
-	core.clearCommandBuffer()
-		
+	
 	-- main loop
 	io.write('Reading blocks > ')
 	for blockNo = 0, numBlocks-1, 1 do
@@ -192,6 +192,8 @@ local function main(args)
 			break
 		end
 	
+		core.clearCommandBuffer()
+		
 		pos = (math.floor( blockNo / 4 ) * 12)+1
 		key = akeys:sub(pos, pos + 11 )
 		cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = blockNo ,arg2 = 0,arg3 = 0, data = key}
@@ -214,8 +216,8 @@ local function main(args)
 					local baseStr = utils.ConvertHexToAscii(tmpHash:format(blockNo))
 					local key = md5.sumhexa(baseStr)
 					local aestest = core.aes128_decrypt(key, blockdata)
-					local hex = utils.ConvertAsciiToBytes(aestest)
-					hex = utils.ConvertBytesToHex(hex)
+					local hex = ConvertAsciiToHex(aestest)
+					
 					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,hex)
 					io.write(blockNo..',')
 				end		
@@ -235,9 +237,7 @@ local function main(args)
 
 	for _,s in pairs(blocks) do
 		local slice = s:sub(8,#s)
-		local str = utils.ConvertBytesToAscii(
-				 utils.ConvertHexToBytes(slice)
-				)
+		local str = utils.ConvertHexToAscii(slice)
 		emldata = emldata..slice..'\n'
 		for c in (str):gmatch('.') do
 			bindata[#bindata+1] = c

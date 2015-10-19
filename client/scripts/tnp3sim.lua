@@ -5,7 +5,8 @@ local lib14a = require('read14a')
 local utils = require('utils')
 local md5 = require('md5')
 local toys = require('default_toys')
-
+local pre = require('precalc')
+		
 example =[[
 	1. script run tnp3sim
 	2. script run tnp3sim -m
@@ -27,7 +28,7 @@ Arguments:
 	]]
 
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
-local DEBUG = false -- the debug flag
+local DEBUG = true -- the debug flag
 local RANDOM = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
 
 local band = bit32.band
@@ -42,9 +43,7 @@ local format = string.format
 --- 
 -- A debug printout-function
 function dbg(args)
-	if not DEBUG then
-		return
-	end
+	if not DEBUG then return end
 	
     if type(args) == "table" then
 		local i = 1
@@ -107,6 +106,14 @@ local function GetCheckSum(blocks, dataarea, chksumtype)
 	return utils.SwapEndianness(crc,16)
 end
 
+local function SetAllCheckSum(blocks)
+	print('Updating all checksums')
+	SetCheckSum(blocks, 3)
+	SetCheckSum(blocks, 2)
+	SetCheckSum(blocks, 1)
+	SetCheckSum(blocks, 0)
+end
+
 local function SetCheckSum(blocks, chksumtype)
 
 	if blocks == nil then return nil, 'Argument \"blocks\" nil' end
@@ -154,7 +161,8 @@ function CalcCheckSum(blocks, dataarea, chksumtype)
 end
 
 local function ValidateCheckSums(blocks)
-
+	print(' Validating checksums')
+	
 	local isOk, crc, calc
 	-- Checksum Type 0
 	crc = GetCheckSum(blocks,1,0)
@@ -199,9 +207,17 @@ local function ValidateCheckSums(blocks)
 	io.write( ('TYPE 3 area 2: %04x = %04x -- %s\n'):format(crc,calc,isOk))
 
 end
-local function LoadEmulator(blocks)
-	local cmd
-	local blockdata
+
+local function AddKey(keys, blockNo, data)
+	local pos = (math.floor( blockNo / 4 ) * 12)+1
+	local key = keys:sub(pos, pos + 11 )
+	return key..data:sub(13)
+end
+
+local function LoadEmulator(uid, blocks)
+	print('Sending dumpdata to emulator memory')
+	local keys = pre.GetAll(uid)
+	local cmd, blockdata
 	for _,b in pairs(blocks) do 
 		
 		blockdata = b
@@ -212,14 +228,16 @@ local function LoadEmulator(blocks)
 				local baseStr = utils.ConvertHexToAscii(base)
 				local key = md5.sumhexa(baseStr)
 				local enc = core.aes128_encrypt(key, blockdata)
-				local hex = utils.ConvertAsciiToBytes(enc)
-				hex = utils.ConvertBytesToHex(hex)
-			
-				blockdata = hex
+				blockdata = utils.ConvertAsciiToHex(enc)
 				io.write( _..',')
 			end
+		else		
+			-- add keys if not existing..
+			if ( blockdata:sub(1,12) == '000000000000' ) then
+				blockdata = AddKey(keys, _, blockdata)
+			end
 		end
-
+		core.clearCommandBuffer()
 		cmd = Command:new{cmd = cmds.CMD_MIFARE_EML_MEMSET, arg1 = _ ,arg2 = 1,arg3 = 16, data = blockdata}
 		local err = core.SendCommand(cmd:getBytes())
 		if err then return err end
@@ -357,10 +375,7 @@ local function main(args)
 		blockindex = blockindex + 1
 	end
 
-	if DEBUG then
-		print(' Validating checksums')
-		ValidateCheckSums(blocks)
-	end
+	if DEBUG then ValidateCheckSums(blocks)	end
 	
 	--
 	print( string.rep('--',20) )	
@@ -419,7 +434,7 @@ local function main(args)
 
 	local level = blocks[13]:sub(27,28)
 	print(('LEVEL : %d'):format( tonumber(level,16)))
-	--hälsa: 667 029b  
+
 	--local health = blocks[]:sub();
 	--print(('Health : %d'):format( tonumber(health,16))
 	
@@ -457,20 +472,15 @@ local function main(args)
 		--print (blocks[13])
 	
 		-- Update Checksums
-		print('Updating all checksums')
-		SetCheckSum(blocks, 3)
-		SetCheckSum(blocks, 2)
-		SetCheckSum(blocks, 1)
-		SetCheckSum(blocks, 0)
-	
-		print('Validating all checksums')	
+		SetAllCheckSum(blocks)
+
+		-- Validate Checksums
 		ValidateCheckSums(blocks)
 	end
-	
+
 	--Load dumpdata to emulator memory
 	if DEBUG then
-		print('Sending dumpdata to emulator memory')
-		err = LoadEmulator(blocks)
+		err = LoadEmulator(uid, blocks)
 		if err then return oops(err) end	
 		core.clearCommandBuffer()
 		print('The simulation is now prepared.\n --> run \"hf mf sim u '..uid..'\" <--')
