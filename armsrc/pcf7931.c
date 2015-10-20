@@ -19,8 +19,7 @@ int DemodPCF7931(uint8_t **outBlocks) {
 	int GraphTraceLen = BigBuf_max_traceLen();
 	if (  GraphTraceLen > 18000 )
 		GraphTraceLen = 18000;
-	
-	
+		
 	int i, j, lastval, bitidx, half_switch;
 	int clock = 64;
 	int tolerance = clock / 8;
@@ -152,10 +151,12 @@ int IsBlock0PCF7931(uint8_t *Block) {
 
 int IsBlock1PCF7931(uint8_t *Block) {
 	// Assume RFU means 0 :)
-	if(Block[10] == 0 && Block[11] == 0 && Block[12] == 0 && Block[13] == 0)
-		if((Block[14] & 0x7f) <= 9 && Block[15] <= 9)
+	if( Block[10] == 0 && 
+	    Block[11] == 0 && 
+		Block[12] == 0 && 
+		Block[13] == 0)
+		 if ( (Block[14] & 0x7f) <= 9 && Block[15] <= 9)
 			return 1;
-
 	return 0;
 }
 
@@ -279,8 +280,7 @@ void ReadPCF7931() {
  */
 void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data)
 {
-
-	uint32_t tab[1024]={0}; // data times frame
+	uint32_t tab[1024] = {0}; // data times frame
 	uint32_t u = 0;
 	uint8_t parity = 0;
 	bool comp = 0;
@@ -298,7 +298,6 @@ void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, ui
 
 	//password indication bit
 	AddBitPCF7931(1, tab, l, p);
-
 
 	//password (on 56 bits)
 	Dbprintf("Password (LSB first on each byte) : %02x %02x %02x %02x %02x %02x %02x", pass1,pass2,pass3,pass4,pass5,pass6,pass7);
@@ -366,8 +365,7 @@ void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, ui
 		tab[u]=(tab[u] * 3)/2;
 	}
 
-
-	//compennsation of the counter reload
+	//compensation of the counter reload
 	while (!comp){
 		comp = 1;
 		for(u=0;tab[u]!=0;u++){
@@ -460,9 +458,9 @@ bool AddBytePCF7931(uint8_t byte, uint32_t * tab, int32_t l, int32_t p){
 	for (u=0; u<8; u++)
 	{
 		if (byte&(1<<u)) {	//bit à 1
-			if(AddBitPCF7931(1, tab, l, p)==1)return 1;
+			if( AddBitPCF7931(1, tab, l, p)==1) return 1;
 		} else { //bit à 0
-			if(AddBitPCF7931(0, tab, l, p)==1)return 1;
+			if (AddBitPCF7931(0, tab, l, p)==1) return 1;
 		}
 	}
 
@@ -478,17 +476,19 @@ bool AddBytePCF7931(uint8_t byte, uint32_t * tab, int32_t l, int32_t p){
 bool AddBitPCF7931(bool b, uint32_t * tab, int32_t l, int32_t p){
 	uint8_t u = 0;
 
-	for(u=0;tab[u]!=0;u+=3){} //we put the cursor at the last value of the array
+	//we put the cursor at the last value of the array
+	for ( u = 0; tab[u] != 0; u += 3 ) { } 
 	
+	if ( b == 1 ) {	//add a bit 1
+		if ( u == 0 ) 
+			tab[u] = 34 * T0_PCF + p;
+		else
+			tab[u] = 34 * T0_PCF + tab[u-1] + p;
 
-	if(b==1){	//add a bit 1
-		if(u==0) tab[u] = 34*T0_PCF+p;
-		else 	 tab[u] = 34*T0_PCF+tab[u-1]+p;
-
-		tab[u+1] = 6*T0_PCF+tab[u]+l;
-		tab[u+2] = 88*T0_PCF+tab[u+1]-l-p;
+		tab[u+1] = 6 * T0_PCF + tab[u] + l;
+		tab[u+2] = 88 * T0_PCF + tab[u+1] - l - p;
 		return 0;
-	}else{ 		//add a bit 0
+	} else { 		//add a bit 0
 
 		if(u==0) tab[u] = 98*T0_PCF+p;
 		else  	 tab[u] = 98*T0_PCF+tab[u-1]+p;
