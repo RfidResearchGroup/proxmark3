@@ -67,9 +67,10 @@ extern uint8_t bits_per_sample ;
 extern bool averaging;
 
 void AcquireRawAdcSamples125k(int divisor);
-void ModThenAcquireRawAdcSamples125k(int delay_off,int period_0,int period_1,uint8_t *command);
+void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint32_t period_1, uint8_t *command);
 void ReadTItag(void);
 void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc);
+
 void AcquireTiType(void);
 void AcquireRawBitsTI(void);
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol);
@@ -88,8 +89,9 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo);
 void CopyIndala64toT55x7(int hi, int lo); // Clone Indala 64-bit tag by UID to T55x7
 void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int uid6, int uid7); // Clone Indala 224-bit tag by UID to T55x7
 void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMode);
-void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode );
+void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd);
 void T55xxReadTrace(void);
+void T55xxWakeUp(uint32_t Pwd);
 void TurnReadLFOn();
 void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode);

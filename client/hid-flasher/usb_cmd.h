@@ -86,6 +86,8 @@ typedef struct{
 #define CMD_T55XX_READ_BLOCK                                              0x0214
 #define CMD_T55XX_WRITE_BLOCK                                             0x0215
 #define CMD_T55XX_READ_TRACE                                              0x0216
+#define CMD_T55XX_WAKEUP	                                              0x0224
+
 #define CMD_PCF7931_READ                                                  0x0217
 #define CMD_PCF7931_WRITE                                                 0x0223
 #define CMD_EM4X_READ_WORD                                                0x0218
@@ -100,6 +102,7 @@ typedef struct{
 #define CMD_PSK_SIM_TAG                                                   0x0220
 #define CMD_AWID_DEMOD_FSK                                                0x0221
 #define CMD_VIKING_CLONE_TAG                                              0x0222
+
 
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 

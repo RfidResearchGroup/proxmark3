@@ -26,7 +26,7 @@
  * @param period_1
  * @param command
  */
-void ModThenAcquireRawAdcSamples125k(int delay_off, int period_0, int period_1, uint8_t *command)
+void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint32_t period_1, uint8_t *command)
 {
 
 	int divisor_used = 95; // 125 KHz
@@ -1167,7 +1167,7 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 	T55xxWriteBit(1);
 	T55xxWriteBit(0); //Page 0
 	
-	if (PwdMode == 1){
+	if (PwdMode){
 		// Send Pwd
 		for (i = 0x80000000; i != 0; i >>= 1)
 			T55xxWriteBit(Pwd & i);
@@ -1190,13 +1190,14 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 	// turn field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,0,0,0,0);
-	LED_A_OFF();	
+	LED_A_OFF();
+	LED_B_OFF();
 }
 
 // Read one card block in page 0
-void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode) {
+void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	LED_A_ON();
-	
+	uint8_t PwdMode = arg0 & 0xFF;
 	uint32_t i = 0;
 	
 	//clear buffer now so it does not interfere with timing later
@@ -1208,8 +1209,7 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode) {
 	// Set up FPGA, 125kHz
 	LFSetupFPGAForADC(95, true);
 	
-	// Trigger T55x7 in mode.
-  // Trigger T55x7 Direct Access Mode
+	// Trigger T55x7 Direct Access Mode
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelayUs(START_GAP);
 	
@@ -1217,11 +1217,12 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode) {
 	T55xxWriteBit(1);
 	T55xxWriteBit(0); //Page 0
 
-	if (PwdMode == 1){
+	if (PwdMode){
 		// Send Pwd
 		for (i = 0x80000000; i != 0; i >>= 1)
 			T55xxWriteBit(Pwd & i);
 	}
+
 	// Send a zero bit separation
 	T55xxWriteBit(0);
 	
@@ -1239,6 +1240,7 @@ void T55xxReadBlock(uint32_t Block, uint32_t Pwd, uint8_t PwdMode) {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,0,0,0,0);    
 	LED_A_OFF();
+	LED_B_OFF();
 }
 
 // Read card traceability data (page 1)
@@ -1269,6 +1271,30 @@ void T55xxReadTrace(void){
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,0,0,0,0);
 	LED_A_OFF();
+	LED_B_OFF();
+}
+
+void T55xxWakeUp(uint32_t Pwd){
+	LED_B_ON();
+	uint32_t i = 0;
+	
+	// Set up FPGA, 125kHz
+	LFSetupFPGAForADC(95, true);
+	
+	// Trigger T55x7 Direct Access Mode
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelayUs(START_GAP);
+	
+	// Opcode 10
+	T55xxWriteBit(1);
+	T55xxWriteBit(0); //Page 0
+
+	// Send Pwd
+	for (i = 0x80000000; i != 0; i >>= 1)
+		T55xxWriteBit(Pwd & i);
+
+	// Turn field on to read the response
+	TurnReadLFOn(READ_GAP);
 }
 
 /*-------------- Cloning routines -----------*/

@@ -266,14 +266,16 @@ void doT55x7Acquisition(void){
 	if ( bufsize > T55xx_SAMPLES_SIZE )
 		bufsize = T55xx_SAMPLES_SIZE;
 
-	//memset(dest, 0, bufsize);
-		
 	uint16_t i = 0;
+	uint16_t nosignal = 0;
 	bool startFound = false;
 	bool highFound = false;
 	uint8_t curSample = 0;
 	uint8_t firstSample = 0;
-	for(;;) {
+	while(!BUTTON_PRESS()) {
+		WDT_HIT();
+		if ( nosignal == 0xFFFF ) break;
+		
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
 			LED_D_ON();
@@ -287,6 +289,7 @@ void doT55x7Acquisition(void){
 					firstSample = curSample;
 				highFound = true;
 			} else if (!highFound) {
+				nosignal++;
 				continue;
 			}
 

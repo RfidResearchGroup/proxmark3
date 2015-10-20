@@ -36,16 +36,18 @@ static int CmdHelp(const char *Cmd);
 
 int usage_lf_cmdread()
 {
-	PrintAndLog("Usage: lf cmdread  <delay off> <zero> <one> <cmdbytes> [H|L]");
+	PrintAndLog("Usage: lf cmdread d <delay period> z <zero period> o <one period> c <cmdbytes> [H]");
 	PrintAndLog("Options:        ");
 	PrintAndLog("       h             This help");
-	PrintAndLog("      <delay off>    delay offset");
-	PrintAndLog("      <zero>         time period ZERO");
-	PrintAndLog("      <one>          time period ONE");
-	PrintAndLog("      [H|L]          Frequency Low (125 KHz) / High (134 KHz)");
+	PrintAndLog("       H             Freqency High (134 KHz), default is 'Low (125KHz)'");
+	PrintAndLog("       d <delay>     delay OFF period, (dec)");
+	PrintAndLog("       z <zero>      time period ZERO, (dec)");
+	PrintAndLog("       o <one>       time period ONE, (dec)");
+	PrintAndLog("       c <cmd>       Command bytes");
+	PrintAndLog("       ************* All periods in microseconds (ms)");
 	PrintAndLog("Examples:");
-	PrintAndLog("      lf cmdread 80 100 200 11000");
-	PrintAndLog("      lf cmdread 80 100 100 11000 H");
+	PrintAndLog("      lf cmdread d 80 z 100 o 200 c 11000");
+	PrintAndLog("      lf cmdread d 80 z 100 o 100 c 11000 H");
 	return 0;
 }
 
@@ -53,21 +55,38 @@ int usage_lf_cmdread()
 int CmdLFCommandRead(const char *Cmd)
 {
 	static char dummy[3] = {0x20,0x00,0x00};
+	UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K};
 	bool errors = FALSE;
-	uint8_t divisor = 95; //125khz
-  	uint8_t cmdp =0;
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
+
+  	uint8_t cmdp = 0;
+	int strLength = 0;
+
+	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp))
 		{
 		case 'h':
 			return usage_lf_cmdread();
 		case 'H':
-			divisor = 88;
+			dummy[1]='h';
 			cmdp++;
 			break;
-		case 'a':
-			//param_getchar(Cmd, cmdp+1) == '1';
+		case 'L':
+			cmdp++;
+			break;
+		case 'c':
+			strLength = param_getstr(Cmd, cmdp+1, (char *)&c.d.asBytes);
+			cmdp+=2;
+			break;
+		case 'd':
+			c.arg[0] = param_get32ex(Cmd, cmdp+1, 0, 10);
+			cmdp+=2;
+			break;
+		case 'z':
+			c.arg[1] = param_get32ex(Cmd, cmdp+1, 0, 10);
+			cmdp+=2;
+			break;
+		case 'o':
+			c.arg[2] = param_get32ex(Cmd, cmdp+1, 0, 10);
 			cmdp+=2;
 			break;
 		default:
@@ -78,19 +97,15 @@ int CmdLFCommandRead(const char *Cmd)
 		if(errors) break;
 	}
 	// No args
-	if(cmdp == 0) errors = 1;
+	if (cmdp == 0) errors = 1;
 
 	//Validations
-	if(errors) return usage_lf_cmdread();
+	if (errors) return usage_lf_cmdread();
 	
-	UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K};
-	
-	sscanf(Cmd, "%"lli" %"lli" %"lli" %s %s", &c.arg[0], &c.arg[1], &c.arg[2],(char*)(&c.d.asBytes),(char*)(&dummy+1));
-	
-	// in case they specified 'h'
-	strcpy((char *)&c.d.asBytes + strlen((char *)c.d.asBytes), dummy);
+	// in case they specified 'H'
+	// added to the end..  
+	strcpy((char *)&c.d.asBytes + strLength, dummy);
 
-	PrintAndLog("ICE: %d %s -- %s", strlen((char *)c.d.asBytes) ,dummy, c.d.asBytes);
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
@@ -1205,8 +1220,8 @@ int CmdLFfind(const char *Cmd)
 static command_t CommandTable[] = 
 {
   {"help",        CmdHelp,            1, "This help"},
+	{"awid",        CmdLFAWID,          1, "{ AWID RFIDs... }"},
   {"em4x",        CmdLFEM4X,          1, "{ EM4X RFIDs... }"},
-  {"awid",		CmdLFAWID,		    1, "{ AWID RFIDs... }"},
   {"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
   {"hitag",       CmdLFHitag,         1, "{ HITAG RFIDs... }"},
   {"io",       	  CmdLFIO,	          1, "{ IOPROX RFIDs... }"},

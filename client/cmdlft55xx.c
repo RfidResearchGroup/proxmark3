@@ -35,7 +35,7 @@ t55xx_conf_block_t config = { .modulation = DEMOD_ASK, .inverted = FALSE, .offse
 
 int usage_t55xx_config(){
 	PrintAndLog("Usage: lf t55xx config [d <demodulation>] [i 1] [o <offset>]");
-	PrintAndLog("Options:        ");
+	PrintAndLog("Options:");
 	PrintAndLog("       h                        This help");
 	PrintAndLog("       b <8|16|32|40|50|64|100|128>     Set bitrate");
 	PrintAndLog("       d <FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  Set demodulation FSK / ASK / PSK / NRZ / Biphase / Biphase A");
@@ -50,30 +50,39 @@ int usage_t55xx_config(){
 	return 0;
 }
 int usage_t55xx_read(){
-	PrintAndLog("Usage:  lf t55xx read <block> <password>");
-    PrintAndLog("     <block>, block number to read. Between 0-7");
-    PrintAndLog("     <password>, OPTIONAL password (8 hex characters)");
+	PrintAndLog("Usage:  lf t55xx read b <block> p <password> <override_safety> <wakeup>");
+	PrintAndLog("Options:");
+    PrintAndLog("     b <block>,	block number to read. Between 0-7");
+    PrintAndLog("     p <password>, OPTIONAL password 4bytes (8 hex symbols)");
+	PrintAndLog("     o,			OPTIONAL override safety check");
+	PrintAndLog("     w,			OPTIONAL wakeup");
+	PrintAndLog("     ****WARNING****");
+	PrintAndLog("     Use of read with password on a tag not configured for a pwd");
+	PrintAndLog("     can damage the tag");
     PrintAndLog("");
 	PrintAndLog("Examples:");
-    PrintAndLog("      lf t55xx read 0           - read data from block 0");
-	PrintAndLog("      lf t55xx read 0 feedbeef  - read data from block 0 password feedbeef");
+    PrintAndLog("      lf t55xx read b 0				- read data from block 0");
+	PrintAndLog("      lf t55xx read b 0 p feedbeef		- read data from block 0 password feedbeef");
+	PrintAndLog("      lf t55xx read b 0 p feedbeef o	- read data from block 0 password feedbeef safety check");
 	PrintAndLog("");
 	return 0;
 }
 int usage_t55xx_write(){
-	PrintAndLog("Usage:  lf t55xx wr <block> <data> [password]");
+	PrintAndLog("Usage:  lf t55xx write <block> <data> [password]");
+	PrintAndLog("Options:");
 	PrintAndLog("     <block>, block number to write. Between 0-7");
-	PrintAndLog("     <data>,  4 bytes of data to write (8 hex characters)");
-    PrintAndLog("     [password], OPTIONAL password 4bytes (8 hex characters)");
+	PrintAndLog("     <data>,  4 bytes of data to write (8 hex symbols)");
+    PrintAndLog("     [password], OPTIONAL password 4bytes (8 hex symbols)");
     PrintAndLog("");
 	PrintAndLog("Examples:");
-	PrintAndLog("      lf t55xx wr 3 11223344           - write 11223344 to block 3");
-	PrintAndLog("      lf t55xx wr 3 11223344 feedbeef  - write 11223344 to block 3 password feedbeef");
+	PrintAndLog("      lf t55xx write 3 11223344           - write 11223344 to block 3");
+	PrintAndLog("      lf t55xx write 3 11223344 feedbeef  - write 11223344 to block 3 password feedbeef");
 	PrintAndLog("");
 	return 0;
 }
 int usage_t55xx_trace() {
 	PrintAndLog("Usage:  lf t55xx trace [1]");
+	PrintAndLog("Options:");
 	PrintAndLog("     [graph buffer data], if set, use Graphbuffer otherwise read data from tag.");
 	PrintAndLog("");
 	PrintAndLog("Examples:");
@@ -84,6 +93,7 @@ int usage_t55xx_trace() {
 }
 int usage_t55xx_info() {
 	PrintAndLog("Usage:  lf t55xx info [1]");
+	PrintAndLog("Options:");
 	PrintAndLog("     [graph buffer data], if set, use Graphbuffer otherwise read data from tag.");
 	PrintAndLog("");
 	PrintAndLog("Examples:");
@@ -94,6 +104,7 @@ int usage_t55xx_info() {
 }
 int usage_t55xx_dump(){
 	PrintAndLog("Usage:  lf t55xx dump <password>");
+	PrintAndLog("Options:");
     PrintAndLog("     <password>, OPTIONAL password 4bytes (8 hex symbols)");
 	PrintAndLog("");
 	PrintAndLog("Examples:");
@@ -103,12 +114,25 @@ int usage_t55xx_dump(){
 	return 0;
 }
 int usage_t55xx_detect(){
-	PrintAndLog("Usage:  lf t55xx detect");
+	PrintAndLog("Usage:  lf t55xx detect [1]");
+	PrintAndLog("Options:");
+	PrintAndLog("     [graph buffer data], if set, use Graphbuffer otherwise read data from tag.");
 	PrintAndLog("");
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf t55xx detect");
 	PrintAndLog("      lf t55xx detect 1");
 	PrintAndLog("");
+	return 0;
+}
+int usage_t55xx_wakup(){
+	PrintAndLog("Usage:  lf t55xx wakeup [h] p <password>");
+	PrintAndLog("This commands send the Answer-On-Request command and leaves the readerfield ON afterwards.");
+	PrintAndLog("Options:");
+	PrintAndLog("     h 			- this help");
+    PrintAndLog("     p <password>	- password 4bytes (8 hex symbols)");
+    PrintAndLog("");
+	PrintAndLog("Examples:");
+    PrintAndLog("      lf t55xx wakeup p 11223344  - send wakeup password");
 	return 0;
 }
 
@@ -216,39 +240,72 @@ int CmdT55xxSetConfig(const char *Cmd) {
 }
 
 int CmdT55xxReadBlock(const char *Cmd) {
-	int block = -1;
-	int password = 0xFFFFFFFF; //default to blank Block 7
-
-	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') return usage_t55xx_read();
-
-	int res = sscanf(Cmd, "%d %x", &block, &password);
-
-	if ( res < 1 || res > 2 ) return usage_t55xx_read();
-	
-	if ((block < 0) | (block > 7)) {
+	uint8_t block = 255;
+	uint8_t wake = 0;
+	uint8_t usepwd = 0;
+	uint32_t password = 0xFFFFFFFF; //default to blank Block 7
+	uint8_t override = 0;
+	uint8_t cmdp = 0;
+	bool errors = false;
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+		return usage_t55xx_read();
+		case 'b':
+		case 'B':
+			errors |= param_getdec(Cmd, cmdp+1, &block);
+			cmdp+=2;
+			break;
+		case 'o':
+		case 'O':
+			override = 1;
+			cmdp++;
+			break;
+		case 'p':
+		case 'P':
+			password = param_get32ex(Cmd, cmdp+1, 0, 10);
+			usepwd = 1;
+			cmdp+=2;
+			break;
+		case 'w':
+		case 'W':
+			wake = 1;
+			cmdp++;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+	}
+	if (errors) return usage_t55xx_read();
+	if (wake && !usepwd) {
+		PrintAndLog("Wake command must use a pwd");
+		return 1;
+	}
+	if ((block > 7) && !wake) {
 		PrintAndLog("Block must be between 0 and 7");
 		return 1;
 	}	
 
-	UsbCommand c = {CMD_T55XX_READ_BLOCK, {0, block, 0}};
- 	c.d.asBytes[0] = 0x0; 
+	UsbCommand c = {CMD_T55XX_READ_BLOCK, {0, block, password}};
 
 	//Password mode
-	if ( res == 2 ) {
-		
+	if ( usepwd || wake ) {
 		// try reading the config block and verify that PWD bit is set before doing this!
-		AquireData( CONFIGURATION_BLOCK );
-		if ( !tryDetectModulation() ) {
-			PrintAndLog("Could not detect is PWD bit is set in config block. Exits.");
-			return 1;
-		}
-		//if PWD bit is set,  allow to execute read command with password.
-		if (( config.block0 & T55x7_PWD ) == 1) {
-			c.arg[2] = password;
-			c.d.asBytes[0] = 0x1; 			
-		} else {		
-			PrintAndLog("PWD bit is NOT set in config block. Reading without password...");
+		if ( wake || override ) {
+			c.arg[0] = (wake<<8) & usepwd;
+			if ( !wake && override )
+				PrintAndLog("Safety Check Overriden - proceeding despite risk");
+		} else {
+			AquireData( CONFIGURATION_BLOCK );
+			if ( !tryDetectModulation() ) {
+				PrintAndLog("Safety Check: Could not detect if PWD bit is set in config block. Exits.");
+				return 1;
+			} else {		
+				PrintAndLog("Safety Check: PWD bit is NOT set in config block. Reading without password...");	
+			}
 		}
 	}
 
@@ -266,7 +323,11 @@ int CmdT55xxReadBlock(const char *Cmd) {
 	//DemodBufferLen=0;
 	if (!DecodeT55xxBlock()) return 3;
 	char blk[10]={0};
+	if ( wake ) {
+		sprintf(blk,"wake");
+	} else {
 	sprintf(blk,"%d", block);
+	}
 	printT55xxBlock(blk);
 	return 0;
 }
@@ -1074,6 +1135,36 @@ void t55x7_create_config_block( int tagtype ){
 	
 }
 
+int CmdT55xxWakeUp(const char *Cmd) {
+	uint32_t password = 0xFFFFFFFF; //default to blank Block 7
+	uint8_t cmdp = 0;
+	bool errors = false;
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+			return usage_t55xx_wakup();
+		case 'p':
+		case 'P':
+			password = param_get32ex(Cmd, cmdp+1, 0, 10);
+			cmdp+=2;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+	}
+	if (errors) return usage_t55xx_wakup();
+	
+	UsbCommand c = {CMD_T55XX_WAKEUP, {password, 0, 0}};
+
+	clearCommandBuffer();
+	SendCommand(&c);
+	PrintAndLog("Wake up command sent. Try read now");
+	return 0;
+}
+
 /*
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits){
 	
@@ -1100,6 +1191,8 @@ static command_t CommandTable[] =
   {"info",   CmdT55xxInfo,      0, "[1] Show T55xx configuration data (page 0/ blk 0)"},
   {"dump",   CmdT55xxDump,      0, "[password] Dump T55xx card block 0-7. [optional password]"},
   {"special", special,          0, "Show block changes with 64 different offsets"},
+  {"wakeup", CmdT55xxWakeUp,    0, "Send AOR wakeup command"},
+  
   {NULL, NULL, 0, NULL}
 };
 
