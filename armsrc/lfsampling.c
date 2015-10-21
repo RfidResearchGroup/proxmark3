@@ -121,11 +121,11 @@ void LFSetupFPGAForADC(int divisor, bool lf_field)
  */
 uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold,bool silent)
 {
-	//.
+	//bigbuf, to hold the aquired raw data signal
 	uint8_t *dest = BigBuf_get_addr();
-    int bufsize = BigBuf_max_traceLen();
+    uint16_t bufsize = BigBuf_max_traceLen();
 
-	memset(dest, 0, bufsize);
+	BigBuf_Clear_ext(false);
 
 	if(bits_per_sample < 1) bits_per_sample = 1;
 	if(bits_per_sample > 8) bits_per_sample = 8;
@@ -244,7 +244,6 @@ uint32_t SampleLF(bool printCfg)
 * Initializes the FPGA for snoop-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-
 uint32_t SnoopLF() {
 	return ReadLF(false, true);
 }
@@ -256,9 +255,9 @@ uint32_t SnoopLF() {
 void doT55x7Acquisition(void){
 
 	#define T55xx_SAMPLES_SIZE 12000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
-	#define T55xx_READ_UPPER_THRESHOLD 128+40  // 50
+	#define T55xx_UPPER_THRESHOLD 128+40  // 50
 	#define T55xx_READ_TOL   5
-	//#define T55xx_READ_LOWER_THRESHOLD 128-40  //-50
+	#define T55xx_LOWER_THRESHOLD 128-40  //-50
 
 	uint8_t *dest = BigBuf_get_addr();
 	uint16_t bufsize = BigBuf_max_traceLen();
@@ -267,39 +266,37 @@ void doT55x7Acquisition(void){
 		bufsize = T55xx_SAMPLES_SIZE;
 
 	uint16_t i = 0;
-	uint16_t nosignal = 0;
 	bool startFound = false;
 	bool highFound = false;
-	uint8_t curSample = 0;
+	uint8_t sample = 0;
 	uint8_t firstSample = 0;
 	while(!BUTTON_PRESS()) {
-		WDT_HIT();
-		if ( nosignal == 0xFFFF ) break;
-		
+		WDT_HIT();		
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-			AT91C_BASE_SSC->SSC_THR = 0x43;
+			AT91C_BASE_SSC->SSC_THR = 0x00;
 			LED_D_ON();
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-			curSample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			
+			sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+			LED_D_OFF();
+		
 			// find first high sample
-			if (!startFound && curSample > T55xx_READ_UPPER_THRESHOLD) {
-				if (curSample > firstSample) 
-					firstSample = curSample;
-				highFound = true;
+			if (!startFound && sample > T55xx_UPPER_THRESHOLD) {
+				if (sample > firstSample) 
+					firstSample = sample;
+				highFound = TRUE;
 			} else if (!highFound) {
-				nosignal++;
 				continue;
 			}
 
 			// skip until samples begin to change
-			if (startFound || curSample < firstSample-T55xx_READ_TOL){
+			if (startFound || sample < firstSample - T55xx_READ_TOL){
 				if (!startFound) 
 					dest[i++] = firstSample;
-				startFound = true;
-				dest[i++] = curSample;
-			LED_D_OFF();
+				startFound = TRUE;
+				dest[i++] = sample;
+			
+			// exit condition.
 			if (i >= bufsize) break;
 			}
 		}

@@ -50,12 +50,11 @@ int usage_t55xx_config(){
 	return 0;
 }
 int usage_t55xx_read(){
-	PrintAndLog("Usage:  lf t55xx read b <block> p <password> <override_safety> <wakeup>");
+	PrintAndLog("Usage:  lf t55xx read b <block> p <password> <override_safety>");
 	PrintAndLog("Options:");
     PrintAndLog("     b <block>,	block number to read. Between 0-7");
     PrintAndLog("     p <password>, OPTIONAL password 4bytes (8 hex symbols)");
 	PrintAndLog("     o,			OPTIONAL override safety check");
-	PrintAndLog("     w,			OPTIONAL wakeup");
 	PrintAndLog("     ****WARNING****");
 	PrintAndLog("     Use of read with password on a tag not configured for a pwd");
 	PrintAndLog("     can damage the tag");
@@ -226,52 +225,42 @@ int CmdT55xxSetConfig(const char *Cmd) {
 	}
 
 	// No args
-	if (cmdp == 0) {
-		printConfiguration( config );
-		return 0;
-	}
+	if (cmdp == 0) return printConfiguration( config );
+
 	//Validations
-	if (errors)
-		return usage_t55xx_config();
+	if (errors) return usage_t55xx_config();
 
  	config.block0 = 0;
- 	printConfiguration ( config );
-	return 0;
+ 	return printConfiguration ( config );
 }
 
 int CmdT55xxReadBlock(const char *Cmd) {
 	uint8_t block = 255;
-	uint8_t wake = 0;
-	uint8_t usepwd = 0;
-	uint32_t password = 0xFFFFFFFF; //default to blank Block 7
-	uint8_t override = 0;
+	uint32_t password = 0; //default to blank Block 7
+	bool usepwd = FALSE;
+	bool override = FALSE;	
+	bool errors = FALSE;
 	uint8_t cmdp = 0;
-	bool errors = false;
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
-		return usage_t55xx_read();
+			return usage_t55xx_read();
 		case 'b':
 		case 'B':
 			errors |= param_getdec(Cmd, cmdp+1, &block);
-			cmdp+=2;
+			cmdp += 2;
 			break;
 		case 'o':
 		case 'O':
-			override = 1;
+			override = TRUE;
 			cmdp++;
 			break;
 		case 'p':
 		case 'P':
-			password = param_get32ex(Cmd, cmdp+1, 0, 10);
-			usepwd = 1;
-			cmdp+=2;
-			break;
-		case 'w':
-		case 'W':
-			wake = 1;
-			cmdp++;
+			password = param_get32ex(Cmd, cmdp+1, 0xFFFFFFFF, 16);
+			usepwd = TRUE;
+			cmdp += 2;
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -280,11 +269,8 @@ int CmdT55xxReadBlock(const char *Cmd) {
 		}
 	}
 	if (errors) return usage_t55xx_read();
-	if (wake && !usepwd) {
-		PrintAndLog("Wake command must use a pwd");
-		return 1;
-	}
-	if ((block > 7) && !wake) {
+
+	if ( block > 7 ) {
 		PrintAndLog("Block must be between 0 and 7");
 		return 1;
 	}	
@@ -292,13 +278,10 @@ int CmdT55xxReadBlock(const char *Cmd) {
 	UsbCommand c = {CMD_T55XX_READ_BLOCK, {0, block, password}};
 
 	//Password mode
-	if ( usepwd || wake ) {
+	if ( usepwd ) {
+		
 		// try reading the config block and verify that PWD bit is set before doing this!
-		if ( wake || override ) {
-			c.arg[0] = (wake<<8) & usepwd;
-			if ( !wake && override )
-				PrintAndLog("Safety Check Overriden - proceeding despite risk");
-		} else {
+		if ( !override ) {
 			AquireData( CONFIGURATION_BLOCK );
 			if ( !tryDetectModulation() ) {
 				PrintAndLog("Safety Check: Could not detect if PWD bit is set in config block. Exits.");
@@ -306,6 +289,9 @@ int CmdT55xxReadBlock(const char *Cmd) {
 			} else {		
 				PrintAndLog("Safety Check: PWD bit is NOT set in config block. Reading without password...");	
 			}
+		} else {		
+			PrintAndLog("Safety Check Overriden - proceeding despite risk");
+			c.arg[0] = usepwd;
 		}
 	}
 
@@ -320,14 +306,11 @@ int CmdT55xxReadBlock(const char *Cmd) {
 	GetFromBigBuf(got,sizeof(got),0);
 	WaitForResponse(CMD_ACK,NULL);
 	setGraphBuf(got, sizeof(got));
-	//DemodBufferLen=0;
+
 	if (!DecodeT55xxBlock()) return 3;
+	
 	char blk[10]={0};
-	if ( wake ) {
-		sprintf(blk,"wake");
-	} else {
-	sprintf(blk,"%d", block);
-	}
+	sprintf(blk,"%d", block);	
 	printT55xxBlock(blk);
 	return 0;
 }
@@ -390,8 +373,7 @@ bool DecodeT55xxBlock(){
 int CmdT55xxDetect(const char *Cmd){
 
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H')
-		return usage_t55xx_detect();
+	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') return usage_t55xx_detect();
 	
 	if (strlen(Cmd)==0)
 		AquireData( CONFIGURATION_BLOCK );
@@ -683,17 +665,17 @@ void printT55xxBlock(const char *blockNum){
 	}
 
 	for (; i < endpos; ++i)
-		bits[i - config.offset]=DemodBuffer[i];
+		bits[i - config.offset] = DemodBuffer[i];
 
 	blockData = PackBits(0, 32, bits);
-	PrintAndLog("[%s] 0x%08X  %s", blockNum, blockData, sprint_bin(bits,32));
+	PrintAndLog("%s | %08X | %s", blockNum, blockData, sprint_bin(bits,32));
 }
 
 int special(const char *Cmd) {
 	uint32_t blockData = 0;
 	uint8_t bits[32] = {0x00};
 
-	PrintAndLog("[OFFSET] [DATA] [BINARY]");
+	PrintAndLog("OFFSET | DATA  | BINARY");
 	PrintAndLog("----------------------------------------------------");
 	int i,j = 0;
 	for (; j < 64; ++j){
@@ -703,32 +685,29 @@ int special(const char *Cmd) {
 	
 		blockData = PackBits(0, 32, bits);
 		
-		PrintAndLog("[%02d] 0x%08X  %s",j , blockData, sprint_bin(bits,32));	
+		PrintAndLog("%02d | 0x%08X | %s",j , blockData, sprint_bin(bits,32));	
 	}
 	return 0;
 }
 
-void printConfiguration( t55xx_conf_block_t b){
+int printConfiguration( t55xx_conf_block_t b){
 	PrintAndLog("Modulation : %s", GetSelectedModulationStr(b.modulation) );
 	PrintAndLog("Bit Rate   : %s", GetBitRateStr(b.bitrate) );
 	PrintAndLog("Inverted   : %s", (b.inverted) ? "Yes" : "No" );
 	PrintAndLog("Offset     : %d", b.offset);
 	PrintAndLog("Block0     : 0x%08X", b.block0);
 	PrintAndLog("");
+	return 0;
 }
 
-int CmdT55xxWriteBlock(const char *Cmd)
-{
+int CmdT55xxWriteBlock(const char *Cmd) {
 	int block = 8; //default to invalid block
 	int data = 0xFFFFFFFF; //default to blank Block 
 	int password = 0xFFFFFFFF; //default to blank Block 7
 	
 	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') {
-		usage_t55xx_write();
-		return 0;
-	}
-  
+	if (cmdp == 'h' || cmdp == 'H') return usage_t55xx_write();
+ 
 	int res = sscanf(Cmd, "%d %x %x",&block, &data, &password);
 	
 	if ( res < 2 || res > 3) {
@@ -762,12 +741,10 @@ int CmdT55xxWriteBlock(const char *Cmd)
 	return 0;
 }
 
-int CmdT55xxReadTrace(const char *Cmd)
-{
+int CmdT55xxReadTrace(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') 
-		return usage_t55xx_trace();
+	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') return usage_t55xx_trace();
 
 	if (strlen(Cmd)==0)
 		AquireData( TRACE_BLOCK );
@@ -852,8 +829,7 @@ int CmdT55xxInfo(const char *Cmd){
 	*/
 	char cmdp = param_getchar(Cmd, 0);
 
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H')
-		return usage_t55xx_info();
+	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') return usage_t55xx_info();
 	
 	if (strlen(Cmd)==0)
 		AquireData( CONFIGURATION_BLOCK );
@@ -909,12 +885,8 @@ int CmdT55xxDump(const char *Cmd){
 
 	char s[20] = {0x00};
 	uint8_t pwd[4] = {0x00};
-
 	char cmdp = param_getchar(Cmd, 0);
-	if ( cmdp == 'h' || cmdp == 'H') {
-		usage_t55xx_dump();
-		return 0;
-	}
+	if ( cmdp == 'h' || cmdp == 'H') return usage_t55xx_dump();
 
 	bool hasPwd = ( strlen(Cmd) > 0);	
 	if ( hasPwd ){
@@ -937,25 +909,17 @@ int CmdT55xxDump(const char *Cmd){
 }
 
 int AquireData( uint8_t block ){
-
-	UsbCommand c;
 	
-	if ( block == CONFIGURATION_BLOCK ) 
-		c.cmd = CMD_T55XX_READ_BLOCK;
-	else if (block == TRACE_BLOCK )
-		c.cmd = CMD_T55XX_READ_TRACE;
-		
-	c.arg[0] = 0x00;
-	c.arg[1] = 0x00;
-	c.arg[2] = 0x00;
-	c.d.asBytes[0] = 0x0; 
-
-	//Password mode
-	// if ( res == 2 ) {
-		// c.arg[2] = password;
-		// c.d.asBytes[0] = 0x1; 
-	// }
-
+	uint32_t password = 0;
+	UsbCommand c = {CMD_T55XX_READ_BLOCK, {0, 0, password}};
+	
+	if ( block == CONFIGURATION_BLOCK ) {
+		c.arg[0] = 0x00 | 0x01;
+	}
+	else if (block == TRACE_BLOCK ) {
+		c.arg[0] = 0x02 | 0x01;
+	}
+	
 	clearCommandBuffer();
 	SendCommand(&c);
 	if ( !WaitForResponseTimeout(CMD_ACK,NULL,2500) ) {
@@ -1136,7 +1100,7 @@ void t55x7_create_config_block( int tagtype ){
 }
 
 int CmdT55xxWakeUp(const char *Cmd) {
-	uint32_t password = 0xFFFFFFFF; //default to blank Block 7
+	uint32_t password = 0;
 	uint8_t cmdp = 0;
 	bool errors = false;
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -1146,7 +1110,7 @@ int CmdT55xxWakeUp(const char *Cmd) {
 			return usage_t55xx_wakup();
 		case 'p':
 		case 'P':
-			password = param_get32ex(Cmd, cmdp+1, 0, 10);
+			password = param_get32ex(Cmd, cmdp+1, 0xFFFFFFFF, 16);
 			cmdp+=2;
 			break;
 		default:
@@ -1156,9 +1120,8 @@ int CmdT55xxWakeUp(const char *Cmd) {
 		}
 	}
 	if (errors) return usage_t55xx_wakup();
-	
-	UsbCommand c = {CMD_T55XX_WAKEUP, {password, 0, 0}};
 
+	UsbCommand c = {CMD_T55XX_WAKEUP, {password, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	PrintAndLog("Wake up command sent. Try read now");

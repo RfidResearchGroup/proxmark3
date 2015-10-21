@@ -1197,7 +1197,8 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 // Read one card block in page 0
 void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	LED_A_ON();
-	uint8_t PwdMode = arg0 & 0xFF;
+	uint8_t PwdMode = arg0 & 0x01;
+	uint8_t Page    = arg0 & 0x02;
 	uint32_t i = 0;
 	
 	//clear buffer now so it does not interfere with timing later
@@ -1215,7 +1216,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	
 	// Opcode 10
 	T55xxWriteBit(1);
-	T55xxWriteBit(0); //Page 0
+	T55xxWriteBit(Page); //Page 0
 
 	if (PwdMode){
 		// Send Pwd
@@ -1245,33 +1246,45 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 
 // Read card traceability data (page 1)
 void T55xxReadTrace(void){
-	LED_A_ON();
+	// LED_A_ON();
 
-	//clear buffer now so it does not interfere with timing later
-	BigBuf_Clear_ext(false);
+	// uint8_t PwdMode = arg0 & 0xFF;
+	// uint32_t i = 0;
+		
+	// //clear buffer now so it does not interfere with timing later
+	// BigBuf_Clear_ext(false);
 
-	// Set up FPGA, 125kHz
-	LFSetupFPGAForADC(95, true);
+	// // Set up FPGA, 125kHz
+	// LFSetupFPGAForADC(95, true);
 	
-  // Trigger T55x7 Direct Access Mode
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelayUs(START_GAP);
+	// // Trigger T55x7 Direct Access Mode
+	// FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	// SpinDelayUs(START_GAP);
 
-	// Opcode 11
-	T55xxWriteBit(1);
-	T55xxWriteBit(1); //Page 1
+	// // Opcode 11
+	// T55xxWriteBit(1);
+	// T55xxWriteBit(1); //Page 1
 
-	// Turn field on to read the response
-	TurnReadLFOn(READ_GAP);
+	// if (PwdMode){
+		// // Send Pwd
+		// for (i = 0x80000000; i != 0; i >>= 1)
+			// T55xxWriteBit(Pwd & i);
+	// }
 
-	// Acquisition
-	doT55x7Acquisition();
+	// // Send a zero bit separation
+	// T55xxWriteBit(0);
+	
+	// // Turn field on to read the response
+	// TurnReadLFOn(READ_GAP);
 
-	// turn field off
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	cmd_send(CMD_ACK,0,0,0,0,0);
-	LED_A_OFF();
-	LED_B_OFF();
+	// // Acquisition
+	// doT55x7Acquisition();
+
+	// // turn field off
+	// FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	// cmd_send(CMD_ACK,0,0,0,0,0);
+	// LED_A_OFF();
+	// LED_B_OFF();
 }
 
 void T55xxWakeUp(uint32_t Pwd){
@@ -1294,7 +1307,7 @@ void T55xxWakeUp(uint32_t Pwd){
 		T55xxWriteBit(Pwd & i);
 
 	// Turn field on to read the response
-	TurnReadLFOn(READ_GAP);
+	TurnReadLFOn(20*1000);
 }
 
 /*-------------- Cloning routines -----------*/
