@@ -33,9 +33,7 @@
 #include "cmdlfviking.h"
 static int CmdHelp(const char *Cmd);
 
-
-int usage_lf_cmdread()
-{
+int usage_lf_cmdread(void) {
 	PrintAndLog("Usage: lf cmdread d <delay period> z <zero period> o <one period> c <cmdbytes> [H]");
 	PrintAndLog("Options:        ");
 	PrintAndLog("       h             This help");
@@ -49,6 +47,85 @@ int usage_lf_cmdread()
 	PrintAndLog("      lf cmdread d 80 z 100 o 200 c 11000");
 	PrintAndLog("      lf cmdread d 80 z 100 o 100 c 11000 H");
 	return 0;
+}
+int usage_lf_read(void){
+	PrintAndLog("Usage: lf read [h] [s]");
+	PrintAndLog("Options:        ");
+	PrintAndLog("       h            This help");
+	PrintAndLog("       s            silent run no printout");
+	PrintAndLog("This function takes no arguments. ");
+	PrintAndLog("Use 'lf config' to set parameters.");
+	return 0;
+}
+int usage_lf_snoop(void) {
+	PrintAndLog("Usage: lf snoop");
+	PrintAndLog("Options:        ");
+	PrintAndLog("       h            This help");
+	PrintAndLog("This function takes no arguments. ");
+	PrintAndLog("Use 'lf config' to set parameters.");
+	return 0;
+}
+int usage_lf_config(void) {
+	PrintAndLog("Usage: lf config [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
+	PrintAndLog("Options:        ");
+	PrintAndLog("       h             This help");
+	PrintAndLog("       L             Low frequency (125 KHz)");
+	PrintAndLog("       H             High frequency (134 KHz)");
+	PrintAndLog("       q <divisor>   Manually set divisor. 88-> 134KHz, 95-> 125 Hz");
+	PrintAndLog("       b <bps>       Sets resolution of bits per sample. Default (max): 8");
+	PrintAndLog("       d <decim>     Sets decimation. A value of N saves only 1 in N samples. Default: 1");
+	PrintAndLog("       a [0|1]       Averaging - if set, will average the stored sample value when decimating. Default: 1");
+	PrintAndLog("       t <threshold> Sets trigger threshold. 0 means no threshold (range: 0-128)");
+	PrintAndLog("Examples:");
+	PrintAndLog("      lf config b 8 L");
+	PrintAndLog("                    Samples at 125KHz, 8bps.");
+	PrintAndLog("      lf config H b 4 d 3");
+	PrintAndLog("                    Samples at 134KHz, averages three samples into one, stored with ");
+	PrintAndLog("                    a resolution of 4 bits per sample.");
+	PrintAndLog("      lf read");
+	PrintAndLog("                    Performs a read (active field)");
+	PrintAndLog("      lf snoop");
+	PrintAndLog("                    Performs a snoop (no active field)");
+	return 0;
+}
+int usage_lf_simfsk(void) {
+  PrintAndLog("Usage: lf simfsk [c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
+  PrintAndLog("Options:        ");
+  PrintAndLog("       h              This help");
+  PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
+  PrintAndLog("       i              invert data");
+  PrintAndLog("       H <fcHigh>     Manually set the larger Field Clock");
+  PrintAndLog("       L <fcLow>      Manually set the smaller Field Clock");
+  //PrintAndLog("       s              TBD- -to enable a gap between playback repetitions - default: no gap");
+  PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
+  PrintAndLog("\n  NOTE: if you set one clock manually set them all manually");
+  return 0;
+}
+int usage_lf_simask(void) {
+  PrintAndLog("Usage: lf simask [c <clock>] [i] [b|m|r] [s] [d <raw hex to sim>]");
+  PrintAndLog("Options:        ");
+  PrintAndLog("       h              This help");
+  PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
+  PrintAndLog("       i              invert data");
+  PrintAndLog("       b              sim ask/biphase");
+  PrintAndLog("       m              sim ask/manchester - Default");
+  PrintAndLog("       r              sim ask/raw");
+  PrintAndLog("       s              TBD- -to enable a gap between playback repetitions - default: no gap");
+  PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
+  return 0;
+}
+int usage_lf_simpsk(void) {
+  PrintAndLog("Usage: lf simpsk [1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>]");
+  PrintAndLog("Options:        ");
+  PrintAndLog("       h              This help");
+  PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
+  PrintAndLog("       i              invert data");
+  PrintAndLog("       1              set PSK1 (default)");
+  PrintAndLog("       2              set PSK2");
+  PrintAndLog("       3              set PSK3");
+  PrintAndLog("       r <carrier>    2|4|8 are valid carriers: default = 2");
+  PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
+  return 0;
 }
 
 /* send a LF command before reading */
@@ -421,51 +498,6 @@ int CmdIndalaClone(const char *Cmd)
   return 0;
 }
 
-int usage_lf_read()
-{
-	PrintAndLog("Usage: lf read");
-	PrintAndLog("Options:        ");
-	PrintAndLog("       h            This help");
-	PrintAndLog("       s            silent run no printout");
-	PrintAndLog("This function takes no arguments. ");
-	PrintAndLog("Use 'lf config' to set parameters.");
-	return 0;
-}
-int usage_lf_snoop()
-{
-	PrintAndLog("Usage: lf snoop");
-	PrintAndLog("Options:        ");
-	PrintAndLog("       h            This help");
-	PrintAndLog("This function takes no arguments. ");
-	PrintAndLog("Use 'lf config' to set parameters.");
-	return 0;
-}
-
-int usage_lf_config()
-{
-	PrintAndLog("Usage: lf config [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
-	PrintAndLog("Options:        ");
-	PrintAndLog("       h             This help");
-	PrintAndLog("       L             Low frequency (125 KHz)");
-	PrintAndLog("       H             High frequency (134 KHz)");
-	PrintAndLog("       q <divisor>   Manually set divisor. 88-> 134KHz, 95-> 125 Hz");
-	PrintAndLog("       b <bps>       Sets resolution of bits per sample. Default (max): 8");
-	PrintAndLog("       d <decim>     Sets decimation. A value of N saves only 1 in N samples. Default: 1");
-	PrintAndLog("       a [0|1]       Averaging - if set, will average the stored sample value when decimating. Default: 1");
-	PrintAndLog("       t <threshold> Sets trigger threshold. 0 means no threshold (range: 0-128)");
-	PrintAndLog("Examples:");
-	PrintAndLog("      lf config b 8 L");
-	PrintAndLog("                    Samples at 125KHz, 8bps.");
-	PrintAndLog("      lf config H b 4 d 3");
-	PrintAndLog("                    Samples at 134KHz, averages three samples into one, stored with ");
-	PrintAndLog("                    a resolution of 4 bits per sample.");
-	PrintAndLog("      lf read");
-	PrintAndLog("                    Performs a read (active field)");
-	PrintAndLog("      lf snoop");
-	PrintAndLog("                    Performs a snoop (no active field)");
-	return 0;
-}
-
 int CmdLFSetConfig(const char *Cmd)
 {
 
@@ -545,35 +577,31 @@ int CmdLFSetConfig(const char *Cmd)
 
 int CmdLFRead(const char *Cmd)
 {
-
-	uint8_t cmdp = 0;
 	bool arg1 = false;
-	if (param_getchar(Cmd, cmdp) == 'h')
-	{
-		return usage_lf_read();
-	}
-	if (param_getchar(Cmd, cmdp) == 's') arg1 = true; //suppress print
-	//And ship it to device
+	uint8_t cmdp =  param_getchar(Cmd, 0);
+	
+	if ( cmdp == 'h' || cmdp == 'H') return usage_lf_read();
+	
+	 //suppress print
+	if ( cmdp == 's' || cmdp == 'S') arg1 = true;
+
 	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, {arg1,0,0}};
+	clearCommandBuffer();
 	SendCommand(&c);
-	//WaitForResponse(CMD_ACK,NULL);	
 	if ( !WaitForResponseTimeout(CMD_ACK,NULL,2500) ) {
 		PrintAndLog("command execution time out");
 		return 1;
 	}
-
 	return 0;
 }
 
 int CmdLFSnoop(const char *Cmd)
 {
-	uint8_t cmdp =0;
-	if(param_getchar(Cmd, cmdp) == 'h')
-	{
-		return usage_lf_snoop();
-	}
-
+	uint8_t cmdp = param_getchar(Cmd, 0);
+	if(cmdp == 'h' || cmdp == 'H') return usage_lf_snoop();
+	
 	UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES};
+	clearCommandBuffer();	
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK,NULL);
 	return 0;
@@ -595,81 +623,33 @@ static void ChkBitstream(const char *str)
 // converts GraphBuffer to bitstream (based on zero crossings) if needed.
 int CmdLFSim(const char *Cmd)
 {
-  int i,j;
-  static int gap;
+	int i,j;
+	static int gap;
 
-  sscanf(Cmd, "%i", &gap);
+	sscanf(Cmd, "%i", &gap);
 
 	// convert to bitstream if necessary 
-
-  ChkBitstream(Cmd);
+	ChkBitstream(Cmd);
 
 	//can send only 512 bits at a time (1 byte sent per bit...)
-  printf("Sending [%d bytes]", GraphTraceLen);
-  for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
-    UsbCommand c={CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
+	printf("Sending [%d bytes]", GraphTraceLen);
+	for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
+		UsbCommand c = {CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
 
-    for (j = 0; j < USB_CMD_DATA_SIZE; j++) {
-      c.d.asBytes[j] = GraphBuffer[i+j];
-    }
-    SendCommand(&c);
-    WaitForResponse(CMD_ACK,NULL);
-    printf(".");
-  }
+		for (j = 0; j < USB_CMD_DATA_SIZE; j++) {
+			c.d.asBytes[j] = GraphBuffer[i+j];
+		}
+		clearCommandBuffer();
+		SendCommand(&c);
+		WaitForResponse(CMD_ACK,NULL);
+		printf(".");
+	}
 
-  printf("\n");
-  PrintAndLog("Starting to simulate");
-  UsbCommand c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
-  SendCommand(&c);
-  return 0;
-}
-
-int usage_lf_simfsk(void)
-{
-  //print help
-  PrintAndLog("Usage: lf simfsk [c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
-  PrintAndLog("Options:        ");
-  PrintAndLog("       h              This help");
-  PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
-  PrintAndLog("       i              invert data");
-  PrintAndLog("       H <fcHigh>     Manually set the larger Field Clock");
-  PrintAndLog("       L <fcLow>      Manually set the smaller Field Clock");
-  //PrintAndLog("       s              TBD- -to enable a gap between playback repetitions - default: no gap");
-  PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
-  PrintAndLog("\n  NOTE: if you set one clock manually set them all manually");
-  return 0;
-}
-
-int usage_lf_simask(void)
-{
-  //print help
-  PrintAndLog("Usage: lf simask [c <clock>] [i] [b|m|r] [s] [d <raw hex to sim>]");
-  PrintAndLog("Options:        ");
-  PrintAndLog("       h              This help");
-  PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
-  PrintAndLog("       i              invert data");
-  PrintAndLog("       b              sim ask/biphase");
-  PrintAndLog("       m              sim ask/manchester - Default");
-  PrintAndLog("       r              sim ask/raw");
-  PrintAndLog("       s              TBD- -to enable a gap between playback repetitions - default: no gap");
-  PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
-  return 0;
-}
-
-int usage_lf_simpsk(void)
-{
-  //print help
-  PrintAndLog("Usage: lf simpsk [1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>]");
-  PrintAndLog("Options:        ");
-  PrintAndLog("       h              This help");
-  PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
-  PrintAndLog("       i              invert data");
-  PrintAndLog("       1              set PSK1 (default)");
-  PrintAndLog("       2              set PSK2");
-  PrintAndLog("       3              set PSK3");
-  PrintAndLog("       r <carrier>    2|4|8 are valid carriers: default = 2");
-  PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
-  return 0;
+	PrintAndLog("\nStarting to simulate");
+	UsbCommand c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	return 0;
 }
 
 // by marshmellow - sim ask data given clock, fcHigh, fcLow, invert 

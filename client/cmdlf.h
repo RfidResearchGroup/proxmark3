@@ -27,4 +27,12 @@ int CmdLFSnoop(const char *Cmd);
 int CmdVchDemod(const char *Cmd);
 int CmdLFfind(const char *Cmd);
 
+// usages helptext
+int usage_lf_cmdread(void);
+int usage_lf_read(void);
+int usage_lf_snoop(void);
+int usage_lf_config(void);
+int usage_lf_simfsk(void);
+int usage_lf_simask(void);
+int usage_lf_simpsk(void);
 #endif
