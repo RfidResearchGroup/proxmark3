@@ -611,7 +611,7 @@ int CmdHF14ADesAuth(const char *Cmd){
 	
 	c.d.asBytes[0] = keylength;
 	memcpy(c.d.asBytes+1, key, keylength);
-	
+	clearCommandBuffer();
     SendCommand(&c);
 	UsbCommand resp;
 	

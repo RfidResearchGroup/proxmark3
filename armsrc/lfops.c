@@ -16,8 +16,8 @@
 #include "string.h"
 #include "lfdemod.h"
 #include "lfsampling.h"
-#include "usb_cdc.h"
-
+#include "protocols.h"
+#include "usb_cdc.h" //test
 
 /**
  * Function to do a modulation and then get samples.
@@ -1053,61 +1053,9 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 /*------------------------------
  * T5555/T5557/T5567 routines
  *------------------------------
- */
-
-/* T55x7 configuration register definitions */
-#define T55x7_POR_DELAY				0x00000001
-#define T55x7_ST_TERMINATOR			0x00000008
-#define T55x7_PWD					0x00000010
-#define T55x7_MAXBLOCK_SHIFT		5
-#define T55x7_AOR					0x00000200
-#define T55x7_PSKCF_RF_2			0
-#define T55x7_PSKCF_RF_4			0x00000400
-#define T55x7_PSKCF_RF_8			0x00000800
-#define T55x7_MODULATION_DIRECT		0
-#define T55x7_MODULATION_PSK1		0x00001000
-#define T55x7_MODULATION_PSK2		0x00002000
-#define T55x7_MODULATION_PSK3		0x00003000
-#define T55x7_MODULATION_FSK1		0x00004000
-#define T55x7_MODULATION_FSK2		0x00005000
-#define T55x7_MODULATION_FSK1a		0x00006000
-#define T55x7_MODULATION_FSK2a		0x00007000
-#define T55x7_MODULATION_MANCHESTER	0x00008000
-#define T55x7_MODULATION_BIPHASE	0x00010000
-#define T55x7_MODULATION_DIPHASE	0x00018000
-//#define T55x7_MODULATION_BIPHASE57	0x00011000
-#define T55x7_BITRATE_RF_8			0
-#define T55x7_BITRATE_RF_16			0x00040000
-#define T55x7_BITRATE_RF_32			0x00080000
-#define T55x7_BITRATE_RF_40			0x000C0000
-#define T55x7_BITRATE_RF_50			0x00100000
-#define T55x7_BITRATE_RF_64			0x00140000
-#define T55x7_BITRATE_RF_100		0x00180000
-#define T55x7_BITRATE_RF_128		0x001C0000
-
-/* T5555 (Q5) configuration register definitions */
-#define T5555_ST_TERMINATOR			0x00000001
-#define T5555_MAXBLOCK_SHIFT		0x00000001
-#define T5555_MODULATION_MANCHESTER	0
-#define T5555_MODULATION_PSK1		0x00000010
-#define T5555_MODULATION_PSK2		0x00000020
-#define T5555_MODULATION_PSK3		0x00000030
-#define T5555_MODULATION_FSK1		0x00000040
-#define T5555_MODULATION_FSK2		0x00000050
-#define T5555_MODULATION_BIPHASE	0x00000060
-#define T5555_MODULATION_DIRECT		0x00000070
-#define T5555_INVERT_OUTPUT			0x00000080
-#define T5555_PSK_RF_2				0
-#define T5555_PSK_RF_4				0x00000100
-#define T5555_PSK_RF_8				0x00000200
-#define T5555_USE_PWD				0x00000400
-#define T5555_USE_AOR				0x00000800
-#define T5555_BITRATE_SHIFT			12
-#define T5555_FAST_WRITE			0x00004000
-#define T5555_PAGE_SELECT			0x00008000
-
-/*
- * Relevant times in microsecond
+ * NOTE: T55x7/T5555 configuration register definitions moved to protocols.h 
+ *
+ * Relevant communication times in microsecond
  * To compensate antenna falling times shorten the write times
  * and enlarge the gap ones.
  * Q5 tags seems to have issues when these values changes. 
@@ -1136,24 +1084,29 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 void TurnReadLFOn(int delay) {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	// Give it a bit of time for the resonant antenna to settle.
-	SpinDelayUs(delay); //155*8 //50*8
+
+	// measure antenna strength.
+	//int adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
+	// where to save it
+	
+	SpinDelayUs(delay);
 }
 
 // Write one bit to card
 void T55xxWriteBit(int bit) {
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 	if (!bit)
-		SpinDelayUs(WRITE_0);
+		TurnReadLFOn(WRITE_0);
 	else
-		SpinDelayUs(WRITE_1);
+		TurnReadLFOn(WRITE_1);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelayUs(WRITE_GAP);
 }
 
 // Write one card block in page 0, no lock
-void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMode) {
+void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t arg) {
 	LED_A_ON();
-	
+	bool PwdMode = arg & 0x1;
+	uint8_t Page = (arg & 0x2)>>1;
 	uint32_t i = 0;
 
 	// Set up FPGA, 125kHz
@@ -1165,8 +1118,7 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 
 	// Opcode 10
 	T55xxWriteBit(1);
-	T55xxWriteBit(0); //Page 0
-	
+	T55xxWriteBit(Page); //Page 0
 	if (PwdMode){
 		// Send Pwd
 		for (i = 0x80000000; i != 0; i >>= 1)
@@ -1186,20 +1138,24 @@ void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t PwdMod
 	// Perform write (nominal is 5.6 ms for T55x7 and 18ms for E5550,
 	// so wait a little more)
 	TurnReadLFOn(20 * 1000);
+		//could attempt to do a read to confirm write took
+		// as the tag should repeat back the new block 
+		// until it is reset, but to confirm it we would 
+		// need to know the current block 0 config mode
 	
 	// turn field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,0,0,0,0);
 	LED_A_OFF();
-	LED_B_OFF();
 }
 
 // Read one card block in page 0
 void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	LED_A_ON();
-	uint8_t PwdMode = arg0 & 0x01;
-	uint8_t Page    = arg0 & 0x02;
+	bool PwdMode = arg0 & 0x1;
+	uint8_t Page = (arg0 & 0x2) >> 1;
 	uint32_t i = 0;
+	bool RegReadMode = (Block == 0xFF);
 	
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_ext(false);
@@ -1207,14 +1163,14 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	//make sure block is at max 7
 	Block &= 0x7;
 
-	// Set up FPGA, 125kHz
+	// Set up FPGA, 125kHz to power up the tag
 	LFSetupFPGAForADC(95, true);
 	
-	// Trigger T55x7 Direct Access Mode
+	// Trigger T55x7 Direct Access Mode with start gap
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelayUs(START_GAP);
 	
-	// Opcode 10
+	// Opcode 1[page]
 	T55xxWriteBit(1);
 	T55xxWriteBit(Page); //Page 0
 
@@ -1223,11 +1179,11 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 		for (i = 0x80000000; i != 0; i >>= 1)
 			T55xxWriteBit(Pwd & i);
 	}
-
 	// Send a zero bit separation
 	T55xxWriteBit(0);
 	
-	// Send Block number
+	// Send Block number (if direct access mode)
+	if (!RegReadMode)
 	for (i = 0x04; i != 0; i >>= 1)
 		T55xxWriteBit(Block & i);
 
@@ -1237,54 +1193,10 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	// Acquisition
 	doT55x7Acquisition();
 	
-	// turn field off
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	// Turn the field off
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 	cmd_send(CMD_ACK,0,0,0,0,0);    
 	LED_A_OFF();
-	LED_B_OFF();
-}
-
-// Read card traceability data (page 1)
-void T55xxReadTrace(void){
-	// LED_A_ON();
-
-	// uint8_t PwdMode = arg0 & 0xFF;
-	// uint32_t i = 0;
-		
-	// //clear buffer now so it does not interfere with timing later
-	// BigBuf_Clear_ext(false);
-
-	// // Set up FPGA, 125kHz
-	// LFSetupFPGAForADC(95, true);
-	
-	// // Trigger T55x7 Direct Access Mode
-	// FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	// SpinDelayUs(START_GAP);
-
-	// // Opcode 11
-	// T55xxWriteBit(1);
-	// T55xxWriteBit(1); //Page 1
-
-	// if (PwdMode){
-		// // Send Pwd
-		// for (i = 0x80000000; i != 0; i >>= 1)
-			// T55xxWriteBit(Pwd & i);
-	// }
-
-	// // Send a zero bit separation
-	// T55xxWriteBit(0);
-	
-	// // Turn field on to read the response
-	// TurnReadLFOn(READ_GAP);
-
-	// // Acquisition
-	// doT55x7Acquisition();
-
-	// // turn field off
-	// FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	// cmd_send(CMD_ACK,0,0,0,0,0);
-	// LED_A_OFF();
-	// LED_B_OFF();
 }
 
 void T55xxWakeUp(uint32_t Pwd){
@@ -1306,16 +1218,23 @@ void T55xxWakeUp(uint32_t Pwd){
 	for (i = 0x80000000; i != 0; i >>= 1)
 		T55xxWriteBit(Pwd & i);
 
-	// Turn field on to read the response
+	// Turn and leave field on to let the begin repeating transmission
 	TurnReadLFOn(20*1000);
 }
 
 /*-------------- Cloning routines -----------*/
+
+void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks) {
+	// write last block first and config block last (if included)
+	for (uint8_t i = numblocks; i > startblock; i--)
+		T55xxWriteBlock(blockdata[i-1],i-1,0,0);
+}
+
 // Copy HID id to card and setup block 0 config
-void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT)
-{
-	int data1=0, data2=0, data3=0, data4=0, data5=0, data6=0; //up to six blocks for long format
-	int last_block = 0;
+void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
+	uint32_t data[] = {0,0,0,0,0,0,0};
+	//int data1=0, data2=0, data3=0, data4=0, data5=0, data6=0; //up to six blocks for long format
+	uint8_t last_block = 0;
 
 	if (longFMT){
 		// Ensure no more than 84 bits supplied
@@ -1325,108 +1244,34 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT)
 		}
 		// Build the 6 data blocks for supplied 84bit ID
 		last_block = 6;
-		data1 = 0x1D96A900; // load preamble (1D) & long format identifier (9E manchester encoded)
-		for (int i=0;i<4;i++) {
-			if (hi2 & (1<<(19-i)))
-				data1 |= (1<<(((3-i)*2)+1)); // 1 -> 10
-			else
-				data1 |= (1<<((3-i)*2)); // 0 -> 01
-		}
-
-		data2 = 0;
-		for (int i=0;i<16;i++) {
-			if (hi2 & (1<<(15-i)))
-				data2 |= (1<<(((15-i)*2)+1)); // 1 -> 10
-			else
-				data2 |= (1<<((15-i)*2)); // 0 -> 01
-		}
-
-		data3 = 0;
-		for (int i=0;i<16;i++) {
-			if (hi & (1<<(31-i)))
-				data3 |= (1<<(((15-i)*2)+1)); // 1 -> 10
-			else
-				data3 |= (1<<((15-i)*2)); // 0 -> 01
-		}
-
-		data4 = 0;
-		for (int i=0;i<16;i++) {
-			if (hi & (1<<(15-i)))
-				data4 |= (1<<(((15-i)*2)+1)); // 1 -> 10
-			else
-				data4 |= (1<<((15-i)*2)); // 0 -> 01
-		}
-
-		data5 = 0;
-		for (int i=0;i<16;i++) {
-			if (lo & (1<<(31-i)))
-				data5 |= (1<<(((15-i)*2)+1)); // 1 -> 10
-			else
-				data5 |= (1<<((15-i)*2)); // 0 -> 01
-		}
-
-		data6 = 0;
-		for (int i=0;i<16;i++) {
-			if (lo & (1<<(15-i)))
-				data6 |= (1<<(((15-i)*2)+1)); // 1 -> 10
-			else
-				data6 |= (1<<((15-i)*2)); // 0 -> 01
-		}
-	}
-	else {
+		// load preamble (1D) & long format identifier (9E manchester encoded)
+		data[1] = 0x1D96A900 | manchesterEncode2Bytes((hi2 >> 16) & 0xF);
+		// load raw id from hi2, hi, lo to data blocks (manchester encoded)
+		data[2] = manchesterEncode2Bytes(hi2 & 0xFFFF);
+		data[3] = manchesterEncode2Bytes(hi >> 16);
+		data[4] = manchesterEncode2Bytes(hi & 0xFFFF);
+		data[5] = manchesterEncode2Bytes(lo >> 16);
+		data[6] = manchesterEncode2Bytes(lo & 0xFFFF);
+	}	else {
 		// Ensure no more than 44 bits supplied
 		if (hi>0xFFF) {
 			DbpString("Tags can only have 44 bits.");
 			return;
 		}
-
 		// Build the 3 data blocks for supplied 44bit ID
 		last_block = 3;
-
-		data1 = 0x1D000000; // load preamble
-
-		for (int i=0;i<12;i++) {
-			if (hi & (1<<(11-i)))
-				data1 |= (1<<(((11-i)*2)+1)); // 1 -> 10
-			else
-				data1 |= (1<<((11-i)*2)); // 0 -> 01
-		}
-
-		data2 = 0;
-		for (int i=0;i<16;i++) {
-			if (lo & (1<<(31-i)))
-				data2 |= (1<<(((15-i)*2)+1)); // 1 -> 10
-			else
-				data2 |= (1<<((15-i)*2)); // 0 -> 01
-		}
-
-		data3 = 0;
-		for (int i=0;i<16;i++) {
-			if (lo & (1<<(15-i)))
-				data3 |= (1<<(((15-i)*2)+1)); // 1 -> 10
-			else
-				data3 |= (1<<((15-i)*2)); // 0 -> 01
-		}
+		// load preamble
+		data[1] = 0x1D000000 | manchesterEncode2Bytes(hi & 0xFFF);
+		data[2] = manchesterEncode2Bytes(lo >> 16);
+		data[3] = manchesterEncode2Bytes(lo & 0xFFFF);
 	}
+	// load chip config block
+	data[0] = T55x7_BITRATE_RF_50 | T55x7_MODULATION_FSK2a | last_block << T55x7_MAXBLOCK_SHIFT;
 
 	LED_D_ON();
 	// Program the data blocks for supplied ID
 	// and the block 0 for HID format
-	T55xxWriteBlock(data1,1,0,0);
-	T55xxWriteBlock(data2,2,0,0);
-	T55xxWriteBlock(data3,3,0,0);
-
-	if (longFMT) { // if long format there are 6 blocks
-		T55xxWriteBlock(data4,4,0,0);
-		T55xxWriteBlock(data5,5,0,0);
-		T55xxWriteBlock(data6,6,0,0);
-	}
-
-	// Config for HID (RF/50, FSK2a, Maxblock=3 for short/6 for long)
-	T55xxWriteBlock(T55x7_BITRATE_RF_50    |
-					T55x7_MODULATION_FSK2a |
-					last_block << T55x7_MAXBLOCK_SHIFT,
-					0,0,0);
+	WriteT55xx(data, 0, last_block+1);
 
 	LED_D_OFF();
 
@@ -1435,21 +1280,39 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT)
 
 void CopyIOtoT55x7(uint32_t hi, uint32_t lo, uint8_t longFMT)
 {
-	int data1=0, data2=0; //up to six blocks for long format
-
-	data1 = hi;  // load preamble
-	data2 = lo;
+	uint32_t data[] = {T55x7_BITRATE_RF_64 | T55x7_MODULATION_FSK2a | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
 
 	LED_D_ON();
 	// Program the data blocks for supplied ID
-	// and the block 0 for HID format
-	T55xxWriteBlock(data1,1,0,0);
-	T55xxWriteBlock(data2,2,0,0);
+	// and the block 0 config
+	WriteT55xx(data, 0, 3);
 
-	//Config Block
-	T55xxWriteBlock(0x00147040,0,0,0);
 	LED_D_OFF();
 
+	DbpString("DONE!");
+}
+
+// Clone Indala 64-bit tag by UID to T55x7
+void CopyIndala64toT55x7(uint32_t hi, uint32_t lo) {
+	//Program the 2 data blocks for supplied 64bit UID
+	// and the Config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
+	uint32_t data[] = { T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
+	WriteT55xx(data, 0, 3);
+	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
+	//	T5567WriteBlock(0x603E1042,0);
+	DbpString("DONE!");
+}
+// Clone Indala 224-bit tag by UID to T55x7
+void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t uid4, uint32_t uid5, uint32_t uid6, uint32_t uid7)
+{
+	//Program the 7 data blocks for supplied 224bit UID
+	uint32_t data[] = {0, uid1, uid2, uid3, uid4, uid5, uid6, uid7};
+	// and the block 0 for Indala224 format	
+	//Config for Indala (RF/32;PSK1 with RF/2;Maxblock=7)
+	data[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (7 << T55x7_MAXBLOCK_SHIFT);
+	WriteT55xx(data, 0, 8);
+	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
+	//	T5567WriteBlock(0x603E10E2,0);
 	DbpString("DONE!");
 }
 
@@ -1518,92 +1381,27 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo)
 	LED_D_ON();
 
 	// Write EM410x ID
-	T55xxWriteBlock((uint32_t)(id >> 32), 1, 0, 0);
-	T55xxWriteBlock((uint32_t)id, 2, 0, 0);
-
-	// Config for EM410x (RF/64, Manchester, Maxblock=2)
+	uint32_t data[] = {0, id>>32, id & 0xFFFF};
 	if (card) {
-		// Clock rate is stored in bits 8-15 of the card value
 		clock = (card & 0xFF00) >> 8;
+		clock = (clock == 0) ? 64 : clock;
 		Dbprintf("Clock rate: %d", clock);
-		switch (clock) {
-		case 50:
-			clock = T55x7_BITRATE_RF_50;
-		case 40:
-			clock = T55x7_BITRATE_RF_40;
-		case 32:
-			clock = T55x7_BITRATE_RF_32;
-			break;
-		case 16:
-			clock = T55x7_BITRATE_RF_16;
-			break;
-		case 0:
-			// A value of 0 is assumed to be 64 for backwards-compatibility
-			// Fall through...
-		case 64:
-			clock = T55x7_BITRATE_RF_64;
-			break;
-		default:
+		clock = GetT55xxClockBit(clock);
+		if (clock == 0) {
 			Dbprintf("Invalid clock rate: %d", clock);
 			return;
 		}
 
-		// Writing configuration for T55x7 tag
-		T55xxWriteBlock(clock	    |
-						T55x7_MODULATION_MANCHESTER |
-						2 << T55x7_MAXBLOCK_SHIFT,
-						0, 0, 0);
+		data[0] = clock | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT);
+	} else {
+		data[0] = (0x1F << T5555_BITRATE_SHIFT) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
 	}
-	else
-		// Writing configuration for T5555(Q5) tag
-		T55xxWriteBlock(0x1F << T5555_BITRATE_SHIFT |
-						T5555_MODULATION_MANCHESTER |
-						2 << T5555_MAXBLOCK_SHIFT,
-						0, 0, 0);
+
+	WriteT55xx(data, 0, 3);
 
 	LED_D_OFF();
 	Dbprintf("Tag %s written with 0x%08x%08x\n", card ? "T55x7":"T5555",
 			 (uint32_t)(id >> 32), (uint32_t)id);
-}
-
-// Clone Indala 64-bit tag by UID to T55x7
-void CopyIndala64toT55x7(int hi, int lo)
-{
-	//Program the 2 data blocks for supplied 64bit UID
-	// and the block 0 for Indala64 format
-	T55xxWriteBlock(hi,1,0,0);
-	T55xxWriteBlock(lo,2,0,0);
-	//Config for Indala (RF/32;PSK1 with RF/2;Maxblock=2)
-	T55xxWriteBlock(T55x7_BITRATE_RF_32    |
-					T55x7_MODULATION_PSK1 |
-					2 << T55x7_MAXBLOCK_SHIFT,
-					0, 0, 0);
-	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
-	//	T5567WriteBlock(0x603E1042,0);
-
-	DbpString("DONE!");
-}
-
-void CopyIndala224toT55x7(int uid1, int uid2, int uid3, int uid4, int uid5, int uid6, int uid7)
-{
-	//Program the 7 data blocks for supplied 224bit UID
-	// and the block 0 for Indala224 format
-	T55xxWriteBlock(uid1,1,0,0);
-	T55xxWriteBlock(uid2,2,0,0);
-	T55xxWriteBlock(uid3,3,0,0);
-	T55xxWriteBlock(uid4,4,0,0);
-	T55xxWriteBlock(uid5,5,0,0);
-	T55xxWriteBlock(uid6,6,0,0);
-	T55xxWriteBlock(uid7,7,0,0);
-	//Config for Indala (RF/32;PSK1 with RF/2;Maxblock=7)
-	T55xxWriteBlock(T55x7_BITRATE_RF_32    |
-					T55x7_MODULATION_PSK1 |
-					7 << T55x7_MAXBLOCK_SHIFT,
-					0,0,0);
-	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
-	//	T5567WriteBlock(0x603E10E2,0);
-
-	DbpString("DONE!");
 }
 
 //-----------------------------------

@@ -3,13 +3,36 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include "protocols.h"
+
+// ATA55xx shared presets & routines
+uint32_t GetT55xxClockBit(uint32_t clock) {
+	switch (clock) {
+		case 128:
+			return T55x7_BITRATE_RF_128;
+		case 100:
+			return T55x7_BITRATE_RF_100;
+		case 64:
+			return T55x7_BITRATE_RF_64;
+		case 50:
+			return T55x7_BITRATE_RF_50;
+		case 40:
+			return T55x7_BITRATE_RF_40;
+		case 32:
+			return T55x7_BITRATE_RF_32;
+		case 16:
+			return T55x7_BITRATE_RF_16;
+		case 8:
+			return T55x7_BITRATE_RF_8;
+		default:
+			return 0;
+	}
+}
+
 #ifndef ON_DEVICE
 #include "ui.h"
 #define prnt PrintAndLog
-#endif
 
-
-
+// iclass / picopass chip config structures and shared routines
 typedef struct {
 	uint8_t app_limit;      //[8]
 	uint8_t otp[2];         //[9-10]
@@ -31,20 +54,7 @@ typedef struct {
 
 }picopass_hdr;
 
-
-//#define prnt printf
-/*void prnt(char *fmt,...)
-{
-	va_list argptr;
-	va_start(argptr, fmt);
-	vprintf(fmt, argptr);
-	printf("          "); // cleaning prompt
-	va_end(argptr);
-	printf("\n");
-}
-*/
-uint8_t isset(uint8_t val, uint8_t mask)
-{
+uint8_t isset(uint8_t val, uint8_t mask) {
 	return (val & mask);
 }
 
@@ -52,8 +62,7 @@ uint8_t notset(uint8_t val, uint8_t mask){
 	return !(val & mask);
 }
 
-void fuse_config(const picopass_hdr *hdr)
-{
+void fuse_config(const picopass_hdr *hdr) {
 	uint8_t fuses = hdr->conf.fuses;
 
 	if (isset(fuses,FUSE_FPERS))prnt("	Mode: Personalization [Programmable]");
@@ -104,8 +113,7 @@ void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *
 	}
 }
 
-void mem_app_config(const picopass_hdr *hdr)
-{
+void mem_app_config(const picopass_hdr *hdr) {
 	uint8_t mem = hdr->conf.mem_config;
 	uint8_t chip = hdr->conf.chip_config;
 	uint8_t applimit = hdr->conf.app_limit;
@@ -118,28 +126,25 @@ void mem_app_config(const picopass_hdr *hdr)
 	prnt("	AA1: blocks 06-%02X", applimit);
 	prnt("	AA2: blocks %02X-%02X", applimit+1, max_blk);
 }
-void print_picopass_info(const picopass_hdr *hdr)
-{
+void print_picopass_info(const picopass_hdr *hdr) {
 	fuse_config(hdr);
 	mem_app_config(hdr);
 }
-void printIclassDumpInfo(uint8_t* iclass_dump)
-{
-//	picopass_hdr hdr;
-//	memcpy(&hdr, iclass_dump, sizeof(picopass_hdr));
+void printIclassDumpInfo(uint8_t* iclass_dump) {
 	print_picopass_info((picopass_hdr *) iclass_dump);
 }
 
 /*
-void test()
-{
+void test() {
 	picopass_hdr hdr = {0x27,0xaf,0x48,0x01,0xf9,0xff,0x12,0xe0,0x12,0xff,0xff,0xff,0x7f,0x1f,0xff,0x3c};
 	prnt("Picopass configuration:");
 	print_picopass_info(&hdr);
 }
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	test();
 	return 0;
 }
 */
+
+#endif
+//ON_DEVICE

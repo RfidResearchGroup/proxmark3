@@ -44,7 +44,7 @@ local _commands = {
 	CMD_INDALA_CLONE_TAG_L =                                             0x0213,
 	CMD_T55XX_READ_BLOCK =                                               0x0214,
 	CMD_T55XX_WRITE_BLOCK =                                              0x0215,
-	CMD_T55XX_READ_TRACE =                                               0x0216,
+	--//CMD_T55XX_READ_TRACE =                                               0x0216,
 	CMD_PCF7931_READ =                                                   0x0217,
 	CMD_PCF7931_WRITE =                                                  0x0223,
 	CMD_EM4X_READ_WORD =                                                 0x0218,
@@ -157,7 +157,8 @@ local _commands = {
 	CMD_MIFARE_DES_READER =                                              0x072c,
 	CMD_MIFARE_DESFIRE_INFO =                                            0x072d,
 	CMD_MIFARE_DESFIRE =                                                 0x072e,
-	
+    CMD_HF_SNIFFER =                                                     0x0800,	
+
 	CMD_UNKNOWN =                                                        0xFFFF,
 }
 

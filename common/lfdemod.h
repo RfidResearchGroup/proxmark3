@@ -30,6 +30,7 @@ int      DetectStrongAskClock(uint8_t dest[], size_t size, uint8_t high, uint8_t
 uint8_t  Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo);
 int      fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow);
 int      getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo);
+uint32_t manchesterEncode2Bytes(uint16_t datain);
 int      ManchesterEncode(uint8_t *BitStream, size_t size);
 int      manrawdecode(uint8_t *BitStream, size_t *size, uint8_t invert);
 int      nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int maxErr);

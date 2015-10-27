@@ -985,9 +985,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_T55XX_WRITE_BLOCK:
 			T55xxWriteBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes[0]);
 			break;
-		case CMD_T55XX_READ_TRACE:
-			T55xxReadTrace();
-			break;
 		case CMD_T55XX_WAKEUP:
 			T55xxWakeUp(c->arg[0]);
 			break;
@@ -1236,6 +1233,11 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			iClass_Clone(c->arg[0], c->arg[1], c->d.asBytes);
 			break;
 #endif
+#ifdef WITH_HFSNOOP
+		case CMD_HF_SNIFFER:
+			HfSnoop(c->arg[0], c->arg[1]);
+			break;
+#endif
 
 		case CMD_BUFF_CLEAR:
 			BigBuf_Clear();
@@ -1372,7 +1374,7 @@ void  __attribute__((noreturn)) AppMain(void)
 	AT91C_BASE_PMC->PMC_SCER = AT91C_PMC_PCK0;
 	// PCK0 is PLL clock / 4 = 96Mhz / 4 = 24Mhz
 	AT91C_BASE_PMC->PMC_PCKR[0] = AT91C_PMC_CSS_PLL_CLK |
-		AT91C_PMC_PRES_CLK_4;
+		AT91C_PMC_PRES_CLK_4; //  4 for 24Mhz pck0, 2 for 48 MHZ pck0
 	AT91C_BASE_PIOA->PIO_OER = GPIO_PCK0;
 
 	// Reset SPI

@@ -200,6 +200,8 @@ typedef struct{
 
 #define CMD_MIFARE_COLLECT_NONCES										  0x072f
 
+#define CMD_HF_SNIFFER                                                    0x0800
+
 #define CMD_UNKNOWN                                                       0xFFFF
 
 

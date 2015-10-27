@@ -255,9 +255,8 @@ uint32_t SnoopLF() {
 void doT55x7Acquisition(void){
 
 	#define T55xx_SAMPLES_SIZE 12000 // 32 x 32 x 10  (32 bit times numofblock (7), times clock skip..)
-	#define T55xx_UPPER_THRESHOLD 128+40  // 50
+	#define T55xx_READ_UPPER_THRESHOLD 128+40  // 50
 	#define T55xx_READ_TOL   5
-	#define T55xx_LOWER_THRESHOLD 128-40  //-50
 
 	uint8_t *dest = BigBuf_get_addr();
 	uint16_t bufsize = BigBuf_max_traceLen();
@@ -265,40 +264,43 @@ void doT55x7Acquisition(void){
 	if ( bufsize > T55xx_SAMPLES_SIZE )
 		bufsize = T55xx_SAMPLES_SIZE;
 
+	//int adcval = 0;
 	uint16_t i = 0;
 	bool startFound = false;
 	bool highFound = false;
-	uint8_t sample = 0;
+	uint8_t curSample = 0;
 	uint8_t firstSample = 0;
-	while(!BUTTON_PRESS()) {
+	uint16_t skipCnt = 0;
+	while(!BUTTON_PRESS() && skipCnt<1000) {
 		WDT_HIT();		
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-			AT91C_BASE_SSC->SSC_THR = 0x00;
+			AT91C_BASE_SSC->SSC_THR = 0x43;
 			LED_D_ON();
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-			sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+			curSample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;	
 			LED_D_OFF();
 		
 			// find first high sample
-			if (!startFound && sample > T55xx_UPPER_THRESHOLD) {
-				if (sample > firstSample) 
-					firstSample = sample;
-				highFound = TRUE;
+			if (!startFound && curSample > T55xx_READ_UPPER_THRESHOLD) {
+				if (curSample > firstSample) 
+					firstSample = curSample;
+				highFound = true;
 			} else if (!highFound) {
+				skipCnt++;
 				continue;
 			}
 
 			// skip until samples begin to change
-			if (startFound || sample < firstSample - T55xx_READ_TOL){
+			if (startFound || curSample < firstSample-T55xx_READ_TOL){
 				if (!startFound) 
 					dest[i++] = firstSample;
-				startFound = TRUE;
-				dest[i++] = sample;
-			
-			// exit condition.
-			if (i >= bufsize) break;
+				startFound = true;
+				dest[i++] = curSample;
+				if (i >= bufsize-1) break;
 			}
 		}
+		
 	}
 }
+			

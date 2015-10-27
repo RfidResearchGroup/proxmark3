@@ -43,6 +43,7 @@ void SetAdcMuxFor(uint32_t whichGpio);
 #define FPGA_MAJOR_MODE_HF_READER_RX_XCORR			(1<<5)
 #define FPGA_MAJOR_MODE_HF_SIMULATOR				(2<<5)
 #define FPGA_MAJOR_MODE_HF_ISO14443A				(3<<5)
+#define FPGA_MAJOR_MODE_HF_SNOOP				    (4<<5)
 // BOTH
 #define FPGA_MAJOR_MODE_OFF							(7<<5)
 // Options for LF_ADC

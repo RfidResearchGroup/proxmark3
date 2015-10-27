@@ -82,6 +82,6 @@ bool DecodeT55xxBlock();
 bool tryDetectModulation();
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate);
 int special(const char *Cmd);
-int AquireData( uint8_t block );
+int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password );
 
 #endif

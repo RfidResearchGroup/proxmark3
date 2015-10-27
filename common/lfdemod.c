@@ -282,6 +282,16 @@ int manrawdecode(uint8_t * BitStream, size_t *size, uint8_t invert)
 	return bestErr;
 }
 
+uint32_t manchesterEncode2Bytes(uint16_t datain) {
+	uint32_t output = 0;
+	uint8_t curBit = 0;
+	for (uint8_t i=0; i<16; i++) {
+		curBit = (datain >> (15-i) & 1);
+		output |= (1<<(((15-i)*2)+curBit));
+	}
+	return output;
+}
+
 //by marshmellow
 //encode binary data into binary manchester 
 int ManchesterEncode(uint8_t *BitStream, size_t size)

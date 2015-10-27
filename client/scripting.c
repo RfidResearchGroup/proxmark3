@@ -53,7 +53,7 @@ static int l_SendCommand(lua_State *L){
     const char *data = luaL_checklstring(L, 1, &size);
     if(size != sizeof(UsbCommand))
     {
-        printf("Got data size %d, expected %d" , size, sizeof(UsbCommand));
+		printf("Got data size %d, expected %d" , (int) size,(int) sizeof(UsbCommand));
         lua_pushstring(L,"Wrong data size");
         return 1;
     }

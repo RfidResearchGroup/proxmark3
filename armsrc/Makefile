@@ -10,12 +10,12 @@ APP_INCLUDES = apps.h
 
 #remove one of the following defines and comment out the relevant line
 #in the next section to remove that particular feature from compilation  
-APP_CFLAGS	= -DWITH_ISO14443a_StandAlone -DWITH_LF -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b -DWITH_ICLASS -DWITH_LEGICRF -DWITH_HITAG  -DWITH_CRC -DON_DEVICE \
+APP_CFLAGS	= -DWITH_ISO14443a_StandAlone -DWITH_LF -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b -DWITH_ICLASS -DWITH_LEGICRF -DWITH_HITAG  -DWITH_CRC -DON_DEVICE -DWITH_HFSNOOP \
 				-fno-strict-aliasing -ffunction-sections -fdata-sections
 #-DWITH_LCD 
 
 #SRC_LCD = fonts.c LCD.c
-SRC_LF = lfops.c hitag2.c lfsampling.c pcf7931.c
+SRC_LF = lfops.c hitag2.c lfsampling.c pcf7931.c lfdemod.c protocols.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = epa.c iso14443a.c mifareutil.c mifarecmd.c mifaresniff.c
 SRC_ISO14443b = iso14443b.c
@@ -52,7 +52,6 @@ THUMBSRC = start.c \
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
 	legicrf.c \
-	lfdemod.c \
 	$(SRC_ISO14443a) \
 	$(SRC_ISO14443b) \
 	$(SRC_CRAPTO1) \
@@ -60,7 +59,8 @@ ARMSRC = fpgaloader.c \
 	legic_prng.c \
 	iclass.c \
 	BigBuf.c \
-	optimized_cipher.c
+	optimized_cipher.c \
+	hfsnoop.c
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
