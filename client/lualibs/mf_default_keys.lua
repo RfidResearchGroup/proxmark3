@@ -64,6 +64,11 @@ local _keys = {
     '776974687573', -- Transport Key B
     '4AF9D7ADEBE4', -- Directory and event log Key A
     '2BA9621E0A36', -- Directory and event log Key B
+	-- Data from: http://pastebin.com/AK9Bftpw
+    '48ffe71294a0', -- Länstrafiken i Västerbotten
+    'e3429281efc1', -- Länstrafiken i Västerbotten
+    '16f21a82ec84', -- Länstrafiken i Västerbotten
+    '460722122510', -- Länstrafiken i Västerbotten
     -- Data from: http://pastebin.com/Dnnc5dFC
     -- New cards are not encrypted (MF Ultralight)
     'fc00018778f7', -- Västtrafiken Key A
@@ -141,7 +146,7 @@ local _keys = {
 	'b00000000000',	
 	
 	--[[
-    Should be for Mifare TNP3xxx tags A KEY.
+    Should be for Mifare TNP3xxx tags key A
     --]]
 	'4b0b20107ccb',
 
