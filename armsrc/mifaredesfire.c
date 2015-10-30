@@ -1,5 +1,4 @@
 #include "mifaredesfire.h"
-#include "des.h"
 #include "BigBuf.h"
 
 #define MAX_APPLICATION_COUNT 28
@@ -198,6 +197,10 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 
 	InitDesfireCard();
 	
+	LED_A_ON();
+	LED_B_OFF();
+	LED_C_OFF();
+	
 	// 3 olika sätt att authenticera.   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
 	// 4 olika crypto algo   DES, 3DES, 3K3DES, AES
 	// 3 olika kommunikations sätt,   PLAIN,MAC,CRYPTO
@@ -205,20 +208,32 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 	// des, nyckel 0, 
 	switch (mode){
         case 1:{
-            if (algo == 1) {
-
-            uint8_t keybytes[8] = {0x00};
+            uint8_t keybytes[16];
             uint8_t RndA[8] = {0x00};
             uint8_t RndB[8] = {0x00};
             
+            if (algo == 2) {
             if (datain[1] == 0xff){
+                    memcpy(keybytes,PICC_MASTER_KEY16,16);
+                } else {
+                    memcpy(keybytes, datain+1, datalen);
+                }
+            } else {
+                if (algo == 1) {
+                    if (datain[1] == 0xff){
                 memcpy(keybytes,null_key_data8,8);
             } else{
                 memcpy(keybytes, datain+1, datalen);
             }
+                }
+            }
             
             struct desfire_key defaultkey = {0};
             desfirekey_t key = &defaultkey;
+            
+            if (algo == 2)
+                Desfire_3des_key_new_with_version(keybytes, key);
+            else if (algo ==1)
             Desfire_des_key_new(keybytes, key);
             
             cmd[0] = AUTHENTICATE;
@@ -240,8 +255,11 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             }
             
             memcpy( encRndB, resp+3, 8);
-            
+            if (algo == 2)
+                tdes_dec(&decRndB, &encRndB, key->data);
+            else if (algo == 1)
             des_dec(&decRndB, &encRndB, key->data);
+            
             memcpy(RndB, decRndB, 8);
             rol(decRndB,8);
             
@@ -250,14 +268,21 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
             memcpy(RndA, decRndA, 8);
             uint8_t encRndA[8] = {0x00};
             
+            if (algo == 2)
+                tdes_dec(&encRndA, &decRndA, key->data);
+            else if (algo == 1)
             des_dec(&encRndA, &decRndA, key->data);
             
             memcpy(both, encRndA, 8);
             
             for (int x = 0; x < 8; x++) {
                 decRndB[x] = decRndB[x] ^ encRndA[x];
+                
             }
             
+            if (algo == 2)
+                tdes_dec(&encRndB, &decRndB, key->data);
+            else if (algo == 1)
             des_dec(&encRndB, &decRndB, key->data);
             
             memcpy(both + 8, encRndB, 8);
@@ -282,7 +307,12 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 //print_result("SESSION : ", skey->data, 8);
                 
                 memcpy(encRndA, resp+3, 8);
+                
+                if (algo == 2)
+                    tdes_dec(&encRndA, &encRndA, key->data);
+                else if (algo == 1)
                 des_dec(&encRndA, &encRndA, key->data);
+                
                 rol(decRndA,8);
                 for (int x = 0; x < 8; x++) {
                     if (decRndA[x] != encRndA[x]) {
@@ -295,6 +325,8 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 //Change the selected key to a new value.
                 /*
                  
+                 // Current key is a 3DES key, change it to a DES key
+                 if (algo == 2) {
                 cmd[0] = CHANGE_KEY;
                 cmd[1] = keyno;
                 
@@ -312,6 +344,48 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 memcpy(buff3, &first, 1);
                 memcpy(buff3 + 1, &second, 1);
                 
+                 tdes_dec(&buff1, &buff1, skey->data);
+                 memcpy(cmd+2,buff1,8);
+                 
+                 for (int x = 0; x < 8; x++) {
+                 buff2[x] = buff2[x] ^ buff1[x];
+                 }
+                 tdes_dec(&buff2, &buff2, skey->data);
+                 memcpy(cmd+10,buff2,8);
+                 
+                 for (int x = 0; x < 8; x++) {
+                 buff3[x] = buff3[x] ^ buff2[x];
+                 }
+                 tdes_dec(&buff3, &buff3, skey->data);
+                 memcpy(cmd+18,buff3,8);
+                 
+                 // The command always times out on the first attempt, this will retry until a response
+                 // is recieved.
+                 len = 0;
+                 while(!len) {
+                 len = DesfireAPDU(cmd,26,resp);
+                 }
+                 
+                 } else {
+                    // Current key is a DES key, change it to a 3DES key
+                    if (algo == 1) {
+                        cmd[0] = CHANGE_KEY;
+                        cmd[1] = keyno;
+                        
+                        uint8_t newKey[16] = {0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4a,0x4b,0x4c,0x4d,0x4e,0x4f};
+                        
+                        uint8_t first, second;
+                        uint8_t buff1[8] = {0x00};
+                        uint8_t buff2[8] = {0x00};
+                        uint8_t buff3[8] = {0x00};
+                        
+                        memcpy(buff1,newKey, 8);
+                        memcpy(buff2,newKey + 8, 8);
+                        
+                        ComputeCrc14443(CRC_14443_A, newKey, 16, &first, &second);
+                        memcpy(buff3, &first, 1);
+                        memcpy(buff3 + 1, &second, 1);
+                        
                 des_dec(&buff1, &buff1, skey->data);
                 memcpy(cmd+2,buff1,8);
                 
@@ -333,17 +407,19 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
                 while(!len) {
                     len = DesfireAPDU(cmd,26,resp);
                 }
+                    }
+                 }
                 */
                 
                 OnSuccess();
+                if (algo == 2)
+                    cmd_send(CMD_ACK,1,0,0,skey->data,16);
+                else if (algo == 1)
                 cmd_send(CMD_ACK,1,0,0,skey->data,8);
-                
             } else {
                 DbpString("Authetication failed.");
                 OnError(6);
                 return;
-            }
-            
             }
             }
 			break;
@@ -416,6 +492,7 @@ void MifareDES_Auth1(uint8_t mode, uint8_t algo, uint8_t keyno,  uint8_t *datain
 				OnError(7);
 				return;
 			}
+			
 			break;
 		}	
 	}
