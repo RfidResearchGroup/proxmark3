@@ -1078,7 +1078,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 			};
 
 			if(mifare_classic_halt(NULL, cuid)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
+				if (MF_DBGLEVEL >= 4)	Dbprintf("INFO - Tag answered the 'Halt' command");
 				break;
 			};
 		};	
@@ -1114,7 +1114,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	
 		if (workFlags & 0x04) {
 			if (mifare_classic_halt(NULL, cuid)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
+				if (MF_DBGLEVEL >= 4)	Dbprintf("INFO - Tag answered the 'Halt' command");
 				break;
 			};
 		}
@@ -1192,7 +1192,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 		
 		if (workFlags & 0x04) {
 			if (mifare_classic_halt(NULL, cuid)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
+				if (MF_DBGLEVEL >= 4)	Dbprintf("INFO - Tag answered the 'Halt' command");
 				break;
 			};
 		}
@@ -1239,9 +1239,8 @@ void MifareCIdent(){
 		isOK = 0;
 	};
 
-	if (mifare_classic_halt(NULL, 0)) {
-		isOK = 0;
-	};
+	// removed the if,  since some magic tags misbehavies and send an answer to it.
+	mifare_classic_halt(NULL, 0);
 
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
 }
