@@ -58,12 +58,12 @@ int CmdSetDebugMode(const char *Cmd)
 }
 
 int usage_data_printdemodbuf(){
-		PrintAndLog("Usage: data printdemodbuffer x o <offset>");
-		PrintAndLog("Options:        ");
-		PrintAndLog("       h          This help");
-		PrintAndLog("       x          output in hex (omit for binary output)");
-		PrintAndLog("       o <offset> enter offset in # of bits");
-		return 0;	
+	PrintAndLog("Usage: data printdemodbuffer x o <offset>");
+	PrintAndLog("Options:");
+	PrintAndLog("       h          This help");
+	PrintAndLog("       x          output in hex (omit for binary output)");
+	PrintAndLog("       o <offset> enter offset in # of bits");
+	return 0;	
 }
 
 //by marshmellow

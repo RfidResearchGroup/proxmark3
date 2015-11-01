@@ -602,73 +602,83 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	return tracepos;
 }
 
+int usage_hf_list(){
+	PrintAndLog("List protocol data in trace buffer.");
+	PrintAndLog("Usage:  hf list <protocol> [f][c]");
+	PrintAndLog("    f      - show frame delay times as well");
+	PrintAndLog("    c      - mark CRC bytes");
+	PrintAndLog("Supported <protocol> values:");
+	PrintAndLog("    raw    - just show raw data without annotations");
+	PrintAndLog("    14a    - interpret data as iso14443a communications");
+	PrintAndLog("    14b    - interpret data as iso14443b communications");
+	PrintAndLog("    iclass - interpret data as iclass communications");
+	PrintAndLog("    topaz  - interpret data as topaz communications");
+	PrintAndLog("    7816   - interpret data as iso7816-4 communications");
+	PrintAndLog("");
+	PrintAndLog("example:	hf list 14a f");
+	PrintAndLog("			hf list iclass");
+	return 0;
+}
+int usage_hf_search(){
+	PrintAndLog("Usage: hf search");
+	PrintAndLog("Will try to find a HF read out of the unknown tag. Stops when found.");
+	PrintAndLog("Options:");
+	PrintAndLog("       h	- This help");
+	PrintAndLog("");
+	return 0;
+}
+int usage_hf_snoop(){
+	PrintAndLog("Usage: hf snoop <skip pairs> <skip triggers>");
+	PrintAndLog("The high frequence snoop will assign all available memory on device for snooped data");
+	PrintAndLog("User the 'data samples' command to download from device,  and 'data plot' to look at it");
+	PrintAndLog("Press button to quit the snooping.");
+	PrintAndLog("Options:");
+	PrintAndLog("       h				- This help");
+	PrintAndLog("       <skip pairs>	- skip sample pairs");
+	PrintAndLog("       <skip triggers>	- skip number of triggers");
+	PrintAndLog("");
+	PrintAndLog("example:   hf snoop");
+	PrintAndLog("           hf snoop 1000 0");
+	return 0;
+}
 
 int CmdHFList(const char *Cmd)
 {
 	bool showWaitCycles = false;
 	bool markCRCBytes = false;
-	char type[40] = {0};
-	int tlen = param_getstr(Cmd,0,type);
+	char type[10] = {0};
+	//int tlen = param_getstr(Cmd,0,type);
 	char param1 = param_getchar(Cmd, 1);
 	char param2 = param_getchar(Cmd, 2);
 	bool errors = false;
 	uint8_t protocol = 0;
-	//Validate params
 
-	if(tlen == 0) {
-		errors = true;
+	//Validate params H or empty
+	if (strlen(Cmd) < 1 || param1 == 'h' || param1 == 'H') return usage_hf_list();
+	
+	//Validate params  F,C
+	if(
+		(param1 != 0 && param1 != 'f' && param1 != 'c')	|| 
+		(param2 != 0 && param2 != 'f' && param2 != 'c')
+		) {
+		return usage_hf_list();
 	}
 
-	if(param1 == 'h'
-			|| (param1 != 0 && param1 != 'f' && param1 != 'c')
-			|| (param2 != 0 && param2 != 'f' && param2 != 'c')) {
-		errors = true;
-	}
+	param_getstr(Cmd,0,type);
+	
+	// validate type of output
+	if(strcmp(type, "iclass") == 0)		protocol = ICLASS;
+	else if(strcmp(type, "14a") == 0)	protocol = ISO_14443A;
+	else if(strcmp(type, "14b") == 0)	protocol = ISO_14443B;
+	else if(strcmp(type, "topaz")== 0)	protocol = TOPAZ;
+	else if(strcmp(type, "7816")== 0)	protocol = ISO_7816_4;			
+	else if(strcmp(type, "raw")== 0) 	protocol = -1;//No crc, no annotations
+	else errors = true;
 
-	if(!errors) {
-		if(strcmp(type, "iclass") == 0)	{
-			protocol = ICLASS;
-		} else if(strcmp(type, "14a") == 0) {
-			protocol = ISO_14443A;
-		} else if(strcmp(type, "14b") == 0)	{
-			protocol = ISO_14443B;
-		} else if(strcmp(type,"topaz")== 0) {
-			protocol = TOPAZ;
-		} else if(strcmp(type,"7816")== 0) {
-			protocol = ISO_7816_4;			
-		} else if(strcmp(type,"raw")== 0) {
-			protocol = -1;//No crc, no annotations
-		}else{
-			errors = true;
-		}
-	}
+	if (errors) return usage_hf_list();
 
-	if (errors) {
-		PrintAndLog("List protocol data in trace buffer.");
-		PrintAndLog("Usage:  hf list <protocol> [f][c]");
-		PrintAndLog("    f      - show frame delay times as well");
-		PrintAndLog("    c      - mark CRC bytes");
-		PrintAndLog("Supported <protocol> values:");
-		PrintAndLog("    raw    - just show raw data without annotations");
-		PrintAndLog("    14a    - interpret data as iso14443a communications");
-		PrintAndLog("    14b    - interpret data as iso14443b communications");
-		PrintAndLog("    iclass - interpret data as iclass communications");
-		PrintAndLog("    topaz  - interpret data as topaz communications");
-		PrintAndLog("    7816   - interpret data as iso7816-4 communications");
-		PrintAndLog("");
-		PrintAndLog("example: hf list 14a f");
-		PrintAndLog("example: hf list iclass");
-		return 0;
-	}
-
-
-	if (param1 == 'f' || param2 == 'f') {
-		showWaitCycles = true;
-	}
-
-	if (param1 == 'c' || param2 == 'c') {
-		markCRCBytes = true;
-	}
+	if (param1 == 'f' || param2 == 'f') showWaitCycles = true;
+	if (param1 == 'c' || param2 == 'c') markCRCBytes = true;
 
 	uint8_t *trace;
 	uint16_t tracepos = 0;
@@ -710,9 +720,13 @@ int CmdHFList(const char *Cmd)
 }
 
 int CmdHFSearch(const char *Cmd){
-	int ans = 0;
+
+	char cmdp = param_getchar(Cmd, 0);	
+	if (cmdp == 'h' || cmdp == 'H') return usage_hf_search();
+	
 	PrintAndLog("");
-	ans = CmdHF14AReader("s");
+	int ans = CmdHF14AReader("s");
+
 	if (ans > 0) {
 		PrintAndLog("\nValid ISO14443A Tag Found - Quiting Search\n");
 		return ans;
@@ -738,8 +752,13 @@ int CmdHFSearch(const char *Cmd){
 
 int CmdHFSnoop(const char *Cmd)
 {
-	char * pEnd;
-	UsbCommand c = {CMD_HF_SNIFFER, {strtol(Cmd, &pEnd,0),strtol(pEnd, &pEnd,0),0}};
+	char cmdp = param_getchar(Cmd, 0);	
+	if (cmdp == 'h' || cmdp == 'H') return usage_hf_snoop();
+	
+	int skippairs =  param_get32ex(Cmd, 0, 0, 10);
+	int skiptriggers =  param_get32ex(Cmd, 1, 0, 10);
+	
+	UsbCommand c = {CMD_HF_SNIFFER, {skippairs,skiptriggers,0}};
 	SendCommand(&c);
 	return 0;
 }

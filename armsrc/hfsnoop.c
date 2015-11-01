@@ -20,7 +20,7 @@ static void RAMFUNC optimizedSnoop(void)
 		if(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)
 		{
 			*dest = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
-			dest = dest + 1;
+			dest++;
 		}
 	}
 	//Resetting Frame mode (First set in fpgaloader.c)
@@ -65,7 +65,6 @@ void HfSnoop(int samplesToSkip, int triggersToSkip)
 				waitcount--;
 			}
 		}
-
 		optimizedSnoop();
 	}
 
