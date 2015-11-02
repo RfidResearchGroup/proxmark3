@@ -60,6 +60,9 @@ typedef struct {
 		RF_128 = 0x07,
 	} bitrate;
 } t55xx_conf_block_t;
+t55xx_conf_block_t Get_t55xx_Config();
+void Set_t55xx_Config(t55xx_conf_block_t conf);
+
 
 int CmdLFT55XX(const char *Cmd);
 int CmdT55xxSetConfig(const char *Cmd);
@@ -68,6 +71,7 @@ int CmdT55xxWriteBlock(const char *Cmd);
 int CmdT55xxReadTrace(const char *Cmd);
 int CmdT55xxInfo(const char *Cmd);
 int CmdT55xxDetect(const char *Cmd);
+int CmdResetRead(const char *Cmd);
 
 char * GetBitRateStr(uint32_t id);
 char * GetSaferStr(uint32_t id);

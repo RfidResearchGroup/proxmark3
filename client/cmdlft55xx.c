@@ -35,6 +35,13 @@
 // Default configuration
 t55xx_conf_block_t config = { .modulation = DEMOD_ASK, .inverted = FALSE, .offset = 0x00, .block0 = 0x00};
 
+t55xx_conf_block_t Get_t55xx_Config(){
+	return config;
+}
+void Set_t55xx_Config(t55xx_conf_block_t conf){
+	config = conf;
+}
+
 int usage_t55xx_config(){
 	PrintAndLog("Usage: lf t55xx config [d <demodulation>] [i 1] [o <offset>]");
 	PrintAndLog("Options:");
@@ -550,7 +557,7 @@ bool tryDetectModulation(){
 bool testModulation(uint8_t mode, uint8_t modread){
 	switch( mode ){
 		case DEMOD_FSK:
-			if (modread > 3 && modread < 8) return TRUE;
+			if (modread >= DEMOD_FSK1 && modread <= DEMOD_FSK2a) return TRUE;
 			break;
 		case DEMOD_ASK:
 			if (modread == DEMOD_ASK) return TRUE;
@@ -1178,16 +1185,35 @@ uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits){
 	return tmp;
 }
 */
+
+int CmdResetRead(const char *Cmd) {
+	UsbCommand c = {CMD_T55XX_RESET_READ, {0,0,0}};
+
+	clearCommandBuffer();
+	SendCommand(&c);
+	if ( !WaitForResponseTimeout(CMD_ACK,NULL,2500) ) {
+		PrintAndLog("command execution time out");
+		return 0;
+	}
+
+	uint8_t got[BIGBUF_SIZE-1];
+	GetFromBigBuf(got,sizeof(got),0);
+	WaitForResponse(CMD_ACK,NULL);
+	setGraphBuf(got, sizeof(got));
+	return 1;
+}
+
 static command_t CommandTable[] =
 {
   {"help",   CmdHelp,           1, "This help"},
   {"config", CmdT55xxSetConfig, 1, "Set/Get T55XX configuration (modulation, inverted, offset, rate)"},
   {"detect", CmdT55xxDetect,    0, "[1] Try detecting the tag modulation from reading the configuration block."},
-  {"read",   CmdT55xxReadBlock, 0, "b <block> p [password] [o] [1] -- Read T55xx block data (page 0) [optional password]"},
-  {"write",  CmdT55xxWriteBlock,0, "b <block> d <data> p [password] [1] -- Write T55xx block data (page 0) [optional password]"},
+  {"read",     CmdT55xxReadBlock, 0, "b <block> p [password] [o] [1] -- Read T55xx block data. Optional [p password], [override], [page1]"},
+  {"resetread",CmdResetRead,      0, "Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)"},
+  {"write",    CmdT55xxWriteBlock,0, "b <block> d <data> p [password] [1] -- Write T55xx block data. Optional [p password], [page1]"},
   {"trace",  CmdT55xxReadTrace, 0, "[1] Show T55xx traceability data (page 1/ blk 0-1)"},
   {"info",   CmdT55xxInfo,      0, "[1] Show T55xx configuration data (page 0/ blk 0)"},
-  {"dump",   CmdT55xxDump,      0, "[password] [o] Dump T55xx card block 0-7. [optional password]"},
+  {"dump",     CmdT55xxDump,      0, "[password] [o] Dump T55xx card block 0-7. Optional [password], [override]"},
   {"special", special,          0, "Show block changes with 64 different offsets"},
   {"wakeup", CmdT55xxWakeUp,    0, "Send AOR wakeup command"},
   {NULL, NULL, 0, NULL}

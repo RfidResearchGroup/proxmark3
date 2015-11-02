@@ -5,7 +5,7 @@
 * acquisition of T55x7 LF signal. Similart to other LF, but adjusted with @marshmellows thresholds
 * the data is collected in BigBuf.
 **/
-void doT55x7Acquisition(void);
+void doT55x7Acquisition(size_t sample_size);
 
 /**
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.

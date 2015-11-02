@@ -85,7 +85,7 @@ typedef struct{
 #define CMD_INDALA_CLONE_TAG_L                                            0x0213
 #define CMD_T55XX_READ_BLOCK                                              0x0214
 #define CMD_T55XX_WRITE_BLOCK                                             0x0215
-#define CMD_T55XX_READ_TRACE                                              0x0216
+#define CMD_T55XX_RESET_READ                                              0x0216
 #define CMD_T55XX_WAKEUP	                                              0x0224
 
 #define CMD_PCF7931_READ                                                  0x0217
