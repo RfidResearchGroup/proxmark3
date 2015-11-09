@@ -1199,32 +1199,32 @@ int CmdLFfind(const char *Cmd)
 
 static command_t CommandTable[] = 
 {
-  {"help",        CmdHelp,            1, "This help"},
+	{"help",        CmdHelp,            1, "This help"},
 	{"awid",        CmdLFAWID,          1, "{ AWID RFIDs... }"},
-  {"em4x",        CmdLFEM4X,          1, "{ EM4X RFIDs... }"},
-  {"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
-  {"hitag",       CmdLFHitag,         1, "{ HITAG RFIDs... }"},
-  {"io",       	  CmdLFIO,	          1, "{ IOPROX RFIDs... }"},
-  {"pcf7931",     CmdLFPCF7931,       1, "{ PCF7931 RFIDs... }"},
-  {"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
-  {"t55xx",       CmdLFT55XX,         1, "{ T55X7 RFIDs... }"},
-  {"viking",      CmdLFViking,        1, "{ Viking RFIDs... }"},
-  {"config",      CmdLFSetConfig,     0, "Set config for LF sampling, bit/sample, decimation, frequency"},
- 
-  {"cmdread",     CmdLFCommandRead,   0, "<off period> <'0' period> <'1' period> <command> ['h' 134] \n\t\t-- Modulate LF reader field to send command before read (all periods in microseconds)"},
-  {"flexdemod",   CmdFlexdemod,       1, "Demodulate samples for FlexPass"},
-  {"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
-  {"indalaclone", CmdIndalaClone,     0, "<UID> ['l']-- Clone Indala to T55x7 (tag must be in antenna)(UID in HEX)(option 'l' for 224 UID"},
-  {"read",        CmdLFRead,          0, "['s' silent] Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
-  {"search",      CmdLFfind,          1, "[offline] ['u'] Read and Search for valid known tag (in offline mode it you can load first then search) \n\t\t-- 'u' to search for unknown tags"},
-  {"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
-  {"simask",      CmdLFaskSim,        0, "[clock] [invert <1|0>] [biphase/manchester/raw <'b'|'m'|'r'>] [msg separator 's'] [d <hexdata>] \n\t\t-- Simulate LF ASK tag from demodbuffer or input"},
-  {"simfsk",      CmdLFfskSim,        0, "[c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>] \n\t\t-- Simulate LF FSK tag from demodbuffer or input"},
-  {"simpsk",      CmdLFpskSim,        0, "[1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>] \n\t\t-- Simulate LF PSK tag from demodbuffer or input"},
-  {"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
-  {"snoop",       CmdLFSnoop,         0, "['l'|'h'|<divisor>] [trigger threshold] -- Snoop LF (l:125khz, h:134khz)"},
-  {"vchdemod",    CmdVchDemod,        1, "['clone'] -- Demodulate samples for VeriChip"},
-  {NULL, NULL, 0, NULL}
+	{"em4x",        CmdLFEM4X,          1, "{ EM4X RFIDs... }"},
+	{"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
+	{"hitag",       CmdLFHitag,         1, "{ HITAG RFIDs... }"},
+	{"io",       	  CmdLFIO,	          1, "{ IOPROX RFIDs... }"},
+	{"pcf7931",     CmdLFPCF7931,       1, "{ PCF7931 RFIDs... }"},
+	{"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
+	{"t55xx",       CmdLFT55XX,         1, "{ T55X7 RFIDs... }"},
+	{"viking",      CmdLFViking,        1, "{ Viking RFIDs... }"},
+	{"config",      CmdLFSetConfig,     0, "Set config for LF sampling, bit/sample, decimation, frequency"},
+
+	{"cmdread",     CmdLFCommandRead,   0, "<off period> <'0' period> <'1' period> <command> ['h' 134] \n\t\t-- Modulate LF reader field to send command before read (all periods in microseconds)"},
+	{"flexdemod",   CmdFlexdemod,       1, "Demodulate samples for FlexPass"},
+	{"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
+	{"indalaclone", CmdIndalaClone,     0, "<UID> ['l']-- Clone Indala to T55x7 (tag must be in antenna)(UID in HEX)(option 'l' for 224 UID"},
+	{"read",        CmdLFRead,          0, "['s' silent] Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
+	{"search",      CmdLFfind,          1, "[offline] ['u'] Read and Search for valid known tag (in offline mode it you can load first then search) \n\t\t-- 'u' to search for unknown tags"},
+	{"sim",         CmdLFSim,           0, "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
+	{"simask",      CmdLFaskSim,        0, "[clock] [invert <1|0>] [biphase/manchester/raw <'b'|'m'|'r'>] [msg separator 's'] [d <hexdata>] \n\t\t-- Simulate LF ASK tag from demodbuffer or input"},
+	{"simfsk",      CmdLFfskSim,        0, "[c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>] \n\t\t-- Simulate LF FSK tag from demodbuffer or input"},
+	{"simpsk",      CmdLFpskSim,        0, "[1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>] \n\t\t-- Simulate LF PSK tag from demodbuffer or input"},
+	{"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
+	{"snoop",       CmdLFSnoop,         0, "Snoop LF"},
+	{"vchdemod",    CmdVchDemod,        1, "['clone'] -- Demodulate samples for VeriChip"},
+	{NULL, NULL, 0, NULL}
 };
 
 int CmdLF(const char *Cmd)

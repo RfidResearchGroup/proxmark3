@@ -34,6 +34,7 @@
 // Craig Young - 14a stand-alone code
 #ifdef WITH_ISO14443a_StandAlone
  #include "iso14443a.h"
+ #include "protocols.h"
 #endif
 
 #define abs(x) ( ((x)<0) ? -(x) : (x) )
@@ -387,6 +388,8 @@ void StandAloneMode14a()
 	uint32_t uid_tmp2 = 0;
 	iso14a_card_select_t hi14a_card[OPTS];
 
+	uint8_t params = (MAGIC_SINGLE | MAGIC_DATAIN);
+					
 	LED(selected + 1, 0);
 
 	for (;;)
@@ -480,87 +483,84 @@ void StandAloneMode14a()
 		else if (iGotoClone==1)
 		{
 			iGotoClone=0;
-					LEDsoff();
-					LED(selected + 1, 0);
-					LED(LED_ORANGE, 250);
+			LEDsoff();
+			LED(selected + 1, 0);
+			LED(LED_ORANGE, 250);
 
+			// record
+			Dbprintf("Preparing to Clone card [Bank: %x]; uid: %08x", selected, uid_1st[selected]);
 
-					// record
-					Dbprintf("Preparing to Clone card [Bank: %x]; uid: %08x", selected, uid_1st[selected]);
+			// wait for button to be released
+			// Delay cloning until card is in place
+			while(BUTTON_PRESS())
+				WDT_HIT();
 
-					// wait for button to be released
-					while(BUTTON_PRESS())
-					{
-						// Delay cloning until card is in place
-						WDT_HIT();
-					}
-					Dbprintf("Starting clone. [Bank: %u]", selected);
-					// need this delay to prevent catching some weird data
-					SpinDelay(500);
-					// Begin clone function here:
-					/* Example from client/mifarehost.c for commanding a block write for "magic Chinese" cards:
-							UsbCommand c = {CMD_MIFARE_CSETBLOCK, {wantWipe, params & (0xFE | (uid == NULL ? 0:1)), blockNo}};
-							memcpy(c.d.asBytes, data, 16);
-							SendCommand(&c);
+			Dbprintf("Starting clone. [Bank: %u]", selected);
+			// need this delay to prevent catching some weird data
+			SpinDelay(500);
+			// Begin clone function here:
+			/* Example from client/mifarehost.c for commanding a block write for "magic Chinese" cards:
+					UsbCommand c = {CMD_MIFARE_CSETBLOCK, {params & (0xFE | (uid == NULL ? 0:1)), blockNo, 0}};
+					memcpy(c.d.asBytes, data, 16);
+					SendCommand(&c);
 
-						Block read is similar:
-							UsbCommand c = {CMD_MIFARE_CGETBLOCK, {params, 0, blockNo}};
-						We need to imitate that call with blockNo 0 to set a uid.
+				Block read is similar:
+					UsbCommand c = {CMD_MIFARE_CGETBLOCK, {params, blockNo, 0}};
+				We need to imitate that call with blockNo 0 to set a uid.
 
-						The get and set commands are handled in this file:
-							// Work with "magic Chinese" card
-							case CMD_MIFARE_CSETBLOCK:
-									MifareCSetBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
-									break;
-							case CMD_MIFARE_CGETBLOCK:
-									MifareCGetBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
-									break;
+				The get and set commands are handled in this file:
+					// Work with "magic Chinese" card
+					case CMD_MIFARE_CSETBLOCK:
+							MifareCSetBlock(c->arg[0], c->arg[1], c->d.asBytes);
+							break;
+					case CMD_MIFARE_CGETBLOCK:
+							MifareCGetBlock(c->arg[0], c->arg[1], c->d.asBytes);
+							break;
 
-						mfCSetUID provides example logic for UID set workflow:
-							-Read block0 from card in field with MifareCGetBlock()
-							-Configure new values without replacing reserved bytes
-									memcpy(block0, uid, 4); // Copy UID bytes from byte array
-									// Mifare UID BCC
-									block0[4] = block0[0]^block0[1]^block0[2]^block0[3]; // BCC on byte 5
-									Bytes 5-7 are reserved SAK and ATQA for mifare classic
-							-Use mfCSetBlock(0, block0, oldUID, wantWipe, CSETBLOCK_SINGLE_OPER) to write it
-					*/
-					uint8_t oldBlock0[16] = {0}, newBlock0[16] = {0}, testBlock0[16] = {0};
-					// arg0 = Flags == CSETBLOCK_SINGLE_OPER=0x1F, arg1=returnSlot, arg2=blockNo
-			MifareCGetBlock(0x3F, 1, 0, oldBlock0);
+				mfCSetUID provides example logic for UID set workflow:
+					-Read block0 from card in field with MifareCGetBlock()
+					-Configure new values without replacing reserved bytes
+							memcpy(block0, uid, 4); // Copy UID bytes from byte array
+							// Mifare UID BCC
+							block0[4] = block0[0]^block0[1]^block0[2]^block0[3]; // BCC on byte 5
+							Bytes 5-7 are reserved SAK and ATQA for mifare classic
+					-Use mfCSetBlock(0, block0, oldUID, wantWipe, MAGIC_SINGLE) to write it
+			*/
+			uint8_t oldBlock0[16] = {0}, newBlock0[16] = {0}, testBlock0[16] = {0};
+			// arg0 = Flags, arg1=blockNo
+			MifareCGetBlock(params, 0, oldBlock0);
 			if (oldBlock0[0] == 0 && oldBlock0[0] == oldBlock0[1]  && oldBlock0[1] == oldBlock0[2] && oldBlock0[2] == oldBlock0[3]) {
 				Dbprintf("No changeable tag detected. Returning to replay mode for bank[%d]", selected);
 				playing = 1;
 			}
 			else {
-					Dbprintf("UID from target tag: %02X%02X%02X%02X", oldBlock0[0],oldBlock0[1],oldBlock0[2],oldBlock0[3]);
-					memcpy(newBlock0,oldBlock0,16);
-					// Copy uid_1st for bank (2nd is for longer UIDs not supported if classic)
+				Dbprintf("UID from target tag: %02X%02X%02X%02X", oldBlock0[0],oldBlock0[1],oldBlock0[2],oldBlock0[3]);
+				memcpy(newBlock0,oldBlock0,16);
+				// Copy uid_1st for bank (2nd is for longer UIDs not supported if classic)
 
-					newBlock0[0] = uid_1st[selected]>>24;
-					newBlock0[1] = 0xFF & (uid_1st[selected]>>16);
-					newBlock0[2] = 0xFF & (uid_1st[selected]>>8);
-					newBlock0[3] = 0xFF & (uid_1st[selected]);
-					newBlock0[4] = newBlock0[0]^newBlock0[1]^newBlock0[2]^newBlock0[3];
-					// arg0 = needWipe, arg1 = workFlags, arg2 = blockNo, datain
-					MifareCSetBlock(0, 0xFF,0, newBlock0);
-				MifareCGetBlock(0x3F, 1, 0, testBlock0);
-					if (memcmp(testBlock0,newBlock0,16)==0)
-					{
-						DbpString("Cloned successfull!");
-						cardRead[selected] = 0; // Only if the card was cloned successfully should we clear it
+				newBlock0[0] = uid_1st[selected]>>24;
+				newBlock0[1] = 0xFF & (uid_1st[selected]>>16);
+				newBlock0[2] = 0xFF & (uid_1st[selected]>>8);
+				newBlock0[3] = 0xFF & (uid_1st[selected]);
+				newBlock0[4] = newBlock0[0]^newBlock0[1]^newBlock0[2]^newBlock0[3];
+
+				// arg0 = workFlags, arg1 = blockNo, datain
+				MifareCSetBlock(params, 0, newBlock0);
+				MifareCGetBlock(params, 0, testBlock0);
+				
+				if (memcmp(testBlock0, newBlock0, 16)==0) {
+					DbpString("Cloned successfull!");
+					cardRead[selected] = 0; // Only if the card was cloned successfully should we clear it
 					playing = 0;
 					iGotoRecord = 1;
-				selected = (selected + 1) % OPTS;
-				}
-				else {
+					selected = (selected + 1) % OPTS;
+				} else {
 					Dbprintf("Clone failed. Back to replay mode on bank[%d]", selected);
 					playing = 1;
 				}
 			}
 			LEDsoff();
 			LED(selected + 1, 0);
-
 		}
 		// Change where to record (or begin playing)
 		else if (playing==1) // button_pressed == BUTTON_SINGLE_CLICK && cardRead[selected])
@@ -1162,10 +1162,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			
 		// Work with "magic Chinese" card
 		case CMD_MIFARE_CSETBLOCK:
-			MifareCSetBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			MifareCSetBlock(c->arg[0], c->arg[1], c->d.asBytes);
 			break;
 		case CMD_MIFARE_CGETBLOCK:
-			MifareCGetBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
+			MifareCGetBlock(c->arg[0], c->arg[1], c->d.asBytes);
 			break;
 		case CMD_MIFARE_CIDENT:
 			MifareCIdent();
@@ -1196,7 +1196,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 
 		case CMD_MIFARE_COLLECT_NONCES:
-			MifareCollectNonces(c->arg[0], c->arg[1]);
 			break;
 #endif
 

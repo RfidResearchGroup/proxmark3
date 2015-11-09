@@ -22,7 +22,7 @@ help:
 	@echo +	all           - Make bootrom, armsrc and the OS-specific host directory
 	@echo + client        - Make only the OS-specific host directory
 	@echo + flash-bootrom - Make bootrom and flash it
-	@echo + flash-os      - Make armsrc and flash os (includes fpga)
+	@echo + flash-os      - Make armsrc and flash os \(includes fpga\)
 	@echo + flash-all     - Make bootrom and armsrc and flash bootrom and os image
 	@echo +	clean         - Clean in bootrom, armsrc and the OS-specific host directory
 

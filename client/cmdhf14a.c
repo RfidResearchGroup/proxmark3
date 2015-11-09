@@ -136,8 +136,8 @@ int CmdHF14AList(const char *Cmd)
 int CmdHF14AReader(const char *Cmd)
 {
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
+	clearCommandBuffer();
 	SendCommand(&c);
-
 	UsbCommand resp;
 	WaitForResponse(CMD_ACK,&resp);
 	
@@ -185,6 +185,7 @@ int CmdHF14AReader(const char *Cmd)
 			c.arg[1] = 0;
 			c.arg[2] = 0;
 
+			clearCommandBuffer();
 			SendCommand(&c);
 
 			UsbCommand resp;
@@ -248,6 +249,7 @@ int CmdHF14AReader(const char *Cmd)
 		c.arg[1] = 2;
 		c.arg[2] = 0;
 		memcpy(c.d.asBytes, rats, 2);
+		clearCommandBuffer();
 		SendCommand(&c);
 		WaitForResponse(CMD_ACK,&resp);
 		
@@ -345,16 +347,16 @@ int CmdHF14AReader(const char *Cmd)
 						PrintAndLog("                     x0 -> <1 kByte");
 						break;
 					case 0x01:
-						PrintAndLog("                     x0 -> 1 kByte");
+						PrintAndLog("                     x1 -> 1 kByte");
 						break;
 					case 0x02:
-						PrintAndLog("                     x0 -> 2 kByte");
+						PrintAndLog("                     x2 -> 2 kByte");
 						break;
 					case 0x03:
-						PrintAndLog("                     x0 -> 4 kByte");
+						PrintAndLog("                     x3 -> 4 kByte");
 						break;
 					case 0x04:
-						PrintAndLog("                     x0 -> 8 kByte");
+						PrintAndLog("                     x4 -> 8 kByte");
 						break;
 				}
 				switch (card.ats[pos + 3] & 0xf0) {
@@ -395,14 +397,17 @@ int CmdHF14AReader(const char *Cmd)
 
 	
 	// try to see if card responses to "chinese magic backdoor" commands.
+	uint8_t isOK = 0;
+	clearCommandBuffer();
 	c.cmd = CMD_MIFARE_CIDENT;
 	c.arg[0] = 0;
 	c.arg[1] = 0;
 	c.arg[2] = 0;	
 	SendCommand(&c);
-	WaitForResponse(CMD_ACK,&resp);
-	uint8_t isOK  = resp.arg[0] & 0xff;
-	PrintAndLog("Answers to chinese magic backdoor commands: %s", (isOK ? "YES" : "NO") );
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500))
+		isOK  = resp.arg[0] & 0xff;
+
+	PrintAndLog("Answers to magic commands (GEN1): %s", (isOK ? "YES" : "NO") );
 	
 	// disconnect
 	c.cmd = CMD_READER_ISO_14443a;

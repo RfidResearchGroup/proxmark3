@@ -501,21 +501,20 @@ int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData)
     }
     return 0;
 }
-
-int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid) 
-{
+int mifare_classic_halt_ex(struct Crypto1State *pcs) {
 	uint16_t len;	
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
+	uint8_t receivedAnswer[4];
+	uint8_t receivedAnswerPar[4];
 
 	len = mifare_sendcmd_short(pcs, pcs == NULL ? false:true, 0x50, 0x00, receivedAnswer, receivedAnswerPar, NULL);
 	if (len != 0) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)
-			Dbprintf("halt error. response len: %x", len);  
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("halt error. response len: %x", len);  
 		return 1;
 	}
-
 	return 0;
+}
+int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid) {
+	return mifare_classic_halt_ex(pcs);
 }
 
 int mifare_ultra_halt()

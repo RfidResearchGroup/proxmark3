@@ -1543,7 +1543,7 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 {
 	uint8_t memBlock[16] = {0x00};
 	uint8_t blockNo = 0;
-	bool wipeCard = FALSE;
+	uint8_t params = MAGIC_SINGLE;
 	int res;
 
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
@@ -1562,10 +1562,12 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 	}
 
 	char ctmp = param_getchar(Cmd, 2);
-	wipeCard = (ctmp == 'w' || ctmp == 'W');
+	if (ctmp == 'w' || ctmp == 'W')
+		params |= MAGIC_WIPE;
+	
 	PrintAndLog("--block number:%2d data:%s", blockNo, sprint_hex(memBlock, 16));
 
-	res = mfCSetBlock(blockNo, memBlock, NULL, wipeCard, CSETBLOCK_SINGLE_OPER);
+	res = mfCSetBlock(blockNo, memBlock, NULL, params);
 	if (res) {
 		PrintAndLog("Can't write block. error=%d", res);
 		return 1;
@@ -1576,13 +1578,15 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 int CmdHF14AMfCLoad(const char *Cmd)
 {
 	FILE * f;
-	char filename[FILE_PATH_SIZE] = {0x00};
+	char filename[FILE_PATH_SIZE];
 	char * fnameptr = filename;
 	char buf[64] = {0x00};
 	uint8_t buf8[64] = {0x00};
 	uint8_t fillFromEmulator = 0;
 	int i, len, blockNum, flags=0;
 
+	memset(filename, 0, sizeof(filename));
+	
 	char ctmp = param_getchar(Cmd, 0);
 	
 	if (ctmp == 'h' || ctmp == 'H' || ctmp == 0x00) {
@@ -1602,11 +1606,11 @@ int CmdHF14AMfCLoad(const char *Cmd)
 				PrintAndLog("Cant get block: %d", blockNum);
 				return 2;
 			}
-			if (blockNum == 0) flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;				// switch on field and send magic sequence
+			if (blockNum == 0) flags = MAGIC_INIT + MAGIC_WUPC;				// switch on field and send magic sequence
 			if (blockNum == 1) flags = 0;													// just write
-			if (blockNum == 16 * 4 - 1) flags = CSETBLOCK_HALT + CSETBLOCK_RESET_FIELD;		// Done. Magic Halt and switch off field.
+			if (blockNum == 16 * 4 - 1) flags = MAGIC_HALT + MAGIC_OFF;		// Done. Magic Halt and switch off field.
 
-			if (mfCSetBlock(blockNum, buf8, NULL, 0, flags)) {
+			if (mfCSetBlock(blockNum, buf8, NULL, flags)) {
 				PrintAndLog("Cant set magic card block: %d", blockNum);
 				return 3;
 			}
@@ -1649,11 +1653,11 @@ int CmdHF14AMfCLoad(const char *Cmd)
 			for (i = 0; i < 32; i += 2)
 				sscanf(&buf[i], "%02x", (unsigned int *)&buf8[i / 2]);
 
-			if (blockNum == 0) flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;				// switch on field and send magic sequence
+			if (blockNum == 0) flags = MAGIC_INIT + MAGIC_WUPC;				// switch on field and send magic sequence
 			if (blockNum == 1) flags = 0;													// just write
-			if (blockNum == 16 * 4 - 1) flags = CSETBLOCK_HALT + CSETBLOCK_RESET_FIELD;		// Done. Switch off field.
+			if (blockNum == 16 * 4 - 1) flags = MAGIC_HALT + MAGIC_OFF;		// Done. Switch off field.
 
-			if (mfCSetBlock(blockNum, buf8, NULL, 0, flags)) {
+			if (mfCSetBlock(blockNum, buf8, NULL, flags)) {
 				PrintAndLog("Can't set magic card block: %d", blockNum);
 				return 3;
 			}
@@ -1663,6 +1667,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		}
 		fclose(f);
 	
+		// 64 or 256blocks.
 		if (blockNum != 16 * 4 && blockNum != 32 * 4 + 8 * 16){
 			PrintAndLog("File content error. There must be 64 blocks");
 			return 4;
@@ -1674,12 +1679,13 @@ int CmdHF14AMfCLoad(const char *Cmd)
 }
 
 int CmdHF14AMfCGetBlk(const char *Cmd) {
-	uint8_t memBlock[16];
+	uint8_t data[16];
 	uint8_t blockNo = 0;
 	int res;
-	memset(memBlock, 0x00, sizeof(memBlock));
+	memset(data, 0x00, sizeof(data));
+	char ctmp = param_getchar(Cmd, 0);
 
-	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
+	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') {
 		PrintAndLog("Usage:  hf mf cgetblk <block number>");
 		PrintAndLog("sample:  hf mf cgetblk 1");
 		PrintAndLog("Get block data from magic Chinese card (only works with such cards)\n");
@@ -1690,22 +1696,24 @@ int CmdHF14AMfCGetBlk(const char *Cmd) {
 
 	PrintAndLog("--block number:%2d ", blockNo);
 
-	res = mfCGetBlock(blockNo, memBlock, CSETBLOCK_SINGLE_OPER);
+	res = mfCGetBlock(blockNo, data, MAGIC_SINGLE);
 	if (res) {
-			PrintAndLog("Can't read block. error=%d", res);
-			return 1;
-		}
+		PrintAndLog("Can't read block. error=%d", res);
+		return 1;
+	}
 	
-	PrintAndLog("block data:%s", sprint_hex(memBlock, 16));
+	PrintAndLog("data:%s", sprint_hex(data, sizeof(data)));
 	return 0;
 }
 
 int CmdHF14AMfCGetSc(const char *Cmd) {
-	uint8_t memBlock[16] = {0x00};
+	uint8_t data[16];
 	uint8_t sectorNo = 0;
 	int i, res, flags;
-
-	if (strlen(Cmd) < 1 || param_getchar(Cmd, 0) == 'h') {
+	memset(data, 0x00, sizeof(data));
+	char ctmp = param_getchar(Cmd, 0);
+	
+	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') {
 		PrintAndLog("Usage:  hf mf cgetsc <sector number>");
 		PrintAndLog("sample:  hf mf cgetsc 0");
 		PrintAndLog("Get sector data from magic Chinese card (only works with such cards)\n");
@@ -1719,19 +1727,19 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 	}
 
 	PrintAndLog("--sector number:%d ", sectorNo);
+	PrintAndLog("block | data");
 
-	flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;
+	flags = MAGIC_INIT + MAGIC_WUPC;
 	for (i = 0; i < 4; i++) {
 		if (i == 1) flags = 0;
-		if (i == 3) flags = CSETBLOCK_HALT + CSETBLOCK_RESET_FIELD;
+		if (i == 3) flags = MAGIC_HALT + MAGIC_OFF;
 
-		res = mfCGetBlock(sectorNo * 4 + i, memBlock, flags);
+		res = mfCGetBlock(sectorNo * 4 + i, data, flags);
 		if (res) {
 			PrintAndLog("Can't read block. %d error=%d", sectorNo * 4 + i, res);
 			return 1;
-		}
-	
-		PrintAndLog("block %3d data:%s", sectorNo * 4 + i, sprint_hex(memBlock, 16));
+		}	
+		PrintAndLog(" %3d | %s", sectorNo * 4 + i, sprint_hex(data, sizeof(data)));
 	}
 	return 0;
 }
@@ -1739,14 +1747,14 @@ int CmdHF14AMfCGetSc(const char *Cmd) {
 int CmdHF14AMfCSave(const char *Cmd) {
 
 	FILE * f;
-	char filename[FILE_PATH_SIZE] = {0x00};
+	char filename[FILE_PATH_SIZE];
 	char * fnameptr = filename;
 	uint8_t fillFromEmulator = 0;
-	uint8_t buf[64] = {0x00};
+	uint8_t buf[64];
 	int i, j, len, flags;
 	
-	// memset(filename, 0, sizeof(filename));
-	// memset(buf, 0, sizeof(buf));
+	memset(filename, 0, sizeof(filename));
+	memset(buf, 0, sizeof(buf));
 	char ctmp = param_getchar(Cmd, 0);
 	
 	if ( ctmp == 'h' || ctmp == 'H' ) {
@@ -1762,10 +1770,10 @@ int CmdHF14AMfCSave(const char *Cmd) {
 
 	if (fillFromEmulator) {
 		// put into emulator
-		flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;
+		flags = MAGIC_INIT + MAGIC_WUPC;
 		for (i = 0; i < 16 * 4; i++) {
 			if (i == 1) flags = 0;
-			if (i == 16 * 4 - 1) flags = CSETBLOCK_HALT + CSETBLOCK_RESET_FIELD;
+			if (i == 16 * 4 - 1) flags = MAGIC_HALT + MAGIC_OFF;
 		
 			if (mfCGetBlock(i, buf, flags)) {
 				PrintAndLog("Cant get block: %d", i);
@@ -1782,9 +1790,10 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		len = strlen(Cmd);
 		if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
 	
+		// get filename based on UID
 		if (len < 1) {
-			// get filename
-			if (mfCGetBlock(0, buf, CSETBLOCK_SINGLE_OPER)) {
+		
+			if (mfCGetBlock(0, buf, MAGIC_SINGLE)) {
 				PrintAndLog("Cant get block: %d", 0);
 				len = sprintf(fnameptr, "dump");
 				fnameptr += len;
@@ -1797,6 +1806,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 			fnameptr += len;
 		}
 
+		// add .eml extension
 		sprintf(fnameptr, ".eml"); 
 	
 		// open file
@@ -1808,10 +1818,10 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		}
 
 		// put hex
-		flags = CSETBLOCK_INIT_FIELD + CSETBLOCK_WUPC;
+		flags = MAGIC_INIT + MAGIC_WUPC;
 		for (i = 0; i < 16 * 4; i++) {
 			if (i == 1) flags = 0;
-			if (i == 16 * 4 - 1) flags = CSETBLOCK_HALT + CSETBLOCK_RESET_FIELD;
+			if (i == 16 * 4 - 1) flags = MAGIC_HALT + MAGIC_OFF;
 		
 			if (mfCGetBlock(i, buf, flags)) {
 				PrintAndLog("Cant get block: %d", i);
@@ -1821,10 +1831,9 @@ int CmdHF14AMfCSave(const char *Cmd) {
 				fprintf(f, "%02x", buf[j]); 
 			fprintf(f,"\n");
 		}
+		fflush(f);
 		fclose(f);
-	
 		PrintAndLog("Saved to file: %s", filename);
-	
 		return 0;
 	}
 }
@@ -2031,13 +2040,12 @@ int CmdHFMF(const char *Cmd)
 {
 	// flush
 	WaitForResponseTimeout(CMD_ACK,NULL,100);
-
-  CmdsParse(CommandTable, Cmd);
-  return 0;
+	CmdsParse(CommandTable, Cmd);
+	return 0;
 }
 
 int CmdHelp(const char *Cmd)
 {
-  CmdsHelp(CommandTable);
-  return 0;
+	CmdsHelp(CommandTable);
+	return 0;
 }
