@@ -75,7 +75,7 @@ int CmdLS(const char *Cmd){
 int CmdQuit(const char *Cmd)
 {
   exit(0);
-  return 0;
+  return 99;
 }
 
 int CmdRev(const char *Cmd)
@@ -174,8 +174,8 @@ bool WaitForResponse(uint32_t cmd, UsbCommand* response) {
 // Entry point into our code: called whenever the user types a command and
 // then presses Enter, which the full command line that they typed.
 //-----------------------------------------------------------------------------
-void CommandReceived(char *Cmd) {
-  CmdsParse(CommandTable, Cmd);
+int CommandReceived(char *Cmd) {
+	return CmdsParse(CommandTable, Cmd);
 }
 
 //-----------------------------------------------------------------------------

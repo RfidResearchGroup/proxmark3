@@ -155,12 +155,11 @@ static void *main_loop(void *targ) {
         cmd[strlen(cmd) - 1] = 0x00;
 			
 			if (cmd[0] != 0x00) {
-				if (strncmp(cmd, "quit", 4) == 0) {
-					exit(0);
+				int ret = CommandReceived(cmd);
+				add_history(cmd);
+				if (ret == 99) {  // exit or quit
 					break;
 				}
-				CommandReceived(cmd);
-				add_history(cmd);
 			}
 			free(cmd);
 		} else {
@@ -223,7 +222,7 @@ int main(int argc, char* argv[]) {
 		.usb_present = 0,
 		.script_cmds_file = NULL
 	};
-	pthread_t main_loop_t;
+	pthread_t main_loop_threat;
 
   
 	sp = uart_open(argv[1]);
@@ -258,18 +257,20 @@ int main(int argc, char* argv[]) {
 	// create a mutex to avoid interlacing print commands from our different threads
 	pthread_mutex_init(&print_lock, NULL);
 
-	pthread_create(&main_loop_t, NULL, &main_loop, &marg);
+	pthread_create(&main_loop_threat, NULL, &main_loop, &marg);
 	InitGraphics(argc, argv);
 
 	MainGraphics();
 
-	pthread_join(main_loop_t, NULL);
+	pthread_join(main_loop_threat, NULL);
 
 	// Clean up the port
+	if (offline == 0) {
 	uart_close(sp);
+	}
   
 	// clean up mutex
 	pthread_mutex_destroy(&print_lock);
   
-  return 0;
+	exit(0);
 }

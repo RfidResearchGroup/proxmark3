@@ -40,17 +40,17 @@ void CmdsLS(const command_t Commands[])
   }
 }
 
-void CmdsParse(const command_t Commands[], const char *Cmd)
+int CmdsParse(const command_t Commands[], const char *Cmd)
 {
   if(strcmp( Cmd, "XX_internal_command_dump_XX") == 0)
   {// Help dump children
       dumpCommandsRecursive(Commands, 0);
-      return;
+		return 0;
   }
   if(strcmp( Cmd, "XX_internal_command_dump_markdown_XX") == 0)
   {// Markdown help dump children
       dumpCommandsRecursive(Commands, 1);
-      return;
+		return 0;
   }
   char cmd_name[32];
   int len = 0;
@@ -77,11 +77,13 @@ void CmdsParse(const command_t Commands[], const char *Cmd)
   if (Commands[i].Name) {
     while (Cmd[len] == ' ')
       ++len;
-    Commands[i].Parse(Cmd + len);
+	return Commands[i].Parse(Cmd + len);
   } else {
     // show help for selected hierarchy or if command not recognised
     CmdsHelp(Commands);
   }
+
+	return 0;
 }
 
 char pparent[512] = {0};
