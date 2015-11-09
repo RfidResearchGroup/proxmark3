@@ -73,22 +73,23 @@ int CmdEM410xSim(const char *Cmd)
 	uint8_t uid[5] = {0x00};
 
 	if (cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  lf em4x em410xsim <UID>");
+		PrintAndLog("Usage:  lf em4x em410xsim <UID> <clock>");
 		PrintAndLog("");
 		PrintAndLog("     sample: lf em4x em410xsim 0F0368568B");
 		return 0;
 	}
+	/* clock is 64 in EM410x tags */
+	uint8_t clock = 64;
 
 	if (param_gethex(Cmd, 0, uid, 10)) {
 		PrintAndLog("UID must include 10 HEX symbols");
 		return 0;
 	}
+	param_getdec(Cmd, 1, &clock);
 	
-	PrintAndLog("Starting simulating UID %02X%02X%02X%02X%02X", uid[0],uid[1],uid[2],uid[3],uid[4]);
+	PrintAndLog("Starting simulating UID %02X%02X%02X%02X%02X  clock: %d", uid[0],uid[1],uid[2],uid[3],uid[4],clock);
 	PrintAndLog("Press pm3-button to about simulation");
 
-	/* clock is 64 in EM410x tags */
-	int clock = 64;
 
 	/* clear our graph */
 	ClearGraph(0);
@@ -197,21 +198,13 @@ int CmdEM410xWrite(const char *Cmd)
 	}
 
 	// Check Clock
-	if (card == 1)
-	{
 		// Default: 64
 		if (clock == 0)
 			clock = 64;
 
-		// Allowed clock rates: 16, 32 and 64
-		if ((clock != 16) && (clock != 32) && (clock != 64)) {
-			PrintAndLog("Error! Clock rate %d not valid. Supported clock rates are 16, 32 and 64.\n", clock);
-			return 0;
-		}
-	}
-	else if (clock != 0)
-	{
-		PrintAndLog("Error! Clock rate is only supported on T55x7 tags.\n");
+	// Allowed clock rates: 16, 32, 40 and 64
+	if ((clock != 16) && (clock != 32) && (clock != 64) && (clock != 40)) {
+		PrintAndLog("Error! Clock rate %d not valid. Supported clock rates are 16, 32, 40 and 64.\n", clock);
 		return 0;
 	}
 
@@ -221,17 +214,18 @@ int CmdEM410xWrite(const char *Cmd)
 		//   provide for backwards-compatibility for older firmware, and to avoid
 		//   having to add another argument to CMD_EM410X_WRITE_TAG, we just store
 		//   the clock rate in bits 8-15 of the card value
-		card = (card & 0xFF) | (((uint64_t)clock << 8) & 0xFF00);
-	}
-	else if (card == 0)
+		card = (card & 0xFF) | ((clock << 8) & 0xFF00);
+	}	else if (card == 0) {
 		PrintAndLog("Writing %s tag with UID 0x%010" PRIx64, "T5555", id, clock);
-	else {
+		card = (card & 0xFF) | ((clock << 8) & 0xFF00);
+	} else {
 		PrintAndLog("Error! Bad card type selected.\n");
 		return 0;
 	}
 
 	UsbCommand c = {CMD_EM410X_WRITE_TAG, {card, (uint32_t)(id >> 32), (uint32_t)id}};
 	SendCommand(&c);
+
 	return 0;
 }
 
