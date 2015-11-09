@@ -141,7 +141,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
 	uint32_t sample_total_numbers =0 ;
 	uint32_t sample_total_saved =0 ;
 
-	while(!BUTTON_PRESS()) {
+	while(!BUTTON_PRESS() && !usb_poll_validate_length() ) {
 		WDT_HIT();
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
@@ -269,7 +269,7 @@ void doT55x7Acquisition(size_t sample_size) {
 	uint8_t curSample = 0;
 	uint8_t firstSample = 0;
 	uint16_t skipCnt = 0;
-	while(!BUTTON_PRESS() && skipCnt<1000) {
+	while(!BUTTON_PRESS() && !usb_poll_validate_length() && skipCnt<1000) {
 		WDT_HIT();		
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;

@@ -81,38 +81,39 @@ static void setup_timer(void)
 /* Generate Keystream */
 static uint32_t get_key_stream(int skip, int count)
 {
-  uint32_t key=0; int i;
+	uint32_t key=0; int i;
 
-  /* Use int to enlarge timer tc to 32bit */
-  legic_prng_bc += prng_timer->TC_CV;
-  prng_timer->TC_CCR = AT91C_TC_SWTRG;
+	/* Use int to enlarge timer tc to 32bit */
+	legic_prng_bc += prng_timer->TC_CV;
+	prng_timer->TC_CCR = AT91C_TC_SWTRG;
 
-  /* If skip == -1, forward prng time based */
-  if(skip == -1) {
-     i  = (legic_prng_bc+SIM_SHIFT)/SIM_DIVISOR; /* Calculate Cycles based on timer */
-     i -= legic_prng_count(); /* substract cycles of finished frames */
-     i -= count; /* substract current frame length, rewidn to bedinning */
-     legic_prng_forward(i);
-  } else {
-     legic_prng_forward(skip);
-  }
+	/* If skip == -1, forward prng time based */
+	if(skip == -1) {
+		i  = (legic_prng_bc+SIM_SHIFT)/SIM_DIVISOR; /* Calculate Cycles based on timer */
+		i -= legic_prng_count(); /* substract cycles of finished frames */
+		i -= count; /* substract current frame length, rewidn to bedinning */
+		legic_prng_forward(i);
+	} else {
+		legic_prng_forward(skip);
+	}
 
-  /* Write Time Data into LOG */
-  uint8_t *BigBuf = BigBuf_get_addr();
-  if(count == 6) { i = -1; } else { i = legic_read_count; }
-  BigBuf[OFFSET_LOG+128+i] = legic_prng_count();
-  BigBuf[OFFSET_LOG+256+i*4]   = (legic_prng_bc >> 0) & 0xff;
-  BigBuf[OFFSET_LOG+256+i*4+1] = (legic_prng_bc >> 8) & 0xff;
-  BigBuf[OFFSET_LOG+256+i*4+2] = (legic_prng_bc >>16) & 0xff;
-  BigBuf[OFFSET_LOG+256+i*4+3] = (legic_prng_bc >>24) & 0xff;
-  BigBuf[OFFSET_LOG+384+i] = count;
+	/* Write Time Data into LOG */
+	uint8_t *BigBuf = BigBuf_get_addr();
+	i = (count == 6) ? -1 : legic_read_count;
 
-  /* Generate KeyStream */
-  for(i=0; i<count; i++) {
-    key |= legic_prng_get_bit() << i;
-    legic_prng_forward(1);
-  }
-  return key;
+	BigBuf[OFFSET_LOG+128+i] = legic_prng_count();
+	BigBuf[OFFSET_LOG+256+i*4]   = (legic_prng_bc >> 0) & 0xff;
+	BigBuf[OFFSET_LOG+256+i*4+1] = (legic_prng_bc >> 8) & 0xff;
+	BigBuf[OFFSET_LOG+256+i*4+2] = (legic_prng_bc >>16) & 0xff;
+	BigBuf[OFFSET_LOG+256+i*4+3] = (legic_prng_bc >>24) & 0xff;
+	BigBuf[OFFSET_LOG+384+i] = count;
+
+	/* Generate KeyStream */
+	for(i=0; i<count; i++) {
+		key |= legic_prng_get_bit() << i;
+		legic_prng_forward(1);
+	}
+	return key;
 }
 
 /* Send a frame in tag mode, the FPGA must have been set up by
@@ -145,11 +146,11 @@ static void frame_send_tag(uint16_t response, int bits, int crypt)
       int nextbit = timer->TC_CV + TAG_TIME_BIT;
       int bit = response & 1;
       response = response >> 1;
-      if(bit) {
+      if(bit)
          AT91C_BASE_PIOA->PIO_SODR = GPIO_SSC_DOUT;
-      } else {
+      else
          AT91C_BASE_PIOA->PIO_CODR = GPIO_SSC_DOUT;
-      }
+      
       while(timer->TC_CV < nextbit) ;
    }
    AT91C_BASE_PIOA->PIO_CODR = GPIO_SSC_DOUT;
@@ -171,11 +172,11 @@ static void frame_send_rwd(uint32_t data, int bits)
 		int bit = data & 1;
 		data = data >> 1;
 
-		if(bit ^ legic_prng_get_bit()) {
+		if(bit ^ legic_prng_get_bit())
 			bit_end = starttime + RWD_TIME_1;
-		} else {
+		else
 			bit_end = starttime + RWD_TIME_0;
-		}
+		
 
 		/* RWD_TIME_PAUSE time off, then some time on, so that the complete bit time is
 		 * RWD_TIME_x, where x is the bit to be transmitted */
@@ -184,16 +185,15 @@ static void frame_send_rwd(uint32_t data, int bits)
 		AT91C_BASE_PIOA->PIO_SODR = GPIO_SSC_DOUT;
 		legic_prng_forward(1); /* bit duration is longest. use this time to forward the lfsr */
 
-		while(timer->TC_CV < bit_end) ;
+		while(timer->TC_CV < bit_end);
 	}
 
-	{
-		/* One final pause to mark the end of the frame */
-		int pause_end = timer->TC_CV + RWD_TIME_PAUSE;
-		AT91C_BASE_PIOA->PIO_CODR = GPIO_SSC_DOUT;
-		while(timer->TC_CV < pause_end) ;
-		AT91C_BASE_PIOA->PIO_SODR = GPIO_SSC_DOUT;
-	}
+	/* One final pause to mark the end of the frame */
+	int pause_end = timer->TC_CV + RWD_TIME_PAUSE;
+	AT91C_BASE_PIOA->PIO_CODR = GPIO_SSC_DOUT;
+	while(timer->TC_CV < pause_end) ;
+	AT91C_BASE_PIOA->PIO_SODR = GPIO_SSC_DOUT;
+
 
 	/* Reset the timer, to measure time until the start of the tag frame */
 	timer->TC_CCR = AT91C_TC_SWTRG;
@@ -239,8 +239,7 @@ static void frame_receive_rwd(struct legic_frame * const f, int bits, int crypt)
      * since we cannot compute it on the fly while reading */
 	legic_prng_forward(2);
 
-	if(crypt)
-	{
+	if(crypt) {
 		for(i=0; i<bits; i++) {
 			data |= legic_prng_get_bit() << i;
 			legic_prng_forward(1);
@@ -277,9 +276,9 @@ static void frame_receive_rwd(struct legic_frame * const f, int bits, int crypt)
 
 static void frame_append_bit(struct legic_frame * const f, int bit)
 {
-   if(f->bits >= 31) {
+   if(f->bits >= 31)
        return; /* Overflow, won't happen */
-   }
+  
    f->data |= (bit<<f->bits);
    f->bits++;
 }
@@ -448,12 +447,11 @@ int LegicRfReader(int offset, int bytes) {
 			Dbprintf("Unknown card format: %x",tag_type);
 			return -1;
 	}
-	if(bytes == -1) {
+	if(bytes == -1)
 		bytes = card_sz;
-	}
-	if(bytes+offset >= card_sz) {
+
+	if(bytes+offset >= card_sz)
 		bytes = card_sz-offset;
-	}
 
 	perform_setup_phase_rwd(SESSION_IV);
 

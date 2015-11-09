@@ -1220,10 +1220,6 @@ int CmdFSKdemodIO(const char *Cmd)
 //print full AWID Prox ID and some bit format details if found
 int CmdFSKdemodAWID(const char *Cmd)
 {
-
-	//int verbose=1;
-	//sscanf(Cmd, "%i", &verbose);
-
 	//raw fsk demod no manchester decoding no start bit finding just get binary from wave
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t size = getFromGraphBuf(BitStream);
@@ -1254,7 +1250,7 @@ int CmdFSKdemodAWID(const char *Cmd)
 	// |            |             |             |               |             |               |
 	// 01234567 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 - to 96
 	// -----------------------------------------------------------------------------
-	// 00000001 000 1 110 1 101 1 011 1 101 1 010 0 000 1 000 1 010 0 001 0 110 1 100 0 000 1 000 1
+	// 00000001 000 1 110 1 101 1 011 1 1 d01 1 010 0 000 1 000 1 010 0 001 0 110 1 100 0 000 1 000 1
 	// premable bbb o bbb o bbw o fff o fff o ffc o ccc o ccc o ccc o ccc o ccc o wxx o xxx o xxx o - to 96
 	//          |---26 bit---|    |-----117----||-------------142-------------|
 	// b = format bit len, o = odd parity of last 3 bits

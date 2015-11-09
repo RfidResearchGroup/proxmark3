@@ -1304,6 +1304,9 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 	// load chip config block
 	data[0] = T55x7_BITRATE_RF_50 | T55x7_MODULATION_FSK2a | last_block << T55x7_MAXBLOCK_SHIFT;
 
+	//TODO add selection of chip for Q5 or T55x7
+	// data[0] = (((50-2)/2)<<T5555_BITRATE_SHIFT) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | last_block << T5555_MAXBLOCK_SHIFT;
+
 	LED_D_ON();
 	// Program the data blocks for supplied ID
 	// and the block 0 for HID format
@@ -1316,6 +1319,8 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 
 void CopyIOtoT55x7(uint32_t hi, uint32_t lo) {
 	uint32_t data[] = {T55x7_BITRATE_RF_64 | T55x7_MODULATION_FSK2a | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
+	//TODO add selection of chip for Q5 or T55x7
+	// data[0] = (((64-2)/2)<<T5555_BITRATE_SHIFT) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | 2 << T5555_MAXBLOCK_SHIFT;
 
 	LED_D_ON();
 	// Program the data blocks for supplied ID
@@ -1332,6 +1337,9 @@ void CopyIndala64toT55x7(uint32_t hi, uint32_t lo) {
 	//Program the 2 data blocks for supplied 64bit UID
 	// and the Config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
 	uint32_t data[] = { T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
+	//TODO add selection of chip for Q5 or T55x7
+	// data[0] = (((32-2)/2)<<T5555_BITRATE_SHIFT) | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
+
 	WriteT55xx(data, 0, 3);
 	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
 	//	T5567WriteBlock(0x603E1042,0);
@@ -1344,6 +1352,8 @@ void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t 
 	// and the block 0 for Indala224 format	
 	//Config for Indala (RF/32;PSK1 with RF/2;Maxblock=7)
 	data[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (7 << T55x7_MAXBLOCK_SHIFT);
+	//TODO add selection of chip for Q5 or T55x7
+	// data[0] = (((32-2)/2)<<T5555_BITRATE_SHIFT) | T5555_MODULATION_PSK1 | 7 << T5555_MAXBLOCK_SHIFT;
 	WriteT55xx(data, 0, 8);
 	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
 	//	T5567WriteBlock(0x603E10E2,0);
@@ -1415,19 +1425,20 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
 
 	// Write EM410x ID
 	uint32_t data[] = {0, id>>32, id & 0xFFFFFFFF};
-	if (card) {
+
 		clock = (card & 0xFF00) >> 8;
 		clock = (clock == 0) ? 64 : clock;
 		Dbprintf("Clock rate: %d", clock);
+	if (card & 0xFF) { //t55x7
 		clock = GetT55xxClockBit(clock);
 		if (clock == 0) {
 			Dbprintf("Invalid clock rate: %d", clock);
 			return;
 		}
-
 		data[0] = clock | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT);
-	} else {
-		data[0] = (0x1F << T5555_BITRATE_SHIFT) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
+	} else { //t5555 (Q5)
+		clock = (clock-2)>>1;  //n = (RF-2)/2
+		data[0] = (clock << T5555_BITRATE_SHIFT) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
 	}
 
 	WriteT55xx(data, 0, 3);
