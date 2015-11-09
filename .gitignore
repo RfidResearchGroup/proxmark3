@@ -1,6 +1,7 @@
 # .gitignore
 # don't push these files to the repository
 
+.history
 *.log
 *.eml
 *.o
@@ -35,4 +36,4 @@ fpga/*
 !fpga/sim.tcl
 
 client/*
-.history
+
