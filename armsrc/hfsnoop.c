@@ -7,7 +7,6 @@ static void RAMFUNC optimizedSnoop(void);
 
 static void RAMFUNC optimizedSnoop(void)
 {
-	BigBuf_free();
 	int n = BigBuf_max_traceLen() / sizeof(uint16_t); // take all memory
 
 	uint16_t *dest = (uint16_t *)BigBuf_get_addr();
@@ -20,7 +19,7 @@ static void RAMFUNC optimizedSnoop(void)
 		if(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)
 		{
 			*dest = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
-			dest++;
+			dest = dest + 1;
 		}
 	}
 	//Resetting Frame mode (First set in fpgaloader.c)
@@ -41,24 +40,28 @@ void HfSnoop(int samplesToSkip, int triggersToSkip)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SNOOP);
 	SpinDelay(100);
 
+	BigBuf_free();
+	BigBuf_Clear();
+	
 	AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(16); // Setting Frame Mode For better performance on high speed data transfer.
 
 	trigger_cnt = 0;
 	uint16_t r = 0;
-	while(!BUTTON_PRESS()) {
+	while(!BUTTON_PRESS() && !usb_poll_validate_length() ) {
 		WDT_HIT();
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			r = (uint16_t)AT91C_BASE_SSC->SSC_RHR;
-			if (!(trigger_cnt == triggersToSkip) && ( (r >> 8) >= 240)) 
+			r = MAX(r & 0xff, r >> 8); 
+			if (r >= 240) 
 			{
-				Dbprintf("Trigger kicked! Value: %d.", r >> 8);
-				trigger_cnt++;
+				if (++trigger_cnt > triggersToSkip) {
 				break;
 			} 
 		}
 	}
+	}
+
 	if(!BUTTON_PRESS()) {
-		Dbprintf("Trigger kicked! Value: %d, Dumping Samples Hispeed now.", r >> 8);
 		int waitcount = samplesToSkip; // lets wait 40000 ticks of pck0
 		while(waitcount != 0) {
 			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
@@ -66,6 +69,7 @@ void HfSnoop(int samplesToSkip, int triggersToSkip)
 			}
 		}
 		optimizedSnoop();
+		Dbprintf("Trigger kicked! Value: %d, Dumping Samples Hispeed now.", r);
 	}
 
 	DbpString("HF Snoop end");
