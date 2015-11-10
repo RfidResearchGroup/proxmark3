@@ -1250,7 +1250,7 @@ int CmdFSKdemodAWID(const char *Cmd)
 	// |            |             |             |               |             |               |
 	// 01234567 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 - to 96
 	// -----------------------------------------------------------------------------
-	// 00000001 000 1 110 1 101 1 011 1 1 d01 1 010 0 000 1 000 1 010 0 001 0 110 1 100 0 000 1 000 1
+	// 00000001 000 1 110 1 101 1 011 1 101 1 010 0 000 1 000 1 010 0 001 0 110 1 100 0 000 1 000 1
 	// premable bbb o bbb o bbw o fff o fff o ffc o ccc o ccc o ccc o ccc o ccc o wxx o xxx o xxx o - to 96
 	//          |---26 bit---|    |-----117----||-------------142-------------|
 	// b = format bit len, o = odd parity of last 3 bits
@@ -1419,7 +1419,6 @@ int CmdFSKdemodPyramid(const char *Cmd)
 	uint32_t fc = 0;
 	uint32_t cardnum = 0;
 	uint32_t code1 = 0;
-	//uint32_t code2 = 0;
 	if (fmtLen==26){
 		fc = bytebits_to_byte(BitStream+73, 8);
 		cardnum = bytebits_to_byte(BitStream+81, 16);
@@ -1876,54 +1875,6 @@ int CmdRawDemod(const char *Cmd)
 		PrintAndLog("unknown modulation entered - see help ('h') for parameter structure");
 	}
 	return ans;
-}
-
-int AmVikingDecode(const uint8_t *id){
-    // searching the buffer for the id
-    //uint8_t id_bits[32];
-    // convert 4 bytes of id to 32 bits present in 32 bytes data;
-    //bytes_to_bits(id,4,id_bits,sizeof(id_bits));
-
-    //print_arraybinary(id_bits,sizeof(id_bits));
-	PrintAndLog("   binary: %s", printBits(4, id) );
-
-    //size_t idx = 0;
-    size_t BitLen = DemodBufferLen;
-    uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
-    memcpy(BitStream, DemodBuffer, BitLen);
-    
-    // if (VikingDecode(BitStream,BitLen,&idx,id_bits,sizeof(id_bits)) ==  1)
-    // {
-        // setDemodBuf(BitStream,64, idx);
-        // PrintAndLog("Found Viking tag\n");
-        // CmdPrintDemodBuff("x");
-    // }
-    // else
-    // {
-        // PrintAndLog("Not found Viking tag\n");
-    // }
-    return 0;
-}
-int AMVikingDemod(const uint8_t *id){
-    // demod am clock 32 fail
-    if (!ASKDemod("32",g_debugMode,false,1))
-        return 0;
-    // search for the card id from bitstream.
-    return AmVikingDecode(id);
-}
-//by Gusto
-// takes 1 argument <8 bytes of Hex number on the card
-// print binary found and saves in grapbuffer for further commands
-int CmdAMVikingDemod(const char *Cmd){
-    uint8_t id[4];
-    if (param_gethex(Cmd,0,id,8) == 1)
-    {
-        PrintAndLog("Usage:  data vikingdemod CardID 8 bytes of hex number");
-        return 0;
-    }
-    PrintAndLog("Card ID : %02X%02X%02X%02X\n",id[0],id[1],id[2],id[3]);
-    // try to demod AMViking
-    return AMVikingDemod(id);
 }
 
 int CmdGrid(const char *Cmd)
@@ -2415,6 +2366,7 @@ static command_t CommandTable[] =
 	{"askedgedetect",   CmdAskEdgeDetect,   1, "[threshold] Adjust Graph for manual ask demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
 	{"askem410xdemod",  CmdAskEM410xDemod,  1, "[clock] [invert<0|1>] [maxErr] -- Demodulate an EM410x tag from GraphBuffer (args optional)"},
 	{"askgproxiidemod", CmdG_Prox_II_Demod, 1, "Demodulate a G Prox II tag from GraphBuffer"},
+	{"askvikingdemod",  CmdVikingDemod,     1, "Demodulate a Viking AM tag from GraphBuffer"},
 	{"autocorr",        CmdAutoCorr,        1, "[window length] [g] -- Autocorrelation over window - g to save back to GraphBuffer (overwrite)"},
 	{"biphaserawdecode",CmdBiphaseDecodeRaw,1, "[offset] [invert<0|1>] [maxErr] -- Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
 	{"bin2hex",         Cmdbin2hex,         1, "bin2hex <digits>     -- Converts binary to hexadecimal"},
@@ -2424,7 +2376,6 @@ static command_t CommandTable[] =
 	{"detectclock",     CmdDetectClockRate, 1, "[modulation] Detect clock rate of wave in GraphBuffer (options: 'a','f','n','p' for ask, fsk, nrz, psk respectively)"},
 	{"fdxbdemod",       CmdFDXBdemodBI    , 1, "Demodulate a FDX-B ISO11784/85 Biphase tag from GraphBuffer"},
 	{"fskawiddemod",    CmdFSKdemodAWID,    1, "Demodulate an AWID FSK tag from GraphBuffer"},
-    {"vikingdemod",     CmdAMVikingDemod,   1, "Demodulate a Viking AM tag from GraphBuffer"},
 	//{"fskfcdetect",   CmdFSKfcDetect,     1, "Try to detect the Field Clock of an FSK wave"},
 	{"fskhiddemod",     CmdFSKdemodHID,     1, "Demodulate a HID FSK tag from GraphBuffer"},
 	{"fskiodemod",      CmdFSKdemodIO,      1, "Demodulate an IO Prox FSK tag from GraphBuffer"},

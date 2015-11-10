@@ -1005,7 +1005,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		case CMD_AWID_DEMOD_FSK: // Set realtime AWID demodulation
 			CmdAWIDdemodFSK(c->arg[0], 0, 0, 1);
-                        break;
+			break;
         case CMD_VIKING_CLONE_TAG:
             CopyViKingtoT55x7(c->arg[0],c->arg[1]);
             break;

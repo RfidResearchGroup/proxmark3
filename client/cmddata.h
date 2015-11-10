@@ -17,6 +17,7 @@ int CmdData(const char *Cmd);
 void printDemodBuff(void);
 void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx);
 int CmdAskEM410xDemod(const char *Cmd);
+int CmdVikingDemod(const char *Cmd);
 int CmdG_Prox_II_Demod(const char *Cmd);
 int Cmdaskrawdemod(const char *Cmd);
 int Cmdaskmandemod(const char *Cmd);
@@ -67,8 +68,7 @@ int PSKDemod(const char *Cmd, bool verbose);
 int NRZrawDemod(const char *Cmd, bool verbose);
 void printEM410x(uint32_t hi, uint64_t id);
 int getSamples(const char *Cmd, bool silent);
-int AMVikingDemod(const uint8_t *cardid);
-int CmdAMVikingDemod(const char *cmd);
+
 
 #define MAX_DEMOD_BUF_LEN (1024*128)
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];

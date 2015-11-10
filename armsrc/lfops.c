@@ -1132,7 +1132,7 @@ void T55xxResetRead(void) {
 }
 
 // Write one card block in page 0, no lock
-void T55xxWriteBlockExt(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t arg) {
+void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg) {
 	LED_A_ON();
 	bool PwdMode = arg & 0x1;
 	uint8_t Page = (arg & 0x2)>>1;
@@ -1178,7 +1178,7 @@ void T55xxWriteBlockExt(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t arg
 }
 
 // Write one card block in page 0, no lock
-void T55xxWriteBlock(uint32_t Data, uint32_t Block, uint32_t Pwd, uint8_t arg) {
+void T55xxWriteBlock(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg) {
 	T55xxWriteBlockExt(Data, Block, Pwd, arg);
 	cmd_send(CMD_ACK,0,0,0,0,0);
 }
@@ -1260,10 +1260,8 @@ void T55xxWakeUp(uint32_t Pwd){
 
 void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks) {
 	// write last block first and config block last (if included)
-	for (uint8_t i = numblocks+startblock; i > startblock; i--) {
-		//Dbprintf("write- Blk: %d, d:%08X",i-1,blockdata[i-1]);
+	for (uint8_t i = numblocks+startblock; i > startblock; i--)
 		T55xxWriteBlockExt(blockdata[i-1],i-1,0,0);
-	}
 }
 
 // Copy HID id to card and setup block 0 config
@@ -1652,13 +1650,10 @@ void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode
 }
 
 void CopyViKingtoT55x7(uint32_t block1, uint32_t block2) {
-    LED_D_ON();
-    T55xxWriteBlock(block1,1,0,0);
-    T55xxWriteBlock(block2,2,0,0);
-	T55xxWriteBlock(T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | 2 << T55x7_MAXBLOCK_SHIFT,0,0,0);
-    // T55xxWriteBlock(T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | 2 << T5555_MAXBLOCK_SHIFT,0,0,1);
-	// ICEMAN NOTES:
-	// Shouldn't this one be: T55x7_MAXBLOCK_SHIFT  and 0 in password mode
-    LED_D_OFF();
+
+	uint32_t data[] = {T55x7_BITRATE_RF_32 | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT), block1, block2};
+	// Program the data blocks for supplied ID and the block 0 config
+	WriteT55xx(data, 0, 3);
+	LED_D_OFF();
 }
 

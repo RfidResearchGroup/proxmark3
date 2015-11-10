@@ -127,6 +127,18 @@ int usage_lf_simpsk(void) {
   PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
   return 0;
 }
+int usage_lf_find(void){
+    PrintAndLog("Usage:  lf search <0|1> [u]");
+    PrintAndLog("     <use data from Graphbuffer> , if not set, try reading data from tag.");
+    PrintAndLog("     [Search for Unknown tags] , if not set, reads only known tags.");
+    PrintAndLog("");
+    PrintAndLog("    sample: lf search     = try reading data from tag & search for known tags");
+    PrintAndLog("          : lf search 1   = use data from GraphBuffer & search for known tags");
+    PrintAndLog("          : lf search u   = try reading data from tag & search for known and unknown tags");
+    PrintAndLog("          : lf search 1 u = use data from GraphBuffer & search for known and unknown tags");
+	return 0;
+}
+
 
 /* send a LF command before reading */
 int CmdLFCommandRead(const char *Cmd)
@@ -269,191 +281,186 @@ int CmdFlexdemod(const char *Cmd)
   
 int CmdIndalaDemod(const char *Cmd)
 {
-  // Usage: recover 64bit UID by default, specify "224" as arg to recover a 224bit UID
+	// Usage: recover 64bit UID by default, specify "224" as arg to recover a 224bit UID
 
-  int state = -1;
-  int count = 0;
-  int i, j;
+	int state = -1;
+	int count = 0;
+	int i, j;
 
-  // worst case with GraphTraceLen=64000 is < 4096
-  // under normal conditions it's < 2048
+	// worst case with GraphTraceLen=64000 is < 4096
+	// under normal conditions it's < 2048
 
-  uint8_t rawbits[4096];
-  int rawbit = 0;
-  int worst = 0, worstPos = 0;
- // PrintAndLog("Expecting a bit less than %d raw bits", GraphTraceLen / 32);
-  for (i = 0; i < GraphTraceLen-1; i += 2) {
-    count += 1;
-    if ((GraphBuffer[i] > GraphBuffer[i + 1]) && (state != 1)) {
-      if (state == 0) {
-        for (j = 0; j <  count - 8; j += 16) {
-          rawbits[rawbit++] = 0;
-        }
-        if ((abs(count - j)) > worst) {
-          worst = abs(count - j);
-          worstPos = i;
-        }
-      }
-      state = 1;
-      count = 0;
-    } else if ((GraphBuffer[i] < GraphBuffer[i + 1]) && (state != 0)) {
-      if (state == 1) {
-        for (j = 0; j <  count - 8; j += 16) {
-          rawbits[rawbit++] = 1;
-        }
-        if ((abs(count - j)) > worst) {
-          worst = abs(count - j);
-          worstPos = i;
-        }
-      }
-      state = 0;
-      count = 0;
-    }
-  }
-  
-  if (rawbit>0){
-    PrintAndLog("Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
-    PrintAndLog("worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
+	uint8_t rawbits[4096];
+	int rawbit = 0;
+	int worst = 0, worstPos = 0;
+	// PrintAndLog("Expecting a bit less than %d raw bits", GraphTraceLen / 32);
+	for (i = 0; i < GraphTraceLen-1; i += 2) {
+		count += 1;
+		if ((GraphBuffer[i] > GraphBuffer[i + 1]) && (state != 1)) {
+			if (state == 0) {
+				for (j = 0; j <  count - 8; j += 16) {
+					rawbits[rawbit++] = 0;
+				}
+				if ((abs(count - j)) > worst) {
+					worst = abs(count - j);
+					worstPos = i;
+				}
+			}
+			state = 1;
+			count = 0;
+		} else if ((GraphBuffer[i] < GraphBuffer[i + 1]) && (state != 0)) {
+			if (state == 1) {
+				for (j = 0; j <  count - 8; j += 16) {
+					rawbits[rawbit++] = 1;
+				}
+				if ((abs(count - j)) > worst) {
+					worst = abs(count - j);
+					worstPos = i;
+				}
+			}
+			state = 0;
+			count = 0;
+		}
+	}
+
+	if ( rawbit>0 ){
+		PrintAndLog("Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
+		PrintAndLog("worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
 	} else {
 		return 0;
 	}
 
-  // Finding the start of a UID
-  int uidlen, long_wait;
-  if (strcmp(Cmd, "224") == 0) {
-    uidlen = 224;
-    long_wait = 30;
-  } else {
-    uidlen = 64;
-    long_wait = 29;
-  }
+	// Finding the start of a UID
+	int uidlen, long_wait;
+	if (strcmp(Cmd, "224") == 0) {
+		uidlen = 224;
+		long_wait = 30;
+	} else {
+		uidlen = 64;
+		long_wait = 29;
+	}
 
-  int start;
-  int first = 0;
-  for (start = 0; start <= rawbit - uidlen; start++) {
-    first = rawbits[start];
-    for (i = start; i < start + long_wait; i++) {
-      if (rawbits[i] != first) {
-        break;
-      }
-    }
-    if (i == (start + long_wait)) {
-      break;
-    }
-  }
+	int start;
+	int first = 0;
+	for (start = 0; start <= rawbit - uidlen; start++) {
+		first = rawbits[start];
+		for (i = start; i < start + long_wait; i++) {
+			if (rawbits[i] != first) {
+				break;
+			}
+		}
+		if (i == (start + long_wait)) {
+			break;
+		}
+	}
   
-  if (start == rawbit - uidlen + 1) {
-    PrintAndLog("nothing to wait for");
-    return 0;
-  }
+	if (start == rawbit - uidlen + 1) {
+		PrintAndLog("nothing to wait for");
+		return 0;
+	}
 
-  // Inverting signal if needed
-  if (first == 1) {
-    for (i = start; i < rawbit; i++) {
-      rawbits[i] = !rawbits[i];
-    }
-  }
+	// Inverting signal if needed
+	if (first == 1) {
+		for (i = start; i < rawbit; i++) {
+			rawbits[i] = !rawbits[i];
+		}
+	}
 
-  // Dumping UID
+	// Dumping UID
 	uint8_t bits[224] = {0x00};
 	char showbits[225] = {0x00};
-  int bit;
-  i = start;
-  int times = 0;
+	int bit;
+	i = start;
+	int times = 0;
 	
-  if (uidlen > rawbit) {
-    PrintAndLog("Warning: not enough raw bits to get a full UID");
-    for (bit = 0; bit < rawbit; bit++) {
-      bits[bit] = rawbits[i++];
-      // As we cannot know the parity, let's use "." and "/"
-      showbits[bit] = '.' + bits[bit];
-    }
-    showbits[bit+1]='\0';
-    PrintAndLog("Partial UID=%s", showbits);
-    return 0;
-  } else {
-    for (bit = 0; bit < uidlen; bit++) {
-      bits[bit] = rawbits[i++];
-      showbits[bit] = '0' + bits[bit];
-    }
-    times = 1;
-  }
+	if (uidlen > rawbit) {
+		PrintAndLog("Warning: not enough raw bits to get a full UID");
+		for (bit = 0; bit < rawbit; bit++) {
+			bits[bit] = rawbits[i++];
+			// As we cannot know the parity, let's use "." and "/"
+			showbits[bit] = '.' + bits[bit];
+		}
+		showbits[bit+1]='\0';
+		PrintAndLog("Partial UID=%s", showbits);
+		return 0;
+	} else {
+		for (bit = 0; bit < uidlen; bit++) {
+			bits[bit] = rawbits[i++];
+			showbits[bit] = '0' + bits[bit];
+		}
+		times = 1;
+	}
   
-  //convert UID to HEX
-  uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
-  int idx;
+	//convert UID to HEX
+	uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
+	int idx;
 	uid1 = uid2 = 0;
 	
-  if (uidlen==64){
-    for( idx=0; idx<64; idx++) {
-        if (showbits[idx] == '0') {
-        uid1=(uid1<<1)|(uid2>>31);
-        uid2=(uid2<<1)|0;
-        } else {
-        uid1=(uid1<<1)|(uid2>>31);
-        uid2=(uid2<<1)|1;
-        } 
-      }
-    PrintAndLog("UID=%s (%x%08x)", showbits, uid1, uid2);
-  }
-  else {
+	if (uidlen==64){
+		for( idx=0; idx<64; idx++) {
+			if (showbits[idx] == '0') {
+				uid1 = (uid1<<1) | (uid2>>31);
+				uid2 = (uid2<<1) | 0;
+			} else {
+				uid1 = (uid1<<1) | (uid2>>31);
+				uid2 = (uid2<<1) | 1;
+			} 
+		}
+		PrintAndLog("UID=%s (%x%08x)", showbits, uid1, uid2);
+	} else {
 		uid3 = uid4 = uid5 = uid6 = uid7 = 0;
 
-    for( idx=0; idx<224; idx++) {
-        uid1=(uid1<<1)|(uid2>>31);
-        uid2=(uid2<<1)|(uid3>>31);
-        uid3=(uid3<<1)|(uid4>>31);
-        uid4=(uid4<<1)|(uid5>>31);
-        uid5=(uid5<<1)|(uid6>>31);
-        uid6=(uid6<<1)|(uid7>>31);
-			
+		for( idx=0; idx<224; idx++) {
+			uid1 = (uid1<<1) | (uid2>>31);
+			uid2 = (uid2<<1) | (uid3>>31);
+			uid3 = (uid3<<1) | (uid4>>31);
+			uid4 = (uid4<<1) | (uid5>>31);
+			uid5 = (uid5<<1) | (uid6>>31);
+			uid6 = (uid6<<1) | (uid7>>31);
+
 			if (showbits[idx] == '0') 
 				uid7 = (uid7<<1) | 0;
 			else 
 				uid7 = (uid7<<1) | 1;
-      }
-    PrintAndLog("UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
-  }
+		}
+		PrintAndLog("UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+	}
 
-  // Checking UID against next occurrences
-    int failed = 0;
+	// Checking UID against next occurrences
+	int failed = 0;
 	for (; i + uidlen <= rawbit;) {
 		failed = 0;
-    for (bit = 0; bit < uidlen; bit++) {
-      if (bits[bit] != rawbits[i++]) {
-        failed = 1;
-        break;
-      }
-    }
-    if (failed == 1) {
-      break;
-    }
-    times += 1;
-  }
+		for (bit = 0; bit < uidlen; bit++) {
+			if (bits[bit] != rawbits[i++]) {
+				failed = 1;
+				break;
+			}
+		}
+		if (failed == 1) {
+			break;
+		}
+		times += 1;
+	}
 
-  PrintAndLog("Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
+	PrintAndLog("Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
 
-  // Remodulating for tag cloning
+	// Remodulating for tag cloning
 	// HACK: 2015-01-04 this will have an impact on our new way of seening lf commands (demod) 
 	// since this changes graphbuffer data.
-  GraphTraceLen = 32*uidlen;
-  i = 0;
-  int phase = 0;
-  for (bit = 0; bit < uidlen; bit++) {
-    if (bits[bit] == 0) {
-      phase = 0;
-    } else {
-      phase = 1;
-    }
-    int j;
-    for (j = 0; j < 32; j++) {
-      GraphBuffer[i++] = phase;
-      phase = !phase;
-    }
-  }
+	GraphTraceLen = 32 * uidlen;
+	i = 0;
+	int phase = 0;
+	for (bit = 0; bit < uidlen; bit++) {
+		phase = (bits[bit] == 0) ? 0 : 1;
+		int j;
+		for (j = 0; j < 32; j++) {
+			GraphBuffer[i++] = phase;
+			phase = !phase;
+		}
+	}
 
-  RepaintGraphWindow();
-  return 1;
+	RepaintGraphWindow();
+	return 1;
 }
 
 int CmdIndalaClone(const char *Cmd)
@@ -1043,25 +1050,14 @@ int CmdVchDemod(const char *Cmd)
 //by marshmellow
 int CmdLFfind(const char *Cmd)
 {
-  int ans=0;
+  int ans = 0;
   char cmdp = param_getchar(Cmd, 0);
   char testRaw = param_getchar(Cmd, 1);
-  if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') {
-    PrintAndLog("Usage:  lf search <0|1> [u]");
-    PrintAndLog("     <use data from Graphbuffer> , if not set, try reading data from tag.");
-    PrintAndLog("     [Search for Unknown tags] , if not set, reads only known tags.");
-    PrintAndLog("");
-    PrintAndLog("    sample: lf search     = try reading data from tag & search for known tags");
-    PrintAndLog("          : lf search 1   = use data from GraphBuffer & search for known tags");
-    PrintAndLog("          : lf search u   = try reading data from tag & search for known and unknown tags");
-    PrintAndLog("          : lf search 1 u = use data from GraphBuffer & search for known and unknown tags");
-
-    return 0;
-  }
+  if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') return usage_lf_find();
 
   if (!offline && (cmdp != '1')){
-		CmdLFRead("s");
-		getSamples("30000",false);
+	CmdLFRead("s");
+	getSamples("30000",false);
   } else if (GraphTraceLen < 1000) {
     PrintAndLog("Data in Graphbuffer was too small.");
     return 0;
@@ -1133,6 +1129,12 @@ int CmdLFfind(const char *Cmd)
 		return 1;
 	}	
 
+	ans=CmdVikingDemod("");
+	if (ans>0) {
+		PrintAndLog("\nValid Viking ID Found!");
+		return 1;
+	}	
+
 	ans=CmdPSKNexWatch("");
 	if (ans>0) {
 		PrintAndLog("\nValid NexWatch ID Found!");
@@ -1171,15 +1173,15 @@ int CmdLFfind(const char *Cmd)
 			}
 		}
 	}
-		ans=GetFskClock("",FALSE,FALSE); 
+	ans=GetFskClock("",FALSE,FALSE); 
     if (ans != 0){ //fsk
-			ans=FSKrawDemod("",TRUE);
-      if (ans>0) {
-        PrintAndLog("\nUnknown FSK Modulated Tag Found!");
-        return 1;
-      }
+		ans=FSKrawDemod("",TRUE);
+		if (ans>0) {
+			PrintAndLog("\nUnknown FSK Modulated Tag Found!");
+			return 1;
+		}
     }
-		ans=ASKDemod("0 0 0",TRUE,FALSE,1);
+	ans=ASKDemod("0 0 0",TRUE,FALSE,1);
     if (ans>0) {
       PrintAndLog("\nUnknown ASK Modulated and Manchester encoded Tag Found!");
       PrintAndLog("\nif it does not look right it could instead be ASK/Biphase - try 'data rawdemod ab'");
@@ -1187,10 +1189,10 @@ int CmdLFfind(const char *Cmd)
     }
     ans=CmdPSK1rawDemod("");
     if (ans>0) {
-      PrintAndLog("Possible unknown PSK1 Modulated Tag Found above!\n\nCould also be PSK2 - try 'data rawdemod p2'");
-      PrintAndLog("\nCould also be PSK3 - [currently not supported]");
-      PrintAndLog("\nCould also be NRZ - try 'data nrzrawdemod");
-      return 1;
+		PrintAndLog("Possible unknown PSK1 Modulated Tag Found above!\n\nCould also be PSK2 - try 'data rawdemod p2'");
+		PrintAndLog("\nCould also be PSK3 - [currently not supported]");
+		PrintAndLog("\nCould also be NRZ - try 'data nrzrawdemod");
+		return 1;
     }
     PrintAndLog("\nNo Data Found!\n");
   }

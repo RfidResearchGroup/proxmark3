@@ -600,6 +600,26 @@ int IOdemodFSK(uint8_t *dest, size_t size)
 }
 
 // by marshmellow
+// find viking preamble 0xF200 in already demoded data
+int VikingDemod_AM(uint8_t *dest, size_t *size) {
+	if (justNoise(dest, *size)) return -1;
+	//make sure buffer has data
+	if (*size < 64*2) return -2;
+
+	size_t startIdx = 0;
+	uint8_t preamble[] = {1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
+	if (errChk == 0) return -4; //preamble not found
+	uint32_t checkCalc = bytebits_to_byte(dest+startIdx,8) ^ bytebits_to_byte(dest+startIdx+8,8) ^ bytebits_to_byte(dest+startIdx+16,8)
+	    ^ bytebits_to_byte(dest+startIdx+24,8) ^ bytebits_to_byte(dest+startIdx+32,8) ^ bytebits_to_byte(dest+startIdx+40,8) 
+	    ^ bytebits_to_byte(dest+startIdx+48,8) ^ bytebits_to_byte(dest+startIdx+56,8);
+	if ( checkCalc != 0xA8 ) return -5;
+	if (*size != 64) return -5;
+	//return start position
+	return (int) startIdx;
+}
+
+// by marshmellow
 // takes a array of binary values, start position, length of bits per parity (includes parity bit),
 //   Parity Type (1 for odd; 0 for even; 2 Always 1's), and binary Length (length to run) 
 size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen)
@@ -1505,30 +1525,3 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
 	*size = numBits;
 	return errCnt;
 }
-// on successful return 1 otherwise return 0
-int VikingDecode(uint8_t *BitStream, 
-					size_t size,
-					size_t *startIdx,
-					uint8_t *id_bits,
-					size_t id_bits_size)
-{
-    //no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
-    //  otherwise could be a void with no arguments
-    //set defaults
-    uint32_t i = 0;
-    uint32_t lastcheckindex = size - (id_bits_size * 2);
-    int found = 0;
-    while (i < lastcheckindex)
-    {
-        if (memcmp(BitStream + i,id_bits,id_bits_size) == 0)
-        {
-            *startIdx = i;
-            found = 1;
-            break;
-        }
-        i++;
-    }
-    return found;
-}
-
-
