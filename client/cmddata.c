@@ -1603,61 +1603,33 @@ int CmdIndalaDecode(const char *Cmd)
 		return 0;
 	}
 	uint8_t invert=0;
-	ans = indala26decode(DemodBuffer, &DemodBufferLen, &invert);
-	if (ans < 1) {
+	size_t size = DemodBufferLen;
+	size_t startIdx = indala26decode(DemodBuffer, &size, &invert);
+	if (startIdx < 1) {
 		if (g_debugMode==1)
 			PrintAndLog("Error2: %d",ans);
 		return -1;
 	}
-	char showbits[251]={0x00};
+	setDemodBuf(DemodBuffer, size, startIdx);
 	if (invert)
 		if (g_debugMode==1)
 			PrintAndLog("Had to invert bits");
 
+	PrintAndLog("BitLen: %d",DemodBufferLen);
 	//convert UID to HEX
 	uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
-	int idx;
-	uid1=0;
-	uid2=0;
-	PrintAndLog("BitLen: %d",DemodBufferLen);
+	uid1=bytebits_to_byte(DemodBuffer,32);
+	uid2=bytebits_to_byte(DemodBuffer+32,32);
 	if (DemodBufferLen==64){
-		for( idx=0; idx<64; idx++) {
-			uid1=(uid1<<1)|(uid2>>31);
-			if (DemodBuffer[idx] == 0) {
-				uid2=(uid2<<1)|0;
-				showbits[idx]='0';
+		PrintAndLog("Indala UID=%s (%x%08x)", sprint_bin(DemodBuffer,DemodBufferLen), uid1, uid2);
 			} else {
-				uid2=(uid2<<1)|1;
-				showbits[idx]='1';
-			}
-		}
-		showbits[idx]='\0';
-		PrintAndLog("Indala UID=%s (%x%08x)", showbits, uid1, uid2);
-	}
-	else {
-		uid3=0;
-		uid4=0;
-		uid5=0;
-		uid6=0;
-		uid7=0;
-		for( idx=0; idx<DemodBufferLen; idx++) {
-			uid1=(uid1<<1)|(uid2>>31);
-			uid2=(uid2<<1)|(uid3>>31);
-			uid3=(uid3<<1)|(uid4>>31);
-			uid4=(uid4<<1)|(uid5>>31);
-			uid5=(uid5<<1)|(uid6>>31);
-			uid6=(uid6<<1)|(uid7>>31);
-			if (DemodBuffer[idx] == 0) {
-				uid7=(uid7<<1)|0;
-				showbits[idx]='0';
-			}
-			else {
-				uid7=(uid7<<1)|1;
-				showbits[idx]='1';
-			}
-		}
-		showbits[idx]='\0';
-		PrintAndLog("Indala UID=%s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+		uid3=bytebits_to_byte(DemodBuffer+64,32);
+		uid4=bytebits_to_byte(DemodBuffer+96,32);
+		uid5=bytebits_to_byte(DemodBuffer+128,32);
+		uid6=bytebits_to_byte(DemodBuffer+160,32);
+		uid7=bytebits_to_byte(DemodBuffer+192,32);
+		PrintAndLog("Indala UID=%s (%x%08x%08x%08x%08x%08x%08x)", 
+		    sprint_bin(DemodBuffer,DemodBufferLen), uid1, uid2, uid3, uid4, uid5, uid6, uid7);
 	}
 	if (g_debugMode){
 		PrintAndLog("DEBUG: printing demodbuffer:");

@@ -602,7 +602,6 @@ int IOdemodFSK(uint8_t *dest, size_t size)
 // by marshmellow
 // find viking preamble 0xF200 in already demoded data
 int VikingDemod_AM(uint8_t *dest, size_t *size) {
-	if (justNoise(dest, *size)) return -1;
 	//make sure buffer has data
 	if (*size < 64*2) return -2;
 
@@ -614,7 +613,7 @@ int VikingDemod_AM(uint8_t *dest, size_t *size) {
 	    ^ bytebits_to_byte(dest+startIdx+24,8) ^ bytebits_to_byte(dest+startIdx+32,8) ^ bytebits_to_byte(dest+startIdx+40,8) 
 	    ^ bytebits_to_byte(dest+startIdx+48,8) ^ bytebits_to_byte(dest+startIdx+56,8);
 	if ( checkCalc != 0xA8 ) return -5;
-	if (*size != 64) return -5;
+	if (*size != 64) return -6;
 	//return start position
 	return (int) startIdx;
 }
@@ -1074,63 +1073,20 @@ void psk2TOpsk1(uint8_t *BitStream, size_t size)
 int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert)
 {
 	//26 bit 40134 format  (don't know other formats)
-	int i;
-	int long_wait=29;//29 leading zeros in format
-	int start;
-	int first = 0;
-	int first2 = 0;
-	int bitCnt = 0;
-	int ii;
-	// Finding the start of a UID
-	for (start = 0; start <= *size - 250; start++) {
-		first = bitStream[start];
-		for (i = start; i < start + long_wait; i++) {
-			if (bitStream[i] != first) {
-				break;
-			}
-		}
-		if (i == (start + long_wait)) {
-			break;
-		}
-	}
-	if (start == *size - 250 + 1) {
-		// did not find start sequence
-		return -1;
-	}
-	// Inverting signal if needed
-	if (first == 1) {
-		for (i = start; i < *size; i++) {
-			bitStream[i] = !bitStream[i];
-		}
-		*invert = 1;
-	}else *invert=0;
+	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+	uint8_t preamble_i[] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0};
+	size_t startidx = 0; 
+	if (!preambleSearch(bitStream, preamble, sizeof(preamble), size, &startidx)){
+		// if didn't find preamble try again inverting
+		if (!preambleSearch(bitStream, preamble_i, sizeof(preamble_i), size, &startidx)) return -1;
+		*invert ^= 1;
+	} 
+	if (*size != 64 && *size != 224) return -2;
+	if (*invert==1)
+		for (size_t i = startidx; i < *size; i++)
+			bitStream[i] ^= 1;
 
-	int iii;
-	//found start once now test length by finding next one
-	for (ii=start+29; ii <= *size - 250; ii++) {
-		first2 = bitStream[ii];
-		for (iii = ii; iii < ii + long_wait; iii++) {
-			if (bitStream[iii] != first2) {
-				break;
-			}
-		}
-		if (iii == (ii + long_wait)) {
-			break;
-		}
-	}
-	if (ii== *size - 250 + 1){
-		// did not find second start sequence
-		return -2;
-	}
-	bitCnt=ii-start;
-
-	// Dumping UID
-	i = start;
-	for (ii = 0; ii < bitCnt; ii++) {
-		bitStream[ii] = bitStream[i++];
-	}
-	*size=bitCnt;
-	return 1;
+	return (int) startidx;
 }
 
 // by marshmellow - demodulate NRZ wave (both similar enough)
