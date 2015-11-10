@@ -1541,7 +1541,7 @@ int CmdHF14AMfCSetUID(const char *Cmd)
 
 int CmdHF14AMfCSetBlk(const char *Cmd)
 {
-	uint8_t memBlock[16] = {0x00};
+	uint8_t block[16] = {0x00};
 	uint8_t blockNo = 0;
 	uint8_t params = MAGIC_SINGLE;
 	int res;
@@ -1556,7 +1556,7 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 
 	blockNo = param_get8(Cmd, 0);
 
-	if (param_gethex(Cmd, 1, memBlock, 32)) {
+	if (param_gethex(Cmd, 1, block, 32)) {
 		PrintAndLog("block data must include 32 HEX symbols");
 		return 1;
 	}
@@ -1565,9 +1565,9 @@ int CmdHF14AMfCSetBlk(const char *Cmd)
 	if (ctmp == 'w' || ctmp == 'W')
 		params |= MAGIC_WIPE;
 	
-	PrintAndLog("--block number:%2d data:%s", blockNo, sprint_hex(memBlock, 16));
+	PrintAndLog("--block number:%2d data:%s", blockNo, sprint_hex(block, 16));
 
-	res = mfCSetBlock(blockNo, memBlock, NULL, params);
+	res = mfCSetBlock(blockNo, block, NULL, params);
 	if (res) {
 		PrintAndLog("Can't write block. error=%d", res);
 		return 1;

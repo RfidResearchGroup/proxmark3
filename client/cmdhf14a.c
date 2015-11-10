@@ -127,6 +127,48 @@ char* getTagInfo(uint8_t uid) {
 	return manufactureMapping[len-1].desc; 
 }
 
+
+int usage_hf_14a_sim(void) {
+	PrintAndLog("\n Emulating ISO/IEC 14443 type A tag with 4 or 7 byte UID\n");
+	PrintAndLog("Usage: hf 14a sim t <type> u <uid> x");
+	PrintAndLog("  Options : ");
+	PrintAndLog("    h     : this help");
+	PrintAndLog("    t     : 1 = MIFARE Classic");
+	PrintAndLog("            2 = MIFARE Ultralight");
+	PrintAndLog("            3 = MIFARE Desfire");
+	PrintAndLog("            4 = ISO/IEC 14443-4");
+	PrintAndLog("            5 = MIFARE Tnp3xxx");
+	PrintAndLog("            6 = MIFARE Mini");
+	PrintAndLog("            7 = AMIIBO (NTAG 215),  pack 0x8080");
+	PrintAndLog("    u     : 4 or 7 byte UID");
+	PrintAndLog("    x     : (Optional) performs the 'reader attack', nr/ar attack against a legitimate reader");
+	PrintAndLog("\n   sample : hf 14a sim t 1 u 1122344");
+	PrintAndLog("          : hf 14a sim t 1 u 1122344 x\n");
+	return 0;
+}
+int usage_hf_14a_sniff(void){
+	PrintAndLog("It get data from the field and saves it into command buffer.");
+	PrintAndLog("Buffer accessible from command 'hf list 14a'");
+	PrintAndLog("Usage:  hf 14a sniff [c][r]");
+	PrintAndLog("c - triggered by first data from card");
+	PrintAndLog("r - triggered by first 7-bit request from reader (REQ,WUP,...)");
+	PrintAndLog("sample: hf 14a sniff c r");
+	return 0;
+}
+int usage_hf_14a_raw(void){
+	PrintAndLog("Usage: hf 14a raw [-h] [-r] [-c] [-p] [-a] [-T] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
+	PrintAndLog("       -h    this help");
+	PrintAndLog("       -r    do not read response");
+	PrintAndLog("       -c    calculate and append CRC");
+	PrintAndLog("       -p    leave the signal field ON after receive");
+	PrintAndLog("       -a    active signal field ON without select");
+	PrintAndLog("       -s    active signal field ON with select");
+	PrintAndLog("       -b    number of bits to send. Useful for send partial byte");
+	PrintAndLog("       -t    timeout in ms");
+	PrintAndLog("       -T    use Topaz protocol to send command");
+	return 0;
+}
+
 int CmdHF14AList(const char *Cmd)
 {
 	PrintAndLog("Deprecated command, use 'hf list 14a' instead");
@@ -456,27 +498,6 @@ int CmdHF14ACUIDs(const char *Cmd)
 	return 1;
 }
 
-
-static int usage_hf_14a_sim(void)
-{
-	PrintAndLog("\n Emulating ISO/IEC 14443 type A tag with 4 or 7 byte UID\n");
-	PrintAndLog("Usage: hf 14a sim t <type> u <uid> x");
-	PrintAndLog("  Options : ");
-	PrintAndLog("    h     : this help");
-	PrintAndLog("    t     : 1 = MIFARE Classic");
-	PrintAndLog("            2 = MIFARE Ultralight");
-	PrintAndLog("            3 = MIFARE Desfire");
-	PrintAndLog("            4 = ISO/IEC 14443-4");
-	PrintAndLog("            5 = MIFARE Tnp3xxx");
-	PrintAndLog("            6 = MIFARE Mini");
-	PrintAndLog("            7 = AMIIBO (NTAG 215),  pack 0x8080");
-	PrintAndLog("    u     : 4 or 7 byte UID");
-	PrintAndLog("    x     : (Optional) performs the 'reader attack', nr/ar attack against a legitimate reader");
-	PrintAndLog("\n   sample : hf 14a sim t 1 u 1122344");
-	PrintAndLog("          : hf 14a sim t 1 u 1122344 x\n");
-	return 0;
-}
-
 // ## simulate iso14443a tag
 // ## greg - added ability to specify tag UID
 int CmdHF14ASim(const char *Cmd)
@@ -486,9 +507,7 @@ int CmdHF14ASim(const char *Cmd)
 	uint8_t tagtype = 1;
 	uint64_t uid = 0;
 	uint8_t cmdp = 0;
-	
-	clearCommandBuffer();
-	
+
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
 		switch(param_getchar(Cmd, cmdp))
@@ -541,6 +560,7 @@ int CmdHF14ASim(const char *Cmd)
 	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a,{ tagtype, flags, 0 }};
 	
 	num_to_bytes(uid, 7, c.d.asBytes);
+	clearCommandBuffer();
 	SendCommand(&c);	
 
 	uint8_t data[40];
@@ -567,15 +587,7 @@ int CmdHF14ASniff(const char *Cmd) {
 	int param = 0;
 	
 	uint8_t ctmp = param_getchar(Cmd, 0) ;
-	if (ctmp == 'h' || ctmp == 'H') {
-		PrintAndLog("It get data from the field and saves it into command buffer.");
-		PrintAndLog("Buffer accessible from command 'hf list 14a'");
-		PrintAndLog("Usage:  hf 14a sniff [c][r]");
-		PrintAndLog("c - triggered by first data from card");
-		PrintAndLog("r - triggered by first 7-bit request from reader (REQ,WUP,...)");
-		PrintAndLog("sample: hf 14a sniff c r");
-		return 0;
-	}	
+	if (ctmp == 'h' || ctmp == 'H') return usage_hf_14a_sniff();
 	
 	for (int i = 0; i < 2; i++) {
 		ctmp = param_getchar(Cmd, i);
@@ -584,10 +596,10 @@ int CmdHF14ASniff(const char *Cmd) {
 	}
 
   UsbCommand c = {CMD_SNOOP_ISO_14443a, {param, 0, 0}};
+  clearCommandBuffer();
   SendCommand(&c);
   return 0;
 }
-
 
 int CmdHF14ACmdRaw(const char *cmd) {
     UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}};
@@ -606,19 +618,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
 	uint16_t datalen=0;
 	uint32_t temp;
 
-    if (strlen(cmd)<2) {
-        PrintAndLog("Usage: hf 14a raw [-r] [-c] [-p] [-a] [-T] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
-        PrintAndLog("       -r    do not read response");
-        PrintAndLog("       -c    calculate and append CRC");
-        PrintAndLog("       -p    leave the signal field ON after receive");
-        PrintAndLog("       -a    active signal field ON without select");
-        PrintAndLog("       -s    active signal field ON with select");
-        PrintAndLog("       -b    number of bits to send. Useful for send partial byte");
-		PrintAndLog("       -t    timeout in ms");
-		PrintAndLog("       -T    use Topaz protocol to send command");
-        return 0;
-    }
-
+    if (strlen(cmd)<2) return usage_hf_14a_raw();
 
     // strip
     while (*cmd==' ' || *cmd=='\t') cmd++;
@@ -627,6 +627,9 @@ int CmdHF14ACmdRaw(const char *cmd) {
         if (cmd[i]==' ' || cmd[i]=='\t') { i++; continue; }
         if (cmd[i]=='-') {
             switch (cmd[i+1]) {
+				case 'H':
+				case 'h':
+					return usage_hf_14a_raw();
                 case 'r': 
                     reply = FALSE;
                     break;
@@ -661,8 +664,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
 					topazmode = TRUE;
 					break;
                 default:
-                    PrintAndLog("Invalid option");
-                    return 0;
+                    return usage_hf_14a_raw();
             }
             i+=2;
             continue;
@@ -744,9 +746,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
     return 0;
 }
 
-
-static void waitCmd(uint8_t iSelect)
-{
+static void waitCmd(uint8_t iSelect) {
     uint8_t *recv;
     UsbCommand resp;
     char *hexout;

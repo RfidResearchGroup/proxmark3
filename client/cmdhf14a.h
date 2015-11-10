@@ -13,7 +13,6 @@
 #define CMDHF14A_H__
 
 int CmdHF14A(const char *Cmd);
-
 int CmdHF14AList(const char *Cmd);
 int CmdHF14AMifare(const char *Cmd);
 int CmdHF14AReader(const char *Cmd);
@@ -22,4 +21,7 @@ int CmdHF14ASniff(const char *Cmd);
 
 char* getTagInfo(uint8_t uid);
 
+int usage_hf_14a_sim(void);
+int usage_hf_14a_sniff(void);
+int usage_hf_14a_raw(void);
 #endif

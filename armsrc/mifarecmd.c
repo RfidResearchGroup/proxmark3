@@ -1092,8 +1092,8 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 		OnErrorMagic(4);
 	};
 	
-	memcpy(data, datain, sizeof(data));
-	AppendCrc14443a(data, sizeof(data));
+	memcpy(data, datain, 16);
+	AppendCrc14443a(data, 16);
 	
 	ReaderTransmit(data, sizeof(data), NULL);
 	if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
@@ -1118,8 +1118,6 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 	uint8_t workFlags = arg0;
 	uint8_t blockNo = arg1;
 
-	Dbprintf("ICE :: CGetBlocks Flags %02x", workFlags);
-	
 	// variables
 	uint8_t data[MAX_MIFARE_FRAME_SIZE];
 	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
