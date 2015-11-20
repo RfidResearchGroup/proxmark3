@@ -1495,6 +1495,10 @@ int CmdFDXBdemodBI(const char *Cmd){
 		if (g_debugMode) PrintAndLog("Error FDXBDemod , no startmarker found :: %d",preambleIndex);
 		return 0;
 	}
+	if (size != 128) {
+		if (g_debugMode) PrintAndLog("Error incorrect data length found");
+		return 0;
+	}
 	
 	setDemodBuf(BitStream, 128, preambleIndex);
 
@@ -1564,6 +1568,9 @@ int PSKDemod(const char *Cmd, bool verbose)
 		//invalid carrier
 		return 0;
 	}
+	if (g_debugMode){
+		PrintAndLog("Carrier: rf/%d",carrier);
+	}
 	int errCnt=0;
 	errCnt = pskRawDemod(BitStream, &BitLen, &clk, &invert);
 	if (errCnt > maxErr){
@@ -1605,7 +1612,7 @@ int CmdIndalaDecode(const char *Cmd)
 	uint8_t invert=0;
 	size_t size = DemodBufferLen;
 	size_t startIdx = indala26decode(DemodBuffer, &size, &invert);
-	if (startIdx < 1) {
+	if (startIdx < 1 || size > 224) {
 		if (g_debugMode==1)
 			PrintAndLog("Error2: %d",ans);
 		return -1;
@@ -1622,7 +1629,7 @@ int CmdIndalaDecode(const char *Cmd)
 	uid2=bytebits_to_byte(DemodBuffer+32,32);
 	if (DemodBufferLen==64){
 		PrintAndLog("Indala UID=%s (%x%08x)", sprint_bin(DemodBuffer,DemodBufferLen), uid1, uid2);
-			} else {
+	} else {
 		uid3=bytebits_to_byte(DemodBuffer+64,32);
 		uid4=bytebits_to_byte(DemodBuffer+96,32);
 		uid5=bytebits_to_byte(DemodBuffer+128,32);
@@ -1699,7 +1706,7 @@ int NRZrawDemod(const char *Cmd, bool verbose)
 	size_t BitLen = getFromGraphBuf(BitStream);
 	if (BitLen==0) return 0;
 	int errCnt=0;
-	errCnt = nrzRawDemod(BitStream, &BitLen, &clk, &invert, maxErr);
+	errCnt = nrzRawDemod(BitStream, &BitLen, &clk, &invert);
 	if (errCnt > maxErr){
 		if (g_debugMode) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
 		return 0;

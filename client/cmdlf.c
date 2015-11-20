@@ -294,9 +294,12 @@ int CmdIndalaDemod(const char *Cmd)
 	int rawbit = 0;
 	int worst = 0, worstPos = 0;
 	// PrintAndLog("Expecting a bit less than %d raw bits", GraphTraceLen / 32);
+	
+	// loop through raw signal - since we know it is psk1 rf/32 fc/2 skip every other value (+=2)
 	for (i = 0; i < GraphTraceLen-1; i += 2) {
 		count += 1;
 		if ((GraphBuffer[i] > GraphBuffer[i + 1]) && (state != 1)) {
+			// appears redundant - marshmellow
 			if (state == 0) {
 				for (j = 0; j <  count - 8; j += 16) {
 					rawbits[rawbit++] = 0;
@@ -309,6 +312,7 @@ int CmdIndalaDemod(const char *Cmd)
 			state = 1;
 			count = 0;
 		} else if ((GraphBuffer[i] < GraphBuffer[i + 1]) && (state != 0)) {
+			//appears redundant
 			if (state == 1) {
 				for (j = 0; j <  count - 8; j += 16) {
 					rawbits[rawbit++] = 1;
@@ -1098,13 +1102,6 @@ int CmdLFfind(const char *Cmd)
     return 1;
   }
 
-  //add psk and indala
-  ans=CmdIndalaDecode("");
-  if (ans>0) {
-    PrintAndLog("\nValid Indala ID Found!");
-    return 1;
-  }
-
   ans=CmdAskEM410xDemod("");
   if (ans>0) {
     PrintAndLog("\nValid EM410x ID Found!");
@@ -1134,6 +1131,12 @@ int CmdLFfind(const char *Cmd)
 		PrintAndLog("\nValid Viking ID Found!");
 		return 1;
 	}	
+
+	ans=CmdIndalaDecode("");
+	if (ans>0) {
+		PrintAndLog("\nValid Indala ID Found!");
+		return 1;
+	}
 
 	ans=CmdPSKNexWatch("");
 	if (ans>0) {

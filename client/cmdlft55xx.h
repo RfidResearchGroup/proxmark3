@@ -59,6 +59,7 @@ typedef struct {
 		RF_100 = 0x06,
 		RF_128 = 0x07,
 	} bitrate;
+	bool Q5;
 } t55xx_conf_block_t;
 t55xx_conf_block_t Get_t55xx_Config();
 void Set_t55xx_Config(t55xx_conf_block_t conf);
@@ -72,6 +73,7 @@ int CmdT55xxReadTrace(const char *Cmd);
 int CmdT55xxInfo(const char *Cmd);
 int CmdT55xxDetect(const char *Cmd);
 int CmdResetRead(const char *Cmd);
+int CmdT55xxWipe(const char *Cmd);
 
 char * GetBitRateStr(uint32_t id);
 char * GetSaferStr(uint32_t id);
@@ -79,12 +81,13 @@ char * GetModulationStr( uint32_t id);
 char * GetModelStrFromCID(uint32_t cid);
 char * GetSelectedModulationStr( uint8_t id);
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bitstream);
+void printT5xxHeader(uint8_t page);
 void printT55xxBlock(const char *demodStr);
 int printConfiguration( t55xx_conf_block_t b);
 
 bool DecodeT55xxBlock();
 bool tryDetectModulation();
-bool test(uint8_t mode, uint8_t *offset, int *fndBitRate);
+bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5);
 int special(const char *Cmd);
 int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password );
 

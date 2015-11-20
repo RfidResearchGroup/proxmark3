@@ -23,8 +23,8 @@ int usage_lf_viking_clone(void){
 //see ASKDemod for what args are accepted
 int CmdVikingDemod(const char *Cmd)
 {
-	CmdLFRead("s");
-	getSamples("30000",false);
+	//CmdLFRead("s");
+	//getSamples("30000",false);
 	
  	if (!ASKDemod(Cmd, false, false, 1)) {
 		if (g_debugMode) PrintAndLog("ASKDemod failed");
@@ -34,7 +34,7 @@ int CmdVikingDemod(const char *Cmd)
 
 	int ans = VikingDemod_AM(DemodBuffer, &size);
 	if (ans < 0) {
-		if (g_debugMode) PrintAndLog("Error Viking_Demod");
+		if (g_debugMode) PrintAndLog("Error Viking_Demod %d", ans);
 		return 0;
 	}
 	//got a good demod

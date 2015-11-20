@@ -1065,7 +1065,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 #define WRITE_GAP 20*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (or 10fc)
 #define WRITE_0   16*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (or 24fc)
 #define WRITE_1   50*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (or 56fc)  432 for T55x7; 448 for E5550
-#define READ_GAP  52*8 
+#define READ_GAP  15*8 
 
 //  VALUES TAKEN FROM EM4x function: SendForward
 //  START_GAP = 440;       (55*8) cycles at 125Khz (8us = 1cycle)
@@ -1183,7 +1183,7 @@ void T55xxWriteBlock(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg) {
 	cmd_send(CMD_ACK,0,0,0,0,0);
 }
 
-// Read one card block in page 0
+// Read one card block in page [page]
 void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	LED_A_ON();
 	bool PwdMode = arg0 & 0x1;
@@ -1463,6 +1463,15 @@ uint8_t * fwd_write_ptr; //forwardlink bit pointer
 // prepares command bits
 // see EM4469 spec
 //====================================================================
+//--------------------------------------------------------------------
+//  VALUES TAKEN FROM EM4x function: SendForward
+//  START_GAP = 440;       (55*8) cycles at 125Khz (8us = 1cycle)
+//  WRITE_GAP = 128;       (16*8)
+//  WRITE_1   = 256 32*8;  (32*8) 
+
+//  These timings work for 4469/4269/4305 (with the 55*8 above)
+//  WRITE_0 = 23*8 , 9*8  SpinDelayUs(23*8); 
+
 uint8_t Prepare_Cmd( uint8_t cmd ) {
 
 	*forward_ptr++ = 0; //start bit
