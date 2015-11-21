@@ -461,14 +461,14 @@ bool tryDetectModulation(){
 	} else {
 		clk = GetAskClock("", FALSE, FALSE);
 		if (clk>0) {
-			if ( ASKDemod("0 0 1", TRUE, FALSE, 1) && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+			if ( ASKDemod("0 0 1", FALSE, FALSE, 1) && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
 				tests[hits].modulation = DEMOD_ASK;
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = FALSE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
 				++hits;
 			}
-			if ( ASKDemod("0 1 1", TRUE, FALSE, 1)  && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+			if ( ASKDemod("0 1 1", FALSE, FALSE, 1)  && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
 				tests[hits].modulation = DEMOD_ASK;
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = TRUE;
@@ -862,19 +862,21 @@ int CmdT55xxWriteBlock(const char *Cmd) {
 	UsbCommand resp;
  	c.d.asBytes[0] = (page1) ? 0x2 : 0; 
 
-	PrintAndLog("Writing to page: %d  block: %d  data : 0x%08X", page1, block, data);
+	char pwdStr[16] = {0};
+	snprintf(pwdStr, sizeof(pwdStr), "pwd: 0x%08X", password);
+	
+	PrintAndLog("Writing page %d  block: %02d  data: 0x%08X %s", page1, block, data,  (usepwd) ? pwdStr : "" );
 
 	//Password mode
 	if (usepwd) {
 		c.arg[2] = password;
 		c.d.asBytes[0] |= 0x1; 
-		PrintAndLog("pwd   : 0x%08X", password);
 	}
 	clearCommandBuffer();
 	SendCommand(&c);
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)){
 		PrintAndLog("Error occurred, device did not ACK write operation. (May be due to old firmware)");
-	return 0;
+		return 0;
 	}
 	return 1;
 }
@@ -1230,26 +1232,24 @@ char * GetSelectedModulationStr( uint8_t id){
 }
 
 void t55x7_create_config_block( int tagtype ){
-	//switch?
+
+	/*
+     T55X7_DEFAULT_CONFIG_BLOCK, T55X7_RAW_CONFIG_BLOCK
+     T55X7_EM_UNIQUE_CONFIG_BLOCK, T55X7_FDXB_CONFIG_BLOCK,
+	 T55X7_FDXB_CONFIG_BLOCK, T55X7_HID_26_CONFIG_BLOCK, T55X7_INDALA_64_CONFIG_BLOCK, T55X7_INDALA_224_CONFIG_BLOCK 
+	 T55X7_GUARDPROXII_CONFIG_BLOCK, T55X7_VIKING_CONFIG_BLOCK,	T55X7_NORALYS_CONFIG_BLOCK, T55X7_IOPROX_CONFIG_BLOCK	
+	*/
+	static char buf[60];
+	char *retStr = buf;
 	
-	
+	switch (id){
+		case 0: snprintf(retStr, sizeof(buf),"%08X - T55X7 Default", T55X7_DEFAULT_CONFIG_BLOCK); break;
+		case 1: snprintf(retStr, sizeof(buf),"%08X - T55X7 Raw", T55X7_RAW_CONFIG_BLOCK); break;
+		default:
+			break;
+	}
+	PrintAndLog(buf);
 }
-
-/*
-uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits){
-	
-	int i = start;
-	int j = len-1;
-
-	if (len > 32) return 0;
-
-	uint32_t tmp = 0;
-	for (; j >= 0; --j, ++i)
-		tmp	|= bits[i] << j;
-
-	return tmp;
-}
-*/
 
 int CmdResetRead(const char *Cmd) {
 	UsbCommand c = {CMD_T55XX_RESET_READ, {0,0,0}};
@@ -1271,19 +1271,23 @@ int CmdResetRead(const char *Cmd) {
 int CmdT55xxWipe(const char *Cmd) {
 	char writeData[20] = {0};
 	char *ptrData = writeData;
-	uint8_t blk = 0;
+	
 	PrintAndLog("\nBeginning Wipe of a T55xx tag (assuming the tag is not password protected)\n");
+	
 	//try with the default password to reset block 0  (with a pwd should work even if pwd bit not set)
-	snprintf(ptrData,sizeof(writeData),"b %d d 00088040 p 0", blk);
-	if (!CmdT55xxWriteBlock(ptrData)){
-		PrintAndLog("Error writing blk %d", blk);
-	}
-	blk = 1;
-	for (; blk<8; blk++) {
+	snprintf(ptrData,sizeof(writeData),"b 0 d 000880E0 p 0");
+	
+	if (!CmdT55xxWriteBlock(ptrData))
+		PrintAndLog("Error writing blk 0");
+	
+	for (uint8_t blk = 1; blk<8; blk++) {
+		
 		snprintf(ptrData,sizeof(writeData),"b %d d 0", blk);
-		if (!CmdT55xxWriteBlock(ptrData)){
+		
+		if (!CmdT55xxWriteBlock(ptrData)) 
 			PrintAndLog("Error writing blk %d", blk);
-		}
+		
+		memset(writeData, sizeof(writeData), 0x00);
 	}
 	return 0;
 }

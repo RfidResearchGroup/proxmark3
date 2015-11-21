@@ -1848,9 +1848,8 @@ int CmdHF14AMfuELoad(const char *Cmd)
 	
 	char ctmp = param_getchar(Cmd, 0);
 		
-	if ( ctmp == 'h' || ctmp == 0x00) {
-		return usage_hf_mfu_eload();
-	}	
+	if ( ctmp == 'h' || ctmp == 0x00) return usage_hf_mfu_eload();
+
 /*
 	switch (ctmp) {
 		case '0' : numBlocks = 5*4; break;

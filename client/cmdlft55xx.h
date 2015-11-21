@@ -28,6 +28,7 @@
 #define T55X7_GUARDPROXII_CONFIG_BLOCK	0x00150060	// bitrate 64pcb, Direct modulation, Biphase, 3 data blocks
 #define T55X7_VIKING_CONFIG_BLOCK		0x00088040	// compat mode, data rate 32, Manchester, 2 data blocks
 #define T55X7_NORALYS_CONFIG_BLOCK		0x00088C6A	// compat mode,   (NORALYS - KCP3000)
+#define T55X7_IOPROX_CONFIG_BLOCK		0x00147040  // maxblock 2
 #define T55X7_bin 0b0010
 
 

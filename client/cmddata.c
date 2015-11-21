@@ -125,9 +125,7 @@ int CmdPrintDemodBuff(const char *Cmd)
 		if (numBits==0) return 0;
 		PrintAndLog("DemodBuffer: %s",hex);		
 	} else {
-		//setDemodBuf(DemodBuffer, DemodBufferLen-offset, offset);
-		char *bin = sprint_bin_break(DemodBuffer+offset,numBits,16);
-		PrintAndLog("DemodBuffer:\n%s",bin);
+		PrintAndLog("DemodBuffer:\n%s", sprint_bin_break(DemodBuffer+offset,numBits,16));
 	}
 	return 1;
 }
@@ -1628,7 +1626,7 @@ int CmdIndalaDecode(const char *Cmd)
 	uid1=bytebits_to_byte(DemodBuffer,32);
 	uid2=bytebits_to_byte(DemodBuffer+32,32);
 	if (DemodBufferLen==64){
-		PrintAndLog("Indala UID=%s (%x%08x)", sprint_bin(DemodBuffer,DemodBufferLen), uid1, uid2);
+		PrintAndLog("Indala UID=%s (%x%08x)",  sprint_bin_break(DemodBuffer,DemodBufferLen,16), uid1, uid2);
 	} else {
 		uid3=bytebits_to_byte(DemodBuffer+64,32);
 		uid4=bytebits_to_byte(DemodBuffer+96,32);
@@ -1636,7 +1634,7 @@ int CmdIndalaDecode(const char *Cmd)
 		uid6=bytebits_to_byte(DemodBuffer+160,32);
 		uid7=bytebits_to_byte(DemodBuffer+192,32);
 		PrintAndLog("Indala UID=%s (%x%08x%08x%08x%08x%08x%08x)", 
-		    sprint_bin(DemodBuffer,DemodBufferLen), uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+		     sprint_bin_break(DemodBuffer,DemodBufferLen,16), uid1, uid2, uid3, uid4, uid5, uid6, uid7);
 	}
 	if (g_debugMode){
 		PrintAndLog("DEBUG: printing demodbuffer:");
@@ -1959,10 +1957,7 @@ int getSamples(const char *Cmd, bool silent)
 
 	int n = strtol(Cmd, NULL, 0);
 
-	if (n == 0)
-		n = sizeof(got);
-
-	if (n > sizeof(got))
+	if ( n == 0 || n > sizeof(got))
 		n = sizeof(got);
 
 	PrintAndLog("Reading %d bytes from device memory\n", n);
@@ -1976,8 +1971,7 @@ int getSamples(const char *Cmd, bool silent)
 	if(response.arg[0] > 0)
 	{
 		sample_config *sc = (sample_config *) response.d.asBytes;
-		PrintAndLog("Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample
-		    , sc->decimation);
+		PrintAndLog("Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
 		bits_per_sample = sc->bits_per_sample;
 	}
 	if(bits_per_sample < 8)
