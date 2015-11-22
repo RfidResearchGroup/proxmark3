@@ -1204,10 +1204,12 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 				EmSendCmdEx(data,sizeof(data),false);
 				p_response = NULL;					
 		} else if (receivedCmd[0] == 0x39 && tagType == 7) {	// Received a READ COUNTER -- 
-			uint8_t counter = receivedCmd[1];
-			uint32_t value = counters[counter];
+			uint8_t index = receivedCmd[1];
 			uint8_t data[] =  {0x00,0x00,0x00,0x14,0xa5};
-			AppendCrc14443a(data, sizeof(data)-2);
+			if ( counters[index] > 0) {
+				num_to_bytes(counters[index], 3, data);
+				AppendCrc14443a(data, sizeof(data)-2);
+			}
 			EmSendCmdEx(data,sizeof(data),false);				
 			p_response = NULL;
 		} else if (receivedCmd[0] == 0xA5 && tagType == 7) {	// Received a INC COUNTER -- 

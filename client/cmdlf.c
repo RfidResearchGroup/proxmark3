@@ -1056,67 +1056,66 @@ int CmdVchDemod(const char *Cmd)
 }
 
 //by marshmellow
-int CmdLFfind(const char *Cmd)
-{
-  int ans = 0;
-  char cmdp = param_getchar(Cmd, 0);
-  char testRaw = param_getchar(Cmd, 1);
-  if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') return usage_lf_find();
+int CmdLFfind(const char *Cmd) {
+	int ans = 0;
+	char cmdp = param_getchar(Cmd, 0);
+	char testRaw = param_getchar(Cmd, 1);
+	if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') return usage_lf_find();
 
-  if (!offline && (cmdp != '1')){
-	CmdLFRead("s");
-	getSamples("30000",false);
-  } else if (GraphTraceLen < 1000) {
-    PrintAndLog("Data in Graphbuffer was too small.");
-    return 0;
-  }
-  if (cmdp == 'u' || cmdp == 'U') testRaw = 'u';
+	if (!offline && (cmdp != '1')){
+		CmdLFRead("s");
+		getSamples("30000",false);
+	} else if (GraphTraceLen < 1000) {
+		PrintAndLog("Data in Graphbuffer was too small.");
+		return 0;
+	}
+	if (cmdp == 'u' || cmdp == 'U') testRaw = 'u';
 
-  PrintAndLog("NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
-  PrintAndLog("False Positives ARE possible\n");  
-  PrintAndLog("\nChecking for known tags:\n");
+	PrintAndLog("NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
+	PrintAndLog("False Positives ARE possible\n");  
+	PrintAndLog("\nChecking for known tags:\n");
 
-  ans=CmdFSKdemodIO("");
-  if (ans>0) {
-    PrintAndLog("\nValid IO Prox ID Found!");
-    return 1;
-  }
+	ans=CmdFSKdemodIO("");
+	if (ans>0) {
+	PrintAndLog("\nValid IO Prox ID Found!");
+	return 1;
+	}
 
-  ans=CmdFSKdemodPyramid("");
-  if (ans>0) {
-    PrintAndLog("\nValid Pyramid ID Found!");
-    return 1;
-  }
+	ans=CmdFSKdemodPyramid("");
+	if (ans>0) {
+	PrintAndLog("\nValid Pyramid ID Found!");
+	return 1;
+	}
 
-  ans=CmdFSKdemodParadox("");
-  if (ans>0) {
-    PrintAndLog("\nValid Paradox ID Found!");
-    return 1;
-  }
+	ans=CmdFSKdemodParadox("");
+	if (ans>0) {
+	PrintAndLog("\nValid Paradox ID Found!");
+	return 1;
+	}
 
-  ans=CmdFSKdemodAWID("");
-  if (ans>0) {
-    PrintAndLog("\nValid AWID ID Found!");
-    return 1;
-  }
+	ans=CmdFSKdemodAWID("");
+	if (ans>0) {
+	PrintAndLog("\nValid AWID ID Found!");
+	return 1;
+	}
 
-  ans=CmdFSKdemodHID("");
-  if (ans>0) {
-    PrintAndLog("\nValid HID Prox ID Found!");
-    return 1;
-  }
+	ans=CmdFSKdemodHID("");
+	if (ans>0) {
+	PrintAndLog("\nValid HID Prox ID Found!");
+	return 1;
+	}
 
-  ans=CmdAskEM410xDemod("");
-  if (ans>0) {
-    PrintAndLog("\nValid EM410x ID Found!");
-    return 1;
-  }
+	ans=CmdAskEM410xDemod("");
+	if (ans>0) {
+	PrintAndLog("\nValid EM410x ID Found!");
+	return 1;
+	}
 
-  ans=CmdG_Prox_II_Demod("");
-  if (ans>0) {
-    PrintAndLog("\nValid Guardall G-Prox II ID Found!");
-    return 1;
-  }
+	ans=CmdG_Prox_II_Demod("");
+	if (ans>0) {
+	PrintAndLog("\nValid Guardall G-Prox II ID Found!");
+	return 1;
+	}
 
 	ans=CmdFDXBdemodBI("");
 	if (ans>0) {
@@ -1147,63 +1146,68 @@ int CmdLFfind(const char *Cmd)
 		PrintAndLog("\nValid NexWatch ID Found!");
 		return 1;
 	}
-
-  PrintAndLog("\nNo Known Tags Found!\n");
-  if (testRaw=='u' || testRaw=='U'){
-    //test unknown tag formats (raw mode)
-    PrintAndLog("\nChecking for Unknown tags:\n");
-    ans=AutoCorrelate(4000, FALSE, FALSE);
+	// TIdemod?
 	
-    if (ans > 0) {
 
-		PrintAndLog("Possible Auto Correlation of %d repeating samples",ans);
+	PrintAndLog("\nNo Known Tags Found!\n");
+	if (testRaw=='u' || testRaw=='U'){
+		//test unknown tag formats (raw mode)
+		PrintAndLog("\nChecking for Unknown tags:\n");
+		ans=AutoCorrelate(4000, FALSE, FALSE);
+	
+		if (ans > 0) {
 
-		if ( ans % 8 == 0)  {
-			int bytes = (ans / 8);
-			PrintAndLog("Possible %d bytes", bytes);
-			int blocks = 0;
-			if ( bytes % 2 == 0) {
-				blocks = (bytes / 2);	
-				PrintAndLog("Possible  2 blocks, width %d", blocks);
-			}
-			if ( bytes % 4 == 0) {
-				blocks = (bytes / 4);	
-				PrintAndLog("Possible  4 blocks, width %d", blocks);
-			}
-			if ( bytes % 8 == 0) {
-				blocks = (bytes / 8);	
-				PrintAndLog("Possible  8 blocks, width %d", blocks);
-			}
-			if ( bytes % 16 == 0) {
-				blocks = (bytes / 16);	
-				PrintAndLog("Possible 16 blocks, width %d", blocks);
+			PrintAndLog("Possible Auto Correlation of %d repeating samples",ans);
+
+			if ( ans % 8 == 0)  {
+				int bytes = (ans / 8);
+				PrintAndLog("Possible %d bytes", bytes);
+				int blocks = 0;
+				if ( bytes % 2 == 0) {
+					blocks = (bytes / 2);	
+					PrintAndLog("Possible  2 blocks, width %d", blocks);
+				}
+				if ( bytes % 4 == 0) {
+					blocks = (bytes / 4);	
+					PrintAndLog("Possible  4 blocks, width %d", blocks);
+				}
+				if ( bytes % 8 == 0) {
+					blocks = (bytes / 8);	
+					PrintAndLog("Possible  8 blocks, width %d", blocks);
+				}
+				if ( bytes % 16 == 0) {
+					blocks = (bytes / 16);	
+					PrintAndLog("Possible 16 blocks, width %d", blocks);
+				}
 			}
 		}
-	}
-	ans=GetFskClock("",FALSE,FALSE); 
-    if (ans != 0){ //fsk
-		ans=FSKrawDemod("",TRUE);
+
+		ans=GetFskClock("",FALSE,FALSE); 
+		if (ans != 0){ //fsk
+			ans=FSKrawDemod("",TRUE);
+			if (ans>0) {
+				PrintAndLog("\nUnknown FSK Modulated Tag Found!");
+				return 1;
+			}
+		}
+
+		ans=ASKDemod("0 0 0",TRUE,FALSE,1);
 		if (ans>0) {
-			PrintAndLog("\nUnknown FSK Modulated Tag Found!");
+		  PrintAndLog("\nUnknown ASK Modulated and Manchester encoded Tag Found!");
+		  PrintAndLog("\nif it does not look right it could instead be ASK/Biphase - try 'data rawdemod ab'");
+		  return 1;
+		}
+		
+		ans=CmdPSK1rawDemod("");
+		if (ans>0) {
+			PrintAndLog("Possible unknown PSK1 Modulated Tag Found above!\n\nCould also be PSK2 - try 'data rawdemod p2'");
+			PrintAndLog("\nCould also be PSK3 - [currently not supported]");
+			PrintAndLog("\nCould also be NRZ - try 'data nrzrawdemod");
 			return 1;
 		}
-    }
-	ans=ASKDemod("0 0 0",TRUE,FALSE,1);
-    if (ans>0) {
-      PrintAndLog("\nUnknown ASK Modulated and Manchester encoded Tag Found!");
-      PrintAndLog("\nif it does not look right it could instead be ASK/Biphase - try 'data rawdemod ab'");
-      return 1;
-    }
-    ans=CmdPSK1rawDemod("");
-    if (ans>0) {
-		PrintAndLog("Possible unknown PSK1 Modulated Tag Found above!\n\nCould also be PSK2 - try 'data rawdemod p2'");
-		PrintAndLog("\nCould also be PSK3 - [currently not supported]");
-		PrintAndLog("\nCould also be NRZ - try 'data nrzrawdemod");
-		return 1;
-    }
-    PrintAndLog("\nNo Data Found!\n");
-  }
-  return 0;
+		PrintAndLog("\nNo Data Found!\n");
+	}
+	return 0;
 }
 
 static command_t CommandTable[] = 

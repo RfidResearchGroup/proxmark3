@@ -262,29 +262,30 @@ int CmdTIDemod(const char *Cmd)
 // read a TI tag and return its ID
 int CmdTIRead(const char *Cmd)
 {
-  UsbCommand c = {CMD_READ_TI_TYPE};
-  SendCommand(&c);
-  return 0;
+	UsbCommand c = {CMD_READ_TI_TYPE};
+	clearCommandbuffer();
+	SendCommand(&c);
+	return 0;
 }
 
 // write new data to a r/w TI tag
 int CmdTIWrite(const char *Cmd)
 {
-  UsbCommand c = {CMD_WRITE_TI_TYPE};
-  int res = 0;
+	UsbCommand c = {CMD_WRITE_TI_TYPE};
+	int res = 0;
 
-  res = sscanf(Cmd, "%012"llx" %012"llx" %012"llx"", &c.arg[0], &c.arg[1], &c.arg[2]);
-  
-  if (res == 2) c.arg[2]=0;
-  if (res < 2)
-    PrintAndLog("Please specify the data as two hex strings, optionally the CRC as a third");
-  else
-    SendCommand(&c);
-  return 0;
+	res = sscanf(Cmd, "%012"llx" %012"llx" %012"llx"", &c.arg[0], &c.arg[1], &c.arg[2]);
+
+	if (res == 2) c.arg[2]=0;
+	if (res < 2)
+		PrintAndLog("Please specify the data as two hex strings, optionally the CRC as a third");
+	else
+		clearCommandbuffer();
+		SendCommand(&c);
+	return 0;
 }
 
-static command_t CommandTable[] = 
-{
+static command_t CommandTable[] = {
   {"help",      CmdHelp,        1, "This help"},
   {"demod",     CmdTIDemod,     1, "Demodulate raw bits for TI-type LF tag"},
   {"read",      CmdTIRead,      0, "Read and decode a TI 134 kHz tag"},
@@ -292,14 +293,12 @@ static command_t CommandTable[] =
   {NULL, NULL, 0, NULL}
 };
 
-int CmdLFTI(const char *Cmd)
-{
+int CmdLFTI(const char *Cmd){
   CmdsParse(CommandTable, Cmd);
   return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd){
   CmdsHelp(CommandTable);
   return 0;
 }
