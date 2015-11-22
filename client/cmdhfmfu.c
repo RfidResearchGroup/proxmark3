@@ -460,6 +460,8 @@ static int ulev1_print_configuration( uint8_t *data, uint8_t startPage){
 
 	bool strg_mod_en = (data[0] & 2);
 	uint8_t authlim = (data[4] & 0x07);
+	bool nfc_cnf_en = (data[4] & 0x08);
+	bool nfc_cnf_prot_pwd = (data[4] & 0x10);
 	bool cfglck = (data[4] & 0x40);
 	bool prot = (data[4] & 0x80);
 	uint8_t vctid = data[5];
@@ -475,6 +477,10 @@ static int ulev1_print_configuration( uint8_t *data, uint8_t startPage){
 		PrintAndLog("                    - Unlimited password attempts");
 	else
 		PrintAndLog("                    - Max number of password attempts is %d", authlim);
+	
+	PrintAndLog("                    - NFC counter %s", (nfc_cnf_en) ? "enabled":"disabled");
+	PrintAndLog("                    - NFC counter %s", (nfc_cnf_prot_pwd) ? "not protected":"password protection enabled");
+	
 	PrintAndLog("                    - user configuration %s", cfglck ? "permanently locked":"writeable");
 	PrintAndLog("                    - %s access is protected with password", prot ? "read and write":"write");
 	PrintAndLog("                    - %02X, Virtual Card Type Identifier is %s default", vctid, (vctid==0x05)? "":"not");

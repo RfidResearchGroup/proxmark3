@@ -72,6 +72,7 @@ int CmdSrix4kRead(const char *Cmd)
 	return 0;
 }
 
+
 int rawClose(void){
 	UsbCommand resp;
 	UsbCommand c = {CMD_ISO_14443B_COMMAND, {0, 0, 0}};
@@ -313,7 +314,7 @@ char *get_ST_Chip_Model(uint8_t data){
 		case 0x6: sprintf(retStr, "SRI512"); break;
 		case 0x7: sprintf(retStr, "SRI4K"); break;
 		case 0xC: sprintf(retStr, "SRT512"); break;
-		default: sprintf(retStr, "Unknown"); break;
+		default : sprintf(retStr, "Unknown"); break;
 	}
 	return retStr;
 }
@@ -457,8 +458,6 @@ int HF14BStdInfo(uint8_t *data, uint8_t *datalen){
 
 	//add more info here
 	print_atqb_resp(data);
-
-
 	return 1;
 }
 
@@ -681,6 +680,84 @@ int CmdSriWrite( const char *Cmd){
 	return 0;
 }
 
+int srix4kChecksum(uint32_t value) {
+/*
+// vv = value
+// pp = position
+//                vv vv vv pp 
+4 bytes			: 00 1A 20 01
+*/
+
+#define NibbleHigh(b) ( (b & 0xF0) >> 4 )
+#define NibbleLow(b)  ( b & 0x0F )
+#define Crumb(b,p)    (((b & (0x3 << p) ) >> p ) & 0xF) 
+
+	// only the lower crumbs.
+	uint8_t block = (value & 0xFF);
+	uint8_t i = 0;
+	uint8_t valuebytes[] = {0,0,0};
+		
+	// if ( strlen(Cmd) > 0){
+		// value = param_get32ex(Cmd, 0, 0, 16);
+	
+		// block = value & 0xFF;
+		
+		// value &= 0xFFFFFF00;
+		// value >>=8;
+	// }
+
+	num_to_bytes(value, 3, valuebytes);
+	
+	// Scrambled part
+	// Crumb swapping of value.
+	uint8_t temp[] = {0,0};
+	temp[0] = (Crumb(value, 22) << 4 | Crumb(value, 14 ) << 2 | Crumb(value, 6)) << 4;
+	temp[0] |= Crumb(value, 20) << 4 | Crumb(value, 12 ) << 2 | Crumb(value, 4);
+	temp[1] = (Crumb(value, 18) << 4 | Crumb(value, 10 ) << 2 | Crumb(value, 2)) << 4;
+	temp[1] |= Crumb(value, 16) << 4 | Crumb(value, 8  ) << 2 | Crumb(value, 0);
+
+	// chksum part
+	uint32_t chksum = 0xFF - block;
+	
+	// chksum is reduced by each nibbles of value.
+	for (i = 0; i < 3; ++i){
+		chksum -= NibbleHigh(valuebytes[i]);
+		chksum -= NibbleLow(valuebytes[i]);
+	}
+
+	// base4 conversion
+	// and left shift twice
+	i = 3;
+	uint8_t base4[] = {0,0,0,0};	
+	while( chksum !=0 ){
+        base4[i--] = (chksum % 4 << 2);
+		chksum /= 4;
+    }
+	
+	// merge scambled and chksum parts
+	uint32_t encvalue = 
+		( NibbleLow ( base4[0]) << 28 ) |
+		( NibbleHigh( temp[0])  << 24 ) |
+		
+		( NibbleLow ( base4[1]) << 20 ) |
+		( NibbleLow ( temp[0])  << 16 ) |
+		
+		( NibbleLow ( base4[2]) << 12 ) |
+		( NibbleHigh( temp[1])  << 8 ) |
+		
+		( NibbleLow ( base4[3]) << 4 ) |
+		  NibbleLow ( temp[1] );
+
+	PrintAndLog("ICE | %08X", encvalue);
+	return 0;
+}
+int srix4kMagicbytes(){
+	return 0;
+}
+int srix4kValid(){
+	return 0;
+}
+
 static command_t CommandTable[] = 
 {
 	{"help",        CmdHelp,        1, "This help"},
@@ -693,6 +770,7 @@ static command_t CommandTable[] =
 	{"srix4kread",  CmdSrix4kRead,  0, "Read contents of a SRIX4K tag"},
 	{"sriwrite",    CmdSriWrite,    0, "Write data to a SRI512 | SRIX4K tag"},
 	{"raw",         CmdHF14BCmdRaw, 0, "Send raw hex data to tag"},
+	//{"calcSrix4",   srix4kchksum, 1, "a srix4k checksum test"},
 	{NULL, NULL, 0, NULL}
 };
 
