@@ -13,17 +13,18 @@
 #include "lfdemod.h"
 #include "common.h"
 
-/* //un_comment to allow debug print calls when used not on device
+//un_comment to allow debug print calls when used not on device
 void dummy(char *fmt, ...){}
 
 #ifndef ON_DEVICE
 #include "ui.h"
+#include "cmdparser.h"
+#include "cmddata.h"
 #define prnt PrintAndLog
 #else 
-
+	uint8_t g_debugMode=0;
 #define prnt dummy
 #endif
-*/
 
 uint8_t justNoise(uint8_t *BitStream, size_t size)
 {
@@ -64,6 +65,81 @@ uint8_t parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType)
 	}
 	//PrintAndLog("DEBUG: ans: %d, ptype: %d",ans,pType);
 	return (ans == pType);
+}
+
+//by marshmellow
+// takes a array of binary values, start position, length of bits per parity (includes parity bit),
+//   Parity Type (1 for odd; 0 for even; 2 Always 1's), and binary Length (length to run) 
+size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen)
+{
+	uint32_t parityWd = 0;
+	size_t j = 0, bitCnt = 0;
+	for (int word = 0; word < (bLen); word+=pLen){
+		for (int bit=0; bit < pLen; bit++){
+			parityWd = (parityWd << 1) | BitStream[startIdx+word+bit];
+			BitStream[j++] = (BitStream[startIdx+word+bit]);
+		}
+		j--; // overwrite parity with next data
+		// if parity fails then return 0
+		if (pType == 2) { // then marker bit which should be a 1
+			if (!BitStream[j]) return 0;
+		} else {
+			if (parityTest(parityWd, pLen, pType) == 0) return 0;			
+		}
+		bitCnt+=(pLen-1);
+		parityWd = 0;
+	}
+	// if we got here then all the parities passed
+	//return ID start index and size
+	return bitCnt;
+}
+
+// by marshmellow
+// takes a array of binary values, length of bits per parity (includes parity bit),
+//   Parity Type (1 for odd; 0 for even; 2 Always 1's), and binary Length (length to run)
+size_t addParity(uint8_t *BitSource, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType)
+{
+	uint32_t parityWd = 0;
+	size_t j = 0, bitCnt = 0;
+	for (int word = 0; word < sourceLen; word+=pLen-1) {
+		for (int bit=0; bit < pLen-1; bit++){
+			parityWd = (parityWd << 1) | BitSource[word+bit];
+			dest[j++] = (BitSource[word+bit]);
+		}
+		// if parity fails then return 0
+		if (pType == 2) { // then marker bit which should be a 1
+			dest[j++]=1;
+		} else {
+			dest[j++] = parityTest(parityWd, pLen-1, pType) ^ 1;
+		}
+		bitCnt += pLen;
+		parityWd = 0;
+	}
+	// if we got here then all the parities passed
+	//return ID start index and size
+	return bitCnt;
+}
+
+uint32_t bytebits_to_byte(uint8_t *src, size_t numbits)
+{
+	uint32_t num = 0;
+	for(int i = 0 ; i < numbits ; i++)
+	{
+		num = (num << 1) | (*src);
+		src++;
+	}
+	return num;
+}
+
+//least significant bit first
+uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits)
+{
+	uint32_t num = 0;
+	for(int i = 0 ; i < numbits ; i++)
+	{
+		num = (num << 1) | *(src + (numbits-(i+1)));
+	}
+	return num;
 }
 
 //by marshmellow
@@ -198,6 +274,7 @@ int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr
 	if (*clk==0 || start < 0) return -3;
 	if (*invert != 1) *invert = 0;
 	if (amp==1) askAmp(BinStream, *size);
+	if (g_debugMode==2) prnt("DEBUG: clk %d, beststart %d", *clk, start);
 
 	uint8_t initLoopMax = 255;
 	if (initLoopMax > *size) initLoopMax = *size;
@@ -210,6 +287,7 @@ int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr
 	size_t errCnt = 0;
 	// if clean clipped waves detected run alternate demod
 	if (DetectCleanAskWave(BinStream, *size, high, low)) {
+		if (g_debugMode==2) prnt("DEBUG: Clean Wave Detected");
 		errCnt = cleanAskRawDemod(BinStream, size, *clk, *invert, high, low);
 		if (askType) //askman
 			return manrawdecode(BinStream, size, 0);	
@@ -551,28 +629,6 @@ int ParadoxdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, ui
 	return (int)startIdx;
 }
 
-uint32_t bytebits_to_byte(uint8_t* src, size_t numbits)
-{
-	uint32_t num = 0;
-	for(int i = 0 ; i < numbits ; i++)
-	{
-		num = (num << 1) | (*src);
-		src++;
-	}
-	return num;
-}
-
-//least significant bit first
-uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits)
-{
-	uint32_t num = 0;
-	for(int i = 0 ; i < numbits ; i++)
-	{
-		num = (num << 1) | *(src + (numbits-(i+1)));
-	}
-	return num;
-}
-
 int IOdemodFSK(uint8_t *dest, size_t size)
 {
 	if (justNoise(dest, size)) return -1;
@@ -620,33 +676,6 @@ int VikingDemod_AM(uint8_t *dest, size_t *size) {
 	if (*size != 64) return -6;
 	//return start position
 	return (int) startIdx;
-}
-
-// by marshmellow
-// takes a array of binary values, start position, length of bits per parity (includes parity bit),
-//   Parity Type (1 for odd; 0 for even; 2 Always 1's), and binary Length (length to run) 
-size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen)
-{
-	uint32_t parityWd = 0;
-	size_t j = 0, bitCnt = 0;
-	for (int word = 0; word < (bLen); word+=pLen){
-		for (int bit=0; bit < pLen; bit++){
-			parityWd = (parityWd << 1) | BitStream[startIdx+word+bit];
-			BitStream[j++] = (BitStream[startIdx+word+bit]);
-		}
-		j--; // overwrite parity with next data
-		// if parity fails then return 0
-		if (pType == 2) { // then marker bit which should be a 1
-			if (!BitStream[j]) return 0;
-		} else {
-			if (parityTest(parityWd, pLen, pType) == 0) return 0;			
-		}
-		bitCnt+=(pLen-1);
-		parityWd = 0;
-	}
-	// if we got here then all the parities passed
-	//return ID start index and size
-	return bitCnt;
 }
 
 // Ask/Biphase Demod then try to locate an ISO 11784/85 ID
@@ -756,7 +785,7 @@ int DetectStrongAskClock(uint8_t dest[], size_t size, uint8_t high, uint8_t low)
 			minClk = i - startwave;
 	}
 	// set clock
-	//prnt("minClk: %d",minClk);
+	if (g_debugMode==2) prnt("DEBUG ASK: detectstrongASKclk smallest wave: %d",minClk);
 	for (uint8_t clkCnt = 0; clkCnt<7; clkCnt++) {
 		if (minClk >= fndClk[clkCnt]-(fndClk[clkCnt]/8) && minClk <= fndClk[clkCnt]+1)
 			return fndClk[clkCnt];
@@ -790,6 +819,7 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 	if (!clockFnd){
 		if (DetectCleanAskWave(dest, size, peak, low)==1){
 			int ans = DetectStrongAskClock(dest, size, peak, low);
+			if (g_debugMode==2) prnt("DEBUG ASK: detectaskclk Clean Ask Wave Detected: clk %d",ans);
 			for (i=clkEnd-1; i>0; i--){
 				if (clk[i] == ans) {
 					*clock = ans;
@@ -800,7 +830,6 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 			}
 		}
 	}
-	
 	uint8_t ii;
 	uint8_t clkCnt, tol = 0;
 	uint16_t bestErr[]={1000,1000,1000,1000,1000,1000,1000,1000,1000};
@@ -842,7 +871,7 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 			}
 			//if we found no errors then we can stop here and a low clock (common clocks)
 			//  this is correct one - return this clock
-					//prnt("DEBUG: clk %d, err %d, ii %d, i %d",clk[clkCnt],errCnt,ii,i);
+			if (g_debugMode == 2) prnt("DEBUG ASK: clk %d, err %d, startpos %d, endpos %d",clk[clkCnt],errCnt,ii,i);
 			if(errCnt==0 && clkCnt<7) { 
 				if (!clockFnd) *clock = clk[clkCnt];
 				return ii;
@@ -864,8 +893,8 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 				best = iii;
 			}
 		}
+		if (g_debugMode == 2) prnt("DEBUG ASK: clk %d, # Errors %d, Current Best Clk %d, bestStart %d",clk[iii],bestErr[iii],clk[best],bestStart[best]);
 	}
-	//if (bestErr[best] > maxErr) return -1;
 	if (!clockFnd) *clock = clk[best];
 	return bestStart[best];
 }
@@ -892,7 +921,7 @@ int DetectPSKClock(uint8_t dest[], size_t size, int clock)
 	uint16_t peaksdet[]={0,0,0,0,0,0,0,0,0};
 	fc = countFC(dest, size, 0);
 	if (fc!=2 && fc!=4 && fc!=8) return -1;
-	//prnt("DEBUG: FC: %d",fc);
+	if (g_debugMode==2) prnt("DEBUG PSK: FC: %d",fc);
 
 	//find first full wave
 	for (i=160; i<loopCnt; i++){
@@ -913,7 +942,7 @@ int DetectPSKClock(uint8_t dest[], size_t size, int clock)
 			}
 		}
 	}
-	//prnt("DEBUG: firstFullWave: %d, waveLen: %d",firstFullWave,fullWaveLen);
+	if (g_debugMode ==2) prnt("DEBUG PSK: firstFullWave: %d, waveLen: %d",firstFullWave,fullWaveLen);
 	
 	//test each valid clock from greatest to smallest to see which lines up
 	for(clkCnt=7; clkCnt >= 1 ; clkCnt--){
@@ -921,7 +950,7 @@ int DetectPSKClock(uint8_t dest[], size_t size, int clock)
 		waveStart = 0;
 		errCnt=0;
 		peakcnt=0;
-		//prnt("DEBUG: clk: %d, lastClkBit: %d",clk[clkCnt],lastClkBit);
+		if (g_debugMode == 2) prnt("DEBUG PSK: clk: %d, lastClkBit: %d",clk[clkCnt],lastClkBit);
 
 		for (i = firstFullWave+fullWaveLen-1; i < loopCnt-2; i++){
 			//top edge of wave = start of new wave 
@@ -934,7 +963,7 @@ int DetectPSKClock(uint8_t dest[], size_t size, int clock)
 					waveLenCnt = waveEnd-waveStart;
 					if (waveLenCnt > fc){ 
 						//if this wave is a phase shift
-						//prnt("DEBUG: phase shift at: %d, len: %d, nextClk: %d, ii: %d, fc: %d",waveStart,waveLenCnt,lastClkBit+clk[clkCnt]-tol,ii+1,fc);
+						if (g_debugMode == 2) prnt("DEBUG PSK: phase shift at: %d, len: %d, nextClk: %d, i: %d, fc: %d",waveStart,waveLenCnt,lastClkBit+clk[clkCnt]-tol,i+1,fc);
 						if (i+1 >= lastClkBit + clk[clkCnt] - tol){ //should be a clock bit
 							peakcnt++;
 							lastClkBit+=clk[clkCnt];
@@ -963,7 +992,7 @@ int DetectPSKClock(uint8_t dest[], size_t size, int clock)
 		if (peaksdet[i] > peaksdet[best]) {
 			best = i;
 		}
-		//prnt("DEBUG: Clk: %d, peaks: %d, errs: %d, bestClk: %d",clk[iii],peaksdet[iii],bestErr[iii],clk[best]);
+		if (g_debugMode == 2) prnt("DEBUG PSK: Clk: %d, peaks: %d, errs: %d, bestClk: %d",clk[i],peaksdet[i],bestErr[i],clk[best]);
 	}
 	return clk[best];
 }
@@ -992,8 +1021,8 @@ int DetectStrongNRZClk(uint8_t *dest, size_t size, int peak, int low){
 			transition1 = i;
 		}
 	}
-	//prnt("DEBUG: LowestTrs: %d",lowestTransition);
 	if (lowestTransition == 255) lowestTransition = 0;
+	if (g_debugMode==2) prnt("DEBUG NRZ: detectstrongNRZclk smallest wave: %d",lowestTransition);
 	return lowestTransition;
 }
 
@@ -1108,7 +1137,7 @@ int DetectNRZClock(uint8_t dest[], size_t size, int clock)
 		} else if (peaksdet[iii] > peaksdet[best]){
 			best = iii;
 		}
-		//prnt("DEBUG: Clk: %d, peaks: %d, maxPeak: %d, bestClk: %d, lowestTrs: %d",clk[iii],peaksdet[iii],maxPeak, clk[best], lowestTransition);
+		if (g_debugMode==2) prnt("DEBUG NRZ: Clk: %d, peaks: %d, maxPeak: %d, bestClk: %d, lowestTrs: %d",clk[iii],peaksdet[iii],maxPeak, clk[best], lowestTransition);
 	}
 
 	return clk[best];
@@ -1269,7 +1298,6 @@ uint8_t detectFSKClk(uint8_t *BitStream, size_t size, uint8_t fcHigh, uint8_t fc
 	uint8_t rfHighest=15, rfHighest2=15, rfHighest3=15;
 
 	for (i=0; i<15; i++){
-		//prnt("DEBUG: RF %d, cnts %d",rfLens[i], rfCnts[i]);
 		//get highest 2 RF values  (might need to get more values to compare or compare all?)
 		if (rfCnts[i]>rfCnts[rfHighest]){
 			rfHighest3=rfHighest2;
@@ -1281,12 +1309,13 @@ uint8_t detectFSKClk(uint8_t *BitStream, size_t size, uint8_t fcHigh, uint8_t fc
 		} else if(rfCnts[i]>rfCnts[rfHighest3]){
 			rfHighest3=i;
 		}
+		if (g_debugMode==2) prnt("DEBUG FSK: RF %d, cnts %d",rfLens[i], rfCnts[i]);
 	}  
 	// set allowed clock remainder tolerance to be 1 large field clock length+1 
 	//   we could have mistakenly made a 9 a 10 instead of an 8 or visa versa so rfLens could be 1 FC off  
 	uint8_t tol1 = fcHigh+1; 
 	
-	//prnt("DEBUG: hightest: 1 %d, 2 %d, 3 %d",rfLens[rfHighest],rfLens[rfHighest2],rfLens[rfHighest3]);
+	if (g_debugMode==2) prnt("DEBUG FSK: most counted rf values: 1 %d, 2 %d, 3 %d",rfLens[rfHighest],rfLens[rfHighest2],rfLens[rfHighest3]);
 
 	// loop to find the highest clock that has a remainder less than the tolerance
 	//   compare samples counted divided by
@@ -1296,6 +1325,7 @@ uint8_t detectFSKClk(uint8_t *BitStream, size_t size, uint8_t fcHigh, uint8_t fc
 		if (rfLens[rfHighest] % clk[ii] < tol1 || rfLens[rfHighest] % clk[ii] > clk[ii]-tol1){
 			if (rfLens[rfHighest2] % clk[ii] < tol1 || rfLens[rfHighest2] % clk[ii] > clk[ii]-tol1){
 				if (rfLens[rfHighest3] % clk[ii] < tol1 || rfLens[rfHighest3] % clk[ii] > clk[ii]-tol1){
+					if (g_debugMode==2) prnt("DEBUG FSK: clk %d divides into the 3 most rf values within tolerance",clk[ii]);
 					break;
 				}
 			}
@@ -1362,7 +1392,6 @@ uint16_t countFC(uint8_t *BitStream, size_t size, uint8_t fskAdj)
 	uint16_t maxCnt1=0;
 	// go through fclens and find which ones are bigest 2  
 	for (i=0; i<15; i++){
-		//prnt("DEBUG: FC %d, Cnt %d",fcLens[i],fcCnts[i]);    
 		// get the 3 best FC values
 		if (fcCnts[i]>maxCnt1) {
 			best3=best2;
@@ -1375,6 +1404,7 @@ uint16_t countFC(uint8_t *BitStream, size_t size, uint8_t fskAdj)
 		} else if(fcCnts[i]>fcCnts[best3]){
 			best3=i;
 		}
+		if (g_debugMode==2) prnt("DEBUG countfc: FC %u, Cnt %u, best fc: %u, best2 fc: %u",fcLens[i],fcCnts[i],fcLens[best1],fcLens[best2]);
 	}
 	if (fcLens[best1]==0) return 0;
 	uint8_t fcH=0, fcL=0;
@@ -1385,13 +1415,13 @@ uint16_t countFC(uint8_t *BitStream, size_t size, uint8_t fskAdj)
 		fcH=fcLens[best2];
 		fcL=fcLens[best1];
 	}
-	//prnt("DEBUG: dd %d > %d",(size-180)/fcH/3,fcCnts[best1]+fcCnts[best2]);
-	if ((size-180)/fcH/3 > fcCnts[best1]+fcCnts[best2]) return 0; //lots of waves not psk or fsk
-
+	if ((size-180)/fcH/3 > fcCnts[best1]+fcCnts[best2]) {
+		if (g_debugMode==2) prnt("DEBUG countfc: fc is too large: %u > %u. Not psk or fsk",(size-180)/fcH/3,fcCnts[best1]+fcCnts[best2]);
+		return 0; //lots of waves not psk or fsk
+	}
 	// TODO: take top 3 answers and compare to known Field clocks to get top 2
 
 	uint16_t fcs = (((uint16_t)fcH)<<8) | fcL;
-	//prnt("DEBUG: Best %d  best2 %d best3 %d",fcLens[best1],fcLens[best2],fcLens[best3]);
 	if (fskAdj) return fcs;	
 	return fcLens[best1];
 }

@@ -839,7 +839,7 @@ void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		size = 50*128*2; //big enough to catch 2 sequences of largest format
 		idx = AWIDdemodFSK(dest, &size);
 		
-		if (idx>0 && size==96){
+		if (idx<=0 || size!=96) continue;
 	        // Index map
 	        // 0            10            20            30              40            50              60
 	        // |            |             |             |               |             |               |
@@ -859,6 +859,7 @@ void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	        uint32_t rawHi2 = bytebits_to_byte(dest+idx,32);
 
 	        size = removeParity(dest, idx+8, 4, 1, 88);
+		if (size != 66) continue;
 	        // ok valid card found!
 
 	        // Index map
@@ -900,7 +901,6 @@ void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				return;
 			}
 			// reset
-		}
 		idx = 0;
 		WDT_HIT();
 	}
@@ -1267,7 +1267,6 @@ void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks) {
 // Copy HID id to card and setup block 0 config
 void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 	uint32_t data[] = {0,0,0,0,0,0,0};
-	//int data1=0, data2=0, data3=0, data4=0, data5=0, data6=0; //up to six blocks for long format
 	uint8_t last_block = 0;
 
 	if (longFMT){
@@ -1356,6 +1355,15 @@ void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t 
 	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
 	//	T5567WriteBlock(0x603E10E2,0);
 	DbpString("DONE!");
+}
+// clone viking tag to T55xx
+void CopyVikingtoT55xx(uint32_t block1, uint32_t block2, uint8_t Q5) {
+	uint32_t data[] = {T55x7_BITRATE_RF_32 | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT), block1, block2};
+	if (Q5) data[0] = (32 << T5555_BITRATE_SHIFT) | T5555_MODULATION_MANCHESTER | 2 << T5555_MAXBLOCK_SHIFT;
+	// Program the data blocks for supplied ID and the block 0 config
+	WriteT55xx(data, 0, 3);
+	LED_D_OFF();
+	cmd_send(CMD_ACK,0,0,0,0,0);
 }
 
 // Define 9bit header for EM410x tags
@@ -1657,12 +1665,3 @@ void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 	LED_D_OFF();
 }
-
-void CopyViKingtoT55x7(uint32_t block1, uint32_t block2) {
-
-	uint32_t data[] = {T55x7_BITRATE_RF_32 | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT), block1, block2};
-	// Program the data blocks for supplied ID and the block 0 config
-	WriteT55xx(data, 0, 3);
-	LED_D_OFF();
-}
-

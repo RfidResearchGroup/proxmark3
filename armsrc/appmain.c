@@ -1007,10 +1007,8 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			CmdAWIDdemodFSK(c->arg[0], 0, 0, 1);
 			break;
         case CMD_VIKING_CLONE_TAG:
-            CopyViKingtoT55x7(c->arg[0],c->arg[1]);
+			CopyVikingtoT55xx(c->arg[0], c->arg[1], c->arg[2]);
             break;
-
-    
 #endif
 
 #ifdef WITH_HITAG

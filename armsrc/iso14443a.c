@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+ //-----------------------------------------------------------------------------
 // Merlok - June 2011, 2012
 // Gerhard de Koning Gans - May 2008
 // Hagen Fritsch - June 2010
@@ -939,6 +939,7 @@ bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
 //-----------------------------------------------------------------------------
 void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 {
+	uint32_t counters[] = {0,0,0};
 	//Here, we collect UID,NT,AR,NR,UID2,NT2,AR2,NR2
 	// This can be used in a reader-only attack.
 	// (it can also be retrieved via 'hf 14a list', but hey...
@@ -1182,7 +1183,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 				// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
 				p_response = NULL;
 			}
-		} else if(receivedCmd[0] == 0x3A) {	// Received a FAST READ (ranged read) -- just returns all zeros.
+		} else if(receivedCmd[0] == 0x3A) {	// Received a FAST READ (ranged read)
 				
 				uint8_t emdata[MAX_FRAME_SIZE];
 				int start =  receivedCmd[1] * 4;
@@ -1202,15 +1203,19 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 				AppendCrc14443a(data, sizeof(data)-2);
 				EmSendCmdEx(data,sizeof(data),false);
 				p_response = NULL;					
-		} else if(receivedCmd[0] == 0x39 && tagType == 7) {	// Received a READ COUNTER -- 
-				uint8_t data[] =  {0x00,0x00,0x00,0x14,0xa5};
-				EmSendCmdEx(data,sizeof(data),false);				
-				p_response = NULL;
-		} else if(receivedCmd[0] == 0xA5 && tagType == 7) {	// Received a INC COUNTER -- 
+		} else if (receivedCmd[0] == 0x39 && tagType == 7) {	// Received a READ COUNTER -- 
+			uint8_t counter = receivedCmd[1];
+			uint32_t value = counters[counter];
+			uint8_t data[] =  {0x00,0x00,0x00,0x14,0xa5};
+			AppendCrc14443a(data, sizeof(data)-2);
+			EmSendCmdEx(data,sizeof(data),false);				
+			p_response = NULL;
+		} else if (receivedCmd[0] == 0xA5 && tagType == 7) {	// Received a INC COUNTER -- 
 			// number of counter
-			//uint8_t counter = receivedCmd[1];
-			//uint32_t val = bytes_to_num(receivedCmd+2,4);
-			
+			uint8_t counter = receivedCmd[1];
+			uint32_t val = bytes_to_num(receivedCmd+2,4);
+			counters[counter] = val;
+		
 			// send ACK
 			uint8_t ack[] = {0x0a};
 			EmSendCmdEx(ack,sizeof(ack),false);

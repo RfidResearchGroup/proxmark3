@@ -192,7 +192,6 @@ int CmdLFCommandRead(const char *Cmd)
 	if (errors) return usage_lf_cmdread();
 	
 	// in case they specified 'H'
-	// added to the end..  
 	strcpy((char *)&c.d.asBytes + strLength, dummy);
 
 	clearCommandBuffer();
@@ -505,6 +504,7 @@ int CmdIndalaClone(const char *Cmd)
     c.arg[1] = uid2;
   }
 
+	clearCommandBuffer();
   SendCommand(&c);
   return 0;
 }
@@ -582,6 +582,7 @@ int CmdLFSetConfig(const char *Cmd)
 	//Averaging is a flag on high-bit of arg[1]
 	UsbCommand c = {CMD_SET_LF_SAMPLING_CONFIG};
 	memcpy(c.d.asBytes,&config,sizeof(sample_config));
+	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
@@ -760,6 +761,7 @@ int CmdLFfskSim(const char *Cmd)
   UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
 
   memcpy(c.d.asBytes, DemodBuffer, size);
+	clearCommandBuffer();
   SendCommand(&c);
   return 0;
 }
@@ -853,6 +855,7 @@ int CmdLFaskSim(const char *Cmd)
   UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
   PrintAndLog("preparing to sim ask data: %d bits", size);
   memcpy(c.d.asBytes, DemodBuffer, size);
+	clearCommandBuffer();
   SendCommand(&c);
   return 0;
 }
@@ -960,6 +963,7 @@ int CmdLFpskSim(const char *Cmd)
   UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};
   PrintAndLog("DEBUG: Sending DemodBuffer Length: %d", size);
   memcpy(c.d.asBytes, DemodBuffer, size);
+	clearCommandBuffer();
   SendCommand(&c);
   
   return 0;

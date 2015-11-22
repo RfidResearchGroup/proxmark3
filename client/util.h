@@ -43,6 +43,7 @@ char * sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t bre
 
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
 uint64_t bytes_to_num(uint8_t* src, size_t len);
+void num_to_bytebits(uint64_t	n, size_t len, uint8_t *dest);
 char * printBits(size_t const size, void const * const ptr);
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
 
@@ -62,8 +63,8 @@ int param_getstr(const char *line, int paramnum, char * str);
  int hextobinstring( char *target,  char *source);
  int binarraytohex( char *target,  char *source,  int length);
 void binarraytobinstring(char *target,  char *source,  int length);
-uint8_t GetParity( char *string, uint8_t type,  int length);
-void wiegand_add_parity(char *target, char *source, char length);
+uint8_t GetParity( uint8_t *string, uint8_t type,  int length);
+void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
 
 void xor(unsigned char * dst, unsigned char * src, size_t len);
 int32_t le24toh (uint8_t data[3]);

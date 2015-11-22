@@ -159,6 +159,13 @@ uint64_t bytes_to_num(uint8_t* src, size_t len)
 	return num;
 }
 
+void num_to_bytebits(uint64_t	n, size_t len, uint8_t *dest) {
+	while (len--) {
+		dest[len] = n & 1;
+		n >>= 1;
+	}
+}
+
 // aa,bb,cc,dd,ee,ff,gg,hh, ii,jj,kk,ll,mm,nn,oo,pp
 // to
 // hh,gg,ff,ee,dd,cc,bb,aa, pp,oo,nn,mm,ll,kk,jj,ii
@@ -445,7 +452,7 @@ void binarraytobinstring(char *target, char *source,  int length)
 }
 
 // return parity bit required to match type
-uint8_t GetParity( char *bits, uint8_t type, int length)
+uint8_t GetParity( uint8_t *bits, uint8_t type, int length)
 {
     int x;
 
@@ -457,7 +464,7 @@ uint8_t GetParity( char *bits, uint8_t type, int length)
 }
 
 // add HID parity to binary array: EVEN prefix for 1st half of ID, ODD suffix for 2nd half
-void wiegand_add_parity(char *target, char *source, char length)
+void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length)
 {
     *(target++)= GetParity(source, EVEN, length / 2);
     memcpy(target, source, length);

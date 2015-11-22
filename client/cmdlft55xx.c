@@ -126,13 +126,15 @@ int usage_t55xx_dump(){
 	return 0;
 }
 int usage_t55xx_detect(){
-	PrintAndLog("Usage:  lf t55xx detect [1]");
+	PrintAndLog("Usage:  lf t55xx detect [1] [p <password>]");
 	PrintAndLog("Options:");
-	PrintAndLog("     [graph buffer data]  - if set, use Graphbuffer otherwise read data from tag.");
+	PrintAndLog("     1             - if set, use Graphbuffer otherwise read data from tag.");
+	PrintAndLog("     p <password>  - OPTIONAL password (8 hex characters)");
 	PrintAndLog("");
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf t55xx detect");
 	PrintAndLog("      lf t55xx detect 1");
+	PrintAndLog("      lf t55xx detect 11223344");
 	PrintAndLog("");
 	return 0;
 }
@@ -397,28 +399,41 @@ bool DecodeT55xxBlock(){
 
 int CmdT55xxDetect(const char *Cmd){
 
-	//bool override = false;
-	//bool pwdmode = false;
+	bool errors = FALSE;
+	bool useGB = FALSE;
+	bool usepwd = FALSE;
+	uint32_t password = 0;
+	uint8_t cmdp = 0;
 
-	uint32_t password = 0; //default to blank Block 7
-	bool usepwd = ( strlen(Cmd) > 0);	
-	if ( usepwd ){
-		password = param_get32ex(Cmd, 0, 0, 16);
-		// if (param_getchar(Cmd, 1) =='o' )
-			// override = true;
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+			return usage_t55xx_detect();
+		case 'p':
+		case 'P':
+			password = param_get32ex(Cmd, cmdp+1, 0, 16);
+			usepwd = TRUE;
+			cmdp += 2;
+			break;
+		case '1':
+			// use Graphbuffer data
+			useGB = TRUE;
+			cmdp++;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
 	}
-
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') return usage_t55xx_detect();
+	if (errors) return usage_t55xx_detect();
 	
-	if (strlen(Cmd)==0) {
-		password = param_get32ex(Cmd, 0, 0, 16);
-		//if (param_getchar(Cmd, 1) =='o' ) override = true;
+	if ( !useGB) {
+		if ( !AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password) )
+			return 0;
 	}
-
-	if ( !AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password) )
-		return 0;
-		
+	
 	if ( !tryDetectModulation() )
 		PrintAndLog("Could not detect modulation automatically. Try setting it manually with \'lf t55xx config\'");
 
@@ -1242,7 +1257,7 @@ void t55x7_create_config_block( int tagtype ){
 	static char buf[60];
 	char *retStr = buf;
 	
-	switch (id){
+	switch (tagtype){
 		case 0: snprintf(retStr, sizeof(buf),"%08X - T55X7 Default", T55X7_DEFAULT_CONFIG_BLOCK); break;
 		case 1: snprintf(retStr, sizeof(buf),"%08X - T55X7 Raw", T55X7_RAW_CONFIG_BLOCK); break;
 		default:
@@ -1292,16 +1307,15 @@ int CmdT55xxWipe(const char *Cmd) {
 	return 0;
 }
 
-static command_t CommandTable[] =
-{
+static command_t CommandTable[] = {
   {"help",   CmdHelp,           1, "This help"},
   {"config", CmdT55xxSetConfig, 1, "Set/Get T55XX configuration (modulation, inverted, offset, rate)"},
-  {"detect", CmdT55xxDetect,    0, "[1] Try detecting the tag modulation from reading the configuration block."},
+  {"detect",   CmdT55xxDetect,    1, "[1] Try detecting the tag modulation from reading the configuration block."},
   {"read",     CmdT55xxReadBlock, 0, "b <block> p [password] [o] [1] -- Read T55xx block data. Optional [p password], [override], [page1]"},
   {"resetread",CmdResetRead,      0, "Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)"},
   {"write",    CmdT55xxWriteBlock,0, "b <block> d <data> p [password] [1] -- Write T55xx block data. Optional [p password], [page1]"},
-  {"trace",    CmdT55xxReadTrace, 0, "[1] Show T55x7 traceability data (page 1/ blk 0-1)"},
-  {"info",     CmdT55xxInfo,      0, "[1] Show T55x7 configuration data (page 0/ blk 0)"},
+  {"trace",    CmdT55xxReadTrace, 1, "[1] Show T55x7 traceability data (page 1/ blk 0-1)"},
+  {"info",     CmdT55xxInfo,      1, "[1] Show T55x7 configuration data (page 0/ blk 0)"},
   {"dump",     CmdT55xxDump,      0, "[password] [o] Dump T55xx card block 0-7. Optional [password], [override]"},
   {"special", special,          0, "Show block changes with 64 different offsets"},
   {"wakeup", CmdT55xxWakeUp,    0, "Send AOR wakeup command"},
@@ -1309,14 +1323,12 @@ static command_t CommandTable[] =
   {NULL, NULL, 0, NULL}
 };
 
-int CmdLFT55XX(const char *Cmd)
-{
+int CmdLFT55XX(const char *Cmd) {
   CmdsParse(CommandTable, Cmd);
   return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
   CmdsHelp(CommandTable);
   return 0;
 }
