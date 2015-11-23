@@ -202,8 +202,7 @@ void ReadTItag(void)
 		crc = update_crc16(crc, (shift1>>16)&0xff);
 		crc = update_crc16(crc, (shift1>>24)&0xff);
 
-		Dbprintf("Info: Tag data: %x%08x, crc=%x",
-				 (unsigned int)shift1, (unsigned int)shift0, (unsigned int)shift2 & 0xFFFF);
+		Dbprintf("Info: Tag data: %x%08x, crc=%x", (unsigned int)shift1, (unsigned int)shift0, (unsigned int)shift2 & 0xFFFF);
 		if (crc != (shift2&0xffff)) {
 			Dbprintf("Error: CRC mismatch, expected %x", (unsigned int)crc);
 		} else {
@@ -349,7 +348,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 	// start by writing 0xBB (keyword) and 0xEB (password)
 	// then write 80 bits of data (or 64 bit data + 16 bit crc if you prefer)
 	// finally end with 0x0300 (write frame)
-	// all data is sent lsb firts
+	// all data is sent lsb first
 	// finish with 15ms programming time
 
 	// modulate antenna
