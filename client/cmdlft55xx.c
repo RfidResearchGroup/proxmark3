@@ -1326,12 +1326,11 @@ int CmdT55xxBruteForce(const char *Cmd) {
     start_password = param_get32ex(Cmd, 0, 0, 16);
 	end_password = param_get32ex(Cmd, 1, 0, 16);
 	
-	if ( start_password == end_password ) return usage_t55xx_bruteforce();
+	if ( start_password >= end_password ) return usage_t55xx_bruteforce();
 	
-    PrintAndLog("Start Password %08x", start_password);
-    PrintAndLog("  End Password %08x", end_password);
+    PrintAndLog("Search password range [%08X -> %08X]", start_password, end_password);
 	
-    int i = start_password;
+    uint32_t i = start_password;
 
     while ((!found) && (i <= end_password)){
 
@@ -1349,15 +1348,15 @@ int CmdT55xxBruteForce(const char *Cmd) {
     PrintAndLog("");
 	
     if (found)
-		PrintAndLog("Found Password [%08x]", i);
+		PrintAndLog("Password found [%08x]", i);
     else
-		PrintAndLog("NOT Found Last Password [%08x]", i);
+		PrintAndLog("Password NOT found. Last tried: [%08x]", i);
     return 0;
 }
 
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,           1, "This help"},
-	{"bruceforce",	CmdT55xxBruteForce,0, "Simple bruteforce attack to find password"},
+	{"bruteforce",	CmdT55xxBruteForce,0, "Simple bruteforce attack to find password"},
 	{"config",		CmdT55xxSetConfig, 1, "Set/Get T55XX configuration (modulation, inverted, offset, rate)"},
 	{"detect",		CmdT55xxDetect,    1, "[1] Try detecting the tag modulation from reading the configuration block."},
 	{"dump",		CmdT55xxDump,      0, "[password] [o] Dump T55xx card block 0-7. Optional [password], [override]"},
