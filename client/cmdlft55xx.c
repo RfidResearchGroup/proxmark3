@@ -1328,7 +1328,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 	
 	if ( start_password >= end_password ) return usage_t55xx_bruteforce();
 	
-    PrintAndLog("Search password range [%08X -> %08X]", start_password, end_password);
+    PrintAndLog("Search password  range [%08X -> %08X]", start_password, end_password);
 	
     uint32_t i = start_password;
 
