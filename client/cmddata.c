@@ -1987,7 +1987,11 @@ int getSamples(const char *Cmd, bool silent)
 	GetFromBigBuf(got,n,0);
 	PrintAndLog("Data fetched");
 	UsbCommand response;
-	WaitForResponse(CMD_ACK, &response);
+	if ( !WaitForResponseTimeout(CMD_ACK, &response, 10000) ) {
+        PrintAndLog("timeout while waiting for reply.");
+		return 1;
+    }
+	
 	uint8_t bits_per_sample = 8;
 
 	//Old devices without this feature would send 0 at arg[0]
@@ -2030,9 +2034,9 @@ int CmdTuneSamples(const char *Cmd)
 	int timeout = 0;
 	printf("\nMeasuring antenna characteristics, please wait...");
 
-	UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING};
+	UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING, {0,0,0}};
+	clearCommandBuffer();
 	SendCommand(&c);
-
 	UsbCommand resp;
 	while(!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING,&resp,1000)) {
 		timeout++;
@@ -2080,7 +2084,6 @@ int CmdTuneSamples(const char *Cmd)
 		ShowGraphWindow();
 		RepaintGraphWindow();
 	}
-
 	return 0;
 }
 
@@ -2096,7 +2099,7 @@ int CmdLoad(const char *Cmd)
 	
 	FILE *f = fopen(filename, "r");
 	if (!f) {
-		 PrintAndLog("couldn't open '%s'", filename);
+		PrintAndLog("couldn't open '%s'", filename);
 		return 0;
 	}
 
@@ -2115,11 +2118,13 @@ int CmdLoad(const char *Cmd)
 int CmdLtrim(const char *Cmd)
 {
 	int ds = atoi(Cmd);
-	if (GraphTraceLen<=0) return 0;
+
+	if (GraphTraceLen <= 0) return 0;
+
 	for (int i = ds; i < GraphTraceLen; ++i)
 		GraphBuffer[i-ds] = GraphBuffer[i];
-	GraphTraceLen -= ds;
 
+	GraphTraceLen -= ds;
 	RepaintGraphWindow();
 	return 0;
 }
@@ -2128,9 +2133,7 @@ int CmdLtrim(const char *Cmd)
 int CmdRtrim(const char *Cmd)
 {
 	int ds = atoi(Cmd);
-
 	GraphTraceLen = ds;
-
 	RepaintGraphWindow();
 	return 0;
 }

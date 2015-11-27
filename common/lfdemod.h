@@ -16,6 +16,7 @@
 #include <stdint.h>
 
 //generic
+uint8_t justNoise(uint8_t *BitStream, size_t size);
 size_t   addParity(uint8_t *BitSource, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType);
 int      askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType);
 int      BiphaseRawDecode(uint8_t * BitStream, size_t *size, int offset, int invert);

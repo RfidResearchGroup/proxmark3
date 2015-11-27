@@ -75,6 +75,7 @@ int CmdT55xxInfo(const char *Cmd);
 int CmdT55xxDetect(const char *Cmd);
 int CmdResetRead(const char *Cmd);
 int CmdT55xxWipe(const char *Cmd);
+int CmdT55xxBruteForce(const char *Cmd);
 
 char * GetBitRateStr(uint32_t id);
 char * GetSaferStr(uint32_t id);
@@ -92,4 +93,5 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
 int special(const char *Cmd);
 int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password );
 
+bool detectPassword(int password);
 #endif

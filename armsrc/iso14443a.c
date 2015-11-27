@@ -1896,10 +1896,12 @@ int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity)
 	return Demod.len;
 }
 
-/* performs iso14443a anticollision procedure
- * fills the uid pointer unless NULL
- * fills resp_data unless NULL */
-int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, uint32_t *cuid_ptr) {
+// performs iso14443a anticollision (optional) and card select procedure
+// fills the uid and cuid pointer unless NULL
+// fills the card info record unless NULL
+// if anticollision is false, then the UID must be provided in uid_ptr[] 
+// and num_cascades must be set (1: 4 Byte UID, 2: 7 Byte UID, 3: 10 Byte UID)
+int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades) {
 	uint8_t wupa[]       = { 0x52 };  // 0x26 - REQA  0x52 - WAKE-UP
 	uint8_t sel_all[]    = { 0x93,0x20 };
 	uint8_t sel_uid[]    = { 0x93,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
@@ -1914,7 +1916,7 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 	int len;
 
 	// Broadcast for a card, WUPA (0x52) will force response from all cards in the field
-    ReaderTransmitBitsPar(wupa,7,0, NULL);
+    ReaderTransmitBitsPar(wupa, 7, NULL, NULL);
 	
 	// Receive the ATQA
 	if(!ReaderReceive(resp, resp_par)) return 0;
@@ -1925,9 +1927,11 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 		memset(p_hi14a_card->uid,0,10);
 	}
 
+	if (anticollision) {
 	// clear uid
 	if (uid_ptr) {
 		memset(uid_ptr,0,10);
+	}
 	}
 
 	// check for proprietary anticollision:
@@ -1942,6 +1946,7 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 		// SELECT_* (L1: 0x93, L2: 0x95, L3: 0x97)
 		sel_uid[0] = sel_all[0] = 0x93 + cascade_level * 2;
 
+		if (anticollision) {
 		// SELECT_ALL
 		ReaderTransmit(sel_all, sizeof(sel_all), NULL);
 		if (!ReaderReceive(resp, resp_par)) return 0;
@@ -1977,6 +1982,14 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 		} else {		// no collision, use the response to SELECT_ALL as current uid
 			memcpy(uid_resp, resp, 4);
 		}
+		} else {
+			if (cascade_level < num_cascades - 1) {
+				uid_resp[0] = 0x88;
+				memcpy(uid_resp+1, uid_ptr+cascade_level*3, 3);
+			} else {
+				memcpy(uid_resp, uid_ptr+cascade_level*3, 4);
+			}
+		}
 		uid_resp_len = 4;
 
 		// calculate crypto UID. Always use last 4 Bytes.
@@ -1986,7 +1999,7 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 
 		// Construct SELECT UID command
 		sel_uid[1] = 0x70;													// transmitting a full UID (1 Byte cmd, 1 Byte NVB, 4 Byte UID, 1 Byte BCC, 2 Bytes CRC)
-		memcpy(sel_uid+2, uid_resp, 4);										// the UID
+		memcpy(sel_uid+2, uid_resp, 4);										// the UID received during anticollision, or the provided UID
 		sel_uid[6] = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5];  	// calculate and add BCC
 		AppendCrc14443a(sel_uid, 7);										// calculate and add CRC
 		ReaderTransmit(sel_uid, sizeof(sel_uid), NULL);
@@ -2002,11 +2015,10 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 			uid_resp[0] = uid_resp[1];
 			uid_resp[1] = uid_resp[2];
 			uid_resp[2] = uid_resp[3]; 
-
 			uid_resp_len = 3;
 		}
 
-		if(uid_ptr) {
+		if(uid_ptr && anticollision) {
 			memcpy(uid_ptr + (cascade_level*3), uid_resp, uid_resp_len);
 		}
 
@@ -2127,7 +2139,7 @@ void ReaderIso14443a(UsbCommand *c)
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 		if(!(param & ISO14A_NO_SELECT)) {
 			iso14a_card_select_t *card = (iso14a_card_select_t*)buf;
-			arg0 = iso14443a_select_card(NULL,card,NULL);
+			arg0 = iso14443a_select_card(NULL,card,NULL, true, 0);
 			cmd_send(CMD_ACK,arg0,card->uidlen,0,buf,sizeof(iso14a_card_select_t));
 		}
 	}
@@ -2325,7 +2337,7 @@ void ReaderMifare(bool first_try)
 			SpinDelay(100);
 		}
 		
-		if(!iso14443a_select_card(uid, NULL, &cuid)) {
+		if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
 			if (MF_DBGLEVEL >= 1)	Dbprintf("Mifare: Can't select card");
 			continue;
 		}

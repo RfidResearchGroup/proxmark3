@@ -171,6 +171,7 @@ typedef struct{
 
 #define CMD_READER_MIFARE                                                 0x0611
 #define CMD_MIFARE_NESTED                                                 0x0612
+#define CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES                               0x0613
 
 #define CMD_MIFARE_READBL                                                 0x0620
 #define CMD_MIFAREU_READBL                                                0x0720

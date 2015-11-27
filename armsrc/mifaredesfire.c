@@ -25,7 +25,7 @@ bool InitDesfireCard(){
 	byte_t cardbuf[USB_CMD_DATA_SIZE] = {0x00};
 	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
 	
-	int len = iso14443a_select_card(NULL,card,NULL);
+	int len = iso14443a_select_card(NULL,card,NULL,true,0);
 
 	if (!len) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)
@@ -114,7 +114,7 @@ void MifareDesfireGetInformation(){
 
 	// card select - information
 	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
-	byte_t isOK = iso14443a_select_card(NULL, card, NULL);
+	byte_t isOK = iso14443a_select_card(NULL, card, NULL, true, 0);
 	if ( isOK == 0) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) {
 			Dbprintf("Can't select card");

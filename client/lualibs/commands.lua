@@ -129,6 +129,7 @@ local _commands = {
 
 	CMD_READER_MIFARE =                                                  0x0611,
 	CMD_MIFARE_NESTED =                                                  0x0612,
+	CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES =                                0x0613,
 
 	CMD_MIFARE_READBL =                                                  0x0620,
 	CMD_MIFAREU_READBL =                                                 0x0720,

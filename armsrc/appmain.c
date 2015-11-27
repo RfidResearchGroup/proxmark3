@@ -432,7 +432,7 @@ void StandAloneMode14a()
 						SpinDelay(300);
 					}
 				}
-				if (!iso14443a_select_card(uid, &hi14a_card[selected], &cuid))
+				if (!iso14443a_select_card(uid, &hi14a_card[selected], &cuid, true, 0))
 					continue;
 				else
 				{
@@ -1130,6 +1130,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			//break;
 		case CMD_MIFAREU_WRITEBL:
 			MifareUWriteBlock(c->arg[0], c->arg[1], c->d.asBytes);
+			break;
+		case CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES:
+			MifareAcquireEncryptedNonces(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
 		case CMD_MIFARE_NESTED:
 			MifareNested(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);

@@ -134,7 +134,7 @@ int usage_t55xx_detect(){
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf t55xx detect");
 	PrintAndLog("      lf t55xx detect 1");
-	PrintAndLog("      lf t55xx detect 11223344");
+	PrintAndLog("      lf t55xx detect p 11223344");
 	PrintAndLog("");
 	return 0;
 }
@@ -148,6 +148,14 @@ int usage_t55xx_wakup(){
 	PrintAndLog("Examples:");
     PrintAndLog("      lf t55xx wakeup p 11223344  - send wakeup password");
 	return 0;
+}
+int usage_t55xx_bruteforce(){
+    PrintAndLog("Usage: lf t55xx bruteforce <start password> <end password>");
+    PrintAndLog("       password must be 4 bytes (8 hex symbols)");
+    PrintAndLog("Examples:");
+    PrintAndLog("       lf t55xx bruteforce aaaaaaaa bbbbbbbb");
+    PrintAndLog("");
+    return 0;
 }
 
 static int CmdHelp(const char *Cmd);
@@ -1307,20 +1315,61 @@ int CmdT55xxWipe(const char *Cmd) {
 	return 0;
 }
 
+int CmdT55xxBruteForce(const char *Cmd) {
+    uint32_t start_password = 0x00000000; //start password
+    uint32_t end_password   = 0xFFFFFFFF; //end   password
+
+    bool found = false;
+    char cmdp = param_getchar(Cmd, 0);
+    if (cmdp == 'h' || cmdp == 'H') return usage_t55xx_bruteforce();
+
+    start_password = param_get32ex(Cmd, 0, 0, 16);
+	end_password = param_get32ex(Cmd, 1, 0, 16);
+	
+	if ( start_password == end_password ) return usage_t55xx_bruteforce();
+	
+    PrintAndLog("Start Password %08x", start_password);
+    PrintAndLog("  End Password %08x", end_password);
+	
+    int i = start_password;
+
+    while ((!found) && (i <= end_password)){
+
+		AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, i);
+		found = tryDetectModulation();
+        
+		if (found)
+			break;
+        
+        if ((i % 0x100) == 0) printf("[%08x], ",i);
+
+		i++;
+    }
+    
+    PrintAndLog("");
+	
+    if (found)
+		PrintAndLog("Found Password [%08x]", i);
+    else
+		PrintAndLog("NOT Found Last Password [%08x]", i);
+    return 0;
+}
+
 static command_t CommandTable[] = {
-  {"help",   CmdHelp,           1, "This help"},
-  {"config", CmdT55xxSetConfig, 1, "Set/Get T55XX configuration (modulation, inverted, offset, rate)"},
-  {"detect",   CmdT55xxDetect,    1, "[1] Try detecting the tag modulation from reading the configuration block."},
-  {"read",     CmdT55xxReadBlock, 0, "b <block> p [password] [o] [1] -- Read T55xx block data. Optional [p password], [override], [page1]"},
-  {"resetread",CmdResetRead,      0, "Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)"},
-  {"write",    CmdT55xxWriteBlock,0, "b <block> d <data> p [password] [1] -- Write T55xx block data. Optional [p password], [page1]"},
-  {"trace",    CmdT55xxReadTrace, 1, "[1] Show T55x7 traceability data (page 1/ blk 0-1)"},
-  {"info",     CmdT55xxInfo,      1, "[1] Show T55x7 configuration data (page 0/ blk 0)"},
-  {"dump",     CmdT55xxDump,      0, "[password] [o] Dump T55xx card block 0-7. Optional [password], [override]"},
-  {"special", special,          0, "Show block changes with 64 different offsets"},
-  {"wakeup", CmdT55xxWakeUp,    0, "Send AOR wakeup command"},
-  {"wipe",     CmdT55xxWipe,      0, "Wipe a T55xx tag and set defaults (will destroy any data on tag)"},
-  {NULL, NULL, 0, NULL}
+	{"help",		CmdHelp,           1, "This help"},
+	{"bruceforce",	CmdT55xxBruteForce,0, "Simple bruteforce attack to find password"},
+	{"config",		CmdT55xxSetConfig, 1, "Set/Get T55XX configuration (modulation, inverted, offset, rate)"},
+	{"detect",		CmdT55xxDetect,    1, "[1] Try detecting the tag modulation from reading the configuration block."},
+	{"dump",		CmdT55xxDump,      0, "[password] [o] Dump T55xx card block 0-7. Optional [password], [override]"},
+	{"info",		CmdT55xxInfo,      1, "[1] Show T55x7 configuration data (page 0/ blk 0)"},
+	{"read",		CmdT55xxReadBlock, 0, "b <block> p [password] [o] [1] -- Read T55xx block data. Optional [p password], [override], [page1]"},
+	{"resetread",	CmdResetRead,      0, "Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)"},
+	{"special",		special,           0, "Show block changes with 64 different offsets"},	
+	{"trace",		CmdT55xxReadTrace, 1, "[1] Show T55x7 traceability data (page 1/ blk 0-1)"},
+	{"wakeup",		CmdT55xxWakeUp,    0, "Send AOR wakeup command"},
+	{"wipe",		CmdT55xxWipe,      0, "Wipe a T55xx tag and set defaults (will destroy any data on tag)"},
+	{"write",		CmdT55xxWriteBlock,0, "b <block> d <data> p [password] [1] -- Write T55xx block data. Optional [p password], [page1]"},
+	{NULL, NULL, 0, NULL}
 };
 
 int CmdLFT55XX(const char *Cmd) {

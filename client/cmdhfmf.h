@@ -38,6 +38,7 @@ int CmdHF14AMfUWrBl(const char* cmd);
 int CmdHF14AMfChk(const char* cmd);
 int CmdHF14AMifare(const char* cmd);
 int CmdHF14AMfNested(const char* cmd);
+int CmdHF14AMfNestedHard(const char *Cmd);
 int CmdHF14AMfSniff(const char* cmd);
 int CmdHF14AMf1kSim(const char* cmd);
 int CmdHF14AMfEClear(const char* cmd);

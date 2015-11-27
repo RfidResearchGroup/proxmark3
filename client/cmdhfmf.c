@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhfmf.h"
+#include "cmdhfmfhard.h"
 #include "nonce2key/nonce2key.h"
 
 static int CmdHelp(const char *Cmd);
@@ -790,6 +791,104 @@ int CmdHF14AMfNested(const char *Cmd)
 	}
 	return 0;
 }
+
+
+int CmdHF14AMfNestedHard(const char *Cmd)
+{
+	uint8_t blockNo = 0;
+	uint8_t keyType = 0;
+	uint8_t trgBlockNo = 0;
+	uint8_t trgKeyType = 0;
+	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
+	
+	char ctmp;
+	ctmp = param_getchar(Cmd, 0);
+	if (ctmp != 'R' && ctmp != 'r' && strlen(Cmd) < 20) {
+		PrintAndLog("Usage:");
+		PrintAndLog("      hf mf hardnested <block number> <key A|B> <key (12 hex symbols)>");
+		PrintAndLog("                       <target block number> <target key A|B> [w] [s]");
+		PrintAndLog("  or  hf mf hardnested r");
+		PrintAndLog(" ");
+		PrintAndLog("Options: ");
+		PrintAndLog("      w: Acquire nonces and write them to binary file nonces.bin");
+		PrintAndLog("      s: Slower acquisition (required by some non standard cards)");
+		PrintAndLog("      r: Read nonces.bin and start attack");
+		PrintAndLog(" ");
+		PrintAndLog("      sample1: hf mf hardnested 0 A FFFFFFFFFFFF 4 A");
+		PrintAndLog("      sample2: hf mf hardnested 0 A FFFFFFFFFFFF 4 A w");
+		PrintAndLog("      sample3: hf mf hardnested 0 A FFFFFFFFFFFF 4 A w s");
+		PrintAndLog("      sample4: hf mf hardnested r");
+
+		return 0;
+	}	
+	
+	bool nonce_file_read = false;
+	bool nonce_file_write = false;
+	bool slow = false;
+	
+	if (ctmp == 'R' || ctmp == 'r') {
+
+		nonce_file_read = true;
+
+	} else {
+
+		blockNo = param_get8(Cmd, 0);
+		ctmp = param_getchar(Cmd, 1);
+		if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
+			PrintAndLog("Key type must be A or B");
+			return 1;
+		}
+		if (ctmp != 'A' && ctmp != 'a') { 
+			keyType = 1;
+		}
+		
+		if (param_gethex(Cmd, 2, key, 12)) {
+			PrintAndLog("Key must include 12 HEX symbols");
+			return 1;
+		}
+		
+		trgBlockNo = param_get8(Cmd, 3);
+		ctmp = param_getchar(Cmd, 4);
+		if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
+			PrintAndLog("Target key type must be A or B");
+			return 1;
+		}
+		if (ctmp != 'A' && ctmp != 'a') {
+			trgKeyType = 1;
+		}
+
+		uint16_t i = 5;
+		while ((ctmp = param_getchar(Cmd, i))) {
+			if (ctmp == 's' || ctmp == 'S') {
+				slow = true;
+			} else if (ctmp == 'w' || ctmp == 'W') {
+				nonce_file_write = true;
+			} else {
+				PrintAndLog("Possible options are w and/or s");
+				return 1;
+			}
+			i++;
+		}
+	}
+
+	PrintAndLog("--target block no:%3d, target key type:%c, file action: %s, Slow: %s ", 
+			trgBlockNo, 
+			trgKeyType?'B':'A', 
+			nonce_file_write?"write":nonce_file_read?"read":"none",
+			slow?"Yes":"No");
+	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, nonce_file_read, nonce_file_write, slow);
+	if (isOK) {
+		switch (isOK) {
+			case 1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
+			case 2 : PrintAndLog("Button pressed. Aborted.\n"); break;
+			default : break;
+		}
+		return 2;
+	}
+
+	return 0;
+}
+
 
 int CmdHF14AMfChk(const char *Cmd)
 {
@@ -2017,6 +2116,7 @@ static command_t CommandTable[] =
   {"chk",		CmdHF14AMfChk,			0, "Test block keys"},
   {"mifare",	CmdHF14AMifare,			0, "Read parity error messages."},
   {"nested",	CmdHF14AMfNested,		0, "Test nested authentication"},
+	{"hardnested", 	CmdHF14AMfNestedHard, 	0, "Nested attack for hardened Mifare cards"},
   {"sniff",		CmdHF14AMfSniff,		0, "Sniff card-reader communication"},
   {"sim",		CmdHF14AMf1kSim,		0, "Simulate MIFARE card"},
   {"eclr",		CmdHF14AMfEClear,		0, "Clear simulator memory block"},
