@@ -1388,24 +1388,32 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			PrintAndLog("No keys found in file");
 			return 1;
 		}
+		PrintAndLog("Loaded %d keys", keycnt);
 		
 		// loop
-		uint32_t testpwd = 0x00;
+		uint64_t testpwd = 0x00;
 		for (uint16_t c = 0; c < keycnt; ++c ) {
 	
-			testpwd = bytes_to_num(keyBlock + 4*keycnt, 4);
+			testpwd = bytes_to_num(keyBlock + 4*c, 4);
+
+			PrintAndLog("Testing %08X", testpwd);
+			
 			
 			AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, testpwd);
 			found = tryDetectModulation();
-		
+
 			if ( found ) {
 				PrintAndLog("Found valid password:[%08X]", testpwd);
 				return 0;
 			} 
 		}
+		PrintAndLog("Password NOT found.");
+		return 0;
 	}
 	
+	// Try to read Block 7, first :)
 	
+	// incremental pwd range search
     start_password = param_get32ex(Cmd, 0, 0, 16);
 	end_password = param_get32ex(Cmd, 1, 0, 16);
 	
