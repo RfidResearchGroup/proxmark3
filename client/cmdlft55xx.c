@@ -150,10 +150,15 @@ int usage_t55xx_wakup(){
 	return 0;
 }
 int usage_t55xx_bruteforce(){
-    PrintAndLog("Usage: lf t55xx bruteforce <start password> <end password>");
+    PrintAndLog("Usage: lf t55xx bruteforce <start password> <end password> [i <*.dic>]");
     PrintAndLog("       password must be 4 bytes (8 hex symbols)");
+	PrintAndLog("Options:");
+	PrintAndLog("     h			- this help");
+    PrintAndLog("     i <*.dic>	- loads a default keys dictionary file <*.dic>");
+    PrintAndLog("");
     PrintAndLog("Examples:");
     PrintAndLog("       lf t55xx bruteforce aaaaaaaa bbbbbbbb");
+	PrintAndLog("       lf t55xx bruteforce i mykeys.dic");
     PrintAndLog("");
     return 0;
 }
@@ -1316,13 +1321,91 @@ int CmdT55xxWipe(const char *Cmd) {
 }
 
 int CmdT55xxBruteForce(const char *Cmd) {
+	
+	// load a default pwd file.
+	char buf[9];
+	char filename[FILE_PATH_SIZE]={0};
+	int	keycnt = 0;
+	uint8_t stKeyBlock = 20;
+	uint8_t *keyBlock = NULL, *p;
+	keyBlock = calloc(stKeyBlock, 6);
+	if (keyBlock == NULL) return 1;
+	
     uint32_t start_password = 0x00000000; //start password
     uint32_t end_password   = 0xFFFFFFFF; //end   password
-
     bool found = false;
+
     char cmdp = param_getchar(Cmd, 0);
     if (cmdp == 'h' || cmdp == 'H') return usage_t55xx_bruteforce();
 
+	if (cmdp == 'i' || cmdp == 'I') {
+	
+		int len = strlen(Cmd+2);
+		if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
+		memcpy(filename, Cmd+2, len);
+	
+		FILE * f = fopen( filename , "r");
+		
+		if ( !f ) {
+			PrintAndLog("File: %s: not found or locked.", filename);
+			free(keyBlock);
+			return 1;
+		}			
+			
+		while( fgets(buf, sizeof(buf), f) ){
+			if (strlen(buf) < 8 || buf[7] == '\n') continue;
+		
+			while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
+			
+			//The line start with # is comment, skip
+			if( buf[0]=='#' ) continue;
+
+			if (!isxdigit(buf[0])){
+				PrintAndLog("File content error. '%s' must include 8 HEX symbols", buf);
+				continue;
+			}
+			
+			buf[8] = 0;
+
+			if ( stKeyBlock - keycnt < 2) {
+				p = realloc(keyBlock, 6*(stKeyBlock+=10));
+				if (!p) {
+					PrintAndLog("Cannot allocate memory for defaultKeys");
+					free(keyBlock);
+					return 2;
+				}
+				keyBlock = p;
+			}
+			memset(keyBlock + 4 * keycnt, 0, 4);
+			num_to_bytes(strtoll(buf, NULL, 16), 4, keyBlock + 4*keycnt);
+			PrintAndLog("chk custom pwd[%2d] %08X", keycnt, bytes_to_num(keyBlock + 4*keycnt, 4));
+			keycnt++;
+			memset(buf, 0, sizeof(buf));
+		}		
+		fclose(f);
+		
+		if (keycnt == 0) {
+			PrintAndLog("No keys found in file");
+			return 1;
+		}
+		
+		// loop
+		uint32_t testpwd = 0x00;
+		for (uint16_t c = 0; c < keycnt; ++c ) {
+	
+			testpwd = bytes_to_num(keyBlock + 4*keycnt, 4);
+			
+			AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, testpwd);
+			found = tryDetectModulation();
+		
+			if ( found ) {
+				PrintAndLog("Found valid password:[%08X]", testpwd);
+				return 0;
+			} 
+		}
+	}
+	
+	
     start_password = param_get32ex(Cmd, 0, 0, 16);
 	end_password = param_get32ex(Cmd, 1, 0, 16);
 	
@@ -1348,7 +1431,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
     PrintAndLog("");
 	
     if (found)
-		PrintAndLog("Password found [%08x]", i);
+		PrintAndLog("Found valid password: [%08x]", i);
     else
 		PrintAndLog("Password NOT found. Last tried: [%08x]", i);
     return 0;

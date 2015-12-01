@@ -792,7 +792,6 @@ int CmdHF14AMfNested(const char *Cmd)
 	return 0;
 }
 
-
 int CmdHF14AMfNestedHard(const char *Cmd)
 {
 	uint8_t blockNo = 0;
@@ -888,7 +887,6 @@ int CmdHF14AMfNestedHard(const char *Cmd)
 
 	return 0;
 }
-
 
 int CmdHF14AMfChk(const char *Cmd)
 {
