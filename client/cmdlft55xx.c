@@ -1399,7 +1399,11 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			PrintAndLog("Testing %08X", testpwd);
 			
 			
-			AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, testpwd);
+			if ( !AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, testpwd)) {
+				PrintAndLog("Aquireing data from device failed. Quitting");
+				return 0;
+			}
+			
 			found = tryDetectModulation();
 
 			if ( found ) {
@@ -1425,7 +1429,10 @@ int CmdT55xxBruteForce(const char *Cmd) {
 
     while ((!found) && (i <= end_password)){
 
-		AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, i);
+		if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, i)) {
+			PrintAndLog("Aquireing data from device failed. Quitting");
+			return 0;
+		}
 		found = tryDetectModulation();
         
 		if (found)
