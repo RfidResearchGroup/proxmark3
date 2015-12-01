@@ -1394,6 +1394,12 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		uint64_t testpwd = 0x00;
 		for (uint16_t c = 0; c < keycnt; ++c ) {
 	
+			if (ukbhit()) {
+				getchar();
+				printf("\naborted via keyboard!\n");
+				return 0;
+			}
+		
 			testpwd = bytes_to_num(keyBlock + 4*c, 4);
 
 			PrintAndLog("Testing %08X", testpwd);
@@ -1423,23 +1429,27 @@ int CmdT55xxBruteForce(const char *Cmd) {
 	
 	if ( start_password >= end_password ) return usage_t55xx_bruteforce();
 	
-    PrintAndLog("Search password  range [%08X -> %08X]", start_password, end_password);
+    PrintAndLog("Search password range [%08X -> %08X]", start_password, end_password);
 	
     uint32_t i = start_password;
 
     while ((!found) && (i <= end_password)){
 
+		printf(".");
+		fflush(stdout);
+		if (ukbhit()) {
+			getchar();
+			printf("\naborted via keyboard!\n");
+			return 0;
+		}
+			
 		if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, i)) {
 			PrintAndLog("Aquireing data from device failed. Quitting");
 			return 0;
 		}
 		found = tryDetectModulation();
         
-		if (found)
-			break;
-        
-        if ((i % 0x100) == 0) printf("[%08x], ",i);
-
+		if (found) break;
 		i++;
     }
     
@@ -1448,7 +1458,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
     if (found)
 		PrintAndLog("Found valid password: [%08x]", i);
     else
-		PrintAndLog("Password NOT found. Last tried: [%08x]", i);
+		PrintAndLog("Password NOT found. Last tried: [%08x]", --i);
     return 0;
 }
 
