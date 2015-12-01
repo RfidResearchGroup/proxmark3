@@ -271,7 +271,7 @@ void doT55x7Acquisition(size_t sample_size) {
 	uint8_t curSample = 0;
 	uint8_t lastSample = 0;
 	uint16_t skipCnt = 0;
-	while(!BUTTON_PRESS() && !usb_poll_validate_length() && skipCnt<1000) {
+	while(!BUTTON_PRESS() && !usb_poll_validate_length() && skipCnt < 1000 && (i < bufsize) ) {
 		WDT_HIT();		
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 			AT91C_BASE_SSC->SSC_THR = 0x43;
@@ -306,11 +306,10 @@ void doT55x7Acquisition(size_t sample_size) {
 				// if just found start - recover last sample
 				if (!startFound) {
 					dest[i++] = lastSample;
-				startFound = true;
+					startFound = true;
 				}
 				// collect samples
 				dest[i++] = curSample;
-				if (i >= bufsize-1) break;
 			}
 		}
 	}

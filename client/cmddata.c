@@ -934,15 +934,15 @@ char *GetFSKType(uint8_t fchigh, uint8_t fclow, uint8_t invert)
 int FSKrawDemod(const char *Cmd, bool verbose)
 {
 	//raw fsk demod  no manchester decoding no start bit finding just get binary from wave
+	uint8_t rfLen, invert, fchigh, fclow;
+
 	//set defaults
-	int rfLen = 0;
-	int invert = 0;
-	int fchigh = 0;
-	int fclow = 0;
-
 	//set options from parameters entered with the command
-	sscanf(Cmd, "%i %i %i %i", &rfLen, &invert, &fchigh, &fclow);
-
+	rfLen = param_get8ex(Cmd, 0, 0, 10);
+	invert = param_get8ex(Cmd, 1, 0, 10);
+	fchigh = param_get8ex(Cmd, 2, 0, 10);
+	fclow = param_get8ex(Cmd, 3, 0, 10);
+	
 	if (strlen(Cmd)>0 && strlen(Cmd)<=2) {
 		 if (rfLen==1){
 			invert = 1;   //if invert option only is used
@@ -958,31 +958,31 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 	if (fchigh==0 || fclow == 0){
 		fcs = countFC(BitStream, BitLen, 1);
 		if (fcs==0){
-			fchigh=10;
-			fclow=8;
-		}else{
+			fchigh = 10;
+			fclow = 8;
+		} else {
 			fchigh = (fcs >> 8) & 0xFF;
 			fclow = fcs & 0xFF;
 		}
 	}
+
 	//get bit clock length
-	if (rfLen==0){
+	if (rfLen == 0){
 		rfLen = detectFSKClk(BitStream, BitLen, fchigh, fclow);
 		if (rfLen == 0) rfLen = 50;
 	}
-	int size = fskdemod(BitStream,BitLen,(uint8_t)rfLen,(uint8_t)invert,(uint8_t)fchigh,(uint8_t)fclow);
-	if (size>0){
-		setDemodBuf(BitStream,size,0);
+	int size = fskdemod(BitStream, BitLen, rfLen, invert, fchigh, fclow);
+	if (size > 0){
+		setDemodBuf(BitStream, size, 0);
 
 		// Now output the bitstream to the scrollback by line of 16 bits
 		if (verbose || g_debugMode) {
-			PrintAndLog("\nUsing Clock:%d, invert:%d, fchigh:%d, fclow:%d", rfLen, invert, fchigh, fclow);
-			PrintAndLog("%s decoded bitstream:",GetFSKType(fchigh,fclow,invert));
+			PrintAndLog("\nUsing Clock:%d, invert:%d, fchigh:%d, fclow:%u", rfLen, invert, fchigh, fclow);
+			PrintAndLog("%s decoded bitstream:", GetFSKType(fchigh, fclow, invert));
 			printDemodBuff();
 		}
-
 		return 1;
-	} else{
+	} else {
 		if (g_debugMode) PrintAndLog("no FSK data found");
 	}
 	return 0;

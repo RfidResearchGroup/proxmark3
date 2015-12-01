@@ -1407,7 +1407,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			found = tryDetectModulation();
 
 			if ( found ) {
-				PrintAndLog("Found valid password:[%08X]", testpwd);
+				PrintAndLog("Found valid password: [%08X]", testpwd);
 				return 0;
 			} 
 		}
