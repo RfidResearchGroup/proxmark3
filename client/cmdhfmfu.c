@@ -41,20 +41,9 @@ uint8_t default_3des_keys[KEYS_3DES_COUNT][16] = {
 		{ 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF }	// 11 22 33
 };
 
-#define KEYS_PWD_COUNT 10
+#define KEYS_PWD_COUNT 1
 uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 	{0xFF,0xFF,0xFF,0xFF}, // PACK 0x00,0x00 -- factory default
-
-	{0x4A,0xF8,0x4B,0x19}, // PACK 0xE5,0xBE -- italian bus (sniffed)
-	{0x33,0x6B,0xA1,0x19}, // PACK 0x9c,0x2d -- italian bus (sniffed)
-	{0xFF,0x90,0x6C,0xB2}, // PACK 0x12,0x9e -- italian bus (sniffed)	
-	{0x46,0x1c,0xA3,0x19}, // PACK 0xE9,0x5A -- italian bus (sniffed)
-	{0x35,0x1C,0xD0,0x19}, // PACK 0x9A,0x5a -- italian bus (sniffed)
-
-	{0x05,0x22,0xE6,0xB4}, // PACK 0x80,0x80 -- Amiiboo (sniffed) pikachu-b UID:
-	{0x7E,0x22,0xE6,0xB4}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
-	{0x02,0xE1,0xEE,0x36}, // PACK 0x80,0x80 -- AMiiboo (sniffed) sonic UID:  04d257 7ae33e8027
-	{0x32,0x0C,0x16,0x17}, // PACK 0x80,0x80 -- AMiiboo (sniffed) 
 };
 
 #define MAX_UL_TYPES 18
@@ -729,7 +718,8 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	uint8_t dataLen = 0;
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authkeyptr = authenticationkey;
-	uint8_t	*key;
+	uint8_t pwd[4] = {0,0,0,0};
+	uint8_t	*key = pwd;
 	uint8_t pack[4] = {0,0,0,0};
 	int len = 0;
 	char tempStr[50];
@@ -909,6 +899,23 @@ int CmdHF14AMfUInfo(const char *Cmd){
 		if ( !authlim && !hasAuthKey ) {
 			PrintAndLog("\n--- Known EV1/NTAG passwords.");
 			len = 0;
+			
+			// test pwd gen A
+			num_to_bytes( ul_ev1_pwdgenA(card.uid), 4, key);
+			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
+			if (len >= 1) {
+				PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+			}
+			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
+			
+			// test pwd gen B
+			num_to_bytes( ul_ev1_pwdgenB(card.uid), 4, key);
+			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
+			if (len >= 1) {
+				PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+			}
+			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
+			
 			for (uint8_t i = 0; i < KEYS_PWD_COUNT; ++i ) {
 				key = default_pwd_pack[i];
 				len = ulev1_requestAuthentication(key, pack, sizeof(pack));
