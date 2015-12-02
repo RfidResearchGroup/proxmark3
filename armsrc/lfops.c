@@ -1060,9 +1060,9 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
  * Q5 tags seems to have issues when these values changes. 
  */
 
-#define START_GAP 50*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (or 15fc)
+#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (or 15fc)
 #define WRITE_GAP 20*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (or 10fc)
-#define WRITE_0   16*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (or 24fc)
+#define WRITE_0   18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (or 24fc)
 #define WRITE_1   50*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (or 56fc)  432 for T55x7; 448 for E5550
 #define READ_GAP  15*8 
 
@@ -1260,7 +1260,7 @@ void T55xxWakeUp(uint32_t Pwd){
 void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks) {
 	// write last block first and config block last (if included)
 	for (uint8_t i = numblocks+startblock; i > startblock; i--)
-		T55xxWriteBlockExt(blockdata[i-1],i-1,0,0);
+		T55xxWriteBlockExt(blockdata[i-1], i-1, 0, 0);
 }
 
 // Copy HID id to card and setup block 0 config
@@ -1429,11 +1429,11 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
 	LED_D_ON();
 
 	// Write EM410x ID
-	uint32_t data[] = {0, id>>32, id & 0xFFFFFFFF};
+	uint32_t data[] = {0, (uint32_t)(id>>32), id & 0xFFFFFFFF};
 
-		clock = (card & 0xFF00) >> 8;
-		clock = (clock == 0) ? 64 : clock;
-		Dbprintf("Clock rate: %d", clock);
+	clock = (card & 0xFF00) >> 8;
+	clock = (clock == 0) ? 64 : clock;
+	Dbprintf("Clock rate: %d", clock);
 	if (card & 0xFF) { //t55x7
 		clock = GetT55xxClockBit(clock);
 		if (clock == 0) {
@@ -1449,8 +1449,10 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
 	WriteT55xx(data, 0, 3);
 
 	LED_D_OFF();
-	Dbprintf("Tag %s written with 0x%08x%08x\n", card ? "T55x7":"T5555",
-			 (uint32_t)(id >> 32), (uint32_t)id);
+	Dbprintf("Tag %s written with 0x%08x%08x\n",
+			card ? "T55x7":"T5555",
+			(uint32_t)(id >> 32),
+			(uint32_t)id);
 }
 
 //-----------------------------------

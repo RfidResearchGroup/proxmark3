@@ -173,7 +173,7 @@ int CmdEM410xWrite(const char *Cmd)
 {
 	uint64_t id = 0xFFFFFFFFFFFFFFFF; // invalid id value
 	int card = 0xFF; // invalid card value
-	unsigned int clock = 0; // invalid clock value
+	uint32_t clock = 0; // invalid clock value
 
 	sscanf(Cmd, "%" PRIx64 " %d %d", &id, &card, &clock);
 
@@ -199,8 +199,8 @@ int CmdEM410xWrite(const char *Cmd)
 
 	// Check Clock
 		// Default: 64
-		if (clock == 0)
-			clock = 64;
+	if (clock == 0)
+		clock = 64;
 
 	// Allowed clock rates: 16, 32, 40 and 64
 	if ((clock != 16) && (clock != 32) && (clock != 64) && (clock != 40)) {
@@ -225,7 +225,6 @@ int CmdEM410xWrite(const char *Cmd)
 
 	UsbCommand c = {CMD_EM410X_WRITE_TAG, {card, (uint32_t)(id >> 32), (uint32_t)id}};
 	SendCommand(&c);
-
 	return 0;
 }
 
