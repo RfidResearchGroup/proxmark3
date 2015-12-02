@@ -152,13 +152,15 @@ int usage_t55xx_wakup(){
 int usage_t55xx_bruteforce(){
     PrintAndLog("Usage: lf t55xx bruteforce <start password> <end password> [i <*.dic>]");
     PrintAndLog("       password must be 4 bytes (8 hex symbols)");
+	PrintAndLog("This command uses A) bruteforce to scan a number range");
+	PrintAndLog("                  B) a dictionary attack");
 	PrintAndLog("Options:");
 	PrintAndLog("     h			- this help");
     PrintAndLog("     i <*.dic>	- loads a default keys dictionary file <*.dic>");
     PrintAndLog("");
     PrintAndLog("Examples:");
     PrintAndLog("       lf t55xx bruteforce aaaaaaaa bbbbbbbb");
-	PrintAndLog("       lf t55xx bruteforce i mykeys.dic");
+	PrintAndLog("       lf t55xx bruteforce i default_pwd.dic");
     PrintAndLog("");
     return 0;
 }

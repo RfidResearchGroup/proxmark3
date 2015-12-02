@@ -481,17 +481,25 @@ int32_t le24toh (uint8_t data[3]) {
     return (data[2] << 16) | (data[1] << 8) | data[0];
 }
 
-
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits) {
+
+	if (len > 32) return 0;
 	
 	int i = start;
 	int j = len-1;
-
-	if (len > 32) return 0;
-
 	uint32_t tmp = 0;
+
 	for (; j >= 0; --j, ++i)
 		tmp	|= bits[i] << j;
 
 	return tmp;
+}
+
+// RotateLeft - Ultralight, Desfire
+void rol(uint8_t *data, const size_t len){
+    uint8_t first = data[0];
+    for (size_t i = 0; i < len-1; i++) {
+        data[i] = data[i+1];
+    }
+    data[len-1] = first;
 }

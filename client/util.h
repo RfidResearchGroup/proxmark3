@@ -59,9 +59,9 @@ int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt);
 int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt);
 int param_getstr(const char *line, int paramnum, char * str);
 
- int hextobinarray( char *target,  char *source);
- int hextobinstring( char *target,  char *source);
- int binarraytohex( char *target,  char *source,  int length);
+int hextobinarray( char *target,  char *source);
+int hextobinstring( char *target,  char *source);
+int binarraytohex( char *target,  char *source,  int length);
 void binarraytobinstring(char *target,  char *source,  int length);
 uint8_t GetParity( uint8_t *string, uint8_t type,  int length);
 void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
@@ -69,3 +69,4 @@ void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
 void xor(unsigned char * dst, unsigned char * src, size_t len);
 int32_t le24toh (uint8_t data[3]);
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits);
+void rol(uint8_t *data, const size_t len);

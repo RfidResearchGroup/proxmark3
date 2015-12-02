@@ -74,6 +74,54 @@ uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {
 		MAX_UL_BLOCKS, MAX_MY_D_NFC, MAX_MY_D_MOVE,
 		MAX_MY_D_MOVE, MAX_MY_D_MOVE_LEAN, MAX_UL_BLOCKS};
 
+// Certain pwd generation algo nickname A.
+uint32_t ul_ev1_pwdgenA(uint8_t* uid) { 
+
+	uint8_t pos = (uid[3] ^ uid[4] ^ uid[5] ^ uid[6]) % 32;
+	
+	uint32_t xortable[] = {
+						0x4f2711c1, 0x07D7BB83, 0x9636EF07, 0xB5F4460E, 0xF271141C, 0x7D7BB038, 0x636EF871, 0x5F4468E3,
+						0x271149C7, 0xD7BB0B8F, 0x36EF8F1E, 0xF446863D, 0x7114947A, 0x7BB0B0F5, 0x6EF8F9EB, 0x44686BD7,
+						0x11494fAF, 0xBB0B075F, 0xEF8F96BE, 0x4686B57C, 0x1494F2F9, 0xB0B07DF3, 0xF8F963E6, 0x686B5FCC,
+						0x494F2799, 0x0B07D733, 0x8F963667, 0x86B5F4CE, 0x94F2719C, 0xB07D7B38, 0xF9636E70, 0x6B5F44E0
+						};
+
+	uint8_t entry[] = {0x00,0x00,0x00,0x00};
+	uint8_t pwd[] = {0x00,0x00,0x00,0x00};
+	
+	num_to_bytes( xortable[pos], 4, entry);
+
+	pwd[0] = entry[0] ^ uid[1] ^ uid[2] ^ uid[3];
+	pwd[1] = entry[1] ^ uid[0] ^ uid[2] ^ uid[4];
+	pwd[2] = entry[2] ^ uid[0] ^ uid[1] ^ uid[5];
+	pwd[3] = entry[3] ^ uid[6];
+
+	return (uint32_t)bytes_to_num(pwd, 4);
+}
+
+// Certain pwd generation algo nickname B. (very simple)
+uint32_t ul_ev1_pwdgenB(uint8_t* uid) {
+
+	uint8_t pwd[] = {0x00,0x00,0x00,0x00};
+	
+	pwd[0] = uid[1] ^ uid[3] ^ 0xAA;
+	pwd[1] = uid[2] ^ uid[4] ^ 0x55;
+	pwd[2] = uid[3] ^ uid[5] ^ 0xAA;
+	pwd[3] = uid[4] ^ uid[6] ^ 0x55;
+	return (uint32_t)bytes_to_num(pwd, 4);
+}
+
+void ul_ev1_pwdgen_selftest(){
+	
+	uint8_t uid1[] = {0x04,0x11,0x12,0x11,0x12,0x11,0x10};
+	uint32_t pwd1 = ul_ev1_pwdgenA(uid1);
+	PrintAndLog("UID | %s | %08X | %s", sprint_hex(uid1,7), pwd1, (pwd1 == 0x8432EB17)?"OK":"->8432EB17<-");
+
+	uint8_t uid2[] = {0x04,0x1f,0x98,0xea,0x1e,0x3e,0x81};		
+	uint32_t pwd2 = ul_ev1_pwdgenB(uid2);
+	PrintAndLog("UID | %s | %08X | %s", sprint_hex(uid2,7), pwd2, (pwd2 == 0x5fd37eca)?"OK":"->5fd37eca<--");
+	return;
+}
 
 static int CmdHelp(const char *Cmd);
 
@@ -237,16 +285,6 @@ static int ulev1_getVersion( uint8_t *response, uint16_t responseLength ){
 	return len;
 }
 
-// static int ulev1_fastRead( uint8_t startblock, uint8_t endblock, uint8_t *response ){
-	
-	// uint8_t cmd[] = {MIFARE_ULEV1_FASTREAD, startblock, endblock};
-	
-	// if ( !ul_send_cmd_raw(cmd, sizeof(cmd), response)){
-		// return -1;
-	// }
-	// return 0;
-// }
-
 static int ulev1_readCounter( uint8_t counter, uint8_t *response, uint16_t responseLength ){
 
 	uint8_t cmd[] = {MIFARE_ULEV1_READ_CNT, counter};
@@ -267,7 +305,6 @@ static int ulev1_readSignature( uint8_t *response, uint16_t responseLength ){
 	int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
 	return len;
 }
-
 
 // Fudan check checks for which error is given for a command with incorrect crc
 // NXP UL chip responds with 01, fudan 00.
@@ -338,12 +375,12 @@ static int ul_print_default( uint8_t *data){
 
 	PrintAndLog("      Lock : %s - %s",
 				sprint_hex(data+10, 2),
-				printBits(2, data+10)
+				sprint_bin(data+10, 2)
 		);
 
 	PrintAndLog("OneTimePad : %s - %s\n",
 				sprint_hex(data + 12, 4),
-				printBits(4, data+12)
+				sprint_bin(data+12, 4)
 		);
 
 	return 0;
@@ -434,8 +471,8 @@ static int ulc_print_3deskey( uint8_t *data){
 static int ulc_print_configuration( uint8_t *data){
 
 	PrintAndLog("--- UL-C Configuration");
-	PrintAndLog(" Higher Lockbits [40/0x28] : %s - %s", sprint_hex(data, 4), printBits(2, data));
-	PrintAndLog("         Counter [41/0x29] : %s - %s", sprint_hex(data+4, 4), printBits(2, data+4));
+	PrintAndLog(" Higher Lockbits [40/0x28] : %s - %s", sprint_hex(data, 4), sprint_bin(data, 2));
+	PrintAndLog("         Counter [41/0x29] : %s - %s", sprint_hex(data+4, 4), sprint_bin(data+4, 2));
 
 	bool validAuth = (data[8] >= 0x03 && data[8] <= 0x30);
 	if ( validAuth )
@@ -1829,15 +1866,8 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	return 0;
 }
 
-// static uint8_t * diversify_key(uint8_t * key){
-	
-
- // return key;
-// }
-
 // static void GenerateUIDe( uint8_t *uid, uint8_t len){
 	// for (int i=0; i<len; ++i){
-			
 	// }
 	// return;
 // }
@@ -1931,10 +1961,6 @@ int CmdHF14AMfuELoad(const char *Cmd)
 	return 0;
 }
 
-
-//------------------------------------
-// Menu Stuff
-//------------------------------------
 static command_t CommandTable[] =
 {
 	{"help",	CmdHelp,			1, "This help"},

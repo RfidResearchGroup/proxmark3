@@ -28,6 +28,8 @@ int usage_hf_mfu_eload(void);
 
 int CmdHFMFUltra(const char *Cmd);
 
+uint32_t ul_ev1_pwdgenA(uint8_t* uid);
+
 typedef enum TAGTYPE_UL {
 	UNKNOWN       = 0x000000,
 	UL            = 0x000001,
