@@ -7,6 +7,11 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   --
 
 ### Added												
+- `lf t55xx bruteforce <start password> <end password> [i <*.dic>]` - Simple bruteforce attack to find password - (iceman and others)
+- `lf viking clone`- clone viking tag to t55x7 or Q5 from 4byte hex ID input 
+- `lf viking sim`  - sim full viking tag from 4byte hex ID input
+- `lf viking read` - read viking tag and output ID
+- `lf t55xx wipe`  - sets t55xx back to factory defaults
 - Added viking demod to `lf search` (marshmellow)
 - `data askvikingdemod` demod viking id tag from graphbuffer (marshmellow)
 - `lf t55xx resetread` added reset then read command - should allow determining start
@@ -29,6 +34,11 @@ of stream transmissions (marshmellow)
 - Added option c to 'hf list' (mark CRC bytes) (piwi)
 
 ### Changed																		
+- Adjusted lf awid clone to optionally clone to Q5 tags
+- Adjusted lf t55xx detect to find Q5 tags (t5555) instead of just t55x7
+- Adjusted all lf NRZ demods - works more acurately and consistantly (as long as you have strong signal)
+- Adjusted lf pskindalademod to reduce false positive reads.
+- Small adjustments to psk, nrz, and ask clock detect routines - more reliable.
 - Adjusted lf em410x em410xsim to accept a clock argument
 - Adjusted lf t55xx dump to allow overriding the safety check and warning text (marshmellow)
 - Adjusted lf t55xx write input variables (marshmellow)

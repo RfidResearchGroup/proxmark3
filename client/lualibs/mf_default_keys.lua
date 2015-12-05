@@ -226,6 +226,12 @@ local _keys = {
 	'51284C3686A6',
 	'3DF14C8000A1',
 	'6A470D54127C',
+	
+	--[[
+	3dprinter
+	EPI Envisionte
+	--]]
+	'AAFB06045877',
 }
 
 ---
