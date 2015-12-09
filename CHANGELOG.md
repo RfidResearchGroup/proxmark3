@@ -34,6 +34,7 @@ of stream transmissions (marshmellow)
 - Added option c to 'hf list' (mark CRC bytes) (piwi)
 
 ### Changed																		
+- Added `[l] <length>` option to data printdemodbuffer
 - Adjusted lf awid clone to optionally clone to Q5 tags
 - Adjusted lf t55xx detect to find Q5 tags (t5555) instead of just t55x7
 - Adjusted all lf NRZ demods - works more acurately and consistantly (as long as you have strong signal)

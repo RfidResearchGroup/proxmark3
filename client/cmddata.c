@@ -58,11 +58,12 @@ int CmdSetDebugMode(const char *Cmd)
 }
 
 int usage_data_printdemodbuf(){
-	PrintAndLog("Usage: data printdemodbuffer x o <offset>");
+		PrintAndLog("Usage: data printdemodbuffer x o <offset> l <length>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h          This help");
 	PrintAndLog("       x          output in hex (omit for binary output)");
 	PrintAndLog("       o <offset> enter offset in # of bits");
+		PrintAndLog("       l <length> enter length to print in # of bits or hex characters respectively");
 	return 0;	
 }
 
@@ -87,7 +88,8 @@ int CmdPrintDemodBuff(const char *Cmd)
 	char hex[512]={0x00};
 	bool hexMode = false;
 	bool errors = false;
-	uint8_t offset = 0;
+	uint32_t offset = 0; //could be size_t but no param_get16...
+	uint32_t length = 512;
 	char cmdp = 0;
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
@@ -103,8 +105,14 @@ int CmdPrintDemodBuff(const char *Cmd)
 			break;
 		case 'o':
 		case 'O':
-			offset = param_get8(Cmd, cmdp+1);
+			offset = param_get32ex(Cmd, cmdp+1, 0, 10);
 			if (!offset) errors = true;
+			cmdp += 2;
+			break;
+		case 'l':
+		case 'L':
+			length = param_get32ex(Cmd, cmdp+1, 512, 10);
+			if (!length) errors = true;
 			cmdp += 2;
 			break;
 		default:
@@ -116,11 +124,12 @@ int CmdPrintDemodBuff(const char *Cmd)
 	}
 	//Validations
 	if(errors) return usage_data_printdemodbuf();
-
-	int numBits = (DemodBufferLen-offset) & 0x7FC; //make sure we don't exceed our string
+	length = (length > (DemodBufferLen-offset)) ? DemodBufferLen-offset : length; 
+	int numBits = (length) & 0x00FFC; //make sure we don't exceed our string
 
 	if (hexMode){
 		char *buf = (char *) (DemodBuffer + offset);
+		numBits = (numBits > sizeof(hex)) ? sizeof(hex) : numBits;
 		numBits = binarraytohex(hex, buf, numBits);
 		if (numBits==0) return 0;
 		PrintAndLog("DemodBuffer: %s",hex);		
@@ -313,7 +322,7 @@ int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType)
 	char amp = param_getchar(Cmd, 0);
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	sscanf(Cmd, "%i %i %i %i %c", &clk, &invert, &maxErr, &maxLen, &amp);
-	if (!maxLen) maxLen = 512*64;
+	if (!maxLen) maxLen = BIGBUF_SIZE;
 	if (invert != 0 && invert != 1) {
 		PrintAndLog("Invalid argument: %s", Cmd);
 		return 0;
@@ -955,21 +964,20 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 	if (BitLen==0) return 0;
 	//get field clock lengths
 	uint16_t fcs=0;
-	if (fchigh==0 || fclow == 0){
+	if (!fchigh || !fclow) {
 		fcs = countFC(BitStream, BitLen, 1);
-		if (fcs==0){
+		if (!fcs) {
 			fchigh = 10;
 			fclow = 8;
 		} else {
-			fchigh = (fcs >> 8) & 0xFF;
-			fclow = fcs & 0xFF;
+			fchigh = (fcs >> 8) & 0x00FF;
+			fclow = fcs & 0x00FF;
 		}
 	}
-
 	//get bit clock length
-	if (rfLen == 0){
+	if (!rfLen){
 		rfLen = detectFSKClk(BitStream, BitLen, fchigh, fclow);
-		if (rfLen == 0) rfLen = 50;
+		if (!rfLen) rfLen = 50;
 	}
 	int size = fskdemod(BitStream, BitLen, rfLen, invert, fchigh, fclow);
 	if (size > 0){
@@ -977,10 +985,11 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 
 		// Now output the bitstream to the scrollback by line of 16 bits
 		if (verbose || g_debugMode) {
-			PrintAndLog("\nUsing Clock:%d, invert:%d, fchigh:%d, fclow:%u", rfLen, invert, fchigh, fclow);
+			PrintAndLog("\nUsing Clock:%u, invert:%u, fchigh:%u, fclow:%u", rfLen, invert, fchigh, fclow);
 			PrintAndLog("%s decoded bitstream:", GetFSKType(fchigh, fclow, invert));
 			printDemodBuff();
 		}
+
 		return 1;
 	} else {
 		if (g_debugMode) PrintAndLog("no FSK data found");
@@ -2392,7 +2401,7 @@ static command_t CommandTable[] =
 	{"manrawdecode",    Cmdmandecoderaw,    1, "[invert] [maxErr] -- Manchester decode binary stream in DemodBuffer"},
 	{"norm",            CmdNorm,            1, "Normalize max/min to +/-128"},
 	{"plot",            CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
-	{"printdemodbuffer",CmdPrintDemodBuff,  1, "[x] [o] <offset> -- print the data in the DemodBuffer - 'x' for hex output"},
+	{"printdemodbuffer",CmdPrintDemodBuff,  1, "[x] [o] <offset> [l] <length> -- print the data in the DemodBuffer - 'x' for hex output"},
 	{"pskindalademod",  CmdIndalaDecode,    1, "[clock] [invert<0|1>] -- Demodulate an indala tag (PSK1) from GraphBuffer (args optional)"},
 	{"psknexwatchdemod",CmdPSKNexWatch,     1, "Demodulate a NexWatch tag (nexkey, quadrakey) (PSK1) from GraphBuffer"},
 	{"rawdemod",        CmdRawDemod,        1, "[modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary"},  

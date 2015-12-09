@@ -300,7 +300,7 @@ int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr
 	uint8_t midBit = 0;
 	uint8_t tol = 0;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
 	if (*clk <= 32) tol = 1;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely
-	size_t MaxBits = 1024;
+	size_t MaxBits = 3072;
 	lastBit = start - *clk;
 
 	for (i = start; i < *size; ++i) {
