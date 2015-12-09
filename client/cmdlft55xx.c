@@ -1317,7 +1317,7 @@ int CmdT55xxWipe(const char *Cmd) {
 		if (!CmdT55xxWriteBlock(ptrData)) 
 			PrintAndLog("Error writing blk %d", blk);
 		
-		memset(writeData, sizeof(writeData), 0x00);
+		memset(writeData,0x00, sizeof(writeData));
 	}
 	return 0;
 }

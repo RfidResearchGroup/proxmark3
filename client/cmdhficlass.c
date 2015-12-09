@@ -1021,7 +1021,11 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 	// else we have to create a share memory
 	int i;
 	fseek(f,startblock*8,SEEK_SET);
-	fread(tag_data,sizeof(iclass_block_t),endblock - startblock + 1,f);
+	if ( fread(tag_data,sizeof(iclass_block_t),endblock - startblock + 1,f) == 0){
+		PrintAndLog("File reading error.");
+		fclose(f);
+		return 2;
+	}
 
 	uint8_t MAC[4]={0x00,0x00,0x00,0x00};
 	uint8_t div_key[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
