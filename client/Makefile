@@ -81,14 +81,14 @@ CORESRCS = 	uart.c \
 
 
 CMDSRCS = 	nonce2key/crapto1.c\
-		nonce2key/crypto1.c\
-		nonce2key/nonce2key.c\
-		loclass/cipher.c \
-		loclass/cipherutils.c \
-		loclass/des.c \
-		loclass/ikeys.c \
-		loclass/elite_crack.c\
-		loclass/fileutils.c\
+			nonce2key/crypto1.c\
+			nonce2key/nonce2key.c\
+			loclass/cipher.c \
+			loclass/cipherutils.c \
+			loclass/des.c \
+			loclass/ikeys.c \
+			loclass/elite_crack.c\
+			loclass/fileutils.c\
 			mifarehost.c\
 			crc.c \
 			crc16.c \
@@ -109,7 +109,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			cmdhficlass.c \
 			cmdhfmf.c \
             cmdhfmfu.c \
-cmdhfmfhard.c \
+			cmdhfmfhard.c \
 			cmdhfmfdes.c \
 			cmdhftopaz.c \
 			cmdhw.c \
@@ -140,6 +140,7 @@ cmdhfmfhard.c \
 			reveng/model.c\
 			reveng/poly.c\
 			reveng/getopt.c\
+			tea.c\
 	   
 
 ZLIBSRCS = deflate.c adler32.c trees.c zutil.c inflate.c inffast.c inftrees.c
