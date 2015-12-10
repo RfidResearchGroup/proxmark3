@@ -384,18 +384,22 @@ bool DecodeT55xxBlock(){
 			ans = ASKDemod(cmdStr, FALSE, FALSE, 1);
 			break;
 		case DEMOD_PSK1:
-			// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
+			// skip first 16 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
+			save_restoreGB(1);
 			CmdLtrim("160");
 			snprintf(cmdStr, sizeof(buf),"%d %d 6", bitRate[config.bitrate], config.inverted );
 			ans = PSKDemod(cmdStr, FALSE);
+			save_restoreGB(0);
 			break;
 		case DEMOD_PSK2: //inverted won't affect this
 		case DEMOD_PSK3: //not fully implemented
 			// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
+			save_restoreGB(1);
 			CmdLtrim("160");
 			snprintf(cmdStr, sizeof(buf),"%d 0 6", bitRate[config.bitrate] );
 			ans = PSKDemod(cmdStr, FALSE);
 			psk1TOpsk2(DemodBuffer, DemodBufferLen);
+			save_restoreGB(1);
 			break;
 		case DEMOD_NRZ:
 			snprintf(cmdStr, sizeof(buf),"%d %d 1", bitRate[config.bitrate], config.inverted );
@@ -1011,8 +1015,14 @@ int CmdT55xxInfo(const char *Cmd){
 
 	if (!DecodeT55xxBlock()) return 1;
 
+	// too little space to start with
 	if ( DemodBufferLen < 32) return 1;
 
+	// 
+	PrintAndLog("Offset+32 ==%d\n DemodLen == %d", config.offset + 32,DemodBufferLen );
+		
+
+	
 	uint8_t si = config.offset;
 	uint32_t bl0      = PackBits(si, 32, DemodBuffer);
 	

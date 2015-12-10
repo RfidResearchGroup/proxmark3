@@ -124,7 +124,12 @@ char *sprint_hex(const uint8_t *data, const size_t len) {
 
 char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
 	// make sure we don't go beyond our char array memory
-	int max_len = ( len+(len/breaks) > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len+(len/breaks);
+	int max_len;
+	if (breaks==0)
+		max_len = ( len > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len;
+	else
+		max_len = ( len+(len/breaks) > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len+(len/breaks);
+
 	static char buf[MAX_BIN_BREAK_LENGTH]; // 3072 + end of line characters if broken at 8 bits
 	//clear memory
 	memset(buf, 0x00, sizeof(buf));
@@ -149,6 +154,12 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 
 char *sprint_bin(const uint8_t *data, const size_t len) {
 	return sprint_bin_break(data, len, 0);
+}
+
+char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
+	static char buf[1024];
+	memset(buf, 0x00, 1024);
+	return buf;
 }
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
 {
