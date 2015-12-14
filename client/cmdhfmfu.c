@@ -257,7 +257,7 @@ static int ul_auth_select( iso14a_card_select_t *card, TagTypeUL_t tagtype, bool
 		if ( !ul_select(card) ) return 0;
 
 		if (hasAuthKey) {
-			if (ulev1_requestAuthentication(authenticationkey, pack, packSize) < 1) {
+			if (ulev1_requestAuthentication(authenticationkey, pack, packSize) < 2) {
 				ul_switch_off_field();
 				PrintAndLog("Error: Authentication Failed UL-EV1/NTAG");
 				return 0;
@@ -1203,8 +1203,8 @@ int usage_hf_mfu_dump(void) {
 	PrintAndLog("NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216");
 	PrintAndLog("and saves binary dump into the file `filename.bin` or `cardUID.bin`");
 	PrintAndLog("It autodetects card type.\n");	
-	PrintAndLog("Usage:  hf mfu dump k <key> l n <filename w/o .bin>");
-	PrintAndLog("  Options : ");
+	PrintAndLog("Usage:  hf mfu dump k <key> l n <filename w/o .bin> p <page#> q <#pages>");
+	PrintAndLog("  Options :");
 	PrintAndLog("  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
 	PrintAndLog("  l       : (optional) swap entered key's endianness");
 	PrintAndLog("  n <FN > : filename w/o .bin to save the dump as");	
@@ -1323,6 +1323,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	uint8_t dataLen = 0;
 	uint8_t cmdp = 0;
 	uint8_t authenticationkey[16] = {0x00};
+	memset(authenticationkey, 0x00, sizeof(authenticationkey));
 	uint8_t	*authKeyPtr = authenticationkey;
 	size_t fileNlen = 0;
 	bool errors = false;
