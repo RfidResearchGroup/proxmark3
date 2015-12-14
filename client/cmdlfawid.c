@@ -19,7 +19,8 @@
 #include "util.h"       // weigandparity
 #include "protocols.h"  // for T55xx config register definitions
 #include "cmdmain.h"
-
+ #include "sleep.h"
+ 
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_awid_fskdemod(void) {
@@ -57,11 +58,23 @@ int usage_lf_awid_clone(void) {
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf awid clone <Facility-Code> <Card-Number>");
 	PrintAndLog("Options :");
-	PrintAndLog("  <Facility-Code> :  8-bit value AWID facility code");
+	PrintAndLog("  <Facility-Code> : 8-bit value AWID facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value AWID card number");
 	PrintAndLog("  Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
 	PrintAndLog("");
 	PrintAndLog("Sample  : lf awid clone 224 1337");
+	return 0;
+}
+
+int usage_lf_awid_brute(void){
+	PrintAndLog("Enables bruteforce of AWID26 card with specified facility-code.");
+	PrintAndLog("Per AWID26 format, the facility-code (FC) is 8-bit and the card number is 16-bit.");
+	PrintAndLog("");
+	PrintAndLog("Usage:  lf awid brute <Facility-Code>");
+	PrintAndLog("Options :");
+	PrintAndLog("  <Facility-Code> :  8-bit value AWID facility code");
+	PrintAndLog("");
+	PrintAndLog("Sample  : lf awid brute 224");
 	return 0;
 }
 
@@ -189,11 +202,57 @@ int CmdAWIDClone(const char *Cmd) {
 	return 0;
 }
 
+int CmdAWIDBrute(const char *Cmd){
+	
+	uint8_t fc = 0x00;
+	uint8_t bits[96];
+	uint8_t *bs = bits;
+	size_t size = sizeof(bits);
+	memset(bs, 0x00, size);
+
+	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) > 3 || strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_awid_brute();
+	
+  	fc =  param_get8(Cmd, 0);
+	if ( fc == 0) return usage_lf_awid_brute();
+	
+	PrintAndLog("Bruteforceing AWID26");
+	PrintAndLog("Press pm3-button to abort simulation or run another command");
+
+	uint64_t arg1 = (10<<8) + 8; // fcHigh = 10, fcLow = 8
+	uint64_t arg2 = 50; 		 // clk RF/50 invert=0
+	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};  
+
+	for ( uint16_t cn = 1; cn < 0xFFFF; ++cn){
+		if (ukbhit()) {
+			PrintAndLog("aborted via keyboard!");
+			c.cmd = CMD_PING;
+			c.arg[0] = 0x00;
+			c.arg[1] = 0x00;
+			c.arg[2] = 0x00;
+			clearCommandBuffer();
+			SendCommand(&c);
+			return 1;
+		}
+			
+		(void)getAWIDBits(fc, cn, bs);
+		memcpy(c.d.asBytes, bs, size);
+		clearCommandBuffer();
+		SendCommand(&c);
+		
+		PrintAndLog("Trying FC: %u; CN: %u", fc, cn);
+		// pause
+		sleep(1);
+	}
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",      CmdHelp,         1, "This help"},
 	{"fskdemod",  CmdAWIDDemodFSK, 0, "['1'] Realtime AWID FSK demodulator (option '1' for one tag only)"},
 	{"sim",       CmdAWIDSim,      0, "<Facility-Code> <Card Number> -- AWID tag simulator"},
 	{"clone",     CmdAWIDClone,    0, "<Facility-Code> <Card Number> <Q5> -- Clone AWID to T55x7"},
+	{"brute",	  CmdAWIDBrute,	   0, "<Facility-Code> -- bruteforce card number"},
 	{NULL, NULL, 0, NULL}
 };
 

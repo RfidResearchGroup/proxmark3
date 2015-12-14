@@ -45,7 +45,6 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len);
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
 uint64_t bytes_to_num(uint8_t* src, size_t len);
 void num_to_bytebits(uint64_t	n, size_t len, uint8_t *dest);
-char * printBits(size_t const size, void const * const ptr);
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
 
 char param_getchar(const char *line, int paramnum);

@@ -400,7 +400,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	for(;;) {
 		//wait until SSC_CLK goes HIGH
 		while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
-			if(BUTTON_PRESS() || (usb_poll_validate_length() )) {
+			if(BUTTON_PRESS() || usb_poll_validate_length() ) {
 				DbpString("Stopped");
 				return;
 			}
@@ -417,7 +417,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 		
 		//wait until SSC_CLK goes LOW
 		while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
-			if(BUTTON_PRESS()) {
+			if( BUTTON_PRESS() || usb_poll_validate_length() ) {
 				DbpString("Stopped");
 				return;
 			}
@@ -594,20 +594,10 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 		}
 	}
 	Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, invert: %d, n: %d",fcHigh, fcLow, clk, invert, n);
-	/*Dbprintf("DEBUG: First 32:");
-	uint8_t *dest = BigBuf_get_addr();
-	i=0;
-	Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-	i+=16;
-	Dbprintf("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", dest[i],dest[i+1],dest[i+2],dest[i+3],dest[i+4],dest[i+5],dest[i+6],dest[i+7],dest[i+8],dest[i+9],dest[i+10],dest[i+11],dest[i+12],dest[i+13],dest[i+14],dest[i+15]);
-	*/
-	if (ledcontrol)
-		LED_A_ON();
 
+	if (ledcontrol)	LED_A_ON();
 	SimulateTagLowFrequency(n, 0, ledcontrol);
-
-	if (ledcontrol)
-		LED_A_OFF();
+	if (ledcontrol)	LED_A_OFF();
 }
 
 // compose ask waveform for one bit(ASK)

@@ -304,7 +304,6 @@ bool usb_poll()
 **/
 bool usb_poll_validate_length()
 {
-
 	if (!usb_check()) return false;
 	if (!(pUdp->UDP_CSR[AT91C_EP_OUT] & btReceiveBank)) return false;
 	return (pUdp->UDP_CSR[AT91C_EP_OUT] >> 16) >  0;

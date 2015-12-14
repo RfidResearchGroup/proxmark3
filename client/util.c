@@ -159,6 +159,8 @@ char *sprint_bin(const uint8_t *data, const size_t len) {
 char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 	static char buf[1024];
 	memset(buf, 0x00, 1024);
+	char *tmp = buf;
+	sprintf(tmp, "%s| %s", sprint_hex(data, len) , data);	
 	return buf;
 }
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
@@ -192,8 +194,8 @@ void num_to_bytebits(uint64_t	n, size_t len, uint8_t *dest) {
 // hh,gg,ff,ee,dd,cc,bb,aa, pp,oo,nn,mm,ll,kk,jj,ii
 // up to 64 bytes or 512 bits
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize){
-	//static uint8_t buf[64];
-	uint8_t buf[64];
+	static uint8_t buf[64];
+	//uint8_t buf[64];
 	memset(buf, 0x00, 64);
 	uint8_t *tmp = buf;
 	for (uint8_t block=0; block < (uint8_t)(len/blockSize); block++){
@@ -202,28 +204,6 @@ uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockS
 		}
 	}
 	return tmp;
-}
-
-//assumes little endian
-char * printBits(size_t const size, void const * const ptr)
-{
-    unsigned char *b = (unsigned char*) ptr;	
-    unsigned char byte;
-	static char buf[1024];
-	char * tmp = buf;
-    int i, j;
-
-    for (i=size-1;i>=0;i--)
-    {
-        for (j=7;j>=0;j--)
-        {
-            byte = b[i] & (1<<j);
-            byte >>= j;
-            sprintf(tmp, "%u", byte);
-			tmp++;
-        }
-    }
-	return buf;
 }
 
 //  -------------------------------------------------------------------------
@@ -344,13 +324,11 @@ int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt)
 {
 	int bg, en, temp, i;
 
-	if (hexcnt % 2)
-		return 1;
+	if (hexcnt & 1) return 1;
 	
 	if (param_getptr(line, &bg, &en, paramnum)) return 1;
 
-	if (en - bg + 1 != hexcnt) 
-		return 1;
+	if (en - bg + 1 != hexcnt) return 1;
 
 	for(i = 0; i < hexcnt; i += 2) {
 		if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1])) )	return 1;
