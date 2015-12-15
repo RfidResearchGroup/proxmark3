@@ -60,7 +60,8 @@ ARMSRC = fpgaloader.c \
 	iclass.c \
 	BigBuf.c \
 	optimized_cipher.c \
-	hfsnoop.c
+	hfsnoop.c \
+	parity.c
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common

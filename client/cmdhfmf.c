@@ -799,14 +799,16 @@ int CmdHF14AMfNestedHard(const char *Cmd)
 	uint8_t trgBlockNo = 0;
 	uint8_t trgKeyType = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
+	uint8_t trgkey[6] = {0, 0, 0, 0, 0, 0};
 	
 	char ctmp;
 	ctmp = param_getchar(Cmd, 0);
+
 	if (ctmp != 'R' && ctmp != 'r' && strlen(Cmd) < 20) {
 		PrintAndLog("Usage:");
 		PrintAndLog("      hf mf hardnested <block number> <key A|B> <key (12 hex symbols)>");
-		PrintAndLog("                       <target block number> <target key A|B> [w] [s]");
-		PrintAndLog("  or  hf mf hardnested r");
+		PrintAndLog("                       <target block number> <target key A|B> [known target key (12 hex symbols)] [w] [s]");
+		PrintAndLog("  or  hf mf hardnested r [known target key]");
 		PrintAndLog(" ");
 		PrintAndLog("Options: ");
 		PrintAndLog("      w: Acquire nonces and write them to binary file nonces.bin");
@@ -817,17 +819,22 @@ int CmdHF14AMfNestedHard(const char *Cmd)
 		PrintAndLog("      sample2: hf mf hardnested 0 A FFFFFFFFFFFF 4 A w");
 		PrintAndLog("      sample3: hf mf hardnested 0 A FFFFFFFFFFFF 4 A w s");
 		PrintAndLog("      sample4: hf mf hardnested r");
-
+		PrintAndLog(" ");
+		PrintAndLog("Add the known target key to check if it is present in the remaining key space:");
+		PrintAndLog("      sample5: hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF");
 		return 0;
 	}	
 	
+	bool know_target_key = false;
 	bool nonce_file_read = false;
 	bool nonce_file_write = false;
 	bool slow = false;
 	
 	if (ctmp == 'R' || ctmp == 'r') {
-
 		nonce_file_read = true;
+		if (!param_gethex(Cmd, 1, trgkey, 12)) {
+			know_target_key = true;
+		}
 
 	} else {
 
@@ -857,6 +864,12 @@ int CmdHF14AMfNestedHard(const char *Cmd)
 		}
 
 		uint16_t i = 5;
+
+		if (!param_gethex(Cmd, 5, trgkey, 12)) {
+			know_target_key = true;
+			i++;
+		}
+
 		while ((ctmp = param_getchar(Cmd, i))) {
 			if (ctmp == 's' || ctmp == 'S') {
 				slow = true;
@@ -870,12 +883,16 @@ int CmdHF14AMfNestedHard(const char *Cmd)
 		}
 	}
 
-	PrintAndLog("--target block no:%3d, target key type:%c, file action: %s, Slow: %s ", 
+	PrintAndLog("--target block no:%3d, target key type:%c, known target key: 0x%02x%02x%02x%02x%02x%02x%s, file action: %s, Slow: %s ", 
 			trgBlockNo, 
 			trgKeyType?'B':'A', 
+			trgkey[0], trgkey[1], trgkey[2], trgkey[3], trgkey[4], trgkey[5],
+			know_target_key?"":" (not set)",
 			nonce_file_write?"write":nonce_file_read?"read":"none",
 			slow?"Yes":"No");
-	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, nonce_file_read, nonce_file_write, slow);
+
+	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key?trgkey:NULL, nonce_file_read, nonce_file_write, slow);
+
 	if (isOK) {
 		switch (isOK) {
 			case 1 : PrintAndLog("Error: No response from Proxmark.\n"); break;

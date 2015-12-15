@@ -18,6 +18,7 @@
 #include "iso14443a.h"
 #include "crapto1.h"
 #include "mifareutil.h"
+#include "parity.h"
 #include "des.h"
 
 int MF_DBGLEVEL = MF_DBG_ALL;
@@ -50,7 +51,7 @@ void mf_crypto1_encrypt(struct Crypto1State *pcs, uint8_t *data, uint16_t len, u
 		data[i] = crypto1_byte(pcs, 0x00, 0) ^ data[i];
 		if((i&0x0007) == 0) 
 			par[i>>3] = 0;
-		par[i>>3] |= (((filter(pcs->odd) ^ oddparity(bt)) & 0x01)<<(7-(i&0x0007)));
+		par[i>>3] |= (((filter(pcs->odd) ^ oddparity8(bt)) & 0x01)<<(7-(i&0x0007)));
 	}	
 	return;
 }
@@ -99,7 +100,7 @@ int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd,
 		for (pos = 0; pos < 4; pos++)
 		{
 			ecmd[pos] = crypto1_byte(pcs, 0x00, 0) ^ dcmd[pos];
-			par[0] |= (((filter(pcs->odd) ^ oddparity(dcmd[pos])) & 0x01) << (7-pos));
+			par[0] |= (((filter(pcs->odd) ^ oddparity8(dcmd[pos])) & 0x01) << (7-pos));
 		}	
 
 		ReaderTransmitPar(ecmd, sizeof(ecmd), par, timing);
@@ -193,7 +194,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	for (pos = 0; pos < 4; pos++)
 	{
 		mf_nr_ar[pos] = crypto1_byte(pcs, nr[pos], 0) ^ nr[pos];
-		par[0] |= (((filter(pcs->odd) ^ oddparity(nr[pos])) & 0x01) << (7-pos));
+		par[0] |= (((filter(pcs->odd) ^ oddparity8(nr[pos])) & 0x01) << (7-pos));
 	}	
 		
 	// Skip 32 bits in pseudo random generator
@@ -204,7 +205,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	{
 		nt = prng_successor(nt,8);
 		mf_nr_ar[pos] = crypto1_byte(pcs,0x00,0) ^ (nt & 0xff);
-		par[0] |= (((filter(pcs->odd) ^ oddparity(nt & 0xff)) & 0x01) << (7-pos));
+		par[0] |= (((filter(pcs->odd) ^ oddparity8(nt & 0xff)) & 0x01) << (7-pos));
 	}	
 		
 	// Transmit reader nonce and reader answer
@@ -427,7 +428,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 	for (pos = 0; pos < 18; pos++)
 	{
 		d_block_enc[pos] = crypto1_byte(pcs, 0x00, 0) ^ d_block[pos];
-		par[pos>>3] |= (((filter(pcs->odd) ^ oddparity(d_block[pos])) & 0x01) << (7 - (pos&0x0007)));
+		par[pos>>3] |= (((filter(pcs->odd) ^ oddparity8(d_block[pos])) & 0x01) << (7 - (pos&0x0007)));
 	}	
 
 	ReaderTransmitPar(d_block_enc, sizeof(d_block_enc), par, NULL);

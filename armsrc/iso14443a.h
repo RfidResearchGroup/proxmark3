@@ -13,7 +13,6 @@
 #ifndef __ISO14443A_H
 #define __ISO14443A_H
 #include "common.h"
-#include "mifare.h"
 #include "mifaresniff.h"
 
 typedef struct {
@@ -71,8 +70,6 @@ typedef struct {
 } tUart;
 
 
-
-extern byte_t oddparity (const byte_t bt);
 extern void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 extern void AppendCrc14443a(uint8_t *data, int len);
 
