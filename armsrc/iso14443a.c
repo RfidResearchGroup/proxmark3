@@ -977,6 +977,15 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 			response8[0] = 0x80;
 			response8[1] = 0x80;
 			ComputeCrc14443(CRC_14443_A, response8, 2, &response8[2], &response8[3]);
+			// uid not supplied then get from emulator memory
+			if (data[0]==0) {
+				uint16_t start = 4 * (0+12);  
+				uint8_t emdata[8];
+				emlGetMemBt( emdata, start, sizeof(emdata));
+				memcpy(data, emdata, 3); //uid bytes 0-2
+				memcpy(data+3, emdata+4, 4); //uid bytes 3-7
+				flags |= FLAG_7B_UID_IN_DATA;
+			}
 		} break;		
 		default: {
 			Dbprintf("Error: unkown tagtype (%d)",tagType);
@@ -1034,12 +1043,12 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 	// TC(1) = 0x02: CID supported, NAD not supported
 	ComputeCrc14443(CRC_14443_A, response6, 4, &response6[4], &response6[5]);
 
-	// Prepare GET_VERSION (different for EV-1 / NTAG)
+	// Prepare GET_VERSION (different for UL EV-1 / NTAG)
 	//uint8_t response7_EV1[] = {0x00, 0x04, 0x03, 0x01, 0x01, 0x00, 0x0b, 0x03, 0xfd, 0xf7};  //EV1 48bytes VERSION.
-	uint8_t response7_NTAG[] = {0x00, 0x04, 0x04, 0x02, 0x01, 0x00, 0x11, 0x03, 0x01, 0x9e}; //NTAG 215
+	//uint8_t response7_NTAG[] = {0x00, 0x04, 0x04, 0x02, 0x01, 0x00, 0x11, 0x03, 0x01, 0x9e}; //NTAG 215
 	
 	// Prepare CHK_TEARING
-	uint8_t response9[] =  {0xBD,0x90,0x3f};
+	//uint8_t response9[] =  {0xBD,0x90,0x3f};
 	
 	#define TAG_RESPONSE_COUNT 10
 	tag_response_info_t responses[TAG_RESPONSE_COUNT] = {
@@ -1050,9 +1059,9 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 		{ .response = response3a, .response_n = sizeof(response3a) },  // Acknowledge select - cascade 2
 		{ .response = response5,  .response_n = sizeof(response5)  },  // Authentication answer (random nonce)
 		{ .response = response6,  .response_n = sizeof(response6)  },  // dummy ATS (pseudo-ATR), answer to RATS
-		{ .response = response7_NTAG,  .response_n = sizeof(response7_NTAG)  },  // EV1/NTAG GET_VERSION response
+		//{ .response = response7_NTAG, .response_n = sizeof(response7_NTAG)}, // EV1/NTAG GET_VERSION response
 		{ .response = response8,   .response_n = sizeof(response8) },  // EV1/NTAG PACK response
-		{ .response = response9,   .response_n = sizeof(response9) }  // EV1/NTAG CHK_TEAR response
+		//{ .response = response9,      .response_n = sizeof(response9)     }  // EV1/NTAG CHK_TEAR response
 	};
 
 	// Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
@@ -1105,7 +1114,6 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 	LED_A_ON();
 	for(;;) {
 		// Clean receive command buffer
-		
 		if(!GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len)) {
 			DbpString("Button press");
 			break;
@@ -1129,33 +1137,18 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 			p_response = &responses[4]; order = 30;
 		} else if(receivedCmd[0] == 0x30) {	// Received a (plain) READ
 			uint8_t block = receivedCmd[1];
-			if ( tagType == 7 ) {
-				uint16_t start = 4 * block;
-				
-				/*if ( block < 4 ) {
-				    //NTAG 215
-					uint8_t blockdata[50] = {
-					data[0],data[1],data[2], 0x88 ^ data[0] ^ data[1] ^ data[2],
-					data[3],data[4],data[5],data[6],
-					data[3] ^ data[4] ^ data[5] ^ data[6],0x48,0x0f,0xe0,
-					0xe1,0x10,0x12,0x00,
-					0x03,0x00,0xfe,0x00, 
-					0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-					0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-					0x00,0x00,0x00,0x00,
-					0x00,0x00};
-					AppendCrc14443a(blockdata+start, 16);
-					EmSendCmdEx( blockdata+start, MAX_MIFARE_FRAME_SIZE, false);
-				} else {*/	
+			// if Ultralight or NTAG (4 byte blocks)
+			if ( tagType == 7 || tagType == 2 ) {
+				//first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
+				uint16_t start = 4 * (block+12);  
 					uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
 					emlGetMemBt( emdata, start, 16);
 					AppendCrc14443a(emdata, 16);
 					EmSendCmdEx(emdata, sizeof(emdata), false);				
-				//}
+				// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
 				p_response = NULL;
-				
-			} else {			
-				EmSendCmdEx(data+(4*block),16,false);
+			} else { // all other tags (16 byte block tags)
+				EmSendCmdEx(data+(4*receivedCmd[1]),16,false);
 				// Dbprintf("Read request from reader: %x %x",receivedCmd[0],receivedCmd[1]);
 				// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
 				p_response = NULL;
@@ -1163,7 +1156,8 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 		} else if(receivedCmd[0] == 0x3A) {	// Received a FAST READ (ranged read)
 				
 				uint8_t emdata[MAX_FRAME_SIZE];
-				int start =  receivedCmd[1] * 4;
+				//first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
+				int start =  (receivedCmd[1]+12) * 4; 
 				int len   = (receivedCmd[2] - receivedCmd[1] + 1) * 4;
 				emlGetMemBt( emdata, start, len);
 				AppendCrc14443a(emdata, len);
@@ -1172,13 +1166,19 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 				
 		} else if(receivedCmd[0] == 0x3C && tagType == 7) {	// Received a READ SIGNATURE -- 
 				// ECC data,  taken from a NTAG215 amiibo token. might work. LEN: 32, + 2 crc
-				uint8_t data[] = {0x56,0x06,0xa6,0x4f,0x43,0x32,0x53,0x6f,
-								  0x43,0xda,0x45,0xd6,0x61,0x38,0xaa,0x1e,
-								  0xcf,0xd3,0x61,0x36,0xca,0x5f,0xbb,0x05,
-								  0xce,0x21,0x24,0x5b,0xa6,0x7a,0x79,0x07,
-								  0x00,0x00};
-				AppendCrc14443a(data, sizeof(data)-2);
-				EmSendCmdEx(data,sizeof(data),false);
+				//first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
+				uint16_t start = 4 * 4;
+				uint8_t emdata[34];
+				emlGetMemBt( emdata, start, 32);
+				AppendCrc14443a(emdata, 32);
+				EmSendCmdEx(emdata, sizeof(emdata), false);
+				//uint8_t data[] = {0x56,0x06,0xa6,0x4f,0x43,0x32,0x53,0x6f,
+				//				  0x43,0xda,0x45,0xd6,0x61,0x38,0xaa,0x1e,
+				//				  0xcf,0xd3,0x61,0x36,0xca,0x5f,0xbb,0x05,
+				//				  0xce,0x21,0x24,0x5b,0xa6,0x7a,0x79,0x07,
+				//				  0x00,0x00};
+				//AppendCrc14443a(data, sizeof(data)-2);
+				//EmSendCmdEx(data,sizeof(data),false);
 				p_response = NULL;					
 		} else if (receivedCmd[0] == 0x39 && tagType == 7) {	// Received a READ COUNTER -- 
 			uint8_t index = receivedCmd[1];
@@ -1201,7 +1201,16 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 			p_response = NULL;
 			
 		} else if(receivedCmd[0] == 0x3E && tagType == 7) {	// Received a CHECK_TEARING_EVENT -- 
-				p_response = &responses[9];				
+			//first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
+			uint8_t emdata[3];
+			uint8_t counter=0;
+			if (receivedCmd[1]<3) counter = receivedCmd[1];
+			emlGetMemBt( emdata, 10+counter, 1);
+			AppendCrc14443a(emdata, sizeof(emdata)-2);
+			EmSendCmdEx(emdata, sizeof(emdata), false);	
+			p_response = NULL;
+			//p_response = &responses[9];				
+		
 		} else if(receivedCmd[0] == 0x50) {	// Received a HALT
 
 			if (tracing) {
@@ -1211,7 +1220,12 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 		} else if(receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61) {	// Received an authentication request
 					
 			if ( tagType == 7 ) {   // IF NTAG /EV1  0x60 == GET_VERSION, not a authentication request.
-				p_response = &responses[7];
+				uint8_t emdata[10];
+				emlGetMemBt( emdata, 0, 8 );
+				AppendCrc14443a(emdata, sizeof(emdata)-2);
+				EmSendCmdEx(emdata, sizeof(emdata), false);	
+				p_response = NULL;
+				//p_response = &responses[7];
 			} else {
 				p_response = &responses[5]; order = 7;
 			}
@@ -1282,13 +1296,18 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 		else if (receivedCmd[0] == 0x1b) // NTAG / EV-1 authentication
 		{
 			if ( tagType == 7 ) {
-				p_response =  &responses[8]; // PACK response
+				uint16_t start = 13; //first 4 blocks of emu are [getversion answer - check tearing - pack - 0x00]
+				uint8_t emdata[4];
+				emlGetMemBt( emdata, start, 2);
+				AppendCrc14443a(emdata, 2);
+				EmSendCmdEx(emdata, sizeof(emdata), false);
+				p_response = NULL;
+				//p_response =  &responses[8]; // PACK response
 				uint32_t pwd = bytes_to_num(receivedCmd+1,4);
 				
 				if ( MF_DBGLEVEL >= 3)  Dbprintf("Auth attempt: %08x", pwd);	
 			}
-		}
-		else {
+		} else {
 			// Check for ISO 14443A-4 compliant commands, look at left nibble
 			switch (receivedCmd[0]) {
 				case 0x02:
@@ -2545,7 +2564,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	uint8_t rAUTH_NT[] = {0x01, 0x01, 0x01, 0x01};
 	uint8_t rAUTH_AT[] = {0x00, 0x00, 0x00, 0x00};
 		
-	//Here, we collect UID,NT,AR,NR,UID2,NT2,AR2,NR2
+	//Here, we collect UID1,UID2,NT,AR,NR,0,0,NT2,AR2,NR2
 	// This can be used in a reader-only attack.
 	// (it can also be retrieved via 'hf 14a list', but hey...
 	uint32_t ar_nr_responses[] = {0,0,0,0,0,0,0,0,0,0};
@@ -2620,7 +2639,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 
 	bool finished = FALSE;
-	while (!BUTTON_PRESS() && !finished) {
+	while (!BUTTON_PRESS() && !finished && !usb_poll_validate_length()) {
 		WDT_HIT();
 
 		// find reader field
@@ -3017,7 +3036,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		} else {
 			Dbprintf("Failed to obtain two AR/NR pairs!");
 			if(ar_nr_collected > 0 ) {
-				Dbprintf("Only got these: UID=%07x%08x, nonce=%08x, AR1=%08x, NR1=%08x",
+				Dbprintf("Only got these: UID=%06x%08x, nonce=%08x, AR1=%08x, NR1=%08x",
 						ar_nr_responses[0], // UID1
 						ar_nr_responses[1], // UID2
 						ar_nr_responses[2], // NT

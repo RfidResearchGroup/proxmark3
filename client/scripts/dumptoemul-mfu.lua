@@ -4,9 +4,9 @@ getopt = require('getopt')
 bin = require('bin')
 example = "script run dumptoemul-mfu -i dumpdata-foobar.bin"
 author = "Martin Holst Swende \n @Marshmellow"
-usage = "script run dumptoemul [-i <file>] [-o <file>]"
+usage = "script run dumptoemul-mfu [-i <file>] [-o <file>]"
 desc =[[
-This script takes a dumpfile from 'hf mf dump' and converts it to a format that can be used
+This script takes a dumpfile from 'hf mfu dump' and converts it to a format that can be used
 by the emulator
 
 Arguments:
@@ -91,7 +91,7 @@ local function main(args)
 	-- The hex-data is now in ascii-format,
 
 	-- But first, check the uid
-	local uid = string.sub(dumpdata,1,8)
+	local uid = string.sub(dumpdata,1+48,8)
 	output = output or (uid .. ".eml")
 
 	-- Format some linebreaks

@@ -1210,7 +1210,6 @@ int usage_hf_mfu_dump(void) {
 	PrintAndLog("  n <FN > : filename w/o .bin to save the dump as");	
 	PrintAndLog("  p <Pg > : starting Page number to manually set a page to start the dump at");	
 	PrintAndLog("  q <qty> : number of Pages to manually set how many pages to dump");	
-
 	PrintAndLog("");
 	PrintAndLog("   sample : hf mfu dump");
 	PrintAndLog("          : hf mfu dump n myfile");
@@ -1248,14 +1247,29 @@ int usage_hf_mfu_wrbl(void) {
 }
 
 int usage_hf_mfu_eload(void) {
-	PrintAndLog("It loads emulator dump from the file `filename.eml`\n");
-	PrintAndLog("Usage:  hf mfu eload t <card memory> i <file name w/o `.eml`>\n");
-	PrintAndLog("  Options:");	
-	PrintAndLog("  t <card memory> : Tag memorysize/type");
-	PrintAndLog("  i <file>        : file name w/o `.eml`");
+	PrintAndLog("It loads emul dump from the file `filename.eml`");
+	PrintAndLog("Hint: See script dumptoemul-mfu.lua to convert the .bin to the eml");
+	PrintAndLog("Usage:  hf mfu eload u <file name w/o `.eml`> [numblocks]");
+	PrintAndLog("  Options:");
+	PrintAndLog("    h          : this help");	
+	PrintAndLog("    u          : UL");
+	PrintAndLog("    numblocks  : number of blocks to load from eml file");		
 	PrintAndLog("");
-	PrintAndLog("    sample : hf mfu eload filename");
-	PrintAndLog("           : hf mfu eload 4 filename");
+	PrintAndLog("  sample: hf mfu eload u filename");
+	PrintAndLog("          hf mfu eload u filename 57");
+	return 0;
+}
+
+int usage_hf_mfu_sim(void) {
+	PrintAndLog("\nEmulating Ultralight tag from emulator memory\n");
+	PrintAndLog("\nBe sure to load the emulator memory first!\n");
+	PrintAndLog("Usage: hf mfu sim t 7 u <uid>");
+	PrintAndLog("  Options : ");
+	PrintAndLog("    h     : this help");
+	PrintAndLog("    t     : 7 = NTAG or Ultralight sim");
+	PrintAndLog("    u     : 4 or 7 byte UID");
+	PrintAndLog("\n   sample : hf mfu sim t 7");
+	PrintAndLog("          : hf mfu sim t 7 u 1122344556677\n");
 	return 0;
 }
 
@@ -1300,8 +1314,8 @@ int  usage_hf_mfu_gendiverse(void){
 	return 0;
 }
 
+#define DUMP_PREFIX_LENGTH 48 
 //
-
 //  Mifare Ultralight / Ultralight-C / Ultralight-EV1
 //  Read and Dump Card Contents,  using auto detection of tag size.
 int CmdHF14AMfUDump(const char *Cmd){
@@ -1365,7 +1379,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 			cmdp += 2;
 			break;
 		case 'p':
-		case 'P':
+		case 'P': //set start page
 			startPage = param_get8(Cmd, cmdp+1);
 			manualPages = true;
 			cmdp += 2;
@@ -1469,6 +1483,71 @@ int CmdHF14AMfUDump(const char *Cmd){
 		}
 	}
 
+	uint8_t	get_pack[] = {0,0};
+	iso14a_card_select_t card;
+	//attempt to read pack
+	if (!ul_auth_select( &card, tagtype, true, authKeyPtr, get_pack, sizeof(get_pack))) {
+		//reset pack
+		get_pack[0]=0;
+		get_pack[1]=0;
+	}
+	ul_switch_off_field();
+	// add pack to block read
+	memcpy(data + (Pages*4) - 4, get_pack, sizeof(get_pack));
+
+	uint8_t dump_file_data[1024+DUMP_PREFIX_LENGTH] = {0x00};
+	uint8_t get_version[] = {0,0,0,0,0,0,0,0,0};
+	uint8_t	get_tearing[] = {0,0,0};
+	uint8_t	get_counter[] = {0,0,0};
+	uint8_t	dummy_pack[] = {0,0};
+	uint8_t	get_signature[32];
+	memset( get_signature, 0, sizeof(get_signature) );
+
+	if ( hasAuthKey )
+		ul_auth_select( &card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+	else
+		ul_select(&card);
+
+	ulev1_getVersion( get_version, sizeof(get_version) );
+	for ( uint8_t i = 0; i<3; ++i) {
+		ulev1_readTearing(i, get_tearing+i, 1);
+		ulev1_readCounter(i, get_counter, sizeof(get_counter) );
+	}
+	ul_switch_off_field();
+	if ( hasAuthKey )
+		ul_auth_select( &card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+	else
+		ul_select(&card);
+	ulev1_readSignature( get_signature, sizeof(get_signature));
+	ul_switch_off_field();
+	//get version
+	memcpy(dump_file_data, get_version, sizeof(get_version));
+	//tearing
+	memcpy(dump_file_data+10, get_tearing, sizeof(get_tearing));
+	//pack
+	memcpy(dump_file_data+13, get_pack, sizeof(get_pack));
+	//signature
+	memcpy(dump_file_data+16, get_signature, sizeof(get_signature));
+	//block read data
+	memcpy(dump_file_data+DUMP_PREFIX_LENGTH, data, Pages*4);
+
+	PrintAndLog("\nDataType| Data        |   | Ascii");
+	PrintAndLog("---------------------------------");
+	PrintAndLog("GetVer-1| %s|   | %.4s", sprint_hex(dump_file_data, 4), dump_file_data);
+	PrintAndLog("GetVer-2| %s|   | %.4s", sprint_hex(dump_file_data+4, 4), dump_file_data+4);
+	PrintAndLog("TBD     | 00 00       |   | ");
+	PrintAndLog("Tearing |    %s|   | %.3s", sprint_hex(dump_file_data+10, 3), dump_file_data+10);
+	PrintAndLog("Pack    |    %s   |    | %.2s", sprint_hex(dump_file_data+13, 2), dump_file_data+13);
+	PrintAndLog("TBD     |          00 |   | ");
+	PrintAndLog("Sig-1   | %s|   | %.4s", sprint_hex(dump_file_data+16, 4), dump_file_data+16);
+	PrintAndLog("Sig-2   | %s|   | %.4s", sprint_hex(dump_file_data+20, 4), dump_file_data+20);
+	PrintAndLog("Sig-3   | %s|   | %.4s", sprint_hex(dump_file_data+24, 4), dump_file_data+24);
+	PrintAndLog("Sig-4   | %s|   | %.4s", sprint_hex(dump_file_data+28, 4), dump_file_data+28);
+	PrintAndLog("Sig-5   | %s|   | %.4s", sprint_hex(dump_file_data+32, 4), dump_file_data+32);
+	PrintAndLog("Sig-6   | %s|   | %.4s", sprint_hex(dump_file_data+36, 4), dump_file_data+36);
+	PrintAndLog("Sig-7   | %s|   | %.4s", sprint_hex(dump_file_data+40, 4), dump_file_data+40);
+	PrintAndLog("Sig-8   | %s|   | %.4s", sprint_hex(dump_file_data+44, 4), dump_file_data+44);
+	
 	PrintAndLog("\nBlock#  | Data        |lck| Ascii");
 	PrintAndLog("---------------------------------");
 	for (i = 0; i < Pages; ++i) {
@@ -1537,17 +1616,16 @@ int CmdHF14AMfUDump(const char *Cmd){
 		PrintAndLog("Could not create file name %s", filename);
 		return 1;
 	}
-	fwrite( data, 1, Pages*4, fout );
+	fwrite( dump_file_data, 1, Pages*4 + DUMP_PREFIX_LENGTH, fout );
 	fclose(fout);
 	
-	PrintAndLog("Dumped %d pages, wrote %d bytes to %s", Pages, Pages*4, filename);
+	PrintAndLog("Dumped %d pages, wrote %d bytes to %s", Pages+12, (Pages+12)*4, filename);
 	return 0;
 }
 
 //-------------------------------------------------------------------------------
 // Ultralight C Methods
 //-------------------------------------------------------------------------------
-
 
 //
 // Ultralight C Authentication Demo {currently uses hard-coded key}
@@ -1874,113 +1952,34 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	return 0;
 }
 
-// static void GenerateUIDe( uint8_t *uid, uint8_t len){
-	// for (int i=0; i<len; ++i){
-	// }
-	// return;
-// }
-
-int CmdHF14AMfuELoad(const char *Cmd)
-{
-	//FILE * f;
-	//char filename[FILE_PATH_SIZE];
-	//char *fnameptr = filename;
-	//char buf[64] = {0x00};
-	//uint8_t buf8[64] = {0x00};
-	//int i, len, blockNum, numBlocks;
-	//int nameParamNo = 1;
-	
+int CmdHF14AMfUeLoad(const char *Cmd) {
 	char ctmp = param_getchar(Cmd, 0);
-		
-	if ( ctmp == 'h' || ctmp == 0x00) return usage_hf_mfu_eload();
-
-/*
-	switch (ctmp) {
-		case '0' : numBlocks = 5*4; break;
-		case '1' : 
-		case '\0': numBlocks = 16*4; break;
-		case '2' : numBlocks = 32*4; break;
-		case '4' : numBlocks = 256; break;
-		default:  {
-			numBlocks = 16*4;
-			nameParamNo = 0;
-		}
-	}
-
-	len = param_getstr(Cmd,nameParamNo,filename);
-	
-	if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
-
-	fnameptr += len;
-
-	sprintf(fnameptr, ".eml"); 
-	
-	// open file
-	f = fopen(filename, "r");
-	if (f == NULL) {
-		PrintAndLog("File %s not found or locked", filename);
-		return 1;
-	}
-	
-	blockNum = 0;
-	while(!feof(f)){
-		memset(buf, 0, sizeof(buf));
-		
-		if (fgets(buf, sizeof(buf), f) == NULL) {
-			
-			if (blockNum >= numBlocks) break;
-			
-			PrintAndLog("File reading error.");
-			fclose(f);
-			return 2;
-		}
-		
-		if (strlen(buf) < 32){
-			if(strlen(buf) && feof(f))
-				break;
-			PrintAndLog("File content error. Block data must include 32 HEX symbols");
-			fclose(f);
-			return 2;
-		}
-		
-		for (i = 0; i < 32; i += 2) {
-			sscanf(&buf[i], "%02x", (unsigned int *)&buf8[i / 2]);
-		}
-		
-		if (mfEmlSetMem(buf8, blockNum, 1)) {
-			PrintAndLog("Cant set emul block: %3d", blockNum);
-			fclose(f);
-			return 3;
-		}
-		printf(".");
-		blockNum++;
-		
-		if (blockNum >= numBlocks) break;
-	}
-	fclose(f);
-	printf("\n");
-	
-	if ((blockNum != numBlocks)) {
-		PrintAndLog("File content error. Got %d must be %d blocks.",blockNum, numBlocks);
-		return 4;
-	}
-	PrintAndLog("Loaded %d blocks from file: %s", blockNum, filename);
-	*/
-	return 0;
+	if ( ctmp == 'h' || ctmp == 'H' || ctmp == 0x00) return usage_hf_mfu_eload();
+	return CmdHF14AMfELoad(Cmd);
 }
 
+int CmdHF14AMfUSim(const char *Cmd) {
+	char ctmp = param_getchar(Cmd, 0);
+	if ( ctmp == 'h' || ctmp == 'H' || ctmp == 0x00) return usage_hf_mfu_sim();
+	return CmdHF14ASim(Cmd);
+}
+
+//------------------------------------
+// Menu Stuff
+//------------------------------------
 static command_t CommandTable[] =
 {
 	{"help",	CmdHelp,			1, "This help"},
 	{"dbg",		CmdHF14AMfDbg,		0, "Set default debug mode"},
 	{"info",	CmdHF14AMfUInfo,	0, "Tag information"},
 	{"dump",	CmdHF14AMfUDump,	0, "Dump Ultralight / Ultralight-C / NTAG tag to binary file"},
+	{"eload",	CmdHF14AMfUeLoad,   0, "load Ultralight .eml dump file into emulator memory"},	
 	{"rdbl",	CmdHF14AMfURdBl,	0, "Read block"},
 	{"wrbl",	CmdHF14AMfUWrBl,	0, "Write block"},
-	{"eload",	CmdHF14AMfuELoad,	0, "<not implemented> Load from file emulator dump"},
 	{"cauth",	CmdHF14AMfucAuth,	0, "Authentication    - Ultralight C"},
-	{"setpwd",	CmdHF14AMfucSetPwd, 1, "Set 3des password - Ultralight-C"},
-	{"setuid",	CmdHF14AMfucSetUid, 1, "Set UID - MAGIC tags only"},
+	{"setpwd",	CmdHF14AMfucSetPwd, 0, "Set 3des password - Ultralight-C"},
+	{"setuid",	CmdHF14AMfucSetUid, 0, "Set UID - MAGIC tags only"},
+	{"sim",		CmdHF14AMfUSim,     0, "Simulate Ultralight from emulator memory"},		
 	{"gen",		CmdHF14AMfuGenDiverseKeys , 1, "Generate 3des mifare diversified keys"},
 	{NULL, NULL, 0, NULL}
 };
