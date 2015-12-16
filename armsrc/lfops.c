@@ -400,7 +400,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	for(;;) {
 		//wait until SSC_CLK goes HIGH
 		while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
-			if(BUTTON_PRESS() || usb_poll_validate_length() ) {
+			if(BUTTON_PRESS() || !usb_poll_validate_length() ) {
 				DbpString("Stopped");
 				return;
 			}
@@ -417,7 +417,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 		
 		//wait until SSC_CLK goes LOW
 		while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
-			if( BUTTON_PRESS() || usb_poll_validate_length() ) {
+			if( BUTTON_PRESS() || !usb_poll_validate_length() ) {
 				DbpString("Stopped");
 				return;
 			}

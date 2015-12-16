@@ -21,6 +21,7 @@
 #include "proxmark3.h"
 #include "iso14443crc.h"
 #include "protocols.h"
+#include "cmdhf.h"
 
 #define TOPAZ_MAX_MEMORY	2048
 
@@ -32,7 +33,6 @@ static struct {
 	uint8_t *dynamic_lock_areas;
 	uint8_t *dynamic_reserved_areas;
 } topaz_tag;
-
 
 static void topaz_switch_on_field(void)
 {
@@ -252,8 +252,7 @@ static void topaz_print_NDEF(uint8_t *data)
 }
 
 	
-int CmdHFTopazReader(const char *Cmd)
-{
+int CmdHFTopazReader(const char *Cmd) {
 	int status;
 	uint8_t atqa[2];
 	uint8_t rid_response[8];
@@ -367,23 +366,22 @@ int CmdHFTopazReader(const char *Cmd)
 	return 0;
 }
 
-
-int CmdHFTopazSim(const char *Cmd)
-{
+int CmdHFTopazSim(const char *Cmd) {
 	PrintAndLog("not yet implemented");
 	return 0;
 }
 
-
-int CmdHFTopazCmdRaw(const char *Cmd)
-{
+int CmdHFTopazCmdRaw(const char *Cmd) {
 	PrintAndLog("not yet implemented");
 	return 0;
 }
 
+int CmdHFTopazList(const char *Cmd) {
+	CmdHFList("topaz");
+	return 0;
+}
 
 static int CmdHelp(const char *Cmd);
-
 
 static command_t CommandTable[] = 
 {
@@ -392,9 +390,9 @@ static command_t CommandTable[] =
 	{"sim",		CmdHFTopazSim,		0, "<UID> -- Simulate Topaz tag"},
 	{"sniff",	CmdHF14ASniff,		0, "Sniff Topaz reader-tag communication"},
 	{"raw",		CmdHFTopazCmdRaw,	0, "Send raw hex data to tag"},
+	{"list",	CmdHFTopazList,		0, "[Deprecated] List Topaz history"},
 	{NULL,		NULL,				0, NULL}
 };
-
 
 int CmdHFTopaz(const char *Cmd) {
 	// flush

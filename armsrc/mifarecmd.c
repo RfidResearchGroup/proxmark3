@@ -1043,7 +1043,7 @@ void MifareEMemClr(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 
 void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	//emlSetMem(datain, arg0, arg1); // data, block num, blocks count	 
+	if (arg2==0) arg2 = 16; // backwards compat... default bytewidth
 	emlSetMem_xt(datain, arg0, arg1, arg2); // data, block num, blocks count, block byte width
 }
 
@@ -1187,8 +1187,8 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 		if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
 			if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Can't select card");
 			OnErrorMagic(MAGIC_UID);
-		};
-	};
+		}
+	}
 	
 	// wipe tag, fill it with zeros
 	if (workFlags & MAGIC_WIPE){
@@ -1196,14 +1196,14 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 		if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 			if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wupC1 error");
 			OnErrorMagic(MAGIC_WIPE);
-		};
+		}
 
 		ReaderTransmit(wipeC, sizeof(wipeC), NULL);
 		if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 			if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wipeC error");
 			OnErrorMagic(MAGIC_WIPE);
-		};
-	};	
+		}
+	}	
 
 	// write block
 	if (workFlags & MAGIC_WUPC) {
@@ -1211,19 +1211,19 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 		if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 			if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wupC1 error");
 			OnErrorMagic(MAGIC_WUPC);
-		};
+		}
 
 		ReaderTransmit(wupC2, sizeof(wupC2), NULL);
 		if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 			if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wupC2 error");
 			OnErrorMagic(MAGIC_WUPC);
-		};
+		}
 	}
 
 	if ((mifare_sendcmd_short(NULL, 0, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("write block send command error");
 		OnErrorMagic(4);
-	};
+	}
 	
 	memcpy(data, datain, 16);
 	AppendCrc14443a(data, 16);
@@ -1232,7 +1232,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 	if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("write block send data error");
 		OnErrorMagic(0);
-	};	
+	}	
 	
 	if (workFlags & MAGIC_OFF) 
 		mifare_classic_halt_ex(NULL);
@@ -1271,20 +1271,20 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 		if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 			if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("wupC1 error");
 			OnErrorMagic(MAGIC_WUPC);
-		};
+		}
 
 		ReaderTransmit(wupC2, sizeof(wupC2), NULL);
 		if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 			if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("wupC2 error");
 			OnErrorMagic(MAGIC_WUPC);
-		};
+		}
 	}
 
 	// read block		
 	if ((mifare_sendcmd_short(NULL, 0, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 18)) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("read block send command error");
 		OnErrorMagic(0);
-	};
+	}
 	
 	memcpy(data, receivedAnswer, sizeof(data));
 	
@@ -1309,19 +1309,19 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 void MifareCIdent(){
 	
 	// variables
-	byte_t isOK = 1;	
+	bool isOK = true;	
 	uint8_t receivedAnswer[1];
 	uint8_t receivedAnswerPar[1];
 
 	ReaderTransmitBitsPar(wupC1,7,0, NULL);
 	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-		isOK = 0;
-	};
+		isOK = false;
+	}
 
 	ReaderTransmit(wupC2, sizeof(wupC2), NULL);
 	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-		isOK = 0;
-	};
+		isOK = false;
+	}
 
 	// removed the if,  since some magic tags misbehavies and send an answer to it.
 	mifare_classic_halt(NULL, 0);

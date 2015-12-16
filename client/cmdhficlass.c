@@ -32,6 +32,7 @@
 #include "protocols.h"
 #include "usb_cmd.h"
 #include "cmdhfmfu.h"
+#include "cmdhf.h"
 
 #define llX PRIx64
 
@@ -62,7 +63,8 @@ int xorbits_8(uint8_t val) {
 }
 
 int CmdHFiClassList(const char *Cmd) {
-	PrintAndLog("Deprecated command, use 'hf list iclass' instead");
+	//PrintAndLog("Deprecated command, use 'hf list iclass' instead");
+	CmdHFList("iclass");
 	return 0;
 }
 

@@ -947,11 +947,10 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 
 	//set defaults
 	//set options from parameters entered with the command
-	rfLen = param_get8ex(Cmd, 0, 0, 10);
-	invert = param_get8ex(Cmd, 1, 0, 10);
-	fchigh = param_get8ex(Cmd, 2, 0, 10);
-	fclow = param_get8ex(Cmd, 3, 0, 10);
-	
+	rfLen = param_get8(Cmd, 0);
+	invert = param_get8(Cmd, 1);
+	fchigh = param_get8(Cmd, 2);
+	fclow = param_get8(Cmd, 3);
 	if (strlen(Cmd)>0 && strlen(Cmd)<=2) {
 		 if (rfLen==1){
 			invert = 1;   //if invert option only is used
@@ -963,16 +962,16 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 	size_t BitLen = getFromGraphBuf(BitStream);
 	if (BitLen==0) return 0;
 	//get field clock lengths
-	uint16_t fcs=0;
+	uint8_t fc1=0, fc2=0, rf1=0;
 	if (!fchigh || !fclow) {
-		fcs = countFC(BitStream, BitLen, 1);
-		if (!fcs) {
-			fchigh = 10;
-			fclow = 8;
-		} else {
-			fchigh = (fcs >> 8) & 0x00FF;
-			fclow = fcs & 0x00FF;
+		uint8_t ans = fskClocks(&fc1, &fc2, &rf1, false);
+		if (ans == 0) {
+			if (g_debugMode) PrintAndLog("\nError: cannot detect valid fsk field clocks");			
+			return 0; // can't detect field clock
 		}
+		fchigh = fc1;
+		fclow = fc2;
+		if (rfLen == 0) rfLen = rf1;
 	}
 	//get bit clock length
 	if (!rfLen){

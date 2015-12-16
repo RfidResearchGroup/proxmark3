@@ -140,7 +140,7 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 	for (size_t out_index=0; out_index < max_len; out_index++) {
 		// set character
 		sprintf(tmp++, "%u", data[in_index]);
-		// check if a line break is needed
+		// check if a line break is needed and we have room to print it in our array
 		if ( (breaks > 0) && !((in_index+1) % breaks) && (out_index+1 != max_len) ) {
 			// increment and print line break
 			out_index++;
@@ -195,7 +195,6 @@ void num_to_bytebits(uint64_t	n, size_t len, uint8_t *dest) {
 // up to 64 bytes or 512 bits
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize){
 	static uint8_t buf[64];
-	//uint8_t buf[64];
 	memset(buf, 0x00, 64);
 	uint8_t *tmp = buf;
 	for (uint8_t block=0; block < (uint8_t)(len/blockSize); block++){

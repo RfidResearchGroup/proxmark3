@@ -1252,24 +1252,26 @@ int usage_hf_mfu_eload(void) {
 	PrintAndLog("Usage:  hf mfu eload u <file name w/o `.eml`> [numblocks]");
 	PrintAndLog("  Options:");
 	PrintAndLog("    h          : this help");	
-	PrintAndLog("    u          : UL");
-	PrintAndLog("    numblocks  : number of blocks to load from eml file");		
+	PrintAndLog("    u          : UL (required)");
+	PrintAndLog("    [filename] : without `.eml` (required)");	
+	PrintAndLog("    numblocks  : number of blocks to load from eml file (optional)");
 	PrintAndLog("");
 	PrintAndLog("  sample: hf mfu eload u filename");
 	PrintAndLog("          hf mfu eload u filename 57");
-	return 0;
+			return 0;
 }
 
 int usage_hf_mfu_sim(void) {
 	PrintAndLog("\nEmulating Ultralight tag from emulator memory\n");
 	PrintAndLog("\nBe sure to load the emulator memory first!\n");
 	PrintAndLog("Usage: hf mfu sim t 7 u <uid>");
-	PrintAndLog("  Options : ");
-	PrintAndLog("    h     : this help");
-	PrintAndLog("    t     : 7 = NTAG or Ultralight sim");
-	PrintAndLog("    u     : 4 or 7 byte UID");
+	PrintAndLog("  Options:");
+	PrintAndLog("    h       : this help");
+	PrintAndLog("    t 7     : 7 = NTAG or Ultralight sim (required)");
+	PrintAndLog("    u <uid> : 4 or 7 byte UID (optional)");
 	PrintAndLog("\n   sample : hf mfu sim t 7");
 	PrintAndLog("          : hf mfu sim t 7 u 1122344556677\n");
+	
 	return 0;
 }
 
@@ -1469,12 +1471,6 @@ int CmdHF14AMfUDump(const char *Cmd){
 
 	// add keys to block dump
 	if (hasAuthKey) {
-		if (!swapEndian){
-			authKeyPtr = SwapEndian64(authenticationkey, dataLen, (dataLen == 16) ? 8 : 4);
-		} else {
-			authKeyPtr = authenticationkey;
-		}
-
 		if (tagtype & UL_C){ //add 4 pages
 			memcpy(data + Pages*4, authKeyPtr, dataLen);
 			Pages += dataLen/4;  
@@ -1486,7 +1482,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	uint8_t	get_pack[] = {0,0};
 	iso14a_card_select_t card;
 	//attempt to read pack
-	if (!ul_auth_select( &card, tagtype, true, authKeyPtr, get_pack, sizeof(get_pack))) {
+	if (!ul_auth_select( &card, tagtype, hasAuthKey, authKeyPtr, get_pack, sizeof(get_pack))) {
 		//reset pack
 		get_pack[0]=0;
 		get_pack[1]=0;
@@ -1537,7 +1533,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	PrintAndLog("GetVer-2| %s|   | %.4s", sprint_hex(dump_file_data+4, 4), dump_file_data+4);
 	PrintAndLog("TBD     | 00 00       |   | ");
 	PrintAndLog("Tearing |    %s|   | %.3s", sprint_hex(dump_file_data+10, 3), dump_file_data+10);
-	PrintAndLog("Pack    |    %s   |    | %.2s", sprint_hex(dump_file_data+13, 2), dump_file_data+13);
+	PrintAndLog("Pack    |    %s   |   | %.2s", sprint_hex(dump_file_data+13, 2), dump_file_data+13);
 	PrintAndLog("TBD     |          00 |   | ");
 	PrintAndLog("Sig-1   | %s|   | %.4s", sprint_hex(dump_file_data+16, 4), dump_file_data+16);
 	PrintAndLog("Sig-2   | %s|   | %.4s", sprint_hex(dump_file_data+20, 4), dump_file_data+20);
@@ -1619,7 +1615,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	fwrite( dump_file_data, 1, Pages*4 + DUMP_PREFIX_LENGTH, fout );
 	fclose(fout);
 	
-	PrintAndLog("Dumped %d pages, wrote %d bytes to %s", Pages+12, (Pages+12)*4, filename);
+	PrintAndLog("Dumped %d pages, wrote %d bytes to %s", Pages+(DUMP_PREFIX_LENGTH/4), Pages*4 + DUMP_PREFIX_LENGTH, filename);
 	return 0;
 }
 
@@ -1776,14 +1772,13 @@ int CmdHF14AMfucSetPwd(const char *Cmd){
 
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
-		if ( (resp.arg[0] & 0xff) == 1)
+		if ( (resp.arg[0] & 0xff) == 1) {
 			PrintAndLog("Ultralight-C new password: %s", sprint_hex(pwd,16));
-		else{
+		} else {
 			PrintAndLog("Failed writing at block %d", resp.arg[1] & 0xff);
 			return 1;
 		}
-	}
-	else {
+	} else {
 		PrintAndLog("command execution time out");
 		return 1;
 	}	

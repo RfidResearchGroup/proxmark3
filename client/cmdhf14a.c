@@ -25,6 +25,7 @@
 #include "mifare.h"
 #include "cmdhfmfu.h"
 #include "nonce2key/nonce2key.h"
+#include "cmdhf.h"
 
 #define llx PRIx64
 
@@ -171,7 +172,8 @@ int usage_hf_14a_raw(void){
 
 int CmdHF14AList(const char *Cmd)
 {
-	PrintAndLog("Deprecated command, use 'hf list 14a' instead");
+	//PrintAndLog("Deprecated command, use 'hf list 14a' instead");
+	CmdHFList("14a");
 	return 0;
 }
 

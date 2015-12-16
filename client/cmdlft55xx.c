@@ -150,12 +150,14 @@ int usage_t55xx_wakup(){
 	return 0;
 }
 int usage_t55xx_bruteforce(){
-    PrintAndLog("Usage: lf t55xx bruteforce <start password> <end password> [i <*.dic>]");
-    PrintAndLog("       password must be 4 bytes (8 hex symbols)");
 	PrintAndLog("This command uses A) bruteforce to scan a number range");
 	PrintAndLog("                  B) a dictionary attack");
+    PrintAndLog("Usage: lf t55xx bruteforce <start password> <end password> [i <*.dic>]");
+    PrintAndLog("       password must be 4 bytes (8 hex symbols)");
 	PrintAndLog("Options:");
 	PrintAndLog("     h			- this help");
+	PrintAndLog("     <start_pwd> - 4 byte hex value to start pwd search at");
+	PrintAndLog("     <end_pwd>   - 4 byte hex value to end pwd search at");
     PrintAndLog("     i <*.dic>	- loads a default keys dictionary file <*.dic>");
     PrintAndLog("");
     PrintAndLog("Examples:");
@@ -181,7 +183,6 @@ int CmdT55xxSetConfig(const char *Cmd) {
 	uint8_t bitRate = 0;
 	uint8_t rates[9] = {8,16,32,40,50,64,100,128,0};
 	uint8_t cmdp = 0;
-	config.Q5 = FALSE;
 	bool errors = FALSE;
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors)
 	{
@@ -384,11 +385,12 @@ bool DecodeT55xxBlock(){
 			ans = ASKDemod(cmdStr, FALSE, FALSE, 1);
 			break;
 		case DEMOD_PSK1:
-			// skip first 16 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
+			// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
 			save_restoreGB(1);
 			CmdLtrim("160");
 			snprintf(cmdStr, sizeof(buf),"%d %d 6", bitRate[config.bitrate], config.inverted );
 			ans = PSKDemod(cmdStr, FALSE);
+			//undo trim samples
 			save_restoreGB(0);
 			break;
 		case DEMOD_PSK2: //inverted won't affect this
@@ -399,7 +401,8 @@ bool DecodeT55xxBlock(){
 			snprintf(cmdStr, sizeof(buf),"%d 0 6", bitRate[config.bitrate] );
 			ans = PSKDemod(cmdStr, FALSE);
 			psk1TOpsk2(DemodBuffer, DemodBufferLen);
-			save_restoreGB(1);
+			//undo trim samples
+			save_restoreGB(0);
 			break;
 		case DEMOD_NRZ:
 			snprintf(cmdStr, sizeof(buf),"%d %d 1", bitRate[config.bitrate], config.inverted );
@@ -417,7 +420,6 @@ bool DecodeT55xxBlock(){
 }
 
 int CmdT55xxDetect(const char *Cmd){
-
 	bool errors = FALSE;
 	bool useGB = FALSE;
 	bool usepwd = FALSE;
@@ -465,7 +467,6 @@ bool tryDetectModulation(){
 	t55xx_conf_block_t tests[15];
 	int bitRate=0;
 	uint8_t fc1 = 0, fc2 = 0, clk=0;
-	save_restoreGB(1);
 	
 	if (GetFskClock("", FALSE, FALSE)){ 
 		fskClocks(&fc1, &fc2, &clk, FALSE);
@@ -486,7 +487,6 @@ bool tryDetectModulation(){
 				tests[hits].modulation = DEMOD_FSK1;
 			else if (fc1 == 10 && fc2 == 8)
 				tests[hits].modulation = DEMOD_FSK2a;
-
 			tests[hits].bitrate = bitRate;
 			tests[hits].inverted = TRUE;
 			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
@@ -525,7 +525,7 @@ bool tryDetectModulation(){
 			}
 		}
 		//undo trim from ask
-		save_restoreGB(0);
+		//save_restoreGB(0);
 		clk = GetNrzClock("", FALSE, FALSE);
 		if (clk>0) {
 			if ( NRZrawDemod("0 0 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
@@ -545,9 +545,9 @@ bool tryDetectModulation(){
 			}
 		}
 		
-		//undo trim from nrz
-		save_restoreGB(0);
+		// allow undo
 		// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
+		save_restoreGB(1);
 		CmdLtrim("160");
 		clk = GetPskClock("", FALSE, FALSE);
 		if (clk>0) {
@@ -588,14 +588,16 @@ bool tryDetectModulation(){
 				}
 			} // inverse waves does not affect this demod
 		}
+		//undo trim samples
+		save_restoreGB(0);
 	}		
-	save_restoreGB(0);	
 	if ( hits == 1) {
 		config.modulation = tests[0].modulation;
 		config.bitrate = tests[0].bitrate;
 		config.inverted = tests[0].inverted;
 		config.offset = tests[0].offset;
 		config.block0 = tests[0].block0;
+		config.Q5 = tests[0].Q5;
 		printConfiguration( config );
 		return TRUE;
 	}
@@ -671,6 +673,15 @@ bool testQ5Modulation(uint8_t	mode, uint8_t	modread){
 	return FALSE;
 }
 
+int convertQ5bitRate(uint8_t bitRateRead) {
+	uint8_t expected[] = {8, 16, 32, 40, 50, 64, 100, 128};
+	for (int i=0; i<8; i++)
+		if (expected[i] == bitRateRead)
+			return i;
+
+	return -1;
+}
+
 bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t	clk){
 
 	if ( DemodBufferLen < 64 ) return FALSE;
@@ -682,12 +693,12 @@ bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t	clk){
 		uint8_t safer     = PackBits(si, 4, DemodBuffer); si += 4;     //master key
 		uint8_t resv      = PackBits(si, 8, DemodBuffer); si += 8;
 		// 2nibble must be zeroed.
-		if (safer != 0x6) continue;
+		if (safer != 0x6 && safer != 0x9) continue;
 		if ( resv > 0x00) continue;
 		//uint8_t	pageSel   = PackBits(si, 1, DemodBuffer); si += 1;
 		//uint8_t fastWrite = PackBits(si, 1, DemodBuffer); si += 1;
 		si += 1+1;
-		int bitRate       = PackBits(si, 5, DemodBuffer)*2 + 2; si += 5;     //bit rate
+		int bitRate       = PackBits(si, 6, DemodBuffer)*2 + 2; si += 6;     //bit rate
 		if (bitRate > 128 || bitRate < 8) continue;
 
 		//uint8_t AOR       = PackBits(si, 1, DemodBuffer); si += 1;   
@@ -702,7 +713,8 @@ bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t	clk){
 		//test modulation
 		if (!testQ5Modulation(mode, modread)) continue;
 		if (bitRate != clk) continue;
-		*fndBitRate = bitRate;
+		*fndBitRate = convertQ5bitRate(bitRate);
+		if (*fndBitRate < 0) continue;
 		*offset = idx;
 
 		return TRUE;
@@ -1117,35 +1129,16 @@ char * GetBitRateStr(uint32_t id){
 
 	char *retStr = buf;
 		switch (id){
-		case 0: 
-			snprintf(retStr,sizeof(buf),"%d - RF/8",id);
-			break;
-		case 1:
-			snprintf(retStr,sizeof(buf),"%d - RF/16",id);
-			break;
-		case 2:		
-			snprintf(retStr,sizeof(buf),"%d - RF/32",id);
-			break;
-		case 3:
-			snprintf(retStr,sizeof(buf),"%d - RF/40",id);
-			break;
-		case 4:
-			snprintf(retStr,sizeof(buf),"%d - RF/50",id);
-			break;
-		case 5:
-			snprintf(retStr,sizeof(buf),"%d - RF/64",id);
-			break;
-		case 6:
-			snprintf(retStr,sizeof(buf),"%d - RF/100",id);
-			break;
-		case 7:
-			snprintf(retStr,sizeof(buf),"%d - RF/128",id);
-			break;
-		default:
-			snprintf(retStr,sizeof(buf),"%d - (Unknown)",id);
-			break;
+		case 0:   snprintf(retStr,sizeof(buf),"%d - RF/8",id);   break;
+		case 1:   snprintf(retStr,sizeof(buf),"%d - RF/16",id);  break;
+		case 2:   snprintf(retStr,sizeof(buf),"%d - RF/32",id);  break;
+		case 3:   snprintf(retStr,sizeof(buf),"%d - RF/40",id);  break;
+		case 4:   snprintf(retStr,sizeof(buf),"%d - RF/50",id);  break;
+		case 5:   snprintf(retStr,sizeof(buf),"%d - RF/64",id);  break;
+		case 6:   snprintf(retStr,sizeof(buf),"%d - RF/100",id); break;
+		case 7:   snprintf(retStr,sizeof(buf),"%d - RF/128",id); break;
+		default:  snprintf(retStr,sizeof(buf),"%d - (Unknown)",id); break;
 		}
-
 	return buf;
 }
 
@@ -1476,7 +1469,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,           1, "This help"},
-	{"bruteforce",	CmdT55xxBruteForce,0, "Simple bruteforce attack to find password"},
+	{"bruteforce",CmdT55xxBruteForce,0, "<start password> <end password> [i <*.dic>] Simple bruteforce attack to find password"},
 	{"config",		CmdT55xxSetConfig, 1, "Set/Get T55XX configuration (modulation, inverted, offset, rate)"},
 	{"detect",		CmdT55xxDetect,    1, "[1] Try detecting the tag modulation from reading the configuration block."},
 	{"dump",		CmdT55xxDump,      0, "[password] [o] Dump T55xx card block 0-7. Optional [password], [override]"},
