@@ -1403,6 +1403,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	//Validations
 	if(errors) return usage_hf_mfu_dump();
 
+	//if we entered a key in little endian and set the swapEndian switch - switch it...
 	if (swapEndian && hasAuthKey) 
 		authKeyPtr = SwapEndian64(authenticationkey, dataLen, (dataLen == 16) ? 8 : 4);
 
@@ -1469,28 +1470,8 @@ int CmdHF14AMfUDump(const char *Cmd){
 		}
 	}
 
-	// add keys to block dump
-	if (hasAuthKey) {
-		if (tagtype & UL_C){ //add 4 pages
-			memcpy(data + Pages*4, authKeyPtr, dataLen);
-			Pages += dataLen/4;  
-		} else { // 2nd page from end
-			memcpy(data + (Pages*4) - 8, authenticationkey, dataLen);
-		}
-	}
-
 	uint8_t	get_pack[] = {0,0};
 	iso14a_card_select_t card;
-	//attempt to read pack
-	if (!ul_auth_select( &card, tagtype, hasAuthKey, authKeyPtr, get_pack, sizeof(get_pack))) {
-		//reset pack
-		get_pack[0]=0;
-		get_pack[1]=0;
-	}
-	ul_switch_off_field();
-	// add pack to block read
-	memcpy(data + (Pages*4) - 4, get_pack, sizeof(get_pack));
-
 	uint8_t dump_file_data[1024+DUMP_PREFIX_LENGTH] = {0x00};
 	uint8_t get_version[] = {0,0,0,0,0,0,0,0,0};
 	uint8_t	get_tearing[] = {0,0,0};
@@ -1499,6 +1480,17 @@ int CmdHF14AMfUDump(const char *Cmd){
 	uint8_t	get_signature[32];
 	memset( get_signature, 0, sizeof(get_signature) );
 
+	// not ul_c and not std ul then attempt to get deeper info
+	if (!(tagtype & UL_C || tagtype & UL)) {
+		//attempt to read pack
+		if (!ul_auth_select( &card, tagtype, true, authKeyPtr, get_pack, sizeof(get_pack))) {
+			//reset pack
+			get_pack[0]=0;
+			get_pack[1]=0;
+		}
+		ul_switch_off_field();
+		// add pack to block read
+		memcpy(data + (Pages*4) - 4, get_pack, sizeof(get_pack));
 	if ( hasAuthKey )
 		ul_auth_select( &card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
 	else
@@ -1516,6 +1508,28 @@ int CmdHF14AMfUDump(const char *Cmd){
 		ul_select(&card);
 	ulev1_readSignature( get_signature, sizeof(get_signature));
 	ul_switch_off_field();
+	}
+
+	// format and add keys to block dump output
+	if (hasAuthKey) {
+		// if we didn't swapendian before - do it now for the sprint_hex call
+		// NOTE: default entry is bigendian (unless swapped), sprint_hex outputs little endian
+		//       need to swap to keep it the same
+		if (!swapEndian){
+			authKeyPtr = SwapEndian64(authenticationkey, dataLen, (dataLen == 16) ? 8 : 4);
+		} else {
+			authKeyPtr = authenticationkey;
+		}
+
+		if (tagtype & UL_C){ //add 4 pages
+			memcpy(data + Pages*4, authKeyPtr, dataLen);
+			Pages += dataLen/4;  
+		} else { // 2nd page from end
+			memcpy(data + (Pages*4) - 8, authenticationkey, dataLen);
+		}
+	}
+
+	//add *special* blocks to dump
 	//get version
 	memcpy(dump_file_data, get_version, sizeof(get_version));
 	//tearing
@@ -1524,9 +1538,10 @@ int CmdHF14AMfUDump(const char *Cmd){
 	memcpy(dump_file_data+13, get_pack, sizeof(get_pack));
 	//signature
 	memcpy(dump_file_data+16, get_signature, sizeof(get_signature));
-	//block read data
+	//add regular block read data to dump
 	memcpy(dump_file_data+DUMP_PREFIX_LENGTH, data, Pages*4);
 
+	PrintAndLog("\n*Special* block data:");
 	PrintAndLog("\nDataType| Data        |   | Ascii");
 	PrintAndLog("---------------------------------");
 	PrintAndLog("GetVer-1| %s|   | %.4s", sprint_hex(dump_file_data, 4), dump_file_data);
@@ -1543,7 +1558,6 @@ int CmdHF14AMfUDump(const char *Cmd){
 	PrintAndLog("Sig-6   | %s|   | %.4s", sprint_hex(dump_file_data+36, 4), dump_file_data+36);
 	PrintAndLog("Sig-7   | %s|   | %.4s", sprint_hex(dump_file_data+40, 4), dump_file_data+40);
 	PrintAndLog("Sig-8   | %s|   | %.4s", sprint_hex(dump_file_data+44, 4), dump_file_data+44);
-	
 	PrintAndLog("\nBlock#  | Data        |lck| Ascii");
 	PrintAndLog("---------------------------------");
 	for (i = 0; i < Pages; ++i) {
@@ -1794,6 +1808,7 @@ int CmdHF14AMfucSetUid(const char *Cmd){
 	UsbCommand resp;
 	uint8_t uid[7] = {0x00};
 	char cmdp = param_getchar(Cmd, 0);
+	
 	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') return usage_hf_mfu_ucsetuid();
 
 	if (param_gethex(Cmd, 0, uid, 14)) {
