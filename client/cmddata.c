@@ -2325,21 +2325,15 @@ int Cmdbin2hex(const char *Cmd)
 }
 
 int usage_data_hex2bin(){
-
-	PrintAndLog("Usage: data bin2hex <binary_digits>");
+	PrintAndLog("Usage: data hex2bin <hex_digits>");
 	PrintAndLog("       This function will ignore all non-hexadecimal characters (but stop reading on whitespace)");
 	return 0;
-
 }
 
 int Cmdhex2bin(const char *Cmd)
 {
 	int bg =0, en =0;
-	if(param_getptr(Cmd, &bg, &en, 0))
-	{
-		return usage_data_hex2bin();
-	}
-
+	if(param_getptr(Cmd, &bg, &en, 0))  return usage_data_hex2bin();
 
 	while(bg <= en )
 	{

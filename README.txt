@@ -14,7 +14,8 @@ Among the stuff is
 
 	* Jonor's hf 14a raw timing patch
 	* Piwi's updates. (usually gets into the master)
-	* Piwi's "topaz" branch (not merged)
+	* Piwi's "topaz" branch
+	* Piwi's "hardnested" branch 
 	* Holiman's iclass, (usually gets into the master)
 	* Marshmellow's fixes (usually gets into the master)
 	* Midnitesnake's Ultralight,  Ultralight-c enhancements
@@ -25,8 +26,11 @@ Among the stuff is
 	* Minor textual changes here and there.
 	* Simulation of Ultralight/Ntag.
 	* Marshmellow's and my "RevEng" addon for the client.  Ref: http://reveng.sourceforge.net/
-	* Someone's alterantive bruteforce Mifare changes.. (you need the two other exe to make it work)
-	* 
+	* Someone's alternative bruteforce Mifare changes.. (you need the two other exe to make it work)
+
+	* A Bruteforce for T55XX passwords against tag.
+	* A Bruteforce for AWID 26, starting w a facilitycode then trying all 0xFFFF cardnumbers via simulation. To be used against a AWID Reader.
+
 	
 Give me a hint, and I'll see if I can't merge in the stuff you have. 
 
@@ -96,8 +100,8 @@ iceman at host iuse.se
 The Proxmark 3 is available for purchase (assembled and tested) from the
 following locations:
 
-   * http://proxmark3.com/
-   * http://www.xfpga.com/
+   * http://www.elechouse.com  (new and revised hardware package 2015)
+   
 
 Most of the ultra-low-volume contract assemblers could put
 something like this together with a reasonable yield. A run of around

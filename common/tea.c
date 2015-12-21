@@ -10,8 +10,6 @@
 #define ROUNDS 32
 #define DELTA  0x9E3779B9
 #define SUM    0xC6EF3720
-#define SWAPENDIAN(x)\
-  (x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
 
 void tea_encrypt(uint8_t *v, uint8_t *key) {
 
@@ -28,22 +26,12 @@ void tea_encrypt(uint8_t *v, uint8_t *key) {
 	//input
 	y = bytes_to_num(v, 4);
 	z = bytes_to_num(v+4, 4);
-	
-	// SWAPENDIAN(a);
-	// SWAPENDIAN(b);
-	// SWAPENDIAN(c);
-	// SWAPENDIAN(d);
-	// SWAPENDIAN(y);
-	// SWAPENDIAN(z);
 		
 	while ( n-- > 0 ) {
 		sum += DELTA;
 		y += ((z << 4) + a) ^ (z + sum) ^ ((z >> 5) + b);
 		z += ((y << 4) + c) ^ (y + sum) ^ ((y >> 5) + d);
 	}
-
-	// SWAPENDIAN(y);
-	// SWAPENDIAN(z);
 
 	num_to_bytes(y, 4, v);
 	num_to_bytes(z, 4, v+4);
@@ -65,22 +53,12 @@ void tea_decrypt(uint8_t *v, uint8_t *key) {
 	y = bytes_to_num(v, 4);
 	z = bytes_to_num(v+4, 4);
 
-	// SWAPENDIAN(a);
-	// SWAPENDIAN(b);
-	// SWAPENDIAN(c);
-	// SWAPENDIAN(d);
-	// SWAPENDIAN(y);
-	// SWAPENDIAN(z);
-	
 	/* sum = delta<<5, in general sum = delta * n */
 	while ( n-- > 0 ) {
 		z -= ((y << 4) + c) ^ (y + sum) ^ ((y >> 5) + d);
 		y -= ((z << 4) + a) ^ (z + sum) ^ ((z >> 5) + b);
 		sum -= DELTA;
 	}
-
-	// SWAPENDIAN(y);
-	// SWAPENDIAN(z);
 	num_to_bytes(y, 4, v);
 	num_to_bytes(z, 4, v+4);
 }

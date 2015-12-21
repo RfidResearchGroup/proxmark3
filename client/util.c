@@ -194,7 +194,7 @@ void num_to_bytebits(uint64_t	n, size_t len, uint8_t *dest) {
 // hh,gg,ff,ee,dd,cc,bb,aa, pp,oo,nn,mm,ll,kk,jj,ii
 // up to 64 bytes or 512 bits
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize){
-	static uint8_t buf[64];
+	uint8_t buf[64];
 	memset(buf, 0x00, 64);
 	uint8_t *tmp = buf;
 	for (uint8_t block=0; block < (uint8_t)(len/blockSize); block++){
@@ -204,6 +204,15 @@ uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockS
 	}
 	return tmp;
 }
+
+void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSize, uint8_t *dest){
+	for (uint8_t block=0; block < (uint8_t)(len/blockSize); block++){
+		for (size_t i = 0; i < blockSize; i++){
+			dest[i+(blockSize*block)] = src[(blockSize-1-i)+(blockSize*block)];
+		}
+	}
+}
+
 
 //  -------------------------------------------------------------------------
 //  string parameters lib
