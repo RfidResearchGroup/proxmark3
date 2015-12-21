@@ -6,7 +6,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   --trying to fix "hf 14b" command to be able to read CALYPSO card.	 (iceman)
   --
 
-### Added												
+### Added
+- `lf awid bruteforce <facilitycode>` - Simple bruteforce attack against a AWID reader.
 - `lf t55xx bruteforce <start password> <end password> [i <*.dic>]` - Simple bruteforce attack to find password - (iceman and others)
 - `lf viking clone`- clone viking tag to t55x7 or Q5 from 4byte hex ID input 
 - `lf viking sim`  - sim full viking tag from 4byte hex ID input
@@ -52,6 +53,7 @@ of stream transmissions (marshmellow)
 - Revised workflow for StandAloneMode14a (Craig Young)
 - EPA functions (`hf epa`) now support both ISO 14443-A and 14443-B cards (frederikmoellers)
 - 'hw version' only talks to ARM at startup, after that the info is cached. (pwpiwi)
+- Added `r` option to iclass functions - allows key to be provided in raw block 3/4 format 
 
 ## [2.2.0][2015-07-12]
 
