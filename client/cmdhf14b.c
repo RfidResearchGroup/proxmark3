@@ -22,13 +22,15 @@
 #include "cmdhf14b.h"
 #include "cmdmain.h"
 #include "cmdhf14a.h"
+#include "tea.h"
+#include "cmdhf.h"
+#include "prng.h"
+#include "sha1.h"
 
 static int CmdHelp(const char *Cmd);
 
-int CmdHF14BList(const char *Cmd)
-{
-	PrintAndLog("Deprecated command, use 'hf list 14b' instead");
-
+int CmdHF14BList(const char *Cmd) {
+	CmdHFList("14b");
 	return 0;
 }
 
@@ -349,7 +351,7 @@ int print_ST_Lock_info(uint8_t model){
 		case 0x7: //             (SRI4K)
 			//only need data[3]
 			blk1 = 9;
-			PrintAndLog("   raw: %s",printBits(1,data+3));
+			PrintAndLog("   raw: %s", sprint_bin(data+3, 1));
 			PrintAndLog(" 07/08:%slocked", (data[3] & 1) ? " not " : " " );
 			for (uint8_t i = 1; i<8; i++){
 				PrintAndLog("    %02u:%slocked", blk1, (data[3] & (1 << i)) ? " not " : " " );
@@ -361,7 +363,7 @@ int print_ST_Lock_info(uint8_t model){
 		case 0xC: //             (SRT512)
 			//need data[2] and data[3]
 			blk1 = 0;
-			PrintAndLog("   raw: %s",printBits(2,data+2));
+			PrintAndLog("   raw: %s", sprint_bin(data+2, 2));
 			for (uint8_t b=2; b<4; b++){
 				for (uint8_t i=0; i<8; i++){
 					PrintAndLog("    %02u:%slocked", blk1, (data[b] & (1 << i)) ? " not " : " " );
@@ -372,7 +374,7 @@ int print_ST_Lock_info(uint8_t model){
 		case 0x2: //             (SR176)
 			//need data[2]
 			blk1 = 0;
-			PrintAndLog("   raw: %s",printBits(1,data+2));
+			PrintAndLog("   raw: %s", sprint_bin(data+2, 1));
 			for (uint8_t i = 0; i<8; i++){
 				PrintAndLog(" %02u/%02u:%slocked", blk1, blk1+1, (data[2] & (1 << i)) ? " " : " not " );
 				blk1+=2;
@@ -680,7 +682,7 @@ int CmdSriWrite( const char *Cmd){
 	return 0;
 }
 
-int srix4kChecksum(uint32_t value) {
+uint32_t srix4kEncode(uint32_t value) {
 /*
 // vv = value
 // pp = position
@@ -697,15 +699,6 @@ int srix4kChecksum(uint32_t value) {
 	uint8_t i = 0;
 	uint8_t valuebytes[] = {0,0,0};
 		
-	// if ( strlen(Cmd) > 0){
-		// value = param_get32ex(Cmd, 0, 0, 16);
-	
-		// block = value & 0xFF;
-		
-		// value &= 0xFFFFFF00;
-		// value >>=8;
-	// }
-
 	num_to_bytes(value, 3, valuebytes);
 	
 	// Scrambled part
@@ -725,8 +718,7 @@ int srix4kChecksum(uint32_t value) {
 		chksum -= NibbleLow(valuebytes[i]);
 	}
 
-	// base4 conversion
-	// and left shift twice
+	// base4 conversion and left shift twice
 	i = 3;
 	uint8_t base4[] = {0,0,0,0};	
 	while( chksum !=0 ){
@@ -748,13 +740,106 @@ int srix4kChecksum(uint32_t value) {
 		( NibbleLow ( base4[3]) << 4 ) |
 		  NibbleLow ( temp[1] );
 
-	PrintAndLog("ICE | %08X", encvalue);
+	PrintAndLog("ICE encoded | %08X -> %08X", value, encvalue);
+	return encvalue;
+}
+uint32_t srix4kDecode(uint32_t value) {
+	switch(value) {
+		case 0xC04F42C5: return 0x003139;
+		case 0xC1484807: return 0x002943;
+		case 0xC0C60848: return 0x001A20;
+	}
 	return 0;
 }
-int srix4kMagicbytes(){
+uint32_t srix4kDecodeCounter(uint32_t num) {
+	uint32_t value = ~num;
+	++value;
+	return value;
+}
+
+uint32_t srix4kGetMagicbytes( uint64_t uid, uint32_t block6, uint32_t block18, uint32_t block19 ){
+#define MASK 0xFFFFFFFF;
+	uint32_t uid32 = uid & MASK;
+	uint32_t counter = srix4kDecodeCounter(block6);
+	uint32_t decodedBlock18 = srix4kDecode(block18);
+	uint32_t decodedBlock19 = srix4kDecode(block19);
+	uint32_t doubleBlock = (decodedBlock18 << 16 | decodedBlock19) + 1;
+
+	uint32_t result = (uid32 * doubleBlock * counter) & MASK;
+	PrintAndLog("Magic bytes | %08X", result);
+	return result;
+}
+int srix4kValid(const char *Cmd){
+
+	uint64_t uid = 0xD00202501A4532F9;
+	uint32_t block6 = 0xFFFFFFFF;
+	uint32_t block18 = 0xC04F42C5;
+	uint32_t block19 = 0xC1484807;
+	uint32_t block21 = 0xD1BCABA4;
+  
+	uint32_t test_b18 = 0x00313918;
+	uint32_t test_b18_enc = srix4kEncode(test_b18);
+	//uint32_t test_b18_dec = srix4kDecode(test_b18_enc);
+	PrintAndLog("ENCODE & CHECKSUM |  %08X -> %08X (%s)", test_b18, test_b18_enc , "");
+	
+	uint32_t magic = srix4kGetMagicbytes(uid, block6, block18, block19);
+	PrintAndLog("BLOCK 21 |  %08X -> %08X (no XOR)", block21, magic ^ block21);
 	return 0;
 }
-int srix4kValid(){
+
+int CmdteaSelfTest(const char *Cmd){
+	
+	uint8_t v[8], v_le[8];
+	memset(v, 0x00, sizeof(v));
+	memset(v_le, 0x00, sizeof(v_le));
+	uint8_t* v_ptr = v_le;
+
+	uint8_t cmdlen = strlen(Cmd);
+	cmdlen = ( sizeof(v)<<2 < cmdlen ) ? sizeof(v)<<2 : cmdlen;
+	
+	if ( param_gethex(Cmd, 0, v, cmdlen) > 0 ){
+		PrintAndLog("can't read hex chars, uneven? :: %u", cmdlen);
+		return 1;
+	}
+	
+	SwapEndian64ex(v , 8, 4, v_ptr);
+	
+
+	
+	PrintAndLog("Modified Burtle");
+	prng_ctx ctx; // = { 0, 0, 0, 0 };
+	uint32_t num = bytes_to_num(v+1, 4);
+	burtle_init_mod( &ctx, num);
+	PrintAndLog("V   : %X", num);
+	PrintAndLog("BURT: %X", burtle_get_mod( &ctx));
+	PrintAndLog("SIMP: %X", GetSimplePrng(num));
+
+	uint8_t calc[16];
+	
+	for ( uint8_t i=0; i<8; ++i){
+		if ( i%2 == 0) {
+			calc[0] += v[i];
+			calc[1] += NibbleHigh( v[i]);
+			calc[2] += NibbleLow( v[i]);			
+			calc[3] ^= v[i];
+			calc[4] ^= NibbleHigh(v[i]);
+			calc[5] ^= NibbleLow( v[i]);
+		}			
+		else {
+			calc[6] += v[i];
+			calc[7] += NibbleHigh( v[i]);
+			calc[8] += NibbleLow( v[i]);			
+			calc[9] ^= v[i];
+			calc[10] ^= NibbleHigh(v[i]);
+			calc[11] ^= NibbleLow( v[i]);
+		}		
+	}
+	for ( uint8_t i=0; i<4; ++i) calc[12] += v[i];
+	for ( uint8_t i=1; i<5; ++i) calc[13] += v[i];
+	for ( uint8_t i=2; i<6; ++i) calc[14] += v[i];
+	for ( uint8_t i=3; i<7; ++i) calc[15] += v[i];
+
+	PrintAndLog("%s ", sprint_hex(calc, 16) );
 	return 0;
 }
 
@@ -770,7 +855,8 @@ static command_t CommandTable[] =
 	{"srix4kread",  CmdSrix4kRead,  0, "Read contents of a SRIX4K tag"},
 	{"sriwrite",    CmdSriWrite,    0, "Write data to a SRI512 | SRIX4K tag"},
 	{"raw",         CmdHF14BCmdRaw, 0, "Send raw hex data to tag"},
-	//{"calcSrix4",   srix4kchksum, 1, "a srix4k checksum test"},
+	//{"valid",   	srix4kValid,	1, "srix4k checksum test"},
+	{"valid",   	CmdteaSelfTest,	1, "tea test"},
 	{NULL, NULL, 0, NULL}
 };
 
