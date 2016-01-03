@@ -30,7 +30,7 @@
 // uint32_t test_state_even = 0;
 
 #define CONFIDENCE_THRESHOLD	0.95		// Collect nonces until we are certain enough that the following brute force is successfull
-#define GOOD_BYTES_REQUIRED		60
+#define GOOD_BYTES_REQUIRED		20
 
 
 static const float p_K[257] = {		// the probability that a random nonce has a Sum Property == K 
@@ -83,6 +83,7 @@ typedef struct noncelist {
 	float Sum8_prob;
 	bool updated;
 	noncelistentry_t *first;
+	float score1, score2;
 } noncelist_t;
 
 
@@ -266,6 +267,33 @@ static float sum_probability(uint16_t K, uint16_t n, uint16_t k)
 }
 
 		
+
+	
+static inline uint_fast8_t common_bits(uint_fast8_t bytes_diff) 
+{
+	static const uint_fast8_t common_bits_LUT[256] = {
+		8, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		4, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		5, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		4, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		6, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		4, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		5, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		4, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		7, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		4, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		5, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		4, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		6, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		4, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		5, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
+		4, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0
+	};
+
+	return common_bits_LUT[bytes_diff];
+}
+
+
 static void Tests()
 {
 	printf("Tests: Partial Statelist sizes\n");
@@ -397,11 +425,18 @@ static void Tests()
 	printf("\nTests: Best %d first bytes:\n", MAX_BEST_BYTES);
 	for (uint16_t i = 0; i < MAX_BEST_BYTES; i++) {
 		uint8_t best_byte = best_first_bytes[i];
-		uint16_t best_num = nonces[best_byte].num;
-		uint16_t best_sum = nonces[best_byte].Sum;
-		uint16_t best_sum8 = nonces[best_byte].Sum8_guess;
-		float confidence = nonces[best_byte].Sum8_prob;
-		printf("#%03d Byte: %02x, n = %2d, k = %2d, Sum(a8): %3d, Confidence: %2.1f%%\n", i, best_byte, best_num, best_sum, best_sum8, confidence*100);
+		printf("#%03d Byte: %02x, n = %2d, k = %2d, Sum(a8): %3d, Confidence: %2.1f%%, Bitflip: %c%c\n", 
+		//printf("#%03d Byte: %02x, n = %2d, k = %2d, Sum(a8): %3d, Confidence: %2.1f%%, Bitflip: %c%c, score1: %f, score2: %f\n", 
+			i, best_byte, 
+			nonces[best_byte].num,
+			nonces[best_byte].Sum,
+			nonces[best_byte].Sum8_guess,
+			nonces[best_byte].Sum8_prob * 100,
+			nonces[best_byte].BitFlip[ODD_STATE]?'o':' ', 
+			nonces[best_byte].BitFlip[EVEN_STATE]?'e':' '
+			//nonces[best_byte].score1,
+			//nonces[best_byte].score2
+			);
 	}
 	
 	// printf("\nTests: parity performance\n");
@@ -419,18 +454,7 @@ static void Tests()
 	// }
 	// printf("parsum newparity = %d, time = %1.5fsec\n", par_sum, (float)(clock() - time1p)/CLOCKS_PER_SEC);
 
-}
 
-
-static int common_bits(uint8_t byte1, uint8_t byte2) 
-{
-	uint8_t common_bits = byte1 ^ byte2;
-	uint8_t j = 0;
-	while ((common_bits & 0x01) == 0 && j < 8) {
-		j++;
-		common_bits >>= 1;
-	}
-	return j;
 }
 
 
@@ -485,11 +509,12 @@ static void sort_best_first_bytes(void)
 		if (nonces[best_first_bytes[i]].BitFlip[ODD_STATE] || nonces[best_first_bytes[i]].BitFlip[EVEN_STATE]) {
 			bitflip_prob = 0.09375;
 		}
+		nonces[best_first_bytes[i]].score1 = p_K[sum8] * bitflip_prob;
 		if (p_K[sum8] * bitflip_prob <= min_p_K) {
 			min_p_K = p_K[sum8] * bitflip_prob;
-			best_first_byte = i;
 		}
 	}
+
 
 	// use number of commmon bits as a tie breaker
 	uint16_t max_common_bits = 0;
@@ -501,8 +526,9 @@ static void sort_best_first_bytes(void)
 		if (p_K[nonces[best_first_bytes[i]].Sum8_guess] * bitflip_prob == min_p_K) {
 			uint16_t sum_common_bits = 0;
 			for (uint16_t j = 0; j < num_good_nonces; j++) {
-				sum_common_bits += common_bits(best_first_bytes[i],best_first_bytes[j]);
+				sum_common_bits += common_bits(best_first_bytes[i] ^ best_first_bytes[j]);
 			}
+			nonces[best_first_bytes[i]].score2 = sum_common_bits;
 			if (sum_common_bits > max_common_bits) {
 				max_common_bits = sum_common_bits;
 				best_first_byte = i;
@@ -510,7 +536,7 @@ static void sort_best_first_bytes(void)
 		}
 	}	
 
-	// swap best possible first bytes to the pole position
+	// swap best possible first byte to the pole position
 	uint16_t temp = best_first_bytes[0];
 	best_first_bytes[0] = best_first_bytes[best_first_byte];
 	best_first_bytes[best_first_byte] = temp;
@@ -596,12 +622,36 @@ static int read_nonce_file(void)
 }
 
 
+static void Check_for_FilterFlipProperties(void)
+{
+	printf("Checking for Filter Flip Properties...\n");
+
+	for (uint16_t i = 0; i < 256; i++) {
+		nonces[i].BitFlip[ODD_STATE] = false;
+		nonces[i].BitFlip[EVEN_STATE] = false;
+	}
+	
+	for (uint16_t i = 0; i < 256; i++) {
+		uint8_t parity1 = (nonces[i].first->par_enc) >> 3;				// parity of first byte
+		uint8_t parity2_odd = (nonces[i^0x80].first->par_enc) >> 3;  	// XOR 0x80 = last bit flipped
+		uint8_t parity2_even = (nonces[i^0x40].first->par_enc) >> 3;	// XOR 0x40 = second last bit flipped
+		
+		if (parity1 == parity2_odd) {				// has Bit Flip Property for odd bits
+			nonces[i].BitFlip[ODD_STATE] = true;
+		} else if (parity1 == parity2_even) {		// has Bit Flip Property for even bits
+			nonces[i].BitFlip[EVEN_STATE] = true;
+		}
+	}
+}
+
+
 static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, bool nonce_file_write, bool slow)
 {
 	clock_t time1 = clock();
 	bool initialize = true;
 	bool field_off = false;
 	bool finished = false;
+	bool filter_flip_checked = false;
 	uint32_t flags = 0;
 	uint8_t write_buf[9];
 	uint32_t total_num_nonces = 0;
@@ -673,6 +723,10 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 		
 		if (first_byte_num == 256 ) {
 			// printf("first_byte_num = %d, first_byte_Sum = %d\n", first_byte_num, first_byte_Sum);
+			if (!filter_flip_checked) {
+				Check_for_FilterFlipProperties();
+				filter_flip_checked = true;
+			}
 			num_good_first_bytes = estimate_second_byte_sum();
 			if (total_num_nonces > next_fivehundred) {
 				next_fivehundred = (total_num_nonces/500+1) * 500;
@@ -785,71 +839,66 @@ static void init_BitFlip_statelist(void)
 }
 
 		
-static void add_state(statelist_t *sl, uint32_t state, odd_even_t odd_even)
-{
-	uint32_t *p;
-
-	p = sl->states[odd_even];
-	p += sl->len[odd_even];
-	*p = state;
-	sl->len[odd_even]++;
-}
-
-
-static uint32_t *find_first_state(uint32_t state, uint32_t mask, partial_indexed_statelist_t *sl, odd_even_t odd_even)
+static inline uint32_t *find_first_state(uint32_t state, uint32_t mask, partial_indexed_statelist_t *sl, odd_even_t odd_even)
 {
 	uint32_t *p = sl->index[odd_even][(state & mask) >> (20-STATELIST_INDEX_WIDTH)];		// first Bits as index
 
 	if (p == NULL) return NULL;
-	while ((*p & mask) < (state & mask)) p++;
+	while (*p < (state & mask)) p++;
 	if (*p == 0xffffffff) return NULL;					// reached end of list, no match
 	if ((*p & mask) == (state & mask)) return p;		// found a match.
 	return NULL;										// no match
 } 
 
 
-static bool remaining_bits_match(uint8_t num_common_bits, uint8_t byte1, uint8_t byte2, uint32_t state1, uint32_t state2, odd_even_t odd_even)
+static inline bool /*__attribute__((always_inline))*/ invariant_holds(uint_fast8_t byte_diff, uint_fast32_t state1, uint_fast32_t state2, uint_fast8_t bit, uint_fast8_t state_bit)
 {
-	uint8_t j = num_common_bits;
-	if (odd_even == ODD_STATE) {
-		j |= 0x01;			// consider the next odd bit
+	uint_fast8_t j_1_bit_mask = 0x01 << (bit-1);
+	uint_fast8_t bit_diff = byte_diff & j_1_bit_mask;							 			// difference of (j-1)th bit
+	uint_fast8_t filter_diff = filter(state1 >> (4-state_bit)) ^ filter(state2 >> (4-state_bit));	// difference in filter function
+	uint_fast8_t mask_y12_y13 = 0xc0 >> state_bit;
+	uint_fast8_t state_bits_diff = (state1 ^ state2) & mask_y12_y13;						// difference in state bits 12 and 13
+	uint_fast8_t all_diff = evenparity8(bit_diff ^ state_bits_diff ^ filter_diff);			// use parity function to XOR all bits
+	return !all_diff;
+}
+
+
+static inline bool /*__attribute__((always_inline))*/ invalid_state(uint_fast8_t byte_diff, uint_fast32_t state1, uint_fast32_t state2, uint_fast8_t bit, uint_fast8_t state_bit)
+{
+	uint_fast8_t j_bit_mask = 0x01 << bit;
+	uint_fast8_t bit_diff = byte_diff & j_bit_mask;											// difference of jth bit
+	uint_fast8_t mask_y13_y16 = 0x48 >> state_bit;
+	uint_fast8_t state_bits_diff = (state1 ^ state2) & mask_y13_y16;						// difference in state bits 13 and 16
+	uint_fast8_t all_diff = evenparity8(bit_diff ^ state_bits_diff);						// use parity function to XOR all bits
+	return all_diff;
+}
+
+
+static inline bool remaining_bits_match(uint_fast8_t num_common_bits, uint_fast8_t byte_diff, uint_fast32_t state1, uint_fast32_t state2, odd_even_t odd_even)
+{
+	if (odd_even) {
+		// odd bits
+		switch (num_common_bits) {
+			case 0: if (!invariant_holds(byte_diff, state1, state2, 1, 0)) return true;
+			case 1: if (invalid_state(byte_diff, state1, state2, 1, 0)) return false;
+			case 2: if (!invariant_holds(byte_diff, state1, state2, 3, 1)) return true;
+			case 3: if (invalid_state(byte_diff, state1, state2, 3, 1)) return false;
+			case 4: if (!invariant_holds(byte_diff, state1, state2, 5, 2)) return true;
+			case 5: if (invalid_state(byte_diff, state1, state2, 5, 2)) return false;
+			case 6: if (!invariant_holds(byte_diff, state1, state2, 7, 3)) return true;
+			case 7: if (invalid_state(byte_diff, state1, state2, 7, 3)) return false;
+		}
 	} else {
-		j = (j+1) & 0xfe;	// consider the next even bit
-	}
-		
-	while (j <= 7) {
-		if (j != num_common_bits) {			// this is not the first differing bit, we need first to check if the invariant still holds
-			uint32_t bit_diff = ((byte1 ^ byte2) << (17-j)) & 0x00010000;					// difference of (j-1)th bit -> bit 16
-			uint32_t filter_diff = filter(state1 >> (4-j/2)) ^ filter(state2 >> (4-j/2));	// difference in filter function -> bit 0
-			uint32_t mask_y12_y13 = 0x000000c0 >> (j/2);
-			uint32_t state_diff = (state1 ^ state2) & mask_y12_y13;							// difference in state bits 12 and 13 -> bits 6/7 ... 3/4
-			uint32_t all_diff = parity(bit_diff | state_diff | filter_diff);				// use parity function to XOR all 4 bits
-			if (all_diff) {			// invariant doesn't hold any more. Accept this state.
-				// if ((odd_even == ODD_STATE && state1 == test_state_odd)
-					// || (odd_even == EVEN_STATE && state1 == test_state_even)) {
-					// printf("remaining_bits_match(): %s test state: Invariant doesn't hold. Bytes = %02x, %02x, Common Bits=%d, Testing Bit %d, State1=0x%08x, State2=0x%08x\n", 
-						// odd_even==ODD_STATE?"odd":"even", byte1, byte2, num_common_bits, j, state1, state2);
-				// }
-				return true;
-			}
+		// even bits
+		switch (num_common_bits) {	
+			case 0: if (invalid_state(byte_diff, state1, state2, 0, 0)) return false;
+			case 1: if (!invariant_holds(byte_diff, state1, state2, 2, 1)) return true;
+			case 2: if (invalid_state(byte_diff, state1, state2, 2, 1)) return false;
+			case 3: if (!invariant_holds(byte_diff, state1, state2, 4, 2)) return true;
+			case 4: if (invalid_state(byte_diff, state1, state2, 4, 2)) return false;
+			case 5: if (!invariant_holds(byte_diff, state1, state2, 6, 3)) return true;
+			case 6: if (invalid_state(byte_diff, state1, state2, 6, 3)) return false;
 		}
-		// check for validity of state candidate
-		uint32_t bit_diff = ((byte1 ^ byte2) << (16-j)) & 0x00010000;						// difference of jth bit -> bit 16
-		uint32_t mask_y13_y16 = 0x00000048 >> (j/2);
-		uint32_t state_diff = (state1 ^ state2) & mask_y13_y16;								// difference in state bits 13 and 16 -> bits 3/6 ... 0/3
-		uint32_t all_diff = parity(bit_diff | state_diff);									// use parity function to XOR all 3 bits
-		if (all_diff) {				// not a valid state
-			// if ((odd_even == ODD_STATE && state1 == test_state_odd)
-				// || (odd_even == EVEN_STATE && state1 == test_state_even)) {
-				// printf("remaining_bits_match(): %s test state: Invalid state. Bytes = %02x, %02x, Common Bits=%d, Testing Bit %d, State1=0x%08x, State2=0x%08x\n", 
-					// odd_even==ODD_STATE?"odd":"even", byte1, byte2, num_common_bits, j, state1, state2);
-				// printf("                        byte1^byte2: 0x%02x, bit_diff: 0x%08x, state_diff: 0x%08x, all_diff: 0x%08x\n", 
-					// byte1^byte2, bit_diff, state_diff, all_diff);
-			// }
-			return false;
-		}
-		// continue checking for the next bit
-		j += 2;
 	} 
 	
 	return true;					// valid state
@@ -860,25 +909,13 @@ static bool all_other_first_bytes_match(uint32_t state, odd_even_t odd_even)
 {
 	for (uint16_t i = 1; i < num_good_first_bytes; i++) {
 		uint16_t sum_a8 = nonces[best_first_bytes[i]].Sum8_guess;
-		uint8_t j = 0; // number of common bits
-		uint8_t common_bits = best_first_bytes[0] ^ best_first_bytes[i];
+		uint_fast8_t bytes_diff = best_first_bytes[0] ^ best_first_bytes[i];
+		uint_fast8_t j = common_bits(bytes_diff);
 		uint32_t mask = 0xfffffff0;
 		if (odd_even == ODD_STATE) {
-			while ((common_bits & 0x01) == 0 && j < 8) {
-				j++;
-				common_bits >>= 1;
-				if (j % 2 == 0) {		// the odd bits
-					mask >>= 1;
-				}
-			}
+			mask >>= j/2;
 		} else {
-			while ((common_bits & 0x01) == 0 && j < 8) {
-				j++;
-				common_bits >>= 1;
-				if (j % 2 == 1) {		// the even bits
-					mask >>= 1;
-				}
-			}
+			mask >>= (j+1)/2;
 		}
 		mask &= 0x000fffff;
 		//printf("bytes 0x%02x and 0x%02x: %d common bits, mask = 0x%08x, state = 0x%08x, sum_a8 = %d", best_first_bytes[0], best_first_bytes[i], j, mask, state, sum_a8);
@@ -891,7 +928,7 @@ static bool all_other_first_bytes_match(uint32_t state, odd_even_t odd_even)
 					uint32_t *p = find_first_state(state, mask, &partial_statelist[part_sum_a8], odd_even);
 					if (p != NULL) {
 						while ((state & mask) == (*p & mask) && (*p != 0xffffffff)) {
-							if (remaining_bits_match(j, best_first_bytes[0], best_first_bytes[i], state, (state&0x00fffff0) | *p, odd_even)) {
+							if (remaining_bits_match(j, bytes_diff, state, (state&0x00fffff0) | *p, odd_even)) {
 								found_match = true;
 								// if ((odd_even == ODD_STATE && state == test_state_odd)
 									// || (odd_even == EVEN_STATE && state == test_state_even)) {
@@ -936,25 +973,13 @@ static bool all_bit_flips_match(uint32_t state, odd_even_t odd_even)
 {
 	for (uint16_t i = 0; i < 256; i++) {
 		if (nonces[i].BitFlip[odd_even] && i != best_first_bytes[0]) {
-			uint8_t j = 0; // number of common bits
-			uint8_t common_bits = best_first_bytes[0] ^ i;
+			uint_fast8_t bytes_diff = best_first_bytes[0] ^ i;
+			uint_fast8_t j = common_bits(bytes_diff);
 			uint32_t mask = 0xfffffff0;
 			if (odd_even == ODD_STATE) {
-				while ((common_bits & 0x01) == 0 && j < 8) {
-					j++;
-					common_bits >>= 1;
-					if (j % 2 == 0) {		// the odd bits
-						mask >>= 1;
-					}
-				}
+				mask >>= j/2;
 			} else {
-				while ((common_bits & 0x01) == 0 && j < 8) {
-					j++;
-					common_bits >>= 1;
-					if (j % 2 == 1) {		// the even bits
-						mask >>= 1;
-					}
-				}
+				mask >>= (j+1)/2;
 			}
 			mask &= 0x000fffff;
 			//printf("bytes 0x%02x and 0x%02x: %d common bits, mask = 0x%08x, state = 0x%08x, sum_a8 = %d", best_first_bytes[0], best_first_bytes[i], j, mask, state, sum_a8);
@@ -962,7 +987,7 @@ static bool all_bit_flips_match(uint32_t state, odd_even_t odd_even)
 			uint32_t *p = find_first_state(state, mask, &statelist_bitflip, 0);
 			if (p != NULL) {
 				while ((state & mask) == (*p & mask) && (*p != 0xffffffff)) {
-					if (remaining_bits_match(j, best_first_bytes[0], i, state, (state&0x00fffff0) | *p, odd_even)) {
+					if (remaining_bits_match(j, bytes_diff, state, (state&0x00fffff0) | *p, odd_even)) {
 						found_match = true;
 						// if ((odd_even == ODD_STATE && state == test_state_odd)
 							// || (odd_even == EVEN_STATE && state == test_state_even)) {
@@ -1001,27 +1026,54 @@ static bool all_bit_flips_match(uint32_t state, odd_even_t odd_even)
 }
 
 
-#define INVALID_BIT (1<<30)
-#define SET_INVALID(pstate) (*(pstate) |= INVALID_BIT)
-#define IS_INVALID(state) (state & INVALID_BIT)
+static struct sl_cache_entry {
+	uint32_t *sl;
+	uint32_t len;
+	} sl_cache[17][17][2];
+
+
+static void init_statelist_cache(void)
+{
+
+	for (uint16_t i = 0; i < 17; i+=2) {
+		for (uint16_t j = 0; j < 17; j+=2) {
+			for (uint16_t k = 0; k < 2; k++) {
+				sl_cache[i][j][k].sl = NULL;
+				sl_cache[i][j][k].len = 0;
+			}
+		}
+	}		
+}
+
 
 static int add_matching_states(statelist_t *candidates, uint16_t part_sum_a0, uint16_t part_sum_a8, odd_even_t odd_even)
 {
 	uint32_t worstcase_size = 1<<20;
+	
+	// check cache for existing results
+	if (sl_cache[part_sum_a0][part_sum_a8][odd_even].sl != NULL) {
+		candidates->states[odd_even] = sl_cache[part_sum_a0][part_sum_a8][odd_even].sl;
+		candidates->len[odd_even] = sl_cache[part_sum_a0][part_sum_a8][odd_even].len;
+		return 0;
+	}
 	
 	candidates->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
 	if (candidates->states[odd_even] == NULL) {
 		PrintAndLog("Out of memory error.\n");
 		return 4;
 	}
+	uint32_t *add_p = candidates->states[odd_even]; 
 	for (uint32_t *p1 = partial_statelist[part_sum_a0].states[odd_even]; *p1 != 0xffffffff; p1++) {
 		uint32_t search_mask = 0x000ffff0;
 		uint32_t *p2 = find_first_state((*p1 << 4), search_mask, &partial_statelist[part_sum_a8], odd_even);
 		if (p2 != NULL) {
 			while (((*p1 << 4) & search_mask) == (*p2 & search_mask) && *p2 != 0xffffffff) {
+				if ((nonces[best_first_bytes[0]].BitFlip[odd_even] && find_first_state((*p1 << 4) | *p2, 0x000fffff, &statelist_bitflip, 0))
+					|| !nonces[best_first_bytes[0]].BitFlip[odd_even]) {
 				if (all_other_first_bytes_match((*p1 << 4) | *p2, odd_even)) {
 					if (all_bit_flips_match((*p1 << 4) | *p2, odd_even)) { 
-					add_state(candidates, (*p1 << 4) | *p2, odd_even);
+							*add_p++ = (*p1 << 4) | *p2;
+						}
 				}
 				}
 				p2++;
@@ -1029,12 +1081,14 @@ static int add_matching_states(statelist_t *candidates, uint16_t part_sum_a0, ui
 		}
 	}
 
-	// set end of list marker
-	uint32_t *p = candidates->states[odd_even];
-	p += candidates->len[odd_even];
-	*p = 0xffffffff;
+	// set end of list marker and len
+	*add_p = 0xffffffff; 
+	candidates->len[odd_even] = add_p - candidates->states[odd_even];
 
 	candidates->states[odd_even] = realloc(candidates->states[odd_even], sizeof(uint32_t) * (candidates->len[odd_even] + 1));
+
+	sl_cache[part_sum_a0][part_sum_a8][odd_even].sl = candidates->states[odd_even];
+	sl_cache[part_sum_a0][part_sum_a8][odd_even].len = candidates->len[odd_even];
 
 	return 0;
 }
@@ -1121,6 +1175,8 @@ static void generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 	}
 	printf("Number of possible keys with Sum(a0) = %d: %lld (2^%1.1f)\n", sum_a0, maximum_states, log(maximum_states)/log(2.0));
 	
+	init_statelist_cache();
+	
 	for (uint16_t p = 0; p <= 16; p += 2) {
 		for (uint16_t q = 0; q <= 16; q += 2) {
 			if (p*(16-q) + (16-p)*q == sum_a0) {
@@ -1130,10 +1186,30 @@ static void generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 					for (uint16_t s = 0; s <= 16; s += 2) {
 						if (r*(16-s) + (16-r)*s == sum_a8) {
 							current_candidates = add_more_candidates(current_candidates);
+							// check for the smallest partial statelist. Try this first - it might give 0 candidates 
+							// and eliminate the need to calculate the other part
+							if (MIN(partial_statelist[p].len[ODD_STATE], partial_statelist[r].len[ODD_STATE]) 
+									< MIN(partial_statelist[q].len[EVEN_STATE], partial_statelist[s].len[EVEN_STATE])) { 
 							add_matching_states(current_candidates, p, r, ODD_STATE);
-							printf("Odd state candidates: %d (2^%0.1f)\n", current_candidates->len[ODD_STATE], log(current_candidates->len[ODD_STATE])/log(2)); 
+								if(current_candidates->len[ODD_STATE]) {
 							add_matching_states(current_candidates, q, s, EVEN_STATE);
-							printf("Even state candidates: %d (2^%0.1f)\n", current_candidates->len[EVEN_STATE], log(current_candidates->len[EVEN_STATE])/log(2)); 
+								} else {
+									current_candidates->len[EVEN_STATE] = 0;
+									uint32_t *p = current_candidates->states[EVEN_STATE] = malloc(sizeof(uint32_t));
+									*p = 0xffffffff;
+								}
+							} else {
+								add_matching_states(current_candidates, q, s, EVEN_STATE);
+								if(current_candidates->len[EVEN_STATE]) {
+									add_matching_states(current_candidates, p, r, ODD_STATE);
+								} else {
+									current_candidates->len[ODD_STATE] = 0;
+									uint32_t *p = current_candidates->states[ODD_STATE] = malloc(sizeof(uint32_t));
+									*p = 0xffffffff;
+								}
+							}
+							printf("Odd  state candidates: %6d (2^%0.1f)\n", current_candidates->len[ODD_STATE], log(current_candidates->len[ODD_STATE])/log(2)); 
+							printf("Even state candidates: %6d (2^%0.1f)\n", current_candidates->len[EVEN_STATE], log(current_candidates->len[EVEN_STATE])/log(2)); 
 						}
 					}
 				}
@@ -1148,29 +1224,6 @@ static void generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 	}
 	printf("Number of remaining possible keys: %lld (2^%1.1f)\n", maximum_states, log(maximum_states)/log(2.0));
 
-}
-
-
-static void Check_for_FilterFlipProperties(void)
-{
-	printf("Checking for Filter Flip Properties...\n");
-
-	for (uint16_t i = 0; i < 256; i++) {
-		nonces[i].BitFlip[ODD_STATE] = false;
-		nonces[i].BitFlip[EVEN_STATE] = false;
-	}
-	
-	for (uint16_t i = 0; i < 256; i++) {
-		uint8_t parity1 = (nonces[i].first->par_enc) >> 3;				// parity of first byte
-		uint8_t parity2_odd = (nonces[i^0x80].first->par_enc) >> 3;  	// XOR 0x80 = last bit flipped
-		uint8_t parity2_even = (nonces[i^0x40].first->par_enc) >> 3;	// XOR 0x40 = second last bit flipped
-		
-		if (parity1 == parity2_odd) {				// has Bit Flip Property for odd bits
-			nonces[i].BitFlip[ODD_STATE] = true;
-		} else if (parity1 == parity2_even) {		// has Bit Flip Property for even bits
-			nonces[i].BitFlip[EVEN_STATE] = true;
-		}
-	}
 }
 
 
@@ -1217,6 +1270,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 		if (read_nonce_file() != 0) {
 			return 3;
 		}
+		Check_for_FilterFlipProperties();
 		num_good_first_bytes = MIN(estimate_second_byte_sum(), GOOD_BYTES_REQUIRED);
 	} else {					// acquire nonces.
 		uint16_t is_OK = acquire_nonces(blockNo, keyType, key, trgBlockNo, trgKeyType, nonce_file_write, slow);
@@ -1225,7 +1279,6 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 		}
 	}
 
-	Check_for_FilterFlipProperties();
 
 	Tests();
 
@@ -1244,7 +1297,9 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 		// best_first_bytes[9]  );
 	PrintAndLog("Number of first bytes with confidence > %2.1f%%: %d", CONFIDENCE_THRESHOLD*100.0, num_good_first_bytes);
 
+	time_t start_time = clock();
 	generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
+	PrintAndLog("Time for generating key candidates list: %1.0f seconds", (float)(clock() - start_time)/CLOCKS_PER_SEC);
 	
 	brute_force();
 	

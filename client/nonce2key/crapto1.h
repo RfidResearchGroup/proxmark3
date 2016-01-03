@@ -80,6 +80,12 @@ static inline int parity(uint32_t x)
 	return x;
 #endif
 }
+
+#if !defined LOWMEM && defined __GNUC__
+extern uint8_t filterlut[1 << 20];
+#define filter(x) (filterlut[(x) & 0xfffff])
+#define filter_unsafe(x) (filterlut[x])
+#else
 static inline int filter(uint32_t const x)
 {
 	uint32_t f;
@@ -91,6 +97,9 @@ static inline int filter(uint32_t const x)
 	f |= 0x0d938 >> (x >> 16 & 0xf) &  1;
 	return BIT(0xEC57E80A, f);
 }
+#define filter_unsafe(x) (filter(x))
+#endif
+
 #ifdef __cplusplus
 }
 #endif

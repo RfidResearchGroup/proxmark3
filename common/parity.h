@@ -13,21 +13,24 @@
 
 extern const uint8_t OddByteParity[256];
 
-static inline uint8_t oddparity8(uint8_t bt)
-{
-	return OddByteParity[bt];
-}
+#define oddparity8(x) (OddByteParity[(x)])
 
 
 extern const uint8_t EvenByteParity[256];
 
-static inline uint8_t evenparity8(const uint8_t bt)
-{
-	return EvenByteParity[bt];
+static inline bool /*__attribute__((always_inline))*/ evenparity8(const uint8_t x) {
+#if !defined __i386__ || !defined __GNUC__
+	return EvenByteParity[x];
+#else
+	uint8_t y;
+        __asm(	"testb $255, %1\n"
+                "setpo %0\n" : "=r"(y) : "r"(x): );
+	return y;
+#endif
 }
 
 
-static inline uint32_t evenparity32(uint32_t x) 
+static inline uint8_t evenparity32(uint32_t x) 
 {
 	x ^= x >> 16;
 	x ^= x >> 8;

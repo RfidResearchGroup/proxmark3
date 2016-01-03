@@ -21,14 +21,20 @@
 #include <stdlib.h>
 
 #if !defined LOWMEM && defined __GNUC__
-static uint8_t filterlut[1 << 20];
+uint8_t filterlut[1 << 20];
 static void __attribute__((constructor)) fill_lut()
 {
-        uint32_t i;
-        for(i = 0; i < 1 << 20; ++i)
-                filterlut[i] = filter(i);
+	uint32_t x;
+	uint32_t f;
+	for(x = 0; x < 1 << 20; ++x) {
+		f  = 0xf22c0 >> (x       & 0xf) & 16;
+		f |= 0x6c9c0 >> (x >>  4 & 0xf) &  8;
+		f |= 0x3c8b0 >> (x >>  8 & 0xf) &  4;
+		f |= 0x1e458 >> (x >> 12 & 0xf) &  2;
+		f |= 0x0d938 >> (x >> 16 & 0xf) &  1;
+		filterlut[x] = BIT(0xEC57E80A, f);
+	}
 }
-#define filter(x) (filterlut[(x) & 0xfffff])
 #endif
 
 
