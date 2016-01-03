@@ -59,8 +59,7 @@ int CmdLFHitagList(const char *Cmd)
 	char filename[FILE_PATH_SIZE]  = { 0x00 };
 	FILE* pf = NULL;
   	
-	if (len > FILE_PATH_SIZE) 
-		len = FILE_PATH_SIZE;
+	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
 	memcpy(filename, Cmd, len);
    
 	if (strlen(filename) > 0) {
@@ -151,21 +150,23 @@ int CmdLFHitagList(const char *Cmd)
 }
 
 int CmdLFHitagSnoop(const char *Cmd) {
-  UsbCommand c = {CMD_SNOOP_HITAG};
-  SendCommand(&c);
-  return 0;
+	UsbCommand c = {CMD_SNOOP_HITAG};
+	clearCommandBuffer();
+	SendCommand(&c);
+	return 0;
 }
 
 int CmdLFHitagSim(const char *Cmd) {
     
-  UsbCommand c = {CMD_SIMULATE_HITAG};
+	UsbCommand c = {CMD_SIMULATE_HITAG};
 	char filename[FILE_PATH_SIZE] = { 0x00 };
 	FILE* pf;
 	bool tag_mem_supplied;
+	
 	int len = strlen(Cmd);
 	if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
 	memcpy(filename, Cmd, len);
-	
+
 	if (strlen(filename) > 0) {
 		if ((pf = fopen(filename,"rb+")) == NULL) {
 			PrintAndLog("Error: Could not open file [%s]",filename);
@@ -173,26 +174,26 @@ int CmdLFHitagSim(const char *Cmd) {
 		}
 		tag_mem_supplied = true;
 		if (fread(c.d.asBytes,48,1,pf) == 0) {
-      PrintAndLog("Error: File reading error");
-      fclose(pf);
+			PrintAndLog("Error: File reading error");
+			fclose(pf);
 			return 1;
-    }
+		}
 		fclose(pf);
 	} else {
 		tag_mem_supplied = false;
 	}
-	
+
 	// Does the tag comes with memory
 	c.arg[0] = (uint32_t)tag_mem_supplied;
 
-  SendCommand(&c);
-  return 0;
+	clearCommandBuffer();
+	SendCommand(&c);
+	return 0;
 }
 
 int CmdLFHitagReader(const char *Cmd) {
-//  UsbCommand c = {CMD_READER_HITAG};
 	
-//	param_get32ex(Cmd,1,0,16);
+
 	UsbCommand c = {CMD_READER_HITAG};//, {param_get32ex(Cmd,0,0,10),param_get32ex(Cmd,1,0,16),param_get32ex(Cmd,2,0,16),param_get32ex(Cmd,3,0,16)}};
 	hitag_data* htd = (hitag_data*)c.d.asBytes;
 	hitag_function htf = param_get32ex(Cmd,0,0,10);
@@ -207,7 +208,6 @@ int CmdLFHitagReader(const char *Cmd) {
 		} break;
 		case RHT2F_CRYPTO: {
 			num_to_bytes(param_get64ex(Cmd,1,0,16),6,htd->crypto.key);
-//			num_to_bytes(param_get32ex(Cmd,2,0,16),4,htd->auth.NrAr+4);
 		} break;
 		case RHT2F_TEST_AUTH_ATTEMPTS: {
 			// No additional parameters needed
@@ -229,52 +229,51 @@ int CmdLFHitagReader(const char *Cmd) {
 	// Copy the hitag2 function into the first argument
 	c.arg[0] = htf;
 
-  // Send the command to the proxmark
-  SendCommand(&c);
-  
-  UsbCommand resp;
-  WaitForResponse(CMD_ACK,&resp);
-  
-  // Check the return status, stored in the first argument
-  if (resp.arg[0] == false) return 1;
-    
-  uint32_t id = bytes_to_num(resp.d.asBytes,4);
-  char filename[256];
-  FILE* pf = NULL;
+	clearCommandBuffer();
+	// Send the command to the proxmark
+	SendCommand(&c);
 
-  sprintf(filename,"%08x_%04x.ht2",id,(rand() & 0xffff));
-  if ((pf = fopen(filename,"wb")) == NULL) {
-    PrintAndLog("Error: Could not open file [%s]",filename);
-    return 1;
-  }
-  
-  // Write the 48 tag memory bytes to file and finalize
-  fwrite(resp.d.asBytes,1,48,pf);
-  fclose(pf);
+	UsbCommand resp;
+	WaitForResponse(CMD_ACK,&resp);
 
-  PrintAndLog("Succesfully saved tag memory to [%s]",filename);
-  
-  return 0;
+	// Check the return status, stored in the first argument
+	if (resp.arg[0] == false) return 1;
+
+	uint32_t id = bytes_to_num(resp.d.asBytes,4);
+	char filename[FILE_PATH_SIZE];
+	FILE* pf = NULL;
+
+	sprintf(filename,"%08x_%04x.ht2",id,(rand() & 0xffff));
+	if ((pf = fopen(filename,"wb")) == NULL) {
+		PrintAndLog("Error: Could not open file [%s]",filename);
+		return 1;
+	}
+
+	// Write the 48 tag memory bytes to file and finalize
+	fwrite(resp.d.asBytes,1,48,pf);
+	fclose(pf);
+
+	PrintAndLog("Succesfully saved tag memory to [%s]",filename);
+	return 0;
 }
 
-static command_t CommandTable[] = 
-{
-  {"help",    CmdHelp,           1, "This help"},
-  {"list",    CmdLFHitagList,    1, "<outfile> List Hitag trace history"},
-  {"reader",  CmdLFHitagReader,  1, "Act like a Hitag Reader"},
-  {"sim",     CmdLFHitagSim,     1, "<infile> Simulate Hitag transponder"},
-  {"snoop",   CmdLFHitagSnoop,   1, "Eavesdrop Hitag communication"},
-		{NULL, NULL, 0, NULL}
+static command_t CommandTable[] = {
+	{"help",    CmdHelp,           1, "This help"},
+	{"list",    CmdLFHitagList,    1, "<outfile> List Hitag trace history"},
+	{"reader",  CmdLFHitagReader,  1, "Act like a Hitag Reader"},
+	{"sim",     CmdLFHitagSim,     1, "<infile> Simulate Hitag transponder"},
+	{"snoop",   CmdLFHitagSnoop,   1, "Eavesdrop Hitag communication"},
+	{NULL, NULL, 0, NULL}
 };
 
 int CmdLFHitag(const char *Cmd)
 {
-  CmdsParse(CommandTable, Cmd);
-  return 0;
+	CmdsParse(CommandTable, Cmd);
+	return 0;
 }
 
 int CmdHelp(const char *Cmd)
 {
-  CmdsHelp(CommandTable);
-  return 0;
+	CmdsHelp(CommandTable);
+	return 0;
 }

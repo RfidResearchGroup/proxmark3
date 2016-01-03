@@ -24,13 +24,10 @@
 #include "BigBuf.h"
 
 static bool bQuiet;
-
 static bool bCrypto;
 static bool bAuthenticating;
 static bool bPwd;
 static bool bSuccessful;
-
-
 
 struct hitag2_tag {
 	uint32_t uid;
@@ -144,6 +141,16 @@ static u64 _hitag2_round (u64 *state)
 	return _f20 (x);
 }
 
+// "MIKRON"             =  O  N  M  I  K  R
+// Key                  = 4F 4E 4D 49 4B 52             - Secret 48-bit key
+// Serial               = 49 43 57 69                   - Serial number of the tag, transmitted in clear
+// Random               = 65 6E 45 72                   - Random IV, transmitted in clear
+//~28~DC~80~31  = D7 23 7F CE                   - Authenticator value = inverted first 4 bytes of the keystream
+
+// The code below must print out "D7 23 7F CE 8C D0 37 A9 57 49 C1 E6 48 00 8A B6".
+// The inverse of the first 4 bytes is sent to the tag to authenticate.
+// The rest is encrypted by XORing it with the subsequent keystream.
+
 static u32 _hitag2_byte (u64 * x)
 {
 	u32					i, c;
@@ -152,16 +159,13 @@ static u32 _hitag2_byte (u64 * x)
 	return c;
 }
 
-static int hitag2_reset(void)
-{
+static int hitag2_reset(void) {
 	tag.state = TAG_STATE_RESET;
 	tag.crypto_active = 0;
 	return 0;
 }
 
-static int hitag2_init(void)
-{
-//	memcpy(&tag, &resetdata, sizeof(tag));
+static int hitag2_init(void) {
 	hitag2_reset();
 	return 0;
 }
@@ -223,16 +227,16 @@ static int hitag2_cipher_transcrypt(uint64_t* cs, byte_t *data, unsigned int byt
 #define HITAG_T_WAIT_2 90 /* T_wresp should be 199..206 */
 #define HITAG_T_WAIT_MAX 300 /* bit more than HITAG_T_WAIT_1 + HITAG_T_WAIT_2 */
 
-#define HITAG_T_TAG_ONE_HALF_PERIOD			10
-#define HITAG_T_TAG_TWO_HALF_PERIOD			25
-#define HITAG_T_TAG_THREE_HALF_PERIOD		41 
-#define HITAG_T_TAG_FOUR_HALF_PERIOD    57 
+#define HITAG_T_TAG_ONE_HALF_PERIOD		10
+#define HITAG_T_TAG_TWO_HALF_PERIOD		25
+#define HITAG_T_TAG_THREE_HALF_PERIOD	41 
+#define HITAG_T_TAG_FOUR_HALF_PERIOD	57 
 
-#define HITAG_T_TAG_HALF_PERIOD					16
-#define HITAG_T_TAG_FULL_PERIOD					32
+#define HITAG_T_TAG_HALF_PERIOD			16
+#define HITAG_T_TAG_FULL_PERIOD			32
 
-#define HITAG_T_TAG_CAPTURE_ONE_HALF		13
-#define HITAG_T_TAG_CAPTURE_TWO_HALF		25
+#define HITAG_T_TAG_CAPTURE_ONE_HALF	13
+#define HITAG_T_TAG_CAPTURE_TWO_HALF	25
 #define HITAG_T_TAG_CAPTURE_THREE_HALF	41 
 #define HITAG_T_TAG_CAPTURE_FOUR_HALF   57 
 
@@ -424,11 +428,10 @@ static void hitag_reader_send_bit(int bit) {
 	if(bit == 0) {
 		// Zero bit: |_-|
 		while(AT91C_BASE_TC0->TC_CV < T0*22);
-		//		SpinDelayUs(16*8);
+
 	} else {
 		// One bit: |_--|
 		while(AT91C_BASE_TC0->TC_CV < T0*28);
-		//		SpinDelayUs(22*8);
 	}
 	LED_A_OFF();
 }
@@ -475,26 +478,26 @@ static bool hitag2_password(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* 
 				*txlen = 32;
 				memcpy(tx,password,4);
 				bPwd = true;
-        memcpy(tag.sectors[blocknr],rx,4);
-        blocknr++;
+				memcpy(tag.sectors[blocknr],rx,4);
+				blocknr++;
 			} else {
 				
-			if(blocknr == 1){
-				//store password in block1, the TAG answers with Block3, but we need the password in memory
-				memcpy(tag.sectors[blocknr],tx,4);
-			}else{
-				memcpy(tag.sectors[blocknr],rx,4);
-			}
-			
-			blocknr++;
-			if (blocknr > 7) {
-			  DbpString("Read succesful!");
-        bSuccessful = true;
-			  return false;
-			}
-			*txlen = 10;
-			tx[0] = 0xc0 | (blocknr << 3) | ((blocknr^7) >> 2);
-			tx[1] = ((blocknr^7) << 6);
+				if(blocknr == 1){
+					//store password in block1, the TAG answers with Block3, but we need the password in memory
+					memcpy(tag.sectors[blocknr],tx,4);
+				} else {
+					memcpy(tag.sectors[blocknr],rx,4);
+				}
+				
+				blocknr++;
+				if (blocknr > 7) {
+					DbpString("Read succesful!");
+					bSuccessful = true;
+					return false;
+				}
+				*txlen = 10;
+				tx[0] = 0xc0 | (blocknr << 3) | ((blocknr^7) >> 2);
+				tx[1] = ((blocknr^7) << 6);
 			}
 		} break;
 			
@@ -544,9 +547,9 @@ static bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* tx
           bCrypto = false;
         }
 			} else {
-        *txlen = 5;
-        memcpy(tx,"\xc0",nbytes(*txlen));
-      }
+				*txlen = 5;
+				memcpy(tx,"\xc0",nbytes(*txlen));
+			}
 		} break;
 			
       // Received UID, crypto tag answer
@@ -560,20 +563,20 @@ static bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* tx
         hitag2_cipher_transcrypt(&cipher_state,tx+4,4,0);
 				*txlen = 64;
 				bCrypto = true;
-        bAuthenticating = true;
+				bAuthenticating = true;
 			} else {
         // Check if we received answer tag (at)
         if (bAuthenticating) {
-          bAuthenticating = false;
+			bAuthenticating = false;
         } else {
-          // Store the received block
-          memcpy(tag.sectors[blocknr],rx,4);
-          blocknr++;
+			// Store the received block
+			memcpy(tag.sectors[blocknr],rx,4);
+			blocknr++;
         }
         if (blocknr > 7) {
-          DbpString("Read succesful!");
-          bSuccessful = true;
-          return false;
+			DbpString("Read succesful!");
+			bSuccessful = true;
+			return false;
         }
         *txlen = 10;
         tx[0] = 0xc0 | (blocknr << 3) | ((blocknr^7) >> 2);
@@ -589,11 +592,11 @@ static bool hitag2_crypto(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* tx
 	}
 	
   
-  if(bCrypto) {
-    // We have to return now to avoid double encryption
-    if (!bAuthenticating) {
-      hitag2_cipher_transcrypt(&cipher_state,tx,*txlen/8,*txlen%8);
-    }
+	if(bCrypto) {
+		// We have to return now to avoid double encryption
+		if (!bAuthenticating) {
+		  hitag2_cipher_transcrypt(&cipher_state, tx, *txlen/8, *txlen%8);
+		}
 	}
 
 	return true;
@@ -625,8 +628,7 @@ static bool hitag2_authenticate(byte_t* rx, const size_t rxlen, byte_t* tx, size
 				bCrypto = true;
 			} else {
 				DbpString("Authentication succesful!");
-				// We are done... for now
-				return false;
+				return true;
 			}
 		} break;
 			
