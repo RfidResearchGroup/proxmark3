@@ -419,6 +419,14 @@ bool DecodeT55xxBlock(){
 	return (bool) ans;
 }
 
+bool DecodeT5555TraceBlock() {
+	DemodBufferLen = 0x00;
+	
+	// According to datasheet. Always: RF/64, not inverted, Manchester
+	return (bool) ASKDemod("64 0 1", FALSE, FALSE, 1);
+}
+
+
 int CmdT55xxDetect(const char *Cmd){
 	bool errors = FALSE;
 	bool useGB = FALSE;
@@ -936,58 +944,109 @@ int CmdT55xxReadTrace(const char *Cmd) {
 	if (strlen(Cmd)==0)
 		if ( !AquireData( T55x7_PAGE1, REGULAR_READ_MODE_BLOCK, pwdmode, password ) )
 			return 0;
-	
-	if (!DecodeT55xxBlock()) return 0;
 
-	if ( !DemodBufferLen) return 0;
+	if ( config.Q5 ){
+		if (!DecodeT5555TraceBlock()) return 0;
+	}
+	else {
+		if (!DecodeT55xxBlock()) return 0;
+	}
+	
+	if ( !DemodBufferLen ) return 0;
 	
 	RepaintGraphWindow();
-	uint8_t repeat = 0;
-	if (config.offset > 5) 
-		repeat = 32;
-	uint8_t si = config.offset+repeat;
-	uint32_t bl1     = PackBits(si, 32, DemodBuffer);
-	uint32_t bl2     = PackBits(si+32, 32, DemodBuffer);
+	uint8_t repeat = (config.offset > 5) ? 32 : 0;
 	
-	uint32_t acl     = PackBits(si, 8,  DemodBuffer); si += 8;
-	uint32_t mfc     = PackBits(si, 8,  DemodBuffer); si += 8;
-	uint32_t cid     = PackBits(si, 5,  DemodBuffer); si += 5;
-	uint32_t icr     = PackBits(si, 3,  DemodBuffer); si += 3;
-	uint32_t year    = PackBits(si, 4,  DemodBuffer); si += 4;
-	uint32_t quarter = PackBits(si, 2,  DemodBuffer); si += 2;
-	uint32_t lotid   = PackBits(si, 14, DemodBuffer); si += 14;
-	uint32_t wafer   = PackBits(si, 5,  DemodBuffer); si += 5;
-	uint32_t dw      = PackBits(si, 15, DemodBuffer); 
+	uint8_t si = config.offset + repeat;
+	uint32_t bl1 = PackBits(si, 32, DemodBuffer);
+	uint32_t bl2 = PackBits(si+32, 32, DemodBuffer);	
 	
-	time_t t = time(NULL);
-	struct tm tm = *localtime(&t);
-	if ( year > tm.tm_year-110)
-		year += 2000;
-	else
-		year += 2010;
+	if (config.Q5) {
+		uint32_t hdr = PackBits(si, 9,  DemodBuffer); si += 9;
+    
+		if (hdr != 0x1FF) {
+		  PrintAndLog("Invalid Q5 Trace data header (expected 0x1FF, found %X)", hdr);
+		  return 0;
+		}
+    
+		t5555_tracedata_t data = {.bl1 = bl1, .bl2 = bl2, .icr = 0, .lotidc = '?', .lotid = 0, .wafer = 0, .dw =0};
+			
+		data.icr     = PackBits(si, 2,  DemodBuffer); si += 2;
+		data.lotidc  = 'Z' - PackBits(si, 2,  DemodBuffer); si += 3;
+		
+		data.lotid   = PackBits(si, 4,  DemodBuffer); si += 5;
+		data.lotid <<= 4;
+		data.lotid  |= PackBits(si, 4,  DemodBuffer); si += 5;
+		data.lotid <<= 4;
+		data.lotid  |= PackBits(si, 4,  DemodBuffer); si += 5;
+		data.lotid <<= 4;
+		data.lotid  |= PackBits(si, 4,  DemodBuffer); si += 5;
+		data.lotid <<= 1;
+		data.lotid  |= PackBits(si, 1,  DemodBuffer); si += 1;
+		
+		data.wafer   = PackBits(si, 3,  DemodBuffer); si += 4;
+		data.wafer <<= 2;
+		data.wafer  |= PackBits(si, 2,  DemodBuffer); si += 2;
+		
+		data.dw      = PackBits(si, 2,  DemodBuffer); si += 3;
+		data.dw    <<= 4;
+		data.dw     |= PackBits(si, 4,  DemodBuffer); si += 5;
+		data.dw    <<= 4;
+		data.dw     |= PackBits(si, 4,  DemodBuffer); si += 5;
+		data.dw    <<= 4;
+		data.dw     |= PackBits(si, 4,  DemodBuffer); si += 5;
+	
+		printT5555Trace(data, repeat);
+		
+	} else {
+	
+		t55xx_tracedata_t data = {.bl1 = bl1, .bl2 = bl2, .acl = 0, .mfc = 0, .cid = 0, .year = 0, .quarter = 0, .icr = 0,  .lotid = 0, .wafer = 0, .dw = 0};
+		
+		data.acl = PackBits(si, 8,  DemodBuffer); si += 8;
+		if ( data.acl != 0xE0 ) {
+			PrintAndLog("The modulation is most likely wrong since the ACL is not 0xE0. ");
+			return 0;
+		}
 
-	if (config.Q5) PrintAndLog("*** Warning *** Info read off a Q5 will not work as expected");
-	if ( acl != 0xE0 ) {
-		PrintAndLog("The modulation is most likely wrong since the ACL is not 0xE0. ");
-		return 0;
+		data.mfc     = PackBits(si, 8,  DemodBuffer); si += 8;
+		data.cid     = PackBits(si, 5,  DemodBuffer); si += 5;
+		data.icr     = PackBits(si, 3,  DemodBuffer); si += 3;
+		data.year    = PackBits(si, 4,  DemodBuffer); si += 4;
+		data.quarter = PackBits(si, 2,  DemodBuffer); si += 2;
+		data.lotid   = PackBits(si, 14, DemodBuffer); si += 14;
+		data.wafer   = PackBits(si, 5,  DemodBuffer); si += 5;
+		data.dw      = PackBits(si, 15, DemodBuffer); 
+
+		time_t t = time(NULL);
+		struct tm tm = *localtime(&t);
+		if ( data.year > tm.tm_year-110)
+			data.year += 2000;
+		else
+			data.year += 2010;
+
+		
+		printT55xxTrace(data, repeat);
 	}
-	PrintAndLog("");
+	return 0;
+}
+
+void printT55xxTrace( t55xx_tracedata_t data, uint8_t repeat ){
 	PrintAndLog("-- T55xx Trace Information ----------------------------------");
 	PrintAndLog("-------------------------------------------------------------");
-	PrintAndLog(" ACL Allocation class (ISO/IEC 15963-1)  : 0x%02X (%d)", acl, acl);
-	PrintAndLog(" MFC Manufacturer ID (ISO/IEC 7816-6)    : 0x%02X (%d) - %s", mfc, mfc, getTagInfo(mfc));
-	PrintAndLog(" CID                                     : 0x%02X (%d) - %s", cid, cid, GetModelStrFromCID(cid));
-	PrintAndLog(" ICR IC Revision                         : %d",icr );
+	PrintAndLog(" ACL Allocation class (ISO/IEC 15963-1)  : 0x%02X (%d)", data.acl, data.acl);
+	PrintAndLog(" MFC Manufacturer ID (ISO/IEC 7816-6)    : 0x%02X (%d) - %s", data.mfc, data.mfc, getTagInfo(data.mfc));
+	PrintAndLog(" CID                                     : 0x%02X (%d) - %s", data.cid, data.cid, GetModelStrFromCID(data.cid));
+	PrintAndLog(" ICR IC Revision                         : %d", data.icr );
 	PrintAndLog(" Manufactured");
-	PrintAndLog("     Year/Quarter : %d/%d",year, quarter);
-	PrintAndLog("     Lot ID       : %d", lotid );
-	PrintAndLog("     Wafer number : %d", wafer);
-	PrintAndLog("     Die Number   : %d", dw);
+	PrintAndLog("     Year/Quarter : %d/%d", data.year, data.quarter);
+	PrintAndLog("     Lot ID       : %d", data.lotid );
+	PrintAndLog("     Wafer number : %d", data.wafer);
+	PrintAndLog("     Die Number   : %d", data.dw);
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" Raw Data - Page 1");
-	PrintAndLog("     Block 1  : 0x%08X  %s", bl1, sprint_bin(DemodBuffer+config.offset+repeat,32) );
-	PrintAndLog("     Block 2  : 0x%08X  %s", bl2, sprint_bin(DemodBuffer+config.offset+repeat+32,32) );
-	PrintAndLog("-------------------------------------------------------------");
+	PrintAndLog("     Block 1  : 0x%08X  %s", data.bl1, sprint_bin(DemodBuffer+config.offset+repeat,32) );
+	PrintAndLog("     Block 2  : 0x%08X  %s", data.bl2, sprint_bin(DemodBuffer+config.offset+repeat+32,32) );
+	PrintAndLog("-------------------------------------------------------------");	
 
 	/*
 	TRACE - BLOCK O
@@ -1005,8 +1064,32 @@ int CmdT55xxReadTrace(const char *Cmd) {
 		13-17	Wafer number
 		18-32	DW,  die number sequential
 	*/
+}
+void printT5555Trace( t5555_tracedata_t data, uint8_t repeat ){
+	PrintAndLog("-- T5555 (Q5) Trace Information -----------------------------");
+	PrintAndLog("-------------------------------------------------------------");
+	PrintAndLog(" ICR IC Revision  : %d", data.icr );	
+	PrintAndLog("     Lot          : %c%d", data.lotidc, data.lotid);
+	PrintAndLog("     Wafer number : %d", data.wafer);
+	PrintAndLog("     Die Number   : %d", data.dw);
+	PrintAndLog("-------------------------------------------------------------");
+	PrintAndLog(" Raw Data - Page 1");
+	PrintAndLog("     Block 1  : 0x%08X  %s", data.bl1, sprint_bin(DemodBuffer+config.offset+repeat,32) );
+	PrintAndLog("     Block 2  : 0x%08X  %s", data.bl2, sprint_bin(DemodBuffer+config.offset+repeat+32,32) );
 	
-  return 0;
+	/*
+		** Q5 **
+		TRACE - BLOCK O and BLOCK1
+		Bits	Definition				HEX
+		1-9		Header                  0x1FF
+		10-11 IC Revision
+		12-13 Lot ID char
+		15-35 Lot ID (NB parity)
+		36-41 Wafer number (NB parity)
+		42-58 DW, die number sequential (NB parity)
+		60-63 Parity bits
+		64    Always zero
+	*/
 }
 
 int CmdT55xxInfo(const char *Cmd){
@@ -1032,12 +1115,9 @@ int CmdT55xxInfo(const char *Cmd){
 
 	// 
 	PrintAndLog("Offset+32 ==%d\n DemodLen == %d", config.offset + 32,DemodBufferLen );
-		
 
-	
 	uint8_t si = config.offset;
-	uint32_t bl0      = PackBits(si, 32, DemodBuffer);
-	
+	uint32_t bl0      = PackBits(si, 32, DemodBuffer);	
 	uint32_t safer    = PackBits(si, 4, DemodBuffer); si += 4;	
 	uint32_t resv     = PackBits(si, 7, DemodBuffer); si += 7;
 	uint32_t dbr      = PackBits(si, 3, DemodBuffer); si += 3;
@@ -1052,6 +1132,7 @@ int CmdT55xxInfo(const char *Cmd){
 	uint32_t fw       = PackBits(si, 1, DemodBuffer); si += 1;
 	uint32_t inv      = PackBits(si, 1, DemodBuffer); si += 1;	
 	uint32_t por      = PackBits(si, 1, DemodBuffer); si += 1;
+	
 	if (config.Q5) PrintAndLog("*** Warning *** Config Info read off a Q5 will not display as expected");
 	PrintAndLog("");
 	PrintAndLog("-- T55xx Configuration & Tag Information --------------------");
@@ -1162,45 +1243,19 @@ char * GetModulationStr( uint32_t id){
 	char *retStr = buf;
 	
 	switch (id){
-		case 0: 
-			snprintf(retStr,sizeof(buf),"%d - DIRECT (ASK/NRZ)",id);
-			break;
-		case 1:
-			snprintf(retStr,sizeof(buf),"%d - PSK 1 phase change when input changes",id);
-			break;
-		case 2:		
-			snprintf(retStr,sizeof(buf),"%d - PSK 2 phase change on bitclk if input high",id);
-			break;
-		case 3:
-			snprintf(retStr,sizeof(buf),"%d - PSK 3 phase change on rising edge of input",id);
-			break;
-		case 4:
-			snprintf(retStr,sizeof(buf),"%d - FSK 1 RF/8  RF/5",id);
-			break;
-		case 5:
-			snprintf(retStr,sizeof(buf),"%d - FSK 2 RF/8  RF/10",id);
-			break;
-		case 6:
-			snprintf(retStr,sizeof(buf),"%d - FSK 1a RF/5  RF/8",id);
-			break;
-		case 7:
-			snprintf(retStr,sizeof(buf),"%d - FSK 2a RF/10  RF/8",id);
-			break;
-		case 8:
-			snprintf(retStr,sizeof(buf),"%d - Manchester",id);
-			break;
-		case 16:
-			snprintf(retStr,sizeof(buf),"%d - Biphase",id);
-			break;
-		case 0x18:
-			snprintf(retStr,sizeof(buf),"%d - Biphase a - AKA Conditional Dephase Encoding(CDP)",id);
-			break;
-		case 17:
-			snprintf(retStr,sizeof(buf),"%d - Reserved",id);
-			break;
-		default:
-			snprintf(retStr,sizeof(buf),"0x%02X (Unknown)",id);
-			break;
+		case 0: snprintf(retStr,sizeof(buf),"%d - DIRECT (ASK/NRZ)",id); break;
+		case 1:	snprintf(retStr,sizeof(buf),"%d - PSK 1 phase change when input changes",id); break;
+		case 2:	snprintf(retStr,sizeof(buf),"%d - PSK 2 phase change on bitclk if input high",id); break;
+		case 3:	snprintf(retStr,sizeof(buf),"%d - PSK 3 phase change on rising edge of input",id); break;
+		case 4:	snprintf(retStr,sizeof(buf),"%d - FSK 1 RF/8  RF/5",id); break;
+		case 5:	snprintf(retStr,sizeof(buf),"%d - FSK 2 RF/8  RF/10",id); break;
+		case 6:	snprintf(retStr,sizeof(buf),"%d - FSK 1a RF/5  RF/8",id); break;
+		case 7: snprintf(retStr,sizeof(buf),"%d - FSK 2a RF/10  RF/8",id); break;
+		case 8:	snprintf(retStr,sizeof(buf),"%d - Manchester",id); break;
+		case 16: snprintf(retStr,sizeof(buf),"%d - Biphase",id); break;
+		case 0x18:snprintf(retStr,sizeof(buf),"%d - Biphase a - AKA Conditional Dephase Encoding(CDP)",id); break;
+		case 17: snprintf(retStr,sizeof(buf),"%d - Reserved",id); break;
+		default: snprintf(retStr,sizeof(buf),"0x%02X (Unknown)",id); break;
 		}
 	return buf;
 }
@@ -1221,45 +1276,19 @@ char * GetSelectedModulationStr( uint8_t id){
 	char *retStr = buf;
 
 	switch (id){
-		case DEMOD_FSK:
-			snprintf(retStr,sizeof(buf),"FSK");
-			break;
-		case DEMOD_FSK1:
-			snprintf(retStr,sizeof(buf),"FSK1");
-			break;
-		case DEMOD_FSK1a:
-			snprintf(retStr,sizeof(buf),"FSK1a");
-			break;
-		case DEMOD_FSK2:
-			snprintf(retStr,sizeof(buf),"FSK2");
-			break;
-		case DEMOD_FSK2a:
-			snprintf(retStr,sizeof(buf),"FSK2a");
-			break;
-		case DEMOD_ASK:		
-			snprintf(retStr,sizeof(buf),"ASK");
-			break;
-		case DEMOD_NRZ:
-			snprintf(retStr,sizeof(buf),"DIRECT/NRZ");
-			break;
-		case DEMOD_PSK1:
-			snprintf(retStr,sizeof(buf),"PSK1");
-			break;
-		case DEMOD_PSK2:
-			snprintf(retStr,sizeof(buf),"PSK2");
-			break;
-		case DEMOD_PSK3:
-			snprintf(retStr,sizeof(buf),"PSK3");
-			break;
-		case DEMOD_BI:
-			snprintf(retStr,sizeof(buf),"BIPHASE");
-			break;
-		case DEMOD_BIa:
-			snprintf(retStr,sizeof(buf),"BIPHASEa - (CDP)");
-			break;
-		default:
-			snprintf(retStr,sizeof(buf),"(Unknown)");
-			break;
+		case DEMOD_FSK:	snprintf(retStr,sizeof(buf),"FSK");	break;
+		case DEMOD_FSK1: snprintf(retStr,sizeof(buf),"FSK1"); break;
+		case DEMOD_FSK1a: snprintf(retStr,sizeof(buf),"FSK1a"); break;
+		case DEMOD_FSK2: snprintf(retStr,sizeof(buf),"FSK2"); break;
+		case DEMOD_FSK2a: snprintf(retStr,sizeof(buf),"FSK2a"); break;
+		case DEMOD_ASK: snprintf(retStr,sizeof(buf),"ASK"); break;
+		case DEMOD_NRZ: snprintf(retStr,sizeof(buf),"DIRECT/NRZ"); break;
+		case DEMOD_PSK1: snprintf(retStr,sizeof(buf),"PSK1"); break;
+		case DEMOD_PSK2: snprintf(retStr,sizeof(buf),"PSK2"); break;
+		case DEMOD_PSK3: snprintf(retStr,sizeof(buf),"PSK3"); break;
+		case DEMOD_BI: snprintf(retStr,sizeof(buf),"BIPHASE"); break;
+		case DEMOD_BIa: snprintf(retStr,sizeof(buf),"BIPHASEa - (CDP)"); break;
+		default: snprintf(retStr,sizeof(buf),"(Unknown)"); break;
 		}
 	return buf;
 }
@@ -1278,6 +1307,7 @@ void t55x7_create_config_block( int tagtype ){
 	switch (tagtype){
 		case 0: snprintf(retStr, sizeof(buf),"%08X - T55X7 Default", T55X7_DEFAULT_CONFIG_BLOCK); break;
 		case 1: snprintf(retStr, sizeof(buf),"%08X - T55X7 Raw", T55X7_RAW_CONFIG_BLOCK); break;
+		//case 2: snprintf(retStr, sizeof(buf),"%08X - Q5 Default", Q5_DEFAULT_CONFIG_BLOCK); break;
 		default:
 			break;
 	}
@@ -1300,7 +1330,7 @@ int CmdResetRead(const char *Cmd) {
 	setGraphBuf(got, sizeof(got));
 	return 1;
 }
-
+// ADD T5555 (Q5) Default config block
 int CmdT55xxWipe(const char *Cmd) {
 	char writeData[20] = {0};
 	char *ptrData = writeData;

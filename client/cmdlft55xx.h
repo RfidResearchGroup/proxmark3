@@ -31,6 +31,29 @@
 #define T55X7_IOPROX_CONFIG_BLOCK		0x00147040  // maxblock 2
 #define T55X7_bin 0b0010
 
+typedef struct {
+	uint32_t bl1;
+	uint32_t bl2; 
+	uint32_t acl; 
+	uint32_t mfc; 
+	uint32_t cid; 
+	uint32_t year; 
+	uint32_t quarter; 
+	uint32_t icr;
+	uint32_t lotid; 
+	uint32_t wafer; 
+	uint32_t dw;
+} t55xx_tracedata_t;
+
+typedef struct {
+	uint32_t bl1;
+	uint32_t bl2;
+	uint32_t icr;
+	char lotidc;
+	uint32_t lotid;
+	uint32_t wafer;
+	uint32_t dw;
+} t5555_tracedata_t;
 
 typedef struct {
 	enum {
@@ -94,4 +117,8 @@ int special(const char *Cmd);
 int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password );
 
 bool detectPassword(int password);
+
+void printT55xxTrace( t55xx_tracedata_t data, uint8_t repeat );
+void printT5555Trace( t5555_tracedata_t data, uint8_t repeat );
+
 #endif
