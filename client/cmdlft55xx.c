@@ -166,7 +166,18 @@ int usage_t55xx_bruteforce(){
     PrintAndLog("");
     return 0;
 }
-
+int usage_t55xx_wipe(){
+	PrintAndLog("Usage:  lf t55xx wipe [h] [Q5]");
+	PrintAndLog("This commands wipes a tag, fills blocks 1-7 with zeros and a default configuration block");
+	PrintAndLog("Options:");
+	PrintAndLog("     h 	- this help");
+    PrintAndLog("     Q5	- indicates to use the T555 (Q5) default configuration block");
+    PrintAndLog("");
+	PrintAndLog("Examples:");
+    PrintAndLog("      lf t55xx wipe	-  wipes a t55x7 tag,    config block 0x000880E0");
+	PrintAndLog("      lf t55xx wipe Q5 -  wipes a t5555 Q5 tag, config block 0x6001F004");
+	return 0;
+}
 static int CmdHelp(const char *Cmd);
 
 void printT5xxHeader(uint8_t page){
@@ -1307,7 +1318,7 @@ void t55x7_create_config_block( int tagtype ){
 	switch (tagtype){
 		case 0: snprintf(retStr, sizeof(buf),"%08X - T55X7 Default", T55X7_DEFAULT_CONFIG_BLOCK); break;
 		case 1: snprintf(retStr, sizeof(buf),"%08X - T55X7 Raw", T55X7_RAW_CONFIG_BLOCK); break;
-		//case 2: snprintf(retStr, sizeof(buf),"%08X - Q5 Default", Q5_DEFAULT_CONFIG_BLOCK); break;
+		case 2: snprintf(retStr, sizeof(buf),"%08X - T5555 Q5 Default", T5555_DEFAULT_CONFIG_BLOCK); break;
 		default:
 			break;
 	}
@@ -1334,21 +1345,28 @@ int CmdResetRead(const char *Cmd) {
 int CmdT55xxWipe(const char *Cmd) {
 	char writeData[20] = {0};
 	char *ptrData = writeData;
-	
+	char cmdp = param_getchar(Cmd, 0);	
+	if ( cmdp == 'h' || cmdp == 'H') return usage_t55xx_wipe();
+
+	bool Q5 = (cmdp == 'q' || cmdp == 'Q');
+
+	// Try with the default password to reset block 0
+	// With a pwd should work even if pwd bit not set
 	PrintAndLog("\nBeginning Wipe of a T55xx tag (assuming the tag is not password protected)\n");
+		
+	if ( Q5 ){
+		snprintf(ptrData,sizeof(writeData),"b 0 d 6001F004 p 0");
+	} else {
+		snprintf(ptrData,sizeof(writeData),"b 0 d 000880E0 p 0");
+	}
 	
-	//try with the default password to reset block 0  (with a pwd should work even if pwd bit not set)
-	snprintf(ptrData,sizeof(writeData),"b 0 d 000880E0 p 0");
-	
-	if (!CmdT55xxWriteBlock(ptrData))
-		PrintAndLog("Error writing blk 0");
+	if (!CmdT55xxWriteBlock(ptrData)) PrintAndLog("Error writing blk 0");
 	
 	for (uint8_t blk = 1; blk<8; blk++) {
 		
 		snprintf(ptrData,sizeof(writeData),"b %d d 0", blk);
 		
-		if (!CmdT55xxWriteBlock(ptrData)) 
-			PrintAndLog("Error writing blk %d", blk);
+		if (!CmdT55xxWriteBlock(ptrData)) PrintAndLog("Error writing blk %d", blk);
 		
 		memset(writeData,0x00, sizeof(writeData));
 	}

@@ -31,6 +31,22 @@
 #define T55X7_IOPROX_CONFIG_BLOCK		0x00147040  // maxblock 2
 #define T55X7_bin 0b0010
 
+#define T5555_DEFAULT_CONFIG_BLOCK		0x6001F004  // data rate 64 , ask, manchester, 2 data blocks?
+enum {
+	T55x7_RAW = 0x00,
+	T55x7_DEFAULT = 0x00,
+	T5555_DEFAULT = 0x01,
+	EM_UNIQUE  = 0x0,
+	FDBX = 0x02,
+	HID_26 = 0x03,
+	INDALA_64 = 0x04,
+	INDALA_224 = 0x05,
+	GUARDPROXXII = 0x06,
+	VIKING = 0x07,
+	NORALSYS = 0x08,
+	IOPROX = 0x09,
+} t55xx_tag;
+
 typedef struct {
 	uint32_t bl1;
 	uint32_t bl2; 
