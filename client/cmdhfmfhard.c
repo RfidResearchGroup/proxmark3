@@ -30,7 +30,7 @@
 // uint32_t test_state_even = 0;
 
 #define CONFIDENCE_THRESHOLD	0.95		// Collect nonces until we are certain enough that the following brute force is successfull
-#define GOOD_BYTES_REQUIRED		20
+#define GOOD_BYTES_REQUIRED		30
 
 
 static const float p_K[257] = {		// the probability that a random nonce has a Sum Property == K 
@@ -89,14 +89,13 @@ typedef struct noncelist {
 
 static uint32_t cuid;
 static noncelist_t nonces[256];
+static uint8_t best_first_bytes[256];
 static uint16_t first_byte_Sum = 0;
 static uint16_t first_byte_num = 0;
 static uint16_t num_good_first_bytes = 0;
 static uint64_t maximum_states = 0;
 static uint64_t known_target_key;
 
-#define MAX_BEST_BYTES 256
-static uint8_t best_first_bytes[MAX_BEST_BYTES];
 
 
 typedef enum {
@@ -200,12 +199,12 @@ static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even)
 }
 
 
-static uint16_t SumProperty(struct Crypto1State *s)
-{
-	uint16_t sum_odd = PartialSumProperty(s->odd, ODD_STATE);
-	uint16_t sum_even = PartialSumProperty(s->even, EVEN_STATE);
-	return (sum_odd*(16-sum_even) + (16-sum_odd)*sum_even);
-}
+// static uint16_t SumProperty(struct Crypto1State *s)
+// {
+	// uint16_t sum_odd = PartialSumProperty(s->odd, ODD_STATE);
+	// uint16_t sum_even = PartialSumProperty(s->even, EVEN_STATE);
+	// return (sum_odd*(16-sum_even) + (16-sum_odd)*sum_even);
+// }
 
 
 static double p_hypergeometric(uint16_t N, uint16_t K, uint16_t n, uint16_t k) 
@@ -296,13 +295,13 @@ static inline uint_fast8_t common_bits(uint_fast8_t bytes_diff)
 
 static void Tests()
 {
-	printf("Tests: Partial Statelist sizes\n");
-	for (uint16_t i = 0; i <= 16; i+=2) {
-		printf("Partial State List Odd [%2d] has %8d entries\n", i, partial_statelist[i].len[ODD_STATE]);
-	}
-	for (uint16_t i = 0; i <= 16; i+=2) {
-		printf("Partial State List Even	[%2d] has %8d entries\n", i, partial_statelist[i].len[EVEN_STATE]);
-	}
+	// printf("Tests: Partial Statelist sizes\n");
+	// for (uint16_t i = 0; i <= 16; i+=2) {
+		// printf("Partial State List Odd [%2d] has %8d entries\n", i, partial_statelist[i].len[ODD_STATE]);
+	// }
+	// for (uint16_t i = 0; i <= 16; i+=2) {
+		// printf("Partial State List Even	[%2d] has %8d entries\n", i, partial_statelist[i].len[EVEN_STATE]);
+	// }
 	
  	// #define NUM_STATISTICS 100000
 	// uint32_t statistics_odd[17];
@@ -375,65 +374,64 @@ static void Tests()
 	// printf("p_hypergeometric(256, 1, 1, 1) = %0.8f\n", p_hypergeometric(256, 1, 1, 1));
 	// printf("p_hypergeometric(256, 1, 1, 0) = %0.8f\n", p_hypergeometric(256, 1, 1, 0));
 	
-	struct Crypto1State *pcs;
-	pcs = crypto1_create(0xffffffffffff);
-	printf("\nTests: for key = 0xffffffffffff:\nSum(a0) = %d\nodd_state =  0x%06x\neven_state = 0x%06x\n", 
-		SumProperty(pcs), pcs->odd & 0x00ffffff, pcs->even & 0x00ffffff);
-	crypto1_byte(pcs, (cuid >> 24) ^ best_first_bytes[0], true);
-	printf("After adding best first byte 0x%02x:\nSum(a8) = %d\nodd_state =  0x%06x\neven_state = 0x%06x\n",
-		best_first_bytes[0],
-		SumProperty(pcs),
-		pcs->odd & 0x00ffffff, pcs->even & 0x00ffffff);
+	// struct Crypto1State *pcs;
+	// pcs = crypto1_create(0xffffffffffff);
+	// printf("\nTests: for key = 0xffffffffffff:\nSum(a0) = %d\nodd_state =  0x%06x\neven_state = 0x%06x\n", 
+		// SumProperty(pcs), pcs->odd & 0x00ffffff, pcs->even & 0x00ffffff);
+	// crypto1_byte(pcs, (cuid >> 24) ^ best_first_bytes[0], true);
+	// printf("After adding best first byte 0x%02x:\nSum(a8) = %d\nodd_state =  0x%06x\neven_state = 0x%06x\n",
+		// best_first_bytes[0],
+		// SumProperty(pcs),
+		// pcs->odd & 0x00ffffff, pcs->even & 0x00ffffff);
+	// //test_state_odd = pcs->odd & 0x00ffffff;
+	// //test_state_even = pcs->even & 0x00ffffff;
+	// crypto1_destroy(pcs);
+	// pcs = crypto1_create(0xa0a1a2a3a4a5);
+	// printf("Tests: for key = 0xa0a1a2a3a4a5:\nSum(a0) = %d\nodd_state =  0x%06x\neven_state = 0x%06x\n",
+		// SumProperty(pcs), pcs->odd & 0x00ffffff, pcs->even & 0x00ffffff);
+	// crypto1_byte(pcs, (cuid >> 24) ^ best_first_bytes[0], true);
+	// printf("After adding best first byte 0x%02x:\nSum(a8) = %d\nodd_state =  0x%06x\neven_state = 0x%06x\n",
+		// best_first_bytes[0],
+		// SumProperty(pcs),
+		// pcs->odd & 0x00ffffff, pcs->even & 0x00ffffff);
+	// //test_state_odd = pcs->odd & 0x00ffffff;
+	// //test_state_even = pcs->even & 0x00ffffff;
+	// crypto1_destroy(pcs);
+	// pcs = crypto1_create(0xa6b9aa97b955);
+	// printf("Tests: for key = 0xa6b9aa97b955:\nSum(a0) = %d\nodd_state =  0x%06x\neven_state = 0x%06x\n",
+		// SumProperty(pcs), pcs->odd & 0x00ffffff, pcs->even & 0x00ffffff);
+	// crypto1_byte(pcs, (cuid >> 24) ^ best_first_bytes[0], true);
+	// printf("After adding best first byte 0x%02x:\nSum(a8) = %d\nodd_state =  0x%06x\neven_state = 0x%06x\n",
+		// best_first_bytes[0],
+		// SumProperty(pcs),
+		// pcs->odd & 0x00ffffff, pcs->even & 0x00ffffff);
 	//test_state_odd = pcs->odd & 0x00ffffff;
 	//test_state_even = pcs->even & 0x00ffffff;
-	crypto1_destroy(pcs);
-	pcs = crypto1_create(0xa0a1a2a3a4a5);
-	printf("Tests: for key = 0xa0a1a2a3a4a5:\nSum(a0) = %d\nodd_state =  0x%06x\neven_state = 0x%06x\n",
-		SumProperty(pcs), pcs->odd & 0x00ffffff, pcs->even & 0x00ffffff);
-	crypto1_byte(pcs, (cuid >> 24) ^ best_first_bytes[0], true);
-	printf("After adding best first byte 0x%02x:\nSum(a8) = %d\nodd_state =  0x%06x\neven_state = 0x%06x\n",
-		best_first_bytes[0],
-		SumProperty(pcs),
-		pcs->odd & 0x00ffffff, pcs->even & 0x00ffffff);
-	// test_state_odd = pcs->odd & 0x00ffffff;
-	// test_state_even = pcs->even & 0x00ffffff;
-	crypto1_destroy(pcs);
-	pcs = crypto1_create(0xa6b9aa97b955);
-	printf("Tests: for key = 0xa6b9aa97b955:\nSum(a0) = %d\nodd_state =  0x%06x\neven_state = 0x%06x\n",
-		SumProperty(pcs), pcs->odd & 0x00ffffff, pcs->even & 0x00ffffff);
-	crypto1_byte(pcs, (cuid >> 24) ^ best_first_bytes[0], true);
-	printf("After adding best first byte 0x%02x:\nSum(a8) = %d\nodd_state =  0x%06x\neven_state = 0x%06x\n",
-		best_first_bytes[0],
-		SumProperty(pcs),
-		pcs->odd & 0x00ffffff, pcs->even & 0x00ffffff);
-	//test_state_odd = pcs->odd & 0x00ffffff;
-	//test_state_even = pcs->even & 0x00ffffff;
-	crypto1_destroy(pcs);
-
+	// crypto1_destroy(pcs);
 
 	
-	printf("\nTests: number of states with BitFlipProperty: %d, (= %1.3f%% of total states)\n", statelist_bitflip.len[0], 100.0 * statelist_bitflip.len[0] / (1<<20));
+	
+	// printf("\nTests: number of states with BitFlipProperty: %d, (= %1.3f%% of total states)\n", statelist_bitflip.len[0], 100.0 * statelist_bitflip.len[0] / (1<<20));
 
 	printf("\nTests: Actual BitFlipProperties odd/even:\n");
 	for (uint16_t i = 0; i < 256; i++) {
-		printf("[%02x]:%c%c ", i, nonces[i].BitFlip[ODD_STATE]?'o':' ', nonces[i].BitFlip[EVEN_STATE]?'e':' ');
+		printf("[%02x]:%c  ", i, nonces[i].BitFlip[ODD_STATE]?'o':nonces[i].BitFlip[EVEN_STATE]?'e':' ');
 		if (i % 8 == 7) {
 			printf("\n");
 		}
 	}
 	
-	printf("\nTests: Best %d first bytes:\n", MAX_BEST_BYTES);
-	for (uint16_t i = 0; i < MAX_BEST_BYTES; i++) {
+	printf("\nTests: Sorted First Bytes:\n");
+	for (uint16_t i = 0; i < 256; i++) {
 		uint8_t best_byte = best_first_bytes[i];
-		printf("#%03d Byte: %02x, n = %2d, k = %2d, Sum(a8): %3d, Confidence: %2.1f%%, Bitflip: %c%c\n", 
-		//printf("#%03d Byte: %02x, n = %2d, k = %2d, Sum(a8): %3d, Confidence: %2.1f%%, Bitflip: %c%c, score1: %f, score2: %f\n", 
+		printf("#%03d Byte: %02x, n = %3d, k = %3d, Sum(a8): %3d, Confidence: %5.1f%%, Bitflip: %c\n", 
+		//printf("#%03d Byte: %02x, n = %3d, k = %3d, Sum(a8): %3d, Confidence: %5.1f%%, Bitflip: %c, score1: %1.5f, score2: %1.0f\n", 
 			i, best_byte, 
 			nonces[best_byte].num,
 			nonces[best_byte].Sum,
 			nonces[best_byte].Sum8_guess,
 			nonces[best_byte].Sum8_prob * 100,
-			nonces[best_byte].BitFlip[ODD_STATE]?'o':' ', 
-			nonces[best_byte].BitFlip[EVEN_STATE]?'e':' '
+			nonces[best_byte].BitFlip[ODD_STATE]?'o':nonces[best_byte].BitFlip[EVEN_STATE]?'e':' '
 			//nonces[best_byte].score1,
 			//nonces[best_byte].score2
 			);
@@ -460,25 +458,25 @@ static void Tests()
 
 static void sort_best_first_bytes(void)
 {
-	// first, sort based on probability for correct guess	
+	// sort based on probability for correct guess	
 	for (uint16_t i = 0; i < 256; i++ ) {
 		uint16_t j = 0;
 		float prob1 = nonces[i].Sum8_prob;
 		float prob2 = nonces[best_first_bytes[0]].Sum8_prob;
-		while (prob1 < prob2 && j < MAX_BEST_BYTES-1) {
+		while (prob1 < prob2 && j < i) {
 			prob2 = nonces[best_first_bytes[++j]].Sum8_prob;
 		}
-		if (prob1 >= prob2) {
-			for (uint16_t k = MAX_BEST_BYTES-1; k > j; k--) {
+		if (j < i) {
+			for (uint16_t k = i; k > j; k--) {
 				best_first_bytes[k] = best_first_bytes[k-1];
 			}
+		}
 			best_first_bytes[j] = i;
 		}
-	}
 
-	// determine, how many are above the CONFIDENCE_THRESHOLD
+	// determine how many are above the CONFIDENCE_THRESHOLD
 	uint16_t num_good_nonces = 0;
-	for (uint16_t i = 0; i < MAX_BEST_BYTES; i++) {
+	for (uint16_t i = 0; i < 256; i++) {
 		if (nonces[best_first_bytes[i]].Sum8_prob > CONFIDENCE_THRESHOLD) {
 			++num_good_nonces;
 		}
@@ -546,9 +544,6 @@ static void sort_best_first_bytes(void)
 
 static uint16_t estimate_second_byte_sum(void) 
 {
-	for (uint16_t i = 0; i < MAX_BEST_BYTES; i++) {
-		best_first_bytes[i] = 0;
-	}
 	
 	for (uint16_t first_byte = 0; first_byte < 256; first_byte++) {
 		float Sum8_prob = 0.0;
@@ -570,7 +565,7 @@ static uint16_t estimate_second_byte_sum(void)
 	sort_best_first_bytes();
 
 	uint16_t num_good_nonces = 0;
-	for (uint16_t i = 0; i < MAX_BEST_BYTES; i++) {
+	for (uint16_t i = 0; i < 256; i++) {
 		if (nonces[best_first_bytes[i]].Sum8_prob > CONFIDENCE_THRESHOLD) {
 			++num_good_nonces;
 		}
@@ -1148,7 +1143,7 @@ static void TestIfKeyExists(uint64_t key)
 			PrintAndLog("Key Found after testing %lld (2^%1.1f) out of %lld (2^%1.1f) keys. A brute force would have taken approx %lld minutes.", 
 				count, log(count)/log(2), 
 				maximum_states, log(maximum_states)/log(2),
-				(count>>22)/60);
+				(count>>23)/60);
 			crypto1_destroy(pcs);
 			return;
 		}
@@ -1232,12 +1227,9 @@ static void brute_force(void)
 	if (known_target_key != -1) {
 		PrintAndLog("Looking for known target key in remaining key space...");
 		TestIfKeyExists(known_target_key);
-		return;
 	} else {
 		PrintAndLog("Brute Force phase is not implemented.");
-		return;
 	}
-	
 
 }
 
