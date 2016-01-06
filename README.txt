@@ -1,5 +1,6 @@
 The iceman fork
 ---------------
+
 NOTICE: 
 
 The official Proxmark repository is found here: https://github.com/Proxmark/proxmark3
@@ -7,6 +8,12 @@ The official Proxmark repository is found here: https://github.com/Proxmark/prox
 NEWS: 
 
 ::THIS FORK IS HIGHLY EXPERIMENTAL::
+
+-- Coverty Build Scan 
+<a href="https://scan.coverity.com/projects/proxmark3-iceman-fork">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/5117/badge.svg"/>
+</a>
 
 
 Whats in this fork?  I have scraped the web for different enhancements to the PM3 source code and not all of them ever found their way to the master branch. 
@@ -52,7 +59,7 @@ GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS.
 	- Generally speaking, if you're running a "later" Proxmark, installation is very easy.
 	- Run "sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget"a
 	- Follow these instructions
-Get devkitARM release 41 from SourceForge (choose either the 64/32 ¿bit depending on your architecture, it is assumed you know how to check and recognize your architecture):
+Get devkitARM release 41 from SourceForge (choose either the 64/32 Â¿bit depending on your architecture, it is assumed you know how to check and recognize your architecture):
 
 (64-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-x86_64-linux.tar.bz2/download
 (32-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-i686-linux.tar.bz2/download
