@@ -9,7 +9,9 @@ NEWS:
 
 ::THIS FORK IS HIGHLY EXPERIMENTAL::
 
--- Coverty Build Scan 
+-- Coverty Scan Build Status
+[![Build status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3-iceman-fork)
+
 <a href="https://scan.coverity.com/projects/proxmark3-iceman-fork">
   <img alt="Coverity Scan Build Status"
        src="https://scan.coverity.com/projects/5117/badge.svg"/>
