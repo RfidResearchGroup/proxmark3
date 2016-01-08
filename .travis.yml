@@ -3,3 +3,4 @@ language: c
 #install:
 compiler: gcc
 
+script: make clean && make all
