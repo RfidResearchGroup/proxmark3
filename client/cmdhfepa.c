@@ -58,13 +58,13 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 			}
 			// print nonce
 			PrintAndLog("Length: %d, Nonce: %s", nonce_length, nonce);
+			free(nonce);
 		}
 		if (i < n - 1) {
 			sleep(d);
 		}
 	}
 	PrintAndLog("End: %u", time(NULL));
-
 	return 1;
 }
 

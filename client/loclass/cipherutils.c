@@ -171,6 +171,7 @@ void printarr(char * name, uint8_t* arr, int len)
 	}
 	cx += snprintf(output+cx,outsize-cx,"};");
 	prnlog(output);
+	free(output);
 }
 
 void printvar(char * name, uint8_t* arr, int len)
@@ -188,6 +189,7 @@ void printvar(char * name, uint8_t* arr, int len)
 	}
 
 	prnlog(output);
+	free(output);
 }
 
 void printarr_human_readable(char * title, uint8_t* arr, int len)

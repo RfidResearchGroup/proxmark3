@@ -184,7 +184,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 	traceLen += iLen;
 
 	// parity bytes
-	if (iLen != 0) {
+	if (num_paritybytes != 0) {
 		if (parity != NULL) {
 			memcpy(trace + traceLen, parity, num_paritybytes);
 		} else {
