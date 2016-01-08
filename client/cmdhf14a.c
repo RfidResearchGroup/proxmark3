@@ -731,8 +731,10 @@ int CmdHF14ACmdRaw(const char *cmd) {
 
 	if(topazmode)
 		c.arg[0] |= ISO14A_TOPAZMODE;
-		
+			
 	// Max buffer is USB_CMD_DATA_SIZE
+	datalen = (datalen > USB_CMD_DATA_SIZE) ? USB_CMD_DATA_SIZE : datalen;
+		
     c.arg[1] = (datalen & 0xFFFF) | (numbits << 16);
     memcpy(c.d.asBytes,data,datalen);
 

@@ -2027,7 +2027,10 @@ int CmdHF14AMfSniff(const char *Cmd){
 			uint16_t traceLen = resp.arg[1];
 			len = resp.arg[2];
 
-			if (res == 0) return 0;						// we are done
+			if (res == 0) {
+				free(buf);
+				return 0;						// we are done
+			}
 
 			if (res == 1) {								// there is (more) data to be transferred
 				if (pckNum == 0) {						// first packet, (re)allocate necessary buffer
