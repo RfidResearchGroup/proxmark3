@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include <time.h>
+//#include <time.h>
 #include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"
@@ -22,8 +22,6 @@
 #include "util.h"
 #include "data.h"
 #include "lfdemod.h"
-#include "../common/crc.h"
-#include "../common/iso14443crc.h"
 #include "cmdhf14a.h"
 
 #define T55x7_CONFIGURATION_BLOCK 0x00
