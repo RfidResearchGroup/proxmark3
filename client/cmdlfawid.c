@@ -101,23 +101,20 @@ int getAWIDBits(uint32_t fc, uint32_t cn, uint8_t	*AWIDBits) {
 	num_to_bytebits(cn, 16, wiegand+8);
 
 	wiegand_add_parity(pre+8, wiegand, 24);
-
 	size_t bitLen = addParity(pre, AWIDBits+8, 66, 4, 1);
+
 	if (bitLen != 88) return 0;
-	//for (uint8_t i = 0; i<3; i++){
-	//	PrintAndLog("DEBUG: %08X", bytebits_to_byte(AWIDBits+(32*i),32));
-	//}
 	return 1;
 }
 
 int CmdAWIDSim(const char *Cmd) {
-	uint32_t fcode = 0, cnum = 0, fc=0, cn=0;
+	uint32_t fcode = 0, cnum = 0, fc = 0, cn = 0;
 	uint8_t bits[96];
 	uint8_t *bs = bits;
 	size_t size = sizeof(bits);
-	memset(bs, 0, size);
+	memset(bs, 0x00, size);
 
-	uint64_t arg1 = (10<<8) + 8; // fcHigh = 10, fcLow = 8
+	uint64_t arg1 = ( 10 << 8 ) + 8; // fcHigh = 10, fcLow = 8
 	uint64_t arg2 = 50; // clk RF/50 invert=0
   
 	if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) return usage_lf_awid_sim();
@@ -125,8 +122,8 @@ int CmdAWIDSim(const char *Cmd) {
 	fcode = (fc & 0x000000FF);
 	cnum = (cn & 0x0000FFFF);
 	
-	if (fc!=fcode) PrintAndLog("Facility-Code (%u) truncated to 8-bits: %u", fc, fcode);
-	if (cn!=cnum)  PrintAndLog("Card number (%u) truncated to 16-bits: %u", cn, cnum);
+	if (fc != fcode) PrintAndLog("Facility-Code (%u) truncated to 8-bits: %u", fc, fcode);
+	if (cn != cnum)  PrintAndLog("Card number (%u) truncated to 16-bits: %u", cn, cnum);
 	
 	PrintAndLog("Emulating AWID26 -- FC: %u; CN: %u\n", fcode, cnum);
 	PrintAndLog("Press pm3-button to abort simulation or run another command");
