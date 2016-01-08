@@ -1,0 +1,5 @@
+# Travis-CI Build for Iceman Fork / Proxmark3
+language: c
+#install:
+compiler: gcc
+
