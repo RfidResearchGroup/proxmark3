@@ -17,4 +17,7 @@ int CmdHIDDemodFSK(const char *Cmd);
 int CmdHIDSim(const char *Cmd);
 int CmdHIDClone(const char *Cmd);
 
+int CmdHIDWiegand(const char *Cmd);
+
+int usage_hid_wiegand();
 #endif
