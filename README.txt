@@ -9,7 +9,11 @@ NEWS:
 
 ::THIS FORK IS HIGHLY EXPERIMENTAL::
 
-## Build Status
+
+## Build Status Travis CI
+[![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)
+
+## Build Status Coverity Scan
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3-iceman-fork)
 
 
