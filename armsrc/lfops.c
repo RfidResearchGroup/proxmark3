@@ -744,7 +744,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				  (unsigned int) lo,
 				  (unsigned int) (lo>>1) & 0xFFFF
 				  );
-			}else {  //standard HID tags 44/96 bits
+			} else {  //standard HID tags 44/96 bits
 				uint8_t bitlen = 0;
 				uint32_t fc = 0;
 				uint32_t cardnum = 0;
@@ -1260,7 +1260,7 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 
 	if (longFMT){
 		// Ensure no more than 84 bits supplied
-		if (hi2>0xFFFFF) {
+		if (hi2 > 0xFFFFF) {
 			DbpString("Tags can only have 84 bits.");
 			return;
 		}
@@ -1276,7 +1276,7 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 		data[6] = manchesterEncode2Bytes(lo & 0xFFFF);
 	}	else {
 		// Ensure no more than 44 bits supplied
-		if (hi>0xFFF) {
+		if (hi > 0xFFF) {
 			DbpString("Tags can only have 44 bits.");
 			return;
 		}

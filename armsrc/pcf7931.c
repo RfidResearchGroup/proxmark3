@@ -386,10 +386,9 @@ void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, ui
  */
 
 void SendCmdPCF7931(uint32_t * tab){
-	uint16_t u=0;
-	uint16_t tempo=0;
+	uint16_t u=0, tempo=0;
 
-	Dbprintf("SENDING DATA FRAME...");
+	Dbprintf("Sending data frame...");
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
@@ -413,27 +412,19 @@ void SendCmdPCF7931(uint32_t * tab){
 
 
 	tempo = AT91C_BASE_TC0->TC_CV;
-	for(u=0;tab[u]!= 0;u+=3){
-
+	for( u = 0; tab[u] != 0; u += 3){
 
 		// modulate antenna
 		HIGH(GPIO_SSC_DOUT);
-		while(tempo !=  tab[u]){
-			tempo = AT91C_BASE_TC0->TC_CV;
-		}
+		while(tempo != tab[u]) tempo = AT91C_BASE_TC0->TC_CV;		
 
 		// stop modulating antenna
 		LOW(GPIO_SSC_DOUT);
-		while(tempo !=  tab[u+1]){
-			tempo = AT91C_BASE_TC0->TC_CV;
-		}
-
+		while(tempo != tab[u+1]) tempo = AT91C_BASE_TC0->TC_CV;
 
 		// modulate antenna
 		HIGH(GPIO_SSC_DOUT);
-		while(tempo !=  tab[u+2]){
-			tempo = AT91C_BASE_TC0->TC_CV;
-		}
+		while(tempo != tab[u+2]) tempo = AT91C_BASE_TC0->TC_CV;		
 	}
 
 	LED_A_OFF();
@@ -455,7 +446,7 @@ void SendCmdPCF7931(uint32_t * tab){
 bool AddBytePCF7931(uint8_t byte, uint32_t * tab, int32_t l, int32_t p){
 
 	uint32_t u;
-	for (u=0; u<8; u++)
+	for ( u=0; u<8; u++)
 	{
 		if (byte&(1<<u)) {	//bit à 1
 			if( AddBitPCF7931(1, tab, l, p)==1) return 1;
@@ -463,7 +454,6 @@ bool AddBytePCF7931(uint8_t byte, uint32_t * tab, int32_t l, int32_t p){
 			if (AddBitPCF7931(0, tab, l, p)==1) return 1;
 		}
 	}
-
 	return 0;
 }
 
@@ -485,16 +475,18 @@ bool AddBitPCF7931(bool b, uint32_t * tab, int32_t l, int32_t p){
 		else
 			tab[u] = 34 * T0_PCF + tab[u-1] + p;
 
-		tab[u+1] = 6 * T0_PCF + tab[u] + l;
+		tab[u+1] =  6 * T0_PCF + tab[u] + l;
 		tab[u+2] = 88 * T0_PCF + tab[u+1] - l - p;
 		return 0;
 	} else { 		//add a bit 0
 
-		if(u==0) tab[u] = 98*T0_PCF+p;
-		else  	 tab[u] = 98*T0_PCF+tab[u-1]+p;
+		if ( u == 0 )
+			tab[u] = 98 * T0_PCF + p;
+		else
+			tab[u] = 98 * T0_PCF + tab[u-1] + p;
 
-		tab[u+1] = 6*T0_PCF+tab[u]+l;
-		tab[u+2] = 24*T0_PCF+tab[u+1]-l-p;
+		tab[u+1] =  6 * T0_PCF + tab[u] + l;
+		tab[u+2] = 24 * T0_PCF + tab[u+1] - l - p;
 		return 0;
 	}
 
@@ -510,13 +502,11 @@ bool AddBitPCF7931(bool b, uint32_t * tab, int32_t l, int32_t p){
  */
 bool AddPatternPCF7931(uint32_t a, uint32_t b, uint32_t c, uint32_t * tab){
 	uint32_t u = 0;
-	for(u=0;tab[u]!=0;u+=3){} //we put the cursor at the last value of the array
+	for(u = 0; tab[u] != 0; u += 3){} //we put the cursor at the last value of the array
 
-	if(u==0) tab[u] = a;
-	else tab[u] = a + tab[u-1];
-
-	tab[u+1] = b+tab[u];
-	tab[u+2] = c+tab[u+1];
+	tab[u]   = (u == 0) ? a : a + tab[u-1];
+	tab[u+1] = b + tab[u];
+	tab[u+2] = c + tab[u+1];
 
 	return 0;
 }

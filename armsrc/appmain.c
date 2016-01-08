@@ -351,7 +351,6 @@ void SendStatus(void)
 #if defined(WITH_ISO14443a_StandAlone) || defined(WITH_LF)
 
 #define OPTS 2
-
 void StandAloneMode()
 {
 	DbpString("Stand-alone mode! No PC necessary.");
@@ -365,12 +364,8 @@ void StandAloneMode()
 	LED(LED_GREEN,	200);
 	LED(LED_ORANGE, 200);
 	LED(LED_RED,	200);
-
 }
-
 #endif
-
-
 
 #ifdef WITH_ISO14443a_StandAlone
 void StandAloneMode14a()
@@ -640,8 +635,7 @@ void SamyRun()
 	// Turn on selected LED
 	LED(selected + 1, 0);
 
-	for (;;)
-	{
+	for (;;) {
 		usb_poll();
 		WDT_HIT();
 
@@ -672,49 +666,41 @@ void SamyRun()
 			LEDsoff();
 			LED(selected + 1, 0);
 			// Finished recording
+			// If we were previously playing, set playing off
+			// so next button push begins playing what we recorded
+			playing = 0;			
+			cardRead = 1;	
+		}
+		else if (button_pressed > 0 && cardRead == 1) {
+			LEDsoff();
+			LED(selected + 1, 0);
+			LED(LED_ORANGE, 0);
+
+			// record
+			Dbprintf("Cloning %x %x %x", selected, high[selected], low[selected]);
+
+			// wait for button to be released
+			while(BUTTON_PRESS())
+				WDT_HIT();
+
+			/* need this delay to prevent catching some weird data */
+			SpinDelay(500);
+
+			CopyHIDtoT55x7(high[selected], low[selected], 0, 0);
+			Dbprintf("Cloned %x %x %x", selected, high[selected], low[selected]);
+
+			LEDsoff();
+			LED(selected + 1, 0);
+			// Finished recording
 
 			// If we were previously playing, set playing off
 			// so next button push begins playing what we recorded
-			playing = 0;
-			
-			cardRead = 1;
-	
-		}
-
-		else if (button_pressed > 0 && cardRead == 1)
-		{
-					LEDsoff();
-					LED(selected + 1, 0);
-					LED(LED_ORANGE, 0);
-
-					// record
-					Dbprintf("Cloning %x %x %x", selected, high[selected], low[selected]);
-
-					// wait for button to be released
-					while(BUTTON_PRESS())
-						WDT_HIT();
-
-					/* need this delay to prevent catching some weird data */
-					SpinDelay(500);
-
-					CopyHIDtoT55x7(high[selected], low[selected], 0, 0);
-					Dbprintf("Cloned %x %x %x", selected, high[selected], low[selected]);
-
-					LEDsoff();
-					LED(selected + 1, 0);
-					// Finished recording
-
-					// If we were previously playing, set playing off
-					// so next button push begins playing what we recorded
-					playing = 0;
-					
-					cardRead = 0;
-			
+			playing = 0;			
+			cardRead = 0;			
 		}
 
 		// Change where to record (or begin playing)
-		else if (button_pressed)
-		{
+		else if (button_pressed) {
 			// Next option if we were previously playing
 			if (playing)
 				selected = (selected + 1) % OPTS;
