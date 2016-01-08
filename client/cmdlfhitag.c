@@ -71,7 +71,7 @@ int CmdLFHitagList(const char *Cmd)
 
 	for (;;) {
   
-		if(i > traceLen) { break; }
+		if(i >= traceLen) { break; }
 
 		bool isResponse;
 		int timestamp = *((uint32_t *)(got+i));

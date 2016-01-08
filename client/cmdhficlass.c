@@ -409,6 +409,7 @@ int CmdHFiClassDecrypt(const char *Cmd) {
 
 	saveFile(outfilename,"bin", decrypted, blocknum*8);
 
+	free(decrypted);
 	return 0;
 }
 

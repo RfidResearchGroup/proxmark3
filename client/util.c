@@ -137,7 +137,7 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 
 	size_t in_index = 0;
 	// loop through the out_index to make sure we don't go too far
-	for (size_t out_index=0; out_index < max_len; out_index++) {
+	for (size_t out_index=0; out_index < max_len-2; out_index++) {
 		// set character
 		sprintf(tmp++, "%u", data[in_index]);
 		// check if a line break is needed and we have room to print it in our array
@@ -463,11 +463,9 @@ void binarraytobinstring(char *target, char *source,  int length)
 uint8_t GetParity( uint8_t *bits, uint8_t type, int length)
 {
     int x;
-
-    for(x= 0 ; length > 0 ; --length)
+    for( x = 0 ; length > 0 ; --length)
         x += bits[length - 1];
     x %= 2;
-
     return x ^ type;
 }
 
@@ -503,7 +501,8 @@ uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits) {
 	return tmp;
 }
 
-// RotateLeft - Ultralight, Desfire
+// RotateLeft - Ultralight, Desfire, works on byte level
+// 00-01-02  >> 01-02-00
 void rol(uint8_t *data, const size_t len){
     uint8_t first = data[0];
     for (size_t i = 0; i < len-1; i++) {

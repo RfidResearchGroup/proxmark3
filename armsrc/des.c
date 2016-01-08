@@ -274,7 +274,7 @@ uint32_t des_f(uint32_t r, uint8_t* kr){
 	uint64_t data;
 	uint8_t *sbp; /* sboxpointer */ 
 	permute((uint8_t*)e_permtab, (uint8_t*)&r, (uint8_t*)&data);
-	for(i=0; i<7; ++i)
+	for(i=0; i<6; ++i)
 		((uint8_t*)&data)[i] ^= kr[i];
 	
 	/* Sbox substitution */

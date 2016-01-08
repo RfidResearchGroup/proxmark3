@@ -17,6 +17,9 @@
 #include <time.h>
 #include "data.h"
 
+#ifndef ROTR
+# define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
+#endif
 #ifndef MIN
 # define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
