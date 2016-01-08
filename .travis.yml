@@ -1,17 +1,15 @@
 # Travis-CI Build for Iceman Fork / Proxmark3
 language: c
+
 #install:
 compiler: gcc
 
-before script:
-  ## Install mainline ARM toolchain.  gcc-arm-none-eabi is available
-  ## in Ubuntu >= 14.04, but this external PPA is needed for 12.04.
-  ## Install srecord
-  - if [ ${BUILD_ARCH:-0} = arm-aapcs ] ; then
-      sudo add-apt-repository -y ppa:terry.guo/gcc-arm-embedded &&
-      sudo apt-get -qq update &&
-      sudo apt-get -qq install gcc-arm-none-eabi srecord &&
-      arm-none-eabi-gcc --version ;
-    fi
-	
+## Install mainline ARM toolchain.  gcc-arm-none-eabi is available
+## in Ubuntu >= 14.04, but this external PPA is needed for 12.04.
+before_script:
+  - sudo apt-add-repository 'deb http://archive.ubuntu.com/ubuntu trusty main universe multiverse restricted'
+  - sudo apt-get update -qq
+  - sudo apt-get install -y gcc-arm-none-eabi
+
+  #make command
 script: make clean && make all UBUNTU_1404_QT4=1
