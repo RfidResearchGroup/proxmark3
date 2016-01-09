@@ -12,4 +12,4 @@ before_script:
   - sudo apt-get install -y gcc-arm-none-eabi
 
   #make command
-script: make clean && make all UBUNTU_1404_QT4=1
+script: "make clean && make all UBUNTU_1404_QT4=1"
