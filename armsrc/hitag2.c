@@ -94,7 +94,6 @@ static uint64_t cipher_state;
 #define rotl64(x, n)	((((u64)(x))<<((n)&63))+(((u64)(x))>>((0-(n))&63)))
 
 // Single bit Hitag2 functions:
-
 #define i4(x,a,b,c,d)	((u32)((((x)>>(a))&1)+(((x)>>(b))&1)*2+(((x)>>(c))&1)*4+(((x)>>(d))&1)*8))
 
 static const u32 ht2_f4a = 0x2C79;		// 0010 1100 0111 1001
@@ -103,7 +102,7 @@ static const u32 ht2_f5c = 0x7907287B;	// 0111 1001 0000 0111 0010 1000 0111 101
 
 static u32 _f20 (const u64 x)
 {
-	u32					i5;
+	u32	i5;
 
 	i5 = ((ht2_f4a >> i4 (x, 1, 2, 4, 5)) & 1)* 1
 	   + ((ht2_f4b >> i4 (x, 7,11,13,14)) & 1)* 2
@@ -116,8 +115,8 @@ static u32 _f20 (const u64 x)
 
 static u64 _hitag2_init (const u64 key, const u32 serial, const u32 IV)
 {
-	u32					i;
-	u64					x = ((key & 0xFFFF) << 32) + serial;
+	u32	i;
+	u64	x = ((key & 0xFFFF) << 32) + serial;
 
 	for (i = 0; i < 32; i++)
 	{
@@ -129,7 +128,7 @@ static u64 _hitag2_init (const u64 key, const u32 serial, const u32 IV)
 
 static u64 _hitag2_round (u64 *state)
 {
-	u64					x = *state;
+	u64 x = *state;
 
 	x = (x >>  1) +
 	 ((((x >>  0) ^ (x >>  2) ^ (x >>  3) ^ (x >>  6)
@@ -153,7 +152,7 @@ static u64 _hitag2_round (u64 *state)
 
 static u32 _hitag2_byte (u64 * x)
 {
-	u32					i, c;
+	u32	i, c;
 
 	for (i = 0, c = 0; i < 8; i++) c += (u32) _hitag2_round (x) << (i^7);
 	return c;

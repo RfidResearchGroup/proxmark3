@@ -426,10 +426,11 @@ static RAMFUNC int ManchesterDecoding(int v)
 					Demod.state = DEMOD_UNSYNCD;
 					error = 0x88;
 				}
-
+				
+				// TODO: use this error value to print?  Ask Holiman.
+				// 2016-01-08 iceman
 			}
 			error = 0;
-
 		}
 	}
 	else {

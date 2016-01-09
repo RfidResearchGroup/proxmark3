@@ -89,43 +89,43 @@ int usage_lf_config(void) {
 	return 0;
 }
 int usage_lf_simfsk(void) {
-  PrintAndLog("Usage: lf simfsk [c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
-  PrintAndLog("Options:        ");
-  PrintAndLog("       h              This help");
-  PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
-  PrintAndLog("       i              invert data");
-  PrintAndLog("       H <fcHigh>     Manually set the larger Field Clock");
-  PrintAndLog("       L <fcLow>      Manually set the smaller Field Clock");
-  //PrintAndLog("       s              TBD- -to enable a gap between playback repetitions - default: no gap");
-  PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
-  PrintAndLog("\n  NOTE: if you set one clock manually set them all manually");
-  return 0;
+	PrintAndLog("Usage: lf simfsk [c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
+	PrintAndLog("Options:        ");
+	PrintAndLog("       h              This help");
+	PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
+	PrintAndLog("       i              invert data");
+	PrintAndLog("       H <fcHigh>     Manually set the larger Field Clock");
+	PrintAndLog("       L <fcLow>      Manually set the smaller Field Clock");
+	//PrintAndLog("       s              TBD- -to enable a gap between playback repetitions - default: no gap");
+	PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
+	PrintAndLog("\n  NOTE: if you set one clock manually set them all manually");
+	return 0;
 }
 int usage_lf_simask(void) {
-  PrintAndLog("Usage: lf simask [c <clock>] [i] [b|m|r] [s] [d <raw hex to sim>]");
-  PrintAndLog("Options:        ");
-  PrintAndLog("       h              This help");
-  PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
-  PrintAndLog("       i              invert data");
-  PrintAndLog("       b              sim ask/biphase");
-  PrintAndLog("       m              sim ask/manchester - Default");
-  PrintAndLog("       r              sim ask/raw");
-  PrintAndLog("       s              TBD- -to enable a gap between playback repetitions - default: no gap");
-  PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
-  return 0;
+	PrintAndLog("Usage: lf simask [c <clock>] [i] [b|m|r] [s] [d <raw hex to sim>]");
+	PrintAndLog("Options:        ");
+	PrintAndLog("       h              This help");
+	PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
+	PrintAndLog("       i              invert data");
+	PrintAndLog("       b              sim ask/biphase");
+	PrintAndLog("       m              sim ask/manchester - Default");
+	PrintAndLog("       r              sim ask/raw");
+	PrintAndLog("       s              TBD- -to enable a gap between playback repetitions - default: no gap");
+	PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
+	return 0;
 }
 int usage_lf_simpsk(void) {
-  PrintAndLog("Usage: lf simpsk [1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>]");
-  PrintAndLog("Options:        ");
-  PrintAndLog("       h              This help");
-  PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
-  PrintAndLog("       i              invert data");
-  PrintAndLog("       1              set PSK1 (default)");
-  PrintAndLog("       2              set PSK2");
-  PrintAndLog("       3              set PSK3");
-  PrintAndLog("       r <carrier>    2|4|8 are valid carriers: default = 2");
-  PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
-  return 0;
+	PrintAndLog("Usage: lf simpsk [1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>]");
+	PrintAndLog("Options:        ");
+	PrintAndLog("       h              This help");
+	PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
+	PrintAndLog("       i              invert data");
+	PrintAndLog("       1              set PSK1 (default)");
+	PrintAndLog("       2              set PSK2");
+	PrintAndLog("       3              set PSK3");
+	PrintAndLog("       r <carrier>    2|4|8 are valid carriers: default = 2");
+	PrintAndLog("       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
+	return 0;
 }
 int usage_lf_find(void){
     PrintAndLog("Usage:  lf search <0|1> [u]");
@@ -511,16 +511,15 @@ int CmdIndalaClone(const char *Cmd)
 
 int CmdLFSetConfig(const char *Cmd)
 {
-
 	uint8_t divisor =  0;//Frequency divisor
 	uint8_t bps = 0; // Bits per sample
 	uint8_t decimation = 0; //How many to keep
 	bool averaging = 1; // Defaults to true
 	bool errors = FALSE;
-	int trigger_threshold =-1;//Means no change
+	int trigger_threshold = -1;//Means no change
 	uint8_t unsigned_trigg = 0;
 
-	uint8_t cmdp =0;
+	uint8_t cmdp = 0;
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
 		switch(param_getchar(Cmd, cmdp))
@@ -563,22 +562,18 @@ int CmdLFSetConfig(const char *Cmd)
 		}
 		if(errors) break;
 	}
-	if(cmdp == 0)
-	{
-		errors = 1;// No args
-	}
+
+	// No args
+	if (cmdp == 0) errors = 1;
 
 	//Validations
-	if(errors)
-	{
-		return usage_lf_config();
-	}
+	if (errors) return usage_lf_config();
+	
 	//Bps is limited to 8, so fits in lower half of arg1
-	if(bps >> 8) bps = 8;
+	if (bps >> 4) bps = 8;
 
-	sample_config config = {
-		decimation,bps,averaging,divisor,trigger_threshold
-	};
+	sample_config config = { decimation, bps, averaging, divisor, trigger_threshold };
+
 	//Averaging is a flag on high-bit of arg[1]
 	UsbCommand c = {CMD_SET_LF_SAMPLING_CONFIG};
 	memcpy(c.d.asBytes,&config,sizeof(sample_config));
