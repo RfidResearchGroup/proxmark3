@@ -30,7 +30,7 @@ int usage_hid_wiegand(){
 	PrintAndLog("       facilitynum	- Facility number");
 	PrintAndLog("       cardnum		- Card number");
 	PrintAndLog("Examples:");
-	PrintAndLog("      lf hid wiegand 26 0 304 2001");
+	PrintAndLog("      lf hid wiegand 26 0 101 2001");
 	return 0;
 }
 
@@ -230,8 +230,8 @@ static void calc37H(uint64_t cn, uint32_t *hi, uint32_t *lo){
 }
 static void calc40(uint64_t cn, uint32_t *hi, uint32_t *lo){
 	cn = (cn & 0xFFFFFFFFFF);
-	*lo = (uint32_t)((cn & 0xFFFFFFFF) << 1 ); 
-	*hi = (uint32_t) (cn >> 31);  
+	*lo = ((cn & 0xFFFFFFFF) << 1 ); 
+	*hi = (cn >> 31);  
 }
 
 int CmdHIDWiegand(const char *Cmd)
@@ -284,13 +284,12 @@ int CmdHIDWiegand(const char *Cmd)
 		}
 		case 40 : {
 			calc40(cn, &hi, &lo);
-			PrintAndLog("%x  %x", hi, lo);
 			break;
 		}
 		case 44 : { break; }
 		case 84 : { break; }
 	}
-	PrintAndLog("HID %d bit | FC: %d CN: %d | Wiegand Code: %08X%08X", fmtlen, fc, cn, hi, lo);
+	PrintAndLog("HID %d bit | FC: %d CN: %lld | Wiegand Code: %08X%08X", fmtlen, fc, cn, hi, lo);
 	return 0;
 }
 
