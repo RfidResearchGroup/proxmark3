@@ -74,6 +74,7 @@ void rol(uint8_t *data, const size_t len){
     }
     data[len-1] = first;
 }
+
 void lsl (uint8_t *data, size_t len) {
     for (size_t n = 0; n < len - 1; n++) {
         data[n] = (data[n] << 1) | (data[n+1] >> 7);
@@ -420,7 +421,6 @@ void StartCountSspClk()
 	// we can use the counter.
 	while (AT91C_BASE_TC0->TC_CV < 0xFFF0);
 }
-
 
 uint32_t RAMFUNC GetCountSspClk(){
 	uint32_t tmp_count;

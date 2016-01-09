@@ -32,11 +32,13 @@ int usage_hf_mfu_sim(void);
 int usage_hf_mfu_ucauth(void);
 int usage_hf_mfu_ucsetpwd(void);
 int usage_hf_mfu_ucsetuid(void);
-int  usage_hf_mfu_gendiverse(void);
+int usage_hf_mfu_gendiverse(void);
 
 int CmdHFMFUltra(const char *Cmd);
 
 uint32_t ul_ev1_pwdgenA(uint8_t* uid);
+uint32_t ul_ev1_pwdgenA(uint8_t* uid);
+uint32_t ul_ev1_pwdgenC(uint8_t* uid);
 
 typedef enum TAGTYPE_UL {
 	UNKNOWN       = 0x000000,

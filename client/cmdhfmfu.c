@@ -100,6 +100,25 @@ uint32_t ul_ev1_pwdgenB(uint8_t* uid) {
 	return (uint32_t)bytes_to_num(pwd, 4);
 }
 
+// Certain pwd generation algo nickname C.
+uint32_t ul_ev1_pwdgenC(uint8_t* uid){
+	uint32_t pwd = 0;
+	uint8_t base[] = {
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x28,
+		0x63, 0x29, 0x20, 0x43, 0x6f, 0x70, 0x79, 0x72,
+		0x69, 0x67, 0x68, 0x74, 0x20, 0x4c, 0x45, 0x47,
+		0x4f, 0x20, 0x32, 0x30, 0x31, 0x34, 0xaa, 0xaa
+	};
+
+	memcpy(base, uid, 7);
+
+	for (int i = 0; i < 32; i += 4) {
+		uint32_t b = *(uint32_t *)(base + i);
+		pwd = b + ROTR(pwd, 25) + ROTR(pwd, 10) - pwd;
+	}
+	return BSWAP_32(pwd);
+}
+
 void ul_ev1_pwdgen_selftest(){
 	
 	uint8_t uid1[] = {0x04,0x11,0x12,0x11,0x12,0x11,0x10};
@@ -109,6 +128,10 @@ void ul_ev1_pwdgen_selftest(){
 	uint8_t uid2[] = {0x04,0x1f,0x98,0xea,0x1e,0x3e,0x81};		
 	uint32_t pwd2 = ul_ev1_pwdgenB(uid2);
 	PrintAndLog("UID | %s | %08X | %s", sprint_hex(uid2,7), pwd2, (pwd2 == 0x5fd37eca)?"OK":"->5fd37eca<--");
+
+	uint8_t uid3[] = {0x04,0x62, 0xB6, 0x8A, 0xB4, 0x42, 0x80};
+	uint32_t pwd3 = ul_ev1_pwdgenC(uid3);
+	PrintAndLog("UID | %s | %08X | %s", sprint_hex(uid3,7), pwd3, (pwd3 == 0x5a349515)?"OK":"->5a349515<--");
 	return;
 }
 
@@ -915,6 +938,14 @@ int CmdHF14AMfUInfo(const char *Cmd){
 				PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
 			}
 			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
+
+			// test pwd gen C
+			num_to_bytes( ul_ev1_pwdgenC(card.uid), 4, key);
+			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
+			if (len >= 1) {
+				PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
+			}
+			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;			
 			
 			for (uint8_t i = 0; i < KEYS_PWD_COUNT; ++i ) {
 				key = default_pwd_pack[i];
@@ -1876,7 +1907,6 @@ int CmdHF14AMfucSetUid(const char *Cmd){
 int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 
 	uint8_t uid[4];	
-	
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') return usage_hf_mfu_gendiverse();
 
