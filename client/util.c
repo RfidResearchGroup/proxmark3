@@ -21,7 +21,7 @@ int ukbhit(void)
   int error;
   static struct termios Otty, Ntty;
 
-  tcgetattr( 0, &Otty);
+  if ( tcgetattr( 0, &Otty) == -1) return false;
   Ntty = Otty;
 
   Ntty.c_iflag          = 0;       /* input mode                */
