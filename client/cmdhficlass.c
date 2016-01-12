@@ -601,7 +601,7 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 				errors = param_gethex(tempStr, 0, CreditKEY, dataLen);
 			} else if (dataLen == 1) {
 				keyNbr = param_get8(Cmd, cmdp+1);
-				if (keyNbr <= ICLASS_KEYS_MAX) {
+				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(CreditKEY, iClass_Key_Table[keyNbr], 8);
 				} else {
 					PrintAndLog("\nERROR: Credit KeyNbr is invalid\n");
@@ -635,7 +635,7 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 				errors = param_gethex(tempStr, 0, KEY, dataLen);
 			} else if (dataLen == 1) {
 				keyNbr = param_get8(Cmd, cmdp+1);
-				if (keyNbr <= ICLASS_KEYS_MAX) {
+				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(KEY, iClass_Key_Table[keyNbr], 8);
 				} else {
 					PrintAndLog("\nERROR: Credit KeyNbr is invalid\n");
@@ -894,7 +894,7 @@ int CmdHFiClass_WriteBlock(const char *Cmd) {
 				errors = param_gethex(tempStr, 0, KEY, dataLen);
 			} else if (dataLen == 1) {
 				keyNbr = param_get8(Cmd, cmdp+1);
-				if (keyNbr <= ICLASS_KEYS_MAX) {
+				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(KEY, iClass_Key_Table[keyNbr], 8);
 				} else {
 					PrintAndLog("\nERROR: Credit KeyNbr is invalid\n");
@@ -997,7 +997,7 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 				errors = param_gethex(tempStr, 0, KEY, dataLen);
 			} else if (dataLen == 1) {
 				keyNbr = param_get8(Cmd, cmdp+1);
-				if (keyNbr <= ICLASS_KEYS_MAX) {
+				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(KEY, iClass_Key_Table[keyNbr], 8);
 				} else {
 					PrintAndLog("\nERROR: Credit KeyNbr is invalid\n");
@@ -1182,7 +1182,7 @@ int CmdHFiClass_ReadBlock(const char *Cmd) {
 				errors = param_gethex(tempStr, 0, KEY, dataLen);
 			} else if (dataLen == 1) {
 				keyNbr = param_get8(Cmd, cmdp+1);
-				if (keyNbr <= ICLASS_KEYS_MAX) {
+				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(KEY, iClass_Key_Table[keyNbr], 8);
 				} else {
 					PrintAndLog("\nERROR: Credit KeyNbr is invalid\n");
@@ -1450,7 +1450,7 @@ int CmdHFiClassCalcNewKey(const char *Cmd) {
 				errors = param_gethex(tempStr, 0, NEWKEY, dataLen);
 			} else if (dataLen == 1) {
 				keyNbr = param_get8(Cmd, cmdp+1);
-				if (keyNbr <= ICLASS_KEYS_MAX) {
+				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(NEWKEY, iClass_Key_Table[keyNbr], 8);
 				} else {
 					PrintAndLog("\nERROR: NewKey Nbr is invalid\n");
@@ -1469,7 +1469,7 @@ int CmdHFiClassCalcNewKey(const char *Cmd) {
 				errors = param_gethex(tempStr, 0, OLDKEY, dataLen);
 			} else if (dataLen == 1) {
 				keyNbr = param_get8(Cmd, cmdp+1);
-				if (keyNbr <= ICLASS_KEYS_MAX) {
+				if (keyNbr < ICLASS_KEYS_MAX) {
 					memcpy(OLDKEY, iClass_Key_Table[keyNbr], 8);
 				} else {
 					PrintAndLog("\nERROR: Credit KeyNbr is invalid\n");
