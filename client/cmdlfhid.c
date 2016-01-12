@@ -17,23 +17,35 @@
 #include "cmdlfhid.h"
 #include "util.h"
 #include "cmdmain.h"
+#include "sleep.h"
 
 static int CmdHelp(const char *Cmd);
 
-int usage_hid_wiegand(){
-  	PrintAndLog("Usage: lf hid wiegand [h] [formatlenght] [oem] [FacilityCode] [cardnumber]");
+int usage_lf_hid_wiegand(void){
+  	PrintAndLog("Usage: lf hid wiegand [h] [oem] [FacilityCode] [cardnumber]");
 	PrintAndLog("This command converts FC/Cardnum to wiegand code");
 	PrintAndLog("Options:");
 	PrintAndLog("       h			- This help");
-	PrintAndLog("       formatlen	- Format length,  26|34|35|37|44|84");
 	PrintAndLog("       oem			- Oem number");
 	PrintAndLog("       facilitynum	- Facility number");
 	PrintAndLog("       cardnum		- Card number");
 	PrintAndLog("Examples:");
-	PrintAndLog("      lf hid wiegand 26 0 101 2001");
+	PrintAndLog("      lf hid wiegand 0 101 2001");
 	return 0;
 }
-
+int usage_lf_hid_brute(void){
+	PrintAndLog("Enables bruteforce of HID readers with specified facility-code.");
+	PrintAndLog("Different formatlength is supported");
+	PrintAndLog("This is a incremental attack against reader.");
+	PrintAndLog("");
+	PrintAndLog("Usage:  lf hid brute <formatlength> <Facility-Code>");
+	PrintAndLog("Options :");
+	PrintAndLog("  <formatlength>   : 26|33|34|35|37|40|44|84 ");
+	PrintAndLog("  <Facility-Code>  : 8-bit value HID facility code");
+	PrintAndLog("");
+	PrintAndLog("Sample  : lf hid brute 26 224");
+	return 0;
+}
 /*
 int CmdHIDDemod(const char *Cmd)
 {
@@ -54,8 +66,7 @@ int CmdHIDDemod(const char *Cmd)
   return 0;
 }
 */
-int CmdHIDDemodFSK(const char *Cmd)
-{
+int CmdHIDDemodFSK(const char *Cmd) {
 	int findone = ( Cmd[0] == '1' ) ? 1 : 0;
 	UsbCommand c = {CMD_HID_DEMOD_FSK, {findone, 0 , 0}};
 	clearCommandBuffer();
@@ -63,8 +74,7 @@ int CmdHIDDemodFSK(const char *Cmd)
 	return 0;
 }
 
-int CmdHIDSim(const char *Cmd)
-{
+int CmdHIDSim(const char *Cmd) {
 	unsigned int hi = 0, lo = 0;
 	int n = 0, i = 0;
 
@@ -82,8 +92,7 @@ int CmdHIDSim(const char *Cmd)
 	return 0;
 }
 
-int CmdHIDClone(const char *Cmd)
-{
+int CmdHIDClone(const char *Cmd) {
 	unsigned int hi2 = 0, hi = 0, lo = 0;
 	int n = 0, i = 0;
 	UsbCommand c;
@@ -134,6 +143,9 @@ static void getParity26(uint32_t *hi, uint32_t *lo){
 	for (i = 12;i >= 1;i--)
 		result ^= (*lo >> i) & 1;
 	*lo |= !result;
+}
+static void getParity33(uint32_t *hi, uint32_t *lo){
+
 }
 static void getParity34(uint32_t *hi, uint32_t *lo){
 	uint32_t result = 0;
@@ -199,6 +211,9 @@ static void calc26(uint16_t fc, uint32_t cardno, uint32_t *hi, uint32_t *lo){
    *lo = ((cardno & 0xFFFF) << 1) | ((fc & 0xFF) << 17) | (1 << 26);
    *hi = (1 << 5);
 }
+static void calc33(uint16_t fc, uint32_t cardno, uint32_t *hi, uint32_t *lo){
+
+}
 static void calc34(uint16_t fc, uint32_t cardno, uint32_t *hi, uint32_t *lo){
   // put card number first bit 1 .. 20 //
   *lo = ((cardno & 0X000F7FFF) << 1) | ((fc & 0XFFFF) << 17);
@@ -209,87 +224,148 @@ static void calc35(uint16_t fc, uint32_t cardno, uint32_t *hi, uint32_t *lo){
 	*lo = ((cardno & 0xFFFFF) << 1) | fc << 21; 
 	*hi = (1 << 5) | ((fc >> 11) & 1);  
 }
-static void calc37S(uint16_t sc, uint32_t cn, uint32_t *hi, uint32_t *lo){
-	// SC 2 - 17   - 16 bit  
-	// CN 18 - 36  - 19 bit
+static void calc37S(uint16_t fc, uint32_t cardno, uint32_t *hi, uint32_t *lo){
+	// FC 2 - 17   - 16 bit  
+	// cardno 18 - 36  - 19 bit
 	// Even P1   1 - 19
 	// Odd  P37  19 - 36
 
-	sc = sc & 0xFFFF;
-	*lo = ( (sc << 20) | (cn & 0x7FFFF) << 1);
-	*hi = (sc >> 12);
+	fc = fc & 0xFFFF;
+	*lo = ((fc << 20) | (cardno & 0x7FFFF) << 1);
+	*hi = (fc >> 12);
 }
-static void calc37H(uint64_t cn, uint32_t *hi, uint32_t *lo){
+static void calc37H(uint64_t cardno, uint32_t *hi, uint32_t *lo){
 	// SC NONE
-	// CN 1-35 34 bits 
+	// cardno 1-35 34 bits 
 	// Even Parity  0th bit  1-18
 	// Odd  Parity 36th bit 19-35
-	cn = (cn & 0x00000003FFFFFFFF);
-	*lo = (cn << 1);
-	*hi = (cn >> 31);
+	cardno = (cardno & 0x00000003FFFFFFFF);
+	*lo = (cardno << 1);
+	*hi = (cardno >> 31);
 }
-static void calc40(uint64_t cn, uint32_t *hi, uint32_t *lo){
-	cn = (cn & 0xFFFFFFFFFF);
-	*lo = ((cn & 0xFFFFFFFF) << 1 ); 
-	*hi = (cn >> 31);  
+static void calc40(uint64_t cardno, uint32_t *hi, uint32_t *lo){
+	cardno = (cardno & 0xFFFFFFFFFF);
+	*lo = ((cardno & 0xFFFFFFFF) << 1 ); 
+	*hi = (cardno >> 31);  
 }
 
-int CmdHIDWiegand(const char *Cmd)
-{
-	uint32_t oem;
-	uint32_t fmtlen = 0;
-	uint32_t fc, lo = 0, hi = 0;
-	uint64_t cn = 0;
-	uint32_t cardnum = 0;
-	
-	//uint32_t temp, p
-	uint8_t ctmp = param_getchar(Cmd, 0);
-	if ( strlen(Cmd) < 0 || strlen(Cmd) < 4 || ctmp == 'H' || ctmp == 'h' ) return usage_hid_wiegand();
+static void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint32_t *hi, uint32_t *lo){
 
-	fmtlen = param_get8(Cmd, 0);	
-	oem = param_get8(Cmd, 1);
-	fc = param_get32ex(Cmd, 2, 0, 10);
-	cn = param_get64ex(Cmd, 3, 0, 10);
-
+	uint32_t cn = (cardno & 0xFFFFFFFF);
 	switch ( fmtlen ) {
-		case 26 : {
-			cardnum = (cn & 0xFFFFFFFF);
-			calc26(fc, cardnum, &hi, &lo);
-			getParity26(&hi, &lo);		
+		case 26 : {			
+			calc26(fc, cn, hi, lo);
+			getParity26(hi, lo);		
+			break;
+		}
+		case 33 : { 
+ 			calc33(fc, cn, hi, lo);
+			getParity33(hi, lo);	
 			break;
 		}
 		case 34 : {
-			cardnum = (cn & 0xFFFFFFFF);
- 			calc34(fc, cardnum, &hi, &lo);
-			getParity34(&hi, &lo);		
+ 			calc34(fc, cn, hi, lo);
+			getParity34(hi, lo);		
 			break;
 		}
 		case 35 : {
-			cardnum = (cn & 0xFFFFFFFF);
-			calc35(fc, cardnum, &hi, &lo);
-			getParity35(&hi, &lo);
+			calc35(fc, cn, hi, lo);
+			getParity35(hi, lo);
 			break;
 		}
 		case 37 : {
-			cardnum = (cn & 0xFFFFFFFF);
-			calc37S(fc, cardnum, &hi, &lo);
-			getParity37S(&hi, &lo);
+			calc37S(fc, cn, hi, lo);
+			getParity37S(hi, lo);
 			break;
 		}
 		case 38 : { 
-			cardnum = (cn & 0xFFFFFFFF);
-			calc37H(cardnum, &hi, &lo);
-			getParity37H(&hi, &lo);
+			calc37H(cn, hi, lo);
+			getParity37H(hi, lo);
 			break;
 		}
-		case 40 : {
-			calc40(cn, &hi, &lo);
-			break;
-		}
+		case 40 : calc40(cardno, hi, lo);	break;
 		case 44 : { break; }
 		case 84 : { break; }
 	}
-	PrintAndLog("HID %d bit | FC: %d CN: %lld | Wiegand Code: %08X%08X", fmtlen, fc, cn, hi, lo);
+}	
+
+int CmdHIDWiegand(const char *Cmd) {
+	uint32_t oem;
+	uint32_t fc, lo = 0, hi = 0;
+	uint64_t cardnum = 0;
+	
+	uint8_t ctmp = param_getchar(Cmd, 0);
+	if ( strlen(Cmd) < 0 || strlen(Cmd) < 3 || ctmp == 'H' || ctmp == 'h' ) return usage_lf_hid_wiegand();
+
+	oem = param_get8(Cmd, 0);
+	fc = param_get32ex(Cmd, 1, 0, 10);
+	cardnum = param_get64ex(Cmd, 2, 0, 10);
+
+	uint8_t ftmlen[] = {26,33,34,35,37,38,40};
+	for (uint8_t i = 0; i < sizeof(ftmlen); i++){
+		calcWiegand( ftmlen[i], fc, cardnum, &hi, &lo);
+		PrintAndLog("HID %d bit | FC: %d CN: %llu | Wiegand Code: %08X%08X", ftmlen[i], fc, cardnum, hi, lo);
+	}
+	return 0;
+}
+
+int CmdHIDBrute(const char *Cmd){
+	
+	bool error = FALSE;
+	uint8_t fc = 0, fmtlen = 0;
+	uint32_t hi = 0, lo = 0;
+
+	UsbCommand c = {CMD_HID_SIM_TAG, {0, 0, 0}};  
+	
+	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) > 2 || strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_hid_brute();
+
+	fmtlen = param_get8(Cmd, 0);
+	switch(fmtlen){
+		case 26:
+		case 33:
+		case 34:
+		case 35:
+		case 37: {
+			error = FALSE;
+			break;
+		}
+		default: {
+			error = TRUE;
+			break;
+		}
+	}
+	if ( error ) return usage_lf_hid_brute();
+	
+  	fc =  param_get8(Cmd, 1);
+	if ( fc == 0) return usage_lf_hid_brute();
+	
+	PrintAndLog("Bruteforceing HID Reader");
+	PrintAndLog("Press pm3-button to abort simulation or run another command");
+
+	for ( uint16_t cn = 1; cn < 0xFFFF; ++cn){
+		if (ukbhit()) {
+			PrintAndLog("aborted via keyboard!");
+			c.cmd = CMD_PING;
+			c.arg[0] = 0x00;
+			c.arg[1] = 0x00;
+			c.arg[2] = 0x00;
+			clearCommandBuffer();
+			SendCommand(&c);
+			return 1;
+		}
+
+		calcWiegand( fmtlen, fc, cn, &hi, &lo);
+
+		c.arg[0] = hi;
+		c.arg[1] = lo;		
+		clearCommandBuffer();
+		SendCommand(&c);
+		
+		PrintAndLog("Trying FC: %u; CN: %u", fc, cn);
+		// pause
+		sleep(1);
+	}
 	return 0;
 }
 
