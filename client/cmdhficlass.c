@@ -286,9 +286,9 @@ int CmdHFiClassELoad(const char *Cmd) {
 
 	if (fsize < 0) 	{
 		prnlog("Error, when getting filesize");
+		fclose(f);
 		return 1;
 	}
-
 
 	uint8_t *dump = malloc(fsize);
 
@@ -1508,6 +1508,12 @@ static int loadKeys(char *filename) {
 	fseek(f, 0, SEEK_END);
 	long fsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
+
+	if ( fsize < 0 ) {
+		PrintAndLog("Error, when getting filesize");
+		fclose(f);
+		return 1;
+	}
 
 	uint8_t *dump = malloc(fsize);
 
