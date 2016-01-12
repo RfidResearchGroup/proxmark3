@@ -1364,7 +1364,7 @@ int CmdHF14AMfELoad(const char *Cmd)
 
 	len = param_getstr(Cmd,nameParamNo,filename);
 	
-	if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
+	if (len > FILE_PATH_SIZE - 5) len = FILE_PATH_SIZE - 5;
 
 	fnameptr += len;
 
@@ -1461,7 +1461,7 @@ int CmdHF14AMfESave(const char *Cmd)
 
 	len = param_getstr(Cmd,nameParamNo,filename);
 	
-	if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
+	if (len > FILE_PATH_SIZE - 5) len = FILE_PATH_SIZE - 5;
 	
 	// user supplied filename?
 	if (len < 1) {
@@ -1738,7 +1738,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 		return 0;
 	} else {
 		len = strlen(Cmd);
-		if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
+		if (len > FILE_PATH_SIZE - 5) len = FILE_PATH_SIZE - 5;
 
 		memcpy(filename, Cmd, len);
 		fnameptr += len;
@@ -1908,7 +1908,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 		return 0;
 	} else {
 		len = strlen(Cmd);
-		if (len > FILE_PATH_SIZE - 4) len = FILE_PATH_SIZE - 4;
+		if (len > FILE_PATH_SIZE - 5) len = FILE_PATH_SIZE - 5;
 	
 		// get filename based on UID
 		if (len < 1) {
