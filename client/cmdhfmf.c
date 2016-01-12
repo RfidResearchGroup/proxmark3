@@ -21,8 +21,17 @@ int CmdHF14AMifare(const char *Cmd)
 	uint64_t par_list = 0, ks_list = 0, r_key = 0;
 	int16_t isOK = 0;
 	int tmpchar; 
+	uint8_t blockNo = 0;
 	
-	UsbCommand c = {CMD_READER_MIFARE, {true, 0, 0}};
+	char cmdp = param_getchar(Cmd, 0);	
+	if ( cmdp == 'H' || cmdp == 'h') {
+		PrintAndLog("Usage:  hf mf mifare <block number>");
+		PrintAndLog("        sample: hf mf mifare 0");
+		return 0;
+	}	
+	
+	blockNo = param_get8(Cmd, 0);
+	UsbCommand c = {CMD_READER_MIFARE, {true, blockNo, 0}};
 
 	// message
 	printf("-------------------------------------------------------------------------\n");
@@ -754,6 +763,8 @@ int CmdHF14AMfNested(const char *Cmd)
 				
 				uint8_t sectrail = (FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
 				
+				PrintAndLog("Reading block %d", sectrail);
+							
 				UsbCommand c = {CMD_MIFARE_READBL, {sectrail, 0, 0}};
 				num_to_bytes(e_sector[i].Key[0], 6, c.d.asBytes); // KEY A
 				clearCommandBuffer();
@@ -1159,8 +1170,10 @@ int CmdHF14AMfChk(const char *Cmd)
 	for (i = 0; i < SectorsCnt; i++) {
 		// KEY A  but not KEY B
 		if ( e_sector[i].foundKey[0] && !e_sector[i].foundKey[1] ) {
-			
+						
 			uint8_t sectrail = (FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
+			
+			PrintAndLog("Reading block %d", sectrail);
 			
 			UsbCommand c = {CMD_MIFARE_READBL, {sectrail, 0, 0}};
 			num_to_bytes(e_sector[i].Key[0], 6, c.d.asBytes); // KEY A

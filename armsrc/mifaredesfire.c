@@ -63,9 +63,8 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 		print_result(" RX    : ", datain, datalen);
 	}
 	
-	if ( flags & CLEARTRACE ){
+	if ( flags & CLEARTRACE )
 		clear_trace();
-	}
 	
 	if ( flags & INIT ){
 		if ( !InitDesfireCard() )
@@ -73,9 +72,8 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 	}
 	
 	int len = DesfireAPDU(datain, datalen, resp);
-	if (MF_DBGLEVEL >= 4) {
+	if (MF_DBGLEVEL >= 4)
 		print_result("ERR <--: ", resp, len);
-	}
 
 	if ( !len ) {
 		OnError(2);
@@ -85,9 +83,8 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 	// reset the pcb_blocknum,
 	pcb_blocknum = 0;
 	
-	if ( flags & DISCONNECT ){
+	if ( flags & DISCONNECT )
 		OnSuccess();
-	}
 	
 	cmd_send(CMD_ACK,1,len,0,resp,len);
 }

@@ -21,6 +21,7 @@ SRC_ISO14443a = epa.c iso14443a.c mifareutil.c mifarecmd.c mifaresniff.c
 SRC_ISO14443b = iso14443b.c
 SRC_CRAPTO1 = crapto1.c crypto1.c des.c aes.c desfire_key.c desfire_crypto.c mifaredesfire.c
 SRC_CRC = iso14443crc.c crc.c crc16.c crc32.c 
+SRC_EMV = tlv.c emvdataels.c emvutil.c emvcmd.c 									 
 
 #the FPGA bitstream files. Note: order matters!
 FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit
@@ -62,6 +63,7 @@ ARMSRC = fpgaloader.c \
 	optimized_cipher.c \
 	hfsnoop.c \
 	parity.c
+#  $(SRC_EMV)
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common

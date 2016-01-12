@@ -44,6 +44,7 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	clear_trace();
+	set_tracing(true);
 
 	LED_A_ON();
 	LED_B_OFF();
@@ -96,6 +97,7 @@ void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes){
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	clear_trace();
+	set_tracing(true);
 
 	if(!iso14443a_select_card(NULL, NULL, NULL, true, 0)) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Can't select card");
@@ -131,6 +133,7 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	clear_trace();
+	set_tracing(true);
 
 	int len = iso14443a_select_card(NULL, NULL, NULL, true, 0);
 	if(!len) {
@@ -202,7 +205,8 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	clear_trace();
-
+	set_tracing(true);
+	
 	LED_A_ON();
 	LED_B_OFF();
 	LED_C_OFF();
@@ -258,7 +262,8 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 	// free eventually allocated BigBuf memory
 	BigBuf_free();
 	clear_trace();
-
+	set_tracing(true);
+	
 	// params
 	uint8_t blockNo = arg0;
 	uint16_t blocks = arg1;
@@ -368,7 +373,8 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	clear_trace();
-
+	set_tracing(true);
+	
 	LED_A_ON();
 	LED_B_OFF();
 	LED_C_OFF();
@@ -426,6 +432,7 @@ void MifareUWriteBlockCompat(uint8_t arg0, uint8_t *datain)
 	LED_A_ON(); LED_B_OFF(); LED_C_OFF();
 
 	clear_trace();
+	set_tracing(true);
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	if(!iso14443a_select_card(uid, NULL, NULL, true, 0)) {
@@ -473,7 +480,8 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	clear_trace();
-
+	set_tracing(true);
+	
 	if(!iso14443a_select_card(NULL, NULL, NULL, true, 0)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Can't select card");
 		OnError(0);
@@ -532,7 +540,8 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	clear_trace();
-
+	set_tracing(true);
+	
 	if(!iso14443a_select_card(NULL, NULL, NULL, true, 0)) {
 		if (MF_DBGLEVEL >= 1) Dbprintf("Can't select card");
 		OnError(0);
@@ -982,7 +991,9 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LED_C_OFF();
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
-	if (clearTrace) clear_trace();
+	if (clearTrace) 
+		clear_trace();
+	
 	set_tracing(TRUE);
 
 	for (i = 0; i < keyCount; i++) {
@@ -1354,6 +1365,7 @@ void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain){
     
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	clear_trace();
+	set_tracing(true);
 
 	int len = iso14443a_select_card(uid, NULL, &cuid, true, 0);
 	if(!len) {

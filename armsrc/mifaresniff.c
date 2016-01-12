@@ -169,6 +169,5 @@ bool intMfSniffSend() {
 	LED_B_OFF();
 
 	clear_trace();
-	
 	return TRUE;
 }

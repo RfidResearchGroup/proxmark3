@@ -345,7 +345,7 @@ void SimulateIso14443bTag(void)
 	// response to HLTB and ATTRIB
 	static const uint8_t response2[] = {0x00, 0x78, 0xF0};
 
-	uint8_t parity[MAX_PARITY_SIZE];
+	uint8_t parity[MAX_PARITY_SIZE] = {0x00};
 				
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
@@ -383,14 +383,12 @@ void SimulateIso14443bTag(void)
 
 	for(;;) {
 
-		if(!GetIso14443bCommandFromReader(receivedCmd, &len)) {
-		Dbprintf("button pressed, received %d commands", cmdsRecvd);
-		break;
+		if (!GetIso14443bCommandFromReader(receivedCmd, &len)) {
+			Dbprintf("button pressed, received %d commands", cmdsRecvd);
+			break;
 		}
 
-		if (tracing) {
-			LogTrace(receivedCmd, len, 0, 0, parity, TRUE);
-		}
+		LogTrace(receivedCmd, len, 0, 0, parity, TRUE);
 
 		// Good, look at the command now.
 		if ( (len == sizeof(cmd1) && memcmp(receivedCmd, cmd1, len) == 0)
@@ -410,14 +408,14 @@ void SimulateIso14443bTag(void)
 			// And print whether the CRC fails, just for good measure
 			uint8_t b1, b2;
 			if (len >= 3){ // if crc exists
-			ComputeCrc14443(CRC_14443_B, receivedCmd, len-2, &b1, &b2);
-			if(b1 != receivedCmd[len-2] || b2 != receivedCmd[len-1]) {
-				// Not so good, try again.
-				DbpString("+++CRC fail");
-		
-			} else {
-				DbpString("CRC passes");
-			}
+				ComputeCrc14443(CRC_14443_B, receivedCmd, len-2, &b1, &b2);
+				if(b1 != receivedCmd[len-2] || b2 != receivedCmd[len-1]) {
+					// Not so good, try again.
+					DbpString("+++CRC fail");
+			
+				} else {
+					DbpString("CRC passes");
+				}
 			}
 			//get rid of compiler warning
 			respCodeLen = 0;
@@ -462,7 +460,7 @@ void SimulateIso14443bTag(void)
 				AT91C_BASE_SSC->SSC_THR = respCode[i++];
 				FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			}
-				if(BUTTON_PRESS()) break;
+			if(BUTTON_PRESS()) break;
 		}
 		
 		// Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again:
@@ -475,8 +473,7 @@ void SimulateIso14443bTag(void)
 			}
 		}
 		
-		// trace the response:
-		if (tracing) LogTrace(resp, respLen, 0, 0, parity, FALSE);			
+		LogTrace(resp, respLen, 0, 0, parity, FALSE);			
 	}
 	FpgaDisableSscDma();
 	set_tracing(FALSE);	
@@ -793,8 +790,8 @@ static void GetSamplesFor14443bDemod(int n, bool quiet)
 	}
 
 	//Tracing
-	if (tracing && Demod.len > 0) {
-		uint8_t parity[MAX_PARITY_SIZE];
+	if (Demod.len > 0) {
+		uint8_t parity[MAX_PARITY_SIZE] = {0x00};
 		LogTrace(Demod.output, Demod.len, 0, 0, parity, FALSE);
 	}
 }
@@ -1216,7 +1213,7 @@ void RAMFUNC SnoopIso14443b(void)
 	upTo = dmaBuf;
 	lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
 	FpgaSetupSscDma((uint8_t*) dmaBuf, ISO14443B_DMA_BUFFER_SIZE);
-	uint8_t parity[MAX_PARITY_SIZE];
+	uint8_t parity[MAX_PARITY_SIZE] = {0x00};
 
 	bool TagIsActive = FALSE;
 	bool ReaderIsActive = FALSE;
@@ -1245,10 +1242,12 @@ void RAMFUNC SnoopIso14443b(void)
 				Dbprintf("blew circular buffer! behindBy=%d", behindBy);
 				break;
 			}
+			
 			if(!tracing) {
-				DbpString("Reached trace limit");
+				DbpString("Trace full");
 				break;
 			}
+			
 			if(BUTTON_PRESS()) {
 				DbpString("cancelled");
 				break;
@@ -1258,26 +1257,26 @@ void RAMFUNC SnoopIso14443b(void)
 		samples += 2;
 
 		if (!TagIsActive) {							// no need to try decoding reader data if the tag is sending
-			if(Handle14443bUartBit(ci & 0x01)) {
-			if(triggered && tracing) {
+			if (Handle14443bUartBit(ci & 0x01)) {
+				if ( triggered)
 					LogTrace(Uart.output, Uart.byteCnt, samples, samples, parity, TRUE);
+
+				/* And ready to receive another command. */
+				UartReset();
+				/* And also reset the demod code, which might have been */
+				/* false-triggered by the commands from the reader. */
+				DemodReset();
 			}
-			/* And ready to receive another command. */
-			UartReset();
-			/* And also reset the demod code, which might have been */
-			/* false-triggered by the commands from the reader. */
-			DemodReset();
-		}
-			if(Handle14443bUartBit(cq & 0x01)) {
-			if(triggered && tracing) {
+			if (Handle14443bUartBit(cq & 0x01)) {
+				if (triggered)
 					LogTrace(Uart.output, Uart.byteCnt, samples, samples, parity, TRUE);
-			}
-			/* And ready to receive another command. */
-			UartReset();
-			/* And also reset the demod code, which might have been */
-			/* false-triggered by the commands from the reader. */
-			DemodReset();
-		}
+
+					/* And ready to receive another command. */
+					UartReset();
+					/* And also reset the demod code, which might have been */
+					/* false-triggered by the commands from the reader. */
+					DemodReset();
+				}
 			ReaderIsActive = (Uart.state > STATE_GOT_FALLING_EDGE_OF_SOF);
 		}
 
@@ -1285,25 +1284,21 @@ void RAMFUNC SnoopIso14443b(void)
 			// is this | 0x01 the error?   & 0xfe  in https://github.com/Proxmark/proxmark3/issues/103
 			if(Handle14443bSamplesDemod(ci & 0xfe, cq & 0xfe)) {
 
-			//Use samples as a time measurement
-			if(tracing)
-			{
-				//uint8_t parity[MAX_PARITY_SIZE];
+				//Use samples as a time measurement
 				LogTrace(Demod.output, Demod.len, samples, samples, parity, FALSE);
-			}
-			triggered = TRUE;
 
-			// And ready to receive another response.
-			DemodReset();
-		}
+				triggered = TRUE;
+
+				// And ready to receive another response.
+				DemodReset();
+			}
 			TagIsActive = (Demod.state > DEMOD_GOT_FALLING_EDGE_OF_SOF);
 		}
 	}
 
 	FpgaDisableSscDma();
 	LEDsoff();
-	set_tracing(FALSE);	
-		
+	
 	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 	DbpString("Snoop statistics:");
 	Dbprintf("  Max behind by: %i", maxBehindBy);
@@ -1311,6 +1306,7 @@ void RAMFUNC SnoopIso14443b(void)
 	Dbprintf("  Uart ByteCnt: %i", Uart.byteCnt);
 	Dbprintf("  Uart ByteCntMax: %i", Uart.byteCntMax);
 	Dbprintf("  Trace length: %i", BigBuf_get_traceLen());
+	set_tracing(FALSE);	
 }
 
 
@@ -1337,13 +1333,13 @@ void SendRawCommand14443B(uint32_t datalen, uint32_t recv, uint8_t powerfield, u
 		CodeAndTransmit14443bAsReader(data, datalen);
 	}
 
-	if(recv) {
+	if (recv) {
 		GetSamplesFor14443bDemod(RECEIVE_SAMPLES_TIMEOUT, FALSE);
 		uint16_t iLen = MIN(Demod.len, USB_CMD_DATA_SIZE);
 		cmd_send(CMD_ACK, iLen, 0, 0, Demod.output, iLen);
 	}
 	
-	if(!powerfield) {
+	if (!powerfield) {
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		FpgaDisableSscDma();
 		set_tracing(FALSE);

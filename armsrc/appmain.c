@@ -405,8 +405,8 @@ void StandAloneMode14a()
 			/* need this delay to prevent catching some weird data */
 			SpinDelay(500);
 			/* Code for reading from 14a tag */
-			uint8_t uid[10]  ={0};
-			uint32_t cuid;
+			uint8_t uid[10] = {0};
+			uint32_t cuid = 0;
 			iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
 			for ( ; ; )
@@ -1089,7 +1089,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 			
 		case CMD_READER_MIFARE:
-            ReaderMifare(c->arg[0]);
+            ReaderMifare(c->arg[0], c->arg[1]);
 			break;
 		case CMD_MIFARE_READBL:
 			MifareReadBlock(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
@@ -1186,7 +1186,19 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MIFARE_COLLECT_NONCES:
 			break;
 #endif
-
+#ifdef WITH_EMV
+		case CMD_EMV_TRANSACTION:
+			EMVTransaction();
+			break;
+        case CMD_EMV_GET_RANDOM_NUM:
+            //EMVgetUDOL();
+            break;
+        case CMD_EMV_LOAD_VALUE:
+            EMVloadvalue(c->arg[0], c->d.asBytes);  
+            break;
+        case CMD_EMV_DUMP_CARD:
+            EMVdumpcard();
+#endif
 #ifdef WITH_ICLASS
 		// Makes use of ISO14443a FPGA Firmware
 		case CMD_SNOOP_ICLASS:
