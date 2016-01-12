@@ -1040,6 +1040,7 @@ int CmdHF14AMfChk(const char *Cmd)
 						if (!p) {
 							PrintAndLog("Cannot allocate memory for defKeys");
 							free(keyBlock);
+							free(f);
 							return 2;
 						}
 						keyBlock = p;
