@@ -2052,6 +2052,11 @@ int CmdHF14AMfSniff(const char *Cmd){
 					bufsize = traceLen;
 					memset(buf, 0x00, traceLen);
 				}
+				if (bufPtr == NULL) {
+					PrintAndLog("Cannot allocate memory for trace");
+					free(buf);
+					return 2;
+				}
 				memcpy(bufPtr, resp.d.asBytes, len);
 				bufPtr += len;
 				pckNum++;
