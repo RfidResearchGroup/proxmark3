@@ -943,7 +943,7 @@ int usage_hf_iclass_clone(void) {
 }
 
 int CmdHFiClassCloneTag(const char *Cmd) {
-	char filename[FILE_PATH_SIZE];
+	char filename[FILE_PATH_SIZE] = { 0x00 };
 	char tempStr[50]={0};
 	uint8_t KEY[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 	uint8_t keyNbr = 0;
