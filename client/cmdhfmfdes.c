@@ -352,7 +352,7 @@ void GetKeySettings( uint8_t *aid){
 			PrintAndLog("   Can't read Application Master key settings");
 		} else {
 			// Access rights.
-			uint8_t rights = (resp.d.asBytes[3] >> 4 && 0xff);
+			uint8_t rights = (resp.d.asBytes[3] >> 4 & 0xff);
 			switch (rights){
 				case 0x00:
 					str = "AMK authentication is necessary to change any key (default)";
