@@ -1316,8 +1316,13 @@ int CmdHFiClassReadTagFile(const char *Cmd) {
 	long fsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
 
-	uint8_t *dump = malloc(fsize);
+	if ( fsize < 0 ) {
+		PrintAndLog("Error, when getting filesize");
+		fclose(f);
+		return 1;
+	}
 
+	uint8_t *dump = malloc(fsize);
 
 	size_t bytes_read = fread(dump, 1, fsize, f);
 	fclose(f);
