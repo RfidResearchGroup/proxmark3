@@ -66,14 +66,12 @@ int CmdSri512Read(const char *Cmd)
  * SRIX4K tags are ISO14443-B modulated memory tags,
  * this command just dumps the contents of the memory/
  */
-int CmdSrix4kRead(const char *Cmd)
-{
+int CmdSrix4kRead(const char *Cmd) {
 	UsbCommand c = {CMD_READ_SRIX4K_TAG, {strtol(Cmd, NULL, 0), 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
-
 
 int rawClose(void){
 	UsbCommand resp;
@@ -81,7 +79,8 @@ int rawClose(void){
 	clearCommandBuffer();
 	SendCommand(&c);
 	if (!WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
-	return 0;	
+		PrintAndLog("Command time-out");
+		return 1;
 	}
 	return 0;
 }
@@ -804,47 +803,26 @@ int CmdteaSelfTest(const char *Cmd){
 	
 	SwapEndian64ex(v , 8, 4, v_ptr);
 	
-
+	// ENCRYPTION KEY:	
 	
-	PrintAndLog("Modified Burtle");
-	prng_ctx ctx; // = { 0, 0, 0, 0 };
-	uint32_t num = bytes_to_num(v+1, 4);
-	burtle_init_mod( &ctx, num);
-	PrintAndLog("V   : %X", num);
-	PrintAndLog("BURT: %X", burtle_get_mod( &ctx));
-	PrintAndLog("SIMP: %X", GetSimplePrng(num));
-
-	uint8_t calc[16];
+	uint8_t key[16]  = {0x00};
+	uint8_t keyle[16];
+	uint8_t* key_ptr = keyle;
+	SwapEndian64ex(key , sizeof(key), 4, key_ptr);
 	
-	for ( uint8_t i=0; i<8; ++i){
-		if ( i%2 == 0) {
-			calc[0] += v[i];
-			calc[1] += NibbleHigh( v[i]);
-			calc[2] += NibbleLow( v[i]);			
-			calc[3] ^= v[i];
-			calc[4] ^= NibbleHigh(v[i]);
-			calc[5] ^= NibbleLow( v[i]);
-		}			
-		else {
-			calc[6] += v[i];
-			calc[7] += NibbleHigh( v[i]);
-			calc[8] += NibbleLow( v[i]);			
-			calc[9] ^= v[i];
-			calc[10] ^= NibbleHigh(v[i]);
-			calc[11] ^= NibbleLow( v[i]);
-		}		
-	}
-	for ( uint8_t i=0; i<4; ++i) calc[12] += v[i];
-	for ( uint8_t i=1; i<5; ++i) calc[13] += v[i];
-	for ( uint8_t i=2; i<6; ++i) calc[14] += v[i];
-	for ( uint8_t i=3; i<7; ++i) calc[15] += v[i];
+	PrintAndLog("TEST LE enc| %s", sprint_hex(v_ptr, 8));
+	
+	tea_decrypt(v_ptr, key_ptr);	
+	PrintAndLog("TEST LE dec | %s", sprint_hex_ascii(v_ptr, 8));
+	
+	tea_encrypt(v_ptr, key_ptr);	
+	tea_encrypt(v_ptr, key_ptr);
+	PrintAndLog("TEST enc2 | %s", sprint_hex_ascii(v_ptr, 8));
 
-	PrintAndLog("%s ", sprint_hex(calc, 16) );
 	return 0;
 }
 
-static command_t CommandTable[] = 
-{
+static command_t CommandTable[] = {
 	{"help",        CmdHelp,        1, "This help"},
 	{"info",        CmdHF14Binfo,   0, "Find and print details about a 14443B tag"},
 	{"list",        CmdHF14BList,   0, "[Deprecated] List ISO 14443B history"},
@@ -860,14 +838,13 @@ static command_t CommandTable[] =
 	{NULL, NULL, 0, NULL}
 };
 
-int CmdHF14B(const char *Cmd)
-{
+int CmdHF14B(const char *Cmd) {
+	clearCommandBuffer();
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
 	CmdsHelp(CommandTable);
 	return 0;
 }
