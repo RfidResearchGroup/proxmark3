@@ -686,8 +686,8 @@ static void Check_for_FilterFlipProperties(void)
 
 static void simulate_MFplus_RNG(uint32_t test_cuid, uint64_t test_key, uint32_t *nt_enc, uint8_t *par_enc)
 {
-	struct Crypto1State sim_cs;
-	sim_cs.odd = sim_cs.even = 0;
+	struct Crypto1State sim_cs = {0, 0};
+//	sim_cs.odd = sim_cs.even = 0;
 
 	// init cryptostate with key:
 	for(int8_t i = 47; i > 0; i -= 2) {
