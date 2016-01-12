@@ -269,10 +269,9 @@ int CmdHFiClassELoad(const char *Cmd) {
 	//File handling and reading
 	FILE *f;
 	char filename[FILE_PATH_SIZE];
-	if(opt == 'f' && param_getstr(Cmd, 1, filename) > 0)
-	{
+	if(opt == 'f' && param_getstr(Cmd, 1, filename) > 0) {
 		f = fopen(filename, "rb");
-	}else{
+	} else {
 		return hf_iclass_eload_usage();
 	}
 
@@ -285,8 +284,13 @@ int CmdHFiClassELoad(const char *Cmd) {
 	long fsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
 
-	uint8_t *dump = malloc(fsize);
+	if (fsize < 0) 	{
+		prnlog("Error, when getting filesize");
+		return 1;
+	}
 
+
+	uint8_t *dump = malloc(fsize);
 
 	size_t bytes_read = fread(dump, 1, fsize, f);
 	fclose(f);
