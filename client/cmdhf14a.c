@@ -735,7 +735,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
 	// Max buffer is USB_CMD_DATA_SIZE
 	datalen = (datalen > USB_CMD_DATA_SIZE) ? USB_CMD_DATA_SIZE : datalen;
 		
-    c.arg[1] = (datalen & 0xFFFF) | (numbits << 16);
+    c.arg[1] = (datalen & 0xFFFF) | (uint32_t)(numbits << 16);
     memcpy(c.d.asBytes,data,datalen);
 
 	clearCommandBuffer();
