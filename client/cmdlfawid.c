@@ -19,7 +19,7 @@
 #include "util.h"       // weigandparity
 #include "protocols.h"  // for T55xx config register definitions
 #include "cmdmain.h"
- #include "sleep.h"
+#include "sleep.h"
  
 static int CmdHelp(const char *Cmd);
 
@@ -67,8 +67,9 @@ int usage_lf_awid_clone(void) {
 }
 
 int usage_lf_awid_brute(void){
-	PrintAndLog("Enables bruteforce of AWID26 card with specified facility-code.");
+	PrintAndLog("Enables bruteforce of AWID26 reader with specified facility-code.");
 	PrintAndLog("Per AWID26 format, the facility-code (FC) is 8-bit and the card number is 16-bit.");
+	PrintAndLog("This is a incremental attack against reader.");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf awid brute <Facility-Code>");
 	PrintAndLog("Options :");
@@ -213,7 +214,7 @@ int CmdAWIDBrute(const char *Cmd){
   	fc =  param_get8(Cmd, 0);
 	if ( fc == 0) return usage_lf_awid_brute();
 	
-	PrintAndLog("Bruteforceing AWID26");
+	PrintAndLog("Bruteforceing AWID26 Reader");
 	PrintAndLog("Press pm3-button to abort simulation or run another command");
 
 	uint64_t arg1 = (10<<8) + 8; // fcHigh = 10, fcLow = 8
