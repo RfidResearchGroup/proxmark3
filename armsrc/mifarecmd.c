@@ -750,7 +750,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	uint16_t davg = 0;
 	static uint16_t dmin, dmax;
 	uint8_t uid[10] = {0x00};
-	uint32_t cuid, nt1, nt2, nttmp, nttest, ks1;
+	uint32_t cuid = 0, nt1, nt2, nttmp, nttest, ks1;
 	uint8_t par[1] = {0x00};
 	uint32_t target_nt[2] = {0x00}, target_ks[2] = {0x00};
 	
@@ -759,7 +759,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
+	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
 
 	uint32_t auth1_time, auth2_time;
 	static uint16_t delta_time;

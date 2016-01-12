@@ -1464,7 +1464,6 @@ void PrepareDelayedTransfer(uint16_t delay)
 //-------------------------------------------------------------------------------------
 static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing)
 {
-	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 
 	uint32_t ThisTransferTime = 0;
@@ -1492,9 +1491,8 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = cmd[c];
 			c++;
-			if(c >= len) {
+			if(c >= len)
 				break;
-			}
 		}
 	}
 	
@@ -1508,7 +1506,7 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8_t *parity)
 {
 	int i, j;
-	int last;
+	int last = 0;
 	uint8_t b;
 
 	ToSendReset();
@@ -1516,7 +1514,6 @@ void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8
 	// Start of Communication (Seq. Z)
 	ToSend[++ToSendMax] = SEC_Z;
 	LastProxToAirDuration = 8 * (ToSendMax+1) - 6;
-	last = 0;
 
 	size_t bytecount = nbytes(bits);
 	// Generate send structure for the data bits
@@ -1729,7 +1726,7 @@ int EmSend4bitEx(uint8_t resp, bool correctionNeeded){
 	Code4bitAnswerAsTag(resp);
 	int res = EmSendCmd14443aRaw(ToSend, ToSendMax, correctionNeeded);
 	// do the tracing for the previous reader request and this tag answer:
-	uint8_t par[1];
+	uint8_t par[1] = {0x00};
 	GetParity(&resp, 1, par);
 	EmLogTrace(Uart.output, 
 				Uart.len, 
@@ -1766,13 +1763,13 @@ int EmSendCmdExPar(uint8_t *resp, uint16_t respLen, bool correctionNeeded, uint8
 }
 
 int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool correctionNeeded){
-	uint8_t par[MAX_PARITY_SIZE];
+	uint8_t par[MAX_PARITY_SIZE] = {0x00};
 	GetParity(resp, respLen, par);
 	return EmSendCmdExPar(resp, respLen, correctionNeeded, par);
 }
 
 int EmSendCmd(uint8_t *resp, uint16_t respLen){
-	uint8_t par[MAX_PARITY_SIZE];
+	uint8_t par[MAX_PARITY_SIZE] = {0x00};
 	GetParity(resp, respLen, par);
 	return EmSendCmdExPar(resp, respLen, false, par);
 }
@@ -1793,9 +1790,12 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 		uint16_t exact_fdt = (approx_fdt - 20 + 32)/64 * 64 + 20;
 		reader_EndTime = tag_StartTime - exact_fdt;
 		reader_StartTime = reader_EndTime - reader_modlen;
-		if (!LogTrace(reader_data, reader_len, reader_StartTime, reader_EndTime, reader_Parity, TRUE)) {
+		
+		if (!LogTrace(reader_data, reader_len, reader_StartTime, reader_EndTime, reader_Parity, TRUE))
 			return FALSE;
-		} else return(!LogTrace(tag_data, tag_len, tag_StartTime, tag_EndTime, tag_Parity, FALSE));
+		else 
+			return(!LogTrace(tag_data, tag_len, tag_StartTime, tag_EndTime, tag_Parity, FALSE));
+		
 	} else {
 		return TRUE;
 	}
@@ -1847,9 +1847,8 @@ void ReaderTransmitBitsPar(uint8_t* frame, uint16_t bits, uint8_t *par, uint32_t
 		LED_A_ON();
   
 	// Log reader command in trace buffer
-	if (tracing) {
+	if (tracing)
 		LogTrace(frame, nbytes(bits), LastTimeProxToAirStart*16 + DELAY_ARM2AIR_AS_READER, (LastTimeProxToAirStart + LastProxToAirDuration)*16 + DELAY_ARM2AIR_AS_READER, par, TRUE);
-	}
 }
 
 void ReaderTransmitPar(uint8_t* frame, uint16_t len, uint8_t *par, uint32_t *timing)
@@ -1860,7 +1859,7 @@ void ReaderTransmitPar(uint8_t* frame, uint16_t len, uint8_t *par, uint32_t *tim
 void ReaderTransmitBits(uint8_t* frame, uint16_t len, uint32_t *timing)
 {
   // Generate parity and redirect
-  uint8_t par[MAX_PARITY_SIZE];
+  uint8_t par[MAX_PARITY_SIZE] = {0x00};
   GetParity(frame, len/8, par);
   ReaderTransmitBitsPar(frame, len, par, timing);
 }
@@ -1868,26 +1867,30 @@ void ReaderTransmitBits(uint8_t* frame, uint16_t len, uint32_t *timing)
 void ReaderTransmit(uint8_t* frame, uint16_t len, uint32_t *timing)
 {
   // Generate parity and redirect
-  uint8_t par[MAX_PARITY_SIZE];
+  uint8_t par[MAX_PARITY_SIZE] = {0x00};
   GetParity(frame, len, par);
   ReaderTransmitBitsPar(frame, len*8, par, timing);
 }
 
 int ReaderReceiveOffset(uint8_t* receivedAnswer, uint16_t offset, uint8_t *parity)
 {
-	if (!GetIso14443aAnswerFromTag(receivedAnswer, parity, offset)) return FALSE;
-	if (tracing) {
+	if (!GetIso14443aAnswerFromTag(receivedAnswer, parity, offset)) 
+		return FALSE;
+
+	if (tracing)
 		LogTrace(receivedAnswer, Demod.len, Demod.startTime*16 - DELAY_AIR2ARM_AS_READER, Demod.endTime*16 - DELAY_AIR2ARM_AS_READER, parity, FALSE);
-	}
+
 	return Demod.len;
 }
 
 int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity)
 {
-	if (!GetIso14443aAnswerFromTag(receivedAnswer, parity, 0)) return FALSE;
-	if (tracing) {
+	if (!GetIso14443aAnswerFromTag(receivedAnswer, parity, 0)) 
+		return FALSE;
+
+	if (tracing)
 		LogTrace(receivedAnswer, Demod.len, Demod.startTime*16 - DELAY_AIR2ARM_AS_READER, Demod.endTime*16 - DELAY_AIR2ARM_AS_READER, parity, FALSE);
-	}
+
 	return Demod.len;
 }
 
@@ -2254,7 +2257,7 @@ void ReaderMifare(bool first_try)
 	static byte_t par_low = 0;
 	bool led_on = TRUE;
 	uint8_t uid[10] = {0};
-	uint32_t cuid;
+	uint32_t cuid = 0;
 
 	uint32_t nt = 0;
 	uint32_t previous_nt = 0;
@@ -2267,7 +2270,7 @@ void ReaderMifare(bool first_try)
 	static int32_t sync_cycles = 0;
 	int catch_up_cycles = 0;
 	int last_catch_up = 0;
-	uint16_t elapsed_prng_sequences;
+	uint16_t elapsed_prng_sequences = 0;
 	uint16_t consecutive_resyncs = 0;
 	int isOK = 0;
 
@@ -2299,8 +2302,8 @@ void ReaderMifare(bool first_try)
 	int16_t debug_info_nr = -1;
 	uint16_t strategy = 0;
 	int32_t debug_info[MAX_STRATEGY][NUM_DEBUG_INFOS];
-	uint32_t select_time;
-	uint32_t halt_time;
+	uint32_t select_time = 0;
+	uint32_t halt_time = 0;
   
 	for(uint16_t i = 0; TRUE; ++i) {
 		
@@ -2328,6 +2331,7 @@ void ReaderMifare(bool first_try)
 			SpinDelay(200);
 			iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 			SpinDelay(100);
+			WDT_HIT();
 		}
 		
 		if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
@@ -2345,10 +2349,11 @@ void ReaderMifare(bool first_try)
 			while(GetCountSspClk() > sync_time) {
 				elapsed_prng_sequences++;
 				sync_time = (sync_time & 0xfffffff8) + sync_cycles;
-			}
+			}			
 
 			// Transmit MIFARE_CLASSIC_AUTH at synctime. Should result in returning the same tag nonce (== nt_attacked) 
 			ReaderTransmit(mf_auth, sizeof(mf_auth), &sync_time);
+			
 		} else {
 			// collect some information on tag nonces for debugging:
 			#define DEBUG_FIXED_SYNC_CYCLES	PRNG_SEQUENCE_LENGTH
@@ -2473,7 +2478,7 @@ void ReaderMifare(bool first_try)
 		} else {
 			if (nt_diff == 0 && first_try) {
 				par[0]++;
-				if (par[0] == 0x00) {		// tried all 256 possible parities without success. Card doesn't send NACK.
+				if (par[0] == 0x00) {	// tried all 256 possible parities without success. Card doesn't send NACK.
 					isOK = -2;
 					break;
 				}
@@ -2483,9 +2488,10 @@ void ReaderMifare(bool first_try)
 		}
 	}
 
-
 	mf_nr_ar[3] &= 0x1F;
-	
+
+	WDT_HIT();
+		
 	if (isOK == -4) {
 		if (MF_DBGLEVEL >= 3) {
 			for (uint16_t i = 0; i <= MAX_STRATEGY; ++i) {
@@ -2544,10 +2550,10 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
 	uint32_t numReads = 0;//Counts numer of times reader read a block
-	uint8_t receivedCmd[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedCmd_par[MAX_MIFARE_PARITY_SIZE];
-	uint8_t response[MAX_MIFARE_FRAME_SIZE];
-	uint8_t response_par[MAX_MIFARE_PARITY_SIZE];
+	uint8_t receivedCmd[MAX_MIFARE_FRAME_SIZE] = {0x00};
+	uint8_t receivedCmd_par[MAX_MIFARE_PARITY_SIZE] = {0x00};
+	uint8_t response[MAX_MIFARE_FRAME_SIZE] = {0x00};
+	uint8_t response_par[MAX_MIFARE_PARITY_SIZE] = {0x00};
 	
 	uint8_t rATQA[] = {0x04, 0x00}; // Mifare classic 1k 4BUID
 	uint8_t rUIDBCC1[] = {0xde, 0xad, 0xbe, 0xaf, 0x62};

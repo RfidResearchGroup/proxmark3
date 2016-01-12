@@ -54,7 +54,7 @@ start:
 		}
 		
 		UsbCommand resp;
-		if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
 			isOK  = resp.arg[0];
 			uid = (uint32_t)bytes_to_num(resp.d.asBytes +  0, 4);
 			nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
@@ -93,7 +93,7 @@ start:
 	}
 	t1 = clock() - t1;
 	if ( t1 > 0 ){
-		PrintAndLog("Time in darkside: %f ticks - %1.2f sec\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC);
+		PrintAndLog("Time in darkside: %.0f ticks - %4.2f sec\n (%u)", (float)t1, ((float)t1)/CLOCKS_PER_SEC, CLOCKS_PER_SEC);
 	}
 	return 0;
 }
@@ -706,7 +706,7 @@ int CmdHF14AMfNested(const char *Cmd)
 				
 				if (!res) {
 					e_sector[i].Key[j] = key64;
-					e_sector[i].foundKey[j] = 1;
+					e_sector[i].foundKey[j] = TRUE;
 				}
 			}
 		}
@@ -763,39 +763,24 @@ int CmdHF14AMfNested(const char *Cmd)
 				if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500)) continue;
 					
 				uint8_t isOK  = resp.arg[0] & 0xff;
+				if (!isOK) continue;
+
 				uint8_t *data = resp.d.asBytes;
-
-				if (isOK) {
-
-					key64 = bytes_to_num(data+10, 6);
-					if (key64) {
-						PrintAndLog("Data:%s", sprint_hex(data+10, 6));
-						e_sector[i].foundKey[1] = 1;
-						e_sector[i].Key[1] = key64;
-					}
+				key64 = bytes_to_num(data+10, 6);
+				if (key64) {
+					PrintAndLog("Data:%s", sprint_hex(data+10, 6));
+					e_sector[i].foundKey[1] = 1;
+					e_sector[i].Key[1] = key64;
 				}
 			}
 		}
 		
 		t1 = clock() - t1;
-		if ( t1 > 0 ) {
-			PrintAndLog("Time in nested: %f ticks %1.2f sec (%1.2f sec per key)\n\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC, ((float)t1)/iterations/CLOCKS_PER_SEC);
-		}
+		if ( t1 > 0 )
+			PrintAndLog("Time in nested: %.0f ticks %4.2f sec (%4.2f sec per key)\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC, ((float)t1)/iterations/CLOCKS_PER_SEC);
 		
-		PrintAndLog("-----------------------------------------------\nIterations count: %d\n\n", iterations);
 		//print them
-		PrintAndLog("|---|----------------|---|----------------|---|");
-		PrintAndLog("|sec|key A           |res|key B           |res|");
-		PrintAndLog("|---|----------------|---|----------------|---|");
-		for (i = 0; i < SectorsCnt; i++) {
-			PrintAndLog("|%03d|  %012"llx"  | %d |  %012"llx"  | %d |", i,
-				e_sector[i].Key[0], 
-				e_sector[i].foundKey[0], 
-				e_sector[i].Key[1], 
-				e_sector[i].foundKey[1]
-			);
-		}
-		PrintAndLog("|---|----------------|---|----------------|---|");
+		printKeyTable( SectorsCnt, e_sector );
 		
 		// transfer them to the emulator
 		if (transferToEml) {
@@ -979,6 +964,8 @@ int CmdHF14AMfChk(const char *Cmd)
 	uint8_t *keyBlock = NULL, *p;
 	uint8_t stKeyBlock = 20;
 	
+	sector *e_sector = NULL;
+	
 	int i, res;
 	int	keycnt = 0;
 	char ctmp	= 0x00;
@@ -987,6 +974,8 @@ int CmdHF14AMfChk(const char *Cmd)
 	uint8_t keyType = 0;
 	uint64_t key64 = 0;
 	
+	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+		
 	int transferToEml = 0;
 	int createDumpFile = 0;
 
@@ -1124,78 +1113,135 @@ int CmdHF14AMfChk(const char *Cmd)
 	}
 	
 	// initialize storage for found keys
-	bool validKey[2][40];
-	uint8_t foundKey[2][40][6];
-	for (uint16_t t = 0; t < 2; t++) {
-		for (uint16_t sectorNo = 0; sectorNo < SectorsCnt; sectorNo++) {
-			validKey[t][sectorNo] = false;
-			for (uint16_t i = 0; i < 6; i++) {
-				foundKey[t][sectorNo][i] = 0xff;
-			}
-		}
-	}
-	// time
-	clock_t t1 = clock();
-		
-	for ( int t = !keyType; t < 2; keyType==2?(t++):(t=2) ) {
-		int b=blockNo;
-		for (int i = 0; i < SectorsCnt; ++i) {
-			PrintAndLog("--sector:%2d, block:%3d, key type:%C, key count:%2d ", i, b, t?'B':'A', keycnt);
-			uint32_t max_keys = keycnt>USB_CMD_DATA_SIZE/6?USB_CMD_DATA_SIZE/6:keycnt;
-			for (uint32_t c = 0; c < keycnt; c+=max_keys) {
-				uint32_t size = keycnt-c>max_keys?max_keys:keycnt-c;
-				res = mfCheckKeys(b, t, true, size, &keyBlock[6*c], &key64);
-				if (res != 1) {
-					if (!res) {
-						PrintAndLog("Found valid key:[%012"llx"]",key64);
-						num_to_bytes(key64, 6, foundKey[t][i]);
-						validKey[t][i] = true;
-					} 
-				} else {
-					PrintAndLog("Command execute timeout");
-				}
-			}
-			b<127?(b+=4):(b+=16);	
-		}
-	}
-	t1 = clock() - t1;
-	if ( t1 > 0 ){
-		printf("Time in checkkeys: %f ticks  %1.2f sec (%1.2f sec per key)\n\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC, ((float)t1)/keycnt/CLOCKS_PER_SEC);
+	e_sector = calloc(SectorsCnt, sizeof(sector));
+	if (e_sector == NULL) {
+		free(keyBlock);
+		return 1;
 	}
 
-	if (transferToEml) {
-		uint8_t block[16];
-		for (uint16_t sectorNo = 0; sectorNo < SectorsCnt; sectorNo++) {
-			if (validKey[0][sectorNo] || validKey[1][sectorNo]) {
-				mfEmlGetMem(block, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
-				for (uint16_t t = 0; t < 2; t++) {
-					if (validKey[t][sectorNo]) {
-						memcpy(block + t*10, foundKey[t][sectorNo], 6);
-					}
+	uint8_t trgKeyType = 0;
+	
+	// time
+	clock_t t1 = clock();
+	
+	// check keys.
+	for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) {
+		int b = blockNo;
+		for (int i = 0; i < SectorsCnt; ++i) {
+			
+			// skip already found keys.
+			if (e_sector[i].foundKey[trgKeyType]) continue;
+			
+			PrintAndLog("--sector:%2d, block:%3d, key type:%C, key count:%2d ", i, b, trgKeyType ? 'B':'A', keycnt);
+			
+			uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE/6) ? (USB_CMD_DATA_SIZE/6) : keycnt;
+			
+			for (uint32_t c = 0; c < keycnt; c += max_keys) {
+				
+				uint32_t size = keycnt-c > max_keys ? max_keys : keycnt-c;
+				
+				res = mfCheckKeys(b, trgKeyType, true, size, &keyBlock[6*c], &key64);
+				if (!res) {
+					PrintAndLog("Found valid key:[%012"llx"]",key64);					
+					e_sector[i].Key[trgKeyType] = key64;
+					e_sector[i].foundKey[trgKeyType] = TRUE;
+					break;
+				} else {
+					e_sector[i].Key[trgKeyType] = 0xffffffffffff;
+					e_sector[i].foundKey[trgKeyType] = FALSE;
 				}
-				mfEmlSetMem(block, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
 			}
+			b < 127 ? ( b +=4 ) : ( b += 16 );	
+		}
+	}
+	// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
+	PrintAndLog("testing to read B...");
+	for (i = 0; i < SectorsCnt; i++) {
+		// KEY A  but not KEY B
+		if ( e_sector[i].foundKey[0] && !e_sector[i].foundKey[1] ) {
+			
+			uint8_t sectrail = (FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
+			
+			UsbCommand c = {CMD_MIFARE_READBL, {sectrail, 0, 0}};
+			num_to_bytes(e_sector[i].Key[0], 6, c.d.asBytes); // KEY A
+			clearCommandBuffer();
+			SendCommand(&c);
+
+			UsbCommand resp;
+			if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500)) continue;
+				
+			uint8_t isOK  = resp.arg[0] & 0xff;
+			if (!isOK) continue;
+
+			uint8_t *data = resp.d.asBytes;
+			key64 = bytes_to_num(data+10, 6);
+			if (key64) {
+				PrintAndLog("Data:%s", sprint_hex(data+10, 6));
+				e_sector[i].foundKey[1] = 1;
+				e_sector[i].Key[1] = key64;
+			}
+		}
+	}
+	
+	t1 = clock() - t1;
+	if ( t1 > 0 )
+		printf("Time in checkkeys: %.0f ticks  %1.2f sec (%1.2f sec per key)\n\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC, ((float)t1)/keycnt/CLOCKS_PER_SEC);
+
+	//print them
+	printKeyTable( SectorsCnt, e_sector );
+	
+	if (transferToEml) {
+		uint8_t block[16] = {0x00};
+		for (uint8_t i = 0; i < SectorsCnt; ++i ) {
+			mfEmlGetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
+			if (e_sector[i].foundKey[0])
+				num_to_bytes(e_sector[i].Key[0], 6, block);
+			if (e_sector[i].foundKey[1])
+				num_to_bytes(e_sector[i].Key[1], 6, block+10);
+			mfEmlSetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
 		}
 		PrintAndLog("Found keys have been transferred to the emulator memory");
 	}
-
+	
 	if (createDumpFile) {
 		FILE *fkeys = fopen("dumpkeys.bin","wb");
 		if (fkeys == NULL) { 
 			PrintAndLog("Could not create file dumpkeys.bin");
 			free(keyBlock);
+			free(e_sector);
 			return 1;
 		}
-		for (uint16_t t = 0; t < 2; t++) {
-			fwrite(foundKey[t], 1, 6*SectorsCnt, fkeys);
+		PrintAndLog("Printing keys to binary file dumpkeys.bin...");
+	
+		for( i=0; i<SectorsCnt; i++) {
+			num_to_bytes(e_sector[i].Key[0], 6, tempkey);
+			fwrite ( tempkey, 1, 6, fkeys );
+		}
+		for(i=0; i<SectorsCnt; i++) {
+			num_to_bytes(e_sector[i].Key[1], 6, tempkey);
+			fwrite ( tempkey, 1, 6, fkeys );
 		}
 		fclose(fkeys);
-		PrintAndLog("Found keys have been dumped to file dumpkeys.bin. 0xffffffffffff has been inserted for unknown keys.");
+		PrintAndLog("Found keys have been dumped to file dumpkeys.bin. 0xffffffffffff has been inserted for unknown keys.");			
 	}
-
+	
 	free(keyBlock);
+	free(e_sector);
 	PrintAndLog("");
 	return 0;
+}
+
+void printKeyTable( uint8_t sectorscnt, sector *e_sector ){
+	PrintAndLog("|---|----------------|---|----------------|---|");
+	PrintAndLog("|sec|key A           |res|key B           |res|");
+	PrintAndLog("|---|----------------|---|----------------|---|");
+	for (uint8_t i = 0; i < sectorscnt; ++i) {
+		PrintAndLog("|%03d|  %012"llx"  | %d |  %012"llx"  | %d |", i,
+			e_sector[i].Key[0], e_sector[i].foundKey[0], 
+			e_sector[i].Key[1], e_sector[i].foundKey[1]
+		);
+	}
+	PrintAndLog("|---|----------------|---|----------------|---|");
 }
 
 int CmdHF14AMf1kSim(const char *Cmd)

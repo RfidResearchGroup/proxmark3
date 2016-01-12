@@ -33,8 +33,8 @@ int CmdHF14AMfDESAuth(const char *Cmd){
         
     uint8_t blockNo = 0;
     //keyNo=0;
-    uint32_t cuid=0;
-    uint8_t reply[16];
+    uint32_t cuid = 0;
+    uint8_t reply[16] = {0x00};
     //DES_cblock r1_b1;
     uint8_t b1[8]={ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
     uint8_t b2[8]={ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
@@ -126,8 +126,8 @@ int CmdHF14AMfAESAuth(const char *Cmd){
         
     uint8_t blockNo = 0;
     //keyNo=0;
-    uint32_t cuid=0;
-    uint8_t reply[32];
+    uint32_t cuid = 0;
+    uint8_t reply[32] = {0x00};
     //DES_cblock r1_b1;
     //unsigned char * b1, b2, nr, b0, r0, r1;
     

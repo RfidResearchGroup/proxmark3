@@ -56,4 +56,5 @@ int CmdHF14AMfCLoad(const char* cmd);
 int CmdHF14AMfCSave(const char* cmd);
 int CmdHf14MfDecryptBytes(const char *Cmd);
 
+void printKeyTable( uint8_t sectorscnt, sector *e_sector );
 #endif
