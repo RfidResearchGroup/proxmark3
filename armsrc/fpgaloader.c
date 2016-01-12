@@ -158,9 +158,8 @@ void FpgaSetupSsc(void)
 //-----------------------------------------------------------------------------
 bool FpgaSetupSscDma(uint8_t *buf, int len)
 {
-	if (buf == NULL) {
+	if (buf == NULL)
         return false;
-    }
 
 	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;	// Disable DMA Transfer
 	AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) buf;		// transfer to this memory address
@@ -184,15 +183,15 @@ static int get_from_fpga_combined_stream(z_streamp compressed_fpga_stream, uint8
 		compressed_fpga_stream->avail_out = OUTPUT_BUFFER_LEN;
 		fpga_image_ptr = output_buffer;
 		int res = inflate(compressed_fpga_stream, Z_SYNC_FLUSH);
-		if (res != Z_OK) {
+
+		if (res != Z_OK)
 			Dbprintf("inflate returned: %d, %s", res, compressed_fpga_stream->msg);
-		}
-		if (res < 0) {
+
+		if (res < 0)
 			return res;
-		}
 	}
 
-	uncompressed_bytes_cnt++;
+	++uncompressed_bytes_cnt;
 	
 	return *fpga_image_ptr++;
 }
@@ -209,8 +208,7 @@ static int get_from_fpga_stream(int bitstream_version, z_streamp compressed_fpga
 		get_from_fpga_combined_stream(compressed_fpga_stream, output_buffer);
 	}
 
-	return get_from_fpga_combined_stream(compressed_fpga_stream, output_buffer);
-	
+	return get_from_fpga_combined_stream(compressed_fpga_stream, output_buffer);	
 }
 
 
@@ -247,16 +245,14 @@ static bool reset_fpga_stream(int bitstream_version, z_streamp compressed_fpga_s
 
 	fpga_image_ptr = output_buffer;
 
-	for (uint16_t i = 0; i < FPGA_BITSTREAM_FIXED_HEADER_SIZE; i++) {
+	for (uint16_t i = 0; i < FPGA_BITSTREAM_FIXED_HEADER_SIZE; i++)
 		header[i] = get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
-	}
 	
 	// Check for a valid .bit file (starts with _bitparse_fixed_header)
-	if(memcmp(_bitparse_fixed_header, header, FPGA_BITSTREAM_FIXED_HEADER_SIZE) == 0) {
+	if(memcmp(_bitparse_fixed_header, header, FPGA_BITSTREAM_FIXED_HEADER_SIZE) == 0)
 		return true;
-	} else {
-		return false;
-	}
+
+	return false;
 }
 
 
@@ -413,7 +409,7 @@ static int bitparse_find_section(int bitstream_version, char section_name, unsig
 void FpgaDownloadAndGo(int bitstream_version)
 {
 	z_stream compressed_fpga_stream;
-	uint8_t output_buffer[OUTPUT_BUFFER_LEN];
+	uint8_t output_buffer[OUTPUT_BUFFER_LEN] = {0x00};
 	
 	// check whether or not the bitstream is already loaded
 	if (downloaded_bitstream == bitstream_version)
@@ -447,18 +443,17 @@ void FpgaDownloadAndGo(int bitstream_version)
 void FpgaGatherVersion(int bitstream_version, char *dst, int len)
 {
 	unsigned int fpga_info_len;
-	char tempstr[40];
+	char tempstr[40] = {0x00};
 	z_stream compressed_fpga_stream;
-	uint8_t output_buffer[OUTPUT_BUFFER_LEN];
+	uint8_t output_buffer[OUTPUT_BUFFER_LEN] = {0x00};
 	
 	dst[0] = '\0';
 
 	// ensure that we can allocate enough memory for decompression:
 	BigBuf_free();
 
-	if (!reset_fpga_stream(bitstream_version, &compressed_fpga_stream, output_buffer)) {
+	if (!reset_fpga_stream(bitstream_version, &compressed_fpga_stream, output_buffer))
 		return;
-	}
 
 	if(bitparse_find_section(bitstream_version, 'a', &fpga_info_len, &compressed_fpga_stream, output_buffer)) {
 		for (uint16_t i = 0; i < fpga_info_len; i++) {

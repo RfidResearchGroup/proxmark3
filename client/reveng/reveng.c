@@ -473,9 +473,12 @@ chkres(int *resc, model_t **result, const poly_t divisor, const poly_t init, int
 	pfree(&xor);
 	if(aptr != eptr) return;
 
-	if(!(*result = realloc(*result, ++*resc * sizeof(model_t))))
+	*result = realloc(*result, ++*resc * sizeof(model_t));
+	if (!*result) {
 		uerror("cannot reallocate result array");
-
+		return;
+	}
+	
 	rptr = *result + *resc - 1;
 	rptr->spoly  = pclone(divisor);
 	rptr->init   = pclone(init);

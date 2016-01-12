@@ -903,10 +903,7 @@ int SendDataTag(uint8_t *send, int sendlen, int init, int speed, uint8_t **recv)
 		*recv=answer;
 	}
 
-	LED_A_OFF();
-	LED_B_OFF();
-	LED_C_OFF();
-	LED_D_OFF();
+	LEDsoff();
 	
 	return answerLen;
 }
