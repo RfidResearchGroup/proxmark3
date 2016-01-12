@@ -988,6 +988,7 @@ int CmdHF14AMfChk(const char *Cmd)
 		break;
 	default:
 		PrintAndLog("Key type must be A , B or ?");
+		free(keyBlock);
 		return 1;
 	};
 	
