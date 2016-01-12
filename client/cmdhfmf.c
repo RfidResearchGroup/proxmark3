@@ -2163,7 +2163,8 @@ static command_t CommandTable[] =
 int CmdHFMF(const char *Cmd)
 {
 	// flush
-	WaitForResponseTimeout(CMD_ACK,NULL,100);
+	clearCommandBuffer();
+	//WaitForResponseTimeout(CMD_ACK,NULL,100);
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }

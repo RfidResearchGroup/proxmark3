@@ -16,11 +16,13 @@ static int CmdHelp(const char *Cmd);
 
 int CmdHFDESReader(const char *Cmd)
 {
-    UsbCommand c  ={CMD_MIFARE_DES_READER, {3, 0x60, 0}};
+    UsbCommand c = { CMD_MIFARE_DES_READER, {3, 0x60, 0} };
     SendCommand(&c);
-
     UsbCommand resp;
-	WaitForResponseTimeout(CMD_ACK,&resp,2000);
+	if (!WaitForResponseTimeout(CMD_ACK,&resp,2000) ){
+		PrintAndLog("Command time-out");
+		return 1;
+	}
     return 0;
 }  
 
@@ -57,7 +59,8 @@ static command_t CommandTable[] =
 int CmdHFDES(const char *Cmd)
 {
     //flush
-    WaitForResponseTimeout(CMD_ACK,NULL,100);
+	clearCommandBuffer();
+    //WaitForResponseTimeout(CMD_ACK,NULL,100);
     CmdsParse(CommandTable, Cmd);
     return 0;
 }

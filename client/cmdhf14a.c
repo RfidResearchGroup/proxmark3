@@ -790,7 +790,8 @@ static command_t CommandTable[] =
 
 int CmdHF14A(const char *Cmd) {
 	// flush
-	WaitForResponseTimeout(CMD_ACK,NULL,100);
+	clearCommandBuffer();
+	//WaitForResponseTimeout(CMD_ACK,NULL,100);
 
 	// parse
 	CmdsParse(CommandTable, Cmd);

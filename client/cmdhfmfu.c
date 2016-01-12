@@ -2025,7 +2025,8 @@ static command_t CommandTable[] =
 };
 
 int CmdHFMFUltra(const char *Cmd){
-	WaitForResponseTimeout(CMD_ACK,NULL,100);
+	clearCommandBuffer();
+	//WaitForResponseTimeout(CMD_ACK,NULL,100);
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }

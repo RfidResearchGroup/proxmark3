@@ -79,7 +79,8 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	struct Crypto1State *p1, *p2, *p3, *p4;
 	
 	// flush queue
-	WaitForResponseTimeout(CMD_ACK,NULL,100);
+	clearCommandBuffer();
+	//WaitForResponseTimeout(CMD_ACK,NULL,100);
 	
 	UsbCommand c = {CMD_MIFARE_NESTED, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, calibrate}};
 	memcpy(c.d.asBytes, key, 6);

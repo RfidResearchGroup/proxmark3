@@ -636,8 +636,7 @@ int CmdHF14ADesAuth(const char *Cmd){
 }
 
 
-static command_t CommandTable[] =
-{
+static command_t CommandTable[] = {
   {"help",		CmdHelp,					1, "This help"},
   {"info",		CmdHF14ADesInfo,			0, "Get MIFARE DesFire information"},
   {"enum",		CmdHF14ADesEnumApplications,0, "Tries enumerate all applications"},
@@ -647,18 +646,17 @@ static command_t CommandTable[] =
   {NULL, NULL, 0, NULL}
 };
 
-int CmdHFMFDes(const char *Cmd)
-{
+int CmdHFMFDes(const char *Cmd) {
    // flush
-   WaitForResponseTimeout(CMD_ACK,NULL,100);
-   CmdsParse(CommandTable, Cmd);
-  return 0;
+	clearCommandBuffer();
+	//WaitForResponseTimeout(CMD_ACK,NULL,100);
+	CmdsParse(CommandTable, Cmd);
+	return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
-  CmdsHelp(CommandTable);
-  return 0;
+int CmdHelp(const char *Cmd) {
+	CmdsHelp(CommandTable);
+	return 0;
 }
 
 
