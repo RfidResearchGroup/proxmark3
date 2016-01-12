@@ -1612,7 +1612,7 @@ int CmdHFiClassManageKeys(const char *Cmd) {
 		case 'n':
 		case 'N':
 			keyNbr = param_get8(Cmd, cmdp+1);
-			if (keyNbr < 0) {
+			if (keyNbr == 0) {
 				PrintAndLog("Wrong block number");
 				errors = true;
 			}
