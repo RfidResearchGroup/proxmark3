@@ -21,14 +21,14 @@ int ukbhit(void)
   int error;
   static struct termios Otty, Ntty;
 
-  if ( tcgetattr( 0, &Otty) == -1) return false;
+  if ( tcgetattr( 0, &Otty) == -1) return -1;
   Ntty = Otty;
 
-  Ntty.c_iflag          = 0;       /* input mode                */
-  Ntty.c_oflag          = 0;       /* output mode               */
-  Ntty.c_lflag         &= ~ICANON; /* raw mode */
-  Ntty.c_cc[VMIN]       = CMIN;    /* minimum time to wait      */
-  Ntty.c_cc[VTIME]      = CTIME;   /* minimum characters to wait for */
+  Ntty.c_iflag		= 0;       /* input mode                */
+  Ntty.c_oflag		= 0;       /* output mode               */
+  Ntty.c_lflag		&= ~ICANON; /* raw mode */
+  Ntty.c_cc[VMIN]	= CMIN;    /* minimum time to wait      */
+  Ntty.c_cc[VTIME]	= CTIME;   /* minimum characters to wait for */
 
   if (0 == (error = tcsetattr(0, TCSANOW, &Ntty))) {
     error += ioctl(0, FIONREAD, &cnt);
