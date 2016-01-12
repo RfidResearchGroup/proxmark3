@@ -143,7 +143,7 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout,  size_t 
 	bitIndex = 0;
 	
 	int isDamp = 0;
-	int damplimit = (int)((high / 2) * 0.3);
+	int damplimit = (int)( (int)(high / 2) * 0.3);
 	int dampHi =  (high/2)+damplimit;
 	int dampLow = (high/2)-damplimit;
 	int firstST = 0;
@@ -219,7 +219,7 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout,  size_t 
 	i = startIndex;
 	j = 0;
 	tolerance = clock/4;
-	uint8_t decodedArr[len];
+	uint8_t decodedArr[len] =  {0x00};
 	
 	/* Detect duration between 2 successive transitions */
 	for (bitindex = 1; i < len; i++) {
@@ -287,7 +287,7 @@ int manchester_decode( int * data, const size_t len, uint8_t * dataout,  size_t 
 	* parse it into final decoded bitstream
     */ 
 	int i, j, warnings; 
-	uint8_t decodedArr[(len/2)+1];
+	uint8_t decodedArr[(len/2)+1] = {0x00};
 
 	j = warnings = 0;
 	
@@ -433,6 +433,7 @@ void iceFsk3(int * data, const size_t len){
 	if ( fieldlen != 40 && fieldlen != 50){
 		printf("Detected field Length: %d \n", fieldlen);
 		printf("Can only handle 40 or 50.  Aborting...\n");
+		free(output);
 		return;
 	}
 	
