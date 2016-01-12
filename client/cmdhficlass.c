@@ -374,12 +374,15 @@ int CmdHFiClassDecrypt(const char *Cmd) {
 	//Open the tagdump-file
 	FILE *f;
 	char filename[FILE_PATH_SIZE];
-	if(opt == 'f' && param_getstr(Cmd, 1, filename) > 0)
-	{
-		f = fopen(filename, "rb");
-	}else{
+	if(opt == 'f' && param_getstr(Cmd, 1, filename) > 0) {
+		if ( (f = fopen(filename, "rb")) == NULL) {
+			PrintAndLog("Could not find file %s", filename);
+			return 1;
+		}
+		
+	} else {
 		return usage_hf_iclass_decrypt();
-	}
+	}	
 
 	fseek(f, 0, SEEK_END);
 	long fsize = ftell(f);
