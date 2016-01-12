@@ -257,6 +257,7 @@ engini(int *resc, model_t **result, const poly_t divisor, int flags, int args, c
 		palloc(&apoly, dlen);
 		calini(resc, result, divisor, flags, apoly, args, argpolys);
 		pfree(&apoly);
+		free(mat);
 		return;
 	}
 
