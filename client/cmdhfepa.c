@@ -178,8 +178,7 @@ int CmdHFEPAPACEReplay(const char *Cmd)
 
 // UI-related stuff
 
-static const command_t CommandTable[] =
-{
+static const command_t CommandTable[] = {
   {"help",    CmdHelp,                   1, "This help"},
   {"cnonces", CmdHFEPACollectPACENonces, 0,
               "<m> <n> <d> Acquire n>0 encrypted PACE nonces of size m>0 with d sec pauses"},
@@ -188,18 +187,15 @@ static const command_t CommandTable[] =
   {NULL, NULL, 0, NULL}
 };
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
   CmdsHelp(CommandTable);
   return 0;
 }
 
-int CmdHFEPA(const char *Cmd)
-{
+int CmdHFEPA(const char *Cmd) {
 	// flush
 	clearCommandBuffer();
 	//WaitForResponseTimeout(CMD_ACK,NULL,100);
-
 	// parse
 	CmdsParse(CommandTable, Cmd);
 	return 0;
