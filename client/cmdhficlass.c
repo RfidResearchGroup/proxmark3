@@ -1048,6 +1048,7 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 
 	if (startblock<5) {
 		PrintAndLog("You cannot write key blocks this way. yet... make your start block > 4");
+		fclose(f);	
 		return 0;
 	}
 	// now read data from the file from block 6 --- 19
