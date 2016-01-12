@@ -1226,10 +1226,10 @@ int CmdHF14AMf1kSim(const char *Cmd)
 						corr_uid |= (uint64_t)data[2] << 48; 
 						corr_uid |= (uint64_t)data[1] << 40; 
 						corr_uid |= (uint64_t)data[0] << 32;
-						corr_uid |= data[7] << 24;
-						corr_uid |= data[6] << 16;
-						corr_uid |= data[5] << 8;
-						corr_uid |= data[4];
+						corr_uid |= (uint64_t)data[7] << 24;
+						corr_uid |= (uint64_t)data[6] << 16;
+						corr_uid |= (uint64_t)data[5] << 8;
+						corr_uid |= (uint64_t)data[4];
 				tryMfk64(corr_uid, data, key);
 					}
 					PrintAndLog("--");
