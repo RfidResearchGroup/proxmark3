@@ -182,7 +182,7 @@ int CmdLegicLoad(const char *Cmd) {
 	
 	char cmdp = param_getchar(Cmd, 0);
 	if ( cmdp == 'H' || cmdp == 'h' || cmdp == 0x00) {
-		PrintAndLog("It loads datasamples from the file `filename`");
+		PrintAndLog("It loads datasamples from the file `filename` to device memory");
 		PrintAndLog("Usage:  hf legic load <file name>");
 		PrintAndLog(" sample: hf legic load filename");
 		return 0;
@@ -209,17 +209,16 @@ int CmdLegicLoad(const char *Cmd) {
         int res = sscanf(line, "%x %x %x %x %x %x %x %x", 
             &data[0], &data[1], &data[2], &data[3],
             &data[4], &data[5], &data[6], &data[7]);
+			
         if(res != 8) {
           PrintAndLog("Error: could not read samples");
           fclose(f);
           return -1;
         }
-        UsbCommand c = { CMD_DOWNLOADED_SIM_SAMPLES_125K, {offset, 0, 0}};
-
-		for( j = 0; j < 8; j++) {
-            c.d.asBytes[j] = data[j];
-        }
 		
+        UsbCommand c = { CMD_DOWNLOADED_SIM_SAMPLES_125K, {offset, 0, 0}};
+		memcpy(c.d.asBytes, data, 8);
+		clearCommandBuffer();
         SendCommand(&c);
         WaitForResponse(CMD_ACK, NULL);
         offset += 8;
@@ -240,9 +239,8 @@ int CmdLegicSave(const char *Cmd) {
 
 	/* If no length given save entire legic read buffer */
 	/* round up to nearest 8 bytes so the saved data can be used with legicload */
-	if (requested == 0) {
+	if (requested == 0)
 		requested = 1024;
-	}
 
 	if (requested % 8 != 0) {
 		int remainder = requested % 8;

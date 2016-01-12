@@ -35,21 +35,22 @@ volatile static bool txcmd_pending = false;
 
 void SendCommand(UsbCommand *c) {
 	#if 0
-  printf("Sending %d bytes\n", sizeof(UsbCommand));
+	printf("Sending %d bytes\n", sizeof(UsbCommand));
 	#endif
 
 	if (offline) {
-      PrintAndLog("Sending bytes to proxmark failed - offline");
-      return;
-    }
-  /**
+		PrintAndLog("Sending bytes to proxmark failed - offline");
+		return;
+	}
+	/**
 	The while-loop below causes hangups at times, when the pm3 unit is unresponsive
 	or disconnected. The main console thread is alive, but comm thread just spins here.
 	Not good.../holiman
 	**/
-  while(txcmd_pending);
-  txcmd = *c;
-  txcmd_pending = true;
+	while(txcmd_pending);
+
+	txcmd = *c;
+	txcmd_pending = true;
 }
 
 struct receiver_arg {
@@ -65,101 +66,105 @@ byte_t rx[0x1000000];
 byte_t* prx = rx;
 
 static void *uart_receiver(void *targ) {
-  struct receiver_arg *arg = (struct receiver_arg*)targ;
-  size_t rxlen;
-  size_t cmd_count;
+	struct receiver_arg *arg = (struct receiver_arg*)targ;
+	size_t rxlen;
+	size_t cmd_count;
 
-  while (arg->run) {
-    rxlen = sizeof(UsbCommand);
+	while (arg->run) {
+
+		rxlen = sizeof(UsbCommand);
+
 		if (uart_receive(sp, prx, &rxlen)) {
-      prx += rxlen;
-      if (((prx-rx) % sizeof(UsbCommand)) != 0) {
-        continue;
-      }
-      cmd_count = (prx-rx) / sizeof(UsbCommand);
+			prx += rxlen;
+			if (((prx-rx) % sizeof(UsbCommand)) != 0)
+				continue;
+			
+			cmd_count = (prx-rx) / sizeof(UsbCommand);
 
-			for (size_t i = 0; i < cmd_count; i++) {
-        UsbCommandReceived((UsbCommand*)(rx+(i*sizeof(UsbCommand))));
-      }
-    }
-    prx = rx;
+			for (size_t i = 0; i < cmd_count; i++)
+				UsbCommandReceived((UsbCommand*)( rx + ( i * sizeof(UsbCommand))));
 
-    if(txcmd_pending) {
-			if (!uart_send(sp, (byte_t*) &txcmd, sizeof(UsbCommand))) {
-        PrintAndLog("Sending bytes to proxmark failed");
-      }
-      txcmd_pending = false;
-    }
-  }
+		}
+		prx = rx;
 
-  pthread_exit(NULL);
-  return NULL;
+		if (txcmd_pending) {
+			if ( !uart_send(sp, (byte_t*) &txcmd, sizeof(UsbCommand))) {
+				PrintAndLog("Sending bytes to proxmark failed");
+			}
+			txcmd_pending = false;
+		}
+	}
+
+	pthread_exit(NULL);
+	return NULL;
 }
 
 static void *main_loop(void *targ) {
-  struct main_loop_arg *arg = (struct main_loop_arg*)targ;
-  struct receiver_arg rarg;
-  char *cmd = NULL;
-  pthread_t reader_thread;
+	struct main_loop_arg *arg = (struct main_loop_arg*)targ;
+	struct receiver_arg rarg;
+	char *cmd = NULL;
+	pthread_t reader_thread;
   
-  if (arg->usb_present == 1) {
+	if (arg->usb_present == 1) {
 		rarg.run = 1;
-    pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
+		pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
 		// cache Version information now:
 		CmdVersion(NULL);
-  }
+	}
 
-  FILE *script_file = NULL;
-	char script_cmd_buf[256];  // iceman, needs lua script the same file_path_buffer as the rest
+	FILE *script_file = NULL;
+	char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
 
 	if (arg->script_cmds_file) {
-    script_file = fopen(arg->script_cmds_file, "r");
-		if (script_file) {
-      printf("using 'scripting' commands file %s\n", arg->script_cmds_file);
-    }
-  }
+		script_file = fopen(arg->script_cmds_file, "r");
+		
+		if (script_file)
+			printf("using 'scripting' commands file %s\n", arg->script_cmds_file);
+	}
 
 	read_history(".history");
 
 	while(1)  {
 
-    // If there is a script file
-    if (script_file)
-    {
+		// If there is a script file
+		if (script_file)
+		{
 			if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), script_file)) {
-        fclose(script_file);
-        script_file = NULL;
+				fclose(script_file);
+				script_file = NULL;
 			} else {
-        char *nl;
-        nl = strrchr(script_cmd_buf, '\r');
-        if (nl) *nl = '\0';
+				char *nl;
+				nl = strrchr(script_cmd_buf, '\r');
+				if (nl)
+					*nl = '\0';
 				
-        nl = strrchr(script_cmd_buf, '\n');
-        if (nl) *nl = '\0';
+				nl = strrchr(script_cmd_buf, '\n');
+				
+				if (nl)
+					*nl = '\0';
 
 				if ((cmd = (char*) malloc(strlen(script_cmd_buf) + 1)) != NULL) {
-          memset(cmd, 0, strlen(script_cmd_buf));
-          strcpy(cmd, script_cmd_buf);
-          printf("%s\n", cmd);
-        }
-      }
-    }
-		
-		if (!script_file) {
-      cmd = readline(PROXPROMPT);
+					memset(cmd, 0, strlen(script_cmd_buf));
+					strcpy(cmd, script_cmd_buf);
+					printf("%s\n", cmd);
+				}
+			}
+		} else {
+			cmd = readline(PROXPROMPT);
 		}
 		
 		if (cmd) {
 
 			while(cmd[strlen(cmd) - 1] == ' ')
-        cmd[strlen(cmd) - 1] = 0x00;
-			
+				cmd[strlen(cmd) - 1] = 0x00;
+
 			if (cmd[0] != 0x00) {
 				int ret = CommandReceived(cmd);
 				add_history(cmd);
-				if (ret == 99) {  // exit or quit
+				
+				// exit or quit
+				if (ret == 99) 
 					break;
-				}
 			}
 			free(cmd);
 		} else {
@@ -170,29 +175,29 @@ static void *main_loop(void *targ) {
   
 	write_history(".history");
   
-  if (arg->usb_present == 1) {
-    rarg.run = 0;
-    pthread_join(reader_thread, NULL);
-  }
+	if (arg->usb_present == 1) {
+		rarg.run = 0;
+		pthread_join(reader_thread, NULL);
+	}
 
 	if (script_file) {
-    fclose(script_file);
-    script_file = NULL;
-  }
+		fclose(script_file);
+		script_file = NULL;
+	}
 
-  ExitGraphics();
-  pthread_exit(NULL);
-  return NULL;
+	ExitGraphics();
+	pthread_exit(NULL);
+	return NULL;
 }
 
 static void dumpAllHelp(int markdown)
 {
-  printf("\n%sProxmark3 command dump%s\n\n",markdown?"# ":"",markdown?"":"\n======================");
-  printf("Some commands are available only if a Proxmark is actually connected.%s\n",markdown?"  ":"");
-  printf("Check column \"offline\" for their availability.\n");
-  printf("\n");
-  command_t *cmds = getTopLevelCommandTable();
-  dumpCommandsRecursive(cmds, markdown);
+	printf("\n%sProxmark3 command dump%s\n\n",markdown?"# ":"",markdown?"":"\n======================");
+	printf("Some commands are available only if a Proxmark is actually connected.%s\n",markdown?"  ":"");
+	printf("Check column \"offline\" for their availability.\n");
+	printf("\n");
+	command_t *cmds = getTopLevelCommandTable();
+	dumpCommandsRecursive(cmds, markdown);
 }
 
 int main(int argc, char* argv[]) {
@@ -222,6 +227,7 @@ int main(int argc, char* argv[]) {
 		.usb_present = 0,
 		.script_cmds_file = NULL
 	};
+	
 	pthread_t main_loop_threat;
 
   
@@ -250,8 +256,9 @@ int main(int argc, char* argv[]) {
 			printf("Output will be flushed after every print.\n");
 			flushAfterWrite = 1;
 		}
-		else
-		marg.script_cmds_file = argv[2];
+		else {
+			marg.script_cmds_file = argv[2];
+		}
 	}
 
 	// create a mutex to avoid interlacing print commands from our different threads
@@ -265,9 +272,8 @@ int main(int argc, char* argv[]) {
 	pthread_join(main_loop_threat, NULL);
 
 	// Clean up the port
-	if (offline == 0) {
-	uart_close(sp);
-	}
+	if (offline == 0)
+		uart_close(sp);
   
 	// clean up mutex
 	pthread_mutex_destroy(&print_lock);
