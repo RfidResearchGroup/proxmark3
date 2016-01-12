@@ -58,7 +58,7 @@ int CmdLegicDecode(const char *Cmd)
   int crc = 0;
   int wrp = 0;
   int wrc = 0;
-  uint8_t data_buf[1024]; // receiver buffer
+  uint8_t data_buf[1052]; // receiver buffer
   char out_string[3076]; // just use big buffer - bad practice
   char token_type[4];
   
