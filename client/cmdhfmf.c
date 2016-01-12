@@ -2133,40 +2133,38 @@ int CmdHf14MfDecryptBytes(const char *Cmd){
 	return tryDecryptWord( nt, ar_enc, at_enc, data, len);
 }
 
-static command_t CommandTable[] =
-{
-  {"help",		CmdHelp,				1, "This help"},
-  {"dbg",		CmdHF14AMfDbg,			0, "Set default debug mode"},
-  {"rdbl",		CmdHF14AMfRdBl,			0, "Read MIFARE classic block"},
-  {"rdsc",		CmdHF14AMfRdSc,			0, "Read MIFARE classic sector"},
-  {"dump",		CmdHF14AMfDump,			0, "Dump MIFARE classic tag to binary file"},
-  {"restore",	CmdHF14AMfRestore,		0, "Restore MIFARE classic binary file to BLANK tag"},
-  {"wrbl",		CmdHF14AMfWrBl,			0, "Write MIFARE classic block"},
-  {"chk",		CmdHF14AMfChk,			0, "Test block keys"},
-  {"mifare",	CmdHF14AMifare,			0, "Read parity error messages."},
-  {"nested",	CmdHF14AMfNested,		0, "Test nested authentication"},
+static command_t CommandTable[] = {
+	{"help",		CmdHelp,				1, "This help"},
+	{"dbg",			CmdHF14AMfDbg,			0, "Set default debug mode"},
+	{"rdbl",		CmdHF14AMfRdBl,			0, "Read MIFARE classic block"},
+	{"rdsc",		CmdHF14AMfRdSc,			0, "Read MIFARE classic sector"},
+	{"dump",		CmdHF14AMfDump,			0, "Dump MIFARE classic tag to binary file"},
+	{"restore",		CmdHF14AMfRestore,		0, "Restore MIFARE classic binary file to BLANK tag"},
+	{"wrbl",		CmdHF14AMfWrBl,			0, "Write MIFARE classic block"},
+	{"chk",			CmdHF14AMfChk,			0, "Test block keys"},
+	{"mifare",		CmdHF14AMifare,			0, "Read parity error messages."},
+	{"nested",		CmdHF14AMfNested,		0, "Test nested authentication"},
 	{"hardnested", 	CmdHF14AMfNestedHard, 	0, "Nested attack for hardened Mifare cards"},
-  {"sniff",		CmdHF14AMfSniff,		0, "Sniff card-reader communication"},
-  {"sim",		CmdHF14AMf1kSim,		0, "Simulate MIFARE card"},
-  {"eclr",		CmdHF14AMfEClear,		0, "Clear simulator memory block"},
-  {"eget",		CmdHF14AMfEGet,			0, "Get simulator memory block"},
-  {"eset",		CmdHF14AMfESet,			0, "Set simulator memory block"},
-  {"eload",		CmdHF14AMfELoad,		0, "Load from file emul dump"},
-  {"esave",		CmdHF14AMfESave,		0, "Save to file emul dump"},
-  {"ecfill",	CmdHF14AMfECFill,		0, "Fill simulator memory with help of keys from simulator"},
-  {"ekeyprn",	CmdHF14AMfEKeyPrn,		0, "Print keys from simulator memory"},
-  {"csetuid",	CmdHF14AMfCSetUID,		0, "Set UID for magic Chinese card"},
-  {"csetblk",	CmdHF14AMfCSetBlk,		0, "Write block - Magic Chinese card"},
-  {"cgetblk",	CmdHF14AMfCGetBlk,		0, "Read block - Magic Chinese card"},
-  {"cgetsc",	CmdHF14AMfCGetSc,		0, "Read sector - Magic Chinese card"},
-  {"cload",		CmdHF14AMfCLoad,		0, "Load dump into magic Chinese card"},
-  {"csave",		CmdHF14AMfCSave,		0, "Save dump from magic Chinese card into file or emulator"},
-  {"decrypt",   CmdHf14MfDecryptBytes,  1, "[nt] [ar_enc] [at_enc] [data] - to decrypt snoop or trace"},
-  {NULL, NULL, 0, NULL}
+	{"sniff",		CmdHF14AMfSniff,		0, "Sniff card-reader communication"},
+	{"sim",			CmdHF14AMf1kSim,		0, "Simulate MIFARE card"},
+	{"eclr",		CmdHF14AMfEClear,		0, "Clear simulator memory block"},
+	{"eget",		CmdHF14AMfEGet,			0, "Get simulator memory block"},
+	{"eset",		CmdHF14AMfESet,			0, "Set simulator memory block"},
+	{"eload",		CmdHF14AMfELoad,		0, "Load from file emul dump"},
+	{"esave",		CmdHF14AMfESave,		0, "Save to file emul dump"},
+	{"ecfill",		CmdHF14AMfECFill,		0, "Fill simulator memory with help of keys from simulator"},
+	{"ekeyprn",		CmdHF14AMfEKeyPrn,		0, "Print keys from simulator memory"},
+	{"csetuid",		CmdHF14AMfCSetUID,		0, "Set UID for magic Chinese card"},
+	{"csetblk",		CmdHF14AMfCSetBlk,		0, "Write block - Magic Chinese card"},
+	{"cgetblk",		CmdHF14AMfCGetBlk,		0, "Read block - Magic Chinese card"},
+	{"cgetsc",		CmdHF14AMfCGetSc,		0, "Read sector - Magic Chinese card"},
+	{"cload",		CmdHF14AMfCLoad,		0, "Load dump into magic Chinese card"},
+	{"csave",		CmdHF14AMfCSave,		0, "Save dump from magic Chinese card into file or emulator"},
+	{"decrypt",		CmdHf14MfDecryptBytes,  1, "[nt] [ar_enc] [at_enc] [data] - to decrypt snoop or trace"},
+	{NULL, NULL, 0, NULL}
 };
 
-int CmdHFMF(const char *Cmd)
-{
+int CmdHFMF(const char *Cmd) {
 	// flush
 	clearCommandBuffer();
 	//WaitForResponseTimeout(CMD_ACK,NULL,100);
@@ -2174,8 +2172,7 @@ int CmdHFMF(const char *Cmd)
 	return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
 	CmdsHelp(CommandTable);
 	return 0;
 }
