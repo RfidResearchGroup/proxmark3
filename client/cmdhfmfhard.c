@@ -286,20 +286,18 @@ static double p_hypergeometric(uint16_t N, uint16_t K, uint16_t n, uint16_t k)
 static float sum_probability(uint16_t K, uint16_t n, uint16_t k)
 {
 	const uint16_t N = 256;
-	
-	
 
-		if (k > K || p_K[K] == 0.0) return 0.0;
+	if (k > K || p_K[K] == 0.0) return 0.0;
 
-		double p_T_is_k_when_S_is_K = p_hypergeometric(N, K, n, k);
-		double p_S_is_K = p_K[K];
-		double p_T_is_k = 0;
-		for (uint16_t i = 0; i <= 256; i++) {
-			if (p_K[i] != 0.0) {
-				p_T_is_k += p_K[i] * p_hypergeometric(N, i, n, k);
-			}
+	double p_T_is_k_when_S_is_K = p_hypergeometric(N, K, n, k);
+	double p_S_is_K = p_K[K];
+	double p_T_is_k = 0;
+	for (uint16_t i = 0; i <= 256; i++) {
+		if (p_K[i] != 0.0) {
+			p_T_is_k += p_K[i] * p_hypergeometric(N, i, n, k);
 		}
-		return(p_T_is_k_when_S_is_K * p_S_is_K / p_T_is_k);
+	}
+	return(p_T_is_k_when_S_is_K * p_S_is_K / p_T_is_k);
 }
 
 		
@@ -514,7 +512,7 @@ static void sort_best_first_bytes(void)
 	// determine how many are above the CONFIDENCE_THRESHOLD
 	uint16_t num_good_nonces = 0;
 	for (uint16_t i = 0; i < 256; i++) {
-		if (nonces[best_first_bytes[i]].Sum8_prob > CONFIDENCE_THRESHOLD) {
+		if (nonces[best_first_bytes[i]].Sum8_prob >= CONFIDENCE_THRESHOLD) {
 			++num_good_nonces;
 		}
 	}
@@ -603,7 +601,7 @@ static uint16_t estimate_second_byte_sum(void)
 
 	uint16_t num_good_nonces = 0;
 	for (uint16_t i = 0; i < 256; i++) {
-		if (nonces[best_first_bytes[i]].Sum8_prob > CONFIDENCE_THRESHOLD) {
+		if (nonces[best_first_bytes[i]].Sum8_prob >= CONFIDENCE_THRESHOLD) {
 			++num_good_nonces;
 		}
 	}
