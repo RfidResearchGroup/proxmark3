@@ -29,14 +29,15 @@ int compar_state(const void * a, const void * b) {
 }
 
 int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t * key) {
+
 	struct Crypto1State *state;
-	uint32_t i, pos, rr, nr_diff, key_count;//, ks1, ks2;
+	uint32_t i, pos, rr = 0, nr_diff, key_count;//, ks1, ks2;
 	byte_t bt, ks3x[8], par[8][8];
 	uint64_t key_recovered;
 	int64_t *state_s;
+
 	static uint32_t last_uid;
 	static int64_t *last_keylist;
-	rr = 0;
   
 	if (last_uid != uid && last_keylist != NULL) {
 		free(last_keylist);
@@ -49,21 +50,23 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
   
 	PrintAndLog("\nuid(%08x) nt(%08x) par(%016"llx") ks(%016"llx") nr(%08"llx")\n\n", uid, nt, par_info, ks_info, nr);
 
-	for (pos=0; pos<8; pos++) {
+	for ( pos = 0; pos < 8; pos++ ) {
 		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
 		bt = (par_info >> (pos*8)) & 0xff;
-		for (i=0; i<8; i++)	{
+
+		for ( i = 0; i < 8; i++) {
 			par[7-pos][i] = (bt >> i) & 0x01;
 		}
 	}
 
 	printf("|diff|{nr}    |ks3|ks3^5|parity         |\n");
 	printf("+----+--------+---+-----+---------------+\n");
-	for (i=0; i<8; i++)	{
+
+	for ( i = 0; i < 8; i++) {
 		nr_diff = nr | i << 5;
 		printf("| %02x |%08x|", i << 5, nr_diff);
 		printf(" %01x |  %01x  |", ks3x[i], ks3x[i]^5);
-		for (pos=0; pos<7; pos++) 
+		for (pos = 0; pos < 7; pos++) 
 			printf("%01x,", par[i][pos]);
 		printf("%01x|\n", par[i][7]);
 	}
@@ -91,7 +94,10 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	if(!state)
 		return 1;
 	
+	// quicksort statelist
 	qsort(state_s, i, sizeof(*state_s), compar_state);
+
+	// set last element marker 
 	*(state_s + i) = -1;
 	
 	//Create the intersection:
@@ -134,6 +140,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 		key64 = *(last_keylist + i);
 		num_to_bytes(key64, 6, keyBlock);
 		key64 = 0;
+		// Call tag to verify if key is correct
 		res = mfCheckKeys(0, 0, false, 1, keyBlock, &key64);
 		if (!res) {
 			*key = key64;
@@ -150,6 +157,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	return 1;
 }
 
+// *outputkey is not used...
 int tryMfk32(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 
 	struct Crypto1State *s,*t;
@@ -188,24 +196,25 @@ int tryMfk32(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 		crypto1_word(t, uid ^ nt, 0);
 		crypto1_word(t, nr1_enc, 1);
 		if (ar1_enc == (crypto1_word(t, 0, 0) ^ prng_successor(nt, 64))) {
-			PrintAndLog("Found Key: [%012"llx"]",key);
+			PrintAndLog("Found Key: [%012"llx"]", key);
 			isSuccess = TRUE;
 			++counter;
 			if (counter==20)
 				break;
 		}
 	}
-	free(s);
+	crypto1_destroy(t);
+	crypto1_destroy(s);
 	return isSuccess;
 }
 
 int tryMfk32_moebius(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 
-	struct Crypto1State *s,*t;
+	struct Crypto1State *s, *t;
 	uint64_t key;     // recovered key
 	uint32_t uid;     // serial number
-	uint32_t nt0;      // tag challenge first
-	uint32_t nt1;      // tag challenge second
+	uint32_t nt0;     // tag challenge first
+	uint32_t nt1;     // tag challenge second
 	uint32_t nr0_enc; // first encrypted reader challenge
 	uint32_t ar0_enc; // first encrypted reader response
 	uint32_t nr1_enc; // second encrypted reader challenge
@@ -239,7 +248,8 @@ int tryMfk32_moebius(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 				break;
 		}
 	}
-	free(s);
+	crypto1_destroy(t);
+	crypto1_destroy(s);
 	return isSuccess;
 }
 

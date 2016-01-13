@@ -405,18 +405,66 @@ void lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
  */
 void lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb)
 {
-	int i;
+/*	int i;
 	for (i = 7; i >= 0; --i)
 		lfsr_rollback_bit(s, BEBIT(in, i), fb);
+*/
+// unfold loop 20160112
+	lfsr_rollback_bit(s, BEBIT(in, 7), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 6), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 5), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 4), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 3), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 2), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 1), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 0), fb);
 }
 /** lfsr_rollback_word
  * Rollback the shift register in order to get previous states
  */
 void lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb)
 {
+/*
 	int i;
 	for (i = 31; i >= 0; --i)
 		lfsr_rollback_bit(s, BEBIT(in, i), fb);
+*/
+// unfold loop 20160112
+	lfsr_rollback_bit(s, BEBIT(in, 31), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 30), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 29), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 28), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 27), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 26), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 25), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 24), fb);
+
+	lfsr_rollback_bit(s, BEBIT(in, 23), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 22), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 21), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 20), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 19), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 18), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 17), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 16), fb);
+
+	lfsr_rollback_bit(s, BEBIT(in, 15), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 14), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 13), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 12), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 11), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 10), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 9), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 8), fb);
+
+	lfsr_rollback_bit(s, BEBIT(in, 7), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 6), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 5), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 4), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 3), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 2), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 1), fb);
+	lfsr_rollback_bit(s, BEBIT(in, 0), fb);
 }
 
 /** nonce_distance

@@ -38,6 +38,7 @@ void crypto1_destroy(struct Crypto1State *state)
 {
 	free(state);
 }
+
 void crypto1_get_lfsr(struct Crypto1State *state, uint64_t *lfsr)
 {
 	int i;
@@ -66,11 +67,22 @@ uint8_t crypto1_bit(struct Crypto1State *s, uint8_t in, int is_encrypted)
 }
 uint8_t crypto1_byte(struct Crypto1State *s, uint8_t in, int is_encrypted)
 {
+/*	
 	uint8_t i, ret = 0;
 
 	for (i = 0; i < 8; ++i)
 		ret |= crypto1_bit(s, BIT(in, i), is_encrypted) << i;
-
+*/
+	// unfold loop 20160112
+	uint8_t ret = 0;
+	ret |= crypto1_bit(s, BIT(in, 0), is_encrypted) << 0;
+	ret |= crypto1_bit(s, BIT(in, 1), is_encrypted) << 1;
+	ret |= crypto1_bit(s, BIT(in, 2), is_encrypted) << 2;
+	ret |= crypto1_bit(s, BIT(in, 3), is_encrypted) << 3;
+	ret |= crypto1_bit(s, BIT(in, 4), is_encrypted) << 4;
+	ret |= crypto1_bit(s, BIT(in, 5), is_encrypted) << 5;
+	ret |= crypto1_bit(s, BIT(in, 6), is_encrypted) << 6;
+	ret |= crypto1_bit(s, BIT(in, 7), is_encrypted) << 7;
 	return ret;
 }
 uint32_t crypto1_word(struct Crypto1State *s, uint32_t in, int is_encrypted)
