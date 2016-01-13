@@ -102,7 +102,7 @@ start:
 	}
 	t1 = clock() - t1;
 	if ( t1 > 0 ){
-		PrintAndLog("Time in darkside: %.0f ticks - %4.2f sec\n (%u)", (float)t1, ((float)t1)/CLOCKS_PER_SEC, CLOCKS_PER_SEC);
+		PrintAndLog("Time in darkside: %.0f ticks - %4.2f sec\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC);
 	}
 	return 0;
 }
