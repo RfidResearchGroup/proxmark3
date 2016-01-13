@@ -1387,7 +1387,10 @@ int CmdT55xxBruteForce(const char *Cmd) {
     bool found = false;
 
     char cmdp = param_getchar(Cmd, 0);
-    if (cmdp == 'h' || cmdp == 'H') return usage_t55xx_bruteforce();
+    if (cmdp == 'h' || cmdp == 'H') {
+		free(keyBlock);
+		return usage_t55xx_bruteforce();
+	}
 
 	if (cmdp == 'i' || cmdp == 'I') {
 	
@@ -1423,6 +1426,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 				if (!p) {
 					PrintAndLog("Cannot allocate memory for defaultKeys");
 					free(keyBlock);
+					fclose(f);
 					return 2;
 				}
 				keyBlock = p;
@@ -1437,6 +1441,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		
 		if (keycnt == 0) {
 			PrintAndLog("No keys found in file");
+			free(keyBlock);
 			return 1;
 		}
 		PrintAndLog("Loaded %d keys", keycnt);
@@ -1448,6 +1453,8 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			if (ukbhit()) {
 				getchar();
 				printf("\naborted via keyboard!\n");
+				free(keyBlock);
+				free(p);
 				return 0;
 			}
 		
@@ -1458,6 +1465,8 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			
 			if ( !AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, testpwd)) {
 				PrintAndLog("Aquireing data from device failed. Quitting");
+				free(keyBlock);
+				free(p);
 				return 0;
 			}
 			
@@ -1465,10 +1474,14 @@ int CmdT55xxBruteForce(const char *Cmd) {
 
 			if ( found ) {
 				PrintAndLog("Found valid password: [%08X]", testpwd);
+				free(keyBlock);
+				free(p);
 				return 0;
 			} 
 		}
 		PrintAndLog("Password NOT found.");
+		free(keyBlock);
+		free(p);
 		return 0;
 	}
 	
@@ -1478,7 +1491,10 @@ int CmdT55xxBruteForce(const char *Cmd) {
     start_password = param_get32ex(Cmd, 0, 0, 16);
 	end_password = param_get32ex(Cmd, 1, 0, 16);
 	
-	if ( start_password >= end_password ) return usage_t55xx_bruteforce();
+	if ( start_password >= end_password ) {
+		free(keyBlock);
+		return usage_t55xx_bruteforce();
+	}
 	
     PrintAndLog("Search password range [%08X -> %08X]", start_password, end_password);
 	
@@ -1491,11 +1507,13 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		if (ukbhit()) {
 			getchar();
 			printf("\naborted via keyboard!\n");
+			free(keyBlock);
 			return 0;
 		}
 			
 		if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, i)) {
 			PrintAndLog("Aquireing data from device failed. Quitting");
+			free(keyBlock);
 			return 0;
 		}
 		found = tryDetectModulation();
@@ -1510,6 +1528,8 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		PrintAndLog("Found valid password: [%08x]", i);
     else
 		PrintAndLog("Password NOT found. Last tried: [%08x]", --i);
+
+	free(keyBlock);
     return 0;
 }
 
