@@ -257,7 +257,7 @@ int CmdHFTopazReader(const char *Cmd) {
 	uint8_t atqa[2];
 	uint8_t rid_response[8];
 	uint8_t *uid_echo = &rid_response[2];
-	uint8_t rall_response[124];
+	uint8_t rall_response[130];
 	
 	status = topaz_select(atqa, rid_response);
 	
@@ -286,7 +286,7 @@ int CmdHFTopazReader(const char *Cmd) {
 	PrintAndLog("HR0  : %02x (%sa Topaz tag (%scapable of carrying a NDEF message), %s memory map)", rid_response[0], 
 						(rid_response[0] & 0xF0) == 0x10 ? "" : "not ",
 						(rid_response[0] & 0xF0) == 0x10 ? "" : "not ",
-						(rid_response[0] & 0x0F) == 0x10 ? "static" : "dynamic");
+						(rid_response[0] & 0x0F) == 0x01 ? "static" : "dynamic");
 	PrintAndLog("HR1  : %02x", rid_response[1]);
 	
 	status = topaz_rall(uid_echo, rall_response);
