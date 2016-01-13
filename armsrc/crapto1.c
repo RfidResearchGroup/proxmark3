@@ -92,8 +92,7 @@ update_contribution(uint32_t *item, const uint32_t mask1, const uint32_t mask2)
 /** extend_table
  * using a bit of the keystream extend the table of possible lfsr states
  */
-static inline void
-extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in)
+static inline void extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in)
 {
 	in <<= 24;
 	for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1)
@@ -347,9 +346,20 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
  */
 uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb)
 {
-	int i, ret = 0;
+/*	int i, ret = 0;
 	for (i = 7; i >= 0; --i)
 		ret |= lfsr_rollback_bit(s, BIT(in, i), fb) << i;
+*/
+// unfold loop 20160112
+	uint8_t ret = 0;
+	ret |= lfsr_rollback_bit(s, BIT(in, 7), fb) << 7;
+	ret |= lfsr_rollback_bit(s, BIT(in, 6), fb) << 6;
+	ret |= lfsr_rollback_bit(s, BIT(in, 5), fb) << 5;
+	ret |= lfsr_rollback_bit(s, BIT(in, 4), fb) << 4;
+	ret |= lfsr_rollback_bit(s, BIT(in, 3), fb) << 3;
+	ret |= lfsr_rollback_bit(s, BIT(in, 2), fb) << 2;
+	ret |= lfsr_rollback_bit(s, BIT(in, 1), fb) << 1;
+	ret |= lfsr_rollback_bit(s, BIT(in, 0), fb) << 0;
 	return ret;
 }
 /** lfsr_rollback_word
@@ -357,10 +367,48 @@ uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb)
  */
 uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb)
 {
-	int i;
+/*	int i;
 	uint32_t ret = 0;
 	for (i = 31; i >= 0; --i)
 		ret |= lfsr_rollback_bit(s, BEBIT(in, i), fb) << (i ^ 24);
+*/
+// unfold loop 20160112
+	uint32_t ret = 0;
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 31), fb) << (31 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 30), fb) << (30 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 29), fb) << (29 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 28), fb) << (28 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 27), fb) << (27 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 26), fb) << (26 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 25), fb) << (25 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 24), fb) << (24 ^ 24);
+
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 23), fb) << (23 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 22), fb) << (22 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 21), fb) << (21 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 20), fb) << (20 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 19), fb) << (19 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 18), fb) << (18 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 17), fb) << (17 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 16), fb) << (16 ^ 24);
+
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 15), fb) << (15 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 14), fb) << (14 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 13), fb) << (13 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 12), fb) << (12 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 11), fb) << (11 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 10), fb) << (10 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 9), fb) << (9 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 8), fb) << (8 ^ 24);
+
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 7), fb) << (7 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 6), fb) << (6 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 5), fb) << (5 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 4), fb) << (4 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 3), fb) << (3 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 2), fb) << (2 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 1), fb) << (1 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 0), fb) << (0 ^ 24);
 	return ret;
 }
 
@@ -469,7 +517,7 @@ lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
 	if(!s || !odd || !even) {
 		free(statelist);
 		statelist = 0;
-                goto out;
+		goto out;
 	}
 
 	for(o = odd; *o + 1; ++o)

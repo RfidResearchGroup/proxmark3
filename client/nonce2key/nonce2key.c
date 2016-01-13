@@ -296,6 +296,5 @@ int tryMfk64(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 	crypto1_get_lfsr(revstate, &key);
 	PrintAndLog("Found Key: [%012"llx"]",key);
 	crypto1_destroy(revstate);
-	crypto1_destroy(pcs);
 	return 0;
 }
