@@ -804,7 +804,7 @@ int CmdHF14AMfNestedHard(const char *Cmd)
 	char ctmp;
 	ctmp = param_getchar(Cmd, 0);
 
-	if (ctmp != 'R' && ctmp != 'r' && strlen(Cmd) < 20) {
+	if (ctmp != 'R' && ctmp != 'r' && ctmp != 'T' && ctmp != 't' && strlen(Cmd) < 20) {
 		PrintAndLog("Usage:");
 		PrintAndLog("      hf mf hardnested <block number> <key A|B> <key (12 hex symbols)>");
 		PrintAndLog("                       <target block number> <target key A|B> [known target key (12 hex symbols)] [w] [s]");
@@ -829,15 +829,17 @@ int CmdHF14AMfNestedHard(const char *Cmd)
 	bool nonce_file_read = false;
 	bool nonce_file_write = false;
 	bool slow = false;
+	int tests = 0;
+	
 	
 	if (ctmp == 'R' || ctmp == 'r') {
 		nonce_file_read = true;
 		if (!param_gethex(Cmd, 1, trgkey, 12)) {
 			know_target_key = true;
 		}
-
+	} else if (ctmp == 'T' || ctmp == 't') {
+		tests = param_get32ex(Cmd, 1, 100, 10);
 	} else {
-
 		blockNo = param_get8(Cmd, 0);
 		ctmp = param_getchar(Cmd, 1);
 		if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
@@ -883,13 +885,14 @@ int CmdHF14AMfNestedHard(const char *Cmd)
 		}
 	}
 
-	PrintAndLog("--target block no:%3d, target key type:%c, known target key: 0x%02x%02x%02x%02x%02x%02x%s, file action: %s, Slow: %s ", 
+	PrintAndLog("--target block no:%3d, target key type:%c, known target key: 0x%02x%02x%02x%02x%02x%02x%s, file action: %s, Slow: %s, Tests: %d ", 
 			trgBlockNo, 
 			trgKeyType?'B':'A', 
 			trgkey[0], trgkey[1], trgkey[2], trgkey[3], trgkey[4], trgkey[5],
 			know_target_key?"":" (not set)",
 			nonce_file_write?"write":nonce_file_read?"read":"none",
-			slow?"Yes":"No");
+			slow?"Yes":"No",
+			tests);
 
 	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key?trgkey:NULL, nonce_file_read, nonce_file_write, slow);
 

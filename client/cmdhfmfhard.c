@@ -18,6 +18,7 @@
 #include <stdlib.h> 
 #include <string.h>
 #include <pthread.h>
+#include <locale.h>
 #include <math.h>
 #include "proxmark3.h"
 #include "cmdmain.h"
@@ -95,7 +96,8 @@ static uint16_t first_byte_num = 0;
 static uint16_t num_good_first_bytes = 0;
 static uint64_t maximum_states = 0;
 static uint64_t known_target_key;
-
+static bool write_stats = false;
+static FILE *fstats = NULL;
 
 
 typedef enum {
@@ -172,6 +174,41 @@ static int add_nonce(uint32_t nonce_enc, uint8_t par_enc)
 	nonces[first_byte].updated = true;   // indicates that we need to recalculate the Sum(a8) probability for this first byte
 
 	return (1);				// new nonce added
+}
+
+
+static void init_nonce_memory(void)
+{
+	for (uint16_t i = 0; i < 256; i++) {
+		nonces[i].num = 0;
+		nonces[i].Sum = 0;
+		nonces[i].Sum8_guess = 0;
+		nonces[i].Sum8_prob = 0.0;
+		nonces[i].updated = true;
+		nonces[i].first = NULL;
+	}
+	first_byte_num = 0;
+	first_byte_Sum = 0;
+	num_good_first_bytes = 0;
+}
+
+
+static void free_nonce_list(noncelistentry_t *p)
+{
+	if (p == NULL) {
+		return;
+	} else {
+		free_nonce_list(p->next);
+		free(p);
+	}
+}
+
+
+static void free_nonces_memory(void)
+{
+	for (uint16_t i = 0; i < 256; i++) {
+		free_nonce_list(nonces[i].first);
+	}
 }
 
 
@@ -621,6 +658,8 @@ static void Check_for_FilterFlipProperties(void)
 {
 	printf("Checking for Filter Flip Properties...\n");
 
+	uint16_t num_bitflips = 0;
+	
 	for (uint16_t i = 0; i < 256; i++) {
 		nonces[i].BitFlip[ODD_STATE] = false;
 		nonces[i].BitFlip[EVEN_STATE] = false;
@@ -633,10 +672,92 @@ static void Check_for_FilterFlipProperties(void)
 		
 		if (parity1 == parity2_odd) {				// has Bit Flip Property for odd bits
 			nonces[i].BitFlip[ODD_STATE] = true;
+			num_bitflips++;
 		} else if (parity1 == parity2_even) {		// has Bit Flip Property for even bits
 			nonces[i].BitFlip[EVEN_STATE] = true;
+			num_bitflips++;
 		}
 	}
+	
+	if (write_stats) {
+		fprintf(fstats, "%d;", num_bitflips);
+	}
+}
+
+
+static void simulate_MFplus_RNG(uint32_t test_cuid, uint64_t test_key, uint32_t *nt_enc, uint8_t *par_enc)
+{
+	struct Crypto1State sim_cs;
+
+	// init cryptostate with key:
+	for(int8_t i = 47; i > 0; i -= 2) {
+		sim_cs.odd  = sim_cs.odd  << 1 | BIT(test_key, (i - 1) ^ 7);
+		sim_cs.even = sim_cs.even << 1 | BIT(test_key, i ^ 7);
+	}
+
+	*par_enc = 0;
+	uint32_t nt = (rand() & 0xff) << 24 | (rand() & 0xff) << 16 | (rand() & 0xff) << 8 | (rand() & 0xff);
+	for (int8_t byte_pos = 3; byte_pos >= 0; byte_pos--) {
+		uint8_t nt_byte_dec = (nt >> (8*byte_pos)) & 0xff;
+		uint8_t nt_byte_enc = crypto1_byte(&sim_cs, nt_byte_dec ^ (test_cuid >> (8*byte_pos)), false) ^ nt_byte_dec; 	// encode the nonce byte
+		*nt_enc = (*nt_enc << 8) | nt_byte_enc;		
+		uint8_t ks_par = filter(sim_cs.odd);											// the keystream bit to encode/decode the parity bit
+		uint8_t nt_byte_par_enc = ks_par ^ oddparity8(nt_byte_dec);						// determine the nt byte's parity and encode it
+		*par_enc = (*par_enc << 1) | nt_byte_par_enc;
+	}
+	
+}
+
+
+static void simulate_acquire_nonces()
+{
+	clock_t time1 = clock();
+	bool filter_flip_checked = false;
+	uint32_t total_num_nonces = 0;
+	uint32_t next_fivehundred = 500;
+	uint32_t total_added_nonces = 0;
+
+	cuid = (rand() & 0xff) << 24 | (rand() & 0xff) << 16 | (rand() & 0xff) << 8 | (rand() & 0xff);
+	known_target_key = ((uint64_t)rand() & 0xfff) << 36 | ((uint64_t)rand() & 0xfff) << 24 | ((uint64_t)rand() & 0xfff) << 12 | ((uint64_t)rand() & 0xfff);
+	
+	printf("Simulating nonce acquisition for target key %012"llx", cuid %08x ...\n", known_target_key, cuid);
+	fprintf(fstats, "%012"llx";%08x;", known_target_key, cuid);
+	
+	do {
+		uint32_t nt_enc = 0;
+		uint8_t par_enc = 0;
+
+		simulate_MFplus_RNG(cuid, known_target_key, &nt_enc, &par_enc);
+		//printf("Simulated RNG: nt_enc1: %08x, nt_enc2: %08x, par_enc: %02x\n", nt_enc1, nt_enc2, par_enc);
+		total_added_nonces += add_nonce(nt_enc, par_enc);
+		total_num_nonces++;
+		
+		if (first_byte_num == 256 ) {
+			// printf("first_byte_num = %d, first_byte_Sum = %d\n", first_byte_num, first_byte_Sum);
+			if (!filter_flip_checked) {
+				Check_for_FilterFlipProperties();
+				filter_flip_checked = true;
+			}
+			num_good_first_bytes = estimate_second_byte_sum();
+			if (total_num_nonces > next_fivehundred) {
+				next_fivehundred = (total_num_nonces/500+1) * 500;
+				printf("Acquired %5d nonces (%5d with distinct bytes 0 and 1). Number of bytes with probability for correctly guessed Sum(a8) > %1.1f%%: %d\n",
+					total_num_nonces, 
+					total_added_nonces,
+					CONFIDENCE_THRESHOLD * 100.0,
+					num_good_first_bytes);
+			}
+		}
+
+	} while (num_good_first_bytes < GOOD_BYTES_REQUIRED);
+	
+	PrintAndLog("Acquired a total of %d nonces in %1.1f seconds (%0.0f nonces/minute)", 
+		total_num_nonces, 
+		((float)clock()-time1)/CLOCKS_PER_SEC, 
+		total_num_nonces*60.0*CLOCKS_PER_SEC/((float)clock()-time1));
+
+	fprintf(fstats, "%d;%d;%d;%1.2f;", total_num_nonces, total_added_nonces, num_good_first_bytes, CONFIDENCE_THRESHOLD);
+		
 }
 
 
@@ -1029,7 +1150,6 @@ static struct sl_cache_entry {
 
 static void init_statelist_cache(void)
 {
-
 	for (uint16_t i = 0; i < 17; i+=2) {
 		for (uint16_t j = 0; j < 17; j+=2) {
 			for (uint16_t k = 0; k < 2; k++) {
@@ -1144,12 +1264,18 @@ static void TestIfKeyExists(uint64_t key)
 				count, log(count)/log(2), 
 				maximum_states, log(maximum_states)/log(2),
 				(count>>23)/60);
+			if (write_stats) {
+				fprintf(fstats, "1\n");
+			}
 			crypto1_destroy(pcs);
 			return;
 		}
 	}
 
 	printf("Key NOT found!\n");
+	if (write_stats) {
+		fprintf(fstats, "0\n");
+	}
 	crypto1_destroy(pcs);
 }
 
@@ -1218,7 +1344,36 @@ static void generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 		maximum_states += (uint64_t)sl->len[ODD_STATE] * sl->len[EVEN_STATE];
 	}
 	printf("Number of remaining possible keys: %lld (2^%1.1f)\n", maximum_states, log(maximum_states)/log(2.0));
+	if (write_stats) {
+		if (maximum_states != 0) {
+			fprintf(fstats, "%1.1f;", log(maximum_states)/log(2.0));
+		} else {
+			fprintf(fstats, "%1.1f;", 0.0);
+		}
+	}
+}
 
+
+static void	free_candidates_memory(statelist_t *sl)
+{
+	if (sl == NULL) {
+		return;
+	} else {
+		free_candidates_memory(sl->next);
+		free(sl);
+	}
+}
+
+
+static void free_statelist_cache(void)
+{
+	for (uint16_t i = 0; i < 17; i+=2) {
+		for (uint16_t j = 0; j < 17; j+=2) {
+			for (uint16_t k = 0; k < 2; k++) {
+				free(sl_cache[i][j][k].sl);
+			}
+		}
+	}		
 }
 
 
@@ -1234,30 +1389,46 @@ static void brute_force(void)
 }
 
 
-int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *trgkey, bool nonce_file_read, bool nonce_file_write, bool slow) 
+int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *trgkey, bool nonce_file_read, bool nonce_file_write, bool slow, int tests) 
 {
+	// initialize Random number generator
+	time_t t;
+	srand((unsigned) time(&t));
+	
 	if (trgkey != NULL) {
 		known_target_key = bytes_to_num(trgkey, 6);
 	} else {
 		known_target_key = -1;
 	}
 	
-	// initialize the list of nonces
-	for (uint16_t i = 0; i < 256; i++) {
-		nonces[i].num = 0;
-		nonces[i].Sum = 0;
-		nonces[i].Sum8_guess = 0;
-		nonces[i].Sum8_prob = 0.0;
-		nonces[i].updated = true;
-		nonces[i].first = NULL;
-	}
-	first_byte_num = 0;
-	first_byte_Sum = 0;
-	num_good_first_bytes = 0;
-
 	init_partial_statelists();
 	init_BitFlip_statelist();
+	write_stats = false;
 	
+	if (tests) {
+		// set the correct locale for the stats printing
+		setlocale(LC_ALL, "");
+		write_stats = true;
+		if ((fstats = fopen("hardnested_stats.txt","a")) == NULL) { 
+			PrintAndLog("Could not create/open file hardnested_stats.txt");
+			return 3;
+		}
+		for (uint32_t i = 0; i < tests; i++) {
+			init_nonce_memory();
+			simulate_acquire_nonces();
+			Tests();
+			printf("Sum(a0) = %d\n", first_byte_Sum);
+			fprintf(fstats, "%d;", first_byte_Sum);
+			generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
+			brute_force();
+			free_nonces_memory();
+			free_statelist_cache();
+			free_candidates_memory(candidates);
+			candidates = NULL;
+		}
+		fclose(fstats);
+	} else {
+		init_nonce_memory();
 	if (nonce_file_read) {  	// use pre-acquired data from file nonces.bin
 		if (read_nonce_file() != 0) {
 			return 3;
@@ -1270,7 +1441,6 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 			return is_OK;
 		}
 	}
-
 
 	Tests();
 
@@ -1294,6 +1464,11 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 	PrintAndLog("Time for generating key candidates list: %1.0f seconds", (float)(clock() - start_time)/CLOCKS_PER_SEC);
 	
 	brute_force();
+		free_nonces_memory();
+		free_statelist_cache();
+		free_candidates_memory(candidates);
+		candidates = NULL;
+	}
 	
 	return 0;
 }

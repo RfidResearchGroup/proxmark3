@@ -717,15 +717,16 @@ void SamyRun()
 				// wait for button to be released
 				while(BUTTON_PRESS())
 					WDT_HIT();
+				
 				Dbprintf("%x %x %x", selected, high[selected], low[selected]);
-				CmdHIDsimTAG(high[selected], low[selected], 0);
+				CmdHIDsimTAG(high[selected], low[selected], 0);		
 				DbpString("Done playing");
-				if (BUTTON_HELD(1000) > 0)
-					{
+				
+				if (BUTTON_HELD(1000) > 0) {
 					DbpString("Exiting");
 					LEDsoff();
 					return;
-					}
+				}
 
 				/* We pressed a button so ignore it here with a delay */
 				SpinDelay(300);
