@@ -1378,7 +1378,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 	char filename[FILE_PATH_SIZE]={0};
 	int	keycnt = 0;
 	uint8_t stKeyBlock = 20;
-	uint8_t *keyBlock = NULL, *p;
+	uint8_t *keyBlock = NULL, *p = NULL;
 	keyBlock = calloc(stKeyBlock, 6);
 	if (keyBlock == NULL) return 1;
 	
