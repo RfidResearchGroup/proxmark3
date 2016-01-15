@@ -5,12 +5,14 @@
 # -- Henryk Plötz <henryk@ploetzli.ch> 2009-09-28
 # Modified april 2014 because of the move to github. 
 # --- Martin Holst Swende <martin@swende.se>
-
+# Modified january 2016 to work with Travis-CI
+# --- iceman <iceman@iuse.se>
 
 # Clear environment locale so that git will not use localized strings
 $ENV{'LC_ALL'} = "C";
 $ENV{'LANG'} = "C";
 
+my $githistory = `git fetch --all`;
 my $gitversion = `git describe --dirty`;
 my $gitbranch = `git rev-parse --abbrev-ref HEAD`;
 my $clean = 2;

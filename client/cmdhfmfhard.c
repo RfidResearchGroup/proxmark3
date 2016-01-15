@@ -1292,7 +1292,7 @@ static void generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 			}
 		}
 	}
-	printf("Number of possible keys with Sum(a0) = %d: %lld (2^%1.1f)\n", sum_a0, maximum_states, log(maximum_states)/log(2.0));
+	printf("Number of possible keys with Sum(a0) = %d: %ll (2^%1.1f)\n", sum_a0, maximum_states, log(maximum_states)/log(2.0));
 	
 	init_statelist_cache();
 	
@@ -1341,7 +1341,7 @@ static void generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 	for (statelist_t *sl = candidates; sl != NULL; sl = sl->next) {
 		maximum_states += (uint64_t)sl->len[ODD_STATE] * sl->len[EVEN_STATE];
 	}
-	printf("Number of remaining possible keys: %lld (2^%1.1f)\n", maximum_states, log(maximum_states)/log(2.0));
+	printf("Number of remaining possible keys: %ll (2^%1.1f)\n", maximum_states, log(maximum_states)/log(2.0));
 	if (write_stats) {
 		if (maximum_states != 0) {
 			fprintf(fstats, "%1.1f;", log(maximum_states)/log(2.0));
@@ -1462,10 +1462,10 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 	PrintAndLog("Time for generating key candidates list: %1.0f seconds", (float)(clock() - start_time)/CLOCKS_PER_SEC);
 	
 	brute_force();
-		free_nonces_memory();
-		free_statelist_cache();
-		free_candidates_memory(candidates);
-		candidates = NULL;
+	free_nonces_memory();
+	free_statelist_cache();
+	free_candidates_memory(candidates);
+	candidates = NULL;
 	}
 	
 	return 0;

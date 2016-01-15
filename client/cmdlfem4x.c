@@ -58,7 +58,8 @@ int CmdEM410xRead(const char *Cmd)
 		return 0;
 	}
 	char id[12] = {0x00};
-	sprintf(id, "%010llx",lo);
+	//sprintf(id, "%010llx",lo);
+	 sprintf(id, "%010" PRIu64 ", lo);	
 	
 	global_em410xId = id;
 	return 1;
