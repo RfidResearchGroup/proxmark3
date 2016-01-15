@@ -29,6 +29,7 @@ int CmdHF14AMifare(const char *Cmd)
 	printf("Press button on the proxmark3 device to abort both proxmark3 and client.\n");
 	printf("-------------------------------------------------------------------------\n");
 
+	time_t time1 = clock();
 	
 start:
     clearCommandBuffer();
@@ -86,6 +87,7 @@ start:
 		PrintAndLog("Found valid key: %012"llx" \n", r_key);
 	}
 	
+	PrintAndLog("Time in darkside: %1.0f seconds", (float)(clock() - time1)/CLOCKS_PER_SEC);
 	PrintAndLog("");
 	return 0;
 }
@@ -662,8 +664,7 @@ int CmdHF14AMfNested(const char *Cmd)
 		}
 	}
 	else { // ------------------------------------  multiple sectors working
-		clock_t time1;
-		time1 = clock();
+		clock_t time1 = clock();
 
 		e_sector = calloc(SectorsCnt, sizeof(sector));
 		if (e_sector == NULL) return 1;
@@ -733,7 +734,7 @@ int CmdHF14AMfNested(const char *Cmd)
 			}
 		}
 
-		printf("Time in nested: %1.3f (%1.3f sec per key)\n\n", ((float)clock() - time1)/CLOCKS_PER_SEC, ((float)clock() - time1)/iterations/CLOCKS_PER_SEC);
+		PrintAndLog("Time in nested: %1.3f (%1.3f sec per key)\n\n", ((float)clock() - time1)/CLOCKS_PER_SEC, ((float)clock() - time1)/iterations/CLOCKS_PER_SEC);
 		
 		PrintAndLog("-----------------------------------------------\nIterations count: %d\n\n", iterations);
 		//print them
@@ -1083,7 +1084,9 @@ int CmdHF14AMfChk(const char *Cmd)
 			}
 		}
 	}
-	
+	// time
+	time_t time1 = clock();
+		
 	for ( int t = !keyType; t < 2; keyType==2?(t++):(t=2) ) {
 		int b=blockNo;
 		for (int i = 0; i < SectorsCnt; ++i) {
@@ -1105,6 +1108,8 @@ int CmdHF14AMfChk(const char *Cmd)
 			b<127?(b+=4):(b+=16);	
 		}
 	}
+	printf("Time in checkkeys: %1.3f (%1.3f sec per key)\n\n", ((float)clock() - time1)/CLOCKS_PER_SEC, ((float)clock() - time1)/keycnt/CLOCKS_PER_SEC);
+		
 
 	if (transferToEml) {
 		uint8_t block[16];
