@@ -36,4 +36,5 @@ fpga/*
 !fpga/go.bat
 !fpga/sim.tcl
 
+client/*
 
