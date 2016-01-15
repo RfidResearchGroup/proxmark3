@@ -216,7 +216,7 @@ local function main(args)
 					local baseStr = utils.ConvertHexToAscii(tmpHash:format(blockNo))
 					local key = md5.sumhexa(baseStr)
 					local aestest = core.aes128_decrypt(key, blockdata)
-					local hex = ConvertAsciiToHex(aestest)
+					local hex = utils.ConvertAsciiToHex(aestest)
 					
 					blocks[blockNo+1] = ('%02d  :: %s'):format(blockNo,hex)
 					io.write(blockNo..',')
