@@ -734,6 +734,37 @@ int CmdHF14AMfNested(const char *Cmd)
 			}
 		}
 
+		// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
+		PrintAndLog("testing to read B...");
+		for (i = 0; i < SectorsCnt; i++) {
+			// KEY A  but not KEY B
+			if ( e_sector[i].foundKey[0] && !e_sector[i].foundKey[1] ) {
+				
+				uint8_t sectrail = (FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
+				
+				UsbCommand c = {CMD_MIFARE_READBL, {sectrail, 0, 0}};
+				num_to_bytes(e_sector[i].Key[0], 6, c.d.asBytes); // KEY A
+				clearCommandBuffer();
+				SendCommand(&c);
+
+				UsbCommand resp;
+				if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500)) continue;
+					
+				uint8_t isOK  = resp.arg[0] & 0xff;
+				uint8_t *data = resp.d.asBytes;
+
+				if (isOK) {
+
+					key64 = bytes_to_num(data+10, 6);
+					if (key64) {
+						PrintAndLog("Data:%s", sprint_hex(data+10, 6));
+						e_sector[i].foundKey[1] = 1;
+						e_sector[i].Key[1] = key64;
+					}
+				}
+			}
+		}
+		
 		PrintAndLog("Time in nested: %1.3f (%1.3f sec per key)\n\n", ((float)clock() - time1)/CLOCKS_PER_SEC, ((float)clock() - time1)/iterations/CLOCKS_PER_SEC);
 		
 		PrintAndLog("-----------------------------------------------\nIterations count: %d\n\n", iterations);
@@ -743,7 +774,11 @@ int CmdHF14AMfNested(const char *Cmd)
 		PrintAndLog("|---|----------------|---|----------------|---|");
 		for (i = 0; i < SectorsCnt; i++) {
 			PrintAndLog("|%03d|  %012"llx"  | %d |  %012"llx"  | %d |", i,
-				e_sector[i].Key[0], e_sector[i].foundKey[0], e_sector[i].Key[1], e_sector[i].foundKey[1]);
+				e_sector[i].Key[0], 
+				e_sector[i].foundKey[0], 
+				e_sector[i].Key[1], 
+				e_sector[i].foundKey[1]
+			);
 		}
 		PrintAndLog("|---|----------------|---|----------------|---|");
 		
@@ -1044,7 +1079,7 @@ int CmdHF14AMfChk(const char *Cmd)
 						if (!p) {
 							PrintAndLog("Cannot allocate memory for defKeys");
 							free(keyBlock);
-							free(f);
+							fclose(f);
 							return 2;
 						}
 						keyBlock = p;
@@ -1228,7 +1263,7 @@ int CmdHF14AMf1kSim(const char *Cmd)
 					
 					uint64_t corr_uid = 0;
 					if ( memcmp(data, "\x00\x00\x00\x00", 4) == 0 ) {
-						corr_uid = (data[3] << 24) | (data[2] << 16) | (data[1] << 8) | data[0];
+						corr_uid = ((uint64_t)(data[3] << 24)) | (data[2] << 16) | (data[1] << 8) | data[0];
 				tryMfk32(corr_uid, data, key);
 			} else {
 						corr_uid |= (uint64_t)data[2] << 48; 
@@ -1789,6 +1824,7 @@ int CmdHF14AMfCLoad(const char *Cmd)
 
 			if (mfCSetBlock(blockNum, buf8, NULL, flags)) {
 				PrintAndLog("Can't set magic card block: %d", blockNum);
+				fclose(f);
 				return 3;
 			}
 			blockNum++;
