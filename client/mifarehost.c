@@ -79,23 +79,19 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	struct Crypto1State *p1, *p2, *p3, *p4;
 	
 	// flush queue
-	clearCommandBuffer();
-	//WaitForResponseTimeout(CMD_ACK,NULL,100);
 	
 	UsbCommand c = {CMD_MIFARE_NESTED, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, calibrate}};
 	memcpy(c.d.asBytes, key, 6);
+	clearCommandBuffer();
 	SendCommand(&c);
 
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-		return -1;
-	}
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
 
-	if (resp.arg[0]) {
-		return resp.arg[0];  // error during nested
-	}
-		
+	// error during nested
+	if (resp.arg[0]) return resp.arg[0];
+	
 	memcpy(&uid, resp.d.asBytes, 4);
-	PrintAndLog("uid:%08x trgbl=%d trgkey=%x", uid, (uint16_t)resp.arg[2] & 0xff, (uint16_t)resp.arg[2] >> 8);
+	PrintAndLog("UID: %08x Block:%d Key: %c", uid, (uint16_t)resp.arg[2] & 0xff, (resp.arg[2] >> 8) ?'A':'B' );
 			
 	for (i = 0; i < 2; i++) {
 		statelists[i].blockNo = resp.arg[2] & 0xff;
