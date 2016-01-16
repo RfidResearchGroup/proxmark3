@@ -141,8 +141,10 @@ reveng(const model_t *guess, const poly_t qpoly, int rflags, int args, const pol
 		engini(&resc, &result, guess->spoly, guess->flags, args, argpolys);
 
 requit:
-	if(!(result = realloc(result, ++resc * sizeof(model_t))))
+	if(!(result = realloc(result, ++resc * sizeof(model_t)))) {
 		uerror("cannot reallocate result array");
+		return NULL;
+	}
 	rptr = result + resc - 1;
 	rptr->spoly  = pzero;
 	rptr->init   = pzero;

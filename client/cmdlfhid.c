@@ -166,12 +166,11 @@ static void getParity34(uint32_t *hi, uint32_t *lo){
 
 	*lo |= !result;
 }
-static void getParity35(uint32_t *hi, uint32_t *lo){
-	*hi = *hi;
+static void getParity35(uint32_t *hi, uint32_t *lo){	
 }
 static void getParity37S(uint32_t *hi,uint32_t *lo){
 	uint32_t result = 0;
-	uint8_t i;
+	int i;
 
 	// even parity
 	for (i = 4; i >= 0; i--)
@@ -295,7 +294,7 @@ int CmdHIDWiegand(const char *Cmd) {
 	uint64_t cardnum = 0;
 	
 	uint8_t ctmp = param_getchar(Cmd, 0);
-	if ( strlen(Cmd) < 0 || strlen(Cmd) < 3 || ctmp == 'H' || ctmp == 'h' ) return usage_lf_hid_wiegand();
+	if ( strlen(Cmd) == 0 || strlen(Cmd) < 3 || ctmp == 'H' || ctmp == 'h' ) return usage_lf_hid_wiegand();
 
 	oem = param_get8(Cmd, 0);
 	fc = param_get32ex(Cmd, 1, 0, 10);
@@ -311,7 +310,7 @@ int CmdHIDWiegand(const char *Cmd) {
 
 int CmdHIDBrute(const char *Cmd){
 	
-	bool error = FALSE;
+	bool error = TRUE;
 	uint8_t fc = 0, fmtlen = 0;
 	uint32_t hi = 0, lo = 0;
 
@@ -321,20 +320,13 @@ int CmdHIDBrute(const char *Cmd){
 	if (strlen(Cmd) > 2 || strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_hid_brute();
 
 	fmtlen = param_get8(Cmd, 0);
-	switch(fmtlen){
-		case 26:
-		case 33:
-		case 34:
-		case 35:
-		case 37: {
+	uint8_t ftms[] = {26,33,34,35,37};
+	for ( uint8_t i = 0; i < sizeof(ftms); i++){
+		if ( ftms[i] == fmtlen ) {
 			error = FALSE;
-			break;
-		}
-		default: {
-			error = TRUE;
-			break;
 		}
 	}
+
 	if ( error ) return usage_lf_hid_brute();
 	
   	fc =  param_get8(Cmd, 1);

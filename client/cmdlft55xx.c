@@ -1454,7 +1454,6 @@ int CmdT55xxBruteForce(const char *Cmd) {
 				getchar();
 				printf("\naborted via keyboard!\n");
 				free(keyBlock);
-				free(p);
 				return 0;
 			}
 		
@@ -1466,7 +1465,6 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			if ( !AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, testpwd)) {
 				PrintAndLog("Aquireing data from device failed. Quitting");
 				free(keyBlock);
-				free(p);
 				return 0;
 			}
 			
@@ -1475,13 +1473,11 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			if ( found ) {
 				PrintAndLog("Found valid password: [%08X]", testpwd);
 				free(keyBlock);
-				free(p);
 				return 0;
 			} 
 		}
 		PrintAndLog("Password NOT found.");
 		free(keyBlock);
-		free(p);
 		return 0;
 	}
 	

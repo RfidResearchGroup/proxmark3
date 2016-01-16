@@ -592,8 +592,10 @@ mbynam(model_t *dest, const char *key) {
 
 	if(!aliases->name)
 		return(-1);
-	if(!(ukey = malloc((size_t) 1 + strlen(key))))
+	if(!(ukey = malloc((size_t) 1 + strlen(key)))) {
 		uerror("cannot allocate memory for comparison string");
+		return(0);
+	}
 	akey.name = uptr = ukey;
 	do
 		*uptr++ = toupper(*key);
@@ -713,12 +715,15 @@ mtostr(const model_t *model) {
 
 void
 mmatch(model_t *model, int flags) {
+
+	if(!model) return;
+	
 	/* searches models[] for a model matching the argument, and links a name if found
 	 * if flags & M_OVERWR, copies the found model onto the argument. */
 	model_t *mptr;
-	if(!model) return;
 
 	mptr = bsearch(model, models, NPRESETS, sizeof(model_t), (int (*)(const void *, const void *)) &mcmp);
+
 	if(mptr) {
 		model->name = mptr->name;
 		if(flags & M_OVERWR)

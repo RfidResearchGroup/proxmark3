@@ -396,8 +396,9 @@ static command_t CommandTable[] =
 
 int CmdHFTopaz(const char *Cmd) {
 	// flush
-	WaitForResponseTimeout(CMD_ACK,NULL,100);
-
+	//WaitForResponseTimeout(CMD_ACK,NULL,100);
+	clearCommandBuffer();
+	
 	// parse
 	CmdsParse(CommandTable, Cmd);
 	return 0;
