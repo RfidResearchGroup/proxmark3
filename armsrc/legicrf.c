@@ -276,10 +276,10 @@ static void frame_receive_rwd(struct legic_frame * const f, int bits, int crypt)
 
 static void frame_append_bit(struct legic_frame * const f, int bit)
 {
-   if(f->bits >= 31)
+   if (f->bits >= 31)
        return; /* Overflow, won't happen */
   
-   f->data |= (bit<<f->bits);
+   f->data |= (bit << f->bits);
    f->bits++;
 }
 
@@ -354,9 +354,11 @@ int legic_read_byte(int byte_index, int cmd_sz) {
 	frame_receive_rwd(&current_frame, 12, 1);
 
 	byte = current_frame.data & 0xff;
+
 	if( LegicCRC(byte_index, byte, cmd_sz) != (current_frame.data >> 8) ) {
 		Dbprintf("!!! crc mismatch: expected %x but got %x !!!", 
-           LegicCRC(byte_index, current_frame.data & 0xff, cmd_sz), current_frame.data >> 8);
+			LegicCRC(byte_index, current_frame.data & 0xff, cmd_sz),
+			current_frame.data >> 8);
 		return -1;
 	}
 
@@ -372,9 +374,8 @@ int legic_read_byte(int byte_index, int cmd_sz) {
  */
 int legic_write_byte(int byte, int addr, int addr_sz) {
     //do not write UID, CRC, DCF
-    if(addr <= 0x06) { 
+    if(addr <= 0x06)
 		return 0;
-	}
 
 	//== send write command ==============================
 	crc_clear(&legic_crc);

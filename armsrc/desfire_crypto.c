@@ -226,8 +226,8 @@ void* mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes
             cmac (key, DESFIRE (tag)->ivect, res, *nbytes, DESFIRE (tag)->cmac);
 
             if (append_mac) {
-                maced_data_length (key, *nbytes);
-
+                size_t len = maced_data_length (key, *nbytes);
+				++len;
                 memcpy (res, data, *nbytes);
                 memcpy (res + *nbytes, DESFIRE (tag)->cmac, CMAC_LENGTH);
                 *nbytes += CMAC_LENGTH;

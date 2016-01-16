@@ -996,32 +996,26 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	
 	set_tracing(TRUE);
 
-	for (i = 0; i < keyCount; i++) {
-		if(mifare_classic_halt(pcs, cuid)) {
+	for (i = 0; i < keyCount; ++i) {
+		if (mifare_classic_halt(pcs, cuid))
 			if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Halt error");
-		}
 
-		if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
+		if (!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
 			if (OLD_MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card");
 			break;
-		};
+		}
 
 		ui64Key = bytes_to_num(datain + i * 6, 6);
-		if(mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
+		if (mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST))
 			continue;
-		};
 		
 		isOK = 1;
 		break;
 	}
-	
-	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
 	
 	LED_B_ON();
     cmd_send(CMD_ACK,isOK,0,0,datain + i * 6,6);
-	LED_B_OFF();
-
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 	set_tracing(FALSE);

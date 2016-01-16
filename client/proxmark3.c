@@ -166,7 +166,6 @@ static void *main_loop(void *targ) {
 				if (ret == 99) 
 					break;
 			}
-			free(cmd);
 		} else {
 			printf("\n");
 			break;
@@ -174,7 +173,9 @@ static void *main_loop(void *targ) {
 	}
   
 	write_history(".history");
-  
+
+	free(cmd);
+			
 	if (arg->usb_present == 1) {
 		rarg.run = 0;
 		pthread_join(reader_thread, NULL);
