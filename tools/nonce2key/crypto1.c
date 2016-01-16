@@ -74,8 +74,8 @@ uint32_t crypto1_word(struct Crypto1State *s, uint32_t in, int is_encrypted)
 {
 	uint32_t i, ret = 0;
 
-	for (i = 0; i < 4; ++i, in <<= 8)
-		ret = ret << 8 | crypto1_byte(s, in >> 24, is_encrypted);
+	for (i = 0; i < 32; ++i)
+		ret |= crypto1_bit(s, BEBIT(in, i), is_encrypted) << (i ^ 24);
 
 	return ret;
 }

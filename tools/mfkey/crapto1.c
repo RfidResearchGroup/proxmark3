@@ -15,7 +15,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor,
     Boston, MA  02110-1301, US$
 
-    Copyright (C) 2008-2008 bla <blapost@gmail.com>
+    Copyright (C) 2008-2014 bla <blapost@gmail.com>
 */
 #include "crapto1.h"
 #include <stdlib.h>
@@ -33,7 +33,7 @@ static void __attribute__((constructor)) fill_lut()
 
 static void quicksort(uint32_t* const start, uint32_t* const stop)
 {
-	uint32_t *it = start + 1, *rit = stop;
+	uint32_t *it = start + 1, *rit = stop, t;
 
 	if(it > rit)
 		return;
@@ -44,12 +44,12 @@ static void quicksort(uint32_t* const start, uint32_t* const stop)
 		else if(*rit > *start)
 			--rit;
 		else
-			*it ^= (*it ^= *rit, *rit ^= *it);
+			t = *it,  *it = *rit, *rit = t;
 
 	if(*rit >= *start)
 		--rit;
 	if(rit != start)
-		*rit ^= (*rit ^= *start, *start ^= *rit);
+		t = *rit,  *rit = *start, *start = t;
 
 	quicksort(start, rit - 1);
 	quicksort(rit + 1, stop);
@@ -319,9 +319,10 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
 {
 	int out;
 	uint8_t ret;
+	uint32_t t;
 
 	s->odd &= 0xffffff;
-	s->odd ^= (s->odd ^= s->even, s->even ^= s->odd);
+	t = s->odd, s->odd = s->even, s->even = t;
 
 	out = s->even & 1;
 	out ^= LF_POLY_EVEN & (s->even >>= 1);

@@ -15,7 +15,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
     MA  02110-1301, US$
 
-    Copyright (C) 2008-2008 bla <blapost@gmail.com>
+    Copyright (C) 2008-2014 bla <blapost@gmail.com>
 */
 #ifndef CRAPTO1_INCLUDED
 #define CRAPTO1_INCLUDED
@@ -39,10 +39,9 @@ uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd);
 struct Crypto1State*
 lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8]);
 
-
-void lfsr_rollback_bit(struct Crypto1State* s, uint32_t in, int fb);
-void lfsr_rollback_byte(struct Crypto1State* s, uint32_t in, int fb);
-void lfsr_rollback_word(struct Crypto1State* s, uint32_t in, int fb);
+uint8_t lfsr_rollback_bit(struct Crypto1State* s, uint32_t in, int fb);
+uint8_t lfsr_rollback_byte(struct Crypto1State* s, uint32_t in, int fb);
+uint32_t lfsr_rollback_word(struct Crypto1State* s, uint32_t in, int fb);
 int nonce_distance(uint32_t from, uint32_t to);
 #define FOREACH_VALID_NONCE(N, FILTER, FSIZE)\
 	uint32_t __n = 0,__M = 0, N = 0;\
