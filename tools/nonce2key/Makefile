@@ -5,7 +5,7 @@ LDFLAGS =
 
 OBJS = crypto1.o crapto1.o
 HEADERS = crapto1.h
-EXES = nonce2key
+EXES = nonce2key nonce2key.exe
 
 all: $(OBJS) $(EXES)
 
@@ -15,8 +15,5 @@ all: $(OBJS) $(EXES)
 % : %.c
 	$(LD) $(LDFLAGS) -o $@ $(OBJS) $<
 
-crypto1test: libnfc $(OBJS)
-	$(LD) $(LDFLAGS) -o crypto1test crypto1test.c $(OBJS)
- 
 clean: 
 	rm -f $(OBJS) $(EXES)
