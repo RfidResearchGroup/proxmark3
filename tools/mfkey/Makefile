@@ -4,8 +4,8 @@ CFLAGS = -Wall -Winline -O4
 LDFLAGS =
 
 OBJS = crapto1.o crypto1.o
-HEADERS = 
-EXES = mfkey64 mfkey32 mfkey32v2
+HEADERS = crapto1.h
+EXES = mfkey64 mfkey64.exe mfkey32 mfkey32.exe mfkey32v2 mfkey32v2.exe
 LIBS =
 	
 all: $(OBJS) $(EXES) $(LIBS)

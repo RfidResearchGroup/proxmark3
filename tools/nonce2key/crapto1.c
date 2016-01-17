@@ -15,7 +15,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor,
     Boston, MA  02110-1301, US$
 
-    Copyright (C) 2008-2008 bla <blapost@gmail.com>
+    Copyright (C) 2008-2014 bla <blapost@gmail.com>
 */
 #include "crapto1.h"
 #include <stdlib.h>
@@ -107,8 +107,7 @@ extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in
 /** extend_table_simple
  * using a bit of the keystream extend the table of possible lfsr states
  */
-static inline void
-extend_table_simple(uint32_t *tbl, uint32_t **end, int bit)
+static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit)
 {
 	for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1)
 		if(filter(*tbl) ^ filter(*tbl | 1)) {
