@@ -232,6 +232,12 @@ local _keys = {
 	EPI Envisionte
 	--]]
 	'AAFB06045877',
+	
+	--[[
+	Fysiken
+	--]]
+	'3E65E4FB65B3',
+	'25094DF6F148',
 }
 
 ---
