@@ -59,7 +59,6 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	state = lfsr_common_prefix(nr, rr, ks3x, par);
 	lfsr_rollback_word(state, uid^nt, 0);
 	crypto1_get_lfsr(state, key);
-    printf("\nkey recovered: %012"llx"\n\n",key);
 	crypto1_destroy(state);
 	return 0;
 }
