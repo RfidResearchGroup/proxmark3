@@ -189,6 +189,7 @@ int zlib_decompress(FILE *infile, FILE *outfile)
 	compressed_fpga_stream.avail_out = DECOMPRESS_BUF_SIZE;
 	compressed_fpga_stream.zalloc = fpga_deflate_malloc;
 	compressed_fpga_stream.zfree = fpga_deflate_free;
+	compressed_fpga_stream.opaque = Z_NULL;
 	
 	ret = inflateInit2(&compressed_fpga_stream, 0);
 	
