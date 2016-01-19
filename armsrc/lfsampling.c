@@ -40,11 +40,11 @@ void printConfig()
 void setSamplingConfig(sample_config *sc)
 {
 	if(sc->divisor != 0) config.divisor = sc->divisor;
-	if(sc->bits_per_sample!= 0) config.bits_per_sample= sc->bits_per_sample;
-	if(sc->decimation!= 0) config.decimation= sc->decimation;
-	if(sc->trigger_threshold != -1) config.trigger_threshold= sc->trigger_threshold;
+	if(sc->bits_per_sample != 0) config.bits_per_sample = sc->bits_per_sample;
+	if(sc->decimation != 0) config.decimation = sc->decimation;
+	if(sc->trigger_threshold != -1) config.trigger_threshold = sc->trigger_threshold;
 
-	config.averaging= sc->averaging;
+	config.averaging = sc->averaging;
 	if(config.bits_per_sample > 8)	config.bits_per_sample = 8;
 	if(config.decimation < 1)	config.decimation = 1;
 
