@@ -513,9 +513,9 @@ int CmdHF14AMfRestore(const char *Cmd)
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		for(blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
 			UsbCommand c = {CMD_MIFARE_WRITEBL, {FirstBlockOfSector(sectorNo) + blockNo, keyType, 0}};
-			memcpy(c.d.asBytes, key, 6);
-			
-			if (fread(bldata, 1, 16, fdump) == 0) {
+			memcpy(c.d.asBytes, key, 6);			
+			bytes_read = fread(bldata, 1, 16, fdump);
+			if ( bytes_read == 0) {
 				PrintAndLog("File reading error (dumpdata.bin).");
 				fclose(fdump);
 				return 2;

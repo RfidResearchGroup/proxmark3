@@ -1060,7 +1060,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 		{ .response = response5,  .response_n = sizeof(response5)  },  // Authentication answer (random nonce)
 		{ .response = response6,  .response_n = sizeof(response6)  },  // dummy ATS (pseudo-ATR), answer to RATS
 		//{ .response = response7_NTAG, .response_n = sizeof(response7_NTAG)}, // EV1/NTAG GET_VERSION response
-		{ .response = response8,   .response_n = sizeof(response8) },  // EV1/NTAG PACK response
+		{ .response = response8,   .response_n = sizeof(response8) }  // EV1/NTAG PACK response
 		//{ .response = response9,      .response_n = sizeof(response9)     }  // EV1/NTAG CHK_TEAR response
 	};
 
@@ -1093,9 +1093,8 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 
 	// Prepare the responses of the anticollision phase
 	// there will be not enough time to do this at the moment the reader sends it REQA
-	for (size_t i=0; i<TAG_RESPONSE_COUNT; i++) {
+	for (size_t i=0; i<TAG_RESPONSE_COUNT; i++)
 		prepare_allocated_tag_modulation(&responses[i]);
-	}
 
 	int len = 0;
 
@@ -2239,16 +2238,14 @@ void ReaderMifare(bool first_try)
 	uint8_t mf_nr_ar[]   = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
 	static uint8_t mf_nr_ar3;
 
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
+	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
+	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
-	if (first_try) { 
+	if (first_try)
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-	}
 	
 	// free eventually allocated BigBuf memory. We want all for tracing.
 	BigBuf_free();
-	
 	clear_trace();
 	set_tracing(TRUE);
 
@@ -2256,7 +2253,7 @@ void ReaderMifare(bool first_try)
 	uint8_t par[1] = {0};	// maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
 	static byte_t par_low = 0;
 	bool led_on = TRUE;
-	uint8_t uid[10]  ={0};
+	uint8_t uid[10] = {0};
 	uint32_t cuid;
 
 	uint32_t nt = 0;
@@ -2265,7 +2262,7 @@ void ReaderMifare(bool first_try)
 	byte_t par_list[8] = {0x00};
 	byte_t ks_list[8] = {0x00};
 
-   #define PRNG_SEQUENCE_LENGTH  (1 << 16);
+	#define PRNG_SEQUENCE_LENGTH  (1 << 16);
 	static uint32_t sync_time = 0;
 	static int32_t sync_cycles = 0;
 	int catch_up_cycles = 0;
@@ -2305,7 +2302,7 @@ void ReaderMifare(bool first_try)
 	uint32_t select_time;
 	uint32_t halt_time;
   
-	for(uint16_t i = 0; TRUE; i++) {
+	for(uint16_t i = 0; TRUE; ++i) {
 		
 		LED_C_ON();
 		WDT_HIT();
@@ -2455,9 +2452,8 @@ void ReaderMifare(bool first_try)
 		if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
 			catch_up_cycles = 8; 	// the PRNG is delayed by 8 cycles due to the NAC (4Bits = 0x05 encrypted) transfer
 	
-			if (nt_diff == 0) {
+			if (nt_diff == 0)
 				par_low = par[0] & 0xE0; // there is no need to check all parities for other nt_diff. Parity Bits for mf_nr_ar[0..2] won't change
-			}
 
 			led_on = !led_on;
 			if(led_on) LED_B_ON(); else LED_B_OFF();
@@ -2475,8 +2471,7 @@ void ReaderMifare(bool first_try)
 			mf_nr_ar[3] = (mf_nr_ar[3] & 0x1F) | (nt_diff << 5);
 			par[0] = par_low;
 		} else {
-			if (nt_diff == 0 && first_try)
-			{
+			if (nt_diff == 0 && first_try) {
 				par[0]++;
 				if (par[0] == 0x00) {		// tried all 256 possible parities without success. Card doesn't send NACK.
 					isOK = -2;
@@ -2501,7 +2496,7 @@ void ReaderMifare(bool first_try)
 		}
 	}
 	
-	byte_t buf[28];
+	byte_t buf[28] = {0x00};
 	memcpy(buf + 0,  uid, 4);
 	num_to_bytes(nt, 4, buf + 4);
 	memcpy(buf + 8,  par_list, 8);
@@ -2713,8 +2708,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				break;
 			}
 			case MFEMUL_AUTH1:{
-				if( len != 8)
-				{
+				if( len != 8) {
 					cardSTATE_TO_IDLE();
 					LogTrace(Uart.output, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
 					break;
@@ -2725,9 +2719,9 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 				//Collect AR/NR
 				//if(ar_nr_collected < 2 && cardAUTHSC == 2){
-				if(ar_nr_collected < 2){
-					if(ar_nr_responses[2] != ar)
-					{// Avoid duplicates... probably not necessary, ar should vary. 
+				if(ar_nr_collected < 2) {
+					if(ar_nr_responses[2] != ar) {
+						// Avoid duplicates... probably not necessary, ar should vary. 
 						//ar_nr_responses[ar_nr_collected*5]   = 0;
 						//ar_nr_responses[ar_nr_collected*5+1] = 0;
 						ar_nr_responses[ar_nr_collected*5+2] = nonce;
@@ -2737,9 +2731,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 					}						
 					// Interactive mode flag, means we need to send ACK
 					if(flags & FLAG_INTERACTIVE && ar_nr_collected == 2)
-					{
 						finished = true;
-					}
 				}
 
 				// --- crypto
@@ -2768,9 +2760,13 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
 				LED_C_ON();
 				cardSTATE = MFEMUL_WORK;
-				if (MF_DBGLEVEL >= 4)	Dbprintf("AUTH COMPLETED for sector %d with key %c. time=%d", 
-					cardAUTHSC, cardAUTHKEY == 0 ? 'A' : 'B',
-					GetTickCount() - authTimer);
+				if (MF_DBGLEVEL >= 4) {
+					Dbprintf("AUTH COMPLETED for sector %d with key %c. time=%d", 
+						cardAUTHSC, 
+						cardAUTHKEY == 0 ? 'A' : 'B',
+						GetTickCount() - authTimer
+					);
+				}
 				break;
 			}
 			case MFEMUL_SELECT2:{
@@ -2785,7 +2781,9 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 				// select 2 card
 				if (len == 9 && 
-						(receivedCmd[0] == 0x95 && receivedCmd[1] == 0x70 && memcmp(&receivedCmd[2], rUIDBCC2, 4) == 0)) {
+						(receivedCmd[0] == 0x95 &&
+						 receivedCmd[1] == 0x70 && 
+						 memcmp(&receivedCmd[2], rUIDBCC2, 4) == 0) ) {
 					EmSendCmd(rSAK, sizeof(rSAK));
 					cuid = bytes_to_num(rUIDBCC2, 4);
 					cardSTATE = MFEMUL_WORK;
@@ -2812,10 +2810,9 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				
 				bool encrypted_data = (cardAUTHKEY != 0xFF) ;
 
-				if(encrypted_data) {
-					// decrypt seqence
+				// decrypt seqence
+				if(encrypted_data)
 					mf_crypto1_decrypt(pcs, receivedCmd, len);
-				}
 				
 				if (len == 4 && (receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61)) {
 					authTimer = GetTickCount();
@@ -2879,9 +2876,8 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				}
 				// read block
 				if (receivedCmd[0] == 0x30) {
-					if (MF_DBGLEVEL >= 4) {
-						Dbprintf("Reader reading block %d (0x%02x)",receivedCmd[1],receivedCmd[1]);
-					}
+					if (MF_DBGLEVEL >= 4) Dbprintf("Reader reading block %d (0x%02x)",receivedCmd[1],receivedCmd[1]);
+
 					emlGetMem(response, receivedCmd[1], 1);
 					AppendCrc14443a(response, 16);
 					mf_crypto1_encrypt(pcs, response, 18, response_par);
@@ -2948,7 +2944,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				break;
 			}
 			case MFEMUL_WRITEBL2:{
-				if (len == 18){
+				if (len == 18) {
 					mf_crypto1_decrypt(pcs, receivedCmd, len);
 					emlSetMem(receivedCmd, cardWRBL, 1);
 					EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK));
@@ -3071,11 +3067,11 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.
 	// So 32 should be enough!
-	uint8_t receivedCmd[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedCmdPar[MAX_MIFARE_PARITY_SIZE];
+	uint8_t receivedCmd[MAX_MIFARE_FRAME_SIZE] = {0x00};
+	uint8_t receivedCmdPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 	// The response (tag -> reader) that we're receiving.
-	uint8_t receivedResponse[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedResponsePar[MAX_MIFARE_PARITY_SIZE];
+	uint8_t receivedResponse[MAX_MIFARE_FRAME_SIZE] = {0x00};
+	uint8_t receivedResponsePar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
 	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
 
@@ -3131,11 +3127,12 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		
 		int register readBufDataP = data - dmaBuf;	// number of bytes we have processed so far
 		int register dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR; // number of bytes already transferred
-		if (readBufDataP <= dmaBufDataP){			// we are processing the same block of data which is currently being transferred
+
+		if (readBufDataP <= dmaBufDataP)			// we are processing the same block of data which is currently being transferred
 			dataLen = dmaBufDataP - readBufDataP;	// number of bytes still to be processed
-		} else {									
+		else
 			dataLen = DMA_BUFFER_SIZE - readBufDataP + dmaBufDataP; // number of bytes still to be processed
-		}
+
 		// test for length of buffer
 		if(dataLen > maxDataLen) {					// we are more behind than ever...
 			maxDataLen = dataLen;					
@@ -3162,10 +3159,12 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		
 		if (sniffCounter & 0x01) {
 
-			if(!TagIsActive) {		// no need to try decoding tag data if the reader is sending
+			// no need to try decoding tag data if the reader is sending
+			if(!TagIsActive) {		
 				uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
 				if(MillerDecoding(readerdata, (sniffCounter-1)*4)) {
 					LED_C_INV();
+
 					if (MfSniffLogic(receivedCmd, Uart.len, Uart.parity, Uart.bitCount, TRUE)) break;
 
 					/* And ready to receive another command. */
@@ -3177,7 +3176,8 @@ void RAMFUNC SniffMifare(uint8_t param) {
 				ReaderIsActive = (Uart.state != STATE_UNSYNCD);
 			}
 			
-			if(!ReaderIsActive) {		// no need to try decoding tag data if the reader is sending
+			// no need to try decoding tag data if the reader is sending
+			if(!ReaderIsActive) {		
 				uint8_t tagdata = (previous_data << 4) | (*data & 0x0F);
 				if(ManchesterDecoding(tagdata, 0, (sniffCounter-1)*4)) {
 					LED_C_INV();
@@ -3186,6 +3186,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
 					// And ready to receive another response.
 					DemodReset();
+					
 					// And reset the Miller decoder including its (now outdated) input buffer
 					UartInit(receivedCmd, receivedCmdPar);
 				}
@@ -3196,9 +3197,9 @@ void RAMFUNC SniffMifare(uint8_t param) {
 		previous_data = *data;
 		sniffCounter++;
 		data++;
-		if(data == dmaBuf + DMA_BUFFER_SIZE) {
+
+		if(data == dmaBuf + DMA_BUFFER_SIZE)
 			data = dmaBuf;
-		}
 
 	} // main cycle
 
