@@ -145,7 +145,11 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	uint32_t pos;
 	uint8_t tmp4[4];
 	uint8_t par[1] = {0x00};
-	byte_t nr[4];
+
+	// "random" reader nonce:
+	byte_t nr[4] = {0x55, 0x41, 0x49, 0x92};
+	//byte_t nr[4] = {0x01, 0x01, 0x01, 0x01};
+	
 	uint32_t nt, ntpp; // Supplied tag nonce
 	
 	uint8_t mf_nr_ar[] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
@@ -156,12 +160,6 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	len = mifare_sendcmd_short(pcs, isNested, 0x60 + (keyType & 0x01), blockNo, receivedAnswer, receivedAnswerPar, timing);
 	if (MF_DBGLEVEL >= 4)	Dbprintf("rand tag nonce len: %x", len);  
 	if (len != 4) return 1;
-	
-	// "random" reader nonce:
-	nr[0] = 0x55;
-	nr[1] = 0x41;
-	nr[2] = 0x49;
-	nr[3] = 0x92; 
 	
 	// Save the tag nonce (nt)
 	nt = bytes_to_num(receivedAnswer, 4);
