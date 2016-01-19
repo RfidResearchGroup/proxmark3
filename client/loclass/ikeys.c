@@ -740,14 +740,15 @@ int readKeyFile(uint8_t key[8])
 	FILE *f;
 	int retval = 1;
 	f = fopen("iclass_key.bin", "rb");
-	if (f)
-	{
-		if(fread(key, sizeof(uint8_t), 8, f) == 1) 
-	 	{
-	 		retval = 0;	
-	 	}
-		fclose(f);
+	if (!f) {
+		return 0;
 	}
+	
+	size_t bytes_read = fread(key, sizeof(uint8_t), 8, f);
+	if ( bytes_read == 1) {
+		retval = 0;	
+	}
+	fclose(f);
 	return retval;
 }
 
@@ -758,11 +759,9 @@ int doKeyTests(uint8_t debuglevel)
 
 	prnlog("[+] Checking if the master key is present (iclass_key.bin)...");
 	uint8_t key[8] = {0};
-	if(readKeyFile(key))
-	{
+	if(readKeyFile(key)) {
 		prnlog("[+] Master key not present, will not be able to do all testcases");
-	}else
-	{
+	} else {
 
 		//Test if it's the right key...
 		uint8_t i;

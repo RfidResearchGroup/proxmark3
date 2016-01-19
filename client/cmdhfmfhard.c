@@ -626,7 +626,8 @@ static int read_nonce_file(void)
 	}
 
 	PrintAndLog("Reading nonces from file nonces.bin...");
-	if (fread(read_buf, 1, 6, fnonces) == 0) {
+	size_t bytes_read = fread(read_buf, 1, 6, fnonces);
+	if ( bytes_read == 0) {
 		PrintAndLog("File reading error.");
 		fclose(fnonces);
 		return 1;

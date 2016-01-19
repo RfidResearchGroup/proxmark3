@@ -1044,7 +1044,8 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 	// else we have to create a share memory
 	int i;
 	fseek(f,startblock*8,SEEK_SET);
-	if ( fread(tag_data,sizeof(iclass_block_t),endblock - startblock + 1,f) == 0){
+	size_t bytes_read = fread(tag_data,sizeof(iclass_block_t),endblock - startblock + 1,f);
+	if ( bytes_read == 0){
 		PrintAndLog("File reading error.");
 		fclose(f);
 		return 2;

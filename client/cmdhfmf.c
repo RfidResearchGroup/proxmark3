@@ -312,8 +312,10 @@ int CmdHF14AMfDump(const char *Cmd)
 	}
 	
 	// Read keys A from file
+	size_t bytes_read;
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
-		if (fread( keyA[sectorNo], 1, 6, fin ) == 0) {
+		bytes_read = fread( keyA[sectorNo], 1, 6, fin );
+		if ( bytes_read == 0) {
 			PrintAndLog("File reading error.");
 			fclose(fin);
 			return 2;
@@ -322,7 +324,8 @@ int CmdHF14AMfDump(const char *Cmd)
 	
 	// Read keys B from file
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
-		if (fread( keyB[sectorNo], 1, 6, fin ) == 0) {
+		bytes_read = fread( keyB[sectorNo], 1, 6, fin );
+		if ( bytes_read == 0) {
 			PrintAndLog("File reading error.");
 			fclose(fin);
 			return 2;
@@ -479,8 +482,10 @@ int CmdHF14AMfRestore(const char *Cmd)
 		return 1;
 	}
 	
+	size_t bytes_read;
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
-		if (fread(keyA[sectorNo], 1, 6, fkeys) == 0) {
+		bytes_read = fread( keyA[sectorNo], 1, 6, fkeys );
+		if ( bytes_read == 0) {
 			PrintAndLog("File reading error (dumpkeys.bin).");
 			fclose(fkeys);
 			return 2;
@@ -488,7 +493,8 @@ int CmdHF14AMfRestore(const char *Cmd)
 	}
 
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
-		if (fread(keyB[sectorNo], 1, 6, fkeys) == 0) {
+		bytes_read = fread( keyB[sectorNo], 1, 6, fkeys );
+		if ( bytes_read == 0) {
 			PrintAndLog("File reading error (dumpkeys.bin).");
 			fclose(fkeys);
 			return 2;
