@@ -2561,7 +2561,8 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	//uint8_t rSAK[] = {0x09, 0x3f, 0xcc };  // Mifare Mini 
 	uint8_t rSAK1[] = {0x04, 0xda, 0x17};
 
-	uint8_t rAUTH_NT[] = {0x01, 0x01, 0x01, 0x01};
+	//uint8_t rAUTH_NT[] = {0x01, 0x01, 0x01, 0x01};
+	uint8_t rAUTH_NT[] = {0x55, 0x41, 0x49, 0x92};
 	uint8_t rAUTH_AT[] = {0x00, 0x00, 0x00, 0x00};
 		
 	//Here, we collect UID1,UID2,NT,AR,NR,0,0,NT2,AR2,NR2
