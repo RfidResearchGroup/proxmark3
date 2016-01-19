@@ -20,9 +20,6 @@
 #include "crapto1.h"
 #include <stdlib.h>
 
-#define SWAPENDIAN(x)\
-	(x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
-
 struct Crypto1State * crypto1_create(uint64_t key)
 {
 	struct Crypto1State *s = malloc(sizeof(*s));
@@ -38,7 +35,6 @@ void crypto1_destroy(struct Crypto1State *state)
 {
 	free(state);
 }
-
 void crypto1_get_lfsr(struct Crypto1State *state, uint64_t *lfsr)
 {
 	int i;
@@ -67,13 +63,13 @@ uint8_t crypto1_bit(struct Crypto1State *s, uint8_t in, int is_encrypted)
 }
 uint8_t crypto1_byte(struct Crypto1State *s, uint8_t in, int is_encrypted)
 {
-/*	
+	/*
 	uint8_t i, ret = 0;
 
 	for (i = 0; i < 8; ++i)
 		ret |= crypto1_bit(s, BIT(in, i), is_encrypted) << i;
-*/
-	// unfold loop 20160112
+	*/
+// unfold loop 20161012
 	uint8_t ret = 0;
 	ret |= crypto1_bit(s, BIT(in, 0), is_encrypted) << 0;
 	ret |= crypto1_bit(s, BIT(in, 1), is_encrypted) << 1;
@@ -87,11 +83,49 @@ uint8_t crypto1_byte(struct Crypto1State *s, uint8_t in, int is_encrypted)
 }
 uint32_t crypto1_word(struct Crypto1State *s, uint32_t in, int is_encrypted)
 {
+	/*
 	uint32_t i, ret = 0;
 
-	for (i = 0; i < 4; ++i, in <<= 8)
-		ret = ret << 8 | crypto1_byte(s, in >> 24, is_encrypted);
+	for (i = 0; i < 32; ++i)
+		ret |= crypto1_bit(s, BEBIT(in, i), is_encrypted) << (i ^ 24);
+*/
+//unfold loop 2016012
+	uint32_t ret = 0;
+	ret |= crypto1_bit(s, BEBIT(in, 0), is_encrypted) << (0 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 1), is_encrypted) << (1 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 2), is_encrypted) << (2 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 3), is_encrypted) << (3 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 4), is_encrypted) << (4 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 5), is_encrypted) << (5 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 6), is_encrypted) << (6 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 7), is_encrypted) << (7 ^ 24);
+	
+	ret |= crypto1_bit(s, BEBIT(in, 8), is_encrypted) << (8 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 9), is_encrypted) << (9 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 10), is_encrypted) << (10 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 11), is_encrypted) << (11 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 12), is_encrypted) << (12 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 13), is_encrypted) << (13 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 14), is_encrypted) << (14 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 15), is_encrypted) << (15 ^ 24);
 
+	ret |= crypto1_bit(s, BEBIT(in, 16), is_encrypted) << (16 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 17), is_encrypted) << (17 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 18), is_encrypted) << (18 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 19), is_encrypted) << (19 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 20), is_encrypted) << (20 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 21), is_encrypted) << (21 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 22), is_encrypted) << (22 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 23), is_encrypted) << (23 ^ 24);
+
+	ret |= crypto1_bit(s, BEBIT(in, 24), is_encrypted) << (24 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 25), is_encrypted) << (25 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 26), is_encrypted) << (26 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 27), is_encrypted) << (27 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 28), is_encrypted) << (28 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 29), is_encrypted) << (29 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 30), is_encrypted) << (30 ^ 24);
+	ret |= crypto1_bit(s, BEBIT(in, 31), is_encrypted) << (31 ^ 24);
 	return ret;
 }
 

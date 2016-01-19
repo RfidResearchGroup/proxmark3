@@ -1218,10 +1218,12 @@ int CmdHF14AMf1kSim(const char *Cmd)
 		}
 		pnr +=2;
 	}
+	
 	if (param_getchar(Cmd, pnr) == 'n') {
 		exitAfterNReads = param_get8(Cmd,pnr+1);
 		pnr += 2;
 	}
+	
 	if (param_getchar(Cmd, pnr) == 'i' ) {
 		//Using a flag to signal interactiveness, least significant bit
 		flags |= FLAG_INTERACTIVE;
@@ -1232,10 +1234,13 @@ int CmdHF14AMf1kSim(const char *Cmd)
 		//Using a flag to signal interactiveness, least significant bit
 		flags |= FLAG_NR_AR_ATTACK;
 	}
+	
 	PrintAndLog(" uid:%s, numreads:%d, flags:%d (0x%02x) ",
 				flags & FLAG_4B_UID_IN_DATA ? sprint_hex(uid,4):
 											  flags & FLAG_7B_UID_IN_DATA	? sprint_hex(uid,7): "N/A"
-				, exitAfterNReads, flags,flags);
+				, exitAfterNReads
+				, flags
+				, flags);
 
 
 	UsbCommand c = {CMD_SIMULATE_MIFARE_CARD, {flags, exitAfterNReads,0}};
@@ -1250,40 +1255,39 @@ int CmdHF14AMf1kSim(const char *Cmd)
 
 		UsbCommand resp;		
 		PrintAndLog("Press pm3-button or send another cmd to abort simulation");
-		//while(! WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-			//We're waiting only 1.5 s at a time, otherwise we get the
-			// annoying message about "Waiting for a response... "
-		//}
-		while(!ukbhit() ){
-			if (!WaitForResponseTimeout(CMD_ACK,&resp,1500) ) continue;
+
+		while( !ukbhit() ){
+			if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
 
 			if ( !(flags & FLAG_NR_AR_ATTACK) ) break;
+			
 			if ( (resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD ) break;
 
-					memset(data, 0x00, sizeof(data));
-					memset(key, 0x00, sizeof(key));
-					int len = (resp.arg[1] > sizeof(data)) ? sizeof(data) : resp.arg[1];
-					
-					memcpy(data, resp.d.asBytes, len);
-					
-					uint64_t corr_uid = 0;
-					if ( memcmp(data, "\x00\x00\x00\x00", 4) == 0 ) {
-						corr_uid = ((uint64_t)(data[3] << 24)) | (data[2] << 16) | (data[1] << 8) | data[0];
-				tryMfk32(corr_uid, data, key);
-			} else {
-						corr_uid |= (uint64_t)data[2] << 48; 
-						corr_uid |= (uint64_t)data[1] << 40; 
-						corr_uid |= (uint64_t)data[0] << 32;
-						corr_uid |= (uint64_t)data[7] << 24;
-						corr_uid |= (uint64_t)data[6] << 16;
-						corr_uid |= (uint64_t)data[5] << 8;
-						corr_uid |= (uint64_t)data[4];
-				tryMfk64(corr_uid, data, key);
-					}
-					PrintAndLog("--");
+				memset(data, 0x00, sizeof(data));
+				memset(key, 0x00, sizeof(key));
+				int len = (resp.arg[1] > sizeof(data)) ? sizeof(data) : resp.arg[1];
+				
+				memcpy(data, resp.d.asBytes, len);
+				
+				uint64_t corr_uid = 0;
+				
+				// this IF?  what was I thinking of?
+				if ( memcmp(data, "\x00\x00\x00\x00", 4) == 0 ) {
+					corr_uid = ((uint64_t)(data[3] << 24)) | (data[2] << 16) | (data[1] << 8) | data[0];
+					tryMfk32(corr_uid, data, key);
+				} else {
+					corr_uid |= (uint64_t)data[2] << 48; 
+					corr_uid |= (uint64_t)data[1] << 40; 
+					corr_uid |= (uint64_t)data[0] << 32;
+					corr_uid |= (uint64_t)data[7] << 24;
+					corr_uid |= (uint64_t)data[6] << 16;
+					corr_uid |= (uint64_t)data[5] << 8;
+					corr_uid |= (uint64_t)data[4];
+					tryMfk64(corr_uid, data, key);
 				}
-			}
-	
+			PrintAndLog("--");
+		}
+	}
 	return 0;
 }
 

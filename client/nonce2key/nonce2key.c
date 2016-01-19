@@ -9,14 +9,10 @@
 //-----------------------------------------------------------------------------
 // MIFARE Darkside hack
 //-----------------------------------------------------------------------------
-
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-#define llx PRIx64
-
 #include "nonce2key.h"
 #include "mifarehost.h"
 #include "ui.h"
+#include "proxmark3.h"
 
 int compar_state(const void * a, const void * b) {
 	// didn't work: (the result is truncated to 32 bits)
@@ -31,19 +27,8 @@ int compar_state(const void * a, const void * b) {
 int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t * key) {
 
 	struct Crypto1State *state;
-	uint32_t i, pos, rr = 0, nr_diff, key_count;//, ks1, ks2;
+	uint32_t i, pos, rr = 0, nr_diff;
 	byte_t bt, ks3x[8], par[8][8];
-	uint64_t key_recovered;
-	int64_t *state_s;
-
-	static uint32_t last_uid;
-	static int64_t *last_keylist;
-  
-	if (last_uid != uid && last_keylist != NULL) {
-		free(last_keylist);
-		last_keylist = NULL;
-	}
-	last_uid = uid;
 
 	// Reset the last three significant bits of the reader nonce
 	nr &= 0xffffff1f;
@@ -66,95 +51,16 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 		nr_diff = nr | i << 5;
 		printf("| %02x |%08x|", i << 5, nr_diff);
 		printf(" %01x |  %01x  |", ks3x[i], ks3x[i]^5);
-		for (pos = 0; pos < 7; pos++) 
-			printf("%01x,", par[i][pos]);
+		for (pos = 0; pos < 7; pos++) printf("%01x,", par[i][pos]);
 		printf("%01x|\n", par[i][7]);
 	}
 	printf("+----+--------+---+-----+---------------+\n");
 
-	if ( par_info == 0 )
-		PrintAndLog("Parity is all zero, try special attack! Wait for few more seconds...");
-  
-	state = lfsr_common_prefix(nr, rr, ks3x, par, par_info==0);
-	state_s = (int64_t*)state;
-	
-	//char filename[50] ;
-    //sprintf(filename, "nt_%08x_%d.txt", nt, nr);
-    //printf("name %s\n", filename);
-	//FILE* fp = fopen(filename,"w");
-	for (i = 0; (state) && ((state + i)->odd != -1); i++)
-	{
-		lfsr_rollback_word(state+i, uid^nt, 0);
-		crypto1_get_lfsr(state + i, &key_recovered);
-		*(state_s + i) = key_recovered;
-		//fprintf(fp, "%012llx\n",key_recovered);
-	}
-	//fclose(fp);
-	
-	if(!state)
-		return 1;
-	
-	// quicksort statelist
-	qsort(state_s, i, sizeof(*state_s), compar_state);
-
-	// set last element marker 
-	*(state_s + i) = -1;
-	
-	//Create the intersection:
-	if (par_info == 0 ) {
-		if ( last_keylist != NULL) 	{
-			int64_t *p1, *p2, *p3;
-			p1 = p3 = last_keylist; 
-			p2 = state_s;
-			while ( *p1 != -1 && *p2 != -1 ) {
-				if (compar_state(p1, p2) == 0) {
-					printf("p1:%"llx" p2:%"llx" p3:%"llx" key:%012"llx"\n",
-						(uint64_t)(p1-last_keylist),
-						(uint64_t)(p2-state_s),
-						(uint64_t)(p3-last_keylist),
-						*p1);
-					*p3++ = *p1++;
-					p2++;
-				} else {
-					while (compar_state(p1, p2) == -1) ++p1;
-					while (compar_state(p1, p2) == 1) ++p2;
-				}
-			}
-			key_count = p3 - last_keylist;
-		} else {
-			key_count = 0;
-		}
-	} else {
-		last_keylist = state_s;
-		key_count = i;
-	}
-	
-	printf("key candidates count: %d\n", key_count);
-
-	// The list may still contain several key candidates. Test each of them with mfCheckKeys
-	int res;
-	uint8_t keyBlock[6];
-	uint64_t key64;
-	for (i = 0; i < key_count; i++) {
-
-		key64 = *(last_keylist + i);
-		num_to_bytes(key64, 6, keyBlock);
-		key64 = 0;
-		// Call tag to verify if key is correct
-		res = mfCheckKeys(0, 0, false, 1, keyBlock, &key64);
-		if (!res) {
-			*key = key64;
-			free(last_keylist);
-			last_keylist = NULL;
-			if (par_info == 0)
-				free(state);
-			return 0;
-		}
-	}	
-	
-	free(last_keylist);
-	last_keylist = state_s;
-	return 1;
+	state = lfsr_common_prefix(nr, rr, ks3x, par);
+	lfsr_rollback_word(state, uid^nt, 0);
+	crypto1_get_lfsr(state, key);
+	crypto1_destroy(state);
+	return 0;
 }
 
 // *outputkey is not used...
@@ -203,8 +109,9 @@ int tryMfk32(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 				break;
 		}
 	}
+	
+	num_to_bytes(key, 6, outputkey);
 	crypto1_destroy(t);
-	crypto1_destroy(s);
 	return isSuccess;
 }
 
@@ -248,8 +155,8 @@ int tryMfk32_moebius(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 				break;
 		}
 	}
+	num_to_bytes(key, 6, outputkey);
 	crypto1_destroy(t);
-	crypto1_destroy(s);
 	return isSuccess;
 }
 
@@ -295,6 +202,7 @@ int tryMfk64(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 	lfsr_rollback_word(revstate, uid ^ nt, 0);
 	crypto1_get_lfsr(revstate, &key);
 	PrintAndLog("Found Key: [%012"llx"]",key);
+	num_to_bytes(key, 6, outputkey);
 	crypto1_destroy(revstate);
 	return 0;
 }

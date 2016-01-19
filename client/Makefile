@@ -5,9 +5,8 @@
 #-----------------------------------------------------------------------------
 include ../common/Makefile.common
 
-
-CC=gcc
-CXX=g++
+CC = gcc
+CXX = g++
 #COMMON_FLAGS = -m32
 VPATH = ../common ../zlib
 OBJDIR = obj
