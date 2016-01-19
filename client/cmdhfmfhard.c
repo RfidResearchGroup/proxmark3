@@ -20,7 +20,6 @@
 #include <pthread.h>
 #include <locale.h>
 #include <math.h>
-#include <inttypes.h>
 #include "proxmark3.h"
 #include "cmdmain.h"
 #include "ui.h"
@@ -857,8 +856,14 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 		}
 
 		if (!initialize) {
-			if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) return 1;
-			if (resp.arg[0]) return resp.arg[0];  // error during nested_hard
+			if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
+				fclose(fnonces);
+				return 1;
+			}
+			if (resp.arg[0]) {
+				fclose(fnonces);
+				return resp.arg[0];  // error during nested_hard
+			}
 		}
 
 		initialize = false;
@@ -1293,7 +1298,7 @@ static void generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 			}
 		}
 	}
-	printf("Number of possible keys with Sum(a0) = %d: %"PRIu64" (2^%1.1f)\n", sum_a0, maximum_states, log(maximum_states)/log(2.0));
+	printf("Number of possible keys with Sum(a0) = %d: %lld (2^%1.1f)\n", sum_a0, maximum_states, log(maximum_states)/log(2.0));
 	
 	init_statelist_cache();
 	
@@ -1342,7 +1347,7 @@ static void generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 	for (statelist_t *sl = candidates; sl != NULL; sl = sl->next) {
 		maximum_states += (uint64_t)sl->len[ODD_STATE] * sl->len[EVEN_STATE];
 	}
-	printf("Number of remaining possible keys: %"PRIu64" (2^%1.1f)\n", maximum_states, log(maximum_states)/log(2.0));
+	printf("Number of remaining possible keys: %lld (2^%1.1f)\n", maximum_states, log(maximum_states)/log(2.0));
 	if (write_stats) {
 		if (maximum_states != 0) {
 			fprintf(fstats, "%1.1f;", log(maximum_states)/log(2.0));
@@ -1458,7 +1463,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 		// best_first_bytes[9]  );
 	PrintAndLog("Number of first bytes with confidence > %2.1f%%: %d", CONFIDENCE_THRESHOLD*100.0, num_good_first_bytes);
 
-	time_t start_time = clock();
+	clock_t start_time = clock();
 	generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
 	PrintAndLog("Time for generating key candidates list: %1.0f seconds", (float)(clock() - start_time)/CLOCKS_PER_SEC);
 	
