@@ -91,6 +91,7 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile)
 			for(uint16_t j = 0; j < num_infiles; j++) {
 				fclose(infile[j]);
 			}
+			free(fpga_config);
 			return(EXIT_FAILURE);
 		}
 
@@ -195,7 +196,7 @@ int zlib_decompress(FILE *infile, FILE *outfile)
 			compressed_fpga_stream.next_in = inbuf;
 			uint16_t i = 0;
 			do {
-				uint8_t c = fgetc(infile);
+				int c = fgetc(infile);
 				if (!feof(infile)) {
 					inbuf[i++] = c;
 					compressed_fpga_stream.avail_in++;
