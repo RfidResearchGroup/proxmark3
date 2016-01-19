@@ -30,7 +30,7 @@ int CmdHF14AMifare(const char *Cmd)
 	printf("Press button on the proxmark3 device to abort both proxmark3 and client.\n");
 	printf("-------------------------------------------------------------------------\n");
 
-	clock_t t = clock();
+	clock_t t1 = clock();
 	
 start:
     clearCommandBuffer();
@@ -91,9 +91,10 @@ start:
 		printf("------------------------------------------------------------------\n");
 		PrintAndLog("Found valid key: %012"llx" \n", r_key);
 	}
-	t = clock() - t;
-	//printf("Time in darkside: %d ticks - %1.2f seconds\n", t, ((float)t)/CLOCKS_PER_SEC);
-	printf("Time in darkside: %Lf ticks - %1.2Lf seconds\n", (long double)t, ((long double)t)/CLOCKS_PER_SEC);
+	t1 = clock() - t1;
+	if ( t1 > 0 ){
+		PrintAndLog("Time in darkside: %f ticks - %1.2f sec\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC);
+	}
 	return 0;
 }
 
@@ -675,7 +676,7 @@ int CmdHF14AMfNested(const char *Cmd)
 		}
 	}
 	else { // ------------------------------------  multiple sectors working
-		clock_t time1 = clock();
+		clock_t t1 = clock();
 
 		e_sector = calloc(SectorsCnt, sizeof(sector));
 		if (e_sector == NULL) return 1;
@@ -776,7 +777,10 @@ int CmdHF14AMfNested(const char *Cmd)
 			}
 		}
 		
-		PrintAndLog("Time in nested: %1.2f (%1.2f sec per key)\n\n", ((float)clock() - time1)/CLOCKS_PER_SEC, ((float)clock() - time1)/iterations/CLOCKS_PER_SEC);
+		t1 = clock() - t1;
+		if ( t1 > 0 ) {
+			PrintAndLog("Time in nested: %f ticks %1.2f sec (%1.2f sec per key)\n\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC, ((float)t1)/iterations/CLOCKS_PER_SEC);
+		}
 		
 		PrintAndLog("-----------------------------------------------\nIterations count: %d\n\n", iterations);
 		//print them
@@ -1131,7 +1135,7 @@ int CmdHF14AMfChk(const char *Cmd)
 		}
 	}
 	// time
-	clock_t time1 = clock();
+	clock_t t1 = clock();
 		
 	for ( int t = !keyType; t < 2; keyType==2?(t++):(t=2) ) {
 		int b=blockNo;
@@ -1154,8 +1158,10 @@ int CmdHF14AMfChk(const char *Cmd)
 			b<127?(b+=4):(b+=16);	
 		}
 	}
-	printf("Time in checkkeys: %1.3f (%1.3f sec per key)\n\n", ((float)clock() - time1)/CLOCKS_PER_SEC, ((float)clock() - time1)/keycnt/CLOCKS_PER_SEC);
-		
+	t1 = clock() - t1;
+	if ( t1 > 0 ){
+		printf("Time in checkkeys: %f ticks  %1.2f sec (%1.2f sec per key)\n\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC, ((float)t1)/keycnt/CLOCKS_PER_SEC);
+	}
 
 	if (transferToEml) {
 		uint8_t block[16];

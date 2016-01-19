@@ -750,11 +750,13 @@ static void simulate_acquire_nonces()
 
 	} while (num_good_first_bytes < GOOD_BYTES_REQUIRED);
 	
+	time1 = clock() - time1;
+	if ( time1 > 0 ) {
 	PrintAndLog("Acquired a total of %d nonces in %1.1f seconds (%0.0f nonces/minute)", 
 		total_num_nonces, 
-		((float)clock()-time1)/CLOCKS_PER_SEC, 
-		total_num_nonces*60.0*CLOCKS_PER_SEC/((float)clock()-time1));
-
+		((float)time1)/CLOCKS_PER_SEC, 
+		total_num_nonces * 60.0 * CLOCKS_PER_SEC/(float)time1);
+	}
 	fprintf(fstats, "%d;%d;%d;%1.2f;", total_num_nonces, total_added_nonces, num_good_first_bytes, CONFIDENCE_THRESHOLD);
 		
 }
@@ -876,11 +878,14 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 		fclose(fnonces);
 	}
 	
+	time1 = clock() - time1;
+	if ( time1 > 0 ) {
 	PrintAndLog("Acquired a total of %d nonces in %1.1f seconds (%0.0f nonces/minute)", 
 		total_num_nonces, 
-		((float)clock()-time1)/CLOCKS_PER_SEC, 
-		total_num_nonces*60.0*CLOCKS_PER_SEC/((float)clock()-time1));
-	
+		((float)time1)/CLOCKS_PER_SEC, 
+		total_num_nonces * 60.0 * CLOCKS_PER_SEC/(float)time1
+		);
+	}
 	return 0;
 }
 
@@ -1434,47 +1439,48 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 		fclose(fstats);
 	} else {
 		init_nonce_memory();
-	if (nonce_file_read) {  	// use pre-acquired data from file nonces.bin
-		if (read_nonce_file() != 0) {
-			return 3;
+		if (nonce_file_read) {  	// use pre-acquired data from file nonces.bin
+			if (read_nonce_file() != 0) {
+				return 3;
+			}
+			Check_for_FilterFlipProperties();
+			num_good_first_bytes = MIN(estimate_second_byte_sum(), GOOD_BYTES_REQUIRED);
+		} else {					// acquire nonces.
+			uint16_t is_OK = acquire_nonces(blockNo, keyType, key, trgBlockNo, trgKeyType, nonce_file_write, slow);
+			if (is_OK != 0) {
+				return is_OK;
+			}
 		}
-		Check_for_FilterFlipProperties();
-		num_good_first_bytes = MIN(estimate_second_byte_sum(), GOOD_BYTES_REQUIRED);
-	} else {					// acquire nonces.
-		uint16_t is_OK = acquire_nonces(blockNo, keyType, key, trgBlockNo, trgKeyType, nonce_file_write, slow);
-		if (is_OK != 0) {
-			return is_OK;
-		}
-	}
 
-	Tests();
+		Tests();
 
-	PrintAndLog("");
-	PrintAndLog("Sum(a0) = %d", first_byte_Sum);
-	// PrintAndLog("Best 10 first bytes: %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x",
-		// best_first_bytes[0],
-		// best_first_bytes[1],
-		// best_first_bytes[2],
-		// best_first_bytes[3],
-		// best_first_bytes[4],
-		// best_first_bytes[5],
-		// best_first_bytes[6],
-		// best_first_bytes[7],
-		// best_first_bytes[8],
-		// best_first_bytes[9]  );
-	PrintAndLog("Number of first bytes with confidence > %2.1f%%: %d", CONFIDENCE_THRESHOLD*100.0, num_good_first_bytes);
+		PrintAndLog("");
+		PrintAndLog("Sum(a0) = %d", first_byte_Sum);
+		// PrintAndLog("Best 10 first bytes: %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x",
+			// best_first_bytes[0],
+			// best_first_bytes[1],
+			// best_first_bytes[2],
+			// best_first_bytes[3],
+			// best_first_bytes[4],
+			// best_first_bytes[5],
+			// best_first_bytes[6],
+			// best_first_bytes[7],
+			// best_first_bytes[8],
+			// best_first_bytes[9]  );
+		PrintAndLog("Number of first bytes with confidence > %2.1f%%: %d", CONFIDENCE_THRESHOLD*100.0, num_good_first_bytes);
 
-	clock_t start_time = clock();
-	generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
-	PrintAndLog("Time for generating key candidates list: %1.0f seconds", (float)(clock() - start_time)/CLOCKS_PER_SEC);
+		clock_t time1 = clock();
+		generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
+		time1 = clock() - time1;
+		if ( time1 > 0 )
+			PrintAndLog("Time for generating key candidates list: %1.0f seconds", ((float)time1)/CLOCKS_PER_SEC);
 	
-	brute_force();
-	free_nonces_memory();
-	free_statelist_cache();
-	free_candidates_memory(candidates);
-	candidates = NULL;
-	}
-	
+		brute_force();
+		free_nonces_memory();
+		free_statelist_cache();
+		free_candidates_memory(candidates);
+		candidates = NULL;
+	}	
 	return 0;
 }
 

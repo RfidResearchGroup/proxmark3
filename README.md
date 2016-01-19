@@ -17,6 +17,24 @@ NEWS:
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3-iceman-fork)
 
 
+## Coverity Scan Config && Run
+
+Download the Coverity Scan Self-buld and install it.
+You will need to configure  ARM-NON-EABI- Compiler for it to use:
+
+:: Configure
+cov-configure --comptype gcc --compiler  /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc
+
+::run it (I'm running on Ubuntu)
+cov-build --dir cov-int make all UBUNTU_1404_QT4=1
+
+:: make a tarball
+tar czvf proxmark3.tgz cov-int
+
+:: upload it to coverity.com
+
+## Whats changed?
+
 Whats in this fork?  I have scraped the web for different enhancements to the PM3 source code and not all of them ever found their way to the master branch. 
 Among the stuff is
 
@@ -39,6 +57,8 @@ Among the stuff is
 	* A Bruteforce for T55XX passwords against tag.
 	* A Bruteforce for AWID 26, starting w a facilitycode then trying all 0xFFFF cardnumbers via simulation. To be used against a AWID Reader.
 
+	* Blaposts Crapto1 v3.3
+	
 	
 Give me a hint, and I'll see if I can't merge in the stuff you have. 
 

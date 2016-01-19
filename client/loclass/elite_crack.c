@@ -522,8 +522,8 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[])
 		errors += bruteforceItem(*attack, keytable);
 	}
 	free(attack);
-	clock_t t2 = clock();
-	float diff = (((float)t2 - (float)t1) / CLOCKS_PER_SEC );
+	t1 = clock() - t1;
+	float diff = ((float)t1 / CLOCKS_PER_SEC );
 	prnlog("\nPerformed full crack in %f seconds",diff);
 
 	// Pick out the first 16 bytes of the keytable.
