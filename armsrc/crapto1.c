@@ -15,7 +15,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor,
     Boston, MA  02110-1301, US$
 
-    Copyright (C) 2008-2008 bla <blapost@gmail.com>
+    Copyright (C) 2008-2014 bla <blapost@gmail.com>
 */
 #include "crapto1.h"
 #include <stdlib.h>
@@ -85,7 +85,8 @@ update_contribution(uint32_t *item, const uint32_t mask1, const uint32_t mask2)
 /** extend_table
  * using a bit of the keystream extend the table of possible lfsr states
  */
-static inline void extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in)
+static inline void
+extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in)
 {
 	in <<= 24;
 	for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1)
@@ -183,6 +184,7 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 	uint32_t *even_head = 0, *even_tail = 0, eks = 0;
 	int i;
 
+	// split the keystream into an odd and even part
 	for(i = 31; i >= 0; i -= 2)
 		oks = oks << 1 | BEBIT(ks2, i);
 	for(i = 30; i >= 0; i -= 2)
@@ -199,6 +201,7 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 
 	statelist->odd = statelist->even = 0;
 
+	// initialize statelists: add all possible states which would result into the rightmost 2 bits of the keystream
 	for(i = 1 << 20; i >= 0; --i) {
 		if(filter(i) == (oks & 1))
 			*++odd_tail = i;
@@ -206,11 +209,15 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 			*++even_tail = i;
 	}
 
+	// extend the statelists. Look at the next 8 Bits of the keystream (4 Bit each odd and even):
 	for(i = 0; i < 4; i++) {
 		extend_table_simple(odd_head,  &odd_tail, (oks >>= 1) & 1);
 		extend_table_simple(even_head, &even_tail, (eks >>= 1) & 1);
 	}
 
+	// the statelists now contain all states which could have generated the last 10 Bits of the keystream.
+	// 22 bits to go to recover 32 bits in total. From now on, we need to take the "in"
+	// parameter into account.
 	in = (in >> 16 & 0xff) | (in << 16) | (in & 0xff00);
 	recover(odd_head, odd_tail, oks,
 		even_head, even_tail, eks, 11, statelist, in << 1);
@@ -439,15 +446,13 @@ static uint32_t fastfwd[2][8] = {
  * encrypt the NACK which is observed when varying only the 3 last bits of Nr
  * only correct iff [NR_3] ^ NR_3 does not depend on Nr_3
  */
- // TO VERIFY 
 uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
 {
 	uint32_t *candidates = malloc(4 << 10);
+	if(!candidates) return 0;
+	
 	uint32_t c,  entry;
 	int size = 0, i, good;
-
-	if(!candidates)
-		return 0;
 
 	for(i = 0; i < 1 << 21; ++i) {
 		for(c = 0, good = 1; good && c < 8; ++c) {
@@ -467,9 +472,7 @@ uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
 /** check_pfx_parity
  * helper function which eliminates possible secret states using parity bits
  */
-static struct Crypto1State*
-check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8],
-          	uint32_t odd, uint32_t even, struct Crypto1State* sl)
+static struct Crypto1State* check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8], uint32_t odd, uint32_t even, struct Crypto1State* sl)
 {
 	uint32_t ks1, nr, ks2, rr, ks3, c, good = 1;
 
@@ -497,7 +500,6 @@ check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8],
 	return sl + good;
 }
 
-
 /** lfsr_common_prefix
  * Implentation of the common prefix attack.
  * Requires the 28 bit constant prefix used as reader nonce (pfx)
@@ -507,8 +509,8 @@ check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8],
  * It returns a zero terminated list of possible cipher states after the
  * tag nonce was fed in
  */
-struct Crypto1State*
-lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
+
+struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
 {
 	struct Crypto1State *statelist, *s;
 	uint32_t *odd, *even, *o, *e, top;
@@ -516,7 +518,7 @@ lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
 	odd = lfsr_prefix_ks(ks, 1);
 	even = lfsr_prefix_ks(ks, 0);
 	
-	s = statelist = malloc((sizeof *statelist) << 20);
+	s = statelist = malloc((sizeof *statelist) << 21);
 	if(!s || !odd || !even) {
 		free(statelist);
 		free(odd);
@@ -536,6 +538,5 @@ lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
 
 	free(odd);
 	free(even);
-
 	return statelist;
 }

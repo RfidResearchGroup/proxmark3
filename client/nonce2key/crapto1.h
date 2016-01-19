@@ -37,7 +37,6 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in);
 struct Crypto1State* lfsr_recovery64(uint32_t ks2, uint32_t ks3);
 uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd);
 struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8]);
-struct Crypto1State* lfsr_common_prefix_ex(uint32_t pfx, uint8_t ks[8], uint8_t par[8][8]);
 
 uint8_t lfsr_rollback_bit(struct Crypto1State* s, uint32_t in, int fb);
 uint8_t lfsr_rollback_byte(struct Crypto1State* s, uint32_t in, int fb);
@@ -69,7 +68,7 @@ static inline int parity(uint32_t x)
 	x ^= x >> 4;
 	return BIT(0x6996, x & 0xf);
 #else
-	__asm__(	"movl %1, %%eax\n"
+        __asm__(    "movl %1, %%eax\n"
 			"mov %%ax, %%cx\n"
 			"shrl $0x10, %%eax\n"
 			"xor %%ax, %%cx\n"
