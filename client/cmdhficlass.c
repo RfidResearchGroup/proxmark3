@@ -34,8 +34,6 @@
 #include "cmdhfmfu.h"
 #include "cmdhf.h"
 
-#define llX PRIx64
-
 static int CmdHelp(const char *Cmd);
 
 #define ICLASS_KEYS_MAX 8

@@ -15,8 +15,6 @@
 #include "mifarehost.h"
 #include "proxmark3.h"
 
-#define llx PRIx64
-
 // MIFARE
 int compar_int(const void * a, const void * b) {
 	// didn't work: (the result is truncated to 32 bits)

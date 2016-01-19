@@ -27,8 +27,6 @@
 #include "nonce2key/nonce2key.h"
 #include "cmdhf.h"
 
-#define llx PRIx64
-
 static int CmdHelp(const char *Cmd);
 static void waitCmd(uint8_t iLen);
 
