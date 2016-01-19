@@ -1377,6 +1377,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 	char buf[9];
 	char filename[FILE_PATH_SIZE]={0};
 	int	keycnt = 0;
+	int c;
 	uint8_t stKeyBlock = 20;
 	uint8_t *keyBlock = NULL, *p = NULL;
 	keyBlock = calloc(stKeyBlock, 6);
@@ -1451,7 +1452,8 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		for (uint16_t c = 0; c < keycnt; ++c ) {
 	
 			if (ukbhit()) {
-				getchar();
+				c = getchar();
+				(void)c;
 				printf("\naborted via keyboard!\n");
 				free(keyBlock);
 				return 0;
@@ -1501,7 +1503,8 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		printf(".");
 		fflush(stdout);
 		if (ukbhit()) {
-			getchar();
+			c = getchar();
+			(void)c;
 			printf("\naborted via keyboard!\n");
 			free(keyBlock);
 			return 0;

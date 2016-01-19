@@ -20,7 +20,8 @@ int CmdHF14AMifare(const char *Cmd)
 	uint32_t nt = 0, nr = 0;
 	uint64_t par_list = 0, ks_list = 0, r_key = 0;
 	int16_t isOK = 0;
-
+	int tmpchar; 
+	
 	UsbCommand c = {CMD_READER_MIFARE, {true, 0, 0}};
 
 	// message
@@ -29,21 +30,25 @@ int CmdHF14AMifare(const char *Cmd)
 	printf("Press button on the proxmark3 device to abort both proxmark3 and client.\n");
 	printf("-------------------------------------------------------------------------\n");
 
-	time_t time1 = clock();
+	clock_t t = clock();
 	
 start:
     clearCommandBuffer();
     SendCommand(&c);
 	
 	//flush queue
-	while (ukbhit()) getchar();
+	while (ukbhit()) {
+		tmpchar = getchar();
+		(void)tmpchar;
+	}
 
 	// wait cycle
 	while (true) {
         printf(".");
 		fflush(stdout);
 		if (ukbhit()) {
-			getchar();
+			tmpchar = getchar();
+			(void)tmpchar;
 			printf("\naborted via keyboard!\n");
 			break;
 		}
@@ -86,9 +91,9 @@ start:
 		printf("------------------------------------------------------------------\n");
 		PrintAndLog("Found valid key: %012"llx" \n", r_key);
 	}
-	
-	PrintAndLog("Time in darkside: %1.0f seconds", (float)(clock() - time1)/CLOCKS_PER_SEC);
-	PrintAndLog("");
+	t = clock() - t;
+	//printf("Time in darkside: %d ticks - %1.2f seconds\n", t, ((float)t)/CLOCKS_PER_SEC);
+	printf("Time in darkside: %Lf ticks - %1.2Lf seconds\n", (long double)t, ((long double)t)/CLOCKS_PER_SEC);
 	return 0;
 }
 
@@ -765,7 +770,7 @@ int CmdHF14AMfNested(const char *Cmd)
 			}
 		}
 		
-		PrintAndLog("Time in nested: %1.3f (%1.3f sec per key)\n\n", ((float)clock() - time1)/CLOCKS_PER_SEC, ((float)clock() - time1)/iterations/CLOCKS_PER_SEC);
+		PrintAndLog("Time in nested: %1.2f (%1.2f sec per key)\n\n", ((float)clock() - time1)/CLOCKS_PER_SEC, ((float)clock() - time1)/iterations/CLOCKS_PER_SEC);
 		
 		PrintAndLog("-----------------------------------------------\nIterations count: %d\n\n", iterations);
 		//print them
@@ -1120,7 +1125,7 @@ int CmdHF14AMfChk(const char *Cmd)
 		}
 	}
 	// time
-	time_t time1 = clock();
+	clock_t time1 = clock();
 		
 	for ( int t = !keyType; t < 2; keyType==2?(t++):(t=2) ) {
 		int b=blockNo;
@@ -2012,6 +2017,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 	bool wantSaveToEmlFile = 0;
 
 	//var 
+	int tmpchar;
 	int res = 0;
 	int len = 0;
 	int blockLen = 0;
@@ -2062,7 +2068,8 @@ int CmdHF14AMfSniff(const char *Cmd){
 		printf(".");
 		fflush(stdout);
 		if (ukbhit()) {
-			getchar();
+			tmpchar = getchar();
+			(void)tmpchar;
 			printf("\naborted via keyboard!\n");
 			break;
 		}
