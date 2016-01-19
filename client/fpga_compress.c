@@ -113,6 +113,7 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile)
 	compressed_fpga_stream.avail_in = i;
 	compressed_fpga_stream.zalloc = fpga_deflate_malloc;
 	compressed_fpga_stream.zfree = fpga_deflate_free;
+	compressed_fpga_stream.opaque = Z_NULL;
 	
 	ret = deflateInit2(&compressed_fpga_stream, 
 						COMPRESS_LEVEL,
