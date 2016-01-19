@@ -184,6 +184,7 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 	uint32_t *even_head = 0, *even_tail = 0, eks = 0;
 	int i;
 
+	// split the keystream into an odd and even part
 	for(i = 31; i >= 0; i -= 2)
 		oks = oks << 1 | BEBIT(ks2, i);
 	for(i = 30; i >= 0; i -= 2)
@@ -200,6 +201,7 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 
 	statelist->odd = statelist->even = 0;
 
+	// initialize statelists: add all possible states which would result into the rightmost 2 bits of the keystream
 	for(i = 1 << 20; i >= 0; --i) {
 		if(filter(i) == (oks & 1))
 			*++odd_tail = i;
@@ -207,11 +209,15 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 			*++even_tail = i;
 	}
 
+	// extend the statelists. Look at the next 8 Bits of the keystream (4 Bit each odd and even):
 	for(i = 0; i < 4; i++) {
 		extend_table_simple(odd_head,  &odd_tail, (oks >>= 1) & 1);
 		extend_table_simple(even_head, &even_tail, (eks >>= 1) & 1);
 	}
 
+	// the statelists now contain all states which could have generated the last 10 Bits of the keystream.
+	// 22 bits to go to recover 32 bits in total. From now on, we need to take the "in"
+	// parameter into account.
 	in = (in >> 16 & 0xff) | (in << 16) | (in & 0xff00);
 	recover(odd_head, odd_tail, oks,
 		even_head, even_tail, eks, 11, statelist, in << 1);
@@ -338,9 +344,21 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
  */
 uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb)
 {
+	/*
 	int i, ret = 0;
 	for (i = 7; i >= 0; --i)
 		ret |= lfsr_rollback_bit(s, BIT(in, i), fb) << i;
+*/
+
+	uint8_t ret = 0;
+	ret |= lfsr_rollback_bit(s, BIT(in, 7), fb) << 7;
+	ret |= lfsr_rollback_bit(s, BIT(in, 6), fb) << 6;
+	ret |= lfsr_rollback_bit(s, BIT(in, 5), fb) << 5;
+	ret |= lfsr_rollback_bit(s, BIT(in, 4), fb) << 4;
+	ret |= lfsr_rollback_bit(s, BIT(in, 3), fb) << 3;
+	ret |= lfsr_rollback_bit(s, BIT(in, 2), fb) << 2;
+	ret |= lfsr_rollback_bit(s, BIT(in, 1), fb) << 1;
+	ret |= lfsr_rollback_bit(s, BIT(in, 0), fb) << 0;
 	return ret;
 }
 /** lfsr_rollback_word
@@ -348,10 +366,50 @@ uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb)
  */
 uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb)
 {
+	/*
 	int i;
 	uint32_t ret = 0;
 	for (i = 31; i >= 0; --i)
 		ret |= lfsr_rollback_bit(s, BEBIT(in, i), fb) << (i ^ 24);
+*/
+	
+	uint32_t ret = 0;
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 31), fb) << (31 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 30), fb) << (30 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 29), fb) << (29 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 28), fb) << (28 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 27), fb) << (27 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 26), fb) << (26 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 25), fb) << (25 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 24), fb) << (24 ^ 24);
+
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 23), fb) << (23 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 22), fb) << (22 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 21), fb) << (21 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 20), fb) << (20 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 19), fb) << (19 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 18), fb) << (18 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 17), fb) << (17 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 16), fb) << (16 ^ 24);
+	
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 15), fb) << (15 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 14), fb) << (14 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 13), fb) << (13 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 12), fb) << (12 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 11), fb) << (11 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 10), fb) << (10 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 9), fb) << (9 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 8), fb) << (8 ^ 24);
+	
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 7), fb) << (7 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 6), fb) << (6 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 5), fb) << (5 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 4), fb) << (4 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 3), fb) << (3 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 2), fb) << (2 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 1), fb) << (1 ^ 24);
+	ret |= lfsr_rollback_bit(s, BEBIT(in, 0), fb) << (0 ^ 24);
+	
 	return ret;
 }
 
@@ -391,8 +449,9 @@ static uint32_t fastfwd[2][8] = {
  */
 uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
 {
-	uint32_t c, entry, *candidates = malloc(4 << 10);
-	int i, size = 0, good;
+	uint32_t *candidates = malloc(4 << 10);
+	uint32_t c,  entry;
+	int size = 0, i, good;
 
 	if(!candidates)
 		return 0;
@@ -478,6 +537,9 @@ struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8]
 			}
 
 	s->odd = s->even = 0;
+
+	free(odd);
+	free(even);
 
 	return statelist;
 }

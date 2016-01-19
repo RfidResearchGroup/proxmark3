@@ -43,6 +43,9 @@ uint8_t lfsr_rollback_bit(struct Crypto1State* s, uint32_t in, int fb);
 uint8_t lfsr_rollback_byte(struct Crypto1State* s, uint32_t in, int fb);
 uint32_t lfsr_rollback_word(struct Crypto1State* s, uint32_t in, int fb);
 int nonce_distance(uint32_t from, uint32_t to);
+#define SWAPENDIAN(x)\
+	(x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
+	
 #define FOREACH_VALID_NONCE(N, FILTER, FSIZE)\
 	uint32_t __n = 0,__M = 0, N = 0;\
 	int __i;\
@@ -66,7 +69,7 @@ static inline int parity(uint32_t x)
 	x ^= x >> 4;
 	return BIT(0x6996, x & 0xf);
 #else
-        asm(    "movl %1, %%eax\n"
+	__asm__(	"movl %1, %%eax\n"
 		"mov %%ax, %%cx\n"
 		"shrl $0x10, %%eax\n"
 		"xor %%ax, %%cx\n"
