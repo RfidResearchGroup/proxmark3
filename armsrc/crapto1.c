@@ -33,8 +33,7 @@ static void __attribute__((constructor)) fill_lut()
 
 static void quicksort(uint32_t* const start, uint32_t* const stop)
 {
-	uint32_t *it = start + 1, *rit = stop;
-	uint32_t tmp;
+	uint32_t *it = start + 1, *rit = stop, t;
 
 	if(it > rit)
 		return;
@@ -44,19 +43,13 @@ static void quicksort(uint32_t* const start, uint32_t* const stop)
 			++it;
 		else if(*rit > *start)
 			--rit;
-		else {
-			tmp = *it;
-			*it = *rit;
-			*rit = tmp;
-		}
+		else
+			t = *it,  *it = *rit, *rit = t;
 
 	if(*rit >= *start)
 		--rit;
-	if(rit != start) {
-		tmp = *rit;
-		*rit = *start;
-		*start = tmp;
-	}
+	if(rit != start)
+		t = *rit,  *rit = *start, *start = t;
 
 	quicksort(start, rit - 1);
 	quicksort(rit + 1, stop);
@@ -325,12 +318,10 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
 {
 	int out;
 	uint8_t ret;
-	uint32_t tmp;
+	uint32_t t;
 
 	s->odd &= 0xffffff;
-	tmp = s->odd;
-	s->odd = s->even;
-	s->even = tmp;
+	t = s->odd, s->odd = s->even, s->even = t;
 
 	out = s->even & 1;
 	out ^= LF_POLY_EVEN & (s->even >>= 1);
@@ -346,7 +337,8 @@ uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb)
  */
 uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb)
 {
-/*	int i, ret = 0;
+	/*
+	int i, ret = 0;
 	for (i = 7; i >= 0; --i)
 		ret |= lfsr_rollback_bit(s, BIT(in, i), fb) << i;
 */
@@ -367,7 +359,8 @@ uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb)
  */
 uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb)
 {
-/*	int i;
+	/*
+	int i;
 	uint32_t ret = 0;
 	for (i = 31; i >= 0; --i)
 		ret |= lfsr_rollback_bit(s, BEBIT(in, i), fb) << (i ^ 24);
@@ -435,6 +428,8 @@ int nonce_distance(uint32_t from, uint32_t to)
 static uint32_t fastfwd[2][8] = {
 	{ 0, 0x4BC53, 0xECB1, 0x450E2, 0x25E29, 0x6E27A, 0x2B298, 0x60ECB},
 	{ 0, 0x1D962, 0x4BC53, 0x56531, 0xECB1, 0x135D3, 0x450E2, 0x58980}};
+
+
 /** lfsr_prefix_ks
  *
  * Is an exported helper function from the common prefix attack
@@ -444,10 +439,12 @@ static uint32_t fastfwd[2][8] = {
  * encrypt the NACK which is observed when varying only the 3 last bits of Nr
  * only correct iff [NR_3] ^ NR_3 does not depend on Nr_3
  */
+ // TO VERIFY 
 uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
 {
-	uint32_t c, entry, *candidates = malloc(4 << 10);
-	int i, size = 0, good;
+	uint32_t *candidates = malloc(4 << 10);
+	uint32_t c,  entry;
+	int size = 0, i, good;
 
 	if(!candidates)
 		return 0;
@@ -503,6 +500,12 @@ check_pfx_parity(uint32_t prefix, uint32_t rresp, uint8_t parities[8][8],
 
 /** lfsr_common_prefix
  * Implentation of the common prefix attack.
+ * Requires the 28 bit constant prefix used as reader nonce (pfx)
+ * The reader response used (rr)
+ * The keystream used to encrypt the observed NACK's (ks)
+ * The parity bits (par)
+ * It returns a zero terminated list of possible cipher states after the
+ * tag nonce was fed in
  */
 struct Crypto1State*
 lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
@@ -516,8 +519,9 @@ lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
 	s = statelist = malloc((sizeof *statelist) << 20);
 	if(!s || !odd || !even) {
 		free(statelist);
-		statelist = 0;
-		goto out;
+		free(odd);
+		free(even);
+		return 0;
 	}
 
 	for(o = odd; *o + 1; ++o)
@@ -529,8 +533,9 @@ lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
 			}
 
 	s->odd = s->even = 0;
-out:
+
 	free(odd);
 	free(even);
+
 	return statelist;
 }

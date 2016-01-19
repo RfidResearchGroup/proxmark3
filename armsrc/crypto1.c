@@ -20,8 +20,6 @@
 #include "crapto1.h"
 #include <stdlib.h>
 
-#define SWAPENDIAN(x)\
-	(x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
 
 void crypto1_create(struct Crypto1State *s, uint64_t key)
 {
