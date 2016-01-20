@@ -24,6 +24,7 @@
 void crypto1_create(struct Crypto1State *s, uint64_t key)
 {
 //	struct Crypto1State *s = malloc(sizeof(*s));
+	s->odd = s->even = 0;
 	int i;
 
 	for(i = 47;s && i > 0; i -= 2) {
