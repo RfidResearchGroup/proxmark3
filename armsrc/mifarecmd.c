@@ -608,7 +608,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 {
 	uint64_t ui64Key = 0;
 	uint8_t uid[10];
-	uint32_t cuid;
+	uint32_t cuid = 0;
 	uint8_t cascade_levels = 0;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
@@ -1348,7 +1348,7 @@ void MifareCollectNonces(uint32_t arg0, uint32_t arg1){
 
 void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain){
 
-	byte_t dataout[11] = {0x00};
+	byte_t dataout[12] = {0x00};
 	uint8_t uid[10] = {0x00};
 	uint32_t cuid = 0x00;
     

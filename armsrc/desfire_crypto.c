@@ -84,6 +84,7 @@ void cmac (const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t l
     mifare_cypher_blocks_chained (NULL, key, ivect, buffer, len, MCD_SEND, MCO_ENCYPHER);
 
     memcpy (cmac, ivect, kbs);
+	free(buffer);
 }
 
 size_t key_block_size (const desfirekey_t key) {

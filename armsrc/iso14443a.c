@@ -2399,10 +2399,10 @@ void ReaderMifare(bool first_try)
 						isOK = -4; 			// Card's PRNG runs at an unexpected frequency or resets unexpectedly
 						break;
 					} else {				// continue for a while, just to collect some debug info
-						debug_info[strategy][debug_info_nr] = nt_distance;
-						debug_info_nr++;
+						++debug_info_nr;
+						debug_info[strategy][debug_info_nr] = nt_distance;						
 						if (debug_info_nr == NUM_DEBUG_INFOS) {
-							strategy++;
+							++strategy;
 							debug_info_nr = 0;
 						}
 						continue;
@@ -2427,7 +2427,7 @@ void ReaderMifare(bool first_try)
 			}
 			catch_up_cycles /= elapsed_prng_sequences;
 			if (catch_up_cycles == last_catch_up) {
-				consecutive_resyncs++;
+				++consecutive_resyncs;
 			}
 			else {
 				last_catch_up = catch_up_cycles;
@@ -2488,8 +2488,8 @@ void ReaderMifare(bool first_try)
 	
 	if (isOK == -4) {
 		if (MF_DBGLEVEL >= 3) {
-			for (uint16_t i = 0; i <= MAX_STRATEGY; i++) {
-				for(uint16_t j = 0; j < NUM_DEBUG_INFOS; j++) {
+			for (uint16_t i = 0; i <= MAX_STRATEGY; ++i) {
+				for(uint16_t j = 0; j < NUM_DEBUG_INFOS; ++j) {
 					Dbprintf("collected debug info[%d][%d] = %d", i, j, debug_info[i][j]);
 				}
 			}

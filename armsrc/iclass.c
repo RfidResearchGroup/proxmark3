@@ -633,8 +633,6 @@ static RAMFUNC int ManchesterDecoding(int v)
 //-----------------------------------------------------------------------------
 void RAMFUNC SnoopIClass(void)
 {
-
-
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
     // response from the tag.
@@ -705,22 +703,22 @@ void RAMFUNC SnoopIClass(void)
     for(;;) {
         LED_A_ON();
         WDT_HIT();
-        int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) &
-                                (DMA_BUFFER_SIZE-1);
-        if(behindBy > maxBehindBy) {
+        int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) & (DMA_BUFFER_SIZE-1);
+
+        if ( behindBy > maxBehindBy) {
             maxBehindBy = behindBy;
-            if(behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
+            if ( behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
                 Dbprintf("blew circular buffer! behindBy=0x%x", behindBy);
                 goto done;
             }
         }
-        if(behindBy < 1) continue;
+        if( behindBy < 1) continue;
 
-	LED_A_OFF();
+		LED_A_OFF();
         smpl = upTo[0];
         upTo++;
         lastRxCounter -= 1;
-        if(upTo - dmaBuf > DMA_BUFFER_SIZE) {
+        if (upTo - dmaBuf > DMA_BUFFER_SIZE) {
             upTo -= DMA_BUFFER_SIZE;
             lastRxCounter += DMA_BUFFER_SIZE;
             AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
@@ -728,77 +726,75 @@ void RAMFUNC SnoopIClass(void)
         }
 
         //samples += 4;
-	samples += 1;
+		samples += 1;
 
-	if(smpl & 0xF) {
-		decbyte ^= (1 << (3 - div));
-	}
+		if(smpl & 0xF)
+			decbyte ^= (1 << (3 - div));
 	
-	// FOR READER SIDE COMMUMICATION...
-
-	decbyter <<= 2;
-	decbyter ^= (smpl & 0x30);
-
-	div++;
 	
-	if((div + 1) % 2 == 0) {
-		smpl = decbyter;	
-		if(OutOfNDecoding((smpl & 0xF0) >> 4)) {
-		    rsamples = samples - Uart.samples;
-			time_stop = (GetCountSspClk()-time_0) << 4;
-		    LED_C_ON();
+		// FOR READER SIDE COMMUMICATION...
 
-			//if(!LogTrace(Uart.output,Uart.byteCnt, rsamples, Uart.parityBits,TRUE)) break;
-			//if(!LogTrace(NULL, 0, Uart.endTime*16 - DELAY_READER_AIR2ARM_AS_SNIFFER, 0, TRUE)) break;
-			if(tracing)	{
-				uint8_t parity[MAX_PARITY_SIZE];
-				GetParity(Uart.output, Uart.byteCnt, parity);
-				LogTrace(Uart.output,Uart.byteCnt, time_start, time_stop, parity, TRUE);
+		decbyter <<= 2;
+		decbyter ^= (smpl & 0x30);
+
+		++div;
+	
+		if (( div + 1) % 2 == 0) {
+			smpl = decbyter;	
+			if ( OutOfNDecoding((smpl & 0xF0) >> 4)) {
+				rsamples = samples - Uart.samples;
+				time_stop = (GetCountSspClk()-time_0) << 4;
+				LED_C_ON();
+
+				//if(!LogTrace(Uart.output,Uart.byteCnt, rsamples, Uart.parityBits,TRUE)) break;
+				//if(!LogTrace(NULL, 0, Uart.endTime*16 - DELAY_READER_AIR2ARM_AS_SNIFFER, 0, TRUE)) break;
+				if(tracing)	{
+					uint8_t parity[MAX_PARITY_SIZE];
+					GetParity(Uart.output, Uart.byteCnt, parity);
+					LogTrace(Uart.output,Uart.byteCnt, time_start, time_stop, parity, TRUE);
+				}
+
+				/* And ready to receive another command. */
+				Uart.state = STATE_UNSYNCD;
+				/* And also reset the demod code, which might have been */
+				/* false-triggered by the commands from the reader. */
+				Demod.state = DEMOD_UNSYNCD;
+				LED_B_OFF();
+				Uart.byteCnt = 0;
+			} else {
+				time_start = (GetCountSspClk()-time_0) << 4;
 			}
-
-
-			/* And ready to receive another command. */
-		    Uart.state = STATE_UNSYNCD;
-		    /* And also reset the demod code, which might have been */
-		    /* false-triggered by the commands from the reader. */
-		    Demod.state = DEMOD_UNSYNCD;
-		    LED_B_OFF();
-		    Uart.byteCnt = 0;
-		}else{
-			time_start = (GetCountSspClk()-time_0) << 4;
+			decbyter = 0;
 		}
-		decbyter = 0;
-	}
 
-	if(div > 3) {
-		smpl = decbyte;
-		if(ManchesterDecoding(smpl & 0x0F)) {
-			time_stop = (GetCountSspClk()-time_0) << 4;
+		if(div > 3) {
+			smpl = decbyte;
+			if(ManchesterDecoding(smpl & 0x0F)) {
+				time_stop = (GetCountSspClk()-time_0) << 4;
 
-		    rsamples = samples - Demod.samples;
-		    LED_B_ON();
+				rsamples = samples - Demod.samples;
+				LED_B_ON();
 
-			if(tracing)	{
-				uint8_t parity[MAX_PARITY_SIZE];
-				GetParity(Demod.output, Demod.len, parity);
-				LogTrace(Demod.output, Demod.len, time_start, time_stop, parity, FALSE);
+				if(tracing)	{
+					uint8_t parity[MAX_PARITY_SIZE];
+					GetParity(Demod.output, Demod.len, parity);
+					LogTrace(Demod.output, Demod.len, time_start, time_stop, parity, FALSE);
+				}
+
+				// And ready to receive another response.
+				memset(&Demod, 0, sizeof(Demod));
+				Demod.output = tagToReaderResponse;
+				Demod.state = DEMOD_UNSYNCD;
+				LED_C_OFF();
+			} else {
+				time_start = (GetCountSspClk()-time_0) << 4;
 			}
-
-		    // And ready to receive another response.
-		    memset(&Demod, 0, sizeof(Demod));
-			Demod.output = tagToReaderResponse;
-		    Demod.state = DEMOD_UNSYNCD;
-		    LED_C_OFF();
-		}else{
-			time_start = (GetCountSspClk()-time_0) << 4;
+			
+			div = 0;
+			decbyte = 0x00;
 		}
-		
-		div = 0;
-		decbyte = 0x00;
-	}
-	//}
 
-        if(BUTTON_PRESS()) {
+        if (BUTTON_PRESS()) {
             DbpString("cancelled_a");
             goto done;
         }
@@ -813,18 +809,14 @@ done:
     AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
     Dbprintf("%x %x %x", maxBehindBy, Uart.state, Uart.byteCnt);
 	Dbprintf("%x %x %x", Uart.byteCntMax, BigBuf_get_traceLen(), (int)Uart.output[0]);
-    LED_A_OFF();
-    LED_B_OFF();
-    LED_C_OFF();
-    LED_D_OFF();
+	LEDsoff();
 	set_tracing(FALSE);	
 }
 
 void rotateCSN(uint8_t* originalCSN, uint8_t* rotatedCSN) {
 	int i; 
-	for(i = 0; i < 8; i++) {
+	for(i = 0; i < 8; i++)
 		rotatedCSN[i] = (originalCSN[i] >> 3) | (originalCSN[(i+1)%8] << 5);
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1339,15 +1331,11 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 		}
 	}
 
-	//Dbprintf("%x", cmdsRecvd);
-	LED_A_OFF();
-	LED_B_OFF();
-	LED_C_OFF();
-
+	LEDsoff();
+	
 	if(buttonPressed)
-	{
 		DbpString("Button pressed");
-	}
+	
 	return buttonPressed;
 }
 
