@@ -34,9 +34,9 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	
 	// variables
 	byte_t isOK = 0;
-	byte_t dataoutbuf[16];
-	uint8_t uid[10];
-	uint32_t cuid;
+	byte_t dataoutbuf[16] = {0x00};
+	uint8_t uid[10] = {0x00};
+	uint32_t cuid = 0;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
@@ -193,8 +193,8 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	// variables
 	byte_t isOK = 0;
 	byte_t dataoutbuf[16 * 16];
-	uint8_t uid[10];
-	uint32_t cuid;
+	uint8_t uid[10] = {0x00};
+	uint32_t cuid = 0;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
@@ -352,15 +352,15 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	uint8_t blockNo = arg0;
 	uint8_t keyType = arg1;
 	uint64_t ui64Key = 0;
-	byte_t blockdata[16];
+	byte_t blockdata[16] = {0x00};
 
 	ui64Key = bytes_to_num(datain, 6);
 	memcpy(blockdata, datain + 10, 16);
 	
 	// variables
 	byte_t isOK = 0;
-	uint8_t uid[10];
-	uint32_t cuid;
+	uint8_t uid[10] = {0x00};
+	uint32_t cuid = 0;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
@@ -607,18 +607,18 @@ int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity) {
 void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain)
 {
 	uint64_t ui64Key = 0;
-	uint8_t uid[10];
+	uint8_t uid[10] = {0x00};
 	uint32_t cuid = 0;
 	uint8_t cascade_levels = 0;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
+	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
 	int16_t isOK = 0;
-	uint8_t par_enc[1];
+	uint8_t par_enc[1] = {0x00};
 	uint8_t nt_par_enc = 0;
-	uint8_t buf[USB_CMD_DATA_SIZE];
-	uint32_t timeout;
+	uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
+	uint32_t timeout = 0;
 	
 	uint8_t blockNo = arg0 & 0xff;
 	uint8_t keyType = (arg0 >> 8) & 0xff;
@@ -747,14 +747,14 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	
 	// variables
 	uint16_t rtr, i, j, len;
-	uint16_t davg;
+	uint16_t davg = 0;
 	static uint16_t dmin, dmax;
-	uint8_t uid[10];
+	uint8_t uid[10] = {0x00};
 	uint32_t cuid, nt1, nt2, nttmp, nttest, ks1;
-	uint8_t par[1];
-	uint32_t target_nt[2], target_ks[2];
+	uint8_t par[1] = {0x00};
+	uint32_t target_nt[2] = {0x00}, target_ks[2] = {0x00};
 	
-	uint8_t par_array[4];
+	uint8_t par_array[4] = {0x00};
 	uint16_t ncount = 0;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
@@ -967,8 +967,8 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	// variables
 	int i;
 	byte_t isOK = 0;
-	uint8_t uid[10];
-	uint32_t cuid;
+	uint8_t uid[10] = {0x00};
+	uint32_t cuid = 0;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
@@ -1049,7 +1049,7 @@ void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 
 void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain){
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	byte_t buf[USB_CMD_DATA_SIZE];
+	byte_t buf[USB_CMD_DATA_SIZE] = {0x00};
 	emlGetMem(buf, arg0, arg1); // data, block num, blocks count (max 4)
 
 	LED_B_ON();
@@ -1065,15 +1065,15 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	uint8_t numSectors = arg0;
 	uint8_t keyType = arg1;
 	uint64_t ui64Key = 0;
-	uint32_t cuid;
+	uint32_t cuid = 0;
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
 
 	// variables
-	byte_t dataoutbuf[16];
-	byte_t dataoutbuf2[16];
-	uint8_t uid[10];
+	byte_t dataoutbuf[16] = {0x00};
+	byte_t dataoutbuf2[16] = {0x00};
+	uint8_t uid[10] = {0x00};
 
 	LED_A_ON();
 	LED_B_OFF();
@@ -1111,7 +1111,7 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 				isOK = false;
 				if (MF_DBGLEVEL >= 1)	Dbprintf("Error reading sector %2d block %2d", sectorNo, blockNo);
 				break;
-			};
+			}
 			if (isOK) {
 				if (blockNo < NumBlocksPerSector(sectorNo) - 1) {
 					emlSetMem(dataoutbuf, FirstBlockOfSector(sectorNo) + blockNo, 1);
@@ -1125,9 +1125,9 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 
 	}
 
-	if(mifare_classic_halt(pcs, cuid)) {
-		if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
-	};
+	if(mifare_classic_halt(pcs, cuid))
+		if (MF_DBGLEVEL >= 1)
+			Dbprintf("Halt error");
 
 	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
@@ -1169,7 +1169,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 	// variables
 	uint8_t uid[10] = {0x00};
 	uint8_t data[18] = {0x00};
-	uint32_t cuid;
+	uint32_t cuid = 0;
 	
 	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
 	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
@@ -1310,8 +1310,8 @@ void MifareCIdent(){
 	
 	// variables
 	bool isOK = true;	
-	uint8_t receivedAnswer[1];
-	uint8_t receivedAnswerPar[1];
+	uint8_t receivedAnswer[1] = {0x00};
+	uint8_t receivedAnswerPar[1] = {0x00};
 
 	ReaderTransmitBitsPar(wupC1,7,0, NULL);
 	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
@@ -1350,7 +1350,7 @@ void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain){
 
 	byte_t dataout[12] = {0x00};
 	uint8_t uid[10] = {0x00};
-	uint32_t cuid = 0x00;
+	uint32_t cuid = 0;
     
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	clear_trace();
