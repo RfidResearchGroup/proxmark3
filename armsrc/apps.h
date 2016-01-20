@@ -121,7 +121,8 @@ void EPA_PACE_Collect_Nonce(UsbCommand * c);
 void EPA_PACE_Replay(UsbCommand *c);
 
 // mifarecmd.h
-void ReaderMifare(bool first_try);
+//void ReaderMifare(bool first_try);
+void ReaderMifare(bool first_try, uint8_t block );
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
 void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
@@ -211,5 +212,10 @@ bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, void* d
 
 /// util.h
 void HfSnoop(int , int);
+//EMV functions emvcmd.h
+void EMVTransaction(void);
+void EMVgetUDOL(void);
+void EMVloadvalue(uint32_t tag, uint8_t* datain);
+void EMVdumpcard(void);
 
 #endif

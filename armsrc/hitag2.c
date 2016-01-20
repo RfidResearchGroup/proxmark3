@@ -714,8 +714,8 @@ void SnoopHitag(uint32_t type) {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
 	// Clean up trace and prepare it for storing frames
-	set_tracing(TRUE);
 	clear_trace();
+	set_tracing(TRUE);
 	
 	auth_table_len = 0;
 	auth_table_pos = 0;
@@ -928,9 +928,9 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
 	// Clean up trace and prepare it for storing frames
-	set_tracing(TRUE);
 	clear_trace();
-
+	set_tracing(TRUE);
+	
 	auth_table_len = 0;
 	auth_table_pos = 0;
     byte_t* auth_table;
@@ -1121,9 +1121,9 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	bSuccessful = false;
   
 	// Clean up trace and prepare it for storing frames
-	set_tracing(TRUE);
 	clear_trace();
-
+	set_tracing(TRUE);
+	
 	DbpString("Starting Hitag reader family");
 
 	// Check configuration

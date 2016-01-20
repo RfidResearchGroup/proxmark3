@@ -653,8 +653,9 @@ void RAMFUNC SnoopIClass(void)
     // The DMA buffer, used to stream samples from the FPGA
     uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
  
-	set_tracing(TRUE);
 	clear_trace();
+	set_tracing(TRUE);
+	
     iso14a_set_trigger(FALSE);
 
     int lastRxCounter;
@@ -985,8 +986,9 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	// Enable and clear the trace
-	set_tracing(TRUE);
 	clear_trace();
+	set_tracing(TRUE);
+
 	//Use the emulator memory for SIM
 	uint8_t *emulator = BigBuf_get_EM_addr();
 
@@ -1323,10 +1325,8 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 				GetParity(trace_data, trace_data_size, parity);
 				LogTrace(trace_data, trace_data_size, (t2r_time-time_0) << 4, (t2r_time-time_0) << 4, parity, FALSE);
 			}
-			if(!tracing) {
+			if(!tracing)
 				DbpString("Trace full");
-				//break;
-			}
 
 		}
 	}
@@ -1570,9 +1570,9 @@ void setupIclassReader()
 {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     // Reset trace buffer
-	set_tracing(TRUE);
 	clear_trace();
-
+	set_tracing(TRUE);
+	
     // Setup SSC
     FpgaSetupSsc();
     // Start from off (no field generated)
@@ -1693,7 +1693,9 @@ void ReaderIClass(uint8_t arg0) {
     while(!BUTTON_PRESS())
     {
 		if (try_once && tryCnt > 5) break; 
+		
 		tryCnt++;
+		
 		if(!tracing) {
 			DbpString("Trace full");
 			break;

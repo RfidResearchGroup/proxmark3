@@ -202,7 +202,7 @@ int CmdLegicLoad(const char *Cmd) {
     }
 	
     char line[80]; 
-	int offset = 0, j; 
+	int offset = 0; 
 	uint32_t data[8] = {0x00};
 	
     while ( fgets(line, sizeof(line), f) ) {

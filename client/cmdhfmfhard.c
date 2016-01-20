@@ -88,7 +88,7 @@ typedef struct noncelist {
 } noncelist_t;
 
 
-static uint32_t cuid;
+static uint32_t cuid = 0;
 static noncelist_t nonces[256];
 static uint8_t best_first_bytes[256];
 static uint16_t first_byte_Sum = 0;
