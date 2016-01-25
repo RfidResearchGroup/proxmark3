@@ -63,7 +63,7 @@ start:
 		}
 		
 		UsbCommand resp;
-		if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 			isOK  = resp.arg[0];
 			uid = (uint32_t)bytes_to_num(resp.d.asBytes +  0, 4);
 			nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
@@ -96,14 +96,12 @@ start:
 		c.arg[0] = false;
 		goto start;
 	} else {
-		isOK = 0;
-		printf("------------------------------------------------------------------\n");
 		PrintAndLog("Found valid key: %012"llx" \n", r_key);
 	}
+	
 	t1 = clock() - t1;
-	if ( t1 > 0 ){
+	if ( t1 > 0 )
 		PrintAndLog("Time in darkside: %.0f ticks - %4.2f sec\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC);
-	}
 	return 0;
 }
 
@@ -575,7 +573,7 @@ int CmdHF14AMfNested(const char *Cmd)
 	uint8_t trgKeyType = 0;
 	uint8_t SectorsCnt = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-	uint8_t keyBlock[14*6];
+	uint8_t keyBlock[6*6];
 	uint64_t key64 = 0;
 	bool transferToEml = false;
 	
@@ -649,40 +647,35 @@ int CmdHF14AMfNested(const char *Cmd)
 	transferToEml |= (ctmp == 'd' || ctmp == 'D');
 	
 	if (cmdp == 'o') {
-		PrintAndLog("--target block no:%3d, target key type:%c ", trgBlockNo, trgKeyType?'B':'A');
 		int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, true);
-		if (isOK) {
-			switch (isOK) {
-				case -1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
-				case -2 : PrintAndLog("Button pressed. Aborted.\n"); break;
-				case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (random numbers are not predictable).\n"); break;
-				default : PrintAndLog("Unknown Error.\n");
-			}
-			return 2;
-		}
-		key64 = bytes_to_num(keyBlock, 6);
-		if (key64) {
-			PrintAndLog("Found valid key:%012"llx, key64);
+		switch (isOK) {
+			case -1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
+			case -2 : PrintAndLog("Button pressed. Aborted.\n"); break;
+			case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (random numbers are not predictable).\n"); break;
+			case -4 : PrintAndLog("No valid key found"); break;
+			case -5 : 
+				key64 = bytes_to_num(keyBlock, 6);
 
-			// transfer key to the emulator
-			if (transferToEml) {
-				uint8_t sectortrailer;
-				if (trgBlockNo < 32*4) { 	// 4 block sector
-					sectortrailer = (trgBlockNo & 0x03) + 3;
-				} else {					// 16 block sector
-					sectortrailer = (trgBlockNo & 0x0f) + 15;
+				// transfer key to the emulator
+				if (transferToEml) {
+					uint8_t sectortrailer;
+					if (trgBlockNo < 32*4) { 	// 4 block sector
+						sectortrailer = (trgBlockNo & 0x03) + 3;
+					} else {					// 16 block sector
+						sectortrailer = (trgBlockNo & 0x0f) + 15;
+					}
+					mfEmlGetMem(keyBlock, sectortrailer, 1);
+			
+					if (!trgKeyType)
+						num_to_bytes(key64, 6, keyBlock);
+					else
+						num_to_bytes(key64, 6, &keyBlock[10]);
+					mfEmlSetMem(keyBlock, sectortrailer, 1);		
 				}
-				mfEmlGetMem(keyBlock, sectortrailer, 1);
-		
-				if (!trgKeyType)
-					num_to_bytes(key64, 6, keyBlock);
-				else
-					num_to_bytes(key64, 6, &keyBlock[10]);
-				mfEmlSetMem(keyBlock, sectortrailer, 1);		
-			}
-		} else {
-			PrintAndLog("No valid key found");
+				return 0;
+			default : PrintAndLog("Unknown Error.\n");
 		}
+		return 2;
 	}
 	else { // ------------------------------------  multiple sectors working
 		clock_t t1 = clock();
@@ -697,14 +690,6 @@ int CmdHF14AMfNested(const char *Cmd)
 		num_to_bytes(0xa0a1a2a3a4a5, 6, (uint8_t*)(keyBlock + 3 * 6));
 		num_to_bytes(0xb0b1b2b3b4b5, 6, (uint8_t*)(keyBlock + 4 * 6));
 		num_to_bytes(0xaabbccddeeff, 6, (uint8_t*)(keyBlock + 5 * 6));
-		num_to_bytes(0x4d3a99c351dd, 6, (uint8_t*)(keyBlock + 6 * 6));
-		num_to_bytes(0x1a982c7e459a, 6, (uint8_t*)(keyBlock + 7 * 6));
-		num_to_bytes(0xd3f7d3f7d3f7, 6, (uint8_t*)(keyBlock + 8 * 6));
-		num_to_bytes(0x714c5c886e97, 6, (uint8_t*)(keyBlock + 9 * 6));
-		num_to_bytes(0x587ee5f9350f, 6, (uint8_t*)(keyBlock + 10 * 6));
-		num_to_bytes(0xa0478cc39091, 6, (uint8_t*)(keyBlock + 11 * 6));
-		num_to_bytes(0x533cb6c723f6, 6, (uint8_t*)(keyBlock + 12 * 6));
-		num_to_bytes(0x8fd0a4f256e9, 6, (uint8_t*)(keyBlock + 13 * 6));
 
 		PrintAndLog("Testing known keys. Sector count=%d", SectorsCnt);
 		for (i = 0; i < SectorsCnt; i++) {
@@ -719,44 +704,47 @@ int CmdHF14AMfNested(const char *Cmd)
 				}
 			}
 		}
+		clock_t t2 = clock() - t1;
+		if ( t2 > 0 )
+			PrintAndLog("Time to check 6 known keys: %.0f ticks %4.2f sec", (float)t2, ((float)t2)/CLOCKS_PER_SEC);
+	
 		
 		// nested sectors
 		iterations = 0;
-		PrintAndLog("nested...");
+		PrintAndLog("enter nested...");
 		bool calibrate = true;
 		for (i = 0; i < NESTED_SECTOR_RETRY; i++) {
-			for (uint8_t sectorNo = 0; sectorNo < SectorsCnt; sectorNo++) {
-				for (trgKeyType = 0; trgKeyType < 2; trgKeyType++) { 
-					if (e_sector[sectorNo].foundKey[trgKeyType]) continue;
-					PrintAndLog("-----------------------------------------------");
-					int16_t isOK = mfnested(blockNo, keyType, key, FirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate);
-					if(isOK) {
-						switch (isOK) {
-							case -1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
-							case -2 : PrintAndLog("Button pressed. Aborted.\n"); break;
-							case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (random numbers are not predictable).\n"); break;
-							default : PrintAndLog("Unknown Error.\n");
-						}
-						free(e_sector);
-						return 2;
-					} else {
-						calibrate = false;
-					}
-					
-					iterations++;
+			for (uint8_t sectorNo = 0; sectorNo < SectorsCnt; ++sectorNo) {
+				for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) { 
 
-					key64 = bytes_to_num(keyBlock, 6);
-					if (key64) {
-						PrintAndLog("Found valid key:%012"llx, key64);
-						e_sector[sectorNo].foundKey[trgKeyType] = 1;
-						e_sector[sectorNo].Key[trgKeyType] = key64;
+					if (e_sector[sectorNo].foundKey[trgKeyType]) continue;
+					
+					int16_t isOK = mfnested(blockNo, keyType, key, FirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate);
+					switch (isOK) {
+						case -1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
+						case -2 : PrintAndLog("Button pressed. Aborted.\n"); break;
+						case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (random numbers are not predictable).\n"); break;
+						case -4 : //key not found
+							calibrate = false;
+							iterations++;
+							continue; 
+						case -5 :
+							calibrate = false;
+							iterations++;
+							e_sector[sectorNo].foundKey[trgKeyType] = 1;
+							e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
+							continue;
+							
+						default : PrintAndLog("Unknown Error.\n");
 					}
+					free(e_sector);
+					return 2;
 				}
 			}
 		}
 
 		// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
-		PrintAndLog("testing to read B...");
+		PrintAndLog("trying to read key B...");
 		for (i = 0; i < SectorsCnt; i++) {
 			// KEY A  but not KEY B
 			if ( e_sector[i].foundKey[0] && !e_sector[i].foundKey[1] ) {
@@ -993,8 +981,7 @@ int CmdHF14AMfChk(const char *Cmd)
 	keyBlock = calloc(stKeyBlock, 6);
 	if (keyBlock == NULL) return 1;
 
-	uint64_t defaultKeys[] =
-	{
+	uint64_t defaultKeys[] = {
 		0xffffffffffff, // Default key (first key used by program if no user defined key)
 		0x000000000000, // Blank key
 		0xa0a1a2a3a4a5, // NFCForum MAD key
@@ -1012,9 +999,8 @@ int CmdHF14AMfChk(const char *Cmd)
 	int defaultKeysSize = sizeof(defaultKeys) / sizeof(uint64_t);
 
 	for (int defaultKeyCounter = 0; defaultKeyCounter < defaultKeysSize; defaultKeyCounter++)
-	{
 		num_to_bytes(defaultKeys[defaultKeyCounter], 6, (uint8_t*)(keyBlock + defaultKeyCounter * 6));
-	}
+
 	
 	if (param_getchar(Cmd, 0)=='*') {
 		blockNo = 3;
@@ -1025,9 +1011,9 @@ int CmdHF14AMfChk(const char *Cmd)
 			case '4': SectorsCnt = 40; break;
 			default:  SectorsCnt = 16;
 		}
-	}
-	else
+	} else {
 		blockNo = param_get8(Cmd, 0);
+	}
 	
 	ctmp = param_getchar(Cmd, 1);
 	switch (ctmp) {	
@@ -1061,7 +1047,7 @@ int CmdHF14AMfChk(const char *Cmd)
 				}
 				keyBlock = p;
 			}
-			PrintAndLog("chk key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
+			PrintAndLog("check key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
 			(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
 			(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
 			keycnt++;
@@ -1101,7 +1087,7 @@ int CmdHF14AMfChk(const char *Cmd)
 					}
 					memset(keyBlock + 6 * keycnt, 0, 6);
 					num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6*keycnt);
-					PrintAndLog("chk custom key[%2d] %012"llx, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
+					PrintAndLog("check custom key[%2d] %012"llx, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
 					keycnt++;
 					memset(buf, 0, sizeof(buf));
 				}
@@ -1118,7 +1104,7 @@ int CmdHF14AMfChk(const char *Cmd)
 	if (keycnt == 0) {
 		PrintAndLog("No key specified, trying default keys");
 		for (;keycnt < defaultKeysSize; keycnt++)
-			PrintAndLog("chk default key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
+			PrintAndLog("check default key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
 				(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
 				(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
 	}
@@ -1143,8 +1129,6 @@ int CmdHF14AMfChk(const char *Cmd)
 			// skip already found keys.
 			if (e_sector[i].foundKey[trgKeyType]) continue;
 			
-			PrintAndLog("--sector:%2d, block:%3d, key type:%C, key count:%2d ", i, b, trgKeyType ? 'B':'A', keycnt);
-			
 			uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE/6) ? (USB_CMD_DATA_SIZE/6) : keycnt;
 			
 			for (uint32_t c = 0; c < keycnt; c += max_keys) {
@@ -1153,11 +1137,12 @@ int CmdHF14AMfChk(const char *Cmd)
 				
 				res = mfCheckKeys(b, trgKeyType, true, size, &keyBlock[6*c], &key64);
 				if (!res) {
-					PrintAndLog("Found valid key:[%012"llx"]",key64);					
+					PrintAndLog("Sector:%3d Block:%3d, key type: %C  -- Found key [%012"llx"]", i, b, trgKeyType ? 'B':'A', key64);
+										 
 					e_sector[i].Key[trgKeyType] = key64;
 					e_sector[i].foundKey[trgKeyType] = TRUE;
 					break;
-				} else {
+				} else {					
 					e_sector[i].Key[trgKeyType] = 0xffffffffffff;
 					e_sector[i].foundKey[trgKeyType] = FALSE;
 				}

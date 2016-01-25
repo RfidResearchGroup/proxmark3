@@ -14,6 +14,7 @@
 #include <pthread.h>
 #include "mifarehost.h"
 #include "proxmark3.h"
+#include "radixsort.h"
 
 // MIFARE
 int compar_int(const void * a, const void * b) {
@@ -21,16 +22,31 @@ int compar_int(const void * a, const void * b) {
 	//return (*(uint64_t*)b - *(uint64_t*)a);
 
 	// better:
-	if (*(uint64_t*)b == *(uint64_t*)a) return 0;
-	else if (*(uint64_t*)b > *(uint64_t*)a) return 1;
-	else return -1;
+	// if (*(uint64_t*)b > *(uint64_t*)a) return 1;
+	// if (*(uint64_t*)b < *(uint64_t*)a) return -1;
+	// return 0;
+
+	return (*(uint64_t*)b > *(uint64_t*)a) - (*(uint64_t*)b < *(uint64_t*)a);
+	//return (*(int64_t*)b > *(int64_t*)a) - (*(int64_t*)b < *(int64_t*)a);
 }
 
 // Compare 16 Bits out of cryptostate
 int Compare16Bits(const void * a, const void * b) {
-	if ((*(uint64_t*)b & 0x00ff000000ff0000) == (*(uint64_t*)a & 0x00ff000000ff0000)) return 0;
-	else if ((*(uint64_t*)b & 0x00ff000000ff0000) > (*(uint64_t*)a & 0x00ff000000ff0000)) return 1;
-	else return -1;
+
+	// if ((*(uint64_t*)b & 0x00ff000000ff0000) > (*(uint64_t*)a & 0x00ff000000ff0000)) return 1;	
+	// if ((*(uint64_t*)b & 0x00ff000000ff0000) < (*(uint64_t*)a & 0x00ff000000ff0000)) return -1;	
+	// return 0;
+
+	return 
+		((*(uint64_t*)b & 0x00ff000000ff0000) > (*(uint64_t*)a & 0x00ff000000ff0000))
+		-
+		((*(uint64_t*)b & 0x00ff000000ff0000) < (*(uint64_t*)a & 0x00ff000000ff0000))
+		;
+	// return 
+		// ((*(int64_t*)b & 0x00ff000000ff0000) > (*(int64_t*)a & 0x00ff000000ff0000))
+		// -
+		// ((*(int64_t*)b & 0x00ff000000ff0000) < (*(int64_t*)a & 0x00ff000000ff0000))
+		// ;
 }
 
 typedef 
@@ -59,7 +75,9 @@ void* nested_worker_thread(void *arg)
 	StateList_t *statelist = arg;
 
 	statelist->head.slhead = lfsr_recovery32(statelist->ks1, statelist->nt ^ statelist->uid);
-	for (p1 = statelist->head.slhead; *(uint64_t *)p1 != 0; p1++);
+	
+	for (p1 = statelist->head.slhead; *(uint64_t *)p1 != 0; ++p1);
+	
 	statelist->len = p1 - statelist->head.slhead;
 	statelist->tail.sltail = --p1;
 	qsort(statelist->head.slhead, statelist->len, sizeof(uint64_t), Compare16Bits);
@@ -72,26 +90,21 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	uint16_t i;
 	uint32_t uid;
 	UsbCommand resp;
-
 	StateList_t statelists[2];
 	struct Crypto1State *p1, *p2, *p3, *p4;
-	
-	// flush queue
 	
 	UsbCommand c = {CMD_MIFARE_NESTED, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, calibrate}};
 	memcpy(c.d.asBytes, key, 6);
 	clearCommandBuffer();
 	SendCommand(&c);
-
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
 
 	// error during nested
 	if (resp.arg[0]) return resp.arg[0];
 	
 	memcpy(&uid, resp.d.asBytes, 4);
-	PrintAndLog("UID: %08x Block:%d Key: %c", uid, (uint16_t)resp.arg[2] & 0xff, (resp.arg[2] >> 8) ?'A':'B' );
 			
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 2; ++i) {
 		statelists[i].blockNo = resp.arg[2] & 0xff;
 		statelists[i].keyType = (resp.arg[2] >> 8) & 0xff;
 		statelists[i].uid = uid;
@@ -99,19 +112,16 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 		memcpy(&statelists[i].ks1, (void *)(resp.d.asBytes + 4 + i * 8 + 4), 4);
 	}
 	
-	// calc keys
-	
+	// calc keys	
 	pthread_t thread_id[2];
 		
 	// create and run worker threads
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 2; i++)
 		pthread_create(thread_id + i, NULL, nested_worker_thread, &statelists[i]);
-	}
 	
 	// wait for threads to terminate:
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 2; i++)
 		pthread_join(thread_id[i], (void*)&statelists[i].head.slhead);
-	}
 
 
 	// the first 16 Bits of the cryptostate already contain part of our key.
@@ -142,6 +152,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 			while (Compare16Bits(p1, p2) == 1) p2++;
 		}
 	}
+	
 	p3->even = 0; p3->odd = 0;
 	p4->even = 0; p4->odd = 0;
 	statelists[0].len = p3 - statelists[0].head.slhead;
@@ -153,6 +164,12 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	// intersection of both lists. Create the intersection:
 	qsort(statelists[0].head.keyhead, statelists[0].len, sizeof(uint64_t), compar_int);
 	qsort(statelists[1].head.keyhead, statelists[1].len, sizeof(uint64_t), compar_int);
+
+	// 	clock_t t1 = clock();
+	//radixSort(statelists[0].head.keyhead, statelists[0].len);
+	//radixSort(statelists[1].head.keyhead, statelists[1].len);
+	// t1 = clock() - t1;	
+	// PrintAndLog("radixsort, ticks %.0f", (float)t1);
 
 	uint64_t *p5, *p6, *p7;
 	p5 = p7 = statelists[0].head.keyhead; 
@@ -168,38 +185,39 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 		}
 	}
 	statelists[0].len = p7 - statelists[0].head.keyhead;
-	statelists[0].tail.keytail=--p7;
+	statelists[0].tail.keytail = --p7;
 
 	memset(resultKey, 0, 6);
+	uint64_t key64 = 0;
+
 	// The list may still contain several key candidates. Test each of them with mfCheckKeys
 	for (i = 0; i < statelists[0].len; i++) {
-		uint8_t keyBlock[6];
-		uint64_t key64;
+
 		crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
-		num_to_bytes(key64, 6, keyBlock);
-		key64 = 0;
-		if (!mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, 1, keyBlock, &key64)) {
-			num_to_bytes(key64, 6, resultKey);
-			break;
+		num_to_bytes(key64, 6, resultKey);
+
+		if (!mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, 1, resultKey, &key64)) {
+			free(statelists[0].head.slhead);
+			free(statelists[1].head.slhead);
+			PrintAndLog("UID: %08x target block:%3u key type: %c  -- Found key [%012"llx"]", uid, (uint16_t)resp.arg[2] & 0xff, (resp.arg[2] >> 8)?'B':'A', key64);
+			return -5;
 		}
 	}
-	
+	PrintAndLog("UID: %08x target block:%3u key type: %c", uid, (uint16_t)resp.arg[2] & 0xff, (resp.arg[2] >> 8)?'B':'A');	
 	free(statelists[0].head.slhead);
-	free(statelists[1].head.slhead);	
-	return 0;
+	free(statelists[1].head.slhead);
+	return -4;
 }
 
 int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key){
 
 	*key = 0;
-
-	UsbCommand c = {CMD_MIFARE_CHKKEYS, {((blockNo & 0xff) | ((keyType&0xff)<<8)), clear_trace, keycnt}};
+	UsbCommand c = {CMD_MIFARE_CHKKEYS, { (blockNo | (keyType<<8)), clear_trace, keycnt}};
 	memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
-	
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK,&resp,3000)) return 1;
+	if (!WaitForResponseTimeout(CMD_ACK,&resp, 3000)) return 1;
 	if ((resp.arg[0] & 0xff) != 0x01) return 2;
 	*key = bytes_to_num(resp.d.asBytes, 6);
 	return 0;
@@ -237,14 +255,12 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
 	uint8_t params = MAGIC_SINGLE;
 	uint8_t block0[16];
 	memset(block0, 0x00, sizeof(block0));
-	
 
 	int old = mfCGetBlock(0, block0, params);
-	if (old == 0) {
+	if (old == 0)
 		PrintAndLog("old block 0:  %s", sprint_hex(block0, sizeof(block0)));
-	} else {
-		PrintAndLog("Couldn't get old data. Will write over the last bytes of Block 0.");
-	}
+	else 
+		PrintAndLog("Couldn't get old data. Will write over the last bytes of Block 0.");	
 
 	// fill in the new values
 	// UID
@@ -344,7 +360,7 @@ int isBlockEmpty(int blockN) {
 }
 
 int isBlockTrailer(int blockN) {
- return ((blockN & 0x03) == 0x03);
+	return ((blockN & 0x03) == 0x03);
 }
 
 int loadTraceCard(uint8_t *tuid) {
@@ -439,20 +455,22 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
 		for (i = 0; i < len; i++)
 			data[i] = crypto1_byte(pcs, 0x00, isEncrypted) ^ data[i];
 	} else {
-		bt = 0;
-		for (i = 0; i < 4; i++)
-			bt |= (crypto1_bit(pcs, 0, isEncrypted) ^ BIT(data[0], i)) << i;
-				
+		bt = 0;		
+		bt |= (crypto1_bit(pcs, 0, isEncrypted) ^ BIT(data[0], 0)) << 0;
+		bt |= (crypto1_bit(pcs, 0, isEncrypted) ^ BIT(data[0], 1)) << 1;
+		bt |= (crypto1_bit(pcs, 0, isEncrypted) ^ BIT(data[0], 2)) << 2;
+		bt |= (crypto1_bit(pcs, 0, isEncrypted) ^ BIT(data[0], 3)) << 3;			
 		data[0] = bt;
 	}
 	return;
 }
 
-
 int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
+	
 	uint8_t data[64];
 
 	if (traceState == TRACE_ERROR) return 1;
+	
 	if (len > 64) {
 		traceState = TRACE_ERROR;
 		return 1;
@@ -637,7 +655,6 @@ int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data,
 	uint32_t ar_enc;  // encrypted reader response
 	uint32_t at_enc;  // encrypted tag response
 	*/
-
 	struct Crypto1State *pcs = NULL;
 	
 	ks2 = ar_enc ^ prng_successor(nt, 64);
