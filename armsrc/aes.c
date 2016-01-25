@@ -1152,7 +1152,7 @@ int main()
     if( AesCtxIni(&ctx, iv, key, KEY128, CBC) < 0)
         printf("init error\n");
 
-    if (AesEncrypt(&ctx, databuf, databuf, sizeof databuf) < 0)
+    if (AesEncrypt(&ctx, databuf, databuf, sizeof(databuf) ) < 0)
         printf("error in encryption\n");
 
     // initialize context and decrypt cipher at other end
@@ -1160,7 +1160,7 @@ int main()
     if( AesCtxIni(&ctx, iv, key, KEY128, CBC) < 0)
         printf("init error\n");
 
-    if (AesDecrypt(&ctx, databuf, databuf, sizeof databuf) < 0)
+    if (AesDecrypt(&ctx, databuf, databuf, sizeof(databuf) ) < 0)
         printf("error in decryption\n");
 
     printf("%s\n", databuf);

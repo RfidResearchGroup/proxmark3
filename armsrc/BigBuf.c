@@ -27,7 +27,7 @@ static uint16_t BigBuf_hi = BIGBUF_SIZE;
 static uint8_t *emulator_memory = NULL;
 
 // trace related variables
-static uint16_t traceLen = 0;
+static uint16_t traceLen;
 int tracing = 1; //Last global one.. todo static?
 
 // get the address of BigBuf

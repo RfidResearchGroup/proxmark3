@@ -57,19 +57,17 @@ void ToSendReset(void)
 	ToSendBit = 8;
 }
 
-void ToSendStuffBit(int b)
-{
+void ToSendStuffBit(int b) {
 	if(ToSendBit >= 8) {
-		ToSendMax++;
+		++ToSendMax;
 		ToSend[ToSendMax] = 0;
 		ToSendBit = 0;
 	}
 
-	if(b) {
+	if(b)
 		ToSend[ToSendMax] |= (1 << (7 - ToSendBit));
-	}
 
-	ToSendBit++;
+	++ToSendBit;
 
 	if(ToSendMax >= sizeof(ToSend)) {
 		ToSendBit = 0;
@@ -81,22 +79,20 @@ void ToSendStuffBit(int b)
 // Debug print functions, to go out over USB, to the usual PC-side client.
 //=============================================================================
 
-void DbpString(char *str)
-{
+void DbpString(char *str) {
   byte_t len = strlen(str);
   cmd_send(CMD_DEBUG_PRINT_STRING,len,0,0,(byte_t*)str,len);
 }
 
 #if 0
-void DbpIntegers(int x1, int x2, int x3)
-{
+void DbpIntegers(int x1, int x2, int x3) {
   cmd_send(CMD_DEBUG_PRINT_INTEGERS,x1,x2,x3,0,0);
 }
 #endif
 
 void Dbprintf(const char *fmt, ...) {
-// should probably limit size here; oh well, let's just use a big buffer
-	char output_string[128];
+	// should probably limit size here; oh well, let's just use a big buffer
+	char output_string[128] = {0x00};
 	va_list ap;
 
 	va_start(ap, fmt);
@@ -108,28 +104,27 @@ void Dbprintf(const char *fmt, ...) {
 
 // prints HEX & ASCII
 void Dbhexdump(int len, uint8_t *d, bool bAsci) {
-	int l=0,i;
+	int l=0, i;
 	char ascii[9];
     
 	while (len>0) {
-		if (len>8) l=8;
-		else l=len;
+
+		l = (len>8) ? 8 : len;
 		
 		memcpy(ascii,d,l);
 		ascii[l]=0;
 		
 		// filter safe ascii
-		for (i=0;i<l;i++)
+		for (i=0; i<l; ++i)
 			if (ascii[i]<32 || ascii[i]>126) ascii[i]='.';
         
-		if (bAsci) {
+		if (bAsci)
 			Dbprintf("%-8s %*D",ascii,l,d," ");
-		} else {
+		else
 			Dbprintf("%*D",l,d," ");
-		}
         
-		len-=8;
-		d+=8;		
+		len -= 8;
+		d += 8;		
 	}
 }
 
@@ -163,10 +158,9 @@ static int ReadAdc(int ch)
 
 	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
 
-	while(!(AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ch)))
-		;
+	while (!(AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ch))) ;
+	
 	d = AT91C_BASE_ADC->ADC_CDR[ch];
-
 	return d;
 }
 
@@ -175,15 +169,13 @@ int AvgAdc(int ch) // was static - merlok
 	int i;
 	int a = 0;
 
-	for(i = 0; i < 32; i++) {
+	for(i = 0; i < 32; ++i)
 		a += ReadAdc(ch);
-	}
 
 	return (a + 15) >> 5;
 }
 
-void MeasureAntennaTuning(void)
-{
+void MeasureAntennaTuning(void) {
 	uint8_t LF_Results[256];
 	int i, adcval = 0, peak = 0, peakv = 0, peakf = 0; //ptr = 0 
 	int vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
@@ -201,8 +193,9 @@ void MeasureAntennaTuning(void)
   
   	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+
 	for (i=255; i>=19; i--) {
-    WDT_HIT();
+		WDT_HIT();
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
 		SpinDelay(20);
 		adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
@@ -229,13 +222,11 @@ void MeasureAntennaTuning(void)
 
 	cmd_send(CMD_MEASURED_ANTENNA_TUNING, vLf125 | (vLf134<<16), vHf, peakf | (peakv<<16), LF_Results, 256);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	LED_A_OFF();
-	LED_B_OFF();
-  return;
+
+	LEDsoff();
 }
 
-void MeasureAntennaTuningHf(void)
-{
+void MeasureAntennaTuningHf(void) {
 	int vHf = 0;	// in mV
 
 	DbpString("Measuring HF antenna, press button to exit");
@@ -251,15 +242,13 @@ void MeasureAntennaTuningHf(void)
 		Dbprintf("%d mV",vHf);
 		if (BUTTON_PRESS()) break;
 	}
+	
 	DbpString("cancelled");
-
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-
 }
 
 
-void ReadMem(int addr)
-{
+void ReadMem(int addr) {
 	const uint8_t *data = ((uint8_t *)addr);
 
 	Dbprintf("%x: %02x %02x %02x %02x %02x %02x %02x %02x",
@@ -280,6 +269,7 @@ void SendVersion(void)
 	 * pointer, then use it.
 	 */
 	char *bootrom_version = *(char**)&_bootphase1_version_pointer;
+	
 	if( bootrom_version < &_flash_start || bootrom_version >= &_flash_end ) {
 		strcat(VersionString, "bootrom version information appears invalid\n");
 	} else {
@@ -292,6 +282,7 @@ void SendVersion(void)
 
 	FpgaGatherVersion(FPGA_BITSTREAM_LF, temp, sizeof(temp));
 	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
+	
 	FpgaGatherVersion(FPGA_BITSTREAM_HF, temp, sizeof(temp));
 	strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 
@@ -333,8 +324,7 @@ void printUSBSpeed(void)
 /**
   * Prints runtime information about the PM3.
 **/
-void SendStatus(void)
-{
+void SendStatus(void) {
 	BigBuf_print_status();
 	Fpga_print_status();
 	printConfig(); //LF Sampling config
@@ -782,16 +772,14 @@ static const char LIGHT_SCHEME[] = {
 };
 static const int LIGHT_LEN = sizeof(LIGHT_SCHEME)/sizeof(LIGHT_SCHEME[0]);
 
-void ListenReaderField(int limit)
-{
-	int lf_av, lf_av_new, lf_baseline= 0, lf_max;
-	int hf_av, hf_av_new,  hf_baseline= 0, hf_max;
-	int mode=1, display_val, display_max, i;
-
+void ListenReaderField(int limit) {
 #define LF_ONLY						1
 #define HF_ONLY						2
 #define REPORT_CHANGE			 	10    // report new values only if they have changed at least by REPORT_CHANGE
 
+	int lf_av, lf_av_new, lf_baseline= 0, lf_max;
+	int hf_av, hf_av_new,  hf_baseline= 0, hf_max;
+	int mode=1, display_val, display_max, i;
 
 	// switch off FPGA - we don't want to measure our own signal
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -1400,9 +1388,8 @@ void  __attribute__((noreturn)) AppMain(void)
 	for(;;) {
 		if (usb_poll()) {
 			rx_len = usb_read(rx,sizeof(UsbCommand));
-			if (rx_len) {
+			if (rx_len)
 				UsbPacketReceived(rx,rx_len);
-			}
 		}
 		WDT_HIT();
 

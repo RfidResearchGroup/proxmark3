@@ -24,9 +24,9 @@
 static uint8_t filterlut[1 << 20];
 static void __attribute__((constructor)) fill_lut()
 {
-        uint32_t i;
-        for(i = 0; i < 1 << 20; ++i)
-                filterlut[i] = filter(i);
+	uint32_t i;
+	for(i = 0; i < 1 << 20; ++i)
+			filterlut[i] = filter(i);
 }
 #define filter(x) (filterlut[(x) & 0xfffff])
 #endif
@@ -509,7 +509,6 @@ static struct Crypto1State* check_pfx_parity(uint32_t prefix, uint32_t rresp, ui
  * It returns a zero terminated list of possible cipher states after the
  * tag nonce was fed in
  */
-
 struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8])
 {
 	struct Crypto1State *statelist, *s;
