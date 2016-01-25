@@ -1383,33 +1383,31 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, int delay)
 //-----------------------------------------------------------------------------
 static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int *wait)
 {
-  int c;
-  FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
-  AT91C_BASE_SSC->SSC_THR = 0x00;
-  FpgaSetupSsc();
+	int c;
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+	AT91C_BASE_SSC->SSC_THR = 0x00;
+	FpgaSetupSsc();
 
-   if (wait)
-   {
-     if(*wait < 10) *wait = 10;
-     
-  for(c = 0; c < *wait;) {
-    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-      AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
-      c++;
-    }
-    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-      volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
-      (void)r;
-    }
-    WDT_HIT();
-  }
+	if (wait) {
+		if(*wait < 10) *wait = 10;
 
-   }
+		for(c = 0; c < *wait;) {
+			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+				AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
+				c++;
+			}
+			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+				volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
+				(void)r;
+			}
+			WDT_HIT();
+		}
+	}
 
 
-  uint8_t sendbyte;
-  bool firstpart = TRUE;
-  c = 0;
+	uint8_t sendbyte;
+	bool firstpart = TRUE;
+	c = 0;
   for(;;) {
     if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 
@@ -1437,7 +1435,7 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
     }
     WDT_HIT();
   }
-  if (samples) *samples = (c + *wait) << 3;
+  if (samples && wait) *samples = (c + *wait) << 3;
 }
 
 
