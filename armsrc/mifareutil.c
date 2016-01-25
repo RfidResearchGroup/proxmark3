@@ -149,8 +149,8 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	uint32_t nt, ntpp; // Supplied tag nonce
 	
 	uint8_t mf_nr_ar[] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
+	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
+	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 	
 	// Transmit MIFARE_CLASSIC_AUTH
 	len = mifare_sendcmd_short(pcs, isNested, 0x60 + (keyType & 0x01), blockNo, receivedAnswer, receivedAnswerPar, timing);
@@ -185,8 +185,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 
 	// Generate (encrypted) nr+parity by loading it into the cipher (Nr)
 	par[0] = 0;
-	for (pos = 0; pos < 4; pos++)
-	{
+	for (pos = 0; pos < 4; pos++) {
 		mf_nr_ar[pos] = crypto1_byte(pcs, nr[pos], 0) ^ nr[pos];
 		par[0] |= (((filter(pcs->odd) ^ oddparity8(nr[pos])) & 0x01) << (7-pos));
 	}	
@@ -195,8 +194,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	nt = prng_successor(nt,32);
 
 	//  ar+parity
-	for (pos = 4; pos < 8; pos++)
-	{
+	for (pos = 4; pos < 8; pos++) {
 		nt = prng_successor(nt,8);
 		mf_nr_ar[pos] = crypto1_byte(pcs,0x00,0) ^ (nt & 0xff);
 		par[0] |= (((filter(pcs->odd) ^ oddparity8(nt & 0xff)) & 0x01) << (7-pos));
@@ -207,8 +205,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 
 	// Receive 4 byte tag answer
 	len = ReaderReceive(receivedAnswer, receivedAnswerPar);
-	if (!len)
-	{
+	if (!len) {
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Authentication failed. Card timeout.");
 		return 2;
 	}
@@ -220,7 +217,6 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Authentication failed. Error card response.");
 		return 3;
 	}
-
 	return 0;
 }
 
@@ -370,7 +366,7 @@ int mifare_ultra_auth(uint8_t *keybytes){
 int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData)
 {
 	uint16_t len;
-	uint8_t	bt[2];
+	uint8_t	bt[2] = {0x00};
 	uint8_t receivedAnswer[MAX_FRAME_SIZE] = {0x00};
 	uint8_t receivedAnswerPar[MAX_PARITY_SIZE] = {0x00};
 	
@@ -398,7 +394,7 @@ int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData)
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData) 
 {
 	// variables
-	uint16_t len, i;	
+	uint16_t len;	
 	uint32_t pos = 0;
 	uint8_t par[3] = {0x00};		// enough for 18 Bytes to send
 	byte_t res = 0;
@@ -419,8 +415,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 	AppendCrc14443a(d_block, 16);
 	
 	// crypto
-	for (pos = 0; pos < 18; pos++)
-	{
+	for (pos = 0; pos < 18; pos++) {
 		d_block_enc[pos] = crypto1_byte(pcs, 0x00, 0) ^ d_block[pos];
 		par[pos>>3] |= (((filter(pcs->odd) ^ oddparity8(d_block[pos])) & 0x01) << (7 - (pos&0x0007)));
 	}	
@@ -431,8 +426,10 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 	len = ReaderReceive(receivedAnswer, receivedAnswerPar);	
 
 	res = 0;
-	for (i = 0; i < 4; i++)
-		res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], i)) << i;
+	res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 0)) << 0;
+	res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 1)) << 1;
+	res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 2)) << 2;
+	res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 3)) << 3;
 
 	if ((len != 1) || (res != 0x0A)) {
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Cmd send data2 Error: %02x", res);  
@@ -629,9 +626,8 @@ void emlClearMem(void) {
 	memset(emCARD, 0, CARD_MEMORY_SIZE);
 	
 	// fill sectors trailer data
-	for(b = 3; b < 256; b<127?(b+=4):(b+=16)) {
+	for(b = 3; b < 256; b<127?(b+=4):(b+=16))
 		emlSetMem((uint8_t *)trailer, b , 1);
-	}	
 
 	// uid
 	emlSetMem((uint8_t *)uid, 0, 1);
