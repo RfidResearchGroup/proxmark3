@@ -14,16 +14,6 @@
 #include "ui.h"
 #include "proxmark3.h"
 
-int compar_state(const void * a, const void * b) {
-	// didn't work: (the result is truncated to 32 bits)
-	//return (*(int64_t*)b - *(int64_t*)a);
-
-	// better:
-	if (*(int64_t*)b == *(int64_t*)a) return 0;
-	else if (*(int64_t*)b > *(int64_t*)a) return 1;
-	else return -1;
-}
-
 int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t * key) {
 
 	struct Crypto1State *state;
