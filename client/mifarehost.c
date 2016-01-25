@@ -14,7 +14,7 @@
 #include <pthread.h>
 #include "mifarehost.h"
 #include "proxmark3.h"
-#include "radixsort.h"
+//#include "radixsort.h"
 
 // MIFARE
 int compar_int(const void * a, const void * b) {
