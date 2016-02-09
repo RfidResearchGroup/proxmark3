@@ -159,8 +159,6 @@ static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit)
 		} else									// drop
 			*tbl-- = *(*end)--;
 }
-
-
 /** recover
  * recursively narrow down the search space, 4 bits of keystream at a time
  */
