@@ -2047,7 +2047,7 @@ int CmdTuneSamples(const char *Cmd)
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	while(!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING,&resp,1000)) {
+	while(!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING, &resp, 2000)) {
 		timeout++;
 		printf(".");
 		if (timeout > 7) {
