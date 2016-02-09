@@ -53,6 +53,7 @@ uint64_t getVikingBits(uint32_t id) {
 	ret	|= checksum;
 	return ret;
 }
+
 //by marshmellow
 //see ASKDemod for what args are accepted
 int CmdVikingRead(const char *Cmd) {
@@ -80,7 +81,7 @@ int CmdVikingClone(const char *Cmd) {
 
 	rawID = getVikingBits(id);
 
-	UsbCommand c = {CMD_VIKING_CLONE_TAG,{rawID >> 32, rawID & 0xFFFF, Q5}};
+	UsbCommand c = {CMD_VIKING_CLONE_TAG,{rawID >> 32, rawID & 0xFFFFFFFF, Q5}};
 	clearCommandBuffer();
     SendCommand(&c);
 	//check for ACK
