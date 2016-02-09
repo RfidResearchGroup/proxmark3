@@ -278,6 +278,6 @@ int main(int argc, char* argv[]) {
   
 	// clean up mutex
 	pthread_mutex_destroy(&print_lock);
-  
+ 
 	exit(0);
 }
