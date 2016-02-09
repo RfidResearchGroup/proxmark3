@@ -31,29 +31,70 @@ static void __attribute__((constructor)) fill_lut()
 #define filter(x) (filterlut[(x) & 0xfffff])
 #endif
 
-static void quicksort(uint32_t* const start, uint32_t* const stop)
+
+
+typedef struct bucket {
+	uint32_t *head;
+	uint32_t *bp;
+} bucket_t;
+
+typedef bucket_t bucket_array_t[2][0x100];
+
+typedef struct bucket_info {
+	struct {
+		uint32_t *head, *tail;
+		} bucket_info[2][0x100];
+		uint32_t numbuckets;
+	} bucket_info_t;
+
+
+static void bucket_sort_intersect(uint32_t* const estart, uint32_t* const estop,
+								  uint32_t* const ostart, uint32_t* const ostop,
+								  bucket_info_t *bucket_info, bucket_array_t bucket)
 {
-	uint32_t *it = start + 1, *rit = stop, t;
+	uint32_t *p1, *p2;
+	uint32_t *start[2];
+	uint32_t *stop[2];
 
-	if(it > rit)
-		return;
+	start[0] = estart;
+	stop[0] = estop;
+	start[1] = ostart;
+	stop[1] = ostop;
 
-	while(it < rit)
-		if(*it <= *start)
-			++it;
-		else if(*rit > *start)
-			--rit;
-		else
-			t = *it,  *it = *rit, *rit = t;
+	// init buckets to be empty
+	for (uint32_t i = 0; i < 2; i++) {
+		for (uint32_t j = 0x00; j <= 0xff; j++) {
+			bucket[i][j].bp = bucket[i][j].head;
+		}
+	}
 
-	if(*rit >= *start)
-		--rit;
-	if(rit != start)
-		t = *rit,  *rit = *start, *start = t;
+	// sort the lists into the buckets based on the MSB (contribution bits)
+	for (uint32_t i = 0; i < 2; i++) {
+		for (p1 = start[i]; p1 <= stop[i]; p1++) {
+			uint32_t bucket_index = (*p1 & 0xff000000) >> 24;
+			*(bucket[i][bucket_index].bp++) = *p1;
+		}
+	}
 
-	quicksort(start, rit - 1);
-	quicksort(rit + 1, stop);
+
+	// write back intersecting buckets as sorted list.
+	// fill in bucket_info with head and tail of the bucket contents in the list and number of non-empty buckets.
+	uint32_t nonempty_bucket;
+	for (uint32_t i = 0; i < 2; i++) {
+		p1 = start[i];
+		nonempty_bucket = 0;
+		for (uint32_t j = 0x00; j <= 0xff; j++) {
+			if (bucket[0][j].bp != bucket[0][j].head && bucket[1][j].bp != bucket[1][j].head) { // non-empty intersecting buckets only
+				bucket_info->bucket_info[i][nonempty_bucket].head = p1;
+				for (p2 = bucket[i][j].head; p2 < bucket[i][j].bp; *p1++ = *p2++);
+				bucket_info->bucket_info[i][nonempty_bucket].tail = p1 - 1;
+				nonempty_bucket++;
+			}
+		}
+		bucket_info->numbuckets = nonempty_bucket;
+		}
 }
+
 /** binsearch
  * Binary search for the first occurence of *stop's MSB in sorted [start,stop]
  */
@@ -110,12 +151,12 @@ extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in
 static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit)
 {
 	for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1)
-		if(filter(*tbl) ^ filter(*tbl | 1)) {
+		if(filter(*tbl) ^ filter(*tbl | 1)) {	// replace
 			*tbl |= filter(*tbl) ^ bit;
-		} else if(filter(*tbl) == bit) {
+		} else if(filter(*tbl) == bit) {		// insert
 			*++*end = *++tbl;
 			*tbl = tbl[-1] | 1;
-		} else
+		} else									// drop
 			*tbl-- = *(*end)--;
 }
 /** recover
@@ -124,9 +165,10 @@ static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit)
 static struct Crypto1State*
 recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 	uint32_t *e_head, uint32_t *e_tail, uint32_t eks, int rem,
-	struct Crypto1State *sl, uint32_t in)
+	struct Crypto1State *sl, uint32_t in, bucket_array_t bucket)
 {
-	uint32_t *o, *e, i;
+	uint32_t *o, *e;
+	bucket_info_t bucket_info;
 
 	if(rem == -1) {
 		for(e = e_head; e <= e_tail; ++e) {
@@ -140,7 +182,7 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 		return sl;
 	}
 
-	for(i = 0; i < 4 && rem--; i++) {
+	for(uint32_t i = 0; i < 4 && rem--; i++) {
 		oks >>= 1;
 		eks >>= 1;
 		in >>= 2;
@@ -155,20 +197,13 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 			return sl;
 	}
 
-	quicksort(o_head, o_tail);
-	quicksort(e_head, e_tail);
+	bucket_sort_intersect(e_head, e_tail, o_head, o_tail, &bucket_info, bucket);
 
-	while(o_tail >= o_head && e_tail >= e_head)
-		if(((*o_tail ^ *e_tail) >> 24) == 0) {
-			o_tail = binsearch(o_head, o = o_tail);
-			e_tail = binsearch(e_head, e = e_tail);
-			sl = recover(o_tail--, o, oks,
-				     e_tail--, e, eks, rem, sl, in);
+	for (int i = bucket_info.numbuckets - 1; i >= 0; i--) {
+		sl = recover(bucket_info.bucket_info[1][i].head, bucket_info.bucket_info[1][i].tail, oks,
+					 bucket_info.bucket_info[0][i].head, bucket_info.bucket_info[0][i].tail, eks,
+					 rem, sl, in, bucket);
 		}
-		else if(*o_tail > *e_tail)
-			o_tail = binsearch(o_head, o_tail) - 1;
-		else
-			e_tail = binsearch(e_head, e_tail) - 1;
 
 	return sl;
 }
@@ -201,6 +236,17 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 
 	statelist->odd = statelist->even = 0;
 
+	// allocate memory for out of place bucket_sort
+	bucket_array_t bucket;
+	for (uint32_t i = 0; i < 2; i++)
+		for (uint32_t j = 0; j <= 0xff; j++) {
+			bucket[i][j].head = malloc(sizeof(uint32_t)<<14);
+			if (!bucket[i][j].head) {
+				goto out;
+			}
+		}
+
+
 	// initialize statelists: add all possible states which would result into the rightmost 2 bits of the keystream
 	for(i = 1 << 20; i >= 0; --i) {
 		if(filter(i) == (oks & 1))
@@ -218,13 +264,18 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 	// the statelists now contain all states which could have generated the last 10 Bits of the keystream.
 	// 22 bits to go to recover 32 bits in total. From now on, we need to take the "in"
 	// parameter into account.
-	in = (in >> 16 & 0xff) | (in << 16) | (in & 0xff00);
+	in = (in >> 16 & 0xff) | (in << 16) | (in & 0xff00);		// Byte swapping
 	recover(odd_head, odd_tail, oks,
-		even_head, even_tail, eks, 11, statelist, in << 1);
+		even_head, even_tail, eks, 11, statelist, in << 1, bucket);
+
 
 out:
 	free(odd_head);
 	free(even_head);
+	for (uint32_t i = 0; i < 2; i++)
+		for (uint32_t j = 0; j <= 0xff; j++)
+			free(bucket[i][j].head);
+
 	return statelist;
 }
 
