@@ -1435,7 +1435,7 @@ void PrepareDelayedTransfer(uint16_t delay)
 	delay &= 0x07;
 	if (delay) {
 		for (uint16_t i = 0; i < delay; i++) {
-			bitmask |= (0x01 << i);
+			bitmask |= (1 << i);
 		}
 		ToSend[++ToSendMax] = 0x00;
 		for (uint16_t i = 0; i < ToSendMax; i++) {
@@ -1572,7 +1572,7 @@ void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8
 	ToSend[++ToSendMax] = SEC_Y;
 
 	// Convert to length of command:
-	ToSendMax++;
+	++ToSendMax;
 }
 
 //-----------------------------------------------------------------------------
@@ -1580,7 +1580,8 @@ void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8
 //-----------------------------------------------------------------------------
 void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *parity)
 {
-  CodeIso14443aBitsAsReaderPar(cmd, len*8, parity);
+  //CodeIso14443aBitsAsReaderPar(cmd, len*8, parity);
+  CodeIso14443aBitsAsReaderPar(cmd, len<<3, parity);
 }
 
 
@@ -1703,7 +1704,7 @@ static int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen, bool correctionNe
 	}
 
 	// Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again:
-	uint8_t fpga_queued_bits = FpgaSendQueueDelay >> 3;
+	uint8_t fpga_queued_bits = FpgaSendQueueDelay >> 3;  // twich /8 ??   >>3, 
 	for (i = 0; i <= fpga_queued_bits/8 + 1; ) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = SEC_F;
@@ -1838,19 +1839,22 @@ void ReaderTransmitBitsPar(uint8_t* frame, uint16_t bits, uint8_t *par, uint32_t
 		LED_A_ON();
   
 	// Log reader command in trace buffer
-	LogTrace(frame, nbytes(bits), LastTimeProxToAirStart*16 + DELAY_ARM2AIR_AS_READER, (LastTimeProxToAirStart + LastProxToAirDuration)*16 + DELAY_ARM2AIR_AS_READER, par, TRUE);
+	//LogTrace(frame, nbytes(bits), LastTimeProxToAirStart*16 + DELAY_ARM2AIR_AS_READER, (LastTimeProxToAirStart + LastProxToAirDuration)*16 + DELAY_ARM2AIR_AS_READER, par, TRUE);
+	LogTrace(frame, nbytes(bits), (LastTimeProxToAirStart<<4) + DELAY_ARM2AIR_AS_READER, ((LastTimeProxToAirStart + LastProxToAirDuration)<<4) + DELAY_ARM2AIR_AS_READER, par, TRUE);
 }
 
 void ReaderTransmitPar(uint8_t* frame, uint16_t len, uint8_t *par, uint32_t *timing)
 {
-  ReaderTransmitBitsPar(frame, len*8, par, timing);
+  //ReaderTransmitBitsPar(frame, len*8, par, timing);
+  ReaderTransmitBitsPar(frame, len<<3, par, timing);
 }
 
 void ReaderTransmitBits(uint8_t* frame, uint16_t len, uint32_t *timing)
 {
   // Generate parity and redirect
   uint8_t par[MAX_PARITY_SIZE] = {0x00};
-  GetParity(frame, len/8, par);
+  //GetParity(frame, len/8, par);
+  GetParity(frame, len >> 3, par);
   ReaderTransmitBitsPar(frame, len, par, timing);
 }
 
@@ -1859,7 +1863,8 @@ void ReaderTransmit(uint8_t* frame, uint16_t len, uint32_t *timing)
   // Generate parity and redirect
   uint8_t par[MAX_PARITY_SIZE] = {0x00};
   GetParity(frame, len, par);
-  ReaderTransmitBitsPar(frame, len*8, par, timing);
+  //ReaderTransmitBitsPar(frame, len*8, par, timing);
+  ReaderTransmitBitsPar(frame, len<<3, par, timing);
 }
 
 int ReaderReceiveOffset(uint8_t* receivedAnswer, uint16_t offset, uint8_t *parity)
@@ -1867,7 +1872,8 @@ int ReaderReceiveOffset(uint8_t* receivedAnswer, uint16_t offset, uint8_t *parit
 	if (!GetIso14443aAnswerFromTag(receivedAnswer, parity, offset)) 
 		return FALSE;
 
-	LogTrace(receivedAnswer, Demod.len, Demod.startTime*16 - DELAY_AIR2ARM_AS_READER, Demod.endTime*16 - DELAY_AIR2ARM_AS_READER, parity, FALSE);
+	//LogTrace(receivedAnswer, Demod.len, Demod.startTime*16 - DELAY_AIR2ARM_AS_READER, Demod.endTime*16 - DELAY_AIR2ARM_AS_READER, parity, FALSE);
+	LogTrace(receivedAnswer, Demod.len, (Demod.startTime<<4) - DELAY_AIR2ARM_AS_READER, (Demod.endTime<<4) - DELAY_AIR2ARM_AS_READER, parity, FALSE);
 	return Demod.len;
 }
 
@@ -1876,7 +1882,8 @@ int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity)
 	if (!GetIso14443aAnswerFromTag(receivedAnswer, parity, 0)) 
 		return FALSE;
 
-	LogTrace(receivedAnswer, Demod.len, Demod.startTime*16 - DELAY_AIR2ARM_AS_READER, Demod.endTime*16 - DELAY_AIR2ARM_AS_READER, parity, FALSE);
+	//LogTrace(receivedAnswer, Demod.len, Demod.startTime*16 - DELAY_AIR2ARM_AS_READER, Demod.endTime*16 - DELAY_AIR2ARM_AS_READER, parity, FALSE);
+	LogTrace(receivedAnswer, Demod.len, (Demod.startTime<<4) - DELAY_AIR2ARM_AS_READER, (Demod.endTime<<4) - DELAY_AIR2ARM_AS_READER, parity, FALSE);
 	return Demod.len;
 }
 
@@ -2189,17 +2196,34 @@ void ReaderIso14443a(UsbCommand *c)
 int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 
 	if (nt1 == nt2) return 0;
-	
-	uint16_t i;
+
 	uint32_t nttmp1 = nt1;
 	uint32_t nttmp2 = nt2;
 	
-	for (i = 1; i < 0xFFFF; ++i) {
-		nttmp1 = prng_successor(nttmp1, 1);
-		if (nttmp1 == nt2) return i;
+	for (uint16_t i = 1; i < 0xFFFF; i += 8) {
+		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i;
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -i;
+		
+		nttmp1 = prng_successor(nttmp1, 2);	if (nttmp1 == nt2) return i+1;
+		nttmp2 = prng_successor(nttmp2, 2);	if (nttmp2 == nt1) return -i-1;
+		
+		nttmp1 = prng_successor(nttmp1, 3);	if (nttmp1 == nt2) return i+2;
+		nttmp2 = prng_successor(nttmp2, 3);	if (nttmp2 == nt1) return -i-2;
+		
+		nttmp1 = prng_successor(nttmp1, 4);	if (nttmp1 == nt2) return i+3;
+		nttmp2 = prng_successor(nttmp2, 4);	if (nttmp2 == nt1) return -i-3;
 
-		nttmp2 = prng_successor(nttmp2, 1);
-		if (nttmp2 == nt1) return -i;
+		nttmp1 = prng_successor(nttmp1, 5);	if (nttmp1 == nt2) return i+4;
+		nttmp2 = prng_successor(nttmp2, 5);	if (nttmp2 == nt1) return -i-4;
+		
+		nttmp1 = prng_successor(nttmp1, 6);	if (nttmp1 == nt2) return i+5;
+		nttmp2 = prng_successor(nttmp2, 6);	if (nttmp2 == nt1) return -i-5;
+		
+		nttmp1 = prng_successor(nttmp1, 7);	if (nttmp1 == nt2) return i+6;
+		nttmp2 = prng_successor(nttmp2, 7);	if (nttmp2 == nt1) return -i-6;
+		
+		nttmp1 = prng_successor(nttmp1, 8);	if (nttmp1 == nt2) return i+7;
+		nttmp2 = prng_successor(nttmp2, 8);	if (nttmp2 == nt1) return -i-7;
 	}
 	
 	return(-99999); // either nt1 or nt2 are invalid nonces
@@ -2230,9 +2254,8 @@ void ReaderMifare(bool first_try, uint8_t block )
 	byte_t nt_diff = 0;
 	uint8_t par[1] = {0};	// maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
 	static byte_t par_low = 0;
-	bool led_on = TRUE;
 	uint8_t uid[10] = {0};
-	uint32_t cuid = 0;
+	//uint32_t cuid = 0;
 
 	uint32_t nt = 0;
 	uint32_t previous_nt = 0;
@@ -2256,17 +2279,11 @@ void ReaderMifare(bool first_try, uint8_t block )
 
 	uint16_t unexpected_random = 0;
 	uint16_t sync_tries = 0;
-	int16_t debug_info_nr = -1;
 	uint16_t strategy = 0;
-	int32_t debug_info[MAX_STRATEGY+1][NUM_DEBUG_INFOS];
-	uint32_t select_time = 0;
 	uint32_t halt_time = 0;
-	//uint8_t caller[7] = {0};	
 
-	// init to zero.
-	for (uint16_t i = 0; i < MAX_STRATEGY+1; ++i)
-		for(uint16_t j = 0; j < NUM_DEBUG_INFOS; ++j)
-			debug_info[i][j] = 0;
+	clear_trace();
+	set_tracing(TRUE);
 	
 	LED_A_ON();
 	LED_B_OFF();
@@ -2277,8 +2294,6 @@ void ReaderMifare(bool first_try, uint8_t block )
 	
 	// free eventually allocated BigBuf memory. We want all for tracing.
 	BigBuf_free();
-	clear_trace();
-	set_tracing(TRUE);
 
 	if (first_try) { 
 		sync_time = GetCountSspClk() & 0xfffffff8;
@@ -2310,7 +2325,7 @@ void ReaderMifare(bool first_try, uint8_t block )
 			int len = mifare_sendcmd_short(NULL, false, 0x50, 0x00, receivedAnswer, receivedAnswerPar, &halt_time);
 
 			if (len && MF_DBGLEVEL >= 3)
-				Dbprintf("Unexpected response of %d bytes to halt command (additional debugging).\n", len);
+				Dbprintf("Unexpected response of %d bytes to halt command.", len);
 		}
 
 		if (strategy == 3) {
@@ -2323,61 +2338,32 @@ void ReaderMifare(bool first_try, uint8_t block )
 			WDT_HIT();
 		}
 		
-		if (!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
+		if (!iso14443a_select_card(uid, NULL, NULL, true, 0)) {
 			if (MF_DBGLEVEL >= 1) Dbprintf("Mifare: Can't select card\n");
 			continue;
 		}
-
-		select_time = GetCountSspClk() & 0xfffffff8;
-		elapsed_prng_sequences = 1;
 		
-		if (debug_info_nr == -1) {
-			
-			sync_time = (sync_time & 0xfffffff8) + sync_cycles + catch_up_cycles;
-			catch_up_cycles = 0;
-									
-			// if we missed the sync time already, advance to the next nonce repeat
-			WDT_HIT();
-			while(GetCountSspClk() > sync_time) {
-				++elapsed_prng_sequences;
-				sync_time = (sync_time & 0xfffffff8) + sync_cycles;
-				//sync_time += sync_cycles;
-				//sync_time &= 0xfffffff8;
-			}
-			WDT_HIT();
-			// Transmit MIFARE_CLASSIC_AUTH at synctime. Should result in returning the same tag nonce (== nt_attacked) 
-			ReaderTransmit(mf_auth, sizeof(mf_auth), &sync_time);			
-			if (MF_DBGLEVEL == 2) Dbprintf("sync_time %d \n", sync_time);
-			
-		} else {
-			// collect some information on tag nonces for debugging:
-			#define DEBUG_FIXED_SYNC_CYCLES	PRNG_SEQUENCE_LENGTH
-			if (strategy == 0) {
-				// nonce distances at fixed time after card select:
-				sync_time = select_time + DEBUG_FIXED_SYNC_CYCLES;
-			} else if (strategy == 1) {
-				// nonce distances at fixed time between authentications:
-				sync_time = sync_time + DEBUG_FIXED_SYNC_CYCLES;
-			} else if (strategy == 2) {
-				// nonce distances at fixed time after halt:
-				sync_time = halt_time + DEBUG_FIXED_SYNC_CYCLES;
-			} else {
-				// nonce_distances at fixed time after power on
-				sync_time = DEBUG_FIXED_SYNC_CYCLES;
-			}
-			ReaderTransmit(mf_auth, sizeof(mf_auth), &sync_time);
-		}			
+		sync_time = (sync_time & 0xfffffff8) + sync_cycles + catch_up_cycles;
+		catch_up_cycles = 0;
+								
+		// if we missed the sync time already, advance to the next nonce repeat
+		while(GetCountSspClk() > sync_time) {
+			++elapsed_prng_sequences;
+			sync_time = (sync_time & 0xfffffff8) + sync_cycles;
+		}
+		// Transmit MIFARE_CLASSIC_AUTH at synctime. Should result in returning the same tag nonce (== nt_attacked) 
+		ReaderTransmit(mf_auth, sizeof(mf_auth), &sync_time);			
 
 		// Receive the (4 Byte) "random" nonce
 		if (!ReaderReceive(receivedAnswer, receivedAnswerPar))
 			continue;
 
-		previous_nt = nt;
-		nt = bytes_to_num(receivedAnswer, 4);
-
 		// Transmit reader nonce with fake par
 		ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par, NULL);
 
+		previous_nt = nt;
+		nt = bytes_to_num(receivedAnswer, 4);
+		
 		if (first_try && previous_nt && !nt_attacked) { // we didn't calibrate our clock yet
 			int nt_distance = dist_nt(previous_nt, nt);
 			if (nt_distance == 0) {
@@ -2397,22 +2383,16 @@ void ReaderMifare(bool first_try, uint8_t block )
 					if (strategy > MAX_STRATEGY || MF_DBGLEVEL < 3) {
 						isOK = -4; 			// Card's PRNG runs at an unexpected frequency or resets unexpectedly
 						break;
-					} else {				// continue for a while, just to collect some debug info
-						++debug_info_nr;
-						debug_info[strategy][debug_info_nr] = nt_distance;						
-						if (debug_info_nr == NUM_DEBUG_INFOS-1) {
-							++strategy;
-							debug_info_nr = 0;
-						}
+					} else {
 						continue;
 					}
 				}
 				
-				sync_cycles = (sync_cycles - nt_distance/elapsed_prng_sequences);
+				sync_cycles = (sync_cycles - nt_distance)/elapsed_prng_sequences;
 				if (sync_cycles <= 0)
 					sync_cycles += PRNG_SEQUENCE_LENGTH;
 				
-				if (MF_DBGLEVEL >= 2)
+				if (MF_DBGLEVEL >= 3)
 					Dbprintf("calibrating in cycle %d. nt_distance=%d, elapsed_prng_sequences=%d, new sync_cycles: %d\n", i, nt_distance, elapsed_prng_sequences, sync_cycles);
 
 				continue;
@@ -2435,8 +2415,7 @@ void ReaderMifare(bool first_try, uint8_t block )
 			} else {
 				last_catch_up = catch_up_cycles;
 			    consecutive_resyncs = 0;
-			}
-			sync_cycles += catch_up_cycles;
+			}		
 			
 			if (consecutive_resyncs < 3) {
 				if (MF_DBGLEVEL >= 3)
@@ -2454,17 +2433,12 @@ void ReaderMifare(bool first_try, uint8_t block )
 			continue;
 		}
  
-		consecutive_resyncs = 0;
-		
 		// Receive answer. This will be a 4 Bit NACK when the 8 parity bits are OK after decoding
 		if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
 			catch_up_cycles = 8; 	// the PRNG is delayed by 8 cycles due to the NAC (4Bits = 0x05 encrypted) transfer
 	
 			if (nt_diff == 0)
 				par_low = par[0] & 0xE0; // there is no need to check all parities for other nt_diff. Parity Bits for mf_nr_ar[0..2] won't change
-
-			led_on = !led_on;
-			if(led_on) LED_B_ON(); else LED_B_OFF();
 
 			par_list[nt_diff] = SwapBits(par[0], 8);
 			ks_list[nt_diff] = receivedAnswer[0] ^ 0x05;
@@ -2478,6 +2452,7 @@ void ReaderMifare(bool first_try, uint8_t block )
 			nt_diff = (nt_diff + 1) & 0x07;
 			mf_nr_ar[3] = (mf_nr_ar[3] & 0x1F) | (nt_diff << 5);
 			par[0] = par_low;
+			
 		} else {
 			if (nt_diff == 0 && first_try) {
 				par[0]++;
@@ -2489,17 +2464,13 @@ void ReaderMifare(bool first_try, uint8_t block )
 				par[0] = ((par[0] & 0x1F) + 1) | par_low;
 			}
 		}
+		
+		consecutive_resyncs = 0;
 	}
 
 	mf_nr_ar[3] &= 0x1F;
 
 	WDT_HIT();
-
-	if (isOK == -4) {
-		for (uint16_t i = 0; i < MAX_STRATEGY+1; ++i)
-			for(uint16_t j = 0; j < NUM_DEBUG_INFOS; ++j)
-				Dbprintf("info[%d][%d] = %d", i, j, debug_info[i][j]);
-	}
 	
 	// reset sync_time.
 	if ( isOK == 1) {
