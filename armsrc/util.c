@@ -39,9 +39,8 @@ size_t nbytes(size_t nbits) {
 }
 
 uint32_t SwapBits(uint32_t value, int nrbits) {
-	int i;
 	uint32_t newvalue = 0;
-	for(i = 0; i < nrbits; i++) {
+	for(int i = 0; i < nrbits; i++) {
 		newvalue ^= ((value >> i) & 1) << (nrbits - 1 - i);
 	}
 	return newvalue;
@@ -423,13 +422,9 @@ void StartCountSspClk()
 }
 
 uint32_t RAMFUNC GetCountSspClk(){
-	uint32_t tmp_count;
-	tmp_count = (AT91C_BASE_TC2->TC_CV << 16) | AT91C_BASE_TC0->TC_CV;
-	if ((tmp_count & 0x0000ffff) == 0) { //small chance that we may have missed an increment in TC2
+	uint32_t tmp_count = (AT91C_BASE_TC2->TC_CV << 16) | AT91C_BASE_TC0->TC_CV;
+	if ((tmp_count & 0x0000ffff) == 0)  //small chance that we may have missed an increment in TC2
 		return (AT91C_BASE_TC2->TC_CV << 16);
-	} 
-	else {
-		return tmp_count;
-	}
+	return tmp_count;
 }
 
