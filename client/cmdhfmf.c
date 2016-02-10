@@ -65,11 +65,6 @@ start:
 		UsbCommand resp;
 		if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 			isOK  = resp.arg[0];
-			uid = (uint32_t)bytes_to_num(resp.d.asBytes +  0, 4);
-			nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
-			par_list = bytes_to_num(resp.d.asBytes +  8, 8);
-			ks_list = bytes_to_num(resp.d.asBytes +  16, 8);
-			nr = bytes_to_num(resp.d.asBytes + 24, 4);
 			printf("\n\n");
 			switch (isOK) {
 				case -1 : PrintAndLog("Button pressed. Aborted.\n"); break;
@@ -79,6 +74,11 @@ start:
 						  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour.\n"); break;
 				default: ;
 			}
+			uid = (uint32_t)bytes_to_num(resp.d.asBytes +  0, 4);
+			nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
+			par_list = bytes_to_num(resp.d.asBytes +  8, 8);
+			ks_list = bytes_to_num(resp.d.asBytes +  16, 8);
+			nr = bytes_to_num(resp.d.asBytes + 24, 4);
 			break;
 		}
 	}	
