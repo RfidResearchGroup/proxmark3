@@ -80,10 +80,7 @@ void ProxGuiQT::MainLoop()
 	plotapp->exec();
 }
 
-ProxGuiQT::ProxGuiQT(int argc, char **argv) : plotapp(NULL), plotwidget(NULL),
-	argc(argc), argv(argv)
-{
-}
+ProxGuiQT::ProxGuiQT(int argc, char **argv) : plotapp(NULL), plotwidget(NULL), argc(argc), argv(argv) {}
 
 ProxGuiQT::~ProxGuiQT(void)
 {
@@ -309,7 +306,6 @@ void ProxWidget::mouseMoveEvent(QMouseEvent *event)
 	} else if (event->buttons() & Qt::RightButton) {
 		CursorBPos = x;
 	}
-
 
 	this->update();
 }
