@@ -53,7 +53,7 @@ start:
 
 	// wait cycle
 	while (true) {
-        printf(".");
+		printf(".");
 		fflush(stdout);
 		if (ukbhit()) {
 			tmpchar = getchar();
@@ -63,22 +63,21 @@ start:
 		}
 		
 		UsbCommand resp;
-		if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 			isOK  = resp.arg[0];
-			uid = (uint32_t)bytes_to_num(resp.d.asBytes +  0, 4);
-			nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
-			par_list = bytes_to_num(resp.d.asBytes +  8, 8);
-			ks_list = bytes_to_num(resp.d.asBytes +  16, 8);
-			nr = bytes_to_num(resp.d.asBytes + 24, 4);
-			printf("\n\n");
 			switch (isOK) {
 				case -1 : PrintAndLog("Button pressed. Aborted.\n"); break;
 				case -2 : PrintAndLog("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).\n"); break;
 				case -3 : PrintAndLog("Card is not vulnerable to Darkside attack (its random number generator is not predictable).\n"); break;
 				case -4 : PrintAndLog("Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
-						  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour.\n"); break;
+					  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour.\n"); break;
 				default: ;
 			}
+			uid = (uint32_t)bytes_to_num(resp.d.asBytes, 4);
+			nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
+			par_list = bytes_to_num(resp.d.asBytes +  8, 8);
+			ks_list = bytes_to_num(resp.d.asBytes +  16, 8);
+			nr = bytes_to_num(resp.d.asBytes + 24, 4);
 			break;
 		}
 	}	
@@ -707,12 +706,13 @@ int CmdHF14AMfNested(const char *Cmd)
 		clock_t t2 = clock() - t1;
 		if ( t2 > 0 )
 			PrintAndLog("Time to check 6 known keys: %.0f ticks %4.2f sec", (float)t2, ((float)t2)/CLOCKS_PER_SEC);
-	
+
+		PrintAndLog("enter nested...");	
 		
 		// nested sectors
 		iterations = 0;
-		PrintAndLog("enter nested...");
 		bool calibrate = true;
+
 		for (i = 0; i < NESTED_SECTOR_RETRY; i++) {
 			for (uint8_t sectorNo = 0; sectorNo < SectorsCnt; ++sectorNo) {
 				for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) { 
@@ -731,7 +731,7 @@ int CmdHF14AMfNested(const char *Cmd)
 						case -5 :
 							calibrate = false;
 							iterations++;
-							e_sector[sectorNo].foundKey[trgKeyType] = 1;
+							e_sector[sectorNo].foundKey[trgKeyType] = TRUE;
 							e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
 							continue;
 							
@@ -742,6 +742,10 @@ int CmdHF14AMfNested(const char *Cmd)
 				}
 			}
 		}
+		
+		t1 = clock() - t1;
+		if ( t1 > 0 )
+			PrintAndLog("Time in nested: %.0f ticks %4.2f sec (%4.2f sec per key)\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC, ((float)t1)/iterations/CLOCKS_PER_SEC);
 
 		// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
 		PrintAndLog("trying to read key B...");
@@ -759,7 +763,7 @@ int CmdHF14AMfNested(const char *Cmd)
 				SendCommand(&c);
 
 				UsbCommand resp;
-				if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500)) continue;
+				if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
 					
 				uint8_t isOK  = resp.arg[0] & 0xff;
 				if (!isOK) continue;
@@ -768,15 +772,12 @@ int CmdHF14AMfNested(const char *Cmd)
 				key64 = bytes_to_num(data+10, 6);
 				if (key64) {
 					PrintAndLog("Data:%s", sprint_hex(data+10, 6));
-					e_sector[i].foundKey[1] = 1;
+					e_sector[i].foundKey[1] = TRUE;
 					e_sector[i].Key[1] = key64;
 				}
 			}
 		}
-		
-		t1 = clock() - t1;
-		if ( t1 > 0 )
-			PrintAndLog("Time in nested: %.0f ticks %4.2f sec (%4.2f sec per key)\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC, ((float)t1)/iterations/CLOCKS_PER_SEC);
+
 		
 		//print them
 		printKeyTable( SectorsCnt, e_sector );
@@ -1047,7 +1048,7 @@ int CmdHF14AMfChk(const char *Cmd)
 				}
 				keyBlock = p;
 			}
-			PrintAndLog("check key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
+			PrintAndLog("key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
 			(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
 			(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
 			keycnt++;
@@ -1087,7 +1088,7 @@ int CmdHF14AMfChk(const char *Cmd)
 					}
 					memset(keyBlock + 6 * keycnt, 0, 6);
 					num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6*keycnt);
-					PrintAndLog("check custom key[%2d] %012"llx, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
+					PrintAndLog("check key[%2d] %012"llx, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
 					keycnt++;
 					memset(buf, 0, sizeof(buf));
 				}
@@ -1104,7 +1105,7 @@ int CmdHF14AMfChk(const char *Cmd)
 	if (keycnt == 0) {
 		PrintAndLog("No key specified, trying default keys");
 		for (;keycnt < defaultKeysSize; keycnt++)
-			PrintAndLog("check default key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
+			PrintAndLog("key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
 				(keyBlock + 6*keycnt)[0],(keyBlock + 6*keycnt)[1], (keyBlock + 6*keycnt)[2],
 				(keyBlock + 6*keycnt)[3], (keyBlock + 6*keycnt)[4],	(keyBlock + 6*keycnt)[5], 6);
 	}
@@ -1117,19 +1118,19 @@ int CmdHF14AMfChk(const char *Cmd)
 	}
 
 	uint8_t trgKeyType = 0;
+	uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE/6) ? (USB_CMD_DATA_SIZE/6) : keycnt;
 	
 	// time
 	clock_t t1 = clock();
 	
 	// check keys.
 	for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) {
+
 		int b = blockNo;
 		for (int i = 0; i < SectorsCnt; ++i) {
 			
 			// skip already found keys.
 			if (e_sector[i].foundKey[trgKeyType]) continue;
-			
-			uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE/6) ? (USB_CMD_DATA_SIZE/6) : keycnt;
 			
 			for (uint32_t c = 0; c < keycnt; c += max_keys) {
 				
@@ -1137,7 +1138,7 @@ int CmdHF14AMfChk(const char *Cmd)
 				
 				res = mfCheckKeys(b, trgKeyType, true, size, &keyBlock[6*c], &key64);
 				if (!res) {
-					PrintAndLog("Sector:%3d Block:%3d, key type: %C  -- Found key [%012"llx"]", i, b, trgKeyType ? 'B':'A', key64);
+					//PrintAndLog("Sector:%3d Block:%3d, key type: %C  -- Found key [%012"llx"]", i, b, trgKeyType ? 'B':'A', key64);
 										 
 					e_sector[i].Key[trgKeyType] = key64;
 					e_sector[i].foundKey[trgKeyType] = TRUE;
@@ -1150,6 +1151,11 @@ int CmdHF14AMfChk(const char *Cmd)
 			b < 127 ? ( b +=4 ) : ( b += 16 );	
 		}
 	}
+	
+	t1 = clock() - t1;
+	if ( t1 > 0 )
+		printf("Time in checkkeys: %.0f ticks  %1.2f sec (%1.2f sec per key)\n\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC, ((float)t1)/keycnt/CLOCKS_PER_SEC);
+
 	// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
 	PrintAndLog("testing to read B...");
 	for (i = 0; i < SectorsCnt; i++) {
@@ -1180,10 +1186,7 @@ int CmdHF14AMfChk(const char *Cmd)
 			}
 		}
 	}
-	
-	t1 = clock() - t1;
-	if ( t1 > 0 )
-		printf("Time in checkkeys: %.0f ticks  %1.2f sec (%1.2f sec per key)\n\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC, ((float)t1)/keycnt/CLOCKS_PER_SEC);
+
 
 	//print them
 	printKeyTable( SectorsCnt, e_sector );
