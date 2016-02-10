@@ -158,7 +158,14 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 	// allocate memory for out of place bucket_sort
 	bucket_array_t bucket;
 	
-	if ( !bucket_malloc(bucket) ) goto out;
+	for (uint32_t i = 0; i < 2; i++) {
+		for (uint32_t j = 0; j <= 0xff; j++) {
+			bucket[i][j].head = malloc(sizeof(uint32_t)<<14);
+			if (!bucket[i][j].head) {
+				 goto out;
+			}
+		}
+	}
 
 	// initialize statelists: add all possible states which would result into the rightmost 2 bits of the keystream
 	for(i = 1 << 20; i >= 0; --i) {
@@ -183,7 +190,9 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 out:
 	free(odd_head);
 	free(even_head);
-	bucket_free(bucket);
+	for (uint8_t i = 0; i < 2; i++)
+		for (uint8_t j = 0; j <= 0xff; j++)
+			free(bucket[i][j].head);
 	return statelist;
 }
 

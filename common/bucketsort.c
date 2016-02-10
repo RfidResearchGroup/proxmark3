@@ -1,23 +1,5 @@
 #include "bucketsort.h"
 
-bool bucket_malloc(bucket_array_t bucket) {
-	for (uint32_t i = 0; i < 2; i++) {
-		for (uint32_t j = 0; j <= 0xff; j++) {
-			bucket[i][j].head = malloc(sizeof(uint32_t)<<14);
-			if (!bucket[i][j].head) {
-				return false;
-			}
-		}
-	}
-	return true;
-}
-
-void bucket_free(bucket_array_t bucket) {
-	for (uint8_t i = 0; i < 2; i++)
-		for (uint8_t j = 0; j <= 0xff; j++)
-			free(bucket[i][j].head);
-}
-
 void bucket_sort_intersect(uint32_t* const estart, uint32_t* const estop,
 								  uint32_t* const ostart, uint32_t* const ostop,
 								  bucket_info_t *bucket_info, bucket_array_t bucket)
