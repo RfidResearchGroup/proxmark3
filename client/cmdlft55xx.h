@@ -23,6 +23,7 @@
 // #define T55X7_FDXB_CONFIG_BLOCK         903F8080  // emulate fdx-b - xtended mode, BiPhase ('57), data rate 32, 4 data blocks
 #define T55X7_FDXB_CONFIG_BLOCK         0x903F0082  // emulate fdx-b - xtended mode, BiPhase ('50), invert data, data rate 32, 4 data blocks
 #define T55X7_HID_26_CONFIG_BLOCK       0x00107060  // hid 26 bit - compat mode, FSK2a, data rate 50, 3 data blocks
+#define T55X7_PYRAMID_CONFIG_BLOCK		0x00107080  // Pyramid 26 bit - compat mode, FSK2a, data rate 50, 4 data blocks
 #define T55X7_INDALA_64_CONFIG_BLOCK    0x00081040  // emulate indala 64 bit - compat mode, PSK1, psk carrier FC * 2, data rate 32, maxblock 2
 #define T55X7_INDALA_224_CONFIG_BLOCK   0x000810E0  // emulate indala 224 bit - compat mode, PSK1, psk carrier FC * 2, data rate 32, maxblock 7
 #define T55X7_GUARDPROXII_CONFIG_BLOCK	0x00150060	// bitrate 64pcb, Direct modulation, Biphase, 3 data blocks
