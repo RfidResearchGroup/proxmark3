@@ -651,7 +651,7 @@ void SamyRun()
 			SpinDelay(500);
 
 			CmdHIDdemodFSK(1, &high[selected], &low[selected], 0);
-			Dbprintf("Recorded %x %x %x", selected, high[selected], low[selected]);
+			Dbprintf("Recorded %x %x %08x", selected, high[selected], low[selected]);
 
 			LEDsoff();
 			LED(selected + 1, 0);
@@ -667,7 +667,7 @@ void SamyRun()
 			LED(LED_ORANGE, 0);
 
 			// record
-			Dbprintf("Cloning %x %x %x", selected, high[selected], low[selected]);
+			Dbprintf("Cloning %x %x %08x", selected, high[selected], low[selected]);
 
 			// wait for button to be released
 			while(BUTTON_PRESS())
@@ -676,8 +676,8 @@ void SamyRun()
 			/* need this delay to prevent catching some weird data */
 			SpinDelay(500);
 
-			CopyHIDtoT55x7(high[selected], low[selected], 0, 0);
-			Dbprintf("Cloned %x %x %x", selected, high[selected], low[selected]);
+			CopyHIDtoT55x7(0, high[selected], low[selected], 0);
+			Dbprintf("Cloned %x %x %08x", selected, high[selected], low[selected]);
 
 			LEDsoff();
 			LED(selected + 1, 0);
@@ -708,7 +708,7 @@ void SamyRun()
 				while(BUTTON_PRESS())
 					WDT_HIT();
 				
-				Dbprintf("%x %x %x", selected, high[selected], low[selected]);
+				Dbprintf("%x %x %08x", selected, high[selected], low[selected]);
 				CmdHIDsimTAG(high[selected], low[selected], 0);		
 				DbpString("Done playing");
 				
