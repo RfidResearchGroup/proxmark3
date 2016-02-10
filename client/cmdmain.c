@@ -120,6 +120,7 @@ int getCommand(UsbCommand* response)
     //Pick out the next unread command
     UsbCommand* last_unread = &cmdBuffer[cmd_tail];
     memcpy(response, last_unread, sizeof(UsbCommand));
+
     //Increment tail - this is a circular buffer, so modulo buffer size
     cmd_tail = (cmd_tail +1 ) % CMD_BUFFER_SIZE;
 
@@ -146,10 +147,10 @@ bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeou
 	for ( size_t dm_seconds = 0; dm_seconds < ms_timeout/10; dm_seconds++ ) {
 
 		while( getCommand(response) ) {
-			if(response->cmd == cmd){
-				return true;
-			}
+			if(response->cmd == cmd)
+				return true;			
 		}
+
 		msleep(10); // XXX ugh
 		if (dm_seconds == 200) { // Two seconds elapsed
 			PrintAndLog("Waiting for a response from the proxmark...");
@@ -188,20 +189,19 @@ void UsbCommandReceived(UsbCommand *UC)
 			return;
 		} break;
 
-		case CMD_DEBUG_PRINT_INTEGERS: {
-			PrintAndLog("#db# %08x, %08x, %08x       \r\n", UC->arg[0], UC->arg[1], UC->arg[2]);
-			return;
-		} break;
+		case CMD_DEBUG_PRINT_INTEGERS:
+			PrintAndLog("#db# %08x, %08x, %08x", UC->arg[0], UC->arg[1], UC->arg[2]);
+			break;
 
-		case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K: {
-			memcpy(sample_buf+(UC->arg[0]),UC->d.asBytes,UC->arg[1]);
-			return;
-		} break;
+		case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K:
+			memcpy( sample_buf + (UC->arg[0]), UC->d.asBytes, UC->arg[1]);
+			break;
 
 		default: {
 			storeCommand(UC);
 			break;
 		}
 	}
+
 }
 
