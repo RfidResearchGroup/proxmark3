@@ -31,90 +31,10 @@ static void __attribute__((constructor)) fill_lut()
 #define filter(x) (filterlut[(x) & 0xfffff])
 #endif
 
-
-
-typedef struct bucket {
-	uint32_t *head;
-	uint32_t *bp;
-} bucket_t;
-
-typedef bucket_t bucket_array_t[2][0x100];
-
-typedef struct bucket_info {
-	struct {
-		uint32_t *head, *tail;
-		} bucket_info[2][0x100];
-		uint32_t numbuckets;
-	} bucket_info_t;
-
-
-static void bucket_sort_intersect(uint32_t* const estart, uint32_t* const estop,
-								  uint32_t* const ostart, uint32_t* const ostop,
-								  bucket_info_t *bucket_info, bucket_array_t bucket)
-{
-	uint32_t *p1, *p2;
-	uint32_t *start[2];
-	uint32_t *stop[2];
-
-	start[0] = estart;
-	stop[0] = estop;
-	start[1] = ostart;
-	stop[1] = ostop;
-
-	// init buckets to be empty
-	for (uint32_t i = 0; i < 2; i++) {
-		for (uint32_t j = 0x00; j <= 0xff; j++) {
-			bucket[i][j].bp = bucket[i][j].head;
-		}
-	}
-
-	// sort the lists into the buckets based on the MSB (contribution bits)
-	for (uint32_t i = 0; i < 2; i++) {
-		for (p1 = start[i]; p1 <= stop[i]; p1++) {
-			uint32_t bucket_index = (*p1 & 0xff000000) >> 24;
-			*(bucket[i][bucket_index].bp++) = *p1;
-		}
-	}
-
-
-	// write back intersecting buckets as sorted list.
-	// fill in bucket_info with head and tail of the bucket contents in the list and number of non-empty buckets.
-	uint32_t nonempty_bucket;
-	for (uint32_t i = 0; i < 2; i++) {
-		p1 = start[i];
-		nonempty_bucket = 0;
-		for (uint32_t j = 0x00; j <= 0xff; j++) {
-			if (bucket[0][j].bp != bucket[0][j].head && bucket[1][j].bp != bucket[1][j].head) { // non-empty intersecting buckets only
-				bucket_info->bucket_info[i][nonempty_bucket].head = p1;
-				for (p2 = bucket[i][j].head; p2 < bucket[i][j].bp; *p1++ = *p2++);
-				bucket_info->bucket_info[i][nonempty_bucket].tail = p1 - 1;
-				nonempty_bucket++;
-			}
-		}
-		bucket_info->numbuckets = nonempty_bucket;
-		}
-}
-
-/** binsearch
- * Binary search for the first occurence of *stop's MSB in sorted [start,stop]
- */
-static inline uint32_t* binsearch(uint32_t *start, uint32_t *stop)
-{
-	uint32_t mid, val = *stop & 0xff000000;
-	while(start != stop)
-		if(start[mid = (stop - start) >> 1] > val)
-			stop = &start[mid];
-		else
-			start += mid + 1;
-
-	return start;
-}
-
 /** update_contribution
  * helper, calculates the partial linear feedback contributions and puts in MSB
  */
-static inline void
-update_contribution(uint32_t *item, const uint32_t mask1, const uint32_t mask2)
+static inline void update_contribution(uint32_t *item, const uint32_t mask1, const uint32_t mask2)
 {
 	uint32_t p = *item >> 25;
 
@@ -126,8 +46,7 @@ update_contribution(uint32_t *item, const uint32_t mask1, const uint32_t mask2)
 /** extend_table
  * using a bit of the keystream extend the table of possible lfsr states
  */
-static inline void
-extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in)
+static inline void extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in)
 {
 	in <<= 24;
 	for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1)
@@ -150,14 +69,16 @@ extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in
  */
 static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit)
 {
-	for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1)
+	for(*tbl <<= 1; tbl <= *end; *++tbl <<= 1) {
 		if(filter(*tbl) ^ filter(*tbl | 1)) {	// replace
 			*tbl |= filter(*tbl) ^ bit;
 		} else if(filter(*tbl) == bit) {		// insert
 			*++*end = *++tbl;
 			*tbl = tbl[-1] | 1;
-		} else									// drop
+		} else	{								// drop
 			*tbl-- = *(*end)--;
+		}
+	}
 }
 /** recover
  * recursively narrow down the search space, 4 bits of keystream at a time
@@ -186,13 +107,11 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 		oks >>= 1;
 		eks >>= 1;
 		in >>= 2;
-		extend_table(o_head, &o_tail, oks & 1, LF_POLY_EVEN << 1 | 1,
-			     LF_POLY_ODD << 1, 0);
+		extend_table(o_head, &o_tail, oks & 1, LF_POLY_EVEN << 1 | 1, LF_POLY_ODD << 1, 0);
 		if(o_head > o_tail)
 			return sl;
 
-		extend_table(e_head, &e_tail, eks & 1, LF_POLY_ODD,
-			     LF_POLY_EVEN << 1 | 1, in & 3);
+		extend_table(e_head, &e_tail, eks & 1, LF_POLY_ODD, LF_POLY_EVEN << 1 | 1, in & 3);
 		if(e_head > e_tail)
 			return sl;
 	}
@@ -238,14 +157,8 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 
 	// allocate memory for out of place bucket_sort
 	bucket_array_t bucket;
-	for (uint32_t i = 0; i < 2; i++)
-		for (uint32_t j = 0; j <= 0xff; j++) {
-			bucket[i][j].head = malloc(sizeof(uint32_t)<<14);
-			if (!bucket[i][j].head) {
-				goto out;
-			}
-		}
-
+	
+	if ( !bucket_malloc(bucket) ) goto out;
 
 	// initialize statelists: add all possible states which would result into the rightmost 2 bits of the keystream
 	for(i = 1 << 20; i >= 0; --i) {
@@ -265,17 +178,12 @@ struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in)
 	// 22 bits to go to recover 32 bits in total. From now on, we need to take the "in"
 	// parameter into account.
 	in = (in >> 16 & 0xff) | (in << 16) | (in & 0xff00);		// Byte swapping
-	recover(odd_head, odd_tail, oks,
-		even_head, even_tail, eks, 11, statelist, in << 1, bucket);
-
+	recover(odd_head, odd_tail, oks, even_head, even_tail, eks, 11, statelist, in << 1, bucket);
 
 out:
 	free(odd_head);
 	free(even_head);
-	for (uint32_t i = 0; i < 2; i++)
-		for (uint32_t j = 0; j <= 0xff; j++)
-			free(bucket[i][j].head);
-
+	bucket_free(bucket);
 	return statelist;
 }
 

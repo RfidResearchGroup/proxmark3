@@ -80,7 +80,8 @@ int CmdVikingClone(const char *Cmd) {
 		Q5 = true;
 
 	rawID = getVikingBits(id);
-
+	
+	PrintAndLog("Cloning - ID: %08X, Raw: %08X%08X",id,(uint32_t)(rawID >> 32),(uint32_t) (rawID & 0xFFFFFFFF));
 	UsbCommand c = {CMD_VIKING_CLONE_TAG,{rawID >> 32, rawID & 0xFFFFFFFF, Q5}};
 	clearCommandBuffer();
     SendCommand(&c);
@@ -107,9 +108,10 @@ int CmdVikingSim(const char *Cmd) {
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
 
+	PrintAndLog("Simulating - ID: %08X, Raw: %08X%08X",id,(uint32_t)(rawID >> 32),(uint32_t) (rawID & 0xFFFFFFFF));
+	
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
-	PrintAndLog("preparing to sim ask data: %d bits", size);
-	num_to_bytebits(rawID, 64, c.d.asBytes);
+	num_to_bytebits(rawID, size, c.d.asBytes);
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;

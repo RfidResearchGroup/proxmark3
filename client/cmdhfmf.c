@@ -53,7 +53,7 @@ start:
 
 	// wait cycle
 	while (true) {
-		printf(".");
+        printf(".");
 		fflush(stdout);
 		if (ukbhit()) {
 			tmpchar = getchar();
@@ -63,17 +63,18 @@ start:
 		}
 		
 		UsbCommand resp;
-		if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 			isOK  = resp.arg[0];
+			printf("\n\n");
 			switch (isOK) {
 				case -1 : PrintAndLog("Button pressed. Aborted.\n"); break;
 				case -2 : PrintAndLog("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).\n"); break;
 				case -3 : PrintAndLog("Card is not vulnerable to Darkside attack (its random number generator is not predictable).\n"); break;
 				case -4 : PrintAndLog("Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
-					  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour.\n"); break;
+						  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour.\n"); break;
 				default: ;
 			}
-			uid = (uint32_t)bytes_to_num(resp.d.asBytes, 4);
+			uid = (uint32_t)bytes_to_num(resp.d.asBytes +  0, 4);
 			nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
 			par_list = bytes_to_num(resp.d.asBytes +  8, 8);
 			ks_list = bytes_to_num(resp.d.asBytes +  16, 8);
@@ -711,6 +712,7 @@ int CmdHF14AMfNested(const char *Cmd)
 		
 		// nested sectors
 		iterations = 0;
+		PrintAndLog("enter nested...");
 		bool calibrate = true;
 
 		for (i = 0; i < NESTED_SECTOR_RETRY; i++) {
@@ -731,7 +733,7 @@ int CmdHF14AMfNested(const char *Cmd)
 						case -5 :
 							calibrate = false;
 							iterations++;
-							e_sector[sectorNo].foundKey[trgKeyType] = TRUE;
+							e_sector[sectorNo].foundKey[trgKeyType] = 1;
 							e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
 							continue;
 							
@@ -763,7 +765,7 @@ int CmdHF14AMfNested(const char *Cmd)
 				SendCommand(&c);
 
 				UsbCommand resp;
-				if ( !WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
+				if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500)) continue;
 					
 				uint8_t isOK  = resp.arg[0] & 0xff;
 				if (!isOK) continue;
@@ -1131,6 +1133,7 @@ int CmdHF14AMfChk(const char *Cmd)
 			
 			// skip already found keys.
 			if (e_sector[i].foundKey[trgKeyType]) continue;
+			
 			
 			for (uint32_t c = 0; c < keycnt; c += max_keys) {
 				
