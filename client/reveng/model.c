@@ -1,5 +1,5 @@
 /* model.c
- * Greg Cook, 9/Apr/2015
+ * Greg Cook, 29/Jul/2015
  */
 
 /* CRC RevEng, an arbitrary-precision CRC calculator and algorithm finder
@@ -21,7 +21,8 @@
  * along with CRC RevEng.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* 2014-01-14: added CRC-8/DVB-S2
+/* 2015-07-29: eliminated struct malias.isprimry
+ * 2014-01-14: added CRC-8/DVB-S2
  * 2014-01-11: corrected CRC-40/GSM, added alias CRC-8/AES
  * 2013-10-14: added CRC-13/BBC and six cdma2000 algorithms
  * 2013-06-11: ensure BMP_BIT is an integer constant to compile presets
@@ -67,8 +68,7 @@ struct mpreset {
 
 struct malias {
 	const char *name;
-	const struct mpreset *model;
-	const int isprimry;
+	const struct mpreset *const model;
 };
 
 #ifdef PRESETS
@@ -404,110 +404,110 @@ static const struct mpreset models[] = {
 
 /* List of names with pointers to models, pre-sorted for use with bsearch() */
 static const struct malias aliases[] = {
-	{"ARC",			models+47, 1},	/*   0 */
-	{"B-CRC-32",		models+ 4, 0},	/*   1 */
-	{"CKSUM",		models+ 2, 0},	/*   2 */
-	{"CRC-10",		models+58, 1},	/*   3 */
-	{"CRC-10/CDMA2000",	models+71, 1},	/*   4 */
-	{"CRC-11",		models+45, 1},	/*   5 */
-	{"CRC-12/3GPP",		models+53, 1},	/*   6 */
-	{"CRC-12/CDMA2000",	models+70, 1},	/*   7 */
-	{"CRC-12/DECT",		models+52, 1},	/*   8 */
-	{"CRC-13/BBC",		models+69, 1},	/*   9 */
-	{"CRC-14/DARC",		models+30, 1},	/*  10 */
-	{"CRC-15",		models+56, 1},	/*  11 */
-	{"CRC-15/MPT1327",	models+67, 1},	/*  12 */
-	{"CRC-16",		models+47, 0},	/*  13 */
-	{"CRC-16/ACORN",	models+15, 0},	/*  14 */
-	{"CRC-16/ARC",		models+47, 0},	/*  15 */
-	{"CRC-16/AUG-CCITT",	models+17, 1},	/*  16 */
-	{"CRC-16/BUYPASS",	models+46, 1},	/*  17 */
-	{"CRC-16/CCITT",	models+16, 0},	/*  18 */
-	{"CRC-16/CCITT-FALSE",	models+21, 1},	/*  19 */
-	{"CRC-16/CCITT-TRUE",	models+16, 0},	/*  20 */
-	{"CRC-16/CDMA2000",	models+66, 1},	/*  21 */
-	{"CRC-16/DARC",		models+22, 0},	/*  22 */
-	{"CRC-16/DDS-110",	models+49, 1},	/*  23 */
-	{"CRC-16/DECT-R",	models+ 8, 1},	/*  24 */
-	{"CRC-16/DECT-X",	models+ 7, 1},	/*  25 */
-	{"CRC-16/DNP",		models+36, 1},	/*  26 */
-	{"CRC-16/EN-13757",	models+35, 1},	/*  27 */
-	{"CRC-16/EPC",		models+22, 0},	/*  28 */
-	{"CRC-16/GENIBUS",	models+22, 1},	/*  29 */
-	{"CRC-16/I-CODE",	models+22, 0},	/*  30 */
-	{"CRC-16/IBM-SDLC",	models+24, 0},	/*  31 */
-	{"CRC-16/ISO-HDLC",	models+24, 0},	/*  32 */
-	{"CRC-16/LHA",		models+47, 0},	/*  33 */
-	{"CRC-16/MAXIM",	models+48, 1},	/*  34 */
-	{"CRC-16/MCRF4XX",	models+23, 1},	/*  35 */
-	{"CRC-16/RIELLO",	models+19, 1},	/*  36 */
-	{"CRC-16/SPI-FUJITSU",	models+17, 0},	/*  37 */
-	{"CRC-16/T10-DIF",	models+57, 1},	/*  38 */
-	{"CRC-16/TELEDISK",	models+63, 1},	/*  39 */
-	{"CRC-16/TMS37157",	models+18, 1},	/*  40 */
-	{"CRC-16/USB",		models+51, 1},	/*  41 */
-	{"CRC-16/VERIFONE",	models+46, 0},	/*  42 */
-	{"CRC-24",		models+55, 1},	/*  43 */
-	{"CRC-24/FLEXRAY-A",	models+42, 1},	/*  44 */
-	{"CRC-24/FLEXRAY-B",	models+41, 1},	/*  45 */
-	{"CRC-24/OPENPGP",	models+55, 0},	/*  46 */
-	{"CRC-3/ROHC",		models+43, 1},	/*  47 */
-	{"CRC-31/PHILIPS",	models+12, 1},	/*  48 */
-	{"CRC-32",		models+ 6, 1},	/*  49 */
-	{"CRC-32/AAL5",		models+ 4, 0},	/*  50 */
-	{"CRC-32/ADCCP",	models+ 6, 0},	/*  51 */
-	{"CRC-32/BZIP2",	models+ 4, 1},	/*  52 */
-	{"CRC-32/CASTAGNOLI",	models+29, 0},	/*  53 */
-	{"CRC-32/DECT-B",	models+ 4, 0},	/*  54 */
-	{"CRC-32/ISCSI",	models+29, 0},	/*  55 */
-	{"CRC-32/MPEG-2",	models+ 3, 1},	/*  56 */
-	{"CRC-32/POSIX",	models+ 2, 1},	/*  57 */
-	{"CRC-32C",		models+29, 1},	/*  58 */
-	{"CRC-32D",		models+65, 1},	/*  59 */
-	{"CRC-32Q",		models+54, 1},	/*  60 */
-	{"CRC-4/ITU",		models+32, 1},	/*  61 */
-	{"CRC-40/GSM",		models+ 1, 1},	/*  62 */
-	{"CRC-5/EPC",		models+40, 1},	/*  63 */
-	{"CRC-5/ITU",		models+64, 1},	/*  64 */
-	{"CRC-5/USB",		models+31, 1},	/*  65 */
-	{"CRC-6/CDMA2000-A",	models+61, 1},	/*  66 */
-	{"CRC-6/CDMA2000-B",	models+26, 1},	/*  67 */
-	{"CRC-6/DARC",		models+44, 1},	/*  68 */
-	{"CRC-6/ITU",		models+13, 1},	/*  69 */
-	{"CRC-64",		models+37, 1},	/*  70 */
-	{"CRC-64/WE",		models+38, 1},	/*  71 */
-	{"CRC-64/XZ",		models+39, 1},	/*  72 */
-	{"CRC-7",		models+25, 1},	/*  73 */
-	{"CRC-7/ROHC",		models+62, 1},	/*  74 */
-	{"CRC-8",		models+ 9, 1},	/*  75 */
-	{"CRC-8/AES",		models+28, 0},	/*  76 */
-	{"CRC-8/CDMA2000",	models+60, 1},	/*  77 */
-	{"CRC-8/DARC",		models+34, 1},	/*  78 */
-	{"CRC-8/DVB-S2",	models+68, 1},	/*  79 */
-	{"CRC-8/EBU",		models+28, 1},	/*  80 */
-	{"CRC-8/I-CODE",	models+27, 1},	/*  81 */
-	{"CRC-8/ITU",		models+10, 1},	/*  82 */
-	{"CRC-8/MAXIM",		models+33, 1},	/*  83 */
-	{"CRC-8/ROHC",		models+11, 1},	/*  84 */
-	{"CRC-8/WCDMA",		models+59, 1},	/*  85 */
-	{"CRC-82/DARC",		models+14, 1},	/*  86 */
-	{"CRC-A",		models+20, 1},	/*  87 */
-	{"CRC-B",		models+24, 0},	/*  88 */
-	{"CRC-CCITT",		models+16, 0},	/*  89 */
-	{"CRC-IBM",		models+47, 0},	/*  90 */
-	{"DOW-CRC",		models+33, 0},	/*  91 */
-	{"JAMCRC",		models+ 5, 1},	/*  92 */
-	{"KERMIT",		models+16, 1},	/*  93 */
-	{"MODBUS",		models+50, 1},	/*  94 */
-	{"PKZIP",		models+ 6, 0},	/*  95 */
-	{"R-CRC-16",		models+ 8, 0},	/*  96 */
-	{"X-25",		models+24, 1},	/*  97 */
-	{"X-CRC-12",		models+52, 0},	/*  98 */
-	{"X-CRC-16",		models+ 7, 0},	/*  99 */
-	{"XFER",		models+ 0, 1},	/* 100 */
-	{"XMODEM",		models+15, 1},	/* 101 */
-	{"ZMODEM",		models+15, 0},	/* 102 */
-	{NULL,			NULL,      0},	/* terminating entry */
+	{"ARC",			models+47},	/*   0 */
+	{"B-CRC-32",		models+ 4},	/*   1 */
+	{"CKSUM",		models+ 2},	/*   2 */
+	{"CRC-10",		models+58},	/*   3 */
+	{"CRC-10/CDMA2000",	models+71},	/*   4 */
+	{"CRC-11",		models+45},	/*   5 */
+	{"CRC-12/3GPP",		models+53},	/*   6 */
+	{"CRC-12/CDMA2000",	models+70},	/*   7 */
+	{"CRC-12/DECT",		models+52},	/*   8 */
+	{"CRC-13/BBC",		models+69},	/*   9 */
+	{"CRC-14/DARC",		models+30},	/*  10 */
+	{"CRC-15",		models+56},	/*  11 */
+	{"CRC-15/MPT1327",	models+67},	/*  12 */
+	{"CRC-16",		models+47},	/*  13 */
+	{"CRC-16/ACORN",	models+15},	/*  14 */
+	{"CRC-16/ARC",		models+47},	/*  15 */
+	{"CRC-16/AUG-CCITT",	models+17},	/*  16 */
+	{"CRC-16/BUYPASS",	models+46},	/*  17 */
+	{"CRC-16/CCITT",	models+16},	/*  18 */
+	{"CRC-16/CCITT-FALSE",	models+21},	/*  19 */
+	{"CRC-16/CCITT-TRUE",	models+16},	/*  20 */
+	{"CRC-16/CDMA2000",	models+66},	/*  21 */
+	{"CRC-16/DARC",		models+22},	/*  22 */
+	{"CRC-16/DDS-110",	models+49},	/*  23 */
+	{"CRC-16/DECT-R",	models+ 8},	/*  24 */
+	{"CRC-16/DECT-X",	models+ 7},	/*  25 */
+	{"CRC-16/DNP",		models+36},	/*  26 */
+	{"CRC-16/EN-13757",	models+35},	/*  27 */
+	{"CRC-16/EPC",		models+22},	/*  28 */
+	{"CRC-16/GENIBUS",	models+22},	/*  29 */
+	{"CRC-16/I-CODE",	models+22},	/*  30 */
+	{"CRC-16/IBM-SDLC",	models+24},	/*  31 */
+	{"CRC-16/ISO-HDLC",	models+24},	/*  32 */
+	{"CRC-16/LHA",		models+47},	/*  33 */
+	{"CRC-16/MAXIM",	models+48},	/*  34 */
+	{"CRC-16/MCRF4XX",	models+23},	/*  35 */
+	{"CRC-16/RIELLO",	models+19},	/*  36 */
+	{"CRC-16/SPI-FUJITSU",	models+17},	/*  37 */
+	{"CRC-16/T10-DIF",	models+57},	/*  38 */
+	{"CRC-16/TELEDISK",	models+63},	/*  39 */
+	{"CRC-16/TMS37157",	models+18},	/*  40 */
+	{"CRC-16/USB",		models+51},	/*  41 */
+	{"CRC-16/VERIFONE",	models+46},	/*  42 */
+	{"CRC-24",		models+55},	/*  43 */
+	{"CRC-24/FLEXRAY-A",	models+42},	/*  44 */
+	{"CRC-24/FLEXRAY-B",	models+41},	/*  45 */
+	{"CRC-24/OPENPGP",	models+55},	/*  46 */
+	{"CRC-3/ROHC",		models+43},	/*  47 */
+	{"CRC-31/PHILIPS",	models+12},	/*  48 */
+	{"CRC-32",		models+ 6},	/*  49 */
+	{"CRC-32/AAL5",		models+ 4},	/*  50 */
+	{"CRC-32/ADCCP",	models+ 6},	/*  51 */
+	{"CRC-32/BZIP2",	models+ 4},	/*  52 */
+	{"CRC-32/CASTAGNOLI",	models+29},	/*  53 */
+	{"CRC-32/DECT-B",	models+ 4},	/*  54 */
+	{"CRC-32/ISCSI",	models+29},	/*  55 */
+	{"CRC-32/MPEG-2",	models+ 3},	/*  56 */
+	{"CRC-32/POSIX",	models+ 2},	/*  57 */
+	{"CRC-32C",		models+29},	/*  58 */
+	{"CRC-32D",		models+65},	/*  59 */
+	{"CRC-32Q",		models+54},	/*  60 */
+	{"CRC-4/ITU",		models+32},	/*  61 */
+	{"CRC-40/GSM",		models+ 1},	/*  62 */
+	{"CRC-5/EPC",		models+40},	/*  63 */
+	{"CRC-5/ITU",		models+64},	/*  64 */
+	{"CRC-5/USB",		models+31},	/*  65 */
+	{"CRC-6/CDMA2000-A",	models+61},	/*  66 */
+	{"CRC-6/CDMA2000-B",	models+26},	/*  67 */
+	{"CRC-6/DARC",		models+44},	/*  68 */
+	{"CRC-6/ITU",		models+13},	/*  69 */
+	{"CRC-64",		models+37},	/*  70 */
+	{"CRC-64/WE",		models+38},	/*  71 */
+	{"CRC-64/XZ",		models+39},	/*  72 */
+	{"CRC-7",		models+25},	/*  73 */
+	{"CRC-7/ROHC",		models+62},	/*  74 */
+	{"CRC-8",		models+ 9},	/*  75 */
+	{"CRC-8/AES",		models+28},	/*  76 */
+	{"CRC-8/CDMA2000",	models+60},	/*  77 */
+	{"CRC-8/DARC",		models+34},	/*  78 */
+	{"CRC-8/DVB-S2",	models+68},	/*  79 */
+	{"CRC-8/EBU",		models+28},	/*  80 */
+	{"CRC-8/I-CODE",	models+27},	/*  81 */
+	{"CRC-8/ITU",		models+10},	/*  82 */
+	{"CRC-8/MAXIM",		models+33},	/*  83 */
+	{"CRC-8/ROHC",		models+11},	/*  84 */
+	{"CRC-8/WCDMA",		models+59},	/*  85 */
+	{"CRC-82/DARC",		models+14},	/*  86 */
+	{"CRC-A",		models+20},	/*  87 */
+	{"CRC-B",		models+24},	/*  88 */
+	{"CRC-CCITT",		models+16},	/*  89 */
+	{"CRC-IBM",		models+47},	/*  90 */
+	{"DOW-CRC",		models+33},	/*  91 */
+	{"JAMCRC",		models+ 5},	/*  92 */
+	{"KERMIT",		models+16},	/*  93 */
+	{"MODBUS",		models+50},	/*  94 */
+	{"PKZIP",		models+ 6},	/*  95 */
+	{"R-CRC-16",		models+ 8},	/*  96 */
+	{"X-25",		models+24},	/*  97 */
+	{"X-CRC-12",		models+52},	/*  98 */
+	{"X-CRC-16",		models+ 7},	/*  99 */
+	{"XFER",		models+ 0},	/* 100 */
+	{"XMODEM",		models+15},	/* 101 */
+	{"ZMODEM",		models+15},	/* 102 */
+	{NULL,			NULL     },	/* terminating entry */
 };
 #    define NALIASES 103
 
@@ -520,7 +520,7 @@ static const struct mpreset models[] = {
 #  define NPRESETS 0
 
 static const struct malias aliases[] = {
-	{NULL,			NULL,      0},	/* terminating entry */
+	{NULL,			NULL     },	/* terminating entry */
 };
 #  define NALIASES 0
 
@@ -587,7 +587,7 @@ int
 mbynam(model_t *dest, const char *key) {
 	/* Sets parameters in dest according to the model named by key.
 	 */
-	struct malias akey = {NULL, NULL, 0}, *aptr;
+	struct malias akey = {NULL, NULL}, *aptr;
 	char *ukey, *uptr;
 
 	if(!aliases->name)
@@ -615,7 +615,7 @@ mbynum(model_t *dest, int num) {
 	/* Sets parameters in dest according to the model indexed by num. */
 	if(num > NPRESETS)
 		num = NPRESETS;
-	munpack(dest, models+num);
+	munpack(dest, num+models);
 }
 
 int
@@ -635,7 +635,8 @@ mnames(void) {
 	const struct malias *aptr = aliases;
 
 	while(aptr->name) {
-		if(aptr->isprimry)
+		if(aptr->name == aptr->model->name
+			|| !strcmp(aptr->name, aptr->model->name))
 			size += strlen(aptr->name) + 1;
 		++aptr;
 	}
@@ -644,7 +645,8 @@ mnames(void) {
 		aptr = aliases;
 		sptr = string;
 		while(aptr->name) {
-			if(aptr->isprimry) {
+			if(aptr->name == aptr->model->name
+				|| !strcmp(aptr->name, aptr->model->name)) {
 				strcpy(sptr, aptr->name);
 				sptr += strlen(aptr->name);
 				*sptr++ = '\n';
