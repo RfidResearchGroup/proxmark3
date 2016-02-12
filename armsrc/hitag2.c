@@ -414,7 +414,7 @@ static void hitag_reader_send_bit(int bit) {
 	// Binary puls length modulation (BPLM) is used to encode the data stream
 	// This means that a transmission of a one takes longer than that of a zero
 	
-	// Enable modulation, which means, drop the the field
+	// Enable modulation, which means, drop the field
 	HIGH(GPIO_SSC_DOUT);
 	
 	// Wait for 4-10 times the carrier period
@@ -444,7 +444,7 @@ static void hitag_reader_send_frame(const byte_t* frame, size_t frame_len)
 	}
 	// Send EOF 
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-	// Enable modulation, which means, drop the the field
+	// Enable modulation, which means, drop the field
 	HIGH(GPIO_SSC_DOUT);
 	// Wait for 4-10 times the carrier period
 	while(AT91C_BASE_TC0->TC_CV < T0*6);

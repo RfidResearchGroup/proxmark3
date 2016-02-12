@@ -38,7 +38,7 @@ of stream transmissions (marshmellow)
 - Added `[l] <length>` option to data printdemodbuffer
 - Adjusted lf awid clone to optionally clone to Q5 tags
 - Adjusted lf t55xx detect to find Q5 tags (t5555) instead of just t55x7
-- Adjusted all lf NRZ demods - works more acurately and consistantly (as long as you have strong signal)
+- Adjusted all lf NRZ demods - works more accurately and consistently (as long as you have strong signal)
 - Adjusted lf pskindalademod to reduce false positive reads.
 - Small adjustments to psk, nrz, and ask clock detect routines - more reliable.
 - Adjusted lf em410x em410xsim to accept a clock argument
@@ -49,7 +49,7 @@ of stream transmissions (marshmellow)
 - Adjusted timings for t55xx commands.  more reliable now. (marshmellow & iceman)
 - `lf cmdread` adjusted input methods and added help text (marshmellow & iceman)
 - changed `lf config t <threshold>` to be 0 - 128 and will trigger on + or - threshold value (marshmellow) 
-- `hf iclass dump` cli options - can now dump AA1 and AA2 with different keys in one run (does not go to muliple pages for the larger tags yet)
+- `hf iclass dump` cli options - can now dump AA1 and AA2 with different keys in one run (does not go to multiple pages for the larger tags yet)
 - Revised workflow for StandAloneMode14a (Craig Young)
 - EPA functions (`hf epa`) now support both ISO 14443-A and 14443-B cards (frederikmoellers)
 - 'hw version' only talks to ARM at startup, after that the info is cached. (pwpiwi)

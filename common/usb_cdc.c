@@ -363,7 +363,7 @@ uint32_t usb_write(const byte_t* data, const size_t len) {
 		cpt = MIN(length, AT91C_EP_IN_SIZE-1);
 		length -= cpt;
 		while (cpt--) pUdp->UDP_FDR[AT91C_EP_IN] = *data++;
-		// Wait for the the first bank to be sent
+		// Wait for the first bank to be sent
 		while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {
 			if (!usb_check()) return length;
 		}

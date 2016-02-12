@@ -1212,7 +1212,7 @@ int CmdHFiClass_loclass(const char *Cmd) {
 		PrintAndLog("f <filename>  Bruteforce iclass dumpfile");
 		PrintAndLog("                   An iclass dumpfile is assumed to consist of an arbitrary number of");
 		PrintAndLog("                   malicious CSNs, and their protocol responses");
-		PrintAndLog("                   The the binary format of the file is expected to be as follows: ");
+		PrintAndLog("                   The binary format of the file is expected to be as follows: ");
 		PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
 		PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
 		PrintAndLog("                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
