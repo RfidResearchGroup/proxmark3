@@ -135,8 +135,7 @@ uint32_t bytebits_to_byte(uint8_t *src, size_t numbits)
 uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits)
 {
 	uint32_t num = 0;
-	for(int i = 0 ; i < numbits ; i++)
-	{
+	for(int i = 0 ; i < numbits ; i++) {
 		num = (num << 1) | *(src + (numbits-(i+1)));
 	}
 	return num;

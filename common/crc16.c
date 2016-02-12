@@ -7,7 +7,8 @@
 //-----------------------------------------------------------------------------
 
 #include "crc16.h"
-#define CRC16_MASK_CCITT 0x1021
+#define CRC16_POLY_CCITT 0x1021
+#define CRC16_POLY 0x8408
 
 unsigned short update_crc16( unsigned short crc, unsigned char c )
 {
@@ -15,11 +16,11 @@ unsigned short update_crc16( unsigned short crc, unsigned char c )
 
   v = (crc ^ c) & 0xff;
   for (i = 0; i < 8; i++) {
-      tcrc = ( (tcrc ^ v) & 1 ) ? ( tcrc >> 1 ) ^ 0x8408 : tcrc >> 1;
+      tcrc = ( (tcrc ^ v) & 1 ) ? ( tcrc >> 1 ) ^ CRC16_POLY : tcrc >> 1;
       v >>= 1;
   }
 
-  return ((crc >> 8) ^ tcrc)&0xffff;
+  return ((crc >> 8) ^ tcrc) & 0xffff;
 }
 
 uint16_t crc16(uint8_t const *message, int length, uint16_t remainder, uint16_t polynomial) {
@@ -41,11 +42,11 @@ uint16_t crc16(uint8_t const *message, int length, uint16_t remainder, uint16_t 
 }
 
 uint16_t crc16_ccitt(uint8_t const *message, int length) {
-    return crc16(message, length, 0xffff, CRC16_MASK_CCITT);
+    return crc16(message, length, 0xffff, CRC16_POLY_CCITT);
 }
 
 uint16_t crc16_ccitt_kermit(uint8_t const *message, int length) {
-    return bit_reverse_uint16(crc16(message, length, 0x0000, CRC16_MASK_CCITT));
+    return bit_reverse_uint16(crc16(message, length, 0x0000, CRC16_POLY_CCITT));
 }
 uint16_t bit_reverse_uint16 (uint16_t value) {
 	const uint16_t mask0 = 0x5555;
