@@ -503,10 +503,18 @@ uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits) {
 
 // RotateLeft - Ultralight, Desfire, works on byte level
 // 00-01-02  >> 01-02-00
-void rol(uint8_t *data, const size_t len){
+void rol(uint8_t *data, const size_t len){	
     uint8_t first = data[0];
     for (size_t i = 0; i < len-1; i++) {
         data[i] = data[i+1];
     }
     data[len-1] = first;
+}
+
+uint32_t SwapBits(uint32_t value, int nrbits) {
+	uint32_t newvalue = 0;
+	for(int i = 0; i < nrbits; i++) {
+		newvalue ^= ((value >> i) & 1) << (nrbits - 1 - i);
+	}
+	return newvalue;
 }

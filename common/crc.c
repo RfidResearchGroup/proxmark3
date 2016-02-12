@@ -7,7 +7,6 @@
 //-----------------------------------------------------------------------------
 #include "crc.h"
 #include "util.h"
-#include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -44,8 +43,7 @@ uint32_t crc_finish(crc_t *crc)
 }
 
 //credits to iceman
-uint32_t CRC8Maxim(uint8_t *buff, size_t size) 
-{
+uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
 	crc_t crc;
 	crc_init(&crc, 9, 0x8c, 0x00, 0x00);
 	crc_clear(&crc);
@@ -68,10 +66,4 @@ uint32_t CRC8Legic(uint8_t *buff, size_t size) {
 	return SwapBits(crc_finish(&crc), 8);
 }
 
-uint32_t SwapBits(uint32_t value, int nrbits) {
-	uint32_t newvalue = 0;
-	for(int i = 0; i < nrbits; i++) {
-		newvalue ^= ((value >> i) & 1) << (nrbits - 1 - i);
-	}
-	return newvalue;
-}
+
