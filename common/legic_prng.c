@@ -26,7 +26,9 @@ void legic_prng_init(uint8_t init) {
 void legic_prng_forward(int count) {
   lfsr.c += count;
   while(count--) {
-    lfsr.a = lfsr.a >> 1 | (lfsr.a ^ lfsr.a >> 6) << 6;
+    //lfsr.a = lfsr.a >> 1 | (lfsr.a ^ lfsr.a >> 6) << 6;
+	// According: http://www.proxmark.org/forum/viewtopic.php?pid=5437#p5437
+	lfsr.a = (lfsr.a >> 1 | (lfsr.a ^ lfsr.a >> 6) << 6) & 0x7F;
     lfsr.b = lfsr.b >> 1 | (lfsr.b ^ lfsr.b >> 2 ^ lfsr.b >> 3 ^ lfsr.b >> 7) << 7;
   }
 }

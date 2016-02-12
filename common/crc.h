@@ -26,7 +26,7 @@ typedef struct crc {
  * final_xor is XORed onto the state before returning it from crc_result(). */
 extern void crc_init(crc_t *crc, int order, uint32_t polynom, uint32_t initial_value, uint32_t final_xor);
 
-/* Update the crc state. data is the data of length data_width bits (only the the
+/* Update the crc state. data is the data of length data_width bits (only the
  * data_width lower-most bits are used).
  */
 extern void crc_update(crc_t *crc, uint32_t data, int data_width);
@@ -38,7 +38,12 @@ extern void crc_clear(crc_t *crc);
 extern uint32_t crc_finish(crc_t *crc);
 
 // Calculate CRC-8/Maxim checksum
-uint32_t CRC8Maxim(uint8_t *buff, size_t size  );
+uint32_t CRC8Maxim(uint8_t *buff, size_t size);
+
+// Calculate CRC-8/Legic checksum
+uint32_t CRC8Legic(uint8_t *buff, size_t size);
+uint32_t SwapBits(uint32_t value, int nrbits);
+
 /* Static initialization of a crc structure */
 #define CRC_INITIALIZER(_order, _polynom, _initial_value, _final_xor) { \
 	.state = ((_initial_value) & ((1L<<(_order))-1)), \

@@ -6,6 +6,8 @@
 // Generic CRC calculation code.
 //-----------------------------------------------------------------------------
 #include "crc.h"
+#include "util.h"
+#include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -21,8 +23,7 @@ void crc_init(crc_t *crc, int order, uint32_t polynom, uint32_t initial_value, u
 
 void crc_update(crc_t *crc, uint32_t data, int data_width)
 {
-	int i;
-	for(i=0; i<data_width; i++) {
+	for( int i=0; i < data_width; i++) {
 		int oldstate = crc->state;
 		crc->state = crc->state >> 1;
 		if( (oldstate^data) & 1 ) {
@@ -49,8 +50,28 @@ uint32_t CRC8Maxim(uint8_t *buff, size_t size)
 	crc_init(&crc, 9, 0x8c, 0x00, 0x00);
 	crc_clear(&crc);
 
-	for (size_t i=0; i < size; ++i){
+	for (size_t i=0; i < size; ++i)
 		crc_update(&crc, buff[i], 8);
-	}
+
 	return crc_finish(&crc);
+}
+
+uint32_t CRC8Legic(uint8_t *buff, size_t size) {
+
+	// Poly 0x63,   reversed poly 0xC6,  Init 0x55,  Final 0x00
+	crc_t crc;
+	crc_init(&crc, 8, 0xC6, 0x55, 0);
+	crc_clear(&crc);
+	
+	for ( int i = 0; i < size; ++i)
+		crc_update(&crc, buff[i], 8);
+	return SwapBits(crc_finish(&crc), 8);
+}
+
+uint32_t SwapBits(uint32_t value, int nrbits) {
+	uint32_t newvalue = 0;
+	for(int i = 0; i < nrbits; i++) {
+		newvalue ^= ((value >> i) & 1) << (nrbits - 1 - i);
+	}
+	return newvalue;
 }
