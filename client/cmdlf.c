@@ -31,6 +31,7 @@
 #include "cmdlfio.h"
 #include "lfdemod.h"
 #include "cmdlfviking.h"
+#include "cmdlfpresco.h"
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_cmdread(void) {
@@ -1212,13 +1213,13 @@ static command_t CommandTable[] =
 	{"em4x",        CmdLFEM4X,          1, "{ EM4X RFIDs... }"},
 	{"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
 	{"hitag",       CmdLFHitag,         1, "{ HITAG RFIDs... }"},
-	{"io",       	  CmdLFIO,	          1, "{ IOPROX RFIDs... }"},
+	{"io",			CmdLFIO,			1, "{ IOPROX RFIDs... }"},
 	{"pcf7931",     CmdLFPCF7931,       1, "{ PCF7931 RFIDs... }"},
+	{"presco",      CmdLFPresco,        1, "{ Presco RFIDs... }"},
 	{"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
 	{"t55xx",       CmdLFT55XX,         1, "{ T55X7 RFIDs... }"},
 	{"viking",      CmdLFViking,        1, "{ Viking RFIDs... }"},
 	{"config",      CmdLFSetConfig,     0, "Set config for LF sampling, bit/sample, decimation, frequency"},
-
 	{"cmdread",     CmdLFCommandRead,   0, "<off period> <'0' period> <'1' period> <command> ['h' 134] \n\t\t-- Modulate LF reader field to send command before read (all periods in microseconds)"},
 	{"flexdemod",   CmdFlexdemod,       1, "Demodulate samples for FlexPass"},
 	{"indalademod", CmdIndalaDemod,     1, "['224'] -- Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},

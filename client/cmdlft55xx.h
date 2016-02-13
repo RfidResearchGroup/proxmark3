@@ -30,6 +30,7 @@
 #define T55X7_VIKING_CONFIG_BLOCK		0x00088040	// compat mode, data rate 32, Manchester, 2 data blocks
 #define T55X7_NORALYS_CONFIG_BLOCK		0x00088C6A	// compat mode,   (NORALYS - KCP3000)
 #define T55X7_IOPROX_CONFIG_BLOCK		0x00147040  // maxblock 2
+#define T55X7_PRESCO_CONFIG_BLOCK		0x00088088  // data rate 32, Manchester, 5 data blocks, STT
 #define T55X7_bin 0b0010
 
 #define T5555_DEFAULT_CONFIG_BLOCK		0x6001F004  // data rate 64 , ask, manchester, 2 data blocks?
