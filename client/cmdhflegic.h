@@ -21,4 +21,7 @@ int CmdLegicRfSim(const char *Cmd);
 int CmdLegicRfWrite(const char *Cmd);
 int CmdLegicRfFill(const char *Cmd);
 
+int CmdLegicCalcCrc8(const char *Cmd);
+
+int usage_legic_calccrc8(void);
 #endif

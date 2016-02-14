@@ -17,24 +17,35 @@
 #include "cmdhflegic.h"
 #include "cmdmain.h"
 #include "util.h"
+#include "crc.h"
 static int CmdHelp(const char *Cmd);
+
+int usage_legic_calccrc8(void){
+	PrintAndLog("Calculates the legic crc8 on the input hexbytes.");
+	PrintAndLog("There must be an even number of hexsymbols as input.");
+	PrintAndLog("Usage:  hf legic crc8 <hexbytes>");
+	PrintAndLog("Options :");
+	PrintAndLog("  <hexbytes>   : hex bytes in a string");
+	PrintAndLog("");
+	PrintAndLog("Sample  : hf legic crc8 deadbeef1122");
+	return 0;
+}
 
 /*
  *  Output BigBuf and deobfuscate LEGIC RF tag data.
  *   This is based on information given in the talk held
  *  by Henryk Ploetz and Karsten Nohl at 26c3
  */
-int CmdLegicDecode(const char *Cmd)
-{
-	int i, j, k, n;
+int CmdLegicDecode(const char *Cmd) {
+	int i, k, n;
 	int segment_len = 0;
 	int segment_flag = 0;
 	int stamp_len = 0;
 	int crc = 0;
 	int wrp = 0;
 	int wrc = 0;
-	uint8_t data_buf[3076]; // receiver buffer
-	char out_string[3076]; // just use big buffer - bad practice
+	uint8_t data_buf[1200]; // receiver buffer
+	//char out_string[3076]; // just use big buffer - bad practice
 	char token_type[4];
 
 	// copy data from proxmark into buffer
@@ -42,18 +53,19 @@ int CmdLegicDecode(const char *Cmd)
 	WaitForResponse(CMD_ACK,NULL);
 
 	// Output CDF System area (9 bytes) plus remaining header area (12 bytes)
-
+	crc = data_buf[4];
+	uint32_t calc_crc =  CRC8Legic(data_buf, 4);	
+	
 	PrintAndLog("\nCDF: System Area");
 
-	PrintAndLog("MCD: %02x, MSN: %02x %02x %02x, MCC: %02x",
+	PrintAndLog("MCD: %02x, MSN: %02x %02x %02x, MCC: %02x %s",
 		data_buf[0],
 		data_buf[1],
 		data_buf[2],
 		data_buf[3],
-		data_buf[4]
+		data_buf[4],
+		(calc_crc == crc) ? "OK":"Failed" 
 	);
-
-	crc = data_buf[4];
  
 	switch (data_buf[5]&0x7f) {
 		case 0x00 ... 0x2f:
@@ -116,46 +128,46 @@ int CmdLegicDecode(const char *Cmd)
 			(data_buf[i+4]^crc)
 		);
 
-		i+=5;
+		i += 5;
     
 		if ( wrc>0 ) {
 			PrintAndLog("WRC protected area:");
-			for ( k=0, j=0; k < wrc && j<(sizeof(out_string)-3); k++, i++, j += 3) {
-				sprintf(&out_string[j], "%02x", (data_buf[i]^crc));
-				out_string[j+2] = ' ';
-			}
-
-			out_string[j] = '\0';
-
-			PrintAndLog("%s", out_string);
+			
+			for ( k=i; k < wrc; k++)
+				data_buf[k] ^= crc;
+			
+			for ( k=i; k < wrc; k += 8)
+				PrintAndLog("%s", sprint_hex( data_buf+k, 8)  );
+			
+			i += wrc;
 		}
     
 		if ( wrp>wrc ) {
 			PrintAndLog("Remaining write protected area:");
 
-			for (k=0, j=0; k < (wrp-wrc) && j<(sizeof(out_string)-3); k++, i++, j += 3) {
-				sprintf(&out_string[j], "%02x", (data_buf[i]^crc));
-				out_string[j+2] = ' ';
-			};
-
-			out_string[j] = '\0';
-
-			PrintAndLog("%s", out_string);
-			if( (wrp-wrc) == 8 ) {
-				sprintf(out_string, "Card ID: %2X%02X%02X", data_buf[i-4]^crc, data_buf[i-3]^crc, data_buf[i-2]^crc);
-				PrintAndLog("%s", out_string);
+			if ( data_buf[k] > 0) {
+				for (k=i; k < (wrp-wrc); k++)
+					data_buf[k] ^= crc;
 			}
+			
+			for (k=i; k < (wrp-wrc); k++)
+				PrintAndLog("%s", sprint_hex( data_buf+k, 16)  );
+
+			i += (wrp-wrc);
+			
+			if( (wrp-wrc) == 8 )
+				PrintAndLog("Card ID: %2X%02X%02X", data_buf[i-4]^crc, data_buf[i-3]^crc, data_buf[i-2]^crc);			
 		}
     
 		PrintAndLog("Remaining segment payload:");
-		for ( k=0, j=0; k < (segment_len - wrp - 5) && j<(sizeof(out_string)-3); k++, i++, j += 3) {
-			sprintf(&out_string[j], "%02x", (data_buf[i]^crc));
-			out_string[j+2] = ' ';
-		};
-    
-		out_string[j] = '\0';
-    
-		PrintAndLog("%s", out_string);
+		
+		if ( data_buf[k] > 0 ) {
+			for ( k=i; k < (segment_len - wrp - 5); k++)
+				data_buf[k] ^= crc;
+		}
+		
+		for ( k=i; k < (segment_len - wrp - 5); k++)
+			PrintAndLog("%s", sprint_hex( data_buf+k, 16)  );
     
 		// end with last segment
 		if (segment_flag & 0x8) return 0;
@@ -282,7 +294,7 @@ int CmdLegicSave(const char *Cmd) {
 }
 
 int CmdLegicRfSim(const char *Cmd) {
-	UsbCommand c= {CMD_SIMULATE_TAG_LEGIC_RF, {6,3,0}};
+	UsbCommand c = {CMD_SIMULATE_TAG_LEGIC_RF, {6,3,0}};
 	sscanf(Cmd, " %"lli" %"lli" %"lli, &c.arg[0], &c.arg[1], &c.arg[2]);
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -325,15 +337,33 @@ int CmdLegicRfFill(const char *Cmd) {
     return 0;
  }
 
+
+int CmdLegicCalcCrc8(const char *Cmd){
+
+	int len =  strlen(Cmd);	
+	if (len & 1 ) return usage_legic_calccrc8(); 
+	
+	uint8_t *data = malloc(len);
+	if ( data == NULL ) return 1;
+		
+	param_gethex(Cmd, 0, data, len );
+	
+	uint32_t checksum =  CRC8Legic(data, len/2);	
+	PrintAndLog("Bytes: %s || CRC8: %X", sprint_hex(data, len/2), checksum );
+	free(data);
+	return 0;
+} 
+ 
 static command_t CommandTable[] =  {
-	{"help",        CmdHelp,        1, "This help"},
-	{"decode",      CmdLegicDecode, 0, "Display deobfuscated and decoded LEGIC RF tag data (use after hf legic reader)"},
-	{"reader",      CmdLegicRFRead, 0, "[offset [length]] -- read bytes from a LEGIC card"},
-	{"save",        CmdLegicSave,   0, "<filename> [<length>] -- Store samples"},
-	{"load",        CmdLegicLoad,   0, "<filename> -- Restore samples"},
-	{"sim",         CmdLegicRfSim,  0, "[phase drift [frame drift [req/resp drift]]] Start tag simulator (use after load or read)"},
-	{"write",       CmdLegicRfWrite,0, "<offset> <length> -- Write sample buffer (user after load or read)"},
-	{"fill",        CmdLegicRfFill, 0, "<offset> <length> <value> -- Fill/Write tag with constant value"},
+	{"help",	CmdHelp,        1, "This help"},
+	{"decode",	CmdLegicDecode, 0, "Display deobfuscated and decoded LEGIC RF tag data (use after hf legic reader)"},
+	{"read",	CmdLegicRFRead, 0, "[offset][length] -- read bytes from a LEGIC card"},
+	{"save",	CmdLegicSave,   0, "<filename> [<length>] -- Store samples"},
+	{"load",	CmdLegicLoad,   0, "<filename> -- Restore samples"},
+	{"sim",		CmdLegicRfSim,  0, "[phase drift [frame drift [req/resp drift]]] Start tag simulator (use after load or read)"},
+	{"write",	CmdLegicRfWrite,0, "<offset> <length> -- Write sample buffer (user after load or read)"},
+	{"fill",	CmdLegicRfFill, 0, "<offset> <length> <value> -- Fill/Write tag with constant value"},
+	{"crc8",	CmdLegicCalcCrc8, 1, "Calculate Legic CRC8 over given hexbytes"},
 	{NULL, NULL, 0, NULL}
 };
 
