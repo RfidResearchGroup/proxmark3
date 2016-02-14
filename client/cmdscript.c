@@ -98,10 +98,10 @@ int CmdList(const char *Cmd)
  * @param Cmd
  * @return
  */
-int CmdScript(const char *Cmd)
-{
-  CmdsParse(CommandTable, Cmd);
-  return 0;
+int CmdScript(const char *Cmd) {
+	clearCommandBuffer();
+	CmdsParse(CommandTable, Cmd);
+	return 0;
 }
 /**
  * Utility to check the ending of a string (used to check file suffix)

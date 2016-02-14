@@ -73,14 +73,13 @@ static command_t CommandTable[] =
   {NULL, NULL, 0, NULL}
 };
 
-int CmdLFIO(const char *Cmd)
-{
-  CmdsParse(CommandTable, Cmd);
-  return 0; 
+int CmdLFIO(const char *Cmd){
+	clearCommandBuffer();
+	CmdsParse(CommandTable, Cmd);
+	return 0; 
 }
 
-int CmdHelp(const char *Cmd)
-{
-  CmdsHelp(CommandTable);
-  return 0;
+int CmdHelp(const char *Cmd) {
+	CmdsHelp(CommandTable);
+	return 0;
 }

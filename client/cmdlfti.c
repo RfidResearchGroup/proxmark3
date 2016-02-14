@@ -298,11 +298,12 @@ static command_t CommandTable[] = {
 };
 
 int CmdLFTI(const char *Cmd){
-  CmdsParse(CommandTable, Cmd);
-  return 0;
+	clearCommandBuffer();
+	CmdsParse(CommandTable, Cmd);
+	return 0;
 }
 
 int CmdHelp(const char *Cmd){
-  CmdsHelp(CommandTable);
-  return 0;
+	CmdsHelp(CommandTable);
+	return 0;
 }

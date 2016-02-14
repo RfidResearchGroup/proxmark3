@@ -212,6 +212,7 @@ static command_t CommandTable[] = {
 };
 
 int CmdLFPresco(const char *Cmd) {
+	clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }

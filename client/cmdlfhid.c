@@ -372,6 +372,7 @@ static command_t CommandTable[] = {
 };
 
 int CmdLFHID(const char *Cmd) {
+	clearCommandBuffer();
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }

@@ -2411,8 +2411,8 @@ static command_t CommandTable[] =
 	{NULL, NULL, 0, NULL}
 };
 
-int CmdData(const char *Cmd)
-{
+int CmdData(const char *Cmd){
+	clearCommandBuffer();
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }

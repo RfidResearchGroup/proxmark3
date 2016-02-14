@@ -255,6 +255,7 @@ static command_t CommandTable[] = {
 };
 
 int CmdLFAWID(const char *Cmd) {
+	clearCommandBuffer();
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }

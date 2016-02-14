@@ -126,6 +126,7 @@ static command_t CommandTable[] = {
 };
 
 int CmdLFViking(const char *Cmd) {
+	clearCommandBuffer();
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
