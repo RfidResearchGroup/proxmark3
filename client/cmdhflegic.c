@@ -31,6 +31,13 @@ int usage_legic_calccrc8(void){
 	return 0;
 }
 
+int usage_legic_load(void){
+	PrintAndLog("It loads datasamples from the file `filename` to device memory");
+	PrintAndLog("Usage:  hf legic load <file name>");
+	PrintAndLog(" sample: hf legic load filename");
+	return 0;
+}
+
 /*
  *  Output BigBuf and deobfuscate LEGIC RF tag data.
  *   This is based on information given in the talk held
@@ -64,7 +71,7 @@ int CmdLegicDecode(const char *Cmd) {
 		data_buf[2],
 		data_buf[3],
 		data_buf[4],
-		(calc_crc == crc) ? "OK":"Failed" 
+		(calc_crc == crc) ? "OK":"Fail" 
 	);
  
 	switch (data_buf[5]&0x7f) {
@@ -105,6 +112,10 @@ int CmdLegicDecode(const char *Cmd) {
 	PrintAndLog("\nADF: User Area");
   
 	i = 22;  
+	uint8_t segCrcBytes[8] = {0x00};
+	uint32_t segCalcCRC = 0;
+	uint32_t segCRC = 0;
+	
 	for ( n=0; n<64; n++ ) {
 		segment_len = ((data_buf[i+1]^crc)&0x0f) * 256 + (data_buf[i]^crc);
 		segment_flag = ((data_buf[i+1]^crc)&0xf0)>>4;
@@ -112,7 +123,20 @@ int CmdLegicDecode(const char *Cmd) {
 		wrp = (data_buf[i+2]^crc);
 		wrc = ((data_buf[i+3]^crc)&0x70)>>4;
 
-		PrintAndLog("Segment %02u: raw header=%02x %02x %02x %02x, flag=%01x (valid=%01u, last=%01u), len=%04u, WRP=%02u, WRC=%02u, RD=%01u, CRC=%02x",
+		/* validate segment-crc */
+		segCRC = data_buf[i+4]^crc;
+		
+		segCrcBytes[0]=data_buf[0]; //uid0
+		segCrcBytes[1]=data_buf[1]; //uid1
+		segCrcBytes[2]=data_buf[2]; //uid2
+		segCrcBytes[3]=data_buf[3]; //uid3
+		segCrcBytes[4]=(data_buf[i]^crc); //hdr0
+		segCrcBytes[5]=(data_buf[i+1]^crc); //hdr1
+		segCrcBytes[6]=(data_buf[i+2]^crc); //hdr2
+		segCrcBytes[7]=(data_buf[i+3]^crc); //hdr3
+		segCalcCRC = CRC8Legic(segCrcBytes, 8);
+
+		PrintAndLog("Segment %02u: raw header=%02x %02x %02x %02x, flag=%01x (valid=%01u, last=%01u), len=%04u, WRP=%02u, WRC=%02u, RD=%01u, CRC=%02x  (%s)",
 			n,
 			data_buf[i]^crc,
 			data_buf[i+1]^crc,
@@ -125,7 +149,8 @@ int CmdLegicDecode(const char *Cmd) {
 			wrp,
 			wrc,
 			((data_buf[i+3]^crc)&0x80)>>7,
-			(data_buf[i+4]^crc)
+			segCRC,
+			( segCRC == segCalcCRC ) ? "OK" : "fail"
 		);
 
 		i += 5;
@@ -189,18 +214,13 @@ int CmdLegicRFRead(const char *Cmd) {
 }
 
 int CmdLegicLoad(const char *Cmd) {
-	char filename[FILE_PATH_SIZE] = {0x00};
-	int len = 0;
 	
 	char cmdp = param_getchar(Cmd, 0);
-	if ( cmdp == 'H' || cmdp == 'h' || cmdp == 0x00) {
-		PrintAndLog("It loads datasamples from the file `filename` to device memory");
-		PrintAndLog("Usage:  hf legic load <file name>");
-		PrintAndLog(" sample: hf legic load filename");
-		return 0;
-	}
+	if ( cmdp == 'H' || cmdp == 'h' || cmdp == 0x00) return usage_legic_load();
 
-	len = strlen(Cmd);	
+	char filename[FILE_PATH_SIZE] = {0x00};
+	int len = strlen(Cmd);
+	
 	if (len > FILE_PATH_SIZE) {
 		PrintAndLog("Filepath too long (was %s bytes), max allowed is %s ", len, FILE_PATH_SIZE);
 		return 0;
@@ -215,12 +235,12 @@ int CmdLegicLoad(const char *Cmd) {
 	
     char line[80]; 
 	int offset = 0; 
-	uint32_t data[8] = {0x00};
+	uint8_t data[8] = {0x00};
 	
     while ( fgets(line, sizeof(line), f) ) {
         int res = sscanf(line, "%x %x %x %x %x %x %x %x", 
-            &data[0], &data[1], &data[2], &data[3],
-            &data[4], &data[5], &data[6], &data[7]);
+            (unsigned int *)&data[0], (unsigned int *)&data[1], (unsigned int *)&data[2], (unsigned int *)&data[3],
+            (unsigned int *)&data[4], (unsigned int *)&data[5], (unsigned int *)&data[6], (unsigned int *)&data[7]);
 			
         if(res != 8) {
           PrintAndLog("Error: could not read samples");
@@ -336,7 +356,6 @@ int CmdLegicRfFill(const char *Cmd) {
     SendCommand(&cmd);
     return 0;
  }
-
 
 int CmdLegicCalcCrc8(const char *Cmd){
 
