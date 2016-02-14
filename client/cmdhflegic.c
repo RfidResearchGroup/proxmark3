@@ -47,7 +47,7 @@ int CmdLegicDecode(const char *Cmd) {
 	int i, k, n;
 	int segment_len = 0;
 	int segment_flag = 0;
-	int stamp_len = 0;
+	uint8_t stamp_len = 0;
 	int crc = 0;
 	int wrp = 0;
 	int wrc = 0;

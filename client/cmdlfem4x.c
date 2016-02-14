@@ -11,15 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdlf.h"
 #include "cmdlfem4x.h"
-#include "lfdemod.h"
 
 char *global_em410xId;
 

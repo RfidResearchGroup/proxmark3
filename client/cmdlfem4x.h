@@ -10,6 +10,16 @@
 
 #ifndef CMDLFEM4X_H__
 #define CMDLFEM4X_H__
+#include "proxmark3.h"
+#include "ui.h"
+#include "util.h"
+#include "graph.h"
+#include "cmdparser.h"
+#include "cmddata.h"
+#include "cmdmain.h"
+#include "cmdmain.h"
+#include "cmdlf.h"
+#include "lfdemod.h"
 
 int CmdEMdemodASK(const char *Cmd);
 int CmdEM410xRead(const char *Cmd);
