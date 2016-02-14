@@ -677,6 +677,20 @@ int VikingDemod_AM(uint8_t *dest, size_t *size) {
 	return (int) startIdx;
 }
 
+// find presco preamble 0x10D in already demoded data
+int PrescoDemod(uint8_t *dest, size_t *size) {
+	//make sure buffer has data
+	if (*size < 64*2) return -2;
+
+	size_t startIdx = 0;
+	uint8_t preamble[] = {1,0,0,0,0,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0};
+	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
+	if (errChk == 0) return -4; //preamble not found
+	//return start position
+	return (int) startIdx;
+}
+
+
 // Ask/Biphase Demod then try to locate an ISO 11784/85 ID
 // BitStream must contain previously askrawdemod and biphasedemoded data
 int FDXBdemodBI(uint8_t *dest, size_t *size)

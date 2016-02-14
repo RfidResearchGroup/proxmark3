@@ -74,19 +74,44 @@ int GetPrescoBits(uint32_t sitecode, uint32_t usercode, uint8_t	*prescoBits) {
 	if (bitLen != 88) return 0;
 	return 1;
 }
+//see ASKDemod for what args are accepted
+int CmdPrescoDemod(const char *Cmd) {
+	if (!ASKDemod(Cmd, false, false, 1)) {
+		if (g_debugMode) PrintAndLog("ASKDemod failed");
+		return 0;
+	}
+	size_t size = DemodBufferLen;
+	//call lfdemod.c demod for Viking
+	int ans = PrescoDemod(DemodBuffer, &size);
+	if (ans < 0) {
+		if (g_debugMode) PrintAndLog("Error Presco_Demod %d", ans);
+		return 0;
+	}
+	//got a good demod
+	uint32_t raw1 = bytebits_to_byte(DemodBuffer+ans, 32);
+	uint32_t raw2 = bytebits_to_byte(DemodBuffer+ans+32, 32);
+	uint32_t cardid = bytebits_to_byte(DemodBuffer+ans+24, 32);
+	PrintAndLog("Presco Tag Found: Card ID %08X", cardid);
+	PrintAndLog("Raw: %08X%08X", raw1,raw2);
+	setDemodBuf(DemodBuffer+ans, 64, 0);
+	
+	// uint32_t sitecode = 0, usercode = 0;
+	// GetWiegandFromPresco(id, &sitecode, &usercode);
+	// PrintAndLog8("SiteCode %d  |  UserCode %d", sitecode, usercode);
+	
+	return 1;
+}
 
 //see ASKDemod for what args are accepted
 int CmdPrescoRead(const char *Cmd) {
-	PrintAndLog("Number: 123456789 --> Sitecode 30 | usercode 8665");
-//	GetWiegandFromPresco("123456789");
+	//	Presco Number: 123456789 --> Sitecode 30 | usercode 8665
 
 	// read lf silently
-	//CmdLFRead("s");
+	CmdLFRead("s");
 	// get samples silently
-	//getSamples("30000",false);
-	// demod and output viking ID	
-	//return CmdVikingDemod(Cmd);
-	return 0;
+	getSamples("30000",false);
+	// demod and output Presco ID	
+	return CmdPrescoDemod(Cmd);
 }
 
 int CmdPrescoClone(const char *Cmd) {
