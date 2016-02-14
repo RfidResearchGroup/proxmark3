@@ -235,28 +235,53 @@ int CmdLegicLoad(const char *Cmd) {
 	
     char line[80]; 
 	int offset = 0; 
-	uint8_t data[8] = {0x00};
-	
+	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
+	int index = 0;
+	int totalbytes = 0;
     while ( fgets(line, sizeof(line), f) ) {
         int res = sscanf(line, "%x %x %x %x %x %x %x %x", 
-            (unsigned int *)&data[0], (unsigned int *)&data[1], (unsigned int *)&data[2], (unsigned int *)&data[3],
-            (unsigned int *)&data[4], (unsigned int *)&data[5], (unsigned int *)&data[6], (unsigned int *)&data[7]);
+            (unsigned int *)&data[index],
+			(unsigned int *)&data[index + 1],
+			(unsigned int *)&data[index + 2],
+			(unsigned int *)&data[index + 3],
+            (unsigned int *)&data[index + 4],
+			(unsigned int *)&data[index + 5],
+			(unsigned int *)&data[index + 6],
+			(unsigned int *)&data[index + 7]);
 			
         if(res != 8) {
           PrintAndLog("Error: could not read samples");
           fclose(f);
           return -1;
         }
-		
-        UsbCommand c = { CMD_DOWNLOADED_SIM_SAMPLES_125K, {offset, 0, 0}};
-		memcpy(c.d.asBytes, data, 8);
-		clearCommandBuffer();
-        SendCommand(&c);
-        WaitForResponse(CMD_ACK, NULL);
-        offset += 8;
+		index += res;
+			
+		if ( index == USB_CMD_DATA_SIZE ){
+//			PrintAndLog("sent %d | %d | %d", index, offset, totalbytes);
+			UsbCommand c = { CMD_DOWNLOADED_SIM_SAMPLES_125K, {offset, 0, 0}};
+			memcpy(c.d.asBytes, data, sizeof(data));
+			clearCommandBuffer();
+			SendCommand(&c);
+			WaitForResponse(CMD_ACK, NULL);
+
+			offset += index;
+			totalbytes += index;
+			index = 0;
+		}
     }
     fclose(f);
-    PrintAndLog("loaded %u samples", offset);
+	
+	// left over bytes?
+	if ( index != 0 ) {
+		UsbCommand c = { CMD_DOWNLOADED_SIM_SAMPLES_125K, {offset, 0, 0}};
+		memcpy(c.d.asBytes, data, 8);
+		clearCommandBuffer();
+		SendCommand(&c);
+		WaitForResponse(CMD_ACK, NULL);
+		totalbytes += index;		
+	}
+	
+    PrintAndLog("loaded %u samples", totalbytes);
     return 0;
 }
 
@@ -295,14 +320,8 @@ int CmdLegicSave(const char *Cmd) {
 
 	for (int j = 0; j < requested; j += 8) {
 		fprintf(f, "%02x %02x %02x %02x %02x %02x %02x %02x\n",
-			got[j+0],
-			got[j+1],
-			got[j+2],
-			got[j+3],
-			got[j+4],
-			got[j+5],
-			got[j+6],
-			got[j+7]
+			got[j+0], got[j+1], got[j+2], got[j+3],
+			got[j+4], got[j+5],	got[j+6], got[j+7]
 		);
 		delivered += 8;
 		if (delivered >= requested) break;
