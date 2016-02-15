@@ -44,15 +44,16 @@ int usage_legic_load(void){
  *  by Henryk Ploetz and Karsten Nohl at 26c3
  */
 int CmdLegicDecode(const char *Cmd) {
-	int i, k, n;
+	// Index for the bytearray.
+	int i = 0;
+	int k = 0, segmentNum;
 	int segment_len = 0;
 	int segment_flag = 0;
 	uint8_t stamp_len = 0;
 	int crc = 0;
 	int wrp = 0;
 	int wrc = 0;
-	uint8_t data_buf[1200]; // receiver buffer
-	//char out_string[3076]; // just use big buffer - bad practice
+	uint8_t data_buf[1200]; // receiver buffer,  should be 1024..
 	char token_type[4];
 
 	// copy data from proxmark into buffer
@@ -74,18 +75,18 @@ int CmdLegicDecode(const char *Cmd) {
 		(calc_crc == crc) ? "OK":"Fail" 
 	);
  
-	switch (data_buf[5]&0x7f) {
+	switch (data_buf[5] & 0x7f) {
 		case 0x00 ... 0x2f:
 			strncpy(token_type, "IAM",sizeof(token_type));
 			break;
 		case 0x30 ... 0x6f:
-			strcpy(token_type, "SAM");
+			strncpy(token_type, "SAM",sizeof(token_type));
 			break;
 		case 0x70 ... 0x7f:
-			strcpy(token_type, "GAM");
+			strncpy(token_type, "GAM",sizeof(token_type));
 			break;
 		default:
-			strcpy(token_type, "???");
+			strncpy(token_type, "???",sizeof(token_type));
 			break;
 	}
 
@@ -109,91 +110,104 @@ int CmdLegicDecode(const char *Cmd) {
 
 	PrintAndLog("Remaining Header Area");
 	PrintAndLog("%s", sprint_hex(data_buf+9, 13));
-	PrintAndLog("\nADF: User Area");
-  
-	i = 22;  
+	
 	uint8_t segCrcBytes[8] = {0x00};
 	uint32_t segCalcCRC = 0;
 	uint32_t segCRC = 0;
-	
-	for ( n=0; n<64; n++ ) {
+
+	PrintAndLog("\nADF: User Area");
+	i = 22;  
+	// 64 potential segements
+	for ( segmentNum=0; segmentNum<64; segmentNum++ ) {
 		segment_len = ((data_buf[i+1]^crc)&0x0f) * 256 + (data_buf[i]^crc);
 		segment_flag = ((data_buf[i+1]^crc)&0xf0)>>4;
 
 		wrp = (data_buf[i+2]^crc);
 		wrc = ((data_buf[i+3]^crc)&0x70)>>4;
 
-		/* validate segment-crc */
-		segCRC = data_buf[i+4]^crc;
+		bool hasWRC = (wrc > 0);
+		bool hasWRP = (wrp > wrc);
+		int wrp_len = (wrp - wrc);
+		int remain_seg_payload_len = (segment_len - wrp - 5);
 		
-		segCrcBytes[0]=data_buf[0]; //uid0
-		segCrcBytes[1]=data_buf[1]; //uid1
-		segCrcBytes[2]=data_buf[2]; //uid2
-		segCrcBytes[3]=data_buf[3]; //uid3
-		segCrcBytes[4]=(data_buf[i]^crc); //hdr0
+		// validate segment-crc
+		segCrcBytes[0]=data_buf[0];			//uid0
+		segCrcBytes[1]=data_buf[1];			//uid1
+		segCrcBytes[2]=data_buf[2];			//uid2
+		segCrcBytes[3]=data_buf[3];			//uid3
+		segCrcBytes[4]=(data_buf[i]^crc); 	//hdr0
 		segCrcBytes[5]=(data_buf[i+1]^crc); //hdr1
 		segCrcBytes[6]=(data_buf[i+2]^crc); //hdr2
 		segCrcBytes[7]=(data_buf[i+3]^crc); //hdr3
+
 		segCalcCRC = CRC8Legic(segCrcBytes, 8);
+		segCRC = data_buf[i+4]^crc;
 
 		PrintAndLog("Segment %02u: raw header=%02x %02x %02x %02x, flag=%01x (valid=%01u, last=%01u), len=%04u, WRP=%02u, WRC=%02u, RD=%01u, CRC=%02x  (%s)",
-			n,
+			segmentNum,
 			data_buf[i]^crc,
 			data_buf[i+1]^crc,
 			data_buf[i+2]^crc,
 			data_buf[i+3]^crc,
 			segment_flag,
-			(segment_flag&0x4)>>2,
-			(segment_flag&0x8)>>3,
+			(segment_flag & 0x4) >> 2,
+			(segment_flag & 0x8) >> 3,
 			segment_len,
 			wrp,
 			wrc,
-			((data_buf[i+3]^crc)&0x80)>>7,
+			((data_buf[i+3]^crc) & 0x80) >> 7,
 			segCRC,
 			( segCRC == segCalcCRC ) ? "OK" : "fail"
 		);
 
 		i += 5;
     
-		if ( wrc>0 ) {
-			PrintAndLog("WRC protected area:");
+		if ( hasWRC ) {
+			PrintAndLog("WRC protected area:   (I %d | K %d| WRC %d)", i, k, wrc);
 			
 			for ( k=i; k < wrc; k++)
 				data_buf[k] ^= crc;
 			
-			for ( k=i; k < wrc; k += 8)
-				PrintAndLog("%s", sprint_hex( data_buf+k, 8)  );
+			//is WRC / 8? 
+			
+			// for ( k=i; k < wrc; k += 8)
+			PrintAndLog("%s", sprint_hex( data_buf+i, wrc ) );
 			
 			i += wrc;
 		}
     
-		if ( wrp>wrc ) {
-			PrintAndLog("Remaining write protected area:");
+		if ( hasWRP ) {
+			PrintAndLog("Remaining write protected area:  (I %d | K %d | WRC %d | WRP %d  WRP_LEN %d)",i, k, wrc, wrp, wrp_len);
 
-			if ( data_buf[k] > 0) {
-				for (k=i; k < (wrp-wrc); k++)
-					data_buf[k] ^= crc;
-			}
+			// // de-xor?
+			// if ( data_buf[k] > 0) {
+				// for (k=i; k < wrp_len; k++)
+					// data_buf[k] ^= crc;
+			// }
 			
-			for (k=i; k < (wrp-wrc); k++)
-				PrintAndLog("%s", sprint_hex( data_buf+k, 16)  );
-
-			i += (wrp-wrc);
+			// for (k=i; k < wrp_len; k += 16) {
+				
+			PrintAndLog("%s", sprint_hex( data_buf+i, wrp_len));
+			// }
 			
-			if( (wrp-wrc) == 8 )
-				PrintAndLog("Card ID: %2X%02X%02X", data_buf[i-4]^crc, data_buf[i-3]^crc, data_buf[i-2]^crc);			
+			i += wrp_len;
+			
+			// if( wrp_len == 8 )
+				// PrintAndLog("Card ID: %2X%02X%02X", data_buf[i-4]^crc, data_buf[i-3]^crc, data_buf[i-2]^crc);			
 		}
     
 		PrintAndLog("Remaining segment payload:");
 		
-		if ( data_buf[k] > 0 ) {
-			for ( k=i; k < (segment_len - wrp - 5); k++)
-				data_buf[k] ^= crc;
-		}
+		// if ( data_buf[k] > 0 ) {
+			// for ( k=i; k < remain_seg_payload_len; k++)
+				// data_buf[k] ^= crc;
+		// }
 		
-		for ( k=i; k < (segment_len - wrp - 5); k++)
-			PrintAndLog("%s", sprint_hex( data_buf+k, 16)  );
+		// for ( k=i; k < remain_seg_payload_len; k++)
+		PrintAndLog("%s", sprint_hex( data_buf+i, remain_seg_payload_len )  );
     
+		i += remain_seg_payload_len;
+		
 		// end with last segment
 		if (segment_flag & 0x8) return 0;
 
@@ -262,8 +276,11 @@ int CmdLegicLoad(const char *Cmd) {
 			memcpy(c.d.asBytes, data, sizeof(data));
 			clearCommandBuffer();
 			SendCommand(&c);
-			WaitForResponse(CMD_ACK, NULL);
-
+			if ( !WaitForResponseTimeout(CMD_ACK, NULL, 1500)){
+				PrintAndLog("Command execute timeout");
+				fclose(f);
+				return 1;
+			}
 			offset += index;
 			totalbytes += index;
 			index = 0;
@@ -277,7 +294,10 @@ int CmdLegicLoad(const char *Cmd) {
 		memcpy(c.d.asBytes, data, 8);
 		clearCommandBuffer();
 		SendCommand(&c);
-		WaitForResponse(CMD_ACK, NULL);
+		if ( !WaitForResponseTimeout(CMD_ACK, NULL, 1500)){
+				PrintAndLog("Command execute timeout");
+				return 1;
+		}
 		totalbytes += index;		
 	}
 	
@@ -315,8 +335,8 @@ int CmdLegicSave(const char *Cmd) {
 		return -1;
 	}
 
-	GetFromBigBuf(got,requested,offset);
-	WaitForResponse(CMD_ACK,NULL);
+	GetFromBigBuf(got, requested, offset);
+	WaitForResponse(CMD_ACK, NULL);
 
 	for (int j = 0; j < requested; j += 8) {
 		fprintf(f, "%02x %02x %02x %02x %02x %02x %02x %02x\n",
