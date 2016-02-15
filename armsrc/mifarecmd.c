@@ -1169,15 +1169,15 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 	uint8_t workFlags = arg0;
 	uint8_t blockNo = arg1;
 	
-	Dbprintf("ICE :: CSetBlocks Flags %02x", workFlags);
-	
 	// variables
+	bool isOK = false; //assume we will get an error
+	uint8_t errormsg = 0x00;
 	uint8_t uid[10] = {0x00};
 	uint8_t data[18] = {0x00};
 	uint32_t cuid = 0;
 	
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
+	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
+	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
 	if (workFlags & MAGIC_INIT) {
 		LED_A_ON();
@@ -1187,65 +1187,83 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 		set_tracing(TRUE);
 	}
 
-	// read UID and return to client
-	if (workFlags & MAGIC_UID) {
-		if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
-			if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Can't select card");
-			OnErrorMagic(MAGIC_UID);
+	//loop doesn't loop just breaks out if error
+	while (true) {
+		// read UID and return to client with write
+		if (workFlags & MAGIC_UID) {
+			if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
+				if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Can't select card");
+				errormsg = MAGIC_UID;
+				// break;
+			}
+			
+			if ( mifare_classic_halt_ex(NULL) ) break;
 		}
-	}
 	
-	// wipe tag, fill it with zeros
-	if (workFlags & MAGIC_WIPE){
-		ReaderTransmitBitsPar(wupC1,7,0, NULL);
-		if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-			if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wupC1 error");
-			OnErrorMagic(MAGIC_WIPE);
+		// wipe tag, fill it with zeros
+		if (workFlags & MAGIC_WIPE){
+			ReaderTransmitBitsPar(wupC1,7,0, NULL);
+			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+				if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wupC1 error");
+				errormsg = MAGIC_WIPE;
+				break;
+			}
+
+			ReaderTransmit(wipeC, sizeof(wipeC), NULL);
+			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+				if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wipeC error");
+				errormsg = MAGIC_WIPE;
+				break;
+			}
+
+			if ( mifare_classic_halt_ex(NULL) ) break;
+		}	
+
+		// write block
+		if (workFlags & MAGIC_WUPC) {
+			ReaderTransmitBitsPar(wupC1,7,0, NULL);
+			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+				if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wupC1 error");
+				errormsg = MAGIC_WUPC;
+				break;
+			}
+
+			ReaderTransmit(wupC2, sizeof(wupC2), NULL);
+			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+				if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wupC2 error");
+				errormsg = MAGIC_WUPC;
+				break;
+			}
 		}
 
-		ReaderTransmit(wipeC, sizeof(wipeC), NULL);
-		if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-			if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wipeC error");
-			OnErrorMagic(MAGIC_WIPE);
+		if ((mifare_sendcmd_short(NULL, 0, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
+			if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("write block send command error");
+			errormsg = 4;
+			break;
 		}
-	}	
+	
+		memcpy(data, datain, 16);
+		AppendCrc14443a(data, 16);
+	
+		ReaderTransmit(data, sizeof(data), NULL);
+		if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
+			if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("write block send data error");
+			errormsg = 0;
+			break;
+		}	
+	
+		if (workFlags & MAGIC_OFF) 
+			if ( mifare_classic_halt_ex(NULL) ) break;
+		
+		isOK = true;
+		break;
 
-	// write block
-	if (workFlags & MAGIC_WUPC) {
-		ReaderTransmitBitsPar(wupC1,7,0, NULL);
-		if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-			if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wupC1 error");
-			OnErrorMagic(MAGIC_WUPC);
-		}
+	} // end while	
 
-		ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-		if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-			if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wupC2 error");
-			OnErrorMagic(MAGIC_WUPC);
-		}
-	}
-
-	if ((mifare_sendcmd_short(NULL, 0, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("write block send command error");
-		OnErrorMagic(4);
-	}
-	
-	memcpy(data, datain, 16);
-	AppendCrc14443a(data, 16);
-	
-	ReaderTransmit(data, sizeof(data), NULL);
-	if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("write block send data error");
-		OnErrorMagic(0);
-	}	
-	
-	if (workFlags & MAGIC_OFF) 
-		mifare_classic_halt_ex(NULL);
-	
-	LED_B_ON();
-	// check if uid is cuid?
-	cmd_send(CMD_ACK,1,0,0,uid,sizeof(uid));
-	LED_B_OFF();
+	if (isOK )
+		cmd_send(CMD_ACK,1,0,0,uid,sizeof(uid));
+	else
+		OnErrorMagic(errormsg);
 
 	if (workFlags & MAGIC_OFF)
 		OnSuccessMagic();
@@ -1255,11 +1273,13 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
     
 	uint8_t workFlags = arg0;
 	uint8_t blockNo = arg1;
-
+	uint8_t errormsg = 0x00;
+	bool isOK = false; //assume we will get an error
+	
 	// variables
 	uint8_t data[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
-	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
+	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
+	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 	
 	memset(data, 0x00, sizeof(data));
 	
@@ -1271,42 +1291,52 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 		set_tracing(TRUE);
 	}
 
-	if (workFlags & MAGIC_WUPC) {
-		ReaderTransmitBitsPar(wupC1,7,0, NULL);
-		if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-			if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("wupC1 error");
-			OnErrorMagic(MAGIC_WUPC);
+	//loop doesn't loop just breaks out if error or done
+	while (true) {
+		if (workFlags & MAGIC_WUPC) {
+			ReaderTransmitBitsPar(wupC1,7,0, NULL);
+			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+				if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("wupC1 error");
+				errormsg = MAGIC_WUPC;
+				break;
+			}
+
+			ReaderTransmit(wupC2, sizeof(wupC2), NULL);
+			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+				if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("wupC2 error");
+				errormsg = MAGIC_WUPC;
+				break;
+			}
 		}
 
-		ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-		if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-			if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("wupC2 error");
-			OnErrorMagic(MAGIC_WUPC);
+		// read block		
+		if ((mifare_sendcmd_short(NULL, 0, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 18)) {
+			if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("read block send command error");
+			errormsg = 0;
+			break;
 		}
+		
+		memcpy(data, receivedAnswer, sizeof(data));
+		
+		// send HALT
+		if (workFlags & MAGIC_HALT) {
+			mifare_classic_halt_ex(NULL);
+			break;
+		}
+		isOK = true;
+		break;
 	}
-
-	// read block		
-	if ((mifare_sendcmd_short(NULL, 0, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 18)) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("read block send command error");
-		OnErrorMagic(0);
-	}
-	
-	memcpy(data, receivedAnswer, sizeof(data));
-	
-	// send HALT
-	if (workFlags & MAGIC_HALT) 
-		mifare_classic_halt_ex(NULL);
-	
-	LED_B_ON();
-	
 	// if MAGIC_DATAIN, the data stays on device side.
-	if (workFlags & MAGIC_DATAIN)
-		memcpy(datain, data, sizeof(data));
-	else
-		cmd_send(CMD_ACK,1,0,0,data,sizeof(data));
+	if (workFlags & MAGIC_DATAIN) {
+		if (isOK)
+			memcpy(datain, data, sizeof(data));
+	} else {
+		if (isOK) 
+			cmd_send(CMD_ACK,1,0,0,data,sizeof(data));	
+		else 
+			OnErrorMagic(errormsg);	
+	}
 	
-	LED_B_OFF();
-
 	if (workFlags & MAGIC_OFF)
 		OnSuccessMagic();
 }
