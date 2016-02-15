@@ -165,13 +165,12 @@ int CmdLegicDecode(const char *Cmd) {
     
 		if ( hasWRC ) {
 			PrintAndLog("WRC protected area:   (I %d | K %d| WRC %d)", i, k, wrc);
-			
-			for ( k=i; k < wrc; k++)
-				data_buf[k] ^= crc;
-			
-			//is WRC / 8? 
-			
-			// for ( k=i; k < wrc; k += 8)
+
+			// de-xor?  if not zero, assume it needs xoring.
+			if ( data_buf[i] > 0) {
+				for ( k=i; k < wrc; ++k)
+					data_buf[k] ^= crc;
+			}
 			print_hex_break( data_buf+i, wrc, 16);
 			
 			i += wrc;
@@ -182,34 +181,32 @@ int CmdLegicDecode(const char *Cmd) {
 
 			// de-xor?  if not zero, assume it needs xoring.
 			if ( data_buf[i] > 0) {
-				for (k=i; k < wrp_len; k++)
+				for (k=i; k < wrp_len; ++k)
 					data_buf[k] ^= crc;
 			}
 			
-			// for (k=i; k < wrp_len; k += 16) {
-				
 			print_hex_break( data_buf+i, wrp_len, 16);
-			// }
 			
 			i += wrp_len;
 			
+			// does this one work?
 			if( wrp_len == 8 )
 				PrintAndLog("Card ID: %2X%02X%02X", data_buf[i-4]^crc, data_buf[i-3]^crc, data_buf[i-2]^crc);			
 		}
     
-		PrintAndLog("Remaining segment payload:");
+		PrintAndLog("Remaining segment payload:  (I %d | K %d | Remain LEN %d)", i, k, remain_seg_payload_len);
 		
 		if ( data_buf[i] > 0 ) {
-			for ( k=i; k < remain_seg_payload_len; k++)
+			for ( k=i; k < remain_seg_payload_len; ++k)
 				data_buf[k] ^= crc;
 		}
 		
-		// for ( k=i; k < remain_seg_payload_len; k++)
 		print_hex_break( data_buf+i, remain_seg_payload_len, 16);
     
 		i += remain_seg_payload_len;
 		
 		printf("\n-------------------------------------\n");
+
 		// end with last segment
 		if (segment_flag & 0x8) return 0;
 
