@@ -712,7 +712,6 @@ int CmdHF14AMfNested(const char *Cmd)
 		
 		// nested sectors
 		iterations = 0;
-		PrintAndLog("enter nested...");
 		bool calibrate = true;
 
 		for (i = 0; i < NESTED_SECTOR_RETRY; i++) {
