@@ -92,7 +92,7 @@ int CmdLegicDecode(const char *Cmd) {
 
 	stamp_len = 0xfc - data_buf[6];
 
-	PrintAndLog("DCF: %02x %02x, Token_Type=%s (OLE=%01u), Stamp_len=%02u",
+	PrintAndLog("DCF: %02x %02x, Token Type=%s (OLE=%01u), Stamp len=%02u",
 		data_buf[5],
 		data_buf[6],
 		token_type,
@@ -116,6 +116,7 @@ int CmdLegicDecode(const char *Cmd) {
 	uint32_t segCRC = 0;
 
 	PrintAndLog("\nADF: User Area");
+	printf("-------------------------------------\n");
 	i = 22;  
 	// 64 potential segements
 	for ( segmentNum=0; segmentNum<64; segmentNum++ ) {
@@ -143,16 +144,16 @@ int CmdLegicDecode(const char *Cmd) {
 		segCalcCRC = CRC8Legic(segCrcBytes, 8);
 		segCRC = data_buf[i+4]^crc;
 
-		PrintAndLog("Segment %02u: raw header=%02x %02x %02x %02x, flag=%01x (valid=%01u, last=%01u), len=%04u, WRP=%02u, WRC=%02u, RD=%01u, CRC=%02x  (%s)",
+		PrintAndLog("Segment %02u \nraw header=0x%02X 0x%02X 0x%02X 0x%02X \nSegment len: %u,  Flag: 0x%X (valid:%01u, last:%01u), WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X (%s)",
 			segmentNum,
 			data_buf[i]^crc,
 			data_buf[i+1]^crc,
 			data_buf[i+2]^crc,
 			data_buf[i+3]^crc,
+			segment_len, 
 			segment_flag,
 			(segment_flag & 0x4) >> 2,
 			(segment_flag & 0x8) >> 3,
-			segment_len,
 			wrp,
 			wrc,
 			((data_buf[i+3]^crc) & 0x80) >> 7,
@@ -171,7 +172,7 @@ int CmdLegicDecode(const char *Cmd) {
 			//is WRC / 8? 
 			
 			// for ( k=i; k < wrc; k += 8)
-			PrintAndLog("%s", sprint_hex( data_buf+i, wrc ) );
+			print_hex_break( data_buf+i, wrc, 16);
 			
 			i += wrc;
 		}
@@ -179,35 +180,36 @@ int CmdLegicDecode(const char *Cmd) {
 		if ( hasWRP ) {
 			PrintAndLog("Remaining write protected area:  (I %d | K %d | WRC %d | WRP %d  WRP_LEN %d)",i, k, wrc, wrp, wrp_len);
 
-			// // de-xor?
-			// if ( data_buf[k] > 0) {
-				// for (k=i; k < wrp_len; k++)
-					// data_buf[k] ^= crc;
-			// }
+			// de-xor?  if not zero, assume it needs xoring.
+			if ( data_buf[i] > 0) {
+				for (k=i; k < wrp_len; k++)
+					data_buf[k] ^= crc;
+			}
 			
 			// for (k=i; k < wrp_len; k += 16) {
 				
-			PrintAndLog("%s", sprint_hex( data_buf+i, wrp_len));
+			print_hex_break( data_buf+i, wrp_len, 16);
 			// }
 			
 			i += wrp_len;
 			
-			// if( wrp_len == 8 )
-				// PrintAndLog("Card ID: %2X%02X%02X", data_buf[i-4]^crc, data_buf[i-3]^crc, data_buf[i-2]^crc);			
+			if( wrp_len == 8 )
+				PrintAndLog("Card ID: %2X%02X%02X", data_buf[i-4]^crc, data_buf[i-3]^crc, data_buf[i-2]^crc);			
 		}
     
 		PrintAndLog("Remaining segment payload:");
 		
-		// if ( data_buf[k] > 0 ) {
-			// for ( k=i; k < remain_seg_payload_len; k++)
-				// data_buf[k] ^= crc;
-		// }
+		if ( data_buf[i] > 0 ) {
+			for ( k=i; k < remain_seg_payload_len; k++)
+				data_buf[k] ^= crc;
+		}
 		
 		// for ( k=i; k < remain_seg_payload_len; k++)
-		PrintAndLog("%s", sprint_hex( data_buf+i, remain_seg_payload_len )  );
+		print_hex_break( data_buf+i, remain_seg_payload_len, 16);
     
 		i += remain_seg_payload_len;
 		
+		printf("\n-------------------------------------\n");
 		// end with last segment
 		if (segment_flag & 0x8) return 0;
 

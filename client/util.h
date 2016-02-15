@@ -45,6 +45,7 @@ void AddLogCurrentDT(char *fileName);
 void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext, int byteCount);
 
 void print_hex(const uint8_t * data, const size_t len);
+void print_hex_break(const uint8_t *data, const size_t len, const uint8_t breaks);
 char *sprint_hex(const uint8_t * data, const size_t len);
 char *sprint_bin(const uint8_t * data, const size_t len);
 char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks);

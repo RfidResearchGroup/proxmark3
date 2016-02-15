@@ -97,14 +97,22 @@ void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext, int byteCount) 
 }
 
 // printing and converting functions
-
-void print_hex(const uint8_t * data, const size_t len)
-{
+void print_hex(const uint8_t * data, const size_t len) {
 	size_t i;
-
-	for (i=0; i < len; i++)
+	for (i=0; i < len; ++i)
 		printf("%02x ", data[i]);
+	printf("\n");
+}
+void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
+	size_t i;
+	for ( i = 0; i < len; ++i) {
 
+		printf("%02X ", data[i]);
+		
+		// check if a line break is needed
+		if ( (breaks > 0) && (i > 0) && !(i % breaks) )
+			printf("\n");
+	}
 	printf("\n");
 }
 
@@ -158,9 +166,10 @@ char *sprint_bin(const uint8_t *data, const size_t len) {
 
 char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 	static char buf[1024];
-	memset(buf, 0x00, 1024);
 	char *tmp = buf;
-	sprintf(tmp, "%s| %s", sprint_hex(data, len) , data);	
+	memset(buf, 0x00, 1024);
+	size_t max_len = (len > 1010) ? 1010 : len;
+	sprintf(tmp, "%s| %s", sprint_hex(data, max_len) , data);	
 	return buf;
 }
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
