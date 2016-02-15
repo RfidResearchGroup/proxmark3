@@ -5,7 +5,8 @@ LDFLAGS =
 
 OBJS = crypto1.o crapto1.o
 HEADERS = crapto1.h
-EXES = nonce2key nonce2key.exe
+EXES = nonce2key
+WINEXES = nonce2key.exe
 
 all: $(OBJS) $(EXES)
 
@@ -16,4 +17,4 @@ all: $(OBJS) $(EXES)
 	$(LD) $(LDFLAGS) -o $@ $(OBJS) $<
 
 clean: 
-	rm -f $(OBJS) $(EXES)
+	rm -f $(OBJS) $(EXES) $(WINEXES)
