@@ -141,3 +141,13 @@ uint32_t prng_successor(uint32_t x, uint32_t n)
 
 	return SWAPENDIAN(x);
 }
+
+uint32_t prng_successor_one(uint32_t x)
+{
+	SWAPENDIAN(x);
+
+	x = x >> 1 | (x >> 16 ^ x >> 18 ^ x >> 19 ^ x >> 21) << 31;
+
+	return SWAPENDIAN(x);
+}
+
