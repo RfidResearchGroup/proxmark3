@@ -14,7 +14,7 @@ OBJDIR = obj
 LDLIBS =  -L/mingw/lib -L/opt/local/lib -L/usr/local/lib -lm -lreadline -lpthread -lgdi32
 LUALIB = ../liblua/liblua.a
 LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=c99 -I. -I../include -I../common -I../zlib -I/mingw/include -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O4
+CFLAGS = -std=c99 -I. -I../include -I../common -I../zlib -I/mingw/include -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O3
 LUAPLATFORM = generic
 
 ifneq (,$(findstring MINGW,$(platform)))
@@ -28,12 +28,12 @@ ifneq (,$(findstring MINGW,$(platform)))
         QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
     endif
 else ifeq ($(platform),Darwin)
-    CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
+    CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
     QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
     MOC = $(shell pkg-config --variable=moc_location QtCore)
     LUAPLATFORM = macosx
 else
-    CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
+    CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
     QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
     LUALIB +=  -ldl
     MOC = $(shell pkg-config --variable=moc_location QtCore)
@@ -54,7 +54,7 @@ endif
 
 # easy variable to pass to allow this to build on ubutnu 14.04.2
 ifeq (1,$(UBUNTU_1404_QT4))
-  CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O4
+  CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
   QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
   LUALIB = ../liblua/liblua.a
   LUALIB +=  -ldl
