@@ -17,6 +17,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - `hf mf c*` updated the calling structure and refactored of the chinese magic commands (iceman, marshmellow)
   - Started to add Peter Fillmore's  EMV fork into Iceman fork. ref: https://github.com/peterfillmore/proxmark3  (peter fillmore,  iceman)
   - Added Travis-CI automatic build integration with GitHub fork. (iceman)
+  - Updated the Reveng 1.30 sourcecode to 1.31 from Reveng projecthomepage (iceman)
 
 ### Added
 - `lf awid bruteforce <facilitycode>` - Simple bruteforce attack against a AWID reader.
