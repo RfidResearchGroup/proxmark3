@@ -593,10 +593,11 @@ int CmdHF14AMfNested(const char *Cmd)
 		PrintAndLog("t - transfer keys into emulator memory");
 		PrintAndLog("d - write keys to binary file");
 		PrintAndLog(" ");
-		PrintAndLog("      sample1: hf mf nested 1 0 A FFFFFFFFFFFF ");
-		PrintAndLog("      sample2: hf mf nested 1 0 A FFFFFFFFFFFF t ");
-		PrintAndLog("      sample3: hf mf nested 1 0 A FFFFFFFFFFFF d ");
-		PrintAndLog("      sample4: hf mf nested o 0 A FFFFFFFFFFFF 4 A");
+		PrintAndLog(" samples:");
+		PrintAndLog("              hf mf nested 1 0 A FFFFFFFFFFFF ");
+		PrintAndLog("              hf mf nested 1 0 A FFFFFFFFFFFF t ");
+		PrintAndLog("              hf mf nested 1 0 A FFFFFFFFFFFF d ");
+		PrintAndLog("              hf mf nested o 0 A FFFFFFFFFFFF 4 A");
 		return 0;
 	}	
 	
@@ -1125,7 +1126,7 @@ int CmdHF14AMfChk(const char *Cmd)
 	clock_t t1 = clock();
 	
 	// check keys.
-	for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) {
+	for (trgKeyType = !keyType;  trgKeyType < 2;  (keyType==2) ? (++trgKeyType) : (trgKeyType=2) ) {
 
 		int b = blockNo;
 		for (int i = 0; i < SectorsCnt; ++i) {

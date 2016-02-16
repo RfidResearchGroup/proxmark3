@@ -22,26 +22,26 @@ int compar_int(const void * a, const void * b) {
 	//return (*(uint64_t*)b - *(uint64_t*)a);
 
 	// better:
-	if (*(uint64_t*)b < *(uint64_t*)a) return -1;
+	/*if (*(uint64_t*)b < *(uint64_t*)a) return -1;
 	if (*(uint64_t*)b > *(uint64_t*)a) return 1;
 	return 0;
-
-	//return (*(uint64_t*)b > *(uint64_t*)a) - (*(uint64_t*)b < *(uint64_t*)a);
+*/
+	return (*(uint64_t*)b > *(uint64_t*)a) - (*(uint64_t*)b < *(uint64_t*)a);
 }
 
 // Compare 16 Bits out of cryptostate
 int Compare16Bits(const void * a, const void * b) {
 
+/*
 	 if ((*(uint64_t*)b & 0x00ff000000ff0000) < (*(uint64_t*)a & 0x00ff000000ff0000)) return -1;
 	 if ((*(uint64_t*)b & 0x00ff000000ff0000) > (*(uint64_t*)a & 0x00ff000000ff0000)) return 1;	
 	 return 0;
-
-	/*return 
+*/
+	return 
 		((*(uint64_t*)b & 0x00ff000000ff0000) > (*(uint64_t*)a & 0x00ff000000ff0000))
 		-
 		((*(uint64_t*)b & 0x00ff000000ff0000) < (*(uint64_t*)a & 0x00ff000000ff0000))
 		;
-*/
 }
 
 typedef 
@@ -69,7 +69,7 @@ void* nested_worker_thread(void *arg)
 	struct Crypto1State *p1;
 	StateList_t *statelist = arg;
 
-	statelist->head.slhead = lfsr_recovery32(statelist->ks1, statelist->nt ^ statelist->uid);
+	statelist->head.slhead = lfsr_recovery32(statelist->ks1, statelist->nt ^ statelist->uid);	
 	
 	for (p1 = statelist->head.slhead; *(uint64_t *)p1 != 0; p1++);
 	
@@ -97,8 +97,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	// error during nested
 	if (resp.arg[0]) return resp.arg[0];
 	
-//	memcpy(&uid, resp.d.asBytes, 4);
-	uid = bytes_to_num(resp.d.asBytes, 4);
+	memcpy(&uid, resp.d.asBytes, 4);
 		
 	for (i = 0; i < 2; i++) {
 		statelists[i].blockNo = resp.arg[2] & 0xff;
@@ -185,34 +184,32 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	// uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE/6) ? (USB_CMD_DATA_SIZE/6) : keycnt;
 
 	uint32_t numOfCandidates = statelists[0].len;
-	if ( numOfCandidates == 0 ) goto out;
+	if ( numOfCandidates > 0 ) {
 
-	uint8_t *keyBlock = malloc(numOfCandidates*6);
-	if (keyBlock == NULL) return -6;
+		uint8_t keyBlock[USB_CMD_DATA_SIZE] = {0x00};
 
-	for (i = 0; i < numOfCandidates; ++i){
-		crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
-		num_to_bytes(key64, 6, keyBlock + i * 6);
+		for (i = 0; i < numOfCandidates; ++i){
+			crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
+			num_to_bytes(key64, 6, keyBlock + i * 6);
+		}
+
+		if (!mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, numOfCandidates, keyBlock, &key64)) {		
+			free(statelists[0].head.slhead);
+			free(statelists[1].head.slhead);
+			num_to_bytes(key64, 6, resultKey);
+
+			PrintAndLog("UID: %08x target block:%3u key type: %c  -- Found key [%012"llx"]",
+				uid,
+				(uint16_t)resp.arg[2] & 0xff,
+				(resp.arg[2] >> 8) ? 'B' : 'A',
+				key64
+			);
+			return -5;
+		}
+		
 	}
-
-	if (!mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, numOfCandidates, keyBlock, &key64)) {		
-		free(statelists[0].head.slhead);
-		free(statelists[1].head.slhead);
-		free(keyBlock);
-		num_to_bytes(key64, 6, resultKey);
-
-		PrintAndLog("UID: %08x target block:%3u key type: %c  -- Found key [%012"llx"]",
-			uid,
-			(uint16_t)resp.arg[2] & 0xff,
-			(resp.arg[2] >> 8) ? 'B' : 'A',
-			key64
-		);
-		return -5;
-	}
-
-out:
 	PrintAndLog("UID: %08x target block:%3u key type: %c",
-		 	uid,
+			uid,
 			(uint16_t)resp.arg[2] & 0xff,
 			(resp.arg[2] >> 8) ? 'B' : 'A'
 	);	
