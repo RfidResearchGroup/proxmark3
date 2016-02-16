@@ -40,8 +40,8 @@ int usage_lf_hid_brute(void){
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf hid brute <formatlength> <Facility-Code>");
 	PrintAndLog("Options :");
-	PrintAndLog("  <formatlength>   : 26|33|34|35|37|40|44|84 ");
-	PrintAndLog("  <Facility-Code>  : 8-bit value HID facility code");
+	PrintAndLog("  <formatlength>	- 26|33|34|35|37|40|44|84");
+	PrintAndLog("  <Facility-Code>	- 8-bit value HID facility code");
 	PrintAndLog("");
 	PrintAndLog("Sample  : lf hid brute 26 224");
 	return 0;
@@ -362,12 +362,13 @@ int CmdHIDBrute(const char *Cmd){
 }
 
 static command_t CommandTable[] = {
-	{"help",      CmdHelp,        1, "This help"},
-	//{"demod",     CmdHIDDemod,    1, "Demodulate HID Prox Card II (not optimal)"},
-	{"fskdemod",  CmdHIDDemodFSK, 0, "['1'] Realtime HID FSK demodulator (option '1' for one tag only)"},
-	{"sim",       CmdHIDSim,      0, "<ID> -- HID tag simulator"},
-	{"clone",     CmdHIDClone,    0, "<ID> ['l'] -- Clone HID to T55x7 (tag must be in antenna)(option 'l' for 84bit ID)"},
-	{"wiegand",  CmdHIDWiegand,  1, "<oem> <fmtlen> <fc> <cardnum> -- convert facilitycode, cardnumber to Wiegand code"},
+	{"help",	CmdHelp,		1, "This help"},
+	//{"demod",	CmdHIDDemod,	1, "Demodulate HID Prox Card II (not optimal)"},
+	{"fskdemod",CmdHIDDemodFSK,	0, "['1'] Realtime HID FSK demodulator (option '1' for one tag only)"},
+	{"sim",		CmdHIDSim,		0, "<ID> -- HID tag simulator"},
+	{"clone",	CmdHIDClone,	0, "<ID> ['l'] -- Clone HID to T55x7 (tag must be in antenna)(option 'l' for 84bit ID)"},
+	{"wiegand",	CmdHIDWiegand,	0, "<oem> <fc> <cardnum> -- convert facilitycode, cardnumber to Wiegand code"},
+	{"brute",	CmdHIDBrute,	0, "<formatlength> <Facility-Code> -- bruteforce card number"},
 	{NULL, NULL, 0, NULL}
 };
 
