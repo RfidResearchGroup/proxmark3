@@ -9,6 +9,7 @@
 #include "crc16.h"
 #define CRC16_POLY_CCITT 0x1021
 #define CRC16_POLY 0x8408
+#define CRC16_POLY_LEGIC 0xB400
 
 unsigned short update_crc16( unsigned short crc, unsigned char c )
 {
@@ -48,6 +49,13 @@ uint16_t crc16_ccitt(uint8_t const *message, int length) {
 uint16_t crc16_ccitt_kermit(uint8_t const *message, int length) {
     return bit_reverse_uint16(crc16(message, length, 0x0000, CRC16_POLY_CCITT));
 }
+
+//ICEMAN: not working yet,
+// This CRC-16 is used in Legic Advant systems. 
+uint16_t crc16_legic(uint8_t const *message, int length, uint16_t inital) {
+	return crc16(message, length, inital, CRC16_POLY_LEGIC);
+}
+
 uint16_t bit_reverse_uint16 (uint16_t value) {
 	const uint16_t mask0 = 0x5555;
 	const uint16_t mask1 = 0x3333;
