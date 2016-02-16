@@ -10,10 +10,12 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - Coverity Scan fixes a lot of resource leaks, etc (iceman)
   -  Added `lf presco *` commands started (iceman) 
   -  Added `lf hid wiegand` added a method to calculate WIEGAND in different formats, (iceman)
-  - `hf mf chkkeys` better printing, same table output as nested, and executes faster (iceman)
-  - `hf mf nested` better printing (iceman)
+  - `hf mf chkkeys` better printing, same table output as nested, faster execution and added Adam Lauries "try to read Key B if Key A is found" (iceman)
+  - `hf mf nested` better printing and added Adam Lauries "try to read Key B if Key A is found" (iceman)
   - `hf mf mifare` fixing the zero parity path, which doesn't got called. (iceman) 
   - Updated the @blapost's Crapto1 implementation to v3.3 (blapost) 
+  - `hf mf c*` updated the calling structure and refactored of the chinese magic commands (iceman, marshmellow)
+  - Started to add Peter Fillmore's  EMV fork into Iceman fork. ref: https://github.com/peterfillmore/proxmark3  (peter fillmore,  iceman)
 
 ### Added
 - `lf awid bruteforce <facilitycode>` - Simple bruteforce attack against a AWID reader.
