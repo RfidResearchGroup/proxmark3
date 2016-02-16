@@ -3,8 +3,17 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-  --trying to fix "hf 14b" command to be able to read CALYPSO card.	 (iceman)
-  --
+  - trying to fix "hf 14b" command to be able to read CALYPSO card.	 (iceman)
+  - `hf legic load`, it now loads faster and a casting bug is gone. (iceman)
+  -  Added `hf legic calccrc8` added a method to calculate the legic crc-8 value (iceman)
+  - `hf legic decode` fixed the output overflow bugs, better printing (iceman)
+  - Coverity Scan fixes a lot of resource leaks, etc (iceman)
+  -  Added `lf presco *` commands started (iceman) 
+  -  Added `lf hid wiegand` added a method to calculate WIEGAND in different formats, (iceman)
+  - `hf mf chkkeys` better printing, same table output as nested, and executes faster (iceman)
+  - `hf mf nested` better printing (iceman)
+  - `hf mf mifare` fixing the zero parity path, which doesn't got called. (iceman) 
+  - Updated the @blapost's Crapto1 implementation to v3.3 (blapost) 
 
 ### Added
 - `lf awid bruteforce <facilitycode>` - Simple bruteforce attack against a AWID reader.
@@ -15,8 +24,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - `lf t55xx wipe`  - sets t55xx back to factory defaults
 - Added viking demod to `lf search` (marshmellow)
 - `data askvikingdemod` demod viking id tag from graphbuffer (marshmellow)
-- `lf t55xx resetread` added reset then read command - should allow determining start
-of stream transmissions (marshmellow)
+- `lf t55xx resetread` added reset then read command - should allow determining start of stream transmissions (marshmellow)
 - `lf t55xx wakeup` added wake with password (AOR) to allow lf search or standard lf read after (iceman, marshmellow)
 - `hf mf eload u` added an ultralight/ntag option. (marshmellow)
 - `hf iclass managekeys` to save, load and manage iclass keys.  (adjusted most commands to accept a loaded key in memory) (marshmellow)
