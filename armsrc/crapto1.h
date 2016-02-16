@@ -32,6 +32,7 @@ uint8_t crypto1_bit(struct Crypto1State*, uint8_t, int);
 uint8_t crypto1_byte(struct Crypto1State*, uint8_t, int);
 uint32_t crypto1_word(struct Crypto1State*, uint32_t, int);
 uint32_t prng_successor(uint32_t x, uint32_t n);
+uint32_t prng_successor_one(uint32_t x);
 
 struct Crypto1State* lfsr_recovery32(uint32_t ks2, uint32_t in);
 struct Crypto1State* lfsr_recovery64(uint32_t ks2, uint32_t ks3);
