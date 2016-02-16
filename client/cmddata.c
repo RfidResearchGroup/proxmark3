@@ -925,16 +925,16 @@ char *GetFSKType(uint8_t fchigh, uint8_t fclow, uint8_t invert)
 	char *fskType = fType;
 	if (fchigh==10 && fclow==8){
 		if (invert) //fsk2a
-			fskType = "FSK2a";
+			memcpy(fskType, "FSK2a", 5);
 		else //fsk2
-			fskType = "FSK2";
+			memcpy(fskType, "FSK2", 4);
 	} else if (fchigh == 8 && fclow == 5) {
 		if (invert)
-			fskType = "FSK1";
+			memcpy(fskType, "FSK1", 4);
 		else
-			fskType = "FSK1a";
+			memcpy(fskType, "FSK1a", 5);
 	} else {
-		fskType = "FSK??";
+		memcpy(fskType, "FSK??", 5);
 	}
 	return fskType;
 }
