@@ -771,7 +771,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
 
 	uint32_t auth1_time, auth2_time;
-	static uint16_t delta_time;
+	static uint16_t delta_time = 0;
 
 	LED_A_ON();
 	LED_C_OFF();
@@ -822,12 +822,8 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 				rtr--;
 				continue;
 			};
+			auth2_time = (delta_time) ? auth1_time + delta_time : 0;
 
-			if (delta_time) {
-				auth2_time = auth1_time + delta_time;
-			} else {
-				auth2_time = 0;
-			}
 			if(mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_NESTED, &nt2, &auth2_time)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Auth2 error");
 				rtr--;
@@ -836,7 +832,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 
 			nttmp = prng_successor(nt1, 100);				//NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
 			for (i = 101; i < 1200; i++) {
-				nttmp = prng_successor(nttmp, 1);
+				nttmp = prng_successor_one(nttmp);
 				if (nttmp == nt2) break;
 			}
 
@@ -896,6 +892,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 
 			// nested authentication
 			auth2_time = auth1_time + delta_time;
+
 			len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, &auth2_time);
 			if (len != 4) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("Nested: Auth2 error len=%d", len);
@@ -906,14 +903,18 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 			if (MF_DBGLEVEL >= 3) Dbprintf("Nonce#%d: Testing nt1=%08x nt2enc=%08x nt2par=%02x", i+1, nt1, nt2, par[0]);
 			
 			// Parity validity check
-			for (j = 0; j < 4; j++) {
-				par_array[j] = (oddparity8(receivedAnswer[j]) != ((par[0] >> (7-j)) & 0x01));
-			}
+//			for (j = 0; j < 4; j++) {
+//				par_array[j] = (oddparity8(receivedAnswer[j]) != ((par[0] >> (7-j)) & 0x01));
+//			}
+			par_array[0] = (oddparity8(receivedAnswer[0]) != ((par[0] >> (7-0)) & 0x01));
+			par_array[1] = (oddparity8(receivedAnswer[1]) != ((par[0] >> (7-1)) & 0x01));
+			par_array[2] = (oddparity8(receivedAnswer[2]) != ((par[0] >> (7-2)) & 0x01));
+			par_array[3] = (oddparity8(receivedAnswer[3]) != ((par[0] >> (7-3)) & 0x01));
 			
 			ncount = 0;
 			nttest = prng_successor(nt1, dmin - 1);
 			for (j = dmin; j < dmax + 1; j++) {
-				nttest = prng_successor(nttest, 1);
+				nttest = prng_successor_one(nttest);
 				ks1 = nt2 ^ nttest;
 
 				if (valid_nonce(nttest, nt2, ks1, par_array)){
@@ -942,8 +943,8 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
 	
-	byte_t buf[4 + 4 * 4];
-	memcpy(buf, &cuid, 4);
+	byte_t buf[4 + 4 * 4] = {0};
+	num_to_bytes(cuid, 4, buf);
 	memcpy(buf+4, &target_nt[0], 4);
 	memcpy(buf+8, &target_ks[0], 4);
 	memcpy(buf+12, &target_nt[1], 4);
@@ -986,9 +987,9 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	int OLD_MF_DBGLEVEL = MF_DBGLEVEL;	
 	MF_DBGLEVEL = MF_DBG_NONE;
 	
+	LEDsoff();
 	LED_A_ON();
-	LED_B_OFF();
-	LED_C_OFF();
+	
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	if (clearTrace) 

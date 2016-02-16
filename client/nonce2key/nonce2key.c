@@ -16,6 +16,7 @@
 
 int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t * key) {
 
+
 	struct Crypto1State *state;
 	uint32_t i, pos, rr = 0, nr_diff;
 	byte_t bt, ks3x[8], par[8][8];
@@ -39,17 +40,22 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 
 	for ( i = 0; i < 8; i++) {
 		nr_diff = nr | i << 5;
-		printf("| %02x |%08x|", i << 5, nr_diff);
-		printf(" %01x |  %01x  |", ks3x[i], ks3x[i]^5);
+		printf("| %02x |%08x| %01x |  %01x  |", i << 5, nr_diff, ks3x[i], ks3x[i]^5);
+
 		for (pos = 0; pos < 7; pos++) printf("%01x,", par[i][pos]);
 		printf("%01x|\n", par[i][7]);
 	}
 	printf("+----+--------+---+-----+---------------+\n");
 
+	clock_t t1 = clock();
+
 	state = lfsr_common_prefix(nr, rr, ks3x, par);
 	lfsr_rollback_word(state, uid^nt, 0);
 	crypto1_get_lfsr(state, key);
 	crypto1_destroy(state);
+
+	t1 = clock() - t1;
+	if ( t1 > 0 ) PrintAndLog("Time in nonce2key: %.0f ticks \n", (float)t1);
 	return 0;
 }
 
@@ -167,9 +173,9 @@ int tryMfk64(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 	pcs = &mpcs;
 	
 	uid 	= myuid;//(uint32_t)bytes_to_num(data +  0, 4);
-	nt 		= *(uint32_t*)(data+8);
-	nr_enc = *(uint32_t*)(data+12);
-	ar_enc = *(uint32_t*)(data+16);
+	nt	= *(uint32_t*)(data+8);
+	nr_enc	= *(uint32_t*)(data+12);
+	ar_enc	= *(uint32_t*)(data+16);
 	
 	crypto1_word(pcs, nr_enc , 1);
 	at_enc = prng_successor(nt, 96) ^ crypto1_word(pcs, 0, 0);

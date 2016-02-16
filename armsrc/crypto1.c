@@ -150,3 +150,4 @@ uint32_t prng_successor_one(uint32_t x)
 
 	return SWAPENDIAN(x);
 }
+

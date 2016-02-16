@@ -750,7 +750,7 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *par
 
 static void CodeIso14443aAsTag(const uint8_t *cmd, uint16_t len)
 {
-	uint8_t par[MAX_PARITY_SIZE];
+	uint8_t par[MAX_PARITY_SIZE] = {0};
 	
 	GetParity(cmd, len, par);
 	CodeIso14443aAsTagPar(cmd, len, par);
@@ -1428,24 +1428,26 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 // of bits specified in the delay parameter.
 void PrepareDelayedTransfer(uint16_t delay)
 {
+	delay &= 0x07;
+	if (!delay) return;
+
 	uint8_t bitmask = 0;
 	uint8_t bits_to_shift = 0;
 	uint8_t bits_shifted = 0;
+	uint16_t i = 0;
 
-	delay &= 0x07;
-	if (delay) {
-		for (uint16_t i = 0; i < delay; i++) {
-			bitmask |= (1 << i);
-		}
+	for (i = 0; i < delay; ++i)
+		bitmask |= (0x01 << i);
+
 		ToSend[++ToSendMax] = 0x00;
-		for (uint16_t i = 0; i < ToSendMax; i++) {
+
+	for (i = 0; i < ToSendMax; ++i) {
 			bits_to_shift = ToSend[i] & bitmask;
 			ToSend[i] = ToSend[i] >> delay;
 			ToSend[i] = ToSend[i] | (bits_shifted << (8 - delay));
 			bits_shifted = bits_to_shift;
 		}
 	}
-}
 
 
 //-------------------------------------------------------------------------------------
@@ -1463,18 +1465,27 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 	uint32_t ThisTransferTime = 0;
 
 	if (timing) {
-		if(*timing == 0) {										// Measure time
+
+		if (*timing != 0)
+			// Delay transfer (fine tuning - up to 7 MF clock ticks)
+			PrepareDelayedTransfer(*timing & 0x00000007);	
+		else
+			// Measure time
 			*timing = (GetCountSspClk() + 8) & 0xfffffff8;
-		} else {
-			PrepareDelayedTransfer(*timing & 0x00000007);		// Delay transfer (fine tuning - up to 7 MF clock ticks)
-		}
-		if(MF_DBGLEVEL >= 4 && GetCountSspClk() >= (*timing & 0xfffffff8)) Dbprintf("TransmitFor14443a: Missed timing");
+
 		
-		while(GetCountSspClk() < (*timing & 0xfffffff8));		// Delay transfer (multiple of 8 MF clock ticks)
+		if (MF_DBGLEVEL >= 4 && GetCountSspClk() >= (*timing & 0xfffffff8)) 
+			Dbprintf("TransmitFor14443a: Missed timing");
+		
+		// Delay transfer (multiple of 8 MF clock ticks)
+		while (GetCountSspClk() < (*timing & 0xfffffff8));	
+
 		LastTimeProxToAirStart = *timing;
 	} else {
 		ThisTransferTime = ((MAX(NextTransferTime, GetCountSspClk()) & 0xfffffff8) + 8);
+
 		while(GetCountSspClk() < ThisTransferTime);
+
 		LastTimeProxToAirStart = ThisTransferTime;
 	}
 	
@@ -2197,33 +2208,62 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 
 	if (nt1 == nt2) return 0;
 
+	uint16_t i;
 	uint32_t nttmp1 = nt1;
 	uint32_t nttmp2 = nt2;
 	
-	for (uint16_t i = 1; i < 0xFFFF; i += 8) {
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -i;
-		
-		nttmp1 = prng_successor(nttmp1, 2);	if (nttmp1 == nt2) return i+1;
-		nttmp2 = prng_successor(nttmp2, 2);	if (nttmp2 == nt1) return -i-1;
-		
-		nttmp1 = prng_successor(nttmp1, 3);	if (nttmp1 == nt2) return i+2;
-		nttmp2 = prng_successor(nttmp2, 3);	if (nttmp2 == nt1) return -i-2;
-		
-		nttmp1 = prng_successor(nttmp1, 4);	if (nttmp1 == nt2) return i+3;
-		nttmp2 = prng_successor(nttmp2, 4);	if (nttmp2 == nt1) return -i-3;
+	for (i = 1; i < 0xFFFF; i += 8) {
+		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i;
 
-		nttmp1 = prng_successor(nttmp1, 5);	if (nttmp1 == nt2) return i+4;
-		nttmp2 = prng_successor(nttmp2, 5);	if (nttmp2 == nt1) return -i-4;
-		
-		nttmp1 = prng_successor(nttmp1, 6);	if (nttmp1 == nt2) return i+5;
-		nttmp2 = prng_successor(nttmp2, 6);	if (nttmp2 == nt1) return -i-5;
-		
-		nttmp1 = prng_successor(nttmp1, 7);	if (nttmp1 == nt2) return i+6;
-		nttmp2 = prng_successor(nttmp2, 7);	if (nttmp2 == nt1) return -i-6;
-		
-		nttmp1 = prng_successor(nttmp1, 8);	if (nttmp1 == nt2) return i+7;
-		nttmp2 = prng_successor(nttmp2, 8);	if (nttmp2 == nt1) return -i-7;
+		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+1;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+1;
+
+		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+2;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+2;
+
+		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+3;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+3;
+
+		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+4;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+4;
+
+		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+5;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+5;
+
+		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+6;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+6;
+
+		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+7;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+7;
+
+		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+8;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+8;
+/*
+		if ( prng_successor(nttmp1, i) == nt2) return i;
+		if ( prng_successor(nttmp2, i) == nt1) return -i;
+
+		if ( prng_successor(nttmp1, i+2) == nt2) return i+2;
+		if ( prng_successor(nttmp2, i+2) == nt1) return -(i+2);
+
+		if ( prng_successor(nttmp1, i+3) == nt2) return i+3;
+		if ( prng_successor(nttmp2, i+3) == nt1) return -(i+3);
+
+		if ( prng_successor(nttmp1, i+4) == nt2) return i+4;
+		if ( prng_successor(nttmp2, i+4) == nt1) return -(i+4);
+
+		if ( prng_successor(nttmp1, i+5) == nt2) return i+5;
+		if ( prng_successor(nttmp2, i+5) == nt1) return -(i+5);
+
+		if ( prng_successor(nttmp1, i+6) == nt2) return i+6;
+		if ( prng_successor(nttmp2, i+6) == nt1) return -(i+6);
+
+		if ( prng_successor(nttmp1, i+7) == nt2) return i+7;
+		if ( prng_successor(nttmp2, i+7) == nt1) return -(i+7);
+
+		if ( prng_successor(nttmp1, i+8) == nt2) return i+8;
+		if ( prng_successor(nttmp2, i+8) == nt1) return -(i+8);
+*/
 	}
 	
 	return(-99999); // either nt1 or nt2 are invalid nonces
@@ -2349,7 +2389,7 @@ void ReaderMifare(bool first_try, uint8_t block )
 		// if we missed the sync time already, advance to the next nonce repeat
 		while(GetCountSspClk() > sync_time) {
 			++elapsed_prng_sequences;
-			sync_time = (sync_time & 0xfffffff8) + sync_cycles;
+			sync_time += sync_cycles;
 		}
 		// Transmit MIFARE_CLASSIC_AUTH at synctime. Should result in returning the same tag nonce (== nt_attacked) 
 		ReaderTransmit(mf_auth, sizeof(mf_auth), &sync_time);			
