@@ -920,7 +920,9 @@ int CmdDetectClockRate(const char *Cmd)
 
 char *GetFSKType(uint8_t fchigh, uint8_t fclow, uint8_t invert)
 {
-	char *fskType;
+	static char fType[8];
+	memset(fType, 0x00, 8);	
+	char *fskType = fType;
 	if (fchigh==10 && fclow==8){
 		if (invert) //fsk2a
 			fskType = "FSK2a";
@@ -953,39 +955,40 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 	fchigh = param_get8(Cmd, 2);
 	fclow = param_get8(Cmd, 3);
 	if (strlen(Cmd)>0 && strlen(Cmd)<=2) {
-		 if (rfLen==1){
+		if (rfLen==1) {
 			invert = 1;   //if invert option only is used
 			rfLen = 0;
-		 }
+		}
 	}
 
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t BitLen = getFromGraphBuf(BitStream);
 	if (BitLen==0) return 0;
+	if (g_debugMode==2) PrintAndLog("DEBUG: Got samples");	
 	//get field clock lengths
-	uint8_t fc1=0, fc2=0, rf1=0;
+	uint16_t fcs=0;
 	if (!fchigh || !fclow) {
-		uint8_t ans = fskClocks(&fc1, &fc2, &rf1, false);
-		if (ans == 0) {
-			if (g_debugMode) PrintAndLog("\nError: cannot detect valid fsk field clocks");			
-			return 0; // can't detect field clock
+		fcs = countFC(BitStream, BitLen, 1);
+		if (!fcs) {
+			fchigh = 10;
+			fclow = 8;
+		} else {
+			fchigh = (fcs >> 8) & 0x00FF;
+			fclow = fcs & 0x00FF;
 		}
-		fchigh = fc1;
-		fclow = fc2;
-		if (rfLen == 0) rfLen = rf1;
 	}
 	//get bit clock length
-	if (!rfLen){
+	if (!rfLen) {
 		rfLen = detectFSKClk(BitStream, BitLen, fchigh, fclow);
 		if (!rfLen) rfLen = 50;
 	}
 	int size = fskdemod(BitStream, BitLen, rfLen, invert, fchigh, fclow);
-	if (size > 0){
+	if (size > 0) {
 		setDemodBuf(BitStream, size, 0);
 
 		// Now output the bitstream to the scrollback by line of 16 bits
 		if (verbose || g_debugMode) {
-			PrintAndLog("\nUsing Clock:%u, invert:%u, fchigh:%u, fclow:%u", rfLen, invert, fchigh, fclow);
+			PrintAndLog("\nUsing Clock:%u, invert:%u, fchigh:%u, fclow:%u", (unsigned int)rfLen,  (unsigned int)invert,  (unsigned int)fchigh,  (unsigned int)fclow);
 			PrintAndLog("%s decoded bitstream:", GetFSKType(fchigh, fclow, invert));
 			printDemodBuff();
 		}
