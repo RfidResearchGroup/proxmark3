@@ -944,7 +944,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	crypto1_destroy(pcs);
 	
 	byte_t buf[4 + 4 * 4] = {0};
-	num_to_bytes(cuid, 4, buf);
+	memcpy(buf, &cuid, 4);
 	memcpy(buf+4, &target_nt[0], 4);
 	memcpy(buf+8, &target_ks[0], 4);
 	memcpy(buf+12, &target_nt[1], 4);
