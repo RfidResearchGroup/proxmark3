@@ -110,8 +110,8 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
 		printf("%02X ", data[i]);
 		
 		// check if a line break is needed
-		if ( (breaks > 0) && (i > 0) && !(i % breaks) )
-			printf("(%d %d)\n", i , breaks);
+		if ( breaks > 0 && !(i+1 % breaks) )
+			printf("(%d %d)\n", i+1 , breaks);
 	}
 	printf("\n");
 }

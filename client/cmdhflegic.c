@@ -57,9 +57,12 @@ int CmdLegicDecode(const char *Cmd) {
 	char token_type[4];
 
 	// copy data from proxmark into buffer
-	GetFromBigBuf(data_buf,sizeof(data_buf),0);
-	WaitForResponse(CMD_ACK,NULL);
-
+	GetFromBigBuf(data_buf, sizeof(data_buf), 0);
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000)){
+		PrintAndLog("Command execute timeout");
+		return 1;
+	}
+	
 	// Output CDF System area (9 bytes) plus remaining header area (12 bytes)
 	crc = data_buf[4];
 	uint32_t calc_crc =  CRC8Legic(data_buf, 4);	
@@ -119,6 +122,7 @@ int CmdLegicDecode(const char *Cmd) {
 	printf("-------------------------------------\n");
 	i = 22;  
 	// 64 potential segements
+	// how to detect there is no segments?!?
 	for ( segmentNum=0; segmentNum<64; segmentNum++ ) {
 		segment_len = ((data_buf[i+1]^crc)&0x0f) * 256 + (data_buf[i]^crc);
 		segment_flag = ((data_buf[i+1]^crc)&0xf0)>>4;
@@ -335,7 +339,10 @@ int CmdLegicSave(const char *Cmd) {
 	}
 
 	GetFromBigBuf(got, requested, offset);
-	WaitForResponse(CMD_ACK, NULL);
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000)){
+		PrintAndLog("Command execute timeout");
+		return 1;
+	}
 
 	for (int j = 0; j < requested; j += 8) {
 		fprintf(f, "%02x %02x %02x %02x %02x %02x %02x %02x\n",
@@ -351,6 +358,7 @@ int CmdLegicSave(const char *Cmd) {
 	return 0;
 }
 
+//TODO: write a help text (iceman)
 int CmdLegicRfSim(const char *Cmd) {
 	UsbCommand c = {CMD_SIMULATE_TAG_LEGIC_RF, {6,3,0}};
 	sscanf(Cmd, " %"lli" %"lli" %"lli, &c.arg[0], &c.arg[1], &c.arg[2]);
@@ -359,6 +367,7 @@ int CmdLegicRfSim(const char *Cmd) {
 	return 0;
 }
 
+//TODO: write a help text (iceman)
 int CmdLegicRfWrite(const char *Cmd) {
     UsbCommand c = {CMD_WRITER_LEGIC_RF};
     int res = sscanf(Cmd, " 0x%"llx" 0x%"llx, &c.arg[0], &c.arg[1]);
