@@ -104,14 +104,18 @@ void print_hex(const uint8_t * data, const size_t len) {
 	printf("\n");
 }
 void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
-	size_t i;
-	for ( i = 0; i < len; ++i) {
+
+	int rownum = 0;
+	printf("[%02d] | ", rownum);
+	for (int i = 0; i < len; ++i) {
 
 		printf("%02X ", data[i]);
 		
 		// check if a line break is needed
-		if ( breaks > 0 && !(i+1 % breaks) )
-			printf("(%d %d)\n", i+1 , breaks);
+		if ( breaks > 0 && !((i+1) % breaks) && (i+1 < len) ) {
+			++rownum;
+			printf("\n[%02d] | ", rownum);
+		}
 	}
 	printf("\n");
 }
