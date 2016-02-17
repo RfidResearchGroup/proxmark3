@@ -11,5 +11,15 @@
  +   1287:    :     a1  e4  58  ce  6e  ea  41  e0
  +     64:   0: TAG 5c  ad  f4  39
 
-./mfkey64 9c599b32 82a4166c a1e458ce 6eea41e0 5cadf439
+:: Sample values
 
+::         <uid>    <nt>     <nr_0>   <ar_0>   <nr_1>   <ar_1>
+./mfkey32 52B0F519 5417D1F8 4D545EA7 E15AC8C2 dac1a7f4 5ae5c37f  
+
+::          <uid>    <nt>     <nr_0>   <ar_0>   <nt1>    <nr_1>   <ar_1>
+./mfkey32v2 12345678 1AD8DF2B 1D316024 620EF048 30D6CB07 C52077E2 837AC61A
+./mfkey32v2 52B0F519 5417D1F8 4D545EA7 E15AC8C2 A1BA88C6 DAC1A7F4 5AE5C37F 
+
+::        <uid>    <nt>     <nr>     <ar>     <at>
+./mfkey64 9C599B32 82A4166C A1E458CE 6EEA41E0 5CADF439
+./mfkey64 52B0F519 5417D1F8 4D545EA7 E15AC8C2 5056e41b

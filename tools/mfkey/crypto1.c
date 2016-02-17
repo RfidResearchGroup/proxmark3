@@ -23,10 +23,13 @@
 struct Crypto1State * crypto1_create(uint64_t key)
 {
 	struct Crypto1State *s = malloc(sizeof(*s));
-	s->odd = s->even = 0;	
-	int i;
+	if ( !s ) return NULL;
 
-	for(i = 47;s && i > 0; i -= 2) {
+	s->odd = s->even = 0;	
+	
+	int i;
+	//for(i = 47;s && i > 0; i -= 2) {
+	for(i = 47; i > 0; i -= 2) {
 		s->odd  = s->odd  << 1 | BIT(key, (i - 1) ^ 7);
 		s->even = s->even << 1 | BIT(key, i ^ 7);
 	}

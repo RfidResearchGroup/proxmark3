@@ -1,6 +1,6 @@
 CC = gcc
 LD = gcc
-CFLAGS = -Wall -O3 -c
+CFLAGS = -std=c99 -Wall -O3 -c
 LDFLAGS =
 
 OBJS = crypto1.o crapto1.o

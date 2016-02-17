@@ -1,13 +1,12 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-#define llx PRIx64
-#define lli PRIi64
-
-// Test-file: test2.c
 #include "crapto1.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
+#define llx PRIx64
+#define lli PRIi64
 int main (int argc, char *argv[]) {
 	struct Crypto1State *s,*t;
 	uint64_t key;     // recovered key
@@ -21,11 +20,11 @@ int main (int argc, char *argv[]) {
 	uint32_t ks2;     // keystream used to encrypt reader response
 
 	printf("MIFARE Classic key recovery - based 32 bits of keystream  VERSION2\n");
-	printf("Recover key from two 32-bit reader authentication answers only");
+	printf("Recover key from two 32-bit reader authentication answers only\n");
 	printf("This version implements Moebius two different nonce solution (like the supercard)\n\n");
 
 	if (argc < 8) {
-		printf(" syntax: %s <uid> <nt> <{nr_0}> <{ar_0}> <nt1> <{nr_1}> <{ar_1}>\n\n",argv[0]);
+		printf("syntax: %s <uid> <nt> <nr_0> <ar_0> <nt1> <nr_1> <ar_1>\n\n", argv[0]);
 		return 1;
 	}
 
@@ -50,6 +49,7 @@ int main (int argc, char *argv[]) {
 	printf("\nLFSR succesors of the tag challenge:\n");
 	printf("  nt': %08x\n",prng_successor(nt0, 64));
 	printf(" nt'': %08x\n",prng_successor(nt0, 96));
+	clock_t t1 = clock();
 
 	// Extract the keystream from the messages
 	printf("\nKeystream used to generate {ar} and {at}:\n");
@@ -71,6 +71,7 @@ int main (int argc, char *argv[]) {
 			break;}
 	}
 	free(s);
-
+	t1 = clock() - t1;
+	if ( t1 > 0 ) printf("Time : %.0f ticks \n", (float)t1 );
 	return 0;
 }

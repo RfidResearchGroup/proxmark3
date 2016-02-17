@@ -26,7 +26,7 @@ static void __attribute__((constructor)) fill_lut()
 {
 	uint32_t i;
 	for(i = 0; i < 1 << 20; ++i)
-			filterlut[i] = filter(i);
+		filterlut[i] = filter(i);
 }
 #define filter(x) (filterlut[(x) & 0xfffff])
 #endif
@@ -196,7 +196,7 @@ out:
 	return statelist;
 }
 
-static const uint32_t S1[] = {     0x62141, 0x310A0, 0x18850, 0x0C428, 0x06214,
+static const uint32_t S1[] = { 0x62141, 0x310A0, 0x18850, 0x0C428, 0x06214,
 	0x0310A, 0x85E30, 0xC69AD, 0x634D6, 0xB5CDE, 0xDE8DA, 0x6F46D, 0xB3C83,
 	0x59E41, 0xA8995, 0xD027F, 0x6813F, 0x3409F, 0x9E6FA};
 static const uint32_t S2[] = {  0x3A557B00, 0x5D2ABD80, 0x2E955EC0, 0x174AAF60,
@@ -490,7 +490,7 @@ struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8]
 	if(!s || !odd || !even) {
 		free(statelist);
 		statelist = 0;
-                goto out;
+		goto out;
 	}
 
 	for(o = odd; *o + 1; ++o)

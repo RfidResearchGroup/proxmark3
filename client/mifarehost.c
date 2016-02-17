@@ -15,6 +15,7 @@
 #include "mifarehost.h"
 #include "proxmark3.h"
 //#include "radixsort.h"
+#include <time.h>
 
 // MIFARE
 int compar_int(const void * a, const void * b) {
@@ -22,26 +23,25 @@ int compar_int(const void * a, const void * b) {
 	//return (*(uint64_t*)b - *(uint64_t*)a);
 
 	// better:
-	/*if (*(uint64_t*)b < *(uint64_t*)a) return -1;
 	if (*(uint64_t*)b > *(uint64_t*)a) return 1;
+	if (*(uint64_t*)b < *(uint64_t*)a) return -1;	
 	return 0;
-*/
-	return (*(uint64_t*)b > *(uint64_t*)a) - (*(uint64_t*)b < *(uint64_t*)a);
+
+	//return (*(uint64_t*)b > *(uint64_t*)a) - (*(uint64_t*)b < *(uint64_t*)a);
 }
 
 // Compare 16 Bits out of cryptostate
 int Compare16Bits(const void * a, const void * b) {
-
-/*
-	 if ((*(uint64_t*)b & 0x00ff000000ff0000) < (*(uint64_t*)a & 0x00ff000000ff0000)) return -1;
 	 if ((*(uint64_t*)b & 0x00ff000000ff0000) > (*(uint64_t*)a & 0x00ff000000ff0000)) return 1;	
+	 if ((*(uint64_t*)b & 0x00ff000000ff0000) < (*(uint64_t*)a & 0x00ff000000ff0000)) return -1;
 	 return 0;
-*/
-	return 
+
+/*	return 
 		((*(uint64_t*)b & 0x00ff000000ff0000) > (*(uint64_t*)a & 0x00ff000000ff0000))
 		-
 		((*(uint64_t*)b & 0x00ff000000ff0000) < (*(uint64_t*)a & 0x00ff000000ff0000))
 		;
+*/
 }
 
 typedef 
@@ -66,6 +66,7 @@ typedef
 // wrapper function for multi-threaded lfsr_recovery32
 void* nested_worker_thread(void *arg)
 {
+	clock_t t1 = clock();
 	struct Crypto1State *p1;
 	StateList_t *statelist = arg;
 
@@ -77,6 +78,9 @@ void* nested_worker_thread(void *arg)
 	statelist->tail.sltail = --p1;
 	qsort(statelist->head.slhead, statelist->len, sizeof(uint64_t), Compare16Bits);
 	
+	
+	t1 = clock() - t1;
+	printf("lfsr_recovery32 takes %.0f ticks \n", (float)t1);
 	return statelist->head.slhead;
 }
 
@@ -148,7 +152,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 			while (Compare16Bits(p1, p2) == 1) p2++;
 		}
 	}
-	
+
 	p3->even = 0; p3->odd = 0;
 	p4->even = 0; p4->odd = 0;
 	statelists[0].len = p3 - statelists[0].head.slhead;
@@ -160,10 +164,11 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	// intersection of both lists. Create the intersection:
 	qsort(statelists[0].head.keyhead, statelists[0].len, sizeof(uint64_t), compar_int);
 	qsort(statelists[1].head.keyhead, statelists[1].len, sizeof(uint64_t), compar_int);
-
+	
 	uint64_t *p5, *p6, *p7;
 	p5 = p7 = statelists[0].head.keyhead; 
 	p6 = statelists[1].head.keyhead;
+	
 	while (p5 <= statelists[0].tail.keytail && p6 <= statelists[1].tail.keytail) {
 		if (compar_int(p5, p6) == 0) {
 			*p7++ = *p5++;
@@ -177,37 +182,40 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	statelists[0].len = p7 - statelists[0].head.keyhead;
 	statelists[0].tail.keytail = --p7;
 
+	uint32_t numOfCandidates = statelists[0].len;
+	if ( numOfCandidates == 0 ) goto out;
+	
 	memset(resultKey, 0, 6);
 	uint64_t key64 = 0;
 
 	// The list may still contain several key candidates. Test each of them with mfCheckKeys
 	// uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE/6) ? (USB_CMD_DATA_SIZE/6) : keycnt;
+	uint8_t keyBlock[USB_CMD_DATA_SIZE] = {0x00};
 
-	uint32_t numOfCandidates = statelists[0].len;
-	if ( numOfCandidates > 0 ) {
-
-		uint8_t keyBlock[USB_CMD_DATA_SIZE] = {0x00};
-
-		for (i = 0; i < numOfCandidates; ++i){
-			crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
-			num_to_bytes(key64, 6, keyBlock + i * 6);
-		}
-
-		if (!mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, numOfCandidates, keyBlock, &key64)) {		
-			free(statelists[0].head.slhead);
-			free(statelists[1].head.slhead);
-			num_to_bytes(key64, 6, resultKey);
-
-			PrintAndLog("UID: %08x target block:%3u key type: %c  -- Found key [%012"llx"]",
-				uid,
-				(uint16_t)resp.arg[2] & 0xff,
-				(resp.arg[2] >> 8) ? 'B' : 'A',
-				key64
-			);
-			return -5;
-		}
-		
+	clock_t t1 = clock();
+	for (i = 0; i < numOfCandidates; ++i){
+		crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
+		num_to_bytes(key64, 6, keyBlock + i * 6);
 	}
+
+	if (!mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, numOfCandidates, keyBlock, &key64)) {		
+		free(statelists[0].head.slhead);
+		free(statelists[1].head.slhead);
+		num_to_bytes(key64, 6, resultKey);
+
+		t1 = clock() - t1;
+		printf("Check candidates takes %.0f ticks \n", (float)t1);	
+		
+		PrintAndLog("UID: %08x target block:%3u key type: %c  -- Found key [%012"llx"]",
+			uid,
+			(uint16_t)resp.arg[2] & 0xff,
+			(resp.arg[2] >> 8) ? 'B' : 'A',
+			key64
+		);
+		return -5;
+	}
+	
+out:
 	PrintAndLog("UID: %08x target block:%3u key type: %c",
 			uid,
 			(uint16_t)resp.arg[2] & 0xff,

@@ -139,12 +139,11 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	// variables
 	int len;	
 	uint32_t pos;
-	uint8_t tmp4[4] = {0x00};
 	uint8_t par[1] = {0x00};
 
 	// "random" reader nonce:
-	byte_t nr[4] = {0x55, 0x41, 0x49, 0x92};
-	//byte_t nr[4] = {0x01, 0x01, 0x01, 0x01};
+	//byte_t nr[4] = {0x55, 0x41, 0x49, 0x92};
+	byte_t nr[4] = {0x01, 0x01, 0x01, 0x01};
 	
 	uint32_t nt, ntpp; // Supplied tag nonce
 	
@@ -210,10 +209,9 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 		return 2;
 	}
 	
-	memcpy(tmp4, receivedAnswer, 4);
 	ntpp = prng_successor(nt, 32) ^ crypto1_word(pcs, 0,0);
-	
-	if (ntpp != bytes_to_num(tmp4, 4)) {
+
+	if (ntpp != bytes_to_num(receivedAnswer, 4)) {
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Authentication failed. Error card response.");
 		return 3;
 	}

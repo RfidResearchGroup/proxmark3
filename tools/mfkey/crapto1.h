@@ -17,8 +17,8 @@
 
     Copyright (C) 2008-2014 bla <blapost@gmail.com>
 */
-#ifndef CRAPTO1_INCLUDED
-#define CRAPTO1_INCLUDED
+#ifndef CRAPTO1_H__
+#define CRAPTO1_H__
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
