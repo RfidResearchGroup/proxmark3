@@ -68,7 +68,7 @@ int CmdLegicDecode(const char *Cmd) {
 	uint32_t calc_crc =  CRC8Legic(data_buf, 4);	
 	
 	PrintAndLog("\nCDF: System Area");
-
+	PrintAndLog("------------------------------------------------------");
 	PrintAndLog("MCD: %02x, MSN: %02x %02x %02x, MCC: %02x %s",
 		data_buf[0],
 		data_buf[1],
@@ -118,8 +118,22 @@ int CmdLegicDecode(const char *Cmd) {
 	uint32_t segCalcCRC = 0;
 	uint32_t segCRC = 0;
 
+	// see if user area is xored or just zeros.
+	int numOfZeros = 0;
+	for (int index=22; index < 256; ++index){
+		if ( data_buf[index] == 0x00 )
+			++numOfZeros;
+	}
+	// if possible zeros is less then 60%, lets assume data is xored
+	// 256  - 22 (header) = 234
+	// 1024 - 22 (header) = 1002
+	int isXored = (numOfZeros*100/stamp_len) < 50;
+	PrintAndLog("is data xored?  %d  ( %d %)", isXored, (numOfZeros*100/stamp_len));
+
+	print_hex_break( data_buf, 33, 16);
+	
 	PrintAndLog("\nADF: User Area");
-	printf("-------------------------------------\n");
+	PrintAndLog("------------------------------------------------------");
 	i = 22;  
 	// 64 potential segements
 	// how to detect there is no segments?!?
@@ -148,7 +162,7 @@ int CmdLegicDecode(const char *Cmd) {
 		segCalcCRC = CRC8Legic(segCrcBytes, 8);
 		segCRC = data_buf[i+4]^crc;
 
-		PrintAndLog("Segment %02u \nraw header=0x%02X 0x%02X 0x%02X 0x%02X \nSegment len: %u,  Flag: 0x%X (valid:%01u, last:%01u), WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X (%s)",
+		PrintAndLog("Segment %02u \nraw header | 0x%02X 0x%02X 0x%02X 0x%02X \nSegment len: %u,  Flag: 0x%X (valid:%01u, last:%01u), WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X (%s)",
 			segmentNum,
 			data_buf[i]^crc,
 			data_buf[i+1]^crc,
@@ -169,9 +183,10 @@ int CmdLegicDecode(const char *Cmd) {
     
 		if ( hasWRC ) {
 			PrintAndLog("WRC protected area:   (I %d | K %d| WRC %d)", i, k, wrc);
-
+			PrintAndLog("\nrow  | data");
+			PrintAndLog("-----+------------------------------------------------");
 			// de-xor?  if not zero, assume it needs xoring.
-			if ( data_buf[i] > 0) {
+			if ( isXored) {
 				for ( k=i; k < wrc; ++k)
 					data_buf[k] ^= crc;
 			}
@@ -182,9 +197,10 @@ int CmdLegicDecode(const char *Cmd) {
     
 		if ( hasWRP ) {
 			PrintAndLog("Remaining write protected area:  (I %d | K %d | WRC %d | WRP %d  WRP_LEN %d)",i, k, wrc, wrp, wrp_len);
+			PrintAndLog("\nrow  | data");
+			PrintAndLog("-----+------------------------------------------------");
 
-			// de-xor?  if not zero, assume it needs xoring.
-			if ( data_buf[i] > 0) {
+			if (isXored) {
 				for (k=i; k < wrp_len; ++k)
 					data_buf[k] ^= crc;
 			}
@@ -199,8 +215,9 @@ int CmdLegicDecode(const char *Cmd) {
 		}
     
 		PrintAndLog("Remaining segment payload:  (I %d | K %d | Remain LEN %d)", i, k, remain_seg_payload_len);
-		
-		if ( data_buf[i] > 0 ) {
+		PrintAndLog("\nrow  | data");
+		PrintAndLog("-----+------------------------------------------------");
+		if ( isXored ) {
 			for ( k=i; k < remain_seg_payload_len; ++k)
 				data_buf[k] ^= crc;
 		}
@@ -209,7 +226,7 @@ int CmdLegicDecode(const char *Cmd) {
     
 		i += remain_seg_payload_len;
 		
-		printf("\n-------------------------------------\n");
+		PrintAndLog("-----+------------------------------------------------\n");
 
 		// end with last segment
 		if (segment_flag & 0x8) return 0;
@@ -332,18 +349,18 @@ int CmdLegicSave(const char *Cmd) {
 		return 0;
 	}
 
+	GetFromBigBuf(got, requested, offset);
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000)){
+		PrintAndLog("Command execute timeout");	
+		return 1;
+	}
+
 	FILE *f = fopen(filename, "w");
 	if(!f) {
 		PrintAndLog("couldn't open '%s'", Cmd+1);
 		return -1;
 	}
-
-	GetFromBigBuf(got, requested, offset);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000)){
-		PrintAndLog("Command execute timeout");
-		return 1;
-	}
-
+	
 	for (int j = 0; j < requested; j += 8) {
 		fprintf(f, "%02x %02x %02x %02x %02x %02x %02x %02x\n",
 			got[j+0], got[j+1], got[j+2], got[j+3],
@@ -409,10 +426,11 @@ int CmdLegicCalcCrc8(const char *Cmd){
 	int len =  strlen(Cmd);	
 	if (len & 1 ) return usage_legic_calccrc8(); 
 	
-	uint8_t *data = malloc(len);
+	// add 1 for null terminator.
+	uint8_t *data = malloc(len+1);
 	if ( data == NULL ) return 1;
 		
-	param_gethex(Cmd, 0, data, len );
+	if (!param_gethex(Cmd, 0, data, len )) return usage_legic_calccrc8(); 
 	
 	uint32_t checksum =  CRC8Legic(data, len/2);	
 	PrintAndLog("Bytes: %s || CRC8: %X", sprint_hex(data, len/2), checksum );

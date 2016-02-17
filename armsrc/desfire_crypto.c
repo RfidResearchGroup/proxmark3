@@ -580,7 +580,7 @@ void mifare_cypher_single_block (desfirekey_t key, uint8_t *data, uint8_t *ivect
 			{
 				AesCtx ctx;
 				AesCtxIni(&ctx, ivect, key->data, KEY128,CBC); 
-				AesEncrypt(&ctx, data, edata, sizeof(data) );
+				AesEncrypt(&ctx, data, edata, sizeof(edata) );
 				break;
 			}
 			case MCO_DECYPHER:

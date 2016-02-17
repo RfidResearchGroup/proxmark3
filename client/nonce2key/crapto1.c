@@ -486,12 +486,11 @@ struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8]
 	odd = lfsr_prefix_ks(ks, 1);
 	even = lfsr_prefix_ks(ks, 0);
 
-	s = statelist = malloc((sizeof *statelist) << 21);
+	s = statelist = malloc((sizeof *statelist) << 20);
 	if(!s || !odd || !even) {
 		free(statelist);
-		free(odd);
-		free(even);
-		return 0;
+		statelist = 0;
+                goto out;
 	}
 
 	for(o = odd; *o + 1; ++o)
@@ -503,7 +502,7 @@ struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8]
 			}
 
 	s->odd = s->even = 0;
-
+out:
 	free(odd);
 	free(even);
 	return statelist;

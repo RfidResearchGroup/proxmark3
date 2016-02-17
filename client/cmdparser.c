@@ -43,7 +43,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd)
   }
   char cmd_name[32];
   int len = 0;
-  memset(cmd_name, 0, 32);
+  memset(cmd_name, 0, sizeof(cmd_name));
   sscanf(Cmd, "%31s%n", cmd_name, &len);
   int i = 0;
   while (Commands[i].Name && strcmp(Commands[i].Name, cmd_name))

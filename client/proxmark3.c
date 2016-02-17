@@ -127,8 +127,8 @@ static void *main_loop(void *targ) {
 	while(1)  {
 
 		// If there is a script file
-		if (script_file)
-		{
+		if (script_file) {
+			
 			if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), script_file)) {
 				fclose(script_file);
 				script_file = NULL;
@@ -142,9 +142,10 @@ static void *main_loop(void *targ) {
 				
 				if (nl)
 					*nl = '\0';
-
-				if ((cmd = (char*) malloc(strlen(script_cmd_buf) + 1)) != NULL) {
-					memset(cmd, 0, strlen(script_cmd_buf));
+				
+				int newlen = strlen(script_cmd_buf);
+				if ((cmd = (char*) malloc( newlen + 1)) != NULL) {
+					memset(cmd, 0x00, newlen);
 					strcpy(cmd, script_cmd_buf);
 					printf("%s\n", cmd);
 				}
@@ -170,8 +171,14 @@ static void *main_loop(void *targ) {
 			printf("\n");
 			break;
 		}
+		free(cmd);
 	}
-  
+
+	if (script_file) {
+		fclose(script_file);
+		script_file = NULL;
+	}
+	
 	write_history(".history");
 
 	free(cmd);
@@ -179,11 +186,6 @@ static void *main_loop(void *targ) {
 	if (arg->usb_present == 1) {
 		rarg.run = 0;
 		pthread_join(reader_thread, NULL);
-	}
-
-	if (script_file) {
-		fclose(script_file);
-		script_file = NULL;
 	}
 
 	ExitGraphics();
