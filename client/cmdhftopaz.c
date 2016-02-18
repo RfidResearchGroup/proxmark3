@@ -188,7 +188,7 @@ static bool topaz_print_lock_control_TLVs(uint8_t *memory)
 		if (tag == 0x01) {			// the Lock Control TLV
 			uint8_t pages_addr = value[0] >> 4;
 			uint8_t byte_offset = value[0] & 0x0f;
-			uint8_t size_in_bits = value[1] ? value[1] : 256;
+			uint8_t size_in_bits = value[1] ? value[1] : 255;
 			uint8_t bytes_per_page = 1 << (value[2] & 0x0f);
 			uint8_t bytes_locked_per_bit = 1 << (value[2] >> 4);
 			PrintAndLog("Lock Area of %d bits at byte offset 0x%02x. Each Lock Bit locks %d bytes.", 
@@ -222,7 +222,7 @@ static int topaz_print_reserved_memory_control_TLVs(uint8_t *memory)
 		if (tag == 0x02) {			// the Reserved Memory Control TLV
 			uint8_t pages_addr = value[0] >> 4;
 			uint8_t byte_offset = value[0] & 0x0f;
-			uint8_t size_in_bytes = value[1] ? value[1] : 256;
+			uint8_t size_in_bytes = value[1] ? value[1] : 255;
 			uint8_t bytes_per_page = 1 << (value[2] & 0x0f);
 			PrintAndLog("Reserved Memory of %d bytes at byte offset 0x%02x.", 
 						size_in_bytes,
