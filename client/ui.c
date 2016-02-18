@@ -9,20 +9,7 @@
 // UI utilities
 //-----------------------------------------------------------------------------
 
-#include <stdarg.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <time.h>
-#include <readline/readline.h>
-#include <pthread.h>
-#include "loclass/cipherutils.h"
 #include "ui.h"
-#include "cmdmain.h"
-#include "cmddata.h"
-#include "graph.h"
-#define M_PI 3.14159265358979323846264338327
-
 double CursorScaleFactor;
 int PlotGridX, PlotGridY, PlotGridXdefault= 64, PlotGridYdefault= 64;
 int offline;

@@ -10,11 +10,25 @@
 
 #ifndef UI_H__
 #define UI_H__
-
+#define _USE_MATH_DEFINES
+#include <stdarg.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <time.h>
+#include <readline/readline.h>
+#include <pthread.h>
 #include <math.h>
 #include <complex.h>
+#include "loclass/cipherutils.h"
 #include "util.h"
+#include "cmdmain.h"
+#include "cmddata.h"
+#include "graph.h"
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846264338327
+#endif
 void ShowGui(void);
 void HideGraphWindow(void);
 void ShowGraphWindow(void);
