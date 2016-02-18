@@ -54,6 +54,7 @@ uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
 	return crc_finish(&crc);
 }
 
+//credits to iceman
 uint32_t CRC8Legic(uint8_t *buff, size_t size) {
 
 	// Poly 0x63,   reversed poly 0xC6,  Init 0x55,  Final 0x00
