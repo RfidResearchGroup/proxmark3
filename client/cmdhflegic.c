@@ -430,7 +430,10 @@ int CmdLegicCalcCrc8(const char *Cmd){
 	uint8_t *data = malloc(len+1);
 	if ( data == NULL ) return 1;
 		
-	if (param_gethex(Cmd, 0, data, len )) return usage_legic_calccrc8(); 
+	if (param_gethex(Cmd, 0, data, len )) {
+		free(data);
+		return usage_legic_calccrc8();	
+	}
 	
 	uint32_t checksum =  CRC8Legic(data, len/2);	
 	PrintAndLog("Bytes: %s || CRC8: %X", sprint_hex(data, len/2), checksum );
