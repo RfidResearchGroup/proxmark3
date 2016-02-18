@@ -167,11 +167,11 @@ static void *main_loop(void *targ) {
 				if (ret == 99) 
 					break;
 			}
+			free(cmd);
 		} else {
 			printf("\n");
 			break;
 		}
-		free(cmd);
 	}
 
 	if (script_file) {
