@@ -424,13 +424,13 @@ int CmdLegicRfFill(const char *Cmd) {
 int CmdLegicCalcCrc8(const char *Cmd){
 
 	int len =  strlen(Cmd);	
-	if (len & 1 ) return usage_legic_calccrc8(); 
+	if ( len & 1 ) return usage_legic_calccrc8(); 
 	
 	// add 1 for null terminator.
 	uint8_t *data = malloc(len+1);
 	if ( data == NULL ) return 1;
 		
-	if (!param_gethex(Cmd, 0, data, len )) return usage_legic_calccrc8(); 
+	if (param_gethex(Cmd, 0, data, len )) return usage_legic_calccrc8(); 
 	
 	uint32_t checksum =  CRC8Legic(data, len/2);	
 	PrintAndLog("Bytes: %s || CRC8: %X", sprint_hex(data, len/2), checksum );
