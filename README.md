@@ -83,10 +83,10 @@ GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS or 15.10
 See https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux
 
 Run 
-	-> sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget"a
+	-> sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget
 
 Follow these instructions
-Get devkitARM release 41 from SourceForge (choose either the 64/32 ¿bit depending on your architecture, it is assumed you know how to check and recognize your architecture):
+Get devkitARM release 41 from SourceForge (choose either the 64/32 bit depending on your architecture, it is assumed you know how to check and recognize your architecture):
 
 (64-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-x86_64-linux.tar.bz2/download
 (32-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-i686-linux.tar.bz2/download
