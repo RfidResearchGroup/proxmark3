@@ -29,6 +29,17 @@ ifneq (,$(findstring MINGW,$(platform)))
     else
         QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
     endif
+
+	# QT version,  4 or 5
+	qtplatform = $(shell $(MOC) -v)
+	ifneq (, $(findstring moc 5,$(qtplatform)))
+	   CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui -I$(QTDIR)/include/QtWidgets  -I/mingw/include
+	   QTLDLIBS = -L$(QTDIR)/lib  -lQt5Core -lQt5Gui -lQt5Widgets 
+	else
+	   CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
+	   QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
+	endif
+	
 else ifeq ($(platform),Darwin)
     CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
     QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
@@ -42,30 +53,6 @@ else
     # Below is a variant you can use if you have problems compiling with QT5 on ubuntu. see http://www.proxmark.org/forum/viewtopic.php?id=1661 for more info. 
     #MOC = /usr/lib/x86_64-linux-gnu/qt4/bin/moc
     LUAPLATFORM = linux
-endif
-
-# QT version,  4 or 5
-qtplatform = $(shell $(MOC) -v)
-ifneq (, $(findstring moc 5,$(qtplatform)))
-   CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui -I$(QTDIR)/include/QtWidgets  -I/mingw/include
-   QTLDLIBS = -L$(QTDIR)/lib  -lQt5Core -lQt5Gui -lQt5Widgets 
-else
-   CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
-   QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
-endif
-
-# easy variable to pass to allow this to build on ubutnu 14.04.2
-ifeq (1,$(UBUNTU_1404_QT4))
-  CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
-  QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
-  LUALIB = ../liblua/liblua.a
-  LUALIB +=  -ldl
-  MOC = $(shell pkg-config --variable=moc_location QtCore)
-  LUAPLATFORM = linux
-
-  # pop out the libgdi/etc strings
-  LDLIBS = -L/mingw/lib -L/opt/local/lib -L/usr/local/lib -lm -lreadline -lpthread 
-  
 endif
 
 ifneq ($(QTLDLIBS),)
