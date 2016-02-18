@@ -81,7 +81,7 @@ int CmdHFEPAPACEReplay(const char *Cmd)
 	uint8_t *apdus[] = {msesa_apdu, gn_apdu, map_apdu, pka_apdu, ma_apdu};
 
 	// usage message
-	static const char const *usage_msg =
+	static const char *usage_msg =
 		"Please specify 5 APDUs separated by spaces. "
 		"Example:\n preplay 0022C1A4 1068000000 1086000002 1234ABCDEF 1A2B3C4D";
 
