@@ -63,6 +63,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo );
 int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose);
 int ASKbiphaseDemod(const char *Cmd, bool verbose);
 int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType);
+int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, bool *stCheck);
 int FSKrawDemod(const char *Cmd, bool verbose);
 int PSKDemod(const char *Cmd, bool verbose);
 int NRZrawDemod(const char *Cmd, bool verbose);

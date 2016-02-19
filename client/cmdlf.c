@@ -38,7 +38,8 @@ int usage_lf_cmdread(void) {
 	PrintAndLog("Usage: lf cmdread d <delay period> z <zero period> o <one period> c <cmdbytes> [H]");
 	PrintAndLog("Options:        ");
 	PrintAndLog("       h             This help");
-	PrintAndLog("       H             Freqency High (134 KHz), default is 'Low (125KHz)'");
+	PrintAndLog("       L             Low frequency (125 KHz)");
+	PrintAndLog("       H             High frequency (134 KHz)");
 	PrintAndLog("       d <delay>     delay OFF period, (dec)");
 	PrintAndLog("       z <zero>      time period ZERO, (dec)");
 	PrintAndLog("       o <one>       time period ONE, (dec)");
@@ -1186,8 +1187,8 @@ int CmdLFfind(const char *Cmd) {
 				return 1;
 			}
 		}
-
-		ans=ASKDemod("0 0 0",TRUE,FALSE,1);
+		bool st = TRUE;
+		ans=ASKDemod_ext("0 0 0",TRUE,FALSE,1,&st);
 		if (ans>0) {
 		  PrintAndLog("\nUnknown ASK Modulated and Manchester encoded Tag Found!");
 		  PrintAndLog("\nif it does not look right it could instead be ASK/Biphase - try 'data rawdemod ab'");
@@ -1217,7 +1218,7 @@ static command_t CommandTable[] =
 	{"pcf7931",     CmdLFPCF7931,       1, "{ PCF7931 RFIDs... }"},
 	{"presco",      CmdLFPresco,        1, "{ Presco RFIDs... }"},
 	{"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
-	{"t55xx",       CmdLFT55XX,         1, "{ T55X7 RFIDs... }"},
+	{"t55xx",       CmdLFT55XX,         1, "{ T55xx RFIDs... }"},
 	{"viking",      CmdLFViking,        1, "{ Viking RFIDs... }"},
 	{"config",      CmdLFSetConfig,     0, "Set config for LF sampling, bit/sample, decimation, frequency"},
 	{"cmdread",     CmdLFCommandRead,   0, "<off period> <'0' period> <'1' period> <command> ['h' 134] \n\t\t-- Modulate LF reader field to send command before read (all periods in microseconds)"},
@@ -1231,7 +1232,7 @@ static command_t CommandTable[] =
 	{"simfsk",      CmdLFfskSim,        0, "[c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>] \n\t\t-- Simulate LF FSK tag from demodbuffer or input"},
 	{"simpsk",      CmdLFpskSim,        0, "[1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>] \n\t\t-- Simulate LF PSK tag from demodbuffer or input"},
 	{"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
-	{"snoop",       CmdLFSnoop,         0, "Snoop LF"},
+	{"snoop",       CmdLFSnoop,         0, "['l'|'h'|<divisor>] [trigger threshold]-- Snoop LF (l:125khz, h:134khz)"},
 	{"vchdemod",    CmdVchDemod,        1, "['clone'] -- Demodulate samples for VeriChip"},
 	{NULL, NULL, 0, NULL}
 };

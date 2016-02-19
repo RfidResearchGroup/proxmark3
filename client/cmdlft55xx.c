@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-//#include <time.h>
 #include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"
@@ -22,7 +21,7 @@
 #include "util.h"
 #include "data.h"
 #include "lfdemod.h"
-#include "cmdhf14a.h"
+#include "cmdhf14a.h" //for getTagInfo
 
 #define T55x7_CONFIGURATION_BLOCK 0x00
 #define T55x7_PAGE0 0x00
@@ -49,6 +48,7 @@ int usage_t55xx_config(){
 	PrintAndLog("       i [1]                            Invert data signal, defaults to normal");
 	PrintAndLog("       o [offset]                       Set offset, where data should start decode in bitstream");
 	PrintAndLog("       Q5                            Set as Q5(T5555) chip instead of T55x7");
+	PrintAndLog("       ST                            Set Sequence Terminator on");
 	PrintAndLog("");
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf t55xx config d FSK          - FSK demodulation");
@@ -169,7 +169,7 @@ int usage_t55xx_wipe(){
 	PrintAndLog("This commands wipes a tag, fills blocks 1-7 with zeros and a default configuration block");
 	PrintAndLog("Options:");
 	PrintAndLog("     h 	- this help");
-    PrintAndLog("     Q5	- indicates to use the T555 (Q5) default configuration block");
+	PrintAndLog("     Q5  - indicates to use the T5555 (Q5) default configuration block");
     PrintAndLog("");
 	PrintAndLog("Examples:");
     PrintAndLog("      lf t55xx wipe	-  wipes a t55x7 tag,    config block 0x000880E0");
@@ -267,6 +267,11 @@ int CmdT55xxSetConfig(const char *Cmd) {
 		case 'Q':
 		case 'q':		
 			config.Q5 = TRUE;
+			cmdp++;
+			break;
+		case 'S':
+		case 's':		
+			config.ST = TRUE;
 			cmdp++;
 			break;
 		default:
@@ -371,6 +376,7 @@ bool DecodeT55xxBlock(){
 	char buf[30] = {0x00};
 	char *cmdStr = buf;
 	int ans = 0;
+	bool ST = config.ST;
 	uint8_t bitRate[8] = {8,16,32,40,50,64,100,128};
 	DemodBufferLen = 0x00;
 
@@ -391,7 +397,7 @@ bool DecodeT55xxBlock(){
 			break;
 		case DEMOD_ASK:
 			snprintf(cmdStr, sizeof(buf),"%d %d 1", bitRate[config.bitrate], config.inverted );
-			ans = ASKDemod(cmdStr, FALSE, FALSE, 1);
+			ans = ASKDemod_ext(cmdStr, FALSE, FALSE, 1, &ST);
 			break;
 		case DEMOD_PSK1:
 			// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
@@ -496,6 +502,7 @@ bool tryDetectModulation(){
 			tests[hits].bitrate = bitRate;
 			tests[hits].inverted = FALSE;
 			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+			tests[hits].ST = FALSE;
 			++hits;
 		}
 		if ( FSKrawDemod("0 1", FALSE) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
@@ -507,19 +514,22 @@ bool tryDetectModulation(){
 			tests[hits].bitrate = bitRate;
 			tests[hits].inverted = TRUE;
 			tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+			tests[hits].ST = FALSE;
 			++hits;
 		}
 	} else {
 		clk = GetAskClock("", FALSE, FALSE);
 		if (clk>0) {
-			if ( ASKDemod("0 0 1", FALSE, FALSE, 1) && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+			tests[hits].ST = TRUE;
+			if ( ASKDemod_ext("0 0 1", FALSE, FALSE, 1, &tests[hits].ST) && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
 				tests[hits].modulation = DEMOD_ASK;
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = FALSE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
 				++hits;
 			}
-			if ( ASKDemod("0 1 1", FALSE, FALSE, 1)  && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+			tests[hits].ST = TRUE;
+			if ( ASKDemod_ext("0 1 1", FALSE, FALSE, 1, &tests[hits].ST)  && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
 				tests[hits].modulation = DEMOD_ASK;
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = TRUE;
@@ -531,6 +541,7 @@ bool tryDetectModulation(){
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = FALSE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				tests[hits].ST = FALSE;
 				++hits;
 			}
 			if ( ASKbiphaseDemod("0 0 1 2", FALSE) && test(DEMOD_BIa, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5) ) {
@@ -538,6 +549,7 @@ bool tryDetectModulation(){
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = TRUE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				tests[hits].ST = FALSE;
 				++hits;
 			}
 		}
@@ -550,6 +562,7 @@ bool tryDetectModulation(){
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = FALSE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				tests[hits].ST = FALSE;
 				++hits;
 			}
 
@@ -558,6 +571,7 @@ bool tryDetectModulation(){
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = TRUE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				tests[hits].ST = FALSE;
 				++hits;
 			}
 		}
@@ -573,6 +587,7 @@ bool tryDetectModulation(){
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = FALSE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				tests[hits].ST = FALSE;
 				++hits;
 			}
 			if ( PSKDemod("0 1 6", FALSE) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
@@ -580,6 +595,7 @@ bool tryDetectModulation(){
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = TRUE;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+				tests[hits].ST = FALSE;
 				++hits;
 			}
 			// PSK2 - needs a call to psk1TOpsk2.
@@ -590,6 +606,7 @@ bool tryDetectModulation(){
 					tests[hits].bitrate = bitRate;
 					tests[hits].inverted = FALSE;
 					tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+					tests[hits].ST = FALSE;
 					++hits;
 				}
 			} // inverse waves does not affect this demod
@@ -601,6 +618,7 @@ bool tryDetectModulation(){
 					tests[hits].bitrate = bitRate;
 					tests[hits].inverted = FALSE;
 					tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
+					tests[hits].ST = FALSE;
 					++hits;
 				}
 			} // inverse waves does not affect this demod
@@ -615,6 +633,7 @@ bool tryDetectModulation(){
 		config.offset = tests[0].offset;
 		config.block0 = tests[0].block0;
 		config.Q5 = tests[0].Q5;
+		config.ST = tests[0].ST;
 		printConfiguration( config );
 		return TRUE;
 	}
@@ -767,14 +786,14 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
 		uint8_t extend   = PackBits(si, 1, DemodBuffer); si += 1;     //bit 15 extended mode
 		uint8_t modread  = PackBits(si, 5, DemodBuffer); si += 5+2+1; 
 		//uint8_t pskcr   = PackBits(si, 2, DemodBuffer); si += 2+1;  //could check psk cr
-		uint8_t nml01    = PackBits(si, 1, DemodBuffer); si += 1+5;   //bit 24, 30, 31 could be tested for 0 if not extended mode
-		uint8_t nml02    = PackBits(si, 2, DemodBuffer); si += 2;
+		//uint8_t nml01    = PackBits(si, 1, DemodBuffer); si += 1+5;   //bit 24, 30, 31 could be tested for 0 if not extended mode
+		//uint8_t nml02    = PackBits(si, 2, DemodBuffer); si += 2;
 		
 		//if extended mode
 		bool extMode =( (safer == 0x6 || safer == 0x9) && extend) ? TRUE : FALSE;
 
 		if (!extMode){
-			if (nml01 || nml02 || xtRate) continue;
+			if (xtRate) continue;  //nml01 || nml02 ||  caused issues on noralys tags
 		}
 		//test modulation
 		if (!testModulation(mode, modread)) continue;
@@ -838,6 +857,7 @@ int printConfiguration( t55xx_conf_block_t b){
 	PrintAndLog("Bit Rate   : %s", GetBitRateStr(b.bitrate) );
 	PrintAndLog("Inverted   : %s", (b.inverted) ? "Yes" : "No" );
 	PrintAndLog("Offset     : %d", b.offset);
+	PrintAndLog("Seq. Term. : %s", (b.ST) ? "Yes" : "No" );
 	PrintAndLog("Block0     : 0x%08X", b.block0);
 	PrintAndLog("");
 	return 0;
@@ -956,8 +976,7 @@ int CmdT55xxReadTrace(const char *Cmd) {
 
 	if ( config.Q5 ){
 		if (!DecodeT5555TraceBlock()) return 0;
-	}
-	else {
+	} else {
 		if (!DecodeT55xxBlock()) return 0;
 	}
 	
@@ -1009,7 +1028,7 @@ int CmdT55xxReadTrace(const char *Cmd) {
 		
 	} else {
 	
-		t55xx_tracedata_t data = {.bl1 = bl1, .bl2 = bl2, .acl = 0, .mfc = 0, .cid = 0, .year = 0, .quarter = 0, .icr = 0,  .lotid = 0, .wafer = 0, .dw = 0};
+		t55x7_tracedata_t data = {.bl1 = bl1, .bl2 = bl2, .acl = 0, .mfc = 0, .cid = 0, .year = 0, .quarter = 0, .icr = 0,  .lotid = 0, .wafer = 0, .dw = 0};
 		
 		data.acl = PackBits(si, 8,  DemodBuffer); si += 8;
 		if ( data.acl != 0xE0 ) {
@@ -1033,14 +1052,13 @@ int CmdT55xxReadTrace(const char *Cmd) {
 		else
 			data.year += 2010;
 
-		
-		printT55xxTrace(data, repeat);
+		printT55x7Trace(data, repeat);
 	}
 	return 0;
 }
 
-void printT55xxTrace( t55xx_tracedata_t data, uint8_t repeat ){
-	PrintAndLog("-- T55xx Trace Information ----------------------------------");
+void printT55x7Trace( t55x7_tracedata_t data, uint8_t repeat ){
+	PrintAndLog("-- T55x7 Trace Information ----------------------------------");
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" ACL Allocation class (ISO/IEC 15963-1)  : 0x%02X (%d)", data.acl, data.acl);
 	PrintAndLog(" MFC Manufacturer ID (ISO/IEC 7816-6)    : 0x%02X (%d) - %s", data.mfc, data.mfc, getTagInfo(data.mfc));
@@ -1074,6 +1092,7 @@ void printT55xxTrace( t55xx_tracedata_t data, uint8_t repeat ){
 		18-32	DW,  die number sequential
 	*/
 }
+
 void printT5555Trace( t5555_tracedata_t data, uint8_t repeat ){
 	PrintAndLog("-- T5555 (Q5) Trace Information -----------------------------");
 	PrintAndLog("-------------------------------------------------------------");
@@ -1101,6 +1120,7 @@ void printT5555Trace( t5555_tracedata_t data, uint8_t repeat ){
 	*/
 }
 
+//need to add Q5 info...
 int CmdT55xxInfo(const char *Cmd){
 	/*
 		Page 0 Block 0 Configuration data.
@@ -1144,7 +1164,7 @@ int CmdT55xxInfo(const char *Cmd){
 	
 	if (config.Q5) PrintAndLog("*** Warning *** Config Info read off a Q5 will not display as expected");
 	PrintAndLog("");
-	PrintAndLog("-- T55xx Configuration & Tag Information --------------------");
+	PrintAndLog("-- T55x7 Configuration & Tag Information --------------------");
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" Safer key                 : %s", GetSaferStr(safer));
 	PrintAndLog(" reserved                  : %d", resv);
@@ -1544,7 +1564,7 @@ static command_t CommandTable[] = {
 	{"special",		special,           0, "Show block changes with 64 different offsets"},	
 	{"trace",		CmdT55xxReadTrace, 1, "[1] Show T55x7 traceability data (page 1/ blk 0-1)"},
 	{"wakeup",		CmdT55xxWakeUp,    0, "Send AOR wakeup command"},
-	{"wipe",		CmdT55xxWipe,      0, "Wipe a T55xx tag and set defaults (will destroy any data on tag)"},
+	{"wipe",		CmdT55xxWipe,      0, "[q] Wipe a T55xx tag and set defaults (will destroy any data on tag)"},
 	{"write",		CmdT55xxWriteBlock,0, "b <block> d <data> p [password] [1] -- Write T55xx block data. Optional [p password], [page1]"},
 	{NULL, NULL, 0, NULL}
 };

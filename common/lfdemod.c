@@ -9,9 +9,8 @@
 //-----------------------------------------------------------------------------
 
 #include <stdlib.h>
-#include <string.h>
 #include "lfdemod.h"
-#include "common.h"
+#include <string.h>
 
 //un_comment to allow debug print calls when used not on device
 void dummy(char *fmt, ...){}
@@ -217,6 +216,7 @@ int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int 
 				if (smplCnt > clk-(clk/4)-1) { //full clock
 					if (smplCnt > clk + (clk/4)+1) { //too many samples
 						errCnt++;
+						if (g_debugMode==2) prnt("DEBUG ASK: Modulation Error at: %u", i);
 						BinStream[bitCnt++]=7;
 					} else if (waveHigh) {
 						BinStream[bitCnt++] = invert;
@@ -273,7 +273,7 @@ int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr
 	if (*clk==0 || start < 0) return -3;
 	if (*invert != 1) *invert = 0;
 	if (amp==1) askAmp(BinStream, *size);
-	if (g_debugMode==2) prnt("DEBUG: clk %d, beststart %d", *clk, start);
+	if (g_debugMode==2) prnt("DEBUG ASK: clk %d, beststart %d", *clk, start);
 
 	uint8_t initLoopMax = 255;
 	if (initLoopMax > *size) initLoopMax = *size;
@@ -286,20 +286,21 @@ int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr
 	size_t errCnt = 0;
 	// if clean clipped waves detected run alternate demod
 	if (DetectCleanAskWave(BinStream, *size, high, low)) {
-		if (g_debugMode==2) prnt("DEBUG: Clean Wave Detected");
+		if (g_debugMode==2) prnt("DEBUG ASK: Clean Wave Detected - using clean wave demod");
 		errCnt = cleanAskRawDemod(BinStream, size, *clk, *invert, high, low);
 		if (askType) //askman
 			return manrawdecode(BinStream, size, 0);	
 		else //askraw
 			return errCnt;
 	}
+	if (g_debugMode==2) prnt("DEBUG ASK: Weak Wave Detected - using weak wave demod");
 
 	int lastBit;  //set first clock check - can go negative
 	size_t i, bitnum = 0;     //output counter
 	uint8_t midBit = 0;
 	uint8_t tol = 0;  //clock tolerance adjust - waves will be accepted as within the clock if they fall + or - this value + clock from last valid wave
 	if (*clk <= 32) tol = 1;    //clock tolerance may not be needed anymore currently set to + or - 1 but could be increased for poor waves or removed entirely
-	size_t MaxBits = 3072;
+	size_t MaxBits = 3072;    //max bits to collect
 	lastBit = start - *clk;
 
 	for (i = start; i < *size; ++i) {
@@ -310,6 +311,7 @@ int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr
 				BinStream[bitnum++] = *invert ^ 1;
 			} else if (i-lastBit >= *clk+tol) {
 				if (bitnum > 0) {
+					if (g_debugMode==2) prnt("DEBUG ASK: Modulation Error at: %u", i);
 					BinStream[bitnum++]=7;
 					errCnt++;						
 				} 
@@ -1212,7 +1214,7 @@ int indala26decode(uint8_t *bitStream, size_t *size, uint8_t *invert)
 	return (int) startidx;
 }
 
-// by marshmellow - demodulate NRZ wave
+// by marshmellow - demodulate NRZ wave - requires a read with strong signal
 // peaks invert bit (high=1 low=0) each clock cycle = 1 bit determined by last peak
 int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert){
 	if (justNoise(dest, *size)) return -1;
@@ -1530,4 +1532,167 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
 	}
 	*size = numBits;
 	return errCnt;
+}
+
+//by marshmellow
+//attempt to identify a Sequence Terminator in ASK modulated raw wave
+bool DetectST(uint8_t buffer[], size_t *size, int *foundclock) {
+	size_t bufsize = *size;
+	//need to loop through all samples and identify our clock, look for the ST pattern
+	uint8_t fndClk[] = {8,16,32,40,50,64,128};
+	int clk = 0; 
+	int tol = 0;
+	int i, j, skip, start, end, low, high, minClk, waveStart;
+	bool complete = false;
+	int tmpbuff[bufsize / 64];
+	int waveLen[bufsize / 64];
+	size_t testsize = (bufsize < 512) ? bufsize : 512;
+	int phaseoff = 0;
+	high = low = 128;
+	memset(tmpbuff, 0, sizeof(tmpbuff));
+
+	if ( getHiLo(buffer, testsize, &high, &low, 80, 80) == -1 ) {
+		if (g_debugMode==2) prnt("DEBUG STT: just noise detected - quitting");
+		return false; //just noise
+	}
+	i = 0;
+	j = 0;
+	minClk = 255;
+	// get to first full low to prime loop and skip incomplete first pulse
+	while ((buffer[i] < high) && (i < bufsize))
+		++i;
+	while ((buffer[i] > low) && (i < bufsize))
+		++i;
+	skip = i;
+
+	// populate tmpbuff buffer with pulse lengths
+	while (i < bufsize) {
+		// measure from low to low
+		while ((buffer[i] > low) && (i < bufsize))
+			++i;
+		start= i;
+		while ((buffer[i] < high) && (i < bufsize))
+			++i;
+		//first high point for this wave
+		waveStart = i;
+		while ((buffer[i] > low) && (i < bufsize))
+			++i;
+		if (j >= (bufsize/64)) {
+			break;
+		}
+		waveLen[j] = i - waveStart; //first high to first low
+		tmpbuff[j++] = i - start;
+		if (i-start < minClk && i < bufsize) {
+			minClk = i - start;
+		}
+	}
+	// set clock  - might be able to get this externally and remove this work...
+	if (!clk) {
+		for (uint8_t clkCnt = 0; clkCnt<7; clkCnt++) {
+			tol = fndClk[clkCnt]/8;
+			if (minClk >= fndClk[clkCnt]-tol && minClk <= fndClk[clkCnt]+1) { 
+				clk=fndClk[clkCnt];
+				break;
+			}
+		}
+		// clock not found - ERROR
+		if (!clk) {
+			if (g_debugMode==2) prnt("DEBUG STT: clock not found - quitting");
+			return false;
+		}
+	} else tol = clk/8;
+
+	*foundclock = clk;
+
+	// look for Sequence Terminator - should be pulses of clk*(1 or 1.5), clk*2, clk*(1.5 or 2)
+	start = -1;
+	for (i = 0; i < j - 4; ++i) {
+		skip += tmpbuff[i];
+		if (tmpbuff[i] >= clk*1-tol && tmpbuff[i] <= (clk*2)+tol && waveLen[i] < clk+tol) {           //1 to 2 clocks depending on 2 bits prior
+			if (tmpbuff[i+1] >= clk*2-tol && tmpbuff[i+1] <= clk*2+tol && waveLen[i+1] > clk*3/2-tol) {       //2 clocks and wave size is 1 1/2
+				if (tmpbuff[i+2] >= (clk*3)/2-tol && tmpbuff[i+2] <= clk*2+tol && waveLen[i+2] > clk-tol) { //1 1/2 to 2 clocks and at least one full clock wave
+					if (tmpbuff[i+3] >= clk*1-tol && tmpbuff[i+3] <= clk*2+tol) { //1 to 2 clocks for end of ST + first bit
+						start = i + 3;
+						break;
+					}
+				}
+			}
+		}
+	}
+	// first ST not found - ERROR
+	if (start < 0) {
+		if (g_debugMode==2) prnt("DEBUG STT: first STT not found - quitting");
+		return false;
+	}
+	if (waveLen[i+2] > clk*1+tol)
+		phaseoff = 0;
+	else
+		phaseoff = clk/2;
+	
+	// skip over the remainder of ST
+	skip += clk*7/2; //3.5 clocks from tmpbuff[i] = end of st - also aligns for ending point
+
+	// now do it again to find the end
+	end = skip;
+	for (i += 3; i < j - 4; ++i) {
+		end += tmpbuff[i];
+		if (tmpbuff[i] >= clk*1-tol && tmpbuff[i] <= (clk*2)+tol) {           //1 to 2 clocks depending on 2 bits prior
+			if (tmpbuff[i+1] >= clk*2-tol && tmpbuff[i+1] <= clk*2+tol && waveLen[i+1] > clk*3/2-tol) {       //2 clocks and wave size is 1 1/2
+				if (tmpbuff[i+2] >= (clk*3)/2-tol && tmpbuff[i+2] <= clk*2+tol && waveLen[i+2] > clk-tol) { //1 1/2 to 2 clocks and at least one full clock wave
+					if (tmpbuff[i+3] >= clk*1-tol && tmpbuff[i+3] <= clk*2+tol) { //1 to 2 clocks for end of ST + first bit
+						complete = true;
+						break;
+					}
+				}
+			}
+		}
+	}
+	end -= phaseoff;
+	//didn't find second ST - ERROR
+	if (!complete) {
+		if (g_debugMode==2) prnt("DEBUG STT: second STT not found - quitting");
+		return false;
+	}
+	if (g_debugMode==2) prnt("DEBUG STT: start of data: %d end of data: %d, datalen: %d, clk: %d, bits: %d, phaseoff: %d", skip, end, end-skip, clk, (end-skip)/clk, phaseoff);
+	//now begin to trim out ST so we can use normal demod cmds
+	start = skip;
+	size_t datalen = end - start;
+	// check validity of datalen (should be even clock increments)  - use a tolerance of up to 1/8th a clock
+	if (datalen % clk > clk/8) {
+		if (g_debugMode==2) prnt("DEBUG STT: datalen not divisible by clk: %u %% %d = %d - quitting", datalen, clk, datalen % clk);
+		return false;
+	} else {
+		// padd the amount off - could be problematic...  but shouldn't happen often
+		datalen += datalen % clk;
+	}
+	// if datalen is less than one t55xx block - ERROR
+	if (datalen/clk < 8*4) {
+		if (g_debugMode==2) prnt("DEBUG STT: datalen is less than 1 full t55xx block - quitting");		
+		return false;
+	}
+	size_t dataloc = start;
+	size_t newloc = 0;
+	i=0;
+	// warning - overwriting buffer given with raw wave data with ST removed...
+	while ( dataloc < bufsize-(clk/2) ) {
+		//compensate for long high at end of ST not being high... (we cut out the high part)
+		if (buffer[dataloc]<high && buffer[dataloc]>low && buffer[dataloc+3]<high && buffer[dataloc+3]>low) {
+			for(i=0; i < clk/2-tol; ++i) {
+				buffer[dataloc+i] = high+5;
+			}
+		}
+		for (i=0; i<datalen; ++i) {
+			if (i+newloc < bufsize) {
+				if (i+newloc < dataloc)
+					buffer[i+newloc] = buffer[dataloc];
+
+				dataloc++;				
+			}
+		}
+		newloc += i;
+		//skip next ST
+		dataloc += clk*4;
+	}
+	*size = newloc;
+	return true;
 }

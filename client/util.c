@@ -151,7 +151,7 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 	// loop through the out_index to make sure we don't go too far
 	for (size_t out_index=0; out_index < max_len-2; out_index++) {
 		// set character
-		sprintf(tmp++, "%u", data[in_index]);
+		sprintf(tmp++, "%u", (unsigned int) data[in_index]);
 		// check if a line break is needed and we have room to print it in our array
 		if ( (breaks > 0) && !((in_index+1) % breaks) && (out_index+1 != max_len) ) {
 			// increment and print line break

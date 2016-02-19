@@ -61,7 +61,7 @@ typedef struct {
 	uint32_t lotid; 
 	uint32_t wafer; 
 	uint32_t dw;
-} t55xx_tracedata_t;
+} t55x7_tracedata_t;
 
 typedef struct {
 	uint32_t bl1;
@@ -102,6 +102,7 @@ typedef struct {
 		RF_128 = 0x07,
 	} bitrate;
 	bool Q5;
+	bool ST;
 } t55xx_conf_block_t;
 t55xx_conf_block_t Get_t55xx_Config();
 void Set_t55xx_Config(t55xx_conf_block_t conf);
@@ -136,7 +137,7 @@ int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password );
 
 bool detectPassword(int password);
 
-void printT55xxTrace( t55xx_tracedata_t data, uint8_t repeat );
+void printT55x7Trace( t55x7_tracedata_t data, uint8_t repeat );
 void printT5555Trace( t5555_tracedata_t data, uint8_t repeat );
 
 #endif

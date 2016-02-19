@@ -14,9 +14,9 @@
 #ifndef LFDEMOD_H__
 #define LFDEMOD_H__
 #include <stdint.h>
+#include "common.h"  //for bool
 
 //generic
-uint8_t justNoise(uint8_t *BitStream, size_t size);
 size_t   addParity(uint8_t *BitSource, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType);
 int      askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType);
 int      BiphaseRawDecode(uint8_t * BitStream, size_t *size, int offset, int invert);
@@ -29,6 +29,7 @@ uint8_t  detectFSKClk(uint8_t *BitStream, size_t size, uint8_t fcHigh, uint8_t f
 int      DetectNRZClock(uint8_t dest[], size_t size, int clock);
 int      DetectPSKClock(uint8_t dest[], size_t size, int clock);
 int      DetectStrongAskClock(uint8_t dest[], size_t size, uint8_t high, uint8_t low);
+bool     DetectST(uint8_t buffer[], size_t *size, int *foundclock);
 int      fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow);
 int      getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo);
 uint32_t manchesterEncode2Bytes(uint16_t datain);

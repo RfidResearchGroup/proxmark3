@@ -277,7 +277,8 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo )
 
 int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose)
 {
-	if (!ASKDemod(Cmd, FALSE, FALSE, 1)) return 0;
+	bool st = TRUE;
+	if (!ASKDemod_ext(Cmd, FALSE, FALSE, 1, &st)) return 0;
 	return AskEm410xDecode(verbose, hi, lo);
 }
 
@@ -312,8 +313,7 @@ int CmdAskEM410xDemod(const char *Cmd)
 //verbose will print results and demoding messages
 //emSearch will auto search for EM410x format in bitstream
 //askType switches decode: ask/raw = 0, ask/manchester = 1 
-int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType)
-{
+int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, bool *stCheck) {
 	int invert=0;
 	int clk=0;
 	int maxErr=100;
@@ -336,7 +336,14 @@ int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType)
 	if (g_debugMode) PrintAndLog("DEBUG: Bitlen from grphbuff: %d",BitLen);
 	if (BitLen<255) return 0;
 	if (maxLen<BitLen && maxLen != 0) BitLen = maxLen;
-
+	int foundclk = 0;
+	bool st = false;
+	if (*stCheck) st = DetectST(BitStream, &BitLen, &foundclk);
+	if (st) {
+		*stCheck = st;
+		clk = (clk == 0) ? foundclk : clk;
+		if (verbose || g_debugMode) PrintAndLog("\nFound Sequence Terminator");
+	}
 	int errCnt = askdemod(BitStream, &BitLen, &clk, &invert, maxErr, askAmp, askType);
 	if (errCnt<0 || BitLen<16){  //if fatal error (or -1)
 		if (g_debugMode) PrintAndLog("DEBUG: no data found %d, errors:%d, bitlen:%d, clock:%d",errCnt,invert,BitLen,clk);
@@ -365,6 +372,10 @@ int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType)
 	}
 	return 1;
 }
+int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType) {
+	bool st = false;
+	return ASKDemod_ext(Cmd, verbose, emSearch, askType, &st);
+}
 
 //by marshmellow
 //takes 5 arguments - clock, invert, maxErr, maxLen as integers and amplify as char == 'a'
@@ -374,7 +385,8 @@ int Cmdaskmandemod(const char *Cmd)
 {
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) > 25 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:  data rawdemod am [clock] <invert> [maxError] [maxLen] [amplify]");
+		PrintAndLog("Usage:  data rawdemod am <s> [clock] <invert> [maxError] [maxLen] [amplify]");
+		PrintAndLog("     ['s'] optional, check for Sequence Terminator");
 		PrintAndLog("     [set clock as integer] optional, if not set, autodetect");
 		PrintAndLog("     <invert>, 1 to invert output");
 		PrintAndLog("     [set maximum allowed errors], default = 100");
@@ -388,6 +400,12 @@ int Cmdaskmandemod(const char *Cmd)
 		PrintAndLog("          : data rawdemod am 64 1 0 = demod an ask/manchester tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
 		return 0;
 	}
+	bool st = TRUE;
+	if (Cmd[0]=='s') 
+		return ASKDemod_ext(Cmd++, TRUE, TRUE, 1, &st);
+	else if (Cmd[1] == 's')
+		return ASKDemod_ext(Cmd+=2, TRUE, TRUE, 1, &st);
+	else
 	return ASKDemod(Cmd, TRUE, TRUE, 1);
 }
 
@@ -964,7 +982,6 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t BitLen = getFromGraphBuf(BitStream);
 	if (BitLen==0) return 0;
-	if (g_debugMode==2) PrintAndLog("DEBUG: Got samples");	
 	//get field clock lengths
 	uint16_t fcs=0;
 	if (!fchigh || !fclow) {

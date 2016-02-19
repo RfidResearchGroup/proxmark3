@@ -152,7 +152,7 @@ bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeou
 		}
 
 		msleep(10); // XXX ugh
-		if (dm_seconds == 200) { // Two seconds elapsed
+		if (dm_seconds == 250) { // 2.5 seconds elapsed
 			PrintAndLog("Waiting for a response from the proxmark...");
 			PrintAndLog("Don't forget to cancel its operation first by pressing on the button");
 		}
