@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <usb.h>
+//#include <usb.h>
 #include "usb_cmd.h"
 
 extern unsigned char return_on_error;
