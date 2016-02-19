@@ -1322,10 +1322,9 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 		memcpy(data, receivedAnswer, sizeof(data));
 		
 		// send HALT
-		if (workFlags & MAGIC_HALT) {
+		if (workFlags & MAGIC_HALT)
 			mifare_classic_halt_ex(NULL);
-			break;
-		}
+
 		isOK = true;
 		break;
 	}
