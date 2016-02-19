@@ -66,10 +66,8 @@ typedef
 // wrapper function for multi-threaded lfsr_recovery32
 void* nested_worker_thread(void *arg)
 {
-	clock_t t1 = clock();
 	struct Crypto1State *p1;
 	StateList_t *statelist = arg;
-
 	statelist->head.slhead = lfsr_recovery32(statelist->ks1, statelist->nt ^ statelist->uid);	
 	
 	for (p1 = statelist->head.slhead; *(uint64_t *)p1 != 0; p1++);
@@ -77,10 +75,6 @@ void* nested_worker_thread(void *arg)
 	statelist->len = p1 - statelist->head.slhead;
 	statelist->tail.sltail = --p1;
 	qsort(statelist->head.slhead, statelist->len, sizeof(uint64_t), Compare16Bits);
-	
-	
-	t1 = clock() - t1;
-	printf("lfsr_recovery32 takes %.0f ticks \n", (float)t1);
 	return statelist->head.slhead;
 }
 
@@ -192,7 +186,6 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	// uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE/6) ? (USB_CMD_DATA_SIZE/6) : keycnt;
 	uint8_t keyBlock[USB_CMD_DATA_SIZE] = {0x00};
 
-	clock_t t1 = clock();
 	for (i = 0; i < numOfCandidates; ++i){
 		crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
 		num_to_bytes(key64, 6, keyBlock + i * 6);
@@ -203,9 +196,6 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 		free(statelists[1].head.slhead);
 		num_to_bytes(key64, 6, resultKey);
 
-		t1 = clock() - t1;
-		printf("Check candidates takes %.0f ticks \n", (float)t1);	
-		
 		PrintAndLog("UID: %08x target block:%3u key type: %c  -- Found key [%012"llx"]",
 			uid,
 			(uint16_t)resp.arg[2] & 0xff,
@@ -235,7 +225,7 @@ int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t key
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK,&resp, 3000)) return 1;
+	if (!WaitForResponseTimeout(CMD_ACK,&resp, 2500)) return 1;
 	if ((resp.arg[0] & 0xff) != 0x01) return 2;
 	*key = bytes_to_num(resp.d.asBytes, 6);
 	return 0;

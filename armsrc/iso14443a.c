@@ -1167,20 +1167,12 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 				p_response = NULL;
 				
 		} else if(receivedCmd[0] == 0x3C && tagType == 7) {	// Received a READ SIGNATURE -- 
-				// ECC data,  taken from a NTAG215 amiibo token. might work. LEN: 32, + 2 crc
 				//first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
 				uint16_t start = 4 * 4;
 				uint8_t emdata[34];
 				emlGetMemBt( emdata, start, 32);
 				AppendCrc14443a(emdata, 32);
 				EmSendCmdEx(emdata, sizeof(emdata), false);
-				//uint8_t data[] = {0x56,0x06,0xa6,0x4f,0x43,0x32,0x53,0x6f,
-				//				  0x43,0xda,0x45,0xd6,0x61,0x38,0xaa,0x1e,
-				//				  0xcf,0xd3,0x61,0x36,0xca,0x5f,0xbb,0x05,
-				//				  0xce,0x21,0x24,0x5b,0xa6,0x7a,0x79,0x07,
-				//				  0x00,0x00};
-				//AppendCrc14443a(data, sizeof(data)-2);
-				//EmSendCmdEx(data,sizeof(data),false);
 				p_response = NULL;					
 		} else if (receivedCmd[0] == 0x39 && tagType == 7) {	// Received a READ COUNTER -- 
 			uint8_t index = receivedCmd[1];
@@ -1210,9 +1202,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 			emlGetMemBt( emdata, 10+counter, 1);
 			AppendCrc14443a(emdata, sizeof(emdata)-2);
 			EmSendCmdEx(emdata, sizeof(emdata), false);	
-			p_response = NULL;
-			//p_response = &responses[9];				
-		
+			p_response = NULL;		
 		} else if(receivedCmd[0] == 0x50) {	// Received a HALT
 			LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
 			p_response = NULL;
@@ -1224,7 +1214,6 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 				AppendCrc14443a(emdata, sizeof(emdata)-2);
 				EmSendCmdEx(emdata, sizeof(emdata), false);	
 				p_response = NULL;
-				//p_response = &responses[7];
 			} else {
 				p_response = &responses[5]; order = 7;
 			}
@@ -1299,7 +1288,6 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data)
 				AppendCrc14443a(emdata, 2);
 				EmSendCmdEx(emdata, sizeof(emdata), false);
 				p_response = NULL;
-				//p_response =  &responses[8]; // PACK response
 				uint32_t pwd = bytes_to_num(receivedCmd+1,4);
 				
 				if ( MF_DBGLEVEL >= 3)  Dbprintf("Auth attempt: %08x", pwd);	
@@ -2217,28 +2205,25 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i;
 
 		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+1;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+1;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-1;
 
 		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+2;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+2;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-2;
 
 		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+3;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+3;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-3;
 
 		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+4;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+4;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-4;
 
 		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+5;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+5;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-5;
 
 		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+6;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+6;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-6;
 
 		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+7;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+7;
-
-		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+8;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i+8;
+		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-7;
 /*
 		if ( prng_successor(nttmp1, i) == nt2) return i;
 		if ( prng_successor(nttmp2, i) == nt1) return -i;
@@ -2260,9 +2245,6 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 
 		if ( prng_successor(nttmp1, i+7) == nt2) return i+7;
 		if ( prng_successor(nttmp2, i+7) == nt1) return -(i+7);
-
-		if ( prng_successor(nttmp1, i+8) == nt2) return i+8;
-		if ( prng_successor(nttmp2, i+8) == nt1) return -(i+8);
 */
 	}
 	
@@ -2281,53 +2263,50 @@ void ReaderMifare(bool first_try, uint8_t block )
 	// Mifare AUTH
 	//uint8_t mf_auth[]    = { 0x60,0x00,0xf5,0x7b };
 	//uint8_t mf_auth[]    = { 0x60,0x05, 0x58, 0x2c };
-	uint8_t mf_auth[]    = { 0x60,0x00, 0x00, 0x00 };
-	uint8_t mf_nr_ar[]   = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
-	static uint8_t mf_nr_ar3 = 0;
-
-	mf_auth[1] = block;
-	AppendCrc14443a(mf_auth, 2);
-	
+	uint8_t mf_auth[] 	= { 0x60,0x00, 0x00, 0x00 };
+	uint8_t mf_nr_ar[]	= { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
+	uint8_t uid[10]		= {0,0,0,0,0,0,0,0,0,0};
+	uint8_t par_list[8]	= {0,0,0,0,0,0,0,0};
+	uint8_t ks_list[8]	= {0,0,0,0,0,0,0,0};
 	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
 	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
+	uint8_t par[1] = {0};	// maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
+	
+	mf_auth[1] = block;
+	AppendCrc14443a(mf_auth, 2);
 
 	byte_t nt_diff = 0;
-	uint8_t par[1] = {0};	// maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
-	static byte_t par_low = 0;
-	uint8_t uid[10] = {0};
-	//uint32_t cuid = 0;
 
 	uint32_t nt = 0;
-	uint32_t previous_nt = 0;
-	static uint32_t nt_attacked = 0;
-	byte_t par_list[8] = {0x00};
-	byte_t ks_list[8] = {0x00};
-
-	static uint32_t sync_time = 0;
-	static int32_t sync_cycles = 0;
+	uint32_t previous_nt = 0;	
+	uint32_t halt_time = 0;
+	uint32_t cuid = 0;
+	
 	int catch_up_cycles = 0;
 	int last_catch_up = 0;
+	int isOK = 0;
+	
 	uint16_t elapsed_prng_sequences = 1;
 	uint16_t consecutive_resyncs = 0;
-	int isOK = 0;
-
-	#define PRNG_SEQUENCE_LENGTH  (1 << 16);
-	#define MAX_UNEXPECTED_RANDOM	4		// maximum number of unexpected (i.e. real) random numbers when trying to sync. Then give up.
-	#define MAX_SYNC_TRIES			32
-	#define NUM_DEBUG_INFOS			8		// per strategy
-	#define MAX_STRATEGY			3
-
 	uint16_t unexpected_random = 0;
 	uint16_t sync_tries = 0;
 	uint16_t strategy = 0;
-	uint32_t halt_time = 0;
+
+	static uint32_t nt_attacked = 0;
+	static uint32_t sync_time = 0;
+	static int32_t sync_cycles = 0;
+	static uint8_t par_low = 0;
+	static uint8_t mf_nr_ar3 = 0;
+
+	#define PRNG_SEQUENCE_LENGTH	(1 << 16)
+	#define MAX_UNEXPECTED_RANDOM	4		// maximum number of unexpected (i.e. real) random numbers when trying to sync. Then give up.
+	#define MAX_SYNC_TRIES		32
+	#define MAX_STRATEGY		3
 
 	clear_trace();
 	set_tracing(TRUE);
 	
 	LED_A_ON();
-	LED_B_OFF();
-	LED_C_OFF();
 	
 	if (first_try)
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
@@ -2337,17 +2316,19 @@ void ReaderMifare(bool first_try, uint8_t block )
 
 	if (first_try) { 
 		sync_time = GetCountSspClk() & 0xfffffff8;
-		sync_cycles = PRNG_SEQUENCE_LENGTH; //65536;	//0x10000			// theory: Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
+		sync_cycles = PRNG_SEQUENCE_LENGTH + 1100; //65536;	//0x10000			// theory: Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
 		mf_nr_ar3 = 0;			
 		nt_attacked = 0;
-		par[0] = 0;
+
 	} else {
-		// we were unsuccessful on a previous call. Try another READER nonce (first 3 parity bits remain the same)
-		mf_nr_ar3++;
+		// we were unsuccessful on a previous call. 
+		// Try another READER nonce (first 3 parity bits remain the same)
+		++mf_nr_ar3;
 		mf_nr_ar[3] = mf_nr_ar3;
 		par[0] = par_low;
 	}
 		
+		LED_A_ON();
 	LED_C_ON(); 
 	for(uint16_t i = 0; TRUE; ++i) {
 
@@ -2378,18 +2359,22 @@ void ReaderMifare(bool first_try, uint8_t block )
 			WDT_HIT();
 		}
 		
-		if (!iso14443a_select_card(uid, NULL, NULL, true, 0)) {
-			if (MF_DBGLEVEL >= 1) Dbprintf("Mifare: Can't select card\n");
+		if (!iso14443a_select_card(uid, NULL,  &cuid, true, 0)) {
+			if (MF_DBGLEVEL >= 2) Dbprintf("Mifare: Can't select card\n");
 			continue;
 		}
+
+		// Sending timeslot of ISO14443a frame
 		
 		sync_time = (sync_time & 0xfffffff8) + sync_cycles + catch_up_cycles;
 		catch_up_cycles = 0;
+		
+		//catch_up_cycles = 0;
 								
 		// if we missed the sync time already, advance to the next nonce repeat
 		while(GetCountSspClk() > sync_time) {
 			++elapsed_prng_sequences;
-			sync_time += sync_cycles;
+			sync_time = (sync_time & 0xfffffff8) + sync_cycles;
 		}
 		// Transmit MIFARE_CLASSIC_AUTH at synctime. Should result in returning the same tag nonce (== nt_attacked) 
 		ReaderTransmit(mf_auth, sizeof(mf_auth), &sync_time);			
@@ -2425,7 +2410,7 @@ void ReaderMifare(bool first_try, uint8_t block )
 						break;
 					} else {
 						continue;
-					}
+				}
 				}
 				
 				sync_cycles = (sync_cycles - nt_distance)/elapsed_prng_sequences;
@@ -2494,6 +2479,7 @@ void ReaderMifare(bool first_try, uint8_t block )
 			par[0] = par_low;
 			
 		} else {
+			// No NACK.	
 			if (nt_diff == 0 && first_try) {
 				par[0]++;
 				if (par[0] == 0x00) {	// tried all 256 possible parities without success. Card doesn't send NACK.
@@ -2501,6 +2487,7 @@ void ReaderMifare(bool first_try, uint8_t block )
 					break;
 				}
 			} else {
+				// Why this?
 				par[0] = ((par[0] & 0x1F) + 1) | par_low;
 			}
 		}
@@ -2521,8 +2508,8 @@ void ReaderMifare(bool first_try, uint8_t block )
 		par[0] = 0;
 	}
 	
-	byte_t buf[28] = {0x00};
-	memcpy(buf + 0,  uid, 4);
+	uint8_t buf[28] = {0x00};
+	num_to_bytes(cuid, 4, buf);
 	num_to_bytes(nt, 4, buf + 4);
 	memcpy(buf + 8,  par_list, 8);
 	memcpy(buf + 16, ks_list, 8);

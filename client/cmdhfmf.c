@@ -101,7 +101,7 @@ start:
 	
 	t1 = clock() - t1;
 	if ( t1 > 0 )
-		PrintAndLog("Time in darkside: %.0f ticks - %4.2f sec\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC);
+		PrintAndLog("Time in darkside: %.0f ticks\n", (float)t1);
 	return 0;
 }
 
@@ -707,7 +707,7 @@ int CmdHF14AMfNested(const char *Cmd)
 		}
 		clock_t t2 = clock() - t1;
 		if ( t2 > 0 )
-			PrintAndLog("Time to check 6 known keys: %.0f ticks %4.2f sec", (float)t2, ((float)t2)/CLOCKS_PER_SEC);
+			PrintAndLog("Time to check 6 known keys: %.0f ticks", (float)t2 );
 
 		PrintAndLog("enter nested...");	
 		
@@ -747,7 +747,7 @@ int CmdHF14AMfNested(const char *Cmd)
 		
 		t1 = clock() - t1;
 		if ( t1 > 0 )
-			PrintAndLog("Time in nested: %.0f ticks %4.2f sec (%4.2f sec per key)\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC, ((float)t1)/iterations/CLOCKS_PER_SEC);
+			PrintAndLog("Time in nested: %.0f ticks \n", (float)t1);
 
 		// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
 		PrintAndLog("trying to read key B...");
@@ -1150,14 +1150,14 @@ int CmdHF14AMfChk(const char *Cmd)
 					e_sector[i].Key[trgKeyType] = 0xffffffffffff;
 					e_sector[i].foundKey[trgKeyType] = FALSE;
 				}
+				printf(".");
 			}
 			b < 127 ? ( b +=4 ) : ( b += 16 );	
 		}
 	}
-	
 	t1 = clock() - t1;
 	if ( t1 > 0 )
-		printf("Time in checkkeys: %.0f ticks  %1.2f sec (%1.2f sec per key)\n\n", (float)t1, ((float)t1)/CLOCKS_PER_SEC, ((float)t1)/keycnt/CLOCKS_PER_SEC);
+		printf("\nTime in checkkeys: %.0f ticks\n", (float)t1);
 
 	// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
 	PrintAndLog("testing to read B...");
