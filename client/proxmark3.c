@@ -154,6 +154,8 @@ static void *main_loop(void *targ) {
 			cmd = readline(PROXPROMPT);
 		}
 		
+		// this one should pick up all non-null cmd...
+		// why is there a 
 		if (cmd) {
 
 			while(cmd[strlen(cmd) - 1] == ' ')
@@ -166,8 +168,9 @@ static void *main_loop(void *targ) {
 				// exit or quit
 				if (ret == 99) 
 					break;
-			}
 			free(cmd);
+			cmd = 0;
+			}
 		} else {
 			printf("\n");
 			break;
@@ -182,6 +185,7 @@ static void *main_loop(void *targ) {
 	write_history(".history");
 
 	free(cmd);
+	cmd = 0;
 			
 	if (arg->usb_present == 1) {
 		rarg.run = 0;
