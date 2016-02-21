@@ -10,7 +10,7 @@
 #include "apps.h"
 #include "util.h"
 #include "string.h"
-
+#include "usb_cdc.h" // for usb_poll_validate_length
 #include "lfsampling.h"
 
 sample_config config = { 1, 8, 1, 95, 0 } ;
@@ -103,7 +103,6 @@ void LFSetupFPGAForADC(int divisor, bool lf_field)
 	FpgaSetupSsc();
 }
 
-
 /**
  * Does the sample acquisition. If threshold is specified, the actual sampling
  * is not commenced until the threshold has been reached.
@@ -125,7 +124,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
 	uint8_t *dest = BigBuf_get_addr();
     uint16_t bufsize = BigBuf_max_traceLen();
 
-	BigBuf_Clear_ext(false);
+	//BigBuf_Clear_ext(false);	  //creates issues with cmdread (marshmellow)
 
 	if(bits_per_sample < 1) bits_per_sample = 1;
 	if(bits_per_sample > 8) bits_per_sample = 8;

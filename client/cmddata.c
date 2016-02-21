@@ -613,7 +613,7 @@ int CmdG_Prox_II_Demod(const char *Cmd)
 		if ((idx+1) % 5 == 0){
 			//spacer bit - should be 0
 			if (DemodBuffer[startIdx+idx] != 0) {
-				if (g_debugMode) PrintAndLog("Error spacer not 0: %d, pos: %d",DemodBuffer[startIdx+idx],startIdx+idx);
+				if (g_debugMode) PrintAndLog("Error spacer not 0: %u, pos: %u", (unsigned int)DemodBuffer[startIdx+idx],(unsigned int)(startIdx+idx));
 				return 0;
 			}
 			continue;
@@ -628,14 +628,14 @@ int CmdG_Prox_II_Demod(const char *Cmd)
 		ByteStream[ByteCnt] = ByteStream[ByteCnt] | (DemodBuffer[startIdx+idx]<<bitCnt);
 		bitCnt++;
 		if (bitCnt % 8 == 0){
-			if (g_debugMode) PrintAndLog("byte %d: %02x",ByteCnt,ByteStream[ByteCnt]);
+			if (g_debugMode) PrintAndLog("byte %u: %02x", (unsigned int)ByteCnt, ByteStream[ByteCnt]);
 			bitCnt=0;
 			ByteCnt++;
 		}
 	}
 	for (uint8_t i = 0; i < ByteCnt; i++){
 		ByteStream[i] ^= xorKey; //xor
-		if (g_debugMode) PrintAndLog("byte %d after xor: %02x", i, ByteStream[i]);
+		if (g_debugMode) PrintAndLog("byte %u after xor: %02x", (unsigned int)i, ByteStream[i]);
 	}
 	//now ByteStream contains 64 bytes of decrypted raw tag data
 	// 

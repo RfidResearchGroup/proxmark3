@@ -27,7 +27,7 @@ static uint16_t BigBuf_hi = BIGBUF_SIZE;
 static uint8_t *emulator_memory = NULL;
 
 // trace related variables
-static uint16_t traceLen;
+static uint16_t traceLen = 0;
 int tracing = 1; //Last global one.. todo static?
 
 // get the address of BigBuf
@@ -61,6 +61,10 @@ void BigBuf_Clear_ext(bool verbose)
 		Dbprintf("Buffer cleared (%i bytes)",BIGBUF_SIZE);
 }
 
+void BigBuf_Clear_keep_EM(void)
+{
+	memset(BigBuf,0,BigBuf_hi);
+}
 
 // allocate a chunk of memory from BigBuf. We allocate high memory first. The unallocated memory
 // at the beginning of BigBuf is always for traces/samples
@@ -238,6 +242,7 @@ int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwP
 
 	return TRUE;
 }
+
 
 // Emulator memory
 uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length){

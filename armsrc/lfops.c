@@ -17,7 +17,7 @@
 #include "lfdemod.h"
 #include "lfsampling.h"
 #include "protocols.h"
-#include "usb_cdc.h" //test
+#include "usb_cdc.h" // for usb_poll_validate_length
 
 /**
  * Function to do a modulation and then get samples.
@@ -37,6 +37,8 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 
 	sample_config sc = { 0,0,1, divisor_used, 0};
 	setSamplingConfig(&sc);
+	//clear read buffer
+	BigBuf_Clear_keep_EM();
 
 	/* Make sure the tag is reset */
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -725,6 +727,9 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
 
+	//clear read buffer
+	BigBuf_Clear_keep_EM();
+
 	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
 
 		WDT_HIT();
@@ -815,6 +820,8 @@ void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	uint8_t *dest = BigBuf_get_addr();
 	size_t size; 
 	int idx=0;
+	//clear read buffer
+	BigBuf_Clear_keep_EM();
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
 
@@ -905,6 +912,8 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 	int clk=0, invert=0, errCnt=0, maxErr=20;
 	uint32_t hi=0;
 	uint64_t lo=0;
+	//clear read buffer
+	BigBuf_Clear_keep_EM();
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
 
@@ -966,7 +975,11 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	uint16_t number=0;
 	uint8_t crc = 0;
 	uint16_t calccrc = 0;
-	// Configure to go in 125Khz listen mode
+
+	//clear read buffer
+	BigBuf_Clear_keep_EM();
+	
+// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
 
 	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
@@ -1095,7 +1108,7 @@ void T55xxWriteBit(int bit) {
 void T55xxResetRead(void) {
 	LED_A_ON();
 	//clear buffer now so it does not interfere with timing later
-	BigBuf_Clear_ext(false);
+	BigBuf_Clear_keep_EM();
 
 	// Set up FPGA, 125kHz
 	LFSetupFPGAForADC(95, true);
@@ -1602,7 +1615,7 @@ void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
 	uint16_t bufsize = BigBuf_max_traceLen();
 	uint32_t i = 0;
 
-	//clear buffer now so it does not interfere with timing later
+	// Clear destination buffer before sending the command
 	BigBuf_Clear_ext(false);
 	
 	//If password mode do login

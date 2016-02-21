@@ -1397,21 +1397,18 @@ int CmdT55xxBruteForce(const char *Cmd) {
 	char buf[9];
 	char filename[FILE_PATH_SIZE]={0};
 	int	keycnt = 0;
-	int c;
+	int ch;
 	uint8_t stKeyBlock = 20;
 	uint8_t *keyBlock = NULL, *p = NULL;
-	keyBlock = calloc(stKeyBlock, 6);
-	if (keyBlock == NULL) return 1;
-	
     uint32_t start_password = 0x00000000; //start password
     uint32_t end_password   = 0xFFFFFFFF; //end   password
     bool found = false;
 
     char cmdp = param_getchar(Cmd, 0);
-    if (cmdp == 'h' || cmdp == 'H') {
-		free(keyBlock);
-		return usage_t55xx_bruteforce();
-	}
+	if (cmdp == 'h' || cmdp == 'H') return usage_t55xx_bruteforce();
+
+	keyBlock = calloc(stKeyBlock, 6);
+	if (keyBlock == NULL) return 1;
 
 	if (cmdp == 'i' || cmdp == 'I') {
 	
@@ -1472,8 +1469,8 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		for (uint16_t c = 0; c < keycnt; ++c ) {
 	
 			if (ukbhit()) {
-				c = getchar();
-				(void)c;
+				ch = getchar();
+				(void)ch;
 				printf("\naborted via keyboard!\n");
 				free(keyBlock);
 				return 0;
@@ -1523,8 +1520,8 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		printf(".");
 		fflush(stdout);
 		if (ukbhit()) {
-			c = getchar();
-			(void)c;
+			ch = getchar();
+			(void)ch;
 			printf("\naborted via keyboard!\n");
 			free(keyBlock);
 			return 0;
