@@ -11,6 +11,21 @@
 #define SCRIPTING_H__
 
 #include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+#include "proxmark3.h"
+#include "usb_cmd.h"
+#include "cmdmain.h"
+#include "util.h"
+#include "nonce2key/nonce2key.h"
+#include "../common/iso15693tools.h"
+#include "iso14443crc.h"
+#include "../common/crc.h"
+#include "../common/crc16.h"
+#include "../common/crc64.h"
+#include "../common/sha1.h"
+#include "aes.h"
+#include "cmdcrc.h"
 
 /**
  * @brief set_libraries loads the core components of pm3 into the 'pm3'
