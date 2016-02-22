@@ -484,7 +484,7 @@ size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow
 
 	size_t numBits = 0;
 	// count cycles between consecutive lo-hi transitions, there should be either 8 (fc/8)
-	// or 10 (fc/10) cycles but in practice due to noise etc we may end up with with anywhere
+	// or 10 (fc/10) cycles but in practice due to noise etc we may end up with anywhere
 	// between 7 to 11 cycles so fuzz it by treat anything <9 as 8 and anything else as 10
 	for(idx = 161; idx < size-20; idx++) {
 		// threshold current value
