@@ -82,8 +82,8 @@ local Utils =
 		return nil		
 	end,
 	
-	------------ CRC-16 ccitt checksums
-	-- Takes a hex string and calculates a crc16
+	------------ CRC-8 Legic checksums
+	-- Takes a hex string and calculates a crc8
 	Crc8Legic = function(s)
 		if s == nil then return nil end
 		if #s == 0 then return nil end
@@ -299,6 +299,15 @@ local Utils =
 			n = (n > 2^(#t*8-1) -1) and (n - 2^(#t*8)) or n -- if last bit set, negative.
 		end
 		return n
+	end,
+	
+	-- a simple implementation of a sleep command. Thanks to Mosci
+	-- takes number of seconds to sleep
+	Sleep = function(n)
+		local clock = os.clock
+		local t0 = clock()
+		while clock() - t0 <= n do end
+		return nil	
 	end,
 	
 	-- function convertStringToBytes(str)
