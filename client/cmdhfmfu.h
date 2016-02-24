@@ -12,6 +12,7 @@ int CmdHF14AMfucAuth(const char *Cmd);
 int CmdHF14AMfucSetPwd(const char *Cmd);
 int CmdHF14AMfucSetUid(const char *Cmd);
 int CmdHF14AMfuGenDiverseKeys(const char *Cmd);
+int CmdHF14AMfuPwdGen(const char *Cmd);
 
 //general stuff
 int CmdHF14AMfUDump(const char *Cmd);
@@ -33,12 +34,17 @@ int usage_hf_mfu_ucauth(void);
 int usage_hf_mfu_ucsetpwd(void);
 int usage_hf_mfu_ucsetuid(void);
 int usage_hf_mfu_gendiverse(void);
+int  usage_hf_mfu_pwdgen(void);
 
 int CmdHFMFUltra(const char *Cmd);
 
 uint32_t ul_ev1_pwdgenA(uint8_t* uid);
 uint32_t ul_ev1_pwdgenA(uint8_t* uid);
 uint32_t ul_ev1_pwdgenC(uint8_t* uid);
+
+uint16_t ul_ev1_packgenA(uint8_t* uid);
+uint16_t ul_ev1_packgenA(uint8_t* uid);
+uint16_t ul_ev1_packgenA(uint8_t* uid);
 
 typedef enum TAGTYPE_UL {
 	UNKNOWN       = 0x000000,

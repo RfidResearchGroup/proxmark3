@@ -119,6 +119,19 @@ uint32_t ul_ev1_pwdgenC(uint8_t* uid){
 	return BSWAP_32(pwd);
 }
 
+// pack generation for algo 1-3
+uint16_t ul_ev1_packgenA(uint8_t* uid){
+	uint16_t pack = (uid[0] ^ uid[1] ^ uid[2]) << 8 | (uid[2] ^ 8);
+	return pack;
+}
+uint16_t ul_ev1_packgenB(uint8_t* uid){
+	return 0x8080;
+}
+uint16_t ul_ev1_packgenC(uint8_t* uid){
+	return 0xaa55;
+}
+
+
 void ul_ev1_pwdgen_selftest(){
 	
 	uint8_t uid1[] = {0x04,0x11,0x12,0x11,0x12,0x11,0x10};
@@ -1347,6 +1360,14 @@ int  usage_hf_mfu_gendiverse(void){
 	return 0;
 }
 
+int  usage_hf_mfu_pwdgen(void){
+	PrintAndLog("Usage:  hf mfu pwdgen <uid (14 hex symbols)>");
+	PrintAndLog("");
+	PrintAndLog("sample: hf mfu pwdgen 11223344556677");
+	PrintAndLog("");
+	return 0;
+}
+
 #define DUMP_PREFIX_LENGTH 48 
 //
 //  Mifare Ultralight / Ultralight-C / Ultralight-EV1
@@ -2004,6 +2025,20 @@ int CmdHF14AMfUSim(const char *Cmd) {
 	return CmdHF14ASim(Cmd);
 }
 
+int CmdHF14AMfuPwdGen(const char *Cmd){
+	uint8_t uid[7] = {0x00};	
+	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') return usage_hf_mfu_pwdgen();
+
+	if (param_gethex(Cmd, 0, uid, 14)) return usage_hf_mfu_pwdgen();
+	
+	PrintAndLog(" algo | pwd      | pack");
+	PrintAndLog("------+----------+-----");
+	PrintAndLog(" EV1  | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
+	PrintAndLog(" Ami  | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
+	PrintAndLog(" LD   | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
+	return 0;
+}
 //------------------------------------
 // Menu Stuff
 //------------------------------------
@@ -2021,6 +2056,7 @@ static command_t CommandTable[] =
 	{"setuid",	CmdHF14AMfucSetUid, 0, "Set UID - MAGIC tags only"},
 	{"sim",		CmdHF14AMfUSim,     0, "Simulate Ultralight from emulator memory"},		
 	{"gen",		CmdHF14AMfuGenDiverseKeys , 1, "Generate 3des mifare diversified keys"},
+	{"pwdgen",	CmdHF14AMfuPwdGen, 1, "Generate pwd from known algos"},
 	{NULL, NULL, 0, NULL}
 };
 
