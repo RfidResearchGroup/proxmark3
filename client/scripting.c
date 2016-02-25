@@ -82,7 +82,6 @@ static int l_WaitForResponseTimeout(lua_State *L){
     }
 
     UsbCommand response;
-
     if(WaitForResponseTimeout(cmd, &response, ms_timeout))
     {
         //Push it as a string
@@ -222,18 +221,17 @@ static int l_iso14443b_crc(lua_State *L)
                      unsigned char *TransmitFirst,
                      unsigned char *TransmitSecond)
 	*/
-	unsigned char buf[USB_CMD_DATA_SIZE];
-    size_t len = 0;	
-    const char *data = luaL_checklstring(L, 1, &len);
-	if (USB_CMD_DATA_SIZE < len)
-		len =  USB_CMD_DATA_SIZE-2;
+    size_t size = 0;	
+    const char *data = luaL_checklstring(L, 1, &size);
+
+	unsigned char buf[USB_CMD_DATA_SIZE] = {0x00};
 	
-	for (int i = 0; i < len; i += 2) {
-		sscanf(&data[i], "%02x", (unsigned int *)&buf[i / 2]);
-	}	
-	ComputeCrc14443(CRC_14443_B, buf, len, &buf[len], &buf[len+1]);
+	for (int i = 0; i < size; i += 2)
+		sscanf(&data[i], "%02x", (unsigned int *)&buf[i / 2]);	
 	
-    lua_pushlstring(L, (const char *)&buf, len+2);
+	size /= 2;	
+	ComputeCrc14443(CRC_14443_B, buf, size, &buf[size], &buf[size+1]);	
+    lua_pushlstring(L, (const char *)&buf, size+2);
     return 1;
 }
 

@@ -75,9 +75,9 @@ local Utils =
 		if #s == 0 then return nil end
 		if  type(s) == 'string' then
 			local utils = require('utils')
-			local ascii = utils.ConvertHexToAscii(s)
-			local hashed = core.iso14443b_crc(ascii)
-			return utils.ConvertAsciiToHex(hashed)
+			return utils.ConvertAsciiToHex(
+							core.iso14443b_crc(s)
+							)
 		end
 		return nil		
 	end,
