@@ -1410,7 +1410,7 @@ int CmdFSKdemodPyramid(const char *Cmd)
 	// s = format start bit, o = odd parity of last 7 bits
 	// f = facility code, c = card number
 	// w = wiegand parity, x = extra space for other formats
-	// p = unknown checksum
+	// p = CRC8maxim checksum
 	// (26 bit format shown)
 
 	//get bytes for checksum calc
@@ -1457,38 +1457,36 @@ int CmdFSKdemodPyramid(const char *Cmd)
 	// s = format start bit, o = odd parity of last 7 bits
 	// f = facility code, c = card number
 	// w = wiegand parity, x = extra space for other formats
-	// p = unknown checksum
+	// p = CRC8-Maxim checksum
 	// (26 bit format shown)
 
 	//find start bit to get fmtLen
 	int j;
-	for (j=0; j<size; j++){
+	for (j=0; j < size; ++j){
 		if(BitStream[j]) break;
 	}
+	
 	uint8_t fmtLen = size-j-8;
 	uint32_t fc = 0;
 	uint32_t cardnum = 0;
 	uint32_t code1 = 0;
-	if (fmtLen==26){
+	
+	if ( fmtLen == 26 ){
 		fc = bytebits_to_byte(BitStream+73, 8);
 		cardnum = bytebits_to_byte(BitStream+81, 16);
 		code1 = bytebits_to_byte(BitStream+72,fmtLen);
 		PrintAndLog("Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi3, rawHi2, rawHi, rawLo);
-	} else if (fmtLen==45){
-		fmtLen=42; //end = 10 bits not 7 like 26 bit fmt
+	} else if (fmtLen == 45) {
+		fmtLen = 42; //end = 10 bits not 7 like 26 bit fmt
 		fc = bytebits_to_byte(BitStream+53, 10);
 		cardnum = bytebits_to_byte(BitStream+63, 32);
 		PrintAndLog("Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
 	} else {
 		cardnum = bytebits_to_byte(BitStream+81, 16);
-		if (fmtLen>32){
-			//code1 = bytebits_to_byte(BitStream+(size-fmtLen),fmtLen-32);
-			//code2 = bytebits_to_byte(BitStream+(size-32),32);
+		if (fmtLen > 32)
 			PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
-		} else{
-			//code1 = bytebits_to_byte(BitStream+(size-fmtLen),fmtLen);
+		else
 			PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
-		}
 	}
 	if (checksum == checkCS)
 		PrintAndLog("Checksum %02x passed", checksum);

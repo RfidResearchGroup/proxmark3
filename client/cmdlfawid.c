@@ -44,8 +44,8 @@ int usage_lf_awid_sim(void) {
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf awid sim <Facility-Code> <Card-Number>");
 	PrintAndLog("Options :");
-	PrintAndLog("  <Facility-Code> :  8-bit value AWID facility code");
-	PrintAndLog("  <Card Number>   : 16-bit value AWID card number");
+	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
+	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("");
 	PrintAndLog("Sample : lf awid sim 224 1337");
 	return 0;
@@ -58,8 +58,8 @@ int usage_lf_awid_clone(void) {
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf awid clone <Facility-Code> <Card-Number>");
 	PrintAndLog("Options :");
-	PrintAndLog("  <Facility-Code> : 8-bit value AWID facility code");
-	PrintAndLog("  <Card Number>   : 16-bit value AWID card number");
+	PrintAndLog("  <Facility-Code> : 8-bit value facility code");
+	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("  Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
 	PrintAndLog("");
 	PrintAndLog("Sample  : lf awid clone 224 1337");
@@ -73,7 +73,7 @@ int usage_lf_awid_brute(void){
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf awid brute <Facility-Code>");
 	PrintAndLog("Options :");
-	PrintAndLog("  <Facility-Code> :  8-bit value AWID facility code");
+	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("");
 	PrintAndLog("Sample  : lf awid brute 224");
 	return 0;
