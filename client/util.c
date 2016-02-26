@@ -135,8 +135,10 @@ char *sprint_hex(const uint8_t *data, const size_t len) {
 }
 
 char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks) {
+	
 	// make sure we don't go beyond our char array memory
-	int max_len;
+	size_t in_index = 0, out_index = 0;
+	int max_len;	
 	if (breaks==0)
 		max_len = ( len > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len;
 	else
@@ -147,9 +149,8 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 	memset(buf, 0x00, sizeof(buf));
 	char *tmp = buf;
 
-	size_t in_index = 0;
 	// loop through the out_index to make sure we don't go too far
-	for (size_t out_index=0; out_index < max_len-2; out_index++) {
+	for (out_index=0; out_index < max_len-2; out_index++) {
 		// set character
 		sprintf(tmp++, "%u", (unsigned int) data[in_index]);
 		// check if a line break is needed and we have room to print it in our array
@@ -157,10 +158,11 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 			// increment and print line break
 			out_index++;
 			sprintf(tmp++, "%s","\n");
-	}
+		}
 		in_index++;
 	}
-
+	// last char.
+	sprintf(tmp++, "%u", (unsigned int) data[in_index]);
 	return buf;
 }
 

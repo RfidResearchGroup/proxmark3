@@ -49,15 +49,17 @@ int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 	memset(pre, 0x00, sizeof(pre));
 
 	// format start bit
+	pre[79] = 1;
 	
 	// Get 26 wiegand from FacilityCode, CardNumber	
-	uint8_t wiegand[26];
+	uint8_t wiegand[24];
+	memset(wiegand, 0x00, sizeof(wiegand));
 	num_to_bytebits(fc, 8, wiegand);
 	num_to_bytebits(cn, 16, wiegand+8);
 
 	// add wiegand parity bits (dest, source, len)
-	wiegand_add_parity(pre+71, wiegand, 26);
-
+	wiegand_add_parity(pre+80, wiegand, 24);
+	
 	// add paritybits	(bitsource, dest, sourcelen, paritylen, parityType (odd, even,)
 	addParity(pre+8, pyramidBits+8, 112, 8, 1);
 	
@@ -68,15 +70,10 @@ int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 
 	uint32_t crc = CRC8Maxim(csBuff, 13);
 	num_to_bytebits(crc, 8, pyramidBits+120);
+
 	return 1;
 }
-/*
-9     - 00001001
-33278 -         1000000111111110
-               10000100110000001
-000101010101010101010101082602
 
-*/
 int CmdPyramidRead(const char *Cmd) {
 	// read lf silently
 	CmdLFRead("s");
@@ -93,9 +90,8 @@ int CmdPyramidClone(const char *Cmd) {
 
 	uint32_t facilitycode=0, cardnumber=0, fc = 0, cn = 0;
 	
-	uint8_t bits[128];
-	uint8_t *bs = bits;
-	memset(bs, 0x00, sizeof(bits));
+	uint8_t bs[129];
+	memset(bs, 0x00, sizeof(bs));
 	
 	//Pyramid - compat mode, FSK2a, data rate 50, 4 data blocks
 	uint32_t blocks[5] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 4<<T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
