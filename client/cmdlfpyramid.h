@@ -26,7 +26,5 @@ int CmdPyramidSim(const char *Cmd);
 
 int usage_lf_pyramid_clone(void);
 int usage_lf_pyramid_sim(void);
-
-int GetWiegandFromPyramid(const char *id, uint32_t *sitecode, uint32_t *usercode);
 #endif
 

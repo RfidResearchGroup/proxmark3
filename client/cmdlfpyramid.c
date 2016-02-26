@@ -38,11 +38,6 @@ int usage_lf_pyramid_sim(void) {
 	return 0;
 }
 
-// calc checksum
-int GetWiegandFromPyramid(const char *id, uint32_t *fc, uint32_t *cn) {
-	return 0;
-}
-
 int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 
 	uint8_t pre[128];
@@ -90,7 +85,7 @@ int CmdPyramidClone(const char *Cmd) {
 
 	uint32_t facilitycode=0, cardnumber=0, fc = 0, cn = 0;
 	
-	uint8_t bs[129];
+	uint8_t bs[128];
 	memset(bs, 0x00, sizeof(bs));
 	
 	//Pyramid - compat mode, FSK2a, data rate 50, 4 data blocks
@@ -103,9 +98,6 @@ int CmdPyramidClone(const char *Cmd) {
 
 	facilitycode = (fc & 0x000000FF);
 	cardnumber = (cn & 0x0000FFFF);
-	
-	// get wiegand from printed number.
-	//GetWiegandFromPyramid(Cmd, &facilitycode, &cardnumber);
 	
 	if ( !GetPyramidBits(facilitycode, cardnumber, bs)) {
 		PrintAndLog("Error with tag bitstream generation.");
@@ -140,29 +132,37 @@ int CmdPyramidClone(const char *Cmd) {
 }
 
 int CmdPyramidSim(const char *Cmd) {
-	// uint32_t id = 0;
-	// uint64_t rawID = 0;
-	// uint8_t clk = 50, encoding = 1, separator = 0, invert = 0;
 
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_pyramid_sim();
 
-	// id = param_get32ex(Cmd, 0, 0, 16);
-	// if (id == 0) return usage_lf_pyramid_sim();
-
-	//rawID = getPyramidBits(id);
-
-	// uint16_t arg1, arg2;
-	// size_t size = 64;
-	// arg1 = clk << 8 | encoding;
-	// arg2 = invert << 8 | separator;
-
-	// PrintAndLog("Simulating - ID: %08X, Raw: %08X%08X",id,(uint32_t)(rawID >> 32),(uint32_t) (rawID & 0xFFFFFFFF));
+	uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
 	
-	// UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
-	// num_to_bytebits(rawID, size, c.d.asBytes);
-	// clearCommandBuffer();
-	// SendCommand(&c);
+	uint8_t bs[128];
+	size_t size = sizeof(bs);
+	memset(bs, 0x00, size);
+	
+	// Pyramid uses:  fcHigh: 10, fcLow: 8, clk: 50, invert: 0
+	uint64_t arg1, arg2;
+	arg1 = (10 << 8) + 8;
+	arg2 = 50 | 0;
+
+	if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) return usage_lf_pyramid_sim();
+
+	facilitycode = (fc & 0x000000FF);
+	cardnumber = (cn & 0x0000FFFF);
+	
+	if ( !GetPyramidBits(facilitycode, cardnumber, bs)) {
+		PrintAndLog("Error with tag bitstream generation.");
+		return 1;
+	}	
+
+	PrintAndLog("Simulating - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
+	
+	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
+	memcpy(c.d.asBytes, bs, size);
+	clearCommandBuffer();
+	SendCommand(&c);
 	return 0;
 }
 
