@@ -48,29 +48,35 @@ int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 	uint8_t pre[128];
 	memset(pre, 0x00, sizeof(pre));
 
-	// add preamble
-	pyramidBits[7]=1;
-	num_to_bytebits(26, 8, pre);
-
-	// get wiegand
-	uint8_t wiegand[24];
+	// format start bit
+	
+	// Get 26 wiegand from FacilityCode, CardNumber	
+	uint8_t wiegand[26];
 	num_to_bytebits(fc, 8, wiegand);
 	num_to_bytebits(cn, 16, wiegand+8);
 
-	// add wiegand parity bits
-	wiegand_add_parity(pre+8, wiegand, 24);
+	// add wiegand parity bits (dest, source, len)
+	wiegand_add_parity(pre+71, wiegand, 26);
 
-	// add paritybits	
-	addParity(pre, pyramidBits+8, 66, 4, 1);
+	// add paritybits	(bitsource, dest, sourcelen, paritylen, parityType (odd, even,)
+	addParity(pre+8, pyramidBits+8, 112, 8, 1);
 	
 	// add checksum		
-	// this is wrong.
-	uint32_t crc = CRC8Maxim(wiegand, 13);
-	num_to_bytebits(crc, 8, pre+120);
-	
+	uint8_t csBuff[13];
+	for (uint8_t i = 0; i < 13; i++)
+		csBuff[i] = bytebits_to_byte(pyramidBits + 16 + (i*8), 8);
+
+	uint32_t crc = CRC8Maxim(csBuff, 13);
+	num_to_bytebits(crc, 8, pyramidBits+120);
 	return 1;
 }
+/*
+9     - 00001001
+33278 -         1000000111111110
+               10000100110000001
+000101010101010101010101082602
 
+*/
 int CmdPyramidRead(const char *Cmd) {
 	// read lf silently
 	CmdLFRead("s");
@@ -85,28 +91,25 @@ int CmdPyramidClone(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_pyramid_clone();
 
-	uint32_t facilitycode=0, cardnumber=0;
+	uint32_t facilitycode=0, cardnumber=0, fc = 0, cn = 0;
+	
 	uint8_t bits[128];
 	uint8_t *bs = bits;
-	memset(bs,0,sizeof(bits));
+	memset(bs, 0x00, sizeof(bits));
+	
 	//Pyramid - compat mode, FSK2a, data rate 50, 4 data blocks
 	uint32_t blocks[5] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 4<<T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
 	
 //	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
 //		blocks[0] = T5555_MODULATION_FSK2 | 50<<T5555_BITRATE_SHIFT | 4<<T5555_MAXBLOCK_SHIFT;
 
-	// get wiegand from printed number.
-	GetWiegandFromPyramid(Cmd, &facilitycode, &cardnumber);
-	
-	if ((facilitycode & 0xFF) != facilitycode) {
-		facilitycode &= 0xFF;
-		PrintAndLog("Facility Code Truncated to 8-bits (Pyramid): %u", facilitycode);
-	}
+	if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) return usage_lf_pyramid_clone();
 
-	if ((cardnumber & 0xFFFF) != cardnumber) {
-		cardnumber &= 0xFFFF;
-		PrintAndLog("Card Number Truncated to 16-bits (Pyramid): %u", cardnumber);
-	}
+	facilitycode = (fc & 0x000000FF);
+	cardnumber = (cn & 0x0000FFFF);
+	
+	// get wiegand from printed number.
+	//GetWiegandFromPyramid(Cmd, &facilitycode, &cardnumber);
 	
 	if ( !GetPyramidBits(facilitycode, cardnumber, bs)) {
 		PrintAndLog("Error with tag bitstream generation.");
@@ -122,16 +125,16 @@ int CmdPyramidClone(const char *Cmd) {
 	PrintAndLog("Blk | Data ");
 	PrintAndLog("----+------------");
 	for ( uint8_t i=0; i<5; ++i )
-		PrintAndLog(" %02d | 0x%08x",i , blocks[i]);
-	
+	PrintAndLog(" %d | %08x",i , blocks[i]);
+
 	UsbCommand resp;
-	//UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
+	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
 	for ( uint8_t i=0; i<5; ++i ) {
-		//c.arg[0] = blocks[i];
-		//c.arg[1] = i;
+		c.arg[0] = blocks[i];
+		c.arg[1] = i;
 		clearCommandBuffer();
-		// SendCommand(&c);
+		SendCommand(&c);
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)){
 			PrintAndLog("Error occurred, device did not respond during write operation.");
 			return -1;
