@@ -207,8 +207,8 @@ int CmdGuardSim(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",	CmdHelp,		1, "This help"},
 	{"read",	CmdGuardRead,  0, "Attempt to read and extract tag data"},
-	{"clone",	CmdGuardClone, 0, "<Facility-Code> <Card Number>  clone Guardall tag"},
-	{"sim",		CmdGuardSim,   0, "<Facility-Code> <Card Number>  simulate Guardall tag"},
+//	{"clone",	CmdGuardClone, 0, "<Facility-Code> <Card Number>  clone Guardall tag"},
+//	{"sim",		CmdGuardSim,   0, "<Facility-Code> <Card Number>  simulate Guardall tag"},
     {NULL, NULL, 0, NULL}
 };
 
