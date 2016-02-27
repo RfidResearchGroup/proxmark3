@@ -60,7 +60,9 @@ int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 	wiegand_add_parity(pre+80, wiegand, 24);
 	
 	// add paritybits	(bitsource, dest, sourcelen, paritylen, parityType (odd, even,)
-	addParity(pre+8, pyramidBits+8, 112, 8, 1);
+	size_t s = addParity(pre+8, pyramidBits+8, 102, 8, 1);
+	
+	//printf(" %d |", s);
 	
 	// add checksum		
 	uint8_t csBuff[13];
@@ -69,7 +71,6 @@ int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 
 	uint32_t crc = CRC8Maxim(csBuff, 13);
 	num_to_bytebits(crc, 8, pyramidBits+120);
-
 	return 1;
 }
 
