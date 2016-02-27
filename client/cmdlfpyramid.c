@@ -13,7 +13,8 @@ static int CmdHelp(const char *Cmd);
 
 int usage_lf_pyramid_clone(void){
 	PrintAndLog("clone a Farpointe/Pyramid tag to a T55x7 tag.");
-	PrintAndLog("Per pyramid format, the facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
+	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
+	PrintAndLog("Currently work only on 26bit");
 	PrintAndLog("");
 	PrintAndLog("Usage: lf pyramid clone <Facility-Code> <Card-Number>");
 	PrintAndLog("Options :");
@@ -27,7 +28,8 @@ int usage_lf_pyramid_clone(void){
 int usage_lf_pyramid_sim(void) {
 	PrintAndLog("Enables simulation of Farpointe/Pyramid card with specified card number.");
 	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
-	PrintAndLog("Per pyramid format, the facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
+	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
+	PrintAndLog("Currently work only on 26bit");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf pyramid sim <Card-Number>");
 	PrintAndLog("Options :");
@@ -38,6 +40,8 @@ int usage_lf_pyramid_sim(void) {
 	return 0;
 }
 
+
+// Works for 26bits.
 int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 
 	uint8_t pre[128];
@@ -70,11 +74,8 @@ int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 }
 
 int CmdPyramidRead(const char *Cmd) {
-	// read lf silently
 	CmdLFRead("s");
-	// get samples silently
 	getSamples("30000",false);
-	// demod and output Pyramid ID	
 	return CmdFSKdemodPyramid("");
 }
 

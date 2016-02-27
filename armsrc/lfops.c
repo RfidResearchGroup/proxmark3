@@ -1259,7 +1259,6 @@ void T55xxWakeUp(uint32_t Pwd){
 }
 
 /*-------------- Cloning routines -----------*/
-
 void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks) {
 	// write last block first and config block last (if included)
 	for (uint8_t i = numblocks+startblock; i > startblock; i--)
