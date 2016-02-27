@@ -85,15 +85,10 @@ int CmdPyramidClone(const char *Cmd) {
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_pyramid_clone();
 
 	uint32_t facilitycode=0, cardnumber=0, fc = 0, cn = 0;
+	uint32_t blocks[5];
 	uint8_t i;
 	uint8_t bs[128];
 	memset(bs, 0x00, sizeof(bs));
-	
-	//Pyramid - compat mode, FSK2a, data rate 50, 4 data blocks
-	uint32_t blocks[5] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 4<<T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
-	
-//	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
-//		blocks[0] = T5555_MODULATION_FSK2 | 50<<T5555_BITRATE_SHIFT | 4<<T5555_MAXBLOCK_SHIFT;
 
 	if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) return usage_lf_pyramid_clone();
 
@@ -105,6 +100,11 @@ int CmdPyramidClone(const char *Cmd) {
 		return 1;
 	}	
 
+//	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
+//		blocks[0] = T5555_MODULATION_FSK2 | 50<<T5555_BITRATE_SHIFT | 4<<T5555_MAXBLOCK_SHIFT;
+
+	//Pyramid - compat mode, FSK2a, data rate 50, 4 data blocks
+	blocks[0] = T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 4<<T55x7_MAXBLOCK_SHIFT;
 	blocks[1] = bytebits_to_byte(bs,32);
 	blocks[2] = bytebits_to_byte(bs+32,32);
 	blocks[3] = bytebits_to_byte(bs+64,32);
@@ -114,7 +114,7 @@ int CmdPyramidClone(const char *Cmd) {
 	PrintAndLog("Blk | Data ");
 	PrintAndLog("----+------------");
 	for ( i = 0; i<5; ++i )
-		PrintAndLog(" %02d | %08x", i, blocks[i]);
+		PrintAndLog(" %02d | %08" PRIx32, i, blocks[i]);
 
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};

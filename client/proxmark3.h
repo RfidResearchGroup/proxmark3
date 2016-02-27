@@ -14,6 +14,7 @@
 
 #define __STDC_FORMAT_MACROS 1
 #include <inttypes.h>
+#define lx  PRIx32
 #define llx PRIx64
 #define lli PRIi64
 #define llu PRIu64
