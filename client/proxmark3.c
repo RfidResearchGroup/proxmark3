@@ -168,9 +168,9 @@ static void *main_loop(void *targ) {
 				// exit or quit
 				if (ret == 99) 
 					break;
+			}
 			free(cmd);
 			cmd = 0;
-			}
 		} else {
 			printf("\n");
 			break;

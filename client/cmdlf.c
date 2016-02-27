@@ -1218,7 +1218,7 @@ static command_t CommandTable[] =
 	{"io",			CmdLFIO,			1, "{ IOPROX RFIDs... }"},
 	{"pcf7931",     CmdLFPCF7931,       1, "{ PCF7931 RFIDs... }"},
 	{"presco",      CmdLFPresco,        1, "{ Presco RFIDs... }"},
-	{"pyramid",		CmdLFPyramid,       1, "{ Farepointe/Pyramid RFIDs... }"},	
+	{"pyramid",		CmdLFPyramid,       1, "{ Farpointe/Pyramid RFIDs... }"},	
 	{"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
 	{"t55xx",       CmdLFT55XX,         1, "{ T55xx RFIDs... }"},
 	{"viking",      CmdLFViking,        1, "{ Viking RFIDs... }"},

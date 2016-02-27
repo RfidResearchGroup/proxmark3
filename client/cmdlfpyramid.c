@@ -12,7 +12,7 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_pyramid_clone(void){
-	PrintAndLog("clone a Farepointe/Pyramid tag to a T55x7 tag.");
+	PrintAndLog("clone a Farpointe/Pyramid tag to a T55x7 tag.");
 	PrintAndLog("Per pyramid format, the facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
 	PrintAndLog("");
 	PrintAndLog("Usage: lf pyramid clone <Facility-Code> <Card-Number>");
@@ -25,7 +25,7 @@ int usage_lf_pyramid_clone(void){
 }
 
 int usage_lf_pyramid_sim(void) {
-	PrintAndLog("Enables simulation of Farepointe/Pyramid card with specified card number.");
+	PrintAndLog("Enables simulation of Farpointe/Pyramid card with specified card number.");
 	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
 	PrintAndLog("Per pyramid format, the facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
 	PrintAndLog("");
@@ -84,7 +84,7 @@ int CmdPyramidClone(const char *Cmd) {
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_pyramid_clone();
 
 	uint32_t facilitycode=0, cardnumber=0, fc = 0, cn = 0;
-	
+	uint8_t i;
 	uint8_t bs[128];
 	memset(bs, 0x00, sizeof(bs));
 	
@@ -109,16 +109,16 @@ int CmdPyramidClone(const char *Cmd) {
 	blocks[3] = bytebits_to_byte(bs+64,32);
 	blocks[4] = bytebits_to_byte(bs+96,32);
 
-	PrintAndLog("Preparing to clone Farepointe/Pyramid to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
+	PrintAndLog("Preparing to clone Farpointe/Pyramid to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
 	PrintAndLog("Blk | Data ");
 	PrintAndLog("----+------------");
-	for ( uint8_t i=0; i<5; ++i )
-	PrintAndLog(" %d | %08x",i , blocks[i]);
+	for ( i = 0; i<5; ++i )
+		PrintAndLog(" %02d | %08x", i, blocks[i]);
 
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
-	for ( uint8_t i=0; i<5; ++i ) {
+	for ( i = 0; i<5; ++i ) {
 		c.arg[0] = blocks[i];
 		c.arg[1] = i;
 		clearCommandBuffer();
@@ -157,7 +157,7 @@ int CmdPyramidSim(const char *Cmd) {
 		return 1;
 	}	
 
-	PrintAndLog("Simulating - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
+	PrintAndLog("Simulating Farpointe/Pyramid - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
 	
 	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
 	memcpy(c.d.asBytes, bs, size);

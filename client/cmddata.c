@@ -1483,10 +1483,7 @@ int CmdFSKdemodPyramid(const char *Cmd)
 		PrintAndLog("Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
 	} else {
 		cardnum = bytebits_to_byte(BitStream+81, 16);
-		if (fmtLen > 32)
-			PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
-		else
-			PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+		PrintAndLog("Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
 	}
 	if (checksum == checkCS)
 		PrintAndLog("Checksum %02x passed", checksum);
