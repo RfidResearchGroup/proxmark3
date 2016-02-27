@@ -40,7 +40,6 @@ int usage_lf_pyramid_sim(void) {
 	return 0;
 }
 
-
 // Works for 26bits.
 int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 
@@ -60,10 +59,8 @@ int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 	wiegand_add_parity(pre+80, wiegand, 24);
 	
 	// add paritybits	(bitsource, dest, sourcelen, paritylen, parityType (odd, even,)
-	size_t s = addParity(pre+8, pyramidBits+8, 102, 8, 1);
-	
-	//printf(" %d |", s);
-	
+	addParity(pre+8, pyramidBits+8, 102, 8, 1);
+
 	// add checksum		
 	uint8_t csBuff[13];
 	for (uint8_t i = 0; i < 13; i++)

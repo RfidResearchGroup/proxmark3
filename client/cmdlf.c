@@ -7,32 +7,7 @@
 //-----------------------------------------------------------------------------
 // Low frequency commands
 //-----------------------------------------------------------------------------
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <limits.h>
-#include "proxmark3.h"
-#include "data.h"
-#include "graph.h"
-#include "ui.h"
-#include "cmdparser.h"
-#include "cmdmain.h"
-#include "cmddata.h"
-#include "util.h"
 #include "cmdlf.h"
-#include "cmdlfhid.h"
-#include "cmdlfawid.h"
-#include "cmdlfti.h"
-#include "cmdlfem4x.h"
-#include "cmdlfhitag.h"
-#include "cmdlft55xx.h"
-#include "cmdlfpcf7931.h"
-#include "cmdlfio.h"
-#include "lfdemod.h"
-#include "cmdlfviking.h"
-#include "cmdlfpresco.h"
-#include "cmdlfpyramid.h"
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_cmdread(void) {
@@ -1213,6 +1188,7 @@ static command_t CommandTable[] =
 	{"help",        CmdHelp,            1, "This help"},
 	{"awid",        CmdLFAWID,          1, "{ AWID RFIDs... }"},
 	{"em4x",        CmdLFEM4X,          1, "{ EM4X RFIDs... }"},
+	{"guard",       CmdLFGuard,         1, "{ Guardall RFIDs... }"},
 	{"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
 	{"hitag",       CmdLFHitag,         1, "{ HITAG RFIDs... }"},
 	{"io",			CmdLFIO,			1, "{ IOPROX RFIDs... }"},

@@ -135,7 +135,8 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			radixsort.c\
 			bucketsort.c\
 			cmdlfpresco.c\
-			cmdlfpyramid.c
+			cmdlfpyramid.c\
+			cmdlfguard.c
 
 ZLIBSRCS = deflate.c adler32.c trees.c zutil.c inflate.c inffast.c inftrees.c
 ZLIB_FLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED 

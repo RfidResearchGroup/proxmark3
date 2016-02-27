@@ -10,6 +10,31 @@
 
 #ifndef CMDLF_H__
 #define CMDLF_H__
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include "proxmark3.h"
+#include "data.h"
+#include "graph.h"
+#include "ui.h"
+#include "cmdparser.h"
+#include "cmdmain.h"
+#include "cmddata.h"
+#include "util.h"
+#include "cmdlfhid.h"
+#include "cmdlfawid.h"
+#include "cmdlfti.h"
+#include "cmdlfem4x.h"
+#include "cmdlfhitag.h"
+#include "cmdlft55xx.h"
+#include "cmdlfpcf7931.h"
+#include "cmdlfio.h"
+#include "lfdemod.h"
+#include "cmdlfviking.h"
+#include "cmdlfpresco.h"
+#include "cmdlfpyramid.h"
+#include "cmdlfguard.h"
 
 int CmdLF(const char *Cmd);
 
