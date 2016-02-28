@@ -47,40 +47,14 @@ int GetGuardBits(uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 	// Intializes random number generator
 	time_t t;
 	srand((unsigned) time(&t));
-
+	//uint8_t xorKey = rand() % 0xFF;
+	uint8_t xorKey = 0x6b;
+	uint8_t i;
+	
+	
 	uint8_t pre[96];
 	memset(pre, 0x00, sizeof(pre));
 
-	uint8_t index = 8;
-	
-	// preamble  6bits
-	pre[0] = 1;
-	pre[1] = 1;
-	pre[2] = 1;
-	pre[3] = 1;
-	pre[4] = 1;
-	//pre[5] = 0;
-
-	// add xor key
-	uint8_t xorKey = rand() % 0xFF;
-	num_to_bytebits(xorKey, 8, pre+index);
-	index += 8;
-	
-	// add format length
-	// len | hex | bin  wiegand pos fc/cn   
-	//  26 | 1A  | 0001 1010
-	num_to_bytebits(26, 8, pre+index);
-	//  36 | 24  | 0010 0100
-	//num_to_bytebits(36, 8, pre+index);
-	//  40 | 28  | 0010 1000
-	//num_to_bytebits(40, 8, pre+index);
-
-	index += 8;
-	
-	// 2bit checksum
-	// unknown today.
-	index += 2;
-	
 	// Get 26 wiegand from FacilityCode, CardNumber	
 	uint8_t wiegand[24];
 	memset(wiegand, 0x00, sizeof(wiegand));
@@ -88,26 +62,71 @@ int GetGuardBits(uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 	num_to_bytebits(cn, 16, wiegand+8);
 
 	// add wiegand parity bits (dest, source, len)
-	wiegand_add_parity(pre+index, wiegand, 24);
+	wiegand_add_parity(pre, wiegand, 24);
 
-	uint8_t tmp = 0, i = 0;
-	for (i = 2; i < 12; ++i) {
-		// // xor all bytes
-		// tmp = xorKey ^ bytebits_to_byte(pre + (i*8), 8);
-		
-		// // copy to out..
-		// num_to_bytebits(tmp, 8, pre + (i*8) );
-	}
+	// lets start. 12bytes of data to be produced.
+	uint8_t rawbytes[12];
+	memset(rawbytes, 0x00, sizeof(rawbytes));
 
-	// add spacer bit 0 every 5
+	// xor key
+	rawbytes[0] = xorKey;
+
+	// add format length (decimal)
+	// len | hex | bin
+	//  26 | 1A  | 0001 1010
+	rawbytes[1] = (26 << 2);
+	//  36 | 24  | 0010 0100
+	//rawbytes[1] = (36 << 2);
+	//  40 | 28  | 0010 1000
+	//rawbytes[1] = (40 << 2);
 	
-	// swap nibbles
+	// 2bit checksum, unknown today, 
+	// these two bits are the last ones of rawbyte[1], hence the LSHIFT above.
+	rawbytes[2] = 1;
+	rawbytes[3] = 0;
 	
+	// add wiegand to rawbytes
+	for (i = 0; i < 4; ++i)
+		rawbytes[i+4] = bytebits_to_byte( pre + (i*8), 8);
 	
-	// copy to outarray
-	memcpy(guardBits, pre, sizeof(pre));
+	if (g_debugMode) printf(" WIE | %s\n", sprint_hex(rawbytes, sizeof(rawbytes)));	
 	
-	printf(" | %s\n", sprint_bin(guardBits, 96) );
+	// NIBBLE_SWAP (works on all data)
+	// for (i = 0; i < 12; ++i)
+		// rawbytes[i] = SWAP_NIBBLE( rawbytes[i] );
+
+	// printf("SWAP | %s\n", sprint_hex(rawbytes, sizeof(rawbytes)));
+	
+	// XOR (only works on wiegand stuff)
+	for (i = 1; i < 12; ++i)
+		rawbytes[i] ^= xorKey ;
+	
+	if (g_debugMode) printf(" XOR | %s \n", sprint_hex(rawbytes, sizeof(rawbytes)));
+
+	// convert rawbytes to bits in pre
+	for (i = 0; i < 12; ++i)
+		num_to_bytebitsLSBF( rawbytes[i], 8, pre + (i*8));
+
+	if (g_debugMode) printf("\n Raw | %s \n", sprint_hex(rawbytes, sizeof(rawbytes)));
+	if (g_debugMode) printf(" Raw | %s\n", sprint_bin(pre, 64) );
+	
+	// add spacer bit 0 every 4 bits, starting with index 0,
+	// 12 bytes, 24 nibbles.  24+1 extra bites. 3bytes.  Ie 9bytes | 1byte xorkey, 8bytes rawdata (64bits, should be enough for a 40bit wiegand)
+	addParity(pre, guardBits+6, 64, 5, 3);
+
+	// preamble
+	guardBits[0] = 1;
+	guardBits[1] = 1;
+	guardBits[2] = 1;
+	guardBits[3] = 1;
+	guardBits[4] = 1;
+	guardBits[5] = 0;
+/*               6      B      
+PRE |          0110   1101   0101   1110   0001   1101   1101   0111   1101011011010110110101101101011
+FIN | 111110 0 0110 0 1101 0 0101 0 1110 0 0001 0 1101 0 1101 0 0111 0 110100110011010011001101001100110100110000000000
+*/
+	
+	if (g_debugMode) printf(" FIN | %s\n", sprint_bin(guardBits, 96) );
 	return 1;
 }
 
@@ -153,19 +172,19 @@ int CmdGuardClone(const char *Cmd) {
 	for ( i = 0; i<4; ++i )
 		PrintAndLog(" %02d | %08x", i, blocks[i]);
 
-	// UsbCommand resp;
-	// UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
+	UsbCommand resp;
+	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
-	// for ( i = 0; i<5; ++i ) {
-		// c.arg[0] = blocks[i];
-		// c.arg[1] = i;
-		// clearCommandBuffer();
-		// SendCommand(&c);
-		// if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)){
-			// PrintAndLog("Error occurred, device did not respond during write operation.");
-			// return -1;
-		// }
-	// }
+	for ( i = 0; i<4; ++i ) {
+		c.arg[0] = blocks[i];
+		c.arg[1] = i;
+		clearCommandBuffer();
+		SendCommand(&c);
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)){
+			PrintAndLog("Error occurred, device did not respond during write operation.");
+			return -1;
+		}
+	}
     return 0;
 }
 
@@ -207,7 +226,7 @@ int CmdGuardSim(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",	CmdHelp,		1, "This help"},
 	{"read",	CmdGuardRead,  0, "Attempt to read and extract tag data"},
-//	{"clone",	CmdGuardClone, 0, "<Facility-Code> <Card Number>  clone Guardall tag"},
+	{"clone",	CmdGuardClone, 0, "<Facility-Code> <Card Number>  clone Guardall tag"},
 //	{"sim",		CmdGuardSim,   0, "<Facility-Code> <Card Number>  simulate Guardall tag"},
     {NULL, NULL, 0, NULL}
 };

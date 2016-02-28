@@ -95,7 +95,7 @@ size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t p
 
 // by marshmellow
 // takes a array of binary values, length of bits per parity (includes parity bit),
-//   Parity Type (1 for odd; 0 for even; 2 Always 1's), and binary Length (length to run)
+//   Parity Type (1 for odd; 0 for even; 2 Always 1's; 3 Always 0's), and binary Length (length to run)
 size_t addParity(uint8_t *BitSource, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType)
 {
 	uint32_t parityWd = 0;
@@ -105,12 +105,16 @@ size_t addParity(uint8_t *BitSource, uint8_t *dest, uint8_t sourceLen, uint8_t p
 			parityWd = (parityWd << 1) | BitSource[word+bit];
 			dest[j++] = (BitSource[word+bit]);
 		}
+		
 		// if parity fails then return 0
-		if (pType == 2) { // then marker bit which should be a 1
-			dest[j++]=1;
-		} else {
-			dest[j++] = parityTest(parityWd, pLen-1, pType) ^ 1;
+		switch (pType) {
+			case 3: dest[j++]=0; break; // marker bit which should be a 0
+			case 2: dest[j++]=1; break; // marker bit which should be a 1
+			default: 
+				dest[j++] = parityTest(parityWd, pLen-1, pType) ^ 1;
+				break;
 		}
+		
 		bitCnt += pLen;
 		parityWd = 0;
 	}
@@ -122,8 +126,7 @@ size_t addParity(uint8_t *BitSource, uint8_t *dest, uint8_t sourceLen, uint8_t p
 uint32_t bytebits_to_byte(uint8_t *src, size_t numbits)
 {
 	uint32_t num = 0;
-	for(int i = 0 ; i < numbits ; i++)
-	{
+	for(int i = 0 ; i < numbits ; i++) {
 		num = (num << 1) | (*src);
 		src++;
 	}

@@ -103,6 +103,7 @@ void print_hex(const uint8_t * data, const size_t len) {
 		printf("%02x ", data[i]);
 	printf("\n");
 }
+
 void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
 
 	int rownum = 0;
@@ -178,6 +179,7 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 	sprintf(tmp, "%s| %s", sprint_hex(data, max_len) , data);	
 	return buf;
 }
+
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
 {
 	while (len--) {
@@ -197,12 +199,22 @@ uint64_t bytes_to_num(uint8_t* src, size_t len)
 	return num;
 }
 
-void num_to_bytebits(uint64_t	n, size_t len, uint8_t *dest) {
+// takes a number (uint64_t) and creates a binarray in dest.
+void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest) {
 	while (len--) {
 		dest[len] = n & 1;
 		n >>= 1;
 	}
 }
+//least significant bit first
+void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest)
+{
+	for(int i = 0 ; i < len ; ++i) {
+		dest[i] =  n & 1;
+		n >>= 1;
+	}
+}
+
 
 // aa,bb,cc,dd,ee,ff,gg,hh, ii,jj,kk,ll,mm,nn,oo,pp
 // to
@@ -220,6 +232,8 @@ uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockS
 	return tmp;
 }
 
+// takes a uint8_t src array, for len items and reverses the byte order in blocksizes (8,16,32,64), 
+// returns: the dest array contains the reordered src array.
 void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSize, uint8_t *dest){
 	for (uint8_t block=0; block < (uint8_t)(len/blockSize); block++){
 		for (size_t i = 0; i < blockSize; i++){
@@ -227,7 +241,6 @@ void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSiz
 		}
 	}
 }
-
 
 //  -------------------------------------------------------------------------
 //  string parameters lib
@@ -493,6 +506,7 @@ void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length)
     *(target)= GetParity(source + length / 2, ODD, length / 2);
 }
 
+// xor two arrays together for len items.  The dst array contains the new xored values.
 void xor(unsigned char * dst, unsigned char * src, size_t len) {
    for( ; len > 0; len--,dst++,src++)
        *dst ^= *src;
@@ -502,6 +516,7 @@ int32_t le24toh (uint8_t data[3]) {
     return (data[2] << 16) | (data[1] << 8) | data[0];
 }
 
+// Pack a bitarray into a uint32_t.  
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits) {
 
 	if (len > 32) return 0;
@@ -526,6 +541,7 @@ void rol(uint8_t *data, const size_t len){
     data[len-1] = first;
 }
 
+// Swap bit order on a uint32_t value.  Can be limited by nrbits just use say 8bits reversal
 uint32_t SwapBits(uint32_t value, int nrbits) {
 	uint32_t newvalue = 0;
 	for(int i = 0; i < nrbits; i++) {

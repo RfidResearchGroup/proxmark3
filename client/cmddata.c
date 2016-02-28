@@ -619,13 +619,13 @@ int CmdG_Prox_II_Demod(const char *Cmd)
 			continue;
 		} 
 		if (keyCnt<8){ //lsb first
-			xorKey = xorKey | (DemodBuffer[startIdx+idx]<<keyCnt);
+			xorKey |=  (DemodBuffer[startIdx+idx]<<keyCnt);
 			keyCnt++;
 			if (keyCnt==8 && g_debugMode) PrintAndLog("xorKey Found: %02x", xorKey);
 			continue;
 		}
 		//lsb first
-		ByteStream[ByteCnt] = ByteStream[ByteCnt] | (DemodBuffer[startIdx+idx]<<bitCnt);
+		ByteStream[ByteCnt] |=  (DemodBuffer[startIdx+idx]<<bitCnt);
 		bitCnt++;
 		if (bitCnt % 8 == 0){
 			if (g_debugMode) PrintAndLog("byte %u: %02x", (unsigned int)ByteCnt, ByteStream[ByteCnt]);

@@ -36,6 +36,18 @@
 #define EVEN                        0
 #define ODD                         1
 
+#ifndef NIBBLE_HIGH
+# define NIBBLE_HIGH(b) ( (b & 0xF0) >> 4 )
+#endif
+#ifndef NIBBLE_LOW
+# define NIBBLE_LOW(b)  ( b & 0x0F )
+#endif
+#ifndef CRUMB
+# define CRUMB(b,p)    (((b & (0x3 << p) ) >> p ) & 0xF)
+#endif
+#ifndef SWAP_NIBBLE
+# define SWAP_NIBBLE(b)  ( (NIBBLE_LOW(b)<< 4) | NIBBLE_HIGH(b))
+#endif
 int ukbhit(void);
 
 void AddLogLine(char *fileName, char *extData, char *c);
@@ -53,7 +65,8 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len);
 
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
 uint64_t bytes_to_num(uint8_t* src, size_t len);
-void num_to_bytebits(uint64_t	n, size_t len, uint8_t *dest);
+void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
+void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
 void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSize, uint8_t *dest);
 
