@@ -743,94 +743,94 @@ int CmdLFfskSim(const char *Cmd)
 // - allow pull data from DemodBuffer
 int CmdLFaskSim(const char *Cmd)
 {
-  //autodetect clock from Graphbuffer if using demod buffer
+	//autodetect clock from Graphbuffer if using demod buffer
 	// needs clock, invert, manchester/raw as m or r, separator as s, and bitstream
-  uint8_t encoding = 1, separator = 0;
-  uint8_t clk=0, invert=0;
-  bool errors = FALSE;
-  char hexData[32] = {0x00}; 
-  uint8_t data[255]= {0x00}; // store entered hex data
-  int dataLen = 0;
-  uint8_t cmdp = 0;
-  while(param_getchar(Cmd, cmdp) != 0x00)
-  {
-    switch(param_getchar(Cmd, cmdp))
-    {
-    case 'h':
-      return usage_lf_simask();
-    case 'i':
-      invert = 1;
-      cmdp++;
-      break;
-    case 'c':
-      errors |= param_getdec(Cmd,cmdp+1,&clk);
-      cmdp+=2;
-      break;
-    case 'b':
-      encoding=2; //biphase
-      cmdp++;
-      break;
-    case 'm':
-      encoding=1;
-      cmdp++;
-      break;
-    case 'r':
-      encoding=0;
-      cmdp++;
-      break;
-    case 's':
-      separator=1;
-      cmdp++;
-      break;
-    case 'd':
-      dataLen = param_getstr(Cmd, cmdp+1, hexData);
-      if (dataLen==0) {
-        errors=TRUE; 
-      } else {
-        dataLen = hextobinarray((char *)data, hexData);
-      }
-      if (dataLen==0) errors=TRUE; 
-      if (errors) PrintAndLog ("Error getting hex data, datalen: %d",dataLen);
-        cmdp+=2;
-      break;
-    default:
-      PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-      errors = TRUE;
-      break;
-    }
-    if(errors) break;
-  }
-  if(cmdp == 0 && DemodBufferLen == 0)
-  {
-    errors = TRUE;// No args
-  }
+	uint8_t encoding = 1, separator = 0, clk=0, invert=0;
+	bool errors = FALSE;
+	char hexData[32] = {0x00}; 
+	uint8_t data[255]= {0x00}; // store entered hex data
+	int dataLen = 0;
+	uint8_t cmdp = 0;
+	
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
+			case 'h': return usage_lf_simask();
+			case 'i':
+				invert = 1;
+				cmdp++;
+				break;
+			case 'c':
+				errors |= param_getdec(Cmd,cmdp+1,&clk);
+				cmdp+=2;
+				break;
+			case 'b':
+				encoding=2; //biphase
+				cmdp++;
+				break;
+			case 'm':
+				encoding=1;
+				cmdp++;
+				break;
+			case 'r':
+				encoding=0;
+				cmdp++;
+				break;
+			case 's':
+				separator=1;
+				cmdp++;
+				break;
+			case 'd':
+				dataLen = param_getstr(Cmd, cmdp+1, hexData);
+				if (dataLen==0)
+					errors = TRUE; 
+				else
+					dataLen = hextobinarray((char *)data, hexData);
+				
+				if (dataLen==0) errors = TRUE; 
+				if (errors) PrintAndLog ("Error getting hex data, datalen: %d", dataLen);
+				cmdp+=2;
+				break;
+			default:
+				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+				errors = TRUE;
+				break;
+		}
+		if(errors) break;
+	}
+  
+	if(cmdp == 0 && DemodBufferLen == 0)
+		errors = TRUE;// No args
 
-  //Validations
-  if(errors)
-  {
-    return usage_lf_simask();
-  }
-  if (dataLen == 0){ //using DemodBuffer
-    if (clk == 0) clk = GetAskClock("0", false, false);
-  } else {
-    setDemodBuf(data, dataLen, 0);
-  }
-  if (clk == 0) clk = 64;
-  if (encoding == 0) clk = clk/2; //askraw needs to double the clock speed
-  uint16_t arg1, arg2;
-  size_t size=DemodBufferLen;
-  arg1 = clk << 8 | encoding;
-  arg2 = invert << 8 | separator;
-  if (size > USB_CMD_DATA_SIZE) {
-    PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
-    size = USB_CMD_DATA_SIZE;
-  }
-  UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
-  PrintAndLog("preparing to sim ask data: %d bits", size);
-  memcpy(c.d.asBytes, DemodBuffer, size);
+	//Validations
+	if(errors) return usage_lf_simask();
+	
+	if (dataLen == 0){ //using DemodBuffer
+		if (clk == 0) 
+			clk = GetAskClock("0", false, false);
+	} else {
+		setDemodBuf(data, dataLen, 0);
+	}
+	if (clk == 0) clk = 64;
+	if (encoding == 0) clk = clk/2; //askraw needs to double the clock speed
+	
+	size_t size = DemodBufferLen;
+
+	if (size > USB_CMD_DATA_SIZE) {
+		PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
+		size = USB_CMD_DATA_SIZE;
+	}
+	
+	PrintAndLog("preparing to sim ask data: %d bits", size);	
+
+	uint16_t arg1, arg2;	
+	arg1 = clk << 8 | encoding;
+	arg2 = invert << 8 | separator;
+
+	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
+	memcpy(c.d.asBytes, DemodBuffer, size);
 	clearCommandBuffer();
-  SendCommand(&c);
-  return 0;
+	SendCommand(&c);
+	return 0;
 }
 
 // by marshmellow - sim psk data given carrier, clock, invert 

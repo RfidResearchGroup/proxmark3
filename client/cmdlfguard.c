@@ -91,12 +91,6 @@ int GetGuardBits(uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 	
 	if (g_debugMode) printf(" WIE | %s\n", sprint_hex(rawbytes, sizeof(rawbytes)));	
 	
-	// NIBBLE_SWAP (works on all data)
-	// for (i = 0; i < 12; ++i)
-		// rawbytes[i] = SWAP_NIBBLE( rawbytes[i] );
-
-	// printf("SWAP | %s\n", sprint_hex(rawbytes, sizeof(rawbytes)));
-	
 	// XOR (only works on wiegand stuff)
 	for (i = 1; i < 12; ++i)
 		rawbytes[i] ^= xorKey ;
@@ -111,7 +105,7 @@ int GetGuardBits(uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 	if (g_debugMode) printf(" Raw | %s\n", sprint_bin(pre, 64) );
 	
 	// add spacer bit 0 every 4 bits, starting with index 0,
-	// 12 bytes, 24 nibbles.  24+1 extra bites. 3bytes.  Ie 9bytes | 1byte xorkey, 8bytes rawdata (64bits, should be enough for a 40bit wiegand)
+	// 12 bytes, 24 nibbles.  24+1 extra bites. 3bytes.  ie 9bytes | 1byte xorkey, 8bytes rawdata (64bits, should be enough for a 40bit wiegand)
 	addParity(pre, guardBits+6, 64, 5, 3);
 
 	// preamble
@@ -121,10 +115,6 @@ int GetGuardBits(uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 	guardBits[3] = 1;
 	guardBits[4] = 1;
 	guardBits[5] = 0;
-/*               6      B      
-PRE |          0110   1101   0101   1110   0001   1101   1101   0111   1101011011010110110101101101011
-FIN | 111110 0 0110 0 1101 0 0101 0 1110 0 0001 0 1101 0 1101 0 0111 0 110100110011010011001101001100110100110000000000
-*/
 	
 	if (g_debugMode) printf(" FIN | %s\n", sprint_bin(guardBits, 96) );
 	return 1;
@@ -194,16 +184,11 @@ int CmdGuardSim(const char *Cmd) {
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_guard_sim();
 
 	uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
+	uint8_t clock = 64, encoding = 2, separator = 0, invert = 0;
 	
 	uint8_t bs[96];
-	size_t size = sizeof(bs);
-	memset(bs, 0x00, size);
+	memset(bs, 0x00, sizeof(bs));
 	
-	// Pyramid uses:  ASK Biphase, clk: 32, invert: 0
-	uint64_t arg1, arg2;
-	arg1 = (10 << 8) + 8;
-	arg2 = 32 | 0;
-
 	if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) return usage_lf_guard_sim();
 
 	facilitycode = (fc & 0x000000FF);
@@ -215,9 +200,20 @@ int CmdGuardSim(const char *Cmd) {
 	}	
 
 	PrintAndLog("Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
-	
+
+	// Guard uses:  clk: 64, invert: 0, encoding: 2 (ASK Biphase)
+	uint64_t arg1, arg2;
+	arg1 = (clock << 8) | encoding;
+	arg2 = (invert << 8) | separator;
+
+	uint8_t rawbytes[12];
+	size_t size = sizeof(rawbytes);
+	for (uint8_t i=0; i < size; ++i){
+		rawbytes[i] =  bytebits_to_byte( bs + (i*8), 8);
+	}
+
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
-	memcpy(c.d.asBytes, bs, size);
+	memcpy(c.d.asBytes, rawbytes, size );
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
@@ -227,7 +223,7 @@ static command_t CommandTable[] = {
     {"help",	CmdHelp,		1, "This help"},
 	{"read",	CmdGuardRead,  0, "Attempt to read and extract tag data"},
 	{"clone",	CmdGuardClone, 0, "<Facility-Code> <Card Number>  clone Guardall tag"},
-//	{"sim",		CmdGuardSim,   0, "<Facility-Code> <Card Number>  simulate Guardall tag"},
+	{"sim",		CmdGuardSim,   0, "<Facility-Code> <Card Number>  simulate Guardall tag"},
     {NULL, NULL, 0, NULL}
 };
 
