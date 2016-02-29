@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+  -  Added `lf guard clone/sim` (iceman)
+  -  Added `lf pyramd clone/sim` (iceman) 
   - trying to fix "hf 14b" command to be able to read CALYPSO card.	 (iceman)
   - `hf legic load`, it now loads faster and a casting bug is gone. (iceman)
   -  Added `hf legic calccrc8` added a method to calculate the legic crc-8 value (iceman)
