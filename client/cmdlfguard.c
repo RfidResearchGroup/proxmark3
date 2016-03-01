@@ -48,7 +48,7 @@ int GetGuardBits(uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 	time_t t;
 	srand((unsigned) time(&t));
 	//uint8_t xorKey = rand() % 0xFF;
-	uint8_t xorKey = 0x6b;
+	uint8_t xorKey = 0x66;
 	uint8_t i;
 	
 	

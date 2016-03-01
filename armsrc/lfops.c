@@ -628,7 +628,7 @@ static void biphaseSimBit(uint8_t c, int *n, uint8_t clock, uint8_t *phase)
 		memset(dest+(*n), c ^ *phase, clock);
 		*phase ^= 1;
 	}
-
+	*n += clock;
 }
 
 // args clock, ask/man or askraw, invert, transmission separator
@@ -646,7 +646,7 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 		for (i=0; i<size; i++){
 			biphaseSimBit(BitStream[i]^invert, &n, clk, &phase);
 		}
-		if (BitStream[0]==BitStream[size-1]){ //run a second set inverted to keep phase in check
+		if (phase==1) { //run a second set inverted to keep phase in check
 			for (i=0; i<size; i++){
 				biphaseSimBit(BitStream[i]^invert, &n, clk, &phase);
 			}

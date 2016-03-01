@@ -592,7 +592,7 @@ int Cmdaskbiphdemod(const char *Cmd)
 int CmdG_Prox_II_Demod(const char *Cmd)
 {
 	if (!ASKbiphaseDemod(Cmd, FALSE)){
-		if (g_debugMode) PrintAndLog("ASKbiphaseDemod failed 1st try");
+		if (g_debugMode) PrintAndLog("Error gProxII: ASKbiphaseDemod failed 1st try");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
@@ -602,46 +602,32 @@ int CmdG_Prox_II_Demod(const char *Cmd)
 		if (g_debugMode) PrintAndLog("Error gProxII_Demod");
 		return 0;
 	}
-	//got a good demod
-	uint32_t ByteStream[65] = {0x00};
+	//got a good demod of 96 bits
+	uint8_t ByteStream[8] = {0x00};
 	uint8_t xorKey=0;
-	uint8_t keyCnt=0;
-	uint8_t bitCnt=0;
-	uint8_t ByteCnt=0;
-	size_t startIdx = ans + 6; //start after preamble
-	for (size_t idx = 0; idx<size-6; idx++){
-		if ((idx+1) % 5 == 0){
-			//spacer bit - should be 0
-			if (DemodBuffer[startIdx+idx] != 0) {
-				if (g_debugMode) PrintAndLog("Error spacer not 0: %u, pos: %u", (unsigned int)DemodBuffer[startIdx+idx],(unsigned int)(startIdx+idx));
+	size_t startIdx = ans + 6; //start after 6 bit preamble
+
+	uint8_t bits_no_spacer[90];
+	//so as to not mess with raw DemodBuffer copy to a new sample array
+	memcpy(bits_no_spacer, DemodBuffer + startIdx, 90);
+	// remove the 18 (90/5=18) parity bits (down to 72 bits (96-6-18=72))
+	size_t bitLen = removeParity(bits_no_spacer, 0, 5, 3, 90); //source, startloc, paritylen, ptype, length_to_run
+	if (bitLen != 72) {
+		if (g_debugMode) PrintAndLog("Error gProxII: spacer removal did not produce 72 bits: %u, start: %u", bitLen, startIdx);
 				return 0;
 			}
-			continue;
-		} 
-		if (keyCnt<8){ //lsb first
-			xorKey |=  (DemodBuffer[startIdx+idx]<<keyCnt);
-			keyCnt++;
-			if (keyCnt==8 && g_debugMode) PrintAndLog("xorKey Found: %02x", xorKey);
-			continue;
-		}
-		//lsb first
-		ByteStream[ByteCnt] |=  (DemodBuffer[startIdx+idx]<<bitCnt);
-		bitCnt++;
-		if (bitCnt % 8 == 0){
-			if (g_debugMode) PrintAndLog("byte %u: %02x", (unsigned int)ByteCnt, ByteStream[ByteCnt]);
-			bitCnt=0;
-			ByteCnt++;
-		}
+	// get key and then get all 8 bytes of payload decoded
+	xorKey = (uint8_t)bytebits_to_byteLSBF(bits_no_spacer, 8);
+	for (size_t idx = 0; idx < 8; idx++) {
+		ByteStream[idx] = ((uint8_t)bytebits_to_byteLSBF(bits_no_spacer+8 + (idx*8),8)) ^ xorKey;
+		if (g_debugMode) PrintAndLog("byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
 	}
-	for (uint8_t i = 0; i < ByteCnt; i++){
-		ByteStream[i] ^= xorKey; //xor
-		if (g_debugMode) PrintAndLog("byte %u after xor: %02x", (unsigned int)i, ByteStream[i]);
-	}
-	//now ByteStream contains 64 bytes of decrypted raw tag data
+	//now ByteStream contains 8 Bytes (64 bits) of decrypted raw tag data
 	// 
 	uint8_t fmtLen = ByteStream[0]>>2;
 	uint32_t FC = 0;
 	uint32_t Card = 0;
+	//get raw 96 bits to print
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer+ans,32);
 	uint32_t raw2 = bytebits_to_byte(DemodBuffer+ans+32, 32);
 	uint32_t raw3 = bytebits_to_byte(DemodBuffer+ans+64, 32);
@@ -649,13 +635,14 @@ int CmdG_Prox_II_Demod(const char *Cmd)
 	if (fmtLen==36){
 		FC = ((ByteStream[3] & 0x7F)<<7) | (ByteStream[4]>>1);
 		Card = ((ByteStream[4]&1)<<19) | (ByteStream[5]<<11) | (ByteStream[6]<<3) | (ByteStream[7]>>5);
-		PrintAndLog("G-Prox-II Found: FmtLen %d, FC %d, Card %d",fmtLen,FC,Card);
+		PrintAndLog("G-Prox-II Found: FmtLen %d, FC %u, Card %u", (int)fmtLen, FC, Card);
 	} else if(fmtLen==26){
 		FC = ((ByteStream[3] & 0x7F)<<1) | (ByteStream[4]>>7);
 		Card = ((ByteStream[4]&0x7F)<<9) | (ByteStream[5]<<1) | (ByteStream[6]>>7);
-		PrintAndLog("G-Prox-II Found: FmtLen %d, FC %d, Card %d",fmtLen,FC,Card);    
+		PrintAndLog("G-Prox-II Found: FmtLen %d, FC %u, Card %u", (int)fmtLen, FC, Card);
 	} else {
-		PrintAndLog("Unknown G-Prox-II Fmt Found: FmtLen %d",fmtLen);
+		PrintAndLog("Unknown G-Prox-II Fmt Found: FmtLen %d",(int)fmtLen);
+		PrintAndLog("Decoded Raw: %s", sprint_hex(ByteStream, 8)); 
 	}
 	PrintAndLog("Raw: %08x%08x%08x", raw1,raw2,raw3);
 	setDemodBuf(DemodBuffer+ans, 96, 0);
