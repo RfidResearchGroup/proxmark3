@@ -107,7 +107,7 @@ local function select1443b()
 		--   bit 0-1-2   | N slots  ( 0 = 1, 1 = 2, 2 = 4, 3 = 8, 4 == 16)
 		--   bit 3 		 | (1== WUPB, 0 == REQB)  
 		--   bit 4-5-6-7 | AFI application family identifier
-		local result, err = sendRaw('050000', 1, 1)
+		local result, err = sendRaw('050008', 1, 1)
 		if result then
 			resp = Command.parse( result )
 			len = tonumber(resp.arg1) * 2

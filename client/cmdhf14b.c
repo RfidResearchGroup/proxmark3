@@ -688,11 +688,6 @@ uint32_t srix4kEncode(uint32_t value) {
 //                vv vv vv pp 
 4 bytes			: 00 1A 20 01
 */
-
-#define NibbleHigh(b) ( (b & 0xF0) >> 4 )
-#define NibbleLow(b)  ( b & 0x0F )
-#define Crumb(b,p)    (((b & (0x3 << p) ) >> p ) & 0xF) 
-
 	// only the lower crumbs.
 	uint8_t block = (value & 0xFF);
 	uint8_t i = 0;
@@ -703,18 +698,18 @@ uint32_t srix4kEncode(uint32_t value) {
 	// Scrambled part
 	// Crumb swapping of value.
 	uint8_t temp[] = {0,0};
-	temp[0] = (Crumb(value, 22) << 4 | Crumb(value, 14 ) << 2 | Crumb(value, 6)) << 4;
-	temp[0] |= Crumb(value, 20) << 4 | Crumb(value, 12 ) << 2 | Crumb(value, 4);
-	temp[1] = (Crumb(value, 18) << 4 | Crumb(value, 10 ) << 2 | Crumb(value, 2)) << 4;
-	temp[1] |= Crumb(value, 16) << 4 | Crumb(value, 8  ) << 2 | Crumb(value, 0);
+	temp[0] = (CRUMB(value, 22) << 4 | CRUMB(value, 14 ) << 2 | CRUMB(value, 6)) << 4;
+	temp[0] |= CRUMB(value, 20) << 4 | CRUMB(value, 12 ) << 2 | CRUMB(value, 4);
+	temp[1] = (CRUMB(value, 18) << 4 | CRUMB(value, 10 ) << 2 | CRUMB(value, 2)) << 4;
+	temp[1] |= CRUMB(value, 16) << 4 | CRUMB(value, 8  ) << 2 | CRUMB(value, 0);
 
 	// chksum part
 	uint32_t chksum = 0xFF - block;
 	
 	// chksum is reduced by each nibbles of value.
 	for (i = 0; i < 3; ++i){
-		chksum -= NibbleHigh(valuebytes[i]);
-		chksum -= NibbleLow(valuebytes[i]);
+		chksum -= NIBBLE_HIGH(valuebytes[i]);
+		chksum -= NIBBLE_LOW(valuebytes[i]);
 	}
 
 	// base4 conversion and left shift twice
@@ -727,17 +722,17 @@ uint32_t srix4kEncode(uint32_t value) {
 	
 	// merge scambled and chksum parts
 	uint32_t encvalue = 
-		( NibbleLow ( base4[0]) << 28 ) |
-		( NibbleHigh( temp[0])  << 24 ) |
+		( NIBBLE_LOW ( base4[0]) << 28 ) |
+		( NIBBLE_HIGH( temp[0])  << 24 ) |
 		
-		( NibbleLow ( base4[1]) << 20 ) |
-		( NibbleLow ( temp[0])  << 16 ) |
+		( NIBBLE_LOW ( base4[1]) << 20 ) |
+		( NIBBLE_LOW ( temp[0])  << 16 ) |
 		
-		( NibbleLow ( base4[2]) << 12 ) |
-		( NibbleHigh( temp[1])  << 8 ) |
+		( NIBBLE_LOW ( base4[2]) << 12 ) |
+		( NIBBLE_HIGH( temp[1])  << 8 ) |
 		
-		( NibbleLow ( base4[3]) << 4 ) |
-		  NibbleLow ( temp[1] );
+		( NIBBLE_LOW ( base4[3]) << 4 ) |
+		  NIBBLE_LOW ( temp[1] );
 
 	PrintAndLog("ICE encoded | %08X -> %08X", value, encvalue);
 	return encvalue;
@@ -804,8 +799,7 @@ int CmdteaSelfTest(const char *Cmd){
 	SwapEndian64ex(v , 8, 4, v_ptr);
 	
 	// ENCRYPTION KEY:	
-	
-	uint8_t key[16]  = {0x00};
+	uint8_t key[16] = {0x55,0xFE,0xF6,0x30,0x62,0xBF,0x0B,0xC1,0xC9,0xB3,0x7C,0x34,0x97,0x3E,0x29,0xFB };
 	uint8_t keyle[16];
 	uint8_t* key_ptr = keyle;
 	SwapEndian64ex(key , sizeof(key), 4, key_ptr);

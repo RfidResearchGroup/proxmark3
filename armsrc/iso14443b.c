@@ -778,11 +778,11 @@ static void GetSamplesFor14443bDemod(int n, bool quiet)
 
 	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 
-	if (!quiet && Demod.len == 0) {
-		Dbprintf("max behindby = %d, samples = %d, gotFrame = %d, Demod.len = %d, Demod.sumI = %d, Demod.sumQ = %d",
+	if (!quiet) {
+		Dbprintf("max behindby = %d, samples = %d, gotFrame = %s, Demod.len = %d, Demod.sumI = %d, Demod.sumQ = %d",
 			max,
 			samples, 
-			gotFrame, 
+			(gotFrame) ? "true" : "false", 
 			Demod.len, 
 			Demod.sumI, 
 			Demod.sumQ
@@ -995,7 +995,7 @@ int iso14443b_select_card()
 void iso14443b_setup() {
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
+	
 	BigBuf_free();
 	// Set up the synchronous serial port
 	FpgaSetupSsc();
@@ -1009,7 +1009,7 @@ void iso14443b_setup() {
 	//SpinDelay(100);
 
 	// Start the timer
-	//StartCountSspClk();
+	StartCountSspClk();
 
 	DemodReset();
 	UartReset();
@@ -1324,6 +1324,11 @@ void RAMFUNC SnoopIso14443b(void)
  */
 void SendRawCommand14443B(uint32_t datalen, uint32_t recv, uint8_t powerfield, uint8_t data[])
 {
+	// param ISO_
+	// param ISO_CONNECT
+	// param ISO14A_NO_DISCONNECT
+	//if (param & ISO14A_NO_DISCONNECT)
+	// return;
 	iso14443b_setup();
 	
 	if ( datalen == 0 && recv == 0 && powerfield == 0){
