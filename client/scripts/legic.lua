@@ -15,6 +15,7 @@
 
 example = "script run legic"
 author  = "Mosci"
+version = "1.0"
 desc =
 [[
 
@@ -25,13 +26,14 @@ it's kinda interactive with following commands in three categories:
 ------------------     --------------------      ---------------
   rt => read    Tag     ds => dump   Segments     lf => load File
   wt => write   Tag     as => add    Segment      sf => save File 
-  ct => copy io Tag     es => edit   Segment      xf => xor  File
-  tc => copy oi Tag     ed => edit   Data     
-  di => dump  inTag     rs => remove Segment
-  do => dump outTag     cc => check  Segment-CRC                  
-                        ck => check  KGH                
+                        es => edit   Segment      xf => xor  File
+  ct => copy io Tag     ed => edit   Data
+  tc => copy oi Tag     rs => remove Segment
+  di => dump  inTag     cc => check  Segment-CRC
+  do => dump outTag     ck => check  KGH        
                         tk => toggle KGH-Flag
-  q => quit             xc => get    KGH-Str      h => this Help 
+                        mt => make   Token
+   q => quit            et => edit   Token         h => this Help 
  
  Data I/O 
  rt: 'read tag'         - reads a tag placed near to the PM3
@@ -49,7 +51,9 @@ it's kinda interactive with following commands in three categories:
  as: 'add Segment'      - will add a 'empty' Segment to the inTag
  es: 'edit Segment'     - edit the Segment-Header of a selected Segment (len, WRP, WRC, RD, valid)
                           all other Segment-Header-Values are either calculated or not needed to edit (yet)
- ed: 'edit data'        - edit the Data of a Segment (Stamp & Payload)
+ ed: 'edit data'        - edit the Data of a Segment (ADF-Aera / Stamp & Payload specific Data)
+ et: 'edit Token'       - edit Data of a Token (CDF-Area / SAM, SAM64, SAM63, IAM, GAM specific Data)
+ mt: 'make Token'       - create a Token 'from scratch' (guided)
  rs: 'remove segment'   - removes a Segment (except Segment 00, but this can be set to valid=0 for Master-Token)
  cc: 'check Segment-CRC'- checks & calculates (if check failed) the Segment-CRC of all Segments
  ck: 'check KGH-CRC'    - checks the and calculates a 'Kaba Group Header' if one was detected
@@ -64,17 +68,19 @@ it's kinda interactive with following commands in three categories:
  
 ]]
 
---- requirements
+--- 
+-- requirements
 local utils   = require('utils')
 local getopt  = require('getopt')
 
---- global variables / defines
+--- 
+-- global variables / defines
 local bxor    = bit32.bxor
 local bbit    = bit32.extract
 local input   = utils.input
 local confirm = utils.confirm
 
---- Error-Handling & Helper
+--- 
 -- This is only meant to be used when errors occur
 function oops(err)
 	print("ERROR: ",err)
@@ -85,6 +91,7 @@ end
 -- Usage help
 function help()
 	print(desc)
+	print(version)
 	print("Example usage")
 	print(example)
 end
@@ -96,17 +103,7 @@ function istable(t)
 end
 
 ---
--- put certain bytes into a new table
-function bytesToTable(bytes, bstart, bend)
-  local t={}
-  for i=0, (bend-bstart) do
-    t[i]=bytes[bstart+i]
-  end
-  return t
-end
-
---- 
--- xor byte (if addr >= 0x22 - start counting from 1 => 23)
+-- xor single byte
 function xorme(hex, xor, index)
 	if ( index >= 23 ) then
 		return ('%02x'):format(bxor( tonumber(hex,16) , tonumber(xor,16) ))
@@ -167,7 +164,6 @@ end
 
 ---
 -- write bytes to file
--- write to file
 function writeFile(bytes, filename)
   if (filename~='MylegicClone.hex') then
     if (file_check(filename)) then
@@ -201,6 +197,16 @@ function writeFile(bytes, filename)
 end
 
 --- 
+-- put certain bytes into a new table
+function bytesToTable(bytes, bstart, bend)
+  local t={}
+  for i=0, (bend-bstart) do
+    t[i]=bytes[bstart+i]
+  end
+  return t
+end
+
+--- 
 -- read from pm3 into virtual-tag
 function readFromPM3()
   local tag, bytes, infile 
@@ -218,6 +224,42 @@ function readFromPM3()
     tag=readFile(infile)
     return tag
   --else return print("user abort"); end
+end
+
+--- 
+-- write virtual Tag to real Tag
+function writeToTag(plainBytes, taglen, filename)
+  local bytes
+	if(utils.confirm("\nplace your empty tag onto the PM3 to read & write\n") == false) then
+    return
+  end
+	
+	-- write data to file
+	if (taglen > 0) then
+		WriteBytes = utils.input("enter number of bytes to write?", taglen)
+
+		-- load file into pm3-buffer
+    if (type(filename)~="string") then filename=input("filename to load to pm3-buffer?","legic.temp") end
+		cmd = 'hf legic load '..filename
+		core.console(cmd)
+		
+		-- write pm3-buffer to Tag
+		for i=0, WriteBytes do
+			if ( i<5 or i>6) then
+				cmd = ('hf legic write 0x%02x 0x01'):format(i)
+				core.console(cmd)
+        --print(cmd)
+			elseif (i == 6) then
+				-- write DCF in reverse order (requires 'mosci-patch')
+				cmd = 'hf legic write 0x05 0x02'
+				core.console(cmd)
+        --print(cmd)
+			else
+				print("skipping byte 0x05 - will be written next step")
+			end				
+			utils.Sleep(0.2)
+		end
+	end
 end
 
 --- 
@@ -240,56 +282,6 @@ function getInputBytes(infile)
 end
 
 ---
--- read Tag-Table in bytes-table
-function tagToBytes(tag)
-  if (istable(tag)) then
-    local bytes = {}
-    local i, i2
-    -- main token-data
-    table.insert(bytes, tag.MCD)
-    table.insert(bytes, tag.MSN0)
-    table.insert(bytes, tag.MSN1)
-    table.insert(bytes, tag.MSN2)
-    table.insert(bytes, tag.MCC)
-    table.insert(bytes, tag.DCFl)
-    table.insert(bytes, tag.DCFh)
-    table.insert(bytes, tag.raw)
-    table.insert(bytes, tag.SSC)
-    -- raw token data
-    for i=0, #tag.data do
-      table.insert(bytes, tag.data[i])
-    end
-    -- backup data
-    for i=0, #tag.Bck do
-      table.insert(bytes, tag.Bck[i])
-    end
-    -- token-create-time / master-token crc
-    for i=0, #tag.MTC do
-      table.insert(bytes, tag.MTC[i])
-    end
-    -- process segments
-    if (type(tag.SEG[0])=='table') then
-      for i=0, #tag.SEG do
-        for i2=1, #tag.SEG[i].raw+1 do
-          table.insert(bytes, #bytes+1, tag.SEG[i].raw[i2])
-        end
-        table.insert(bytes, #bytes+1, tag.SEG[i].crc)
-        for i2=0, #tag.SEG[i].data-1 do
-          table.insert(bytes, #bytes+1, tag.SEG[i].data[i2])
-        end
-      end
-    end
-    -- fill with zeros
-    for i=#bytes+1, 1024 do
-      table.insert(bytes, i, '00')
-    end
-    print(#bytes.." bytes of Tag dumped")
-    return bytes
-  end
-  return oops("tag is no table in tagToBytes ("..type(tag)..")")
-end
-
---- virtual TAG functions
 -- create tag-table helper
 function createTagTable()
   local t={  
@@ -343,6 +335,16 @@ function bytesToTag(bytes, tag)
     if (tag.Type=="SAM" and #bytes>23) then
       tag=segmentsToTag(bytes, tag)
       print((#tag.SEG+1).." Segment(s) found")
+    -- unsegmented Master-Token
+    -- only tag-data 
+    else 
+      for i=0, #tag.Bck do
+        table.insert(tag.data, tag.Bck[i])
+    end
+      tag.data[#tag.data]=tag.MTC[0]
+      tag.Bck=nil
+      --tag.MTC[0]=tag.MTC[1]
+      --tag.MTC[1]=nil
     end
     print(#bytes.." bytes for Tag processed")
     return tag
@@ -351,127 +353,170 @@ function bytesToTag(bytes, tag)
 end
 
 ---
--- dump tag-system area
-function dumpCDF(tag)
-  local res=""
-  local i=0
-  local raw=""
+-- read Tag-Table in bytes-table
+function tagToBytes(tag)
   if (istable(tag)) then
-    res = res.."MCD: "..tag.MCD..", MSN: "..tag.MSN0.." "..tag.MSN1.." "..tag.MSN2..", MCC: "..tag.MCC.."\n"
-    res = res.."DCF: "..tag.DCFl.." "..tag.DCFh..", Token_Type="..tag.Type.." (OLE="..tag.OLE.."), Stamp_len="..tag.Stamp_len.."\n"
-    res = res.."WRP="..tag.WRP..", WRC="..tag.WRC..", RD="..tag.RD..", raw="..tag.raw..", SSC="..tag.SSC.."\n"
-    
-    -- credential
-    if (tag.raw..tag.SSC=="9fff") then
-      res = res.."Remaining Header Area\n"
-      for i=0, (#tag.data) do
-        res = res..tag.data[i].." "
+    local bytes = {}
+    local i, i2
+    -- main token-data
+    table.insert(bytes, tag.MCD)
+    table.insert(bytes, tag.MSN0)
+    table.insert(bytes, tag.MSN1)
+    table.insert(bytes, tag.MSN2)
+    table.insert(bytes, tag.MCC)
+    table.insert(bytes, tag.DCFl)
+    table.insert(bytes, tag.DCFh)
+    table.insert(bytes, tag.raw)
+    table.insert(bytes, tag.SSC)
+    -- raw token data
+    for i=0, #tag.data do
+      table.insert(bytes, tag.data[i])
       end
-      res = res.."\nBackup Area\n"
-      for i=0, (#tag.Bck) do
-        res = res..tag.Bck[i].." "
+    -- backup data
+    if(istable(tag.Bck)) then
+      for i=0, #tag.Bck do
+        table.insert(bytes, tag.Bck[i])
       end
-      res = res.."\nTime Area\n"
-      for i=0, (#tag.MTC) do
-        res = res..tag.MTC[i].." "
       end
-    
-    -- Master Token
-    else
-      res = res .."Master-Token Area\n"
-      for i=0, (#tag.data) do
-        res = res..tag.data[i].." "
+    -- token-create-time / master-token crc
+    for i=0, #tag.MTC do
+      table.insert(bytes, tag.MTC[i])
       end
-      for i=0, (#tag.Bck) do
-        res = res..tag.Bck[i].." "
+    -- process segments
+    if (type(tag.SEG[0])=='table') then
+      for i=0, #tag.SEG do
+        for i2=1, #tag.SEG[i].raw+1 do
+          table.insert(bytes, #bytes+1, tag.SEG[i].raw[i2])
       end
-      for i=0, (#tag.MTC-1) do
-        res = res..tag.MTC[i].." "
+        table.insert(bytes, #bytes+1, tag.SEG[i].crc)
+        for i2=0, #tag.SEG[i].data-1 do
+          table.insert(bytes, #bytes+1, tag.SEG[i].data[i2])
       end
-      res = res .. " MT-CRC: "..tag.MTC[1]
     end
-    return res
-  else print("no valid Tag in dumpCDF") end
+end
+    -- fill with zeros
+    for i=#bytes+1, 1024 do
+      table.insert(bytes, i, '00')
+    end
+    print(#bytes.." bytes of Tag dumped")
+    return bytes
+  end
+  return oops("tag is no table in tagToBytes ("..type(tag)..")")
 end
 
 ---
--- dump single segment
-function dumpSegment(tag, index)
-  local i=index
-  local i2
-  local dp=0 --data-position in table
-  local res="" --result
-  local raw="" --raw-header
-  -- segment
-  if ( (istable(tag.SEG[i])) and tag.Type=="SAM") then 
-    if (istable(tag.SEG[i].raw)) then
-      for k,v in pairs(tag.SEG[i].raw) do
-        raw=raw..v.." "
+-- make token
+function makeToken()
+  local mt={
+    ['Type']    = {"SAM", "SAM63", "SAM64", "IAM", "GAM"},
+    ['DCF']     = {"60ea", "31fa", "30fa", "80fa", "f0fa"},
+    ['WRP']     = {"15", "2", "2", "2", "2"},
+    ['WRC']     = {"01", "02", "02", "00", "00"},
+    ['RD']      = {"01", "00", "00", "00", "00"},
+    ['Stamp']   = {"00", "00", "00", "00", "00"},
+    ['Segment'] = {"0d", "c0", "04", "00", "be", "01", "02", "03", "04", "01", "02", "03", "04"}
+  }
+  ttype=""
+  for k, v in pairs(mt.Type) do
+    ttype=ttype..k..") "..v.."  "
+      end
+  mtq=tonumber(input("select number for Token-Type\n"..ttype, '1'), 10)
+  if (type(mtq)~="number") then return print("selection invalid!") 
+  elseif (mtq>#mt.Type) then return print("selection invalid!")
+  else print("Token-Type '"..mt.Type[mtq].."' selected") end
+  local raw=calcHeaderRaw(mt.WRP[mtq], mt.WRC[mtq], mt.RD[mtq])
+  local mtCRC="00"
+  
+  bytes={"01", "02", "03", "04", "cb", string.sub(mt.DCF[mtq], 0, 2), string.sub(mt.DCF[mtq], 3), raw,
+         "00", "00", "00", "00", "00", "00", "00", "00",
+         "00", "00", "00", "00", "00", "00"}
+  if (mtq==1) then
+    for i=0, #mt.Segment do
+      table.insert(bytes, mt.Segment[i])
+    end
+    bytes[9]="ff"
+      end
+  -- fill bytes
+  for i=#bytes, 1023 do table.insert(bytes, "00") end
+  -- if Master-Token -> calc Master-Token-CRC
+  if (mtq>1) then bytes[22]=calcMtCrc(bytes) end
+  local tempTag=createTagTable()
+  -- remove segment if MasterToken
+  if (mtq>1) then tempTag.SEG[0]=nil end
+  return bytesToTag(bytes, tempTag)
+    end
+    
+--- 
+-- edit token-data
+function editTag(tag)
+  -- for simulation it makes sense to edit everything
+  local edit_sim="MCD MSN0 MSN2 MSN2 MCC DCFl DCFh WRP WRC RD"
+  -- on real tags it makes only sense to edit DCF, WRP, WRC, RD
+  local edit_real="DCFl DCFh WRP WRC RD"
+  if (confirm("do you want to edit non-writeable values (e.g. for simulation)?")) then
+    edit_tag=edit_sim
+  else edit_tag=edit_real end
+    
+  if(istable(tag)) then
+    for k,v in pairs(tag) do
+      if(type(v)~="table" and type(v)~="boolean" and string.find(edit_tag, k)) then
+        tag[k]=input("value for: "..k, v)
       end
     end
     
-    -- segment header
-    res = res.."Segment "..("%02d"):format(tag.SEG[i].index)..": "
-    res = res .."raw header:"..string.sub(raw,0,-2)..", flag="..tag.SEG[i].flag..", (valid="..("%x"):format(tag.SEG[i].valid)..", last="..("%x"):format(tag.SEG[i].last).."), "
-    res = res .."len="..("%04d"):format(tag.SEG[i].len)..", WRP="..("%02x"):format(tag.SEG[i].WRP)..", WRC="..("%02x"):format(tag.SEG[i].WRC)..", "
-    res = res .."RD="..("%02x"):format(tag.SEG[i].RD)..", CRC="..tag.SEG[i].crc.." "
-    res = res .."("..(checkSegmentCrc(tag, i) and "valid" or "error")..")"
-    raw=""
-
-    -- WRC protected
-    if (tag.SEG[i].WRC>0) then
-      res = res .."\nWRC protected area (Stamp):\n"
-      for i2=dp, tag.SEG[i].WRC-1 do
-        res = res..tag.SEG[i].data[dp].." "
-        dp=dp+1
-      end
-    end
-    
-    -- WRP mprotected
-    if (tag.SEG[i].WRP>tag.SEG[i].WRC) then
-      res = res .."\nRemaining write protected area (Stamp):\n"
-      for i2=dp, tag.SEG[i].WRP-tag.SEG[i].WRC-1 do
-        res = res..tag.SEG[i].data[dp].." "
-        dp=dp+1
-      end
-    end
-    
-    -- payload
-    if (#tag.SEG[i].data-dp>0) then
-     res = res .."\nRemaining segment payload:\n"
-     for i2=dp, #tag.SEG[i].data-2 do
-       res = res..tag.SEG[i].data[dp].." "
-       dp=dp+1
+    if (tag.Type=="SAM") then ttype="Header"; else ttype="Stamp"; end
+      if (confirm("do you want to edit "..ttype.." Data?")) then
+      -- master-token specific
+      if(istable(tag.Bck)==false) then
+        -- stamp-data length=(0xfc-DCFh)
+        -- on MT: SSC holds the Starting Stamp Character (Stamp0)
+        tag.SSC=input(ttype.."0: ", tag.SSC)
+        -- rest of stamp-bytes are in tag.data 0..n
+        for i=0, (tonumber(0xfc ,10)-("%d"):format('0x'..tag.DCFh))-2 do
+        tag.data[i]=input(ttype.. i+1 ..": ", tag.data[i])
      end
-     if (tag.SEG[i].kgh) then 
-       res = res..tag.SEG[i].data[dp].." (KGH: "..(checkKghCrc(tag, i) and "valid" or "error")..")"
-     else  res = res..tag.SEG[i].data[dp] end
-    end
-    dp=0
-    return res   
   else
-    return print("Segment not found") 
+        --- on credentials byte7 should always be 9f and byte8 ff 
+        -- on Master-Token not (even on SAM63/64 not)
+        -- tag.SSC=input(ttype.."0: ", tag.SSC)
+        for i=0, #tag.data do
+           tag.data[i]=input(ttype.. i ..": ", tag.data[i])
+  end
+end
+  end
+    
+    bytes=tagToBytes(tag)
+   
+    --- check data-consistency (calculate tag.raw)
+    bytes[8]=calcHeaderRaw(tag.WRP, tag.WRC, tag.RD)
+   
+    --- Master-Token specific
+    -- should be triggered if a SAM was converted to a non-SAM (user-Token to Master-Token)
+    -- or a Master-Token has being edited (also SAM64 & SAM63 - which are in fact Master-Token)
+    if(tag.Type~="SAM" or bytes[6]..bytes[7]~="60ea") then 
+      -- calc new Master-Token crc
+      bytes[22]=calcMtCrc(bytes)   
+    else
+      -- ensure tag.SSC set to 'ff' on credential-token (SAM)
+      bytes[9]='ff'
+      -- if a Master-Token was converted to a Credential-Token
+      -- lets unset the Time-Area to 00 00 (will contain Stamp-Data on MT)
+      bytes[21]='00'
+      bytes[22]='00'
+end
+
+    tag=bytesToTag(bytes, tag)
   end
 end
 
 ---
--- check all segmnet-crc
-function checkAllSegCrc(tag)
-  for i=0, #tag.SEG do
-    crc=calcSegmentCrc(tag, i)
-    tag.SEG[i].crc=crc
-  end
-end
-
----
--- check all segmnet-crc
-function checkAllKghCrc(tag)
-  for i=0, #tag.SEG do
-    crc=calcKghCrc(tag, i)
-    if (tag.SEG[i].kgh) then 
-      tag.SEG[i].data[#tag.SEG[i].data-1]=crc
-    end
-  end
+-- calculates header-byte (addr 0x07)
+function calcHeaderRaw(wrp, wrc, rd)
+  local res
+  wrp=("%02x"):format(tonumber(wrp, 10))
+  rd=tonumber(rd, 16)
+  res=("%02x"):format(tonumber(wrp, 16)+tonumber(wrc.."0", 16)+((rd>0) and tonumber("8"..(rd-1), 16) or 0))         
+  return res
 end
 
 ---
@@ -484,65 +529,14 @@ function dumpTag(tag)
   -- sytstem area
   res ="\nCDF: System Area"
   res= res.."\n"..dumpCDF(tag)
-  -- segments (user area)
-  if(istable(tag.SEG[0])) then
+  -- segments (user-token area)
+  if(tag.Type=="SAM") then
     res = res.."\n\nADF: User Area"
     for i=0, #tag.SEG do
       res=res.."\n"..dumpSegment(tag, i).."\n"
     end
   end
   return res
-end
-
---- 
--- determine TagType (bits 0..6 of DCFlow)
-function getTokenType(DCFl)
-  --[[
-    0x00–0x2f IAM 
-    0x30–0x6f SAM 
-    0x70–0x7f GAM
-  ]]--
-  local tt = tonumber(bbit("0x"..DCFl,0,7),10)
-  if (tt >= 0 and tt <= 47) then tt = "IAM"
-  elseif (tt == 49) then tt = "SAM63"
-  elseif (tt == 48) then tt = "SAM64"
-  elseif (tt >= 50 and tt <= 111) then tt = "SAM"
-  elseif (tt >= 112 and tt <= 127) then tt = "GAM"
-  else tt = "???" end
-  return tt
-end
-
----
--- regenerate segment-header (after edit)
-function regenSegmentHeader(segment)
-  local seg=segment
-  local raw = segment.raw
-  local i
-  -- len  bit0..7 | len=12bit=low nibble of byte1..byte0
-  raw[1]=("%02x"):format(bbit("0x"..("%03x"):format(seg.len),0,8))
-  -- high nibble of len  bit6=valid , bit7=last of byte 1 | ?what are bit 5+6 for? maybe kgh?
-  raw[2]=("%02x"):format(bbit("0x"..("%03x"):format(seg.len),4.4)..bbit("0x"..("%02x"):format((seg.valid*64)+(seg.last*128)),0,8))
-  -- WRP
-  raw[3]=("%02x"):format(bbit("0x"..("%02x"):format(seg.WRP),0,8))
-  -- WRC + RD
-  raw[4]=("%02x"):format(bbit("0x"..("%03x"):format(seg.WRC),4,3)..bbit("0x"..("%02x"):format(seg.RD*128),0,8))
-  -- flag
-  seg.flag=string.sub(raw[2],0,1)
-  --print(raw[1].." "..raw[2].." "..raw[3].." "..raw[4])
-  if(#seg.data>(seg.len-5)) then
-    print("current payload: ".. #seg.data .." - desired payload: ".. seg.len-5)
-    print("Data-Length has being reduced: removing ".. #seg.data-(seg.len-5) .." bytes from Payload");
-    for i=(seg.len-5), #seg.data-1 do
-      table.remove(seg.data)
-    end
-  elseif (#seg.data<(seg.len-5)) then
-    print("current payload: ".. #seg.data .." - desired payload: ".. seg.len-5)
-    print("Data-Length has being extended: adding "..(seg.len-5)-#seg.data.." bytes to Payload");
-    for i=#seg.data, (seg.len-5)-1 do
-      table.insert(seg.data, '00')
-    end
-  end
-  return seg
 end
 
 ---
@@ -613,102 +607,161 @@ function segmentsToTag(bytes, tag)
   else print("no Segments: must be a MIM22") end
 end 
 
---- CRC calculation and validation
--- build kghCrc credentials
-function kghCrcCredentials(tag, segid) 
-  local x='00'
-  if (type(segid)=="string") then segid=tonumber(segid,10) end
-  if (segid>0) then x='93' end
-  local cred = tag.MCD..tag.MSN0..tag.MSN1..tag.MSN2..("%02x"):format(tag.SEG[segid].WRP)
-  cred = cred..("%02x"):format(tag.SEG[segid].WRC)..("%02x"):format(tag.SEG[segid].RD)..x
-  for i=0, #tag.SEG[segid].data-2 do
-    cred = cred..tag.SEG[segid].data[i]
-  end
-  return cred
-end
-
 ---
--- validate kghCRC to segment in tag-table
-function checkKghCrc(tag, segid)
-  if (type(tag.SEG[segid])=='table') then
-    if (tag.data[3]=="11" and tag.raw=="9f" and tag.SSC=="ff") then
-      local data=kghCrcCredentials(tag, segid)
-      if (("%02x"):format(utils.Crc8Legic(data))==tag.SEG[segid].data[tag.SEG[segid].len-5-1]) then return true; end 
-      else return false; end
-  else oops("'Kaba Group header' detected but no Segment-Data found") end
-end
-
----
--- calcuate kghCRC for a given segment 
-function calcKghCrc(tag, segid)
-  -- check if a 'Kaber Group Header' exists
+-- regenerate segment-header (after edit)
+function regenSegmentHeader(segment)
+  local seg=segment
+  local raw = segment.raw
     local i
-    local data=kghCrcCredentials(tag, segid)
-    return ("%02x"):format(utils.Crc8Legic(data))
+  -- len  bit0..7 | len=12bit=low nibble of byte1..byte0
+  raw[1]=("%02x"):format(bbit("0x"..("%03x"):format(seg.len),0,8))
+  -- high nibble of len  bit6=valid , bit7=last of byte 1 | ?what are bit 5+6 for? maybe kgh?
+  raw[2]=("%02x"):format(bbit("0x"..("%03x"):format(seg.len),4.4)..bbit("0x"..("%02x"):format((seg.valid*64)+(seg.last*128)),0,8))
+  -- WRP
+  raw[3]=("%02x"):format(bbit("0x"..("%02x"):format(seg.WRP),0,8))
+  -- WRC + RD
+  raw[4]=("%02x"):format(bbit("0x"..("%03x"):format(seg.WRC),4,3)..bbit("0x"..("%02x"):format(seg.RD*128),0,8))
+  -- flag
+  seg.flag=string.sub(raw[2],0,1)
+  --print(raw[1].." "..raw[2].." "..raw[3].." "..raw[4])
+  if(#seg.data>(seg.len-5)) then
+    print("current payload: ".. #seg.data .." - desired payload: ".. seg.len-5)
+    print("Data-Length has being reduced: removing ".. #seg.data-(seg.len-5) .." bytes from Payload");
+    for i=(seg.len-5), #seg.data-1 do
+      table.remove(seg.data)
 end
-
----
--- build segmentCrc credentials
-function segmentCrcCredentials(tag, segid) 
-  local cred = tag.MCD..tag.MSN0..tag.MSN1..tag.MSN2
-  cred = cred ..tag.SEG[segid].raw[1]..tag.SEG[segid].raw[2]..tag.SEG[segid].raw[3]..tag.SEG[segid].raw[4]
-  return cred
+  elseif (#seg.data<(seg.len-5)) then
+    print("current payload: ".. #seg.data .." - desired payload: ".. seg.len-5)
+    print("Data-Length has being extended: adding "..(seg.len-5)-#seg.data.." bytes to Payload");
+    for i=#seg.data, (seg.len-5)-1 do
+      table.insert(seg.data, '00')
 end
-
----
--- validate segmentCRC for a given segment
-function checkSegmentCrc(tag, segid)
-    local data=segmentCrcCredentials(tag, segid)
-    if (("%02x"):format(utils.Crc8Legic(data))==tag.SEG[segid].crc) then 
-      return true
-    end
-    return false
-end
-
----
--- calculate segmentCRC for a given segment
-function calcSegmentCrc(tag, segid)
-  -- check if a 'Kaber Group Header' exists
-    local data=segmentCrcCredentials(tag, segid)
-    return ("%02x"):format(utils.Crc8Legic(data))
-end
-
---- create master-token
-
----
--- write virtual Tag to real Tag
--- write clone-data to tag
-function writeToTag(plainBytes, taglen, filename)
-  local bytes
-	if(utils.confirm("\nplace your empty tag onto the PM3 to read & write\n") == false) then
-    return
   end
-	
-	-- write data to file
-	if (taglen > 0) then
-		WriteBytes = utils.input("enter number of bytes to write?", taglen)
+  return seg
+end
 
-		-- load file into pm3-buffer
-    if (type(filename)~="string") then filename=input("filename to load to pm3-buffer?","legic.temp") end
-		cmd = 'hf legic load '..filename
-		core.console(cmd)
-		
-		-- write pm3-buffer to Tag
-		for i=0, WriteBytes do
-			if ( i<5 or i>6) then
-				cmd = ('hf legic write 0x%02x 0x01'):format(i)
-				core.console(cmd)
-        --print(cmd)
-			elseif (i == 6) then
-				-- write DCF in reverse order (requires 'mosci-patch')
-				cmd = 'hf legic write 0x05 0x02'
-				core.console(cmd)
-        --print(cmd)
+---
+-- determine TagType (bits 0..6 of DCFlow)
+function getTokenType(DCFl)
+  --[[
+    0x00–0x2f IAM 
+    0x30–0x6f SAM 
+    0x70–0x7f GAM
+  ]]--
+  local tt = tonumber(bbit("0x"..DCFl,0,7),10)
+  if (tt >= 0 and tt <= 47) then tt = "IAM"
+  elseif (tt == 49) then tt = "SAM63"
+  elseif (tt == 48) then tt = "SAM64"
+  elseif (tt >= 50 and tt <= 111) then tt = "SAM"
+  elseif (tt >= 112 and tt <= 127) then tt = "GAM"
+  else tt = "???" end
+  return tt
+    end
+
+---
+-- dump tag-system area
+function dumpCDF(tag)
+  local res=""
+  local i=0
+  local raw=""
+  local bytes
+  if (istable(tag)) then
+    res = res.."MCD: "..tag.MCD..", MSN: "..tag.MSN0.." "..tag.MSN1.." "..tag.MSN2..", MCC: "..tag.MCC.."\n"
+    res = res.."DCF: "..tag.DCFl.." "..tag.DCFh..", Token_Type="..tag.Type.." (OLE="..tag.OLE.."), Stamp_len="..tag.Stamp_len.."\n"
+    res = res.."WRP="..tag.WRP..", WRC="..tag.WRC..", RD="..tag.RD..", raw="..tag.raw..((tag.raw=='9f') and (", SSC="..tag.SSC.."\n") or "\n")
+    
+    -- credential (end-user tag)
+    if (tag.Type=="SAM") then
+      res = res.."Remaining Header Area\n"
+      for i=0, (#tag.data) do
+        res = res..tag.data[i].." "
+  end
+      res = res.."\nBackup Area\n"
+      for i=0, (#tag.Bck) do
+        res = res..tag.Bck[i].." "
+      end
+      res = res.."\nTime Area\n"
+      for i=0, (#tag.MTC) do
+        res = res..tag.MTC[i].." "
+      end
+    
+    -- Master Token specific
 			else
-				print("skipping byte 0x05 - will be written next step")
+      res = res .."Master-Token Area\nStamp: "
+      res= res..tag.SSC.." "
+      for i=0, tag.Stamp_len-2 do
+        res = res..tag.data[i].." "
 			end				
-			utils.Sleep(0.2)
+      res=res.."\nunused payload\n"
+      for i=0, (#tag.data-tag.Stamp_len-1) do
+        res = res..tag.data[i].." "
 		end
+      bytes=tagToBytes(tag)
+      local mtcrc=calcMtCrc(bytes)
+      res=res.."\nMaster-Token CRC: "
+      res = res ..tag.MTC[1].." ("..((tag.MTC[1]==mtcrc) and "valid" or "error")..")"
+    end
+    return res
+  else print("no valid Tag in dumpCDF") end
+end
+
+---
+-- dump single segment
+function dumpSegment(tag, index)
+  local i=index
+  local i2
+  local dp=0 --data-position in table
+  local res="" --result
+  local raw="" --raw-header
+  -- segment
+  if ( (istable(tag.SEG[i])) and tag.Type=="SAM") then 
+    if (istable(tag.SEG[i].raw)) then
+      for k,v in pairs(tag.SEG[i].raw) do
+        raw=raw..v.." "
+      end
+    end
+    
+    -- segment header
+    res = res.."Segment "..("%02d"):format(tag.SEG[i].index)..": "
+    res = res .."raw header:"..string.sub(raw,0,-2)..", flag="..tag.SEG[i].flag..", (valid="..("%x"):format(tag.SEG[i].valid)..", last="..("%x"):format(tag.SEG[i].last).."), "
+    res = res .."len="..("%04d"):format(tag.SEG[i].len)..", WRP="..("%02x"):format(tag.SEG[i].WRP)..", WRC="..("%02x"):format(tag.SEG[i].WRC)..", "
+    res = res .."RD="..("%02x"):format(tag.SEG[i].RD)..", CRC="..tag.SEG[i].crc.." "
+    res = res .."("..(checkSegmentCrc(tag, i) and "valid" or "error")..")"
+    raw=""
+
+    -- WRC protected
+    if (tag.SEG[i].WRC>0) then
+      res = res .."\nWRC protected area (Stamp):\n"
+      for i2=dp, tag.SEG[i].WRC-1 do
+        res = res..tag.SEG[i].data[dp].." "
+        dp=dp+1
+      end
+    end
+    
+    -- WRP mprotected
+    if (tag.SEG[i].WRP>tag.SEG[i].WRC) then
+      res = res .."\nRemaining write protected area (Stamp):\n"
+      for i2=dp, tag.SEG[i].WRP-tag.SEG[i].WRC-1 do
+        res = res..tag.SEG[i].data[dp].." "
+        dp=dp+1
+      end
+    end
+    
+    -- payload
+    if (#tag.SEG[i].data-dp>0) then
+     res = res .."\nRemaining segment payload:\n"
+     for i2=dp, #tag.SEG[i].data-2 do
+       res = res..tag.SEG[i].data[dp].." "
+       dp=dp+1
+     end
+     if (tag.SEG[i].kgh) then 
+       res = res..tag.SEG[i].data[dp].." (KGH: "..(checkKghCrc(tag, i) and "valid" or "error")..")"
+     else  res = res..tag.SEG[i].data[dp] end
+    end
+    dp=0
+    return res   
+  else
+    return print("Segment not found") 
 	end
 end
 
@@ -763,7 +816,7 @@ end
 -- helper to selecting a segment
 function selectSegment(tag)
   local sel
-  if (istable(tag)) then 
+  if (istable(tag.SEG[0])) then 
     print("availabe Segments:\n"..segmentList(tag))
     sel=input("select Segment: ", '00')
     sel=tonumber(sel,10)
@@ -807,8 +860,9 @@ function addSegment(tag)
 end
 
 ---
---
+-- delete segment (except segment 00)
 function delSegment(tag, index)
+  if (istable(tag.SEG[0])) then
   local i
   if (type(index)=="string") then index=tonumber(index,10) end
   if (index > 0) then
@@ -820,6 +874,112 @@ function delSegment(tag, index)
   if(istable(tag.SEG[#tag.SEG])) then tag.SEG[#tag.SEG].last=1 end
   return tag
 end
+end
+
+---
+-- calculate Master-Token crc
+function calcMtCrc(bytes) 
+  --print(#bytes)
+  local cmd=bytes[1]..bytes[2]..bytes[3]..bytes[4]..bytes[7]..bytes[6]..bytes[8]
+  local len=(tonumber(0xfc ,10)-("%d"):format('0x'..bytes[7]))
+  for i=1, len do
+    cmd=cmd..bytes[8+i]
+  end
+  local res=("%02x"):format(utils.Crc8Legic(cmd))
+  return res
+end
+
+---
+-- check all segmnet-crc
+function checkAllSegCrc(tag)
+  if (istable(tag.SEG[0])) then
+    for i=0, #tag.SEG do
+      crc=calcSegmentCrc(tag, i)
+      tag.SEG[i].crc=crc
+    end
+    else return print("Matser-Token / unsegmented Tag") end
+end
+
+---
+-- check all segmnet-crc
+function checkAllKghCrc(tag)
+  if (istable(tag.SEG[0])) then
+    for i=0, #tag.SEG do
+      crc=calcKghCrc(tag, i)
+      if (tag.SEG[i].kgh) then 
+        tag.SEG[i].data[#tag.SEG[i].data-1]=crc
+      end
+    end
+  end
+end
+
+---
+-- build kghCrc credentials
+function kghCrcCredentials(tag, segid) 
+  if (istable(tag) and istable(tag.SEG[0])) then
+    local x='00'
+    if (type(segid)=="string") then segid=tonumber(segid,10) end
+    if (segid>0) then x='93' end
+    local cred = tag.MCD..tag.MSN0..tag.MSN1..tag.MSN2..("%02x"):format(tag.SEG[segid].WRP)
+    cred = cred..("%02x"):format(tag.SEG[segid].WRC)..("%02x"):format(tag.SEG[segid].RD)..x
+    for i=0, #tag.SEG[segid].data-2 do
+      cred = cred..tag.SEG[segid].data[i]
+    end
+    return cred
+  end
+end
+
+---
+-- validate kghCRC to segment in tag-table
+function checkKghCrc(tag, segid)
+  if (type(tag.SEG[segid])=='table') then
+    if (tag.data[3]=="11" and tag.raw=="9f" and tag.SSC=="ff") then
+      local data=kghCrcCredentials(tag, segid)
+      if (("%02x"):format(utils.Crc8Legic(data))==tag.SEG[segid].data[tag.SEG[segid].len-5-1]) then return true; end 
+      else return false; end
+  else oops("'Kaba Group header' detected but no Segment-Data found") end
+end
+
+---
+-- calcuate kghCRC for a given segment 
+function calcKghCrc(tag, segid)
+  if (istable(tag.SEG[0])) then
+  -- check if a 'Kaber Group Header' exists
+    local i
+    local data=kghCrcCredentials(tag, segid)
+    return ("%02x"):format(utils.Crc8Legic(data))
+  end
+end
+
+---
+-- build segmentCrc credentials
+function segmentCrcCredentials(tag, segid) 
+  if (istable(tag.SEG[0])) then
+    local cred = tag.MCD..tag.MSN0..tag.MSN1..tag.MSN2
+    cred = cred ..tag.SEG[segid].raw[1]..tag.SEG[segid].raw[2]..tag.SEG[segid].raw[3]..tag.SEG[segid].raw[4]
+    return cred
+    else return print("Master-Token / unsegmented Tag!") end
+end
+
+---
+-- validate segmentCRC for a given segment
+function checkSegmentCrc(tag, segid)
+    local data=segmentCrcCredentials(tag, segid)
+    if (("%02x"):format(utils.Crc8Legic(data))==tag.SEG[segid].crc) then 
+      return true
+    end
+    return false
+end
+
+---
+-- calculate segmentCRC for a given segment
+function calcSegmentCrc(tag, segid)
+  if (istable(tag.SEG[0])) then
+  -- check if a 'Kaber Group Header' exists
+    local data=segmentCrcCredentials(tag, segid)
+    return ("%02x"):format(utils.Crc8Legic(data))
+  end
+end
 
 ---
 -- helptext for modify-mode
@@ -827,16 +987,17 @@ function modifyHelp()
   local t=[[
   
     Data I/O           Segment Manipulation        File I/O   
-------------------     --------------------      ---------------
+------------------      --------------------     ------------------
   rt => read    Tag     ds => dump   Segments     lf => load File
   wt => write   Tag     as => add    Segment      sf => save File 
-  ct => copy io Tag     es => edit   Segment      xf => xor  File
-  tc => copy oi Tag     ed => edit   Data     
-  di => dump  inTag     rs => remove Segment
-  do => dump outTag     cc => check  Segment-CRC                  
-                        ck => check  KGH                
-                        tk => toggle KGH-Flag
-  q => quit             xc => get    KGH-Str      h => this Help
+                        es => edit   Segment      xf => xor to File
+  ct => copy io Tag     ed => edit   Data
+  tc => copy oi Tag     rs => remove Segment
+                        cc => check  Segment-CRC                  
+  di => dump  inTag     ck => check  KGH                
+  do => dump outTag     tk => toggle KGH-Flag
+                        mt => make   Token         
+   q => quit            et => edit   Token         h => this Help
   ]]                    
   return t
 end
@@ -849,12 +1010,14 @@ function modifyMode()
      ["h"] = function(x) 
               print(modifyHelp().."\n".."tags im Memory:"..(istable(inTAG) and " inTAG" or "")..(istable(outTAG) and " outTAG" or ""))
             end,
-    ["rt"] = function(x) inTAG=readFromPM3(); actions['di']('') end,
+    ["rt"] = function(x) inTAG=readFromPM3(); actions.di() end,
     ["wt"] = function(x)  
-              if(istable(inTAG)) then
+              if(istable(inTAG.SEG)) then 
                 local taglen=22
+                  if (istable(inTAG.Bck)) then
                 for i=0, #inTAG.SEG do
                   taglen=taglen+inTAG.SEG[i].len+5
+                end
                 end
                 -- read new tag (output tag)
                 outTAG=readFromPM3()
@@ -865,15 +1028,19 @@ function modifyMode()
                 inTAG.MSN1 = outbytes[3]
                 inTAG.MSN2 = outbytes[4]
                 inTAG.MCC  = outbytes[5]
-                -- recheck all segments-crc/kghcrc
+                -- recheck all segments-crc/kghcrc (only on a credential)
+                if(istable(inTAG.Bck)) then 
                 checkAllSegCrc(inTAG)
                 checkAllKghCrc(inTAG)
+                end
                 --get bytes from ready outTAG
                 bytes=tagToBytes(inTAG)
+                -- mater-token-crc
+                if (inTAG.Type~="SAM") then bytes[22]=calcMtCrc(bytes) end
                 if (bytes) then   
                   writeFile(bytes, 'MylegicClone.hex')         
                   writeToTag(bytes, taglen, 'MylegicClone.hex')
-                  actions['rt']('') 
+                  actions.rt('') 
                 end
                end
               end,
@@ -886,7 +1053,8 @@ function modifyMode()
                 inTAG=outTAG
             end,
     ["lf"] = function(x)  
-              filename=input("enter filename: ", "legic.temp")
+              if (file_check(x)) then filename=x
+              else  filename=input("enter filename: ", "legic.temp") end
               inTAG=readFile(filename)
             end,
     ["sf"] = function(x)  
@@ -914,13 +1082,15 @@ function modifyMode()
     ["di"] = function(x) if (istable(inTAG)) then print("\n"..dumpTag(inTAG).."\n") end end,
     ["do"] = function(x) if (istable(outTAG)) then print("\n"..dumpTag(outTAG).."\n") end end,
     ["ds"] = function(x) 
-                sel=selectSegment(inTAG)
+                if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
+                else sel=selectSegment(inTAG) end
                 if (sel) then print("\n"..(dumpSegment(inTAG, sel) or "no Segments available").."\n") end 
               end,
     ["es"] = function(x) 
-              sel=selectSegment(inTAG)
+              if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
+              else sel=selectSegment(inTAG) end
               if (sel) then 
-                if(istable(inTAG.SEG)) then
+                if(istable(inTAG.SEG[0])) then
                   inTAG=editSegment(inTAG, sel)
                   inTAG.SEG[sel]=regenSegmentHeader(inTAG.SEG[sel])
               else print("no Segments in Tag") end 
@@ -931,12 +1101,13 @@ function modifyMode()
                 inTAG=addSegment(inTAG)
                 inTAG.SEG[#inTAG.SEG-1]=regenSegmentHeader(inTAG.SEG[#inTAG.SEG-1])
                 inTAG.SEG[#inTAG.SEG]=regenSegmentHeader(inTAG.SEG[#inTAG.SEG]) 
-                else print("unsegmented Tag!")
+                else print("Master-Token / unsegmented Tag!")
               end
             end,
     ["rs"] = function(x) 
-              if (istable(inTAG)) then
-                sel=selectSegment(inTAG)
+              if (istable(inTAG.SEG[0])) then
+                if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
+                else sel=selectSegment(inTAG) end
                 inTAG=delSegment(inTAG, sel)
                 for i=0, #inTAG.SEG do
                   inTAG.SEG[i]=regenSegmentHeader(inTAG.SEG[i])
@@ -944,31 +1115,45 @@ function modifyMode()
               end
             end,
     ["ed"] = function(x) 
-              sel=selectSegment(inTAG)
+              if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
+              else sel=selectSegment(inTAG) end
               if (sel) then 
                 inTAG.SEG[sel].data=editSegmentData(inTAG.SEG[sel].data) 
               end
             end,
+    ["et"] = function(x) 
+                if (istable(inTAG)) then
+                  editTag(inTAG)
+                end
+            end,
+    ["mt"] = function(x) inTAG=makeToken(); actions.di() end,
      ["ts"] = function(x) 
-                sel=selectSegment(inTAG)
+               if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
+               else sel=selectSegment(inTAG) end
                 regenSegmentHeader(inTAG.SEG[sel]) 
               end,
      ["tk"] = function(x) 
-                sel=selectSegment(inTAG)
+               if (istable(inTAG) and istable(inTAG.SEG[0])) then
+                if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
+                else sel=selectSegment(inTAG) end
                 if(inTAG.SEG[sel].kgh) then inTAG.SEG[sel].kgh=false
                 else inTAG.SEG[sel].kgh=true end
+               end
               end,
      ["k"] = function(x) 
+              if (type(x)=="string" and string.len(x)>0) then
                print(("%02x"):format(utils.Crc8Legic(x)))
+              end
               end,
      ["xc"] = function(x) 
-               --get credential-string for kgh-crc on certain segment
-               --usage: xc <segment-index>
-               print("k "..kghCrcCredentials(inTAG, x))
+               if (istable(inTAG) and istable(inTAG.SEG[0])) then
+                 if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
+                 else sel=selectSegment(inTAG) end 
+                 print("k "..kghCrcCredentials(inTAG, sel)) 
+               end 
               end,
      ["cc"] = function(x)  if (istable(inTAG)) then checkAllSegCrc(inTAG) end end,
      ["ck"] = function(x)  if (istable(inTAG)) then checkAllKghCrc(inTAG) end end,
-     ["q"] = function(x)  end,
   }
   print("modify-modus! enter 'h' for help or 'q' to quit")
   repeat 
@@ -978,11 +1163,11 @@ function modifyMode()
       actions[string.lower(string.sub(ic,0,1))](string.sub(ic,3))
     elseif (type(actions[string.lower(string.sub(ic,0,2))])=='function') then
       actions[string.lower(string.sub(ic,0,2))](string.sub(ic,4))
-    else actions['h']('') end
+    else actions.h('') end
   until (string.sub(ic,0,1)=="q")
 end
 
---- main
+--- main function
 function main(args)
 	if (#args == 0 ) then modifyMode() end
   --- variables
@@ -1015,20 +1200,22 @@ function main(args)
       print(dumpTag(inTAG))
     end
     bytes=tagToBytes(inTAG)
-    -- xor with given crc
     if (cfs) then 
+      -- xor willl be done in function writeFile
+      -- with the value of byte[5]
       bytes[5]=crc 
     end
     -- write to outfile
     if (bytes) then 
       writeFile(bytes, outfile)
-      -- reed new content into virtual tag 
-      
+      --- read real tag into virtual tag 
+      -- inTAG=readFromPM3() end
+      --- or simply use the bytes that where wriiten
       inTAG=bytesToTag(bytes, inTAG)
       -- show new content
       if (dfs) then  
         print("-----------------------------------------")
-        print(dumpTag(outTAG)) 
+        print(dumpTag(inTAG)) 
       end
     end
   end
