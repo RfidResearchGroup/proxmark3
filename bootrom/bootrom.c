@@ -9,14 +9,13 @@
 #include <proxmark3.h>
 #include "usb_cdc.h"
 #include "cmd.h"
-//#include "usb_hid.h"
 
 void DbpString(char *str) {
-  byte_t len = 0;
-  while (str[len] != 0x00) {
-    len++;
-  }
-  cmd_send(CMD_DEBUG_PRINT_STRING,len,0,0,(byte_t*)str,len);
+	byte_t len = 0;
+	while (str[len] != 0x00)
+		++len;
+	
+	cmd_send(CMD_DEBUG_PRINT_STRING,len,0,0,(byte_t*)str,len);
 }
 
 struct common_area common_area __attribute__((section(".commonarea")));
@@ -84,114 +83,111 @@ static void ConfigClocks(void)
 		;
 }
 
-static void Fatal(void)
-{
+static void Fatal(void) {
   for(;;);
 }
 
 void UsbPacketReceived(uint8_t *packet, int len) {
-  int i, dont_ack=0;
-  UsbCommand* c = (UsbCommand *)packet;
-  volatile uint32_t *p;
+	int i, dont_ack=0;
+	UsbCommand* c = (UsbCommand *)packet;
+	volatile uint32_t *p;
+
+	if(len != sizeof(UsbCommand)) Fatal();
   
-  if(len != sizeof(UsbCommand)) {
-    Fatal();
-  }
+	uint32_t arg0 = (uint32_t)c->arg[0];
   
-  uint32_t arg0 = (uint32_t)c->arg[0];
+	switch(c->cmd) {
+		case CMD_DEVICE_INFO: {
+			dont_ack = 1;
+			arg0 = DEVICE_INFO_FLAG_BOOTROM_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
+			DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH;
+			if(common_area.flags.osimage_present)
+				arg0 |= DEVICE_INFO_FLAG_OSIMAGE_PRESENT;
+		
+			cmd_send(CMD_DEVICE_INFO,arg0,1,2,0,0);
+		} break;
+      
+		case CMD_SETUP_WRITE: {
+			/* The temporary write buffer of the embedded flash controller is mapped to the
+			* whole memory region, only the last 8 bits are decoded.
+			*/
+			p = (volatile uint32_t *)&_flash_start;
+			for(i = 0; i < 12; i++)
+				p[i+arg0] = c->d.asDwords[i];
+		} break;
+      
+		case CMD_FINISH_WRITE: {
+			uint32_t* flash_mem = (uint32_t*)(&_flash_start);
+			for ( int j=0; j<2; j++) {
+				for(i = 0+(64*j); i < 64+(64*j); i++) {
+					flash_mem[i] = c->d.asDwords[i];
+				}
+        
+				uint32_t flash_address = arg0 + (0x100*j);
+        
+				/* Check that the address that we are supposed to write to is within our allowed region */
+				if( ((flash_address+AT91C_IFLASH_PAGE_SIZE-1) >= end_addr) || (flash_address < start_addr) ) {
+					/* Disallow write */
+					dont_ack = 1;
+					cmd_send(CMD_NACK,0,0,0,0,0);
+				} else {
+					uint32_t page_n = (flash_address - ((uint32_t)flash_mem)) / AT91C_IFLASH_PAGE_SIZE;
+					/* Translate address to flash page and do flash, update here for the 512k part */
+					AT91C_BASE_EFC0->EFC_FCR = MC_FLASH_COMMAND_KEY |
+					MC_FLASH_COMMAND_PAGEN(page_n) |
+					AT91C_MC_FCMD_START_PROG;
+				}
+        
+				// Wait until flashing of page finishes
+				uint32_t sr;
+				while(!((sr = AT91C_BASE_EFC0->EFC_FSR) & AT91C_MC_FRDY));
+					if(sr & (AT91C_MC_LOCKE | AT91C_MC_PROGE)) {
+						dont_ack = 1;
+						cmd_send(CMD_NACK,sr,0,0,0,0);
+					}
+			}
+		} break;
+      
+		case CMD_HARDWARE_RESET: {
+			usb_disable();
+			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
+		} break;
+      
+		case CMD_START_FLASH: {
+			if(c->arg[2] == START_FLASH_MAGIC) 
+				bootrom_unlocked = 1;
+			else 
+				bootrom_unlocked = 0;
+		
+			int prot_start = (int)&_bootrom_start;
+			int prot_end = (int)&_bootrom_end;
+			int allow_start = (int)&_flash_start;
+			int allow_end = (int)&_flash_end;
+			int cmd_start = c->arg[0];
+			int cmd_end = c->arg[1];
+
+			/* Only allow command if the bootrom is unlocked, or the parameters are outside of the protected
+			* bootrom area. In any case they must be within the flash area.
+			*/
+			if( (bootrom_unlocked || ((cmd_start >= prot_end) || (cmd_end < prot_start))) &&
+				(cmd_start >= allow_start) && 
+				(cmd_end <= allow_end) ) {
+				start_addr = cmd_start;
+				end_addr = cmd_end;
+			} else {
+				start_addr = end_addr = 0;
+				dont_ack = 1;
+				cmd_send(CMD_NACK,0,0,0,0,0);
+			}
+		} break;
+      
+		default: {
+			Fatal();
+		} break;
+	}
   
-  switch(c->cmd) {
-    case CMD_DEVICE_INFO: {
-      dont_ack = 1;
-      arg0 = DEVICE_INFO_FLAG_BOOTROM_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
-      DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH;
-      if(common_area.flags.osimage_present) {
-        arg0 |= DEVICE_INFO_FLAG_OSIMAGE_PRESENT;
-      }
-      cmd_send(CMD_DEVICE_INFO,arg0,1,2,0,0);
-    } break;
-      
-    case CMD_SETUP_WRITE: {
-      /* The temporary write buffer of the embedded flash controller is mapped to the
-       * whole memory region, only the last 8 bits are decoded.
-       */
-      p = (volatile uint32_t *)&_flash_start;
-      for(i = 0; i < 12; i++) {
-        p[i+arg0] = c->d.asDwords[i];
-      }
-    } break;
-      
-    case CMD_FINISH_WRITE: {
-      uint32_t* flash_mem = (uint32_t*)(&_flash_start);
-      for (size_t j=0; j<2; j++) {
-        for(i = 0+(64*j); i < 64+(64*j); i++) {
-          flash_mem[i] = c->d.asDwords[i];
-        }
-        
-        uint32_t flash_address = arg0 + (0x100*j);
-        
-        /* Check that the address that we are supposed to write to is within our allowed region */
-        if( ((flash_address+AT91C_IFLASH_PAGE_SIZE-1) >= end_addr) || (flash_address < start_addr) ) {
-          /* Disallow write */
-          dont_ack = 1;
-          cmd_send(CMD_NACK,0,0,0,0,0);
-        } else {
-          uint32_t page_n = (flash_address - ((uint32_t)flash_mem)) / AT91C_IFLASH_PAGE_SIZE;
-          /* Translate address to flash page and do flash, update here for the 512k part */
-          AT91C_BASE_EFC0->EFC_FCR = MC_FLASH_COMMAND_KEY |
-          MC_FLASH_COMMAND_PAGEN(page_n) |
-          AT91C_MC_FCMD_START_PROG;
-        }
-        
-        // Wait until flashing of page finishes
-        uint32_t sr;
-        while(!((sr = AT91C_BASE_EFC0->EFC_FSR) & AT91C_MC_FRDY));
-        if(sr & (AT91C_MC_LOCKE | AT91C_MC_PROGE)) {
-          dont_ack = 1;
-          cmd_send(CMD_NACK,sr,0,0,0,0);
-        }
-      }
-    } break;
-      
-    case CMD_HARDWARE_RESET: {
-      usb_disable();
-      AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
-    } break;
-      
-    case CMD_START_FLASH: {
-      if(c->arg[2] == START_FLASH_MAGIC) bootrom_unlocked = 1;
-      else bootrom_unlocked = 0;
-      {
-        int prot_start = (int)&_bootrom_start;
-        int prot_end = (int)&_bootrom_end;
-        int allow_start = (int)&_flash_start;
-        int allow_end = (int)&_flash_end;
-        int cmd_start = c->arg[0];
-        int cmd_end = c->arg[1];
-        
-        /* Only allow command if the bootrom is unlocked, or the parameters are outside of the protected
-         * bootrom area. In any case they must be within the flash area.
-         */
-        if( (bootrom_unlocked || ((cmd_start >= prot_end) || (cmd_end < prot_start)))
-           && (cmd_start >= allow_start) && (cmd_end <= allow_end) ) {
-          start_addr = cmd_start;
-          end_addr = cmd_end;
-        } else {
-          start_addr = end_addr = 0;
-          dont_ack = 1;
-          cmd_send(CMD_NACK,0,0,0,0,0);
-        }
-      }
-    } break;
-      
-    default: {
-      Fatal();
-    } break;
-  }
-  
-  if(!dont_ack) {
-    cmd_send(CMD_ACK,arg0,0,0,0,0);
-  }
+	if(!dont_ack)
+		cmd_send(CMD_ACK,arg0,0,0,0,0);
 }
 
 static void flash_mode(int externally_entered)
@@ -199,28 +195,29 @@ static void flash_mode(int externally_entered)
 	start_addr = 0;
 	end_addr = 0;
 	bootrom_unlocked = 0;
-  byte_t rx[sizeof(UsbCommand)];
+	byte_t rx[sizeof(UsbCommand)];
 	size_t rx_len;
 
-  usb_enable();
-  for (volatile size_t i=0; i<0x100000; i++);
+	usb_enable();
+	for (volatile size_t i=0; i<0x100000; i++)
+		;
 
 	for(;;) {
 		WDT_HIT();
 
-    if (usb_poll()) {
-      rx_len = usb_read(rx,sizeof(UsbCommand));
-      if (rx_len) {
-        UsbPacketReceived(rx,rx_len);
-      }
-    }
+		if (usb_poll()) {
+			rx_len = usb_read(rx,sizeof(UsbCommand));
+			if (rx_len)
+				UsbPacketReceived(rx,rx_len);
+		}
 
 		if(!externally_entered && !BUTTON_PRESS()) {
 			/* Perform a reset to leave flash mode */
-		usb_disable();
+			usb_disable();
 			LED_B_ON();
 			AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
-			for(;;);
+			for(;;)
+				;
 		}
 		if(externally_entered && BUTTON_PRESS()) {
 			/* Let the user's button press override the automatic leave */
@@ -274,11 +271,11 @@ void BootROM(void)
 		GPIO_LED_D;
 
 //    USB_D_PLUS_PULLUP_OFF();
-  usb_disable();
-    LED_D_OFF();
-    LED_C_ON();
-    LED_B_OFF();
-    LED_A_OFF();
+	usb_disable();
+	LED_D_OFF();
+	LED_C_ON();
+	LED_B_OFF();
+	LED_A_OFF();
 
 	AT91C_BASE_EFC0->EFC_FMR =
 		AT91C_MC_FWS_1FWS |
@@ -305,9 +302,11 @@ void BootROM(void)
 
     if(!common_area_present){
 	    /* Common area not ok, initialize it */
-	    int i; for(i=0; i<sizeof(common_area); i++) { /* Makeshift memset, no need to drag util.c into this */
+	    int i; 
+		/* Makeshift memset, no need to drag util.c into this */
+		for(i=0; i<sizeof(common_area); i++) 
 		    ((char*)&common_area)[i] = 0;
-	    }
+	    
 	    common_area.magic = COMMON_AREA_MAGIC;
 	    common_area.version = 1;
 	    common_area.flags.bootrom_present = 1;
