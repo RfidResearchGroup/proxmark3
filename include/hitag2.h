@@ -7,11 +7,17 @@
 //-----------------------------------------------------------------------------
 // Hitag2 type prototyping
 //-----------------------------------------------------------------------------
+// HitagS added 
+//-----------------------------------------------------------------------------
 
 #ifndef _HITAG2_H_
 #define _HITAG2_H_
 
 typedef enum {
+	RHTSF_CHALLENGE			  = 01,
+	RHTSF_KEY				  = 02,
+	WHTSF_CHALLENGE           = 03,
+	WHTSF_KEY                 = 04,
 	RHT2F_PASSWORD            = 21,
 	RHT2F_AUTHENTICATE        = 22,
 	RHT2F_CRYPTO              = 23,
@@ -24,10 +30,12 @@ typedef struct {
 
 typedef struct {
 	byte_t NrAr[8];
+	byte_t data[4];
 } PACKED rht2d_authenticate;
 
 typedef struct {
-	byte_t key[4];
+	byte_t key[6];
+	byte_t data[4];
 } PACKED rht2d_crypto;
 
 typedef union {

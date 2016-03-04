@@ -81,6 +81,13 @@ local _commands = {
 	CMD_SIMULATE_HITAG =                                                 0x0371,
 	CMD_READER_HITAG =                                                   0x0372,
 
+	--// For HitagS
+	CMD_TEST_HITAGS_TRACES =											 0x0367,
+	CMD_SIMULATE_HITAG_S =												 0x0368,
+	CMD_READ_HITAG_S =													 0x0373,
+	CMD_WR_HITAG_S =													 0x0375,
+	CMD_EMU_HITAG_S =													 0x0376,
+	
 	CMD_SIMULATE_TAG_ISO_14443B =                                        0x0381,
 	CMD_SNOOP_ISO_14443B =                                               0x0382,
 	CMD_SNOOP_ISO_14443a =                                               0x0383,

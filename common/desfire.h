@@ -3,7 +3,6 @@
 
 #include <string.h>
 #include <stdarg.h>
-
 #include "aes.h"
 
 #define MAX_CRYPTO_BLOCK_SIZE 16
@@ -109,8 +108,6 @@ enum DESFIRE_FILE_TYPES {
     MDFT_LINEAR_RECORD_FILE_WITH_BACKUP = 0x03,
     MDFT_CYCLIC_RECORD_FILE_WITH_BACKUP = 0x04
 };
-
-
 
 enum DESFIRE_STATUS {
     OPERATION_OK 				= 0x00,

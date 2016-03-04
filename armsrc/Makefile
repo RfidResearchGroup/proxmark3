@@ -15,7 +15,7 @@ APP_CFLAGS	= -DWITH_ISO14443a_StandAlone -DWITH_LF -DWITH_ISO15693 -DWITH_ISO144
 #-DWITH_LCD 
 
 #SRC_LCD = fonts.c LCD.c
-SRC_LF = lfops.c hitag2.c lfsampling.c pcf7931.c lfdemod.c protocols.c
+SRC_LF = lfops.c hitag2.c hitagS.c lfsampling.c pcf7931.c lfdemod.c protocols.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = epa.c iso14443a.c mifareutil.c mifarecmd.c mifaresniff.c
 SRC_ISO14443b = iso14443b.c

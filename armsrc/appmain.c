@@ -22,7 +22,8 @@
 #include <stdarg.h>
 
 #include "legicrf.h"
-#include <hitag2.h>
+#include "hitag2.h"
+#include "hitagS.h"
 #include "lfsampling.h"
 #include "BigBuf.h"
 #include "mifareutil.h"
@@ -995,6 +996,18 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		case CMD_READER_HITAG: // Reader for Hitag tags, args = type and function
 			ReaderHitag((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes);
+			break;
+		case CMD_SIMULATE_HITAG_S:// Simulate Hitag s tag, args = memory content
+			SimulateHitagSTag((bool)c->arg[0],(byte_t*)c->d.asBytes);
+			break;
+		case CMD_TEST_HITAGS_TRACES:// Tests every challenge within the given file
+			check_challenges((bool)c->arg[0],(byte_t*)c->d.asBytes);
+			break;
+		case CMD_READ_HITAG_S://Reader for only Hitag S tags, args = key or challenge
+			ReadHitagS((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes);
+			break;
+		case CMD_WR_HITAG_S://writer for Hitag tags args=data to write,page and key or challenge
+			WritePageHitagS((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes,c->arg[2]);
 			break;
 #endif
 
