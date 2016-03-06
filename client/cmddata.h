@@ -11,6 +11,12 @@
 #ifndef CMDDATA_H__
 #define CMDDATA_H__
 
+#include <stdlib.h>  //size_t
+#include <stdint.h>  //uint_32+
+#include <stdbool.h> //bool
+
+#include "cmdparser.h" // for command_t
+
 command_t * CmdDataCommands();
 
 int CmdData(const char *Cmd);

@@ -8,23 +8,22 @@
 // Data and Graph commands
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <limits.h>
-#include "proxmark3.h"
-#include "data.h"
-#include "ui.h"
-#include "graph.h"
-#include "cmdparser.h"
+#include <stdio.h>    // also included in util.h
+#include <string.h>   // also included in util.h
+#include <limits.h>   // for CmdNorm INT_MIN && INT_MAX
+#include "data.h"     // also included in util.h
+#include "cmddata.h"
 #include "util.h"
 #include "cmdmain.h"
-#include "cmddata.h"
-#include "lfdemod.h"
-#include "usb_cmd.h"
-#include "crc.h"
-#include "crc16.h"
-#include "loclass/cipherutils.h"
+#include "proxmark3.h"
+#include "ui.h"       // for show graph controls
+#include "graph.h"    // for graph data
+#include "cmdparser.h"// already included in cmdmain.h
+#include "usb_cmd.h"  // already included in cmdmain.h and proxmark3.h
+#include "lfdemod.h"  // for demod code
+#include "crc.h"      // for pyramid checksum maxim
+#include "crc16.h"    // for FDXB demod checksum
+#include "loclass/cipherutils.h" // for decimating samples in getsamples
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 uint8_t g_debugMode=0;
@@ -1265,7 +1264,7 @@ int CmdFSKdemodAWID(const char *Cmd)
 	//get binary from fsk wave
 	int idx = AWIDdemodFSK(BitStream, &size);
 	if (idx<=0){
-		if (g_debugMode==1){
+		if (g_debugMode){
 			if (idx == -1)
 				PrintAndLog("DEBUG: Error - not enough samples");
 			else if (idx == -2)
@@ -1303,7 +1302,7 @@ int CmdFSKdemodAWID(const char *Cmd)
 
 	size = removeParity(BitStream, idx+8, 4, 1, 88);
 	if (size != 66){
-		if (g_debugMode==1) PrintAndLog("DEBUG: Error - at parity check-tag size does not match AWID format");
+		if (g_debugMode) PrintAndLog("DEBUG: Error - at parity check-tag size does not match AWID format");
 		return 0;
 	}
 	// ok valid card found!
@@ -1363,7 +1362,7 @@ int CmdFSKdemodPyramid(const char *Cmd)
 	//get binary from fsk wave
 	int idx = PyramiddemodFSK(BitStream, &size);
 	if (idx < 0){
-		if (g_debugMode==1){
+		if (g_debugMode){
 			if (idx == -5)
 				PrintAndLog("DEBUG: Error - not enough samples");
 			else if (idx == -1)
@@ -1419,7 +1418,7 @@ int CmdFSKdemodPyramid(const char *Cmd)
 
 	size = removeParity(BitStream, idx+8, 8, 1, 120);
 	if (size != 105){
-		if (g_debugMode==1) 
+		if (g_debugMode) 
 			PrintAndLog("DEBUG: Error at parity check - tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %x",size, idx, rawHi3);
 		return 0;
 	}
@@ -1637,21 +1636,21 @@ int CmdIndalaDecode(const char *Cmd)
 	}
 
 	if (!ans){
-		if (g_debugMode==1) 
+		if (g_debugMode) 
 			PrintAndLog("Error1: %d",ans);
 		return 0;
 	}
 	uint8_t invert=0;
 	size_t size = DemodBufferLen;
-	size_t startIdx = indala26decode(DemodBuffer, &size, &invert);
-	if (startIdx < 1 || size > 224) {
-		if (g_debugMode==1)
+	int startIdx = indala26decode(DemodBuffer, &size, &invert);
+	if (startIdx < 0 || size > 224) {
+		if (g_debugMode)
 			PrintAndLog("Error2: %d",ans);
 		return -1;
 	}
-	setDemodBuf(DemodBuffer, size, startIdx);
+	setDemodBuf(DemodBuffer, size, (size_t)startIdx);
 	if (invert)
-		if (g_debugMode==1)
+		if (g_debugMode)
 			PrintAndLog("Had to invert bits");
 
 	PrintAndLog("BitLen: %d",DemodBufferLen);

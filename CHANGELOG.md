@@ -20,7 +20,15 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - Started to add Peter Fillmore's  EMV fork into Iceman fork. ref: https://github.com/peterfillmore/proxmark3  (peter fillmore,  iceman)
   - Added Travis-CI automatic build integration with GitHub fork. (iceman)
   - Updated the Reveng 1.30 sourcecode to 1.31 from Reveng projecthomepage (iceman)
-
+  
+  - Added possibility to write direct to a Legic Prime Tag (MIM256/1024) without using values from the 'BigBuffer' -> 'hf legic writeRaw <addr> <value>' (icsom)
+  - Added possibility to decrease DCF values at address 0x05 & 0x06 on a Legic Prime Tag 
+		DCF-value will be pulled from the BigBuffer (address 0x05 & 0x06) so you have to 
+		load the data into the BigBuffer before with 'hf legic load <path/to/legic.dump>' & then
+		write the DCF-Values (both at once) with 'hf legic write 0x05 0x02'  (icsom)
+  - Added script `legic.lua` for display and edit Data of Legic-Prime Tags (icsom)
+  - Added the experimental HITAG_S support (spenneb)
+  
 ### Added
 - Added a LF ASK Sequence Terminator detection option to the standard ask demod - and applied it to `lf search u`, `lf t55xx detect`, and `data rawdemod am s` (marshmellow)
 - `lf awid bruteforce <facilitycode>` - Simple bruteforce attack against a AWID reader.

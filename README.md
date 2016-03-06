@@ -57,7 +57,8 @@ Among the stuff is
 	* A Bruteforce for AWID 26, starting w a facilitycode then trying all 0xFFFF cardnumbers via simulation. To be used against a AWID Reader.
 	* A Bruteforce for HID,  starting w a facilitycode then trying all 0xFFFF cardnumbers via simulation. To be used against a HID Reader.
 	* Blaposts Crapto1 v3.3
-	
+					  
+    * icsom's  legic script and legic enhancements
 	
 Give me a hint, and I'll see if I can't merge in the stuff you have. 
 

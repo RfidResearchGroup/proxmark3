@@ -110,11 +110,14 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			cmdlfem4x.c \
 			cmdlfhitag.c \
 			cmdlfti.c \
-			cmdlfviking.c\
 			cmdparser.c \
 			cmdmain.c \
 			cmdlft55xx.c \
 			cmdlfpcf7931.c\
+			cmdlfviking.c\
+			cmdlfpresco.c\
+			cmdlfpyramid.c\
+			cmdlfguard.c\
 			pm3_binlib.c\
 			scripting.c\
 			cmdscript.c\
@@ -133,11 +136,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			tea.c\
 			prng.c\
 			radixsort.c\
-			bucketsort.c\
-			cmdlfpresco.c\
-			cmdlfpyramid.c\
-			cmdlfguard.c
-
+			bucketsort.c
 ZLIBSRCS = deflate.c adler32.c trees.c zutil.c inflate.c inffast.c inftrees.c
 ZLIB_FLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED 
 #-DDEBUG -Dverbose=1
