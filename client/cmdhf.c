@@ -750,7 +750,7 @@ int CmdHFSearch(const char *Cmd){
 		PrintAndLog("\nValid ISO15693 Tag Found - Quiting Search\n");
 		return ans;
 	}
-	ans = CmdHFTopazReader("");
+	ans = CmdHFTopazReader("s");
 	if (ans == 0) {
 		PrintAndLog("\nValid Topaz Tag Found - Quiting Search\n");
 		return 1;

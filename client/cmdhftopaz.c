@@ -258,11 +258,15 @@ int CmdHFTopazReader(const char *Cmd) {
 	uint8_t rid_response[8];
 	uint8_t *uid_echo = &rid_response[2];
 	uint8_t rall_response[130];
+	bool verbose = true;
+
+	char ctmp = param_getchar(Cmd, 0);
+	if ( ctmp == 'S' || ctmp == 's') verbose = FALSE;
 	
 	status = topaz_select(atqa, rid_response);
-	
+
 	if (status == -1) {
-		PrintAndLog("Error: couldn't receive ATQA");
+		if (verbose) PrintAndLog("Error: couldn't receive ATQA");
 		return -1;
 	}
 

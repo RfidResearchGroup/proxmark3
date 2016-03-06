@@ -73,13 +73,13 @@ int CmdSrix4kRead(const char *Cmd) {
 	return 0;
 }
 
-static int rawCloseEx(bool silent){
+static int rawCloseEx(bool verbose){
 	UsbCommand resp;
 	UsbCommand c = {CMD_ISO_14443B_COMMAND, {0, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
-	if (!WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
-		if ( !silent ) PrintAndLog("Command time-out");
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+		if ( verbose ) PrintAndLog("Command time-out");
 		return 0;
 	}
 	return 1;
@@ -398,7 +398,7 @@ static void print_st_general_info(uint8_t *data){
 }
 
 // 14b get and print UID only (general info)
-int HF14BStdReader(uint8_t *data, uint8_t *datalen){
+int HF14BStdReader(uint8_t *data, uint8_t *datalen, bool verbose){
 	//05 00 00 = find one tag in field
 	//1d xx xx xx xx 00 08 01 00 = attrib xx=UID (resp 10 [f9 e0])
 	//a3 = ?  (resp 03 [e2 c2])
@@ -423,9 +423,9 @@ int HF14BStdReader(uint8_t *data, uint8_t *datalen){
 	data[1] = 0x00;
 	data[2] = 0x08;
 
-	if (HF14BCmdRaw(true, &crc, true, data, datalen, false)==0) return rawClose();
+	if (HF14BCmdRaw(true, &crc, true, data, datalen, false)==0) return rawCloseEx(verbose);
 
-	if (data[0] != 0x50 || *datalen != 14 || !crc) return rawClose();
+	if (data[0] != 0x50 || *datalen != 14 || !crc) return rawCloseEx(verbose);
 
 	PrintAndLog ("\n14443-3b tag found:");
 	PrintAndLog ("           UID: %s", sprint_hex(data+1,4));
@@ -447,18 +447,18 @@ int HF14BStdReader(uint8_t *data, uint8_t *datalen){
 	cmdLen = 9;
 
 	// attrib
-	if (HF14BCmdRaw(true, &crc2, true, cmd2, &cmdLen, false)==0) return rawClose();
+	if (HF14BCmdRaw(true, &crc2, true, cmd2, &cmdLen, false)==0) rawCloseEx(verbose);
 
-	if (cmdLen != 3 || !crc2) return rawClose();
+	if (cmdLen != 3 || !crc2) return rawCloseEx(verbose);
 	// add attrib responce to data
 	data[14] = cmd2[0];
-	rawClose();
+	rawCloseEx(verbose);
 	return 1;
 }
 
 // 14b get and print Full Info (as much as we know)
-int HF14BStdInfo(uint8_t *data, uint8_t *datalen){
-	if (!HF14BStdReader(data,datalen)) return 0;
+int HF14BStdInfo(uint8_t *data, uint8_t *datalen, bool verbose){
+	if (!HF14BStdReader(data,datalen, verbose)) return 0;
 
 	//add more info here
 	print_atqb_resp(data);
@@ -466,7 +466,7 @@ int HF14BStdInfo(uint8_t *data, uint8_t *datalen){
 }
 
 // SRx get and print general info about SRx chip from UID
-int HF14B_ST_Reader(uint8_t *data, uint8_t *datalen, bool closeCon){
+int HF14B_ST_Reader(uint8_t *data, uint8_t *datalen, bool closeCon, bool verbose){
 	bool crc = true;
 	*datalen = 2;
 	//wake cmd
@@ -475,7 +475,7 @@ int HF14B_ST_Reader(uint8_t *data, uint8_t *datalen, bool closeCon){
 
 	//leave power on
 	// verbose on for now for testing - turn off when functional
-	if (HF14BCmdRaw(true, &crc, true, data, datalen, false)==0) return rawClose();
+	if (HF14BCmdRaw(true, &crc, true, data, datalen, false)==0) return rawCloseEx(verbose);
 
 	if (*datalen != 3 || !crc) return rawClose();
 
@@ -486,40 +486,42 @@ int HF14B_ST_Reader(uint8_t *data, uint8_t *datalen, bool closeCon){
 	*datalen = 2;
 
 	//leave power on
-	if (HF14BCmdRaw(true, &crc, true, data, datalen, false)==0) return rawClose();
+	if (HF14BCmdRaw(true, &crc, true, data, datalen, false)==0) return rawCloseEx(verbose);
 
-	if (*datalen != 3 || !crc || data[0] != chipID) return rawClose();
+	if (*datalen != 3 || !crc || data[0] != chipID) return rawCloseEx(verbose);
 
 	// get uid
 	data[0] = 0x0B;
 	*datalen = 1;
 
 	//leave power on
-	if (HF14BCmdRaw(true, &crc, true, data, datalen, false)==0) return rawClose();
+	if (HF14BCmdRaw(true, &crc, true, data, datalen, false)==0) return rawCloseEx(verbose);
 
-	if (*datalen != 10 || !crc) return rawClose();
+	if (*datalen != 10 || !crc) return rawCloseEx(verbose);
 
 	//power off ?
-	if (closeCon) rawClose();
+	if (closeCon) rawCloseEx(verbose);
 
-	PrintAndLog("\n14443-3b ST tag found:");
-	print_st_general_info(data);
+	if (verbose ) {
+		PrintAndLog("\n14443-3b ST tag found:");
+		print_st_general_info(data);
+	}
 	return 1;
 }
 
 // SRx get and print full info (needs more info...)
-int HF14B_ST_Info(uint8_t *data, uint8_t *datalen){
-	if (!HF14B_ST_Reader(data, datalen, false)) return 0;
+int HF14B_ST_Info(uint8_t *data, uint8_t *datalen, bool verbose){
+	if (!HF14B_ST_Reader(data, datalen, false, verbose)) return 0;
 	
 	//add locking bit information here.
 	if (print_ST_Lock_info(data[5]>>2)) 
-		rawClose();
+		rawCloseEx(verbose);
 
 	return 1;
 }
 
 // test for other 14b type tags (mimic another reader - don't have tags to identify)
-int HF14B_Other_Reader(uint8_t *data, uint8_t *datalen){
+int HF14B_Other_Reader(uint8_t *data, uint8_t *datalen, bool verbose){
 	bool crc = true;
 	*datalen = 4;
 	//std read cmd
@@ -533,7 +535,7 @@ int HF14B_Other_Reader(uint8_t *data, uint8_t *datalen){
 			PrintAndLog ("\n14443-3b tag found:");
 			PrintAndLog ("Unknown tag type answered to a 0x000b3f80 command ans:");
 			PrintAndLog ("%s",sprint_hex(data,*datalen));
-			rawClose();
+			rawCloseEx(verbose);
 			return 1;
 		}
 	}
@@ -547,7 +549,7 @@ int HF14B_Other_Reader(uint8_t *data, uint8_t *datalen){
 			PrintAndLog ("\n14443-3b tag found:");
 			PrintAndLog ("Unknown tag type answered to a 0x0A command ans:");
 			PrintAndLog ("%s",sprint_hex(data,*datalen));
-			rawClose();
+			rawCloseEx(verbose);
 			return 1;
 		}
 	}
@@ -561,11 +563,11 @@ int HF14B_Other_Reader(uint8_t *data, uint8_t *datalen){
 			PrintAndLog ("\n14443-3b tag found:");
 			PrintAndLog ("Unknown tag type answered to a 0x0C command ans:");
 			PrintAndLog ("%s",sprint_hex(data,*datalen));
-			rawClose();
+			rawCloseEx(verbose);
 			return 1;
 		}
 	}
-	rawClose();
+	rawCloseEx(verbose);
 	return 0;
 }
 
@@ -575,14 +577,14 @@ int HF14BInfo(bool verbose){
 	uint8_t datalen = 5;
 
 	// try std 14b (atqb)
-	if (HF14BStdInfo(data, &datalen)) return 1;
+	if (HF14BStdInfo(data, &datalen, verbose)) return 1;
 
 	// try st 14b
-	if (HF14B_ST_Info(data, &datalen)) return 1;
+	if (HF14B_ST_Info(data, &datalen, verbose)) return 1;
 
 	// try unknown 14b read commands (to be identified later)
 	//   could be read of calypso, CEPAS, moneo, or pico pass.
-	if (HF14B_Other_Reader(data, &datalen)) return 1;
+	if (HF14B_Other_Reader(data, &datalen, verbose)) return 1;
 
 	if (verbose) PrintAndLog("no 14443B tag found");
 	return 0;
@@ -599,14 +601,14 @@ int HF14BReader(bool verbose){
 	uint8_t datalen = 5;
 	
 	// try std 14b (atqb)
-	if (HF14BStdReader(data, &datalen)) return 1;
+	if (HF14BStdReader(data, &datalen, verbose)) return 1;
 
 	// try st 14b
-	if (HF14B_ST_Reader(data, &datalen, true)) return 1;
+	if (HF14B_ST_Reader(data, &datalen, true, verbose)) return 1;
 
 	// try unknown 14b read commands (to be identified later)
 	//   could be read of calypso, CEPAS, moneo, or pico pass.
-	if (HF14B_Other_Reader(data, &datalen)) return 1;
+	if (HF14B_Other_Reader(data, &datalen, verbose)) return 1;
 
 	if (verbose) PrintAndLog("no 14443B tag found");
 	return 0;
