@@ -185,7 +185,15 @@ void UsbCommandReceived(UsbCommand *UC)
 			memset(s, 0x00, sizeof(s)); 
 			size_t len = MIN(UC->arg[0],USB_CMD_DATA_SIZE);
 			memcpy(s, UC->d.asBytes, len);
-			PrintAndLog("#db# %s", s);
+			
+			// test
+			if ( UC->arg[1] == CMD_MEASURE_ANTENNA_TUNING_HF) {
+				printf("\r#db# %s", s);
+				fflush(stdout);
+			}
+			else 
+				PrintAndLog("#db# %s", s);
+			
 			return;
 		} break;
 

@@ -80,16 +80,31 @@ void ToSendStuffBit(int b) {
 // Debug print functions, to go out over USB, to the usual PC-side client.
 //=============================================================================
 
+void DbpStringEx(char *str, uint32_t cmd){
+	byte_t len = strlen(str);
+	cmd_send(CMD_DEBUG_PRINT_STRING,len, cmd,0,(byte_t*)str,len);
+}
+
 void DbpString(char *str) {
-  byte_t len = strlen(str);
-  cmd_send(CMD_DEBUG_PRINT_STRING,len,0,0,(byte_t*)str,len);
+	DbpStringEx(str, 0);
 }
 
 #if 0
 void DbpIntegers(int x1, int x2, int x3) {
-  cmd_send(CMD_DEBUG_PRINT_INTEGERS,x1,x2,x3,0,0);
+	cmd_send(CMD_DEBUG_PRINT_INTEGERS,x1,x2,x3,0,0);
 }
 #endif
+void DbprintfEx(uint32_t cmd, const char *fmt, ...) {
+	// should probably limit size here; oh well, let's just use a big buffer
+	char output_string[128] = {0x00};
+	va_list ap;
+
+	va_start(ap, fmt);
+	kvsprintf(fmt, output_string, 10, ap);
+	va_end(ap);
+
+	DbpStringEx(output_string, cmd);
+}
 
 void Dbprintf(const char *fmt, ...) {
 	// should probably limit size here; oh well, let's just use a big buffer
@@ -229,23 +244,18 @@ void MeasureAntennaTuning(void) {
 
 void MeasureAntennaTuningHf(void) {
 	int vHf = 0;	// in mV
-
-	DbpString("Measuring HF antenna, press button to exit");
-
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 
-	for (;;) {
+	while ( !BUTTON_PRESS() ){
 		SpinDelay(20);
 		vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-
-		Dbprintf("%d mV",vHf);
-		if (BUTTON_PRESS()) break;
+		//Dbprintf("%d mV",vHf);
+		DbprintfEx(CMD_MEASURE_ANTENNA_TUNING_HF, "%d mV",vHf);
 	}
-	
-	DbpString("cancelled");
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	DbpString("cancelled");
 }
 
 

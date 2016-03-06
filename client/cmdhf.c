@@ -31,9 +31,11 @@ static int CmdHelp(const char *Cmd);
 
 int CmdHFTune(const char *Cmd)
 {
-  UsbCommand c={CMD_MEASURE_ANTENNA_TUNING_HF};
-  SendCommand(&c);
-  return 0;
+	PrintAndLog("Measuring HF antenna, press button to exit");
+	UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING_HF};
+	clearCommandBuffer();
+	SendCommand(&c);
+	return 0;
 }
 
 
@@ -644,6 +646,8 @@ int usage_hf_snoop(){
 
 int CmdHFList(const char *Cmd)
 {
+	clearCommandBuffer();
+		
 	bool showWaitCycles = false;
 	bool markCRCBytes = false;
 	char type[10] = {0};
@@ -759,27 +763,27 @@ int CmdHFSnoop(const char *Cmd)
 	int skiptriggers =  param_get32ex(Cmd, 1, 0, 10);
 	
 	UsbCommand c = {CMD_HF_SNIFFER, {skippairs,skiptriggers,0}};
+	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
 
-static command_t CommandTable[] = 
-{
-  {"help",        CmdHelp,          1, "This help"},
-  {"14a",         CmdHF14A,         1, "{ ISO14443A RFIDs... }"},
-  {"14b",         CmdHF14B,         1, "{ ISO14443B RFIDs... }"},
-  {"15",          CmdHF15,          1, "{ ISO15693 RFIDs... }"},
-  {"epa",         CmdHFEPA,         1, "{ German Identification Card... }"},
-  {"legic",       CmdHFLegic,       0, "{ LEGIC RFIDs... }"},
-  {"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs... }"},
-  {"mf",      		CmdHFMF,		1, "{ MIFARE RFIDs... }"},
-  {"mfu",         CmdHFMFUltra,     1, "{ MIFARE Ultralight RFIDs... }"},
-  {"mfdes",			CmdHFMFDes,		1, "{ MIFARE Desfire RFIDs... }"},
-  {"topaz",			CmdHFTopaz,		1, "{ TOPAZ (NFC Type 1) RFIDs... }"},
-  {"tune",			CmdHFTune,      0, "Continuously measure HF antenna tuning"},
-  {"list",        CmdHFList,        1, "List protocol data in trace buffer"},
-  {"search",      CmdHFSearch,      1, "Search for known HF tags [preliminary]"},
-  {"snoop",       CmdHFSnoop,       0, "<samples to skip (10000)> <triggers to skip (1)> Generic LF/HF Snoop in Testing stage"},
+static command_t CommandTable[] = {
+	{"help",        CmdHelp,          1, "This help"},
+	{"14a",         CmdHF14A,         1, "{ ISO14443A RFIDs... }"},
+	{"14b",         CmdHF14B,         1, "{ ISO14443B RFIDs... }"},
+	{"15",          CmdHF15,          1, "{ ISO15693 RFIDs... }"},
+	{"epa",         CmdHFEPA,         1, "{ German Identification Card... }"},
+	{"legic",       CmdHFLegic,       0, "{ LEGIC RFIDs... }"},
+	{"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs... }"},
+	{"mf",      	CmdHFMF,		  1, "{ MIFARE RFIDs... }"},
+	{"mfu",         CmdHFMFUltra,     1, "{ MIFARE Ultralight RFIDs... }"},
+	{"mfdes",		CmdHFMFDes,		  1, "{ MIFARE Desfire RFIDs... }"},
+	{"topaz",		CmdHFTopaz,		  1, "{ TOPAZ (NFC Type 1) RFIDs... }"},
+	{"tune",		CmdHFTune,	      0, "Continuously measure HF antenna tuning"},
+	{"list",        CmdHFList,        1, "List protocol data in trace buffer"},
+	{"search",      CmdHFSearch,      1, "Search for known HF tags [preliminary]"},
+	{"snoop",       CmdHFSnoop,       0, "<samples to skip (10000)> <triggers to skip (1)> Generic LF/HF Snoop in Testing stage"},
 	{NULL, NULL, 0, NULL}
 };
 
