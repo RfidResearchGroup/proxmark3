@@ -750,6 +750,11 @@ int CmdHFSearch(const char *Cmd){
 		PrintAndLog("\nValid ISO15693 Tag Found - Quiting Search\n");
 		return ans;
 	}
+	ans = CmdHFTopazReader("");
+	if (ans == 0) {
+		PrintAndLog("\nValid Topaz Tag Found - Quiting Search\n");
+		return 1;
+	}
 	PrintAndLog("\nno known/supported 13.56 MHz tags found\n");
 	return 0;
 }

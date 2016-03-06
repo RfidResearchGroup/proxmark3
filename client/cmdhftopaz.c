@@ -306,6 +306,7 @@ int CmdHFTopazReader(const char *Cmd) {
 			topaz_tag.uid[2], 
 			topaz_tag.uid[1], 
 			topaz_tag.uid[0]);
+			
 	PrintAndLog("       UID[6] (Manufacturer Byte) = %02x, Manufacturer: %s", 
 			topaz_tag.uid[6], 
 			getTagInfo(topaz_tag.uid[6]));
