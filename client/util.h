@@ -14,7 +14,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include "data.h"  //for FILE_PATH_SIZE
+#include "data.h"    //for FILE_PATH_SIZE
 
 #ifndef ROTR
 # define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))

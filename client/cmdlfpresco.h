@@ -20,11 +20,11 @@
 #include "lfdemod.h"    // parityTest
 int CmdLFPresco(const char *Cmd);
 int CmdPrescoClone(const char *Cmd);
-//int CmdPrescoSim(const char *Cmd);
+int CmdPrescoSim(const char *Cmd);
+
+int GetWiegandFromPresco(const char *id, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5);
 
 int usage_lf_presco_clone(void);
 int usage_lf_presco_sim(void);
-
-int GetWiegandFromPresco(const char *id, uint32_t *sitecode, uint32_t *usercode);
 #endif
 

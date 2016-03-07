@@ -20,6 +20,7 @@ int usage_lf_pyramid_clone(void){
 	PrintAndLog("Options :");
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
+	PrintAndLog("  Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
 	PrintAndLog("");
 	PrintAndLog("Sample  : lf pyramid clone 123 11223");
 	return 0;
@@ -98,11 +99,12 @@ int CmdPyramidClone(const char *Cmd) {
 		return 1;
 	}	
 
-//	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
-//		blocks[0] = T5555_MODULATION_FSK2 | 50<<T5555_BITRATE_SHIFT | 4<<T5555_MAXBLOCK_SHIFT;
-
 	//Pyramid - compat mode, FSK2a, data rate 50, 4 data blocks
 	blocks[0] = T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 4<<T55x7_MAXBLOCK_SHIFT;
+
+	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
+		blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | 50<<T5555_BITRATE_SHIFT | 4<<T5555_MAXBLOCK_SHIFT;
+
 	blocks[1] = bytebits_to_byte(bs,32);
 	blocks[2] = bytebits_to_byte(bs+32,32);
 	blocks[3] = bytebits_to_byte(bs+64,32);

@@ -380,7 +380,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 	AcquireTiType();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	DbpString("Now use 'lf ti read' to check");
+	DbpString("Now use `lf ti read` to check");
 }
 
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
@@ -631,6 +631,18 @@ static void biphaseSimBit(uint8_t c, int *n, uint8_t clock, uint8_t *phase)
 	*n += clock;
 }
 
+static void stAskSimBit(int *n, uint8_t clock) {
+	uint8_t *dest = BigBuf_get_addr();
+	uint8_t halfClk = clock/2;
+	//ST = .5 high .5 low 1.5 high .5 low 1 high	
+	memset(dest+(*n), 1, halfClk);
+	memset(dest+(*n) + halfClk, 0, halfClk);
+	memset(dest+(*n) + clock, 1, clock + halfClk);
+	memset(dest+(*n) + clock*2 + halfClk, 0, halfClk);
+	memset(dest+(*n) + clock*3, 1, clock);
+	*n += clock*4;
+}
+
 // args clock, ask/man or askraw, invert, transmission separator
 void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 {
@@ -661,8 +673,10 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 			}
 		}
 	}
-	
-	if (separator==1) Dbprintf("sorry but separator option not yet available"); 
+	if (separator==1 && encoding == 1)
+		stAskSimBit(&n, clk);
+	else if (separator==1)
+		Dbprintf("sorry but separator option not yet available");
 
 	Dbprintf("Simulating with clk: %d, invert: %d, encoding: %d, separator: %d, n: %d",clk, invert, encoding, separator, n);
 
@@ -1431,7 +1445,7 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
 	LED_D_ON();
 
 	// Write EM410x ID
-	uint32_t data[] = {0, (uint32_t)(id>>32), id & 0xFFFFFFFF};
+	uint32_t data[] = {0, (uint32_t)(id>>32), (uint32_t)(id & 0xFFFFFFFF)};
 
 	clock = (card & 0xFF00) >> 8;
 	clock = (clock == 0) ? 64 : clock;
