@@ -1,13 +1,16 @@
 The iceman fork
 ---------------
+##::THIS FORK IS HIGHLY EXPERIMENTAL::
 
-NOTICE: 
+##NOTICE:      
 
-::THIS FORK IS HIGHLY EXPERIMENTAL::
+There is so much in this fork,  with all fixes and additions its basically the most enhanced fork to this day for the Proxmark3 device.
 
+
+##OFFICAL 
 The official Proxmark repository is found here: https://github.com/Proxmark/proxmark3
 
-NEWS: 
+##NEWS: 
 
 ## Build Status Travis CI
 [![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)
@@ -34,7 +37,7 @@ tar czvf proxmark3.tgz cov-int
 
 ## Whats changed?
 
-Whats in this fork?  I have scraped the web for different enhancements to the PM3 source code and not all of them ever found their way to the master branch. 
+Whats so special with this fork?  I have scraped the web for different enhancements to the PM3 source code and not all of them ever found their way to the master branch. 
 Among the stuff is
 
 	* Jonor's hf 14a raw timing patch
@@ -50,7 +53,7 @@ Among the stuff is
 	* other obscure patches like for the sammy-mode,  (offline you know), tagidentifications, defaultkeys. 
 	* Minor textual changes here and there.
 	* Simulation of Ultralight/Ntag.
-	* Marshmellow's and my "RevEng" addon for the client.  Ref: http://reveng.sourceforge.net/
+	* Marshmellow's and my "RevEng" addon for the client.  Ref: http://reveng.sourceforge.net/    Now using reveng1.31
 	* Someone's alternative bruteforce Mifare changes.. (you need the two other exe to make it work)
 
 	* A Bruteforce for T55XX passwords against tag.
@@ -59,6 +62,39 @@ Among the stuff is
 	* Blaposts Crapto1 v3.3
 					  
     * icsom's  legic script and legic enhancements
+
+---	
+Straight from the CHANGELOG
+---
+  - Added `lf guard clone/sim` (iceman)
+  - Added `lf pyramd clone/sim` (iceman) 
+  - trying to fix "hf 14b" command to be able to read CALYPSO card.	 (iceman)
+  - `hf legic load`, it now loads faster and a casting bug is gone. (iceman)
+  - Added `hf legic calccrc8` added a method to calculate the legic crc-8 value (iceman)
+  - `hf legic decode` fixed the output overflow bugs, better printing (iceman)
+  - Coverity Scan fixes a lot of resource leaks, etc (iceman)
+  - Added `lf presco *` commands started (iceman) 
+  - Added `lf hid wiegand` added a method to calculate WIEGAND in different formats, (iceman)
+  - `hf mf chkkeys` better printing, same table output as nested, faster execution and added Adam Lauries "try to read Key B if Key A is found" (iceman)
+  - `hf mf nested` better printing and added Adam Lauries "try to read Key B if Key A is found" (iceman)
+  - `hf mf mifare` fixing the zero parity path, which doesn't got called. (iceman) 
+  - Updated the @blapost's Crapto1 implementation to v3.3 (blapost) 
+  - `hf mf c*` updated the calling structure and refactored of the chinese magic commands (iceman, marshmellow)
+  - Started to add Peter Fillmore's  EMV fork into Iceman fork. ref: https://github.com/peterfillmore/proxmark3  (peter fillmore,  iceman)
+  - Added Travis-CI automatic build integration with GitHub fork. (iceman)
+  - Updated the Reveng 1.30 sourcecode to 1.31 from Reveng projecthomepage (iceman)
+  
+  - Added possibility to write direct to a Legic Prime Tag (MIM256/1024) without using values from the 'BigBuffer' -> 'hf legic writeRaw <addr> <value>' (icsom)
+  - Added possibility to decrease DCF values at address 0x05 & 0x06 on a Legic Prime Tag 
+		DCF-value will be pulled from the BigBuffer (address 0x05 & 0x06) so you have to 
+		load the data into the BigBuffer before with 'hf legic load <path/to/legic.dump>' & then
+		write the DCF-Values (both at once) with 'hf legic write 0x05 0x02'  (icsom)
+  - Added script `legic.lua` for display and edit Data of Legic-Prime Tags (icsom)
+  - Added the experimental HITAG_S support (spenneb)
+  - Added topaz detection to `hf search` (iceman)
+  - Fixed the silent mode for 14b to be used inside 'hf search' (iceman)
+	
+---	
 	
 Give me a hint, and I'll see if I can't merge in the stuff you have. 
 

@@ -28,6 +28,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 		write the DCF-Values (both at once) with 'hf legic write 0x05 0x02'  (icsom)
   - Added script `legic.lua` for display and edit Data of Legic-Prime Tags (icsom)
   - Added the experimental HITAG_S support (spenneb)
+  - Added topaz detection to `hf search` (iceman)
+  - Fixed the silent mode for 14b to be used inside 'hf search' (iceman)
   
 ### Added
 - Added a LF ASK Sequence Terminator detection option to the standard ask demod - and applied it to `lf search u`, `lf t55xx detect`, and `data rawdemod am s` (marshmellow)
