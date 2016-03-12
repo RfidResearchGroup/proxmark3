@@ -197,14 +197,15 @@ void UsbCommandReceived(UsbCommand *UC)
 			return;
 		} break;
 
-		case CMD_DEBUG_PRINT_INTEGERS:
+		case CMD_DEBUG_PRINT_INTEGERS: {
 			PrintAndLog("#db# %08x, %08x, %08x", UC->arg[0], UC->arg[1], UC->arg[2]);
 			break;
-
+		}
 		case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K:
+		case CMD_DOWNLOADED_EML_BIGBUF: {
 			memcpy( sample_buf + (UC->arg[0]), UC->d.asBytes, UC->arg[1]);
 			break;
-
+		}
 		default: {
 			storeCommand(UC);
 			break;

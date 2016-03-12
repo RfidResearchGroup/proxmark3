@@ -63,6 +63,9 @@ typedef struct{
 #define CMD_STATUS														  0x0108
 #define CMD_PING														  0x0109
 
+#define CMD_DOWNLOAD_EML_BIGBUF											  0x0110
+#define CMD_DOWNLOADED_EML_BIGBUF										  0x0111
+
 // For low-frequency tags
 #define CMD_READ_TI_TYPE                                                  0x0202
 #define CMD_WRITE_TI_TYPE                                                 0x0203

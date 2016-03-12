@@ -949,14 +949,15 @@ void SimulateHitagSTag(bool tag_mem_supplied, byte_t* data) {
 	int i, j;
 	byte_t rx[HITAG_FRAME_LEN];
 	size_t rxlen = 0;
-//bool bQuitTraceFull = false;
+	//bool bQuitTraceFull = false;
 	bQuiet = false;
 	byte_t txbuf[HITAG_FRAME_LEN];
 	byte_t* tx = txbuf;
 	size_t txlen = 0;
-	BigBuf_free();
+	// free eventually allocated BigBuf memory
+	BigBuf_free(); BigBuf_Clear_ext(false);
 
-// Clean up trace and prepare it for storing frames
+	// Clean up trace and prepare it for storing frames
 	set_tracing(TRUE);
 	clear_trace();
 

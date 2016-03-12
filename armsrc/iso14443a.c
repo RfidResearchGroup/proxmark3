@@ -546,7 +546,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 	
 	// Allocate memory from BigBuf for some buffers
 	// free all previous allocations first
-	BigBuf_free();
+	BigBuf_free(); BigBuf_Clear_ext(false);
 	
 	// init trace buffer
 	clear_trace();
@@ -2303,6 +2303,9 @@ void ReaderMifare(bool first_try, uint8_t block )
 	#define MAX_SYNC_TRIES		32
 	#define MAX_STRATEGY		3
 
+	// free eventually allocated BigBuf memory
+	BigBuf_free(); BigBuf_Clear_ext(false);
+	
 	clear_trace();
 	set_tracing(TRUE);
 	
@@ -2310,9 +2313,6 @@ void ReaderMifare(bool first_try, uint8_t block )
 	
 	if (first_try)
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-	
-	// free eventually allocated BigBuf memory. We want all for tracing.
-	BigBuf_free();
 
 	if (first_try) { 
 		sync_time = GetCountSspClk() & 0xfffffff8;
@@ -3068,6 +3068,9 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// bit 1 - trigger from first reader 7-bit request
 	LEDsoff();
 
+	// free eventually allocated BigBuf memory
+	BigBuf_free(); BigBuf_Clear_ext(false);
+	
 	// init trace buffer
 	clear_trace();
 	set_tracing(TRUE);
@@ -3084,9 +3087,6 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
 	iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
 
-	// free eventually allocated BigBuf memory
-	BigBuf_free();
-	
 	// allocate the DMA buffer, used to stream samples from the FPGA
 	uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
 	uint8_t *data = dmaBuf;

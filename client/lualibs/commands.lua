@@ -22,6 +22,9 @@ local _commands = {
 	CMD_VERSION =                                                        0x0107,
 	CMD_STATUS =                                                         0x0108,
 	CMD_PING =                                                           0x0109,
+	CMD_DOWNLOAD_EML_BIGBUF =											 0x0110,
+	CMD_DOWNLOADED_EML_BIGBUF =											 0x0111,
+
 	--// For low-frequency tags
 	CMD_READ_TI_TYPE =                                                   0x0202,
 	CMD_WRITE_TI_TYPE =                                                  0x0203,

@@ -1274,8 +1274,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			LED_D_OFF(); // LED D indicates field ON or OFF
 			break;
 
-		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K:
-
+		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K: {
 			LED_B_ON();
 			uint8_t *BigBuf = BigBuf_get_addr();
 			size_t len = 0;
@@ -1287,13 +1286,26 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			cmd_send(CMD_ACK,1,0,BigBuf_get_traceLen(),getSamplingConfig(),sizeof(sample_config));
 			LED_B_OFF();
 			break;
-
+		}
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
 			uint8_t *b = BigBuf_get_addr();
-			memcpy(b+c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
+			memcpy( b + c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			break;
-		}	
+		}
+		case CMD_DOWNLOAD_EML_BIGBUF: {
+			LED_B_ON();
+			uint8_t *cardmem = BigBuf_get_EM_addr();
+			size_t len = 0;
+			for(size_t i=0; i < c->arg[1]; i += USB_CMD_DATA_SIZE) {
+				len = MIN((c->arg[1] - i), USB_CMD_DATA_SIZE);
+				cmd_send(CMD_DOWNLOADED_EML_BIGBUF, i, len, CARD_MEMORY_SIZE, cardmem + c->arg[0] + i, len);
+			}
+			// Trigger a finish downloading signal with an ACK frame
+			cmd_send(CMD_ACK, 1, 0, CARD_MEMORY_SIZE, 0, 0);
+			LED_B_OFF();
+			break;
+		}
 		case CMD_READ_MEM:
 			ReadMem(c->arg[0]);
 			break;

@@ -220,7 +220,8 @@ static voidpf fpga_inflate_malloc(voidpf opaque, uInt items, uInt size)
 
 static void fpga_inflate_free(voidpf opaque, voidpf address)
 {
-	BigBuf_free();
+	// free eventually allocated BigBuf memory
+	BigBuf_free(); BigBuf_Clear_ext(false);
 }
 
 
@@ -416,7 +417,7 @@ void FpgaDownloadAndGo(int bitstream_version)
 		return;
 
 	// make sure that we have enough memory to decompress
-	BigBuf_free();
+	BigBuf_free(); BigBuf_Clear_ext(false);
 	
 	if (!reset_fpga_stream(bitstream_version, &compressed_fpga_stream, output_buffer)) {
 		return;
@@ -430,7 +431,8 @@ void FpgaDownloadAndGo(int bitstream_version)
 
 	inflateEnd(&compressed_fpga_stream);
 	
-	BigBuf_free();
+	// free eventually allocated BigBuf memory
+	BigBuf_free(); BigBuf_Clear_ext(false);
 }	
 
 
@@ -450,7 +452,7 @@ void FpgaGatherVersion(int bitstream_version, char *dst, int len)
 	dst[0] = '\0';
 
 	// ensure that we can allocate enough memory for decompression:
-	BigBuf_free();
+	BigBuf_free(); BigBuf_Clear_ext(false);
 
 	if (!reset_fpga_stream(bitstream_version, &compressed_fpga_stream, output_buffer))
 		return;

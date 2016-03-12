@@ -260,7 +260,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	// free eventually allocated BigBuf memory
-	BigBuf_free();
+	BigBuf_free(); BigBuf_Clear_ext(false);
 	clear_trace();
 	set_tracing(true);
 	
@@ -778,8 +778,8 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	// free eventually allocated BigBuf memory
-	BigBuf_free();
-
+	BigBuf_free(); BigBuf_Clear_ext(false);
+	
 	if (calibrate) clear_trace();
 	set_tracing(true);
 

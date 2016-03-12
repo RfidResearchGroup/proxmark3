@@ -541,7 +541,6 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo)
 		
 }
 
-
 // work with emulator memory
 void emlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 	emlSetMem_xt(data, blockNum, blocksCount, 16);

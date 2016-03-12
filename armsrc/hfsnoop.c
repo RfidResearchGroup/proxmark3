@@ -28,8 +28,11 @@ static void RAMFUNC optimizedSnoop(void)
 
 void HfSnoop(int samplesToSkip, int triggersToSkip)
 {
+	BigBuf_free(); BigBuf_Clear();
+	
 	Dbprintf("Skipping first %d sample pairs, Skipping %d triggers.\n", samplesToSkip, triggersToSkip);
 	bool trigger_cnt;
+
 	LED_D_ON();
 	// Select correct configs
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -39,9 +42,6 @@ void HfSnoop(int samplesToSkip, int triggersToSkip)
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SNOOP);
 	SpinDelay(100);
-
-	BigBuf_free();
-	BigBuf_Clear();
 	
 	AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(16); // Setting Frame Mode For better performance on high speed data transfer.
 

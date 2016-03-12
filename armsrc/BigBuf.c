@@ -16,9 +16,16 @@
 
 // BigBuf is the large multi-purpose buffer, typically used to hold A/D samples or traces.
 // Also used to hold various smaller buffers and the Mifare Emulator Memory.
-
 // declare it as uint32_t to achieve alignment to 4 Byte boundary
 static uint32_t BigBuf[BIGBUF_SIZE/sizeof(uint32_t)];
+
+/* BigBuf memory layout:
+Pointer to highest available memory: BigBuf_hi
+
+    high BIGBUF_SIZE
+    reserved = BigBuf_malloc()  subtracts amount from BigBuf_hi,   
+	low  0x00
+*/
 
 // High memory mark
 static uint16_t BigBuf_hi = BIGBUF_SIZE;
@@ -40,9 +47,9 @@ uint8_t *BigBuf_get_addr(void)
 // get the address of the emulator memory. Allocate part of Bigbuf for it, if not yet done
 uint8_t *BigBuf_get_EM_addr(void)
 {
-	if (emulator_memory == NULL) {		// not yet allocated
+	// not yet allocated
+	if (emulator_memory == NULL)
 		emulator_memory = BigBuf_malloc(CARD_MEMORY_SIZE);
-	}
 	
 	return emulator_memory;
 }
@@ -56,14 +63,14 @@ void BigBuf_Clear(void)
 // clear ALL of BigBuf
 void BigBuf_Clear_ext(bool verbose)
 {
-	memset(BigBuf,0,BIGBUF_SIZE);
+	memset(BigBuf, 0, BIGBUF_SIZE);
 	if (verbose) 
 		Dbprintf("Buffer cleared (%i bytes)",BIGBUF_SIZE);
 }
 
 void BigBuf_Clear_keep_EM(void)
 {
-	memset(BigBuf,0,BigBuf_hi);
+	memset(BigBuf, 0, BigBuf_hi);
 }
 
 // allocate a chunk of memory from BigBuf. We allocate high memory first. The unallocated memory
@@ -85,29 +92,31 @@ void BigBuf_free(void)
 {
 	BigBuf_hi = BIGBUF_SIZE;
 	emulator_memory = NULL;
+	
+	// shouldn't this empty BigBuf also?
 }
 
 
 // free allocated chunks EXCEPT the emulator memory
 void BigBuf_free_keep_EM(void)
 {
-	if (emulator_memory != NULL) {
+	if (emulator_memory != NULL)
 		BigBuf_hi = emulator_memory - (uint8_t *)BigBuf;
-	} else {
+	else
 		BigBuf_hi = BIGBUF_SIZE;
-	}
+	
+	// shouldn't this empty BigBuf also?
 }
 
 void BigBuf_print_status(void)
 {
 	Dbprintf("Memory");
 	Dbprintf("  BIGBUF_SIZE.............%d", BIGBUF_SIZE);
-	Dbprintf("  BigBuf_hi  .............%d", BigBuf_hi);
+	Dbprintf("  Available memory........%d", BigBuf_hi);
 	Dbprintf("Tracing");
 	Dbprintf("  tracing ................%d", tracing);
 	Dbprintf("  traceLen ...............%d", traceLen);
 }
-
 
 // return the maximum trace length (i.e. the unallocated size of BigBuf)
 uint16_t BigBuf_max_traceLen(void)
@@ -149,9 +158,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 	uint16_t duration = timestamp_end - timestamp_start;
 
 	// Return when trace is full
-	uint16_t max_traceLen = BigBuf_max_traceLen();
-
-	if (traceLen + sizeof(iLen) + sizeof(timestamp_start) + sizeof(duration) + num_paritybytes + iLen >= max_traceLen) {
+	if (traceLen + sizeof(iLen) + sizeof(timestamp_start) + sizeof(duration) + num_paritybytes + iLen >= BigBuf_max_traceLen()) {
 		tracing = FALSE;	// don't trace any more
 		return FALSE;
 	}

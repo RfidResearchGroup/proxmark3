@@ -712,7 +712,10 @@ void SnoopHitag(uint32_t type) {
 	size_t rxlen=0;
 	
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-
+	
+	// free eventually allocated BigBuf memory
+	BigBuf_free(); BigBuf_Clear_ext(false);
+	
 	// Clean up trace and prepare it for storing frames
 	clear_trace();
 	set_tracing(TRUE);
@@ -720,7 +723,6 @@ void SnoopHitag(uint32_t type) {
 	auth_table_len = 0;
 	auth_table_pos = 0;
 
-	BigBuf_free();
     auth_table = (byte_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
 	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 	
@@ -927,6 +929,9 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
+	// free eventually allocated BigBuf memory
+	BigBuf_free(); BigBuf_Clear_ext(false);
+
 	// Clean up trace and prepare it for storing frames
 	clear_trace();
 	set_tracing(TRUE);
@@ -934,7 +939,7 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	auth_table_len = 0;
 	auth_table_pos = 0;
     byte_t* auth_table;
-	BigBuf_free();
+
     auth_table = (byte_t *)BigBuf_malloc(AUTH_TABLE_LENGTH);
 	memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 
