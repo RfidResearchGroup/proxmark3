@@ -15,9 +15,9 @@ module hi_read_rx_xcorr(
     input pck0, ck_1356meg, ck_1356megb;
     output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
     input [7:0] adc_d;
-    output adc_clk;
+    output adc_clk, ssp_frame, ssp_din;
     input ssp_dout;
-    output ssp_frame, ssp_din, ssp_clk;
+    output ssp_clk;
     input cross_hi, cross_lo;
     output dbg;
     input xcorr_is_848, snoop;
