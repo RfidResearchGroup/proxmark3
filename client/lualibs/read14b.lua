@@ -96,7 +96,7 @@ local function select1443b()
 	local result, infoReqb, infoAttrib, infoPong, err, resp, len, data
 	local goodReqbResponse = false
 	--REQB
-	local p = 5
+	local p = 20
 	while p > 0 do
 		-- 05 00 08
 		-- 05
@@ -122,10 +122,10 @@ local function select1443b()
 		end
 		
 		-- send some strange 0A/0C
-		if ( p < 3) then
-			sendRaw('0A', 0, 0)
-			sendRaw('0C', 0, 0)
-		end
+		-- if ( p < 3) then
+			-- sendRaw('0A', 0, 0)
+			-- sendRaw('0C', 0, 0)
+		-- end
 		
 		p = p - 1
 		print('retrying')
@@ -200,6 +200,7 @@ local function waitFor14443b()
 	while not core.ukbhit() do
 		res, err = select1443b()
 		if res then return res end
+		if res == nil then return nil, err end
 		-- err means that there was no response from card
 	end
 	return nil, "Aborted by user"
