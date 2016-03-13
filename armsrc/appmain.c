@@ -9,18 +9,14 @@
 // The main application code. This is the first thing called after start.c
 // executes.
 //-----------------------------------------------------------------------------
-
 #include "usb_cdc.h"
 #include "cmd.h"
-
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
 #include "printf.h"
 #include "string.h"
-
 #include <stdarg.h>
-
 #include "legicrf.h"
 #include "hitag2.h"
 #include "hitagS.h"
@@ -28,6 +24,7 @@
 #include "BigBuf.h"
 #include "mifareutil.h"
 #include "pcf7931.h"
+
 #ifdef WITH_LCD
  #include "LCD.h"
 #endif
@@ -37,8 +34,6 @@
  #include "iso14443a.h"
  #include "protocols.h"
 #endif
-
-#define abs(x) ( ((x)<0) ? -(x) : (x) )
 
 //=============================================================================
 // A buffer where we can queue things up to be sent through the FPGA, for
@@ -832,7 +827,7 @@ void ListenReaderField(int limit) {
 
 		if (limit != HF_ONLY) {
 			if(mode == 1) {
-				if (abs(lf_av - lf_baseline) > REPORT_CHANGE) 
+				if (ABS(lf_av - lf_baseline) > REPORT_CHANGE) 
 					LED_D_ON();
 				else
 					LED_D_OFF();
@@ -840,7 +835,7 @@ void ListenReaderField(int limit) {
 
 			lf_av_new = AvgAdc(ADC_CHAN_LF);
 			// see if there's a significant change
-			if(abs(lf_av - lf_av_new) > REPORT_CHANGE) {
+			if(ABS(lf_av - lf_av_new) > REPORT_CHANGE) {
 				Dbprintf("LF 125/134kHz Field Change: %5dmV", (MAX_ADC_LF_VOLTAGE * lf_av_new) >> 10);
 				lf_av = lf_av_new;
 				if (lf_av > lf_max)
@@ -850,7 +845,7 @@ void ListenReaderField(int limit) {
 
 		if (limit != LF_ONLY) {
 			if (mode == 1){
-				if (abs(hf_av - hf_baseline) > REPORT_CHANGE) 	
+				if (ABS(hf_av - hf_baseline) > REPORT_CHANGE) 	
 					LED_B_ON();
 				else
 					LED_B_OFF();
@@ -858,7 +853,7 @@ void ListenReaderField(int limit) {
 
 			hf_av_new = AvgAdc(ADC_CHAN_HF);
 			// see if there's a significant change
-			if(abs(hf_av - hf_av_new) > REPORT_CHANGE) {
+			if(ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
 				Dbprintf("HF 13.56MHz Field Change: %5dmV", (MAX_ADC_HF_VOLTAGE * hf_av_new) >> 10);
 				hf_av = hf_av_new;
 				if (hf_av > hf_max)

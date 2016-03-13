@@ -295,21 +295,19 @@ static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int
 //		number of decoded bytes
 static int GetIso15693AnswerFromTag(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed)
 {
-	int c = 0;
 	uint8_t *dest = BigBuf_get_addr();
-	int getNext = 0;
 
+	int c = 0;
+	int getNext = FALSE;
 	int8_t prev = 0;
 
-// NOW READ RESPONSE
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	//spindelay(60);	// greg - experiment to get rid of some of the 0 byte/failed reads
-	c = 0;
-	getNext = FALSE;
+	SpinDelay(100);	// greg - experiment to get rid of some of the 0 byte/failed reads
+
 	for(;;) {
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
 			AT91C_BASE_SSC->SSC_THR = 0x43;
-		}
+
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			int8_t b;
 			b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -321,11 +319,14 @@ static int GetIso15693AnswerFromTag(uint8_t *receivedResponse, int maxLen, int *
 			if(getNext) {
 				int8_t r;
 
-				if(b < 0) {
-					r = -b;
-				} else {
-					r = b;
-				}
+				r = ABS(b);
+				
+				// if(b < 0) {
+					// r = -b;
+				// } else {
+					// r = b;
+				// }
+				// ABS(prev)
 				if(prev < 0) {
 					r -= prev;
 				} else {
@@ -437,29 +438,26 @@ static int GetIso15693AnswerFromTag(uint8_t *receivedResponse, int maxLen, int *
 	} // "end if correlation > 0" 	(max/(arraylen(FrameSOF)/skip))
 	return k; // return the number of bytes demodulated
 
-///	DbpString("CRC=%04x", Iso15693Crc(outBuf, k-2));
-
+//	DbpString("CRC=%04x", Iso15693Crc(outBuf, k-2));
 }
 
 
 // Now the GetISO15693 message from sniffing command
 static int GetIso15693AnswerFromSniff(uint8_t *receivedResponse, int maxLen, int *samples, int *elapsed)
 {
-	int c = 0;
 	uint8_t *dest = BigBuf_get_addr();
-	int getNext = 0;
 
+	int c = 0;
+	int getNext = FALSE;
 	int8_t prev = 0;
 
-// NOW READ RESPONSE
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	//spindelay(60);	// greg - experiment to get rid of some of the 0 byte/failed reads
-	c = 0;
-	getNext = FALSE;
+	SpinDelay(100);	// greg - experiment to get rid of some of the 0 byte/failed reads
+
 	for(;;) {
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
 			AT91C_BASE_SSC->SSC_THR = 0x43;
-		}
+
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			int8_t b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
 
@@ -470,11 +468,12 @@ static int GetIso15693AnswerFromSniff(uint8_t *receivedResponse, int maxLen, int
 			if(getNext) {
 				int8_t r;
 
-				if(b < 0) {
-					r = -b;
-				} else {
-					r = b;
-				}
+				r = ABS(b);
+				// if(b < 0) {
+					// r = -b;
+				// } else {
+					// r = b;
+				// }
 				if(prev < 0) {
 					r -= prev;
 				} else {
