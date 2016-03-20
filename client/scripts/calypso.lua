@@ -149,33 +149,37 @@ end
 local function calypso_apdu_status(apdu)
 	-- last two is CRC
 	-- next two is APDU status bytes.
+	local status = false
+	local mess = 'FAIL'
 	local sw = apdu:sub( #apdu-7, #apdu-4)
-	print ('SW', sw )
-	-- if 0x9000 OK	
-	if sw == '9000' then return 1 end
-	return 0
+	if sw == '9000' then
+		mess = 'OK'
+		status = true
+	end
+	print ('SW', sw, mess )
+	return status
 end
 
 local _calypso_cmds = {
-	["1.Select ICC file"]	=	"02 94 a4 08 00 04 3f 00 00 02",
-	["2.ICC"]				=	"02 94 b2 01 04 1d",
-	["3.Select EnvHol file"]=	'02 94 a4 08 00 04 20 00 20 01',
-	["4.EnvHol1"]			=	'02 94 b2 01 04 1d',
-	["5.Select EvLog file"]	=	'02 94 a4 08 00 04 20 00 20 10',
-	["6.EvLog1"]			=	'06 00b2 0104 1d',
-	["7.EvLog2"]			=	'06 00b2 0204 1d',
-	["8.EvLog3"]			=	'06 00b2 0304 1d',
-	-- ["Select ConList file"]=	'42 01 04 0a 00a4 0800 04 2000 2050',
-	-- ["ConList"]			=	'42 01 06 06 00b2 0104 1d',
-	-- ["Select Contra file"]=	'42 01 08 0a 00a4 0800 04 2000 2020',
-	-- ["Contra1"]			=	'42 01 0a 06 00b2 0104 1d',
-	-- ["Contra2"]			=	'42 01 0c 06 00b2 0204 1d',
-	-- ["Contra3"]			=	'42 01 0e 06 00b2 0304 1d',
-	-- ["Contra4"]			=	'42 01 00 06 00b2 0404 1d',
-	-- ["Select Counter file"]=	'42 01 02 0a 00a4 0800 04 2000 2069',
-	-- ["Counter"]			=	'42 01 04 06 00b2 0104 1d',
-	-- ["Select SpecEv file"]=	'42 01 06 0a 00a4 08 0004 2000 2040',
-	-- ["SpecEv1"]			=	'42 01 08 06 00b2 0104 1d',
+	["01.Select ICC file"]	=	'02 94 a4 08 00 04 3f 00 00 02',
+	["02.ICC"]				=	'02 94 b2 01 04 1d',
+	["03.Select EnvHol file"]=	'02 94 a4 08 00 04 20 00 20 01',
+	["04.EnvHol1"]			=	'02 94 b2 01 04 1d',
+	["05.Select EvLog file"]	=	'02 94 a4 08 00 04 20 00 20 10',
+	["06.EvLog1"]			=	'06 00b2 0104 1d',
+	["07.EvLog2"]			=	'06 00b2 0204 1d',
+	["08.EvLog3"]			=	'06 00b2 0304 1d',
+	["09.Select ConList file"]=	'42 01 04 0a 00a4 0800 04 2000 2050',
+	["10.ConList"]			=	'42 01 06 06 00b2 0104 1d',
+	["11.Select Contra file"]=	'42 01 08 0a 00a4 0800 04 2000 2020',
+	["12.Contra1"]			=	'42 01 0a 06 00b2 0104 1d',
+	["13.Contra2"]			=	'42 01 0c 06 00b2 0204 1d',
+	["14.Contra3"]			=	'42 01 0e 06 00b2 0304 1d',
+	["15.Contra4"]			=	'42 01 00 06 00b2 0404 1d',
+	["16.Select Counter file"]=	'42 01 02 0a 00a4 0800 04 2000 2069',
+	["17.Counter"]			=	'42 01 04 06 00b2 0104 1d',
+	["18.Select SpecEv file"]=	'42 01 06 0a 00a4 08 0004 2000 2040',
+	["19.SpecEv1"]			=	'42 01 08 06 00b2 0104 1d',
 }
 
 --- 
@@ -214,11 +218,14 @@ function main(args)
 	--for i = 1,10 do
 		--result, err = calypso_send_cmd_raw('0294a40800043f000002',false)  --select ICC file
 		for i, apdu in spairs(_calypso_cmds) do
+			print('>>', i )
 			apdu = apdu:gsub("%s+","")
 			result, err = calypso_send_cmd_raw(apdu , false)
 			if result then 
 				calypso_apdu_status(result.data)
-				print( result.data )			
+				print('<<', result.data )
+			else
+				print('<< no answer')
 			end
 		end
 	calypso_switch_off_field()
