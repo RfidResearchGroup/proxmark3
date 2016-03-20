@@ -5,8 +5,9 @@ This library utilises other libraries under the hood, but can be used as a gener
 ]]
 
 local reader14443A = require('read14a')
+local reader14443B = require('read14b')
 local cmds = require('commands')
-local TIMEOUT = 1000
+local TIMEOUT = 2000
 
 local function sendToDevice(command, ignoreresponse)
 	core.clearCommandBuffer()
@@ -24,14 +25,9 @@ end
 -- This will be moved to a separate 14443B library
 -------------------------------------------------------
 
-local function read14443B()
-	return nil, "Not implemented"
-end
 local reader14443B = {
-	read = read14443B
+	read = reader14443B.read14443b()
 }	
-
-
 -------------------------------------------------------
 -- This will be moved to a separate 1593 library
 -------------------------------------------------------
