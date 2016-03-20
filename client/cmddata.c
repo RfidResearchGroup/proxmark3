@@ -756,8 +756,7 @@ int usage_data_autocorr(void)
 int CmdAutoCorr(const char *Cmd)
 {
 	char cmdp = param_getchar(Cmd, 0);
-	if (cmdp == 'h' || cmdp == 'H') 
-		return usage_data_autocorr();
+	if (cmdp == 'h' || cmdp == 'H') return usage_data_autocorr();
 	int window = 4000; //set default
 	char grph=0;
 	bool updateGrph = FALSE;

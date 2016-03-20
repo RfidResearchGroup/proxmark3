@@ -29,8 +29,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int CmdHFTune(const char *Cmd)
-{
+int CmdHFTune(const char *Cmd) {
 	PrintAndLog("Measuring HF antenna, press button to exit");
 	UsbCommand c = {CMD_MEASURE_ANTENNA_TUNING_HF};
 	clearCommandBuffer();
@@ -48,23 +47,19 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 		// 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
 		// 93 70 = Select (usage: 9370+5bytes 9320 answer - answer: 1byte SAK)
 		if(cmd[1] == 0x70)
-		{
-			snprintf(exp,size,"SELECT_UID"); break;
-		}else
-		{
-			snprintf(exp,size,"ANTICOLL"); break;
-		}
+			snprintf(exp,size,"SELECT_UID");
+		else
+			snprintf(exp,size,"ANTICOLL");
+		break;
 	}
 	case ISO14443A_CMD_ANTICOLL_OR_SELECT_2:{
 		//95 20 = Anticollision of cascade level2
 		//95 70 = Select of cascade level2
 		if(cmd[2] == 0x70)
-		{
-			snprintf(exp,size,"SELECT_UID-2"); break;
-		}else
-		{
-			snprintf(exp,size,"ANTICOLL-2"); break;
-		}
+			snprintf(exp,size,"SELECT_UID-2");
+		else
+			snprintf(exp,size,"ANTICOLL-2");
+		break;
 	}
 	case ISO14443A_CMD_REQA:		snprintf(exp,size,"REQA"); break;
 	case ISO14443A_CMD_READBLOCK:	snprintf(exp,size,"READBLOCK(%d)",cmd[1]); break;
@@ -272,7 +267,22 @@ void annotateIso7816(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 {
 	switch(cmd[0]){
-		case ISO14443B_REQB   		: snprintf(exp,size,"REQB");break;
+		case ISO14443B_REQB   		: {
+			
+			switch ( cmd[2] & 0x07 ) {
+				case 0: snprintf(exp, size,"1 slot ");
+				case 1: snprintf(exp, size,"2 slots "); 
+				case 2: snprintf(exp, size,"4 slots ");
+				case 3: snprintf(exp, size,"8 slots ");
+				default: snprintf(exp, size,"16 slots ");
+			}
+			
+			if ( (cmd[2] & 0x4) == 1 )
+				snprintf(exp, size,"REQB");
+			else
+				snprintf(exp, size,"WUPB");
+			break;
+		}
 		case ISO14443B_ATTRIB 		: snprintf(exp,size,"ATTRIB");break;
 		case ISO14443B_HALT   		: snprintf(exp,size,"HALT");break;
 		case ISO14443B_INITIATE     : snprintf(exp,size,"INITIATE");break;
@@ -735,7 +745,7 @@ int CmdHFSearch(const char *Cmd){
 		PrintAndLog("\nValid ISO14443A Tag Found - Quiting Search\n");
 		return ans;
 	} 
-	ans = HF14BInfo(false);
+	ans = CmdHF14BReader("s");
 	if (ans) {
 		PrintAndLog("\nValid ISO14443B Tag Found - Quiting Search\n");
 		return ans;
@@ -767,7 +777,7 @@ int CmdHFSnoop(const char *Cmd)
 	int skippairs =  param_get32ex(Cmd, 0, 0, 10);
 	int skiptriggers =  param_get32ex(Cmd, 1, 0, 10);
 	
-	UsbCommand c = {CMD_HF_SNIFFER, {skippairs,skiptriggers,0}};
+	UsbCommand c = {CMD_HF_SNIFFER, {skippairs, skiptriggers, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
