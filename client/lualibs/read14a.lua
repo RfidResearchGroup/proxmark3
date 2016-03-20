@@ -78,7 +78,7 @@ end
 --			nil, errormessage if unsuccessfull
 
 local function sendToDevice(command, ignoreresponse)
-	core.clearCommandBuffer()
+	--core.clearCommandBuffer(
 	local err = core.SendCommand(command:getBytes())
 	if err then
 		print(err)
