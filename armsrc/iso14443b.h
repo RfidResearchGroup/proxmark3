@@ -7,15 +7,29 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Routines to support ISO 14443 type A.
+// Routines to support ISO 14443 type B.
 //-----------------------------------------------------------------------------
 
 #ifndef __ISO14443B_H
 #define __ISO14443B_H
-#include "common.h"
 
-int iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response);
+#include "proxmark3.h"
+#include "apps.h"
+#include "util.h"
+#include "string.h"
+#include "iso14443crc.h"
+#include "common.h"
+#include "mifare.h"
+#include "protocols.h"
+#include "mifareutil.h"		// access to global variable: MF_DBGLEVEL
+
+extern void AppendCrc14443b(uint8_t *data, int len);
+
+uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response);
 void iso14443b_setup();
-int iso14443b_select_card();
+uint8_t iso14443b_select_card(iso14b_card_select_t* card);
+uint8_t iso14443b_select_card_srx(iso14b_card_select_t* card);
+
+void SendRawCommand14443B_Ex(UsbCommand *c);
 
 #endif /* __ISO14443B_H */

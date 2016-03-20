@@ -734,7 +734,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
 	datalen = (datalen > USB_CMD_DATA_SIZE) ? USB_CMD_DATA_SIZE : datalen;
 		
     c.arg[1] = (datalen & 0xFFFF) | (uint32_t)(numbits << 16);
-    memcpy(c.d.asBytes,data,datalen);
+    memcpy(c.d.asBytes, data, datalen);
 
 	clearCommandBuffer();
     SendCommand(&c);
@@ -749,26 +749,15 @@ int CmdHF14ACmdRaw(const char *cmd) {
 }
 
 static void waitCmd(uint8_t iSelect) {
-    uint8_t *recv;
     UsbCommand resp;
-    char *hexout;
+    uint16_t len = 0;
 
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-        recv = resp.d.asBytes;
-        uint8_t iLen = iSelect ? resp.arg[1] : resp.arg[0];
-        PrintAndLog("received %i octets",iLen);
-        if(!iLen)
+    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {        
+        len = iSelect ? (resp.arg[1] & 0xffff) : (resp.arg[0]  & 0xffff);
+        PrintAndLog("received %i octets", len);
+        if(!len)
             return;
-        hexout = (char *)malloc(iLen * 3 + 1);
-        if (hexout != NULL) {
-            for (int i = 0; i < iLen; i++) { // data in hex
-                sprintf(&hexout[i * 3], "%02X ", recv[i]);
-            }
-            PrintAndLog("%s", hexout);
-            free(hexout);
-        } else {
-            PrintAndLog("malloc failed your client has low memory?");
-        }
+		PrintAndLog("%s", sprint_hex(resp.d.asBytes, len) );
     } else {
         PrintAndLog("timeout while waiting for reply.");
     }

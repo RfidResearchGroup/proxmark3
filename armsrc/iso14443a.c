@@ -17,6 +17,7 @@
 #include "cmd.h"
 #include "iso14443crc.h"
 #include "iso14443a.h"
+#include "iso14443b.h"
 #include "crapto1.h"
 #include "mifareutil.h"
 #include "BigBuf.h"
@@ -186,12 +187,6 @@ void AppendCrc14443a(uint8_t* data, int len)
 {
 	ComputeCrc14443(CRC_14443_A,data,len,data+len,data+len+1);
 }
-
-void AppendCrc14443b(uint8_t* data, int len)
-{
-	ComputeCrc14443(CRC_14443_B,data,len,data+len,data+len+1);
-}
-
 
 //=============================================================================
 // ISO 14443 Type A - Miller decoder
@@ -745,13 +740,12 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *par
 	ToSend[++ToSendMax] = SEC_F;
 
 	// Convert from last byte pos to length
-	ToSendMax++;
+	++ToSendMax;
 }
 
 static void CodeIso14443aAsTag(const uint8_t *cmd, uint16_t len)
 {
 	uint8_t par[MAX_PARITY_SIZE] = {0};
-	
 	GetParity(cmd, len, par);
 	CodeIso14443aAsTagPar(cmd, len, par);
 }
@@ -1427,7 +1421,7 @@ void PrepareDelayedTransfer(uint16_t delay)
 	for (i = 0; i < delay; ++i)
 		bitmask |= (0x01 << i);
 
-		ToSend[++ToSendMax] = 0x00;
+	ToSend[++ToSendMax] = 0x00;
 
 	for (i = 0; i < ToSendMax; ++i) {
 			bits_to_shift = ToSend[i] & bitmask;
@@ -2052,20 +2046,22 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 
 	// Signal field is on with the appropriate LED
 	if (fpga_minor_mode == FPGA_HF_ISO14443A_READER_MOD
-		|| fpga_minor_mode == FPGA_HF_ISO14443A_READER_LISTEN) {
+		|| fpga_minor_mode == FPGA_HF_ISO14443A_READER_LISTEN)
 		LED_D_ON();
-	} else {
+	else
 		LED_D_OFF();
-	}
+
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | fpga_minor_mode);
 
-	// Start the timer
-	StartCountSspClk();
-	
 	DemodReset();
 	UartReset();
-	NextTransferTime = 2*DELAY_ARM2AIR_AS_READER;
+
 	iso14a_set_timeout(10*106); // 10ms default
+	
+	// Start the timer
+	StartCountSspClk();
+
+	NextTransferTime = 2*DELAY_ARM2AIR_AS_READER;
 }
 
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
@@ -2119,13 +2115,14 @@ void ReaderIso14443a(UsbCommand *c)
 	if (param & ISO14A_REQUEST_TRIGGER)
 		iso14a_set_trigger(TRUE);
 
-
 	if (param & ISO14A_CONNECT) {
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 		if(!(param & ISO14A_NO_SELECT)) {
 			iso14a_card_select_t *card = (iso14a_card_select_t*)buf;
 			arg0 = iso14443a_select_card(NULL,card,NULL, true, 0);
 			cmd_send(CMD_ACK,arg0,card->uidlen,0,buf,sizeof(iso14a_card_select_t));
+			// if it fails,  the cmdhf14a.c client quites.. however this one still executes.
+			if ( arg0 == 0 ) return;
 		}
 	}
 

@@ -43,7 +43,6 @@ uint8_t *BigBuf_get_addr(void)
 	return (uint8_t *)BigBuf;
 }
 
-
 // get the address of the emulator memory. Allocate part of Bigbuf for it, if not yet done
 uint8_t *BigBuf_get_EM_addr(void)
 {
@@ -54,12 +53,12 @@ uint8_t *BigBuf_get_EM_addr(void)
 	return emulator_memory;
 }
 
-
 // clear ALL of BigBuf
 void BigBuf_Clear(void)
 {
 	BigBuf_Clear_ext(true);
 }
+
 // clear ALL of BigBuf
 void BigBuf_Clear_ext(bool verbose)
 {
@@ -86,7 +85,6 @@ uint8_t *BigBuf_malloc(uint16_t chunksize)
 	}
 }
 
-
 // free ALL allocated chunks. The whole BigBuf is available for traces or samples again.
 void BigBuf_free(void)
 {
@@ -95,7 +93,6 @@ void BigBuf_free(void)
 	
 	// shouldn't this empty BigBuf also?
 }
-
 
 // free allocated chunks EXCEPT the emulator memory
 void BigBuf_free_keep_EM(void)
@@ -254,12 +251,10 @@ int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwP
 // Emulator memory
 uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length){
 	uint8_t* mem = BigBuf_get_EM_addr();
-	if(offset+length < CARD_MEMORY_SIZE)
-	{
+	if(offset+length < CARD_MEMORY_SIZE) {
 		memcpy(mem+offset, data, length);
 		return 0;
-	}else
-	{
+	} else {
 		Dbprintf("Error, trying to set memory outside of bounds! %d  > %d", (offset+length), CARD_MEMORY_SIZE);
 		return 1;
 	}

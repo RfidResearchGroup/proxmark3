@@ -37,4 +37,29 @@ typedef enum ISO14A_COMMAND {
 	ISO14A_TOPAZMODE =			(1 << 8)
 } iso14a_command_t;
 
+
+//-----------------------------------------------------------------------------
+// ISO 14443B
+//-----------------------------------------------------------------------------
+typedef struct {
+	byte_t uid[10];
+	byte_t uidlen;
+	byte_t atqb[7];
+	byte_t chipid;
+	byte_t cid;
+} __attribute__((__packed__)) iso14b_card_select_t;
+
+
+typedef enum ISO14B_COMMAND {
+	ISO14B_CONNECT = 			(1 << 0),
+	ISO14B_DISCONNECT =			(1 << 1),
+	ISO14B_APDU = 				(1 << 2),
+	ISO14B_RAW =				(1 << 3),
+	ISO14B_REQUEST_TRIGGER =	(1 << 4),
+	ISO14B_APPEND_CRC =			(1 << 5),
+	ISO14B_SELECT_STD =			(1 << 6),
+	ISO14B_SELECT_SR =			(1 << 7)
+} iso14b_command_t;
+
+
 #endif // _MIFARE_H_

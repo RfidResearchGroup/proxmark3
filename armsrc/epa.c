@@ -523,30 +523,31 @@ int EPA_Setup()
 	uint8_t uid[10];
 	uint8_t pps_response[3];
 	uint8_t pps_response_par[1];
-	iso14a_card_select_t card_select_info;
+	iso14a_card_select_t card_a_info;
+	iso14b_card_select_t card_b_info;
 
 	// first, look for type A cards
 	// power up the field
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 	// select the card
-	return_code = iso14443a_select_card(uid, &card_select_info, NULL, true, 0);
+	return_code = iso14443a_select_card(uid, &card_a_info, NULL, true, 0);
 	if (return_code == 1) {
-	// send the PPS request
-	ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
-	return_code = ReaderReceive(pps_response, pps_response_par);
-	if (return_code != 3 || pps_response[0] != 0xD0) {
-		return return_code == 0 ? 2 : return_code;
-	}
+		// send the PPS request
+		ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
+		return_code = ReaderReceive(pps_response, pps_response_par);
+		if (return_code != 3 || pps_response[0] != 0xD0) {
+			return return_code == 0 ? 2 : return_code;
+		}
 		Dbprintf("ISO 14443 Type A");
 		iso_type = 'a';
-	return 0;
+		return 0;
 	}
 
 	// if we're here, there is no type A card, so we look for type B
 	// power up the field
 	iso14443b_setup();
 	// select the card
-	return_code = iso14443b_select_card();
+	return_code = iso14443b_select_card( &card_b_info );
 	if (return_code == 1) {
 		Dbprintf("ISO 14443 Type B");
 		iso_type = 'b';

@@ -1008,10 +1008,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_TEST_HITAGS_TRACES:// Tests every challenge within the given file
 			check_challenges((bool)c->arg[0],(byte_t*)c->d.asBytes);
 			break;
-		case CMD_READ_HITAG_S://Reader for only Hitag S tags, args = key or challenge
+		case CMD_READ_HITAG_S: //Reader for only Hitag S tags, args = key or challenge
 			ReadHitagS((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes);
 			break;
-		case CMD_WR_HITAG_S://writer for Hitag tags args=data to write,page and key or challenge
+		case CMD_WR_HITAG_S: //writer for Hitag tags args=data to write,page and key or challenge
 			WritePageHitagS((hitag_function)c->arg[0],(hitag_data*)c->d.asBytes,c->arg[2]);
 			break;
 #endif
@@ -1059,11 +1059,8 @@ void UsbPacketReceived(uint8_t *packet, int len)
 #endif
 
 #ifdef WITH_ISO14443b
-		case CMD_READ_SRI512_TAG:
-			ReadSTMemoryIso14443b(0x0F);
-			break;
-		case CMD_READ_SRIX4K_TAG:
-			ReadSTMemoryIso14443b(0x7F);
+		case CMD_READ_SRI_TAG:
+			ReadSTMemoryIso14443b(c->arg[0]);
 			break;
 		case CMD_SNOOP_ISO_14443B:
 			SnoopIso14443b();
@@ -1072,7 +1069,8 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			SimulateIso14443bTag();
 			break;
 		case CMD_ISO_14443B_COMMAND:
-			SendRawCommand14443B(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
+			//SendRawCommand14443B(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
+			SendRawCommand14443B_Ex(c);
 			break;
 #endif
 
@@ -1086,14 +1084,12 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_SIMULATE_TAG_ISO_14443a:
 			SimulateIso14443aTag(c->arg[0], c->arg[1], c->d.asBytes);  // ## Simulate iso14443a tag - pass tag type & UID
 			break;
-			
 		case CMD_EPA_PACE_COLLECT_NONCE:
 			EPA_PACE_Collect_Nonce(c);
 			break;
 		case CMD_EPA_PACE_REPLAY:
 			EPA_PACE_Replay(c);
 			break;
-			
 		case CMD_READER_MIFARE:
             ReaderMifare(c->arg[0], c->arg[1]);
 			break;

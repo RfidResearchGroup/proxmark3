@@ -317,21 +317,7 @@ static int GetIso15693AnswerFromTag(uint8_t *receivedResponse, int maxLen, int *
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
 			if(getNext) {
-				int8_t r;
-
-				r = ABS(b);
-				
-				// if(b < 0) {
-					// r = -b;
-				// } else {
-					// r = b;
-				// }
-				// ABS(prev)
-				if(prev < 0) {
-					r -= prev;
-				} else {
-					r += prev;
-				}
+				int8_t r = ABS(b) + ABS(prev);
 
 				dest[c++] = (uint8_t)r;
 
@@ -466,19 +452,7 @@ static int GetIso15693AnswerFromSniff(uint8_t *receivedResponse, int maxLen, int
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
 			if(getNext) {
-				int8_t r;
-
-				r = ABS(b);
-				// if(b < 0) {
-					// r = -b;
-				// } else {
-					// r = b;
-				// }
-				if(prev < 0) {
-					r -= prev;
-				} else {
-					r += prev;
-				}
+				int8_t r = ABS(b) + ABS(prev);
 
 				dest[c++] = (uint8_t)r;
 
@@ -647,18 +621,7 @@ void AcquireRawAdcSamplesIso15693(void)
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
 			if(getNext) {
-				int8_t r;
-
-				if(b < 0) {
-					r = -b;
-				} else {
-					r = b;
-				}
-				if(prev < 0) {
-					r -= prev;
-				} else {
-					r += prev;
-				}
+				int8_t r = ABS(b) + ABS(prev);
 
 				dest[c++] = (uint8_t)r;
 
@@ -712,18 +675,7 @@ void RecordRawAdcSamplesIso15693(void)
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
 			if(getNext) {
-				int8_t r;
-
-				if(b < 0) {
-					r = -b;
-				} else {
-					r = b;
-				}
-				if(prev < 0) {
-					r -= prev;
-				} else {
-					r += prev;
-				}
+				int8_t r = ABS(b) + ABS(prev);
 
 				dest[c++] = (uint8_t)r;
 

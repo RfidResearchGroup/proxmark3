@@ -28,7 +28,7 @@
 //#include "des.h"
 //#include "aes.h"
 #include "desfire.h"
-
+#include "iso14443b.h"
 
 extern const uint8_t OddByteParity[256];
 extern int rsamples;   // = 0;
@@ -101,7 +101,7 @@ void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode
 /// iso14443.h
 void SimulateIso14443bTag(void);
 void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
-void ReadSTMemoryIso14443b(uint32_t);
+void ReadSTMemoryIso14443b(uint8_t numofblocks);
 void RAMFUNC SnoopIso14443b(void);
 void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
 

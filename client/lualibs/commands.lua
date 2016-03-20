@@ -67,8 +67,7 @@ local _commands = {
 
 	--// For the 13.56 MHz tags
 	CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693 =                              0x0300,
-	CMD_READ_SRI512_TAG =                                                0x0303,
-	CMD_READ_SRIX4K_TAG =                                                0x0304,
+	CMD_READ_SRI_TAG =                                                   0x0303,
 	CMD_ISO_14443B_COMMAND =											 0x0305,
 	CMD_READER_ISO_15693 =                                               0x0310,
 	CMD_SIMTAG_ISO_15693 =                                               0x0311,
@@ -238,6 +237,6 @@ function Command:getBytes()
 	local data  = self.data
 	local cmd = self.cmd 
 	local arg1, arg2, arg3 = self.arg1, self.arg2, self.arg3
-	return bin.pack("LLLLH",cmd, arg1, arg2, arg3, data);
+	return bin.pack("LLLLH", cmd, arg1, arg2, arg3, data);
 end
 return _commands

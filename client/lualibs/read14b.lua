@@ -1,4 +1,3 @@
-
 --[[
 	This is a library to read 14443b tags. It can be used something like this
 
@@ -14,45 +13,57 @@
 -- Loads the commands-library
 local cmds = require('commands')
 local utils = require('utils')
-local TIMEOUT = 10000 -- Shouldn't take longer than 2 seconds
+local TIMEOUT = 4000
+local ISO14B_COMMAND = {
+	ISO14B_CONNECT = 1,
+	ISO14B_DISCONNECT = 2,
+	ISO14B_APDU = 4,
+	ISO14B_RAW = 8,
+	ISO14B_REQUEST_TRIGGER = 0x10,
+	ISO14B_APPEND_CRC = 0x20,
+	ISO14B_SELECT_STD = 0x40,
+	ISO14B_SELECT_SR = 0x80,
+}
 
-local function parse1443b_reqb(data)
+local function parse1443b(data)
 	--[[
-	--]]
-	local pcb = data:sub(1,2)
-	local uid = data:sub(3,10)
-	local pps = data:sub(11,18)
-	local ats = data:sub(19,24)
-	local crc = data:sub(25,29)
-	return { pcb = pcb, uid = uid, pps = pps, ats = ats, crc = crc, cid = '' }
-end
+	
+	Based on this struct : 
+	
+	typedef struct {
+		byte_t uid[10];
+		byte_t uidlen;
+		byte_t atqb[7];
+		byte_t chipid;
+		byte_t cid;
+	} __attribute__((__packed__)) iso14b_card_select_t;
 
-local function parse1443b_attrib(data)
-	--[[
 	--]]
-	local attrib = data:sub(1,2)
-	local crc = data:sub(3,7)
-	return { attrib = attrib, crc = crc }
+	
+	local count, uid, uidlen, atqb, chipid, cid = bin.unpack('H10CH7CC',data)
+	uid = uid:sub(1,2*uidlen)
+	return { uid = uid, uidlen = uidlen, atqb = atqb, chipid = chipid, cid = cid }
 end
-
 
 --- Sends a USBpacket to the device
 -- @param command - the usb packet to send
--- @param readresponse - if set to true, we read the device answer packet 
+-- @param ignoreresponse - if set to true, we don't read the device answer packet 
 -- 		which is usually recipe for fail. If not sent, the host will wait 2s for a 
 -- 		response of type CMD_ACK
 -- @return 	packet,nil if successfull
 --			nil, errormessage if unsuccessfull
-local function sendToDevice(cmd, readresponse)
-	core.clearCommandBuffer()
+local function sendToDevice(cmd, ignoreresponse)
+	--core.clearCommandBuffer()
+	local bytes = cmd:getBytes()
+	local count,c,arg0,arg1,arg2 = bin.unpack('LLLL',bytes)
 	local err = core.SendCommand(cmd:getBytes())
 	if err then
-		print(err)
+		print('ERROR',err)
 		return nil, err
 	end
-	if readresponse == 0 then return '',nil end
+	if ignoreresponse then return nil,nil end
+	
 	local response = core.WaitForResponseTimeout(cmds.CMD_ACK, TIMEOUT)
-	if response == nil then return nil, nil	end
 	return response,nil
 end
 --- Picks out and displays the data read from a tag
@@ -63,133 +74,63 @@ end
 -- @param usbpacket the data received from the device
 local function showData(usbpacket)
 	local response = Command.parse(usbpacket)
-	local len = tonumber(response.arg1) * 2
+	local len = response.arg2 * 2
 	local data = string.sub(response.data, 0, len);
 	print("<< ",data)
 end
 
----
--- Sends a usbpackage ,  "hf 14b raw" and the 14bCrc is added to the rawdata before sending
-local function sendRaw(rawdata, readresponse, addcrc)
-	-- add crc first
-	local rawdata_crc = rawdata
-	if ( addcrc == 1) then 
-		rawdata_crc = utils.Crc14b(rawdata)	
-	end
-	print(">> ", rawdata_crc)
-	
-	local command = Command:new{cmd = cmds.CMD_ISO_14443B_COMMAND, 
-								arg1 = #rawdata_crc/2, 	-- LEN of data, which is half the length of the ASCII-string rawdata
-								arg2 = readresponse, 	-- read response
-								arg3 = 1,  				-- leave power on
-								data = rawdata_crc}		-- raw data bytes 
-	return sendToDevice(command, readresponse) 
-end
 
 -- This function does a connect and retrieves some info
 -- @return if successfull: an table containing card info
 -- @return if unsuccessfull : nil, error
+local function read14443b(disconnect)
 
--- void SendRawCommand14443B(uint32_t datalen, uint32_t recv, uint8_t powerfield, uint8_t data[])
-local function select1443b()
+	local command, result, info, err, data
 
-	local result, infoReqb, infoAttrib, infoPong, err, resp, len, data
-	local goodReqbResponse = false
-	--REQB
-	local p = 20
-	while p > 0 do
-		-- 05 00 08
-		-- 05
-		--   command (REQB/WUPB)
-		-- 00
-		--   AFI application family identifier  ( 00 == all sorts)
-		-- 08  (ie WUPB)
-		--   bit 0-1-2   | N slots  ( 0 = 1, 1 = 2, 2 = 4, 3 = 8, 4 == 16)
-		--   bit 3 		 | (1== WUPB, 0 == REQB)  
-		--   bit 4-5-6-7 | AFI application family identifier
-		local result, err = sendRaw('050008', 1, 1)
-		if result then
-			resp = Command.parse( result )
-			len = tonumber(resp.arg1) * 2
-			local data = string.sub(resp.data, 0, len)
-			if ( resp.arg1 == 14 ) then
-				--print ('DATA ::', data)
-				infoReqb, err = parse1443b_reqb(data)
-				--print(infoReqb.pcb, infoReqb.uid, infoReqb.pps, infoReqb.ats, infoReqb.crc)
-				goodReqbResponse = true
-				break -- break while loop. REQB got a good response
-			end
-		end
-		
-		-- send some strange 0A/0C
-		-- if ( p < 3) then
-			-- sendRaw('0A', 0, 0)
-			-- sendRaw('0C', 0, 0)
-		-- end
-		
-		p = p - 1
-		print('retrying')
-	end
-
-	if goodReqbResponse == false then 
-		err = "No response from card"
-		print(err) 
-		return nil, err	
-	end
-	--SLOT MARKER
-	-- result, err = sendRaw('05', 1, 1)
-	-- if result then
-		-- showData(result)
-		-- resp = Command.parse( result )
-		-- if arg1 == 0 then 
-			-- return nil, "iso14443b card - SLOT MARKER failed"
-		-- end
-		-- len = tonumber(resp.arg1) * 2
-		-- data = string.sub(resp.data, 0, len)
-		-- infoAttrib, err = parse1443b_attrib(data)
-		-- print( infoAttrib.attrib, infoAttrib.crc)		
-	-- else
-		-- err ="No response from card"
-		-- print(err) 
-		-- return nil, err
-	-- end
+	local flags = ISO14B_COMMAND.ISO14B_CONNECT + 
+				  ISO14B_COMMAND.ISO14B_SELECT_STD
 	
-	--ATTRIB
-	local cid = '00'
-	result, err = sendRaw('1D'..infoReqb.uid..'000801'..cid, 1, 1)
+	if disconnect then
+		print('DISCONNECT')
+		flags = flags + ISO14B_COMMAND.ISO14B_DISCONNECT
+	end
+
+	command = Command:new{cmd = cmds.CMD_ISO_14443B_COMMAND, arg1 = flags}
+	local result,err = sendToDevice(command, false) 
 	if result then
-		showData(result)
-		resp = Command.parse( result )
-		if resp.arg1 == 0 then 
-			return nil, "iso14443b card - ATTRIB failed"
+		local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
+		if arg0 == 0 then 
+			data = string.sub(result, count)
+			info, err = parse1443b(data)
+		else
+			err = "iso14443b card select failed"
 		end
-		len = tonumber(resp.arg1) * 2
-		data = string.sub(resp.data, 0, len)
-		infoAttrib, err = parse1443b_attrib(data)
-		infoReqb.cid = infoAttrib.attrib:sub(2,2)
 	else
-		err ="No response from card"
+		err = "No response from card"
+	end
+
+	if err then 
 		print(err) 
 		return nil, err
 	end
-	
-	--PING / PONG - Custom Anticollison for Navigo.
-	local ping = ('BA00')
-	result, err = sendRaw(ping, 1, 1)
-	if result then
-		resp = Command.parse( result )
-		if arg1 == 0 then 
-			return nil, "iso14443b card - PING/PONG failed"
-		end		
-		showData(result)
-	else
-		err = "No response from card"
-		print(err) 
-		return nil, err
-	end
-
-	return infoReqb
+	return info
 end
+--PING / PONG - Custom Anticollison for Navigo.
+-- AA / BB ?!?
+-- local ping = ('BA00')
+-- result, err = sendRaw(ping, 1, 1)
+-- if result then
+	-- resp = Command.parse( result )
+	-- if arg1 == 0 then 
+		-- return nil, "iso14443b card - PING/PONG failed"
+	-- end		
+	-- showData(result)
+-- else
+	-- err = "No response from card"
+	-- print(err) 
+	-- return nil, err
+-- end
+
 
 ---
 -- Waits for a mifare card to be placed within the vicinity of the reader. 
@@ -198,42 +139,20 @@ end
 local function waitFor14443b()
 	print("Waiting for card... press any key to quit")
 	while not core.ukbhit() do
-		res, err = select1443b()
+		res, err = read14443b(false)
 		if res then return res end
-		if res == nil then return nil, err end
 		-- err means that there was no response from card
 	end
 	return nil, "Aborted by user"
 end
 
-local function disconnect(uid)
-
-	local halt = ('50'..uid) -- 50 UID0 UID1 UID2 UID3 CRC1 CRC2
-	result, err = sendRaw(halt, 1, 1)
-	if result then
-		resp = Command.parse( result )
-		showData(result)  -- expected answer is 00 CRC1 CRC2
-	else
-		err = "No response from card"
-		print(err) 
-		return nil, err
-	end
-
-	-- shutdown raw command / pm3 device.
-	local command = Command:new{ cmd = cmds.CMD_ISO_14443B_COMMAND, arg1 = 0, arg2 = 0, arg3 = 0 }
-	-- We can ignore the response here, no ACK is returned for this command
-	-- Check /armsrc/iso14443b.c, SendRawCommand14443B() for details
-	return sendToDevice(command, 0) 
-end
-
 local library = {
-	select1443b = select1443b,
-	select 	= select1443b,
+	parse1443b  = parse1443b,
+	read1443b 	= read14443b,
 	waitFor14443b = waitFor14443b,
 	sendToDevice = sendToDevice,
-	disconnect = disconnect,
-	sendRaw = sendRaw,
 	showData = showData,
+	ISO14B_COMMAND = ISO14B_COMMAND,
 }
 
 return library
