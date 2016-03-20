@@ -91,18 +91,18 @@ begin
     if(corr_i_cnt == 6'd0)
     begin
         if(snoop)
-        begin
-			// Send only 7 most significant bits of tag signal (signed), LSB is reader signal:
-            corr_i_out <= {corr_i_accum[13:7], after_hysteresis_prev_prev};
-            corr_q_out <= {corr_q_accum[13:7], after_hysteresis_prev};
-			after_hysteresis_prev_prev <= after_hysteresis;
-        end
+			begin
+				// Send only 7 most significant bits of tag signal (signed), LSB is reader signal:
+				corr_i_out <= {corr_i_accum[13:7], after_hysteresis_prev_prev};
+				corr_q_out <= {corr_q_accum[13:7], after_hysteresis_prev};
+				after_hysteresis_prev_prev <= after_hysteresis;
+			end
         else
-        begin
-            // 8 most significant bits of tag signal
-            corr_i_out <= corr_i_accum[13:6];
-            corr_q_out <= corr_q_accum[13:6];
-        end
+			begin
+				// 8 most significant bits of tag signal
+				corr_i_out <= corr_i_accum[13:6];
+				corr_q_out <= corr_q_accum[13:6];
+			end
 
         corr_i_accum <= adc_d;
         corr_q_accum <= adc_d;
