@@ -261,9 +261,9 @@ void askAmp(uint8_t *BitStream, size_t size)
 {
 	for(size_t i = 1; i<size; i++){
 		if (BitStream[i]-BitStream[i-1]>=30) //large jump up
-			BitStream[i]=127;
+			BitStream[i]=255;
 		else if(BitStream[i]-BitStream[i-1]<=-20) //large jump down
-			BitStream[i]=-127;
+			BitStream[i]=0;
 	}
 	return;
 }
@@ -463,10 +463,10 @@ int gProxII_Demod(uint8_t BitStream[], size_t *size)
 		//return start position
 		return (int) startIdx;
 	}
-	return -5;
+	return -5; //spacer bits not found - not a valid gproxII
 }
 
-//translate wave to 11111100000 (1 for each short wave 0 for each long wave)
+//translate wave to 11111100000 (1 for each short wave [higher freq] 0 for each long wave [lower freq])
 size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow)
 {
 	size_t last_transition = 0;
@@ -490,6 +490,7 @@ size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow
 	// count cycles between consecutive lo-hi transitions, there should be either 8 (fc/8)
 	// or 10 (fc/10) cycles but in practice due to noise etc we may end up with anywhere
 	// between 7 to 11 cycles so fuzz it by treat anything <9 as 8 and anything else as 10
+	//  (could also be fc/5 && fc/7 for fsk1 = 4-9)
 	for(idx = 161; idx < size-20; idx++) {
 		// threshold current value
 
@@ -497,23 +498,24 @@ size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow
 		else dest[idx] = 1;
 
 		// Check for 0->1 transition
-		if (dest[idx-1] < dest[idx]) { // 0 -> 1 transition
+		if (dest[idx-1] < dest[idx]) {
 			preLastSample = LastSample;
 			LastSample = currSample;
 			currSample = idx-last_transition;
 			if (currSample < (fclow-2)){            //0-5 = garbage noise (or 0-3)
 				//do nothing with extra garbage
-			} else if (currSample < (fchigh-1)) { //6-8 = 8 sample waves  or 3-6 = 5
+			} else if (currSample < (fchigh-1)) {           //6-8 = 8 sample waves  (or 3-6 = 5)
+				//correct previous 9 wave surrounded by 8 waves (or 6 surrounded by 5)
 				if (LastSample > (fchigh-2) && (preLastSample < (fchigh-1) || preLastSample	== 0 )){
-					dest[numBits-1]=1;  //correct previous 9 wave surrounded by 8 waves
+					dest[numBits-1]=1;
 				}
 				dest[numBits++]=1;
 
-			} else if (currSample > (fchigh) && !numBits) { //12 + and first bit = garbage 
+			} else if (currSample > (fchigh) && !numBits) { //12 + and first bit = unusable garbage 
 				//do nothing with beginning garbage
-			} else if (currSample == (fclow+1) && LastSample == (fclow-1)) { // had a 7 then a 9 should be two 8's
+			} else if (currSample == (fclow+1) && LastSample == (fclow-1)) { // had a 7 then a 9 should be two 8's (or 4 then a 6 should be two 5's)
 				dest[numBits++]=1;
-			} else {                                         //9+ = 10 sample waves
+			} else {                                        //9+ = 10 sample waves (or 6+ = 7)
 				dest[numBits++]=0;
 			}
 			last_transition = idx;
@@ -523,6 +525,7 @@ size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow
 }
 
 //translate 11111100000 to 10
+//rfLen = clock, fchigh = larger field clock, fclow = smaller field clock
 size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen,
 		uint8_t invert, uint8_t fchigh, uint8_t fclow)
 {
@@ -534,6 +537,7 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen,
 		n++;
 		if (dest[idx]==lastval) continue; 
 		
+		//find out how many bits (n) we collected
 		//if lastval was 1, we have a 1->0 crossing
 		if (dest[idx-1]==1) {
 			n = (n * fclow + rfLen/2) / rfLen;
@@ -542,6 +546,7 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen,
 		}
 		if (n == 0) n = 1;
 
+		//add to our destination the bits we collected		
 		memset(dest+numBits, dest[idx-1]^invert , n);
 		numBits += n;
 		n=0;
@@ -695,7 +700,6 @@ int PrescoDemod(uint8_t *dest, size_t *size) {
 	//return start position
 	return (int) startIdx;
 }
-
 
 // Ask/Biphase Demod then try to locate an ISO 11784/85 ID
 // BitStream must contain previously askrawdemod and biphasedemoded data
@@ -1495,8 +1499,8 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
 	numBits += (firstFullWave / *clock);
 	//set start of wave as clock align
 	lastClkBit = firstFullWave;
-	//PrintAndLog("DEBUG: firstFullWave: %d, waveLen: %d",firstFullWave,fullWaveLen);  
-	//PrintAndLog("DEBUG: clk: %d, lastClkBit: %d", *clock, lastClkBit);
+	if (g_debugMode==2) prnt("DEBUG PSK: firstFullWave: %u, waveLen: %u",firstFullWave,fullWaveLen);  
+	if (g_debugMode==2) prnt("DEBUG: clk: %d, lastClkBit: %u, fc: %u", *clock, lastClkBit,(unsigned int) fc);
 	waveStart = 0;
 	dest[numBits++] = curPhase; //set first read bit
 	for (i = firstFullWave + fullWaveLen - 1; i < *size-3; i++){
@@ -1679,7 +1683,7 @@ bool DetectST(uint8_t buffer[], size_t *size, int *foundclock) {
 	i=0;
 	// warning - overwriting buffer given with raw wave data with ST removed...
 	while ( dataloc < bufsize-(clk/2) ) {
-		//compensate for long high at end of ST not being high... (we cut out the high part)
+		//compensate for long high at end of ST not being high due to signal loss... (and we cut out the start of wave high part)
 		if (buffer[dataloc]<high && buffer[dataloc]>low && buffer[dataloc+3]<high && buffer[dataloc+3]>low) {
 			for(i=0; i < clk/2-tol; ++i) {
 				buffer[dataloc+i] = high+5;
@@ -1694,7 +1698,7 @@ bool DetectST(uint8_t buffer[], size_t *size, int *foundclock) {
 			}
 		}
 		newloc += i;
-		//skip next ST
+		//skip next ST  -  we just assume it will be there from now on...
 		dataloc += clk*4;
 	}
 	*size = newloc;

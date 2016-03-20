@@ -258,7 +258,7 @@ int CmdHFTopazReader(const char *Cmd) {
 	uint8_t rid_response[8];
 	uint8_t *uid_echo = &rid_response[2];
 	uint8_t rall_response[130];
-	bool verbose = true;
+	bool verbose = TRUE;
 
 	char ctmp = param_getchar(Cmd, 0);
 	if ( ctmp == 'S' || ctmp == 's') verbose = FALSE;
