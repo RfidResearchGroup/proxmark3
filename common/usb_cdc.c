@@ -46,7 +46,8 @@ const char devDescriptor[] = {
 	/* Device descriptor */
 	0x12,      // bLength
 	0x01,      // bDescriptorType
-	0x10,0x01, // Complies with USB Spec. Release (0110h = release 1.10)
+	//0x10,0x01, // Complies with USB Spec. Release (0110h = release 1.10)
+	0x00,0x02, // Complies with USB Spec. Release (0110h = release 2.00)
 	0x02,      // bDeviceClass:    CDC class code
 	0x00,      // bDeviceSubclass: CDC class sub code
 	0x00,      // bDeviceProtocol: CDC Device protocol
