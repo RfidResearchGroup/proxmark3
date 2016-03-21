@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include "cmdhf14b.h"
 
+#define TIMEOUT 2000
 static int CmdHelp(const char *Cmd);
 
 int usage_hf_14b_info(void){
@@ -351,7 +352,7 @@ bool HF14B_ST_Info(bool verbose){
 	SendCommand(&c);
 	UsbCommand resp;
 
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 		if (verbose) PrintAndLog("timeout while waiting for reply.");
 		return FALSE;
     }
@@ -425,7 +426,7 @@ bool HF14B_ST_Reader(bool verbose){
 	SendCommand(&c);
 	UsbCommand resp;
 	
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 		if (verbose) PrintAndLog("timeout while waiting for reply.");
 		return FALSE;
     }
@@ -469,7 +470,7 @@ bool HF14B_Std_Reader(bool verbose){
 	SendCommand(&c);
 	UsbCommand resp;
 	
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 		if (verbose) PrintAndLog("timeout while waiting for reply.");
 		return FALSE;
     }
@@ -814,7 +815,7 @@ bool waitCmd(bool verbose) {
 	uint16_t len = 0;	
     UsbCommand resp;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 
 		status = (resp.arg[0] & 0xFFFF);
 		if ( status > 0 ) return FALSE;
