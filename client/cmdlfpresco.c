@@ -45,6 +45,8 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
 	uint8_t cmdp = 0;
 	char id[11];
 	int stringlen = 0;
+	memset(id, 0x00, sizeof(id));
+	
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
@@ -81,19 +83,19 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
 	if(errors) return -1;
 
 	if (!hex) {
-	for (int index =0; index < strlen(id); ++index) {
+		for (int index =0; index < strlen(id); ++index) {
 		
-		// Get value from number string.
-		if ( id[index] == '*' ) val = 10;
-		if ( id[index] == '#')	val = 11;		
-		if ( id[index] >= 0x30 && id[index] <= 0x39 )
-			val = id[index] - 0x30;
-		
-			*fullcode += val;
-		
-		// last digit is only added, not multipled.
-		if ( index < strlen(id)-1 ) 
-				*fullcode *= 12;
+			// Get value from number string.
+			if ( id[index] == '*' ) val = 10;
+			if ( id[index] == '#')	val = 11;		
+			if ( id[index] >= 0x30 && id[index] <= 0x39 )
+				val = id[index] - 0x30;
+			
+				*fullcode += val;
+			
+			// last digit is only added, not multipled.
+			if ( index < strlen(id)-1 ) 
+					*fullcode *= 12;
 		}
 	}
 

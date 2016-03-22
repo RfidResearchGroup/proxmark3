@@ -70,9 +70,9 @@ static inline int parity(uint32_t x)
 	return BIT(0x6996, x & 0xf);
 #else
 	__asm__(	"movl %1, %%eax\n"
-		"mov %%ax, %%cx\n"
-		"shrl $0x10, %%eax\n"
-		"xor %%ax, %%cx\n"
+				"mov %%ax, %%cx\n"
+				"shrl $0x10, %%eax\n"
+				"xor %%ax, %%cx\n"
                 "xor %%ch, %%cl\n"
                 "setpo %%al\n"
                 "movzx %%al, %0\n": "=r"(x) : "r"(x): "eax","ecx");
@@ -88,7 +88,7 @@ static inline int filter(uint32_t const x)
 	f |= 0x3c8b0 >> (x >>  8 & 0xf) &  4;
 	f |= 0x1e458 >> (x >> 12 & 0xf) &  2;
 	f |= 0x0d938 >> (x >> 16 & 0xf) &  1;
-	return BIT(0xEC57E80A, f);
+	return BIT(0xEC57E80A, 0xf);
 }
 #ifdef __cplusplus
 }

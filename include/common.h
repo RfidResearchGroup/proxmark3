@@ -29,6 +29,5 @@ typedef unsigned char byte_t;
 #ifndef ABS
 # define ABS(a) ( ((a)<0) ? -(a) : (a) )
 #endif
-
 #define RAMFUNC __attribute((long_call, section(".ramfunc")))
 #endif
