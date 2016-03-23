@@ -270,14 +270,14 @@ void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 		case ISO14443B_REQB   		: {
 			
 			switch ( cmd[2] & 0x07 ) {
-				case 0: snprintf(exp, size,"1 slot ");
-				case 1: snprintf(exp, size,"2 slots "); 
-				case 2: snprintf(exp, size,"4 slots ");
-				case 3: snprintf(exp, size,"8 slots ");
-				default: snprintf(exp, size,"16 slots ");
+				case 0: snprintf(exp, size,"1 slot ");break;
+				case 1: snprintf(exp, size,"2 slots ");break; 
+				case 2: snprintf(exp, size,"4 slots ");break;
+				case 3: snprintf(exp, size,"8 slots ");break;
+				default: snprintf(exp, size,"16 slots ");break;
 			}
 			
-			if ( (cmd[2] & 0x4) == 1 )
+			if ( (cmd[2] & 0x4) )
 				snprintf(exp, size,"REQB");
 			else
 				snprintf(exp, size,"WUPB");
