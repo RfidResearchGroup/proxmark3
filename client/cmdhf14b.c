@@ -210,19 +210,24 @@ int CmdHF14BCmdRaw (const char *Cmd) {
 }
 
 // print full atqb info
+// bytes
+// 0,1,2,3 = application data
+// 4       = bit rate capacity
+// 5       = max frame size / -4 info
+// 6       = FWI / Coding options
 static void print_atqb_resp(uint8_t *data, uint8_t cid){
-	//PrintAndLog ("           UID: %s", sprint_hex(data+1,4));
-	PrintAndLog ("      App Data: %s", sprint_hex(data,4));
-	PrintAndLog ("      Protocol: %s", sprint_hex(data+4,3));
+	//PrintAndLog("           UID: %s", sprint_hex(data+1,4));
+	PrintAndLog("      App Data: %s", sprint_hex(data,4));
+	PrintAndLog("      Protocol: %s", sprint_hex(data+4,3));
 	uint8_t BitRate = data[4];
-	if (!BitRate) PrintAndLog ("      Bit Rate: 106 kbit/s only PICC <-> PCD");
-	if (BitRate & 0x10)	PrintAndLog ("      Bit Rate: 212 kbit/s PICC -> PCD supported");
-	if (BitRate & 0x20)	PrintAndLog ("      Bit Rate: 424 kbit/s PICC -> PCD supported"); 
-	if (BitRate & 0x40)	PrintAndLog ("      Bit Rate: 847 kbit/s PICC -> PCD supported"); 
-	if (BitRate & 0x01)	PrintAndLog ("      Bit Rate: 212 kbit/s PICC <- PCD supported");
-	if (BitRate & 0x02)	PrintAndLog ("      Bit Rate: 424 kbit/s PICC <- PCD supported"); 
-	if (BitRate & 0x04)	PrintAndLog ("      Bit Rate: 847 kbit/s PICC <- PCD supported"); 
-	if (BitRate & 0x80)	PrintAndLog ("                Same bit rate <-> required");
+	if (!BitRate) PrintAndLog("      Bit Rate: 106 kbit/s only PICC <-> PCD");
+	if (BitRate & 0x10)	PrintAndLog("      Bit Rate: 212 kbit/s PICC -> PCD supported");
+	if (BitRate & 0x20)	PrintAndLog("      Bit Rate: 424 kbit/s PICC -> PCD supported"); 
+	if (BitRate & 0x40)	PrintAndLog("      Bit Rate: 847 kbit/s PICC -> PCD supported"); 
+	if (BitRate & 0x01)	PrintAndLog("      Bit Rate: 212 kbit/s PICC <- PCD supported");
+	if (BitRate & 0x02)	PrintAndLog("      Bit Rate: 424 kbit/s PICC <- PCD supported"); 
+	if (BitRate & 0x04)	PrintAndLog("      Bit Rate: 847 kbit/s PICC <- PCD supported"); 
+	if (BitRate & 0x80)	PrintAndLog("                Same bit rate <-> required");
 
 	uint16_t maxFrame = data[5]>>4;
 	if (maxFrame < 5) 		maxFrame = 8 * maxFrame + 16;
@@ -232,17 +237,28 @@ static void print_atqb_resp(uint8_t *data, uint8_t cid){
 	else if (maxFrame == 8)	maxFrame = 256;
 	else maxFrame = 257;
 
-	PrintAndLog ("Max Frame Size: %u%s",maxFrame, (maxFrame == 257) ? "+ RFU" : "");
+
+	
+	PrintAndLog("Max Frame Size: %u%s bytes",maxFrame, (maxFrame == 257) ? "+ RFU" : "");
 
 	uint8_t protocolT = data[5] & 0xF;
-	PrintAndLog (" Protocol Type: Protocol is %scompliant with ISO/IEC 14443-4",(protocolT) ? "" : "not " );
-	PrintAndLog ("Frame Wait Int: %u", data[6]>>4);
-	PrintAndLog (" App Data Code: Application is %s",(data[6]&4) ? "Standard" : "Proprietary");
-	PrintAndLog (" Frame Options: NAD is %ssupported",(data[6]&2) ? "" : "not ");
-	PrintAndLog (" Frame Options: CID is %ssupported",(data[6]&1) ? "" : "not ");
-	PrintAndLog ("Tag :");
-	PrintAndLog ("  Max Buf Length: %u (MBLI) %s",cid>>4, (cid & 0xF0) ? "" : "not supported");
-	PrintAndLog ("  Cid : %u", cid & 0x0f);
+	PrintAndLog(" Protocol Type: Protocol is %scompliant with ISO/IEC 14443-4",(protocolT) ? "" : "not " );
+	
+	uint8_t fwt = data[6]>>4;
+	if ( fwt < 16 ){
+		uint32_t etus = (32 << fwt);
+		uint32_t fwt_time = (302 << fwt);
+		PrintAndLog("Frame Wait Integer: %u - %u ETUs | %u µS", fwt, etus, fwt_time);
+	} else {
+		PrintAndLog("Frame Wait Integer: %u - RFU", fwt);
+	}
+	
+	PrintAndLog(" App Data Code: Application is %s",(data[6]&4) ? "Standard" : "Proprietary");
+	PrintAndLog(" Frame Options: NAD is %ssupported",(data[6]&2) ? "" : "not ");
+	PrintAndLog(" Frame Options: CID is %ssupported",(data[6]&1) ? "" : "not ");
+	PrintAndLog("Tag :");
+	PrintAndLog("  Max Buf Length: %u (MBLI) %s", cid>>4, (cid & 0xF0) ? "" : "chained frames not supported");
+	PrintAndLog("  CDI : %u", cid & 0x0f);
 	return;
 }
 
