@@ -1719,11 +1719,13 @@ int CmdHF14AMfCSetUID(const char *Cmd)
 	int argi=0;
 
 	if (strlen(Cmd) < 1 || param_getchar(Cmd, argi) == 'h') {
-		PrintAndLog("Usage:  hf mf csetuid <UID 8 hex symbols> [ATQA 4 hex symbols SAK 2 hex symbols] [w]");
-		PrintAndLog("sample:  hf mf csetuid 01020304");
-		PrintAndLog("sample:  hf mf csetuid 01020304 0004 08 w");
 		PrintAndLog("Set UID, ATQA, and SAK for magic Chinese card (only works with such cards)");
 		PrintAndLog("If you also want to wipe the card then add 'w' at the end of the command line.");
+		PrintAndLog("");
+		PrintAndLog("Usage:  hf mf csetuid <UID 8 hex symbols> [ATQA 4 hex symbols SAK 2 hex symbols] [w]");
+		PrintAndLog("");
+		PrintAndLog("sample:  hf mf csetuid 01020304");
+		PrintAndLog("         hf mf csetuid 01020304 0004 08 w");
 		return 0;
 	}
 
@@ -1764,7 +1766,7 @@ int CmdHF14AMfCSetUID(const char *Cmd)
 
 	PrintAndLog("--wipe card:%s  uid:%s", (wipeCard)?"YES":"NO", sprint_hex(uid, 4));
 
-	res = mfCSetUID(uid, (atqaPresent)?atqa:NULL, (atqaPresent)?sak:NULL, oldUid, wipeCard);
+	res = mfCSetUID(uid, (atqaPresent) ? atqa : NULL, (atqaPresent) ? sak : NULL, oldUid, wipeCard);
 	if (res) {
 			PrintAndLog("Can't set UID. error=%d", res);
 			return 1;
