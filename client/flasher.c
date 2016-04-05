@@ -82,10 +82,9 @@ static void usage(char *argv0)
 {
 	fprintf(stderr, "Usage:   %s <port> [-b] image.elf [image.elf...]\n\n", argv0);
 	fprintf(stderr, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n\n");
-	//Is the example below really true? /Martin
-	fprintf(stderr, "Example:\n\n\t %s path/to/osimage.elf path/to/fpgaimage.elf\n", argv0);
 	fprintf(stderr, "\nExample (Linux):\n\n\t %s  /dev/ttyACM0 armsrc/obj/fullimage.elf\n", argv0);
 	fprintf(stderr, "\nExample (OS)   :\n\n\t %s  /dev/cu.usbmodem1451 armsrc/obj/fullimage.elf\n", argv0);
+	fprintf(stderr, "\nExample (WIN)  :\n\n\t %s  com3 armsrc/obj/fullimage.elf\n", argv0);
 	fprintf(stderr, "\nNote (Linux): if the flasher gets stuck in 'Waiting for Proxmark to reappear on <DEVICE>',\n");
 	fprintf(stderr, "              you need to blacklist proxmark for modem-manager - see wiki for more details:\n");
 	fprintf(stderr, "        old ref --> http://code.google.com/p/proxmark3/wiki/Linux\n\n");
