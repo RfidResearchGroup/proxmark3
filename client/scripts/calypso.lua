@@ -2,6 +2,7 @@ local cmds = require('commands')
 local getopt = require('getopt')
 local lib14b = require('read14b')
 local utils = require('utils')
+local iso7816 = require('7816_error')
 
 example = "script runs 14b raw commands to query a CAPLYPSO tag"
 author = "Iceman, 2016"
@@ -151,35 +152,35 @@ local function calypso_apdu_status(apdu)
 	-- next two is APDU status bytes.
 	local status = false
 	local mess = 'FAIL'
-	local sw = apdu:sub( #apdu-7, #apdu-4)
-	if sw == '9000' then
-		mess = 'OK'
-		status = true
-	end
-	print ('SW', sw, mess )
+	local sw = apdu:sub( #apdu-7, #apdu-4)	
+	desc, err = iso7816.tostring(sw)
+	print ('SW', sw, desc, err )
+
+	status = ( sw == '9000' )
+	
 	return status
 end
 
 local _calypso_cmds = {
-	["01.Select ICC file"]	=	'02 94 a4 08 00 04 3f 00 00 02',
-	["02.ICC"]				=	'02 94 b2 01 041d',
-	["03.Select EnvHol file"] =	'02 94 a4 08 00 04 20 00 20 01',
-	["04.EnvHol1"]			=	'02 94 b2 01 041d',
-	["05.Select EvLog file"] =	'02 94 a4 08 00 04 20 00 20 10',
-	["06.EvLog1"]			=	'02 94 b2 01 041d',
-	["07.EvLog2"]			=	'02 94 b2 02 041d',
-	["08.EvLog3"]			=	'02 94 b2 03 041d',
-	["09.Select ConList file"] ='02 94 a4 0800 04 2000 2050',
-	["10.ConList"]			=	'02 94 b2 01 041d',
-	["11.Select Contra file"] =	'02 94 a4 0800 04 2000 2020',
-	["12.Contra1"]			=	'02 94 b2 01 041d',
-	["13.Contra2"]			=	'02 94 b2 02 041d',
-	["14.Contra3"]			=	'02 94 b2 03 041d',
-	["15.Contra4"]			=	'02 94 b2 04 041d',
-	["16.Select Counter file"]=	'02 94 a4 0800 04 2000 2069',
-	["17.Counter"]			=	'02 94 b2 01 041d',
-	["18.Select SpecEv file"]=	'02 94 a4 08 0004 2000 2040',
-	["19.SpecEv1"]			=	'02 94 b2 01 041d',
+	["01.Select ICC file"]	=	'0294 a4 080004 3f00 0002',
+	["02.ICC"]				=	'0294 b2 01 041d',
+	["03.Select EnvHol file"] =	'0294 a4 080004 2000 2001',
+	["04.EnvHol1"]			=	'0294 b2 01 041d',
+	["05.Select EvLog file"] =	'0294 a4 080004 2000 2010',
+	["06.EvLog1"]			=	'0294 b2 01 041d',
+	["07.EvLog2"]			=	'0294 b2 02 041d',
+	["08.EvLog3"]			=	'0294 b2 03 041d',
+	["09.Select ConList file"] ='0294 a4 080004 2000 2050',
+	["10.ConList"]			=	'0294 b2 01 041d',
+	["11.Select Contra file"] =	'0294 a4 080004 2000 2020',
+	["12.Contra1"]			=	'0294 b2 01 041d',
+	["13.Contra2"]			=	'0294 b2 02 041d',
+	["14.Contra3"]			=	'0294 b2 03 041d',
+	["15.Contra4"]			=	'0294 b2 04 041d',
+	["16.Select Counter file"]=	'0294 a4 080004 2000 2069',
+	["17.Counter"]			=	'0294 b2 01 041d',
+	["18.Select SpecEv file"]=	'0294 a4 080004 2000 2040',
+	["19.SpecEv1"]			=	'0294 b2 01 041d',
 }
 
 --- 
