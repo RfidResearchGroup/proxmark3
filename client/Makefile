@@ -127,6 +127,7 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			sha1.c\
 			sha256.c\
 			cmdcrc.c\
+			reveng/preset.c\
 			reveng/reveng.c\
 			reveng/cli.c\
 			reveng/bmpbit.c\
