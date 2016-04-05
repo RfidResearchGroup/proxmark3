@@ -40,5 +40,5 @@ extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault;
 extern int offline;
 extern int flushAfterWrite;   //buzzy
 
-void iceFsk3(int * data, const size_t len);
+void iceIIR_Butterworth(int * data, const size_t len);
 #endif
