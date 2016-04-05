@@ -1,9 +1,9 @@
 /* cli.c
- * Greg Cook, 9/Apr/2015
+ * Greg Cook, 24/Feb/2016
  */
 
 /* CRC RevEng, an arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015  Gregory Cook
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016  Gregory Cook
  *
  * This file is part of CRC RevEng.
  *
@@ -619,7 +619,7 @@ usage(void) {
 			"\t      Outputs a list of all known/common crc models with their\n"
 			"\t      preset values\n"
 			"\n"
-			"Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015  Gregory Cook\n"
+			"Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016  Gregory Cook\n"
 			"This is free software; see the source for copying conditions.  There is NO\n"
 			"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 			"Version "

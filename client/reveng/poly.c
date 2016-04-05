@@ -1,9 +1,9 @@
 /* poly.c
- * Greg Cook, 29/Jul/2015
+ * Greg Cook, 24/Feb/2016
  */
 
 /* CRC RevEng, an arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015  Gregory Cook
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016  Gregory Cook
  *
  * This file is part of CRC RevEng.
  *
