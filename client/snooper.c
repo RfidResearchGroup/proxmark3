@@ -37,7 +37,7 @@ int main()
         ReceiveCommandPoll(&cmdbuf);
       }
       HANDLE_ERROR;
-      CommandReceived("hf 14a list");
+      CommandReceived("hf list 14a");
       HANDLE_ERROR;
     }
   }
