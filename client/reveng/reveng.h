@@ -1,9 +1,9 @@
 /* reveng.h
- * Greg Cook, 30/Jul/2015
+ * Greg Cook, 24/Feb/2016
  */
 
 /* CRC RevEng, an arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015  Gregory Cook
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016  Gregory Cook
  *
  * This file is part of CRC RevEng.
  *
@@ -92,7 +92,7 @@
 /* Global definitions */
 
 /* CRC RevEng version string */
-#define VERSION "1.3.1"
+#define VERSION "1.4.0"
 
 /* bmpbit.c */
 typedef BMP_T bmp_t;
@@ -162,8 +162,6 @@ extern int pmpar(const poly_t poly, const poly_t mask);
 extern int pident(const poly_t a, const poly_t b);
 
 /* model.c */
-#define M_OVERWR   256
-
 typedef struct {
 	poly_t spoly;		/* polynomial with highest-order term removed. length determines CRC width */
 	poly_t init;		/* initial register value. length == poly.length */
@@ -176,16 +174,20 @@ typedef struct {
 extern void mcpy(model_t *dest, const model_t *src);
 extern void mfree(model_t *model);
 extern int mcmp(const model_t *a, const model_t *b);
-extern int mbynam(model_t *dest, const char *key);
-extern void mbynum(model_t *dest, int num);
-extern int mcount(void);
-extern char *mnames(void);
 extern char *mtostr(const model_t *model);
-extern void mmatch(model_t *model, int flags);
 extern void mcanon(model_t *model);
 extern void mcheck(model_t *model);
 extern void mrev(model_t *model);
 extern void mnovel(model_t *model);
+
+/* preset.c */
+#define M_OVERWR   256
+
+extern int mbynam(model_t *dest, const char *key);
+extern void mbynum(model_t *dest, int num);
+extern int mcount(void);
+extern char *mnames(void);
+extern void mmatch(model_t *model, int flags);
 
 /* reveng.c */
 #define R_HAVEP    512

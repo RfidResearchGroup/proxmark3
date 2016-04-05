@@ -407,13 +407,15 @@ static int l_sha1(lua_State *L)
 
 static int l_reveng_models(lua_State *L){
 
-	char *models[80];
+	// This array needs to be adjusted if RevEng adds more crc-models.
+	char *models[100];
 	int count = 0;
 	int in_width = luaL_checkinteger(L, 1);
 	
 	if( in_width > 89 ) return returnToLuaWithError(L,"Width cannot exceed 89, got %d", in_width);
 
-	uint8_t width[80];
+	// This array needs to be adjusted if RevEng adds more crc-models.
+	uint8_t width[100];
 	width[0] = (uint8_t)in_width;
 	int ans = GetModels(models, &count, width);
 	if (!ans) return 0;
