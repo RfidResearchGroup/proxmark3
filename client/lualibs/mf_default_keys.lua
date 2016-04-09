@@ -1,9 +1,7 @@
     
 local _keys = {
     --[[
-
     These keys are from the pm3 c-codebase. 
-
     --]]
     'ffffffffffff', -- Default key (first key used by program if no user defined key)
     '000000000000', -- Blank key
@@ -18,15 +16,11 @@ local _keys = {
     'a0478cc39091',
     '533cb6c723f6',
     '8fd0a4f256e9',
-
     
     --[[
-    The data below is taken form the Slurp project, 
-    https://github.com/4ZM/slurp/blob/master/res/xml/mifare_default_keys.xml
-    released as GPLV3. 
-
+    The Slurp project, 
+    Data from: https://github.com/4ZM/slurp/blob/master/res/xml/mifare_default_keys.xml
     --]]
-
     '000000000000', -- Default key
     'ffffffffffff', -- Default key
     'b0b1b2b3b4b5', -- Key from mfoc
@@ -38,46 +32,66 @@ local _keys = {
     'a0478cc39091', -- Key from mfoc
     '533cb6c723f6', -- Key from mfoc
     '8fd0a4f256e9', -- Key from mfoc
-    -- Data from: http://pastebin.com/wcTHXLZZ
+
+    --[[
+    Data from: http://pastebin.com/wcTHXLZZ
+    --]]
     'a64598a77478', -- RKF SL Key A
     '26940b21ff5d', -- RKF SL Key A
     'fc00018778f7', -- RKF SL Key A
     '00000ffe2488', -- RKF SL Key B
     '5c598c9c58b5', -- RKF SL Key B
     'e4d2770a89be', -- RKF SL Key B
-    -- Data from: http://pastebin.com/svGjN30Q
+
+	--[[	 
+    Data from: http://pastebin.com/svGjN30Q
+	--]]	
     '434f4d4d4f41', -- RKF JOJO GROUP Key A
     '434f4d4d4f42', -- RKF JOJO GROUP Key B
     '47524f555041', -- RKF JOJO GROUP Key A
     '47524f555042', -- RKF JOJO GROUP Key B
     '505249564141', -- RKF JOJO PRIVA Key A
     '505249564142', -- RKF JOJO PRIVA Key B
-    -- Data from: http://pastebin.com/d7sSetef
+
+	--[[	 
+    Data from: http://pastebin.com/d7sSetef
+	--]]	
     'fc00018778f7', -- RKF Rejskort Danmark Key A
     '00000ffe2488', -- RKF Rejskort Danmark Key B
     '0297927c0f77', -- RKF Rejskort Danmark Key A
     'ee0042f88840', -- RKF Rejskort Danmark Key B
     '722bfcc5375f', -- RKF Rejskort Danmark Key A
     'f1d83f964314', -- RKF Rejskort Danmark Key B
-    -- Data from: http://pastebin.com/pvJX0xVS
+	
+	--[[	 
+	Data from: http://pastebin.com/pvJX0xVS
+	--]]    
     '54726176656C', -- Transport Key A
     '776974687573', -- Transport Key B
     '4AF9D7ADEBE4', -- Directory and event log Key A
     '2BA9621E0A36', -- Directory and event log Key B
-	-- Data from: http://pastebin.com/AK9Bftpw
+
+	--[[	 
+	Data from: http://pastebin.com/AK9Bftpw
+	--]]	
     '48ffe71294a0', -- Länstrafiken i Västerbotten
     'e3429281efc1', -- Länstrafiken i Västerbotten
     '16f21a82ec84', -- Länstrafiken i Västerbotten
     '460722122510', -- Länstrafiken i Västerbotten
-    -- Data from: http://pastebin.com/Dnnc5dFC
-    -- New cards are not encrypted (MF Ultralight)
+	
+	--[[	 
+    Data from: http://pastebin.com/Dnnc5dFC
+	--]]
     'fc00018778f7', -- Västtrafiken Key A
     '00000ffe2488', -- Västtrafiken Key B
     '0297927c0f77', -- Västtrafiken Key A
     'ee0042f88840', -- Västtrafiken Key B
     '54726176656c', -- Västtrafiken Key A
     '776974687573', -- Västtrafiken Key B
-    -- Data from: http://pastebin.com/y3PDBWR1
+	
+	--[[	 
+    Data from: http://pastebin.com/y3PDBWR1
+	 --]]	
     '000000000001',
     'a0a1a2a3a4a5',
     '123456789abc',
@@ -99,7 +113,10 @@ local _keys = {
     '434f4d4d4f42',
     '505249565441',
     '505249565442',
-    -- Data from,:, http://pastebin.com/TUXj17K3
+	
+	--[[	 
+	Data from: http://pastebin.com/TUXj17K3
+	--]]
     'fc0001877bf7', -- RKF ÖstgötaTrafiken Key A
     '00000ffe2488', -- RKF ÖstgötaTrafiken Key B
     '0297927c0f77', -- RKF ÖstgötaTrafiken Key A
@@ -108,9 +125,8 @@ local _keys = {
     '776974687573', -- RKF ÖstgötaTrafiken Key B
 
     --[[
-    The keys below are taken from from https://code.google.com/p/mifare-key-cracker/downloads/list
+    Data from: https://code.google.com/p/mifare-key-cracker/downloads/list
     --]]
-
     'bd493a3962b6',
     '010203040506',
     '111111111111',
@@ -131,11 +147,9 @@ local _keys = {
     '123456789abc',
 	
 	--[[
-    The keys below are taken from from https://github.com/4ZM/mfterm/blob/master/dictionary.txt
+    Data from: https://github.com/4ZM/mfterm/blob/master/dictionary.txt
     --]]
-	
 	'abcdef123456', -- Key from ladyada.net
-
 	'000000000001',
 	'000000000002',
 	'00000000000a',
@@ -146,7 +160,7 @@ local _keys = {
 	'b00000000000',	
 	
 	--[[
-    Should be for Mifare TNP3xxx tags key A
+    Mifare TNP3xxx tags key A
     --]]
 	'4b0b20107ccb',
 
@@ -191,8 +205,8 @@ local _keys = {
 	'4b791bea7bcc',
 	
 	--[[
-	Here be BIP keys...
-	ref: http://pastebin.com/QjUc66Zg
+	Here be BIP keys
+	Data from: http://pastebin.com/QjUc66Zg
 	--]]
 	'3A42F33AF429',
 	'1FC235AC1309',
@@ -238,14 +252,94 @@ local _keys = {
 	--]]
 	'3E65E4FB65B3',
 	'25094DF6F148',
+
 	--[[
 	key A 
 	--]]
 	'454841585443',
+
 	--[[
+	Data from: http://pastebin.com/gQ6nk38G
 	--]]
-	'26973ea74321', 
-	'71f3a315ad26', 
+	'A0A1A2A3A4A5', 
+	'D39BB83F5297', 
+	'A27D3804C259', 
+	'85675B200017', 
+	'528C9DFFE28C', 
+	'C82EC29E3235', 
+	'3E3554AF0E12', 
+	'491CDCFB7752', 
+	'22C1BAE1AACD', 
+	'5F146716E373', 
+	'740E9A4F9AAF', 
+	'AC0E24C75527', 
+	'97184D136233', 
+	'E444D53D359F', 
+	'17758856B182', 
+	'A8966C7CC54B', 
+	'C6AD00254562', 
+	'AE3FF4EEA0DB', 
+	'5EB8F884C8D1', 
+	'FEE470A4CB58', 
+	'75D8690F21B6', 
+	'871B8C085997', 
+	'97D1101F18B0', 
+	'75EDE6A84460', 
+	'DF27A8F1CB8E', 
+	'B0C9DD55DD4D', 
+
+	--[[
+	Data from: http://pastebin.com/AK9Bftpw
+	--]]
+	'48ffe71294a0', 
+	'e3429281efc1', 
+	'16f21a82ec84', 
+	'460722122510', 
+	
+	--[[
+	Data from: http://bit.ly/1bdSbJl
+	--]]
+	'A0B0C0D0E0F0', 
+	'A1B1C1D1E1F1', 
+	
+	--[[
+	Data from: msk three
+	Thanks to A.
+	--]]
+	'ae3d65a3dad4', 
+	'a73f5dc1d333', 
+	'73068F118C13', 
+	
+	--[[
+	Data from: msk social
+	Thanks to A.
+	--]]
+	'a0a1a2a3a4a5', 
+	'2735fc181807', 
+	'2aba9519f574', 
+	'84fd7f7a12b6', 
+	'73068f118c13', 
+	'186d8c4b93f9', 
+	'3a4bba8adaf0', 
+	'8765b17968a2', 
+	'40ead80721ce', 
+	'0db5e6523f7c', 
+	'51119dae5216', 
+	'83e3549ce42d', 
+	'136bdb246cac', 
+	'7de02a7f6025', 
+	'bf23a53c1f63', 
+	'cb9a1f2d7368', 
+	'c7c0adb3284f', 
+	'2b7f3253fac5', 
+	'9f131d8c2057', 
+	'67362d90f973', 
+	'6202a38f69e2', 
+	'100533b89331', 
+	'653a87594079', 
+	'd8a274b2e026', 
+	'b20b83cb145c', 
+	'9afa6cb4fc3d',
 }
 
 ---
