@@ -1,3 +1,4 @@
+#
 # Default Keys as already in Proxmark.exe:
 ffffffffffff,//Defaultkey(firstkeyusedbyprogramifnouserdefinedkey)
 000000000000,//Blankkey
@@ -12,6 +13,7 @@ d3f7d3f7d3f7,
 a0478cc39091,
 533cb6c723f6,
 8fd0a4f256e9,
+#
 # more Keys from mf_default_keys.lua
 000000000001,
 000000000002,
@@ -90,7 +92,11 @@ fc0001877bf7,--RKFÖstgötaTrafikenKeyA
 85fed980ea5a,-- hotel system
 314B49474956,--VIGIK1KeyA
 564c505f4d41,--VIGIK1KeyB
+#
+# Data from: http://irq5.io/2013/04/13/decoding-bcard-conference-badges/
 f4a9ef2afc6d,--BCARD KeyB
+#
+#
 a9f953def0a3,--
 75ccb59c9bed,-- mystery KeyA Mifare 1k EV1 (S50) Sector 17!
 4b791bea7bcc,-- mystery KeyB Mifare 1k EV1 (S50) Sector 17!
@@ -128,19 +134,90 @@ D49E2826664F,
 51284C3686A6,
 3DF14C8000A1,
 6A470D54127C,
-# Data from: http://pastebin.com/AK9Bftpw
 #
+# Data from: http://pastebin.com/AK9Bftpw
 48ffe71294a0, -- Länstrafiken i Västerbotten
 e3429281efc1, -- Länstrafiken i Västerbotten
 16f21a82ec84, -- Länstrafiken i Västerbotten
 460722122510, -- Länstrafiken i Västerbotten
+#
 # 3dprinter
 AAFB06045877, --EPI Envisionte# 3dprinter
+#
 # gym
 3e65e4fb65b3, --Fysiken A
 25094df6f148, --Fysiken B
 #
+#
 454841585443, -- key A
 #
-26973ea74321, -- key A
-71f3a315ad26, -- key B
+# Data from: http://pastebin.com/gQ6nk38G
+A0A1A2A3A4A5,
+D39BB83F5297,
+A27D3804C259,
+85675B200017,
+528C9DFFE28C,
+C82EC29E3235,
+3E3554AF0E12,
+491CDCFB7752,
+22C1BAE1AACD,
+5F146716E373,
+740E9A4F9AAF,
+AC0E24C75527,
+97184D136233,
+E444D53D359F,
+17758856B182,
+A8966C7CC54B,
+C6AD00254562,
+AE3FF4EEA0DB,
+5EB8F884C8D1,
+FEE470A4CB58,
+75D8690F21B6,
+871B8C085997,
+97D1101F18B0,
+75EDE6A84460,
+DF27A8F1CB8E,
+B0C9DD55DD4D,
+#
+# Data from: http://pastebin.com/AK9Bftpw
+48ffe71294a0,
+e3429281efc1,
+16f21a82ec84,
+460722122510,
+#
+# Data from: http://bit.ly/1bdSbJl
+A0B0C0D0E0F0,
+A1B1C1D1E1F1,
+#
+# Data from: msk three
+ae3d65a3dad4,
+a73f5dc1d333,
+73068F118C13,
+#
+# Data from: msk social
+a0a1a2a3a4a5,
+2735fc181807,
+2aba9519f574,
+84fd7f7a12b6,
+73068f118c13,
+186d8c4b93f9,
+3a4bba8adaf0,
+8765b17968a2,
+40ead80721ce,
+0db5e6523f7c,
+51119dae5216,
+83e3549ce42d,
+136bdb246cac,
+7de02a7f6025,
+bf23a53c1f63,
+cb9a1f2d7368,
+c7c0adb3284f,
+2b7f3253fac5,
+9f131d8c2057,
+67362d90f973,
+6202a38f69e2,
+100533b89331,
+653a87594079,
+d8a274b2e026,
+b20b83cb145c,
+9afa6cb4fc3d
