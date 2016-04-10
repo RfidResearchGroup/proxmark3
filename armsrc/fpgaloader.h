@@ -64,6 +64,7 @@ void SetAdcMuxFor(uint32_t whichGpio);
 #define FPGA_HF_SIMULATOR_MODULATE_212K				(2<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_424K				(4<<0)
 #define FPGA_HF_SIMULATOR_MODULATE_424K_8BIT		0x5//101
+//  no 848K 
 
 // Options for ISO14443A
 #define FPGA_HF_ISO14443A_SNIFFER					(0<<0)

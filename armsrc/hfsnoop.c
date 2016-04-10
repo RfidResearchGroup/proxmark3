@@ -19,7 +19,7 @@ static void RAMFUNC optimizedSnoop(void)
 		if(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)
 		{
 			*dest = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
-			dest = dest + 1;
+			++dest;
 		}
 	}
 	//Resetting Frame mode (First set in fpgaloader.c)
@@ -54,6 +54,7 @@ void HfSnoop(int samplesToSkip, int triggersToSkip)
 			r = MAX(r & 0xff, r >> 8); 
 			if (r >= 240) 
 			{
+				
 				if (++trigger_cnt > triggersToSkip) {
 				break;
 			} 
@@ -64,9 +65,9 @@ void HfSnoop(int samplesToSkip, int triggersToSkip)
 	if(!BUTTON_PRESS()) {
 		int waitcount = samplesToSkip; // lets wait 40000 ticks of pck0
 		while(waitcount != 0) {
-			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-				waitcount--;
-			}
+			
+			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY))
+				--waitcount;
 		}
 		optimizedSnoop();
 		Dbprintf("Trigger kicked! Value: %d, Dumping Samples Hispeed now.", r);

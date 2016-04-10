@@ -919,7 +919,7 @@ static void CodeIClassTagAnswer(const uint8_t *cmd, int len)
 	 * The mode FPGA_HF_SIMULATOR_MODULATE_424K_8BIT which we use to simulate tag,
 	 * works like this.
 	 * - A 1-bit input to the FPGA becomes 8 pulses on 423.5kHz (fc/32) (18.88us).
-	 * - A 0-bit inptu to the FPGA becomes an unmodulated time of 18.88us
+	 * - A 0-bit input to the FPGA becomes an unmodulated time of 18.88us
 	 *
 	 * In this mode the SOF can be written as 00011101 = 0x1D
 	 * The EOF can be written as 10111000 = 0xb8
@@ -1384,6 +1384,7 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, int delay)
 static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int *wait)
 {
 	int c;
+	volatile uint32_t r;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 	AT91C_BASE_SSC->SSC_THR = 0x00;
 	FpgaSetupSsc();
@@ -1397,7 +1398,7 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
 				c++;
 			}
 			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-				volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
+				r = AT91C_BASE_SSC->SSC_RHR;
 				(void)r;
 			}
 			WDT_HIT();
@@ -1408,36 +1409,36 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
 	uint8_t sendbyte;
 	bool firstpart = TRUE;
 	c = 0;
-  for(;;) {
-    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+	for(;;) {
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 
-      // DOUBLE THE SAMPLES!
-      if(firstpart) {
-	sendbyte = (cmd[c] & 0xf0) | (cmd[c] >> 4); 
-      }
-      else {
-	sendbyte = (cmd[c] & 0x0f) | (cmd[c] << 4);
-        c++;
-      }
-      if(sendbyte == 0xff) {
-	sendbyte = 0xfe;
-      }
-      AT91C_BASE_SSC->SSC_THR = sendbyte;
-      firstpart = !firstpart;
+			// DOUBLE THE SAMPLES!
+			if(firstpart) {
+				sendbyte = (cmd[c] & 0xf0) | (cmd[c] >> 4); 
+			}
+			else {
+				sendbyte = (cmd[c] & 0x0f) | (cmd[c] << 4);
+				c++;
+			}
 
-      if(c >= len) {
-        break;
-      }
-    }
-    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-      volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
-      (void)r;
-    }
-    WDT_HIT();
-  }
-  if (samples && wait) *samples = (c + *wait) << 3;
+			if(sendbyte == 0xff)
+				sendbyte = 0xfe;
+
+			AT91C_BASE_SSC->SSC_THR = sendbyte;
+			firstpart = !firstpart;
+
+			if(c >= len) break;
+
+		}
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+			r = AT91C_BASE_SSC->SSC_RHR;
+			(void)r;
+		}
+		
+		WDT_HIT();
+	}
+	if (samples && wait) *samples = (c + *wait) << 3;
 }
-
 
 //-----------------------------------------------------------------------------
 // Prepare iClass reader command to send to FPGA
