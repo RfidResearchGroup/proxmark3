@@ -146,11 +146,11 @@ void iso14a_set_ATS_timeout(uint8_t *ats) {
 				tb1 = ats[2];
 
 			fwi = (tb1 & 0xf0) >> 4;			// frame waiting indicator (FWI)
-			//fwt = 256 * 16 * (1 << fwi);		// frame waiting time (FWT) in 1/fc
-			fwt = 4096 * (1 << fwi);
+			fwt = 256 * 16 * (1 << fwi);		// frame waiting time (FWT) in 1/fc
+			//fwt = 4096 * (1 << fwi);
 			
-			//iso14a_set_timeout(fwt/(8*16));
-			iso14a_set_timeout(fwt/128);
+			iso14a_set_timeout(fwt/(8*16));
+			//iso14a_set_timeout(fwt/128);
 		}
 	}
 }
@@ -431,7 +431,6 @@ void DemodInit(uint8_t *data, uint8_t *parity)
 // use parameter non_real_time to provide a timestamp. Set to 0 if the decoder should measure real time
 static RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time)
 {
-
 	Demod.twoBits = (Demod.twoBits << 8) | bit;
 	
 	if (Demod.state == DEMOD_UNSYNCD) {
@@ -802,7 +801,7 @@ static int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
-    // Now run a `software UART' on the stream of incoming samples.
+    // Now run a `software UART` on the stream of incoming samples.
 	UartInit(received, parity);
 
 	// clear RXRDY:
@@ -836,11 +835,11 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 static uint8_t* free_buffer_pointer;
 
 typedef struct {
-  uint8_t* response;
-  size_t   response_n;
-  uint8_t* modulation;
-  size_t   modulation_n;
-  uint32_t ProxToAirDuration;
+	uint8_t* response;
+	size_t   response_n;
+	uint8_t* modulation;
+	size_t   modulation_n;
+	uint32_t ProxToAirDuration;
 } tag_response_info_t;
 
 bool prepare_tag_modulation(tag_response_info_t* response_info, size_t max_buffer_size) {
@@ -886,20 +885,20 @@ bool prepare_tag_modulation(tag_response_info_t* response_info, size_t max_buffe
 #define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 453 
 
 bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
-  // Retrieve and store the current buffer index
-  response_info->modulation = free_buffer_pointer;
-  
-  // Determine the maximum size we can use from our buffer
-  size_t max_buffer_size = ALLOCATED_TAG_MODULATION_BUFFER_SIZE;
-  
-  // Forward the prepare tag modulation function to the inner function
-  if (prepare_tag_modulation(response_info, max_buffer_size)) {
-    // Update the free buffer offset
-    free_buffer_pointer += ToSendMax;
-    return true;
-  } else {
-    return false;
-  }
+	// Retrieve and store the current buffer index
+	response_info->modulation = free_buffer_pointer;
+
+	// Determine the maximum size we can use from our buffer
+	size_t max_buffer_size = ALLOCATED_TAG_MODULATION_BUFFER_SIZE;
+
+	// Forward the prepare tag modulation function to the inner function
+	if (prepare_tag_modulation(response_info, max_buffer_size)) {
+		// Update the free buffer offset
+		free_buffer_pointer += ToSendMax;
+		return true;
+	} else {
+		return false;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1447,21 +1446,13 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 	uint32_t ThisTransferTime = 0;
 
 	if (timing) {
-
-		if (*timing != 0)
-			// Delay transfer (fine tuning - up to 7 MF clock ticks)
-			PrepareDelayedTransfer(*timing & 0x00000007);	
-		else
-			// Measure time
+		if(*timing == 0) {										// Measure time
 			*timing = (GetCountSspClk() + 8) & 0xfffffff8;
-
-		
-		if (MF_DBGLEVEL >= 4 && GetCountSspClk() >= (*timing & 0xfffffff8)) 
-			Dbprintf("TransmitFor14443a: Missed timing");
-		
-		// Delay transfer (multiple of 8 MF clock ticks)
-		while (GetCountSspClk() < (*timing & 0xfffffff8));	
-
+		} else {
+			PrepareDelayedTransfer(*timing & 0x00000007);		// Delay transfer (fine tuning - up to 7 MF clock ticks)
+		}
+		if(MF_DBGLEVEL >= 4 && GetCountSspClk() >= (*timing & 0xfffffff8)) Dbprintf("TransmitFor14443a: Missed timing");
+		while(GetCountSspClk() < (*timing & 0xfffffff8));		// Delay transfer (multiple of 8 MF clock ticks)
 		LastTimeProxToAirStart = *timing;
 	} else {
 		ThisTransferTime = ((MAX(NextTransferTime, GetCountSspClk()) & 0xfffffff8) + 8);
@@ -1573,8 +1564,7 @@ void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8
 //-----------------------------------------------------------------------------
 void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *parity)
 {
-  //CodeIso14443aBitsAsReaderPar(cmd, len*8, parity);
-  CodeIso14443aBitsAsReaderPar(cmd, len<<3, parity);
+  CodeIso14443aBitsAsReaderPar(cmd, len*8, parity);
 }
 
 
@@ -1838,16 +1828,14 @@ void ReaderTransmitBitsPar(uint8_t* frame, uint16_t bits, uint8_t *par, uint32_t
 
 void ReaderTransmitPar(uint8_t* frame, uint16_t len, uint8_t *par, uint32_t *timing)
 {
-  //ReaderTransmitBitsPar(frame, len*8, par, timing);
-  ReaderTransmitBitsPar(frame, len<<3, par, timing);
+  ReaderTransmitBitsPar(frame, len*8, par, timing);
 }
 
 void ReaderTransmitBits(uint8_t* frame, uint16_t len, uint32_t *timing)
 {
   // Generate parity and redirect
   uint8_t par[MAX_PARITY_SIZE] = {0x00};
-  //GetParity(frame, len/8, par);
-  GetParity(frame, len >> 3, par);
+  GetParity(frame, len/8, par);  
   ReaderTransmitBitsPar(frame, len, par, timing);
 }
 
@@ -1856,27 +1844,24 @@ void ReaderTransmit(uint8_t* frame, uint16_t len, uint32_t *timing)
   // Generate parity and redirect
   uint8_t par[MAX_PARITY_SIZE] = {0x00};
   GetParity(frame, len, par);
-  //ReaderTransmitBitsPar(frame, len*8, par, timing);
-  ReaderTransmitBitsPar(frame, len<<3, par, timing);
+  ReaderTransmitBitsPar(frame, len*8, par, timing);
 }
 
 int ReaderReceiveOffset(uint8_t* receivedAnswer, uint16_t offset, uint8_t *parity)
 {
-	if (!GetIso14443aAnswerFromTag(receivedAnswer, parity, offset)) 
-		return FALSE;
-
-	//LogTrace(receivedAnswer, Demod.len, Demod.startTime*16 - DELAY_AIR2ARM_AS_READER, Demod.endTime*16 - DELAY_AIR2ARM_AS_READER, parity, FALSE);
-	LogTrace(receivedAnswer, Demod.len, (Demod.startTime<<4) - DELAY_AIR2ARM_AS_READER, (Demod.endTime<<4) - DELAY_AIR2ARM_AS_READER, parity, FALSE);
+	if (!GetIso14443aAnswerFromTag(receivedAnswer, parity, offset)) return FALSE;
+	//if (tracing) {
+		LogTrace(receivedAnswer, Demod.len, Demod.startTime*16 - DELAY_AIR2ARM_AS_READER, Demod.endTime*16 - DELAY_AIR2ARM_AS_READER, parity, FALSE);
+	//}
 	return Demod.len;
 }
 
 int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity)
 {
-	if (!GetIso14443aAnswerFromTag(receivedAnswer, parity, 0)) 
-		return FALSE;
-
-	//LogTrace(receivedAnswer, Demod.len, Demod.startTime*16 - DELAY_AIR2ARM_AS_READER, Demod.endTime*16 - DELAY_AIR2ARM_AS_READER, parity, FALSE);
-	LogTrace(receivedAnswer, Demod.len, (Demod.startTime<<4) - DELAY_AIR2ARM_AS_READER, (Demod.endTime<<4) - DELAY_AIR2ARM_AS_READER, parity, FALSE);
+	if (!GetIso14443aAnswerFromTag(receivedAnswer, parity, 0)) return FALSE;
+	//if (tracing) {
+		LogTrace(receivedAnswer, Demod.len, Demod.startTime*16 - DELAY_AIR2ARM_AS_READER, Demod.endTime*16 - DELAY_AIR2ARM_AS_READER, parity, FALSE);
+	//}
 	return Demod.len;
 }
 
@@ -2043,13 +2028,12 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 	FpgaSetupSsc();
 	// connect Demodulated Signal to ADC:
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-
+	
+	LED_D_OFF();
 	// Signal field is on with the appropriate LED
-	if (fpga_minor_mode == FPGA_HF_ISO14443A_READER_MOD
-		|| fpga_minor_mode == FPGA_HF_ISO14443A_READER_LISTEN)
+	if (fpga_minor_mode == FPGA_HF_ISO14443A_READER_MOD ||
+		fpga_minor_mode == FPGA_HF_ISO14443A_READER_LISTEN)
 		LED_D_ON();
-	else
-		LED_D_OFF();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | fpga_minor_mode);
 
@@ -2076,12 +2060,14 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
  
 	ReaderTransmit(real_cmd, cmd_len+4, NULL);
 	size_t len = ReaderReceive(data, parity);
+	 //DATA LINK ERROR
+	if (!len) return 0;
+	
 	uint8_t *data_bytes = (uint8_t *) data;
-	if (!len)
-		return 0; //DATA LINK ERROR
+
 	// if we received an I- or R(ACK)-Block with a block number equal to the
 	// current block number, toggle the current block number
-	else if (len >= 4 // PCB+CID+CRC = 4 bytes
+	if (len >= 4 // PCB+CID+CRC = 4 bytes
 	         && ((data_bytes[0] & 0xC0) == 0 // I-Block
 	             || (data_bytes[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
 	         && (data_bytes[0] & 0x01) == iso14_pcb_blocknum) // equal block numbers
@@ -2191,58 +2177,19 @@ void ReaderIso14443a(UsbCommand *c)
 // Therefore try in alternating directions.
 int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 
+	uint16_t i;
+	uint32_t nttmp1, nttmp2;
+
 	if (nt1 == nt2) return 0;
 
-	uint16_t i;
-	uint32_t nttmp1 = nt1;
-	uint32_t nttmp2 = nt2;
+	nttmp1 = nt1;
+	nttmp2 = nt2;
 	
-	for (i = 1; i < 0xFFFF; i += 8) {
-		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i;
-
-		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+1;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-1;
-
-		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+2;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-2;
-
-		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+3;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-3;
-
-		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+4;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-4;
-
-		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+5;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-5;
-
-		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+6;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-6;
-
-		nttmp1 = prng_successor_one(nttmp1); if (nttmp1 == nt2) return i+7;
-		nttmp2 = prng_successor_one(nttmp2); if (nttmp2 == nt1) return -i-7;
-/*
-		if ( prng_successor(nttmp1, i) == nt2) return i;
-		if ( prng_successor(nttmp2, i) == nt1) return -i;
-
-		if ( prng_successor(nttmp1, i+2) == nt2) return i+2;
-		if ( prng_successor(nttmp2, i+2) == nt1) return -(i+2);
-
-		if ( prng_successor(nttmp1, i+3) == nt2) return i+3;
-		if ( prng_successor(nttmp2, i+3) == nt1) return -(i+3);
-
-		if ( prng_successor(nttmp1, i+4) == nt2) return i+4;
-		if ( prng_successor(nttmp2, i+4) == nt1) return -(i+4);
-
-		if ( prng_successor(nttmp1, i+5) == nt2) return i+5;
-		if ( prng_successor(nttmp2, i+5) == nt1) return -(i+5);
-
-		if ( prng_successor(nttmp1, i+6) == nt2) return i+6;
-		if ( prng_successor(nttmp2, i+6) == nt1) return -(i+6);
-
-		if ( prng_successor(nttmp1, i+7) == nt2) return i+7;
-		if ( prng_successor(nttmp2, i+7) == nt1) return -(i+7);
-*/
+	for (i = 1; i < 32768; i++) {
+		nttmp1 = prng_successor(nttmp1, 1);
+		if (nttmp1 == nt2) return i;
+		nttmp2 = prng_successor(nttmp2, 1);
+		if (nttmp2 == nt1) return -i;
 	}
 	
 	return(-99999); // either nt1 or nt2 are invalid nonces
@@ -2456,7 +2403,7 @@ void ReaderMifare(bool first_try, uint8_t block )
 		}
  
 		// Receive answer. This will be a 4 Bit NACK when the 8 parity bits are OK after decoding
-		if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
+		if (!ReaderReceive(receivedAnswer, receivedAnswerPar)) {
 			catch_up_cycles = 8; 	// the PRNG is delayed by 8 cycles due to the NAC (4Bits = 0x05 encrypted) transfer
 	
 			if (nt_diff == 0)
