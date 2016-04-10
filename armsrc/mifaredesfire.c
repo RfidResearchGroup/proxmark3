@@ -520,7 +520,7 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 
 	len = ReaderReceive(resp, par);
 	
-	if( len == 0x00 ){
+	if ( !len ) {
 		if (MF_DBGLEVEL >= 4) Dbprintf("fukked");
 		return FALSE; //DATA LINK ERROR
 	}

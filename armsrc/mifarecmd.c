@@ -832,7 +832,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 
 			nttmp = prng_successor(nt1, 100);				//NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
 			for (i = 101; i < 1200; i++) {
-				nttmp = prng_successor_one(nttmp);
+				nttmp = prng_successor(nttmp, 1);
 				if (nttmp == nt2) break;
 			}
 
@@ -914,7 +914,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 			ncount = 0;
 			nttest = prng_successor(nt1, dmin - 1);
 			for (j = dmin; j < dmax + 1; j++) {
-				nttest = prng_successor_one(nttest);
+				nttest = prng_successor(nttest, 1);
 				ks1 = nt2 ^ nttest;
 
 				if (valid_nonce(nttest, nt2, ks1, par_array)){
@@ -983,7 +983,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
 	
-	// clear debug level
+	// save old debuglevel, and tempory turn off dbg printing. speedissues.
 	int OLD_MF_DBGLEVEL = MF_DBGLEVEL;	
 	MF_DBGLEVEL = MF_DBG_NONE;
 	
@@ -996,35 +996,33 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 		clear_trace();
 	
 	set_tracing(TRUE);
-
+	
 	for (i = 0; i < keyCount; ++i) {
 
-		if (!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
-			if (OLD_MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card");
+		mifare_classic_halt(pcs, cuid);
+	
+		if (!iso14443a_select_card(uid, NULL, &cuid, true, 0))
 			break;
-		}
 
 		ui64Key = bytes_to_num(datain + i * 6, 6);
-		if (mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
-			if (mifare_classic_halt(pcs, cuid))
-				if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Halt error");
+		
+		if (mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST))
 			continue;
-		}
 		
 		isOK = 1;
 		break;
 	}
 	
 	LED_B_ON();
-    cmd_send(CMD_ACK,isOK,0,0,datain + i * 6,6);
+    cmd_send(CMD_ACK, isOK, 0, 0, datain + i * 6, 6);
 
+	// restore debug level
+	MF_DBGLEVEL = OLD_MF_DBGLEVEL;	
+	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 	set_tracing(FALSE);
 	crypto1_destroy(pcs);
-	
-	// restore debug level
-	MF_DBGLEVEL = OLD_MF_DBGLEVEL;	
 }
 
 //-----------------------------------------------------------------------------
@@ -1205,7 +1203,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 	
 		// wipe tag, fill it with zeros
 		if (workFlags & MAGIC_WIPE){
-			ReaderTransmitBitsPar(wupC1,7,0, NULL);
+			ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
 			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 				if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wupC1 error");
 				errormsg = MAGIC_WIPE;
@@ -1224,7 +1222,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 
 		// write block
 		if (workFlags & MAGIC_WUPC) {
-			ReaderTransmitBitsPar(wupC1,7,0, NULL);
+			ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
 			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 				if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wupC1 error");
 				errormsg = MAGIC_WUPC;
@@ -1297,7 +1295,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 	//loop doesn't loop just breaks out if error or done
 	while (true) {
 		if (workFlags & MAGIC_WUPC) {
-			ReaderTransmitBitsPar(wupC1,7,0, NULL);
+			ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
 			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 				if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("wupC1 error");
 				errormsg = MAGIC_WUPC;
@@ -1350,7 +1348,7 @@ void MifareCIdent(){
 	uint8_t receivedAnswer[1] = {0x00};
 	uint8_t receivedAnswerPar[1] = {0x00};
 
-	ReaderTransmitBitsPar(wupC1,7,0, NULL);
+	ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
 	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
 		isOK = false;
 	}
