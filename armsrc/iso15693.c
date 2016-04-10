@@ -223,7 +223,7 @@ static void CodeIso15693AsReader256(uint8_t *cmd, int n)
 static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *wait)
 {
     int c;
-
+	volatile uint32_t r;
 //    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
 	if(*wait < 10) { *wait = 10; }
@@ -231,10 +231,10 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *w
 //    for(c = 0; c < *wait;) {
 //        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 //            AT91C_BASE_SSC->SSC_THR = 0x00;		// For exact timing!
-//            c++;
+//            ++c;
 //        }
 //        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-//            volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
+//            r = AT91C_BASE_SSC->SSC_RHR;
 //            (void)r;
 //        }
 //        WDT_HIT();
@@ -244,13 +244,10 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *w
     for(;;) {
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c];
-            c++;
-            if(c >= len) {
-                break;
-            }
+            if( ++c >= len) break;
         }
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
+            r = AT91C_BASE_SSC->SSC_RHR;
             (void)r;
         }
         WDT_HIT();
@@ -264,19 +261,17 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, int *samples, int *w
 static void TransmitTo15693Reader(const uint8_t *cmd, int len, int *samples, int *wait)
 {
     int c = 0;
+	volatile uint32_t r;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR|FPGA_HF_SIMULATOR_MODULATE_424K);
 	if(*wait < 10) { *wait = 10; }
 
     for(;;) {
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c];
-            c++;
-            if(c >= len) {
-                break;
-            }
+            if( ++c >= len) break;
         }
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
+            r = AT91C_BASE_SSC->SSC_RHR;
             (void)r;
         }
         WDT_HIT();
@@ -569,13 +564,14 @@ static void BuildIdentifyRequest(void);
 //-----------------------------------------------------------------------------
 void AcquireRawAdcSamplesIso15693(void)
 {
-	uint8_t *dest = BigBuf_get_addr();
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	int c = 0;
 	int getNext = 0;
 	int8_t prev = 0;
+	volatile uint32_t r;
 
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+	uint8_t *dest = BigBuf_get_addr();
 	BuildIdentifyRequest();
 
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -592,13 +588,10 @@ void AcquireRawAdcSamplesIso15693(void)
 	for(;;) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = ToSend[c];
-			c++;
-			if(c == ToSendMax+3) {
-				break;
-			}
+			if( ++c == ToSendMax+3) break;
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			volatile uint32_t r = AT91C_BASE_SSC->SSC_RHR;
+			r = AT91C_BASE_SSC->SSC_RHR;
 			(void)r;
 		}
 		WDT_HIT();
@@ -609,9 +602,9 @@ void AcquireRawAdcSamplesIso15693(void)
 	c = 0;
 	getNext = FALSE;
 	for(;;) {
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
 			AT91C_BASE_SSC->SSC_THR = 0x43;
-		}
+		
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			int8_t b;
 			b = (int8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -621,13 +614,11 @@ void AcquireRawAdcSamplesIso15693(void)
 			// every other is Q. We just want power, so abs(I) + abs(Q) is
 			// close to what we want.
 			if(getNext) {
-				int8_t r = ABS(b) + ABS(prev);
+				
+				dest[c++] = (uint8_t)(ABS(b) + ABS(prev));
 
-				dest[c++] = (uint8_t)r;
-
-				if(c >= 2000) {
-					break;
-				}
+				if(c >= 2000) break;
+				
 			} else {
 				prev = b;
 			}
