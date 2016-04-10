@@ -1151,6 +1151,7 @@ int CmdHF14AMfChk(const char *Cmd)
 					e_sector[i].foundKey[trgKeyType] = FALSE;
 				}
 				printf(".");
+				fflush(stdout);
 			}
 			b < 127 ? ( b +=4 ) : ( b += 16 );	
 		}
