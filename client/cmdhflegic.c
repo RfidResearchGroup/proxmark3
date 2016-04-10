@@ -38,9 +38,20 @@ int usage_legic_load(void){
 	return 0;
 }
 
+int usage_legic_read(void){	
+	PrintAndLog("Read data from a legic tag.");
+	PrintAndLog("Usage:  hf legic read <offset> <num of bytes>");
+	PrintAndLog("Options :");
+	PrintAndLog("  <offset>        : offset in data array to start download from");
+	PrintAndLog("  <num of bytes>  : number of bytes to download");
+	PrintAndLog("");
+	PrintAndLog(" sample: hf legic read");
+	return 0;
+}
+
 /*
  *  Output BigBuf and deobfuscate LEGIC RF tag data.
- *   This is based on information given in the talk held
+ *  This is based on information given in the talk held
  *  by Henryk Ploetz and Karsten Nohl at 26c3
  */
 int CmdLegicDecode(const char *Cmd) {
@@ -53,11 +64,11 @@ int CmdLegicDecode(const char *Cmd) {
 	int crc = 0;
 	int wrp = 0;
 	int wrc = 0;
-	uint8_t data_buf[1200]; // receiver buffer,  should be 1024..
+	uint8_t data_buf[1024]; // receiver buffer,  should be 1024..
 	char token_type[4];
 
-	// copy data from proxmark into buffer
-	GetFromBigBuf(data_buf, sizeof(data_buf), 0);
+	// download EML memory, where the "legic read" command puts the data.
+	GetEMLFromBigBuf(data_buf, sizeof(data_buf), 0);
 	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000)){
 		PrintAndLog("Command execute timeout");
 		return 1;
@@ -131,6 +142,8 @@ int CmdLegicDecode(const char *Cmd) {
 	PrintAndLog("is data xored?  %d  ( %d %)", isXored, (numOfZeros*100/stamp_len));
 
 	print_hex_break( data_buf, 33, 16);
+	
+	return 0;
 	
 	PrintAndLog("\nADF: User Area");
 	PrintAndLog("------------------------------------------------------");
@@ -236,6 +249,13 @@ int CmdLegicDecode(const char *Cmd) {
 }
 
 int CmdLegicRFRead(const char *Cmd) {
+	
+	// params:
+	// offset in data
+	// number of bytes.
+	char cmdp = param_getchar(Cmd, 0);
+	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_read();
+	
 	int byte_count=0, offset=0;
 	sscanf(Cmd, "%i %i", &offset, &byte_count);
 	if(byte_count == 0) byte_count = -1;
