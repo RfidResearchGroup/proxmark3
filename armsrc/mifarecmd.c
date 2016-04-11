@@ -613,6 +613,9 @@ int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity) {
 // Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on 
 // Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
+#define AUTHENTICATION_TIMEOUT 848			// card times out 1ms after wrong authentication (according to NXP documentation)
+#define PRE_AUTHENTICATION_LEADTIME 400		// some (non standard) cards need a pause after select before they are ready for first authentication 
+
 void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain)
 {
 	uint64_t ui64Key = 0;
@@ -637,9 +640,6 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 	bool initialize = flags & 0x0001;
 	bool slow = flags & 0x0002;
 	bool field_off = flags & 0x0004;
-	
-	#define AUTHENTICATION_TIMEOUT 848			// card times out 1ms after wrong authentication (according to NXP documentation)
-	#define PRE_AUTHENTICATION_LEADTIME 400		// some (non standard) cards need a pause after select before they are ready for first authentication 
 	
 	LED_A_ON();
 	LED_C_OFF();
@@ -965,16 +965,17 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 // MIFARE check keys. key count up to 85. 
 // 
 //-----------------------------------------------------------------------------
-void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
-{
-  // params
+void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 	uint8_t blockNo = arg0 & 0xff;
 	uint8_t keyType = (arg0 >> 8) & 0xff;
 	bool clearTrace = arg1;
 	uint8_t keyCount = arg2;
 	uint64_t ui64Key = 0;
 	
-	// variables
+	bool have_uid = FALSE;
+	uint8_t cascade_levels = 0;
+	uint32_t timeout = 0;
+	
 	int i;
 	byte_t isOK = 0;
 	uint8_t uid[10] = {0x00};
@@ -999,16 +1000,42 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	
 	for (i = 0; i < keyCount; ++i) {
 
-		mifare_classic_halt(pcs, cuid);
-	
-		if (!iso14443a_select_card(uid, NULL, &cuid, true, 0))
-			break;
+		//mifare_classic_halt(pcs, cuid);
 
+		// this part is from Piwi's faster nonce collecting part in Hardnested.
+		if (!have_uid) { // need a full select cycle to get the uid first
+			iso14a_card_select_t card_info;		
+			if(!iso14443a_select_card(uid, &card_info, &cuid, true, 0)) {
+				if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (ALL)");
+				break;
+			}
+			switch (card_info.uidlen) {
+				case 4 : cascade_levels = 1; break;
+				case 7 : cascade_levels = 2; break;
+				case 10: cascade_levels = 3; break;
+				default: break;
+			}
+			have_uid = TRUE;	
+		} else { // no need for anticollision. We can directly select the card
+			if(!iso14443a_select_card(uid, NULL, NULL, false, cascade_levels)) {
+				if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (UID)");
+				continue;
+			}
+		}
+	
 		ui64Key = bytes_to_num(datain + i * 6, 6);
 		
-		if (mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST))
+		if (mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
+
+			uint8_t dummy_answer = 0;
+			ReaderTransmit(&dummy_answer, 1, NULL);
+			timeout = GetCountSspClk() + AUTHENTICATION_TIMEOUT;
+			
+			// wait for the card to become ready again
+			while(GetCountSspClk() < timeout);
+			
 			continue;
-		
+		}
 		isOK = 1;
 		break;
 	}
