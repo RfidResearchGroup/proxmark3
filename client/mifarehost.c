@@ -218,14 +218,13 @@ out:
 }
 
 int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key){
-
 	*key = 0;
 	UsbCommand c = {CMD_MIFARE_CHKKEYS, { (blockNo | (keyType<<8)), clear_trace, keycnt}};
 	memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK,&resp, 2500)) return 1;
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) return 1;
 	if ((resp.arg[0] & 0xff) != 0x01) return 2;
 	*key = bytes_to_num(resp.d.asBytes, 6);
 	return 0;
