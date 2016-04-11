@@ -17,21 +17,25 @@
 
 
 void print_result(char *name, uint8_t *buf, size_t len) {
-   uint8_t *p = buf;
+	uint8_t *p = buf;
 
-   if ( len % 16 == 0 ) {
-	   for(; p-buf < len; p += 16)
-       Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+	if ( len % 16 == 0 ) {
+		for(; p-buf < len; p += 16)
+			Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
 				name,
 				p-buf,
 				len,
 				p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]
-	   );
-   }
-   else {
-   for(; p-buf < len; p += 8)
-       Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x", name, p-buf, len, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
-   }
+			);
+	}
+	else {
+		for(; p-buf < len; p += 8)
+			Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x",
+				name,
+				p-buf,
+				len,
+				p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+	}
 }
 
 size_t nbytes(size_t nbits) {
@@ -46,16 +50,14 @@ uint32_t SwapBits(uint32_t value, int nrbits) {
 	return newvalue;
 }
 
-void num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
-{
+void num_to_bytes(uint64_t n, size_t len, uint8_t* dest) {
 	while (len--) {
 		dest[len] = (uint8_t) n;
 		n >>= 8;
 	}
 }
 
-uint64_t bytes_to_num(uint8_t* src, size_t len)
-{
+uint64_t bytes_to_num(uint8_t* src, size_t len) {
 	uint64_t num = 0;
 	while (len--) {
 		num = (num << 8) | (*src);
@@ -65,7 +67,7 @@ uint64_t bytes_to_num(uint8_t* src, size_t len)
 }
 
 // RotateLeft - Ultralight, Desfire
-void rol(uint8_t *data, const size_t len){
+void rol(uint8_t *data, const size_t len) {
     uint8_t first = data[0];
     for (size_t i = 0; i < len-1; i++) {
         data[i] = data[i+1];
@@ -346,17 +348,18 @@ void StartCountUS()
 uint32_t RAMFUNC GetCountUS(){
 	//return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV / 15) * 10);
 	//  By suggestion from PwPiwi, http://www.proxmark.org/forum/viewtopic.php?pid=17548#p17548
-	return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV * 2) / 3); 
+	//return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV * 2) / 3); 
+	return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV << 1) / 3); 
 }
 
-static uint32_t GlobalUsCounter = 0;
+// static uint32_t GlobalUsCounter = 0;
 
-uint32_t RAMFUNC GetDeltaCountUS(){
-	uint32_t g_cnt = GetCountUS();
-	uint32_t g_res = g_cnt - GlobalUsCounter;
-	GlobalUsCounter = g_cnt;
-	return g_res;
-}
+// uint32_t RAMFUNC GetDeltaCountUS(){
+	// uint32_t g_cnt = GetCountUS();
+	// uint32_t g_res = g_cnt - GlobalUsCounter;
+	// GlobalUsCounter = g_cnt;
+	// return g_res;
+// }
 
 
 //  -------------------------------------------------------------------------
