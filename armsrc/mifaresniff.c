@@ -25,7 +25,6 @@ bool MfSniffInit(void){
 	memset(sniffATQA, 0x00, 2);
 	sniffSAK = 0;
 	sniffUIDType = SNF_UID_4;
-
 	return FALSE;
 }
 
@@ -33,7 +32,6 @@ bool MfSniffEnd(void){
 	LED_B_ON();
 	cmd_send(CMD_ACK,0,0,0,0,0);
 	LED_B_OFF();
-
 	return FALSE;
 }
 

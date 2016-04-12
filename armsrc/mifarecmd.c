@@ -4,7 +4,7 @@
 // Hagen Fritsch - June 2010
 // Midnitesnake - Dec 2013
 // Andy Davies  - Apr 2014
-// Iceman - May 2014
+// Iceman - May 2014,2015,2016
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -235,18 +235,17 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 		if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
 	}
 
-	//  ----------------------------- crypto1 destroy
-	crypto1_destroy(pcs);
-	
 	if (MF_DBGLEVEL >= 2) DbpString("READ SECTOR FINISHED");
+
+	crypto1_destroy(pcs);
 
 	LED_B_ON();
 	cmd_send(CMD_ACK,isOK,0,0,dataoutbuf,16*NumBlocksPerSector(sectorNo));
 	LED_B_OFF();
 
-	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
+	set_tracing(FALSE);
 }
 
 // arg0 = blockNo (start)
@@ -345,6 +344,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 	BigBuf_free();
+	set_tracing(FALSE);
 }
 
 //-----------------------------------------------------------------------------
@@ -413,10 +413,9 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
 	LED_B_OFF();
 
-
-	// Thats it...
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
+	set_tracing(FALSE);
 }
 
 /* // Command not needed but left for future testing 
@@ -527,6 +526,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 	cmd_send(CMD_ACK,1,0,0,0,0);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
+	set_tracing(FALSE);
 }
 
 void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
@@ -597,6 +597,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	cmd_send(CMD_ACK,1,0,0,0,0);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
+	set_tracing(FALSE);
 }
 
 // Return 1 if the nonce is invalid else return 0
@@ -735,6 +736,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 	if (field_off) {
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
+		set_tracing(FALSE);
 	}
 }
 
@@ -940,7 +942,6 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 
 	LED_C_OFF();
 	
-	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
 	
 	byte_t buf[4 + 4 * 4] = {0};
@@ -1400,16 +1401,10 @@ void OnErrorMagic(uint8_t reason){
 	cmd_send(CMD_ACK,0,reason,0,0,0);
 	OnSuccessMagic();
 }
-
-void MifareCollectNonces(uint32_t arg0, uint32_t arg1){
-}
-
 //
 // DESFIRE
 //
-
 void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain){
-
 	byte_t dataout[12] = {0x00};
 	uint8_t uid[10] = {0x00};
 	uint32_t cuid = 0;
@@ -1432,7 +1427,7 @@ void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain){
 	}
 
 	if (MF_DBGLEVEL >= MF_DBG_EXTENDED) DbpString("AUTH 1 FINISHED");
-    cmd_send(CMD_ACK,1,cuid,0,dataout, sizeof(dataout));
+    cmd_send(CMD_ACK, 1, cuid, 0, dataout, sizeof(dataout));
 }
 
 void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain){
@@ -1457,4 +1452,5 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain){
 	cmd_send(CMD_ACK, isOK, 0, 0, dataout, sizeof(dataout));
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
+	set_tracing(FALSE);
 }

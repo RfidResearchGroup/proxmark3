@@ -14,8 +14,6 @@
 #include "apps.h"
 #include "BigBuf.h"
 
-
-
 void print_result(char *name, uint8_t *buf, size_t len) {
 	uint8_t *p = buf;
 
@@ -400,17 +398,17 @@ void StartCountSspClk()
 	AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_XC2	 			// TC2 clock = XC2 clock = TIOA0
 							| AT91C_TC_WAVE 				// Waveform Mode
 							| AT91C_TC_WAVESEL_UP;	 		// just count
-	
+
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;				// enable TC0
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN;				// enable TC1
 	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN;				// enable TC2
 
-	//
-	// synchronize the counter with the ssp_frame signal. Note: FPGA must be in any iso14446 mode, otherwise the frame signal would not be present 
-	//
+	// synchronize the counter with the ssp_frame signal. 
+	// Note: FPGA must be in any iso14443 mode, otherwise the frame signal would not be present 
 	while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME)); 	// wait for ssp_frame to go high (start of frame)
 	while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME); 		// wait for ssp_frame to be low
 	while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); 	// wait for ssp_clk to go high
+
 	// note: up to now two ssp_clk rising edges have passed since the rising edge of ssp_frame
 	// it is now safe to assert a sync signal. This sets all timers to 0 on next active clock edge
 	AT91C_BASE_TCB->TCB_BCR = 1;							// assert Sync (set all timers to 0 on next active clock edge)
@@ -418,8 +416,9 @@ void StartCountSspClk()
 	// at the next (4th) ssp_clk rising edge, TC0 (the low word of our counter) will be reset. From now on,
 	// whenever the last three bits of our counter go 0, we can be sure to be in the middle of a frame transfer.
 	// (just started with the transfer of the 4th Bit).
-	// The high word of the counter (TC2) will not reset until the low word (TC0) overflows. Therefore need to wait quite some time before
-	// we can use the counter.
+
+	// The high word of the counter (TC2) will not reset until the low word (TC0) overflows. 
+	// Therefore need to wait quite some time before we can use the counter.
 	while (AT91C_BASE_TC0->TC_CV < 0xFFF0);
 }
 
