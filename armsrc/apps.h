@@ -147,7 +147,6 @@ void MifareCIdent();  // is "magic chinese" card?
 void MifareUSetPwd(uint8_t arg0, uint8_t *datain);
 void OnSuccessMagic();
 void OnErrorMagic(uint8_t reason);
-void MifareCollectNonces(uint32_t arg0, uint32_t arg1);
 
 //desfire
 void Mifare_DES_Auth1(uint8_t arg0,uint8_t *datain);
