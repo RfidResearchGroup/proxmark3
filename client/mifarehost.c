@@ -249,14 +249,12 @@ int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
 	UsbCommand c = {CMD_MIFARE_EML_MEMSET, {blockNum, blocksCount, blockBtWidth}};
 	memcpy(c.d.asBytes, data, blocksCount * blockBtWidth); 
-
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
 
 // "MAGIC" CARD
-
 int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_t wipecard) {
 
 	uint8_t params = MAGIC_SINGLE;
@@ -329,6 +327,7 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
 }
 
 // SNIFFER
+// [iceman] so many global variables....
 
 // constants
 static uint8_t trailerAccessBytes[4] = {0x08, 0x77, 0x8F, 0x00};
@@ -342,7 +341,6 @@ static uint8_t traceCurBlock = 0;
 static uint8_t traceCurKey = 0;
 
 struct Crypto1State *traceCrypto1 = NULL;
-
 struct Crypto1State *revstate = NULL;
 
 uint64_t key = 0;
@@ -475,7 +473,8 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
 int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 	
 	uint8_t data[64];
-
+	memset(data, 0x00, sizeof(data));
+	
 	if (traceState == TRACE_ERROR) return 1;
 	
 	if (len > 64) {
@@ -501,7 +500,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 		}
 		
 		// AUTHENTICATION
-		if ((len == 4) && ((data[0] == 0x60) || (data[0] == 0x61))) {
+		if ((len == 4) && ((data[0] == MIFARE_AUTH_KEYA) || (data[0] == MIFARE_AUTH_KEYB))) {
 			traceState = TRACE_AUTH1;
 			traceCurBlock = data[1];
 			traceCurKey = data[0] == 60 ? 1:0;
@@ -509,21 +508,21 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 		}
 
 		// READ
-		if ((len ==4) && ((data[0] == 0x30))) {
+		if ((len ==4) && ((data[0] == ISO14443A_CMD_READBLOCK))) {
 			traceState = TRACE_READ_DATA;
 			traceCurBlock = data[1];
 			return 0;
 		}
 
 		// WRITE
-		if ((len ==4) && ((data[0] == 0xA0))) {
+		if ((len ==4) && ((data[0] == ISO14443A_CMD_WRITEBLOCK))) {
 			traceState = TRACE_WRITE_OK;
 			traceCurBlock = data[1];
 			return 0;
 		}
 
 		// HALT
-		if ((len ==4) && ((data[0] == 0x50) && (data[1] == 0x00))) {
+		if ((len ==4) && ((data[0] == ISO14443A_CMD_HALT) && (data[1] == 0x00))) {
 			traceState = TRACE_ERROR;  // do not decrypt the next commands
 			return 0;
 		}
