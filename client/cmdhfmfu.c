@@ -1614,7 +1614,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	PrintAndLog("---------------------------------");
 	for (i = 0; i < Pages; ++i) {
 		if ( i < 3 ) {
-			PrintAndLog("%02d/0x%02X | %s|   | ", i+startPage, i+startPage, sprint_hex(data + i * 4, 4));
+			PrintAndLog("%02d/0x%02X | %s|   | %.4s", i+startPage, i+startPage, sprint_hex(data + i * 4, 4), data + i * 4 );
 			continue;
 		}
 		switch(i){
