@@ -2362,6 +2362,12 @@ int Cmdhex2bin(const char *Cmd)
 	return 0;
 }
 
+int CmdDataIIR(const char *Cmd){
+	iceIIR_Butterworth(GraphBuffer, GraphTraceLen);
+	RepaintGraphWindow();
+	return 0;
+}
+
 static command_t CommandTable[] =
 {
 	{"help",            CmdHelp,            1, "This help"},
@@ -2408,6 +2414,7 @@ static command_t CommandTable[] =
 	{"tune",            CmdTuneSamples,     0, "Get hw tune samples for graph window"},
 	{"undec",           CmdUndec,           1, "Un-decimate samples by 2"},
 	{"zerocrossings",   CmdZerocrossings,   1, "Count time between zero-crossings"},
+	{"iir",				CmdDataIIR,			0, "apply IIR buttersworth filter on plotdata"},
 	{NULL, NULL, 0, NULL}
 };
 

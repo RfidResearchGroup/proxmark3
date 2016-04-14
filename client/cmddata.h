@@ -14,8 +14,10 @@
 #include <stdlib.h>  //size_t
 #include <stdint.h>  //uint_32+
 #include <stdbool.h> //bool
-
 #include "cmdparser.h" // for command_t
+
+#define MAX_DEMOD_BUF_LEN (1024*128)
+#define BIGBUF_SIZE 40000
 
 command_t * CmdDataCommands();
 
@@ -76,11 +78,10 @@ int NRZrawDemod(const char *Cmd, bool verbose);
 void printEM410x(uint32_t hi, uint64_t id);
 int getSamples(const char *Cmd, bool silent);
 
+int CmdDataIIR(const char *Cmd);
 
-#define MAX_DEMOD_BUF_LEN (1024*128)
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 extern size_t DemodBufferLen;
 extern uint8_t g_debugMode;
-#define BIGBUF_SIZE 40000
 
 #endif
