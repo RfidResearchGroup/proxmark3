@@ -69,6 +69,13 @@ typedef struct {
 	uint8_t *parity;
 } tUart;
 
+typedef struct {
+	uint8_t* response;
+	size_t   response_n;
+	uint8_t* modulation;
+	size_t   modulation_n;
+	uint32_t ProxToAirDuration;
+} tag_response_info_t;
 
 extern void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 extern void AppendCrc14443a(uint8_t *data, int len);
@@ -83,4 +90,13 @@ extern int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data);
 extern int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *resp_data, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades);
 extern void iso14a_set_trigger(bool enable);
 
+int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen, bool correctionNeeded);
+int EmSend4bitEx(uint8_t resp, bool correctionNeeded);
+int EmSend4bit(uint8_t resp);
+int EmSendCmdExPar(uint8_t *resp, uint16_t respLen, bool correctionNeeded, uint8_t *par);
+int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool correctionNeeded);
+int EmSendCmd(uint8_t *resp, uint16_t respLen);
+int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
+bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
+				uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
 #endif /* __ISO14443A_H */

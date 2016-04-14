@@ -126,9 +126,9 @@ char* getTagInfo(uint8_t uid) {
 	return manufactureMapping[len-1].desc; 
 }
 
-
 int usage_hf_14a_sim(void) {
-	PrintAndLog("\n Emulating ISO/IEC 14443 type A tag with 4 or 7 byte UID\n");
+//	PrintAndLog("\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
+	PrintAndLog("\n Emulating ISO/IEC 14443 type A tag with 4,7 byte UID\n");
 	PrintAndLog("Usage: hf 14a sim t <type> u <uid> x");
 	PrintAndLog("  Options : ");
 	PrintAndLog("    h     : this help");
@@ -139,10 +139,13 @@ int usage_hf_14a_sim(void) {
 	PrintAndLog("            5 = MIFARE Tnp3xxx");
 	PrintAndLog("            6 = MIFARE Mini");
 	PrintAndLog("            7 = AMIIBO (NTAG 215),  pack 0x8080");
-	PrintAndLog("    u     : 4 or 7 byte UID");
+//	PrintAndLog("    u     : 4, 7 or 10 byte UID");
+	PrintAndLog("    u     : 4, 7 byte UID");
 	PrintAndLog("    x     : (Optional) performs the 'reader attack', nr/ar attack against a legitimate reader");
-	PrintAndLog("\n   sample : hf 14a sim t 1 u 1122344");
-	PrintAndLog("          : hf 14a sim t 1 u 1122344 x\n");
+	PrintAndLog("\n   sample : hf 14a sim t 1 u 1122344 x");
+	PrintAndLog("          : hf 14a sim t 1 u 1122344");
+	PrintAndLog("          : hf 14a sim t 1 u 1122344556677");
+//	PrintAndLog("          : hf 14a sim t 1 u 11223445566778899AA\n");
 	return 0;
 }
 int usage_hf_14a_sniff(void){
@@ -168,15 +171,13 @@ int usage_hf_14a_raw(void){
 	return 0;
 }
 
-int CmdHF14AList(const char *Cmd)
-{
+int CmdHF14AList(const char *Cmd) {
 	//PrintAndLog("Deprecated command, use 'hf list 14a' instead");
 	CmdHFList("14a");
 	return 0;
 }
 
-int CmdHF14AReader(const char *Cmd)
-{
+int CmdHF14AReader(const char *Cmd) {
 	UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -462,8 +463,7 @@ int CmdHF14AReader(const char *Cmd)
 }
 
 // Collect ISO14443 Type A UIDs
-int CmdHF14ACUIDs(const char *Cmd)
-{
+int CmdHF14ACUIDs(const char *Cmd) {
 	// requested number of UIDs
 	int n = atoi(Cmd);
 	// collect at least 1 (e.g. if no parameter was given)
@@ -494,24 +494,25 @@ int CmdHF14ACUIDs(const char *Cmd)
 		}
 	}
 	PrintAndLog("End: %u", time(NULL));
-
 	return 1;
 }
 
 // ## simulate iso14443a tag
 // ## greg - added ability to specify tag UID
-int CmdHF14ASim(const char *Cmd)
-{
+int CmdHF14ASim(const char *Cmd) {
 	bool errors = FALSE;
 	uint8_t flags = 0;
-	uint8_t tagtype = 1;
-	uint64_t uid = 0;
+	uint8_t tagtype = 1;	
 	uint8_t cmdp = 0;
+	uint8_t uid[10] = {0,0,0,0,0,0,0,0,0,0};
+	int uidlen = 0;
+	uint8_t data[40];
+	uint8_t key[6] = {0,0,0,0,0,0};
+	UsbCommand resp;
+	bool useUIDfromEML = TRUE;
 
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
 			case 'H':
 				return usage_hf_14a_sim();
@@ -525,17 +526,17 @@ int CmdHF14ASim(const char *Cmd)
 				break;
 			case 'u':
 			case 'U':
-				// Retrieve the full 4 or 7 byte long uid 
-				uid = param_get64ex(Cmd, cmdp+1, 0, 16);
-				if (uid == 0 )
-					errors = TRUE;
-				 
-				if (uid > 0xffffffff) {
-					PrintAndLog("Emulating ISO/IEC 14443 type A tag with 7 byte UID (%014"llx")",uid);
-					flags |= FLAG_7B_UID_IN_DATA;
-				} else {
-					PrintAndLog("Emulating ISO/IEC 14443 type A tag with 4 byte UID (%08x)",uid);
-					flags |= FLAG_4B_UID_IN_DATA;
+				// Retrieve the full 4,7,10 byte long uid 
+				param_gethex_ex(Cmd, cmdp+1, uid, &uidlen);
+				switch(uidlen) {
+					//case 20: flags |= FLAG_10B_UID_IN_DATA; break;
+					case 14: flags |= FLAG_7B_UID_IN_DATA; break;
+					case  8: flags |= FLAG_4B_UID_IN_DATA; break;
+					default: errors = TRUE;	break;
+				}				
+				if (!errors) {
+					PrintAndLog("Emulating ISO/IEC 14443 type A tag with %d byte UID (%s)", uidlen>>1, sprint_hex(uid, uidlen>>1));
+					useUIDfromEML = FALSE;
 				}
 				cmdp += 2;
 				break;
@@ -555,17 +556,16 @@ int CmdHF14ASim(const char *Cmd)
 	//Validations
 	if (errors) return usage_hf_14a_sim();
 
+	if ( useUIDfromEML ) 
+		flags |= FLAG_UID_IN_EMUL;
+	
 	PrintAndLog("Press pm3-button to abort simulation");
 	
-	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a,{ tagtype, flags, 0 }};
-	
-	num_to_bytes(uid, 7, c.d.asBytes);
+	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a,{ tagtype, flags, 0 }};	
+	memcpy(c.d.asBytes, uid, uidlen);
 	clearCommandBuffer();
 	SendCommand(&c);	
 
-	uint8_t data[40];
-	uint8_t key[6];
-	UsbCommand resp;
 	while(!ukbhit()){
 		if ( WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
 			if ( (resp.arg[0] & 0xffff) == CMD_SIMULATE_MIFARE_CARD ){
@@ -573,10 +573,10 @@ int CmdHF14ASim(const char *Cmd)
 				memset(key, 0x00, sizeof(key));
 				int len = (resp.arg[1] > sizeof(data)) ? sizeof(data) : resp.arg[1];
 				memcpy(data, resp.d.asBytes, len);
-				tryMfk32(uid, data, key);
-				//tryMfk32_moebius(uid, data, key);
-				//tryMfk64(uid, data, key);
-				PrintAndLog("--");
+				uint32_t cuid = bytes_to_num(data, 4);
+				tryMfk32(cuid, data, key); // 201604, iceman,  errors!
+				//tryMfk32_moebius(cuid, data, key);
+				//tryMfk64(cuid, data, key);
 			}
 		}
 	}
@@ -785,8 +785,7 @@ int CmdHF14A(const char *Cmd) {
 	return 0;
 }
 
-int CmdHelp(const char *Cmd)
-{
+int CmdHelp(const char *Cmd) {
   CmdsHelp(CommandTable);
   return 0;
 }
