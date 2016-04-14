@@ -1296,7 +1296,8 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 			receivedCmd[3], receivedCmd[4], receivedCmd[5],
 			receivedCmd[6], receivedCmd[7], receivedCmd[8]);
 			// Do not respond
-			modulated_response = resp_sof; modulated_response_size = 0; //order = 0;
+			modulated_response = resp_sof;
+			modulated_response_size = 0; //order = 0;
 			trace_data = NULL;
 			trace_data_size = 0;
 		}

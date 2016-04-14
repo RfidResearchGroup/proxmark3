@@ -75,7 +75,6 @@ void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 		break;
 	}
 	
-	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
 	
 	if (MF_DBGLEVEL >= 2)	DbpString("READ BLOCK FINISHED");
@@ -717,10 +716,8 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 			memcpy(buf+i+8, &nt_par_enc, 1);
 			i += 9;
 		}
-
 		// wait for the card to become ready again
-		while(GetCountSspClk() < timeout);
-	
+		while(GetCountSspClk() < timeout);	
 	}
 
 	LED_C_OFF();

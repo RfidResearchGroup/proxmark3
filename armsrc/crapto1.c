@@ -419,10 +419,11 @@ static uint16_t *dist = 0;
 int nonce_distance(uint32_t from, uint32_t to)
 {
 	uint16_t x, i;
-	if(!dist) {
+	// generate distance lookup table
+	if (!dist) {
 		dist = malloc(2 << 16);
-		if(!dist)
-			return -1;
+		if (!dist) return -1;
+		
 		for (x = i = 1; i; ++i) {
 			dist[(x & 0xff) << 8 | x >> 8] = i;
 			x = x >> 1 | (x ^ x >> 2 ^ x >> 3 ^ x >> 5) << 15;
@@ -446,7 +447,7 @@ static uint32_t fastfwd[2][8] = {
  * encrypt the NACK which is observed when varying only the 3 last bits of Nr
  * only correct iff [NR_3] ^ NR_3 does not depend on Nr_3
  */
-uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd)
+uint32_t* lfsr_prefix_ks(uint8_t ks[8], int isodd)
 {
 	uint32_t *candidates = malloc(4 << 10);
 	if(!candidates) return 0;
