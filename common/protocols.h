@@ -134,6 +134,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443A_CMD_WUPA       0x52
 #define ISO14443A_CMD_ANTICOLL_OR_SELECT     0x93
 #define ISO14443A_CMD_ANTICOLL_OR_SELECT_2   0x95
+#define ISO14443A_CMD_ANTICOLL_OR_SELECT_3   0x97
 #define ISO14443A_CMD_WRITEBLOCK 0xA0
 #define ISO14443A_CMD_HALT       0x50
 #define ISO14443A_CMD_RATS       0xE0
@@ -165,6 +166,11 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MIFARE_ULEV1_READSIG	0x3C
 #define MIFARE_ULEV1_CHECKTEAR	0x3E
 #define MIFARE_ULEV1_VCSL		0x4B
+
+// mifare 4bit card answers
+#define CARD_ACK      0x0A  // 1010 - ACK
+#define CARD_NACK_NA  0x04  // 0100 - NACK, not allowed (command not allowed)
+#define CARD_NACK_TR  0x05  // 0101 - NACK, transmission error
 
 
 // Magic Generation 1, parameter "work flags"
