@@ -12,68 +12,71 @@
 #include "apps.h"
 
 static int sniffState = SNF_INIT;
-static uint8_t sniffUIDType;
-static uint8_t sniffUID[8];
-static uint8_t sniffATQA[2];
-static uint8_t sniffSAK;
-static uint8_t sniffBuf[16];
-static uint32_t timerData;
+static uint8_t sniffUIDType = 0;
+static uint8_t sniffUID[10] = {0,0,0,0,0,0,0,0,0,0};
+static uint8_t sniffATQA[2] = {0,0};
+static uint8_t sniffSAK = 0;
+static uint8_t sniffBuf[19];
+static uint32_t timerData = 0;
 
 
-bool MfSniffInit(void){
-	memset(sniffUID, 0x00, 8);
-	memset(sniffATQA, 0x00, 2);
+void MfSniffInit(void){
+	memset(sniffUID, 0x00, sizeof(sniffUID));
+	memset(sniffATQA, 0x00, sizeof(sniffATQA));
+	memset(sniffBuf, 0x00, sizeof(sniffBuf));
 	sniffSAK = 0;
 	sniffUIDType = SNF_UID_4;
-	return FALSE;
 }
 
-bool MfSniffEnd(void){
+void MfSniffEnd(void){
 	LED_B_ON();
 	cmd_send(CMD_ACK,0,0,0,0,0);
 	LED_B_OFF();
-	return FALSE;
 }
 
 bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, uint16_t bitCnt, bool reader) {
 
-	if (reader && (len == 1) && (bitCnt == 7)) { 		// reset on 7-Bit commands from reader
+	// reset on 7-Bit commands from reader
+	if (reader && (len == 1) && (bitCnt == 7)) { 		
 		sniffState = SNF_INIT;
 	}
 
 	switch (sniffState) {
 		case SNF_INIT:{
-			if ((len == 1) && (reader) && (bitCnt == 7) ) {  // REQA or WUPA from reader
-				sniffUIDType = SNF_UID_4;
-				memset(sniffUID, 0x00, 8);
-				memset(sniffATQA, 0x00, 2);
-				sniffSAK = 0;
+			// REQA or WUPA from reader
+			if ((len == 1) && (reader) && (bitCnt == 7) ) {
+				MfSniffInit();
 				sniffState = SNF_WUPREQ;
 			}
 			break;
 		}
 		case SNF_WUPREQ:{
-			if ((!reader) && (len == 2)) { 		// ATQA from tag
-				memcpy(sniffATQA, data, 2);
+			// ATQA from tag
+			if ((!reader) && (len == 2)) {
+				sniffATQA[0] = data[0];
+				sniffATQA[1] = data[1];
 				sniffState = SNF_ATQA;
 			}
 			break;
 		}
 		case SNF_ATQA:{
-			if ((reader) && (len == 2) && (data[0] == 0x93) && (data[1] == 0x20)) { // Select ALL from reader
+			// Select ALL from reader
+			if ((reader) && (len == 2) && (data[0] == 0x93) && (data[1] == 0x20)) {
 				sniffState = SNF_ANTICOL1;
 			}
 			break;
 		}
 		case SNF_ANTICOL1:{
-			if ((!reader) && (len == 5) && ((data[0] ^ data[1] ^ data[2] ^ data[3]) == data[4])) {  // UID from tag (CL1) 
+			// UID from tag (CL1) 
+			if ((!reader) && (len == 5) && ((data[0] ^ data[1] ^ data[2] ^ data[3]) == data[4])) {
 				memcpy(sniffUID + 3, data, 4);
 				sniffState = SNF_UID1;
 			}
 			break;
 		}
 		case SNF_UID1:{
-			if ((reader) && (len == 9) && (data[0] == 0x93) && (data[1] == 0x70) && (CheckCrc14443(CRC_14443_A, data, 9))) {   // Select 4 Byte UID from reader
+			// Select 4 Byte UID from reader
+			if ((reader) && (len == 9) && (data[0] == 0x93) && (data[1] == 0x70) && (CheckCrc14443(CRC_14443_A, data, 9))) {
 				sniffState = SNF_SAK;
 			}
 			break;
@@ -90,7 +93,8 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 			break;
 		}
 		case SNF_ANTICOL2:{
-			if ((!reader) && (len == 5) && ((data[0] ^ data[1] ^ data[2] ^ data[3]) == data[4])) { // CL2 UID 
+			 // CL2 UID 
+			if ((!reader) && (len == 5) && ((data[0] ^ data[1] ^ data[2] ^ data[3]) == data[4])) {
 				memcpy(sniffUID, sniffUID+4, 3);
 				memcpy(sniffUID+3, data, 4);
 				sniffUIDType = SNF_UID_7;
@@ -99,7 +103,25 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 			break;
 		}
 		case SNF_UID2:{
-			if ((reader) && (len == 9) && (data[0] == 0x95) && (data[1] == 0x70) && (CheckCrc14443(CRC_14443_A, data, 9))) {	// Select 2nd part of 7 Byte UID
+			// Select 2nd part of 7 Byte UID
+			if ((reader) && (len == 9) && (data[0] == 0x95) && (data[1] == 0x70) && (CheckCrc14443(CRC_14443_A, data, 9))) {
+				sniffState = SNF_SAK;
+			}
+			break;
+		}
+		case SNF_ANTICOL3:{
+			// CL3 UID 
+			if ((!reader) && (len == 5) && ((data[0] ^ data[1] ^ data[2] ^ data[3]) == data[4])) { 
+				memcpy(sniffUID, sniffUID+4, 3);
+				memcpy(sniffUID+3, data, 4);
+				sniffUIDType = SNF_UID_10;
+				sniffState = SNF_UID3;
+			}
+			break;
+		}
+		case SNF_UID3:{
+			// Select 3nd part of 10 Byte UID
+			if ((reader) && (len == 9) && (data[0] == 0x97) && (data[1] == 0x70) && (CheckCrc14443(CRC_14443_A, data, 9))) {
 				sniffState = SNF_SAK;
 			}
 			break;
@@ -107,12 +129,12 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 		case SNF_CARD_IDLE:{	// trace the card select sequence
 			sniffBuf[0] = 0xFF;
 			sniffBuf[1] = 0xFF;
-			memcpy(sniffBuf + 2, sniffUID, 7);
-			memcpy(sniffBuf + 9, sniffATQA, 2);
-			sniffBuf[11] = sniffSAK;
-			sniffBuf[12] = 0xFF;
-			sniffBuf[13] = 0xFF;
-			LogTrace(sniffBuf, 14, 0, 0, NULL, TRUE);
+			memcpy(sniffBuf + 2, sniffUID, sizeof(sniffUID));
+			memcpy(sniffBuf + 9, sniffATQA, sizeof(sniffATQA));
+			sniffBuf[14] = sniffSAK;
+			sniffBuf[15] = 0xFF;
+			sniffBuf[16] = 0xFF;
+			LogTrace(sniffBuf, sizeof(sniffBuf), 0, 0, NULL, TRUE);
 		}	// intentionally no break;
 		case SNF_CARD_CMD:{		
 			LogTrace(data, len, 0, 0, NULL, TRUE);
@@ -126,13 +148,10 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 			timerData = GetTickCount();
 			break;
 		}
-	
 		default:
 			sniffState = SNF_INIT;
 		break;
 	}
-
-
 	return FALSE;
 }
 
@@ -157,7 +176,6 @@ bool intMfSniffSend() {
 		LED_B_ON();
 		cmd_send(CMD_ACK, 1, BigBuf_get_traceLen(), pckSize, trace + BigBuf_get_traceLen() - pckLen, pckSize);
 		LED_B_OFF();
-
 		pckLen -= pckSize;
 		pckNum++;
 	}
