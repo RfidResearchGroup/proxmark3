@@ -467,6 +467,24 @@ static struct Crypto1State* check_pfx_parity(uint32_t prefix, uint32_t rresp, ui
 
 	return sl + good;
 }
+static struct Crypto1State* check_pfx_parity_ex(uint32_t prefix, uint32_t odd, uint32_t even, struct Crypto1State* sl) {
+	struct Crypto1State s;
+	uint32_t c = 0;
+
+	s.odd = odd ^ fastfwd[1][c];
+	s.even = even ^ fastfwd[0][c];
+	
+	lfsr_rollback_bit(&s, 0, 0);
+	lfsr_rollback_bit(&s, 0, 0);
+	lfsr_rollback_bit(&s, 0, 0);
+	
+	lfsr_rollback_word(&s, 0, 0);
+	lfsr_rollback_word(&s, prefix | c << 5, 1);
+	
+	sl->odd = s.odd;
+	sl->even = s.even;
+	return ++sl;
+}
 
 /** lfsr_common_prefix
  * Implentation of the common prefix attack.
@@ -502,6 +520,43 @@ struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8]
 			}
 
 	s->odd = s->even = 0;
+out:
+	free(odd);
+	free(even);
+	return statelist;
+}
+
+struct Crypto1State* lfsr_common_prefix_ex(uint32_t pfx, uint8_t ks[8])
+{
+	struct Crypto1State *statelist, *s;
+	uint32_t *odd, *even, *o, *e, top;
+
+	odd = lfsr_prefix_ks(ks, 1);
+	even = lfsr_prefix_ks(ks, 0);
+
+	s = statelist = malloc((sizeof *statelist) << 20);
+	if(!s || !odd || !even) {
+		free(statelist);
+		statelist = 0;
+		goto out;
+	}
+
+	// for(o = odd; *o + 1; ++o)
+		// for(e = even; *e + 1; ++e)
+			// for(top = 0; top < 64; ++top) {
+				// *o += 1 << 21;
+				// *e += (!(top & 7) + 1) << 21;
+				// s = check_pfx_parity_ex(pfx, *o, *e, s);
+			// }
+	for(o = odd; *o != -1; ++o)
+		for(e = even; *e != -1; ++e)
+			for(top = 0; top < 64; ++top) {
+				*o = (*o & 0x1fffff) | (top << 21);
+				*e = (*e & 0x1fffff) | (top >> 3) << 21;
+				s = check_pfx_parity_ex(pfx, *o, *e, s);
+			}
+
+	s->odd = s->even = -1;	
 out:
 	free(odd);
 	free(even);

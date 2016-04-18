@@ -15,8 +15,6 @@
 #include "proxmark3.h"
 
 int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t * key) {
-
-
 	struct Crypto1State *state;
 	uint32_t i, pos, rr = 0, nr_diff;
 	byte_t bt, ks3x[8], par[8][8];
@@ -24,7 +22,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	// Reset the last three significant bits of the reader nonce
 	nr &= 0xffffff1f;
   
-	PrintAndLog("\nuid(%08x) nt(%08x) par(%016"llx") ks(%016"llx") nr(%08"llx")\n\n", uid, nt, par_info, ks_info, nr);
+	PrintAndLog("uid(%08x) nt(%08x) par(%016"llx") ks(%016"llx") nr(%08"llx")\n", uid, nt, par_info, ks_info, nr);
 
 	for ( pos = 0; pos < 8; pos++ ) {
 		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
@@ -35,9 +33,9 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 		}
 	}
 
+	printf("+----+--------+---+-----+---------------+\n");
 	printf("|diff|{nr}    |ks3|ks3^5|parity         |\n");
 	printf("+----+--------+---+-----+---------------+\n");
-
 	for ( i = 0; i < 8; i++) {
 		nr_diff = nr | i << 5;
 		printf("| %02x |%08x| %01x |  %01x  |", i << 5, nr_diff, ks3x[i], ks3x[i]^5);
@@ -59,35 +57,120 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	return 0;
 }
 
-// *outputkey is not used...
-int tryMfk32(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
+// call when PAR == 0,  special attack?
+int nonce2key_ex(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t ks_info, uint64_t * key) {
+	struct Crypto1State *state;
+	uint32_t i, pos, key_count;
+	byte_t ks3x[8];
 
+	uint64_t key_recovered;
+	int64_t *state_s;
+	static uint32_t last_uid;
+	static int64_t *last_keylist;
+
+	if (last_uid != uid && last_keylist != NULL) {
+		free(last_keylist);
+		last_keylist = NULL;
+	}
+	last_uid = uid;
+
+	// Reset the last three significant bits of the reader nonce
+	nr &= 0xffffff1f;
+
+	PrintAndLog("uid(%08x) nt(%08x) ks(%016"llx") nr(%08"llx")\n", uid, nt, ks_info, nr);
+ 
+	for (pos=0; pos<8; pos++) {
+		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
+	}
+  
+	PrintAndLog("parity is all zero,try special attack! just wait for few more seconds");
+
+	clock_t t1 = clock();
+	
+	state = lfsr_common_prefix_ex(nr, ks3x);
+	state_s = (int64_t*)state;
+	
+	//char filename[50] ;
+    //sprintf(filename, "nt_%08x_%d.txt", nt, nr);
+    //printf("name %s\n", filename);
+	//FILE* fp = fopen(filename,"w");
+	for (i = 0; (state) && ((state + i)->odd != -1); i++) {
+		lfsr_rollback_word(state+i, uid^nt, 0);
+		crypto1_get_lfsr(state + i, &key_recovered);
+		*(state_s + i) = key_recovered;
+		//fprintf(fp, "%012llx\n",key_recovered);
+	}
+	//fclose(fp);
+	
+	if(!state)
+		return 1;
+	
+	qsort(state_s, i, sizeof(*state_s), compar_int);
+	*(state_s + i) = -1;
+	
+	//Create the intersection:
+	if ( last_keylist != NULL) {
+		int64_t *p1, *p2, *p3;
+		p1 = p3 = last_keylist; 
+		p2 = state_s;
+		while ( *p1 != -1 && *p2 != -1 ) {
+			if (compar_int(p1, p2) == 0) {
+				printf("p1:%"llx" p2:%"llx" p3:%"llx" key:%012"llx"\n",(uint64_t)(p1-last_keylist),(uint64_t)(p2-state_s),(uint64_t)(p3-last_keylist),*p1);
+				*p3++ = *p1++;
+				p2++;
+			}
+			else {
+				while (compar_int(p1, p2) == -1) ++p1;
+				while (compar_int(p1, p2) == 1) ++p2;
+			}
+		}
+		key_count = p3 - last_keylist;;
+	} else {
+		key_count = 0;
+	}
+
+	printf("key_count:%d\n", key_count);
+	
+	// The list may still contain several key candidates. Test each of them with mfCheckKeys
+	uint8_t keyBlock[6];
+	uint64_t key64;
+	for (i = 0; i < key_count; i++) {
+		key64 = *(last_keylist + i);
+		num_to_bytes(key64, 6, keyBlock);
+		key64 = 0;
+		if (!mfCheckKeys(0, 0, TRUE, 1, keyBlock, &key64)) {  //block 0,A,
+			*key = key64;
+			free(last_keylist);
+			last_keylist = NULL;
+			free(state);
+			return 0;
+		}
+	}
+
+	t1 = clock() - t1;
+	if ( t1 > 0 ) PrintAndLog("Time in nonce2key_special: %.0f ticks \n", (float)t1);
+
+	free(last_keylist);
+	last_keylist = state_s;
+	return 1;
+}
+
+int tryMfk32(uint8_t *data, uint64_t *outputkey ){
 	struct Crypto1State *s,*t;
-	uint64_t key;     // recovered key
-	uint32_t uid;     // serial number
-	uint32_t nt;      // tag challenge
-	uint32_t nr0_enc; // first encrypted reader challenge
-	uint32_t ar0_enc; // first encrypted reader response
-	uint32_t nr1_enc; // second encrypted reader challenge
-	uint32_t ar1_enc; // second encrypted reader response	
+	uint64_t key;						 // recovered key
+	uint32_t uid     = le32toh(data);
+	uint32_t nt      = le32toh(data+4);  // tag challenge
+	uint32_t nr0_enc = le32toh(data+8);  // first encrypted reader challenge
+	uint32_t ar0_enc = le32toh(data+12); // first encrypted reader response
+	//+16 uid2
+	//+20 nt2
+	uint32_t nr1_enc = le32toh(data+24); // second encrypted reader challenge
+	uint32_t ar1_enc = le32toh(data+28); // second encrypted reader response	
 	bool isSuccess = FALSE;
 	int counter = 0;
-	
-	uid 	= myuid;//(uint32_t)bytes_to_num(data +  0, 4);
-	nt 		= *(uint32_t*)(data+8);
-	nr0_enc = *(uint32_t*)(data+12);
-	ar0_enc = *(uint32_t*)(data+16);
-	nr1_enc = *(uint32_t*)(data+32);
-	ar1_enc = *(uint32_t*)(data+36);
 
-	// PrintAndLog("recovering key for:");
-	// PrintAndLog("    uid: %08x   %08x",uid, myuid);
-	// PrintAndLog("     nt: %08x",nt);
-	// PrintAndLog(" {nr_0}: %08x",nr0_enc);
-	// PrintAndLog(" {ar_0}: %08x",ar0_enc);
-	// PrintAndLog(" {nr_1}: %08x",nr1_enc);
-	// PrintAndLog(" {ar_1}: %08x",ar1_enc);
-
+	PrintAndLog("Enter mfkey32");
+	clock_t t1 = clock();
 	s = lfsr_recovery32(ar0_enc ^ prng_successor(nt, 64), 0);
   
 	for(t = s; t->odd | t->even; ++t) {
@@ -101,37 +184,33 @@ int tryMfk32(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 			PrintAndLog("Found Key: [%012"llx"]", key);
 			isSuccess = TRUE;
 			++counter;
-			if (counter==20)
+			if (counter==100)
 				break;
 		}
 	}
-	
-	num_to_bytes(key, 6, outputkey);
-	crypto1_destroy(t);
+	t1 = clock() - t1;
+	if ( t1 > 0 ) PrintAndLog("Time in mf32key: %.0f ticks \n", (float)t1);
+	*outputkey = ( isSuccess ) ? key : 0;
+	crypto1_destroy(s);
 	return isSuccess;
 }
 
-int tryMfk32_moebius(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
-
+int tryMfk32_moebius(uint8_t *data, uint64_t *outputkey ){
 	struct Crypto1State *s, *t;
-	uint64_t key;     // recovered key
-	uint32_t uid;     // serial number
-	uint32_t nt0;     // tag challenge first
-	uint32_t nt1;     // tag challenge second
-	uint32_t nr0_enc; // first encrypted reader challenge
-	uint32_t ar0_enc; // first encrypted reader response
-	uint32_t nr1_enc; // second encrypted reader challenge
-	uint32_t ar1_enc; // second encrypted reader response	
+	uint64_t key 	 = 0;			     // recovered key
+	uint32_t uid     = le32toh(data);
+	uint32_t nt0     = le32toh(data+4);  // first tag challenge (nonce)
+	uint32_t nr0_enc = le32toh(data+8);  // first encrypted reader challenge
+	uint32_t ar0_enc = le32toh(data+12); // first encrypted reader response
+	//uint32_t uid1    = le32toh(data+16);
+	uint32_t nt1     = le32toh(data+20); // second tag challenge (nonce)
+	uint32_t nr1_enc = le32toh(data+24); // second encrypted reader challenge
+	uint32_t ar1_enc = le32toh(data+28); // second encrypted reader response	
 	bool isSuccess = FALSE;
 	int counter = 0;
 	
-	uid 	= myuid;//(uint32_t)bytes_to_num(data +  0, 4);
-	nt0 	= *(uint32_t*)(data+8);
-	nr0_enc = *(uint32_t*)(data+12);
-	ar0_enc = *(uint32_t*)(data+16);
-	nt1 	= *(uint32_t*)(data+8);
-	nr1_enc = *(uint32_t*)(data+32);
-	ar1_enc = *(uint32_t*)(data+36);
+	PrintAndLog("Enter mfkey32_moebius");
+	clock_t t1 = clock();
 
 	s = lfsr_recovery32(ar0_enc ^ prng_successor(nt0, 64), 0);
   
@@ -151,54 +230,45 @@ int tryMfk32_moebius(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
 				break;
 		}
 	}
-	num_to_bytes(key, 6, outputkey);
-	crypto1_destroy(t);
+	t1 = clock() - t1;
+	if ( t1 > 0 ) PrintAndLog("Time in mfkey32_moebius: %.0f ticks \n", (float)t1);
+	*outputkey = ( isSuccess ) ? key : 0;
+	crypto1_destroy(s);
 	return isSuccess;
 }
 
-int tryMfk64(uint64_t myuid, uint8_t *data, uint8_t *outputkey ){
+int tryMfk64_ex(uint8_t *data, uint64_t *outputkey){
+	uint32_t uid    = le32toh(data);
+	uint32_t nt     = le32toh(data+4);  // tag challenge
+	uint32_t nr_enc = le32toh(data+8);  // encrypted reader challenge
+	uint32_t ar_enc = le32toh(data+12); // encrypted reader response	
+	uint32_t at_enc = le32toh(data+16);	// encrypted tag response
+	return tryMfk64(uid, nt, nr_enc, ar_enc, at_enc, outputkey);
+}
 
+int tryMfk64(uint32_t uid, uint32_t nt, uint32_t nr_enc, uint32_t ar_enc, uint32_t at_enc, uint64_t *outputkey){
+	uint64_t key 	= 0;				// recovered key
+	uint32_t ks2;     					// keystream used to encrypt reader response
+	uint32_t ks3;     					// keystream used to encrypt tag response
 	struct Crypto1State *revstate;
-	uint64_t key;     // recovered key
-	uint32_t uid;     // serial number
-	uint32_t nt;      // tag challenge
-	uint32_t nr_enc;  // encrypted reader challenge
-	uint32_t ar_enc;  // encrypted reader response
-	uint32_t at_enc;  // encrypted tag response
-	uint32_t ks2;     // keystream used to encrypt reader response
-	uint32_t ks3;     // keystream used to encrypt tag response
-
-	struct Crypto1State mpcs = {0, 0};
-	struct Crypto1State *pcs;
-	pcs = &mpcs;
 	
-	uid 	= myuid;//(uint32_t)bytes_to_num(data +  0, 4);
-	nt	= *(uint32_t*)(data+8);
-	nr_enc	= *(uint32_t*)(data+12);
-	ar_enc	= *(uint32_t*)(data+16);
+	PrintAndLog("Enter mfkey64");
+	clock_t t1 = clock();
 	
-	crypto1_word(pcs, nr_enc , 1);
-	at_enc = prng_successor(nt, 96) ^ crypto1_word(pcs, 0, 0);
-
-	// printf("Recovering key for:\n");
-	// printf("  uid: %08x\n",uid);
-	// printf("   nt: %08x\n",nt);
-	// printf(" {nr}: %08x\n",nr_enc);
-	// printf(" {ar}: %08x\n",ar_enc);
-	// printf(" {at}: %08x\n",at_enc);
-
 	// Extract the keystream from the messages
 	ks2 = ar_enc ^ prng_successor(nt, 64);
 	ks3 = at_enc ^ prng_successor(nt, 96);
-
 	revstate = lfsr_recovery64(ks2, ks3);
 	lfsr_rollback_word(revstate, 0, 0);
 	lfsr_rollback_word(revstate, 0, 0);
 	lfsr_rollback_word(revstate, nr_enc, 1);
 	lfsr_rollback_word(revstate, uid ^ nt, 0);
 	crypto1_get_lfsr(revstate, &key);
-	PrintAndLog("Found Key: [%012"llx"]",key);
-	num_to_bytes(key, 6, outputkey);
+	PrintAndLog("Found Key: [%012"llx"]", key);
 	crypto1_destroy(revstate);
+	*outputkey = key;
+	
+	t1 = clock() - t1;
+	if ( t1 > 0 ) PrintAndLog("Time in mfkey64: %.0f ticks \n", (float)t1);
 	return 0;
 }

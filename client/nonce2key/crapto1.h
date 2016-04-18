@@ -39,6 +39,10 @@ struct Crypto1State* lfsr_recovery64(uint32_t ks2, uint32_t ks3);
 uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd);
 struct Crypto1State* lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8]);
 
+// douvan's no-parity function
+struct Crypto1State* lfsr_common_prefix_ex(uint32_t pfx, uint8_t ks[8]);
+
+
 uint8_t lfsr_rollback_bit(struct Crypto1State* s, uint32_t in, int fb);
 uint8_t lfsr_rollback_byte(struct Crypto1State* s, uint32_t in, int fb);
 uint32_t lfsr_rollback_word(struct Crypto1State* s, uint32_t in, int fb);
@@ -82,7 +86,6 @@ static inline int parity(uint32_t x)
 static inline int filter(uint32_t const x)
 {
 	uint32_t f;
-
 	f  = 0xf22c0 >> (x       & 0xf) & 16;
 	f |= 0x6c9c0 >> (x >>  4 & 0xf) &  8;
 	f |= 0x3c8b0 >> (x >>  8 & 0xf) &  4;
