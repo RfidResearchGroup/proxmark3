@@ -507,7 +507,7 @@ int CmdHF14ASim(const char *Cmd) {
 	uint8_t uid[10] = {0,0,0,0,0,0,0,0,0,0};
 	int uidlen = 0;
 	uint8_t data[40];
-	uint8_t key[6] = {0,0,0,0,0,0};
+	uint64_t key = 0;
 	UsbCommand resp;
 	bool useUIDfromEML = TRUE;
 
@@ -562,7 +562,7 @@ int CmdHF14ASim(const char *Cmd) {
 	PrintAndLog("Press pm3-button to abort simulation");
 	
 	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a,{ tagtype, flags, 0 }};	
-	memcpy(c.d.asBytes, uid, uidlen);
+	memcpy(c.d.asBytes, uid, uidlen>>1);
 	clearCommandBuffer();
 	SendCommand(&c);	
 
@@ -570,13 +570,14 @@ int CmdHF14ASim(const char *Cmd) {
 		if ( WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
 			if ( (resp.arg[0] & 0xffff) == CMD_SIMULATE_MIFARE_CARD ){
 				memset(data, 0x00, sizeof(data));
-				memset(key, 0x00, sizeof(key));
 				int len = (resp.arg[1] > sizeof(data)) ? sizeof(data) : resp.arg[1];
 				memcpy(data, resp.d.asBytes, len);
-				uint32_t cuid = bytes_to_num(data, 4);
-				tryMfk32(cuid, data, key); // 201604, iceman,  errors!
-				//tryMfk32_moebius(cuid, data, key);
-				//tryMfk64(cuid, data, key);
+				key = 0;
+				
+				if ( flags & FLAG_NR_AR_ATTACK ) {
+					bool found = tryMfk32(data, &key);
+					found ^= tryMfk32_moebius(data, &key);
+				}
 			}
 		}
 	}
@@ -776,11 +777,7 @@ static command_t CommandTable[] =
 };
 
 int CmdHF14A(const char *Cmd) {
-	// flush
 	clearCommandBuffer();
-	//WaitForResponseTimeout(CMD_ACK,NULL,100);
-
-	// parse
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }
