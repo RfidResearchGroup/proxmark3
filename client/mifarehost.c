@@ -342,12 +342,11 @@ static uint8_t traceCurKey = 0;
 
 struct Crypto1State *traceCrypto1 = NULL;
 struct Crypto1State *revstate = NULL;
-
 uint64_t key = 0;
 uint32_t ks2 = 0;
 uint32_t ks3 = 0;
 
-uint32_t uid = 0;     // serial number
+uint32_t cuid = 0;    // serial number
 uint32_t nt =0;      // tag challenge
 uint32_t nr_enc =0;  // encrypted reader challenge
 uint32_t ar_enc =0;  // encrypted reader response
@@ -368,7 +367,7 @@ int isBlockTrailer(int blockN) {
 	return ((blockN & 0x03) == 0x03);
 }
 
-int loadTraceCard(uint8_t *tuid) {
+int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
 	FILE * f;
 	char buf[64] = {0x00};
 	uint8_t buf8[64] = {0x00};
@@ -378,9 +377,9 @@ int loadTraceCard(uint8_t *tuid) {
 		saveTraceCard();
 		
 	memset(traceCard, 0x00, 4096);
-	memcpy(traceCard, tuid + 3, 4);
+	memcpy(traceCard, tuid, uidlen);
 
-	FillFileNameByUID(traceFileName, tuid, ".eml", 7);
+	FillFileNameByUID(traceFileName, tuid, ".eml", uidlen);
 
 	f = fopen(traceFileName, "r");
 	if (!f) return 1;
@@ -391,7 +390,7 @@ int loadTraceCard(uint8_t *tuid) {
 	
 		memset(buf, 0, sizeof(buf));
 		if (fgets(buf, sizeof(buf), f) == NULL) {
-			PrintAndLog("File reading error.");
+			PrintAndLog("No trace file found or reading error.");
 			fclose(f);
 			return 2;
 		}
@@ -403,35 +402,35 @@ int loadTraceCard(uint8_t *tuid) {
 			return 2;
 		}
 		for (i = 0; i < 32; i += 2)
-			sscanf(&buf[i], "%02x", (unsigned int *)&buf8[i / 2]);
+			sscanf(&buf[i], "%02X", (unsigned int *)&buf8[i / 2]);
 
 		memcpy(traceCard + blockNum * 16, buf8, 16);
 
 		blockNum++;
 	}
 	fclose(f);
-
 	return 0;
 }
 
 int saveTraceCard(void) {
-	FILE * f;
 	
 	if ((!strlen(traceFileName)) || (isTraceCardEmpty())) return 0;
 	
+	FILE * f;
 	f = fopen(traceFileName, "w+");
 	if ( !f ) return 1;
 	
 	for (int i = 0; i < 64; i++) {  // blocks
 		for (int j = 0; j < 16; j++)  // bytes
-			fprintf(f, "%02x", *(traceCard + i * 16 + j)); 
+			fprintf(f, "%02X", *(traceCard + i * 16 + j)); 
 		fprintf(f,"\n");
 	}
+	fflush(f);
 	fclose(f);
 	return 0;
 }
 
-int mfTraceInit(uint8_t *tuid, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile) {
+int mfTraceInit(uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile) {
 
 	if (traceCrypto1) 
 		crypto1_destroy(traceCrypto1);
@@ -439,16 +438,14 @@ int mfTraceInit(uint8_t *tuid, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFil
 	traceCrypto1 = NULL;
 
 	if (wantSaveToEmlFile) 
-		loadTraceCard(tuid);
+		loadTraceCard(tuid, uidlen);
 		
 	traceCard[4] = traceCard[0] ^ traceCard[1] ^ traceCard[2] ^ traceCard[3];
 	traceCard[5] = sak;
 	memcpy(&traceCard[6], atqa, 2);
 	traceCurBlock = 0;
-	uid = bytes_to_num(tuid + 3, 4);
-	
+	cuid = bytes_to_num(tuid+(uidlen-4), 4);
 	traceState = TRACE_IDLE;
-
 	return 0;
 }
 
@@ -471,30 +468,31 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
 }
 
 int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
-	
-	uint8_t data[64];
-	memset(data, 0x00, sizeof(data));
-	
+
 	if (traceState == TRACE_ERROR) return 1;
-	
+
 	if (len > 64) {
 		traceState = TRACE_ERROR;
 		return 1;
 	}
 	
+	uint8_t data[64];
+	memset(data, 0x00, sizeof(data));
+	
 	memcpy(data, data_src, len);
+	
 	if ((traceCrypto1) && ((traceState == TRACE_IDLE) || (traceState > TRACE_AUTH_OK))) {
 		mf_crypto1_decrypt(traceCrypto1, data, len, 0);
-		PrintAndLog("dec> %s", sprint_hex(data, len));
-		AddLogHex(logHexFileName, "dec> ", data, len); 
+		PrintAndLog("DEC| %s", sprint_hex(data, len));
+		AddLogHex(logHexFileName, "DEC| ", data, len); 
 	}
 	
 	switch (traceState) {
 	case TRACE_IDLE: 
 		// check packet crc16!
 		if ((len >= 4) && (!CheckCrc14443(CRC_14443_A, data, len))) {
-			PrintAndLog("dec> CRC ERROR!!!");
-			AddLogLine(logHexFileName, "dec> ", "CRC ERROR!!!"); 
+			PrintAndLog("DEC| CRC ERROR!!!");
+			AddLogLine(logHexFileName, "DEC| ", "CRC ERROR!!!"); 
 			traceState = TRACE_ERROR;  // do not decrypt the next commands
 			return 1;
 		}
@@ -526,10 +524,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			traceState = TRACE_ERROR;  // do not decrypt the next commands
 			return 0;
 		}
-		
 		return 0;
-	break;
-	
 	case TRACE_READ_DATA: 
 		if (len == 18) {
 			traceState = TRACE_IDLE;
@@ -545,23 +540,19 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			traceState = TRACE_ERROR;
 			return 1;
 		}
-	break;
-
+		break;
 	case TRACE_WRITE_OK: 
 		if ((len == 1) && (data[0] == 0x0a)) {
 			traceState = TRACE_WRITE_DATA;
-
 			return 0;
 		} else {
 			traceState = TRACE_ERROR;
 			return 1;
 		}
-	break;
-
+		break;
 	case TRACE_WRITE_DATA: 
 		if (len == 18) {
 			traceState = TRACE_IDLE;
-
 			memcpy(traceCard + traceCurBlock * 16, data, 16);
 			if (wantSaveToEmlFile) saveTraceCard();
 			return 0;
@@ -569,8 +560,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			traceState = TRACE_ERROR;
 			return 1;
 		}
-	break;
-
+		break;
 	case TRACE_AUTH1: 
 		if (len == 4) {
 			traceState = TRACE_AUTH2;
@@ -580,12 +570,10 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			traceState = TRACE_ERROR;
 			return 1;
 		}
-	break;
-
+		break;
 	case TRACE_AUTH2: 
 		if (len == 8) {
 			traceState = TRACE_AUTH_OK;
-
 			nr_enc = bytes_to_num(data, 4);
 			ar_enc = bytes_to_num(data + 4, 4);
 			return 0;
@@ -593,12 +581,10 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			traceState = TRACE_ERROR;
 			return 1;
 		}
-	break;
-
+		break;
 	case TRACE_AUTH_OK: 
-		if (len ==4) {
+		if (len == 4) {
 			traceState = TRACE_IDLE;
-
 			at_enc = bytes_to_num(data, 4);
 			
 			//  decode key here)
@@ -608,73 +594,51 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			lfsr_rollback_word(revstate, 0, 0);
 			lfsr_rollback_word(revstate, 0, 0);
 			lfsr_rollback_word(revstate, nr_enc, 1);
-			lfsr_rollback_word(revstate, uid ^ nt, 0);
-
+			lfsr_rollback_word(revstate, cuid ^ nt, 0);
 			crypto1_get_lfsr(revstate, &key);
-			printf("Key: %012"llx"\n",key);
-			AddLogUint64(logHexFileName, "key: ", key); 
+			PrintAndLog("Found Key: [%012"llx"]", key);
+			
+			//if ( tryMfk64(cuid, nt, nr_enc, ar_enc, at_enc, &key) )
+			AddLogUint64(logHexFileName, "Found Key: ", key); 
 			
 			int blockShift = ((traceCurBlock & 0xFC) + 3) * 16;
 			if (isBlockEmpty((traceCurBlock & 0xFC) + 3)) memcpy(traceCard + blockShift + 6, trailerAccessBytes, 4);
 			
-			if (traceCurKey) {
+			if (traceCurKey)
 				num_to_bytes(key, 6, traceCard + blockShift + 10);
-			} else {
+			else
 				num_to_bytes(key, 6, traceCard + blockShift);
-			}
-			if (wantSaveToEmlFile) saveTraceCard();
+			
+			if (wantSaveToEmlFile)
+				saveTraceCard();
 
-			if (traceCrypto1) {
+			if (traceCrypto1)
 				crypto1_destroy(traceCrypto1);
-			}
 			
 			// set cryptosystem state
 			traceCrypto1 = lfsr_recovery64(ks2, ks3);
 			
-//	nt = crypto1_word(traceCrypto1, nt ^ uid, 1) ^ nt;
-
-	/*	traceCrypto1 = crypto1_create(key); // key in lfsr
-		crypto1_word(traceCrypto1, nt ^ uid, 0);
-		crypto1_word(traceCrypto1, ar, 1);
-		crypto1_word(traceCrypto1, 0, 0);
-		crypto1_word(traceCrypto1, 0, 0);*/
-	
 			return 0;
 		} else {
 			traceState = TRACE_ERROR;
 			return 1;
 		}
-	break;
-
+		break;
 	default: 
 		traceState = TRACE_ERROR;
 		return 1;
 	}
-
 	return 0;
 }
 
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len){
-	/*
-	uint32_t nt;      // tag challenge
-	uint32_t nr_enc;  // encrypted reader challenge
-	uint32_t ar_enc;  // encrypted reader response
-	uint32_t at_enc;  // encrypted tag response
-	*/
+	PrintAndLog("\nEncrypted data: [%s]", sprint_hex(data, len) );
 	struct Crypto1State *pcs = NULL;
-	
 	ks2 = ar_enc ^ prng_successor(nt, 64);
 	ks3 = at_enc ^ prng_successor(nt, 96);
-	
-	PrintAndLog("Decrypting data with:");
-	PrintAndLog("      nt: %08x",nt);
-	PrintAndLog("  ar_enc: %08x",ar_enc);
-	PrintAndLog("  at_enc: %08x",at_enc);
-	PrintAndLog("\nEncrypted data: [%s]", sprint_hex(data,len) );
-
 	pcs = lfsr_recovery64(ks2, ks3);
 	mf_crypto1_decrypt(pcs, data, len, FALSE);
-	PrintAndLog("Decrypted data: [%s]", sprint_hex(data,len) );
+	PrintAndLog("Decrypted data: [%s]", sprint_hex(data, len) );
 	crypto1_destroy(pcs);
 	return 0;
 }

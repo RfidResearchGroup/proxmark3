@@ -487,7 +487,6 @@ int setLuaPath( lua_State* L, const char* path )
 	return 0; // all done!
 }
 
-
 int set_pm3_libraries(lua_State *L)
 {
 
