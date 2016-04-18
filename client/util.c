@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include "util.h"
+#include "proxmark3.h"
 #define MAX_BIN_BREAK_LENGTH   (3072+384+1)
 
 #ifndef _WIN32
@@ -47,7 +48,7 @@ int ukbhit(void) {
 
 // log files functions
 void AddLogLine(char *file, char *extData, char *c) {
-	FILE *fLog = NULL;
+	FILE *f = NULL;
     char filename[FILE_PATH_SIZE] = {0x00};
     int len = 0;
 
@@ -55,15 +56,16 @@ void AddLogLine(char *file, char *extData, char *c) {
     if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
     memcpy(filename, file, len);
    
-	fLog = fopen(filename, "a");
-	if (!fLog) {
+	f = fopen(filename, "a");
+	if (!f) {
 		printf("Could not append log file %s", filename);
 		return;
 	}
 
-	fprintf(fLog, "%s", extData);
-	fprintf(fLog, "%s\n", c);
-	fclose(fLog);
+	fprintf(f, "%s", extData);
+	fprintf(f, "%s\n", c);
+	fflush(f);
+	fclose(f);
 }
 
 void AddLogHex(char *fileName, char *extData, const uint8_t * data, const size_t len){
@@ -71,28 +73,33 @@ void AddLogHex(char *fileName, char *extData, const uint8_t * data, const size_t
 }
 
 void AddLogUint64(char *fileName, char *extData, const uint64_t data) {
-  char buf[100] = {0};
-	sprintf(buf, "%x%x", (unsigned int)((data & 0xFFFFFFFF00000000) >> 32), (unsigned int)(data & 0xFFFFFFFF));
+	char buf[20] = {0};
+	memset(buf, 0x00, sizeof(buf));
+	//sprintf(buf, "%X%X", (unsigned int)((data & 0xFFFFFFFF00000000) >> 32), (unsigned int)(data & 0xFFFFFFFF));
+	sprintf(buf, "%012"llx"", data);
 	AddLogLine(fileName, extData, buf);
 }
 
 void AddLogCurrentDT(char *fileName) {
-	char buff[20];
+	char buf[20];
+	memset(buf, 0x00, sizeof(buf));
 	struct tm *curTime;
-
 	time_t now = time(0);
 	curTime = gmtime(&now);
-
-	strftime (buff, sizeof(buff), "%Y-%m-%d %H:%M:%S", curTime);
-	AddLogLine(fileName, "\nanticollision: ", buff);
+	strftime (buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", curTime);
+	AddLogLine(fileName, "\nanticollision: ", buf);
 }
 
-void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext, int byteCount) {
+void FillFileNameByUID(char *fileName, uint8_t *uid, char *ext, int byteCount) {
+	if ( fileName == NULL || uid == NULL || ext == NULL ){
+		printf("error: parameter is NULL\n");
+		return;
+	}
 	char * fnameptr = fileName;
-	memset(fileName, 0x00, 200);
+	memset(fileName, 0x00, FILE_PATH_SIZE);
 	
 	for (int j = 0; j < byteCount; j++, fnameptr += 2)
-		sprintf(fnameptr, "%02x", uid[j]); 
+		sprintf(fnameptr, "%02X", uid[j]); 
 	sprintf(fnameptr, "%s", ext); 
 }
 
@@ -131,7 +138,6 @@ char *sprint_hex(const uint8_t *data, const size_t len) {
 
 	for (i=0; i < maxLen; ++i, tmp += 3)
 		sprintf(tmp, "%02X ", data[i]);
-
 	return buf;
 }
 
@@ -207,8 +213,7 @@ void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest) {
 	}
 }
 //least significant bit first
-void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest)
-{
+void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest) {
 	for(int i = 0 ; i < len ; ++i) {
 		dest[i] =  n & 1;
 		n >>= 1;
@@ -515,7 +520,9 @@ void xor(unsigned char * dst, unsigned char * src, size_t len) {
 int32_t le24toh (uint8_t data[3]) {
     return (data[2] << 16) | (data[1] << 8) | data[0];
 }
-
+uint32_t le32toh (uint8_t *data) {
+	return (uint32_t)( (data[3]<<24) | (data[2]<<16) | (data[1]<<8) | data[0]);
+}
 // Pack a bitarray into a uint32_t.  
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits) {
 
