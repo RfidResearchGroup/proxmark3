@@ -1,8 +1,9 @@
 #define __STDC_FORMAT_MACROS
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 #include <inttypes.h>
 #include "crapto1.h"
-#include <stdio.h>
-#include <time.h>
 
 #define llx PRIx64
 #define lli PRIi64
@@ -38,7 +39,7 @@ int main (int argc, char *argv[]) {
 	for (int i = 0; i < encc; i++) {
 		enclen[i] = strlen(argv[i + 6]) / 2;
 		for (int i2 = 0; i2 < enclen[i]; i2++) {
-			sscanf(argv[i+6] + i2*2,"%2x", (uint8_t*)&enc[i][i2]);
+			sscanf(argv[i+6] + i2*2, "%2x", (unsigned int *)&enc[i][i2]);
 		}
 	}
 	
@@ -97,7 +98,7 @@ int main (int argc, char *argv[]) {
 	lfsr_rollback_word(revstate, nr_enc, 1);
 	lfsr_rollback_word(revstate, uid ^ nt, 0);
 	crypto1_get_lfsr(revstate, &key);
-	printf("\nFound Key: [%012"llx"]\n\n",key);
+	printf("\nFound Key: [%012"llx"]\n\n", key);
 	crypto1_destroy(revstate);
   
 	t1 = clock() - t1;
