@@ -60,8 +60,9 @@ Among the stuff is
 	* A Bruteforce for AWID 26, starting w a facilitycode then trying all 0xFFFF cardnumbers via simulation. To be used against a AWID Reader.
 	* A Bruteforce for HID,  starting w a facilitycode then trying all 0xFFFF cardnumbers via simulation. To be used against a HID Reader.
 	* Blaposts Crapto1 v3.3
-					  
-    * icsom's  legic script and legic enhancements
+    * Icsom's  legic script and legic enhancements
+    * Azcid's bitsliced bruteforce solver in 'hf mf hardnested'
+
 
 ---	
 Straight from the CHANGELOG
