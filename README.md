@@ -67,6 +67,11 @@ Among the stuff is
 ---	
 Straight from the CHANGELOG
 ---
+  - 'hf mf chk' speedup
+  - 'hf 14a/mf sim x" attack mode,  now uses also moebius version of mfkey32 to try finding the key.
+  - 'hf 14a sim' Added emulation of Mifare cards with 10byte UID length.
+  - 'hf mf sim' Added emulation of Mifare cards with 10byte UID length.
+  - Added bitsliced bruteforce solver in 'hf mf hardnested' (azcid)
   - Added `lf guard clone/sim` (iceman)
   - Added `lf pyramd clone/sim` (iceman) 
   - trying to fix "hf 14b" command to be able to read CALYPSO card.	 (iceman)
