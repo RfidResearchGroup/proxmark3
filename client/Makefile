@@ -8,13 +8,14 @@ include ../common/Makefile.common
 CC = gcc
 CXX = g++
 #COMMON_FLAGS = -m32
-VPATH = ../common ../zlib
+COMMON_FLAGS =  -std=c99 -O3 -mpopcnt -march=native
+#VPATH = ../common ../zlib
 OBJDIR = obj
 
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm
 LUALIB = ../liblua/liblua.a
-LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=c99 -I. -I../include -I../common -I../zlib -I/opt/local/include -I../liblua -Wall $(COMMON_FLAGS) -g -O3
+#LDFLAGS = $(COMMON_FLAGS)
+CFLAGS =  $(COMMON_FLAGS) -I. -I../include -I../common -I../zlib -I/opt/local/include -I../liblua -Wall -g
 LUAPLATFORM = generic
 
 ifneq (,$(findstring MINGW,$(platform))) 
@@ -69,17 +70,18 @@ CORESRCS = 	uart.c \
 		sleep.c
 
 
-CMDSRCS = 	nonce2key/crapto1.c\
-			nonce2key/crypto1.c\
-			nonce2key/nonce2key.c\
+CMDSRCS = 	nonce2key/crapto1.c \
+			nonce2key/crypto1.c \
+			nonce2key/nonce2key.c \
+			nonce2key/crypto1_bs.c \
 			loclass/cipher.c \
 			loclass/cipherutils.c \
 			loclass/des.c \
 			loclass/ikeys.c \
-			loclass/elite_crack.c\
-			loclass/fileutils.c\
-			mifarehost.c\
-			parity.c\
+			loclass/elite_crack.c \
+			loclass/fileutils.c \
+			mifarehost.c \
+			parity.c \
 			crc.c \
 			crc16.c \
 			crc64.c \
@@ -113,30 +115,30 @@ CMDSRCS = 	nonce2key/crapto1.c\
 			cmdparser.c \
 			cmdmain.c \
 			cmdlft55xx.c \
-			cmdlfpcf7931.c\
-			cmdlfviking.c\
-			cmdlfpresco.c\
-			cmdlfpyramid.c\
-			cmdlfguard.c\
-			pm3_binlib.c\
-			scripting.c\
-			cmdscript.c\
-			pm3_bitlib.c\
-			aes.c\
-			protocols.c\
-			sha1.c\
-			sha256.c\
-			cmdcrc.c\
-			reveng/preset.c\
-			reveng/reveng.c\
-			reveng/cli.c\
-			reveng/bmpbit.c\
-			reveng/model.c\
-			reveng/poly.c\
-			reveng/getopt.c\
-			tea.c\
-			prng.c\
-			radixsort.c\
+			cmdlfpcf7931.c \
+			cmdlfviking.c \
+			cmdlfpresco.c \
+			cmdlfpyramid.c \
+			cmdlfguard.c \
+			pm3_binlib.c \
+			scripting.c \
+			cmdscript.c \
+			pm3_bitlib.c \
+			aes.c \
+			protocols.c \
+			sha1.c \
+			sha256.c \
+			cmdcrc.c \
+			reveng/preset.c \
+			reveng/reveng.c \
+			reveng/cli.c \
+			reveng/bmpbit.c \
+			reveng/model.c \
+			reveng/poly.c \
+			reveng/getopt.c \
+			tea.c \
+			prng.c \
+			radixsort.c \
 			bucketsort.c
 ZLIBSRCS = deflate.c adler32.c trees.c zutil.c inflate.c inffast.c inftrees.c
 ZLIB_FLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED 
@@ -147,13 +149,13 @@ CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
 ZLIBOBJS = $(ZLIBSRCS:%.c=$(OBJDIR)/%.o)
 
 RM = rm -f
-BINS = proxmark3 flasher fpga_compress #snooper cli
+BINS = proxmark3 flasher fpga_compress
 CLEAN = cli cli.exe flasher flasher.exe proxmark3 proxmark3.exe fpga_compress fpga_compress.exe snooper snooper.exe $(CMDOBJS) $(OBJDIR)/*.o *.o *.moc.cpp
 
 all: lua_build $(BINS) 
 
 all-static: LDLIBS:=-static $(LDLIBS)
-all-static: snooper cli flasher fpga_compress
+all-static: $(BINS)
 	
 proxmark3: LDLIBS+=$(LUALIB) $(QTLDLIBS)
 proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(QTGUI)

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2015 piwi
-//
+// fiddled with 2016 Azcid (hardnested bitsliced Bruteforce imp)
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -14,8 +14,8 @@
 //   Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
 #include <stdlib.h> 
+#include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 #include <locale.h>
@@ -25,14 +25,19 @@
 #include "ui.h"
 #include "util.h"
 #include "nonce2key/crapto1.h"
+#include "nonce2key/crypto1_bs.h"
 #include "parity.h"
+#ifdef __WIN32
+	#include <windows.h>
+#endif
+#include <malloc.h>
+#include <assert.h>
 
 // uint32_t test_state_odd = 0;
 // uint32_t test_state_even = 0;
 
 #define CONFIDENCE_THRESHOLD	0.95		// Collect nonces until we are certain enough that the following brute force is successfull
-#define GOOD_BYTES_REQUIRED		30
-
+#define GOOD_BYTES_REQUIRED		28
 
 static const float p_K[257] = {		// the probability that a random nonce has a Sum Property == K 
 	0.0290, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 
@@ -88,6 +93,8 @@ typedef struct noncelist {
 } noncelist_t;
 
 
+static size_t nonces_to_bruteforce = 0;
+static noncelistentry_t *brute_force_nonces[256];
 static uint32_t cuid = 0;
 static noncelist_t nonces[256];
 static uint8_t best_first_bytes[256];
@@ -169,13 +176,17 @@ static int add_nonce(uint32_t nonce_enc, uint8_t par_enc)
 	p2->nonce_enc = nonce_enc;
 	p2->par_enc = par_enc;
 
+    if(nonces_to_bruteforce < 256){
+        brute_force_nonces[nonces_to_bruteforce] = p2;
+        nonces_to_bruteforce++;
+    }
+
 	nonces[first_byte].num++;
 	nonces[first_byte].Sum += evenparity32((nonce_enc & 0x00ff0000) | (par_enc & 0x04));
 	nonces[first_byte].updated = true;   // indicates that we need to recalculate the Sum(a8) probability for this first byte
 
 	return (1);				// new nonce added
 }
-
 
 static void init_nonce_memory(void)
 {
@@ -203,14 +214,12 @@ static void free_nonce_list(noncelistentry_t *p)
 	}
 }
 
-
 static void free_nonces_memory(void)
 {
 	for (uint16_t i = 0; i < 256; i++) {
 		free_nonce_list(nonces[i].first);
 	}
 }
-
 
 static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even)
 { 
@@ -235,14 +244,12 @@ static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even)
 	return sum;
 }
 
-
 // static uint16_t SumProperty(struct Crypto1State *s)
 // {
 	// uint16_t sum_odd = PartialSumProperty(s->odd, ODD_STATE);
 	// uint16_t sum_even = PartialSumProperty(s->even, EVEN_STATE);
 	// return (sum_odd*(16-sum_even) + (16-sum_odd)*sum_even);
 // }
-
 
 static double p_hypergeometric(uint16_t N, uint16_t K, uint16_t n, uint16_t k) 
 {
@@ -281,8 +288,7 @@ static double p_hypergeometric(uint16_t N, uint16_t K, uint16_t n, uint16_t k)
 		}
 	}
 }
-	
-	
+
 static float sum_probability(uint16_t K, uint16_t n, uint16_t k)
 {
 	const uint16_t N = 256;
@@ -299,8 +305,6 @@ static float sum_probability(uint16_t K, uint16_t n, uint16_t k)
 	}
 	return(p_T_is_k_when_S_is_K * p_S_is_K / p_T_is_k);
 }
-
-		
 
 	
 static inline uint_fast8_t common_bits(uint_fast8_t bytes_diff) 
@@ -326,7 +330,6 @@ static inline uint_fast8_t common_bits(uint_fast8_t bytes_diff)
 
 	return common_bits_LUT[bytes_diff];
 }
-
 
 static void Tests()
 {
@@ -490,7 +493,6 @@ static void Tests()
 
 }
 
-
 static void sort_best_first_bytes(void)
 {
 	// sort based on probability for correct guess	
@@ -576,7 +578,6 @@ static void sort_best_first_bytes(void)
 	
 }
 
-
 static uint16_t estimate_second_byte_sum(void) 
 {
 	
@@ -608,7 +609,6 @@ static uint16_t estimate_second_byte_sum(void)
 	
 	return num_good_nonces;
 }	
-
 
 static int read_nonce_file(void)
 {
@@ -652,7 +652,6 @@ static int read_nonce_file(void)
 	return 0;
 }
 
-
 static void Check_for_FilterFlipProperties(void)
 {
 	printf("Checking for Filter Flip Properties...\n");
@@ -683,12 +682,9 @@ static void Check_for_FilterFlipProperties(void)
 	}
 }
 
-
 static void simulate_MFplus_RNG(uint32_t test_cuid, uint64_t test_key, uint32_t *nt_enc, uint8_t *par_enc)
 {
 	struct Crypto1State sim_cs = {0, 0};
-//	sim_cs.odd = sim_cs.even = 0;
-
 	// init cryptostate with key:
 	for(int8_t i = 47; i > 0; i -= 2) {
 		sim_cs.odd  = sim_cs.odd  << 1 | BIT(test_key, (i - 1) ^ 7);
@@ -707,7 +703,6 @@ static void simulate_MFplus_RNG(uint32_t test_cuid, uint64_t test_key, uint32_t 
 	}
 	
 }
-
 
 static void simulate_acquire_nonces()
 {
@@ -761,7 +756,6 @@ static void simulate_acquire_nonces()
 	fprintf(fstats, "%d;%d;%d;%1.2f;", total_num_nonces, total_added_nonces, num_good_first_bytes, CONFIDENCE_THRESHOLD);
 		
 }
-
 
 static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, bool nonce_file_write, bool slow)
 {
@@ -890,7 +884,6 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 	return 0;
 }
 
-
 static int init_partial_statelists(void)
 {
 	const uint32_t sizes_odd[17] = { 126757, 0, 18387, 0, 74241, 0, 181737, 0, 248801, 0, 182033, 0, 73421, 0, 17607, 0, 125601 };
@@ -940,7 +933,6 @@ static int init_partial_statelists(void)
 	
 	return 0;
 }	
-		
 
 static void init_BitFlip_statelist(void)
 {
@@ -964,7 +956,6 @@ static void init_BitFlip_statelist(void)
 	*p = 0xffffffff;
 	statelist_bitflip.states[0] = realloc(statelist_bitflip.states[0], sizeof(uint32_t) * (statelist_bitflip.len[0] + 1));
 }
-
 		
 static inline uint32_t *find_first_state(uint32_t state, uint32_t mask, partial_indexed_statelist_t *sl, odd_even_t odd_even)
 {
@@ -977,7 +968,6 @@ static inline uint32_t *find_first_state(uint32_t state, uint32_t mask, partial_
 	return NULL;										// no match
 } 
 
-
 static inline bool /*__attribute__((always_inline))*/ invariant_holds(uint_fast8_t byte_diff, uint_fast32_t state1, uint_fast32_t state2, uint_fast8_t bit, uint_fast8_t state_bit)
 {
 	uint_fast8_t j_1_bit_mask = 0x01 << (bit-1);
@@ -989,7 +979,6 @@ static inline bool /*__attribute__((always_inline))*/ invariant_holds(uint_fast8
 	return !all_diff;
 }
 
-
 static inline bool /*__attribute__((always_inline))*/ invalid_state(uint_fast8_t byte_diff, uint_fast32_t state1, uint_fast32_t state2, uint_fast8_t bit, uint_fast8_t state_bit)
 {
 	uint_fast8_t j_bit_mask = 0x01 << bit;
@@ -999,7 +988,6 @@ static inline bool /*__attribute__((always_inline))*/ invalid_state(uint_fast8_t
 	uint_fast8_t all_diff = evenparity8(bit_diff ^ state_bits_diff);						// use parity function to XOR all bits
 	return all_diff;
 }
-
 
 static inline bool remaining_bits_match(uint_fast8_t num_common_bits, uint_fast8_t byte_diff, uint_fast32_t state1, uint_fast32_t state2, odd_even_t odd_even)
 {
@@ -1030,7 +1018,6 @@ static inline bool remaining_bits_match(uint_fast8_t num_common_bits, uint_fast8
 	
 	return true;					// valid state
 }
-
 
 static bool all_other_first_bytes_match(uint32_t state, odd_even_t odd_even) 
 {
@@ -1095,7 +1082,6 @@ static bool all_other_first_bytes_match(uint32_t state, odd_even_t odd_even)
 	return true;
 }
 
-
 static bool all_bit_flips_match(uint32_t state, odd_even_t odd_even) 
 {
 	for (uint16_t i = 0; i < 256; i++) {
@@ -1152,12 +1138,10 @@ static bool all_bit_flips_match(uint32_t state, odd_even_t odd_even)
 	return true;
 }
 
-
 static struct sl_cache_entry {
 	uint32_t *sl;
 	uint32_t len;
 	} sl_cache[17][17][2];
-
 
 static void init_statelist_cache(void)
 {
@@ -1170,7 +1154,6 @@ static void init_statelist_cache(void)
 		}
 	}		
 }
-
 
 static int add_matching_states(statelist_t *candidates, uint16_t part_sum_a0, uint16_t part_sum_a8, odd_even_t odd_even)
 {
@@ -1219,7 +1202,6 @@ static int add_matching_states(statelist_t *candidates, uint16_t part_sum_a0, ui
 	return 0;
 }
 
-
 static statelist_t *add_more_candidates(statelist_t *current_candidates)
 {
 	statelist_t *new_candidates = NULL;
@@ -1238,7 +1220,6 @@ static statelist_t *add_more_candidates(statelist_t *current_candidates)
 	new_candidates->states[EVEN_STATE] = NULL;
 	return new_candidates;
 }
-
 
 static void TestIfKeyExists(uint64_t key)
 {
@@ -1290,7 +1271,6 @@ static void TestIfKeyExists(uint64_t key)
 	crypto1_destroy(pcs);
 }
 
-	
 static void generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 {
 	printf("Generating crypto1 state candidates... \n");
@@ -1364,7 +1344,6 @@ static void generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 	}
 }
 
-
 static void	free_candidates_memory(statelist_t *sl)
 {
 	if (sl == NULL) {
@@ -1374,7 +1353,6 @@ static void	free_candidates_memory(statelist_t *sl)
 		free(sl);
 	}
 }
-
 
 static void free_statelist_cache(void)
 {
@@ -1387,18 +1365,331 @@ static void free_statelist_cache(void)
 	}		
 }
 
+size_t keys_found = 0;
+size_t bucket_count = 0;
+statelist_t* buckets[128];
+size_t total_states_tested = 0;
+size_t thread_count = 4;
 
+// these bitsliced states will hold identical states in all slices
+bitslice_t bitsliced_rollback_byte[ROLLBACK_SIZE];
+
+// arrays of bitsliced states with identical values in all slices
+bitslice_t bitsliced_encrypted_nonces[NONCE_TESTS][STATE_SIZE];
+bitslice_t bitsliced_encrypted_parity_bits[NONCE_TESTS][ROLLBACK_SIZE];
+
+#define EXACT_COUNT
+
+static const uint64_t crack_states_bitsliced(statelist_t *p){
+    // the idea to roll back the half-states before combining them was suggested/explained to me by bla
+    // first we pre-bitslice all the even state bits and roll them back, then bitslice the odd bits and combine the two in the inner loop
+    uint64_t key = -1;
+	uint8_t bSize = sizeof(bitslice_t);
+
+#ifdef EXACT_COUNT
+    size_t bucket_states_tested = 0;
+    size_t bucket_size[p->len[EVEN_STATE]/MAX_BITSLICES];
+#else
+    const size_t bucket_states_tested = (p->len[EVEN_STATE])*(p->len[ODD_STATE]);
+#endif
+
+    bitslice_t *bitsliced_even_states[p->len[EVEN_STATE]/MAX_BITSLICES];
+    size_t bitsliced_blocks = 0;
+    uint32_t const * restrict even_end = p->states[EVEN_STATE]+p->len[EVEN_STATE];
+	
+    // bitslice all the even states
+    for(uint32_t * restrict p_even = p->states[EVEN_STATE]; p_even < even_end; p_even += MAX_BITSLICES){
+
+#ifdef __WIN32
+	#ifdef __MINGW32__
+		bitslice_t * restrict lstate_p = __mingw_aligned_malloc((STATE_SIZE+ROLLBACK_SIZE) * bSize, bSize);
+	#else		
+		bitslice_t * restrict lstate_p = _aligned_malloc((STATE_SIZE+ROLLBACK_SIZE) * bSize, bSize);
+	#endif
+#else
+		bitslice_t * restrict lstate_p = memalign(bSize, (STATE_SIZE+ROLLBACK_SIZE) * bSize);
+#endif
+
+		if ( !lstate_p )	{
+			__sync_fetch_and_add(&total_states_tested, bucket_states_tested);
+			return key;
+		}
+				
+		memset(lstate_p+1, 0x0, (STATE_SIZE-1)*sizeof(bitslice_t)); // zero even bits
+		
+		// bitslice even half-states
+        const size_t max_slices = (even_end-p_even) < MAX_BITSLICES ? even_end-p_even : MAX_BITSLICES;
+#ifdef EXACT_COUNT
+        bucket_size[bitsliced_blocks] = max_slices;
+#endif
+        for(size_t slice_idx = 0; slice_idx < max_slices; ++slice_idx){
+            uint32_t e = *(p_even+slice_idx);
+            for(size_t bit_idx = 1; bit_idx < STATE_SIZE; bit_idx+=2, e >>= 1){
+                // set even bits
+                if(e&1){
+                    lstate_p[bit_idx].bytes64[slice_idx>>6] |= 1ull << (slice_idx&63);
+                }
+            }
+        }
+        // compute the rollback bits
+        for(size_t rollback = 0; rollback < ROLLBACK_SIZE; ++rollback){
+            // inlined crypto1_bs_lfsr_rollback
+            const bitslice_value_t feedout = lstate_p[0].value;
+            ++lstate_p;
+            const bitslice_value_t ks_bits = crypto1_bs_f20(lstate_p);
+            const bitslice_value_t feedback = (feedout ^ ks_bits     ^ lstate_p[47- 5].value ^ lstate_p[47- 9].value ^
+                                               lstate_p[47-10].value ^ lstate_p[47-12].value ^ lstate_p[47-14].value ^
+                                               lstate_p[47-15].value ^ lstate_p[47-17].value ^ lstate_p[47-19].value ^
+                                               lstate_p[47-24].value ^ lstate_p[47-25].value ^ lstate_p[47-27].value ^
+                                               lstate_p[47-29].value ^ lstate_p[47-35].value ^ lstate_p[47-39].value ^
+                                               lstate_p[47-41].value ^ lstate_p[47-42].value ^ lstate_p[47-43].value);
+            lstate_p[47].value = feedback ^ bitsliced_rollback_byte[rollback].value;
+        }
+        bitsliced_even_states[bitsliced_blocks++] = lstate_p;
+    }
+
+    // bitslice every odd state to every block of even half-states with half-finished rollback
+    for(uint32_t const * restrict p_odd = p->states[ODD_STATE]; p_odd < p->states[ODD_STATE]+p->len[ODD_STATE]; ++p_odd){
+        // early abort
+        if(keys_found){
+            goto out;
+        }
+
+        // set the odd bits and compute rollback
+        uint64_t o = (uint64_t) *p_odd;
+        lfsr_rollback_byte((struct Crypto1State*) &o, 0, 1);
+        // pre-compute part of the odd feedback bits (minus rollback)
+        bool odd_feedback_bit = parity(o&0x9ce5c);
+
+        crypto1_bs_rewind_a0();
+        // set odd bits
+        for(size_t state_idx = 0; state_idx < STATE_SIZE-ROLLBACK_SIZE; o >>= 1, state_idx+=2){
+            if(o & 1){
+                state_p[state_idx] = bs_ones;
+            } else {
+                state_p[state_idx] = bs_zeroes;
+            }
+        }
+        const bitslice_value_t odd_feedback = odd_feedback_bit ? bs_ones.value : bs_zeroes.value;
+
+        for(size_t block_idx = 0; block_idx < bitsliced_blocks; ++block_idx){
+            const bitslice_t const * restrict bitsliced_even_state = bitsliced_even_states[block_idx];
+            size_t state_idx;
+            // set even bits
+            for(state_idx = 0; state_idx < STATE_SIZE-ROLLBACK_SIZE; state_idx+=2){
+                state_p[1+state_idx] = bitsliced_even_state[1+state_idx];
+            }
+            // set rollback bits
+            uint64_t lo = o;
+            for(; state_idx < STATE_SIZE; lo >>= 1, state_idx+=2){
+                // set the odd bits and take in the odd rollback bits from the even states
+                if(lo & 1){
+                    state_p[state_idx].value = ~bitsliced_even_state[state_idx].value;
+                } else {
+                    state_p[state_idx] = bitsliced_even_state[state_idx];
+                }
+
+                // set the even bits and take in the even rollback bits from the odd states
+                if((lo >> 32) & 1){
+                    state_p[1+state_idx].value = ~bitsliced_even_state[1+state_idx].value;
+                } else {
+                    state_p[1+state_idx] = bitsliced_even_state[1+state_idx];
+                }
+            }
+
+#ifdef EXACT_COUNT
+            bucket_states_tested += bucket_size[block_idx];
+#endif
+            // pre-compute first keystream and feedback bit vectors
+            const bitslice_value_t ksb = crypto1_bs_f20(state_p);
+            const bitslice_value_t fbb = (odd_feedback         ^ state_p[47- 0].value ^ state_p[47- 5].value ^ // take in the even and rollback bits
+                                          state_p[47-10].value ^ state_p[47-12].value ^ state_p[47-14].value ^
+                                          state_p[47-24].value ^ state_p[47-42].value);
+
+            // vector to contain test results (1 = passed, 0 = failed)
+            bitslice_t results = bs_ones;
+
+            for(size_t tests = 0; tests < NONCE_TESTS; ++tests){
+                size_t parity_bit_idx = 0;
+                bitslice_value_t fb_bits = fbb;
+                bitslice_value_t ks_bits = ksb;
+                state_p = &states[KEYSTREAM_SIZE-1];
+                bitslice_value_t parity_bit_vector = bs_zeroes.value;
+
+                // highest bit is transmitted/received first
+                for(int32_t ks_idx = KEYSTREAM_SIZE-1; ks_idx >= 0; --ks_idx, --state_p){
+                    // decrypt nonce bits
+                    const bitslice_value_t encrypted_nonce_bit_vector = bitsliced_encrypted_nonces[tests][ks_idx].value;
+                    const bitslice_value_t decrypted_nonce_bit_vector = (encrypted_nonce_bit_vector ^ ks_bits);
+
+                    // compute real parity bits on the fly
+                    parity_bit_vector ^= decrypted_nonce_bit_vector;
+
+                    // update state
+                    state_p[0].value = (fb_bits ^ decrypted_nonce_bit_vector);
+
+                    // compute next keystream bit
+                    ks_bits = crypto1_bs_f20(state_p);
+
+                    // for each byte:
+                    if((ks_idx&7) == 0){
+                        // get encrypted parity bits
+                        const bitslice_value_t encrypted_parity_bit_vector = bitsliced_encrypted_parity_bits[tests][parity_bit_idx++].value;
+
+                        // decrypt parity bits
+                        const bitslice_value_t decrypted_parity_bit_vector = (encrypted_parity_bit_vector ^ ks_bits);
+
+                        // compare actual parity bits with decrypted parity bits and take count in results vector
+                        results.value &= (parity_bit_vector ^ decrypted_parity_bit_vector);
+
+                        // make sure we still have a match in our set
+                        // if(memcmp(&results, &bs_zeroes, sizeof(bitslice_t)) == 0){
+
+                        // this is much faster on my gcc, because somehow a memcmp needlessly spills/fills all the xmm registers to/from the stack - ???
+                        // the short-circuiting also helps
+                        if(results.bytes64[0] == 0
+#if MAX_BITSLICES > 64
+                           && results.bytes64[1] == 0
+#endif
+#if MAX_BITSLICES > 128
+                           && results.bytes64[2] == 0
+                           && results.bytes64[3] == 0
+#endif
+                          ){
+                            goto stop_tests;
+                        }
+                        // this is about as fast but less portable (requires -std=gnu99)
+                        // asm goto ("ptest %1, %0\n\t"
+                        //           "jz %l2" :: "xm" (results.value), "xm" (bs_ones.value) : "cc" : stop_tests);
+                        parity_bit_vector = bs_zeroes.value;
+                    }
+                    // compute next feedback bit vector
+                    fb_bits = (state_p[47- 0].value ^ state_p[47- 5].value ^ state_p[47- 9].value ^
+                               state_p[47-10].value ^ state_p[47-12].value ^ state_p[47-14].value ^
+                               state_p[47-15].value ^ state_p[47-17].value ^ state_p[47-19].value ^
+                               state_p[47-24].value ^ state_p[47-25].value ^ state_p[47-27].value ^
+                               state_p[47-29].value ^ state_p[47-35].value ^ state_p[47-39].value ^
+                               state_p[47-41].value ^ state_p[47-42].value ^ state_p[47-43].value);
+                }
+            }
+            // all nonce tests were successful: we've found the key in this block!
+            state_t keys[MAX_BITSLICES];
+            crypto1_bs_convert_states(&states[KEYSTREAM_SIZE], keys);
+            for(size_t results_idx = 0; results_idx < MAX_BITSLICES; ++results_idx){
+                if(get_vector_bit(results_idx, results)){
+                    key = keys[results_idx].value;
+                    goto out;
+                }
+            }
+stop_tests:
+            // prepare to set new states
+            crypto1_bs_rewind_a0();
+            continue;
+        }
+    }
+
+out:
+    for(size_t block_idx = 0; block_idx < bitsliced_blocks; ++block_idx){
+		
+#ifdef __WIN32
+	#ifdef __MINGW32__
+		__mingw_aligned_free(bitsliced_even_states[block_idx]-ROLLBACK_SIZE);
+	#else
+		_aligned_free(bitsliced_even_states[block_idx]-ROLLBACK_SIZE);		
+	#endif
+#else
+		memfree(bitsliced_even_states[block_idx]-ROLLBACK_SIZE);
+#endif		
+		
+    }
+    __sync_fetch_and_add(&total_states_tested, bucket_states_tested);
+    return key;
+}
+
+static void* crack_states_thread(void* x){
+    const size_t thread_id = (size_t)x;
+    size_t current_bucket = thread_id;
+    while(current_bucket < bucket_count){
+        statelist_t * bucket = buckets[current_bucket];
+		if(bucket){
+            const uint64_t key = crack_states_bitsliced(bucket);
+            if(key != -1){
+                printf("\nFound key: %012"PRIx64"\n", key);
+                __sync_fetch_and_add(&keys_found, 1);
+                break;
+            } else if(keys_found){
+                break;
+            } else {				
+                printf(".");
+				fflush(stdout);
+            }
+        }
+        current_bucket += thread_count;
+    }
+    return NULL;
+}
+#define _USE_32BIT_TIME_T
 static void brute_force(void)
 {
 	if (known_target_key != -1) {
 		PrintAndLog("Looking for known target key in remaining key space...");
 		TestIfKeyExists(known_target_key);
 	} else {
-		PrintAndLog("Brute Force phase is not implemented.");
+        PrintAndLog("Brute force phase starting.");
+        time_t start, end;
+        time(&start);
+        keys_found = 0;
+
+        crypto1_bs_init();
+
+        PrintAndLog("Using %u-bit bitslices", MAX_BITSLICES);
+        PrintAndLog("Bitslicing best_first_byte^uid[3] (rollback byte): %02x...", best_first_bytes[0]^(cuid>>24));
+        // convert to 32 bit little-endian
+        crypto1_bs_bitslice_value32(rev32((best_first_bytes[0]^(cuid>>24))), bitsliced_rollback_byte, 8);
+
+        PrintAndLog("Bitslicing nonces...");
+        for(size_t tests = 0; tests < NONCE_TESTS; tests++){
+            uint32_t test_nonce = brute_force_nonces[tests]->nonce_enc;
+            uint8_t test_parity = brute_force_nonces[tests]->par_enc;
+            // pre-xor the uid into the decrypted nonces, and also pre-xor the cuid parity into the encrypted parity bits - otherwise an exta xor is required in the decryption routine
+            crypto1_bs_bitslice_value32(cuid^test_nonce, bitsliced_encrypted_nonces[tests], 32);
+            // convert to 32 bit little-endian
+            crypto1_bs_bitslice_value32(rev32( ~(test_parity ^ ~(parity(cuid>>24 & 0xff)<<3 | parity(cuid>>16 & 0xff)<<2 | parity(cuid>>8 & 0xff)<<1 | parity(cuid&0xff)))), bitsliced_encrypted_parity_bits[tests], 4);
+        }
+        total_states_tested = 0;
+
+        // count number of states to go
+        bucket_count = 0;
+        for (statelist_t *p = candidates; p != NULL; p = p->next) {
+            buckets[bucket_count] = p;
+            bucket_count++;
+        }
+
+#ifndef __WIN32
+        thread_count = sysconf(_SC_NPROCESSORS_CONF);
+#endif  /* _WIN32 */
+        pthread_t threads[thread_count];
+		
+        // enumerate states using all hardware threads, each thread handles one bucket
+        PrintAndLog("Starting %u cracking threads to search %u buckets containing a total of %"PRIu32" states...", thread_count, bucket_count, maximum_states);
+		
+        for(size_t i = 0; i < thread_count; i++){
+            pthread_create(&threads[i], NULL, crack_states_thread, (void*) i);
+        }
+        for(size_t i = 0; i < thread_count; i++){
+            pthread_join(threads[i], 0);
+        }
+
+        time(&end);
+        unsigned long elapsed_time = difftime(end, start);
+        PrintAndLog("Tested %"PRIu32" states, found %u keys after %u seconds", total_states_tested, keys_found, elapsed_time);
+        if(!keys_found){
+            assert(total_states_tested == maximum_states);
+        }
+        // reset this counter for the next call
+        nonces_to_bruteforce = 0;
 	}
-
 }
-
 
 int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *trgkey, bool nonce_file_read, bool nonce_file_write, bool slow, int tests) 
 {
