@@ -1,6 +1,10 @@
 # Travis-CI Build for Iceman Fork / Proxmark3
 language: c
 
+# Using trusty beta build environment,  based on Ubuntu 14.04
+sudo: required
+dist: trusty
+
 #install:
 compiler: gcc
 
@@ -13,5 +17,4 @@ before_script:
   - git fetch --all
 
 #make command
-#script: "make all UBUNTU_1404_QT4=1"
 script: "make all"
