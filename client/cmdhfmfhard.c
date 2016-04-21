@@ -1598,7 +1598,7 @@ out:
 		_aligned_free(bitsliced_even_states[block_idx]-ROLLBACK_SIZE);		
 	#endif
 #else
-		memfree(bitsliced_even_states[block_idx]-ROLLBACK_SIZE);
+		free(bitsliced_even_states[block_idx]-ROLLBACK_SIZE);
 #endif		
 		
     }
