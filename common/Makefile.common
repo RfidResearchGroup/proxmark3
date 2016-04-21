@@ -55,8 +55,7 @@ DELETE=del /q
 MOVE=ren
 COPY=copy
 PATHSEP=\\#
-#FLASH_TOOL=winsrc\\prox.exe
-FLASH_TOOL=winsrc\\flash.exe
+FLASH_TOOL=client\\flasher.exe
 DETECTED_OS=Windows
 
 endif
