@@ -1716,14 +1716,12 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
 }
 
 void ReaderTransmitBitsPar(uint8_t* frame, uint16_t bits, uint8_t *par, uint32_t *timing) {
+
 	CodeIso14443aBitsAsReaderPar(frame, bits, par);
-  
 	// Send command to tag
 	TransmitFor14443a(ToSend, ToSendMax, timing);
 	if(trigger) LED_A_ON();
   
-	// Log reader command in trace buffer
-	//LogTrace(frame, nbytes(bits), LastTimeProxToAirStart*16 + DELAY_ARM2AIR_AS_READER, (LastTimeProxToAirStart + LastProxToAirDuration)*16 + DELAY_ARM2AIR_AS_READER, par, TRUE);
 	LogTrace(frame, nbytes(bits), (LastTimeProxToAirStart<<4) + DELAY_ARM2AIR_AS_READER, ((LastTimeProxToAirStart + LastProxToAirDuration)<<4) + DELAY_ARM2AIR_AS_READER, par, TRUE);
 }
 
@@ -1732,17 +1730,17 @@ void ReaderTransmitPar(uint8_t* frame, uint16_t len, uint8_t *par, uint32_t *tim
 }
 
 void ReaderTransmitBits(uint8_t* frame, uint16_t len, uint32_t *timing) {
-  // Generate parity and redirect
-  uint8_t par[MAX_PARITY_SIZE] = {0x00};
-  GetParity(frame, len/8, par);  
-  ReaderTransmitBitsPar(frame, len, par, timing);
+	// Generate parity and redirect
+	uint8_t par[MAX_PARITY_SIZE] = {0x00};
+	GetParity(frame, len/8, par);  
+	ReaderTransmitBitsPar(frame, len, par, timing);
 }
 
 void ReaderTransmit(uint8_t* frame, uint16_t len, uint32_t *timing) {
-  // Generate parity and redirect
-  uint8_t par[MAX_PARITY_SIZE] = {0x00};
-  GetParity(frame, len, par);
-  ReaderTransmitBitsPar(frame, len*8, par, timing);
+	// Generate parity and redirect
+	uint8_t par[MAX_PARITY_SIZE] = {0x00};
+	GetParity(frame, len, par);
+	ReaderTransmitBitsPar(frame, len*8, par, timing);
 }
 
 int ReaderReceiveOffset(uint8_t* receivedAnswer, uint16_t offset, uint8_t *parity) {
