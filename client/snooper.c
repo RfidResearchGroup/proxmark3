@@ -10,7 +10,7 @@
 
 #include "sleep.h"
 #include "ui.h"
-#include "proxusb.h"
+//#include "proxusb.h"
 #include "cmdmain.h"
 
 #define HANDLE_ERROR if (error_occured) { \
