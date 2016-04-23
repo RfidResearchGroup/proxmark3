@@ -18,7 +18,7 @@ int usage_hf14_mifare(void){
 	PrintAndLog("options:");
 	PrintAndLog("           h    this help");
 	PrintAndLog("           <block number>  (Optional) target other key A than block 0.");
-	PrintAndLog("sample:");
+	PrintAndLog("samples:");
 	PrintAndLog("           hf mf mifare");
 	PrintAndLog("           hf mf mifare 16");
 	return 0;
@@ -26,11 +26,11 @@ int usage_hf14_mifare(void){
 int usage_hf14_mf1ksim(void){
 	PrintAndLog("Usage:  hf mf sim  [h] u <uid (8,14,20 hex symbols)> n <numreads> i x");
 	PrintAndLog("options:");
-	PrintAndLog("           h    this help");
-	PrintAndLog("           u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b from emulator memory will be used");
-	PrintAndLog("           n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
-	PrintAndLog("           i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
-	PrintAndLog("           x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a legitimate reader, fishes out the key(s)");
+	PrintAndLog("      h    this help");
+	PrintAndLog("      u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b from emulator memory will be used");
+	PrintAndLog("      n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
+	PrintAndLog("      i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
+	PrintAndLog("      x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a legitimate reader, fishes out the key(s)");
 	PrintAndLog("samples:");
 	PrintAndLog("           hf mf sim u 0a0a0a0a");
 	PrintAndLog("           hf mf sim u 11223344556677");
@@ -56,13 +56,68 @@ int usage_hf14_sniff(void){
 	PrintAndLog("It continuously gets data from the field and saves it to: log, emulator, emulator file.");
 	PrintAndLog("Usage:  hf mf sniff [h] [l] [d] [f]");
 	PrintAndLog("options:");
-	PrintAndLog("           h    this help");
-	PrintAndLog("           l    save encrypted sequence to logfile `uid.log`");
-	PrintAndLog("           d    decrypt sequence and put it to log file `uid.log`");
-//	PrintAndLog(" n/a   e     decrypt sequence, collect read and write commands and save the result of the sequence to emulator memory");
-	PrintAndLog("           f    decrypt sequence, collect read and write commands and save the result of the sequence to emulator dump file `uid.eml`");
+	PrintAndLog("      h    this help");
+	PrintAndLog("      l    save encrypted sequence to logfile `uid.log`");
+	PrintAndLog("      d    decrypt sequence and put it to log file `uid.log`");
+//	PrintAndLog(" n/a  e     decrypt sequence, collect read and write commands and save the result of the sequence to emulator memory");
+	PrintAndLog("      f    decrypt sequence, collect read and write commands and save the result of the sequence to emulator dump file `uid.eml`");
 	PrintAndLog("sample:");
 	PrintAndLog("           hf mf sniff l d f");
+	return 0;
+}
+int usage_hf14_nested(void){
+	PrintAndLog("Usage:");
+	PrintAndLog(" all sectors:  hf mf nested  <card memory> <block number> <key A/B> <key (12 hex symbols)> [t,d]");
+	PrintAndLog(" one sector:   hf mf nested  o <block number> <key A/B> <key (12 hex symbols)>");
+	PrintAndLog("               <target block number> <target key A/B> [t]");
+	PrintAndLog("options:");
+	PrintAndLog("      h    this help");
+	PrintAndLog("      card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
+	PrintAndLog("      t    transfer keys into emulator memory");
+	PrintAndLog("      d    write keys to binary file");
+	PrintAndLog(" ");
+	PrintAndLog("samples:");
+	PrintAndLog("      hf mf nested 1 0 A FFFFFFFFFFFF ");
+	PrintAndLog("      hf mf nested 1 0 A FFFFFFFFFFFF t ");
+	PrintAndLog("      hf mf nested 1 0 A FFFFFFFFFFFF d ");
+	PrintAndLog("      hf mf nested o 0 A FFFFFFFFFFFF 4 A");
+	return 0;
+}
+int usage_hf14_hardnested(void){
+	PrintAndLog("Usage:");
+	PrintAndLog("      hf mf hardnested <block number> <key A|B> <key (12 hex symbols)>");
+	PrintAndLog("                       <target block number> <target key A|B> [known target key (12 hex symbols)] [w] [s]");
+	PrintAndLog("  or  hf mf hardnested r [known target key]");
+	PrintAndLog(" ");
+	PrintAndLog("options:");
+	PrintAndLog("      h    this help");	
+	PrintAndLog("      w    acquire nonces and write them to binary file nonces.bin");
+	PrintAndLog("      s    slower acquisition (required by some non standard cards)");
+	PrintAndLog("      r    read nonces.bin and start attack");
+	PrintAndLog(" ");
+	PrintAndLog("samples:");
+	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A");
+	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A w");
+	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A w s");
+	PrintAndLog("      hf mf hardnested r");
+	PrintAndLog(" ");
+	PrintAndLog("Add the known target key to check if it is present in the remaining key space:");
+	PrintAndLog("      sample5: hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF");
+	return 0;
+}
+int usage_hf14_chk(void){
+	PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
+	PrintAndLog("options:");
+	PrintAndLog("      h    this help");	
+	PrintAndLog("      *    all sectors");
+	PrintAndLog("      card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
+	PrintAndLog("      d    write keys to binary file");
+	PrintAndLog("      t    write keys to emulator memory\n");
+	PrintAndLog(" ");
+	PrintAndLog("samples:");
+	PrintAndLog("      hf mf chk 0 A 1234567890ab keys.dic");
+	PrintAndLog("      hf mf chk *1 ? t");
+	PrintAndLog("      hf mf chk *1 ? d");
 	return 0;
 }
 
@@ -86,6 +141,8 @@ int CmdHF14AMifare(const char *Cmd) {
 	printf("Press button on the proxmark3 device to abort both proxmark3 and client.\n");
 	printf("-------------------------------------------------------------------------\n");
 	clock_t t1 = clock();
+	time_t start, end;
+	time(&start);
 	
 start:
     clearCommandBuffer();
@@ -154,8 +211,10 @@ start:
 	}
 END:
 	t1 = clock() - t1;
+	time(&end);
+	unsigned long elapsed_time = difftime(end, start);	
 	if ( t1 > 0 )
-		PrintAndLog("Time in darkside: %.0f ticks\n", (float)t1);
+		PrintAndLog("Time in darkside: %.0f ticks %u seconds\n", (float)t1, elapsed_time);
 	return 0;
 }
 
@@ -632,30 +691,14 @@ int CmdHF14AMfNested(const char *Cmd) {
 	FILE *fkeys;
 	uint8_t standart[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+	if (strlen(Cmd)<3) return usage_hf14_nested();
 	
 	char cmdp, ctmp;
-
-	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:");
-		PrintAndLog(" all sectors:  hf mf nested  <card memory> <block number> <key A/B> <key (12 hex symbols)> [t,d]");
-		PrintAndLog(" one sector:   hf mf nested  o <block number> <key A/B> <key (12 hex symbols)>");
-		PrintAndLog("               <target block number> <target key A/B> [t]");
-		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
-		PrintAndLog("t - transfer keys into emulator memory");
-		PrintAndLog("d - write keys to binary file");
-		PrintAndLog(" ");
-		PrintAndLog(" samples:");
-		PrintAndLog("              hf mf nested 1 0 A FFFFFFFFFFFF ");
-		PrintAndLog("              hf mf nested 1 0 A FFFFFFFFFFFF t ");
-		PrintAndLog("              hf mf nested 1 0 A FFFFFFFFFFFF d ");
-		PrintAndLog("              hf mf nested o 0 A FFFFFFFFFFFF 4 A");
-		return 0;
-	}	
-	
 	cmdp = param_getchar(Cmd, 0);
 	blockNo = param_get8(Cmd, 1);
 	ctmp = param_getchar(Cmd, 2);
-	
+
 	if (ctmp != 'a' && ctmp != 'A' && ctmp != 'b' && ctmp != 'B') {
 		PrintAndLog("Key type must be A or B");
 		return 1;
@@ -731,7 +774,10 @@ int CmdHF14AMfNested(const char *Cmd) {
 	}
 	else { // ------------------------------------  multiple sectors working
 		clock_t t1 = clock();
-
+		unsigned long elapsed_time;
+		time_t start, end;
+		time(&start);
+		
 		e_sector = calloc(SectorsCnt, sizeof(sector));
 		if (e_sector == NULL) return 1;
 		
@@ -757,9 +803,11 @@ int CmdHF14AMfNested(const char *Cmd) {
 			}
 		}
 		clock_t t2 = clock() - t1;
+		time(&end);
+		elapsed_time = difftime(end, start);	
 		if ( t2 > 0 )
-			PrintAndLog("Time to check 6 known keys: %.0f ticks", (float)t2 );
-
+			PrintAndLog("Time to check 6 known keys: %.0f ticks %u seconds\n", (float)t2 , elapsed_time);
+		
 		PrintAndLog("enter nested...");	
 		
 		// nested sectors
@@ -797,8 +845,11 @@ int CmdHF14AMfNested(const char *Cmd) {
 		}
 		
 		t1 = clock() - t1;
+		time(&end);
+		elapsed_time = difftime(end, start);	
 		if ( t1 > 0 )
-			PrintAndLog("Time in nested: %.0f ticks \n", (float)t1);
+			PrintAndLog("Time in nested: %.0f ticks %u seconds\n", (float)t1, elapsed_time);
+
 
 		// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
 		PrintAndLog("trying to read key B...");
@@ -891,34 +942,14 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 	
 	char ctmp;
 	ctmp = param_getchar(Cmd, 0);
-
-	if (ctmp != 'R' && ctmp != 'r' && ctmp != 'T' && ctmp != 't' && strlen(Cmd) < 20) {
-		PrintAndLog("Usage:");
-		PrintAndLog("      hf mf hardnested <block number> <key A|B> <key (12 hex symbols)>");
-		PrintAndLog("                       <target block number> <target key A|B> [known target key (12 hex symbols)] [w] [s]");
-		PrintAndLog("  or  hf mf hardnested r [known target key]");
-		PrintAndLog(" ");
-		PrintAndLog("Options: ");
-		PrintAndLog("      w: Acquire nonces and write them to binary file nonces.bin");
-		PrintAndLog("      s: Slower acquisition (required by some non standard cards)");
-		PrintAndLog("      r: Read nonces.bin and start attack");
-		PrintAndLog(" ");
-		PrintAndLog("      sample1: hf mf hardnested 0 A FFFFFFFFFFFF 4 A");
-		PrintAndLog("      sample2: hf mf hardnested 0 A FFFFFFFFFFFF 4 A w");
-		PrintAndLog("      sample3: hf mf hardnested 0 A FFFFFFFFFFFF 4 A w s");
-		PrintAndLog("      sample4: hf mf hardnested r");
-		PrintAndLog(" ");
-		PrintAndLog("Add the known target key to check if it is present in the remaining key space:");
-		PrintAndLog("      sample5: hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF");
-		return 0;
-	}	
+	if (ctmp != 'H' && ctmp != 'h' ) return usage_hf14_hardnested();
+	if (ctmp != 'R' && ctmp != 'r' && ctmp != 'T' && ctmp != 't' && strlen(Cmd) < 20) return usage_hf14_hardnested();
 	
 	bool know_target_key = false;
 	bool nonce_file_read = false;
 	bool nonce_file_write = false;
 	bool slow = false;
 	int tests = 0;
-	
 	
 	if (ctmp == 'R' || ctmp == 'r') {
 		nonce_file_read = true;
@@ -997,17 +1028,8 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 }
 
 int CmdHF14AMfChk(const char *Cmd) {
-	if (strlen(Cmd)<3) {
-		PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
-		PrintAndLog("          * - all sectors");
-		PrintAndLog("card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
-		PrintAndLog("d - write keys to binary file");
-		PrintAndLog("t - write keys to emulator memory\n");
-		PrintAndLog("      sample: hf mf chk 0 A 1234567890ab keys.dic");
-		PrintAndLog("              hf mf chk *1 ? t");
-		PrintAndLog("              hf mf chk *1 ? d");
-		return 0;
-	}	
+
+	if (strlen(Cmd)<3) return usage_hf14_chk();
 
 	FILE * f;
 	char filename[FILE_PATH_SIZE]={0};
