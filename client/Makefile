@@ -7,15 +7,14 @@ include ../common/Makefile.common
 
 CC = gcc
 CXX = g++
-#COMMON_FLAGS = -m32
-COMMON_FLAGS =  -std=c99 -O3 -mpopcnt -march=native
+COMMON_FLAGS =  -std=c99 -O3 -mpopcnt -march=native -g
 #VPATH = ../common ../zlib
 OBJDIR = obj
 
 LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm
 LUALIB = ../liblua/liblua.a
 #LDFLAGS = $(COMMON_FLAGS)
-CFLAGS =  $(COMMON_FLAGS) -I. -I../include -I../common -I../zlib -I/opt/local/include -I../liblua -Wall -g
+CFLAGS =  $(COMMON_FLAGS) -I. -I../include -I../common -I../zlib -I/opt/local/include -I../liblua -Wall
 LUAPLATFORM = generic
 
 ifneq (,$(findstring MINGW,$(platform))) 
