@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <time.h>
+#include <time.h> 
 #include "data.h"    //for FILE_PATH_SIZE
 
 #ifndef ROTR

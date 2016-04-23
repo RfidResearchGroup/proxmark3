@@ -10,6 +10,7 @@
 
 #ifndef UI_H__
 #define UI_H__
+
 #define _USE_MATH_DEFINES
 #include <stdarg.h>
 #include <stdlib.h>

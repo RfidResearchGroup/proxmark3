@@ -1230,10 +1230,10 @@ int CmdHF14AMfChk(const char *Cmd) {
 	t1 = clock() - t1;
 	time(&end);
 	unsigned long elapsed_time = difftime(end, start);	
-
 	if ( t1 > 0 )
-		printf("\nTime in checkkeys: %.0f ticks %u seconds\n", (float)t1, elapsed_time);
+		PrintAndLog("\nTime in checkkeys: %.0f ticks %u seconds\n", (float)t1, elapsed_time);
 
+		
 	// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
 	if ( keyType != 1 ) {
 		PrintAndLog("testing to read key B...");

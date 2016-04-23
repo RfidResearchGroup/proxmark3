@@ -12,6 +12,10 @@
 #ifndef PROXMARK3_H__
 #define PROXMARK3_H__
 
+#ifdef __WIN32
+// for MINGW32 environments
+   #define _USE_32BIT_TIME_T 1
+#endif   
 #define __STDC_FORMAT_MACROS 1
 #include <inttypes.h>
 #define lx  PRIx32
