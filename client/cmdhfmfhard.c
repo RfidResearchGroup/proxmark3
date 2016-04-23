@@ -1315,8 +1315,8 @@ static void generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 									*p = 0xffffffff;
 								}
 							}
-							printf("Odd  state candidates: %6d (2^%0.1f)\n", current_candidates->len[ODD_STATE], log(current_candidates->len[ODD_STATE])/log(2)); 
-							printf("Even state candidates: %6d (2^%0.1f)\n", current_candidates->len[EVEN_STATE], log(current_candidates->len[EVEN_STATE])/log(2)); 
+							//printf("Odd  state candidates: %6d (2^%0.1f)\n", current_candidates->len[ODD_STATE], log(current_candidates->len[ODD_STATE])/log(2)); 
+							//printf("Even state candidates: %6d (2^%0.1f)\n", current_candidates->len[EVEN_STATE], log(current_candidates->len[EVEN_STATE])/log(2)); 
 						}
 					}
 				}
