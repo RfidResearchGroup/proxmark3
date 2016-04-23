@@ -120,9 +120,9 @@ start:
 
 			switch (isOK) {
 				case -1 : PrintAndLog("Button pressed. Aborted.\n"); break;
-				case -2 : PrintAndLog("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).\n"); break;
-				case -3 : PrintAndLog("Card is not vulnerable to Darkside attack (its random number generator is not predictable).\n"); break;
-				case -4 : PrintAndLog("Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
+				case -2 : PrintAndLog("Card isn't vulnerable to Darkside attack (doesn't send NACK on authentication requests).\n"); break;
+				case -3 : PrintAndLog("Card isn't vulnerable to Darkside attack (its random number generator is not predictable).\n"); break;
+				case -4 : PrintAndLog("Card isn't vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
 						  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour.\n"); break;
 				default: ;
 			}
@@ -703,7 +703,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 		switch (isOK) {
 			case -1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
 			case -2 : PrintAndLog("Button pressed. Aborted.\n"); break;
-			case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (random numbers are not predictable).\n"); break;
+			case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (its random number generator is not predictable).\n"); break;
 			case -4 : PrintAndLog("No valid key found"); break;
 			case -5 : 
 				key64 = bytes_to_num(keyBlock, 6);
@@ -776,7 +776,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 					switch (isOK) {
 						case -1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
 						case -2 : PrintAndLog("Button pressed. Aborted.\n"); break;
-						case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (random numbers are not predictable).\n"); break;
+						case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (its random number generator is not predictable).\n"); break;
 						case -4 : //key not found
 							calibrate = false;
 							iterations++;
