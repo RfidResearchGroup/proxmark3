@@ -33,9 +33,6 @@
 #include <malloc.h>
 #include <assert.h>
 
-// uint32_t test_state_odd = 0;
-// uint32_t test_state_even = 0;
-
 #define CONFIDENCE_THRESHOLD	0.95		// Collect nonces until we are certain enough that the following brute force is successfull
 #define GOOD_BYTES_REQUIRED		28
 
@@ -1679,10 +1676,11 @@ static void brute_force(void)
 
         time(&end);
         unsigned long elapsed_time = difftime(end, start);
-        PrintAndLog("Tested %"PRIu32" states, found %u keys after %u seconds", total_states_tested, keys_found, elapsed_time);
-        if(!keys_found){
-            assert(total_states_tested == maximum_states);
-        }
+        if(keys_found){
+			PrintAndLog("Success! Tested %"PRIu32" states, found %u keys after %u seconds", total_states_tested, keys_found, elapsed_time);
+        } else {
+			PrintAndLog("Fail! Tested %"PRIu32" states, in %u seconds", total_states_tested, elapsed_time);
+		}
         // reset this counter for the next call
         nonces_to_bruteforce = 0;
 	}
