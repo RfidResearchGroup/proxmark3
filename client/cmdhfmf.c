@@ -218,8 +218,7 @@ END:
 	return 0;
 }
 
-int CmdHF14AMfWrBl(const char *Cmd)
-{
+int CmdHF14AMfWrBl(const char *Cmd) {
 	uint8_t blockNo = 0;
 	uint8_t keyType = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
@@ -268,8 +267,7 @@ int CmdHF14AMfWrBl(const char *Cmd)
 	return 0;
 }
 
-int CmdHF14AMfRdBl(const char *Cmd)
-{
+int CmdHF14AMfRdBl(const char *Cmd) {
 	uint8_t blockNo = 0;
 	uint8_t keyType = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
@@ -317,8 +315,7 @@ int CmdHF14AMfRdBl(const char *Cmd)
   return 0;
 }
 
-int CmdHF14AMfRdSc(const char *Cmd)
-{
+int CmdHF14AMfRdSc(const char *Cmd) {
 	int i;
 	uint8_t sectorNo = 0;
 	uint8_t keyType = 0;
@@ -375,8 +372,7 @@ int CmdHF14AMfRdSc(const char *Cmd)
   return 0;
 }
 
-uint8_t FirstBlockOfSector(uint8_t sectorNo)
-{
+uint8_t FirstBlockOfSector(uint8_t sectorNo) {
 	if (sectorNo < 32) {
 		return sectorNo * 4;
 	} else {
@@ -384,8 +380,7 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo)
 	}
 }
 
-uint8_t NumBlocksPerSector(uint8_t sectorNo)
-{
+uint8_t NumBlocksPerSector(uint8_t sectorNo) {
 	if (sectorNo < 32) {
 		return 4;
 	} else {
@@ -1204,6 +1199,8 @@ int CmdHF14AMfChk(const char *Cmd) {
 	
 	// time
 	clock_t t1 = clock();
+	time_t start, end;
+	time(&start);
 	
 	// check keys.
 	for (trgKeyType = !keyType;  trgKeyType < 2;  (keyType==2) ? (++trgKeyType) : (trgKeyType=2) ) {
@@ -1231,12 +1228,14 @@ int CmdHF14AMfChk(const char *Cmd) {
 		}
 	}
 	t1 = clock() - t1;
+	time(&end);
+	unsigned long elapsed_time = difftime(end, start);	
+
 	if ( t1 > 0 )
-		printf("\nTime in checkkeys: %.0f ticks\n", (float)t1);
+		printf("\nTime in checkkeys: %.0f ticks %u seconds\n", (float)t1, elapsed_time);
 
 	// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
 	if ( keyType != 1 ) {
-		
 		PrintAndLog("testing to read key B...");
 		for (i = 0; i < SectorsCnt; i++) {
 			// KEY A  but not KEY B
