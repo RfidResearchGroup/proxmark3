@@ -1168,6 +1168,15 @@ int CmdHF14AMfChk(const char *Cmd) {
 		return 1;
 	}
 
+	// empty e_sector
+	for(int i = 0; i < SectorsCnt; ++i){
+		e_sector[i].Key[0] = 0xffffffffffff;
+		e_sector[i].Key[1] = 0xffffffffffff;
+		e_sector[i].foundKey[0] = FALSE;
+		e_sector[i].foundKey[1] = FALSE;
+	}
+		
+	
 	uint8_t trgKeyType = 0;
 	uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE/6) ? (USB_CMD_DATA_SIZE/6) : keycnt;
 	
@@ -1182,22 +1191,16 @@ int CmdHF14AMfChk(const char *Cmd) {
 			
 			// skip already found keys.
 			if (e_sector[i].foundKey[trgKeyType]) continue;
-			
-			
+						
 			for (uint32_t c = 0; c < keycnt; c += max_keys) {
 				
 				uint32_t size = keycnt-c > max_keys ? max_keys : keycnt-c;
 				
 				res = mfCheckKeys(b, trgKeyType, true, size, &keyBlock[6*c], &key64);
 				if (!res) {
-					//PrintAndLog("Sector:%3d Block:%3d, key type: %C  -- Found key [%012"llx"]", i, b, trgKeyType ? 'B':'A', key64);
-										 
 					e_sector[i].Key[trgKeyType] = key64;
 					e_sector[i].foundKey[trgKeyType] = TRUE;
 					break;
-				} else {					
-					e_sector[i].Key[trgKeyType] = 0xffffffffffff;
-					e_sector[i].foundKey[trgKeyType] = FALSE;
 				}
 				printf(".");
 				fflush(stdout);
@@ -1210,32 +1213,35 @@ int CmdHF14AMfChk(const char *Cmd) {
 		printf("\nTime in checkkeys: %.0f ticks\n", (float)t1);
 
 	// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
-	PrintAndLog("testing to read B...");
-	for (i = 0; i < SectorsCnt; i++) {
-		// KEY A  but not KEY B
-		if ( e_sector[i].foundKey[0] && !e_sector[i].foundKey[1] ) {
-						
-			uint8_t sectrail = (FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
-			
-			PrintAndLog("Reading block %d", sectrail);
-			
-			UsbCommand c = {CMD_MIFARE_READBL, {sectrail, 0, 0}};
-			num_to_bytes(e_sector[i].Key[0], 6, c.d.asBytes); // KEY A
-			clearCommandBuffer();
-			SendCommand(&c);
-
-			UsbCommand resp;
-			if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500)) continue;
+	if ( keyType != 1 ) {
+		
+		PrintAndLog("testing to read key B...");
+		for (i = 0; i < SectorsCnt; i++) {
+			// KEY A  but not KEY B
+			if ( e_sector[i].foundKey[0] && !e_sector[i].foundKey[1] ) {
+							
+				uint8_t sectrail = (FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
 				
-			uint8_t isOK  = resp.arg[0] & 0xff;
-			if (!isOK) continue;
+				PrintAndLog("Reading block %d", sectrail);
+				
+				UsbCommand c = {CMD_MIFARE_READBL, {sectrail, 0, 0}};
+				num_to_bytes(e_sector[i].Key[0], 6, c.d.asBytes); // KEY A
+				clearCommandBuffer();
+				SendCommand(&c);
 
-			uint8_t *data = resp.d.asBytes;
-			key64 = bytes_to_num(data+10, 6);
-			if (key64) {
-				PrintAndLog("Data:%s", sprint_hex(data+10, 6));
-				e_sector[i].foundKey[1] = 1;
-				e_sector[i].Key[1] = key64;
+				UsbCommand resp;
+				if ( !WaitForResponseTimeout(CMD_ACK,&resp,1500)) continue;
+					
+				uint8_t isOK  = resp.arg[0] & 0xff;
+				if (!isOK) continue;
+
+				uint8_t *data = resp.d.asBytes;
+				key64 = bytes_to_num(data+10, 6);
+				if (key64) {
+					PrintAndLog("Data:%s", sprint_hex(data+10, 6));
+					e_sector[i].foundKey[1] = 1;
+					e_sector[i].Key[1] = key64;
+				}
 			}
 		}
 	}
