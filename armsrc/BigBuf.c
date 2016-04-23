@@ -64,7 +64,7 @@ void BigBuf_Clear_ext(bool verbose)
 {
 	memset(BigBuf, 0, BIGBUF_SIZE);
 	if (verbose) 
-		Dbprintf("Buffer cleared (%i bytes)",BIGBUF_SIZE);
+		Dbprintf("Buffer cleared (%i bytes)", BIGBUF_SIZE);
 }
 
 void BigBuf_Clear_keep_EM(void)

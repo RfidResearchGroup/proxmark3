@@ -117,8 +117,7 @@ void SetupSpi(int mode)
 // Set up the synchronous serial port, with the one set of options that we
 // always use when we are talking to the FPGA. Both RX and TX are enabled.
 //-----------------------------------------------------------------------------
-void FpgaSetupSsc(void)
-{
+void FpgaSetupSsc(void) {
 	// First configure the GPIOs, and get ourselves a clock.
 	AT91C_BASE_PIOA->PIO_ASR =
 		GPIO_SSC_FRAME	|
@@ -156,18 +155,15 @@ void FpgaSetupSsc(void)
 // ourselves, not to another buffer). The stuff to manipulate those buffers
 // is in apps.h, because it should be inlined, for speed.
 //-----------------------------------------------------------------------------
-bool FpgaSetupSscDma(uint8_t *buf, int len)
-{
-	if (buf == NULL)
-        return false;
-
+bool FpgaSetupSscDma(uint8_t *buf, int len) {
+	if (buf == NULL) return false;
+	
 	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;	// Disable DMA Transfer
 	AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) buf;		// transfer to this memory address
 	AT91C_BASE_PDC_SSC->PDC_RCR = len;					// transfer this many bytes
 	AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) buf;		// next transfer to same memory address
 	AT91C_BASE_PDC_SSC->PDC_RNCR = len;					// ... with same number of bytes
-	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;		// go!
-    
+	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;		// go!    
     return true;
 }
 
