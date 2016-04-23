@@ -73,7 +73,6 @@ static const float p_K[257] = {		// the probability that a random nonce has a Su
 	0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,
 	0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,
 	0.0290 };
-
 		
 typedef struct noncelistentry {
 	uint32_t nonce_enc;
@@ -91,7 +90,6 @@ typedef struct noncelist {
 	noncelistentry_t *first;
 	float score1, score2;
 } noncelist_t;
-
 
 static size_t nonces_to_bruteforce = 0;
 static noncelistentry_t *brute_force_nonces[256];
@@ -130,9 +128,7 @@ typedef struct {
 
 static partial_indexed_statelist_t partial_statelist[17];
 static partial_indexed_statelist_t statelist_bitflip;
-
 static statelist_t *candidates = NULL;
-
 
 static int add_nonce(uint32_t nonce_enc, uint8_t par_enc) 
 {
@@ -448,32 +444,31 @@ static void Tests()
 	// crypto1_destroy(pcs);
 
 	
-	
 	// printf("\nTests: number of states with BitFlipProperty: %d, (= %1.3f%% of total states)\n", statelist_bitflip.len[0], 100.0 * statelist_bitflip.len[0] / (1<<20));
 
-	printf("\nTests: Actual BitFlipProperties odd/even:\n");
-	for (uint16_t i = 0; i < 256; i++) {
-		printf("[%02x]:%c  ", i, nonces[i].BitFlip[ODD_STATE]?'o':nonces[i].BitFlip[EVEN_STATE]?'e':' ');
-		if (i % 8 == 7) {
-			printf("\n");
-		}
-	}
+	// printf("\nTests: Actual BitFlipProperties odd/even:\n");
+	// for (uint16_t i = 0; i < 256; i++) {
+		// printf("[%02x]:%c  ", i, nonces[i].BitFlip[ODD_STATE]?'o':nonces[i].BitFlip[EVEN_STATE]?'e':' ');
+		// if (i % 8 == 7) {
+			// printf("\n");
+		// }
+	// }
 	
-	printf("\nTests: Sorted First Bytes:\n");
-	for (uint16_t i = 0; i < 256; i++) {
-		uint8_t best_byte = best_first_bytes[i];
-		printf("#%03d Byte: %02x, n = %3d, k = %3d, Sum(a8): %3d, Confidence: %5.1f%%, Bitflip: %c\n", 
-		//printf("#%03d Byte: %02x, n = %3d, k = %3d, Sum(a8): %3d, Confidence: %5.1f%%, Bitflip: %c, score1: %1.5f, score2: %1.0f\n", 
-			i, best_byte, 
-			nonces[best_byte].num,
-			nonces[best_byte].Sum,
-			nonces[best_byte].Sum8_guess,
-			nonces[best_byte].Sum8_prob * 100,
-			nonces[best_byte].BitFlip[ODD_STATE]?'o':nonces[best_byte].BitFlip[EVEN_STATE]?'e':' '
-			//nonces[best_byte].score1,
-			//nonces[best_byte].score2
-			);
-	}
+	// printf("\nTests: Sorted First Bytes:\n");
+	// for (uint16_t i = 0; i < 256; i++) {
+		// uint8_t best_byte = best_first_bytes[i];
+		// printf("#%03d Byte: %02x, n = %3d, k = %3d, Sum(a8): %3d, Confidence: %5.1f%%, Bitflip: %c\n", 
+		// //printf("#%03d Byte: %02x, n = %3d, k = %3d, Sum(a8): %3d, Confidence: %5.1f%%, Bitflip: %c, score1: %1.5f, score2: %1.0f\n", 
+			// i, best_byte, 
+			// nonces[best_byte].num,
+			// nonces[best_byte].Sum,
+			// nonces[best_byte].Sum8_guess,
+			// nonces[best_byte].Sum8_prob * 100,
+			// nonces[best_byte].BitFlip[ODD_STATE]?'o':nonces[best_byte].BitFlip[EVEN_STATE]?'e':' '
+			// //nonces[best_byte].score1,
+			// //nonces[best_byte].score2
+			// );
+	// }
 	
 	// printf("\nTests: parity performance\n");
 	// time_t time1p = clock();
@@ -1628,7 +1623,7 @@ static void* crack_states_thread(void* x){
     }
     return NULL;
 }
-#define _USE_32BIT_TIME_T
+
 static void brute_force(void)
 {
 	if (known_target_key != -1) {
@@ -1667,6 +1662,8 @@ static void brute_force(void)
 
 #ifndef __WIN32
         thread_count = sysconf(_SC_NPROCESSORS_CONF);
+		if ( thread_count < 1)
+			thread_count = 1;
 #endif  /* _WIN32 */
         pthread_t threads[thread_count];
 		

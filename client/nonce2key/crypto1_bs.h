@@ -58,7 +58,7 @@ bitslice_t bs_zeroes;
 #define ROLLBACK_SIZE 8
 // number of nonces required to test to cover entire 48-bit state
 // I would have said it's 12... but bla goes with 100, so I do too
-#define NONCE_TESTS 100
+#define NONCE_TESTS 12
 
 // state pointer management
 extern __thread bitslice_t states[KEYSTREAM_SIZE+STATE_SIZE];

@@ -80,7 +80,7 @@ inline const bitslice_value_t crypto1_bs_lfsr_rollback(const bitslice_value_t in
 // note that bytes are sliced and unsliced with reversed endianness
 inline void crypto1_bs_convert_states(bitslice_t bitsliced_states[], state_t regular_states[]){
     size_t bit_idx = 0, slice_idx = 0;
-    state_t values[MAX_BITSLICES];
+    state_t values[MAX_BITSLICES] = {{0x00}};
     for(slice_idx = 0; slice_idx < MAX_BITSLICES; slice_idx++){
         for(bit_idx = 0; bit_idx < STATE_SIZE; bit_idx++){
             bool bit = get_vector_bit(slice_idx, bitsliced_states[bit_idx]);
@@ -111,7 +111,7 @@ void crypto1_bs_bitslice_value32(uint32_t value, bitslice_t bitsliced_value[], s
 
 void crypto1_bs_print_states(bitslice_t bitsliced_states[]){
     size_t slice_idx = 0;
-    state_t values[MAX_BITSLICES];
+    state_t values[MAX_BITSLICES]  = {{0x00}};
     crypto1_bs_convert_states(bitsliced_states, values);
     for(slice_idx = 0; slice_idx < MAX_BITSLICES; slice_idx++){
         printf("State %03zu: %012"llx"\n", slice_idx, values[slice_idx].value);

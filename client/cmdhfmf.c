@@ -94,12 +94,14 @@ int usage_hf14_hardnested(void){
 	PrintAndLog("      w    acquire nonces and write them to binary file nonces.bin");
 	PrintAndLog("      s    slower acquisition (required by some non standard cards)");
 	PrintAndLog("      r    read nonces.bin and start attack");
+	PrintAndLog("      t    tests?");
 	PrintAndLog(" ");
 	PrintAndLog("samples:");
 	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A");
 	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A w");
 	PrintAndLog("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A w s");
 	PrintAndLog("      hf mf hardnested r");
+	PrintAndLog("      hf mf hardnested r a0a1a2a3a4a5");
 	PrintAndLog(" ");
 	PrintAndLog("Add the known target key to check if it is present in the remaining key space:");
 	PrintAndLog("      sample5: hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF");
@@ -937,7 +939,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 	
 	char ctmp;
 	ctmp = param_getchar(Cmd, 0);
-	if (ctmp != 'H' && ctmp != 'h' ) return usage_hf14_hardnested();
+	if (ctmp == 'H' || ctmp == 'h' ) return usage_hf14_hardnested();
 	if (ctmp != 'R' && ctmp != 'r' && ctmp != 'T' && ctmp != 't' && strlen(Cmd) < 20) return usage_hf14_hardnested();
 	
 	bool know_target_key = false;
