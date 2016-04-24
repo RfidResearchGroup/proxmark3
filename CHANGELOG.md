@@ -3,11 +3,12 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+  -  'lf viking clone' - fixed a bug. (iceman)
+  -  Added bitsliced bruteforce solver in 'hf mf hardnested' (Aczid)
   - 'hf mf chk' speedup (iceman)
   - 'hf 14a/mf sim x" attack mode,  now uses also moebius version of mfkey32 to try finding the key. (iceman)
   - 'hf 14a sim' Added emulation of Mifare cards with 10byte UID length. (iceman)
   - 'hf mf sim' Added emulation of Mifare cards with 10byte UID length. (iceman)
-  -  Added bitsliced bruteforce solver in 'hf mf hardnested' (azcid)
   -  Added `lf guard clone/sim` (iceman)
   -  Added `lf pyramd clone/sim` (iceman) 
   - trying to fix "hf 14b" command to be able to read CALYPSO card.	 (iceman)

@@ -61,17 +61,18 @@ Among the stuff is
 	* A Bruteforce for HID,  starting w a facilitycode then trying all 0xFFFF cardnumbers via simulation. To be used against a HID Reader.
 	* Blaposts Crapto1 v3.3
     * Icsom's  legic script and legic enhancements
-    * Azcid's bitsliced bruteforce solver in 'hf mf hardnested'
+    * Aczid's bitsliced bruteforce solver in 'hf mf hardnested'
 
 
 ---	
 Straight from the CHANGELOG
 ---
+  -  'lf viking clone' - fixed a bug. (iceman)
+  - Added bitsliced bruteforce solver in 'hf mf hardnested' (aczid)
   - 'hf mf chk' speedup (iceman)
   - 'hf 14a/mf sim x" attack mode,  now uses also moebius version of mfkey32 to try finding the key. (iceman)
   - 'hf 14a sim' Added emulation of Mifare cards with 10byte UID length. (iceman)
   - 'hf mf sim' Added emulation of Mifare cards with 10byte UID length. (iceman)
-  - Added bitsliced bruteforce solver in 'hf mf hardnested' (azcid)
   - Added `lf guard clone/sim` (iceman)
   - Added `lf pyramd clone/sim` (iceman) 
   - trying to fix "hf 14b" command to be able to read CALYPSO card.	 (iceman)
