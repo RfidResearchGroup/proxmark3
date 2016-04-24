@@ -1005,9 +1005,9 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			trgBlockNo, 
 			trgKeyType?'B':'A', 
 			trgkey[0], trgkey[1], trgkey[2], trgkey[3], trgkey[4], trgkey[5],
-			know_target_key?"":" (not set)",
-			nonce_file_write?"write":nonce_file_read?"read":"none",
-			slow?"Yes":"No",
+			know_target_key ? "" : " (not set)",
+			nonce_file_write ? "write": nonce_file_read ? "read" : "none",
+			slow ? "Yes" : "No",
 			tests);
 
 	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key?trgkey:NULL, nonce_file_read, nonce_file_write, slow, tests);
