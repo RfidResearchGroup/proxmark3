@@ -807,7 +807,7 @@ void RAMFUNC SnoopIClass(void)
 	Dbprintf("%x %x %x", Uart.byteCntMax, BigBuf_get_traceLen(), (int)Uart.output[0]);
 
 done:
-    AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
+    FpgaDisableSscDma();
     Dbprintf("%x %x %x", maxBehindBy, Uart.state, Uart.byteCnt);
 	Dbprintf("%x %x %x", Uart.byteCntMax, BigBuf_get_traceLen(), (int)Uart.output[0]);
 	LEDsoff();
