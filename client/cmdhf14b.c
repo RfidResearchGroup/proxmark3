@@ -18,40 +18,53 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_hf_14b_info(void){
-	PrintAndLog("Usage: hf 14b info [-h] [-s]");
-	PrintAndLog("       -h    this help");
-	PrintAndLog("       -s    silently");
+	PrintAndLog("Usage: hf 14b info [h] [s]");
+	PrintAndLog("Options:");
+	PrintAndLog("       h    this help");
+	PrintAndLog("       s    silently");
+	PrintAndLog("sample:");
+	PrintAndLog("       hf 14b info");
 	return 0;
 }
 int usage_hf_14b_reader(void){
-	PrintAndLog("Usage: hf 14b reader [-h] [-s]");
-	PrintAndLog("       -h    this help");
-	PrintAndLog("       -s    silently");
+	PrintAndLog("Usage: hf 14b reader [h] [s]");
+	PrintAndLog("Options:");
+	PrintAndLog("       h    this help");
+	PrintAndLog("       s    silently");
+	PrintAndLog("sample:");
+	PrintAndLog("       hf 14b reader");
 	return 0;
 }
 int usage_hf_14b_raw(void){
 	PrintAndLog("Usage: hf 14b raw [-h] [-r] [-c] [-p] [-s || -ss] <0A 0B 0C ... hex>");
+	PrintAndLog("Options:");
 	PrintAndLog("       -h    this help");
 	PrintAndLog("       -r    do not read response");
 	PrintAndLog("       -c    calculate and append CRC");
 	PrintAndLog("       -p    leave the field on after receive");
 	PrintAndLog("       -s    active signal field ON with select");
 	PrintAndLog("       -ss   active signal field ON with select for SRx ST Microelectronics tags");
+	PrintAndLog("sample:");
+	PrintAndLog("       hf 14b raw -s -c -p 0200a40400");
 	return 0;    
 }
 int usage_hf_14b_snoop(void){
 	PrintAndLog("It get data from the field and saves it into command buffer.");
 	PrintAndLog("Buffer accessible from command 'hf list 14b'");
-	PrintAndLog("Usage: hf 14b snoop [-h]");
-	PrintAndLog("       -h    this help");
-	PrintAndLog("sample: hf 14b snoop");
+	PrintAndLog("Usage: hf 14b snoop [h]");
+	PrintAndLog("Options:");
+	PrintAndLog("       h    this help");
+	PrintAndLog("sample:");
+	PrintAndLog("       hf 14b snoop");
 	return 0;    
 }
 int usage_hf_14b_sim(void){
 	PrintAndLog("Emulating ISO/IEC 14443 type B tag with 4 UID");
-	PrintAndLog("Usage: hf 14b sim [-h]");
-	PrintAndLog("       -h    this help");
-	PrintAndLog("sample: hf 14b sim");
+	PrintAndLog("Usage: hf 14b sim [h]");
+	PrintAndLog("Options:");
+	PrintAndLog("       h    this help");
+	PrintAndLog("sample:");
+	PrintAndLog("       hf 14b sim");
 	return 0;    
 }
 int usage_hf_14b_read_srx(void){
@@ -59,29 +72,37 @@ int usage_hf_14b_read_srx(void){
 	PrintAndLog("Options:");
 	PrintAndLog("       h        this help");
 	PrintAndLog("       <1|2>    1 = SRIX4K , 2 = SRI512");
-	PrintAndLog("sample: hf 14b read 1");
-	PrintAndLog("      : hf 14b read 2");
+	PrintAndLog("sample:");
+	PrintAndLog("       hf 14b read 1");
+	PrintAndLog("       hf 14b read 2");
 	return 0;
 }
 int usage_hf_14b_write_srx(void){
-	PrintAndLog("Usage:  hf 14b write <1|2> <BLOCK> <DATA>");
+	PrintAndLog("Usage:  hf 14b [h] write <1|2> <BLOCK> <DATA>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h        this help");
 	PrintAndLog("       <1|2>    1 = SRIX4K , 2 = SRI512");
 	PrintAndLog("       <block>  BLOCK number depends on tag, special block == FF");
 	PrintAndLog("       <data>   hex bytes of data to be written");
-	PrintAndLog("sample  : hf 14b write 1 7F 11223344");
-	PrintAndLog("        : hf 14b write 1 FF 11223344");
-	PrintAndLog("        : hf 14b write 2 15 11223344");
-	PrintAndLog("        : hf 14b write 2 FF 11223344");
+	PrintAndLog("sample:");
+	PrintAndLog("       hf 14b write 1 7F 11223344");
+	PrintAndLog("       hf 14b write 1 FF 11223344");
+	PrintAndLog("       hf 14b write 2 15 11223344");
+	PrintAndLog("       hf 14b write 2 FF 11223344");
 	return 0;
 }
 
-static int rawClose(){
+static void switch_on_field_14b(void) {
+	UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT, 0, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+}
+
+static int switch_off_field_14b(void) {
 	UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_DISCONNECT, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
-	return 1;
+	return 0;
 }
 
 int CmdHF14BList(const char *Cmd) {
@@ -119,7 +140,7 @@ int CmdHF14BCmdRaw (const char *Cmd) {
 	int i = 0;
 	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
 	uint16_t datalen = 0;
-	uint32_t flags = 0;
+	uint32_t flags = ISO14B_CONNECT;
 	uint32_t temp = 0;
 	
 	if (strlen(Cmd)<3) return usage_hf_14b_raw();
@@ -148,7 +169,6 @@ int CmdHF14BCmdRaw (const char *Cmd) {
                     break;
 				case 's':
 				case 'S':
-					flags |= ISO14B_CONNECT;
 					select = TRUE;
 					if (Cmd[i+2]=='s' || Cmd[i+2]=='S') {
 						flags |= ISO14B_SELECT_SR;
@@ -236,8 +256,6 @@ static void print_atqb_resp(uint8_t *data, uint8_t cid){
 	else if (maxFrame == 7)	maxFrame = 128;
 	else if (maxFrame == 8)	maxFrame = 256;
 	else maxFrame = 257;
-
-
 	
 	PrintAndLog("Max Frame Size: %u%s bytes",maxFrame, (maxFrame == 257) ? "+ RFU" : "");
 
@@ -248,7 +266,7 @@ static void print_atqb_resp(uint8_t *data, uint8_t cid){
 	if ( fwt < 16 ){
 		uint32_t etus = (32 << fwt);
 		uint32_t fwt_time = (302 << fwt);
-		PrintAndLog("Frame Wait Integer: %u - %u ETUs | %u µS", fwt, etus, fwt_time);
+		PrintAndLog("Frame Wait Integer: %u - %u ETUs | %u us", fwt, etus, fwt_time);
 	} else {
 		PrintAndLog("Frame Wait Integer: %u - RFU", fwt);
 	}
@@ -377,10 +395,7 @@ bool HF14B_ST_Info(bool verbose){
 	memcpy(&card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
 	
 	uint64_t status = resp.arg[0];	
-	if ( status > 0 ) { 
-		rawClose();
-		return FALSE;
-	}
+	if ( status > 0 ) return switch_off_field_14b();
 
 	//add locking bit information here. uint8_t data[16] = {0x00};
 	// uint8_t datalen = 2;
@@ -403,7 +418,7 @@ bool HF14B_ST_Info(bool verbose){
 	
 	// if (datalen != resplen || !crc) return rawClose();
 	//print_ST_Lock_info(data[5]>>2);
-	rawClose();
+	switch_off_field_14b();
 	return TRUE;
 }
 
@@ -436,17 +451,17 @@ bool HF14B_ST_Reader(bool verbose){
 
 	bool isSuccess = FALSE;
 
+	switch_on_field_14b();
+	
 	// SRx get and print general info about SRx chip from UID
-	UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0}};
+	UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_SELECT_SR, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 		if (verbose) PrintAndLog("timeout while waiting for reply.");
 		return FALSE;
     }
-
 	
 	iso14b_card_select_t card;
 	memcpy(&card, (iso14b_card_select_t *)resp.d.asBytes, sizeof(iso14b_card_select_t));
@@ -472,7 +487,7 @@ bool HF14B_ST_Reader(bool verbose){
 			break;
 	}
 	
-	rawClose();
+	switch_off_field_14b();
 	return isSuccess;		
 }
 
@@ -515,7 +530,7 @@ bool HF14B_Std_Reader(bool verbose){
 			break;
 	}
 	
-	rawClose();
+	switch_off_field_14b();
 	return isSuccess;	
 }
 
