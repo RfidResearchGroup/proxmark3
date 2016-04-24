@@ -660,7 +660,7 @@ int CmdVikingDemod(const char *Cmd)
 	//call lfdemod.c demod for Viking
 	int ans = VikingDemod_AM(DemodBuffer, &size);
 	if (ans < 0) {
-		if (g_debugMode) PrintAndLog("Error Viking_Demod %d", ans);
+		if (g_debugMode) PrintAndLog("Error Viking_Demod %d %s", ans, (ans == -5)?"[chksum error]":"");
 		return 0;
 	}
 	//got a good demod

@@ -679,10 +679,15 @@ int VikingDemod_AM(uint8_t *dest, size_t *size) {
 	uint8_t preamble[] = {1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
 	if (errChk == 0) return -4; //preamble not found
-	uint32_t checkCalc = bytebits_to_byte(dest+startIdx,8) ^ bytebits_to_byte(dest+startIdx+8,8) ^ bytebits_to_byte(dest+startIdx+16,8)
-	    ^ bytebits_to_byte(dest+startIdx+24,8) ^ bytebits_to_byte(dest+startIdx+32,8) ^ bytebits_to_byte(dest+startIdx+40,8) 
-	    ^ bytebits_to_byte(dest+startIdx+48,8) ^ bytebits_to_byte(dest+startIdx+56,8);
-	if ( checkCalc != 0xA8 ) return -5;
+	uint32_t checkCalc = bytebits_to_byte(dest+startIdx,8) ^ 
+						 bytebits_to_byte(dest+startIdx+8,8) ^ 
+						 bytebits_to_byte(dest+startIdx+16,8) ^ 
+						 bytebits_to_byte(dest+startIdx+24,8) ^ 
+						 bytebits_to_byte(dest+startIdx+32,8) ^ 
+						 bytebits_to_byte(dest+startIdx+40,8) ^ 
+						 bytebits_to_byte(dest+startIdx+48,8) ^ 
+						 bytebits_to_byte(dest+startIdx+56,8);
+	if ( checkCalc != 0xA8 ) return -5;	
 	if (*size != 64) return -6;
 	//return start position
 	return (int) startIdx;
