@@ -1637,8 +1637,9 @@ static void brute_force(void)
         PrintAndLog("Using %u-bit bitslices", MAX_BITSLICES);
         PrintAndLog("Bitslicing best_first_byte^uid[3] (rollback byte): %02x...", best_first_bytes[0]^(cuid>>24));
         // convert to 32 bit little-endian
-        crypto1_bs_bitslice_value32(rev32((best_first_bytes[0]^(cuid>>24))), bitsliced_rollback_byte, 8);
-
+        //crypto1_bs_bitslice_value32(rev32((best_first_bytes[0]^(cuid>>24))), bitsliced_rollback_byte, 8);
+		crypto1_bs_bitslice_value32((best_first_bytes[0]<<24)^cuid, bitsliced_rollback_byte, 8);
+			
         PrintAndLog("Bitslicing nonces...");
         for(size_t tests = 0; tests < NONCE_TESTS; tests++){
             uint32_t test_nonce = brute_force_nonces[tests]->nonce_enc;
@@ -1647,7 +1648,7 @@ static void brute_force(void)
             crypto1_bs_bitslice_value32(cuid^test_nonce, bitsliced_encrypted_nonces[tests], 32);
             // convert to 32 bit little-endian
             crypto1_bs_bitslice_value32(rev32( ~(test_parity ^ ~(parity(cuid>>24 & 0xff)<<3 | parity(cuid>>16 & 0xff)<<2 | parity(cuid>>8 & 0xff)<<1 | parity(cuid&0xff)))), bitsliced_encrypted_parity_bits[tests], 4);
-        }
+		}
         total_states_tested = 0;
 
         // count number of states to go
