@@ -848,24 +848,28 @@ bool waitCmd(bool verbose) {
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 
-		status = (resp.arg[0] & 0xFFFF);
+		status = (resp.arg[0] & 0xFF);
 		if ( status > 0 ) return FALSE;
-		
+			
 		len = (resp.arg[1] & 0xFFFF);
+		
 		memcpy(data, resp.d.asBytes, len);
 		
 		if (verbose) {
-			
-			ComputeCrc14443(CRC_14443_B, data, len-2, &b1, &b2);
-			crc = ( data[len-2] == b1 && data[len-1] == b2);
-			
-			PrintAndLog("[LEN %u] %s[%02X %02X] %s",
-				len,
-				sprint_hex(data, len-2),
-				data[len-2],
-				data[len-1],
-				(crc) ? "OK" : "FAIL"
-			);
+			if ( len >= 3 ) {
+				ComputeCrc14443(CRC_14443_B, data, len-2, &b1, &b2);
+				crc = ( data[len-2] == b1 && data[len-1] == b2);
+		
+				PrintAndLog("[LEN %u] %s[%02X %02X] %s",
+					len,
+					sprint_hex(data, len-2),
+					data[len-2],
+					data[len-1],
+					(crc) ? "OK" : "FAIL"
+				);
+			} else {
+				PrintAndLog("[LEN %u] %s", len,	sprint_hex(data, len) );
+			}
 		}	
 		return TRUE;
     } else {
