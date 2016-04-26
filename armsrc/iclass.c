@@ -677,7 +677,11 @@ void RAMFUNC SnoopIClass(void)
     FpgaSetupSsc();
     upTo = dmaBuf;
     lastRxCounter = DMA_BUFFER_SIZE;
-    FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE);
+	// Setup and start DMA.
+	if ( !FpgaSetupSscDma((uint8_t*) dmaBuf, DMA_BUFFER_SIZE) ){
+		if (MF_DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting"); 
+		return;
+	}
 
     // And the reader -> tag commands
     memset(&Uart, 0, sizeof(Uart));
@@ -1539,9 +1543,15 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
 			if (elapsed) (*elapsed)++;
 		}
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-			if(c < timeout) { c++; } else { return FALSE; }
+			if(c < timeout)
+				c++;
+			else 
+				return FALSE;
+			
 			b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+			
 			skip = !skip;
+			
 			if(skip) continue;
 		
 			if(ManchesterDecoding(b & 0x0f)) {
