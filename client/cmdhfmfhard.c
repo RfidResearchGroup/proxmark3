@@ -1637,7 +1637,6 @@ static void brute_force(void)
         PrintAndLog("Using %u-bit bitslices", MAX_BITSLICES);
         PrintAndLog("Bitslicing best_first_byte^uid[3] (rollback byte): %02x...", best_first_bytes[0]^(cuid>>24));
         // convert to 32 bit little-endian
-        //crypto1_bs_bitslice_value32(rev32((best_first_bytes[0]^(cuid>>24))), bitsliced_rollback_byte, 8);
 		crypto1_bs_bitslice_value32((best_first_bytes[0]<<24)^cuid, bitsliced_rollback_byte, 8);
 			
         PrintAndLog("Bitslicing nonces...");
@@ -1663,6 +1662,7 @@ static void brute_force(void)
 		if ( thread_count < 1)
 			thread_count = 1;
 #endif  /* _WIN32 */
+
         pthread_t threads[thread_count];
 		
         // enumerate states using all hardware threads, each thread handles one bucket
