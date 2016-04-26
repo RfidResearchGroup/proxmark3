@@ -504,7 +504,6 @@ void SimulateIso14443bTag(void) {
 	uint8_t *resp1Code = BigBuf_malloc(ToSendMax);
 	memcpy(resp1Code, ToSend, ToSendMax); 
 	uint16_t resp1CodeLen = ToSendMax;
-	PrintToSendBuffer();
 	DbpString("Printing Resp1Code:");
 	Dbhexdump(resp1CodeLen, resp1Code, 0);
 	
@@ -513,7 +512,6 @@ void SimulateIso14443bTag(void) {
 	uint8_t *resp2Code = BigBuf_malloc(ToSendMax);
 	memcpy(resp2Code, ToSend, ToSendMax); 
 	uint16_t resp2CodeLen = ToSendMax;
-	PrintToSendBuffer();
 	
 	// We need to listen to the high-frequency, peak-detected path.
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
