@@ -743,12 +743,12 @@ int CmdHFSearch(const char *Cmd){
 	int ans = CmdHF14AReader("s");
 
 	if (ans > 0) {
-		PrintAndLog("\nValid ISO14443A Tag Found - Quiting Search\n");
+		PrintAndLog("\nValid ISO14443-A Tag Found - Quiting Search\n");
 		return ans;
 	} 
 	ans = CmdHF14BReader("s");
 	if (ans) {
-		PrintAndLog("\nValid ISO14443B Tag Found - Quiting Search\n");
+		PrintAndLog("\nValid ISO14443-B Tag Found - Quiting Search\n");
 		return ans;
 	}
 	ans = HFiClassReader("", false, false);
