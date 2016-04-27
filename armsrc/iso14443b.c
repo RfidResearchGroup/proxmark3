@@ -19,6 +19,10 @@
 #define TR1 0
 // Frame Delay Time PICC to PCD  (per 14443-3 Amendment 1)
 #define TR2 0
+
+// 4sample
+#define SEND4STUFFBIT(x) ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);
+
 static void switch_off(void);
 
 // the block number for the ISO14443-4 PCB  (used with APDUs)
@@ -218,77 +222,42 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
 
 	// Send SOF.
 	// 10-11 ETU * 4times samples ZEROS
-	for(i = 0; i < 10; i++) {
-		ToSendStuffBit(0);
-		ToSendStuffBit(0);
-		ToSendStuffBit(0);
-		ToSendStuffBit(0);
-	}
+	for(i = 0; i < 10; i++) { SEND4STUFFBIT(0); }
 	
 	// 2-3 ETU * 4times samples ONES
-	for(i = 0; i < 3; i++) {
-		ToSendStuffBit(1);
-		ToSendStuffBit(1);
-		ToSendStuffBit(1);
-		ToSendStuffBit(1);
-	}
+	for(i = 0; i < 3; i++)  { SEND4STUFFBIT(1); }
 	
 	// data
 	for(i = 0; i < len; ++i) {
 		
 		// Start bit
-		ToSendStuffBit(0);
-		ToSendStuffBit(0);
-		ToSendStuffBit(0);
-		ToSendStuffBit(0);
+		SEND4STUFFBIT(0);
 
 		// Data bits
 		b = cmd[i];
 		for(j = 0; j < 8; ++j) {
-			if(b & 1) {
-				ToSendStuffBit(1);
-				ToSendStuffBit(1);
-				ToSendStuffBit(1);
-				ToSendStuffBit(1);
+			if(b & 1) { 
+				SEND4STUFFBIT(1); 
 			} else {
-				ToSendStuffBit(0);
-				ToSendStuffBit(0);
-				ToSendStuffBit(0);
-				ToSendStuffBit(0);
+				SEND4STUFFBIT(0);
 			}
 			b >>= 1;
 		}
 
 		// Stop bit
-		ToSendStuffBit(1);
-		ToSendStuffBit(1);
-		ToSendStuffBit(1);
-		ToSendStuffBit(1);
+		SEND4STUFFBIT(1);
 		
 		// Extra Guard bit
 		// For PICC it ranges 0-18us (1etu = 9us)
-		ToSendStuffBit(1);
-		ToSendStuffBit(1);
-		ToSendStuffBit(1);
-		ToSendStuffBit(1);
+		SEND4STUFFBIT(1);
 	}
 
 	// Send EOF.
 	// 10-11 ETU * 4 sample rate = ZEROS
-	for(i = 0; i < 10; i++) {
-		ToSendStuffBit(0);
-		ToSendStuffBit(0);
-		ToSendStuffBit(0);
-		ToSendStuffBit(0);
-	}
+	for(i = 0; i < 10; i++) { SEND4STUFFBIT(0); }
 	
 	// why this?
-	for(i = 0; i < 40; i++) {
-		ToSendStuffBit(1);
-		ToSendStuffBit(1);
-		ToSendStuffBit(1);
-		ToSendStuffBit(1);
-	}
+	for(i = 0; i < 40; i++) { SEND4STUFFBIT(1); }
 	
 	// Convert from last byte pos to length
 	++ToSendMax;
@@ -587,30 +556,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
 		*  HALT
 		    send halt response ( waiting for wupb )
 		*/
-			
-		if ( len == 7 && receivedCmd[0] == ISO14443B_HALT ) {
-				cardSTATE = SIM_HALTED;
-		} else if ( len == 11 && receivedCmd[0] == ISO14443B_ATTRIB ) {
-				cardSTATE = SIM_ACKNOWLEDGE;
-		} else {
-			// Todo:
-			// - SLOT MARKER
-			// - ISO7816
-			// - emulate with a memory dump
-			Dbprintf("new cmd from reader: len=%d, cmdsRecvd=%d", len, cmdsReceived);
-
-			// CRC Check
-			uint8_t b1, b2;
-			if (len >= 3){ // if crc exists
-				ComputeCrc14443(CRC_14443_B, receivedCmd, len-2, &b1, &b2);
-				if(b1 != receivedCmd[len-2] || b2 != receivedCmd[len-1])
-					DbpString("+++CRC fail");
-				else
-					DbpString("CRC passes");
-			}
-			cardSTATE = SIM_IDLE; 
-		}
-
+		
 		switch(cardSTATE){
 			case SIM_NOFIELD:
 			case SIM_HALTED:
@@ -636,8 +582,32 @@ void SimulateIso14443bTag(uint32_t pupi) {
 				cardSTATE = SIM_IDLE;			
 				break;
 			}
-			default: 
+			case SIM_WORK:{
+				if ( len == 7 && receivedCmd[0] == ISO14443B_HALT ) {
+					cardSTATE = SIM_HALTED;
+				} else if ( len == 11 && receivedCmd[0] == ISO14443B_ATTRIB ) {
+					cardSTATE = SIM_ACKNOWLEDGE;
+				} else {
+					// Todo:
+					// - SLOT MARKER
+					// - ISO7816
+					// - emulate with a memory dump
+					Dbprintf("new cmd from reader: len=%d, cmdsRecvd=%d", len, cmdsReceived);
+
+					// CRC Check
+					uint8_t b1, b2;
+					if (len >= 3){ // if crc exists
+						ComputeCrc14443(CRC_14443_B, receivedCmd, len-2, &b1, &b2);
+						if(b1 != receivedCmd[len-2] || b2 != receivedCmd[len-1])
+							DbpString("+++CRC fail");
+						else
+							DbpString("CRC passes");
+					}
+					cardSTATE = SIM_IDLE; 
+				}
 				break;
+			}
+			default: break;
 		}
 			
 		++cmdsReceived;

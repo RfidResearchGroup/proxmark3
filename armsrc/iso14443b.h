@@ -33,11 +33,13 @@ uint8_t iso14443b_select_card(iso14b_card_select_t* card);
 uint8_t iso14443b_select_card_srx(iso14b_card_select_t* card);
 
 
-#define SIM_NOFIELD	 0
-#define SIM_IDLE 	 1
-#define SIM_HALTED	 2
-#define SIM_SELECTING 3
-#define SIM_HALTING   4
+// States for 14B SIM command
+#define SIM_NOFIELD		0
+#define SIM_IDLE		1
+#define SIM_HALTED		2
+#define SIM_SELECTING	3
+#define SIM_HALTING		4
 #define SIM_ACKNOWLEDGE 5
+#define SIM_WORK		6
 
 #endif /* __ISO14443B_H */
