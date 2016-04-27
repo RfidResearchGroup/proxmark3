@@ -484,45 +484,8 @@ static void TransmitFor14443b_AsTag( uint8_t *response, uint16_t len) {
 // response to send, and send it.
 //-----------------------------------------------------------------------------
 void SimulateIso14443bTag(uint32_t pupi) {
-	// the only commands we understand is WUPB, AFI=0, Select All, N=1:
-	static const uint8_t cmd1[] = { ISO14443B_REQB, 0x00, 0x08, 0x39, 0x73 }; // WUPB
-	// ... and REQB, AFI=0, Normal Request, N=1:
-	static const uint8_t cmd2[] = { ISO14443B_REQB, 0x00, 0x00, 0x71, 0xFF }; // REQB
-	// ... and ATTRIB
-	static const uint8_t cmd4[] = { ISO14443B_ATTRIB, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; // ATTRIB
 
-	// ... if not PUPI/UID is supplied we always respond with ATQB, PUPI = 820de174, Application Data = 0x20381922,
-	// supports only 106kBit/s in both directions, max frame size = 32Bytes,
-	// supports ISO14443-4, FWI=8 (77ms), NAD supported, CID not supported:
-	uint8_t response1[] = {
-		0x50, 0x82, 0x0d, 0xe1, 0x74, 0x20, 0x38, 0x19, 0x22,
-		0x00, 0x21, 0x85, 0x5e, 0xd7
-	};
-	// response to HLTB and ATTRIB
-	static const uint8_t response2[] = {0x00, 0x78, 0xF0};
-
-	// PUPI/UID supplied
-	if ( pupi > 0 ) {
-		uint8_t len = sizeof(response1);
-		num_to_bytes(pupi, 4, response1+1);
-		ComputeCrc14443(CRC_14443_B, response1, len-2, response1+len-2, response1+len-1);
-		//print it..
-	}
-	
-	uint16_t len, cmdsRecvd = 0;
-	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
-	
-	uint8_t *resp1Code;
-	uint8_t *resp2Code;
-	uint16_t resp1CodeLen, resp2CodeLen;
-	
-	// uint32_t time_0 = 0;
-	// uint32_t t2r_time = 0;
-	// uint32_t r2t_time = 0;
-	
-	int cardSTATE = MFEMUL_NOFIELD;
-	int vHf = 0;	// in mV
-	
+	///////////// setup device.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
 	// allocate command receive buffer
@@ -536,62 +499,105 @@ void SimulateIso14443bTag(uint32_t pupi) {
 
 	// Set up the synchronous serial port
 	FpgaSetupSsc();
+	/////////////
 
-	// prepare the (only one) tag answer:
-	CodeIso14443bAsTag(response1, sizeof(response1));
-	resp1Code = BigBuf_malloc(ToSendMax);
-	resp1CodeLen = ToSendMax;
-	memcpy(resp1Code, ToSend, ToSendMax); 
+	uint16_t len, cmdsReceived = 0;
+	int cardSTATE = SIM_NOFIELD;
+	int vHf = 0;	// in mV
+	// uint32_t time_0 = 0;
+	// uint32_t t2r_time = 0;
+	// uint32_t r2t_time = 0;
+	uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);	
 	
+	// the only commands we understand is WUPB, AFI=0, Select All, N=1:
+//	static const uint8_t cmdWUPB[] = { ISO14443B_REQB, 0x00, 0x08, 0x39, 0x73 }; // WUPB
+	// ... and REQB, AFI=0, Normal Request, N=1:
+//	static const uint8_t cmdREQB[] = { ISO14443B_REQB, 0x00, 0x00, 0x71, 0xFF }; // REQB
+	// ... and ATTRIB
+//	static const uint8_t cmdATTRIB[] = { ISO14443B_ATTRIB, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; // ATTRIB
+
+	// ... if not PUPI/UID is supplied we always respond with ATQB, PUPI = 820de174, Application Data = 0x20381922,
+	// supports only 106kBit/s in both directions, max frame size = 32Bytes,
+	// supports ISO14443-4, FWI=8 (77ms), NAD supported, CID not supported:
+	uint8_t respATQB[] = { 	0x50, 0x82, 0x0d, 0xe1, 0x74, 0x20, 0x38, 0x19, 
+							0x22, 0x00, 0x21, 0x85, 0x5e, 0xd7 };
+							
+	// response to HLTB and ATTRIB
+	static const uint8_t respOK[] = {0x00, 0x78, 0xF0};
+
+	// ...PUPI/UID supplied from user. Adjust ATQB response accordingly
+	if ( pupi > 0 ) {
+		num_to_bytes(pupi, 4, respATQB+1);
+		ComputeCrc14443(CRC_14443_B, respATQB, 12, respATQB+13, respATQB+14);
+	}
+
+	// prepare "ATQB" tag answer (encoded):
+	CodeIso14443bAsTag(respATQB, sizeof(respATQB));
+	uint8_t *encodedATQB = BigBuf_malloc(ToSendMax);
+	uint16_t encodedATQBLen = ToSendMax;
+	memcpy(encodedATQB, ToSend, ToSendMax); 
+
 	
-	// prepare the (other) tag answer:
-	CodeIso14443bAsTag(response2, sizeof(response2));
-	resp2Code = BigBuf_malloc(ToSendMax);
-	resp2CodeLen = ToSendMax;	
-	memcpy(resp2Code, ToSend, ToSendMax); 
+	// prepare "OK" tag answer (encoded):
+	CodeIso14443bAsTag(respOK, sizeof(respOK));
+	uint8_t *encodedOK = BigBuf_malloc(ToSendMax);
+	uint16_t encodedOKLen = ToSendMax;	
+	memcpy(encodedOK, ToSend, ToSendMax); 
 	
-		
+	// Simulation loop
 	while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
 		WDT_HIT();
 
 		// find reader field
-		if (cardSTATE == MFEMUL_NOFIELD) {
+		if (cardSTATE == SIM_NOFIELD) {
 			vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-			if ( vHf > MF_MINFIELDV )
-				cardSTATE = MFEMUL_IDLE; 
+			if ( vHf > MF_MINFIELDV ) {
+				cardSTATE = SIM_IDLE; 
+				LED_A_ON();
+			}
 		} 
-		if (cardSTATE == MFEMUL_NOFIELD) continue;
+		if (cardSTATE == SIM_NOFIELD) continue;
 
-		
+		// Get reader command
 		if (!GetIso14443bCommandFromReader(receivedCmd, &len)) {
-			Dbprintf("button pressed, received %d commands", cmdsRecvd);
+			Dbprintf("button pressed, received %d commands", cmdsReceived);
 			break;
 		}
 
-		// REQ or WUP request in ANY state and WUP in HALTED state
-		if (len == 5 && ( 
-				 (receivedCmd[0] == ISO14443B_REQB && cardSTATE != MFEMUL_HALTED) ||
-            	  receivedCmd[0] == ISO14443A_CMD_WUPA
-				 )
-			) {
-			TransmitFor14443b_AsTag( resp1Code, resp1CodeLen );
-			LogTrace(response1, sizeof(response1), 0, 0, NULL, FALSE);
-			cardSTATE = MFEMUL_SELECT1;
-			continue;
-		}		
+		// ISO14443-B protocol states:
+		// REQ or WUP request in ANY state 
+		// WUP in HALTED state
+		if (len == 5 ) {
+				if ( (receivedCmd[0] == ISO14443B_REQB && (receivedCmd[2] & 0x8)== 0x8 && cardSTATE != SIM_HALTED) ||
+            	     (receivedCmd[0] == ISO14443B_REQB && (receivedCmd[2] & 0x8)== 0) ){
+					
+				TransmitFor14443b_AsTag( encodedATQB, encodedATQBLen );
+				LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, FALSE);
+				cardSTATE = SIM_SELECTING;
+				continue;
+			}
+		}
+		
+		/*
+		* How should this flow go?
+		*  REQB or WUPB
+		*   send response  ( waiting for Attrib)
+		*  ATTRIB
+		*   send response  ( waiting for commands 7816) 
+		*  HALT
+		    send halt response ( waiting for wupb )
+		*/
 			
-		if ( (len == 5 && memcmp(receivedCmd, cmd1, len) == 0) || 
-		     (len == 5 && memcmp(receivedCmd, cmd2, len) == 0) ) {
-				//WUPB && REQB
-				cardSTATE = MFEMUL_SELECT1;
-		} else if ( len == 7 && receivedCmd[0] == ISO14443B_HALT ) {
-				cardSTATE = MFEMUL_HALTED;
-		} else if ( len == sizeof(cmd4) && receivedCmd[0] == ISO14443B_ATTRIB ) {
-				cardSTATE = MFEMUL_SELECT2;
+		if ( len == 7 && receivedCmd[0] == ISO14443B_HALT ) {
+				cardSTATE = SIM_HALTED;
+		} else if ( len == 11 && receivedCmd[0] == ISO14443B_ATTRIB ) {
+				cardSTATE = SIM_ACKNOWLEDGE;
 		} else {
-			// SLOT MARKER command?!?
-			// ISO7816?!?
-			Dbprintf("new cmd from reader: len=%d, cmdsRecvd=%d", len, cmdsRecvd);
+			// Todo:
+			// - SLOT MARKER
+			// - ISO7816
+			// - emulate with a memory dump
+			Dbprintf("new cmd from reader: len=%d, cmdsRecvd=%d", len, cmdsReceived);
 
 			// CRC Check
 			uint8_t b1, b2;
@@ -602,38 +608,45 @@ void SimulateIso14443bTag(uint32_t pupi) {
 				else
 					DbpString("CRC passes");
 			}
-			cardSTATE = MFEMUL_IDLE; 			
+			cardSTATE = SIM_IDLE; 
 		}
 
 		switch(cardSTATE){
-			case MFEMUL_NOFIELD:
-			case MFEMUL_HALTED:
-			case MFEMUL_IDLE:{
+			case SIM_NOFIELD:
+			case SIM_HALTED:
+			case SIM_IDLE:{
 				LogTrace(receivedCmd, len, 0, 0, NULL, TRUE);	
 				break;
 			}
-			case MFEMUL_SELECT1: 
-				TransmitFor14443b_AsTag( resp1Code, resp1CodeLen );
-				LogTrace(response1, sizeof(response1), 0, 0, NULL, FALSE);
-				cardSTATE = MFEMUL_WORK;
+			case SIM_SELECTING: {
+				TransmitFor14443b_AsTag( encodedATQB, encodedATQBLen );
+				LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, FALSE);
+				cardSTATE = SIM_IDLE;
 				break;
-			case MFEMUL_SELECT2:
-				TransmitFor14443b_AsTag( resp2Code, resp2CodeLen );
-				LogTrace(response2, sizeof(response2), 0, 0, NULL, FALSE);
-				cardSTATE = MFEMUL_HALTED;
+			}
+			case SIM_HALTING: {
+				TransmitFor14443b_AsTag( encodedOK, encodedOKLen );
+				LogTrace(respOK, sizeof(respOK), 0, 0, NULL, FALSE);
+				cardSTATE = SIM_HALTED;
 				break;
-			case MFEMUL_WORK:
+			}
+			case SIM_ACKNOWLEDGE:{
+				TransmitFor14443b_AsTag( encodedOK, encodedOKLen );
+				LogTrace(respOK, sizeof(respOK), 0, 0, NULL, FALSE);
+				cardSTATE = SIM_IDLE;			
+				break;
+			}
+			default: 
 				break;
 		}
 			
-		++cmdsRecvd;
-		if(cmdsRecvd > 1000) {
+		++cmdsReceived;
+		if(cmdsReceived > 1000) {
 			DbpString("14B Simulate, 1000 commands later...");
 			break;
 		}
 	}
 	if (MF_DBGLEVEL >= 1) Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
-
 	switch_off(); //simulate
 }
 
