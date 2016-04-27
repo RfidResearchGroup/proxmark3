@@ -59,12 +59,14 @@ int usage_hf_14b_snoop(void){
 	return 0;    
 }
 int usage_hf_14b_sim(void){
-	PrintAndLog("Emulating ISO/IEC 14443 type B tag with 4 UID");
-	PrintAndLog("Usage: hf 14b sim [h]");
+	PrintAndLog("Emulating ISO/IEC 14443 type B tag with 4 UID / PUPI");
+	PrintAndLog("Usage: hf 14b sim [h] u <uid>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h    this help");
+	PrintAndLog("       u    4byte UID/PUPI");
 	PrintAndLog("sample:");
 	PrintAndLog("       hf 14b sim");
+	PrintAndLog("       hf 14b sim u 11223344");
 	return 0;    
 }
 int usage_hf_14b_read_srx(void){
@@ -111,10 +113,15 @@ int CmdHF14BList(const char *Cmd) {
 }
 
 int CmdHF14BSim(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
+	char cmdp = param_getchar(Cmd, 0);	
 	if (cmdp == 'h' || cmdp == 'H') return usage_hf_14b_sim();
 	
-	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443B, {0, 0, 0}};
+	uint32_t pupi = 0;
+	if (cmdp == 'u' || cmdp == 'U') {
+		pupi = param_get32ex(Cmd, 1, 0, 16);
+	}
+	
+	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443B, {pupi, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;

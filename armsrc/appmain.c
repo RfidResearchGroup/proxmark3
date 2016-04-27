@@ -71,6 +71,11 @@ void ToSendStuffBit(int b) {
 	}
 }
 
+void PrintToSendBuffer(void){
+	DbpString("Printing ToSendBuffer:");
+	Dbhexdump(ToSendMax, ToSend, 0);
+}
+
 //=============================================================================
 // Debug print functions, to go out over USB, to the usual PC-side client.
 //=============================================================================
@@ -1066,7 +1071,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			SnoopIso14443b();
 			break;
 		case CMD_SIMULATE_TAG_ISO_14443B:
-			SimulateIso14443bTag();
+			SimulateIso14443bTag(c->arg[0]);
 			break;
 		case CMD_ISO_14443B_COMMAND:
 			//SendRawCommand14443B(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);

@@ -54,12 +54,12 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci);
 #define MAX_ADC_LF_VOLTAGE 140800
 int AvgAdc(int ch);
 
+void PrintToSendBuffer(void);
 void ToSendStuffBit(int b);
 void ToSendReset(void);
 void ListenReaderField(int limit);
 extern int ToSendMax;
 extern uint8_t ToSend[];
-
 
 /// lfops.h
 extern uint8_t decimation;
@@ -99,7 +99,7 @@ void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 
 /// iso14443.h
-void SimulateIso14443bTag(void);
+void SimulateIso14443bTag(uint32_t pupi);
 void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
 void ReadSTMemoryIso14443b(uint8_t numofblocks);
 void RAMFUNC SnoopIso14443b(void);
