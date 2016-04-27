@@ -1357,6 +1357,7 @@ static void free_statelist_cache(void)
 	}		
 }
 
+uint64_t foundkey = 0;
 size_t keys_found = 0;
 size_t bucket_count = 0;
 statelist_t* buckets[128];
@@ -1606,8 +1607,8 @@ static void* crack_states_thread(void* x){
 		if(bucket){
             const uint64_t key = crack_states_bitsliced(bucket);
             if(key != -1){
-                printf("\nFound key: %012"PRIx64"\n", key);
                 __sync_fetch_and_add(&keys_found, 1);
+				__sync_fetch_and_add(&foundkey, key);
                 break;
             } else if(keys_found){
                 break;
@@ -1679,6 +1680,7 @@ static void brute_force(void)
         unsigned long elapsed_time = difftime(end, start);
         if(keys_found){
 			PrintAndLog("Success! Tested %"PRIu32" states, found %u keys after %u seconds", total_states_tested, keys_found, elapsed_time);
+			PrintAndLog("\nFound key: %012"PRIx64"\n", foundkey);
         } else {
 			PrintAndLog("Fail! Tested %"PRIu32" states, in %u seconds", total_states_tested, elapsed_time);
 		}
@@ -1740,7 +1742,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 			}
 		}
 
-		Tests();
+		//Tests();
 
 		PrintAndLog("");
 		PrintAndLog("Sum(a0) = %d", first_byte_Sum);
