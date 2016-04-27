@@ -277,7 +277,7 @@ void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 				default: snprintf(exp, size,"16 slots ");break;
 			}
 			
-			if ( (cmd[2] & 0x4) )
+			if ( (cmd[2] & 0x8) )
 				snprintf(exp, size,"REQB");
 			else
 				snprintf(exp, size,"WUPB");
