@@ -551,7 +551,10 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 	UartInit(receivedCmd, receivedCmdPar);
 	
 	// Setup and start DMA.
-	FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE);
+	if ( !FpgaSetupSscDma((uint8_t*) dmaBuf, DMA_BUFFER_SIZE) ){
+		if (MF_DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting"); 
+		return;
+	}
 	
 	// We won't start recording the frames that we acquire until we trigger;
 	// a good trigger condition to get started is probably when we see a
@@ -1137,8 +1140,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 		} else if(receivedCmd[0] == ISO14443A_CMD_HALT) {	// Received a HALT
 			LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
 			p_response = NULL;
-		} else if(receivedCmd[0] == MIFARE_AUTH_KEYA || receivedCmd[0] == MIFARE_AUTH_KEYB) {	// Received an authentication request
-					
+		} else if(receivedCmd[0] == MIFARE_AUTH_KEYA || receivedCmd[0] == MIFARE_AUTH_KEYB) {	// Received an authentication request				
 			if ( tagType == 7 ) {   // IF NTAG /EV1  0x60 == GET_VERSION, not a authentication request.
 				uint8_t emdata[10];
 				emlGetMemBt( emdata, 0, 8 );
@@ -1162,17 +1164,12 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 
 			if ( (flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK ) {
 				if(ar_nr_collected < 2){
-					// Avoid duplicates... probably not necessary, nr should vary. 
-					// nr doesn't change in pm3's reading etc.  its fixed.
-					//if(ar_nr_responses[3] != nr){						
-						ar_nr_responses[ar_nr_collected*4]   = cuid;
-						ar_nr_responses[ar_nr_collected*4+1] = nonce;
-						ar_nr_responses[ar_nr_collected*4+2] = nr;
-						ar_nr_responses[ar_nr_collected*4+3] = ar;
-						ar_nr_collected++;
-					//}
+					ar_nr_responses[ar_nr_collected*4]   = cuid;
+					ar_nr_responses[ar_nr_collected*4+1] = nonce;
+					ar_nr_responses[ar_nr_collected*4+2] = nr;
+					ar_nr_responses[ar_nr_collected*4+3] = ar;
+					ar_nr_collected++;
 				}			
-
 				if(ar_nr_collected > 1 ) {		
 					if (MF_DBGLEVEL >= 2 && !(flags & FLAG_INTERACTIVE)) {
 							Dbprintf("Collected two pairs of AR/NR which can be used to extract keys from reader:");
@@ -1191,6 +1188,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 					memset(ar_nr_responses, 0x00, len);
 				}
 			}
+			
 		} else if (receivedCmd[0] == MIFARE_ULC_AUTH_1 ) { // ULC authentication, or Desfire Authentication
 		} else if (receivedCmd[0] == MIFARE_ULEV1_AUTH) { // NTAG / EV-1 authentication
 			if ( tagType == 7 ) {
@@ -2535,6 +2533,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		}
 			
 		// REQ or WUP request in ANY state and WUP in HALTED state
+		// this if-statement doesn't match the specification above. (iceman)
 		if (len == 1 && ((receivedCmd[0] == ISO14443A_CMD_REQA && cardSTATE != MFEMUL_HALTED) || receivedCmd[0] == ISO14443A_CMD_WUPA)) {
 			selTimer = GetTickCount();
 			EmSendCmdEx(atqa, sizeof(atqa), (receivedCmd[0] == ISO14443A_CMD_WUPA));
@@ -2976,8 +2975,12 @@ void RAMFUNC SniffMifare(uint8_t param) {
 	// Set up the demodulator for the reader -> tag commands
 	UartInit(receivedCmd, receivedCmdPar);
 
-	 // set transfer address and number of bytes. Start transfer.
-	FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE);
+	// Setup and start DMA.
+	// set transfer address and number of bytes. Start transfer.
+	if ( !FpgaSetupSscDma((uint8_t*) dmaBuf, DMA_BUFFER_SIZE) ){
+		if (MF_DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting"); 
+		return;
+	}
 
 	LED_D_OFF();
 
@@ -3004,7 +3007,11 @@ void RAMFUNC SniffMifare(uint8_t param) {
 				maxDataLen = 0;
 				ReaderIsActive = FALSE;
 				TagIsActive = FALSE;
-				FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE); // set transfer address and number of bytes. Start transfer.
+				// Setup and start DMA. set transfer address and number of bytes. Start transfer.
+				if ( !FpgaSetupSscDma((uint8_t*) dmaBuf, DMA_BUFFER_SIZE) ){
+					if (MF_DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting"); 
+					return;
+				}				
 			}
 		}
 		
