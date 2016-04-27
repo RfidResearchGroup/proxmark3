@@ -1,5 +1,7 @@
 The iceman fork
 ---------------
+[![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)  [![Coverity Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3-iceman-fork)  [![Latest release] (https://img.shields.io/github/release/iceman1001/proxmark3.svg)] (https://github.com/iceman1001/proxmark3/releases/latest)
+
 ##::THIS FORK IS HIGHLY EXPERIMENTAL::
 
 ##NOTICE:      
@@ -9,14 +11,6 @@ There is so much in this fork,  with all fixes and additions its basically the m
 
 ##OFFICAL 
 The official Proxmark repository is found here: https://github.com/Proxmark/proxmark3
-
-##NEWS: 
-
-## Build Status Travis CI
-[![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)
-
-## Build Status Coverity Scan
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3-iceman-fork)
 
 
 ## Coverity Scan Config && Run
