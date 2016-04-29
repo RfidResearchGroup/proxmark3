@@ -32,6 +32,9 @@ uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *r
 uint8_t iso14443b_select_card(iso14b_card_select_t* card);
 uint8_t iso14443b_select_card_srx(iso14b_card_select_t* card);
 
+// testfunctions
+void WaitForFpgaDelayQueueIsEmpty( uint16_t delay );
+void ClearFpgaShiftingRegisters(void);
 
 // States for 14B SIM command
 #define SIM_NOFIELD		0

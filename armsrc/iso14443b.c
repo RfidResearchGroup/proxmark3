@@ -21,7 +21,8 @@
 #define TR2 0
 
 // 4sample
-#define SEND4STUFFBIT(x) ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);
+//#define SEND4STUFFBIT(x) ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);
+#define SEND4STUFFBIT(x) ToSendStuffBit(x);
 
 static void switch_off(void);
 
@@ -403,13 +404,25 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
 	// Signal field is off with the appropriate LED
 	LED_D_OFF();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_NO_MODULATION);
-	
+		
 	StartCountSspClk();
+	
+	volatile uint8_t b;
+
+	// clear receiving shift register and holding register
+	// What does this loop do? Is it TR1?
+   	for(uint8_t c = 0; c < 10;) {
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			AT91C_BASE_SSC->SSC_THR = 0xFF;
+			++c;
+		}
+	}
 	
 	// Now run a `software UART' on the stream of incoming samples.
 	UartInit(received);
-	
-	uint8_t mask, b = 0;
+
+	b = 0;
+	uint8_t mask;
 	while( !BUTTON_PRESS() ) {
 		WDT_HIT();
 
@@ -426,27 +439,61 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
 	return FALSE;
 }
 
+void ClearFpgaShiftingRegisters(void){
+
+	volatile uint8_t b;
+
+	// clear receiving shift register and holding register
+	while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
+	b = AT91C_BASE_SSC->SSC_RHR; (void) b;
+
+	while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
+	b = AT91C_BASE_SSC->SSC_RHR; (void) b;
+	
+		
+	// wait for the FPGA to signal fdt_indicator == 1 (the FPGA is ready to queue new data in its delay line)
+	for (uint8_t j = 0; j < 5; j++) {	// allow timeout - better late than never
+		while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
+		if (AT91C_BASE_SSC->SSC_RHR) break;
+	}
+	
+	// Clear TXRDY:
+	AT91C_BASE_SSC->SSC_THR = 0xFF;
+}
+
+void WaitForFpgaDelayQueueIsEmpty( uint16_t delay ){
+	// Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again:
+	uint8_t fpga_queued_bits = delay >> 3;  // twich /8 ??   >>3, 
+	for (uint8_t i = 0; i <= fpga_queued_bits/8 + 1; ) {
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+			AT91C_BASE_SSC->SSC_THR = 0xFF;
+			i++;
+		}
+	}
+}
 
 static void TransmitFor14443b_AsTag( uint8_t *response, uint16_t len) {
 
 		// Signal field is off with the appropriate LED
 		LED_D_OFF();
+		uint16_t fpgasendQueueDelay = 0;
 		
 		// Modulate BPSK
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK);
 		
-		// 8 ETU / 8bits. 8/4= 2 etus.
-		AT91C_BASE_SSC->SSC_THR = 0XFF;
-
+		ClearFpgaShiftingRegisters();
+		
 		FpgaSetupSsc();
 
 		// Transmit the response.
 		for(uint16_t i = 0; i < len;) {
 			if(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-				AT91C_BASE_SSC->SSC_THR = response[i];
-				++i;
+				AT91C_BASE_SSC->SSC_THR = response[++i];
+				fpgasendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			}
 		}
+		
+		WaitForFpgaDelayQueueIsEmpty(fpgasendQueueDelay);
 }	
 //-----------------------------------------------------------------------------
 // Main loop of simulated tag: receive commands from reader, decide what
@@ -537,13 +584,10 @@ void SimulateIso14443bTag(uint32_t pupi) {
 		// REQ or WUP request in ANY state 
 		// WUP in HALTED state
 		if (len == 5 ) {
-				if ( (receivedCmd[0] == ISO14443B_REQB && (receivedCmd[2] & 0x8)== 0x8 && cardSTATE != SIM_HALTED) ||
-            	     (receivedCmd[0] == ISO14443B_REQB && (receivedCmd[2] & 0x8)== 0) ){
-					
-				TransmitFor14443b_AsTag( encodedATQB, encodedATQBLen );
-				LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, FALSE);
+				if ( (receivedCmd[0] == ISO14443B_REQB && (receivedCmd[2] & 0x8)== 0x8 && cardSTATE == SIM_HALTED) ||
+            	      receivedCmd[0] == ISO14443B_REQB ){
+				LogTrace(receivedCmd, len, 0, 0, NULL, TRUE);						  
 				cardSTATE = SIM_SELECTING;
-				continue;
 			}
 		}
 		
@@ -567,7 +611,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
 			case SIM_SELECTING: {
 				TransmitFor14443b_AsTag( encodedATQB, encodedATQBLen );
 				LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, FALSE);
-				cardSTATE = SIM_IDLE;
+				cardSTATE = SIM_WORK;
 				break;
 			}
 			case SIM_HALTING: {

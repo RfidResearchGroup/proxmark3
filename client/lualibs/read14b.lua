@@ -13,7 +13,7 @@
 -- Loads the commands-library
 local cmds = require('commands')
 local utils = require('utils')
-local TIMEOUT = 2000
+local TIMEOUT = 2500
 local ISO14B_COMMAND = {
 	ISO14B_CONNECT = 1,
 	ISO14B_DISCONNECT = 2,

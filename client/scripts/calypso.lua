@@ -52,6 +52,7 @@ local function calypso_parse(result)
 	local r = Command.parse(result)
 	local len = r.arg2 * 2
 	r.data = string.sub(r.data, 0, len);
+	print('GOT:', r.data)
 	if r.arg1 == 0 then
 		return r, nil
 	end 
@@ -162,7 +163,8 @@ local function calypso_apdu_status(apdu)
 end
 
 local _calypso_cmds = {
-	["01.Select ICC file"]	=	'0294 a4 080004 3f00 0002',
+	["01.Select ICC file"]	=	'0294 a4 00 0002 3f00',
+	--["01.Select ICC file"]	=	'0294 a4 080004 3f00 0002',
 	["02.ICC"]				=	'0294 b2 01 041d',
 	["03.Select EnvHol file"] =	'0294 a4 080004 2000 2001',
 	["04.EnvHol1"]			=	'0294 b2 01 041d',
