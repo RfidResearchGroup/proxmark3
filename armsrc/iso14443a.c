@@ -1570,7 +1570,7 @@ int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen, bool correctionNeeded) {
 	b = AT91C_BASE_SSC->SSC_RHR; (void) b;
 	
 	// wait for the FPGA to signal fdt_indicator == 1 (the FPGA is ready to queue new data in its delay line)
-	for (uint16_t j = 0; j < 5; j++) {	// allow timeout - better late than never
+	for (uint8_t j = 0; j < 5; j++) {	// allow timeout - better late than never
 		while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
 		if (AT91C_BASE_SSC->SSC_RHR) break;
 	}
