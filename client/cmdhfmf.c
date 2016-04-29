@@ -111,15 +111,18 @@ int usage_hf14_chk(void){
 	PrintAndLog("Usage:  hf mf chk <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
 	PrintAndLog("options:");
 	PrintAndLog("      h    this help");	
-	PrintAndLog("      *    all sectors");
-	PrintAndLog("      card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
+	PrintAndLog("      *    all sectors based on card memory, other values then below defaults to 1k");
+	PrintAndLog("      			0 - MINI(320 bytes)");
+	PrintAndLog("      			1 - 1K");
+	PrintAndLog("      			2 - 2K");
+	PrintAndLog("      			4 - 4K");
 	PrintAndLog("      d    write keys to binary file");
 	PrintAndLog("      t    write keys to emulator memory\n");
 	PrintAndLog(" ");
 	PrintAndLog("samples:");
-	PrintAndLog("      hf mf chk 0 A 1234567890ab keys.dic");
-	PrintAndLog("      hf mf chk *1 ? t");
-	PrintAndLog("      hf mf chk *1 ? d");
+	PrintAndLog("      hf mf chk 0 A 1234567890ab keys.dic     -- target block 0, Key A");
+	PrintAndLog("      hf mf chk *1 ? t                        -- target all blocks, all keys, 1K, write to emul");
+	PrintAndLog("      hf mf chk *1 ? d                        -- target all blocks, all keys, 1K, write to file");
 	return 0;
 }
 
