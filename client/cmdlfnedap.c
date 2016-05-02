@@ -66,27 +66,29 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 	
 	// add paritybits	(bitsource, dest, sourcelen, paritylen, parityType (odd, even,)
 	addParity(pre+64, pre+64, 128, 8, 1);
+
 //1111111110001011010000010110100011001001000010110101001101011001000110011010010000000000100001110001001000000001000101011100111
 	return 1;
 }
 
+//GetParity( uint8_t *bits, uint8_t type, int length)
+
 //NEDAP demod - ASK/Biphase,  RF/64 with preamble of 1111111110  (always a 128 bit data stream)
 //print NEDAP Prox ID, encoding, encrypted ID, 
-int CmdFSKdemodNedap(const char *Cmd) {
+
+int CmdLFNedapDemod(const char *Cmd) {
 	//raw ask demod no start bit finding just get binary from wave
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
 	size_t size = getFromGraphBuf(BitStream);
 	if (size==0) return 0;
 
 	//get binary from ask wave
-	if (!ASKbiphaseDemod("0 64 1 0", FALSE)) {
+	if (!ASKbiphaseDemod("0 64 0 0", FALSE)) {
 		if (g_debugMode) PrintAndLog("Error NEDAP: ASKbiphaseDemod failed");
 		return 0;
 	}
-	
 	size = DemodBufferLen;
-
-	int idx = NedapDemod(BitStream, &size);
+	int idx = NedapDemod(DemodBuffer, &size);
 	if (idx < 0){
 		if (g_debugMode){
 			if (idx == -5)
@@ -116,30 +118,46 @@ int CmdFSKdemodNedap(const char *Cmd) {
 	 R = Random ?
 	 UID2, UID1, UID0 == card number
 */
-
 	//get raw ID before removing parities
-	uint32_t rawLo = bytebits_to_byte(BitStream+idx+96,32);
-	uint32_t rawHi = bytebits_to_byte(BitStream+idx+64,32);
-	uint32_t rawHi2 = bytebits_to_byte(BitStream+idx+32,32);
-	uint32_t rawHi3 = bytebits_to_byte(BitStream+idx,32);
-	setDemodBuf(BitStream,128,idx);
+	uint32_t rawLo = bytebits_to_byte(DemodBuffer+idx+96,32);
+	uint32_t rawHi = bytebits_to_byte(DemodBuffer+idx+64,32);
+	uint32_t rawHi2 = bytebits_to_byte(DemodBuffer+idx+32,32);
+	uint32_t rawHi3 = bytebits_to_byte(DemodBuffer+idx,32);
+	setDemodBuf(DemodBuffer,128,idx);
 
 	// ok valid card found!
-	uint32_t cardnum = bytebits_to_byte(BitStream+81, 16);
+	uint32_t cardnum = bytebits_to_byte(DemodBuffer+81, 16);
 	PrintAndLog("NEDAP ID Found - Card: %d - Raw: %08x%08x%08x%08x", cardnum, rawHi3, rawHi2, rawHi, rawLo);
 	
 	if (g_debugMode){
 		PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
 		printDemodBuff();
 	}
+	
+	uint8_t last = GetParity( DemodBuffer, EVEN, 128);
+//	PrintAndLog("BIN: %s", sprint_bin_break( DemodBuffer, 128, 32) );
+	PrintAndLog("TEST: LASTPARITY  %d | %d ", DemodBuffer[127], last);
+
 	return 1;
 }
+/*
+lf t55 wr b 1 d FF8B4168
+lf t55 wr b 2 d C90B5359
+lf t55 wr b 3 d 19A40087
+lf t55 wr b 4 d 120115CF
 
+0) 
+lf t55 wr b 1 d FF8B6B20
+lf t55 wr b 2 d F19B84A3
+lf t55 wr b 3 d 18058007
+lf t55 wr b 4 d 1200857C
+
+*/
 
 int CmdLFNedapRead(const char *Cmd) {
 	CmdLFRead("s");
 	getSamples("30000",false);
-	return CmdFSKdemodNedap("");
+	return CmdLFNedapDemod("");
 }
 /*
 int CmdLFNedapClone(const char *Cmd) {
@@ -231,11 +249,57 @@ int CmdLFNedapSim(const char *Cmd) {
 	return 0;
 }
 
+int CmdLFNedapChk(const char *Cmd){
+    
+	uint8_t data[20] = { 0x30, 0x16, 0x00, 0x71, 0x40, 0x21, 0xBE};
+	int len = 0;
+	param_gethex_ex(Cmd, 0, data, &len);
+	
+	len = ( len == 0 ) ? 5 : len>>1;
+	
+	PrintAndLog("Input: [%d] %s", len, sprint_hex(data, len));
+	
+    uint8_t cl = 0x1D, ch = 0x1D, carry = 0;
+    uint8_t al, bl, temp;
+    
+	for (int i = 0; i < len; ++i){
+		al = data[i];
+        for (int j = 8; j > 0; --j) {
+			
+            bl = al ^ ch;
+			//printf("BL %02x | CH %02x \n", al, ch);
+			
+            carry = (cl & 0x80) ? 1 : 0;
+            cl <<= 1;
+            
+            temp = (ch & 0x80) ? 1 : 0;
+            ch = (ch << 1) | carry;
+            carry = temp;
+            
+            carry = (al & 0x80) ? 1 : 0;
+            al <<= 1;
+            
+            carry = (bl & 0x80) ? 1 : 0;
+            bl <<= 1;
+            
+            if (carry) {
+                cl ^= 0x21;
+                ch ^= 0x10;
+            }
+        }
+    }
+	
+	PrintAndLog("Nedap checksum: [ 0x21, 0xBE ] %x", ((ch << 8) | cl) );
+	return 0;
+}
+
+
 static command_t CommandTable[] = {
     {"help",	CmdHelp,		1, "This help"},
-	{"read",	CmdLFNedapRead,  0, "Attempt to read and extract tag data"},
-//	{"clone",	CmdLFNedapClone, 0, "<Card Number>  clone nedap tag"},
-	{"sim",		CmdLFNedapSim,   0, "<Card Number>  simulate nedap tag"},
+	{"read",	CmdLFNedapRead, 0, "Attempt to read and extract tag data"},
+//	{"clone",	CmdLFNedapClone,0, "<Card Number>  clone nedap tag"},
+	{"sim",		CmdLFNedapSim,  0, "<Card Number>  simulate nedap tag"},
+	{"chk",		CmdLFNedapChk,	1, "Calculate Nedap Checksum <uid bytes>"},
     {NULL, NULL, 0, NULL}
 };
 

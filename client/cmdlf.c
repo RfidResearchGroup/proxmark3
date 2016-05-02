@@ -1119,7 +1119,7 @@ int CmdLFfind(const char *Cmd) {
 		PrintAndLog("\nValid NexWatch ID Found!");
 		return 1;
 	}
-	ans=CmdFSKdemodNedap("");
+	ans=CmdLFNedapDemod("");
 	if (ans>0) {
 		PrintAndLog("\nValid NEDAP ID Found!");
 		return 1;

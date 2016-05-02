@@ -21,10 +21,11 @@
 #include "crc.h"
 
 int CmdLFNedap(const char *Cmd);
-int CmdFSKdemodNedap(const char *Cmd);
+int CmdLFNedapDemod(const char *Cmd);
 int CmdLFNedapRead(const char *Cmd);
 //int CmdLFNedapClone(const char *Cmd);
 int CmdLFNedapSim(const char *Cmd);
+int CmdLFNedapChk(const char *Cmd);
 
 int usage_lf_nedap_read(void);
 //int usage_lf_nedap_clone(void);
