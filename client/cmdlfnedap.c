@@ -83,7 +83,8 @@ int CmdFSKdemodNedap(const char *Cmd) {
 		if (g_debugMode) PrintAndLog("Error NEDAP: ASKbiphaseDemod failed");
 		return 0;
 	}
-	size_t size = DemodBufferLen;
+	
+	size = DemodBufferLen;
 
 	int idx = NedapDemod(BitStream, &size);
 	if (idx < 0){
