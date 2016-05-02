@@ -768,6 +768,7 @@ int PyramiddemodFSK(uint8_t *dest, size_t *size)
 int NedapDemod(uint8_t *dest, size_t *size) {
 	//make sure buffer has data
 	if (*size < 128) return -3;
+
 	size_t startIdx = 0;
 	uint8_t preamble[] = {1,1,1,1,1,1,1,1,1,0};
 	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);

@@ -78,7 +78,13 @@ int CmdFSKdemodNedap(const char *Cmd) {
 	size_t size = getFromGraphBuf(BitStream);
 	if (size==0) return 0;
 
-	//get binary from fsk wave
+	//get binary from ask wave
+	if (!ASKbiphaseDemod("0 64 1 0", FALSE)) {
+		if (g_debugMode) PrintAndLog("Error NEDAP: ASKbiphaseDemod failed");
+		return 0;
+	}
+	size_t size = DemodBufferLen;
+
 	int idx = NedapDemod(BitStream, &size);
 	if (idx < 0){
 		if (g_debugMode){
