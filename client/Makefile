@@ -119,6 +119,7 @@ CMDSRCS = 	nonce2key/crapto1.c \
 			cmdlfpresco.c \
 			cmdlfpyramid.c \
 			cmdlfguard.c \
+			cmdlfnedap.c \
 			pm3_binlib.c \
 			scripting.c \
 			cmdscript.c \

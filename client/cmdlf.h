@@ -36,6 +36,7 @@
 #include "cmdlfpyramid.h"// for pyramid menu
 #include "cmdlfviking.h" // for viking menu
 #include "cmdlfguard.h"  // for GuardAll menu
+#include "cmdlfnedap.h"  // for NEDAP menu
 
 int CmdLF(const char *Cmd);
 
