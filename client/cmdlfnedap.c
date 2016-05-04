@@ -107,16 +107,15 @@ int CmdLFNedapDemod(const char *Cmd) {
 		return 0;
 	}
 
-/* Index map
-0        10        20          30            40          50        64
-|        |         |           |             |           |         |
- preamble    enc tag type         encrypted uid                    d    33    d    90    p    04    d    71    d    40    d    45    d    E7    P
-1111111110 00101101000001011 0100011001001000010110101001101011001 0 00110011 0 10010000 0 00000100 0 01110001 0 01000000 0 01000101 0 11100111 1
-                                                                       uid2       uid1       uid0         I          I          R           R    
+/* Index map                                                     O
+ preamble    enc tag type         encrypted uid                  P   d    33    d    90    d    04    d    71    d    40    d    45    d    E7    P
+1111111110 00101101000001011 01000110010010000101101010011010110 0 1 0 00110011 0 10010000 0 00000100 0 01110001 0 01000000 0 01000101 0 11100111 1
+                                                                         uid2       uid1       uid0         I          I          R           R    
 	 Tag ID is 049033 
 	 I = Identical on all tags
 	 R = Random ?
 	 UID2, UID1, UID0 == card number
+
 */
 	//get raw ID before removing parities
 	uint32_t rawLo = bytebits_to_byte(DemodBuffer+idx+96,32);
@@ -124,6 +123,21 @@ int CmdLFNedapDemod(const char *Cmd) {
 	uint32_t rawHi2 = bytebits_to_byte(DemodBuffer+idx+32,32);
 	uint32_t rawHi3 = bytebits_to_byte(DemodBuffer+idx,32);
 	setDemodBuf(DemodBuffer,128,idx);
+
+	// here 62 is length.
+	uint8_t first63bit_parity = GetParity( DemodBuffer, ODD, 62);
+	// Parity bits: 0-62 == 63
+	// here 62 is pos in a zero based array
+	if ( first63bit_parity != DemodBuffer[62]  ) {
+		PrintAndLog("1st half parity check failed:  %d | %d ", DemodBuffer[62], first63bit_parity);
+		return 0;
+	}
+
+	// uint8_t second63bit_parity = GetParity( DemodBuffer+64, ODD, 63);
+	// if ( second63bit_parity != DemodBuffer[127]  ) {
+		// PrintAndLog("2st half parity check failed:  %d | %d ", DemodBuffer[127], second63bit_parity);
+		// return 0;
+	// }
 
 	// ok valid card found!
 	uint32_t cardnum = bytebits_to_byte(DemodBuffer+81, 16);
@@ -133,10 +147,8 @@ int CmdLFNedapDemod(const char *Cmd) {
 		PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
 		printDemodBuff();
 	}
-	
-	uint8_t last = GetParity( DemodBuffer, EVEN, 128);
-//	PrintAndLog("BIN: %s", sprint_bin_break( DemodBuffer, 128, 32) );
-	PrintAndLog("TEST: LASTPARITY  %d | %d ", DemodBuffer[127], last);
+ 	PrintAndLog("BIN: %s", sprint_bin_break( DemodBuffer, 64, 64) );
+
 
 	return 1;
 }
@@ -251,7 +263,7 @@ int CmdLFNedapSim(const char *Cmd) {
 
 int CmdLFNedapChk(const char *Cmd){
     
-	uint8_t data[20] = { 0x30, 0x16, 0x00, 0x71, 0x40, 0x21, 0xBE};
+	uint8_t data[256] = { 0x30, 0x16, 0x00, 0x71, 0x40, 0x21, 0xBE};
 	int len = 0;
 	param_gethex_ex(Cmd, 0, data, &len);
 	
@@ -259,6 +271,10 @@ int CmdLFNedapChk(const char *Cmd){
 	
 	PrintAndLog("Input: [%d] %s", len, sprint_hex(data, len));
 	
+	uint8_t last = GetParity(data, EVEN, 62);
+	PrintAndLog("TEST PARITY::  %d | %d ", DemodBuffer[62], last);
+
+	return 1;
     uint8_t cl = 0x1D, ch = 0x1D, carry = 0;
     uint8_t al, bl, temp;
     
