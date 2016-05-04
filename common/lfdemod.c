@@ -770,10 +770,10 @@ int NedapDemod(uint8_t *dest, size_t *size) {
 	if (*size < 128) return -3;
 
 	size_t startIdx = 0;
-	uint8_t preamble[] = {1,1,1,1,1,1,1,1,1,0,0,0,1};
+	//uint8_t preamble[] = {1,1,1,1,1,1,1,1,1,0,0,0,1};
+	uint8_t preamble[] = {1,1,1,1,1,1,1,1,1,0};
 	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
 	if (errChk == 0) return -4; //preamble not found
-	//return start position
 	return (int) startIdx;
 }
 
