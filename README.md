@@ -154,7 +154,7 @@ Run the client
 						   
 ##Homebrew (Mac OS X)
 These instructions comes from @Chrisfu, where I got the proxmark3.rb scriptfile from.
-Further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.org/chrisfu/)
+Further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.com/chrisfu/)
 
 1. Install homebrew if you haven't yet already done so: http://brew.sh/
 
@@ -166,19 +166,21 @@ Further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.org/c
 I recently added a docker container on Docker HUB.  You find it here: https://hub.docker.com/r/iceman1001/proxmark3/
 Follow those instructions to get it up and running.  No need for the old proxspace-environment anymore.
 
-##Enjoy
-January 2015, Sweden
-iceman at host iuse.se
-
-
 
 ##Buying a proxmark3
-
 The Proxmark 3 device is available for purchase (assembled and tested) from the following locations:
 
    * http://www.elechouse.com  (new and revised hardware package 2015)  
 
    I recommend you to buy this version. 
+
+
+##Enjoy
+
+January 2015, Sweden
+iceman at host iuse.se
+
+
 
 
 ##Note from Jonathan Westhues
