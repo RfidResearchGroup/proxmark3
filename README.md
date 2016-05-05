@@ -165,9 +165,24 @@ Change into the client folder.
 Run the client	
 	-> ./proxmark3 /dev/ttyACM0
 						   
+homebrew (Mac OS X)
+==================
+These instructions comes from @Chrisfu, where I got the proxmark3.rb scriptfile from.
+Further questions about Mac & Homebrew,  contact @Chrisfu
 
+1. Install homebrew if you haven't yet already done so: http://brew.sh/
+
+2. Tap this repo: `brew tap iceman1001/proxmark3`
+
+3. Install Proxmark3: `brew install proxmark3` for stable release or `brew install --HEAD proxmark3` for latest non-stable from GitHub.
+
+
+Enjoy
+-------------------
 January 2015, Sweden
 iceman at host iuse.se
+
+
 
 BUYING A PROXMARK 3
 -------------------
