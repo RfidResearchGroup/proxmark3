@@ -1,20 +1,16 @@
 The iceman fork
----------------
+===============
 [![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)  [![Coverity Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3-iceman-fork)  [![Latest release] (https://img.shields.io/github/release/iceman1001/proxmark3.svg)] (https://github.com/iceman1001/proxmark3/releases/latest)
 
-##::THIS FORK IS HIGHLY EXPERIMENTAL::
+##This fork is HIGHLY EXPERIMENTAL
 
 ##Notice      
-
 There is so much in this fork,  with all fixes and additions its basically the most enhanced fork to this day for the Proxmark3 device.
-
 
 ##Offical
 The official Proxmark repository is found here: https://github.com/Proxmark/proxmark3
 
-
 ##Coverity Scan Config && Run
-
 Download the Coverity Scan Self-buld and install it.
 You will need to configure  ARM-NON-EABI- Compiler for it to use:
 
@@ -30,7 +26,6 @@ tar czvf proxmark3.tgz cov-int
 :: upload it to coverity.com
 
 ##Whats changed?
-
 Whats so special with this fork?  I have scraped the web for different enhancements to the PM3 source code and not all of them ever found their way to the master branch. 
 Among the stuff is
 
@@ -54,13 +49,11 @@ Among the stuff is
 	* A Bruteforce for AWID 26, starting w a facilitycode then trying all 0xFFFF cardnumbers via simulation. To be used against a AWID Reader.
 	* A Bruteforce for HID,  starting w a facilitycode then trying all 0xFFFF cardnumbers via simulation. To be used against a HID Reader.
 	* Blaposts Crapto1 v3.3
-    * Icsom's  legic script and legic enhancements
-    * Aczid's bitsliced bruteforce solver in 'hf mf hardnested'
+        * Icsom's  legic script and legic enhancements
+        * Aczid's bitsliced bruteforce solver in 'hf mf hardnested'
 
-
----	
-Straight from the CHANGELOG
----
+##Straight from the CHANGELOG
+=============================
   - 'lf nedap' - added identification of a NEDAP tag. (iceman)
   - 'lf viking clone' - fixed a bug. (iceman)
   - Added bitsliced bruteforce solver in 'hf mf hardnested' (aczid)
@@ -97,7 +90,6 @@ Straight from the CHANGELOG
   - Fixed the silent mode for 14b to be used inside 'hf search' (iceman)
 	
 ---	
-	
 Give me a hint, and I'll see if I can't merge in the stuff you have. 
 
 I don't actually know how to make small pull-request to github :( and that is the number one reason for me not pushing a lot of things back to the PM3 master.
@@ -105,13 +97,11 @@ I don't actually know how to make small pull-request to github :( and that is th
 ##PM3 GUI
 I do tend to rename and move stuff around, the official PM3-GUI from Gaucho will not work so well. *sorry*	
 
-
-	  
 ##Development
 This fork now compiles just fine on 
-	windows/mingw environment with Qt5.3.1 & GCC 4.8
-	Ubuntuu 1404, 1510
-	Mac OS X
+   - Windows/mingw environment with Qt5.3.1 & GCC 4.8
+   - Ubuntuu 1404, 1510
+   - Mac OS X  (or before the hardnested BF solver at least)
 
 ##Setup and build for UBUNTU
 GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS or 15.10
@@ -178,14 +168,13 @@ I recently added a docker container on Docker HUB.  You find it here: https://hu
 Follow those instructions to get it up and running.  No need for the old proxspace-environment anymore.
 
 ## Enjoy
--------------------
 January 2015, Sweden
 iceman at host iuse.se
 
 
 
-BUYING A PROXMARK 3
--------------------
+Buying a proxmarkK3
+===================
 
 The Proxmark 3 device is available for purchase (assembled and tested) from the following locations:
 
@@ -193,7 +182,9 @@ The Proxmark 3 device is available for purchase (assembled and tested) from the 
 
    I recommend you to buy this version. 
 
---------------------------------------------------------------------------
+
+The last note is from the orginal file.
+====================
 
 Most of the ultra-low-volume contract assemblers could put
 something like this together with a reasonable yield. A run of around
