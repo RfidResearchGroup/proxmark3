@@ -123,7 +123,7 @@ void uart_close(const serial_port sp) {
   // Does the system allows us to place a lock on this file descriptor
   int err = fcntl(spu->fd, F_SETLK, &fl);
   if ( err == -1) {
-     perror("fcntl");
+     //perror("fcntl");
   }  
   close(spu->fd);
   free(sp);
