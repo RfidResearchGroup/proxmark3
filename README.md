@@ -4,16 +4,16 @@ The iceman fork
 
 ##::THIS FORK IS HIGHLY EXPERIMENTAL::
 
-##NOTICE:      
+##Notice      
 
 There is so much in this fork,  with all fixes and additions its basically the most enhanced fork to this day for the Proxmark3 device.
 
 
-##OFFICAL 
+##Offical
 The official Proxmark repository is found here: https://github.com/Proxmark/proxmark3
 
 
-## Coverity Scan Config && Run
+##Coverity Scan Config && Run
 
 Download the Coverity Scan Self-buld and install it.
 You will need to configure  ARM-NON-EABI- Compiler for it to use:
@@ -29,7 +29,7 @@ tar czvf proxmark3.tgz cov-int
 
 :: upload it to coverity.com
 
-## Whats changed?
+##Whats changed?
 
 Whats so special with this fork?  I have scraped the web for different enhancements to the PM3 source code and not all of them ever found their way to the master branch. 
 Among the stuff is
@@ -61,7 +61,8 @@ Among the stuff is
 ---	
 Straight from the CHANGELOG
 ---
-  -  'lf viking clone' - fixed a bug. (iceman)
+  - 'lf nedap' - added identification of a NEDAP tag. (iceman)
+  - 'lf viking clone' - fixed a bug. (iceman)
   - Added bitsliced bruteforce solver in 'hf mf hardnested' (aczid)
   - 'hf mf chk' speedup (iceman)
   - 'hf 14a/mf sim x" attack mode,  now uses also moebius version of mfkey32 to try finding the key. (iceman)
@@ -101,22 +102,18 @@ Give me a hint, and I'll see if I can't merge in the stuff you have.
 
 I don't actually know how to make small pull-request to github :( and that is the number one reason for me not pushing a lot of things back to the PM3 master.
 	
-PM3 GUI:
---------
+##PM3 GUI
 I do tend to rename and move stuff around, the official PM3-GUI from Gaucho will not work so well. *sorry*	
 
 
 	  
-DEVELOPMENT:
-------------
+##Development
 This fork now compiles just fine on 
 	windows/mingw environment with Qt5.3.1 & GCC 4.8
 	Ubuntuu 1404, 1510
 	Mac OS X
 
-SETUP AND BUILD FOR UBUNTU
---------------------------
-
+##Setup and build for UBUNTU
 GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS or 15.10
 See https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux
 
@@ -165,7 +162,7 @@ Change into the client folder.
 Run the client	
 	-> ./proxmark3 /dev/ttyACM0
 						   
-homebrew (Mac OS X)
+##Homebrew (Mac OS X)
 ==================
 These instructions comes from @Chrisfu, where I got the proxmark3.rb scriptfile from.
 Further questions about Mac & Homebrew,  contact @Chrisfu
@@ -176,8 +173,11 @@ Further questions about Mac & Homebrew,  contact @Chrisfu
 
 3. Install Proxmark3: `brew install proxmark3` for stable release or `brew install --HEAD proxmark3` for latest non-stable from GitHub.
 
+##Docker container
+I recently added a docker container on Docker HUB.  You find it here: https://hub.docker.com/r/iceman1001/proxmark3/
+Follow those instructions to get it up and running.  No need for the old proxspace-environment anymore.
 
-Enjoy
+## Enjoy
 -------------------
 January 2015, Sweden
 iceman at host iuse.se
