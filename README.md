@@ -2,7 +2,7 @@ The iceman fork
 ===============
 [![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)  [![Coverity Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3-iceman-fork)  [![Latest release] (https://img.shields.io/github/release/iceman1001/proxmark3.svg)] (https://github.com/iceman1001/proxmark3/releases/latest)
 
-##This fork is HIGHLY EXPERIMENTAL
+##This fork is HIGHLY experimental
 
 ##Notice      
 There is so much in this fork,  with all fixes and additions its basically the most enhanced fork to this day for the Proxmark3 device.
@@ -10,7 +10,7 @@ There is so much in this fork,  with all fixes and additions its basically the m
 ##Offical
 The official Proxmark repository is found here: https://github.com/Proxmark/proxmark3
 
-##Coverity Scan Config && Run
+##Coverity Scan Config & Run
 Download the Coverity Scan Self-buld and install it.
 You will need to configure  ARM-NON-EABI- Compiler for it to use:
 
@@ -153,9 +153,8 @@ Run the client
 	-> ./proxmark3 /dev/ttyACM0
 						   
 ##Homebrew (Mac OS X)
-==================
 These instructions comes from @Chrisfu, where I got the proxmark3.rb scriptfile from.
-Further questions about Mac & Homebrew,  contact @Chrisfu
+Further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.org/chrisfu/)
 
 1. Install homebrew if you haven't yet already done so: http://brew.sh/
 
@@ -167,14 +166,13 @@ Further questions about Mac & Homebrew,  contact @Chrisfu
 I recently added a docker container on Docker HUB.  You find it here: https://hub.docker.com/r/iceman1001/proxmark3/
 Follow those instructions to get it up and running.  No need for the old proxspace-environment anymore.
 
-## Enjoy
+##Enjoy
 January 2015, Sweden
 iceman at host iuse.se
 
 
 
-Buying a proxmarkK3
-===================
+##Buying a proxmark3
 
 The Proxmark 3 device is available for purchase (assembled and tested) from the following locations:
 
@@ -183,9 +181,7 @@ The Proxmark 3 device is available for purchase (assembled and tested) from the 
    I recommend you to buy this version. 
 
 
-The last note is from the orginal file.
-====================
-
+##Note from Jonathan Westhues
 Most of the ultra-low-volume contract assemblers could put
 something like this together with a reasonable yield. A run of around
 a dozen units is probably cost-effective. The BOM includes (possibly-
