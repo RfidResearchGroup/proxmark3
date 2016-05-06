@@ -814,7 +814,6 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 				//printf("Encrypted nonce: %08x, encrypted_parity: %02x\n", nt_enc2, par_enc & 0x0f);
 				total_added_nonces += add_nonce(nt_enc2, par_enc & 0x0f);
 				
-
 				if (nonce_file_write) {
 					fwrite(bufp, 1, 9, fnonces);
 				}
@@ -1400,7 +1399,11 @@ static const uint64_t crack_states_bitsliced(statelist_t *p){
 		bitslice_t * restrict lstate_p = _aligned_malloc((STATE_SIZE+ROLLBACK_SIZE) * bSize, bSize);
 	#endif
 #else
+	#ifdef  defined(__APPLE__)
+		bitslice_t * restrict lstate_p = malloc((STATE_SIZE+ROLLBACK_SIZE) * bSize);
+	#else
 		bitslice_t * restrict lstate_p = memalign(bSize, (STATE_SIZE+ROLLBACK_SIZE) * bSize);
+	#endif
 #endif
 
 		if ( !lstate_p )	{
@@ -1744,8 +1747,8 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 
 		//Tests();
 
-		PrintAndLog("");
-		PrintAndLog("Sum(a0) = %d", first_byte_Sum);
+		//PrintAndLog("");
+		//PrintAndLog("Sum(a0) = %d", first_byte_Sum);
 		// PrintAndLog("Best 10 first bytes: %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x",
 			// best_first_bytes[0],
 			// best_first_bytes[1],
