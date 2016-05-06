@@ -1399,7 +1399,7 @@ static const uint64_t crack_states_bitsliced(statelist_t *p){
 		bitslice_t * restrict lstate_p = _aligned_malloc((STATE_SIZE+ROLLBACK_SIZE) * bSize, bSize);
 	#endif
 #else
-	#ifdef  defined(__APPLE__)
+	#ifdef __APPLE__
 		bitslice_t * restrict lstate_p = malloc((STATE_SIZE+ROLLBACK_SIZE) * bSize);
 	#else
 		bitslice_t * restrict lstate_p = memalign(bSize, (STATE_SIZE+ROLLBACK_SIZE) * bSize);
