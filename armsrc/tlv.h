@@ -2,7 +2,6 @@
 #define __TLV_H
 
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 

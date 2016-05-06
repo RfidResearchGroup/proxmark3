@@ -13,14 +13,14 @@
 #ifndef __USB_CMD_H
 #define __USB_CMD_H
 #ifdef _MSC_VER
-typedef DWORD uint32_t;
-typedef BYTE uint8_t;
-#define PACKED
-// stuff
+   typedef DWORD uint32_t;
+   typedef BYTE uint8_t;
+   #define PACKED
+   // stuff
 #else
-#include <stdint.h>
-#include <stdbool.h>
-#define PACKED __attribute__((packed))
+  #include <stdint.h>
+  #include <stdbool.h>
+  #define PACKED __attribute__((packed))
 #endif
 
 #define USB_CMD_DATA_SIZE 512
