@@ -41,8 +41,8 @@ ifneq (,$(findstring MINGW,$(platform)))
 	endif
 	
 else ifeq ($(platform),Darwin)
-	CFLAGS += -I/usr/include/malloc/
-	LDLIBS = -L/opt/local/lib -lreadline -lpthread -lm
+	CFLAGS += -I/usr/include/malloc/ -I/usr/local/opt/readline/include
+	LDLIBS = -L/opt/local/lib -L/usr/local/opt/readline/lib -lreadline -lpthread -lm
     CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
     QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
     MOC = $(shell pkg-config --variable=moc_location QtCore)
