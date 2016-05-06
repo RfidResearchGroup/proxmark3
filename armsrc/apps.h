@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <sys/types.h> 
+//#include <sys/types.h> 
 #include "common.h"
 #include "crc32.h"
 #include "lfdemod.h"
