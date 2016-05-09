@@ -161,7 +161,7 @@ size_t enciphered_data_length (const desfiretag_t tag, const size_t nbytes, int 
     return padded_data_length (nbytes + crc_length, block_size);
 }
 
-void* mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes, off_t offset, int communication_settings) {
+void* mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes, size_t offset, int communication_settings) {
     uint8_t *res = data;
     uint8_t mac[4];
     size_t edl;
@@ -289,7 +289,7 @@ void* mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes
 
 }
 
-void* mifare_cryto_postprocess_data (desfiretag_t tag, void *data, ssize_t *nbytes, int communication_settings)
+void* mifare_cryto_postprocess_data (desfiretag_t tag, void *data, size_t *nbytes, int communication_settings)
 {
     void *res = data;
     size_t edl;
