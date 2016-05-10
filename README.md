@@ -54,6 +54,7 @@ Among the stuff is
 
 ##Straight from the CHANGELOG
 =============================
+  - 'analyse lcr' - added a new main command group,  to help analysing bytes & bits & nibbles. (iceman)
   - 'lf nedap' - added identification of a NEDAP tag. (iceman)
   - 'lf viking clone' - fixed a bug. (iceman)
   - Added bitsliced bruteforce solver in 'hf mf hardnested' (aczid)
@@ -166,6 +167,7 @@ Further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.com/c
 I recently added a docker container on Docker HUB.  You find it here: https://hub.docker.com/r/iceman1001/proxmark3/
 Follow those instructions to get it up and running.  No need for the old proxspace-environment anymore.
 
+I also published a video on youtube, to show how you should use this docker container. https://www.youtube.com/watch?v=b5Zta89Cf6Q
 
 ##Buying a proxmark3
 The Proxmark 3 device is available for purchase (assembled and tested) from the following locations:

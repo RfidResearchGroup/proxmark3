@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+  - 'analyse lcr' - added a new main command group,  to help analysing bytes & bits & nibbles. (iceman)
+  - 'lf nedap' - added identification of a NEDAP tag. (iceman)
   -  'lf viking clone' - fixed a bug. (iceman)
   -  Added bitsliced bruteforce solver in 'hf mf hardnested' (Aczid)
   - 'hf mf chk' speedup (iceman)
