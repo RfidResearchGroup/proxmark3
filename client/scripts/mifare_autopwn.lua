@@ -219,7 +219,7 @@ function main(args)
 			-- two bytes, then six bytes actual key data
 			-- We can discard first and second return values
 			_,_,key = bin.unpack("H2H6",res)
-			print("Key ", key)
+			print("Found valid key: "..key);
 
 			-- Use nested attack
 			nested(key,sak)
