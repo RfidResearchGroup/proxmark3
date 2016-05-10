@@ -140,7 +140,9 @@ CMDSRCS = 	nonce2key/crapto1.c \
 			tea.c \
 			prng.c \
 			radixsort.c \
-			bucketsort.c
+			bucketsort.c \
+			cmdanalyse.c
+		
 ZLIBSRCS = deflate.c adler32.c trees.c zutil.c inflate.c inffast.c inftrees.c
 ZLIB_FLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED 
 #-DDEBUG -Dverbose=1

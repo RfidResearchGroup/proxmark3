@@ -109,7 +109,7 @@ int CmdLFNedapDemod(const char *Cmd) {
 
 /* Index map                                                     O
  preamble    enc tag type         encrypted uid                  P   d    33    d    90    d    04    d    71    d    40    d    45    d    E7    P
-1111111110 00101101000001011 01000110010010000101101010011010110 0 1 0 00110011 0 10010000 0 00000100 0 01110001 0 01000000 0 01000101 0 11100111 1
+1111111110 0010110100000101101000110010010000101101010011010110 0 1 0 00110011 0 10010000 0 00000100 0 01110001 0 01000000 0 01000101 0 11100111 1
                                                                          uid2       uid1       uid0         I          I          R           R    
 	 Tag ID is 049033 
 	 I = Identical on all tags
@@ -261,6 +261,8 @@ int CmdLFNedapSim(const char *Cmd) {
 	return 0;
 }
 
+
+
 int CmdLFNedapChk(const char *Cmd){
     
 	uint8_t data[256] = { 0x30, 0x16, 0x00, 0x71, 0x40, 0x21, 0xBE};
@@ -271,10 +273,9 @@ int CmdLFNedapChk(const char *Cmd){
 	
 	PrintAndLog("Input: [%d] %s", len, sprint_hex(data, len));
 	
-	uint8_t last = GetParity(data, EVEN, 62);
-	PrintAndLog("TEST PARITY::  %d | %d ", DemodBuffer[62], last);
+	//uint8_t last = GetParity(data, EVEN, 62);
+	//PrintAndLog("TEST PARITY::  %d | %d ", DemodBuffer[62], last);
 
-	return 1;
     uint8_t cl = 0x1D, ch = 0x1D, carry = 0;
     uint8_t al, bl, temp;
     
