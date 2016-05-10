@@ -66,7 +66,7 @@ end
 function mfcrack()
 	core.clearCommandBuffer()
 	-- Build the mifare-command
-	local cmd = Command:new{cmd = cmds.CMD_READER_MIFARE, arg1 = 1}
+	local cmd = Command:new{cmd = cmds.CMD_READER_MIFARE, arg1 = 1, arg2 = 0}
 	
 	local retry = true
 	while retry do
@@ -78,11 +78,10 @@ function mfcrack()
 		if errormessage then return nil, errormessage end
 		-- Try again..set arg1 to 0 this time. 
 
-		cmd = Command:new{cmd = cmds.CMD_READER_MIFARE, arg1 = 0}
+		cmd = Command:new{cmd = cmds.CMD_READER_MIFARE, arg1 = 0, arg2 = 0}
 	end	
 	return nil, "Aborted by user"
 end
-
 
 function mfcrack_inner()
 	while not core.ukbhit() do		
@@ -133,7 +132,7 @@ function mfcrack_inner()
 			local uid,nt,pl = get(4),get(4),get(8)
 			local ks,nr = get(8),get(4)
 
-			local status, key = core.nonce2key(uid,nt, nr, pl,ks)
+			local status, key = core.nonce2key(uid, nt, nr, pl, ks)
 			if not status then return status,key end
 
 			if status > 0 then 
@@ -187,10 +186,9 @@ end
 -- The main entry point
 function main(args)
 
-
 	local verbose, exit,res,uid,err,_,sak
 	local seen_uids = {}
-
+	local print_message = true
 	-- Read the parameters
 	for o, a in getopt.getopt(args, 'hd') do
 		if o == "h" then help() return end
@@ -198,6 +196,10 @@ function main(args)
 	end
 
 	while not exit do
+		if print_message then
+			print("Waiting for card or press any key to stop")
+			print_message = false
+		end
 		res, err = wait_for_mifare()
 		if err then return oops(err) end
 		-- Seen already?
@@ -206,7 +208,7 @@ function main(args)
 		if not seen_uids[uid] then
 			-- Store it
 			seen_uids[uid] = uid
-			print("Card found, commencing crack", uid)
+			print("Card found, commencing crack on UID", uid)
 			-- Crack it
 			local key, cnt
 			res,err = mfcrack()
@@ -223,6 +225,7 @@ function main(args)
 			nested(key,sak)
 			-- Dump info
 			dump(uid)
+			print_message = true
 		end
 	end
 end

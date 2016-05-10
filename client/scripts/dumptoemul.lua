@@ -33,8 +33,6 @@ end
 function oops(err)
 	print("ERROR: ",err)
 end
-
-
 --- 
 -- Usage help
 function help()
