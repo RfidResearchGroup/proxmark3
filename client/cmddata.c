@@ -1314,37 +1314,51 @@ int CmdFSKdemodAWID(const char *Cmd)
 	// 00011010 1 01110101 0000000010001110 1 000000000000000000000000000000000
 	// bbbbbbbb w ffffffff cccccccccccccccc w xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 	// |26 bit|   |-117--| |-----142------|
+    //
+	// 00110010 0 0000011111010000000000000001000100101000100001111 0 00000000 
+	// bbbbbbbb w ffffffffffffffffccccccccccccccccccccccccccccccccc w xxxxxxxx
+	// |50 bit|   |----4000------||-----------2248975-------------| 
 	// b = format bit len, o = odd parity of last 3 bits
 	// f = facility code, c = card number
 	// w = wiegand parity
-	// (26 bit format shown)
 
 	uint32_t fc = 0;
 	uint32_t cardnum = 0;
 	uint32_t code1 = 0;
 	uint32_t code2 = 0;
-	uint8_t fmtLen = bytebits_to_byte(BitStream,8);
-	if (fmtLen==26){
-		fc = bytebits_to_byte(BitStream+9, 8);
-		cardnum = bytebits_to_byte(BitStream+17, 16);
-		code1 = bytebits_to_byte(BitStream+8,fmtLen);
-		PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
-	} else {
-		cardnum = bytebits_to_byte(BitStream+8+(fmtLen-17), 16);
-		if (fmtLen>32){
-			code1 = bytebits_to_byte(BitStream+8,fmtLen-32);
-			code2 = bytebits_to_byte(BitStream+8+(fmtLen-32),32);
-			PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
-		} else{
-			code1 = bytebits_to_byte(BitStream+8,fmtLen);
-			PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
-		}
+	uint8_t fmtLen = bytebits_to_byte(BitStream, 8);
+	switch(fmtLen) {
+		case 26: 
+			fc = bytebits_to_byte(BitStream + 9, 8);
+			cardnum = bytebits_to_byte(BitStream + 17, 16);
+			code1 = bytebits_to_byte(BitStream + 8,fmtLen);
+			PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
+			break;
+		case 50:
+			fc = bytebits_to_byte(BitStream + 9, 16);
+			cardnum = bytebits_to_byte(BitStream + 25, 32);
+			code1 = bytebits_to_byte(BitStream + 8, (fmtLen-32) );
+			code2 = bytebits_to_byte(BitStream + 8 + (fmtLen-32), 32);
+			PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+			break;
+		default:
+			if (fmtLen > 32 ) {
+				cardnum = bytebits_to_byte(BitStream+8+(fmtLen-17), 16);
+				code1 = bytebits_to_byte(BitStream+8,fmtLen-32);
+				code2 = bytebits_to_byte(BitStream+8+(fmtLen-32),32);
+				PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+			} else {
+				cardnum = bytebits_to_byte(BitStream+8+(fmtLen-17), 16);
+				code1 = bytebits_to_byte(BitStream+8,fmtLen);
+				PrintAndLog("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
+			}
+			break;		
 	}
+
 	if (g_debugMode){
 		PrintAndLog("DEBUG: idx: %d, Len: %d Printing Demod Buffer:", idx, 96);
 		printDemodBuff();
 	}
-	//todo - convert hi2, hi, lo to demodbuffer for future sim/clone commands
 	return 1;
 }
 
