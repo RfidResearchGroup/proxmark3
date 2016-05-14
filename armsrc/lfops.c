@@ -898,25 +898,25 @@ void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 					fc = bytebits_to_byte(dest + 9, 8);
 					cardnum = bytebits_to_byte(dest + 17, 16);
 					code1 = bytebits_to_byte(dest + 8,fmtLen);
-					Dbprintf("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
+					Dbprintf("AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
 					break;
 				case 50:
 					fc = bytebits_to_byte(dest + 9, 16);
 					cardnum = bytebits_to_byte(dest + 25, 32);
 					code1 = bytebits_to_byte(dest + 8, (fmtLen-32) );
 					code2 = bytebits_to_byte(dest + 8 + (fmtLen-32), 32);
-					Dbprintf("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+					Dbprintf("AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
 					break;
 				default:
 					if (fmtLen > 32 ) {
 						cardnum = bytebits_to_byte(dest+8+(fmtLen-17), 16);
 						code1 = bytebits_to_byte(dest+8,fmtLen-32);
 						code2 = bytebits_to_byte(dest+8+(fmtLen-32),32);
-						Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+						Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%u) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
 					} else {
 						cardnum = bytebits_to_byte(dest+8+(fmtLen-17), 16);
 						code1 = bytebits_to_byte(dest+8,fmtLen);
-						Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
+						Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%u) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
 					}
 					break;		
 			}
