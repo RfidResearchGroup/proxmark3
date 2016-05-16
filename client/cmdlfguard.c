@@ -140,6 +140,7 @@ int CmdGuardClone(const char *Cmd) {
 	uint32_t blocks[5] = {T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 3<<T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
 	
 //	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
+	//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
 //		blocks[0] = T5555_MODULATION_FSK2 | 50<<T5555_BITRATE_SHIFT | 4<<T5555_MAXBLOCK_SHIFT;
 
 	if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) return usage_lf_guard_clone();

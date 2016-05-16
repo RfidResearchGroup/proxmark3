@@ -28,8 +28,9 @@ int usage_lf_awid_fskdemod(void) {
 	PrintAndLog("By default, values are printed and logged until the button is pressed or another USB command is issued.");
 	PrintAndLog("If the [1] option is provided, reader mode is exited after reading a single AWID card.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf awid fskdemod [1]");
+	PrintAndLog("Usage:  lf awid fskdemod [h] [1]");
 	PrintAndLog("Options :");
+	PrintAndLog("      h :  This help");	
 	PrintAndLog("      1 : (optional) stop after reading a single card");
 	PrintAndLog("");
 	PrintAndLog("Samples");
@@ -42,11 +43,12 @@ int usage_lf_awid_sim(void) {
 	PrintAndLog("Enables simulation of AWID card with specified facility-code and card number.");
 	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf awid sim <format> <facility-code> <card-number>");
+	PrintAndLog("Usage:  lf awid sim [h] <format> <facility-code> <card-number>");
 	PrintAndLog("Options :");
-	PrintAndLog("  <format>        :  format length 26|50");
+	PrintAndLog("                h :  This help");	
+	PrintAndLog("         <format> :  format length 26|50");
 	PrintAndLog("  <facility-code> :  8|16bit value facility code");
-	PrintAndLog("  <card number>   :  16|32-bit value card number");
+	PrintAndLog("    <card number> :  16|32-bit value card number");
 	PrintAndLog("");
 	PrintAndLog("Samples");
 	PrintAndLog("       lf awid sim 26 224 1337");
@@ -58,12 +60,13 @@ int usage_lf_awid_clone(void) {
 	PrintAndLog("Enables cloning of AWID card with specified facility-code and card number onto T55x7.");
 	PrintAndLog("The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf awid clone <format> <facility-code> <card-number>");
+	PrintAndLog("Usage:  lf awid clone [h] <format> <facility-code> <card-number> [Q5]");
 	PrintAndLog("Options :");
-	PrintAndLog("  <format>        :  format length 26|50");
+	PrintAndLog("                h :  This help");	
+	PrintAndLog("         <format> :  format length 26|50");
 	PrintAndLog("  <facility-code> :  8|16bit value facility code");
-	PrintAndLog("  <card number>   :  16|32-bit value card number");
-	PrintAndLog("  Q5              :  optional - clone to Q5 (T5555) instead of T55x7 chip");
+	PrintAndLog("    <card number> :  16|32-bit value card number");
+	PrintAndLog("               Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
 	PrintAndLog("");
 	PrintAndLog("Samples");
 	PrintAndLog("       lf awid clone 26 224 1337");
@@ -75,9 +78,10 @@ int usage_lf_awid_brute(void){
 	PrintAndLog("Enables bruteforce of AWID reader with specified facility-code.");
 	PrintAndLog("This is a incremental attack against reader.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf awid brute <format> <facility-code>");
+	PrintAndLog("Usage:  lf awid brute [h] <format> <facility-code>");
 	PrintAndLog("Options :");
-	PrintAndLog("  <format>        :  format length 26|50");
+	PrintAndLog("                h :  This help");
+	PrintAndLog("         <format> :  format length 26|50");
 	PrintAndLog("  <facility-code> :  8|16bit value facility code");
 	PrintAndLog("");
 	PrintAndLog("Samples");
@@ -226,6 +230,7 @@ int CmdAWIDClone(const char *Cmd) {
 	}
 	
 	if (param_getchar(Cmd, 4) == 'Q' || param_getchar(Cmd, 4) == 'q')
+		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
 		blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | 50<<T5555_BITRATE_SHIFT | 3<<T5555_MAXBLOCK_SHIFT;
 
 	if ( !getAWIDBits(fmtlen, fc, cn, bs)) {
