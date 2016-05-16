@@ -44,5 +44,9 @@ newtarbin:
 tarbin: newtarbin client/tarbin armsrc/tarbin bootrom/tarbin
 	$(GZIP) proxmark3-$(platform)-bin.tar
 
+udev:
+	sudo cp -rf driver/77-mm-usb-device-blacklist.rules /etc/udev/rules.d/77-mm-usb-device-blacklist.rules
+	sudo udevadm control --reload-rules
+ 
 # Dummy target to test for GNU make availability
 _test:
