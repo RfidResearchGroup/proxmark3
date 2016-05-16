@@ -9,7 +9,6 @@
 //-----------------------------------------------------------------------------
 
 #include "mifaresniff.h"
-#include "apps.h"
 
 static int sniffState = SNF_INIT;
 static uint8_t sniffUIDType = 0;

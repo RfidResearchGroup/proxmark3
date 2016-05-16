@@ -1006,7 +1006,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	//clear read buffer
 	BigBuf_Clear_keep_EM();
 	
-// Configure to go in 125Khz listen mode
+	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
 
 	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
@@ -1345,15 +1345,14 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 void CopyIOtoT55x7(uint32_t hi, uint32_t lo) {
 	uint32_t data[] = {T55x7_BITRATE_RF_64 | T55x7_MODULATION_FSK2a | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
 	//TODO add selection of chip for Q5 or T55x7
-	// data[0] = (((64-2)/2)<<T5555_BITRATE_SHIFT) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | 2 << T5555_MAXBLOCK_SHIFT;
+	//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
+	// data[0] = (64 << T5555_BITRATE_SHIFT) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | 2 << T5555_MAXBLOCK_SHIFT;
 
 	LED_D_ON();
 	// Program the data blocks for supplied ID
 	// and the block 0 config
 	WriteT55xx(data, 0, 3);
-
 	LED_D_OFF();
-
 	DbpString("DONE!");
 }
 
@@ -1387,6 +1386,7 @@ void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t 
 // clone viking tag to T55xx
 void CopyVikingtoT55xx(uint32_t block1, uint32_t block2, uint8_t Q5) {
 	uint32_t data[] = {T55x7_BITRATE_RF_32 | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT), block1, block2};
+	//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
 	if (Q5) data[0] = (32 << T5555_BITRATE_SHIFT) | T5555_MODULATION_MANCHESTER | 2 << T5555_MAXBLOCK_SHIFT;
 	// Program the data blocks for supplied ID and the block 0 config
 	WriteT55xx(data, 0, 3);
@@ -1474,7 +1474,7 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
 		clock = (clock-2)>>1;  //n = (RF-2)/2
 		data[0] = (clock << T5555_BITRATE_SHIFT) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
 	}
-
+ 
 	WriteT55xx(data, 0, 3);
 
 	LED_D_OFF();
