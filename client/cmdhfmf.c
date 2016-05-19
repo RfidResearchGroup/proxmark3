@@ -1217,7 +1217,8 @@ int CmdHF14AMfChk(const char *Cmd) {
 			if (e_sector[i].foundKey[trgKeyType]) continue;
 						
 			for (uint32_t c = 0; c < keycnt; c += max_keys) {
-				
+				printf(".");
+				fflush(stdout);			
 				uint32_t size = keycnt-c > max_keys ? max_keys : keycnt-c;
 				
 				res = mfCheckKeys(b, trgKeyType, true, size, &keyBlock[6*c], &key64);
@@ -1226,8 +1227,6 @@ int CmdHF14AMfChk(const char *Cmd) {
 					e_sector[i].foundKey[trgKeyType] = TRUE;
 					break;
 				}
-				printf(".");
-				fflush(stdout);
 			}
 			b < 127 ? ( b +=4 ) : ( b += 16 );	
 		}
