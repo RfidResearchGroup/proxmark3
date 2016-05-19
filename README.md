@@ -167,9 +167,13 @@ Further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.com/c
 I recently added a docker container on Docker HUB.  You find it here: https://hub.docker.com/r/iceman1001/proxmark3/
 Follow those instructions to get it up and running.  No need for the old proxspace-environment anymore.
 
-I also published a video on youtube, to show how you should use this docker container. https://www.youtube.com/watch?v=b5Zta89Cf6Q
-Changed the USB2 -> USB3 controller,  got much better speed and I did a new video to show it off.
-https://youtu.be/0ZS2t5C-caI
+[1.6.0] How to start:   https://www.youtube.com/watch?v=b5Zta89Cf6Q
+[1.6.0] How to connect: https://youtu.be/0ZS2t5C-caI
+[1.6.1] How to flash:   https://www.youtube.com/watch?v=WXouhuGYEiw
+
+Recommendations:
+Use only container tag [1.6.1]
+
 
 ##Buying a proxmark3
 The Proxmark 3 device is available for purchase (assembled and tested) from the following locations:
