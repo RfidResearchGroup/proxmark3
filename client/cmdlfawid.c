@@ -258,7 +258,7 @@ int CmdAWIDClone(const char *Cmd) {
 		c.arg[1] = i;
 		clearCommandBuffer();
 		SendCommand(&c);
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)){
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)){
 			PrintAndLog("Error occurred, device did not respond during write operation.");
 			return -1;
 		}
