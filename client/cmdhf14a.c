@@ -142,9 +142,9 @@ int usage_hf_14a_sim(void) {
 //	PrintAndLog("    u     : 4, 7 or 10 byte UID");
 	PrintAndLog("    u     : 4, 7 byte UID");
 	PrintAndLog("    x     : (Optional) performs the 'reader attack', nr/ar attack against a legitimate reader");
-	PrintAndLog("\n   sample : hf 14a sim t 1 u 1122344 x");
-	PrintAndLog("          : hf 14a sim t 1 u 1122344");
-	PrintAndLog("          : hf 14a sim t 1 u 1122344556677");
+	PrintAndLog("\n   sample : hf 14a sim t 1 u 11223344 x");
+	PrintAndLog("          : hf 14a sim t 1 u 11223344");
+	PrintAndLog("          : hf 14a sim t 1 u 11223344556677");
 //	PrintAndLog("          : hf 14a sim t 1 u 11223445566778899AA\n");
 	return 0;
 }
