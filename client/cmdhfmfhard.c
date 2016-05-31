@@ -605,11 +605,11 @@ static uint16_t estimate_second_byte_sum(void)
 static int read_nonce_file(void)
 {
 	FILE *fnonces = NULL;
-	uint8_t trgBlockNo;
-	uint8_t trgKeyType;
+	uint8_t trgBlockNo = 0;
+	uint8_t trgKeyType = 0;
 	uint8_t read_buf[9];
-	uint32_t nt_enc1, nt_enc2;
-	uint8_t par_enc;
+	uint32_t nt_enc1 = 0, nt_enc2 = 0;
+	uint8_t par_enc = 0;
 	int total_num_nonces = 0;
 	
 	if ((fnonces = fopen("nonces.bin","rb")) == NULL) { 
@@ -640,7 +640,6 @@ static int read_nonce_file(void)
 	}
 	fclose(fnonces);
 	PrintAndLog("Read %d nonces from file. cuid=%08x, Block=%d, Keytype=%c", total_num_nonces, cuid, trgBlockNo, trgKeyType==0?'A':'B');
-
 	return 0;
 }
 
@@ -1635,7 +1634,8 @@ static void brute_force(void)
         time_t start, end;
         time(&start);
         keys_found = 0;
-
+		foundkey = 0;
+		
         crypto1_bs_init();
 
         PrintAndLog("Using %u-bit bitslices", MAX_BITSLICES);
