@@ -20,5 +20,5 @@ command_t * CmdDataCommands();
 
 int CmdAnalyse(const char *Cmd);
 int CmdAnalyseLCR(const char *Cmd);
-
+int CmdAnalyseDates(const char *Cmd);
 #endif

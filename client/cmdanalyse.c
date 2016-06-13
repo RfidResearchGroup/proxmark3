@@ -46,9 +46,16 @@ int CmdAnalyseLCR(const char *Cmd) {
 	return 0;
 }
 
+int CmdAnalyseDates(const char *Cmd){
+	// look for datestamps in a given array of bytes
+	PrintAndLog("To be implemented.  If you feel to contribute!");
+	return 0;
+}
+
 static command_t CommandTable[] = {
-	{"help",            CmdHelp,            1, "This help"},
-	{"lcr",				CmdAnalyseLCR,		0, "Generate final byte for XOR LRC"},
+	{"help",	CmdHelp,            1, "This help"},
+	{"lcr",		CmdAnalyseLCR,		0, "Generate final byte for XOR LRC"},
+	{"dates",	CmdAnalyseDates,	0, "Look for datestamps in a given array of bytes"},
 	{NULL, NULL, 0, NULL}
 };
 
