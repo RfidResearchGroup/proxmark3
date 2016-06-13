@@ -159,7 +159,7 @@ int CmdHF14ADesInfo(const char *Cmd){
 	PrintAndLog("      Vendor Id      : %s", getTagInfo(resp.d.asBytes[7]));
 	PrintAndLog("      Type           : 0x%02X",resp.d.asBytes[8]);
 	PrintAndLog("      Subtype        : 0x%02X",resp.d.asBytes[9]);
-	PrintAndLog("      Version        : %d.%d",resp.d.asBytes[10], resp.d.asBytes[11]);
+	PrintAndLog("      Version        : %s",GetVersionStr(resp.d.asBytes[10], resp.d.asBytes[11]) );
 	PrintAndLog("      Storage size   : %s",GetCardSizeStr(resp.d.asBytes[12]));
 	PrintAndLog("      Protocol       : %s",GetProtocolStr(resp.d.asBytes[13]));
 	PrintAndLog("  -----------------------------------------------------------");
@@ -217,7 +217,7 @@ int CmdHF14ADesInfo(const char *Cmd){
 */
 char * GetCardSizeStr( uint8_t fsize ){
  
- 	static char buf[30];
+ 	static char buf[30] = {0x00};
 	char *retStr = buf;
 
 	uint16_t usize = 1 << ((fsize >>1) + 1);
@@ -233,13 +233,29 @@ char * GetCardSizeStr( uint8_t fsize ){
 
 char * GetProtocolStr(uint8_t id){
 
- 	static char buf[30];
+ 	static char buf[30] = {0x00};
 	char *retStr = buf;
 
 	if ( id == 0x05)
 		sprintf(retStr,"0x%02X (ISO 14443-3, 14443-4)", id);
 	else
 		sprintf(retStr,"0x%02X (Unknown)", id);	
+	return buf;
+}
+
+char * GetVersionStr(uint8_t major, uint8_t minor){
+
+	static char buf[30] = {0x00};
+	char *retStr = buf;
+
+	if ( major == 0)
+		sprintf(retStr,"%d.%d (Desfire MF3ICD40)", major, minor);	
+	else if ( major == 1 && minor == 1)
+		sprintf(retStr,"%d.%d (Desfire EV1)", major, minor);
+	else if ( major == 1 && minor == 2)
+		sprintf(retStr,"%d.%d (Desfire EV2)", major, minor);
+	else
+		sprintf(retStr,"%d.%d (Unknown)", major, minor);
 	return buf;
 }
 
@@ -649,7 +665,6 @@ static command_t CommandTable[] = {
 int CmdHFMFDes(const char *Cmd) {
    // flush
 	clearCommandBuffer();
-	//WaitForResponseTimeout(CMD_ACK,NULL,100);
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }

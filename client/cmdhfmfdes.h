@@ -16,8 +16,9 @@ int CmdHF14ADesInfo(const char *Cmd);
 int CmdHF14ADesEnumApplications(const char *Cmd);
 
 char * GetCardSizeStr( uint8_t fsize );
-char * GetProtocolStr(uint8_t id);
-void GetKeySettings( uint8_t * aid);
+char * GetProtocolStr( uint8_t id );
+char * GetVersionStr( uint8_t major, uint8_t minor );
+void GetKeySettings( uint8_t * aid );
 
 // Command options for Desfire behavior.
 enum  {

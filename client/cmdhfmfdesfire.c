@@ -240,7 +240,6 @@ static command_t CommandTable[] =
 int CmdHFMFDesfire(const char *Cmd){
     // flush
 	clearCommandBuffer();
-    //WaitForResponseTimeout(CMD_ACK,NULL,100);
     CmdsParse(CommandTable, Cmd);
     return 0;
 }
