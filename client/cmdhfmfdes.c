@@ -248,11 +248,11 @@ char * GetVersionStr(uint8_t major, uint8_t minor){
 	static char buf[30] = {0x00};
 	char *retStr = buf;
 
-	if ( major == 0)
+	if ( major == 0x00)
 		sprintf(retStr,"%d.%d (Desfire MF3ICD40)", major, minor);	
-	else if ( major == 1 && minor == 1)
+	else if ( major == 0x01 && minor == 0x01)
 		sprintf(retStr,"%d.%d (Desfire EV1)", major, minor);
-	else if ( major == 1 && minor == 2)
+	else if ( major == 0x12 && minor == 0x00)
 		sprintf(retStr,"%d.%d (Desfire EV2)", major, minor);
 	else
 		sprintf(retStr,"%d.%d (Unknown)", major, minor);
