@@ -250,7 +250,7 @@ char * GetVersionStr(uint8_t major, uint8_t minor){
 
 	if ( major == 0x00)
 		sprintf(retStr,"%d.%d (Desfire MF3ICD40)", major, minor);	
-	else if ( major == 0x01 && minor == 0x01)
+	else if ( major == 0x01 && minor == 0x00)
 		sprintf(retStr,"%d.%d (Desfire EV1)", major, minor);
 	else if ( major == 0x12 && minor == 0x00)
 		sprintf(retStr,"%d.%d (Desfire EV2)", major, minor);
