@@ -877,13 +877,16 @@ int CmdGraphShiftZero(const char *Cmd)
 int CmdAskEdgeDetect(const char *Cmd)
 {
 	int thresLen = 25;
+	int last = 0;
 	sscanf(Cmd, "%i", &thresLen); 
 
-	for(int i = 1; i<GraphTraceLen; i++){
-		if (GraphBuffer[i]-GraphBuffer[i-1]>=thresLen) //large jump up
-			GraphBuffer[i-1] = 127;
-		else if(GraphBuffer[i]-GraphBuffer[i-1]<=-1*thresLen) //large jump down
-			GraphBuffer[i-1] = -127;
+	for(int i = 1; i < GraphTraceLen; ++i){
+		if (GraphBuffer[i] - GraphBuffer[i-1] >= thresLen) //large jump up
+			last = 127;
+		else if(GraphBuffer[i] - GraphBuffer[i-1] <= -1 * thresLen) //large jump down
+			last = -127;
+			
+		GraphBuffer[i-1] = last;
 	}
 	RepaintGraphWindow();
 	return 0;
