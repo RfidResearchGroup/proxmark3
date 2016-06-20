@@ -30,7 +30,10 @@
 #ifdef __WIN32
 	#include <windows.h>
 #endif
-#include <malloc.h>
+// don't include for APPLE/mac which has malloc stuff elsewhere.
+#ifndef __APPLE__
+	#include <malloc.h>
+#endif
 #include <assert.h>
 
 #define CONFIDENCE_THRESHOLD	0.95		// Collect nonces until we are certain enough that the following brute force is successfull
