@@ -259,13 +259,15 @@ int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int 
 //by marshmellow
 void askAmp(uint8_t *BitStream, size_t size)
 {
-	for(size_t i = 1; i<size; i++){
-		if (BitStream[i]-BitStream[i-1]>=30) //large jump up
-			BitStream[i]=255;
-		else if(BitStream[i]-BitStream[i-1]<=-20) //large jump down
-			BitStream[i]=0;
+	uint8_t last = 128;
+	for(size_t i = 1; i < size; ++i){
+		if (BitStream[i]-BitStream[i-1] >= 30) //large jump up
+			last = 255;
+		else if(BitStream[i-1] - BitStream[i] >= 20) //large jump down
+			last = 0;
+		
+		BitStream[i] = last;
 	}
-	return;
 }
 
 //by marshmellow
