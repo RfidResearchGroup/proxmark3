@@ -37,6 +37,7 @@ end
 -- Usage help
 function help()
 	print(desc)
+	print(author)
 	print("Example usage")
 	print(example)
 end
@@ -56,10 +57,8 @@ end
 
 local function readdump(infile)
 	 t = infile:read("*all")
-	 --print(string.len(t))
 	 len = string.len(t)
 	 local len,hex = bin.unpack(("H%d"):format(len),t)
-	 --print(len,hex)
 	 return hex
 end
 
