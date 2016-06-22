@@ -1,4 +1,7 @@
 --[[	
+if it don't works with you tag-layout - be so kind and let me know ;-)
+
+Tested on Tags with those Layouts:
 
 (example)	Legic-Prime Layout with 'Kaba Group Header'
       +----+----+----+----+----+----+----+----+
@@ -52,6 +55,40 @@ SHD = shadow Balance
 LRS = ID of the reader that changed the shadow balance (?? should be always the same as LRB)
 CV  = Counter value for transactions
 CHK = crc16 over SHD + LRS + CV
+
+(example)	Legic-Prime Layout 'gantner unsegmented user-credential'
+      +----+----+----+----+----+----+----+----+
+  0x00|MCD |MSN0|MSN1|MSN2|MCC | 60 | ea | 08 |		
+      +----+----+----+----+----+----+----+----+
+  0x08|Stp0|Stp1|Stp2|Stp3|Stp4|Dat0|Dat1|uCRC| <- addr 0x08..0x0f is WRP
+      +----+----+----+----+----+----+----+----+
+  0x10|emb0| <- this is only within wrp if addr 0x07==09
+      +----+
+MCD   = Manufacturer ID
+MSN   = Manufacturer SerialNumber
+60 ea = DCF Low + DCF high
+08    = raw byte which holds the bits for OLE,WRP,WRC,RD
+Stp   = Stamp (could be more as 4 - up to 7)
+Dat   = Online-Mapping Data
+uCRC  = crc8 over addr 0x00..0x03+0x07..0x0E
+
+
+(example)	Legic-Prime Layout 'gantner unsegmented Master-Token (IAM) with a stamp_len of 4'
+      +----+----+----+----+----+----+----+----+
+  0x00|MCD |MSN0|MSN1|MSN2|MCC | 20 | f8 | 08 |		
+      +----+----+----+----+----+----+----+----+
+  0x08|Stp0|Stp1|Stp2|Stp3| 00 | 00 | 00 |CRC1|
+      +----+----+----+----+----+----+----+----+
+  0x10| 00 | 00 | 00 | 00 | 00 |CRC2| 
+      +----+----+----+----+----+----+
+MCD   = Manufacturer ID
+MSN   = Manufacturer SerialNumber
+60 ea = DCF Low + DCF high
+08    = raw byte which holds the bits for OLE,WRP,WRC,RD
+Stp   = Stamp (could be more as 4 - up to 7)
+Dat   = Online-Mapping Data
+CRC1  = crc8 over addr 0x00..0x03+0x07..0x0E (special 'gantner crc8')
+CRC2  = MCD + MSB0..2+ addr 0x06 + addr 0x05 + addr 0x07 + Stamp (regular Master-Token-CRC)
 --]]
 
 example = "script run legic"
@@ -362,7 +399,11 @@ function bytesToTag(bytes, tag)
     tag.WRP=("%d"):format(bbit("0x"..bytes[8],0,4))
     tag.WRC=("%d"):format(bbit("0x"..bytes[8],4,3))
     tag.RD=("%d"):format(bbit("0x"..bytes[8],7,1))
+    if (tag.Type=="SAM" and tag.raw=='9f') then
     tag.Stamp_len=(tonumber(0xfc,10)-tonumber(bbit("0x"..tag.DCFh,0,8),10))
+    elseif (tag.Type=="SAM" and (tag.raw=='08' or tag.raw=='09')) then
+      tag.Stamp_len = tonumber(tag.raw,10)
+    end
     tag.data=bytesToTable(bytes, 10, 13)
     tag.Bck=bytesToTable(bytes, 14, 20)
     tag.MTC=bytesToTable(bytes, 21, 22)
@@ -1128,7 +1169,7 @@ function dumpTag(tag)
   res =acyellow.."\nCDF: System Area"..acoff
   res= res.."\n"..dumpCDF(tag)
   -- segments (user-token area)
-  if(tag.Type=="SAM") then
+  if(tag.Type=="SAM" and tag.raw=='9f') then
     res = res..acyellow.."\n\nADF: User Area"..acoff
     for i=0, #tag.SEG do
       res=res.."\n"..dumpSegment(tag, i).."\n"
@@ -1150,7 +1191,7 @@ function dumpCDF(tag)
     res = res.."WRP="..tag.WRP..", WRC="..tag.WRC..", RD="..tag.RD..", raw="..tag.raw..((tag.raw=='9f') and (", SSC="..tag.SSC.."\n") or "\n")
     
     -- credential (end-user tag)
-    if (tag.Type=="SAM") then
+    if (tag.Type=="SAM" and tag.raw=='9f') then
       res = res.."Remaining Header Area\n"
       for i=0, (#tag.data) do
         res = res..tag.data[i].." "
@@ -1164,8 +1205,9 @@ function dumpCDF(tag)
         res = res..tag.MTC[i].." "
       end
     
+    
     -- Master Token specific
-    else
+    elseif (tag.Type~="SAM") then
       res = res .."Master-Token Area\nStamp: "
       res= res..tag.SSC.." "
       for i=0, tag.Stamp_len-2 do
@@ -1179,7 +1221,13 @@ function dumpCDF(tag)
       local mtcrc=calcMtCrc(bytes)
       res=res.."\nMaster-Token CRC: "
       res = res ..tag.MTC[1].." ("..((tag.MTC[1]==mtcrc) and "valid" or "error")..")"
+      
+    
+    -- 'Gantner User-Credential' specific
+    elseif (tag.Type=="SAM" and (tag.raw=='08' or tag.raw=='09')) then
+      print(acgreen.."Gantner Detected"..acoff)
     end
+    
     return res
   else print("no valid Tag in dumpCDF") end
 end
@@ -1193,7 +1241,7 @@ function dumpSegment(tag, index)
   local res="" --result
   local raw="" --raw-header
   -- segment
-  if ( (istable(tag.SEG[i])) and tag.Type=="SAM") then 
+  if ( (istable(tag.SEG[i])) and tag.Type=="SAM" and tag.raw=="9f") then 
     if (istable(tag.SEG[i].raw)) then
       for k,v in pairs(tag.SEG[i].raw) do
         raw=raw..v.." "
