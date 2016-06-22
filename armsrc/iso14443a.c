@@ -857,10 +857,12 @@ bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
 //-----------------------------------------------------------------------------
 // Main loop of simulated tag: receive commands from reader, decide what
 // response to send, and send it.
+// 'hf 14a sim'
 //-----------------------------------------------------------------------------
 void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 
-	//Here, we collect CUID, NT, NR, AR, CUID, NT2, NR2, AR2
+	// Here, we collect CUID, block1, keytype1, NT1, NR1, AR1, CUID, block2, keytyp2, NT2, NR2, AR2
+	// it should also collect block, keytype.
 	// This can be used in a reader-only attack.
 	uint32_t ar_nr_responses[] = {0,0,0,0,0,0,0,0,0,0};
 	uint8_t ar_nr_collected = 0;
@@ -1173,13 +1175,14 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 				if(ar_nr_collected > 1 ) {		
 					if (MF_DBGLEVEL >= 2 && !(flags & FLAG_INTERACTIVE)) {
 							Dbprintf("Collected two pairs of AR/NR which can be used to extract keys from reader:");
-							Dbprintf("../tools/mfkey/mfkey32 %08x %08x %08x %08x %08x %08x",
+							Dbprintf("../tools/mfkey/mfkey32v2.exe %08x %08x %08x %08x %08x %08x %08x",
 								ar_nr_responses[0], // CUID
-								ar_nr_responses[1], // NT
-								ar_nr_responses[2], // AR1
-								ar_nr_responses[3], // NR1
-								ar_nr_responses[6], // AR2
-								ar_nr_responses[7]  // NR2
+								ar_nr_responses[1], // NT_1
+								ar_nr_responses[2], // AR_1
+								ar_nr_responses[3], // NR_1
+								ar_nr_responses[5], // NT_2
+								ar_nr_responses[6], // AR_2
+								ar_nr_responses[7]  // NR_2
 							);
 					}
 					uint8_t len = ar_nr_collected*4*4;
