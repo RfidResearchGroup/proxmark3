@@ -12,6 +12,9 @@
 #ifndef __BIGBUF_H
 #define __BIGBUF_H
 
+#include "proxmark3.h"
+#include "apps.h"
+#include "string.h"
 
 #define BIGBUF_SIZE				40000
 #define MAX_FRAME_SIZE			256		// maximum allowed ISO14443 frame
