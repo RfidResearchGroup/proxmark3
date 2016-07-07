@@ -76,7 +76,7 @@ void printDemodBuff(void)
 	}
 	if (bitLen>512) bitLen=512; //max output to 512 bits if we have more - should be plenty
 
-	char *bin = sprint_bin_break(DemodBuffer,bitLen,16);
+	char *bin = sprint_bin_break(DemodBuffer, bitLen,16);
 	PrintAndLog("%s",bin);
 
 	return;
