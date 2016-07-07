@@ -766,7 +766,7 @@ int PyramiddemodFSK(uint8_t *dest, size_t *size)
 	return (int)startIdx;
 }
 
-// find presco preamble 0x10D in already demoded data
+// find nedap preamble in already demoded data
 int NedapDemod(uint8_t *dest, size_t *size) {
 	//make sure buffer has data
 	if (*size < 128) return -3;
