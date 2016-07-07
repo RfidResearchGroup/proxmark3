@@ -54,7 +54,7 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 	//----from this part, the UID in clear text, with a 1bit ZERO as separator between bytes.
 	pre[64] = 0;
 
-	// cardnumber
+	// cardnumber (uid)
 	num_to_bytebits(cn, 24, pre+64);
 
 	pre[73] = 0;
@@ -70,10 +70,14 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 //1111111110001011010000010110100011001001000010110101001101011001000110011010010000000000100001110001001000000001000101011100111
 	return 1;
 }
-
+/*
+ - UID: 001630
+ - i: 4071
+ - Checksum2 BE21
+*/
 //GetParity( uint8_t *bits, uint8_t type, int length)
 
-//NEDAP demod - ASK/Biphase,  RF/64 with preamble of 1111111110  (always a 128 bit data stream)
+//NEDAP demod - ASK/Biphase (or Diphase),  RF/64 with preamble of 1111111110  (always a 128 bit data stream)
 //print NEDAP Prox ID, encoding, encrypted ID, 
 
 int CmdLFNedapDemod(const char *Cmd) {
@@ -91,13 +95,13 @@ int CmdLFNedapDemod(const char *Cmd) {
 	int idx = NedapDemod(DemodBuffer, &size);
 	if (idx < 0){
 		if (g_debugMode){
-			if (idx == -5)
-				PrintAndLog("DEBUG: Error - not enough samples");
-			else if (idx == -1)
-				PrintAndLog("DEBUG: Error - only noise found");
-			else if (idx == -2)
-				PrintAndLog("DEBUG: Error - problem during ASK/Biphase demod");
-			else if (idx == -3)
+			// if (idx == -5)
+				// PrintAndLog("DEBUG: Error - not enough samples");
+			// else if (idx == -1)
+				// PrintAndLog("DEBUG: Error - only noise found");
+			// else if (idx == -2)
+				// PrintAndLog("DEBUG: Error - problem during ASK/Biphase demod");
+			if (idx == -3)
 				PrintAndLog("DEBUG: Error - Size not correct: %d", size);
 			else if (idx == -4)
 				PrintAndLog("DEBUG: Error - NEDAP preamble not found");
@@ -107,10 +111,21 @@ int CmdLFNedapDemod(const char *Cmd) {
 		return 0;
 	}
 
-/* Index map                                                     O
- preamble    enc tag type         encrypted uid                  P   d    33    d    90    d    04    d    71    d    40    d    45    d    E7    P
-1111111110 0010110100000101101000110010010000101101010011010110 0 1 0 00110011 0 10010000 0 00000100 0 01110001 0 01000000 0 01000101 0 11100111 1
+/* Index map                                                      E                                                                              E
+ preamble    enc tag type         encrypted uid                   P d    33    d    90    d    04    d    71    d    40    d    45    d    E7    P
+ 1111111110 00101101000001011010001100100100001011010100110101100 1 0 00110011 0 10010000 0 00000100 0 01110001 0 01000000 0 01000101 0 11100111 1
                                                                          uid2       uid1       uid0         I          I          R           R    
+ 1111111110 00101101000001011010001100100100001011010100110101100 1 
+ 
+ 0 00110011 
+ 0 10010000 
+ 0 00000100
+ 0 01110001
+ 0 01000000
+ 0 01000101
+ 0 11100111
+ 1
+ 
 	 Tag ID is 049033 
 	 I = Identical on all tags
 	 R = Random ?
@@ -118,51 +133,73 @@ int CmdLFNedapDemod(const char *Cmd) {
 
 */
 	//get raw ID before removing parities
-	uint32_t rawLo = bytebits_to_byte(DemodBuffer+idx+96,32);
-	uint32_t rawHi = bytebits_to_byte(DemodBuffer+idx+64,32);
-	uint32_t rawHi2 = bytebits_to_byte(DemodBuffer+idx+32,32);
-	uint32_t rawHi3 = bytebits_to_byte(DemodBuffer+idx,32);
+	uint32_t raw[4] = {0,0,0,0};
+	raw[0] = bytebits_to_byte(DemodBuffer+idx+96,32);
+	raw[1] = bytebits_to_byte(DemodBuffer+idx+64,32);
+	raw[2] = bytebits_to_byte(DemodBuffer+idx+32,32);
+	raw[3] = bytebits_to_byte(DemodBuffer+idx,32);
 	setDemodBuf(DemodBuffer,128,idx);
 
-	// here 62 is length.
-	uint8_t first63bit_parity = GetParity( DemodBuffer, ODD, 62);
-	// Parity bits: 0-62 == 63
-	// here 62 is pos in a zero based array
-	if ( first63bit_parity != DemodBuffer[62]  ) {
-		PrintAndLog("1st half parity check failed:  %d | %d ", DemodBuffer[62], first63bit_parity);
-		return 0;
+	uint8_t firstParity = GetParity( DemodBuffer, EVEN, 63);
+	if ( firstParity != DemodBuffer[63]  ) {
+		PrintAndLog("1st 64bit parity check failed:  %d|%d ", DemodBuffer[63], firstParity);
+		//return 0;
 	}
 
-	// uint8_t second63bit_parity = GetParity( DemodBuffer+64, ODD, 63);
-	// if ( second63bit_parity != DemodBuffer[127]  ) {
-		// PrintAndLog("2st half parity check failed:  %d | %d ", DemodBuffer[127], second63bit_parity);
-		// return 0;
-	// }
+	uint8_t secondParity = GetParity( DemodBuffer+64, EVEN, 63);
+	if ( secondParity != DemodBuffer[127]  ) {
+		PrintAndLog("2st 64bit parity check failed:  %d|%d ", DemodBuffer[127], secondParity);
+		//return 0;
+	}
 
 	// ok valid card found!
-	uint32_t cardnum = bytebits_to_byte(DemodBuffer+81, 16);
-	PrintAndLog("NEDAP ID Found - Card: %d - Raw: %08x%08x%08x%08x", cardnum, rawHi3, rawHi2, rawHi, rawLo);
+	uint32_t uid = 0;
+	uid =  bytebits_to_byte(DemodBuffer+65, 8);
+	uid |= bytebits_to_byte(DemodBuffer+74, 8) << 8;
+	uid |= bytebits_to_byte(DemodBuffer+83, 8) << 16;
+
+	uint16_t two = 0;
+	two =  bytebits_to_byte(DemodBuffer+92, 8); 
+	two |= bytebits_to_byte(DemodBuffer+101, 8) << 8;
 	
+	uint16_t chksum2 = 0;
+	chksum2 =  bytebits_to_byte(DemodBuffer+110, 8);
+	chksum2 |= bytebits_to_byte(DemodBuffer+119, 8) << 8;
+
+	PrintAndLog("NEDAP ID Found - Raw: %08x%08x%08x%08x", raw[3], raw[2], raw[1], raw[0]);
+	PrintAndLog(" - UID: %06X", uid);
+	PrintAndLog(" - i: %04X", two);
+	PrintAndLog(" - Checksum2 %04X", chksum2);
+
 	if (g_debugMode){
 		PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
 		printDemodBuff();
+		PrintAndLog("BIN:\n%s", sprint_bin_break( DemodBuffer, 128, 64) );
 	}
- 	PrintAndLog("BIN: %s", sprint_bin_break( DemodBuffer, 64, 64) );
-
 
 	return 1;
 }
 /*
+configuration
+lf t55xx wr b 0 d 00170082
+
+1) uid 049033
 lf t55 wr b 1 d FF8B4168
 lf t55 wr b 2 d C90B5359
 lf t55 wr b 3 d 19A40087
 lf t55 wr b 4 d 120115CF
 
-0) 
+2) uid 001630
 lf t55 wr b 1 d FF8B6B20
 lf t55 wr b 2 d F19B84A3
 lf t55 wr b 3 d 18058007
 lf t55 wr b 4 d 1200857C
+
+3) uid 39feff
+lf t55xx wr b 1 d ffbfa73e
+lf t55xx wr b 2 d 4c0003ff
+lf t55xx wr b 3 d ffbfa73e
+lf t55xx wr b 4 d 4c0003ff
 
 */
 
