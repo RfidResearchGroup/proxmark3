@@ -8,7 +8,7 @@
 //-----------------------------------------------------------------------------
 // BigBuf and functions to allocate/free parts of it.
 //-----------------------------------------------------------------------------
-#include "bigbuf.h"
+#include "BigBuf.h"
 
 // BigBuf is the large multi-purpose buffer, typically used to hold A/D samples or traces.
 // Also used to hold various smaller buffers and the Mifare Emulator Memory.
