@@ -37,7 +37,9 @@
 #include <assert.h>
 
 #define CONFIDENCE_THRESHOLD	0.95		// Collect nonces until we are certain enough that the following brute force is successfull
-#define GOOD_BYTES_REQUIRED		28
+#define GOOD_BYTES_REQUIRED		13          // default 28, could be smaller == faster
+
+#define END_OF_LIST_MARKER		0xFFFFFFFF
 
 static const float p_K[257] = {		// the probability that a random nonce has a Sum Property == K 
 	0.0290, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 
@@ -198,7 +200,6 @@ static void init_nonce_memory(void)
 	first_byte_Sum = 0;
 	num_good_first_bytes = 0;
 }
-
 
 static void free_nonce_list(noncelistentry_t *p)
 {
@@ -868,10 +869,10 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 	
 	time1 = clock() - time1;
 	if ( time1 > 0 ) {
-	PrintAndLog("Acquired a total of %d nonces in %1.1f seconds (%0.0f nonces/minute)", 
-		total_num_nonces, 
-		((float)time1)/CLOCKS_PER_SEC, 
-		total_num_nonces * 60.0 * CLOCKS_PER_SEC/(float)time1
+		PrintAndLog("Acquired a total of %d nonces in %1.1f seconds (%0.0f nonces/minute)", 
+			total_num_nonces, 
+			((float)time1)/CLOCKS_PER_SEC, 
+			total_num_nonces * 60.0 * CLOCKS_PER_SEC/(float)time1
 		);
 	}
 	return 0;
@@ -920,7 +921,7 @@ static int init_partial_statelists(void)
 		for (uint16_t i = 0; i <= 16; i += 2) {
 			uint32_t *p = partial_statelist[i].states[odd_even];
 			p += partial_statelist[i].len[odd_even];
-			*p = 0xffffffff;
+			*p = END_OF_LIST_MARKER;
 		}
 	}
 	
@@ -946,7 +947,7 @@ static void init_BitFlip_statelist(void)
 	}
 	// set len and add End Of List marker
 	statelist_bitflip.len[0] = p - statelist_bitflip.states[0];
-	*p = 0xffffffff;
+	*p = END_OF_LIST_MARKER;
 	statelist_bitflip.states[0] = realloc(statelist_bitflip.states[0], sizeof(uint32_t) * (statelist_bitflip.len[0] + 1));
 }
 		
@@ -956,7 +957,7 @@ static inline uint32_t *find_first_state(uint32_t state, uint32_t mask, partial_
 
 	if (p == NULL) return NULL;
 	while (*p < (state & mask)) p++;
-	if (*p == 0xffffffff) return NULL;					// reached end of list, no match
+	if (*p == END_OF_LIST_MARKER) return NULL;					// reached end of list, no match
 	if ((*p & mask) == (state & mask)) return p;		// found a match.
 	return NULL;										// no match
 } 
@@ -1034,7 +1035,7 @@ static bool all_other_first_bytes_match(uint32_t state, odd_even_t odd_even)
 					uint16_t part_sum_a8 = (odd_even == ODD_STATE) ? r : s;
 					uint32_t *p = find_first_state(state, mask, &partial_statelist[part_sum_a8], odd_even);
 					if (p != NULL) {
-						while ((state & mask) == (*p & mask) && (*p != 0xffffffff)) {
+						while ((state & mask) == (*p & mask) && (*p != END_OF_LIST_MARKER)) {
 							if (remaining_bits_match(j, bytes_diff, state, (state&0x00fffff0) | *p, odd_even)) {
 								found_match = true;
 								// if ((odd_even == ODD_STATE && state == test_state_odd)
@@ -1092,7 +1093,7 @@ static bool all_bit_flips_match(uint32_t state, odd_even_t odd_even)
 			bool found_match = false;
 			uint32_t *p = find_first_state(state, mask, &statelist_bitflip, 0);
 			if (p != NULL) {
-				while ((state & mask) == (*p & mask) && (*p != 0xffffffff)) {
+				while ((state & mask) == (*p & mask) && (*p != END_OF_LIST_MARKER)) {
 					if (remaining_bits_match(j, bytes_diff, state, (state&0x00fffff0) | *p, odd_even)) {
 						found_match = true;
 						// if ((odd_even == ODD_STATE && state == test_state_odd)
@@ -1165,11 +1166,11 @@ static int add_matching_states(statelist_t *candidates, uint16_t part_sum_a0, ui
 		return 4;
 	}
 	uint32_t *add_p = candidates->states[odd_even]; 
-	for (uint32_t *p1 = partial_statelist[part_sum_a0].states[odd_even]; *p1 != 0xffffffff; p1++) {
+	for (uint32_t *p1 = partial_statelist[part_sum_a0].states[odd_even]; *p1 != END_OF_LIST_MARKER; p1++) {
 		uint32_t search_mask = 0x000ffff0;
 		uint32_t *p2 = find_first_state((*p1 << 4), search_mask, &partial_statelist[part_sum_a8], odd_even);
 		if (p2 != NULL) {
-			while (((*p1 << 4) & search_mask) == (*p2 & search_mask) && *p2 != 0xffffffff) {
+			while (((*p1 << 4) & search_mask) == (*p2 & search_mask) && *p2 != END_OF_LIST_MARKER) {
 				if ((nonces[best_first_bytes[0]].BitFlip[odd_even] && find_first_state((*p1 << 4) | *p2, 0x000fffff, &statelist_bitflip, 0))
 					|| !nonces[best_first_bytes[0]].BitFlip[odd_even]) {
 				if (all_other_first_bytes_match((*p1 << 4) | *p2, odd_even)) {
@@ -1184,7 +1185,7 @@ static int add_matching_states(statelist_t *candidates, uint16_t part_sum_a0, ui
 	}
 
 	// set end of list marker and len
-	*add_p = 0xffffffff; 
+	*add_p = END_OF_LIST_MARKER; 
 	candidates->len[odd_even] = add_p - candidates->states[odd_even];
 
 	candidates->states[odd_even] = realloc(candidates->states[odd_even], sizeof(uint32_t) * (candidates->len[odd_even] + 1));
@@ -1230,14 +1231,14 @@ static void TestIfKeyExists(uint64_t key)
 		bool found_even = false;
 		uint32_t *p_odd = p->states[ODD_STATE];
 		uint32_t *p_even = p->states[EVEN_STATE];
-		while (*p_odd != 0xffffffff) {
+		while (*p_odd != END_OF_LIST_MARKER) {
 			if ((*p_odd & 0x00ffffff) == state_odd) {
 				found_odd = true;
 				break;
 			}
 			p_odd++;
 		}
-		while (*p_even != 0xffffffff) {
+		while (*p_even != END_OF_LIST_MARKER) {
 			if ((*p_even & 0x00ffffff) == state_even) {
 				found_even = true;
 			}
@@ -1245,10 +1246,12 @@ static void TestIfKeyExists(uint64_t key)
 		}
 		count += (p_odd - p->states[ODD_STATE]) * (p_even - p->states[EVEN_STATE]);
 		if (found_odd && found_even) {
-			PrintAndLog("Key Found after testing %lld (2^%1.1f) out of %lld (2^%1.1f) keys. A brute force would have taken approx %lld minutes.", 
-				count, log(count)/log(2), 
-				maximum_states, log(maximum_states)/log(2),
-				(count>>23)/60);
+			PrintAndLog("Key Found after testing %lld (2^%1.1f) out of %lld (2^%1.1f) keys. ", 
+				count,
+				log(count)/log(2), 
+				maximum_states,
+				log(maximum_states)/log(2)
+				);
 			if (write_stats) {
 				fprintf(fstats, "1\n");
 			}
@@ -1301,7 +1304,7 @@ static void generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 								} else {
 									current_candidates->len[EVEN_STATE] = 0;
 									uint32_t *p = current_candidates->states[EVEN_STATE] = malloc(sizeof(uint32_t));
-									*p = 0xffffffff;
+									*p = END_OF_LIST_MARKER;
 								}
 							} else {
 								add_matching_states(current_candidates, q, s, EVEN_STATE);
@@ -1310,7 +1313,7 @@ static void generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 								} else {
 									current_candidates->len[ODD_STATE] = 0;
 									uint32_t *p = current_candidates->states[ODD_STATE] = malloc(sizeof(uint32_t));
-									*p = 0xffffffff;
+									*p = END_OF_LIST_MARKER;
 								}
 							}
 							//printf("Odd  state candidates: %6d (2^%0.1f)\n", current_candidates->len[ODD_STATE], log(current_candidates->len[ODD_STATE])/log(2)); 
@@ -1673,7 +1676,7 @@ static void brute_force(void)
         pthread_t threads[thread_count];
 		
         // enumerate states using all hardware threads, each thread handles one bucket
-        PrintAndLog("Starting %u cracking threads to search %u buckets containing a total of %"PRIu32" states...", thread_count, bucket_count, maximum_states);
+        PrintAndLog("Starting %u cracking threads to search %u buckets containing a total of %"PRIu64" states...", thread_count, bucket_count, maximum_states);
 		
         for(size_t i = 0; i < thread_count; i++){
             pthread_create(&threads[i], NULL, crack_states_thread, (void*) i);
@@ -1682,13 +1685,14 @@ static void brute_force(void)
             pthread_join(threads[i], 0);
         }
 
-        time(&end);
-        unsigned long elapsed_time = difftime(end, start);
+        time(&end);		
+        double elapsed_time = difftime(end, start);
+		PrintAndLog("");
         if(keys_found){
-			PrintAndLog("Success! Tested %"PRIu32" states, found %u keys after %u seconds", total_states_tested, keys_found, elapsed_time);
+			PrintAndLog("Success! Tested %"PRIu64" states, found %u keys after %.f seconds", total_states_tested, keys_found, elapsed_time);
 			PrintAndLog("\nFound key: %012"PRIx64"\n", foundkey);
         } else {
-			PrintAndLog("Fail! Tested %"PRIu32" states, in %u seconds", total_states_tested, elapsed_time);
+			PrintAndLog("Fail! Tested %"PRIu64" states, in %.f seconds", total_states_tested, elapsed_time);
 		}
         // reset this counter for the next call
         nonces_to_bruteforce = 0;
@@ -1772,6 +1776,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 			PrintAndLog("Time for generating key candidates list: %1.0f seconds", ((float)time1)/CLOCKS_PER_SEC);
 	
 		brute_force();
+		
 		free_nonces_memory();
 		free_statelist_cache();
 		free_candidates_memory(candidates);
