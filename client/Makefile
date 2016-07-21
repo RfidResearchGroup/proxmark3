@@ -41,9 +41,16 @@ ifneq (,$(findstring MINGW,$(platform)))
 	endif
 	
 else ifeq ($(platform),Darwin)
+
+	# Assuming you have QT4 installed.
 	CFLAGS += -I/usr/include/malloc/ -I/usr/local/opt/readline/include
 	LDLIBS = -L/opt/local/lib -L/usr/local/opt/readline/lib -lreadline -lpthread -lm
-    CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
+	
+	# use this if you have QT5 installed.
+	#CFLAGS += -I/usr/include/malloc/ -I/usr/local/opt/readline/include -I/usr/local/opt/qt5/include 
+    #LDLIBS = -L/opt/local/lib -L/usr/local/opt/readline/lib -L/usr/local/opt/qt5/lib -lreadline -lpthread -lm
+
+	CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
     QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
     MOC = $(shell pkg-config --variable=moc_location QtCore)
     LUAPLATFORM = macosx
