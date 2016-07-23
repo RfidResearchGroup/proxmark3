@@ -186,19 +186,16 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 	return buf;
 }
 
-void num_to_bytes(uint64_t n, size_t len, uint8_t* dest)
-{
+void num_to_bytes(uint64_t n, size_t len, uint8_t* dest) {
 	while (len--) {
 		dest[len] = (uint8_t) n;
 		n >>= 8;
 	}
 }
 
-uint64_t bytes_to_num(uint8_t* src, size_t len)
-{
+uint64_t bytes_to_num(uint8_t* src, size_t len) {
 	uint64_t num = 0;
-	while (len--)
-	{
+	while (len--) {
 		num = (num << 8) | (*src);
 		src++;
 	}
@@ -212,6 +209,7 @@ void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest) {
 		n >>= 1;
 	}
 }
+
 //least significant bit first
 void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest) {
 	for(int i = 0 ; i < len ; ++i) {
@@ -219,7 +217,6 @@ void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest) {
 		n >>= 1;
 	}
 }
-
 
 // aa,bb,cc,dd,ee,ff,gg,hh, ii,jj,kk,ll,mm,nn,oo,pp
 // to
@@ -549,6 +546,7 @@ void rol(uint8_t *data, const size_t len){
 }
 
 // Swap bit order on a uint32_t value.  Can be limited by nrbits just use say 8bits reversal
+// And clears the rest of the bits.
 uint32_t SwapBits(uint32_t value, int nrbits) {
 	uint32_t newvalue = 0;
 	for(int i = 0; i < nrbits; i++) {
