@@ -138,6 +138,7 @@ typedef struct{
 #define CMD_SNOOP_ISO_14443a                                              0x0383
 #define CMD_SIMULATE_TAG_ISO_14443a                                       0x0384
 #define CMD_READER_ISO_14443a                                             0x0385
+#define CMD_RAW_WRITER_LEGIC_RF                                           0x0386
 #define CMD_SIMULATE_TAG_LEGIC_RF                                         0x0387
 #define CMD_READER_LEGIC_RF                                               0x0388
 #define CMD_WRITER_LEGIC_RF                                               0x0389
@@ -212,6 +213,18 @@ typedef struct{
 #define CMD_MIFARE_COLLECT_NONCES										  0x072f
 
 #define CMD_HF_SNIFFER                                                    0x0800
+
+
+// For EMV Commands
+#define CMD_EMV_READ_RECORD                                               0x0700
+#define CMD_EMV_TRANSACTION                                               0x0701
+#define CMD_EMV_CLONE                                                     0x0702
+#define CMD_EMV_SIM                                                       0x0703
+#define CMD_EMV_TEST                                                      0x0704
+#define CMD_EMV_FUZZ_RATS                                                 0x0705
+#define CMD_EMV_GET_RANDOM_NUM                                            0x0706
+#define CMD_EMV_LOAD_VALUE                                                0x0707
+#define CMD_EMV_DUMP_CARD                                                 0x0708
 
 #define CMD_UNKNOWN                                                       0xFFFF
 

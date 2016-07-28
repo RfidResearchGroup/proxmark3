@@ -95,6 +95,7 @@ local _commands = {
 	CMD_SNOOP_ISO_14443a =                                               0x0383,
 	CMD_SIMULATE_TAG_ISO_14443a =                                        0x0384,
 	CMD_READER_ISO_14443a =                                              0x0385,
+	CMD_RAW_WRITER_LEGIC_RF =											 0x0386,
 	CMD_SIMULATE_TAG_LEGIC_RF =                                          0x0387,
 	CMD_READER_LEGIC_RF =                                                0x0388,
 	CMD_WRITER_LEGIC_RF =                                                0x0389,
@@ -169,6 +170,18 @@ local _commands = {
 	CMD_MIFARE_DESFIRE =                                                 0x072e,
     CMD_HF_SNIFFER =                                                     0x0800,	
 
+	
+	--// For EMV Commands
+	CMD_EMV_READ_RECORD =                                                0x0700,
+	CMD_EMV_TRANSACTION =                                                0x0701,
+	CMD_EMV_CLONE =                                                      0x0702,
+	CMD_EMV_SIM =                                                        0x0703,
+	CMD_EMV_TEST =                                                       0x0704,
+	CMD_EMV_FUZZ_RATS =                                                  0x0705,
+	CMD_EMV_GET_RANDOM_NUM =                                             0x0706,
+	CMD_EMV_LOAD_VALUE =                                                 0x0707,
+	CMD_EMV_DUMP_CARD =                                                  0x0708,
+	
 	CMD_UNKNOWN =                                                        0xFFFF,
 }
 
