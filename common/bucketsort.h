@@ -1,7 +1,9 @@
 #ifndef BUCKETSORT_H__
 #define BUCKETSORT_H__
+
 #include <stdint.h>
 #include <stdlib.h>
+
 typedef struct bucket {
 	uint32_t *head;
 	uint32_t *bp;

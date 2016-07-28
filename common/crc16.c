@@ -9,11 +9,9 @@
 #include "crc16.h"
 #define CRC16_POLY_CCITT 0x1021
 #define CRC16_POLY 0x8408
-#define CRC16_POLY_LEGIC 0xB400
 
-unsigned short update_crc16( unsigned short crc, unsigned char c )
-{
-  unsigned short i, v, tcrc = 0;
+uint16_t update_crc16( uint16_t crc, unsigned char c ) {
+  uint16_t i, v, tcrc = 0;
 
   v = (crc ^ c) & 0xff;
   for (i = 0; i < 8; i++) {
@@ -29,8 +27,8 @@ uint16_t crc16(uint8_t const *message, int length, uint16_t remainder, uint16_t 
 	if (length == 0)
         return (~remainder);
 			
-    for (int byte = 0; byte < length; ++byte) {
-        remainder ^= (message[byte] << 8);
+    for (uint32_t i = 0; i < length; ++i) {
+        remainder ^= (message[i] << 8);
         for (uint8_t bit = 8; bit > 0; --bit) {
             if (remainder & 0x8000) {
                 remainder = (remainder << 1) ^ polynomial;
@@ -47,25 +45,6 @@ uint16_t crc16_ccitt(uint8_t const *message, int length) {
 }
 
 uint16_t crc16_ccitt_kermit(uint8_t const *message, int length) {
-    return bit_reverse_uint16(crc16(message, length, 0x0000, CRC16_POLY_CCITT));
-}
-
-//ICEMAN: not working yet,
-// This CRC-16 is used in Legic Advant systems. 
-uint16_t crc16_legic(uint8_t const *message, int length, uint16_t inital) {
-	return crc16(message, length, inital, CRC16_POLY_LEGIC);
-}
-
-uint16_t bit_reverse_uint16 (uint16_t value) {
-	const uint16_t mask0 = 0x5555;
-	const uint16_t mask1 = 0x3333;
-	const uint16_t mask2 = 0x0F0F;
-	const uint16_t mask3 = 0x00FF;
-
-	value = (((~mask0) & value) >> 1) | ((mask0 & value) << 1);
-	value = (((~mask1) & value) >> 2) | ((mask1 & value) << 2);
-	value = (((~mask2) & value) >> 4) | ((mask2 & value) << 4);
-	value = (((~mask3) & value) >> 8) | ((mask3 & value) << 8);
-
-	return value;
+	uint16_t val = crc16(message, length, 0x0000, CRC16_POLY_CCITT);
+    return SwapBits(val, 16);
 }

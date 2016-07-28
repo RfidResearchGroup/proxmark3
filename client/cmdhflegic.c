@@ -7,27 +7,21 @@
 //-----------------------------------------------------------------------------
 // High frequency Legic commands
 //-----------------------------------------------------------------------------
-
-#include <stdio.h>
-#include <string.h>
-#include "proxmark3.h"
-#include "data.h"
-#include "ui.h"
-#include "cmdparser.h"
 #include "cmdhflegic.h"
-#include "cmdmain.h"
-#include "util.h"
-#include "crc.h"
+
 static int CmdHelp(const char *Cmd);
 
 int usage_legic_calccrc8(void){
-	PrintAndLog("Calculates the legic crc8 on the input hexbytes.");
+	PrintAndLog("Calculates the legic crc8/crc16 on the input hexbytes.");
 	PrintAndLog("There must be an even number of hexsymbols as input.");
-	PrintAndLog("Usage:  hf legic crc8 <hexbytes>");
+	PrintAndLog("Usage:  hf legic crc8 [h] b <hexbytes> u <uidcrc>");
 	PrintAndLog("Options :");
-	PrintAndLog("  <hexbytes>   : hex bytes in a string");
+	PrintAndLog("      b <hexbytes>  : hex bytes");
+	PrintAndLog("      u <uidcrc>    : MCC hexbyte");
 	PrintAndLog("");
-	PrintAndLog("Sample  : hf legic crc8 deadbeef1122");
+	PrintAndLog("Samples :");
+	PrintAndLog("      hf legic crc8 b deadbeef1122");
+	PrintAndLog("      hf legic crc8 b deadbeef1122 u 9A");
 	return 0;
 }
 
@@ -64,8 +58,10 @@ int CmdLegicDecode(const char *Cmd) {
 	int crc = 0;
 	int wrp = 0;
 	int wrc = 0;
-	uint8_t data_buf[1024]; // receiver buffer,  should be 1024..
-	char token_type[4];
+	uint8_t data_buf[1052]; // receiver buffer,  should be 1024..
+	char token_type[5];
+	int dcf;
+	int bIsSegmented = 0;
 
 	// download EML memory, where the "legic read" command puts the data.
 	GetEMLFromBigBuf(data_buf, sizeof(data_buf), 0);
@@ -89,71 +85,120 @@ int CmdLegicDecode(const char *Cmd) {
 		(calc_crc == crc) ? "OK":"Fail" 
 	);
  
+
+	token_type[0] = 0;
+	dcf = ((int)data_buf[6] << 8) | (int)data_buf[5];
+
+	// New unwritten media?
+	if(dcf == 0xFFFF) {
+
+		PrintAndLog("DCF: %d (%02x %02x), Token Type=NM (New Media)",
+			dcf,
+			data_buf[5],
+			data_buf[6]
+		);
+	
+	} else if(dcf > 60000) {		// Master token?
+
+		int fl = 0;
+
+		if(data_buf[6] == 0xec) {
+			strncpy(token_type, "XAM", sizeof(token_type));
+			fl = 1;
+			stamp_len = 0x0c - (data_buf[5] >> 4);
+		} else {
 	switch (data_buf[5] & 0x7f) {
 		case 0x00 ... 0x2f:
 			strncpy(token_type, "IAM",sizeof(token_type));
+					fl = (0x2f - (data_buf[5] & 0x7f)) + 1;
 			break;
 		case 0x30 ... 0x6f:
 			strncpy(token_type, "SAM",sizeof(token_type));
+					fl = (0x6f - (data_buf[5] & 0x7f)) + 1;
 			break;
 		case 0x70 ... 0x7f:
 			strncpy(token_type, "GAM",sizeof(token_type));
-			break;
-		default:
-			strncpy(token_type, "???",sizeof(token_type));
+					fl = (0x7f - (data_buf[5] & 0x7f)) + 1;
 			break;
 	}
 
 	stamp_len = 0xfc - data_buf[6];
+		}
 
-	PrintAndLog("DCF: %02x %02x, Token Type=%s (OLE=%01u), Stamp len=%02u",
+		PrintAndLog("DCF: %d (%02x %02x), Token Type=%s (OLE=%01u), OL=%02u, FL=%02u",
+			dcf,
 		data_buf[5],
 		data_buf[6],
 		token_type,
 		(data_buf[5]&0x80)>>7,
-		stamp_len
+			stamp_len,
+			fl
 	);
 
-	PrintAndLog("WRP=%02u, WRC=%01u, RD=%01u, raw=%02x, SSC=%02x",
+	} else {						// Is IM(-S) type of card...
+
+		if(data_buf[7] == 0x9F && data_buf[8] == 0xFF) {
+			bIsSegmented = 1;
+			strncpy(token_type, "IM-S", sizeof(token_type));
+		} else {
+			strncpy(token_type, "IM", sizeof(token_type));
+		}
+
+		PrintAndLog("DCF: %d (%02x %02x), Token Type=%s (OLE=%01u)",
+			dcf,
+			data_buf[5],
+			data_buf[6],
+			token_type,
+			(data_buf[5]&0x80)>>7
+		);
+	}
+
+	// Makes no sence to show this on blank media...
+	if(dcf != 0xFFFF) {
+
+		if(bIsSegmented) {
+			PrintAndLog("WRP=%02u, WRC=%01u, RD=%01u, SSC=%02x",
 		data_buf[7]&0x0f,
 		(data_buf[7]&0x70)>>4,
 		(data_buf[7]&0x80)>>7,
-		data_buf[7],
 		data_buf[8]
 	);
+		}
 
+		// Header area is only available on IM-S cards, on master tokens this data is the master token data itself
+		if(bIsSegmented || dcf > 60000) {
+			if(dcf > 60000) {
+				PrintAndLog("Master token data");
+				PrintAndLog("%s", sprint_hex(data_buf+8, 14));
+			} else {
 	PrintAndLog("Remaining Header Area");
 	PrintAndLog("%s", sprint_hex(data_buf+9, 13));
+			}
+		}
+	}
+
 	
 	uint8_t segCrcBytes[8] = {0x00};
 	uint32_t segCalcCRC = 0;
 	uint32_t segCRC = 0;
 
-	// see if user area is xored or just zeros.
-	int numOfZeros = 0;
-	for (int index=22; index < 256; ++index){
-		if ( data_buf[index] == 0x00 )
-			++numOfZeros;
-	}
-	// if possible zeros is less then 60%, lets assume data is xored
-	// 256  - 22 (header) = 234
-	// 1024 - 22 (header) = 1002
-	int isXored = (numOfZeros*100/stamp_len) < 50;
-	PrintAndLog("is data xored?  %d  ( %d %)", isXored, (numOfZeros*100/stamp_len));
 
-	print_hex_break( data_buf, 33, 16);
-	
-	return 0;
+	// Data card?
+	if(dcf <= 60000) {
 	
 	PrintAndLog("\nADF: User Area");
 	PrintAndLog("------------------------------------------------------");
+
+		if(bIsSegmented) {
+
+			// Data start point on segmented cards
 	i = 22;  
-	// 64 potential segements
-	// how to detect there is no segments?!?
-	for ( segmentNum=0; segmentNum<64; segmentNum++ ) {
+
+			// decode segments
+			for (segmentNum=1; segmentNum < 128; segmentNum++ )
+			{
 		segment_len = ((data_buf[i+1]^crc)&0x0f) * 256 + (data_buf[i]^crc);
 		segment_flag = ((data_buf[i+1]^crc)&0xf0)>>4;
-
 		wrp = (data_buf[i+2]^crc);
 		wrc = ((data_buf[i+3]^crc)&0x70)>>4;
 
@@ -198,11 +243,10 @@ int CmdLegicDecode(const char *Cmd) {
 			PrintAndLog("WRC protected area:   (I %d | K %d| WRC %d)", i, k, wrc);
 			PrintAndLog("\nrow  | data");
 			PrintAndLog("-----+------------------------------------------------");
-			// de-xor?  if not zero, assume it needs xoring.
-			if ( isXored) {
-				for ( k=i; k < wrc; ++k)
+
+					for ( k=i; k < (i+wrc); ++k)
 					data_buf[k] ^= crc;
-			}
+
 			print_hex_break( data_buf+i, wrc, 16);
 			
 			i += wrc;
@@ -213,16 +257,14 @@ int CmdLegicDecode(const char *Cmd) {
 			PrintAndLog("\nrow  | data");
 			PrintAndLog("-----+------------------------------------------------");
 
-			if (isXored) {
-				for (k=i; k < wrp_len; ++k)
+					for (k=i; k < (i+wrp_len); ++k)
 					data_buf[k] ^= crc;
-			}
 			
 			print_hex_break( data_buf+i, wrp_len, 16);
 			
 			i += wrp_len;
 			
-			// does this one work?
+					// does this one work? (Answer: Only if KGH/BGH is used with BCD encoded card number! So maybe this will show just garbage...)
 			if( wrp_len == 8 )
 				PrintAndLog("Card ID: %2X%02X%02X", data_buf[i-4]^crc, data_buf[i-3]^crc, data_buf[i-2]^crc);			
 		}
@@ -230,10 +272,9 @@ int CmdLegicDecode(const char *Cmd) {
 		PrintAndLog("Remaining segment payload:  (I %d | K %d | Remain LEN %d)", i, k, remain_seg_payload_len);
 		PrintAndLog("\nrow  | data");
 		PrintAndLog("-----+------------------------------------------------");
-		if ( isXored ) {
-			for ( k=i; k < remain_seg_payload_len; ++k)
+
+				for ( k=i; k < (i+remain_seg_payload_len); ++k)
 				data_buf[k] ^= crc;
-		}
 		
 		print_hex_break( data_buf+i, remain_seg_payload_len, 16);
     
@@ -245,6 +286,56 @@ int CmdLegicDecode(const char *Cmd) {
 		if (segment_flag & 0x8) return 0;
 
 	} // end for loop
+		
+		} else {
+
+			// Data start point on unsegmented cards
+			i = 8;
+
+			wrp          = data_buf[7] & 0x0F;
+			wrc          = (data_buf[7] & 0x07) >> 4;
+
+			bool hasWRC = (wrc > 0);
+			bool hasWRP = (wrp > wrc);
+			int wrp_len = (wrp - wrc);
+			int remain_seg_payload_len = (1024 - 22 - wrp);	// Any chance to get physical card size here!?
+
+			PrintAndLog("Unsegmented card - WRP: %02u, WRC: %02u, RD: %01u",
+				wrp,
+				wrc,
+				(data_buf[7] & 0x80) >> 7
+			);
+
+			if ( hasWRC ) {
+				PrintAndLog("WRC protected area:   (I %d | WRC %d)", i, wrc);
+				PrintAndLog("\nrow  | data");
+				PrintAndLog("-----+------------------------------------------------");
+				print_hex_break( data_buf+i, wrc, 16);
+				i += wrc;
+			}
+    
+			if ( hasWRP ) {
+				PrintAndLog("Remaining write protected area:  (I %d | WRC %d | WRP %d | WRP_LEN %d)", i, wrc, wrp, wrp_len);
+				PrintAndLog("\nrow  | data");
+				PrintAndLog("-----+------------------------------------------------");
+				print_hex_break( data_buf+i, wrp_len, 16);
+				i += wrp_len;
+			
+				// does this one work? (Answer: Only if KGH/BGH is used with BCD encoded card number! So maybe this will show just garbage...)
+				if( wrp_len == 8 )
+					PrintAndLog("Card ID: %2X%02X%02X", data_buf[i-4], data_buf[i-3], data_buf[i-2]);
+			}
+    
+			PrintAndLog("Remaining segment payload:  (I %d | Remain LEN %d)", i, remain_seg_payload_len);
+			PrintAndLog("\nrow  | data");
+			PrintAndLog("-----+------------------------------------------------");
+			print_hex_break( data_buf+i, remain_seg_payload_len, 16);
+			i += remain_seg_payload_len;
+		
+			PrintAndLog("-----+------------------------------------------------\n");
+		}
+	}
+
 	return 0;
 }
 
@@ -417,8 +508,37 @@ int CmdLegicRfWrite(const char *Cmd) {
     return 0;
 }
 
+//TODO: write a help text (iceman)
+int CmdLegicRfRawWrite(const char *Cmd) {
+	char answer;
+    UsbCommand c = { CMD_RAW_WRITER_LEGIC_RF, {0,0,0} };
+    int res = sscanf(Cmd, " 0x%"llx" 0x%"llx, &c.arg[0], &c.arg[1]);
+	if(res != 2) {
+		PrintAndLog("Please specify the offset and value as two hex strings");
+        return -1;
+    }
+	
+	if (c.arg[0] == 0x05 || c.arg[0] == 0x06) {
+		PrintAndLog("############# DANGER !! #############");
+		PrintAndLog("# changing the DCF is irreversible  #");
+		PrintAndLog("#####################################");
+		PrintAndLog("do youe really want to continue? y(es) n(o)");		
+		scanf(" %c", &answer);
+		if (answer == 'y' || answer == 'Y') {
+			SendCommand(&c);
+			return 0;
+		}
+		return -1;
+	}
+	
+	clearCommandBuffer();
+    SendCommand(&c);
+	return 0;
+}
+
+//TODO: write a help text (iceman)
 int CmdLegicRfFill(const char *Cmd) {
-    UsbCommand cmd = {CMD_WRITER_LEGIC_RF};
+    UsbCommand cmd = {CMD_WRITER_LEGIC_RF, {0,0,0} };
     int res = sscanf(Cmd, " 0x%"llx" 0x%"llx" 0x%"llx, &cmd.arg[0], &cmd.arg[1], &cmd.arg[2]);
     if(res != 3) {
         PrintAndLog("Please specify the offset, length and value as two hex strings");
@@ -427,14 +547,14 @@ int CmdLegicRfFill(const char *Cmd) {
 
     int i;
     UsbCommand c = {CMD_DOWNLOADED_SIM_SAMPLES_125K, {0, 0, 0}};
-    for(i = 0; i < 48; i++) {
-		c.d.asBytes[i] = cmd.arg[2];
-    }
-	
+	memcpy(c.d.asBytes, cmd.arg[2], 48);
+
 	for(i = 0; i < 22; i++) {
 		c.arg[0] = i*48;
+		
+		clearCommandBuffer();
 		SendCommand(&c);
-		WaitForResponse(CMD_ACK,NULL);
+		WaitForResponse(CMD_ACK, NULL);
 	}
 	clearCommandBuffer();
     SendCommand(&cmd);
@@ -443,20 +563,64 @@ int CmdLegicRfFill(const char *Cmd) {
 
 int CmdLegicCalcCrc8(const char *Cmd){
 
-	int len =  strlen(Cmd);	
-	if ( len & 1 ) return usage_legic_calccrc8(); 
+	uint8_t *data;
+	uint8_t cmdp = 0, uidcrc = 0, type=0;
+	bool errors = false;
+	int len = 0;
 	
-	// add 1 for null terminator.
-	uint8_t *data = malloc(len+1);
-	if ( data == NULL ) return 1;
-		
-	if (param_gethex(Cmd, 0, data, len )) {
-		free(data);
-		return usage_legic_calccrc8();	
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'b':
+		case 'B':
+			data = malloc(len);
+			if ( data == NULL ) {
+				PrintAndLog("Can't allocate memory. exiting");
+				errors = true;
+				break;
+			}			
+			param_gethex_ex(Cmd, cmdp+1, data, &len);
+			// if odd symbols, (hexbyte must be two symbols)
+			if ( len & 1 ) errors = true;
+
+			len >>= 1;	
+			cmdp += 2;
+			break;
+		case 'u':
+		case 'U':		 
+			uidcrc = param_get8ex(Cmd, cmdp+1, 0, 16);
+			cmdp += 2;
+			break;
+		case 'c':
+		case 'C':
+			type = param_get8ex(Cmd, cmdp+1, 0, 10);
+			cmdp += 2;
+			break;
+		case 'h':
+		case 'H':
+			errors = true;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+		if (errors) break;
+	}
+	//Validations
+	if (errors){
+		if (data != NULL) free(data);
+		return usage_legic_calccrc8();
 	}
 	
-	uint32_t checksum =  CRC8Legic(data, len/2);	
-	PrintAndLog("Bytes: %s || CRC8: %X", sprint_hex(data, len/2), checksum );
+	switch (type){
+		case 16:
+			PrintAndLog("LEGIC CRC16: %X", CRC16Legic(data, len, uidcrc));
+			break;
+		default:
+			PrintAndLog("LEGIC CRC8: %X",  CRC8Legic(data, len) );
+			break;
+	}
+	
 	free(data);
 	return 0;
 } 
@@ -469,6 +633,7 @@ static command_t CommandTable[] =  {
 	{"load",	CmdLegicLoad,   0, "<filename> -- Restore samples"},
 	{"sim",		CmdLegicRfSim,  0, "[phase drift [frame drift [req/resp drift]]] Start tag simulator (use after load or read)"},
 	{"write",	CmdLegicRfWrite,0, "<offset> <length> -- Write sample buffer (user after load or read)"},
+	{"writeRaw",CmdLegicRfRawWrite,	0, "<address> <value> -- Write direct to address"},
 	{"fill",	CmdLegicRfFill, 0, "<offset> <length> <value> -- Fill/Write tag with constant value"},
 	{"crc8",	CmdLegicCalcCrc8, 1, "Calculate Legic CRC8 over given hexbytes"},
 	{NULL, NULL, 0, NULL}

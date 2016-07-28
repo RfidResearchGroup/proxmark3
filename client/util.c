@@ -9,15 +9,13 @@
 //-----------------------------------------------------------------------------
 
 #include "util.h"
-#include "proxmark3.h"
 #define MAX_BIN_BREAK_LENGTH   (3072+384+1)
 
 #ifndef _WIN32
 #include <termios.h>
 #include <sys/ioctl.h> 
 
-int ukbhit(void)
-{
+int ukbhit(void) {
   int cnt = 0;
   int error;
   static struct termios Otty, Ntty;
@@ -553,4 +551,20 @@ uint32_t SwapBits(uint32_t value, int nrbits) {
 		newvalue ^= ((value >> i) & 1) << (nrbits - 1 - i);
 	}
 	return newvalue;
+}
+/*
+ ref  http://www.csm.ornl.gov/~dunigan/crc.html
+ Returns the value v with the bottom b [0,32] bits reflected. 
+ Example: reflect(0x3e23L,3) == 0x3e26
+*/
+uint32_t reflect(uint32_t v, int b) {
+	uint32_t t = v;
+	for ( int i = 0; i < b; ++i) {
+		if (t & 1)
+			v |=  BITMASK((b-1)-i);
+		else
+			v &= ~BITMASK((b-1)-i);
+		t>>=1;
+	}
+	return v;
 }

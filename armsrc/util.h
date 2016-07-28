@@ -14,6 +14,10 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "common.h"
+#include "string.h"
+#include "apps.h"
+#include "BigBuf.h"
+#include "proxmark3.h"
 
 #define BYTEx(x, n) (((x) >> (n * 8)) & 0xff )
 
@@ -27,9 +31,17 @@
 #define BUTTON_DOUBLE_CLICK -2
 #define BUTTON_ERROR -99
 
+#ifndef BSWAP_16
+# define BSWAP_16(x) ((( ((x) & 0xFF00 ) >> 8))| ( (((x) & 0x00FF) << 8)))
+#endif
+#ifndef BITMASK
+# define BITMASK(X) (1 << (X))
+#endif
+
 void print_result(char *name, uint8_t *buf, size_t len);
 size_t nbytes(size_t nbits);
 uint32_t SwapBits(uint32_t value, int nrbits);
+uint32_t reflect(uint32_t v, int b);
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
 uint64_t bytes_to_num(uint8_t* src, size_t len);
 void rol(uint8_t *data, const size_t len);
@@ -52,6 +64,7 @@ uint32_t RAMFUNC GetCountUS();
 //uint32_t RAMFUNC GetDeltaCountUS();
 
 void StartCountSspClk();
+void ResetSspClk(void);
 uint32_t RAMFUNC GetCountSspClk();
 
 #endif

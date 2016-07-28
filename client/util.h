@@ -15,7 +15,11 @@
 #include <ctype.h>
 #include <time.h> 
 #include "data.h"    //for FILE_PATH_SIZE
+#include "proxmark3.h"
 
+#ifndef BITMASK
+# define BITMASK(X) (1 << (X))
+#endif
 #ifndef ROTR
 # define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
 #endif
@@ -26,10 +30,14 @@
 # define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 #ifndef BSWAP_32
-#define BSWAP_32(x) \
+# define BSWAP_32(x) \
      ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) | \
       (((x) & 0x0000ff00) <<  8) | (((x) & 0x000000ff) << 24))
 #endif
+#ifndef BSWAP_16
+# define BSWAP_16(x) ((( ((x) & 0xFF00 ) >> 8))| ( (((x) & 0x00FF) << 8)))
+#endif
+
 #define TRUE                        1
 #define FALSE                       0
 #define EVEN                        0
@@ -94,3 +102,4 @@ uint32_t le32toh (uint8_t *data);
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits);
 void rol(uint8_t *data, const size_t len);
 uint32_t SwapBits(uint32_t value, int nrbits);
+uint32_t reflect(uint32_t v, int b);

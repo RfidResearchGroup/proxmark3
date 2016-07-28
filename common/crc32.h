@@ -9,7 +9,7 @@
 #ifndef __CRC32_H
 #define __CRC32_H
 
-void             	crc32 (const uint8_t *data, const size_t len, uint8_t *crc);
-void             	crc32_append (uint8_t *data, const size_t len);
+void crc32 (const uint8_t *data, const size_t len, uint8_t *crc);
+void crc32_append (uint8_t *data, const size_t len);
 
 #endif
