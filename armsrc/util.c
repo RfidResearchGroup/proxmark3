@@ -8,11 +8,7 @@
 // Utility functions used in many places, not specific to any piece of code.
 //-----------------------------------------------------------------------------
 
-#include "proxmark3.h"
 #include "util.h"
-#include "string.h"
-#include "apps.h"
-#include "BigBuf.h"
 
 void print_result(char *name, uint8_t *buf, size_t len) {
 	uint8_t *p = buf;
@@ -48,6 +44,23 @@ uint32_t SwapBits(uint32_t value, int nrbits) {
 	return newvalue;
 }
 
+/*
+ ref  http://www.csm.ornl.gov/~dunigan/crc.html
+ Returns the value v with the bottom b [0,32] bits reflected. 
+ Example: reflect(0x3e23L,3) == 0x3e26
+*/
+uint32_t reflect(uint32_t v, int b) {
+	uint32_t t = v;
+	for ( int i = 0; i < b; ++i) {
+		if (t & 1)
+			v |=  BITMASK((b-1)-i);
+		else
+			v &= ~BITMASK((b-1)-i);
+		t>>=1;
+	}
+	return v;
+}
+
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest) {
 	while (len--) {
 		dest[len] = (uint8_t) n;
@@ -80,13 +93,11 @@ void lsl (uint8_t *data, size_t len) {
     data[len - 1] <<= 1;
 }
 
-int32_t le24toh (uint8_t data[3])
-{
+int32_t le24toh (uint8_t data[3]) {
     return (data[2] << 16) | (data[1] << 8) | data[0];
 }
 
-void LEDsoff()
-{
+void LEDsoff() {
 	LED_A_OFF();
 	LED_B_OFF();
 	LED_C_OFF();
@@ -94,8 +105,7 @@ void LEDsoff()
 }
 
 // LEDs: R(C) O(A) G(B) -- R(D) [1, 2, 4 and 8]
-void LED(int led, int ms)
-{
+void LED(int led, int ms) {
 	if (led & LED_RED)
 		LED_C_ON();
 	if (led & LED_ORANGE)
@@ -120,13 +130,11 @@ void LED(int led, int ms)
 		LED_D_OFF();
 }
 
-
 // Determine if a button is double clicked, single clicked,
 // not clicked, or held down (for ms || 1sec)
 // In general, don't use this function unless you expect a
 // double click, otherwise it will waste 500ms -- use BUTTON_HELD instead
-int BUTTON_CLICKED(int ms)
-{
+int BUTTON_CLICKED(int ms) {
 	// Up to 500ms in between clicks to mean a double click
 	int ticks = (48000 * (ms ? ms : 1000)) >> 10;
 
@@ -188,8 +196,7 @@ int BUTTON_CLICKED(int ms)
 }
 
 // Determine if a button is held down
-int BUTTON_HELD(int ms)
-{
+int BUTTON_HELD(int ms) {
 	// If button is held for one second
 	int ticks = (48000 * (ms ? ms : 1000)) >> 10;
 
@@ -228,8 +235,7 @@ int BUTTON_HELD(int ms)
 
 // attempt at high resolution microsecond timer
 // beware: timer counts in 21.3uS increments (1024/48Mhz)
-void SpinDelayUs(int us)
-{
+void SpinDelayUs(int us) {
 	int ticks = (48*us) >> 10;
 
 	// Borrow a PWM unit for my real-time clock
@@ -250,8 +256,7 @@ void SpinDelayUs(int us)
 	}
 }
 
-void SpinDelay(int ms)
-{
+void SpinDelay(int ms) {
   // convert to uS and call microsecond delay function
 	SpinDelayUs(ms*1000);
 }
@@ -261,8 +266,7 @@ void SpinDelay(int ms)
  * verifies the magic properties, then stores a formatted string, prefixed by
  * prefix in dst.
  */
-void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_information)
-{
+void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_information) {
 	struct version_information *v = (struct version_information*)version_information;
 	dst[0] = 0;
 	strncat(dst, prefix, len-1);
@@ -301,8 +305,7 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
 //	ti = GetTickCount() - ti;
 //	Dbprintf("timer(1s): %d t=%d", ti, GetTickCount());
 
-void StartTickCount()
-{
+void StartTickCount() {
 	// This timer is based on the slow clock. The slow clock frequency is between 22kHz and 40kHz.
 	// We can determine the actual slow clock frequency by looking at the Main Clock Frequency Register.
     uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & 0xffff;		// = 16 * main clock frequency (16MHz) / slow clock frequency
@@ -321,8 +324,7 @@ uint32_t RAMFUNC GetTickCount(){
 //  -------------------------------------------------------------------------
 //  microseconds timer 
 //  -------------------------------------------------------------------------
-void StartCountUS()
-{
+void StartCountUS() {
 	AT91C_BASE_PMC->PMC_PCER |= (0x1 << 12) | (0x1 << 13) | (0x1 << 14);
 //	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC1XC1S_TIOA0;
 	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
@@ -363,8 +365,7 @@ uint32_t RAMFUNC GetCountUS(){
 //  -------------------------------------------------------------------------
 //  Timer for iso14443 commands. Uses ssp_clk from FPGA 
 //  -------------------------------------------------------------------------
-void StartCountSspClk()
-{
+void StartCountSspClk() {
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);  // Enable Clock to all timers
 	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_TIOA1 		// XC0 Clock = TIOA1
 							| AT91C_TCB_TC1XC1S_NONE 		// XC1 Clock = none
