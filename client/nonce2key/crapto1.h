@@ -19,8 +19,10 @@
 */
 #ifndef CRAPTO1_H__
 #define CRAPTO1_H__
+
 #include <stdint.h>
 #include "bucketsort.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
