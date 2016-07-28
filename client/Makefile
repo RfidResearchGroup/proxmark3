@@ -78,7 +78,8 @@ CORESRCS = 	uart.c \
 		sleep.c
 
 
-CMDSRCS = 	nonce2key/crapto1.c \
+CMDSRCS =	mifarehost.c \
+			nonce2key/crapto1.c \
 			nonce2key/crypto1.c \
 			nonce2key/nonce2key.c \
 			nonce2key/crypto1_bs.c \
@@ -88,7 +89,6 @@ CMDSRCS = 	nonce2key/crapto1.c \
 			loclass/ikeys.c \
 			loclass/elite_crack.c \
 			loclass/fileutils.c \
-			mifarehost.c \
 			parity.c \
 			crc.c \
 			crc16.c \
@@ -148,8 +148,9 @@ CMDSRCS = 	nonce2key/crapto1.c \
 			reveng/getopt.c \
 			tea.c \
 			prng.c \
-			radixsort.c \
 			bucketsort.c
+#			radixsort.c \
+
 		
 ZLIBSRCS = deflate.c adler32.c trees.c zutil.c inflate.c inffast.c inftrees.c
 ZLIB_FLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED 
