@@ -164,7 +164,22 @@ int usage_t55xx_bruteforce(){
     PrintAndLog("");
     return 0;
 }
-int usage_t55xx_wipe(){
+int usage_t55xx_recoverpw(){
+	PrintAndLog("This command uses a few tricks to try to recover mangled password");
+	PrintAndLog("WARNING: this may brick non-password protected chips!");
+	PrintAndLog("Usage: lf t55xx recoverpw [password]");
+	PrintAndLog("       password must be 4 bytes (8 hex symbols)");
+	PrintAndLog("       default password is 51243648, used by many cloners");
+	PrintAndLog("Options:");
+	PrintAndLog("     h           - this help");
+	PrintAndLog("     [password] - 4 byte hex value of password written by cloner");
+	PrintAndLog("");
+	PrintAndLog("Examples:");
+	PrintAndLog("       lf t55xx recoverpw");
+	PrintAndLog("       lf t55xx recoverpw 51243648");
+	PrintAndLog("");
+	return 0;
+}int usage_t55xx_wipe(){
 	PrintAndLog("Usage:  lf t55xx wipe [h] [Q5]");
 	PrintAndLog("This commands wipes a tag, fills blocks 1-7 with zeros and a default configuration block");
 	PrintAndLog("Options:");
@@ -1549,6 +1564,96 @@ int CmdT55xxBruteForce(const char *Cmd) {
     return 0;
 }
 
+int tryOnePassword(uint32_t password)
+{
+	PrintAndLog("Trying password %08x", password);
+	if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, password)) {
+		PrintAndLog("Aquireing data from device failed. Quitting");
+		return -1;
+	}
+
+	if (tryDetectModulation())
+		return 1;
+	else return 0;
+}
+
+int CmdT55xxRecoverPW(const char *Cmd) {
+	int bit = 0;
+	uint32_t orig_password = 0x0;
+	uint32_t curr_password = 0x0;
+	uint32_t prev_password = 0xffffffff;
+	uint32_t mask = 0x0;
+	int found = 0;
+
+	char cmdp = param_getchar(Cmd, 0);
+	if (cmdp == 'h' || cmdp == 'H') return usage_t55xx_recoverpw();
+
+	orig_password = param_get32ex(Cmd, 0, 0x51243648, 16); //password used by handheld cloners
+
+	// first try fliping each bit in the expected password
+	while ((found != 1) && (bit < 32)) {
+		curr_password = orig_password ^ ( 1 << bit );
+		found = tryOnePassword(curr_password);
+		if (found == 1)
+			goto done;
+		else if (found == -1)
+			return 0;
+		bit++;
+	}
+
+	// now try to use partial original password, since block 7 should have been completely
+	// erased during the write sequence and it is possible that only partial password has been
+	// written
+	// not sure from which end the bit bits are written, so try from both ends 
+	// from low bit to high bit
+	bit = 0;
+	while ((found != 1) && (bit < 32)) {
+		mask += ( 1 << bit );
+		curr_password = orig_password & mask;
+		// if updated mask didn't change the password, don't try it again
+		if (prev_password == curr_password) {
+			bit++;
+			continue;
+		}
+		found = tryOnePassword(curr_password);
+		if (found == 1)
+			goto done;
+		else if (found == -1)
+			return 0;
+		bit++;
+		prev_password=curr_password;
+	}
+
+	// from high bit to low
+	bit = 0;
+	mask = 0xffffffff;
+	while ((found != 1) && (bit < 32)) {
+		mask -= ( 1 << bit );
+		curr_password = orig_password & mask;
+		// if updated mask didn't change the password, don't try it again
+		if (prev_password == curr_password) {
+			bit++;
+			continue;
+		}
+		found = tryOnePassword(curr_password);
+		if (found == 1)
+			goto done;
+		else if (found == -1)
+			return 0;
+		bit++;
+		prev_password=curr_password;
+	}
+done:
+	PrintAndLog("");
+
+	if (found == 1)
+		PrintAndLog("Found valid password: [%08x]", curr_password);
+	else
+		PrintAndLog("Password NOT found.");
+
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,           1, "This help"},
 	{"bruteforce",CmdT55xxBruteForce,0, "<start password> <end password> [i <*.dic>] Simple bruteforce attack to find password"},
@@ -1558,6 +1663,7 @@ static command_t CommandTable[] = {
 	{"info",		CmdT55xxInfo,      1, "[1] Show T55x7 configuration data (page 0/ blk 0)"},
 	{"read",		CmdT55xxReadBlock, 0, "b <block> p [password] [o] [1] -- Read T55xx block data. Optional [p password], [override], [page1]"},
 	{"resetread",	CmdResetRead,      0, "Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)"},
+	{"recoverpw",	CmdT55xxRecoverPW, 0, "[password] Try to recover from bad password write from a cloner. Only use on PW protected chips!"},
 	{"special",		special,           0, "Show block changes with 64 different offsets"},	
 	{"trace",		CmdT55xxReadTrace, 1, "[1] Show T55x7 traceability data (page 1/ blk 0-1)"},
 	{"wakeup",		CmdT55xxWakeUp,    0, "Send AOR wakeup command"},
