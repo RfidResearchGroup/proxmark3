@@ -335,14 +335,15 @@ int CmdHIDWiegand(const char *Cmd) {
 	// 
 	uint8_t ftmlen[] = {26,33,34,35,37,38,40};
 	
-	PrintAndLog("HID | FC  | CN    |  Wiegand  |  HID Formatted");
-	PrintAndLog("----+-----+-------+-----------+--------------------");
+	PrintAndLog("HID | OEM |  FC |   CN  |  Wiegand  |  HID Formatted");
+	PrintAndLog("----+-----+-----+-------+-----------+--------------------");
 	for (uint8_t i = 0; i < sizeof(ftmlen); i++){
 		calcWiegand( ftmlen[i], fc, cardnum, bs);
 		blocks[0] = bytebits_to_byte(bs,32);
 		blocks[1] = bytebits_to_byte(bs+32,32);
-		PrintAndLog(" %d | %d  | %llu  | %08X%08X  |  %08X%08X ",
+		PrintAndLog(" %d | %d  | %d  | %llu  | %08X%08X  |  %08X%08X ",
 			ftmlen,
+			oem,
 			fc,
 			cardnum,
 			wiegand[0],
@@ -351,7 +352,7 @@ int CmdHIDWiegand(const char *Cmd) {
 			blocks[1]
 			);
 	}
-	PrintAndLog("----+-----+-------+-----------+--------------------");
+	PrintAndLog("----+-----+-----+-------+-----------+--------------------");
 	return 0;
 }
 
