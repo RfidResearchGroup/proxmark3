@@ -11,6 +11,17 @@
 #ifndef CMDLFHID_H__
 #define CMDLFHID_H__
 
+#include <stdio.h>
+#include <string.h>
+#include "proxmark3.h"
+#include "ui.h"
+#include "graph.h"
+#include "cmdparser.h"
+#include "util.h"
+#include "cmdmain.h"
+#include "sleep.h"
+#include "lfdemod.h"
+
 int CmdLFHID(const char *Cmd);
 //int CmdHIDDemod(const char *Cmd);
 int CmdHIDDemodFSK(const char *Cmd);
@@ -20,5 +31,9 @@ int CmdHIDWiegand(const char *Cmd);
 int CmdHIDBrute(const char *Cmd);
 
 int usage_lf_hid_wiegand(void);
+int usage_lf_hid_sim(void);
+int usage_lf_hid_clone(void);
 int usage_lf_hid_brute(void);
+
+void calc26(uint16_t fc, uint32_t cardno, uint8_t *out);
 #endif
