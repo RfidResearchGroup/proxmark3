@@ -547,7 +547,7 @@ int CmdLegicRfFill(const char *Cmd) {
 
     int i;
     UsbCommand c = {CMD_DOWNLOADED_SIM_SAMPLES_125K, {0, 0, 0}};
-	memcpy(c.d.asBytes, cmd.arg[2], 48);
+	memset(c.d.asBytes, cmd.arg[2], 48);
 
 	for(i = 0; i < 22; i++) {
 		c.arg[0] = i*48;

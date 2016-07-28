@@ -70,7 +70,7 @@ uint32_t CRC8ja(uint8_t *buff, size_t size);
 
 // test crc 16.
 uint32_t CRC16_DNP(uint8_t *buff, size_t size);
-
+uint32_t CRC16_CCITT(uint8_t *buff, size_t size);
 
 /* Static initialization of a crc structure */
 #define CRC_INITIALIZER(_order, _polynom, _initial_value, _final_xor) { \
