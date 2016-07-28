@@ -1687,12 +1687,12 @@ static void brute_force(void)
 
         time(&end);		
         double elapsed_time = difftime(end, start);
-		PrintAndLog("");
+		PrintAndLog("ICE %.f seconds", elapsed_time);
         if(keys_found){
-			PrintAndLog("Success! Tested %"PRIu64" states, found %u keys after %.f seconds", total_states_tested, keys_found, elapsed_time);
+			PrintAndLog("Success! Tested %"PRIu32" states, found %u keys after %.f seconds", total_states_tested, keys_found, elapsed_time);
 			PrintAndLog("\nFound key: %012"PRIx64"\n", foundkey);
         } else {
-			PrintAndLog("Fail! Tested %"PRIu64" states, in %.f seconds", total_states_tested, elapsed_time);
+			PrintAndLog("Fail! Tested %"PRIu32" states, in %.f seconds", total_states_tested, elapsed_time);
 		}
         // reset this counter for the next call
         nonces_to_bruteforce = 0;
