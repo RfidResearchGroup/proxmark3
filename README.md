@@ -178,7 +178,9 @@ Use only container tag [1.6.1]
 ##Buying a proxmark3
 The Proxmark 3 device is available for purchase (assembled and tested) from the following locations:
 
-   * http://www.elechouse.com  (new and revised hardware package 2015)  
+   * http://proxmark3.tictail.com/ (For buyers in EU, most likely in Sweden)
+ 
+   * http://www.elechouse.com/  (new and revised hardware package 2015, located in China)  
 
    I recommend you to buy this version. 
 

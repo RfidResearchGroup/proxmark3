@@ -22,26 +22,26 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_hid_wiegand(void){
-  	PrintAndLog("Usage: lf hid wiegand [h] [oem] [FacilityCode] [cardnumber]");
-	PrintAndLog("This command converts FC/Cardnum to wiegand code");
+  	PrintAndLog("Usage: lf hid wiegand [h] [OEM] [FC] [CN]");
+	PrintAndLog("This command converts facility code/card number to Wiegand code");
 	PrintAndLog("Options:");
-	PrintAndLog("       h			- This help");
-	PrintAndLog("       oem			- Oem number");
-	PrintAndLog("       facilitynum	- Facility number");
-	PrintAndLog("       cardnum		- Card number");
+	PrintAndLog("       h             - This help");
+	PrintAndLog("       OEM           - OEM number");
+	PrintAndLog("       FC            - facility code");
+	PrintAndLog("       CN            - card number");
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf hid wiegand 0 101 2001");
 	return 0;
 }
 int usage_lf_hid_brute(void){
-	PrintAndLog("Enables bruteforce of HID readers with specified facility-code.");
+	PrintAndLog("Enables bruteforce of HID readers with specified facility code.");
 	PrintAndLog("Different formatlength is supported");
 	PrintAndLog("This is a incremental attack against reader.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf hid brute <formatlength> <Facility-Code>");
+	PrintAndLog("Usage:  lf hid brute <format length> <facility code>");
 	PrintAndLog("Options :");
-	PrintAndLog("  <formatlength>	- 26|33|34|35|37|40|44|84");
-	PrintAndLog("  <Facility-Code>	- 8-bit value HID facility code");
+	PrintAndLog("  <format length>	- 26|33|34|35|37|40|44|84");
+	PrintAndLog("  <facility code>	- 8-bit value HID facility code");
 	PrintAndLog("");
 	PrintAndLog("Sample  : lf hid brute 26 224");
 	return 0;
@@ -303,7 +303,7 @@ int CmdHIDWiegand(const char *Cmd) {
 	uint8_t ftmlen[] = {26,33,34,35,37,38,40};
 	for (uint8_t i = 0; i < sizeof(ftmlen); i++){
 		calcWiegand( ftmlen[i], fc, cardnum, &hi, &lo);
-		PrintAndLog("HID %d bit | FC: %d CN: %llu | Wiegand Code: %08X%08X", ftmlen[i], fc, cardnum, hi, lo);
+		PrintAndLog("HID %d bit | OEM: %d FC: %d CN: %llu | Wiegand code: %08X%08X", ftmlen[i], oem, fc, cardnum, hi, lo);
 	}
 	return 0;
 }
@@ -332,7 +332,7 @@ int CmdHIDBrute(const char *Cmd){
   	fc =  param_get8(Cmd, 1);
 	if ( fc == 0) return usage_lf_hid_brute();
 	
-	PrintAndLog("Bruteforceing HID Reader");
+	PrintAndLog("Brute-forcing HID reader");
 	PrintAndLog("Press pm3-button to abort simulation or run another command");
 
 	for ( uint16_t cn = 1; cn < 0xFFFF; ++cn){
@@ -362,13 +362,13 @@ int CmdHIDBrute(const char *Cmd){
 }
 
 static command_t CommandTable[] = {
-	{"help",	CmdHelp,		1, "This help"},
-	//{"demod",	CmdHIDDemod,	1, "Demodulate HID Prox Card II (not optimal)"},
-	{"fskdemod",CmdHIDDemodFSK,	0, "['1'] Realtime HID FSK demodulator (option '1' for one tag only)"},
-	{"sim",		CmdHIDSim,		0, "<ID> -- HID tag simulator"},
-	{"clone",	CmdHIDClone,	0, "<ID> ['l'] -- Clone HID to T55x7 (tag must be in antenna)(option 'l' for 84bit ID)"},
-	{"wiegand",	CmdHIDWiegand,	0, "<oem> <fc> <cardnum> -- convert facilitycode, cardnumber to Wiegand code"},
-	{"brute",	CmdHIDBrute,	0, "<formatlength> <Facility-Code> -- bruteforce card number"},
+	{"help",    CmdHelp,        1, "This help"},
+// 	{"demod",   CmdHIDDemod,    1, "Demodulate HID Prox Card II (not optimal)"},
+	{"fskdemod",CmdHIDDemodFSK, 0, "['1'] Realtime HID FSK demodulator (option '1' for one tag only)"},
+	{"sim",     CmdHIDSim,      0, "<ID> -- HID tag simulator"},
+	{"clone",   CmdHIDClone,    0, "<ID> ['l'] -- Clone HID to T55x7 (tag must be in antenna)(option 'l' for 84bit ID)"},
+	{"wiegand", CmdHIDWiegand,  0, "<OEM> <facility code> <card number> -- convert facility code/card number to Wiegand code"},
+	{"brute",   CmdHIDBrute, 0, "<format length> <facility code> -- brute force card number"},
 	{NULL, NULL, 0, NULL}
 };
 
