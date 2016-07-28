@@ -25,13 +25,105 @@ int usage_analyse_lcr(void) {
 	PrintAndLog("expected output: Target (BA) requires final LRC XOR byte value: 5A");
 	return 0;
 }
+
+int usage_analyse_checksum(void) {
+	PrintAndLog("The bytes will be added with eachother and than limited with the applied mask");
+	PrintAndLog("Finally compute ones' complement of the least significant bytes");
+	PrintAndLog("");
+	PrintAndLog("Usage:  analyse chksum [h] b <bytes> m <mask>");
+	PrintAndLog("Options:");
+	PrintAndLog("           h          This help");
+	PrintAndLog("           b <bytes>  bytes to calc missing XOR in a LCR");
+	PrintAndLog("           m <mask>   bit mask to limit the outpuyt");
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("           analyse chksum b 137AF00A0A0D m FF");
+	PrintAndLog("expected output: 0x61");
+	return 0;
+}
+
+int usage_analyse_crc(void){
+	PrintAndLog("A stub method to test different crc implementations inside the PM3 sourcecode. Just because you figured out the poly, doesn't mean you get the desired output");
+	PrintAndLog("");
+	PrintAndLog("Usage:  analyse crc [h] <bytes>");
+	PrintAndLog("Options:");
+	PrintAndLog("           h          This help");
+	PrintAndLog("           <bytes>    bytes to calc crc");
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("           analyse crc 137AF00A0A0D");
+	return 0;
+}
+
 static uint8_t calculateLRC( uint8_t* bytes, uint8_t len) {
     uint8_t LRC = 0;
     for (uint8_t i = 0; i < len; i++)
         LRC ^= bytes[i];
     return LRC;
 }
-	
+
+static uint8_t calcSumCrumbAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < len; i++) {
+        sum += CRUMB(bytes[i], 0);
+		sum += CRUMB(bytes[i], 2);
+		sum += CRUMB(bytes[i], 4);
+		sum += CRUMB(bytes[i], 6);
+	}
+	sum ^= mask;	
+    return sum;
+}
+static uint8_t calcSumCrumbAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask) {
+	return ~calcSumCrumbAdd(bytes, len, mask);
+}
+static uint8_t calcSumNibbleAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < len; i++) {
+        sum += NIBBLE_LOW(bytes[i]);
+		sum += NIBBLE_HIGH(bytes[i]);
+	}
+	sum ^= mask;	
+    return sum;
+}
+static uint8_t calcSumNibbleAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask){
+	return ~calcSumNibbleAdd(bytes, len, mask);
+}
+
+static uint8_t calcSumByteAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < len; i++)
+        sum += bytes[i];
+	sum ^= mask;	
+    return sum;
+}
+// Ones complement
+static uint8_t calcSumByteAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask) {
+	return ~calcSumByteAdd(bytes, len, mask);
+}
+
+static uint8_t calcSumByteSub( uint8_t* bytes, uint8_t len, uint32_t mask) {
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < len; i++)
+        sum -= bytes[i];
+	sum ^= mask;	
+    return sum;
+}
+static uint8_t calcSumByteSubOnes( uint8_t* bytes, uint8_t len, uint32_t mask){
+	return ~calcSumByteSub(bytes, len, mask);
+}
+static uint8_t calcSumNibbleSub( uint8_t* bytes, uint8_t len, uint32_t mask) {
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < len; i++) {
+        sum -= NIBBLE_LOW(bytes[i]);
+		sum -= NIBBLE_HIGH(bytes[i]);
+	}
+	sum ^= mask;	
+    return sum;
+}
+static uint8_t calcSumNibbleSubOnes( uint8_t* bytes, uint8_t len, uint32_t mask) {
+	return ~calcSumNibbleSub(bytes, len, mask);
+}
+
 int CmdAnalyseLCR(const char *Cmd) {
 	uint8_t data[50];
 	char cmdp = param_getchar(Cmd, 0);
@@ -45,17 +137,117 @@ int CmdAnalyseLCR(const char *Cmd) {
 	PrintAndLog("Target [%02X] requires final LRC XOR byte value: 0x%02X",data[len-1] ,finalXor);
 	return 0;
 }
+int CmdAnalyseCRC(const char *Cmd) {
+
+	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_analyse_crc();
+	
+	int len = strlen(Cmd);
+	if ( len & 1 ) return usage_analyse_crc();
+	
+	// add 1 for null terminator.
+	uint8_t *data = malloc(len+1);
+	if ( data == NULL ) return 1;
+
+	if ( param_gethex(Cmd, 0, data, len)) {
+		free(data);
+		return usage_analyse_crc();
+	}
+	len >>= 1;	
+
+	PrintAndLog("\nTests with '%s' hex bytes", sprint_hex(data, len));
+	PrintAndLog("   JA: CRC8: %X  (0x6C expected)", CRC8ja(data, len) );
+	
+	PrintAndLog("\nTests of reflection. Two current methods in source code");	
+	PrintAndLog("   reflect(0x3e23L,3) is %04X == 0x3e26", reflect(0x3e23L,3) );
+	PrintAndLog("  SwapBits(0x3e23L,3) is %04X == 0x3e26", SwapBits(0x3e23L,3) );
+	PrintAndLog("  0xB400 == %04X", reflect( (1 << 16 | 0xb400),16) );
+
+	//
+	// Test of CRC16,  '123456789' string.
+	//
+	PrintAndLog("\nTests with '123456789' string");
+	uint8_t dataStr[] = { 0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39 };
+	uint8_t legic8 = CRC8Legic(dataStr, sizeof(dataStr));
+	
+	PrintAndLog("JA: CRC8 : %X (0x28 expected)", CRC8ja(dataStr, sizeof(dataStr)) );
+	PrintAndLog("LEGIC: CRC16: %X", CRC16Legic(dataStr, sizeof(dataStr), legic8));
+
+	//these below has been tested OK.
+	PrintAndLog("Confirmed CRC Implementations");
+	PrintAndLog("LEGIC: CRC8 : %X (0xC6 expected)", legic8);
+	PrintAndLog("MAXIM: CRC8 : %X (0xA1 expected)", CRC8Maxim(dataStr, sizeof(dataStr)));
+	PrintAndLog("DNP  : CRC16: %X (0x82EA expected)", CRC16_DNP(dataStr, sizeof(dataStr)));	
+	PrintAndLog("CCITT: CRC16: %X (0xE5CC expected)", CRC16_CCITT(dataStr, sizeof(dataStr)));	
+
+	free(data);
+	return 0;
+}
+int CmdAnalyseCHKSUM(const char *Cmd){
+	
+	uint8_t data[50];
+	uint8_t cmdp = 0;
+	uint32_t mask = 0xFF;
+	bool errors = false;
+	int len = 0;
+	
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'b':
+		case 'B':
+			param_gethex_ex(Cmd, cmdp+1, data, &len);
+			if ( len%2 ) errors = true;
+			len >>= 1;	
+			cmdp += 2;
+			break;
+		case 'm':
+		case 'M':		 
+			mask = param_get32ex(Cmd, cmdp+1, 0, 16);
+			cmdp += 2;
+			break;
+		case 'h':
+		case 'H':
+			return usage_analyse_checksum();
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+		if(errors) break;
+	}
+	//Validations
+	if(errors) return usage_analyse_checksum();
+	
+	PrintAndLog("\nByte Add        | 0x%X", calcSumByteAdd(data, len, mask));
+	PrintAndLog("Nibble Add      | 0x%X", calcSumNibbleAdd(data, len, mask));
+	PrintAndLog("Crumb Add       | 0x%X", calcSumCrumbAdd(data, len, mask));
+	
+	PrintAndLog("\nByte Subtract   | 0x%X", calcSumByteSub(data, len, mask));
+	PrintAndLog("Nibble Subtract | 0x%X", calcSumNibbleSub(data, len, mask));
+	
+	PrintAndLog("\nCHECKSUM - One's complement");
+	PrintAndLog("Byte Add        | 0x%X", calcSumByteAddOnes(data, len, mask));
+	PrintAndLog("Nibble Add      | 0x%X", calcSumNibbleAddOnes(data, len, mask));
+	PrintAndLog("Crumb Add       | 0x%X", calcSumCrumbAddOnes(data, len, mask));
+
+	PrintAndLog("Byte Subtract   | 0x%X", calcSumByteSubOnes(data, len, mask));
+	PrintAndLog("Nibble Subtract | 0x%X", calcSumNibbleSubOnes(data, len, mask));
+	
+	return 0;
+}
 
 int CmdAnalyseDates(const char *Cmd){
 	// look for datestamps in a given array of bytes
-	PrintAndLog("To be implemented.  If you feel to contribute!");
+	PrintAndLog("To be implemented. Feel free to contribute!");
 	return 0;
 }
 
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,            1, "This help"},
-	{"lcr",		CmdAnalyseLCR,		0, "Generate final byte for XOR LRC"},
-	{"dates",	CmdAnalyseDates,	0, "Look for datestamps in a given array of bytes"},
+	{"lcr",		CmdAnalyseLCR,		1, "Generate final byte for XOR LRC"},
+	{"crc",		CmdAnalyseCRC,		1, "Stub method for CRC evaluations"},
+	{"chksum",	CmdAnalyseCHKSUM,	1, "Checksum with adding, masking and one's complement"},
+	{"dates",	CmdAnalyseDates,	1, "Look for datestamps in a given array of bytes"},
 	{NULL, NULL, 0, NULL}
 };
 

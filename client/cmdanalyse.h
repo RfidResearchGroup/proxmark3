@@ -16,9 +16,16 @@
 #include "cmdmain.h"
 #include "proxmark3.h"
 #include "ui.h"		// PrintAndLog
-command_t * CmdDataCommands();
+#include "util.h"
+#include "crc.h"
+
+int usage_analyse_lcr(void);
+int usage_analyse_checksum(void);
+int usage_analyse_crc(void);
 
 int CmdAnalyse(const char *Cmd);
 int CmdAnalyseLCR(const char *Cmd);
+int CmdAnalyseCHKSUM(const char *Cmd);
 int CmdAnalyseDates(const char *Cmd);
+int CmdAnalyseCRC(const char *Cmd);
 #endif
