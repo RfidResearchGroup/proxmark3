@@ -14,32 +14,36 @@ static int CmdHelp(const char *Cmd);
 int usage_legic_calccrc8(void){
 	PrintAndLog("Calculates the legic crc8/crc16 on the input hexbytes.");
 	PrintAndLog("There must be an even number of hexsymbols as input.");
-	PrintAndLog("Usage:  hf legic crc8 [h] b <hexbytes> u <uidcrc>");
-	PrintAndLog("Options :");
+	PrintAndLog("Usage:  hf legic crc8 [h] b <hexbytes> u <uidcrc> c <crc type>");
+	PrintAndLog("Options:");
 	PrintAndLog("      b <hexbytes>  : hex bytes");
 	PrintAndLog("      u <uidcrc>    : MCC hexbyte");
+	PrintAndLog("      c <crc type>  : 8|16 bit crc size");
 	PrintAndLog("");
-	PrintAndLog("Samples :");
+	PrintAndLog("Samples:");
 	PrintAndLog("      hf legic crc8 b deadbeef1122");
-	PrintAndLog("      hf legic crc8 b deadbeef1122 u 9A");
+	PrintAndLog("      hf legic crc8 b deadbeef1122 u 9A c 16");
 	return 0;
 }
 
 int usage_legic_load(void){
 	PrintAndLog("It loads datasamples from the file `filename` to device memory");
 	PrintAndLog("Usage:  hf legic load <file name>");
-	PrintAndLog(" sample: hf legic load filename");
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("      hf legic load filename");
 	return 0;
 }
 
 int usage_legic_read(void){	
 	PrintAndLog("Read data from a legic tag.");
 	PrintAndLog("Usage:  hf legic read <offset> <num of bytes>");
-	PrintAndLog("Options :");
+	PrintAndLog("Options:");
 	PrintAndLog("  <offset>        : offset in data array to start download from");
 	PrintAndLog("  <num of bytes>  : number of bytes to download");
 	PrintAndLog("");
-	PrintAndLog(" sample: hf legic read");
+	PrintAndLog("Samples:");
+	PrintAndLog("      hf legic read");
 	return 0;
 }
 
@@ -621,7 +625,7 @@ int CmdLegicCalcCrc8(const char *Cmd){
 			break;
 	}
 	
-	free(data);
+	if (data != NULL) free(data);
 	return 0;
 } 
  

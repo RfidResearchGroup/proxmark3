@@ -99,8 +99,8 @@ uint32_t CRC8Legic(uint8_t *buff, size_t size) {
 uint32_t CRC16Legic(uint8_t *buff, size_t size, uint8_t uidcrc) {
 
 	#define CRC16_POLY_LEGIC 0xB400
-	//uint8_t initial = reflect(uidcrc, 8);
-	uint16_t initial = uidcrc;
+	uint16_t initial = reflect(uidcrc, 8);
+	//uint16_t initial = uidcrc;
 	initial |= initial << 8;
 	crc_t crc;
 	crc_init_ref(&crc, 16, CRC16_POLY_LEGIC, initial, 0, TRUE, TRUE);
