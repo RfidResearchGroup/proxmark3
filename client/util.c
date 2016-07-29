@@ -352,8 +352,6 @@ uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base)
 		return strtoull(&line[bg], NULL, base);
 	else
 		return deflt;
-
-	return 0;
 }
 
 int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt)
