@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------------
 // Low frequency Presco tag commands
 //-----------------------------------------------------------------------------
+#include <math.h>
 #include "cmdlfjablotron.h"
 
 static int CmdHelp(const char *Cmd);
@@ -57,6 +58,17 @@ int getJablotronBits(uint64_t fullcode, uint8_t *bits) {
 	return 1;
 }
 
+static uint64_t getJablontronCardId( uint64_t rawcode ){
+	uint64_t id = 0;
+	uint8_t bytes[] = {0,0,0,0,0};
+	num_to_bytes(rawcode, 5, bytes);
+	for ( int i = 4, j = 0; i > -1;  --i, j += 2 ) {
+		id += NIBBLE_LOW( bytes[i] ) * (int)pow(10,j);
+		id += NIBBLE_HIGH( bytes[i] ) * (int)pow(10,j+1);
+	}
+	return id;
+}
+
 //see ASKDemod for what args are accepted
 int CmdJablotronDemod(const char *Cmd) {
 
@@ -93,11 +105,11 @@ int CmdJablotronDemod(const char *Cmd) {
 	//got a good demod
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
 	uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
-	uint64_t cardid = (raw1 & 0xFFFF);
-	cardid <<= 24;
-	cardid |= (raw2 >> 8);
-	
-	PrintAndLog("Jablotron Tag Found: Card ID %"PRIx64, cardid);
+
+	uint64_t rawid = bytebits_to_byte(DemodBuffer+16, 40);
+	uint64_t id = getJablontronCardId(rawid);
+
+	PrintAndLog("Jablotron Tag Found: Card ID %u", id);
 	PrintAndLog("Raw: %08X%08X", raw1 ,raw2);
 
 	uint8_t chksum = raw2 & 0xFF;
@@ -105,13 +117,14 @@ int CmdJablotronDemod(const char *Cmd) {
 		chksum,
 		(chksum == jablontron_chksum(DemodBuffer)) ? "OK":"FAIL"		
 	);
-		
+
+	id = DEC2BCD(id);
 	// Printed format: 1410-nn-nnnn-nnnn	
-	PrintAndLog("Printed:  1410-%02X-%04X-%04X",
-		(raw1 & 0x0000FF00) >> 8,
-		(raw1 & 0xFF) << 8 | ((raw2 >> 24) & 0xFF),
-		(raw2 & 0x00FFFF00) >> 8
-	);	
+	PrintAndLog("Printed: 1410-%02X-%04X-%04X",
+		(uint8_t)(id >> 32) & 0xFF,
+		(uint16_t)(id >> 16) & 0xFFFF,
+		(uint16_t)id & 0xFFFF
+	);
 	return 1;
 }
 
