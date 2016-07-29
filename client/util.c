@@ -566,3 +566,12 @@ uint32_t reflect(uint32_t v, int b) {
 	}
 	return v;
 }
+
+uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor) {
+   uint64_t remainder=0, quotient=0, result=0;
+   remainder = num % divider;
+   quotient = num / divider;
+   if(!(quotient == 0 && remainder == 0))
+   result += HornerScheme(quotient, divider, factor) * factor + remainder;
+   return result;
+}

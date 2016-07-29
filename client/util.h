@@ -9,12 +9,13 @@
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
-#include <stdint.h>  //included in data.h
+#include <stdint.h>		//included in data.h
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <time.h> 
-#include "data.h"    //for FILE_PATH_SIZE
+#include <time.h>
+#include <math.h>		// math.pow
+#include "data.h"		// for FILE_PATH_SIZE
 #include "proxmark3.h"
 
 #ifndef BITMASK
@@ -55,6 +56,14 @@
 #ifndef SWAP_NIBBLE
 # define SWAP_NIBBLE(b)  ( (NIBBLE_LOW(b)<< 4) | NIBBLE_HIGH(b))
 #endif
+
+#ifndef BCD2DEC
+# define BCD2DEC(bcd) HornerScheme(bcd, 0x10, 10)
+#endif
+#ifndef DEC2BCD
+# define DEC2BCD(dec) HornerScheme(dec, 10, 0x10)
+#endif
+
 int ukbhit(void);
 
 void AddLogLine(char *fileName, char *extData, char *c);
@@ -103,3 +112,4 @@ uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits);
 void rol(uint8_t *data, const size_t len);
 uint32_t SwapBits(uint32_t value, int nrbits);
 uint32_t reflect(uint32_t v, int b);
+uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
