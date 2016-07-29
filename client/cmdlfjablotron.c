@@ -12,26 +12,26 @@ static int CmdHelp(const char *Cmd);
 
 int usage_lf_jablotron_clone(void){
 	PrintAndLog("clone a Jablotron tag to a T55x7 tag.");
-	PrintAndLog("Usage: lf jablotron clone d <Card-ID> <Q5>");
-	PrintAndLog("Options :");
-	PrintAndLog("  d <Card-ID>   : jablotron card ID");
-	PrintAndLog("  <Q5>          : specify write to Q5 (t5555 instead of t55x7)");
+	PrintAndLog("Usage: lf jablotron clone [h] <card ID> <Q5>");
+	PrintAndLog("Options:");
+	PrintAndLog("      h          : This help");
+	PrintAndLog("      <card ID>  : jablotron card ID");
+	PrintAndLog("      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf jablotron clone d 123456789");
+	PrintAndLog("Sample: lf jablotron clone d 112233");
 	return 0;
 }
 
 int usage_lf_jablotron_sim(void) {
 	PrintAndLog("Enables simulation of jablotron card with specified card number.");
 	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
-	PrintAndLog("Per jablotron format, the card number is 9 digit number and can contain *# chars. Larger values are truncated.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf jablotron sim d <Card-ID> or H <hex-ID>");
-	PrintAndLog("Options :");
-	PrintAndLog("  d <Card-ID>   : jablotron card number");
-//	PrintAndLog("  H <hex-ID>    : 8 digit hex card number");
+	PrintAndLog("Usage:  lf jablotron sim [h] <card ID>");
+	PrintAndLog("Options:");
+	PrintAndLog("      h          : This help");
+	PrintAndLog("      <card ID>  : jablotron card ID");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf jablotron sim d 123456789");
+	PrintAndLog("Sample: lf jablotron sim d 112233");
 	return 0;
 }
 
@@ -88,7 +88,7 @@ int CmdJablotronDemod(const char *Cmd) {
 	cardid <<= 32;
 	cardid |= (raw2 >> 8);
 	
-	PrintAndLog("Jablotron Tag Found: Card ID %12X", cardid);
+	PrintAndLog("Jablotron Tag Found: Card ID %012X", cardid);
 	PrintAndLog("Raw: %08X%08X", raw1 ,raw2);
 
 	setDemodBuf(DemodBuffer+ans, 64, 0);
@@ -98,11 +98,8 @@ int CmdJablotronDemod(const char *Cmd) {
 }
 
 int CmdJablotronRead(const char *Cmd) {
-	// read lf silently
 	CmdLFRead("s");
-	// get samples silently
 	getSamples("30000",false);
-	// demod and output Presco ID	
 	return CmdJablotronDemod(Cmd);
 }
 
@@ -118,10 +115,10 @@ int CmdJablotronClone(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_jablotron_clone();
 
-	fullcode = param_get64ex(Cmd, 1, 0, 16);
+	fullcode = param_get64ex(Cmd, 0, 0, 16);
 	
 	//Q5
-	if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q') {
+	if (param_getchar(Cmd, 1) == 'Q' || param_getchar(Cmd, 1) == 'q') {
 		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
 		blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | 64<<T5555_BITRATE_SHIFT | 2<<T5555_MAXBLOCK_SHIFT;
 	}
@@ -140,7 +137,7 @@ int CmdJablotronClone(const char *Cmd) {
 	blocks[1] = bytebits_to_byte(bs,32);
 	blocks[2] = bytebits_to_byte(bs+32,32);
 
-	PrintAndLog("Preparing to clone Jablotron to T55x7 with FullCode: %12X", fullcode);
+	PrintAndLog("Preparing to clone Jablotron to T55x7 with FullCode: %012X", fullcode);
 	PrintAndLog("Blk | Data ");
 	PrintAndLog("----+------------");
 	PrintAndLog(" 00 | 0x%08x", blocks[0]);
@@ -169,7 +166,7 @@ int CmdJablotronSim(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_jablotron_sim();
 
-	fullcode = param_get64ex(Cmd, 1, 0, 16);
+	fullcode = param_get64ex(Cmd, 0, 0, 16);
 	
 	uint8_t clk = 64, encoding = 2, separator = 0, invert = 1;
 	uint16_t arg1, arg2;
@@ -177,7 +174,7 @@ int CmdJablotronSim(const char *Cmd) {
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
 
-	PrintAndLog("Simulating Jablotron - FullCode: %12X", fullcode);
+	PrintAndLog("Simulating Jablotron - FullCode: %012X", fullcode);
 
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 	getJablotronBits(fullcode, c.d.asBytes);
@@ -188,9 +185,9 @@ int CmdJablotronSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",	CmdHelp,			1, "This help"},
-	{"read",	CmdJablotronRead,	0, "Attempt to read and Extract tag data"},
-	{"clone",	CmdJablotronClone,	0, "h <hex> [Q5] clone jablotron tag"},
-	{"sim",		CmdJablotronSim,	0, "h <hex> simulate jablotron tag"},
+	{"read",	CmdJablotronRead,	0, "Attempt to read and extract tag data"},
+	{"clone",	CmdJablotronClone,	0, "clone jablotron tag"},
+	{"sim",		CmdJablotronSim,	0, "simulate jablotron tag"},
     {NULL, NULL, 0, NULL}
 };
 

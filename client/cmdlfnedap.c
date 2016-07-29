@@ -14,12 +14,13 @@ static int CmdHelp(const char *Cmd);
 int usage_lf_nedap_clone(void){
 	PrintAndLog("clone a NEDAP tag to a T55x7 tag.");
 	PrintAndLog("");
-	PrintAndLog("Usage: lf nedap clone <Card-Number>");
-	PrintAndLog("Options :");
-	PrintAndLog("  <Card Number>   : 24-bit value card number");
-//	PrintAndLog("  Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
+	PrintAndLog("Usage: lf nedap clone [h] <Card-Number>");
+	PrintAndLog("Options:");
+	PrintAndLog("      h             : This help");
+	PrintAndLog("      <Card Number> : 24-bit value card number");
+//	PrintAndLog("      Q5            : optional - clone to Q5 (T5555) instead of T55x7 chip");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf nedap clone 112233");
+	PrintAndLog("Sample: lf nedap clone 112233");
 	return 0;
 }
 
@@ -27,11 +28,12 @@ int usage_lf_nedap_sim(void) {
 	PrintAndLog("Enables simulation of NEDAP card with specified card number.");
 	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf nedap sim <Card-Number>");
-	PrintAndLog("Options :");
-	PrintAndLog("  <Card Number>   : 24-bit value card number");
+	PrintAndLog("Usage:  lf nedap sim [h] <Card-Number>");
+	PrintAndLog("Options:");
+	PrintAndLog("      h               : This help");
+	PrintAndLog("      <Card Number>   : 24-bit value card number");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf nedap sim 112233");
+	PrintAndLog("Sample: lf nedap sim 112233");
 	return 0;
 }
 
@@ -277,7 +279,7 @@ int CmdLFNedapSim(const char *Cmd) {
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
 
-	if (sscanf(Cmd, "%u", &cn ) != 2) return usage_lf_nedap_sim();
+	if (sscanf(Cmd, "%u", &cn ) != 1) return usage_lf_nedap_sim();
 	cardnumber = (cn & 0x00FFFFFF);
 	
 	if ( !GetNedapBits(cardnumber, bs)) {
@@ -293,8 +295,6 @@ int CmdLFNedapSim(const char *Cmd) {
 	SendCommand(&c);
 	return 0;
 }
-
-
 
 int CmdLFNedapChk(const char *Cmd){
     
