@@ -70,7 +70,7 @@ static uint8_t calcSumCrumbAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
 		sum += CRUMB(bytes[i], 4);
 		sum += CRUMB(bytes[i], 6);
 	}
-	sum ^= mask;	
+	sum &= mask;	
     return sum;
 }
 static uint8_t calcSumCrumbAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask) {
@@ -82,7 +82,7 @@ static uint8_t calcSumNibbleAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
         sum += NIBBLE_LOW(bytes[i]);
 		sum += NIBBLE_HIGH(bytes[i]);
 	}
-	sum ^= mask;	
+	sum &= mask;	
     return sum;
 }
 static uint8_t calcSumNibbleAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask){
@@ -93,7 +93,7 @@ static uint8_t calcSumByteAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
     uint8_t sum = 0;
     for (uint8_t i = 0; i < len; i++)
         sum += bytes[i];
-	sum ^= mask;	
+	sum &= mask;	
     return sum;
 }
 // Ones complement
@@ -105,7 +105,7 @@ static uint8_t calcSumByteSub( uint8_t* bytes, uint8_t len, uint32_t mask) {
     uint8_t sum = 0;
     for (uint8_t i = 0; i < len; i++)
         sum -= bytes[i];
-	sum ^= mask;	
+	sum &= mask;	
     return sum;
 }
 static uint8_t calcSumByteSubOnes( uint8_t* bytes, uint8_t len, uint32_t mask){
@@ -117,7 +117,7 @@ static uint8_t calcSumNibbleSub( uint8_t* bytes, uint8_t len, uint32_t mask) {
         sum -= NIBBLE_LOW(bytes[i]);
 		sum -= NIBBLE_HIGH(bytes[i]);
 	}
-	sum ^= mask;	
+	sum &= mask;	
     return sum;
 }
 static uint8_t calcSumNibbleSubOnes( uint8_t* bytes, uint8_t len, uint32_t mask) {
@@ -155,8 +155,7 @@ int CmdAnalyseCRC(const char *Cmd) {
 	}
 	len >>= 1;	
 
-	PrintAndLog("\nTests with '%s' hex bytes", sprint_hex(data, len));
-	PrintAndLog("   JA: CRC8: %X  (0x6C expected)", CRC8ja(data, len) );
+	//PrintAndLog("\nTests with '%s' hex bytes", sprint_hex(data, len));
 	
 	PrintAndLog("\nTests of reflection. Two current methods in source code");	
 	PrintAndLog("   reflect(0x3e23L,3) is %04X == 0x3e26", reflect(0x3e23L,3) );
@@ -170,7 +169,6 @@ int CmdAnalyseCRC(const char *Cmd) {
 	uint8_t dataStr[] = { 0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39 };
 	uint8_t legic8 = CRC8Legic(dataStr, sizeof(dataStr));
 	
-	PrintAndLog("JA: CRC8 : %X (0x28 expected)", CRC8ja(dataStr, sizeof(dataStr)) );
 	PrintAndLog("LEGIC: CRC16: %X", CRC16Legic(dataStr, sizeof(dataStr), legic8));
 
 	//these below has been tested OK.

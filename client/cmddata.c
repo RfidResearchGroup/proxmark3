@@ -527,7 +527,11 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 	
 	uint8_t BitStream[MAX_DEMOD_BUF_LEN];
-	size_t size = getFromGraphBuf(BitStream);	  
+	size_t size = getFromGraphBuf(BitStream);	
+	if (size == 0 ) {
+		if (g_debugMode) PrintAndLog("DEBUG: no data in graphbuf");  
+			return 0;  
+	}
 	//invert here inverts the ask raw demoded bits which has no effect on the demod, but we need the pointer
 	int errCnt = askdemod(BitStream, &size, &clk, &invert, maxErr, 0, 0);  
 	if ( errCnt < 0 || errCnt > maxErr ) {   

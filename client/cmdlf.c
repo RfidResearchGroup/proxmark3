@@ -637,115 +637,113 @@ int CmdLFSim(const char *Cmd)
 	return 0;
 }
 
-// by marshmellow - sim ask data given clock, fcHigh, fcLow, invert 
+// by marshmellow - sim fsk data given clock, fcHigh, fcLow, invert 
 // - allow pull data from DemodBuffer
 int CmdLFfskSim(const char *Cmd)
 {
 	//might be able to autodetect FCs and clock from Graphbuffer if using demod buffer
 	// otherwise will need FChigh, FClow, Clock, and bitstream
-  uint8_t fcHigh=0, fcLow=0, clk=0;
-  uint8_t invert=0;
-  bool errors = FALSE;
-  char hexData[32] = {0x00}; // store entered hex data
-  uint8_t data[255] = {0x00}; 
-  int dataLen = 0;
-  uint8_t cmdp = 0;
-  while(param_getchar(Cmd, cmdp) != 0x00)
-  {
-    switch(param_getchar(Cmd, cmdp))
-    {
-    case 'h':
-      return usage_lf_simfsk();
-    case 'i':
-      invert = 1;
-      cmdp++;
-      break;
-    case 'c':
-      errors |= param_getdec(Cmd,cmdp+1,&clk);
-      cmdp+=2;
-      break;
-    case 'H':
-      errors |= param_getdec(Cmd,cmdp+1,&fcHigh);
-      cmdp+=2;
-      break;
-    case 'L':
-      errors |= param_getdec(Cmd,cmdp+1,&fcLow);
-      cmdp+=2;
-      break;
-    //case 's':
-    //  separator=1;
-    //  cmdp++;
-    //  break;
-    case 'd':
-      dataLen = param_getstr(Cmd, cmdp+1, hexData);
-      if (dataLen==0) {
-        errors=TRUE; 
-      } else {
-        dataLen = hextobinarray((char *)data, hexData);
-      }   
-      if (dataLen==0) errors=TRUE; 
-      if (errors) PrintAndLog ("Error getting hex data");
-      cmdp+=2;
-      break;
-    default:
-      PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-      errors = TRUE;
-      break;
-    }
-    if(errors) break;
-  }
-  if(cmdp == 0 && DemodBufferLen == 0)
-  {
-    errors = TRUE;// No args
-  }
+	uint8_t fcHigh = 0, fcLow = 0, clk = 0;
+	uint8_t invert = 0;
+	bool errors = FALSE;
+	char hexData[32] = {0x00}; // store entered hex data
+	uint8_t data[255] = {0x00}; 
+	int dataLen = 0;
+	uint8_t cmdp = 0;
+	
+	while(param_getchar(Cmd, cmdp) != 0x00)
+	{
+		switch(param_getchar(Cmd, cmdp))
+		{
+			case 'h':
+				return usage_lf_simfsk();
+			case 'i':
+				invert = 1;
+				cmdp++;
+				break;
+			case 'c':
+				errors |= param_getdec(Cmd, cmdp+1, &clk);
+				cmdp += 2;
+				break;
+			case 'H':
+				errors |= param_getdec(Cmd, cmdp+1, &fcHigh);
+				cmdp += 2;
+				break;
+			case 'L':
+				errors |= param_getdec(Cmd, cmdp+1, &fcLow);
+				cmdp += 2;
+				break;
+			//case 's':
+			//  separator = 1;
+			//  cmdp++;
+			//  break;
+			case 'd':
+				dataLen = param_getstr(Cmd, cmdp+1, hexData);
+				if (dataLen == 0)
+					errors = TRUE; 
+				else
+					dataLen = hextobinarray((char *)data, hexData);
+				   
+				if (dataLen == 0) errors = TRUE; 
+				if (errors) PrintAndLog ("Error getting hex data");
+				cmdp+=2;
+				break;
+			default:
+				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+				errors = TRUE;
+				break;
+		}
+		if(errors) break;
+	}
+	
+	// No args
+	if(cmdp == 0 && DemodBufferLen == 0)
+		errors = TRUE;
 
-  //Validations
-  if(errors)
-  {
-    return usage_lf_simfsk();
-  }
+	//Validations
+	if(errors) return usage_lf_simfsk();
 
-  if (dataLen == 0){ //using DemodBuffer 
-    if (clk==0 || fcHigh==0 || fcLow==0){ //manual settings must set them all
-      uint8_t ans = fskClocks(&fcHigh, &fcLow, &clk, 0);
-      if (ans==0){
-        if (!fcHigh) fcHigh=10;
-        if (!fcLow) fcLow=8;
-        if (!clk) clk=50;
-      }
-    }
-  } else {
-    setDemodBuf(data, dataLen, 0);
-  }
+	if (dataLen == 0){ //using DemodBuffer 
+		if (clk == 0 || fcHigh == 0 || fcLow == 0){ //manual settings must set them all
+			uint8_t ans = fskClocks(&fcHigh, &fcLow, &clk, 0);
+			if (ans==0){
+				if (!fcHigh) fcHigh = 10;
+				if (!fcLow) fcLow = 8;
+				if (!clk) clk = 50;
+			}
+		}
+	} else {
+		setDemodBuf(data, dataLen, 0);
+	}
 
 	//default if not found
-  if (clk == 0) clk = 50;
-  if (fcHigh == 0) fcHigh = 10;
-  if (fcLow == 0) fcLow = 8;
+	if (clk == 0) clk = 50;
+	if (fcHigh == 0) fcHigh = 10;
+	if (fcLow == 0) fcLow = 8;
 
-  uint16_t arg1, arg2;
-  arg1 = fcHigh << 8 | fcLow;
-  arg2 = invert << 8 | clk;
-  size_t size = DemodBufferLen;
-  if (size > USB_CMD_DATA_SIZE) {
-    PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
-    size = USB_CMD_DATA_SIZE;
-  } 
-  UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
+	uint16_t arg1, arg2;
+	arg1 = fcHigh << 8 | fcLow;
+	arg2 = invert << 8 | clk;
+	size_t size = DemodBufferLen;
+	if (size > USB_CMD_DATA_SIZE) {
+		PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
+		size = USB_CMD_DATA_SIZE;
+	} 
+	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
 
-  memcpy(c.d.asBytes, DemodBuffer, size);
+	memcpy(c.d.asBytes, DemodBuffer, size);
 	clearCommandBuffer();
-  SendCommand(&c);
-  return 0;
+	SendCommand(&c);
+	return 0;
 }
 
 // by marshmellow - sim ask data given clock, invert, manchester or raw, separator 
 // - allow pull data from DemodBuffer
 int CmdLFaskSim(const char *Cmd)
 {
-	//autodetect clock from Graphbuffer if using demod buffer
+	// autodetect clock from Graphbuffer if using demod buffer
 	// needs clock, invert, manchester/raw as m or r, separator as s, and bitstream
-	uint8_t encoding = 1, separator = 0, clk=0, invert=0;
+	uint8_t encoding = 1, separator = 0, clk = 0, invert = 0;
 	bool errors = FALSE;
 	char hexData[32] = {0x00}; 
 	uint8_t data[255]= {0x00}; // store entered hex data
@@ -760,35 +758,35 @@ int CmdLFaskSim(const char *Cmd)
 				cmdp++;
 				break;
 			case 'c':
-				errors |= param_getdec(Cmd,cmdp+1,&clk);
-				cmdp+=2;
+				errors |= param_getdec(Cmd, cmdp+1, &clk);
+				cmdp += 2;
 				break;
 			case 'b':
-				encoding=2; //biphase
+				encoding = 2; //biphase
 				cmdp++;
 				break;
 			case 'm':
-				encoding=1;
+				encoding = 1; //manchester
 				cmdp++;
 				break;
 			case 'r':
-				encoding=0;
+				encoding = 0; //raw
 				cmdp++;
 				break;
 			case 's':
-				separator=1;
+				separator = 1;
 				cmdp++;
 				break;
 			case 'd':
 				dataLen = param_getstr(Cmd, cmdp+1, hexData);
-				if (dataLen==0)
+				if (dataLen == 0)
 					errors = TRUE; 
 				else
 					dataLen = hextobinarray((char *)data, hexData);
 				
-				if (dataLen==0) errors = TRUE; 
+				if (dataLen == 0) errors = TRUE; 
 				if (errors) PrintAndLog ("Error getting hex data, datalen: %d", dataLen);
-				cmdp+=2;
+				cmdp += 2;
 				break;
 			default:
 				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -797,9 +795,10 @@ int CmdLFaskSim(const char *Cmd)
 		}
 		if(errors) break;
 	}
-  
+
+	// No args
 	if(cmdp == 0 && DemodBufferLen == 0)
-		errors = TRUE;// No args
+		errors = TRUE;
 
 	//Validations
 	if(errors) return usage_lf_simask();
@@ -1050,73 +1049,67 @@ int CmdLFfind(const char *Cmd) {
 
 	ans=CmdFSKdemodIO("");
 	if (ans>0) {
-	PrintAndLog("\nValid IO Prox ID Found!");
-	return 1;
+		PrintAndLog("\nValid IO Prox ID Found!");
+		return 1;
 	}
-
 	ans=CmdFSKdemodPyramid("");
 	if (ans>0) {
-	PrintAndLog("\nValid Pyramid ID Found!");
-	return 1;
+		PrintAndLog("\nValid Pyramid ID Found!");
+		return 1;
 	}
-
 	ans=CmdFSKdemodParadox("");
 	if (ans>0) {
-	PrintAndLog("\nValid Paradox ID Found!");
-	return 1;
+		PrintAndLog("\nValid Paradox ID Found!");
+		return 1;
 	}
-
 	ans=CmdFSKdemodAWID("");
 	if (ans>0) {
-	PrintAndLog("\nValid AWID ID Found!");
-	return 1;
+		PrintAndLog("\nValid AWID ID Found!");
+		return 1;
 	}
-
 	ans=CmdFSKdemodHID("");
 	if (ans>0) {
-	PrintAndLog("\nValid HID Prox ID Found!");
-	return 1;
+		PrintAndLog("\nValid HID Prox ID Found!");
+		return 1;
 	}
-
 	ans=CmdAskEM410xDemod("");
 	if (ans>0) {
-	PrintAndLog("\nValid EM410x ID Found!");
-	return 1;
+		PrintAndLog("\nValid EM410x ID Found!");
+		return 1;
 	}
-
 	ans=CmdG_Prox_II_Demod("");
 	if (ans>0) {
-	PrintAndLog("\nValid Guardall G-Prox II ID Found!");
-	return 1;
+		PrintAndLog("\nValid Guardall G-Prox II ID Found!");
+		return 1;
 	}
-
 	ans=CmdFDXBdemodBI("");
 	if (ans>0) {
 		PrintAndLog("\nValid FDX-B ID Found!");
 		return 1;
 	}
-
 	ans=EM4x50Read("", false);
 	if (ans>0) {
 		PrintAndLog("\nValid EM4x50 ID Found!");
 		return 1;
 	}	
-
 	ans=CmdVikingDemod("");
 	if (ans>0) {
 		PrintAndLog("\nValid Viking ID Found!");
 		return 1;
 	}	
-
 	ans=CmdIndalaDecode("");
 	if (ans>0) {
 		PrintAndLog("\nValid Indala ID Found!");
 		return 1;
 	}
-
 	ans=CmdPSKNexWatch("");
 	if (ans>0) {
 		PrintAndLog("\nValid NexWatch ID Found!");
+		return 1;
+	}
+	ans=CmdJablotronDemod("");
+	if (ans>0) {
+		PrintAndLog("\nValid Jablotron ID Found!");
 		return 1;
 	}
 	ans=CmdLFNedapDemod("");
@@ -1197,6 +1190,7 @@ static command_t CommandTable[] =
 	{"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
 	{"hitag",       CmdLFHitag,         1, "{ HITAG RFIDs... }"},
 	{"io",			CmdLFIO,			1, "{ IOPROX RFIDs... }"},
+	{"jablotron",	CmdLFJablotron,		1, "{ JABLOTRON RFIDs... }"},
 	{"nedap",		CmdLFNedap,			1, "{ NEDAP RFIDs... }"},
 	{"pcf7931",     CmdLFPCF7931,       1, "{ PCF7931 RFIDs... }"},
 	{"presco",      CmdLFPresco,        1, "{ Presco RFIDs... }"},

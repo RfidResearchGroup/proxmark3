@@ -723,6 +723,33 @@ int FDXBdemodBI(uint8_t *dest, size_t *size)
 	return (int)startIdx;
 }
 
+// ASK/Diphase fc/64 (inverted Biphase)
+// Note: this i s not a demod, this is only a detection
+// the parameter *dest needs to be demoded before call
+int JablotronDemod(uint8_t *dest, size_t *size){
+	//make sure buffer has enough data
+	if (*size < 64) return -1;
+
+	size_t startIdx = 0;
+	// 0xFFFF preamble, 64bits
+	uint8_t preamble[] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+
+	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
+	if (errChk == 0) return -4; //preamble not found
+	
+	uint8_t checkCalc = 0;
+	for (int i=16; i < 56; i += 8) {
+		checkCalc += bytebits_to_byte(dest+startIdx+i,8);
+	}
+	checkCalc ^= 0x3A;
+
+	uint8_t crc = bytebits_to_byte(dest+startIdx+56,8);
+	
+	if ( checkCalc != crc ) return -5;	
+	if (*size != 64) return -6;
+	return (int)startIdx;
+}
+
 // by marshmellow
 // FSK Demod then try to locate an AWID ID
 int AWIDdemodFSK(uint8_t *dest, size_t *size)

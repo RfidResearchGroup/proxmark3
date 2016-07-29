@@ -17,26 +17,27 @@
 #include "proxmark3.h"
 #include "lfdemod.h"
 			
-#include "util.h"        // for parsing cli command utils
-#include "ui.h"          // for show graph controls
-#include "graph.h"       // for graph data
-#include "cmdparser.h"   // for getting cli commands included in cmdmain.h
-#include "cmdmain.h"     // for sending cmds to device
-#include "data.h"        // for GetFromBigBuf
-#include "cmddata.h"     // for `lf search`
-#include "cmdlfawid.h"   // for awid menu
-#include "cmdlfem4x.h"   // for em4x menu
-#include "cmdlfhid.h"    // for hid menu
-#include "cmdlfhitag.h"  // for hitag menu
-#include "cmdlfio.h"     // for ioprox menu
-#include "cmdlft55xx.h"  // for t55xx menu
-#include "cmdlfti.h"     // for ti menu
-#include "cmdlfpresco.h" // for presco menu
-#include "cmdlfpcf7931.h"// for pcf7931 menu
-#include "cmdlfpyramid.h"// for pyramid menu
-#include "cmdlfviking.h" // for viking menu
-#include "cmdlfguard.h"  // for GuardAll menu
-#include "cmdlfnedap.h"  // for NEDAP menu
+#include "util.h"			// for parsing cli command utils
+#include "ui.h"				// for show graph controls
+#include "graph.h"			// for graph data
+#include "cmdparser.h"		// for getting cli commands included in cmdmain.h
+#include "cmdmain.h"		// for sending cmds to device
+#include "data.h"			// for GetFromBigBuf
+#include "cmddata.h"		// for `lf search`
+#include "cmdlfawid.h"		// for awid menu
+#include "cmdlfem4x.h"		// for em4x menu
+#include "cmdlfhid.h"		// for hid menu
+#include "cmdlfhitag.h"		// for hitag menu
+#include "cmdlfio.h"		// for ioprox menu
+#include "cmdlft55xx.h"		// for t55xx menu
+#include "cmdlfti.h"		// for ti menu
+#include "cmdlfpresco.h"	// for presco menu
+#include "cmdlfpcf7931.h"	// for pcf7931 menu
+#include "cmdlfpyramid.h"	// for pyramid menu
+#include "cmdlfviking.h"	// for viking menu
+#include "cmdlfguard.h"		// for GuardAll menu
+#include "cmdlfnedap.h"		// for NEDAP menu
+#include "cmdlfjablotron.h"	// for JABLOTRON menu
 
 int CmdLF(const char *Cmd);
 

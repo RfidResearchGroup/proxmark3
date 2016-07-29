@@ -94,17 +94,6 @@ uint32_t CRC8Legic(uint8_t *buff, size_t size) {
 	return reflect(crc_finish(&crc), 8);
 }
 
-// credits to marshmellow
-// width=8  poly=0xA3, reversed poly=0x8B,  init=0xB0  refin=true  refout=true  xorout=0x00  check=0x28  name="CRC-8/JA"
-uint32_t CRC8ja(uint8_t *buff, size_t size) {
-	crc_t crc;
-	crc_init_ref(&crc, 8, 0xA3, 0x42, 0x00, TRUE, TRUE);
-	for ( int i=0; i < size; ++i)
-		crc_update(&crc, buff[i], 8);
-	return crc_finish(&crc);
-	//return reflect(crc_finish(&crc), 8);
-}
-
 // This CRC-16 is used in Legic Advant systems. 
 // width=8  poly=0xB400, reversed poly=0x  init=depends  refin=true  refout=true  xorout=0x0000  check=  name="CRC-16/LEGIC"
 uint32_t CRC16Legic(uint8_t *buff, size_t size, uint8_t uidcrc) {

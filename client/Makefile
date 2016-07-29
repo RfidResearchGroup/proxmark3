@@ -130,6 +130,7 @@ CMDSRCS =	mifarehost.c \
 			cmdlfpyramid.c \
 			cmdlfguard.c \
 			cmdlfnedap.c \
+			cmdlfjablotron.c \
 			pm3_binlib.c \
 			scripting.c \
 			cmdscript.c \

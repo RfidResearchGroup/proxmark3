@@ -82,16 +82,11 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 
 int CmdLFNedapDemod(const char *Cmd) {
 	//raw ask demod no start bit finding just get binary from wave
-	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
-	size_t size = getFromGraphBuf(BitStream);
-	if (size==0) return 0;
-
-	//get binary from ask wave
 	if (!ASKbiphaseDemod("0 64 0 0", FALSE)) {
 		if (g_debugMode) PrintAndLog("Error NEDAP: ASKbiphaseDemod failed");
 		return 0;
 	}
-	size = DemodBufferLen;
+	size_t size = DemodBufferLen;
 	int idx = NedapDemod(DemodBuffer, &size);
 	if (idx < 0){
 		if (g_debugMode){
@@ -143,13 +138,13 @@ int CmdLFNedapDemod(const char *Cmd) {
 	uint8_t firstParity = GetParity( DemodBuffer, EVEN, 63);
 	if ( firstParity != DemodBuffer[63]  ) {
 		PrintAndLog("1st 64bit parity check failed:  %d|%d ", DemodBuffer[63], firstParity);
-		//return 0;
+		return 0;
 	}
 
 	uint8_t secondParity = GetParity( DemodBuffer+64, EVEN, 63);
 	if ( secondParity != DemodBuffer[127]  ) {
 		PrintAndLog("2st 64bit parity check failed:  %d|%d ", DemodBuffer[127], secondParity);
-		//return 0;
+		return 0;
 	}
 
 	// ok valid card found!
