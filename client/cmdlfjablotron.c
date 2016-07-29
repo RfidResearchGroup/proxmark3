@@ -144,7 +144,7 @@ int CmdJablotronClone(const char *Cmd) {
 	// clearing the topbit needed for the preambl detection. 
 	if ((fullcode & 0x7FFFFFFFFF) != fullcode) {
 		fullcode &= 0x7FFFFFFFFF;
-		PrintAndLog("Card Number Truncated to 40-bits: %"PRIx64, fullcode);
+		PrintAndLog("Card Number Truncated to 39bits: %"PRIx64, fullcode);
 	}
 	
 	if ( !getJablotronBits(fullcode, bs)) {
@@ -190,7 +190,7 @@ int CmdJablotronSim(const char *Cmd) {
 	// clearing the topbit needed for the preambl detection. 
 	if ((fullcode & 0x7FFFFFFFFF) != fullcode) {
 		fullcode &= 0x7FFFFFFFFF;
-		PrintAndLog("Card Number Truncated to 40-bits: %"PRIx64, fullcode);
+		PrintAndLog("Card Number Truncated to 39bits: %"PRIx64, fullcode);
 	}
 	
 	uint8_t clk = 64, encoding = 2, separator = 0, invert = 1;
