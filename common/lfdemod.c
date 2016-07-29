@@ -732,21 +732,27 @@ int JablotronDemod(uint8_t *dest, size_t *size){
 
 	size_t startIdx = 0;
 	// 0xFFFF preamble, 64bits
-	uint8_t preamble[] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+	uint8_t preamble[] = {
+		        1,1,1,1,
+	            1,1,1,1,
+				1,1,1,1,
+				1,1,1,1,
+				0
+		};
 
 	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
 	if (errChk == 0) return -4; //preamble not found
+	if (*size != 64) return -3;
 	
-	uint8_t checkCalc = 0;
+	uint8_t checkchksum = 0;
 	for (int i=16; i < 56; i += 8) {
-		checkCalc += bytebits_to_byte(dest+startIdx+i,8);
+		checkchksum += bytebits_to_byte(dest+startIdx+i,8);
 	}
-	checkCalc ^= 0x3A;
+	checkchksum ^= 0x3A;
 
-	uint8_t crc = bytebits_to_byte(dest+startIdx+56,8);
+	uint8_t crc = bytebits_to_byte(dest+startIdx+56, 8);
 	
-	if ( checkCalc != crc ) return -5;	
-	if (*size != 64) return -6;
+	if ( checkchksum != crc ) return -5;	
 	return (int)startIdx;
 }
 

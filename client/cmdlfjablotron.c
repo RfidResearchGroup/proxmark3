@@ -35,6 +35,15 @@ int usage_lf_jablotron_sim(void) {
 	return 0;
 }
 
+static uint8_t jablontron_chksum(uint8_t *bits){
+	uint8_t chksum = 0;
+	for (int i=16; i < 56; i += 8) {
+		chksum += bytebits_to_byte(bits+i,8);
+	}
+	chksum ^= 0x3A;	
+	return chksum;
+}
+
 int getJablotronBits(uint64_t fullcode, uint8_t *bits) {	
 	//preamp
 	num_to_bytebits(0xFFFF, 16, bits);
@@ -43,13 +52,8 @@ int getJablotronBits(uint64_t fullcode, uint8_t *bits) {
 	num_to_bytebits(fullcode, 40, bits+16);
 
 	//chksum byte
-	uint8_t crc = 0;
-	for (int i=16; i < 56; i += 8) {
-		crc += bytebits_to_byte(bits+i,8);
-	}
-	crc ^= 0x3A;
-	num_to_bytebits(crc, 8, bits+56);
-		
+	uint8_t chksum = jablontron_chksum(bits);
+	num_to_bytebits(chksum, 8, bits+56);
 	return 1;
 }
 
@@ -68,32 +72,46 @@ int CmdJablotronDemod(const char *Cmd) {
 		if (g_debugMode){
 			// if (ans == -5)
 				// PrintAndLog("DEBUG: Error - not enough samples");
-			// else if (ans == -1)
-				// PrintAndLog("DEBUG: Error - only noise found");
+			if (ans == -1)
+				PrintAndLog("DEBUG: Error - Jablotron too few bits found");
 			// else if (ans == -2)
 				// PrintAndLog("DEBUG: Error - problem during ASK/Biphase demod");
-			if (ans == -3)
-				PrintAndLog("DEBUG: Error - Size not correct: %d", size);
+			else if (ans == -3)
+				PrintAndLog("DEBUG: Error - Jablotron Size not correct: %d", size);
 			else if (ans == -4)
 				PrintAndLog("DEBUG: Error - Jablotron preamble not found");
+			else if (ans == -5)
+				PrintAndLog("DEBUG: Error - Jablotron checksum failed");
 			else
 				PrintAndLog("DEBUG: Error - ans: %d", ans);
 		}
 		return 0;
 	}
-	//got a good demod
-	uint32_t raw1 = bytebits_to_byte(DemodBuffer+ans, 32);
-	uint32_t raw2 = bytebits_to_byte(DemodBuffer+ans+32, 32);
-	uint64_t cardid = (raw1 & 0x0000FFFF);
-	cardid <<= 32;
-	cardid |= (raw2 >> 8);
-	
-	PrintAndLog("Jablotron Tag Found: Card ID %012X", cardid);
-	PrintAndLog("Raw: %08X%08X", raw1 ,raw2);
 
 	setDemodBuf(DemodBuffer+ans, 64, 0);
 	
-	//PrintAndLog("1410-%u-%u-%08X-%02X", fullcode);	
+	//got a good demod
+	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
+	uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
+	uint64_t cardid = (raw1 & 0xFFFF);
+	cardid <<= 24;
+	cardid |= (raw2 >> 8);
+	
+	PrintAndLog("Jablotron Tag Found: Card ID %"PRIx64, cardid);
+	PrintAndLog("Raw: %08X%08X", raw1 ,raw2);
+
+	uint8_t chksum = raw2 & 0xFF;
+	PrintAndLog("Checksum: %02X [%s]",
+		chksum,
+		(chksum == jablontron_chksum(DemodBuffer)) ? "OK":"FAIL"		
+	);
+		
+	// Printed format: 1410-nn-nnnn-nnnn	
+	PrintAndLog("Printed:  1410-%02X-%04X-%04X",
+		(raw1 & 0x0000FF00) >> 8,
+		(raw1 & 0xFF) << 8 | ((raw2 >> 24) & 0xFF),
+		(raw2 & 0x00FFFF00) >> 8
+	);	
 	return 1;
 }
 
@@ -123,11 +141,12 @@ int CmdJablotronClone(const char *Cmd) {
 		blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | 64<<T5555_BITRATE_SHIFT | 2<<T5555_MAXBLOCK_SHIFT;
 	}
 	
-	if ((fullcode & 0xFFFFFFFFFFFF) != fullcode) {
-		fullcode &= 0xFFFFFFFFFFFF;
-		PrintAndLog("Card Number Truncated to 40-bits: %u", fullcode);
+	// clearing the topbit needed for the preambl detection. 
+	if ((fullcode & 0x7FFFFFFFFF) != fullcode) {
+		fullcode &= 0x7FFFFFFFFF;
+		PrintAndLog("Card Number Truncated to 40-bits: %"PRIx64, fullcode);
 	}
-
+	
 	if ( !getJablotronBits(fullcode, bs)) {
 		PrintAndLog("Error with tag bitstream generation.");
 		return 1;
@@ -137,7 +156,7 @@ int CmdJablotronClone(const char *Cmd) {
 	blocks[1] = bytebits_to_byte(bs,32);
 	blocks[2] = bytebits_to_byte(bs+32,32);
 
-	PrintAndLog("Preparing to clone Jablotron to T55x7 with FullCode: %012X", fullcode);
+	PrintAndLog("Preparing to clone Jablotron to T55x7 with FullCode: %"PRIx64, fullcode);
 	PrintAndLog("Blk | Data ");
 	PrintAndLog("----+------------");
 	PrintAndLog(" 00 | 0x%08x", blocks[0]);
@@ -167,6 +186,12 @@ int CmdJablotronSim(const char *Cmd) {
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_jablotron_sim();
 
 	fullcode = param_get64ex(Cmd, 0, 0, 16);
+
+	// clearing the topbit needed for the preambl detection. 
+	if ((fullcode & 0x7FFFFFFFFF) != fullcode) {
+		fullcode &= 0x7FFFFFFFFF;
+		PrintAndLog("Card Number Truncated to 40-bits: %"PRIx64, fullcode);
+	}
 	
 	uint8_t clk = 64, encoding = 2, separator = 0, invert = 1;
 	uint16_t arg1, arg2;
@@ -174,7 +199,7 @@ int CmdJablotronSim(const char *Cmd) {
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
 
-	PrintAndLog("Simulating Jablotron - FullCode: %012X", fullcode);
+	PrintAndLog("Simulating Jablotron - FullCode: %"PRIx64, fullcode);
 
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 	getJablotronBits(fullcode, c.d.asBytes);
