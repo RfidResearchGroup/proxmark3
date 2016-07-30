@@ -12,14 +12,14 @@ static int CmdHelp(const char *Cmd);
 
 int usage_lf_cmdread(void) {
 	PrintAndLog("Usage: lf cmdread d <delay period> z <zero period> o <one period> c <cmdbytes> [H]");
-	PrintAndLog("Options:        ");
+	PrintAndLog("Options:");
 	PrintAndLog("       h             This help");
 	PrintAndLog("       L             Low frequency (125 KHz)");
 	PrintAndLog("       H             High frequency (134 KHz)");
-	PrintAndLog("       d <delay>     delay OFF period, (dec)");
-	PrintAndLog("       z <zero>      time period ZERO, (dec)");
-	PrintAndLog("       o <one>       time period ONE, (dec)");
-	PrintAndLog("       c <cmd>       Command bytes");
+	PrintAndLog("       d <delay>     delay OFF period, (decimal)");
+	PrintAndLog("       z <zero>      time period ZERO, (decimal)");
+	PrintAndLog("       o <one>       time period ONE, (decimal)");
+	PrintAndLog("       c <cmd>       Command bytes  (in ones and zeros)");
 	PrintAndLog("       ************* All periods in microseconds (ms)");
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf cmdread d 80 z 100 o 200 c 11000");
@@ -28,7 +28,7 @@ int usage_lf_cmdread(void) {
 }
 int usage_lf_read(void){
 	PrintAndLog("Usage: lf read [h] [s]");
-	PrintAndLog("Options:        ");
+	PrintAndLog("Options:");
 	PrintAndLog("       h            This help");
 	PrintAndLog("       s            silent run no printout");
 	PrintAndLog("This function takes no arguments. ");
@@ -37,15 +37,15 @@ int usage_lf_read(void){
 }
 int usage_lf_snoop(void) {
 	PrintAndLog("Usage: lf snoop");
-	PrintAndLog("Options:        ");
+	PrintAndLog("Options:");
 	PrintAndLog("       h            This help");
 	PrintAndLog("This function takes no arguments. ");
 	PrintAndLog("Use 'lf config' to set parameters.");
 	return 0;
 }
 int usage_lf_config(void) {
-	PrintAndLog("Usage: lf config [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
-	PrintAndLog("Options:        ");
+	PrintAndLog("Usage: lf config [h] [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
+	PrintAndLog("Options:");
 	PrintAndLog("       h             This help");
 	PrintAndLog("       L             Low frequency (125 KHz)");
 	PrintAndLog("       H             High frequency (134 KHz)");
@@ -68,7 +68,7 @@ int usage_lf_config(void) {
 }
 int usage_lf_simfsk(void) {
 	PrintAndLog("Usage: lf simfsk [c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
-	PrintAndLog("Options:        ");
+	PrintAndLog("Options:");
 	PrintAndLog("       h              This help");
 	PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
 	PrintAndLog("       i              invert data");
@@ -81,7 +81,7 @@ int usage_lf_simfsk(void) {
 }
 int usage_lf_simask(void) {
 	PrintAndLog("Usage: lf simask [c <clock>] [i] [b|m|r] [s] [d <raw hex to sim>]");
-	PrintAndLog("Options:        ");
+	PrintAndLog("Options:");
 	PrintAndLog("       h              This help");
 	PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
 	PrintAndLog("       i              invert data");
@@ -94,7 +94,7 @@ int usage_lf_simask(void) {
 }
 int usage_lf_simpsk(void) {
 	PrintAndLog("Usage: lf simpsk [1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>]");
-	PrintAndLog("Options:        ");
+	PrintAndLog("Options:");
 	PrintAndLog("       h              This help");
 	PrintAndLog("       c <clock>      Manually set clock - can autodetect if using DemodBuffer");
 	PrintAndLog("       i              invert data");
@@ -106,35 +106,38 @@ int usage_lf_simpsk(void) {
 	return 0;
 }
 int usage_lf_find(void){
-    PrintAndLog("Usage:  lf search <0|1> [u]");
-    PrintAndLog("     <use data from Graphbuffer> , if not set, try reading data from tag.");
-    PrintAndLog("     [Search for Unknown tags] , if not set, reads only known tags.");
+    PrintAndLog("Usage:  lf search [h] <0|1> [u]");
     PrintAndLog("");
-    PrintAndLog("    sample: lf search     = try reading data from tag & search for known tags");
-    PrintAndLog("          : lf search 1   = use data from GraphBuffer & search for known tags");
-    PrintAndLog("          : lf search u   = try reading data from tag & search for known and unknown tags");
-    PrintAndLog("          : lf search 1 u = use data from GraphBuffer & search for known and unknown tags");
+	PrintAndLog("Options:");
+	PrintAndLog("       h             This help");
+	PrintAndLog("       <0|1>         Use data from Graphbuffer, if not set, try reading data from tag.");
+    PrintAndLog("       u             Search for Unknown tags, if not set, reads only known tags.");
+	PrintAndLog("Examples:");
+    PrintAndLog("      lf search     = try reading data from tag & search for known tags");
+    PrintAndLog("      lf search 1   = use data from GraphBuffer & search for known tags");
+    PrintAndLog("      lf search u   = try reading data from tag & search for known and unknown tags");
+    PrintAndLog("      lf search 1 u = use data from GraphBuffer & search for known and unknown tags");
 	return 0;
 }
 
 
 /* send a LF command before reading */
-int CmdLFCommandRead(const char *Cmd)
-{
-	static char dummy[3] = {0x20,0x00,0x00};
-	UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K};
+int CmdLFCommandRead(const char *Cmd) {
+//	static char dummy[3] = {0x20,0x00,0x00};
 	bool errors = FALSE;
-
+	bool useHighFreq = FALSE;
+	uint16_t one = 0, zero = 0;
   	uint8_t cmdp = 0;
 	int strLength = 0;
-
+	UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, {0,0,0}};
+	
 	while(param_getchar(Cmd, cmdp) != 0x00) {
-		switch(param_getchar(Cmd, cmdp))
-		{
+		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 			return usage_lf_cmdread();
 		case 'H':
-			dummy[1]='h';
+			//dummy[1]='h';
+			useHighFreq = TRUE;
 			cmdp++;
 			break;
 		case 'L':
@@ -149,11 +152,11 @@ int CmdLFCommandRead(const char *Cmd)
 			cmdp+=2;
 			break;
 		case 'z':
-			c.arg[1] = param_get32ex(Cmd, cmdp+1, 0, 10);
+			zero = param_get32ex(Cmd, cmdp+1, 0, 10) & 0xFFFF;
 			cmdp+=2;
 			break;
 		case 'o':
-			c.arg[2] = param_get32ex(Cmd, cmdp+1, 0, 10);
+			one = param_get32ex(Cmd, cmdp+1, 0, 10) & 0xFFFF;
 			cmdp+=2;
 			break;
 		default:
@@ -164,13 +167,16 @@ int CmdLFCommandRead(const char *Cmd)
 		if(errors) break;
 	}
 	// No args
-	if (cmdp == 0) errors = 1;
+	if (cmdp == 0) errors = TRUE;
 
 	//Validations
 	if (errors) return usage_lf_cmdread();
 	
-	// in case they specified 'H'
-	strcpy((char *)&c.d.asBytes + strLength, dummy);
+	// zero and one lengths
+	c.arg[1] = zero << 16 | one;
+	
+	// add frequency 125 or 134
+	c.arg[2] = useHighFreq;
 
 	clearCommandBuffer();
 	SendCommand(&c);

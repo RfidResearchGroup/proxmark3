@@ -910,7 +910,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			cmd_send(CMD_ACK, SampleLF(c->arg[0]),0,0,0,0);
 			break;
 		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
-			ModThenAcquireRawAdcSamples125k(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
+			ModThenAcquireRawAdcSamples125k(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
 		case CMD_LF_SNOOP_RAW_ADC_SAMPLES:
 			cmd_send(CMD_ACK,SnoopLF(),0,0,0,0);

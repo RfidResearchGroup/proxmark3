@@ -26,29 +26,28 @@
  * @param period_1
  * @param command
  */
-void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint32_t period_1, uint8_t *command)
+void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t periods, uint32_t useHighFreq, uint8_t *command)
 {
-
-	int divisor_used = 95; // 125 KHz
-	// see if 'h' was specified
-
-	if (command[strlen((char *) command) - 1] == 'h')
-		divisor_used = 88; // 134.8 KHz
-
-	sample_config sc = { 0,0,1, divisor_used, 0};
-	setSamplingConfig(&sc);
-	//clear read buffer
-	BigBuf_Clear_keep_EM();
-
 	/* Make sure the tag is reset */
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(2500);
+	SpinDelay(200);
+
+	uint16_t period_0 =  periods >> 16;
+	uint16_t period_1 =  periods & 0xFFFF;
+	
+	// 95 == 125 KHz  88 == 124.8 KHz
+	int divisor_used = (useHighFreq) ? 88 : 95 ; // 125 KHz
+	sample_config sc = { 0,0,1, divisor_used, 0};
+	setSamplingConfig(&sc);
+
+	//clear read buffer
+	BigBuf_Clear_keep_EM();
 
 	LFSetupFPGAForADC(sc.divisor, 1);
 
 	// And a little more time for the tag to fully power up
-	SpinDelay(2000);
+	SpinDelay(50);
 
 	// now modulate the reader field
 	while(*command != '\0' && *command != ' ') {
@@ -68,7 +67,6 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 	LED_D_OFF();
 	SpinDelayUs(delay_off);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc.divisor);
-
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
 	// now do the read
