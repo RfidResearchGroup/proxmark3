@@ -22,8 +22,8 @@
 /**
  * Function to do a modulation and then get samples.
  * @param delay_off
- * @param period_0
- * @param period_1
+ * @param periods  0xFFFF0000 is period_0,  0x0000FFFF is period_1
+ * @param useHighFreg
  * @param command
  */
 void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t periods, uint32_t useHighFreq, uint8_t *command)
@@ -37,7 +37,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t periods, uint3
 	uint16_t period_1 =  periods & 0xFFFF;
 	
 	// 95 == 125 KHz  88 == 124.8 KHz
-	int divisor_used = (useHighFreq) ? 88 : 95 ; // 125 KHz
+	int divisor_used = (useHighFreq) ? 88 : 95;
 	sample_config sc = { 0,0,1, divisor_used, 0};
 	setSamplingConfig(&sc);
 

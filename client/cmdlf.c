@@ -123,7 +123,7 @@ int usage_lf_find(void){
 
 /* send a LF command before reading */
 int CmdLFCommandRead(const char *Cmd) {
-//	static char dummy[3] = {0x20,0x00,0x00};
+
 	bool errors = FALSE;
 	bool useHighFreq = FALSE;
 	uint16_t one = 0, zero = 0;
@@ -136,7 +136,6 @@ int CmdLFCommandRead(const char *Cmd) {
 		case 'h':
 			return usage_lf_cmdread();
 		case 'H':
-			//dummy[1]='h';
 			useHighFreq = TRUE;
 			cmdp++;
 			break;
