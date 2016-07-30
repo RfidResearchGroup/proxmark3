@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 // Low frequency Presco tag commands
 //-----------------------------------------------------------------------------
-#include <math.h>
+
 #include "cmdlfjablotron.h"
 
 static int CmdHelp(const char *Cmd);

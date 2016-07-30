@@ -10,6 +10,7 @@
 #define CMDLFJABLOTRON_H__
 #include <string.h>
 #include <inttypes.h>
+#include <math.h>
 #include "proxmark3.h"
 #include "ui.h"
 #include "util.h"
