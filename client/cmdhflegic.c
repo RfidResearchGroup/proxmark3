@@ -567,7 +567,7 @@ int CmdLegicRfFill(const char *Cmd) {
 
 int CmdLegicCalcCrc8(const char *Cmd){
 
-	uint8_t *data;
+	uint8_t *data = NULL;
 	uint8_t cmdp = 0, uidcrc = 0, type=0;
 	bool errors = false;
 	int len = 0;
