@@ -11,17 +11,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
+#include <pthread.h>
+#include "proxmark3.h"
+//#include "radixsort.h"
+#include <time.h>
 #include "common.h"
 #include "cmdmain.h"
 #include "ui.h"
 #include "data.h"
 #include "util.h"
-#include "nonce2key/nonce2key.h"
+//#include "nonce2key/nonce2key.h"
 #include "nonce2key/crapto1.h"
 #include "iso14443crc.h"
 #include "protocols.h"
 
-#define MEM_CHUNK               1000000
 #define NESTED_SECTOR_RETRY     10
 
 // mifare tracer flags
@@ -32,15 +36,31 @@
 #define TRACE_READ_DATA 		0x04
 #define TRACE_WRITE_OK			0x05
 #define TRACE_WRITE_DATA		0x06
-
 #define TRACE_ERROR		 		0xFF
 
+typedef struct {
+		union {
+			struct Crypto1State *slhead;
+			uint64_t *keyhead;
+		} head;
+		union {
+			struct Crypto1State *sltail;
+			uint64_t *keytail;
+		} tail;
+		uint32_t len;
+		uint32_t uid;
+		uint32_t blockNo;
+		uint32_t keyType;
+		uint32_t nt;
+		uint32_t ks1;
+} StateList_t;
+	
 typedef struct {
 	uint64_t Key[2];
 	int foundKey[2];
 } sector;
  
-int compar_int(const void * a, const void * b);
+extern int compar_int(const void * a, const void * b);
 extern char logHexFileName[FILE_PATH_SIZE];
 
 int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t * ResultKeys, bool calibrate);

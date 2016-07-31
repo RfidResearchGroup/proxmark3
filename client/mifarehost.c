@@ -8,17 +8,10 @@
 // mifare commands
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h> 
-#include <string.h>
-#include <pthread.h>
 #include "mifarehost.h"
-#include "proxmark3.h"
-//#include "radixsort.h"
-#include <time.h>
 
 // MIFARE
-int compar_int(const void * a, const void * b) {
+extern int compar_int(const void * a, const void * b) {
 	// didn't work: (the result is truncated to 32 bits)
 	//return (*(uint64_t*)b - *(uint64_t*)a);
 
@@ -43,25 +36,6 @@ int Compare16Bits(const void * a, const void * b) {
 		;
 */
 }
-
-typedef 
-	struct {
-		union {
-			struct Crypto1State *slhead;
-			uint64_t *keyhead;
-		} head;
-		union {
-			struct Crypto1State *sltail;
-			uint64_t *keytail;
-		} tail;
-		uint32_t len;
-		uint32_t uid;
-		uint32_t blockNo;
-		uint32_t keyType;
-		uint32_t nt;
-		uint32_t ks1;
-	} StateList_t;
-
 
 // wrapper function for multi-threaded lfsr_recovery32
 void* nested_worker_thread(void *arg)
