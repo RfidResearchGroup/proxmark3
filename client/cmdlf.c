@@ -128,7 +128,6 @@ int CmdLFCommandRead(const char *Cmd) {
 	bool useHighFreq = FALSE;
 	uint16_t one = 0, zero = 0;
   	uint8_t cmdp = 0;
-	int strLength = 0;
 	UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, {0,0,0}};
 	
 	while(param_getchar(Cmd, cmdp) != 0x00) {
@@ -143,7 +142,7 @@ int CmdLFCommandRead(const char *Cmd) {
 			cmdp++;
 			break;
 		case 'c':
-			strLength = param_getstr(Cmd, cmdp+1, (char *)&c.d.asBytes);
+			param_getstr(Cmd, cmdp+1, (char *)&c.d.asBytes);
 			cmdp+=2;
 			break;
 		case 'd':
