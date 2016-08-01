@@ -140,7 +140,7 @@ filtop(FILE *input, unsigned long length, int flags, int bperhx) {
 	bmp_t accu = BMP_C(0);
 	bmp_t mask = bperhx == BMP_BIT ? ~BMP_C(0) : (BMP_C(1) << bperhx) - BMP_C(1);
 	unsigned long iter = 0UL, idx;
-	int cmask = ~(~0 << CHAR_BIT), c;
+	int cmask = (1 << CHAR_BIT) - 1, c;
 	int count = 0, ofs;
 	poly_t poly = PZERO;
 	if(bperhx == 0) return(poly);
@@ -205,7 +205,7 @@ strtop(const char *string, int flags, int bperhx) {
 	bmp_t accu;
 	bmp_t mask = bperhx == BMP_BIT ? ~BMP_C(0) : (BMP_C(1) << bperhx) - BMP_C(1);
 	int pass, count, ofs;
-	int cmask = ~(~0 << CHAR_BIT), c;
+	int cmask = (1 << CHAR_BIT) - 1 , c;
 	const char *s;
 
 	poly_t poly = PZERO;
