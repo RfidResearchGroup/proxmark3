@@ -575,6 +575,9 @@ int CmdLegicCalcCrc8(const char *Cmd){
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'b':
 		case 'B':
+			// it's possible for user to accidentally enter "b" parameter
+			// more than once - we have to clean previous malloc
+			if (data) free(data);
 			data = malloc(len);
 			if ( data == NULL ) {
 				PrintAndLog("Can't allocate memory. exiting");
