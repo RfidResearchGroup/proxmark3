@@ -319,7 +319,7 @@ int CmdHIDWiegand(const char *Cmd) {
 	uint32_t oem = 0, fc = 0;
 	uint64_t cardnum = 0;
 	
-	uint32_t blocks[2] = {0,0}
+	uint32_t blocks[2] = {0,0};
 	uint32_t wiegand[2] = {0,0}; 
 
 	uint8_t bits[96];
