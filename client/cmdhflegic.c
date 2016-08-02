@@ -570,23 +570,36 @@ int CmdLegicCalcCrc8(const char *Cmd){
 	uint8_t cmdp = 0, uidcrc = 0, type=0;
 	bool errors = false;
 	int len = 0;
+	int bg, en;
 	
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'b':
 		case 'B':
+			// peek at length of the input string so we can
+			// figure out how many elements to malloc in "data"
+			bg=en=0;
+			param_getptr(Cmd, &bg, &en, cmdp+1);
+			len = (en - bg + 1);
+
+			// check that user entered even number of characters
+			// for hex data string
+			if (len & 1) {
+				errors = true;
+				break;
+			}
+
 			// it's possible for user to accidentally enter "b" parameter
 			// more than once - we have to clean previous malloc
 			if (data) free(data);
-			data = malloc(len);
+			data = malloc(len >> 1);
 			if ( data == NULL ) {
 				PrintAndLog("Can't allocate memory. exiting");
 				errors = true;
 				break;
-			}			
-			param_gethex_ex(Cmd, cmdp+1, data, &len);
-			// if odd symbols, (hexbyte must be two symbols)
-			if ( len & 1 ) errors = true;
+			}
+			
+			param_gethex(Cmd, cmdp+1, data, len);
 
 			len >>= 1;	
 			cmdp += 2;
