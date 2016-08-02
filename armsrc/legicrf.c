@@ -1572,7 +1572,7 @@ static void CodeAndTransmitLegicAsReader(const uint8_t *cmd, uint8_t cmdlen, int
 	TransmitForLegic();
 	if (tracing) {
 		uint8_t parity[1] = {0x00};
-		LogTrace(cmd, bits, 0, 0, parity, TRUE);
+		LogTrace(cmd, cmdlen, 0, 0, parity, TRUE);
 	}
 }
 
