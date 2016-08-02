@@ -789,7 +789,7 @@ static command_t CommandTable[] = {
 	{"14b",         CmdHF14B,         1, "{ ISO14443B RFIDs... }"},
 	{"15",          CmdHF15,          1, "{ ISO15693 RFIDs... }"},
 	{"epa",         CmdHFEPA,         1, "{ German Identification Card... }"},
-	{"legic",       CmdHFLegic,       0, "{ LEGIC RFIDs... }"},
+	{"legic",       CmdHFLegic,       1, "{ LEGIC RFIDs... }"},
 	{"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs... }"},
 	{"mf",      	CmdHFMF,		  1, "{ MIFARE RFIDs... }"},
 	{"mfu",         CmdHFMFUltra,     1, "{ MIFARE Ultralight RFIDs... }"},
