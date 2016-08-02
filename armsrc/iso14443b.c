@@ -1269,12 +1269,13 @@ uint8_t iso14443b_select_card(iso14b_card_select_t *card )
 		return 3;
 	
 	// CID
-	if (card) card->cid = Demod.output[0];
-	
-	uint8_t fwt = card->atqb[6]>>4;
-	if ( fwt < 16 ){
-		uint32_t fwt_time = (302 << fwt);
-		iso14b_set_timeout( fwt_time);
+	if (card) { 
+		card->cid = Demod.output[0];
+		uint8_t fwt = card->atqb[6] >> 4;
+		if ( fwt < 16 ){
+			uint32_t fwt_time = (302 << fwt);
+			iso14b_set_timeout( fwt_time);
+		}
 	}
 	// reset PCB block number
 	pcb_blocknum = 0;
