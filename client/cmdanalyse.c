@@ -188,6 +188,7 @@ int CmdAnalyseCHKSUM(const char *Cmd){
 	uint32_t mask = 0xFF;
 	bool errors = false;
 	int len = 0;
+	memset(data, 0x0, sizeof(data));
 	
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
