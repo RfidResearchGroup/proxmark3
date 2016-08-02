@@ -1531,7 +1531,7 @@ static void TransmitForLegic(void)
 // Code a layer 2 command (string of octets, including CRC) into ToSend[],
 // so that it is ready to transmit to the tag using TransmitForLegic().
 //-----------------------------------------------------------------------------
-static void CodeLegicBitsAsReader(const uint8_t *cmd, int bits)
+static void CodeLegicBitsAsReader(const uint8_t *cmd, uint8_t cmdlen, int bits)
 {
 	int i, j;
 	uint8_t b;
@@ -1539,17 +1539,17 @@ static void CodeLegicBitsAsReader(const uint8_t *cmd, int bits)
 	ToSendReset();
 
 	// Send SOF
-	for(i = 0; i < 7; i++) {
+	for(i = 0; i < 7; i++)
 		ToSendStuffBit(1);
-	}
 
-	for(i = 0; i < bits; i++) {
+
+	for(i = 0; i < cmdlen; i++) {
 		// Start bit
 		ToSendStuffBit(0);
 
 		// Data bits
 		b = cmd[i];
-		for(j = 0; j < 8; j++) {
+		for(j = 0; j < bits; j++) {
 			if(b & 1) {
 				ToSendStuffBit(1);
 			} else {
@@ -1566,9 +1566,9 @@ static void CodeLegicBitsAsReader(const uint8_t *cmd, int bits)
 /**
   Convenience function to encode, transmit and trace Legic comms
   **/
-static void CodeAndTransmitLegicAsReader(const uint8_t *cmd, int bits)
+static void CodeAndTransmitLegicAsReader(const uint8_t *cmd, uint8_t cmdlen, int bits)
 {
-	CodeLegicBitsAsReader(cmd, bits);
+	CodeLegicBitsAsReader(cmd, cmdlen, bits);
 	TransmitForLegic();
 	if (tracing) {
 		uint8_t parity[1] = {0x00};
@@ -1579,13 +1579,13 @@ static void CodeAndTransmitLegicAsReader(const uint8_t *cmd, int bits)
 int ice_legic_select_card()
 {
 	//int cmd_size=0, card_size=0;
-	uint8_t wakeup[] = { 0x7F};
+	uint8_t wakeup[] = { 0x7F };
 	uint8_t getid[] = {0x19};
 
 	legic_prng_init(SESSION_IV);
 
 	// first, wake up the tag, 7bits
-	CodeAndTransmitLegicAsReader(wakeup, 7);
+	CodeAndTransmitLegicAsReader(wakeup, sizeof(wakeup), 7);
 
 	GetSamplesForLegicDemod(1000, TRUE);
 
@@ -1596,7 +1596,7 @@ int ice_legic_select_card()
 	
 	//while(timer->TC_CV < 387) ; /* ~ 258us */
 	//frame_send_rwd(0x19, 6);
-	CodeAndTransmitLegicAsReader(getid, sizeof(getid));
+	CodeAndTransmitLegicAsReader(getid, sizeof(getid), 8);
 	GetSamplesForLegicDemod(1000, TRUE);
 
 	//if (Demod.len < 14) return 2; 
