@@ -527,8 +527,7 @@ int CmdLegicRfRawWrite(const char *Cmd) {
 		PrintAndLog("# changing the DCF is irreversible  #");
 		PrintAndLog("#####################################");
 		PrintAndLog("do youe really want to continue? y(es) n(o)");		
-		scanf(" %c", &answer);
-		if (answer == 'y' || answer == 'Y') {
+		if (scanf(" %c", &answer) > 0 && (answer == 'y' || answer == 'Y')) {
 			SendCommand(&c);
 			return 0;
 		}
