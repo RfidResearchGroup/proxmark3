@@ -556,7 +556,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
 
 	// ...PUPI/UID supplied from user. Adjust ATQB response accordingly
 	if ( pupi > 0 ) {
-		uint8_t len = size(respATQB);
+		uint8_t len = sizeof(respATQB);
 		num_to_bytes(pupi, 4, respATQB+1);
 		ComputeCrc14443(CRC_14443_B, respATQB, 12, &respATQB[len-2], &respATQB[len-1]);
 	}
