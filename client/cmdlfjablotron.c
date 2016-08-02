@@ -179,7 +179,7 @@ int CmdJablotronClone(const char *Cmd) {
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
-	for (int i=4; i>=0; i--) {
+	for (int i=3; i>=0; i--) {
 		c.arg[0] = blocks[i];
 		c.arg[1] = i;
 		clearCommandBuffer();
