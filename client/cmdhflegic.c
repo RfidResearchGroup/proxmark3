@@ -612,7 +612,7 @@ int CmdLegicCalcCrc8(const char *Cmd){
 	}
 	//Validations
 	if (errors){
-		if (data != NULL) free(data);
+		if (data) free(data);
 		return usage_legic_calccrc8();
 	}
 	
@@ -625,7 +625,7 @@ int CmdLegicCalcCrc8(const char *Cmd){
 			break;
 	}
 	
-	if (data != NULL) free(data);
+	if (data) free(data);
 	return 0;
 } 
  
