@@ -21,8 +21,8 @@
 #define TR2 0
 
 // 4sample
-//#define SEND4STUFFBIT(x) ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);
-#define SEND4STUFFBIT(x) ToSendStuffBit(x);
+#define SEND4STUFFBIT(x) ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);
+//#define SEND4STUFFBIT(x) ToSendStuffBit(x);
 
 static void switch_off(void);
 
@@ -205,9 +205,6 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
 	*
 	*/
 	
-	// ToSendStuffBit,  40 calls
-	// 1 ETU = 1startbit, 1stopbit, 8databits == 10bits.
-	// 1 ETU = 10 * 4 == 40 stuffbits ( ETU_TAG_BIT )
 	int i,j;
 	uint8_t b;
 	
@@ -224,41 +221,50 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
 	// Send SOF.
 	// 10-11 ETU * 4times samples ZEROS
 	for(i = 0; i < 10; i++) { SEND4STUFFBIT(0); }
+	//for(i = 0; i < 10; i++) { ToSendStuffBit(0); }
 	
 	// 2-3 ETU * 4times samples ONES
 	for(i = 0; i < 3; i++)  { SEND4STUFFBIT(1); }
+	//for(i = 0; i < 3; i++)  { ToSendStuffBit(1); }
 	
 	// data
 	for(i = 0; i < len; ++i) {
 		
 		// Start bit
 		SEND4STUFFBIT(0);
+		//ToSendStuffBit(0);
 
 		// Data bits
 		b = cmd[i];
 		for(j = 0; j < 8; ++j) {
 			if(b & 1) { 
 				SEND4STUFFBIT(1); 
+				//ToSendStuffBit(1);
 			} else {
 				SEND4STUFFBIT(0);
+				//ToSendStuffBit(0);
 			}
 			b >>= 1;
 		}
 
 		// Stop bit
 		SEND4STUFFBIT(1);
+		//ToSendStuffBit(1);
 		
 		// Extra Guard bit
 		// For PICC it ranges 0-18us (1etu = 9us)
 		SEND4STUFFBIT(1);
+		//ToSendStuffBit(1);
 	}
 
 	// Send EOF.
 	// 10-11 ETU * 4 sample rate = ZEROS
 	for(i = 0; i < 10; i++) { SEND4STUFFBIT(0); }
+	//for(i = 0; i < 10; i++) { ToSendStuffBit(0); }
 	
 	// why this?
 	for(i = 0; i < 40; i++) { SEND4STUFFBIT(1); }
+	//for(i = 0; i < 40; i++) { ToSendStuffBit(1); }
 	
 	// Convert from last byte pos to length
 	++ToSendMax;
@@ -445,9 +451,11 @@ void ClearFpgaShiftingRegisters(void){
 
 	// clear receiving shift register and holding register
 	while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
+
 	b = AT91C_BASE_SSC->SSC_RHR; (void) b;
 
 	while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
+
 	b = AT91C_BASE_SSC->SSC_RHR; (void) b;
 	
 		
@@ -458,7 +466,7 @@ void ClearFpgaShiftingRegisters(void){
 	}
 	
 	// Clear TXRDY:
-	AT91C_BASE_SSC->SSC_THR = 0xFF;
+	//AT91C_BASE_SSC->SSC_THR = 0xFF;
 }
 
 void WaitForFpgaDelayQueueIsEmpty( uint16_t delay ){
@@ -476,7 +484,7 @@ static void TransmitFor14443b_AsTag( uint8_t *response, uint16_t len) {
 
 		// Signal field is off with the appropriate LED
 		LED_D_OFF();
-		uint16_t fpgasendQueueDelay = 0;
+		//uint16_t fpgasendQueueDelay = 0;
 		
 		// Modulate BPSK
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK);
@@ -484,16 +492,21 @@ static void TransmitFor14443b_AsTag( uint8_t *response, uint16_t len) {
 		ClearFpgaShiftingRegisters();
 		
 		FpgaSetupSsc();
+		volatile uint32_t b;
 
 		// Transmit the response.
 		for(uint16_t i = 0; i < len;) {
 			if(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
 				AT91C_BASE_SSC->SSC_THR = response[++i];
-				fpgasendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			}
+			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+				b = AT91C_BASE_SSC->SSC_RHR;
+				(void)b;
+			}			
 		}
 		
-		WaitForFpgaDelayQueueIsEmpty(fpgasendQueueDelay);
+		//WaitForFpgaDelayQueueIsEmpty(fpgasendQueueDelay);
+		AT91C_BASE_SSC->SSC_THR = 0xFF;		
 }	
 //-----------------------------------------------------------------------------
 // Main loop of simulated tag: receive commands from reader, decide what
@@ -543,8 +556,9 @@ void SimulateIso14443bTag(uint32_t pupi) {
 
 	// ...PUPI/UID supplied from user. Adjust ATQB response accordingly
 	if ( pupi > 0 ) {
+		uint8_t len = size(respATQB);
 		num_to_bytes(pupi, 4, respATQB+1);
-		ComputeCrc14443(CRC_14443_B, respATQB, 12, respATQB+13, respATQB+14);
+		ComputeCrc14443(CRC_14443_B, respATQB, 12, &respATQB[len-2], &respATQB[len-1]);
 	}
 
 	// prepare "ATQB" tag answer (encoded):
@@ -790,7 +804,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 				Demod.posCount = 0;	// start of SOF sequence
 			} else {
 				// maximum length of TR1 = 200 1/fs
-				if(Demod.posCount > 25*2) Demod.state = DEMOD_UNSYNCD;
+				if(Demod.posCount > 26*2) Demod.state = DEMOD_UNSYNCD;
 			}
 			++Demod.posCount;
 			break;
@@ -802,7 +816,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 			
 			if(v > 0) {
 				// low phase of SOF too short (< 9 etu). Note: spec is >= 10, but FPGA tends to "smear" edges
-				if(Demod.posCount < 9*2) { 
+				if(Demod.posCount < 8*2) { 
 					Demod.state = DEMOD_UNSYNCD;
 				} else {
 					LED_C_ON(); // Got SOF
@@ -813,7 +827,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 				}
 			} else {
 				// low phase of SOF too long (> 12 etu)
-				if (Demod.posCount > 12*2) { 
+				if (Demod.posCount > 14*2) { 
 					Demod.state = DEMOD_UNSYNCD;
 					LED_C_OFF();
 				}
@@ -826,7 +840,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 			MAKE_SOFT_DECISION();
 			
 			if (v > 0) {
-				if(Demod.posCount > 3*2) { 		// max 19us between characters = 16 1/fs, max 3 etu after low phase of SOF = 24 1/fs
+				if(Demod.posCount > 2*2) { 		// max 19us between characters = 16 1/fs, max 3 etu after low phase of SOF = 24 1/fs
 					Demod.state = DEMOD_UNSYNCD;
 					LED_C_OFF();
 				}
@@ -918,7 +932,7 @@ static void GetTagSamplesFor14443bDemod() {
 	
 	// And put the FPGA in the appropriate mode
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ);
-	
+		
 	while( !BUTTON_PRESS() ) {
 		WDT_HIT();
 
@@ -977,29 +991,47 @@ static void GetTagSamplesFor14443bDemod() {
 //-----------------------------------------------------------------------------
 static void TransmitFor14443b_AsReader(void) {
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX | FPGA_HF_READER_TX_SHALLOW_MOD);
-	SpinDelay(20);
-	
-	int c;	
 	// we could been in following mode:
 	// FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ
 	// if its second call or more
+	
+	// while(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+		// AT91C_BASE_SSC->SSC_THR = 0XFF;
+	// }
+	
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX | FPGA_HF_READER_TX_SHALLOW_MOD);
+	SpinDelay(40);
 
+	int c;	
+	volatile uint32_t b;
+										 
 	// What does this loop do? Is it TR1?
-   	for(c = 0; c < 10;) {
+	// 0xFF = 8 bits of 1.    1 bit == 1Etu,..  
+	// loop 10 * 8 = 80 ETU of delay, with a non modulated signal.  why?
+	// 80*9 = 720us.
+   	for(c = 0; c < 50;) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = 0xFF;
 			++c;
 		}
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+			b = AT91C_BASE_SSC->SSC_RHR;
+			(void)b;
+		}
 	}
-	
+
 	// Send frame loop
 	for(c = 0; c < ToSendMax;) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-			AT91C_BASE_SSC->SSC_THR = ToSend[c];
-			++c;
+			AT91C_BASE_SSC->SSC_THR = ToSend[c++];
 		}
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+			b = AT91C_BASE_SSC->SSC_RHR;
+			(void)b;
+		}					
 	}
+	//WaitForFpgaDelayQueueIsEmpty(delay);
+	// We should wait here for the FPGA to send all bits.
 	WDT_HIT();
 }
 
@@ -1019,6 +1051,9 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len)
 	*
 	* 	1 ETU == 1 BIT!
 	*   TR0 - 8 ETUS minimum.
+	*
+	*   QUESTION:  how long is a 1 or 0 in pulses in the xcorr_848 mode?
+	*              1 "stuffbit" = 1ETU (9us)
 	*/
 	int i;
 	uint8_t b;
@@ -1065,7 +1100,8 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len)
 	// Transition time. TR0 - guard time
 	// 8ETUS minum?
 	// Per specification, Subcarrier must be stopped no later than 2 ETUs after EOF.	
-	for(i = 0; i < 40 ; ++i) ToSendStuffBit(1);
+	// I'm guessing this is for the FPGA to be able to send all bits before we switch to listening mode
+	for(i = 0; i < 32 ; ++i) ToSendStuffBit(1);
 	
 	// TR1 - Synchronization time
 	// Convert from last character reference to length
@@ -1602,8 +1638,8 @@ void RAMFUNC SnoopIso14443b(void) {
 	Dbprintf("  Trace length: %i", BigBuf_get_traceLen());
 
 	// free mem refs.
-	if ( dmaBuf ) dmaBuf = NULL;
 	if ( upTo )   upTo = NULL;
+	
 	// Uart.byteCntMax  should be set with ATQB value..
 }
 
