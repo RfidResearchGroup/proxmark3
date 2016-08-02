@@ -171,7 +171,7 @@ int CmdLFCommandRead(const char *Cmd) {
 	if (errors) return usage_lf_cmdread();
 	
 	// zero and one lengths
-	c.arg[1] = zero << 16 | one;
+	c.arg[1] = (uint32_t)(zero << 16 | one);
 	
 	// add frequency 125 or 134
 	c.arg[2] = useHighFreq;
