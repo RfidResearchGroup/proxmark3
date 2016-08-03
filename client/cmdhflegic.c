@@ -579,7 +579,10 @@ int CmdLegicCalcCrc8(const char *Cmd){
 			// peek at length of the input string so we can
 			// figure out how many elements to malloc in "data"
 			bg=en=0;
-			param_getptr(Cmd, &bg, &en, cmdp+1);
+			if (param_getptr(Cmd, &bg, &en, cmdp+1)) {
+				errors = true;
+				break;
+			}
 			len = (en - bg + 1);
 
 			// check that user entered even number of characters
@@ -599,7 +602,10 @@ int CmdLegicCalcCrc8(const char *Cmd){
 				break;
 			}
 			
-			param_gethex(Cmd, cmdp+1, data, len);
+			if (param_gethex(Cmd, cmdp+1, data, len)) {
+				errors = true;
+				break;
+			}
 
 			len >>= 1;	
 			cmdp += 2;
