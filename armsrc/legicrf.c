@@ -669,11 +669,8 @@ void LegicRfRawWriter(int offset, int byte) {
 		LED_B_OFF();
 		LED_C_OFF();
 		return;
-			
-        WDT_HIT();
-		byte_index++;
-        if(byte_index & 0x10) LED_C_ON(); else LED_C_OFF();
 	}
+	
     LED_B_OFF();
     LED_C_OFF();
     DbpString("write successful");
