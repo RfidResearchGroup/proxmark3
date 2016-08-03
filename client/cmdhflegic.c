@@ -204,10 +204,10 @@ int CmdLegicDecode(const char *Cmd) {
 			// decode segments
 			for (segmentNum=1; segmentNum < 128; segmentNum++ )
 			{
-				segment_len = ((data_buf[i+1]^crc)&0x0f) * 256 + (data_buf[i]^crc);
-				segment_flag = ((data_buf[i+1]^crc)&0xf0)>>4;
-				wrp = (data_buf[i+2]^crc);
-				wrc = ((data_buf[i+3]^crc)&0x70)>>4;
+				segment_len = ((data_buf[i+1] ^ crc) & 0x0f) * 256 + (data_buf[i] ^ crc);
+				segment_flag = ((data_buf[i+1] ^ crc) & 0xf0) >> 4;
+				wrp = (data_buf[i+2] ^ crc);
+				wrc = ((data_buf[i+3] ^ crc) & 0x70) >> 4;
 
 				bool hasWRC = (wrc > 0);
 				bool hasWRP = (wrp > wrc);
@@ -219,20 +219,20 @@ int CmdLegicDecode(const char *Cmd) {
 				segCrcBytes[1]=data_buf[1];			//uid1
 				segCrcBytes[2]=data_buf[2];			//uid2
 				segCrcBytes[3]=data_buf[3];			//uid3
-				segCrcBytes[4]=(data_buf[i]^crc); 	//hdr0
-				segCrcBytes[5]=(data_buf[i+1]^crc); //hdr1
-				segCrcBytes[6]=(data_buf[i+2]^crc); //hdr2
-				segCrcBytes[7]=(data_buf[i+3]^crc); //hdr3
+				segCrcBytes[4]=(data_buf[i] ^ crc);   //hdr0
+				segCrcBytes[5]=(data_buf[i+1] ^ crc); //hdr1
+				segCrcBytes[6]=(data_buf[i+2] ^ crc); //hdr2
+				segCrcBytes[7]=(data_buf[i+3] ^ crc); //hdr3
 
 				segCalcCRC = CRC8Legic(segCrcBytes, 8);
-				segCRC = data_buf[i+4]^crc;
+				segCRC = data_buf[i+4] ^ crc;
 
 				PrintAndLog("Segment %02u \nraw header | 0x%02X 0x%02X 0x%02X 0x%02X \nSegment len: %u,  Flag: 0x%X (valid:%01u, last:%01u), WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X (%s)",
 					segmentNum,
-					data_buf[i]^crc,
-					data_buf[i+1]^crc,
-					data_buf[i+2]^crc,
-					data_buf[i+3]^crc,
+					data_buf[i] ^ crc,
+					data_buf[i+1] ^ crc,
+					data_buf[i+2] ^ crc,
+					data_buf[i+3] ^ crc,
 					segment_len, 
 					segment_flag,
 					(segment_flag & 0x4) >> 2,
@@ -251,7 +251,7 @@ int CmdLegicDecode(const char *Cmd) {
 					PrintAndLog("\nrow  | data");
 					PrintAndLog("-----+------------------------------------------------");
 
-					for ( k=i; k < (i+wrc); ++k)
+					for ( k=i; k < (i + wrc); ++k)
 						data_buf[k] ^= crc;
 
 					print_hex_break( data_buf+i, wrc, 16);
@@ -300,7 +300,7 @@ int CmdLegicDecode(const char *Cmd) {
 			i = 8;
 
 			wrp = data_buf[7] & 0x0F;
-			wrc = (data_buf[7] & 0x707) >> 4;
+			wrc = (data_buf[7] & 0x70) >> 4;
 
 			bool hasWRC = (wrc > 0);
 			bool hasWRP = (wrp > wrc);
@@ -342,7 +342,6 @@ int CmdLegicDecode(const char *Cmd) {
 			PrintAndLog("-----+------------------------------------------------\n");
 		}
 	}
-
 	return 0;
 }
 
