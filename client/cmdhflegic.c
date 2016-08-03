@@ -297,7 +297,7 @@ int CmdLegicDecode(const char *Cmd) {
 			i = 8;
 
 			wrp          = data_buf[7] & 0x0F;
-			wrc          = (data_buf[7] & 0x07) >> 4;
+			wrc          = (data_buf[7] & 0x07) >> 4; // ICEMAN 20160802, this will always be ZERO
 
 			bool hasWRC = (wrc > 0);
 			bool hasWRP = (wrp > wrc);
