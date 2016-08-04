@@ -37,13 +37,13 @@
 #include "iso15693tools.h"
 #include "cmdmain.h"
 
-#define FrameSOF              Iso15693FrameSOF
-#define Logic0						Iso15693Logic0
-#define Logic1						Iso15693Logic1
-#define FrameEOF					Iso15693FrameEOF
+#define FrameSOF				Iso15693FrameSOF
+#define Logic0					Iso15693Logic0
+#define Logic1					Iso15693Logic1
+#define FrameEOF				Iso15693FrameEOF
 
-#define Crc(data,datalen)     Iso15693Crc(data,datalen)
-#define AddCrc(data,datalen)  Iso15693AddCrc(data,datalen)
+#define Crc(data,datalen)		Iso15693Crc(data,datalen)
+#define AddCrc(data,datalen)	Iso15693AddCrc(data,datalen)
 #define sprintUID(target,uid)	Iso15693sprintUID(target,uid)
 
 // structure and database for uid -> tagtype lookups 
@@ -293,7 +293,7 @@ int CmdHF15Demod(const char *Cmd)
 	// First, correlate for SOF
 	for (i = 0; i < 100; i++) {
 		int corr = 0;
-		for (j = 0; j < arraylen(FrameSOF); j += skip) {
+		for (j = 0; j < ARRAYLEN(FrameSOF); j += skip) {
 			corr += FrameSOF[j] * GraphBuffer[i + (j / skip)];
 		}
 		if (corr > max) {
@@ -301,23 +301,22 @@ int CmdHF15Demod(const char *Cmd)
 			maxPos = i;
 		}
 	}
-	PrintAndLog("SOF at %d, correlation %d", maxPos,
-		max / (arraylen(FrameSOF) / skip));
+	PrintAndLog("SOF at %d, correlation %d", maxPos, max / (ARRAYLEN(FrameSOF) / skip));
 	
-	i = maxPos + arraylen(FrameSOF) / skip;
+	i = maxPos + ARRAYLEN(FrameSOF) / skip;
 	int k = 0;
 	uint8_t outBuf[20];
 	memset(outBuf, 0, sizeof(outBuf));
 	uint8_t mask = 0x01;
 	for (;;) {
 		int corr0 = 0, corr1 = 0, corrEOF = 0;
-		for (j = 0; j < arraylen(Logic0); j += skip) {
+		for (j = 0; j < ARRAYLEN(Logic0); j += skip) {
 			corr0 += Logic0[j] * GraphBuffer[i + (j / skip)];
 		}
-		for (j = 0; j < arraylen(Logic1); j += skip) {
+		for (j = 0; j < ARRAYLEN(Logic1); j += skip) {
 			corr1 += Logic1[j] * GraphBuffer[i + (j / skip)];
 		}
-		for (j = 0; j < arraylen(FrameEOF); j += skip) {
+		for (j = 0; j < ARRAYLEN(FrameEOF); j += skip) {
 			corrEOF += FrameEOF[j] * GraphBuffer[i + (j / skip)];
 		}
 		// Even things out by the length of the target waveform.
@@ -328,17 +327,17 @@ int CmdHF15Demod(const char *Cmd)
 			PrintAndLog("EOF at %d", i);
 			break;
 		} else if (corr1 > corr0) {
-			i += arraylen(Logic1) / skip;
+			i += ARRAYLEN(Logic1) / skip;
 			outBuf[k] |= mask;
 		} else {
-			i += arraylen(Logic0) / skip;
+			i += ARRAYLEN(Logic0) / skip;
 		}
 		mask <<= 1;
 		if (mask == 0) {
 			k++;
 			mask = 0x01;
 		}
-		if ((i + (int)arraylen(FrameEOF)) >= GraphTraceLen) {
+		if ((i + (int)ARRAYLEN(FrameEOF)) >= GraphTraceLen) {
 			PrintAndLog("ran off end!");
 			break;
 		}
@@ -435,14 +434,14 @@ int CmdHF15Afi(const char *Cmd)
 
 // Reads all memory pages
 int CmdHF15DumpMem(const char*Cmd) {
+
+	uint8_t uid[8] = {0,0,0,0,0,0,0,0};	
+	uint8_t *recv = NULL;
 	UsbCommand resp;
-	uint8_t uid[8];	
-	uint8_t *recv=NULL;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
-	uint8_t *req=c.d.asBytes;
-	int reqlen=0;
-	int blocknum=0;
-	char output[80];
+	uint8_t *req = c.d.asBytes;
+	int reqlen = 0, blocknum = 0;
+	char output[80] = {0};
 		
 	if (!getUID(uid)) {
 		PrintAndLog("No Tag found.");
@@ -468,15 +467,15 @@ int CmdHF15DumpMem(const char*Cmd) {
 			recv = resp.d.asBytes;
 			if (ISO15_CRC_CHECK==Crc(recv,resp.arg[0])) {
 				if (!(recv[0] & ISO15_RES_ERROR)) {
-					retry=0;
-					*output=0; // reset outputstring
+					retry = 0;
+					*output = 0; // reset outputstring
 					sprintf(output, "Block %02x   ",blocknum);
 					for ( int i=1; i<resp.arg[0]-2; i++) { // data in hex
 						sprintf(output+strlen(output),"%02X ",recv[i]);
 					}					
 					strcat(output,"   "); 
-					for ( int i=1; i<resp.arg[0]-2; i++) { // data in cleaned ascii
-						sprintf(output+strlen(output),"%c",(recv[i]>31 && recv[i]<127)?recv[i]:'.');					
+					for ( int i = 1; i < resp.arg[0]-2; i++) { // data in cleaned ascii
+						sprintf(output+strlen(output),"%c",(recv[i] > 31 && recv[i] < 127) ? recv[i] : '.');					
 					}					
 					PrintAndLog("%s",output);	
 					blocknum++;
@@ -512,7 +511,7 @@ static command_t CommandTable15[] =
 	{"cmd",     CmdHF15Cmd,     0, "Send direct commands to ISO15693 tag"},
 	{"findafi", CmdHF15Afi,     0, "Brute force AFI of an ISO15693 tag"},
 	{"dumpmemory", CmdHF15DumpMem,     0, "Read all memory pages of an ISO15693 tag"},
-		{NULL, NULL, 0, NULL}
+	{NULL, NULL, 0, NULL}
 };
 
 int CmdHF15(const char *Cmd)

@@ -23,6 +23,7 @@
 #include "common.h"
 #include "cmdmain.h"
 #include "mifare.h"
+#include "cmdhfmf.h"
 #include "cmdhfmfu.h"
 #include "nonce2key/nonce2key.h"
 #include "cmdhf.h"
@@ -500,15 +501,13 @@ int CmdHF14ACUIDs(const char *Cmd) {
 // ## simulate iso14443a tag
 // ## greg - added ability to specify tag UID
 int CmdHF14ASim(const char *Cmd) {
+	#define ATTACK_KEY_COUNT 8
 	bool errors = FALSE;
 	uint8_t flags = 0;
 	uint8_t tagtype = 1;	
 	uint8_t cmdp = 0;
 	uint8_t uid[10] = {0,0,0,0,0,0,0,0,0,0};
 	int uidlen = 0;
-	uint8_t data[40];
-	uint64_t key = 0;
-	UsbCommand resp;
 	bool useUIDfromEML = TRUE;
 
 	while(param_getchar(Cmd, cmdp) != 0x00) {
@@ -566,27 +565,23 @@ int CmdHF14ASim(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);	
 
-	while(!ukbhit()){
-		if ( WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-			if ( (resp.arg[0] & 0xffff) == CMD_SIMULATE_MIFARE_CARD ){
-				memset(data, 0x00, sizeof(data));
-				int len = (resp.arg[1] > sizeof(data)) ? sizeof(data) : resp.arg[1];
-				memcpy(data, resp.d.asBytes, len);
-				key = 0;
-				
-				if ( flags & FLAG_NR_AR_ATTACK ) {
-					bool found = tryMfk32(data, &key);
-					found ^= tryMfk32_moebius(data, &key);
-				}
-			}
-		}
+	nonces_t data[ATTACK_KEY_COUNT*2];
+	UsbCommand resp;
+
+	while( !ukbhit() ){
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
+
+		if ( !(flags & FLAG_NR_AR_ATTACK) ) break;
+		if ( (resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD ) break;
+			
+		memcpy( data, resp.d.asBytes, sizeof(data) );
+		readerAttack(data, TRUE);
 	}
 	return 0;
 }
 
 int CmdHF14ASniff(const char *Cmd) {
-	int param = 0;
-	
+	int param = 0;	
 	uint8_t ctmp = param_getchar(Cmd, 0) ;
 	if (ctmp == 'h' || ctmp == 'H') return usage_hf_14a_sniff();
 	
@@ -764,8 +759,7 @@ static void waitCmd(uint8_t iSelect) {
     }
 }
 
-static command_t CommandTable[] = 
-{
+static command_t CommandTable[] = {
   {"help",   CmdHelp,              1, "This help"},
   {"list",   CmdHF14AList,         0, "[Deprecated] List ISO 14443a history"},
   {"reader", CmdHF14AReader,       0, "Act like an ISO14443 Type A reader"},

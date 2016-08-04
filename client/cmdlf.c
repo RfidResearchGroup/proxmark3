@@ -981,7 +981,7 @@ int CmdVchDemod(const char *Cmd)
   for (i = 0; i < (GraphTraceLen-2048); i++) {
     int sum = 0;
     int j;
-    for (j = 0; j < arraylen(SyncPattern); j++) {
+    for (j = 0; j < ARRAYLEN(SyncPattern); j++) {
       sum += GraphBuffer[i+j]*SyncPattern[j];
     }
     if (sum > bestCorrel) {

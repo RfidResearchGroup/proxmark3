@@ -10,14 +10,9 @@
 
 #ifndef DATA_H__
 #define DATA_H__
-
 #include <stdint.h>
-
-#define FILE_PATH_SIZE 1000
-
+#include "util.h"
 extern uint8_t* sample_buf;
-#define arraylen(x) (sizeof(x)/sizeof((x)[0]))
-
 void GetFromBigBuf(uint8_t *dest, int bytes, int start_index);
 void GetEMLFromBigBuf(uint8_t *dest, int bytes, int start_index);
 #endif

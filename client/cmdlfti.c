@@ -174,7 +174,7 @@ int CmdTIDemod(const char *Cmd)
 
 	uint32_t shift3 = 0x7e000000, shift2 = 0, shift1 = 0, shift0 = 0;
 
-	for (i = 0; i < arraylen(bits)-1; i++) {
+	for (i = 0; i < ARRAYLEN(bits)-1; i++) {
 		int high = 0;
 		int low = 0;
 		int j;
