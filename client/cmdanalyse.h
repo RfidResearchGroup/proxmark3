@@ -18,6 +18,7 @@
 #include "ui.h"		// PrintAndLog
 #include "util.h"
 #include "crc.h"
+#include "../common/iso15693tools.h"
 
 int usage_analyse_lcr(void);
 int usage_analyse_checksum(void);

@@ -2175,8 +2175,9 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 // Cloning MiFare Classic Rail and Building Passes, Anywhere, Anytime"
 // (article by Nicolas T. Courtois, 2009)
 //-----------------------------------------------------------------------------
-void ReaderMifare(bool first_try, uint8_t block ) {
-	uint8_t mf_auth[] 	= { MIFARE_AUTH_KEYA, block, 0x00, 0x00 };
+void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
+	
+	uint8_t mf_auth[] 	= { keytype, block, 0x00, 0x00 };
 	uint8_t mf_nr_ar[]	= { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
 	uint8_t uid[10]		= {0,0,0,0,0,0,0,0,0,0};
 	uint8_t par_list[8]	= {0,0,0,0,0,0,0,0};
@@ -2209,13 +2210,14 @@ void ReaderMifare(bool first_try, uint8_t block ) {
 	#define PRNG_SEQUENCE_LENGTH	(1 << 16)
 	#define MAX_UNEXPECTED_RANDOM	4		// maximum number of unexpected (i.e. real) random numbers when trying to sync. Then give up.
 	#define MAX_SYNC_TRIES		32
-
+	
+	AppendCrc14443a(mf_auth, 2);
+	
 	BigBuf_free(); BigBuf_Clear_ext(false);	
 	clear_trace();
 	set_tracing(TRUE);	
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
-	AppendCrc14443a(mf_auth, 2);
 	
 	if (first_try) { 
 		sync_time = GetCountSspClk() & 0xfffffff8;

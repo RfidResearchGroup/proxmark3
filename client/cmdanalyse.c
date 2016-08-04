@@ -176,7 +176,16 @@ int CmdAnalyseCRC(const char *Cmd) {
 	PrintAndLog("LEGIC: CRC8 : %X (0xC6 expected)", legic8);
 	PrintAndLog("MAXIM: CRC8 : %X (0xA1 expected)", CRC8Maxim(dataStr, sizeof(dataStr)));
 	PrintAndLog("DNP  : CRC16: %X (0x82EA expected)", CRC16_DNP(dataStr, sizeof(dataStr)));	
-	PrintAndLog("CCITT: CRC16: %X (0xE5CC expected)", CRC16_CCITT(dataStr, sizeof(dataStr)));	
+	PrintAndLog("CCITT: CRC16: %X (0xE5CC expected)", CRC16_CCITT(dataStr, sizeof(dataStr)));
+
+	PrintAndLog("ICLASS org: CRC16: %X (0x expected)",iclass_crc16( (char*)dataStr, sizeof(dataStr)));
+	PrintAndLog("ICLASS ice: CRC16: %X (0x expected)",CRC16_ICLASS(dataStr, sizeof(dataStr)));
+
+
+
+	uint8_t dataStr1234[] = { 0x1,0x2,0x3,0x4};
+	PrintAndLog("ISO15693 org:  : CRC16: %X (0xF0B8 expected)", Iso15693Crc(dataStr1234, sizeof(dataStr1234)));
+	PrintAndLog("ISO15693 ice:  : CRC16: %X (0xF0B8 expected)", CRC16_Iso15693(dataStr1234, sizeof(dataStr1234)));
 
 	free(data);
 	return 0;

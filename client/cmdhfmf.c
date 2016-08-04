@@ -9,18 +9,18 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhfmf.h"
-#include "cmdhfmfhard.h"
-#include "nonce2key/nonce2key.h"
 
 static int CmdHelp(const char *Cmd);
 int usage_hf14_mifare(void){
-	PrintAndLog("Usage:  hf mf mifare [h] <block number>");
+	PrintAndLog("Usage:  hf mf mifare [h] <block number> <A|B>");
 	PrintAndLog("options:");
-	PrintAndLog("           h    this help");
-	PrintAndLog("           <block number>  (Optional) target other key A than block 0.");
+	PrintAndLog("      h               this help");
+	PrintAndLog("      <block number>  (Optional) target other block");
+	PrintAndLog("      <A|B>           (optional) target key type");
 	PrintAndLog("samples:");
 	PrintAndLog("           hf mf mifare");
 	PrintAndLog("           hf mf mifare 16");
+	PrintAndLog("           hf mf mifare 16 B");
 	return 0;
 }
 int usage_hf14_mf1ksim(void){
@@ -132,13 +132,18 @@ int CmdHF14AMifare(const char *Cmd) {
 	uint64_t par_list = 0, ks_list = 0, r_key = 0;
 	int16_t isOK = 0;
 	int tmpchar; 
-	uint8_t blockNo = 0;
+	uint8_t blockNo = 0, keytype = MIFARE_AUTH_KEYA;
 	
 	char cmdp = param_getchar(Cmd, 0);	
 	if ( cmdp == 'H' || cmdp == 'h') return usage_hf14_mifare();
 	
-	blockNo = param_get8(Cmd, 0);
-	UsbCommand c = {CMD_READER_MIFARE, {true, blockNo, 0}};
+	blockNo = param_get8(Cmd, 0);	 
+	
+	cmdp = param_getchar(Cmd, 1);
+	if (cmdp == 'B' || cmdp == 'b')
+		keytype = MIFARE_AUTH_KEYB;
+	
+	UsbCommand c = {CMD_READER_MIFARE, {true, blockNo, keytype}};
 
 	// message
 	printf("-------------------------------------------------------------------------\n");
@@ -1315,45 +1320,121 @@ int CmdHF14AMfChk(const char *Cmd) {
 	PrintAndLog("");
 	return 0;
 }
+#define ATTACK_KEY_COUNT 8
+sector *k_sector = NULL;
+uint8_t k_sectorsCount = 16;
+void readerAttack(nonces_t data[], bool setEmulatorMem) {
+
+	// initialize storage for found keys
+	if (k_sector == NULL);
+		k_sector = calloc(k_sectorsCount, sizeof(sector));
+	if (k_sector == NULL) 
+		return;
+
+	uint64_t key = 0;
+		
+	// empty e_sector
+	for(int i = 0; i < k_sectorsCount; ++i){
+		k_sector[i].Key[0] = 0xffffffffffff;
+		k_sector[i].Key[1] = 0xffffffffffff;
+		k_sector[i].foundKey[0] = FALSE;
+		k_sector[i].foundKey[1] = FALSE;
+	}
+
+	printf("enter reader attack\n");
+	for (uint8_t i = 0; i < ATTACK_KEY_COUNT; ++i) {
+		if (data[i].ar2 > 0) {
+			
+			if (tryMfk32(data[i], &key)) {
+				PrintAndLog("Found Key%s for sector %02d: [%012"llx"]"
+					, (data[i].keytype) ? "B" : "A"
+					, data[i].sector
+					, key
+				);
+
+				k_sector[i].Key[data[i].keytype] = key;
+				k_sector[i].foundKey[data[i].keytype] = TRUE;
+				
+				//set emulator memory for keys
+				if (setEmulatorMem) {
+					uint8_t	memBlock[16] = {0,0,0,0,0,0, 0xff, 0x0F, 0x80, 0x69, 0,0,0,0,0,0};
+					num_to_bytes( k_sector[i].Key[0], 6, memBlock);
+					num_to_bytes( k_sector[i].Key[1], 6, memBlock+10);
+					mfEmlSetMem( memBlock, i*4 + 3, 1);
+					PrintAndLog("Setting Emulator Memory Block %02d: [%s]"
+						, i*4 + 3
+						, sprint_hex( memBlock, sizeof(memBlock))
+						);
+				}
+				break;
+			}
+			//moebius attack			
+			// if (tryMfk32_moebius(data[i+ATTACK_KEY_COUNT], &key)) {
+				// PrintAndLog("M-Found Key%s for sector %02d: [%012"llx"]"
+					// ,(data[i+ATTACK_KEY_COUNT].keytype) ? "B" : "A"
+					// , data[i+ATTACK_KEY_COUNT].sector
+					// , key
+				// );
+			// }
+		}
+	}
+}
 
 int CmdHF14AMf1kSim(const char *Cmd) {
+
 	uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	uint8_t exitAfterNReads = 0;
 	uint8_t flags = (FLAG_UID_IN_EMUL | FLAG_4B_UID_IN_DATA);
-	int uidlen = 0;
-	uint8_t pnr = 0;
-	uint8_t cmdp = param_getchar(Cmd, 0);
+	int uidlen = 0;	
+	bool setEmulatorMem = false;
+	uint8_t cmdp = 0;
+	bool errors = false;
 
-	if (cmdp == 'h' || cmdp == 'H') return usage_hf14_mf1ksim();
-
-	cmdp = param_getchar(Cmd, pnr);
-	if (cmdp == 'u' || cmdp == 'U') {
-		param_gethex_ex(Cmd, pnr+1, uid, &uidlen);
-		switch(uidlen){
-			case 20: flags = FLAG_10B_UID_IN_DATA;	break;
-			case 14: flags = FLAG_7B_UID_IN_DATA; break;
-			case  8: flags = FLAG_4B_UID_IN_DATA; break;
-			default: return usage_hf14_mf1ksim();
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'e':
+		case 'E':
+			setEmulatorMem = true;
+			cmdp++;
+			break;
+		case 'h':
+		case 'H':
+			return usage_hf14_mf1ksim();
+		case 'i':
+		case 'I':
+			flags |= FLAG_INTERACTIVE;
+			cmdp++;
+			break;
+		case 'n':
+		case 'N':
+			exitAfterNReads = param_get8(Cmd, cmdp+1);
+			cmdp += 2;
+			break;
+		case 'u':
+		case 'U':
+			param_gethex_ex(Cmd, cmdp+1, uid, &uidlen);
+			switch(uidlen) {
+				case 20: flags = FLAG_10B_UID_IN_DATA; break;
+				case 14: flags = FLAG_7B_UID_IN_DATA; break;
+				case  8: flags = FLAG_4B_UID_IN_DATA; break;
+				default: return usage_hf14_mf1ksim();
+			}
+			cmdp +=2;
+			break;
+		case 'x':
+		case 'X':
+			flags |= FLAG_NR_AR_ATTACK;
+			cmdp++;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
 		}
-		pnr +=2;
+		if(errors) break;
 	}
-
-	cmdp = param_getchar(Cmd, pnr);	
-	if (cmdp == 'n' || cmdp == 'N') {
-		exitAfterNReads = param_get8(Cmd, pnr+1);
-		pnr += 2;
-	}
-
-	cmdp = param_getchar(Cmd, pnr);		
-	if (cmdp == 'i' || cmdp == 'I' ) {
-		flags |= FLAG_INTERACTIVE;
-		pnr++;
-	}
-
-	cmdp = param_getchar(Cmd, pnr);	
-	if (cmdp == 'x' || cmdp == 'X') {
-		flags |= FLAG_NR_AR_ATTACK;
-	}
+	//Validations
+	if(errors) return usage_hf14_mf1ksim();
 	
 	PrintAndLog(" uid:%s, numreads:%d, flags:%d (0x%02x) "
 				, (uidlen == 0 ) ? "N/A" : sprint_hex(uid, uidlen>>1)
@@ -1367,24 +1448,24 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 	SendCommand(&c);
 
 	if(flags & FLAG_INTERACTIVE) {		
-		uint8_t data[32];
-		uint64_t key;
-		UsbCommand resp;		
 		PrintAndLog("Press pm3-button or send another cmd to abort simulation");
+
+		nonces_t data[ATTACK_KEY_COUNT*2];
+		UsbCommand resp;		
+
 		while( !ukbhit() ){
 			if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
 
 			if ( !(flags & FLAG_NR_AR_ATTACK) ) break;
 			if ( (resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD ) break;
 
-			memset(data, 0x00, sizeof(data));	
-			int len = (resp.arg[1] > sizeof(data)) ? sizeof(data) : resp.arg[1];
-
-			memcpy(data, resp.d.asBytes, len);			
-			key = 0;
-			bool found = tryMfk32(data, &key);
-			found ^= tryMfk32_moebius(data, &key);
-			if ( found ) break;
+			memcpy( data, resp.d.asBytes, sizeof(data) );			
+			readerAttack(data, setEmulatorMem);
+		}
+		
+		if (k_sector != NULL) {
+			printKeyTable(k_sectorsCount, k_sector );
+			free(k_sector);
 		}
 	}
 	return 0;
@@ -1548,7 +1629,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 int CmdHF14AMfDbg(const char *Cmd) {
 
 	char ctmp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) < 1  || ctmp == 'h'|| ctmp == 'H') return usage_hf14_dbg();
+	if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_hf14_dbg();
 	
 	uint8_t dbgMode = param_get8ex(Cmd, 0, 0, 10);
 	if (dbgMode > 4) return usage_hf14_dbg();
@@ -1572,7 +1653,6 @@ void printKeyTable( uint8_t sectorscnt, sector *e_sector ){
 }
 
 // EMULATOR COMMANDS
-
 int CmdHF14AMfEGet(const char *Cmd)
 {
 	uint8_t blockNo = 0;
@@ -1586,7 +1666,7 @@ int CmdHF14AMfEGet(const char *Cmd)
 	
 	blockNo = param_get8(Cmd, 0);
 
-	PrintAndLog(" ");
+	PrintAndLog("");
 	if (!mfEmlGetMem(data, blockNo, 1)) {
 		PrintAndLog("data[%3d]:%s", blockNo, sprint_hex(data, 16));
 	} else {

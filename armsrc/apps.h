@@ -98,14 +98,14 @@ void TurnReadLFOn();
 void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 
-/// iso14443.h
+/// iso14443b.h
 void SimulateIso14443bTag(uint32_t pupi);
 void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
 void ReadSTMemoryIso14443b(uint8_t numofblocks);
 void RAMFUNC SnoopIso14443b(void);
 void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
 
-/// iso14443a.h
+// iso14443a.h
 void RAMFUNC SniffIso14443a(uint8_t param);
 void SimulateIso14443aTag(int tagType, int flags, byte_t* data);
 void ReaderIso14443a(UsbCommand * c);
@@ -114,16 +114,11 @@ void ReaderIso14443a(UsbCommand * c);
 void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *parity);
 void iso14a_set_trigger(bool enable);
 
-void RAMFUNC SniffMifare(uint8_t param);
-
-/// epa.h
+// epa.h
 void EPA_PACE_Collect_Nonce(UsbCommand * c);
 void EPA_PACE_Replay(UsbCommand *c);
 
 // mifarecmd.h
-//void ReaderMifare(bool first_try);
-void ReaderMifare(bool first_try, uint8_t block );
-int32_t dist_nt(uint32_t nt1, uint32_t nt2);
 void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
 void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 void MifareUC_Auth(uint8_t arg0, uint8_t *datain);
@@ -148,33 +143,37 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain);
 void OnSuccessMagic();
 void OnErrorMagic(uint8_t reason);
 
+int32_t dist_nt(uint32_t nt1, uint32_t nt2);
+void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype );
+void RAMFUNC SniffMifare(uint8_t param);
+
 //desfire
 void Mifare_DES_Auth1(uint8_t arg0,uint8_t *datain);
 void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain);					   
 
 // mifaredesfire.h
-bool 	InitDesfireCard();
-void	MifareSendCommand(uint8_t arg0,uint8_t arg1, uint8_t *datain);
-void 	MifareDesfireGetInformation();
-void 	MifareDES_Auth1(uint8_t arg0,uint8_t arg1,uint8_t arg2, uint8_t *datain);
-void 	ReaderMifareDES(uint32_t param, uint32_t param2, uint8_t * datain);
-int 	DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout);
-size_t	CreateAPDU( uint8_t *datain, size_t len, uint8_t *dataout);
-void 	OnSuccess();
-void 	OnError(uint8_t reason);
+bool InitDesfireCard();
+void MifareSendCommand(uint8_t arg0,uint8_t arg1, uint8_t *datain);
+void MifareDesfireGetInformation();
+void MifareDES_Auth1(uint8_t arg0,uint8_t arg1,uint8_t arg2, uint8_t *datain);
+void ReaderMifareDES(uint32_t param, uint32_t param2, uint8_t * datain);
+int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout);
+size_t CreateAPDU( uint8_t *datain, size_t len, uint8_t *dataout);
+void OnSuccess();
+void OnError(uint8_t reason);
 
 
 // desfire_crypto.h
-void	*mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes, size_t offset, int communication_settings);
-void    *mifare_cryto_postprocess_data (desfiretag_t tag, void *data, size_t *nbytes, int communication_settings);
-void    mifare_cypher_single_block (desfirekey_t  key, uint8_t *data, uint8_t *ivect, MifareCryptoDirection direction, MifareCryptoOperation operation, size_t block_size);
-void    mifare_cypher_blocks_chained (desfiretag_t tag, desfirekey_t key, uint8_t *ivect, uint8_t *data, size_t data_size, MifareCryptoDirection direction, MifareCryptoOperation operation);
-size_t  key_block_size (const desfirekey_t  key);
-size_t  padded_data_length (const size_t nbytes, const size_t block_size);
-size_t  maced_data_length (const desfirekey_t  key, const size_t nbytes);
-size_t  enciphered_data_length (const desfiretag_t tag, const size_t nbytes, int communication_settings);
-void    cmac_generate_subkeys (desfirekey_t key);
-void    cmac (const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
+void *mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes, size_t offset, int communication_settings);
+void *mifare_cryto_postprocess_data (desfiretag_t tag, void *data, size_t *nbytes, int communication_settings);
+void mifare_cypher_single_block (desfirekey_t  key, uint8_t *data, uint8_t *ivect, MifareCryptoDirection direction, MifareCryptoOperation operation, size_t block_size);
+void mifare_cypher_blocks_chained (desfiretag_t tag, desfirekey_t key, uint8_t *ivect, uint8_t *data, size_t data_size, MifareCryptoDirection direction, MifareCryptoOperation operation);
+size_t key_block_size (const desfirekey_t  key);
+size_t padded_data_length (const size_t nbytes, const size_t block_size);
+size_t maced_data_length (const desfirekey_t  key, const size_t nbytes);
+size_t enciphered_data_length (const desfiretag_t tag, const size_t nbytes, int communication_settings);
+void cmac_generate_subkeys (desfirekey_t key);
+void cmac (const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
 
 /// iso15693.h
 void RecordRawAdcSamplesIso15693(void);
@@ -199,7 +198,6 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks);
 void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data);
 void iClass_ReadCheck(uint8_t	blockNo, uint8_t keyType);
 
-
 // hitag2.h
 void SnoopHitag(uint32_t type);
 void SimulateHitagTag(bool tag_mem_supplied, byte_t* data);
@@ -211,13 +209,13 @@ void ReadHitagS(hitag_function htf, hitag_data* htd);
 void WritePageHitagS(hitag_function htf, hitag_data* htd,int page);
 void check_challenges(bool file_given, byte_t* data);
 
-
 // cmd.h
 bool cmd_receive(UsbCommand* cmd);
 bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, void* data, size_t len);
 
-/// util.h
+// util.h
 void HfSnoop(int , int);
+
 //EMV functions emvcmd.h
 void EMVTransaction(void);
 void EMVgetUDOL(void);

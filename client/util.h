@@ -24,12 +24,15 @@
 #ifndef ROTR
 # define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
 #endif
+
 #ifndef MIN
 # define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 #ifndef MAX
 # define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
+
+// Byte swapping
 #ifndef BSWAP_32
 # define BSWAP_32(x) \
      ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) | \
@@ -39,11 +42,13 @@
 # define BSWAP_16(x) ((( ((x) & 0xFF00 ) >> 8))| ( (((x) & 0x00FF) << 8)))
 #endif
 
+// Boolean
 #define TRUE                        1
 #define FALSE                       0
 #define EVEN                        0
 #define ODD                         1
 
+// Nibble logic
 #ifndef NIBBLE_HIGH
 # define NIBBLE_HIGH(b) ( (b & 0xF0) >> 4 )
 #endif
@@ -57,11 +62,21 @@
 # define SWAP_NIBBLE(b)  ( (NIBBLE_LOW(b)<< 4) | NIBBLE_HIGH(b))
 #endif
 
+// Binary Encoded Digit
 #ifndef BCD2DEC
 # define BCD2DEC(bcd) HornerScheme(bcd, 0x10, 10)
 #endif
 #ifndef DEC2BCD
 # define DEC2BCD(dec) HornerScheme(dec, 10, 0x10)
+#endif
+
+// used for save/load files
+#ifndef FILE_PATH_SIZE
+# define FILE_PATH_SIZE 1000
+#endif
+
+#ifndef ARRAYLEN
+# define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
 #endif
 
 int ukbhit(void);

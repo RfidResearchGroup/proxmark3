@@ -37,6 +37,9 @@
 #ifndef BITMASK
 # define BITMASK(X) (1 << (X))
 #endif
+#ifndef ARRAYLEN
+# define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
+#endif
 
 void print_result(char *name, uint8_t *buf, size_t len);
 size_t nbytes(size_t nbits);

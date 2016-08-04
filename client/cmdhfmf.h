@@ -22,7 +22,10 @@
 #include "cmdparser.h"
 #include "common.h"
 #include "util.h"
-#include "mifarehost.h"
+//#include "mifarehost.h"
+#include "mifare.h" // nonces_t struct
+#include "cmdhfmfhard.h"
+#include "nonce2key/nonce2key.h"
 
 int CmdHFMF(const char *Cmd);
 
@@ -56,5 +59,6 @@ int CmdHF14AMfCLoad(const char* cmd);
 int CmdHF14AMfCSave(const char* cmd);
 int CmdHf14MfDecryptBytes(const char *Cmd);
 
+void readerAttack(nonces_t data[], bool setEmulatorMem);
 void printKeyTable( uint8_t sectorscnt, sector *e_sector );
 #endif
