@@ -163,25 +163,47 @@ local function calypso_apdu_status(apdu)
 end
 
 local _calypso_cmds = {
-	["01.Select ICC file"]	=	'0294 a4 00 0002 3f00',
-	--["01.Select ICC file"]	=	'0294 a4 080004 3f00 0002',
-	["02.ICC"]				=	'0294 b2 01 041d',
+
+-- Break down of command bytes:
+--  A4 = select
+--  Master File  3F00
+--  0x3F = master file 
+--  0x00 = master file id, is constant to 0x00.
+
+--  DF Dedicated File  38nn
+--  can be seen as directories
+--  0x38  
+--  0xNN  id
+--	["01.Select ICC file"]	=	'0294 a4 080004 3f00 0002',
+
+-- 	EF Elementary File 
+--  EF1 Pin file
+--  EF2 Key file
+--  Grey Lock file
+--  Electronic deposit file
+--  Electronic Purse file
+--  Electronic Transaction log file
+
+	
+	--["01.Select ICC file"]	=	'0294 a4 00 0002 3f00',
+	["01.Select ICC file"]	=	'0294 a4 080004 3f00 0002',
+	["02.ICC"]				=	'0394 b2 01 041d',
 	["03.Select EnvHol file"] =	'0294 a4 080004 2000 2001',
-	["04.EnvHol1"]			=	'0294 b2 01 041d',
+	["04.EnvHol1"]			=	'0394 b2 01 041d',
 	["05.Select EvLog file"] =	'0294 a4 080004 2000 2010',
-	["06.EvLog1"]			=	'0294 b2 01 041d',
+	["06.EvLog1"]			=	'0394 b2 01 041d',
 	["07.EvLog2"]			=	'0294 b2 02 041d',
-	["08.EvLog3"]			=	'0294 b2 03 041d',
+	["08.EvLog3"]			=	'0394 b2 03 041d',
 	["09.Select ConList file"] ='0294 a4 080004 2000 2050',
-	["10.ConList"]			=	'0294 b2 01 041d',
+	["10.ConList"]			=	'0394 b2 01 041d',
 	["11.Select Contra file"] =	'0294 a4 080004 2000 2020',
-	["12.Contra1"]			=	'0294 b2 01 041d',
+	["12.Contra1"]			=	'0394 b2 01 041d',
 	["13.Contra2"]			=	'0294 b2 02 041d',
-	["14.Contra3"]			=	'0294 b2 03 041d',
+	["14.Contra3"]			=	'0394 b2 03 041d',
 	["15.Contra4"]			=	'0294 b2 04 041d',
-	["16.Select Counter file"]=	'0294 a4 080004 2000 2069',
+	["16.Select Counter file"]=	'0394 a4 080004 2000 2069',
 	["17.Counter"]			=	'0294 b2 01 041d',
-	["18.Select SpecEv file"]=	'0294 a4 080004 2000 2040',
+	["18.Select SpecEv file"]=	'0394 a4 080004 2000 2040',
 	["19.SpecEv1"]			=	'0294 b2 01 041d',
 }
 
@@ -215,7 +237,7 @@ function main(args)
 	P2                 5
 	LEN_
 	         0  1  2  3  4  5  6  7
-	apdu = '0a 00 94 a4 08 00 04 3f 00 00 02'  --select ICC file
+	apdu = '02 94 a4 08 00 04 3f 00 00 02'  --select ICC file
 	DF_NAME = "1TIC.ICA" 
 	--]]
 	--for i = 1,10 do
