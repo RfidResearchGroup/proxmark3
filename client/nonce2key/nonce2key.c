@@ -10,9 +10,6 @@
 // MIFARE Darkside hack
 //-----------------------------------------------------------------------------
 #include "nonce2key.h"
-#include "mifarehost.h"
-#include "ui.h"
-#include "proxmark3.h"
 
 int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t * key) {
 	struct Crypto1State *state;
@@ -155,22 +152,22 @@ int nonce2key_ex(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t ks_info, uint6
 	return 1;
 }
 
-int tryMfk32(uint8_t *data, uint64_t *outputkey ){
+// 32 bit recover key from 2 nonces
+bool tryMfk32(nonces_t data, uint64_t *outputkey) {
 	struct Crypto1State *s,*t;
-	uint64_t key;						 // recovered key
-	uint32_t uid     = le32toh(data);
-	uint32_t nt      = le32toh(data+4);  // tag challenge
-	uint32_t nr0_enc = le32toh(data+8);  // first encrypted reader challenge
-	uint32_t ar0_enc = le32toh(data+12); // first encrypted reader response
-	//+16 uid2
-	//+20 nt2
-	uint32_t nr1_enc = le32toh(data+24); // second encrypted reader challenge
-	uint32_t ar1_enc = le32toh(data+28); // second encrypted reader response	
-	bool isSuccess = FALSE;
-	int counter = 0;
-
-	PrintAndLog("Enter mfkey32");
+	uint64_t outkey = 0;
+	uint64_t key=0;     // recovered key
+	uint32_t uid     = data.cuid;
+	uint32_t nt      = data.nonce;  // first tag challenge (nonce)
+	uint32_t nr0_enc = data.nr;  // first encrypted reader challenge
+	uint32_t ar0_enc = data.ar;  // first encrypted reader response
+	uint32_t nr1_enc = data.nr2; // second encrypted reader challenge
+	uint32_t ar1_enc = data.ar2; // second encrypted reader response
 	clock_t t1 = clock();
+	bool isSuccess = FALSE;
+	uint8_t counter = 0;
+
+
 	s = lfsr_recovery32(ar0_enc ^ prng_successor(nt, 64), 0);
   
 	for(t = s; t->odd | t->even; ++t) {
@@ -181,35 +178,36 @@ int tryMfk32(uint8_t *data, uint64_t *outputkey ){
 		crypto1_word(t, uid ^ nt, 0);
 		crypto1_word(t, nr1_enc, 1);
 		if (ar1_enc == (crypto1_word(t, 0, 0) ^ prng_successor(nt, 64))) {
-			PrintAndLog("Found Key: [%012"llx"]", key);
-			isSuccess = TRUE;
+			//PrintAndLog("Found Key: [%012"llx"]", key);
+			outkey = key;
 			++counter;
-			if (counter==100)
-				break;
+			if (counter==20) break;
 		}
 	}
+ 	isSuccess = (counter > 0);
 	t1 = clock() - t1;
-	if ( t1 > 0 ) PrintAndLog("Time in mf32key: %.0f ticks \n", (float)t1);
-	*outputkey = ( isSuccess ) ? key : 0;
+	if ( t1 > 0 ) PrintAndLog("Time in mfkey32: %.0f ticks  - possible keys %d\n", (float)t1, counter);
+	*outputkey = ( isSuccess ) ? outkey : 0;
 	crypto1_destroy(s);
 	return isSuccess;
 }
 
-int tryMfk32_moebius(uint8_t *data, uint64_t *outputkey ){
+bool tryMfk32_moebius(nonces_t data, uint64_t *outputkey) {
 	struct Crypto1State *s, *t;
+	uint64_t outkey  = 0;
 	uint64_t key 	 = 0;			     // recovered key
-	uint32_t uid     = le32toh(data);
-	uint32_t nt0     = le32toh(data+4);  // first tag challenge (nonce)
-	uint32_t nr0_enc = le32toh(data+8);  // first encrypted reader challenge
-	uint32_t ar0_enc = le32toh(data+12); // first encrypted reader response
+	uint32_t uid     = data.cuid;
+	uint32_t nt0     = data.nonce;  // first tag challenge (nonce)
+	uint32_t nr0_enc = data.nr;  // first encrypted reader challenge
+	uint32_t ar0_enc = data.ar; // first encrypted reader response
 	//uint32_t uid1    = le32toh(data+16);
-	uint32_t nt1     = le32toh(data+20); // second tag challenge (nonce)
-	uint32_t nr1_enc = le32toh(data+24); // second encrypted reader challenge
-	uint32_t ar1_enc = le32toh(data+28); // second encrypted reader response	
+	uint32_t nt1     = data.nonce2; // second tag challenge (nonce)
+	uint32_t nr1_enc = data.nr2; // second encrypted reader challenge
+	uint32_t ar1_enc = data.ar2; // second encrypted reader response	
 	bool isSuccess = FALSE;
 	int counter = 0;
 	
-	PrintAndLog("Enter mfkey32_moebius");
+	//PrintAndLog("Enter mfkey32_moebius");
 	clock_t t1 = clock();
 
 	s = lfsr_recovery32(ar0_enc ^ prng_successor(nt0, 64), 0);
@@ -223,16 +221,16 @@ int tryMfk32_moebius(uint8_t *data, uint64_t *outputkey ){
 		crypto1_word(t, uid ^ nt1, 0);
 		crypto1_word(t, nr1_enc, 1);
 		if (ar1_enc == (crypto1_word(t, 0, 0) ^ prng_successor(nt1, 64))) {
-			PrintAndLog("Found Key: [%012"llx"]",key);
-			isSuccess = TRUE;
+			//PrintAndLog("Found Key: [%012"llx"]",key);
+			outkey=key;
 			++counter;
-			if (counter==20)
-				break;
+			if (counter==20) break;
 		}
 	}
+    isSuccess	= (counter > 0);
 	t1 = clock() - t1;
-	if ( t1 > 0 ) PrintAndLog("Time in mfkey32_moebius: %.0f ticks \n", (float)t1);
-	*outputkey = ( isSuccess ) ? key : 0;
+	if ( t1 > 0 ) PrintAndLog("Time in mfkey32_moebius: %.0f ticks  - possible keys %d\n", (float)t1, counter);
+	*outputkey = ( isSuccess ) ? outkey : 0;
 	crypto1_destroy(s);
 	return isSuccess;
 }
