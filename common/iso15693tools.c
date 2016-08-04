@@ -6,14 +6,7 @@
 // ISO15693 CRC & other commons
 //-----------------------------------------------------------------------------
 
-
-#include "proxmark3.h"
-#include <stdint.h>
-#include <stdlib.h>
-//#include "iso15693tools.h"
-
-#define POLY 0x8408
-
+#include "iso15693tools.h"
 
 // The CRC as described in ISO 15693-Part 3-Annex C
 // 	v	buffer with data
@@ -59,11 +52,11 @@ int sprintf(char *str, const char *format, ...);
 //		uid[]		the UID in transmission order
 //	return: ptr to string
 char* Iso15693sprintUID(char *target,uint8_t *uid) {
-  static char tempbuf[2*8+1]="";
-  if (target==NULL) target=tempbuf;
-  sprintf(target,"%02X%02X%02X%02X%02X%02X%02X%02X",
-  				uid[7],uid[6],uid[5],uid[4],uid[3],uid[2],uid[1],uid[0]);
-  return target;
+	static char tempbuf[2*8+1] = "";
+	if (target==NULL) target=tempbuf;
+	sprintf(target,"%02X%02X%02X%02X%02X%02X%02X%02X",
+				uid[7],uid[6],uid[5],uid[4],uid[3],uid[2],uid[1],uid[0]);
+	return target;
 }
 
 uint16_t iclass_crc16(char *data_p, unsigned short length)

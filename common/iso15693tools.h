@@ -4,6 +4,13 @@
 #ifndef ISO15693_H__
 #define ISO15693_H__
 
+#include "proxmark3.h"
+#include <stdint.h>
+#include <stdlib.h>
+
+#define POLY 0x8408
+
+
 // ISO15693 CRC
 #define ISO15_CRC_PRESET	(uint16_t)0xFFFF
 #define ISO15_CRC_POLY		(uint16_t)0x8408

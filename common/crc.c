@@ -82,7 +82,6 @@ uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
 	return crc_finish(&crc);
 }
 
-
 // width=4  poly=0xC, reversed poly=0x7  init=0x5   refin=true  refout=true  xorout=0x0000  check=  name="CRC-4/LEGIC"
 // width=8  poly=0x63, reversed poly=0x8D  init=0x55  refin=true  refout=true  xorout=0x0000  check=0xC6  name="CRC-8/LEGIC"
 // the CRC needs to be reversed before returned.
@@ -123,6 +122,23 @@ uint32_t CRC16_DNP(uint8_t *buff, size_t size) {
 uint32_t CRC16_CCITT(uint8_t *buff, size_t size) {
 	crc_t crc;
 	crc_init(&crc, 16, 0x1021, 0x1d0f, 0);	
+	for ( int i=0; i < size; ++i)
+		crc_update(&crc, buff[i], 8);
+	return  crc_finish(&crc);
+}
+//width=16  poly=0x8408  init=0xffff  refin=false  refout=true  xorout=0xffff  check=0xF0B8  name="CRC-16/ISO/IEC 13239"
+uint32_t CRC16_Iso15693(uint8_t *buff, size_t size) {
+	crc_t crc;
+	crc_init_ref(&crc, 16, 0x8408, 0xFFFF, 0xFFFF, true, false);	
+	for ( int i=0; i < size; ++i)
+		crc_update(&crc, buff[i], 8);
+	return reflect(crc_finish(&crc), 16);
+}
+//width=16  poly=0x8408  init=0xffff  refin=true  refout=true  xorout=0x0BC3  check=0xF0B8  name="CRC-16/ICLASS"
+uint32_t CRC16_ICLASS(uint8_t *buff, size_t size) {
+
+	crc_t crc;
+	crc_init_ref(&crc, 16, 0x8408, 0xFFFF, 0x0BC3, false, false);	
 	for ( int i=0; i < size; ++i)
 		crc_update(&crc, buff[i], 8);
 	return  crc_finish(&crc);
