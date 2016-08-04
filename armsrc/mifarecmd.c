@@ -1428,7 +1428,6 @@ void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain){
 }
 
 void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain){
-
 	uint32_t cuid = arg0;
 	uint8_t key[16] = {0x00};
 	byte_t dataout[12] = {0x00};

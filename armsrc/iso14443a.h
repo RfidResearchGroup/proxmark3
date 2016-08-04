@@ -13,7 +13,18 @@
 #ifndef __ISO14443A_H
 #define __ISO14443A_H
 #include "common.h"
+#include "proxmark3.h"
+#include "apps.h"
+#include "util.h"
+#include "string.h"
+#include "cmd.h"
+#include "iso14443crc.h"
 #include "mifaresniff.h"
+#include "iso14443b.h"
+#include "crapto1.h"
+#include "mifareutil.h"
+#include "BigBuf.h"
+#include "parity.h"
 
 typedef struct {
 	enum {
@@ -95,7 +106,7 @@ int EmSend4bitEx(uint8_t resp, bool correctionNeeded);
 int EmSend4bit(uint8_t resp);
 int EmSendCmdExPar(uint8_t *resp, uint16_t respLen, bool correctionNeeded, uint8_t *par);
 int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool correctionNeeded);
-int EmSendCmd(uint8_t *resp, uint16_t respLen);
+extern int EmSendCmd(uint8_t *resp, uint16_t respLen);
 int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
 				uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
