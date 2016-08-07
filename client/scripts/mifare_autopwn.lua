@@ -28,6 +28,8 @@ Output files from this operation:
 -- Some utilities 
 -------------------------------
 local DEBUG = false
+local MIFARE_AUTH_KEYA = 0x60
+local MIFARE_AUTH_KEYB = 0x61
 --- 
 -- A debug printout-function
 function dbg(args)
@@ -66,7 +68,7 @@ end
 function mfcrack()
 	core.clearCommandBuffer()
 	-- Build the mifare-command
-	local cmd = Command:new{cmd = cmds.CMD_READER_MIFARE, arg1 = 1, arg2 = 0}
+	local cmd = Command:new{cmd = cmds.CMD_READER_MIFARE, arg1 = 1, arg2 = 0, arg3 = MIFARE_AUTH_KEYA}
 	
 	local retry = true
 	while retry do
@@ -78,7 +80,7 @@ function mfcrack()
 		if errormessage then return nil, errormessage end
 		-- Try again..set arg1 to 0 this time. 
 
-		cmd = Command:new{cmd = cmds.CMD_READER_MIFARE, arg1 = 0, arg2 = 0}
+		cmd = Command:new{cmd = cmds.CMD_READER_MIFARE, arg1 = 0, arg2 = 0, arg3 = MIFARE_AUTH_KEYA}
 	end	
 	return nil, "Aborted by user"
 end
