@@ -49,7 +49,7 @@ void iso14b_set_timeout(uint32_t timeout) {
 	// 9.4395us = 1etu.
 	// clock is about 1.5 us
 	iso14b_timeout = timeout;
-	if(MF_DBGLEVEL >= 2) Dbprintf("ISO14443B Timeout set to %ld fwt", iso14b_timeout);
+	if(MF_DBGLEVEL >= 3) Dbprintf("ISO14443B Timeout set to %ld fwt", iso14b_timeout);
 }
 
 static void switch_off(void){	
@@ -984,16 +984,18 @@ static void GetTagSamplesFor14443bDemod() {
 	}
 	
 	FpgaDisableSscDma();
-
+	
+	if ( upTo ) upTo = NULL;
+	
 	if (MF_DBGLEVEL >= 3) {
-		Dbprintf("time_stop = %u PDC_RCR = %u", time_stop,  AT91C_BASE_PDC_SSC->PDC_RCR);
-		Dbprintf("#Samples = %d, Demod.state = %d, Demod.len = %u",
-			samples, 			
+		Dbprintf("Demod.state = %d, Demod.len = %u,  PDC_RCR = %u",	
 			Demod.state,
-			Demod.len
+			Demod.len,
+			AT91C_BASE_PDC_SSC->PDC_RCR
 		);
 	}
 	
+	// print the last batch of IQ values from FPGA
 	if (MF_DBGLEVEL == 4)
 		Dbhexdump(ISO14443B_DMA_BUFFER_SIZE, (uint8_t *)dmaBuf, FALSE);	
 	
@@ -1517,16 +1519,13 @@ static void iso1444b_setup_snoop(void){
 void RAMFUNC SnoopIso14443b(void) {
 
 	uint32_t time_0 = 0, time_start = 0, time_stop = 0;
-	
+	int ci = 0, cq = 0;
+	int lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
+
 	// We won't start recording the frames that we acquire until we trigger;
 	// a good trigger condition to get started is probably when we see a
 	// response from the tag.
-	int triggered = TRUE;			// TODO: set and evaluate trigger condition	
-	int ci, cq;
-	int maxBehindBy = 0;
-	//int behindBy  = 0;
-	int lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
-	
+	bool triggered = TRUE;			// TODO: set and evaluate trigger condition		
 	bool TagIsActive = FALSE;
 	bool ReaderIsActive = FALSE;
 
@@ -1549,26 +1548,10 @@ void RAMFUNC SnoopIso14443b(void) {
 	for(;;) {
 
 		WDT_HIT();
-		
-		/* iceman: the & (and) should do what?
-			ISO14443B_DMA_BUFFER_SIZE = 256
-			Should it be a "mod 255" ?
-			
-		 (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) & (ISO14443B_DMA_BUFFER_SIZE-1);
-		 
-		*/
-		int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) & RECEIVE_MASK;
 
-		if ( behindBy > maxBehindBy )
-			maxBehindBy = behindBy;
-		
-		// this one needs the inner loop from tr
-		if ( behindBy < 2 ) continue;
-		
 		ci = upTo[0];
 		cq = upTo[1];
-		upTo += 2;
-		
+		upTo += 2;		
 		lastRxCounter -= 2;
 		
 		if (upTo >= dmaBuf + ISO14443B_DMA_BUFFER_SIZE) {
@@ -1576,21 +1559,14 @@ void RAMFUNC SnoopIso14443b(void) {
 			lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
 			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
 			AT91C_BASE_PDC_SSC->PDC_RNCR = ISO14443B_DMA_BUFFER_SIZE;
-			WDT_HIT();
-			
-			// TODO: understand whether we can increase/decrease as we want or not?
-			if ( behindBy > ( 9 * ISO14443B_DMA_BUFFER_SIZE/10) ) { 
-				Dbprintf("blew circular buffer! behindBy = %d", behindBy);
-				break;
-			}
-			
-			if(!tracing) {
-				DbpString("Trace full");
+		
+			if (!tracing) {
+				if (MF_DBGLEVEL >= 2) DbpString("Trace full");
 				break;
 			}
 				
-			if(BUTTON_PRESS()) {
-				DbpString("cancelled");
+			if (BUTTON_PRESS()) {
+				if (MF_DBGLEVEL >= 2) DbpString("cancelled");
 				break;
 			}
 		}
@@ -1635,10 +1611,11 @@ void RAMFUNC SnoopIso14443b(void) {
 			LED_A_OFF();
 		}
 		
-		if(!ReaderIsActive) {
+		if (!ReaderIsActive) {
 			// no need to try decoding tag data if the reader is sending - and we cannot afford the time
 			// is this | 0x01 the error?   & 0xfe  in https://github.com/Proxmark/proxmark3/issues/103
-			if(Handle14443bTagSamplesDemod(ci & 0xFE, cq & 0xFE)) {
+			// LSB is a fpga signal bit.
+			if (Handle14443bTagSamplesDemod(ci >> 1, cq >> 1)) {
 				
 				time_stop = GetCountSspClk() - time_0;
 				
@@ -1658,12 +1635,11 @@ void RAMFUNC SnoopIso14443b(void) {
 	switch_off(); // Snoop
 	
 	DbpString("Snoop statistics:");
-	Dbprintf("  Max behind by: %i", maxBehindBy);
 	Dbprintf("  Uart State: %x  ByteCount: %i  ByteCountMax: %i", Uart.state,  Uart.byteCnt,  Uart.byteCntMax);
 	Dbprintf("  Trace length: %i", BigBuf_get_traceLen());
 
 	// free mem refs.
-	if ( upTo )   upTo = NULL;
+	if ( upTo ) upTo = NULL;
 	
 	// Uart.byteCntMax  should be set with ATQB value..
 }
