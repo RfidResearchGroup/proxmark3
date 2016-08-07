@@ -802,7 +802,8 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 		case DEMOD_UNSYNCD:
 
 			CHECK_FOR_SUBCARRIER();
-
+			if (MF_DBGLEVEL >= 3) { Dbprintf("Demod.state = %d", v); }
+		
 			// subcarrier detected
 			if(v > SUBCARRIER_DETECT_THRESHOLD) {
 				Demod.state = DEMOD_PHASE_REF_TRAINING;
