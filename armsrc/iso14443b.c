@@ -11,7 +11,8 @@
 #include "iso14443b.h"
 
 #ifndef FWT_TIMEOUT_14B
-# define FWT_TIMEOUT_14B 60000
+// defaults to 2000ms
+# define FWT_TIMEOUT_14B 35312
 #endif
 #ifndef ISO14443B_DMA_BUFFER_SIZE
 # define ISO14443B_DMA_BUFFER_SIZE 256
@@ -37,29 +38,19 @@
 // 4sample
 #define SEND4STUFFBIT(x) ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);
 //#define SEND4STUFFBIT(x) ToSendStuffBit(x);
+ // iceman, this threshold value,  what makes 8 a good amplituted for this IQ values? 
+#ifndef SUBCARRIER_DETECT_THRESHOLD
+# define SUBCARRIER_DETECT_THRESHOLD	6
+#endif
 
+static void iso14b_set_timeout(uint32_t timeout);
+static void iso14b_set_maxframesize(uint16_t size);
 static void switch_off(void);
 
 // the block number for the ISO14443-4 PCB  (used with APDUs)
 static uint8_t pcb_blocknum = 0;
-
 static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
-// param timeout is in ftw_ 
-void iso14b_set_timeout(uint32_t timeout) {
-	// 9.4395us = 1etu.
-	// clock is about 1.5 us
-	iso14b_timeout = timeout;
-	if(MF_DBGLEVEL >= 3) Dbprintf("ISO14443B Timeout set to %ld fwt", iso14b_timeout);
-}
 
-static void switch_off(void){	
-	if (MF_DBGLEVEL > 3) Dbprintf("switch_off");
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelay(100);
-	FpgaDisableSscDma();
-	set_tracing(FALSE);
-	LEDsoff();	
-}
 
 //=============================================================================
 // An ISO 14443 Type B tag. We listen for commands from the reader, using
@@ -148,6 +139,44 @@ static void DemodInit(uint8_t *data) {
 	Demod.output = data;
 	DemodReset();
 	//	memset(Demod.output, 0x00, MAX_FRAME_SIZE); 
+}
+
+
+/*
+* 9.4395 us = 1 ETU  and clock is about 1.5 us
+* 13560000Hz 
+* 1000ms/s
+* timeout in ETUs (time to transfer 1 bit, 9.4395 us)
+*
+* Formula to calculate FWT (in ETUs) by timeout (in ms):
+* fwt = 13560000 * 1000 / (8*16) * timeout; 
+* Sample:  3sec == 3000ms
+*  13560000 * 1000 / (8*16) * 3000  == 
+*    13560000000 / 384000 = 35312 FWT
+* @param timeout is in frame wait time, fwt, measured in ETUs
+*/ 
+static void iso14b_set_timeout(uint32_t timeout) {
+	#define MAX_TIMEOUT 40542464 	// 13560000Hz * 1000ms / (2^32-1) * (8*16)
+	if(timeout > MAX_TIMEOUT)
+		timeout = MAX_TIMEOUT;
+
+	iso14b_timeout = timeout;
+	if(MF_DBGLEVEL >= 3) Dbprintf("ISO14443B Timeout set to %ld fwt", iso14b_timeout);
+}
+static void iso14b_set_maxframesize(uint16_t size) {
+	if (size > 256)
+		size = MAX_FRAME_SIZE;
+	
+	Uart.byteCntMax = size;
+	if(MF_DBGLEVEL >= 3) Dbprintf("ISO14443B Max frame size set to %d bytes", Uart.byteCntMax);
+}
+static void switch_off(void){	
+	if (MF_DBGLEVEL > 3) Dbprintf("switch_off");
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelay(100);
+	FpgaDisableSscDma();
+	set_tracing(FALSE);
+	LEDsoff();	
 }
 
 void AppendCrc14443b(uint8_t* data, int len) {
@@ -298,9 +327,9 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
  *          false if we are still waiting for some more
  */
 static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
-	switch(Uart.state) {
+	switch (Uart.state) {
 		case STATE_UNSYNCD:
-			if(!bit) {
+			if (!bit) {
 				// we went low, so this could be the beginning of an SOF
 				Uart.state = STATE_GOT_FALLING_EDGE_OF_SOF;
 				Uart.posCnt = 0;
@@ -310,9 +339,9 @@ static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
 
 		case STATE_GOT_FALLING_EDGE_OF_SOF:
 			Uart.posCnt++;
-			if(Uart.posCnt == 2) {	// sample every 4 1/fs in the middle of a bit
-				if(bit) {
-					if(Uart.bitCnt > 9) {
+			if (Uart.posCnt == 2) {	// sample every 4 1/fs in the middle of a bit
+				if (bit) {
+					if (Uart.bitCnt > 9) {
 						// we've seen enough consecutive
 						// zeros that it's a valid SOF
 						Uart.posCnt = 0;
@@ -320,8 +349,7 @@ static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
 						Uart.state = STATE_AWAITING_START_BIT;
 						LED_A_ON(); // Indicate we got a valid SOF
 					} else {
-						// didn't stay down long enough
-						// before going high, error
+						// didn't stay down long enough before going high, error
 						Uart.state = STATE_UNSYNCD;
 					}
 				} else {
@@ -329,10 +357,9 @@ static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
 				}
 				Uart.bitCnt++;
 			}
-			if(Uart.posCnt >= 4) Uart.posCnt = 0;
-			if(Uart.bitCnt > 12) {
-				// Give up if we see too many zeros without
-				// a one, too.
+			if (Uart.posCnt >= 4) Uart.posCnt = 0;
+			if (Uart.bitCnt > 12) {
+				// Give up if we see too many zeros without a one, too.
 				LED_A_OFF();
 				Uart.state = STATE_UNSYNCD;
 			}
@@ -340,10 +367,9 @@ static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
 
 		case STATE_AWAITING_START_BIT:
 			Uart.posCnt++;
-			if(bit) {
-				if(Uart.posCnt > 50/2) {	// max 57us between characters = 49 1/fs, max 3 etus after low phase of SOF = 24 1/fs
-					// stayed high for too long between
-					// characters, error
+			if (bit) {
+				if (Uart.posCnt > 50/2) {	// max 57us between characters = 49 1/fs, max 3 etus after low phase of SOF = 24 1/fs
+					// stayed high for too long between characters, error
 					Uart.state = STATE_UNSYNCD;
 				}
 			} else {
@@ -357,26 +383,26 @@ static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
 
 		case STATE_RECEIVING_DATA:
 			Uart.posCnt++;
-			if(Uart.posCnt == 2) {
+			if (Uart.posCnt == 2) {
 				// time to sample a bit
 				Uart.shiftReg >>= 1;
-				if(bit) {
+				if (bit) {
 					Uart.shiftReg |= 0x200;
 				}
 				Uart.bitCnt++;
 			}
-			if(Uart.posCnt >= 4) {
+			if (Uart.posCnt >= 4) {
 				Uart.posCnt = 0;
 			}
-			if(Uart.bitCnt == 10) {
-				if((Uart.shiftReg & 0x200) && !(Uart.shiftReg & 0x001))
+			if (Uart.bitCnt == 10) {
+				if ((Uart.shiftReg & 0x200) && !(Uart.shiftReg & 0x001))
 				{
 					// this is a data byte, with correct
 					// start and stop bits
 					Uart.output[Uart.byteCnt] = (Uart.shiftReg >> 1) & 0xff;
 					Uart.byteCnt++;
 
-					if(Uart.byteCnt >= Uart.byteCntMax) {
+					if (Uart.byteCnt >= Uart.byteCntMax) {
 						// Buffer overflowed, give up
 						LED_A_OFF();
 						Uart.state = STATE_UNSYNCD;
@@ -389,9 +415,9 @@ static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
 					// this is an EOF byte
 					LED_A_OFF(); // Finished receiving
 					Uart.state = STATE_UNSYNCD;
-					if (Uart.byteCnt != 0) {
-					return TRUE;
-					}
+					if (Uart.byteCnt != 0)
+						return TRUE;
+					
 				} else {
 					// this is an error
 					LED_A_OFF();
@@ -405,7 +431,6 @@ static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
 			Uart.state = STATE_UNSYNCD;
 			break;
 	}
-
 	return FALSE;
 }
 
@@ -716,13 +741,9 @@ void SimulateIso14443bTag(uint32_t pupi) {
  *          false if we are still waiting for some more
  *
  */
- // iceman, this threshold value,  what makes 8 a good amplituted for this IQ values? 
-#ifndef SUBCARRIER_DETECT_THRESHOLD
-# define SUBCARRIER_DETECT_THRESHOLD	6
-#endif
-
 static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
-	int v = 0, myI = 0, myQ = 0;
+	int v = 0, myI = ABS(ci), myQ = ABS(cq);
+
 // The soft decision on the bit uses an estimate of just the
 // quadrant of the reference angle, not the exact angle.
 #define MAKE_SOFT_DECISION() { \
@@ -774,8 +795,6 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 
 //note: couldn't we just use MAX(ABS(ci),ABS(cq)) + (MIN(ABS(ci),ABS(cq))/2) from common.h - marshmellow
 #define CHECK_FOR_SUBCARRIER() { \
-		myI = ABS(ci); \
-		myQ = ABS(cq); \
 		v = MAX(myI, myQ) + (MIN(myI, myQ) >> 1); \
  	}
 
@@ -895,18 +914,19 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 					uint16_t s = Demod.shiftReg;
 					
 					// stop bit == '1', start bit == '0'
-					if((s & 0x200) && !(s & 0x001)) { 
-						uint8_t b = (s >> 1);
-						Demod.output[Demod.len] = b;
+					if ((s & 0x200) && (s & 0x001) == 0 ) { 
+						// left shift to drop the startbit
+						Demod.output[Demod.len] =  (s >> 1) & 0xFF;
 						++Demod.len;
 						Demod.state = DEMOD_AWAITING_START_BIT;
 					} else {
+						// this one is a bit hard,  either its a correc byte or its unsynced.
 						Demod.state = DEMOD_UNSYNCD;
 						Demod.endTime = GetCountSspClk();
 						LED_C_OFF();
 						
 						// This is EOF (start, stop and all data bits == '0'
-						if(s == 0) return TRUE;
+						if (s == 0) return TRUE;
 					}
 				}
 				Demod.posCount = 0;
@@ -929,7 +949,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 static void GetTagSamplesFor14443bDemod() {
 	bool gotFrame = FALSE, finished = FALSE;
 	int lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
-	int ci = 0, cq = 0, samples = 0;
+	int ci = 0, cq = 0;
 	uint32_t time_0 = 0, time_stop = 0;
 
 	BigBuf_free();
@@ -963,8 +983,6 @@ static void GetTagSamplesFor14443bDemod() {
 		ci = upTo[0] >> 1;
 		cq = upTo[1] >> 1;
 		upTo += 2;
-		samples += 2;
-
 		lastRxCounter -= 2;
 
 		// restart DMA buffer to receive again.
@@ -976,7 +994,6 @@ static void GetTagSamplesFor14443bDemod() {
 		}
 
 		// https://github.com/Proxmark/proxmark3/issues/103
-		//gotFrame =  Handle14443bTagSamplesDemod(ci & 0xfe, cq & 0xfe);
 		gotFrame =  Handle14443bTagSamplesDemod(ci, cq);
 		time_stop = GetCountSspClk() - time_0;
 
@@ -1285,10 +1302,23 @@ uint8_t iso14443b_select_card(iso14b_card_select_t *card )
     ComputeCrc14443(CRC_14443_B, Demod.output, Demod.len-2, &crc[0], &crc[1]);
 	if ( crc[0] != Demod.output[1] || crc[1] != Demod.output[2] ) 
 		return 3;
-	
-	// CID
+
 	if (card) { 
+	
+		// CID
 		card->cid = Demod.output[0];
+
+		// MAX FRAME
+		uint16_t maxFrame = card->atqb[5] >> 4;
+		if (maxFrame < 5) 		maxFrame = 8 * maxFrame + 16;
+		else if (maxFrame == 5)	maxFrame = 64;
+		else if (maxFrame == 6)	maxFrame = 96;
+		else if (maxFrame == 7)	maxFrame = 128;
+		else if (maxFrame == 8)	maxFrame = 256;
+		else maxFrame = 257;
+		iso14b_set_maxframesize(maxFrame);
+		
+		// FWT 
 		uint8_t fwt = card->atqb[6] >> 4;
 		if ( fwt < 16 ){
 			uint32_t fwt_time = (302 << fwt);
