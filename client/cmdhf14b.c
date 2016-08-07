@@ -8,10 +8,6 @@
 // High frequency ISO14443B commands
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include "cmdhf14b.h"
 
 #define TIMEOUT 2000
@@ -139,18 +135,15 @@ int CmdHF14BSnoop(const char *Cmd) {
 }
 
 int CmdHF14BCmdRaw (const char *Cmd) {
-	bool reply = TRUE;
-	bool power = FALSE;
-	bool select = FALSE;
+	bool reply = TRUE, power = FALSE, select = FALSE;
 	char buf[5]="";
-
 	int i = 0;
 	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
 	uint16_t datalen = 0;
 	uint32_t flags = ISO14B_CONNECT;
 	uint32_t temp = 0;
 	
-	if (strlen(Cmd)<3) return usage_hf_14b_raw();
+	if ( strlen(Cmd) < 3 ) return usage_hf_14b_raw();
 
     // strip
     while (*Cmd==' ' || *Cmd=='\t') ++Cmd;
@@ -159,8 +152,8 @@ int CmdHF14BCmdRaw (const char *Cmd) {
         if (Cmd[i]==' ' || Cmd[i]=='\t') { ++i; continue; }
         if (Cmd[i]=='-') {
             switch (Cmd[i+1]) {
-				case 'H':
 				case 'h':
+				case 'H':
 					return usage_hf_14b_raw();
                 case 'r': 
                 case 'R': 
@@ -227,11 +220,11 @@ int CmdHF14BCmdRaw (const char *Cmd) {
 
 	bool success = TRUE;
 	// get back iso14b_card_select_t, don't print it.
-	if(select) 
+	if (select) 
 		success = waitCmd(FALSE);
 
 	// get back response from the raw bytes you sent.
-	if(success && datalen>0) waitCmd(TRUE);
+	if (success && datalen>0) waitCmd(TRUE);
 
     return 1;
 }
@@ -704,7 +697,7 @@ int CmdHF14BWriteSri(const char *Cmd){
 		);
 	}
 	
-	sprintf(str, "-ss -c %02x %02x %02x%02x%02x%02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
+	sprintf(str, "-ss -c %02x %02x %02x %02x %02x %02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
 	CmdHF14BCmdRaw(str);
 	return 0;
 }
@@ -809,41 +802,6 @@ int srix4kValid(const char *Cmd){
 	return 0;
 }
 
-int CmdteaSelfTest(const char *Cmd){
-	
-	uint8_t v[8], v_le[8];
-	memset(v, 0x00, sizeof(v));
-	memset(v_le, 0x00, sizeof(v_le));
-	uint8_t* v_ptr = v_le;
-
-	uint8_t cmdlen = strlen(Cmd);
-	cmdlen = ( sizeof(v)<<2 < cmdlen ) ? sizeof(v)<<2 : cmdlen;
-	
-	if ( param_gethex(Cmd, 0, v, cmdlen) > 0 ){
-		PrintAndLog("can't read hex chars, uneven? :: %u", cmdlen);
-		return 1;
-	}
-	
-	SwapEndian64ex(v , 8, 4, v_ptr);
-	
-	// ENCRYPTION KEY:	
-	uint8_t key[16] = {0x55,0xFE,0xF6,0x30,0x62,0xBF,0x0B,0xC1,0xC9,0xB3,0x7C,0x34,0x97,0x3E,0x29,0xFB };
-	uint8_t keyle[16];
-	uint8_t* key_ptr = keyle;
-	SwapEndian64ex(key , sizeof(key), 4, key_ptr);
-	
-	PrintAndLog("TEST LE enc| %s", sprint_hex(v_ptr, 8));
-	
-	tea_decrypt(v_ptr, key_ptr);	
-	PrintAndLog("TEST LE dec | %s", sprint_hex_ascii(v_ptr, 8));
-	
-	tea_encrypt(v_ptr, key_ptr);	
-	tea_encrypt(v_ptr, key_ptr);
-	PrintAndLog("TEST enc2 | %s", sprint_hex_ascii(v_ptr, 8));
-
-	return 0;
-}
-
 bool waitCmd(bool verbose) {
 
 	bool crc = FALSE;
@@ -896,7 +854,6 @@ static command_t CommandTable[] = {
 	{"sriread",		CmdHF14BReadSri,  0, "Read contents of a SRI512 | SRIX4K tag"},
 	{"sriwrite",    CmdHF14BWriteSri, 0, "Write data to a SRI512 | SRIX4K tag"},
 	//{"valid",   	srix4kValid,	1, "srix4k checksum test"},
-	//{"valid",   	CmdteaSelfTest,	1, "tea test"},
 	{NULL, NULL, 0, NULL}
 };
 

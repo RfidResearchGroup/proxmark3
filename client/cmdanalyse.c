@@ -249,6 +249,40 @@ int CmdAnalyseDates(const char *Cmd){
 	PrintAndLog("To be implemented. Feel free to contribute!");
 	return 0;
 }
+int CmdAnalyseTEASelfTest(const char *Cmd){
+	
+	uint8_t v[8], v_le[8];
+	memset(v, 0x00, sizeof(v));
+	memset(v_le, 0x00, sizeof(v_le));
+	uint8_t* v_ptr = v_le;
+
+	uint8_t cmdlen = strlen(Cmd);
+	cmdlen = ( sizeof(v)<<2 < cmdlen ) ? sizeof(v)<<2 : cmdlen;
+	
+	if ( param_gethex(Cmd, 0, v, cmdlen) > 0 ){
+		PrintAndLog("can't read hex chars, uneven? :: %u", cmdlen);
+		return 1;
+	}
+	
+	SwapEndian64ex(v , 8, 4, v_ptr);
+	
+	// ENCRYPTION KEY:	
+	uint8_t key[16] = {0x55,0xFE,0xF6,0x30,0x62,0xBF,0x0B,0xC1,0xC9,0xB3,0x7C,0x34,0x97,0x3E,0x29,0xFB };
+	uint8_t keyle[16];
+	uint8_t* key_ptr = keyle;
+	SwapEndian64ex(key , sizeof(key), 4, key_ptr);
+	
+	PrintAndLog("TEST LE enc| %s", sprint_hex(v_ptr, 8));
+	
+	tea_decrypt(v_ptr, key_ptr);	
+	PrintAndLog("TEST LE dec | %s", sprint_hex_ascii(v_ptr, 8));
+	
+	tea_encrypt(v_ptr, key_ptr);	
+	tea_encrypt(v_ptr, key_ptr);
+	PrintAndLog("TEST enc2 | %s", sprint_hex_ascii(v_ptr, 8));
+
+	return 0;
+}
 
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,            1, "This help"},
@@ -256,6 +290,7 @@ static command_t CommandTable[] = {
 	{"crc",		CmdAnalyseCRC,		1, "Stub method for CRC evaluations"},
 	{"chksum",	CmdAnalyseCHKSUM,	1, "Checksum with adding, masking and one's complement"},
 	{"dates",	CmdAnalyseDates,	1, "Look for datestamps in a given array of bytes"},
+	{"tea",   	CmdAnalyseTEASelfTest,	1, "Crypto TEA test"},
 	{NULL, NULL, 0, NULL}
 };
 

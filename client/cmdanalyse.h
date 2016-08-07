@@ -19,6 +19,7 @@
 #include "util.h"
 #include "crc.h"
 #include "../common/iso15693tools.h"
+#include "tea.h"
 
 int usage_analyse_lcr(void);
 int usage_analyse_checksum(void);
@@ -29,4 +30,5 @@ int CmdAnalyseLCR(const char *Cmd);
 int CmdAnalyseCHKSUM(const char *Cmd);
 int CmdAnalyseDates(const char *Cmd);
 int CmdAnalyseCRC(const char *Cmd);
+int CmdAnalyseTEASelfTest(const char *Cmd);
 #endif

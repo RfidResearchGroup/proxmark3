@@ -11,6 +11,10 @@
 #ifndef CMDHF14B_H__
 #define CMDHF14B_H__
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include "iso14443crc.h"
 #include "proxmark3.h"
 #include "data.h"
@@ -20,13 +24,11 @@
 #include "cmdparser.h"
 #include "cmdmain.h"
 #include "cmdhf14a.h"
-#include "tea.h"
 #include "cmdhf.h"
 #include "prng.h"
 #include "sha1.h"
 #include "mifare.h"		// structs/enum for ISO14B
 #include "protocols.h"	// definitions of ISO14B protocol
-
 
 int usage_hf_14b_info(void);
 int usage_hf_14b_reader(void);
