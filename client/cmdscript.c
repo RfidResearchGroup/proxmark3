@@ -64,7 +64,7 @@ int str_ends_with(const char * str, const char * suffix) {
  */
 int CmdHelp(const char * Cmd)
 {
-    PrintAndLog("This is a feature to run Lua-scripts. You can place lua-scripts within the scripts/-folder. ");
+    PrintAndLog("This is a feature to run Lua-scripts. You can place lua-scripts within the ´client/scripts/´ folder.");
     return 0;
 }
 
@@ -84,7 +84,7 @@ int CmdList(const char *Cmd)
         while ((ep = readdir (dp)) != NULL)
         {
             if(str_ends_with(ep->d_name, ".lua"))
-                PrintAndLog("%-16s %s", ep->d_name, "A script file");
+                PrintAndLog("%-21s %s", ep->d_name, "A script file");
         }
         (void) closedir (dp);
     }
@@ -152,17 +152,13 @@ int CmdRun(const char *Cmd)
     char buf[256];
     snprintf(buf, sizeof buf, "./scripts/%s%s", script_name, suffix);
 
-    printf("--- Executing: %s, args'%s'\n",buf,arguments);
-
-
-
+    printf("--- Executing: %s, args'%s'\n", buf, arguments);
 
     // run the Lua script
 
     int error = luaL_loadfile(lua_state, buf);
     if(!error)
     {
-
         lua_pushstring(lua_state, arguments);
         lua_setglobal(lua_state, "args");
 

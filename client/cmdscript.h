@@ -8,10 +8,8 @@
 // Some lua scripting glue to proxmark core.
 //-----------------------------------------------------------------------------
 
-
 #ifndef CMDSCRIPT_H__
 #define CMDSCRIPT_H__
-
 
 int CmdScript(const char *Cmd);
 
