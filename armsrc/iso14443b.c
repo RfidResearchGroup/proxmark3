@@ -10,15 +10,29 @@
 //-----------------------------------------------------------------------------
 #include "iso14443b.h"
 
-#define RECEIVE_SAMPLES_TIMEOUT 50000
-#define ISO14443B_DMA_BUFFER_SIZE 256
+#ifndef FWT_TIMEOUT_14B
+# define FWT_TIMEOUT_14B 60000
+#endif
+#ifndef ISO14443B_DMA_BUFFER_SIZE
+# define ISO14443B_DMA_BUFFER_SIZE 256
+#endif
+#ifndef RECEIVE_MASK
+# define RECEIVE_MASK  (ISO14443B_DMA_BUFFER_SIZE-1)
+#endif
 
 // Guard Time (per 14443-2)
-#define TR0 0  
+#ifndef TR0
+# define TR0 0
+#endif
+
 // Synchronization time (per 14443-2)
-#define TR1 0
+#ifndef TR1
+# define TR1 0
+#endif
 // Frame Delay Time PICC to PCD  (per 14443-3 Amendment 1)
-#define TR2 0
+#ifndef TR2
+# define TR2 0
+#endif
 
 // 4sample
 #define SEND4STUFFBIT(x) ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);
@@ -29,7 +43,7 @@ static void switch_off(void);
 // the block number for the ISO14443-4 PCB  (used with APDUs)
 static uint8_t pcb_blocknum = 0;
 
-static uint32_t iso14b_timeout = RECEIVE_SAMPLES_TIMEOUT;
+static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 // param timeout is in ftw_ 
 void iso14b_set_timeout(uint32_t timeout) {
 	// 9.4395us = 1etu.
@@ -482,31 +496,33 @@ void WaitForFpgaDelayQueueIsEmpty( uint16_t delay ){
 
 static void TransmitFor14443b_AsTag( uint8_t *response, uint16_t len) {
 
-		// Signal field is off with the appropriate LED
-		LED_D_OFF();
-		//uint16_t fpgasendQueueDelay = 0;
-		
-		// Modulate BPSK
-		FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK);
-		
-		ClearFpgaShiftingRegisters();
-		
-		FpgaSetupSsc();
-		volatile uint32_t b;
+	volatile uint32_t b;
+	
+	// Signal field is off with the appropriate LED
+	LED_D_OFF();
+	//uint16_t fpgasendQueueDelay = 0;
+	
+	// Modulate BPSK
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK);
+	SpinDelay(40);
+	
+	ClearFpgaShiftingRegisters();
+	
+	FpgaSetupSsc();
 
-		// Transmit the response.
-		for(uint16_t i = 0; i < len;) {
-			if(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-				AT91C_BASE_SSC->SSC_THR = response[++i];
-			}
-			if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-				b = AT91C_BASE_SSC->SSC_RHR;
-				(void)b;
-			}			
+	// Transmit the response.
+	for(uint16_t i = 0; i < len;) {
+		if(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+			AT91C_BASE_SSC->SSC_THR = response[++i];
 		}
-		
-		//WaitForFpgaDelayQueueIsEmpty(fpgasendQueueDelay);
-		AT91C_BASE_SSC->SSC_THR = 0xFF;		
+		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+			b = AT91C_BASE_SSC->SSC_RHR;
+			(void)b;
+		}			
+	}
+	
+	//WaitForFpgaDelayQueueIsEmpty(fpgasendQueueDelay);
+	AT91C_BASE_SSC->SSC_THR = 0xFF;		
 }	
 //-----------------------------------------------------------------------------
 // Main loop of simulated tag: receive commands from reader, decide what
@@ -615,10 +631,10 @@ void SimulateIso14443bTag(uint32_t pupi) {
 		    send halt response ( waiting for wupb )
 		*/
 		
-		switch(cardSTATE){
+		switch (cardSTATE) {
 			case SIM_NOFIELD:
 			case SIM_HALTED:
-			case SIM_IDLE:{
+			case SIM_IDLE: {
 				LogTrace(receivedCmd, len, 0, 0, NULL, TRUE);	
 				break;
 			}
@@ -634,13 +650,13 @@ void SimulateIso14443bTag(uint32_t pupi) {
 				cardSTATE = SIM_HALTED;
 				break;
 			}
-			case SIM_ACKNOWLEDGE:{
+			case SIM_ACKNOWLEDGE: {
 				TransmitFor14443b_AsTag( encodedOK, encodedOKLen );
 				LogTrace(respOK, sizeof(respOK), 0, 0, NULL, FALSE);
 				cardSTATE = SIM_IDLE;			
 				break;
 			}
-			case SIM_WORK:{
+			case SIM_WORK: {
 				if ( len == 7 && receivedCmd[0] == ISO14443B_HALT ) {
 					cardSTATE = SIM_HALTED;
 				} else if ( len == 11 && receivedCmd[0] == ISO14443B_ATTRIB ) {
@@ -669,6 +685,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
 		}
 			
 		++cmdsReceived;
+		// iceman, could add a switch to turn this on/off (if off, no logging?)
 		if(cmdsReceived > 1000) {
 			DbpString("14B Simulate, 1000 commands later...");
 			break;
@@ -699,12 +716,13 @@ void SimulateIso14443bTag(uint32_t pupi) {
  *          false if we are still waiting for some more
  *
  */
+ // iceman, this threshold value,  what makes 8 a good amplituted for this IQ values? 
 #ifndef SUBCARRIER_DETECT_THRESHOLD
-# define SUBCARRIER_DETECT_THRESHOLD	8
+# define SUBCARRIER_DETECT_THRESHOLD	6
 #endif
 
 static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
-	int v=0;// , myI, myQ = 0;
+	int v = 0, myI = 0, myQ = 0;
 // The soft decision on the bit uses an estimate of just the
 // quadrant of the reference angle, not the exact angle.
 #define MAKE_SOFT_DECISION() { \
@@ -722,7 +740,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 
 // Subcarrier amplitude v = sqrt(ci^2 + cq^2), approximated here by abs(ci) + abs(cq)
 // Subcarrier amplitude v = sqrt(ci^2 + cq^2), approximated here by max(abs(ci),abs(cq)) + 1/2*min(abs(ci),abs(cq)))
-#define CHECK_FOR_SUBCARRIER() { \
+#define CHECK_FOR_SUBCARRIER_old() { \
 		if(ci < 0) { \
 			if(cq < 0) { /* ci < 0, cq < 0 */ \
 				if (cq < ci) { \
@@ -755,10 +773,10 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 	}
 
 //note: couldn't we just use MAX(ABS(ci),ABS(cq)) + (MIN(ABS(ci),ABS(cq))/2) from common.h - marshmellow
-#define CHECK_FOR_SUBCARRIER_un() { \
+#define CHECK_FOR_SUBCARRIER() { \
 		myI = ABS(ci); \
 		myQ = ABS(cq); \
-		v = MAX(myI,myQ) + (MIN(myI,myQ) >> 1); \
+		v = MAX(myI, myQ) + (MIN(myI, myQ) >> 1); \
  	}
 
 	switch(Demod.state) {
@@ -867,11 +885,12 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 				Demod.shiftReg >>= 1;
 
 				// logic '1'
-				if(Demod.thisBit > 0)  Demod.shiftReg |= 0x200;
+				if (Demod.thisBit > 0)  Demod.shiftReg |= 0x200;
 
 				++Demod.bitCount;
 				
-				if(Demod.bitCount == 10) {
+				// 1 start 8 data 1 stop = 10
+				if (Demod.bitCount == 10) {
 					
 					uint16_t s = Demod.shiftReg;
 					
@@ -908,9 +927,9 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
  *  quiet: set to 'TRUE' to disable debug output
  */
 static void GetTagSamplesFor14443bDemod() {
-	bool gotFrame = FALSE;
+	bool gotFrame = FALSE, finished = FALSE;
 	int lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
-	int max = 0, ci = 0, cq = 0, samples = 0;
+	int ci = 0, cq = 0, samples = 0;
 	uint32_t time_0 = 0, time_stop = 0;
 
 	BigBuf_free();
@@ -927,60 +946,57 @@ static void GetTagSamplesFor14443bDemod() {
 		if (MF_DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting"); 
 		return;
 	}
-	
-	time_0 = GetCountSspClk();
-	
+
 	// And put the FPGA in the appropriate mode
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR | FPGA_HF_READER_RX_XCORR_848_KHZ);
-		
-	while( !BUTTON_PRESS() ) {
+
+	// get current clock
+	time_0 = GetCountSspClk();
+	
+	// rx counter - dma counter? (how much?) & (mod) mask > 2. (since 2bytes at the time is read)
+	while ( !finished ) {
+
+		LED_A_INV();
 		WDT_HIT();
 
-		int behindBy = lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR;
-		if(behindBy > max) max = behindBy;
+		// LSB is a fpga signal bit.
+		ci = upTo[0] >> 1;
+		cq = upTo[1] >> 1;
+		upTo += 2;
+		samples += 2;
 
-		// rx counter - dma counter? (how much?) & (mod) dma buff / 2.  (since 2bytes at the time is read)
-		while(((lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) & (ISO14443B_DMA_BUFFER_SIZE-1)) > 2) {
+		lastRxCounter -= 2;
 
-			ci = upTo[0];
-			cq = upTo[1];
-			upTo += 2;
-			samples += 2;
-			
-			// restart DMA buffer to receive again.
-			if(upTo >= dmaBuf + ISO14443B_DMA_BUFFER_SIZE) {
-				upTo = dmaBuf;
-				AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
-				AT91C_BASE_PDC_SSC->PDC_RNCR = ISO14443B_DMA_BUFFER_SIZE;
-			}
-			
-			lastRxCounter -= 2;
-			if(lastRxCounter <= 0)
-				lastRxCounter += ISO14443B_DMA_BUFFER_SIZE;
-
-			// is this | 0x01 the error?   & 0xfe  in https://github.com/Proxmark/proxmark3/issues/103
-			//gotFrame =  Handle14443bTagSamplesDemod(ci & 0xfe, cq & 0xfe);
-			gotFrame =  Handle14443bTagSamplesDemod(ci, cq);
-			if ( gotFrame )	break;
-			LED_A_INV();
+		// restart DMA buffer to receive again.
+		if(upTo >= dmaBuf + ISO14443B_DMA_BUFFER_SIZE) {
+			upTo = dmaBuf;
+			lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
+			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) upTo;
+			AT91C_BASE_PDC_SSC->PDC_RNCR = ISO14443B_DMA_BUFFER_SIZE;
 		}
 
+		// https://github.com/Proxmark/proxmark3/issues/103
+		//gotFrame =  Handle14443bTagSamplesDemod(ci & 0xfe, cq & 0xfe);
+		gotFrame =  Handle14443bTagSamplesDemod(ci, cq);
 		time_stop = GetCountSspClk() - time_0;
-	
-		if(time_stop > iso14b_timeout || gotFrame)	break;
+
+		finished = (time_stop > iso14b_timeout || gotFrame);
 	}
 	
 	FpgaDisableSscDma();
 
 	if (MF_DBGLEVEL >= 3) {
-		Dbprintf("max behindby = %d, samples = %d, gotFrame = %s, Demod.state = %d, Demod.len = %u",
-			max,
-			samples, 
-			(gotFrame) ? "true" : "false", 
+		Dbprintf("time_stop = %u PDC_RCR = %u", time_stop,  AT91C_BASE_PDC_SSC->PDC_RCR);
+		Dbprintf("#Samples = %d, Demod.state = %d, Demod.len = %u",
+			samples, 			
 			Demod.state,
 			Demod.len
 		);
 	}
+	
+	if (MF_DBGLEVEL == 4)
+		Dbhexdump(ISO14443B_DMA_BUFFER_SIZE, (uint8_t *)dmaBuf, FALSE);	
+	
 	if ( Demod.len > 0 )
 		LogTrace(Demod.output, Demod.len, Demod.startTime, Demod.endTime, NULL, FALSE);
 }
@@ -1534,11 +1550,19 @@ void RAMFUNC SnoopIso14443b(void) {
 
 		WDT_HIT();
 		
-		int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) & (ISO14443B_DMA_BUFFER_SIZE-1);
+		/* iceman: the & (and) should do what?
+			ISO14443B_DMA_BUFFER_SIZE = 256
+			Should it be a "mod 255" ?
+			
+		 (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) & (ISO14443B_DMA_BUFFER_SIZE-1);
+		 
+		*/
+		int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) & RECEIVE_MASK;
 
 		if ( behindBy > maxBehindBy )
 			maxBehindBy = behindBy;
 		
+		// this one needs the inner loop from tr
 		if ( behindBy < 2 ) continue;
 		
 		ci = upTo[0];
@@ -1549,14 +1573,14 @@ void RAMFUNC SnoopIso14443b(void) {
 		
 		if (upTo >= dmaBuf + ISO14443B_DMA_BUFFER_SIZE) {
 			upTo = dmaBuf;
-			lastRxCounter += ISO14443B_DMA_BUFFER_SIZE;
+			lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
 			AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
 			AT91C_BASE_PDC_SSC->PDC_RNCR = ISO14443B_DMA_BUFFER_SIZE;
 			WDT_HIT();
 			
 			// TODO: understand whether we can increase/decrease as we want or not?
 			if ( behindBy > ( 9 * ISO14443B_DMA_BUFFER_SIZE/10) ) { 
-				Dbprintf("blew circular buffer! behindBy=%d", behindBy);
+				Dbprintf("blew circular buffer! behindBy = %d", behindBy);
 				break;
 			}
 			
@@ -1578,7 +1602,7 @@ void RAMFUNC SnoopIso14443b(void) {
 			// no need to try decoding reader data if the tag is sending
 			if (Handle14443bReaderUartBit(ci & 0x01)) {
 
-				time_stop = (GetCountSspClk()-time_0);
+				time_stop = GetCountSspClk() - time_0;
 				
 				if (triggered)
 					LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, TRUE);
@@ -1589,12 +1613,12 @@ void RAMFUNC SnoopIso14443b(void) {
 				/* false-triggered by the commands from the reader. */
 				DemodReset();
 			} else {
-				time_start = (GetCountSspClk()-time_0);
+				time_start = GetCountSspClk() - time_0;
 			}
 			
 			if (Handle14443bReaderUartBit(cq & 0x01)) {
 				
-				time_stop = (GetCountSspClk()-time_0);
+				time_stop = GetCountSspClk() - time_0;
 				
 				if (triggered)
 					LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, TRUE);
@@ -1605,7 +1629,7 @@ void RAMFUNC SnoopIso14443b(void) {
 					/* false-triggered by the commands from the reader. */
 					DemodReset();
 			} else {
-				time_start = (GetCountSspClk()-time_0);
+				time_start = GetCountSspClk() - time_0;
 			}
 			ReaderIsActive = (Uart.state > STATE_GOT_FALLING_EDGE_OF_SOF);
 			LED_A_OFF();
@@ -1616,7 +1640,7 @@ void RAMFUNC SnoopIso14443b(void) {
 			// is this | 0x01 the error?   & 0xfe  in https://github.com/Proxmark/proxmark3/issues/103
 			if(Handle14443bTagSamplesDemod(ci & 0xFE, cq & 0xFE)) {
 				
-				time_stop = (GetCountSspClk()-time_0);
+				time_stop = GetCountSspClk() - time_0;
 				
 				LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, FALSE);
 
@@ -1625,7 +1649,7 @@ void RAMFUNC SnoopIso14443b(void) {
 				// And ready to receive another response.
 				DemodReset();
 			} else {
-				time_start = (GetCountSspClk()-time_0);
+				time_start = GetCountSspClk() - time_0;
 			}
 			TagIsActive = (Demod.state > DEMOD_GOT_FALLING_EDGE_OF_SOF);
 		}
