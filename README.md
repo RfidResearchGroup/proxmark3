@@ -152,7 +152,7 @@ Get devkitARM release 41 from SourceForge (choose either the 64/32 bit depending
 - Flash the FULLIMAGE	
 `client/flasher /dev/ttyACM0 armsrc/obj/fullimage.elf`
 	
-- Change into the client folder	
+- Change into the client folder		
 `cd client`
 	
 - Run the client	
