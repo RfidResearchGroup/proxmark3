@@ -61,7 +61,7 @@ For people with linux you will need to patch some source code and some small cha
 GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS.
 	- See https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux
 	- Generally speaking, if you're running a "later" Proxmark, installation is very easy.
-	- Run "sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget
+	- Run "sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev
 	- Follow these instructions
         Get devkitARM release 41 from SourceForge (choose either the 64/32 bit depending on your architecture, it is assumed you know how to check and recognize your architecture):
 			(64-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-x86_64-linux.tar.bz2/download

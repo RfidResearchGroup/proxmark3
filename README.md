@@ -54,23 +54,28 @@ Among the stuff is
 
 ##Straight from the CHANGELOG
 =============================
-  - 'analyse lcr' - added a new main command group,  to help analysing bytes & bits & nibbles. (iceman)
-  - 'lf nedap' - added identification of a NEDAP tag. (iceman)
-  - 'lf viking clone' - fixed a bug. (iceman)
-  - Added bitsliced bruteforce solver in 'hf mf hardnested' (aczid)
-  - 'hf mf chk' speedup (iceman)
-  - 'hf 14a/mf sim x" attack mode,  now uses also moebius version of mfkey32 to try finding the key. (iceman)
-  - 'hf 14a sim' Added emulation of Mifare cards with 10byte UID length. (iceman)
-  - 'hf mf sim' Added emulation of Mifare cards with 10byte UID length. (iceman)
-  - Added `lf guard clone/sim` (iceman)
-  - Added `lf pyramd clone/sim` (iceman) 
-  - trying to fix "hf 14b" command to be able to read CALYPSO card.	 (iceman)
+  -  Added `hf mf key_brute` - adds J-Runs 2nd phase bruteforce ref: https://github.com/J-Run/mf_key_brute   (iceman)
+  -  Added `lf jablotron` - adds demod/clone/sim of Jablotron LF tags. (iceman)
+  -  Added `lf t55xx recoverpw` - adds a new password recovery using bitflips and partial flips if password write went bad. (alexgrin)
+  - `hf legic` - added improved legic data mapping. (jason)
+  - `hf mf mifare` - added possibility to target key A|B (douniwan5788)
+  -  Added `analyse lcr` - added a new main command group,  to help analysing bytes & bits & nibbles. (iceman)
+  -  Added `lf nedap` - added identification of a NEDAP tag. (iceman)
+  - `lf viking clone` - fixed a bug. (iceman)
+  -  Added bitsliced bruteforce solver in `hf mf hardnested` (Aczid)
+  - `hf mf chk` speedup (iceman)
+  - `hf 14a/mf sim x` attack mode,  now uses also moebius version of mfkey32 to try finding the key. (iceman)
+  - `hf 14a sim` Added emulation of Mifare cards with 10byte UID length. (iceman)
+  - `hf mf sim` Added emulation of Mifare cards with 10byte UID length. (iceman)
+  -  Added `lf guard clone/sim` (iceman)
+  -  Added `lf pyramd clone/sim` (iceman) 
+  - trying to fix `hf 14b` command to be able to read CALYPSO card.	 (iceman)
   - `hf legic load`, it now loads faster and a casting bug is gone. (iceman)
-  - Added `hf legic calccrc8` added a method to calculate the legic crc-8 value (iceman)
+  -  Added `hf legic calccrc8` added a method to calculate the legic crc-8 value (iceman)
   - `hf legic decode` fixed the output overflow bugs, better printing (iceman)
   - Coverity Scan fixes a lot of resource leaks, etc (iceman)
-  - Added `lf presco *` commands started (iceman) 
-  - Added `lf hid wiegand` added a method to calculate WIEGAND in different formats, (iceman)
+  -  Added `lf presco *` commands started (iceman) 
+  -  Added `lf hid wiegand` added a method to calculate WIEGAND in different formats, (iceman)
   - `hf mf chkkeys` better printing, same table output as nested, faster execution and added Adam Lauries "try to read Key B if Key A is found" (iceman)
   - `hf mf nested` better printing and added Adam Lauries "try to read Key B if Key A is found" (iceman)
   - `hf mf mifare` fixing the zero parity path, which doesn't got called. (iceman) 
@@ -78,7 +83,8 @@ Among the stuff is
   - `hf mf c*` updated the calling structure and refactored of the chinese magic commands (iceman, marshmellow)
   - Started to add Peter Fillmore's  EMV fork into Iceman fork. ref: https://github.com/peterfillmore/proxmark3  (peter fillmore,  iceman)
   - Added Travis-CI automatic build integration with GitHub fork. (iceman)
-  - Updated the Reveng 1.30 sourcecode to 1.31 from Reveng projecthomepage (iceman)
+  - Updated the Reveng 1.30 sourcecode to 1.31 from Reveng project homepage (iceman)
+  - Updated the Reveng 1.31 sourcecode to 1.40 from Reveng project homepage (iceman)
   
   - Added possibility to write direct to a Legic Prime Tag (MIM256/1024) without using values from the 'BigBuffer' -> 'hf legic writeRaw <addr> <value>' (icsom)
   - Added possibility to decrease DCF values at address 0x05 & 0x06 on a Legic Prime Tag 
@@ -88,7 +94,8 @@ Among the stuff is
   - Added script `legic.lua` for display and edit Data of Legic-Prime Tags (icsom)
   - Added the experimental HITAG_S support (spenneb)
   - Added topaz detection to `hf search` (iceman)
-  - Fixed the silent mode for 14b to be used inside 'hf search' (iceman)
+  - Fixed the silent mode for 14b to be used inside `hf search` (iceman)
+  
 	
 ---	
 Give me a hint, and I'll see if I can't merge in the stuff you have. 
@@ -109,8 +116,8 @@ GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS or 15.10
 See https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux
 
 Run 
-	-> sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget
-
+	-> sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev
+	
 Follow these instructions
 Get devkitARM release 41 from SourceForge (choose either the 64/32 bit depending on your architecture, it is assumed you know how to check and recognize your architecture):
 
