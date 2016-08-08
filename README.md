@@ -122,40 +122,40 @@ Get devkitARM release 41 from SourceForge (choose either the 64/32 bit depending
 (64-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-x86_64-linux.tar.bz2/download
 (32-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-i686-linux.tar.bz2/download
 
-Extract the contents of the .tar.bz2	
+- Extract the contents of the .tar.bz2	
 `tar jxvf devkitARM_r41-<arch>-linux.tar.bz2`
 
-Create a directory for the arm dev kit	
+- Create a directory for the arm dev kit	
 `sudo mkdir -p /opt/devkitpro/`
 
-Move the ARM developer kit to the newly created directory	
+- Move the ARM developer kit to the newly created directory	
 `sudo mv devkitARM /opt/devkitpro/`
 
-Add the appropriate environment variable	
+- Add the appropriate environment variable	
 `export PATH=${PATH}:/opt/devkitpro/devkitARM/bin/`
 
-Add the environment variable to your profile	
+- Add the environment variable to your profile	
 `echo 'PATH=${PATH}:/opt/devkitpro/devkitARM/bin/ ' >> ~/.bashrc`
 
-Clone iceman fork	
+- Clone iceman fork	
 `git clone https://github.com/iceman1001/proxmark3.git`
 
-Get the latest commits	
+- Get the latest commits	
 `git pull`
 
-CLEAN COMPILE	
+- CLEAN COMPILE		
 `make clean && make all`
 	
-Flash the BOOTROM	
+- Flash the BOOTROM		
 `client/flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf`
 
-Flash the FULLIMAGE	
+- Flash the FULLIMAGE	
 `client/flasher /dev/ttyACM0 armsrc/obj/fullimage.elf`
 	
-Change into the client folder. 	
+- Change into the client folder	
 `cd client`
 	
-Run the client	
+- Run the client	
 `./proxmark3 /dev/ttyACM0`
 						   
 ##Homebrew (Mac OS X)
