@@ -5,7 +5,7 @@ The iceman fork
 ##This fork is HIGHLY experimental
 
 ##Notice      
-There is so much in this fork,  with all fixes and additions its basically the most enhanced fork to this day for the Proxmark3 device.
+There is so much in this fork,  with all fixes and additions its basically the most enhanced fork to this day for the Proxmark3 device. Which makes it so awesum to play with. Witt all coverity scan fixes this client is much more stable than PM3 Master.
 
 ##Offical
 The official Proxmark repository is found here: https://github.com/Proxmark/proxmark3
@@ -113,8 +113,8 @@ This fork now compiles just fine on
 GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS or 15.10
 See https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux
 
-Run 
-	 `sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev`
+Run	
+`sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev`
 	
 Follow these instructions
 Get devkitARM release 41 from SourceForge (choose either the 64/32 bit depending on your architecture, it is assumed you know how to check and recognize your architecture):
@@ -122,41 +122,41 @@ Get devkitARM release 41 from SourceForge (choose either the 64/32 bit depending
 (64-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-x86_64-linux.tar.bz2/download
 (32-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-i686-linux.tar.bz2/download
 
-Extract the contents of the .tar.bz2:
-	`tar jxvf devkitARM_r41-<arch>-linux.tar.bz2`
+Extract the contents of the .tar.bz2	
+`tar jxvf devkitARM_r41-<arch>-linux.tar.bz2`
 
-Create a directory for the arm dev kit:
-	`sudo mkdir -p /opt/devkitpro/`
+Create a directory for the arm dev kit	
+`sudo mkdir -p /opt/devkitpro/`
 
-Move the ARM developer kit to the newly created directory:
-	`sudo mv devkitARM /opt/devkitpro/`
+Move the ARM developer kit to the newly created directory	
+`sudo mv devkitARM /opt/devkitpro/`
 
-Add the appropriate environment variable:
-	`export PATH=${PATH}:/opt/devkitpro/devkitARM/bin/`
+Add the appropriate environment variable	
+`export PATH=${PATH}:/opt/devkitpro/devkitARM/bin/`
 
-Add the environment variable to your profile:
-	`echo 'PATH=${PATH}:/opt/devkitpro/devkitARM/bin/ ' >> ~/.bashrc`
+Add the environment variable to your profile	
+`echo 'PATH=${PATH}:/opt/devkitpro/devkitARM/bin/ ' >> ~/.bashrc`
 
-Clone iceman fork
-	`git clone https://github.com/iceman1001/proxmark3.git`
+Clone iceman fork	
+`git clone https://github.com/iceman1001/proxmark3.git`
 
 Get the latest commits	
-	`git pull`
+`git pull`
 
 CLEAN COMPILE	
-	`make clean && make all`
+`make clean && make all`
 	
-Flash the BOOTROM
-	`client/flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf`
+Flash the BOOTROM	
+`client/flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf`
 
 Flash the FULLIMAGE	
-	`client/flasher /dev/ttyACM0 armsrc/obj/fullimage.elf`
+`client/flasher /dev/ttyACM0 armsrc/obj/fullimage.elf`
 	
 Change into the client folder. 	
-	`cd client`
+`cd client`
 	
 Run the client	
-	`./proxmark3 /dev/ttyACM0`
+`./proxmark3 /dev/ttyACM0`
 						   
 ##Homebrew (Mac OS X)
 These instructions comes from @Chrisfu, where I got the proxmark3.rb scriptfile from.
