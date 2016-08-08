@@ -276,7 +276,7 @@ int CmdAWIDBrute(const char *Cmd){
 	memset(bs, 0x00, size);
 
 	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 4 || strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_awid_brute();
+	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_awid_brute();
 	
 	fmtlen = param_get8(Cmd, 0);
   	fc =  param_get32ex(Cmd, 1, 0, 10);
