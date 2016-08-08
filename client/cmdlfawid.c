@@ -83,10 +83,11 @@ int usage_lf_awid_brute(void){
 	PrintAndLog("                h :  This help");
 	PrintAndLog("         <format> :  format length 26|50");
 	PrintAndLog("  <facility-code> :  8|16bit value facility code");
+	PrintAndLog("          <delay> :  delay betweens attempts in ms. Default 1000ms");
 	PrintAndLog("");
 	PrintAndLog("Samples");
 	PrintAndLog("       lf awid brute 26 224");
-	PrintAndLog("       lf awid brute 50 2001");
+	PrintAndLog("       lf awid brute 50 2001 2000");
 	return 0;
 }
 
@@ -268,8 +269,9 @@ int CmdAWIDClone(const char *Cmd) {
 
 int CmdAWIDBrute(const char *Cmd){
 	
-	uint32_t fc = 0x00;
+	uint32_t fc = 0;
 	uint8_t fmtlen = 0;
+	uint16_t delay = 1000;
 	uint8_t bits[96];
 	uint8_t *bs = bits;
 	size_t size = sizeof(bits);
@@ -281,6 +283,11 @@ int CmdAWIDBrute(const char *Cmd){
 	fmtlen = param_get8(Cmd, 0);
   	fc =  param_get32ex(Cmd, 1, 0, 10);
 	if ( !fc ) return usage_lf_awid_brute();
+	
+	// delay between attemps,  defaults to 1000ms. 
+	delay = param_get8(Cmd, 2);
+	if (delay < 400)
+		delay = 1000;
 	
 	switch(fmtlen) {
 		case 50:
@@ -298,32 +305,29 @@ int CmdAWIDBrute(const char *Cmd){
 	}
 	
 	PrintAndLog("Bruteforceing AWID %d Reader", fmtlen);
-	PrintAndLog("Press pm3-button to abort simulation or run another command");
+	PrintAndLog("Press pm3-button to abort simulation or press key");
 
 	uint64_t arg1 = (10<<8) + 8; // fcHigh = 10, fcLow = 8
 	uint64_t arg2 = 50; 		 // clk RF/50 invert=0
 	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};  
 
 	for ( uint16_t cn = 1; cn < 0xFFFF; ++cn){
+
 		if (ukbhit()) {
 			PrintAndLog("aborted via keyboard!");
-			c.cmd = CMD_PING;
-			c.arg[0] = 0x00;
-			c.arg[1] = 0x00;
-			c.arg[2] = 0x00;
+			UsbCommand ping = {CMD_PING};
 			clearCommandBuffer();
-			SendCommand(&c);
+			SendCommand(&ping);
 			return 1;
 		}
-			
+
+		PrintAndLog("Trying FC: %u; CN: %u", fc, cn);		
 		(void)getAWIDBits(fmtlen, fc, cn, bs);
 		memcpy(c.d.asBytes, bs, size);
 		clearCommandBuffer();
 		SendCommand(&c);
 		
-		PrintAndLog("Trying FC: %u; CN: %u", fc, cn);
-		// pause
-		sleep(1);
+		msleep(delay);
 	}
 	return 0;
 }
