@@ -1326,7 +1326,7 @@ uint8_t k_sectorsCount = 16;
 void readerAttack(nonces_t data[], bool setEmulatorMem) {
 
 	// initialize storage for found keys
-	if (k_sector == NULL);
+	if (k_sector == NULL)
 		k_sector = calloc(k_sectorsCount, sizeof(sector));
 	if (k_sector == NULL) 
 		return;
