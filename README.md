@@ -14,16 +14,16 @@ The official Proxmark repository is found here: https://github.com/Proxmark/prox
 Download the Coverity Scan Self-buld and install it.
 You will need to configure  ARM-NON-EABI- Compiler for it to use:
 
-:: Configure
+- Configure
 `cov-configure --comptype gcc --compiler  /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc`
 
-::run it (I'm running on Ubuntu)
+- run it (I'm running on Ubuntu)
 `cov-build --dir cov-int make all`
 
-:: make a tarball
+- make a tarball
 `tar czvf proxmark3.tgz cov-int`
 
-:: upload it to coverity.com
+- upload it to coverity.com
 
 ##Whats changed?
 Whats so special with this fork?  I have scraped the web for different enhancements to the PM3 source code and not all of them ever found their way to the master branch. 
@@ -113,7 +113,7 @@ This fork now compiles just fine on
 GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS or 15.10
 See https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux
 
-Run	
+- Run		
 `sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev`
 	
 Follow these instructions
@@ -131,13 +131,13 @@ Get devkitARM release 41 from SourceForge (choose either the 64/32 bit depending
 - Move the ARM developer kit to the newly created directory	
 `sudo mv devkitARM /opt/devkitpro/`
 
-- Add the appropriate environment variable	
+- Add the appropriate environment variable		
 `export PATH=${PATH}:/opt/devkitpro/devkitARM/bin/`
 
 - Add the environment variable to your profile	
 `echo 'PATH=${PATH}:/opt/devkitpro/devkitARM/bin/ ' >> ~/.bashrc`
 
-- Clone iceman fork	
+- Clone iceman fork		
 `git clone https://github.com/iceman1001/proxmark3.git`
 
 - Get the latest commits	
