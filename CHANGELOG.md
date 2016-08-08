@@ -3,20 +3,22 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-  - 'lf t55xx recoverpw' - adds a new password recovery using bitflips and partial flips if password write went bad. (alexgrin)
-  - 'hf legic' - added improved legic data mapping. (jason)
-  - 'hf mf mifare' - added possibility to target key A|B (douniwan5788)
-  - 'analyse lcr' - added a new main command group,  to help analysing bytes & bits & nibbles. (iceman)
-  - 'lf nedap' - added identification of a NEDAP tag. (iceman)
-  -  'lf viking clone' - fixed a bug. (iceman)
-  -  Added bitsliced bruteforce solver in 'hf mf hardnested' (Aczid)
-  - 'hf mf chk' speedup (iceman)
-  - 'hf 14a/mf sim x" attack mode,  now uses also moebius version of mfkey32 to try finding the key. (iceman)
-  - 'hf 14a sim' Added emulation of Mifare cards with 10byte UID length. (iceman)
-  - 'hf mf sim' Added emulation of Mifare cards with 10byte UID length. (iceman)
+  -  Added `hf mf key_brute` - adds J-Runs 2nd phase bruteforce ref: https://github.com/J-Run/mf_key_brute   (iceman)
+  -  Added `lf jablotron` - adds demod/clone/sim of Jablotron LF tags. (iceman)
+  -  Added `lf t55xx recoverpw` - adds a new password recovery using bitflips and partial flips if password write went bad. (alexgrin)
+  - `hf legic` - added improved legic data mapping. (jason)
+  - `hf mf mifare` - added possibility to target key A|B (douniwan5788)
+  -  Added `analyse lcr` - added a new main command group,  to help analysing bytes & bits & nibbles. (iceman)
+  -  Added `lf nedap` - added identification of a NEDAP tag. (iceman)
+  - `lf viking clone` - fixed a bug. (iceman)
+  -  Added bitsliced bruteforce solver in `hf mf hardnested` (Aczid)
+  - `hf mf chk` speedup (iceman)
+  - `hf 14a/mf sim x` attack mode,  now uses also moebius version of mfkey32 to try finding the key. (iceman)
+  - `hf 14a sim` Added emulation of Mifare cards with 10byte UID length. (iceman)
+  - `hf mf sim` Added emulation of Mifare cards with 10byte UID length. (iceman)
   -  Added `lf guard clone/sim` (iceman)
   -  Added `lf pyramd clone/sim` (iceman) 
-  - trying to fix "hf 14b" command to be able to read CALYPSO card.	 (iceman)
+  - trying to fix `hf 14b` command to be able to read CALYPSO card.	 (iceman)
   - `hf legic load`, it now loads faster and a casting bug is gone. (iceman)
   -  Added `hf legic calccrc8` added a method to calculate the legic crc-8 value (iceman)
   - `hf legic decode` fixed the output overflow bugs, better printing (iceman)
@@ -30,7 +32,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - `hf mf c*` updated the calling structure and refactored of the chinese magic commands (iceman, marshmellow)
   - Started to add Peter Fillmore's  EMV fork into Iceman fork. ref: https://github.com/peterfillmore/proxmark3  (peter fillmore,  iceman)
   - Added Travis-CI automatic build integration with GitHub fork. (iceman)
-  - Updated the Reveng 1.30 sourcecode to 1.31 from Reveng projecthomepage (iceman)
+  - Updated the Reveng 1.30 sourcecode to 1.31 from Reveng project homepage (iceman)
+  - Updated the Reveng 1.31 sourcecode to 1.40 from Reveng project homepage (iceman)
   
   - Added possibility to write direct to a Legic Prime Tag (MIM256/1024) without using values from the 'BigBuffer' -> 'hf legic writeRaw <addr> <value>' (icsom)
   - Added possibility to decrease DCF values at address 0x05 & 0x06 on a Legic Prime Tag 
@@ -40,7 +43,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - Added script `legic.lua` for display and edit Data of Legic-Prime Tags (icsom)
   - Added the experimental HITAG_S support (spenneb)
   - Added topaz detection to `hf search` (iceman)
-  - Fixed the silent mode for 14b to be used inside 'hf search' (iceman)
+  - Fixed the silent mode for 14b to be used inside `hf search` (iceman)
   
 ### Added
 - Added a LF ASK Sequence Terminator detection option to the standard ask demod - and applied it to `lf search u`, `lf t55xx detect`, and `data rawdemod am s` (marshmellow)
