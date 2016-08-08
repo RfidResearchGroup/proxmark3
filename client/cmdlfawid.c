@@ -78,7 +78,7 @@ int usage_lf_awid_brute(void){
 	PrintAndLog("Enables bruteforce of AWID reader with specified facility-code.");
 	PrintAndLog("This is a incremental attack against reader.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf awid brute [h] <format> <facility-code>");
+	PrintAndLog("Usage:  lf awid brute [h] <format> <facility-code> <delay>");
 	PrintAndLog("Options :");
 	PrintAndLog("                h :  This help");
 	PrintAndLog("         <format> :  format length 26|50");
@@ -269,9 +269,8 @@ int CmdAWIDClone(const char *Cmd) {
 
 int CmdAWIDBrute(const char *Cmd){
 	
-	uint32_t fc = 0;
+	uint32_t fc = 0, delay = 1000;
 	uint8_t fmtlen = 0;
-	uint16_t delay = 1000;
 	uint8_t bits[96];
 	uint8_t *bs = bits;
 	size_t size = sizeof(bits);
@@ -285,9 +284,7 @@ int CmdAWIDBrute(const char *Cmd){
 	if ( !fc ) return usage_lf_awid_brute();
 	
 	// delay between attemps,  defaults to 1000ms. 
-	delay = param_get8(Cmd, 2);
-	if (delay < 400)
-		delay = 1000;
+	delay = param_get32ex(Cmd, 2, 1000, 10);
 	
 	switch(fmtlen) {
 		case 50:
