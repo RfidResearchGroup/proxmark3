@@ -203,6 +203,53 @@ int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t key
 	*key = bytes_to_num(resp.d.asBytes, 6);
 	return 0;
 }
+// PM3 imp of J-Run mf_key_brute (part 2)
+// ref: https://github.com/J-Run/mf_key_brute
+int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey){
+
+	#define KEYS_IN_BLOCK 85
+	#define KEYBLOCK_SIZE 510
+	#define CANDIDATE_SIZE 0xFFFF * 6
+	uint8_t found = FALSE;
+	uint64_t key64 = 0;
+	uint8_t candidates[CANDIDATE_SIZE] = {0x00};
+	uint8_t keyBlock[KEYBLOCK_SIZE] = {0x00};
+
+	memset(candidates, 0, sizeof(candidates));
+	memset(keyBlock, 0, sizeof(keyBlock));
+	
+	// Generate all possible keys for the first two unknown bytes.
+	for (uint16_t i = 0; i < 0xFFFF; ++i) {		
+		uint32_t j = i * 6;		
+		candidates[0 + j] = i >> 8;	
+		candidates[1 + j] = i;
+		candidates[2 + j] = key[2];
+		candidates[3 + j] = key[3];
+		candidates[4 + j] = key[4];
+		candidates[5 + j] = key[5];
+	}
+	uint32_t counter, i;
+	for ( i = 0, counter = 1; i < CANDIDATE_SIZE; i += KEYBLOCK_SIZE, ++counter){
+
+		key64 = 0;
+		
+		// copy candidatekeys to test key block
+		memcpy(keyBlock, candidates + i, KEYBLOCK_SIZE);
+
+		// check a block of generated candidate keys.
+		if (!mfCheckKeys(blockNo, keyType, TRUE, KEYS_IN_BLOCK, keyBlock, &key64)) {
+			*resultkey = key64;
+			found = TRUE;
+			break;
+		}
+		
+		// progress 
+		if ( counter % 20 == 0 )
+			PrintAndLog("tried : %s.. \t %u keys", sprint_hex(candidates + i, 6),  counter * KEYS_IN_BLOCK  );
+	}
+	return found;
+}
+
 
 // EMULATOR
 

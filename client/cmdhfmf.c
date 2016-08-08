@@ -125,6 +125,21 @@ int usage_hf14_chk(void){
 	PrintAndLog("      hf mf chk *1 ? d                        -- target all blocks, all keys, 1K, write to file");
 	return 0;
 }
+int usage_hf14_keybrute(void){
+	PrintAndLog("J_Run's 2nd phase of multiple sector nested authentication key recovery");
+	PrintAndLog("You have a known 4 last bytes of a key recovered with mf_nonce_brute tool.");
+	PrintAndLog("First 2 bytes of key will be bruteforced");
+	PrintAndLog("");
+	PrintAndLog("Usage:  hf mf keybrute [h] <block number> <A|B> <key>");
+	PrintAndLog("options:");
+	PrintAndLog("      h               this help");
+	PrintAndLog("      <block number>  target block number");
+	PrintAndLog("      <A|B>           target key type");
+	PrintAndLog("      <key>           candidate key from mf_nonce_brute tool");
+	PrintAndLog("samples:");
+	PrintAndLog("           hf mf keybrute 1 A 000011223344");
+	return 0;
+}
 
 int CmdHF14AMifare(const char *Cmd) {
 	uint32_t uid = 0;
@@ -1639,6 +1654,43 @@ int CmdHF14AMfDbg(const char *Cmd) {
 	return 0;
 }
 
+int CmdHF14AMfKeyBrute(const char *Cmd) {
+
+	uint8_t blockNo = 0, keytype = 0;
+	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
+	uint64_t foundkey = 0;
+	
+	char cmdp = param_getchar(Cmd, 0);	
+	if ( cmdp == 'H' || cmdp == 'h') return usage_hf14_keybrute();
+	
+	// block number
+	blockNo = param_get8(Cmd, 0);	 
+	
+	// keytype
+	cmdp = param_getchar(Cmd, 1);
+	if (cmdp == 'B' || cmdp == 'b') keytype = 1;
+	
+	// key
+	if (param_gethex(Cmd, 2, key, 12)) return usage_hf14_keybrute();
+	
+	clock_t t1 = clock();
+	time_t start, end;
+	time(&start);
+	
+	if (mfKeyBrute( blockNo, keytype, key, &foundkey))
+		PrintAndLog("Found valid key: %012"llx" \n", foundkey);
+	else
+		PrintAndLog("Key not found");
+	
+	t1 = clock() - t1;
+	time(&end);
+	unsigned long elapsed_time = difftime(end, start);	
+	if ( t1 > 0 )
+		PrintAndLog("\nTime in keybrute: %.0f ticks %u seconds\n", (float)t1, elapsed_time);
+	
+	return 0;	
+}
+
 void printKeyTable( uint8_t sectorscnt, sector *e_sector ){
 	PrintAndLog("|---|----------------|---|----------------|---|");
 	PrintAndLog("|sec|key A           |res|key B           |res|");
@@ -2383,6 +2435,7 @@ static command_t CommandTable[] = {
 	{"mifare",		CmdHF14AMifare,			0, "Read parity error messages."},
 	{"nested",		CmdHF14AMfNested,		0, "Test nested authentication"},
 	{"hardnested", 	CmdHF14AMfNestedHard, 	0, "Nested attack for hardened Mifare cards"},
+	{"keybrute",	CmdHF14AMfKeyBrute,		0, "J_Run's 2nd phase of multiple sector nested authentication key recovery"},
 	{"sniff",		CmdHF14AMfSniff,		0, "Sniff card-reader communication"},
 	{"sim",			CmdHF14AMf1kSim,		0, "Simulate MIFARE card"},
 	{"eclr",		CmdHF14AMfEClear,		0, "Clear simulator memory block"},
