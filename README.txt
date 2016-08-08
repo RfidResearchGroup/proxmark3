@@ -14,7 +14,7 @@ NEWS:
 [![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)
 
 ## Build Status Coverity Scan
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3-iceman-fork)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3_iceman_fork)
 
 
 Whats in this fork?  I have scraped the web for different enhancements to the PM3 source code and not all of them ever found their way to the master branch. 
@@ -56,9 +56,8 @@ I do tend to rename and move stuff around, the official PM3-GUI from Gaucho will
 DEVELOPMENT:
 
 This fork is adjusted to compile on windows/mingw environment with Qt5.3.1 & GCC 4.9
-For people with linux you will need to patch some source code and some small change to one makefile.  If you are lazy, you google the forum and find asper's or holimans makefile or you find your solution below.
 
-GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS.
+GC made updates to allow this to build easily on Ubuntu 14.04
 	- See https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux
 	- Generally speaking, if you're running a "later" Proxmark, installation is very easy.
 	- Run "sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev
@@ -110,7 +109,11 @@ iceman at host iuse.se
 The Proxmark 3 is available for purchase (assembled and tested) from the
 following locations:
 
-   * http://www.elechouse.com  (new and revised hardware package 2015)
+   * http://proxmark3.tictail.com/ (For buyers in EU, most likely in Sweden)
+ 
+   * http://www.elechouse.com/  (new and revised hardware package 2015, located in China)  
+
+
    
 
 Most of the ultra-low-volume contract assemblers could put

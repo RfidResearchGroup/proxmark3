@@ -15,13 +15,13 @@ Download the Coverity Scan Self-buld and install it.
 You will need to configure  ARM-NON-EABI- Compiler for it to use:
 
 :: Configure
-cov-configure --comptype gcc --compiler  /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc
+`cov-configure --comptype gcc --compiler  /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc`
 
 ::run it (I'm running on Ubuntu)
-cov-build --dir cov-int make all
+`cov-build --dir cov-int make all`
 
 :: make a tarball
-tar czvf proxmark3.tgz cov-int
+`tar czvf proxmark3.tgz cov-int`
 
 :: upload it to coverity.com
 
@@ -43,14 +43,13 @@ Among the stuff is
 	* Minor textual changes here and there.
 	* Simulation of Ultralight/Ntag.
 	* Marshmellow's and my "RevEng" addon for the client.  Ref: http://reveng.sourceforge.net/    Now using reveng1.31
-	* Someone's alternative bruteforce Mifare changes.. (you need the two other exe to make it work)
-
+	* J-Run alternative bruteforce Mifare nested auths.. (you need one other exe to make it work)
 	* A Bruteforce for T55XX passwords against tag.
 	* A Bruteforce for AWID 26, starting w a facilitycode then trying all 0xFFFF cardnumbers via simulation. To be used against a AWID Reader.
 	* A Bruteforce for HID,  starting w a facilitycode then trying all 0xFFFF cardnumbers via simulation. To be used against a HID Reader.
 	* Blaposts Crapto1 v3.3
-        * Icsom's  legic script and legic enhancements
-        * Aczid's bitsliced bruteforce solver in 'hf mf hardnested'
+    * Icsom's  legic script and legic enhancements
+    * Aczid's bitsliced bruteforce solver in 'hf mf hardnested'
 
 ##Straight from the CHANGELOG
 =============================
@@ -95,7 +94,6 @@ Among the stuff is
   - Added the experimental HITAG_S support (spenneb)
   - Added topaz detection to `hf search` (iceman)
   - Fixed the silent mode for 14b to be used inside `hf search` (iceman)
-  
 	
 ---	
 Give me a hint, and I'll see if I can't merge in the stuff you have. 
@@ -116,7 +114,7 @@ GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS or 15.10
 See https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux
 
 Run 
-	-> sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev
+	 `sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev`
 	
 Follow these instructions
 Get devkitARM release 41 from SourceForge (choose either the 64/32 bit depending on your architecture, it is assumed you know how to check and recognize your architecture):
@@ -125,40 +123,40 @@ Get devkitARM release 41 from SourceForge (choose either the 64/32 bit depending
 (32-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-i686-linux.tar.bz2/download
 
 Extract the contents of the .tar.bz2:
-	->  tar jxvf devkitARM_r41-<arch>-linux.tar.bz2
+	`tar jxvf devkitARM_r41-<arch>-linux.tar.bz2`
 
 Create a directory for the arm dev kit:
-	->  sudo mkdir -p /opt/devkitpro/
+	`sudo mkdir -p /opt/devkitpro/`
 
 Move the ARM developer kit to the newly created directory:
-	-> sudo mv devkitARM /opt/devkitpro/
+	`sudo mv devkitARM /opt/devkitpro/`
 
 Add the appropriate environment variable:
-	-> export PATH=${PATH}:/opt/devkitpro/devkitARM/bin/
+	`export PATH=${PATH}:/opt/devkitpro/devkitARM/bin/`
 
 Add the environment variable to your profile:
-	-> echo 'PATH=${PATH}:/opt/devkitpro/devkitARM/bin/ ' >> ~/.bashrc
+	`echo 'PATH=${PATH}:/opt/devkitpro/devkitARM/bin/ ' >> ~/.bashrc`
 
 Clone iceman fork
-	-> git clone https://github.com/iceman1001/proxmark3.git
+	`git clone https://github.com/iceman1001/proxmark3.git`
 
 Get the latest commits	
-	-> git pull
+	`git pull`
 
 CLEAN COMPILE	
-	-> make clean && make all
+	`make clean && make all`
 	
 Flash the BOOTROM
-	-> client/flasher -b /dev/ttyACM0 bootrom/obj/bootrom.elf
+	`client/flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf`
 
 Flash the FULLIMAGE	
-	-> client/flasher /dev/ttyACM0 armsrc/obj/fullimage.elf
+	`client/flasher /dev/ttyACM0 armsrc/obj/fullimage.elf`
 	
 Change into the client folder. 	
-	-> cd client
+	`cd client`
 	
 Run the client	
-	-> ./proxmark3 /dev/ttyACM0
+	`./proxmark3 /dev/ttyACM0`
 						   
 ##Homebrew (Mac OS X)
 These instructions comes from @Chrisfu, where I got the proxmark3.rb scriptfile from.
@@ -179,7 +177,7 @@ Follow those instructions to get it up and running.  No need for the old proxspa
 [1.6.1] How to flash:   https://www.youtube.com/watch?v=WXouhuGYEiw
 
 Recommendations:
-Use only container tag [1.6.1]
+Use only container tag [1.6.4]
 
 
 ##Buying a proxmark3
@@ -188,8 +186,6 @@ The Proxmark 3 device is available for purchase (assembled and tested) from the 
    * http://proxmark3.tictail.com/ (For buyers in EU, most likely in Sweden)
  
    * http://www.elechouse.com/  (new and revised hardware package 2015, located in China)  
-
-   I recommend you to buy this version. 
 
 
 ##Enjoy
