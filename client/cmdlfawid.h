@@ -11,6 +11,18 @@
 #ifndef CMDLFAWID_H__
 #define CMDLFAWID_H__
 
+#include <stdio.h>      // sscanf
+#include <stdbool.h>	// bool
+#include "proxmark3.h"  // Definitions, USB controls, etc
+#include "ui.h"         // PrintAndLog
+#include "cmdparser.h"  // CmdsParse, CmdsHelp
+#include "lfdemod.h"    // parityTest
+#include "util.h"       // weigandparity
+#include "protocols.h"  // for T55xx config register definitions
+#include "cmdmain.h"
+#include "sleep.h"
+
+
 int CmdLFAWID(const char *Cmd);
 int CmdAWIDDemodFSK(const char *Cmd);
 int CmdAWIDSim(const char *Cmd);

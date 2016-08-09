@@ -7,19 +7,9 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency AWID26 commands
+// Low frequency AWID26/50 commands
 //-----------------------------------------------------------------------------
-
-#include <stdio.h>      // sscanf
-#include "proxmark3.h"  // Definitions, USB controls, etc
-#include "ui.h"         // PrintAndLog
-#include "cmdparser.h"  // CmdsParse, CmdsHelp
 #include "cmdlfawid.h"  // AWID function declarations
-#include "lfdemod.h"    // parityTest
-#include "util.h"       // weigandparity
-#include "protocols.h"  // for T55xx config register definitions
-#include "cmdmain.h"
-#include "sleep.h"
  
 static int CmdHelp(const char *Cmd);
 
