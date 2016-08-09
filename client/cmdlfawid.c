@@ -84,7 +84,7 @@ int usage_lf_awid_brute(void){
 	return 0;
 }
 
-static boolean sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bs, size_t bs_len){
+static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bs, size_t bs_len){
 
 	PrintAndLog("Trying FC: %u; CN: %u", fc, cn);		
 	if ( !getAWIDBits(fmtlen, fc, cn, bs)) {
