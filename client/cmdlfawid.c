@@ -311,15 +311,23 @@ int CmdAWIDBrute(const char *Cmd){
 	for ( uint16_t cn = 1; cn < 0xFFFF; ++cn){
 
 		if (ukbhit()) {
-			PrintAndLog("aborted via keyboard!");
+			UsbCommand resp;
 			UsbCommand ping = {CMD_PING};
 			clearCommandBuffer();
 			SendCommand(&ping);
+			if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+				PrintAndLog("aborted via keyboard!");
+				return 0;
+			}
+			PrintAndLog("Device didnt respond to ABORT");
 			return 1;
 		}
 
 		PrintAndLog("Trying FC: %u; CN: %u", fc, cn);		
-		(void)getAWIDBits(fmtlen, fc, cn, bs);
+		if ( !getAWIDBits(fmtlen, fc, cn, bs)) {
+			PrintAndLog("Error with tag bitstream generation.");
+			return 1;
+		}	
 		memcpy(c.d.asBytes, bs, size);
 		clearCommandBuffer();
 		SendCommand(&c);
@@ -332,9 +340,9 @@ int CmdAWIDBrute(const char *Cmd){
 static command_t CommandTable[] = {
 	{"help",      CmdHelp,         1, "This help"},
 	{"fskdemod",  CmdAWIDDemodFSK, 0, "['1'] Realtime AWID FSK demodulator (option '1' for one tag only)"},
-	{"sim",       CmdAWIDSim,      0, "<Facility-Code> <Card Number> -- AWID tag simulator"},
-	{"clone",     CmdAWIDClone,    0, "<Facility-Code> <Card Number> <Q5> -- Clone AWID to T55x7"},
-	{"brute",	  CmdAWIDBrute,	   0, "<Facility-Code> -- bruteforce card number"},
+	{"sim",       CmdAWIDSim,      0, "<facility-code> <card number> -- AWID tag simulator"},
+	{"clone",     CmdAWIDClone,    0, "<facility-code> <card number> <Q5> -- Clone AWID to T55x7"},
+	{"brute",	  CmdAWIDBrute,	   0, "<format> <facility-code> <delay> -- bruteforce card number given a FC"},
 	{NULL, NULL, 0, NULL}
 };
 
