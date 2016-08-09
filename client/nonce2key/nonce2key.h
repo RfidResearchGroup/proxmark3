@@ -18,13 +18,13 @@
 #include <stdlib.h>
 #include "crapto1.h"
 #include "common.h"
-#include "mifare.h" // nonces_t struct
-#include "ui.h"
+#include "mifare.h" 	// nonces_t struct
+#include "ui.h"			// PrintAndLog
 #include "proxmark3.h"
 #include "mifarehost.h"
 
 extern int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t * key); 
-extern int nonce2key_ex(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t ks_info, uint64_t * key);
+extern int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, uint32_t nr, uint64_t ks_info, uint64_t * key);
 
 //iceman, added these to be able to crack key direct from "hf 14 sim" && "hf mf sim"
 bool tryMfk32(nonces_t data, uint64_t *outputkey );

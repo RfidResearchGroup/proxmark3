@@ -213,9 +213,11 @@ start:
 	}	
 	printf("\n");
 	
-	// par == 0
-	if (isOK == -1 && par_list == 0) {
-		if (!nonce2key_ex(uid, nt, nr, ks_list, &r_key) ){
+	// par == 0,  and -4
+	if (isOK == -4 && par_list == 0) {
+		// this special attack when parities is zero, uses checkkeys. Which now with block/keytype option also needs. 
+		// but it uses 0|1 instead of 0x60|0x61...
+		if (!nonce2key_ex(blockNo, keytype - 0x60 , uid, nt, nr, ks_list, &r_key) ){
 			PrintAndLog("Found valid key: %012"llx" \n", r_key);
 			goto END;
 		}

@@ -541,22 +541,16 @@ struct Crypto1State* lfsr_common_prefix_ex(uint32_t pfx, uint8_t ks[8])
 		goto out;
 	}
 
-	// for(o = odd; *o + 1; ++o)
-		// for(e = even; *e + 1; ++e)
-			// for(top = 0; top < 64; ++top) {
-				// *o += 1 << 21;
-				// *e += (!(top & 7) + 1) << 21;
-				// s = check_pfx_parity_ex(pfx, *o, *e, s);
-			// }
-	for(o = odd; *o != -1; ++o)
-		for(e = even; *e != -1; ++e)
+	for(o = odd; *o + 1; ++o)
+		for(e = even; *e + 1; ++e)
 			for(top = 0; top < 64; ++top) {
-				*o = (*o & 0x1fffff) | (top << 21);
-				*e = (*e & 0x1fffff) | (top >> 3) << 21;
+				*o += 1 << 21;
+				*e += (!(top & 7) + 1) << 21;
 				s = check_pfx_parity_ex(pfx, *o, *e, s);
 			}
 
-	s->odd = s->even = -1;	
+	s->odd = s->even = 0;
+
 out:
 	free(odd);
 	free(even);

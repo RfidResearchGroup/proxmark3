@@ -45,7 +45,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	clock_t t1 = clock();
 
 	state = lfsr_common_prefix(nr, rr, ks3x, par);
-	lfsr_rollback_word(state, uid^nt, 0);
+	lfsr_rollback_word(state, uid ^ nt, 0);
 	crypto1_get_lfsr(state, key);
 	crypto1_destroy(state);
 
@@ -54,22 +54,32 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	return 0;
 }
 
-// call when PAR == 0,  special attack?
-int nonce2key_ex(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t ks_info, uint64_t * key) {
+// call when PAR == 0,  special attack?  It seems to need two calls.  with same uid, block, keytype
+int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, uint32_t nr, uint64_t ks_info, uint64_t * key) {
+
 	struct Crypto1State *state;
 	uint32_t i, pos, key_count;
 	byte_t ks3x[8];
 
 	uint64_t key_recovered;
+
 	int64_t *state_s;
+	static uint8_t last_blockno;
+	static uint8_t last_keytype;
 	static uint32_t last_uid;
 	static int64_t *last_keylist;
-
-	if (last_uid != uid && last_keylist != NULL) {
+  
+	if (last_uid != uid &&
+		last_blockno != blockno &&
+		last_keytype != keytype &&
+		last_keylist != NULL)
+	{
 		free(last_keylist);
 		last_keylist = NULL;
 	}
 	last_uid = uid;
+	last_blockno = blockno;
+	last_keytype = keytype;
 
 	// Reset the last three significant bits of the reader nonce
 	nr &= 0xffffff1f;
@@ -80,25 +90,19 @@ int nonce2key_ex(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t ks_info, uint6
 		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
 	}
   
-	PrintAndLog("parity is all zero,try special attack! just wait for few more seconds");
-
-	clock_t t1 = clock();
+  	PrintAndLog("parity is all zero, try special attack. Just wait for few more seconds...");
 	
 	state = lfsr_common_prefix_ex(nr, ks3x);
 	state_s = (int64_t*)state;
+	PrintAndLog("Prefix");
 	
-	//char filename[50] ;
-    //sprintf(filename, "nt_%08x_%d.txt", nt, nr);
-    //printf("name %s\n", filename);
-	//FILE* fp = fopen(filename,"w");
 	for (i = 0; (state) && ((state + i)->odd != -1); i++) {
-		lfsr_rollback_word(state+i, uid^nt, 0);
+		lfsr_rollback_word(state + i, uid ^ nt, 0);
 		crypto1_get_lfsr(state + i, &key_recovered);
 		*(state_s + i) = key_recovered;
-		//fprintf(fp, "%012llx\n",key_recovered);
 	}
-	//fclose(fp);
 	
+	PrintAndLog("zero");
 	if(!state)
 		return 1;
 	
@@ -107,9 +111,12 @@ int nonce2key_ex(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t ks_info, uint6
 	
 	//Create the intersection:
 	if ( last_keylist != NULL) {
+
 		int64_t *p1, *p2, *p3;
 		p1 = p3 = last_keylist; 
 		p2 = state_s;
+		
+		PrintAndLog("one");
 		while ( *p1 != -1 && *p2 != -1 ) {
 			if (compar_int(p1, p2) == 0) {
 				printf("p1:%"llx" p2:%"llx" p3:%"llx" key:%012"llx"\n",(uint64_t)(p1-last_keylist),(uint64_t)(p2-state_s),(uint64_t)(p3-last_keylist),*p1);
@@ -129,24 +136,22 @@ int nonce2key_ex(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t ks_info, uint6
 	printf("key_count:%d\n", key_count);
 	
 	// The list may still contain several key candidates. Test each of them with mfCheckKeys
-	uint8_t keyBlock[6];
+	uint8_t keyBlock[6] = {0,0,0,0,0,0};
 	uint64_t key64;
+	PrintAndLog("two");
 	for (i = 0; i < key_count; i++) {
 		key64 = *(last_keylist + i);
 		num_to_bytes(key64, 6, keyBlock);
 		key64 = 0;
-		if (!mfCheckKeys(0, 0, TRUE, 1, keyBlock, &key64)) {  //block 0,A,
+		if (!mfCheckKeys(blockno, keytype, false, 1, keyBlock, &key64)) {
 			*key = key64;
 			free(last_keylist);
 			last_keylist = NULL;
 			free(state);
 			return 0;
 		}
-	}
-
-	t1 = clock() - t1;
-	if ( t1 > 0 ) PrintAndLog("Time in nonce2key_special: %.0f ticks \n", (float)t1);
-
+	}	
+	
 	free(last_keylist);
 	last_keylist = state_s;
 	return 1;
