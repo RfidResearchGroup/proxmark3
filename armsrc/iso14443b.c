@@ -40,7 +40,7 @@
 //#define SEND4STUFFBIT(x) ToSendStuffBit(x);
  // iceman, this threshold value,  what makes 8 a good amplituted for this IQ values? 
 #ifndef SUBCARRIER_DETECT_THRESHOLD
-# define SUBCARRIER_DETECT_THRESHOLD	6
+# define SUBCARRIER_DETECT_THRESHOLD	8
 #endif
 
 static void iso14b_set_timeout(uint32_t timeout);
@@ -237,7 +237,7 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
 	*  Card data transmission
 	*   - TR1
 	*   - SOF
-	*   - data  (each bytes is:  1startbit,8bits, 1stopbit)
+	*   - data  (each bytes is:  1startbit, 8bits, 1stopbit)
 	*   - CRC_B
 	*   - EOF
 	*
@@ -280,13 +280,14 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
 		// Data bits
 		b = cmd[i];
 		for(j = 0; j < 8; ++j) {
-			if(b & 1) { 
-				SEND4STUFFBIT(1); 
-				//ToSendStuffBit(1);
-			} else {
-				SEND4STUFFBIT(0);
-				//ToSendStuffBit(0);
-			}
+			// if(b & 1) { 
+				// SEND4STUFFBIT(1); 
+				// //ToSendStuffBit(1);
+			// } else {
+				// SEND4STUFFBIT(0);
+				// //ToSendStuffBit(0);
+			// }
+			SEND4STUFFBIT( b & 1 );
 			b >>= 1;
 		}
 
@@ -802,10 +803,9 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 		case DEMOD_UNSYNCD:
 
 			CHECK_FOR_SUBCARRIER();
-			if (MF_DBGLEVEL >= 3) { Dbprintf("Demod.state = %d", v); }
 		
 			// subcarrier detected
-			if(v > SUBCARRIER_DETECT_THRESHOLD) {
+			if (v > SUBCARRIER_DETECT_THRESHOLD) {
 				Demod.state = DEMOD_PHASE_REF_TRAINING;
 				Demod.sumI = ci;
 				Demod.sumQ = cq;
@@ -814,7 +814,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 			break;
 
 		case DEMOD_PHASE_REF_TRAINING:
-			if(Demod.posCount < 8) {
+			if (Demod.posCount < 8) {
 
 				CHECK_FOR_SUBCARRIER();
 				
@@ -837,7 +837,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 			
 			MAKE_SOFT_DECISION();
 			
-			if(v < 0) {	// logic '0' detected
+			if (v < 0) {	// logic '0' detected
 				Demod.state = DEMOD_GOT_FALLING_EDGE_OF_SOF;
 				Demod.posCount = 0;	// start of SOF sequence
 			} else {
@@ -852,13 +852,13 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 			
 			MAKE_SOFT_DECISION();
 			
-			if(v > 0) {
+			if (v > 0) {
 				// low phase of SOF too short (< 9 etu). Note: spec is >= 10, but FPGA tends to "smear" edges
-				if(Demod.posCount < 8*2) { 
+				if (Demod.posCount < 8*2) { 
 					Demod.state = DEMOD_UNSYNCD;
 				} else {
 					LED_C_ON(); // Got SOF
-					Demod.startTime = GetCountSspClk();
+					//Demod.startTime = GetCountSspClk();
 					Demod.state = DEMOD_AWAITING_START_BIT;
 					Demod.posCount = 0;
 					Demod.len = 0;
@@ -904,7 +904,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 				Demod.thisBit += v;
 				Demod.shiftReg >>= 1;
 
-				// logic '1'
+				// OR in a logic '1'
 				if (Demod.thisBit > 0)  Demod.shiftReg |= 0x200;
 
 				++Demod.bitCount;
@@ -923,7 +923,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 					} else {
 						// this one is a bit hard,  either its a correc byte or its unsynced.
 						Demod.state = DEMOD_UNSYNCD;
-						Demod.endTime = GetCountSspClk();
+						//Demod.endTime = GetCountSspClk();
 						LED_C_OFF();
 						
 						// This is EOF (start, stop and all data bits == '0'
@@ -1018,7 +1018,7 @@ static void GetTagSamplesFor14443bDemod() {
 		Dbhexdump(ISO14443B_DMA_BUFFER_SIZE, (uint8_t *)dmaBuf, FALSE);	
 	
 	if ( Demod.len > 0 )
-		LogTrace(Demod.output, Demod.len, Demod.startTime, Demod.endTime, NULL, FALSE);
+		LogTrace(Demod.output, Demod.len, time_0, time_stop, NULL, FALSE);
 }
 
 
@@ -1075,8 +1075,7 @@ static void TransmitFor14443b_AsReader(void) {
 // Code a layer 2 command (string of octets, including CRC) into ToSend[],
 // so that it is ready to transmit to the tag using TransmitFor14443b().
 //-----------------------------------------------------------------------------
-static void CodeIso14443bAsReader(const uint8_t *cmd, int len)
-{
+static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
 	/*
 	*  Reader data transmission:
 	*   - no modulation ONES
@@ -1112,14 +1111,24 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len)
 		ToSendStuffBit(0);
 		// Data bits
 		b = cmd[i];		
-		if (  b & 1 )    ToSendStuffBit(1); else ToSendStuffBit(0);
-		if ( (b>>1) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
-		if ( (b>>2) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
-		if ( (b>>3) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
-		if ( (b>>4) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
-		if ( (b>>5) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
-		if ( (b>>6) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
-		if ( (b>>7) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);		
+		// if (  b & 1 )    ToSendStuffBit(1); else ToSendStuffBit(0);
+		// if ( (b>>1) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
+		// if ( (b>>2) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
+		// if ( (b>>3) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
+		// if ( (b>>4) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
+		// if ( (b>>5) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
+		// if ( (b>>6) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
+		// if ( (b>>7) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);	
+
+		ToSendStuffBit(  b & 1); 
+		ToSendStuffBit( (b>>1) & 1); 		
+		ToSendStuffBit( (b>>2) & 1); 
+		ToSendStuffBit( (b>>3) & 1); 
+		ToSendStuffBit( (b>>4) & 1); 
+		ToSendStuffBit( (b>>5) & 1); 
+		ToSendStuffBit( (b>>6) & 1); 		
+		ToSendStuffBit( (b>>7) & 1); 
+		
 		// Stop bit
 		ToSendStuffBit(1);
 		// EGT extra guard time
@@ -1145,19 +1154,19 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len)
 }
 
 
-/**
-  Convenience function to encode, transmit and trace iso 14443b comms
-  **/
+/*
+*  Convenience function to encode, transmit and trace iso 14443b comms
+*/
 static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len) {
+
+	uint32_t time_start = GetCountSspClk();
 	
 	CodeIso14443bAsReader(cmd, len);
-	
-	uint32_t time_start = GetCountSspClk();
 
 	TransmitFor14443b_AsReader();
-	
+
 	if(trigger) LED_A_ON();
-	
+
 	LogTrace(cmd, len, time_start, GetCountSspClk()-time_start, NULL, TRUE);
 }
 

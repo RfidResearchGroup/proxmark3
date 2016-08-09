@@ -136,7 +136,7 @@ int CmdHF14BSnoop(const char *Cmd) {
 
 int CmdHF14BCmdRaw (const char *Cmd) {
 	bool reply = TRUE, power = FALSE, select = FALSE;
-	char buf[5]="";
+	char buf[5] = "";
 	int i = 0;
 	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
 	uint16_t datalen = 0;
@@ -202,10 +202,10 @@ int CmdHF14BCmdRaw (const char *Cmd) {
 		return 0;
     }
 	
-	if(!power)
+	if (!power)
         flags |= ISO14B_DISCONNECT;
 
-    if(datalen>0)
+    if (datalen>0)
         flags |= ISO14B_RAW;
 
 	// Max buffer is USB_CMD_DATA_SIZE
@@ -249,7 +249,7 @@ static void print_atqb_resp(uint8_t *data, uint8_t cid){
 	if (BitRate & 0x04)	PrintAndLog("      Bit Rate: 847 kbit/s PICC <- PCD supported"); 
 	if (BitRate & 0x80)	PrintAndLog("                Same bit rate <-> required");
 
-	uint16_t maxFrame = data[5]>>4;
+	uint16_t maxFrame = data[5] >> 4;
 	if (maxFrame < 5) 		maxFrame = 8 * maxFrame + 16;
 	else if (maxFrame == 5)	maxFrame = 64;
 	else if (maxFrame == 6)	maxFrame = 96;
@@ -257,7 +257,7 @@ static void print_atqb_resp(uint8_t *data, uint8_t cid){
 	else if (maxFrame == 8)	maxFrame = 256;
 	else maxFrame = 257;
 	
-	PrintAndLog("Max Frame Size: %u%s bytes",maxFrame, (maxFrame == 257) ? "+ RFU" : "");
+	PrintAndLog("Max Frame Size: %u%s bytes", maxFrame, (maxFrame == 257) ? "+ RFU" : "");
 
 	uint8_t protocolT = data[5] & 0xF;
 	PrintAndLog(" Protocol Type: Protocol is %scompliant with ISO/IEC 14443-4",(protocolT) ? "" : "not " );
