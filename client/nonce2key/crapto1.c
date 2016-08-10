@@ -471,14 +471,14 @@ static struct Crypto1State* check_pfx_parity_ex(uint32_t prefix, uint32_t odd, u
 	
 	uint32_t c = 0;
 
-	sl.odd = odd ^ fastfwd[1][c];
-	sl.even = even ^ fastfwd[0][c];
+	sl->odd = odd ^ fastfwd[1][c];
+	sl->even = even ^ fastfwd[0][c];
 	
-	lfsr_rollback_bit(&sl, 0, 0);
-	lfsr_rollback_bit(&sl, 0, 0);
-	lfsr_rollback_bit(&sl, 0, 0);
-	lfsr_rollback_word(&sl, 0, 0);
-	lfsr_rollback_word(&sl, prefix | c << 5, 1);
+	lfsr_rollback_bit(sl, 0, 0);
+	lfsr_rollback_bit(sl, 0, 0);
+	lfsr_rollback_bit(sl, 0, 0);
+	lfsr_rollback_word(sl, 0, 0);
+	lfsr_rollback_word(sl, prefix | c << 5, 1);
 	
 	return ++sl;
 }
