@@ -101,7 +101,6 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 		*(state_s + i) = key_recovered;
 	}
 	
-	PrintAndLog("zero");
 	if(!state)
 		return 1;
 	
@@ -115,7 +114,6 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 		p1 = p3 = last_keylist; 
 		p2 = state_s;
 		
-		PrintAndLog("one");
 		while ( *p1 != -1 && *p2 != -1 ) {
 			if (compar_int(p1, p2) == 0) {
 				printf("p1:%"llx" p2:%"llx" p3:%"llx" key:%012"llx"\n",(uint64_t)(p1-last_keylist),(uint64_t)(p2-state_s),(uint64_t)(p3-last_keylist),*p1);
@@ -127,9 +125,11 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 				while (compar_int(p1, p2) == 1) ++p2;
 			}
 		}
-		key_count = p3 - last_keylist;;
+		key_count = p3 - last_keylist;
+		PrintAndLog("one A");
 	} else {
 		key_count = 0;
+		PrintAndLog("one B");
 	}
 
 	printf("key_count:%d\n", key_count);
@@ -137,7 +137,6 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 	// The list may still contain several key candidates. Test each of them with mfCheckKeys
 	uint8_t keyBlock[6] = {0,0,0,0,0,0};
 	uint64_t key64;
-	PrintAndLog("two");
 	for (i = 0; i < key_count; i++) {
 		key64 = *(last_keylist + i);
 		num_to_bytes(key64, 6, keyBlock);
@@ -150,7 +149,6 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 			return 0;
 		}
 	}	
-	
 	
 	free(last_keylist);
 	last_keylist = state_s;

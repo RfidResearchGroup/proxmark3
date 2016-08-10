@@ -1,4 +1,4 @@
-/*  crapto1.c
+1/*  crapto1.c
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -383,7 +383,7 @@ uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb)
 /** nonce_distance
  * x,y valid tag nonces, then prng_successor(x, nonce_distance(x, y)) = y
  */
-static uint16_t *dist;
+static uint16_t *dist = 0;
 int nonce_distance(uint32_t from, uint32_t to)
 {
 	uint16_t x, i;
@@ -391,7 +391,7 @@ int nonce_distance(uint32_t from, uint32_t to)
 		dist = malloc(2 << 16);
 		if(!dist)
 			return -1;
-		for (x = 1, i = 1; i; ++i) {
+		for (x = i = 1; i; ++i) {
 			dist[(x & 0xff) << 8 | x >> 8] = i;
 			x = x >> 1 | (x ^ x >> 2 ^ x >> 3 ^ x >> 5) << 15;
 		}
@@ -468,21 +468,18 @@ static struct Crypto1State* check_pfx_parity(uint32_t prefix, uint32_t rresp, ui
 	return sl + good;
 }
 static struct Crypto1State* check_pfx_parity_ex(uint32_t prefix, uint32_t odd, uint32_t even, struct Crypto1State* sl) {
-	struct Crypto1State s;
+	
 	uint32_t c = 0;
 
-	s.odd = odd ^ fastfwd[1][c];
-	s.even = even ^ fastfwd[0][c];
+	sl.odd = odd ^ fastfwd[1][c];
+	sl.even = even ^ fastfwd[0][c];
 	
-	lfsr_rollback_bit(&s, 0, 0);
-	lfsr_rollback_bit(&s, 0, 0);
-	lfsr_rollback_bit(&s, 0, 0);
+	lfsr_rollback_bit(&sl, 0, 0);
+	lfsr_rollback_bit(&sl, 0, 0);
+	lfsr_rollback_bit(&sl, 0, 0);
+	lfsr_rollback_word(&sl, 0, 0);
+	lfsr_rollback_word(&sl, prefix | c << 5, 1);
 	
-	lfsr_rollback_word(&s, 0, 0);
-	lfsr_rollback_word(&s, prefix | c << 5, 1);
-	
-	sl->odd = s.odd;
-	sl->even = s.even;
 	return ++sl;
 }
 
