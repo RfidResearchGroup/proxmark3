@@ -549,7 +549,8 @@ struct Crypto1State* lfsr_common_prefix_ex(uint32_t pfx, uint8_t ks[8])
 				s = check_pfx_parity_ex(pfx, *o, *e, s);
 			}
 
-	s->odd = s->even = 0;
+	// in this version, -1 signifies end of states 
+	s->odd = s->even = -1;
 
 out:
 	free(odd);

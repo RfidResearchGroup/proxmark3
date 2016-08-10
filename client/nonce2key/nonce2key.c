@@ -94,7 +94,6 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 	
 	state = lfsr_common_prefix_ex(nr, ks3x);
 	state_s = (int64_t*)state;
-	PrintAndLog("Prefix");
 	
 	for (i = 0; (state) && ((state + i)->odd != -1); i++) {
 		lfsr_rollback_word(state + i, uid ^ nt, 0);
@@ -151,6 +150,7 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 			return 0;
 		}
 	}	
+	
 	
 	free(last_keylist);
 	last_keylist = state_s;

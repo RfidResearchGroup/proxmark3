@@ -217,7 +217,12 @@ start:
 	if (isOK == -4 && par_list == 0) {
 		// this special attack when parities is zero, uses checkkeys. Which now with block/keytype option also needs. 
 		// but it uses 0|1 instead of 0x60|0x61...
-		if (!nonce2key_ex(blockNo, keytype - 0x60 , uid, nt, nr, ks_list, &r_key) ){
+		if (nonce2key_ex(blockNo, keytype - 0x60 , uid, nt, nr, ks_list, &r_key) ){
+			PrintAndLog("Key not found (lfsr_common_prefix list is null).");	
+			PrintAndLog("Failing is expected to happen in 25%% of all cases. Trying again with a different reader nonce...");
+			c.arg[0] = false;
+			goto start;
+		} else {
 			PrintAndLog("Found valid key: %012"llx" \n", r_key);
 			goto END;
 		}

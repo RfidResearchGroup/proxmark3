@@ -867,10 +867,10 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 	uint8_t cardAUTHKEY = 0xff;  // no authentication
 	// allow collecting up to 8 sets of nonces to allow recovery of up to 8 keys
 	#define ATTACK_KEY_COUNT 8 // keep same as define in cmdhfmf.c -> readerAttack()
-	nonces_t ar_nr_resp[ATTACK_KEY_COUNT*2]; //*2 for 2 separate attack types (nml, moebius)
+	nonces_t ar_nr_resp[ATTACK_KEY_COUNT*2]; // for 2 separate attack types (nml, moebius)
 	memset(ar_nr_resp, 0x00, sizeof(ar_nr_resp));
 
-	uint8_t ar_nr_collected[ATTACK_KEY_COUNT*2]; //*2 for 2nd attack type (moebius)
+	uint8_t ar_nr_collected[ATTACK_KEY_COUNT*2]; // for 2nd attack type (moebius)
 	memset(ar_nr_collected, 0x00, sizeof(ar_nr_collected));
 	uint8_t	nonce1_count = 0;
 	uint8_t	nonce2_count = 0;
@@ -2218,10 +2218,11 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	set_tracing(TRUE);	
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
-	
-	if (first_try) { 
-		sync_time = GetCountSspClk() & 0xfffffff8;
-		sync_cycles = PRNG_SEQUENCE_LENGTH + 1130; //65536;	//0x10000	// Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
+	sync_time = GetCountSspClk() & 0xfffffff8;
+	// iceman,  i add 1130 because during my observations this makse the syncronization much fast to sync.
+	sync_cycles = PRNG_SEQUENCE_LENGTH + 1130; //65536;	// Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).		
+
+	if (first_try) {
 		mf_nr_ar3 = 0;			
 		nt_attacked = 0;
 		par_low = 0;
@@ -2294,7 +2295,9 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	
 		WDT_HIT();
 		LED_B_ON();
-		if (first_try && previous_nt && !nt_attacked) { // we didn't calibrate our clock yet
+		// we didn't calibrate our clock yet,
+		// iceman: has to be calibrated every time.
+		if (previous_nt && !nt_attacked) { 
 
 			nt_distance = dist_nt(previous_nt, nt);
 			
