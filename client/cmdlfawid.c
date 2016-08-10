@@ -104,8 +104,9 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 static int sendPing(){
 	UsbCommand resp;
 	UsbCommand ping = {CMD_PING};
-	clearCommandBuffer();
-	SendCommand(&ping);
+	clearCommandBuffer(); SendCommand(&ping);
+	clearCommandBuffer(); SendCommand(&ping);
+	clearCommandBuffer(); SendCommand(&ping);
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
 		PrintAndLog("aborted via keyboard!");
 		return 0;
@@ -374,7 +375,7 @@ int CmdAWIDBrute(const char *Cmd){
 		
 		// Do one down  (if cardnumber is given)
 		if ( cn > 1 )
-			if ( down > 0 )
+			if ( down > 1 )
 				if ( !sendTry(fmtlen, fc, --down, delay, bs, size)) return 1;
 	}
 	return 0;
