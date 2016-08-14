@@ -38,7 +38,7 @@ int CmdHFTune(const char *Cmd) {
 }
 
 
-void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
+int applyIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 {
 	switch(cmd[0])
 	{
@@ -121,9 +121,13 @@ void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	case MIFARE_ULEV1_READSIG :		snprintf(exp,size,"READ_SIG"); break;
 	case MIFARE_ULEV1_CHECKTEAR : 	snprintf(exp,size,"CHK_TEARING(%d)",cmd[1]); break;
 	case MIFARE_ULEV1_VCSL :		snprintf(exp,size,"VCSL"); break;
-	default:						snprintf(exp,size,"?"); break;
+	default:						return 0;
 	}
-	return;
+	return 1;
+}
+
+void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
+	applyIso14443a(exp, size, cmd, cmdsize);
 }
 
 void annotateIclass(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
@@ -249,6 +253,83 @@ void annotateIso7816(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 			case ISO7816_GET_CHALLENGE				:snprintf(exp, size, "GET CHALLENGE");break;
 			case ISO7816_MANAGE_CHANNEL				:snprintf(exp, size, "MANAGE CHANNEL");break;
 			default									:snprintf(exp,size,"?"); break;
+		}
+	}
+}
+
+// MIFARE DESFire
+void annotateMfDesfire(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
+	
+	// it's basically a ISO14443a tag, so try annotation from there
+	if (!applyIso14443a(exp, size, cmd, cmdsize)){
+		//PrintAndLog("rest");
+		//PrintAndLog("(%d)",cmd[0]);
+		// S-block 11xxx010
+		if ( (cmd[0] & 0xC0) && (cmdsize == 3) ) {		
+			switch ( (cmd[0] & 0x30)  ) {
+				case 0x30	: snprintf(exp, size, "S-block DESELECT"); break;
+				case 0x00	: snprintf(exp, size, "S-block WTX"); break;
+				default		: snprintf(exp, size, "S-block"); break;
+			}		
+		}
+		// R-block (ack) 101xx01x
+		else if ( ((cmd[0] & 0xB0) == 0xA0) && ( cmdsize > 2) ) {
+			if ( (cmd[0] & 0x10) == 0 ) 
+				snprintf(exp, size, "R-block ACK(%d)", (cmd[0] & 0x01));
+			else
+				snprintf(exp, size, "R-block NACK(%d)", (cmd[0] & 0x01));
+		}
+		// I-block 000xCN1x
+		else if ( (cmd[0] & 0xC0) == 0x00){
+			// PCB [CID] [NAD] [INF] CRC CRC
+			int pos = 1;
+			if ( (cmd[0] & 0x08) == 0x08) // cid byte following
+				pos = pos + 1;
+			if ( (cmd[0] & 0x04) == 0x04) // nad byte following
+				pos = pos + 1;
+			//PrintAndLog("[%d]",pos);
+			switch ( cmd[pos] ){
+				case MFDES_CREATE_APPLICATION			:snprintf(exp, size, "CREATE APPLICATION");break;
+				case MFDES_DELETE_APPLICATION			:snprintf(exp, size, "DELETE APPLICATION");break;
+				case MFDES_GET_APPLICATION_IDS			:snprintf(exp, size, "GET APPLICATION IDS");break;
+				case MFDES_SELECT_APPLICATION			:snprintf(exp, size, "SELECT APPLICATION");break;
+				case MFDES_FORMAT_PICC					:snprintf(exp, size, "FORMAT PICC");break;
+				case MFDES_GET_VERSION					:snprintf(exp, size, "GET VERSION");break;
+				case MFDES_READ_DATA					:snprintf(exp, size, "READ DATA");break;
+				case MFDES_WRITE_DATA					:snprintf(exp, size, "WRITE DATA");break;
+				case MFDES_GET_VALUE					:snprintf(exp, size, "GET VALUE");break;
+				case MFDES_CREDIT						:snprintf(exp, size, "CREDIT");break;
+				case MFDES_DEBIT						:snprintf(exp, size, "DEBIT");break;
+				case MFDES_LIMITED_CREDIT				:snprintf(exp, size, "LIMITED CREDIT");break;
+				case MFDES_WRITE_RECORD					:snprintf(exp, size, "WRITE RECORD");break;
+				case MFDES_READ_RECORDS					:snprintf(exp, size, "READ RECORDS");break;
+				case MFDES_CLEAR_RECORD_FILE			:snprintf(exp, size, "CLEAR RECORD FILE");break;
+				case MFDES_COMMIT_TRANSACTION			:snprintf(exp, size, "COMMIT TRANSACTION");break;
+				case MFDES_ABORT_TRANSACTION			:snprintf(exp, size, "ABORT TRANSACTION");break;
+				case MFDES_GET_FREE_MEMORY				:snprintf(exp, size, "GET FREE MEMORY");break;
+				case MFDES_GET_FILE_IDS					:snprintf(exp, size, "GET FILE IDS");break;
+				case MFDES_GET_ISOFILE_IDS				:snprintf(exp, size, "GET ISOFILE IDS");break;
+				case MFDES_GET_FILE_SETTINGS			:snprintf(exp, size, "GET FILE SETTINGS");break;
+				case MFDES_CHANGE_FILE_SETTINGS			:snprintf(exp, size, "CHANGE FILE SETTINGS");break;
+				case MFDES_CREATE_STD_DATA_FILE			:snprintf(exp, size, "CREATE STD DATA FILE");break;
+				case MFDES_CREATE_BACKUP_DATA_FILE		:snprintf(exp, size, "CREATE BACKUP DATA FILE");break;
+				case MFDES_CREATE_VALUE_FILE			:snprintf(exp, size, "CREATE VALUE FILE");break;
+				case MFDES_CREATE_LINEAR_RECORD_FILE	:snprintf(exp, size, "CREATE LINEAR RECORD FILE");break;
+				case MFDES_CREATE_CYCLIC_RECORD_FILE	:snprintf(exp, size, "CREATE CYCLIC RECORD FILE");break;
+				case MFDES_DELETE_FILE					:snprintf(exp, size, "DELETE FILE");break;
+				case MFDES_AUTHENTICATE					:snprintf(exp, size, "AUTH NATIVE (keyNo %d)", cmd[pos+1]);break;  // AUTHENTICATE_NATIVE
+				case MFDES_AUTHENTICATE_ISO				:snprintf(exp, size, "AUTH ISO (keyNo %d)", cmd[pos+1]);break;  // AUTHENTICATE_STANDARD
+				case MFDES_AUTHENTICATE_AES				:snprintf(exp, size, "AUTH AES (keyNo %d)", cmd[pos+1]);break;
+				case MFDES_CHANGE_KEY_SETTINGS			:snprintf(exp, size, "CHANGE KEY SETTINGS");break;
+				case MFDES_GET_KEY_SETTINGS				:snprintf(exp, size, "GET KEY SETTINGS");break;
+				case MFDES_CHANGE_KEY					:snprintf(exp, size, "CHANGE KEY");break;
+				case MFDES_GET_KEY_VERSION				:snprintf(exp, size, "GET KEY VERSION");break;
+				case MFDES_AUTHENTICATION_FRAME			:snprintf(exp, size, "AUTH FRAME / NEXT FRAME");break;
+				default									:break;
+			}
+		}else{
+			// anything else
+			snprintf(exp,size,"?");
 		}
 	}
 }
@@ -520,6 +601,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 				crcStatus = iso14443B_CRC_check(isResponse, frame, data_len);
 				break;
 			case ISO_14443A:
+			case MFDES:
 				crcStatus = iso14443A_CRC_check(isResponse, frame, data_len);
 				break;				
 			default: 
@@ -575,6 +657,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 		switch(protocol) {
 			case ICLASS:		annotateIclass(explanation,sizeof(explanation),frame,data_len); break;
 			case ISO_14443A:	annotateIso14443a(explanation,sizeof(explanation),frame,data_len); break;
+			case MFDES:			annotateMfDesfire(explanation,sizeof(explanation),frame,data_len); break;
 			case ISO_14443B:	annotateIso14443b(explanation,sizeof(explanation),frame,data_len); break;
 			case TOPAZ:			annotateTopaz(explanation,sizeof(explanation),frame,data_len); break;
 			case ISO_7816_4:	annotateIso7816(explanation,sizeof(explanation),frame,data_len); break;
@@ -623,6 +706,7 @@ int usage_hf_list(){
 	PrintAndLog("    raw    - just show raw data without annotations");
 	PrintAndLog("    14a    - interpret data as iso14443a communications");
 	PrintAndLog("    14b    - interpret data as iso14443b communications");
+		PrintAndLog("    des 	- interpret data as DESFire communications");
 	PrintAndLog("    iclass - interpret data as iclass communications");
 	PrintAndLog("    topaz  - interpret data as topaz communications");
 	PrintAndLog("    7816   - interpret data as iso7816-4 communications");
@@ -685,7 +769,8 @@ int CmdHFList(const char *Cmd)
 	else if(strcmp(type, "14a") == 0)	protocol = ISO_14443A;
 	else if(strcmp(type, "14b") == 0)	protocol = ISO_14443B;
 	else if(strcmp(type, "topaz")== 0)	protocol = TOPAZ;
-	else if(strcmp(type, "7816")== 0)	protocol = ISO_7816_4;			
+	else if(strcmp(type, "7816")== 0)	protocol = ISO_7816_4;	
+	else if(strcmp(type,"des")== 0)		protocol = MFDES;			
 	else if(strcmp(type, "raw")== 0) 	protocol = -1;//No crc, no annotations
 	else errors = true;
 

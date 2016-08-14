@@ -251,6 +251,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO_14443B	2
 #define TOPAZ		3
 #define ISO_7816_4  4
+#define MFDES		5
 
 //-- Picopass fuses
 #define FUSE_FPERS   0x80
@@ -283,6 +284,44 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 // ISO7816-4	For response APDU's
 #define ISO7816_OK						0x9000
 //	6x xx = ERROR
+	
+// MIFARE DESFire command set:
+#define  MFDES_CREATE_APPLICATION 			 0xca
+#define  MFDES_DELETE_APPLICATION 			 0xda
+#define  MFDES_GET_APPLICATION_IDS 			 0x6a
+#define      MFDES_SELECT_APPLICATION 		 0x5a
+#define      MFDES_FORMAT_PICC 				 0xfc
+#define      MFDES_GET_VERSION 				 0x60
+#define      MFDES_READ_DATA 				 0xbd
+#define      MFDES_WRITE_DATA				 0x3d
+#define      MFDES_GET_VALUE 				 0x6c
+#define      MFDES_CREDIT 					 0x0c
+#define      MFDES_DEBIT 					 0xdc
+#define      MFDES_LIMITED_CREDIT 			 0x1c
+#define      MFDES_WRITE_RECORD 			 0x3b
+#define      MFDES_READ_RECORDS 			 0xbb
+#define     MFDES_CLEAR_RECORD_FILE 		 0xeb
+#define      MFDES_COMMIT_TRANSACTION 		 0xc7
+#define      MFDES_ABORT_TRANSACTION 		 0xa7
+#define      MFDES_GET_FREE_MEMORY           0x6e
+#define  	MFDES_GET_FILE_IDS 				 0x6f
+#define  	MFDES_GET_ISOFILE_IDS 			 0x61
+#define     MFDES_GET_FILE_SETTINGS 		 0xf5
+#define     MFDES_CHANGE_FILE_SETTINGS 		 0x5f
+#define     MFDES_CREATE_STD_DATA_FILE 		 0xcd
+#define     MFDES_CREATE_BACKUP_DATA_FILE 	 0xcb
+#define     MFDES_CREATE_VALUE_FILE 		 0xcc
+#define     MFDES_CREATE_LINEAR_RECORD_FILE	 0xc1
+#define     MFDES_CREATE_CYCLIC_RECORD_FILE	 0xc0
+#define     MFDES_DELETE_FILE 				 0xdf
+#define     MFDES_AUTHENTICATE	 			 0x0a  // AUTHENTICATE_NATIVE
+#define  	MFDES_AUTHENTICATE_ISO 			 0x1a  // AUTHENTICATE_STANDARD
+#define  	MFDES_AUTHENTICATE_AES 			 0xaa
+#define     MFDES_CHANGE_KEY_SETTINGS 		 0x54
+#define     MFDES_GET_KEY_SETTINGS 			 0x45
+#define     MFDES_CHANGE_KEY 				 0xc4
+#define     MFDES_GET_KEY_VERSION 			 0x64
+#define     MFDES_AUTHENTICATION_FRAME 		 0xAF
 	
 void printIclassDumpInfo(uint8_t* iclass_dump);
 void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb);
