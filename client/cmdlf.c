@@ -183,81 +183,68 @@ int CmdLFCommandRead(const char *Cmd) {
 
 int CmdFlexdemod(const char *Cmd)
 {
-  int i;
-  for (i = 0; i < GraphTraceLen; ++i) {
-    if (GraphBuffer[i] < 0) {
-      GraphBuffer[i] = -1;
-    } else {
-      GraphBuffer[i] = 1;
-    }
-  }
+#define LONG_WAIT 100	
+	int i, j, start, bit, sum;
+	int phase = 0;
 
-#define LONG_WAIT 100
-  int start;
-  for (start = 0; start < GraphTraceLen - LONG_WAIT; start++) {
-    int first = GraphBuffer[start];
-    for (i = start; i < start + LONG_WAIT; i++) {
-      if (GraphBuffer[i] != first) {
-        break;
-      }
-    }
-    if (i == (start + LONG_WAIT)) {
-      break;
-    }
-  }
-  if (start == GraphTraceLen - LONG_WAIT) {
-    PrintAndLog("nothing to wait for");
-    return 0;
-  }
+	for (i = 0; i < GraphTraceLen; ++i)
+		GraphBuffer[i] = (GraphBuffer[i] < 0) ? -1 : 1;
 
-  GraphBuffer[start] = 2;
-  GraphBuffer[start+1] = -2;
+	for (start = 0; start < GraphTraceLen - LONG_WAIT; start++) {
+		int first = GraphBuffer[start];
+		for (i = start; i < start + LONG_WAIT; i++) {
+			if (GraphBuffer[i] != first) {
+				break;
+			}
+		}
+		if (i == (start + LONG_WAIT))
+			break;
+	}
+	
+	if (start == GraphTraceLen - LONG_WAIT) {
+		PrintAndLog("nothing to wait for");
+		return 0;
+	}
+
+	GraphBuffer[start] = 2;
+	GraphBuffer[start+1] = -2;
 	uint8_t bits[64] = {0x00};
 
-	int bit, sum;
-  i = start;
-  for (bit = 0; bit < 64; bit++) {
+	i = start;
+	for (bit = 0; bit < 64; bit++) {
 		sum = 0;
 		for (int j = 0; j < 16; j++) {
-      sum += GraphBuffer[i++];
-    }
-
+			sum += GraphBuffer[i++];
+		}
 		bits[bit] = (sum > 0) ? 1 : 0;
+		PrintAndLog("bit %d sum %d", bit, sum);
+	}
 
-    PrintAndLog("bit %d sum %d", bit, sum);
-  }
+	for (bit = 0; bit < 64; bit++) {
+		sum = 0;
+		for (j = 0; j < 16; j++)
+			sum += GraphBuffer[i++];
 
-  for (bit = 0; bit < 64; bit++) {
-    int j;
-    int sum = 0;
-    for (j = 0; j < 16; j++) {
-      sum += GraphBuffer[i++];
-    }
-    if (sum > 0 && bits[bit] != 1) {
-      PrintAndLog("oops1 at %d", bit);
-    }
-    if (sum < 0 && bits[bit] != 0) {
-      PrintAndLog("oops2 at %d", bit);
-    }
-  }
+		if (sum > 0 && bits[bit] != 1) PrintAndLog("oops1 at %d", bit);
+
+		if (sum < 0 && bits[bit] != 0) PrintAndLog("oops2 at %d", bit);
+
+	}
 
 	// HACK writing back to graphbuffer.
-  GraphTraceLen = 32*64;
-  i = 0;
-  int phase = 0;
-  for (bit = 0; bit < 64; bit++) {
-	
+	GraphTraceLen = 32*64;
+	i = 0;
+	for (bit = 0; bit < 64; bit++) {
+		
 		phase = (bits[bit] == 0) ? 0 : 1;
 		
-    int j;
-    for (j = 0; j < 32; j++) {
-      GraphBuffer[i++] = phase;
-      phase = !phase;
-    }
-  }
-
-  RepaintGraphWindow();
-  return 0;
+		for (j = 0; j < 32; j++) {
+			GraphBuffer[i++] = phase;
+			phase = !phase;
+		}
+	}
+	RepaintGraphWindow();
+	return 0;
 }
   
 int CmdIndalaDemod(const char *Cmd)
@@ -270,10 +257,9 @@ int CmdIndalaDemod(const char *Cmd)
 
 	// worst case with GraphTraceLen=64000 is < 4096
 	// under normal conditions it's < 2048
-
 	uint8_t rawbits[4096];
-	int rawbit = 0;
-	int worst = 0, worstPos = 0;
+
+	int rawbit = 0, worst = 0, worstPos = 0;
 	// PrintAndLog("Expecting a bit less than %d raw bits", GraphTraceLen / 32);
 	
 	// loop through raw signal - since we know it is psk1 rf/32 fc/2 skip every other value (+=2)
@@ -448,51 +434,49 @@ int CmdIndalaDemod(const char *Cmd)
 	return 1;
 }
 
-int CmdIndalaClone(const char *Cmd)
-{
-  UsbCommand c;
+int CmdIndalaClone(const char *Cmd){
+	UsbCommand c;
 	unsigned int uid1, uid2, uid3, uid4, uid5, uid6, uid7;
 
 	uid1 =  uid2 = uid3 = uid4 = uid5 = uid6 = uid7 = 0;
-  int n = 0, i = 0;
+	int n = 0, i = 0;
 
-  if (strchr(Cmd,'l') != 0) {
-    while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
-      uid1 = (uid1 << 4) | (uid2 >> 28);
-      uid2 = (uid2 << 4) | (uid3 >> 28);
-      uid3 = (uid3 << 4) | (uid4 >> 28);
-      uid4 = (uid4 << 4) | (uid5 >> 28);
-      uid5 = (uid5 << 4) | (uid6 >> 28);
-      uid6 = (uid6 << 4) | (uid7 >> 28);
-    	uid7 = (uid7 << 4) | (n & 0xf);
-    }
-    PrintAndLog("Cloning 224bit tag with UID %x%08x%08x%08x%08x%08x%08x", uid1, uid2, uid3, uid4, uid5, uid6, uid7);
-    c.cmd = CMD_INDALA_CLONE_TAG_L;
-    c.d.asDwords[0] = uid1;
-    c.d.asDwords[1] = uid2;
-    c.d.asDwords[2] = uid3;
-    c.d.asDwords[3] = uid4;
-    c.d.asDwords[4] = uid5;
-    c.d.asDwords[5] = uid6;
-    c.d.asDwords[6] = uid7;
+	if (strchr(Cmd,'l') != 0) {
+		while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
+			uid1 = (uid1 << 4) | (uid2 >> 28);
+			uid2 = (uid2 << 4) | (uid3 >> 28);
+			uid3 = (uid3 << 4) | (uid4 >> 28);
+			uid4 = (uid4 << 4) | (uid5 >> 28);
+			uid5 = (uid5 << 4) | (uid6 >> 28);
+			uid6 = (uid6 << 4) | (uid7 >> 28);
+			uid7 = (uid7 << 4) | (n & 0xf);
+		}
+		PrintAndLog("Cloning 224bit tag with UID %x%08x%08x%08x%08x%08x%08x", uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+		c.cmd = CMD_INDALA_CLONE_TAG_L;
+		c.d.asDwords[0] = uid1;
+		c.d.asDwords[1] = uid2;
+		c.d.asDwords[2] = uid3;
+		c.d.asDwords[3] = uid4;
+		c.d.asDwords[4] = uid5;
+		c.d.asDwords[5] = uid6;
+		c.d.asDwords[6] = uid7;
 	} else {
-    while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
-      uid1 = (uid1 << 4) | (uid2 >> 28);
-      uid2 = (uid2 << 4) | (n & 0xf);
-    }
-    PrintAndLog("Cloning 64bit tag with UID %x%08x", uid1, uid2);
-    c.cmd = CMD_INDALA_CLONE_TAG;
-    c.arg[0] = uid1;
-    c.arg[1] = uid2;
-  }
+		while (sscanf(&Cmd[i++], "%1x", &n ) == 1) {
+			uid1 = (uid1 << 4) | (uid2 >> 28);
+			uid2 = (uid2 << 4) | (n & 0xf);
+		}
+		PrintAndLog("Cloning 64bit tag with UID %x%08x", uid1, uid2);
+		c.cmd = CMD_INDALA_CLONE_TAG;
+		c.arg[0] = uid1;
+		c.arg[1] = uid2;
+	}
 
 	clearCommandBuffer();
-  SendCommand(&c);
-  return 0;
+	SendCommand(&c);
+	return 0;
 }
 
-int CmdLFSetConfig(const char *Cmd)
-{
+int CmdLFSetConfig(const char *Cmd) {
 	uint8_t divisor =  0;//Frequency divisor
 	uint8_t bps = 0; // Bits per sample
 	uint8_t decimation = 0; //How many to keep
@@ -502,10 +486,8 @@ int CmdLFSetConfig(const char *Cmd)
 	uint8_t unsigned_trigg = 0;
 
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 			return usage_lf_config();
 		case 'H':
@@ -564,8 +546,7 @@ int CmdLFSetConfig(const char *Cmd)
 	return 0;
 }
 
-int CmdLFRead(const char *Cmd)
-{
+int CmdLFRead(const char *Cmd) {
 	bool arg1 = false;
 	uint8_t cmdp =  param_getchar(Cmd, 0);
 	
@@ -584,8 +565,7 @@ int CmdLFRead(const char *Cmd)
 	return 0;
 }
 
-int CmdLFSnoop(const char *Cmd)
-{
+int CmdLFSnoop(const char *Cmd) {
 	uint8_t cmdp = param_getchar(Cmd, 0);
 	if(cmdp == 'h' || cmdp == 'H') return usage_lf_snoop();
 	
@@ -596,22 +576,18 @@ int CmdLFSnoop(const char *Cmd)
 	return 0;
 }
 
-static void ChkBitstream(const char *str)
-{
-  int i;
- 
-  /* convert to bitstream if necessary */
-	for (i = 0; i < (int)(GraphTraceLen / 2); i++){
+static void ChkBitstream(const char *str) {
+	// convert to bitstream if necessary
+	for (int i = 0; i < (int)(GraphTraceLen / 2); i++){
 		if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
-      CmdGetBitStream("");
-      break;
-    }
-  }
+			CmdGetBitStream("");
+			break;
+		}
+	}
 }
 //Attempt to simulate any wave in buffer (one bit per output sample)
 // converts GraphBuffer to bitstream (based on zero crossings) if needed.
-int CmdLFSim(const char *Cmd)
-{
+int CmdLFSim(const char *Cmd) {
 	int i,j;
 	static int gap;
 
@@ -655,10 +631,8 @@ int CmdLFfskSim(const char *Cmd)
 	int dataLen = 0;
 	uint8_t cmdp = 0;
 	
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)){
 			case 'h':
 				return usage_lf_simfsk();
 			case 'i':
@@ -838,197 +812,191 @@ int CmdLFaskSim(const char *Cmd)
 
 // by marshmellow - sim psk data given carrier, clock, invert 
 // - allow pull data from DemodBuffer or parameters
-int CmdLFpskSim(const char *Cmd)
-{
-  //might be able to autodetect FC and clock from Graphbuffer if using demod buffer
-  //will need carrier, Clock, and bitstream
-  uint8_t carrier=0, clk=0;
-  uint8_t invert=0;
-  bool errors = FALSE;
-  char hexData[32] = {0x00}; // store entered hex data
-  uint8_t data[255] = {0x00}; 
-  int dataLen = 0;
-  uint8_t cmdp = 0;
-  uint8_t pskType = 1;
-  while(param_getchar(Cmd, cmdp) != 0x00)
-  {
-    switch(param_getchar(Cmd, cmdp))
-    {
-    case 'h':
-      return usage_lf_simpsk();
-    case 'i':
-      invert = 1;
-      cmdp++;
-      break;
-    case 'c':
-      errors |= param_getdec(Cmd,cmdp+1,&clk);
-      cmdp+=2;
-      break;
-    case 'r':
-      errors |= param_getdec(Cmd,cmdp+1,&carrier);
-      cmdp+=2;
-      break;
-    case '1':
-      pskType=1;
-      cmdp++;
-      break;
-    case '2':
-      pskType=2;
-      cmdp++;
-      break;
-    case '3':
-      pskType=3;
-      cmdp++;
-      break;
-    case 'd':
-      dataLen = param_getstr(Cmd, cmdp+1, hexData);
-      if (dataLen==0) {
-        errors=TRUE; 
-      } else {
-        dataLen = hextobinarray((char *)data, hexData);
-      }    
-      if (dataLen==0) errors=TRUE; 
-      if (errors) PrintAndLog ("Error getting hex data");
-      cmdp+=2;
-      break;
-    default:
-      PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-      errors = TRUE;
-      break;
-    }
-    if (errors) break;
-  }
-  if (cmdp == 0 && DemodBufferLen == 0)
-  {
-    errors = TRUE;// No args
-  }
+int CmdLFpskSim(const char *Cmd) {
+	//might be able to autodetect FC and clock from Graphbuffer if using demod buffer
+	//will need carrier, Clock, and bitstream
+	uint8_t carrier=0, clk=0;
+	uint8_t invert=0;
+	bool errors = FALSE;
+	char hexData[32] = {0x00}; // store entered hex data
+	uint8_t data[255] = {0x00}; 
+	int dataLen = 0;
+	uint8_t cmdp = 0;
+	uint8_t pskType = 1;
+	
+	while(param_getchar(Cmd, cmdp) != 0x00)	{
+		switch(param_getchar(Cmd, cmdp)) {
+			case 'h':
+				return usage_lf_simpsk();
+			case 'i':
+				invert = 1;
+				cmdp++;
+				break;
+			case 'c':
+				errors |= param_getdec(Cmd,cmdp+1,&clk);
+				cmdp +=2;
+				break;
+			case 'r':
+				errors |= param_getdec(Cmd,cmdp+1,&carrier);
+				cmdp += 2;
+				break;
+			case '1':
+				pskType = 1;
+				cmdp++;
+				break;
+			case '2':
+				pskType = 2;
+				cmdp++;
+				break;
+			case '3':
+				pskType = 3;
+				cmdp++;
+				break;
+			case 'd':
+				dataLen = param_getstr(Cmd, cmdp+1, hexData);
+				if (dataLen == 0)
+					errors = TRUE; 
+				else
+					dataLen = hextobinarray((char *)data, hexData);
+				    
+				if (dataLen == 0) errors = TRUE; 
+				if (errors) PrintAndLog ("Error getting hex data");
+				cmdp+=2;
+				break;
+			default:
+				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+				errors = TRUE;
+				break;
+			}
+		if (errors) break;
+	}
+	// No args
+	if (cmdp == 0 && DemodBufferLen == 0)
+		errors = TRUE;
 
-  //Validations
-  if (errors)
-  {
-    return usage_lf_simpsk();
-  }
-  if (dataLen == 0){ //using DemodBuffer
-    PrintAndLog("Getting Clocks");
-    if (clk==0) clk = GetPskClock("", FALSE, FALSE);
-    PrintAndLog("clk: %d",clk);
-    if (!carrier) carrier = GetPskCarrier("", FALSE, FALSE); 
-    PrintAndLog("carrier: %d", carrier);
-  } else {
-    setDemodBuf(data, dataLen, 0);
-  }
+	//Validations
+	if (errors) return usage_lf_simpsk();
 
-  if (clk <= 0) clk = 32;
-  if (carrier == 0) carrier = 2;
-  if (pskType != 1){
-    if (pskType == 2){
-      //need to convert psk2 to psk1 data before sim
-      psk2TOpsk1(DemodBuffer, DemodBufferLen);
-    } else {
-      PrintAndLog("Sorry, PSK3 not yet available");
-    }
-  }
-  uint16_t arg1, arg2;
-  arg1 = clk << 8 | carrier;
-  arg2 = invert;
-  size_t size=DemodBufferLen;
-  if (size > USB_CMD_DATA_SIZE) {
-    PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
-    size=USB_CMD_DATA_SIZE;
-  }
-  UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};
-  PrintAndLog("DEBUG: Sending DemodBuffer Length: %d", size);
-  memcpy(c.d.asBytes, DemodBuffer, size);
-	clearCommandBuffer();
-  SendCommand(&c);
+	if (dataLen == 0){ //using DemodBuffer
+		PrintAndLog("Getting Clocks");
+		
+		if (clk==0) clk = GetPskClock("", FALSE, FALSE);
+		PrintAndLog("clk: %d",clk);
+		
+		if (!carrier) carrier = GetPskCarrier("", FALSE, FALSE); 
+		PrintAndLog("carrier: %d", carrier);
+		
+	} else {
+		setDemodBuf(data, dataLen, 0);
+	}
+
+	if (clk <= 0) clk = 32;
+
+	if (carrier == 0) carrier = 2;
   
-  return 0;
+	if (pskType != 1){
+		if (pskType == 2){
+			//need to convert psk2 to psk1 data before sim
+			psk2TOpsk1(DemodBuffer, DemodBufferLen);
+		} else {
+			PrintAndLog("Sorry, PSK3 not yet available");
+		}
+	}
+	uint16_t arg1, arg2;
+	arg1 = clk << 8 | carrier;
+	arg2 = invert;
+	size_t size = DemodBufferLen;
+	if (size > USB_CMD_DATA_SIZE) {
+		PrintAndLog("DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
+		size = USB_CMD_DATA_SIZE;
+	}
+	UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};
+	PrintAndLog("DEBUG: Sending DemodBuffer Length: %d", size);
+	memcpy(c.d.asBytes, DemodBuffer, size);
+	clearCommandBuffer();
+	SendCommand(&c);
+	return 0;
 }
 
-int CmdLFSimBidir(const char *Cmd)
-{
-  // Set ADC to twice the carrier for a slight supersampling
-  // HACK: not implemented in ARMSRC.
-  PrintAndLog("Not implemented yet.");
-  UsbCommand c = {CMD_LF_SIMULATE_BIDIR, {47, 384, 0}};
-  SendCommand(&c);
-  return 0;
+int CmdLFSimBidir(const char *Cmd) {
+	// Set ADC to twice the carrier for a slight supersampling
+	// HACK: not implemented in ARMSRC.
+	PrintAndLog("Not implemented yet.");
+	UsbCommand c = {CMD_LF_SIMULATE_BIDIR, {47, 384, 0}};
+	SendCommand(&c);
+	return 0;
 }
 
-int CmdVchDemod(const char *Cmd)
-{
-  // Is this the entire sync pattern, or does this also include some
-  // data bits that happen to be the same everywhere? That would be
-  // lovely to know.
-  static const int SyncPattern[] = {
-    1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-    1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-    1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-    1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-    1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-    1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  };
+int CmdVchDemod(const char *Cmd) {
+	// Is this the entire sync pattern, or does this also include some
+	// data bits that happen to be the same everywhere? That would be
+	// lovely to know.
+	static const int SyncPattern[] = {
+		1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+		1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+		1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+		1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+		1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+		1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	};
 
-  // So first, we correlate for the sync pattern, and mark that.
-  int bestCorrel = 0, bestPos = 0;
-  int i;
-  // It does us no good to find the sync pattern, with fewer than
-  // 2048 samples after it...
-  for (i = 0; i < (GraphTraceLen-2048); i++) {
-    int sum = 0;
-    int j;
-    for (j = 0; j < ARRAYLEN(SyncPattern); j++) {
-      sum += GraphBuffer[i+j]*SyncPattern[j];
-    }
-    if (sum > bestCorrel) {
-      bestCorrel = sum;
-      bestPos = i;
-    }
-  }
-  PrintAndLog("best sync at %d [metric %d]", bestPos, bestCorrel);
+	// So first, we correlate for the sync pattern, and mark that.
+	int bestCorrel = 0, bestPos = 0;
+	int i, j, sum = 0;
 
-  char bits[257];
-  bits[256] = '\0';
+	// It does us no good to find the sync pattern, with fewer than 2048 samples after it.
 
-  int worst = INT_MAX;
-  int worstPos = 0;
+	for (i = 0; i < (GraphTraceLen - 2048); i++) {
+		for (j = 0; j < ARRAYLEN(SyncPattern); j++) {
+			sum += GraphBuffer[i+j] * SyncPattern[j];
+		}
+		if (sum > bestCorrel) {
+			bestCorrel = sum;
+			bestPos = i;
+		}
+	}
+	PrintAndLog("best sync at %d [metric %d]", bestPos, bestCorrel);
 
-  for (i = 0; i < 2048; i += 8) {
-    int sum = 0;
-    int j;
-    for (j = 0; j < 8; j++) {
-      sum += GraphBuffer[bestPos+i+j];
-    }
-    if (sum < 0) {
-      bits[i/8] = '.';
-    } else {
-      bits[i/8] = '1';
-    }
-    if(abs(sum) < worst) {
-      worst = abs(sum);
-      worstPos = i;
-    }
-  }
-  PrintAndLog("bits:");
-  PrintAndLog("%s", bits);
-  PrintAndLog("worst metric: %d at pos %d", worst, worstPos);
+	char bits[257];
+	bits[256] = '\0';
 
-  if (strcmp(Cmd, "clone")==0) {
-    GraphTraceLen = 0;
-    char *s;
-    for(s = bits; *s; s++) {
-      int j;
-      for(j = 0; j < 16; j++) {
-        GraphBuffer[GraphTraceLen++] = (*s == '1') ? 1 : 0;
-      }
-    }
-    RepaintGraphWindow();
-  }
-  return 0;
+	int worst = INT_MAX, worstPos = 0;
+
+	for (i = 0; i < 2048; i += 8) {
+		sum = 0;
+		for (j = 0; j < 8; j++) 
+			sum += GraphBuffer[bestPos+i+j];
+		
+		if (sum < 0)
+			bits[i/8] = '.';
+		else
+			bits[i/8] = '1';
+		
+		if(abs(sum) < worst) {
+			worst = abs(sum);
+			worstPos = i;
+		}
+	}
+	PrintAndLog("bits:");
+	PrintAndLog("%s", bits);
+	PrintAndLog("worst metric: %d at pos %d", worst, worstPos);
+
+	// clone
+	if (strcmp(Cmd, "clone")==0) {
+		GraphTraceLen = 0;
+		char *s;
+			for(s = bits; *s; s++) {
+				for(j = 0; j < 16; j++) {
+					GraphBuffer[GraphTraceLen++] = (*s == '1') ? 1 : 0;
+				}
+			}
+		RepaintGraphWindow();
+	}
+	return 0;
 }
 
 //by marshmellow
