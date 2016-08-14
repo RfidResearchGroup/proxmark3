@@ -42,13 +42,13 @@ void Set_t55xx_Config(t55xx_conf_block_t conf){
 int usage_t55xx_config(){
 	PrintAndLog("Usage: lf t55xx config [d <demodulation>] [i 1] [o <offset>] [Q5]");
 	PrintAndLog("Options:");
-	PrintAndLog("       h                        This help");
-	PrintAndLog("       b <8|16|32|40|50|64|100|128>     Set bitrate");
-	PrintAndLog("       d <FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  Set demodulation FSK / ASK / PSK / NRZ / Biphase / Biphase A");
-	PrintAndLog("       i [1]                            Invert data signal, defaults to normal");
-	PrintAndLog("       o [offset]                       Set offset, where data should start decode in bitstream");
-	PrintAndLog("       Q5                            Set as Q5(T5555) chip instead of T55x7");
-	PrintAndLog("       ST                            Set Sequence Terminator on");
+	PrintAndLog("       h                                - This help");
+	PrintAndLog("       b <8|16|32|40|50|64|100|128>     - Set bitrate");
+	PrintAndLog("       d <FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  - Set demodulation FSK / ASK / PSK / NRZ / Biphase / Biphase A");
+	PrintAndLog("       i [1]                            - Invert data signal, defaults to normal");
+	PrintAndLog("       o [offset]                       - Set offset, where data should start decode in bitstream");
+	PrintAndLog("       Q5                               - Set as Q5(T5555) chip instead of T55x7");
+	PrintAndLog("       ST                               - Set Sequence Terminator on");
 	PrintAndLog("");
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf t55xx config d FSK          - FSK demodulation");
@@ -92,7 +92,7 @@ int usage_t55xx_write(){
 int usage_t55xx_trace() {
 	PrintAndLog("Usage:  lf t55xx trace [1]");
 	PrintAndLog("Options:");
-	PrintAndLog("     [graph buffer data]  - if set, use Graphbuffer otherwise read data from tag.");
+	PrintAndLog("     1             - if set, use Graphbuffer otherwise read data from tag.");
 	PrintAndLog("");
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf t55xx trace");
@@ -103,7 +103,7 @@ int usage_t55xx_trace() {
 int usage_t55xx_info() {
 	PrintAndLog("Usage:  lf t55xx info [1]");
 	PrintAndLog("Options:");
-	PrintAndLog("     [graph buffer data]  - if set, use Graphbuffer otherwise read data from tag.");
+	PrintAndLog("     1             - if set, use Graphbuffer otherwise read data from tag.");
 	PrintAndLog("");
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf t55xx info");
@@ -150,7 +150,7 @@ int usage_t55xx_wakup(){
 int usage_t55xx_bruteforce(){
 	PrintAndLog("This command uses A) bruteforce to scan a number range");
 	PrintAndLog("                  B) a dictionary attack");
-    PrintAndLog("Usage: lf t55xx bruteforce <start password> <end password> [i <*.dic>]");
+    PrintAndLog("Usage: lf t55xx bruteforce [h] <start password> <end password> [i <*.dic>]");
     PrintAndLog("       password must be 4 bytes (8 hex symbols)");
 	PrintAndLog("Options:");
 	PrintAndLog("     h			- this help");
@@ -172,7 +172,7 @@ int usage_t55xx_recoverpw(){
 	PrintAndLog("       default password is 51243648, used by many cloners");
 	PrintAndLog("Options:");
 	PrintAndLog("     h           - this help");
-	PrintAndLog("     [password] - 4 byte hex value of password written by cloner");
+	PrintAndLog("     [password]  - 4 byte hex value of password written by cloner");
 	PrintAndLog("");
 	PrintAndLog("Examples:");
 	PrintAndLog("       lf t55xx recoverpw");
