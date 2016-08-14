@@ -456,6 +456,14 @@ bool DecodeT5555TraceBlock() {
 	return (bool) ASKDemod("64 0 1", FALSE, FALSE, 1);
 }
 
+// sanity check. Don't use proxmark if it is offline and you didn't specify useGraphbuf
+static int SanityOfflineCheck( bool useGraphBuffer ){
+	if ( !useGraphBuffer && offline) {
+		PrintAndLog("Your proxmark3 device is offline. Specify [1] to use graphbuffer data instead");
+		return 0;
+	}
+	return 1;
+}
 
 int CmdT55xxDetect(const char *Cmd){
 	bool errors = FALSE;
@@ -488,15 +496,18 @@ int CmdT55xxDetect(const char *Cmd){
 	}
 	if (errors) return usage_t55xx_detect();
 	
+	// sanity check.
+	if (!SanityOfflineCheck(useGB)) return 1;
+	
 	if ( !useGB) {
 		if ( !AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password) )
-			return 0;
+			return 1;
 	}
 	
 	if ( !tryDetectModulation() )
 		PrintAndLog("Could not detect modulation automatically. Try setting it manually with \'lf t55xx config\'");
 
-	return 1;
+	return 0;
 }
 
 // detect configuration?
@@ -985,17 +996,21 @@ int CmdT55xxReadTrace(const char *Cmd) {
 	uint32_t password = 0;	
 	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') return usage_t55xx_trace();
 
-	if (strlen(Cmd)==0)
+	if (strlen(Cmd)==0) {
+		// sanity check.
+		if (!SanityOfflineCheck(FALSE)) return 1;
+
 		if ( !AquireData( T55x7_PAGE1, REGULAR_READ_MODE_BLOCK, pwdmode, password ) )
-			return 0;
+			return 1;
+	}
 
 	if ( config.Q5 ){
-		if (!DecodeT5555TraceBlock()) return 0;
+		if (!DecodeT5555TraceBlock()) return 1;
 	} else {
-		if (!DecodeT55xxBlock()) return 0;
+		if (!DecodeT55xxBlock()) return 1;
 	}
 	
-	if ( !DemodBufferLen ) return 0;
+	if ( !DemodBufferLen ) return 1;
 	
 	RepaintGraphWindow();
 	uint8_t repeat = (config.offset > 5) ? 32 : 0;
@@ -1009,7 +1024,7 @@ int CmdT55xxReadTrace(const char *Cmd) {
     
 		if (hdr != 0x1FF) {
 		  PrintAndLog("Invalid Q5 Trace data header (expected 0x1FF, found %X)", hdr);
-		  return 0;
+		  return 1;
 		}
     
 		t5555_tracedata_t data = {.bl1 = bl1, .bl2 = bl2, .icr = 0, .lotidc = '?', .lotid = 0, .wafer = 0, .dw =0};
@@ -1048,7 +1063,7 @@ int CmdT55xxReadTrace(const char *Cmd) {
 		data.acl = PackBits(si, 8,  DemodBuffer); si += 8;
 		if ( data.acl != 0xE0 ) {
 			PrintAndLog("The modulation is most likely wrong since the ACL is not 0xE0. ");
-			return 0;
+			return 1;
 		}
 
 		data.mfc     = PackBits(si, 8,  DemodBuffer); si += 8;
@@ -1148,9 +1163,13 @@ int CmdT55xxInfo(const char *Cmd){
 
 	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') return usage_t55xx_info();
 	
-	if (strlen(Cmd)==0)
+	if (strlen(Cmd)==0){
+				// sanity check.
+		if (!SanityOfflineCheck(FALSE)) return 1;
+		
 		if ( !AquireData( T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, pwdmode, password ) )
 			return 1;
+	}
 
 	if (!DecodeT55xxBlock()) return 1;
 
@@ -1656,7 +1675,7 @@ done:
 
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,           1, "This help"},
-	{"bruteforce",CmdT55xxBruteForce,0, "<start password> <end password> [i <*.dic>] Simple bruteforce attack to find password"},
+	{"bruteforce",	CmdT55xxBruteForce,0, "<start password> <end password> [i <*.dic>] Simple bruteforce attack to find password"},
 	{"config",		CmdT55xxSetConfig, 1, "Set/Get T55XX configuration (modulation, inverted, offset, rate)"},
 	{"detect",		CmdT55xxDetect,    1, "[1] Try detecting the tag modulation from reading the configuration block."},
 	{"dump",		CmdT55xxDump,      0, "[password] [o] Dump T55xx card block 0-7. Optional [password], [override]"},
