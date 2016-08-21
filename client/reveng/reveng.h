@@ -1,8 +1,8 @@
 /* reveng.h
- * Greg Cook, 24/Feb/2016
+ * Greg Cook, 25/Jul/2016
  */
 
-/* CRC RevEng, an arbitrary-precision CRC calculator and algorithm finder
+/* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
  * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016  Gregory Cook
  *
  * This file is part of CRC RevEng.
@@ -18,7 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with CRC RevEng.  If not, see <http://www.gnu.org/licenses/>.
+ * along with CRC RevEng.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #ifndef REVENG_H
@@ -92,7 +92,7 @@
 /* Global definitions */
 
 /* CRC RevEng version string */
-#define VERSION "1.4.0"
+#define VERSION "1.4.4"
 
 /* bmpbit.c */
 typedef BMP_T bmp_t;

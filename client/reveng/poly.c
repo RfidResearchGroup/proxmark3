@@ -1,8 +1,8 @@
 /* poly.c
- * Greg Cook, 24/Feb/2016
+ * Greg Cook, 26/Jul/2016
  */
 
-/* CRC RevEng, an arbitrary-precision CRC calculator and algorithm finder
+/* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
  * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016  Gregory Cook
  *
  * This file is part of CRC RevEng.
@@ -18,10 +18,11 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with CRC RevEng.  If not, see <http://www.gnu.org/licenses/>.
+ * along with CRC RevEng.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/* 2015-07-29: discard leading $, &, 0x from argument to strtop()
+/* 2016-06-27: pcmp() shortcut returns 0 when pointers identical
+ * 2015-07-29: discard leading $, &, 0x from argument to strtop()
  * 2015-04-03: added direct mode to strtop()
  * 2014-01-11: added LOFS(), RNDUP()
  * 2013-09-16: SIZE(), IDX(), OFS() macros bitshift if BMP_POF2
@@ -511,6 +512,8 @@ pcmp(const poly_t *a, const poly_t *b) {
 	if(a->length > b->length) return(1);
 	aptr = a->bitmap;
 	bptr = b->bitmap;
+	if(aptr == bptr)
+		return(0);
 	for(iter=0UL; iter < a->length; iter += BMP_BIT) {
 		if(*aptr < *bptr)
 			return(-1);

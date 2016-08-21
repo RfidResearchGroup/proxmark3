@@ -1,8 +1,8 @@
 /* cli.c
- * Greg Cook, 24/Feb/2016
+ * Greg Cook, 27/Jun/2016
  */
 
-/* CRC RevEng, an arbitrary-precision CRC calculator and algorithm finder
+/* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
  * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016  Gregory Cook
  *
  * This file is part of CRC RevEng.
@@ -18,10 +18,11 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with CRC RevEng.  If not, see <http://www.gnu.org/licenses/>.
+ * along with CRC RevEng.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/* 2015-04-03: added -z
+/* 2016-06-27: -P sets width like -k
+ * 2015-04-03: added -z
  * 2013-09-16: do not search with -M
  * 2013-06-11: uprog() suppresses first progress report
  * 2013-04-22: uprog() prints poly same as mtostr()
@@ -156,13 +157,16 @@ int reveng_main(int argc, char *argv[]) {
 			case 'i': /* i: Init value */
 				pptr = &model.init;
 				rflags |= R_HAVEI;
-				goto ippx;
+				goto ipqx;
+			case 'P': /* P: reversed polynomial */
 			case 'k': /* k: polynomial in Koopman notation */
 				pfree(&model.spoly);
 				model.spoly = strtop(optarg, 0, 4);
 				pkchop(&model.spoly);
 				width = plen(model.spoly);
 				rflags |= R_HAVEP;
+				if(c == 'P')
+					prcp(&model.spoly);
 				mnovel(&model);
 				break;
 			case 'l': /* l  little-endian input and output */
@@ -194,24 +198,21 @@ int reveng_main(int argc, char *argv[]) {
 			case 'M': /* M  non-augmenting algorithm */
 				model.flags &= ~P_MULXN;
 				break;
-			case 'P': /* P: reversed polynomial */
 			case 'p': /* p: polynomial */
 				pptr = &model.spoly;
 				rflags &= ~R_HAVEQ;
 				rflags |= R_HAVEP;
-ippx:
+ipqx:
 				pfree(pptr);
 				*pptr = strtop(optarg, 0, 4);
 				pright(pptr, width);
-				if(c == 'P')
-					prev(pptr);
 				mnovel(&model);
 				break;
 			case 'q': /* q: range end polynomial */
 				pptr = &qpoly;
 				rflags &= ~R_HAVEP;
 				rflags |= R_HAVEQ;
-				goto ippx;
+				goto ipqx;
 			case 'S': /* s  space between output characters */
 				model.flags |= P_SPACE;
 				break;
@@ -224,6 +225,7 @@ ippx:
 				mrev(&model);
 				break;
 			case 'w': /* w: CRC width = order - 1 */
+				/* no validation, WONTFIX */
 				width = (unsigned long) atol(optarg);
 				break;
 			case 'X': /* X  print uppercase hex */
@@ -232,7 +234,7 @@ ippx:
 			case 'x': /* x: XorOut value */
 				pptr = &model.xorout;
 				rflags |= R_HAVEX;
-				goto ippx;
+				goto ipqx;
 			case 'y': /* y  little-endian byte order in files */
 				model.flags |= P_LTLBYT;
 				break;
@@ -571,7 +573,7 @@ static void
 usage(void) {
 	/* print usage if asked, or if syntax incorrect */
 	fprintf(stderr,
-			"CRC RevEng, an arbitrary-precision CRC calculator and algorithm finder\n"
+			"CRC RevEng: arbitrary-precision CRC calculator and algorithm finder\n"
 			"Usage:\t");
 	fputs(myname, stderr);
 	fprintf(stderr,
@@ -586,7 +588,7 @@ usage(void) {
 			"\t-k KPOLY\tgenerator in Koopman notation (implies WIDTH)\n"
 			"\t-m MODEL\tpreset CRC algorithm\n"
 			"\t-p POLY\t\tgenerator or search range start polynomial\n"
-			"\t-P RPOLY\treversed generator polynomial\n",
+			"\t-P RPOLY\treversed generator polynomial (implies WIDTH)\n",
 			BMP_BIT, BMP_BIT);
 	fprintf(stderr,
 			"\t-q QPOLY\tsearch range end polynomial\n"
