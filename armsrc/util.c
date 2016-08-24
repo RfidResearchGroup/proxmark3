@@ -400,9 +400,9 @@ void StartCountSspClk() {
 							| AT91C_TC_WAVE 				// Waveform Mode
 							| AT91C_TC_WAVESEL_UP;	 		// just count
 
-	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;				// enable TC0
-	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN;				// enable TC1
-	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN;				// enable TC2
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;				// enable and reset TC0
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;				// enable and reset TC1
+	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;				// enable and reset TC2
 
 	// synchronize the counter with the ssp_frame signal. 
 	// Note: FPGA must be in any iso14443 mode, otherwise the frame signal would not be present 
@@ -420,7 +420,13 @@ void StartCountSspClk() {
 
 	// The high word of the counter (TC2) will not reset until the low word (TC0) overflows. 
 	// Therefore need to wait quite some time before we can use the counter.
-	while (AT91C_BASE_TC0->TC_CV < 0xFFF0);
+	while (AT91C_BASE_TC2->TC_CV >= 1);
+}
+void ResetSspClk(void) {	
+	//enable clock of timer and software trigger
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+	AT91C_BASE_TC2->TC_CCR = AT91C_TC_SWTRG;
 }
 
 uint32_t RAMFUNC GetCountSspClk(){
