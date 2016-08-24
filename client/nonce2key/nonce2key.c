@@ -170,8 +170,9 @@ bool tryMfk32(nonces_t data, uint64_t *outputkey) {
 	bool isSuccess = FALSE;
 	uint8_t counter = 0;
 
-
-	s = lfsr_recovery32(ar0_enc ^ prng_successor(nt, 64), 0);
+	uint32_t p64 = prng_successor(nt, 64);
+	
+	s = lfsr_recovery32(ar0_enc ^ p64, 0);
   
 	for(t = s; t->odd | t->even; ++t) {
 		lfsr_rollback_word(t, 0, 0);
@@ -180,7 +181,7 @@ bool tryMfk32(nonces_t data, uint64_t *outputkey) {
 		crypto1_get_lfsr(t, &key);
 		crypto1_word(t, uid ^ nt, 0);
 		crypto1_word(t, nr1_enc, 1);
-		if (ar1_enc == (crypto1_word(t, 0, 0) ^ prng_successor(nt, 64))) {
+		if (ar1_enc == (crypto1_word(t, 0, 0) ^ p64)) {
 			//PrintAndLog("Found Key: [%012"llx"]", key);
 			outkey = key;
 			++counter;
@@ -190,7 +191,8 @@ bool tryMfk32(nonces_t data, uint64_t *outputkey) {
  	isSuccess = (counter > 0);
 	t1 = clock() - t1;
 	if ( t1 > 0 ) PrintAndLog("Time in mfkey32: %.0f ticks  - possible keys %d\n", (float)t1, counter);
-	*outputkey = ( isSuccess ) ? outkey : 0;
+
+	*outputkey = ( isSuccess ) ? outkey : 0;	
 	crypto1_destroy(s);
 	return isSuccess;
 }
@@ -213,7 +215,10 @@ bool tryMfk32_moebius(nonces_t data, uint64_t *outputkey) {
 	//PrintAndLog("Enter mfkey32_moebius");
 	clock_t t1 = clock();
 
-	s = lfsr_recovery32(ar0_enc ^ prng_successor(nt0, 64), 0);
+	uint32_t p640 = prng_successor(nt0, 64);
+	uint32_t p641 = prng_successor(nt1, 64);
+	
+	s = lfsr_recovery32(ar0_enc ^ p640, 0);
   
 	for(t = s; t->odd | t->even; ++t) {
 		lfsr_rollback_word(t, 0, 0);
@@ -223,7 +228,7 @@ bool tryMfk32_moebius(nonces_t data, uint64_t *outputkey) {
 		
 		crypto1_word(t, uid ^ nt1, 0);
 		crypto1_word(t, nr1_enc, 1);
-		if (ar1_enc == (crypto1_word(t, 0, 0) ^ prng_successor(nt1, 64))) {
+		if (ar1_enc == (crypto1_word(t, 0, 0) ^ p641)) {
 			//PrintAndLog("Found Key: [%012"llx"]",key);
 			outkey=key;
 			++counter;
@@ -233,6 +238,7 @@ bool tryMfk32_moebius(nonces_t data, uint64_t *outputkey) {
     isSuccess	= (counter > 0);
 	t1 = clock() - t1;
 	if ( t1 > 0 ) PrintAndLog("Time in mfkey32_moebius: %.0f ticks  - possible keys %d\n", (float)t1, counter);
+
 	*outputkey = ( isSuccess ) ? outkey : 0;
 	crypto1_destroy(s);
 	return isSuccess;
@@ -248,9 +254,9 @@ int tryMfk64_ex(uint8_t *data, uint64_t *outputkey){
 }
 
 int tryMfk64(uint32_t uid, uint32_t nt, uint32_t nr_enc, uint32_t ar_enc, uint32_t at_enc, uint64_t *outputkey){
-	uint64_t key 	= 0;				// recovered key
-	uint32_t ks2;     					// keystream used to encrypt reader response
-	uint32_t ks3;     					// keystream used to encrypt tag response
+	uint64_t key = 0;		// recovered key
+	uint32_t ks2;     		// keystream used to encrypt reader response
+	uint32_t ks3;     		// keystream used to encrypt tag response
 	struct Crypto1State *revstate;
 	
 	PrintAndLog("Enter mfkey64");
@@ -265,11 +271,12 @@ int tryMfk64(uint32_t uid, uint32_t nt, uint32_t nr_enc, uint32_t ar_enc, uint32
 	lfsr_rollback_word(revstate, nr_enc, 1);
 	lfsr_rollback_word(revstate, uid ^ nt, 0);
 	crypto1_get_lfsr(revstate, &key);
+
 	PrintAndLog("Found Key: [%012"llx"]", key);
-	crypto1_destroy(revstate);
-	*outputkey = key;
-	
 	t1 = clock() - t1;
 	if ( t1 > 0 ) PrintAndLog("Time in mfkey64: %.0f ticks \n", (float)t1);
+
+	*outputkey = key;
+	crypto1_destroy(revstate);
 	return 0;
 }
