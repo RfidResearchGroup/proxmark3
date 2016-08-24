@@ -2204,7 +2204,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
 	sync_time = GetCountSspClk() & 0xfffffff8;
-	sync_cycles = PRNG_SEQUENCE_LENGTH // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).		
+	sync_cycles = PRNG_SEQUENCE_LENGTH; // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).		
 	nt_attacked = 0;
 	
    if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare::Sync %08x", sync_time);
@@ -2320,7 +2320,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 		}
 		LED_B_OFF();
 
-		if ((nt != nt_attacked) && nt_attacked) { 	// we somehow lost sync. Try to catch up again...
+		if ( (nt != nt_attacked) && nt_attacked) { 	// we somehow lost sync. Try to catch up again...
 			
 			catch_up_cycles = ABS(dist_nt(nt_attacked, nt));
 			if (catch_up_cycles == 99999) {			// invalid nonce received. Don't resync on that one.
