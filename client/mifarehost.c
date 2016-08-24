@@ -654,12 +654,12 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len){
 	PrintAndLog("\nEncrypted data: [%s]", sprint_hex(data, len) );
-	struct Crypto1State *pcs = NULL;
+	struct Crypto1State *s;
 	ks2 = ar_enc ^ prng_successor(nt, 64);
 	ks3 = at_enc ^ prng_successor(nt, 96);
-	pcs = lfsr_recovery64(ks2, ks3);
-	mf_crypto1_decrypt(pcs, data, len, FALSE);
+	s = lfsr_recovery64(ks2, ks3);
+	mf_crypto1_decrypt(s, data, len, FALSE);
 	PrintAndLog("Decrypted data: [%s]", sprint_hex(data, len) );
-	crypto1_destroy(pcs);
+	crypto1_destroy(s);
 	return 0;
 }
