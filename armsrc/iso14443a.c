@@ -876,7 +876,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 	uint8_t	nonce2_count = 0;
 	uint8_t	moebius_n_count = 0;
 	bool gettingMoebius = false;
-	uint8_t	mM = 0; //moebius_modifier for collection storage
+	uint8_t	mM = 0; // moebius_modifier for collection storage
 
 	
 	switch (tagType) {
@@ -918,8 +918,8 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 				uint16_t start = 4 * (0+12);  
 				uint8_t emdata[8];
 				emlGetMemBt( emdata, start, sizeof(emdata));
-				memcpy(data, emdata, 3); //uid bytes 0-2
-				memcpy(data+3, emdata+4, 4); //uid bytes 3-7
+				memcpy(data, emdata, 3); // uid bytes 0-2
+				memcpy(data+3, emdata+4, 4); // uid bytes 3-7
 				flags |= FLAG_7B_UID_IN_DATA;
 			}
 		} break;		
@@ -984,10 +984,10 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 	nonce = bytes_to_num(response5, 4);	
 	
 	// Prepare GET_VERSION (different for UL EV-1 / NTAG)
-	//uint8_t response7_EV1[] = {0x00, 0x04, 0x03, 0x01, 0x01, 0x00, 0x0b, 0x03, 0xfd, 0xf7};  //EV1 48bytes VERSION.
-	//uint8_t response7_NTAG[] = {0x00, 0x04, 0x04, 0x02, 0x01, 0x00, 0x11, 0x03, 0x01, 0x9e}; //NTAG 215	
+	// uint8_t response7_EV1[] = {0x00, 0x04, 0x03, 0x01, 0x01, 0x00, 0x0b, 0x03, 0xfd, 0xf7};  //EV1 48bytes VERSION.
+	// uint8_t response7_NTAG[] = {0x00, 0x04, 0x04, 0x02, 0x01, 0x00, 0x11, 0x03, 0x01, 0x9e}; //NTAG 215	
 	// Prepare CHK_TEARING
-	//uint8_t response9[] =  {0xBD,0x90,0x3f};
+	// uint8_t response9[] =  {0xBD,0x90,0x3f};
 	
 	#define TAG_RESPONSE_COUNT 10
 	tag_response_info_t responses[TAG_RESPONSE_COUNT] = {
@@ -1001,8 +1001,8 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 
 		{ .response = response8,   .response_n = sizeof(response8) }  // EV1/NTAG PACK response
 	};	
-		//{ .response = response7_NTAG, .response_n = sizeof(response7_NTAG)}, // EV1/NTAG GET_VERSION response
-		//{ .response = response9,      .response_n = sizeof(response9)     }  // EV1/NTAG CHK_TEAR response
+		// { .response = response7_NTAG, .response_n = sizeof(response7_NTAG)}, // EV1/NTAG GET_VERSION response
+		// { .response = response9,      .response_n = sizeof(response9)     }  // EV1/NTAG CHK_TEAR response
 	
 
 	// Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
@@ -1081,7 +1081,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 			uint8_t block = receivedCmd[1];
 			// if Ultralight or NTAG (4 byte blocks)
 			if ( tagType == 7 || tagType == 2 ) {
-				//first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
+				// first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
 				uint16_t start = 4 * (block+12);  
 				uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
 				emlGetMemBt( emdata, start, 16);
@@ -1094,14 +1094,14 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 				emlGetMemBt( emdata, block, 16);
 				AppendCrc14443a(emdata, 16);
 				EmSendCmdEx(emdata, sizeof(emdata), false);
-				//EmSendCmdEx(data+(4*receivedCmd[1]),16,false);
+				// EmSendCmdEx(data+(4*receivedCmd[1]),16,false);
 				// Dbprintf("Read request from reader: %x %x",receivedCmd[0],receivedCmd[1]);
 				// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
 				p_response = NULL;
 			}
 		} else if(receivedCmd[0] == MIFARE_ULEV1_FASTREAD) {	// Received a FAST READ (ranged read)				
 			uint8_t emdata[MAX_FRAME_SIZE];
-			//first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
+			// first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
 			int start =  (receivedCmd[1]+12) * 4; 
 			int len   = (receivedCmd[2] - receivedCmd[1] + 1) * 4;
 			emlGetMemBt( emdata, start, len);
@@ -1109,7 +1109,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 			EmSendCmdEx(emdata, len+2, false);				
 			p_response = NULL;		
 		} else if(receivedCmd[0] == MIFARE_ULEV1_READSIG && tagType == 7) {	// Received a READ SIGNATURE -- 
-			//first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
+			// first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
 			uint16_t start = 4 * 4;
 			uint8_t emdata[34];
 			emlGetMemBt( emdata, start, 32);
@@ -1136,7 +1136,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 			EmSendCmdEx(ack,sizeof(ack),false);
 			p_response = NULL;			
 		} else if(receivedCmd[0] == MIFARE_ULEV1_CHECKTEAR && tagType == 7) {	// Received a CHECK_TEARING_EVENT -- 
-			//first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
+			// first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
 			uint8_t emdata[3];
 			uint8_t counter=0;
 			if (receivedCmd[1]<3) counter = receivedCmd[1];
@@ -1237,7 +1237,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 		} else if (receivedCmd[0] == MIFARE_ULC_AUTH_1 ) { // ULC authentication, or Desfire Authentication
 		} else if (receivedCmd[0] == MIFARE_ULEV1_AUTH) { // NTAG / EV-1 authentication
 			if ( tagType == 7 ) {
-				uint16_t start = 13; //first 4 blocks of emu are [getversion answer - check tearing - pack - 0x00]
+				uint16_t start = 13; // first 4 blocks of emu are [getversion answer - check tearing - pack - 0x00]
 				uint8_t emdata[4];
 				emlGetMemBt( emdata, start, 2);
 				AppendCrc14443a(emdata, 2);
@@ -2142,28 +2142,12 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 
 	if (nt1 == nt2) return 0;
 	
-	uint16_t i;
 	uint32_t nttmp1 = nt1;
 	uint32_t nttmp2 = nt2;
 
-	for (i = 1; i < (32768/8); ++i) {
+	for (uint16_t i = 1; i < 0xFFFF; ++i) {
 		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i;
 		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -i;
-		
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+1;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+1);
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+2;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+2);
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+3;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+3);
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+4;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+4);
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+5;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+5);
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+6;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+6);
-		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+7;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+7);
 	}	
 	// either nt1 or nt2 are invalid nonces	
 	return(-99999); 
@@ -2175,6 +2159,7 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 // Cloning MiFare Classic Rail and Building Passes, Anywhere, Anytime"
 // (article by Nicolas T. Courtois, 2009)
 //-----------------------------------------------------------------------------
+
 void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	
 	uint8_t mf_auth[] 	= { keytype, block, 0x00, 0x00 };
@@ -2221,10 +2206,12 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	sync_time = GetCountSspClk() & 0xfffffff8;
 	// iceman,  i add 1130 because during my observations this makse the syncronization much fast to sync.
 	sync_cycles = PRNG_SEQUENCE_LENGTH + 1130; //65536;	// Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).		
-
+	nt_attacked = 0;
+	
+   if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare::Sync %08x", sync_time);
+				
 	if (first_try) {
-		mf_nr_ar3 = 0;			
-		nt_attacked = 0;
+		mf_nr_ar3 = 0;
 		par_low = 0;
 	} else {
 		// we were unsuccessful on a previous call. 
@@ -2293,11 +2280,9 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 		// Transmit reader nonce with fake par
 		ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par, NULL);
 	
-		WDT_HIT();
-		LED_B_ON();
 		// we didn't calibrate our clock yet,
 		// iceman: has to be calibrated every time.
-		if (previous_nt && !nt_attacked) { 
+		if (first_try &&  previous_nt && !nt_attacked) { 
 
 			nt_distance = dist_nt(previous_nt, nt);
 			
@@ -2426,6 +2411,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	set_tracing(FALSE);
 }
 
+
 /**
   *MIFARE 1K simulate.
   *
@@ -2456,7 +2442,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	struct Crypto1State mpcs = {0, 0};
 	struct Crypto1State *pcs;
 	pcs = &mpcs;
-	uint32_t numReads = 0;	//Counts numer of times reader read a block
+	uint32_t numReads = 0;	// Counts numer of times reader read a block
 	uint8_t receivedCmd[MAX_MIFARE_FRAME_SIZE] = {0x00};
 	uint8_t receivedCmd_par[MAX_MIFARE_PARITY_SIZE] = {0x00};
 	uint8_t response[MAX_MIFARE_FRAME_SIZE] = {0x00};
@@ -2466,14 +2452,14 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	uint8_t sak_4[]  = {0x0C, 0x00, 0x00}; // CL1 - 4b uid
 	uint8_t sak_7[]  = {0x0C, 0x00, 0x00}; // CL2 - 7b uid
 	uint8_t sak_10[] = {0x0C, 0x00, 0x00}; // CL3 - 10b uid
-	//uint8_t sak[] = {0x09, 0x3f, 0xcc };  // Mifare Mini 
+	// uint8_t sak[] = {0x09, 0x3f, 0xcc };  // Mifare Mini 
 	
 	uint8_t rUIDBCC1[] = {0xde, 0xad, 0xbe, 0xaf, 0x62}; 
 	uint8_t rUIDBCC2[] = {0xde, 0xad, 0xbe, 0xaf, 0x62}; 
 	uint8_t rUIDBCC3[] = {0xde, 0xad, 0xbe, 0xaf, 0x62};
 
 	uint8_t rAUTH_NT[] = {0x01, 0x01, 0x01, 0x01};	// very random nonce
-	//uint8_t rAUTH_NT[] = {0x55, 0x41, 0x49, 0x92};// nonce from nested? why this?
+	// uint8_t rAUTH_NT[] = {0x55, 0x41, 0x49, 0x92};// nonce from nested? why this?
 	uint8_t rAUTH_AT[] = {0x00, 0x00, 0x00, 0x00};
 		
 	// Here, we collect CUID, NT, NR, AR, CUID2, NT2, NR2, AR2
@@ -2485,7 +2471,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	uint32_t nonce = bytes_to_num(rAUTH_NT, 4);
 	ar_nr_responses[1] = nonce;
 	
-	//-- Determine the UID
+	// -- Determine the UID
 	// Can be set from emulator memory or incoming data
 	// Length: 4,7,or 10 bytes
 	if ( (flags & FLAG_UID_IN_EMUL) == FLAG_UID_IN_EMUL)
@@ -2601,14 +2587,14 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		} 
 		if (cardSTATE == MFEMUL_NOFIELD) continue;
 
-		//Now, get data
+		// Now, get data
 		res = EmGetCmd(receivedCmd, &len, receivedCmd_par);
 		if (res == 2) { //Field is off!
 			cardSTATE = MFEMUL_NOFIELD;
 			LEDsoff();
 			continue;
 		} else if (res == 1) {
-			break; 	//return value 1 means button press
+			break; 	// return value 1 means button press
 		}
 			
 		// REQ or WUP request in ANY state and WUP in HALTED state
@@ -2725,16 +2711,16 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				uint32_t nr = bytes_to_num(receivedCmd, 4);
 				uint32_t ar = bytes_to_num(&receivedCmd[4], 4);
 
-				//Collect AR/NR
-				//if(ar_nr_collected < 2 && cardAUTHSC == 2){
+				// Collect AR/NR
+				// if(ar_nr_collected < 2 && cardAUTHSC == 2){
 				if(ar_nr_collected < 2) {					
-					//if(ar_nr_responses[2] != nr) {
+					// if(ar_nr_responses[2] != nr) {
 						ar_nr_responses[ar_nr_collected*4]   = cuid;
 						ar_nr_responses[ar_nr_collected*4+1] = nonce;
 						ar_nr_responses[ar_nr_collected*4+2] = nr;
 						ar_nr_responses[ar_nr_collected*4+3] = ar;
 						ar_nr_collected++;
-					//}					
+					// }					
 		
 					// Interactive mode flag, means we need to send ACK
 					finished = ( ((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE)&& ar_nr_collected == 2);
@@ -2795,7 +2781,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 					if (!encrypted_data) { 
 						// first authentication
-						crypto1_word(pcs, cuid ^ nonce, 0);//Update crypto state
+						crypto1_word(pcs, cuid ^ nonce, 0);// Update crypto state
 						num_to_bytes(nonce, 4, rAUTH_AT); // Send nonce
 						
 						if (MF_DBGLEVEL >= 4) Dbprintf("Reader authenticating for block %d (0x%02x) with key %d",receivedCmd[1] ,receivedCmd[1],cardAUTHKEY  );
@@ -2975,7 +2961,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 	// Interactive mode flag, means we need to send ACK
 	if((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE) {
-		//May just aswell send the collected ar_nr in the response aswell
+		// May just aswell send the collected ar_nr in the response aswell
 		uint8_t len = ar_nr_collected * 4 * 4;
 		cmd_send(CMD_ACK, CMD_SIMULATE_MIFARE_CARD, len, 0, &ar_nr_responses, len);
 	}
@@ -2988,7 +2974,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 					ar_nr_responses[1], // NT1
 					ar_nr_responses[2], // NR1
 					ar_nr_responses[3], // AR1
-					//ar_nr_responses[4], // CUID2
+					// ar_nr_responses[4], // CUID2
 					ar_nr_responses[5],  // NT2
 					ar_nr_responses[6], // NR2
 					ar_nr_responses[7]  // AR2
