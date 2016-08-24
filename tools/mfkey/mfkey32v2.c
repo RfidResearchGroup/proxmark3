@@ -47,16 +47,20 @@ int main (int argc, char *argv[]) {
 
 	// Generate lfsr succesors of the tag challenge
 	printf("\nLFSR succesors of the tag challenge:\n");
-	printf("  nt': %08x\n",prng_successor(nt0, 64));
-	printf(" nt'': %08x\n",prng_successor(nt0, 96));
+	uint32_t p64 = prng_successor(nt0, 64);
+	uint32_t p64b = prng_successor(nt1, 64);
+	
+	printf("  nt': %08x\n", p64);
+	printf(" nt'': %08x\n", prng_successor(p64, 32));
 	clock_t t1 = clock();
 
 	// Extract the keystream from the messages
 	printf("\nKeystream used to generate {ar} and {at}:\n");
-	ks2 = ar0_enc ^ prng_successor(nt0, 64);
+	ks2 = ar0_enc ^ p64;
 	printf("  ks2: %08x\n",ks2);
 
-	s = lfsr_recovery32(ar0_enc ^ prng_successor(nt0, 64), 0);
+	s = lfsr_recovery32(ar0_enc ^ p64, 0);
+	
   
 	for(t = s; t->odd | t->even; ++t) {
 		lfsr_rollback_word(t, 0, 0);
@@ -66,7 +70,7 @@ int main (int argc, char *argv[]) {
 		
 		crypto1_word(t, uid ^ nt1, 0);
 		crypto1_word(t, nr1_enc, 1);
-		if (ar1_enc == (crypto1_word(t, 0, 0) ^ prng_successor(nt1, 64))) {
+		if (ar1_enc == (crypto1_word(t, 0, 0) ^ p64b)) {
 			printf("\nFound Key: [%012"llx"]\n\n",key);
 			break;}
 	}

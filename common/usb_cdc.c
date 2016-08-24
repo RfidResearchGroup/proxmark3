@@ -291,8 +291,8 @@ bool usb_check() {
 
 bool usb_poll()
 {
-  if (!usb_check()) return false;
-  return (pUdp->UDP_CSR[AT91C_EP_OUT] & btReceiveBank);
+	if (!usb_check()) return false;
+	return (pUdp->UDP_CSR[AT91C_EP_OUT] & btReceiveBank);
 }
 
 /**
