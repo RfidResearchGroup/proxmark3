@@ -2204,8 +2204,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
 	sync_time = GetCountSspClk() & 0xfffffff8;
-	// iceman,  i add 1130 because during my observations this makse the syncronization much fast to sync.
-	sync_cycles = PRNG_SEQUENCE_LENGTH + 1130; //65536;	// Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).		
+	sync_cycles = PRNG_SEQUENCE_LENGTH // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).		
 	nt_attacked = 0;
 	
    if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare::Sync %08x", sync_time);
@@ -2282,7 +2281,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	
 		// we didn't calibrate our clock yet,
 		// iceman: has to be calibrated every time.
-		if (first_try &&  previous_nt && !nt_attacked) { 
+		if (previous_nt && !nt_attacked) { 
 
 			nt_distance = dist_nt(previous_nt, nt);
 			
