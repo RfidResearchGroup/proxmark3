@@ -239,6 +239,17 @@ start:
 		c.arg[0] = false;
 		goto start;
 	} else {
+		
+		// nonce2key found a candidate key.  Lets verify it.
+		uint8_t keyblock[] = {0,0,0,0,0,0};
+		num_to_bytes(r_key, 6, keyblock);
+		uint64_t key64 = 0;
+		int res = mfCheckKeys(blockNo, keytype - 0x60 , false, 1, keyblock, &key64);
+		if ( res > 0 ) {
+			PrintAndLog("Candidate Key found (%012"llx")", r_key);	
+			PrintAndLog("Failing is expected to happen. Trying again ...");
+			goto start;
+		}
 		PrintAndLog("Found valid key: %012"llx" \n", r_key);
 	}
 END:
