@@ -443,7 +443,6 @@ int CmdStatus(const char *Cmd)
 	return 0;
 }
 
-
 int CmdPing(const char *Cmd)
 {
 	clearCommandBuffer();

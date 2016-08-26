@@ -11,11 +11,15 @@
 
 static int CmdHelp(const char *Cmd);
 
+#define SESSION_IV 0x55
+#define MAX_LENGTH 1024	
+
 int usage_legic_calccrc8(void){
 	PrintAndLog("Calculates the legic crc8/crc16 on the input hexbytes.");
 	PrintAndLog("There must be an even number of hexsymbols as input.");
 	PrintAndLog("Usage:  hf legic crc8 [h] b <hexbytes> u <uidcrc> c <crc type>");
 	PrintAndLog("Options:");
+	PrintAndLog("      h             : this help");
 	PrintAndLog("      b <hexbytes>  : hex bytes");
 	PrintAndLog("      u <uidcrc>    : MCC hexbyte");
 	PrintAndLog("      c <crc type>  : 8|16 bit crc size");
@@ -25,35 +29,65 @@ int usage_legic_calccrc8(void){
 	PrintAndLog("      hf legic crc8 b deadbeef1122 u 9A c 16");
 	return 0;
 }
-
 int usage_legic_load(void){
 	PrintAndLog("It loads datasamples from the file `filename` to device memory");
-	PrintAndLog("Usage:  hf legic load <file name>");
+	PrintAndLog("Usage:  hf legic load [h] <file name>");
+	PrintAndLog("Options:");
+	PrintAndLog("  h             : this help");
+	PrintAndLog("  <filename>    : Name of file to load");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
 	PrintAndLog("      hf legic load filename");
 	return 0;
 }
-
 int usage_legic_read(void){	
 	PrintAndLog("Read data from a legic tag.");
-	PrintAndLog("Usage:  hf legic read <offset> <num of bytes>");
+	PrintAndLog("Usage:  hf legic read [h] <offset> <length> <IV>");
 	PrintAndLog("Options:");
-	PrintAndLog("  <offset>        : offset in data array to start download from");
-	PrintAndLog("  <num of bytes>  : number of bytes to download");
+	PrintAndLog("  h             : this help");
+	PrintAndLog("  <offset>      : offset in data array to start download from");
+	PrintAndLog("  <length>      : number of bytes to download");
+	PrintAndLog("  <IV>          : (optional) Initialization vector to use");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
 	PrintAndLog("      hf legic read");
+	PrintAndLog("      hf legic read 10 4");
 	return 0;
 }
-
 int usage_legic_sim(void){
+	PrintAndLog("Missing help text.");
+	return 0;
+}
+int usage_legic_write(void){
+	PrintAndLog(" Write sample buffer to a legic tag. (use after load or read)");
+	PrintAndLog("Usage:  hf legic write [h] <offset> <length> <IV>");
+	PrintAndLog("Options:");
+	PrintAndLog("  h             : this help");
+	PrintAndLog("  <offset>      : offset in data array to start writing from");
+	PrintAndLog("  <length>      : number of bytes to write");
+	PrintAndLog("  <IV>          : (optional) Initialization vector to use");
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("      hf legic write");
+	PrintAndLog("      hf legic write 10 4");
 	return 0;
 }
 int usage_legic_rawwrite(void){
+	PrintAndLog("Write raw data direct to a specific address on legic tag.");
+	PrintAndLog("Usage:  hf legic writeraw [h] <address> <value> <IV>");
+	PrintAndLog("Options:");
+	PrintAndLog("  h             : this help");
+	PrintAndLog("  <address>     : address to write to");
+	PrintAndLog("  <value>       : value to write");
+	PrintAndLog("  <IV>          : (optional) Initialization vector to use");
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("      hf legic writeraw");
+	PrintAndLog("      hf legic writeraw 10 4");
 	return 0;
 }
 int usage_legic_fill(void){
+	PrintAndLog("Missing help text.");
 	return 0;
 }
 
@@ -346,24 +380,27 @@ int CmdLegicDecode(const char *Cmd) {
 }
 
 int CmdLegicRFRead(const char *Cmd) {
-	
+
 	// params:
 	// offset in data
 	// number of bytes.
 	char cmdp = param_getchar(Cmd, 0);
 	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_read();
 	
-	int byte_count = 0, offset = 0;
-	sscanf(Cmd, "%i %i", &offset, &byte_count);
-	if(byte_count == 0) byte_count = -1;
-	if(byte_count + offset > 1024) byte_count = 1024 - offset;
+	uint32_t offset = 0, len = 0, IV = 0;
+	sscanf(Cmd, "%x %x %x", &offset, &len, &IV);
 
-	UsbCommand c= {CMD_READER_LEGIC_RF, {offset, byte_count, 0}};
+	// OUT-OF-BOUNDS check
+	if(len + offset > MAX_LENGTH) len = MAX_LENGTH - offset;
+	
+	IV &= 0x7F;
+	PrintAndLog("Current IV: 0x%02x", IV);
+	
+	UsbCommand c= {CMD_READER_LEGIC_RF, {offset, len, IV}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
-
 
 int CmdLegicLoad(const char *Cmd) {
 
@@ -505,28 +542,64 @@ int CmdLegicRfSim(const char *Cmd) {
 	return 0;
 }
 
-//TODO: write a help text (iceman)
 int CmdLegicRfWrite(const char *Cmd) {
+
+	// params:
+	// offset - in tag memory
+	// length - num of bytes to be written
+	// IV - initialisation vector
+	
+	char cmdp = param_getchar(Cmd, 0);
+	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_write();
+	
+	uint32_t offset = 0, len = 0, IV = SESSION_IV;
+	
     UsbCommand c = {CMD_WRITER_LEGIC_RF, {0,0,0}};
-    int res = sscanf(Cmd, " 0x%"llx" 0x%"llx, &c.arg[0], &c.arg[1]);
-	if(res != 2) {
-		PrintAndLog("Please specify the offset and length as two hex strings");
+    int res = sscanf(Cmd, "%x %x %x", &offset, &len, &IV);
+	if(res < 2) {
+		PrintAndLog("Please specify the offset and length as two hex strings and, optionally, the IV also as an hex string");
         return -1;
     }
+
+	// OUT-OF-BOUNDS check
+	if(len + offset > MAX_LENGTH) len = MAX_LENGTH - offset;
+
+	
+	IV &= 0x7F;
+	PrintAndLog("Current IV: 0x%02x", IV);
+	
+	c.arg[0] = offset;
+	c.arg[1] = len;
+    c.arg[2] = IV;
+	
 	clearCommandBuffer();
     SendCommand(&c);
     return 0;
 }
 
-//TODO: write a help text (iceman)
 int CmdLegicRfRawWrite(const char *Cmd) {
+
+	char cmdp = param_getchar(Cmd, 0);
+	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_rawwrite();
+	
+	uint32_t address = 0, data = 0, IV = SESSION_IV;	
 	char answer;
+
     UsbCommand c = { CMD_RAW_WRITER_LEGIC_RF, {0,0,0} };
-    int res = sscanf(Cmd, " 0x%"llx" 0x%"llx, &c.arg[0], &c.arg[1]);
-	if(res != 2) {
-		PrintAndLog("Please specify the offset and value as two hex strings");
-        return -1;
-    }
+    int res = sscanf(Cmd, "%x %x %x", &address, &data, &IV);
+	if(res < 2)
+		return usage_legic_rawwrite();
+
+	// OUT-OF-BOUNDS check
+	if(address > MAX_LENGTH)
+		return usage_legic_rawwrite();
+	
+	IV &= 0x7F;
+	PrintAndLog("Current IV: 0x%02x", IV);
+
+	c.arg[0] = address;
+	c.arg[1] = data;
+    c.arg[2] = IV;
 	
 	if (c.arg[0] == 0x05 || c.arg[0] == 0x06) {
 		PrintAndLog("############# DANGER !! #############");
@@ -659,12 +732,12 @@ int CmdLegicCalcCrc8(const char *Cmd){
 static command_t CommandTable[] =  {
 	{"help",	CmdHelp,        1, "This help"},
 	{"decode",	CmdLegicDecode, 0, "Display deobfuscated and decoded LEGIC RF tag data (use after hf legic reader)"},
-	{"read",	CmdLegicRFRead, 0, "[offset][length] -- read bytes from a LEGIC card"},
+	{"read",	CmdLegicRFRead, 0, "[offset][length] <iv> -- read bytes from a LEGIC card"},
 	{"save",	CmdLegicSave,   0, "<filename> [<length>] -- Store samples"},
 	{"load",	CmdLegicLoad,   0, "<filename> -- Restore samples"},
 	{"sim",		CmdLegicRfSim,  0, "[phase drift [frame drift [req/resp drift]]] Start tag simulator (use after load or read)"},
-	{"write",	CmdLegicRfWrite,0, "<offset> <length> -- Write sample buffer (user after load or read)"},
-	{"writeRaw",CmdLegicRfRawWrite,	0, "<address> <value> -- Write direct to address"},
+	{"write",	CmdLegicRfWrite,0, "<offset> <length> <iv> -- Write sample buffer (user after load or read)"},
+	{"writeraw",CmdLegicRfRawWrite,	0, "<address> <value> <iv> -- Write direct to address"},
 	{"fill",	CmdLegicRfFill, 0, "<offset> <length> <value> -- Fill/Write tag with constant value"},
 	{"crc8",	CmdLegicCalcCrc8, 1, "Calculate Legic CRC8 over given hexbytes"},
 	{NULL, NULL, 0, NULL}
