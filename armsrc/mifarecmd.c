@@ -613,7 +613,7 @@ int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity) {
 // Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on 
 // Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
-#define AUTHENTICATION_TIMEOUT 848			// card times out 1ms after wrong authentication (according to NXP documentation)
+#define AUTHENTICATION_TIMEOUT  1000 //848			// card times out 1ms after wrong authentication (according to NXP documentation)
 #define PRE_AUTHENTICATION_LEADTIME 400		// some (non standard) cards need a pause after select before they are ready for first authentication 
 
 void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain)

@@ -12,9 +12,9 @@
 #define __LEGICRF_H
 
 extern void LegicRfSimulate(int phase, int frame, int reqresp);
-extern int  LegicRfReader(int bytes, int offset);
-extern void LegicRfWriter(int bytes, int offset);
-extern void LegicRfRawWriter(int offset, int bytes);
+extern int  LegicRfReader(int offset, int bytes, int iv);
+extern void LegicRfWriter(int offset, int bytes, int iv);
+extern void LegicRfRawWriter(int address, int data, int iv);
 
 int ice_legic_select_card();
 void ice_legic_setup();
