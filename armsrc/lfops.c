@@ -19,6 +19,13 @@
 #include "protocols.h"
 #include "usb_cdc.h" // for usb_poll_validate_length
 
+#ifndef SHORT_COIL
+# define SHORT_COIL()	LOW(GPIO_SSC_DOUT)
+#endif
+#ifndef OPEN_COIL
+# define OPEN_COIL()	HIGH(GPIO_SSC_DOUT)
+#endif
+
 /**
  * Function to do a modulation and then get samples.
  * @param delay_off
@@ -383,31 +390,30 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
-	int i;
+	int i = 0;
 	uint8_t *tab = BigBuf_get_addr();
 
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
 
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 
- #define SHORT_COIL()	LOW(GPIO_SSC_DOUT)
- #define OPEN_COIL()	HIGH(GPIO_SSC_DOUT)
-
-	i = 0;
 	for(;;) {
+		WDT_HIT();
+
+		if (ledcontrol) LED_D_ON();
+				
 		//wait until SSC_CLK goes HIGH
 		while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
-			if(BUTTON_PRESS() || usb_poll_validate_length() ) {
-				DbpString("Stopped");
-				return;
-			}
 			WDT_HIT();
+			if ( usb_poll_validate_length() || BUTTON_PRESS() ) {
+				FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+				LED_D_OFF();
+				return;				
+			}
 		}
-		if (ledcontrol) LED_D_ON();
-
+		
 		if(tab[i])
 			OPEN_COIL();
 		else
@@ -417,20 +423,21 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 		
 		//wait until SSC_CLK goes LOW
 		while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
-			if( BUTTON_PRESS() || usb_poll_validate_length() ) {
-				DbpString("Stopped");
-				return;
-			}
 			WDT_HIT();
+			if ( usb_poll_validate_length() || BUTTON_PRESS() ) {
+				FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+				LED_D_OFF();
+				return;				
+			}
 		}
 
 		i++;
 		if(i == period) {
-
 			i = 0;
 			if (gap) {
+				WDT_HIT();
 				SHORT_COIL();
-				SpinDelayUs(gap);
+				SpinDelayUs(gap);				
 			}
 		}
 	}
@@ -524,7 +531,10 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt)
 // simulate a HID tag until the button is pressed
 void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 {
-	int n=0, i=0;
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	set_tracing(FALSE);
+		
+	int n = 0, i = 0;
 	/*
 	 HID tag bitstream format
 	 The tag contains a 44bit unique code. This is sent out MSB first in sets of 4 bits
@@ -535,7 +545,7 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 	 nor 1 bits, they are special patterns (a = set of 12 fc8 and b = set of 10 fc10)
 	*/
 
-	if (hi>0xFFF) {
+	if (hi > 0xFFF) {
 		DbpString("Tags can only have 44 bits. - USE lf simfsk for larger tags");
 		return;
 	}
@@ -567,7 +577,8 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 			fc(8,  &n); fc(10, &n);		// high-low transition
 		}
 	}
-
+	WDT_HIT();
+	
 	if (ledcontrol)	LED_A_ON();
 	SimulateTagLowFrequency(n, 0, ledcontrol);
 	if (ledcontrol)	LED_A_OFF();
@@ -578,8 +589,14 @@ void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 // arg1 contains fcHigh and fcLow, arg2 contains invert and clock
 void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 {
-	int ledcontrol=1;
-	int n=0, i=0;
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+
+	// free eventually allocated BigBuf memory
+	BigBuf_free(); BigBuf_Clear_ext(false);
+	clear_trace();
+	set_tracing(FALSE);
+	
+	int ledcontrol = 1, n = 0, i = 0;
 	uint8_t fcHigh = arg1 >> 8;
 	uint8_t fcLow = arg1 & 0xFF;
 	uint16_t modCnt = 0;
@@ -587,13 +604,15 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 	uint8_t invert = (arg2 >> 8) & 1;
 
 	for (i=0; i<size; i++){
-		if (BitStream[i] == invert){
+		
+		if (BitStream[i] == invert)
 			fcAll(fcLow, &n, clk, &modCnt);
-		} else {
+		else
 			fcAll(fcHigh, &n, clk, &modCnt);
-		}
 	}
-	Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, invert: %d, n: %d",fcHigh, fcLow, clk, invert, n);
+	WDT_HIT();
+	
+	Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, invert: %d, n: %d", fcHigh, fcLow, clk, invert, n);
 
 	if (ledcontrol)	LED_A_ON();
 	SimulateTagLowFrequency(n, 0, ledcontrol);
@@ -644,19 +663,21 @@ static void stAskSimBit(int *n, uint8_t clock) {
 // args clock, ask/man or askraw, invert, transmission separator
 void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 {
-	int ledcontrol = 1;
-	int n=0, i=0;
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);	
+	set_tracing(FALSE);
+	
+	int ledcontrol = 1, n = 0, i = 0;
 	uint8_t clk = (arg1 >> 8) & 0xFF;
 	uint8_t encoding = arg1 & 0xFF;
 	uint8_t separator = arg2 & 1;
 	uint8_t invert = (arg2 >> 8) & 1;
 
-	if (encoding==2){  //biphase
-		uint8_t phase=0;
+	if (encoding == 2){  //biphase
+		uint8_t phase = 0;
 		for (i=0; i<size; i++){
 			biphaseSimBit(BitStream[i]^invert, &n, clk, &phase);
 		}
-		if (phase==1) { //run a second set inverted to keep phase in check
+		if (phase == 1) { //run a second set inverted to keep phase in check
 			for (i=0; i<size; i++){
 				biphaseSimBit(BitStream[i]^invert, &n, clk, &phase);
 			}
@@ -676,6 +697,8 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 	else if (separator==1)
 		Dbprintf("sorry but separator option not yet available");
 
+	WDT_HIT();
+	
 	Dbprintf("Simulating with clk: %d, invert: %d, encoding: %d, separator: %d, n: %d",clk, invert, encoding, separator, n);
 
 	if (ledcontrol)	LED_A_ON();
@@ -709,8 +732,10 @@ static void pskSimBit(uint8_t waveLen, int *n, uint8_t clk, uint8_t *curPhase, b
 // args clock, carrier, invert,
 void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 {
-	int ledcontrol = 1;
-	int n=0, i=0;
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);	
+	set_tracing(FALSE);
+	
+	int ledcontrol = 1, n = 0, i = 0;
 	uint8_t clk = arg1 >> 8;
 	uint8_t carrier = arg1 & 0xFF;
 	uint8_t invert = arg2 & 0xFF;
@@ -722,6 +747,9 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 			pskSimBit(carrier, &n, clk, &curPhase, TRUE);
 		}
 	}
+	
+	WDT_HIT();
+	
 	Dbprintf("Simulating with Carrier: %d, clk: %d, invert: %d, n: %d",carrier, clk, invert, n);
 		   
 	if (ledcontrol)	LED_A_ON();

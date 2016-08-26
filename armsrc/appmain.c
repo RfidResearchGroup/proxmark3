@@ -191,11 +191,12 @@ int AvgAdc(int ch) // was static - merlok
 	return (a + 15) >> 5;
 }
 
-void MeasureAntennaTuning(void) {
-	uint8_t LF_Results[256];
-	int i, adcval = 0, peak = 0, peakv = 0, peakf = 0; //ptr = 0 
-	int vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
 
+void MeasureAntennaTuning(void) {
+
+	uint8_t* LF_Results = BigBuf_malloc(256);
+	int i, adcval = 0, peak = 0, peakv = 0, peakf = 0;
+	int vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
 	LED_B_ON();
 
 /*
@@ -210,7 +211,7 @@ void MeasureAntennaTuning(void) {
   	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
-	for (i=255; i>=19; i--) {
+	for  (i = 255; i >= 19; i--) {
 		WDT_HIT();
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
 		SpinDelay(20);
@@ -223,11 +224,10 @@ void MeasureAntennaTuning(void) {
 			peakv = adcval;
 			peak = LF_Results[i];
 			peakf = i;
-			//ptr = i;
 		}
 	}
 
-	for (i=18; i >= 0; i--) LF_Results[i] = 0;
+	for (i = 18; i >= 0; i--) LF_Results[i] = 0;
 	
 	LED_A_ON();
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
@@ -239,6 +239,7 @@ void MeasureAntennaTuning(void) {
 	cmd_send(CMD_MEASURED_ANTENNA_TUNING, vLf125 | (vLf134<<16), vHf, peakf | (peakv<<16), LF_Results, 256);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
+	BigBuf_free(); BigBuf_Clear_ext(false);
 	LEDsoff();
 }
 
@@ -899,7 +900,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 {
 	UsbCommand *c = (UsbCommand *)packet;
 
-  //Dbprintf("received %d bytes, with command: 0x%04x and args: %d %d %d",len,c->cmd,c->arg[0],c->arg[1],c->arg[2]);
+	//Dbprintf("received %d bytes, with command: 0x%04x and args: %d %d %d",len,c->cmd,c->arg[0],c->arg[1],c->arg[2]);
   
 	switch(c->cmd) {
 #ifdef WITH_LF
@@ -952,7 +953,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			WriteTItag(c->arg[0],c->arg[1],c->arg[2]);
 			break;
 		case CMD_SIMULATE_TAG_125K:
-			LED_A_ON();
+			LED_A_ON();		
 			SimulateTagLowFrequency(c->arg[0], c->arg[1], 1);
 			LED_A_OFF();
 			break;
@@ -1055,15 +1056,15 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 
 		case CMD_WRITER_LEGIC_RF:
-			LegicRfWriter(c->arg[1], c->arg[0]);
+			LegicRfWriter( c->arg[0], c->arg[1], c->arg[2]);
 			break;
 
 		case CMD_RAW_WRITER_LEGIC_RF:
-			LegicRfRawWriter(c->arg[0], c->arg[1]);
+			LegicRfRawWriter(c->arg[0], c->arg[1], c->arg[2]);
 			break;
 
 		case CMD_READER_LEGIC_RF:
-			LegicRfReader(c->arg[0], c->arg[1]);
+			LegicRfReader(c->arg[0], c->arg[1], c->arg[2]);
 			break;
 #endif
 
@@ -1385,10 +1386,7 @@ void  __attribute__((noreturn)) AppMain(void)
 	}
 	common_area.flags.osimage_present = 1;
 
-	LED_D_OFF();
-	LED_C_OFF();
-	LED_B_OFF();
-	LED_A_OFF();
+	LEDsoff();
 
 	// Init USB device
 	usb_enable();
@@ -1398,8 +1396,7 @@ void  __attribute__((noreturn)) AppMain(void)
 	AT91C_BASE_PIOA->PIO_PDR = GPIO_PCK0;
 	AT91C_BASE_PMC->PMC_SCER = AT91C_PMC_PCK0;
 	// PCK0 is PLL clock / 4 = 96Mhz / 4 = 24Mhz
-	AT91C_BASE_PMC->PMC_PCKR[0] = AT91C_PMC_CSS_PLL_CLK |
-		AT91C_PMC_PRES_CLK_4; //  4 for 24Mhz pck0, 2 for 48 MHZ pck0
+	AT91C_BASE_PMC->PMC_PCKR[0] = AT91C_PMC_CSS_PLL_CLK | AT91C_PMC_PRES_CLK_4; //  4 for 24Mhz pck0, 2 for 48 MHZ pck0
 	AT91C_BASE_PIOA->PIO_OER = GPIO_PCK0;
 
 	// Reset SPI
@@ -1421,10 +1418,11 @@ void  __attribute__((noreturn)) AppMain(void)
 	size_t rx_len;
   
 	for(;;) {
-		if (usb_poll()) {
-			rx_len = usb_read(rx,sizeof(UsbCommand));
+		if ( usb_poll_validate_length() ) {
+			rx_len = usb_read(rx, sizeof(UsbCommand));
+			
 			if (rx_len)
-				UsbPacketReceived(rx,rx_len);
+				UsbPacketReceived(rx, rx_len);
 		}
 		WDT_HIT();
 

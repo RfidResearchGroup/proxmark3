@@ -84,6 +84,20 @@ int usage_lf_awid_brute(void){
 	return 0;
 }
 
+static int sendPing(void){
+	UsbCommand ping = {CMD_PING, {1, 2, 3}};
+	SendCommand(&ping);
+	SendCommand(&ping);	
+	SendCommand(&ping);
+	
+	clearCommandBuffer();
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+		return 0;
+	}
+	return 1;
+}
+
 static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bs, size_t bs_len){
 
 	PrintAndLog("Trying FC: %u; CN: %u", fc, cn);		
@@ -98,22 +112,12 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 	memcpy(c.d.asBytes, bs, bs_len);
 	clearCommandBuffer();
 	SendCommand(&c);
+
 	msleep(delay);
+	sendPing();
 	return TRUE;
 }
-static int sendPing(){
-	UsbCommand resp;
-	UsbCommand ping = {CMD_PING};
-	clearCommandBuffer(); SendCommand(&ping);
-	clearCommandBuffer(); SendCommand(&ping);
-	clearCommandBuffer(); SendCommand(&ping);
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
-		PrintAndLog("aborted via keyboard!");
-		return 0;
-	}
-	PrintAndLog("Device didnt respond to ABORT");	
-	return 1;
-}
+
 
 int CmdAWIDDemodFSK(const char *Cmd) {
 	int findone = 0;
@@ -367,6 +371,11 @@ int CmdAWIDBrute(const char *Cmd){
 	
 	for (;;){
 	
+		if ( offline ) {
+			printf("Device offline\n");
+			return  2;
+		}
+		
 		if (ukbhit()) return sendPing();
 		
 		// Do one up
