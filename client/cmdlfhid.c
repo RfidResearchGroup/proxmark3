@@ -428,12 +428,15 @@ int CmdHIDBrute(const char *Cmd){
 		case 'A':
 			fmtlen = param_get8(Cmd, cmdp+1);			
 			cmdp += 2;
+			bool is_ftm_ok = FALSE;
 			uint8_t ftms[] = {26,33,34,35,37};
 			for ( uint8_t i = 0; i < sizeof(ftms); i++){
 				if ( ftms[i] == fmtlen ) {
-					errors = FALSE;
+					is_ftm_ok = TRUE;
 				}
 			}
+			// negated
+			errors = !is_ftm_ok;
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
