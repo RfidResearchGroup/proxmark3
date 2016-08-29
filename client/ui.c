@@ -85,10 +85,14 @@ void iceIIR_Butterworth(int *data, const size_t len){
 	int i,j;
 	
 	int * output =  (int* ) malloc(sizeof(int) * len);	
-	memset(output, 0x00, len);
-	float fc = 0.1125f;          // center frequency
-	size_t adjustedLen = len;
+	if ( !output ) return;
 	
+	// clear mem
+	memset(output, 0x00, len);
+	
+	size_t adjustedLen = len;
+	float fc = 0.1125f;          // center frequency
+		
     // create very simple low-pass filter to remove images (2nd-order Butterworth)
     float complex iir_buf[3] = {0,0,0};
     float b[3] = {0.003621681514929,  0.007243363029857, 0.003621681514929};
@@ -98,7 +102,7 @@ void iceIIR_Butterworth(int *data, const size_t len){
     float complex x_prime  = 1.0f;   // save sample for estimating frequency
     float complex x;
 		
-	for (i=0; i<adjustedLen; ++i) {
+	for (i = 0; i < adjustedLen; ++i) {
 
 		sample = data[i];
 		
@@ -118,14 +122,36 @@ void iceIIR_Butterworth(int *data, const size_t len){
         float freq = cargf(x*conjf(x_prime));
         x_prime = x;    // retain this sample for next iteration
 
-		output[i] =(freq > 0)? 10 : -10;
+		output[i] =(freq > 0) ? 127 : -127;
     } 
 
 	// show data
+	//memcpy(data, output, adjustedLen);
 	for (j=0; j<adjustedLen; ++j)
 		data[j] = output[j];
-		
+	
 	free(output);
+}
+
+void iceSimple_Filter(int *data, const size_t len, uint8_t k){
+// ref: http://www.edn.com/design/systems-design/4320010/A-simple-software-lowpass-filter-suits-embedded-system-applications
+// parameter K
+#define FILTER_SHIFT 4 
+
+	int32_t filter_reg = 0;
+	int16_t input, output;
+	int8_t shift = (k <=8 ) ? k : FILTER_SHIFT;
+
+	for (int i = 0; i < len; ++i){
+
+		input = data[i];
+		// Update filter with current sample
+		filter_reg = filter_reg - (filter_reg >> shift) + input;
+
+		// Scale output for unity gain
+		output = filter_reg >> shift;
+		data[i] = output;
+	}
 }
 
 float complex cexpf (float complex Z)

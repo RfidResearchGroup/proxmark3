@@ -2417,7 +2417,10 @@ int Cmdhex2bin(const char *Cmd)
 }
 
 int CmdDataIIR(const char *Cmd){
-	iceIIR_Butterworth(GraphBuffer, GraphTraceLen);
+
+	uint8_t k = param_get8(Cmd,0);
+	//iceIIR_Butterworth(GraphBuffer, GraphTraceLen);
+	iceSimple_Filter(GraphBuffer, GraphTraceLen, k);
 	RepaintGraphWindow();
 	return 0;
 }

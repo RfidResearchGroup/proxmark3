@@ -42,4 +42,5 @@ extern int offline;
 extern int flushAfterWrite;   //buzzy
 
 void iceIIR_Butterworth(int * data, const size_t len);
+void iceSimple_Filter(int *data, const size_t len, uint8_t k);
 #endif
