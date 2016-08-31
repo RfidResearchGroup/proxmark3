@@ -194,9 +194,11 @@ int AvgAdc(int ch) // was static - merlok
 
 void MeasureAntennaTuning(void) {
 
-	uint8_t* LF_Results = BigBuf_malloc(256);
+	uint8_t LF_Results[256];
 	int i, adcval = 0, peak = 0, peakv = 0, peakf = 0;
 	int vLf125 = 0, vLf134 = 0, vHf = 0;	// in mV
+
+	memset(LF_Results, 0, sizeof(LF_Results));
 	LED_B_ON();
 
 /*
@@ -210,7 +212,7 @@ void MeasureAntennaTuning(void) {
   
   	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-
+		
 	for  (i = 255; i >= 19; i--) {
 		WDT_HIT();
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
@@ -227,9 +229,6 @@ void MeasureAntennaTuning(void) {
 		}
 	}
 
-	// for (i = 18; i >= 0; i--) 
-		// LF_Results[i] = 0;
-	
 	LED_A_ON();
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
