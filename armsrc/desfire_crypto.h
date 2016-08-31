@@ -2,7 +2,7 @@
 #define __DESFIRE_CRYPTO_H
 
 #include <string.h>
-#include <strings.h>
+//#include <strings.h>
 #include <stdarg.h>
 #include "printf.h"
 
