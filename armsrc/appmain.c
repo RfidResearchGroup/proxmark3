@@ -219,7 +219,7 @@ void MeasureAntennaTuning(void) {
 		if (i==95) 	vLf125 = adcval; // voltage at 125Khz
 		if (i==89) 	vLf134 = adcval; // voltage at 134Khz
 
-		LF_Results[i] = adcval>>8; // scale int to fit in byte for graphing purposes
+		LF_Results[i] = adcval >> 8; // scale int to fit in byte for graphing purposes
 		if(LF_Results[i] > peak) {
 			peakv = adcval;
 			peak = LF_Results[i];
@@ -227,7 +227,8 @@ void MeasureAntennaTuning(void) {
 		}
 	}
 
-	for (i = 18; i >= 0; i--) LF_Results[i] = 0;
+	// for (i = 18; i >= 0; i--) 
+		// LF_Results[i] = 0;
 	
 	LED_A_ON();
 	// Let the FPGA drive the high-frequency antenna around 13.56 MHz.
@@ -236,7 +237,7 @@ void MeasureAntennaTuning(void) {
 	SpinDelay(20);
 	vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 
-	cmd_send(CMD_MEASURED_ANTENNA_TUNING, vLf125 | (vLf134<<16), vHf, peakf | (peakv<<16), LF_Results, 256);
+	cmd_send(CMD_MEASURED_ANTENNA_TUNING, vLf125 | (vLf134 << 16), vHf, peakf | (peakv << 16), LF_Results, 256);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
 	BigBuf_free(); BigBuf_Clear_ext(false);
