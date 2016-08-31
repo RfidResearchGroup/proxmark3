@@ -205,6 +205,9 @@ int CmdTIDemod(const char *Cmd)
 		GraphBuffer[maxPos] = 800;
 		GraphBuffer[maxPos+1] = -800;
 	}
+
+	RepaintGraphWindow();
+	
 	PrintAndLog("Info: raw tag bits = %s", bits);
 
 	TagType = (shift3>>8)&0xff;
@@ -254,7 +257,7 @@ int CmdTIDemod(const char *Cmd)
 		PrintAndLog("Tag data = %08X%08X  [Crc %04X %s]", shift1, shift0, crc, crcStr );
 
 		if (crc != (shift2&0xffff))
-			PrintAndLog("Error: CRC mismatch, calculated %04X, got ^04X", crc, shift2&0xffff);
+			PrintAndLog("Error: CRC mismatch, calculated %04X, got %04X", crc, shift2&0xffff);
    
 	}
 	else {
