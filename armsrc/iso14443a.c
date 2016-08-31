@@ -1987,31 +1987,29 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 }
 
 void iso14443a_setup(uint8_t fpga_minor_mode) {
+
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	// Set up the synchronous serial port
 	FpgaSetupSsc();
 	// connect Demodulated Signal to ADC:
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | fpga_minor_mode);
-	
 	LED_D_OFF();
 	// Signal field is on with the appropriate LED
 	if (fpga_minor_mode == FPGA_HF_ISO14443A_READER_MOD ||
 		fpga_minor_mode == FPGA_HF_ISO14443A_READER_LISTEN)
 		LED_D_ON();
 
-	// Prepare the demodulation functions
-	DemodReset();
-	UartReset();
-
-	iso14a_set_timeout(10*106); // 10ms default
-
-	//NextTransferTime = 2 * DELAY_ARM2AIR_AS_READER;
-	NextTransferTime = DELAY_ARM2AIR_AS_READER << 1;
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | fpga_minor_mode);
 	
 	// Start the timer
 	StartCountSspClk();
+	
+	// Prepare the demodulation functions
+	DemodReset();
+	UartReset();
+	NextTransferTime = 2 * DELAY_ARM2AIR_AS_READER;
+	iso14a_set_timeout(10*106); // 10ms default	
 }
 
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
@@ -2043,6 +2041,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
 
 	return len;
 }
+
 
 //-----------------------------------------------------------------------------
 // Read an ISO 14443a tag. Send out commands and store answers.
@@ -2145,10 +2144,31 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 	uint32_t nttmp1 = nt1;
 	uint32_t nttmp2 = nt2;
 
-	for (uint16_t i = 1; i < 0xFFFF; ++i) {
+	for (uint16_t i = 1; i < 32768/8; ++i) {
 		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i;
 		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -i;
-	}	
+		
+		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+1;
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+1);
+		
+		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+2;
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+2);
+
+		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+3;
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+3);
+		
+		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+4;
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+4);
+		
+		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+5;
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+5);
+		
+		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+6;
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+6);
+		
+		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+7;
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+7);		
+	}
 	// either nt1 or nt2 are invalid nonces	
 	return(-99999); 
 }
