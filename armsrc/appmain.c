@@ -10,7 +10,7 @@
 // executes.
 //-----------------------------------------------------------------------------
 #include "usb_cdc.h"
-#include "cmd.h"
+//#include "cmd.h"
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
