@@ -238,8 +238,6 @@ void MeasureAntennaTuning(void) {
 
 	cmd_send(CMD_MEASURED_ANTENNA_TUNING, vLf125 | (vLf134 << 16), vHf, peakf | (peakv << 16), LF_Results, 256);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-
-	BigBuf_free(); BigBuf_Clear_ext(false);
 	LEDsoff();
 }
 
