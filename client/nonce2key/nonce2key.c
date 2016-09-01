@@ -19,7 +19,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	// Reset the last three significant bits of the reader nonce
 	nr &= 0xffffff1f;
   
-	PrintAndLog("uid(%08x) nt(%08x) par(%016"llx") ks(%016"llx") nr(%08"llx")\n", uid, nt, par_info, ks_info, nr);
+	PrintAndLog("uid(%08x) nt(%08x) par(%016"llx") ks(%016"llx") nr(%08x)\n", uid, nt, par_info, ks_info, nr);
 
 	for ( pos = 0; pos < 8; pos++ ) {
 		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
@@ -84,7 +84,7 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 	// Reset the last three significant bits of the reader nonce
 	nr &= 0xffffff1f;
 
-	PrintAndLog("uid(%08x) nt(%08x) ks(%016"llx") nr(%08"llx")\n", uid, nt, ks_info, nr);
+	PrintAndLog("uid(%08x) nt(%08x) ks(%016"llx") nr(%08x)\n", uid, nt, ks_info, nr);
  
 	for (pos=0; pos<8; pos++) {
 		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
