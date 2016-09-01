@@ -148,8 +148,8 @@ uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits)
 //search for given preamble in given BitStream and return success=1 or fail=0 and startIndex and length
 uint8_t preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx)
 {
-	uint8_t foundCnt=0;
-	for (int idx=0; idx < *size - pLen; idx++){
+	uint8_t foundCnt = 0;
+	for (int idx = 0; idx < *size - pLen; idx++){
 		if (memcmp(BitStream+idx, preamble, pLen) == 0){
 			//first index found
 			foundCnt++;

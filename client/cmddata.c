@@ -258,8 +258,7 @@ void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx)
 	for (; i < size; i++){
 		DemodBuffer[i]=buff[startIdx++];
 	}
-	DemodBufferLen=size;
-	return;
+	DemodBufferLen = size;
 }
 
 int CmdSetDebugMode(const char *Cmd)
@@ -1761,7 +1760,8 @@ int CmdIndalaDecode(const char *Cmd)
 			PrintAndLog("Error1: %d",ans);
 		return 0;
 	}
-	uint8_t invert=0;
+
+	uint8_t invert = 0;
 	size_t size = DemodBufferLen;
 	int startIdx = indala26decode(DemodBuffer, &size, &invert);
 	if (startIdx < 0 || size > 224) {
@@ -1800,12 +1800,18 @@ int CmdIndalaDecode(const char *Cmd)
 int CmdPSKNexWatch(const char *Cmd)
 {
 	if (!PSKDemod("", false)) return 0;
+
 	uint8_t preamble[28] = {0,0,0,0,0,1,0,1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	size_t startIdx = 0, size = DemodBufferLen; 
+	
+	// sanity check. 
+	if ( size < sizeof(preamble) + 100) return 0;
+	
 	bool invert = false;
 	if (!preambleSearch(DemodBuffer, preamble, sizeof(preamble), &size, &startIdx)){
 		// if didn't find preamble try again inverting
 		if (!PSKDemod("1", false)) return 0; 
+
 		size = DemodBufferLen;
 		if (!preambleSearch(DemodBuffer, preamble, sizeof(preamble), &size, &startIdx)) return 0;
 		invert = true;
@@ -1906,7 +1912,6 @@ int CmdPSK1rawDemod(const char *Cmd)
 		if (g_debugMode) PrintAndLog("Error demoding: %d",ans); 
 		return 0;
 	}
- 
 	PrintAndLog("PSK1 demoded bitstream:");
 	// Now output the bitstream to the scrollback by line of 16 bits
 	printDemodBuff();
@@ -1917,12 +1922,12 @@ int CmdPSK1rawDemod(const char *Cmd)
 // takes same args as cmdpsk1rawdemod
 int CmdPSK2rawDemod(const char *Cmd)
 {
-	int ans=0;
+	int ans = 0;
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H')
 		return usage_data_rawdemod_p2();
 
-	ans=PSKDemod(Cmd, TRUE);
+	ans = PSKDemod(Cmd, TRUE);
 	if (!ans){
 		if (g_debugMode) PrintAndLog("Error demoding: %d",ans);  
 		return 0;
