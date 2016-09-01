@@ -18,7 +18,13 @@ my $gitbranch = `git rev-parse --abbrev-ref HEAD`;
 my $clean = 2;
 my @compiletime = gmtime();
 
-my $fullgitinfo = 'iceman' . $gitbranch . '/' . $gitversion;
+my $fullgitinfo = 'iceman';
+
+if ( defined $gitbranch and defined $gitversion ) {
+	$fullgitinfo =  '/'. $gitbranch . '/' . $gitversion;
+} else {
+	$fullgitinfo =  '/master/release-build (no_git)';
+}
 
 $fullgitinfo =~ s/(\s)//g;
 
