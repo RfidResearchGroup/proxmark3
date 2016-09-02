@@ -139,7 +139,6 @@ uint16_t BigBuf_get_traceLen(void)
   The traces produced by calling this function can be fetched on the client-side
   by 'hf list raw', alternatively 'hf list <proto>' for protocol-specific
   annotation of commands/responses.
-
 **/
 bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag)
 {

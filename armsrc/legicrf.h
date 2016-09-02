@@ -11,6 +11,14 @@
 #ifndef __LEGICRF_H
 #define __LEGICRF_H
 
+#include "proxmark3.h"	//
+#include "apps.h"
+#include "util.h"		//
+#include "string.h"		
+#include "legic_prng.h"	// legic PRNG impl
+#include "crc.h"		// legic crc-4
+
+
 extern void LegicRfSimulate(int phase, int frame, int reqresp);
 extern int  LegicRfReader(int offset, int bytes, int iv);
 extern void LegicRfWriter(int offset, int bytes, int iv);

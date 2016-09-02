@@ -246,12 +246,14 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define TOPAZ_WRITE_NE8					0x1B	// Write-no-erase (eight bytes)
 
 
+// Definetions of which protocol annotations there are available
 #define ISO_14443A	0
 #define ICLASS		1
 #define ISO_14443B	2
 #define TOPAZ		3
 #define ISO_7816_4  4
 #define MFDES		5
+#define LEGIC		6
 
 //-- Picopass fuses
 #define FUSE_FPERS   0x80
@@ -322,7 +324,12 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define     MFDES_CHANGE_KEY 				 0xc4
 #define     MFDES_GET_KEY_VERSION 			 0x64
 #define     MFDES_AUTHENTICATION_FRAME 		 0xAF
-	
+
+// LEGIC Commands
+#define 	LEGIC_HSK	0xFF
+#define		LEGIC_READ	0x01
+#define 	LEGIC_WRITE	0x00
+
 void printIclassDumpInfo(uint8_t* iclass_dump);
 void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb);
 

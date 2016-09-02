@@ -107,7 +107,8 @@ int CmdLegicDecode(const char *Cmd) {
 	int bIsSegmented = 0;
 
 	// download EML memory, where the "legic read" command puts the data.
-	GetEMLFromBigBuf(data_buf, sizeof(data_buf), 0);
+	// copy data from proxmark into buffer
+	GetFromBigBuf(data_buf,sizeof(data_buf),0);
 	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000)){
 		PrintAndLog("Command execute timeout");
 		return 1;

@@ -37,161 +37,149 @@ int CmdHFTune(const char *Cmd) {
 	return 0;
 }
 
-
-int applyIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
-{
-	switch(cmd[0])
-	{
-	case ISO14443A_CMD_WUPA:        snprintf(exp,size,"WUPA"); break;
-	case ISO14443A_CMD_ANTICOLL_OR_SELECT:{
-		// 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
-		// 93 70 = Select (usage: 9370+5bytes 9320 answer - answer: 1byte SAK)
-		if(cmd[1] == 0x70)
-			snprintf(exp,size,"SELECT_UID");
-		else
-			snprintf(exp,size,"ANTICOLL");
-		break;
-	}
-	case ISO14443A_CMD_ANTICOLL_OR_SELECT_2:{
-		//95 20 = Anticollision of cascade level2
-		//95 70 = Select of cascade level2
-		if(cmd[2] == 0x70)
-			snprintf(exp,size,"SELECT_UID-2");
-		else
-			snprintf(exp,size,"ANTICOLL-2");
-		break;
-	}
-	case ISO14443A_CMD_REQA:		snprintf(exp,size,"REQA"); break;
-	case ISO14443A_CMD_READBLOCK:	snprintf(exp,size,"READBLOCK(%d)",cmd[1]); break;
-	case ISO14443A_CMD_WRITEBLOCK:	snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); break;
-	case ISO14443A_CMD_HALT:		snprintf(exp,size,"HALT"); break;
-	case ISO14443A_CMD_RATS:		snprintf(exp,size,"RATS"); break;
-	case MIFARE_CMD_INC:			snprintf(exp,size,"INC(%d)",cmd[1]); break;
-	case MIFARE_CMD_DEC:			snprintf(exp,size,"DEC(%d)",cmd[1]); break;
-	case MIFARE_CMD_RESTORE:		snprintf(exp,size,"RESTORE(%d)",cmd[1]); break;
-	case MIFARE_CMD_TRANSFER:		snprintf(exp,size,"TRANSFER(%d)",cmd[1]); break;
-	case MIFARE_AUTH_KEYA:{
-		if ( cmdsize > 3)
-			snprintf(exp,size,"AUTH-A(%d)",cmd[1]); 
-		else
-			//	case MIFARE_ULEV1_VERSION :  both 0x60.
-			snprintf(exp,size,"EV1 VERSION");
-		break;
-	}
-	case MIFARE_AUTH_KEYB:			snprintf(exp,size,"AUTH-B(%d)",cmd[1]); break;
-	case MIFARE_MAGICWUPC1:			snprintf(exp,size,"MAGIC WUPC1"); break;
-	case MIFARE_MAGICWUPC2:			snprintf(exp,size,"MAGIC WUPC2"); break;
-	case MIFARE_MAGICWIPEC:			snprintf(exp,size,"MAGIC WIPEC"); break;
-	case MIFARE_ULC_AUTH_1 :		snprintf(exp,size,"AUTH "); break;
-	case MIFARE_ULC_AUTH_2 : 		snprintf(exp,size,"AUTH_ANSW"); break;
-	case MIFARE_ULEV1_AUTH :	
-		if ( cmdsize == 7 )
-			snprintf(exp,size,"PWD-AUTH KEY: 0x%02x%02x%02x%02x", cmd[1], cmd[2], cmd[3], cmd[4] );
-		else
-			snprintf(exp,size,"PWD-AUTH");
-		break;
-	case MIFARE_ULEV1_FASTREAD : {
-		if ( cmdsize >=3 && cmd[2] <= 0xE6)
-			snprintf(exp,size,"READ RANGE (%d-%d)",cmd[1],cmd[2]); 
-		else
-			snprintf(exp,size,"?");
-		break;
-	}
-	case MIFARE_ULC_WRITE : {
-		if ( cmd[1] < 0x21 )
-			snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); 
-		else
-			snprintf(exp,size,"?");
-		break;
-	}
-	case MIFARE_ULEV1_READ_CNT :{
-		if ( cmd[1] < 5 )
-			snprintf(exp,size,"READ CNT(%d)",cmd[1]);
-		else
-			snprintf(exp,size,"?");
-		break;
-	}
-	case MIFARE_ULEV1_INCR_CNT : {
-		if ( cmd[1] < 5 )
-			snprintf(exp,size,"INCR(%d)",cmd[1]);
-		else
-			snprintf(exp,size,"?");
-		break;
-	}
-	case MIFARE_ULEV1_READSIG :		snprintf(exp,size,"READ_SIG"); break;
-	case MIFARE_ULEV1_CHECKTEAR : 	snprintf(exp,size,"CHK_TEARING(%d)",cmd[1]); break;
-	case MIFARE_ULEV1_VCSL :		snprintf(exp,size,"VCSL"); break;
-	default:						return 0;
+int applyIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
+	switch ( cmd[0] ){
+		case ISO14443A_CMD_WUPA:        snprintf(exp,size,"WUPA"); break;
+		case ISO14443A_CMD_ANTICOLL_OR_SELECT:{
+			// 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
+			// 93 70 = Select (usage: 9370+5bytes 9320 answer - answer: 1byte SAK)
+			if(cmd[1] == 0x70)
+				snprintf(exp,size,"SELECT_UID");
+			else
+				snprintf(exp,size,"ANTICOLL");
+			break;
+		}
+		case ISO14443A_CMD_ANTICOLL_OR_SELECT_2:{
+			//95 20 = Anticollision of cascade level2
+			//95 70 = Select of cascade level2
+			if(cmd[2] == 0x70)
+				snprintf(exp,size,"SELECT_UID-2");
+			else
+				snprintf(exp,size,"ANTICOLL-2");
+			break;
+		}
+		case ISO14443A_CMD_REQA:		snprintf(exp,size,"REQA"); break;
+		case ISO14443A_CMD_READBLOCK:	snprintf(exp,size,"READBLOCK(%d)",cmd[1]); break;
+		case ISO14443A_CMD_WRITEBLOCK:	snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); break;
+		case ISO14443A_CMD_HALT:		snprintf(exp,size,"HALT"); break;
+		case ISO14443A_CMD_RATS:		snprintf(exp,size,"RATS"); break;
+		case MIFARE_CMD_INC:			snprintf(exp,size,"INC(%d)",cmd[1]); break;
+		case MIFARE_CMD_DEC:			snprintf(exp,size,"DEC(%d)",cmd[1]); break;
+		case MIFARE_CMD_RESTORE:		snprintf(exp,size,"RESTORE(%d)",cmd[1]); break;
+		case MIFARE_CMD_TRANSFER:		snprintf(exp,size,"TRANSFER(%d)",cmd[1]); break;
+		case MIFARE_AUTH_KEYA:{
+			if ( cmdsize > 3)
+				snprintf(exp,size,"AUTH-A(%d)",cmd[1]); 
+			else
+				//	case MIFARE_ULEV1_VERSION :  both 0x60.
+				snprintf(exp,size,"EV1 VERSION");
+			break;
+		}
+		case MIFARE_AUTH_KEYB:			snprintf(exp,size,"AUTH-B(%d)",cmd[1]); break;
+		case MIFARE_MAGICWUPC1:			snprintf(exp,size,"MAGIC WUPC1"); break;
+		case MIFARE_MAGICWUPC2:			snprintf(exp,size,"MAGIC WUPC2"); break;
+		case MIFARE_MAGICWIPEC:			snprintf(exp,size,"MAGIC WIPEC"); break;
+		case MIFARE_ULC_AUTH_1 :		snprintf(exp,size,"AUTH "); break;
+		case MIFARE_ULC_AUTH_2 : 		snprintf(exp,size,"AUTH_ANSW"); break;
+		case MIFARE_ULEV1_AUTH :	
+			if ( cmdsize == 7 )
+				snprintf(exp,size,"PWD-AUTH KEY: 0x%02x%02x%02x%02x", cmd[1], cmd[2], cmd[3], cmd[4] );
+			else
+				snprintf(exp,size,"PWD-AUTH");
+			break;
+		case MIFARE_ULEV1_FASTREAD : {
+			if ( cmdsize >=3 && cmd[2] <= 0xE6)
+				snprintf(exp,size,"READ RANGE (%d-%d)",cmd[1],cmd[2]); 
+			else
+				snprintf(exp,size,"?");
+			break;
+		}
+		case MIFARE_ULC_WRITE : {
+			if ( cmd[1] < 0x21 )
+				snprintf(exp,size,"WRITEBLOCK(%d)",cmd[1]); 
+			else
+				snprintf(exp,size,"?");
+			break;
+		}
+		case MIFARE_ULEV1_READ_CNT :{
+			if ( cmd[1] < 5 )
+				snprintf(exp,size,"READ CNT(%d)",cmd[1]);
+			else
+				snprintf(exp,size,"?");
+			break;
+		}
+		case MIFARE_ULEV1_INCR_CNT : {
+			if ( cmd[1] < 5 )
+				snprintf(exp,size,"INCR(%d)",cmd[1]);
+			else
+				snprintf(exp,size,"?");
+			break;
+		}
+		case MIFARE_ULEV1_READSIG :		snprintf(exp,size,"READ_SIG"); break;
+		case MIFARE_ULEV1_CHECKTEAR : 	snprintf(exp,size,"CHK_TEARING(%d)",cmd[1]); break;
+		case MIFARE_ULEV1_VCSL :		snprintf(exp,size,"VCSL"); break;
+		default:						return 0;
 	}
 	return 1;
 }
 
-void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
+void annotateIso14443a(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 	applyIso14443a(exp, size, cmd, cmdsize);
 }
 
-void annotateIclass(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
-{
-	switch(cmd[0])
-	{
-	case ICLASS_CMD_ACTALL:      snprintf(exp,size,"ACTALL"); break;
-	case ICLASS_CMD_READ_OR_IDENTIFY:{
-		if(cmdsize > 1){
-			snprintf(exp,size,"READ(%d)",cmd[1]);
-		}else{
-			snprintf(exp,size,"IDENTIFY");
+void annotateIclass(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
+	switch (cmd[0]) {
+		case ICLASS_CMD_ACTALL:      snprintf(exp,size,"ACTALL"); break;
+		case ICLASS_CMD_READ_OR_IDENTIFY:{
+			if(cmdsize > 1){
+				snprintf(exp,size,"READ(%d)",cmd[1]);
+			}else{
+				snprintf(exp,size,"IDENTIFY");
+			}
+			break;
 		}
-		break;
-	}
-	case ICLASS_CMD_SELECT:      snprintf(exp,size,"SELECT"); break;
-	case ICLASS_CMD_PAGESEL:     snprintf(exp,size,"PAGESEL(%d)", cmd[1]); break;
-	case ICLASS_CMD_READCHECK_KC:snprintf(exp,size,"READCHECK[Kc](%d)", cmd[1]); break;
-	case ICLASS_CMD_READCHECK_KD:snprintf(exp,size,"READCHECK[Kd](%d)", cmd[1]); break;
-	case ICLASS_CMD_CHECK:       snprintf(exp,size,"CHECK"); break;
-	case ICLASS_CMD_DETECT:      snprintf(exp,size,"DETECT"); break;
-	case ICLASS_CMD_HALT:        snprintf(exp,size,"HALT"); break;
-	case ICLASS_CMD_UPDATE:      snprintf(exp,size,"UPDATE(%d)",cmd[1]); break;
-	case ICLASS_CMD_ACT:         snprintf(exp,size,"ACT"); break;
-	case ICLASS_CMD_READ4:       snprintf(exp,size,"READ4(%d)",cmd[1]); break;
-	default:                     snprintf(exp,size,"?"); break;
+		case ICLASS_CMD_SELECT:      snprintf(exp,size,"SELECT"); break;
+		case ICLASS_CMD_PAGESEL:     snprintf(exp,size,"PAGESEL(%d)", cmd[1]); break;
+		case ICLASS_CMD_READCHECK_KC:snprintf(exp,size,"READCHECK[Kc](%d)", cmd[1]); break;
+		case ICLASS_CMD_READCHECK_KD:snprintf(exp,size,"READCHECK[Kd](%d)", cmd[1]); break;
+		case ICLASS_CMD_CHECK:       snprintf(exp,size,"CHECK"); break;
+		case ICLASS_CMD_DETECT:      snprintf(exp,size,"DETECT"); break;
+		case ICLASS_CMD_HALT:        snprintf(exp,size,"HALT"); break;
+		case ICLASS_CMD_UPDATE:      snprintf(exp,size,"UPDATE(%d)",cmd[1]); break;
+		case ICLASS_CMD_ACT:         snprintf(exp,size,"ACT"); break;
+		case ICLASS_CMD_READ4:       snprintf(exp,size,"READ4(%d)",cmd[1]); break;
+		default:                     snprintf(exp,size,"?"); break;
 	}
 	return;
 }
 
-void annotateIso15693(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
-{
-
-	if(cmd[0] == 0x26)
-	{
+void annotateIso15693(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
+	if(cmd[0] == 0x26) {
 		switch(cmd[1]){
-		case ISO15693_INVENTORY           :snprintf(exp, size, "INVENTORY");break;
-		case ISO15693_STAYQUIET           :snprintf(exp, size, "STAY_QUIET");break;
-		default:                     snprintf(exp,size,"?"); break;
-
+			case ISO15693_INVENTORY				:snprintf(exp, size, "INVENTORY");break;
+			case ISO15693_STAYQUIET				:snprintf(exp, size, "STAY_QUIET");break;
+			default								:snprintf(exp,size,"?"); break;
 		}
-	}else if(cmd[0] == 0x02)
-	{
-		switch(cmd[1])
-		{
-		case ISO15693_READBLOCK            :snprintf(exp, size, "READBLOCK");break;
-		case ISO15693_WRITEBLOCK           :snprintf(exp, size, "WRITEBLOCK");break;
-		case ISO15693_LOCKBLOCK            :snprintf(exp, size, "LOCKBLOCK");break;
-		case ISO15693_READ_MULTI_BLOCK     :snprintf(exp, size, "READ_MULTI_BLOCK");break;
-		case ISO15693_SELECT               :snprintf(exp, size, "SELECT");break;
-		case ISO15693_RESET_TO_READY       :snprintf(exp, size, "RESET_TO_READY");break;
-		case ISO15693_WRITE_AFI            :snprintf(exp, size, "WRITE_AFI");break;
-		case ISO15693_LOCK_AFI             :snprintf(exp, size, "LOCK_AFI");break;
-		case ISO15693_WRITE_DSFID          :snprintf(exp, size, "WRITE_DSFID");break;
-		case ISO15693_LOCK_DSFID           :snprintf(exp, size, "LOCK_DSFID");break;
-		case ISO15693_GET_SYSTEM_INFO      :snprintf(exp, size, "GET_SYSTEM_INFO");break;
-		case ISO15693_READ_MULTI_SECSTATUS :snprintf(exp, size, "READ_MULTI_SECSTATUS");break;
-		default:                            snprintf(exp,size,"?"); break;
+	} else if(cmd[0] == 0x02) {
+		switch (cmd[1]) {
+			case ISO15693_READBLOCK            :snprintf(exp, size, "READBLOCK");break;
+			case ISO15693_WRITEBLOCK           :snprintf(exp, size, "WRITEBLOCK");break;
+			case ISO15693_LOCKBLOCK            :snprintf(exp, size, "LOCKBLOCK");break;
+			case ISO15693_READ_MULTI_BLOCK     :snprintf(exp, size, "READ_MULTI_BLOCK");break;
+			case ISO15693_SELECT               :snprintf(exp, size, "SELECT");break;
+			case ISO15693_RESET_TO_READY       :snprintf(exp, size, "RESET_TO_READY");break;
+			case ISO15693_WRITE_AFI            :snprintf(exp, size, "WRITE_AFI");break;
+			case ISO15693_LOCK_AFI             :snprintf(exp, size, "LOCK_AFI");break;
+			case ISO15693_WRITE_DSFID          :snprintf(exp, size, "WRITE_DSFID");break;
+			case ISO15693_LOCK_DSFID           :snprintf(exp, size, "LOCK_DSFID");break;
+			case ISO15693_GET_SYSTEM_INFO      :snprintf(exp, size, "GET_SYSTEM_INFO");break;
+			case ISO15693_READ_MULTI_SECSTATUS :snprintf(exp, size, "READ_MULTI_SECSTATUS");break;
+			default:                            snprintf(exp,size,"?"); break;
 		}
 	}
 }
 
-void annotateTopaz(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
-{
+void annotateTopaz(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 	switch(cmd[0]) {
 		case TOPAZ_REQA						:snprintf(exp, size, "REQA");break;
 		case TOPAZ_WUPA						:snprintf(exp, size, "WUPA");break;
@@ -345,8 +333,7 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 0A 11 22 33 44 55 66 = Authenticate (11 22 33 44 55 66 = data to authenticate)
 **/
 
-void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
-{
+void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 	switch(cmd[0]){
 		case ISO14443B_REQB   		: {
 			
@@ -379,6 +366,18 @@ void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize)
 	}
 }
 
+// LEGIC 
+// 1 = read
+// 0 = write
+// Quite simpel tag
+void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
+	switch(cmd[0]) {
+		case LEGIC_HSK						:snprintf(exp, size, "HANDSHAKE");break;
+		case LEGIC_READ						:snprintf(exp, size, "READ");break;
+		case LEGIC_WRITE					:snprintf(exp, size, "WRITE");break;
+		default								:snprintf(exp,size,"?"); break;
+	}		
+}
 /**
  * @brief iso14443A_CRC_check Checks CRC in command or response
  * @param isResponse
@@ -490,6 +489,16 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
 	}
 }
 
+uint8_t legic_CRC_check(bool isResponse, uint8_t* data, uint8_t len){
+	if (len > 2) return 2;
+	return 0;
+	// crc_init(&legic_crc, 4, 0x19 >> 1, 0x5, 0);
+	// crc_clear(&legic_crc);
+	// crc_update(&legic_crc, 1, 1); /* CMD_READ */
+	// crc_update(&legic_crc, byte_index, cmd_sz-1);
+	// crc_update(&legic_crc, value, 8);
+	// return crc_finish(&legic_crc);
+}
 
 bool is_last_record(uint16_t tracepos, uint8_t *trace, uint16_t traceLen)
 {
@@ -603,10 +612,12 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			case ISO_14443A:
 			case MFDES:
 				crcStatus = iso14443A_CRC_check(isResponse, frame, data_len);
-				break;				
+				break;
 			default: 
 				break;
 		}
+	} else if ( data_len == 2 && protocol == LEGIC ){
+		crcStatus = legic_CRC_check(isResponse, frame, data_len);		
 	}
 	//0 CRC-command, CRC not ok
 	//1 CRC-command, CRC ok
@@ -661,6 +672,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			case ISO_14443B:	annotateIso14443b(explanation,sizeof(explanation),frame,data_len); break;
 			case TOPAZ:			annotateTopaz(explanation,sizeof(explanation),frame,data_len); break;
 			case ISO_7816_4:	annotateIso7816(explanation,sizeof(explanation),frame,data_len); break;
+			case LEGIC:			annotateLegic(explanation,sizeof(explanation),frame,data_len); break;
 			default:			break;
 		}
 	}
@@ -706,10 +718,11 @@ int usage_hf_list(){
 	PrintAndLog("    raw    - just show raw data without annotations");
 	PrintAndLog("    14a    - interpret data as iso14443a communications");
 	PrintAndLog("    14b    - interpret data as iso14443b communications");
-		PrintAndLog("    des 	- interpret data as DESFire communications");
+	PrintAndLog("    des 	- interpret data as DESFire communications");
 	PrintAndLog("    iclass - interpret data as iclass communications");
 	PrintAndLog("    topaz  - interpret data as topaz communications");
 	PrintAndLog("    7816   - interpret data as iso7816-4 communications");
+	PrintAndLog("    legic  - interpret data as LEGIC communications");
 	PrintAndLog("");
 	PrintAndLog("example:	hf list 14a f");
 	PrintAndLog("			hf list iclass");
@@ -738,8 +751,7 @@ int usage_hf_snoop(){
 	return 0;
 }
 
-int CmdHFList(const char *Cmd)
-{
+int CmdHFList(const char *Cmd) {
 	clearCommandBuffer();
 		
 	bool showWaitCycles = false;
@@ -770,7 +782,8 @@ int CmdHFList(const char *Cmd)
 	else if(strcmp(type, "14b") == 0)	protocol = ISO_14443B;
 	else if(strcmp(type, "topaz")== 0)	protocol = TOPAZ;
 	else if(strcmp(type, "7816")== 0)	protocol = ISO_7816_4;	
-	else if(strcmp(type,"des")== 0)		protocol = MFDES;			
+	else if(strcmp(type,"des")== 0)		protocol = MFDES;
+	else if(strcmp(type,"legic")==0)	protocol = LEGIC;
 	else if(strcmp(type, "raw")== 0) 	protocol = -1;//No crc, no annotations
 	else errors = true;
 
@@ -809,8 +822,7 @@ int CmdHFList(const char *Cmd)
     PrintAndLog("      Start |        End | Src | Data (! denotes parity error)                                   | CRC | Annotation         |");
 	PrintAndLog("------------|------------|-----|-----------------------------------------------------------------|-----|--------------------|");
 
-	while(tracepos < traceLen)
-	{
+	while(tracepos < traceLen) {
 		tracepos = printTraceLine(tracepos, traceLen, trace, protocol, showWaitCycles, markCRCBytes);
 	}
 
@@ -854,8 +866,7 @@ int CmdHFSearch(const char *Cmd){
 	return 0;
 }
 
-int CmdHFSnoop(const char *Cmd)
-{
+int CmdHFSnoop(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);	
 	if (cmdp == 'h' || cmdp == 'H') return usage_hf_snoop();
 	
