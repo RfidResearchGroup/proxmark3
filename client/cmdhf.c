@@ -371,13 +371,21 @@ void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 // 0 = write
 // Quite simpel tag
 void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
-	switch(cmd[0]) {
-		case LEGIC_HSK						:snprintf(exp, size, "HANDSHAKE");break;
-		case LEGIC_READ						:snprintf(exp, size, "READ");break;
-		case LEGIC_WRITE					:snprintf(exp, size, "WRITE");break;
-		default								:snprintf(exp,size,"?"); break;
-	}		
+	
+	if ( cmdsize > 1) {
+		switch(cmd[0]) {
+			case LEGIC_READ			:snprintf(exp, size, "READ Byte(%d)", cmd[1]);break;
+			case LEGIC_WRITE		:snprintf(exp, size, "WRITE Byte(%d)", cmd[1]);break;
+			default					:snprintf(exp, size, "?"); break;
+		}		
+	} else {		
+		switch(cmd[0]) {
+			case LEGIC_HSK			:snprintf(exp, size, "END Handshake");break;
+			default					:snprintf(exp, size, "?"); break;
+		}		
+	}
 }
+
 /**
  * @brief iso14443A_CRC_check Checks CRC in command or response
  * @param isResponse
@@ -491,6 +499,9 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
 
 uint8_t legic_CRC_check(bool isResponse, uint8_t* data, uint8_t len){
 	if (len > 2) return 2;
+	
+	uint8_t calccrc = CRC8Legic(data, len);
+	
 	return 0;
 	// crc_init(&legic_crc, 4, 0x19 >> 1, 0x5, 0);
 	// crc_clear(&legic_crc);
@@ -654,17 +665,15 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 		}
 	}
 
-	if(data_len == 0 )
+	if (data_len == 0 )
 		sprintf(line[0],"<empty trace - possible error>");
-
 
 	//--- Draw the CRC column
 	char *crc = (crcStatus == 0 ? "!crc" : (crcStatus == 1 ? " ok " : "    "));
 
 	EndOfTransmissionTimestamp = timestamp + duration;
 
-	if(!isResponse)
-	{
+	if (!isResponse)	{
 		switch(protocol) {
 			case ICLASS:		annotateIclass(explanation,sizeof(explanation),frame,data_len); break;
 			case ISO_14443A:	annotateIso14443a(explanation,sizeof(explanation),frame,data_len); break;

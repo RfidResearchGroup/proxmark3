@@ -326,7 +326,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define     MFDES_AUTHENTICATION_FRAME 		 0xAF
 
 // LEGIC Commands
-#define 	LEGIC_HSK	0xFF
+#define 	LEGIC_HSK	0x39
 #define		LEGIC_READ	0x01
 #define 	LEGIC_WRITE	0x00
 
