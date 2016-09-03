@@ -47,7 +47,7 @@ int usage_legic_read(void){
 	PrintAndLog("  h             : this help");
 	PrintAndLog("  <offset>      : offset in data array to start download from");
 	PrintAndLog("  <length>      : number of bytes to download");
-	PrintAndLog("  <IV>          : (optional) Initialization vector to use");
+	PrintAndLog("  <IV>          : (optional) Initialization vector to use (ODD and 7bits)");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
 	PrintAndLog("      hf legic read");
@@ -65,7 +65,7 @@ int usage_legic_write(void){
 	PrintAndLog("  h             : this help");
 	PrintAndLog("  <offset>      : offset in data array to start writing from");
 	PrintAndLog("  <length>      : number of bytes to write");
-	PrintAndLog("  <IV>          : (optional) Initialization vector to use");
+	PrintAndLog("  <IV>          : (optional) Initialization vector to use (ODD and 7bits)");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
 	PrintAndLog("      hf legic write");
@@ -79,7 +79,7 @@ int usage_legic_rawwrite(void){
 	PrintAndLog("  h             : this help");
 	PrintAndLog("  <address>     : address to write to");
 	PrintAndLog("  <value>       : value to write");
-	PrintAndLog("  <IV>          : (optional) Initialization vector to use");
+	PrintAndLog("  <IV>          : (optional) Initialization vector to use (ODD and 7bits)");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
 	PrintAndLog("      hf legic writeraw");
@@ -101,12 +101,11 @@ int CmdLegicDecode(const char *Cmd) {
 	int i = 0, k = 0, segmentNum = 0, segment_len = 0, segment_flag = 0;
 	int crc = 0, wrp = 0, wrc = 0;
 	uint8_t stamp_len = 0;
-	uint8_t data_buf[1052]; // receiver buffer
+	uint8_t data_buf[1024]; // receiver buffer
 	char token_type[5] = {0,0,0,0,0};
 	int dcf = 0;
 	int bIsSegmented = 0;
 
-	// download EML memory, where the "legic read" command puts the data.
 	// copy data from proxmark into buffer
 	GetFromBigBuf(data_buf,sizeof(data_buf),0);
 	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000)){
@@ -388,13 +387,20 @@ int CmdLegicRFRead(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_read();
 	
-	uint32_t offset = 0, len = 0, IV = 0;
+	uint32_t offset = 0, len = 0, IV = 1;
 	sscanf(Cmd, "%x %x %x", &offset, &len, &IV);
 
 	// OUT-OF-BOUNDS check
 	if(len + offset > MAX_LENGTH) len = MAX_LENGTH - offset;
 	
-	IV &= 0x7F;
+	if ( (IV & 0x7F) != IV ){
+		IV &= 0x7F;
+		PrintAndLog("Truncating IV to 7bits");
+	}
+	if ( (IV & 1) == 0 ){
+		IV |= 0x01;  // IV must be odd
+		PrintAndLog("LSB of IV must be SET");	
+	}
 	PrintAndLog("Current IV: 0x%02x", IV);
 	
 	UsbCommand c= {CMD_READER_LEGIC_RF, {offset, len, IV}};
@@ -553,7 +559,7 @@ int CmdLegicRfWrite(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_write();
 	
-	uint32_t offset = 0, len = 0, IV = SESSION_IV;
+	uint32_t offset = 0, len = 0, IV = 0;
 	
     UsbCommand c = {CMD_WRITER_LEGIC_RF, {0,0,0}};
     int res = sscanf(Cmd, "%x %x %x", &offset, &len, &IV);
@@ -565,8 +571,15 @@ int CmdLegicRfWrite(const char *Cmd) {
 	// OUT-OF-BOUNDS check
 	if(len + offset > MAX_LENGTH) len = MAX_LENGTH - offset;
 
+	if ( (IV & 0x7F) != IV ){
+		IV &= 0x7F;
+		PrintAndLog("Truncating IV to 7bits");
+	}
+	if ( (IV & 1) == 0 ){
+		IV |= 0x01;  // IV must be odd
+		PrintAndLog("LSB of IV must be SET");	
+	}
 	
-	IV &= 0x7F;
 	PrintAndLog("Current IV: 0x%02x", IV);
 	
 	c.arg[0] = offset;
@@ -583,7 +596,7 @@ int CmdLegicRfRawWrite(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_rawwrite();
 	
-	uint32_t address = 0, data = 0, IV = SESSION_IV;	
+	uint32_t address = 0, data = 0, IV = 0;	
 	char answer;
 
     UsbCommand c = { CMD_RAW_WRITER_LEGIC_RF, {0,0,0} };
@@ -595,7 +608,14 @@ int CmdLegicRfRawWrite(const char *Cmd) {
 	if(address > MAX_LENGTH)
 		return usage_legic_rawwrite();
 	
-	IV &= 0x7F;
+	if ( (IV & 0x7F) != IV ){
+		IV &= 0x7F;
+		PrintAndLog("Truncating IV to 7bits");
+	}
+	if ( (IV & 1) == 0 ){
+		IV |= 0x01;  // IV must be odd
+		PrintAndLog("LSB of IV must be SET");	
+	}
 	PrintAndLog("Current IV: 0x%02x", IV);
 
 	c.arg[0] = address;
