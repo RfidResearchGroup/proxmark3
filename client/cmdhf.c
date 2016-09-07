@@ -373,16 +373,20 @@ void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 	
 	if ( cmdsize > 1) {
-		switch(cmd[0]) {
-			case LEGIC_READ			:snprintf(exp, size, "READ Byte(%d)", cmd[1]);break;
-			case LEGIC_WRITE		:snprintf(exp, size, "WRITE Byte(%d)", cmd[1]);break;
-			default					:snprintf(exp, size, "?"); break;
-		}		
+		
+		uint8_t cmdBit = (cmd[0] & 1);
+		uint8_t address = (cmd[1] << 7) | cmd[0] >> 1;
+		
+		if (cmdBit == LEGIC_READ)
+			snprintf(exp, size, "READ Byte(%d)", address);
+		else if (cmdBit == LEGIC_WRITE )
+			snprintf(exp, size, "WRITE Byte(%d)", address);
+		else 
+			snprintf(exp, size, "?");
+				
 	} else {		
-		switch(cmd[0]) {
-			case LEGIC_HSK			:snprintf(exp, size, "END Handshake");break;
-			default					:snprintf(exp, size, "?"); break;
-		}		
+		if ( cmd[0] == LEGIC_HSK_22 ) snprintf(exp, size, "MIM22");
+		if ( cmd[0] == LEGIC_HSK_256 ) snprintf(exp, size, "MIN256/1024");
 	}
 }
 
@@ -689,7 +693,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	int num_lines = MIN((data_len - 1)/16 + 1, 16);
 	for (int j = 0; j < num_lines ; j++) {
 		if (j == 0) {
-			PrintAndLog(" %10d | %10d | %s |%-64s | %s| %s",
+			PrintAndLog(" %10u | %10u | %s |%-64s | %s| %s",
 				(timestamp - first_timestamp),
 				(EndOfTransmissionTimestamp - first_timestamp),
 				(isResponse ? "Tag" : "Rdr"),
@@ -708,7 +712,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 	
 	if (showWaitCycles && !isResponse && next_record_is_response(tracepos, trace)) {
 		uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
-			PrintAndLog(" %10d | %10d | %s |fdt (Frame Delay Time): %d",
+			PrintAndLog(" %10u | %10u | %s |fdt (Frame Delay Time): %d",
 				(EndOfTransmissionTimestamp - first_timestamp),
 				(next_timestamp - first_timestamp),
 				"   ",
