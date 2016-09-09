@@ -326,9 +326,10 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define     MFDES_AUTHENTICATION_FRAME 		 0xAF
 
 // LEGIC Commands
-#define 	LEGIC_HSK	0x39
-#define		LEGIC_READ	0x01
-#define 	LEGIC_WRITE	0x00
+#define 	LEGIC_HSK_22	0x19
+#define 	LEGIC_HSK_256	0x39
+#define		LEGIC_READ		0x01
+#define 	LEGIC_WRITE		0x00
 
 void printIclassDumpInfo(uint8_t* iclass_dump);
 void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb);

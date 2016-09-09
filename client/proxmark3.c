@@ -54,16 +54,26 @@ void SendCommand(UsbCommand *c) {
 }
 
 struct receiver_arg {
-  int run;
+	int run;
 };
 
 struct main_loop_arg {
-  int usb_present;
-  char *script_cmds_file;
+	int usb_present;
+	char *script_cmds_file;
 };
 
 byte_t rx[0x1000000];
 byte_t* prx = rx;
+
+// static void showBanner(void){
+	// printf("██████╗ ███╗   ███╗ ████╗     ...Iceman fork\n");
+	// printf("██╔══██╗████╗ ████║   ══█║\n");
+	// printf("██████╔╝██╔████╔██║ ████╔╝\n");
+	// printf("██╔═══╝ ██║╚██╔╝██║   ══█║    iceman@icesql.net\n");
+	// printf("██║     ██║ ╚═╝ ██║ ████╔╝ https://github.com/iceman1001/proxmark3\n");
+	// printf("╚═╝     ╚═╝     ╚═╝ ╚═══╝v1.6.4\n");
+// }
+
 
 static void *uart_receiver(void *targ) {
 	struct receiver_arg *arg = (struct receiver_arg*)targ;
@@ -105,6 +115,7 @@ static void *main_loop(void *targ) {
 	char *cmd = NULL;
 	pthread_t reader_thread;
   
+ 
 	if (arg->usb_present == 1) {
 		rarg.run = 1;
 		pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);

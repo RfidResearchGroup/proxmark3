@@ -35,63 +35,106 @@ int timestamp;
 AT91PS_TC timer;
 AT91PS_TC prng_timer;
 
+/*
 static void setup_timer(void) {
-	/* Set up Timer 1 to use for measuring time between pulses. Since we're bit-banging
-	 * this it won't be terribly accurate but should be good enough.
-	 */
+	// Set up Timer 1 to use for measuring time between pulses. Since we're bit-banging
+	// this it won't be terribly accurate but should be good enough.
+	//
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
 	timer = AT91C_BASE_TC1;
 	timer->TC_CCR = AT91C_TC_CLKDIS;
 	timer->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
 	timer->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
-	/* 
-     * Set up Timer 2 to use for measuring time between frames in 
-     * tag simulation mode. Runs 4x faster as Timer 1
-	 */
+	// 
+    // Set up Timer 2 to use for measuring time between frames in 
+    // tag simulation mode. Runs 4x faster as Timer 1
+	//
     AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC2);
     prng_timer = AT91C_BASE_TC2;
     prng_timer->TC_CCR = AT91C_TC_CLKDIS;
 	prng_timer->TC_CMR = AT91C_TC_CLKS_TIMER_DIV2_CLOCK;
     prng_timer->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 }
+*/
 
-/* At TIMER_CLOCK3 (MCK/32) */
-#define	RWD_TIME_1 150     /* RWD_TIME_PAUSE off, 80us on = 100us */
-#define RWD_TIME_0 90      /* RWD_TIME_PAUSE off, 40us on = 60us */
-#define RWD_TIME_PAUSE 30  /* 20us */
+// At TIMER_CLOCK3 (MCK/32)
+//#define RWD_TIME_1 150     /* RWD_TIME_PAUSE off, 80us on = 100us */
+//#define RWD_TIME_0 90      /* RWD_TIME_PAUSE off, 40us on = 60us */
+//#define RWD_TIME_PAUSE 30  /* 20us */
+
+#define	RWD_TIME_1 80     /* READER_TIME_PAUSE off, 80us on = 100us */
+#define RWD_TIME_0 40      /* READER_TIME_PAUSE off, 40us on = 60us */
+#define RWD_TIME_PAUSE 20  /* 20us */
+
+#define TAG_BIT_PERIOD 100 // 100us for every bit
+
 #define RWD_TIME_FUZZ 20   /* rather generous 13us, since the peak detector + hysteresis fuzz quite a bit */
-#define TAG_TIME_BIT 150   /* 100us for every bit */
-#define TAG_TIME_WAIT 490  /* 490 time from RWD frame end to tag frame start, experimentally determined */
+
+
+//#define TAG_TIME_WAIT 490  /* 490 time from READER frame end to TAG frame start, experimentally determined */
+#define TAG_TIME_WAIT 258  // 330us from READER frame end to TAG frame start, experimentally determined 
+#define RDW_TIME_WAIT 258  // 
+
 
 #define SIM_DIVISOR  586   /* prng_time/SIM_DIVISOR count prng needs to be forwared */
 #define SIM_SHIFT    900   /* prng_time+SIM_SHIFT shift of delayed start */
 
-#define SESSION_IV 0x55
 #define OFFSET_LOG 1024
 
 #define FUZZ_EQUAL(value, target, fuzz) ((value) > ((target)-(fuzz)) && (value) < ((target)+(fuzz)))
 
-// ~ 258us + 100us*delay
-#define WAIT_387	WAIT(387)
-#define WAIT(delay) 	while(timer->TC_CV < (delay) );
+#ifndef SHORT_COIL
+//#define LOW(x)	 AT91C_BASE_PIOA->PIO_CODR = (x)
+# define SHORT_COIL()	LOW(GPIO_SSC_DOUT);
+#endif
+#ifndef OPEN_COIL
+//#define HIGH(x)	 AT91C_BASE_PIOA->PIO_SODR = (x)
+# define OPEN_COIL()	HIGH(GPIO_SSC_DOUT);
+#endif
 
+uint32_t stop_send_frame_us = 0;
+
+// ~ 258us + 100us*delay
+#define WAIT(delay) SpinDelayUs(delay);
+#define WAIT_100	WAIT(100)
+
+#define COIL_PULSE(delay) \
+		SHORT_COIL() \
+		SpinDelayUs(RWD_TIME_PAUSE); \
+		OPEN_COIL() \
+		SpinDelayUs(delay);
 
 // ToDo: define a meaningful maximum size for auth_table. The bigger this is, the lower will be the available memory for traces. 
 // Historically it used to be FREE_BUFFER_SIZE, which was 2744.
 #define LEGIC_CARD_MEMSIZE 1024
 static uint8_t* cardmem;
 
-/*
-The new tracelog..
-	// Traceformat:
-	// 32 bits timestamp (little endian)
-	// 16 bits duration (little endian)
-	// 16 bits data length (little endian, Highest Bit used as readerToTag flag)
-	// y Bytes data
-	// x Bytes parity (one byte per 8 bytes data)
-*/
- 
+// Starts Clock and waits until its reset
+static void Reset(AT91PS_TC clock){
+	clock->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	while(clock->TC_CV > 1) ;
+}
+
+// Starts Clock and waits until its reset
+static void ResetClock(void){
+	Reset(timer);
+}
+
+// Prng works when waiting in 99.1us cycles.
+// and while sending/receiving in bit frames (100, 60)
+static void CalibratePrng( uint32_t time){
+	// Calculate Cycles based on timer 100us
+	uint32_t i =  (time - stop_send_frame_us) / 100 ;
+
+	// substract cycles of finished frames
+	int k =  i - legic_prng_count()+1; 
+
+	// substract current frame length, rewind to beginning
+	if ( k > 0 )
+		legic_prng_forward(k);
+}
+
 /* Generate Keystream */
 static uint32_t get_key_stream(int skip, int count)
 {
@@ -102,8 +145,7 @@ static uint32_t get_key_stream(int skip, int count)
 	legic_prng_bc += prng_timer->TC_CV;
 
 	// reset the prng timer.
-	prng_timer->TC_CCR = AT91C_TC_SWTRG;
-	while(prng_timer->TC_CV > 1) ;
+	Reset(prng_timer);
 
 	/* If skip == -1, forward prng time based */
 	if(skip == -1) {
@@ -137,109 +179,77 @@ static uint32_t get_key_stream(int skip, int count)
 /* Send a frame in tag mode, the FPGA must have been set up by
  * LegicRfSimulate
  */
-static void frame_send_tag(uint16_t response, int bits, int crypt)
-{
-   /* Bitbang the response */
-   AT91C_BASE_PIOA->PIO_CODR = GPIO_SSC_DOUT;
-   AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-   AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-        
-   /* Use time to crypt frame */
-   if(crypt) {
-      legic_prng_forward(2); /* TAG_TIME_WAIT -> shift by 2 */
-      int key = 0;
-      for(int i = 0; i < bits; i++) {
-         key |= legic_prng_get_bit() << i;
-         legic_prng_forward(1);
-      }
-      response = response ^ key;
+static void frame_send_tag(uint16_t response, uint8_t bits, uint8_t crypt) {
+	/* Bitbang the response */
+	LOW(GPIO_SSC_DOUT);
+	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+
+	/* Use time to crypt frame */
+	if(crypt) {
+		legic_prng_forward(2); /* TAG_TIME_WAIT -> shift by 2 */
+		response ^= legic_prng_get_bits(bits);
+	}
+
+	/* Wait for the frame start */
+	WAIT( TAG_TIME_WAIT )
+
+	uint8_t bit = 0;
+	for(int i = 0; i < bits; i++) {
+
+		bit = response & 1;
+		response >>= 1;
+
+		if (bit)
+			HIGH(GPIO_SSC_DOUT);
+		else
+			LOW(GPIO_SSC_DOUT);
+		  
+		WAIT_100
    }
-
-   /* Wait for the frame start */
-   //while(timer->TC_CV < (TAG_TIME_WAIT - 30)) ;
-   WAIT( TAG_TIME_WAIT - 30)
-
-   uint8_t bit = 0;
-   for(int i = 0; i < bits; i++) {
-      int nextbit = timer->TC_CV + TAG_TIME_BIT;
-      bit = response & 1;
-      response >>= 1;
-	  
-      if (bit)
-         AT91C_BASE_PIOA->PIO_SODR = GPIO_SSC_DOUT;
-      else
-         AT91C_BASE_PIOA->PIO_CODR = GPIO_SSC_DOUT;
-      
-      //while(timer->TC_CV < nextbit) ;
-	  WAIT(nextbit)
-   }
-   AT91C_BASE_PIOA->PIO_CODR = GPIO_SSC_DOUT;
-}
-
-// Starts Clock and waits until its reset
-static void ResetClock(void){
-	timer->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-	while(timer->TC_CV > 1) ;
+   LOW(GPIO_SSC_DOUT);
 }
 
 /* Send a frame in reader mode, the FPGA must have been set up by
  * LegicRfReader
  */
-static void frame_send_rwd(uint32_t data, uint8_t bits){
+static void frame_sendAsReader(uint32_t data, uint8_t bits){
 
-	uint8_t bit = 0;	
-	uint32_t starttime = 0, pause_end = 0, bit_end = 0, temp = data;
-	ResetClock();
-	
-	for(int i = 0; i < bits; i++) {
+	uint32_t starttime = GetCountUS();
+	uint32_t send = data;
+	uint8_t prng1 = legic_prng_count() ;
+	uint16_t mask = 1;
+	uint16_t lfsr = legic_prng_get_bits(bits);
 
-		starttime = timer->TC_CV;		
-		pause_end = starttime + RWD_TIME_PAUSE;
-		bit = temp & 1;
-		temp >>= 1;
-
-		if(bit ^ legic_prng_get_bit())
-			bit_end = starttime + RWD_TIME_1;
-		else
-			bit_end = starttime + RWD_TIME_0;
-		
-		/* RWD_TIME_PAUSE time off, then some time on, so that the complete bit time is
-		 * RWD_TIME_x, where x is the bit to be transmitted */
-		AT91C_BASE_PIOA->PIO_CODR = GPIO_SSC_DOUT;
-
-		WAIT( pause_end )
-		
-		AT91C_BASE_PIOA->PIO_SODR = GPIO_SSC_DOUT;
-
-		// bit duration is longest. use this time to forward the lfsr
-		legic_prng_forward(1); 
-
-		WAIT( bit_end )
+	// xor the lsfr onto data.
+	send ^= lfsr;
+				
+	for (; mask < BITMASK(bits); mask <<= 1) {	
+		if (send & mask) {
+			COIL_PULSE(RWD_TIME_1)
+		} else {
+			COIL_PULSE(RWD_TIME_0)
+		}
 	}
 
 	// One final pause to mark the end of the frame
-	pause_end = timer->TC_CV + RWD_TIME_PAUSE;
-	
-	AT91C_BASE_PIOA->PIO_CODR = GPIO_SSC_DOUT;
-	
-	WAIT(pause_end)
-	
-	AT91C_BASE_PIOA->PIO_SODR = GPIO_SSC_DOUT;
+	COIL_PULSE(0)
 
 	// log
-	uint8_t cmdbytes[2] = { (data & 0xFF), 0 };
-	if ( bits > 8 ) {
-		cmdbytes[1] = (data >> 8 ) & 0xFF;
-		LogTrace(cmdbytes, 2, 0, timer->TC_CV, NULL, TRUE);
-	} else {
-		LogTrace(cmdbytes, 1, 0, timer->TC_CV, NULL, TRUE);
-	}
-	/* Reset the timer, to measure time until the start of the tag frame */
-	ResetClock();
+	stop_send_frame_us = GetCountUS();
+	uint8_t cmdbytes[] = {
+		data & 0xFF, 
+		(data >> 8) & 0xFF, 
+		lfsr & 0xFF,
+		(lfsr >> 8) & 0xFF,
+		prng1,
+		legic_prng_count()
+	};
+	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, stop_send_frame_us, NULL, TRUE);
 }
 
 /* Receive a frame from the card in reader emulation mode, the FPGA and
- * timer must have been set up by LegicRfReader and frame_send_rwd.
+ * timer must have been set up by LegicRfReader and frame_sendAsReader.
  *
  * The LEGIC RF protocol from card to reader does not include explicit
  * frame start/stop information or length information. The reader must
@@ -252,58 +262,68 @@ static void frame_send_rwd(uint32_t data, uint8_t bits){
  * for edges. Count the edges in each bit interval. If they are approximately
  * 0 this was a 0-bit, if they are approximately equal to the number of edges
  * expected for a 212kHz subcarrier, this was a 1-bit. For timing we use the
- * timer that's still running from frame_send_rwd in order to get a synchronization
+ * timer that's still running from frame_sendAsReader in order to get a synchronization
  * with the frame that we just sent.
  *
  * FIXME: Because we're relying on the hysteresis to just do the right thing
  * the range is severely reduced (and you'll probably also need a good antenna).
  * So this should be fixed some time in the future for a proper receiver.
  */
-static void frame_receive_rwd(struct legic_frame * const f, int bits, int crypt)
-{
-	uint32_t starttime = timer->TC_CV;
+static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits, uint8_t crypt) {
+
+	uint32_t starttime = GetCountUS();	
 	
-	uint32_t the_bit = 1;  
-	uint32_t data = 0;/* Use a bitmask to save on shifts */
-	int i, old_level = 0, edges = 0;
-	int next_bit_at = TAG_TIME_WAIT;
-	int level = 0;
-	
+	uint8_t i = 0;	
+	uint32_t the_bit = 1;
+	uint32_t next_bit_at;
+	uint32_t data;/* Use a bitmask to save on shifts */
+
+	int old_level = 0, edges = 0, level = 0;
+
 	if(bits > 32) bits = 32;
 
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
 
-	/* we have some time now, precompute the cipher
-     * since we cannot compute it on the fly while reading */
-	legic_prng_forward(2);
+	// calibrate the prng.
+	// the time between end-of-send  and here, div 100us
+	CalibratePrng( starttime );
+	
+	// precompute the cipher
+	uint8_t prng1 =  legic_prng_count() ;
+	if(crypt)
+		data = legic_prng_get_bits(bits);
 
-	if(crypt) {
-		for(i=0; i<bits; i++) {
-			data |= legic_prng_get_bit() << i;
-			legic_prng_forward(1);
-		}
-	}
+	uint16_t lsfr = data;
+	
+	// FIXED time between sending frame and now listening frame.
+	WAIT(TAG_TIME_WAIT)
+	//uint32_t iced = GetCountUS() - starttime;
+	//uint32_t icetime = TAG_TIME_WAIT - iced;
+	// if (icetime > TAG_TIME_WAIT)
+		// icetime =  TAG_TIME_WAIT;
+	//WAIT( icetime )
 
-	// QUESTION: how long did those extra calls to logtrace take?
-	WAIT(next_bit_at)
+	next_bit_at = GetCountUS();
+	next_bit_at += TAG_BIT_PERIOD;
 
-	next_bit_at += TAG_TIME_BIT;
-
-	for(i=0; i<bits; i++) {
+	for( i = 0; i < bits; i++) {
 		edges = 0;
-		while(timer->TC_CV < next_bit_at) {
-			level = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
-			if(level != old_level)
+		while  ( GetCountUS() < next_bit_at) {
+
+			level = AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN;
+			
+			if (level != old_level)
 				edges++;
 			old_level = level;
 		}
-		next_bit_at += TAG_TIME_BIT;
+		next_bit_at += TAG_BIT_PERIOD;
 		
-		// We expect 42 edges 
+		// We expect 42 edges  == ONE
 		if(edges > 20 && edges < 60) { 
+			DbpString("one");
 			data ^= the_bit;
-		}
+		}		
 		the_bit <<= 1;
 	}
 
@@ -311,11 +331,15 @@ static void frame_receive_rwd(struct legic_frame * const f, int bits, int crypt)
 	f->bits = bits;
 		
 	// log
-	uint8_t cmdbytes[] = { (data & 0xFF), (data >> 8) & 0xFF };
-	LogTrace(cmdbytes, 2, starttime, timer->TC_CV, NULL, FALSE);
-	
-	// Reset the timer, to synchronize the next frame
-	ResetClock();
+	uint8_t cmdbytes[] = { 
+		(data & 0xFF),
+		(data >> 8) & 0xFF,
+		(lsfr & 0xFF),
+		(lsfr >> 8) & 0xFF,
+		prng1,
+		legic_prng_count()
+	};
+	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GetCountUS(), NULL, FALSE);
 }
 
 static void frame_append_bit(struct legic_frame * const f, int bit) {
@@ -335,46 +359,54 @@ static void frame_clean(struct legic_frame * const f) {
 static uint32_t perform_setup_phase_rwd(uint8_t iv) {
 
 	// Switch on carrier and let the tag charge for 1ms
-	AT91C_BASE_PIOA->PIO_SODR = GPIO_SSC_DOUT;
-	SpinDelay(20);  // was 1ms before. 
-
+	HIGH(GPIO_SSC_DOUT);
+	SpinDelay(40);
+	
+	ResetUSClock();
+	
 	// no keystream yet
 	legic_prng_init(0);
-
-	frame_send_rwd(iv, 7);
 	
+	// send IV handshake
+	frame_sendAsReader(iv, 7);
+
+	// Now both tag and reader has same IV. Prng can start.
 	legic_prng_init(iv);
 
 	frame_clean(&current_frame);
-	
-	frame_receive_rwd(&current_frame, 6, 1);
 
-	 // we wait anyways
-	legic_prng_forward(3);
-	
-	WAIT(387)
+	frame_receiveAsReader(&current_frame, 6, 1);
 
+	// fixed delay before sending ack.
+	WAIT(TAG_BIT_PERIOD);
+	
 	// Send obsfuscated acknowledgment frame.
-	// 0x19 = MIM22
-	// 0x39 = MIM256, MIM1024
-	if ( current_frame.data == 0x0D ){
-		frame_send_rwd(0x19, 6);
-	}else{
-		frame_send_rwd(0x39, 6);
+	// 0x19 = 0x18 MIM22, 0x01 LSB READCMD 
+	// 0x39 = 0x38 MIM256, MIM1024 0x01 LSB READCMD 
+	switch ( current_frame.data  ) {
+		case 0x0D:
+			frame_sendAsReader(0x19, 6);
+			break;
+		case 0x1D:
+		case 0x3D:
+			frame_sendAsReader(0x39, 6);
+			break;
+		default:
+			break;
 	}
-
 	return current_frame.data;
+	
+	// End of Setup Phase.
 }
 
-static void LegicCommonInit(void) {
-	
+static void LegicCommonInit(void) {	
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
 
 	/* Bitbang the transmitter */
-	AT91C_BASE_PIOA->PIO_CODR = GPIO_SSC_DOUT;
+	LOW(GPIO_SSC_DOUT);
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 
@@ -384,15 +416,15 @@ static void LegicCommonInit(void) {
 
 	clear_trace();
 	set_tracing(TRUE);
-	
-	setup_timer();
 
 	crc_init(&legic_crc, 4, 0x19 >> 1, 0x5, 0);
+	
+	StartCountUS();
 }
 
 /* Switch off carrier, make sure tag is reset */
 static void switch_off_tag_rwd(void) {
-	AT91C_BASE_PIOA->PIO_CODR = GPIO_SSC_DOUT;
+	LOW(GPIO_SSC_DOUT);
 	SpinDelay(10);
 	WDT_HIT();
 }
@@ -400,31 +432,29 @@ static void switch_off_tag_rwd(void) {
 // calculate crc4 for a legic READ command 
 // 5,8,10 address size.
 static int LegicCRC(uint16_t byte_index, uint8_t value, uint8_t cmd_sz) {
-	crc_clear(&legic_crc);
-	crc_update(&legic_crc, LEGIC_READ, 1);
-	crc_update(&legic_crc, byte_index, cmd_sz-1);
-	crc_update(&legic_crc, value, 8);
+	crc_clear(&legic_crc);	
+	uint32_t temp =  (value << cmd_sz) | (byte_index << 1) | LEGIC_READ;
+	crc_update(&legic_crc, temp, cmd_sz + 8 );
+	// crc_update(&legic_crc, LEGIC_READ, 1);
+	// crc_update(&legic_crc, byte_index, cmd_sz-1);
+	// crc_update(&legic_crc, value, 8);
 	return crc_finish(&legic_crc);
 }
 
-#define LEGIC_READ 0x01
-#define LEGIC_WRITE 0x00
-
 int legic_read_byte(int byte_index, int cmd_sz) {
 
-	int calcCrc = 0, crc = 0;
-	uint8_t byte = 0;
+	int calcCrc = 0;
+	uint8_t byte = 0, crc = 0;
 	uint32_t cmd = (byte_index << 1) | LEGIC_READ;
 
-	WAIT_387
+	legic_prng_forward(3);
+	WAIT(300)
 
-	// send read command
-	frame_send_rwd(cmd, cmd_sz);
+	frame_sendAsReader(cmd, cmd_sz);
 
 	frame_clean(&current_frame);
 
-	// receive
-	frame_receive_rwd(&current_frame, 12, 1);
+	frame_receiveAsReader(&current_frame, 12, 1);
 
 	byte = current_frame.data & 0xff;
 	calcCrc = LegicCRC(byte_index, byte, cmd_sz);
@@ -435,8 +465,6 @@ int legic_read_byte(int byte_index, int cmd_sz) {
 		return -1;
 	}
 
-	// we wait anyways
-	legic_prng_forward(4); 
 	return byte;
 }
 
@@ -469,7 +497,7 @@ int legic_write_byte(int byte, int addr, int addr_sz) {
 	
     while(timer->TC_CV < 387) ; /* ~ 258us */
 	
-	frame_send_rwd(cmd, cmd_sz);
+	frame_sendAsReader(cmd, cmd_sz);
   
 // wllm-rbnt doesnt have these
 //	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
@@ -483,7 +511,7 @@ int legic_write_byte(int byte, int addr, int addr_sz) {
 
     for( t = 0; t < 80; t++) {
         edges = 0;
-		next_bit_at += TAG_TIME_BIT;
+		next_bit_at += TAG_BIT_PERIOD;
         while(timer->TC_CV < next_bit_at) {
             int level = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
             if(level != old_level) {
@@ -493,7 +521,7 @@ int legic_write_byte(int byte, int addr, int addr_sz) {
         }
         if(edges > 20 && edges < 60) { /* expected are 42 edges */
 			int t = timer->TC_CV;
-			int c = t / TAG_TIME_BIT;
+			int c = t / TAG_BIT_PERIOD;
 			
 			ResetClock();
 			legic_prng_forward(c);
@@ -507,20 +535,17 @@ int legic_write_byte(int byte, int addr, int addr_sz) {
 
 int LegicRfReader(int offset, int bytes, int iv) {
 	
-	// ice_legic_setup();
-	// ice_legic_select_card();
-	// return 0;
 	int byte_index = 0, cmd_sz = 0, card_sz = 0;	   							   
 
+	if ( MF_DBGLEVEL >= 2) Dbprintf("setting up legic card,  IV = %x", iv);
+	
 	LegicCommonInit();
-
-	if ( MF_DBGLEVEL >= 2) DbpString("setting up legic card");
 
 	uint32_t tag_type = perform_setup_phase_rwd(iv);
 
 	 //we lose to mutch time with dprintf
 	switch_off_tag_rwd();
-
+	
 	switch(tag_type) {
 		case 0x0d:
 			if ( MF_DBGLEVEL >= 2) DbpString("MIM22 card found, reading card ...");
@@ -539,7 +564,7 @@ int LegicRfReader(int offset, int bytes, int iv) {
 			break;
 		default:
 			if ( MF_DBGLEVEL >= 1) Dbprintf("Unknown card format: %x",tag_type);
-			return -1;
+			return 1;
 	}
 	if(bytes == -1)
 		bytes = card_sz;
@@ -547,18 +572,19 @@ int LegicRfReader(int offset, int bytes, int iv) {
 	if(bytes+offset >= card_sz)
 		bytes = card_sz - offset;
 
+	// Start setup and read bytes.
 	perform_setup_phase_rwd(iv);
 
-	legic_prng_forward(2);
-
 	LED_B_ON();
-	while(byte_index < bytes) {
+	while (byte_index < bytes) {
 		int r = legic_read_byte(byte_index+offset, cmd_sz);
-		if(r == -1 || BUTTON_PRESS()) {			
+		
+		if (r == -1 || BUTTON_PRESS()) {			
            	switch_off_tag_rwd();
 	        LEDsoff();
 	        if ( MF_DBGLEVEL >= 2) DbpString("operation aborted");
-			return -1;
+			cmd_send(CMD_ACK,0,0,0,0,0);  
+			return 1;
 		}
 		cardmem[byte_index] = r;
         WDT_HIT();
@@ -567,9 +593,8 @@ int LegicRfReader(int offset, int bytes, int iv) {
 
 	switch_off_tag_rwd();
 	LEDsoff();
-	
-	if ( MF_DBGLEVEL >= 1) Dbprintf("Card read, use 'hf legic decode' or");
-    if ( MF_DBGLEVEL >= 1) Dbprintf("'data hexsamples %d' to view results", (bytes+7) & ~7);
+	uint8_t len = (bytes & 0x3FF);
+	cmd_send(CMD_ACK,1,len,0,0,0);  
     return 0;
 }
 
@@ -577,7 +602,7 @@ int LegicRfReader(int offset, int bytes, int iv) {
 	int byte_index=0;
 
     LED_B_ON();
-	perform_setup_phase_rwd(SESSION_IV);
+	perform_setup_phase_rwd(iv);
     //legic_prng_forward(2);
 	while(byte_index < bytes) {
 		int r;
@@ -616,9 +641,7 @@ int LegicRfReader(int offset, int bytes, int iv) {
 
 void LegicRfWriter(int offset, int bytes, int iv) {
 
-	int byte_index = 0, addr_sz = 0;
-	
-	iv = (iv <=0 ) ? SESSION_IV : iv;										  
+	int byte_index = 0, addr_sz = 0;								  
 
 	LegicCommonInit();
 	
@@ -695,8 +718,6 @@ void LegicRfWriter(int offset, int bytes, int iv) {
 void LegicRfRawWriter(int address, int byte, int iv) {
 
 	int byte_index = 0, addr_sz = 0;
-												  
-	iv = (iv <= 0) ? SESSION_IV : iv;
 	
 	LegicCommonInit();
 	
@@ -767,11 +788,11 @@ static void frame_handle_tag(struct legic_frame const * const f)
 
         LED_C_ON();
         
-		prng_timer->TC_CCR = AT91C_TC_SWTRG;
-		while(prng_timer->TC_CV > 1) ;
+		// Reset prng timer
+		Reset(prng_timer);
 		
         legic_prng_init(f->data);
-        frame_send_tag(0x3d, 6, 1); /* 0x3d^0x26 = 0x1b */
+        frame_send_tag(0x3d, 6, 1); /* 0x3d^0x26 = 0x1B */
         legic_state = STATE_IV;
         legic_read_count = 0;
         legic_prng_bc = 0;
@@ -924,7 +945,7 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
 
-	setup_timer();
+	//setup_timer();
 	crc_init(&legic_crc, 4, 0x19 >> 1, 0x5, 0);
 
 	int old_level = 0;
@@ -1654,7 +1675,7 @@ int ice_legic_select_card()
 	uint8_t wakeup[] = { 0x7F };
 	uint8_t getid[] = {0x19};
 
-	legic_prng_init(SESSION_IV);
+	//legic_prng_init(SESSION_IV);
 
 	// first, wake up the tag, 7bits
 	CodeAndTransmitLegicAsReader(wakeup, sizeof(wakeup), 7);
@@ -1662,12 +1683,12 @@ int ice_legic_select_card()
 	GetSamplesForLegicDemod(1000, TRUE);
 
 	// frame_clean(&current_frame);
-	//frame_receive_rwd(&current_frame, 6, 1);
+	//frame_receiveAsReader(&current_frame, 6, 1);
 
 	legic_prng_forward(1); /* we wait anyways */
 	
 	//while(timer->TC_CV < 387) ; /* ~ 258us */
-	//frame_send_rwd(0x19, 6);
+	//frame_sendAsReader(0x19, 6);
 	CodeAndTransmitLegicAsReader(getid, sizeof(getid), 8);
 	GetSamplesForLegicDemod(1000, TRUE);
 

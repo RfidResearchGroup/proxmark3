@@ -403,9 +403,34 @@ int CmdLegicRFRead(const char *Cmd) {
 	}
 	PrintAndLog("Current IV: 0x%02x", IV);
 	
-	UsbCommand c= {CMD_READER_LEGIC_RF, {offset, len, IV}};
+	// get some  prng bytes from 
+	uint8_t temp[12];
+	legic_prng_init(IV);
+	for ( uint8_t j = 0; j < sizeof(temp); ++j)
+		temp[j] = legic_prng_get_bits(8);
+
+	PrintAndLog("PRNG: %s", sprint_hex(temp, sizeof(temp)));
+	
+	UsbCommand c = {CMD_READER_LEGIC_RF, {offset, len, IV}};
 	clearCommandBuffer();
 	SendCommand(&c);
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+		uint8_t isOK = resp.arg[0] & 0xFF;
+		uint16_t len = resp.arg[1] & 0x3FF;
+		if ( isOK ) {
+			PrintAndLog("OK : %d", isOK);
+			PrintAndLog("use 'hf legic decode' or");
+			PrintAndLog("'data hexsamples %d' to view results", len);	
+		}
+	} else {
+		PrintAndLog("command execution time out");
+		return 1;
+	}
+
+	//uint8_t got[12000];
+	//GetFromBigBuf(got,sizeof(got),0);
+	//WaitForResponse(CMD_ACK,NULL);
 	return 0;
 }
 

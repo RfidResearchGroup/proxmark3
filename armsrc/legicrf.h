@@ -18,6 +18,8 @@
 #include "legic_prng.h"	// legic PRNG impl
 #include "crc.h"		// legic crc-4
 
+#define LEGIC_READ 0x01
+#define LEGIC_WRITE 0x00
 
 extern void LegicRfSimulate(int phase, int frame, int reqresp);
 extern int  LegicRfReader(int offset, int bytes, int iv);

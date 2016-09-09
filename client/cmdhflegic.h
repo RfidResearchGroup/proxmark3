@@ -20,6 +20,7 @@
 #include "cmdmain.h"
 #include "util.h"
 #include "crc.h"
+#include "legic_prng.h"
 
 int CmdHFLegic(const char *Cmd);
 
