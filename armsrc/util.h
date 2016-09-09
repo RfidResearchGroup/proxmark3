@@ -64,6 +64,7 @@ uint32_t RAMFUNC GetTickCount();
 
 void StartCountUS();
 uint32_t RAMFUNC GetCountUS();
+void ResetUSClock(void);
 //uint32_t RAMFUNC GetDeltaCountUS();
 
 void StartCountSspClk();

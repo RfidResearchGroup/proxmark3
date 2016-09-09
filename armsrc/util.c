@@ -56,7 +56,7 @@ uint32_t reflect(uint32_t v, int b) {
 			v |=  BITMASK((b-1)-i);
 		else
 			v &= ~BITMASK((b-1)-i);
-		t>>=1;
+		t >>= 1;
 	}
 	return v;
 }
@@ -340,16 +340,25 @@ void StartCountUS() {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS; // timer disable  
 	AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_XC1; // from timer 0
 	
-	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;
-	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN;
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TCB->TCB_BCR = 1;
-	}
+	
+	while (AT91C_BASE_TC1->TC_CV >= 1);
+}
 
 uint32_t RAMFUNC GetCountUS(){
 	//return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV / 15) * 10);
 	//  By suggestion from PwPiwi, http://www.proxmark.org/forum/viewtopic.php?pid=17548#p17548
 	//return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV * 2) / 3); 
 	return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV << 1) / 3); 
+	//return (AT91C_BASE_TC1->TC_CV << 16) | ((AT91C_BASE_TC0->TC_CV << 1) / 3); 
+}
+void ResetUSClock(void) {	
+	//enable clock of timer and software trigger
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	while (AT91C_BASE_TC1->TC_CV >= 1);
 }
 
 // static uint32_t GlobalUsCounter = 0;
@@ -424,9 +433,9 @@ void StartCountSspClk() {
 }
 void ResetSspClk(void) {	
 	//enable clock of timer and software trigger
-	AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-	AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
-	AT91C_BASE_TC2->TC_CCR = AT91C_TC_SWTRG;
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 }
 
 uint32_t RAMFUNC GetCountSspClk(){
