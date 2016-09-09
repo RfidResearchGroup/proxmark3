@@ -42,17 +42,25 @@ ifneq (,$(findstring MINGW,$(platform)))
 	
 else ifeq ($(platform),Darwin)
 
-	# Assuming you have QT4 installed.
-	CFLAGS += -I/usr/include/malloc/ -I/usr/local/opt/readline/include
-	LDLIBS = -L/opt/local/lib -L/usr/local/opt/readline/lib -lreadline -lpthread -lm
-	
-	# use this if you have QT5 installed.
-	#CFLAGS += -I/usr/include/malloc/ -I/usr/local/opt/readline/include -I/usr/local/opt/qt5/include 
-    #LDLIBS = -L/opt/local/lib -L/usr/local/opt/readline/lib -L/usr/local/opt/qt5/lib -lreadline -lpthread -lm
+	# OS X, QT5 detection needs this.
+	export PKG_CONFIG_PATH=/usr/local/Cellar/qt5/5.6.1-1/lib/pkgconfig/
 
 	CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
     QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
     MOC = $(shell pkg-config --variable=moc_location QtCore)
+
+	# QT version,  4 or 5
+	qtplatform = $(shell $(MOC) -v)
+	ifneq (, $(findstring moc 5,$(qtplatform)))
+		# use this if you have QT5 installed.
+		CFLAGS += -I/usr/include/malloc/ -I/usr/local/opt/readline/include -I/usr/local/opt/qt5/include 
+		LDLIBS = -L/opt/local/lib -L/usr/local/opt/readline/lib -L/usr/local/opt/qt5/lib -lreadline -lpthread -lm
+	else
+		# Assuming you have QT4 installed.
+		CFLAGS += -I/usr/include/malloc/ -I/usr/local/opt/readline/include
+		LDLIBS = -L/opt/local/lib -L/usr/local/opt/readline/lib -lreadline -lpthread -lm
+	endif
+
     LUAPLATFORM = macosx
 else
     CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
@@ -94,6 +102,7 @@ CMDSRCS =	mifarehost.c \
 			crc16.c \
 			crc64.c \
 			iso14443crc.c \
+			legic_prng.c \
 			iso15693tools.c \
 			data.c \
 			graph.c \
