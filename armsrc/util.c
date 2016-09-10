@@ -236,10 +236,11 @@ int BUTTON_HELD(int ms) {
 // attempt at high resolution microsecond timer
 // beware: timer counts in 21.3uS increments (1024/48Mhz)
 void SpinDelayUs(int us) {
-	int ticks = (48*us) >> 10;
+	int ticks = (48 * us) >> 10;
 
 	// Borrow a PWM unit for my real-time clock
 	AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
+	
 	// 48 MHz / 1024 gives 46.875 kHz
 	AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);
 	AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;
@@ -352,7 +353,6 @@ uint32_t RAMFUNC GetCountUS(){
 	//  By suggestion from PwPiwi, http://www.proxmark.org/forum/viewtopic.php?pid=17548#p17548
 	//return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV * 2) / 3); 
 	return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV << 1) / 3); 
-	//return (AT91C_BASE_TC1->TC_CV << 16) | ((AT91C_BASE_TC0->TC_CV << 1) / 3); 
 }
 void ResetUSClock(void) {	
 	//enable clock of timer and software trigger
@@ -360,7 +360,16 @@ void ResetUSClock(void) {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	while (AT91C_BASE_TC1->TC_CV >= 1);
 }
+// attempt at high resolution microsecond timer
+// beware: timer counts in 21.3uS increments (1024/48Mhz)
+void SpinDelayCountUs(uint32_t us) {
 
+	us += GetCountUS();
+	us -= 6;
+	
+	for(;;)
+		if ( GetCountUS() >= us ) return;
+}
 // static uint32_t GlobalUsCounter = 0;
 
 // uint32_t RAMFUNC GetDeltaCountUS(){
