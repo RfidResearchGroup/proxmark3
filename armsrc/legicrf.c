@@ -62,16 +62,16 @@ static void setup_timer(void) {
 //#define RWD_TIME_1 150     /* RWD_TIME_PAUSE off, 80us on = 100us */
 //#define RWD_TIME_0 90      /* RWD_TIME_PAUSE off, 40us on = 60us */
 //#define RWD_TIME_PAUSE 30  /* 20us */
+#define US_CALIBRATION 4
+#define	RWD_TIME_1 80-US_CALIBRATION		/* READER_TIME_PAUSE off, 80us on = 100us */
+#define RWD_TIME_0 40-US_CALIBRATION		/* READER_TIME_PAUSE off, 40us on = 60us */
+#define RWD_TIME_PAUSE 20-US_CALIBRATION	/* 20us */
 
-#define	RWD_TIME_1 80-4     /* READER_TIME_PAUSE off, 80us on = 100us */
-#define RWD_TIME_0 40-4      /* READER_TIME_PAUSE off, 40us on = 60us */
-#define RWD_TIME_PAUSE 20-4  /* 20us */
-
-#define TAG_BIT_PERIOD 100-8 // 100us for every bit
+#define TAG_BIT_PERIOD 100-US_CALIBRATION	// 100us for every bit
 
 #define RWD_TIME_FUZZ 20   /* rather generous 13us, since the peak detector + hysteresis fuzz quite a bit */
 
-#define TAG_TIME_WAIT 330  // 330us from READER frame end to TAG frame start, experimentally determined  (490)
+#define TAG_TIME_WAIT 330 - US_CALIBRATION // 330us from READER frame end to TAG frame start, experimentally determined  (490)
 #define RDW_TIME_WAIT 258  // 
 
 
@@ -278,17 +278,20 @@ static void frame_sendAsReader(uint32_t data, uint8_t bits){
  */
 static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits, uint8_t crypt) {
 
+	uint32_t starttime = GetCountUS();
+	
 	frame_clean(f);
 	
 	uint8_t i = 0, edges = 0;	
 	uint16_t lsfr = 0;
-	uint32_t the_bit = 1, next_bit_at, data;
+	uint32_t the_bit = 1, next_bit_at = 0, data;
 	int old_level = 0, level = 0;
 
 	if(bits > 32) bits = 32;
 
-	uint32_t starttime = GetCountUS();	
-
+	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
+	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
+	
 	// calibrate the prng.	
 	legic_prng_forward(2);
 	//CalibratePrng( starttime );
@@ -301,15 +304,12 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits, ui
 
 	data = lsfr;
 	
-	next_bit_at = GetCountUS() + TAG_BIT_PERIOD;
-	
 	//FIXED time between sending frame and now listening frame. 330us
 	uint32_t icetime = TAG_TIME_WAIT - ( GetCountUS() - stop_send_frame_us );
-	//
-	WAIT( icetime ); // 21.3us inc.
+	WAIT( icetime ); // 8-10us
 	 
-	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
-	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
+	next_bit_at = GetCountUS();
+	next_bit_at += TAG_BIT_PERIOD;
 	
 	for( i = 0; i < bits; i++) {
 		edges = 0;
@@ -336,6 +336,8 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits, ui
 	f->bits = bits;
 		
 	// log
+	stop_send_frame_us = GetCountUS();
+	
 	uint8_t cmdbytes[] = { 
 		(data & 0xFF),
 		(data >> 8) & 0xFF,
@@ -347,7 +349,7 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits, ui
 		icetime & 0xff,
 		(icetime >> 8) & 0xFF
 	};
-	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GetCountUS(), NULL, FALSE);
+	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, stop_send_frame_us, NULL, FALSE);
 
 }
 
