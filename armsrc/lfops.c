@@ -1144,7 +1144,7 @@ void TurnReadLFOn(int delay) {
 	//int adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
 	// where to save it
 	
-	SpinDelayUs(delay);	// ICEMAN:  problem with (us) clock is  21.3us increments
+	SpinDelayCountUs(delay);	// ICEMAN:  problem with (us) clock is  21.3us increments
 }
 
 // Write one bit to card
@@ -1154,7 +1154,7 @@ void T55xxWriteBit(int bit) {
 	else
 		TurnReadLFOn(WRITE_1);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelayUs(WRITE_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
+	SpinDelayCountUs(WRITE_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
 }
 
 // Send T5577 reset command then read stream (see if we can identify the start of the stream)
@@ -1168,7 +1168,7 @@ void T55xxResetRead(void) {
 
 	// Trigger T55x7 in mode.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelayUs(START_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
+	SpinDelayCountUs(START_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
 
 	// reset tag - op code 00
 	T55xxWriteBit(0);
@@ -1198,7 +1198,7 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 	
 	// Trigger T55x7 in mode.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelayUs(START_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
+	SpinDelayCountUs(START_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
 
 	// Opcode 10
 	T55xxWriteBit(1);
@@ -1258,7 +1258,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	
 	// Trigger T55x7 Direct Access Mode with start gap
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelayUs(START_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
+	SpinDelayCountUs(START_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
 	
 	// Opcode 1[page]
 	T55xxWriteBit(1);
@@ -1298,7 +1298,7 @@ void T55xxWakeUp(uint32_t Pwd){
 	
 	// Trigger T55x7 Direct Access Mode
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelayUs(START_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
+	SpinDelayCountUs(START_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
 	
 	// Opcode 10
 	T55xxWriteBit(1);

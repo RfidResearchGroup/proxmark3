@@ -280,7 +280,6 @@ int param_getptr(const char *line, int *bg, int *en, int paramnum)
 	return 0;
 }
 
-
 char param_getchar(const char *line, int paramnum)
 {
 	int bg, en;

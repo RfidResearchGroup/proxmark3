@@ -488,8 +488,6 @@ bool AddBitPCF7931(bool b, uint32_t * tab, int32_t l, int32_t p){
 		tab[u+2] = 24 * T0_PCF + tab[u+1] - l - p;
 		return 0;
 	}
-
-	
 	return 1;
 }
 

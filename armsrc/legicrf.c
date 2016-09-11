@@ -62,18 +62,15 @@ static void setup_timer(void) {
 //#define RWD_TIME_1 150     /* RWD_TIME_PAUSE off, 80us on = 100us */
 //#define RWD_TIME_0 90      /* RWD_TIME_PAUSE off, 40us on = 60us */
 //#define RWD_TIME_PAUSE 30  /* 20us */
-#define US_CALIBRATION 4
-#define	RWD_TIME_1 80-US_CALIBRATION		/* READER_TIME_PAUSE off, 80us on = 100us */
-#define RWD_TIME_0 40-US_CALIBRATION		/* READER_TIME_PAUSE off, 40us on = 60us */
-#define RWD_TIME_PAUSE 20-US_CALIBRATION	/* 20us */
 
-#define TAG_BIT_PERIOD 100-US_CALIBRATION	// 100us for every bit
+// testing calculating in ticks instead of (us) microseconds.
+#define	RWD_TIME_1 120		// READER_TIME_PAUSE off, 80us on = 100us  80 * 1.5 == 120ticks
+#define RWD_TIME_0 60		// READER_TIME_PAUSE off, 40us on = 60us   40 * 1.5 == 60ticks 
+#define RWD_TIME_PAUSE 30	// 20us == 20 * 1.5 == 30ticks */
+#define TAG_BIT_PERIOD 150	// 100us == 100 * 1.5 == 150ticks
 
-#define RWD_TIME_FUZZ 20   /* rather generous 13us, since the peak detector + hysteresis fuzz quite a bit */
-
-#define TAG_TIME_WAIT 330 - US_CALIBRATION // 330us from READER frame end to TAG frame start, experimentally determined  (490)
-#define RDW_TIME_WAIT 258  // 
-
+#define RWD_TIME_FUZZ 20   // rather generous 13us, since the peak detector + hysteresis fuzz quite a bit
+#define TAG_TIME_WAIT 495  // 330us from READER frame end to TAG frame start. 330 * 1.5 == 495
 
 #define SIM_DIVISOR  586   /* prng_time/SIM_DIVISOR count prng needs to be forwared */
 #define SIM_SHIFT    900   /* prng_time+SIM_SHIFT shift of delayed start */
@@ -95,14 +92,25 @@ uint32_t stop_send_frame_us = 0;
 
 // ~ 258us + 100us*delay
 #define WAIT(delay) SpinDelayCountUs((delay));
-#define COIL_PULSE(x)  { SHORT_COIL; WAIT(RWD_TIME_PAUSE); OPEN_COIL; WAIT((x)); }
-#define COIL_PULSE_PAUSE  { SHORT_COIL; WAIT(RWD_TIME_PAUSE); OPEN_COIL; }
+#define COIL_PULSE(x)  { \
+		SHORT_COIL; \
+		Wait(RWD_TIME_PAUSE); \
+		OPEN_COIL; \
+		Wait(x); \
+	}
+#define GET_COUNT_US  GetCountUS()
+	
 
 // ToDo: define a meaningful maximum size for auth_table. The bigger this is, the lower will be the available memory for traces. 
 // Historically it used to be FREE_BUFFER_SIZE, which was 2744.
 #define LEGIC_CARD_MEMSIZE 1024
 static uint8_t* cardmem;
 
+static void Wait(uint32_t time){
+	if ( time == 0 ) return;
+	time += AT91C_BASE_TC0->TC_CV;	
+	while(AT91C_BASE_TC0->TC_CV < time);
+}
 // Starts Clock and waits until its reset
 static void Reset(AT91PS_TC clock){
 	clock->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
@@ -222,7 +230,7 @@ static void frame_send_tag(uint16_t response, uint8_t bits, uint8_t crypt) {
  */
 static void frame_sendAsReader(uint32_t data, uint8_t bits){
 
-	uint32_t starttime = GetCountUS();
+	uint32_t starttime = AT91C_BASE_TC0->TC_CV;
 	uint32_t send = data;
 	uint8_t prng1 = legic_prng_count() ;
 	uint16_t mask = 1;
@@ -233,16 +241,20 @@ static void frame_sendAsReader(uint32_t data, uint8_t bits){
 				
 	for (; mask < BITMASK(bits); mask <<= 1) {	
 		if (send & mask) {
-			 COIL_PULSE(RWD_TIME_1); 
+			COIL_PULSE(RWD_TIME_1);
 		} else {
-			 COIL_PULSE(RWD_TIME_0); 
+			COIL_PULSE(RWD_TIME_0);
 		}
 	}
 
-	// One final pause to mark the end of the frame
-	COIL_PULSE_PAUSE;
+	// Final pause to mark the end of the frame
+	// tempo = AT91C_BASE_TC0->TC_CV + RWD_TIME_PAUSE;
+	// SHORT_COIL;
+	// while(AT91C_BASE_TC0->TC_CV < tempo);
+	// OPEN_COIL;
+	COIL_PULSE(0);
 	
-	stop_send_frame_us = GetCountUS();
+	stop_send_frame_us = AT91C_BASE_TC0->TC_CV;
 	uint8_t cmdbytes[] = {
 		data & 0xFF, 
 		(data >> 8) & 0xFF, 
@@ -278,7 +290,7 @@ static void frame_sendAsReader(uint32_t data, uint8_t bits){
  */
 static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits, uint8_t crypt) {
 
-	uint32_t starttime = GetCountUS();
+	uint32_t starttime = AT91C_BASE_TC0->TC_CV;
 	
 	frame_clean(f);
 	
@@ -305,15 +317,14 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits, ui
 	data = lsfr;
 	
 	//FIXED time between sending frame and now listening frame. 330us
-	uint32_t icetime = TAG_TIME_WAIT - ( GetCountUS() - stop_send_frame_us );
-	WAIT( icetime ); // 8-10us
+	uint32_t icetime = TAG_TIME_WAIT - ( AT91C_BASE_TC0->TC_CV  - stop_send_frame_us );
+	while ( AT91C_BASE_TC0->TC_CV != icetime );
 	 
-	next_bit_at = GetCountUS();
-	next_bit_at += TAG_BIT_PERIOD;
+	next_bit_at =  AT91C_BASE_TC0->TC_CV + TAG_BIT_PERIOD;
 	
 	for( i = 0; i < bits; i++) {
 		edges = 0;
-		while  ( GetCountUS() < next_bit_at) {
+		while  ( AT91C_BASE_TC0->TC_CV < next_bit_at) {
 
 			level = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
 			
@@ -325,7 +336,7 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits, ui
 		next_bit_at += TAG_BIT_PERIOD;
 		
 		// We expect 42 edges  == ONE
-		if(edges > 20 && edges < 60)
+		if(edges > 20 && edges < 60) 
 			data ^= the_bit;
 
 		the_bit <<= 1;
@@ -336,7 +347,7 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits, ui
 	f->bits = bits;
 		
 	// log
-	stop_send_frame_us = GetCountUS();
+	stop_send_frame_us = AT91C_BASE_TC0->TC_CV;
 	
 	uint8_t cmdbytes[] = { 
 		(data & 0xFF),
@@ -534,10 +545,17 @@ int LegicRfReader(int offset, int bytes, int iv) {
 	int byte_index = 0, cmd_sz = 0, card_sz = 0;	   							   
 
 	if ( MF_DBGLEVEL >= 2) { 
-		Dbprintf("setting up legic card,  IV = %x", iv);
-		
+		Dbprintf("setting up legic card,  IV = %x", iv);		
 		Dbprintf("ONE %d  ZERO %d  PAUSE %d", RWD_TIME_1 , RWD_TIME_0 , RWD_TIME_PAUSE);
 		Dbprintf("TAG BIT PERIOD %d  FUZZ %d  TAG WAIT TIME %d",  TAG_BIT_PERIOD, RWD_TIME_FUZZ, TAG_TIME_WAIT);
+
+		// StartCountUS();
+		// for ( uint8_t i =0; i<255; ++i){
+			// uint32_t t1 = GET_COUNT_US;
+			// WAIT(i)
+			// t1 = GET_COUNT_US - t1;
+			// Dbprintf("WAIT(%d) == %u | %u | diff %d", i, t1-i );
+		// }
 	}
 	
 	LegicCommonInit();
