@@ -415,22 +415,18 @@ int CmdLegicRFRead(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 		uint8_t isOK = resp.arg[0] & 0xFF;
 		uint16_t len = resp.arg[1] & 0x3FF;
 		if ( isOK ) {
-			PrintAndLog("OK : %d", isOK);
 			PrintAndLog("use 'hf legic decode' or");
 			PrintAndLog("'data hexsamples %d' to view results", len);	
+			
 		}
 	} else {
 		PrintAndLog("command execution time out");
 		return 1;
 	}
-
-	//uint8_t got[12000];
-	//GetFromBigBuf(got,sizeof(got),0);
-	//WaitForResponse(CMD_ACK,NULL);
 	return 0;
 }
 

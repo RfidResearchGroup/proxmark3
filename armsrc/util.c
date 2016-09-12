@@ -351,8 +351,7 @@ void StartCountUS() {
 uint32_t RAMFUNC GetCountUS(){
 	//return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV / 15) * 10);
 	//  By suggestion from PwPiwi, http://www.proxmark.org/forum/viewtopic.php?pid=17548#p17548
-	//return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV * 2) / 3); 
-	return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV << 1) / 3); 
+	return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV * 2) / 3); 
 }
 void ResetUSClock(void) {	
 	//enable clock of timer and software trigger
@@ -363,12 +362,9 @@ void ResetUSClock(void) {
 // attempt at high resolution microsecond timer
 // beware: timer counts in 21.3uS increments (1024/48Mhz)
 void SpinDelayCountUs(uint32_t us) {
-
-	us += GetCountUS();
-	us -= 6;
-	
-	for(;;)
-		if ( GetCountUS() >= us ) return;
+	if (us < 8) return;
+	us += GetCountUS();	
+	while ( GetCountUS() < us ){}
 }
 // static uint32_t GlobalUsCounter = 0;
 
