@@ -1639,11 +1639,11 @@ void RAMFUNC SnoopIso14443b(void) {
 				if (triggered)
 					LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, TRUE);
 
-                /* And ready to receive another command. */
-                UartReset();
-                /* And also reset the demod code, which might have been */
-                /* false-triggered by the commands from the reader. */
-                DemodReset();
+				/* And ready to receive another command. */
+				UartReset();
+				/* And also reset the demod code, which might have been */
+				/* false-triggered by the commands from the reader. */
+				DemodReset();
 			} else {
 				time_start = GetCountSspClk() - time_0;
 			}
