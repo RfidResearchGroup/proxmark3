@@ -47,7 +47,6 @@ COPY=cp
 PATHSEP=/
 FLASH_TOOL=client/flasher
 DETECTED_OS=$(UNAME)
-
 else
 
 # Assume that we are running on Windows.

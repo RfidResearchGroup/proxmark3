@@ -418,11 +418,14 @@ int CmdLegicRFRead(const char *Cmd) {
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 		uint8_t isOK = resp.arg[0] & 0xFF;
 		uint16_t len = resp.arg[1] & 0x3FF;
-		if ( isOK ) {
-			PrintAndLog("use 'hf legic decode' or");
-			PrintAndLog("'data hexsamples %d' to view results", len);	
-			
-		}
+		 if ( isOK ) {
+			PrintAndLog("use 'hf legic decode'");
+		 }
+			uint8_t *data = resp.d.asBytes;
+			PrintAndLog("\nData        |");
+			PrintAndLog("-----------------------------");
+			PrintAndLog(" %s|\n", sprint_hex(data, len));
+		// }
 	} else {
 		PrintAndLog("command execution time out");
 		return 1;
@@ -685,6 +688,37 @@ int CmdLegicRfFill(const char *Cmd) {
     return 0;
  }
 
+void static calc4(uint8_t *cmd, uint8_t len){
+	crc_t crc;
+ 	//crc_init_ref(&crc, 4, 0x19 >> 1, 0x5, 0, TRUE, TRUE);
+	crc_init(&crc, 4, 0x19 >> 1, 0x5, 0);
+
+	crc_clear(&crc);
+	crc_update(&crc, 1, 1); /* CMD_READ */
+	crc_update(&crc, cmd[0], 8);
+	crc_update(&crc, cmd[1], 8);
+	printf("crc4 %X\n", reflect(crc_finish(&crc), 4) ) ;
+
+	crc_clear(&crc);
+	crc_update(&crc, 1, 1); /* CMD_READ */
+	crc_update(&crc, cmd[0], 8);
+	crc_update(&crc, cmd[1], 8);
+	printf("crc4 %X\n",  crc_finish(&crc), 4 ) ;
+
+	printf("---- old ---\n");
+	crc_update2(&crc, 1, 1); /* CMD_READ */
+	crc_update2(&crc, cmd[0], 8);
+	crc_update2(&crc, cmd[1], 8);
+	printf("crc4 %X \n", reflect(crc_finish(&crc), 4) ) ;
+
+	
+	crc_clear(&crc);
+	crc_update2(&crc, 1, 1); /* CMD_READ */
+	crc_update2(&crc, cmd[0], 8);
+	crc_update2(&crc, cmd[1], 8);
+	printf("crc4 %X\n",  crc_finish(&crc), 4 ) ;
+}	
+ 
 int CmdLegicCalcCrc8(const char *Cmd){
 
 	uint8_t *data = NULL;
@@ -760,10 +794,13 @@ int CmdLegicCalcCrc8(const char *Cmd){
 	
 	switch (type){
 		case 16:
-			PrintAndLog("LEGIC CRC16: %X", CRC16Legic(data, len, uidcrc));
+			PrintAndLog("Legic crc16: %X", CRC16Legic(data, len, uidcrc));
+			break;
+		case 4:
+			calc4(data, 0);
 			break;
 		default:
-			PrintAndLog("LEGIC CRC8: %X",  CRC8Legic(data, len) );
+			PrintAndLog("Legic crc8: %X",  CRC8Legic(data, len) );
 			break;
 	}
 	
@@ -782,6 +819,7 @@ static command_t CommandTable[] =  {
 	{"writeraw",CmdLegicRfRawWrite,	0, "<address> <value> <iv> -- Write direct to address"},
 	{"fill",	CmdLegicRfFill, 0, "<offset> <length> <value> -- Fill/Write tag with constant value"},
 	{"crc8",	CmdLegicCalcCrc8, 1, "Calculate Legic CRC8 over given hexbytes"},
+	{"info",	CmdLegicCalcCrc8, 1, "Information"},
 	{NULL, NULL, 0, NULL}
 };
 

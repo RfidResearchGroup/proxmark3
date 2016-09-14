@@ -98,7 +98,7 @@ static void setup_timer(void) {
 # define OPEN_COIL	HIGH(GPIO_SSC_DOUT);
 #endif
 
-uint32_t stop_send_frame_us = 0;
+uint32_t sendFrameStop = 0;
 
 // Pause pulse,  off in 20us / 30ticks,
 // ONE / ZERO bit pulse,  
@@ -154,7 +154,7 @@ static void frame_clean(struct legic_frame * const f) {
 // and while sending/receiving in bit frames (100, 60)
 /*static void CalibratePrng( uint32_t time){
 	// Calculate Cycles based on timer 100us
-	uint32_t i =  (time - stop_send_frame_us) / 100 ;
+	uint32_t i =  (time - sendFrameStop) / 100 ;
 
 	// substract cycles of finished frames
 	int k =  i - legic_prng_count()+1; 
@@ -263,7 +263,7 @@ static void frame_sendAsReader(uint32_t data, uint8_t bits){
 	// Final pause to mark the end of the frame
 	COIL_PULSE(0);
 	
-	stop_send_frame_us = GET_TICKS;
+	sendFrameStop = GET_TICKS;
 	uint8_t cmdbytes[] = {
 		BYTEx(data, 0), 
 		BYTEx(data, 1),
@@ -271,7 +271,7 @@ static void frame_sendAsReader(uint32_t data, uint8_t bits){
 		prng1,
 		legic_prng_count()
 	};
-	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, stop_send_frame_us, NULL, TRUE);
+	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, sendFrameStop, NULL, TRUE);
 }
 
 /* Receive a frame from the card in reader emulation mode, the FPGA and
@@ -320,7 +320,8 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	data = lsfr;
 	
 	//FIXED time between sending frame and now listening frame. 330us
-	Wait( TAG_FRAME_WAIT );
+	Wait( TAG_FRAME_WAIT - ( GET_TICKS - sendFrameStop ) );
+	//Wait( TAG_FRAME_WAIT );
 
 	uint32_t starttime = GET_TICKS;
 	
@@ -340,10 +341,10 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 		next_bit_at += TAG_BIT_PERIOD;
 		
 		// We expect 42 edges  == ONE
-		if(edges > 20 && edges < 60) {
+		if(edges > 20 && edges < 64)
 			data ^= the_bit;
-		}		
-		the_bit <<= 1;
+
+		the_bit <<= 1;	
 	}
 
 	// output
@@ -351,7 +352,7 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	f->bits = bits;
 		
 	// log
-	stop_send_frame_us = GET_TICKS;
+	sendFrameStop = GET_TICKS;
 	
 	uint8_t cmdbytes[] = { 
 		BYTEx(data,0),
@@ -359,18 +360,20 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 		bits,
 		BYTEx(lsfr,0),
 		BYTEx(lsfr,1),
+		BYTEx(data, 0) ^ BYTEx(lsfr,0),
+		BYTEx(data, 1) ^ BYTEx(lsfr,1),
 		prng_before,
 		legic_prng_count()
 	};
-	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, stop_send_frame_us, NULL, FALSE);
+	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, sendFrameStop, NULL, FALSE);
 }
 
 // Setup pm3 as a Legic Reader
-static uint32_t perform_setup_phase_rwd(uint8_t iv) {
+static uint32_t setup_phase_reader(uint8_t iv) {
 
 	// Switch on carrier and let the tag charge for 1ms
 	HIGH(GPIO_SSC_DOUT);
-	SpinDelay(40);
+	SpinDelay(300);
 	
 	ResetUSClock();
 	
@@ -386,24 +389,23 @@ static uint32_t perform_setup_phase_rwd(uint8_t iv) {
 	frame_receiveAsReader(&current_frame, 6);
 
 	// fixed delay before sending ack.
-	Wait(TAG_FRAME_WAIT);
-	legic_prng_forward(4);
+	Wait(360);  // 240us = 360tick
+	legic_prng_forward(2);  //240us / 100 == 2.4 iterations
 	
 	// Send obsfuscated acknowledgment frame.
 	// 0x19 = 0x18 MIM22, 0x01 LSB READCMD 
 	// 0x39 = 0x38 MIM256, MIM1024 0x01 LSB READCMD 
 	switch ( current_frame.data  ) {
-		case 0x0D:
-			frame_sendAsReader(0x19, 6);
-			break;
-		case 0x1D:
-		case 0x3D:
-			frame_sendAsReader(0x39, 6);
-			break;
-		default:
-			break;
+		case 0x0D: frame_sendAsReader(0x19, 6); break;
+		case 0x1D: 
+		case 0x3D: frame_sendAsReader(0x39, 6); break;
+		default: break;
 	}
 	return current_frame.data;
+
+	// fixed delay after setup phase.
+	Wait(375); // 260us == 375 ticks
+	legic_prng_forward(2);// 260us / 100 == 2.6 iterations
 }
 
 static void LegicCommonInit(void) {	
@@ -439,19 +441,19 @@ static void switch_off_tag_rwd(void) {
 // 5,8,10 address size.
 static uint32_t legic4Crc(uint8_t legicCmd, uint16_t byte_index, uint8_t value, uint8_t cmd_sz) {
 	crc_clear(&legic_crc);	
-	uint32_t temp =  (value << cmd_sz) | (byte_index << 1) | legicCmd;
-	crc_update(&legic_crc, temp, cmd_sz + 8 );
+	//uint32_t temp =  (value << cmd_sz) | (byte_index << 1) | legicCmd;
+	//crc_update(&legic_crc, temp, cmd_sz + 8 );
+	crc_update(&legic_crc, 1, 1); /* CMD_READ */
+	crc_update(&legic_crc, byte_index, cmd_sz-1);
+	crc_update(&legic_crc, value, 8);
 	return crc_finish(&legic_crc);
 }
 
 int legic_read_byte(int byte_index, int cmd_sz) {
 
-	uint8_t byte = 0, crc = 0;
-	uint32_t calcCrc = 0;
+	uint8_t byte = 0, crc = 0, calcCrc = 0;
 	uint32_t cmd = (byte_index << 1) | LEGIC_READ;
 
-	Wait(TAG_FRAME_WAIT);
-	
 	frame_sendAsReader(cmd, cmd_sz);
 	frame_receiveAsReader(&current_frame, 12);
 
@@ -463,7 +465,10 @@ int legic_read_byte(int byte_index, int cmd_sz) {
 		Dbprintf("!!! crc mismatch: expected %x but got %x !!!",  calcCrc, crc);
 		return -1;
 	}
-	legic_prng_forward(4);
+
+	Wait(690);  // 460us == 690ticks
+	legic_prng_forward(4); // 460 / 100 = 4.6  iterations
+	
 	return byte;
 }
 
@@ -542,13 +547,14 @@ int LegicRfReader(int offset, int bytes, int iv) {
 	uint16_t byte_index = 0;
 	uint8_t cmd_sz = 0;
 	int card_sz = 0;	   							   
-
+	uint8_t isOK = 1;
+	
 	if ( MF_DBGLEVEL >= 2)
-		Dbprintf("setting up legic card,  IV = 0x%03.3x", iv);		
+		Dbprintf("setting up legic card,  IV = 0x%02x", iv);
 	
 	LegicCommonInit();
 
-	uint32_t tag_type = perform_setup_phase_rwd(iv);
+	uint32_t tag_type = setup_phase_reader(iv);
 
 	 //we lose to mutch time with dprintf
 	switch_off_tag_rwd();
@@ -571,7 +577,9 @@ int LegicRfReader(int offset, int bytes, int iv) {
 			break;
 		default:
 			if ( MF_DBGLEVEL >= 1) Dbprintf("Unknown card format: %x", tag_type);
-			return 1;
+			isOK = 0;
+			goto OUT;
+			break;
 	}
 	if (bytes == -1)
 		bytes = card_sz;
@@ -580,28 +588,27 @@ int LegicRfReader(int offset, int bytes, int iv) {
 		bytes = card_sz - offset;
 
 	// Start setup and read bytes.
-	perform_setup_phase_rwd(iv);
-
+	setup_phase_reader(iv);
+	
 	LED_B_ON();
 	while (byte_index < bytes) {
 		int r = legic_read_byte(byte_index + offset, cmd_sz);
 		
 		if (r == -1 || BUTTON_PRESS()) {			
-           	switch_off_tag_rwd();
-	        LEDsoff();
 	        if ( MF_DBGLEVEL >= 2) DbpString("operation aborted");
-			cmd_send(CMD_ACK,0,0,0,0,0);  
-			return 1;
+			isOK = 0;
+			goto OUT;
 		}
 		cardmem[++byte_index] = r;
-		//byte_index++;		
+		//byte_index++;
         WDT_HIT();
 	}
 
+OUT:	
 	switch_off_tag_rwd();
 	LEDsoff();
 	uint8_t len = (bytes & 0x3FF);
-	cmd_send(CMD_ACK,1,len,0,0,0);  
+	cmd_send(CMD_ACK,isOK,len,0,cardmem,len);
     return 0;
 }
 
@@ -609,7 +616,7 @@ int LegicRfReader(int offset, int bytes, int iv) {
 	int byte_index=0;
 
     LED_B_ON();
-	perform_setup_phase_rwd(iv);
+	setup_phase_reader(iv);
     //legic_prng_forward(2);
 	while(byte_index < bytes) {
 		int r;
@@ -654,7 +661,7 @@ void LegicRfWriter(int offset, int bytes, int iv) {
 	
 	if ( MF_DBGLEVEL >= 2) 	DbpString("setting up legic card");
 	
-	uint32_t tag_type = perform_setup_phase_rwd(iv);
+	uint32_t tag_type = setup_phase_reader(iv);
 	
 	switch_off_tag_rwd();
 	
@@ -689,7 +696,7 @@ void LegicRfWriter(int offset, int bytes, int iv) {
 	}
 
     LED_B_ON();
-	perform_setup_phase_rwd(iv);
+	setup_phase_reader(iv);
 	int r = 0;
 	while(byte_index < bytes) {
 
@@ -730,7 +737,7 @@ void LegicRfRawWriter(int address, int byte, int iv) {
 	
 	if ( MF_DBGLEVEL >= 2) DbpString("setting up legic card");
 	
-	uint32_t tag_type = perform_setup_phase_rwd(iv);
+	uint32_t tag_type = setup_phase_reader(iv);
 	
 	switch_off_tag_rwd();
 	
@@ -767,7 +774,7 @@ void LegicRfRawWriter(int address, int byte, int iv) {
 	Dbprintf("integer value: %d address: %d  addr_sz: %d", byte, address, addr_sz);
     LED_B_ON();
 	
-	perform_setup_phase_rwd(iv);
+	setup_phase_reader(iv);
     		
 	int r = legic_write_byte(byte, address, addr_sz);
 		
