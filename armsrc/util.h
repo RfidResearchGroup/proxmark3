@@ -18,6 +18,7 @@
 #include "apps.h"
 #include "BigBuf.h"
 #include "proxmark3.h"
+#include "ticks.h"
 
 #define BYTEx(x, n) (((x) >> (n * 8)) & 0xff )
 
@@ -51,25 +52,10 @@ void rol(uint8_t *data, const size_t len);
 void lsl (uint8_t *data, size_t len);
 int32_t le24toh (uint8_t data[3]);
 
-void SpinDelay(int ms);
-void SpinDelayUs(int us);
 void LED(int led, int ms);
 void LEDsoff();
 int BUTTON_CLICKED(int ms);
 int BUTTON_HELD(int ms);
 void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_information);
-
-void StartTickCount();
-uint32_t RAMFUNC GetTickCount();
-
-void StartCountUS();
-uint32_t RAMFUNC GetCountUS();
-void ResetUSClock(void);
-void SpinDelayCountUs(uint32_t us);
-//uint32_t RAMFUNC GetDeltaCountUS();
-
-void StartCountSspClk();
-void ResetSspClk(void);
-uint32_t RAMFUNC GetCountSspClk();
 
 #endif

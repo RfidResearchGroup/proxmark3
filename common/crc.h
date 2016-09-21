@@ -44,6 +44,7 @@ extern void crc_init(crc_t *crc, int order, uint32_t polynom, uint32_t initial_v
  * data_width lower-most bits are used).
  */
 extern void crc_update(crc_t *crc, uint32_t data, int data_width);
+extern void crc_update2(crc_t *crc, uint32_t data, int data_width);
 
 /* Clean the crc state, e.g. reset it to initial_value */
 extern void crc_clear(crc_t *crc);

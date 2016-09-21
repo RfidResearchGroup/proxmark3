@@ -43,6 +43,8 @@ void crc_update(crc_t *crc, uint32_t indata, int data_width){
 	crc->state ^= indata << (crc->order - data_width);
 	
 	for( uint8_t bit = data_width; bit > 0; --bit) {
+		
+		
 		 // Try to divide the current data bit.
 		if (crc->state & crc->topbit)
 			crc->state = (crc->state << 1) ^ crc->polynom;
@@ -50,6 +52,22 @@ void crc_update(crc_t *crc, uint32_t indata, int data_width){
 			crc->state = (crc->state << 1);
 	}
 }
+
+void crc_update2(crc_t *crc, uint32_t data, int data_width)
+{
+	if (crc->refin) data = reflect(data, data_width);
+	
+	int i;
+	for(i=0; i<data_width; i++) {
+		int oldstate = crc->state;
+		crc->state = crc->state >> 1;
+		if( (oldstate^data) & 1 ) {
+			crc->state ^= crc->polynom;
+		}
+		data >>= 1;
+	}
+}
+
 
 uint32_t crc_finish(crc_t *crc) {
 	uint32_t val = crc->state;
@@ -83,6 +101,14 @@ uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
 }
 
 // width=4  poly=0xC, reversed poly=0x7  init=0x5   refin=true  refout=true  xorout=0x0000  check=  name="CRC-4/LEGIC"
+uint32_t CRC4Legic(uint8_t *cmd, size_t size) {
+ 	crc_t crc;
+ 	crc_init_ref(&crc, 4, 0x19 >> 1, 0x5, 0, TRUE, TRUE);
+	crc_update2(&crc, 1, 1); /* CMD_READ */
+	crc_update2(&crc, cmd[0], 8);
+	crc_update2(&crc, cmd[1], 8);
+	return reflect(crc_finish(&crc), 4);	
+}
 // width=8  poly=0x63, reversed poly=0x8D  init=0x55  refin=true  refout=true  xorout=0x0000  check=0xC6  name="CRC-8/LEGIC"
 // the CRC needs to be reversed before returned.
 uint32_t CRC8Legic(uint8_t *buff, size_t size) {
