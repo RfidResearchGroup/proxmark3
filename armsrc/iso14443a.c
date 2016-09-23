@@ -2001,6 +2001,8 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 		LED_D_ON();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | fpga_minor_mode);
+
+	SpinDelay(20);
 	
 	// Start the timer
 	StartCountSspClk();
@@ -2009,7 +2011,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 	DemodReset();
 	UartReset();
 	NextTransferTime = 2 * DELAY_ARM2AIR_AS_READER;
-	iso14a_set_timeout(20*106); // 20ms default	
+	iso14a_set_timeout(10*106); // 20ms default	
 }
 
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {

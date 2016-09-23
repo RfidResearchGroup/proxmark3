@@ -211,5 +211,5 @@ void ResetTicks(){
 }
 void ResetTimer(AT91PS_TC timer){
 	timer->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-	while(timer->TC_CV > 1) ;
+	while(timer->TC_CV >= 1) ;
 }
