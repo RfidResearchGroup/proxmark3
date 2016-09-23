@@ -11,7 +11,7 @@ Feel free to donate. All support is welcome.
 ##Notice      
 There is so much in this fork,  with all fixes and additions its basically the most enhanced fork to this day for the Proxmark3 device. Which makes it so awesum to play with. Witt all coverity scan fixes this client is much more stable than PM3 Master.
 
-##Offical
+##Official
 The official Proxmark repository is found here: https://github.com/Proxmark/proxmark3
 
 ##Coverity Scan Config & Run
