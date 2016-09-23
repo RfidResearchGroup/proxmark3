@@ -48,7 +48,7 @@ void SpinDelay(int ms) {
 //	SpinDelay(1000);
 //	ti = GetTickCount() - ti;
 //	Dbprintf("timer(1s): %d t=%d", ti, GetTickCount());
-void StartTickCount() {
+void StartTickCount(void) {
 	// This timer is based on the slow clock. The slow clock frequency is between 22kHz and 40kHz.
 	// We can determine the actual slow clock frequency by looking at the Main Clock Frequency Register.
     uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & 0xffff;		// = 16 * main clock frequency (16MHz) / slow clock frequency
@@ -60,14 +60,14 @@ void StartTickCount() {
 /*
 * Get the current count.
 */
-uint32_t RAMFUNC GetTickCount(){
+uint32_t RAMFUNC GetTickCount(void){
 	return AT91C_BASE_RTTC->RTTC_RTVR;// was * 2;
 }
 
 //  -------------------------------------------------------------------------
 //  microseconds timer 
 //  -------------------------------------------------------------------------
-void StartCountUS() {
+void StartCountUS(void) {
 	AT91C_BASE_PMC->PMC_PCER |= (1 << 12) | (1 << 13) | (1 << 14);
 	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
 
@@ -87,25 +87,20 @@ void StartCountUS() {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TCB->TCB_BCR = 1;
 	
-	while (AT91C_BASE_TC1->TC_CV > 1);
+	while (AT91C_BASE_TC1->TC_CV >= 1);
 }
 
-uint32_t RAMFUNC GetCountUS(){
+uint32_t RAMFUNC GetCountUS(void){
 	//return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV / 15) * 10);
 	//  By suggestion from PwPiwi, http://www.proxmark.org/forum/viewtopic.php?pid=17548#p17548
 	return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV * 2) / 3); 
 }
-void ResetUSClock(void) {	
-	//enable clock of timer and software trigger
-	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-	while (AT91C_BASE_TC1->TC_CV > 1);
-}
+
 
 //  -------------------------------------------------------------------------
 //  Timer for iso14443 commands. Uses ssp_clk from FPGA 
 //  -------------------------------------------------------------------------
-void StartCountSspClk() {
+void StartCountSspClk(void) {
 	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);  // Enable Clock to all timers
 	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_TIOA1 		// XC0 Clock = TIOA1
 							| AT91C_TCB_TC1XC1S_NONE 		// XC1 Clock = none
@@ -160,17 +155,17 @@ void StartCountSspClk() {
 
 	// The high word of the counter (TC2) will not reset until the low word (TC0) overflows. 
 	// Therefore need to wait quite some time before we can use the counter.
-	while (AT91C_BASE_TC2->TC_CV > 1);
+	while (AT91C_BASE_TC2->TC_CV >= 1);
 }
 void ResetSspClk(void) {	
 	//enable clock of timer and software trigger
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	while (AT91C_BASE_TC2->TC_CV >= 1);	
 }
 
-uint32_t RAMFUNC GetCountSspClk(){
-
+uint32_t RAMFUNC GetCountSspClk(void) {
 	uint32_t tmp_count = (AT91C_BASE_TC2->TC_CV << 16) | AT91C_BASE_TC0->TC_CV;
 	if ((tmp_count & 0x0000ffff) == 0)  //small chance that we may have missed an increment in TC2
 		return (AT91C_BASE_TC2->TC_CV << 16);

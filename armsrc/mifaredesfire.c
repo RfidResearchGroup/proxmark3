@@ -19,17 +19,13 @@ static  uint8_t deselect_cmd[] = {0xc2,0xe0,0xb4};
 
 bool InitDesfireCard(){
 
+	iso14a_card_select_t card;
+	
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	set_tracing(TRUE);
 
-	byte_t cardbuf[USB_CMD_DATA_SIZE] = {0x00};
-	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
-	
-	int len = iso14443a_select_card(NULL,card,NULL,true,0);
-
-	if (!len) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR)
-			Dbprintf("Can't select card");
+	if (!iso14443a_select_card(NULL, &card, NULL, true, 0)) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) DbpString("Can't select card");
 		OnError(1);
 		return false;
 	}
@@ -92,9 +88,9 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain){
 void MifareDesfireGetInformation(){
 		
 	int len = 0;
+	iso14a_card_select_t card;
 	uint8_t resp[USB_CMD_DATA_SIZE] = {0x00};
 	uint8_t dataout[USB_CMD_DATA_SIZE] = {0x00};
-	byte_t cardbuf[USB_CMD_DATA_SIZE] = {0x00};
 	
 	/*
 		1 = PCB					1
@@ -110,17 +106,13 @@ void MifareDesfireGetInformation(){
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	// card select - information
-	iso14a_card_select_t *card = (iso14a_card_select_t*)cardbuf;
-	byte_t isOK = iso14443a_select_card(NULL, card, NULL, true, 0);
-	if ( isOK == 0) {
-		if (MF_DBGLEVEL >= MF_DBG_ERROR) {
-			Dbprintf("Can't select card");
-		}
+	if ( !iso14443a_select_card(NULL, &card, NULL, true, 0) ) {
+		if (MF_DBGLEVEL >= MF_DBG_ERROR) DbpString("Can't select card");
 		OnError(1);
 		return;
 	}
 
-	memcpy(dataout,card->uid,7);
+	memcpy(dataout, card.uid, 7);
 
 	LED_A_ON();
 	LED_B_OFF();
@@ -507,19 +499,17 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 	size_t len = 0;
 	size_t wrappedLen = 0;
 	uint8_t wCmd[USB_CMD_DATA_SIZE] = {0x00};
-	
 	uint8_t resp[MAX_FRAME_SIZE];
     uint8_t par[MAX_PARITY_SIZE];
 	
 	wrappedLen = CreateAPDU( cmd, cmd_len, wCmd);
 	
-	if (MF_DBGLEVEL >= 4) {
+	if (MF_DBGLEVEL >= 4)
 		print_result("WCMD <--: ", wCmd, wrappedLen);	
-	}
+
 	ReaderTransmit( wCmd, wrappedLen, NULL);
 
 	len = ReaderReceive(resp, par);
-	
 	if ( !len ) {
 		if (MF_DBGLEVEL >= 4) Dbprintf("fukked");
 		return FALSE; //DATA LINK ERROR
@@ -566,6 +556,7 @@ size_t CreateAPDU( uint8_t *datain, size_t len, uint8_t *dataout){
 void OnSuccess(){
 	pcb_blocknum = 0;
 	ReaderTransmit(deselect_cmd, 3 , NULL);
+	mifare_ultra_halt();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 	set_tracing(FALSE);	

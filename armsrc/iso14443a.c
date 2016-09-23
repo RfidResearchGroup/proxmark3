@@ -1835,10 +1835,10 @@ int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity) {
 // if anticollision is false, then the UID must be provided in uid_ptr[] 
 // and num_cascades must be set (1: 4 Byte UID, 2: 7 Byte UID, 3: 10 Byte UID)
 int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades) {
-	uint8_t wupa[]       = { 0x52 };  // 0x26 - REQA  0x52 - WAKE-UP
-	uint8_t sel_all[]    = { 0x93,0x20 };
-	uint8_t sel_uid[]    = { 0x93,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-	uint8_t rats[]       = { 0xE0,0x80,0x00,0x00 }; // FSD=256, FSDI=8, CID=0
+	uint8_t wupa[]       = { ISO14443A_CMD_WUPA };  // 0x26 - ISO14443A_CMD_REQA  0x52 - ISO14443A_CMD_WUPA
+	uint8_t sel_all[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT,0x20 };
+	uint8_t sel_uid[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	uint8_t rats[]       = { ISO14443A_CMD_RATS,0x80,0x00,0x00 }; // FSD=256, FSDI=8, CID=0
 	uint8_t resp[MAX_FRAME_SIZE] = {0}; // theoretically. A usual RATS will be much smaller
 	uint8_t resp_par[MAX_PARITY_SIZE] = {0};
 	byte_t uid_resp[4] = {0};
@@ -2009,7 +2009,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 	DemodReset();
 	UartReset();
 	NextTransferTime = 2 * DELAY_ARM2AIR_AS_READER;
-	iso14a_set_timeout(10*106); // 10ms default	
+	iso14a_set_timeout(20*106); // 20ms default	
 }
 
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
@@ -2045,7 +2045,6 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
 
 //-----------------------------------------------------------------------------
 // Read an ISO 14443a tag. Send out commands and store answers.
-//
 //-----------------------------------------------------------------------------
 void ReaderIso14443a(UsbCommand *c) {
 	iso14a_command_t param = c->arg[0];

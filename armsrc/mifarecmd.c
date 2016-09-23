@@ -379,7 +379,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 	LED_C_OFF();
 
 	while (true) {
-			if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
+		if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
 			if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
 			break;
 		};
@@ -403,14 +403,11 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 		break;
 	}
 	
-	//  ----------------------------- crypto1 destroy
 	crypto1_destroy(pcs);
 	
 	if (MF_DBGLEVEL >= 2)	DbpString("WRITE BLOCK FINISHED");
 
-	LED_B_ON();
 	cmd_send(CMD_ACK,isOK,0,0,0,0);
-	LED_B_OFF();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();

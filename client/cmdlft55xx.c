@@ -547,6 +547,11 @@ bool tryDetectModulation(){
 		clk = GetAskClock("", FALSE, FALSE);
 		if (clk>0) {
 			tests[hits].ST = TRUE;
+			// "0 0 1 " == clock auto, invert false, maxError 1.
+			// false = no verbose
+			// false = no emSearch
+			// 1 = Ask/Man
+			// st = true
 			if ( ASKDemod_ext("0 0 1", FALSE, FALSE, 1, &tests[hits].ST) && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
 				tests[hits].modulation = DEMOD_ASK;
 				tests[hits].bitrate = bitRate;
@@ -555,6 +560,11 @@ bool tryDetectModulation(){
 				++hits;
 			}
 			tests[hits].ST = TRUE;
+			// "0 0 1 " == clock auto, invert true, maxError 1.
+			// false = no verbose
+			// false = no emSearch
+			// 1 = Ask/Man
+			// st = true
 			if ( ASKDemod_ext("0 1 1", FALSE, FALSE, 1, &tests[hits].ST)  && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
 				tests[hits].modulation = DEMOD_ASK;
 				tests[hits].bitrate = bitRate;
@@ -1249,8 +1259,11 @@ int CmdT55xxDump(const char *Cmd){
 
 int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
 	// arg0 bitmodes:
-	// bit0 = pwdmode
-	// bit1 = page to read from
+	// 	bit0 = pwdmode
+	// 	bit1 = page to read from
+	// arg1: which block to read
+	// arg2: password
+	
 	uint8_t arg0 = (page<<1) | pwdmode;
 	UsbCommand c = {CMD_T55XX_READ_BLOCK, {arg0, block, password}};
 	
@@ -1583,8 +1596,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
     return 0;
 }
 
-int tryOnePassword(uint32_t password)
-{
+int tryOnePassword(uint32_t password) {
 	PrintAndLog("Trying password %08x", password);
 	if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, password)) {
 		PrintAndLog("Aquireing data from device failed. Quitting");
