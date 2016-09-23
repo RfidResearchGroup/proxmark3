@@ -48,7 +48,6 @@ void SpinDelay(int ms) {
 //	SpinDelay(1000);
 //	ti = GetTickCount() - ti;
 //	Dbprintf("timer(1s): %d t=%d", ti, GetTickCount());
-
 void StartTickCount() {
 	// This timer is based on the slow clock. The slow clock frequency is between 22kHz and 40kHz.
 	// We can determine the actual slow clock frequency by looking at the Main Clock Frequency Register.
@@ -88,7 +87,7 @@ void StartCountUS() {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TCB->TCB_BCR = 1;
 	
-	while (AT91C_BASE_TC1->TC_CV >= 1);
+	while (AT91C_BASE_TC1->TC_CV > 1);
 }
 
 uint32_t RAMFUNC GetCountUS(){
@@ -100,22 +99,9 @@ void ResetUSClock(void) {
 	//enable clock of timer and software trigger
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-	while (AT91C_BASE_TC1->TC_CV >= 1);
+	while (AT91C_BASE_TC1->TC_CV > 1);
 }
-// attempt at high resolution microsecond timer
-// beware: timer counts in 21.3uS increments (1024/48Mhz)
-void SpinDelayCountUs(uint32_t us) {
-	if (us < 8) return;
-	us += GetCountUS();	
-	while ( GetCountUS() < us ){}
-}
-// static uint32_t GlobalUsCounter = 0;
-// uint32_t RAMFUNC GetDeltaCountUS(){
-	// uint32_t g_cnt = GetCountUS();
-	// uint32_t g_res = g_cnt - GlobalUsCounter;
-	// GlobalUsCounter = g_cnt;
-	// return g_res;
-// }
+
 //  -------------------------------------------------------------------------
 //  Timer for iso14443 commands. Uses ssp_clk from FPGA 
 //  -------------------------------------------------------------------------
@@ -174,7 +160,7 @@ void StartCountSspClk() {
 
 	// The high word of the counter (TC2) will not reset until the low word (TC0) overflows. 
 	// Therefore need to wait quite some time before we can use the counter.
-	while (AT91C_BASE_TC2->TC_CV >= 1);
+	while (AT91C_BASE_TC2->TC_CV > 1);
 }
 void ResetSspClk(void) {	
 	//enable clock of timer and software trigger
@@ -192,17 +178,16 @@ uint32_t RAMFUNC GetCountSspClk(){
 }
 
 
+//  -------------------------------------------------------------------------
+//  Timer for bitbanging,  or LF stuff when you need a very precis timer
+//  1us = 1.5ticks
+//  -------------------------------------------------------------------------
 void StartTicks(void){
 	//initialization of the timer
 	AT91C_BASE_PMC->PMC_PCER |= (1 << 12) | (1 << 13) | (1 << 14);
 	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
-
-	// fast clock TC0
-	// tick=1.5mks
-	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS; // timer disable
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;  //clock at 48/32 MHz
-	
-	// Enable and reset timer
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TCB->TCB_BCR = 1;
 	// wait until timer becomes zero.

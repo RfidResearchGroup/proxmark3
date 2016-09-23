@@ -60,19 +60,19 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t periods, uint3
 	while(*command != '\0' && *command != ' ') {
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LED_D_OFF();
-		SpinDelayUs(delay_off);
+		WaitUS(delay_off);
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc.divisor);
 
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 		LED_D_ON();
 		if(*(command++) == '0')
-			SpinDelayUs(period_0);	// ICEMAN:  problem with (us) clock is  21.3us increments
+			WaitUS(period_0);
 		else
-			SpinDelayUs(period_1);	// ICEMAN:  problem with (us) clock is  21.3us increments
+			WaitUS(period_1);
 	}
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LED_D_OFF();
-	SpinDelayUs(delay_off);	// ICEMAN:  problem with (us) clock is  21.3us increments
+	WaitUS(delay_off);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc.divisor);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
@@ -225,20 +225,20 @@ void WriteTIbyte(uint8_t b)
 	// modulate 8 bits out to the antenna
 	for (i=0; i<8; i++)
 	{
-		if (b&(1<<i)) {
-			// stop modulating antenna
+		if ( b & ( 1 << i ) ) {
+			// stop modulating antenna 1ms
 			LOW(GPIO_SSC_DOUT);
-			SpinDelayUs(1000);	// ICEMAN:  problem with (us) clock is  21.3us increments
-			// modulate antenna
-			HIGH(GPIO_SSC_DOUT);
-			SpinDelayUs(1000);	// ICEMAN:  problem with (us) clock is  21.3us increments
+			WaitUS(1000);
+			// modulate antenna 1ms
+			HIGH(GPIO_SSC_DOUT); 
+			WaitUS(1000);
 		} else {
-			// stop modulating antenna
+			// stop modulating antenna 1ms
 			LOW(GPIO_SSC_DOUT);
-			SpinDelayUs(300);	// ICEMAN:  problem with (us) clock is  21.3us increments
-			// modulate antenna
+			WaitUS(300);
+			// modulate antenna 1m
 			HIGH(GPIO_SSC_DOUT);
-			SpinDelayUs(1700);	// ICEMAN:  problem with (us) clock is  21.3us increments
+			WaitUS(1700);
 		}
 	}
 }
@@ -437,7 +437,7 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 			if (gap) {
 				WDT_HIT();
 				SHORT_COIL();
-				SpinDelayUs(gap);	// ICEMAN:  problem with (us) clock is  21.3us increments
+				WaitUS(gap);
 			}
 		}
 	}
@@ -1138,13 +1138,12 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
 void TurnReadLFOn(int delay) {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-	// Give it a bit of time for the resonant antenna to settle.
 
 	// measure antenna strength.
 	//int adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
-	// where to save it
-	
-	SpinDelayCountUs(delay);	// ICEMAN:  problem with (us) clock is  21.3us increments
+
+	// Give it a bit of time for the resonant antenna to settle.
+	WaitUS(delay);
 }
 
 // Write one bit to card
@@ -1154,7 +1153,7 @@ void T55xxWriteBit(int bit) {
 	else
 		TurnReadLFOn(WRITE_1);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelayCountUs(WRITE_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
+	WaitUS(WRITE_GAP);
 }
 
 // Send T5577 reset command then read stream (see if we can identify the start of the stream)
@@ -1168,7 +1167,7 @@ void T55xxResetRead(void) {
 
 	// Trigger T55x7 in mode.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelayCountUs(START_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
+	WaitUS(START_GAP);
 
 	// reset tag - op code 00
 	T55xxWriteBit(0);
@@ -1198,7 +1197,7 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 	
 	// Trigger T55x7 in mode.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelayCountUs(START_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
+	WaitUS(START_GAP);
 
 	// Opcode 10
 	T55xxWriteBit(1);
@@ -1258,7 +1257,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	
 	// Trigger T55x7 Direct Access Mode with start gap
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelayCountUs(START_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
+	WaitUS(START_GAP);
 	
 	// Opcode 1[page]
 	T55xxWriteBit(1);
@@ -1298,7 +1297,7 @@ void T55xxWakeUp(uint32_t Pwd){
 	
 	// Trigger T55x7 Direct Access Mode
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	SpinDelayCountUs(START_GAP);	// ICEMAN:  problem with (us) clock is  21.3us increments
+	WaitUS(START_GAP);
 	
 	// Opcode 10
 	T55xxWriteBit(1);
@@ -1629,20 +1628,20 @@ void SendForward(uint8_t fwd_bit_count) {
 	fwd_bit_sz--; //prepare next bit modulation
 	fwd_write_ptr++;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-	SpinDelayUs(55*8); //55 cycles off (8us each)for 4305	// ICEMAN:  problem with (us) clock is  21.3us increments
+	WaitUS(55*8); //55 cycles off (8us each)for 4305	// ICEMAN:  problem with (us) clock is  21.3us increments
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);//field on
-	SpinDelayUs(16*8); //16 cycles on (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
+	WaitUS(16*8); //16 cycles on (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
 
 	// now start writting
 	while(fwd_bit_sz-- > 0) { //prepare next bit modulation
 		if(((*fwd_write_ptr++) & 1) == 1)
-			SpinDelayUs(32*8); //32 cycles at 125Khz (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
+			WaitUS(32*8); //32 cycles at 125Khz (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
 		else {
 			//These timings work for 4469/4269/4305 (with the 55*8 above)
 			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-			SpinDelayUs(23*8); //16-4 cycles off (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
+			WaitUS(23*8); //16-4 cycles off (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
 			FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);//field on
-			SpinDelayUs(9*8); //16 cycles on (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
+			WaitUS(9*8); //16 cycles on (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
 		}
 	}
 }

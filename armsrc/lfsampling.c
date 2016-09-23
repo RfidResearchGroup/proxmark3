@@ -6,17 +6,11 @@
 // Miscellaneous routines for low frequency sampling.
 //-----------------------------------------------------------------------------
 
-#include "proxmark3.h"
-#include "apps.h"
-#include "util.h"
-#include "string.h"
-#include "usb_cdc.h" // for usb_poll_validate_length
 #include "lfsampling.h"
 
 sample_config config = { 1, 8, 1, 95, 0 } ;
 
-void printConfig()
-{
+void printConfig() {
 	Dbprintf("LF Sampling config: ");
 	Dbprintf("  [q] divisor:           %d ", config.divisor);
 	Dbprintf("  [b] bps:               %d ", config.bits_per_sample);
@@ -37,8 +31,7 @@ void printConfig()
  * @brief setSamplingConfig
  * @param sc
  */
-void setSamplingConfig(sample_config *sc)
-{
+void setSamplingConfig(sample_config *sc) {
 	if(sc->divisor != 0) config.divisor = sc->divisor;
 	if(sc->bits_per_sample != 0) config.bits_per_sample = sc->bits_per_sample;
 	if(sc->decimation != 0) config.decimation = sc->decimation;
@@ -51,8 +44,7 @@ void setSamplingConfig(sample_config *sc)
 	printConfig();
 }
 
-sample_config* getSamplingConfig()
-{
+sample_config* getSamplingConfig() {
 	return &config;
 }
 
@@ -67,8 +59,7 @@ typedef struct {
  * @param stream
  * @param bit
  */
-void pushBit( BitstreamOut* stream, uint8_t bit)
-{
+void pushBit( BitstreamOut* stream, uint8_t bit) {
 	int bytepos = stream->position >> 3; // divide by 8
 	int bitpos = stream->position & 7;
 	*(stream->buffer+bytepos) |= (bit > 0) <<  (7 - bitpos);
@@ -83,8 +74,7 @@ void pushBit( BitstreamOut* stream, uint8_t bit)
 * 				   0 or 95 ==> 125 KHz
 *
 **/
-void LFSetupFPGAForADC(int divisor, bool lf_field)
-{
+void LFSetupFPGAForADC(int divisor, bool lf_field) {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	if ( (divisor == 1) || (divisor < 0) || (divisor > 255) )
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
@@ -101,6 +91,9 @@ void LFSetupFPGAForADC(int divisor, bool lf_field)
 	SpinDelay(50);
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
 	FpgaSetupSsc();
+	
+	// start a 1.5ticks is 1us
+	StartTicks();
 }
 
 /**
@@ -118,8 +111,7 @@ void LFSetupFPGAForADC(int divisor, bool lf_field)
  * @param silent - is true, now outputs are made. If false, dbprints the status
  * @return the number of bits occupied by the samples.
  */
-uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold,bool silent)
-{
+uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold,bool silent) {
 	//bigbuf, to hold the aquired raw data signal
 	uint8_t *dest = BigBuf_get_addr();
     uint16_t bufsize = BigBuf_max_traceLen();
@@ -210,12 +202,10 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
  * @param silent
  * @return number of bits sampled
  */
-uint32_t DoAcquisition_default(int trigger_threshold, bool silent)
-{
+uint32_t DoAcquisition_default(int trigger_threshold, bool silent) {
 	return DoAcquisition(1,8,0,trigger_threshold,silent);
 }
-uint32_t DoAcquisition_config( bool silent)
-{
+uint32_t DoAcquisition_config( bool silent) {
 	return DoAcquisition(config.decimation
 				  ,config.bits_per_sample
 				  ,config.averaging
@@ -223,11 +213,10 @@ uint32_t DoAcquisition_config( bool silent)
 				  ,silent);
 }
 
-uint32_t ReadLF(bool activeField, bool silent)
-{
-	if (!silent) printConfig();
+uint32_t ReadLF(bool activeField, bool silent) {
+	if (!silent)
+		printConfig();
 	LFSetupFPGAForADC(config.divisor, activeField);
-	// Now call the acquisition routine
 	return DoAcquisition_config(silent);
 }
 
@@ -235,8 +224,7 @@ uint32_t ReadLF(bool activeField, bool silent)
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SampleLF(bool printCfg)
-{
+uint32_t SampleLF(bool printCfg) {
 	return ReadLF(true, printCfg);
 }
 /**
@@ -253,23 +241,22 @@ uint32_t SnoopLF() {
 **/
 void doT55x7Acquisition(size_t sample_size) {
 
-	#define T55xx_READ_UPPER_THRESHOLD 128+60  // 60 grph
-	#define T55xx_READ_LOWER_THRESHOLD 128-60  // -60 grph
-	#define T55xx_READ_TOL   5
-
+	#define T55xx_READ_UPPER_THRESHOLD 128+40  // 60 grph
+	#define T55xx_READ_LOWER_THRESHOLD 128-40  // -60 grph
+	#define T55xx_READ_TOL   2
+	
 	uint8_t *dest = BigBuf_get_addr();
 	uint16_t bufsize = BigBuf_max_traceLen();
 	
 	if ( bufsize > sample_size )
 		bufsize = sample_size;
 
-	uint16_t i = 0;
+	uint8_t curSample = 0, lastSample = 0;
+	uint16_t i = 0, skipCnt = 0;
 	bool startFound = false;
 	bool highFound = false;
 	bool lowFound = false;
-	uint8_t curSample = 0;
-	uint8_t lastSample = 0;
-	uint16_t skipCnt = 0;
+		
 	while(!BUTTON_PRESS() && !usb_poll_validate_length() && skipCnt < 1000 && (i < bufsize) ) {
 		WDT_HIT();		
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
@@ -301,7 +288,7 @@ void doT55x7Acquisition(size_t sample_size) {
 
 
 			// skip until first high samples begin to change
-			if (startFound || curSample > T55xx_READ_LOWER_THRESHOLD+T55xx_READ_TOL){
+			if (startFound || curSample > T55xx_READ_LOWER_THRESHOLD + T55xx_READ_TOL){
 				// if just found start - recover last sample
 				if (!startFound) {
 					dest[i++] = lastSample;
