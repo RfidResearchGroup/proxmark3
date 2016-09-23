@@ -7,9 +7,11 @@
 //-----------------------------------------------------------------------------
 
 #include "legic_prng.h"
-// a is 7bit
-// b is 
-// c is a counter
+// the prng is a muxed value from two lsfr a, b
+// a is 7bit lsfr
+// b is 8bit lsfr
+// c keeps track on which step the prng is.
+// legic_prng_get_bit() = gets a bit muxed from a and b. 
 struct lfsr {
 	uint8_t  a;
 	uint8_t  b;
