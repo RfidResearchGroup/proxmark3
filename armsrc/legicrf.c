@@ -89,11 +89,9 @@ static void setup_timer(void) {
 #define FUZZ_EQUAL(value, target, fuzz) ((value) > ((target)-(fuzz)) && (value) < ((target)+(fuzz)))
 
 #ifndef SHORT_COIL
-//#define LOW(x)	 AT91C_BASE_PIOA->PIO_CODR = (x)
 # define SHORT_COIL	LOW(GPIO_SSC_DOUT);
 #endif
 #ifndef OPEN_COIL
-//#define HIGH(x)	 AT91C_BASE_PIOA->PIO_SODR = (x)
 # define OPEN_COIL	HIGH(GPIO_SSC_DOUT);
 #endif
 
@@ -104,12 +102,13 @@ uint32_t sendFrameStop = 0;
 //    one == 80us / 120ticks
 //    zero == 40us / 60ticks
 #ifndef COIL_PULSE
-# define COIL_PULSE(x)  { \
+# define COIL_PULSE(x) \
+	do { \
 		SHORT_COIL; \
-		WaitTicks(RWD_TIME_PAUSE); \
+		WaitTicks( (RWD_TIME_PAUSE) ); \
 		OPEN_COIL; \
 		WaitTicks((x)); \
-	}
+	} while (0) 
 #endif
 
 // ToDo: define a meaningful maximum size for auth_table. The bigger this is, the lower will be the available memory for traces. 
@@ -282,8 +281,9 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	uint8_t i = bits, edges = 0;	
 	uint16_t lsfr = 0;
 	uint32_t the_bit = 1, next_bit_at = 0, data;
+	
 	int old_level = 0, level = 0;
-
+	
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
 	
@@ -298,15 +298,15 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	data = lsfr;
 	
 	//FIXED time between sending frame and now listening frame. 330us
-	//WaitTicks( GET_TICKS - sendFrameStop - TAG_FRAME_WAIT);
-	WaitTicks( 490 );
+	//WaitTicks( TAG_FRAME_WAIT - (GET_TICKS - sendFrameStop ) );
+	WaitTicks( 495 );
 
 	uint32_t starttime = GET_TICKS;
-	
 	next_bit_at =  GET_TICKS + TAG_BIT_PERIOD;
-	
+
 	while ( i-- ){
 		edges = 0;
+		uint8_t adjust = 0;
 		while  ( GET_TICKS < next_bit_at) {
 
 			level = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
@@ -315,11 +315,17 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 				++edges;
 			
 			old_level = level;
-		}
+			
+			if(edges > 20 && adjust == 0) {
+				next_bit_at -= 15;
+				adjust = 1;
+			}
+		}		
+
 		next_bit_at += TAG_BIT_PERIOD;
 		
 		// We expect 42 edges  == ONE
-		if(edges > 30 && edges < 64)
+		if(edges > 20 && edges < 64)
 			data ^= the_bit;
 
 		the_bit <<= 1;	
@@ -351,7 +357,7 @@ static uint32_t setup_phase_reader(uint8_t iv) {
 	
 	// Switch on carrier and let the tag charge for 1ms
 	HIGH(GPIO_SSC_DOUT);
-	WaitUS(300);	
+	WaitUS(1000);	
 	
 	ResetTicks();
 	
@@ -367,8 +373,8 @@ static uint32_t setup_phase_reader(uint8_t iv) {
 	frame_receiveAsReader(&current_frame, 6);
 
 	// fixed delay before sending ack.
-	WaitTicks(387);  // 244us
-	legic_prng_forward(3);  //240us / 100 == 2.4 iterations
+	WaitTicks(366);  // 244us
+	legic_prng_forward(1);  //240us / 100 == 2.4 iterations
 	
 	// Send obsfuscated acknowledgment frame.
 	// 0x19 = 0x18 MIM22, 0x01 LSB READCMD 
@@ -432,8 +438,8 @@ int legic_read_byte(int byte_index, int cmd_sz) {
 	// 460 | 690
 	// 258 | 387
 	// 244 | 366
-	WaitTicks(332); 
-	legic_prng_forward(2); // 460 / 100 = 4.6  iterations
+	WaitTicks(366); 
+	legic_prng_forward(3); // 460 / 100 = 4.6  iterations
 
 	uint8_t byte = 0, crc = 0, calcCrc = 0;
 	uint32_t cmd = (byte_index << 1) | LEGIC_READ;
