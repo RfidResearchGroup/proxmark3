@@ -120,8 +120,8 @@ static int l_unpack(lua_State *L) 		/** unpack(f,s, [init]) */
  lua_pushnil(L);
  while (*f && done == 0)
  {
-  int c=*f++;
-  int N=1;
+  int c = *f++;
+  int N = 1;
   if (isdigit((int) (unsigned char) *f))
   {
    N=0;
@@ -233,15 +233,15 @@ static int l_unpack(lua_State *L) 		/** unpack(f,s, [init]) */
 
 static int l_pack(lua_State *L) 		/** pack(f,...) */
 {
- int i=2;
- const char *f=luaL_checkstring(L,1);
- int swap=0;
+ int i = 2;
+ const char *f = luaL_checkstring(L,1);
+ int swap = 0;
  luaL_Buffer b;
  luaL_buffinit(L,&b);
  while (*f)
  {
-  int c=*f++;
-  int N=1;
+  int c = *f++;
+  int N = 1;
   if (isdigit((int) (unsigned char) *f))
   {
    N=0;
