@@ -109,7 +109,7 @@ I do tend to rename and move stuff around, the official PM3-GUI from Gaucho will
 
 ##Development
 This fork now compiles just fine on 
-   - Windows/mingw environment with Qt5.3.1 & GCC 4.8
+   - Windows/mingw environment with Qt5.6.1 & GCC 4.8
    - Ubuntuu 1404, 1510
    - Mac OS X  (or before the hardnested BF solver at least)
 
@@ -183,6 +183,78 @@ Follow those instructions to get it up and running.  No need for the old proxspa
 Recommendations:
 Use only container tag [1.6.4]
 
+
+## Building on Windows
+### 1. QT Open Source
+Download QT 5.6.1: http://download.qt.io/archive/qt/5.6/5.6.1-1/qt-opensource-windows-x86-mingw492-5.6.1-1.exe		
+Install to `C:\Qt` and choose the following components to be installed:		
+- QT - MinGW 32 bit
+- Tools - MinGW
+
+In your shell from MSYS (see below), make sure you set QTDIR to your QT installation and add its bin to your path as well:		
+`export QTDIR=/c/Qt/5.6/mingw49_32`		
+`export PATH=$PATH:$QTDIR/bin`
+
+### 2. MSYS
+MSYS is a collection of GNU utilities such as bash, make, gawk and grep to allow building of applications and programs which depend on traditionally UNIX tools to be present. It is intended to supplement MinGW and the deficiencies of the cmd shell.
+
+Download MSYS: http://downloads.sourceforge.net/mingw/MSYS-1.0.11.exe
+
+Follow the installation procedure, you may want to install MSYS to `C:\Qt\msys` and when asked where is your MinGW installation and for its path answer the following: `c:/Qt/Tools/mingw492_32`
+
+### 3. Readline
+Download and unpack: https://sourceforge.net/projects/gnuwin32/files/readline/5.0-1/readline-5.0-1-bin.zip/download		
+
+`bin/*` to `C:\Qt\5.6\Tools\mingw49_32\bin`		
+`include/*` to `C:\Qt\5.6\Tools\mingw49_32\include`		
+`lib/*` to `C:\Qt\5.6\Tools\mingw49_32\lib`
+
+### 4. LibUSB
+Download and unpack: https://sourceforge.net/projects/libusb-win32/files/latest/download?source=files
+
+`include/lusb0_usb.h` to `C:\Qt\5.6\Tools\mingw49_32\include`		
+`lib/gcc/libusb.a` to `C:\Qt\5.6\Tools\mingw49_32\lib`
+
+### 5. DevkitPro
+Download and install: https://sourceforge.net/projects/devkitpro/files/latest/download?source=files
+
+You only need devkitARM, nothing more (no extra lib or anything else) to compile the firmware (ARM) side. Assuming you installed it to `C:\devkitpro`, make sure you set the `DEVKITARM` environment variable to `/c/devkitPro/devkitARM` and add its bin to your PATH:		
+`export DEVKITARM=/c/devkitPro/devkitARM`		
+`export PATH=$PATH:$DEVKITARM/bin`
+
+### 6. Build and run
+Download and install Git for Windows: https://git-scm.com/download/win
+
+- Run minimal system: `C:\Qt\msys\msys.bat`
+
+- Set the environment:		
+`export DEVKITARM=/c/devkitPro/devkitARM`		
+`export PATH=$PATH:$DEVKITARM/bin`		
+`export QTDIR=/c/Qt/5.6/mingw49_32`		
+`export PATH=$PATH:$QTDIR/bin`
+
+- Clone iceman fork		
+`git clone https://github.com/iceman1001/proxmark3.git`
+
+- Get the latest commits	
+`git pull`
+
+- CLEAN COMPILE		
+`make clean && make all`
+
+Assuming you have Proxmark3 Windows drivers installed you can run the Proxmark software where "X" is the com port number assigned to proxmark3 under Windows. 
+	
+- Flash the BOOTROM		
+`client/flasher.exe comX -b bootrom/obj/bootrom.elf`
+
+- Flash the FULLIMAGE	
+`client/flasher.exe comX armsrc/obj/fullimage.elf`
+	
+- Change into the client folder		
+`cd client`
+	
+- Run the client	
+`proxmark3.exe comX`
 
 ##Buying a proxmark3
 The Proxmark 3 device is available for purchase (assembled and tested) from the following locations:
