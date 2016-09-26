@@ -843,11 +843,11 @@ int HFLegicInfo(const char *Cmd, bool verbose) {
 				}
 			}		
 		} else {
-			PrintAndLog("legic card select failed");
+			if ( verbose ) PrintAndLog("legic card select failed");
 			return 1;
 		}
 	} else {
-		PrintAndLog("command execution time out");
+		if ( verbose ) PrintAndLog("command execution time out");
 		return 1;
 	}
 	return 0;
