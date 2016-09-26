@@ -16,14 +16,14 @@ my $githistory = `git fetch --all`;
 my $gitversion = `git describe --dirty`;
 my $gitbranch = `git rev-parse --abbrev-ref HEAD`;
 my $clean = 2;
-my @compiletime = gmtime();
+my @compiletime = localtime();
 
 my $fullgitinfo = 'iceman';
 
 if ( defined $gitbranch and defined $gitversion ) {
-	$fullgitinfo =  '/'. $gitbranch . '/' . $gitversion;
+	$fullgitinfo =  $fullgitinfo.'/'. $gitbranch . '/' . $gitversion;
 } else {
-	$fullgitinfo =  '/master/release-build (no_git)';
+	$fullgitinfo =  $fullgitinfo.'/master/release-build (no_git)';
 }
 
 $fullgitinfo =~ s/(\s)//g;
