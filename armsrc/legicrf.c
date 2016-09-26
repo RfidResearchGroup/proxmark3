@@ -116,7 +116,7 @@ uint32_t sendFrameStop = 0;
 #define LEGIC_CARD_MEMSIZE 1024
 static uint8_t* cardmem;
 
-static void frame_append_bit(struct legic_frame * const f, int bit) {
+static void frame_append_bit(struct legic_frame * const f, uint8_t bit) {
 	// Overflow, won't happen
    if (f->bits >= 31) return;
   
@@ -225,7 +225,7 @@ void frame_sendAsReader(uint32_t data, uint8_t bits){
 
 	uint32_t starttime = GET_TICKS, send = 0;
 	uint16_t mask = 1;
-	uint8_t prng1 = legic_prng_count() ;
+	uint8_t prngstart = legic_prng_count() ;
 	
 	// xor lsfr onto data.
 	send = data ^ legic_prng_get_bits(bits);
@@ -243,10 +243,12 @@ void frame_sendAsReader(uint32_t data, uint8_t bits){
 	
 	sendFrameStop = GET_TICKS;
 	uint8_t cmdbytes[] = {
+		bits,
 		BYTEx(data, 0), 
 		BYTEx(data, 1),
-		bits,
-		prng1,
+		0x00, 
+		0x00,
+		prngstart,
 		legic_prng_count()
 	};
 	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, sendFrameStop, NULL, TRUE);
@@ -287,21 +289,29 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
 	
-	// calibrate the prng.	
+	// calibrate the prng.
+	// 
 	legic_prng_forward(2);
 	
 	// precompute the cipher
-	uint8_t prng_before =  legic_prng_count() ;
+	uint8_t prngstart =  legic_prng_count() ;
 
-	lsfr = legic_prng_get_bits(bits);
-
-	data = lsfr;
+	data = lsfr = legic_prng_get_bits(bits);
 	
 	//FIXED time between sending frame and now listening frame. 330us
-	//WaitTicks( TAG_FRAME_WAIT - (GET_TICKS - sendFrameStop ) );
-	WaitTicks( 495 );
-
+	// 387 = 0x19  0001 1001
+	// 480 = 0x19
+	// 500 = 0x1C  0001 1100
 	uint32_t starttime = GET_TICKS;
+	//uint16_t mywait =  TAG_FRAME_WAIT - (starttime - sendFrameStop);
+	uint16_t mywait =  495 - (starttime - sendFrameStop);
+	if ( bits == 6)
+		WaitTicks( 495 - 9 );
+	else {
+		//Dbprintf("WAIT %d", mywait );
+		WaitTicks( mywait );
+	}
+
 	next_bit_at =  GET_TICKS + TAG_BIT_PERIOD;
 
 	while ( i-- ){
@@ -325,7 +335,8 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 		next_bit_at += TAG_BIT_PERIOD;
 		
 		// We expect 42 edges  == ONE
-		if(edges > 20 && edges < 64)
+		//if (edges > 20 && edges < 64)
+		if ( edges > 20 )
 			data ^= the_bit;
 
 		the_bit <<= 1;	
@@ -334,22 +345,17 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	// output
 	f->data = data;
 	f->bits = bits;
-		
-	// log
-	sendFrameStop = GET_TICKS;
 	
-	uint8_t cmdbytes[] = { 
+	uint8_t cmdbytes[] = {
+		bits,
 		BYTEx(data,0),
 		BYTEx(data,1),
-		bits,
-		BYTEx(lsfr,0),
-		BYTEx(lsfr,1),
 		BYTEx(data, 0) ^ BYTEx(lsfr,0),
 		BYTEx(data, 1) ^ BYTEx(lsfr,1),
-		prng_before,
+		prngstart,
 		legic_prng_count()
 	};
-	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, sendFrameStop, NULL, FALSE);
+	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, FALSE);
 }
 
 // Setup pm3 as a Legic Reader
@@ -438,8 +444,8 @@ int legic_read_byte(int byte_index, int cmd_sz) {
 	// 460 | 690
 	// 258 | 387
 	// 244 | 366
-	WaitTicks(366); 
-	legic_prng_forward(3); // 460 / 100 = 4.6  iterations
+	WaitTicks(387); 
+	legic_prng_forward(4); // 460 / 100 = 4.6  iterations
 
 	uint8_t byte = 0, crc = 0, calcCrc = 0;
 	uint32_t cmd = (byte_index << 1) | LEGIC_READ;
@@ -455,9 +461,6 @@ int legic_read_byte(int byte_index, int cmd_sz) {
 		Dbprintf("!!! crc mismatch: expected %x but got %x !!!",  calcCrc, crc);
 		return -1;
 	}
-
-
-//	legic_prng_forward(2); // 460 / 100 = 4.6  iterations
 	return byte;
 }
 
@@ -534,18 +537,13 @@ int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
 int LegicRfReader(int offset, int bytes, int iv) {
 	
 	uint16_t byte_index = 0;
-	uint8_t cmd_sz = 0;
-	int card_sz = 0;	   							   
-	uint8_t isOK = 1;
-	
-	if ( MF_DBGLEVEL >= 2)
-		Dbprintf("setting up legic card,  IV = 0x%02x", iv);
-	
+	uint8_t cmd_sz = 0, isOK = 1;
+	int card_sz = 0;
+
 	LegicCommonInit();
 
 	uint32_t tag_type = setup_phase_reader(iv);
-
-	 //we lose to mutch time with dprintf
+	
 	switch_off_tag_rwd();
 	
 	switch(tag_type) {
@@ -584,16 +582,16 @@ int LegicRfReader(int offset, int bytes, int iv) {
 		int r = legic_read_byte(byte_index + offset, cmd_sz);
 		
 		if (r == -1 || BUTTON_PRESS()) {			
-	        if ( MF_DBGLEVEL >= 2) DbpString("operation aborted");
+	        if ( MF_DBGLEVEL >= 3) DbpString("operation aborted");
 			isOK = 0;
 			goto OUT;
 		}
 		cardmem[++byte_index] = r;
-		//byte_index++;
         WDT_HIT();
 	}
 
 OUT:	
+	WDT_HIT();
 	switch_off_tag_rwd();
 	LEDsoff();
 	uint8_t len = (bytes & 0x3FF);

@@ -372,21 +372,34 @@ void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 // Quite simpel tag
 void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 	
-	if ( cmdsize > 1) {
-		
-		uint8_t cmdBit = (cmd[0] & 1);
-		uint8_t address = (cmd[1] << 7) | cmd[0] >> 1;
-		
-		if (cmdBit == LEGIC_READ)
-			snprintf(exp, size, "READ Byte(%d)", address);
-		else if (cmdBit == LEGIC_WRITE )
-			snprintf(exp, size, "WRITE Byte(%d)", address);
-		else 
-			snprintf(exp, size, "?");
-				
-	} else {		
-		if ( cmd[0] == LEGIC_HSK_22 ) snprintf(exp, size, "MIM22");
-		if ( cmd[0] == LEGIC_HSK_256 ) snprintf(exp, size, "MIN256/1024");
+	uint8_t bitsend = cmd[0];
+	
+	switch (bitsend){
+		case 7:
+			snprintf(exp, size, "IV 0x%02X", cmd[1]);
+			break;
+		case 6: {
+			if ( cmd[1] == LEGIC_HSK_22 ) 
+				snprintf(exp, size, "MIM22");
+			if ( cmd[1] == LEGIC_HSK_256 ) 
+				snprintf(exp, size, "MIN256/1024");			
+			break;
+		}
+		case 9:
+		case 11: {
+			uint8_t cmdBit = (cmd[1] & 1);
+			uint8_t address = (cmd[2] << 7) | cmd[1] >> 1;
+			
+			if (cmdBit == LEGIC_READ) 
+				snprintf(exp, size, "READ Byte(%d)", address);
+			
+			if (cmdBit == LEGIC_WRITE ) 
+				snprintf(exp, size, "WRITE Byte(%d)", address);
+			break;
+		}
+		case 12:
+		default:
+			break;
 	}
 }
 
