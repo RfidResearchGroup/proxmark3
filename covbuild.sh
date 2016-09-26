@@ -7,7 +7,7 @@
 make clean
 
 ## coverity build
-cov-build --dir cov-int make all UBUNTU_1404_QT4=1
+cov-build --dir cov-int make all
 
 ## create tarball
 tar cfz proxmark3.all.`date --date now +%Y%m%d%H%M%S`.tgz cov-int

@@ -705,7 +705,7 @@ void static calc4(uint8_t *cmd, uint8_t len){
 	crc_update(&crc, 1, 1); /* CMD_READ */
 	crc_update(&crc, cmd[0], 8);
 	crc_update(&crc, cmd[1], 8);
-	printf("crc4 %X\n",  crc_finish(&crc), 4 ) ;
+	printf("crc4 %X\n",  crc_finish(&crc) ) ;
 
 	printf("---- old ---\n");
 	crc_update2(&crc, 1, 1); /* CMD_READ */
@@ -718,7 +718,7 @@ void static calc4(uint8_t *cmd, uint8_t len){
 	crc_update2(&crc, 1, 1); /* CMD_READ */
 	crc_update2(&crc, cmd[0], 8);
 	crc_update2(&crc, cmd[1], 8);
-	printf("crc4 %X\n",  crc_finish(&crc), 4 ) ;
+	printf("crc4 %X\n",  crc_finish(&crc) ) ;
 }	
  
 int CmdLegicCalcCrc8(const char *Cmd){
