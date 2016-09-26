@@ -2,14 +2,14 @@ The iceman fork
 ===============
 [![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)  [![Coverity Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3_iceman_fork)  [![Latest release] (https://img.shields.io/github/release/iceman1001/proxmark3.svg)] (https://github.com/iceman1001/proxmark3/releases/latest)
 
-##This fork is HIGHLY experimental
+##This fork is HIGHLY experimental (or bleeding edge)
 
 ##Donate
 https://paypal.me/iceman1001/
 Feel free to donate. All support is welcome.
 
 ##Notice      
-There is so much in this fork,  with all fixes and additions its basically the most enhanced fork to this day for the Proxmark3 device. Which makes it so awesum to play with. Witt all coverity scan fixes this client is much more stable than PM3 Master.
+There is so much in this fork,  with all fixes and additions its basically the most enhanced fork to this day for the Proxmark3 device. Which makes it so awesum to play with. Do please play with it. Get excited and experiment. As a side note with all coverity scan fixes this client is much more stable than PM3 Master even if I tend to break it sometimes. I'll try to make a release when this fork becomes stable between my experiments.
 
 ##Official
 The official Proxmark repository is found here: https://github.com/Proxmark/proxmark3
