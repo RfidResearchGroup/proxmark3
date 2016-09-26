@@ -48,8 +48,8 @@ static void badcode(lua_State *L, int c)
 
 static int doendian(int c)
 {
- int x=1;
- int e=*(char*)&x;
+ int x = 1;
+ int e = *(char*)&x;
  if (c==OP_LITTLEENDIAN) return !e;
  if (c==OP_BIGENDIAN) return e;
  if (c==OP_NATIVE) return 0;
@@ -60,7 +60,7 @@ static void doswap(int swap, void *p, size_t n)
 {
  if (swap)
  {
-  char *a=(char*)p;
+  char *a = (char*)p;
   int i,j;
   for (i=0, j=n-1, n=n/2; n--; i++, j--)
   {
@@ -87,14 +87,14 @@ static void doswap(int swap, void *p, size_t n)
    case OP:				\
    {					\
     T l;				\
-    int m=sizeof(l);			\
-    if (i+m>len) { done = 1;	break; }	\
-    memcpy(&l,s+i,m);			\
+    int m = sizeof(l);			\
+    if (i + m > len) { done = 1;	break; }	\
+    memcpy(&l, s+i, m);			\
     doswap(swap,&l,m);			\
-    if (i+m+l>len) { done = 1; break;}		\
-    i+=m;				\
+    if (i + m + l > len) { done = 1; break;}		\
+    i += m;				\
     lua_pushlstring(L,s+i,l);		\
-    i+=l;				\
+    i += l;				\
     ++n;				\
     break;				\
    }

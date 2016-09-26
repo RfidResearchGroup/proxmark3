@@ -969,17 +969,17 @@ int CmdUndec(const char *Cmd)
 //shift graph zero up or down based on input + or -
 int CmdGraphShiftZero(const char *Cmd)
 {
-	int shift=0;
+	int shift = 0, shiftedVal = 0;
 	//set options from parameters entered with the command
 	sscanf(Cmd, "%i", &shift);
-	int shiftedVal=0;
+
 	for(int i = 0; i<GraphTraceLen; i++){
 		shiftedVal=GraphBuffer[i]+shift;
-		if (shiftedVal>127) 
-			shiftedVal=127;
-		else if (shiftedVal<-127) 
-			shiftedVal=-127;
-		GraphBuffer[i]= shiftedVal;
+		if (shiftedVal > 127) 
+			shiftedVal = 127;
+		else if (shiftedVal < -127) 
+			shiftedVal = -127;
+		GraphBuffer[i] = shiftedVal;
 	}
 	CmdNorm("");
 	return 0;

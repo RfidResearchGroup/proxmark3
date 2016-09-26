@@ -125,8 +125,8 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	p4->even = 0; p4->odd = 0;
 	statelists[0].len = p3 - statelists[0].head.slhead;
 	statelists[1].len = p4 - statelists[1].head.slhead;
-	statelists[0].tail.sltail=--p3;
-	statelists[1].tail.sltail=--p4;
+	statelists[0].tail.sltail = --p3;
+	statelists[1].tail.sltail = --p4;
 
 	// the statelists now contain possible keys. The key we are searching for must be in the
 	// intersection of both lists. Create the intersection:

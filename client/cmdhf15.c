@@ -207,23 +207,22 @@ int getUID(uint8_t *buf)
 	UsbCommand resp;
 	uint8_t *recv;
 	UsbCommand c = {CMD_ISO_15693_COMMAND, {0, 1, 1}}; // len,speed,recv?
-	uint8_t *req=c.d.asBytes;
-	int reqlen=0;
+	uint8_t *req = c.d.asBytes;
+	int reqlen = 0;
 	
-	for (int retry=0;retry<3; retry++) { // don't give up the at the first try		
+	for (int retry = 0; retry <3; retry++) { // don't give up the at the first try		
 		
-		req[0]= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | 
-		        ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
-		req[1]=ISO15_CMD_INVENTORY;
-		req[2]=0; // mask length
-		reqlen=AddCrc(req,3);
-		c.arg[0]=reqlen;
+		req[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
+		req[1] = ISO15_CMD_INVENTORY;
+		req[2] = 0; // mask length
+		reqlen = AddCrc(req, 3);
+		c.arg[0] = reqlen;
 	
 		SendCommand(&c);
 		
-		if (WaitForResponseTimeout(CMD_ACK,&resp,1000)) {
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
 			recv = resp.d.asBytes;
-			if (resp.arg[0]>=12 && ISO15_CRC_CHECK==Crc(recv,12)) {
+			if (resp.arg[0] >= 12 && ISO15_CRC_CHECK == Crc(recv,12)) {
 			   memcpy(buf,&recv[2],8);
 			   return 1;
 			} 
@@ -238,16 +237,16 @@ int getUID(uint8_t *buf)
 //		uid[8] 	tag uid
 // returns description of the best match	
 static char* getTagInfo(uint8_t *uid) {
-	uint64_t myuid,mask;
-	int i=0, best=-1;	
-	memcpy(&myuid,uid,sizeof(uint64_t));
-	while (uidmapping[i].mask>0) {
-		mask=(~0LL) <<(64-uidmapping[i].mask);
+	uint64_t myuid, mask;
+	int i = 0, best = -1;	
+	memcpy(&myuid, uid, sizeof(uint64_t));
+	while (uidmapping[i].mask > 0) {
+		mask = (~0LL) << (64-uidmapping[i].mask);
 		if ((myuid & mask) == uidmapping[i].uid) {
-			if (best==-1) { 
-				best=i;
+			if (best == -1) { 
+				best = i;
 			} else {
-				if (uidmapping[i].mask>uidmapping[best].mask) {
+				if (uidmapping[i].mask > uidmapping[best].mask) {
 					best=i;
 				}
 			}					
@@ -255,8 +254,8 @@ static char* getTagInfo(uint8_t *uid) {
 		i++;
 	} 
 
-	if (best>=0) return uidmapping[best].desc;
-	
+	if (best >= 0)
+		return uidmapping[best].desc;
 	return uidmapping[i].desc; 
 }
 
