@@ -370,19 +370,20 @@ void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 // 1 = read
 // 0 = write
 // Quite simpel tag
-void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
-	
-	uint8_t bitsend = cmd[0];
-	
+void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){	
+	uint8_t bitsend = cmd[0];	
 	switch (bitsend){
 		case 7:
 			snprintf(exp, size, "IV 0x%02X", cmd[1]);
 			break;
 		case 6: {
-			if ( cmd[1] == LEGIC_HSK_22 ) 
-				snprintf(exp, size, "MIM22");
-			if ( cmd[1] == LEGIC_HSK_256 ) 
-				snprintf(exp, size, "MIN256/1024");			
+			switch ( cmd[1] ) {
+				case LEGIC_MIM_22:	 snprintf(exp, size, "MIM22"); break;
+				case LEGIC_MIM_256:	 snprintf(exp, size, "MIM256"); break;
+				case LEGIC_MIM_1024: snprintf(exp, size, "MIM1024"); break;
+				case LEGIC_ACK_22:	 snprintf(exp, size, "ACK 22"); break;
+				case LEGIC_ACK_256:	 snprintf(exp, size, "ACK 256/1024"); break;
+			}
 			break;
 		}
 		case 9:
@@ -681,14 +682,20 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 		}
 	}
 
-	if (data_len == 0 )
+	if (data_len == 0 ) {
 		sprintf(line[0],"<empty trace - possible error>");
+		return tracepos;
+	}
 
-	//--- Draw the CRC column
+	// Draw the CRC column
 	char *crc = (crcStatus == 0 ? "!crc" : (crcStatus == 1 ? " ok " : "    "));
 
 	EndOfTransmissionTimestamp = timestamp + duration;
 
+	// Always annotate LEGIC read/tag
+	if ( protocol == LEGIC )
+		annotateLegic(explanation,sizeof(explanation),frame,data_len);
+	
 	if (!isResponse)	{
 		switch(protocol) {
 			case ICLASS:		annotateIclass(explanation,sizeof(explanation),frame,data_len); break;
@@ -697,7 +704,7 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			case ISO_14443B:	annotateIso14443b(explanation,sizeof(explanation),frame,data_len); break;
 			case TOPAZ:			annotateTopaz(explanation,sizeof(explanation),frame,data_len); break;
 			case ISO_7816_4:	annotateIso7816(explanation,sizeof(explanation),frame,data_len); break;
-			case LEGIC:			annotateLegic(explanation,sizeof(explanation),frame,data_len); break;
+
 			default:			break;
 		}
 	}
