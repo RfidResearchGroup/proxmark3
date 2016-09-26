@@ -815,7 +815,7 @@ void LegicRfInfo(void){
 	}
 
 	cmd_send(CMD_ACK,1,card_sz,0,uid,sizeof(uid));
-out:	
+OUT:	
 	switch_off_tag_rwd();
 	LEDsoff();
 
@@ -1127,6 +1127,7 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
 // The software UART that receives commands from the reader, and its state
 // variables.
 //-----------------------------------------------------------------------------
+/*
 static struct {
 	enum {
 		STATE_UNSYNCD,
@@ -1141,7 +1142,7 @@ static struct {
 	int     posCnt;
 	uint8_t *output;
 } Uart;
-
+*/
 /* Receive & handle a bit coming from the reader.
  *
  * This function is called 4 times per bit (every 2 subcarrier cycles).
@@ -1266,7 +1267,7 @@ static struct {
 
 	// return FALSE;
 // }
-
+/*
 
 static void UartReset() {
 	Uart.byteCntMax = 3;
@@ -1276,7 +1277,7 @@ static void UartReset() {
 	Uart.posCnt = 0;
 	memset(Uart.output, 0x00, 3);
 }
-
+*/
 // static void UartInit(uint8_t *data) {
 	// Uart.output = data;
 	// UartReset();
@@ -1288,7 +1289,7 @@ static void UartReset() {
 // tag's response, which we leave in the buffer to be demodulated on the
 // PC side.
 //=============================================================================
-
+/*
 static struct {
 	enum {
 		DEMOD_UNSYNCD,
@@ -1307,7 +1308,7 @@ static struct {
 	int     sumI;
 	int     sumQ;
 } Demod;
-
+*/
 /*
  * Handles reception of a bit from the tag
  *
@@ -1322,32 +1323,8 @@ static struct {
  *          false if we are still waiting for some more
  *
  */
-
- #ifndef SUBCARRIER_DETECT_THRESHOLD
- # define SUBCARRIER_DETECT_THRESHOLD	8
- #endif
  
- // Subcarrier amplitude v = sqrt(ci^2 + cq^2), approximated here by max(abs(ci),abs(cq)) + 1/2*min(abs(ci),abs(cq)))
-#ifndef CHECK_FOR_SUBCARRIER
-# define CHECK_FOR_SUBCARRIER() { v = MAX(ai, aq) + MIN(halfci, halfcq); }
-#endif
-
-// The soft decision on the bit uses an estimate of just the
-// quadrant of the reference angle, not the exact angle.
-// Subcarrier amplitude v = sqrt(ci^2 + cq^2), approximated here by max(abs(ci),abs(cq)) + 1/2*min(abs(ci),abs(cq)))
-#define MAKE_SOFT_DECISION() { \
-		if(Demod.sumI > 0) \
-			v = ci; \
-		else \
-			v = -ci; \
-		\
-		if(Demod.sumQ > 0) \
-			v += cq; \
-		else \
-			v -= cq; \
-		\
-	}
-
+/*
 static RAMFUNC int HandleLegicSamplesDemod(int ci, int cq)
 {
 	int v = 0;
@@ -1502,7 +1479,8 @@ static RAMFUNC int HandleLegicSamplesDemod(int ci, int cq)
 	}
 	return FALSE;
 }
-
+*/
+/*
 // Clear out the state of the "UART" that receives from the tag.
 static void DemodReset() {
 	Demod.len = 0;
@@ -1520,13 +1498,17 @@ static void DemodInit(uint8_t *data) {
 	Demod.output = data;
 	DemodReset();
 }
+*/
 
 /*
  *  Demodulate the samples we received from the tag, also log to tracebuffer
  *  quiet: set to 'TRUE' to disable debug output
  */
+ 
+ /*
  #define LEGIC_DMA_BUFFER_SIZE 256
-static void GetSamplesForLegicDemod(int n, bool quiet)
+
+ static void GetSamplesForLegicDemod(int n, bool quiet)
 {
 	int max = 0;
 	bool gotFrame = FALSE;
@@ -1601,9 +1583,13 @@ static void GetSamplesForLegicDemod(int n, bool quiet)
 		LogTrace(Demod.output, Demod.len, 0, 0, parity, FALSE);
 	}
 }
+
+*/
+
 //-----------------------------------------------------------------------------
 // Transmit the command (to the tag) that was placed in ToSend[].
 //-----------------------------------------------------------------------------
+/*
 static void TransmitForLegic(void)
 {
 	int c;
@@ -1650,12 +1636,13 @@ static void TransmitForLegic(void)
 	}
 	LED_B_OFF();
 }
-
+*/
 
 //-----------------------------------------------------------------------------
 // Code a layer 2 command (string of octets, including CRC) into ToSend[],
 // so that it is ready to transmit to the tag using TransmitForLegic().
 //-----------------------------------------------------------------------------
+/*
 static void CodeLegicBitsAsReader(const uint8_t *cmd, uint8_t cmdlen, int bits)
 {
 	int i, j;
@@ -1687,11 +1674,12 @@ static void CodeLegicBitsAsReader(const uint8_t *cmd, uint8_t cmdlen, int bits)
 	// Convert from last character reference to length
 	++ToSendMax;
 }
-
+*/
 /**
   Convenience function to encode, transmit and trace Legic comms
   **/
-static void CodeAndTransmitLegicAsReader(const uint8_t *cmd, uint8_t cmdlen, int bits)
+/*
+  static void CodeAndTransmitLegicAsReader(const uint8_t *cmd, uint8_t cmdlen, int bits)
 {
 	CodeLegicBitsAsReader(cmd, cmdlen, bits);
 	TransmitForLegic();
@@ -1701,8 +1689,9 @@ static void CodeAndTransmitLegicAsReader(const uint8_t *cmd, uint8_t cmdlen, int
 	}
 }
 
-
+*/
 // Set up LEGIC communication
+/*
 void ice_legic_setup() {
 
 	// standard things.
@@ -1732,3 +1721,4 @@ void ice_legic_setup() {
 	// initalize prng
 	legic_prng_init(0);
 }
+*/
