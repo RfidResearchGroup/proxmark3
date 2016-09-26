@@ -99,9 +99,12 @@ local _commands = {
 	CMD_SIMULATE_TAG_LEGIC_RF =                                          0x0387,
 	CMD_READER_LEGIC_RF =                                                0x0388,
 	CMD_WRITER_LEGIC_RF =                                                0x0389,
+	
 	CMD_EPA_PACE_COLLECT_NONCE =                                         0x038A,
 	CMD_EPA_PACE_REPLAY =                                                0x038B,
 
+	CMD_LEGIC_INFO =													 0x03BC,
+	
 	CMD_ICLASS_READCHECK =                                               0x038F,
 	CMD_ICLASS_CLONE =                                                   0x0390,
 	CMD_ICLASS_DUMP =                                                    0x0391,

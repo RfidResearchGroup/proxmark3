@@ -246,8 +246,8 @@ void frame_sendAsReader(uint32_t data, uint8_t bits){
 		bits,
 		BYTEx(data, 0), 
 		BYTEx(data, 1),
-		0x00, 
-		0x00,
+		BYTEx(send, 0), 
+		BYTEx(send, 1),
 		prngstart,
 		legic_prng_count()
 	};
@@ -304,12 +304,14 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	// 500 = 0x1C  0001 1100
 	uint32_t starttime = GET_TICKS;
 	//uint16_t mywait =  TAG_FRAME_WAIT - (starttime - sendFrameStop);
-	uint16_t mywait =  495 - (starttime - sendFrameStop);
-	if ( bits == 6)
-		WaitTicks( 495 - 9 );
-	else {
-		//Dbprintf("WAIT %d", mywait );
-		WaitTicks( mywait );
+	//uint16_t mywait =  495 - (starttime - sendFrameStop);
+	if ( bits == 6) {
+		//Dbprintf("6 WAIT %d", 495 - 9 - 9 );
+		WaitTicks( 495 - 9 - 9 );
+	} else {
+		//Dbprintf("x WAIT %d", mywait );
+		//WaitTicks( mywait );
+		WaitTicks( 450 );
 	}
 
 	next_bit_at =  GET_TICKS + TAG_BIT_PERIOD;
@@ -419,9 +421,9 @@ static void LegicCommonInit(void) {
 // Switch off carrier, make sure tag is reset
 static void switch_off_tag_rwd(void) {
 	LOW(GPIO_SSC_DOUT);
-	WaitUS(200);
+	WaitUS(20);
 	WDT_HIT();
-	Dbprintf("Exit Switch_off_tag_rwd");
+	set_tracing(FALSE);
 }
 
 // calculate crc4 for a legic READ command 
@@ -438,6 +440,9 @@ static uint32_t legic4Crc(uint8_t legicCmd, uint16_t byte_index, uint8_t value, 
 
 int legic_read_byte(int byte_index, int cmd_sz) {
 
+	uint8_t byte = 0, crc = 0, calcCrc = 0;
+	uint32_t cmd = (byte_index << 1) | LEGIC_READ;
+	
 	// (us)| ticks
 	// -------------
 	// 330 | 495
@@ -446,10 +451,7 @@ int legic_read_byte(int byte_index, int cmd_sz) {
 	// 244 | 366
 	WaitTicks(387); 
 	legic_prng_forward(4); // 460 / 100 = 4.6  iterations
-
-	uint8_t byte = 0, crc = 0, calcCrc = 0;
-	uint32_t cmd = (byte_index << 1) | LEGIC_READ;
-
+	
 	frame_sendAsReader(cmd, cmd_sz);
 	frame_receiveAsReader(&current_frame, 12);
 
@@ -774,6 +776,49 @@ void LegicRfRawWriter(int address, int byte, int iv) {
 
     LEDsoff();
     if ( MF_DBGLEVEL >= 1) DbpString("write successful");
+}
+
+void LegicRfInfo(void){
+
+	LegicCommonInit();
+	uint32_t tag_type = setup_phase_reader(0x55);
+	uint8_t cmd_sz = 0;
+	uint16_t card_sz = 0;
+	
+	switch(tag_type) {
+		case 0x0d:
+            cmd_sz = 6;
+			card_sz = 22;
+			break;
+		case 0x1d:
+			cmd_sz = 9;
+			card_sz = 256;
+			break;
+		case 0x3d:
+            cmd_sz = 11;
+			card_sz = 1024;
+			break;
+		default: 
+			cmd_send(CMD_ACK,0,0,0,0,0);
+			goto OUT;
+	}
+
+	// read UID bytes.
+	uint8_t uid[] = {0,0,0,0};
+	for ( uint8_t i = 0; i < sizeof(uid); ++i) {
+		int r = legic_read_byte(i, cmd_sz);
+		if ( r == -1 ) {
+			cmd_send(CMD_ACK,0,0,0,0,0);
+			goto OUT;
+		}
+		uid[i] = r & 0xFF;
+	}
+
+	cmd_send(CMD_ACK,1,card_sz,0,uid,sizeof(uid));
+out:	
+	switch_off_tag_rwd();
+	LEDsoff();
+
 }
 
 /* Handle (whether to respond) a frame in tag mode
@@ -1656,56 +1701,6 @@ static void CodeAndTransmitLegicAsReader(const uint8_t *cmd, uint8_t cmdlen, int
 	}
 }
 
-int ice_legic_select_card()
-{
-	//int cmd_size=0, card_size=0;
-	uint8_t wakeup[] = { 0x7F };
-	uint8_t getid[] = {0x19};
-
-	//legic_prng_init(SESSION_IV);
-
-	// first, wake up the tag, 7bits
-	CodeAndTransmitLegicAsReader(wakeup, sizeof(wakeup), 7);
-
-	GetSamplesForLegicDemod(1000, TRUE);
-
-	//frame_receiveAsReader(&current_frame, 6, 1);
-
-	legic_prng_forward(1); /* we wait anyways */
-	
-	//while(timer->TC_CV < 387) ; /* ~ 258us */
-	//frame_sendAsReader(0x19, 6);
-	CodeAndTransmitLegicAsReader(getid, sizeof(getid), 8);
-	GetSamplesForLegicDemod(1000, TRUE);
-
-	//if (Demod.len < 14) return 2; 
-	Dbprintf("CARD TYPE: %02x  LEN: %d", Demod.output[0], Demod.len);
-
-	switch(Demod.output[0]) {
-		case 0x1d:
-			DbpString("MIM 256 card found");
-            // cmd_size = 9;
-			// card_size = 256;
-			break;
-		case 0x3d:
-			DbpString("MIM 1024 card found");
-            // cmd_size = 11;
-			// card_size = 1024;
-			break;
-		default:
-			return -1;
-	}
-	
-	// if(bytes == -1)
-		// bytes = card_size;
-
-	// if(bytes + offset >= card_size)
-		// bytes = card_size - offset;	
-	
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	set_tracing(FALSE);
-	return 1;
-}
 
 // Set up LEGIC communication
 void ice_legic_setup() {

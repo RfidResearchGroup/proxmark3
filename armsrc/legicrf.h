@@ -19,13 +19,11 @@
 #include "crc.h"		// legic crc-4
 #include "ticks.h"		// timers
 
-#define LEGIC_READ 0x01
-#define LEGIC_WRITE 0x00
-
 extern void LegicRfSimulate(int phase, int frame, int reqresp);
 extern int  LegicRfReader(int offset, int bytes, int iv);
 extern void LegicRfWriter(int offset, int bytes, int iv);
 extern void LegicRfRawWriter(int address, int data, int iv);
+extern void LegicRfInfo(void);
 
 uint32_t get_key_stream(int skip, int count);
 void frame_send_tag(uint16_t response, uint8_t bits, uint8_t crypt);

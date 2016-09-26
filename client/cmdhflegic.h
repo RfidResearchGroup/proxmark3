@@ -34,8 +34,11 @@ int CmdLegicRfRawWrite(const char *Cmd);
 int CmdLegicRfFill(const char *Cmd);
 
 int CmdLegicCalcCrc8(const char *Cmd);
+int CmdLegicInfo(const char *Cmd);
+int HFLegicInfo(const char *Cmd, bool verbose);
 
 int usage_legic_calccrc8(void);
 int usage_legic_load(void);
 int usage_legic_read(void);
+int usage_legic_info(void);
 #endif

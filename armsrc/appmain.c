@@ -1064,6 +1064,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_READER_LEGIC_RF:
 			LegicRfReader(c->arg[0], c->arg[1], c->arg[2]);
 			break;
+			
+		case CMD_LEGIC_INFO:
+			LegicRfInfo();
+			break;
 #endif
 
 #ifdef WITH_ISO14443b

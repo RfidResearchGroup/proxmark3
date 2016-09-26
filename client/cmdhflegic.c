@@ -90,7 +90,16 @@ int usage_legic_fill(void){
 	PrintAndLog("Missing help text.");
 	return 0;
 }
-
+int usage_legic_info(void){
+	PrintAndLog("Read info from a legic tag.");
+	PrintAndLog("Usage:  hf legic info [h]");
+	PrintAndLog("Options:");
+	PrintAndLog("  h             : this help");
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("      hf legic info");
+	return 0;
+}
 /*
  *  Output BigBuf and deobfuscate LEGIC RF tag data.
  *  This is based on information given in the talk held
@@ -810,6 +819,43 @@ int CmdLegicCalcCrc8(const char *Cmd){
 	return 0;
 } 
  
+int HFLegicInfo(const char *Cmd, bool verbose) {
+
+	char cmdp = param_getchar(Cmd, 0);
+	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_info();
+	
+	UsbCommand c = {CMD_LEGIC_INFO, {0,0,0}};
+	clearCommandBuffer();
+    SendCommand(&c);
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+		uint8_t isOK = resp.arg[0] & 0xFF;
+		uint16_t tagtype = resp.arg[1] & 0xFFF;
+		 if ( isOK ) {
+			PrintAndLog(" UID : %s", sprint_hex(resp.d.asBytes, 4));
+			switch(tagtype) {
+				case 22: PrintAndLog("MIM22 card (22bytes)"); break;
+				case 256: PrintAndLog("MIM256 card (256bytes)"); break;
+				case 1024: PrintAndLog("MIM1024 card (1024bytes)");	break;				
+				default: {
+					PrintAndLog("Unknown card format: %x", tagtype); 
+					return 1;
+				}
+			}		
+		} else {
+			PrintAndLog("legic card select failed");
+			return 1;
+		}
+	} else {
+		PrintAndLog("command execution time out");
+		return 1;
+	}
+	return 0;
+}
+int CmdLegicInfo(const char *Cmd){
+	return HFLegicInfo(Cmd, TRUE);
+}
+	
 static command_t CommandTable[] =  {
 	{"help",	CmdHelp,        1, "This help"},
 	{"decode",	CmdLegicDecode, 0, "Display deobfuscated and decoded LEGIC RF tag data (use after hf legic reader)"},
@@ -821,7 +867,7 @@ static command_t CommandTable[] =  {
 	{"writeraw",CmdLegicRfRawWrite,	0, "<address> <value> <iv> -- Write direct to address"},
 	{"fill",	CmdLegicRfFill, 0, "<offset> <length> <value> -- Fill/Write tag with constant value"},
 	{"crc8",	CmdLegicCalcCrc8, 1, "Calculate Legic CRC8 over given hexbytes"},
-	{"info",	CmdLegicCalcCrc8, 1, "Information"},
+	{"info",	CmdLegicInfo, 1, "Information"},
 	{NULL, NULL, 0, NULL}
 };
 
