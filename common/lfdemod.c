@@ -587,7 +587,7 @@ int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32
 {
 	if (justNoise(dest, *size)) return -1;
 
-	size_t numStart=0, size2=*size, startIdx=0; 
+	size_t numStart=0, size2 = *size, startIdx=0; 
 	// FSK demodulator
 	*size = fskdemod(dest, size2,50,1,10,8); //fsk2a
 	if (*size < 96*2) return -2;
@@ -619,7 +619,7 @@ int ParadoxdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, ui
 {
 	if (justNoise(dest, *size)) return -1;
 	
-	size_t numStart=0, size2=*size, startIdx=0;
+	size_t numStart=0, size2 = *size, startIdx=0;
 	// FSK demodulator
 	*size = fskdemod(dest, size2,50,1,10,8); //fsk2a
 	if (*size < 96) return -2;
