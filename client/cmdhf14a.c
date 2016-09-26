@@ -655,14 +655,17 @@ int CmdHF14ACmdRaw(const char *cmd) {
 		c.arg[2] = 13560000 / 1000 / (8*16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
 	}
 
-    if(power)
+    if(power) {
         c.arg[0] |= ISO14A_NO_DISCONNECT;
-
-    if(datalen>0)
+	}
+	
+    if(datalen>0) {
         c.arg[0] |= ISO14A_RAW;
-
-	if(topazmode)
+	}
+	
+	if(topazmode) {
 		c.arg[0] |= ISO14A_TOPAZMODE;
+	}
 			
 	// Max buffer is USB_CMD_DATA_SIZE
 	datalen = (datalen > USB_CMD_DATA_SIZE) ? USB_CMD_DATA_SIZE : datalen;

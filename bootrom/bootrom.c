@@ -49,8 +49,7 @@ static void ConfigClocks(void)
         PMC_MAIN_OSC_STARTUP_DELAY(8);
 
 	// wait for main oscillator to stabilize
-	while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MOSCS) )
-		;
+	while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MOSCS) ) {};
 
     // PLL output clock frequency in range  80 - 160 MHz needs CKGR_PLL = 00
     // PLL output clock frequency in range 150 - 180 MHz needs CKGR_PLL = 10
@@ -63,8 +62,7 @@ static void ConfigClocks(void)
 		PMC_PLL_USB_DIVISOR(1);
 
 	// wait for PLL to lock
-	while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_LOCK) )
-		;
+	while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_LOCK) ) {};
 
 	// we want a master clock (MCK) to be PLL clock / 2 = 96Mhz / 2 = 48Mhz
 	// datasheet recommends that this register is programmed in two operations
@@ -72,15 +70,13 @@ static void ConfigClocks(void)
     AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_PRES_CLK_2;
 
 	// wait for main clock ready signal
-	while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY) )
-		;
+	while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY) ) {};
 
 	// set the source to PLL
     AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_PRES_CLK_2 | AT91C_PMC_CSS_PLL_CLK;
 
 	// wait for main clock ready signal
-	while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY) )
-		;
+	while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY) ) {};
 }
 
 static void Fatal(void) {
@@ -199,8 +195,7 @@ static void flash_mode(int externally_entered)
 	size_t rx_len;
 
 	usb_enable();
-	for (volatile size_t i=0; i<0x100000; i++)
-		;
+	for (volatile size_t i=0; i<0x100000; i++) {};
 
 	for(;;) {
 		WDT_HIT();

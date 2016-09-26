@@ -81,12 +81,9 @@ size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t p
 		j--; // overwrite parity with next data
 		// if parity fails then return 0
 		switch (pType) {
-			case 3: if (BitStream[j]==1) return 0; break; //should be 0 spacer bit
-			case 2: if (BitStream[j]==0) return 0; break; //should be 1 spacer bit
-			default: //test parity
-				if (parityTest(parityWd, pLen, pType) == 0) 
-					return 0; 
-				break;
+			case 3:  if (BitStream[j]==1) { return 0 }; break; //should be 0 spacer bit
+			case 2:  if (BitStream[j]==0) { return 0 }; break; //should be 1 spacer bit
+			default: if (parityTest(parityWd, pLen, pType) == 0) { return 0; } break; //test parity
 		}
 		bitCnt+=(pLen-1);
 		parityWd = 0;
