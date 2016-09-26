@@ -68,10 +68,6 @@ static void setup_timer(void) {
 */
 
 // At TIMER_CLOCK3 (MCK/32)
-//#define RWD_TIME_1 150     /* RWD_TIME_PAUSE off, 80us on = 100us */
-//#define RWD_TIME_0 90      /* RWD_TIME_PAUSE off, 40us on = 60us */
-//#define RWD_TIME_PAUSE 30  /* 20us */
-
 // testing calculating in (us) microseconds.
 #define	RWD_TIME_1 120		// READER_TIME_PAUSE 20us off, 80us on = 100us  80 * 1.5 == 120ticks
 #define RWD_TIME_0 60		// READER_TIME_PAUSE 20us off, 40us on = 60us   40 * 1.5 == 60ticks 
@@ -290,7 +286,6 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
 	
 	// calibrate the prng.
-	// 
 	legic_prng_forward(2);
 	
 	// precompute the cipher
@@ -365,7 +360,7 @@ static uint32_t setup_phase_reader(uint8_t iv) {
 	
 	// Switch on carrier and let the tag charge for 1ms
 	HIGH(GPIO_SSC_DOUT);
-	WaitUS(1000);	
+	WaitUS(100);	
 	
 	ResetTicks();
 	
@@ -423,7 +418,6 @@ static void switch_off_tag_rwd(void) {
 	LOW(GPIO_SSC_DOUT);
 	WaitUS(20);
 	WDT_HIT();
-	set_tracing(FALSE);
 }
 
 // calculate crc4 for a legic READ command 
@@ -449,8 +443,8 @@ int legic_read_byte(int byte_index, int cmd_sz) {
 	// 460 | 690
 	// 258 | 387
 	// 244 | 366
-	WaitTicks(387); 
-	legic_prng_forward(4); // 460 / 100 = 4.6  iterations
+	WaitTicks(495); 
+	legic_prng_forward(3); // 460 / 100 = 4.6  iterations
 	
 	frame_sendAsReader(cmd, cmd_sz);
 	frame_receiveAsReader(&current_frame, 12);
