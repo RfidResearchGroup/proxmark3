@@ -177,22 +177,22 @@ const char strDescriptor[] = {
 // Clear flags in the UDP_CSR register and waits for synchronization
 #define UDP_CLEAR_EP_FLAGS(endpoint, flags) { \
 	volatile unsigned int reg; \
-	reg = pUdp->UDP_CSR[endpoint]; \
+	reg = pUdp->UDP_CSR[(endpoint)]; \
 	reg |= REG_NO_EFFECT_1_ALL; \
 	reg &= ~(flags); \
-	pUdp->UDP_CSR[endpoint] = reg; \
-	while ( (pUdp->UDP_CSR[endpoint] & (flags)) == (flags)); \
-}
+	pUdp->UDP_CSR[(endpoint)] = reg; \
+	while ( (pUdp->UDP_CSR[(endpoint)] & (flags)) == (flags)); \
+} \
 
 // reset flags in the UDP_CSR register and waits for synchronization
 #define UDP_SET_EP_FLAGS(endpoint, flags) { \
 	volatile unsigned int reg; \
-	reg = pUdp->UDP_CSR[endpoint]; \
+	reg = pUdp->UDP_CSR[(endpoint)]; \
 	reg |= REG_NO_EFFECT_1_ALL; \
 	reg |= (flags); \
-	pUdp->UDP_CSR[endpoint] = reg; \
-	while ( ( pUdp->UDP_CSR[endpoint] & (flags)) != (flags)); \
-}
+	pUdp->UDP_CSR[(endpoint)] = reg; \
+	while ( ( pUdp->UDP_CSR[(endpoint)] & (flags)) != (flags)); \
+} \
 
 	
 /* USB standard request code */
