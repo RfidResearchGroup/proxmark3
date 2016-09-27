@@ -192,7 +192,7 @@ Install to `C:\Qt` and choose the following components to be installed:
 - Tools - MinGW
 
 In your shell from MSYS (see below), make sure you set QTDIR to your QT installation and add its bin to your path as well:		
-`export QTDIR=/c/Qt/5.6/mingw49_32`		
+`export QTDIR=/c/Qt/5.6/mingw492_32`		
 `export PATH=$PATH:$QTDIR/bin`
 
 ### 2. MSYS
@@ -205,15 +205,15 @@ Follow the installation procedure, you may want to install MSYS to `C:\Qt\msys` 
 ### 3. Readline
 Download and unpack: https://sourceforge.net/projects/gnuwin32/files/readline/5.0-1/readline-5.0-1-bin.zip/download		
 
-`bin/*` to `C:\Qt\5.6\Tools\mingw49_32\bin`		
-`include/*` to `C:\Qt\5.6\Tools\mingw49_32\include`		
-`lib/*` to `C:\Qt\5.6\Tools\mingw49_32\lib`
+`bin/*` to `C:\Qt\5.6\Tools\mingw492_32\bin`		
+`include/*` to `C:\Qt\5.6\Tools\mingw492_32\include`		
+`lib/*` to `C:\Qt\5.6\Tools\mingw492_32\lib`
 
 ### 4. LibUSB
 Download and unpack: https://sourceforge.net/projects/libusb-win32/files/latest/download?source=files
 
-`include/lusb0_usb.h` to `C:\Qt\5.6\Tools\mingw49_32\include`		
-`lib/gcc/libusb.a` to `C:\Qt\5.6\Tools\mingw49_32\lib`
+`include/lusb0_usb.h` to `C:\Qt\5.6\Tools\mingw492_32\include`		
+`lib/gcc/libusb.a` to `C:\Qt\5.6\Tools\mingw492_32\lib`
 
 ### 5. DevkitPro
 Download and install: https://sourceforge.net/projects/devkitpro/files/latest/download?source=files
@@ -230,7 +230,7 @@ Download and install Git for Windows: https://git-scm.com/download/win
 - Set the environment:		
 `export DEVKITARM=/c/devkitPro/devkitARM`		
 `export PATH=$PATH:$DEVKITARM/bin`		
-`export QTDIR=/c/Qt/5.6/mingw49_32`		
+`export QTDIR=/c/Qt/5.6/mingw492_32`		
 `export PATH=$PATH:$QTDIR/bin`
 
 - Clone iceman fork		
