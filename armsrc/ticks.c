@@ -8,7 +8,6 @@
 //-----------------------------------------------------------------------------
 // Timers, Clocks functions used in LF or Legic where you would need detailed time.
 //-----------------------------------------------------------------------------
-
 #include "ticks.h"
 
 // attempt at high resolution microsecond timer

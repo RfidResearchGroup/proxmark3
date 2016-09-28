@@ -410,18 +410,8 @@ int CmdLegicRFRead(const char *Cmd) {
 		IV |= 0x01;  // IV must be odd
 		PrintAndLog("LSB of IV must be SET");	
 	}
-	PrintAndLog("Current IV: 0x%02x", IV);
+	PrintAndLog("Using IV: 0x%02x", IV);
 	
-	// get some  prng bytes from 
-	uint8_t temp[32];
-	legic_prng_init(IV);
-	for ( uint8_t j = 0; j < sizeof(temp); ++j) {
-		temp[j] = legic_prng_get_bit(1);
-		legic_prng_forward(1);
-		//PrintAndLog("PRNG: %s", sprint_hex(temp, sizeof(temp)));
-	}
-	PrintAndLog("PRNG: %s", sprint_bin(temp, sizeof(temp)));
-		
 	UsbCommand c = {CMD_READER_LEGIC_RF, {offset, len, IV}};
 	clearCommandBuffer();
 	SendCommand(&c);

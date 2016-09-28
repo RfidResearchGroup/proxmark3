@@ -72,7 +72,7 @@ static void setup_timer(void) {
 #define	RWD_TIME_1 120		// READER_TIME_PAUSE 20us off, 80us on = 100us  80 * 1.5 == 120ticks
 #define RWD_TIME_0 60		// READER_TIME_PAUSE 20us off, 40us on = 60us   40 * 1.5 == 60ticks 
 #define RWD_TIME_PAUSE 30	// 20us == 20 * 1.5 == 30ticks */
-#define TAG_BIT_PERIOD 150	// 100us == 100 * 1.5 == 150ticks
+#define TAG_BIT_PERIOD 143	// 100us == 100 * 1.5 == 150ticks
 #define TAG_FRAME_WAIT 495  // 330us from READER frame end to TAG frame start. 330 * 1.5 == 495
 
 #define RWD_TIME_FUZZ 20   // rather generous 13us, since the peak detector + hysteresis fuzz quite a bit
@@ -278,7 +278,7 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	
 	uint8_t i = bits, edges = 0;	
 	uint16_t lsfr = 0;
-	uint32_t the_bit = 1, next_bit_at = 0, data;
+	uint32_t the_bit = 1, next_bit_at = 0, data = 0;
 	
 	int old_level = 0, level = 0;
 	
@@ -287,22 +287,17 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	
 	// calibrate the prng.
 	legic_prng_forward(2);
-	
-	// precompute the cipher
 	uint8_t prngstart =  legic_prng_count() ;
-
 	data = lsfr = legic_prng_get_bits(bits);
 	
 	//FIXED time between sending frame and now listening frame. 330us
 	// 387 = 0x19  0001 1001
-	// 480 = 0x19
-	// 500 = 0x1C  0001 1100
 	uint32_t starttime = GET_TICKS;
 	//uint16_t mywait =  TAG_FRAME_WAIT - (starttime - sendFrameStop);
 	//uint16_t mywait =  495 - (starttime - sendFrameStop);
 	if ( bits == 6) {
-		//Dbprintf("6 WAIT %d", 495 - 9 - 9 );
-		WaitTicks( 495 - 9 - 9 );
+		//WaitTicks( 495 - 9 - 9 );
+		WaitTicks( 475 );
 	} else {
 		//Dbprintf("x WAIT %d", mywait );
 		//WaitTicks( mywait );
@@ -313,7 +308,6 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 
 	while ( i-- ){
 		edges = 0;
-		uint8_t adjust = 0;
 		while  ( GET_TICKS < next_bit_at) {
 
 			level = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
@@ -322,11 +316,6 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 				++edges;
 			
 			old_level = level;
-			
-			if(edges > 20 && adjust == 0) {
-				next_bit_at -= 15;
-				adjust = 1;
-			}
 		}		
 
 		next_bit_at += TAG_BIT_PERIOD;
@@ -345,10 +334,10 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	
 	uint8_t cmdbytes[] = {
 		bits,
-		BYTEx(data,0),
-		BYTEx(data,1),
-		BYTEx(data, 0) ^ BYTEx(lsfr,0),
-		BYTEx(data, 1) ^ BYTEx(lsfr,1),
+		BYTEx(data, 0),
+		BYTEx(data, 1),
+		BYTEx(data, 0) ^ BYTEx(lsfr, 0),
+		BYTEx(data, 1) ^ BYTEx(lsfr, 1),
 		prngstart,
 		legic_prng_count()
 	};
@@ -360,7 +349,7 @@ static uint32_t setup_phase_reader(uint8_t iv) {
 	
 	// Switch on carrier and let the tag charge for 1ms
 	HIGH(GPIO_SSC_DOUT);
-	WaitUS(100);	
+	WaitUS(1000);	
 	
 	ResetTicks();
 	
@@ -375,9 +364,10 @@ static uint32_t setup_phase_reader(uint8_t iv) {
 
 	frame_receiveAsReader(&current_frame, 6);
 
-	// fixed delay before sending ack.
-	WaitTicks(366);  // 244us
-	legic_prng_forward(1);  //240us / 100 == 2.4 iterations
+	// 292us (438t) - fixed delay before sending ack.
+	// minus log and stuff 100tick?
+	WaitTicks(338);
+	legic_prng_forward(3); 
 	
 	// Send obsfuscated acknowledgment frame.
 	// 0x19 = 0x18 MIM22, 0x01 LSB READCMD 
@@ -388,6 +378,8 @@ static uint32_t setup_phase_reader(uint8_t iv) {
 		case 0x3D: frame_sendAsReader(0x39, 6); break;
 		default: break;
 	}
+
+	legic_prng_forward(2);
 	return current_frame.data;
 }
 
@@ -440,16 +432,14 @@ int legic_read_byte(int byte_index, int cmd_sz) {
 	// (us)| ticks
 	// -------------
 	// 330 | 495
-	// 460 | 690
-	// 258 | 387
 	// 244 | 366
-	WaitTicks(495); 
-	legic_prng_forward(3); // 460 / 100 = 4.6  iterations
+	WaitTicks(366); 
 	
 	frame_sendAsReader(cmd, cmd_sz);
 	frame_receiveAsReader(&current_frame, 12);
 
 	byte = BYTEx(current_frame.data, 0);
+
 	calcCrc = legic4Crc(LEGIC_READ, byte_index, byte, cmd_sz);
 	crc = BYTEx(current_frame.data, 1);
 
@@ -457,6 +447,9 @@ int legic_read_byte(int byte_index, int cmd_sz) {
 		Dbprintf("!!! crc mismatch: expected %x but got %x !!!",  calcCrc, crc);
 		return -1;
 	}
+
+	legic_prng_forward(4);
+	WaitTicks(40);
 	return byte;
 }
 
@@ -572,7 +565,7 @@ int LegicRfReader(int offset, int bytes, int iv) {
 
 	// Start setup and read bytes.
 	setup_phase_reader(iv);
-	
+		
 	LED_B_ON();
 	while (byte_index < bytes) {
 		int r = legic_read_byte(byte_index + offset, cmd_sz);
@@ -775,7 +768,7 @@ void LegicRfRawWriter(int address, int byte, int iv) {
 void LegicRfInfo(void){
 
 	LegicCommonInit();
-	uint32_t tag_type = setup_phase_reader(0x55);
+	uint32_t tag_type = setup_phase_reader(0x1);
 	uint8_t cmd_sz = 0;
 	uint16_t card_sz = 0;
 	
