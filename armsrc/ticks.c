@@ -178,14 +178,26 @@ uint32_t RAMFUNC GetCountSspClk(void) {
 //  -------------------------------------------------------------------------
 void StartTicks(void){
 	//initialization of the timer
+	// tc1 is higher 0xFFFF0000
+	// tc0 is lower 0x0000FFFF
 	AT91C_BASE_PMC->PMC_PCER |= (1 << 12) | (1 << 13) | (1 << 14);
 	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;  //clock at 48/32 MHz
+	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK | // MCK(48MHz) / 32 
+								AT91C_TC_WAVE | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_CLEAR |
+								AT91C_TC_ACPC_SET | AT91C_TC_ASWTRG_SET;
+	AT91C_BASE_TC0->TC_RA = 1;
+	AT91C_BASE_TC0->TC_RC = 0xBFFF + 1; // 0xC000
+
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;	// timer disable  
+	AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_XC1; // from TC0
+	
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TCB->TCB_BCR = 1;
+	
 	// wait until timer becomes zero.
-	while (AT91C_BASE_TC0->TC_CV > 1);
+	while (AT91C_BASE_TC1->TC_CV >= 1);
 }
 // Wait - Spindelay in ticks.
 // if called with a high number, this will trigger the WDT...
@@ -206,7 +218,9 @@ void WaitMS(uint16_t ms){
 }
 // Starts Clock and waits until its reset
 void ResetTicks(){
-	ResetTimer(AT91C_BASE_TC0);
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+	while (AT91C_BASE_TC1->TC_CV >= 1);
 }
 void ResetTimer(AT91PS_TC timer){
 	timer->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;

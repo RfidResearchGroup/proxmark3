@@ -390,8 +390,8 @@ int CmdLegicDecode(const char *Cmd) {
 int CmdLegicRFRead(const char *Cmd) {
 
 	// params:
-	// offset in data
-	// number of bytes.
+	// offset in data memory
+	// number of bytes to read
 	char cmdp = param_getchar(Cmd, 0);
 	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_read();
 	
@@ -401,7 +401,7 @@ int CmdLegicRFRead(const char *Cmd) {
 	// OUT-OF-BOUNDS check
 	if ( len + offset > MAX_LENGTH ) {
 		len = MAX_LENGTH - offset;
-		PrintAndLog("Out-of-bound, shorten len to %d",len);
+		PrintAndLog("Out-of-bound, shorten len to %d", len);
 	}
 	
 	if ( (IV & 0x7F) != IV ){
@@ -414,7 +414,7 @@ int CmdLegicRFRead(const char *Cmd) {
 		PrintAndLog("LSB of IV must be SET");	
 	}
 
-	PrintAndLog("Using IV: 0x%02x", IV);
+	//PrintAndLog("Using IV: 0x%02x | Offset: 0x%02x | Len: 0x%02x ", IV, offset, len);
 	
 	UsbCommand c = {CMD_READER_LEGIC_RF, {offset, len, IV}};
 	clearCommandBuffer();
