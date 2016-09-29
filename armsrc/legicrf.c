@@ -10,7 +10,7 @@
 #include "legicrf.h"
 
 static struct legic_frame {
-	int bits;
+	uint8_t bits;
 	uint32_t data;
 } current_frame;
 
@@ -426,7 +426,7 @@ static uint32_t legic4Crc(uint8_t legicCmd, uint16_t byte_index, uint8_t value, 
 
 int legic_read_byte(int byte_index, int cmd_sz) {
 
-	uint8_t byte = 0, crc = 0, calcCrc = 0;
+	uint8_t byte = 0; //, crc = 0, calcCrc = 0;
 	uint32_t cmd = (byte_index << 1) | LEGIC_READ;
 	
 	// (us)| ticks
@@ -440,13 +440,13 @@ int legic_read_byte(int byte_index, int cmd_sz) {
 
 	byte = BYTEx(current_frame.data, 0);
 
-	calcCrc = legic4Crc(LEGIC_READ, byte_index, byte, cmd_sz);
-	crc = BYTEx(current_frame.data, 1);
+	// calcCrc = legic4Crc(LEGIC_READ, byte_index, byte, cmd_sz);
+	// crc = BYTEx(current_frame.data, 1);
 
-	if( calcCrc != crc ) {
-		Dbprintf("!!! crc mismatch: expected %x but got %x !!!",  calcCrc, crc);
-		return -1;
-	}
+	// if( calcCrc != crc ) {
+		// Dbprintf("!!! crc mismatch: expected %x but got %x !!!",  calcCrc, crc);
+		// return -1;
+	// }
 
 	legic_prng_forward(4);
 	WaitTicks(40);
@@ -526,56 +526,37 @@ int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
 int LegicRfReader(int offset, int bytes, int iv) {
 	
 	uint16_t byte_index = 0;
-	uint8_t cmd_sz = 0, isOK = 1;
-	int card_sz = 0;
-
-	LegicCommonInit();
-
-	uint32_t tag_type = setup_phase_reader(iv);
+	uint8_t isOK = 1;
+	legic_card_select_t card;
 	
+	LegicCommonInit();
+	
+	if ( legic_select_card(&card) ) {
+		isOK = 0;
+		goto OUT;
+	}
+		
 	switch_off_tag_rwd();
 	
-	switch(tag_type) {
-		case 0x0d:
-			if ( MF_DBGLEVEL >= 2) DbpString("MIM22 card found, reading card");
-            cmd_sz = 6;
-			card_sz = 22;
-			break;
-		case 0x1d:
-			if ( MF_DBGLEVEL >= 2) DbpString("MIM256 card found, reading card");
-            cmd_sz = 9;
-			card_sz = 256;
-			break;
-		case 0x3d:
-			if ( MF_DBGLEVEL >= 2) DbpString("MIM1024 card found, reading card");
-            cmd_sz = 11;
-			card_sz = 1024;
-			break;
-		default:
-			if ( MF_DBGLEVEL >= 1) Dbprintf("Unknown card format: %x", tag_type);
-			isOK = 0;
-			goto OUT;
-			break;
-	}
 	if (bytes == -1)
-		bytes = card_sz;
+		bytes = card.cardsize;
 
-	if (bytes + offset >= card_sz)
-		bytes = card_sz - offset;
+	if (bytes + offset >= card.cardsize)
+		bytes = card.cardsize - offset;
 
 	// Start setup and read bytes.
 	setup_phase_reader(iv);
 		
 	LED_B_ON();
 	while (byte_index < bytes) {
-		int r = legic_read_byte(byte_index + offset, cmd_sz);
+		int r = legic_read_byte(byte_index + offset, card.cmdsize);
 		
 		if (r == -1 || BUTTON_PRESS()) {			
 	        if ( MF_DBGLEVEL >= 3) DbpString("operation aborted");
 			isOK = 0;
 			goto OUT;
 		}
-		cardmem[++byte_index] = r;
+		cardmem[byte_index++] = r;
         WDT_HIT();
 	}
 
@@ -765,47 +746,61 @@ void LegicRfRawWriter(int address, int byte, int iv) {
     if ( MF_DBGLEVEL >= 1) DbpString("write successful");
 }
 
-void LegicRfInfo(void){
+int legic_select_card(legic_card_select_t *p_card){
 
-	LegicCommonInit();
-	uint32_t tag_type = setup_phase_reader(0x1);
-	uint8_t cmd_sz = 0;
-	uint16_t card_sz = 0;
+	if ( p_card == NULL ) return 1;
 	
-	switch(tag_type) {
+	p_card->tagtype = setup_phase_reader(0x1);
+	
+	switch(p_card->tagtype) {
 		case 0x0d:
-            cmd_sz = 6;
-			card_sz = 22;
+            p_card->cmdsize = 6;
+			p_card->cardsize = 22;
 			break;
 		case 0x1d:
-			cmd_sz = 9;
-			card_sz = 256;
+			p_card->cmdsize = 9;
+			p_card->cardsize = 256;
 			break;
 		case 0x3d:
-            cmd_sz = 11;
-			card_sz = 1024;
+            p_card->cmdsize = 11;
+			p_card->cardsize = 1024;
 			break;
 		default: 
-			cmd_send(CMD_ACK,0,0,0,0,0);
-			goto OUT;
+		    p_card->cmdsize = 0;
+			p_card->cardsize = 0;
+			return 2;
+			break;
+	}
+	return 0;
+}
+
+void LegicRfInfo(void){
+
+	uint8_t buf[sizeof(legic_card_select_t)] = {0x00};
+	legic_card_select_t *card = (legic_card_select_t*) buf;
+	
+	LegicCommonInit();
+	
+	if ( legic_select_card(card) ) {
+		cmd_send(CMD_ACK,0,0,0,0,0);
+		goto OUT;
 	}
 
 	// read UID bytes.
-	uint8_t uid[] = {0,0,0,0};
-	for ( uint8_t i = 0; i < sizeof(uid); ++i) {
-		int r = legic_read_byte(i, cmd_sz);
+	for ( uint8_t i = 0; i < sizeof(card->uid); ++i) {
+		int r = legic_read_byte(i, card->cmdsize);
 		if ( r == -1 ) {
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			goto OUT;
 		}
-		uid[i] = r & 0xFF;
+		card->uid[i] = r & 0xFF;
 	}
 
-	cmd_send(CMD_ACK,1,card_sz,0,uid,sizeof(uid));
-OUT:	
+	cmd_send(CMD_ACK, 1 ,0 , 0, buf, sizeof(legic_card_select_t));
+	
+OUT:
 	switch_off_tag_rwd();
 	LEDsoff();
-
 }
 
 /* Handle (whether to respond) a frame in tag mode

@@ -31,7 +31,7 @@ typedef struct {
 	uint8_t mem_config;     //[13]
 	uint8_t eas;            //[14]
 	uint8_t fuses;          //[15]
-}picopass_conf_block;
+} picopass_conf_block;
 
 
 typedef struct {
@@ -41,8 +41,7 @@ typedef struct {
 	uint8_t key_d[8];
 	uint8_t key_c[8];
 	uint8_t app_issuer_area[8];
-
-}picopass_hdr;
+} picopass_hdr;
 
 uint8_t isset(uint8_t val, uint8_t mask) {
 	return (val & mask);

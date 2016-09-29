@@ -11,7 +11,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-#define SESSION_IV 0x55
 #define MAX_LENGTH 1024	
 
 int usage_legic_calccrc8(void){
@@ -400,16 +399,21 @@ int CmdLegicRFRead(const char *Cmd) {
 	sscanf(Cmd, "%x %x %x", &offset, &len, &IV);
 
 	// OUT-OF-BOUNDS check
-	if(len + offset > MAX_LENGTH) len = MAX_LENGTH - offset;
+	if ( len + offset > MAX_LENGTH ) {
+		len = MAX_LENGTH - offset;
+		PrintAndLog("Out-of-bound, shorten len to %d",len);
+	}
 	
 	if ( (IV & 0x7F) != IV ){
 		IV &= 0x7F;
 		PrintAndLog("Truncating IV to 7bits");
 	}
+	
 	if ( (IV & 1) == 0 ){
-		IV |= 0x01;  // IV must be odd
+		IV |= 0x01;
 		PrintAndLog("LSB of IV must be SET");	
 	}
+
 	PrintAndLog("Using IV: 0x%02x", IV);
 	
 	UsbCommand c = {CMD_READER_LEGIC_RF, {offset, len, IV}};
@@ -818,27 +822,30 @@ int HFLegicInfo(const char *Cmd, bool verbose) {
 	clearCommandBuffer();
     SendCommand(&c);
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
-		uint8_t isOK = resp.arg[0] & 0xFF;
-		uint16_t tagtype = resp.arg[1] & 0xFFF;
-		 if ( isOK ) {
-			PrintAndLog(" UID : %s", sprint_hex(resp.d.asBytes, 4));
-			switch(tagtype) {
-				case 22: PrintAndLog("MIM22 card (22bytes)"); break;
-				case 256: PrintAndLog("MIM256 card (256bytes)"); break;
-				case 1024: PrintAndLog("MIM1024 card (1024bytes)");	break;				
-				default: {
-					PrintAndLog("Unknown card format: %x", tagtype); 
-					return 1;
-				}
-			}		
-		} else {
-			if ( verbose ) PrintAndLog("legic card select failed");
-			return 1;
-		}
-	} else {
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
 		if ( verbose ) PrintAndLog("command execution time out");
 		return 1;
+	}
+	
+	uint8_t isOK = resp.arg[0] & 0xFF;
+	if ( !isOK ) {
+		if ( verbose ) PrintAndLog("legic card select failed");
+		return 1;
+	}
+	
+	legic_card_select_t card;
+	memcpy(&card, (legic_card_select_t *)resp.d.asBytes, sizeof(legic_card_select_t));
+
+	PrintAndLog("  UID : %s", sprint_hex(card.uid, sizeof(card.uid)));
+	switch(card.cardsize) {
+		case 22:
+		case 256: 
+		case 1024:
+			PrintAndLog(" TYPE : MIM%d card (%d bytes)", card.cardsize, card.cardsize); break;				
+		default: {
+			PrintAndLog("Unknown card format: %d", card.cardsize); 
+			return 1;
+		}
 	}
 	return 0;
 }

@@ -21,6 +21,7 @@
 #include "util.h"
 #include "crc.h"
 #include "legic_prng.h"
+#include "legic.h" // legic_card_select_t struct
 
 int CmdHFLegic(const char *Cmd);
 
