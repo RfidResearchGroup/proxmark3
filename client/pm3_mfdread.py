@@ -9,21 +9,28 @@
 
 import codecs
 import sys
+import copy
 from struct import unpack 
 from datetime import datetime
 from bitstring import BitArray
 
+class Options:
+    FORCE_1K = False
 
 if len(sys.argv) == 1:
     print('''
 ------------------
 Usage: mfdread.py ./dump.mfd
 Mifare dumps reader. 
-
 ''')
     sys.exit();
 
-
+def d(bytes):
+    decoded = codecs.decode(bytes, "hex")
+    try:
+        return str(decoded, "utf-8").rstrip('\0')
+    except:
+        return ""
 
 
 class bashcolors:
@@ -68,6 +75,37 @@ def accbits_for_blocknum(accbits_str, blocknum):
         return False
 
 
+def accbits_to_permission_sector(accbits):
+    permissions = {
+        '000': "- A | A   - | A A [read B]",
+        '010': "- - | A   - | A - [read B]",
+        '100': "- B | A/B - | - B",
+        '110': "- - | A/B - | - -",
+        '001': "- A | A   A | A A [transport]",
+        '011': "- B | A/B B | - B",
+        '101': "- - | A/B B | - -",
+        '111': "- - | A/B - | - -",
+    }
+    if isinstance(accbits, BitArray):
+        return permissions.get(accbits.bin, "unknown")
+    else:
+        return ""
+
+def accbits_to_permission_data(accbits):
+    permissions = {
+        '000': "A/B | A/B   | A/B | A/B [transport]",
+        '010': "A/B |  -    |  -  |  -  [r/w]",
+        '100': "A/B |   B   |  -  |  -  [r/w]",
+        '110': "A/B |   B   |   B | A/B [value]",
+        '001': "A/B |  -    |  -  | A/B [value]",
+        '011': "  B |   B   |  -  |  -  [r/w]",
+        '101': "  B |  -    |  -  |  -  [r/w]",
+        '111': " -  |  -    |  -  |  -  [r/w]",
+    }
+    if isinstance(accbits, BitArray):
+        return permissions.get(accbits.bin, "unknown")
+    else:
+        return ""
 
 
 def accbit_info(accbits):
@@ -99,6 +137,9 @@ def print_info(data):
         print("Wrong file size: %d bytes.\nOnly 1024 or 4096 allowed." % len(data))
         sys.exit();
 
+    if Options.FORCE_1K:
+        cardsize = 16
+
     # read all sectors
     for i in range(0, cardsize):
         start = i * 64
@@ -109,6 +150,7 @@ def print_info(data):
             sector = str(sector, 'ascii')
         blocksmatrix.append([sector[x:x+32] for x in range(0, len(sector), 32)])
 
+    blocksmatrix_clear = copy.deepcopy(blocksmatrix)
     # add colors for each keyA, access bits, KeyB
     for c in range(0, len(blocksmatrix)):
         # Fill in the access bits
@@ -126,10 +168,12 @@ def print_info(data):
     print("\tSAK:  " + blocksmatrix[0][0][10:12])
     print("\tATQA: " + blocksmatrix[0][0][12:14])
     print("                   %sKey A%s    %sAccess Bits%s    %sKey B%s" %(bashcolors.RED,bashcolors.ENDC,bashcolors.GREEN,bashcolors.ENDC,bashcolors.BLUE,bashcolors.ENDC))
-    print("╔═════════╦═════╦══════════════════════════════════╦═══════════════╗")
-    print("║  Sector ║Block║            Data                  ║  Access Bits  ║")
+    print("╔═════════╦═════╦══════════════════════════════════╦════════╦═════════════════════════════════════╗")
+    print("║  Sector ║Block║            Data                  ║ Access ║   A | Acc.  | B                     ║")
+    print("║         ║     ║                                  ║        ║ r w | r   w | r w [info]            ║")
+    print("║         ║     ║                                  ║        ║  r  |  w    |  i  | d/t/r           ║")
     for q in range(0, len(blocksmatrix)):
-        print("╠═════════╬═════╬══════════════════════════════════╬═══════════════╣")
+        print("╠═════════╬═════╬══════════════════════════════════╬════════╬═════════════════════════════════════╣")
 
         # z is the block in each sector
         for z in range(0, len(blocksmatrix[q])):
@@ -140,21 +184,41 @@ def print_info(data):
             else:
                 accbits = bashcolors.WARNING + "ERR" + bashcolors.ENDC
 
+            if (q == 0 and z == 0):
+                permissions = "-"
+            elif (z == 3):
+                permissions = accbits_to_permission_sector(blockrights[q][z])
+            else:
+                permissions = accbits_to_permission_data(blockrights[q][z])
+
             # Add Padding after the sector number
             padLen = max(1, 5 - len(str(q)))
             padding = " " * padLen
             # Only print the sector number in the second third row
             if (z == 2):
-                print("║    %d%s║  %d  ║ %s ║      %s      ║"  %(q,padding,z,blocksmatrix[q][z], accbits))
+                print("║    %d%s║  %d  ║ %s ║  %s   ║ %-35s ║ %s"  %(q,padding,z,blocksmatrix[q][z], accbits, permissions, d(blocksmatrix_clear[q][z])))
             else:
-                print("║         ║  %d  ║ %s ║      %s      ║"  %(z,blocksmatrix[q][z], accbits))
-    print("╚═════════╩═════╩══════════════════════════════════╩═══════════════╝")
+                print("║         ║  %d  ║ %s ║  %s   ║ %-35s ║ %s"  %(z,blocksmatrix[q][z], accbits, permissions, d(blocksmatrix_clear[q][z])))
+    print("╚═════════╩═════╩══════════════════════════════════╩════════╩═════════════════════════════════════╝")
 
 
-def main(filename):
+def main(args):
+    if args[0] == '-n':
+        args.pop(0)
+        bashcolors.BLUE = ""
+        bashcolors.RED = ""
+        bashcolors.GREEN = ""
+        bashcolors.WARNING = ""
+        bashcolors.ENDC = ""
+
+    if args[0] == '-1':
+        args.pop(0)
+        Options.FORCE_1K = True
+
+    filename = args[0]
     with open(filename, "rb") as f:
         data = f.read()
         print_info(data)
  
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(sys.argv[1:])
