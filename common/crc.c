@@ -35,29 +35,21 @@ void crc_clear(crc_t *crc) {
 		crc->state = reflect(crc->state, crc->order);
 }
 
-void crc_update(crc_t *crc, uint32_t indata, int data_width){
-
-	uint32_t poly = crc->polynom;	
-
-	// if requested, return the initial CRC */
-    if (indata == 0)
-        return crc->initial_value;
-		
-	//reflected
+void crc_update(crc_t *crc, uint32_t data, int data_width){
+	
 	if (crc->refin) 
-		indata = reflect(indata, data_width);
+		data = reflect(data, data_width);
 	
 	// Bring the next byte into the remainder.
-	crc->state ^= indata << (crc->order - data_width);
+	crc->state ^= data << (crc->order - data_width);
 	
 	for( uint8_t bit = data_width; bit > 0; --bit) {		
-		 // Try to divide the current data bit.
+
 		if (crc->state & crc->topbit)
-			crc->state = (crc->state << 1) ^ poly;
+			crc->state = (crc->state << 1) ^ crc->polynom;
 		else
 			crc->state = (crc->state << 1);
 	}
-    return crc ^ model->xorout;
 }
 
 void crc_update2(crc_t *crc, uint32_t data, int data_width)
