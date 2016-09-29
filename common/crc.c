@@ -35,7 +35,7 @@ void crc_clear(crc_t *crc) {
 		crc->state = reflect(crc->state, crc->order);
 }
 
-void crc_update(crc_t *crc, uint32_t data, int data_width){
+void crc_update2(crc_t *crc, uint32_t data, int data_width){
 	
 	if (crc->refin) 
 		data = reflect(data, data_width);
@@ -52,7 +52,7 @@ void crc_update(crc_t *crc, uint32_t data, int data_width){
 	}
 }
 
-void crc_update2(crc_t *crc, uint32_t data, int data_width)
+void crc_update(crc_t *crc, uint32_t data, int data_width)
 {
 	if (crc->refin) 
 		data = reflect(data, data_width);

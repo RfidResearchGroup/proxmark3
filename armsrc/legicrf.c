@@ -221,7 +221,6 @@ void frame_sendAsReader(uint32_t data, uint8_t bits){
 
 	uint32_t starttime = GET_TICKS, send = 0;
 	uint16_t mask = 1;
-	uint8_t prngstart = legic_prng_count() ;
 	
 	// xor lsfr onto data.
 	send = data ^ legic_prng_get_bits(bits);
@@ -243,9 +242,7 @@ void frame_sendAsReader(uint32_t data, uint8_t bits){
 		BYTEx(data, 0), 
 		BYTEx(data, 1),
 		BYTEx(send, 0), 
-		BYTEx(send, 1),
-		prngstart,
-		legic_prng_count()
+		BYTEx(send, 1)
 	};
 	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, sendFrameStop, NULL, TRUE);
 }
@@ -287,19 +284,15 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	
 	// calibrate the prng.
 	legic_prng_forward(2);
-	uint8_t prngstart =  legic_prng_count() ;
 	data = lsfr = legic_prng_get_bits(bits);
 	
 	//FIXED time between sending frame and now listening frame. 330us
-	// 387 = 0x19  0001 1001
 	uint32_t starttime = GET_TICKS;
 	//uint16_t mywait =  TAG_FRAME_WAIT - (starttime - sendFrameStop);
-	//uint16_t mywait =  495 - (starttime - sendFrameStop);
 	if ( bits == 6) {
 		//WaitTicks( 495 - 9 - 9 );
 		WaitTicks( 475 );
 	} else {
-		//Dbprintf("x WAIT %d", mywait );
 		//WaitTicks( mywait );
 		WaitTicks( 450 );
 	}
@@ -321,7 +314,6 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 		next_bit_at += TAG_BIT_PERIOD;
 		
 		// We expect 42 edges  == ONE
-		//if (edges > 20 && edges < 64)
 		if ( edges > 20 )
 			data ^= the_bit;
 
@@ -332,15 +324,8 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	f->data = data;
 	f->bits = bits;
 	
-	uint8_t cmdbytes[] = {
-		bits,
-		BYTEx(data, 0),
-		BYTEx(data, 1),
-		BYTEx(data, 0) ^ BYTEx(lsfr, 0),
-		BYTEx(data, 1) ^ BYTEx(lsfr, 1),
-		prngstart,
-		legic_prng_count()
-	};
+	//log
+	uint8_t cmdbytes[] = {bits,	BYTEx(data, 0),	BYTEx(data, 1)};
 	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, FALSE);
 }
 
@@ -413,26 +398,18 @@ static void switch_off_tag_rwd(void) {
 }
 
 // calculate crc4 for a legic READ command 
-// 5,8,10 address size.
 static uint32_t legic4Crc(uint8_t legicCmd, uint16_t byte_index, uint8_t value, uint8_t cmd_sz) {
 	crc_clear(&legic_crc);	
-	//uint32_t temp =  (value << cmd_sz) | (byte_index << 1) | legicCmd;
-	//crc_update(&legic_crc, temp, cmd_sz + 8 );
-	crc_update(&legic_crc, 1, 1); /* CMD_READ */
-	crc_update(&legic_crc, byte_index, cmd_sz-1);
-	crc_update(&legic_crc, value, 8);
+	uint32_t temp =  (value << cmd_sz) | (byte_index << 1) | legicCmd;
+	crc_update(&legic_crc, temp, cmd_sz + 8 );
 	return crc_finish(&legic_crc);
 }
 
 int legic_read_byte(int byte_index, int cmd_sz) {
 
-	uint8_t byte = 0; //, crc = 0, calcCrc = 0;
+	uint8_t byte = 0, crc = 0, calcCrc = 0;
 	uint32_t cmd = (byte_index << 1) | LEGIC_READ;
-	
-	// (us)| ticks
-	// -------------
-	// 330 | 495
-	// 244 | 366
+
 	WaitTicks(366); 
 	
 	frame_sendAsReader(cmd, cmd_sz);
@@ -440,13 +417,13 @@ int legic_read_byte(int byte_index, int cmd_sz) {
 
 	byte = BYTEx(current_frame.data, 0);
 
-	// calcCrc = legic4Crc(LEGIC_READ, byte_index, byte, cmd_sz);
-	// crc = BYTEx(current_frame.data, 1);
+	calcCrc = legic4Crc(LEGIC_READ, byte_index, byte, cmd_sz);
+	crc = BYTEx(current_frame.data, 1);
 
-	// if( calcCrc != crc ) {
-		// Dbprintf("!!! crc mismatch: expected %x but got %x !!!",  calcCrc, crc);
-		// return -1;
-	// }
+	if( calcCrc != crc ) {
+		Dbprintf("!!! crc mismatch: expected %x but got %x !!!",  calcCrc, crc);
+		return -1;
+	}
 
 	legic_prng_forward(4);
 	WaitTicks(40);
@@ -535,9 +512,9 @@ int LegicRfReader(int offset, int bytes, int iv) {
 		isOK = 0;
 		goto OUT;
 	}
-		
+
 	switch_off_tag_rwd();
-	
+
 	if (bytes == -1)
 		bytes = card.cardsize;
 
