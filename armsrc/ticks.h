@@ -19,7 +19,7 @@
 #include "proxmark3.h"
 
 #ifndef GET_TICKS
-# define GET_TICKS   ((AT91C_BASE_TC1->TC_CV << 16) | AT91C_BASE_TC0->TC_CV)
+# define GET_TICKS   (uint32_t)((AT91C_BASE_TC1->TC_CV << 16) | AT91C_BASE_TC0->TC_CV)
 #endif
 
 void SpinDelay(int ms);

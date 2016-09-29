@@ -425,12 +425,14 @@ int CmdLegicRFRead(const char *Cmd) {
 		uint16_t len = resp.arg[1] & 0x3FF;
 		 if ( isOK ) {
 			PrintAndLog("use 'hf legic decode'");
-		 }
+
 			uint8_t *data = resp.d.asBytes;
 			PrintAndLog("\nData        |");
 			PrintAndLog("-----------------------------");
 			PrintAndLog(" %s|\n", sprint_hex(data, len));
-		// }
+		 } else {
+			 PrintAndLog("failed reading tag");
+		 }
 	} else {
 		PrintAndLog("command execution time out");
 		return 1;

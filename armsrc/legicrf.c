@@ -72,7 +72,7 @@ static void setup_timer(void) {
 #define	RWD_TIME_1 120		// READER_TIME_PAUSE 20us off, 80us on = 100us  80 * 1.5 == 120ticks
 #define RWD_TIME_0 60		// READER_TIME_PAUSE 20us off, 40us on = 60us   40 * 1.5 == 60ticks 
 #define RWD_TIME_PAUSE 30	// 20us == 20 * 1.5 == 30ticks */
-#define TAG_BIT_PERIOD 143	// 100us == 100 * 1.5 == 150ticks
+#define TAG_BIT_PERIOD 142	// 100us == 100 * 1.5 == 150ticks
 #define TAG_FRAME_WAIT 495  // 330us from READER frame end to TAG frame start. 330 * 1.5 == 495
 
 #define RWD_TIME_FUZZ 20   // rather generous 13us, since the peak detector + hysteresis fuzz quite a bit
@@ -264,7 +264,6 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	if ( bits > 32 ) return;
 	
 	uint8_t i = bits, edges = 0;	
-	uint16_t lsfr = 0;
 	uint32_t the_bit = 1, next_bit_at = 0, data = 0;
 	uint32_t old_level = 0;
 	volatile uint32_t level = 0;
@@ -276,18 +275,19 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	
 	// calibrate the prng.
 	legic_prng_forward(2);
-	data = lsfr = legic_prng_get_bits(bits);
+	data = legic_prng_get_bits(bits);
 	
 	//FIXED time between sending frame and now listening frame. 330us
 	uint32_t starttime = GET_TICKS;
-	if ( bits == 6) {
-		//WaitTicks( 495 - 9 - 9 );
-		WaitTicks( 475 );
-	} else {
-		WaitTicks( 450 );
-	}
+	//if ( bits == 6 || bits == 7) {
+		// its about 9+9 ticks delay from end-send to here.
+		//WaitTicks( 495 - 9 - 9 );		
+		WaitTicks( 477 );
+	//} else {
+//		WaitTicks( 477 );
+//	}
 
-	next_bit_at =  GET_TICKS + TAG_BIT_PERIOD;
+	next_bit_at = GET_TICKS + TAG_BIT_PERIOD;
 
 	while ( i-- ){
 		edges = 0;
@@ -400,14 +400,16 @@ int legic_read_byte( uint16_t index, uint8_t cmd_sz) {
 	uint8_t byte, crc, calcCrc = 0;
 	uint32_t cmd = (index << 1) | LEGIC_READ;
 
-	WaitTicks(366); 
+	//WaitTicks(366); 
+	WaitTicks(330); 
+	//WaitTicks(50);
 	
 	frame_sendAsReader(cmd, cmd_sz);
 	frame_receiveAsReader(&current_frame, 12);
 
+	// CRC check. 
 	byte = BYTEx(current_frame.data, 0);
 	crc = BYTEx(current_frame.data, 1);
-	
 	calcCrc = legic4Crc(LEGIC_READ, index, byte, cmd_sz);
 
 	if( calcCrc != crc ) {
@@ -416,7 +418,6 @@ int legic_read_byte( uint16_t index, uint8_t cmd_sz) {
 	}
 
 	legic_prng_forward(4);
-	WaitTicks(50);
 	return byte;
 }
 
@@ -738,7 +739,6 @@ int legic_select_card_iv(legic_card_select_t *p_card, uint8_t iv){
 			p_card->addrsize = 0;
 			p_card->cardsize = 0;
 			return 2;
-			break;
 	}
 	return 0;
 }
@@ -752,7 +752,7 @@ void LegicRfInfo(void){
 	legic_card_select_t *card = (legic_card_select_t*) buf;
 	
 	LegicCommonInit();
-	
+
 	if ( legic_select_card(card) ) {
 		cmd_send(CMD_ACK,0,0,0,0,0);
 		goto OUT;
