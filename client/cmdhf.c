@@ -515,20 +515,6 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
 	}
 }
 
-uint8_t legic_CRC_check(bool isResponse, uint8_t* data, uint8_t len){
-	if (len > 2) return 2;
-	
-	uint8_t calccrc = CRC8Legic(data, len);
-	
-	return 0;
-	// crc_init(&legic_crc, 4, 0x19 >> 1, 0x5, 0);
-	// crc_clear(&legic_crc);
-	// crc_update(&legic_crc, 1, 1); /* CMD_READ */
-	// crc_update(&legic_crc, byte_index, cmd_sz-1);
-	// crc_update(&legic_crc, value, 8);
-	// return crc_finish(&legic_crc);
-}
-
 bool is_last_record(uint16_t tracepos, uint8_t *trace, uint16_t traceLen)
 {
 	return(tracepos + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) >= traceLen);
@@ -645,8 +631,6 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			default: 
 				break;
 		}
-	} else if ( data_len == 2 && protocol == LEGIC ){
-		crcStatus = legic_CRC_check(isResponse, frame, data_len);		
 	}
 	//0 CRC-command, CRC not ok
 	//1 CRC-command, CRC ok
@@ -848,8 +832,12 @@ int CmdHFList(const char *Cmd) {
 	PrintAndLog("Recorded Activity (TraceLen = %d bytes)", traceLen);
 	PrintAndLog("");
 	PrintAndLog("Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
-	PrintAndLog("iso14443a - All times are in carrier periods (1/13.56Mhz)");
-	PrintAndLog("iClass    - Timings are not as accurate");
+	if ( protocol == ISO_14443A )
+		PrintAndLog("iso14443a - All times are in carrier periods (1/13.56Mhz)");
+	if ( protocol == ICLASS )
+		PrintAndLog("iClass    - Timings are not as accurate");
+	if ( protocol == LEGIC )
+		PrintAndLog("LEGIC    - Timings are in ticks (1us == 1.5ticks)");
 	PrintAndLog("");
     PrintAndLog("      Start |        End | Src | Data (! denotes parity error)                                   | CRC | Annotation         |");
 	PrintAndLog("------------|------------|-----|-----------------------------------------------------------------|-----|--------------------|");
