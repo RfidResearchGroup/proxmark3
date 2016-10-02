@@ -389,7 +389,7 @@ void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 		case 9:
 		case 11: {
 			uint8_t cmdBit = (cmd[1] & 1);
-			uint8_t address = (cmd[2] << 7) | cmd[1] >> 1;
+			uint16_t address = (cmd[2] << 7) | cmd[1] >> 1;
 			
 			if (cmdBit == LEGIC_READ) 
 				snprintf(exp, size, "READ Byte(%d)", address);
