@@ -115,7 +115,7 @@ uint32_t CRC8Legic(uint8_t *buff, size_t size) {
 	crc_t crc;
 	crc_init_ref(&crc, 8, 0x63, 0x55, 0, TRUE, TRUE);
 	for ( int i = 0; i < size; ++i)
-		crc_update(&crc, buff[i], 8);
+		crc_update2(&crc, buff[i], 8);
 	return reflect(crc_finish(&crc), 8);
 }
 

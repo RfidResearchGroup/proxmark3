@@ -109,86 +109,86 @@ int CmdLegicDecode(const char *Cmd) {
 	int i = 0, k = 0, segmentNum = 0, segment_len = 0, segment_flag = 0;
 	int crc = 0, wrp = 0, wrc = 0;
 	uint8_t stamp_len = 0;
-	uint8_t data_buf[1024]; // receiver buffer
+	uint8_t data[1024]; // receiver buffer
 	char token_type[5] = {0,0,0,0,0};
 	int dcf = 0;
 	int bIsSegmented = 0;
 
-	// copy data from proxmark into buffer
-	GetFromBigBuf(data_buf,sizeof(data_buf),0);
+	// copy data from device
+	GetEMLFromBigBuf(data, sizeof(data), 0);
 	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000)){
 		PrintAndLog("Command execute timeout");
 		return 1;
 	}
 	
 	// Output CDF System area (9 bytes) plus remaining header area (12 bytes)
-	crc = data_buf[4];
-	uint32_t calc_crc =  CRC8Legic(data_buf, 4);	
+	crc = data[4];
+	uint32_t calc_crc =  CRC8Legic(data, 4);	
 	
 	PrintAndLog("\nCDF: System Area");
 	PrintAndLog("------------------------------------------------------");
 	PrintAndLog("MCD: %02x, MSN: %02x %02x %02x, MCC: %02x %s",
-		data_buf[0],
-		data_buf[1],
-		data_buf[2],
-		data_buf[3],
-		data_buf[4],
-		(calc_crc == crc) ? "OK":"Fail" 
+		data[0],
+		data[1],
+		data[2],
+		data[3],
+		data[4],
+		(calc_crc == crc) ? "OK":"Fail"
 	);
  
 
 	token_type[0] = 0;
-	dcf = ((int)data_buf[6] << 8) | (int)data_buf[5];
+	dcf = ((int)data[6] << 8) | (int)data[5];
 
 	// New unwritten media?
 	if(dcf == 0xFFFF) {
 
 		PrintAndLog("DCF: %d (%02x %02x), Token Type=NM (New Media)",
 			dcf,
-			data_buf[5],
-			data_buf[6]
+			data[5],
+			data[6]
 		);
 	
 	} else if(dcf > 60000) {		// Master token?
 
 		int fl = 0;
 
-		if(data_buf[6] == 0xec) {
+		if(data[6] == 0xec) {
 			strncpy(token_type, "XAM", sizeof(token_type));
 			fl = 1;
-			stamp_len = 0x0c - (data_buf[5] >> 4);
+			stamp_len = 0x0c - (data[5] >> 4);
 		} else {
-			switch (data_buf[5] & 0x7f) {
+			switch (data[5] & 0x7f) {
 			case 0x00 ... 0x2f:
 				strncpy(token_type, "IAM", sizeof(token_type));
-				fl = (0x2f - (data_buf[5] & 0x7f)) + 1;
+				fl = (0x2f - (data[5] & 0x7f)) + 1;
 				break;
 			case 0x30 ... 0x6f:
 				strncpy(token_type, "SAM", sizeof(token_type));
-				fl = (0x6f - (data_buf[5] & 0x7f)) + 1;
+				fl = (0x6f - (data[5] & 0x7f)) + 1;
 				break;
 			case 0x70 ... 0x7f:
 				strncpy(token_type, "GAM", sizeof(token_type));
-				fl = (0x7f - (data_buf[5] & 0x7f)) + 1;
+				fl = (0x7f - (data[5] & 0x7f)) + 1;
 				break;
 			}
 
-			stamp_len = 0xfc - data_buf[6];
+			stamp_len = 0xfc - data[6];
 		}
 
 		PrintAndLog("DCF: %d (%02x %02x), Token Type=%s (OLE=%01u), OL=%02u, FL=%02u",
 			dcf,
-			data_buf[5],
-			data_buf[6],
+			data[5],
+			data[6],
 			token_type,
-			(data_buf[5] & 0x80 )>> 7,
+			(data[5] & 0x80 )>> 7,
 			stamp_len,
 			fl
 		);
 
 	} else {	// Is IM(-S) type of card...
 
-		if(data_buf[7] == 0x9F && data_buf[8] == 0xFF) {
+		if(data[7] == 0x9F && data[8] == 0xFF) {
 			bIsSegmented = 1;
 			strncpy(token_type, "IM-S", sizeof(token_type));
 		} else {
@@ -197,10 +197,10 @@ int CmdLegicDecode(const char *Cmd) {
 
 		PrintAndLog("DCF: %d (%02x %02x), Token Type=%s (OLE=%01u)",
 			dcf,
-			data_buf[5],
-			data_buf[6],
+			data[5],
+			data[6],
 			token_type,
-			(data_buf[5]&0x80) >> 7
+			(data[5]&0x80) >> 7
 		);
 	}
 
@@ -209,10 +209,10 @@ int CmdLegicDecode(const char *Cmd) {
 
 		if(bIsSegmented) {
 			PrintAndLog("WRP=%02u, WRC=%01u, RD=%01u, SSC=%02x",
-				data_buf[7] & 0x0f,
-				(data_buf[7] & 0x70) >> 4,
-				(data_buf[7] & 0x80) >> 7,
-				data_buf[8]
+				data[7] & 0x0f,
+				(data[7] & 0x70) >> 4,
+				(data[7] & 0x80) >> 7,
+				data[8]
 			);
 		}
 
@@ -220,10 +220,10 @@ int CmdLegicDecode(const char *Cmd) {
 		if(bIsSegmented || dcf > 60000) {
 			if(dcf > 60000) {
 				PrintAndLog("Master token data");
-				PrintAndLog("%s", sprint_hex(data_buf+8, 14));
+				PrintAndLog("%s", sprint_hex(data+8, 14));
 			} else {
 				PrintAndLog("Remaining Header Area");
-				PrintAndLog("%s", sprint_hex(data_buf+9, 13));
+				PrintAndLog("%s", sprint_hex(data+9, 13));
 			}
 		}
 	}
@@ -246,10 +246,10 @@ int CmdLegicDecode(const char *Cmd) {
 			// decode segments
 			for (segmentNum=1; segmentNum < 128; segmentNum++ )
 			{
-				segment_len = ((data_buf[i+1] ^ crc) & 0x0f) * 256 + (data_buf[i] ^ crc);
-				segment_flag = ((data_buf[i+1] ^ crc) & 0xf0) >> 4;
-				wrp = (data_buf[i+2] ^ crc);
-				wrc = ((data_buf[i+3] ^ crc) & 0x70) >> 4;
+				segment_len = ((data[i+1] ^ crc) & 0x0f) * 256 + (data[i] ^ crc);
+				segment_flag = ((data[i+1] ^ crc) & 0xf0) >> 4;
+				wrp = (data[i+2] ^ crc);
+				wrc = ((data[i+3] ^ crc) & 0x70) >> 4;
 
 				bool hasWRC = (wrc > 0);
 				bool hasWRP = (wrp > wrc);
@@ -257,31 +257,31 @@ int CmdLegicDecode(const char *Cmd) {
 				int remain_seg_payload_len = (segment_len - wrp - 5);
 		
 				// validate segment-crc
-				segCrcBytes[0]=data_buf[0];			//uid0
-				segCrcBytes[1]=data_buf[1];			//uid1
-				segCrcBytes[2]=data_buf[2];			//uid2
-				segCrcBytes[3]=data_buf[3];			//uid3
-				segCrcBytes[4]=(data_buf[i] ^ crc);   //hdr0
-				segCrcBytes[5]=(data_buf[i+1] ^ crc); //hdr1
-				segCrcBytes[6]=(data_buf[i+2] ^ crc); //hdr2
-				segCrcBytes[7]=(data_buf[i+3] ^ crc); //hdr3
+				segCrcBytes[0]=data[0];			//uid0
+				segCrcBytes[1]=data[1];			//uid1
+				segCrcBytes[2]=data[2];			//uid2
+				segCrcBytes[3]=data[3];			//uid3
+				segCrcBytes[4]=(data[i] ^ crc);   //hdr0
+				segCrcBytes[5]=(data[i+1] ^ crc); //hdr1
+				segCrcBytes[6]=(data[i+2] ^ crc); //hdr2
+				segCrcBytes[7]=(data[i+3] ^ crc); //hdr3
 
 				segCalcCRC = CRC8Legic(segCrcBytes, 8);
-				segCRC = data_buf[i+4] ^ crc;
+				segCRC = data[i+4] ^ crc;
 
 				PrintAndLog("Segment %02u \nraw header | 0x%02X 0x%02X 0x%02X 0x%02X \nSegment len: %u,  Flag: 0x%X (valid:%01u, last:%01u), WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X (%s)",
 					segmentNum,
-					data_buf[i] ^ crc,
-					data_buf[i+1] ^ crc,
-					data_buf[i+2] ^ crc,
-					data_buf[i+3] ^ crc,
+					data[i] ^ crc,
+					data[i+1] ^ crc,
+					data[i+2] ^ crc,
+					data[i+3] ^ crc,
 					segment_len, 
 					segment_flag,
 					(segment_flag & 0x4) >> 2,
 					(segment_flag & 0x8) >> 3,
 					wrp,
 					wrc,
-					((data_buf[i+3]^crc) & 0x80) >> 7,
+					((data[i+3]^crc) & 0x80) >> 7,
 					segCRC,
 					( segCRC == segCalcCRC ) ? "OK" : "fail"
 				);
@@ -294,9 +294,9 @@ int CmdLegicDecode(const char *Cmd) {
 					PrintAndLog("-----+------------------------------------------------");
 
 					for ( k=i; k < (i + wrc); ++k)
-						data_buf[k] ^= crc;
+						data[k] ^= crc;
 
-					print_hex_break( data_buf+i, wrc, 16);
+					print_hex_break( data+i, wrc, 16);
 			
 					i += wrc;
 				}
@@ -307,15 +307,15 @@ int CmdLegicDecode(const char *Cmd) {
 					PrintAndLog("-----+------------------------------------------------");
 
 					for (k=i; k < (i+wrp_len); ++k)
-						data_buf[k] ^= crc;
+						data[k] ^= crc;
 			
-					print_hex_break( data_buf+i, wrp_len, 16);
+					print_hex_break( data+i, wrp_len, 16);
 			
 					i += wrp_len;
 			
 					// does this one work? (Answer: Only if KGH/BGH is used with BCD encoded card number! So maybe this will show just garbage...)
 					if( wrp_len == 8 )
-						PrintAndLog("Card ID: %2X%02X%02X", data_buf[i-4]^crc, data_buf[i-3]^crc, data_buf[i-2]^crc);			
+						PrintAndLog("Card ID: %2X%02X%02X", data[i-4]^crc, data[i-3]^crc, data[i-2]^crc);			
 				}
     
 				PrintAndLog("Remaining segment payload:  (I %d | K %d | Remain LEN %d)", i, k, remain_seg_payload_len);
@@ -323,9 +323,9 @@ int CmdLegicDecode(const char *Cmd) {
 				PrintAndLog("-----+------------------------------------------------");
 
 				for ( k=i; k < (i+remain_seg_payload_len); ++k)
-					data_buf[k] ^= crc;
+					data[k] ^= crc;
 		
-				print_hex_break( data_buf+i, remain_seg_payload_len, 16);
+				print_hex_break( data+i, remain_seg_payload_len, 16);
     
 				i += remain_seg_payload_len;
 		
@@ -341,8 +341,8 @@ int CmdLegicDecode(const char *Cmd) {
 			// Data start point on unsegmented cards
 			i = 8;
 
-			wrp = data_buf[7] & 0x0F;
-			wrc = (data_buf[7] & 0x70) >> 4;
+			wrp = data[7] & 0x0F;
+			wrc = (data[7] & 0x70) >> 4;
 
 			bool hasWRC = (wrc > 0);
 			bool hasWRP = (wrp > wrc);
@@ -352,14 +352,14 @@ int CmdLegicDecode(const char *Cmd) {
 			PrintAndLog("Unsegmented card - WRP: %02u, WRC: %02u, RD: %01u",
 				wrp,
 				wrc,
-				(data_buf[7] & 0x80) >> 7
+				(data[7] & 0x80) >> 7
 			);
 
 			if ( hasWRC ) {
 				PrintAndLog("WRC protected area:   (I %d | WRC %d)", i, wrc);
 				PrintAndLog("\nrow  | data");
 				PrintAndLog("-----+------------------------------------------------");
-				print_hex_break( data_buf+i, wrc, 16);
+				print_hex_break( data+i, wrc, 16);
 				i += wrc;
 			}
     
@@ -367,18 +367,18 @@ int CmdLegicDecode(const char *Cmd) {
 				PrintAndLog("Remaining write protected area:  (I %d | WRC %d | WRP %d | WRP_LEN %d)", i, wrc, wrp, wrp_len);
 				PrintAndLog("\nrow  | data");
 				PrintAndLog("-----+------------------------------------------------");
-				print_hex_break( data_buf + i, wrp_len, 16);
+				print_hex_break( data + i, wrp_len, 16);
 				i += wrp_len;
 			
 				// does this one work? (Answer: Only if KGH/BGH is used with BCD encoded card number! So maybe this will show just garbage...)
 				if( wrp_len == 8 )
-					PrintAndLog("Card ID: %2X%02X%02X", data_buf[i-4], data_buf[i-3], data_buf[i-2]);
+					PrintAndLog("Card ID: %2X%02X%02X", data[i-4], data[i-3], data[i-2]);
 			}
     
 			PrintAndLog("Remaining segment payload:  (I %d | Remain LEN %d)", i, remain_seg_payload_len);
 			PrintAndLog("\nrow  | data");
 			PrintAndLog("-----+------------------------------------------------");
-			print_hex_break( data_buf + i, remain_seg_payload_len, 16);
+			print_hex_break( data + i, remain_seg_payload_len, 16);
 			i += remain_seg_payload_len;
 		
 			PrintAndLog("-----+------------------------------------------------\n");

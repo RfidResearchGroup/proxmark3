@@ -320,7 +320,7 @@ static uint32_t setup_phase_reader(uint8_t iv) {
 	
 	// Switch on carrier and let the tag charge for 1ms
 	HIGH(GPIO_SSC_DOUT);
-	WaitUS(2000);	
+	WaitUS(5000);	
 	
 	ResetTicks();
 	
