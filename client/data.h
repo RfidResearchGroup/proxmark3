@@ -14,5 +14,5 @@
 #include "util.h"
 extern uint8_t* sample_buf;
 void GetFromBigBuf(uint8_t *dest, int bytes, int start_index);
-void GetEMLFromBigBuf(uint8_t *dest, int bytes, int start_index);
+void GetEMLFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index);
 #endif

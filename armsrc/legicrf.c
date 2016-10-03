@@ -72,7 +72,7 @@ static void setup_timer(void) {
 #define	RWD_TIME_1 120		// READER_TIME_PAUSE 20us off, 80us on = 100us  80 * 1.5 == 120ticks
 #define RWD_TIME_0 60		// READER_TIME_PAUSE 20us off, 40us on = 60us   40 * 1.5 == 60ticks 
 #define RWD_TIME_PAUSE 30	// 20us == 20 * 1.5 == 30ticks */
-#define TAG_BIT_PERIOD 142	// 100us == 100 * 1.5 == 150ticks
+#define TAG_BIT_PERIOD 144	// 100us == 100 * 1.5 == 150ticks
 #define TAG_FRAME_WAIT 495  // 330us from READER frame end to TAG frame start. 330 * 1.5 == 495
 
 #define RWD_TIME_FUZZ 20   // rather generous 13us, since the peak detector + hysteresis fuzz quite a bit
@@ -279,13 +279,9 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	
 	//FIXED time between sending frame and now listening frame. 330us
 	uint32_t starttime = GET_TICKS;
-	//if ( bits == 6 || bits == 7) {
-		// its about 9+9 ticks delay from end-send to here.
-		//WaitTicks( 495 - 9 - 9 );		
-		WaitTicks( 477 );
-	//} else {
-//		WaitTicks( 477 );
-//	}
+	// its about 9+9 ticks delay from end-send to here.
+	//WaitTicks( 495 - 9 - 9 );		
+	WaitTicks( 477 );
 
 	next_bit_at = GET_TICKS + TAG_BIT_PERIOD;
 
@@ -324,7 +320,7 @@ static uint32_t setup_phase_reader(uint8_t iv) {
 	
 	// Switch on carrier and let the tag charge for 1ms
 	HIGH(GPIO_SSC_DOUT);
-	WaitUS(1000);	
+	WaitUS(2000);	
 	
 	ResetTicks();
 	
@@ -370,7 +366,7 @@ static void LegicCommonInit(void) {
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 
 	// reserve a cardmem,  meaning we can use the tracelog function in bigbuff easier.
-	cardmem = BigBuf_malloc(LEGIC_CARD_MEMSIZE);
+	cardmem = BigBuf_get_EM_addr();
 	memset(cardmem, 0x00, LEGIC_CARD_MEMSIZE);
 
 	clear_trace();
@@ -402,7 +398,6 @@ int legic_read_byte( uint16_t index, uint8_t cmd_sz) {
 
 	//WaitTicks(366); 
 	WaitTicks(330); 
-	//WaitTicks(50);
 	
 	frame_sendAsReader(cmd, cmd_sz);
 	frame_receiveAsReader(&current_frame, 12);
@@ -457,7 +452,7 @@ int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
 	
 	frame_sendAsReader(cmd, cmd_sz);
   
-	// wllm-rbnt doesnt have these
+ 
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
 
@@ -471,13 +466,13 @@ int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
         edges = 0;
 		next_bit_at += TAG_BIT_PERIOD;
         while(timer->TC_CV < next_bit_at) {
-            int level = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
+            volatile uint32_t level = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
             if(level != old_level)
                 edges++;
 
             old_level = level;
         }
-        if(edges > 20 && edges < 60) { /* expected are 42 edges */
+        if(edges > 20 ) { /* expected are 42 edges */
 			int t = timer->TC_CV;
 			int c = t / TAG_BIT_PERIOD;
 			
@@ -618,6 +613,7 @@ void LegicRfWriter(uint16_t offset, uint16_t bytes, uint8_t iv) {
 
     LED_B_ON();
 	setup_phase_reader(iv);
+	
 	int r = 0;
 	while(byte_index < bytes) {
 

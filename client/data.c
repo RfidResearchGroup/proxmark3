@@ -23,7 +23,7 @@ void GetFromBigBuf(uint8_t *dest, int bytes, int start_index) {
 	clearCommandBuffer();
 	SendCommand(&c);
 }
-void GetEMLFromBigBuf(uint8_t *dest, int bytes, int start_index) {
+void GetEMLFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index) {
 	sample_buf = dest;
 	UsbCommand c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, bytes, 0}};
 	clearCommandBuffer();

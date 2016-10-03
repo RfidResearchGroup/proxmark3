@@ -414,7 +414,7 @@ int CmdLegicRFRead(const char *Cmd) {
 		PrintAndLog("LSB of IV must be SET");	
 	}
 
-	//PrintAndLog("Using IV: 0x%02x | Offset: 0x%02x | Len: 0x%02x ", IV, offset, len);
+	//PrintAndLog("Using IV: 0x%02x", IV);
 	
 	UsbCommand c = {CMD_READER_LEGIC_RF, {offset, len, IV}};
 	clearCommandBuffer();
@@ -424,12 +424,24 @@ int CmdLegicRFRead(const char *Cmd) {
 		uint8_t isOK = resp.arg[0] & 0xFF;
 		uint16_t len = resp.arg[1] & 0x3FF;
 		 if ( isOK ) {
-			PrintAndLog("use 'hf legic decode'");
 
-			uint8_t *data = resp.d.asBytes;
-			PrintAndLog("\nData        |");
+			uint8_t *data = malloc(len);
+			if ( !data ){
+				PrintAndLog("Cannot allocate memory");
+				return 2;
+			}
+			// copy data from device
+			GetEMLFromBigBuf(data, len, 0);
+			if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000)){
+				PrintAndLog("Command execute timeout");
+				if ( data ) 
+					free(data);
+				return 1;
+			}
+	
+			PrintAndLog("\nData");
 			PrintAndLog("-----------------------------");
-			PrintAndLog(" %s|\n", sprint_hex(data, len));
+			print_hex_break( data, len, 32);
 		 } else {
 			 PrintAndLog("failed reading tag");
 		 }
