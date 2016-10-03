@@ -57,7 +57,7 @@ const char devDescriptor[] = {
 	0x01,0x00, // Device release number (0001)
 	0x01,      // iManufacturer    // 0x01
 	0x00,      // iProduct
-	0x00,      // SerialNumber
+	0xFD,      // SerialNumber
 	0x01       // bNumConfigs
 };
 
@@ -72,7 +72,7 @@ const char cfgDescriptor[] = {
 	0x01,   // CbConfigurationValue
 	0x00,   // CiConfiguration
 	0xC0,   // CbmAttributes 0xA0
-	0x00,   // CMaxPower
+	0xFA,   // CMaxPower
 
 	/* Communication Class Interface Descriptor Requirement */
 	0x09, // bLength
@@ -82,7 +82,7 @@ const char cfgDescriptor[] = {
 	0x01, // bNumEndpoints
 	0x02, // bInterfaceClass
 	0x02, // bInterfaceSubclass
-	0x00, // bInterfaceProtocol
+	0x01, // bInterfaceProtocol
 	0x00, // iInterface
 
 	/* Header Functional Descriptor */
@@ -96,7 +96,7 @@ const char cfgDescriptor[] = {
 	0x04, // bFunctionLength
 	0x24, // bDescriptor Type: CS_INTERFACE
 	0x02, // bDescriptor Subtype: ACM Func Desc
-	0x00, // bmCapabilities
+	0x02, // bmCapabilities
 
 	/* Union Functional Descriptor */
 	0x05, // bFunctionLength
