@@ -400,7 +400,7 @@ int CmdLegicRFRead(const char *Cmd) {
 	// OUT-OF-BOUNDS check
 	if ( len + offset > MAX_LENGTH ) {
 		len = MAX_LENGTH - offset;
-		PrintAndLog("Out-of-bound, shorten len to %d", len);
+		PrintAndLog("Out-of-bound, shorten len to %d (0x%02X)", len);
 	}
 	
 	if ( (IV & 0x7F) != IV ){
@@ -412,16 +412,14 @@ int CmdLegicRFRead(const char *Cmd) {
 		IV |= 0x01;
 		PrintAndLog("LSB of IV must be SET");	
 	}
-
-	//PrintAndLog("Using IV: 0x%02x", IV);
 	
 	UsbCommand c = {CMD_READER_LEGIC_RF, {offset, len, IV}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
 		uint8_t isOK = resp.arg[0] & 0xFF;
-		uint16_t readlen = resp.arg[1] & 0x3FF;
+		uint16_t readlen = resp.arg[1];
 		 if ( isOK ) {
 
 			uint8_t *data = malloc(readlen);
@@ -435,7 +433,7 @@ int CmdLegicRFRead(const char *Cmd) {
 			
 			// copy data from device
 			GetEMLFromBigBuf(data, readlen, 0);
-			if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000)){
+			if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500)){
 				PrintAndLog("Command execute timeout");
 				if ( data ) 
 					free(data);
@@ -616,7 +614,7 @@ int CmdLegicRfWrite(const char *Cmd) {
 	// OUT-OF-BOUNDS check
 	if ( len + offset > MAX_LENGTH ) {
 		len = MAX_LENGTH - offset;
-		PrintAndLog("Out-of-bound, shorten len to %d", len);
+		PrintAndLog("Out-of-bound, shorten len to %d (0x%02X)", len);
 	}
 	if ( (IV & 0x7F) != IV ){
 		IV &= 0x7F;
@@ -659,8 +657,8 @@ int CmdLegicRfRawWrite(const char *Cmd) {
 	
 	// OUT-OF-BOUNDS check
 	if ( offset > MAX_LENGTH ) {
-		offset = MAX_LENGTH;
-		PrintAndLog("Out-of-bound, shorten len to %d", offset);
+		PrintAndLog("Out-of-bound, offset");
+		return 1;
 	}
 	
 	if ( (IV & 0x7F) != IV ){

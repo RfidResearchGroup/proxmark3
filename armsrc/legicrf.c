@@ -72,7 +72,7 @@ static void setup_timer(void) {
 #define	RWD_TIME_1 120		// READER_TIME_PAUSE 20us off, 80us on = 100us  80 * 1.5 == 120ticks
 #define RWD_TIME_0 60		// READER_TIME_PAUSE 20us off, 40us on = 60us   40 * 1.5 == 60ticks 
 #define RWD_TIME_PAUSE 30	// 20us == 20 * 1.5 == 30ticks */
-#define TAG_BIT_PERIOD 143	// 100us == 100 * 1.5 == 150ticks
+#define TAG_BIT_PERIOD 142	// 100us == 100 * 1.5 == 150ticks
 #define TAG_FRAME_WAIT 495  // 330us from READER frame end to TAG frame start. 330 * 1.5 == 495
 
 #define RWD_TIME_FUZZ 20   // rather generous 13us, since the peak detector + hysteresis fuzz quite a bit
@@ -486,8 +486,6 @@ int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
 
 int LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
 	
-	len &= 0x3FF;
-
 	uint16_t i = 0;
 	uint8_t isOK = 1;
 	legic_card_select_t card;
@@ -507,7 +505,7 @@ int LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
 	setup_phase_reader(iv);
 		
 	LED_B_ON();
-	while (i < len) {
+	while (i <= len) {
 		int r = legic_read_byte(offset + i, card.cmdsize);
 		
 		if (r == -1 || BUTTON_PRESS()) {			
