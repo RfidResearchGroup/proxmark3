@@ -44,13 +44,14 @@ int usage_legic_read(void){
 	PrintAndLog("Usage:  hf legic read [h] <offset> <length> <IV>");
 	PrintAndLog("Options:");
 	PrintAndLog("  h             : this help");
-	PrintAndLog("  <offset>      : offset in data array to start download from");
-	PrintAndLog("  <length>      : number of bytes to download");
-	PrintAndLog("  <IV>          : (optional) Initialization vector to use (ODD and 7bits)");
+	PrintAndLog("  <offset>      : offset in data array to start download from (hex)");
+	PrintAndLog("  <length>      : number of bytes to read (hex)");
+	PrintAndLog("  <IV>          : (optional) Initialization vector to use (hex, odd and 7bits)");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
-	PrintAndLog("      hf legic read");
-	PrintAndLog("      hf legic read 10 4");
+	PrintAndLog("      hf legic read 0 21        - reads from byte[0] 21 bytes(system header)");
+	PrintAndLog("      hf legic read 0 4 55      - reads from byte[0] 4 bytes with IV 0x55");
+	PrintAndLog("      hf legic read 0 100 55    - reads 256bytes with IV 0x55");
 	return 0;
 }
 int usage_legic_sim(void){
@@ -62,27 +63,25 @@ int usage_legic_write(void){
 	PrintAndLog("Usage:  hf legic write [h] <offset> <length> <IV>");
 	PrintAndLog("Options:");
 	PrintAndLog("  h             : this help");
-	PrintAndLog("  <offset>      : offset in data array to start writing from");
-	PrintAndLog("  <length>      : number of bytes to write");
+	PrintAndLog("  <offset>      : offset in data array to start writing from (hex)");
+	PrintAndLog("  <length>      : number of bytes to write (hex)");
 	PrintAndLog("  <IV>          : (optional) Initialization vector to use (ODD and 7bits)");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
-	PrintAndLog("      hf legic write");
-	PrintAndLog("      hf legic write 10 4");
+	PrintAndLog("      hf legic write 10 4      - writes 0x4 to byte[0x10]");
 	return 0;
 }
 int usage_legic_rawwrite(void){
-	PrintAndLog("Write raw data direct to a specific address on legic tag.");
-	PrintAndLog("Usage:  hf legic writeraw [h] <address> <value> <IV>");
+	PrintAndLog("Write raw data direct to a specific offset on legic tag.");
+	PrintAndLog("Usage:  hf legic writeraw [h] <offset> <value> <IV>");
 	PrintAndLog("Options:");
 	PrintAndLog("  h             : this help");
-	PrintAndLog("  <address>     : address to write to");
-	PrintAndLog("  <value>       : value to write");
-	PrintAndLog("  <IV>          : (optional) Initialization vector to use (ODD and 7bits)");
+	PrintAndLog("  <offset>      : offset to write to (hex)");
+	PrintAndLog("  <value>       : value (hex)");
+	PrintAndLog("  <IV>          : (optional) Initialization vector to use (hex, odd and 7bits)");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
-	PrintAndLog("      hf legic writeraw");
-	PrintAndLog("      hf legic writeraw 10 4");
+	PrintAndLog("      hf legic writeraw 10 4    - writes 0x4 to byte[0x10]");
 	return 0;
 }
 int usage_legic_fill(void){
@@ -422,16 +421,20 @@ int CmdLegicRFRead(const char *Cmd) {
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 		uint8_t isOK = resp.arg[0] & 0xFF;
-		uint16_t len = resp.arg[1] & 0x3FF;
+		uint16_t readlen = resp.arg[1] & 0x3FF;
 		 if ( isOK ) {
 
-			uint8_t *data = malloc(len);
+			uint8_t *data = malloc(readlen);
 			if ( !data ){
 				PrintAndLog("Cannot allocate memory");
 				return 2;
 			}
+			
+			if ( readlen != len )
+				PrintAndLog("Fail, only managed to read 0x%02X bytes", readlen);
+			
 			// copy data from device
-			GetEMLFromBigBuf(data, len, 0);
+			GetEMLFromBigBuf(data, readlen, 0);
 			if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000)){
 				PrintAndLog("Command execute timeout");
 				if ( data ) 
@@ -441,7 +444,7 @@ int CmdLegicRFRead(const char *Cmd) {
 	
 			PrintAndLog("\nData");
 			PrintAndLog("-----------------------------");
-			print_hex_break( data, len, 32);
+			print_hex_break( data, readlen, 32);
 		 } else {
 			 PrintAndLog("failed reading tag");
 		 }
@@ -647,17 +650,18 @@ int CmdLegicRfRawWrite(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_rawwrite();
 	
-	uint32_t address = 0, data = 0, IV = 0;	
+	uint32_t offset = 0, data = 0, IV = 0;	
 	char answer;
 
-    UsbCommand c = { CMD_RAW_WRITER_LEGIC_RF, {0,0,0} };
-    int res = sscanf(Cmd, "%x %x %x", &address, &data, &IV);
+    int res = sscanf(Cmd, "%x %x %x", &offset, &data, &IV);
 	if(res < 2)
 		return usage_legic_rawwrite();
-
+	
 	// OUT-OF-BOUNDS check
-	if(address > MAX_LENGTH)
-		return usage_legic_rawwrite();
+	if ( offset > MAX_LENGTH ) {
+		offset = MAX_LENGTH;
+		PrintAndLog("Out-of-bound, shorten len to %d", offset);
+	}
 	
 	if ( (IV & 0x7F) != IV ){
 		IV &= 0x7F;
@@ -667,11 +671,8 @@ int CmdLegicRfRawWrite(const char *Cmd) {
 		IV |= 0x01;  // IV must be odd
 		PrintAndLog("LSB of IV must be SET");	
 	}
-	PrintAndLog("Current IV: 0x%02x", IV);
 
-	c.arg[0] = address;
-	c.arg[1] = data;
-    c.arg[2] = IV;
+	UsbCommand c = { CMD_RAW_WRITER_LEGIC_RF, {offset, data, IV} };
 	
 	if (c.arg[0] == 0x05 || c.arg[0] == 0x06) {
 		PrintAndLog("############# DANGER !! #############");

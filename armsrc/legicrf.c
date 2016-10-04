@@ -72,7 +72,7 @@ static void setup_timer(void) {
 #define	RWD_TIME_1 120		// READER_TIME_PAUSE 20us off, 80us on = 100us  80 * 1.5 == 120ticks
 #define RWD_TIME_0 60		// READER_TIME_PAUSE 20us off, 40us on = 60us   40 * 1.5 == 60ticks 
 #define RWD_TIME_PAUSE 30	// 20us == 20 * 1.5 == 30ticks */
-#define TAG_BIT_PERIOD 142	// 100us == 100 * 1.5 == 150ticks
+#define TAG_BIT_PERIOD 143	// 100us == 100 * 1.5 == 150ticks
 #define TAG_FRAME_WAIT 495  // 330us from READER frame end to TAG frame start. 330 * 1.5 == 495
 
 #define RWD_TIME_FUZZ 20   // rather generous 13us, since the peak detector + hysteresis fuzz quite a bit
@@ -280,7 +280,6 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	//FIXED time between sending frame and now listening frame. 330us
 	uint32_t starttime = GET_TICKS;
 	// its about 9+9 ticks delay from end-send to here.
-	//WaitTicks( 495 - 9 - 9 );		
 	WaitTicks( 477 );
 
 	next_bit_at = GET_TICKS + TAG_BIT_PERIOD;
@@ -524,7 +523,7 @@ OUT:
 	WDT_HIT();
 	switch_off_tag_rwd();
 	LEDsoff();
-	cmd_send(CMD_ACK,isOK,len,0,cardmem,len);
+	cmd_send(CMD_ACK, isOK, len, 0, cardmem, len);
     return 0;
 }
 
