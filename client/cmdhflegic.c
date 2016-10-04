@@ -400,7 +400,7 @@ int CmdLegicRFRead(const char *Cmd) {
 	// OUT-OF-BOUNDS check
 	if ( len + offset > MAX_LENGTH ) {
 		len = MAX_LENGTH - offset;
-		PrintAndLog("Out-of-bound, shorten len to %d (0x%02X)", len);
+		PrintAndLog("Out-of-bound, shorten len to %d (0x%02X)", len, len);
 	}
 	
 	if ( (IV & 0x7F) != IV ){
@@ -614,7 +614,7 @@ int CmdLegicRfWrite(const char *Cmd) {
 	// OUT-OF-BOUNDS check
 	if ( len + offset > MAX_LENGTH ) {
 		len = MAX_LENGTH - offset;
-		PrintAndLog("Out-of-bound, shorten len to %d (0x%02X)", len);
+		PrintAndLog("Out-of-bound, shorten len to %d (0x%02X)", len, len);
 	}
 	if ( (IV & 0x7F) != IV ){
 		IV &= 0x7F;
