@@ -72,7 +72,7 @@ static void setup_timer(void) {
 #define	RWD_TIME_1 120		// READER_TIME_PAUSE 20us off, 80us on = 100us  80 * 1.5 == 120ticks
 #define RWD_TIME_0 60		// READER_TIME_PAUSE 20us off, 40us on = 60us   40 * 1.5 == 60ticks 
 #define RWD_TIME_PAUSE 30	// 20us == 20 * 1.5 == 30ticks */
-#define TAG_BIT_PERIOD 144	// 100us == 100 * 1.5 == 150ticks
+#define TAG_BIT_PERIOD 142	// 100us == 100 * 1.5 == 150ticks
 #define TAG_FRAME_WAIT 495  // 330us from READER frame end to TAG frame start. 330 * 1.5 == 495
 
 #define RWD_TIME_FUZZ 20   // rather generous 13us, since the peak detector + hysteresis fuzz quite a bit
@@ -433,11 +433,11 @@ int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
 	crc_update(&legic_crc, addr, addr_sz);
 	crc_update(&legic_crc, byte, 8);
 	uint32_t crc = crc_finish(&legic_crc);
-
 	uint32_t crc2 = legic4Crc(LEGIC_WRITE, addr, byte, addr_sz+1);
-	if ( crc != crc2 ) 
+	if ( crc != crc2 ) {
 		Dbprintf("crc is missmatch");
-	
+		return 1;
+	}
 	// send write command
 	uint32_t cmd = ((crc     <<(addr_sz+1+8)) //CRC
                    |(byte    <<(addr_sz+1))   //Data
@@ -448,11 +448,10 @@ int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
 
     legic_prng_forward(2); /* we wait anyways */
 	
-	WaitUS(TAG_FRAME_WAIT);
+	WaitTicks(330);
 	
 	frame_sendAsReader(cmd, cmd_sz);
-  
- 
+   
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
 

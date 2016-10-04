@@ -604,7 +604,6 @@ int CmdLegicRfWrite(const char *Cmd) {
 	
 	uint32_t offset = 0, len = 0, IV = 0;
 	
-    UsbCommand c = {CMD_WRITER_LEGIC_RF, {0,0,0}};
     int res = sscanf(Cmd, "%x %x %x", &offset, &len, &IV);
 	if(res < 2) {
 		PrintAndLog("Please specify the offset and length as two hex strings and, optionally, the IV also as an hex string");
@@ -612,8 +611,10 @@ int CmdLegicRfWrite(const char *Cmd) {
     }
 
 	// OUT-OF-BOUNDS check
-	if(len + offset > MAX_LENGTH) len = MAX_LENGTH - offset;
-
+	if ( len + offset > MAX_LENGTH ) {
+		len = MAX_LENGTH - offset;
+		PrintAndLog("Out-of-bound, shorten len to %d", len);
+	}
 	if ( (IV & 0x7F) != IV ){
 		IV &= 0x7F;
 		PrintAndLog("Truncating IV to 7bits");
@@ -623,14 +624,21 @@ int CmdLegicRfWrite(const char *Cmd) {
 		PrintAndLog("LSB of IV must be SET");	
 	}
 	
-	PrintAndLog("Current IV: 0x%02x", IV);
-	
-	c.arg[0] = offset;
-	c.arg[1] = len;
-    c.arg[2] = IV;
-	
+    UsbCommand c = {CMD_WRITER_LEGIC_RF, {offset, len, IV}};	
 	clearCommandBuffer();
     SendCommand(&c);
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+		uint8_t isOK = resp.arg[0] & 0xFF;
+		 if ( isOK ) {
+		 } else {
+			 PrintAndLog("failed writig tag");
+		 }
+	} else {
+		PrintAndLog("command execution time out");
+		return 1;
+	}
+	
     return 0;
 }
 
