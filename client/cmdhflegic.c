@@ -440,8 +440,8 @@ int CmdLegicRFRead(const char *Cmd) {
 				return 1;
 			}
 	
-			PrintAndLog("\nData");
-			PrintAndLog("-----------------------------");
+			PrintAndLog("\n ##  | Data");
+			PrintAndLog("-----+-----");
 			print_hex_break( data, readlen, 32);
 		 } else {
 			 PrintAndLog("failed reading tag");

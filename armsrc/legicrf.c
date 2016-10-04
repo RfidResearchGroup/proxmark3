@@ -395,8 +395,10 @@ int legic_read_byte( uint16_t index, uint8_t cmd_sz) {
 	uint8_t byte, crc, calcCrc = 0;
 	uint32_t cmd = (index << 1) | LEGIC_READ;
 
-	//WaitTicks(366); 
-	WaitTicks(330); 
+	//WaitTicks(330); // (4)
+	WaitTicks(240); // (3)
+	//WaitTicks(230); //(2)
+	//WaitTicks(60); //(1)
 	
 	frame_sendAsReader(cmd, cmd_sz);
 	frame_receiveAsReader(&current_frame, 12);
@@ -411,7 +413,7 @@ int legic_read_byte( uint16_t index, uint8_t cmd_sz) {
 		return -1;
 	}
 
-	legic_prng_forward(4);
+	legic_prng_forward(3);
 	return byte;
 }
 
@@ -505,7 +507,7 @@ int LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
 	setup_phase_reader(iv);
 		
 	LED_B_ON();
-	while (i <= len) {
+	while (i < len) {
 		int r = legic_read_byte(offset + i, card.cmdsize);
 		
 		if (r == -1 || BUTTON_PRESS()) {			
