@@ -417,7 +417,7 @@ int CmdLegicRFRead(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
 		uint8_t isOK = resp.arg[0] & 0xFF;
 		uint16_t readlen = resp.arg[1];
 		 if ( isOK ) {
