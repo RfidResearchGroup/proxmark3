@@ -88,8 +88,19 @@ int usage_legic_fill(void){
 	PrintAndLog("Missing help text.");
 	return 0;
 }
+int usage_legic_reader(void){
+	PrintAndLog("Read UID and type information from a legic tag.");
+	PrintAndLog("Usage:  hf legic reader [h]");
+	PrintAndLog("Options:");
+	PrintAndLog("  h             : this help");
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("      hf legic reader");
+	return 0;
+}
 int usage_legic_info(void){
-	PrintAndLog("Read info from a legic tag.");
+	PrintAndLog("Reads information from a legic prime tag.");
+	PrintAndLog("Shows systemarea, user areas etc");
 	PrintAndLog("Usage:  hf legic info [h]");
 	PrintAndLog("Options:");
 	PrintAndLog("  h             : this help");
@@ -98,12 +109,30 @@ int usage_legic_info(void){
 	PrintAndLog("      hf legic info");
 	return 0;
 }
+int usage_legic_dump(void){
+	PrintAndLog("Reads all pages from LEGIC MIM22, MIM256, MIM1024");
+	PrintAndLog("and saves binary dump into the file `filename.bin` or `cardUID.bin`");
+	PrintAndLog("It autodetects card type.\n");	
+	PrintAndLog("Usage:  hf legic dump [h] o <filename w/o .bin>");
+	PrintAndLog("Options:");
+	PrintAndLog("  h             : this help");
+	PrintAndLog("  n <FN>  : filename w/o .bin to save the dump as");	
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("      hf legic dump");
+	PrintAndLog("      hf legic dump o myfile");
+	return 0;
+}
+
 /*
  *  Output BigBuf and deobfuscate LEGIC RF tag data.
  *  This is based on information given in the talk held
  *  by Henryk Ploetz and Karsten Nohl at 26c3
  */
-int CmdLegicDecode(const char *Cmd) {
+int CmdLegicInfo(const char *Cmd) {
+
+	char cmdp = param_getchar(Cmd, 0);
+	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_info();
 
 	int i = 0, k = 0, segmentNum = 0, segment_len = 0, segment_flag = 0;
 	int crc = 0, wrp = 0, wrc = 0;
@@ -113,6 +142,8 @@ int CmdLegicDecode(const char *Cmd) {
 	int dcf = 0;
 	int bIsSegmented = 0;
 
+	CmdLegicRFRead("0 21 55");
+	
 	// copy data from device
 	GetEMLFromBigBuf(data, sizeof(data), 0);
 	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000)){
@@ -834,7 +865,7 @@ int CmdLegicCalcCrc8(const char *Cmd){
 	return 0;
 } 
  
-int HFLegicInfo(const char *Cmd, bool verbose) {
+int HFLegicReader(const char *Cmd, bool verbose) {
 
 	char cmdp = param_getchar(Cmd, 0);
 	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_info();
@@ -870,22 +901,29 @@ int HFLegicInfo(const char *Cmd, bool verbose) {
 	}
 	return 0;
 }
-int CmdLegicInfo(const char *Cmd){
-	return HFLegicInfo(Cmd, TRUE);
+int CmdLegicReader(const char *Cmd){
+	return HFLegicReader(Cmd, TRUE);
 }
+
+int CmdLegicDump(const char *Cmd){
+	char cmdp = param_getchar(Cmd, 0);
+	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_dump();
+	return 0;
+}	
 	
 static command_t CommandTable[] =  {
-	{"help",	CmdHelp,        1, "This help"},
-	{"decode",	CmdLegicDecode, 0, "Display deobfuscated and decoded LEGIC RF tag data (use after hf legic reader)"},
-	{"read",	CmdLegicRFRead, 0, "[offset][length] <iv> -- read bytes from a LEGIC card"},
-	{"save",	CmdLegicSave,   0, "<filename> [<length>] -- Store samples"},
-	{"load",	CmdLegicLoad,   0, "<filename> -- Restore samples"},
-	{"sim",		CmdLegicRfSim,  0, "[phase drift [frame drift [req/resp drift]]] Start tag simulator (use after load or read)"},
-	{"write",	CmdLegicRfWrite,0, "<offset> <length> <iv> -- Write sample buffer (user after load or read)"},
+	{"help",	CmdHelp,			1, "This help"},
+	{"reader",	CmdLegicReader,		1, "LEGIC Prime Reader UID and Type tag info"},
+	{"info",	CmdLegicInfo,		0, "Display deobfuscated and decoded LEGIC Prime tag data"},
+	{"dump",	CmdLegicDump,		0, "Dump LEGIC Prime card to binary file"},
+	{"rdmem",	CmdLegicRFRead,		0, "[offset][length] <iv> -- read bytes from a LEGIC card"},
+	{"save",	CmdLegicSave,		0, "<filename> [<length>] -- Store samples"},
+	{"load",	CmdLegicLoad,		0, "<filename> -- Restore samples"},
+	{"sim",		CmdLegicRfSim,		0, "[phase drift [frame drift [req/resp drift]]] Start tag simulator (use after load or read)"},
+	{"write",	CmdLegicRfWrite,	0, "<offset> <length> <iv> -- Write sample buffer (user after load or read)"},
 	{"writeraw",CmdLegicRfRawWrite,	0, "<address> <value> <iv> -- Write direct to address"},
-	{"fill",	CmdLegicRfFill, 0, "<offset> <length> <value> -- Fill/Write tag with constant value"},
-	{"crc8",	CmdLegicCalcCrc8, 1, "Calculate Legic CRC8 over given hexbytes"},
-	{"info",	CmdLegicInfo, 1, "Information"},
+	{"fill",	CmdLegicRfFill,		0, "<offset> <length> <value> -- Fill/Write tag with constant value"},
+	{"crc8",	CmdLegicCalcCrc8,	1, "Calculate Legic CRC8 over given hexbytes"},
 	{NULL, NULL, 0, NULL}
 };
 

@@ -140,14 +140,13 @@ static void frame_clean(struct legic_frame * const f) {
 
 /* Generate Keystream */
 uint32_t get_key_stream(int skip, int count) {
-	uint32_t key = 0;
+
 	int i;
 
 	// Use int to enlarge timer tc to 32bit
 	legic_prng_bc += prng_timer->TC_CV;
 
 	// reset the prng timer.
-	ResetTimer(prng_timer);
 
 	/* If skip == -1, forward prng time based */
 	if(skip == -1) {
@@ -161,55 +160,41 @@ uint32_t get_key_stream(int skip, int count) {
 
 	i = (count == 6) ? -1 : legic_read_count;
 
-	/* Write Time Data into LOG */
-	// uint8_t *BigBuf = BigBuf_get_addr();
-	// BigBuf[OFFSET_LOG+128+i] = legic_prng_count();
-	// BigBuf[OFFSET_LOG+256+i*4]   = (legic_prng_bc >> 0) & 0xff;
-	// BigBuf[OFFSET_LOG+256+i*4+1] = (legic_prng_bc >> 8) & 0xff;
-	// BigBuf[OFFSET_LOG+256+i*4+2] = (legic_prng_bc >>16) & 0xff;
-	// BigBuf[OFFSET_LOG+256+i*4+3] = (legic_prng_bc >>24) & 0xff;
-	// BigBuf[OFFSET_LOG+384+i] = count;
+	// log
+	//uint8_t cmdbytes[] = {bits,	BYTEx(data, 0), BYTEx(data, 1),	BYTEx(send, 0), BYTEx(send, 1), legic_prng_count()};
+	//LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, TRUE);
 
 	/* Generate KeyStream */
-	for(i=0; i<count; i++) {
-		key |= legic_prng_get_bit() << i;
-		legic_prng_forward(1);
-	}
-	return key;
+	return legic_prng_get_bits(count);
 }
 
 /* Send a frame in tag mode, the FPGA must have been set up by
  * LegicRfSimulate
  */
-void frame_send_tag(uint16_t response, uint8_t bits, uint8_t crypt) {
+void frame_send_tag(uint16_t response, uint8_t bits) {
+
+	uint16_t mask = 1;
+	
 	/* Bitbang the response */
-	LOW(GPIO_SSC_DOUT);
+	SHORT_COIL;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 
-	/* Use time to crypt frame */
-	if(crypt) {
-		legic_prng_forward(2); /* TAG_FRAME_WAIT -> shift by 2 */
-		response ^= legic_prng_get_bits(bits);
-	}
+	 /* TAG_FRAME_WAIT -> shift by 2 */
+	legic_prng_forward(2);
+	response ^= legic_prng_get_bits(bits);
 
 	/* Wait for the frame start */
-	WaitUS( TAG_FRAME_WAIT );
+	WaitTicks( TAG_FRAME_WAIT );
 
-	uint8_t bit = 0;
-	for(int i = 0; i < bits; i++) {
-
-		bit = response & 1;
-		response >>= 1;
-
-		if (bit)
-			HIGH(GPIO_SSC_DOUT);
+	for (; mask < BITMASK(bits); mask <<= 1) {	
+		if (send & mask)
+			OPEN_COIL;
 		else
-			LOW(GPIO_SSC_DOUT);
-		  
-		WaitUS(100);
+			SHORT_COIL;
+		WaitTicks(TAG_BIT_PERIOD);
    }
-   LOW(GPIO_SSC_DOUT);
+   SHORT_COIL;
 }
 
 /* Send a frame in reader mode, the FPGA must have been set up by
@@ -775,26 +760,26 @@ static void frame_handle_tag(struct legic_frame const * const f)
 {
 	uint8_t *BigBuf = BigBuf_get_addr();
 
-   /* First Part of Handshake (IV) */
-   if(f->bits == 7) {
+	/* First Part of Handshake (IV) */
+	if(f->bits == 7) {
 
-        LED_C_ON();
-        
+		LED_C_ON();
+
 		// Reset prng timer
 		ResetTimer(prng_timer);
-		
-        legic_prng_init(f->data);
-        frame_send_tag(0x3d, 6, 1); /* 0x3d^0x26 = 0x1B */
-        legic_state = STATE_IV;
-        legic_read_count = 0;
-        legic_prng_bc = 0;
-        legic_prng_iv = f->data;
- 
- 
+
+		legic_prng_init(f->data);
+		frame_send_tag(0x3d, 6); /* 0x3d^0x26 = 0x1B */
+		legic_state = STATE_IV;
+		legic_read_count = 0;
+		legic_prng_bc = 0;
+		legic_prng_iv = f->data;
+
+
 		ResetTimer(timer);
 		WaitUS(280);
-        return;
-   }
+		return;
+	}
 
    /* 0x19==??? */
    if(legic_state == STATE_IV) {
@@ -828,7 +813,7 @@ static void frame_handle_tag(struct legic_frame const * const f)
          //Dbprintf("Data:%03.3x, key:%03.3x, addr: %03.3x, read_c:%u", f->data, key, addr, read_c);
          legic_prng_forward(legic_reqresp_drift);
 
-         frame_send_tag(hash | data, 12, 1);
+         frame_send_tag(hash | data, 12);
 
 		 ResetTimer(timer);
          legic_prng_forward(2);

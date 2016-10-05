@@ -27,7 +27,7 @@ extern void LegicRfRawWriter(int address, int data, uint8_t iv);
 extern void LegicRfInfo(void);
 
 uint32_t get_key_stream(int skip, int count);
-void frame_send_tag(uint16_t response, uint8_t bits, uint8_t crypt);
+void frame_send_tag(uint16_t response, uint8_t bits);
 void frame_sendAsReader(uint32_t data, uint8_t bits);
 
 int legic_read_byte( uint16_t index, uint8_t cmd_sz);

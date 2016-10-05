@@ -24,9 +24,9 @@
 #include "legic.h" // legic_card_select_t struct
 
 int CmdHFLegic(const char *Cmd);
+int CmdLegicInfo(const char *Cmd);
 
 int CmdLegicRFRead(const char *Cmd);
-int CmdLegicDecode(const char *Cmd);
 int CmdLegicLoad(const char *Cmd);
 int CmdLegicSave(const char *Cmd);
 int CmdLegicRfSim(const char *Cmd);
@@ -35,11 +35,21 @@ int CmdLegicRfRawWrite(const char *Cmd);
 int CmdLegicRfFill(const char *Cmd);
 
 int CmdLegicCalcCrc8(const char *Cmd);
-int CmdLegicInfo(const char *Cmd);
-int HFLegicInfo(const char *Cmd, bool verbose);
+
+int CmdLegicReader(const char *Cmd);
+int HFLegicReader(const char *Cmd, bool verbose);
+
+int CmdLegicDump(const char *Cmd);
+
 
 int usage_legic_calccrc8(void);
 int usage_legic_load(void);
 int usage_legic_read(void);
+int usage_legic_sim(void);
+int usage_legic_write(void);
+int usage_legic_rawwrite(void);
+int usage_legic_fill(void);
+int usage_legic_reader(void);
 int usage_legic_info(void);
+int usage_legic_dump(void);
 #endif

@@ -882,7 +882,7 @@ int CmdHFSearch(const char *Cmd){
 		PrintAndLog("\nValid Topaz Tag Found - Quiting Search\n");
 		return 1;
 	}
-	ans = HFLegicInfo("", false);
+	ans = HFLegicReader("", false);
 	if ( ans == 0) {
 		PrintAndLog("\nValid LEGIC Tag Found - Quiting Search\n");
 		return 1;
