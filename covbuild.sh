@@ -9,17 +9,28 @@ make clean
 ## coverity build
 cov-build --dir cov-int make all
 
-## create tarball
-tar cfz proxmark3.all.`date --date now +%Y%m%d%H%M%S`.tgz cov-int
-echo "Coverity build file is ready"
+## delete all previous tarballs
+rm proxmark3.all.*.tgz
 
+##
+VERSION="0.1.`date --date now +%H%M`"
+TODAY="`date --date now +%Y%m%d.%H%M`"
+DESCNAME="autoMango.$TODAY"
+FILENAME=proxmark3.all.$TODAY.tgz
+
+## create tarball
+tar cfz $FILENAME cov-int
+echo "Coverity build file is ready"
 
 ## clean up build folders
 rm -rf cov-int
 echo "Coverity build cleaned"
 
 ## upload tarball to Coverity.com
-## not using it.
-# curl --form project=proxmark-iceman-fork --form token=PUT_YOUR_API_TOKEN_HERE --form email=PUT_YOU_EMAIL@HERE --form file=@proxmark3.tgz --form version=0.4.0 --form description=Description http://scan5.coverity.com/cgi-bin/upload.py
-
-
+curl --form token=dY262wIFmfkcRkA5Pyw0eA \
+ --form email=herrmann1001@gmail.com \
+  --form file=@$FILENAME \
+  --form version="$VERSION" \
+  --form description="$DESCNAME" \
+  https://scan.coverity.com/builds?project=proxmark3_iceman_fork
+echo "tarball uploaded to Coverity for analyse"
