@@ -142,7 +142,7 @@ int CmdLegicInfo(const char *Cmd) {
 	int dcf = 0;
 	int bIsSegmented = 0;
 
-	CmdLegicRdmem("0 21 55");
+	CmdLegicRdmem("0 22 55");
 	
 	// copy data from device
 	GetEMLFromBigBuf(data, sizeof(data), 0);
@@ -864,41 +864,59 @@ int CmdLegicCalcCrc8(const char *Cmd){
 	if (data) free(data);
 	return 0;
 } 
- 
-int HFLegicReader(const char *Cmd, bool verbose) {
 
-	char cmdp = param_getchar(Cmd, 0);
-	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_info();
-	
+int legic_print_type(uint32_t tagtype, uint8_t spaces){
+	char spc[11] = "          ";
+	spc[10]=0x00;
+	char *spacer = spc + (10-spaces);
+
+	if ( tagtype == 22 )	
+		PrintAndLog("%sTYPE : MIM%d card (outdated)", spacer, tagtype);
+	else if ( tagtype == 256 )
+		PrintAndLog("%sTYPE : MIM%d card (234 bytes)", spacer, tagtype);
+	else if ( tagtype == 1024 )
+		PrintAndLog("%sTYPE : MIM%d card (1002 bytes)", spacer, tagtype);
+	else
+		PrintAndLog("%sTYPE : Unknown %06x", spacer, tagtype);
+	return 0;
+}
+int legic_get_type(legic_card_select_t *card){
+
+	if ( card == NULL ) return 1;
+
 	UsbCommand c = {CMD_LEGIC_INFO, {0,0,0}};
 	clearCommandBuffer();
     SendCommand(&c);
 	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
-		if ( verbose ) PrintAndLog("command execution time out");
-		return 1;
-	}
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 500))
+		return 2;
 	
 	uint8_t isOK = resp.arg[0] & 0xFF;
-	if ( !isOK ) {
-		if ( verbose ) PrintAndLog("legic card select failed");
-		return 1;
-	}
+	if ( !isOK ) 
+		return 3;
+	
+	memcpy(card, (legic_card_select_t *)resp.d.asBytes, sizeof(legic_card_select_t));
+	return 0;
+}
+
+int HFLegicReader(const char *Cmd, bool verbose) {
+
+	char cmdp = param_getchar(Cmd, 0);
+	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_reader();
 	
 	legic_card_select_t card;
-	memcpy(&card, (legic_card_select_t *)resp.d.asBytes, sizeof(legic_card_select_t));
-
-	PrintAndLog("  UID : %s", sprint_hex(card.uid, sizeof(card.uid)));
-	switch(card.cardsize) {
-		case 22:
-		case 256: 
-		case 1024:
-			PrintAndLog(" TYPE : MIM%d card (%d bytes)", card.cardsize, card.cardsize); break;				
-		default: {
-			PrintAndLog("Unknown card format: %d", card.cardsize); 
+	switch(legic_get_type(&card)){
+		case 1: 
+			if ( verbose ) PrintAndLog("command execution time out"); 
 			return 1;
-		}
+		case 2: 
+		case 3: 
+			if ( verbose ) PrintAndLog("legic card select failed");
+			return 2;
+		default: break;
 	}
+	PrintAndLog(" UID : %s", sprint_hex(card.uid, sizeof(card.uid)));
+	legic_print_type(card.cardsize, 0);
 	return 0;
 }
 int CmdLegicReader(const char *Cmd){
@@ -912,9 +930,8 @@ int CmdLegicDump(const char *Cmd){
 	char *fnameptr = filename;
 	size_t fileNlen = 0;
 	bool errors = false;
-	uint16_t dumplen = 0x100;
-	
-	char cmdp = param_getchar(Cmd, 0);
+	uint16_t dumplen;	
+	uint8_t cmdp = 0;
 	
 	while(param_getchar(Cmd, cmdp) != 0x00)
 	{
@@ -942,9 +959,16 @@ int CmdLegicDump(const char *Cmd){
 	if(errors) return usage_legic_dump();
 	
 	// tagtype
-	//uint32_t tagtype = GetHF14AMfU_Type();
-	//if (tagtype == -1) return -1;
+	legic_card_select_t card;
+	if (legic_get_type(&card)) {
+		PrintAndLog("Failed to identify tagtype");
+		return -1;
+	}
+	dumplen = card.cardsize;
 	
+	legic_print_type(dumplen, 0);	
+	PrintAndLog("Reading tag memory...");
+
 	UsbCommand c = {CMD_READER_LEGIC_RF, {0x00, dumplen, 0x55}};
 	clearCommandBuffer();
 	SendCommand(&c);

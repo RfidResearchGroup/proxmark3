@@ -1,5 +1,6 @@
 //-----------------------------------------------------------------------------
 // (c) 2009 Henryk Plötz <henryk@ploetzli.ch>
+//     2016 Iceman
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -85,7 +86,7 @@ static void setup_timer(void) {
 #define FUZZ_EQUAL(value, target, fuzz) ((value) > ((target)-(fuzz)) && (value) < ((target)+(fuzz)))
 
 #ifndef SHORT_COIL
-# define SHORT_COIL	LOW(GPIO_SSC_DOUT);
+# define SHORT_COIL	 LOW(GPIO_SSC_DOUT);
 #endif
 #ifndef OPEN_COIL
 # define OPEN_COIL	HIGH(GPIO_SSC_DOUT);
@@ -102,7 +103,7 @@ static void setup_timer(void) {
 		WaitTicks( (RWD_TIME_PAUSE) ); \
 		OPEN_COIL; \
 		WaitTicks((x)); \
-	} while (0) 
+	} while (0); 
 #endif
 
 // ToDo: define a meaningful maximum size for auth_table. The bigger this is, the lower will be the available memory for traces. 
@@ -210,9 +211,9 @@ void frame_sendAsReader(uint32_t data, uint8_t bits){
 				
 	for (; mask < BITMASK(bits); mask <<= 1) {	
 		if (send & mask)
-			COIL_PULSE(RWD_TIME_1);
+			COIL_PULSE(RWD_TIME_1)
 		else
-			COIL_PULSE(RWD_TIME_0);
+			COIL_PULSE(RWD_TIME_0)
 	}
 
 	// Final pause to mark the end of the frame
