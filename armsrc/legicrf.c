@@ -189,9 +189,9 @@ void frame_send_tag(uint16_t response, uint8_t bits) {
 
 	for (; mask < BITMASK(bits); mask <<= 1) {	
 		if (response & mask)
-			OPEN_COIL;
+			OPEN_COIL
 		else
-			SHORT_COIL;
+			SHORT_COIL
 		WaitTicks(TAG_BIT_PERIOD);
    }
    SHORT_COIL;
