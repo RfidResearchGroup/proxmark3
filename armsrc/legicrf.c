@@ -394,11 +394,10 @@ int legic_read_byte( uint16_t index, uint8_t cmd_sz) {
 
 	uint8_t byte, crc, calcCrc = 0;
 	uint32_t cmd = (index << 1) | LEGIC_READ;
-
-	//WaitTicks(330); // (4)
-	WaitTicks(240); // (3)
-	//WaitTicks(230); //(2)
-	//WaitTicks(60); //(1)
+	
+	// 90ticks = 60us (should be 100us but crc calc takes time.)
+	//WaitTicks(330); // 330ticks prng(4) - works
+	WaitTicks(240); // 240ticks prng(3) - works
 	
 	frame_sendAsReader(cmd, cmd_sz);
 	frame_receiveAsReader(&current_frame, 12);
@@ -763,7 +762,7 @@ void LegicRfInfo(void){
 	}
 
 	cmd_send(CMD_ACK, 1, 0, 0, buf, sizeof(legic_card_select_t));
-	
+
 OUT:
 	switch_off_tag_rwd();
 	LEDsoff();
