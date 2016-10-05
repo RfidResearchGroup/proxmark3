@@ -26,7 +26,7 @@
 int CmdHFLegic(const char *Cmd);
 int CmdLegicInfo(const char *Cmd);
 
-int CmdLegicRFRead(const char *Cmd);
+int CmdLegicRdmem(const char *Cmd);
 int CmdLegicLoad(const char *Cmd);
 int CmdLegicSave(const char *Cmd);
 int CmdLegicRfSim(const char *Cmd);
@@ -44,7 +44,7 @@ int CmdLegicDump(const char *Cmd);
 
 int usage_legic_calccrc8(void);
 int usage_legic_load(void);
-int usage_legic_read(void);
+int usage_legic_rdmem(void);
 int usage_legic_sim(void);
 int usage_legic_write(void);
 int usage_legic_rawwrite(void);

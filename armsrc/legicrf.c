@@ -188,7 +188,7 @@ void frame_send_tag(uint16_t response, uint8_t bits) {
 	WaitTicks( TAG_FRAME_WAIT );
 
 	for (; mask < BITMASK(bits); mask <<= 1) {	
-		if (send & mask)
+		if (response & mask)
 			OPEN_COIL;
 		else
 			SHORT_COIL;
@@ -431,7 +431,7 @@ int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
 				   
     uint32_t cmd_sz = addr_sz+1+8+4;          //crc+data+cmd
 
-    legic_prng_forward(2); /* we wait anyways */
+    legic_prng_forward(2);
 	
 	WaitTicks(330);
 	
@@ -444,7 +444,7 @@ int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
     int t, old_level = 0, edges = 0;
     int next_bit_at = 0;
 
-	WaitUS(TAG_FRAME_WAIT);
+	WaitTicks(TAG_FRAME_WAIT);
 
     for( t = 0; t < 80; ++t) {
         edges = 0;
