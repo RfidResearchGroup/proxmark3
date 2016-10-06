@@ -59,6 +59,7 @@ DETECTED_OS=Windows
 
 endif
 
+APP_CFLAGS += -DHAS_512_FLASH
 
 # Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the zlib directory
 VPATH = . ../common ../fpga ../zlib

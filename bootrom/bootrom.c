@@ -275,7 +275,11 @@ void BootROM(void)
 	AT91C_BASE_EFC0->EFC_FMR =
 		AT91C_MC_FWS_1FWS |
 		MC_FLASH_MODE_MASTER_CLK_IN_MHZ(48);
-
+#ifdef HAS_512_FLASH
+	AT91C_BASE_EFC1->EFC_FMR =
+		AT91C_MC_FWS_1FWS |
+		MC_FLASH_MODE_MASTER_CLK_IN_MHZ(48);
+#endif	
     // Initialize all system clocks
     ConfigClocks();
 

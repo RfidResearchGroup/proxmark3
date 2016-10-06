@@ -28,7 +28,13 @@ int OpenProxmark(size_t i);
 unsigned int current_command = CMD_UNKNOWN;
 
 #define FLASH_START            0x100000
-#define FLASH_SIZE             (256*1024)
+
+#ifdef HAS_512_FLASH
+# define FLASH_SIZE             (512*1024)
+#else
+# define FLASH_SIZE             (256*1024)
+#endif
+
 #define FLASH_END              (FLASH_START + FLASH_SIZE)
 #define BOOTLOADER_SIZE        0x2000
 #define BOOTLOADER_END         (FLASH_START + BOOTLOADER_SIZE)
