@@ -135,7 +135,7 @@ local skel_1 = [[
 		add("04,,,Smart MX with 7 byte UID,0D48");
 		add("04,,,Smart MX with 7 byte UID,0E48");
 		add("04,,,Smart MX with 7 byte UID,0F48");	
-</script>
+	</script>
 
 	<style>
 		* {
@@ -215,6 +215,7 @@ local skel_1 = [[
 
 			return {info: info, highlighter : ndefHighligheter }
 		}, 
+
 		function(data)
 		{//This is the catch-all
 			return {info: {type : "Unknown"}, highlighter : noHighlighter}
@@ -312,12 +313,10 @@ local skel_1 = [[
 			
 			if(line < 128){
 				linesPerSector = 4;
-			}else
-			{
+			} else {
 				//Quadruple size sectors
 				linesPerSector = 16;
 				line = line - 128;
-
 			}
 
 			if(line % linesPerSector == 0)
@@ -339,8 +338,6 @@ local skel_1 = [[
 
 		}
 	};
-
-
 
 	</script>
 	
