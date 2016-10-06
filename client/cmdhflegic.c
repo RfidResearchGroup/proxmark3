@@ -13,10 +13,10 @@ static int CmdHelp(const char *Cmd);
 
 #define MAX_LENGTH 1024	
 
-int usage_legic_calccrc8(void){
+int usage_legic_calccrc(void){
 	PrintAndLog("Calculates the legic crc8/crc16 on the input hexbytes.");
 	PrintAndLog("There must be an even number of hexsymbols as input.");
-	PrintAndLog("Usage:  hf legic crc8 [h] b <hexbytes> u <uidcrc> c <crc type>");
+	PrintAndLog("Usage:  hf legic crc [h] b <hexbytes> u <uidcrc> c <crc type>");
 	PrintAndLog("Options:");
 	PrintAndLog("      h             : this help");
 	PrintAndLog("      b <hexbytes>  : hex bytes");
@@ -24,8 +24,8 @@ int usage_legic_calccrc8(void){
 	PrintAndLog("      c <crc type>  : 8|16 bit crc size");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
-	PrintAndLog("      hf legic crc8 b deadbeef1122");
-	PrintAndLog("      hf legic crc8 b deadbeef1122 u 9A c 16");
+	PrintAndLog("      hf legic crc b deadbeef1122");
+	PrintAndLog("      hf legic crc b deadbeef1122 u 9A c 16");
 	return 0;
 }
 int usage_legic_load(void){
@@ -687,6 +687,7 @@ int CmdLegicRfWrite(const char *Cmd) {
     return 0;
 }
 
+/*
 int CmdLegicRfRawWrite(const char *Cmd) {
 	PrintAndLog("############# DANGER !! #############");
 	PrintAndLog("# changing the DCF is irreversible  #");
@@ -697,11 +698,9 @@ int CmdLegicRfRawWrite(const char *Cmd) {
 	// }
 	return 0;
 }
+*/
 
-void static calc4(uint8_t *cmd, uint8_t len){
-}	
- 
-int CmdLegicCalcCrc8(const char *Cmd){
+int CmdLegicCalcCrc(const char *Cmd){
 
 	uint8_t *data = NULL;
 	uint8_t cmdp = 0, uidcrc = 0, type=0;
@@ -771,15 +770,12 @@ int CmdLegicCalcCrc8(const char *Cmd){
 	//Validations
 	if (errors){
 		if (data) free(data);
-		return usage_legic_calccrc8();
+		return usage_legic_calccrc();
 	}
 	
 	switch (type){
 		case 16:
 			PrintAndLog("Legic crc16: %X", CRC16Legic(data, len, uidcrc));
-			break;
-		case 4:
-			calc4(data, 0);
 			break;
 		default:
 			PrintAndLog("Legic crc8: %X",  CRC8Legic(data, len) );
@@ -1105,7 +1101,7 @@ static command_t CommandTable[] =  {
 	{"load",	CmdLegicLoad,		0, "<filename> -- Restore samples"},
 	{"sim",		CmdLegicRfSim,		0, "[phase drift [frame drift [req/resp drift]]] Start tag simulator (use after load or read)"},
 	{"write",	CmdLegicRfWrite,	0, "<offset> <length> <iv> -- Write sample buffer (user after load or read)"},
-	{"crc8",	CmdLegicCalcCrc8,	1, "Calculate Legic CRC8 over given hexbytes"},	
+	{"crc",		CmdLegicCalcCrc,	1, "Calculate Legic CRC over given hexbytes"},	
 	{"eload",	CmdLegicELoad,		1, "Load binary dump to emulator memory"},
 	{"esave",	CmdLegicESave,		1, "Save emulator memory to binary file"},
 	{NULL, NULL, 0, NULL}

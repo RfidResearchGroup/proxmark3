@@ -31,11 +31,9 @@ int CmdLegicLoad(const char *Cmd);
 int CmdLegicSave(const char *Cmd);
 int CmdLegicRfSim(const char *Cmd);
 int CmdLegicRfWrite(const char *Cmd);
-int CmdLegicRfRawWrite(const char *Cmd);
-int CmdLegicCalcCrc8(const char *Cmd);
+int CmdLegicCalcCrc(const char *Cmd);
 int CmdLegicDump(const char *Cmd);
 int CmdLegicReader(const char *Cmd);
-
 int CmdLegicELoad(const char *Cmd);
 int CmdLegicESave(const char *Cmd);
 
@@ -45,7 +43,7 @@ int legic_get_type(legic_card_select_t *card);
 void legic_chk_iv(uint32_t *iv);
 void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes);
 
-int usage_legic_calccrc8(void);
+int usage_legic_calccrc(void);
 int usage_legic_load(void);
 int usage_legic_rdmem(void);
 int usage_legic_sim(void);
