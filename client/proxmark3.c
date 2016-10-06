@@ -115,7 +115,6 @@ static void *main_loop(void *targ) {
 	char *cmd = NULL;
 	pthread_t reader_thread;
   
- 
 	if (arg->usb_present == 1) {
 		rarg.run = 1;
 		pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
@@ -248,8 +247,7 @@ int main(int argc, char* argv[]) {
 	
 	pthread_t main_loop_threat;
 
-  
-	sp = uart_open(argv[1]);
+  	sp = uart_open(argv[1]);
 	if (sp == INVALID_SERIAL_PORT) {
 		printf("ERROR: invalid serial port\n");
 		marg.usb_present = 0;
