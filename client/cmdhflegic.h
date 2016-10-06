@@ -50,7 +50,6 @@ int usage_legic_load(void);
 int usage_legic_rdmem(void);
 int usage_legic_sim(void);
 int usage_legic_write(void);
-int usage_legic_rawwrite(void);
 int usage_legic_reader(void);
 int usage_legic_info(void);
 int usage_legic_dump(void);

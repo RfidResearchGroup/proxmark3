@@ -71,19 +71,6 @@ int usage_legic_write(void){
 	PrintAndLog("      hf legic write 10 4      - writes 0x4 to byte[0x10]");
 	return 0;
 }
-int usage_legic_rawwrite(void){
-	PrintAndLog("Write raw data direct to a specific offset on legic tag.");
-	PrintAndLog("Usage:  hf legic writeraw [h] <offset> <value> <IV>");
-	PrintAndLog("Options:");
-	PrintAndLog("  h             : this help");
-	PrintAndLog("  <offset>      : offset to write to (hex)");
-	PrintAndLog("  <value>       : value (hex)");
-	PrintAndLog("  <IV>          : (optional) Initialization vector to use (hex, odd and 7bits)");
-	PrintAndLog("");
-	PrintAndLog("Samples:");
-	PrintAndLog("      hf legic writeraw 10 4    - writes 0x4 to byte[0x10]");
-	return 0;
-}
 int usage_legic_reader(void){
 	PrintAndLog("Read UID and type information from a legic tag.");
 	PrintAndLog("Usage:  hf legic reader [h]");
@@ -119,7 +106,6 @@ int usage_legic_dump(void){
 	PrintAndLog("      hf legic dump o myfile");
 	return 0;
 }
-
 int usage_legic_eload(void){
 	PrintAndLog("It loads binary dump from the file `filename.bin`");
 	PrintAndLog("Usage:  hf legic eload [h] [card memory] <file name w/o `.bin`>");
@@ -151,7 +137,6 @@ int usage_legic_esave(void){
 	PrintAndLog("      hf legic esave 2 filename");
 	return 0;
 }
-
 
 /*
  *  Output BigBuf and deobfuscate LEGIC RF tag data.
@@ -447,11 +432,11 @@ int CmdLegicInfo(const char *Cmd) {
 	return 0;
 }
 
+// params:
+// offset in data memory
+// number of bytes to read
 int CmdLegicRdmem(const char *Cmd) {
 
-	// params:
-	// offset in data memory
-	// number of bytes to read
 	char cmdp = param_getchar(Cmd, 0);
 	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_rdmem();
 	
@@ -470,39 +455,39 @@ int CmdLegicRdmem(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
-		uint8_t isOK = resp.arg[0] & 0xFF;
-		uint16_t readlen = resp.arg[1];
-		 if ( isOK ) {
-
-			uint8_t *data = malloc(readlen);
-			if ( !data ){
-				PrintAndLog("Cannot allocate memory");
-				return 2;
-			}
-			
-			if ( readlen != len )
-				PrintAndLog("Fail, only managed to read 0x%02X bytes", readlen);
-			
-			// copy data from device
-			GetEMLFromBigBuf(data, readlen, 0);
-			if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500)){
-				PrintAndLog("Command execute timeout");
-				if ( data ) 
-					free(data);
-				return 1;
-			}
-	
-			PrintAndLog("\n ##  | Data");
-			PrintAndLog("-----+-----");
-			print_hex_break( data, readlen, 32);
-		 } else {
-			 PrintAndLog("failed reading tag");
-		 }
-	} else {
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 3000) ) {
 		PrintAndLog("command execution time out");
 		return 1;
 	}
+
+	uint8_t isOK = resp.arg[0] & 0xFF;
+	uint16_t readlen = resp.arg[1];
+	if ( !isOK ) {
+		PrintAndLog("failed reading tag");
+		return 2;
+	}
+	
+	uint8_t *data = malloc(readlen);
+	if ( !data ){
+		PrintAndLog("Cannot allocate memory");
+		return 2;
+	}
+			
+	if ( readlen != len )
+		PrintAndLog("Fail, only managed to read 0x%02X bytes", readlen);
+			
+	// copy data from device
+	GetEMLFromBigBuf(data, readlen, 0);
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500)){
+		PrintAndLog("Command execute timeout");
+		free(data);
+		return 1;
+	}
+	
+	PrintAndLog("\n ##  | Data");
+	PrintAndLog("-----+-----");
+	print_hex_break( data, readlen, 32);
+	free(data);
 	return 0;
 }
 
@@ -703,80 +688,17 @@ int CmdLegicRfWrite(const char *Cmd) {
 }
 
 int CmdLegicRfRawWrite(const char *Cmd) {
-
-	char cmdp = param_getchar(Cmd, 0);
-	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_rawwrite();
-	
-	uint32_t offset = 0, data = 0, IV = 0;	
-	char answer;
-
-    int res = sscanf(Cmd, "%x %x %x", &offset, &data, &IV);
-	if(res < 2)
-		return usage_legic_rawwrite();
-	
-	// OUT-OF-BOUNDS check
-	if ( offset > MAX_LENGTH ) {
-		PrintAndLog("Out-of-bound, offset");
-		return 1;
-	}
-	
-	if ( (IV & 0x7F) != IV ){
-		IV &= 0x7F;
-		PrintAndLog("Truncating IV to 7bits");
-	}
-	if ( (IV & 1) == 0 ){
-		IV |= 0x01;  // IV must be odd
-		PrintAndLog("LSB of IV must be SET");	
-	}
-
-	UsbCommand c = { CMD_RAW_WRITER_LEGIC_RF, {offset, data, IV} };
-	
-	if (c.arg[0] == 0x05 || c.arg[0] == 0x06) {
-		PrintAndLog("############# DANGER !! #############");
-		PrintAndLog("# changing the DCF is irreversible  #");
-		PrintAndLog("#####################################");
-		PrintAndLog("do youe really want to continue? y(es) n(o)");		
-		if (scanf(" %c", &answer) > 0 && (answer == 'y' || answer == 'Y')) {
-			SendCommand(&c);
-			return 0;
-		}
-		return -1;
-	}
-	
-	clearCommandBuffer();
-    SendCommand(&c);
+	PrintAndLog("############# DANGER !! #############");
+	PrintAndLog("# changing the DCF is irreversible  #");
+	PrintAndLog("#####################################");
+	PrintAndLog("do youe really want to continue? y(es) n(o)");		
+	// if (scanf(" %c", &answer) > 0 && (answer == 'y' || answer == 'Y')) {
+		// return 0;
+	// }
 	return 0;
 }
 
 void static calc4(uint8_t *cmd, uint8_t len){
-	crc_t crc;
- 	//crc_init_ref(&crc, 4, 0x19 >> 1, 0x5, 0, TRUE, TRUE);
-	crc_init(&crc, 4, 0x19 >> 1, 0x5, 0);
-
-	crc_clear(&crc);
-	crc_update(&crc, 1, 1); /* CMD_READ */
-	crc_update(&crc, cmd[0], 8);
-	crc_update(&crc, cmd[1], 8);
-	printf("crc4 %X\n", reflect(crc_finish(&crc), 4) ) ;
-
-	crc_clear(&crc);
-	crc_update(&crc, 1, 1); /* CMD_READ */
-	crc_update(&crc, cmd[0], 8);
-	crc_update(&crc, cmd[1], 8);
-	printf("crc4 %X\n",  crc_finish(&crc) ) ;
-
-	printf("---- old ---\n");
-	crc_update2(&crc, 1, 1); /* CMD_READ */
-	crc_update2(&crc, cmd[0], 8);
-	crc_update2(&crc, cmd[1], 8);
-	printf("crc4 %X \n", reflect(crc_finish(&crc), 4) ) ;
-
-	
-	crc_clear(&crc);
-	crc_update2(&crc, 1, 1); /* CMD_READ */
-	crc_update2(&crc, cmd[0], 8);
-	crc_update2(&crc, cmd[1], 8);
-	printf("crc4 %X\n",  crc_finish(&crc) ) ;
 }	
  
 int CmdLegicCalcCrc8(const char *Cmd){
@@ -912,18 +834,15 @@ void legic_chk_iv(uint32_t *iv){
 		PrintAndLog("LSB of IV must be SET %u", *iv);	
 	}
 }
-
 void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
-
 	size_t len = 0;
 	UsbCommand c = {CMD_LEGIC_ESET, {0, 0, 0}};	
-
 	for(size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 		
 		len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);		
 		c.arg[0] = i; // offset
 		c.arg[1] = len; // number of bytes
-		memcpy(c.d.asBytes, src, len); 
+		memcpy(c.d.asBytes, src+i, len); 
 		clearCommandBuffer();
 		SendCommand(&c);
 		PrintAndLog("ICE: offset %d | len %d", i, len);
@@ -1023,6 +942,7 @@ int CmdLegicDump(const char *Cmd){
 		PrintAndLog("Fail, cannot allocate memory");
 		return 3;
 	}
+	memset(data, 0, readlen);
 	
 	if ( readlen != dumplen )
 		PrintAndLog("Fail, only managed to read 0x%02X bytes of 0x%02X", readlen, dumplen);
@@ -1148,8 +1068,7 @@ int CmdLegicESave(const char *Cmd) {
 	memset(data, 0, numofbytes);
 		
 	// download emulator memory
-	PrintAndLog("Reading emulator memory...");
-	
+	PrintAndLog("Reading emulator memory...");	
 	GetEMLFromBigBuf(data, numofbytes, 0);
 	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
 		PrintAndLog("Fail, transfer from device time-out");
