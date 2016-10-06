@@ -91,7 +91,13 @@ static void setup_timer(void) {
 #ifndef OPEN_COIL
 # define OPEN_COIL	HIGH(GPIO_SSC_DOUT);
 #endif
-
+#ifndef LINE_IN
+# define LINE_IN \
+	do { \
+	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN; \
+	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN; \
+	} while (0); 
+#endif
 // Pause pulse,  off in 20us / 30ticks,
 // ONE / ZERO bit pulse,  
 //    one == 80us / 120ticks
@@ -160,10 +166,6 @@ uint32_t get_key_stream(int skip, int count) {
 	}
 
 	i = (count == 6) ? -1 : legic_read_count;
-
-	// log
-	//uint8_t cmdbytes[] = {bits,	BYTEx(data, 0), BYTEx(data, 1),	BYTEx(send, 0), BYTEx(send, 1), legic_prng_count()};
-	//LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, TRUE);
 
 	/* Generate KeyStream */
 	return legic_prng_get_bits(count);
@@ -255,9 +257,9 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	volatile uint32_t level = 0;
 	
 	frame_clean(f);
-		
-	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
-	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
+	
+	/* Bitbang the receiver */
+	LINE_IN;
 	
 	// calibrate the prng.
 	legic_prng_forward(2);
@@ -434,9 +436,8 @@ int legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 	
 	frame_sendAsReader(cmd, cmd_sz);
 
-	// wait for ack
-	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
-	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
+	/* Bitbang the receiver */
+	LINE_IN;
 
     int t, old_level = 0, edges = 0;
     int next_bit_at = 0;
@@ -546,14 +547,14 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 	if ( index > cardsize ) return -1;
 	
 	loop
-		write( cardmem[index], index , card.addrsize);
+		write( data[index], index , card.addrsize);
 		--index;
 	end loop	
 	*/
 	uint16_t index = len;
 	while(index > 4) {
 
-		r = legic_write_byte( index, cardmem[ index ], card.addrsize);
+		r = legic_write_byte( index, data[ index ], card.addrsize);
 		
 		if ( r ) {
 			Dbprintf("operation aborted @ 0x%03.3x", index);
@@ -681,7 +682,11 @@ OUT:
  */
 static void frame_handle_tag(struct legic_frame const * const f)
 {
-	uint8_t *BigBuf = BigBuf_get_addr();
+	// log
+	//uint8_t cmdbytes[] = {bits,	BYTEx(data, 0),	BYTEx(data, 1)};
+	//LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, FALSE);
+	
+	cardmem = BigBuf_get_EM_addr();
 
 	/* First Part of Handshake (IV) */
 	if(f->bits == 7) {
@@ -691,8 +696,12 @@ static void frame_handle_tag(struct legic_frame const * const f)
 		// Reset prng timer
 		ResetTimer(prng_timer);
 
+		// IV from reader.
 		legic_prng_init(f->data);
+		
+		// We should have three tagtypes with three different answers.
 		frame_send_tag(0x3d, 6); /* 0x3d^0x26 = 0x1B */
+		
 		legic_state = STATE_IV;
 		legic_read_count = 0;
 		legic_prng_bc = 0;
@@ -706,7 +715,7 @@ static void frame_handle_tag(struct legic_frame const * const f)
 
    /* 0x19==??? */
    if(legic_state == STATE_IV) {
-      int local_key = get_key_stream(3, 6);
+      uint32_t local_key = get_key_stream(3, 6);
       int xored = 0x39 ^ local_key;
       if((f->bits == 6) && (f->data == xored)) {
          legic_state = STATE_CON;
@@ -726,59 +735,47 @@ static void frame_handle_tag(struct legic_frame const * const f)
    /* Read */
    if(f->bits == 11) {
       if(legic_state == STATE_CON) {
-         int key   = get_key_stream(2, 11); //legic_phase_drift, 11);
-         int addr  = f->data ^ key; addr = addr >> 1;
-         int data = BigBuf[addr];
+         uint32_t key = get_key_stream(2, 11); //legic_phase_drift, 11);
+         uint16_t addr = f->data ^ key; 
+		 addr >>= 1;
+         uint8_t data = cardmem[addr];
          int hash = legic4Crc(LEGIC_READ, addr, data, 11) << 8;
-         BigBuf[OFFSET_LOG+legic_read_count] = (uint8_t)addr;
-         legic_read_count++;
 
-         //Dbprintf("Data:%03.3x, key:%03.3x, addr: %03.3x, read_c:%u", f->data, key, addr, read_c);
+         legic_read_count++;
          legic_prng_forward(legic_reqresp_drift);
 
          frame_send_tag(hash | data, 12);
-
 		 ResetTimer(timer);
          legic_prng_forward(2);
-		 WaitUS(180);
+		 WaitTicks(330);
          return;
       }
    }
 
    /* Write */
    if(f->bits == 23) {
-      int key   = get_key_stream(-1, 23); //legic_frame_drift, 23);
-      int addr  = f->data ^ key; addr = addr >> 1; addr = addr & 0x3ff;
-      int data  = f->data ^ key; data = data >> 11; data = data & 0xff;
+      uint32_t key  = get_key_stream(-1, 23); //legic_frame_drift, 23);
+      uint16_t addr = f->data ^ key; 
+	  addr >>= 1; 
+	  addr &= 0x3ff;
+      uint32_t data = f->data ^ key; 
+	  data >>= 11; 
+	  data &= 0xff;
 
+	  cardmem[addr] = data;
       /* write command */
       legic_state = STATE_DISCON;
       LED_C_OFF();
       Dbprintf("write - addr: %x, data: %x", addr, data);
+	  // should send a ACK within 3.5ms too
       return;
    }
 
    if(legic_state != STATE_DISCON) {
       Dbprintf("Unexpected: sz:%u, Data:%03.3x, State:%u, Count:%u", f->bits, f->data, legic_state, legic_read_count);
-      int i;
       Dbprintf("IV: %03.3x", legic_prng_iv);
-      for(i = 0; i<legic_read_count; i++) {
-         Dbprintf("Read Nb: %u, Addr: %u", i, BigBuf[OFFSET_LOG+i]);
-      }
-
-      for(i = -1; i<legic_read_count; i++) {
-         uint32_t t;
-         t  = BigBuf[OFFSET_LOG+256+i*4];
-         t |= BigBuf[OFFSET_LOG+256+i*4+1] << 8;
-         t |= BigBuf[OFFSET_LOG+256+i*4+2] <<16;
-         t |= BigBuf[OFFSET_LOG+256+i*4+3] <<24;
-
-         Dbprintf("Cycles: %u, Frame Length: %u, Time: %u", 
-            BigBuf[OFFSET_LOG+128+i],
-            BigBuf[OFFSET_LOG+384+i],
-            t);
-      }
    }
+
    legic_state = STATE_DISCON; 
    legic_read_count = 0;
    SpinDelay(10);
@@ -822,6 +819,9 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
    * on DOUT, 1 bit is 100us. The time from reader to card frame is still unclear,
    * seems to be 300us-ish.
    */
+		
+	int old_level = 0, active = 0;
+	legic_state = STATE_DISCON;
 
 	legic_phase_drift = phase;
 	legic_frame_drift = frame;
@@ -829,30 +829,36 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-	FpgaSetupSsc();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_212K);
 
 	/* Bitbang the receiver */
-	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
-	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
+	LINE_IN;
 
-	//setup_timer();
+	// need a way to determine which tagtype we are simulating
+	
+	// hook up emulator memory  
+	cardmem = BigBuf_get_EM_addr();
+	
+	clear_trace();
+	set_tracing(TRUE);
+
 	crc_init(&legic_crc, 4, 0x19 >> 1, 0x5, 0);
 
-	int old_level = 0;
-	int active = 0;
-	legic_state = STATE_DISCON;
+	StartTicks();
 
 	LED_B_ON();
 	DbpString("Starting Legic emulator, press button to end");
    
 	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
-		int level = !!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
-		int time = timer->TC_CV;
+		volatile uint32_t level = !!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
 
-		if(level != old_level) {
-			if(level == 1) {
-				timer->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+		uint32_t time = GET_TICKS;
+
+		if (level != old_level) {
+			
+			if (level) {
+
+				ResetTicks();
 				
 				if (FUZZ_EQUAL(time, RWD_TIME_1, RWD_TIME_FUZZ)) {
 					/* 1 bit */
@@ -880,15 +886,22 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
 			LED_A_OFF();
 		}
 
-		if(time >= (20*RWD_TIME_1) && (timer->TC_SR & AT91C_TC_CLKSTA)) {
-			timer->TC_CCR = AT91C_TC_CLKDIS;
-		}
+		/*
+		* Disable the counter, Then wait for the clock to acknowledge the
+		* shutdown in its status register. Reading the SR has the
+		* side-effect of clearing any pending state in there.
+		*/
+		if(time >= (20*RWD_TIME_1) && (timer->TC_SR & AT91C_TC_CLKSTA))
+			StopTicks();
 
 		old_level = level;
 		WDT_HIT();
 	}
-	if ( MF_DBGLEVEL >= 1) DbpString("Stopped");
+
+	WDT_HIT();
+	switch_off_tag_rwd();
 	LEDsoff();
+	cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
 }
 
 //-----------------------------------------------------------------------------

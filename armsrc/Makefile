@@ -14,7 +14,7 @@ APP_CFLAGS	= -DWITH_ISO14443a_StandAlone -DWITH_LF \
 			 -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b -DWITH_ICLASS \
 			-DWITH_LEGICRF -DWITH_HITAG -DWITH_CRC -DON_DEVICE -DWITH_HFSNOOP \
 			-fno-strict-aliasing -ffunction-sections -fdata-sections
-#-DWITH_LCD
+			#-DWITH_LCD
 
 #SRC_LCD = fonts.c LCD.c
 SRC_LF = lfops.c hitag2.c hitagS.c lfsampling.c pcf7931.c lfdemod.c protocols.c
