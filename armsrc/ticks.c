@@ -217,7 +217,7 @@ void WaitMS(uint16_t ms){
 	WaitTicks( (uint32_t)(ms * 1500) );
 }
 // Starts Clock and waits until its reset
-void ResetTicks(){
+void ResetTicks(void){
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	while (AT91C_BASE_TC1->TC_CV >= 1);
@@ -225,4 +225,9 @@ void ResetTicks(){
 void ResetTimer(AT91PS_TC timer){
 	timer->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	while(timer->TC_CV >= 1) ;
+}
+// stop clock
+void StopTicks(void){
+	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;	
 }

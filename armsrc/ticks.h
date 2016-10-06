@@ -44,4 +44,5 @@ extern void WaitUS(uint16_t us);
 extern void WaitMS(uint16_t ms);
 extern void ResetTicks();
 extern void ResetTimer(AT91PS_TC timer);
+extern void StopTicks(void);
 #endif
