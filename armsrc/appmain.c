@@ -1052,21 +1052,17 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_SIMULATE_TAG_LEGIC_RF:
 			LegicRfSimulate(c->arg[0], c->arg[1], c->arg[2]);
 			break;
-
 		case CMD_WRITER_LEGIC_RF:
-			LegicRfWriter( c->arg[0], c->arg[1], c->arg[2]);
+			LegicRfWriter( c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
-
-		case CMD_RAW_WRITER_LEGIC_RF:
-			LegicRfRawWriter(c->arg[0], c->arg[1], c->arg[2]);
-			break;
-
 		case CMD_READER_LEGIC_RF:
 			LegicRfReader(c->arg[0], c->arg[1], c->arg[2]);
-			break;
-			
+			break;			
 		case CMD_LEGIC_INFO:
 			LegicRfInfo();
+			break;
+		case CMD_LEGIC_ESET:
+			LegicEMemSet(c->arg[0], c->arg[1], c->d.asBytes);
 			break;
 #endif
 
@@ -1196,7 +1192,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_MIFARE_DESFIRE:
 			MifareSendCommand(c->arg[0], c->arg[1], c->d.asBytes);
 			break;
-
 		case CMD_MIFARE_COLLECT_NONCES:
 			break;
 #endif
@@ -1227,7 +1222,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_READER_ICLASS_REPLAY:
 		    ReaderIClass_Replay(c->arg[0], c->d.asBytes);
 			break;
-	case CMD_ICLASS_EML_MEMSET:
+		case CMD_ICLASS_EML_MEMSET:
 			emlSet(c->d.asBytes,c->arg[0], c->arg[1]);
 			break;
 		case CMD_ICLASS_WRITEBLOCK:

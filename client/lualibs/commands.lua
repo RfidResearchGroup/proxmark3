@@ -104,7 +104,10 @@ local _commands = {
 	CMD_EPA_PACE_REPLAY =                                                0x038B,
 
 	CMD_LEGIC_INFO =													 0x03BC,
-	
+	CMD_LEGIC_ESET =													 0x03BD,
+	CMD_LEGIC_EGET =													 0x03BE,
+
+
 	CMD_ICLASS_READCHECK =                                               0x038F,
 	CMD_ICLASS_CLONE =                                                   0x0390,
 	CMD_ICLASS_DUMP =                                                    0x0391,

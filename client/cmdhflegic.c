@@ -84,10 +84,6 @@ int usage_legic_rawwrite(void){
 	PrintAndLog("      hf legic writeraw 10 4    - writes 0x4 to byte[0x10]");
 	return 0;
 }
-int usage_legic_fill(void){
-	PrintAndLog("Missing help text.");
-	return 0;
-}
 int usage_legic_reader(void){
 	PrintAndLog("Read UID and type information from a legic tag.");
 	PrintAndLog("Usage:  hf legic reader [h]");
@@ -123,6 +119,39 @@ int usage_legic_dump(void){
 	PrintAndLog("      hf legic dump o myfile");
 	return 0;
 }
+
+int usage_legic_eload(void){
+	PrintAndLog("It loads binary dump from the file `filename.bin`");
+	PrintAndLog("Usage:  hf legic eload [h] [card memory] <file name w/o `.bin`>");
+	PrintAndLog("Options:");
+	PrintAndLog("  h             : this help");
+	PrintAndLog("  [card memory] : 0 = MIM22");
+	PrintAndLog("                : 1 = MIM256 (default)");
+	PrintAndLog("                : 2 = MIM1024");
+	PrintAndLog("  <filename>    : filename w/o .bin to load");	
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("      hf legic eload filename");
+	PrintAndLog("      hf legic eload 2 filename");
+	return 0;
+}
+int usage_legic_esave(void){
+	PrintAndLog("It saves binary dump into the file `filename.bin` or `cardID.bin`");
+	PrintAndLog(" Usage:  hf legic esave [h] [card memory] [file name w/o `.bin`]");
+	PrintAndLog("Options:");
+	PrintAndLog("  h             : this help");
+	PrintAndLog("  [card memory] : 0 = MIM22");
+	PrintAndLog("                : 1 = MIM256 (default)");
+	PrintAndLog("                : 2 = MIM1024");
+	PrintAndLog("  <filename>    : filename w/o .bin to load");	
+	PrintAndLog("");
+	PrintAndLog("Samples:");	
+	PrintAndLog("      hf legic esave ");
+	PrintAndLog("      hf legic esave 2");
+	PrintAndLog("      hf legic esave 2 filename");
+	return 0;
+}
+
 
 /*
  *  Output BigBuf and deobfuscate LEGIC RF tag data.
@@ -166,6 +195,7 @@ int CmdLegicInfo(const char *Cmd) {
 		(calc_crc == crc) ? "OK":"Fail"
 	);
  
+	// MCD = Manufacturer ID (should be list meaning something?)
 
 	token_type[0] = 0;
 	dcf = ((int)data[6] << 8) | (int)data[5];
@@ -434,15 +464,7 @@ int CmdLegicRdmem(const char *Cmd) {
 		PrintAndLog("Out-of-bound, shorten len to %d (0x%02X)", len, len);
 	}
 	
-	if ( (IV & 0x7F) != IV ){
-		IV &= 0x7F;
-		PrintAndLog("Truncating IV to 7bits");
-	}
-	
-	if ( (IV & 1) == 0 ){
-		IV |= 0x01;
-		PrintAndLog("LSB of IV must be SET");	
-	}
+	legic_chk_iv(&IV);
 	
 	UsbCommand c = {CMD_READER_LEGIC_RF, {offset, len, IV}};
 	clearCommandBuffer();
@@ -484,6 +506,8 @@ int CmdLegicRdmem(const char *Cmd) {
 	return 0;
 }
 
+// load, filename  (ascii hex textfile)
+// uploads it to device mem
 int CmdLegicLoad(const char *Cmd) {
 
 // iceman: potential bug, where all filepaths or filename which starts with H or h will print the helptext :)	
@@ -563,6 +587,9 @@ int CmdLegicLoad(const char *Cmd) {
     return 0;
 }
 
+// Save,  filename, num of bytes, starting offset. (in decimal)
+//  ie:  "hf legic save nnn.txt 100 0  (saves the first 100bytes)
+// (ascii hex textfile)
 int CmdLegicSave(const char *Cmd) {
 	int requested = 1024;
 	int offset = 0;
@@ -616,6 +643,8 @@ int CmdLegicSave(const char *Cmd) {
 }
 
 //TODO: write a help text (iceman)
+// should say which tagtype
+// should load a tag to device mem.
 int CmdLegicRfSim(const char *Cmd) {
 	UsbCommand c = {CMD_SIMULATE_TAG_LEGIC_RF, {6,3,0}};
 	sscanf(Cmd, " %"lli" %"lli" %"lli, &c.arg[0], &c.arg[1], &c.arg[2]);
@@ -626,11 +655,9 @@ int CmdLegicRfSim(const char *Cmd) {
 
 int CmdLegicRfWrite(const char *Cmd) {
 
-	// params:
 	// offset - in tag memory
 	// length - num of bytes to be written
-	// IV - initialisation vector
-	
+
 	char cmdp = param_getchar(Cmd, 0);
 	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_write();
 	
@@ -641,20 +668,23 @@ int CmdLegicRfWrite(const char *Cmd) {
 		PrintAndLog("Please specify the offset and length as two hex strings and, optionally, the IV also as an hex string");
         return -1;
     }
+	
+	// tagtype
+	legic_card_select_t card;
+	if (legic_get_type(&card)) {
+		PrintAndLog("Failed to identify tagtype");
+		return -1;
+	}
 
+	legic_print_type(card.cardsize, 0);
+	
 	// OUT-OF-BOUNDS check
-	if ( len + offset > MAX_LENGTH ) {
-		len = MAX_LENGTH - offset;
-		PrintAndLog("Out-of-bound, shorten len to %d (0x%02X)", len, len);
+	if ( len + offset > card.cardsize ) {
+		PrintAndLog("Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, len + offset);
+		return -2;
 	}
-	if ( (IV & 0x7F) != IV ){
-		IV &= 0x7F;
-		PrintAndLog("Truncating IV to 7bits");
-	}
-	if ( (IV & 1) == 0 ){
-		IV |= 0x01;  // IV must be odd
-		PrintAndLog("LSB of IV must be SET");	
-	}
+	
+	legic_chk_iv(&IV);
 	
     UsbCommand c = {CMD_WRITER_LEGIC_RF, {offset, len, IV}};	
 	clearCommandBuffer();
@@ -662,10 +692,8 @@ int CmdLegicRfWrite(const char *Cmd) {
 	UsbCommand resp;
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 		uint8_t isOK = resp.arg[0] & 0xFF;
-		 if ( isOK ) {
-		 } else {
-			 PrintAndLog("failed writig tag");
-		 }
+		 if ( !isOK )
+			 PrintAndLog("failed writing tag");
 	} else {
 		PrintAndLog("command execution time out");
 		return 1;
@@ -719,31 +747,6 @@ int CmdLegicRfRawWrite(const char *Cmd) {
     SendCommand(&c);
 	return 0;
 }
-
-//TODO: write a help text (iceman)
-int CmdLegicRfFill(const char *Cmd) {
-    UsbCommand cmd = {CMD_WRITER_LEGIC_RF, {0,0,0} };
-    int res = sscanf(Cmd, " 0x%"llx" 0x%"llx" 0x%"llx, &cmd.arg[0], &cmd.arg[1], &cmd.arg[2]);
-    if(res != 3) {
-        PrintAndLog("Please specify the offset, length and value as two hex strings");
-        return -1;
-    }
-
-    int i;
-    UsbCommand c = {CMD_DOWNLOADED_SIM_SAMPLES_125K, {0, 0, 0}};
-	memset(c.d.asBytes, cmd.arg[2], 48);
-
-	for(i = 0; i < 22; i++) {
-		c.arg[0] = i*48;
-		
-		clearCommandBuffer();
-		SendCommand(&c);
-		WaitForResponse(CMD_ACK, NULL);
-	}
-	clearCommandBuffer();
-    SendCommand(&cmd);
-    return 0;
- }
 
 void static calc4(uint8_t *cmd, uint8_t len){
 	crc_t crc;
@@ -898,6 +901,34 @@ int legic_get_type(legic_card_select_t *card){
 	memcpy(card, (legic_card_select_t *)resp.d.asBytes, sizeof(legic_card_select_t));
 	return 0;
 }
+void legic_chk_iv(uint32_t *iv){
+	if ( (*iv & 0x7F) != *iv ){
+		*iv &= 0x7F;
+		PrintAndLog("Truncating IV to 7bits, %u", *iv);
+	}
+	// IV must be odd
+	if ( (*iv & 1) == 0 ){
+		*iv |= 0x01;  
+		PrintAndLog("LSB of IV must be SET %u", *iv);	
+	}
+}
+
+void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
+
+	size_t len = 0;
+	UsbCommand c = {CMD_LEGIC_ESET, {0, 0, 0}};	
+
+	for(size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
+		
+		len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);		
+		c.arg[0] = i; // offset
+		c.arg[1] = len; // number of bytes
+		memcpy(c.d.asBytes, src, len); 
+		clearCommandBuffer();
+		SendCommand(&c);
+		PrintAndLog("ICE: offset %d | len %d", i, len);
+	}
+}
 
 int HFLegicReader(const char *Cmd, bool verbose) {
 
@@ -925,7 +956,7 @@ int CmdLegicReader(const char *Cmd){
 
 int CmdLegicDump(const char *Cmd){
 
-	FILE *fout;
+	FILE *f;
 	char filename[FILE_PATH_SIZE] = {0x00};
 	char *fnameptr = filename;
 	size_t fileNlen = 0;
@@ -933,24 +964,26 @@ int CmdLegicDump(const char *Cmd){
 	uint16_t dumplen;	
 	uint8_t cmdp = 0;
 	
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
-		case 'h':
-		case 'H':
-			return usage_legic_dump();
-		case 'o':
-		case 'O':
-			fileNlen = param_getstr(Cmd, cmdp+1, filename);
-			if (!fileNlen) errors = true; 
-			if (fileNlen > FILE_PATH_SIZE-5) fileNlen = FILE_PATH_SIZE-5;
-			cmdp += 2;
-			break;
-		default:
-			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-			errors = true;
-			break;
+	memset(filename, 0, sizeof(filename));
+	
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
+			case 'h':
+			case 'H':
+				return usage_legic_dump();
+			case 'o':
+			case 'O':
+				fileNlen = param_getstr(Cmd, cmdp+1, filename);
+				if (!fileNlen) 
+					errors = true; 
+				if (fileNlen > FILE_PATH_SIZE-5) 
+					fileNlen = FILE_PATH_SIZE-5;
+				cmdp += 2;
+				break;
+			default:
+				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+				errors = true;
+				break;
 		}
 		if(errors) break;
 	}
@@ -986,7 +1019,7 @@ int CmdLegicDump(const char *Cmd){
 
 	uint16_t readlen = resp.arg[1];
 	uint8_t *data = malloc(readlen);
-	if ( !data ){
+	if (!data) {
 		PrintAndLog("Fail, cannot allocate memory");
 		return 3;
 	}
@@ -998,7 +1031,7 @@ int CmdLegicDump(const char *Cmd){
 	GetEMLFromBigBuf(data, readlen, 0);
 	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
 		PrintAndLog("Fail, transfer from device time-out");
-		if ( data ) free(data);
+		free(data);
 		return 4;
 	}
 
@@ -1008,18 +1041,140 @@ int CmdLegicDump(const char *Cmd){
 	else
 		sprintf(fnameptr + fileNlen,".bin");
 
-	if ((fout = fopen(filename,"wb")) == NULL) { 
+	if ((f = fopen(filename,"wb")) == NULL) { 
 		PrintAndLog("Could not create file name %s", filename);
-		if ( data ) free(data);
+		if (data)
+			free(data);
 		return 5;
 	}
-	fwrite( data, 1, readlen, fout );
-	fclose(fout);
-	if ( data ) free(data);
-	
+	fwrite(data, 1, readlen, f);
+	fclose(f);
+	free(data);
 	PrintAndLog("Wrote %d bytes to %s", readlen, filename);
 	return 0;
 }	
+
+int CmdLegicELoad(const char *Cmd) {
+	FILE * f;
+	char filename[FILE_PATH_SIZE];
+	char *fnameptr = filename;
+	int len, numofbytes;
+	int nameParamNo = 1;
+	
+	char cmdp = param_getchar(Cmd, 0);		
+	if ( cmdp == 'h' || cmdp == 'H' || cmdp == 0x00)
+		return usage_legic_eload();
+
+	switch (cmdp) {
+		case '0' : numofbytes = 22; break;
+		case '1' : 
+		case '\0': numofbytes = 256; break;
+		case '2' : numofbytes = 1024; break;
+		default  : numofbytes = 256;  nameParamNo = 0;break;
+	}
+
+	// set up buffer
+	uint8_t *data = malloc(numofbytes);
+	if (!data) {
+		PrintAndLog("Fail, cannot allocate memory");
+		return 3;		
+	}
+	memset(data, 0, numofbytes);
+	
+	// set up file
+	len = param_getstr(Cmd, nameParamNo, filename);
+	if (len > FILE_PATH_SIZE - 5) 
+		len = FILE_PATH_SIZE - 5;
+	fnameptr += len;
+	sprintf(fnameptr, ".bin"); 	
+	
+	// open file
+	if ((f = fopen(filename,"rb")) == NULL) { 
+		PrintAndLog("File %s not found or locked", filename);
+		free(data);
+		return 1;
+	}
+
+	// load file
+	size_t bytes_read = fread(data, 1, numofbytes, f);
+	if ( bytes_read == 0){
+		PrintAndLog("File reading error");
+		free(data);
+		fclose(f);
+		return 2;
+	}
+	fclose(f);
+	
+	// transfer to device
+	legic_seteml(data, 0, numofbytes);
+		
+	free(data);	
+	PrintAndLog("\nLoaded %d bytes from file: %s  to emulator memory", numofbytes, filename);
+	return 0;
+}
+
+int CmdLegicESave(const char *Cmd) {
+	FILE *f;
+	char filename[FILE_PATH_SIZE];
+	char *fnameptr = filename;
+	int fileNlen, numofbytes, nameParamNo = 1;
+	
+	memset(filename, 0, sizeof(filename));
+
+	char cmdp = param_getchar(Cmd, 0);
+	
+	if ( cmdp == 'h' || cmdp == 'H' || cmdp == 0x00)
+		return usage_legic_esave();
+
+	switch (cmdp) {
+		case '0' : numofbytes = 22; break;
+		case '1' : 
+		case '\0': numofbytes = 256; break;
+		case '2' : numofbytes = 1024; break;
+		default  : numofbytes = 256; nameParamNo = 0; break;
+	}
+
+	fileNlen = param_getstr(Cmd, nameParamNo, filename);
+	
+	if (fileNlen > FILE_PATH_SIZE - 5) 
+		fileNlen = FILE_PATH_SIZE - 5;
+
+	// set up buffer
+	uint8_t *data = malloc(numofbytes);
+	if (!data) {
+		PrintAndLog("Fail, cannot allocate memory");
+		return 3;		
+	}
+	memset(data, 0, numofbytes);
+		
+	// download emulator memory
+	PrintAndLog("Reading emulator memory...");
+	
+	GetEMLFromBigBuf(data, numofbytes, 0);
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
+		PrintAndLog("Fail, transfer from device time-out");
+		free(data);
+		return 4;
+	}
+
+	// user supplied filename?
+	if (fileNlen < 1)		
+		sprintf(fnameptr,"%02X%02X%02X%02X.bin", data[0], data[1], data[2], data[3]);
+	else
+		sprintf(fnameptr + fileNlen,".bin");
+	
+	// open file
+	if ((f = fopen(filename,"wb")) == NULL) { 
+		PrintAndLog("Could not create file name %s", filename);
+		free(data);
+		return 1;
+	}
+	fwrite(data, 1, numofbytes, f);
+	fclose(f);
+	free(data);
+	PrintAndLog("\nSaved %d bytes from emulator memory to file: %s", numofbytes, filename);
+	return 0;
+}
 	
 static command_t CommandTable[] =  {
 	{"help",	CmdHelp,			1, "This help"},
@@ -1031,9 +1186,9 @@ static command_t CommandTable[] =  {
 	{"load",	CmdLegicLoad,		0, "<filename> -- Restore samples"},
 	{"sim",		CmdLegicRfSim,		0, "[phase drift [frame drift [req/resp drift]]] Start tag simulator (use after load or read)"},
 	{"write",	CmdLegicRfWrite,	0, "<offset> <length> <iv> -- Write sample buffer (user after load or read)"},
-	{"writeraw",CmdLegicRfRawWrite,	0, "<address> <value> <iv> -- Write direct to address"},
-	{"fill",	CmdLegicRfFill,		0, "<offset> <length> <value> -- Fill/Write tag with constant value"},
-	{"crc8",	CmdLegicCalcCrc8,	1, "Calculate Legic CRC8 over given hexbytes"},
+	{"crc8",	CmdLegicCalcCrc8,	1, "Calculate Legic CRC8 over given hexbytes"},	
+	{"eload",	CmdLegicELoad,		1, "Load binary dump to emulator memory"},
+	{"esave",	CmdLegicESave,		1, "Save emulator memory to binary file"},
 	{NULL, NULL, 0, NULL}
 };
 

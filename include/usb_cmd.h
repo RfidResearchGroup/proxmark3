@@ -147,6 +147,8 @@ typedef struct{
 #define CMD_EPA_PACE_REPLAY                                               0x038B
 
 #define CMD_LEGIC_INFO													  0x03BC
+#define CMD_LEGIC_ESET													  0x03BD
+#define CMD_LEGIC_EGET													  0x03BE
 
 #define CMD_ICLASS_READCHECK                                              0x038F
 #define CMD_ICLASS_CLONE                                                  0x0390

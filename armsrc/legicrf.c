@@ -407,19 +407,15 @@ int legic_read_byte( uint16_t index, uint8_t cmd_sz) {
  * - wait until the tag sends back an ACK ('1' bit unencrypted)
  * - forward the prng based on the timing
  */
-//int legic_write_byte(int byte, int addr, int addr_sz, int PrngCorrection) {
-int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
-
-    //do not write UID, CRC at offset 0-4.
-	if (addr <= 4) return 0;
+int legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 
 	// crc
 	crc_clear(&legic_crc);
 	crc_update(&legic_crc, 0, 1); /* CMD_WRITE */
-	crc_update(&legic_crc, addr, addr_sz);
+	crc_update(&legic_crc, index, addr_sz);
 	crc_update(&legic_crc, byte, 8);
 	uint32_t crc = crc_finish(&legic_crc);
-	uint32_t crc2 = legic4Crc(LEGIC_WRITE, addr, byte, addr_sz+1);
+	uint32_t crc2 = legic4Crc(LEGIC_WRITE, index, byte, addr_sz+1);
 	if ( crc != crc2 ) {
 		Dbprintf("crc is missmatch");
 		return 1;
@@ -427,8 +423,8 @@ int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
 	// send write command
 	uint32_t cmd = ((crc     <<(addr_sz+1+8)) //CRC
                    |(byte    <<(addr_sz+1))   //Data
-                   |(addr    <<1)             //Address
-                   | LEGIC_WRITE);             //CMD = Write
+                   |(index    <<1)             //index
+                   | LEGIC_WRITE);            //CMD = Write
 				   
     uint32_t cmd_sz = addr_sz+1+8+4;          //crc+data+cmd
 
@@ -437,15 +433,16 @@ int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
 	WaitTicks(330);
 	
 	frame_sendAsReader(cmd, cmd_sz);
-   
+
+	// wait for ack
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
 
-	// wait for ack
     int t, old_level = 0, edges = 0;
     int next_bit_at = 0;
 
-	WaitTicks(TAG_FRAME_WAIT);
+	// ACK 3.6ms = 3600us * 1.5 = 5400ticks.
+	WaitTicks(5360);
 
     for( t = 0; t < 80; ++t) {
         edges = 0;
@@ -457,7 +454,8 @@ int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
 
             old_level = level;
         }
-        if(edges > 20 ) { /* expected are 42 edges */
+		/* expected are 42 edges (ONE) */
+        if(edges > 20 ) {
 			int t = timer->TC_CV;
 			int c = t / TAG_BIT_PERIOD;
 			
@@ -467,7 +465,6 @@ int legic_write_byte(uint8_t byte, uint16_t addr, uint8_t addr_sz) {
         }
     }
 
-	ResetTimer(timer);
 	return -1;
 }
 
@@ -512,51 +509,16 @@ OUT:
     return 0;
 }
 
-/*int _LegicRfWriter(int offset, int bytes, int addr_sz, uint8_t *BigBuf, int RoundBruteforceValue) {
-	int byte_index=0;
+void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 
-    LED_B_ON();
-	setup_phase_reader(iv);
-    //legic_prng_forward(2);
-	while(byte_index < bytes) {
-		int r;
-
-		//check if the DCF should be changed
-		if ( (offset == 0x05) && (bytes == 0x02) ) {
-			//write DCF in reverse order (addr 0x06 before 0x05)
-			r = legic_write_byte(BigBuf[(0x06-byte_index)], (0x06-byte_index), addr_sz, RoundBruteforceValue);
-			//legic_prng_forward(1);
-			if(r == 0) {
-				byte_index++;
-				r = legic_write_byte(BigBuf[(0x06-byte_index)], (0x06-byte_index), addr_sz, RoundBruteforceValue);
-			}
-			//legic_prng_forward(1);
-		}
-		else {
-			r = legic_write_byte(BigBuf[byte_index+offset], byte_index+offset, addr_sz, RoundBruteforceValue);
-		}
-		if((r != 0) || BUTTON_PRESS()) {
-			Dbprintf("operation aborted @ 0x%03.3x", byte_index);
-	switch_off_tag_rwd();
-			LED_B_OFF();
-			LED_C_OFF();
-			return -1;
-		}
-
-        WDT_HIT();
-		byte_index++;
-        if(byte_index & 0x10) LED_C_ON(); else LED_C_OFF();
-	}
-    LED_B_OFF();
-    LED_C_OFF();
-    DbpString("write successful");
-    return 0;
-}*/
-
-void LegicRfWriter(uint16_t offset, uint16_t bytes, uint8_t iv) {
-
-	int byte_index = 0;  
 	uint8_t isOK = 1;
+	
+	// UID not is writeable.
+	if ( offset <= 4 ) {
+		isOK = 0;
+		goto OUT;
+	}
+	
 	legic_card_select_t card;
 	
 	LegicCommonInit();
@@ -566,129 +528,46 @@ void LegicRfWriter(uint16_t offset, uint16_t bytes, uint8_t iv) {
 		goto OUT;
 	}
 	
-	switch_off_tag_rwd();
-	
-	switch(card.tagtype) {
-		case 0x0d:
-			if(offset+bytes > 22) {
-				Dbprintf("Error: can not write to 0x%03.3x on MIM22", offset + bytes);
-				return;
-			}
-			if ( MF_DBGLEVEL >= 2) Dbprintf("MIM22 card found, writing 0x%02.2x - 0x%02.2x ...", offset, offset + bytes);
-			break;
-		case 0x1d:
-			if(offset+bytes > 0x100) {
-				Dbprintf("Error: can not write to 0x%03.3x on MIM256", offset + bytes);
-				return;
-			}
-			if ( MF_DBGLEVEL >= 2) Dbprintf("MIM256 card found, writing 0x%02.2x - 0x%02.2x ...", offset, offset + bytes);
-			break;
-		case 0x3d:
-			if(offset+bytes > 0x400) {
-          		Dbprintf("Error: can not write to 0x%03.3x on MIM1024", offset + bytes);
-           		return;
-          	}
-			if ( MF_DBGLEVEL >= 2) Dbprintf("MIM1024 card found, writing 0x%03.3x - 0x%03.3x ...", offset, offset + bytes);
-			break;
-		default:
-            return;
-	}
+	if (len + offset >= card.cardsize)
+		len = card.cardsize - offset;
 
-    LED_B_ON();
 	setup_phase_reader(iv);
-	
+
+    LED_B_ON();	
 	int r = 0;
-	while(byte_index < bytes) {
+	// how about we write backwards instead. no need for this extra DCF check.	
+	// index = len - cardsize
+	// stops uid 01234, 
+	/*
+	len = 20
+	offset = 5
+	
+	index = 20+5 = 25
+	if ( index > cardsize ) return -1;
+	
+	loop
+		write( cardmem[index], index , card.addrsize);
+		--index;
+	end loop	
+	*/
+	uint16_t index = len;
+	while(index > 4) {
 
-		//check if the DCF should be changed
-		if ( ((byte_index+offset) == 0x05) && (bytes >= 0x02) ) {
-			//write DCF in reverse order (addr 0x06 before 0x05)
-			r = legic_write_byte(cardmem[(0x06-byte_index)], (0x06-byte_index), card.addrsize);
-
-			// write second byte on success
-			if(r == 0) {
-				byte_index++;
-				r = legic_write_byte(cardmem[(0x06-byte_index)], (0x06-byte_index), card.addrsize);
-			}
-		}
-		else {
-			r = legic_write_byte(cardmem[byte_index+offset], byte_index+offset, card.addrsize);
-		}
+		r = legic_write_byte( index, cardmem[ index ], card.addrsize);
 		
-		if ((r != 0) || BUTTON_PRESS()) {
-			Dbprintf("operation aborted @ 0x%03.3x", byte_index);
+		if ( r ) {
+			Dbprintf("operation aborted @ 0x%03.3x", index);
 			isOK = 0;
 			goto OUT;
 		}
-
-        WDT_HIT();
-		byte_index++;
+		--index;
+		WDT_HIT();
 	}
 
 OUT:
 	cmd_send(CMD_ACK, isOK, 0,0,0,0);
 	switch_off_tag_rwd();
 	LEDsoff();	
-}
-
-void LegicRfRawWriter(int address, int byte, uint8_t iv) {
-
-	int byte_index = 0, addr_sz = 0;
-	
-	LegicCommonInit();
-	
-	if ( MF_DBGLEVEL >= 2) DbpString("setting up legic card");
-	
-	uint32_t tag_type = setup_phase_reader(iv);
-	
-	switch_off_tag_rwd();
-	
-	switch(tag_type) {
-		case 0x0d:
-			if(address > 22) {
-				Dbprintf("Error: can not write to 0x%03.3x on MIM22", address);
-				return;
-			}
-			addr_sz = 5;
-			if ( MF_DBGLEVEL >= 2) Dbprintf("MIM22 card found, writing at addr 0x%02.2x - value 0x%02.2x ...", address, byte);
-			break;
-		case 0x1d:
-			if(address > 0x100) {
-				Dbprintf("Error: can not write to 0x%03.3x on MIM256", address);
-				return;
-			}
-			addr_sz = 8;
-			if ( MF_DBGLEVEL >= 2) Dbprintf("MIM256 card found, writing at addr 0x%02.2x - value 0x%02.2x ...", address, byte);
-			break;
-		case 0x3d:
-			if(address > 0x400) {
-          		Dbprintf("Error: can not write to 0x%03.3x on MIM1024", address);
-           		return;
-          	}
-			addr_sz = 10;
-			if ( MF_DBGLEVEL >= 2) Dbprintf("MIM1024 card found, writing at addr 0x%03.3x - value 0x%03.3x ...", address, byte);
-			break;
-		default:
-			Dbprintf("No or unknown card found, aborting");
-            return;
-	}
-	
-	Dbprintf("integer value: %d address: %d  addr_sz: %d", byte, address, addr_sz);
-    LED_B_ON();
-	
-	setup_phase_reader(iv);
-    		
-	int r = legic_write_byte(byte, address, addr_sz);
-		
-	if((r != 0) || BUTTON_PRESS()) {
-		Dbprintf("operation aborted @ 0x%03.3x (%1d)", byte_index, r);
-		switch_off_tag_rwd();
-		LEDsoff();
-		return;
-	}
-
-    LEDsoff();
-    if ( MF_DBGLEVEL >= 1) DbpString("write successful");
 }
 
 int legic_select_card_iv(legic_card_select_t *p_card, uint8_t iv){
@@ -725,8 +604,42 @@ int legic_select_card(legic_card_select_t *p_card){
 	return legic_select_card_iv(p_card, 0x01);
 }
 
+//-----------------------------------------------------------------------------
+// Work with emulator memory
+// 
+// Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_HF) here although FPGA is not
+// involved in dealing with emulator memory. But if it is called later, it might
+// destroy the Emulator Memory.
+//-----------------------------------------------------------------------------
+// arg0 = offset
+// arg1 = num of bytes
+void LegicEMemSet(uint32_t arg0, uint32_t arg1, uint8_t *data) {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+	legic_emlset_mem(data, arg0, arg1);
+}
+// arg0 = offset
+// arg1 = num of bytes
+void LegicEMemGet(uint32_t arg0, uint32_t arg1) {
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+	uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
+	legic_emlget_mem(buf, arg0, arg1);
+	LED_B_ON();
+	cmd_send(CMD_ACK, arg0, arg1, 0, buf, USB_CMD_DATA_SIZE);
+	LED_B_OFF();
+}
+void legic_emlset_mem(uint8_t *data, int offset, int numofbytes) {
+	cardmem = BigBuf_get_EM_addr();
+	memcpy(cardmem + offset, data, numofbytes);
+}
+void legic_emlget_mem(uint8_t *data, int offset, int numofbytes) {
+	cardmem = BigBuf_get_EM_addr();
+	memcpy(data, cardmem + offset, numofbytes);
+}
+
 void LegicRfInfo(void){
 
+	int r;
+	
 	uint8_t buf[sizeof(legic_card_select_t)] = {0x00};
 	legic_card_select_t *card = (legic_card_select_t*) buf;
 	
@@ -739,7 +652,7 @@ void LegicRfInfo(void){
 
 	// read UID bytes
 	for ( uint8_t i = 0; i < sizeof(card->uid); ++i) {
-		int r = legic_read_byte(i, card->cmdsize);
+		r = legic_read_byte(i, card->cmdsize);
 		if ( r == -1 ) {
 			cmd_send(CMD_ACK,0,0,0,0,0);
 			goto OUT;
@@ -747,6 +660,15 @@ void LegicRfInfo(void){
 		card->uid[i] = r & 0xFF;
 	}
 
+	// MCC byte.
+	r = legic_read_byte(4, card->cmdsize);
+	uint32_t calc_mcc =  CRC8Legic(card->uid, 4);;
+	if ( r != calc_mcc) {
+		cmd_send(CMD_ACK,0,0,0,0,0);
+		goto OUT;
+	}
+	
+	// OK
 	cmd_send(CMD_ACK, 1, 0, 0, buf, sizeof(legic_card_select_t));
 
 OUT:
