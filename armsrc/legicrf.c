@@ -217,7 +217,7 @@ void frame_sendAsReader(uint32_t data, uint8_t bits){
 	COIL_PULSE(0);
 	
 	// log
-	uint8_t cmdbytes[] = {cmd_sz, BYTEx(cmd, 0), BYTEx(cmd, 1), BYTEx(cmd, 2), BYTEx(send, 0), BYTEx(send, 1) };
+	uint8_t cmdbytes[] = {bits, BYTEx(data,0), BYTEx(data,1), BYTEx(data,2) , BYTEx(send,0), BYTEx(send,1)};
 	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, TRUE);
 }
 
