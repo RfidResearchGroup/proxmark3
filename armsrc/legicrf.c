@@ -426,10 +426,9 @@ bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 	cmd	|= (crc & 0xF ) << (addr_sz+1+8); 	// CRC
 
 	/* Bitbang the response */
-	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+	//AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 	
-	legic_prng_forward(2);
-	WaitTicks(330);
+	WaitTicks(240);
 	
 	frame_sendAsReader(cmd, cmd_sz);
 	
@@ -466,8 +465,6 @@ bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 			goto OUT;
         }
     }
-
-	Dbprintf("ice: i == %d",i);
 		
 OUT: ;
 	// log
@@ -541,7 +538,7 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 	while( len > 0 ) {
 		--len;		
 		if ( !legic_write_byte( len + offset, data[len], card.addrsize) ) {
-			Dbprintf("operation failed | %d | %d | %d", len + offset, len, data[len] );
+			Dbprintf("operation failed | %02X | %02X | %02X", len + offset, len, data[len] );
 			isOK = 0;
 			goto OUT;
 		}
