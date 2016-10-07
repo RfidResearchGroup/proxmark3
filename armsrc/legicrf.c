@@ -217,7 +217,7 @@ void frame_sendAsReader(uint32_t data, uint8_t bits){
 	COIL_PULSE(0);
 	
 	// log
-	uint8_t cmdbytes[] = {bits, BYTEx(data,0), BYTEx(data,1), BYTEx(data,2) , BYTEx(send,0), BYTEx(send,1)};
+	uint8_t cmdbytes[] = {bits, BYTEx(data,0), BYTEx(data,1), BYTEx(data,2), BYTEx(send,0), BYTEx(send,1), BYTEx(send,2)};
 	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, TRUE);
 }
 
@@ -410,13 +410,6 @@ bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 	uint8_t	cmd_sz = addr_sz+1+8+4; //crc+data+cmd;
 	uint32_t steps = 0, next_bit_at, start, crc, old_level = 0;
 
-/*	
-	crc_clear(&legic_crc);
-	crc_update(&legic_crc, 0, 1); // CMD_WRITE 
-	crc_update(&legic_crc, index, addr_sz);
-	crc_update(&legic_crc, byte, 8);
-	crc = crc_finish(&legic_crc);
-*/
 	crc = legic4Crc(LEGIC_WRITE, index, byte, addr_sz+1);
 
 	// send write command
@@ -424,9 +417,6 @@ bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 	cmd |= index << 1;			  // index
 	cmd |= byte  << (addr_sz+1);  // Data	
 	cmd	|= (crc & 0xF ) << (addr_sz+1+8); 	// CRC
-
-	/* Bitbang the response */
-	//AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 	
 	WaitTicks(240);
 	
@@ -438,7 +428,7 @@ bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 
 	// ACK,  - one single "1" bit after 3.6ms
 	// 3.6ms = 3600us * 1.5 = 5400ticks.
-	WaitTicks(5300);
+	WaitTicks(5400);
 	
 	next_bit_at = GET_TICKS + TAG_BIT_PERIOD;
 	
@@ -467,7 +457,8 @@ bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
     }
 		
 OUT: ;
-	// log
+	legic_prng_forward(1);
+	
 	uint8_t cmdbytes[] = {1, isOK, BYTEx(steps, 0), BYTEx(steps, 1) };
 	LogTrace(cmdbytes, sizeof(cmdbytes), start, GET_TICKS, NULL, FALSE);
 	return isOK;
