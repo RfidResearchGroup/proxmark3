@@ -1158,7 +1158,7 @@ static command_t CommandTable[] =  {
 	{"save",	CmdLegicSave,		0, "<filename> [<length>] -- Store samples"},
 	{"load",	CmdLegicLoad,		0, "<filename> -- Restore samples"},
 	{"sim",		CmdLegicRfSim,		0, "[phase drift [frame drift [req/resp drift]]] Start tag simulator (use after load or read)"},
-	{"write",	CmdLegicRfWrite,	0, "<offset> <length> <iv> -- Write sample buffer (user after load or read)"},
+	{"write",	CmdLegicRfWrite,	0, "Write data to tag"},
 	{"crc",		CmdLegicCalcCrc,	1, "Calculate Legic CRC over given hexbytes"},	
 	{"eload",	CmdLegicELoad,		1, "Load binary dump to emulator memory"},
 	{"esave",	CmdLegicESave,		1, "Save emulator memory to binary file"},
