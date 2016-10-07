@@ -732,7 +732,7 @@ int CmdLegicRfWrite(const char *Cmd) {
 	clearCommandBuffer();
     SendCommand(&c);
 	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
 		PrintAndLog("command execution time out");
 		return 1;
 	}

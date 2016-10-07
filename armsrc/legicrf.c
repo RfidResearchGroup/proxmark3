@@ -92,11 +92,7 @@ static void setup_timer(void) {
 # define OPEN_COIL	HIGH(GPIO_SSC_DOUT);
 #endif
 #ifndef LINE_IN
-# define LINE_IN \
-	do { \
-	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN; \
-	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN; \
-	} while (0); 
+# define LINE_IN  AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
 #endif
 // Pause pulse,  off in 20us / 30ticks,
 // ONE / ZERO bit pulse,  
@@ -205,8 +201,7 @@ void frame_send_tag(uint16_t response, uint8_t bits) {
  */
 void frame_sendAsReader(uint32_t data, uint8_t bits){
 
-	uint32_t starttime = GET_TICKS, send = 0;
-	uint16_t mask = 1;
+	uint32_t starttime = GET_TICKS, send = 0, mask = 1;
 	
 	// xor lsfr onto data.
 	send = data ^ legic_prng_get_bits(bits);
@@ -222,7 +217,7 @@ void frame_sendAsReader(uint32_t data, uint8_t bits){
 	COIL_PULSE(0);
 	
 	// log
-	uint8_t cmdbytes[] = {bits,	BYTEx(data, 0), BYTEx(data, 1),	BYTEx(send, 0), BYTEx(send, 1)};
+	uint8_t cmdbytes[] = {cmd_sz, BYTEx(cmd, 0), BYTEx(cmd, 1), BYTEx(cmd, 2), BYTEx(send, 0), BYTEx(send, 1) };
 	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, TRUE);
 }
 
@@ -257,9 +252,6 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	volatile uint32_t level = 0;
 	
 	frame_clean(f);
-	
-	/* Bitbang the receiver */
-	LINE_IN;
 	
 	// calibrate the prng.
 	legic_prng_forward(2);
@@ -348,10 +340,11 @@ static void LegicCommonInit(void) {
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
 	/* Bitbang the transmitter */
-	LOW(GPIO_SSC_DOUT);
+	SHORT_COIL;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-
+	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
+	
 	// reserve a cardmem,  meaning we can use the tracelog function in bigbuff easier.
 	cardmem = BigBuf_get_EM_addr();
 	memset(cardmem, 0x00, LEGIC_CARD_MEMSIZE);
@@ -365,7 +358,7 @@ static void LegicCommonInit(void) {
 
 // Switch off carrier, make sure tag is reset
 static void switch_off_tag_rwd(void) {
-	LOW(GPIO_SSC_DOUT);
+	SHORT_COIL;
 	WaitUS(20);
 	WDT_HIT();
 }
@@ -396,7 +389,7 @@ int legic_read_byte( uint16_t index, uint8_t cmd_sz) {
 	calcCrc = legic4Crc(LEGIC_READ, index, byte, cmd_sz);
 
 	if( calcCrc != crc ) {
-		Dbprintf("!!! crc mismatch: expected %x but got %x !!!",  calcCrc, crc);
+		Dbprintf("!!! crc mismatch: %x != %x !!!",  calcCrc, crc);
 		return -1;
 	}
 
@@ -409,66 +402,77 @@ int legic_read_byte( uint16_t index, uint8_t cmd_sz) {
  * - wait until the tag sends back an ACK ('1' bit unencrypted)
  * - forward the prng based on the timing
  */
-int legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
+bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 
-	// crc
+	bool isOK = false;
+	uint8_t i = 80, edges = 0;
+	uint8_t	cmd_sz = addr_sz+1+8+4; //crc+data+cmd;
+	uint32_t steps = 0, next_bit_at, start, crc, old_level = 0;
+
+	/*
 	crc_clear(&legic_crc);
-	crc_update(&legic_crc, 0, 1); /* CMD_WRITE */
+	crc_update(&legic_crc, 0, 1); // CMD_WRITE 
 	crc_update(&legic_crc, index, addr_sz);
 	crc_update(&legic_crc, byte, 8);
 	uint32_t crc = crc_finish(&legic_crc);
-	/*
-	uint32_t crc2 = legic4Crc(LEGIC_WRITE, index, byte, addr_sz+1);
-	if ( crc != crc2 ) {
-		Dbprintf("crc is missmatch");
-		return 1;
-	}
 	*/
-	// send write command
-	uint32_t cmd = ((crc     <<(addr_sz+1+8)) //CRC
-                   |(byte    <<(addr_sz+1))   //Data
-                   |(index    <<1)             //index
-                   | LEGIC_WRITE);            //CMD = Write
-				   
-    uint32_t cmd_sz = addr_sz+1+8+4;          //crc+data+cmd
+	crc = legic4Crc(LEGIC_WRITE, index, byte, addr_sz+1);
 
-    legic_prng_forward(2);
+	// send write command
+	uint32_t cmd;
+	cmd	= ((crc & 0xF ) << (addr_sz+1+8));  // CRC
+	cmd |= byte  << (addr_sz+1); // Data
+	cmd |= ((index & 0xFF) << 1);           // index
+    cmd |= LEGIC_WRITE;          // CMD
+
+	/* Bitbang the response */
+	SHORT_COIL;
+	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 	
 	WaitTicks(330);
 	
 	frame_sendAsReader(cmd, cmd_sz);
-
-	/* Bitbang the receiver */
+	
 	LINE_IN;
 
-    int t, old_level = 0, edges = 0;
-    int next_bit_at = 0;
+	start = GET_TICKS;
 
-	// ACK 3.6ms = 3600us * 1.5 = 5400ticks.
-	WaitTicks(5300);
-	ResetTicks();
+	// ACK,  - one single "1" bit after 3.6ms
+	// 3.6ms = 3600us * 1.5 = 5400ticks.
+	WaitTicks(5000);
+	//WaitTicks(330);
 	
-    for( t = 0; t < 80; ++t) {
+	next_bit_at = GET_TICKS + TAG_BIT_PERIOD;
+	
+    while ( i-- ) {
+		WDT_HIT();
         edges = 0;
-		next_bit_at += TAG_BIT_PERIOD;
         while ( GET_TICKS < next_bit_at) {
+			
             volatile uint32_t level = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
-            if(level != old_level)
-                edges++;
+            
+			if (level != old_level)
+                ++edges;
 
             old_level = level;
         }
-
-		/* expected are 42 edges (ONE) */
+		
+		next_bit_at += TAG_BIT_PERIOD;
+		
+		// We expect 42 edges (ONE)
         if(edges > 20 ) {
-	
-			uint32_t c = (GET_TICKS / TAG_BIT_PERIOD);
-			legic_prng_forward(c);
-        	return 0;
+			steps = ( (GET_TICKS - start) / TAG_BIT_PERIOD);			
+			legic_prng_forward(steps);
+        	isOK = true;
+			goto OUT;
         }
     }
 
-	return -1;
+OUT: ;
+	// log
+	uint8_t cmdbytes[] = {cmd_sz, isOK, BYTEx(steps, 0), BYTEx(steps, 1) };
+	LogTrace(cmdbytes, sizeof(cmdbytes), start, GET_TICKS, NULL, FALSE);
+	return isOK;
 }
 
 int LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
@@ -534,17 +538,15 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 
     LED_B_ON();	
 	while( len > 0 ) {
-
-		int r = legic_write_byte( len + offset + LOWERLIMIT, data[len], card.addrsize);
-		if ( r == -1 ) {
-			Dbprintf("operation aborted @ 0x%03.3x", len);
+		
+		if ( !legic_write_byte( len + offset + LOWERLIMIT, data[len-1], card.addrsize) ) {
+			Dbprintf("operation failed @ 0x%03.3x", len-1);
 			isOK = 0;
 			goto OUT;
 		}
 		--len;
 		WDT_HIT();
 	}
-
 OUT:
 	cmd_send(CMD_ACK, isOK, 0,0,0,0);
 	switch_off_tag_rwd();
