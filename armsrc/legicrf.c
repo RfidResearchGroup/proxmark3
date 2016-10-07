@@ -405,17 +405,18 @@ int legic_read_byte( uint16_t index, uint8_t cmd_sz) {
 bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 
 	bool isOK = false;
-	uint8_t i = 80, edges = 0;
+	int8_t i = 40;
+	uint8_t edges = 0;
 	uint8_t	cmd_sz = addr_sz+1+8+4; //crc+data+cmd;
 	uint32_t steps = 0, next_bit_at, start, crc, old_level = 0;
 
-	/*
+/*	
 	crc_clear(&legic_crc);
 	crc_update(&legic_crc, 0, 1); // CMD_WRITE 
 	crc_update(&legic_crc, index, addr_sz);
 	crc_update(&legic_crc, byte, 8);
-	uint32_t crc = crc_finish(&legic_crc);
-	*/
+	crc = crc_finish(&legic_crc);
+*/
 	crc = legic4Crc(LEGIC_WRITE, index, byte, addr_sz+1);
 
 	// send write command
@@ -425,9 +426,9 @@ bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 	cmd	|= (crc & 0xF ) << (addr_sz+1+8); 	// CRC
 
 	/* Bitbang the response */
-	SHORT_COIL;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 	
+	legic_prng_forward(2);
 	WaitTicks(330);
 	
 	frame_sendAsReader(cmd, cmd_sz);
@@ -438,8 +439,7 @@ bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 
 	// ACK,  - one single "1" bit after 3.6ms
 	// 3.6ms = 3600us * 1.5 = 5400ticks.
-	WaitTicks(5000);
-	//WaitTicks(330);
+	WaitTicks(5300);
 	
 	next_bit_at = GET_TICKS + TAG_BIT_PERIOD;
 	
@@ -467,6 +467,8 @@ bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
         }
     }
 
+	Dbprintf("ice: i == %d",i);
+		
 OUT: ;
 	// log
 	uint8_t cmdbytes[] = {1, isOK, BYTEx(steps, 0), BYTEx(steps, 1) };
