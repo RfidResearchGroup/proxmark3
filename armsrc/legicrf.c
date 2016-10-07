@@ -445,24 +445,24 @@ int legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
     int next_bit_at = 0;
 
 	// ACK 3.6ms = 3600us * 1.5 = 5400ticks.
-	WaitTicks(5400);
-
+	WaitTicks(5300);
+	ResetTicks();
+	
     for( t = 0; t < 80; ++t) {
         edges = 0;
 		next_bit_at += TAG_BIT_PERIOD;
-        while(timer->TC_CV < next_bit_at) {
+        while ( GET_TICKS < next_bit_at) {
             volatile uint32_t level = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
             if(level != old_level)
                 edges++;
 
             old_level = level;
         }
+
 		/* expected are 42 edges (ONE) */
         if(edges > 20 ) {
-			int t = timer->TC_CV;
-			int c = t / TAG_BIT_PERIOD;
-			
-			ResetTimer(timer);
+	
+			uint32_t c = (GET_TICKS / TAG_BIT_PERIOD);
 			legic_prng_forward(c);
         	return 0;
         }
@@ -484,13 +484,9 @@ int LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
 		goto OUT;
 	}
 
-	switch_off_tag_rwd();
-
 	if (len + offset >= card.cardsize)
 		len = card.cardsize - offset;
 
-	setup_phase_reader(iv);
-		
 	LED_B_ON();
 	while (i < len) {
 		int r = legic_read_byte(offset + i, card.cmdsize);
@@ -515,8 +511,6 @@ OUT:
 void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 
 	#define LOWERLIMIT 4
-
-	int r = 0;
 	uint8_t isOK = 1;
 	legic_card_select_t card;
 	
@@ -533,14 +527,10 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 		goto OUT;
 	}
 	
-	switch_off_tag_rwd();
-	
 	if ( len + offset + LOWERLIMIT >= card.cardsize) {
 		isOK = 0;
 		goto OUT;
 	}
-	
-	setup_phase_reader(iv);
 
     LED_B_ON();	
 	while( len > 0 ) {
