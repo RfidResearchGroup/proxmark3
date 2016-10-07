@@ -60,15 +60,15 @@ int usage_legic_sim(void){
 }
 int usage_legic_write(void){
 	PrintAndLog(" Write sample buffer to a legic tag. (use after load or read)");
-	PrintAndLog("Usage:  hf legic write [h] <offset> <length> <IV>");
+	PrintAndLog("Usage:  hf legic write [h] o <offset> d <data (hex symbols)>");
 	PrintAndLog("Options:");
 	PrintAndLog("  h             : this help");
-	PrintAndLog("  <offset>      : offset in data array to start writing from (hex)");
-	PrintAndLog("  <length>      : number of bytes to write (hex)");
-	PrintAndLog("  <IV>          : (optional) Initialization vector to use (ODD and 7bits)");
+	PrintAndLog("  o <offset>    : offset in data array to start writing");
+	//PrintAndLog("  <IV>          : (optional) Initialization vector to use (ODD and 7bits)");
+	PrintAndLog("  d <data>      : bytes to write (hex symbols)");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
-	PrintAndLog("      hf legic write 10 4      - writes 0x4 to byte[0x10]");
+	PrintAndLog("      hf legic write o 10 d 11223344    - Write 0x11223344 starting from offset 0x10");
 	return 0;
 }
 int usage_legic_reader(void){
@@ -538,7 +538,6 @@ int CmdLegicLoad(const char *Cmd) {
 		index += res;
 			
 		if ( index == USB_CMD_DATA_SIZE ){
-//			PrintAndLog("sent %d | %d | %d", index, offset, totalbytes);
 			UsbCommand c = { CMD_DOWNLOADED_SIM_SAMPLES_125K, {offset, 0, 0}};
 			memcpy(c.d.asBytes, data, sizeof(data));
 			clearCommandBuffer();
@@ -640,20 +639,74 @@ int CmdLegicRfSim(const char *Cmd) {
 
 int CmdLegicRfWrite(const char *Cmd) {
 
-	// offset - in tag memory
-	// length - num of bytes to be written
+	uint8_t *data = NULL;
+	uint8_t cmdp = 0;
+	bool errors = false;
+	int len = 0, bg, en;
+	uint32_t offset = 0, IV = 0x55;
+	
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'd':
+		case 'D':
+			// peek at length of the input string so we can
+			// figure out how many elements to malloc in "data"
+			bg=en=0;
+			if (param_getptr(Cmd, &bg, &en, cmdp+1)) {
+				errors = true;
+				break;
+			}
+			len = (en - bg + 1);
 
-	char cmdp = param_getchar(Cmd, 0);
-	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_write();
-	
-	uint32_t offset = 0, len = 0, IV = 0;
-	
-    int res = sscanf(Cmd, "%x %x %x", &offset, &len, &IV);
-	if(res < 2) {
-		PrintAndLog("Please specify the offset and length as two hex strings and, optionally, the IV also as an hex string");
-        return -1;
-    }
-	
+			// check that user entered even number of characters
+			// for hex data string
+			if (len & 1) {
+				errors = true;
+				break;
+			}
+
+			// it's possible for user to accidentally enter "b" parameter
+			// more than once - we have to clean previous malloc
+			if (data)
+				free(data);
+			data = malloc(len >> 1);
+			if ( data == NULL ) {
+				PrintAndLog("Can't allocate memory. exiting");
+				errors = true;
+				break;
+			}
+			
+			if (param_gethex(Cmd, cmdp+1, data, len)) {
+				errors = true;
+				break;
+			}
+
+			len >>= 1;	
+			cmdp += 2;
+			break;
+		case 'o':
+		case 'O':
+			offset = param_get32ex(Cmd, cmdp+1, 4, 10);
+			cmdp += 2;
+			break;
+		case 'h':
+		case 'H':
+			errors = true;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+		if (errors) break;
+	}
+	//Validations
+	if (errors){
+		if (data) 
+			free(data);
+		return usage_legic_write();
+	}
+
 	// tagtype
 	legic_card_select_t card;
 	if (legic_get_type(&card)) {
@@ -664,23 +717,28 @@ int CmdLegicRfWrite(const char *Cmd) {
 	legic_print_type(card.cardsize, 0);
 	
 	// OUT-OF-BOUNDS check
-	if ( len + offset > card.cardsize ) {
-		PrintAndLog("Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, len + offset);
+	// UID 4 bytes can't be written to.
+	if ( len + offset + 4 >= card.cardsize ) {
+		PrintAndLog("Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, len + offset + 4);
 		return -2;
 	}
-	
+
 	legic_chk_iv(&IV);
 	
-    UsbCommand c = {CMD_WRITER_LEGIC_RF, {offset, len, IV}};	
+	PrintAndLog("Writing to tag");
+    UsbCommand c = {CMD_WRITER_LEGIC_RF, {offset, len, IV}};
+	memcpy(c.d.asBytes, data, len);
+	
 	clearCommandBuffer();
     SendCommand(&c);
 	UsbCommand resp;
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-		uint8_t isOK = resp.arg[0] & 0xFF;
-		 if ( !isOK )
-			 PrintAndLog("failed writing tag");
-	} else {
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 		PrintAndLog("command execution time out");
+		return 1;
+	}
+	uint8_t isOK = resp.arg[0] & 0xFF;
+	if ( !isOK ) {
+		PrintAndLog("failed writing tag");
 		return 1;
 	}
 	

@@ -417,11 +417,13 @@ int legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 	crc_update(&legic_crc, index, addr_sz);
 	crc_update(&legic_crc, byte, 8);
 	uint32_t crc = crc_finish(&legic_crc);
+	/*
 	uint32_t crc2 = legic4Crc(LEGIC_WRITE, index, byte, addr_sz+1);
 	if ( crc != crc2 ) {
 		Dbprintf("crc is missmatch");
 		return 1;
 	}
+	*/
 	// send write command
 	uint32_t cmd = ((crc     <<(addr_sz+1+8)) //CRC
                    |(byte    <<(addr_sz+1))   //Data
@@ -443,7 +445,7 @@ int legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
     int next_bit_at = 0;
 
 	// ACK 3.6ms = 3600us * 1.5 = 5400ticks.
-	WaitTicks(5360);
+	WaitTicks(5400);
 
     for( t = 0; t < 80; ++t) {
         edges = 0;
@@ -512,15 +514,17 @@ OUT:
 
 void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 
+	#define LOWERLIMIT 4
+
+	int r = 0;
 	uint8_t isOK = 1;
+	legic_card_select_t card;
 	
-	// UID not is writeable.
-	if ( offset <= 4 ) {
+	// uid NOT is writeable.
+	if ( offset <= LOWERLIMIT ) {
 		isOK = 0;
 		goto OUT;
 	}
-	
-	legic_card_select_t card;
 	
 	LegicCommonInit();
 	
@@ -529,39 +533,25 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 		goto OUT;
 	}
 	
-	if (len + offset >= card.cardsize)
-		len = card.cardsize - offset;
-
+	switch_off_tag_rwd();
+	
+	if ( len + offset + LOWERLIMIT >= card.cardsize) {
+		isOK = 0;
+		goto OUT;
+	}
+	
 	setup_phase_reader(iv);
 
     LED_B_ON();	
-	int r = 0;
-	// how about we write backwards instead. no need for this extra DCF check.	
-	// index = len - cardsize
-	// stops uid 01234, 
-	/*
-	len = 20
-	offset = 5
-	
-	index = 20+5 = 25
-	if ( index > cardsize ) return -1;
-	
-	loop
-		write( data[index], index , card.addrsize);
-		--index;
-	end loop	
-	*/
-	uint16_t index = len;
-	while(index > 4) {
+	while( len > 0 ) {
 
-		r = legic_write_byte( index, data[ index ], card.addrsize);
-		
-		if ( r ) {
-			Dbprintf("operation aborted @ 0x%03.3x", index);
+		int r = legic_write_byte( len + offset + LOWERLIMIT, data[len], card.addrsize);
+		if ( r == -1 ) {
+			Dbprintf("operation aborted @ 0x%03.3x", len);
 			isOK = 0;
 			goto OUT;
 		}
-		--index;
+		--len;
 		WDT_HIT();
 	}
 
