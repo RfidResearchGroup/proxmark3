@@ -372,6 +372,7 @@ void annotateIso14443b(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize) {
 // Quite simpel tag
 void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){	
 	uint8_t bitsend = cmd[0];	
+	uint8_t cmdBit = (cmd[1] & 1);
 	switch (bitsend){
 		case 7:
 			snprintf(exp, size, "IV 0x%02X", cmd[1]);
@@ -388,7 +389,7 @@ void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 		}
 		case 9:
 		case 11: {
-			uint8_t cmdBit = (cmd[1] & 1);
+
 			uint16_t address = (cmd[2] << 7) | cmd[1] >> 1;
 			
 			if (cmdBit == LEGIC_READ) 
@@ -396,6 +397,22 @@ void annotateLegic(char *exp, size_t size, uint8_t* cmd, uint8_t cmdsize){
 			
 			if (cmdBit == LEGIC_WRITE ) 
 				snprintf(exp, size, "WRITE Byte(%d)", address);
+			break;
+		}
+		case 21: {
+			if (cmdBit == LEGIC_WRITE ) {
+				uint16_t address = ((cmd[2] << 7) | cmd[1] >> 1) & 0xFF;
+				uint8_t val = (cmd[3] & 1 ) << 7 | cmd[2] >> 1;
+				snprintf(exp, size, "WRITE Byte(%d) %02X", address, val);
+			}
+			break;
+		}
+		case 23: {
+			if (cmdBit == LEGIC_WRITE ) {
+				uint16_t address = ((cmd[2] << 7) | cmd[1] >> 1) & 0x3FF;
+				uint8_t val = (cmd[3] & 0x7 ) << 5 | cmd[2] >> 3;
+				snprintf(exp, size, "WRITE Byte(%d) %02X", address, val);
+			}
 			break;
 		}
 		case 12:

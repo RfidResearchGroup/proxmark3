@@ -419,11 +419,10 @@ bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 	crc = legic4Crc(LEGIC_WRITE, index, byte, addr_sz+1);
 
 	// send write command
-	uint32_t cmd;
-	cmd	= ((crc & 0xF ) << (addr_sz+1+8));  // CRC
-	cmd |= byte  << (addr_sz+1); // Data
-	cmd |= ((index & 0xFF) << 1);           // index
-    cmd |= LEGIC_WRITE;          // CMD
+	uint32_t cmd = LEGIC_WRITE;
+	cmd |= index << 1;			  // index
+	cmd |= byte  << (addr_sz+1);  // Data	
+	cmd	|= (crc & 0xF ) << (addr_sz+1+8); 	// CRC
 
 	/* Bitbang the response */
 	SHORT_COIL;
@@ -470,7 +469,7 @@ bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 
 OUT: ;
 	// log
-	uint8_t cmdbytes[] = {cmd_sz, isOK, BYTEx(steps, 0), BYTEx(steps, 1) };
+	uint8_t cmdbytes[] = {1, isOK, BYTEx(steps, 0), BYTEx(steps, 1) };
 	LogTrace(cmdbytes, sizeof(cmdbytes), start, GET_TICKS, NULL, FALSE);
 	return isOK;
 }
@@ -538,13 +537,12 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 
     LED_B_ON();	
 	while( len > 0 ) {
-		
-		if ( !legic_write_byte( len + offset + LOWERLIMIT, data[len-1], card.addrsize) ) {
-			Dbprintf("operation failed @ 0x%03.3x", len-1);
+		--len;		
+		if ( !legic_write_byte( len + offset, data[len], card.addrsize) ) {
+			Dbprintf("operation failed | %d | %d | %d", len + offset, len, data[len] );
 			isOK = 0;
 			goto OUT;
 		}
-		--len;
 		WDT_HIT();
 	}
 OUT:
