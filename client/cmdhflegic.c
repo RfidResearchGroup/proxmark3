@@ -966,7 +966,7 @@ int CmdLegicRestore(const char *Cmd){
 	uint8_t *data = malloc(numofbytes);
 	if (!data) {
 		PrintAndLog("Fail, cannot allocate memory");
-		return 3;		
+		return 2;		
 	}
 	memset(data, 0, numofbytes);
 	
@@ -975,15 +975,27 @@ int CmdLegicRestore(const char *Cmd){
 	// set up file
 	fnameptr += fileNlen;
 	sprintf(fnameptr, ".bin");
-	
-	PrintAndLog("Reading binary file...");
 
 	if ((f = fopen(filename,"rb")) == NULL) {
 		PrintAndLog("File %s not found or locked", filename);
-		return 2;
+		return 3;
 	}	
 	
-	// verify size of dumpfile is the same as card.
+	// verify size of dumpfile is the same as card.	
+	fseek(f, 0, SEEK_END); // seek to end of file
+	size_t filesize = ftell(f); // get current file pointer
+	fseek(f, 0, SEEK_SET); // seek back to beginning of file
+	
+	if ( filesize != numofbytes) {
+		PrintAndLog("Fail, Filesize and cardsize is not equal. [%u != %u]", filesize, numofbytes);
+		free(data);
+		fclose(f);
+		return 4;
+	}
+		
+	
+	PrintAndLog("Reading binary file...");
+
 
 	// load file
 	size_t bytes_read = fread(data, 1, numofbytes, f);
