@@ -874,19 +874,13 @@ int CmdHFSearch(const char *Cmd){
 	
 	PrintAndLog("");
 	int ans = CmdHF14AReader("s");
-
 	if (ans > 0) {
 		PrintAndLog("\nValid ISO14443-A Tag Found - Quiting Search\n");
 		return ans;
 	} 
-	ans = CmdHF14BReader("s");
+	ans = HF14BReader(false); //CmdHF14BReader("s");
 	if (ans) {
 		PrintAndLog("\nValid ISO14443-B Tag Found - Quiting Search\n");
-		return ans;
-	}
-	ans = HFiClassReader("", false, false);
-	if (ans) {
-		PrintAndLog("\nValid iClass Tag (or PicoPass Tag) Found - Quiting Search\n");
 		return ans;
 	}
 	ans = HF15Reader("", false);
@@ -894,15 +888,20 @@ int CmdHFSearch(const char *Cmd){
 		PrintAndLog("\nValid ISO15693 Tag Found - Quiting Search\n");
 		return ans;
 	}
+	ans = HFLegicReader("", false);
+	if ( ans == 0) {
+		PrintAndLog("\nValid LEGIC Tag Found - Quiting Search\n");
+		return 1;
+	}
 	ans = CmdHFTopazReader("s");
 	if (ans == 0) {
 		PrintAndLog("\nValid Topaz Tag Found - Quiting Search\n");
 		return 1;
 	}
-	ans = HFLegicReader("", false);
-	if ( ans == 0) {
-		PrintAndLog("\nValid LEGIC Tag Found - Quiting Search\n");
-		return 1;
+	ans = HFiClassReader("", false, false);
+	if (ans) {
+		PrintAndLog("\nValid iClass Tag (or PicoPass Tag) Found - Quiting Search\n");
+		return ans;
 	}
 	
 	PrintAndLog("\nno known/supported 13.56 MHz tags found\n");
