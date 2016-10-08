@@ -787,7 +787,7 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
    * measure the time between two rising edges on DIN, and no encoding on the
    * subcarrier from card to reader, so we'll just shift out our verbatim data
    * on DOUT, 1 bit is 100us. The time from reader to card frame is still unclear,
-   * seems to be 300us-ish.
+   * seems to be 330us.
    */
 		
 	int old_level = 0, active = 0;
