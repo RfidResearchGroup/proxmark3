@@ -94,7 +94,7 @@ void T55xxWriteBlock(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t PwdMode
 void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t PwdMode);
 void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd);
 void T55xxWakeUp(uint32_t Pwd);
-void TurnReadLFOn();
+void TurnReadLFOn(uint32_t delay);
 void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
 

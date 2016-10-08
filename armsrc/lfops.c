@@ -1116,10 +1116,10 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
  * Q5 tags seems to have issues when these values changes. 
  */
 
-#define START_GAP 50*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (or 15fc)
-#define WRITE_GAP 20*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (or 10fc)
-#define WRITE_0   18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (or 24fc)
-#define WRITE_1   50*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (or 56fc)  432 for T55x7; 448 for E5550
+#define START_GAP 50*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
+#define WRITE_GAP 20*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
+#define WRITE_0   18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
+#define WRITE_1   54*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550
 #define READ_GAP  15*8 
 
 //  VALUES TAKEN FROM EM4x function: SendForward
@@ -1128,7 +1128,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 //  WRITE_1   = 256 32*8;  (32*8) 
 
 //  These timings work for 4469/4269/4305 (with the 55*8 above)
-//  WRITE_0 = 23*8 , 9*8  SpinDelayUs(23*8); 
+//  WRITE_0 = 23*8 , 9*8 
 
 // Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
 // TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
@@ -1136,7 +1136,10 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 // T0 = TIMER_CLOCK1 / 125000 = 192
 // 1 Cycle = 8 microseconds(us)  == 1 field clock
 
-void TurnReadLFOn(int delay) {
+// new timer:
+//     = 1us = 1.5ticks
+// 1fc = 8us = 12ticks
+void TurnReadLFOn(uint32_t delay) {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
 	// measure antenna strength.
@@ -1221,10 +1224,11 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 	// Perform write (nominal is 5.6 ms for T55x7 and 18ms for E5550,
 	// so wait a little more)
 	TurnReadLFOn(20 * 1000);
-		//could attempt to do a read to confirm write took
-		// as the tag should repeat back the new block 
-		// until it is reset, but to confirm it we would 
-		// need to know the current block 0 config mode
+	
+	//could attempt to do a read to confirm write took
+	// as the tag should repeat back the new block 
+	// until it is reset, but to confirm it we would 
+	// need to know the current block 0 config mode
 	
 	// turn field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1513,9 +1517,9 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
 //-----------------------------------
 // EM4469 / EM4305 routines
 //-----------------------------------
-#define FWD_CMD_LOGIN 0xC //including the even parity, binary mirrored
-#define FWD_CMD_WRITE 0xA
-#define FWD_CMD_READ 0x9
+#define FWD_CMD_LOGIN   0xC //including the even parity, binary mirrored
+#define FWD_CMD_WRITE   0xA
+#define FWD_CMD_READ    0x9
 #define FWD_CMD_DISABLE 0x5
 
 uint8_t forwardLink_data[64]; //array of forwarded bits
@@ -1534,7 +1538,7 @@ uint8_t * fwd_write_ptr; //forwardlink bit pointer
 //  WRITE_1   = 256 32*8;  (32*8) 
 
 //  These timings work for 4469/4269/4305 (with the 55*8 above)
-//  WRITE_0 = 23*8 , 9*8  SpinDelayUs(23*8); 
+//  WRITE_0 = 23*8 , 9*8
 
 uint8_t Prepare_Cmd( uint8_t cmd ) {
 
@@ -1639,9 +1643,9 @@ void SendForward(uint8_t fwd_bit_count) {
 		else {
 			//These timings work for 4469/4269/4305 (with the 55*8 above)
 			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-			WaitUS(23*8); //16-4 cycles off (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
+			WaitUS(16*8); //16-4 cycles off (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
 			FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);//field on
-			WaitUS(9*8); //16 cycles on (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
+			WaitUS(16*8); //16 cycles on (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
 		}
 	}
 }
@@ -1649,22 +1653,20 @@ void SendForward(uint8_t fwd_bit_count) {
 void EM4xLogin(uint32_t Password) {
 
 	uint8_t fwd_bit_count;
-
 	forward_ptr = forwardLink_data;
 	fwd_bit_count = Prepare_Cmd( FWD_CMD_LOGIN );
 	fwd_bit_count += Prepare_Data( Password&0xFFFF, Password>>16 );
-
 	SendForward(fwd_bit_count);
 
 	//Wait for command to complete
-	SpinDelay(20);
+	WaitMS(20);
 }
 
 void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
 
 	uint8_t fwd_bit_count;
 	uint8_t *dest = BigBuf_get_addr();
-	uint16_t bufsize = BigBuf_max_traceLen();
+	uint16_t bufsize = BigBuf_max_traceLen();  // ICEMAN: this tries to fill up all tracelog space
 	uint32_t i = 0;
 
 	// Clear destination buffer before sending the command
@@ -1677,14 +1679,10 @@ void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
 	fwd_bit_count = Prepare_Cmd( FWD_CMD_READ );
 	fwd_bit_count += Prepare_Addr( Address );
 
-	// Connect the A/D to the peak-detected low-frequency path.
-	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-	// Now set up the SSC to get the ADC samples that are now streaming at us.
-	FpgaSetupSsc();
-
 	SendForward(fwd_bit_count);
 
 	// Now do the acquisition
+	// ICEMAN, change to the one in lfsampling.c
 	i = 0;
 	for(;;) {
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
@@ -1717,7 +1715,7 @@ void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode
 	SendForward(fwd_bit_count);
 
 	//Wait for write to complete
-	SpinDelay(20);
+	WaitMS(20);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
 	LED_D_OFF();
 }
