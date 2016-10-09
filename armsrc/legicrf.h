@@ -35,6 +35,8 @@ bool legic_write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz);
 int legic_select_card(legic_card_select_t *p_card);
 int legic_select_card_iv(legic_card_select_t *p_card, uint8_t iv);
 
+void LegicCommonInit(bool clear_mem);
+
 // emulator mem
 void LegicEMemSet(uint32_t arg0, uint32_t arg1, uint8_t *data);
 void LegicEMemGet(uint32_t arg0, uint32_t arg1);

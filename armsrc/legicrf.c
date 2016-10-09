@@ -180,7 +180,7 @@ void frame_send_tag(uint16_t response, uint8_t bits) {
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 
 	 /* TAG_FRAME_WAIT -> shift by 2 */
-	legic_prng_forward(2);
+	legic_prng_forward(3);
 	response ^= legic_prng_get_bits(bits);
 
 	/* Wait for the frame start */
@@ -333,7 +333,7 @@ static uint32_t setup_phase_reader(uint8_t iv) {
 	return current_frame.data;
 }
 
-static void LegicCommonInit(void) {
+void LegicCommonInit(bool clear_mem) {
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
@@ -347,7 +347,8 @@ static void LegicCommonInit(void) {
 	
 	// reserve a cardmem,  meaning we can use the tracelog function in bigbuff easier.
 	cardmem = BigBuf_get_EM_addr();
-	memset(cardmem, 0x00, LEGIC_CARD_MEMSIZE);
+	if ( clear_mem )
+		memset(cardmem, 0x00, LEGIC_CARD_MEMSIZE);
 
 	clear_trace();
 	set_tracing(TRUE);
@@ -470,7 +471,7 @@ int LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
 	uint8_t isOK = 1;
 	legic_card_select_t card;
 	
-	LegicCommonInit();
+	LegicCommonInit(TRUE);
 	
 	if ( legic_select_card_iv(&card, iv) ) {
 		isOK = 0;
@@ -513,7 +514,7 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 		goto OUT;
 	}
 	
-	LegicCommonInit();
+	LegicCommonInit(TRUE);
 	
 	if ( legic_select_card_iv(&card, iv) ) {
 		isOK = 0;
@@ -613,7 +614,7 @@ void LegicRfInfo(void){
 	uint8_t buf[sizeof(legic_card_select_t)] = {0x00};
 	legic_card_select_t *card = (legic_card_select_t*) buf;
 	
-	LegicCommonInit();
+	LegicCommonInit(FALSE);
 
 	if ( legic_select_card(card) ) {
 		cmd_send(CMD_ACK,0,0,0,0,0);
@@ -654,31 +655,35 @@ static void frame_handle_tag(struct legic_frame const * const f)
 	// log
 	//uint8_t cmdbytes[] = {bits,	BYTEx(data, 0),	BYTEx(data, 1)};
 	//LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, FALSE);
-	
-	cardmem = BigBuf_get_EM_addr();
-
+	Dbprintf("ICE: enter frame_handle_tag: %02x ", f->bits);
+		
 	/* First Part of Handshake (IV) */
 	if(f->bits == 7) {
 
 		LED_C_ON();
 
 		// Reset prng timer
-		ResetTimer(prng_timer);
+		//ResetTimer(prng_timer);
+		ResetTicks();
 
 		// IV from reader.
 		legic_prng_init(f->data);
 		
+		Dbprintf("ICE: IV: %02x ", f->data);
+		
 		// We should have three tagtypes with three different answers.
-		frame_send_tag(0x3d, 6); /* 0x3d^0x26 = 0x1B */
+		legic_prng_forward(2);
+		//frame_send_tag(0x3d, 6); /* MIM1024 0x3d^0x26 = 0x1B */
+		frame_send_tag(0x1d, 6); // MIM256
 		
 		legic_state = STATE_IV;
 		legic_read_count = 0;
 		legic_prng_bc = 0;
 		legic_prng_iv = f->data;
 
-
-		ResetTimer(timer);
-		WaitUS(280);
+		//ResetTimer(timer);
+		//WaitUS(280);
+		WaitTicks(388);
 		return;
 	}
 
@@ -689,8 +694,10 @@ static void frame_handle_tag(struct legic_frame const * const f)
       if((f->bits == 6) && (f->data == xored)) {
          legic_state = STATE_CON;
 
-		 ResetTimer(timer);
-		 WaitUS(200);
+		 //ResetTimer(timer);
+
+		 //WaitUS(200);
+		 WaitTicks(300);
          return;
 
 	 } else {
@@ -708,13 +715,14 @@ static void frame_handle_tag(struct legic_frame const * const f)
          uint16_t addr = f->data ^ key; 
 		 addr >>= 1;
          uint8_t data = cardmem[addr];
-         int hash = legic4Crc(LEGIC_READ, addr, data, 11) << 8;
+		 
+         uint32_t crc = legic4Crc(LEGIC_READ, addr, data, 11) << 8;
 
-         legic_read_count++;
-         legic_prng_forward(legic_reqresp_drift);
+         //legic_read_count++;
+         //legic_prng_forward(legic_reqresp_drift);
 
-         frame_send_tag(hash | data, 12);
-		 ResetTimer(timer);
+         frame_send_tag(crc | data, 12);
+		 //ResetTimer(timer);
          legic_prng_forward(2);
 		 WaitTicks(330);
          return;
@@ -745,11 +753,11 @@ static void frame_handle_tag(struct legic_frame const * const f)
       Dbprintf("IV: %03.3x", legic_prng_iv);
    }
 
-   legic_state = STATE_DISCON; 
-   legic_read_count = 0;
-   SpinDelay(10);
-   LED_C_OFF();
-   return; 
+	legic_state = STATE_DISCON; 
+	legic_read_count = 0;
+	WaitMS(10);
+	LED_C_OFF();
+	return; 
 }
 
 /* Read bit by bit untill full frame is received
@@ -757,6 +765,7 @@ static void frame_handle_tag(struct legic_frame const * const f)
  */
 static void emit(int bit) {
 
+	Dbprintf("ICE: enter emit:");
 	switch (bit) {
 		case 1:
 			frame_append_bit(&current_frame, 1);
@@ -790,18 +799,24 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
    */
 		
 	int old_level = 0, active = 0;
+	volatile uint32_t level = 0;
+	
 	legic_state = STATE_DISCON;
-
 	legic_phase_drift = phase;
 	legic_frame_drift = frame;
 	legic_reqresp_drift = reqresp;
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+	
+	/* to get the stream of bits from FPGA in sim mode.*/
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+	FpgaSetupSsc();	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_212K);
 
 	/* Bitbang the receiver */
-	LINE_IN;
+//	LINE_IN;
+	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
+	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
 
 	// need a way to determine which tagtype we are simulating
 	
@@ -819,7 +834,8 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
 	DbpString("Starting Legic emulator, press button to end");
    
 	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
-		volatile uint32_t level = !!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
+		
+		level = !!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
 
 		uint32_t time = GET_TICKS;
 
@@ -849,7 +865,7 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
 		}
 
 		/* Frame end */
-		if(time >= (RWD_TIME_1+RWD_TIME_FUZZ) && active) {
+		if(time >= (RWD_TIME_1 + RWD_TIME_FUZZ) && active) {
 			emit(-1);
 			active = 0;
 			LED_A_OFF();
@@ -860,14 +876,16 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
 		* shutdown in its status register. Reading the SR has the
 		* side-effect of clearing any pending state in there.
 		*/
-		if(time >= (20*RWD_TIME_1) && (timer->TC_SR & AT91C_TC_CLKSTA))
-			StopTicks();
+		//if(time >= (20*RWD_TIME_1) && (timer->TC_SR & AT91C_TC_CLKSTA))
+		//if(time >= (20 * RWD_TIME_1) )
+		//StopTicks();
 
 		old_level = level;
 		WDT_HIT();
 	}
 
 	WDT_HIT();
+	DbpString("LEGIC Prime emulator stopped");
 	switch_off_tag_rwd();
 	LEDsoff();
 	cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
