@@ -1019,7 +1019,7 @@ int CmdLegicRestore(const char *Cmd){
 	}
 	fclose(f);
 
-	PrintAndLog("Restoring %s to card", filename);
+	PrintAndLog("Restoring to card");
 
 	// transfer to device
 	size_t len = 0;
@@ -1031,11 +1031,10 @@ int CmdLegicRestore(const char *Cmd){
 		c.arg[0] = i; // offset
 		c.arg[1] = len; // number of bytes
 		memcpy(c.d.asBytes, data+i, len); 
-		PrintAndLog("offset %d | chunk %d | numofbytes %d", i, len, numofbytes);
 		clearCommandBuffer();
 		SendCommand(&c);
 	
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
 			PrintAndLog("command execution time out");
 			free(data);	
 			return 1;
@@ -1046,11 +1045,11 @@ int CmdLegicRestore(const char *Cmd){
 			free(data);	
 			return 1;
 		}
-		PrintAndLog("Wrote chunk %d - %d", i, len);
+		PrintAndLog("Wrote chunk [offset %d | len %d | total %d", i, len, i+len);
 	}	
 	
 	free(data);	
-	PrintAndLog("\nWrote %d bytes from file: %s to card", numofbytes, filename);
+	PrintAndLog("\nWrote %d bytes to card from file %s", numofbytes, filename);
 	return 0;
 }
 
