@@ -506,8 +506,8 @@ int CmdLegicRdmem(const char *Cmd) {
 		return 1;
 	}
 	
-	PrintAndLog("\n ##  | Data");
-	PrintAndLog("-----+-----");
+	PrintAndLog("\n ##  |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F");
+	PrintAndLog("-----+------------------------------------------------------------------------------------------------");
 	print_hex_break( data, readlen, 32);
 	free(data);
 	return 0;
@@ -551,11 +551,19 @@ int CmdLegicRfWrite(const char *Cmd) {
 				errors = true;
 				break;
 			}
+			
+			// limit number of bytes to write. This is not a 'restore' command.
+			if ( (len>>1) > 100 ){
+				PrintAndLog("Max bound on 100bytes to write a one time.");
+				PrintAndLog("Use the 'hf legic restore' command if you want to write the whole tag at once");
+				errors = true;
+			}
 
 			// it's possible for user to accidentally enter "b" parameter
 			// more than once - we have to clean previous malloc
 			if (data)
 				free(data);
+			
 			data = malloc(len >> 1);
 			if ( data == NULL ) {
 				PrintAndLog("Can't allocate memory. exiting");
@@ -604,27 +612,42 @@ int CmdLegicRfWrite(const char *Cmd) {
 	legic_print_type(card.cardsize, 0);
 	
 	// OUT-OF-BOUNDS checks
-	// UID 4 bytes can't be written to.
-	if ( offset < 4 ) {
-		PrintAndLog("Out-of-bounds, UID 4bytes can't be written to. Offset = %d", offset);
+	// UID 4+1 bytes can't be written to.
+	if ( offset < 5 ) {
+		PrintAndLog("Out-of-bounds, bytes 0-1-2-3-4 can't be written to. Offset = %d", offset);
 		return -2;
 	}
 	
-	if ( len + offset + 4 >= card.cardsize ) {
-		PrintAndLog("Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, len + offset + 4);
+	if ( len + offset >= card.cardsize ) {
+		PrintAndLog("Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, len + offset);
 		return -2;
 	}
 
+	if (offset == 5 || offset == 6) {
+		PrintAndLog("############# DANGER ################");
+		PrintAndLog("# changing the DCF is irreversible  #");
+		PrintAndLog("#####################################");
+		PrintAndLog("do you really want to continue? y(es) n(o)");		
+		char answer;
+		sscanf("%c", &answer);
+		bool exit = !(answer == 'n' || answer == 'N');
+		if (exit)
+			return 0;
+		printf("ICE DCF:  %c answer, %d\n", answer, exit);
+		return 0;
+	}
+	
 	legic_chk_iv(&IV);
 	
 	PrintAndLog("Writing to tag");
-    UsbCommand c = {CMD_WRITER_LEGIC_RF, {offset, len, IV}};
-	memcpy(c.d.asBytes, data, len);
-	
-	clearCommandBuffer();
-    SendCommand(&c);
+
+	UsbCommand c = {CMD_WRITER_LEGIC_RF, {offset, len, IV}};
+	memcpy(c.d.asBytes, data, len);	
 	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
+	clearCommandBuffer();
+	SendCommand(&c);
+	
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 		PrintAndLog("command execution time out");
 		return 1;
 	}
@@ -633,19 +656,9 @@ int CmdLegicRfWrite(const char *Cmd) {
 		PrintAndLog("failed writing tag");
 		return 1;
 	}
-	
+
     return 0;
 }
-
-/*
-	PrintAndLog("############# DANGER !! #############");
-	PrintAndLog("# changing the DCF is irreversible  #");
-	PrintAndLog("#####################################");
-	PrintAndLog("do youe really want to continue? y(es) n(o)");		
-	// if (scanf(" %c", &answer) > 0 && (answer == 'y' || answer == 'Y')) {
-		// return 0;
-	// }
-*/
 
 int CmdLegicCalcCrc(const char *Cmd){
 
@@ -922,7 +935,7 @@ int CmdLegicRestore(const char *Cmd){
 	char filename[FILE_PATH_SIZE] = {0x00};
 	char *fnameptr = filename;
 	size_t fileNlen = 0;
-	bool errors = false;
+	bool errors = true;
 	uint16_t numofbytes;	
 	uint8_t cmdp = 0;
 	
@@ -938,17 +951,20 @@ int CmdLegicRestore(const char *Cmd){
 			case 'I':
 				fileNlen = param_getstr(Cmd, cmdp+1, filename);
 				if (!fileNlen) 
-					errors = true; 
+					errors = true;
+				else 
+					errors = false;
+				
 				if (fileNlen > FILE_PATH_SIZE-5) 
 					fileNlen = FILE_PATH_SIZE-5;
-				cmdp += 2;
+				cmdp += 2;				
 				break;
 			default:
 				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 				errors = true;
 				break;
 		}
-		if(errors) break;
+		if (errors) break;
 	}
 
 	//Validations
@@ -987,15 +1003,11 @@ int CmdLegicRestore(const char *Cmd){
 	fseek(f, 0, SEEK_SET); // seek back to beginning of file
 	
 	if ( filesize != numofbytes) {
-		PrintAndLog("Fail, Filesize and cardsize is not equal. [%u != %u]", filesize, numofbytes);
+		PrintAndLog("Fail, filesize and cardsize is not equal. [%u != %u]", filesize, numofbytes);
 		free(data);
 		fclose(f);
 		return 4;
 	}
-		
-	
-	PrintAndLog("Reading binary file...");
-
 
 	// load file
 	size_t bytes_read = fread(data, 1, numofbytes, f);
@@ -1009,12 +1021,36 @@ int CmdLegicRestore(const char *Cmd){
 
 	PrintAndLog("Restoring %s to card", filename);
 
-	//loop writing :)
-
-	//endloop
+	// transfer to device
+	size_t len = 0;
+	UsbCommand c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}};
+	UsbCommand resp;
+	for(size_t i = 7; i < numofbytes; i += USB_CMD_DATA_SIZE) {
+		
+		len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);		
+		c.arg[0] = i; // offset
+		c.arg[1] = len; // number of bytes
+		memcpy(c.d.asBytes, data+i, len); 
+		PrintAndLog("offset %d | chunk %d | numofbytes %d", i, len, numofbytes);
+		clearCommandBuffer();
+		SendCommand(&c);
+	
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+			PrintAndLog("command execution time out");
+			free(data);	
+			return 1;
+		}
+		uint8_t isOK = resp.arg[0] & 0xFF;
+		if ( !isOK ) {
+			PrintAndLog("failed writing tag [msg = %u]", resp.arg[1] & 0xFF);
+			free(data);	
+			return 1;
+		}
+		PrintAndLog("Wrote chunk %d - %d", i, len);
+	}	
 	
 	free(data);	
-	PrintAndLog("\nLoaded %d bytes from file: %s  to emulator memory", numofbytes, filename);
+	PrintAndLog("\nWrote %d bytes from file: %s to card", numofbytes, filename);
 	return 0;
 }
 

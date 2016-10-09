@@ -477,7 +477,7 @@ int LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
 		goto OUT;
 	}
 
-	if (len + offset >= card.cardsize)
+	if (len + offset > card.cardsize)
 		len = card.cardsize - offset;
 
 	LED_B_ON();
@@ -504,7 +504,7 @@ OUT:
 void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 
 	#define LOWERLIMIT 4
-	uint8_t isOK = 1;
+	uint8_t isOK = 1, msg = 0;
 	legic_card_select_t card;
 	
 	// uid NOT is writeable.
@@ -517,13 +517,12 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 	
 	if ( legic_select_card_iv(&card, iv) ) {
 		isOK = 0;
+		msg = 1;
 		goto OUT;
 	}
 	
-	if ( len + offset + LOWERLIMIT >= card.cardsize) {
-		isOK = 0;
-		goto OUT;
-	}
+	if ( len + offset > card.cardsize)
+		len = card.cardsize - offset;
 
     LED_B_ON();	
 	while( len > 0 ) {
@@ -536,7 +535,7 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 		WDT_HIT();
 	}
 OUT:
-	cmd_send(CMD_ACK, isOK, 0,0,0,0);
+	cmd_send(CMD_ACK, isOK, msg,0,0,0);
 	switch_off_tag_rwd();
 	LEDsoff();	
 }
@@ -723,7 +722,7 @@ static void frame_handle_tag(struct legic_frame const * const f)
    }
 
    /* Write */
-   if(f->bits == 23) {
+   if (f->bits == 23 || f->bits == 21 ) {
       uint32_t key  = get_key_stream(-1, 23); //legic_frame_drift, 23);
       uint16_t addr = f->data ^ key; 
 	  addr >>= 1; 
@@ -737,7 +736,7 @@ static void frame_handle_tag(struct legic_frame const * const f)
       legic_state = STATE_DISCON;
       LED_C_OFF();
       Dbprintf("write - addr: %x, data: %x", addr, data);
-	  // should send a ACK within 3.5ms too
+	  // should send a ACK after 3.6ms 
       return;
    }
 
