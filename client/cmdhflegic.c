@@ -1035,7 +1035,7 @@ int CmdLegicRestore(const char *Cmd){
 		clearCommandBuffer();
 		SendCommand(&c);
 	
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
 			PrintAndLog("command execution time out");
 			free(data);	
 			return 1;
