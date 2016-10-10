@@ -453,7 +453,7 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
 		
 	StartCountSspClk();
 	
-	volatile uint8_t b;
+	volatile uint8_t b = 0;
 
 	// clear receiving shift register and holding register
 	// What does this loop do? Is it TR1?
@@ -467,7 +467,6 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
 	// Now run a `software UART' on the stream of incoming samples.
 	UartInit(received);
 
-	b = 0;
 	uint8_t mask;
 	while( !BUTTON_PRESS() ) {
 		WDT_HIT();
@@ -490,11 +489,11 @@ void ClearFpgaShiftingRegisters(void){
 	volatile uint8_t b;
 
 	// clear receiving shift register and holding register
-	while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
+	while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)) {};
 
 	b = AT91C_BASE_SSC->SSC_RHR; (void) b;
 
-	while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
+	while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)) {};
 
 	b = AT91C_BASE_SSC->SSC_RHR; (void) b;
 	
