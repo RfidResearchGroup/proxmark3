@@ -69,7 +69,7 @@ static void setup_timer(void) {
 */
 
 // At TIMER_CLOCK3 (MCK/32)
-// testing calculating in (us) microseconds.
+// testing calculating in ticks. 1.5ticks = 1us 
 #define	RWD_TIME_1 120		// READER_TIME_PAUSE 20us off, 80us on = 100us  80 * 1.5 == 120ticks
 #define RWD_TIME_0 60		// READER_TIME_PAUSE 20us off, 40us on = 60us   40 * 1.5 == 60ticks 
 #define RWD_TIME_PAUSE 30	// 20us == 20 * 1.5 == 30ticks */
@@ -297,19 +297,18 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 // Setup pm3 as a Legic Reader
 static uint32_t setup_phase_reader(uint8_t iv) {
 	
-	// Switch on carrier and let the tag charge for 1ms
+	// Switch on carrier and let the tag charge for 5ms
 	HIGH(GPIO_SSC_DOUT);
-	WaitUS(5000);	
+	WaitUS(5000);
 	
 	ResetTicks();
 	
-	// no keystream yet
 	legic_prng_init(0);
 	
 	// send IV handshake
 	frame_sendAsReader(iv, 7);
 
-	// Now both tag and reader has same IV. Prng can start.
+	// tag and reader has same IV.
 	legic_prng_init(iv);
 
 	frame_receiveAsReader(&current_frame, 6);
@@ -655,7 +654,7 @@ static void frame_handle_tag(struct legic_frame const * const f)
 	// log
 	//uint8_t cmdbytes[] = {bits,	BYTEx(data, 0),	BYTEx(data, 1)};
 	//LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, FALSE);
-	Dbprintf("ICE: enter frame_handle_tag: %02x ", f->bits);
+	//Dbprintf("ICE: enter frame_handle_tag: %02x ", f->bits);
 		
 	/* First Part of Handshake (IV) */
 	if(f->bits == 7) {
@@ -694,9 +693,7 @@ static void frame_handle_tag(struct legic_frame const * const f)
       if((f->bits == 6) && (f->data == xored)) {
          legic_state = STATE_CON;
 
-		 //ResetTimer(timer);
-
-		 //WaitUS(200);
+		 ResetTimer(timer);
 		 WaitTicks(300);
          return;
 
@@ -765,7 +762,6 @@ static void frame_handle_tag(struct legic_frame const * const f)
  */
 static void emit(int bit) {
 
-	Dbprintf("ICE: enter emit:");
 	switch (bit) {
 		case 1:
 			frame_append_bit(&current_frame, 1);
@@ -799,22 +795,35 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
    */
 		
 	int old_level = 0, active = 0;
-	volatile uint32_t level = 0;
+	volatile int32_t level = 0;
 	
 	legic_state = STATE_DISCON;
 	legic_phase_drift = phase;
 	legic_frame_drift = frame;
 	legic_reqresp_drift = reqresp;
 
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-	
-	/* to get the stream of bits from FPGA in sim mode.*/
-	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-	FpgaSetupSsc();	
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_212K);
 
+	/* to get the stream of bits from FPGA in sim mode.*/
+	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+	// Set up the synchronous serial port
+	//FpgaSetupSsc();
+	// connect Demodulated Signal to ADC:
+	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_212K);
+	//FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_NO_MODULATION);
+
+	#define LEGIC_DMA_BUFFER 256
+	// The DMA buffer, used to stream samples from the FPGA
+	//uint8_t *dmaBuf = BigBuf_malloc(LEGIC_DMA_BUFFER);
+	//uint8_t *data = dmaBuf;
+	// Setup and start DMA.
+	// if ( !FpgaSetupSscDma((uint8_t*) dmaBuf, LEGIC_DMA_BUFFER) ){
+		// if (MF_DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting"); 
+		// return;
+	// }
+
+	//StartCountSspClk();
 	/* Bitbang the receiver */
-//	LINE_IN;
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_DIN;
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DIN;
 
@@ -832,7 +841,38 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
 
 	LED_B_ON();
 	DbpString("Starting Legic emulator, press button to end");
-   
+	
+	/*
+	 * The mode FPGA_HF_SIMULATOR_MODULATE_212K works like this.
+	 * - A 1-bit input to the FPGA becomes 8 pulses on 212kHz (fc/64) (18.88us).
+	 * - A 0-bit input to the FPGA becomes an unmodulated time of 18.88us
+	 *
+	 * In this mode the SOF can be written as 00011101 = 0x1D
+	 * The EOF can be written as 10111000 = 0xb8
+	 * A logic 1 is 01
+	 * A logic 0 is 10
+	volatile uint8_t b;
+	uint8_t i = 0;
+	while( !BUTTON_PRESS() ) {
+		WDT_HIT();
+
+		// not sending anything.
+        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+            AT91C_BASE_SSC->SSC_THR = 0x00;
+        }
+
+		// receive
+		if ( AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY ) {
+			b = (uint8_t) AT91C_BASE_SSC->SSC_RHR;
+			bd[i] = b;
+			++i;
+	//		if(OutOfNDecoding(b & 0x0f))
+	//				*len = Uart.byteCnt;
+			}
+		
+	}
+	 */
+
 	while(!BUTTON_PRESS() && !usb_poll_validate_length()) {
 		
 		level = !!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN);
@@ -840,23 +880,23 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
 		uint32_t time = GET_TICKS;
 
 		if (level != old_level) {
-			
-			if (level) {
+			if (level == 1) {
 
-				ResetTicks();
-				
+				//Dbprintf("start, %u ", time);
+				StartTicks();
+				// did we get a signal 
 				if (FUZZ_EQUAL(time, RWD_TIME_1, RWD_TIME_FUZZ)) {
-					/* 1 bit */
+					// 1 bit 
 					emit(1);
 					active = 1;
 					LED_A_ON();
 				} else if (FUZZ_EQUAL(time, RWD_TIME_0, RWD_TIME_FUZZ)) {
-					/* 0 bit */
+					// 0 bit 
 					emit(0);
 					active = 1;
 					LED_A_ON();
 				} else if (active) {
-					/* invalid */
+					// invalid 
 					emit(-1);
 					active = 0;
 					LED_A_OFF();
@@ -864,6 +904,7 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
 			}
 		}
 
+	
 		/* Frame end */
 		if(time >= (RWD_TIME_1 + RWD_TIME_FUZZ) && active) {
 			emit(-1);
@@ -877,19 +918,21 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
 		* side-effect of clearing any pending state in there.
 		*/
 		//if(time >= (20*RWD_TIME_1) && (timer->TC_SR & AT91C_TC_CLKSTA))
-		//if(time >= (20 * RWD_TIME_1) )
-		//StopTicks();
+		if(time >= (20 * RWD_TIME_1) )
+			StopTicks();
 
 		old_level = level;
 		WDT_HIT();
-	}
+}
 
 	WDT_HIT();
 	DbpString("LEGIC Prime emulator stopped");
 	switch_off_tag_rwd();
+	FpgaDisableSscDma();
 	LEDsoff();
 	cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
 }
+
 
 //-----------------------------------------------------------------------------
 // Code up a string of octets at layer 2 (including CRC, we don't generate
