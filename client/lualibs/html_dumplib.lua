@@ -80,11 +80,12 @@ end
 
 local function convert_ascii_dump_to_JS(infile)
 	local t = infile:read("*all")
-	
+	local cleaned
 	local output = "[";
 	for line in string.gmatch(t, "[^\n]+") do 
 	    if string.byte(line,1) ~= string.byte("+",1) then
-                  output = output .. "'"..line.."',\n"
+			cleaned = (line or ''):gsub('%s+','')
+			output = output .. "'"..cleaned.."',\n"
         end
 	end
 	output = output .. "]"
@@ -117,11 +118,12 @@ end
 
 local function convert_ascii_dump_to_BIN(infile)
 	local t = infile:read("*all")
-	
+	local cleaned
 	local output = {};
 	for line in string.gmatch(t, "[^\n]+") do 
 		if string.byte(line) ~= string.byte("+") then
-			for c in (line or ''):gmatch('..') do
+			cleaned = (line or ''):gsub('%s+','')
+			for c in cleaned:gmatch('..') do				
 				output[#output+1] = string.char( tonumber(c,16) )
 			end
 		end
