@@ -629,7 +629,7 @@ int CmdLegicRfWrite(const char *Cmd) {
 		PrintAndLog("#####################################");
 		PrintAndLog("do you really want to continue? y(es) n(o)");		
 		char answer;
-		sscanf("%c", &answer);
+		sscanf(" %c", &answer);
 		bool exit = !(answer == 'n' || answer == 'N');
 		if (exit)
 			return 0;
