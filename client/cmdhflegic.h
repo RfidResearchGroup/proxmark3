@@ -38,6 +38,7 @@ int CmdLegicReader(const char *Cmd);
 int CmdLegicELoad(const char *Cmd);
 int CmdLegicESave(const char *Cmd);
 int CmdLegicList(const char *Cmd);
+int CmdLegicWipe(const char *Cmd);
 
 int HFLegicReader(const char *Cmd, bool verbose);
 int legic_print_type(uint32_t tagtype, uint8_t spaces);

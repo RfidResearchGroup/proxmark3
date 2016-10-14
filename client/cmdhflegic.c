@@ -636,14 +636,13 @@ int CmdLegicRfWrite(const char *Cmd) {
 		PrintAndLog("############# DANGER ################");
 		PrintAndLog("# changing the DCF is irreversible  #");
 		PrintAndLog("#####################################");
-		PrintAndLog("do you really want to continue? y(es) n(o)");		
-		char answer;
-		sscanf(" %c", &answer);
-		bool exit = !(answer == 'n' || answer == 'N');
-		if (exit)
+		char *answer = NULL;
+		answer = readline("do you really want to continue? y(es) n(o) : ");
+		bool overwrite = (answer[0] == 'y' || answer[0] == 'Y');
+		if (!overwrite){
+			PrintAndLog("command cancelled");
 			return 0;
-		printf("ICE DCF:  %c answer, %d\n", answer, exit);
-		return 0;
+		}
 	}
 	
 	legic_chk_iv(&IV);
