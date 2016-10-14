@@ -21,7 +21,7 @@ matrix:
       osx_image: xcode7.3
   allow_failures:
     - os: osx
-	
+
 # MAC OS - dependencies?
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
