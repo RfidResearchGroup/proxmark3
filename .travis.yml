@@ -1,12 +1,30 @@
 # Travis-CI Build for Iceman Fork / Proxmark3
 language: c
 
-# Using trusty beta build environment,  based on Ubuntu 14.04
-sudo: required
-dist: trusty
+# multi platform build test
+os:
+  - linux
+  - osx
 
 #install:
 compiler: gcc
+
+# build matrix,  
+# LINUX : Using trusty beta build environment,  based on Ubuntu 14.04
+# MAC OS: 
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: required
+    - os: osx
+      osx_image: xcode7.2
+  allow_failures:
+    - os: osx
+	
+# MAC OS - dependencies?
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
 
 ## Install mainline ARM toolchain.  gcc-arm-none-eabi is available
 ## in Ubuntu >= 14.04, but this external PPA is needed for 12.04.
