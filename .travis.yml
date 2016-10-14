@@ -1,14 +1,10 @@
 # Travis-CI Build for Iceman Fork / Proxmark3
 language: c
 
-# multi platform build test
-os:
-  - linux
-  - osx
-
 #install:
 compiler: gcc
 
+# multi platform build test
 # build matrix,  
 # LINUX : Using trusty beta build environment,  based on Ubuntu 14.04
 # MAC OS: 
