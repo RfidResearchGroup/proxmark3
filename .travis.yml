@@ -26,9 +26,9 @@ before_install:
 ## Install mainline ARM toolchain.  gcc-arm-none-eabi is available
 ## in Ubuntu >= 14.04, but this external PPA is needed for 12.04.
 before_script:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; sudo apt-add-repository 'deb http://archive.ubuntu.com/ubuntu trusty main universe multiverse restricted'; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; sudo apt-get update -qq; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; sudo apt-get install -y gcc-arm-none-eabi; fi
+  - sudo apt-add-repository 'deb http://archive.ubuntu.com/ubuntu trusty main universe multiverse restricted';
+  - sudo apt-get update -qq;
+  - sudo apt-get install -y gcc-arm-none-eabi;
   - git fetch --all
 
 #make command
