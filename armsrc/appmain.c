@@ -182,9 +182,7 @@ static int ReadAdc(int ch)
 
 int AvgAdc(int ch) // was static - merlok
 {
-	int i;
-	int a = 0;
-
+	int i, a = 0;
 	for(i = 0; i < 32; ++i)
 		a += ReadAdc(ch);
 
