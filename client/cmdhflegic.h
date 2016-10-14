@@ -54,5 +54,5 @@ int usage_legic_reader(void);
 int usage_legic_info(void);
 int usage_legic_dump(void);
 int usage_legic_restore(void);
-
+int usage_legic_wipe(void);
 #endif

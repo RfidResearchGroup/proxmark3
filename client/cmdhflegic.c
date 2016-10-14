@@ -149,7 +149,16 @@ int usage_legic_esave(void){
 	PrintAndLog("      hf legic esave 2 myfile");
 	return 0;
 }
-
+int usage_legic_wipe(void){
+	PrintAndLog("Fills a legic tag memory with zeros. From byte7 and to the end.");
+	PrintAndLog(" Usage:  hf legic wipe [h]");
+	PrintAndLog("Options:");
+	PrintAndLog("      h             : this help");
+	PrintAndLog("");
+	PrintAndLog("Samples:");	
+	PrintAndLog("      hf legic wipe");
+	return 0;
+}
 /*
  *  Output BigBuf and deobfuscate LEGIC RF tag data.
  *  This is based on information given in the talk held
@@ -1174,6 +1183,61 @@ int CmdLegicESave(const char *Cmd) {
 	return 0;
 }
 
+int CmdLegicWipe(const char *Cmd){
+
+	char cmdp = param_getchar(Cmd, 0);
+	
+	if ( cmdp == 'h' || cmdp == 'H') return usage_legic_wipe();
+	
+	// tagtype
+	legic_card_select_t card;
+	if (legic_get_type(&card)) {
+		PrintAndLog("Failed to identify tagtype");
+		return 1;
+	}
+	
+	// set up buffer
+	uint8_t *data = malloc(card.cardsize);
+	if (!data) {
+		PrintAndLog("Fail, cannot allocate memory");
+		return 2;		
+	}
+	memset(data, 0, card.cardsize);
+	
+	legic_print_type(card.cardsize, 0);
+
+	printf("Erasing");
+	
+	// transfer to device
+	size_t len = 0;
+	UsbCommand c = {CMD_WRITER_LEGIC_RF, {0, 0, 0x55}};
+	UsbCommand resp;
+	for(size_t i = 7; i < card.cardsize; i += USB_CMD_DATA_SIZE) {
+		
+		printf(".");
+		len = MIN((card.cardsize - i), USB_CMD_DATA_SIZE);		
+		c.arg[0] = i; // offset
+		c.arg[1] = len; // number of bytes
+		memcpy(c.d.asBytes, data+i, len); 
+		clearCommandBuffer();
+		SendCommand(&c);
+	
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
+			PrintAndLog("command execution time out");
+			free(data);	
+			return 3;
+		}
+		uint8_t isOK = resp.arg[0] & 0xFF;
+		if ( !isOK ) {
+			PrintAndLog("failed writing tag [msg = %u]", resp.arg[1] & 0xFF);
+			free(data);	
+			return 4;
+		}
+	}
+	printf("ok\n");
+	return 0;
+}
+
 int CmdLegicList(const char *Cmd) {
 	CmdHFList("legic");
 	return 0;
@@ -1192,6 +1256,7 @@ static command_t CommandTable[] =  {
 	{"eload",	CmdLegicELoad,		1, "Load binary dump to emulator memory"},
 	{"esave",	CmdLegicESave,		1, "Save emulator memory to binary file"},
 	{"list",	CmdLegicList,		1, "[Deprecated] List LEGIC history"},
+	{"wipe",	CmdLegicWipe,		1, "Wipe a LEGIC Prime tag"},
 	{NULL, NULL, 0, NULL}
 };
 
