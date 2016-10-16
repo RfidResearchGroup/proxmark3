@@ -192,7 +192,7 @@ Install to `C:\Qt` and choose the following components to be installed:
 - Tools - MinGW
 
 In your shell from MSYS (see below), make sure you set QTDIR to your QT installation and add its bin to your path as well:		
-`export QTDIR=/c/Qt/5.6/mingw492_32`		
+`export QTDIR=/c/Qt/5.6/mingw49_32`		
 `export PATH=$PATH:$QTDIR/bin`
 
 ### 2. MSYS
@@ -230,7 +230,7 @@ Download and install Git for Windows: https://git-scm.com/download/win
 - Set the environment:		
 `export DEVKITARM=/c/devkitPro/devkitARM`		
 `export PATH=$PATH:$DEVKITARM/bin`		
-`export QTDIR=/c/Qt/5.6/mingw492_32`		
+`export QTDIR=/c/Qt/5.6/mingw49_32`		
 `export PATH=$PATH:$QTDIR/bin`
 
 - Clone iceman fork		
