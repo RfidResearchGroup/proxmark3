@@ -458,23 +458,36 @@ void printEM410x(uint32_t hi, uint64_t id)
 int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo )
 {
 	size_t idx = 0;
-	size_t BitLen = DemodBufferLen;
+	size_t size = DemodBufferLen;
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
-	memcpy(BitStream, DemodBuffer, BitLen); 
-	if (Em410xDecode(BitStream, &BitLen, &idx, hi, lo)){
-		//set GraphBuffer for clone or sim command
-		setDemodBuf(BitStream, BitLen, idx);
+	memcpy(BitStream, DemodBuffer, size); 
+	int ans = Em410xDecode(BitStream, &size, &idx, hi, lo);
+	if ( ans < 0){
 		if (g_debugMode){
-			PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, BitLen);
-			printDemodBuff();
+
+			if (ans == -1)
+				PrintAndLog("DEBUG: Error - Em410x not only 0|1 in decoded bitstream");
+			else if (ans == -3)
+				PrintAndLog("DEBUG: Error - Em410x Size not correct: %d", size);
+			else if (ans == -4)
+				PrintAndLog("DEBUG: Error - Em410x preamble not found");
+			else if (ans == -5)
+				PrintAndLog("DEBUG: Error - Em410x parity failed");
 		}
-		if (verbose){
-			PrintAndLog("EM410x pattern found: ");
-			printEM410x(*hi, *lo);
-		}
-		return 1;
+		return 0;
 	}
-	return 0;
+	
+	//set GraphBuffer for clone or sim command
+	setDemodBuf(BitStream, size, idx);
+	if (g_debugMode){
+		PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
+		printDemodBuff();
+	}
+	if (verbose){
+		PrintAndLog("EM410x pattern found: ");
+		printEM410x(*hi, *lo);
+	}
+	return 1;
 }
 
 int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose)

@@ -169,13 +169,13 @@ uint8_t preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_
 
 //by marshmellow
 //takes 1s and 0s and searches for EM410x format - output EM ID
-uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo)
+int Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo)
 {
 	//no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
 	//  otherwise could be a void with no arguments
 	//set defaults
 	uint32_t i = 0;
-	if (BitStream[1]>1) return 0;  //allow only 1s and 0s
+	if (BitStream[1]>1) return -1;  //allow only 1s and 0s
 
 	// 111111111 bit pattern represent start of frame
 	//  include 0 in front to help get start pos
@@ -186,14 +186,15 @@ uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_
 	uint8_t FmtLen = 10;
 	*startIdx = 0;
 	errChk = preambleSearch(BitStream, preamble, sizeof(preamble), size, startIdx);
-	if (errChk == 0 || *size < 64) return 0;
+	if (errChk == 0 ) return -4;
+	if (*size < 64) return -3;
 	if (*size > 64) FmtLen = 22;
 	*startIdx += 1; //get rid of 0 from preamble
 	idx = *startIdx + 9;
 	for (i=0; i<FmtLen; i++){ //loop through 10 or 22 sets of 5 bits (50-10p = 40 bits or 88 bits)
 		parityBits = bytebits_to_byte(BitStream+(i*5)+idx,5);
 		//check even parity - quit if failed
-		if (parityTest(parityBits, 5, 0) == 0) return 0;
+		if (parityTest(parityBits, 5, 0) == 0) return -5;
 		//set uint64 with ID from BitStream
 		for (uint8_t ii=0; ii<4; ii++){
 			*hi = (*hi << 1) | (*lo >> 63);
