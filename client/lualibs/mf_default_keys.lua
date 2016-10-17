@@ -259,6 +259,15 @@ local _keys = {
 	'454841585443',
 
 	--[[
+	Data from: http://phreakerclub.com/forum/showthread.php?p=41266
+	--]]
+	'26973ea74321', 
+	'71f3a315ad26', 
+	'51044efb5aab',
+	'ac70ca327a04',
+	'eb0a8ff88ade',
+	
+	--[[
 	Data from: http://pastebin.com/gQ6nk38G
 	--]]
 	'A0A1A2A3A4A5', 
@@ -340,9 +349,8 @@ local _keys = {
 	'd8a274b2e026', 
 	'b20b83cb145c', 
 	'9afa6cb4fc3d',
-	--[[
-	Data from:  http://pastebin.com/RRJUEDCM
-	
+	--[[	
+	Data from:  http://pastebin.com/RRJUEDCM	
 	--]]
 	'0d258fe90296',
 	'e55a3ca71826',
@@ -356,6 +364,12 @@ local _keys = {
 	'1acc3189578c',
 	'c2b7ec7d4eb1',
 	'369a4663acd2',	
+	--[[	
+	Data from:  https://github.com/zhangjingye03/zxcardumper
+	zxcard Key A/B
+	--]]
+	'668770666644',
+	'003003003003',
 }
 
 ---
