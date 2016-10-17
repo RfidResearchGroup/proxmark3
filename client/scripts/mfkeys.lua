@@ -14,13 +14,32 @@ local cmds = require('commands')
 local keys = require('mf_default_keys')
 -- Ability to read what card is there
 local reader = require('read14a')
+local getopt = require('getopt')
 
+local OR = bit32.bor
+local LSHIFT = bit32.lshift
 
-local desc = 
-("This script implements check keys. It utilises a large list of default keys (currently %d keys).\
-If you want to add more, just put them inside mf_default_keys.lua. "):format(#keys)
+example =[[
+	 script run mfkeys
+]]
+author = "Iceman"
+usage = "script run mfkeys"
+desc = ("This script implements Mifare check keys. It utilises a large list of default keys (currently %d keys).\
+If you want to add more, just put them inside /lualibs/mf_default_keys.lua\n"):format(#keys) ..
+[[
+
+Arguments:
+	-h             : this help
+]]
 
 local TIMEOUT = 10000 -- 10 seconds
+--- 
+-- Usage help
+function help()
+	print(desc)
+	print("Example usage")
+	print(example)
+end
 	
 --[[This may be moved to a separate library at some point]]
 local utils = 
@@ -81,7 +100,6 @@ local function checkCommand(command)
 	end
 end
 
-
 function checkBlock(blockNo, keys, keyType)
 	-- The command data is only 512 bytes, each key is 6 bytes, meaning that we can send max 85 keys in one go. 
 	-- If there's more, we need to split it up
@@ -91,12 +109,10 @@ function checkBlock(blockNo, keys, keyType)
 		local n,data = remaining, nil
 		if remaining > 85 then n = 85 end
 		local data = table.concat(keys,"",start,n)
-		--print("data",data)
-		--print("data len", #data)
 		print(("Testing block %d, keytype %d, with %d keys"):format(blockNo, keyType, n))
 		local command = Command:new{cmd = cmds.CMD_MIFARE_CHKKEYS, 
-								arg1 = blockNo, 
-								arg2 = keyType, 
+								arg1 =  OR(blockNo, LSHIFT(keyType,8) ),
+								arg2 = 0, 
 								arg3 = n, 
 								data = data}
 		local status = checkCommand(command)
@@ -108,19 +124,19 @@ function checkBlock(blockNo, keys, keyType)
 end
 
 -- A function to display the results
+-- TODO: iceman 2016,  still screws up output when a key is not found.
 local function displayresults(results)
 	local sector, blockNo, keyA, keyB,_
 
-	print("________________________________________")
-	print("|Sector|Block|     A      |      B     |")
-	print("|--------------------------------------|")
+	print("|---|----------------|---|----------------|---|")
+	print("|sec|key A           |res|key B           |res|")
+	print("|---|----------------|---|----------------|---|")
 
 	for sector,_ in pairs(results) do
 		blockNo, keyA, keyB = unpack(_)
-
-		print(("| %3d  | %3d |%s|%s|"):format(sector, blockNo, keyA, keyB ))
+		print(("|%03d|  %s  | 1 |  %s  | 1 |"):format(sector, keyA, keyB ))
 	end
-	print("|--------------------------------------|")
+	print("|---|----------------|---|----------------|---|")
 
 end
 -- A little helper to place an item first in the list
@@ -164,18 +180,20 @@ local function dumptofile(results)
 	end
 end
 
-
 local function main( args)
 
-	print(desc);
-
+	-- Arguments for the script
+	for o, a in getopt.getopt(args, 'h') do
+		if o == "h" then return help() end			
+	end
+	
 	result, err = reader.read1443a()
 	if not result then
 		print(err)
 		return
 	end
-	print(("Found a %s tag"):format(result.name))
 
+	print(("Found a %s tag"):format(result.name))
 
 	core.clearCommandBuffer()
 	local blockNo
