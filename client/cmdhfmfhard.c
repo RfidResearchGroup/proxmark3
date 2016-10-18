@@ -93,6 +93,13 @@ typedef struct noncelist {
 	float score1, score2;
 } noncelist_t;
 
+typedef struct check_args {
+	uint32_t next_fivehundred;
+	uint32_t total_num_nonces;
+	uint32_t total_added_nonces;
+	uint32_t idx;
+} check_args_t;
+
 static size_t nonces_to_bruteforce = 0;
 static noncelistentry_t *brute_force_nonces[256];
 static uint32_t cuid = 0;
@@ -132,6 +139,15 @@ static partial_indexed_statelist_t partial_statelist[17];
 static partial_indexed_statelist_t statelist_bitflip;
 static statelist_t *candidates = NULL;
 
+bool thread_check_started = false;
+bool thread_check_done = false;
+bool cracking = false;
+bool field_off = false;
+
+pthread_t thread_check;
+check_args_t cargs;
+
+static void* check_thread(void*);
 static bool generate_candidates(uint16_t, uint16_t);
 static bool brute_force(void);
 
@@ -759,7 +775,6 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 {
 	clock_t time1 = clock();
 	bool initialize = true;
-	bool field_off = false;
 	bool finished = false;
 	bool filter_flip_checked = false;
 	uint32_t flags = 0;
@@ -771,11 +786,19 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 	FILE *fnonces = NULL;
 	UsbCommand resp;
 
+	field_off = false;
+	cracking = false;
+
 	printf("Acquiring nonces...\n");
-	
+
 	clearCommandBuffer();
 
 	do {
+		if (cracking) {
+			sleep(3);
+			continue;
+		}
+
 		flags = 0;
 		flags |= initialize ? 0x0001 : 0;
 		flags |= slow ? 0x0002 : 0;
@@ -831,12 +854,13 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 			total_num_nonces += num_acquired_nonces;
 		}
 		
-		if (first_byte_num == 256 ) {
+		if (first_byte_num == 256 && !field_off) {
 			// printf("first_byte_num = %d, first_byte_Sum = %d\n", first_byte_num, first_byte_Sum);
 			if (!filter_flip_checked) {
 				Check_for_FilterFlipProperties();
 				filter_flip_checked = true;
 			}
+
 			num_good_first_bytes = estimate_second_byte_sum();
 			if (total_num_nonces > next_fivehundred) {
 				next_fivehundred = (total_num_nonces/500+1) * 500;
@@ -845,22 +869,27 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 					total_added_nonces,
 					CONFIDENCE_THRESHOLD * 100.0,
 					num_good_first_bytes);
+			}
 
-				if (total_added_nonces > (2500*idx)) {
-					clock_t time1 = clock();
-					field_off = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
-					time1 = clock() - time1;
-					if ( time1 > 0 ) PrintAndLog("Time for generating key candidates list: %1.0f seconds", ((float)time1)/CLOCKS_PER_SEC);
-					if (known_target_key != -1) brute_force();
-					idx++;
+			if (thread_check_started) {
+				if (thread_check_done) {
+					//printf ("Detect check thread end ..\n");
+					pthread_join (thread_check, 0);
+					idx = cargs.idx;
+					thread_check_started = thread_check_done = false;
 				}
-			}
-			if (num_good_first_bytes >= GOOD_BYTES_REQUIRED) {
-				field_off = true;	// switch off field with next SendCommand and then finish
-			}
+			} else {
+				//printf ("Starting check thread ...\n");
+				memset (&cargs, 0, sizeof (cargs));
 
-			if (field_off) {
-				field_off = finished = brute_force();
+				// set arguments
+				cargs.next_fivehundred = next_fivehundred;
+				cargs.total_num_nonces = total_num_nonces;
+				cargs.total_added_nonces = total_added_nonces;
+				cargs.idx = idx;
+
+				pthread_create (&thread_check, NULL, check_thread, (void *)&cargs);
+				thread_check_started = true;
 			}
 		}
 
@@ -869,6 +898,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 				fclose(fnonces);
 				return 1;
 			}
+
 			if (resp.arg[0]) {
 				fclose(fnonces);
 				return resp.arg[0];  // error during nested_hard
@@ -879,7 +909,6 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 
 	} while (!finished);
 
-	
 	if (nonce_file_write) {
 		fclose(fnonces);
 	}
@@ -1301,6 +1330,8 @@ static bool generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 		}
 	}
 
+	if (maximum_states == 0) return false;
+
 	printf("Number of possible keys with Sum(a0) = %d: %"PRIu64" (2^%1.1f)\n", sum_a0, maximum_states, log(maximum_states)/log(2.0));
 	
 	init_statelist_cache();
@@ -1497,7 +1528,7 @@ static const uint64_t crack_states_bitsliced(statelist_t *p){
         const bitslice_value_t odd_feedback = odd_feedback_bit ? bs_ones.value : bs_zeroes.value;
 
         for(size_t block_idx = 0; block_idx < bitsliced_blocks; ++block_idx){
-            bitslice_t const * restrict bitsliced_even_state = bitsliced_even_states[block_idx];
+            const bitslice_t * const restrict bitsliced_even_state = bitsliced_even_states[block_idx];
             size_t state_idx;
             // set even bits
             for(state_idx = 0; state_idx < STATE_SIZE-ROLLBACK_SIZE; state_idx+=2){
@@ -1630,6 +1661,33 @@ out:
     return key;
 }
 
+static void* check_thread(void* x)
+{
+	check_args_t *cargs = (check_args_t *)x;
+
+	// printf("first_byte_num = %d, first_byte_Sum = %d\n", first_byte_num, first_byte_Sum);
+	num_good_first_bytes = estimate_second_byte_sum();
+	if (cargs->total_added_nonces > (2500*cargs->idx)) {
+		clock_t time1 = clock();
+		cracking = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
+		time1 = clock() - time1;
+		if ( time1 > 0 ) PrintAndLog("Time for generating key candidates list: %1.0f seconds", ((float)time1)/CLOCKS_PER_SEC);
+		if (known_target_key != -1) brute_force();
+		cargs->idx++;
+	}
+
+	if (cracking || num_good_first_bytes >= GOOD_BYTES_REQUIRED) {
+		if (cargs->total_added_nonces > 2500+1000) {
+			field_off = brute_force(); // switch off field with next SendCommand and then finish
+		}
+		cracking = false;
+	}
+
+	thread_check_done = true;
+
+	return (void *) NULL;
+}
+
 static void* crack_states_thread(void* x){
     const size_t thread_id = (size_t)x;
     size_t current_bucket = thread_id;
@@ -1660,6 +1718,8 @@ static bool brute_force(void)
 		PrintAndLog("Looking for known target key in remaining key space...");
 		ret = TestIfKeyExists(known_target_key);
 	} else {
+		if (maximum_states == 0) return false;
+
 	 	PrintAndLog("Brute force phase starting.");
 	 	time_t start, end;
 		time(&start);
@@ -1712,15 +1772,9 @@ static bool brute_force(void)
 		time(&end);
 		double elapsed_time = difftime(end, start);
 
-		if(keys_found){
+		if (keys_found && TestIfKeyExists(foundkey)) {
 			PrintAndLog("Success! Tested %"PRIu32" states, found %u keys after %.f seconds", total_states_tested, keys_found, elapsed_time);
 			PrintAndLog("\nFound key: %012"PRIx64"\n", foundkey);
-			known_target_key = foundkey;
-
-			ret = TestIfKeyExists(known_target_key);
-
-			PrintAndLog("Check if key is found in the keyspace: %d", ret);
-
 			ret = true;
 		} else {
 			PrintAndLog("Fail! Tested %"PRIu32" states, in %.f seconds", total_states_tested, elapsed_time);
