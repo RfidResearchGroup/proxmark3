@@ -1474,7 +1474,7 @@ static const uint64_t crack_states_bitsliced(statelist_t *p){
         const bitslice_value_t odd_feedback = odd_feedback_bit ? bs_ones.value : bs_zeroes.value;
 
         for(size_t block_idx = 0; block_idx < bitsliced_blocks; ++block_idx){
-            const bitslice_t const * restrict bitsliced_even_state = bitsliced_even_states[block_idx];
+            const bitslice_t * const restrict bitsliced_even_state = bitsliced_even_states[block_idx];
             size_t state_idx;
             // set even bits
             for(state_idx = 0; state_idx < STATE_SIZE-ROLLBACK_SIZE; state_idx+=2){
