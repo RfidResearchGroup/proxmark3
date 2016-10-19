@@ -126,7 +126,7 @@ void FpgaSetupSsc(void) {
 		GPIO_SSC_CLK;
 	AT91C_BASE_PIOA->PIO_PDR = GPIO_SSC_DOUT;
 
-	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SSC);
+	AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_SSC);
 
 	// Now set up the SSC proper, starting from a known state.
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
