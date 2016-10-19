@@ -14,6 +14,7 @@ void FpgaSendCommand(uint16_t cmd, uint16_t v);
 void FpgaWriteConfWord(uint8_t v);
 void FpgaDownloadAndGo(int bitstream_version);
 void FpgaGatherVersion(int bitstream_version, char *dst, int len);
+void FpgaSetupSscExt(uint8_t clearPCER);
 void FpgaSetupSsc(void);
 void SetupSpi(int mode);
 bool FpgaSetupSscDma(uint8_t *buf, int len);
@@ -27,7 +28,6 @@ void SetAdcMuxFor(uint32_t whichGpio);
 #define FPGA_BITSTREAM_ERR 0
 #define FPGA_BITSTREAM_LF 1
 #define FPGA_BITSTREAM_HF 2
-
 
 // Definitions for the FPGA commands.
 #define FPGA_CMD_SET_CONFREG						(1<<12)
