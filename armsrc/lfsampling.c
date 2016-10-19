@@ -87,11 +87,10 @@ void LFSetupFPGAForADC(int divisor, bool lf_field) {
 
 	// Connect the A/D to the peak-detected low-frequency path.
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-	// Give it a bit of time for the resonant antenna to settle.
+	// 50ms for the resonant antenna to settle.
 	SpinDelay(50);
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
 	FpgaSetupSsc();
-	
 	// start a 1.5ticks is 1us
 	StartTicks();
 }
@@ -285,7 +284,6 @@ void doT55x7Acquisition(size_t sample_size) {
 				skipCnt++;
 				continue;
 			}
-
 
 			// skip until first high samples begin to change
 			if (startFound || curSample > T55xx_READ_LOWER_THRESHOLD + T55xx_READ_TOL){
