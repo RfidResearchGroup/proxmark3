@@ -4,8 +4,6 @@ local cmds = require('commands')
 
 example = "script run mifare_autopwn"
 author = "Martin Holst Swende"
-
-
 desc =
 [[
 This is a which automates cracking and dumping mifare classic cards. It sets itself into 
