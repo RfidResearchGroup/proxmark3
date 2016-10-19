@@ -395,32 +395,31 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
 	int i = 0;
-	uint8_t *tab = BigBuf_get_addr();
+	uint8_t *buf = BigBuf_get_addr();
 
-	StartTicks();
-
+ 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
 
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 
+	StartTicks();
+
 	for(;;) {
 		WDT_HIT();
 
 		if (ledcontrol) LED_D_ON();
 				
-		//wait until SSC_CLK goes HIGH
+		// wait until SSC_CLK goes HIGH
+		// used as a simple detection of a reader field?
 		while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
 			WDT_HIT();
-			if ( usb_poll_validate_length() || BUTTON_PRESS() ) {
-				FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-				LED_D_OFF();
-				return;				
-			}
+			if ( usb_poll_validate_length() || BUTTON_PRESS() )
+				goto OUT;
 		}
 		
-		if(tab[i])
+		if(buf[i])
 			OPEN_COIL();
 		else
 			SHORT_COIL();
@@ -430,11 +429,8 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 		//wait until SSC_CLK goes LOW
 		while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
 			WDT_HIT();
-			if ( usb_poll_validate_length() || BUTTON_PRESS() ) {
-				FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-				LED_D_OFF();
-				return;				
-			}
+			if ( usb_poll_validate_length() || BUTTON_PRESS() )
+				goto OUT;
 		}
 
 		i++;
@@ -447,7 +443,11 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 			}
 		}
 	}
+OUT: 
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	StopTicks();
+	LED_D_OFF();
+	return;	
 }
 
 #define DEBUG_FRAME_CONTENTS 1
