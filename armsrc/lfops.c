@@ -397,7 +397,6 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	int i = 0;
 	uint8_t *buf = BigBuf_get_addr();
 
- 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
 
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
