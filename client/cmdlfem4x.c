@@ -13,7 +13,7 @@
 #include <inttypes.h>
 #include "cmdlfem4x.h"
 
-char *global_em410xId;
+uint64_t g_em410xid = 0;
 
 static int CmdHelp(const char *Cmd);
 
@@ -47,11 +47,7 @@ int CmdEM410xRead(const char *Cmd)
 		PrintAndLog ("EM410x XL pattern found");
 		return 0;
 	}
-	char id[12] = {0x00};
-	//sprintf(id, "%010llx",lo);
-	 sprintf(id, "%010"PRIu64, lo);	
-	
-	global_em410xId = id;
+	g_em410xid = lo;
 	return 1;
 }
 
@@ -150,11 +146,18 @@ int CmdEM410xWatch(const char *Cmd)
 }
 
 //currently only supports manchester modulations
+// todo: helptext
 int CmdEM410xWatchnSpoof(const char *Cmd)
 {
-	CmdEM410xWatch(Cmd);
-	PrintAndLog("# Replaying captured ID: %s",global_em410xId);
-	CmdLFaskSim("");
+	// loops if the captured ID was in XL-format.
+ 	uint8_t ans = 0;
+	do {
+		ans = CmdEM410xWatch(Cmd);
+		if ( ans ) {
+			PrintAndLog("# Replaying captured ID: %llu", g_em410xid);
+			CmdLFaskSim("");
+		} 
+	} while ( !ans );
 	return 0;
 }
 
