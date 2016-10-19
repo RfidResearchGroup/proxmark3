@@ -597,7 +597,7 @@ int CmdLFSim(const char *Cmd) {
 	ChkBitstream(Cmd);
 
 	if (g_debugMode) 
-		printf("Sending [%d bytes]", GraphTraceLen);
+		printf("DEBUG: Sending [%d bytes]\n", GraphTraceLen);
 	
 	//can send only 512 bits at a time (1 byte sent per bit...)
 	for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
@@ -612,7 +612,7 @@ int CmdLFSim(const char *Cmd) {
 		printf(".");
 	}
 
-	PrintAndLog("\nStarting to simulate");
+	PrintAndLog("Starting to simulate");
 
 	UsbCommand c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
 	clearCommandBuffer();
@@ -733,6 +733,7 @@ int CmdLFaskSim(const char *Cmd)
 	
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
+			case 'H':
 			case 'h': return usage_lf_simask();
 			case 'i':
 				invert = 1;
@@ -791,7 +792,7 @@ int CmdLFaskSim(const char *Cmd)
 		setDemodBuf(data, dataLen, 0);
 	}
 	if (clk == 0) clk = 64;
-	if (encoding == 0) clk = clk/2; //askraw needs to double the clock speed
+	if (encoding == 0) clk >>= 2; //askraw needs to double the clock speed
 	
 	size_t size = DemodBufferLen;
 
