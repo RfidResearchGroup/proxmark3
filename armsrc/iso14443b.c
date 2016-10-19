@@ -216,16 +216,19 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
 	*  -TO VERIFY THIS BELOW-
 	* The mode FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK which we use to simulate tag
 	* works like this:  
-	* - A 1-bit input to the FPGA becomes 8 pulses at 847.5kHz (9.44µS)
-	* - A 0-bit input to the FPGA becomes an unmodulated time of 9.44µS
+	* - A 1-bit input to the FPGA becomes 8 pulses at 847.5kHz (1.18µS / pulse) == 9.44us
+	* - A 0-bit input to the FPGA becomes an unmodulated time of 1.18µS  or does it become 8 nonpulses for 9.44us
 	*
-	*
+	* FPGA doesn't seem to work with ETU.  It seems to work with pulse / duration instead.
 	* 
 	* Card sends data ub 847.e kHz subcarrier
-	* 848k = 9.44µS  = 128 fc
-	* 424k = 18.88µS = 256 fc
-	* 212k = 37.76µS = 512 fc
-	* 106k = 75.52µS = 1024 fc
+	* subcar |duration| FC division
+	* -------+--------+------------
+	* 106kHz | 9.44µS | FC/128
+	* 212kHz | 4.72µS | FC/64
+	* 424kHz | 2.36µS | FC/32
+	* 848kHz | 1.18µS | FC/16
+	* -------+--------+------------
 	*
 	*  Reader data transmission:
 	*   - no modulation ONES
@@ -496,8 +499,7 @@ void ClearFpgaShiftingRegisters(void){
 	while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)) {};
 
 	b = AT91C_BASE_SSC->SSC_RHR; (void) b;
-	
-		
+			
 	// wait for the FPGA to signal fdt_indicator == 1 (the FPGA is ready to queue new data in its delay line)
 	for (uint8_t j = 0; j < 5; j++) {	// allow timeout - better late than never
 		while(!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
