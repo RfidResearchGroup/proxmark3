@@ -596,8 +596,10 @@ int CmdLFSim(const char *Cmd) {
 	// convert to bitstream if necessary 
 	ChkBitstream(Cmd);
 
+	if (g_debugMode) 
+		printf("Sending [%d bytes]", GraphTraceLen);
+	
 	//can send only 512 bits at a time (1 byte sent per bit...)
-	printf("Sending [%d bytes]", GraphTraceLen);
 	for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
 		UsbCommand c = {CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
 
@@ -611,6 +613,7 @@ int CmdLFSim(const char *Cmd) {
 	}
 
 	PrintAndLog("\nStarting to simulate");
+
 	UsbCommand c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
