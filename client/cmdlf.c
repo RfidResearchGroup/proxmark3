@@ -606,7 +606,7 @@ int CmdLFSim(const char *Cmd) {
 		}
 		clearCommandBuffer();
 		SendCommand(&c);
-		WaitForResponse(CMD_ACK,NULL);
+		WaitForResponse(CMD_ACK, NULL);
 		printf(".");
 	}
 
