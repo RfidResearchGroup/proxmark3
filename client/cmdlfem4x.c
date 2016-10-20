@@ -150,14 +150,9 @@ int CmdEM410xWatch(const char *Cmd)
 int CmdEM410xWatchnSpoof(const char *Cmd)
 {
 	// loops if the captured ID was in XL-format.
- 	uint8_t ans = 0;
-	do {
-		ans = CmdEM410xWatch(Cmd);
-		if ( ans ) {
-			PrintAndLog("# Replaying captured ID: %llu", g_em410xid);
-			CmdLFaskSim("");
-		} 
-	} while ( !ans );
+	CmdEM410xWatch(Cmd);
+	PrintAndLog("# Replaying captured ID: %llu", g_em410xid);
+	CmdLFaskSim("");
 	return 0;
 }
 
