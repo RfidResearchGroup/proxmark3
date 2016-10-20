@@ -9,7 +9,6 @@
 // Timers, Clocks functions used in LF or Legic where you would need detailed time.
 //-----------------------------------------------------------------------------
 #include "ticks.h"
-
 // attempt at high resolution microsecond timer
 // beware: timer counts in 21.3uS increments (1024/48Mhz)
 void SpinDelayUs(int us) {
@@ -67,7 +66,7 @@ uint32_t RAMFUNC GetTickCount(void){
 //  microseconds timer 
 //  -------------------------------------------------------------------------
 void StartCountUS(void) {
-	AT91C_BASE_PMC->PMC_PCER |= (1 << 12) | (1 << 13) | (1 << 14);
+	AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
 	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
 
 	// fast clock
@@ -95,12 +94,11 @@ uint32_t RAMFUNC GetCountUS(void){
 	return (AT91C_BASE_TC1->TC_CV * 0x8000) + ((AT91C_BASE_TC0->TC_CV * 2) / 3); 
 }
 
-
 //  -------------------------------------------------------------------------
 //  Timer for iso14443 commands. Uses ssp_clk from FPGA 
 //  -------------------------------------------------------------------------
 void StartCountSspClk(void) {
-	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);  // Enable Clock to all timers
+	AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);  // Enable Clock to all timers
 	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_TIOA1 		// XC0 Clock = TIOA1
 							| AT91C_TCB_TC1XC1S_NONE 		// XC1 Clock = none
 							| AT91C_TCB_TC2XC2S_TIOA0;		// XC2 Clock = TIOA0
@@ -163,14 +161,12 @@ void ResetSspClk(void) {
 	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	while (AT91C_BASE_TC2->TC_CV >= 1);	
 }
-
 uint32_t RAMFUNC GetCountSspClk(void) {
 	uint32_t tmp_count = (AT91C_BASE_TC2->TC_CV << 16) | AT91C_BASE_TC0->TC_CV;
 	if ((tmp_count & 0x0000ffff) == 0)  //small chance that we may have missed an increment in TC2
 		return (AT91C_BASE_TC2->TC_CV << 16);
 	return tmp_count;
 }
-
 
 //  -------------------------------------------------------------------------
 //  Timer for bitbanging,  or LF stuff when you need a very precis timer
@@ -180,7 +176,7 @@ void StartTicks(void){
 	//initialization of the timer
 	// tc1 is higher 0xFFFF0000
 	// tc0 is lower 0x0000FFFF
-	AT91C_BASE_PMC->PMC_PCER |= (1 << 12) | (1 << 13) | (1 << 14);
+	AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
 	AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 	AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK | // MCK(48MHz) / 32 

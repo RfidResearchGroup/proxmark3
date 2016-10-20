@@ -1284,6 +1284,12 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			break;
 		}
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
+			// iceman; since changing fpga_bitstreams clears bigbuff, Its better to call it before.
+			// to be able to use this one for uploading data to device not only for LF, I use c->arg[1] 
+			if ( c->arg[1] == 0 )
+				FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+			else 
+				FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 			uint8_t *b = BigBuf_get_addr();
 			memcpy( b + c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
 			cmd_send(CMD_ACK,0,0,0,0,0);

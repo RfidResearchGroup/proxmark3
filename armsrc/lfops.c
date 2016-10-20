@@ -91,6 +91,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t periods, uint3
 */
 void ReadTItag(void)
 {
+	StartTicks();
 	// some hardcoded initial params
 	// when we read a TI tag we sample the zerocross line at 2Mhz
 	// TI tags modulate a 1 as 16 cycles of 123.2Khz
@@ -216,6 +217,7 @@ void ReadTItag(void)
 			DbpString("Info: CRC is good");
 		}
 	}
+	StopTicks();
 }
 
 void WriteTIbyte(uint8_t b)
@@ -282,7 +284,7 @@ void AcquireTiType(void)
 	HIGH(GPIO_SSC_DOUT);
 
 	// Charge TI tag for 50ms.
-	SpinDelay(50);
+	WaitMS(50);
 
 	// stop modulating antenna and listen
 	LOW(GPIO_SSC_DOUT);
@@ -322,6 +324,7 @@ void AcquireTiType(void)
 // if not provided a valid crc will be computed from the data and written.
 void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 {
+	StartTicks();
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	if(crc == 0) {
 		crc = update_crc16(crc, (idlo)&0xff);
@@ -360,7 +363,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 
 	// modulate antenna
 	HIGH(GPIO_SSC_DOUT);
-	SpinDelay(50);	// charge time
+	WaitMS(50);	// charge time
 
 	WriteTIbyte(0xbb); // keyword
 	WriteTIbyte(0xeb); // password
@@ -377,7 +380,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 	WriteTIbyte(0x00); // write frame lo
 	WriteTIbyte(0x03); // write frame hi
 	HIGH(GPIO_SSC_DOUT);
-	SpinDelay(50);	// programming time
+	WaitMS(50);	// programming time
 
 	LED_A_OFF();
 
@@ -386,35 +389,38 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	DbpString("Now use `lf ti read` to check");
+	StopTicks();
 }
 
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
 	int i = 0;
-	uint8_t *tab = BigBuf_get_addr();
+	uint8_t *buf = BigBuf_get_addr();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
+	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
 
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
+	//AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
+
+	StartTicks();
 
 	for(;;) {
 		WDT_HIT();
 
 		if (ledcontrol) LED_D_ON();
 				
-		//wait until SSC_CLK goes HIGH
+		// wait until SSC_CLK goes HIGH
+		// used as a simple detection of a reader field?
 		while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
 			WDT_HIT();
-			if ( usb_poll_validate_length() || BUTTON_PRESS() ) {
-				FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-				LED_D_OFF();
-				return;				
-			}
+			if ( usb_poll_validate_length() || BUTTON_PRESS() )
+				goto OUT;
 		}
 		
-		if(tab[i])
+		if(buf[i])
 			OPEN_COIL();
 		else
 			SHORT_COIL();
@@ -424,11 +430,8 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 		//wait until SSC_CLK goes LOW
 		while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
 			WDT_HIT();
-			if ( usb_poll_validate_length() || BUTTON_PRESS() ) {
-				FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-				LED_D_OFF();
-				return;				
-			}
+			if ( usb_poll_validate_length() || BUTTON_PRESS() )
+				goto OUT;
 		}
 
 		i++;
@@ -441,6 +444,12 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 			}
 		}
 	}
+OUT: 
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	StopTicks();
+	LED_D_OFF();
+	DbpString("Simulation stopped");
+	return;	
 }
 
 #define DEBUG_FRAME_CONTENTS 1

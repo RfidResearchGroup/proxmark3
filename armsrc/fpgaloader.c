@@ -117,7 +117,7 @@ void SetupSpi(int mode)
 // Set up the synchronous serial port, with the one set of options that we
 // always use when we are talking to the FPGA. Both RX and TX are enabled.
 //-----------------------------------------------------------------------------
-void FpgaSetupSsc(void) {
+void FpgaSetupSscExt(uint8_t clearPCER) {
 	// First configure the GPIOs, and get ourselves a clock.
 	AT91C_BASE_PIOA->PIO_ASR =
 		GPIO_SSC_FRAME	|
@@ -126,7 +126,10 @@ void FpgaSetupSsc(void) {
 		GPIO_SSC_CLK;
 	AT91C_BASE_PIOA->PIO_PDR = GPIO_SSC_DOUT;
 
-	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SSC);
+	if ( clearPCER )
+		AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SSC);
+	else
+		AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_SSC);
 
 	// Now set up the SSC proper, starting from a known state.
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
@@ -148,7 +151,9 @@ void FpgaSetupSsc(void) {
 
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_RXEN | AT91C_SSC_TXEN;
 }
-
+void FpgaSetupSsc(void) {
+	FpgaSetupSscExt(TRUE);
+}
 //-----------------------------------------------------------------------------
 // Set up DMA to receive samples from the FPGA. We will use the PDC, with
 // a single buffer as a circular buffer (so that we just chain back to

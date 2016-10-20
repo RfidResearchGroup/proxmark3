@@ -13,7 +13,7 @@
 #include <inttypes.h>
 #include "cmdlfem4x.h"
 
-char *global_em410xId;
+uint64_t g_em410xid = 0;
 
 static int CmdHelp(const char *Cmd);
 
@@ -47,11 +47,7 @@ int CmdEM410xRead(const char *Cmd)
 		PrintAndLog ("EM410x XL pattern found");
 		return 0;
 	}
-	char id[12] = {0x00};
-	//sprintf(id, "%010llx",lo);
-	 sprintf(id, "%010"PRIu64, lo);	
-	
-	global_em410xId = id;
+	g_em410xid = lo;
 	return 1;
 }
 
@@ -59,10 +55,9 @@ int CmdEM410xRead(const char *Cmd)
 int CmdEM410xSim(const char *Cmd)
 {
 	int i, n, j, binary[4], parity[4];
-
-	char cmdp = param_getchar(Cmd, 0);
 	uint8_t uid[5] = {0x00};
 
+	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') {
 		PrintAndLog("Usage:  lf em4x em410xsim <UID> <clock>");
 		PrintAndLog("");
@@ -81,46 +76,45 @@ int CmdEM410xSim(const char *Cmd)
 	PrintAndLog("Starting simulating UID %02X%02X%02X%02X%02X  clock: %d", uid[0],uid[1],uid[2],uid[3],uid[4],clock);
 	PrintAndLog("Press pm3-button to about simulation");
 
-
 	/* clear our graph */
 	ClearGraph(0);
 
-		/* write 9 start bits */
-		for (i = 0; i < 9; i++)
-			AppendGraph(0, clock, 1);
+	/* write 9 start bits */
+	for (i = 0; i < 9; i++)
+		AppendGraph(0, clock, 1);
 
-		/* for each hex char */
-		parity[0] = parity[1] = parity[2] = parity[3] = 0;
-		for (i = 0; i < 10; i++)
-		{
-			/* read each hex char */
-			sscanf(&Cmd[i], "%1x", &n);
-			for (j = 3; j >= 0; j--, n/= 2)
-				binary[j] = n % 2;
+	/* for each hex char */
+	parity[0] = parity[1] = parity[2] = parity[3] = 0;
+	for (i = 0; i < 10; i++)
+	{
+		/* read each hex char */
+		sscanf(&Cmd[i], "%1x", &n);
+		for (j = 3; j >= 0; j--, n/= 2)
+			binary[j] = n % 2;
 
-			/* append each bit */
-			AppendGraph(0, clock, binary[0]);
-			AppendGraph(0, clock, binary[1]);
-			AppendGraph(0, clock, binary[2]);
-			AppendGraph(0, clock, binary[3]);
+		/* append each bit */
+		AppendGraph(0, clock, binary[0]);
+		AppendGraph(0, clock, binary[1]);
+		AppendGraph(0, clock, binary[2]);
+		AppendGraph(0, clock, binary[3]);
 
-			/* append parity bit */
-			AppendGraph(0, clock, binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
+		/* append parity bit */
+		AppendGraph(0, clock, binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
 
-			/* keep track of column parity */
-			parity[0] ^= binary[0];
-			parity[1] ^= binary[1];
-			parity[2] ^= binary[2];
-			parity[3] ^= binary[3];
-		}
+		/* keep track of column parity */
+		parity[0] ^= binary[0];
+		parity[1] ^= binary[1];
+		parity[2] ^= binary[2];
+		parity[3] ^= binary[3];
+	}
 
-		/* parity columns */
-		AppendGraph(0, clock, parity[0]);
-		AppendGraph(0, clock, parity[1]);
-		AppendGraph(0, clock, parity[2]);
-		AppendGraph(0, clock, parity[3]);
+	/* parity columns */
+	AppendGraph(0, clock, parity[0]);
+	AppendGraph(0, clock, parity[1]);
+	AppendGraph(0, clock, parity[2]);
+	AppendGraph(0, clock, parity[3]);
 
-		/* stop bit */
+	/* stop bit */
 	AppendGraph(1, clock, 0);
  
 	CmdLFSim("0"); //240 start_gap.
@@ -152,10 +146,12 @@ int CmdEM410xWatch(const char *Cmd)
 }
 
 //currently only supports manchester modulations
+// todo: helptext
 int CmdEM410xWatchnSpoof(const char *Cmd)
 {
+	// loops if the captured ID was in XL-format.
 	CmdEM410xWatch(Cmd);
-	PrintAndLog("# Replaying captured ID: %s",global_em410xId);
+	PrintAndLog("# Replaying captured ID: %llu", g_em410xid);
 	CmdLFaskSim("");
 	return 0;
 }
