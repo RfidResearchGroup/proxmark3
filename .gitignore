@@ -15,6 +15,7 @@
 *.moc.cpp
 *.z
 *.exe
+*.dsym
 hardnested_stats.txt
 proxmark
 proxmark3

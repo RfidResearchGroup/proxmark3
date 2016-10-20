@@ -167,9 +167,10 @@ static void *main_loop(void *targ) {
 		// this one should pick up all non-null cmd...
 		// why is there a 
 		if (cmd) {
-
-			while(cmd[strlen(cmd) - 1] == ' ')
-				cmd[strlen(cmd) - 1] = 0x00;
+			if (strlen(cmd) > 0) {
+				while(cmd[strlen(cmd) - 1] == ' ')
+					cmd[strlen(cmd) - 1] = 0x00;
+			}
 
 			if (cmd[0] != 0x00) {
 				int ret = CommandReceived(cmd);
