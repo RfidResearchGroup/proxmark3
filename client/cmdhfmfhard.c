@@ -95,13 +95,6 @@ typedef struct noncelist {
 	float score1, score2;
 } noncelist_t;
 
-typedef struct check_args {
-	uint32_t next_fivehundred;
-	uint32_t total_num_nonces;
-	uint32_t total_added_nonces;
-	uint32_t idx;
-} check_args_t;
-
 static size_t nonces_to_bruteforce = 0;
 static noncelistentry_t *brute_force_nonces[256];
 static uint32_t cuid = 0;
@@ -147,9 +140,8 @@ bool cracking = false;
 bool field_off = false;
 
 pthread_t thread_check;
-check_args_t cargs;
 
-static void* check_thread(void*);
+static void* check_thread();
 static bool generate_candidates(uint16_t, uint16_t);
 static bool brute_force(void);
 
@@ -877,23 +869,19 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 
 			if (thread_check_started) {
 				if (thread_check_done) {
-					//printf ("Detect check thread end ..\n");
 					pthread_join (thread_check, 0);
-					idx = cargs.idx;
 					thread_check_started = thread_check_done = false;
 				}
 			} else {
-				//printf ("Starting check thread ...\n");
-				memset (&cargs, 0, sizeof (cargs));
-
-				// set arguments
-				cargs.next_fivehundred = next_fivehundred;
-				cargs.total_num_nonces = total_num_nonces;
-				cargs.total_added_nonces = total_added_nonces;
-				cargs.idx = idx;
-
-				pthread_create (&thread_check, NULL, check_thread, (void *)&cargs);
-				thread_check_started = true;
+				if (total_added_nonces >= MIN_NONCES_REQUIRED)
+				{
+					num_good_first_bytes = estimate_second_byte_sum();
+					if (total_added_nonces > (NONCES_TRIGGER*idx) || num_good_first_bytes >= GOOD_BYTES_REQUIRED) {
+						pthread_create (&thread_check, NULL, check_thread, NULL);
+						thread_check_started = true;
+						idx++;
+					}
+				}
 			}
 		}
 
@@ -1676,28 +1664,19 @@ out:
     return key;
 }
 
-static void* check_thread(void* x)
+static void* check_thread()
 {
-	check_args_t *cargs = (check_args_t *)x;
-
-	// printf("first_byte_num = %d, first_byte_Sum = %d\n", first_byte_num, first_byte_Sum);
 	num_good_first_bytes = estimate_second_byte_sum();
 
-	if (cargs->total_added_nonces > MIN_NONCES_REQUIRED)
-	{
-		if (cargs->total_added_nonces > (NONCES_TRIGGER*cargs->idx) || num_good_first_bytes >= GOOD_BYTES_REQUIRED) {
-			clock_t time1 = clock();
-			cracking = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
-			time1 = clock() - time1;
-			if ( time1 > 0 ) PrintAndLog("Time for generating key candidates list: %1.0f seconds", ((float)time1)/CLOCKS_PER_SEC);
-			if (known_target_key != -1) brute_force();
-			cargs->idx++;
-		}
+	clock_t time1 = clock();
+	cracking = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
+	time1 = clock() - time1;
+	if ( time1 > 0 ) PrintAndLog("Time for generating key candidates list: %1.0f seconds", ((float)time1)/CLOCKS_PER_SEC);
+	if (known_target_key != -1) brute_force();
 
-		if (cracking) {
-			field_off = brute_force(); // switch off field with next SendCommand and then finish
-			cracking = false;
-		}
+	if (cracking) {
+		field_off = brute_force(); // switch off field with next SendCommand and then finish
+		cracking = false;
 	}
 
 	thread_check_done = true;
