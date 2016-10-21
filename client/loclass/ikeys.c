@@ -748,7 +748,10 @@ int readKeyFile(uint8_t key[8])
 	if ( bytes_read == 1) {
 		retval = 0;	
 	}
-	fclose(f);
+	if (f) {
+		fclose(f);
+		f = NULL;
+	}
 	return retval;
 }
 

@@ -13,28 +13,7 @@
 //   Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on 
 //   Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
-
-#include <stdlib.h> 
-#include <stdio.h>
-#include <string.h>
-#include <pthread.h>
-#include <locale.h>
-#include <math.h>
-#include "proxmark3.h"
-#include "cmdmain.h"
-#include "ui.h"
-#include "util.h"
-#include "nonce2key/crapto1.h"
-#include "nonce2key/crypto1_bs.h"
-#include "parity.h"
-#ifdef __WIN32
-	#include <windows.h>
-#endif
-// don't include for APPLE/mac which has malloc stuff elsewhere.
-#ifndef __APPLE__
-	#include <malloc.h>
-#endif
-#include <assert.h>
+#include "cmdhfmfhard.h"
 
 #define CONFIDENCE_THRESHOLD	0.95		// Collect nonces until we are certain enough that the following brute force is successfull
 #define GOOD_BYTES_REQUIRED	13		// default 28, could be smaller == faster
@@ -639,6 +618,7 @@ static int read_nonce_file(void)
 	if ( bytes_read == 0) {
 		PrintAndLog("File reading error.");
 		fclose(fnonces);
+		fnonces = NULL;
 		return 1;
 	}
 	cuid = bytes_to_num(read_buf, 4);
@@ -656,6 +636,7 @@ static int read_nonce_file(void)
 		total_num_nonces += 2;
 	}
 	fclose(fnonces);
+	fnonces = NULL;
 	PrintAndLog("Read %d nonces from file. cuid=%08x, Block=%d, Keytype=%c", total_num_nonces, cuid, trgBlockNo, trgKeyType==0?'A':'B');
 	return 0;
 }
@@ -1339,8 +1320,8 @@ static bool generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 	for (uint16_t p = 0; p <= 16; p += 2) {
 		for (uint16_t q = 0; q <= 16; q += 2) {
 			if (p*(16-q) + (16-p)*q == sum_a0) {
-				printf("Reducing Partial Statelists (p,q) = (%d,%d) with lengths %d, %d\n", 
-						p, q, partial_statelist[p].len[ODD_STATE], partial_statelist[q].len[EVEN_STATE]);
+				// printf("Reducing Partial Statelists (p,q) = (%d,%d) with lengths %d, %d\n", 
+						// p, q, partial_statelist[p].len[ODD_STATE], partial_statelist[q].len[EVEN_STATE]);
 				for (uint16_t r = 0; r <= 16; r += 2) {
 					for (uint16_t s = 0; s <= 16; s += 2) {
 						if (r*(16-s) + (16-r)*s == sum_a8) {

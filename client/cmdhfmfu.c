@@ -1679,8 +1679,10 @@ int CmdHF14AMfUDump(const char *Cmd){
 		return 1;
 	}
 	fwrite( dump_file_data, 1, Pages*4 + DUMP_PREFIX_LENGTH, fout );
-	fclose(fout);
-	
+	if (fout) {
+		fclose(fout);
+		fout = NULL;
+	}
 	PrintAndLog("Dumped %d pages, wrote %d bytes to %s", Pages+(DUMP_PREFIX_LENGTH/4), Pages*4 + DUMP_PREFIX_LENGTH, filename);
 	return 0;
 }

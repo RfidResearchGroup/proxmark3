@@ -77,17 +77,19 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
 	/* We should have a valid filename now, e.g. dumpdata-3.bin */
 
 	/*Opening file for writing in binary mode*/
-	FILE *fileHandle=fopen(fileName,"wb");
-	if(!fileHandle) {
+	FILE *f = fopen(fileName,"wb");
+	if (!f) {
 		prnlog("Failed to write to file '%s'", fileName);
 		free(fileName);
 		return 1;
 	}
-	fwrite(data, 1,	datalen, fileHandle);
-	fclose(fileHandle);
+	fwrite(data, 1,	datalen, f);
+	if (f) {
+		fclose(f);
+		f = NULL;
+	}
 	prnlog("Saved data to '%s'", fileName);
 	free(fileName);
-
 	return 0;
 }
 

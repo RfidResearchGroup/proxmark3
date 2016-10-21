@@ -475,6 +475,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 		if ( bytes_read == 0) {
 			PrintAndLog("File reading error.");
 			fclose(fin);
+			fin = NULL;
 			return 2;
 		}
 	}
@@ -485,12 +486,14 @@ int CmdHF14AMfDump(const char *Cmd) {
 		if ( bytes_read == 0) {
 			PrintAndLog("File reading error.");
 			fclose(fin);
+			fin = NULL;
 			return 2;
 		}
 	}
 	
 	fclose(fin);
-
+	fin = NULL;
+			
 	PrintAndLog("|-----------------------------------------|");
 	PrintAndLog("|------ Reading sector access bits...-----|");
 	PrintAndLog("|-----------------------------------------|");
@@ -596,6 +599,7 @@ int CmdHF14AMfDump(const char *Cmd) {
 		uint16_t numblocks = FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1);
 		fwrite(carddata, 1, 16*numblocks, fout);
 		fclose(fout);
+		fout = NULL;		
 		PrintAndLog("Dumped %d blocks (%d bytes) to file dumpdata.bin", numblocks, 16*numblocks);
 	}
 		
@@ -644,6 +648,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 		if ( bytes_read == 0) {
 			PrintAndLog("File reading error (dumpkeys.bin).");
 			fclose(fkeys);
+			fkeys = NULL;
 			return 2;
 		}
 	}
@@ -653,6 +658,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 		if ( bytes_read == 0) {
 			PrintAndLog("File reading error (dumpkeys.bin).");
 			fclose(fkeys);
+			fkeys = NULL;
 			return 2;
 		}
 	}
@@ -673,6 +679,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 			if ( bytes_read == 0) {
 				PrintAndLog("File reading error (dumpdata.bin).");
 				fclose(fdump);
+				fdump = NULL;				
 				return 2;
 			}
 					
@@ -708,6 +715,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	}
 	
 	fclose(fdump);
+	fdump = NULL;	
 	return 0;
 }
 

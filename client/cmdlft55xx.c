@@ -1491,7 +1491,10 @@ int CmdT55xxBruteForce(const char *Cmd) {
 				if (!p) {
 					PrintAndLog("Cannot allocate memory for defaultKeys");
 					free(keyBlock);
-					fclose(f);
+					if (f) {
+						fclose(f);
+						f = NULL;
+					}
 					return 2;
 				}
 				keyBlock = p;
@@ -1502,8 +1505,10 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			keycnt++;
 			memset(buf, 0, sizeof(buf));
 		}		
-		fclose(f);
-		
+		if (f) {
+			fclose(f);
+			f = NULL;
+		}
 		if (keycnt == 0) {
 			PrintAndLog("No keys found in file");
 			free(keyBlock);

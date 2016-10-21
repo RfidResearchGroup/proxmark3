@@ -2216,7 +2216,10 @@ int CmdLoad(const char *Cmd)
 		GraphBuffer[GraphTraceLen] = atoi(line);
 		GraphTraceLen++;
 	}
-	fclose(f);
+	if (f) {
+		fclose(f);
+		f = NULL;
+	}
 	PrintAndLog("loaded %d samples", GraphTraceLen);
 	RepaintGraphWindow();
 	return 0;
@@ -2290,7 +2293,10 @@ int CmdSave(const char *Cmd)
 	for (i = 0; i < GraphTraceLen; i++) {
 		fprintf(f, "%d\n", GraphBuffer[i]);
 	}
-	fclose(f);
+	if (f) {
+		fclose(f);
+		f = NULL;
+	}
 	PrintAndLog("saved to '%s'", Cmd);
 	return 0;
 }

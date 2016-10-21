@@ -552,7 +552,6 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[])
  */
 int bruteforceFile(const char *filename, uint16_t keytable[])
 {
-
 	FILE *f = fopen(filename, "rb");
 	if(!f) {
 		prnlog("Failed to read from file '%s'", filename);
@@ -565,19 +564,23 @@ int bruteforceFile(const char *filename, uint16_t keytable[])
 
 	if (fsize < 0) {
 		prnlog("Error, when getting filesize");
-		fclose(f);
+		if (f) {
+			fclose(f);
+			f = NULL;
+		}
 		return 1;
 	}
 
 	uint8_t *dump = malloc(fsize);
 	size_t bytes_read = fread(dump, 1, fsize, f);
 
-	fclose(f);
-    if (bytes_read < fsize)
-    {
+	if (f) {
+		fclose(f);
+		f = NULL;
+	}
+    if (bytes_read < fsize) {
         prnlog("Error, could only read %d bytes (should be %d)",bytes_read, fsize );
     }
-
 	uint8_t res = bruteforceDump(dump,fsize,keytable);
 	free(dump);
 	return res;

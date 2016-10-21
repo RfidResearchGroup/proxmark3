@@ -25,15 +25,13 @@ void dummy(char *fmt, ...){}
 #define prnt dummy
 #endif
 
-uint8_t justNoise(uint8_t *BitStream, size_t size)
-{
-	static const uint8_t THRESHOLD = 123;
-	//test samples are not just noise
-	uint8_t justNoise1 = 1;
-	for(size_t idx=0; idx < size && justNoise1 ;idx++){
-		justNoise1 = BitStream[idx] < THRESHOLD;
-	}
-	return justNoise1;
+//test samples are not just noise
+uint8_t justNoise(uint8_t *bits, size_t size) {
+	#define THRESHOLD 123
+	uint8_t val = 1;
+	for(size_t idx=0; idx < size && val ;idx++)
+		val = bits[idx] < THRESHOLD;
+	return val;
 }
 
 //by marshmellow

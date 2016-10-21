@@ -77,7 +77,7 @@ void PrintAndLog(char *fmt, ...)
 }
 
 void SetLogFilename(char *fn) {
-  logfilename = fn;
+	logfilename = fn;
 }
  
 void iceIIR_Butterworth(int *data, const size_t len){

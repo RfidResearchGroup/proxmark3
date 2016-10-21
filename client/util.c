@@ -63,7 +63,10 @@ void AddLogLine(char *file, char *extData, char *c) {
 	fprintf(f, "%s", extData);
 	fprintf(f, "%s\n", c);
 	fflush(f);
-	fclose(f);
+	if (f) {
+		fclose(f);
+		f = NULL;
+	}
 }
 
 void AddLogHex(char *fileName, char *extData, const uint8_t * data, const size_t len){
