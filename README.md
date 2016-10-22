@@ -222,7 +222,7 @@ You only need devkitARM, nothing more (no extra lib or anything else) to compile
 `export DEVKITARM=/c/devkitPro/devkitARM`		
 `export PATH=$PATH:$DEVKITARM/bin`
 
-### 6 - Install Strawberry Perl
+### 6. Install Strawberry Perl
 Download and install: http://strawberry-perl.googlecode.com/files/strawberry-perl-5.10.1.1.msi
 
 ### 7. Build and run
