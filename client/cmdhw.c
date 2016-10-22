@@ -137,12 +137,17 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
 			mem_avail = 2048;
 			break;
 	}
-	PrintAndLog("Nonvolatile Program Memory Size: %dK bytes. Used: %d bytes (%2.0f\%). Free: %d bytes (%2.0f\%).", 
+	
+	uint32_t mem_left = 0;
+	if ( mem_avail > 0 ) 
+		mem_left = mem_avail * 1024 - mem_used;
+	
+	PrintAndLog("Nonvolatile Program Memory Size: %uK bytes. Used: %u bytes (%2.0f\%). Free: %u bytes (%2.0f\%).", 
 				mem_avail, 
 				mem_used, 
-				mem_avail == 0 ? 0 : (float)mem_used/(mem_avail*1024)*100,
-				mem_avail*1024 - mem_used,
-				mem_avail == 0 ? 0 : (float)(mem_avail*1024-mem_used)/(mem_avail*1024)*100
+				mem_avail == 0 ? 0.0f : (float)(mem_used/(mem_avail*1024))*100,
+				mem_left,
+				mem_avail == 0 ? 0.0f : (float)(mem_left/(mem_avail*1024))*100
 				);
 	switch((iChipID&0xF000)>>12)
 	{
