@@ -27,6 +27,7 @@ static int CmdHelp(const char *Cmd);
 static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
 {
 	char asBuff[100];
+	memset(asBuff, 0, sizeof(asBuff));
 	uint32_t mem_avail = 0;
 	
 	switch(iChipID)
