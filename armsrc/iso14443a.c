@@ -2484,12 +2484,20 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		
 	// Here, we collect CUID, NT, NR, AR, CUID2, NT2, NR2, AR2
 	// This can be used in a reader-only attack.
-	uint32_t ar_nr_responses[] = {0,0,0,0,0,0,0,0,0};
-	uint8_t ar_nr_collected = 0;
+	nonces_t ar_nr_resp[ATTACK_KEY_COUNT*2]; // for 2 separate attack types (nml, moebius)
+	memset(ar_nr_resp, 0x00, sizeof(ar_nr_resp));
+
+	uint8_t ar_nr_collected[ATTACK_KEY_COUNT*2]; // for 2nd attack type (moebius)
+	memset(ar_nr_collected, 0x00, sizeof(ar_nr_collected));
+	uint8_t	nonce1_count = 0;
+	uint8_t	nonce2_count = 0;
+	uint8_t	moebius_n_count = 0;
+	bool gettingMoebius = false;
+	uint8_t	mM = 0; // moebius_modifier for collection storage
+	bool doBufResetNext = false;
 
 	// Authenticate response - nonce
 	uint32_t nonce = bytes_to_num(rAUTH_NT, 4);
-	ar_nr_responses[1] = nonce;
 	
 	// -- Determine the UID
 	// Can be set from emulator memory or incoming data
@@ -2515,7 +2523,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		case 4:
 			sak_4[0] &= 0xFB;		
 			// save CUID
-			ar_nr_responses[0] = cuid = bytes_to_num(rUIDBCC1, 4);
+			cuid = bytes_to_num(rUIDBCC1, 4);
 			// BCC
 			rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
 			if (MF_DBGLEVEL >= 2)	{
@@ -2531,7 +2539,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 			atqa[0] |= 0x40;
 			sak_7[0] &= 0xFB;						
 			// save CUID
-			ar_nr_responses[0] = cuid = bytes_to_num(rUIDBCC2, 4);			
+			cuid = bytes_to_num(rUIDBCC2, 4);			
 			 // CascadeTag, CT
 			rUIDBCC1[0] = 0x88;
 			// BCC
@@ -2553,7 +2561,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 			atqa[0] |= 0x80;
 			sak_10[0] &= 0xFB;					
 			// save CUID
-			ar_nr_responses[0] = cuid = bytes_to_num(rUIDBCC3, 4);
+			cuid = bytes_to_num(rUIDBCC3, 4);
 			 // CascadeTag, CT
 			rUIDBCC1[0] = 0x88;
 			rUIDBCC2[0] = 0x88;
@@ -2731,6 +2739,81 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				uint32_t nr = bytes_to_num(receivedCmd, 4);
 				uint32_t ar = bytes_to_num(&receivedCmd[4], 4);
 
+				if (doBufResetNext) {
+					// Reset, lets try again!
+					Dbprintf("Re-read after previous NR_AR_ATTACK, resetting buffer");
+					memset(ar_nr_resp, 0x00, sizeof(ar_nr_resp));
+					memset(ar_nr_collected, 0x00, sizeof(ar_nr_collected));
+					mM = 0;
+					doBufResetNext = false;
+				}
+
+				for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
+					if ( ar_nr_collected[i+mM]==0 || ((cardAUTHSC == ar_nr_resp[i+mM].sector) && (cardAUTHKEY == ar_nr_resp[i+mM].keytype) && (ar_nr_collected[i+mM] > 0)) ) {
+
+						// if first auth for sector, or matches sector and keytype of previous auth
+						if (ar_nr_collected[i+mM] < 2) {
+							// if we haven't already collected 2 nonces for this sector
+							if (ar_nr_resp[ar_nr_collected[i+mM]].ar != ar) {
+								// Avoid duplicates... probably not necessary, ar should vary.
+								if (ar_nr_collected[i+mM]==0) {
+									// first nonce collect
+									ar_nr_resp[i+mM].cuid = cuid;
+									ar_nr_resp[i+mM].sector = cardAUTHSC;
+									ar_nr_resp[i+mM].keytype = cardAUTHKEY;
+									ar_nr_resp[i+mM].nonce = nonce;
+									ar_nr_resp[i+mM].nr = nr;
+									ar_nr_resp[i+mM].ar = ar;
+									nonce1_count++;
+									// add this nonce to first moebius nonce
+									ar_nr_resp[i+ATTACK_KEY_COUNT].cuid = cuid;
+									ar_nr_resp[i+ATTACK_KEY_COUNT].sector = cardAUTHSC;
+									ar_nr_resp[i+ATTACK_KEY_COUNT].keytype = cardAUTHKEY;
+									ar_nr_resp[i+ATTACK_KEY_COUNT].nonce = nonce;
+									ar_nr_resp[i+ATTACK_KEY_COUNT].nr = nr;
+									ar_nr_resp[i+ATTACK_KEY_COUNT].ar = ar;
+									ar_nr_collected[i+ATTACK_KEY_COUNT]++;
+								} else { // second nonce collect (std and moebius)
+									ar_nr_resp[i+mM].nonce2 = nonce;
+									ar_nr_resp[i+mM].nr2 = nr;
+									ar_nr_resp[i+mM].ar2 = ar;
+									if (!gettingMoebius) {
+										nonce2_count++;
+										// check if this was the last second nonce we need for std attack
+										if ( nonce2_count == nonce1_count ) {
+											// done collecting std test switch to moebius
+											// first finish incrementing last sample
+											ar_nr_collected[i+mM]++; 
+											// switch to moebius collection
+											gettingMoebius = true;
+											mM = ATTACK_KEY_COUNT;
+											break;
+										}
+									} else {
+										moebius_n_count++;
+										// if we've collected all the nonces we need - finish.
+
+										if (nonce1_count == moebius_n_count) {
+											cmd_send(CMD_ACK,CMD_SIMULATE_MIFARE_CARD,0,0,&ar_nr_resp,sizeof(ar_nr_resp));
+											nonce1_count = 0;
+											nonce2_count = 0;
+											moebius_n_count = 0;
+											gettingMoebius = false;
+											doBufResetNext = true;
+											finished = ( ((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE));
+										}
+									}
+								}
+								ar_nr_collected[i+mM]++;
+							}
+						}
+						// we found right spot for this nonce stop looking
+						break;
+					}
+				}
+
+
+				/*
 				// Collect AR/NR
 				// if(ar_nr_collected < 2 && cardAUTHSC == 2){
 				if(ar_nr_collected < 2) {					
@@ -2745,7 +2828,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 					// Interactive mode flag, means we need to send ACK
 					finished = ( ((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE)&& ar_nr_collected == 2);
 				}
-				/*
+				
 				crypto1_word(pcs, ar , 1);
 				cardRr = nr ^ crypto1_word(pcs, 0, 0);
 				
@@ -2980,37 +3063,45 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	}
 
 	// Interactive mode flag, means we need to send ACK
+	/*
 	if((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE) {
 		// May just aswell send the collected ar_nr in the response aswell
 		uint8_t len = ar_nr_collected * 4 * 4;
 		cmd_send(CMD_ACK, CMD_SIMULATE_MIFARE_CARD, len, 0, &ar_nr_responses, len);
 	}
-
+	
+   */
 	if( ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK ) && MF_DBGLEVEL >= 1 ) {
-		if(ar_nr_collected > 1 ) {
-			Dbprintf("Collected two pairs of AR/NR which can be used to extract keys from reader:");
-			Dbprintf("../tools/mfkey/mfkey32v2.exe %08x %08x %08x %08x %08x %08x %08x",
-					ar_nr_responses[0], // CUID
-					ar_nr_responses[1], // NT1
-					ar_nr_responses[2], // NR1
-					ar_nr_responses[3], // AR1
-					// ar_nr_responses[4], // CUID2
-					ar_nr_responses[5],  // NT2
-					ar_nr_responses[6], // NR2
-					ar_nr_responses[7]  // AR2
-				);
-		} else {
-			Dbprintf("Failed to obtain two AR/NR pairs!");
-			if(ar_nr_collected == 1 ) {
-				Dbprintf("Only got these: UID=%08x, nonce=%08x, NR1=%08x, AR1=%08x",
-						ar_nr_responses[0], // CUID
-						ar_nr_responses[1], // NT
-						ar_nr_responses[2], // NR1
-						ar_nr_responses[3]  // AR1
-					);
+		for ( uint8_t	i = 0; i < ATTACK_KEY_COUNT; i++) {
+			if (ar_nr_collected[i] == 2) {
+				Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i<ATTACK_KEY_COUNT/2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
+				Dbprintf("../tools/mfkey/mfkey32 %08x %08x %08x %08x %08x %08x",
+						ar_nr_resp[i].cuid,  //UID
+						ar_nr_resp[i].nonce, //NT
+						ar_nr_resp[i].nr,    //NR1
+						ar_nr_resp[i].ar,    //AR1
+						ar_nr_resp[i].nr2,   //NR2
+						ar_nr_resp[i].ar2    //AR2
+						);
+			}
+		}	
+		for ( uint8_t i = ATTACK_KEY_COUNT; i < ATTACK_KEY_COUNT*2; i++) {
+			if (ar_nr_collected[i] == 2) {
+				Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i<ATTACK_KEY_COUNT/2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
+				Dbprintf("../tools/mfkey/mfkey32v2 %08x %08x %08x %08x %08x %08x %08x",
+						ar_nr_resp[i].cuid,  //UID
+						ar_nr_resp[i].nonce, //NT
+						ar_nr_resp[i].nr,    //NR1
+						ar_nr_resp[i].ar,    //AR1
+						ar_nr_resp[i].nonce2,//NT2
+						ar_nr_resp[i].nr2,   //NR2
+						ar_nr_resp[i].ar2    //AR2
+						);
 			}
 		}
 	}
+	
+	
 	if (MF_DBGLEVEL >= 1) Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
 	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
