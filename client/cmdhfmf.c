@@ -31,6 +31,7 @@ int usage_hf14_mf1ksim(void){
 	PrintAndLog("      n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
 	PrintAndLog("      i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
 	PrintAndLog("      x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a legitimate reader, fishes out the key(s)");
+	PrintAndLog("      e    (Optional) Fill simulator keys from what we crack");
 	PrintAndLog("samples:");
 	PrintAndLog("           hf mf sim u 0a0a0a0a");
 	PrintAndLog("           hf mf sim u 11223344556677");
@@ -1384,7 +1385,9 @@ void readerAttack(nonces_t data[], bool setEmulatorMem) {
 	printf("enter reader attack\n");
 	for (uint8_t i = 0; i < ATTACK_KEY_COUNT; ++i) {
 		if (data[i].ar2 > 0) {
-			
+
+			// We can probably skip this, mfkey32v2 is more reliable.
+#ifdef HFMF_TRYMFK32
 			if (tryMfk32(data[i], &key)) {
 				PrintAndLog("Found Key%s for sector %02d: [%012"llx"]"
 					, (data[i].keytype) ? "B" : "A"
@@ -1400,22 +1403,43 @@ void readerAttack(nonces_t data[], bool setEmulatorMem) {
 					uint8_t	memBlock[16] = {0,0,0,0,0,0, 0xff, 0x0F, 0x80, 0x69, 0,0,0,0,0,0};
 					num_to_bytes( k_sector[i].Key[0], 6, memBlock);
 					num_to_bytes( k_sector[i].Key[1], 6, memBlock+10);
-					mfEmlSetMem( memBlock, i*4 + 3, 1);
 					PrintAndLog("Setting Emulator Memory Block %02d: [%s]"
-						, i*4 + 3
+						, ((data[i].sector)*4) + 3
 						, sprint_hex( memBlock, sizeof(memBlock))
 						);
+					mfEmlSetMem( memBlock, ((data[i].sector)*4) + 3, 1);
 				}
-				break;
+				continue;
 			}
+#endif
 			//moebius attack			
-			// if (tryMfk32_moebius(data[i+ATTACK_KEY_COUNT], &key)) {
-				// PrintAndLog("M-Found Key%s for sector %02d: [%012"llx"]"
-					// ,(data[i+ATTACK_KEY_COUNT].keytype) ? "B" : "A"
-					// , data[i+ATTACK_KEY_COUNT].sector
-					// , key
-				// );
-			// }
+			if (tryMfk32_moebius(data[i+ATTACK_KEY_COUNT], &key)) {
+				uint8_t sectorNum = data[i+ATTACK_KEY_COUNT].sector;
+				uint8_t keyType = data[i+ATTACK_KEY_COUNT].keytype;
+
+				PrintAndLog("M-Found Key%s for sector %02d: [%012"llx"]"
+					, keyType ? "B" : "A"
+					, sectorNum
+					, key
+				);
+
+				k_sector[sectorNum].Key[keyType] = key;
+				k_sector[sectorNum].foundKey[keyType] = TRUE;
+
+				//set emulator memory for keys
+				if (setEmulatorMem) {
+					uint8_t	memBlock[16] = {0,0,0,0,0,0, 0xff, 0x0F, 0x80, 0x69, 0,0,0,0,0,0};
+					num_to_bytes( k_sector[sectorNum].Key[0], 6, memBlock);
+					num_to_bytes( k_sector[sectorNum].Key[1], 6, memBlock+10);
+					PrintAndLog("Setting Emulator Memory Block %02d: [%s]"
+						, (sectorNum*4) + 3
+						, sprint_hex( memBlock, sizeof(memBlock))
+						);
+					mfEmlSetMem( memBlock, (sectorNum*4) + 3, 1);
+				}
+				continue;
+			}
+
 		}
 	}
 }
@@ -1506,6 +1530,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 		if (k_sector != NULL) {
 			printKeyTable(k_sectorsCount, k_sector );
 			free(k_sector);
+			k_sector = NULL;
 		}
 	}
 	return 0;
