@@ -64,7 +64,7 @@ const manufactureName manufactureMapping[] = {
 	{ 0x17, "KSW Microtec GmbH Germany" },
 	{ 0x18, "ZMD AG Germany" },
 	{ 0x19, "XICOR, Inc. USA" },
-	{ 0x1A, "Sony Corporation Japan Identifier Company Country" },
+	{ 0x1A, "Sony Corporation Japan" },
 	{ 0x1B, "Malaysia Microelectronic Solutions Sdn. Bhd Malaysia" },
 	{ 0x1C, "Emosyn USA" },
 	{ 0x1D, "Shanghai Fudan Microelectronics Co. Ltd. P.R. China" },
@@ -94,7 +94,7 @@ const manufactureName manufactureMapping[] = {
 	{ 0x35, "Fraunhofer Institute for Photonic Microsystems Germany" },
 	{ 0x36, "IDS Microchip AG Switzerland" },
 	{ 0x37, "Kovio USA" },
-	{ 0x38, "HMT Microelectronic Ltd Switzerland Identifier Company Country" },
+	{ 0x38, "HMT Microelectronic Ltd Switzerland" },
 	{ 0x39, "Silicon Craft Technology Thailand" },
 	{ 0x3A, "Advanced Film Device Inc. Japan" },
 	{ 0x3B, "Nitecrest Ltd UK" },
@@ -106,7 +106,7 @@ const manufactureName manufactureMapping[] = {
 	{ 0x41, "Renesas Electronics Corporation Japan" },
 	{ 0x42, "3Alogics Inc Korea" },
 	{ 0x43, "Top TroniQ Asia Limited Hong Kong" },
-	{ 0x44, "Gentag Inc (USA) USA" },
+	{ 0x44, "Gentag Inc. USA" },
 	{ 0x00, "no tag-info available" } // must be the last entry
 };
 
