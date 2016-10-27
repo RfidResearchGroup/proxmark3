@@ -143,7 +143,7 @@ int usage_hf_14a_sim(void) {
 //	PrintAndLog("    u     : 4, 7 or 10 byte UID");
 	PrintAndLog("    u     : 4, 7 byte UID");
 	PrintAndLog("    x     : (Optional) performs the 'reader attack', nr/ar attack against a legitimate reader");
-	PrintAndLog("    m     : (Optional) Show maths used for cracking reader. Useful for debugging.");
+	PrintAndLog("    v     : (Optional) show maths used for cracking reader. Useful for debugging.");
 	PrintAndLog("\n   sample : hf 14a sim t 1 u 11223344 x");
 	PrintAndLog("          : hf 14a sim t 1 u 11223344");
 	PrintAndLog("          : hf 14a sim t 1 u 11223344556677");
@@ -455,11 +455,6 @@ int CmdHF14ASim(const char *Cmd) {
 			case 'h':
 			case 'H':
 				return usage_hf_14a_sim();
-			case 'm':
-			case 'M':
-				showMaths = true;
-				cmdp++;
-				break;
 			case 't':
 			case 'T':
 				// Retrieve the tag type
@@ -483,6 +478,11 @@ int CmdHF14ASim(const char *Cmd) {
 					useUIDfromEML = FALSE;
 				}
 				cmdp += 2;
+				break;
+			case 'v':
+			case 'V':
+				showMaths = true;
+				cmdp++;
 				break;
 			case 'x':
 			case 'X':
