@@ -2145,29 +2145,24 @@ int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 	uint32_t nttmp1 = nt1;
 	uint32_t nttmp2 = nt2;
 
-	for (uint16_t i = 1; i < 32768/8; ++i) {
+	// 0xFFFF -- Half up and half down to find distance between nonces
+	for (uint16_t i = 1; i < 32768/8; i += 8) {
 		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -i;
-		
 		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+1;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+1);
-		
 		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+2;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+2);
-
 		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+3;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+3);
-		
 		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+4;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+4);
-		
 		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+5;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+5);
-		
 		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+6;
-		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+6);
-		
 		nttmp1 = prng_successor(nttmp1, 1);	if (nttmp1 == nt2) return i+7;
+		
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -i;
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+1);
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+2);
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+3);
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+4);
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+5);
+		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+6);
 		nttmp2 = prng_successor(nttmp2, 1);	if (nttmp2 == nt1) return -(i+7);		
 	}
 	// either nt1 or nt2 are invalid nonces	
