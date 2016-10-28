@@ -1365,7 +1365,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 #define ATTACK_KEY_COUNT 8
 sector *k_sector = NULL;
 uint8_t k_sectorsCount = 16;
-void readerAttack(nonces_t data[], bool setEmulatorMem, bool showMaths) {
+void readerAttack(nonces_t data[], bool setEmulatorMem, bool verbose) {
 
 	// initialize storage for found keys
 	if (k_sector == NULL)
@@ -1389,7 +1389,7 @@ void readerAttack(nonces_t data[], bool setEmulatorMem, bool showMaths) {
 
 			// We can probably skip this, mfkey32v2 is more reliable.
 #ifdef HFMF_TRYMFK32
-			if (tryMfk32(data[i], &key)) {
+			if (tryMfk32(data[i], &key, verbose)) {
 				PrintAndLog("Found Key%s for sector %02d: [%012"llx"]"
 					, (data[i].keytype) ? "B" : "A"
 					, data[i].sector
@@ -1414,7 +1414,7 @@ void readerAttack(nonces_t data[], bool setEmulatorMem, bool showMaths) {
 			}
 #endif
 			//moebius attack			
-			if (tryMfk32_moebius(data[i+ATTACK_KEY_COUNT], &key, showMaths)) {
+			if (tryMfk32_moebius(data[i+ATTACK_KEY_COUNT], &key, verbose)) {
 				uint8_t sectorNum = data[i+ATTACK_KEY_COUNT].sector;
 				uint8_t keyType = data[i+ATTACK_KEY_COUNT].keytype;
 
@@ -1456,7 +1456,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 	bool errors = false;
 
 	// If set to true, we should show our workings when doing NR_AR_ATTACK.
-	bool showMaths = false;
+	bool verbose = false;
 
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
@@ -1491,7 +1491,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 			break;
 		case 'v':
 		case 'V':
-			showMaths = true;
+			verbose = true;
 			cmdp++;
 			break;
 		case 'x':
@@ -1533,7 +1533,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 			if ( (resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD ) break;
 
 			memcpy( data, resp.d.asBytes, sizeof(data) );			
-			readerAttack(data, setEmulatorMem, showMaths);
+			readerAttack(data, setEmulatorMem, verbose);
 		}
 		
 		if (k_sector != NULL) {

@@ -448,7 +448,7 @@ int CmdHF14ASim(const char *Cmd) {
 	uint8_t uid[10] = {0,0,0,0,0,0,0,0,0,0};
 	int uidlen = 0;
 	bool useUIDfromEML = TRUE;
-	bool showMaths = false;
+	bool verbose = false;
 
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
@@ -481,7 +481,7 @@ int CmdHF14ASim(const char *Cmd) {
 				break;
 			case 'v':
 			case 'V':
-				showMaths = true;
+				verbose = true;
 				cmdp++;
 				break;
 			case 'x':
@@ -520,7 +520,7 @@ int CmdHF14ASim(const char *Cmd) {
 		if ( (resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD ) break;
 			
 		memcpy( data, resp.d.asBytes, sizeof(data) );
-		readerAttack(data, TRUE, showMaths);
+		readerAttack(data, TRUE, verbose);
 	}
 	return 0;
 }
