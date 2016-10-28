@@ -28,7 +28,7 @@ extern int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t
 
 //iceman, added these to be able to crack key direct from "hf 14 sim" && "hf mf sim"
 bool tryMfk32(nonces_t data, uint64_t *outputkey );
-bool tryMfk32_moebius(nonces_t data, uint64_t *outputkey );  // <<-- this one has best success
+bool tryMfk32_moebius(nonces_t data, uint64_t *outputkey, bool showMaths );  // <<-- this one has best success
 int tryMfk64_ex(uint8_t *data, uint64_t *outputkey );
 int tryMfk64(uint32_t uid, uint32_t nt, uint32_t nr_enc, uint32_t ar_enc, uint32_t at_enc, uint64_t *outputkey);
 #endif

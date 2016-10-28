@@ -143,6 +143,7 @@ int usage_hf_14a_sim(void) {
 //	PrintAndLog("    u     : 4, 7 or 10 byte UID");
 	PrintAndLog("    u     : 4, 7 byte UID");
 	PrintAndLog("    x     : (Optional) performs the 'reader attack', nr/ar attack against a legitimate reader");
+	PrintAndLog("    v     : (Optional) show maths used for cracking reader. Useful for debugging.");
 	PrintAndLog("\n   sample : hf 14a sim t 1 u 11223344 x");
 	PrintAndLog("          : hf 14a sim t 1 u 11223344");
 	PrintAndLog("          : hf 14a sim t 1 u 11223344556677");
@@ -447,6 +448,7 @@ int CmdHF14ASim(const char *Cmd) {
 	uint8_t uid[10] = {0,0,0,0,0,0,0,0,0,0};
 	int uidlen = 0;
 	bool useUIDfromEML = TRUE;
+	bool showMaths = false;
 
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
@@ -476,6 +478,11 @@ int CmdHF14ASim(const char *Cmd) {
 					useUIDfromEML = FALSE;
 				}
 				cmdp += 2;
+				break;
+			case 'v':
+			case 'V':
+				showMaths = true;
+				cmdp++;
 				break;
 			case 'x':
 			case 'X':
@@ -513,7 +520,7 @@ int CmdHF14ASim(const char *Cmd) {
 		if ( (resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD ) break;
 			
 		memcpy( data, resp.d.asBytes, sizeof(data) );
-		readerAttack(data, TRUE);
+		readerAttack(data, TRUE, showMaths);
 	}
 	return 0;
 }
