@@ -214,9 +214,10 @@ start:
 		}
 	}	
 	printf("\n");
+	// error
+	if (isOK != 1) return 1;
 	
-	// par == 0,  and -4
-	if (isOK == -4 && par_list == 0) {
+	if (par_list == 0 && ks_list != 0) {
 		// this special attack when parities is zero, uses checkkeys. Which now with block/keytype option also needs. 
 		// but it uses 0|1 instead of 0x60|0x61...
 		if (nonce2key_ex(blockNo, keytype - 0x60 , uid, nt, nr, ks_list, &r_key) ){
@@ -229,10 +230,7 @@ start:
 			goto END;
 		}
 	}
-	
-	// error
-	if (isOK != 1) return 1;
-	
+
 	// execute original function from util nonce2key
 	if (nonce2key(uid, nt, nr, par_list, ks_list, &r_key)) {
 		isOK = 2;

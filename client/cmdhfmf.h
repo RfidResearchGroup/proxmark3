@@ -16,6 +16,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "proxmark3.h"
+
 #include "iso14443crc.h"
 #include "data.h"
 #include "ui.h"

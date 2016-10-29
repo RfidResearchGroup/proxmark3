@@ -54,15 +54,19 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	return 0;
 }
 
+int compar_intA(const void * a, const void * b) {
+	if (*(int64_t*)b == *(int64_t*)a) return 0;
+	if (*(int64_t*)b > *(int64_t*)a) return 1;
+	return -1;
+}
+
 // call when PAR == 0,  special attack?  It seems to need two calls.  with same uid, block, keytype
 int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, uint32_t nr, uint64_t ks_info, uint64_t * key) {
 
 	struct Crypto1State *state;
 	uint32_t i, pos, key_count;
-	byte_t ks3x[8];
-
+	uint8_t ks3x[8];
 	uint64_t key_recovered;
-
 	int64_t *state_s;
 	static uint8_t last_blockno;
 	static uint8_t last_keytype;
@@ -83,58 +87,70 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 
 	// Reset the last three significant bits of the reader nonce
 	nr &= 0xffffff1f;
-
-	PrintAndLog("uid(%08x) nt(%08x) ks(%016"llx") nr(%08x)\n", uid, nt, ks_info, nr);
  
+	// split keystream into array
 	for (pos=0; pos<8; pos++) {
 		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
 	}
-  
-  	PrintAndLog("parity is all zero, try special attack. Just wait for few more seconds...");
-	
+ 
+	// find possible states for this keystream
 	state = lfsr_common_prefix_ex(nr, ks3x);
+
+	if (!state) {
+		key_count = 0;
+		PrintAndLog("Failed getting states");
+		return 1;
+	}
+	
 	state_s = (int64_t*)state;
 	
+	uint32_t xored = uid ^ nt;
+	
 	for (i = 0; (state) && ((state + i)->odd != -1); i++) {
-		lfsr_rollback_word(state + i, uid ^ nt, 0);
+		lfsr_rollback_word(state + i, xored, 0);
 		crypto1_get_lfsr(state + i, &key_recovered);
 		*(state_s + i) = key_recovered;
 	}
-	
-	if(!state)
-		return 1;
-	
-	qsort(state_s, i, sizeof(*state_s), compar_int);
+
+	qsort(state_s, i, sizeof(int64_t), compar_intA);
 	*(state_s + i) = -1;
 	
-	//Create the intersection:
-	if ( last_keylist != NULL) {
-
-		int64_t *p1, *p2, *p3;
-		p1 = p3 = last_keylist; 
-		p2 = state_s;
-		
-		while ( *p1 != -1 && *p2 != -1 ) {
-			if (compar_int(p1, p2) == 0) {
-				printf("p1:%"llx" p2:%"llx" p3:%"llx" key:%012"llx"\n",(uint64_t)(p1-last_keylist),(uint64_t)(p2-state_s),(uint64_t)(p3-last_keylist),*p1);
-				*p3++ = *p1++;
-				p2++;
-			}
-			else {
-				while (compar_int(p1, p2) == -1) ++p1;
-				while (compar_int(p1, p2) == 1) ++p2;
-			}
-		}
-		key_count = p3 - last_keylist;
-		PrintAndLog("one A");
-	} else {
+	// first call to this function.  clear all other stuff and set new found states.
+	if (last_keylist == NULL) {
 		key_count = 0;
-		PrintAndLog("one B");
+		free(last_keylist);
+		last_keylist = state_s;
+		PrintAndLog("parity is all zero, testing special attack. First call, this attack needs at least two calls. Hold on...");		
+		PrintAndLog("uid(%08x) nt(%08x) ks(%016"llx") nr(%08x)\n", uid, nt, ks_info, nr);
+		return 1;
 	}
 
-	printf("key_count:%d\n", key_count);
+	PrintAndLog("uid(%08x) nt(%08x) ks(%016"llx") nr(%08x)\n", uid, nt, ks_info, nr);
+		
+	//Create the intersection:
+	int64_t *p1, *p2, *p3;
+	p1 = p3 = last_keylist; 
+	p2 = state_s;
+		
+	while ( *p1 != -1 && *p2 != -1 ) {
+		if (compar_intA(p1, p2) == 0) {
+			printf("p1:%"llx" p2:%"llx" p3:%"llx" key:%012"llx"\n",(uint64_t)(p1-last_keylist),(uint64_t)(p2-state_s),(uint64_t)(p3-last_keylist),*p1);
+			*p3++ = *p1++;
+			p2++;
+		}
+		else {
+			while (compar_intA(p1, p2) == -1) ++p1;
+			while (compar_intA(p1, p2) == 1) ++p2;
+		}
+	}
+	key_count = p3 - last_keylist;
+	printf("key_count: %d\n", key_count);
+	if ( key_count == 0 ){
+		free(state);
+		return 0;
+	}
 	
-	// The list may still contain several key candidates. Test each of them with mfCheckKeys
+	// Validate all key candidates with testing each of them with mfCheckKeys
 	uint8_t keyBlock[6] = {0,0,0,0,0,0};
 	uint64_t key64;
 	for (i = 0; i < key_count; i++) {
@@ -149,9 +165,6 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 			return 0;
 		}
 	}	
-	
-	free(last_keylist);
-	last_keylist = state_s;
 	return 1;
 }
 
