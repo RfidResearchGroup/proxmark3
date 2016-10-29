@@ -150,6 +150,7 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 		return 0;
 	}
 	
+	uint8_t retval = 1;
 	// Validate all key candidates with testing each of them with mfCheckKeys
 	uint8_t keyBlock[6] = {0,0,0,0,0,0};
 	uint64_t key64;
@@ -159,13 +160,16 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 		key64 = 0;
 		if (!mfCheckKeys(blockno, keytype, false, 1, keyBlock, &key64)) {
 			*key = key64;
-			free(last_keylist);
-			last_keylist = NULL;
-			free(state);
-			return 0;
+			retval = 0;
+			goto out;
 		}
-	}	
-	return 1;
+	}
+	
+out:
+	free(last_keylist);
+	last_keylist = NULL;
+	free(state);
+	return retval;
 }
 
 // 32 bit recover key from 2 nonces
