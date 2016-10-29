@@ -147,6 +147,7 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 	printf("key_count: %d\n", key_count);
 	if ( key_count == 0 ){
 		free(state);
+		state = NULL;
 		return 0;
 	}
 	
@@ -169,6 +170,7 @@ out:
 	free(last_keylist);
 	last_keylist = NULL;
 	free(state);
+	state = NULL;
 	return retval;
 }
 
