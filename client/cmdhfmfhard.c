@@ -19,6 +19,7 @@
 #define GOOD_BYTES_REQUIRED	13		// default 28, could be smaller == faster
 #define MIN_NONCES_REQUIRED	4000		// 4000-5000 could be good
 #define NONCES_TRIGGER		2500		// every 2500 nonces check if we can crack the key
+#define CRACKING_THRESHOLD	39.00f		// as 2^39
 
 #define END_OF_LIST_MARKER		0xFFFFFFFF
 
@@ -115,7 +116,6 @@ static statelist_t *candidates = NULL;
 
 bool thread_check_started = false;
 bool thread_check_done = false;
-bool cracking = false;
 bool field_off = false;
 
 pthread_t thread_check;
@@ -765,7 +765,6 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 	UsbCommand resp;
 
 	field_off = false;
-	cracking = false;
 	thread_check_started = false;
 	thread_check_done = false;
 
@@ -774,7 +773,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 	clearCommandBuffer();
 
 	do {
-		if (cracking) {
+		if (thread_check_started && !thread_check_done) {
 			sleep(3);
 			continue;
 		}
@@ -1376,7 +1375,7 @@ static bool generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 			fprintf(fstats, "%1.1f;", 0.0);
 		}
 	}
-	if (kcalc < 39.00f) return true;
+	if (kcalc < CRACKING_THRESHOLD) return true;
 
 	return false;
 }
@@ -1653,14 +1652,12 @@ static void* check_thread()
 	num_good_first_bytes = estimate_second_byte_sum();
 
 	clock_t time1 = clock();
-	cracking = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
+	bool cracking = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
 	time1 = clock() - time1;
-	if ( time1 > 0 ) PrintAndLog("Time for generating key candidates list: %1.0f seconds", ((float)time1)/CLOCKS_PER_SEC);
-	if (known_target_key != -1) brute_force();
+	if (time1 > 0) PrintAndLog("Time for generating key candidates list: %1.0f seconds", ((float)time1)/CLOCKS_PER_SEC);
 
-	if (cracking) {
+	if (cracking || known_target_key != -1) {
 		field_off = brute_force(); // switch off field with next SendCommand and then finish
-		cracking = false;
 	}
 
 	thread_check_done = true;
@@ -1808,13 +1805,23 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 		fstats = NULL;
 	} else {
 		init_nonce_memory();
-		if (nonce_file_read) {  	// use pre-acquired data from file nonces.bin
+		if (nonce_file_read) { // use pre-acquired data from file nonces.bin
 			if (read_nonce_file() != 0) {
 				return 3;
 			}
 			Check_for_FilterFlipProperties();
 			num_good_first_bytes = MIN(estimate_second_byte_sum(), GOOD_BYTES_REQUIRED);
-		} else {					// acquire nonces.
+			PrintAndLog("Number of first bytes with confidence > %2.1f%%: %d", CONFIDENCE_THRESHOLD*100.0, num_good_first_bytes);
+
+			clock_t time1 = clock();
+			bool cracking = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
+			time1 = clock() - time1;
+			if (time1 > 0)
+				PrintAndLog("Time for generating key candidates list: %1.0f seconds", ((float)time1)/CLOCKS_PER_SEC);
+
+			if (cracking)
+				brute_force();
+		} else { // acquire nonces.
 			uint16_t is_OK = acquire_nonces(blockNo, keyType, key, trgBlockNo, trgKeyType, nonce_file_write, slow);
 			if (is_OK != 0) {
 				return is_OK;
@@ -1836,16 +1843,6 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 			// best_first_bytes[7],
 			// best_first_bytes[8],
 			// best_first_bytes[9]  );
-
-		//PrintAndLog("Number of first bytes with confidence > %2.1f%%: %d", CONFIDENCE_THRESHOLD*100.0, num_good_first_bytes);
-
-		//clock_t time1 = clock();
-		//generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
-		//time1 = clock() - time1;
-		//if ( time1 > 0 )
-			//PrintAndLog("Time for generating key candidates list: %1.0f seconds", ((float)time1)/CLOCKS_PER_SEC);
-
-		//brute_force();
 
 		free_nonces_memory();
 		free_statelist_cache();
