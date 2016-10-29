@@ -13,10 +13,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <time.h>
 #include <math.h>		// math.pow
+#include "proxmark3.h"	// time_t
 #include "data.h"		// for FILE_PATH_SIZE
-#include "proxmark3.h"
 
 #ifndef BITMASK
 # define BITMASK(X) (1 << (X))

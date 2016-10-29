@@ -16,11 +16,19 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <time.h>
 #include <readline/readline.h>
 #include <pthread.h>
 #include <math.h>
 #include <complex.h>
+
+// Handle platform specific includes
+#ifndef _WIN32
+  #include <sys/time.h>
+#else
+  #include <time.h>
+  #include <windows.h>
+#endif
+
 #include "loclass/cipherutils.h"
 #include "util.h"
 #include "cmdmain.h"

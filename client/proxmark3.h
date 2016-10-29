@@ -12,20 +12,26 @@
 #ifndef PROXMARK3_H__
 #define PROXMARK3_H__
 
+// Handle platform specific includes
 #ifdef __WIN32
 // for MINGW32 environments
-   #define _USE_32BIT_TIME_T 1
-#endif   
+  #define _USE_32BIT_TIME_T 1
+  #include <time.h>
+  #include <windows.h>
+#else
+  #include <sys/time.h>
+#endif
+
 #define __STDC_FORMAT_MACROS 1
 #include <inttypes.h>
+#include "usb_cmd.h"
+
+#define lu PRIu32
 #define lx  PRIx32
 #define llx PRIx64
 #define lli PRIi64
 #define llu PRIu64
 #define hhu PRIu8
-
-#include "usb_cmd.h"
-
 #define PROXPROMPT "pm3 --> "
 
 void SendCommand(UsbCommand *c);

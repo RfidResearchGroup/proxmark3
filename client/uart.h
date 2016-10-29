@@ -54,6 +54,7 @@ typedef unsigned char byte_t;
   #include <sys/time.h>
   #include <errno.h>
 #else
+  #include <time.h>
   #include <windows.h>
 #endif
 

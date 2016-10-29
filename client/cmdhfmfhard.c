@@ -1275,7 +1275,7 @@ static bool TestIfKeyExists(uint64_t key)
 		}
 		count += (p_odd - p->states[ODD_STATE]) * (p_even - p->states[EVEN_STATE]);
 		if (found_odd && found_even) {
-			PrintAndLog("Key Found after testing %lld (2^%1.1f) out of %lld (2^%1.1f) keys. ", 
+			PrintAndLog("\nKey Found after testing %lld (2^%1.1f) out of %lld (2^%1.1f) keys. ", 
 				count,
 				log(count)/log(2), 
 				maximum_states,
@@ -1698,8 +1698,10 @@ static bool brute_force(void)
 		if (maximum_states == 0) return false; // prevent keyspace reduction error (2^-inf)
 
 	 	PrintAndLog("Brute force phase starting.");
-	 	time_t start, end;
-		time(&start);
+
+//		clock_t time1 = clock();	 	
+		time_t start1, end1;
+		time(&start1);
 		keys_found = 0;
 		foundkey = 0;
 
@@ -1746,11 +1748,16 @@ static bool brute_force(void)
 			pthread_join(threads[i], 0);
 		}
 
-		time(&end);
-		unsigned long  elapsed_time = difftime(end, start);
+		time(&end1);
+		unsigned long elapsed_time = difftime(end1, start1);
+		// time1 = clock() - time1;
+		// if ( time1 > 0 ) {
+			// ((float)time1)/CLOCKS_PER_SEC
+		// }
 
 		if (keys_found && TestIfKeyExists(foundkey)) {
-			PrintAndLog("Success! Tested %"PRIu32" states, found %u keys after %u seconds", total_states_tested, keys_found, elapsed_time);
+			printf("ICE: %u | %u | %u \n", start1, end1, elapsed_time);
+			PrintAndLog("Success! Found %u keys after %u seconds", keys_found, elapsed_time);
 			PrintAndLog("\nFound key: %012"PRIx64"\n", foundkey);
 			ret = true;
 		} else {
@@ -1851,5 +1858,3 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 	}
 	return 0;
 }
-
-

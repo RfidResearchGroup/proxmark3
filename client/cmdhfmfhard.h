@@ -11,23 +11,20 @@
 #ifndef CMDHFMFHARD_H__
 #define CMDHFMFHARD_H__
 
-#include "sleep.h"
 #include <stdlib.h> 
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 #include <locale.h>
 #include <math.h>
-#include "proxmark3.h"
+#include "proxmark3.h"		// time_t , PRIu32
+#include "sleep.h"
 #include "cmdmain.h"
 #include "ui.h"
 #include "util.h"
 #include "nonce2key/crapto1.h"
 #include "nonce2key/crypto1_bs.h"
 #include "parity.h"
-#ifdef __WIN32
-	#include <windows.h>
-#endif
 // don't include for APPLE/mac which has malloc stuff elsewhere.
 #ifndef __APPLE__
 	#include <malloc.h>

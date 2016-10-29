@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// Copyright (C) 2016 iceman <iceman at ...>
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -20,6 +20,7 @@
 #include "crc.h"
 #include "../common/iso15693tools.h"
 #include "tea.h"
+#include "../include/legic_prng.h"
 
 int usage_analyse_lcr(void);
 int usage_analyse_checksum(void);
@@ -31,4 +32,5 @@ int CmdAnalyseCHKSUM(const char *Cmd);
 int CmdAnalyseDates(const char *Cmd);
 int CmdAnalyseCRC(const char *Cmd);
 int CmdAnalyseTEASelfTest(const char *Cmd);
+int CmdAnalyseLfsr(const char *Cmd);
 #endif

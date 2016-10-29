@@ -13,9 +13,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
-#include "proxmark3.h"
+
+#include "proxmark3.h"	// time_t
 //#include "radixsort.h"
-#include <time.h>
 #include "common.h"
 #include "cmdmain.h"
 #include "ui.h"

@@ -8,6 +8,7 @@
 // Analyse bytes commands
 //-----------------------------------------------------------------------------
 #include "cmdanalyse.h"
+#include "nonce2key/nonce2key.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -124,6 +125,29 @@ static uint8_t calcSumNibbleSubOnes( uint8_t* bytes, uint8_t len, uint32_t mask)
 	return ~calcSumNibbleSub(bytes, len, mask);
 }
 
+// measuring LFSR maximum length
+int CmdAnalyseLfsr(const char *Cmd){
+
+    uint16_t start_state = 0;  /* Any nonzero start state will work. */
+    uint16_t lfsr = start_state;
+    //uint32_t period = 0;
+
+	uint8_t iv = param_get8ex(Cmd, 0, 0, 16);
+	uint8_t find = param_get8ex(Cmd, 1, 0, 16);
+	
+	printf("LEGIC LFSR IV 0x%02X: \n", iv);
+	printf(" bit# | lfsr | ^0x40 |  0x%02X ^ lfsr \n",find);
+	
+	for (uint8_t i = 0x01; i < 0x30; i += 1) {
+		//period = 0;
+		legic_prng_init(iv);
+		legic_prng_forward(i);
+		lfsr = legic_prng_get_bits(12);
+
+		printf(" %02X | %03X | %03X | %03X \n",i, lfsr, 0x40 ^ lfsr, find ^ lfsr);
+	}
+	return 0;
+}
 int CmdAnalyseLCR(const char *Cmd) {
 	uint8_t data[50];
 	char cmdp = param_getchar(Cmd, 0);
@@ -284,6 +308,25 @@ int CmdAnalyseTEASelfTest(const char *Cmd){
 	return 0;
 }
 
+int CmdAnalyseA(const char *Cmd){
+	
+// uid(2e086b1a) nt(230736f6) par(0000000000000000) ks(0b0008000804000e) nr(000000000)
+// uid(2e086b1a) nt(230736f6) par(0000000000000000) ks(0e0b0e0b090c0d02) nr(000000001)
+// uid(2e086b1a) nt(230736f6) par(0000000000000000) ks(0e05060e01080b08) nr(000000002)
+	uint32_t uid = 0x2e086b1a, nt = 0x230736f6, nr = 0x000000001;
+	uint64_t ks_list = 0x0e0b0e0b090c0d02, r_key = 0;
+
+	nonce2key_ex(0, 0 , uid, nt, nr, ks_list, &r_key);
+
+	nr = 0x000000002;
+	ks_list = 0x0e05060e01080b08;
+	nonce2key_ex(0, 0 , uid, nt, nr, ks_list, &r_key);
+
+	printf("Found valid key: %012"llx" \n", r_key);	
+	return 0;
+}
+
+
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,            1, "This help"},
 	{"lcr",		CmdAnalyseLCR,		1, "Generate final byte for XOR LRC"},
@@ -291,6 +334,8 @@ static command_t CommandTable[] = {
 	{"chksum",	CmdAnalyseCHKSUM,	1, "Checksum with adding, masking and one's complement"},
 	{"dates",	CmdAnalyseDates,	1, "Look for datestamps in a given array of bytes"},
 	{"tea",   	CmdAnalyseTEASelfTest,	1, "Crypto TEA test"},
+	{"lfsr",	CmdAnalyseLfsr,		1,	"LFSR tests"},
+	{"a",		CmdAnalyseA,		1,	"num bits test"},
 	{NULL, NULL, 0, NULL}
 };
 
