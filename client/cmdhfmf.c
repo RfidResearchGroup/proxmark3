@@ -32,6 +32,7 @@ int usage_hf14_mf1ksim(void){
 	PrintAndLog("      i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
 	PrintAndLog("      x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a legitimate reader, fishes out the key(s)");
 	PrintAndLog("      e    (Optional) Fill simulator keys from what we crack");
+	PrintAndLog("      v    (Optional) Show maths used for cracking reader. Useful for debugging.");
 	PrintAndLog("samples:");
 	PrintAndLog("           hf mf sim u 0a0a0a0a");
 	PrintAndLog("           hf mf sim u 11223344556677");
@@ -1364,7 +1365,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 #define ATTACK_KEY_COUNT 8
 sector *k_sector = NULL;
 uint8_t k_sectorsCount = 16;
-void readerAttack(nonces_t data[], bool setEmulatorMem) {
+void readerAttack(nonces_t data[], bool setEmulatorMem, bool verbose) {
 
 	// initialize storage for found keys
 	if (k_sector == NULL)
@@ -1388,7 +1389,7 @@ void readerAttack(nonces_t data[], bool setEmulatorMem) {
 
 			// We can probably skip this, mfkey32v2 is more reliable.
 #ifdef HFMF_TRYMFK32
-			if (tryMfk32(data[i], &key)) {
+			if (tryMfk32(data[i], &key, verbose)) {
 				PrintAndLog("Found Key%s for sector %02d: [%012"llx"]"
 					, (data[i].keytype) ? "B" : "A"
 					, data[i].sector
@@ -1413,7 +1414,7 @@ void readerAttack(nonces_t data[], bool setEmulatorMem) {
 			}
 #endif
 			//moebius attack			
-			if (tryMfk32_moebius(data[i+ATTACK_KEY_COUNT], &key)) {
+			if (tryMfk32_moebius(data[i+ATTACK_KEY_COUNT], &key, verbose)) {
 				uint8_t sectorNum = data[i+ATTACK_KEY_COUNT].sector;
 				uint8_t keyType = data[i+ATTACK_KEY_COUNT].keytype;
 
@@ -1449,10 +1450,13 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 	uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	uint8_t exitAfterNReads = 0;
 	uint8_t flags = (FLAG_UID_IN_EMUL | FLAG_4B_UID_IN_DATA);
-	int uidlen = 0;	
+	int uidlen = 0;
 	bool setEmulatorMem = false;
 	uint8_t cmdp = 0;
 	bool errors = false;
+
+	// If set to true, we should show our workings when doing NR_AR_ATTACK.
+	bool verbose = false;
 
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
@@ -1484,6 +1488,11 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 				default: return usage_hf14_mf1ksim();
 			}
 			cmdp +=2;
+			break;
+		case 'v':
+		case 'V':
+			verbose = true;
+			cmdp++;
 			break;
 		case 'x':
 		case 'X':
@@ -1524,7 +1533,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 			if ( (resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD ) break;
 
 			memcpy( data, resp.d.asBytes, sizeof(data) );			
-			readerAttack(data, setEmulatorMem);
+			readerAttack(data, setEmulatorMem, verbose);
 		}
 		
 		if (k_sector != NULL) {

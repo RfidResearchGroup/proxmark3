@@ -261,7 +261,10 @@ static double p_hypergeometric(uint16_t N, uint16_t K, uint16_t n, uint16_t k)
 		for (int16_t i = N; i >= N-n+1; i--) {
 			log_result -= log(i);
 		}
-		return exp(log_result);
+		if ( log_result > 0 )
+			return exp(log_result);
+		else 
+			return 0.0;
 	} else {
 		if (n-k == N-K) {	// special case. The published recursion below would fail with a divide by zero exception
 			double log_result = 0.0;
@@ -1312,7 +1315,7 @@ static bool generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 
 	if (maximum_states == 0) return false; // prevent keyspace reduction error (2^-inf)
 
-	printf("Number of possible keys with Sum(a0) = %d: %"PRIu64" (2^%1.1f)\n", sum_a0, maximum_states, log(maximum_states)/log(2.0));
+	printf("Number of possible keys with Sum(a0) = %d: %"PRIu64" (2^%1.1f)\n", sum_a0, maximum_states, log(maximum_states)/log(2));
 	
 	init_statelist_cache();
 	
@@ -1329,9 +1332,9 @@ static bool generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 							// and eliminate the need to calculate the other part
 							if (MIN(partial_statelist[p].len[ODD_STATE], partial_statelist[r].len[ODD_STATE]) 
 									< MIN(partial_statelist[q].len[EVEN_STATE], partial_statelist[s].len[EVEN_STATE])) { 
-							add_matching_states(current_candidates, p, r, ODD_STATE);
+								add_matching_states(current_candidates, p, r, ODD_STATE);
 								if(current_candidates->len[ODD_STATE]) {
-							add_matching_states(current_candidates, q, s, EVEN_STATE);
+									add_matching_states(current_candidates, q, s, EVEN_STATE);
 								} else {
 									current_candidates->len[EVEN_STATE] = 0;
 									uint32_t *p = current_candidates->states[EVEN_STATE] = malloc(sizeof(uint32_t));
@@ -1363,7 +1366,7 @@ static bool generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 
 	if (maximum_states == 0) return false; // prevent keyspace reduction error (2^-inf)
 
-	float kcalc = log(maximum_states)/log(2.0);
+	float kcalc = log(maximum_states)/log(2);
 	printf("Number of remaining possible keys: %"PRIu64" (2^%1.1f)\n", maximum_states, kcalc);
 	if (write_stats) {
 		if (maximum_states != 0) {
@@ -1703,7 +1706,7 @@ static bool brute_force(void)
 		crypto1_bs_init();
 
 		PrintAndLog("Using %u-bit bitslices", MAX_BITSLICES);
-		PrintAndLog("Bitslicing best_first_byte^uid[3] (rollback byte): %02x...", best_first_bytes[0]^(cuid>>24));
+		PrintAndLog("Bitslicing best_first_byte^uid[3] (rollback byte): %02X ...", best_first_bytes[0]^(cuid>>24));
 		// convert to 32 bit little-endian
 		crypto1_bs_bitslice_value32((best_first_bytes[0]<<24)^cuid, bitsliced_rollback_byte, 8);
 
@@ -1744,14 +1747,14 @@ static bool brute_force(void)
 		}
 
 		time(&end);
-		double elapsed_time = difftime(end, start);
+		unsigned long  elapsed_time = difftime(end, start);
 
 		if (keys_found && TestIfKeyExists(foundkey)) {
-			PrintAndLog("Success! Tested %"PRIu32" states, found %u keys after %.f seconds", total_states_tested, keys_found, elapsed_time);
+			PrintAndLog("Success! Tested %"PRIu32" states, found %u keys after %u seconds", total_states_tested, keys_found, elapsed_time);
 			PrintAndLog("\nFound key: %012"PRIx64"\n", foundkey);
 			ret = true;
 		} else {
-			PrintAndLog("Fail! Tested %"PRIu32" states, in %.f seconds", total_states_tested, elapsed_time);
+			PrintAndLog("Fail! Tested %"PRIu32" states, in %u seconds", total_states_tested, elapsed_time);
 		}
 
 		// reset this counter for the next call

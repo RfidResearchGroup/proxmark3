@@ -1019,10 +1019,17 @@ int CmdLFfind(const char *Cmd) {
 	}
 	if (cmdp == 'u' || cmdp == 'U') testRaw = 'u';
 
+	// if ( justNoise(GraphBuffer, GraphTraceLen) ) {
+		// PrintAndLog("Signal looks just like noise. Quitting.");
+		// return 0;
+	// }
+	
 	PrintAndLog("NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
 	PrintAndLog("False Positives ARE possible\n");  
 	PrintAndLog("\nChecking for known tags:\n");
 
+
+		
 	ans=CmdFSKdemodIO("");
 	if (ans>0) {
 		PrintAndLog("\nValid IO Prox ID Found!");

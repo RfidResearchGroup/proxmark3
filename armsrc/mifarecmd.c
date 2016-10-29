@@ -1217,10 +1217,9 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 			if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
 				if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("Can't select card");
 				errormsg = MAGIC_UID;
-				// break;
 			}
-			
-			if ( mifare_classic_halt_ex(NULL) ) break;
+			mifare_classic_halt_ex(NULL);
+			break;
 		}
 	
 		// wipe tag, fill it with zeros
@@ -1239,7 +1238,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 				break;
 			}
 
-			if ( mifare_classic_halt_ex(NULL) ) break;
+			mifare_classic_halt_ex(NULL);
 		}	
 
 		// write block
@@ -1276,7 +1275,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 		}	
 	
 		if (workFlags & MAGIC_OFF) 
-			if ( mifare_classic_halt_ex(NULL) ) break;
+			mifare_classic_halt_ex(NULL);
 		
 		isOK = true;
 		break;

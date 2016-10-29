@@ -60,6 +60,6 @@ int CmdHF14AMfCLoad(const char* cmd);
 int CmdHF14AMfCSave(const char* cmd);
 int CmdHf14MfDecryptBytes(const char *Cmd);
 
-void readerAttack(nonces_t data[], bool setEmulatorMem);
+void readerAttack(nonces_t data[], bool setEmulatorMem, bool verbose);
 void printKeyTable( uint8_t sectorscnt, sector *e_sector );
 #endif

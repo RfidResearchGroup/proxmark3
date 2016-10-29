@@ -156,7 +156,7 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 }
 
 // 32 bit recover key from 2 nonces
-bool tryMfk32(nonces_t data, uint64_t *outputkey) {
+bool tryMfk32(nonces_t data, uint64_t *outputkey, bool verbose) {
 	struct Crypto1State *s,*t;
 	uint64_t outkey = 0;
 	uint64_t key=0;     // recovered key
@@ -166,22 +166,24 @@ bool tryMfk32(nonces_t data, uint64_t *outputkey) {
 	uint32_t ar0_enc = data.ar;  // first encrypted reader response
 	uint32_t nr1_enc = data.nr2; // second encrypted reader challenge
 	uint32_t ar1_enc = data.ar2; // second encrypted reader response
-	clock_t t1 = clock();
 	bool isSuccess = FALSE;
 	uint8_t counter = 0;
-
-	printf("Recovering key for:\n");
-	printf("    uid: %08x\n",uid);
-	printf("     nt: %08x\n",nt);
-	printf(" {nr_0}: %08x\n",nr0_enc);
-	printf(" {ar_0}: %08x\n",ar0_enc);
-	printf(" {nr_1}: %08x\n",nr1_enc);
-	printf(" {ar_1}: %08x\n",ar1_enc);
-
-	printf("\nLFSR succesors of the tag challenge:\n");
+	
+	clock_t t1 = clock();
 	uint32_t p64 = prng_successor(nt, 64);
-	printf("  nt': %08x\n", p64);
-	printf(" nt'': %08x\n", prng_successor(p64, 32));
+		
+	if ( verbose ) {
+		printf("Recovering key for:\n");
+		printf("    uid: %08x\n",uid);
+		printf("     nt: %08x\n",nt);
+		printf(" {nr_0}: %08x\n",nr0_enc);
+		printf(" {ar_0}: %08x\n",ar0_enc);
+		printf(" {nr_1}: %08x\n",nr1_enc);
+		printf(" {ar_1}: %08x\n",ar1_enc);
+		printf("\nLFSR succesors of the tag challenge:\n");
+		printf("  nt': %08x\n", p64);
+		printf(" nt'': %08x\n", prng_successor(p64, 32));
+	}
 	
 	s = lfsr_recovery32(ar0_enc ^ p64, 0);
   
@@ -193,7 +195,6 @@ bool tryMfk32(nonces_t data, uint64_t *outputkey) {
 		crypto1_word(t, uid ^ nt, 0);
 		crypto1_word(t, nr1_enc, 1);
 		if (ar1_enc == (crypto1_word(t, 0, 0) ^ p64)) {
-			//PrintAndLog("Found Key: [%012"llx"]", key);
 			outkey = key;
 			++counter;
 			if (counter==20) break;
@@ -208,7 +209,7 @@ bool tryMfk32(nonces_t data, uint64_t *outputkey) {
 	return isSuccess;
 }
 
-bool tryMfk32_moebius(nonces_t data, uint64_t *outputkey) {
+bool tryMfk32_moebius(nonces_t data, uint64_t *outputkey, bool verbose) {
 	struct Crypto1State *s, *t;
 	uint64_t outkey  = 0;
 	uint64_t key 	 = 0;			     // recovered key
@@ -222,25 +223,25 @@ bool tryMfk32_moebius(nonces_t data, uint64_t *outputkey) {
 	uint32_t ar1_enc = data.ar2; // second encrypted reader response	
 	bool isSuccess = FALSE;
 	int counter = 0;
-	
-	printf("Recovering key for:\n");
-	printf("    uid: %08x\n",uid);
-	printf("   nt_0: %08x\n",nt0);
-	printf(" {nr_0}: %08x\n",nr0_enc);
-	printf(" {ar_0}: %08x\n",ar0_enc);
-	printf("   nt_1: %08x\n",nt1);
-	printf(" {nr_1}: %08x\n",nr1_enc);
-	printf(" {ar_1}: %08x\n",ar1_enc);
 
-	//PrintAndLog("Enter mfkey32_moebius");
 	clock_t t1 = clock();
 
-	printf("\nLFSR succesors of the tag challenge:\n");
 	uint32_t p640 = prng_successor(nt0, 64);
 	uint32_t p641 = prng_successor(nt1, 64);
 	
-	printf("  nt': %08x\n", p640);
-	printf(" nt'': %08x\n", prng_successor(p640, 32));
+	if (verbose) {
+		printf("Recovering key for:\n");
+		printf("    uid: %08x\n", uid);
+		printf("   nt_0: %08x\n", nt0);
+		printf(" {nr_0}: %08x\n", nr0_enc);
+		printf(" {ar_0}: %08x\n", ar0_enc);
+		printf("   nt_1: %08x\n", nt1);
+		printf(" {nr_1}: %08x\n", nr1_enc);
+		printf(" {ar_1}: %08x\n", ar1_enc);
+		printf("\nLFSR succesors of the tag challenge:\n");
+		printf("  nt': %08x\n", p640);
+		printf(" nt'': %08x\n", prng_successor(p640, 32));
+	}
 	
 	s = lfsr_recovery32(ar0_enc ^ p640, 0);
   
@@ -253,7 +254,6 @@ bool tryMfk32_moebius(nonces_t data, uint64_t *outputkey) {
 		crypto1_word(t, uid ^ nt1, 0);
 		crypto1_word(t, nr1_enc, 1);
 		if (ar1_enc == (crypto1_word(t, 0, 0) ^ p641)) {
-			//PrintAndLog("Found Key: [%012"llx"]",key);
 			outkey=key;
 			++counter;
 			if (counter==20) break;
