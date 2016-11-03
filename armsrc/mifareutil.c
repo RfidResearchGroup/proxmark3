@@ -470,7 +470,6 @@ int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) {
     return 0;
 }
 int mifare_classic_halt_ex(struct Crypto1State *pcs) {
-	uint16_t len = 0;	
 	uint8_t receivedAnswer[4] = {0x00, 0x00, 0x00, 0x00};
 	mifare_sendcmd_short(pcs, (pcs == NULL) ? CRYPT_NONE : CRYPT_ALL, 0x50, 0x00, receivedAnswer, NULL, NULL);
 	return 0;
