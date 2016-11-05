@@ -120,7 +120,6 @@ bool field_off = false;
 
 pthread_t thread_check;
 
-static void* check_thread();
 static bool generate_candidates(uint16_t, uint16_t);
 static bool brute_force(void);
 
@@ -261,10 +260,7 @@ static double p_hypergeometric(uint16_t N, uint16_t K, uint16_t n, uint16_t k)
 		for (int16_t i = N; i >= N-n+1; i--) {
 			log_result -= log(i);
 		}
-		if ( log_result > 0 )
-			return exp(log_result);
-		else 
-			return 0.0;
+		return (log_result > 0) ? exp(log_result) : 0.0;
 	} else {
 		if (n-k == N-K) {	// special case. The published recursion below would fail with a divide by zero exception
 			double log_result = 0.0;
@@ -274,7 +270,7 @@ static double p_hypergeometric(uint16_t N, uint16_t K, uint16_t n, uint16_t k)
 			for (int16_t i = K+1; i <= N; i++) {
 				log_result -= log(i);
 			}
-			return exp(log_result);
+			return (log_result > 0) ? exp(log_result) : 0.0;
 		} else { 			// recursion
 			return (p_hypergeometric(N, K, n, k-1) * (K-k+1) * (n-k+1) / (k * (N-K-n+k)));
 		}
@@ -288,11 +284,16 @@ static float sum_probability(uint16_t K, uint16_t n, uint16_t k)
 	if (k > K || p_K[K] == 0.0) return 0.0;
 
 	double p_T_is_k_when_S_is_K = p_hypergeometric(N, K, n, k);
+	
+	if (p_T_is_k_when_S_is_K == 0.0) return 0.0;
+	
 	double p_S_is_K = p_K[K];
 	double p_T_is_k = 0;
 	for (uint16_t i = 0; i <= 256; i++) {
 		if (p_K[i] != 0.0) {
-			p_T_is_k += p_K[i] * p_hypergeometric(N, i, n, k);
+			double tmp = p_hypergeometric(N, i, n, k);
+			if (tmp != 0.0)
+				p_T_is_k += p_K[i] * tmp;
 		}
 	}
 	return(p_T_is_k_when_S_is_K * p_S_is_K / p_T_is_k);
@@ -500,7 +501,7 @@ static void sort_best_first_bytes(void)
 			}
 		}
 			best_first_bytes[j] = i;
-		}
+	}
 
 	// determine how many are above the CONFIDENCE_THRESHOLD
 	uint16_t num_good_nonces = 0;
@@ -621,7 +622,6 @@ static int read_nonce_file(void)
 	if ( bytes_read == 0) {
 		PrintAndLog("File reading error.");
 		fclose(fnonces);
-		fnonces = NULL;
 		return 1;
 	}
 	cuid = bytes_to_num(read_buf, 4);
@@ -639,7 +639,6 @@ static int read_nonce_file(void)
 		total_num_nonces += 2;
 	}
 	fclose(fnonces);
-	fnonces = NULL;
 	PrintAndLog("Read %d nonces from file. cuid=%08x, Block=%d, Keytype=%c", total_num_nonces, cuid, trgBlockNo, trgKeyType==0?'A':'B');
 	return 0;
 }
@@ -729,7 +728,7 @@ static void simulate_acquire_nonces()
 			if (total_num_nonces > next_fivehundred) {
 				next_fivehundred = (total_num_nonces/500+1) * 500;
 				printf("Acquired %5d nonces (%5d with distinct bytes 0 and 1). Number of bytes with probability for correctly guessed Sum(a8) > %1.1f%%: %d\n",
-					total_num_nonces, 
+					total_num_nonces,
 					total_added_nonces,
 					CONFIDENCE_THRESHOLD * 100.0,
 					num_good_first_bytes);
@@ -765,26 +764,17 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 	UsbCommand resp;
 
 	field_off = false;
-	thread_check_started = false;
-	thread_check_done = false;
 
 	printf("Acquiring nonces...\n");
 
-	clearCommandBuffer();
-
 	do {
-		if (thread_check_started && !thread_check_done) {
-			sleep(3);
-			continue;
-		}
-
 		flags = 0;
 		flags |= initialize ? 0x0001 : 0;
 		flags |= slow ? 0x0002 : 0;
 		flags |= field_off ? 0x0004 : 0;
 		UsbCommand c = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags}};
 		memcpy(c.d.asBytes, key, 6);
-
+		clearCommandBuffer();
 		SendCommand(&c);
 		
 		if (field_off) finished = true;
@@ -805,6 +795,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 				fwrite(write_buf, 1, 4, fnonces);
 				fwrite(&trgBlockNo, 1, 1, fnonces);
 				fwrite(&trgKeyType, 1, 1, fnonces);
+				fflush(fnonces);
 			}
 		}
 
@@ -825,14 +816,15 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 				
 				if (nonce_file_write && fnonces) {
 					fwrite(bufp, 1, 9, fnonces);
+					fflush(fnonces);
 				}
-				
+
 				bufp += 9;
 			}
 
 			total_num_nonces += num_acquired_nonces;
 		}
-		
+
 		if (first_byte_num == 256 && !field_off) {
 			// printf("first_byte_num = %d, first_byte_Sum = %d\n", first_byte_num, first_byte_Sum);
 			if (!filter_flip_checked) {
@@ -843,45 +835,41 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 			num_good_first_bytes = estimate_second_byte_sum();
 			if (total_num_nonces > next_fivehundred) {
 				next_fivehundred = (total_num_nonces/500+1) * 500;
-				printf("Acquired %5d nonces (%5d with distinct bytes 0 and 1). Number of bytes with probability for correctly guessed Sum(a8) > %1.1f%%: %d\n",
-					total_num_nonces, 
+				printf("Acquired %5d nonces (%5d / %5d with distinct bytes 0 and 1). Number of bytes with probability for correctly guessed Sum(a8) > %1.1f%%: %d\n",
+					total_num_nonces,
 					total_added_nonces,
+					(total_added_nonces < MIN_NONCES_REQUIRED) ? MIN_NONCES_REQUIRED : (NONCES_TRIGGER*idx),
 					CONFIDENCE_THRESHOLD * 100.0,
 					num_good_first_bytes);
 			}
 
-			if (thread_check_started) {
-				if (thread_check_done) {
-					pthread_join (thread_check, 0);
-					thread_check_started = thread_check_done = false;
-				}
-			} else {
-				if (total_added_nonces >= MIN_NONCES_REQUIRED)
-				{
-					num_good_first_bytes = estimate_second_byte_sum();
-					if (total_added_nonces > (NONCES_TRIGGER*idx) || num_good_first_bytes >= GOOD_BYTES_REQUIRED) {
-						pthread_create (&thread_check, NULL, check_thread, NULL);
-						thread_check_started = true;
-						idx++;
-					}
+			if (total_added_nonces >= MIN_NONCES_REQUIRED) {
+				num_good_first_bytes = estimate_second_byte_sum();
+				if (total_added_nonces > (NONCES_TRIGGER * idx)) {
+			
+					clock_t time1 = clock();
+					bool cracking = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
+					time1 = clock() - time1;
+					if (time1 > 0) PrintAndLog("Time for generating key candidates list: %1.0f seconds", ((float)time1)/CLOCKS_PER_SEC);
+
+					if (cracking || known_target_key != -1) {
+						field_off = brute_force(); // switch off field with next SendCommand and then finish
+ 					}
+
+					idx++;
 				}
 			}
-		}
 
+		}
+		
 		if (!initialize) {
 			if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
-				if (fnonces) { // fix segfault on proxmark3 v1 when reset button is pressed
-					fclose(fnonces);
-					fnonces = NULL;
-				}
+				if (fnonces) fclose(fnonces);
 				return 1;
 			}
 
 			if (resp.arg[0]) {
-				if (fnonces) { // fix segfault on proxmark3 v1 when reset button is pressed
-					fclose(fnonces);
-					fnonces = NULL;
-				}
+				if (fnonces) fclose(fnonces);
 				return resp.arg[0];  // error during nested_hard
 			}
 		}
@@ -890,10 +878,8 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 
 	} while (!finished);
 
-	if (nonce_file_write && fnonces) {
+	if (nonce_file_write && fnonces)
 		fclose(fnonces);
-		fnonces = NULL;
-	}
 	
 	time1 = clock() - time1;
 	if ( time1 > 0 ) {
@@ -1647,24 +1633,6 @@ out:
     return key;
 }
 
-static void* check_thread()
-{
-	num_good_first_bytes = estimate_second_byte_sum();
-
-	clock_t time1 = clock();
-	bool cracking = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
-	time1 = clock() - time1;
-	if (time1 > 0) PrintAndLog("Time for generating key candidates list: %1.0f seconds", ((float)time1)/CLOCKS_PER_SEC);
-
-	if (cracking || known_target_key != -1) {
-		field_off = brute_force(); // switch off field with next SendCommand and then finish
-	}
-
-	thread_check_done = true;
-
-	return (void *) NULL;
-}
-
 static void* crack_states_thread(void* x){
     const size_t thread_id = (size_t)x;
     size_t current_bucket = thread_id;
@@ -1699,9 +1667,7 @@ static bool brute_force(void)
 
 	 	PrintAndLog("Brute force phase starting.");
 
-//		clock_t time1 = clock();	 	
-		time_t start1, end1;
-		time(&start1);
+		clock_t time1 = clock();	 	
 		keys_found = 0;
 		foundkey = 0;
 
@@ -1748,20 +1714,15 @@ static bool brute_force(void)
 			pthread_join(threads[i], 0);
 		}
 
-		time(&end1);
-		unsigned long elapsed_time = difftime(end1, start1);
-		// time1 = clock() - time1;
-		// if ( time1 > 0 ) {
-			// ((float)time1)/CLOCKS_PER_SEC
-		// }
-
+		time1 = clock() - time1;
+		if ( time1 < 0 ) time1 = -1;
+		
 		if (keys_found && TestIfKeyExists(foundkey)) {
-			printf("ICE: %u | %u | %u \n", start1, end1, elapsed_time);
-			PrintAndLog("Success! Found %u keys after %u seconds", keys_found, elapsed_time);
+			PrintAndLog("Success! Found %u keys after %0.0f seconds", keys_found, ((float)time1)/CLOCKS_PER_SEC);
 			PrintAndLog("\nFound key: %012"PRIx64"\n", foundkey);
 			ret = true;
 		} else {
-			PrintAndLog("Fail! Tested %"PRIu32" states, in %u seconds", total_states_tested, elapsed_time);
+			PrintAndLog("Fail! Tested %"PRIu32" states, in %0.0f seconds", total_states_tested, ((float)time1)/CLOCKS_PER_SEC);
 		}
 
 		// reset this counter for the next call
