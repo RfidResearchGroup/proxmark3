@@ -644,9 +644,8 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 	if (initialize) {
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 		clear_trace();
-		set_tracing(true);
+		set_tracing(FALSE);
 	}
-	
 	LED_C_ON();
 	
 	uint16_t num_nonces = 0;
@@ -708,7 +707,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 			memcpy(buf+i, receivedAnswer, 4);
 			nt_par_enc = par_enc[0] & 0xf0;
 		} else {
-			nt_par_enc |= par_enc[0] >> 4;
+			nt_par_enc |= par_enc[0]  >> 4;
 			memcpy(buf+i+4, receivedAnswer, 4);
 			memcpy(buf+i+8, &nt_par_enc, 1);
 			i += 9;
@@ -718,9 +717,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 	}
 
 	LED_C_OFF();
-	
-	crypto1_destroy(pcs);
-	
+	crypto1_destroy(pcs);	
 	LED_B_ON();
 	cmd_send(CMD_ACK, isOK, cuid, num_nonces, buf, sizeof(buf));
 	LED_B_OFF();
@@ -730,7 +727,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 	if (field_off) {
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
-		set_tracing(FALSE);
+		//set_tracing(FALSE);
 	}
 }
 
