@@ -1,6 +1,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2015 piwi
 // fiddled with 2016 Azcid (hardnested bitsliced Bruteforce imp)
+// fiddled with 2016 Matrix ( sub testing of nonces while collecting )
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -772,7 +773,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 		clearCommandBuffer();
 		SendCommand(&c);
 		
-		if (field_off) finished = true;
+		if (field_off) break;
 		
 		if (initialize) {
 			if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) return 1;
@@ -1382,10 +1383,11 @@ static void free_statelist_cache(void)
 	}		
 }
 
+#define MAX_BUCKETS 128
 uint64_t foundkey = 0;
 size_t keys_found = 0;
 size_t bucket_count = 0;
-statelist_t* buckets[128];
+statelist_t* buckets[MAX_BUCKETS];
 size_t total_states_tested = 0;
 size_t thread_count = 4;
 
@@ -1686,7 +1688,7 @@ static bool brute_force(void)
 
 		// count number of states to go
 		bucket_count = 0;
-		for (statelist_t *p = candidates; p != NULL && bucket_count < 128; p = p->next) {
+		for (statelist_t *p = candidates; p != NULL && bucket_count < MAX_BUCKETS; p = p->next) {
 			buckets[bucket_count] = p;
 			bucket_count++;
 		}
