@@ -68,7 +68,6 @@ void crc_update(crc_t *crc, uint32_t data, int data_width)
 	}
 }
 
-
 uint32_t crc_finish(crc_t *crc) {
 	uint32_t val = crc->state;
 	if (crc->refout) val = reflect(val, crc->order);
@@ -96,7 +95,7 @@ uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
 	crc_t crc;
 	crc_init_ref(&crc, 8, 0x31, 0, 0, TRUE, TRUE);	
 	for ( int i=0; i < size; ++i)
-		crc_update(&crc, buff[i], 8);
+		crc_update2(&crc, buff[i], 8);
 	return crc_finish(&crc);
 }
 
@@ -139,7 +138,7 @@ uint32_t CRC16_DNP(uint8_t *buff, size_t size) {
 	crc_t crc;
 	crc_init_ref(&crc, 16, 0x3d65, 0, 0xffff, TRUE, TRUE);
 	for ( int i=0; i < size; ++i)
-		crc_update(&crc, buff[i], 8);
+		crc_update2(&crc, buff[i], 8);
 	
 	return BSWAP_16(crc_finish(&crc));
 }
