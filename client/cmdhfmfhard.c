@@ -15,11 +15,13 @@
 //   Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
 #include "cmdhfmfhard.h"
+#include "cmdhw.h"
 
 #define CONFIDENCE_THRESHOLD	0.95		// Collect nonces until we are certain enough that the following brute force is successfull
 #define GOOD_BYTES_REQUIRED	13		// default 28, could be smaller == faster
 #define NONCES_THRESHOLD	5000		// every N nonces check if we can crack the key
-#define CRACKING_THRESHOLD	38.00f		// as 2^38
+#define CRACKING_THRESHOLD	36.0f //38.50f		// as 2^38.5
+#define MAX_BUCKETS		128
 
 #define END_OF_LIST_MARKER		0xFFFFFFFF
 
@@ -72,7 +74,8 @@ typedef struct noncelist {
 	float Sum8_prob;
 	bool updated;
 	noncelistentry_t *first;
-	float score1, score2;
+	float score1;
+	uint_fast8_t score2;
 } noncelist_t;
 
 static size_t nonces_to_bruteforce = 0;
@@ -115,6 +118,22 @@ static partial_indexed_statelist_t statelist_bitflip;
 static statelist_t *candidates = NULL;
 
 bool field_off = false;
+
+uint64_t foundkey = 0;
+size_t keys_found = 0;
+size_t bucket_count = 0;
+statelist_t* buckets[MAX_BUCKETS];
+static uint64_t total_states_tested = 0;
+size_t thread_count = 4;
+
+// these bitsliced states will hold identical states in all slices
+bitslice_t bitsliced_rollback_byte[ROLLBACK_SIZE];
+
+// arrays of bitsliced states with identical values in all slices
+bitslice_t bitsliced_encrypted_nonces[NONCE_TESTS][STATE_SIZE];
+bitslice_t bitsliced_encrypted_parity_bits[NONCE_TESTS][ROLLBACK_SIZE];
+
+#define EXACT_COUNT
 
 static bool generate_candidates(uint16_t, uint16_t);
 static bool brute_force(void);
@@ -283,7 +302,7 @@ static float sum_probability(uint16_t K, uint16_t n, uint16_t k)
 	if (p_T_is_k_when_S_is_K == 0.0) return 0.0;
 
 	double p_S_is_K = p_K[K];
-	double p_T_is_k = 0;
+	double p_T_is_k = 0.0;
 	for (uint16_t i = 0; i <= 256; i++) {
 		if (p_K[i] != 0.0) {
 			p_T_is_k += p_K[i] * p_hypergeometric(N, i, n, k);
@@ -478,7 +497,7 @@ static void Tests()
 
 }
 
-static void sort_best_first_bytes(void)
+static uint16_t sort_best_first_bytes(void)
 {
 	// sort based on probability for correct guess	
 	for (uint16_t i = 0; i < 256; i++ ) {
@@ -493,7 +512,7 @@ static void sort_best_first_bytes(void)
 				best_first_bytes[k] = best_first_bytes[k-1];
 			}
 		}
-			best_first_bytes[j] = i;
+		best_first_bytes[j] = i;
 	}
 
 	// determine how many are above the CONFIDENCE_THRESHOLD
@@ -504,6 +523,8 @@ static void sort_best_first_bytes(void)
 		}
 	}
 	
+	if (num_good_nonces == 0) return 0;
+
 	uint16_t best_first_byte = 0;
 
 	// select the best possible first byte based on number of common bits with all {b'}
@@ -526,25 +547,28 @@ static void sort_best_first_bytes(void)
 	for (uint16_t i = 0; i < num_good_nonces; i++ ) {
 		uint16_t sum8 = nonces[best_first_bytes[i]].Sum8_guess;
 		float bitflip_prob = 1.0;
-		if (nonces[best_first_bytes[i]].BitFlip[ODD_STATE] || nonces[best_first_bytes[i]].BitFlip[EVEN_STATE]) {
+		
+		if (nonces[best_first_bytes[i]].BitFlip[ODD_STATE] || nonces[best_first_bytes[i]].BitFlip[EVEN_STATE])
 			bitflip_prob = 0.09375;
-		}
+		
 		nonces[best_first_bytes[i]].score1 = p_K[sum8] * bitflip_prob;
-		if (p_K[sum8] * bitflip_prob <= min_p_K) {
+		
+		if (p_K[sum8] * bitflip_prob <= min_p_K)
 			min_p_K = p_K[sum8] * bitflip_prob;
-		}
+		
 	}
 
 
 	// use number of commmon bits as a tie breaker
-	uint16_t max_common_bits = 0;
+	uint_fast8_t max_common_bits = 0;
 	for (uint16_t i = 0; i < num_good_nonces; i++) {
+
 		float bitflip_prob = 1.0;
-		if (nonces[best_first_bytes[i]].BitFlip[ODD_STATE] || nonces[best_first_bytes[i]].BitFlip[EVEN_STATE]) {
+		if (nonces[best_first_bytes[i]].BitFlip[ODD_STATE] || nonces[best_first_bytes[i]].BitFlip[EVEN_STATE])
 			bitflip_prob = 0.09375;
-		}
+		
 		if (p_K[nonces[best_first_bytes[i]].Sum8_guess] * bitflip_prob == min_p_K) {
-			uint16_t sum_common_bits = 0;
+			uint_fast8_t sum_common_bits = 0;
 			for (uint16_t j = 0; j < num_good_nonces; j++) {
 				sum_common_bits += common_bits(best_first_bytes[i] ^ best_first_bytes[j]);
 			}
@@ -558,16 +582,16 @@ static void sort_best_first_bytes(void)
 
 	// swap best possible first byte to the pole position
 	if (best_first_byte != 0) {
-	uint16_t temp = best_first_bytes[0];
-	best_first_bytes[0] = best_first_bytes[best_first_byte];
-	best_first_bytes[best_first_byte] = temp;
+		uint16_t temp = best_first_bytes[0];
+		best_first_bytes[0] = best_first_bytes[best_first_byte];
+		best_first_bytes[best_first_byte] = temp;
 	}
 	
+	return num_good_nonces;
 }
 
 static uint16_t estimate_second_byte_sum(void) 
-{
-	
+{	
 	for (uint16_t first_byte = 0; first_byte < 256; first_byte++) {
 		float Sum8_prob = 0.0;
 		uint16_t Sum8 = 0;
@@ -584,17 +608,7 @@ static uint16_t estimate_second_byte_sum(void)
 			nonces[first_byte].updated = false;
 		}
 	}
-	
-	sort_best_first_bytes();
-
-	uint16_t num_good_nonces = 0;
-	for (uint16_t i = 0; i < 256; i++) {
-		if (nonces[best_first_bytes[i]].Sum8_prob >= CONFIDENCE_THRESHOLD) {
-			++num_good_nonces;
-		}
-	}
-	
-	return num_good_nonces;
+	return sort_best_first_bytes();
 }	
 
 static int read_nonce_file(void)
@@ -613,6 +627,7 @@ static int read_nonce_file(void)
 	}
 
 	PrintAndLog("Reading nonces from file nonces.bin...");
+	memset (read_buf, 0, sizeof (read_buf));
 	size_t bytes_read = fread(read_buf, 1, 6, fnonces);
 	if ( bytes_read == 0) {
 		PrintAndLog("File reading error.");
@@ -622,8 +637,10 @@ static int read_nonce_file(void)
 	cuid = bytes_to_num(read_buf, 4);
 	trgBlockNo = bytes_to_num(read_buf+4, 1);
 	trgKeyType = bytes_to_num(read_buf+5, 1);
-
-	while (fread(read_buf, 1, 9, fnonces) == 9) {
+	size_t ret = 0;
+	do {
+		memset (read_buf, 0, sizeof (read_buf));
+		if ((ret = fread(read_buf, 1, 9, fnonces)) == 9) {
 		nt_enc1 = bytes_to_num(read_buf, 4);
 		nt_enc2 = bytes_to_num(read_buf+4, 4);
 		par_enc = bytes_to_num(read_buf+8, 1);
@@ -633,6 +650,8 @@ static int read_nonce_file(void)
 		add_nonce(nt_enc2, par_enc & 0x0f);
 		total_num_nonces += 2;
 	}
+	} while (ret == 9);
+
 	fclose(fnonces);
 	PrintAndLog("Read %d nonces from file. cuid=%08x, Block=%d, Keytype=%c", total_num_nonces, cuid, trgBlockNo, trgKeyType==0?'A':'B');
 	return 0;
@@ -641,7 +660,6 @@ static int read_nonce_file(void)
 static void Check_for_FilterFlipProperties(void)
 {
 	printf("Checking for Filter Flip Properties...\n");
-
 	uint16_t num_bitflips = 0;
 	
 	for (uint16_t i = 0; i < 256; i++) {
@@ -650,6 +668,8 @@ static void Check_for_FilterFlipProperties(void)
 	}
 	
 	for (uint16_t i = 0; i < 256; i++) {
+		if (!nonces[i].first || !nonces[i^0x80].first || !nonces[i^0x40].first) continue;
+
 		uint8_t parity1 = (nonces[i].first->par_enc) >> 3;				// parity of first byte
 		uint8_t parity2_odd = (nonces[i^0x80].first->par_enc) >> 3;  	// XOR 0x80 = last bit flipped
 		uint8_t parity2_even = (nonces[i^0x40].first->par_enc) >> 3;	// XOR 0x40 = second last bit flipped
@@ -663,9 +683,8 @@ static void Check_for_FilterFlipProperties(void)
 		}
 	}
 	
-	if (write_stats) {
+	if (write_stats)
 		fprintf(fstats, "%d;", num_bitflips);
-	}
 }
 
 static void simulate_MFplus_RNG(uint32_t test_cuid, uint64_t test_key, uint32_t *nt_enc, uint8_t *par_enc)
@@ -722,7 +741,7 @@ static void simulate_acquire_nonces()
 			num_good_first_bytes = estimate_second_byte_sum();
 			if (total_num_nonces > next_fivehundred) {
 				next_fivehundred = (total_num_nonces/500+1) * 500;
-				printf("Acquired %5d nonces (%5d with distinct bytes 0 and 1). Number of bytes with probability for correctly guessed Sum(a8) > %1.1f%%: %d\n",
+				printf("Acquired %5d nonces (%5d with distinct bytes 0,1). Bytes with probability for correctly guessed Sum(a8) > %1.1f%%: %d\n",
 					total_num_nonces,
 					total_added_nonces,
 					CONFIDENCE_THRESHOLD * 100.0,
@@ -756,18 +775,23 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 	uint32_t total_added_nonces = 0;
 	uint32_t idx = 1;
 	FILE *fnonces = NULL;
-	UsbCommand resp;
 	field_off = false;
-	UsbCommand c = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 0}};
-	memcpy(c.d.asBytes, key, 6);
+
+	UsbCommand resp;
+	UsbCommand c = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {0,0,0} };
+	memcpy(c.d.asBytes, key, 6);	
+	c.arg[0] = blockNo + (keyType * 0x100);
+	c.arg[1] = trgBlockNo + (trgKeyType * 0x100);
 	
 	printf("Acquiring nonces...\n");
 	do {
 		flags = 0;
-		flags |= initialize ? 0x0001 : 0;
+		//flags |= initialize ? 0x0001 : 0;
+		flags |= 0x0001;
 		flags |= slow ? 0x0002 : 0;
 		flags |= field_off ? 0x0004 : 0;
 		c.arg[2] = flags;
+
 		clearCommandBuffer();
 		SendCommand(&c);
 		
@@ -777,6 +801,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 			if (fnonces) fclose(fnonces);
 			return 1;
 		}
+
 		if (resp.arg[0]) {
 			if (fnonces) fclose(fnonces);
 			return resp.arg[0];  // error during nested_hard
@@ -791,6 +816,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 					return 3;
 				}
 				PrintAndLog("Writing acquired nonces to binary file nonces.bin");
+				memset (write_buf, 0, sizeof (write_buf));
 				num_to_bytes(cuid, 4, write_buf);
 				fwrite(write_buf, 1, 4, fnonces);
 				fwrite(&trgBlockNo, 1, 1, fnonces);
@@ -804,14 +830,12 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 		uint8_t par_enc;
 		uint16_t num_acquired_nonces = resp.arg[2];
 		uint8_t *bufp = resp.d.asBytes;
-		for (uint16_t i = 0; i < num_acquired_nonces; i+=2) {
+		for (uint16_t i = 0; i < num_acquired_nonces; i += 2) {
 			nt_enc1 = bytes_to_num(bufp, 4);
 			nt_enc2 = bytes_to_num(bufp+4, 4);
 			par_enc = bytes_to_num(bufp+8, 1);
 			
-			//printf("Encrypted nonce: %08x, encrypted_parity: %02x\n", nt_enc1, par_enc >> 4);
 			total_added_nonces += add_nonce(nt_enc1, par_enc >> 4);
-			//printf("Encrypted nonce: %08x, encrypted_parity: %02x\n", nt_enc2, par_enc & 0x0f);
 			total_added_nonces += add_nonce(nt_enc2, par_enc & 0x0f);
 			
 			if (nonce_file_write && fnonces) {
@@ -833,23 +857,29 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 
 			if (total_num_nonces > next_fivehundred) {
 				next_fivehundred = (total_num_nonces/500+1) * 500;
-				printf("Acquired %5d nonces (%5d/%5d with distinct bytes 0,1). #bytes with probability for correctly guessed Sum(a8) > %1.1f%%: %d\n",
+				printf("Acquired %5d nonces (%5d/%5d with distinct bytes 0,1). Bytes with probability for correctly guessed Sum(a8) > %1.1f%%: %d\n",
 					total_num_nonces,
 					total_added_nonces,
 					NONCES_THRESHOLD * idx,
 					CONFIDENCE_THRESHOLD * 100.0,
 					num_good_first_bytes);
 			}
+			
+			if ( num_good_first_bytes > 0 ) {
+				//printf("GOOD BYTES: %s \n", sprint_hex(best_first_bytes, num_good_first_bytes) );
+				if ( total_added_nonces >= (NONCES_THRESHOLD * idx)) {					
 
-			if (total_added_nonces >= (NONCES_THRESHOLD * idx) && num_good_first_bytes > 0 ) {
-				bool cracking = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
-				if (cracking || known_target_key != -1) {
-					field_off = brute_force(); // switch off field with next SendCommand and then finish
+					CmdFPGAOff("");
+						
+					bool cracking = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
+					if (cracking || known_target_key != -1) {
+						field_off = brute_force(); // switch off field with next SendCommand and then finish					
+						if (field_off) break;
+					}
+					idx++;
 				}
-				idx++;
 			}
 		}
-
 	} while (!finished);
 
 	if (nonce_file_write && fnonces)
@@ -937,7 +967,7 @@ static void init_BitFlip_statelist(void)
 	// set len and add End Of List marker
 	statelist_bitflip.len[0] = p - statelist_bitflip.states[0];
 	*p = END_OF_LIST_MARKER;
-	statelist_bitflip.states[0] = realloc(statelist_bitflip.states[0], sizeof(uint32_t) * (statelist_bitflip.len[0] + 1));
+	//statelist_bitflip.states[0] = realloc(statelist_bitflip.states[0], sizeof(uint32_t) * (statelist_bitflip.len[0] + 1));
 }
 		
 static inline uint32_t *find_first_state(uint32_t state, uint32_t mask, partial_indexed_statelist_t *sl, odd_even_t odd_even)
@@ -1237,6 +1267,7 @@ static bool TestIfKeyExists(uint64_t key)
 		}
 		count += (p_odd - p->states[ODD_STATE]) * (p_even - p->states[EVEN_STATE]);
 		if (found_odd && found_even) {
+			if (known_target_key != -1) {
 			PrintAndLog("Key Found after testing %llu (2^%1.1f) out of %lld (2^%1.1f) keys.", 
 				count,
 				log(count)/log(2), 
@@ -1246,14 +1277,17 @@ static bool TestIfKeyExists(uint64_t key)
 			if (write_stats) {
 				fprintf(fstats, "1\n");
 			}
+			}
 			crypto1_destroy(pcs);
 			return true;
 		}
 	}
 
+	if (known_target_key != -1) {
 	printf("Key NOT found!\n");
 	if (write_stats) {
 		fprintf(fstats, "0\n");
+	}
 	}
 	crypto1_destroy(pcs);
 
@@ -1325,7 +1359,7 @@ static bool generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 
 	maximum_states = 0;
 	unsigned int n = 0;
-	for (statelist_t *sl = candidates; sl != NULL && n < 128; sl = sl->next, n++) {
+	for (statelist_t *sl = candidates; sl != NULL && n < MAX_BUCKETS; sl = sl->next, n++) {
 		maximum_states += (uint64_t)sl->len[ODD_STATE] * sl->len[EVEN_STATE];
 	}
 
@@ -1334,11 +1368,7 @@ static bool generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 	float kcalc = log(maximum_states)/log(2);
 	printf("Number of remaining possible keys: %"PRIu64" (2^%1.1f)\n", maximum_states, kcalc);
 	if (write_stats) {
-		if (maximum_states != 0) {
-			fprintf(fstats, "%1.1f;", kcalc);
-		} else {
-			fprintf(fstats, "%1.1f;", 0.0);
-		}
+		fprintf(fstats, "%1.1f;", (kcalc != 0) ? kcalc : 0.0);
 	}
 	if (kcalc < CRACKING_THRESHOLD) return true;
 
@@ -1365,23 +1395,6 @@ static void free_statelist_cache(void)
 		}
 	}		
 }
-
-#define MAX_BUCKETS 128
-uint64_t foundkey = 0;
-size_t keys_found = 0;
-size_t bucket_count = 0;
-statelist_t* buckets[MAX_BUCKETS];
-size_t total_states_tested = 0;
-size_t thread_count = 4;
-
-// these bitsliced states will hold identical states in all slices
-bitslice_t bitsliced_rollback_byte[ROLLBACK_SIZE];
-
-// arrays of bitsliced states with identical values in all slices
-bitslice_t bitsliced_encrypted_nonces[NONCE_TESTS][STATE_SIZE];
-bitslice_t bitsliced_encrypted_parity_bits[NONCE_TESTS][ROLLBACK_SIZE];
-
-#define EXACT_COUNT
 
 static const uint64_t crack_states_bitsliced(statelist_t *p){
     // the idea to roll back the half-states before combining them was suggested/explained to me by bla
@@ -1471,11 +1484,7 @@ static const uint64_t crack_states_bitsliced(statelist_t *p){
         crypto1_bs_rewind_a0();
         // set odd bits
         for(size_t state_idx = 0; state_idx < STATE_SIZE-ROLLBACK_SIZE; o >>= 1, state_idx+=2){
-            if(o & 1){
-                state_p[state_idx] = bs_ones;
-            } else {
-                state_p[state_idx] = bs_zeroes;
-            }
+            state_p[state_idx] = (o & 1) ? bs_ones : bs_zeroes;
         }
         const bitslice_value_t odd_feedback = odd_feedback_bit ? bs_ones.value : bs_zeroes.value;
 
@@ -1505,7 +1514,7 @@ static const uint64_t crack_states_bitsliced(statelist_t *p){
             }
 
 #ifdef EXACT_COUNT
-            bucket_states_tested += bucket_size[block_idx];
+            bucket_states_tested += (bucket_size[block_idx] > MAX_BITSLICES) ? MAX_BITSLICES : bucket_size[block_idx];
 #endif
             // pre-compute first keystream and feedback bit vectors
             const bitslice_value_t ksb = crypto1_bs_f20(state_p);
@@ -1616,34 +1625,39 @@ out:
 static void* crack_states_thread(void* x){
     const size_t thread_id = (size_t)x;
     size_t current_bucket = thread_id;
+	statelist_t *bucket = NULL;
+
     while(current_bucket < bucket_count){
-        statelist_t * bucket = buckets[current_bucket];
-		if(bucket){
+		if (keys_found) break;
+
+		if ((bucket = buckets[current_bucket])) {
             const uint64_t key = crack_states_bitsliced(bucket);
-            if(key != -1){
+
+			if (keys_found) break;
+			else if(key != -1 && TestIfKeyExists(key)) {
                 __sync_fetch_and_add(&keys_found, 1);
 				__sync_fetch_and_add(&foundkey, key);
-                break;
-            } else if(keys_found){
                 break;
             } else {				
                 printf(".");
 				fflush(stdout);
             }
         }
+
         current_bucket += thread_count;
     }
+
     return NULL;
 }
 
 static bool brute_force(void) {
-	if (maximum_states == 0) return false; // prevent keyspace reduction error (2^-inf)
-		
 	bool ret = false;
 	if (known_target_key != -1) {
 		PrintAndLog("Looking for known target key in remaining key space...");
 		ret = TestIfKeyExists(known_target_key);
 	} else {
+		if (maximum_states == 0) return false; // prevent keyspace reduction error (2^-inf)
+
 	 	PrintAndLog("Brute force phase starting.");
 
 		clock_t time1 = clock();	 	
@@ -1651,6 +1665,9 @@ static bool brute_force(void) {
 		foundkey = 0;
 
 		crypto1_bs_init();
+		memset (bitsliced_rollback_byte, 0, sizeof (bitsliced_rollback_byte));
+		memset (bitsliced_encrypted_nonces, 0, sizeof (bitsliced_encrypted_nonces));
+		memset (bitsliced_encrypted_parity_bits, 0, sizeof (bitsliced_encrypted_parity_bits));
 
 		PrintAndLog("Using %u-bit bitslices", MAX_BITSLICES);
 		PrintAndLog("Bitslicing best_first_byte^uid[3] (rollback byte): %02X ...", best_first_bytes[0]^(cuid>>24));
@@ -1670,11 +1687,12 @@ static bool brute_force(void) {
 
 		// count number of states to go
 		bucket_count = 0;
+		buckets[MAX_BUCKETS-1] = NULL;
 		for (statelist_t *p = candidates; p != NULL && bucket_count < MAX_BUCKETS; p = p->next) {
 			buckets[bucket_count] = p;
 			bucket_count++;
 		}
-		buckets[bucket_count] = NULL;
+		if (bucket_count < MAX_BUCKETS) buckets[bucket_count] = NULL;
 
 #ifndef __WIN32
 		thread_count = sysconf(_SC_NPROCESSORS_CONF);
@@ -1697,7 +1715,7 @@ static bool brute_force(void) {
 		time1 = clock() - time1;
 		PrintAndLog("\nTime for bruteforce %0.1f seconds.",((float)time1)/CLOCKS_PER_SEC);		
 		
-		if (keys_found && TestIfKeyExists(foundkey)) {
+		if (keys_found) {
 			PrintAndLog("\nFound key: %012"PRIx64"\n", foundkey);
 			ret = true;
 		} 
@@ -1756,12 +1774,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 			num_good_first_bytes = MIN(estimate_second_byte_sum(), GOOD_BYTES_REQUIRED);
 			PrintAndLog("Number of first bytes with confidence > %2.1f%%: %d", CONFIDENCE_THRESHOLD*100.0, num_good_first_bytes);
 
-			clock_t time1 = clock();
 			bool cracking = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
-			time1 = clock() - time1;
-			if (time1 > 0)
-				PrintAndLog("Time for generating key candidates list: %1.0f seconds", ((float)time1)/CLOCKS_PER_SEC);
-
 			if (cracking || known_target_key != -1) {
 				brute_force();
 			}
