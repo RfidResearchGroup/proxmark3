@@ -97,7 +97,6 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 	state = lfsr_common_prefix_ex(nr, ks3x);
 
 	if (!state) {
-		key_count = 0;
 		PrintAndLog("Failed getting states");
 		return 1;
 	}
@@ -117,7 +116,6 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 	
 	// first call to this function.  clear all other stuff and set new found states.
 	if (last_keylist == NULL) {
-		key_count = 0;
 		free(last_keylist);
 		last_keylist = state_s;
 		PrintAndLog("parity is all zero, testing special attack. First call, this attack needs at least two calls. Hold on...");		
