@@ -165,14 +165,17 @@ static int add_nonce(uint32_t nonce_enc, uint8_t par_enc)
 		} else {					// add new entry at end of existing list.
 			p2 = p2->next = malloc(sizeof(noncelistentry_t));
 		}
-	} else if ((p1->nonce_enc & 0x00ff0000) != (nonce_enc & 0x00ff0000)) {				// found distinct 2nd byte. Need to insert.
+		if (p2 == NULL) return 0;							// memory allocation failed
+	}
+	else if ((p1->nonce_enc & 0x00ff0000) != (nonce_enc & 0x00ff0000)) {			// found distinct 2nd byte. Need to insert.
 		if (p2 == NULL) {			// need to insert at start of list
 			p2 = nonces[first_byte].first = malloc(sizeof(noncelistentry_t));
 		} else {
 			p2 = p2->next = malloc(sizeof(noncelistentry_t));
 		}
-	} else {											// we have seen this 2nd byte before. Nothing to add or insert. 
-		return (0);
+		if (p2 == NULL) return 0;							// memory allocation failed
+	} else {
+		return 0;									// we have seen this 2nd byte before. Nothing to add or insert.
 	}
 
 	// add or insert new data
@@ -189,7 +192,7 @@ static int add_nonce(uint32_t nonce_enc, uint8_t par_enc)
 	nonces[first_byte].Sum += evenparity32((nonce_enc & 0x00ff0000) | (par_enc & 0x04));
 	nonces[first_byte].updated = true;   // indicates that we need to recalculate the Sum(a8) probability for this first byte
 
-	return (1);				// new nonce added
+	return 1;				// new nonce added
 }
 
 static void init_nonce_memory(void)
@@ -762,16 +765,6 @@ static void simulate_acquire_nonces()
 		
 }
 
-static void	free_candidates_memory(statelist_t *sl)
-{
-	if (sl == NULL) {
-		return;
-	} else {
-		free_candidates_memory(sl->next);
-		free(sl);
-	}
-}
-
 static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, bool nonce_file_write, bool slow)
 {
 	uint8_t three_in_row = 0;
@@ -1269,11 +1262,7 @@ static bool TestIfKeyExists(uint64_t key)
 	uint32_t state_odd = pcs->odd & 0x00ffffff;
 	uint32_t state_even = pcs->even & 0x00ffffff;
 	//printf("Tests: searching for key %llx after first byte 0x%02x (state_odd = 0x%06x, state_even = 0x%06x) ...\n", key, best_first_bytes[0], state_odd, state_even);
-	printf("Validating keysearch space\n");
-	if ( candidates == NULL ) {
-			printf("candidates list is NULL\n");
-			return false;
-	}
+	printf("Validating key search space\n");
 	uint64_t count = 0;
 	for (statelist_t *p = candidates; p != NULL; p = p->next) {
 		bool found_odd = false;
@@ -1398,6 +1387,16 @@ static bool generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 	if (kcalc < CRACKING_THRESHOLD) return true;
 
 	return false;
+}
+
+static void free_candidates_memory(statelist_t *sl)
+{
+	if (sl == NULL) {
+		return;
+	} else {
+		free_candidates_memory(sl->next);
+		free(sl);
+	}
 }
 
 static void free_statelist_cache(void)
@@ -1649,19 +1648,23 @@ static void* crack_states_thread(void* x){
             const uint64_t key = crack_states_bitsliced(bucket);
 
 			if (keys_found) break;
-			else if(key != -1 && TestIfKeyExists(key)) {
+			else if(key != -1) {
+				if (TestIfKeyExists(key)) {
                 __sync_fetch_and_add(&keys_found, 1);
 				__sync_fetch_and_add(&foundkey, key);
+					printf("*");
+					fflush(stdout);
                 break;
+				}
+				printf("!");
+				fflush(stdout);
             } else {				
                 printf(".");
 				fflush(stdout);
             }
         }
-
         current_bucket += thread_count;
     }
-
     return NULL;
 }
 
