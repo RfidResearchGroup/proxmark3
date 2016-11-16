@@ -13,7 +13,7 @@
 #define PROXMARK3_H__
 
 // Handle platform specific includes
-#ifdef __WIN32
+#ifdef _WIN32
 // for MINGW32 environments
   #define _USE_32BIT_TIME_T 1
   #include <time.h>
