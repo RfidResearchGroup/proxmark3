@@ -23,5 +23,5 @@ int CmdSetDivisor(const char *Cmd);
 int CmdSetMux(const char *Cmd);
 int CmdTune(const char *Cmd);
 int CmdVersion(const char *Cmd);
-
+int CmdPing(const char *Cmd);
 #endif
