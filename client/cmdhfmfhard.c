@@ -762,8 +762,20 @@ static void simulate_acquire_nonces()
 		
 }
 
+static void	free_candidates_memory(statelist_t *sl)
+{
+	if (sl == NULL) {
+		return;
+	} else {
+		free_candidates_memory(sl->next);
+		free(sl);
+	}
+}
+
 static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, bool nonce_file_write, bool slow)
 {
+	uint8_t three_in_row = 0;
+	uint8_t prev_best = 0;
 	clock_t time1 = clock();
 	bool initialize = true;
 	bool finished = false;
@@ -776,15 +788,15 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 	uint32_t idx = 1;
 	FILE *fnonces = NULL;
 	field_off = false;
-
 	UsbCommand resp;
 	UsbCommand c = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {0,0,0} };
 	memcpy(c.d.asBytes, key, 6);	
 	c.arg[0] = blockNo + (keyType * 0x100);
 	c.arg[1] = trgBlockNo + (trgKeyType * 0x100);
-	
+		
 	printf("Acquiring nonces...\n");
 	do {
+	
 		flags = 0;
 		//flags |= initialize ? 0x0001 : 0;
 		flags |= 0x0001;
@@ -797,7 +809,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 		
 		if (field_off) break;
 
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, 6000)) {
 			if (fnonces) fclose(fnonces);
 			return 1;
 		}
@@ -854,6 +866,12 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 			}
 
 			num_good_first_bytes = estimate_second_byte_sum();
+			if ( prev_best == best_first_bytes[0] ){
+				++three_in_row;
+			} else {
+				three_in_row = 0;
+			}
+			prev_best = best_first_bytes[0];
 
 			if (total_num_nonces > next_fivehundred) {
 				next_fivehundred = (total_num_nonces/500+1) * 500;
@@ -862,23 +880,27 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 					total_added_nonces,
 					NONCES_THRESHOLD * idx,
 					CONFIDENCE_THRESHOLD * 100.0,
-					num_good_first_bytes);
+					num_good_first_bytes
+					);
 			}
 			
 			if ( num_good_first_bytes > 0 ) {
 				//printf("GOOD BYTES: %s \n", sprint_hex(best_first_bytes, num_good_first_bytes) );
-				if ( total_added_nonces >= (NONCES_THRESHOLD * idx)) {					
-
-					CmdFPGAOff("");
-						
+				if ( total_added_nonces >= (NONCES_THRESHOLD * idx) || three_in_row >= 3) {
+					
 					bool cracking = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
 					if (cracking || known_target_key != -1) {
-						field_off = brute_force(); // switch off field with next SendCommand and then finish					
-						if (field_off) break;
+						
+						UsbCommand cOff = {CMD_FPGA_MAJOR_MODE_OFF, {0,0,0} };
+						SendCommand(&cOff);
+						field_off = brute_force();
 					}
-					idx++;
+					free_candidates_memory(candidates);
 				}
 			}
+			
+			if ( total_added_nonces >= (NONCES_THRESHOLD * idx)) 
+					++idx;
 		}
 	} while (!finished);
 
@@ -1246,6 +1268,10 @@ static bool TestIfKeyExists(uint64_t key)
 	uint32_t state_even = pcs->even & 0x00ffffff;
 	//printf("Tests: searching for key %llx after first byte 0x%02x (state_odd = 0x%06x, state_even = 0x%06x) ...\n", key, best_first_bytes[0], state_odd, state_even);
 	printf("Validating keysearch space\n");
+	if ( candidates == NULL ) {
+			printf("candidates list is NULL\n");
+			return false;
+	}
 	uint64_t count = 0;
 	for (statelist_t *p = candidates; p != NULL; p = p->next) {
 		bool found_odd = false;
@@ -1260,23 +1286,22 @@ static bool TestIfKeyExists(uint64_t key)
 			p_odd++;
 		}
 		while (*p_even != END_OF_LIST_MARKER) {
-			if ((*p_even & 0x00ffffff) == state_even) {
+			if ((*p_even & 0x00ffffff) == state_even)
 				found_even = true;
-			}
+
 			p_even++;
 		}
 		count += (p_odd - p->states[ODD_STATE]) * (p_even - p->states[EVEN_STATE]);
 		if (found_odd && found_even) {
 			if (known_target_key != -1) {
-			PrintAndLog("Key Found after testing %llu (2^%1.1f) out of %lld (2^%1.1f) keys.", 
-				count,
-				log(count)/log(2), 
-				maximum_states,
-				log(maximum_states)/log(2)
-				);
-			if (write_stats) {
-				fprintf(fstats, "1\n");
-			}
+				PrintAndLog("Key Found after testing %llu (2^%1.1f) out of %lld (2^%1.1f) keys.", 
+					count,
+					log(count)/log(2), 
+					maximum_states,
+					log(maximum_states)/log(2)
+					);
+				if (write_stats)
+					fprintf(fstats, "1\n");			
 			}
 			crypto1_destroy(pcs);
 			return true;
@@ -1284,13 +1309,11 @@ static bool TestIfKeyExists(uint64_t key)
 	}
 
 	if (known_target_key != -1) {
-	printf("Key NOT found!\n");
-	if (write_stats) {
-		fprintf(fstats, "0\n");
-	}
+		printf("Key NOT found!\n");
+		if (write_stats)
+			fprintf(fstats, "0\n");
 	}
 	crypto1_destroy(pcs);
-
 	return false;
 }
 
@@ -1373,16 +1396,6 @@ static bool generate_candidates(uint16_t sum_a0, uint16_t sum_a8)
 	if (kcalc < CRACKING_THRESHOLD) return true;
 
 	return false;
-}
-
-static void	free_candidates_memory(statelist_t *sl)
-{
-	if (sl == NULL) {
-		return;
-	} else {
-		free_candidates_memory(sl->next);
-		free(sl);
-	}
 }
 
 static void free_statelist_cache(void)
