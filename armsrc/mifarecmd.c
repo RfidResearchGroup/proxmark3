@@ -641,13 +641,17 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 	LED_A_ON();
 	LED_C_OFF();
 
+	BigBuf_free(); BigBuf_Clear_ext(false);	
+	clear_trace();
+	set_tracing(FALSE);
+	
 	if (initialize) {
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-		clear_trace();
-		set_tracing(FALSE);
 	}
+	
 	LED_C_ON();
 	
+	uint8_t dummy_answer = 0;	
 	uint16_t num_nonces = 0;
 	bool have_uid = false;
 	for (uint16_t i = 0; i <= USB_CMD_DATA_SIZE - 9; ) {
@@ -698,7 +702,6 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 		}
 	
 		// send a dummy byte as reader response in order to trigger the cards authentication timeout
-		uint8_t dummy_answer = 0;
 		ReaderTransmit(&dummy_answer, 1, NULL);
 		timeout = GetCountSspClk() + AUTHENTICATION_TIMEOUT;
 		
@@ -727,7 +730,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 	if (field_off) {
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
-		//set_tracing(FALSE);
+		set_tracing(FALSE);
 	}
 }
 
