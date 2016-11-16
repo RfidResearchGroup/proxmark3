@@ -1866,6 +1866,9 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 			memset(uid_ptr,0,10);
 	}
 
+	// reset the PCB block number
+	iso14_pcb_blocknum = 0;
+	
 	// check for proprietary anticollision:
 	if ((resp[0] & 0x1F) == 0) return 3;
 	
@@ -1977,12 +1980,8 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 		p_hi14a_card->ats_len = len;
 	}
 
-	// reset the PCB block number
-	iso14_pcb_blocknum = 0;
-
 	// set default timeout based on ATS
 	iso14a_set_ATS_timeout(resp);
-
 	return 1;	
 }
 
@@ -2216,7 +2215,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	
 	BigBuf_free(); BigBuf_Clear_ext(false);	
 	clear_trace();
-	set_tracing(TRUE);	
+	set_tracing(FALSE);	
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
 	sync_time = GetCountSspClk() & 0xfffffff8;
