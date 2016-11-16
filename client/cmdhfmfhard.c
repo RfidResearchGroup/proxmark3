@@ -866,12 +866,6 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 			}
 
 			num_good_first_bytes = estimate_second_byte_sum();
-			if ( prev_best == best_first_bytes[0] ){
-				++three_in_row;
-			} else {
-				three_in_row = 0;
-			}
-			prev_best = best_first_bytes[0];
 
 			if (total_num_nonces > next_fivehundred) {
 				next_fivehundred = (total_num_nonces/500+1) * 500;
@@ -881,10 +875,18 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 					NONCES_THRESHOLD * idx,
 					CONFIDENCE_THRESHOLD * 100.0,
 					num_good_first_bytes
-					);
+					);				
 			}
 			
 			if ( num_good_first_bytes > 0 ) {
+				
+				if ( prev_best == best_first_bytes[0] ){
+					++three_in_row;
+				} else {
+					three_in_row = 0;
+				}
+				prev_best = best_first_bytes[0];
+				
 				//printf("GOOD BYTES: %s \n", sprint_hex(best_first_bytes, num_good_first_bytes) );
 				if ( total_added_nonces >= (NONCES_THRESHOLD * idx) || three_in_row >= 3) {
 					
@@ -895,7 +897,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 						SendCommand(&cOff);
 						field_off = brute_force();
 					}
-					free_candidates_memory(candidates);
+					three_in_row = 0;
 				}
 			}
 			
