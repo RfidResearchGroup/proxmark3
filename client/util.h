@@ -17,6 +17,18 @@
 #include "proxmark3.h"	// time_t
 #include "data.h"		// for FILE_PATH_SIZE
 
+// Handle platform specific includes
+#ifndef _WIN32
+  #include <termios.h>
+  #include <sys/ioctl.h>
+  #include <sys/time.h>
+#else
+  #include <conio.h>
+  #include <time.h>
+  #include <windows.h>
+#endif
+
+
 #ifndef BITMASK
 # define BITMASK(X) (1 << (X))
 #endif

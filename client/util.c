@@ -12,9 +12,6 @@
 #define MAX_BIN_BREAK_LENGTH   (3072+384+1)
 
 #ifndef _WIN32
-#include <termios.h>
-#include <sys/ioctl.h> 
-
 int ukbhit(void) {
   int cnt = 0;
   int error;
@@ -38,7 +35,6 @@ int ukbhit(void) {
 }
 
 #else
-#include <conio.h>
 int ukbhit(void) {
 	return kbhit();
 }
