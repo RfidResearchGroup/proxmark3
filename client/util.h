@@ -17,6 +17,7 @@
 #include "proxmark3.h"	// time_t
 #include "data.h"		// for FILE_PATH_SIZE
 
+#include <time.h>
 // Handle platform specific includes
 #ifndef _WIN32
   #include <termios.h>
@@ -24,7 +25,6 @@
   #include <sys/time.h>
 #else
   #include <conio.h>
-  #include <time.h>
   #include <windows.h>
 #endif
 
