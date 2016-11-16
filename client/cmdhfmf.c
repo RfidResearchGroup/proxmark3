@@ -245,7 +245,7 @@ start:
 		uint64_t key64 = 0;
 		int res = mfCheckKeys(blockNo, keytype - 0x60 , false, 1, keyblock, &key64);
 		if ( res > 0 ) {
-			PrintAndLog("Candidate Key found (%012"llx") - Test authentication failed. Starting over darkside attack", r_key);	
+			PrintAndLog("Candidate Key found (%012"llx") - Test authentication failed. [%d] Restarting darkside attack", r_key, res);	
 			goto start;
 		}
 		PrintAndLog("Found valid key: %012"llx" \n", r_key);
