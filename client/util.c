@@ -185,7 +185,7 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest) {
 	while (len--) {
-		dest[len] = (uint8_t) n;
+		dest[len] = n & 0xFF;
 		n >>= 8;
 	}
 }
