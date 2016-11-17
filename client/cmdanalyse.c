@@ -26,7 +26,6 @@ int usage_analyse_lcr(void) {
 	PrintAndLog("expected output: Target (BA) requires final LRC XOR byte value: 5A");
 	return 0;
 }
-
 int usage_analyse_checksum(void) {
 	PrintAndLog("The bytes will be added with eachother and than limited with the applied mask");
 	PrintAndLog("Finally compute ones' complement of the least significant bytes");
@@ -42,7 +41,6 @@ int usage_analyse_checksum(void) {
 	PrintAndLog("expected output: 0x61");
 	return 0;
 }
-
 int usage_analyse_crc(void){
 	PrintAndLog("A stub method to test different crc implementations inside the PM3 sourcecode. Just because you figured out the poly, doesn't mean you get the desired output");
 	PrintAndLog("");
@@ -53,6 +51,20 @@ int usage_analyse_crc(void){
 	PrintAndLog("");
 	PrintAndLog("Samples:");
 	PrintAndLog("           analyse crc 137AF00A0A0D");
+	return 0;
+}
+int usage_analyse_hid(void){
+	PrintAndLog("Permute function from 'heart of darkness' paper.");
+	PrintAndLog("");
+	PrintAndLog("Usage:  analyse hid [h] <r|f> <bytes>");
+	PrintAndLog("Options:");
+	PrintAndLog("           h          This help");
+	PrintAndLog("           r          reverse permuted key");
+	PrintAndLog("           f          permute key");
+	PrintAndLog("           <bytes>    input bytes");
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("           analyse hid r 0123456789abcdef");
 	return 0;
 }
 
@@ -309,23 +321,128 @@ int CmdAnalyseTEASelfTest(const char *Cmd){
 }
 
 int CmdAnalyseA(const char *Cmd){
+/*	
+piwi
+// uid(2e086b1a) nt(230736f6) ks(0b0008000804000e) nr(000000000)
+// uid(2e086b1a) nt(230736f6) ks(0e0b0e0b090c0d02) nr(000000001)
+// uid(2e086b1a) nt(230736f6) ks(0e05060e01080b08) nr(000000002)
+uint64_t d1[] = {0x2e086b1a, 0x230736f6, 0x0000001, 0x0e0b0e0b090c0d02};
+uint64_t d2[] = {0x2e086b1a, 0x230736f6, 0x0000002, 0x0e05060e01080b08};
 	
-// uid(2e086b1a) nt(230736f6) par(0000000000000000) ks(0b0008000804000e) nr(000000000)
-// uid(2e086b1a) nt(230736f6) par(0000000000000000) ks(0e0b0e0b090c0d02) nr(000000001)
-// uid(2e086b1a) nt(230736f6) par(0000000000000000) ks(0e05060e01080b08) nr(000000002)
-	uint32_t uid = 0x2e086b1a, nt = 0x230736f6, nr = 0x000000001;
-	uint64_t ks_list = 0x0e0b0e0b090c0d02, r_key = 0;
-
-	nonce2key_ex(0, 0 , uid, nt, nr, ks_list, &r_key);
-
-	nr = 0x000000002;
-	ks_list = 0x0e05060e01080b08;
-	nonce2key_ex(0, 0 , uid, nt, nr, ks_list, &r_key);
-
-	printf("Found valid key: %012"llx" \n", r_key);	
+// uid(17758822) nt(c0c69e59) ks(080105020705040e) nr(00000001)
+// uid(17758822) nt(c0c69e59) ks(01070a05050c0705) nr(00000002)
+uint64_t d1[] = {0x17758822, 0xc0c69e59, 0x0000001, 0x080105020705040e};
+uint64_t d2[] = {0x17758822, 0xc0c69e59, 0x0000002, 0x01070a05050c0705};
+	
+// uid(6e442129) nt(8f699195) ks(090d0b0305020f02) nr(00000001)
+// uid(6e442129) nt(8f699195) ks(03030508030b0c0e) nr(00000002)
+// uid(6e442129) nt(8f699195) ks(02010f030c0d050d) nr(00000003)
+// uid(6e442129) nt(8f699195) ks(00040f0f0305030e) nr(00000004)
+uint64_t d1[] = {0x6e442129, 0x8f699195, 0x0000001, 0x090d0b0305020f02};
+uint64_t d2[] = {0x6e442129, 0x8f699195, 0x0000004, 0x00040f0f0305030e};
+	
+uid(3e172b29) nt(039b7bd2) ks(0c0e0f0505080800) nr(00000001)
+uid(3e172b29) nt(039b7bd2) ks(0e06090d03000b0f) nr(00000002)
+*/
+	uint64_t key = 0;
+	uint64_t d1[] = {0x3e172b29, 0x039b7bd2, 0x0000001, 0x0c0e0f0505080800};
+	uint64_t d2[] = {0x3e172b29, 0x039b7bd2, 0x0000002, 0x0e06090d03000b0f};
+	
+	nonce2key_ex(0, 0 , d1[0], d1[1], d1[2], d1[3], &key);
+	nonce2key_ex(0, 0 , d2[0], d2[1], d2[2], d2[3], &key);
 	return 0;
 }
 
+static void permute(uint8_t *data, uint8_t len, uint8_t *output){	
+#define KEY_SIZE 8
+
+	if ( len > KEY_SIZE ) {
+		for(uint8_t m = 0; m < len; m += KEY_SIZE){
+			permute(data+m, KEY_SIZE, output+m);
+		}
+		return;
+	}
+	if ( len != KEY_SIZE ) {
+		printf("wrong key size\n");
+		return;
+	}
+	uint8_t i,j,p, mask;
+	for( i=0; i < KEY_SIZE; ++i){
+		p = 0;
+		mask = 0x80 >> i;
+		for( j=0; j < KEY_SIZE; ++j){
+			p >>= 1;
+			if (data[j] & mask) 
+				p |= 0x80;
+		}
+		output[i] = p;
+	}
+}
+static void permute_rev(uint8_t *data, uint8_t len, uint8_t *output){
+	permute(data, len, output);
+	permute(output, len, data);
+	permute(data, len, output);
+}
+static void simple_crc(uint8_t *data, uint8_t len, uint8_t *output){
+	uint8_t crc = 0;
+	for( uint8_t i=0; i < len; ++i){
+		// seventh byte contains the crc.
+		if ( (i & 0x7) == 0x7 ) {
+			output[i] = crc ^ 0xFF;
+			crc = 0;
+		} else {
+			output[i] = data[i];
+			crc ^= data[i];
+		}
+	}
+}
+// DES doesn't use the MSB.
+static void shave(uint8_t *data, uint8_t len){
+	for (uint8_t i=0; i<len; ++i)
+		data[i] &= 0xFE;
+}
+static void generate_rev(uint8_t *data, uint8_t len) {
+	uint8_t *key = calloc(len,1);	
+	printf("input permuted key | %s \n", sprint_hex(data, len));
+	permute_rev(data, len, key);
+	printf("    unpermuted key | %s \n", sprint_hex(key, len));
+	shave(key, len);
+	printf("               key | %s \n", sprint_hex(key, len));
+	free(key);	
+}
+static void generate(uint8_t *data, uint8_t len) {
+	uint8_t *key = calloc(len,1);
+	uint8_t *pkey = calloc(len,1);	
+	printf("    input key | %s \n", sprint_hex(data, len));
+	permute(data, len, pkey);
+	printf(" permuted key | %s \n", sprint_hex(pkey, len));
+	simple_crc(pkey, len, key );
+	printf("   CRC'ed key | %s \n", sprint_hex(key, len));
+	free(key);
+	free(pkey);
+}
+int CmdAnalyseHid(const char *Cmd){
+
+	uint8_t data[16] = {0};
+	bool isReverse = FALSE;
+	int len = 0;
+	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) == 0|| cmdp == 'h' || cmdp == 'H') return usage_analyse_hid();
+		
+	if ( cmdp == 'r' || cmdp == 'R' ) 
+		isReverse = TRUE;
+	
+	param_gethex_ex(Cmd, 1, data, &len);
+	if ( len%2 ) return usage_analyse_hid();
+	
+	len >>= 1;
+	
+	if ( isReverse )
+		generate_rev(data, len);
+	else 
+		generate(data, len);
+	return 0;
+}
 
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,            1, "This help"},
@@ -336,6 +453,7 @@ static command_t CommandTable[] = {
 	{"tea",   	CmdAnalyseTEASelfTest,	1, "Crypto TEA test"},
 	{"lfsr",	CmdAnalyseLfsr,		1,	"LFSR tests"},
 	{"a",		CmdAnalyseA,		1,	"num bits test"},
+	{"hid",		CmdAnalyseHid,		1,	"Permute function from 'heart of darkness' paper"},
 	{NULL, NULL, 0, NULL}
 };
 

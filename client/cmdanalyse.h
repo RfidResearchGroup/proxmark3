@@ -25,6 +25,7 @@
 int usage_analyse_lcr(void);
 int usage_analyse_checksum(void);
 int usage_analyse_crc(void);
+int usage_analyse_hid(void);
 
 int CmdAnalyse(const char *Cmd);
 int CmdAnalyseLCR(const char *Cmd);
@@ -33,4 +34,5 @@ int CmdAnalyseDates(const char *Cmd);
 int CmdAnalyseCRC(const char *Cmd);
 int CmdAnalyseTEASelfTest(const char *Cmd);
 int CmdAnalyseLfsr(const char *Cmd);
+int CmdAnalyseHid(const char *Cmd);
 #endif
