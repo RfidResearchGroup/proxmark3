@@ -767,8 +767,6 @@ static void simulate_acquire_nonces()
 
 static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, bool nonce_file_write, bool slow)
 {
-	uint8_t three_in_row = 0;
-	uint8_t prev_best = 0;
 	clock_t time1 = clock();
 	bool initialize = true;
 	bool finished = false;
@@ -791,8 +789,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 	do {
 	
 		flags = 0;
-		//flags |= initialize ? 0x0001 : 0;
-		flags |= 0x0001;
+		flags |= initialize ? 0x0001 : 0;
 		flags |= slow ? 0x0002 : 0;
 		flags |= field_off ? 0x0004 : 0;
 		c.arg[2] = flags;
@@ -871,31 +868,14 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 					);				
 			}
 			
-			if ( num_good_first_bytes > 0 ) {
-				
-				if ( prev_best == best_first_bytes[0] ){
-					++three_in_row;
-				} else {
-					three_in_row = 0;
-				}
-				prev_best = best_first_bytes[0];
-				
-				//printf("GOOD BYTES: %s \n", sprint_hex(best_first_bytes, num_good_first_bytes) );
-				if ( total_added_nonces >= (NONCES_THRESHOLD * idx) || three_in_row >= 3) {
-					
-					bool cracking = generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess);
-					if (cracking || known_target_key != -1) {
-						
-						UsbCommand cOff = {CMD_FPGA_MAJOR_MODE_OFF, {0,0,0} };
-						SendCommand(&cOff);
-						field_off = brute_force();
+			if (total_added_nonces >= (NONCES_THRESHOLD * idx)) {
+				if (num_good_first_bytes > 0) {
+					if (generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].Sum8_guess) || known_target_key != -1) {
+						field_off = brute_force(); // switch off field with next SendCommand and then finish
 					}
-					three_in_row = 0;
 				}
+				idx++;
 			}
-			
-			if ( total_added_nonces >= (NONCES_THRESHOLD * idx)) 
-					++idx;
 		}
 	} while (!finished);
 
