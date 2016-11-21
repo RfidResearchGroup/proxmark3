@@ -463,6 +463,79 @@ static int l_reveng_RunModel(lua_State *L){
 	return 1;
 }
 
+static int l_hardnested(lua_State *L){
+
+	bool haveTarget = TRUE;
+    size_t size;
+    const char *p_blockno = luaL_checklstring(L, 1, &size);
+    if(size != 2)  return returnToLuaWithError(L,"Wrong size of blockNo, got %d bytes, expected 2", (int) size);
+
+    const char *p_keytype = luaL_checklstring(L, 2, &size);
+    if(size != 1)  return returnToLuaWithError(L,"Wrong size of keyType, got %d bytes, expected 1", (int) size);
+
+	const char *p_key = luaL_checklstring(L, 3, &size);
+    if(size != 12)  return returnToLuaWithError(L,"Wrong size of key, got %d bytes, expected 12", (int) size);
+	
+    const char *p_trg_blockno = luaL_checklstring(L, 4, &size);
+    if(size != 2)  return returnToLuaWithError(L,"Wrong size of trgBlockNo, got %d bytes, expected 2", (int) size);
+
+    const char *p_trg_keytype = luaL_checklstring(L, 5, &size);
+    if(size != 1)  return returnToLuaWithError(L,"Wrong size of trgKeyType, got %d bytes, expected 1", (int) size);
+
+    const char *p_trgkey = luaL_checklstring(L, 6, &size);
+    if(size != 12)
+		haveTarget = FALSE;
+
+	const char *p_nonce_file_read = luaL_checklstring(L, 7, &size);
+    if(size != 1)  return returnToLuaWithError(L,"Wrong size of nonce_file_read, got %d bytes, expected 1", (int) size);
+
+	const char *p_nonce_file_write = luaL_checklstring(L, 8, &size);
+    if(size != 1)  return returnToLuaWithError(L,"Wrong size of nonce_file_write, got %d bytes, expected 1", (int) size);
+
+	const char *p_slow = luaL_checklstring(L, 9, &size);
+    if(size != 1)  return returnToLuaWithError(L,"Wrong size of slow, got %d bytes, expected 1", (int) size);
+
+	const char *p_tests = luaL_checklstring(L, 10, &size);
+    if(size != 1)  return returnToLuaWithError(L,"Wrong size of tests, got %d bytes, expected 1", (int) size);
+	
+	uint32_t blockNo = 0, keyType = 0;
+	uint32_t trgBlockNo = 0, trgKeyType = 0;
+	uint32_t slow = 0, tests = 0;
+	uint32_t nonce_file_read = 0, nonce_file_write = 0;
+	
+    sscanf(p_blockno, "%02x", &blockNo);
+	sscanf(p_keytype, "%x", &keyType);
+    sscanf(p_trg_blockno, "%02x", &trgBlockNo);
+	sscanf(p_trg_keytype, "%x", &trgKeyType);
+	sscanf(p_nonce_file_read, "%x", &nonce_file_read);
+	sscanf(p_nonce_file_write, "%x", &nonce_file_write);
+
+	sscanf(p_slow, "%x", &slow);
+	sscanf(p_tests, "%x", &tests);
+
+	uint8_t key[6] = {0,0,0,0,0,0};
+    uint8_t trgkey[6] = {0,0,0,0,0,0};
+	for (int i = 0; i < 32; i += 2) {
+		sscanf(&p_key[i], "%02x", (unsigned int *)&key[i / 2]);
+		if (haveTarget)
+			sscanf(&p_trgkey[i], "%02x", (unsigned int *)&trgkey[i / 2]);
+	}
+	
+    uint64_t foundkey = 0;
+	int retval = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, haveTarget ? trgkey : NULL, nonce_file_read,  nonce_file_write,  slow,  tests, &foundkey);
+
+    //Push the retval on the stack
+    lua_pushinteger(L,retval);
+
+    //Push the key onto the stack
+    uint8_t dest_key[6];
+    num_to_bytes(foundkey, sizeof(dest_key), dest_key);
+
+    //printf("Pushing to lua stack: %012"llx"\n",key);
+    lua_pushlstring(L, (const char *) dest_key, sizeof(dest_key));
+    return 2; //Two return values
+}
+
 /**
  * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
  * able to do "require('foobar')" if foobar.lua is within lualibs folder.
@@ -489,7 +562,6 @@ int setLuaPath( lua_State* L, const char* path )
 
 int set_pm3_libraries(lua_State *L)
 {
-
     static const luaL_Reg libs[] = {
         {"SendCommand",                 l_SendCommand},
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},
@@ -511,6 +583,7 @@ int set_pm3_libraries(lua_State *L)
 		{"sha1",						l_sha1},
 		{"reveng_models",				l_reveng_models},
 		{"reveng_runmodel",				l_reveng_RunModel},
+		{"hardnested",					l_hardnested},
         {NULL, NULL}
     };
 

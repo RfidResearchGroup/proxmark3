@@ -1057,7 +1057,8 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			slow ? "Yes" : "No",
 			tests);
 
-	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests);
+	uint64_t foundkey = 0;
+	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey);
 
 	if (isOK) {
 		switch (isOK) {

@@ -777,6 +777,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 	uint32_t next_fivehundred = 500;
 	uint32_t total_added_nonces = 0;
 	uint32_t idx = 1;
+	uint32_t timeout  = 0;
 	FILE *fnonces = NULL;
 	field_off = false;
 	UsbCommand resp;
@@ -799,10 +800,15 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 		
 		if (field_off) break;
 
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 6000)) {
-			if (fnonces) fclose(fnonces);
-			return 1;
-		}
+		while(!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+			timeout++;
+			printf(".");
+			if (timeout > 7) {
+				PrintAndLog("\nNo response from Proxmark. Aborting...");
+				if (fnonces) fclose(fnonces);
+				return 1;
+			}
+		}		
 
 		if (resp.arg[0]) {
 			if (fnonces) fclose(fnonces);
@@ -1723,11 +1729,13 @@ static bool brute_force(void) {
 	return ret;
 }
 
-int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *trgkey, bool nonce_file_read, bool nonce_file_write, bool slow, int tests) 
+int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *trgkey, bool nonce_file_read, bool nonce_file_write, bool slow, int tests, uint64_t *found_key) 
 {
 	// initialize Random number generator
 	time_t t;
 	srand((unsigned) time(&t));
+	
+	*found_key = 0;
 	
 	if (trgkey != NULL) {
 		known_target_key = bytes_to_num(trgkey, 6);
@@ -1790,5 +1798,6 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 		free_candidates_memory(candidates);
 		candidates = NULL;
 	}
+	*found_key = foundkey;
 	return 0;
 }

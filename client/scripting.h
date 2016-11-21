@@ -26,6 +26,7 @@
 #include "../common/sha1.h"
 #include "aes.h"
 #include "cmdcrc.h"
+#include "cmdhfmfhard.h"
 
 /**
  * @brief set_libraries loads the core components of pm3 into the 'pm3'
