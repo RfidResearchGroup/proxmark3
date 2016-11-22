@@ -156,11 +156,11 @@ function main(args)
 		local succB = 1
 		local errA, keyA = core.hardnested(blockno, keytype, key, trgblockno, '0', trgkey, 0,0,0,0)
 		keyA = keyA or ""
-		if errA > 0 then succA = 0 end
+		if errA == nil or errA > 0 then succA = 0 end
 
 		local errB, keyB = core.hardnested(blockno, keytype, key, trgblockno, '1', trgkey, 0,0,0,0)
 		keyB = keyB or ""
-		if errB > 0 then succB = 0 end
+		if errB == nil or errB > 0 then succB = 0 end
 		result[sector] = { succA, succB, utils.ConvertAsciiToHex(keyA), utils.ConvertAsciiToHex(keyB) }
 				
 		-- Check if user aborted
