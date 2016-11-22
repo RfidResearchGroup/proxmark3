@@ -104,7 +104,6 @@ static void *uart_receiver(void *targ) {
 			txcmd_pending = false;
 		}
 	}
-
 	pthread_exit(NULL);
 	return NULL;
 }

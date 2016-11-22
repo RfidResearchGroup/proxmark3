@@ -385,10 +385,10 @@ serial_port uart_open(const char* pcPortName) {
     return INVALID_SERIAL_PORT;
   }
   
-  sp->ct.ReadIntervalTimeout         = 0;
-  sp->ct.ReadTotalTimeoutMultiplier  = 0;
+  sp->ct.ReadIntervalTimeout         = 1;
+  sp->ct.ReadTotalTimeoutMultiplier  = 1;
   sp->ct.ReadTotalTimeoutConstant    = 30;
-  sp->ct.WriteTotalTimeoutMultiplier = 0;
+  sp->ct.WriteTotalTimeoutMultiplier = 1;
   sp->ct.WriteTotalTimeoutConstant   = 30;
   
   if(!SetCommTimeouts(sp->hPort,&sp->ct)) {

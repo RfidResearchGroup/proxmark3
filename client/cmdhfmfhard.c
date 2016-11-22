@@ -803,7 +803,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 		while(!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 			timeout++;
 			printf(".");
-			if (timeout > 7) {
+			if (timeout > 3) {
 				PrintAndLog("\nNo response from Proxmark. Aborting...");
 				if (fnonces) fclose(fnonces);
 				return 1;
@@ -1788,6 +1788,10 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 		} else { // acquire nonces.
 			uint16_t is_OK = acquire_nonces(blockNo, keyType, key, trgBlockNo, trgKeyType, nonce_file_write, slow);
 			if (is_OK != 0) {
+				free_nonces_memory();
+				//free_statelist_cache();
+				free_candidates_memory(candidates);
+				candidates = NULL;
 				return is_OK;
 			}
 		}

@@ -71,7 +71,6 @@
  */
 void permutekey(uint8_t key[8], uint8_t dest[8])
 {
-
 	int i;
 	for(i = 0 ; i < 8 ; i++)
 	{
@@ -84,7 +83,6 @@ void permutekey(uint8_t key[8], uint8_t dest[8])
 					(((key[1] & (0x80 >> i)) >> (7-i)) << 1) |
 					(((key[0] & (0x80 >> i)) >> (7-i)) << 0);
 	}
-
 	return;
 }
 /**
