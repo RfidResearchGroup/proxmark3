@@ -1294,7 +1294,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 		else {
 			//#db# Unknown command received from reader (len=5): 26 1 0 f6 a 44 44 44 44
 			// Never seen this command before
-			Dbprintf("Unknown command received from reader (len=%d): %x %x %x %x %x %x %x %x %x",
+			Dbprintf("Unhandled command received from reader (len=%d): %x %x %x %x %x %x %x %x %x",
 			len,
 			receivedCmd[0], receivedCmd[1], receivedCmd[2],
 			receivedCmd[3], receivedCmd[4], receivedCmd[5],
@@ -1467,7 +1467,7 @@ void CodeIClassCommand(const uint8_t * cmd, int len)
     for(j = 0; j < 4; j++) {
       for(k = 0; k < 4; k++) {
 			if(k == (b & 3)) {
-				ToSend[++ToSendMax] = 0x0f;
+				ToSend[++ToSendMax] = 0xf0;
 			}
 			else {
 				ToSend[++ToSendMax] = 0x00;
@@ -1990,14 +1990,22 @@ bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 	//uint8_t readblockdata[10];
 	//write[1] = blockNo;
 	memcpy(write+2, data, 12); // data + mac
+	char *wrCmd = (char *)(write+1); 
+	uint16_t wrCrc = iclass_crc16(wrCmd, 13);
+	write[14] = wrCrc >> 8;
+	write[15] = wrCrc & 0xff;
 	uint8_t resp[] = {0,0,0,0,0,0,0,0,0,0};
-	bool isOK;
+	bool isOK = false;
+
 	isOK = sendCmdGetResponseWithRetries(write,sizeof(write),resp,sizeof(resp),10);
-	if (isOK) {
+	if (isOK) { //if reader responded correctly
 		//Dbprintf("WriteResp: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",resp[0],resp[1],resp[2],resp[3],resp[4],resp[5],resp[6],resp[7],resp[8],resp[9]);
-		if (memcmp(write+2,resp,8)) {
+		if (memcmp(write+2,resp,8)) {  //if response is not equal to write values
+			if (blockNo != 3 && blockNo != 4) { //if not programming key areas (note key blocks don't get programmed with actual key data it is xor data)
 			//error try again
 			isOK = sendCmdGetResponseWithRetries(write,sizeof(write),resp,sizeof(resp),10);
+			} 
+			
 		}
 	}
 	return isOK;
