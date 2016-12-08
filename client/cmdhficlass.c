@@ -769,8 +769,8 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 	if (have_debit_key) memcpy(tag_data+(3*8),div_key,8);
 	if (have_credit_key) memcpy(tag_data+(4*8),c_div_key,8);
 	// print the dump
-	printf("CSN   |00| %s |\n", sprint_hex(tag_data, 8));
-	printf("CSN   |00| %s |\n", sprint_hex(tag_data, 8));
+	printf("------+--+-------------------------+\n");
+	printf("CSN   |00| %s|\n", sprint_hex(tag_data, 8));	
 	printIclassDumpContents(tag_data, 1, (gotBytes/8)-1, gotBytes-8);
 
 	if (filename[0] == 0){
@@ -1263,6 +1263,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 	
 	int i = startblock;
 	int j;
+	printf("------+--+-------------------------+\n");
 	while (i <= endblock){
 		printf("Block |%02X| ",i);
 		memcpy(blockdata, iclass_dump + (i * 8), 8);
@@ -1271,6 +1272,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 		printf("|\n");
 		i++;
 	}
+	printf("------+--+-------------------------+\n");
 }
 
 int usage_hf_iclass_readtagfile() {
@@ -1318,7 +1320,8 @@ int CmdHFiClassReadTagFile(const char *Cmd) {
 	fclose(f);
 	
 	uint8_t *csn = dump;
-	printf("CSN   [00] | %s |\n", sprint_hex(csn, 8) );
+	printf("------+--+-------------------------+\n");
+	printf("CSN   |00| %s|\n", sprint_hex(csn, 8) );
 	printIclassDumpContents(dump,startblock,endblock,bytes_read);
 	free(dump);
 	return 0;
@@ -1377,9 +1380,9 @@ static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, u
 		xor_div_key[i] = old_div_key[i] ^ new_div_key[i];
 	}
 	if (verbose) {
-		printf("Old Div Key : %s\n",sprint_hex(old_div_key,8));
-		printf("New Div Key : %s\n",sprint_hex(new_div_key,8));
-		printf("Xor Div Key : %s\n",sprint_hex(xor_div_key,8));		
+		printf("Old div key : %s\n",sprint_hex(old_div_key,8));
+		printf("New div key : %s\n",sprint_hex(new_div_key,8));
+		printf("Xor div key : %s\n",sprint_hex(xor_div_key,8));		
 	}
 }
 
@@ -1397,7 +1400,6 @@ int usage_hf_iclass_calc_newkey(void) {
 	PrintAndLog(" std key to e key read csn: hf iclass calcnewkey o 1122334455667788 n 2233445566778899 e");
 	PrintAndLog(" std to std read csn      : hf iclass calcnewkey o 1122334455667788 n 2233445566778899");
 	PrintAndLog("NOTE: * = required\n");
-
 	return 1;
 }
 
@@ -1520,9 +1522,9 @@ static int loadKeys(char *filename) {
 		return 0;
 	}
 	uint8_t i = 0;
-	for (; i < bytes_read/8; i++){
+	for (; i < bytes_read/8; i++)
 		memcpy(iClass_Key_Table[i],dump+(i*8),8);
-	}
+	
 	free(dump);
 	PrintAndLog("%u keys loaded", i);
 	return 1;
@@ -1547,9 +1549,8 @@ static int saveKeys(char *filename) {
 
 static int printKeys(void) {
 	PrintAndLog("");
-	for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++){
+	for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++)
 		PrintAndLog("%u: %s", i, sprint_hex(iClass_Key_Table[i],8));
-	}
 	PrintAndLog("");	
 	return 0;
 }
