@@ -86,8 +86,7 @@ eff603e1efe9,--kiev
 f14ee7cae863,--kiev
 f1a97341a9fc,
 f1d83f964314,--RKFRejskortDanmarkKeyB
-fc00018778f7,--VästtrafikenKeyA
-fc0001877bf7,--RKFÖstgötaTrafikenKeyA
+fc00018778f7,--VästtrafikenKeyA, RKFÖstgötaTrafikenKeyA
 44ab09010845,-- hotel system
 85fed980ea5a,-- hotel system
 314B49474956,--VIGIK1KeyA
@@ -284,4 +283,4 @@ cba6ae869ad5,
 645a166b1eeb,
 a7abbc77cc9e,
 f792c4c76a5c,
-bfb6796a11db
+bfb6796a11db,
