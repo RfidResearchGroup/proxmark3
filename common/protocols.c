@@ -54,23 +54,28 @@ uint8_t notset(uint8_t val, uint8_t mask){
 void fuse_config(const picopass_hdr *hdr) {
 	uint8_t fuses = hdr->conf.fuses;
 
-	if (isset(fuses,FUSE_FPERS))prnt("	Mode: Personalization [Programmable]");
-	else prnt("	Mode: Application [Locked]");
+	if (isset(fuses,FUSE_FPERS)) 
+		prnt("	Mode: Personalization [Programmable]");
+	else 
+		prnt("	Mode: Application [Locked]");
 
-	if (isset(fuses, FUSE_CODING1))
+	if (isset(fuses, FUSE_CODING1)) {
 		prnt("	Coding: RFU");
-	else
-	{
-		if( isset( fuses , FUSE_CODING0)) prnt("	Coding: ISO 14443-2 B/ISO 15693");
-		else prnt("	Coding: ISO 14443B only");
+	} else {
+		if( isset( fuses , FUSE_CODING0)) 
+			prnt("	Coding: ISO 14443-2 B/ISO 15693");
+		else 
+			prnt("	Coding: ISO 14443B only");
 	}
 	if( isset (fuses,FUSE_CRYPT1 | FUSE_CRYPT0 )) prnt("	Crypt: Secured page, keys not locked");
 	if( isset (fuses,FUSE_CRYPT1) && notset( fuses, FUSE_CRYPT0 )) prnt("	Crypt: Secured page, keys not locked");
 	if( notset (fuses,FUSE_CRYPT1) && isset( fuses, FUSE_CRYPT0 )) prnt("	Crypt: Non secured page");
 	if( notset (fuses,FUSE_CRYPT1) && notset( fuses, FUSE_CRYPT0 )) prnt("	Crypt: No auth possible. Read only if RA is enabled");
 
-	if( isset( fuses, FUSE_RA)) prnt("	RA: Read access enabled");
-	else prnt("	RA: Read access not enabled");
+	if( isset( fuses, FUSE_RA))
+		prnt("	RA: Read access enabled");
+	else 
+		prnt("	RA: Read access not enabled");
 }
 
 void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb) {
