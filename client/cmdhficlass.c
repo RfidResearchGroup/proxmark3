@@ -672,9 +672,9 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 		return 0;
 	}
 	
-	if( readStatus & (FLAG_ICLASS_READER_CSN|FLAG_ICLASS_READER_CONF|FLAG_ICLASS_READER_CC)){
+	if( readStatus & (FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_CC)){
 		memcpy(tag_data, data, 8*3);
-		blockno+=2; // 2 to force re-read of block 2 later. (seems to respond differently..)
+		blockno += 2; // 2 to force re-read of block 2 later. (seems to respond differently..)
 		numblks = data[8];
 		getMemConfig(data[13], data[12], &maxBlk, &app_areas, &kb);
 		// large memory - not able to dump pages currently
@@ -768,10 +768,14 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 	// add diversified keys to dump
 	if (have_debit_key) memcpy(tag_data+(3*8),div_key,8);
 	if (have_credit_key) memcpy(tag_data+(4*8),c_div_key,8);
+	
+	printf("Num of bytes:  %d\n", gotBytes);
+	
 	// print the dump
 	printf("------+--+-------------------------+\n");
 	printf("CSN   |00| %s|\n", sprint_hex(tag_data, 8));	
-	printIclassDumpContents(tag_data, 1, (gotBytes/8)-1, gotBytes-8);
+	//printIclassDumpContents(tag_data, 1, (gotBytes/8)-1, gotBytes-8);
+	printIclassDumpContents(tag_data, 1, (gotBytes/8), gotBytes);
 
 	if (filename[0] == 0){
 		snprintf(filename, FILE_PATH_SIZE,"iclass_tagdump-%02x%02x%02x%02x%02x%02x%02x%02x",
@@ -1240,17 +1244,16 @@ int CmdHFiClass_loclass(const char *Cmd) {
 }
 
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize) {
-	uint8_t blockdata[8];
 	uint8_t mem_config;
 	memcpy(&mem_config, iclass_dump + 13,1);
 	uint8_t maxmemcount;
+	
 	uint8_t filemaxblock = filesize / 8;
 
 	if (mem_config & 0x80)
 		maxmemcount = 255;
 	else
 		maxmemcount = 31;
-	//PrintAndLog	("endblock: %d, filesize: %d, maxmemcount: %d, filemaxblock: %d", endblock,filesize, maxmemcount, filemaxblock);
 
 	if (startblock == 0)
 		startblock = 6;
@@ -1258,18 +1261,17 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 	if ((endblock > maxmemcount) || (endblock == 0))
 		endblock = maxmemcount;
 	
-	if (endblock > filemaxblock)
-		endblock = filemaxblock;
+	// remember endblock needs to relate to zero-index arrays.
+	if (endblock > filemaxblock-1)
+		endblock = filemaxblock-1;
+
+	//PrintAndLog	("startblock: %d, endblock: %d, filesize: %d, maxmemcount: %d, filemaxblock: %d",startblock, endblock,filesize, maxmemcount, filemaxblock);
 	
 	int i = startblock;
-	int j;
 	printf("------+--+-------------------------+\n");
 	while (i <= endblock){
-		printf("Block |%02X| ",i);
-		memcpy(blockdata, iclass_dump + (i * 8), 8);
-		for (j = 0;j < 8;j++)
-			printf("%02X ", blockdata[j]);
-		printf("|\n");
+		uint8_t *blk = iclass_dump + (i * 8);
+		printf("Block |%02X| %s|\n", i, sprint_hex(blk, 8) );	
 		i++;
 	}
 	printf("------+--+-------------------------+\n");
@@ -1322,7 +1324,7 @@ int CmdHFiClassReadTagFile(const char *Cmd) {
 	uint8_t *csn = dump;
 	printf("------+--+-------------------------+\n");
 	printf("CSN   |00| %s|\n", sprint_hex(csn, 8) );
-	printIclassDumpContents(dump,startblock,endblock,bytes_read);
+	printIclassDumpContents(dump, startblock, endblock, bytes_read);
 	free(dump);
 	return 0;
 }
