@@ -58,4 +58,5 @@ int VikingDemod_AM(uint8_t *dest, size_t *size);
 int PrescoDemod(uint8_t *dest, size_t *size);
 int NedapDemod(uint8_t *dest, size_t *size);
 int JablotronDemod(uint8_t *dest, size_t *size);
+int Visa2kDemod_AM(uint8_t *dest, size_t *size);
 #endif
