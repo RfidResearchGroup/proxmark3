@@ -280,7 +280,6 @@ int testReversedBitstream()
 	return 0;
 }
 
-
 int testCipherUtils(void)
 {
 	prnlog("[+] Testing some internals...");
