@@ -153,7 +153,7 @@ int CmdPrescoRead(const char *Cmd) {
 	// read lf silently
 	CmdLFRead("s");
 	// get samples silently
-	getSamples("30000",false);
+	getSamples("20000", TRUE);
 	// demod and output Presco ID	
 	return CmdPrescoDemod(Cmd);
 }

@@ -38,7 +38,7 @@ int usage_lf_io_clone(void) {
 	PrintAndLog("Enables cloning of IOProx card with specified facility-code and card number onto T55x7.");
 	PrintAndLog("The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf awid clone [h] <version> <facility-code> <card-number> [Q5]");
+	PrintAndLog("Usage:  lf io clone [h] <version> <facility-code> <card-number> [Q5]");
 	PrintAndLog("Options :");
 	PrintAndLog("                h :  This help");	
 	PrintAndLog("        <version> :  8bit version");

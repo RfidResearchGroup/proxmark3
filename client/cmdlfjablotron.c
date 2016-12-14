@@ -130,7 +130,7 @@ int CmdJablotronDemod(const char *Cmd) {
 
 int CmdJablotronRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("30000",false);
+	getSamples("20000", TRUE);
 	return CmdJablotronDemod(Cmd);
 }
 

@@ -38,6 +38,7 @@
 #include "cmdlfguard.h"		// for GuardAll menu
 #include "cmdlfnedap.h"		// for NEDAP menu
 #include "cmdlfjablotron.h"	// for JABLOTRON menu
+#include "cmdlfvisa2000.h"  // for VISA2000 menu
 
 int CmdLF(const char *Cmd);
 

@@ -122,7 +122,7 @@ int GetGuardBits(uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 
 int CmdGuardRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("30000",false);
+	getSamples("20000", TRUE);
 	return CmdG_Prox_II_Demod("");
 }
 

@@ -202,7 +202,7 @@ lf t55xx wr b 4 d 4c0003ff
 
 int CmdLFNedapRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("30000",false);
+	getSamples("20000", TRUE);
 	return CmdLFNedapDemod("");
 }
 /*

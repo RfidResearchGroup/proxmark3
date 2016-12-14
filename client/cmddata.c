@@ -1288,42 +1288,46 @@ int CmdFSKdemodParadox(const char *Cmd)
 //print ioprox ID and some format details
 int CmdFSKdemodIO(const char *Cmd)
 {
-	int idx=0;
+	int retval = 0;
+	int idx = 0;
+	char crcStr[20];
+	memset(crcStr, 0x00, sizeof(crcStr) );
+
 	//something in graphbuffer?
 	if (GraphTraceLen < 65) {
 		if (g_debugMode)PrintAndLog("DEBUG: not enough samples in GraphBuffer");
-		return 0;
+		return retval;
 	}
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
-	size_t BitLen = getFromGraphBuf(BitStream);
-	if (BitLen==0) return 0;
+	size_t bitlen = getFromGraphBuf(BitStream);
+	if (bitlen == 0) return retval;
 
 	//get binary from fsk wave
-	idx = IOdemodFSK(BitStream,BitLen);
+	idx = IOdemodFSK(BitStream, bitlen);
 	if (idx<0){
 		if (g_debugMode){
 			if (idx==-1){
-				PrintAndLog("DEBUG: Just Noise Detected");     
+				PrintAndLog("DEBUG: IO Prox - Just Noise Detected");     
 			} else if (idx == -2) {
-				PrintAndLog("DEBUG: not enough samples");
+				PrintAndLog("DEBUG: IO Prox - not enough samples");
 			} else if (idx == -3) {
-				PrintAndLog("DEBUG: error during fskdemod");        
+				PrintAndLog("DEBUG: IO Prox - error during fskdemod");        
 			} else if (idx == -4) {
-				PrintAndLog("DEBUG: Preamble not found");
+				PrintAndLog("DEBUG: IO Prox - Preamble not found");
 			} else if (idx == -5) {
-				PrintAndLog("DEBUG: Separator bits not found");
+				PrintAndLog("DEBUG: IO Prox - Separator bits not found");
 			} else {
-				PrintAndLog("DEBUG: Error demoding fsk %d", idx);
+				PrintAndLog("DEBUG: IO Prox - Error demoding fsk %d", idx);
 			}
 		}
-		return 0;
+		return retval;
 	}
 	if (idx==0){
 		if (g_debugMode){
-			PrintAndLog("DEBUG: IO Prox Data not found - FSK Bits: %d",BitLen);
-			if (BitLen > 92) PrintAndLog("%s", sprint_bin_break(BitStream,92,16));
+			PrintAndLog("DEBUG: IO Prox - Data not found - FSK Bits: %d", bitlen);
+			if (bitlen > 92) PrintAndLog("%s", sprint_bin_break(BitStream,92,16));
 		} 
-		return 0;
+		return retval;
 	}
 		//Index map
 		//0           10          20          30          40          50          60
@@ -1334,10 +1338,11 @@ int CmdFSKdemodIO(const char *Cmd)
 		//
 		//XSF(version)facility:codeone+codetwo (raw)
 		//Handle the data
-	if (idx+64>BitLen) {
-		if (g_debugMode) PrintAndLog("not enough bits found - bitlen: %d",BitLen);
-		return 0;
+	if (idx + 64 > bitlen) {
+		if (g_debugMode) PrintAndLog("DEBUG: IO Prox - not enough bits found - bitlen: %d", bitlen);
+		return retval;
 	}
+	
 	if (g_debugMode) {
 		PrintAndLog("%d%d%d%d%d%d%d%d %d", BitStream[idx], BitStream[idx+1], BitStream[idx+2], BitStream[idx+3], BitStream[idx+4], BitStream[idx+5], BitStream[idx+6], BitStream[idx+7], BitStream[idx+8]);
 		PrintAndLog("%d%d%d%d%d%d%d%d %d", BitStream[idx+9], BitStream[idx+10], BitStream[idx+11],BitStream[idx+12],BitStream[idx+13],BitStream[idx+14],BitStream[idx+15],BitStream[idx+16],BitStream[idx+17]);
@@ -1356,21 +1361,29 @@ int CmdFSKdemodIO(const char *Cmd)
 	uint8_t crc = bytebits_to_byte(BitStream+idx+54,8);
 	uint16_t calccrc = 0;
 
-	for (uint8_t i=1; i<6; ++i){
-		calccrc += bytebits_to_byte(BitStream+idx+9*i,8);
+	for (uint8_t i = 1; i < 6; ++i){
+		calccrc += bytebits_to_byte(BitStream + idx + 9 * i ,8);
 	}
 	calccrc &= 0xff;
 	calccrc = 0xff - calccrc;
 
-	char *crcStr = (crc == calccrc) ? "crc ok": "!crc";
+	if  (crc == calccrc) {
+		snprintf(crcStr, 3, "ok");
+		retval = 1;
+	} else {
+		if (g_debugMode) PrintAndLog("DEBUG: IO Prox - crc failed");
+			
+		snprintf(crcStr, 20, "failed 0x%02X != 0x%02X", crc, calccrc);
+		retval = 0;
+	}
 
-	PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x) [%02x %s]",version,facilitycode,number,code,code2, crc, crcStr);
+	PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x) [crc %s]",version,facilitycode,number,code,code2, crcStr);
 	setDemodBuf(BitStream,64,idx);
 	if (g_debugMode){
-		PrintAndLog("DEBUG: idx: %d, Len: %d, Printing demod buffer:",idx,64);
+		PrintAndLog("DEBUG: IO Prox - idx: %d, Len: %d, Printing demod buffer:", idx, 64);
 		printDemodBuff();
-	}
-	return 1;
+	}	
+	return retval;
 }
 
 //by marshmellow
@@ -1704,8 +1717,7 @@ int CmdFDXBdemodBI(const char *Cmd){
 	PrintAndLog("reserved Code: %u", reservedCode);
 	PrintAndLog("Animal Tag:    %s", animalBit ? "True" : "False");
 	PrintAndLog("CRC:           0x%04X - [%04X] - %s", crc16, calcCrc, (calcCrc == crc16) ? "Passed" : "Failed");
-	PrintAndLog("Extended:      0x%X\n", extended);
-	
+	PrintAndLog("Extended:      0x%X\n", extended);	
 	return 1;
 }
 
@@ -1771,8 +1783,7 @@ int CmdIndalaDecode(const char *Cmd)
 	}
 
 	if (!ans){
-		if (g_debugMode) 
-			PrintAndLog("Error1: %d",ans);
+		if (g_debugMode) PrintAndLog("DEBUG: Indala - Can't demod signal: %d",ans);
 		return 0;
 	}
 
@@ -1780,33 +1791,31 @@ int CmdIndalaDecode(const char *Cmd)
 	size_t size = DemodBufferLen;
 	int startIdx = indala26decode(DemodBuffer, &size, &invert);
 	if (startIdx < 0 || size > 224) {
-		if (g_debugMode)
-			PrintAndLog("Error2: %d",ans);
+		if (g_debugMode) PrintAndLog("DEBUG: Indala - Wrong size, expected [64|224] got: %d", size);
 		return -1;
 	}
 	setDemodBuf(DemodBuffer, size, (size_t)startIdx);
 	if (invert)
-		if (g_debugMode)
-			PrintAndLog("Had to invert bits");
+		if (g_debugMode) PrintAndLog("DEBUG: Indala - Had to invert bits");
 
 	PrintAndLog("BitLen: %d",DemodBufferLen);
 	//convert UID to HEX
 	uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
-	uid1=bytebits_to_byte(DemodBuffer,32);
-	uid2=bytebits_to_byte(DemodBuffer+32,32);
+	uid1 = bytebits_to_byte(DemodBuffer,32);
+	uid2 = bytebits_to_byte(DemodBuffer+32,32);
 	if (DemodBufferLen==64){
 		PrintAndLog("Indala UID=%s (%x%08x)",  sprint_bin_break(DemodBuffer,DemodBufferLen,16), uid1, uid2);
 	} else {
-		uid3=bytebits_to_byte(DemodBuffer+64,32);
-		uid4=bytebits_to_byte(DemodBuffer+96,32);
-		uid5=bytebits_to_byte(DemodBuffer+128,32);
-		uid6=bytebits_to_byte(DemodBuffer+160,32);
-		uid7=bytebits_to_byte(DemodBuffer+192,32);
+		uid3 = bytebits_to_byte(DemodBuffer+64,32);
+		uid4 = bytebits_to_byte(DemodBuffer+96,32);
+		uid5 = bytebits_to_byte(DemodBuffer+128,32);
+		uid6 = bytebits_to_byte(DemodBuffer+160,32);
+		uid7 = bytebits_to_byte(DemodBuffer+192,32);
 		PrintAndLog("Indala UID=%s (%x%08x%08x%08x%08x%08x%08x)", 
 		     sprint_bin_break(DemodBuffer,DemodBufferLen,16), uid1, uid2, uid3, uid4, uid5, uid6, uid7);
 	}
 	if (g_debugMode){
-		PrintAndLog("DEBUG: printing demodbuffer:");
+		PrintAndLog("DEBUG: Indala - printing demodbuffer:");
 		printDemodBuff();
 	}
 	return 1;
@@ -2091,9 +2100,9 @@ int getSamples(const char *Cmd, bool silent)
 	if ( n == 0 || n > sizeof(got))
 		n = sizeof(got);
 
-	PrintAndLog("Reading %d bytes from device memory\n", n);
+	if (!silent) PrintAndLog("Reading %d bytes from device memory\n", n);
 	GetFromBigBuf(got,n,0);
-	PrintAndLog("Data fetched");
+	if (!silent) PrintAndLog("Data fetched");
 	UsbCommand response;
 	if ( !WaitForResponseTimeout(CMD_ACK, &response, 10000) ) {
         PrintAndLog("timeout while waiting for reply.");
@@ -2105,12 +2114,12 @@ int getSamples(const char *Cmd, bool silent)
 	//Old devices without this feature would send 0 at arg[0]
 	if (response.arg[0] > 0) {
 		sample_config *sc = (sample_config *) response.d.asBytes;
-		PrintAndLog("Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
+		if (!silent) PrintAndLog("Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
 		bits_per_sample = sc->bits_per_sample;
 	}
 	
 	if (bits_per_sample < 8) {
-		PrintAndLog("Unpacking...");
+		if (!silent) PrintAndLog("Unpacking...");
 		BitstreamOut bout = { got, bits_per_sample * n,  0};
 		int j =0;
 		for (j = 0; j * bits_per_sample < n * 8 && j < n; j++) {
@@ -2118,7 +2127,7 @@ int getSamples(const char *Cmd, bool silent)
 			GraphBuffer[j] = ((int) sample )- 128;
 		}
 		GraphTraceLen = j;
-		PrintAndLog("Unpacked %d samples" , j );
+		if (!silent) PrintAndLog("Unpacked %d samples" , j );
 	} else {
 		for (int j = 0; j < n; j++) {
 			GraphBuffer[j] = ((int)got[j]) - 128;

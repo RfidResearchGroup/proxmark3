@@ -249,8 +249,9 @@ int CmdFlexdemod(const char *Cmd)
   
 int CmdIndalaDemod(const char *Cmd)
 {
+	// PSK1, Bitrate 32, 
+	
 	// Usage: recover 64bit UID by default, specify "224" as arg to recover a 224bit UID
-
 	int state = -1;
 	int count = 0;
 	int i, j;
@@ -1012,7 +1013,7 @@ int CmdLFfind(const char *Cmd) {
 
 	if (!offline && (cmdp != '1')){
 		CmdLFRead("s");
-		getSamples("30000",false);
+		getSamples("30000", TRUE);
 	} else if (GraphTraceLen < 1000) {
 		PrintAndLog("Data in Graphbuffer was too small.");
 		return 0;
@@ -1028,8 +1029,6 @@ int CmdLFfind(const char *Cmd) {
 	PrintAndLog("False Positives ARE possible\n");  
 	PrintAndLog("\nChecking for known tags:\n");
 
-
-		
 	ans=CmdFSKdemodIO("");
 	if (ans>0) {
 		PrintAndLog("\nValid IO Prox ID Found!");
@@ -1098,6 +1097,11 @@ int CmdLFfind(const char *Cmd) {
 	ans=CmdLFNedapDemod("");
 	if (ans>0) {
 		PrintAndLog("\nValid NEDAP ID Found!");
+		return 1;
+	}
+	ans=CmdVisa2kDemod("");
+	if (ans>0) {
+		PrintAndLog("\nValid Visa2000 ID Found!");
 		return 1;
 	}
 	// TIdemod?
@@ -1172,6 +1176,7 @@ static command_t CommandTable[] =
 	{"guard",       CmdLFGuard,         1, "{ Guardall RFIDs... }"},
 	{"hid",         CmdLFHID,           1, "{ HID RFIDs... }"},
 	{"hitag",       CmdLFHitag,         1, "{ HITAG RFIDs... }"},
+//	{"indala",		CmdLFIndala,		1, "{ Indala RFIDs... }"},
 	{"io",			CmdLFIO,			1, "{ IOPROX RFIDs... }"},
 	{"jablotron",	CmdLFJablotron,		1, "{ JABLOTRON RFIDs... }"},
 	{"nedap",		CmdLFNedap,			1, "{ NEDAP RFIDs... }"},
@@ -1181,6 +1186,7 @@ static command_t CommandTable[] =
 	{"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
 	{"t55xx",       CmdLFT55XX,         1, "{ T55xx RFIDs... }"},
 	{"viking",      CmdLFViking,        1, "{ Viking RFIDs... }"},
+	{"visa2000",    CmdLFVisa2k,        1, "{ Visa2000 RFIDs... }"},
 	{"config",      CmdLFSetConfig,     0, "Set config for LF sampling, bit/sample, decimation, frequency"},
 	{"cmdread",     CmdLFCommandRead,   0, "<off period> <'0' period> <'1' period> <command> ['h' 134] \n\t\t-- Modulate LF reader field to send command before read (all periods in microseconds)"},
 	{"flexdemod",   CmdFlexdemod,       1, "Demodulate samples for FlexPass"},
