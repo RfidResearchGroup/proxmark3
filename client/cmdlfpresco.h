@@ -21,6 +21,8 @@
 int CmdLFPresco(const char *Cmd);
 int CmdPrescoClone(const char *Cmd);
 int CmdPrescoSim(const char *Cmd);
+int CmdPrescoRead(const char *Cmd);
+int CmdPrescoDemod(const char *Cmd);
 
 int GetWiegandFromPresco(const char *id, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5);
 

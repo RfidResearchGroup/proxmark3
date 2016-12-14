@@ -54,7 +54,7 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
 			case 'H':
 				hex = true;
 				//get hex
-				*fullcode = param_get32ex(Cmd, cmdp+1, 0, 10);
+				*fullcode = param_get32ex(Cmd, cmdp+1, 0, 16);
 				cmdp+=2;
 				break;
 			case 'P':
@@ -115,34 +115,44 @@ int GetPrescoBits(uint32_t fullcode, uint8_t *prescoBits) {
 
 //see ASKDemod for what args are accepted
 int CmdPrescoDemod(const char *Cmd) {
-	if (!ASKDemod(Cmd, false, false, 1)) {
-		if (g_debugMode) PrintAndLog("ASKDemod failed");
+	bool st = true;
+	//if (!ASKDemod(Cmd, false, false, 1)) {
+	if (!ASKDemod_ext("32 0 0", FALSE, FALSE, 1, &st)) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error Presco ASKDemod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
 	//call lfdemod.c demod for Viking
 	int ans = PrescoDemod(DemodBuffer, &size);
 	if (ans < 0) {
-		if (g_debugMode) PrintAndLog("Error Presco_Demod %d", ans);
+		if (g_debugMode){
+			if (ans == -1)
+				PrintAndLog("DEBUG: Error - Presco: too few bits found");
+			else if (ans == -2)
+				PrintAndLog("DEBUG: Error - Presco: preamble not found");
+			else if (ans == -3)
+				PrintAndLog("DEBUG: Error - Presco: Size not correct: %d", size);
+			else
+				PrintAndLog("DEBUG: Error - Presco: ans: %d", ans);
+		}
 		return 0;
 	}
-	//got a good demod
-	uint32_t raw1 = bytebits_to_byte(DemodBuffer+ans, 32);
-	uint32_t raw2 = bytebits_to_byte(DemodBuffer+ans+32, 32);
-	uint32_t raw3 = bytebits_to_byte(DemodBuffer+ans+64, 32);
-	uint32_t raw4 = bytebits_to_byte(DemodBuffer+ans+96, 32);
-	uint32_t cardid = raw4;
-	PrintAndLog("Presco Tag Found: Card ID %08X", cardid);
-	PrintAndLog("Raw: %08X%08X%08X%08X", raw1,raw2,raw3,raw4);
-	setDemodBuf(DemodBuffer+ans, 128, 0);
+	setDemodBuf(DemodBuffer, 128, ans);
 	
+	//got a good demod
+	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
+	uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
+	uint32_t raw3 = bytebits_to_byte(DemodBuffer+64, 32);
+	uint32_t raw4 = bytebits_to_byte(DemodBuffer+96, 32);
+	uint32_t cardid = raw4;
+	PrintAndLog("Presco Tag Found: Card ID %08X, Raw: %08X%08X%08X%08X", cardid, raw1, raw2, raw3, raw4);
+
 	uint32_t sitecode = 0, usercode = 0, fullcode = 0;
-	bool Q5=false;
+	bool Q5 = false;
 	char cmd[12] = {0};
 	sprintf(cmd, "H %08X", cardid);
 	GetWiegandFromPresco(cmd, &sitecode, &usercode, &fullcode, &Q5);
 	PrintAndLog("SiteCode %u, UserCode %u, FullCode, %08X", sitecode, usercode, fullcode);
-	
 	return 1;
 }
 
@@ -239,8 +249,8 @@ int CmdPrescoSim(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",	CmdHelp,		1, "This help"},
 	{"read",	CmdPrescoRead,  0, "Attempt to read and Extract tag data"},
-	{"clone", CmdPrescoClone, 0, "d <9 digit ID> or h <hex> [Q5] clone presco tag"},
-	{"sim",   CmdPrescoSim,   0, "d <9 digit ID> or h <hex> simulate presco tag"},
+	{"clone",	CmdPrescoClone, 0, "d <9 digit ID> or h <hex> [Q5] clone presco tag"},
+	{"sim",		CmdPrescoSim,   0, "d <9 digit ID> or h <hex> simulate presco tag"},
     {NULL, NULL, 0, NULL}
 };
 

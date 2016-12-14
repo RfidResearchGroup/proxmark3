@@ -711,13 +711,12 @@ int Visa2kDemod_AM(uint8_t *dest, size_t *size) {
 
 // find presco preamble 0x10D in already demoded data
 int PrescoDemod(uint8_t *dest, size_t *size) {
-	//make sure buffer has data
-	if (*size < 64*2) return -2;
-
+	if (*size < 128*2) return -1; //make sure buffer has data
 	size_t startIdx = 0;
-	uint8_t preamble[] = {1,0,0,0,0,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0};
+	uint8_t preamble[] = {0,0,0,1,0,0,0,0,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -4; //preamble not found
+	if (errChk == 0) return -2; //preamble not found
+	if (*size != 128) return -3; //wrong demoded size
 	//return start position
 	return (int) startIdx;
 }

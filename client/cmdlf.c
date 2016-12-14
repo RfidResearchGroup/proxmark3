@@ -1104,6 +1104,11 @@ int CmdLFfind(const char *Cmd) {
 		PrintAndLog("\nValid Visa2000 ID Found!");
 		return 1;
 	}
+	ans=CmdPrescoDemod("");
+	if (ans>0) {
+		PrintAndLog("\nValid Presco ID Found!");
+		return 1;
+	}
 	// TIdemod?
 	
 
