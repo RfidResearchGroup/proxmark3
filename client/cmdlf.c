@@ -1104,6 +1104,11 @@ int CmdLFfind(const char *Cmd) {
 		PrintAndLog("\nValid Visa2000 ID Found!");
 		return 1;
 	}
+	ans=CmdNoralsyDemod("");
+	if (ans>0) {
+		PrintAndLog("\nValid Noralsy ID Found!");
+		return 1;
+	}
 	ans=CmdPrescoDemod("");
 	if (ans>0) {
 		PrintAndLog("\nValid Presco ID Found!");
@@ -1183,8 +1188,9 @@ static command_t CommandTable[] =
 	{"hitag",       CmdLFHitag,         1, "{ HITAG RFIDs... }"},
 //	{"indala",		CmdLFIndala,		1, "{ Indala RFIDs... }"},
 	{"io",			CmdLFIO,			1, "{ IOPROX RFIDs... }"},
-	{"jablotron",	CmdLFJablotron,		1, "{ JABLOTRON RFIDs... }"},
-	{"nedap",		CmdLFNedap,			1, "{ NEDAP RFIDs... }"},
+	{"jablotron",	CmdLFJablotron,		1, "{ Jablotron RFIDs... }"},
+	{"nedap",		CmdLFNedap,			1, "{ Nedap RFIDs... }"},
+	{"noralsy",		CmdLFNoralsy,		1, "{ Noralsy RFIDs... }"},	
 	{"pcf7931",     CmdLFPCF7931,       1, "{ PCF7931 RFIDs... }"},
 	{"presco",      CmdLFPresco,        1, "{ Presco RFIDs... }"},
 	{"pyramid",		CmdLFPyramid,       1, "{ Farpointe/Pyramid RFIDs... }"},	

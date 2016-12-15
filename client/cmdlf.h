@@ -39,6 +39,7 @@
 #include "cmdlfnedap.h"		// for NEDAP menu
 #include "cmdlfjablotron.h"	// for JABLOTRON menu
 #include "cmdlfvisa2000.h"  // for VISA2000 menu
+#include "cmdlfnoralsy.h"	// for NORALSY meny
 
 int CmdLF(const char *Cmd);
 
