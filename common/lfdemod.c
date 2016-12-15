@@ -708,7 +708,18 @@ int Visa2kDemod_AM(uint8_t *dest, size_t *size) {
 	//return start position
 	return (int) startIdx;
 }
-
+// by iceman
+// find Noralsy preamble in already demoded data
+int NoralsyDemod_AM(uint8_t *dest, size_t *size) {
+	if (*size < 96*2) return -1; //make sure buffer has data
+	size_t startIdx = 0;
+	uint8_t preamble[] = {1,0,1,1,1,0,1,1,0,0,0,0};
+	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
+	if (errChk == 0) return -2; //preamble not found
+	if (*size != 96) return -3; //wrong demoded size
+	//return start position
+	return (int) startIdx;
+}
 // find presco preamble 0x10D in already demoded data
 int PrescoDemod(uint8_t *dest, size_t *size) {
 	if (*size < 128*2) return -1; //make sure buffer has data
