@@ -101,6 +101,22 @@ static uint8_t calcSumNibbleAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
 static uint8_t calcSumNibbleAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask){
 	return ~calcSumNibbleAdd(bytes, len, mask);
 }
+static uint8_t calcSumNibbleXor( uint8_t* bytes, uint8_t len, uint32_t mask) {
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < len; i++) {
+        sum ^= NIBBLE_LOW(bytes[i]);
+		sum ^= NIBBLE_HIGH(bytes[i]);
+	}
+	sum &= mask;	
+    return sum;
+}
+static uint8_t calcSumByteXor( uint8_t* bytes, uint8_t len, uint32_t mask) {
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < len; i++)
+        sum ^= bytes[i];
+	sum &= mask;	
+    return sum;
+}
 
 static uint8_t calcSumByteAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
     uint8_t sum = 0;
@@ -113,6 +129,8 @@ static uint8_t calcSumByteAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
 static uint8_t calcSumByteAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask) {
 	return ~calcSumByteAdd(bytes, len, mask);
 }
+
+
 
 static uint8_t calcSumByteSub( uint8_t* bytes, uint8_t len, uint32_t mask) {
     uint8_t sum = 0;
@@ -276,6 +294,10 @@ int CmdAnalyseCHKSUM(const char *Cmd){
 
 	PrintAndLog("Byte Subtract   | 0x%X", calcSumByteSubOnes(data, len, mask));
 	PrintAndLog("Nibble Subtract | 0x%X", calcSumNibbleSubOnes(data, len, mask));
+	
+	PrintAndLog("\nXOR");
+	PrintAndLog("Byte Xor   | 0x%X", calcSumByteXor(data, len, mask));
+	PrintAndLog("Nibble Xor   | 0x%X", calcSumNibbleXor(data, len, mask));
 	
 	return 0;
 }
