@@ -26,8 +26,8 @@
 #include "loclass/cipherutils.h" // for decimating samples in getsamples
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
-uint8_t g_debugMode=0;
-size_t DemodBufferLen=0;
+uint8_t g_debugMode = 0;
+size_t DemodBufferLen = 0;
 static int CmdHelp(const char *Cmd);
 
 int usage_data_printdemodbuf(void){

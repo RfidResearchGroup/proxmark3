@@ -30,6 +30,7 @@ int CmdG_Prox_II_Demod(const char *Cmd);
 int Cmdaskrawdemod(const char *Cmd);
 int Cmdaskmandemod(const char *Cmd);
 int AutoCorrelate(int window, bool SaveGrph, bool verbose);
+int CmdAskEdgeDetect(const char *Cmd);
 int CmdAutoCorr(const char *Cmd);
 int CmdBiphaseDecodeRaw(const char *Cmd);
 int CmdBitsamples(const char *Cmd);

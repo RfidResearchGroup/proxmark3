@@ -48,10 +48,16 @@ static uint8_t visa_chksum( uint32_t id ) {
 //see ASKDemod for what args are accepted
 int CmdVisa2kDemod(const char *Cmd) {
 
+	// save GraphBuffer - to restore it later	
+	save_restoreGB(1);
+	
+	CmdAskEdgeDetect("");
+	
 	//ASK / Manchester
 	bool st = TRUE;
 	if (!ASKDemod_ext("64 0 0", FALSE, FALSE, 1, &st)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - Visa2k: ASK/Manchester Demod failed");
+		save_restoreGB(0);
 		return 0;
 	}
 	size_t size = DemodBufferLen;
@@ -67,6 +73,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 			else
 				PrintAndLog("DEBUG: Error - Visa2k: ans: %d", ans);
 		}
+		save_restoreGB(0);
 		return 0;
 	}
 	setDemodBuf(DemodBuffer, 96, ans);
@@ -82,10 +89,11 @@ int CmdVisa2kDemod(const char *Cmd) {
 	// test checksums
 	if ( chk != calc ) { 
 		printf("DEBUG: error: Visa2000 checksum failed %x - %x\n", chk, calc);
+		save_restoreGB(0);
 		return 0;
 	}
 	PrintAndLog("Visa2000 Tag Found: Card ID %u,  Raw: %08X%08X%08X", raw2,  raw1 ,raw2, raw3);
-
+	save_restoreGB(0);
 	return 1;
 }
 
