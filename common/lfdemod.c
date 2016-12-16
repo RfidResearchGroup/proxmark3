@@ -71,7 +71,7 @@ size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t p
 {
 	uint32_t parityWd = 0;
 	size_t j = 0, bitCnt = 0;
-	for (int word = 0; word < (bLen); word+=pLen){
+	for (int word = 0; word < (bLen); word += pLen){
 		for (int bit=0; bit < pLen; bit++){
 			parityWd = (parityWd << 1) | BitStream[startIdx+word+bit];
 			BitStream[j++] = (BitStream[startIdx+word+bit]);
@@ -83,7 +83,7 @@ size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t p
 			case 2:  if (BitStream[j]==0) { return 0; } break; //should be 1 spacer bit
 			default: if (parityTest(parityWd, pLen, pType) == 0) { return 0; } break; //test parity
 		}
-		bitCnt+=(pLen-1);
+		bitCnt += (pLen-1);
 		parityWd = 0;
 	}
 	// if we got here then all the parities passed
@@ -815,7 +815,7 @@ int PyramiddemodFSK(uint8_t *dest, size_t *size)
 	*size = fskdemod(dest, *size, 50, 1, 10, 8);  // fsk2a RF/50 
 	if (*size < 128) return -2;  //did we get a good demod?
 
-	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1};
 	size_t startIdx = 0;
 	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
 	if (errChk == 0) return -4; //preamble not found

@@ -1512,17 +1512,17 @@ int CmdFSKdemodPyramid(const char *Cmd)
 	if (idx < 0){
 		if (g_debugMode){
 			if (idx == -5)
-				PrintAndLog("DEBUG: Error - not enough samples");
+				PrintAndLog("DEBUG: Error - Pyramid: not enough samples");
 			else if (idx == -1)
-				PrintAndLog("DEBUG: Error - only noise found");
+				PrintAndLog("DEBUG: Error - Pyramid: only noise found");
 			else if (idx == -2)
-				PrintAndLog("DEBUG: Error - problem during FSK demod");
+				PrintAndLog("DEBUG: Error - Pyramid: problem during FSK demod");
 			else if (idx == -3)
-				PrintAndLog("DEBUG: Error - Size not correct: %d", size);
+				PrintAndLog("DEBUG: Error - Pyramid: size not correct: %d", size);
 			else if (idx == -4)
-				PrintAndLog("DEBUG: Error - Pyramid preamble not found");
+				PrintAndLog("DEBUG: Error - Pyramid: preamble not found");
 			else
-				PrintAndLog("DEBUG: Error - idx: %d",idx);
+				PrintAndLog("DEBUG: Error - Pyramid: idx: %d",idx);
 		}
 		return 0;
 	}
@@ -1555,19 +1555,23 @@ int CmdFSKdemodPyramid(const char *Cmd)
 	}
 	//check checksum calc
 	//checksum calc thanks to ICEMAN!!
-	uint32_t checkCS =  CRC8Maxim(csBuff,13);
+	uint32_t checkCS =  CRC8Maxim(csBuff, 13);
 
 	//get raw ID before removing parities
-	uint32_t rawLo = bytebits_to_byte(BitStream+idx+96,32);
-	uint32_t rawHi = bytebits_to_byte(BitStream+idx+64,32);
-	uint32_t rawHi2 = bytebits_to_byte(BitStream+idx+32,32);
-	uint32_t rawHi3 = bytebits_to_byte(BitStream+idx,32);
-	setDemodBuf(BitStream,128,idx);
+	uint32_t rawLo = bytebits_to_byte(BitStream+idx+96, 32);
+	uint32_t rawHi = bytebits_to_byte(BitStream+idx+64, 32);
+	uint32_t rawHi2 = bytebits_to_byte(BitStream+idx+32, 32);
+	uint32_t rawHi3 = bytebits_to_byte(BitStream+idx, 32);
+	setDemodBuf(BitStream, 128, idx);
 
 	size = removeParity(BitStream, idx+8, 8, 1, 120);
 	if (size != 105){
-		if (g_debugMode) 
-			PrintAndLog("DEBUG: Error at parity check - tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %x",size, idx, rawHi3);
+		if (g_debugMode) {
+			if ( size == 0)
+				PrintAndLog("DEBUG: Error - Pyramid: parity check failed - IDX: %d, hi3: %08X", idx, rawHi3);
+			else
+				PrintAndLog("DEBUG: Error - Pyramid: at parity check - tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %08X", size, idx, rawHi3);
+		}
 		return 0;
 	}
 
@@ -1625,7 +1629,7 @@ int CmdFSKdemodPyramid(const char *Cmd)
 		PrintAndLog("Checksum %02x failed - should have been %02x", checksum, checkCS);
 
 	if (g_debugMode){
-		PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
+		PrintAndLog("DEBUG: Pyramid: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
 		printDemodBuff();
 	}
 	return 1;
