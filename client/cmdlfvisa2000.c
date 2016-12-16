@@ -118,10 +118,8 @@ int CmdVisa2kClone(const char *Cmd) {
 	PrintAndLog("Preparing to clone Visa2000 to T55x7 with CardId: %u", id);
 	PrintAndLog("Blk | Data ");
 	PrintAndLog("----+------------");
-	PrintAndLog(" 00 | 0x%08x", blocks[0]);
-	PrintAndLog(" 01 | 0x%08x", blocks[1]);
-	PrintAndLog(" 02 | 0x%08x", blocks[2]);
-	PrintAndLog(" 02 | 0x%08x", blocks[3]);
+	for(int i = 0; i<4; ++i)
+	PrintAndLog(" %02d | 0x%08x", i , blocks[i]);
 	
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
