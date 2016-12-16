@@ -109,8 +109,14 @@ int CmdNoralsyDemod(const char *Cmd) {
 	chk1 = bytebits_to_byte(DemodBuffer+72, 4);
 	chk2 = bytebits_to_byte(DemodBuffer+76, 4);
 	// test checksums
-	if ( chk1 != calc1 ) printf("checksum 1 failed %x - %x\n", chk1, calc1);
-	if ( chk2 != calc2 ) printf("checksum 2 failed %x - %x\n", chk2, calc2);	
+	if ( chk1 != calc1 ) { 
+		printf("checksum 1 failed %x - %x\n", chk1, calc1);
+		return 0;
+	}
+	if ( chk2 != calc2 ) {
+		printf("checksum 2 failed %x - %x\n", chk2, calc2);	
+		return 0;
+	}
 	
 	PrintAndLog("Noralsy Tag Found: Card ID %u,  Raw: %08X%08X%08X", cardid,  raw1 ,raw2, raw3);
 	return 1;

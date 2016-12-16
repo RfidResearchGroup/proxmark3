@@ -9,6 +9,8 @@
 
 #include "cmdlfvisa2000.h"
 
+#define BL0CK1 0x56495332
+
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_visa2k_clone(void){
@@ -36,11 +38,18 @@ int usage_lf_visa2k_sim(void) {
 	return 0;
 }
 
+static uint8_t visa_chksum( uint32_t id ) {
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < 32; i += 4)
+        sum ^=  (id >> i) & 0xF;
+    return sum & 0xF;
+}
+
 //see ASKDemod for what args are accepted
 int CmdVisa2kDemod(const char *Cmd) {
 
 	//ASK / Manchester
-	bool st = true;
+	bool st = TRUE;
 	if (!ASKDemod_ext("64 0 0", FALSE, FALSE, 1, &st)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - Visa2k: ASK/Manchester Demod failed");
 		return 0;
@@ -67,7 +76,16 @@ int CmdVisa2kDemod(const char *Cmd) {
 	uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
 	uint32_t raw3 = bytebits_to_byte(DemodBuffer+64, 32);
 
+	// chksum
+	uint8_t calc = visa_chksum(raw2);
+	uint8_t chk = raw3 & 0xF;	
+	// test checksums
+	if ( chk != calc ) { 
+		printf("DEBUG: error: Visa2000 checksum failed %x - %x\n", chk, calc);
+		return 0;
+	}
 	PrintAndLog("Visa2000 Tag Found: Card ID %u,  Raw: %08X%08X%08X", raw2,  raw1 ,raw2, raw3);
+
 	return 1;
 }
 
@@ -80,12 +98,8 @@ int CmdVisa2kRead(const char *Cmd) {
 int CmdVisa2kClone(const char *Cmd) {
 
 	uint64_t id = 0;
-	uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_64 | T55x7_ST_TERMINATOR |3<<T55x7_MAXBLOCK_SHIFT, 0, 0};
+	uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_64 | T55x7_ST_TERMINATOR |3<<T55x7_MAXBLOCK_SHIFT, BL0CK1, 0};
 
-	// uint8_t bits[96];
-	// uint8_t *bs = bits;
-	// memset(bs, 0, sizeof(bits));
-	
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_visa2k_clone();
 
@@ -97,15 +111,9 @@ int CmdVisa2kClone(const char *Cmd) {
 		blocks[0] = T5555_MODULATION_MANCHESTER | 64<<T5555_BITRATE_SHIFT | T5555_ST_TERMINATOR | 3<<T5555_MAXBLOCK_SHIFT;
 	}
 	
-	// if ( !getJablotronBits(fullcode, bs)) {
-		// PrintAndLog("Error with tag bitstream generation.");
-		// return 1;
-	// }	
-	
 	// 
-	blocks[1] = 0x56495332;
 	blocks[2] = id;
-	blocks[3] = 0;
+	blocks[3] = visa_chksum( id);
 
 	PrintAndLog("Preparing to clone Visa2000 to T55x7 with CardId: %u", id);
 	PrintAndLog("Blk | Data ");
@@ -148,12 +156,12 @@ int CmdVisa2kSim(const char *Cmd) {
 	PrintAndLog("Simulating Visa2000 - CardId: %u", id);
 
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
-	
-	uint32_t blocks[3] = { 0x56495332, id, 0};
 
-	for(int i=0; i<3; ++i){
+	uint32_t blocks[3] = { BL0CK1, id,  visa_chksum(id) };
+
+	for(int i=0; i<3; ++i)
 		num_to_bytebits(blocks[i], 32, c.d.asBytes + i*32);
-	}
+
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
