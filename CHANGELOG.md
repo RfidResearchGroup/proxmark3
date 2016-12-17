@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+  -  `lf search` - fixed the silent option when aquireing data. (iceman)
+  -  `lf search` - added presco, visa2000, noralsy detection (iceman)
+  -  `lf precso` - fixed some bitsgeneration in precso bits (iceman)
+  -  Added `lf noralsy` -  adds demod/clone/sime of Noralsy LF tags. (iceman)
+  -  Added `lf visa2000` - adds demod/clone/sim of Visa2000 lF tags. (iceman)
   -  Added `hf mf key_brute` - adds J-Runs 2nd phase bruteforce ref: https://github.com/J-Run/mf_key_brute   (iceman)
   -  Added `lf jablotron` - adds demod/clone/sim of Jablotron LF tags. (iceman)
   -  Added `lf t55xx recoverpw` - adds a new password recovery using bitflips and partial flips if password write went bad. (alexgrin)
