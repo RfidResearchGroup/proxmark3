@@ -1106,7 +1106,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				if (ledcontrol)	LED_A_OFF();
 				*high=code;
 				*low=code2;
-				goto out;
+				goto OUT;
 			}
 			code=code2=0;
 			version=facilitycode=0;
