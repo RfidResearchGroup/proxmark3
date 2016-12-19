@@ -75,7 +75,7 @@ int CmdJablotronDemod(const char *Cmd) {
 	//Differential Biphase / di-phase (inverted biphase)
 	//get binary from ask wave
 	if (!ASKbiphaseDemod("0 64 1 0", FALSE)) {
-		if (g_debugMode) PrintAndLog("Error Jablotron: ASKbiphaseDemod failed");
+		if (g_debugMode) PrintAndLog("DEBUG: Error - Jablotron ASKbiphaseDemod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
@@ -83,11 +83,11 @@ int CmdJablotronDemod(const char *Cmd) {
 	if (ans < 0){
 		if (g_debugMode){
 			// if (ans == -5)
-				// PrintAndLog("DEBUG: Error - not enough samples");
+				// PrintAndLog("DEBUG: Error - Jablotron not enough samples");
 			if (ans == -1)
 				PrintAndLog("DEBUG: Error - Jablotron too few bits found");
 			// else if (ans == -2)
-				// PrintAndLog("DEBUG: Error - problem during ASK/Biphase demod");
+				// PrintAndLog("DEBUG: Error - Jablotron problem during ASK/Biphase demod");
 			else if (ans == -3)
 				PrintAndLog("DEBUG: Error - Jablotron Size not correct: %d", size);
 			else if (ans == -4)
@@ -95,7 +95,7 @@ int CmdJablotronDemod(const char *Cmd) {
 			else if (ans == -5)
 				PrintAndLog("DEBUG: Error - Jablotron checksum failed");
 			else
-				PrintAndLog("DEBUG: Error - ans: %d", ans);
+				PrintAndLog("DEBUG: Error - Jablotron ans: %d", ans);
 		}
 		return 0;
 	}

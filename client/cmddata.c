@@ -480,7 +480,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo )
 	//set GraphBuffer for clone or sim command
 	setDemodBuf(BitStream, size, idx);
 	if (g_debugMode){
-		PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
+		PrintAndLog("DEBUG: Em410x idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
 		printDemodBuff();
 	}
 	if (verbose){
@@ -717,11 +717,11 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose)
 	//attempt to Biphase decode BitStream
 	errCnt = BiphaseRawDecode(BitStream, &size, offset, invert);
 	if (errCnt < 0){
-		if (g_debugMode || verbose) PrintAndLog("Error BiphaseRawDecode: %d", errCnt);
+		if (g_debugMode || verbose) PrintAndLog("DEBUG: Error BiphaseRawDecode: %d", errCnt);
 		return 0;
 	} 
 	if (errCnt > maxErr) {
-		if (g_debugMode || verbose) PrintAndLog("Error BiphaseRawDecode too many errors: %d", errCnt);
+		if (g_debugMode || verbose) PrintAndLog("DEBUG: Error BiphaseRawDecode too many errors: %d", errCnt);
 		return 0;
 	}
 	//success set DemodBuffer and return
@@ -750,14 +750,14 @@ int Cmdaskbiphdemod(const char *Cmd)
 int CmdG_Prox_II_Demod(const char *Cmd)
 {
 	if (!ASKbiphaseDemod(Cmd, FALSE)){
-		if (g_debugMode) PrintAndLog("Error gProxII: ASKbiphaseDemod failed 1st try");
+		if (g_debugMode) PrintAndLog("DEBUG: Error - gProxII ASKbiphaseDemod failed 1st try");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
 	//call lfdemod.c demod for gProxII
 	int ans = gProxII_Demod(DemodBuffer, &size);
 	if (ans < 0){
-		if (g_debugMode) PrintAndLog("Error gProxII_Demod");
+		if (g_debugMode) PrintAndLog("DEBUG: Error - gProxII demod");
 		return 0;
 	}
 	//got a good demod of 96 bits
@@ -771,14 +771,14 @@ int CmdG_Prox_II_Demod(const char *Cmd)
 	// remove the 18 (90/5=18) parity bits (down to 72 bits (96-6-18=72))
 	size_t bitLen = removeParity(bits_no_spacer, 0, 5, 3, 90); //source, startloc, paritylen, ptype, length_to_run
 	if (bitLen != 72) {
-		if (g_debugMode) PrintAndLog("Error gProxII: spacer removal did not produce 72 bits: %u, start: %u", bitLen, startIdx);
+		if (g_debugMode) PrintAndLog("DEBUG: Error - gProxII spacer removal did not produce 72 bits: %u, start: %u", bitLen, startIdx);
 				return 0;
 			}
 	// get key and then get all 8 bytes of payload decoded
 	xorKey = (uint8_t)bytebits_to_byteLSBF(bits_no_spacer, 8);
 	for (size_t idx = 0; idx < 8; idx++) {
 		ByteStream[idx] = ((uint8_t)bytebits_to_byteLSBF(bits_no_spacer+8 + (idx*8),8)) ^ xorKey;
-		if (g_debugMode) PrintAndLog("byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
+		if (g_debugMode) PrintAndLog("DEBUG: gProxII byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
 	}
 	//now ByteStream contains 8 Bytes (64 bits) of decrypted raw tag data
 	// 
@@ -812,14 +812,14 @@ int CmdG_Prox_II_Demod(const char *Cmd)
 int CmdVikingDemod(const char *Cmd)
 {
 	if (!ASKDemod(Cmd, false, false, 1)) {
-		if (g_debugMode) PrintAndLog("ASKDemod failed");
+		if (g_debugMode) PrintAndLog("DEBUG: Error - Viking ASKDemod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
 	//call lfdemod.c demod for Viking
 	int ans = VikingDemod_AM(DemodBuffer, &size);
 	if (ans < 0) {
-		if (g_debugMode) PrintAndLog("Error Viking_Demod %d %s", ans, (ans == -5)?"[chksum error]":"");
+		if (g_debugMode) PrintAndLog("DEBUG: Error - Viking Demod %d %s", ans, (ans == -5)?"[chksum error]":"");
 		return 0;
 	}
 	//got a good demod
@@ -1164,21 +1164,21 @@ int CmdFSKdemodHID(const char *Cmd)
 	if (idx<0){
 		if (g_debugMode){
 			if (idx==-1){
-				PrintAndLog("DEBUG: Just Noise Detected");
+				PrintAndLog("DEBUG: Error - HID just noise detected");
 			} else if (idx == -2) {
-				PrintAndLog("DEBUG: Error demoding fsk");
+				PrintAndLog("DEBUG: Error - HID problem during FSK demod");
 			} else if (idx == -3) {
-				PrintAndLog("DEBUG: Preamble not found");
+				PrintAndLog("DEBUG: Error - HID preamble not found");
 			} else if (idx == -4) {
-				PrintAndLog("DEBUG: Error in Manchester data, SIZE: %d", BitLen);
+				PrintAndLog("DEBUG: Error - HID error in Manchester data, SIZE: %d", BitLen);
 			} else {
-				PrintAndLog("DEBUG: Error demoding fsk %d", idx);
+				PrintAndLog("DEBUG: Error - HID error demoding fsk %d", idx);
 			}   
 		}
 		return 0;
 	}
 	if (hi2==0 && hi==0 && lo==0) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - no values found");
+		if (g_debugMode) PrintAndLog("DEBUG: Error - HID no values found");
 		return 0;
 	}
 	if (hi2 != 0){ //extra large HID tags
@@ -1228,7 +1228,7 @@ int CmdFSKdemodHID(const char *Cmd)
 	}
 	setDemodBuf(BitStream,BitLen,idx);
 	if (g_debugMode){ 
-		PrintAndLog("DEBUG: idx: %d, Len: %d, Printing Demod Buffer:", idx, BitLen);
+		PrintAndLog("DEBUG: HID idx: %d, Len: %d, Printing Demod Buffer:", idx, BitLen);
 		printDemodBuff();
 	}
 	return 1;
@@ -1250,21 +1250,21 @@ int CmdFSKdemodParadox(const char *Cmd)
 	if (idx<0){
 		if (g_debugMode){
 			if (idx==-1){
-				PrintAndLog("DEBUG: Just Noise Detected");     
+				PrintAndLog("DEBUG: Error - Paradox just noise detected");     
 			} else if (idx == -2) {
-				PrintAndLog("DEBUG: Error demoding fsk");
+				PrintAndLog("DEBUG: Error - Paradox error demoding fsk");
 			} else if (idx == -3) {
-				PrintAndLog("DEBUG: Preamble not found");
+				PrintAndLog("DEBUG: Error - Paradox preamble not found");
 			} else if (idx == -4) {
-				PrintAndLog("DEBUG: Error in Manchester data");
+				PrintAndLog("DEBUG: Error - Paradox error in Manchester data");
 			} else {
-				PrintAndLog("DEBUG: Error demoding fsk %d", idx);
+				PrintAndLog("DEBUG: Error - Paradox error demoding fsk %d", idx);
 			}
 		}
 		return 0;
 	}
 	if (hi2==0 && hi==0 && lo==0){
-		if (g_debugMode) PrintAndLog("DEBUG: Error - no value found");
+		if (g_debugMode) PrintAndLog("DEBUG: Error - Paradox no value found");
 		return 0;
 	}
 	uint32_t fc = ((hi & 0x3)<<6) | (lo>>26);
@@ -1277,7 +1277,7 @@ int CmdFSKdemodParadox(const char *Cmd)
 		hi>>10, (hi & 0x3)<<26 | (lo>>10), fc, cardnum, (lo>>2) & 0xFF, rawHi2, rawHi, rawLo);
 	setDemodBuf(BitStream,BitLen,idx);
 	if (g_debugMode){ 
-		PrintAndLog("DEBUG: idx: %d, len: %d, Printing Demod Buffer:", idx, BitLen);
+		PrintAndLog("DEBUG: Paradox idx: %d, len: %d, Printing Demod Buffer:", idx, BitLen);
 		printDemodBuff();
 	}
 	return 1;
@@ -1295,7 +1295,7 @@ int CmdFSKdemodIO(const char *Cmd)
 
 	//something in graphbuffer?
 	if (GraphTraceLen < 65) {
-		if (g_debugMode)PrintAndLog("DEBUG: not enough samples in GraphBuffer");
+		if (g_debugMode)PrintAndLog("DEBUG: Error - IO prox not enough samples in GraphBuffer");
 		return retval;
 	}
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
@@ -1307,24 +1307,24 @@ int CmdFSKdemodIO(const char *Cmd)
 	if (idx<0){
 		if (g_debugMode){
 			if (idx==-1){
-				PrintAndLog("DEBUG: IO Prox - Just Noise Detected");     
+				PrintAndLog("DEBUG: Error - IO prox just noise detected");     
 			} else if (idx == -2) {
-				PrintAndLog("DEBUG: IO Prox - not enough samples");
+				PrintAndLog("DEBUG: Error - IO prox not enough samples");
 			} else if (idx == -3) {
-				PrintAndLog("DEBUG: IO Prox - error during fskdemod");        
+				PrintAndLog("DEBUG: Error - IO prox error during fskdemod");        
 			} else if (idx == -4) {
-				PrintAndLog("DEBUG: IO Prox - Preamble not found");
+				PrintAndLog("DEBUG: Error - IO prox preamble not found");
 			} else if (idx == -5) {
-				PrintAndLog("DEBUG: IO Prox - Separator bits not found");
+				PrintAndLog("DEBUG: Error - IO prox separator bits not found");
 			} else {
-				PrintAndLog("DEBUG: IO Prox - Error demoding fsk %d", idx);
+				PrintAndLog("DEBUG: Error - IO prox error demoding fsk %d", idx);
 			}
 		}
 		return retval;
 	}
 	if (idx==0){
 		if (g_debugMode){
-			PrintAndLog("DEBUG: IO Prox - Data not found - FSK Bits: %d", bitlen);
+			PrintAndLog("DEBUG: Error - IO prox data not found - FSK Bits: %d", bitlen);
 			if (bitlen > 92) PrintAndLog("%s", sprint_bin_break(BitStream,92,16));
 		} 
 		return retval;
@@ -1339,7 +1339,7 @@ int CmdFSKdemodIO(const char *Cmd)
 		//XSF(version)facility:codeone+codetwo (raw)
 		//Handle the data
 	if (idx + 64 > bitlen) {
-		if (g_debugMode) PrintAndLog("DEBUG: IO Prox - not enough bits found - bitlen: %d", bitlen);
+		if (g_debugMode) PrintAndLog("DEBUG: Error - IO prox not enough bits found - bitlen: %d", bitlen);
 		return retval;
 	}
 	
@@ -1371,7 +1371,7 @@ int CmdFSKdemodIO(const char *Cmd)
 		snprintf(crcStr, 3, "ok");
 		retval = 1;
 	} else {
-		if (g_debugMode) PrintAndLog("DEBUG: IO Prox - crc failed");
+		if (g_debugMode) PrintAndLog("DEBUG: Error - IO prox crc failed");
 			
 		snprintf(crcStr, 20, "failed 0x%02X != 0x%02X", crc, calccrc);
 		retval = 0;
@@ -1380,7 +1380,7 @@ int CmdFSKdemodIO(const char *Cmd)
 	PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x) [crc %s]",version,facilitycode,number,code,code2, crcStr);
 	setDemodBuf(BitStream,64,idx);
 	if (g_debugMode){
-		PrintAndLog("DEBUG: IO Prox - idx: %d, Len: %d, Printing demod buffer:", idx, 64);
+		PrintAndLog("DEBUG: IO prox idx: %d, Len: %d, Printing demod buffer:", idx, 64);
 		printDemodBuff();
 	}	
 	return retval;
@@ -1400,17 +1400,17 @@ int CmdFSKdemodAWID(const char *Cmd)
 	if (idx<=0){
 		if (g_debugMode){
 			if (idx == -1)
-				PrintAndLog("DEBUG: Error - not enough samples");
+				PrintAndLog("DEBUG: Error - AWID not enough samples");
 			else if (idx == -2)
-				PrintAndLog("DEBUG: Error - only noise found");
+				PrintAndLog("DEBUG: Error - AWID only noise found");
 			else if (idx == -3)
-				PrintAndLog("DEBUG: Error - problem during FSK demod");
+				PrintAndLog("DEBUG: Error - AWID problem during FSK demod");
 			else if (idx == -4)
 				PrintAndLog("DEBUG: Error - AWID preamble not found");
 			else if (idx == -5)
-				PrintAndLog("DEBUG: Error - Size not correct: %d", size);
+				PrintAndLog("DEBUG: Error - AWID size not correct: %d", size);
 			else
-				PrintAndLog("DEBUG: Error %d",idx);
+				PrintAndLog("DEBUG: Error - AWID error %d",idx);
 		}
 		return 0;
 	}
@@ -1436,7 +1436,7 @@ int CmdFSKdemodAWID(const char *Cmd)
 
 	size = removeParity(BitStream, idx+8, 4, 1, 88);
 	if (size != 66){
-		if (g_debugMode) PrintAndLog("DEBUG: Error - at parity check-tag size does not match AWID format");
+		if (g_debugMode) PrintAndLog("DEBUG: Error - AWID at parity check-tag size does not match AWID format");
 		return 0;
 	}
 	// ok valid card found!
@@ -1491,7 +1491,7 @@ int CmdFSKdemodAWID(const char *Cmd)
 	}
 
 	if (g_debugMode){
-		PrintAndLog("DEBUG: idx: %d, Len: %d Printing Demod Buffer:", idx, 96);
+		PrintAndLog("DEBUG: AWID idx: %d, Len: %d Printing Demod Buffer:", idx, 96);
 		printDemodBuff();
 	}
 	return 1;
@@ -1663,23 +1663,23 @@ int CmdFDXBdemodBI(const char *Cmd){
 	
 	errCnt = askdemod(BitStream, &size, &clk, &invert, maxErr, 0, 0);
 	if ( errCnt < 0 || errCnt > maxErr ) { 
-		if (g_debugMode) PrintAndLog("DEBUG: no data or error found %d, clock: %d", errCnt, clk);
+		if (g_debugMode) PrintAndLog("DEBUG: Error - FDXB no data or error found %d, clock: %d", errCnt, clk);
 		return 0;
 	}
 
 	errCnt = BiphaseRawDecode(BitStream, &size, maxErr, 1);
 	if (errCnt < 0 || errCnt > maxErr ) {
-		if (g_debugMode) PrintAndLog("Error BiphaseRawDecode: %d", errCnt);
+		if (g_debugMode) PrintAndLog("DEBUG: Error - FDXB BiphaseRawDecode: %d", errCnt);
 		return 0;
 	} 
 	
 	int preambleIndex = FDXBdemodBI(BitStream, &size);
 	if (preambleIndex < 0){
-		if (g_debugMode) PrintAndLog("Error FDXBDemod , no startmarker found :: %d",preambleIndex);
+		if (g_debugMode) PrintAndLog("DEBUG: Error - FDXB preamble not found :: %d",preambleIndex);
 		return 0;
 	}
 	if (size != 128) {
-		if (g_debugMode) PrintAndLog("Error incorrect data length found");
+		if (g_debugMode) PrintAndLog("DEBUG: Error - FDXB incorrect data length found");
 		return 0;
 	}
 	
@@ -1688,7 +1688,7 @@ int CmdFDXBdemodBI(const char *Cmd){
 	// remove marker bits (1's every 9th digit after preamble) (pType = 2)
 	size = removeParity(BitStream, preambleIndex + 11, 9, 2, 117);
 	if ( size != 104 ) {
-		if (g_debugMode) PrintAndLog("Error removeParity:: %d", size);
+		if (g_debugMode) PrintAndLog("DEBUG: Error - FDXB error removeParity:: %d", size);
 		return 0;
 	}
 	if (g_debugMode) {
@@ -1787,7 +1787,7 @@ int CmdIndalaDecode(const char *Cmd)
 	}
 
 	if (!ans){
-		if (g_debugMode) PrintAndLog("DEBUG: Indala - Can't demod signal: %d",ans);
+		if (g_debugMode) PrintAndLog("DEBUG: Error - Indala can't demod signal: %d",ans);
 		return 0;
 	}
 
@@ -1795,12 +1795,12 @@ int CmdIndalaDecode(const char *Cmd)
 	size_t size = DemodBufferLen;
 	int startIdx = indala26decode(DemodBuffer, &size, &invert);
 	if (startIdx < 0 || size > 224) {
-		if (g_debugMode) PrintAndLog("DEBUG: Indala - Wrong size, expected [64|224] got: %d", size);
+		if (g_debugMode) PrintAndLog("DEBUG: Error - Indala wrong size, expected [64|224] got: %d", size);
 		return -1;
 	}
 	setDemodBuf(DemodBuffer, size, (size_t)startIdx);
 	if (invert)
-		if (g_debugMode) PrintAndLog("DEBUG: Indala - Had to invert bits");
+		if (g_debugMode) PrintAndLog("DEBUG: Error - Indala had to invert bits");
 
 	PrintAndLog("BitLen: %d",DemodBufferLen);
 	//convert UID to HEX
@@ -1861,7 +1861,7 @@ int CmdPSKNexWatch(const char *Cmd)
 	//output
 	PrintAndLog("NexWatch ID: %d", ID);
 	if (invert){
-		PrintAndLog("Had to Invert - probably NexKey");
+		PrintAndLog("DEBUG: Error - NexWatch had to Invert - probably NexKey");
 		for (uint8_t idx=0; idx<size; idx++)
 			DemodBuffer[idx] ^= 1;
 	} 

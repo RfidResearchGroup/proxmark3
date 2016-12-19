@@ -85,7 +85,7 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 int CmdLFNedapDemod(const char *Cmd) {
 	//raw ask demod no start bit finding just get binary from wave
 	if (!ASKbiphaseDemod("0 64 0 0", FALSE)) {
-		if (g_debugMode) PrintAndLog("Error NEDAP: ASKbiphaseDemod failed");
+		if (g_debugMode) PrintAndLog("DEBUG: Error - Nedap ASKbiphaseDemod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
@@ -99,11 +99,11 @@ int CmdLFNedapDemod(const char *Cmd) {
 			// else if (idx == -2)
 				// PrintAndLog("DEBUG: Error - problem during ASK/Biphase demod");
 			if (idx == -3)
-				PrintAndLog("DEBUG: Error - Size not correct: %d", size);
+				PrintAndLog("DEBUG: Error - Nedap Size not correct: %d", size);
 			else if (idx == -4)
-				PrintAndLog("DEBUG: Error - NEDAP preamble not found");
+				PrintAndLog("DEBUG: Error - Nedap preamble not found");
 			else
-				PrintAndLog("DEBUG: Error - idx: %d",idx);
+				PrintAndLog("DEBUG: Error - Nedap idx: %d",idx);
 		}
 		return 0;
 	}
@@ -139,13 +139,13 @@ int CmdLFNedapDemod(const char *Cmd) {
 
 	uint8_t firstParity = GetParity( DemodBuffer, EVEN, 63);
 	if ( firstParity != DemodBuffer[63]  ) {
-		PrintAndLog("1st 64bit parity check failed:  %d|%d ", DemodBuffer[63], firstParity);
+		PrintAndLog("DEBUG: Error - Nedap 1st 64bit parity check failed:  %d|%d ", DemodBuffer[63], firstParity);
 		return 0;
 	}
 
 	uint8_t secondParity = GetParity( DemodBuffer+64, EVEN, 63);
 	if ( secondParity != DemodBuffer[127]  ) {
-		PrintAndLog("2st 64bit parity check failed:  %d|%d ", DemodBuffer[127], secondParity);
+		PrintAndLog("DEBUG: Error - Nedap 2st 64bit parity check failed:  %d|%d ", DemodBuffer[127], secondParity);
 		return 0;
 	}
 
