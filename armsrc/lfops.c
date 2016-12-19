@@ -1106,7 +1106,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				if (ledcontrol)	LED_A_OFF();
 				*high=code;
 				*low=code2;
-				return;
+				goto out;
 			}
 			code=code2=0;
 			version=facilitycode=0;
@@ -1115,6 +1115,8 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 
 		WDT_HIT();
 	}
+OUT:	
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);		
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
 }
