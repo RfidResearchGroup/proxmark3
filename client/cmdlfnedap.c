@@ -226,13 +226,14 @@ int CmdLFNedapClone(const char *Cmd) {
 		return 1;
 	}	
 
-	((ASK/biphase   data rawdemod ab 0 64 1 0
-	//NEDAP - compat mode, ASK/Biphase, data rate 64, 4 data blocks
-	blocks[0] = T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 4<<T55x7_MAXBLOCK_SHIFT;
+	((ASK/DIphase   data rawdemod ab 0 64 1 0
+	//NEDAP - compat mode, ASK/DIphase, data rate 64, 4 data blocks
+	// DI-pahse (CDP) T55x7_MODULATION_DIPHASE
+	blocks[0] = T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_64 | 7<<T55x7_MAXBLOCK_SHIFT;
 
 	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
 		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-		blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | 64<<T5555_BITRATE_SHIFT | 4<<T5555_MAXBLOCK_SHIFT;
+		blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | 64<<T5555_BITRATE_SHIFT | 7<<T5555_MAXBLOCK_SHIFT;
 
 	blocks[1] = bytebits_to_byte(bs,32);
 	blocks[2] = bytebits_to_byte(bs+32,32);
@@ -273,7 +274,7 @@ int CmdLFNedapSim(const char *Cmd) {
 	size_t size = sizeof(bs);
 	memset(bs, 0x00, size);
 	
-	// NEDAP,  Bihase = 2, clock 64, inverted, 
+	// NEDAP,  Biphase = 2, clock 64, inverted,  (DIPhase == inverted BIphase
 	uint8_t encoding = 2, separator = 0, clk=64, invert=1;
 	uint16_t arg1, arg2;
 	arg1 = clk << 8 | encoding;
@@ -312,7 +313,7 @@ int CmdLFNedapChk(const char *Cmd){
     uint8_t cl = 0x1D, ch = 0x1D, carry = 0;
     uint8_t al, bl, temp;
     
-	for (int i = 0; i < len; ++i){
+	for (int i = len; i >=0; --i){
 		al = data[i];
         for (int j = 8; j > 0; --j) {
 			

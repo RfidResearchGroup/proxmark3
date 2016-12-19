@@ -1463,8 +1463,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
 		memcpy(filename, Cmd+2, len);
 	
-		FILE * f = fopen( filename , "r");
-		
+		FILE * f = fopen( filename , "r");		
 		if ( !f ) {
 			PrintAndLog("File: %s: not found or locked.", filename);
 			free(keyBlock);
@@ -1519,7 +1518,13 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		// loop
 		uint64_t testpwd = 0x00;
 		for (uint16_t c = 0; c < keycnt; ++c ) {
-	
+
+			if ( offline ) {
+				printf("Device offline\n");
+				free(keyBlock);
+				return  2;
+			}
+		
 			if (ukbhit()) {
 				ch = getchar();
 				(void)ch;
@@ -1531,8 +1536,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			testpwd = bytes_to_num(keyBlock + 4*c, 4);
 
 			PrintAndLog("Testing %08X", testpwd);
-			
-			
+						
 			if ( !AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, testpwd)) {
 				PrintAndLog("Aquireing data from device failed. Quitting");
 				free(keyBlock);
@@ -1540,7 +1544,6 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			}
 			
 			found = tryDetectModulation();
-
 			if ( found ) {
 				PrintAndLog("Found valid password: [%08X]", testpwd);
 				free(keyBlock);
@@ -1610,7 +1613,8 @@ int tryOnePassword(uint32_t password) {
 
 	if (tryDetectModulation())
 		return 1;
-	else return 0;
+	else 
+		return 0;
 }
 
 int CmdT55xxRecoverPW(const char *Cmd) {

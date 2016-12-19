@@ -127,7 +127,7 @@ int CmdHIDSim(const char *Cmd) {
 
 int CmdHIDClone(const char *Cmd) {
 	
-	unsigned int hi2 = 0, hi = 0, lo = 0;
+	uint32_t hi2 = 0, hi = 0, lo = 0;
 	int n = 0, i = 0;
 	UsbCommand c;
 
@@ -482,7 +482,7 @@ static command_t CommandTable[] = {
 	{"fskdemod",CmdHIDDemodFSK, 0, "Realtime HID FSK demodulator"},
 	{"sim",     CmdHIDSim,      0, "HID tag simulator"},
 	{"clone",   CmdHIDClone,    0, "Clone HID to T55x7"},
-	{"wiegand", CmdHIDWiegand,  0, "Convert facility code/card number to Wiegand code"},
+	{"wiegand", CmdHIDWiegand,  1, "Convert facility code/card number to Wiegand code"},
 	{"brute",   CmdHIDBrute,	0, "Bruteforce card number against reader"},
 	{NULL, NULL, 0, NULL}
 };
