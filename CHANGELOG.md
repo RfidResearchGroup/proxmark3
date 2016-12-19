@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+  -  Fixed bugs in `lf sim` and other lf continuous demods not turning off antenna when finished (marshmellow)
+  -  `hf iclass write` - fixed bugs, added crc. (?)
+  -  `hf iclass dump` - changed layout in dump (iceman)
+  -  Changed - debug statements are more clear (iceman)
   -  `lf search` - fixed the silent option when aquireing data. (iceman)
   -  `lf search` - added presco, visa2000, noralsy detection (iceman)
   -  `lf precso` - fixed some bitsgeneration in precso bits (iceman)
