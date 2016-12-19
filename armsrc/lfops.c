@@ -397,16 +397,19 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	int i = 0;
 	uint8_t *buf = BigBuf_get_addr();
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
-	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
+	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
+	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+	
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
-	//AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 
-	StartTicks();
-
+	// power on antenna
+	// OPEN_COIL();
+	// SpinDelay(50);
+		
 	for(;;) {
 		WDT_HIT();
 
@@ -424,29 +427,28 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 			OPEN_COIL();
 		else
 			SHORT_COIL();
-
-		if (ledcontrol) LED_D_OFF();
-		
+	
 		//wait until SSC_CLK goes LOW
 		while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
 			WDT_HIT();
 			if ( usb_poll_validate_length() || BUTTON_PRESS() )
 				goto OUT;
 		}
-
+				
 		i++;
 		if(i == period) {
 			i = 0;
 			if (gap) {
 				WDT_HIT();
 				SHORT_COIL();
-				WaitUS(gap);
+				SpinDelayUs(gap);
 			}
 		}
+		
+		if (ledcontrol) LED_D_OFF();
 	}
 OUT: 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	StopTicks();
 	LED_D_OFF();
 	DbpString("Simulation stopped");
 	return;	
@@ -852,13 +854,15 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 				if (ledcontrol)	LED_A_OFF();
 				*high = hi;
 				*low = lo;
-				return;
+				goto OUT;
 			}
 			// reset
 		}
 		hi2 = hi = lo = idx = 0;
 		WDT_HIT();
 	}
+OUT:	
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
 }
@@ -955,13 +959,14 @@ void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 					}
 					break;		
 			}
-			if (findone){
-				if (ledcontrol)	LED_A_OFF();
-				return;
-			}
+			if (findone)
+				goto OUT;
+
 		idx = 0;
 		WDT_HIT();
 	}
+OUT:	
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);	
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
 }
@@ -1072,15 +1077,15 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 			// Checksum: 0x75
 			//XSF(version)facility:codeone+codetwo
 			//Handle the data
-			if(findone){ //only print binary if we are doing one
-				Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx],   dest[idx+1],   dest[idx+2],dest[idx+3],dest[idx+4],dest[idx+5],dest[idx+6],dest[idx+7],dest[idx+8]);
-				Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+9], dest[idx+10],dest[idx+11],dest[idx+12],dest[idx+13],dest[idx+14],dest[idx+15],dest[idx+16],dest[idx+17]);
-				Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+18],dest[idx+19],dest[idx+20],dest[idx+21],dest[idx+22],dest[idx+23],dest[idx+24],dest[idx+25],dest[idx+26]);
-				Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+27],dest[idx+28],dest[idx+29],dest[idx+30],dest[idx+31],dest[idx+32],dest[idx+33],dest[idx+34],dest[idx+35]);
-				Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+36],dest[idx+37],dest[idx+38],dest[idx+39],dest[idx+40],dest[idx+41],dest[idx+42],dest[idx+43],dest[idx+44]);
-				Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+45],dest[idx+46],dest[idx+47],dest[idx+48],dest[idx+49],dest[idx+50],dest[idx+51],dest[idx+52],dest[idx+53]);
-				Dbprintf("%d%d%d%d%d%d%d%d %d%d",dest[idx+54],dest[idx+55],dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
-			}
+			// if(findone){ //only print binary if we are doing one
+				// Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx],   dest[idx+1],   dest[idx+2],dest[idx+3],dest[idx+4],dest[idx+5],dest[idx+6],dest[idx+7],dest[idx+8]);
+				// Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+9], dest[idx+10],dest[idx+11],dest[idx+12],dest[idx+13],dest[idx+14],dest[idx+15],dest[idx+16],dest[idx+17]);
+				// Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+18],dest[idx+19],dest[idx+20],dest[idx+21],dest[idx+22],dest[idx+23],dest[idx+24],dest[idx+25],dest[idx+26]);
+				// Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+27],dest[idx+28],dest[idx+29],dest[idx+30],dest[idx+31],dest[idx+32],dest[idx+33],dest[idx+34],dest[idx+35]);
+				// Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+36],dest[idx+37],dest[idx+38],dest[idx+39],dest[idx+40],dest[idx+41],dest[idx+42],dest[idx+43],dest[idx+44]);
+				// Dbprintf("%d%d%d%d%d%d%d%d %d",dest[idx+45],dest[idx+46],dest[idx+47],dest[idx+48],dest[idx+49],dest[idx+50],dest[idx+51],dest[idx+52],dest[idx+53]);
+				// Dbprintf("%d%d%d%d%d%d%d%d %d%d",dest[idx+54],dest[idx+55],dest[idx+56],dest[idx+57],dest[idx+58],dest[idx+59],dest[idx+60],dest[idx+61],dest[idx+62],dest[idx+63]);
+			// }
 			code = bytebits_to_byte(dest+idx,32);
 			code2 = bytebits_to_byte(dest+idx+32,32);
 			version = bytebits_to_byte(dest+idx+27,8); //14,4
