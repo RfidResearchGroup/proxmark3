@@ -12,6 +12,8 @@
 #define MAX_BIN_BREAK_LENGTH   (3072+384+1)
 
 #ifndef _WIN32
+#include <sys/ttydefaults.h>
+
 int ukbhit(void) {
   int cnt = 0;
   int error;
