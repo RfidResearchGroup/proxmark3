@@ -19,7 +19,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	// Reset the last three significant bits of the reader nonce
 	nr &= 0xffffff1f;
   
-	PrintAndLog("uid(%08x) nt(%08x) par(%016"llx") ks(%016"llx") nr(%08x)\n", uid, nt, par_info, ks_info, nr);
+	PrintAndLog("uid(%08x) nt(%08x) par(%016"llx") ks(%016"llx") nr(%08x)", uid, nt, par_info, ks_info, nr);
 
 	for ( pos = 0; pos < 8; pos++ ) {
 		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
@@ -30,17 +30,19 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 		}
 	}
 
-	printf("+----+--------+---+-----+---------------+\n");
-	printf("|diff|{nr}    |ks3|ks3^5|parity         |\n");
-	printf("+----+--------+---+-----+---------------+\n");
+	PrintAndLog("+----+--------+---+-----+---------------+");
+	PrintAndLog("|diff|{nr}    |ks3|ks3^5|parity         |");
+	PrintAndLog("+----+--------+---+-----+---------------+");
 	for ( i = 0; i < 8; i++) {
 		nr_diff = nr | i << 5;
-		printf("| %02x |%08x| %01x |  %01x  |", i << 5, nr_diff, ks3x[i], ks3x[i]^5);
 
-		for (pos = 0; pos < 7; pos++) printf("%01x,", par[i][pos]);
-		printf("%01x|\n", par[i][7]);
+		PrintAndLog("| %02x |%08x| %01x |  %01x  |%01x,%01x,%01x,%01x,%01x,%01x,%01x,%01x|",
+			i << 5, nr_diff, ks3x[i], ks3x[i]^5,
+			par[i][0], par[i][1], par[i][2], par[i][3],
+			par[i][4], par[i][5], par[i][6], par[i][7]);
+
 	}
-	printf("+----+--------+---+-----+---------------+\n");
+	PrintAndLog("+----+--------+---+-----+---------------+");
 
 	clock_t t1 = clock();
 
@@ -50,7 +52,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	crypto1_destroy(state);
 
 	t1 = clock() - t1;
-	if ( t1 > 0 ) PrintAndLog("Time in nonce2key: %.0f ticks \n", (float)t1);
+	if ( t1 > 0 ) PrintAndLog("Time in nonce2key: %.0f ticks", (float)t1);
 	return 0;
 }
 
@@ -119,11 +121,11 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 		free(last_keylist);
 		last_keylist = state_s;
 		PrintAndLog("parity is all zero, testing special attack. First call, this attack needs at least two calls. Hold on...");		
-		PrintAndLog("uid(%08x) nt(%08x) ks(%016"llx") nr(%08x)\n", uid, nt, ks_info, nr);
+		PrintAndLog("uid(%08x) nt(%08x) ks(%016"llx") nr(%08x)", uid, nt, ks_info, nr);
 		return 1;
 	}
 
-	PrintAndLog("uid(%08x) nt(%08x) ks(%016"llx") nr(%08x)\n", uid, nt, ks_info, nr);
+	PrintAndLog("uid(%08x) nt(%08x) ks(%016"llx") nr(%08x)", uid, nt, ks_info, nr);
 		
 	//Create the intersection:
 	int64_t *p1, *p2, *p3;
@@ -132,7 +134,7 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 		
 	while ( *p1 != -1 && *p2 != -1 ) {
 		if (compar_intA(p1, p2) == 0) {
-			printf("p1:%"llx" p2:%"llx" p3:%"llx" key:%012"llx"\n",(uint64_t)(p1-last_keylist),(uint64_t)(p2-state_s),(uint64_t)(p3-last_keylist),*p1);
+			PrintAndLog("p1:%"llx" p2:%"llx" p3:%"llx" key:%012"llx,(uint64_t)(p1-last_keylist),(uint64_t)(p2-state_s),(uint64_t)(p3-last_keylist),*p1);
 			*p3++ = *p1++;
 			p2++;
 		}
@@ -142,7 +144,7 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 		}
 	}
 	key_count = p3 - last_keylist;
-	printf("key_count: %d\n", key_count);
+	PrintAndLog("key_count: %d", key_count);
 	if ( key_count == 0 ){
 		free(state);
 		state = NULL;
@@ -190,16 +192,16 @@ bool tryMfk32(nonces_t data, uint64_t *outputkey, bool verbose) {
 	uint32_t p64 = prng_successor(nt, 64);
 		
 	if ( verbose ) {
-		printf("Recovering key for:\n");
-		printf("    uid: %08x\n",uid);
-		printf("     nt: %08x\n",nt);
-		printf(" {nr_0}: %08x\n",nr0_enc);
-		printf(" {ar_0}: %08x\n",ar0_enc);
-		printf(" {nr_1}: %08x\n",nr1_enc);
-		printf(" {ar_1}: %08x\n",ar1_enc);
-		printf("\nLFSR succesors of the tag challenge:\n");
-		printf("  nt': %08x\n", p64);
-		printf(" nt'': %08x\n", prng_successor(p64, 32));
+		PrintAndLog("Recovering key for:");
+		PrintAndLog("    uid: %08x",uid);
+		PrintAndLog("     nt: %08x",nt);
+		PrintAndLog(" {nr_0}: %08x",nr0_enc);
+		PrintAndLog(" {ar_0}: %08x",ar0_enc);
+		PrintAndLog(" {nr_1}: %08x",nr1_enc);
+		PrintAndLog(" {ar_1}: %08x",ar1_enc);
+		PrintAndLog("\nLFSR succesors of the tag challenge:");
+		PrintAndLog("  nt': %08x", p64);
+		PrintAndLog(" nt'': %08x", prng_successor(p64, 32));
 	}
 	
 	s = lfsr_recovery32(ar0_enc ^ p64, 0);
@@ -219,7 +221,7 @@ bool tryMfk32(nonces_t data, uint64_t *outputkey, bool verbose) {
 	}
  	isSuccess = (counter > 0);
 	t1 = clock() - t1;
-	if ( t1 > 0 ) PrintAndLog("Time in mfkey32: %.0f ticks  - possible keys %d\n", (float)t1, counter);
+	if ( t1 > 0 ) PrintAndLog("Time in mfkey32: %.0f ticks  - possible keys %d", (float)t1, counter);
 
 	*outputkey = ( isSuccess ) ? outkey : 0;	
 	crypto1_destroy(s);
@@ -247,17 +249,17 @@ bool tryMfk32_moebius(nonces_t data, uint64_t *outputkey, bool verbose) {
 	uint32_t p641 = prng_successor(nt1, 64);
 	
 	if (verbose) {
-		printf("Recovering key for:\n");
-		printf("    uid: %08x\n", uid);
-		printf("   nt_0: %08x\n", nt0);
-		printf(" {nr_0}: %08x\n", nr0_enc);
-		printf(" {ar_0}: %08x\n", ar0_enc);
-		printf("   nt_1: %08x\n", nt1);
-		printf(" {nr_1}: %08x\n", nr1_enc);
-		printf(" {ar_1}: %08x\n", ar1_enc);
-		printf("\nLFSR succesors of the tag challenge:\n");
-		printf("  nt': %08x\n", p640);
-		printf(" nt'': %08x\n", prng_successor(p640, 32));
+		PrintAndLog("Recovering key for:");
+		PrintAndLog("    uid: %08x", uid);
+		PrintAndLog("   nt_0: %08x", nt0);
+		PrintAndLog(" {nr_0}: %08x", nr0_enc);
+		PrintAndLog(" {ar_0}: %08x", ar0_enc);
+		PrintAndLog("   nt_1: %08x", nt1);
+		PrintAndLog(" {nr_1}: %08x", nr1_enc);
+		PrintAndLog(" {ar_1}: %08x", ar1_enc);
+		PrintAndLog("\nLFSR succesors of the tag challenge:");
+		PrintAndLog("  nt': %08x", p640);
+		PrintAndLog(" nt'': %08x", prng_successor(p640, 32));
 	}
 	
 	s = lfsr_recovery32(ar0_enc ^ p640, 0);
@@ -278,7 +280,7 @@ bool tryMfk32_moebius(nonces_t data, uint64_t *outputkey, bool verbose) {
 	}
     isSuccess	= (counter > 0);
 	t1 = clock() - t1;
-	if ( t1 > 0 ) PrintAndLog("Time in mfkey32_moebius: %.0f ticks  - possible keys %d\n", (float)t1, counter);
+	if ( t1 > 0 ) PrintAndLog("Time in mfkey32_moebius: %.0f ticks  - possible keys %d", (float)t1, counter);
 
 	*outputkey = ( isSuccess ) ? outkey : 0;
 	crypto1_destroy(s);
@@ -315,7 +317,7 @@ int tryMfk64(uint32_t uid, uint32_t nt, uint32_t nr_enc, uint32_t ar_enc, uint32
 
 	PrintAndLog("Found Key: [%012"llx"]", key);
 	t1 = clock() - t1;
-	if ( t1 > 0 ) PrintAndLog("Time in mfkey64: %.0f ticks \n", (float)t1);
+	if ( t1 > 0 ) PrintAndLog("Time in mfkey64: %.0f ticks", (float)t1);
 
 	*outputkey = key;
 	crypto1_destroy(revstate);
