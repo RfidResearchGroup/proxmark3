@@ -400,6 +400,17 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
+
+	// set frequency,  get values from 'lf config' command
+	sample_config *sc = getSamplingConfig();
+
+	if ( (sc->divisor == 1) || (sc->divisor < 0) || (sc->divisor > 255) )
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
+	else if (sc->divisor == 0)
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+	else
+		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
+	
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 	
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
