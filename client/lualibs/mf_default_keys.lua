@@ -10,7 +10,8 @@ local _keys = {
     'aabbccddeeff',
     '4d3a99c351dd',
     '1a982c7e459a',
-    'd3f7d3f7d3f7',
+    'd3f7d3f7d3f7', -- key A Wien
+	'5a1b85fce20a', -- key B Wien
     '714c5c886e97',
     '587ee5f9350f',
     'a0478cc39091',
