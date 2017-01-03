@@ -21,6 +21,7 @@
 #include "../common/iso15693tools.h"
 #include "tea.h"
 #include "../include/legic_prng.h"
+#include "loclass/elite_crack.h"
 
 int usage_analyse_lcr(void);
 int usage_analyse_checksum(void);

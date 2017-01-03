@@ -445,6 +445,9 @@ static void generate(uint8_t *data, uint8_t len) {
 }
 int CmdAnalyseHid(const char *Cmd){
 
+	uint8_t key[8] = {0};	
+	uint8_t key_std_format[8] = {0};
+	uint8_t key_iclass_format[8] = {0};
 	uint8_t data[16] = {0};
 	bool isReverse = FALSE;
 	int len = 0;
@@ -457,12 +460,20 @@ int CmdAnalyseHid(const char *Cmd){
 	param_gethex_ex(Cmd, 1, data, &len);
 	if ( len%2 ) return usage_analyse_hid();
 	
-	len >>= 1;
-	
-	if ( isReverse )
+	len >>= 1;	
+
+	memcpy(key, data, 8);
+
+	if ( isReverse ) {
 		generate_rev(data, len);
-	else 
+		permutekey_rev(key, key_std_format);
+		printf(" holiman iclass key | %s \n", sprint_hex(key_std_format, 8));
+	}
+	else {
 		generate(data, len);
+		permutekey(key, key_iclass_format);		
+		printf(" holiman std key | %s \n", sprint_hex(key_iclass_format, 8));
+	}
 	return 0;
 }
 
