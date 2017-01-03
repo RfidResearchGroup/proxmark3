@@ -115,7 +115,6 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 	return TRUE;
 }
 
-
 int CmdAWIDDemodFSK(const char *Cmd) {
 	int findone = 0;
 	if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_awid_fskdemod();

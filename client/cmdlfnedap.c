@@ -298,7 +298,7 @@ int CmdLFNedapSim(const char *Cmd) {
 }
 
 int CmdLFNedapChk(const char *Cmd){
-    
+    //301600714021BE
 	uint8_t data[256] = { 0x30, 0x16, 0x00, 0x71, 0x40, 0x21, 0xBE};
 	int len = 0;
 	param_gethex_ex(Cmd, 0, data, &len);
@@ -313,7 +313,7 @@ int CmdLFNedapChk(const char *Cmd){
     uint8_t cl = 0x1D, ch = 0x1D, carry = 0;
     uint8_t al, bl, temp;
     
-	for (int i = len; i >=0; --i){
+	for (int i =len; i >= 0; --i){
 		al = data[i];
         for (int j = 8; j > 0; --j) {
 			
@@ -340,7 +340,7 @@ int CmdLFNedapChk(const char *Cmd){
         }
     }
 	
-	PrintAndLog("Nedap checksum: [ 0x21, 0xBE ] %x", ((ch << 8) | cl) );
+	PrintAndLog("Nedap checksum: 0x%X", ((ch << 8) | cl) );
 	return 0;
 }
 

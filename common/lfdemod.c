@@ -677,7 +677,6 @@ int IOdemodFSK(uint8_t *dest, size_t size)
 int VikingDemod_AM(uint8_t *dest, size_t *size) {
 	//make sure buffer has data
 	if (*size < 64*2) return -2;
-
 	size_t startIdx = 0;
 	uint8_t preamble[] = {1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
@@ -693,7 +692,7 @@ int VikingDemod_AM(uint8_t *dest, size_t *size) {
 	if ( checkCalc != 0xA8 ) return -5;	
 	if (*size != 64) return -6;
 	//return start position
-	return (int) startIdx;
+	return (int)startIdx;
 }
 
 // by iceman
@@ -706,7 +705,7 @@ int Visa2kDemod_AM(uint8_t *dest, size_t *size) {
 	if (errChk == 0) return -2; //preamble not found
 	if (*size != 96) return -3; //wrong demoded size
 	//return start position
-	return (int) startIdx;
+	return (int)startIdx;
 }
 // by iceman
 // find Noralsy preamble in already demoded data
@@ -718,7 +717,7 @@ int NoralsyDemod_AM(uint8_t *dest, size_t *size) {
 	if (errChk == 0) return -2; //preamble not found
 	if (*size != 96) return -3; //wrong demoded size
 	//return start position
-	return (int) startIdx;
+	return (int)startIdx;
 }
 // find presco preamble 0x10D in already demoded data
 int PrescoDemod(uint8_t *dest, size_t *size) {
@@ -729,54 +728,41 @@ int PrescoDemod(uint8_t *dest, size_t *size) {
 	if (errChk == 0) return -2; //preamble not found
 	if (*size != 128) return -3; //wrong demoded size
 	//return start position
-	return (int) startIdx;
+	return (int)startIdx;
 }
 
 // Ask/Biphase Demod then try to locate an ISO 11784/85 ID
 // BitStream must contain previously askrawdemod and biphasedemoded data
-int FDXBdemodBI(uint8_t *dest, size_t *size)
-{
-	//make sure buffer has enough data
-	if (*size < 128) return -1;
-
+int FDXBdemodBI(uint8_t *dest, size_t *size) {
+	if (*size < 128*2) return -1; 	//make sure buffer has enough data
 	size_t startIdx = 0;
 	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,1};
-
 	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
 	if (errChk == 0) return -2; //preamble not found
+	if (*size != 128) return -3; //wrong demoded size
+	//return start position
 	return (int)startIdx;
 }
 
 // ASK/Diphase fc/64 (inverted Biphase)
 // Note: this i s not a demod, this is only a detection
 // the parameter *dest needs to be demoded before call
+// 0xFFFF preamble, 64bits
 int JablotronDemod(uint8_t *dest, size_t *size){
-	//make sure buffer has enough data
-	if (*size < 64) return -1;
-
+	if (*size < 64*2) return -1;	//make sure buffer has enough data
 	size_t startIdx = 0;
-	// 0xFFFF preamble, 64bits
-	uint8_t preamble[] = {
-		        1,1,1,1,
-	            1,1,1,1,
-				1,1,1,1,
-				1,1,1,1,
-				0
-		};
-
+	uint8_t preamble[] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0};
 	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -4; //preamble not found
-	if (*size != 64) return -3;
+	if (errChk == 0) return -2; //preamble not found
+	if (*size != 64) return -3; // wrong demoded size
 	
 	uint8_t checkchksum = 0;
 	for (int i=16; i < 56; i += 8) {
 		checkchksum += bytebits_to_byte(dest+startIdx+i,8);
 	}
 	checkchksum ^= 0x3A;
-
 	uint8_t crc = bytebits_to_byte(dest+startIdx+56, 8);
-	
-	if ( checkchksum != crc ) return -5;	
+	if ( checkchksum != crc ) return -5;
 	return (int)startIdx;
 }
 

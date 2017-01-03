@@ -82,16 +82,12 @@ int CmdJablotronDemod(const char *Cmd) {
 	int ans = JablotronDemod(DemodBuffer, &size);
 	if (ans < 0){
 		if (g_debugMode){
-			// if (ans == -5)
-				// PrintAndLog("DEBUG: Error - Jablotron not enough samples");
 			if (ans == -1)
 				PrintAndLog("DEBUG: Error - Jablotron too few bits found");
-			// else if (ans == -2)
-				// PrintAndLog("DEBUG: Error - Jablotron problem during ASK/Biphase demod");
-			else if (ans == -3)
-				PrintAndLog("DEBUG: Error - Jablotron Size not correct: %d", size);
-			else if (ans == -4)
+			else if (ans == -2)
 				PrintAndLog("DEBUG: Error - Jablotron preamble not found");
+			else if (ans == -3)
+				PrintAndLog("DEBUG: Error - Jablotron size not correct: %d", size);
 			else if (ans == -5)
 				PrintAndLog("DEBUG: Error - Jablotron checksum failed");
 			else
