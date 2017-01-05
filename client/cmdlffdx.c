@@ -335,8 +335,8 @@ static command_t CommandTable[] = {
     {"help",	CmdHelp,	1, "This help"},
 	{"demod",	CmdFdxDemod,1, "Attempt extract tag data from graphbuf"},
 	{"read",	CmdFdxRead,	0, "Attempt to read and extract tag data"},
-	{"clone",	CmdFdxClone,0, "clone animal ID tag"},
-	{"sim",		CmdFdxSim,	0, "simulate animal ID tag"},
+	{"clone",	CmdFdxClone,0, "Clone animal ID tag to T55x7"},
+	{"sim",		CmdFdxSim,	0, "Animal ID tag simulator"},
     {NULL, NULL, 0, NULL}
 };
 
