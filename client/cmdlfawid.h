@@ -18,6 +18,7 @@
 #include "cmdparser.h"  // CmdsParse, CmdsHelp
 #include "lfdemod.h"    // parityTest
 #include "util.h"       // weigandparity
+#include "cmdlf.h"	    // lf read
 #include "protocols.h"  // for T55xx config register definitions
 #include "cmdmain.h"
 #include "sleep.h"
@@ -25,6 +26,7 @@
 
 int CmdLFAWID(const char *Cmd);
 int CmdAWIDDemodFSK(const char *Cmd);
+int CmdAWIDRead(const char *Cmd);
 int CmdAWIDSim(const char *Cmd);
 int CmdAWIDClone(const char *Cmd);
 int CmdAWIDBrute(const char *Cmd);

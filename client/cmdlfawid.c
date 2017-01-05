@@ -36,7 +36,7 @@ int usage_lf_awid_sim(void) {
 	PrintAndLog("Usage:  lf awid sim [h] <format> <facility-code> <card-number>");
 	PrintAndLog("Options:");
 	PrintAndLog("                h :  This help");	
-	PrintAndLog("         <format> :  format length 26|50");
+	PrintAndLog("         <format> :  format length 26|34|37|50");
 	PrintAndLog("  <facility-code> :  8|16bit value facility code");
 	PrintAndLog("    <card number> :  16|32-bit value card number");
 	PrintAndLog("");
@@ -53,7 +53,7 @@ int usage_lf_awid_clone(void) {
 	PrintAndLog("Usage:  lf awid clone [h] <format> <facility-code> <card-number> [Q5]");
 	PrintAndLog("Options:");
 	PrintAndLog("                h :  This help");	
-	PrintAndLog("         <format> :  format length 26|50");
+	PrintAndLog("         <format> :  format length 26|34|37|50");
 	PrintAndLog("  <facility-code> :  8|16bit value facility code");
 	PrintAndLog("    <card number> :  16|32-bit value card number");
 	PrintAndLog("               Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
@@ -126,6 +126,12 @@ int CmdAWIDDemodFSK(const char *Cmd) {
 	return 0;   
 }
 
+int CmdAWIDRead(const char *Cmd) {
+	CmdLFRead("s");
+	getSamples("12000", TRUE);
+	return CmdFSKdemodAWID(Cmd);
+}
+
 //refactored by marshmellow
 int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
 
@@ -139,16 +145,35 @@ int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
 	num_to_bytebits(fmtlen, 8, pre);
 	
 	// add facilitycode, cardnumber and wiegand parity bits
-	if ( fmtlen == 26 ) {
-		uint8_t wiegand[24];
-		num_to_bytebits(fc, 8, wiegand);
-		num_to_bytebits(cn, 16, wiegand+8);
-		wiegand_add_parity(pre+8, wiegand,  sizeof(wiegand));
-	} else {
-		uint8_t wiegand[48];
-		num_to_bytebits(fc, 16, wiegand);
-		num_to_bytebits(cn, 32, wiegand+16);
-		wiegand_add_parity(pre+8, wiegand, sizeof(wiegand));
+	switch (fmtlen) {
+		case 26:{
+			uint8_t wiegand[24];
+			num_to_bytebits(fc, 8, wiegand);
+			num_to_bytebits(cn, 16, wiegand+8);
+			wiegand_add_parity(pre+8, wiegand,  sizeof(wiegand));
+			break;
+		}
+		case 34:{
+			uint8_t wiegand[32];
+			num_to_bytebits(fc, 8, wiegand);
+			num_to_bytebits(cn, 24, wiegand+8);
+			wiegand_add_parity(pre+8, wiegand,  sizeof(wiegand));
+			break;
+		}
+		case 37:{
+			uint8_t wiegand[31];
+			num_to_bytebits(fc, 13, wiegand);
+			num_to_bytebits(cn, 18, wiegand+13);
+			wiegand_add_parity(pre+8, wiegand,  sizeof(wiegand));
+			break;
+		}
+		case 50: {
+			uint8_t wiegand[48];
+			num_to_bytebits(fc, 16, wiegand);
+			num_to_bytebits(cn, 32, wiegand+16);
+			wiegand_add_parity(pre+8, wiegand, sizeof(wiegand));
+			break;
+		}
 	}
 	
 	// add AWID 4bit parity 
@@ -156,6 +181,49 @@ int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
 
 	if (bitLen != 88) return 0;
 	return 1;
+}
+
+static void verify_values(uint8_t *fmtlen, uint32_t *fc, uint32_t *cn){
+	switch (*fmtlen) {
+		case 50:
+			if ((*fc & 0xFFFF) != *fc) {
+				*fc &= 0xFFFF;
+				PrintAndLog("Facility-Code Truncated to 16-bits (AWID50): %u", *fc);
+			}
+			break;
+		case 37:
+			if ((*fc & 0x1FFF) != *fc) {
+				*fc &= 0x1FFF;
+				PrintAndLog("Facility-Code Truncated to 13-bits (AWID37): %u", *fc);
+			}
+			if ((*cn & 0x3FFFF) != *cn) {
+				*cn &= 0x3FFFF;
+				PrintAndLog("Card Number Truncated to 18-bits (AWID37): %u", *cn);
+			}			
+			break;
+		case 34:
+			if ((*fc & 0xFF) != *fc) {
+				*fc &= 0xFF;
+				PrintAndLog("Facility-Code Truncated to 8-bits (AWID34): %u", *fc);
+			}
+			if ((*cn & 0xFFFFFF) != *cn) {
+				*cn &= 0xFFFFFF;
+				PrintAndLog("Card Number Truncated to 24-bits (AWID34): %u", *cn);
+			}
+			break;
+		case 26:
+		default:
+			*fmtlen = 26;
+			if ((*fc & 0xFF) != *fc) {
+				*fc &= 0xFF;
+				PrintAndLog("Facility-Code Truncated to 8-bits (AWID26): %u", *fc);
+			}
+			if ((*cn & 0xFFFF) != *cn) {
+				*cn &= 0xFFFF;
+				PrintAndLog("Card Number Truncated to 16-bits (AWID26): %u", *cn);
+			}
+			break;
+	}
 }
 
 int CmdAWIDSim(const char *Cmd) {
@@ -177,26 +245,7 @@ int CmdAWIDSim(const char *Cmd) {
 	cn = param_get32ex(Cmd, 2, 0, 10);
 	if ( !fc || !cn) return usage_lf_awid_sim();
 	
-	switch(fmtlen) {
-		case 26:
-			if ((fc & 0xFF) != fc) {
-				fc &= 0xFF;
-				PrintAndLog("Facility-Code Truncated to 8-bits (AWID26): %u", fc);
-			}
-
-			if ((cn & 0xFFFF) != cn) {
-				cn &= 0xFFFF;
-				PrintAndLog("Card Number Truncated to 16-bits (AWID26): %u", cn);
-			}
-			break;
-		case 50:
-			if ((fc & 0xFFFF) != fc) {
-				fc &= 0xFFFF;
-				PrintAndLog("Facility-Code Truncated to 16-bits (AWID50): %u", fc);
-			}
-			break;
-		default: break;
-	}
+	verify_values(&fmtlen, &fc, &cn);
 	
 	PrintAndLog("Emulating AWID %u -- FC: %u; CN: %u\n", fmtlen, fc, cn);
 	PrintAndLog("Press pm3-button to abort simulation or run another command");
@@ -233,31 +282,12 @@ int CmdAWIDClone(const char *Cmd) {
 
 	if ( !fc || !cn) return usage_lf_awid_clone();
 	
-	switch(fmtlen) {
-		case 50:
-			if ((fc & 0xFFFF) != fc) {
-				fc &= 0xFFFF;
-				PrintAndLog("Facility-Code Truncated to 16-bits (AWID50): %u", fc);
-			}
-			break;
-		default: 
-			fmtlen = 26;
-			if ((fc & 0xFF) != fc) {
-				fc &= 0xFF;
-				PrintAndLog("Facility-Code Truncated to 8-bits (AWID26): %u", fc);
-			}
-
-			if ((cn & 0xFFFF) != cn) {
-				cn &= 0xFFFF;
-				PrintAndLog("Card Number Truncated to 16-bits (AWID26): %u", cn);
-			}
-			break;
-	}
-	
 	if (param_getchar(Cmd, 4) == 'Q' || param_getchar(Cmd, 4) == 'q')
 		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
 		blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | 50<<T5555_BITRATE_SHIFT | 3<<T5555_MAXBLOCK_SHIFT;
 
+	verify_values(&fmtlen, &fc, &cn);
+		
 	if ( !getAWIDBits(fmtlen, fc, cn, bs)) {
 		PrintAndLog("Error with tag bitstream generation.");
 		return 1;
@@ -389,6 +419,7 @@ int CmdAWIDBrute(const char *Cmd){
 static command_t CommandTable[] = {
 	{"help",      CmdHelp,         1, "This help"},
 	{"fskdemod",  CmdAWIDDemodFSK, 0, "Realtime AWID FSK demodulator"},
+	{"read",      CmdAWIDRead,     0, "Attempt to read and extract tag data"},
 	{"sim",       CmdAWIDSim,      0, "AWID tag simulator"},
 	{"clone",     CmdAWIDClone,    0, "Clone AWID to T55x7"},
 	{"brute",	  CmdAWIDBrute,	   0, "Bruteforce card number against reader"},

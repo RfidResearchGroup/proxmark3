@@ -1460,6 +1460,7 @@ int CmdFSKdemodAWID(const char *Cmd)
 	uint32_t code1 = 0;
 	uint32_t code2 = 0;
 	uint8_t fmtLen = bytebits_to_byte(BitStream, 8);
+
 	switch(fmtLen) {
 		case 26: 
 			fc = bytebits_to_byte(BitStream + 9, 8);
@@ -1467,6 +1468,22 @@ int CmdFSKdemodAWID(const char *Cmd)
 			code1 = bytebits_to_byte(BitStream + 8,fmtLen);
 			PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
 			break;
+		case 34:
+			fc = bytebits_to_byte(BitStream + 9, 8);
+			cardnum = bytebits_to_byte(BitStream + 17, 24);
+			code1 = bytebits_to_byte(BitStream + 8, (fmtLen-32) );
+			code2 = bytebits_to_byte(BitStream + 8 + (fmtLen-32), 32);			
+			PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);			
+			break;
+		case 37:
+			fc = bytebits_to_byte(BitStream + 9, 13);
+			cardnum = bytebits_to_byte(BitStream + 22, 18);
+			code1 = bytebits_to_byte(BitStream + 8, (fmtLen-32) );
+			code2 = bytebits_to_byte(BitStream + 8 + (fmtLen-32), 32);			
+			PrintAndLog("AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+			break;
+		// case 40:
+		// break;		
 		case 50:
 			fc = bytebits_to_byte(BitStream + 9, 16);
 			cardnum = bytebits_to_byte(BitStream + 25, 32);
@@ -1801,21 +1818,24 @@ int CmdIndalaDecode(const char *Cmd)
 	if (invert)
 		if (g_debugMode) PrintAndLog("DEBUG: Error - Indala had to invert bits");
 
-	PrintAndLog("BitLen: %d",DemodBufferLen);
 	//convert UID to HEX
 	uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
 	uid1 = bytebits_to_byte(DemodBuffer,32);
 	uid2 = bytebits_to_byte(DemodBuffer+32,32);
 	if (DemodBufferLen==64){
-		PrintAndLog("Indala UID=%s (%x%08x)",  sprint_bin_break(DemodBuffer,DemodBufferLen,16), uid1, uid2);
+		PrintAndLog("Indala Found - Bitlength %d, UID = (%x%08x)\n%s",
+			DemodBufferLen, uid1, uid2, sprint_bin_break(DemodBuffer,DemodBufferLen,32)
+		);
 	} else {
 		uid3 = bytebits_to_byte(DemodBuffer+64,32);
 		uid4 = bytebits_to_byte(DemodBuffer+96,32);
 		uid5 = bytebits_to_byte(DemodBuffer+128,32);
 		uid6 = bytebits_to_byte(DemodBuffer+160,32);
 		uid7 = bytebits_to_byte(DemodBuffer+192,32);
-		PrintAndLog("Indala UID=%s (%x%08x%08x%08x%08x%08x%08x)", 
-		     sprint_bin_break(DemodBuffer,DemodBufferLen,16), uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+		PrintAndLog("Indala Found - Bitlength %d, UID = (%x%08x%08x%08x%08x%08x%08x)\n%s", 
+			DemodBufferLen,
+		    uid1, uid2, uid3, uid4, uid5, uid6, uid7, sprint_bin_break(DemodBuffer,DemodBufferLen,32)
+		);
 	}
 	if (g_debugMode){
 		PrintAndLog("DEBUG: Indala - printing demodbuffer:");
