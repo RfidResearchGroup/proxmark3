@@ -294,12 +294,11 @@ int CmdIndalaDemod(const char *Cmd)
 			count = 0;
 		}
 	}
+	if ( rawbit<1 ) return 0;
 
-	if ( rawbit>0 ){
+	if (g_debugMode) {
 		PrintAndLog("Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen/32);
 		PrintAndLog("worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
-	} else {
-		return 0;
 	}
 
 	// Finding the start of a UID
@@ -327,15 +326,14 @@ int CmdIndalaDemod(const char *Cmd)
 	}
   
 	if (start == rawbit - uidlen + 1) {
-		PrintAndLog("nothing to wait for");
+		if (g_debugMode) PrintAndLog("nothing to wait for");
 		return 0;
 	}
 
 	// Inverting signal if needed
 	if (first == 1) {
-		for (i = start; i < rawbit; i++) {
+		for (i = start; i < rawbit; i++)
 			rawbits[i] = !rawbits[i];
-		}
 	}
 
 	// Dumping UID
@@ -414,7 +412,7 @@ int CmdIndalaDemod(const char *Cmd)
 		times += 1;
 	}
 
-	PrintAndLog("Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
+	if (g_debugMode) PrintAndLog("Occurrences: %d (expected %d)", times, (rawbit - start) / uidlen);
 
 	// Remodulating for tag cloning
 	// HACK: 2015-01-04 this will have an impact on our new way of seening lf commands (demod) 
