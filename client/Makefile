@@ -142,6 +142,7 @@ CMDSRCS =	mifarehost.c \
 			cmdlfjablotron.c \
 			cmdlfvisa2000.c \
 			cmdlfnoralsy.c \
+			cmdlffdx.c \
 			pm3_binlib.c \
 			scripting.c \
 			cmdscript.c \

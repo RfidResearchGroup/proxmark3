@@ -253,19 +253,17 @@ void setDemodBuf(uint8_t *buff, size_t size, size_t startIdx)
 
 	if ( size >= MAX_DEMOD_BUF_LEN)
 		size = MAX_DEMOD_BUF_LEN;
-
-	size_t i = 0;
-	for (; i < size; i++){
+	
+	for (size_t i = 0; i < size; i++)
 		DemodBuffer[i]=buff[startIdx++];
-	}
+	
 	DemodBufferLen = size;
 }
 
-int CmdSetDebugMode(const char *Cmd)
-{
-	int demod=0;
+int CmdSetDebugMode(const char *Cmd) {
+	int demod = 0;
 	sscanf(Cmd, "%i", &demod);
-	g_debugMode=(uint8_t)demod;
+	g_debugMode = (uint8_t)demod;
 	return 1;
 }
 
@@ -1691,12 +1689,7 @@ int CmdFDXBdemodBI(const char *Cmd){
 		if (g_debugMode) PrintAndLog("DEBUG: Error - FDXB error removeParity:: %d", size);
 		return 0;
 	}
-	if (g_debugMode) {
-		char *bin = sprint_bin_break(BitStream,size,16);
-		PrintAndLog("DEBUG BinStream:\n%s",bin);
-	}
 	PrintAndLog("\nFDX-B / ISO 11784/5 Animal Tag ID Found:");
-	if (g_debugMode) PrintAndLog("Start marker %d;   Size %d", preambleIndex, size);
 
 	//got a good demod
 	uint64_t NationalCode = ((uint64_t)(bytebits_to_byteLSBF(BitStream+32,6)) << 32) | bytebits_to_byteLSBF(BitStream,32);
@@ -1717,11 +1710,17 @@ int CmdFDXBdemodBI(const char *Cmd){
 	PrintAndLog("Animal ID:     %04u-%012llu", countryCode, NationalCode);
 	PrintAndLog("National Code: %012llu", NationalCode);
 	PrintAndLog("CountryCode:   %04u", countryCode);
-	PrintAndLog("Extended Data: %s", dataBlockBit ? "True" : "False");
-	PrintAndLog("reserved Code: %u", reservedCode);
-	PrintAndLog("Animal Tag:    %s", animalBit ? "True" : "False");
+
+	PrintAndLog("Reserved/RFU:      %u", reservedCode);
+	PrintAndLog("Animal Tag:        %s", animalBit ? "True" : "False");
+	PrintAndLog("Has extended data: %s [0x%X]", dataBlockBit ? "True" : "False", extended);
 	PrintAndLog("CRC:           0x%04X - [%04X] - %s", crc16, calcCrc, (calcCrc == crc16) ? "Passed" : "Failed");
-	PrintAndLog("Extended:      0x%X\n", extended);	
+
+	if (g_debugMode) {
+		PrintAndLog("Start marker %d;   Size %d", preambleIndex, size);
+		char *bin = sprint_bin_break(BitStream,size,16);
+		PrintAndLog("DEBUG BinStream:\n%s",bin);
+	}
 	return 1;
 }
 

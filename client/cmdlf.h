@@ -40,7 +40,7 @@
 #include "cmdlfjablotron.h"	// for JABLOTRON menu
 #include "cmdlfvisa2000.h"  // for VISA2000 menu
 #include "cmdlfnoralsy.h"	// for NORALSY meny
-
+#include "cmdlffdx.h"		// for FDX-B meny
 int CmdLF(const char *Cmd);
 
 int CmdLFCommandRead(const char *Cmd);

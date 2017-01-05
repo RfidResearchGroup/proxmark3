@@ -1181,6 +1181,7 @@ int CmdLFfind(const char *Cmd) {
 static command_t CommandTable[] = 
 {
 	{"help",        CmdHelp,            1, "This help"},
+	{"animal",      CmdLFFdx,           1, "{ Animal RFIDs... }"},
 	{"awid",        CmdLFAWID,          1, "{ AWID RFIDs... }"},
 	{"em4x",        CmdLFEM4X,          1, "{ EM4X RFIDs... }"},
 	{"guard",       CmdLFGuard,         1, "{ Guardall RFIDs... }"},
