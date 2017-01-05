@@ -79,47 +79,11 @@ static uint16_t getFDXchksum (uint64_t raw){
 }
 
 int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits) {
-	
-	uint64_t raw = 0;
-	uint8_t data[117] = {0};
-	
-	raw |= isanimal;
-	raw |= (0x000 & 0x3ff) << 1;
-	raw |= isextended << 14;
-	raw |= (country & 0x3ff) << 15;
-	raw |= (national_id & 0x3FFFFFFFFF) << 25;
-		
-	uint16_t crc = getFDXchksum(raw);
 
-	// add raw to bitarray
-	num_to_bytebits(raw, 64, data);
-
-	// add crc to bitarray
-	num_to_bytebits(crc, 16, data+64);
-
-	// add extended data to bitarray
-	num_to_bytebits(extended, 24, data+64+16);
-	
-	//reverse array
-	printf("ICE:\n %s\n", sprint_bin(data, 104) );
-	for (uint8_t i = 0; i <104/2; ++i) {
-		uint8_t tmp = data[i];
-		data[i] = data[104-i];
-		data[104-i] = tmp;
-	}
-	printf("ICE:\n %s\n", sprint_bin(data, 104) );
-	
-	// add parity always EVEN (2), every 8bits
-	// into output array
-	uint8_t bitlen = addParity(data, bits+11, 104, 9, 2);
-	if (bitlen != 117 ) 
-		printf("ICE ERROR PARITY BITLEN 119 != %d\n", bitlen);
-	
     // add preamble ten 0x00 and one 0x01
     memset(bits, 0x00, 10);
 	bits[10] = 1;
-	printf("%s\n", sprint_bin_break(bits, 128, 32) );
-	/*
+	
 	// 128bits
     // every 9th bit is 0x01, but we can just fill the rest with 0x01 and overwrite
 	memset(bits, 0x01, 128);
@@ -153,7 +117,7 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
 	for (uint8_t i=0; i<8; ++i)
 		raw[i] = bytebits_to_byte(bits + 11 + i * 9, 8);
 		
-	uint16_t crc = crc16_ccitt_kermit(raw, 8);
+	crc = crc16_ccitt_kermit(raw, 8);
 	num_to_bytebitsLSBF(crc >> 0, 8, bits+83);
 	num_to_bytebitsLSBF(crc >> 8, 8, bits+92);
 	
@@ -161,8 +125,6 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
 	num_to_bytebitsLSBF( extended >> 0 , 8, bits+101);
 	num_to_bytebitsLSBF( extended >> 8 , 8, bits+110);
 	num_to_bytebitsLSBF( extended >> 16, 8, bits+119);
-	
-	*/
 	return 1;
 }
 
