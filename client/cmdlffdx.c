@@ -72,12 +72,6 @@ static void verify_values(uint32_t countryid, uint64_t animalid){
 	}
 }
 
-static uint16_t getFDXchksum (uint64_t raw){
-	uint8_t arr[8];
-	num_to_bytes(raw, 64, arr);
-	return crc16_ccitt_kermit(arr, 8);
-}
-
 int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits) {
 
     // add preamble ten 0x00 and one 0x01
@@ -117,7 +111,7 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
 	for (uint8_t i=0; i<8; ++i)
 		raw[i] = bytebits_to_byte(bits + 11 + i * 9, 8);
 		
-	crc = crc16_ccitt_kermit(raw, 8);
+	uint16_t crc = crc16_ccitt_kermit(raw, 8);
 	num_to_bytebitsLSBF(crc >> 0, 8, bits+83);
 	num_to_bytebitsLSBF(crc >> 8, 8, bits+92);
 	
