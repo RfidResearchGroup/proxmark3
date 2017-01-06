@@ -147,7 +147,10 @@ Get devkitARM release 41 from SourceForge (choose either the 64/32 bit depending
 - Get the latest commits	
 `git pull`
 
-- CLEAN COMPILE		
+- Install the blacklist rules
+`make udev`
+
+- Clean and complete compilation
 `make clean && make all`
 	
 - Flash the BOOTROM		
