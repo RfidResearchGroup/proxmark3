@@ -175,28 +175,22 @@ typedef struct {
 	size_t   Wiegand_n;
  } wiegand_t;
 
-// static void addHIDMarker(uint8_t fmtlen, uint8_t *out) {
-	
-// }
-//static void getParity26(uint32_t *hi, uint32_t *lo){
-	// uint32_t result = 0;
-	// int i;
-	// // even parity
-	// for (i = 24;i >= 13;i--)
-		// result ^= (*lo >> i) & 1;
-	// // even parity 26th bit
-	// *lo |= result << 25;
+static void addHIDMarker(uint8_t fmtlen, uint8_t *out) {
+    
+	switch(fmtlen) {
+		case 26:
+			   //*out |= (1 << 26); // why this?
+			   //*out |= (1 << 37);  // bit format for hid?
+			break;
+		case 34:
+				// set bit format for less than 37 bit format
+				// 5+32= 1
+				//*hi = (1 << 5) | (fc >> 15);
+			break;
+		default:break;
+	}
+}
 
-	// // odd parity 
-	// result = 0;
-	// for (i = 12;i >= 1;i--)
-		// result ^= (*lo >> i) & 1;
-	// *lo |= !result;
-//}
-
-// static void getParity33(uint32_t *hi, uint32_t *lo){
-
-// }
 // static void getParity34(uint32_t *hi, uint32_t *lo){
 	// uint32_t result = 0;
 	// int i;
@@ -215,28 +209,6 @@ typedef struct {
 		// result ^= (*lo >> i) & 1;
 
 	// *lo |= !result;
-// }
-// static void getParity35(uint32_t *hi, uint32_t *lo){	
-// }
-// static void getParity37S(uint32_t *hi,uint32_t *lo){
-	// uint32_t result = 0;
-	// int i;
-
-	// // even parity
-	// for (i = 4; i >= 0; i--)
-		// result ^= (*hi >> i) & 1;
-	
-	// for (i = 31; i >= 20; i--)
-		// result ^= (*lo >> i) & 1;
-
-	// *hi |= result;
-
-	// // odd parity
-	// result = 0;
-	// for (i = 19; i >= 1; i--)
-		// result ^= (*lo >> i) & 1;
-
-	// *lo |= result;
 // }
 // static void getParity37H(uint32_t *hi, uint32_t *lo){
 	// uint32_t result = 0;
@@ -257,48 +229,46 @@ typedef struct {
 // }
 
 //static void calc26(uint16_t fc, uint32_t cardno, uint32_t *hi, uint32_t *lo){
-void calc26(uint16_t fc, uint32_t cardno, uint8_t *out){
-
+static void calc26(uint16_t fc, uint32_t cardno, uint8_t *out){
 	uint8_t wiegand[24];
 	num_to_bytebits(fc, 8, wiegand);
 	num_to_bytebits(cardno, 16, wiegand+8);
 	wiegand_add_parity(out,  wiegand, sizeof(wiegand) );
-	
-//   *out |= (1 << 26); // why this?
-//   *out |= (1 << 37);  // bit format for hid?
 }
 // static void calc33(uint16_t fc, uint32_t cardno, uint32_t *hi, uint32_t *lo){
-
 // }
-// static void calc34(uint16_t fc, uint32_t cardno, uint32_t *hi, uint32_t *lo){
-  // // put card number first bit 1 .. 20 //
-  // *lo = ((cardno & 0X000F7FFF) << 1) | ((fc & 0XFFFF) << 17);
-  // // set bit format for less than 37 bit format
-  // *hi = (1 << 5) | (fc >> 15);
-// }
+static void calc34(uint16_t fc, uint32_t cardno, uint8_t *out){
+	uint8_t wiegand[32];
+	num_to_bytebits(fc, 16, wiegand);
+	num_to_bytebits(cardno, 16, wiegand + 16);
+  	wiegand_add_parity(out,  wiegand, sizeof(wiegand) );	
+}
 // static void calc35(uint16_t fc, uint32_t cardno, uint32_t *hi, uint32_t *lo){
 	// *lo = ((cardno & 0xFFFFF) << 1) | fc << 21; 
 	// *hi = (1 << 5) | ((fc >> 11) & 1);  
 // }
-// static void calc37S(uint16_t fc, uint32_t cardno, uint32_t *hi, uint32_t *lo){
-	// // FC 2 - 17   - 16 bit  
-	// // cardno 18 - 36  - 19 bit
-	// // Even P1   1 - 19
-	// // Odd  P37  19 - 36
-
-	// fc = fc & 0xFFFF;
-	// *lo = ((fc << 20) | (cardno & 0x7FFFF) << 1);
-	// *hi = (fc >> 12);
-// }
-// static void calc37H(uint64_t cardno, uint32_t *hi, uint32_t *lo){
-	// // SC NONE
-	// // cardno 1-35 34 bits 
-	// // Even Parity  0th bit  1-18
-	// // Odd  Parity 36th bit 19-35
-	// cardno = (cardno & 0x00000003FFFFFFFF);
-	// *lo = (cardno << 1);
-	// *hi = (cardno >> 31);
-// }
+static void calc37S(uint16_t fc, uint32_t cardno, uint8_t *out){
+	// FC 2 - 17   - 16 bit  
+	// cardno 18 - 36  - 19 bit
+	// Even P1   1 - 19
+	// Odd  P37  19 - 36
+	uint8_t wiegand[35];
+	num_to_bytebits(fc, 16, wiegand);
+	num_to_bytebits(cardno, 19, wiegand + 16);
+  	wiegand_add_parity(out,  wiegand, sizeof(wiegand) );
+}
+static void calc37H(uint64_t cardno, uint8_t *out){
+	// SC NONE
+	// cardno 1-35 34 bits 
+	// Even Parity  0th bit  1-18
+	// Odd  Parity 36th bit 19-35
+	uint8_t wiegand[37];
+	num_to_bytebits( (uint32_t)(cardno >> 32), 2, wiegand);
+	num_to_bytebits( (uint32_t)(cardno >> 0), 32, wiegand + 2);
+  	wiegand_add_parity(out,  wiegand, sizeof(wiegand) );
+	
+	printf("%x %x\n", (uint32_t)(cardno >> 32), (uint32_t)cardno );
+}
 // static void calc40(uint64_t cardno, uint32_t *hi, uint32_t *lo){
 	// cardno = (cardno & 0xFFFFFFFFFF);
 	// *lo = ((cardno & 0xFFFFFFFF) << 1 ); 
@@ -308,51 +278,48 @@ void calc26(uint16_t fc, uint32_t cardno, uint8_t *out){
 void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits){
 
 	// uint32_t hi = 0, lo = 0;
-	// uint32_t cn32 = (cardno & 0xFFFFFFFF);
-	// switch ( fmtlen ) {
-		// case 26 : {			
-			// calc26(fc, cn32, bits);
-			// addHIDFormatMarker(fmtlen, bits);	
-			// break;
-		// }
+	 uint32_t cn32 = (cardno & 0xFFFFFFFF);
+	 switch ( fmtlen ) {
+		case 26 : {			
+			calc26(fc, cn32, bits);
+			//addHIDFormatMarker(fmtlen, bits);	
+			break;
+		}
 		// case 33 : { 
  			// // calc33(fc, cn32, hi, lo);
 			// // getParity33(hi, lo);	
 			// break;
 		// }
-		// case 34 : {
- 			// calc34(fc, cn32, hi, lo);
-			// getParity34(hi, lo);		
-			// break;
-		// }
+		case 34 : {
+ 			calc34(fc, cn32, bits);
+			//addHIDFormatMarker(fmtlen, bits);	
+			break;
+		}
 		// case 35 : {
 			// calc35(fc, cn32, hi, lo);
 			// getParity35(hi, lo);
 			// break;
 		// }
-		// case 37 : {
-			// calc37S(fc, cn32, hi, lo);
-			// getParity37S(hi, lo);
-			// break;
-		// }
-		// case 38 : { 
-			// calc37H(cn32, hi, lo);
-			// getParity37H(hi, lo);
-			// break;
-		// }
+		case 37 : {
+			calc37S(fc, cn32, bits);
+			//addHIDFormatMarker(fmtlen, bits);	
+			break;
+		}
+		case 38 : { 
+			calc37H(cardno, bits);
+			break;
+		}
 		// case 40 : calc40(cardno, hi, lo);	break;
 		// case 44 : { break; }
 		// case 84 : { break; }
-	// }
-
+		default: break;
+	}
 }	
 
 int CmdHIDWiegand(const char *Cmd) {
 	uint32_t oem = 0, fc = 0;
 	uint64_t cardnum = 0;
-	
-	uint32_t blocks[2] = {0,0};
-	uint32_t wiegand[2] = {0,0}; 
+	uint64_t blocks = 0, wiegand = 0; 
 
 	uint8_t bits[96];
 	uint8_t *bs = bits;
@@ -365,24 +332,25 @@ int CmdHIDWiegand(const char *Cmd) {
 	fc = param_get32ex(Cmd, 1, 0, 10);
 	cardnum = param_get64ex(Cmd, 2, 0, 10);
 
-	// 
-	uint8_t ftmlen[] = {26,33,34,35,37,38,40};
+	uint8_t fmtlen[] = {26,33,34,35,37,38,40};
 	
-	PrintAndLog("HID | OEM |  FC |   CN  |  Wiegand  |  HID Formatted");
-	PrintAndLog("----+-----+-----+-------+-----------+--------------------");
-	for (uint8_t i = 0; i < sizeof(ftmlen); i++){
-		calcWiegand( ftmlen[i], fc, cardnum, bs);
-		blocks[0] = bytebits_to_byte(bs,32);
-		blocks[1] = bytebits_to_byte(bs+32,32);
-		PrintAndLog(" %d | %d  | %d  | %llu  | %08X%08X  |  %08X%08X ",
-			ftmlen,
+	PrintAndLog("HID | OEM | FC   | CN      |  Wiegand  |  HID Formatted");
+	PrintAndLog("----+-----+------+---------+-----------+--------------------");
+	for (uint8_t i = 0; i < sizeof(fmtlen); i++){
+		memset(bits, 0x00, sizeof(bits));
+		calcWiegand( fmtlen[i], fc, cardnum, bs);
+		wiegand = (uint64_t)bytebits_to_byte(bs, 32) << 32 | bytebits_to_byte(bs+32, 32);
+		blocks = (uint64_t)bytebits_to_byte(bs, 32) << 32 | bytebits_to_byte(bs+32, 32);
+		uint8_t shifts = 64-fmtlen[i];		
+		wiegand >>= shifts;
+		
+		PrintAndLog(" %u | %03u | %03u  | %llu  | %llX  |  %llX",
+			fmtlen[i],
 			oem,
 			fc,
 			cardnum,
-			wiegand[0],
-			wiegand[1],
-			blocks[0],
-			blocks[1]
+			wiegand,
+			blocks
 			);
 	}
 	PrintAndLog("----+-----+-----+-------+-----------+--------------------");

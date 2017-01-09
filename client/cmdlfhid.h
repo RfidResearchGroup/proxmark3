@@ -17,7 +17,7 @@
 #include "ui.h"
 #include "graph.h"
 #include "cmdparser.h"
-#include "util.h"
+#include "util.h"		// wiegand_add_parity etc
 #include "cmdmain.h"
 #include "sleep.h"
 #include "lfdemod.h"
@@ -35,6 +35,6 @@ int usage_lf_hid_sim(void);
 int usage_lf_hid_clone(void);
 int usage_lf_hid_brute(void);
 
-void calc26(uint16_t fc, uint32_t cardno, uint8_t *out);
+//void calc26(uint16_t fc, uint32_t cardno, uint8_t *out);
 void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits);
 #endif
