@@ -2222,7 +2222,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	sync_cycles = PRNG_SEQUENCE_LENGTH; // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).		
 	nt_attacked = 0;
 	
-   if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare::Sync %08x", sync_time);
+   if (MF_DBGLEVEL >= 4)	Dbprintf("Mifare::Sync %u", sync_time);
 				
 	if (first_try) {
 		mf_nr_ar3 = 0;

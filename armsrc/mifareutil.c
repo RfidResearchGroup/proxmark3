@@ -471,7 +471,11 @@ int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) {
 }
 int mifare_classic_halt_ex(struct Crypto1State *pcs) {
 	uint8_t receivedAnswer[4] = {0x00, 0x00, 0x00, 0x00};
-	mifare_sendcmd_short(pcs, (pcs == NULL) ? CRYPT_NONE : CRYPT_ALL, 0x50, 0x00, receivedAnswer, NULL, NULL);
+	uint16_t len = mifare_sendcmd_short(pcs, (pcs == NULL) ? CRYPT_NONE : CRYPT_ALL, 0x50, 0x00, receivedAnswer, NULL, NULL);
+	if (len != 0) {
+		if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("halt warning. response len: %x", len);
+		return 1;
+	}
 	return 0;
 }
 int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid) {
