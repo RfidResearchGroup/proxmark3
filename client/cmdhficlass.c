@@ -172,6 +172,33 @@ int usage_hf_iclass_managekeys(void) {
 	PrintAndLog(" print keys   : hf iclass managekeys p\n");
 	return 0;
 }
+int usage_hf_iclass_reader(void) {
+	PrintAndLog("HELP :  Act as a Iclass reader:\n");
+	PrintAndLog("Usage:  hf iclass reader [h] [1]\n");
+	PrintAndLog("Options:");
+	PrintAndLog("    h   This help text");
+	PrintAndLog("    1   read only 1 tag");
+	PrintAndLog("Samples:");
+	PrintAndLog("        hf iclass reader 1");
+	return 0;
+}
+int usage_hf_iclass_replay(void){
+	PrintAndLog("HELP:   Replay a collected mac message");
+	PrintAndLog("Usage:  hf iclass replay [h] <mac>");
+	PrintAndLog("Options:");
+	PrintAndLog("    h       This help text");
+	PrintAndLog("    <mac>   Mac bytes to replay (8 hexsymbols)");
+	PrintAndLog("Samples:");
+	PrintAndLog("        hf iclass replay 00112233");	
+	return 0;
+}
+int usage_hf_iclass_snoop(void){
+	PrintAndLog("HELP:   Snoops the communication between reader and tag");
+	PrintAndLog("Usage:  hf iclass snoop [h]");
+	PrintAndLog("Samples:");
+	PrintAndLog("		 hf iclass snoop");	
+	return 0;
+}
 
 int xorbits_8(uint8_t val) {
 	uint8_t res = val ^ (val >> 1); //1st pass
@@ -188,6 +215,9 @@ int CmdHFiClassList(const char *Cmd) {
 }
 
 int CmdHFiClassSnoop(const char *Cmd) {
+	char cmdp = param_getchar(Cmd, 0);
+	if (cmdp == 'h' || cmdp == 'H')	return usage_hf_iclass_snoop();
+
 	UsbCommand c = {CMD_SNOOP_ICLASS};
 	SendCommand(&c);
 	return 0;
@@ -318,19 +348,18 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 	return 0;
 }
 
-int CmdHFiClassReader(const char *Cmd) {
-	return HFiClassReader(Cmd, true, true);
+int CmdHFiClassReader(const char *Cmd) {	
+	char cmdp = param_getchar(Cmd, 0);
+	if (cmdp == 'h' || cmdp == 'H') return usage_hf_iclass_reader();
+	bool findone = (cmdp == '1') ? FALSE : TRUE;
+	return HFiClassReader(Cmd, findone, true);
 }
 
 int CmdHFiClassReader_Replay(const char *Cmd) {
 	uint8_t readerType = 0;
 	uint8_t MAC[4]={0x00, 0x00, 0x00, 0x00};
 
-	if (strlen(Cmd)<1) {
-		PrintAndLog("Usage:  hf iclass replay <MAC>");
-		PrintAndLog("        sample: hf iclass replay 00112233");
-		return 0;
-	}
+	if (strlen(Cmd)<1) return usage_hf_iclass_replay();
 
 	if (param_gethex(Cmd, 0, MAC, 8)) {
 		PrintAndLog("MAC must include 8 HEX symbols");
@@ -437,12 +466,14 @@ static int readKeyfile(const char *filename, size_t len, uint8_t* buffer) {
 }
 
 int CmdHFiClassDecrypt(const char *Cmd) {
+
+	char opt = param_getchar(Cmd, 0);
+	if (strlen(Cmd)<1 || opt == 'h' || opt == 'H') return usage_hf_iclass_decrypt();
+	
 	uint8_t key[16] = { 0 };
 	if(readKeyfile("iclass_decryptionkey.bin", 16, key)) return usage_hf_iclass_decrypt();
 	
-	PrintAndLog("Decryption file found... ");
-	char opt = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<1 || opt == 'h' || opt == 'H') return usage_hf_iclass_decrypt();
+	PrintAndLog("Decryption file found...");
 
 	//Open the tagdump-file
 	FILE *f;
@@ -1304,7 +1335,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 	printf("------+--+-------------------------+\n");
 	while (i <= endblock){
 		uint8_t *blk = iclass_dump + (i * 8);
-		printf("Block |%02X| %s|\n", i, sprint_hex(blk, 8) );	
+		printf("Block |%02X| %s\n", i, sprint_hex_ascii(blk, 8) );	
 		i++;
 	}
 	printf("------+--+-------------------------+\n");

@@ -181,7 +181,18 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 	char *tmp = buf;
 	memset(buf, 0x00, 1024);
 	size_t max_len = (len > 1010) ? 1010 : len;
-	sprintf(tmp, "%s| %s", sprint_hex(data, max_len) , data);	
+
+	sprintf(tmp, "%s| ", sprint_hex(data, max_len) );
+	
+	size_t i = 0;
+	size_t pos = (max_len * 3)+2;
+	while(i < max_len){
+		char c = data[i];
+		if ( (c < 32) || (c == 127))
+			c = '.';
+		sprintf(tmp+pos+i, "%c",  c);
+		++i;
+	}
 	return buf;
 }
 
@@ -284,9 +295,7 @@ int param_getptr(const char *line, int *bg, int *en, int paramnum)
 char param_getchar(const char *line, int paramnum)
 {
 	int bg, en;
-	
 	if (param_getptr(line, &bg, &en, paramnum)) return 0x00;
-
 	return line[bg];
 }
 
@@ -327,7 +336,6 @@ uint8_t param_isdec(const char *line, int paramnum)
 uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base)
 {
 	int bg, en;
-
 	if (!param_getptr(line, &bg, &en, paramnum)) 
 		return strtoul(&line[bg], NULL, base) & 0xff;
 	else
@@ -337,7 +345,6 @@ uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base)
 uint32_t param_get32ex(const char *line, int paramnum, int deflt, int base)
 {
 	int bg, en;
-
 	if (!param_getptr(line, &bg, &en, paramnum)) 
 		return strtoul(&line[bg], NULL, base);
 	else
@@ -347,7 +354,6 @@ uint32_t param_get32ex(const char *line, int paramnum, int deflt, int base)
 uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base)
 {
 	int bg, en;
-
 	if (!param_getptr(line, &bg, &en, paramnum)) 
 		return strtoull(&line[bg], NULL, base);
 	else
@@ -398,7 +404,6 @@ int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt)
 int param_getstr(const char *line, int paramnum, char * str)
 {
 	int bg, en;
-
 	if (param_getptr(line, &bg, &en, paramnum)) return 0;
 	
 	memcpy(str, line + bg, en - bg + 1);
