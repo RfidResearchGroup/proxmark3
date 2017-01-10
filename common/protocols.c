@@ -22,27 +22,6 @@ uint32_t GetT55xxClockBit(uint32_t clock) {
 #include "ui.h"
 #define prnt PrintAndLog
 
-// iclass / picopass chip config structures and shared routines
-typedef struct {
-	uint8_t app_limit;      //[8]
-	uint8_t otp[2];         //[9-10]
-	uint8_t block_writelock;//[11]
-	uint8_t chip_config;    //[12]
-	uint8_t mem_config;     //[13]
-	uint8_t eas;            //[14]
-	uint8_t fuses;          //[15]
-} picopass_conf_block;
-
-
-typedef struct {
-	uint8_t csn[8];
-	picopass_conf_block conf;
-	uint8_t epurse[8];
-	uint8_t key_d[8];
-	uint8_t key_c[8];
-	uint8_t app_issuer_area[8];
-} picopass_hdr;
-
 uint8_t isset(uint8_t val, uint8_t mask) {
 	return (val & mask);
 }
@@ -80,23 +59,27 @@ void fuse_config(const picopass_hdr *hdr) {
 
 void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb) {
 	// mem-bit 5, mem-bit 7, chip-bit 4: defines chip type
-	if(isset(chip_cfg, 0x10) && notset(mem_cfg, 0x80) && notset(mem_cfg, 0x20)) {
+	uint8_t k16		= isset(mem_cfg, 0x80);
+	uint8_t k2 		= isset(mem_cfg, 0x08);
+	uint8_t book	= isset(mem_cfg, 0x20);
+	
+	if(isset(chip_cfg, 0x10) && !k16 && !book) {
 		*kb = 2;
 		*app_areas = 2;
 		*max_blk = 31;
-	} else if(isset(chip_cfg, 0x10) && isset(mem_cfg, 0x80) && notset(mem_cfg, 0x20)) {
+	} else if(isset(chip_cfg, 0x10) && k16 && !book) {
 		*kb = 16;
 		*app_areas = 2;
 		*max_blk = 255; //16kb
-	} else if(notset(chip_cfg, 0x10) && notset(mem_cfg, 0x80) && notset(mem_cfg, 0x20)) {
+	} else if(notset(chip_cfg, 0x10) && !k16 && !book) {
 		*kb = 16;
 		*app_areas = 16;
 		*max_blk = 255; //16kb
-	} else if(isset(chip_cfg, 0x10) && isset(mem_cfg, 0x80) && isset(mem_cfg, 0x20)) {
+	} else if(isset(chip_cfg, 0x10) && k16 && book) {
 		*kb = 32;
 		*app_areas = 3;
 		*max_blk = 255; //16kb
-	} else if(notset(chip_cfg, 0x10) && notset(mem_cfg, 0x80) && isset(mem_cfg, 0x20)) {
+	} else if(notset(chip_cfg, 0x10) && !k16 && book) {
 		*kb = 32;
 		*app_areas = 17;
 		*max_blk = 255; //16kb
@@ -119,6 +102,26 @@ void mem_app_config(const picopass_hdr *hdr) {
 	prnt("  Mem: %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
 	prnt("	AA1: blocks 06-%02X", applimit);
 	prnt("	AA2: blocks %02X-%02X", applimit+1, max_blk);
+	
+	prnt("");
+	uint8_t book = isset(mem, 0x20);
+	if (book) {
+		prnt("KeyAccess:");
+		prnt("\tRead A - Kd");
+		prnt("\tRead B - Kc");
+		prnt("\tWrite A - Kd");
+		prnt("\tWrite B - Kc");
+		prnt("\tDebit  - Kd or Kc");
+		prnt("\tCredit - Kc");
+	} else{
+		prnt("KeyAccess:");
+		prnt("\tRead A - Kd or Kc");
+		prnt("\tRead B - Kd or Kc");
+		prnt("\tWrite A - Kc");
+		prnt("\tWrite B - Kc");
+		prnt("\tDebit  - Kd or Kc");
+		prnt("\tCredit - Kc");
+	}
 }
 void print_picopass_info(const picopass_hdr *hdr) {
 	fuse_config(hdr);

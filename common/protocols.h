@@ -389,5 +389,27 @@ void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *
 
 uint32_t GetT55xxClockBit(uint32_t clock);
 
+// iclass / picopass chip config structures and shared routines
+typedef struct {
+	uint8_t app_limit;      //[8]
+	uint8_t otp[2];         //[9-10]
+	uint8_t block_writelock;//[11]
+	uint8_t chip_config;    //[12]
+	uint8_t mem_config;     //[13]
+	uint8_t eas;            //[14]
+	uint8_t fuses;          //[15]
+} picopass_conf_block;
+
+
+typedef struct {
+	uint8_t csn[8];
+	picopass_conf_block conf;
+	uint8_t epurse[8];
+	uint8_t key_d[8];
+	uint8_t key_c[8];
+	uint8_t app_issuer_area[8];
+} picopass_hdr;
+
+
 #endif 
 // PROTOCOLS_H

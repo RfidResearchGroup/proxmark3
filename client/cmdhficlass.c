@@ -10,32 +10,11 @@
 // High frequency iClass commands
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include "iso14443crc.h" // Can also be used for iClass, using 0xE012 as CRC-type
-#include "data.h"
-#include "proxmark3.h"
-#include "ui.h"
-#include "cmdparser.h"
 #include "cmdhficlass.h"
-#include "common.h"
-#include "util.h"
-#include "cmdmain.h"
-#include "loclass/des.h"
-#include "loclass/cipherutils.h"
-#include "loclass/cipher.h"
-#include "loclass/ikeys.h"
-#include "loclass/elite_crack.h"
-#include "loclass/fileutils.h"
-#include "protocols.h"
-#include "usb_cmd.h"
-#include "cmdhfmfu.h"
-#include "cmdhf.h"
 
 static int CmdHelp(const char *Cmd);
 
+#define NUM_CSNS 15
 #define ICLASS_KEYS_MAX 8
 static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
 		{ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },
@@ -51,6 +30,148 @@ static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
 typedef struct iclass_block {
     uint8_t d[8];
 } iclass_block_t;
+
+int usage_hf_iclass_sim(void) {
+	PrintAndLog("Usage:  hf iclass sim <option> [CSN]");
+	PrintAndLog("        options");
+	PrintAndLog("                0 <CSN> simulate the given CSN");
+	PrintAndLog("                1       simulate default CSN");
+	PrintAndLog("                2       Reader-attack, gather reader responses to extract elite key");
+	PrintAndLog("                3       Full simulation using emulator memory (see 'hf iclass eload')");
+	PrintAndLog("        example: hf iclass sim 0 031FEC8AF7FF12E0");
+	PrintAndLog("        example: hf iclass sim 2");
+	PrintAndLog("        example: hf iclass eload 'tagdump.bin'");
+	PrintAndLog("                 hf iclass sim 3");
+	return 0;
+}
+int usage_hf_iclass_eload(void) {
+	PrintAndLog("Loads iclass tag-dump into emulator memory on device");
+	PrintAndLog("Usage:  hf iclass eload f <filename>");
+	PrintAndLog("");
+	PrintAndLog("Example: hf iclass eload f iclass_tagdump-aa162d30f8ff12f1.bin");
+	return 0;
+}
+int usage_hf_iclass_decrypt(void) {
+	PrintAndLog("Usage: hf iclass decrypt f <tagdump>");
+	PrintAndLog("");
+	PrintAndLog("OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
+	PrintAndLog("in the working directory. The file should be 16 bytes binary data");
+	PrintAndLog("");
+	PrintAndLog("example: hf iclass decrypt f tagdump_12312342343.bin");
+	PrintAndLog("");
+	PrintAndLog("OBS! This is pretty stupid implementation, it tries to decrypt every block after block 6. ");
+	PrintAndLog("Correct behaviour would be to decrypt only the application areas where the key is valid,");
+	PrintAndLog("which is defined by the configuration block.");
+	return 1;
+}
+int usage_hf_iclass_encrypt(void) {
+	PrintAndLog("Usage: hf iclass encrypt <BlockData>");
+	PrintAndLog("");
+	PrintAndLog("OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
+	PrintAndLog("in the working directory. The file should be 16 bytes binary data");
+	PrintAndLog("");
+	PrintAndLog("example: hf iclass encrypt 0102030405060708");
+	PrintAndLog("");
+	return 0;
+}
+int usage_hf_iclass_dump(void) {
+	PrintAndLog("Usage:  hf iclass dump f <fileName> k <Key> c <CreditKey> e|r\n");
+	PrintAndLog("Options:");
+	PrintAndLog("  f <filename> : specify a filename to save dump to");
+	PrintAndLog("  k <Key>      : *Access Key as 16 hex symbols or 1 hex to select key from memory");
+	PrintAndLog("  c <CreditKey>: Credit Key as 16 hex symbols or 1 hex to select key from memory");
+	PrintAndLog("  e            : If 'e' is specified, the key is interpreted as the 16 byte");
+	PrintAndLog("                 Custom Key (KCus), which can be obtained via reader-attack");
+	PrintAndLog("                 See 'hf iclass sim 2'. This key should be on iclass-format");
+	PrintAndLog("  r            : If 'r' is specified, the key is interpreted as raw block 3/4");
+	PrintAndLog("  NOTE: * = required");
+	PrintAndLog("Samples:");
+	PrintAndLog("  hf iclass dump k 001122334455667B");
+	PrintAndLog("  hf iclass dump k AAAAAAAAAAAAAAAA c 001122334455667B");
+	PrintAndLog("  hf iclass dump k AAAAAAAAAAAAAAAA e");
+	return 0;
+}
+int usage_hf_iclass_clone(void) {
+	PrintAndLog("Usage:  hf iclass clone f <tagfile.bin> b <first block> l <last block> k <KEY> c e|r");
+	PrintAndLog("Options:");
+	PrintAndLog("  f <filename>: specify a filename to clone from");
+	PrintAndLog("  b <Block>   : The first block to clone as 2 hex symbols");
+	PrintAndLog("  l <Last Blk>: Set the Data to write as 16 hex symbols");
+	PrintAndLog("  k <Key>     : Access Key as 16 hex symbols or 1 hex to select key from memory");
+	PrintAndLog("  c           : If 'c' is specified, the key set is assumed to be the credit key\n");
+	PrintAndLog("  e           : If 'e' is specified, elite computations applied to key");
+	PrintAndLog("  r           : If 'r' is specified, no computations applied to key");
+	PrintAndLog("Samples:");
+	PrintAndLog("  hf iclass clone f iclass_tagdump-121345.bin b 06 l 1A k 1122334455667788 e");
+	PrintAndLog("  hf iclass clone f iclass_tagdump-121345.bin b 05 l 19 k 0");
+	PrintAndLog("  hf iclass clone f iclass_tagdump-121345.bin b 06 l 19 k 0 e");
+	return -1;
+}
+int usage_hf_iclass_writeblock(void) {
+	PrintAndLog("Options:");
+	PrintAndLog("  b <Block> : The block number as 2 hex symbols");
+	PrintAndLog("  d <data>  : Set the Data to write as 16 hex symbols");
+	PrintAndLog("  k <Key>   : Access Key as 16 hex symbols or 1 hex to select key from memory");
+	PrintAndLog("  c         : If 'c' is specified, the key set is assumed to be the credit key\n");
+	PrintAndLog("  e         : If 'e' is specified, elite computations applied to key");
+	PrintAndLog("  r         : If 'r' is specified, no computations applied to key");
+	PrintAndLog("Samples:");
+	PrintAndLog("  hf iclass writeblk b 0A d AAAAAAAAAAAAAAAA k 001122334455667B");
+	PrintAndLog("  hf iclass writeblk b 1B d AAAAAAAAAAAAAAAA k 001122334455667B c");
+	PrintAndLog("  hf iclass writeblk b 0A d AAAAAAAAAAAAAAAA n 0");
+	return 0;
+}
+int usage_hf_iclass_readblock(void) {
+	PrintAndLog("Usage:  hf iclass readblk b <Block> k <Key> c e|r\n");
+	PrintAndLog("Options:");
+	PrintAndLog("  b <Block> : The block number as 2 hex symbols");
+	PrintAndLog("  k <Key>   : Access Key as 16 hex symbols or 1 hex to select key from memory");
+	PrintAndLog("  c         : If 'c' is specified, the key set is assumed to be the credit key\n");
+	PrintAndLog("  e         : If 'e' is specified, elite computations applied to key");
+	PrintAndLog("  r         : If 'r' is specified, no computations applied to key");
+	PrintAndLog("Samples:");
+	PrintAndLog("  hf iclass readblk b 06 k 0011223344556677");
+	PrintAndLog("  hf iclass readblk b 1B k 0011223344556677 c");
+	PrintAndLog("  hf iclass readblk b 0A k 0");
+	return 0;
+}
+int usage_hf_iclass_readtagfile() {
+	PrintAndLog("Usage: hf iclass readtagfile <filename> [startblock] [endblock]");
+	return 1;
+}
+int usage_hf_iclass_calc_newkey(void) {
+	PrintAndLog("HELP :  Manage iClass Keys in client memory:\n");
+	PrintAndLog("Usage:  hf iclass calc_newkey o <Old key> n <New key> s [csn] e");
+	PrintAndLog("  Options:");
+	PrintAndLog("  o <oldkey> : *specify a key as 16 hex symbols or a key number as 1 symbol");
+	PrintAndLog("  n <newkey> : *specify a key as 16 hex symbols or a key number as 1 symbol");
+	PrintAndLog("  s <csn>    : specify a card Serial number to diversify the key (if omitted will attempt to read a csn)");
+	PrintAndLog("  e          : specify new key as elite calc");
+	PrintAndLog("  ee         : specify old and new key as elite calc");
+	PrintAndLog("Samples:");
+	PrintAndLog(" e key to e key given csn : hf iclass calcnewkey o 1122334455667788 n 2233445566778899 s deadbeafdeadbeaf ee");
+	PrintAndLog(" std key to e key read csn: hf iclass calcnewkey o 1122334455667788 n 2233445566778899 e");
+	PrintAndLog(" std to std read csn      : hf iclass calcnewkey o 1122334455667788 n 2233445566778899");
+	PrintAndLog("NOTE: * = required\n");
+	return 1;
+}
+int usage_hf_iclass_managekeys(void) {
+	PrintAndLog("HELP :  Manage iClass Keys in client memory:\n");
+	PrintAndLog("Usage:  hf iclass managekeys n [keynbr] k [key] f [filename] s l p\n");
+	PrintAndLog("  Options:");
+	PrintAndLog("  n <keynbr>  : specify the keyNbr to set in memory");
+	PrintAndLog("  k <key>     : set a key in memory");
+	PrintAndLog("  f <filename>: specify a filename to use with load or save operations");
+	PrintAndLog("  s           : save keys in memory to file specified by filename");
+	PrintAndLog("  l           : load keys to memory from file specified by filename");
+	PrintAndLog("  p           : print keys loaded into memory\n");
+	PrintAndLog("Samples:");
+	PrintAndLog(" set key      : hf iclass managekeys n 0 k 1122334455667788");
+	PrintAndLog(" save key file: hf iclass managekeys f mykeys.bin s");
+	PrintAndLog(" load key file: hf iclass managekeys f mykeys.bin l");
+	PrintAndLog(" print keys   : hf iclass managekeys p\n");
+	return 0;
+}
 
 int xorbits_8(uint8_t val) {
 	uint8_t res = val ^ (val >> 1); //1st pass
@@ -72,21 +193,6 @@ int CmdHFiClassSnoop(const char *Cmd) {
 	return 0;
 }
 
-int usage_hf_iclass_sim(void) {
-	PrintAndLog("Usage:  hf iclass sim <option> [CSN]");
-	PrintAndLog("        options");
-	PrintAndLog("                0 <CSN> simulate the given CSN");
-	PrintAndLog("                1       simulate default CSN");
-	PrintAndLog("                2       Reader-attack, gather reader responses to extract elite key");
-	PrintAndLog("                3       Full simulation using emulator memory (see 'hf iclass eload')");
-	PrintAndLog("        example: hf iclass sim 0 031FEC8AF7FF12E0");
-	PrintAndLog("        example: hf iclass sim 2");
-	PrintAndLog("        example: hf iclass eload 'tagdump.bin'");
-	PrintAndLog("                 hf iclass sim 3");
-	return 0;
-}
-
-#define NUM_CSNS 15
 int CmdHFiClassSim(const char *Cmd) {
 	uint8_t simType = 0;
 	uint8_t CSN[8] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -246,18 +352,10 @@ int iclassEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 	return 0;
 }
 
-int hf_iclass_eload_usage(void) {
-	PrintAndLog("Loads iclass tag-dump into emulator memory on device");
-	PrintAndLog("Usage:  hf iclass eload f <filename>");
-	PrintAndLog("");
-	PrintAndLog("Example: hf iclass eload f iclass_tagdump-aa162d30f8ff12f1.bin");
-	return 0;
-}
-
 int CmdHFiClassELoad(const char *Cmd) {
 
 	char opt = param_getchar(Cmd, 0);
-	if (strlen(Cmd)<1 || opt == 'h' || opt == 'H') return hf_iclass_eload_usage();
+	if (strlen(Cmd)<1 || opt == 'h' || opt == 'H') return usage_hf_iclass_eload();
 
 	//File handling and reading
 	FILE *f;
@@ -265,7 +363,7 @@ int CmdHFiClassELoad(const char *Cmd) {
 	if(opt == 'f' && param_getstr(Cmd, 1, filename) > 0) {
 		f = fopen(filename, "rb");
 	} else {
-		return hf_iclass_eload_usage();
+		return usage_hf_iclass_eload();
 	}
 
 	if(!f) {
@@ -338,26 +436,10 @@ static int readKeyfile(const char *filename, size_t len, uint8_t* buffer) {
 	return 0;
 }
 
-int usage_hf_iclass_decrypt(void) {
-	PrintAndLog("Usage: hf iclass decrypt f <tagdump>");
-	PrintAndLog("");
-	PrintAndLog("OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
-	PrintAndLog("in the working directory. The file should be 16 bytes binary data");
-	PrintAndLog("");
-	PrintAndLog("example: hf iclass decrypt f tagdump_12312342343.bin");
-	PrintAndLog("");
-	PrintAndLog("OBS! This is pretty stupid implementation, it tries to decrypt every block after block 6. ");
-	PrintAndLog("Correct behaviour would be to decrypt only the application areas where the key is valid,");
-	PrintAndLog("which is defined by the configuration block.");
-	return 1;
-}
-
 int CmdHFiClassDecrypt(const char *Cmd) {
 	uint8_t key[16] = { 0 };
-	if(readKeyfile("iclass_decryptionkey.bin", 16, key)) {
-		usage_hf_iclass_decrypt();
-		return 1;
-	}
+	if(readKeyfile("iclass_decryptionkey.bin", 16, key)) return usage_hf_iclass_decrypt();
+	
 	PrintAndLog("Decryption file found... ");
 	char opt = param_getchar(Cmd, 0);
 	if (strlen(Cmd)<1 || opt == 'h' || opt == 'H') return usage_hf_iclass_decrypt();
@@ -377,44 +459,61 @@ int CmdHFiClassDecrypt(const char *Cmd) {
 	fseek(f, 0, SEEK_END);
 	long fsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
-	uint8_t enc_dump[8] = {0};
+		
+	if ( fsize < 0 ) {
+		PrintAndLog("Error, when getting filesize");
+		fclose(f);
+		return 2;
+	}
+	
 	uint8_t *decrypted = malloc(fsize);
+	
+	size_t bytes_read = fread(decrypted, 1, fsize, f);
+	fclose(f);
+	if ( bytes_read == 0) {
+		PrintAndLog("File reading error");
+		free(decrypted);
+		return 3;
+	}
+
+	picopass_hdr *hdr = (picopass_hdr *)decrypted;
+		
+	uint8_t mem = hdr->conf.mem_config;
+	uint8_t chip = hdr->conf.chip_config;
+	uint8_t applimit = hdr->conf.app_limit;
+	uint8_t kb = 2;
+	uint8_t app_areas = 2;
+	uint8_t max_blk = 31;
+	getMemConfig(mem, chip, &max_blk, &app_areas, &kb);	
+	
+	//Use the first block (CSN) for filename
+	char outfilename[FILE_PATH_SIZE] = {0};
+	snprintf(outfilename, FILE_PATH_SIZE, "iclass_tagdump-%02x%02x%02x%02x%02x%02x%02x%02x-decrypted",
+			 hdr->csn[0],hdr->csn[1],hdr->csn[2],hdr->csn[3],
+			 hdr->csn[4],hdr->csn[5],hdr->csn[6],hdr->csn[7]);
+
+	// tripledes
 	des3_context ctx = { DES_DECRYPT ,{ 0 } };
 	des3_set2key_dec( &ctx, key);
-	size_t bytes_read = fread(enc_dump, 1, 8, f);
 
-	//Use the first block (CSN) for filename
-	char outfilename[FILE_PATH_SIZE] = { 0 };
-	snprintf(outfilename,FILE_PATH_SIZE,"iclass_tagdump-%02x%02x%02x%02x%02x%02x%02x%02x-decrypted",
-			 enc_dump[0],enc_dump[1],enc_dump[2],enc_dump[3],
-			 enc_dump[4],enc_dump[5],enc_dump[6],enc_dump[7]);
-
-	size_t blocknum =0;
-	while(bytes_read == 8)
-	{
-		if(blocknum < 7) {
-			memcpy(decrypted+(blocknum*8), enc_dump, 8);
-		} else {
-			des3_crypt_ecb(&ctx, enc_dump,decrypted +(blocknum*8) );
+	uint8_t enc_dump[8] = {0};
+	uint8_t empty[8] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+	for(uint16_t blocknum=0; blocknum < applimit; ++blocknum) {
+		
+		uint8_t idx = blocknum*8;
+		memcpy(enc_dump, decrypted + idx, 8);
+		
+		// block 7 or higher,  and not empty 0xFF
+		if(blocknum > 6 &&  memcmp(enc_dump, empty, 8) != 0 ) {
+			des3_crypt_ecb(&ctx, enc_dump, decrypted + idx );
 		}
-		printvar("decrypted block", decrypted +(blocknum*8), 8);
-		bytes_read = fread(enc_dump, 1, 8, f);
-		blocknum++;
+		//printvar("decrypted block", decrypted + idx, 8);
 	}
-	fclose(f);
-	saveFile(outfilename,"bin", decrypted, blocknum*8);
+	
+	saveFile(outfilename, "bin", decrypted, fsize);
 	free(decrypted);
-	return 0;
-}
-
-int usage_hf_iclass_encrypt(void) {
-	PrintAndLog("Usage: hf iclass encrypt <BlockData>");
-	PrintAndLog("");
-	PrintAndLog("OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
-	PrintAndLog("in the working directory. The file should be 16 bytes binary data");
-	PrintAndLog("");
-	PrintAndLog("example: hf iclass encrypt 0102030405060708");
-	PrintAndLog("");
+	
+	printIclassDumpContents(decrypted, 1, (fsize/8), fsize);
 	return 0;
 }
 
@@ -425,7 +524,6 @@ static int iClassEncryptBlkData(uint8_t *blkData) {
 		return 1;
 	}
 	PrintAndLog("Decryption file found... ");
-
 	uint8_t encryptedData[16];
 	uint8_t *encrypted = encryptedData;
 	des3_context ctx = { DES_DECRYPT ,{ 0 } };
@@ -527,24 +625,6 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
 		return false;
 	}
 	return true;
-}
-
-int usage_hf_iclass_dump(void) {
-	PrintAndLog("Usage:  hf iclass dump f <fileName> k <Key> c <CreditKey> e|r\n");
-	PrintAndLog("Options:");
-	PrintAndLog("  f <filename> : specify a filename to save dump to");
-	PrintAndLog("  k <Key>      : *Access Key as 16 hex symbols or 1 hex to select key from memory");
-	PrintAndLog("  c <CreditKey>: Credit Key as 16 hex symbols or 1 hex to select key from memory");
-	PrintAndLog("  e            : If 'e' is specified, the key is interpreted as the 16 byte");
-	PrintAndLog("                 Custom Key (KCus), which can be obtained via reader-attack");
-	PrintAndLog("                 See 'hf iclass sim 2'. This key should be on iclass-format");
-	PrintAndLog("  r            : If 'r' is specified, the key is interpreted as raw block 3/4");
-	PrintAndLog("  NOTE: * = required");
-	PrintAndLog("Samples:");
-	PrintAndLog("  hf iclass dump k 001122334455667B");
-	PrintAndLog("  hf iclass dump k AAAAAAAAAAAAAAAA c 001122334455667B");
-	PrintAndLog("  hf iclass dump k AAAAAAAAAAAAAAAA e");
-	return 0;
 }
 
 int CmdHFiClassReader_Dump(const char *Cmd) {
@@ -817,21 +897,6 @@ static int WriteBlock(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_c
 	return 1;
 }
 
-int usage_hf_iclass_writeblock(void) {
-	PrintAndLog("Options:");
-	PrintAndLog("  b <Block> : The block number as 2 hex symbols");
-	PrintAndLog("  d <data>  : Set the Data to write as 16 hex symbols");
-	PrintAndLog("  k <Key>   : Access Key as 16 hex symbols or 1 hex to select key from memory");
-	PrintAndLog("  c         : If 'c' is specified, the key set is assumed to be the credit key\n");
-	PrintAndLog("  e         : If 'e' is specified, elite computations applied to key");
-	PrintAndLog("  r         : If 'r' is specified, no computations applied to key");
-	PrintAndLog("Samples:");
-	PrintAndLog("  hf iclass writeblk b 0A d AAAAAAAAAAAAAAAA k 001122334455667B");
-	PrintAndLog("  hf iclass writeblk b 1B d AAAAAAAAAAAAAAAA k 001122334455667B c");
-	PrintAndLog("  hf iclass writeblk b 0A d AAAAAAAAAAAAAAAA n 0");
-	return 0;
-}
-
 int CmdHFiClass_WriteBlock(const char *Cmd) {
 	uint8_t blockno=0;
 	uint8_t bldata[8]={0,0,0,0,0,0,0,0};
@@ -914,23 +979,6 @@ int CmdHFiClass_WriteBlock(const char *Cmd) {
 	int ans = WriteBlock(blockno, bldata, KEY, use_credit_key, elite, rawkey, true);
 	ul_switch_off_field();
 	return ans;
-}
-
-int usage_hf_iclass_clone(void) {
-	PrintAndLog("Usage:  hf iclass clone f <tagfile.bin> b <first block> l <last block> k <KEY> c e|r");
-	PrintAndLog("Options:");
-	PrintAndLog("  f <filename>: specify a filename to clone from");
-	PrintAndLog("  b <Block>   : The first block to clone as 2 hex symbols");
-	PrintAndLog("  l <Last Blk>: Set the Data to write as 16 hex symbols");
-	PrintAndLog("  k <Key>     : Access Key as 16 hex symbols or 1 hex to select key from memory");
-	PrintAndLog("  c           : If 'c' is specified, the key set is assumed to be the credit key\n");
-	PrintAndLog("  e           : If 'e' is specified, elite computations applied to key");
-	PrintAndLog("  r           : If 'r' is specified, no computations applied to key");
-	PrintAndLog("Samples:");
-	PrintAndLog("  hf iclass clone f iclass_tagdump-121345.bin b 06 l 1A k 1122334455667788 e");
-	PrintAndLog("  hf iclass clone f iclass_tagdump-121345.bin b 05 l 19 k 0");
-	PrintAndLog("  hf iclass clone f iclass_tagdump-121345.bin b 06 l 19 k 0 e");
-	return -1;
 }
 
 int CmdHFiClassCloneTag(const char *Cmd) {
@@ -1117,21 +1165,6 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
 	return 1;
 }
 
-int usage_hf_iclass_readblock(void) {
-	PrintAndLog("Usage:  hf iclass readblk b <Block> k <Key> c e|r\n");
-	PrintAndLog("Options:");
-	PrintAndLog("  b <Block> : The block number as 2 hex symbols");
-	PrintAndLog("  k <Key>   : Access Key as 16 hex symbols or 1 hex to select key from memory");
-	PrintAndLog("  c         : If 'c' is specified, the key set is assumed to be the credit key\n");
-	PrintAndLog("  e         : If 'e' is specified, elite computations applied to key");
-	PrintAndLog("  r         : If 'r' is specified, no computations applied to key");
-	PrintAndLog("Samples:");
-	PrintAndLog("  hf iclass readblk b 06 k 0011223344556677");
-	PrintAndLog("  hf iclass readblk b 1B k 0011223344556677 c");
-	PrintAndLog("  hf iclass readblk b 0A k 0");
-	return 0;
-}
-
 int CmdHFiClass_ReadBlock(const char *Cmd) {
 	uint8_t blockno=0;
 	uint8_t keyType = 0x88; //debit key
@@ -1277,11 +1310,6 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 	printf("------+--+-------------------------+\n");
 }
 
-int usage_hf_iclass_readtagfile() {
-	PrintAndLog("Usage: hf iclass readtagfile <filename> [startblock] [endblock]");
-	return 1;
-}
-
 int CmdHFiClassReadTagFile(const char *Cmd) {
 	int startblock = 0;
 	int endblock = 0;
@@ -1386,23 +1414,6 @@ static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, u
 		printf("New div key : %s\n",sprint_hex(new_div_key,8));
 		printf("Xor div key : %s\n",sprint_hex(xor_div_key,8));		
 	}
-}
-
-int usage_hf_iclass_calc_newkey(void) {
-	PrintAndLog("HELP :  Manage iClass Keys in client memory:\n");
-	PrintAndLog("Usage:  hf iclass calc_newkey o <Old key> n <New key> s [csn] e");
-	PrintAndLog("  Options:");
-	PrintAndLog("  o <oldkey> : *specify a key as 16 hex symbols or a key number as 1 symbol");
-	PrintAndLog("  n <newkey> : *specify a key as 16 hex symbols or a key number as 1 symbol");
-	PrintAndLog("  s <csn>    : specify a card Serial number to diversify the key (if omitted will attempt to read a csn)");
-	PrintAndLog("  e          : specify new key as elite calc");
-	PrintAndLog("  ee         : specify old and new key as elite calc");
-	PrintAndLog("Samples:");
-	PrintAndLog(" e key to e key given csn : hf iclass calcnewkey o 1122334455667788 n 2233445566778899 s deadbeafdeadbeaf ee");
-	PrintAndLog(" std key to e key read csn: hf iclass calcnewkey o 1122334455667788 n 2233445566778899 e");
-	PrintAndLog(" std to std read csn      : hf iclass calcnewkey o 1122334455667788 n 2233445566778899");
-	PrintAndLog("NOTE: * = required\n");
-	return 1;
 }
 
 int CmdHFiClassCalcNewKey(const char *Cmd) {
@@ -1554,24 +1565,6 @@ static int printKeys(void) {
 	for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++)
 		PrintAndLog("%u: %s", i, sprint_hex(iClass_Key_Table[i],8));
 	PrintAndLog("");	
-	return 0;
-}
-
-int usage_hf_iclass_managekeys(void) {
-	PrintAndLog("HELP :  Manage iClass Keys in client memory:\n");
-	PrintAndLog("Usage:  hf iclass managekeys n [keynbr] k [key] f [filename] s l p\n");
-	PrintAndLog("  Options:");
-	PrintAndLog("  n <keynbr>  : specify the keyNbr to set in memory");
-	PrintAndLog("  k <key>     : set a key in memory");
-	PrintAndLog("  f <filename>: specify a filename to use with load or save operations");
-	PrintAndLog("  s           : save keys in memory to file specified by filename");
-	PrintAndLog("  l           : load keys to memory from file specified by filename");
-	PrintAndLog("  p           : print keys loaded into memory\n");
-	PrintAndLog("Samples:");
-	PrintAndLog(" set key      : hf iclass managekeys n 0 k 1122334455667788");
-	PrintAndLog(" save key file: hf iclass managekeys f mykeys.bin s");
-	PrintAndLog(" load key file: hf iclass managekeys f mykeys.bin l");
-	PrintAndLog(" print keys   : hf iclass managekeys p\n");
 	return 0;
 }
 
