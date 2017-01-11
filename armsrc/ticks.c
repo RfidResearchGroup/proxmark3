@@ -85,7 +85,7 @@ void StartCountUS(void) {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TCB->TCB_BCR = 1;
 	
-	while (AT91C_BASE_TC1->TC_CV >= 1);
+	while (AT91C_BASE_TC1->TC_CV > 0);
 }
 
 uint32_t RAMFUNC GetCountUS(void){
@@ -152,14 +152,14 @@ void StartCountSspClk(void) {
 
 	// The high word of the counter (TC2) will not reset until the low word (TC0) overflows. 
 	// Therefore need to wait quite some time before we can use the counter.
-	while (AT91C_BASE_TC2->TC_CV >= 1);
+	while (AT91C_BASE_TC2->TC_CV > 0);
 }
 void ResetSspClk(void) {	
 	//enable clock of timer and software trigger
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-	while (AT91C_BASE_TC2->TC_CV >= 1);	
+	while (AT91C_BASE_TC2->TC_CV > 0);	
 }
 uint32_t RAMFUNC GetCountSspClk(void) {
 	uint32_t tmp_count = (AT91C_BASE_TC2->TC_CV << 16) | AT91C_BASE_TC0->TC_CV;
@@ -193,7 +193,7 @@ void StartTicks(void){
 	AT91C_BASE_TCB->TCB_BCR = 1;
 	
 	// wait until timer becomes zero.
-	while (AT91C_BASE_TC1->TC_CV >= 1);
+	while (AT91C_BASE_TC1->TC_CV > 0);
 }
 // Wait - Spindelay in ticks.
 // if called with a high number, this will trigger the WDT...
@@ -216,11 +216,11 @@ void WaitMS(uint16_t ms){
 void ResetTicks(void){
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-	while (AT91C_BASE_TC1->TC_CV >= 1);
+	while (AT91C_BASE_TC1->TC_CV > 0);
 }
 void ResetTimer(AT91PS_TC timer){
 	timer->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-	while(timer->TC_CV >= 1) ;
+	while(timer->TC_CV > 0) ;
 }
 // stop clock
 void StopTicks(void){
