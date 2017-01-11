@@ -924,7 +924,8 @@ int CmdLegicDump(const char *Cmd){
 	else
 		sprintf(fnameptr + fileNlen,".bin");
 
-	if ((f = fopen(filename,"wb")) == NULL) { 
+	f = fopen(filename,"wb");
+	if (!f) { 
 		PrintAndLog("Could not create file name %s", filename);
 		if (data)
 			free(data);
@@ -1000,7 +1001,8 @@ int CmdLegicRestore(const char *Cmd){
 	fnameptr += fileNlen;
 	sprintf(fnameptr, ".bin");
 
-	if ((f = fopen(filename,"rb")) == NULL) {
+	f = fopen(filename,"rb");
+	if (!f) {
 		PrintAndLog("File %s not found or locked", filename);
 		return 3;
 	}	
@@ -1019,14 +1021,14 @@ int CmdLegicRestore(const char *Cmd){
 
 	// load file
 	size_t bytes_read = fread(data, 1, numofbytes, f);
+	fclose(f);
+	
 	if ( bytes_read == 0){
 		PrintAndLog("File reading error");
 		free(data);
-		fclose(f);
 		return 2;
 	}
-	fclose(f);
-
+	
 	PrintAndLog("Restoring to card");
 
 	// transfer to device
@@ -1096,7 +1098,8 @@ int CmdLegicELoad(const char *Cmd) {
 	sprintf(fnameptr, ".bin");
 	
 	// open file
-	if ((f = fopen(filename,"rb")) == NULL) { 
+	f = fopen(filename,"rb");
+	if (!f) { 
 		PrintAndLog("File %s not found or locked", filename);
 		free(data);
 		return 1;
@@ -1108,9 +1111,11 @@ int CmdLegicELoad(const char *Cmd) {
 		PrintAndLog("File reading error");
 		free(data);
 		fclose(f);
+		f = NULL;		
 		return 2;
 	}
 	fclose(f);
+	f = NULL;
 	
 	// transfer to device
 	legic_seteml(data, 0, numofbytes);
@@ -1170,7 +1175,8 @@ int CmdLegicESave(const char *Cmd) {
 		sprintf(fnameptr + fileNlen,".bin");
 	
 	// open file
-	if ((f = fopen(filename,"wb")) == NULL) { 
+	f = fopen(filename,"wb");
+	if (!f) { 
 		PrintAndLog("Could not create file name %s", filename);
 		free(data);
 		return 1;
