@@ -116,7 +116,7 @@ int GetPrescoBits(uint32_t fullcode, uint8_t *prescoBits) {
 //see ASKDemod for what args are accepted
 int CmdPrescoDemod(const char *Cmd) {
 	bool st = true;
-	//if (!ASKDemod(Cmd, false, false, 1)) {
+
 	if (!ASKDemod_ext("32 0 0", FALSE, FALSE, 1, &st)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error Presco ASKDemod failed");
 		return 0;

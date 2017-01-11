@@ -822,6 +822,19 @@ int NedapDemod(uint8_t *dest, size_t *size) {
 	return (int) startIdx;
 }
 
+// Find IDTEC PSK1, RF  Preamble == 0x4944544B, Demodsize 64bits
+// by iceman
+int IdteckDemodPSK(uint8_t *dest, size_t *size) {
+	//make sure buffer has data
+	if (*size < 64*2) return -1;	
+	size_t startIdx = 0;
+	uint8_t preamble[] = {0,1,0,0,1,0,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,0,1,0,1,1};
+	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
+	if (errChk == 0) return -2; //preamble not found
+	if (*size != 64) return -3; // wrong demoded size
+	return (int) startIdx;
+}
+
 // by marshmellow
 // to detect a wave that has heavily clipped (clean) samples
 uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, uint8_t high, uint8_t low)

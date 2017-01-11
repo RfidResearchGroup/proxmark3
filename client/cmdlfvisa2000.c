@@ -121,13 +121,13 @@ int CmdVisa2kClone(const char *Cmd) {
 	
 	// 
 	blocks[2] = id;
-	blocks[3] = visa_chksum( id);
+	blocks[3] = visa_chksum(id);
 
 	PrintAndLog("Preparing to clone Visa2000 to T55x7 with CardId: %u", id);
 	PrintAndLog("Blk | Data ");
 	PrintAndLog("----+------------");
 	for(int i = 0; i<4; ++i)
-	PrintAndLog(" %02d | 0x%08x", i , blocks[i]);
+		PrintAndLog(" %02d | 0x%08x", i , blocks[i]);
 	
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};

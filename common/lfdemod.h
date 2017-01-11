@@ -60,4 +60,5 @@ int NedapDemod(uint8_t *dest, size_t *size);
 int JablotronDemod(uint8_t *dest, size_t *size);
 int Visa2kDemod_AM(uint8_t *dest, size_t *size);
 int NoralsyDemod_AM(uint8_t *dest, size_t *size);
+int IdteckDemodPSK(uint8_t *dest, size_t *size);
 #endif

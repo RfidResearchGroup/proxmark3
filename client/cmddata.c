@@ -1889,6 +1889,63 @@ int CmdPSKNexWatch(const char *Cmd)
 	return 1;
 }
 
+int CmdPSKIdteck(const char *Cmd) {
+
+	if (!PSKDemod("", false)) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - Idteck PSKDemod failed");
+		return 0;
+	}
+	size_t size = DemodBufferLen;
+
+	//get binary from PSK1 wave
+	int idx = IdteckDemodPSK(DemodBuffer, &size);
+	if (idx < 0){
+		if (g_debugMode){
+			if (idx == -1)
+				PrintAndLog("DEBUG: Error - Idteck: not enough samples");
+			else if (idx == -2)
+				PrintAndLog("DEBUG: Error - Idteck: preamble not found");
+			else if (idx == -3)
+				PrintAndLog("DEBUG: Error - Idteck: size not correct: %d", size);
+			else
+				PrintAndLog("DEBUG: Error - Idteck: idx: %d",idx);
+		}
+	
+		// if didn't find preamble try again inverting
+		if (!PSKDemod("1", false)) {
+			if (g_debugMode) PrintAndLog("DEBUG: Error - Idteck PSKDemod failed");
+			return 0;
+		}
+		idx = IdteckDemodPSK(DemodBuffer, &size);
+		if (idx < 0){
+			if (g_debugMode){
+				if (idx == -1)
+					PrintAndLog("DEBUG: Error - Idteck: not enough samples");
+				else if (idx == -2)
+					PrintAndLog("DEBUG: Error - Idteck: preamble not found");
+				else if (idx == -3)
+					PrintAndLog("DEBUG: Error - Idteck: size not correct: %d", size);
+				else
+					PrintAndLog("DEBUG: Error - Idteck: idx: %d",idx);
+			}
+			return 0;
+		}		
+	}
+	setDemodBuf(DemodBuffer, 64, idx);
+	
+	//got a good demod
+	uint32_t id = 0;
+	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
+	uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
+	
+	//parity check (TBD)
+	//checksum check (TBD)
+
+	//output
+	PrintAndLog("IDTECK Tag Found: Card ID %u ,  Raw: %08X%08X", id, raw1, raw2);
+	return 1;
+}
+
 // by marshmellow
 // takes 3 arguments - clock, invert, maxErr as integers
 // attempts to demodulate nrz only

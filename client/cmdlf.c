@@ -1087,6 +1087,11 @@ int CmdLFfind(const char *Cmd) {
 		PrintAndLog("\nValid NexWatch ID Found!");
 		return 1;
 	}
+	ans=CmdPSKIdteck("");
+	if (ans>0) {
+		PrintAndLog("\nValid Idteck ID Found!");
+		return 1;
+	}
 	ans=CmdJablotronDemod("");
 	if (ans>0) {
 		PrintAndLog("\nValid Jablotron ID Found!");
