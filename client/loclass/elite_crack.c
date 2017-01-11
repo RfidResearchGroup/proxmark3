@@ -154,9 +154,15 @@ void hash1(uint8_t csn[] , uint8_t k[])
 	k[5] = ~rl( csn[5]+k[3] )+1;
 	k[6] = rr( csn[6]+(k[4]^0x3c) );
 	k[7] = rl( csn[7]+(k[5]^0xc3) );
-	int i;
-	for(i = 7; i >=0; i--)
-		k[i] = k[i] & 0x7F;
+	
+	k[7] &= 0x7F;
+	k[6] &= 0x7F;
+	k[5] &= 0x7F;
+	k[4] &= 0x7F;
+	k[3] &= 0x7F;
+	k[2] &= 0x7F;
+	k[1] &= 0x7F;
+	k[0] &= 0x7F;
 }
 /**
 Definition 14. Define the rotate key function rk : (F 82 ) 8 × N → (F 82 ) 8 as
@@ -165,15 +171,12 @@ rk(x [0] . . . x [7] , n + 1) = rk(rl(x [0] ) . . . rl(x [7] ), n)
 **/
 void rk(uint8_t *key, uint8_t n, uint8_t *outp_key)
 {
-
     memcpy(outp_key, key, 8);
-
     uint8_t j;
-
-    while(n-- > 0)
+    while(n-- > 0) {
         for(j=0; j < 8 ; j++)
             outp_key[j] = rl(outp_key[j]);
-
+	}
     return;
 }
 
@@ -222,9 +225,9 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable)
     uint8_t temp_output[8]={0};
     //calculate complement of key
     int i;
-    for(i=0;i<8;i++)
+    for (i=0; i<8; i++)
         key64_negated[i]= ~key64[i];
-
+	
     // Once again, key is on iclass-format
     desencrypt_iclass(key64, key64_negated, z[0]);
 
@@ -238,26 +241,21 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable)
     desdecrypt_iclass(z[0], key64_negated, y[0]);
     printvar("y0  ",  y[0],8);
 
-    for(i=1; i<8; i++)
-    {
-
+    for (i=1; i<8; i++) {
         // z [i] = DES dec (rk(K cus , i), z [i−1] )
         rk(key64, i, temp_output);
         //y [i] = DES enc (rk(K cus , i), y [i−1] )
 
         desdecrypt_iclass(temp_output,z[i-1], z[i]);
         desencrypt_iclass(temp_output,y[i-1], y[i]);
-
     }
-    if(outp_keytable != NULL)
-    {
-        for(i = 0 ; i < 8 ; i++)
-        {
+
+    if (outp_keytable != NULL) {
+        for(i = 0 ; i < 8 ; i++) {
             memcpy(outp_keytable+i*16,y[i],8);
             memcpy(outp_keytable+8+i*16,z[i],8);
         }
-    }else
-    {
+    } else {
         printarr_human_readable("hash2", outp_keytable,128);
     }
 }
@@ -283,6 +281,7 @@ int _readFromDump(uint8_t dump[], dumpdata* item, uint8_t i)
 	size_t itemsize = sizeof(dumpdata);
 	//dumpdata item =  {0};
 	memcpy(item,dump+i*itemsize, itemsize);
+
 	if(true)
 	{
 		printvar("csn", item->csn,8);
@@ -317,7 +316,6 @@ int bruteforceItem(dumpdata item, uint16_t keytable[])
 	uint8_t key_index[8] = {0};
 	hash1(item.csn, key_index);
 
-
 	/*
 	 * Determine which bytes to retrieve. A hash is typically
 	 * 01010000454501
@@ -333,23 +331,21 @@ int bruteforceItem(dumpdata item, uint16_t keytable[])
 	uint8_t bytes_to_recover[3] = {0};
 	uint8_t numbytes_to_recover = 0 ;
 	int i;
-	for(i =0 ; i < 8 ; i++)
-	{
-		if(keytable[key_index[i]] & (CRACKED | BEING_CRACKED)) continue;
+	for (i=0; i<8; i++)	{
+		if (keytable[key_index[i]] & (CRACKED | BEING_CRACKED)) continue;
+		
 		bytes_to_recover[numbytes_to_recover++] = key_index[i];
 		keytable[key_index[i]] |= BEING_CRACKED;
 
-		if(numbytes_to_recover > 3)
-		{
+		if (numbytes_to_recover > 3) {
 			prnlog("The CSN requires > 3 byte bruteforce, not supported");
-			printvar("CSN", item.csn,8);
-			printvar("HASH1", key_index,8);
+			printvar("CSN", item.csn, 8);
+			printvar("HASH1", key_index, 8);
 
 			//Before we exit, reset the 'BEING_CRACKED' to zero
 			keytable[bytes_to_recover[0]]  &= ~BEING_CRACKED;
 			keytable[bytes_to_recover[1]]  &= ~BEING_CRACKED;
 			keytable[bytes_to_recover[2]]  &= ~BEING_CRACKED;
-
 			return 1;
 		}
 	}
@@ -373,61 +369,57 @@ int bruteforceItem(dumpdata item, uint16_t keytable[])
 
 	while(!found && !(brute & endmask))
 	{
-
 		//Update the keytable with the brute-values
-		for(i =0 ; i < numbytes_to_recover; i++)
-		{
+		for (i=0; i < numbytes_to_recover; i++) {
 			keytable[bytes_to_recover[i]] &= 0xFF00;
 			keytable[bytes_to_recover[i]] |= (brute >> (i*8) & 0xFF);
 		}
 
 		// Piece together the key
-		key_sel[0] = keytable[key_index[0]] & 0xFF;key_sel[1] = keytable[key_index[1]] & 0xFF;
-		key_sel[2] = keytable[key_index[2]] & 0xFF;key_sel[3] = keytable[key_index[3]] & 0xFF;
-		key_sel[4] = keytable[key_index[4]] & 0xFF;key_sel[5] = keytable[key_index[5]] & 0xFF;
-		key_sel[6] = keytable[key_index[6]] & 0xFF;key_sel[7] = keytable[key_index[7]] & 0xFF;
+		key_sel[0] = keytable[key_index[0]] & 0xFF;
+		key_sel[1] = keytable[key_index[1]] & 0xFF;
+		key_sel[2] = keytable[key_index[2]] & 0xFF;
+		key_sel[3] = keytable[key_index[3]] & 0xFF;
+		key_sel[4] = keytable[key_index[4]] & 0xFF;
+		key_sel[5] = keytable[key_index[5]] & 0xFF;
+		key_sel[6] = keytable[key_index[6]] & 0xFF;
+		key_sel[7] = keytable[key_index[7]] & 0xFF;
 
 		//Permute from iclass format to standard format
-		permutekey_rev(key_sel,key_sel_p);
+		permutekey_rev(key_sel, key_sel_p);
 		//Diversify
 		diversifyKey(item.csn, key_sel_p, div_key);
 		//Calc mac
-		doMAC(item.cc_nr, div_key,calculated_MAC);
+		doMAC(item.cc_nr, div_key, calculated_MAC);
 
-		if(memcmp(calculated_MAC, item.mac, 4) == 0)
-		{
+		if(memcmp(calculated_MAC, item.mac, 4) == 0) {
 			for(i =0 ; i < numbytes_to_recover; i++)
 				prnlog("=> %d: 0x%02x", bytes_to_recover[i],0xFF & keytable[bytes_to_recover[i]]);
 			found = true;
 			break;
 		}
+		
 		brute++;
-		if((brute & 0xFFFF) == 0)
-		{
+		if ((brute & 0xFFFF) == 0) {
 			printf("%d",(brute >> 16) & 0xFF);
 			fflush(stdout);
 		}
 	}
-	if(! found)
-	{
+	if (!found) {
 		prnlog("Failed to recover %d bytes using the following CSN",numbytes_to_recover);
 		printvar("CSN",item.csn,8);
 		errors++;
+
 		//Before we exit, reset the 'BEING_CRACKED' to zero
-		for(i =0 ; i < numbytes_to_recover; i++)
-		{
+		for (i=0; i < numbytes_to_recover; i++){
 			keytable[bytes_to_recover[i]]  &= 0xFF;
 			keytable[bytes_to_recover[i]]  |= CRACK_FAILED;
 		}
-
-	}else
-	{
-		for(i =0 ; i < numbytes_to_recover; i++)
-		{
+	} else {
+		for (i=0; i < numbytes_to_recover; i++){
 			keytable[bytes_to_recover[i]]  &= 0xFF;
 			keytable[bytes_to_recover[i]]  |= CRACKED;
 		}
-
 	}
 	return errors;
 }
@@ -551,7 +543,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[])
 int bruteforceFile(const char *filename, uint16_t keytable[])
 {
 	FILE *f = fopen(filename, "rb");
-	if(!f) {
+	if (!f) {
 		prnlog("Failed to read from file '%s'", filename);
 		return 1;
 	}
@@ -562,20 +554,15 @@ int bruteforceFile(const char *filename, uint16_t keytable[])
 
 	if (fsize < 0) {
 		prnlog("Error, when getting filesize");
-		if (f) {
-			fclose(f);
-			f = NULL;
-		}
+		if (f) fclose(f);
 		return 1;
 	}
 
 	uint8_t *dump = malloc(fsize);
 	size_t bytes_read = fread(dump, 1, fsize, f);
 
-	if (f) {
-		fclose(f);
-		f = NULL;
-	}
+	if (f) fclose(f);
+	
     if (bytes_read < fsize) {
         prnlog("Error, could only read %d bytes (should be %d)",bytes_read, fsize );
     }
@@ -627,14 +614,13 @@ int _testBruteforce()
 		uint16_t keytable[128] = {0};
 
 		//Test a few variants
-		if(fileExists("iclass_dump.bin"))
-		{
+		if (fileExists("iclass_dump.bin")){
 			errors |= bruteforceFile("iclass_dump.bin",keytable);
-		}else if(fileExists("loclass/iclass_dump.bin")){
+		} else if (fileExists("loclass/iclass_dump.bin")){
 			errors |= bruteforceFile("loclass/iclass_dump.bin",keytable);
-		}else if(fileExists("client/loclass/iclass_dump.bin")){
+		} else if (fileExists("client/loclass/iclass_dump.bin")){
 			errors |= bruteforceFile("client/loclass/iclass_dump.bin",keytable);
-		}else{
+		} else {
 			prnlog("Error: The file iclass_dump.bin was not found!");
 		}
 	}
@@ -649,7 +635,6 @@ int _test_iclass_key_permutation()
 	uint8_t testcase_output_rev[8] = {0};
 	permutekey(testcase, testcase_output);
 	permutekey_rev(testcase_output, testcase_output_rev);
-
 
 	if(memcmp(testcase_output, testcase_output_correct,8) != 0)
 	{

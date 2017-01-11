@@ -77,7 +77,7 @@ static int debug_print = 0;
  * @brief The key diversification algorithm uses 6-bit bytes.
  * This implementation uses 64 bit uint to pack seven of them into one
  * variable. When they are there, they are placed as follows:
- * XXXX XXXX N0 .... N7, occupying the lsat 48 bits.
+ * XXXX XXXX N0 .... N7, occupying the last 48 bits.
  *
  * This function picks out one from such a collection
  * @param all
@@ -141,38 +141,28 @@ uint64_t swapZvalues(uint64_t c)
 */
 uint64_t ck(int i, int j, uint64_t z)
 {
-
-	if(i == 1 && j == -1)
-	{
+	if (i == 1 && j == -1) {
 		// ck(1, −1, z [0] . . . z [3] ) = z [0] . . . z [3]
 		return z;
-
-	}else if( j == -1)
-	{
+	} else if( j == -1) {
 		// ck(i, −1, z [0] . . . z [3] ) = ck(i − 1, i − 2, z [0] . . . z [3] )
 		return ck(i-1,i-2, z);
 	}
 
-	if(getSixBitByte(z,i) == getSixBitByte(z,j))
+	if (getSixBitByte(z,i) == getSixBitByte(z,j))
 	{
-
 		//ck(i, j − 1, z [0] . . . z [i] ← j . . . z [3] )
 		uint64_t newz = 0;
 		int c;
-		for(c = 0; c < 4 ;c++)
-		{
+		for(c = 0; c < 4; c++) {
 			uint8_t val = getSixBitByte(z,c);
-			if(c == i)
-			{
+			if (c == i)
 				pushbackSixBitByte(&newz, j, c);
-			}else
-			{
+			else
 				pushbackSixBitByte(&newz, val, c);
-			}
 		}
 		return ck(i,j-1,newz);
-	}else
-	{
+	} else {
 		return ck(i,j-1,z);
 	}
 }
@@ -364,9 +354,9 @@ void hash0(uint64_t c, uint8_t k[8])
 			k[i] |= zTilde_i & 0x7E;
 			k[i] |= (~p_i) & 1;
 		}
-		if((k[i]  & 1 )== 0)
+		if ((k[i] & 1 )== 0)
 		{
-			zerocounter ++;
+			zerocounter++;
 		}
 	}
 }
@@ -694,10 +684,8 @@ int readKeyFile(uint8_t key[8]) {
 	if ( bytes_read == 1)
 		retval = 0;	
 
-	if (f) {
+	if (f)
 		fclose(f);
-		f = NULL;
-	}
 	return retval;
 }
 
