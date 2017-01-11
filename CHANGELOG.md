@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+  -  `hf 14a reader` - fixed a bug when card has sak 0x00 but still is not UL/NTAG etc. (iceman)
+
+## [1.6.7][icemanfork] [2017-01-05]
   -  Fixed bugs in `lf sim` and other lf continuous demods not turning off antenna when finished (marshmellow)
   -  `hf iclass write` - fixed bugs, added crc. (?)
   -  `hf iclass dump` - changed layout in dump (iceman)
