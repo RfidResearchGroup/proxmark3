@@ -27,7 +27,7 @@ int CmdNoralsySim(const char *Cmd);
 int CmdNoralsyRead(const char *Cmd);
 int CmdNoralsyDemod(const char *Cmd);
 
-int getnoralsyBits(uint32_t id, uint8_t *bits);
+int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits);
 
 int usage_lf_noralsy_clone(void);
 int usage_lf_noralsy_sim(void);

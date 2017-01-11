@@ -4,19 +4,19 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency Presco tag commands
+// Low frequency Noralsy tag commands
 //-----------------------------------------------------------------------------
-
 #include "cmdlfnoralsy.h"
 
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_noralsy_clone(void){
 	PrintAndLog("clone a Noralsy tag to a T55x7 tag.");
-	PrintAndLog("Usage: lf noralsy clone [h] <card ID> <Q5>");
+	PrintAndLog("Usage: lf noralsy clone [h] <card id> <year> <Q5>");
 	PrintAndLog("Options:");
 	PrintAndLog("      h          : This help");
-	PrintAndLog("      <card ID>  : Noralsy card ID");
+	PrintAndLog("      <card id>  : Noralsy card ID");
+	PrintAndLog("      <year>     : Tag allocation year");
 	PrintAndLog("      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
 	PrintAndLog("");
 	PrintAndLog("Sample: lf noralsy clone 112233");
@@ -27,10 +27,11 @@ int usage_lf_noralsy_sim(void) {
 	PrintAndLog("Enables simulation of Noralsy card with specified card number.");
 	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf noralsy sim [h] <card ID>");
+	PrintAndLog("Usage:  lf noralsy sim [h] <card id> <year>");
 	PrintAndLog("Options:");
 	PrintAndLog("      h          : This help");
-	PrintAndLog("      <card ID>  : Noralsy card ID");
+	PrintAndLog("      <card id>  : Noralsy card ID");
+	PrintAndLog("      <year>     : Tag allocation year");
 	PrintAndLog("");
 	PrintAndLog("Sample: lf noralsy sim 112233");
 	return 0;
@@ -42,19 +43,23 @@ static uint8_t noralsy_chksum( uint8_t* bits, uint8_t len) {
         sum ^= bytebits_to_byte(bits+i, 4);
     return sum & 0x0F ;
 }
-int getnoralsyBits(uint32_t id, uint8_t *bits) {	
+int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits) {	
 	//preamp
 	num_to_bytebits(0xBB0214FF, 32, bits);  // --> Have seen 0xBB0214FF / 0xBB0314FF  UNKNOWN
 
 	//convert ID into BCD-format
 	id = DEC2BCD(id);
-
+	year = DEC2BCD(year);
+	year &= 0xFF;
+	
 	uint16_t sub1 = (id & 0xFFF0000) >> 16;
 	uint8_t sub2 = (id & 0x000FF00) >> 8;
 	uint8_t sub3 = (id & 0x00000FF);
 	
 	num_to_bytebits(sub1, 12, bits+32);
-	num_to_bytebits(0x980, 12, bits+44);   // --> UNKNOWN part
+	num_to_bytebits(year, 8, bits+44);
+	num_to_bytebits(0, 4, bits+52);   // --> UNKNOWN. Flag?
+	
 	num_to_bytebits(sub2, 8, bits+56);
 	num_to_bytebits(sub3, 8, bits+64);
 
@@ -101,6 +106,10 @@ int CmdNoralsyDemod(const char *Cmd) {
 	cardid |= (raw2 & 0xFF) << 8;
 	cardid |= ((raw3 & 0xFF000000) >> 24);
 	cardid = BCD2DEC(cardid);
+
+	uint16_t year = (raw2 & 0x000ff000) >> 12;
+	year = BCD2DEC(year);
+	year += ( year > 60 ) ? 1900: 2000;
 	
 	// calc checksums
 	uint8_t calc1 = noralsy_chksum(DemodBuffer+32, 40);
@@ -118,21 +127,21 @@ int CmdNoralsyDemod(const char *Cmd) {
 		return 0;
 	}
 	
-	PrintAndLog("Noralsy Tag Found: Card ID %u,  Raw: %08X%08X%08X", cardid,  raw1 ,raw2, raw3);
+	PrintAndLog("Noralsy Tag Found: Card ID %u, Year: %u Raw: %08X%08X%08X", cardid, year, raw1 ,raw2, raw3);
 	return 1;
 }
 
 int CmdNoralsyRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("20000",TRUE);
+	getSamples("8000",TRUE);
 	return CmdNoralsyDemod(Cmd);
 }
 
 int CmdNoralsyClone(const char *Cmd) {
-
+	
+	uint16_t year = 0;
 	uint32_t id = 0;
 	uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | T55x7_ST_TERMINATOR |3<<T55x7_MAXBLOCK_SHIFT, 0, 0};
-
 	uint8_t bits[96];
 	uint8_t *bs = bits;
 	memset(bs, 0, sizeof(bits));
@@ -141,6 +150,7 @@ int CmdNoralsyClone(const char *Cmd) {
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_noralsy_clone();
 
 	id = param_get32ex(Cmd, 0, 0, 10);
+	year = param_get32ex(Cmd, 1, 2000, 10);
 	
 	//Q5
 	if (param_getchar(Cmd, 1) == 'Q' || param_getchar(Cmd, 1) == 'q') {
@@ -148,7 +158,7 @@ int CmdNoralsyClone(const char *Cmd) {
 		blocks[0] = T5555_MODULATION_MANCHESTER | 32<<T5555_BITRATE_SHIFT | T5555_ST_TERMINATOR | 3<<T5555_MAXBLOCK_SHIFT;
 	}
 	
-	 if ( !getnoralsyBits(id, bs)) {
+	 if ( !getnoralsyBits(id, year, bs)) {
 		PrintAndLog("Error with tag bitstream generation.");
 		return 1;
 	}	
@@ -187,12 +197,15 @@ int CmdNoralsySim(const char *Cmd) {
 	uint8_t bits[96];
 	uint8_t *bs = bits;
 	memset(bs, 0, sizeof(bits));
-	
+
+	uint16_t year = 0;
 	uint32_t id = 0;
+
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_noralsy_sim();
 
 	id = param_get32ex(Cmd, 0, 0, 10);
+	year = param_get32ex(Cmd, 1, 2000, 10);
 
 	uint8_t clk = 32, encoding = 1, separator = 1, invert = 0;
 	uint16_t arg1, arg2;
@@ -200,7 +213,7 @@ int CmdNoralsySim(const char *Cmd) {
 	arg1 = clk << 8 | encoding;
 	arg2 = invert << 8 | separator;
 	
-	 if ( !getnoralsyBits(id, bs)) {
+	 if ( !getnoralsyBits(id, year, bs)) {
 		PrintAndLog("Error with tag bitstream generation.");
 		return 1;
 	}	
