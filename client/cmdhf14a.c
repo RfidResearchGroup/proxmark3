@@ -216,16 +216,15 @@ int CmdHF14AReader(const char *Cmd) {
 			ul_switch_off_field();
 			
 			uint32_t tagT = GetHF14AMfU_Type();
-			ul_print_type(tagT, 0);
+			if (tagT != UL_ERROR)
+				ul_print_type(tagT, 0);
 
 			// reconnect for further tests
 			c.arg[0] = ISO14A_CONNECT | ISO14A_NO_DISCONNECT;
 			c.arg[1] = 0;
 			c.arg[2] = 0;
-
 			clearCommandBuffer();
 			SendCommand(&c);
-
 			UsbCommand resp;
 			WaitForResponse(CMD_ACK, &resp);
 			
