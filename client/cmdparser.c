@@ -15,17 +15,14 @@
 #include "cmdparser.h"
 #include "proxmark3.h"
 
-void CmdsHelp(const command_t Commands[])
-{
-  if (Commands[0].Name == NULL)
-    return;
-  int i = 0;
-  while (Commands[i].Name)
-  {
-    if (!offline || Commands[i].Offline)
-       PrintAndLog("%-16s %s", Commands[i].Name, Commands[i].Help);
-    ++i;
-  }
+void CmdsHelp(const command_t Commands[]) {
+	if (Commands[0].Name == NULL) return;
+	int i = 0;
+	while (Commands[i].Name) {
+		if (!offline || Commands[i].Offline)
+			PrintAndLog("%-16s %s", Commands[i].Name, Commands[i].Help);
+		++i;
+	}
 }
 
 
@@ -33,13 +30,13 @@ int CmdsParse(const command_t Commands[], const char *Cmd)
 {
   if(strcmp( Cmd, "XX_internal_command_dump_XX") == 0)
   {// Help dump children
-      dumpCommandsRecursive(Commands, 0);
-		return 0;
+	dumpCommandsRecursive(Commands, 0);
+	return 0;
   }
   if(strcmp( Cmd, "XX_internal_command_dump_markdown_XX") == 0)
   {// Markdown help dump children
-      dumpCommandsRecursive(Commands, 1);
-		return 0;
+     dumpCommandsRecursive(Commands, 1);
+	return 0;
   }
   char cmd_name[32];
   int len = 0;
