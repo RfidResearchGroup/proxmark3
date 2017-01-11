@@ -199,7 +199,6 @@ int usage_hf_iclass_snoop(void){
 	PrintAndLog("		 hf iclass snoop");	
 	return 0;
 }
-
 int xorbits_8(uint8_t val) {
 	uint8_t res = val ^ (val >> 1); //1st pass
 	res = res ^ (res >> 1); 		// 2nd pass
@@ -473,13 +472,14 @@ int CmdHFiClassDecrypt(const char *Cmd) {
 	uint8_t key[16] = { 0 };
 	if(readKeyfile("iclass_decryptionkey.bin", 16, key)) return usage_hf_iclass_decrypt();
 	
-	PrintAndLog("Decryption file found...");
+	PrintAndLog("Decryption key loaded from file [ok]");
 
 	//Open the tagdump-file
 	FILE *f;
 	char filename[FILE_PATH_SIZE];
 	if(opt == 'f' && param_getstr(Cmd, 1, filename) > 0) {
-		if ( (f = fopen(filename, "rb")) == NULL) {
+		f = fopen(filename, "rb");
+		if (!f) {
 			PrintAndLog("Could not find file %s", filename);
 			return 1;
 		}		
@@ -1577,7 +1577,7 @@ static int loadKeys(char *filename) {
 static int saveKeys(char *filename) {
 	FILE *f;
 	f = fopen(filename,"wb");
-	if (f == NULL) {
+	if (!f) {
 		printf("error opening file %s\n",filename);
 		return 0;
 	}
