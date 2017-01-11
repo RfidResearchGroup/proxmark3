@@ -24,3 +24,4 @@ ioprox-XSF-01-BE-03011.pm3: IO Prox FSK RF/64 ID in name
 indala-504278295.pm3: PSK 26 bit indala
 AWID-15-259.pm3: AWID FSK RF/50 FC: 15 Card: 259 
 HID-weak-fob-11647.pm3: HID 32bit Prox Card#: 11647.  very weak tag/read but just readable.
+visa2000.pm3:  VISA2000 ASK/MAN RF/64, Card: 480518
