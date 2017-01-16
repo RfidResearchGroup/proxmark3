@@ -995,7 +995,7 @@ int CmdT55xxWriteBlock(const char *Cmd) {
 	}
 	clearCommandBuffer();
 	SendCommand(&c);
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)){
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)){
 		PrintAndLog("Error occurred, device did not ACK write operation. (May be due to old firmware)");
 		return 0;
 	}
