@@ -1,3 +1,6 @@
+#for linux ppl
+# this should work fine on Ubuntu distros. Don't know about Kali, ...
+
 echo "Updating your system..."
 
 # install dependencies for Proxmark3 source code.
@@ -10,6 +13,10 @@ sudo apt-get autoremove -y
 sudo apt-get autoclean -y
 sudo apt-get clean -y
 sudo apt-get update
+
+# Copy blacklist rules into /etc/udev/rules.d
+# check the Makefile for details
+sudo make udev
 
 # Where is my device?
 #dmesg | tail -10

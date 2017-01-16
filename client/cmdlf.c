@@ -602,16 +602,16 @@ int CmdLFSim(const char *Cmd) {
 	for (i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
 		UsbCommand c = {CMD_DOWNLOADED_SIM_SAMPLES_125K, {i, 0, 0}};
 
-		for (j = 0; j < USB_CMD_DATA_SIZE; j++) {
+		for (j = 0; j < USB_CMD_DATA_SIZE; j++)
 			c.d.asBytes[j] = GraphBuffer[i+j];
-		}
+
 		clearCommandBuffer();
 		SendCommand(&c);
 		WaitForResponse(CMD_ACK, NULL);
 		printf(".");
 	}
 
-	PrintAndLog("Starting to simulate");
+	PrintAndLog("Simulating");
 
 	UsbCommand c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}};
 	clearCommandBuffer();

@@ -1296,7 +1296,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 				FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 			uint8_t *b = BigBuf_get_addr();
 			memcpy( b + c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
-			cmd_send(CMD_ACK,0,0,0,0,0);
+			cmd_send(CMD_ACK,1,0,0,0,0);
 			break;
 		}
 		case CMD_DOWNLOAD_EML_BIGBUF: {
