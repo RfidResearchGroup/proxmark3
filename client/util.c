@@ -196,6 +196,20 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 	return buf;
 }
 
+char *sprint_ascii(const uint8_t *data, const size_t len) {
+	static char buf[1024];
+	char *tmp = buf;
+	memset(buf, 0x00, 1024);
+	size_t max_len = (len > 1010) ? 1010 : len;
+	size_t i = 0;
+	while(i < max_len){
+		char c = data[i];
+		tmp[i] = ((c < 32) || (c == 127)) ? '.' : c;
+		++i;
+	}
+	return buf;
+}
+
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest) {
 	while (len--) {
 		dest[len] = n & 0xFF;
