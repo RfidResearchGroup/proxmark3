@@ -602,10 +602,11 @@ int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32
 		*hi2 = (*hi2<<1)|(*hi>>31);
 		*hi = (*hi<<1)|(*lo>>31);
 		//Then, shift in a 0 or one into low
+		*lo <<= 1;
 		if (dest[idx] && !dest[idx+1])  // 1 0
-			*lo=(*lo<<1)|1;
+			*lo |= 1;
 		else // 0 1
-			*lo=(*lo<<1)|0;
+			*lo |= 0;
 	}
 	return (int)startIdx;
 }

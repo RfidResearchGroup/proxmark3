@@ -1274,7 +1274,8 @@ int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
 		return 0;
 	}
 
-	uint8_t got[12288];
+	//uint8_t got[12288];
+	uint8_t got[7679];
 	GetFromBigBuf(got, sizeof(got), 0);
 	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 8000) ) {
 		PrintAndLog("command execution time out");

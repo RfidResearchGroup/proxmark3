@@ -2231,6 +2231,7 @@ int CmdTuneSamples(const char *Cmd)
 	while(!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING, &resp, 2000)) {
 		timeout++;
 		printf(".");
+		fflush(stdout);
 		if (timeout > 7) {
 			PrintAndLog("\nNo response from Proxmark. Aborting...");
 			return 1;

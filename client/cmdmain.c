@@ -192,9 +192,9 @@ void UsbCommandReceived(UsbCommand *UC)
 				printf("\r#db# %s", s);
 				fflush(stdout);
 			}
-			else 
+			else {
 				PrintAndLog("#db# %s", s);
-			
+			}
 			return;
 		} break;
 
@@ -204,7 +204,12 @@ void UsbCommandReceived(UsbCommand *UC)
 		}
 		case CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K:
 		case CMD_DOWNLOADED_EML_BIGBUF: {
+			// sample_buf is a array pointer, located in data.c
+			// arg0 = offset in transfer. Startindex of this chunk
+			// arg1 = length bytes to transfer
+			// arg2 = bigbuff tracelength (?)
 			memcpy( sample_buf + (UC->arg[0]), UC->d.asBytes, UC->arg[1]);
+			//printf("DBG:: Download from device. chunk %llu | size %llu | tracelen:%llu \n", UC->arg[0], UC->arg[1], UC->arg[2]);
 			break;
 		}
 		default: {

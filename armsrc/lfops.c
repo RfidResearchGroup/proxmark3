@@ -1310,7 +1310,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	TurnReadLFOn(READ_GAP);
 	
 	// Acquisition
-	doT55x7Acquisition(12000);
+	doT55x7Acquisition(7679);
 	
 	// Turn the field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off

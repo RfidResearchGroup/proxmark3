@@ -1276,8 +1276,13 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			size_t len = 0;
 			size_t startidx = c->arg[0];
 			uint8_t isok = FALSE;
+			// arg0 = startindex
+			// arg1 = length bytes to transfer
+			// arg2 = RFU
+			//Dbprintf("transfer to client parameters: %llu | %llu | %llu", c->arg[0], c->arg[1], c->arg[2]);
+			
 			for(size_t i = 0; i < c->arg[1]; i += USB_CMD_DATA_SIZE) {
-				len = MIN((c->arg[1] - i),USB_CMD_DATA_SIZE);
+				len = MIN( (c->arg[1] - i), USB_CMD_DATA_SIZE);
 				isok = cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), BigBuf + startidx + i, len);
 				if (!isok) 
 					Dbprintf("transfer to client failed ::  | bytes %d", len);
@@ -1289,7 +1294,9 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		}
 		case CMD_DOWNLOADED_SIM_SAMPLES_125K: {
 			// iceman; since changing fpga_bitstreams clears bigbuff, Its better to call it before.
-			// to be able to use this one for uploading data to device not only for LF, I use c->arg[1] 
+			// to be able to use this one for uploading data to device 
+			// arg1 = 0 upload for LF usage 
+			//        1 upload for HF usage
 			if ( c->arg[1] == 0 )
 				FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 			else 
