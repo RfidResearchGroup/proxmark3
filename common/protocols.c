@@ -60,7 +60,7 @@ void fuse_config(const picopass_hdr *hdr) {
 void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb) {
 	// mem-bit 5, mem-bit 7, chip-bit 4: defines chip type
 	uint8_t k16		= isset(mem_cfg, 0x80);
-	uint8_t k2 		= isset(mem_cfg, 0x08);
+	//uint8_t k2 		= isset(mem_cfg, 0x08);
 	uint8_t book	= isset(mem_cfg, 0x20);
 	
 	if(isset(chip_cfg, 0x10) && !k16 && !book) {
