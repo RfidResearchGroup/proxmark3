@@ -195,8 +195,8 @@ static int CmdHelp(const char *Cmd);
 
 void printT5xxHeader(uint8_t page){
 	PrintAndLog("Reading Page %d:", page);	
-	PrintAndLog("blk | hex data | binary");
-	PrintAndLog("----+----------+---------------------------------");	
+	PrintAndLog("blk | hex data | binary                          | ascii");
+	PrintAndLog("----+----------+---------------------------------+-------");	
 }
 
 int CmdT55xxSetConfig(const char *Cmd) {
@@ -864,16 +864,18 @@ void printT55xxBlock(const char *blockNum){
 		bits[i - config.offset] = DemodBuffer[i];
 
 	blockData = PackBits(0, 32, bits);
+	uint8_t bytes[4] = {0};
+	num_to_bytes(blockData, 4, bytes);
 
-	PrintAndLog(" %s | %08X | %s", blockNum, blockData, sprint_bin(bits,32));
+	PrintAndLog(" %s | %08X | %s | %s", blockNum, blockData, sprint_bin(bits,32), sprint_ascii(bytes,4));
 }
 
 int special(const char *Cmd) {
 	uint32_t blockData = 0;
 	uint8_t bits[32] = {0x00};
 
-	PrintAndLog("OFFSET | DATA  | BINARY");
-	PrintAndLog("----------------------------------------------------");
+	PrintAndLog("OFFSET | DATA  | BINARY                             | ASCII");
+	PrintAndLog("-------+-------+------------------------------------+------");
 	int i,j = 0;
 	for (; j < 64; ++j){
 		
@@ -1263,20 +1265,21 @@ int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
 	// 	bit1 = page to read from
 	// arg1: which block to read
 	// arg2: password
-	
 	uint8_t arg0 = (page<<1) | pwdmode;
 	UsbCommand c = {CMD_T55XX_READ_BLOCK, {arg0, block, password}};
-	
 	clearCommandBuffer();
 	SendCommand(&c);
-	if ( !WaitForResponseTimeout(CMD_ACK,NULL,2500) ) {
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
 		PrintAndLog("command execution time out");
 		return 0;
 	}
 
-	uint8_t got[12000];
-	GetFromBigBuf(got,sizeof(got),0);
-	WaitForResponse(CMD_ACK,NULL);
+	uint8_t got[12288];
+	GetFromBigBuf(got, sizeof(got), 0);
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 8000) ) {
+		PrintAndLog("command execution time out");
+		return 0;
+	}
 	setGraphBuf(got, sizeof(got));
 	return 1;
 }
