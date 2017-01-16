@@ -1283,7 +1283,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 
 	// Set up FPGA, 125kHz to power up the tag
 	LFSetupFPGAForADC(95, true);
-	SpinDelay(3);
+	//SpinDelay(3);
 	
 	// Trigger T55x7 Direct Access Mode with start gap
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
