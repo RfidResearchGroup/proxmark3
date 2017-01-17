@@ -674,12 +674,45 @@ bool tryDetectModulation(){
 		return TRUE;
 	}
 	
+	bool retval = FALSE;
 	if ( hits > 1) {
 		PrintAndLog("Found [%d] possible matches for modulation.",hits);
 		for(int i=0; i<hits; ++i){
-			PrintAndLog("--[%d]---------------", i+1);
+			retval = testKnownConfigBlock(tests[i].block0);
+			if ( retval ) {				
+				PrintAndLog("--[%d]--------------- << selected this", i+1);
+				config.modulation = tests[i].modulation;
+				config.bitrate = tests[i].bitrate;
+				config.inverted = tests[i].inverted;
+				config.offset = tests[i].offset;
+				config.block0 = tests[i].block0;
+				config.Q5 = tests[i].Q5;
+				config.ST = tests[i].ST;
+			} else {
+				PrintAndLog("--[%d]---------------", i+1);
+			}
 			printConfiguration( tests[i] );
 		}
+	}
+	return retval;
+}
+
+bool testKnownConfigBlock(uint32_t block0) {
+	switch(block0){
+		case T55X7_DEFAULT_CONFIG_BLOCK:
+		case T55X7_RAW_CONFIG_BLOCK:
+		case T55X7_EM_UNIQUE_CONFIG_BLOCK:
+		case T55X7_FDXB_CONFIG_BLOCK:
+		case T55X7_HID_26_CONFIG_BLOCK:
+		case T55X7_PYRAMID_CONFIG_BLOCK:
+		case T55X7_INDALA_64_CONFIG_BLOCK:
+		case T55X7_INDALA_224_CONFIG_BLOCK:
+		case T55X7_GUARDPROXII_CONFIG_BLOCK:
+		case T55X7_VIKING_CONFIG_BLOCK:
+		case T55X7_NORALYS_CONFIG_BLOCK:
+		case T55X7_IOPROX_CONFIG_BLOCK:
+		case T55X7_PRESCO_CONFIG_BLOCK:
+			return TRUE;
 	}
 	return FALSE;
 }
@@ -1423,11 +1456,10 @@ int CmdT55xxWipe(const char *Cmd) {
 	// With a pwd should work even if pwd bit not set
 	PrintAndLog("\nBeginning Wipe of a T55xx tag (assuming the tag is not password protected)\n");
 		
-	if ( Q5 ){
+	if ( Q5 )
 		snprintf(ptrData,sizeof(writeData),"b 0 d 6001F004 p 0");
-	} else {
+	else
 		snprintf(ptrData,sizeof(writeData),"b 0 d 000880E0 p 0");
-	}
 	
 	if (!CmdT55xxWriteBlock(ptrData)) PrintAndLog("Error writing blk 0");
 	

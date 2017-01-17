@@ -13,10 +13,7 @@
 // config blocks
 #define T55X7_DEFAULT_CONFIG_BLOCK      0x000880E8      // compat mode, data rate 32, manchester, ST, 7 data blocks
 #define T55X7_RAW_CONFIG_BLOCK          0x000880E0      // compat mode, data rate 32, manchester, 7 data blocks
-
 #define T55X7_EM_UNIQUE_CONFIG_BLOCK    0x00148040      // emulate em4x02/unique - compat mode, manchester, data rate 64, 2 data blocks
-
-
 // FDXB requires data inversion and BiPhase 57 is simply BipHase 50 inverted, so we can either do it using the modulation scheme or the inversion flag
 // we've done both below to prove that it works either way, and the modulation value for BiPhase 50 in the Atmel data sheet of binary "10001" (17) is a typo,
 // and it should actually be "10000" (16)
@@ -107,7 +104,6 @@ typedef struct {
 t55xx_conf_block_t Get_t55xx_Config();
 void Set_t55xx_Config(t55xx_conf_block_t conf);
 
-
 int CmdLFT55XX(const char *Cmd);
 int CmdT55xxSetConfig(const char *Cmd);
 int CmdT55xxReadBlock(const char *Cmd);
@@ -131,6 +127,7 @@ int printConfiguration( t55xx_conf_block_t b);
 
 bool DecodeT55xxBlock();
 bool tryDetectModulation();
+bool testKnownConfigBlock(uint32_t block0);
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5);
 int special(const char *Cmd);
 int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password );
