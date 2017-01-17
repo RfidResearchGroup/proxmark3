@@ -195,8 +195,8 @@ static int CmdHelp(const char *Cmd);
 
 void printT5xxHeader(uint8_t page){
 	PrintAndLog("Reading Page %d:", page);	
-	PrintAndLog("blk | hex data | binary                          | ascii");
-	PrintAndLog("----+----------+---------------------------------+-------");	
+	PrintAndLog("blk | hex data | binary                           | ascii");
+	PrintAndLog("----+----------+----------------------------------+-------");	
 }
 
 int CmdT55xxSetConfig(const char *Cmd) {
@@ -907,8 +907,8 @@ int special(const char *Cmd) {
 	uint32_t blockData = 0;
 	uint8_t bits[32] = {0x00};
 
-	PrintAndLog("OFFSET | DATA  | BINARY                             | ASCII");
-	PrintAndLog("-------+-------+------------------------------------+------");
+	PrintAndLog("OFFSET | DATA  | BINARY                              | ASCII");
+	PrintAndLog("-------+-------+-------------------------------------+------");
 	int i,j = 0;
 	for (; j < 64; ++j){
 		

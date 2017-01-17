@@ -144,11 +144,11 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 	
 	// make sure we don't go beyond our char array memory
 	size_t in_index = 0, out_index = 0;
-	int max_len;	
+	int rowlen;	
 	if (breaks==0)
-		max_len = ( len > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len;
+		rowlen = ( len > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len;
 	else
-		max_len = ( len+(len/breaks) > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len+(len/breaks);
+		rowlen = ( len+(len/breaks) > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len+(len/breaks);
 
 	static char buf[MAX_BIN_BREAK_LENGTH]; // 3072 + end of line characters if broken at 8 bits
 	//clear memory
@@ -156,11 +156,11 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 	char *tmp = buf;
 
 	// loop through the out_index to make sure we don't go too far
-	for (out_index=0; out_index < max_len-2; out_index++) {
+	for (out_index=0; out_index < rowlen-1; out_index++) {
 		// set character
-		sprintf(tmp++, "%u", (unsigned int) data[in_index]);
+		sprintf(tmp++, "%u", data[in_index]);
 		// check if a line break is needed and we have room to print it in our array
-		if ( (breaks > 0) && !((in_index+1) % breaks) && (out_index+1 != max_len) ) {
+		if ( (breaks > 0) && !((in_index+1) % breaks) && (out_index+1 != rowlen) ) {
 			// increment and print line break
 			out_index++;
 			sprintf(tmp++, "%s","\n");
@@ -168,7 +168,7 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 		in_index++;
 	}
 	// last char.
-	sprintf(tmp++, "%u", (unsigned int) data[in_index]);
+	sprintf(tmp++, "%u", data[in_index]);
 	return buf;
 }
 
