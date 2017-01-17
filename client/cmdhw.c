@@ -255,13 +255,13 @@ int CmdVersion(const char *Cmd)
 	if (resp.arg[0] == 0 && resp.arg[1] == 0) { // no cached information available
 		SendCommand(&c);
 		if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
-			PrintAndLog("Prox/RFID mark3 RFID instrument");
+			PrintAndLog("Proxmark3 RFID instrument");
 			PrintAndLog((char*)resp.d.asBytes);
 			lookupChipID(resp.arg[0], resp.arg[1]);
 		}
 	} else {
 		PrintAndLog("[[[ Cached information ]]]\n");
-		PrintAndLog("Prox/RFID mark3 RFID instrument");
+		PrintAndLog("Proxmark3 RFID instrument");
 		PrintAndLog((char*)resp.d.asBytes);
 		lookupChipID(resp.arg[0], resp.arg[1]);
 		PrintAndLog("");
