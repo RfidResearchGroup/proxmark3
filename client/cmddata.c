@@ -328,6 +328,11 @@ int CmdPrintDemodBuff(const char *Cmd)
 	}
 	//Validations
 	if(errors) return usage_data_printdemodbuf();
+	
+	if (DemodBufferLen == 0) {
+		PrintAndLog("Demodbuffer is empty");
+		return 0;
+	}
 	length = (length > (DemodBufferLen-offset)) ? DemodBufferLen-offset : length; 
 	int numBits = (length) & 0x00FFC; //make sure we don't exceed our string
 
@@ -534,7 +539,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 	}
 	if (amp == 'a' || amp == 'A') askAmp=1; 
 	size_t BitLen = getFromGraphBuf(BitStream);
-	if (g_debugMode) PrintAndLog("DEBUG: Bitlen from grphbuff: %d",BitLen);
+	if (g_debugMode) PrintAndLog("DEBUG: Bitlen from grphbuff: %d", BitLen);
 	if (BitLen<255) return 0;
 	if (maxLen<BitLen && maxLen != 0) BitLen = maxLen;
 	int foundclk = 0;
@@ -550,7 +555,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 		if (g_debugMode) PrintAndLog("DEBUG: no data found %d, errors:%d, bitlen:%d, clock:%d",errCnt,invert,BitLen,clk);
 		return 0;
 	}
-	if (errCnt>maxErr){
+	if (errCnt > maxErr){
 		if (g_debugMode) PrintAndLog("DEBUG: Too many errors found, errors:%d, bits:%d, clock:%d",errCnt, BitLen, clk);
 		return 0;
 	}
@@ -628,8 +633,8 @@ int Cmdmandecoderaw(const char *Cmd)
 	}
 
 	sscanf(Cmd, "%i %i", &invert, &maxErr);
-	size=i;
-	errCnt=manrawdecode(BitStream, &size, invert);
+	size = i;
+	errCnt = manrawdecode(BitStream, &size, invert);
 	if (errCnt >= maxErr){
 		PrintAndLog("Too many errors: %d",errCnt);
 		return 0;
@@ -778,8 +783,8 @@ int CmdG_Prox_II_Demod(const char *Cmd)
 		ByteStream[idx] = ((uint8_t)bytebits_to_byteLSBF(bits_no_spacer+8 + (idx*8),8)) ^ xorKey;
 		if (g_debugMode) PrintAndLog("DEBUG: gProxII byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
 	}
-	//now ByteStream contains 8 Bytes (64 bits) of decrypted raw tag data
-	// 
+	
+	//ByteStream contains 8 Bytes (64 bits) of decrypted raw tag data
 	uint8_t fmtLen = ByteStream[0]>>2;
 	uint32_t FC = 0;
 	uint32_t Card = 0;
@@ -787,20 +792,25 @@ int CmdG_Prox_II_Demod(const char *Cmd)
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer+ans,32);
 	uint32_t raw2 = bytebits_to_byte(DemodBuffer+ans+32, 32);
 	uint32_t raw3 = bytebits_to_byte(DemodBuffer+ans+64, 32);
-
-	if (fmtLen==36){
-		FC = ((ByteStream[3] & 0x7F)<<7) | (ByteStream[4]>>1);
-		Card = ((ByteStream[4]&1)<<19) | (ByteStream[5]<<11) | (ByteStream[6]<<3) | (ByteStream[7]>>5);
-		PrintAndLog("G-Prox-II Found: FmtLen %d, FC %u, Card %u", (int)fmtLen, FC, Card);
-	} else if(fmtLen==26){
-		FC = ((ByteStream[3] & 0x7F)<<1) | (ByteStream[4]>>7);
-		Card = ((ByteStream[4]&0x7F)<<9) | (ByteStream[5]<<1) | (ByteStream[6]>>7);
-		PrintAndLog("G-Prox-II Found: FmtLen %d, FC %u, Card %u", (int)fmtLen, FC, Card);
-	} else {
-		PrintAndLog("Unknown G-Prox-II Fmt Found: FmtLen %d",(int)fmtLen);
-		PrintAndLog("Decoded Raw: %s", sprint_hex(ByteStream, 8)); 
+	bool unknown = FALSE;
+	switch(fmtLen) {
+		case 36:
+			FC = ((ByteStream[3] & 0x7F)<<7) | (ByteStream[4]>>1);
+			Card = ((ByteStream[4]&1)<<19) | (ByteStream[5]<<11) | (ByteStream[6]<<3) | (ByteStream[7]>>5);
+			break;
+		case 26: 
+			FC = ((ByteStream[3] & 0x7F)<<1) | (ByteStream[4]>>7);
+			Card = ((ByteStream[4]&0x7F)<<9) | (ByteStream[5]<<1) | (ByteStream[6]>>7);
+			break;
+		default :
+			unknown = TRUE;
+			break;
 	}
-	PrintAndLog("Raw: %08x%08x%08x", raw1,raw2,raw3);
+	if ( !unknown)
+		PrintAndLog("G-Prox-II Found: Format Len: %ubit - FC: %u - Card: %u, Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
+	else
+		PrintAndLog("Unknown G-Prox-II Fmt Found: Format Len: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
+
 	setDemodBuf(DemodBuffer+ans, 96, 0);
 	return 1;
 }
