@@ -10,6 +10,28 @@
 #ifndef CMDLFT55XX_H__
 #define CMDLFT55XX_H__
 
+#include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
+#include "proxmark3.h"
+#include "ui.h"
+#include "graph.h"
+#include "cmdmain.h"
+#include "cmdparser.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "util.h"
+#include "data.h"
+#include "lfdemod.h"
+#include "cmdhf14a.h" //for getTagInfo
+
+
+#define T55x7_CONFIGURATION_BLOCK 0x00
+#define T55x7_PAGE0 0x00
+#define T55x7_PAGE1 0x01
+#define T55x7_PWD	0x00000010
+#define REGULAR_READ_MODE_BLOCK 0xFF
+
 // config blocks
 #define T55X7_DEFAULT_CONFIG_BLOCK      0x000880E8      // compat mode, data rate 32, manchester, ST, 7 data blocks
 #define T55X7_RAW_CONFIG_BLOCK          0x000880E0      // compat mode, data rate 32, manchester, 7 data blocks
