@@ -115,7 +115,7 @@ int CmdPyramidClone(const char *Cmd) {
 	PrintAndLog("Blk | Data ");
 	PrintAndLog("----+------------");
 	for ( i = 0; i<5; ++i )
-		PrintAndLog(" %02d | %08" PRIx32, i, blocks[i]);
+		PrintAndLog(" %02d | 0x%08" PRIx32, i, blocks[i]);
 
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
@@ -125,7 +125,7 @@ int CmdPyramidClone(const char *Cmd) {
 		c.arg[1] = i;
 		clearCommandBuffer();
 		SendCommand(&c);
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)){
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
 			PrintAndLog("Error occurred, device did not respond during write operation.");
 			return -1;
 		}

@@ -1369,7 +1369,7 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 		data[4] = manchesterEncode2Bytes(hi & 0xFFFF);
 		data[5] = manchesterEncode2Bytes(lo >> 16);
 		data[6] = manchesterEncode2Bytes(lo & 0xFFFF);
-	}	else {
+	} else {
 		// Ensure no more than 44 bits supplied
 		if (hi > 0xFFF) {
 			DbpString("Tags can only have 44 bits.");
@@ -1389,13 +1389,8 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 	// data[0] = (((50-2)/2)<<T5555_BITRATE_SHIFT) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | last_block << T5555_MAXBLOCK_SHIFT;
 
 	LED_D_ON();
-	// Program the data blocks for supplied ID
-	// and the block 0 for HID format
 	WriteT55xx(data, 0, last_block+1);
-
 	LED_D_OFF();
-
-	DbpString("DONE!");
 }
 
 void CopyIOtoT55x7(uint32_t hi, uint32_t lo) {
@@ -1409,7 +1404,6 @@ void CopyIOtoT55x7(uint32_t hi, uint32_t lo) {
 	// and the block 0 config
 	WriteT55xx(data, 0, 3);
 	LED_D_OFF();
-	DbpString("DONE!");
 }
 
 // Clone Indala 64-bit tag by UID to T55x7
@@ -1423,7 +1417,6 @@ void CopyIndala64toT55x7(uint32_t hi, uint32_t lo) {
 	WriteT55xx(data, 0, 3);
 	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
 	//	T5567WriteBlock(0x603E1042,0);
-	DbpString("DONE!");
 }
 // Clone Indala 224-bit tag by UID to T55x7
 void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t uid4, uint32_t uid5, uint32_t uid6, uint32_t uid7) {
@@ -1437,7 +1430,6 @@ void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t 
 	WriteT55xx(data, 0, 8);
 	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
 	//	T5567WriteBlock(0x603E10E2,0);
-	DbpString("DONE!");
 }
 // clone viking tag to T55xx
 void CopyVikingtoT55xx(uint32_t block1, uint32_t block2, uint8_t Q5) {

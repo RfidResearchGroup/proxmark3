@@ -6,8 +6,7 @@
 //-----------------------------------------------------------------------------
 // Low frequency Farpoint / Pyramid tag commands
 //-----------------------------------------------------------------------------
-#include <string.h>
-#include <inttypes.h>
+
 #include "cmdlfguard.h"
 static int CmdHelp(const char *Cmd);
 
@@ -40,7 +39,6 @@ int usage_lf_guard_sim(void) {
 	return 0;
 }
 
-
 // Works for 26bits.
 int GetGuardBits(uint32_t fc, uint32_t cn, uint8_t *guardBits) {
   
@@ -50,8 +48,6 @@ int GetGuardBits(uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 	//uint8_t xorKey = rand() % 0xFF;
 	uint8_t xorKey = 0x66;
 	uint8_t i;
-	
-	
 	uint8_t pre[96];
 	memset(pre, 0x00, sizeof(pre));
 
@@ -122,7 +118,7 @@ int GetGuardBits(uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 
 int CmdGuardRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("20000", TRUE);
+	getSamples("12000", TRUE);
 	return CmdG_Prox_II_Demod("");
 }
 
@@ -161,7 +157,7 @@ int CmdGuardClone(const char *Cmd) {
 	PrintAndLog("Blk | Data ");
 	PrintAndLog("----+------------");
 	for ( i = 0; i<4; ++i )
-		PrintAndLog(" %02d | %08x", i, blocks[i]);
+		PrintAndLog(" %02d | 0x%08x", i, blocks[i]);
 
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
@@ -171,7 +167,7 @@ int CmdGuardClone(const char *Cmd) {
 		c.arg[1] = i;
 		clearCommandBuffer();
 		SendCommand(&c);
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)){
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
 			PrintAndLog("Error occurred, device did not respond during write operation.");
 			return -1;
 		}

@@ -15,8 +15,7 @@
 #include <string.h>
 #include <limits.h>
 #include "proxmark3.h"
-#include "lfdemod.h"
-			
+#include "lfdemod.h"		// device/client demods of LF signals		
 #include "util.h"			// for parsing cli command utils
 #include "ui.h"				// for show graph controls
 #include "graph.h"			// for graph data
@@ -41,6 +40,9 @@
 #include "cmdlfvisa2000.h"  // for VISA2000 menu
 #include "cmdlfnoralsy.h"	// for NORALSY meny
 #include "cmdlffdx.h"		// for FDX-B meny
+
+#define T55XX_WRITE_TIMEOUT	1500
+
 int CmdLF(const char *Cmd);
 
 int CmdLFCommandRead(const char *Cmd);

@@ -8,6 +8,8 @@
 //-----------------------------------------------------------------------------
 #ifndef CMDLFGUARD_H__
 #define CMDLFGUARD_H__
+#include <string.h>
+#include <inttypes.h>
 #include "proxmark3.h"
 #include "ui.h"
 #include "util.h"

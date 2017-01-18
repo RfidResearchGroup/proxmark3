@@ -116,13 +116,12 @@ int GetPrescoBits(uint32_t fullcode, uint8_t *prescoBits) {
 //see ASKDemod for what args are accepted
 int CmdPrescoDemod(const char *Cmd) {
 	bool st = true;
-
 	if (!ASKDemod_ext("32 0 0", FALSE, FALSE, 1, &st)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error Presco ASKDemod failed");
 		return 0;
 	}
 	size_t size = DemodBufferLen;
-	//call lfdemod.c demod for Viking
+	//call lfdemod.c demod for Presco
 	int ans = PrescoDemod(DemodBuffer, &size);
 	if (ans < 0) {
 		if (g_debugMode){
@@ -163,7 +162,7 @@ int CmdPrescoRead(const char *Cmd) {
 	// read lf silently
 	CmdLFRead("s");
 	// get samples silently
-	getSamples("20000", TRUE);
+	getSamples("12000", TRUE);
 	// demod and output Presco ID	
 	return CmdPrescoDemod(Cmd);
 }
@@ -174,7 +173,7 @@ int CmdPrescoClone(const char *Cmd) {
 
 	bool Q5 = false;
 	uint32_t sitecode=0, usercode=0, fullcode=0;
-	uint32_t blocks[5] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | 4<<T55x7_MAXBLOCK_SHIFT | T55x7_ST_TERMINATOR, 0, 0, 0, 5};
+	uint32_t blocks[5] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | 4<<T55x7_MAXBLOCK_SHIFT | T55x7_ST_TERMINATOR, 0, 0, 0, 0};
 	
 	// get wiegand from printed number.
 	if (GetWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == -1) return usage_lf_presco_clone();
@@ -215,7 +214,7 @@ int CmdPrescoClone(const char *Cmd) {
 		c.arg[1] = i;
 		clearCommandBuffer();
 		SendCommand(&c);
-		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)){
+		if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
 			PrintAndLog("Error occurred, device did not respond during write operation.");
 			return -1;
 		}

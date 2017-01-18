@@ -1410,10 +1410,9 @@ void t55x7_create_config_block( int tagtype ){
 
 int CmdResetRead(const char *Cmd) {
 	UsbCommand c = {CMD_T55XX_RESET_READ, {0,0,0}};
-
 	clearCommandBuffer();
 	SendCommand(&c);
-	if ( !WaitForResponseTimeout(CMD_ACK,NULL,2500) ) {
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
 		PrintAndLog("command execution time out");
 		return 0;
 	}
