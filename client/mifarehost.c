@@ -250,15 +250,13 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
 	return found;
 }
 
-
 // EMULATOR
-
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
 	UsbCommand c = {CMD_MIFARE_EML_MEMGET, {blockNum, blocksCount, 0}};
 	clearCommandBuffer();
  	SendCommand(&c);
 	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500)) return 1;
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return 1;
 	memcpy(data, resp.d.asBytes, blocksCount * 16);
 	return 0;
 }
