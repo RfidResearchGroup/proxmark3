@@ -2238,6 +2238,12 @@ int CmdTuneSamples(const char *Cmd)
 		}
 	}
 
+#define NON_VOLTAGE		999
+#define LF_UNUSABLE_V	2948		// was 2000. Changed due to bugfix in voltage measurements. LF results are now 47% higher.
+#define LF_MARGINAL_V	14739		// was 10000. Changed due to bugfix bug in voltage measurements. LF results are now 47% higher.
+#define HF_UNUSABLE_V	3167		// was 2000. Changed due to bugfix in voltage measurements. HF results are now 58% higher.
+#define HF_MARGINAL_V	7917		// was 5000. Changed due to bugfix in voltage measurements. HF results are now 58% higher.
+ 
 	int peakv, peakf;
 	int vLf125, vLf134, vHf;
 	vLf125 = resp.arg[0] & 0xffff;
@@ -2246,19 +2252,16 @@ int CmdTuneSamples(const char *Cmd)
 	peakf = resp.arg[2] & 0xffff;
 	peakv = resp.arg[2] >> 16;
 	PrintAndLog("");
-	if ( vLf125 > 0 )
+	if ( vLf125 > NON_VOLTAGE )
 		PrintAndLog("# LF antenna: %5.2f V @   125.00 kHz", vLf125/1000.0);
-	if ( vLf134 > 0 )
+	if ( vLf134 > NON_VOLTAGE )
 		PrintAndLog("# LF antenna: %5.2f V @   134.00 kHz", vLf134/1000.0);
-	if ( peakv > 0 && peakf > 0 )
+	if ( peakv > NON_VOLTAGE && peakf > NON_VOLTAGE )
 		PrintAndLog("# LF optimal: %5.2f V @%9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
-	if ( vHf > 0 )
+	if ( vHf > NON_VOLTAGE )
 		PrintAndLog("# HF antenna: %5.2f V @    13.56 MHz", vHf/1000.0);
 
- #define LF_UNUSABLE_V		2948		// was 2000. Changed due to bugfix in voltage measurements. LF results are now 47% higher.
- #define LF_MARGINAL_V		14739		// was 10000. Changed due to bugfix bug in voltage measurements. LF results are now 47% higher.
- #define HF_UNUSABLE_V		3167		// was 2000. Changed due to bugfix in voltage measurements. HF results are now 58% higher.
- #define HF_MARGINAL_V		7917		// was 5000. Changed due to bugfix in voltage measurements. HF results are now 58% higher.
+
 
 	if (peakv < LF_UNUSABLE_V)
 		PrintAndLog("# Your LF antenna is unusable.");
