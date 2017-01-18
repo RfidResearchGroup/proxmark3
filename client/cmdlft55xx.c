@@ -150,6 +150,7 @@ int usage_t55xx_wakup(){
 int usage_t55xx_bruteforce(){
 	PrintAndLog("This command uses A) bruteforce to scan a number range");
 	PrintAndLog("                  B) a dictionary attack");
+	PrintAndLog("press 'enter' to cancel the command");
     PrintAndLog("Usage: lf t55xx bruteforce [h] <start password> <end password> [i <*.dic>]");
     PrintAndLog("       password must be 4 bytes (8 hex symbols)");
 	PrintAndLog("Options:");
@@ -166,6 +167,7 @@ int usage_t55xx_bruteforce(){
 }
 int usage_t55xx_recoverpw(){
 	PrintAndLog("This command uses a few tricks to try to recover mangled password");
+	PrintAndLog("press 'enter' to cancel the command");
 	PrintAndLog("WARNING: this may brick non-password protected chips!");
 	PrintAndLog("Usage: lf t55xx recoverpw [password]");
 	PrintAndLog("       password must be 4 bytes (8 hex symbols)");
@@ -1474,13 +1476,22 @@ int CmdT55xxWipe(const char *Cmd) {
 	return 0;
 }
 
+bool IsCancelled(void) {
+	if (ukbhit()) {
+		int ch = getchar();
+		(void)ch;
+		printf("\naborted via keyboard!\n");
+		return TRUE;
+	}
+	return FALSE;
+}
+
 int CmdT55xxBruteForce(const char *Cmd) {
 	
 	// load a default pwd file.
 	char buf[9];
 	char filename[FILE_PATH_SIZE]={0};
 	int	keycnt = 0;
-	int ch;
 	uint8_t stKeyBlock = 20;
 	uint8_t *keyBlock = NULL, *p = NULL;
     uint32_t start_password = 0x00000000; //start password
@@ -1561,10 +1572,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 				return  2;
 			}
 		
-			if (ukbhit()) {
-				ch = getchar();
-				(void)ch;
-				printf("\naborted via keyboard!\n");
+			if (IsCancelled()) {
 				free(keyBlock);
 				return 0;
 			}
@@ -1610,10 +1618,8 @@ int CmdT55xxBruteForce(const char *Cmd) {
 
 		printf(".");
 		fflush(stdout);
-		if (ukbhit()) {
-			ch = getchar();
-			(void)ch;
-			printf("\naborted via keyboard!\n");
+		
+		if (IsCancelled()) {
 			free(keyBlock);
 			return 0;
 		}
@@ -1675,6 +1681,8 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 		else if (found == -1)
 			return 0;
 		bit++;
+		
+		if (IsCancelled()) return 0;
 	}
 
 	// now try to use partial original password, since block 7 should have been completely
@@ -1697,7 +1705,9 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 		else if (found == -1)
 			return 0;
 		bit++;
-		prev_password=curr_password;
+		prev_password = curr_password;
+		
+		if (IsCancelled()) return 0;
 	}
 
 	// from high bit to low
@@ -1717,7 +1727,9 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 		else if (found == -1)
 			return 0;
 		bit++;
-		prev_password=curr_password;
+		prev_password = curr_password;
+		
+		if (IsCancelled()) return 0;
 	}
 done:
 	PrintAndLog("");
