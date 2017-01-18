@@ -2256,7 +2256,7 @@ int CmdTuneSamples(const char *Cmd)
 		PrintAndLog("# LF antenna: %5.2f V @   125.00 kHz", vLf125/1000.0);
 	if ( vLf134 > NON_VOLTAGE )
 		PrintAndLog("# LF antenna: %5.2f V @   134.00 kHz", vLf134/1000.0);
-	if ( peakv > NON_VOLTAGE && peakf > NON_VOLTAGE )
+	if ( peakv > NON_VOLTAGE && peakf > 0 )
 		PrintAndLog("# LF optimal: %5.2f V @%9.2f kHz", peakv/1000.0, 12000.0/(peakf+1));
 	if ( vHf > NON_VOLTAGE )
 		PrintAndLog("# HF antenna: %5.2f V @    13.56 MHz", vHf/1000.0);
