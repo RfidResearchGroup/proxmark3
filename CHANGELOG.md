@@ -10,7 +10,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   -  `hf iclass write` - fixed bugs, added crc. (?)
   -  `hf iclass dump` - changed layout in dump (iceman)
   -  Changed - debug statements are more clear (iceman)
-  -  `lf search` - fixed the silent option when aquireing data. (iceman)
+  -  `lf search` - fixed the silent option when acquire data. (iceman)
   -  `lf search` - added presco, visa2000, noralsy detection (iceman)
   -  `lf precso` - fixed some bitsgeneration in precso bits (iceman)
   -  Added `lf noralsy` -  adds demod/clone/sime of Noralsy LF tags. (iceman)

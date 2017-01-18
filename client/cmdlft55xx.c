@@ -6,28 +6,7 @@
 //-----------------------------------------------------------------------------
 // Low frequency T55xx commands
 //-----------------------------------------------------------------------------
-
-#include <stdio.h>
-#include <string.h>
-#include <inttypes.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "graph.h"
-#include "cmdmain.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdlf.h"
 #include "cmdlft55xx.h"
-#include "util.h"
-#include "data.h"
-#include "lfdemod.h"
-#include "cmdhf14a.h" //for getTagInfo
-
-#define T55x7_CONFIGURATION_BLOCK 0x00
-#define T55x7_PAGE0 0x00
-#define T55x7_PAGE1 0x01
-#define T55x7_PWD	0x00000010
-#define REGULAR_READ_MODE_BLOCK 0xFF
 
 // Default configuration
 t55xx_conf_block_t config = { .modulation = DEMOD_ASK, .inverted = FALSE, .offset = 0x00, .block0 = 0x00, .Q5 = FALSE };
@@ -1489,7 +1468,7 @@ bool IsCancelled(void) {
 int CmdT55xxBruteForce(const char *Cmd) {
 	
 	// load a default pwd file.
-	char buf[9];
+	char line[9];
 	char filename[FILE_PATH_SIZE]={0};
 	int	keycnt = 0;
 	uint8_t stKeyBlock = 20;
@@ -1498,10 +1477,12 @@ int CmdT55xxBruteForce(const char *Cmd) {
     uint32_t end_password   = 0xFFFFFFFF; //end   password
     bool found = false;
 
+	memset(line, 0, sizeof(line));
+	
     char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') return usage_t55xx_bruteforce();
 
-	keyBlock = calloc(stKeyBlock, 6);
+	keyBlock = calloc(stKeyBlock, 4);
 	if (keyBlock == NULL) return 1;
 
 	if (cmdp == 'i' || cmdp == 'I') {
@@ -1516,45 +1497,47 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			free(keyBlock);
 			return 1;
 		}			
-			
-		while( fgets(buf, sizeof(buf), f) ){
-			if (strlen(buf) < 8 || buf[7] == '\n') continue;
 		
-			while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
-			
+		while( fgets(line, sizeof(line), f) ){
+			if (strlen(line) < 8 || line[7] == '\n') continue;
+		
+			//goto next line
+			while (fgetc(f) != '\n' && !feof(f)) ;
+		
 			//The line start with # is comment, skip
-			if( buf[0]=='#' ) continue;
+			if( line[0]=='#' ) continue;
 
-			if (!isxdigit(buf[0])){
-				PrintAndLog("File content error. '%s' must include 8 HEX symbols", buf);
+			if (!isxdigit(line[0])) {
+				PrintAndLog("File content error. '%s' must include 8 HEX symbols", line);
 				continue;
 			}
 			
-			buf[8] = 0;
-
+			line[8] = 0;		
+			
+			// realloc keyblock array size.
 			if ( stKeyBlock - keycnt < 2) {
-				p = realloc(keyBlock, 6*(stKeyBlock+=10));
+				p = realloc(keyBlock, 4 * (stKeyBlock += 10));
 				if (!p) {
 					PrintAndLog("Cannot allocate memory for defaultKeys");
 					free(keyBlock);
-					if (f) {
+					if (f)
 						fclose(f);
-						f = NULL;
-					}
 					return 2;
 				}
 				keyBlock = p;
 			}
+			// clear mem
 			memset(keyBlock + 4 * keycnt, 0, 4);
-			num_to_bytes(strtoll(buf, NULL, 16), 4, keyBlock + 4*keycnt);
-			PrintAndLog("chk custom pwd[%2d] %08X", keycnt, bytes_to_num(keyBlock + 4*keycnt, 4));
-			keycnt++;
-			memset(buf, 0, sizeof(buf));
+			
+			num_to_bytes( strtoll(line, NULL, 16), 4, keyBlock + 4*keycnt);
+			
+			PrintAndLog("chk custom pwd[%2d] %08X", keycnt, bytes_to_num(keyBlock + 4 * keycnt, 4) );			
+			keycnt++;			
+			memset(line, 0, sizeof(line));
 		}		
-		if (f) {
+		if (f)
 			fclose(f);
-			f = NULL;
-		}
+		
 		if (keycnt == 0) {
 			PrintAndLog("No keys found in file");
 			free(keyBlock);
@@ -1582,7 +1565,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			PrintAndLog("Testing %08X", testpwd);
 						
 			if ( !AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, testpwd)) {
-				PrintAndLog("Aquireing data from device failed. Quitting");
+				PrintAndLog("Acquire data from device failed. Quitting");
 				free(keyBlock);
 				return 0;
 			}
@@ -1590,8 +1573,8 @@ int CmdT55xxBruteForce(const char *Cmd) {
 			found = tryDetectModulation();
 			if ( found ) {
 				PrintAndLog("Found valid password: [%08X]", testpwd);
-				free(keyBlock);
-				return 0;
+				//free(keyBlock);
+				//return 0;
 			} 
 		}
 		PrintAndLog("Password NOT found.");
@@ -1625,7 +1608,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 		}
 			
 		if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, i)) {
-			PrintAndLog("Aquireing data from device failed. Quitting");
+			PrintAndLog("Acquire data from device failed. Quitting");
 			free(keyBlock);
 			return 0;
 		}
@@ -1649,7 +1632,7 @@ int CmdT55xxBruteForce(const char *Cmd) {
 int tryOnePassword(uint32_t password) {
 	PrintAndLog("Trying password %08x", password);
 	if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, TRUE, password)) {
-		PrintAndLog("Aquireing data from device failed. Quitting");
+		PrintAndLog("Acquire data from device failed. Quitting");
 		return -1;
 	}
 
@@ -1666,20 +1649,16 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 	uint32_t prev_password = 0xffffffff;
 	uint32_t mask = 0x0;
 	int found = 0;
-
 	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') return usage_t55xx_recoverpw();
 
 	orig_password = param_get32ex(Cmd, 0, 0x51243648, 16); //password used by handheld cloners
 
 	// first try fliping each bit in the expected password
-	while ((found != 1) && (bit < 32)) {
+	while (bit < 32) {
 		curr_password = orig_password ^ ( 1 << bit );
 		found = tryOnePassword(curr_password);
-		if (found == 1)
-			goto done;
-		else if (found == -1)
-			return 0;
+		if (found == -1) return 0;
 		bit++;
 		
 		if (IsCancelled()) return 0;
@@ -1691,7 +1670,7 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 	// not sure from which end the bit bits are written, so try from both ends 
 	// from low bit to high bit
 	bit = 0;
-	while ((found != 1) && (bit < 32)) {
+	while (bit < 32) {
 		mask += ( 1 << bit );
 		curr_password = orig_password & mask;
 		// if updated mask didn't change the password, don't try it again
@@ -1700,10 +1679,7 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 			continue;
 		}
 		found = tryOnePassword(curr_password);
-		if (found == 1)
-			goto done;
-		else if (found == -1)
-			return 0;
+		if (found == -1) return 0;
 		bit++;
 		prev_password = curr_password;
 		
@@ -1713,7 +1689,7 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 	// from high bit to low
 	bit = 0;
 	mask = 0xffffffff;
-	while ((found != 1) && (bit < 32)) {
+	while (bit < 32) {
 		mask -= ( 1 << bit );
 		curr_password = orig_password & mask;
 		// if updated mask didn't change the password, don't try it again
@@ -1722,16 +1698,14 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 			continue;
 		}
 		found = tryOnePassword(curr_password);
-		if (found == 1)
-			goto done;
-		else if (found == -1)
+		if (found == -1)
 			return 0;
 		bit++;
 		prev_password = curr_password;
 		
 		if (IsCancelled()) return 0;
 	}
-done:
+
 	PrintAndLog("");
 
 	if (found == 1)
