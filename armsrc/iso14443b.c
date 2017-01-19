@@ -659,7 +659,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
 		*/
 		
 		switch (cardSTATE) {
-			case SIM_NOFIELD:
+			//case SIM_NOFIELD:
 			case SIM_HALTED:
 			case SIM_IDLE: {
 				LogTrace(receivedCmd, len, 0, 0, NULL, TRUE);	
