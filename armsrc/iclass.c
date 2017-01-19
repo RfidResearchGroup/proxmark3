@@ -425,6 +425,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 				if(!(Demod.buffer2 & Demod.syncBit) || !(Demod.buffer3 & Demod.syncBit)) {
 					Demod.state = DEMOD_UNSYNCD;
 					error = 0x88;
+					return FALSE;
 				}
 				
 				// TODO: use this error value to print?  Ask Holiman.
