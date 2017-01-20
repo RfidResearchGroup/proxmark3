@@ -99,7 +99,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 
 int CmdVisa2kRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("12000",TRUE);
+	getSamples("16000",TRUE);
 	return CmdVisa2kDemod(Cmd);
 }
 
