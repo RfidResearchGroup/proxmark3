@@ -20,6 +20,7 @@
 uint8_t  justNoise(uint8_t *bits, size_t size);
 size_t   addParity(uint8_t *BitSource, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType);
 int      askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType);
+void     askAmp(uint8_t *BitStream, size_t size);
 int      BiphaseRawDecode(uint8_t * BitStream, size_t *size, int offset, int invert);
 uint32_t bytebits_to_byte(uint8_t* src, size_t numbits);
 uint32_t bytebits_to_byteLSBF(uint8_t* src, size_t numbits);

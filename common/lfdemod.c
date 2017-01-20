@@ -60,7 +60,7 @@ uint8_t parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType)
 	for (uint8_t i = 0; i < bitLen; i++){
 		ans ^= ((bits >> i) & 1);
 	}
-	//PrintAndLog("DEBUG: ans: %d, ptype: %d",ans,pType);
+	//prnt("DEBUG: ans: %d, ptype: %d",ans,pType);
 	return (ans == pType);
 }
 
@@ -220,7 +220,7 @@ int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int 
 			if ((BinStream[i] >= high && !waveHigh) || (BinStream[i] <= low && waveHigh)){
 
 				if (smplCnt > clk-(clk/4)-1) { //full clock
-					if (smplCnt > clk + (clk/4)+2) { //too many samples
+					if (smplCnt > clk + (clk/4)+1) { //too many samples
 						errCnt++;
 						if (g_debugMode==2) prnt("DEBUG ASK: Modulation Error at: %u", i);
 						BinStream[bitCnt++] = 7;
@@ -281,7 +281,7 @@ int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr
 	if (*clk==0 || start < 0) return -3;
 	if (*invert != 1) *invert = 0;
 	if (amp==1) askAmp(BinStream, *size);
-	if (g_debugMode==2) prnt("DEBUG ASK: size %d, clk %d, beststart %d", *size, *clk, start);
+	if (g_debugMode==2) prnt("DEBUG ASK: clk %d, beststart %d, amp %d", *clk, start, amp);
 
 	uint8_t initLoopMax = 255;
 	if (initLoopMax > *size) initLoopMax = *size;
@@ -537,7 +537,7 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen,
 	uint32_t n=1;
 	for( idx=1; idx < size; idx++) {
 		n++;
-		if (dest[idx]==lastval) continue; 
+		if (dest[idx]==lastval) continue; //skip until we hit a transition
 		
 		//find out how many bits (n) we collected
 		//if lastval was 1, we have a 1->0 crossing
@@ -1355,7 +1355,7 @@ uint8_t detectFSKClk(uint8_t *BitStream, size_t size, uint8_t fcHigh, uint8_t fc
 	fcCounter=0;
 	rfCounter=0;
 	firstBitFnd=0;
-	//PrintAndLog("DEBUG: fcTol: %d",fcTol);
+	//prnt("DEBUG: fcTol: %d",fcTol);
 	// prime i to first peak / up transition
 	for (i = 160; i < size-20; i++)
 		if (BitStream[i] > BitStream[i-1] && BitStream[i]>=BitStream[i+1])
@@ -1386,7 +1386,7 @@ uint8_t detectFSKClk(uint8_t *BitStream, size_t size, uint8_t fcHigh, uint8_t fc
 					}
 				}
 				if (rfCounter > 0 && rfLensFnd < 15){
-					//PrintAndLog("DEBUG: rfCntr %d, fcCntr %d",rfCounter,fcCounter);
+					//prnt("DEBUG: rfCntr %d, fcCntr %d",rfCounter,fcCounter);
 					rfCnts[rfLensFnd]++;
 					rfLens[rfLensFnd++] = rfCounter;
 				}
@@ -1544,7 +1544,7 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
 	uint16_t errCnt=0, waveLenCnt=0;
 	fc = countFC(dest, *size, 0);
 	if (fc!=2 && fc!=4 && fc!=8) return -1;
-	//PrintAndLog("DEBUG: FC: %d",fc);
+	//prnt("DEBUG: FC: %d",fc);
 	*clock = DetectPSKClock(dest, *size, *clock);
 	if (*clock == 0) return -1;
 	int avgWaveVal=0, lastAvgWaveVal=0;
@@ -1552,7 +1552,7 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
 	for (i=0; i<loopCnt; i++){
 		if (dest[i]+fc < dest[i+1] && dest[i+1] >= dest[i+2]){
 			waveEnd = i+1;
-			//PrintAndLog("DEBUG: waveEnd: %d",waveEnd);
+			//prnt("DEBUG: waveEnd: %d",waveEnd);
 			waveLenCnt = waveEnd-waveStart;
 			if (waveLenCnt > fc && waveStart > fc && !(waveLenCnt > fc+2)){ //not first peak and is a large wave but not out of whack
 				lastAvgWaveVal = avgWaveVal/(waveLenCnt);
@@ -1595,9 +1595,9 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
 				waveLenCnt = waveEnd-waveStart;
 				lastAvgWaveVal = avgWaveVal/waveLenCnt;
 				if (waveLenCnt > fc){  
-					//PrintAndLog("DEBUG: avgWaveVal: %d, waveSum: %d",lastAvgWaveVal,avgWaveVal);
+					//prnt("DEBUG: avgWaveVal: %d, waveSum: %d",lastAvgWaveVal,avgWaveVal);
 					//this wave is a phase shift
-					//PrintAndLog("DEBUG: phase shift at: %d, len: %d, nextClk: %d, i: %d, fc: %d",waveStart,waveLenCnt,lastClkBit+*clock-tol,i+1,fc);
+					//prnt("DEBUG: phase shift at: %d, len: %d, nextClk: %d, i: %d, fc: %d",waveStart,waveLenCnt,lastClkBit+*clock-tol,i+1,fc);
 					if (i+1 >= lastClkBit + *clock - tol){ //should be a clock bit
 						curPhase ^= 1;
 						dest[numBits++] = curPhase;
@@ -1632,13 +1632,15 @@ bool DetectST(uint8_t buffer[], size_t *size, int *foundclock) {
 	int tol = 0;
 	int i, j, skip, start, end, low, high, minClk, waveStart;
 	bool complete = false;
-	int tmpbuff[bufsize / 64];
-	int waveLen[bufsize / 64];
+	int tmpbuff[bufsize / 32]; //guess rf/32 clock, if click is smaller we will only have room for a fraction of the samples captured
+	int waveLen[bufsize / 32]; //  if clock is larger then we waste memory in array size that is not needed...
 	size_t testsize = (bufsize < 512) ? bufsize : 512;
 	int phaseoff = 0;
 	high = low = 128;
 	memset(tmpbuff, 0, sizeof(tmpbuff));
+	memset(waveLen, 0, sizeof(waveLen));
 
+	
 	if ( getHiLo(buffer, testsize, &high, &low, 80, 80) == -1 ) {
 		if (g_debugMode==2) prnt("DEBUG STT: just noise detected - quitting");
 		return false; //just noise
@@ -1665,7 +1667,7 @@ bool DetectST(uint8_t buffer[], size_t *size, int *foundclock) {
 		waveStart = i;
 		while ((buffer[i] > low) && (i < bufsize))
 			++i;
-		if (j >= (bufsize/64)) {
+		if (j >= (bufsize/32)) {
 			break;
 		}
 		waveLen[j] = i - waveStart; //first high to first low
@@ -1711,6 +1713,8 @@ bool DetectST(uint8_t buffer[], size_t *size, int *foundclock) {
 	if (start < 0) {
 		if (g_debugMode==2) prnt("DEBUG STT: first STT not found - quitting");
 		return false;
+	} else {
+		if (g_debugMode==2) prnt("DEBUG STT: first STT found at: %d, j=%d",start, j);
 	}
 	if (waveLen[i+2] > clk*1+tol)
 		phaseoff = 0;
@@ -1724,7 +1728,7 @@ bool DetectST(uint8_t buffer[], size_t *size, int *foundclock) {
 	end = skip;
 	for (i += 3; i < j - 4; ++i) {
 		end += tmpbuff[i];
-		if (tmpbuff[i] >= clk*1-tol && tmpbuff[i] <= (clk*2)+tol) {           //1 to 2 clocks depending on 2 bits prior
+		if (tmpbuff[i] >= clk*1-tol && tmpbuff[i] <= (clk*2)+tol && waveLen[i] < clk+tol) {           //1 to 2 clocks depending on 2 bits prior
 			if (tmpbuff[i+1] >= clk*2-tol && tmpbuff[i+1] <= clk*2+tol && waveLen[i+1] > clk*3/2-tol) {       //2 clocks and wave size is 1 1/2
 				if (tmpbuff[i+2] >= (clk*3)/2-tol && tmpbuff[i+2] <= clk*2+tol && waveLen[i+2] > clk-tol) { //1 1/2 to 2 clocks and at least one full clock wave
 					if (tmpbuff[i+3] >= clk*1-tol && tmpbuff[i+3] <= clk*2+tol) { //1 to 2 clocks for end of ST + first bit
@@ -1746,12 +1750,15 @@ bool DetectST(uint8_t buffer[], size_t *size, int *foundclock) {
 	start = skip;
 	size_t datalen = end - start;
 	// check validity of datalen (should be even clock increments)  - use a tolerance of up to 1/8th a clock
-	if (datalen % clk > clk/8) {
+	if ( clk - (datalen % clk) <= clk/8) {
+		// padd the amount off - could be problematic...  but shouldn't happen often
+		datalen += clk - (datalen % clk);
+	} else if ( (datalen % clk) <= clk/8 ) {
+		// padd the amount off - could be problematic...  but shouldn't happen often
+		datalen -= datalen % clk;
+	} else {
 		if (g_debugMode==2) prnt("DEBUG STT: datalen not divisible by clk: %u %% %d = %d - quitting", datalen, clk, datalen % clk);
 		return false;
-	} else {
-		// padd the amount off - could be problematic...  but shouldn't happen often
-		datalen += datalen % clk;
 	}
 	// if datalen is less than one t55xx block - ERROR
 	if (datalen/clk < 8*4) {
@@ -1759,8 +1766,20 @@ bool DetectST(uint8_t buffer[], size_t *size, int *foundclock) {
 		return false;
 	}
 	size_t dataloc = start;
+	if (buffer[dataloc-(clk*4)-(clk/8)] <= low && buffer[dataloc] <= low && buffer[dataloc-(clk*4)] >= high) {
+		//we have low drift (and a low just before the ST and a low just after the ST) - compensate by backing up the start 
+		for ( i=0; i <= (clk/8); ++i ) {
+			if ( buffer[dataloc - (clk*4) - i] <= low ) {
+				dataloc -= i;
+				break;
+			}
+		}
+	}
+	
 	size_t newloc = 0;
 	i=0;
+	if (g_debugMode==2) prnt("DEBUG STT: Starting STT trim - start: %d, datalen: %d ",dataloc, datalen);		
+
 	// warning - overwriting buffer given with raw wave data with ST removed...
 	while ( dataloc < bufsize-(clk/2) ) {
 		//compensate for long high at end of ST not being high due to signal loss... (and we cut out the start of wave high part)
@@ -1779,6 +1798,7 @@ bool DetectST(uint8_t buffer[], size_t *size, int *foundclock) {
 		}
 		newloc += i;
 		//skip next ST  -  we just assume it will be there from now on...
+		if (g_debugMode==2) prnt("DEBUG STT: skipping STT at %d to %d", dataloc, dataloc+(clk*4));
 		dataloc += clk*4;
 	}
 	*size = newloc;
