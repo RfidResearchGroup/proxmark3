@@ -12,10 +12,15 @@ CXX=g++
 VPATH = ../../common
 OBJDIR = obj
 
-LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb -lreadline -lpthread
-LDFLAGS = $(COMMON_FLAGS)
-CFLAGS = -std=gnu99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O3
+ifeq ($(platform),Darwin)
+	LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb-1.0 -lreadline -lpthread
+	CFLAGS = -std=gnu99 -I. -I../include -I../common -I/usr/local/include -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O3
+else
+	LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb -lreadline -lpthread
+	CFLAGS = -std=gnu99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O3
+endif
 
+LDFLAGS = $(COMMON_FLAGS)
 CXXFLAGS =
 QTLDLIBS =
 
