@@ -698,7 +698,7 @@ int VikingDemod_AM(uint8_t *dest, size_t *size) {
 // by iceman
 // find Visa2000 preamble in already demoded data
 int Visa2kDemod_AM(uint8_t *dest, size_t *size) {
-	if (*size < 96*2) return -1; //make sure buffer has data
+	if (*size < 96) return -1; //make sure buffer has data
 	size_t startIdx = 0;
 	uint8_t preamble[] = {0,1,0,1,0,1,1,0,0,1,0,0,1,0,0,1,0,1,0,1,0,0,1,1,0,0,1,1,0,0,1,0};
 	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
