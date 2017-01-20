@@ -9,7 +9,19 @@
 #ifndef __CRC32_H
 #define __CRC32_H
 
+#include <stdint.h>
+#include <stddef.h>
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void crc32 (const uint8_t *data, const size_t len, uint8_t *crc);
 void crc32_append (uint8_t *data, const size_t len);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

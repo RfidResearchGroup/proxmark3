@@ -222,9 +222,14 @@ int CmdLFHitagReader(const char *Cmd) {
 		case RHT2F_TEST_AUTH_ATTEMPTS: {
 			// No additional parameters needed
 		} break;
+		case RHT2F_UID_ONLY: {
+			// No additional parameters needed
+		} break;
 		default: {
-			PrintAndLog("Error: unkown reader function %d",htf);
-			PrintAndLog("Hitag reader functions");
+			PrintAndLog("\nError: unkown reader function %d",htf);
+			PrintAndLog("");
+			PrintAndLog("Usage: hitag reader <Reader Function #>");
+			PrintAndLog("Reader Functions:");
 			PrintAndLog(" HitagS (0*)");
 			PrintAndLog("  01 <nr> <ar> (Challenge) read all pages from a Hitag S tag");
 			PrintAndLog("  02 <key> (set to 0 if no authentication is needed) read all pages from a Hitag S tag");
@@ -234,6 +239,7 @@ int CmdLFHitagReader(const char *Cmd) {
 			PrintAndLog("  22 <nr> <ar> (authentication)");
 			PrintAndLog("  23 <key> (authentication) key is in format: ISK high + ISK low");
 			PrintAndLog("  25 (test recorded authentications)");
+			PrintAndLog("  26 just read UID");
 			return 1;
 		} break;
 	}
@@ -250,6 +256,9 @@ int CmdLFHitagReader(const char *Cmd) {
 
 	uint32_t id = bytes_to_num(resp.d.asBytes,4);
 
+	if (htf == RHT2F_UID_ONLY){
+		PrintAndLog("Valid Hitag2 tag found - UID: %08x",id);
+	} else {
 	char filename[FILE_PATH_SIZE];
 	FILE* f = NULL;
 	sprintf(filename,"%08x_%04x.ht2",id,(rand() & 0xffff));
@@ -263,6 +272,7 @@ int CmdLFHitagReader(const char *Cmd) {
 	fwrite(resp.d.asBytes, 1, 48, f);
 	fclose(f);
 	PrintAndLog("Succesfully saved tag memory to [%s]",filename);
+	}
 	return 0;
 }
 

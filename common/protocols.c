@@ -1,6 +1,3 @@
-#include <string.h>
-#include <stdint.h>
-#include <stdarg.h>
 #include "protocols.h"
 
 // ATA55xx shared presets & routines

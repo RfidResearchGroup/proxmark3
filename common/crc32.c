@@ -1,10 +1,7 @@
-#include <stdint.h>
-#include <stddef.h>
 #include "crc32.h"
 
 #define htole32(x) (x)
 #define CRC32_PRESET 0xFFFFFFFF
-
 
 static void crc32_byte (uint32_t *crc, const uint8_t value);
 

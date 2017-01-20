@@ -1,6 +1,11 @@
 #ifndef PROTOCOLS_H
 #define PROTOCOLS_H
 
+#include <string.h>
+#include <stdint.h>
+#include <stdarg.h>
+
+
 //The following data is taken from http://www.proxmark.org/forum/viewtopic.php?pid=13501#p13501
 /*
 ISO14443A (usually NFC tags)
