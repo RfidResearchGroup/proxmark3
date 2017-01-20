@@ -22,6 +22,7 @@ typedef enum {
 	RHT2F_AUTHENTICATE        = 22,
 	RHT2F_CRYPTO              = 23,
 	RHT2F_TEST_AUTH_ATTEMPTS  = 25,
+	RHT2F_UID_ONLY            = 26
 } hitag_function;
 
 typedef struct {

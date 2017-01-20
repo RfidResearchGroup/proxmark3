@@ -1119,6 +1119,12 @@ int CmdLFfind(const char *Cmd) {
 	}
 	// TIdemod?
 	
+	if (!offline && (cmdp != '1')){
+		ans=CmdLFHitagReader("26");
+		if (ans==0) {
+			return 1;
+		}
+	}
 
 	PrintAndLog("\nNo Known Tags Found!\n");
 	if (testRaw=='u' || testRaw=='U'){

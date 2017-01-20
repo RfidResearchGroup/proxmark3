@@ -698,6 +698,42 @@ static bool hitag2_test_auth_attempts(byte_t* rx, const size_t rxlen, byte_t* tx
 	return true;
 }
 
+static bool hitag2_read_uid(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* txlen) {
+	// Reset the transmission frame length
+	*txlen = 0;
+
+	// Try to find out which command was send by selecting on length (in bits)
+	switch (rxlen) {
+		// No answer, try to resurrect
+		case 0: {
+			// Just starting or if there is no answer
+			*txlen = 5;
+			memcpy(tx,"\xc0",nbytes(*txlen));
+		} break;
+		// Received UID
+		case 32: {
+			// Check if we received answer tag (at)
+			if (bAuthenticating) {
+				bAuthenticating = false;
+			} else {
+				// Store the received block
+				memcpy(tag.sectors[blocknr],rx,4);
+				blocknr++;
+			}
+			if (blocknr > 0) {
+				//DbpString("Read successful!");
+				bSuccessful = true;
+				return false;
+			}
+		} break;
+		// Unexpected response
+		default: {
+			Dbprintf("Uknown frame length: %d",rxlen);
+			return false;
+		} break;
+	}
+	return true;
+}
 
 void SnoopHitag(uint32_t type) {
 	int frame_count;
@@ -1129,7 +1165,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	clear_trace();
 	set_tracing(TRUE);
 	
-	DbpString("Starting Hitag reader family");
+	//DbpString("Starting Hitag reader family");
 
 	// Check configuration
 	switch(htf) {
@@ -1171,7 +1207,13 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 			bQuiet = false;
 			bCrypto = false;
 		} break;
-			
+		case RHT2F_UID_ONLY: {
+			blocknr = 0;
+			bQuiet = false;
+			bCrypto = false;
+			bAuthenticating = false;
+			bQuitTraceFull = true;
+		} break;
 		default: {
 			Dbprintf("Error, unknown function: %d",htf);
 			set_tracing(FALSE);
@@ -1229,23 +1271,23 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 		// hitagS settings
 		reset_sof = 1;
 		t_wait = 200;
-		DbpString("Configured for hitagS reader");
+    //DbpString("Configured for hitagS reader");
 	} else if (htf < 20) {
 		// hitag1 settings
 		reset_sof = 1;
 		t_wait = 200;
-		DbpString("Configured for hitag1 reader");
+    //DbpString("Configured for hitag1 reader");
 	} else if (htf < 30) {
 		// hitag2 settings
 		reset_sof = 4;
 		t_wait = HITAG_T_WAIT_2;
-		DbpString("Configured for hitag2 reader");
+    //DbpString("Configured for hitag2 reader");
 	} else {
 		Dbprintf("Error, unknown hitag reader type: %d",htf);
 		set_tracing(FALSE);	
 		return;
 	}
-		
+	uint8_t attempt_count=0;
 	while(!bStop && !BUTTON_PRESS()) {
 		// Watchdog hit
 		WDT_HIT();
@@ -1279,6 +1321,11 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 			} break;
 			case RHT2F_TEST_AUTH_ATTEMPTS: {
 				bStop = !hitag2_test_auth_attempts(rx,rxlen,tx,&txlen);
+			} break;
+			case RHT2F_UID_ONLY: {
+				bStop = !hitag2_read_uid(rx, rxlen, tx, &txlen);
+				attempt_count++; //attempt 3 times to get uid then quit
+				if (!bStop && attempt_count == 3) bStop = true;
 			} break;
 			default: {
 				Dbprintf("Error, unknown function: %d",htf);
@@ -1326,6 +1373,8 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 		bSkip = true;
 		tag_sof = reset_sof;
 		response = 0;
+			//Dbprintf("DEBUG: Waiting to receive frame");
+		uint32_t errorCount = 0;
 		
 		// Receive frame, watch for at most T0*EOF periods
 		while (AT91C_BASE_TC1->TC_CV < T0*HITAG_T_WAIT_MAX) {
@@ -1375,10 +1424,13 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 						rxlen++;
 					}
 				} else {
+						//Dbprintf("DEBUG: Wierd2");
+						errorCount++;
 					// Ignore wierd value, is to small to mean anything
 				}
 			}
-
+			//if we saw over 100 wierd values break it probably isn't hitag...
+			if (errorCount >100) break;
 			// We can break this loop if we received the last bit from a frame
 			if (AT91C_BASE_TC1->TC_CV > T0*HITAG_T_EOF) {
 				if (rxlen>0) break;
@@ -1390,7 +1442,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 	AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	Dbprintf("DONE: frame received: %d",frame_count);
+//	Dbprintf("DONE: frame received: %d",frame_count);
 	cmd_send(CMD_ACK,bSuccessful,0,0,(byte_t*)tag.sectors,48);
   	set_tracing(FALSE);
 }
