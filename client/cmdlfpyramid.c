@@ -74,7 +74,7 @@ int GetPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 
 int CmdPyramidRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("20000", TRUE);
+	getSamples("12000", TRUE);
 	return CmdFSKdemodPyramid("");
 }
 
