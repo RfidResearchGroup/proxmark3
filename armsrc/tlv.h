@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <stdint.h>
+#include <stddef.h>
 
 //structure buffer definitions
 #define TAG_LENGTH 2

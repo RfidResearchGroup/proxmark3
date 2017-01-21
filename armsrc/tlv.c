@@ -1,5 +1,4 @@
 #include <tlv.h>
-#include <stddef.h>
 
 int decode_ber_tlv_item(uint8_t* data, tlvtag* returnedtag)
 {
