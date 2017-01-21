@@ -7,7 +7,6 @@
 //-----------------------------------------------------------------------------
 // Utility functions used in many places, not specific to any piece of code.
 //-----------------------------------------------------------------------------
-
 #include "util.h"
 
 void print_result(char *name, uint8_t *buf, size_t len) {
