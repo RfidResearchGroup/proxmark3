@@ -14,19 +14,22 @@
 #define __ISO14443B_H
 
 #include "proxmark3.h"
+#include "common.h"
 #include "apps.h"
 #include "util.h"
 #include "string.h"
 #include "iso14443crc.h"
-#include "common.h"
+
 #include "mifare.h"
 #include "protocols.h"
 #include "mifareutil.h"		// access to global variable: MF_DBGLEVEL
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern void AppendCrc14443b(uint8_t *data, int len);
-
 void SendRawCommand14443B_Ex(UsbCommand *c);
-
 void iso14443b_setup();
 uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response);
 uint8_t iso14443b_select_card(iso14b_card_select_t* card);
@@ -44,5 +47,9 @@ void ClearFpgaShiftingRegisters(void);
 #define SIM_HALTING		4
 #define SIM_ACKNOWLEDGE 5
 #define SIM_WORK		6
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __ISO14443B_H */
