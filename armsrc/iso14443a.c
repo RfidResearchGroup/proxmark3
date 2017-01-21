@@ -2085,17 +2085,17 @@ void ReaderIso14443a(UsbCommand *c) {
 	}
 
 	if (param & ISO14A_RAW) {
-		if(param & ISO14A_APPEND_CRC) {
-			if(param & ISO14A_TOPAZMODE) {
+		if (param & ISO14A_APPEND_CRC) {
+			if (param & ISO14A_TOPAZMODE)
 				AppendCrc14443b(cmd,len);
-			} else {
+			else
 				AppendCrc14443a(cmd,len);
-			}
+			
 			len += 2;
 			if (lenbits) lenbits += 16;
 		}
-		if(lenbits>0) {				// want to send a specific number of bits (e.g. short commands)
-			if(param & ISO14A_TOPAZMODE) {
+		if (lenbits>0) {				// want to send a specific number of bits (e.g. short commands)
+			if (param & ISO14A_TOPAZMODE) {
 				int bits_to_send = lenbits;
 				uint16_t i = 0;
 				ReaderTransmitBitsPar(&cmd[i++], MIN(bits_to_send, 7), NULL, NULL);		// first byte is always short (7bits) and no parity
@@ -2109,7 +2109,7 @@ void ReaderIso14443a(UsbCommand *c) {
 				ReaderTransmitBitsPar(cmd, lenbits, par, NULL);							// bytes are 8 bit with odd parity
 			}
 		} else {					// want to send complete bytes only
-			if(param & ISO14A_TOPAZMODE) {
+			if (param & ISO14A_TOPAZMODE) {
 				uint16_t i = 0;
 				ReaderTransmitBitsPar(&cmd[i++], 7, NULL, NULL);						// first byte: 7 bits, no paritiy
 				while (i < len) {

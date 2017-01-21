@@ -26,6 +26,11 @@
 #include "BigBuf.h"
 #include "parity.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 typedef struct {
 	enum {
 		DEMOD_UNSYNCD,
@@ -110,4 +115,10 @@ extern int EmSendCmd(uint8_t *resp, uint16_t respLen);
 int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
 				uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
+
+
+#ifdef __cplusplus
+}
+#endif				
+
 #endif /* __ISO14443A_H */
