@@ -12,6 +12,7 @@
 
 #ifndef __USB_CMD_H
 #define __USB_CMD_H
+
 #ifdef _MSC_VER
    typedef DWORD uint32_t;
    typedef BYTE uint8_t;
@@ -205,7 +206,6 @@ typedef struct{
 //0x0725 and 0x0726 no longer used 
 #define CMD_MIFAREUC_SETPWD                                               0x0727
 
-
 // mifare desfire
 #define CMD_MIFARE_DESFIRE_READBL                                         0x0728
 #define CMD_MIFARE_DESFIRE_WRITEBL                                        0x0729
@@ -218,7 +218,6 @@ typedef struct{
 #define CMD_MIFARE_COLLECT_NONCES										  0x072f
 
 #define CMD_HF_SNIFFER                                                    0x0800
-
 
 // For EMV Commands
 #define CMD_EMV_READ_RECORD                                               0x0700
@@ -233,7 +232,6 @@ typedef struct{
 
 #define CMD_UNKNOWN                                                       0xFFFF
 
-
 //Mifare simulation flags
 #define FLAG_INTERACTIVE		0x01
 #define FLAG_4B_UID_IN_DATA 	0x02
@@ -241,7 +239,6 @@ typedef struct{
 #define FLAG_10B_UID_IN_DATA 	0x08
 #define FLAG_UID_IN_EMUL		0x10
 #define FLAG_NR_AR_ATTACK 		0x20
-
 
 //Iclass reader flags
 #define FLAG_ICLASS_READER_ONLY_ONCE 0x01
@@ -251,8 +248,6 @@ typedef struct{
 #define FLAG_ICLASS_READER_AA		0x10
 #define FLAG_ICLASS_READER_ONE_TRY      0x20
 #define FLAG_ICLASS_READER_CEDITKEY     0x40
-
-
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
 /* Whether a bootloader that understands the common_area is present */
