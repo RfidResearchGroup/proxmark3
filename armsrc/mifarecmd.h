@@ -22,5 +22,7 @@
 #include "crapto1.h"
 #include "mifareutil.h"
 #include "common.h"
-
+#include "crc.h"
+#include "protocols.h"
+#include "parity.h"
 #endif

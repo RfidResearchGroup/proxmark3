@@ -14,11 +14,6 @@
 //-----------------------------------------------------------------------------
 
 #include "mifarecmd.h"
-#include "apps.h"
-#include "util.h"
-#include "crc.h"
-#include "protocols.h"
-#include "parity.h"
 
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag. 
