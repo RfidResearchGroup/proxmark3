@@ -10,11 +10,7 @@
 // the card (with iso14443a_select_card etc.). If You want to use these
 // functions, You need to do the setup before calling them!
 //-----------------------------------------------------------------------------
-
-#include "iso14443a.h"
-#include "iso14443b.h"
 #include "epa.h"
-#include "cmd.h"
 
 // Protocol and Parameter Selection Request for ISO 14443 type A cards
 // use regular (1x) speed in both directions

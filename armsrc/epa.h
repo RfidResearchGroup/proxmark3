@@ -11,6 +11,10 @@
 #ifndef __EPA_H
 #define __EPA_H
 
+#include "cmd.h"
+#include "iso14443a.h"
+#include "iso14443b.h"
+
 // this struct is used by EPA_Parse_CardAccess and contains info about the
 // PACE protocol supported by the chip
 typedef struct {
