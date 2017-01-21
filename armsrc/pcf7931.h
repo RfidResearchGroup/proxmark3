@@ -1,6 +1,12 @@
 #ifndef __PCF7931_H
 #define __PCF7931_H
 
+#include "proxmark3.h"
+#include "apps.h"
+#include "lfsampling.h"
+#include "pcf7931.h"
+#include "string.h"
+
 int DemodPCF7931(uint8_t **outBlocks);
 int IsBlock0PCF7931(uint8_t *Block);
 int IsBlock1PCF7931(uint8_t *Block);
