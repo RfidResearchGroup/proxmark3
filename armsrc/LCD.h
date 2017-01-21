@@ -9,6 +9,10 @@
 #ifndef __LCD_H
 #define __LCD_H
 
+#include "proxmark3.h"
+#include "apps.h"
+#include "fonts.h"
+
 // The resolution of the LCD
 #define LCD_XRES	132
 #define LCD_YRES	132
