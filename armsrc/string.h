@@ -12,8 +12,7 @@
 #ifndef __STRING_H
 #define __STRING_H
 
-#include <stdint.h>
-#include <util.h>
+#include <common.h>
 
 int strlen(const char *str);
 RAMFUNC void *memcpy(void *dest, const void *src, int len);
@@ -24,6 +23,5 @@ char *strncat(char *dest, const char *src, unsigned int n);
 char *strcat(char *dest, const char *src);
 void strreverse(char s[]);
 void itoa(int n, char s[]);
-
 
 #endif /* __STRING_H */

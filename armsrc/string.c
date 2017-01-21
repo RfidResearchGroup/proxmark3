@@ -7,9 +7,7 @@
 //-----------------------------------------------------------------------------
 // Common string.h functions
 //-----------------------------------------------------------------------------
-
 #include "string.h"
-#include <stdint.h>
 
 void *memcpy(void *dest, const void *src, int len)
 {
