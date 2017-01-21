@@ -33,12 +33,7 @@
  *
  *	@(#)subr_prf.c	8.3 (Berkeley) 1/21/94
  */
-
-#include <stddef.h>
-#include <stdarg.h>
 #include "printf.h"
-#include "util.h"
-#include "string.h"
 
 typedef uint32_t uintmax_t;
 typedef int32_t intmax_t;
@@ -431,7 +426,6 @@ sprintf(char *dest, const char *fmt, ...)
 	/* http://www.pagetable.com/?p=298 */
 	int retval;
 	va_list ap;
-
 	va_start(ap, fmt);
 	retval = kvsprintf(fmt, dest, 10, ap);
 	va_end(ap);
