@@ -16,7 +16,7 @@
  * 
  * $Id$
  */
-#include <stdlib.h>
+
 #include "desfire_key.h"
 
 static inline void update_key_schedules (desfirekey_t key);
