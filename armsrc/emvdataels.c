@@ -1,5 +1,7 @@
+// ICEMAN 2017, this file looks similar to emvdataels.h headerfile. 
+
 //Data elements for EMV transactions.
-#include <stdint.h>
+
 #ifndef __EMVDATAELS_H
 #define __EMVDATAELS_H
 #include "emvdataels.h"
@@ -8,7 +10,7 @@
 typedef struct{
 uint8_t tag[2];
 char description[255];
-}tagdescription;
+} tagdescription;
 
 const uint8_t AID_VISA[]    =   {0xa0,0x00,0x00,0x00,0x03};
 const uint8_t AID_VISA_DB[] =   {0xa0,0x00,0x00,0x00,0x03,0x10,0x10};
@@ -122,6 +124,5 @@ const tagdescription EMV_TAG_LIST[] = {
 #define AIP_CDA_SUPPORTED 0x01
  
 //human readable error messages
-
 
 #endif //__EMVDATAELS_H

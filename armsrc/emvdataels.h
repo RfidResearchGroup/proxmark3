@@ -1,7 +1,9 @@
 //Data elements for EMV transactions.
-#include <stdint.h>
 #ifndef __EMVDATAELS_H
 #define __EMVDATAELS_H
+
+#include <stdint.h>
+
 //Known AIDs
 extern const uint8_t AID_VISA[5];
 extern const uint8_t AID_VISA_DB[7] ;
@@ -27,7 +29,7 @@ extern const uint8_t DF_PSE[];
 typedef struct{
     uint8_t tag[2];
     char description[255];
-}tagdescription;
+} tagdescription;
 
 extern const tagdescription EMV_TAG_LIST[62]; //SW1 return values
 extern const uint8_t SW1_RESPONSE_BYTES[]; 
