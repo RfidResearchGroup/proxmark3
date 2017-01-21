@@ -5,7 +5,7 @@
 #include "apps.h"
 #include "util.h"
 #include "string.h"
-
+#include "BigBuf.h"
 #include "iso14443crc.h"
 #include "iso14443a.h"
 #include "desfire_key.h"

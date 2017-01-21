@@ -1,5 +1,4 @@
 #include "mifaredesfire.h"
-#include "BigBuf.h"
 
 #define MAX_APPLICATION_COUNT 28
 #define MAX_FILE_COUNT 16
