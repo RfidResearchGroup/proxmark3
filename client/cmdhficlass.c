@@ -880,7 +880,7 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 	if (have_debit_key) memcpy(tag_data+(3*8),div_key,8);
 	if (have_credit_key) memcpy(tag_data+(4*8),c_div_key,8);
 	
-	printf("Num of bytes:  %d\n", gotBytes);
+	printf("Num of bytes:  %zu\n", gotBytes);
 	
 	// print the dump
 	printf("------+--+-------------------------+\n");
