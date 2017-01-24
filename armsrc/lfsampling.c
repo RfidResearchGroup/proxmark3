@@ -48,11 +48,11 @@ sample_config* getSamplingConfig() {
 	return &config;
 }
 
-typedef struct {
+struct BitstreamOut {
 	uint8_t * buffer;
 	uint32_t numbits;
 	uint32_t position;
-} BitstreamOut;
+};
 
 /**
  * @brief Pushes bit onto the stream
@@ -259,7 +259,7 @@ void doT55x7Acquisition(size_t sample_size) {
 	while(!BUTTON_PRESS() && !usb_poll_validate_length() && skipCnt < 1000 && (i < bufsize) ) {
 		WDT_HIT();		
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-			AT91C_BASE_SSC->SSC_THR = 0x43;
+			AT91C_BASE_SSC->SSC_THR = 0x43; //43
 			LED_D_ON();
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
@@ -275,7 +275,7 @@ void doT55x7Acquisition(size_t sample_size) {
 				skipCnt++;
 				continue;
 			}
-			// skip until the first Low sample below threshold
+			// skip until the first low sample below threshold
 			if (!startFound && curSample < T55xx_READ_LOWER_THRESHOLD) {
 				//if (curSample > lastSample) 
 				lastSample = curSample;

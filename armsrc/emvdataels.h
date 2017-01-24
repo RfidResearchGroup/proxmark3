@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+typedef struct tagdescription tagdescription;
+
 //Known AIDs
 extern const uint8_t AID_VISA[5];
 extern const uint8_t AID_VISA_DB[7] ;
@@ -25,12 +27,6 @@ extern const uint8_t AID_ALIAS[7];
 
 //Master data file for PSE
 extern const uint8_t DF_PSE[];
-
-typedef struct{
-    uint8_t tag[2];
-    char description[255];
-} tagdescription;
-
 extern const tagdescription EMV_TAG_LIST[62]; //SW1 return values
 extern const uint8_t SW1_RESPONSE_BYTES[]; 
 extern const uint8_t SW1_WRONG_LENGTH[] ; 

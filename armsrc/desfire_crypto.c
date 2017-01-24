@@ -89,7 +89,6 @@ void cmac (const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t l
 
 size_t key_block_size (const desfirekey_t key) {
     size_t block_size = 8;
-
     switch (key->type) {
 		case T_DES:
 		case T_3DES:
@@ -100,7 +99,6 @@ size_t key_block_size (const desfirekey_t key) {
 			block_size = 16;
 			break;
     }
-
     return block_size;
 }
 
@@ -109,7 +107,6 @@ size_t key_block_size (const desfirekey_t key) {
  */
 static size_t key_macing_length (const desfirekey_t key) {
     size_t mac_length = MAC_LENGTH;
-
     switch (key->type) {
     case T_DES:
     case T_3DES:
@@ -120,7 +117,6 @@ static size_t key_macing_length (const desfirekey_t key) {
         mac_length = CMAC_LENGTH;
         break;
     }
-
     return mac_length;
 }
 
@@ -459,7 +455,7 @@ void* mifare_cryto_postprocess_data (desfiretag_t tag, void *data, size_t *nbyte
                 break;
             case AS_NEW:
                 end_crc_pos = crc_pos + 4;
-                crc32 (res, end_crc_pos, (uint8_t *)&crc);
+                crc32_ex (res, end_crc_pos, (uint8_t *)&crc);
                 break;
             }
             if (!crc) {

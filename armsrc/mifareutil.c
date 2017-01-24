@@ -8,7 +8,6 @@
 //-----------------------------------------------------------------------------
 // Work with mifare cards.
 //-----------------------------------------------------------------------------
-
 #include "mifareutil.h"
 
 int MF_DBGLEVEL = MF_DBG_ALL;
@@ -277,7 +276,7 @@ int mifare_ultra_auth(uint8_t *keybytes){
 	memcpy(enc_random_b,resp+1,8);
 
 	// decrypt nonce.
-	tdes_2key_dec(random_b, enc_random_b, sizeof(random_b), key, IV );
+	tdes_2key_dec((void*)random_b, (void*)enc_random_b, sizeof(random_b), (const void*)key, IV );
 	rol(random_b,8);
 	memcpy(rnd_ab  ,random_a,8);
 	memcpy(rnd_ab+8,random_b,8);

@@ -10,20 +10,15 @@
 // executes.
 //-----------------------------------------------------------------------------
 #include "usb_cdc.h"
-//#include "cmd.h"
 #include "proxmark3.h"
 #include "apps.h"
 #include "util.h"
 #include "printf.h"
 #include "string.h"
-#include <stdarg.h>
 #include "legicrf.h"
-#include "hitag2.h"
-#include "hitagS.h"
 #include "lfsampling.h"
 #include "BigBuf.h"
 #include "mifareutil.h"
-#include "pcf7931.h"
 
 #ifdef WITH_LCD
  #include "LCD.h"
@@ -74,6 +69,28 @@ void ToSendStuffBit(int b) {
 void PrintToSendBuffer(void){
 	DbpString("Printing ToSendBuffer:");
 	Dbhexdump(ToSendMax, ToSend, 0);
+}
+
+void print_result(char *name, uint8_t *buf, size_t len) {
+	uint8_t *p = buf;
+
+	if ( len % 16 == 0 ) {
+		for(; p-buf < len; p += 16)
+			Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+				name,
+				p-buf,
+				len,
+				p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]
+			);
+	}
+	else {
+		for(; p-buf < len; p += 8)
+			Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x",
+				name,
+				p-buf,
+				len,
+				p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+	}
 }
 
 //=============================================================================
@@ -1025,19 +1042,15 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693:
 			RecordRawAdcSamplesIso15693();
 			break;
-			
 		case CMD_ISO_15693_COMMAND:
 			DirectTag15693Command(c->arg[0],c->arg[1],c->arg[2],c->d.asBytes);
 			break;
-					
 		case CMD_ISO_15693_FIND_AFI:
 			BruteforceIso15693Afi(c->arg[0]);
 			break;	
-			
 		case CMD_ISO_15693_DEBUG:
 			SetDebugIso15693(c->arg[0]);
 			break;
-
 		case CMD_READER_ISO_15693:
 			ReaderIso15693(c->arg[0]);
 			break;

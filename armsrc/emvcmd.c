@@ -8,13 +8,7 @@
 //--------------------------------------------------------------------------------
 //Routines to support EMV transactions
 //--------------------------------------------------------------------------------
-
-#include "mifare.h"
-#include "iso14443a.h"
-#include "emvutil.h"
 #include "emvcmd.h"
-#include "apps.h"
-#include "emvdataels.h"
 
 static emvtags currentcard; //use to hold emv tags for the reader/card during communications
 static tUart Uart;

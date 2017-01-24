@@ -11,15 +11,18 @@
 #ifndef __EMVCMD_H
 #define __EMVCMD_H
 
+
 #include "proxmark3.h"
+#include "common.h"
 #include "apps.h"
 #include "util.h"
 #include "string.h"
-
 #include "iso14443crc.h"
 #include "iso14443a.h"
-#include "common.h"
+#include "mifare.h"
+#include "emvcmd.h"
 #include "emvutil.h"
+#include "emvdataels.h"
 #include "emvcard.h"
 
 #define VISA_DCVV           0

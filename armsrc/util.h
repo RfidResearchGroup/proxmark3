@@ -11,13 +11,10 @@
 #ifndef __UTIL_H
 #define __UTIL_H
 
-#include <stddef.h>
-#include <stdint.h>
 #include "common.h"
-#include "string.h"
-#include "apps.h"
-#include "BigBuf.h"
 #include "proxmark3.h"
+#include "string.h"
+#include "BigBuf.h"
 #include "ticks.h"
 
 #define BYTEx(x, n) (((x) >> (n * 8)) & 0xff )
@@ -42,7 +39,6 @@
 # define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
 #endif
 
-void print_result(char *name, uint8_t *buf, size_t len);
 size_t nbytes(size_t nbits);
 uint32_t SwapBits(uint32_t value, int nrbits);
 uint32_t reflect(uint32_t v, int b);

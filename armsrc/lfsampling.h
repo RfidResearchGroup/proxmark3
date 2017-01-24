@@ -1,5 +1,5 @@
-#ifndef LFSAMPLING_H
-#define LFSAMPLING_H
+#ifndef __LFSAMPLING_H
+#define __LFSAMPLING_H
 
 #include "proxmark3.h"
 #include "apps.h"
@@ -7,6 +7,8 @@
 #include "string.h"
 #include "usb_cdc.h"	// for usb_poll_validate_length
 #include "ticks.h"		// for StartTicks
+
+typedef struct BitstreamOut BitstreamOut;
 
 /**
 * acquisition of T55x7 LF signal. Similart to other LF, but adjusted with @marshmellows thresholds
@@ -72,4 +74,4 @@ sample_config * getSamplingConfig();
 void printConfig();
 
 
-#endif // LFSAMPLING_H
+#endif // __LFSAMPLING_H

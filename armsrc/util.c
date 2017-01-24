@@ -9,28 +9,6 @@
 //-----------------------------------------------------------------------------
 #include "util.h"
 
-void print_result(char *name, uint8_t *buf, size_t len) {
-	uint8_t *p = buf;
-
-	if ( len % 16 == 0 ) {
-		for(; p-buf < len; p += 16)
-			Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-				name,
-				p-buf,
-				len,
-				p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]
-			);
-	}
-	else {
-		for(; p-buf < len; p += 8)
-			Dbprintf("[%s:%d/%d] %02x %02x %02x %02x %02x %02x %02x %02x",
-				name,
-				p-buf,
-				len,
-				p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
-	}
-}
-
 size_t nbytes(size_t nbits) {
 	return (nbits >> 3)+((nbits % 8) > 0);
 }

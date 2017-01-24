@@ -25,8 +25,8 @@
  * \license	 GPLv3 or later
  * 
  */
-#include <stdint.h>
-#include <string.h>
+
+#include "des.h"
 
 const uint8_t sbox[256]  = {
   /* S-box 1 */

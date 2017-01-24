@@ -36,11 +36,7 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "proxmark3.h"
 #include "apps.h"
-#include "util.h"
-#include "string.h"
-#include "common.h"
 #include "cmd.h"
 // Needed for CRC in emulation mode;
 // same construction as in ISO 14443;
@@ -52,7 +48,6 @@
 
 static int timeout = 4096;
 
-
 static int SendIClassAnswer(uint8_t *resp, int respLen, int delay);
 
 //-----------------------------------------------------------------------------
@@ -63,7 +58,7 @@ static struct {
     enum {
         STATE_UNSYNCD,
         STATE_START_OF_COMMUNICATION,
-	STATE_RECEIVING
+		STATE_RECEIVING
     }       state;
     uint16_t    shiftReg;
     int     bitCnt;

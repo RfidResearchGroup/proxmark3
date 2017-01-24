@@ -8,19 +8,7 @@
 //-----------------------------------------------------------------------------
 // various EMV related functions.
 //-----------------------------------------------------------------------------
-#include <stdarg.h>
-#include "proxmark3.h"
-#include "apps.h"
-#include "util.h"
-#include "string.h"
-
-#include "BigBuf.h"
-
-#include "iso14443crc.h"
-#include "iso14443a.h"
 #include "emvutil.h"
-#include "emvdataels.h" //EMV data elements 
-#include "emvtags.h" //EMV card structure
 
 #define DUMP(varname) Dbprintf("%s=", #varname);
 

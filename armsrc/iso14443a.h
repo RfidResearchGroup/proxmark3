@@ -12,24 +12,20 @@
 
 #ifndef __ISO14443A_H
 #define __ISO14443A_H
-#include "common.h"
-#include "proxmark3.h"
-#include "apps.h"
-#include "util.h"
-#include "string.h"
-#include "cmd.h"
-#include "iso14443crc.h"
-#include "mifaresniff.h"
-#include "iso14443b.h"
-#include "crapto1.h"
-#include "mifareutil.h"
-#include "BigBuf.h"
-#include "parity.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include "cmd.h"
+#include "apps.h"
+#include "util.h"
+#include "string.h"
+#include "iso14443crc.h"
+#include "mifaresniff.h"
+#include "crapto1.h"
+#include "mifareutil.h"
+#include "parity.h"
 
 typedef struct {
 	enum {

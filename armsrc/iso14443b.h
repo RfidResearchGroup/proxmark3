@@ -13,8 +13,12 @@
 #ifndef __ISO14443B_H
 #define __ISO14443B_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "proxmark3.h"
-#include "common.h"
+#include "common.h"  	// access to global variable: MF_DBGLEVEL
 #include "apps.h"
 #include "util.h"
 #include "string.h"
@@ -22,11 +26,7 @@
 
 #include "mifare.h"
 #include "protocols.h"
-#include "mifareutil.h"		// access to global variable: MF_DBGLEVEL
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#include "mifareutil.h"	
 
 extern void AppendCrc14443b(uint8_t *data, int len);
 void SendRawCommand14443B_Ex(UsbCommand *c);

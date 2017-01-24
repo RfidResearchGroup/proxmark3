@@ -11,26 +11,25 @@
 #ifndef __APPS_H
 #define __APPS_H
 
-#include <stdint.h>
-#include <stddef.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdlib.h>
-//#include <sys/types.h> 
+#include <stdarg.h>
 #include "common.h"
+#include "usb_cdc.h"
 #include "crc32.h"
 #include "lfdemod.h"
 #include "BigBuf.h"
 #include "fpgaloader.h"
-#include "usb_cdc.h"
 #include "hitag2.h"
 #include "hitagS.h"
 #include "mifare.h"
 #include "pcf7931.h"
-//#include "des.h"
-//#include "aes.h"
 #include "desfire.h"
 #include "iso14443b.h"
 
-extern const uint8_t OddByteParity[256];
 extern int rsamples;   // = 0;
 extern int tracing;    // = TRUE;
 extern uint8_t trigger;
@@ -55,6 +54,7 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci);
 #define MAX_ADC_LF_VOLTAGE 140800
 int AvgAdc(int ch);
 
+void print_result(char *name, uint8_t *buf, size_t len);
 void PrintToSendBuffer(void);
 void ToSendStuffBit(int b);
 void ToSendReset(void);
@@ -105,6 +105,9 @@ void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
 void ReadSTMemoryIso14443b(uint8_t numofblocks);
 void RAMFUNC SnoopIso14443b(void);
 void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
+void SendRawCommand14443B_Ex(UsbCommand *c);
+void AppendCrc14443b(uint8_t* data, int len);
+void ClearFpgaShiftingRegisters(void);
 
 // iso14443a.h
 void RAMFUNC SniffIso14443a(uint8_t param);
@@ -162,7 +165,6 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout);
 size_t CreateAPDU( uint8_t *datain, size_t len, uint8_t *dataout);
 void OnSuccess();
 void OnError(uint8_t reason);
-
 
 // desfire_crypto.h
 void *mifare_cryto_preprocess_data (desfiretag_t tag, void *data, size_t *nbytes, size_t offset, int communication_settings);
@@ -222,5 +224,9 @@ void EMVTransaction(void);
 void EMVgetUDOL(void);
 void EMVloadvalue(uint32_t tag, uint8_t* datain);
 void EMVdumpcard(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

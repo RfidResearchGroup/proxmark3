@@ -12,16 +12,15 @@
 #ifndef __MIFAREUTIL_H
 #define __MIFAREUTIL_H
 
-
 #include "proxmark3.h"
 #include "apps.h"
+#include "parity.h"
 #include "util.h"
 #include "string.h"
 #include "iso14443crc.h"
 #include "iso14443a.h"
 #include "crapto1.h"
-#include "parity.h"
-//#include "des.h"
+#include "des.h"
 
 // mifare authentication
 #define CRYPT_NONE    0
@@ -29,18 +28,6 @@
 #define CRYPT_REQUEST 2
 #define AUTH_FIRST    0	
 #define AUTH_NESTED   2
-
-// reader voltage field detector
-#define MF_MINFIELDV      4000
-
-// debug
-// 0 - no debug messages 1 - error messages 2 - all messages 4 - extended debug mode
-#define MF_DBG_NONE          0
-#define MF_DBG_ERROR         1
-#define MF_DBG_ALL           2
-#define MF_DBG_EXTENDED      4
-
-extern int MF_DBGLEVEL;
 
 //mifare emulator states
 #define MFEMUL_NOFIELD      0

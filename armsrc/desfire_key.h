@@ -3,8 +3,9 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include "iso14443a.h"
 #include "desfire.h"
-#include "iso14443a.h" //test
+//#include "mifare.h" // iso14a_card_select_t struct
 void 		Desfire_des_key_new (const uint8_t value[8], desfirekey_t key);
 void 		Desfire_3des_key_new (const uint8_t value[16], desfirekey_t key);
 void 		Desfire_des_key_new_with_version (const uint8_t value[8], desfirekey_t key);

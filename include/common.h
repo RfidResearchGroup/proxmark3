@@ -18,6 +18,18 @@
 #include <at91sam7s512.h>
 typedef unsigned char byte_t;
 
+// debug
+// 0 - no debug messages 1 - error messages 2 - all messages 4 - extended debug mode
+#define MF_DBG_NONE          0
+#define MF_DBG_ERROR         1
+#define MF_DBG_ALL           2
+#define MF_DBG_EXTENDED      4
+extern int MF_DBGLEVEL;
+
+// reader voltage field detector
+#define MF_MINFIELDV      4000
+
+
 #ifndef MIN
 # define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif

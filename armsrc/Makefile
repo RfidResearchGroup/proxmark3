@@ -19,11 +19,13 @@ APP_CFLAGS	= -DWITH_ISO14443a_StandAlone -DWITH_LF \
 #SRC_LCD = fonts.c LCD.c
 SRC_LF = lfops.c hitag2.c hitagS.c lfsampling.c pcf7931.c lfdemod.c protocols.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
-SRC_ISO14443a = epa.c iso14443a.c mifareutil.c mifarecmd.c mifaresniff.c
+SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c mifaresniff.c epa.c
 SRC_ISO14443b = iso14443b.c
 SRC_CRAPTO1 = crapto1.c crypto1.c des.c aes.c desfire_key.c desfire_crypto.c mifaredesfire.c
 SRC_CRC = iso14443crc.c crc.c crc16.c crc32.c 
 SRC_EMV = tlv.c emvdataels.c emvutil.c emvcmd.c 									 
+SRC_ICLASS = iclass.c optimized_cipher.c
+SRC_LEGIC = legicrf.c legic_prng.c
 
 #the FPGA bitstream files. Note: order matters!
 FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit
@@ -45,28 +47,30 @@ THUMBSRC = start.c \
 	$(SRC_ISO15693) \
 	$(SRC_LF) \
 	$(SRC_ZLIB) \
+	$(SRC_LEGIC) \
+	$(SRC_ISO14443b) \
+	$(SRC_ICLASS) \
 	appmain.c \
 	printf.c \
 	util.c \
 	string.c \
 	usb_cdc.c \
 	cmd.c \
-	ticks.c
+	BigBuf.c \
+	ticks.c \
+	hfsnoop.c
 
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
-	legicrf.c \
-	$(SRC_ISO14443a) \
-	$(SRC_ISO14443b) \
-	$(SRC_CRAPTO1) \
 	$(SRC_CRC) \
-	legic_prng.c \
-	iclass.c \
-	BigBuf.c \
-	optimized_cipher.c \
-	hfsnoop.c \
+	$(SRC_CRAPTO1) \
+	$(SRC_ISO14443a) \
 	parity.c
-#  $(SRC_EMV)
+#	$(SRC_ISO14443b) \
+#	$(SRC_ICLASS) \
+#  $(SRC_EMV) \
+	#BigBuf.c \
+
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common

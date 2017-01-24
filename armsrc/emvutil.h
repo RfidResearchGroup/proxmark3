@@ -11,12 +11,21 @@
 //-----------------------------------------------------------------------------
 #ifndef __EMVUTIL_H
 #define __EMVUTIL_H
+
 #include <stdarg.h>
 #include <stdint.h>
-#include "iso14443a.h"
+#include "proxmark3.h"
+#include "apps.h"
 #include "tlv.h"
-#include "emvtags.h"
-#include "emvdataels.h"
+#include "util.h"
+#include "string.h"
+#include "BigBuf.h"
+#include "iso14443crc.h"
+#include "iso14443a.h"
+#include "emvutil.h"
+#include "emvdataels.h" //EMV data elements 
+#include "emvtags.h" //EMV card structure
+
 // mifare 4bit card answers
 // reader voltage field detector
 #define EMV_MINFIELDV      4000
