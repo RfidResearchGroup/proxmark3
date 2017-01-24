@@ -9,16 +9,7 @@
 // Routines to load the FPGA image, and then to configure the FPGA's major
 // mode once it is configured.
 //-----------------------------------------------------------------------------
-
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
 #include "fpgaloader.h"
-#include "proxmark3.h"
-#include "util.h"
-#include "string.h"
-#include "BigBuf.h"
-#include "zlib.h"
 
 extern void Dbprintf(const char *fmt, ...);
 

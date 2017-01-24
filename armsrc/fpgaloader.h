@@ -9,6 +9,15 @@
 // Routines to load the FPGA image, and then to configure the FPGA's major
 // mode once it is configured.
 //-----------------------------------------------------------------------------
+#ifndef __FPGALOADER_H
+#define __FPGALOADER_H
+
+#include "common.h"		// standard definitions
+#include "proxmark3.h"	// common area
+//#include "util.h"
+#include "string.h"
+#include "BigBuf.h"		// bigbuf mem
+#include "zlib.h"		// uncompress
 
 void FpgaSendCommand(uint16_t cmd, uint16_t v);
 void FpgaWriteConfWord(uint8_t v);
@@ -72,3 +81,5 @@ void SetAdcMuxFor(uint32_t whichGpio);
 #define FPGA_HF_ISO14443A_TAGSIM_MOD				(2<<0)
 #define FPGA_HF_ISO14443A_READER_LISTEN				(3<<0)
 #define FPGA_HF_ISO14443A_READER_MOD				(4<<0)
+
+#endif
