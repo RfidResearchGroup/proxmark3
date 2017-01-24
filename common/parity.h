@@ -9,23 +9,24 @@
 #ifndef __PARITY_H
 #define __PARITY_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 extern const uint8_t OddByteParity[256];
+extern const uint8_t EvenByteParity[256];
 
 static inline uint8_t oddparity8(uint8_t bt)
 {
 	return OddByteParity[bt];
 }
 
-
-extern const uint8_t EvenByteParity[256];
-
 static inline uint8_t evenparity8(const uint8_t bt)
 {
 	return EvenByteParity[bt];
 }
-
 
 static inline uint8_t evenparity32(uint32_t x) 
 {
@@ -34,5 +35,8 @@ static inline uint8_t evenparity32(uint32_t x)
 	return EvenByteParity[x & 0xff];
 }
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __PARITY_H */

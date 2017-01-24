@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include "aes.h"
+#include "mifare.h"
 
 #define MAX_CRYPTO_BLOCK_SIZE 16
 /* Mifare DESFire EV1 Application crypto operations */

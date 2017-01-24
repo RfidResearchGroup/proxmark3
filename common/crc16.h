@@ -9,7 +9,7 @@
 #define __CRC16_H
 
 #include <stdint.h>
-#include "util.h"
+#include "util.h"   // SwapBits
 
 unsigned short update_crc16(unsigned short crc, unsigned char c);
 uint16_t crc16(uint8_t const *message, int length, uint16_t remainder, uint16_t polynomial);

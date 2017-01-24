@@ -9,9 +9,7 @@
 #ifndef __CRC_H
 #define __CRC_H
 
-#include <stdint.h>		//uint32+
-#include <stdbool.h>	//bool
-#include <stddef.h>
+#include "common.h"	//stdint, stddef, stdbool
 #include "util.h"	// reflect, bswap_16
 
 typedef struct crc {
