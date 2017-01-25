@@ -168,7 +168,7 @@ function main(args)
 			-- or actually blockNo and keytype
 			-- just try default for now
 			if sector == 1 and targetkeytype == 0 then
-				keyA = key
+				keyA = tonumber(key)
 			else
 				local err, foundkey = core.hardnested(blockno, keytype, key, trgblockno, tostring(targetkeytype), trgkey, 0,0,0,0)
 				foundkey = foundkey or ""
