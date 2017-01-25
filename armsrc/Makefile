@@ -48,26 +48,24 @@ THUMBSRC = start.c \
 	$(SRC_LF) \
 	$(SRC_ZLIB) \
 	$(SRC_LEGIC) \
-	$(SRC_ISO14443b) \
-	$(SRC_ICLASS) \
 	appmain.c \
 	printf.c \
 	util.c \
 	string.c \
-	usb_cdc.c \
-	cmd.c \
 	BigBuf.c \
 	ticks.c \
 	hfsnoop.c
 
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
-	$(SRC_CRC) \
-	$(SRC_CRAPTO1) \
 	$(SRC_ISO14443a) \
+	$(SRC_ISO14443b) \
+	$(SRC_CRAPTO1) \
+	$(SRC_CRC) \
+	$(SRC_ICLASS) \
+	usb_cdc.c \
+	cmd.c \
 	parity.c
-#	$(SRC_ISO14443b) \
-#	$(SRC_ICLASS) \
 #  $(SRC_EMV) \
 	#BigBuf.c \
 
