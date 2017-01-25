@@ -12,5 +12,5 @@ install:
 before_build:
  - make clean
  
- build:
+build:
   - make all
