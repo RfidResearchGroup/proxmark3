@@ -1,0 +1,16 @@
+os: Windows Server 2012
+platform: x64
+
+branches:
+  only:
+    - master
+
+install:
+ - cinst make
+ - cinst mingw
+
+before_build:
+ - make clean
+ 
+ build:
+  - make all
