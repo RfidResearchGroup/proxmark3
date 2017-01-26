@@ -1,6 +1,6 @@
 #include "random.h"
 
-static uint64_t next_random = 1;
+ uint64_t next_random = 1;
 
 /* Generates a (non-cryptographically secure) 32-bit random number.
  *
@@ -13,7 +13,9 @@ uint32_t prand() {
 	if (next_random == 1)
 		next_random = GetTickCount();
 
-	next_random = next_random * 6364136223846793005 + 1;
+	next_random *= 6364136223846793005;
+	next_random += 1;
+	
 	return (uint32_t)(next_random >> 32) % 0xffffffff;
 }
 
