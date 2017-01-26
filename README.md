@@ -226,7 +226,7 @@ You only need devkitARM, nothing more (no extra lib or anything else) to compile
 `export PATH=$PATH:$DEVKITARM/bin`
 
 ### 6. Install Strawberry Perl
-Download and install: http://strawberry-perl.googlecode.com/files/strawberry-perl-5.10.1.1.msi
+Download and install: https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/strawberry-perl/strawberry-perl-5.10.1.3.msi
 
 ### 7. Build and run
 Download and install Git for Windows: https://git-scm.com/download/win
