@@ -54,11 +54,11 @@ else ifeq ($(platform),Darwin)
 	ifneq (, $(findstring moc 5,$(qtplatform)))
 		# use this if you have QT5 installed.
 		CFLAGS += -I/usr/include/malloc/ -I/usr/local/opt/readline/include -I/usr/local/opt/qt5/include 
-		LDLIBS = -L/opt/local/lib -L/usr/local/opt/readline/lib -L/usr/local/opt/qt5/lib -lreadline -lpthread -lm
+		LDLIBS = -L/usr/local/opt/readline/lib -L/usr/local/opt/qt5/lib -lreadline -lpthread -lm
 	else
 		# Assuming you have QT4 installed.
 		CFLAGS += -I/usr/include/malloc/ -I/usr/local/opt/readline/include
-		LDLIBS = -L/opt/local/lib -L/usr/local/opt/readline/lib -lreadline -lpthread -lm
+		LDLIBS = -L/usr/local/opt/readline/lib -lreadline -lpthread -lm
 	endif
 
     LUAPLATFORM = macosx
