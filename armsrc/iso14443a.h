@@ -26,6 +26,7 @@ extern "C" {
 #include "crapto1.h"
 #include "mifareutil.h"
 #include "parity.h"
+#include "random.h"
 
 typedef struct {
 	enum {

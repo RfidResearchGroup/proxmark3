@@ -66,14 +66,14 @@ typedef enum ISO14B_COMMAND {
 //-----------------------------------------------------------------------------
 typedef struct {
   uint32_t cuid;
-  uint8_t  sector;
-  uint8_t  keytype;
   uint32_t nonce;
   uint32_t ar;
   uint32_t nr;
   uint32_t nonce2;
   uint32_t ar2;
   uint32_t nr2;
+  uint8_t  sector;
+  uint8_t  keytype;
 } nonces_t;
 
 #endif // _MIFARE_H_

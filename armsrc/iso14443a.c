@@ -849,6 +849,8 @@ bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
 //-----------------------------------------------------------------------------
 void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 
+	#define ATTACK_KEY_COUNT 8 // keep same as define in cmdhfmf.c -> readerAttack()
+	
 	uint8_t sak = 0;
 	uint32_t cuid = 0;			
 	uint32_t nonce = 0;
@@ -866,7 +868,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 	uint8_t cardAUTHSC = 0;
 	uint8_t cardAUTHKEY = 0xff;  // no authentication
 	// allow collecting up to 8 sets of nonces to allow recovery of up to 8 keys
-	#define ATTACK_KEY_COUNT 8 // keep same as define in cmdhfmf.c -> readerAttack()
+
 	nonces_t ar_nr_resp[ATTACK_KEY_COUNT*2]; // for 2 separate attack types (nml, moebius)
 	memset(ar_nr_resp, 0x00, sizeof(ar_nr_resp));
 
@@ -972,16 +974,17 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 	response3a[0] = sak & 0xFB;
 	ComputeCrc14443(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
 
-	uint8_t response5[] = { 0x01, 0x01, 0x01, 0x01 }; 				// Very random tag nonce
+	// Tag NONCE.
+	uint8_t response5[4]; 
+	nonce = prand();
+	num_to_bytes(nonce, 4, response5);
+	
 	uint8_t response6[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 }; 	// dummy ATS (pseudo-ATR), answer to RATS: 
 	// Format byte = 0x58: FSCI=0x08 (FSC=256), TA(1) and TC(1) present, 
 	// TA(1) = 0x80: different divisors not supported, DR = 1, DS = 1
 	// TB(1) = not present. Defaults: FWI = 4 (FWT = 256 * 16 * 2^4 * 1/fc = 4833us), SFGI = 0 (SFG = 256 * 16 * 2^0 * 1/fc = 302us)
 	// TC(1) = 0x02: CID supported, NAD not supported
 	ComputeCrc14443(CRC_14443_A, response6, 4, &response6[4], &response6[5]);
-
-	// the randon nonce
-	nonce = bytes_to_num(response5, 4);	
 	
 	// Prepare GET_VERSION (different for UL EV-1 / NTAG)
 	// uint8_t response7_EV1[] = {0x00, 0x04, 0x03, 0x01, 0x01, 0x00, 0x0b, 0x03, 0xfd, 0xf7};  //EV1 48bytes VERSION.
@@ -1058,7 +1061,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 		}
 		
 		// incease nonce at every command recieved
-		nonce++;
+		nonce = prand();
 		num_to_bytes(nonce, 4, response5);
 		
 		p_response = NULL;
@@ -1173,8 +1176,16 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 
 			// Collect AR/NR per keytype & sector
 			if ( (flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK ) {
+				
 					for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
-						if ( ar_nr_collected[i+mM]==0 || ((cardAUTHSC == ar_nr_resp[i+mM].sector) && (cardAUTHKEY == ar_nr_resp[i+mM].keytype) && (ar_nr_collected[i+mM] > 0)) ) {
+						
+						if ( ar_nr_collected[i+mM] == 0 || (
+									(cardAUTHSC == ar_nr_resp[i+mM].sector) && 
+									(cardAUTHKEY == ar_nr_resp[i+mM].keytype) &&
+									(ar_nr_collected[i+mM] > 0)
+								)
+							) {
+								
 							// if first auth for sector, or matches sector and keytype of previous auth
 							if (ar_nr_collected[i+mM] < 2) {
 								// if we haven't already collected 2 nonces for this sector
@@ -1360,7 +1371,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 	BigBuf_free_keep_EM();
 	LED_A_OFF();
 	
-		if(flags & FLAG_NR_AR_ATTACK && MF_DBGLEVEL >= 1) {
+	if(flags & FLAG_NR_AR_ATTACK && MF_DBGLEVEL >= 1) {
 		for ( uint8_t	i = 0; i < ATTACK_KEY_COUNT; i++) {
 			if (ar_nr_collected[i] == 2) {
 				Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i<ATTACK_KEY_COUNT/2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
@@ -2472,10 +2483,14 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	uint8_t rUIDBCC2[] = {0xde, 0xad, 0xbe, 0xaf, 0x62}; 
 	uint8_t rUIDBCC3[] = {0xde, 0xad, 0xbe, 0xaf, 0x62};
 
-	uint8_t rAUTH_NT[] = {0x01, 0x01, 0x01, 0x01};	// very random nonce
+	// TAG Nonce - Authenticate response
+	uint8_t rAUTH_NT[4];
+	uint32_t nonce = prand();
+	num_to_bytes(nonce, 4, rAUTH_NT);
+	
 	// uint8_t rAUTH_NT[] = {0x55, 0x41, 0x49, 0x92};// nonce from nested? why this?
 	uint8_t rAUTH_AT[] = {0x00, 0x00, 0x00, 0x00};
-		
+	
 	// Here, we collect CUID, NT, NR, AR, CUID2, NT2, NR2, AR2
 	// This can be used in a reader-only attack.
 	nonces_t ar_nr_resp[ATTACK_KEY_COUNT*2]; // for 2 separate attack types (nml, moebius)
@@ -2490,9 +2505,6 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	uint8_t	mM = 0; // moebius_modifier for collection storage
 	bool doBufResetNext = false;
 
-	// Authenticate response - nonce
-	uint32_t nonce = bytes_to_num(rAUTH_NT, 4);
-	
 	// -- Determine the UID
 	// Can be set from emulator memory or incoming data
 	// Length: 4,7,or 10 bytes
@@ -2628,7 +2640,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 			crypto1_destroy(pcs);
 			cardAUTHKEY = 0xff;
 			LEDsoff();
-			nonce++; 
+			nonce = prand(); 
 			continue;
 		}
 		
@@ -2743,7 +2755,13 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				}
 
 				for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
-					if ( ar_nr_collected[i+mM]==0 || ((cardAUTHSC == ar_nr_resp[i+mM].sector) && (cardAUTHKEY == ar_nr_resp[i+mM].keytype) && (ar_nr_collected[i+mM] > 0)) ) {
+					
+					if ( ar_nr_collected[i+mM] == 0 || (
+								(cardAUTHSC == ar_nr_resp[i+mM].sector) && 
+								(cardAUTHKEY == ar_nr_resp[i+mM].keytype) && 
+								(ar_nr_collected[i+mM] > 0)
+							)
+						) {
 
 						// if first auth for sector, or matches sector and keytype of previous auth
 						if (ar_nr_collected[i+mM] < 2) {
@@ -2788,7 +2806,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 										// if we've collected all the nonces we need - finish.
 
 										if (nonce1_count == moebius_n_count) {
-											cmd_send(CMD_ACK,CMD_SIMULATE_MIFARE_CARD,0,0,&ar_nr_resp,sizeof(ar_nr_resp));
+											cmd_send(CMD_ACK, CMD_SIMULATE_MIFARE_CARD, 0, 0, &ar_nr_resp, sizeof(ar_nr_resp));
 											nonce1_count = 0;
 											nonce2_count = 0;
 											moebius_n_count = 0;
@@ -3058,13 +3076,13 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 	// Interactive mode flag, means we need to send ACK
 	/*
-	if((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE) {
+	if((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE && flags & FLAG_NR_AR_ATTACK == FLAG_NR_AR_ATTACK) {
 		// May just aswell send the collected ar_nr in the response aswell
 		uint8_t len = ar_nr_collected * 4 * 4;
 		cmd_send(CMD_ACK, CMD_SIMULATE_MIFARE_CARD, len, 0, &ar_nr_responses, len);
 	}
+	*/
 	
-   */
 	if( ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK ) && MF_DBGLEVEL >= 1 ) {
 		for ( uint8_t	i = 0; i < ATTACK_KEY_COUNT; i++) {
 			if (ar_nr_collected[i] == 2) {
@@ -3093,10 +3111,10 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 						);
 			}
 		}
-	}
+	}	
 	
-	
-	if (MF_DBGLEVEL >= 1) Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
+	if (MF_DBGLEVEL >= 1) 
+		Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
 	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();

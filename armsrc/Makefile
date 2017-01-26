@@ -54,7 +54,8 @@ THUMBSRC = start.c \
 	string.c \
 	BigBuf.c \
 	ticks.c \
-	hfsnoop.c
+	hfsnoop.c \
+	random.c
 
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
