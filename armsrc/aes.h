@@ -3,6 +3,8 @@
 * your source which uses these given APIs. (This source is kept under
 * public domain)
 */
+#ifndef __AES_H
+#define __AES_H
 
 // AES context structure
 typedef struct {
@@ -28,3 +30,5 @@ typedef struct {
 int AesCtxIni(AesCtx *pCtx, unsigned char *pIV, unsigned char *pKey, unsigned int KeyLen, unsigned char Mode);
 int AesEncrypt(AesCtx *pCtx, unsigned char *pData, unsigned char *pCipher, unsigned int DataLen);
 int AesDecrypt(AesCtx *pCtx, unsigned char *pCipher, unsigned char *pData, unsigned int CipherLen);
+
+#endif

@@ -7,6 +7,8 @@
 //-----------------------------------------------------------------------------
 // High frequency ISO14443A commands
 //-----------------------------------------------------------------------------
+#ifndef __MIFARE_HOST_H
+#define __MIFARE_HOST_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,13 +17,11 @@
 #include <pthread.h>
 
 #include "proxmark3.h"	// time_t
-//#include "radixsort.h"
 #include "common.h"
 #include "cmdmain.h"
 #include "ui.h"
 #include "data.h"
 #include "util.h"
-//#include "nonce2key/nonce2key.h"
 #include "nonce2key/crapto1.h"
 #include "iso14443crc.h"
 #include "protocols.h"
@@ -84,3 +84,4 @@ int isBlockTrailer(int blockN);
 int loadTraceCard(uint8_t *tuid, uint8_t uidlen);
 int saveTraceCard(void);
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len);
+#endif

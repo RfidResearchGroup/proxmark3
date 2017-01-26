@@ -7,6 +7,8 @@
 //-----------------------------------------------------------------------------
 // utilities
 //-----------------------------------------------------------------------------
+#ifndef __UTIL_H_
+#define __UTIL_H_
 
 #include <stdio.h>
 #include <stdint.h>		//included in data.h
@@ -141,3 +143,5 @@ void rol(uint8_t *data, const size_t len);
 uint32_t SwapBits(uint32_t value, int nrbits);
 uint32_t reflect(uint32_t v, int b);
 uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
+
+#endif

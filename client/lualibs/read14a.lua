@@ -86,7 +86,7 @@ local function sendToDevice(command, ignoreresponse)
 	end
 	if ignoreresponse then return nil,nil end
 
-	local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
+	local response = core.WaitForResponseTimeout(cmds.CMD_ACK, TIMEOUT)
 	return response,nil
 end
 

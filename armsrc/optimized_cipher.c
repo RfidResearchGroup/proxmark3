@@ -98,7 +98,6 @@ uint8_t xopt__select(bool x, bool y, uint8_t r)
 
 void opt_successor(const uint8_t* k, State *s, bool y, State* successor)
 {
-
 	uint8_t Tt = 1 & opt_T(s);
 
 	successor->t = (s->t >> 1);
@@ -212,26 +211,26 @@ void opt_doReaderMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4])
 {
 	static uint8_t cc_nr[12];
 
-	opt_reverse_arraybytecpy(cc_nr, cc_nr_p,12);
+	opt_reverse_arraybytecpy(cc_nr, cc_nr_p, 12);
 	uint8_t dest []= {0,0,0,0,0,0,0,0};
-	opt_MAC(div_key_p,cc_nr, dest);
+	opt_MAC(div_key_p, cc_nr, dest);
 	//The output MAC must also be reversed
-	opt_reverse_arraybytecpy(mac, dest,4);
+	opt_reverse_arraybytecpy(mac, dest, 4);
 	return;
 }
 void opt_doTagMAC(uint8_t *cc_p, const uint8_t *div_key_p, uint8_t mac[4])
 {
 	static uint8_t cc_nr[8+4+4];
-	opt_reverse_arraybytecpy(cc_nr, cc_p,12);
+	opt_reverse_arraybytecpy(cc_nr, cc_p, 12);
 	State _init  =  {
 			((div_key_p[0] ^ 0x4c) + 0xEC) & 0xFF,// l
 			((div_key_p[0] ^ 0x4c) + 0x21) & 0xFF,// r
 			0x4c, // b
 			0xE012 // t
 			};
-	opt_suc(div_key_p,&_init,cc_nr, 12,true);
+	opt_suc(div_key_p, &_init, cc_nr, 12, true);
 	uint8_t dest []= {0,0,0,0};
-	opt_output(div_key_p,&_init, dest);
+	opt_output(div_key_p, &_init, dest);
 	//The output MAC must also be reversed
 	opt_reverse_arraybytecpy(mac, dest,4);
 	return;
@@ -248,14 +247,14 @@ void opt_doTagMAC(uint8_t *cc_p, const uint8_t *div_key_p, uint8_t mac[4])
 State opt_doTagMAC_1(uint8_t *cc_p, const uint8_t *div_key_p)
 {
 	static uint8_t cc_nr[8];
-	opt_reverse_arraybytecpy(cc_nr, cc_p,8);
+	opt_reverse_arraybytecpy(cc_nr, cc_p, 8);
 	State _init  =  {
 			((div_key_p[0] ^ 0x4c) + 0xEC) & 0xFF,// l
 			((div_key_p[0] ^ 0x4c) + 0x21) & 0xFF,// r
 			0x4c, // b
 			0xE012 // t
 			};
-	opt_suc(div_key_p,&_init,cc_nr, 8,false);
+	opt_suc(div_key_p, &_init, cc_nr, 8, false);
 	return _init;
 }
 /**
@@ -271,10 +270,10 @@ void opt_doTagMAC_2(State _init,  uint8_t* nr, uint8_t mac[4], const uint8_t* di
 {
 	static uint8_t _nr [4];
 	opt_reverse_arraybytecpy(_nr, nr, 4);
-	opt_suc(div_key_p,&_init,_nr, 4, true);
-	//opt_suc(div_key_p,&_init,nr, 4, false);
+	opt_suc(div_key_p, &_init,_nr, 4, true);
+	//opt_suc(div_key_p, &_init,nr, 4, false);
 	uint8_t dest []= {0,0,0,0};
-	opt_output(div_key_p,&_init, dest);
+	opt_output(div_key_p, &_init, dest);
 	//The output MAC must also be reversed
 	opt_reverse_arraybytecpy(mac, dest,4);
 	return;

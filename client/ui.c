@@ -25,7 +25,10 @@ void PrintAndLog(char *fmt, ...)
 	va_list argptr, argptr2;
 	static FILE *logfile = NULL;
 	static int logging = 1;
-
+	// time_t current_time;
+	// struct tm* tm_info;
+	// char buffer[26] = {0};
+		
 	// lock this section to avoid interlacing prints from different threats
 	pthread_mutex_lock(&print_lock);
   
@@ -63,6 +66,16 @@ void PrintAndLog(char *fmt, ...)
 	}
 	
 	if (logging && logfile) {
+
+		/*
+		// Obtain current time.
+		current_time = time(NULL);
+		// Convert to local time format.
+		tm_info = localtime(&current_time);		
+		strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+		fprintf(logfile, "%s  ", buffer);
+		*/
+		
 		vfprintf(logfile, fmt, argptr2);
 		fprintf(logfile,"\n");
 		fflush(logfile);
