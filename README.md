@@ -183,8 +183,7 @@ Follow those instructions to get it up and running.  No need for the old proxspa
 [1.6.0] How to connect: https://youtu.be/0ZS2t5C-caI
 [1.6.1] How to flash:   https://www.youtube.com/watch?v=WXouhuGYEiw
 
-Recommendations:
-Use only container tag [1.6.4]
+Recommendations:  Use only latest container.
 
 
 ## Building on Windows
