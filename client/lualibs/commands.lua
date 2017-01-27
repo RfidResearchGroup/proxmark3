@@ -62,6 +62,7 @@ local _commands = {
 	CMD_AWID_DEMOD_FSK =                                                 0x0221,
 	CMD_VIKING_CLONE_TAG =                                               0x0222,
 	CMD_T55XX_WAKEUP =	                                              	 0x0224,
+	CMD_COTAG =															 0x0225,
 	
 	--/* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 

@@ -40,6 +40,7 @@
 #include "cmdlfvisa2000.h"  // for VISA2000 menu
 #include "cmdlfnoralsy.h"	// for NORALSY meny
 #include "cmdlffdx.h"		// for FDX-B meny
+#include "cmdlfcotag.h"		// for COTAG meny
 
 #define T55XX_WRITE_TIMEOUT	1500
 
