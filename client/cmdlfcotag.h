@@ -11,6 +11,7 @@
 #ifndef CMDLFCOTAG_H__
 #define CMDLFCOTAG_H__
 
+#include "util.h"       // FALSE / TRUE
 #include "proxmark3.h"  // Definitions, USB controls, etc
 #include "cmddata.h"	// getSamples
 #include "cmdparser.h"  // CmdsParse, CmdsHelp
