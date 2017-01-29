@@ -24,19 +24,20 @@ int usage_hf14_mifare(void){
 	return 0;
 }
 int usage_hf14_mf1ksim(void){
-	PrintAndLog("Usage:  hf mf sim  [h] u <uid (8,14,20 hex symbols)> n <numreads> i x");
+	PrintAndLog("Usage:  hf mf sim [h] u <uid> n <numreads> [i] [x] [e] [v]");
 	PrintAndLog("options:");
 	PrintAndLog("      h    this help");
 	PrintAndLog("      u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b from emulator memory will be used");
 	PrintAndLog("      n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
 	PrintAndLog("      i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
-	PrintAndLog("      x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a legitimate reader, fishes out the key(s)");
-	PrintAndLog("      e    (Optional) Fill simulator keys from what we crack");
-	PrintAndLog("      v    (Optional) Show maths used for cracking reader. Useful for debugging.");
+	PrintAndLog("      x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a reader");
+	PrintAndLog("      e    (Optional) Fill simulator keys from found keys");
+	PrintAndLog("      v    (Optional) Verbose");
 	PrintAndLog("samples:");
 	PrintAndLog("           hf mf sim u 0a0a0a0a");
 	PrintAndLog("           hf mf sim u 11223344556677");
 	PrintAndLog("           hf mf sim u 112233445566778899AA");	
+	PrintAndLog("           hf mf sim u 11223344 i x");	
 	return 0;
 }
 int usage_hf14_dbg(void){
@@ -1381,7 +1382,8 @@ void readerAttack(nonces_t data[], bool setEmulatorMem, bool verbose) {
 		k_sector[i].foundKey[1] = FALSE;
 	}
 
-	printf("enter reader attack\n");
+	if (verbose) printf("enter Moebius attack (mfkey32v2) \n");
+	
 	for (uint8_t i = 0; i < ATTACK_KEY_COUNT; ++i) {
 		
 		// if no-collected data 
@@ -1419,7 +1421,7 @@ void readerAttack(nonces_t data[], bool setEmulatorMem, bool verbose) {
 			uint8_t sectorNum = data[i+ATTACK_KEY_COUNT].sector;
 			uint8_t keyType = data[i+ATTACK_KEY_COUNT].keytype;
 
-			PrintAndLog("Found Key%s for sector %02d: [%012"llx"]"
+			PrintAndLog("Reader is trying authenticate with: Key %s, sector %02d: [%012"llx"]"
 				, keyType ? "B" : "A"
 				, sectorNum
 				, key
@@ -1528,7 +1530,6 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 
 		while( !ukbhit() ){
 			if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
-
 			if ( !(flags & FLAG_NR_AR_ATTACK) ) break;
 			if ( (resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD ) break;
 
@@ -1537,7 +1538,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 		}
 		
 		if (k_sector != NULL) {
-			printKeyTable(k_sectorsCount, k_sector );
+			printKeyTable(k_sectorsCount, k_sector);
 			free(k_sector);
 			k_sector = NULL;
 		}

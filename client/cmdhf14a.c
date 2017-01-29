@@ -130,9 +130,9 @@ char* getTagInfo(uint8_t uid) {
 int usage_hf_14a_sim(void) {
 //	PrintAndLog("\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
 	PrintAndLog("\n Emulating ISO/IEC 14443 type A tag with 4,7 byte UID\n");
-	PrintAndLog("Usage: hf 14a sim t <type> u <uid> x");
-	PrintAndLog("  Options : ");
-	PrintAndLog("    h     : this help");
+	PrintAndLog("usage: hf 14a sim [h] t <type> u <uid> [x] [e] [v]");
+	PrintAndLog("options: ");
+	PrintAndLog("    h     : This help");
 	PrintAndLog("    t     : 1 = MIFARE Classic");
 	PrintAndLog("            2 = MIFARE Ultralight");
 	PrintAndLog("            3 = MIFARE Desfire");
@@ -142,12 +142,14 @@ int usage_hf_14a_sim(void) {
 	PrintAndLog("            7 = AMIIBO (NTAG 215),  pack 0x8080");
 //	PrintAndLog("    u     : 4, 7 or 10 byte UID");
 	PrintAndLog("    u     : 4, 7 byte UID");
-	PrintAndLog("    x     : (Optional) performs the 'reader attack', nr/ar attack against a legitimate reader");
-	PrintAndLog("    v     : (Optional) show maths used for cracking reader. Useful for debugging.");
-	PrintAndLog("\n   sample : hf 14a sim t 1 u 11223344 x");
-	PrintAndLog("          : hf 14a sim t 1 u 11223344");
-	PrintAndLog("          : hf 14a sim t 1 u 11223344556677");
-//	PrintAndLog("          : hf 14a sim t 1 u 11223445566778899AA\n");
+	PrintAndLog("    x     : (Optional) Performs the 'reader attack', nr/ar attack against a reader");
+	PrintAndLog("    e     : (Optional) Fill simulator keys from found keys");	
+	PrintAndLog("    v     : (Optional) Verbose");
+	PrintAndLog("samples:");
+	PrintAndLog("          hf 14a sim t 1 u 11223344 x");
+	PrintAndLog("          hf 14a sim t 1 u 11223344");
+	PrintAndLog("          hf 14a sim t 1 u 11223344556677");
+//	PrintAndLog("          hf 14a sim t 1 u 11223445566778899AA\n");
 	return 0;
 }
 int usage_hf_14a_sniff(void){
@@ -447,7 +449,8 @@ int CmdHF14ASim(const char *Cmd) {
 	uint8_t uid[10] = {0,0,0,0,0,0,0,0,0,0};
 	int uidlen = 0;
 	bool useUIDfromEML = TRUE;
-	bool verbose = false;
+	bool setEmulatorMem = FALSE;
+	bool verbose = FALSE;
 
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
@@ -459,7 +462,7 @@ int CmdHF14ASim(const char *Cmd) {
 				// Retrieve the tag type
 				tagtype = param_get8ex(Cmd, cmdp+1, 0, 10);
 				if (tagtype == 0)
-					errors = true; 
+					errors = TRUE; 
 				cmdp += 2;
 				break;
 			case 'u':
@@ -488,6 +491,11 @@ int CmdHF14ASim(const char *Cmd) {
 				flags |= FLAG_NR_AR_ATTACK;
 				cmdp++;
 				break;
+			case 'e':
+			case 'E':
+				setEmulatorMem = TRUE;
+				cmdp++;
+				break;				
 			default:
 				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
 				errors = true;
@@ -502,8 +510,6 @@ int CmdHF14ASim(const char *Cmd) {
 	if ( useUIDfromEML ) 
 		flags |= FLAG_UID_IN_EMUL;
 	
-	PrintAndLog("Press pm3-button to abort simulation");
-	
 	UsbCommand c = {CMD_SIMULATE_TAG_ISO_14443a,{ tagtype, flags, 0 }};	
 	memcpy(c.d.asBytes, uid, uidlen>>1);
 	clearCommandBuffer();
@@ -511,15 +517,15 @@ int CmdHF14ASim(const char *Cmd) {
 
 	nonces_t data[ATTACK_KEY_COUNT*2];
 	UsbCommand resp;
-
+	
+	PrintAndLog("Press pm3-button to abort simulation");
 	while( !ukbhit() ){
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
-
 		if ( !(flags & FLAG_NR_AR_ATTACK) ) break;
 		if ( (resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD ) break;
 			
 		memcpy( data, resp.d.asBytes, sizeof(data) );
-		readerAttack(data, TRUE, verbose);
+		readerAttack(data, setEmulatorMem, verbose);
 	}
 	return 0;
 }
