@@ -15,7 +15,7 @@
 
 #include "common.h"
 #include "ticks.h"
-
+void fast_prand();
+void fast_prandEx(uint32_t seed);
 uint32_t prand();
-
 #endif

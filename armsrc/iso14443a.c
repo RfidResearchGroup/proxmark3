@@ -850,6 +850,8 @@ bool prepare_allocated_tag_modulation(tag_response_info_t* response_info) {
 void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 
 	#define ATTACK_KEY_COUNT 8 // keep same as define in cmdhfmf.c -> readerAttack()
+	// init pseudorand
+	fast_prand();
 	
 	uint8_t sak = 0;
 	uint32_t cuid = 0;			
@@ -869,7 +871,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 	uint8_t cardAUTHKEY = 0xff;  // no authentication
 	// allow collecting up to 8 sets of nonces to allow recovery of up to 8 keys
 
-	nonces_t ar_nr_resp[ATTACK_KEY_COUNT*2]; // for 2 separate attack types (nml, moebius)
+	nonces_t ar_nr_resp[ATTACK_KEY_COUNT*2]; // for 2 separate attack types (std, moebius)
 	memset(ar_nr_resp, 0x00, sizeof(ar_nr_resp));
 
 	uint8_t ar_nr_collected[ATTACK_KEY_COUNT*2]; // for 2nd attack type (moebius)
@@ -976,8 +978,6 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 
 	// Tag NONCE.
 	uint8_t response5[4]; 
-	nonce = prand();
-	num_to_bytes(nonce, 4, response5);
 	
 	uint8_t response6[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 }; 	// dummy ATS (pseudo-ATR), answer to RATS: 
 	// Format byte = 0x58: FSCI=0x08 (FSC=256), TA(1) and TC(1) present, 
@@ -1187,57 +1187,53 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 							) {
 								
 							// if first auth for sector, or matches sector and keytype of previous auth
-							if (ar_nr_collected[i+mM] < 2) {
-								// if we haven't already collected 2 nonces for this sector
-								if (ar_nr_resp[ar_nr_collected[i+mM]].ar != ar) {
-									// Avoid duplicates... probably not necessary, ar should vary. 
-									if (ar_nr_collected[i+mM]==0) {
-										// first nonce collect
-										ar_nr_resp[i+mM].cuid = cuid;
-										ar_nr_resp[i+mM].sector = cardAUTHSC;
-										ar_nr_resp[i+mM].keytype = cardAUTHKEY;
-										ar_nr_resp[i+mM].nonce = nonce;
-										ar_nr_resp[i+mM].nr = nr;
-										ar_nr_resp[i+mM].ar = ar;
-										nonce1_count++;
-										// add this nonce to first moebius nonce
-										ar_nr_resp[i+ATTACK_KEY_COUNT].cuid = cuid;
-										ar_nr_resp[i+ATTACK_KEY_COUNT].sector = cardAUTHSC;
-										ar_nr_resp[i+ATTACK_KEY_COUNT].keytype = cardAUTHKEY;
-										ar_nr_resp[i+ATTACK_KEY_COUNT].nonce = nonce;
-										ar_nr_resp[i+ATTACK_KEY_COUNT].nr = nr;
-										ar_nr_resp[i+ATTACK_KEY_COUNT].ar = ar;
-										ar_nr_collected[i+ATTACK_KEY_COUNT]++;
-									} else { // second nonce collect (std and moebius)
-										ar_nr_resp[i+mM].nonce2 = nonce;
-										ar_nr_resp[i+mM].nr2 = nr;
-										ar_nr_resp[i+mM].ar2 = ar;
-										if (!gettingMoebius) {
-											nonce2_count++;
-											// check if this was the last second nonce we need for std attack
-											if ( nonce2_count == nonce1_count ) {
-												// done collecting std test switch to moebius
-												// first finish incrementing last sample
-												ar_nr_collected[i+mM]++; 
-												// switch to moebius collection
-												gettingMoebius = true;
-												mM = ATTACK_KEY_COUNT;
-												break;
-											}
-										} else {
-											moebius_n_count++;
-											// if we've collected all the nonces we need - finish.
-											if (nonce1_count == moebius_n_count) {
-												cmd_send(CMD_ACK,CMD_SIMULATE_MIFARE_CARD,0,0,&ar_nr_resp,sizeof(ar_nr_resp));
-												nonce1_count = 0;
-												nonce2_count = 0;
-												moebius_n_count = 0;
-												gettingMoebius = false;
-											}
+							if (ar_nr_collected[i+mM] > 1) continue;
+								
+							// if we haven't already collected 2 nonces for this sector
+							if (ar_nr_resp[ar_nr_collected[i+mM]].ar != ar) {
+								// Avoid duplicates... probably not necessary, ar should vary. 
+								if (ar_nr_collected[i+mM]==0) {
+									// first nonce collect
+									nonce1_count++;
+									// add this nonce to first moebius nonce
+									ar_nr_resp[i+ATTACK_KEY_COUNT].cuid = cuid;
+									ar_nr_resp[i+ATTACK_KEY_COUNT].sector = cardAUTHSC;
+									ar_nr_resp[i+ATTACK_KEY_COUNT].keytype = cardAUTHKEY;
+									ar_nr_resp[i+ATTACK_KEY_COUNT].nonce = nonce;
+									ar_nr_resp[i+ATTACK_KEY_COUNT].nr = nr;
+									ar_nr_resp[i+ATTACK_KEY_COUNT].ar = ar;
+									ar_nr_collected[i+ATTACK_KEY_COUNT]++;
+								} else { 
+									// second nonce collect (std and moebius)
+									ar_nr_resp[i+mM].nonce2 = nonce;
+									ar_nr_resp[i+mM].nr2 = nr;
+									ar_nr_resp[i+mM].ar2 = ar;
+									
+									if (!gettingMoebius) {
+										nonce2_count++;
+										// check if this was the last second nonce we need for std attack
+										if ( nonce2_count == nonce1_count ) {
+											// done collecting std test switch to moebius
+											// first finish incrementing last sample
+											ar_nr_collected[i+mM]++; 
+											// switch to moebius collection
+											gettingMoebius = true;
+											mM = ATTACK_KEY_COUNT;
+											break;
+										}
+									} else {
+										moebius_n_count++;
+										// if we've collected all the nonces we need - finish.
+										if (nonce1_count == moebius_n_count) {
+											cmd_send(CMD_ACK,CMD_SIMULATE_MIFARE_CARD,0,0,&ar_nr_resp,sizeof(ar_nr_resp));
+											nonce1_count = 0;
+											nonce2_count = 0;
+											moebius_n_count = 0;
+											gettingMoebius = false;
 										}
 									}
-									ar_nr_collected[i+mM]++;
 								}
+								ar_nr_collected[i+mM]++;
 							}
 							// we found right spot for this nonce stop looking
 							break;
@@ -1372,6 +1368,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 	LED_A_OFF();
 	
 	if(flags & FLAG_NR_AR_ATTACK && MF_DBGLEVEL >= 1) {
+		/*
 		for ( uint8_t	i = 0; i < ATTACK_KEY_COUNT; i++) {
 			if (ar_nr_collected[i] == 2) {
 				Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i<ATTACK_KEY_COUNT/2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
@@ -1385,6 +1382,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 						);
 			}
 		}	
+		*/
 		for ( uint8_t	i = ATTACK_KEY_COUNT; i < ATTACK_KEY_COUNT*2; i++) {
 			if (ar_nr_collected[i] == 2) {
 				Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i<ATTACK_KEY_COUNT/2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
@@ -1406,6 +1404,8 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 		Dbprintf("-[ Messages after halt [%d]", happened2);
 		Dbprintf("-[ Num of received cmd [%d]", cmdsRecvd);
 	}
+	
+	cmd_send(CMD_ACK,1,0,0,0,0);
 }
 
 // prepare a delayed transfer. This simply shifts ToSend[] by a number
@@ -2450,6 +2450,10 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
   *@param exitAfterNReads, exit simulation after n blocks have been read, 0 is inifite
   */
 void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *datain) {
+
+	// init pseudorand
+	fast_prand( GetTickCount() );
+	
 	int cardSTATE = MFEMUL_NOFIELD;
 	int _UID_LEN = 0;  // 4, 7, 10
 	int vHf = 0;	// in mV
@@ -2747,7 +2751,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 
 				if (doBufResetNext) {
 					// Reset, lets try again!
-					Dbprintf("Re-read after previous NR_AR_ATTACK, resetting buffer");
+					if (MF_DBGLEVEL >= 4) Dbprintf("Re-read after previous NR_AR_ATTACK, resetting buffer");
 					memset(ar_nr_resp, 0x00, sizeof(ar_nr_resp));
 					memset(ar_nr_collected, 0x00, sizeof(ar_nr_collected));
 					mM = 0;
@@ -3116,7 +3120,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 	if (MF_DBGLEVEL >= 1) 
 		Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", tracing, BigBuf_get_traceLen());
 	
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	cmd_send(CMD_ACK,1,0,0,0,0);	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 	set_tracing(FALSE);
 }

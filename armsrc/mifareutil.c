@@ -121,7 +121,10 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 
 	// "random" reader nonce:
 	//byte_t nr[4] = {0x55, 0x41, 0x49, 0x92};
-	byte_t nr[4] = {0x01, 0x01, 0x01, 0x01};
+	fast_prand();
+	byte_t nr[4];
+	num_to_bytes(prand(), 4, nr);
+	//byte_t nr[4] = {0x01, 0x01, 0x01, 0x01};
 	
 	uint32_t nt, ntpp; // Supplied tag nonce
 	
