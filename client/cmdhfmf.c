@@ -1361,18 +1361,16 @@ int CmdHF14AMfChk(const char *Cmd) {
 	PrintAndLog("");
 	return 0;
 }
-#define ATTACK_KEY_COUNT 8
+
 sector *k_sector = NULL;
 uint8_t k_sectorsCount = 16;
-void readerAttack(nonces_t data[], bool setEmulatorMem, bool verbose) {
+static void emptySectorTable(){
 
 	// initialize storage for found keys
 	if (k_sector == NULL)
 		k_sector = calloc(k_sectorsCount, sizeof(sector));
 	if (k_sector == NULL) 
 		return;
-
-	uint64_t key = 0;
 		
 	// empty e_sector
 	for(int i = 0; i < k_sectorsCount; ++i){
@@ -1381,68 +1379,47 @@ void readerAttack(nonces_t data[], bool setEmulatorMem, bool verbose) {
 		k_sector[i].foundKey[0] = FALSE;
 		k_sector[i].foundKey[1] = FALSE;
 	}
+}
+void showSectorTable(){
+	if (k_sector != NULL) {
+		printKeyTable(k_sectorsCount, k_sector);
+		free(k_sector);
+		k_sector = NULL;
+	}
+}
+void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
 
-	if (verbose) printf("enter Moebius attack (mfkey32v2) \n");
+	uint64_t key = 0;	
+	bool success = FALSE;
 	
-	for (uint8_t i = 0; i < ATTACK_KEY_COUNT; ++i) {
-		
-		// if no-collected data 
-		if (data[i].ar2 == 0) continue;
+	if (k_sector == NULL)
+		emptySectorTable();
 
-		// We can probably skip this, mfkey32v2 is more reliable.
-#ifdef HFMF_TRYMFK32
-		if (tryMfk32(data[i], &key, verbose)) {
-			PrintAndLog("Found Key%s for sector %02d: [%012"llx"]"
-				, (data[i].keytype) ? "B" : "A"
-				, data[i].sector
-				, key
-			);
+	success = tryMfk32_moebius(data, &key, verbose);
+	if (success) {
+		uint8_t sector = data.sector;
+		uint8_t keytype = data.keytype;
 
-			k_sector[i].Key[data[i].keytype] = key;
-			k_sector[i].foundKey[data[i].keytype] = TRUE;
-			
-			//set emulator memory for keys
-			if (setEmulatorMem) {
-				uint8_t	memBlock[16] = {0,0,0,0,0,0, 0xff, 0x0F, 0x80, 0x69, 0,0,0,0,0,0};
-				num_to_bytes( k_sector[i].Key[0], 6, memBlock);
-				num_to_bytes( k_sector[i].Key[1], 6, memBlock+10);
-				PrintAndLog("Setting Emulator Memory Block %02d: [%s]"
-					, ((data[i].sector)*4) + 3
-					, sprint_hex( memBlock, sizeof(memBlock))
-					);
-				mfEmlSetMem( memBlock, ((data[i].sector)*4) + 3, 1);
-			}
-			continue;
-		}
-#endif
-		
-		//moebius attack			
-		if (tryMfk32_moebius(data[i+ATTACK_KEY_COUNT], &key, verbose)) {
-			uint8_t sectorNum = data[i+ATTACK_KEY_COUNT].sector;
-			uint8_t keyType = data[i+ATTACK_KEY_COUNT].keytype;
+		PrintAndLog("Reader is trying authenticate with: Key %s, sector %02d: [%012"llx"]"
+			, keytype ? "B" : "A"
+			, sector
+			, key
+		);
 
-			PrintAndLog("Reader is trying authenticate with: Key %s, sector %02d: [%012"llx"]"
-				, keyType ? "B" : "A"
-				, sectorNum
-				, key
-			);
+		k_sector[sector].Key[keytype] = key;
+		k_sector[sector].foundKey[keytype] = TRUE;
 
-			k_sector[sectorNum].Key[keyType] = key;
-			k_sector[sectorNum].foundKey[keyType] = TRUE;
-
-			//set emulator memory for keys
-			if (setEmulatorMem) {
-				uint8_t	memBlock[16] = {0,0,0,0,0,0, 0xff, 0x0F, 0x80, 0x69, 0,0,0,0,0,0};
-				num_to_bytes( k_sector[sectorNum].Key[0], 6, memBlock);
-				num_to_bytes( k_sector[sectorNum].Key[1], 6, memBlock+10);
-				//iceman,  guessing this will not work so well for 4K tags.
-				PrintAndLog("Setting Emulator Memory Block %02d: [%s]"
-					, (sectorNum*4) + 3
-					, sprint_hex( memBlock, sizeof(memBlock))
-					);
-				mfEmlSetMem( memBlock, (sectorNum*4) + 3, 1);
-			}
-			continue;
+		//set emulator memory for keys
+		if (setEmulatorMem) {
+			uint8_t	memBlock[16] = {0,0,0,0,0,0, 0xff, 0x0F, 0x80, 0x69, 0,0,0,0,0,0};
+			num_to_bytes( k_sector[sector].Key[0], 6, memBlock);
+			num_to_bytes( k_sector[sector].Key[1], 6, memBlock+10);
+			//iceman,  guessing this will not work so well for 4K tags.
+			PrintAndLog("Setting Emulator Memory Block %02d: [%s]"
+				, (sector*4) + 3
+				, sprint_hex( memBlock, sizeof(memBlock))
+				);
+			mfEmlSetMem( memBlock, (sector*4) + 3, 1);
 		}
 	}
 }
@@ -1453,18 +1430,17 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 	uint8_t exitAfterNReads = 0;
 	uint8_t flags = (FLAG_UID_IN_EMUL | FLAG_4B_UID_IN_DATA);
 	int uidlen = 0;
-	bool setEmulatorMem = false;
 	uint8_t cmdp = 0;
-	bool errors = false;
-
-	// If set to true, we should show our workings when doing NR_AR_ATTACK.
-	bool verbose = false;
-
+	bool errors = FALSE;
+	bool verbose = FALSE;
+	bool setEmulatorMem = FALSE;
+	nonces_t data[1];
+		
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'e':
 		case 'E':
-			setEmulatorMem = true;
+			setEmulatorMem = TRUE;
 			cmdp++;
 			break;
 		case 'h':
@@ -1489,11 +1465,11 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 				case  8: flags = FLAG_4B_UID_IN_DATA; break;
 				default: return usage_hf14_mf1ksim();
 			}
-			cmdp +=2;
+			cmdp += 2;
 			break;
 		case 'v':
 		case 'V':
-			verbose = true;
+			verbose = TRUE;
 			cmdp++;
 			break;
 		case 'x':
@@ -1503,7 +1479,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-			errors = true;
+			errors = TRUE;
 			break;
 		}
 		if(errors) break;
@@ -1521,27 +1497,20 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 	memcpy(c.d.asBytes, uid, sizeof(uid));
 	clearCommandBuffer();
 	SendCommand(&c);
+	UsbCommand resp;		
 
-	if(flags & FLAG_INTERACTIVE) {		
+	if(flags & FLAG_INTERACTIVE) {
 		PrintAndLog("Press pm3-button or send another cmd to abort simulation");
-
-		nonces_t data[ATTACK_KEY_COUNT*2];
-		UsbCommand resp;		
 
 		while( !ukbhit() ){
 			if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
 			if ( !(flags & FLAG_NR_AR_ATTACK) ) break;
 			if ( (resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD ) break;
 
-			memcpy( data, resp.d.asBytes, sizeof(data) );			
-			readerAttack(data, setEmulatorMem, verbose);
+			memcpy(data, resp.d.asBytes, sizeof(data));
+			readerAttack(data[0], setEmulatorMem, verbose);
 		}
-		
-		if (k_sector != NULL) {
-			printKeyTable(k_sectorsCount, k_sector);
-			free(k_sector);
-			k_sector = NULL;
-		}
+		showSectorTable();
 	}
 	return 0;
 }

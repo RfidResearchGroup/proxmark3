@@ -74,6 +74,11 @@ typedef struct {
   uint32_t nr2;
   uint8_t  sector;
   uint8_t  keytype;
+  enum {
+		EMPTY,
+		FIRST,
+		SECOND,
+	} state;
 } nonces_t;
 
 #endif // _MIFARE_H_

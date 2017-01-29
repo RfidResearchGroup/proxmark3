@@ -441,7 +441,6 @@ int CmdHF14ACUIDs(const char *Cmd) {
 // ## simulate iso14443a tag
 // ## greg - added ability to specify tag UID
 int CmdHF14ASim(const char *Cmd) {
-	#define ATTACK_KEY_COUNT 8
 	bool errors = FALSE;
 	uint8_t flags = 0;
 	uint8_t tagtype = 1;	
@@ -451,7 +450,8 @@ int CmdHF14ASim(const char *Cmd) {
 	bool useUIDfromEML = TRUE;
 	bool setEmulatorMem = FALSE;
 	bool verbose = FALSE;
-
+	nonces_t data[1];
+	
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
@@ -483,7 +483,7 @@ int CmdHF14ASim(const char *Cmd) {
 				break;
 			case 'v':
 			case 'V':
-				verbose = true;
+				verbose = TRUE;
 				cmdp++;
 				break;
 			case 'x':
@@ -498,7 +498,7 @@ int CmdHF14ASim(const char *Cmd) {
 				break;				
 			default:
 				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-				errors = true;
+				errors = TRUE;
 				break;
 			}
 		if(errors) break;
@@ -514,19 +514,19 @@ int CmdHF14ASim(const char *Cmd) {
 	memcpy(c.d.asBytes, uid, uidlen>>1);
 	clearCommandBuffer();
 	SendCommand(&c);	
-
-	nonces_t data[ATTACK_KEY_COUNT*2];
 	UsbCommand resp;
 	
 	PrintAndLog("Press pm3-button to abort simulation");
+	
 	while( !ukbhit() ){
 		if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
 		if ( !(flags & FLAG_NR_AR_ATTACK) ) break;
 		if ( (resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD ) break;
 			
-		memcpy( data, resp.d.asBytes, sizeof(data) );
-		readerAttack(data, setEmulatorMem, verbose);
+		memcpy(data, resp.d.asBytes, sizeof(data) );
+		readerAttack(data[0], setEmulatorMem, verbose);
 	}
+	showSectorTable();
 	return 0;
 }
 
