@@ -280,8 +280,9 @@ bool tryMfk32_moebius(nonces_t data, uint64_t *outputkey, bool verbose) {
 	}
     isSuccess	= (counter > 0);
 	t1 = clock() - t1;
-	if ( t1 > 0 ) PrintAndLog("Time in mfkey32_moebius: %.0f ticks  - possible keys %d", (float)t1, counter);
-
+	if (verbose) {
+		if ( t1 > 0 ) PrintAndLog("Time in mfkey32_moebius: %.0f ticks  - possible keys %d", (float)t1, counter);
+	}
 	*outputkey = ( isSuccess ) ? outkey : 0;
 	crypto1_destroy(s);
 	return isSuccess;

@@ -1058,12 +1058,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 		if(!GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len)) {
 			DbpString("Button press");
 			break;
-		}
-		
-		// incease nonce at every command recieved
-		nonce = prand();
-		num_to_bytes(nonce, 4, response5);
-		
+		}	
 		p_response = NULL;
 		
 		// Okay, look at the command now.
@@ -1158,6 +1153,12 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 				EmSendCmdEx(emdata, sizeof(emdata), false);
 				p_response = NULL;
 			} else {
+				
+				// incease nonce at every command recieved. this is time consuming.
+				nonce = prand();
+				num_to_bytes(nonce, 4, response5);
+				prepare_tag_modulation(&responses[5], DYNAMIC_MODULATION_BUFFER_SIZE);
+				
 				cardAUTHSC = receivedCmd[1] / 4; // received block num
 				cardAUTHKEY = receivedCmd[0] - 0x60;
 				p_response = &responses[5]; order = 7;
@@ -1173,7 +1174,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 			LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
 			uint32_t nr = bytes_to_num(receivedCmd,4);
 			uint32_t ar = bytes_to_num(receivedCmd+4,4);
-
+		 
 			// Collect AR/NR per keytype & sector
 			if ( (flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK ) {
 				
@@ -1279,8 +1280,8 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 				  dynamic_response_info.response_n = 2;
 				} break;
 
-				case 0xaa:
-				case 0xbb: {
+				case 0xAA:
+				case 0xBB: {
 				  dynamic_response_info.response[0] = receivedCmd[0] ^ 0x11;
 				  dynamic_response_info.response_n = 2;
 				} break;
@@ -1313,7 +1314,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 				dynamic_response_info.response[1] = receivedCmd[1];
 
 				// Add CRC bytes, always used in ISO 14443A-4 compliant cards
-				AppendCrc14443a(dynamic_response_info.response,dynamic_response_info.response_n);
+				AppendCrc14443a(dynamic_response_info.response, dynamic_response_info.response_n);
 				dynamic_response_info.response_n += 2;
         
 				if (prepare_tag_modulation(&dynamic_response_info,DYNAMIC_MODULATION_BUFFER_SIZE) == false) {
@@ -1333,7 +1334,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 
 		// comment this limit if you want to simulation longer		
 		if (!tracing) {
-			Dbprintf("Trace Full. Simulation stopped.");
+			DbpString("Trace Full. Simulation stopped.");
 			break;
 		}
 		// comment this limit if you want to simulation longer
@@ -1366,9 +1367,10 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 	set_tracing(FALSE);
 	BigBuf_free_keep_EM();
 	LED_A_OFF();
-	
+
+	/*	
 	if(flags & FLAG_NR_AR_ATTACK && MF_DBGLEVEL >= 1) {
-		/*
+
 		for ( uint8_t	i = 0; i < ATTACK_KEY_COUNT; i++) {
 			if (ar_nr_collected[i] == 2) {
 				Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i<ATTACK_KEY_COUNT/2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
@@ -1382,7 +1384,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 						);
 			}
 		}	
-		*/
+
 		for ( uint8_t	i = ATTACK_KEY_COUNT; i < ATTACK_KEY_COUNT*2; i++) {
 			if (ar_nr_collected[i] == 2) {
 				Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i<ATTACK_KEY_COUNT/2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
@@ -1398,7 +1400,8 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 			}
 		}
 	}
-	
+	*/
+		
 	if (MF_DBGLEVEL >= 4){
 		Dbprintf("-[ Wake ups after halt [%d]", happened);
 		Dbprintf("-[ Messages after halt [%d]", happened2);

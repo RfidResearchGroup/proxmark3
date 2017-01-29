@@ -1383,62 +1383,64 @@ void readerAttack(nonces_t data[], bool setEmulatorMem, bool verbose) {
 
 	printf("enter reader attack\n");
 	for (uint8_t i = 0; i < ATTACK_KEY_COUNT; ++i) {
-		if (data[i].ar2 > 0) {
+		
+		// if no-collected data 
+		if (data[i].ar2 == 0) continue;
 
-			// We can probably skip this, mfkey32v2 is more reliable.
+		// We can probably skip this, mfkey32v2 is more reliable.
 #ifdef HFMF_TRYMFK32
-			if (tryMfk32(data[i], &key, verbose)) {
-				PrintAndLog("Found Key%s for sector %02d: [%012"llx"]"
-					, (data[i].keytype) ? "B" : "A"
-					, data[i].sector
-					, key
-				);
+		if (tryMfk32(data[i], &key, verbose)) {
+			PrintAndLog("Found Key%s for sector %02d: [%012"llx"]"
+				, (data[i].keytype) ? "B" : "A"
+				, data[i].sector
+				, key
+			);
 
-				k_sector[i].Key[data[i].keytype] = key;
-				k_sector[i].foundKey[data[i].keytype] = TRUE;
-				
-				//set emulator memory for keys
-				if (setEmulatorMem) {
-					uint8_t	memBlock[16] = {0,0,0,0,0,0, 0xff, 0x0F, 0x80, 0x69, 0,0,0,0,0,0};
-					num_to_bytes( k_sector[i].Key[0], 6, memBlock);
-					num_to_bytes( k_sector[i].Key[1], 6, memBlock+10);
-					PrintAndLog("Setting Emulator Memory Block %02d: [%s]"
-						, ((data[i].sector)*4) + 3
-						, sprint_hex( memBlock, sizeof(memBlock))
-						);
-					mfEmlSetMem( memBlock, ((data[i].sector)*4) + 3, 1);
-				}
-				continue;
+			k_sector[i].Key[data[i].keytype] = key;
+			k_sector[i].foundKey[data[i].keytype] = TRUE;
+			
+			//set emulator memory for keys
+			if (setEmulatorMem) {
+				uint8_t	memBlock[16] = {0,0,0,0,0,0, 0xff, 0x0F, 0x80, 0x69, 0,0,0,0,0,0};
+				num_to_bytes( k_sector[i].Key[0], 6, memBlock);
+				num_to_bytes( k_sector[i].Key[1], 6, memBlock+10);
+				PrintAndLog("Setting Emulator Memory Block %02d: [%s]"
+					, ((data[i].sector)*4) + 3
+					, sprint_hex( memBlock, sizeof(memBlock))
+					);
+				mfEmlSetMem( memBlock, ((data[i].sector)*4) + 3, 1);
 			}
+			continue;
+		}
 #endif
-			//moebius attack			
-			if (tryMfk32_moebius(data[i+ATTACK_KEY_COUNT], &key, verbose)) {
-				uint8_t sectorNum = data[i+ATTACK_KEY_COUNT].sector;
-				uint8_t keyType = data[i+ATTACK_KEY_COUNT].keytype;
+		
+		//moebius attack			
+		if (tryMfk32_moebius(data[i+ATTACK_KEY_COUNT], &key, verbose)) {
+			uint8_t sectorNum = data[i+ATTACK_KEY_COUNT].sector;
+			uint8_t keyType = data[i+ATTACK_KEY_COUNT].keytype;
 
-				PrintAndLog("M-Found Key%s for sector %02d: [%012"llx"]"
-					, keyType ? "B" : "A"
-					, sectorNum
-					, key
-				);
+			PrintAndLog("Found Key%s for sector %02d: [%012"llx"]"
+				, keyType ? "B" : "A"
+				, sectorNum
+				, key
+			);
 
-				k_sector[sectorNum].Key[keyType] = key;
-				k_sector[sectorNum].foundKey[keyType] = TRUE;
+			k_sector[sectorNum].Key[keyType] = key;
+			k_sector[sectorNum].foundKey[keyType] = TRUE;
 
-				//set emulator memory for keys
-				if (setEmulatorMem) {
-					uint8_t	memBlock[16] = {0,0,0,0,0,0, 0xff, 0x0F, 0x80, 0x69, 0,0,0,0,0,0};
-					num_to_bytes( k_sector[sectorNum].Key[0], 6, memBlock);
-					num_to_bytes( k_sector[sectorNum].Key[1], 6, memBlock+10);
-					PrintAndLog("Setting Emulator Memory Block %02d: [%s]"
-						, (sectorNum*4) + 3
-						, sprint_hex( memBlock, sizeof(memBlock))
-						);
-					mfEmlSetMem( memBlock, (sectorNum*4) + 3, 1);
-				}
-				continue;
+			//set emulator memory for keys
+			if (setEmulatorMem) {
+				uint8_t	memBlock[16] = {0,0,0,0,0,0, 0xff, 0x0F, 0x80, 0x69, 0,0,0,0,0,0};
+				num_to_bytes( k_sector[sectorNum].Key[0], 6, memBlock);
+				num_to_bytes( k_sector[sectorNum].Key[1], 6, memBlock+10);
+				//iceman,  guessing this will not work so well for 4K tags.
+				PrintAndLog("Setting Emulator Memory Block %02d: [%s]"
+					, (sectorNum*4) + 3
+					, sprint_hex( memBlock, sizeof(memBlock))
+					);
+				mfEmlSetMem( memBlock, (sectorNum*4) + 3, 1);
 			}
-
+			continue;
 		}
 	}
 }
