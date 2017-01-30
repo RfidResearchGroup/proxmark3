@@ -53,6 +53,34 @@ local Utils =
 		return hex
 	end,
 	
+	------------ FILE WRITING (EML)
+	--- Writes an eml-file.
+	-- @param uid - the uid of the tag. Used in filename
+	-- @param blockData. Assumed to be on the format {'\0\1\2\3,'\b\e\e\f' ..., 
+	-- that is, blockData[row] contains a string with the actual data, not ascii hex representation 
+	-- return filename if all went well, 
+	-- @reurn nil, error message if unsuccessfulls	
+	WriteDumpFile = function(uid, blockData)
+		local destination = string.format("%s.eml", uid)
+		local file = io.open(destination, "w")
+		if file == nil then 
+			return nil, string.format("Could not write to file %s", destination)
+		end
+		local rowlen = string.len(blockData[1])
+
+		for i,block in ipairs(blockData) do
+			if rowlen ~= string.len(block) then
+				prlog(string.format("WARNING: Dumpdata seems corrupted, line %d was not the same length as line 1",i))
+			end
+
+			local formatString = string.format("H%d", string.len(block))
+			local _,hex = bin.unpack(formatString,block)
+			file:write(hex.."\n")
+		end
+		file:close()	
+		return destination
+	end,
+	
 	------------ string split function
 	Split = function( inSplitPattern, outResults )
 		if not outResults then
@@ -262,7 +290,14 @@ local Utils =
 		if #s == 0 then return '' end
 		local t={}
 		for k in s:gmatch"(%x%x)" do
-			table.insert(t, string.char(tonumber(k,16)))
+			local n = tonumber(k,16)
+			local c 
+			if  (n < 32) or (n == 127) then
+				c = '.';
+			else
+				c = string.char(n)
+			end
+			table.insert(t,c)
 		end
 		return table.concat(t)	
 	end,
