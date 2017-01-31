@@ -36,11 +36,10 @@ int usage_lf_read(void){
 	return 0;
 }
 int usage_lf_snoop(void) {
-	PrintAndLog("Usage: lf snoop");
+	PrintAndLog("Snoop low frequence signal. Use 'lf config' to set parameters.");
+	PrintAndLog("Usage: lf snoop [h]");
 	PrintAndLog("Options:");
-	PrintAndLog("       h            This help");
-	PrintAndLog("This function takes no arguments. ");
-	PrintAndLog("Use 'lf config' to set parameters.");
+	PrintAndLog("      h         This help");
 	return 0;
 }
 int usage_lf_config(void) {
@@ -568,10 +567,11 @@ int CmdLFSnoop(const char *Cmd) {
 	uint8_t cmdp = param_getchar(Cmd, 0);
 	if(cmdp == 'h' || cmdp == 'H') return usage_lf_snoop();
 	
-	UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES};
+	UsbCommand c = {CMD_LF_SNOOP_RAW_ADC_SAMPLES,{0,0,0}};
 	clearCommandBuffer();	
 	SendCommand(&c);
 	WaitForResponse(CMD_ACK,NULL);
+	getSamples("", false);
 	return 0;
 }
 
@@ -1221,7 +1221,7 @@ static command_t CommandTable[] =
 	{"simfsk",      CmdLFfskSim,        0, "[c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>] \n\t\t-- Simulate LF FSK tag from demodbuffer or input"},
 	{"simpsk",      CmdLFpskSim,        0, "[1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>] \n\t\t-- Simulate LF PSK tag from demodbuffer or input"},
 	{"simbidir",    CmdLFSimBidir,      0, "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
-	{"snoop",       CmdLFSnoop,         0, "['l'|'h'|<divisor>] [trigger threshold]-- Snoop LF (l:125khz, h:134khz)"},
+	{"snoop",       CmdLFSnoop,         0, "Snoop LF"},
 	{"vchdemod",    CmdVchDemod,        1, "['clone'] -- Demodulate samples for VeriChip"},
 	{NULL, NULL, 0, NULL}
 };

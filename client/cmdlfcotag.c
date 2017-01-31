@@ -18,9 +18,13 @@ int CmdCOTAGRead(const char *Cmd) {
 	UsbCommand c = {CMD_COTAG, {0, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
-
-	getSamples("20000", TRUE);
-	return CmdFSKdemodAWID(Cmd);
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+		//PrintAndLog("command execution time out");
+		return 1;
+	}
+	getSamples("", true);
+	//return CmdFSKdemodAWID(Cmd);
+	return 0;
 }
 
 static command_t CommandTable[] = {

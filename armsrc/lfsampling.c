@@ -110,7 +110,7 @@ void LFSetupFPGAForADC(int divisor, bool lf_field) {
  * @param silent - is true, now outputs are made. If false, dbprints the status
  * @return the number of bits occupied by the samples.
  */
-uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold,bool silent) {
+uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold, bool silent) {
 	//bigbuf, to hold the aquired raw data signal
 	uint8_t *dest = BigBuf_get_addr();
     uint16_t bufsize = BigBuf_max_traceLen();
@@ -224,14 +224,20 @@ uint32_t ReadLF(bool activeField, bool silent) {
 * @return number of bits sampled
 **/
 uint32_t SampleLF(bool printCfg) {
-	return ReadLF(true, printCfg);
+	BigBuf_Clear_ext(false);
+	uint32_t ret = ReadLF(true, printCfg);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	return ret;	
 }
 /**
 * Initializes the FPGA for snoop-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
 uint32_t SnoopLF() {
-	return ReadLF(false, true);
+	BigBuf_Clear_ext(false);
+	uint32_t ret = ReadLF(false, true);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	return ret;	
 }
 
 /**

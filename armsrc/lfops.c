@@ -78,6 +78,8 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t periods, uint3
 
 	// now do the read
 	DoAcquisition_config(false);
+	
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
 
 /* blank r/w tag data stream
@@ -1740,12 +1742,12 @@ void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode
 
 void Cotag() {
 
+//#define WAIT2200 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS(2035); }
 #define WAIT2200 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS(2200); }
-
 	LED_A_ON();
 	
 	//clear buffer now so it does not interfere with timing later
-	BigBuf_Clear_keep_EM();
+	BigBuf_Clear_ext(false);
 
 	// Set up FPGA, 132kHz to power up the tag
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -1755,28 +1757,33 @@ void Cotag() {
 	// Connect the A/D to the peak-detected low-frequency path.
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 	
-	// 50ms for the resonant antenna to settle.
-	SpinDelay(50);
-	
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
 	FpgaSetupSsc();
+
 	// start a 1.5ticks is 1us
 	StartTicks();
 	
 	//send start pulse
-	TurnReadLFOn(800);
-	WAIT2200
-	TurnReadLFOn(3600);
-	WAIT2200
-	TurnReadLFOn(800);
-	WAIT2200
+	TurnReadLFOn(800); 	WAIT2200
+	TurnReadLFOn(3600);	WAIT2200
+	TurnReadLFOn(800);	WAIT2200
 	TurnReadLFOn(3600);	
 	
-	// Turn field on to read the response
-	TurnReadLFOn(READ_GAP);
+/*
+	TurnReadLFOn(740); 	WAIT2200
+	TurnReadLFOn(3330);	WAIT2200
+	TurnReadLFOn(740);	WAIT2200
+	TurnReadLFOn(3330);	
+	
+
+burst 800 us,    gap   2.2 msecs
+burst 3.6 msecs  gap   2.2 msecs
+burst 800 us     gap   2.2 msecs
+pulse 3.6 msecs
+*/
 	
 	// Acquisition
-	doT55x7Acquisition(20000);
+	DoAcquisition_default(-1, true);
 	
 	// Turn the field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
