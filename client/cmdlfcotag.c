@@ -19,11 +19,10 @@ int CmdCOTAGRead(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);
 	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
-		//PrintAndLog("command execution time out");
+		PrintAndLog("command execution time out");
 		return 1;
 	}
-	getSamples("", true);
-	//return CmdFSKdemodAWID(Cmd);
+	getSamples("20000", true);
 	return 0;
 }
 

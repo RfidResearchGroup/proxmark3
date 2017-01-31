@@ -556,7 +556,7 @@ int CmdLFRead(const char *Cmd) {
 	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, {arg1,0,0}};
 	clearCommandBuffer();
 	SendCommand(&c);
-	if ( !WaitForResponseTimeout(CMD_ACK,NULL,2500) ) {
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL ,2500) ) {
 		PrintAndLog("command execution time out");
 		return 1;
 	}
@@ -1011,7 +1011,7 @@ int CmdLFfind(const char *Cmd) {
 
 	if (!offline && (cmdp != '1')){
 		CmdLFRead("s");
-		getSamples("30000", TRUE);
+		getSamples("30000", false);
 	} else if (GraphTraceLen < 1000) {
 		PrintAndLog("Data in Graphbuffer was too small.");
 		return 0;
@@ -1118,13 +1118,15 @@ int CmdLFfind(const char *Cmd) {
 		return 1;
 	}
 	// TIdemod?
-	
+
+/*	
 	if (!offline && (cmdp != '1')){
 		ans=CmdLFHitagReader("26");
 		if (ans==0) {
 			return 1;
 		}
 	}
+*/
 
 	PrintAndLog("\nNo Known Tags Found!\n");
 	if (testRaw=='u' || testRaw=='U'){

@@ -195,9 +195,9 @@ int CmdLFHitagSim(const char *Cmd) {
 
 int CmdLFHitagReader(const char *Cmd) {
 	
-	UsbCommand c = {CMD_READER_HITAG};//, {param_get32ex(Cmd,0,0,10),param_get32ex(Cmd,1,0,16),param_get32ex(Cmd,2,0,16),param_get32ex(Cmd,3,0,16)}};
+	UsbCommand c = {CMD_READER_HITAG, {0,0,0} };//, {param_get32ex(Cmd,0,0,10),param_get32ex(Cmd,1,0,16),param_get32ex(Cmd,2,0,16),param_get32ex(Cmd,3,0,16)}};
 	hitag_data* htd = (hitag_data*)c.d.asBytes;
-	hitag_function htf = param_get32ex(Cmd,0,0,10);
+	hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
 	
 	switch (htf) {
 		case 01: { //RHTSF_CHALLENGE
@@ -249,7 +249,7 @@ int CmdLFHitagReader(const char *Cmd) {
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	WaitForResponse(CMD_ACK,&resp);
+	WaitForResponse(CMD_ACK, &resp);
 
 	// Check the return status, stored in the first argument
 	if (resp.arg[0] == false) return 1;
@@ -259,19 +259,19 @@ int CmdLFHitagReader(const char *Cmd) {
 	if (htf == RHT2F_UID_ONLY){
 		PrintAndLog("Valid Hitag2 tag found - UID: %08x",id);
 	} else {
-	char filename[FILE_PATH_SIZE];
-	FILE* f = NULL;
-	sprintf(filename,"%08x_%04x.ht2",id,(rand() & 0xffff));
-	f = fopen(filename,"wb");
-	if (!f) {
-		PrintAndLog("Error: Could not open file [%s]",filename);
-		return 1;
-	}
+		char filename[FILE_PATH_SIZE];
+		FILE* f = NULL;
+		sprintf(filename,"%08x_%04x.ht2",id,(rand() & 0xffff));
+		f = fopen(filename,"wb");
+		if (!f) {
+			PrintAndLog("Error: Could not open file [%s]",filename);
+			return 1;
+		}
 
-	// Write the 48 tag memory bytes to file and finalize
-	fwrite(resp.d.asBytes, 1, 48, f);
-	fclose(f);
-	PrintAndLog("Succesfully saved tag memory to [%s]",filename);
+		// Write the 48 tag memory bytes to file and finalize
+		fwrite(resp.d.asBytes, 1, 48, f);
+		fclose(f);
+		PrintAndLog("Succesfully saved tag memory to [%s]",filename);
 	}
 	return 0;
 }
