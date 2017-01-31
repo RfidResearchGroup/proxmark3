@@ -15,7 +15,9 @@
 // Handle platform specific includes
 #ifdef _WIN32
 // for MINGW32 environments
-  #define _USE_32BIT_TIME_T 1
+  #ifndef _USE_32BIT_TIME_T
+    #define _USE_32BIT_TIME_T 1
+  #endif  
   #include <time.h>
   #include <windows.h>
 #else

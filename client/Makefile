@@ -19,7 +19,7 @@ LUAPLATFORM = generic
 
 ifneq (,$(findstring MINGW,$(platform))) 
     LDLIBS +=  -L/mingw/lib -lgdi32
-	CFLAGS +=  -I/mingw/include
+	CFLAGS +=  -I/mingw/include -D__USE_MINGW_ANSI_STDIO=1
     CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
     MOC = $(QTDIR)/bin/moc
     LUAPLATFORM = mingw
