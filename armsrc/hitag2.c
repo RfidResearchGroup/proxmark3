@@ -708,7 +708,7 @@ static bool hitag2_read_uid(byte_t* rx, const size_t rxlen, byte_t* tx, size_t* 
 		case 0: {
 			// Just starting or if there is no answer
 			*txlen = 5;
-			memcpy(tx,"\xc0",nbytes(*txlen));
+			memcpy(tx,"\xC0",nbytes(*txlen));
 		} break;
 		// Received UID
 		case 32: {
@@ -1296,13 +1296,12 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 		if(rxlen > 0) {
 			frame_count++;
 			if (!bQuiet) {
-				if (!LogTraceHitag(rx,rxlen,response,0,false)) {
+				if (!LogTraceHitag(rx,rxlen, response, 0, false)) {
 					DbpString("Trace full");
-					if (bQuitTraceFull) {
+					if (bQuitTraceFull)
 						break;
-					} else {
+					else
 						bQuiet = true;
-					}
 				}
 			}
 		}

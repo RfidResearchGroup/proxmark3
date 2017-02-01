@@ -383,21 +383,24 @@ void StandAloneMode()
 #endif
 
 #ifdef WITH_ISO14443a_StandAlone
+
+typedef struct {
+	uint8_t uid[10];
+	uint8_t uidlen;
+	uint8_t atqa[2];
+	uint8_t sak;
+} __attribute__((__packed__)) card_clone_t;
+
 void StandAloneMode14a()
 {
 	StandAloneMode();
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
-	int selected = 0;
-	int playing = 0, iGotoRecord = 0, iGotoClone = 0;
+	int selected = 0, playing = 0, iGotoRecord = 0, iGotoClone = 0;
 	int cardRead[OPTS] = {0};
-	uint8_t readUID[10] = {0};
-	uint32_t uid_1st[OPTS]={0};
-	uint32_t uid_2nd[OPTS]={0};
-	uint32_t uid_tmp1 = 0;
-	uint32_t uid_tmp2 = 0;
-	iso14a_card_select_t hi14a_card[OPTS];
 
+	card_clone_t uids[OPTS];
+	iso14a_card_select_t card_info[OPTS];
 	uint8_t params = (MAGIC_SINGLE | MAGIC_DATAIN);
 					
 	LED(selected + 1, 0);
@@ -419,9 +422,6 @@ void StandAloneMode14a()
 			Dbprintf("Enabling iso14443a reader mode for [Bank: %u]...", selected);
 			/* need this delay to prevent catching some weird data */
 			SpinDelay(500);
-			/* Code for reading from 14a tag */
-			uint8_t uid[10] = {0};
-			uint32_t cuid = 0;
 			iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
 			for ( ; ; )
@@ -432,9 +432,9 @@ void StandAloneMode14a()
 						Dbprintf("Button press detected -- replaying card in bank[%d]", selected);
 						break;
 					}
-					else if (cardRead[(selected+1)%OPTS]) {
+					else if (cardRead[(selected+1) % OPTS]) {
 						Dbprintf("Button press detected but no card in bank[%d] so playing from bank[%d]", selected, (selected+1)%OPTS);
-						selected = (selected+1)%OPTS;
+						selected = (selected+1) % OPTS;
 						break; // playing = 1;
 					}
 					else {
@@ -442,40 +442,33 @@ void StandAloneMode14a()
 						SpinDelay(300);
 					}
 				}
-				if (!iso14443a_select_card(uid, &hi14a_card[selected], &cuid, true, 0))
+				if (!iso14443a_select_card(NULL, &card_info[selected], NULL, true, 0))
 					continue;
 				else
 				{
 					Dbprintf("Read UID:"); 
-					Dbhexdump(10, uid, 0);
-					memcpy(readUID, uid, 10 * sizeof(uint8_t));
-					uint8_t *dst = (uint8_t *)&uid_tmp1;
-					// Set UID byte order
-					for (int i=0; i<4; i++)
-						dst[i] = uid[3-i];
-					dst = (uint8_t *)&uid_tmp2;
-					for (int i=0; i<4; i++)
-						dst[i] = uid[7-i];
-					if (uid_1st[(selected+1)%OPTS] == uid_tmp1 && uid_2nd[(selected+1)%OPTS] == uid_tmp2) {
+					Dbhexdump(card_info[selected].uidlen, card_info[selected].uid, 0);
+					
+					if (memcmp(uids[(selected+1)%OPTS].uid, card_info[selected].uid, card_info[selected].uidlen ) == 0 ) {
 						Dbprintf("Card selected has same UID as what is stored in the other bank. Skipping.");
 					}
 					else {
-						if (uid_tmp2) {
-							Dbprintf("Bank[%d] received a 7-byte UID",selected);
-							uid_1st[selected] = (uid_tmp1)>>8;
-							uid_2nd[selected] = (uid_tmp1<<24) + (uid_tmp2>>8);
-						}
-						else {
-							Dbprintf("Bank[%d] received a 4-byte UID",selected);
-							uid_1st[selected] = uid_tmp1;
-							uid_2nd[selected] = uid_tmp2;
-						}
+						
+						uids[selected].sak = card_info[selected].sak;
+						uids[selected].uidlen = card_info[selected].uidlen;						
+						memcpy(uids[selected].uid , card_info[selected].uid, uids[selected].uidlen);						
+						memcpy(uids[selected].atqa, card_info[selected].atqa, 2);
+												
+						if (uids[selected].uidlen > 4)
+							Dbprintf("Bank[%d] received a 7-byte UID", selected);
+						else
+							Dbprintf("Bank[%d] received a 4-byte UID", selected);
 					break;
 				}
 			}
 			}
-			Dbprintf("ATQA = %02X%02X", hi14a_card[selected].atqa[0], hi14a_card[selected].atqa[1]);
-			Dbprintf("SAK = %02X", hi14a_card[selected].sak);
+			Dbprintf("ATQA = %02X%02X", uids[selected].atqa[0], uids[selected].atqa[1]);
+			Dbprintf("SAK = %02X", uids[selected].sak);
 			LEDsoff();
 			LED(LED_GREEN,  200);
 			LED(LED_ORANGE, 200);
@@ -498,8 +491,11 @@ void StandAloneMode14a()
 			LED(selected + 1, 0);
 			LED(LED_ORANGE, 250);
 
+			// magiccards holds 4bytes uid.
+			uint64_t tmpuid = bytes_to_num(uids[selected].uid, 4);
+			
 			// record
-			Dbprintf("Preparing to Clone card [Bank: %x]; uid: %08x", selected, uid_1st[selected]);
+			Dbprintf("Preparing to Clone card [Bank: %x]; uid: %08x", selected, tmpuid & 0xFFFFFFFF);
 
 			// wait for button to be released
 			// Delay cloning until card is in place
@@ -547,12 +543,9 @@ void StandAloneMode14a()
 			else {
 				Dbprintf("UID from target tag: %02X%02X%02X%02X", oldBlock0[0], oldBlock0[1], oldBlock0[2], oldBlock0[3]);
 				memcpy(newBlock0, oldBlock0, 16);
-				// Copy uid_1st for bank (2nd is for longer UIDs not supported if classic)
 
-				newBlock0[0] = uid_1st[selected]>>24;
-				newBlock0[1] = 0xFF & (uid_1st[selected]>>16);
-				newBlock0[2] = 0xFF & (uid_1st[selected]>>8);
-				newBlock0[3] = 0xFF & (uid_1st[selected]);
+				// Copy uid for bank (2nd is for longer UIDs not supported if classic)
+				memcpy(newBlock0, uids[selected].uid, 4);
 				newBlock0[4] = newBlock0[0] ^ newBlock0[1] ^ newBlock0[2] ^ newBlock0[3];
 
 				// arg0 = workFlags, arg1 = blockNo, datain
@@ -588,21 +581,30 @@ void StandAloneMode14a()
 					WDT_HIT();
 					int button_action = BUTTON_HELD(1000);
 					if (button_action == 0) { // No button action, proceed with sim
-						uint8_t data[512] = {0}; // in case there is a read command received we shouldn't break
-						uint8_t flags = ( uid_2nd[selected] > 0x00 ) ? FLAG_7B_UID_IN_DATA : FLAG_4B_UID_IN_DATA;
-						num_to_bytes(uid_1st[selected], 3, data);
-						num_to_bytes(uid_2nd[selected], 4, data+3);
+
+						uint8_t flags = FLAG_4B_UID_IN_DATA;
+						uint8_t data[USB_CMD_DATA_SIZE] = {0}; // in case there is a read command received we shouldn't break
+
+						memcpy(data, uids[selected].uid, uids[selected].uidlen);
 						
-						Dbprintf("Simulating ISO14443a tag with uid[0]: %08x, uid[1]: %08x [Bank: %u]", uid_1st[selected], uid_2nd[selected], selected);
-						if (hi14a_card[selected].sak == 8 && hi14a_card[selected].atqa[0] == 4 && hi14a_card[selected].atqa[1] == 0) {
+						uint64_t tmpuid = bytes_to_num(uids[selected].uid, uids[selected].uidlen);
+									
+						if (  uids[selected].uidlen == 7 ) {
+							flags = FLAG_7B_UID_IN_DATA;
+							Dbprintf("Simulating ISO14443a tag with uid: %02x%08x [Bank: %u]", tmpuid >> 32, tmpuid & 0xFFFFFFFF , selected);
+						} else {
+							Dbprintf("Simulating ISO14443a tag with uid: %08x [Bank: %u]", tmpuid & 0xFFFFFFFF , selected);
+						}
+						
+						if (uids[selected].sak == 8 && uids[selected].atqa[0] == 4 && uids[selected].atqa[1] == 0) {
 							DbpString("Mifare Classic");
 							SimulateIso14443aTag(1, flags, data); // Mifare Classic
 						}
-						else if (hi14a_card[selected].sak == 0 && hi14a_card[selected].atqa[0] == 0x44 && hi14a_card[selected].atqa[1] == 0) {
+						else if (uids[selected].sak == 0 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
 							DbpString("Mifare Ultralight");
 							SimulateIso14443aTag(2, flags, data); // Mifare Ultralight
 						}
-						else if (hi14a_card[selected].sak == 20 && hi14a_card[selected].atqa[0] == 0x44 && hi14a_card[selected].atqa[1] == 3) {
+						else if (uids[selected].sak == 20 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 3) {
 							DbpString("Mifare DESFire");
 							SimulateIso14443aTag(3, flags, data); // Mifare DESFire
 						}
