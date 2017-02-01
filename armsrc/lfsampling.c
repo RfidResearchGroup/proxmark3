@@ -8,6 +8,14 @@
 
 #include "lfsampling.h"
 
+/*
+Default LF config is set to:
+	decimation = 1  (we keep 1 out of 1 samples)
+	bits_per_sample = 8
+	averaging = YES
+	divisor = 95 (125khz)
+	trigger_threshold = 0
+	*/
 sample_config config = { 1, 8, 1, 95, 0 } ;
 
 void printConfig() {
@@ -15,10 +23,9 @@ void printConfig() {
 	Dbprintf("  [q] divisor:           %d ", config.divisor);
 	Dbprintf("  [b] bps:               %d ", config.bits_per_sample);
 	Dbprintf("  [d] decimation:        %d ", config.decimation);
-	Dbprintf("  [a] averaging:         %d ", config.averaging);
+	Dbprintf("  [a] averaging:         %s ", (config.averaging) ? "Yes" : "No");
 	Dbprintf("  [t] trigger threshold: %d ", config.trigger_threshold);
 }
-
 
 /**
  * Called from the USB-handler to set the sampling configuration
@@ -34,12 +41,11 @@ void printConfig() {
 void setSamplingConfig(sample_config *sc) {
 	if(sc->divisor != 0) config.divisor = sc->divisor;
 	if(sc->bits_per_sample != 0) config.bits_per_sample = sc->bits_per_sample;
-	if(sc->decimation != 0) config.decimation = sc->decimation;
 	if(sc->trigger_threshold != -1) config.trigger_threshold = sc->trigger_threshold;
-
+	
+	config.decimation = (sc->decimation != 0) ? sc->decimation : 1;
 	config.averaging = sc->averaging;
 	if(config.bits_per_sample > 8)	config.bits_per_sample = 8;
-	if(config.decimation < 1)	config.decimation = 1;
 
 	printConfig();
 }
@@ -134,7 +140,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
 	while(!BUTTON_PRESS() && !usb_poll_validate_length() ) {
 		WDT_HIT();
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-			AT91C_BASE_SSC->SSC_THR = 0x43;
+			AT91C_BASE_SSC->SSC_THR = 0x00; //0x43;
 			LED_D_ON();
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {

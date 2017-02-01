@@ -497,24 +497,24 @@ int CmdLFSetConfig(const char *Cmd) {
 			cmdp++;
 			break;
 		case 'q':
-			errors |= param_getdec(Cmd,cmdp+1,&divisor);
+			errors |= param_getdec(Cmd, cmdp+1, &divisor);
 			cmdp+=2;
 			break;
 		case 't':
-			errors |= param_getdec(Cmd,cmdp+1,&unsigned_trigg);
+			errors |= param_getdec(Cmd, cmdp+1, &unsigned_trigg);
 			cmdp+=2;
 			if(!errors) trigger_threshold = unsigned_trigg;
 			break;
 		case 'b':
-			errors |= param_getdec(Cmd,cmdp+1,&bps);
+			errors |= param_getdec(Cmd, cmdp+1, &bps);
 			cmdp+=2;
 			break;
 		case 'd':
-			errors |= param_getdec(Cmd,cmdp+1,&decimation);
+			errors |= param_getdec(Cmd, cmdp+1, &decimation);
 			cmdp+=2;
 			break;
 		case 'a':
-			averaging = param_getchar(Cmd,cmdp+1) == '1';
+			averaging = param_getchar(Cmd, cmdp+1) == '1';
 			cmdp+=2;
 			break;
 		default:
@@ -531,14 +531,13 @@ int CmdLFSetConfig(const char *Cmd) {
 	//Validations
 	if (errors) return usage_lf_config();
 	
-	//Bps is limited to 8, so fits in lower half of arg1
+	//Bps is limited to 8
 	if (bps >> 4) bps = 8;
 
 	sample_config config = { decimation, bps, averaging, divisor, trigger_threshold };
 
-	//Averaging is a flag on high-bit of arg[1]
-	UsbCommand c = {CMD_SET_LF_SAMPLING_CONFIG};
-	memcpy(c.d.asBytes,&config,sizeof(sample_config));
+	UsbCommand c = {CMD_SET_LF_SAMPLING_CONFIG, {0,0,0} };
+	memcpy(c.d.asBytes, &config, sizeof(sample_config));
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;

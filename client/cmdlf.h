@@ -46,6 +46,8 @@
 
 int CmdLF(const char *Cmd);
 
+int CmdLFSetConfig(const char *Cmd);
+
 int CmdLFCommandRead(const char *Cmd);
 int CmdFlexdemod(const char *Cmd);
 int CmdIndalaDemod(const char *Cmd);

@@ -43,7 +43,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t periods, uint3
 	uint16_t period_0 =  periods >> 16;
 	uint16_t period_1 =  periods & 0xFFFF;
 	
-	// 95 == 125 KHz  88 == 124.8 KHz
+	// 95 == 125 KHz  88 == 134.8 KHz
 	int divisor_used = (useHighFreq) ? 88 : 95;
 	sample_config sc = { 0,0,1, divisor_used, 0};
 	setSamplingConfig(&sc);
@@ -1742,8 +1742,9 @@ void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode
 
 void Cotag() {
 
-//#define WAIT2200 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS(2035); }
-#define WAIT2200 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS(2200); }
+#define OFF 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS(2035); }
+//#define WAIT2200 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS(2200); }
+#define ON(x)      { FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 89); FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD); WaitUS((x)); }
 	LED_A_ON();
 	
 	//clear buffer now so it does not interfere with timing later
@@ -1764,26 +1765,23 @@ void Cotag() {
 	StartTicks();
 	
 	//send start pulse
-	TurnReadLFOn(800); 	WAIT2200
-	TurnReadLFOn(3600);	WAIT2200
-	TurnReadLFOn(800);	WAIT2200
-	TurnReadLFOn(3600);	
-	
+	ON(740)  OFF
+	ON(3330) OFF
+	ON(740)  OFF
+	ON(1000)
+
 /*
-	TurnReadLFOn(740); 	WAIT2200
-	TurnReadLFOn(3330);	WAIT2200
-	TurnReadLFOn(740);	WAIT2200
-	TurnReadLFOn(3330);	
-	
+	ON(800)  OFF
+	ON(3600) OFF
+	ON(800)  OFF
+	ON(1000)
 
 burst 800 us,    gap   2.2 msecs
 burst 3.6 msecs  gap   2.2 msecs
 burst 800 us     gap   2.2 msecs
 pulse 3.6 msecs
 */
-	
-	// Acquisition
-	DoAcquisition_default(-1, true);
+	DoAcquisition_config(FALSE);	
 	
 	// Turn the field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off

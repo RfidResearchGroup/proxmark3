@@ -16,6 +16,8 @@
 #include "cmddata.h"	// getSamples
 #include "cmdparser.h"  // CmdsParse, CmdsHelp
 #include "cmdmain.h"
+#include "ui.h"			// PrintAndLog
+#include "cmdlf.h"		// Setconfig 
 
 int CmdLFCOTAG(const char *Cmd);
 int CmdCOTAGRead(const char *Cmd);

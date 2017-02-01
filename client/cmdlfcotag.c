@@ -15,6 +15,8 @@ int CmdCOTAGRead(const char *Cmd) {
 
 //	if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_cotag_read();
 
+	CmdLFSetConfig("q 89");
+ 
 	UsbCommand c = {CMD_COTAG, {0, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -22,7 +24,7 @@ int CmdCOTAGRead(const char *Cmd) {
 		PrintAndLog("command execution time out");
 		return 1;
 	}
-	getSamples("20000", true);
+	getSamples("", true);
 	return 0;
 }
 
