@@ -446,8 +446,9 @@ void StandAloneMode14a()
 					continue;
 				else
 				{
-					Dbprintf("Read UID:"); Dbhexdump(10,uid,0);
-					memcpy(readUID,uid,10*sizeof(uint8_t));
+					Dbprintf("Read UID:"); 
+					Dbhexdump(10, uid, 0);
+					memcpy(readUID, uid, 10 * sizeof(uint8_t));
 					uint8_t *dst = (uint8_t *)&uid_tmp1;
 					// Set UID byte order
 					for (int i=0; i<4; i++)
@@ -473,8 +474,8 @@ void StandAloneMode14a()
 				}
 			}
 			}
-			Dbprintf("ATQA = %02X%02X",hi14a_card[selected].atqa[0],hi14a_card[selected].atqa[1]);
-			Dbprintf("SAK = %02X",hi14a_card[selected].sak);
+			Dbprintf("ATQA = %02X%02X", hi14a_card[selected].atqa[0], hi14a_card[selected].atqa[1]);
+			Dbprintf("SAK = %02X", hi14a_card[selected].sak);
 			LEDsoff();
 			LED(LED_GREEN,  200);
 			LED(LED_ORANGE, 200);
@@ -544,15 +545,15 @@ void StandAloneMode14a()
 				playing = 1;
 			}
 			else {
-				Dbprintf("UID from target tag: %02X%02X%02X%02X", oldBlock0[0],oldBlock0[1],oldBlock0[2],oldBlock0[3]);
-				memcpy(newBlock0,oldBlock0,16);
+				Dbprintf("UID from target tag: %02X%02X%02X%02X", oldBlock0[0], oldBlock0[1], oldBlock0[2], oldBlock0[3]);
+				memcpy(newBlock0, oldBlock0, 16);
 				// Copy uid_1st for bank (2nd is for longer UIDs not supported if classic)
 
 				newBlock0[0] = uid_1st[selected]>>24;
 				newBlock0[1] = 0xFF & (uid_1st[selected]>>16);
 				newBlock0[2] = 0xFF & (uid_1st[selected]>>8);
 				newBlock0[3] = 0xFF & (uid_1st[selected]);
-				newBlock0[4] = newBlock0[0]^newBlock0[1]^newBlock0[2]^newBlock0[3];
+				newBlock0[4] = newBlock0[0] ^ newBlock0[1] ^ newBlock0[2] ^ newBlock0[3];
 
 				// arg0 = workFlags, arg1 = blockNo, datain
 				MifareCSetBlock(params, 0, newBlock0);
@@ -590,9 +591,9 @@ void StandAloneMode14a()
 						uint8_t data[512] = {0}; // in case there is a read command received we shouldn't break
 						uint8_t flags = ( uid_2nd[selected] > 0x00 ) ? FLAG_7B_UID_IN_DATA : FLAG_4B_UID_IN_DATA;
 						num_to_bytes(uid_1st[selected], 3, data);
-						num_to_bytes(uid_2nd[selected], 4, data);
+						num_to_bytes(uid_2nd[selected], 4, data+3);
 						
-						Dbprintf("Simulating ISO14443a tag with uid[0]: %08x, uid[1]: %08x [Bank: %u]", uid_1st[selected],uid_2nd[selected],selected);
+						Dbprintf("Simulating ISO14443a tag with uid[0]: %08x, uid[1]: %08x [Bank: %u]", uid_1st[selected], uid_2nd[selected], selected);
 						if (hi14a_card[selected].sak == 8 && hi14a_card[selected].atqa[0] == 4 && hi14a_card[selected].atqa[1] == 0) {
 							DbpString("Mifare Classic");
 							SimulateIso14443aTag(1, flags, data); // Mifare Classic
@@ -607,7 +608,7 @@ void StandAloneMode14a()
 						}
 						else {
 							Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");
-							SimulateIso14443aTag(1, flags, data);
+							SimulateIso14443aTag(1, flags, data); // Mifare Classic
 						}
 					}
 					else if (button_action == BUTTON_SINGLE_CLICK) {

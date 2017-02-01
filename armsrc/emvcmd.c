@@ -348,7 +348,7 @@ void EMVTransaction()
  
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     while(true) { 
-        if(!iso14443a_select_card(uid,NULL,&cuid)) {
+        if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
             if(EMV_DBGLEVEL >= 1) Dbprintf("Can't select card");
             break;
         }
