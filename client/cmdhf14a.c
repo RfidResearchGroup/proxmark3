@@ -133,13 +133,14 @@ int usage_hf_14a_sim(void) {
 	PrintAndLog("usage: hf 14a sim [h] t <type> u <uid> [x] [e] [v]");
 	PrintAndLog("options: ");
 	PrintAndLog("    h     : This help");
-	PrintAndLog("    t     : 1 = MIFARE Classic");
+	PrintAndLog("    t     : 1 = MIFARE Classic 1k");
 	PrintAndLog("            2 = MIFARE Ultralight");
 	PrintAndLog("            3 = MIFARE Desfire");
 	PrintAndLog("            4 = ISO/IEC 14443-4");
 	PrintAndLog("            5 = MIFARE Tnp3xxx");
 	PrintAndLog("            6 = MIFARE Mini");
 	PrintAndLog("            7 = AMIIBO (NTAG 215),  pack 0x8080");
+	PrintAndLog("            8 = MIFARE Classic 4k");
 //	PrintAndLog("    u     : 4, 7 or 10 byte UID");
 	PrintAndLog("    u     : 4, 7 byte UID");
 	PrintAndLog("    x     : (Optional) Performs the 'reader attack', nr/ar attack against a reader");

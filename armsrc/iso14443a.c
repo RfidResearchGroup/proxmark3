@@ -918,7 +918,11 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 				memcpy(data+3, emdata+4, 4); // uid bytes 3-7
 				flags |= FLAG_7B_UID_IN_DATA;
 			}
-		} break;		
+		} break;	
+		case 8: { // MIFARE Classic 4k
+			response1[0] = 0x02;
+			sak = 0x18;
+		} break;
 		default: {
 			Dbprintf("Error: unkown tagtype (%d)",tagType);
 			return;

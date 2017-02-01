@@ -596,21 +596,25 @@ void StandAloneMode14a()
 							Dbprintf("Simulating ISO14443a tag with uid: %08x [Bank: %u]", tmpuid & 0xFFFFFFFF , selected);
 						}
 						
-						if (uids[selected].sak == 8 && uids[selected].atqa[0] == 4 && uids[selected].atqa[1] == 0) {
-							DbpString("Mifare Classic");
-							SimulateIso14443aTag(1, flags, data); // Mifare Classic
-						}
-						else if (uids[selected].sak == 0 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
+						if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0) {
+							DbpString("Mifare Classic 1k");
+							SimulateIso14443aTag(1, flags, data);
+						} else if (uids[selected].sak == 0x18 && uids[selected].atqa[0] == 0x02 && uids[selected].atqa[1] == 0) {
+							DbpString("Mifare Classic 4k (4b uid)");
+							SimulateIso14443aTag(8, flags, data);
+						} else if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
+							DbpString("Mifare Classic 4k (7b uid)");
+							SimulateIso14443aTag(8, flags, data);
+						} else if (uids[selected].sak == 0x00 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
 							DbpString("Mifare Ultralight");
-							SimulateIso14443aTag(2, flags, data); // Mifare Ultralight
-						}
-						else if (uids[selected].sak == 20 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 3) {
+							SimulateIso14443aTag(2, flags, data);
+						} else if (uids[selected].sak == 0x20 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0x03) {
 							DbpString("Mifare DESFire");
-							SimulateIso14443aTag(3, flags, data); // Mifare DESFire
+							SimulateIso14443aTag(3, flags, data);
 						}
 						else {
 							Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");
-							SimulateIso14443aTag(1, flags, data); // Mifare Classic
+							SimulateIso14443aTag(1, flags, data);
 						}
 					}
 					else if (button_action == BUTTON_SINGLE_CLICK) {
