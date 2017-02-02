@@ -8,7 +8,7 @@
 // Low frequency COTAG commands
 //-----------------------------------------------------------------------------
 #include "cmdlfcotag.h"  // COTAG function declarations
- 
+
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_cotag_read(void){
@@ -24,8 +24,37 @@ int usage_lf_cotag_read(void){
 	PrintAndLog("        lf cotag read 1");
 	return 0;
 }
+
+// COTAG demod should be able to use GraphBuffer,
+// when data load samples
 int CmdCOTAGDemod(const char *Cmd) {
-	return 0;
+
+	uint8_t bits[COTAG_BITS] = {0};
+	size_t bitlen = COTAG_BITS;
+	memcpy(bits, DemodBuffer, COTAG_BITS);
+	
+	int err = manrawdecode(bits, &bitlen, 1);
+	if (err){
+		if (g_debugMode) PrintAndLog("DEBUG: Error - COTAG too many errors: %d", err);
+		return -1;
+	}
+
+	setDemodBuf(bits, bitlen, 0);
+
+	//got a good demod
+	uint16_t cn = bytebits_to_byteLSBF(bits+1, 16);
+	uint32_t fc = bytebits_to_byteLSBF(bits+1+16, 8);
+	
+	/*
+	fc 161:   1010 0001 -> LSB 1000 0101
+	cn 33593  1000 0011 0011 1001 -> LSB 1001 1100 1100 0001
+        cccc cccc cccc cccc                     ffffffff
+	  0 1001 1100 1100 0001 1000 0101 0000 0000 100001010000000001111011100000011010000010000000000000000000000000000000000000000000000000000000100111001100000110000101000
+        1001 1100 1100 0001                     10000101                                                                                         
+	*/
+	//PrintAndLog("COTAG Found: FC %u, CN: %u Raw: %08X%08X%08X", fc, cn); //, raw1 ,raw2, raw3);
+	PrintAndLog("COTAG Found: FC %u, CN: %u", fc, cn); 
+	return 1;
 }
 
 // When reading a COTAG.
@@ -36,8 +65,7 @@ int CmdCOTAGRead(const char *Cmd) {
 	
 	if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_cotag_read();
 	
-	uint8_t bits[320] = {0};
-	uint32_t rawsignal = 0;
+	uint32_t rawsignal = 1;
 	sscanf(Cmd, "%u", &rawsignal);
  
 	UsbCommand c = {CMD_COTAG, {rawsignal, 0, 0}};
@@ -45,7 +73,7 @@ int CmdCOTAGRead(const char *Cmd) {
 	SendCommand(&c);
 	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 7000) ) {
 		PrintAndLog("command execution time out");
-		return 1;	
+		return -1;	
 	}
 	
 	switch ( rawsignal ){
@@ -56,24 +84,14 @@ int CmdCOTAGRead(const char *Cmd) {
 			getSamples("", true); break;
 		}
 		case 1: {
-			GetFromBigBuf(bits, sizeof(bits), 0);
+			GetFromBigBuf(DemodBuffer, COTAG_BITS, 0);
+			DemodBufferLen = COTAG_BITS;
 			UsbCommand response;
-			if ( !WaitForResponseTimeout(CMD_ACK, &response, 500) ) {
-				if (g_debugMode) PrintAndLog("timeout while waiting for reply.");
-				return 1;
+			if ( !WaitForResponseTimeout(CMD_ACK, &response, 1000) ) {
+				PrintAndLog("timeout while waiting for reply.");
+				return -1;
 			}
-			
-			size_t size = sizeof(bits);
-			int err = manrawdecode(bits, &size, 1);
-			if (err){
-				if (g_debugMode) PrintAndLog("DEBUG: Error - COTAG too many errors: %d", err);
-				return 0;
-			}
-			PrintAndLog("%s", sprint_bin(bits, size));
-			setDemodBuf(bits, size, 0);
-			
-			// CmdCOTAGDemod();
-			break;
+			return CmdCOTAGDemod("");
 		}
 	}	
 	return 0;

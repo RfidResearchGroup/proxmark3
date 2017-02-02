@@ -371,8 +371,8 @@ uint32_t doCotagAcquisitionManchester() {
 	uint8_t *dest = BigBuf_get_addr();
 	uint16_t bufsize = BigBuf_max_traceLen();
 	
-	if ( bufsize > 320 )
-		bufsize = 320;
+	if ( bufsize > COTAG_BITS )
+		bufsize = COTAG_BITS;
 
 	dest[0] = 0;	
 	uint8_t sample = 0, firsthigh = 0, firstlow = 0; 

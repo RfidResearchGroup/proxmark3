@@ -105,8 +105,7 @@ int CmdJablotronDemod(const char *Cmd) {
 	uint64_t rawid = bytebits_to_byte(DemodBuffer+16, 40);
 	uint64_t id = getJablontronCardId(rawid);
 
-	PrintAndLog("Jablotron Tag Found: Card ID %u", id);
-	PrintAndLog("Raw: %08X%08X", raw1 ,raw2);
+	PrintAndLog("Jablotron Tag Found: Card ID %u  :: Raw: %08X%08X", id, raw1 ,raw2);
 
 	uint8_t chksum = raw2 & 0xFF;
 	PrintAndLog("Checksum: %02X [%s]",

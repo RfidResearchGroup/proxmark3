@@ -1116,6 +1116,14 @@ int CmdLFfind(const char *Cmd) {
 		PrintAndLog("\nValid Presco ID Found!");
 		return 1;
 	}
+	// ICEMAN;  always call save_restorGB for COTAG. Will break graphbuffer
+	save_restoreGB(1)
+	ans=CmdCOTAGRead("");
+	if (ans>0){
+		PrintAndLog("\nValid COTAG ID Found!");
+		return 1;
+	}
+	save_restoreGB(0)
 	// TIdemod?
 
 /*	
@@ -1126,7 +1134,6 @@ int CmdLFfind(const char *Cmd) {
 		}
 	}
 */
-
 	PrintAndLog("\nNo Known Tags Found!\n");
 	if (testRaw=='u' || testRaw=='U'){
 		//test unknown tag formats (raw mode)

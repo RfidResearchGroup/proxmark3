@@ -64,6 +64,10 @@
 #define TRUE 1
 #define FALSE 0
 
+#ifndef COTAG_BITS
+#define COTAG_BITS 320
+#endif
+
 //#define PACKED __attribute__((__packed__))
 
 #define LED_A_ON()		HIGH(GPIO_LED_A)
