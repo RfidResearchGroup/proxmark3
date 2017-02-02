@@ -350,9 +350,9 @@ int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr
 //take 10 and 01 and manchester decode
 //run through 2 times and take least errCnt
 int manrawdecode(uint8_t * BitStream, size_t *size, uint8_t invert){
-	uint16_t bitnum = 0, MaxBits = 512, errCnt = 0;
+	int errCnt = 0, bestErr = 1000;
+	uint16_t bitnum = 0, MaxBits = 512, bestRun = 0;
 	size_t i, k;
-	uint16_t bestErr = 1000, bestRun = 0;
 	if (*size < 16) return -1;
 	//find correct start position [alignment]
 	for (k=0; k < 2; ++k){

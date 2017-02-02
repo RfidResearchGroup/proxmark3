@@ -799,7 +799,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
 
-		DoAcquisition_default(-1,true);
+		DoAcquisition_default(0, true);
 		// FSK demodulator
 		size = 50*128*2; //big enough to catch 2 sequences of largest format
 		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo);
@@ -1740,18 +1740,36 @@ void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode
 	LED_D_OFF();
 }
 
-void Cotag() {
+/*
+Reading a COTAG.
+
+COTAG needs the reader to send a startsequence and the card has an extreme slow datarate.
+because of this, we can "sample" the data signal but we interpreate it to Manchester direct.
+
+READER START SEQUENCE:
+burst 800 us,    gap   2.2 msecs
+burst 3.6 msecs  gap   2.2 msecs
+burst 800 us     gap   2.2 msecs
+pulse 3.6 msecs
+
+This triggers a COTAG tag to response
+*/
+void Cotag(uint32_t arg0) {
 
 #define OFF 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS(2035); }
-//#define WAIT2200 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS(2200); }
-#define ON(x)      { FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 89); FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD); WaitUS((x)); }
-	LED_A_ON();
+#define ON(x)   { FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD); WaitUS((x)); }
+
+	uint8_t rawsignal = arg0 & 0xF;
+
+	LED_A_ON();	
+
+	// Switching to LF image on FPGA. This might empty BigBuff
+	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_ext(false);
-
-	// Set up FPGA, 132kHz to power up the tag
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+	
+	// Set up FPGA, 132kHz to power up the tag	
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 89);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
@@ -1761,27 +1779,20 @@ void Cotag() {
 	// Now set up the SSC to get the ADC samples that are now streaming at us.
 	FpgaSetupSsc();
 
-	// start a 1.5ticks is 1us
+	// start clock - 1.5ticks is 1us
 	StartTicks();
 	
-	//send start pulse
+	//send COTAG start pulse
 	ON(740)  OFF
 	ON(3330) OFF
 	ON(740)  OFF
 	ON(1000)
 
-/*
-	ON(800)  OFF
-	ON(3600) OFF
-	ON(800)  OFF
-	ON(1000)
-
-burst 800 us,    gap   2.2 msecs
-burst 3.6 msecs  gap   2.2 msecs
-burst 800 us     gap   2.2 msecs
-pulse 3.6 msecs
-*/
-	DoAcquisition_config(FALSE);	
+	switch(rawsignal) {
+		case 0: doCotagAcquisition(50000); break;
+		case 1: doCotagAcquisitionManchester(); break;
+		case 2: DoAcquisition_config(TRUE); break;
+	}
 	
 	// Turn the field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off

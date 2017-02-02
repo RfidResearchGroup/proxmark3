@@ -20,7 +20,7 @@ sample_config config = { 1, 8, 1, 95, 0 } ;
 
 void printConfig() {
 	Dbprintf("LF Sampling config: ");
-	Dbprintf("  [q] divisor:           %d ", config.divisor);
+	Dbprintf("  [q] divisor:           %d (%d KHz)", config.divisor, 12000 / (config.divisor+1));
 	Dbprintf("  [b] bps:               %d ", config.bits_per_sample);
 	Dbprintf("  [d] decimation:        %d ", config.decimation);
 	Dbprintf("  [a] averaging:         %s ", (config.averaging) ? "Yes" : "No");
@@ -140,7 +140,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
 	while(!BUTTON_PRESS() && !usb_poll_validate_length() ) {
 		WDT_HIT();
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-			AT91C_BASE_SSC->SSC_THR = 0x00; //0x43;
+			AT91C_BASE_SSC->SSC_THR = 0x43;
 			LED_D_ON();
 		}
 		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
@@ -310,4 +310,122 @@ void doT55x7Acquisition(size_t sample_size) {
 		}
 	}
 }
+/**
+* acquisition of Cotag LF signal. Similart to other LF,  since the Cotag has such long datarate RF/384
+* and is Manchester?,  we directly gather the manchester data into bigbuff
+**/
+
+#define COTAG_T1 384
+#define COTAG_T2 (COTAG_T1>>1)
+#define COTAG_ONE_THRESHOLD 128+30
+#define COTAG_ZERO_THRESHOLD 128-30
+void doCotagAcquisition(size_t sample_size) {
+
+	uint8_t *dest = BigBuf_get_addr();
+	uint16_t bufsize = BigBuf_max_traceLen();
+	
+	if ( bufsize > sample_size )
+		bufsize = sample_size;
+
+	dest[0] = 0;	
+	uint8_t sample = 0, firsthigh = 0, firstlow = 0; 
+	uint16_t i = 0;
+
+	while (!BUTTON_PRESS() && !usb_poll_validate_length() && (i < bufsize) ) {
+		WDT_HIT();		
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+			AT91C_BASE_SSC->SSC_THR = 0x43;
+			LED_D_ON();
+		}
+		
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+			sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;	
+			LED_D_OFF();
+		
+			// find first peak
+			if ( !firsthigh ) {
+				if (sample < COTAG_ONE_THRESHOLD) 
+					continue;
+				firsthigh = 1;
+			}
+			if ( !firstlow ){
+				if (sample > COTAG_ZERO_THRESHOLD )
+					continue;
+				firstlow = 1;
+			}
+
+			++i;			
+	
+			if ( sample > COTAG_ONE_THRESHOLD)
+				dest[i] = 255;
+			else if ( sample < COTAG_ZERO_THRESHOLD) 
+				dest[i] = 0;
+			else 
+				dest[i] = dest[i-1];			
+		}
+	}
+}
+
+uint32_t doCotagAcquisitionManchester() {
+
+	uint8_t *dest = BigBuf_get_addr();
+	uint16_t bufsize = BigBuf_max_traceLen();
+	
+	if ( bufsize > 320 )
+		bufsize = 320;
+
+	dest[0] = 0;	
+	uint8_t sample = 0, firsthigh = 0, firstlow = 0; 
+	uint16_t sample_counter = 0, period = 0;
+	uint8_t curr = 0, prev = 0;
+
+	while (!BUTTON_PRESS() && !usb_poll_validate_length() && (sample_counter < bufsize) ) {
+		WDT_HIT();		
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+			AT91C_BASE_SSC->SSC_THR = 0x43;
+			LED_D_ON();
+		}
+		
+		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+			sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;	
+			LED_D_OFF();
+		
+			// find first peak
+			if ( !firsthigh ) {
+				if (sample < COTAG_ONE_THRESHOLD) 
+					continue;
+				firsthigh = 1;
+			}
 			
+			if ( !firstlow ){
+				if (sample > COTAG_ZERO_THRESHOLD )
+					continue;
+				firstlow = 1;
+			}
+						
+			// set sample 255, 0,  or previous			
+			if ( sample > COTAG_ONE_THRESHOLD){
+				prev = curr;
+				curr = 1;
+			}
+			else if ( sample < COTAG_ZERO_THRESHOLD) {
+				prev = curr;
+				curr = 0;
+			}
+			else {
+				curr = prev;
+			}			
+
+			// full T1 periods, 
+			if ( period > 0 ) {
+				--period;
+				continue;
+			}
+						
+			dest[sample_counter] = curr;
+			++sample_counter;
+			period = COTAG_T1;
+		}
+	}
+	return sample_counter;
+}

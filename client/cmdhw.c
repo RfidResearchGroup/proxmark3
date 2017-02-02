@@ -222,10 +222,11 @@ int CmdSetDivisor(const char *Cmd)
 		PrintAndLog("divisor must be between 19 and 255");
 		return 1;
 	} 
-	
+	// 12 000 000 (12Mhz)
+	// 
 	clearCommandBuffer();
 	SendCommand(&c);
-	PrintAndLog("Divisor set, expected freq=%dHz", 12000000 / (c.arg[0]+1));
+	PrintAndLog("Divisor set, expected %.1f KHz", ((double)12000 / (c.arg[0]+1)) );
 	return 0;
 }
 
