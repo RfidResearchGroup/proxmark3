@@ -20,7 +20,7 @@
 #include "cmdlf.h"		// Setconfig 
 
 #ifndef COTAG_BITS
-#define COTAG_BITS 320
+#define COTAG_BITS 264
 #endif
 
 int CmdLFCOTAG(const char *Cmd);

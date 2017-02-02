@@ -45,6 +45,11 @@ int CmdCOTAGDemod(const char *Cmd) {
 	uint16_t cn = bytebits_to_byteLSBF(bits+1, 16);
 	uint32_t fc = bytebits_to_byteLSBF(bits+1+16, 8);
 	
+	uint32_t raw1 = bytebits_to_byteLSBF(bits, 32);
+	uint32_t raw2 = bytebits_to_byteLSBF(bits+32, 32);
+	uint32_t raw3 = bytebits_to_byteLSBF(bits+64, 32);
+	uint32_t raw4 = bytebits_to_byteLSBF(bits+96, 32);
+	
 	/*
 	fc 161:   1010 0001 -> LSB 1000 0101
 	cn 33593  1000 0011 0011 1001 -> LSB 1001 1100 1100 0001
@@ -52,8 +57,7 @@ int CmdCOTAGDemod(const char *Cmd) {
 	  0 1001 1100 1100 0001 1000 0101 0000 0000 100001010000000001111011100000011010000010000000000000000000000000000000000000000000000000000000100111001100000110000101000
         1001 1100 1100 0001                     10000101                                                                                         
 	*/
-	//PrintAndLog("COTAG Found: FC %u, CN: %u Raw: %08X%08X%08X", fc, cn); //, raw1 ,raw2, raw3);
-	PrintAndLog("COTAG Found: FC %u, CN: %u", fc, cn); 
+	PrintAndLog("COTAG Found: FC %u, CN: %u Raw: %08X%08X%08X%08X", fc, cn, raw1 ,raw2, raw3, raw4);
 	return 1;
 }
 

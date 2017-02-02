@@ -65,7 +65,7 @@
 #define FALSE 0
 
 #ifndef COTAG_BITS
-#define COTAG_BITS 320
+#define COTAG_BITS 264
 #endif
 
 //#define PACKED __attribute__((__packed__))
