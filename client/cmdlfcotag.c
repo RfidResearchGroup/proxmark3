@@ -59,18 +59,18 @@ int CmdCOTAGRead(const char *Cmd) {
 			GetFromBigBuf(bits, sizeof(bits), 0);
 			UsbCommand response;
 			if ( !WaitForResponseTimeout(CMD_ACK, &response, 500) ) {
-					PrintAndLog("timeout while waiting for reply.");
-					return 1;
+				if (g_debugMode) PrintAndLog("timeout while waiting for reply.");
+				return 1;
 			}
 			
 			size_t size = sizeof(bits);
 			int err = manrawdecode(bits, &size, 1);
 			if (err){
-				PrintAndLog("DEBUG: Error - COTAG too many errors: %d", err);
+				if (g_debugMode) PrintAndLog("DEBUG: Error - COTAG too many errors: %d", err);
 				return 0;
 			}
 			PrintAndLog("%s", sprint_bin(bits, size));
-			setDemodBuf(bits, sizeof(bits), 0);
+			setDemodBuf(bits, size, 0);
 			
 			// CmdCOTAGDemod();
 			break;
