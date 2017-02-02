@@ -1117,13 +1117,13 @@ int CmdLFfind(const char *Cmd) {
 		return 1;
 	}
 	// ICEMAN;  always call save_restorGB for COTAG. Will break graphbuffer
-	save_restoreGB(1)
+	save_restoreGB(1);
 	ans=CmdCOTAGRead("");
 	if (ans>0){
 		PrintAndLog("\nValid COTAG ID Found!");
 		return 1;
 	}
-	save_restoreGB(0)
+	save_restoreGB(0);
 	// TIdemod?
 
 /*	
