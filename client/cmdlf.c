@@ -1004,6 +1004,7 @@ int CmdVchDemod(const char *Cmd) {
 //by marshmellow
 int CmdLFfind(const char *Cmd) {
 	int ans = 0;
+	size_t minLength = 1000;
 	char cmdp = param_getchar(Cmd, 0);
 	char testRaw = param_getchar(Cmd, 1);
 	if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') return usage_lf_find();
@@ -1011,20 +1012,37 @@ int CmdLFfind(const char *Cmd) {
 	if (!offline && (cmdp != '1')){
 		CmdLFRead("s");
 		getSamples("30000", false);
-	} else if (GraphTraceLen < 1000) {
+	} else if (GraphTraceLen < minLength) {
 		PrintAndLog("Data in Graphbuffer was too small.");
 		return 0;
 	}
 	if (cmdp == 'u' || cmdp == 'U') testRaw = 'u';
 
-	// if ( justNoise(GraphBuffer, GraphTraceLen) ) {
-		// PrintAndLog("Signal looks just like noise. Quitting.");
-		// return 0;
-	// }
-	
 	PrintAndLog("NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
 	PrintAndLog("False Positives ARE possible\n");  
 	PrintAndLog("\nChecking for known tags:\n");
+
+	size_t testLen = minLength;
+	
+	// only run these tests if device is online
+	if (!offline && (cmdp != '1')){
+
+		// only run if graphbuffer is just noise as it should be for hitag/cotag
+		if (graphJustNoise(GraphBuffer, testLen)) {
+			
+			ans=CmdLFHitagReader("26");
+			if (ans==0)
+				return 1;
+
+			ans=CmdCOTAGRead("");
+			if (ans>0){
+				PrintAndLog("\nValid COTAG ID Found!");
+				return 1;
+			}
+			PrintAndLog("Signal looks just like noise. Quitting.");
+		    return 0;
+		}
+	}
 
 	ans=CmdFSKdemodIO("");
 	if (ans>0) {
@@ -1116,24 +1134,8 @@ int CmdLFfind(const char *Cmd) {
 		PrintAndLog("\nValid Presco ID Found!");
 		return 1;
 	}
-	// ICEMAN;  always call save_restorGB for COTAG. Will break graphbuffer
-	save_restoreGB(1);
-	ans=CmdCOTAGRead("");
-	if (ans>0){
-		PrintAndLog("\nValid COTAG ID Found!");
-		return 1;
-	}
-	save_restoreGB(0);
-	// TIdemod?
 
-/*	
-	if (!offline && (cmdp != '1')){
-		ans=CmdLFHitagReader("26");
-		if (ans==0) {
-			return 1;
-		}
-	}
-*/
+	// TIdemod?
 	PrintAndLog("\nNo Known Tags Found!\n");
 	if (testRaw=='u' || testRaw=='U'){
 		//test unknown tag formats (raw mode)
