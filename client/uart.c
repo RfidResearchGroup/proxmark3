@@ -319,19 +319,24 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) 
     
     // Write error
     if (res < 0) {
-      return false;
+		printf("write error\n");
+		return false;
     }
     
     // Write time-out
     if (res == 0) {
-      return false;
+		printf("write time-out\n");
+		return false;
     }
     
     // Send away the bytes
     res = write(((serial_port_unix*)sp)->fd,pbtTx+szPos,szTxLen-szPos);
     
     // Stop if the OS has some troubles sending the data
-    if (res <= 0) return false;
+    if (res <= 0) {
+		printf("os troubles\n");
+		return false;
+	}
     
     szPos += res;
   }
@@ -428,7 +433,7 @@ bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t* pszRxLen) {
 
 bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) {
   DWORD dwTxLen = 0;
-  return WriteFile(((serial_port_windows*)sp)->hPort,pbtTx,szTxLen,&dwTxLen,NULL);
+  return WriteFile(((serial_port_windows*)sp)->hPort, pbtTx, szTxLen, &dwTxLen, NULL);
   return (dwTxLen != 0);
 }
 
