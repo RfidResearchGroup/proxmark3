@@ -221,6 +221,8 @@ int CmdHF14AReader(const char *Cmd) {
 			uint32_t tagT = GetHF14AMfU_Type();
 			if (tagT != UL_ERROR)
 				ul_print_type(tagT, 0);
+			else 
+				PrintAndLog("TYPE: Possible AZTEK (iso14443a compliant)");
 
 			// reconnect for further tests
 			c.arg[0] = ISO14A_CONNECT | ISO14A_NO_DISCONNECT;
