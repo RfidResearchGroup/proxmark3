@@ -14,20 +14,33 @@ APP_CFLAGS = -DWITH_ISO14443a_StandAlone \
 			 -DWITH_LF \
 			 -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b -DWITH_ICLASS \
 			 -DWITH_LEGICRF -DWITH_HITAG -DWITH_CRC -DON_DEVICE -DWITH_HFSNOOP \
-			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 #			 -DWITH_EMV \
 #			 -DWITH_LCD \
+			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 
+#ifdef WITH_LCD			 
 #SRC_LCD = fonts.c LCD.c
-SRC_LF = lfops.c hitag2.c hitagS.c lfsampling.c pcf7931.c lfdemod.c protocols.c
+#endif
+
+#ifdef WITH_LF
+SRC_LF = lfops.c hitag2.c hitagS.c lfsampling.c pcf7931.c lfdemod.c
+#endif
+
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c mifaresniff.c epa.c
 SRC_ISO14443b = iso14443b.c
 SRC_CRAPTO1 = crapto1.c crypto1.c des.c aes.c desfire_key.c desfire_crypto.c mifaredesfire.c
 SRC_CRC = iso14443crc.c crc.c crc16.c crc32.c 
+
+#ifdef WITH_EMV
 SRC_EMV = tlv.c emvdataels.c emvutil.c emvcmd.c 									 
+#endif
+#ifdef WITH_ICLASS
 SRC_ICLASS = iclass.c optimized_cipher.c
+#endif
+#ifdef WITH_LEGIC
 SRC_LEGIC = legicrf.c legic_prng.c
+#endif
 
 #the FPGA bitstream files. Note: order matters!
 FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit
@@ -45,6 +58,7 @@ APP_CFLAGS += -I.
 
 # Compile these in thumb mode (small size)
 THUMBSRC = start.c \
+	protocols.c \
 	$(SRC_LCD) \
 	$(SRC_ISO15693) \
 	$(SRC_LF) \
@@ -56,6 +70,10 @@ THUMBSRC = start.c \
 	string.c \
 	BigBuf.c \
 	ticks.c \
+	usb_cdc.c \
+	parity.c \
+	random.c \
+	cmd.c \
 	hfsnoop.c
 
 # These are to be compiled in ARM mode
@@ -65,11 +83,7 @@ ARMSRC = fpgaloader.c \
 	$(SRC_CRAPTO1) \
 	$(SRC_CRC) \
 	$(SRC_ICLASS) \
-	usb_cdc.c \
-	cmd.c \
-	parity.c \
-	random.c \
-#	$(SRC_EMV) \
+	$(SRC_EMV)
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
