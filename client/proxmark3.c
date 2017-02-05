@@ -98,7 +98,8 @@ static void *uart_receiver(void *targ) {
 		prx = rx;
 
 		if (txcmd_pending) {
-			if ( !uart_send(sp, (byte_t*) &txcmd, sizeof(UsbCommand))) {
+			bool res = uart_send(sp, (byte_t*) &txcmd, sizeof(UsbCommand));
+			if (!res) {
 				PrintAndLog("Sending bytes to proxmark failed");
 			}
 			txcmd_pending = false;

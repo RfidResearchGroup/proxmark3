@@ -11,14 +11,14 @@
 #include "emvcmd.h"
 
 static emvtags currentcard; //use to hold emv tags for the reader/card during communications
-static tUart Uart;
+//static tUart Uart;
 
 // The FPGA will report its internal sending delay in
 uint16_t FpgaSendQueueDelay;
 //variables used for timing purposes:
 //these are in ssp_clk cycles:
 //static uint32_t NextTransferTime;
-static uint32_t LastTimeProxToAirStart;
+//static uint32_t LastTimeProxToAirStart;
 //static uint32_t LastProxToAirDuration;
 
 //load individual tag into current card
@@ -128,7 +128,6 @@ int EMVGetProcessingOptions(uint8_t *PDOL, uint8_t PDOLlen, emvtags* inputcard)
 int EMVGetChallenge(emvtags* inputcard)
 {
     uint8_t receivedAnswer[MAX_FRAME_SIZE];
-    //uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
     //variables
     //tlvtag inputtag; //create the tag structure
     //perform select 
@@ -146,7 +145,6 @@ int EMVGenerateAC(uint8_t refcontrol, emvtags* inputcard)
     uint8_t cdolcommandlen = 0;
     tlvtag temptag;
  
-    //uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
     if(currentcard.tag_8C_len > 0) { 
         emv_generateDOL(currentcard.tag_8C, currentcard.tag_8C_len, &currentcard, cdolcommand, &cdolcommandlen); }
     else{
@@ -184,10 +182,9 @@ int EMV_PaywaveTransaction()
     else if((currentcard.tag_9F66[0] & 0x80) == 0x80) {
         if((currentcard.tag_9F66[1] & 0x80) == 1) { //CVN17
             cardMode = VISA_CVN17;
-        }
-        else{
+        } else {
             cardMode = VISA_DCVV; 
-            }
+        }
     }
      
     EMVSelectAID(currentcard.tag_4F,currentcard.tag_4F_len, &currentcard); //perform second AID command
@@ -243,7 +240,7 @@ int EMV_PaywaveTransaction()
         EMVReadRecord(4,2,&currentcard);
     }
     //EMVGetChallenge(&currentcard);
-        //memcpy(currentcard.tag_9F4C,&responsebuffer[1],8); // ICC UN 
+    //memcpy(currentcard.tag_9F4C,&responsebuffer[1],8); // ICC UN 
     EMVGenerateAC(0x81,&currentcard);
 
     Dbprintf("CARDMODE=%i",cardMode);    
@@ -383,6 +380,8 @@ void EMVdumpcard(void){
 //-----------------------------------------------------------------------------
 void SimulateEMVcard()
 {
+	/*
+	
 	//uint8_t sak; //select ACKnowledge
     uint16_t readerPacketLen = 64; //reader packet length - provided by RATS, default to 64 bytes if RATS not supported
 	
@@ -548,17 +547,17 @@ void SimulateEMVcard()
 	    currentblock = receivedCmd[0] & 0x01; 	
         
         if(receivedCmd[0] == 0x26) { // Received a REQUEST
-			p_response = &responses[ATR]; order = REQA;
+			p_response = &responses[ATR]; order = ISO14443A_CMD_REQA;
 		} else if(receivedCmd[0] == 0x52) { // Received a WAKEUP
-			p_response = &responses[ATR]; order = WUPA;
+			p_response = &responses[ATR]; order = ISO14443A_CMD_WUPA;
 		} else if(receivedCmd[1] == 0x20 && receivedCmd[0] == 0x93) {	// Received request for UID (cascade 1)
-			p_response = &responses[UID1]; order = SELUID1;
+			p_response = &responses[UID1]; order =  ISO14443A_CMD_ANTICOLL_OR_SELECT;
 		} else if(receivedCmd[1] == 0x20 && receivedCmd[0] == 0x95) { 	// Received request for UID (cascade 2)
-			p_response = &responses[UID2]; order = SELUID2;
+			p_response = &responses[UID2]; order =  ISO14443A_CMD_ANTICOLL_OR_SELECT_2;
 		} else if(receivedCmd[1] == 0x70 && receivedCmd[0] == 0x93) {	// Received a SELECT (cascade 1)
-			p_response = &responses[SELACK1]; order = SEL1;
+			p_response = &responses[SELACK1]; order =  ISO14443A_CMD_ANTICOLL_OR_SELECT;
 		} else if(receivedCmd[1] == 0x70 && receivedCmd[0] == 0x95) {	// Received a SELECT (cascade 2)
-			p_response = &responses[SELACK2]; order = SEL2;
+			p_response = &responses[SELACK2]; order =  ISO14443A_CMD_ANTICOLL_OR_SELECT_2;
 		} else if((receivedCmd[0] & 0xA2) == 0xA2){ //R-Block received 
             if(previousblock == currentblock){ //rule 11, retransmit last block
 		        p_response = &dynamic_response_info;
@@ -731,4 +730,6 @@ void SimulateEMVcard()
 	Dbprintf("%x %x %x", happened, happened2, cmdsRecvd);
 	LED_A_OFF();
 	BigBuf_free_keep_EM();
+	
+	*/
 }

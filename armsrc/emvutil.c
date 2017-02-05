@@ -370,14 +370,18 @@ exitfunction:  //goto label to exit search quickly once found
 //function to 
 int emv_settag(uint32_t tag, uint8_t *datain, emvtags *currentcard){
     char binarydata[255] = {0};
-    //if((strlen((const char *)datain)%2) != 0){ //must be an even string
+    
+	/*
+	// if((strlen((const char *)datain)%2) != 0){ //must be an even string
     //    return -1;
-    //}
-    //if(strlen((const char *)datain) > 255) {
+    // }
+    // if(strlen((const char *)datain) > 255) {
     //    return -1;
-    //} 
-    uint8_t datalen = strlen((const char *)datain) / 2; //length of datain 
-    for(int i=0;i<strlen((const char *)datain);i+=2){
+    // } 
+	*/
+   
+	uint8_t datalen = strlen((const char *)datain) / 2; //length of datain 
+    for(int i = 0; i < strlen((const char *)datain); i += 2){
         binarydata[i/2] |= (char)hex2int(datain[i]) << 4;
         binarydata[i/2] |= (char)hex2int(datain[i+1]);
     } 
@@ -1353,7 +1357,7 @@ int emv_select(uint8_t* AID, uint8_t AID_len, void* data)
     selectCmd[4] = AID_len;
     memcpy(&(selectCmd[5]), AID, AID_len);
     selectCmd[selectCmd_len-1] = 0x00;
-    return iso14_apdu(selectCmd,selectCmd_len,false, 0,data);
+    return iso14_apdu(selectCmd, selectCmd_len, data);
 }
 
 //perform READ RECORD
@@ -1367,7 +1371,7 @@ int emv_readrecord(uint8_t recordnumber, uint8_t sfi, void* data)
     readRecordCmd[2] = recordnumber;
     readRecordCmd[3] = ((sfi << 3) | 0x04);
     readRecordCmd[4] = 0x00;
-    return iso14_apdu(readRecordCmd,readRecordCmd_len,false,0,data); 
+    return iso14_apdu(readRecordCmd, readRecordCmd_len, data); 
 }
 
 int emv_getprocessingoptions(uint8_t* pdol, uint8_t pdol_len, void* data)
@@ -1386,7 +1390,7 @@ int emv_getprocessingoptions(uint8_t* pdol, uint8_t pdol_len, void* data)
         memcpy(&(processingCmd[7]), pdol, pdol_len);}
     processingCmd[processingCmd_len] = 0x00; 
     //Dbhexdump(processingCmd_len, processingCmd, false); 
-    return iso14_apdu(processingCmd,processingCmd_len,false, 0, data);
+    return iso14_apdu(processingCmd, processingCmd_len, data);
 }
 
 int emv_computecryptogram(uint8_t* UDOL, uint8_t UDOL_len, void *data)
@@ -1402,7 +1406,7 @@ int emv_computecryptogram(uint8_t* UDOL, uint8_t UDOL_len, void *data)
     memcpy(&(cryptogramCmd[5]), UDOL, UDOL_len);
     cryptogramCmd[cryptogramCmd_len-1] = 0x00;
  
-    return iso14_apdu(cryptogramCmd,cryptogramCmd_len,false, 0,data);
+    return iso14_apdu(cryptogramCmd, cryptogramCmd_len, data);
 }
 
 int emv_getchallenge(void *data)
@@ -1416,7 +1420,7 @@ int emv_getchallenge(void *data)
     challengeCmd[3] = 0x00; 
     challengeCmd[4] = 0x00;
      
-    return iso14_apdu(challengeCmd,challengeCmd_len,false, 0,data);
+    return iso14_apdu(challengeCmd, challengeCmd_len, data);
 }
 
 int emv_loopback(uint8_t* transData , uint8_t transData_len, void *data)
@@ -1430,7 +1434,7 @@ int emv_loopback(uint8_t* transData , uint8_t transData_len, void *data)
     loopbackCmd[3] = 0x00; 
     loopbackCmd[4] = loopbackCmd_len;
     memcpy(&(loopbackCmd[5]), transData, transData_len);  
-    return iso14_apdu(loopbackCmd,loopbackCmd_len,false, 0,data);
+    return iso14_apdu(loopbackCmd, loopbackCmd_len, data);
 }
 
 //generateAC
@@ -1447,12 +1451,10 @@ int emv_generateAC(uint8_t refcontrolparam, uint8_t* cdolinput, uint8_t cdolinpu
     memcpy(&(acCmd[5]), cdolinput, cdolinputlen);  
     acCmd[acCmd_len-1] = 0x00;
     Dbhexdump(acCmd_len, acCmd,false); 
-    return iso14_apdu(acCmd,acCmd_len,false,0,data);
+    return iso14_apdu(acCmd, acCmd_len, data);
 }
 
-int emv_decodeAFL(uint8_t* AFL, uint8_t AFLlen )
-{
-
+int emv_decodeAFL(uint8_t* AFL, uint8_t AFLlen ){
     return 0;
 }
 

@@ -3,12 +3,6 @@
 
 #include "emvdataels.h"
 
-//Known AIDs
-struct tagdescription {
-	uint8_t tag[2];
-	char description[255];
-};
-
 const uint8_t AID_VISA[]    =   {0xa0,0x00,0x00,0x00,0x03};
 const uint8_t AID_VISA_DB[] =   {0xa0,0x00,0x00,0x00,0x03,0x10,0x10};
 const uint8_t AID_VISA_C[]  =   {0xa0,0x00,0x00,0x00,0x03,0x10,0x10,0x01};
@@ -44,7 +38,7 @@ const uint8_t PIN_BLOCKED[] = {0x69,0x84};
 const uint8_t PIN_BLOCKED2[] = {0x69,0x84};
 const uint8_t PIN_WRONG[] = {0x63};
 
-const tagdescription EMV_TAG_LIST[] = {
+const tagdescription_t EMV_TAG_LIST[62] = {
     {"\x4f\x00","Application Identifier (AID)"},
     {"\x50\x00","Application Label"},
     {"\x57\x00","Track 2 Equivalent Data"},
