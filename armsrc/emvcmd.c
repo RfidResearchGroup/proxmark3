@@ -11,15 +11,10 @@
 #include "emvcmd.h"
 
 static emvtags currentcard; //use to hold emv tags for the reader/card during communications
-//static tUart Uart;
 
 // The FPGA will report its internal sending delay in
-uint16_t FpgaSendQueueDelay;
-//variables used for timing purposes:
-//these are in ssp_clk cycles:
-//static uint32_t NextTransferTime;
-//static uint32_t LastTimeProxToAirStart;
-//static uint32_t LastProxToAirDuration;
+//uint16_t FpgaSendQueueDelay;
+
 
 //load individual tag into current card
 void EMVloadvalue(uint32_t tag, uint8_t *datain){
@@ -31,15 +26,13 @@ void EMVloadvalue(uint32_t tag, uint8_t *datain){
 void EMVReadRecord(uint8_t arg0, uint8_t arg1,emvtags *currentcard)
 {
     uint8_t record = arg0;
-    uint8_t sfi = arg1 & 0x0F; //convert arg1 to number
+    uint8_t sfi = arg1 & 0x0F; // convert arg1 to number
     uint8_t receivedAnswer[MAX_FRAME_SIZE];
-   
-     //uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
-    
-    //variables
-    tlvtag inputtag; //create the tag structure
-    //perform read 
-    //write the result to the provided card 
+  
+    // variables
+    tlvtag inputtag; // create the tag structure
+    // perform read 
+    // write the result to the provided card 
     if(!emv_readrecord(record,sfi,receivedAnswer)) {
         if(EMV_DBGLEVEL >= 1) Dbprintf("readrecord failed");
     }
@@ -58,33 +51,32 @@ void EMVReadRecord(uint8_t arg0, uint8_t arg1,emvtags *currentcard)
 void EMVSelectAID(uint8_t *AID, uint8_t AIDlen, emvtags* inputcard)
 {
     uint8_t receivedAnswer[MAX_FRAME_SIZE];
-    //uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
     
-    //variables
-    tlvtag inputtag; //create the tag structure
-    //perform select 
+    // variables
+    tlvtag inputtag; // create the tag structure
+    // perform select 
     if(!emv_select(AID, AIDlen, receivedAnswer)){
         if(EMV_DBGLEVEL >= 1) Dbprintf("AID Select failed");
         return; 
     }
-    //write the result to the provided card 
+    // write the result to the provided card 
     if(*(receivedAnswer+1) == 0x6F){ 
-        //decode the 6F template 
+        // decode the 6F template 
         decode_ber_tlv_item(receivedAnswer+1, &inputtag);
-        //store 84 and A5 tags 
+        // store 84 and A5 tags 
         emv_decode_field(inputtag.value, inputtag.valuelength, &currentcard); 
-        //decode the A5 tag 
+        // decode the A5 tag 
         if(currentcard.tag_A5_len > 0) 
             emv_decode_field(currentcard.tag_A5, currentcard.tag_A5_len, &currentcard);
         
-        //copy this result to the DFName 
+        // copy this result to the DFName 
         if(currentcard.tag_84_len == 0) 
             memcpy(currentcard.tag_DFName, currentcard.tag_84, currentcard.tag_84_len);
         
-        //decode the BF0C result, assuming 1 directory entry for now 
+        // decode the BF0C result, assuming 1 directory entry for now 
         if(currentcard.tag_BF0C_len !=0){
             emv_decode_field(currentcard.tag_BF0C, currentcard.tag_BF0C_len, &currentcard);}
-         //retrieve the AID, use the AID to decide what transaction flow to use 
+         // retrieve the AID, use the AID to decide what transaction flow to use 
         if(currentcard.tag_61_len !=0){
                 emv_decode_field(currentcard.tag_61, currentcard.tag_61_len, &currentcard);}
     }
@@ -95,29 +87,28 @@ void EMVSelectAID(uint8_t *AID, uint8_t AIDlen, emvtags* inputcard)
 int EMVGetProcessingOptions(uint8_t *PDOL, uint8_t PDOLlen, emvtags* inputcard)
 {
     uint8_t receivedAnswer[MAX_FRAME_SIZE];
-    //uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
      
-    //variables
+    // variables
     tlvtag inputtag; //create the tag structure
-    //perform pdol 
+    // perform pdol 
     if(!emv_getprocessingoptions(PDOL, PDOLlen, receivedAnswer)){
         if(EMV_DBGLEVEL >= 1) Dbprintf("get processing options failed");
         return 0; 
     }
-    //write the result to the provided card 
-    //FORMAT 1 received 
+    // write the result to the provided card 
+    // FORMAT 1 received 
     if(receivedAnswer[1] == 0x80){ 
-        //store AIP
-        //decode tag 80 
+        // store AIP
+        // decode tag 80 
         decode_ber_tlv_item(receivedAnswer+1, &inputtag);
         memcpy(currentcard.tag_82, &inputtag.value, sizeof(currentcard.tag_82));
         memcpy(currentcard.tag_94, &inputtag.value[2], inputtag.valuelength - sizeof(currentcard.tag_82));
         currentcard.tag_94_len = inputtag.valuelength - sizeof(currentcard.tag_82); 
     }
     else if(receivedAnswer[1] == 0x77){
-        //decode the 77 template 
+        // decode the 77 template 
         decode_ber_tlv_item(receivedAnswer+1, &inputtag);
-        //store 82 and 94 tags (AIP, AFL) 
+        // store 82 and 94 tags (AIP, AFL) 
         emv_decode_field(inputtag.value, inputtag.valuelength, &currentcard); 
     } 
     if(EMV_DBGLEVEL >= 2) 
@@ -128,9 +119,9 @@ int EMVGetProcessingOptions(uint8_t *PDOL, uint8_t PDOLlen, emvtags* inputcard)
 int EMVGetChallenge(emvtags* inputcard)
 {
     uint8_t receivedAnswer[MAX_FRAME_SIZE];
-    //variables
-    //tlvtag inputtag; //create the tag structure
-    //perform select 
+    // variables
+    // tlvtag inputtag; //create the tag structure
+    // perform select 
     if(!emv_getchallenge(receivedAnswer)){
         if(EMV_DBGLEVEL >= 1) Dbprintf("get processing options failed");
         return 1; 
@@ -148,12 +139,12 @@ int EMVGenerateAC(uint8_t refcontrol, emvtags* inputcard)
     if(currentcard.tag_8C_len > 0) { 
         emv_generateDOL(currentcard.tag_8C, currentcard.tag_8C_len, &currentcard, cdolcommand, &cdolcommandlen); }
     else{
-            //cdolcommand = NULL; //cdol val is null
+            // cdolcommand = NULL; //cdol val is null
         cdolcommandlen = 0;
     }
-    //variables
-    //tlvtag inputtag; //create the tag structure
-    //perform select 
+    // variables
+    // tlvtag inputtag; //create the tag structure
+    // perform select 
     if(!emv_generateAC(refcontrol, cdolcommand, cdolcommandlen,receivedAnswer)){
         if(EMV_DBGLEVEL >= 1) Dbprintf("get processing options failed");
         return 1; 
@@ -172,7 +163,7 @@ int EMVGenerateAC(uint8_t refcontrol, emvtags* inputcard)
 int EMV_PaywaveTransaction()
 {
     uint8_t cardMode = 0;  
-    //determine mode of transaction from TTQ  
+    // determine mode of transaction from TTQ  
     if((currentcard.tag_9F66[0] & 0x40) == 0x40) {
         cardMode = VISA_EMV;
     }
@@ -187,9 +178,9 @@ int EMV_PaywaveTransaction()
         }
     }
      
-    EMVSelectAID(currentcard.tag_4F,currentcard.tag_4F_len, &currentcard); //perform second AID command
+    EMVSelectAID(currentcard.tag_4F,currentcard.tag_4F_len, &currentcard); // perform second AID command
      
-    //get PDOL
+    // get PDOL
     uint8_t pdolcommand[20]; //20 byte buffer for pdol data 
     uint8_t pdolcommandlen = 0; 
     if(currentcard.tag_9F38_len > 0) { 
@@ -208,7 +199,7 @@ int EMV_PaywaveTransaction()
     Dbhexdump(2, currentcard.tag_82, false); 
     emv_decodeAIP(currentcard.tag_82); 
 //    
-//    //decode the AFL list and read records 
+//    decode the AFL list and read records 
     uint8_t i = 0; 
     uint8_t sfi = 0;
     uint8_t recordstart = 0; 
@@ -219,11 +210,11 @@ int EMV_PaywaveTransaction()
             recordstart = currentcard.tag_94[i++];
             recordend = currentcard.tag_94[i++];
             for(int j=recordstart; j<(recordend+1); j++){
-            //read records 
+            // read records 
                 EMVReadRecord(j,sfi, &currentcard);
-                //while(responsebuffer[0] == 0xF2) {
+                // while(responsebuffer[0] == 0xF2) {
                 //    EMVReadRecord(j,sfi, &currentcard);
-                //}
+                // }
             }  
             i++;
         }
@@ -239,25 +230,24 @@ int EMV_PaywaveTransaction()
         EMVReadRecord(3,3,&currentcard);
         EMVReadRecord(4,2,&currentcard);
     }
-    //EMVGetChallenge(&currentcard);
-    //memcpy(currentcard.tag_9F4C,&responsebuffer[1],8); // ICC UN 
+    // EMVGetChallenge(&currentcard);
+    // memcpy(currentcard.tag_9F4C,&responsebuffer[1],8); // ICC UN 
     EMVGenerateAC(0x81,&currentcard);
 
     Dbprintf("CARDMODE=%i",cardMode);    
     return 0;
 } 
 
-
 int EMV_PaypassTransaction()
 {
-    //uint8_t *responsebuffer  = emv_get_bigbufptr(); 
-    //tlvtag temptag; //buffer for decoded tags 
-    //get the current block counter 
-    //select the AID (Mastercard 
+    // uint8_t *responsebuffer  = emv_get_bigbufptr(); 
+    // tlvtag temptag; //buffer for decoded tags 
+    // get the current block counter 
+    // select the AID (Mastercard 
     EMVSelectAID(currentcard.tag_4F,currentcard.tag_4F_len, &currentcard);  
     
-    //get PDOL
-    uint8_t pdolcommand[20]; //20 byte buffer for pdol data 
+    // get PDOL
+    uint8_t pdolcommand[20]; // 20 byte buffer for pdol data 
     uint8_t pdolcommandlen = 0; 
     if(currentcard.tag_9F38_len > 0) { 
         emv_generateDOL(currentcard.tag_9F38, currentcard.tag_9F38_len, &currentcard, pdolcommand, &pdolcommandlen); 
@@ -273,7 +263,7 @@ int EMV_PaypassTransaction()
     Dbhexdump(2, currentcard.tag_82, false); 
     emv_decodeAIP(currentcard.tag_82); 
     
-    //decode the AFL list and read records 
+    // decode the AFL list and read records 
     uint8_t i = 0; 
     uint8_t sfi = 0;
     uint8_t recordstart = 0; 
@@ -284,47 +274,47 @@ int EMV_PaypassTransaction()
         recordstart = currentcard.tag_94[i++];
         recordend = currentcard.tag_94[i++];
         for(int j=recordstart; j<(recordend+1); j++){
-        //read records 
+        // read records 
             EMVReadRecord(j,sfi, &currentcard);
-            //while(responsebuffer[0] == 0xF2) {
+            // while(responsebuffer[0] == 0xF2) {
             //    EMVReadRecord(j,sfi, &currentcard);
-            //}
+            // }
         }  
         i++;
     }
     /* get ICC dynamic data */
     if((currentcard.tag_82[0] & AIP_CDA_SUPPORTED) == AIP_CDA_SUPPORTED)
     {
-        //DDA supported, so perform GENERATE AC 
-        //generate the iCC UN 
+        // DDA supported, so perform GENERATE AC 
+        // generate the iCC UN 
         EMVGetChallenge(&currentcard);
         //memcpy(currentcard.tag_9F4C,&responsebuffer[1],8); // ICC UN 
         EMVGenerateAC(0x80,&currentcard);
  
         
-        //generate AC2  
-        //if(currentcard.tag_8D_len > 0) { 
+        // generate AC2  
+        // if(currentcard.tag_8D_len > 0) { 
         //    emv_generateDOL(currentcard.tag_8D, currentcard.tag_8D_len, &currentcard, cdolcommand, &cdolcommandlen); }
-        //else{
+        // else{
         //    //cdolcommand = NULL; //cdol val is null
         //    cdolcommandlen = 0;
-        //}
-        //emv_generateAC(0x80, cdolcommand,cdolcommandlen, &currentcard);
+        // }
+        // emv_generateAC(0x80, cdolcommand,cdolcommandlen, &currentcard);
         
-        //if(responsebuffer[1] == 0x77) //format 2 data field returned
-        //{
+        // if(responsebuffer[1] == 0x77) //format 2 data field returned
+        // {
         //    decode_ber_tlv_item(&responsebuffer[1], &temptag);
         //    emv_decode_field(temptag.value, temptag.valuelength, &currentcard); 
-        //}
+        // }
     } 
-    //generate cryptographic checksum
-    //uint8_t udol[4] = {0x00,0x00,0x00,0x00}; 
-    //emv_computecryptogram(udol, sizeof(udol));
-    //if(responsebuffer[1] == 0x77) //format 2 data field returned
-    //{
+    // generate cryptographic checksum
+    // uint8_t udol[4] = {0x00,0x00,0x00,0x00}; 
+    // emv_computecryptogram(udol, sizeof(udol));
+    // if(responsebuffer[1] == 0x77) //format 2 data field returned
+    // {
     //    decode_ber_tlv_item(&responsebuffer[1], &temptag);
     //    emv_decode_field(temptag.value, temptag.valuelength, &currentcard); 
-    //} 
+    // } 
     return 0;
 }
 
@@ -344,6 +334,7 @@ void EMVTransaction()
     LED_C_OFF();
  
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+	
     while(true) { 
         if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
             if(EMV_DBGLEVEL >= 1) Dbprintf("Can't select card");
@@ -351,6 +342,7 @@ void EMVTransaction()
         }
         //selectPPSE 
         EMVSelectAID((uint8_t *)DF_PSE, 14, &currentcard); //hard coded len
+		
         //get response
         if (!memcmp(currentcard.tag_4F, AID_MASTERCARD, sizeof(AID_MASTERCARD))){
             Dbprintf("Mastercard Paypass Card Detected"); 

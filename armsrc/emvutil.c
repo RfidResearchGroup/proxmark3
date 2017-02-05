@@ -1389,7 +1389,6 @@ int emv_getprocessingoptions(uint8_t* pdol, uint8_t pdol_len, void* data)
     if(pdol_len > 0){ 
         memcpy(&(processingCmd[7]), pdol, pdol_len);}
     processingCmd[processingCmd_len] = 0x00; 
-    //Dbhexdump(processingCmd_len, processingCmd, false); 
     return iso14_apdu(processingCmd, processingCmd_len, data);
 }
 
@@ -1458,6 +1457,7 @@ int emv_decodeAFL(uint8_t* AFL, uint8_t AFLlen ){
     return 0;
 }
 
+//ICEMAN: move to client 
 //Print out AIP Bit meanings
 int emv_decodeAIP(uint8_t* AIP)
 {
@@ -1480,6 +1480,7 @@ int emv_decodeAIP(uint8_t* AIP)
     return 0;
 }
 
+//ICEMAN: move to client 
 int emv_decodeCVM(uint8_t* CVM, uint8_t CVMlen)
 {
     uint8_t counter = 0;
@@ -1545,6 +1546,7 @@ int emv_decodeCVM(uint8_t* CVM, uint8_t CVMlen)
     return 0;
 }
 
+//ICEMAN: move to client 
 //dump the current card to the console
 void dumpCard(emvtags* currentcard){
     DUMP(currentcard->ATQA);
