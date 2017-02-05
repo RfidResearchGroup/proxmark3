@@ -11,7 +11,6 @@
 #ifndef __EMVCMD_H
 #define __EMVCMD_H
 
-
 #include "proxmark3.h"
 #include "common.h"
 #include "apps.h"

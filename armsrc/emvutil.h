@@ -50,13 +50,6 @@ extern int EMV_DBGLEVEL;
 #define EMVEMUL_WORK	   7
 #define EMVEMUL_HALTED      8 
 #define EMVEMUL_ACK 9
-//#define cardSTATE_TO_IDLE() cardSTATE = EMVEMUL_IDLE; LED_B_OFF(); LED_C_OFF();
-//grabbed from iso14443a.c
-//static int EmGetCmd(uint8_t *received, int *len);
-//int EmSendCmdEx(uint8_t *resp, size_t respLen, bool correctionNeeded);//tag types
-//int EmSendCmd(uint8_t *resp, size_t respLen);
-//#define cardSTATE_TO_IDLE() cardSTATE = MFEMUL_IDLE; LED_B_OFF(); LED_C_OFF();
-//extern int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data);
 
 //functions
 //int emv_sendapdu( uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2,  uint8_t lc, uint8_t* data, uint8_t le); 
@@ -73,13 +66,6 @@ int emv_generateAC(uint8_t refcontrolparam, uint8_t* cdolinput, uint8_t cdolinpu
 int emv_decodeAFL(uint8_t* AFL, uint8_t AFLlen);
 int emv_decodeAIP(uint8_t* AIP);
 int emv_decodeCVM(uint8_t* CVM, uint8_t CVMlen);
-//memory management
-//uint8_t* emv_get_bigbufptr(void);
-//uint8_t* emv_get_bigbufptr_sendbuf(void);
-//uint8_t* emv_get_bigbufptr_recbuf(void);
-
-//emulator
-//void EMVsim();
 
 //utils
 int emv_printtag(uint8_t* selected_tag,emvtags* inputcard, uint8_t* outputstring, uint8_t* outputlen);
