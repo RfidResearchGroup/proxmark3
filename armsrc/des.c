@@ -296,15 +296,24 @@ uint32_t des_f(uint32_t r, uint8_t* kr){
 
 /******************************************************************************/
 
-void des_enc(void* out, const void* in, const void* key){
-#define R *((uint32_t*)&(data[4]))
-#define L *((uint32_t*)&(data[0]))
+typedef struct {
+	union {
+		uint8_t  v8[8];
+		uint32_t v32[2];
+	} d;
+} data_t;
+#define R (data.d.v32[1])
+#define L (data.d.v32[0])
 
-	uint8_t data[8],kr[6],k[7];
+void des_enc(void* out, const void* in, const void* key){
+
+	uint8_t kr[6], k[7];
 	uint8_t i;
+	data_t data;
 	
-	permute((uint8_t*)ip_permtab, (uint8_t*)in, data);
+	permute((uint8_t*)ip_permtab, (uint8_t*)in, data.d.v8);
 	permute((uint8_t*)pc1_permtab, (const uint8_t*)key, k);
+
 	for(i=0; i<8; ++i){
 		shiftkey(k);
 		if(ROTTABLE&((1<<((i<<1)+0))) )
@@ -324,18 +333,18 @@ void des_enc(void* out, const void* in, const void* key){
 	L ^= R;
 	R ^= L;
 	
-	permute((uint8_t*)inv_ip_permtab, data, (uint8_t*)out);
+	permute((uint8_t*)inv_ip_permtab, data.d.v8, (uint8_t*)out);
 }
 
 /******************************************************************************/
 
 void des_dec(void* out, const void* in, const uint8_t* key){
-#define R *((uint32_t*)&(data[4]))
-#define L *((uint32_t*)&(data[0]))
 
-	uint8_t data[8],kr[6],k[7];
+	uint8_t kr[6],k[7];
 	int8_t i;
-	permute((uint8_t*)ip_permtab, (uint8_t*)in, data);
+	data_t data;
+	
+	permute((uint8_t*)ip_permtab, (uint8_t*)in, data.d.v8);
 	permute((uint8_t*)pc1_permtab, (const uint8_t*)key, k);
 	for(i=7; i>=0; --i){
 		
@@ -359,7 +368,7 @@ void des_dec(void* out, const void* in, const uint8_t* key){
 	L ^= R;
 	R ^= L;
 	
-	permute((uint8_t*)inv_ip_permtab, data, (uint8_t*)out);
+	permute((uint8_t*)inv_ip_permtab, data.d.v8, (uint8_t*)out);
 }
 
 /******************************************************************************/
