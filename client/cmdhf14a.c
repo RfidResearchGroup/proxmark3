@@ -1,5 +1,6 @@
 //-----------------------------------------------------------------------------
 // 2011, Merlok
+// 2014, Peter Fillmore
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>, Hagen Fritsch
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -700,7 +701,8 @@ int CmdHF14ACmdRaw(const char *cmd) {
     return 0;
 }
 
-static void waitCmd(uint8_t iSelect) {
+static void waitCmd(uint8_t iSelect)
+{
     UsbCommand resp;
     uint16_t len = 0;
 

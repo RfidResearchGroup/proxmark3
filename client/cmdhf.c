@@ -19,12 +19,13 @@
 #include "cmdhf14b.h"
 #include "cmdhf15.h"
 #include "cmdhfepa.h"
-#include "cmdhflegic.h"
-#include "cmdhficlass.h"
-#include "cmdhfmf.h"
-#include "cmdhfmfu.h"
-#include "cmdhfmfdes.h"
-#include "cmdhftopaz.h"
+#include "cmdhflegic.h"	 // LEGIC
+#include "cmdhficlass.h" // ICLASS
+#include "cmdhfmf.h"	 // CLASSIC
+#include "cmdhfmfu.h"	 // ULTRALIGHT/NTAG etc
+#include "cmdhfmfdes.h"	 // DESFIRE
+#include "cmdhftopaz.h"	 // TOPAZ
+#include "cmdhfemv.h"	 // EMV
 #include "protocols.h"
 
 static int CmdHelp(const char *Cmd);
@@ -927,6 +928,7 @@ static command_t CommandTable[] = {
 	{"14b",         CmdHF14B,         1, "{ ISO14443B RFIDs... }"},
 	{"15",          CmdHF15,          1, "{ ISO15693 RFIDs... }"},
 	{"epa",         CmdHFEPA,         1, "{ German Identification Card... }"},
+	{"emv",         CmdHFEmv,         1, "{ EMV RFIDs... }"},
 	{"legic",       CmdHFLegic,       1, "{ LEGIC RFIDs... }"},
 	{"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs... }"},
 	{"mf",      	CmdHFMF,		  1, "{ MIFARE RFIDs... }"},

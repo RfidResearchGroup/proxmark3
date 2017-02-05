@@ -122,6 +122,7 @@ CMDSRCS =	mifarehost.c \
 			cmdhfmfhard.c \
 			cmdhfmfdes.c \
 			cmdhftopaz.c \
+			cmdhfemv.c \
 			cmdhw.c \
 			cmdlf.c \
 			cmdlfio.c \
