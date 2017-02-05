@@ -2047,7 +2047,6 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
 	{
 		iso14_pcb_blocknum ^= 1;
 	}
-
 	return len;
 }
 
