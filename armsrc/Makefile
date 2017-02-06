@@ -70,10 +70,7 @@ THUMBSRC = start.c \
 	string.c \
 	BigBuf.c \
 	ticks.c \
-	usb_cdc.c \
-	parity.c \
 	random.c \
-	cmd.c \
 	hfsnoop.c
 
 # These are to be compiled in ARM mode
@@ -83,7 +80,10 @@ ARMSRC = fpgaloader.c \
 	$(SRC_CRAPTO1) \
 	$(SRC_CRC) \
 	$(SRC_ICLASS) \
-	$(SRC_EMV)
+	$(SRC_EMV) \
+	parity.c \
+	usb_cdc.c \
+	cmd.c
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common

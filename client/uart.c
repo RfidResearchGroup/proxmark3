@@ -106,6 +106,11 @@ serial_port uart_open(const char* pcPortName)
   // Flush all lingering data that may exist
   tcflush(sp->fd, TCIOFLUSH);
 
+  // set speed, works for UBUNTU 14.04
+  bool err = uart_set_speed(sp, 460800);
+  if (!err)
+	  uart_set_speed(sp, 115200);
+  
   return sp;
 }
 
@@ -389,11 +394,11 @@ serial_port uart_open(const char* pcPortName) {
     uart_close(sp);
     return INVALID_SERIAL_PORT;
   }
-  
-  sp->ct.ReadIntervalTimeout         = 1;
-  sp->ct.ReadTotalTimeoutMultiplier  = 1;
+  // all zero's configure: no timeout for read/write used.
+  sp->ct.ReadIntervalTimeout         = 0;//1;
+  sp->ct.ReadTotalTimeoutMultiplier  = 0;//1;
   sp->ct.ReadTotalTimeoutConstant    = 30;
-  sp->ct.WriteTotalTimeoutMultiplier = 1;
+  sp->ct.WriteTotalTimeoutMultiplier = 0;//1;
   sp->ct.WriteTotalTimeoutConstant   = 30;
   
   if(!SetCommTimeouts(sp->hPort,&sp->ct)) {
@@ -402,6 +407,10 @@ serial_port uart_open(const char* pcPortName) {
   }
   
   PurgeComm(sp->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
+  
+  bool err = uart_set_speed(sp, 460800);
+  if (!err)
+	  uart_set_speed(sp, 115200);
   
   return sp;
 }
