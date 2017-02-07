@@ -10,6 +10,10 @@
 
 #ifndef CMDLFEM4X_H__
 #define CMDLFEM4X_H__
+
+#include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
 #include "proxmark3.h"
 #include "ui.h"
 #include "util.h"
@@ -30,9 +34,11 @@ int CmdEM410xWrite(const char *Cmd);
 int CmdEM4x50Read(const char *Cmd);
 int CmdLFEM4X(const char *Cmd);
 int CmdReadWord(const char *Cmd);
-int CmdReadWordPWD(const char *Cmd);
 int CmdWriteWord(const char *Cmd);
-int CmdWriteWordPWD(const char *Cmd);
 int EM4x50Read(const char *Cmd, bool verbose);
+
+int usage_lf_em410x_sim(void);
+int usage_lf_em_read(void);
+int usage_lf_em_write(void);
 
 #endif

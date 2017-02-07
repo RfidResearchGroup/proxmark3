@@ -96,8 +96,8 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t PwdM
 void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd);
 void T55xxWakeUp(uint32_t Pwd);
 void TurnReadLFOn(uint32_t delay);
-void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
-void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode);
+void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd);
+void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd);
 void Cotag(uint32_t arg0);
 
 /// iso14443b.h

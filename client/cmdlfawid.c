@@ -116,10 +116,9 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 }
 
 int CmdAWIDDemodFSK(const char *Cmd) {
-	int findone = 0;
-	if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_awid_fskdemod();
-	if (Cmd[0] == '1') findone = 1;
 
+	if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_awid_fskdemod();
+	uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
 	UsbCommand c = {CMD_AWID_DEMOD_FSK, {findone, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);

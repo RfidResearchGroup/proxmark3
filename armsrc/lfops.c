@@ -1537,7 +1537,9 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
 //-----------------------------------
 // EM4469 / EM4305 routines
 //-----------------------------------
-#define FWD_CMD_LOGIN   0xC //including the even parity, binary mirrored
+// Below given command set. 
+// Commands are including the even parity, binary mirrored
+#define FWD_CMD_LOGIN   0xC 
 #define FWD_CMD_WRITE   0xA
 #define FWD_CMD_READ    0x9
 #define FWD_CMD_DISABLE 0x5
@@ -1586,7 +1588,7 @@ uint8_t Prepare_Addr( uint8_t addr ) {
 
 	uint8_t i;
 	line_parity = 0;
-	for(i=0;i<6;i++) {
+	for( i=0; i<6; i++ ) {
 		*forward_ptr++ = addr;
 		line_parity ^= addr;
 		addr >>= 1;
@@ -1640,10 +1642,23 @@ uint8_t Prepare_Data( uint16_t data_low, uint16_t data_hi) {
 //====================================================================
 void SendForward(uint8_t fwd_bit_count) {
 
+// iceman,   21.3us increments for the USclock verification.
+// 55FC * 8us == 440us / 21.3 === 20.65 steps.  could be too short. Go for 56FC instead
+// 32FC * 8us == 256us / 21.3 ==  12.018 steps. ok
+// 16FC * 8us == 128us / 21.3 ==  6.009 steps. ok 
+
+#ifndef EM_START_GAP
+#define EM_START_GAP 56*8
+#endif
+#ifndef EM_ONE_GAP
+#define EM_ONE_GAP 32*8
+#endif
+#ifndef EM_ZERO_GAP
+# define EM_ZERO_GAP 16*8
+#endif
+
 	fwd_write_ptr = forwardLink_data;
 	fwd_bit_sz = fwd_bit_count;
-
-	LED_D_ON();
 
 	// Set up FPGA, 125kHz
 	LFSetupFPGAForADC(95, true);
@@ -1651,93 +1666,83 @@ void SendForward(uint8_t fwd_bit_count) {
 	// force 1st mod pulse (start gap must be longer for 4305)
 	fwd_bit_sz--; //prepare next bit modulation
 	fwd_write_ptr++;
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-	WaitUS(55*8); //55 cycles off (8us each)for 4305	// ICEMAN:  problem with (us) clock is  21.3us increments
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);//field on
-	WaitUS(16*8); //16 cycles on (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
+	
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	WaitUS(EM_START_GAP);
 
-	// now start writting
+	TurnReadLFOn(EM_ZERO_GAP);
+
+	// now start writting with bitbanging the antenna.
 	while(fwd_bit_sz-- > 0) { //prepare next bit modulation
 		if(((*fwd_write_ptr++) & 1) == 1)
-			WaitUS(32*8); //32 cycles at 125Khz (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
+			WaitUS(EM_ONE_GAP);
 		else {
-			//These timings work for 4469/4269/4305 (with the 55*8 above)
-			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-			WaitUS(16*8); //16-4 cycles off (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
-			FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);//field on
-			WaitUS(16*8); //16 cycles on (8us each)	// ICEMAN:  problem with (us) clock is  21.3us increments
+			//These timings work for 4469/4269/4305
+			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+			WaitUS(EM_ZERO_GAP);			
+			TurnReadLFOn(EM_ZERO_GAP);
 		}
 	}
 }
 
-void EM4xLogin(uint32_t Password) {
-
-	uint8_t fwd_bit_count;
+void EM4xLogin(uint32_t pwd) {
+	uint8_t len;
 	forward_ptr = forwardLink_data;
-	fwd_bit_count = Prepare_Cmd( FWD_CMD_LOGIN );
-	fwd_bit_count += Prepare_Data( Password&0xFFFF, Password>>16 );
-	SendForward(fwd_bit_count);
-
-	//Wait for command to complete
+	len = Prepare_Cmd( FWD_CMD_LOGIN );
+	len += Prepare_Data( pwd & 0xFFFF, pwd >> 16 );
+	SendForward(len);
 	WaitMS(20);
 }
 
-void EM4xReadWord(uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
+void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 
-	uint8_t fwd_bit_count;
-	uint8_t *dest = BigBuf_get_addr();
-	uint16_t bufsize = BigBuf_max_traceLen();  // ICEMAN: this tries to fill up all tracelog space
-	uint32_t i = 0;
+	LED_A_ON();
 
-	// Clear destination buffer before sending the command
+	uint8_t len;
+	
+	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_ext(false);
 	
-	//If password mode do login
-	if (PwdMode == 1) EM4xLogin(Pwd);
+	if (usepwd) EM4xLogin(pwd);
 
 	forward_ptr = forwardLink_data;
-	fwd_bit_count = Prepare_Cmd( FWD_CMD_READ );
-	fwd_bit_count += Prepare_Addr( Address );
+	len = Prepare_Cmd( FWD_CMD_READ );
+	len += Prepare_Addr( addr );
 
-	SendForward(fwd_bit_count);
+	SendForward(len);
 
-	// Now do the acquisition
-	// ICEMAN, change to the one in lfsampling.c
-	i = 0;
-	for(;;) {
-		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-			AT91C_BASE_SSC->SSC_THR = 0x43;
-		}
-		if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-			dest[i] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			++i;
-			if (i >= bufsize) break;
-		}
-	}
+	DoAcquisition_config(TRUE);
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off	
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,0,0,0,0);
-	LED_D_OFF();
+	LED_A_OFF();
 }
 
-void EM4xWriteWord(uint32_t Data, uint8_t Address, uint32_t Pwd, uint8_t PwdMode) {
+void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
 
-	uint8_t fwd_bit_count;
-
-	//If password mode do login
-	if (PwdMode == 1) EM4xLogin(Pwd);
+	LED_A_ON();
+	
+	bool usePwd = (flag & 0xF);
+	uint8_t addr = (flag >> 8) & 0xFF;
+	uint8_t len;
+	
+	//clear buffer now so it does not interfere with timing later
+	BigBuf_Clear_ext(false);
+	
+	if (usePwd) EM4xLogin(pwd);
 
 	forward_ptr = forwardLink_data;
-	fwd_bit_count = Prepare_Cmd( FWD_CMD_WRITE );
-	fwd_bit_count += Prepare_Addr( Address );
-	fwd_bit_count += Prepare_Data( Data&0xFFFF, Data>>16 );
+	len = Prepare_Cmd( FWD_CMD_WRITE );
+	len += Prepare_Addr( addr );
+	len += Prepare_Data( data & 0xFFFF, data >> 16 );
 
-	SendForward(fwd_bit_count);
+	SendForward(len);
 
-	//Wait for write to complete
+	//Wait 20ms for write to complete
 	WaitMS(20);
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-	LED_D_OFF();
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	cmd_send(CMD_ACK,0,0,0,0,0);
+	LED_A_OFF();
 }
 
 /*
@@ -1755,10 +1760,12 @@ pulse 3.6 msecs
 This triggers a COTAG tag to response
 */
 void Cotag(uint32_t arg0) {
-
-#define OFF 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS(2035); }
-#define ON(x)   { FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD); WaitUS((x)); }
-
+#ifndef OFF
+# define OFF 	{ FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS(2035); }
+#endif
+#ifndef ON
+# define ON(x)   { FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD); WaitUS((x)); }
+#endif
 	uint8_t rawsignal = arg0 & 0xF;
 
 	LED_A_ON();	
@@ -1799,3 +1806,7 @@ void Cotag(uint32_t arg0) {
 	cmd_send(CMD_ACK,0,0,0,0,0);    
 	LED_A_OFF();
 }
+
+/*
+* EM4305 support
+*/
