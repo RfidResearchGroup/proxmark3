@@ -72,26 +72,27 @@ int CmdHelp(const char * Cmd)
 * Generate list of available commands, what it does is 
 * generate a file listing of the script-directory for files
 * ending with .lua
+*
 */
 int CmdList(const char *Cmd)
 {
-    DIR *dp;
     struct dirent *ep;
-    dp = opendir ("./scripts/");
+    DIR *dp = opendir ("./scripts/");
+	if ( dp == NULL ) {
+		PrintAndLog ("Couldn't open the scripts-directory");
+		return 1;
+	}
 
-    if (dp != NULL)
-    {
-        while ((ep = readdir (dp)) != NULL)
-        {
-            if(str_ends_with(ep->d_name, ".lua"))
-                PrintAndLog("%-21s %s", ep->d_name, "A script file");
-        }
-        (void) closedir (dp);
-    }
-    else
-        PrintAndLog ("Couldn't open the scripts-directory");
+	while ((ep = readdir (dp)) != NULL)
+	{
+		if(str_ends_with(ep->d_name, ".lua"))
+			PrintAndLog("%-21s %s", ep->d_name, "A script file");
+	}
+	(void) closedir (dp);
     return 0;
 }
+
+
 /**
  * Finds a matching script-file
  * @brief CmdScript
