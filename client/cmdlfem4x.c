@@ -626,8 +626,8 @@ static command_t CommandTable[] = {
 	{"em410xspoof",	CmdEM410xWatchnSpoof, 0, "['h'] --- Watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
 	{"em410xwrite",	CmdEM410xWrite, 	0, "<UID> <'0' T5555> <'1' T55x7> [clock rate] -- Write EM410x UID to T5555(Q5) or T55x7 tag, optionally setting clock rate"},
 	{"em4x50read",	CmdEM4x50Read, 		1, "Extract data from EM4x50 tag"},
-	{"readword",	CmdReadWord, 		1, "<word> <pwd> -- Read EM4xxx word data"},
-	{"writeword",	CmdWriteWord, 		1, "<sata> <word> <pwd> -- Write EM4xxx word data"},
+	{"readword",	CmdReadWord, 		1, "Read EM4xxx data"},
+	{"writeword",	CmdWriteWord, 		1, "Write EM4xxx data"},
 	{NULL, NULL, 0, NULL}
 };
 
