@@ -1,6 +1,6 @@
 The iceman fork
 ===============
-[![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)  [![Coverity Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3_iceman_fork)  [![Latest release] (https://img.shields.io/github/release/iceman1001/proxmark3.svg)](https://github.com/iceman1001/proxmark3/releases/latest) [![Github Releases](https://img.shields.io/github/downloads/iceman1001/proxmark3/total.svg)](https://github.com/iceman1001/proxmark3/releases/latest)
+[![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)  [![Coverity Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3_iceman_fork)  [![Latest release] (https://img.shields.io/github/release/iceman1001/proxmark3.svg)](https://github.com/iceman1001/proxmark3/releases/latest)
 
 ##This fork is HIGHLY experimental (or bleeding edge)
 
@@ -57,6 +57,22 @@ Among the stuff is
 
 ##Straight from the CHANGELOG
 =============================
+## [1.6.9][icemanfork] [2017-02-06]
+  - Serial speedup,  if possible 408600baud otherwise default to 115200baud (iceman)
+  - `hf emv` - Added Peter Fillmore's EMV branch now compiles on iceman fork.  See seperate issue. (iceman)
+  - `hf 14a reader` - Aztek detection. (iceman)
+  - `standalone mode` - added more detection of tags and refactored (iceman)
+  - `script run ufodump` - dumps an Aztek tag. (iceman)
+  - `script run hard_autopwn` - runs hardnested attack against all sectors on tag (iceman)
+  - Added lf cotag read, and added it to lf search (iceman)
+  - Added hitag2 read UID only and added that to lf search (marshmellow)
+  - `lf search` -  check for if signal is only noice (marshmellow)
+  - `hf 14a reader` - fixed a bug when card has sak 0x00 but still is not UL/NTAG etc. (iceman)
+  - `hf mf sim` / `hf 14a sim` - use random nonce. (micolous)
+  - `hw tune` - only prints out if voltage is detected from antenna. (iceman)
+  - `hf iclass decrypt` - only decrypt Application1 (iceman)
+  - `lf t55xx detect` - when finding multiple possible config blocks, see if a known configblock exists and select. (iceman)
+  
   -  Added `hf mf key_brute` - adds J-Runs 2nd phase bruteforce ref: https://github.com/J-Run/mf_key_brute   (iceman)
   -  Added `lf jablotron` - adds demod/clone/sim of Jablotron LF tags. (iceman)
   -  Added `lf t55xx recoverpw` - adds a new password recovery using bitflips and partial flips if password write went bad. (alexgrin)
@@ -100,9 +116,12 @@ Among the stuff is
   - Fixed the silent mode for 14b to be used inside `hf search` (iceman)
 	
 ---	
-Give me a hint, and I'll see if I can't merge in the stuff you have. 
-
+##Why don't you merged with offical PM3 Master?
 I don't actually know how to make small pull-request to github :( and that is the number one reason for me not pushing a lot of things back to the PM3 master.
+Me fiddling with the code so much, there is a nightmare in merging a PR.  Luckily I have @marshmellow42 who takes some stuff and push PR's back.
+
+##Why don't you add nnnn or mmmm functionality?
+Give me a hint, and I'll see if I can't merge in the stuff you have. 
 	
 ##PM3 GUI
 I do tend to rename and move stuff around, the official PM3-GUI from Gaucho will not work so well. *sorry*	
@@ -111,7 +130,7 @@ I do tend to rename and move stuff around, the official PM3-GUI from Gaucho will
 This fork now compiles just fine on 
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
    - Ubuntuu 1404, 1510
-   - Mac OS X  (or before the hardnested BF solver at least)
+   - Mac OS X
 
 ##Setup and build for UBUNTU
 GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS or 15.10
