@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]  
+  -  `lf em4x em4x50***` refactoring of em4x50 commands. (iceman)
+  
+## [1.6.9][icemanfork] [2017-02-06]
   - Serial speedup,  if possible 408600baud otherwise default to 115200baud (iceman)
   - `hf emv` - Added Peter Fillmore's EMV branch now compiles on iceman fork.  See seperate issue. (iceman)
   - `hf 14a reader` - Aztek detection. (iceman)
