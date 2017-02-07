@@ -10,6 +10,10 @@
 
 #include "cmdlfhid.h"
 
+#ifndef BITS
+# define BITS 96
+#endif
+
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_hid_wiegand(void){
@@ -97,7 +101,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 }
 
 int CmdHIDDemodFSK(const char *Cmd) {
-	int findone = ( Cmd[0] == '1' ) ? 1 : 0;
+	uint8_t findone = ( Cmd[0] == '1' ) ? 1 : 0;
 	UsbCommand c = {CMD_HID_DEMOD_FSK, {findone, 0 , 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
@@ -176,22 +180,30 @@ typedef struct {
  } wiegand_t;
 
 static void addHIDMarker(uint8_t fmtlen, uint8_t *out) {    
+	// temp array
+	uint8_t arr[BITS];
+	memset(arr, 0, BITS);
+
+	// copy inpu
+	uint8_t pos = sizeof(arr)-fmtlen;
+	memcpy(arr+pos, out, fmtlen);
+			
 	switch(fmtlen) {
 		case 26:{
-			uint8_t len = 37;
-			uint8_t tmp[len];
-			memset(tmp, 0, len);
-			uint8_t idx = 37-fmtlen;
-			memcpy(tmp+idx, out, fmtlen);
-			tmp[idx] = 1; // start sentinel?
-			tmp[0]  = 1; // bit indicates that a format smaller than 37 is used
-			memcpy(out, tmp, len);
+			// start sentinel, BITS-bit 27 = 1
+			arr[BITS-27] = 1;
+			// fmt smaller than 37 used,  bit37 = 1
+			arr[BITS-38]  = 1;
+			memcpy(out, arr, BITS);
 			break;
 		}
 		case 34:
-				// set bit format for less than 37 bit format
-				// 5+32= 1
-				//*hi = (1 << 5) | (fc >> 15);
+			// start sentinel, BITS-bit 27 = 1
+			arr[BITS-35] = 1;
+			
+			// fmt smaller than 37 used,  bit37 = 1
+			arr[BITS-38]  = 1;
+			memcpy(out, arr, BITS);
 			break;
 		default:break;
 	}
@@ -302,7 +314,7 @@ int CmdHIDWiegand(const char *Cmd) {
 	uint64_t cardnum = 0;
 	uint64_t blocks = 0, wiegand = 0; 
 
-	uint8_t bits[96];
+	uint8_t bits[BITS];
 	uint8_t *bs = bits;
 	memset(bs, 0, sizeof(bits));
 	
@@ -320,12 +332,12 @@ int CmdHIDWiegand(const char *Cmd) {
 	for (uint8_t i = 0; i < sizeof(fmtlen); i++){
 		memset(bits, 0x00, sizeof(bits));
 		calcWiegand( fmtlen[i], fc, cardnum, bs);
-		printf("ice:: %s", sprint_bin(bs, fmtlen[i]));
+		printf("ice:: %s \n", sprint_bin(bs, fmtlen[i]));
 		wiegand = (uint64_t)bytebits_to_byte(bs, 32) << 32 | bytebits_to_byte(bs+32, 32);
 		
 		addHIDMarker(fmtlen[i], bs);	
-		printf("ice:: %s", sprint_bin(bs, 37));
-		blocks = (uint64_t)bytebits_to_byte(bs, 32) << 32 | bytebits_to_byte(bs+32, 32);
+		printf("ice:: %s\n", sprint_bin(bs, BITS));
+		blocks = (uint64_t)bytebits_to_byte(bs+32, 32) << 32 | bytebits_to_byte(bs+64, 32);
 		uint8_t shifts = 64-fmtlen[i];		
 		wiegand >>= shifts;
 		
