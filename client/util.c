@@ -376,7 +376,8 @@ uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base)
 
 int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt)
 {
-	int bg, en, temp, i;
+	int bg, en, i;
+	uint32_t temp;
 
 	if (hexcnt & 1) return 1;
 	
@@ -395,7 +396,8 @@ int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt)
 }
 int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt)
 {
-	int bg, en, temp, i;
+	int bg, en, i;
+	uint32_t temp;
 
 	//if (hexcnt % 2)
 	//	return 1;
