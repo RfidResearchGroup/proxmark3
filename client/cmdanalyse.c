@@ -101,13 +101,24 @@ static uint8_t calcSumNibbleAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
 static uint8_t calcSumNibbleAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask){
 	return ~calcSumNibbleAdd(bytes, len, mask);
 }
+static uint8_t calcSumCrumbXor(  uint8_t* bytes, uint8_t len, uint32_t mask) {
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < len; i++) {
+        sum ^= CRUMB(bytes[i], 0);
+		sum ^= CRUMB(bytes[i], 2);
+		sum ^= CRUMB(bytes[i], 4);
+		sum ^= CRUMB(bytes[i], 6);
+	}	
+	sum &= mask;
+    return sum;
+}
 static uint8_t calcSumNibbleXor( uint8_t* bytes, uint8_t len, uint32_t mask) {
     uint8_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum ^= NIBBLE_LOW(bytes[i]);
 		sum ^= NIBBLE_HIGH(bytes[i]);
 	}
-	sum &= mask;	
+	sum &= mask;
     return sum;
 }
 static uint8_t calcSumByteXor( uint8_t* bytes, uint8_t len, uint32_t mask) {
@@ -248,7 +259,7 @@ int CmdAnalyseCHKSUM(const char *Cmd){
 	
 	uint8_t data[50];
 	uint8_t cmdp = 0;
-	uint32_t mask = 0xFF;
+	uint32_t mask = 0xFFFF;
 	bool errors = false;
 	int len = 0;
 	memset(data, 0x0, sizeof(data));
@@ -280,25 +291,24 @@ int CmdAnalyseCHKSUM(const char *Cmd){
 	//Validations
 	if(errors) return usage_analyse_checksum();
 	
-	PrintAndLog("\nByte Add        | 0x%X", calcSumByteAdd(data, len, mask));
-	PrintAndLog("Nibble Add      | 0x%X", calcSumNibbleAdd(data, len, mask));
-	PrintAndLog("Crumb Add       | 0x%X", calcSumCrumbAdd(data, len, mask));
-	
-	PrintAndLog("\nByte Subtract   | 0x%X", calcSumByteSub(data, len, mask));
-	PrintAndLog("Nibble Subtract | 0x%X", calcSumNibbleSub(data, len, mask));
-	
-	PrintAndLog("\nCHECKSUM - One's complement");
-	PrintAndLog("Byte Add        | 0x%X", calcSumByteAddOnes(data, len, mask));
-	PrintAndLog("Nibble Add      | 0x%X", calcSumNibbleAddOnes(data, len, mask));
-	PrintAndLog("Crumb Add       | 0x%X", calcSumCrumbAddOnes(data, len, mask));
-
-	PrintAndLog("Byte Subtract   | 0x%X", calcSumByteSubOnes(data, len, mask));
-	PrintAndLog("Nibble Subtract | 0x%X", calcSumNibbleSubOnes(data, len, mask));
-	
-	PrintAndLog("\nXOR");
-	PrintAndLog("Byte Xor   | 0x%X", calcSumByteXor(data, len, mask));
-	PrintAndLog("Nibble Xor   | 0x%X", calcSumNibbleXor(data, len, mask));
-	
+	PrintAndLog("     add          | sub         | add 1's compl    | sub 1's compl   | xor");
+	PrintAndLog("byte nibble crumb | byte nibble | byte nibble cumb | byte nibble     | byte nibble cumb");
+	PrintAndLog("------------------+-------------+------------------+-----------------+--------------------");
+	PrintAndLog("0x%02X 0x%02X   0x%02X  | 0x%02X 0x%02X   | 0x%02X 0x%02X   0x%02X | 0x%02X 0x%02X       | 0x%02X 0x%02X   0x%02X",
+				  calcSumByteAdd(data, len, mask)
+				, calcSumNibbleAdd(data, len, mask)
+				, calcSumCrumbAdd(data, len, mask)
+				, calcSumByteSub(data, len, mask)
+				, calcSumNibbleSub(data, len, mask)
+				, calcSumByteAddOnes(data, len, mask)
+				, calcSumNibbleAddOnes(data, len, mask)
+				, calcSumCrumbAddOnes(data, len, mask)
+				, calcSumByteSubOnes(data, len, mask)
+				, calcSumNibbleSubOnes(data, len, mask)
+				, calcSumByteXor(data, len, mask)
+				, calcSumNibbleXor(data, len, mask)
+				, calcSumCrumbXor(data, len, mask)
+			);	
 	return 0;
 }
 
