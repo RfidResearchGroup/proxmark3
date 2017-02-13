@@ -7,22 +7,20 @@
 //-----------------------------------------------------------------------------
 // Low frequency demod/decode commands
 //-----------------------------------------------------------------------------
-
-#include <stdlib.h>
 #include "lfdemod.h"
-#include <string.h>
 
 //un_comment to allow debug print calls when used not on device
 void dummy(char *fmt, ...){}
 
+
 #ifndef ON_DEVICE
-#include "ui.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#define prnt PrintAndLog
+# include "ui.h"
+# include "cmdparser.h"
+# include "cmddata.h"
+# define prnt PrintAndLog
 #else 
 	uint8_t g_debugMode=0;
-#define prnt dummy
+# define prnt dummy
 #endif
 
 //test samples are not just noise

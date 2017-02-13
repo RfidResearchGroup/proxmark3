@@ -15,6 +15,8 @@
 #define LFDEMOD_H__
 #include <stdint.h>  // for uint_32+
 #include <stdbool.h> // for bool
+#include <string.h>  // for strcmp 
+#include <stdlib.h>  // for
 
 //generic
 uint8_t  justNoise(uint8_t *bits, size_t size);
