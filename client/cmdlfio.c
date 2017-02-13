@@ -185,7 +185,7 @@ int CmdIOSim(const char *Cmd) {
 
 int CmdIOClone(const char *Cmd) {
 	
-	uint32_t blocks[3] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_64 | 2<<T55x7_MAXBLOCK_SHIFT, 0, 0};
+	uint32_t blocks[3] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
 	uint16_t cn = 0;
 	uint8_t version = 0, fc = 0;
 	uint8_t bits[64];
@@ -206,9 +206,9 @@ int CmdIOClone(const char *Cmd) {
 		PrintAndLog("Card Number Truncated to 16-bits (IOProx): %u", cn);
 	}
 	
-//	if (param_getchar(Cmd, 4) == 'Q' || param_getchar(Cmd, 4) == 'q')
+	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
 		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-//		blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | 50<<T5555_BITRATE_SHIFT | 3<<T5555_MAXBLOCK_SHIFT;
+		blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | ((50-2)>>1) << T5555_BITRATE_SHIFT | 2 << T5555_MAXBLOCK_SHIFT;
 
 	if ( !getIOProxBits(version, fc, cn, bs)) {
 		PrintAndLog("Error with tag bitstream generation.");

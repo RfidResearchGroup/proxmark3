@@ -710,7 +710,7 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 		for (i=0; i<size; i++){
 			askSimBit(BitStream[i]^invert, &n, clk, encoding);
 		}
-		if (encoding==0 && BitStream[0]==BitStream[size-1]){ //run a second set inverted (for biphase phase)
+		if (encoding==0 && BitStream[0]==BitStream[size-1]){ //run a second set inverted (for ask/raw || biphase phase)
 			for (i=0; i<size; i++){
 				askSimBit(BitStream[i]^invert^1, &n, clk, encoding);
 			}
@@ -1388,7 +1388,7 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 	data[0] = T55x7_BITRATE_RF_50 | T55x7_MODULATION_FSK2a | last_block << T55x7_MAXBLOCK_SHIFT;
 
 	//TODO add selection of chip for Q5 or T55x7
-	// data[0] = (((50-2)/2)<<T5555_BITRATE_SHIFT) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | last_block << T5555_MAXBLOCK_SHIFT;
+	// data[0] = (((50-2)>>1)<<T5555_BITRATE_SHIFT) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | last_block << T5555_MAXBLOCK_SHIFT;
 
 	LED_D_ON();
 	WriteT55xx(data, 0, last_block+1);
@@ -1399,7 +1399,7 @@ void CopyIOtoT55x7(uint32_t hi, uint32_t lo) {
 	uint32_t data[] = {T55x7_BITRATE_RF_64 | T55x7_MODULATION_FSK2a | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
 	//TODO add selection of chip for Q5 or T55x7
 	//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-	// data[0] = (64 << T5555_BITRATE_SHIFT) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | 2 << T5555_MAXBLOCK_SHIFT;
+	// data[0] = ( ((64-2)>>1) << T5555_BITRATE_SHIFT) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | 2 << T5555_MAXBLOCK_SHIFT;
 
 	LED_D_ON();
 	// Program the data blocks for supplied ID
@@ -1414,7 +1414,7 @@ void CopyIndala64toT55x7(uint32_t hi, uint32_t lo) {
 	// and the Config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
 	uint32_t data[] = { T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
 	//TODO add selection of chip for Q5 or T55x7
-	// data[0] = (((32-2)/2)<<T5555_BITRATE_SHIFT) | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
+	// data[0] = (((32-2)>>1)<<T5555_BITRATE_SHIFT) | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
 
 	WriteT55xx(data, 0, 3);
 	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
@@ -1428,7 +1428,7 @@ void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t 
 	//Config for Indala (RF/32;PSK1 with RF/2;Maxblock=7)
 	data[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (7 << T55x7_MAXBLOCK_SHIFT);
 	//TODO add selection of chip for Q5 or T55x7
-	// data[0] = (((32-2)/2)<<T5555_BITRATE_SHIFT) | T5555_MODULATION_PSK1 | 7 << T5555_MAXBLOCK_SHIFT;
+	// data[0] = (((32-2)>>1) << T5555_BITRATE_SHIFT) | T5555_MODULATION_PSK1 | 7 << T5555_MAXBLOCK_SHIFT;
 	WriteT55xx(data, 0, 8);
 	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
 	//	T5567WriteBlock(0x603E10E2,0);
@@ -1437,7 +1437,7 @@ void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t 
 void CopyVikingtoT55xx(uint32_t block1, uint32_t block2, uint8_t Q5) {
 	uint32_t data[] = {T55x7_BITRATE_RF_32 | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT), block1, block2};
 	//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-	if (Q5) data[0] = (32 << T5555_BITRATE_SHIFT) | T5555_MODULATION_MANCHESTER | 2 << T5555_MAXBLOCK_SHIFT;
+	if (Q5) data[0] = (((32-2)>>1) << T5555_BITRATE_SHIFT) | T5555_MODULATION_MANCHESTER | 2 << T5555_MAXBLOCK_SHIFT;
 	// Program the data blocks for supplied ID and the block 0 config
 	WriteT55xx(data, 0, 3);
 	LED_D_OFF();
@@ -1521,8 +1521,8 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
 		}
 		data[0] = clock | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT);
 	} else { //t5555 (Q5)
-		clock = (clock-2)>>1;  //n = (RF-2)/2
-		data[0] = (clock << T5555_BITRATE_SHIFT) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
+		// t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
+		data[0] = ( ((clock-2) >> 1) << T5555_BITRATE_SHIFT) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
 	}
  
 	WriteT55xx(data, 0, 3);
@@ -1648,7 +1648,7 @@ void SendForward(uint8_t fwd_bit_count) {
 // 16FC * 8us == 128us / 21.3 ==  6.009 steps. ok 
 
 #ifndef EM_START_GAP
-#define EM_START_GAP 56*8
+#define EM_START_GAP 60*8
 #endif
 #ifndef EM_ONE_GAP
 #define EM_ONE_GAP 32*8
@@ -1669,8 +1669,7 @@ void SendForward(uint8_t fwd_bit_count) {
 	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	WaitUS(EM_START_GAP);
-
-	TurnReadLFOn(EM_ZERO_GAP);
+	TurnReadLFOn(16);
 
 	// now start writting with bitbanging the antenna.
 	while(fwd_bit_sz-- > 0) { //prepare next bit modulation
@@ -1679,8 +1678,8 @@ void SendForward(uint8_t fwd_bit_count) {
 		else {
 			//These timings work for 4469/4269/4305
 			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-			WaitUS(EM_ZERO_GAP);			
-			TurnReadLFOn(EM_ZERO_GAP);
+			WaitUS(20);			
+			TurnReadLFOn(12);
 		}
 	}
 }
@@ -1691,7 +1690,10 @@ void EM4xLogin(uint32_t pwd) {
 	len = Prepare_Cmd( FWD_CMD_LOGIN );
 	len += Prepare_Data( pwd & 0xFFFF, pwd >> 16 );
 	SendForward(len);
-	WaitMS(20);
+	//WaitMS(20); - no wait for login command.
+	// should receive
+	// 0000 1010 ok.
+	// 0000 0001 fail
 }
 
 void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
@@ -1703,6 +1705,12 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_ext(false);
 	
+	/* should we read answer from Logincommand?
+	*
+	* should receive
+	* 0000 1010 ok.
+	* 0000 0001 fail
+	**/
 	if (usepwd) EM4xLogin(pwd);
 
 	forward_ptr = forwardLink_data;
@@ -1728,7 +1736,13 @@ void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
 	
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_ext(false);
-	
+
+	/* should we read answer from Logincommand?
+	*
+	* should receive
+	* 0000 1010 ok.
+	* 0000 0001 fail
+	**/	
 	if (usePwd) EM4xLogin(pwd);
 
 	forward_ptr = forwardLink_data;

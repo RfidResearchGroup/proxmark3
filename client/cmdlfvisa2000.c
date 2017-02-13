@@ -45,6 +45,17 @@ static uint8_t visa_chksum( uint32_t id ) {
     return sum & 0xF;
 }
 
+/**
+*
+* 56495332 00096ebd 00000077 —> tag id 618173
+* aaaaaaaa iiiiiiii -----..c
+*
+* a = fixed value  ascii 'VIS2'
+* i = card id
+* c = checksum  (xor of card id)
+* . = unknown 
+* 
+**/
 //see ASKDemod for what args are accepted
 int CmdVisa2kDemod(const char *Cmd) {
 
@@ -82,7 +93,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
 	uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
 	uint32_t raw3 = bytebits_to_byte(DemodBuffer+64, 32);
-
+	
 	// chksum
 	uint8_t calc = visa_chksum(raw2);
 	uint8_t chk = raw3 & 0xF;	
@@ -106,7 +117,7 @@ int CmdVisa2kRead(const char *Cmd) {
 int CmdVisa2kClone(const char *Cmd) {
 
 	uint64_t id = 0;
-	uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_64 | T55x7_ST_TERMINATOR |3<<T55x7_MAXBLOCK_SHIFT, BL0CK1, 0};
+	uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_64 | T55x7_ST_TERMINATOR | 3 << T55x7_MAXBLOCK_SHIFT, BL0CK1, 0};
 
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_visa2k_clone();
@@ -116,7 +127,7 @@ int CmdVisa2kClone(const char *Cmd) {
 	//Q5
 	if (param_getchar(Cmd, 1) == 'Q' || param_getchar(Cmd, 1) == 'q') {
 		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-		blocks[0] = T5555_MODULATION_MANCHESTER | 64<<T5555_BITRATE_SHIFT | T5555_ST_TERMINATOR | 3<<T5555_MAXBLOCK_SHIFT;
+		blocks[0] = T5555_MODULATION_MANCHESTER | ((64-2)>>1) << T5555_BITRATE_SHIFT | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 	}
 	
 	// 

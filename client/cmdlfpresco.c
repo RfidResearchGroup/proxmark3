@@ -173,14 +173,14 @@ int CmdPrescoClone(const char *Cmd) {
 
 	bool Q5 = false;
 	uint32_t sitecode=0, usercode=0, fullcode=0;
-	uint32_t blocks[5] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | 4<<T55x7_MAXBLOCK_SHIFT | T55x7_ST_TERMINATOR, 0, 0, 0, 0};
+	uint32_t blocks[5] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT | T55x7_ST_TERMINATOR, 0, 0, 0, 0};
 	
 	// get wiegand from printed number.
 	if (GetWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == -1) return usage_lf_presco_clone();
 
 	if (Q5)
 		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-		blocks[0] = T5555_MODULATION_MANCHESTER | 32<<T5555_BITRATE_SHIFT | 4<<T5555_MAXBLOCK_SHIFT | T5555_ST_TERMINATOR;
+		blocks[0] = T5555_MODULATION_MANCHESTER | ((32-2)>>1) << T5555_BITRATE_SHIFT | 4 << T5555_MAXBLOCK_SHIFT | T5555_ST_TERMINATOR;
 
 	if ((sitecode & 0xFF) != sitecode) {
 		sitecode &= 0xFF;

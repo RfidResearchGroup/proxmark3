@@ -71,6 +71,18 @@ int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits) {
 	return 1;
 }
 
+/*
+*
+* 2520116 | BB0314FF2529900116360000 | 10111011 00000011 00010100 11111111 00100101 00101001 10010000 00000001 00010110 00110110 00000000 00000000
+*			aaaaaaaaiii***iiiicc----                                       iiiiiiii iiiiYYYY YYYY**** iiiiiiii iiiiiiii cccccccc
+*
+* a = fixed value BB0314FF 
+* i = printed id, BCD-format
+* Y = year
+* c = checksum
+* 
+**/
+
 //see ASKDemod for what args are accepted
 int CmdNoralsyDemod(const char *Cmd) {
 
@@ -141,7 +153,7 @@ int CmdNoralsyClone(const char *Cmd) {
 	
 	uint16_t year = 0;
 	uint32_t id = 0;
-	uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | T55x7_ST_TERMINATOR |3<<T55x7_MAXBLOCK_SHIFT, 0, 0};
+	uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | T55x7_ST_TERMINATOR | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0};
 	uint8_t bits[96];
 	uint8_t *bs = bits;
 	memset(bs, 0, sizeof(bits));
@@ -153,9 +165,9 @@ int CmdNoralsyClone(const char *Cmd) {
 	year = param_get32ex(Cmd, 1, 2000, 10);
 	
 	//Q5
-	if (param_getchar(Cmd, 1) == 'Q' || param_getchar(Cmd, 1) == 'q') {
+	if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q') {
 		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-		blocks[0] = T5555_MODULATION_MANCHESTER | 32<<T5555_BITRATE_SHIFT | T5555_ST_TERMINATOR | 3<<T5555_MAXBLOCK_SHIFT;
+		blocks[0] = T5555_MODULATION_MANCHESTER | ((32-2)>>1) << T5555_BITRATE_SHIFT | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 	}
 	
 	 if ( !getnoralsyBits(id, year, bs)) {

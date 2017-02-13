@@ -283,7 +283,7 @@ uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool 
 	}
 	return code;
 }
-/* Read the transmitted data of an EM4x50 tag
+/* Read the transmitted data of an EM4x50 tag from the graphbuffer
  * Format:
  *
  *  XXXXXXXX [row parity bit (even)] <- 8 bits plus parity
@@ -305,19 +305,7 @@ uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool 
  //completed by Marshmellow
 int EM4x50Read(const char *Cmd, bool verbose)
 {
-	/*
-	char buf[30] = {0x00};
-	char *cmdStr = buf;
-	int ans = 0;
-	bool ST = config.ST;
-	uint8_t bitRate[8] = {8,16,32,40,50,64,100,128};
-	DemodBufferLen = 0x00;	
-	snprintf(cmdStr, sizeof(buf),"%d %d 1", bitRate[config.bitrate], config.inverted );
-	ans = ASKDemod_ext(cmdStr, FALSE, FALSE, 1, &ST);
-	snprintf(cmdStr, sizeof(buf),"0 %d %d 1", bitRate[config.bitrate], config.inverted );
-	ans = ASKbiphaseDemod(cmdStr, FALSE);
-	*/
-	
+
 	uint8_t fndClk[] = {8,16,32,40,50,64,128};
 	int clk = 0; 
 	int invert = 0;
@@ -553,14 +541,46 @@ int CmdReadWord(const char *Cmd) {
 		return -1;
 	}
 	
-	//uint8_t got[12288];
-	uint8_t got[30000];
+	uint8_t got[6000];
 	GetFromBigBuf(got, sizeof(got), 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 8000) ) {
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
 		PrintAndLog("command execution time out");
-		return 0;
+		return -1;
 	}
 	setGraphBuf(got, sizeof(got));
+	
+	
+	int ans = 0;
+	//bool ST = true;
+	DemodBufferLen = 0x00;	
+
+	//ans = ASKDemod_ext("0 0 1", FALSE, FALSE, 1, &ST);
+	ans = ASKbiphaseDemod("0 0 1", FALSE);
+	if (!ans) { 
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/Manchester Demod failed");
+		return -1;
+	}
+
+	size_t startIdx = 0, size = DemodBufferLen; 
+
+	PrintAndLog("ANS: %d | %u | %u", ans, startIdx, size);
+
+	
+	uint8_t preamble[8] = {0,0,0,0,1,0,1,0};	
+	uint8_t errChk = !preambleSearch(DemodBuffer, preamble, sizeof(preamble), &size, &startIdx);
+	if ( errChk == 0) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
+		return -1;
+	}
+
+	// sanity check. 
+	if (size != 32) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 incorrect data length found,  %u", size );
+		return -1;
+	}
+
+	//setDemodBuf(BitStream, 32, preambleIndex);
+	
 	return 1;
 }
 
@@ -614,6 +634,37 @@ int CmdWriteWord(const char *Cmd) {
 		PrintAndLog("Error occurred, device did not respond during write operation.");
 		return -1;
 	}
+	
+	//get response if there is one
+	uint8_t got[6000]; // 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
+	GetFromBigBuf(got, sizeof(got), 0);
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 8000) ) {
+		PrintAndLog("command execution time out");
+		return -2;
+	}
+	setGraphBuf(got, sizeof(got));
+	
+	int ans = 0;
+	//bool ST = true;
+	DemodBufferLen = 0x00;	
+
+	//ans = ASKDemod_ext("0 0 1", FALSE, FALSE, 1, &ST);
+	ans = ASKbiphaseDemod("0 0 1", FALSE);
+	if (!ans) { 
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/Manchester Demod failed");
+		return -3;
+	}
+	PrintAndLog("ANS: %d", ans);
+	
+	//todo: check response for 00001010 then write data for write confirmation!	
+	size_t startIdx = 0, size = DemodBufferLen; 
+
+	uint8_t preamble[8] = {0,0,0,0,1,0,1,0};		
+	if (!preambleSearch(DemodBuffer, preamble, sizeof(preamble), &size, &startIdx)){
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
+		return -4;
+	}
+	PrintAndLog("Write OK");
 	return 0;
 }
 
@@ -625,9 +676,9 @@ static command_t CommandTable[] = {
 	{"em410xwatch",	CmdEM410xWatch, 	0, "['h'] -- Watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
 	{"em410xspoof",	CmdEM410xWatchnSpoof, 0, "['h'] --- Watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
 	{"em410xwrite",	CmdEM410xWrite, 	0, "<UID> <'0' T5555> <'1' T55x7> [clock rate] -- Write EM410x UID to T5555(Q5) or T55x7 tag, optionally setting clock rate"},
-	{"em4x50read",	CmdEM4x50Read, 		1, "Extract data from EM4x50 tag"},
-	{"readword",	CmdReadWord, 		1, "Read EM4xxx data"},
-	{"writeword",	CmdWriteWord, 		1, "Write EM4xxx data"},
+	{"em4x50read",	CmdEM4x50Read, 		1, "demod data from EM4x50 tag from the graphbuffer"},
+	{"readword",	CmdReadWord, 		1, "read EM4x05/4x69 data"},
+	{"writeword",	CmdWriteWord, 		1, "write EM405/4x69 data"},
 	{NULL, NULL, 0, NULL}
 };
 

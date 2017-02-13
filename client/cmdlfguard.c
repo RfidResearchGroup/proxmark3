@@ -15,8 +15,9 @@ int usage_lf_guard_clone(void){
 	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
 	PrintAndLog("Currently work only on 26bit");
 	PrintAndLog("");
-	PrintAndLog("Usage: lf guard clone <Facility-Code> <Card-Number>");
+	PrintAndLog("Usage: lf guard clone <format> <Facility-Code> <Card-Number>");
 	PrintAndLog("Options :");
+	PrintAndLog("         <format> :  format length 26|32|36|40");	
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("");
@@ -30,8 +31,9 @@ int usage_lf_guard_sim(void) {
 	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
 	PrintAndLog("Currently work only on 26bit");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf guard sim <Card-Number>");
+	PrintAndLog("Usage:  lf guard sim <format> <Card-Number>");
 	PrintAndLog("Options :");
+	PrintAndLog("         <format> :  format length 26|32|36|40");	
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("");
@@ -40,44 +42,61 @@ int usage_lf_guard_sim(void) {
 }
 
 // Works for 26bits.
-int GetGuardBits(uint32_t fc, uint32_t cn, uint8_t *guardBits) {
+int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
   
-	// Intializes random number generator
-	time_t t;
-	srand((unsigned) time(&t));
-	//uint8_t xorKey = rand() % 0xFF;
 	uint8_t xorKey = 0x66;
 	uint8_t i;
 	uint8_t pre[96];
-	memset(pre, 0x00, sizeof(pre));
-
-	// Get 26 wiegand from FacilityCode, CardNumber	
-	uint8_t wiegand[24];
-	memset(wiegand, 0x00, sizeof(wiegand));
-	num_to_bytebits(fc, 8, wiegand);
-	num_to_bytebits(cn, 16, wiegand+8);
-
-	// add wiegand parity bits (dest, source, len)
-	wiegand_add_parity(pre, wiegand, 24);
-
-	// lets start. 12bytes of data to be produced.
 	uint8_t rawbytes[12];
-	memset(rawbytes, 0x00, sizeof(rawbytes));
-
-	// xor key
-	rawbytes[0] = xorKey;
+	memset(pre, 0x00, sizeof(pre));
+	memset(rawbytes, 0x00, sizeof(rawbytes));	
 
 	// add format length (decimal)
-	// len | hex | bin
-	//  26 | 1A  | 0001 1010
-	rawbytes[1] = (26 << 2);
-	//  36 | 24  | 0010 0100
-	//rawbytes[1] = (36 << 2);
-	//  40 | 28  | 0010 1000
-	//rawbytes[1] = (40 << 2);
-	
+	switch (fmtlen) {
+		case 32: {
+			rawbytes[1] = (32 << 2);
+			
+			break;
+		}
+		case 36: {
+			// FC = ((ByteStream[3] & 0x7F)<<7) | (ByteStream[4]>>1);
+			// Card = ((ByteStream[4]&1)<<19) | (ByteStream[5]<<11) | (ByteStream[6]<<3) | (ByteStream[7]>>5);
+			rawbytes[1] = (36 << 2);
+			// Get 26 wiegand from FacilityCode, CardNumber	
+			uint8_t wiegand[34];
+			memset(wiegand, 0x00, sizeof(wiegand));
+			num_to_bytebits(fc, 8, wiegand);
+			num_to_bytebits(cn, 26, wiegand+8);
+
+			// add wiegand parity bits (dest, source, len)
+			wiegand_add_parity(pre, wiegand, 34);			
+			break;
+		}
+		case 40: {
+			rawbytes[1] = (40 << 2);
+			break;
+		}
+		case 26:
+		default: {
+			rawbytes[1] = (26 << 2);
+			// Get 26 wiegand from FacilityCode, CardNumber	
+			uint8_t wiegand[24];
+			memset(wiegand, 0x00, sizeof(wiegand));
+			num_to_bytebits(fc, 8, wiegand);
+			num_to_bytebits(cn, 16, wiegand+8);
+
+			// add wiegand parity bits (dest, source, len)
+			wiegand_add_parity(pre, wiegand, 24);
+			break;
+		}
+	}
 	// 2bit checksum, unknown today, 
 	// these two bits are the last ones of rawbyte[1], hence the LSHIFT above.
+
+	
+	// xor key
+	rawbytes[0] = xorKey;
+	
 	rawbytes[2] = 1;
 	rawbytes[3] = 0;
 	
@@ -86,6 +105,7 @@ int GetGuardBits(uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 		rawbytes[i+4] = bytebits_to_byte( pre + (i*8), 8);
 	
 	if (g_debugMode) printf(" WIE | %s\n", sprint_hex(rawbytes, sizeof(rawbytes)));	
+	
 	
 	// XOR (only works on wiegand stuff)
 	for (i = 1; i < 12; ++i)
@@ -127,24 +147,25 @@ int CmdGuardClone(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_guard_clone();
 
-	uint32_t facilitycode=0, cardnumber=0, fc = 0, cn = 0;
+	uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
 	uint8_t i;
 	uint8_t bs[96];
 	memset(bs, 0x00, sizeof(bs));
 	
 	//GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
-	uint32_t blocks[5] = {T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 3<<T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
+	uint32_t blocks[5] = {T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
 	
-//	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
-	//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-//		blocks[0] = T5555_MODULATION_FSK2 | 50<<T5555_BITRATE_SHIFT | 4<<T5555_MAXBLOCK_SHIFT;
+	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
+		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
+		blocks[0] = T5555_MODULATION_FSK2 | ((50-2)>>1) << T5555_BITRATE_SHIFT | 3 << T5555_MAXBLOCK_SHIFT;
 
-	if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) return usage_lf_guard_clone();
+	if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn ) != 2) return usage_lf_guard_clone();
 
+	fmtlen &= 0x7f;
 	facilitycode = (fc & 0x000000FF);
 	cardnumber = (cn & 0x0000FFFF);
 	
-	if ( !GetGuardBits(facilitycode, cardnumber, bs)) {
+	if ( !GetGuardBits(fmtlen, facilitycode, cardnumber, bs)) {
 		PrintAndLog("Error with tag bitstream generation.");
 		return 1;
 	}	
@@ -180,18 +201,19 @@ int CmdGuardSim(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_guard_sim();
 
-	uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
+	uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
 	uint8_t clock = 64, encoding = 2, separator = 0, invert = 0;
 	
 	uint8_t bs[96];
 	memset(bs, 0x00, sizeof(bs));
 	
-	if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) return usage_lf_guard_sim();
+	if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn ) != 2) return usage_lf_guard_sim();
 
+	fmtlen &= 0x7F;
 	facilitycode = (fc & 0x000000FF);
 	cardnumber = (cn & 0x0000FFFF);
 	
-	if ( !GetGuardBits(facilitycode, cardnumber, bs)) {
+	if ( !GetGuardBits(fmtlen, facilitycode, cardnumber, bs)) {
 		PrintAndLog("Error with tag bitstream generation.");
 		return 1;
 	}	

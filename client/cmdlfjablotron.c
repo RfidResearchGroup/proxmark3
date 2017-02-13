@@ -132,7 +132,7 @@ int CmdJablotronRead(const char *Cmd) {
 int CmdJablotronClone(const char *Cmd) {
 
 	uint64_t fullcode = 0;
-	uint32_t blocks[3] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_64 | 2<<T55x7_MAXBLOCK_SHIFT, 0, 0};
+	uint32_t blocks[3] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
 
 	uint8_t bits[64];
 	uint8_t *bs = bits;
@@ -146,7 +146,7 @@ int CmdJablotronClone(const char *Cmd) {
 	//Q5
 	if (param_getchar(Cmd, 1) == 'Q' || param_getchar(Cmd, 1) == 'q') {
 		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-		blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | 64<<T5555_BITRATE_SHIFT | 2<<T5555_MAXBLOCK_SHIFT;
+		blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | ((64-2)>>1) << T5555_BITRATE_SHIFT | 2 << T5555_MAXBLOCK_SHIFT;
 	}
 	
 	// clearing the topbit needed for the preambl detection. 

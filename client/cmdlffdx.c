@@ -202,7 +202,7 @@ int CmdFdxClone(const char *Cmd) {
 
 	uint32_t countryid = 0;
 	uint64_t animalid = 0;
-	uint32_t blocks[5] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_32 | 4<<T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
+	uint32_t blocks[5] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
 	uint8_t bits[128];
 	uint8_t *bs = bits;
 	memset(bs, 0, sizeof(bits));
@@ -214,9 +214,9 @@ int CmdFdxClone(const char *Cmd) {
 	animalid = param_get64ex(Cmd, 1, 0, 10);
 	
 	//Q5
-	if (param_getchar(Cmd, 1) == 'Q' || param_getchar(Cmd, 1) == 'q') {
+	if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q') {
 		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-		blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | 32<<T5555_BITRATE_SHIFT | 4<<T5555_MAXBLOCK_SHIFT;
+		blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | ((32-2)>>1) << T5555_BITRATE_SHIFT | 4 << T5555_MAXBLOCK_SHIFT;
 	}
 	
 	verify_values(countryid, animalid);
