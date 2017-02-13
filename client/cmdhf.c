@@ -928,7 +928,9 @@ static command_t CommandTable[] = {
 	{"14b",         CmdHF14B,         1, "{ ISO14443B RFIDs... }"},
 	{"15",          CmdHF15,          1, "{ ISO15693 RFIDs... }"},
 	{"epa",         CmdHFEPA,         1, "{ German Identification Card... }"},
+#ifdef WITH_EMV
 	{"emv",         CmdHFEmv,         1, "{ EMV RFIDs... }"},
+#endif	
 	{"legic",       CmdHFLegic,       1, "{ LEGIC RFIDs... }"},
 	{"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs... }"},
 	{"mf",      	CmdHFMF,		  1, "{ MIFARE RFIDs... }"},
