@@ -61,8 +61,11 @@ endif
 
 #uncomment to enable EMV
 #APP_CFLAGS += -DWITH_EMV
+#COMMON_FLAGS += -DWITH_EMV
 #uncomment to fix 256 vs 512kb Devices
 APP_CFLAGS += -DHAS_512_FLASH
+COMMON_FLAGS += -DHAS_512_FLASH
+
 # Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the zlib directory
 VPATH = . ../common ../fpga ../zlib
 

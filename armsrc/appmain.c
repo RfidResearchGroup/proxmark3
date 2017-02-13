@@ -1228,6 +1228,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
             break;
         case CMD_EMV_DUMP_CARD:
             EMVdumpcard();
+			break;
 #endif
 #ifdef WITH_ICLASS
 		// Makes use of ISO14443a FPGA Firmware

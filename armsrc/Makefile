@@ -9,37 +9,33 @@
 APP_INCLUDES = apps.h
 
 #remove one of the following defines and comment out the relevant line
-#in the next section to remove that particular feature from compilation  
-APP_CFLAGS = -DWITH_ISO14443a_StandAlone \
+#in the next section to remove that particular feature from compilation.
+# NO space,TABs after the "\" sign.  
+APP_CFLAGS = -DWITH_CRC \
+			 -DON_DEVICE \
 			 -DWITH_LF \
-			 -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b -DWITH_ICLASS \
-			 -DWITH_LEGICRF -DWITH_HITAG -DWITH_CRC -DON_DEVICE -DWITH_HFSNOOP \
-#			 -DWITH_LCD \
+			 -DWITH_HITAG \
+ 			 -DWITH_ISO15693 \
+			 -DWITH_LEGICRF \
+			 -DWITH_ISO14443b \
+			 -DWITH_ISO14443a \
+			 -DWITH_ICLASS \
+			 -DWITH_HFSNOOP \
+			 -DWITH_ISO14443a_StandAlone \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
+### IMPORTANT -  move the commented variable below this line
+#			 -DWITH_LCD \
 
-#ifdef WITH_LCD			 
 SRC_LCD = fonts.c LCD.c
-#endif
-
-#ifdef WITH_LF
 SRC_LF = lfops.c hitag2.c hitagS.c lfsampling.c pcf7931.c lfdemod.c
-#endif
-
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c mifaresniff.c epa.c
 SRC_ISO14443b = iso14443b.c
 SRC_CRAPTO1 = crapto1.c crypto1.c des.c aes.c desfire_key.c desfire_crypto.c mifaredesfire.c
 SRC_CRC = iso14443crc.c crc.c crc16.c crc32.c 
-
-#ifdef WITH_EMV
 SRC_EMV = tlv.c emvdataels.c emvutil.c emvcmd.c 									 
-#endif
-#ifdef WITH_ICLASS
 SRC_ICLASS = iclass.c optimized_cipher.c
-#endif
-#ifdef WITH_LEGIC
 SRC_LEGIC = legicrf.c legic_prng.c
-#endif
 
 #the FPGA bitstream files. Note: order matters!
 FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit
