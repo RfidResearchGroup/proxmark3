@@ -14,12 +14,11 @@ APP_CFLAGS = -DWITH_ISO14443a_StandAlone \
 			 -DWITH_LF \
 			 -DWITH_ISO15693 -DWITH_ISO14443a -DWITH_ISO14443b -DWITH_ICLASS \
 			 -DWITH_LEGICRF -DWITH_HITAG -DWITH_CRC -DON_DEVICE -DWITH_HFSNOOP \
-#			 -DWITH_EMV \
 #			 -DWITH_LCD \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 
 #ifdef WITH_LCD			 
-#SRC_LCD = fonts.c LCD.c
+SRC_LCD = fonts.c LCD.c
 #endif
 
 #ifdef WITH_LF
@@ -87,6 +86,8 @@ ARMSRC = fpgaloader.c \
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common
+
+COMMON_FLAGS =  -Os 
 
 OBJS = $(OBJDIR)/fullimage.s19 
 FPGA_COMPRESSOR = ../client/fpga_compress

@@ -7,7 +7,8 @@ include ../common/Makefile.common
 
 CC = gcc
 CXX = g++
-COMMON_FLAGS =  -std=c99 -O3 -mpopcnt -march=native -g
+COMMON_FLAGS = -std=c99 -O3 -mpopcnt -march=native -g
+
 #VPATH = ../common ../zlib
 OBJDIR = obj
 
@@ -81,10 +82,9 @@ else
     QTGUI = guidummy.o
 endif
 
-CORESRCS = 	uart.c \
-		util.c \
-		sleep.c
-
+CORESRCS =  uart.c \
+			util.c \
+			sleep.c
 
 CMDSRCS =	mifarehost.c \
 			nonce2key/crapto1.c \
