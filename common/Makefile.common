@@ -59,8 +59,10 @@ DETECTED_OS=Windows
 
 endif
 
+#uncomment to enable EMV
+#APP_CFLAGS += -DWITH_EMV
+#uncomment to fix 256 vs 512kb Devices
 APP_CFLAGS += -DHAS_512_FLASH
-
 # Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the zlib directory
 VPATH = . ../common ../fpga ../zlib
 
@@ -68,7 +70,6 @@ INCLUDES = ../include/proxmark3.h ../include/at91sam7s512.h ../include/config_gp
 
 CFLAGS =  -c $(INCLUDE) -Wall -Werror -pedantic -Wunused -std=c99 $(APP_CFLAGS) -Os
 LDFLAGS = -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
-
 LIBS = -lgcc
 
 THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(THUMBSRC)))
