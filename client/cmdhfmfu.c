@@ -485,10 +485,10 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces){
 }
 
 static int ulc_print_3deskey( uint8_t *data){
-	PrintAndLog("         deskey1 [44/0x2C] : %s [%.4s]", sprint_hex(data   ,4),data);
-	PrintAndLog("         deskey1 [45/0x2D] : %s [%.4s]", sprint_hex(data+4 ,4),data+4);
-	PrintAndLog("         deskey2 [46/0x2E] : %s [%.4s]", sprint_hex(data+8 ,4),data+8);
-	PrintAndLog("         deskey2 [47/0x2F] : %s [%.4s]", sprint_hex(data+12,4),data+12);
+	PrintAndLog("         deskey1 [44/0x2C] : %s [s]", sprint_hex(data   ,4), sprint_ascii(data,4) );
+	PrintAndLog("         deskey1 [45/0x2D] : %s [s]", sprint_hex(data+4 ,4), sprint_ascii(data+4,4));
+	PrintAndLog("         deskey2 [46/0x2E] : %s [s]", sprint_hex(data+8 ,4), sprint_ascii(data+8,4));
+	PrintAndLog("         deskey2 [47/0x2F] : %s [s]", sprint_hex(data+12,4), sprint_ascii(data+12,4));
 	PrintAndLog("\n 3des key : %s", sprint_hex(SwapEndian64(data, 16, 8), 16));
 	return 0;
 }
@@ -1213,7 +1213,7 @@ int CmdHF14AMfURdBl(const char *Cmd){
 			uint8_t *data = resp.d.asBytes;
 			PrintAndLog("\nBlock#  | Data        | Ascii");
 			PrintAndLog("-----------------------------");
-			PrintAndLog("%02d/0x%02X | %s| %.4s\n", blockNo, blockNo, sprint_hex(data, 4), data);
+			PrintAndLog("%02d/0x%02X | %s| %s\n", blockNo, blockNo, sprint_hex(data, 4), sprint_ascii(data,4));
 		}
 		else {
 			PrintAndLog("Failed reading block: (%02x)", isOK);
@@ -1596,25 +1596,25 @@ int CmdHF14AMfUDump(const char *Cmd){
 	PrintAndLog("\n*Special* block data:");
 	PrintAndLog("\nDataType| Data        |   | Ascii");
 	PrintAndLog("---------------------------------");
-	PrintAndLog("GetVer-1| %s|   | %.4s", sprint_hex(dump_file_data, 4), dump_file_data);
-	PrintAndLog("GetVer-2| %s|   | %.4s", sprint_hex(dump_file_data+4, 4), dump_file_data+4);
+	PrintAndLog("GetVer-1| %s|   | %s", sprint_hex(dump_file_data, 4), sprint_ascii(dump_file_data, 4));
+	PrintAndLog("GetVer-2| %s|   | %s", sprint_hex(dump_file_data+4, 4), sprint_ascii(dump_file_data+4,4));
 	PrintAndLog("TBD     | 00 00       |   | ");
-	PrintAndLog("Tearing |    %s|   | %.3s", sprint_hex(dump_file_data+10, 3), dump_file_data+10);
-	PrintAndLog("Pack    |    %s   |   | %.2s", sprint_hex(dump_file_data+13, 2), dump_file_data+13);
+	PrintAndLog("Tearing |    %s|   | %s", sprint_hex(dump_file_data+10, 3), sprint_ascii(dump_file_data+10,3) );
+	PrintAndLog("Pack    |    %s   |   | %s", sprint_hex(dump_file_data+13, 2), sprint_ascii(dump_file_data+13,2) );
 	PrintAndLog("TBD     |          00 |   | ");
-	PrintAndLog("Sig-1   | %s|   | %.4s", sprint_hex(dump_file_data+16, 4), dump_file_data+16);
-	PrintAndLog("Sig-2   | %s|   | %.4s", sprint_hex(dump_file_data+20, 4), dump_file_data+20);
-	PrintAndLog("Sig-3   | %s|   | %.4s", sprint_hex(dump_file_data+24, 4), dump_file_data+24);
-	PrintAndLog("Sig-4   | %s|   | %.4s", sprint_hex(dump_file_data+28, 4), dump_file_data+28);
-	PrintAndLog("Sig-5   | %s|   | %.4s", sprint_hex(dump_file_data+32, 4), dump_file_data+32);
-	PrintAndLog("Sig-6   | %s|   | %.4s", sprint_hex(dump_file_data+36, 4), dump_file_data+36);
-	PrintAndLog("Sig-7   | %s|   | %.4s", sprint_hex(dump_file_data+40, 4), dump_file_data+40);
-	PrintAndLog("Sig-8   | %s|   | %.4s", sprint_hex(dump_file_data+44, 4), dump_file_data+44);
+	PrintAndLog("Sig-1   | %s|   | %s", sprint_hex(dump_file_data+16, 4), sprint_ascii(dump_file_data+16,4));
+	PrintAndLog("Sig-2   | %s|   | %s", sprint_hex(dump_file_data+20, 4), sprint_ascii(dump_file_data+20,4));
+	PrintAndLog("Sig-3   | %s|   | %s", sprint_hex(dump_file_data+24, 4), sprint_ascii(dump_file_data+24,4));
+	PrintAndLog("Sig-4   | %s|   | %s", sprint_hex(dump_file_data+28, 4), sprint_ascii(dump_file_data+28,4));
+	PrintAndLog("Sig-5   | %s|   | %s", sprint_hex(dump_file_data+32, 4), sprint_ascii(dump_file_data+32,4));
+	PrintAndLog("Sig-6   | %s|   | %s", sprint_hex(dump_file_data+36, 4), sprint_ascii(dump_file_data+36,4));
+	PrintAndLog("Sig-7   | %s|   | %s", sprint_hex(dump_file_data+40, 4), sprint_ascii(dump_file_data+40,4));
+	PrintAndLog("Sig-8   | %s|   | %s", sprint_hex(dump_file_data+44, 4), sprint_ascii(dump_file_data+44,4));
 	PrintAndLog("\nBlock#  | Data        |lck| Ascii");
 	PrintAndLog("---------------------------------");
 	for (i = 0; i < Pages; ++i) {
 		if ( i < 3 ) {
-			PrintAndLog("%02d/0x%02X | %s|   | %.4s", i+startPage, i+startPage, sprint_hex(data + i * 4, 4), data + i * 4 );
+			PrintAndLog("%02d/0x%02X | %s|   | %s", i+startPage, i+startPage, sprint_hex(data + i * 4, 4), sprint_ascii(data + i * 4,4) );
 			continue;
 		}
 		switch(i){
@@ -1661,7 +1661,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 			case 43: tmplockbit = bit2[9]; break;  //auth1
 			default: break;
 		}
-		PrintAndLog("%02d/0x%02X | %s| %d | %.4s", i+startPage, i+startPage, sprint_hex(data + i * 4, 4), tmplockbit, data+i*4);
+		PrintAndLog("%02d/0x%02X | %s| %d | %s", i+startPage, i+startPage, sprint_hex(data + i * 4, 4), tmplockbit, sprint_ascii(data + i * 4,4));
 	}
 	PrintAndLog("---------------------------------");
 
