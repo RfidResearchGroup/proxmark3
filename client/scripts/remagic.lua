@@ -59,6 +59,22 @@ local function cmdClassic()
 	[4] = "hf 14a raw -c -a 5000",
 	}
 end
+local function cmdRestoreST()
+	local arr = {}
+	for i = 0, 15 do
+		local blk = 3 + (4*i)
+		arr[i] = "hf mf csetbl "..blk.." FFFFFFFFFFFFFF078000FFFFFFFFFFFF"
+	end
+	return arr
+end 
+local function sendCmds( cmds )
+	for i = 0, #cmds do
+		if cmds[i]  then 
+			print ( cmds[i]  )
+			core.console( cmds[i] )
+		end
+	end
+end
 --- 
 -- The main entry point
 function main(args)
@@ -76,16 +92,10 @@ function main(args)
 	core.clearCommandBuffer()
 	
 	if isUltralight then
-		cmds = cmdUltralight()
+		sendCmds ( cmdUltralight() )
 	else
-		cmds = cmdClassic()
-	end
-	
-	for i = 0, #cmds do
-		if cmds[i]  then 
-			print ( cmds[i] )
-			core.console( cmds[i] )
-		end
+		sendCmds( cmdClassic() )
+		sendCmds( cmdRestoreST() )
 	end
 end
 
