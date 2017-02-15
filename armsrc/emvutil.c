@@ -249,7 +249,7 @@ int emv_lookuptag(uint8_t* tag, emvtags *currentcard, uint8_t* outputval, uint8_
 			returnedlength = currentcard->tag_9F12_len; goto exitfunction;}
         else if(*(tag+1) == 0x1A){ 
 			memcpy(&returnedtag, currentcard->tag_9F1A,  sizeof(currentcard->tag_9F1A));
-			returnlength = sizeof(currentcard->tag_9F1A); goto exitfunction;}
+			returnedlength = sizeof(currentcard->tag_9F1A); goto exitfunction;}
         else if(*(tag+1) == 0x1F){ 
 			memcpy(&returnedtag, currentcard->tag_9F1F,  currentcard->tag_9F1F_len);
 			returnedlength = currentcard->tag_9F1F_len; goto exitfunction;}
