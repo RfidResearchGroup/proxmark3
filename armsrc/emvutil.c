@@ -42,7 +42,7 @@ int emv_lookuptag(uint8_t* tag, emvtags *currentcard, uint8_t* outputval, uint8_
 {
     //loop through tag and return the appropriate value
     uint8_t returnedtag[255]; 
-    uint8_t returnedlength; 
+    uint8_t returnedlength = 0; 
     memset(returnedtag, 0x00, sizeof(returnedtag)); 
     if(!memcmp(tag, "\x4F\x00",2)){
          memcpy(&returnedtag, currentcard->tag_4F,  currentcard->tag_4F_len);
@@ -201,165 +201,165 @@ int emv_lookuptag(uint8_t* tag, emvtags *currentcard, uint8_t* outputval, uint8_
         }
     if(*tag == 0x9F) {
         if(*(tag+1) == 0x01){ 
-             memcpy(&returnedtag, currentcard->tag_9F01,  sizeof(currentcard->tag_9F01));
-             returnedlength = sizeof(currentcard->tag_9F01);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F01,  sizeof(currentcard->tag_9F01));
+			returnedlength = sizeof(currentcard->tag_9F01);goto exitfunction;}
         else if(*(tag+1) == 0x02){ 
-             memcpy(&returnedtag, currentcard->tag_9F02,  sizeof(currentcard->tag_9F02));
-             returnedlength = sizeof(currentcard->tag_9F02);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F02,  sizeof(currentcard->tag_9F02));
+			returnedlength = sizeof(currentcard->tag_9F02);goto exitfunction;}
         else if(*(tag+1) == 0x03){ 
-             returnedlength = sizeof(currentcard->tag_9F03);goto exitfunction;}
+			returnedlength = sizeof(currentcard->tag_9F03);goto exitfunction;}
         else if(*(tag+1) == 0x04){ 
-             memcpy(&returnedtag, currentcard->tag_9F04,  sizeof(currentcard->tag_9F04));
-             returnedlength = sizeof(currentcard->tag_9F04);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F04,  sizeof(currentcard->tag_9F04));
+			returnedlength = sizeof(currentcard->tag_9F04);goto exitfunction;}
         else if(*(tag+1) == 0x05){ 
-       memcpy(&returnedtag, currentcard->tag_9F05,  currentcard->tag_9F05_len);
-             returnedlength = currentcard->tag_9F05_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F05,  currentcard->tag_9F05_len);
+			returnedlength = currentcard->tag_9F05_len; goto exitfunction;}
         else if(*(tag+1) == 0x06){ 
-       memcpy(&returnedtag, currentcard->tag_9F06,  currentcard->tag_9F06_len);
-             returnedlength = currentcard->tag_9F06_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F06,  currentcard->tag_9F06_len);
+			returnedlength = currentcard->tag_9F06_len; goto exitfunction;}
         else if(*(tag+1) == 0x07){ 
-             memcpy(&returnedtag, currentcard->tag_9F07,  sizeof(currentcard->tag_9F07));
-             returnedlength = sizeof(currentcard->tag_9F07);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F07,  sizeof(currentcard->tag_9F07));
+			returnedlength = sizeof(currentcard->tag_9F07);goto exitfunction;}
         else if(*(tag+1) == 0x08){ 
-             memcpy(&returnedtag, currentcard->tag_9F08,  sizeof(currentcard->tag_9F08));
-             returnedlength = sizeof(currentcard->tag_9F08);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F08,  sizeof(currentcard->tag_9F08));
+			returnedlength = sizeof(currentcard->tag_9F08);goto exitfunction;}
         else if(*(tag+1) == 0x09){ 
-             memcpy(&returnedtag, currentcard->tag_9F09,  sizeof(currentcard->tag_9F09));
-             returnedlength = sizeof(currentcard->tag_9F09);goto exitfunction;} 
+			memcpy(&returnedtag, currentcard->tag_9F09,  sizeof(currentcard->tag_9F09));
+			returnedlength = sizeof(currentcard->tag_9F09);goto exitfunction;} 
         else if(*(tag+1) == 0x0B){ 
-       memcpy(&returnedtag, currentcard->tag_9F0B,  currentcard->tag_9F0B_len);
-             returnedlength = currentcard->tag_9F0B_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F0B,  currentcard->tag_9F0B_len);
+			returnedlength = currentcard->tag_9F0B_len; goto exitfunction;}
         else if(*(tag+1) == 0x0D){ 
-             memcpy(&returnedtag, currentcard->tag_9F0D,  sizeof(currentcard->tag_9F0D));
-             returnedlength = sizeof(currentcard->tag_9F0D);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F0D,  sizeof(currentcard->tag_9F0D));
+			returnedlength = sizeof(currentcard->tag_9F0D); goto exitfunction;}
         else if(*(tag+1) == 0x0E){ 
-             memcpy(&returnedtag, currentcard->tag_9F0E,  sizeof(currentcard->tag_9F0E));
-             returnedlength = sizeof(currentcard->tag_9F0E);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F0E,  sizeof(currentcard->tag_9F0E));
+			returnedlength = sizeof(currentcard->tag_9F0E); goto exitfunction;}
         else if(*(tag+1) == 0x0F){ 
-             memcpy(&returnedtag, currentcard->tag_9F0F,  sizeof(currentcard->tag_9F0F));
-             returnedlength = sizeof(currentcard->tag_9F0F);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F0F,  sizeof(currentcard->tag_9F0F));
+			returnedlength = sizeof(currentcard->tag_9F0F); goto exitfunction;}
         else if(*(tag+1) == 0x10){ 
-            memcpy(&returnedtag, currentcard->tag_9F10,  currentcard->tag_9F10_len);
-             returnedlength = currentcard->tag_9F10_len;goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F10,  currentcard->tag_9F10_len);
+			returnedlength = currentcard->tag_9F10_len; goto exitfunction;}
         else if(*(tag+1) == 0x11){ 
-             memcpy(&returnedtag, currentcard->tag_9F11,  sizeof(currentcard->tag_9F11));
-             returnedlength = sizeof(currentcard->tag_9F11);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F11,  sizeof(currentcard->tag_9F11));
+			returnedlength = sizeof(currentcard->tag_9F11); goto exitfunction;}
         else if(*(tag+1) == 0x12){ 
-             memcpy(&returnedtag, currentcard->tag_9F12,  currentcard->tag_9F12_len);
-             returnedlength = currentcard->tag_9F12_len;goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F12,  currentcard->tag_9F12_len);
+			returnedlength = currentcard->tag_9F12_len; goto exitfunction;}
         else if(*(tag+1) == 0x1A){ 
-             memcpy(&returnedtag, currentcard->tag_9F1A,  sizeof(currentcard->tag_9F1A));
-            goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F1A,  sizeof(currentcard->tag_9F1A));
+			returnlength = sizeof(currentcard->tag_9F1A); goto exitfunction;}
         else if(*(tag+1) == 0x1F){ 
-       memcpy(&returnedtag, currentcard->tag_9F1F,  currentcard->tag_9F1F_len);
-             returnedlength = currentcard->tag_9F1F_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F1F,  currentcard->tag_9F1F_len);
+			returnedlength = currentcard->tag_9F1F_len; goto exitfunction;}
         else if(*(tag+1) == 0x32){ 
-       memcpy(&returnedtag, currentcard->tag_9F32,  currentcard->tag_9F32_len);
-             returnedlength = currentcard->tag_9F32_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F32,  currentcard->tag_9F32_len);
+			returnedlength = currentcard->tag_9F32_len; goto exitfunction;}
         else if(*(tag+1) == 0x34){ 
-       memcpy(&returnedtag, currentcard->tag_9F34,  sizeof(currentcard->tag_9F34));
-             returnedlength = sizeof(currentcard->tag_9F34); goto exitfunction;}
-else if(*(tag+1) == 0x35){ 
-       memcpy(&returnedtag, currentcard->tag_9F35,  sizeof(currentcard->tag_9F35));
-             returnedlength = sizeof(currentcard->tag_9F35); goto exitfunction;}
-else if(*(tag+1) == 0x37){ 
-             memcpy(&returnedtag, currentcard->tag_9F37,  sizeof(currentcard->tag_9F37));
-             returnedlength = sizeof(currentcard->tag_9F37);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F34,  sizeof(currentcard->tag_9F34));
+			returnedlength = sizeof(currentcard->tag_9F34); goto exitfunction;}
+		else if(*(tag+1) == 0x35){ 
+			memcpy(&returnedtag, currentcard->tag_9F35,  sizeof(currentcard->tag_9F35));
+			returnedlength = sizeof(currentcard->tag_9F35); goto exitfunction;}
+		else if(*(tag+1) == 0x37){ 
+			memcpy(&returnedtag, currentcard->tag_9F37,  sizeof(currentcard->tag_9F37));
+			returnedlength = sizeof(currentcard->tag_9F37);goto exitfunction;}
         else if(*(tag+1) == 0x38){ 
-       memcpy(&returnedtag, currentcard->tag_9F38,  currentcard->tag_9F38_len);
-             returnedlength = currentcard->tag_9F38_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F38,  currentcard->tag_9F38_len);
+			returnedlength = currentcard->tag_9F38_len; goto exitfunction;}
         else if(*(tag+1) == 0x44){ 
-             memcpy(&returnedtag, currentcard->tag_9F44,  sizeof(currentcard->tag_9F44));
-             returnedlength = sizeof(currentcard->tag_9F44);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F44,  sizeof(currentcard->tag_9F44));
+			returnedlength = sizeof(currentcard->tag_9F44);goto exitfunction;}
         else if(*(tag+1) == 0x45){ 
-             memcpy(&returnedtag, currentcard->tag_9F45,  sizeof(currentcard->tag_9F45));
-             returnedlength = sizeof(currentcard->tag_9F45);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F45,  sizeof(currentcard->tag_9F45));
+			returnedlength = sizeof(currentcard->tag_9F45);goto exitfunction;}
         else if(*(tag+1) == 0x46){ 
-            memcpy(&returnedtag, currentcard->tag_9F46,  currentcard->tag_9F46_len);
-             returnedlength = currentcard->tag_9F46_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F46,  currentcard->tag_9F46_len);
+			returnedlength = currentcard->tag_9F46_len; goto exitfunction;}
         else if(*(tag+1) == 0x47){ 
-       memcpy(&returnedtag, currentcard->tag_9F47,  currentcard->tag_9F47_len);
-             returnedlength = currentcard->tag_9F47_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F47,  currentcard->tag_9F47_len);
+			returnedlength = currentcard->tag_9F47_len; goto exitfunction;}
         else if(*(tag+1) == 0x48){ 
-       memcpy(&returnedtag, currentcard->tag_9F48,  currentcard->tag_9F48_len);
-             returnedlength = currentcard->tag_9F48_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F48,  currentcard->tag_9F48_len);
+			returnedlength = currentcard->tag_9F48_len; goto exitfunction;}
         else if(*(tag+1) == 0x49){ 
-       memcpy(&returnedtag, currentcard->tag_9F49,  currentcard->tag_9F49_len);
-             returnedlength = currentcard->tag_9F49_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F49,  currentcard->tag_9F49_len);
+			returnedlength = currentcard->tag_9F49_len; goto exitfunction;}
         else if(*(tag+1) == 0x4A){ 
-             memcpy(&returnedtag, currentcard->tag_9F4A,  sizeof(currentcard->tag_9F4A));
-             returnedlength = sizeof(currentcard->tag_9F4A);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F4A,  sizeof(currentcard->tag_9F4A));
+			returnedlength = sizeof(currentcard->tag_9F4A);goto exitfunction;}
         else if(*(tag+1) == 0x4B){ 
-       memcpy(&returnedtag, currentcard->tag_9F4B,  currentcard->tag_9F4B_len);
-             returnedlength = currentcard->tag_9F4B_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F4B,  currentcard->tag_9F4B_len);
+			returnedlength = currentcard->tag_9F4B_len; goto exitfunction;}
         else if(*(tag+1) == 0x4C){ 
-             memcpy(&returnedtag, currentcard->tag_9F4C,  sizeof(currentcard->tag_9F4C));
-             returnedlength = sizeof(currentcard->tag_9F4C); goto exitfunction;}
-else if(*(tag+1) == 0x60){ 
-             memcpy(&returnedtag, currentcard->tag_9F60,  sizeof(currentcard->tag_9F60));
-             returnedlength = sizeof(currentcard->tag_9F60);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F4C,  sizeof(currentcard->tag_9F4C));
+			returnedlength = sizeof(currentcard->tag_9F4C); goto exitfunction;}
+		else if(*(tag+1) == 0x60){ 
+			memcpy(&returnedtag, currentcard->tag_9F60,  sizeof(currentcard->tag_9F60));
+			returnedlength = sizeof(currentcard->tag_9F60);goto exitfunction;}
         else if(*(tag+1) == 0x61){ 
-             memcpy(&returnedtag, currentcard->tag_9F61,  sizeof(currentcard->tag_9F61));
-             returnedlength = sizeof(currentcard->tag_9F61);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F61,  sizeof(currentcard->tag_9F61));
+			returnedlength = sizeof(currentcard->tag_9F61);goto exitfunction;}
         else if(*(tag+1) == 0x62){ 
-             memcpy(&returnedtag, currentcard->tag_9F62,  sizeof(currentcard->tag_9F62));
-             returnedlength = sizeof(currentcard->tag_9F62);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F62,  sizeof(currentcard->tag_9F62));
+			returnedlength = sizeof(currentcard->tag_9F62);goto exitfunction;}
         else if(*(tag+1) == 0x63){ 
-             memcpy(&returnedtag, currentcard->tag_9F63,  sizeof(currentcard->tag_9F63));
-             returnedlength = sizeof(currentcard->tag_9F63);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F63,  sizeof(currentcard->tag_9F63));
+			returnedlength = sizeof(currentcard->tag_9F63);goto exitfunction;}
         else if(*(tag+1) == 0x64){ 
-             memcpy(&returnedtag, currentcard->tag_9F64,  sizeof(currentcard->tag_9F64));
-             returnedlength = sizeof(currentcard->tag_9F64);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F64,  sizeof(currentcard->tag_9F64));
+			returnedlength = sizeof(currentcard->tag_9F64);goto exitfunction;}
         else if(*(tag+1) == 0x65){ 
-             memcpy(&returnedtag, currentcard->tag_9F65,  sizeof(currentcard->tag_9F65));
-             returnedlength = sizeof(currentcard->tag_9F65);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F65,  sizeof(currentcard->tag_9F65));
+			returnedlength = sizeof(currentcard->tag_9F65);goto exitfunction;}
         else if(*(tag+1) == 0x66){ 
-            memcpy(&returnedtag, currentcard->tag_9F66,  sizeof(currentcard->tag_9F66));
-             returnedlength = sizeof(currentcard->tag_9F66);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F66,  sizeof(currentcard->tag_9F66));
+			returnedlength = sizeof(currentcard->tag_9F66);goto exitfunction;}
         else if(*(tag+1) == 0x67){ 
-             memcpy(&returnedtag, currentcard->tag_9F67,  sizeof(currentcard->tag_9F67));
-             returnedlength = sizeof(currentcard->tag_9F67);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F67,  sizeof(currentcard->tag_9F67));
+			returnedlength = sizeof(currentcard->tag_9F67);goto exitfunction;}
         else if(*(tag+1) == 0x68){ 
-        memcpy(&returnedtag, currentcard->tag_9F68,  currentcard->tag_9F68_len);
-             returnedlength = currentcard->tag_9F68_len;goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F68,  currentcard->tag_9F68_len);
+			returnedlength = currentcard->tag_9F68_len;goto exitfunction;}
         else if(*(tag+1) == 0x69){ 
-       memcpy(&returnedtag, currentcard->tag_9F69,  currentcard->tag_9F69_len);
-             returnedlength = currentcard->tag_9F69_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F69,  currentcard->tag_9F69_len);
+			returnedlength = currentcard->tag_9F69_len; goto exitfunction;}
         else if(*(tag+1) == 0x6A){ 
-             memcpy(&returnedtag, currentcard->tag_9F6A,  sizeof(currentcard->tag_9F6A));
-             returnedlength = sizeof(currentcard->tag_9F6A);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F6A,  sizeof(currentcard->tag_9F6A));
+			returnedlength = sizeof(currentcard->tag_9F6A);goto exitfunction;}
         else if(*(tag+1) == 0x6B){ 
-       memcpy(&returnedtag, currentcard->tag_9F6B,  currentcard->tag_9F6B_len);
-             returnedlength = currentcard->tag_9F6B_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F6B,  currentcard->tag_9F6B_len);
+			returnedlength = currentcard->tag_9F6B_len; goto exitfunction;}
         else if(*(tag+1) == 0x6C){ 
-             memcpy(&returnedtag, currentcard->tag_9F6C,  sizeof(currentcard->tag_9F6C));
-             returnedlength = sizeof(currentcard->tag_9F6C);goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_9F6C,  sizeof(currentcard->tag_9F6C));
+			returnedlength = sizeof(currentcard->tag_9F6C);goto exitfunction;}
     }
     else {
         if(!memcmp(tag, "\x61\x00",2)){
-       memcpy(&returnedtag, currentcard->tag_61,  currentcard->tag_61_len);
-             returnedlength = currentcard->tag_61_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_61,  currentcard->tag_61_len);
+			returnedlength = currentcard->tag_61_len; goto exitfunction;}
         else if(!memcmp(tag, "\x6F\x00",2)){
-       memcpy(&returnedtag, currentcard->tag_6F,  currentcard->tag_6F_len);
-             returnedlength = currentcard->tag_6F_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_6F,  currentcard->tag_6F_len);
+			returnedlength = currentcard->tag_6F_len; goto exitfunction;}
         else if(!memcmp(tag, "\xAF\x00",2)){
-       memcpy(&returnedtag, currentcard->tag_AF,  currentcard->tag_AF_len);
-             returnedlength = currentcard->tag_AF_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_AF,  currentcard->tag_AF_len);
+			returnedlength = currentcard->tag_AF_len; goto exitfunction;}
         else if(!memcmp(tag, "\x70\x00",2)){
-       memcpy(&returnedtag, currentcard->tag_70,  currentcard->tag_70_len);
-             returnedlength = currentcard->tag_70_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_70,  currentcard->tag_70_len);
+			returnedlength = currentcard->tag_70_len; goto exitfunction;}
         else if(!memcmp(tag, "\x77\x00",2)){
-       memcpy(&returnedtag, currentcard->tag_77,  currentcard->tag_77_len);
-             returnedlength = currentcard->tag_77_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_77,  currentcard->tag_77_len);
+			returnedlength = currentcard->tag_77_len; goto exitfunction;}
         else if(!memcmp(tag, "\x80\x00",2)){
-       memcpy(&returnedtag, currentcard->tag_80,  currentcard->tag_80_len);
-             returnedlength = currentcard->tag_80_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_80,  currentcard->tag_80_len);
+			returnedlength = currentcard->tag_80_len; goto exitfunction;}
         else if(!memcmp(tag, "\xBF\x0C",2)){
-       memcpy(&returnedtag, currentcard->tag_BF0C,  currentcard->tag_BF0C_len);
-             returnedlength = currentcard->tag_BF0C_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_BF0C,  currentcard->tag_BF0C_len);
+			returnedlength = currentcard->tag_BF0C_len; goto exitfunction;}
         else if(!memcmp(tag, "\xFF\x01",2)){ //special DF tag
-       memcpy(&returnedtag, currentcard->tag_DFName,  currentcard->tag_DFName_len);
-             returnedlength = currentcard->tag_DFName_len; goto exitfunction;}
+			memcpy(&returnedtag, currentcard->tag_DFName,  currentcard->tag_DFName_len);
+			returnedlength = currentcard->tag_DFName_len; goto exitfunction;}
     }
 exitfunction:  //goto label to exit search quickly once found
     memcpy(outputval, &returnedtag, returnedlength);
@@ -826,6 +826,7 @@ int emv_generatetemplate(uint8_t* templateval,emvtags* currentcard, uint8_t* ret
     } 
     encode_ber_tlv_item(templateval, strlen((const char*) templateval), bufferval, counter, returnedval, &encodedlen);   
     *returnedlen = encodedlen; 
+	va_end(arguments);
     return 0;
 }
 
@@ -1388,7 +1389,7 @@ int emv_getprocessingoptions(uint8_t* pdol, uint8_t pdol_len, void* data)
     processingCmd[6] = pdol_len;
     if(pdol_len > 0){ 
         memcpy(&(processingCmd[7]), pdol, pdol_len);}
-    processingCmd[processingCmd_len] = 0x00; 
+    processingCmd[processingCmd_len-1] = 0x00; 
     return iso14_apdu(processingCmd, processingCmd_len, data);
 }
 
@@ -1513,7 +1514,7 @@ int emv_decodeCVM(uint8_t* CVM, uint8_t CVMlen)
             if((CVM[counter] & 0x3F) == 0x30){
                 Dbprintf("Signature (paper)");
             }  
-            if((CVM[counter] & 0x3F) == 0x40){
+            if((CVM[counter] & 0x7F) == 0x40){ // iceman, wrong masked used? changed from 0x3f -> 0x7f
                 Dbprintf("No CVM required");
             }
             counter +=2; 

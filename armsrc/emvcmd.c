@@ -171,7 +171,7 @@ int EMV_PaywaveTransaction()
         cardMode = VISA_FDDA;
     }
     else if((currentcard.tag_9F66[0] & 0x80) == 0x80) {
-        if((currentcard.tag_9F66[1] & 0x80) == 1) { //CVN17
+        if((currentcard.tag_9F66[1] & 0x80) == 0x80) { //CVN17
             cardMode = VISA_CVN17;
         } else {
             cardMode = VISA_DCVV; 
