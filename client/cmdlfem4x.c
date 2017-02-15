@@ -500,7 +500,7 @@ int CmdEM4x50Read(const char *Cmd) {
 }
 
 int usage_lf_em_read(void) {
-	PrintAndLog("Read EM4x50.  Tag must be on antenna. ");
+	PrintAndLog("Read EM4x05/EM4x69.  Tag must be on antenna. ");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf em readword [h] <address> <pwd>");
 	PrintAndLog("Options:");
@@ -512,6 +512,125 @@ int usage_lf_em_read(void) {
 	PrintAndLog("      lf em readword 1 11223344");
 	return 0;
 }
+
+//search for given preamble in given BitStream and return success=1 or fail=0 and startIndex
+uint8_t EMpreambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t size, size_t *startIdx)
+{
+	// Sanity check.  If preamble length is bigger than bitstream length.
+	if ( size <= pLen ) return 0;
+	// em only sends preamble once, so look for it once in the first x bits
+	uint8_t foundCnt = 0;
+	for (int idx = 0; idx < size - pLen; idx++){
+		if (memcmp(BitStream+idx, preamble, pLen) == 0){
+			//first index found
+			foundCnt++;
+			if (foundCnt == 1) {
+				*startIdx = idx;
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+
+int demodEM4x05resp(uint8_t bitsNeeded) {
+	int ans = 0;
+	bool demodFound = false;
+	DemodBufferLen = 0x00;
+	// skip first two 0 bits as they might have been missed in the demod 
+	uint8_t preamble[6] = {0,0,1,0,1,0};
+
+	// test for FSK wave (easiest to 99% ID)
+	if (GetFskClock("", FALSE, FALSE)) {
+		//valid fsk clocks found
+		ans = FSKrawDemod("0 0", false);
+		if (!ans) {
+			if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: FSK Demod failed");
+			//return -1;
+		} else {
+			// set size to 10 to only test first 4 positions for the preamble
+			size_t size = (10 > DemodBufferLen) ? DemodBufferLen : 10;
+			size_t startIdx = 0; 
+
+			if (g_debugMode) PrintAndLog("ANS: %d | %u | %u", ans, startIdx, size);
+
+			uint8_t errChk = !EMpreambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx);
+			if ( errChk == 0) {
+				if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
+				//return -1;
+			} else {
+				//can't test size because the preamble doesn't repeat :(
+				//meaning chances of false positives are high.
+				demodFound = true;
+			}
+		}
+	}
+
+	ans = GetPskClock("", FALSE, FALSE);
+	if (ans>0) {
+		PrintAndLog("PSK response possibly found, run `data rawd p1` to attempt to demod");
+	}
+
+	if (!demodFound) {
+		DemodBufferLen = 0x00;
+		//try biphase
+		ans = ASKbiphaseDemod("0 0 1", FALSE);
+		if (!ans) { 
+			if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/biphase Demod failed");
+			//return -1;
+		} else {
+			// set size to 10 to only test first 4 positions for the preamble
+			size_t size = (10 > DemodBufferLen) ? DemodBufferLen : 10;
+			size_t startIdx = 0; 
+
+			if (g_debugMode) PrintAndLog("ANS: %d | %u | %u", ans, startIdx, size);
+
+			uint8_t errChk = !EMpreambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx);
+			if ( errChk == 0) {
+				if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
+				//return -1;
+			} else {
+				//can't test size because the preamble doesn't repeat :(
+				//meaning chances of false positives are high.
+				demodFound = true;
+			}
+		}
+	}
+
+	if (!demodFound) {
+		DemodBufferLen = 0x00;
+		// try manchester - NOTE: ST only applies to T55x7 tags.
+		ans = ASKDemod_ext("0,0,1", false, false, 1, false);
+		if (!ans) {
+			if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/Manchester Demod failed");
+			//return -1;
+		} else {
+			// set size to 10 to only test first 4 positions for the preamble
+			size_t size = (10 > DemodBufferLen) ? DemodBufferLen : 10;
+			size_t startIdx = 0; 
+
+			if (g_debugMode) PrintAndLog("ANS: %d | %u | %u", ans, startIdx, size);
+
+			uint8_t errChk = !EMpreambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx);
+			if ( errChk == 0) {
+				if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
+				//return -1;
+			} else {
+				//can't test size because the preamble doesn't repeat :(
+				//meaning chances of false positives are high.
+				demodFound = true;
+			}
+		}
+	}
+
+	if (demodFound && bitsNeeded < DemodBufferLen) {
+		setDemodBuf(DemodBuffer + ans + sizeof(preamble), bitsNeeded, 0);
+		CmdPrintDemodBuff("x");
+		return 1;
+	}
+	return -1;
+}
+
 int CmdReadWord(const char *Cmd) {
 	int addr, pwd;
 	bool usePwd = false;
@@ -548,44 +667,20 @@ int CmdReadWord(const char *Cmd) {
 		return -1;
 	}
 	setGraphBuf(got, sizeof(got));
-	
-	
-	int ans = 0;
-	//bool ST = true;
-	DemodBufferLen = 0x00;	
-
-	//ans = ASKDemod_ext("0 0 1", FALSE, FALSE, 1, &ST);
-	ans = ASKbiphaseDemod("0 0 1", FALSE);
-	if (!ans) { 
-		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/Manchester Demod failed");
+	int testLen = (GraphTraceLen < 1000) ? GraphTraceLen : 1000;
+	if (graphJustNoise(GraphBuffer, testLen)) {
+		PrintAndLog("no tag not found");
 		return -1;
 	}
 
-	size_t startIdx = 0, size = DemodBufferLen; 
-
-	PrintAndLog("ANS: %d | %u | %u", ans, startIdx, size);
-
-	
-	uint8_t preamble[8] = {0,0,0,0,1,0,1,0};	
-	uint8_t errChk = !preambleSearch(DemodBuffer, preamble, sizeof(preamble), &size, &startIdx);
-	if ( errChk == 0) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
-		return -1;
-	}
-
-	// sanity check. 
-	if (size != 32) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 incorrect data length found,  %u", size );
-		return -1;
-	}
-
-	//setDemodBuf(BitStream, 32, preambleIndex);
+	//need 32 bits for read word
+	demodEM4x05resp(32);
 	
 	return 1;
 }
 
 int usage_lf_em_write(void) {
-	PrintAndLog("Write EM4x50.  Tag must be on antenna. ");
+	PrintAndLog("Write EM4x05/EM4x69.  Tag must be on antenna. ");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf em writeword [h] <address> <data> <pwd>");
 	PrintAndLog("Options:");
@@ -654,7 +749,6 @@ int CmdWriteWord(const char *Cmd) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/Manchester Demod failed");
 		return -3;
 	}
-	PrintAndLog("ANS: %d", ans);
 	
 	//todo: check response for 00001010 then write data for write confirmation!	
 	size_t startIdx = 0, size = DemodBufferLen; 
