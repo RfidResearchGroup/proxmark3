@@ -533,6 +533,9 @@ uint8_t EMpreambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, siz
 	return 0;
 }
 
+// FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE 
+// should cover 90% of known used configs
+// the rest will need to be manually demoded for now...
 int demodEM4x05resp(uint8_t bitsNeeded) {
 	int ans = 0;
 	bool demodFound = false;
@@ -546,7 +549,6 @@ int demodEM4x05resp(uint8_t bitsNeeded) {
 		ans = FSKrawDemod("0 0", false);
 		if (!ans) {
 			if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: FSK Demod failed");
-			//return -1;
 		} else {
 			// set size to 10 to only test first 4 positions for the preamble
 			size_t size = (10 > DemodBufferLen) ? DemodBufferLen : 10;
@@ -557,7 +559,6 @@ int demodEM4x05resp(uint8_t bitsNeeded) {
 			uint8_t errChk = !EMpreambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx);
 			if ( errChk == 0) {
 				if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
-				//return -1;
 			} else {
 				//can't test size because the preamble doesn't repeat :(
 				//meaning chances of false positives are high.
@@ -565,10 +566,37 @@ int demodEM4x05resp(uint8_t bitsNeeded) {
 			}
 		}
 	}
-
+	// PSK clocks should be easy to detect ( but difficult to demod a non-repeating pattern... )
+	if (!demodFound) {
 	ans = GetPskClock("", FALSE, FALSE);
 	if (ans>0) {
 		PrintAndLog("PSK response possibly found, run `data rawd p1` to attempt to demod");
+	}
+	}
+
+	// more common than biphase
+	if (!demodFound) {
+		DemodBufferLen = 0x00;
+		// try manchester - NOTE: ST only applies to T55x7 tags.
+		ans = ASKDemod_ext("0,0,1", false, false, 1, false);
+		if (!ans) {
+			if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/Manchester Demod failed");
+		} else {
+			// set size to 10 to only test first 4 positions for the preamble
+			size_t size = (10 > DemodBufferLen) ? DemodBufferLen : 10;
+			size_t startIdx = 0; 
+
+			if (g_debugMode) PrintAndLog("ANS: %d | %u | %u", ans, startIdx, size);
+
+			uint8_t errChk = !EMpreambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx);
+			if ( errChk == 0) {
+				if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
+			} else {
+				//can't test size because the preamble doesn't repeat :(
+				//meaning chances of false positives are high.
+				demodFound = true;
+			}
+		}
 	}
 
 	if (!demodFound) {
@@ -599,11 +627,10 @@ int demodEM4x05resp(uint8_t bitsNeeded) {
 
 	if (!demodFound) {
 		DemodBufferLen = 0x00;
-		// try manchester - NOTE: ST only applies to T55x7 tags.
-		ans = ASKDemod_ext("0,0,1", false, false, 1, false);
+		//try diphase (differential biphase or inverted)
+		ans = ASKbiphaseDemod("0 1 1", FALSE);
 		if (!ans) {
-			if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/Manchester Demod failed");
-			//return -1;
+			if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/biphase Demod failed");
 		} else {
 			// set size to 10 to only test first 4 positions for the preamble
 			size_t size = (10 > DemodBufferLen) ? DemodBufferLen : 10;
@@ -614,7 +641,6 @@ int demodEM4x05resp(uint8_t bitsNeeded) {
 			uint8_t errChk = !EMpreambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx);
 			if ( errChk == 0) {
 				if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
-				//return -1;
 			} else {
 				//can't test size because the preamble doesn't repeat :(
 				//meaning chances of false positives are high.
@@ -624,8 +650,10 @@ int demodEM4x05resp(uint8_t bitsNeeded) {
 	}
 
 	if (demodFound && bitsNeeded < DemodBufferLen) {
+		if (bitsNeeded > 0) {
 		setDemodBuf(DemodBuffer + ans + sizeof(preamble), bitsNeeded, 0);
 		CmdPrintDemodBuff("x");
+		}
 		return 1;
 	}
 	return -1;
@@ -673,10 +701,9 @@ int CmdReadWord(const char *Cmd) {
 		return -1;
 	}
 
-	//need 32 bits for read word
-	demodEM4x05resp(32);
-	
-	return 1;
+	//attempt demod:
+	//need 32 bits from a read word
+	return demodEM4x05resp(32);
 }
 
 int usage_lf_em_write(void) {
@@ -739,26 +766,15 @@ int CmdWriteWord(const char *Cmd) {
 	}
 	setGraphBuf(got, sizeof(got));
 	
-	int ans = 0;
-	//bool ST = true;
-	DemodBufferLen = 0x00;	
-
-	//ans = ASKDemod_ext("0 0 1", FALSE, FALSE, 1, &ST);
-	ans = ASKbiphaseDemod("0 0 1", FALSE);
-	if (!ans) { 
-		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/Manchester Demod failed");
-		return -3;
-	}
+	//todo: check response for 00001010 then write data for write confirmation!
 	
-	//todo: check response for 00001010 then write data for write confirmation!	
-	size_t startIdx = 0, size = DemodBufferLen; 
-
-	uint8_t preamble[8] = {0,0,0,0,1,0,1,0};		
-	if (!preambleSearch(DemodBuffer, preamble, sizeof(preamble), &size, &startIdx)){
-		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
-		return -4;
+	//attempt demod:
+	//need 0 bits demoded (after preamble) to verify write cmd
+	int result = demodEM4x05resp(0);
+	if (result == 1) {
+		PrintAndLog("Write Verified");
 	}
-	PrintAndLog("Write OK");
+	return result;
 	return 0;
 }
 
