@@ -542,9 +542,9 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 	if (maxLen<BitLen && maxLen != 0) BitLen = maxLen;
 	int foundclk = 0;
 	//amp before ST check
-	if (amp == 'a' || amp == 'A') {
+	if (amp == 'a' || amp == 'A')
 		askAmp(BitStream, BitLen); 
-	}
+
 	bool st = false;
 	if (*stCheck) st = DetectST(BitStream, &BitLen, &foundclk);
 	if (st) {
@@ -552,6 +552,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 		clk = (clk == 0) ? foundclk : clk;
 		if (verbose || g_debugMode) PrintAndLog("\nFound Sequence Terminator");
 	}
+		
 	int errCnt = askdemod(BitStream, &BitLen, &clk, &invert, maxErr, 0, askType);
 	if (errCnt<0 || BitLen<16){  //if fatal error (or -1)
 		if (g_debugMode) PrintAndLog("DEBUG: no data found %d, errors:%d, bitlen:%d, clock:%d",errCnt,invert,BitLen,clk);

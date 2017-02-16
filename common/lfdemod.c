@@ -276,6 +276,7 @@ int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr
 {
 	if (*size==0) return -1;
 	int start = DetectASKClock(BinStream, *size, clk, maxErr); //clock default
+
 	if (*clk==0 || start < 0) return -3;
 	if (*invert != 1) *invert = 0;
 	if (amp==1) askAmp(BinStream, *size);

@@ -514,10 +514,10 @@ int usage_lf_em_read(void) {
 }
 
 //search for given preamble in given BitStream and return success=1 or fail=0 and startIndex
-uint8_t EMpreambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t size, size_t *startIdx)
-{
+uint8_t EMpreambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t size, size_t *startIdx) {
 	// Sanity check.  If preamble length is bigger than bitstream length.
 	if ( size <= pLen ) return 0;
+	
 	// em only sends preamble once, so look for it once in the first x bits
 	uint8_t foundCnt = 0;
 	for (int idx = 0; idx < size - pLen; idx++){
@@ -533,127 +533,100 @@ uint8_t EMpreambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, siz
 	return 0;
 }
 
+#define EM_PREAMBLE_LEN 6
+bool detectFSK(){
+	// detect fsk clock
+	if (!GetFskClock("", FALSE, FALSE)) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: FSK clock failed");
+		return FALSE;
+	}
+	// demod
+	int ans = FSKrawDemod("0 0", FALSE);
+	if (!ans) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: FSK Demod failed");
+		return FALSE;
+	}
+	return TRUE;
+}
+// PSK clocks should be easy to detect ( but difficult to demod a non-repeating pattern... )
+bool detectPSK(){	
+	int	ans = GetPskClock("", FALSE, FALSE);
+	if (!ans) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: PSK clock failed");		
+		return FALSE;
+	}
+	PrintAndLog("PSK response possibly found, run `data rawd p1` to attempt to demod");
+	return TRUE;
+}
+// try manchester - NOTE: ST only applies to T55x7 tags.
+bool detectASK_MAN(){
+	bool stcheck = FALSE;
+	int ans = ASKDemod_ext("0 0 0", TRUE, FALSE, 1, &stcheck);
+	if (!ans) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/Manchester Demod failed");
+		return FALSE;
+	} 
+	return TRUE;
+}
+bool detectASK_BI(){
+	int ans = ASKbiphaseDemod("0 0 1", FALSE);
+	if (!ans) { 
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/biphase normal demod failed");
+		
+		ans = ASKbiphaseDemod("0 1 1", FALSE);
+		if (!ans) {
+			if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/biphase inverted demod failed");
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+bool doPreambleSearch(size_t *startIdx){
+
+	// skip first two 0 bits as they might have been missed in the demod 
+	uint8_t preamble[EM_PREAMBLE_LEN] = {0,0,1,0,1,0};
+	
+	// set size to 10 to only test first 4 positions for the preamble
+	size_t size = (10 > DemodBufferLen) ? DemodBufferLen : 10;
+	*startIdx = 0; 
+
+	if (g_debugMode) PrintAndLog("Before:: startindex: %u | size: %u", *startIdx, size);
+
+	uint8_t errChk = !EMpreambleSearch(DemodBuffer, preamble, EM_PREAMBLE_LEN, size, startIdx);
+	if ( errChk == 0) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", *startIdx);
+		return FALSE;
+	} 
+	if (g_debugMode) PrintAndLog("After:: startindex: %u | size: %u", *startIdx, size);	
+	return TRUE;
+}
+
 // FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE 
 // should cover 90% of known used configs
 // the rest will need to be manually demoded for now...
 int demodEM4x05resp(uint8_t bitsNeeded) {
-	int ans = 0;
-	bool demodFound = false;
-	DemodBufferLen = 0x00;
-	// skip first two 0 bits as they might have been missed in the demod 
-	uint8_t preamble[6] = {0,0,1,0,1,0};
 
-	// test for FSK wave (easiest to 99% ID)
-	if (GetFskClock("", FALSE, FALSE)) {
-		//valid fsk clocks found
-		ans = FSKrawDemod("0 0", false);
-		if (!ans) {
-			if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: FSK Demod failed");
-		} else {
-			// set size to 10 to only test first 4 positions for the preamble
-			size_t size = (10 > DemodBufferLen) ? DemodBufferLen : 10;
-			size_t startIdx = 0; 
+	size_t startIdx = 0;	
+	
+	if (detectASK_MAN() && doPreambleSearch( &startIdx ))
+		goto EXIT_SET;
+	
+	if (detectASK_BI() && doPreambleSearch( &startIdx ))
+		goto EXIT_SET;
+	
+	if (detectFSK() && doPreambleSearch( &startIdx ))
+		goto EXIT_SET;
+	
 
-			if (g_debugMode) PrintAndLog("ANS: %d | %u | %u", ans, startIdx, size);
+	if (detectPSK() && doPreambleSearch( &startIdx ))
+		goto EXIT_SET;
+	
+	return -1;
 
-			uint8_t errChk = !EMpreambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx);
-			if ( errChk == 0) {
-				if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
-			} else {
-				//can't test size because the preamble doesn't repeat :(
-				//meaning chances of false positives are high.
-				demodFound = true;
-			}
-		}
-	}
-	// PSK clocks should be easy to detect ( but difficult to demod a non-repeating pattern... )
-	if (!demodFound) {
-	ans = GetPskClock("", FALSE, FALSE);
-	if (ans>0) {
-		PrintAndLog("PSK response possibly found, run `data rawd p1` to attempt to demod");
-	}
-	}
-
-	// more common than biphase
-	if (!demodFound) {
-		DemodBufferLen = 0x00;
-		// try manchester - NOTE: ST only applies to T55x7 tags.
-		ans = ASKDemod_ext("0,0,1", false, false, 1, false);
-		if (!ans) {
-			if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/Manchester Demod failed");
-		} else {
-			// set size to 10 to only test first 4 positions for the preamble
-			size_t size = (10 > DemodBufferLen) ? DemodBufferLen : 10;
-			size_t startIdx = 0; 
-
-			if (g_debugMode) PrintAndLog("ANS: %d | %u | %u", ans, startIdx, size);
-
-			uint8_t errChk = !EMpreambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx);
-			if ( errChk == 0) {
-				if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
-			} else {
-				//can't test size because the preamble doesn't repeat :(
-				//meaning chances of false positives are high.
-				demodFound = true;
-			}
-		}
-	}
-
-	if (!demodFound) {
-		DemodBufferLen = 0x00;
-		//try biphase
-		ans = ASKbiphaseDemod("0 0 1", FALSE);
-		if (!ans) { 
-			if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/biphase Demod failed");
-			//return -1;
-		} else {
-			// set size to 10 to only test first 4 positions for the preamble
-			size_t size = (10 > DemodBufferLen) ? DemodBufferLen : 10;
-			size_t startIdx = 0; 
-
-			if (g_debugMode) PrintAndLog("ANS: %d | %u | %u", ans, startIdx, size);
-
-			uint8_t errChk = !EMpreambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx);
-			if ( errChk == 0) {
-				if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
-				//return -1;
-			} else {
-				//can't test size because the preamble doesn't repeat :(
-				//meaning chances of false positives are high.
-				demodFound = true;
-			}
-		}
-	}
-
-	if (!demodFound) {
-		DemodBufferLen = 0x00;
-		//try diphase (differential biphase or inverted)
-		ans = ASKbiphaseDemod("0 1 1", FALSE);
-		if (!ans) {
-			if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/biphase Demod failed");
-		} else {
-			// set size to 10 to only test first 4 positions for the preamble
-			size_t size = (10 > DemodBufferLen) ? DemodBufferLen : 10;
-			size_t startIdx = 0; 
-
-			if (g_debugMode) PrintAndLog("ANS: %d | %u | %u", ans, startIdx, size);
-
-			uint8_t errChk = !EMpreambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx);
-			if ( errChk == 0) {
-				if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", startIdx);
-			} else {
-				//can't test size because the preamble doesn't repeat :(
-				//meaning chances of false positives are high.
-				demodFound = true;
-			}
-		}
-	}
-
-	if (demodFound && bitsNeeded < DemodBufferLen) {
-		if (bitsNeeded > 0) {
-		setDemodBuf(DemodBuffer + ans + sizeof(preamble), bitsNeeded, 0);
+EXIT_SET:	
+	if ( bitsNeeded < DemodBufferLen) {
+		setDemodBuf(DemodBuffer + startIdx + EM_PREAMBLE_LEN, bitsNeeded, 0);
 		CmdPrintDemodBuff("x");
-		}
 		return 1;
 	}
 	return -1;
@@ -734,7 +707,6 @@ int CmdWriteWord(const char *Cmd) {
 	data = param_get32ex(Cmd, 1, -1, 16);
 	pwd =  param_get32ex(Cmd, 2, -1, 16);
 	
-	
 	if ( (addr > 15) || (addr < 0 ) || ( addr == -1) ) {
 		PrintAndLog("Address must be between 0 and 15");
 		return 1;
@@ -760,7 +732,7 @@ int CmdWriteWord(const char *Cmd) {
 	//get response if there is one
 	uint8_t got[6000]; // 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
 	GetFromBigBuf(got, sizeof(got), 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 8000) ) {
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
 		PrintAndLog("command execution time out");
 		return -2;
 	}
@@ -775,7 +747,6 @@ int CmdWriteWord(const char *Cmd) {
 		PrintAndLog("Write Verified");
 	}
 	return result;
-	return 0;
 }
 
 static command_t CommandTable[] = {
