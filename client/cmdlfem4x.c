@@ -638,7 +638,6 @@ int setDemodBufferEM(uint8_t bitsNeeded, size_t idx){
 // should cover 90% of known used configs
 // the rest will need to be manually demoded for now...
 int demodEM4x05resp(uint8_t bitsNeeded) {
-
 	size_t startIdx = 0;	
 	
 	if (detectASK_MAN() && doPreambleSearch( &startIdx ))
@@ -652,7 +651,7 @@ int demodEM4x05resp(uint8_t bitsNeeded) {
 	
 	if (detectPSK() && doPreambleSearch( &startIdx )) 
 		return setDemodBufferEM(bitsNeeded, startIdx);
-	
+
 	return -1;
 }
 
@@ -696,7 +695,11 @@ int CmdReadWord(const char *Cmd) {
 
 	//attempt demod:
 	//need 32 bits from a read word
-	return demodEM4x05resp(44);
+	int result = demodEM4x05resp(44);
+	if (result == -1)
+		PrintAndLog("Read failed");
+	
+	return result;
 }
 
 int CmdWriteWord(const char *Cmd) {
