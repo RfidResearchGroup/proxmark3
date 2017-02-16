@@ -546,8 +546,10 @@ bool downloadSamplesEM(){
 bool doPreambleSearch(size_t *startIdx){
 	
 	// sanity check
-	if ( DemodBufferLen < EM_PREAMBLE_LEN) 
+	if ( DemodBufferLen < EM_PREAMBLE_LEN) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 demodbuffer too small");
 		return FALSE;
+	}
 	
 	// skip first two 0 bits as they might have been missed in the demod 
 	uint8_t preamble[EM_PREAMBLE_LEN] = {0,0,1,0,1,0};
@@ -591,8 +593,8 @@ bool detectFSK(){
 // PSK clocks should be easy to detect ( but difficult to demod a non-repeating pattern... )
 bool detectPSK(){	
 	int	ans = GetPskClock("", FALSE, FALSE);
-	if (!ans) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: PSK clock failed");		
+	if (ans <= 0) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: PSK clock failed");
 		return FALSE;
 	}
 	PrintAndLog("PSK response possibly found, run `data rawd p1` to attempt to demod");
@@ -601,7 +603,7 @@ bool detectPSK(){
 // try manchester - NOTE: ST only applies to T55x7 tags.
 bool detectASK_MAN(){
 	bool stcheck = FALSE;
-	int ans = ASKDemod_ext("0 0 0", TRUE, FALSE, 1, &stcheck);
+	int ans = ASKDemod_ext("0 0 0", FALSE, FALSE, 1, &stcheck);
 	if (!ans) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305: ASK/Manchester Demod failed");
 		return FALSE;
