@@ -1448,10 +1448,10 @@ uint16_t countFC(uint8_t *BitStream, size_t size, uint8_t fskAdj)
 	uint8_t fcLens[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint16_t fcCnts[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t fcLensFnd = 0;
-	uint8_t lastFCcnt=0;
+	uint8_t lastFCcnt = 0;
 	uint8_t fcCounter = 0;
 	size_t i;
-	if (size == 0) return 0;
+	if (size < 180) return 0;
 
 	// prime i to first up transition
 	for (i = 160; i < size-20; i++)

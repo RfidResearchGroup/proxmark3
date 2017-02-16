@@ -571,7 +571,6 @@ bool doPreambleSearch(size_t *startIdx){
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", *startIdx);
 		return FALSE;
 	} 
-
 	return TRUE;
 }
 
@@ -695,7 +694,7 @@ int CmdReadWord(const char *Cmd) {
 
 	//attempt demod:
 	//need 32 bits from a read word
-	return demodEM4x05resp(32);
+	return demodEM4x05resp(44);
 }
 
 int CmdWriteWord(const char *Cmd) {
