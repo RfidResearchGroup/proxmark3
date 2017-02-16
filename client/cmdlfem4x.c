@@ -305,7 +305,6 @@ uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool 
  //completed by Marshmellow
 int EM4x50Read(const char *Cmd, bool verbose)
 {
-
 	uint8_t fndClk[] = {8,16,32,40,50,64,128};
 	int clk = 0; 
 	int invert = 0;
@@ -500,7 +499,7 @@ int CmdEM4x50Read(const char *Cmd) {
 }
 
 int usage_lf_em_read(void) {
-	PrintAndLog("Read EM4x05/EM4x69.  Tag must be on antenna. ");
+	PrintAndLog("Read EM 4x05/4x50/EM4x69.  Tag must be on antenna. ");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf em readword [h] <address> <pwd>");
 	PrintAndLog("Options:");
@@ -513,27 +512,69 @@ int usage_lf_em_read(void) {
 	return 0;
 }
 
-//search for given preamble in given BitStream and return success=1 or fail=0 and startIndex
-uint8_t EMpreambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t size, size_t *startIdx) {
-	// Sanity check.  If preamble length is bigger than bitstream length.
-	if ( size <= pLen ) return 0;
-	
-	// em only sends preamble once, so look for it once in the first x bits
-	uint8_t foundCnt = 0;
-	for (int idx = 0; idx < size - pLen; idx++){
-		if (memcmp(BitStream+idx, preamble, pLen) == 0){
-			//first index found
-			foundCnt++;
-			if (foundCnt == 1) {
-				*startIdx = idx;
-				return 1;
-			}
-		}
-	}
+int usage_lf_em_write(void) {
+	PrintAndLog("Write EM 4x05/4x50/4x69.  Tag must be on antenna. ");
+	PrintAndLog("");
+	PrintAndLog("Usage:  lf em writeword [h] <address> <data> <pwd>");
+	PrintAndLog("Options:");
+	PrintAndLog("       h         - this help");
+	PrintAndLog("       address   - memory address to write to. (0-15)");
+	PrintAndLog("       data      - data to write (hex)");	
+	PrintAndLog("       pwd       - password (hex) (optional)");
+	PrintAndLog("samples:");
+	PrintAndLog("      lf em writeword 1");
+	PrintAndLog("      lf em writeword 1 deadc0de 11223344");
 	return 0;
 }
 
 #define EM_PREAMBLE_LEN 6
+// download samples from device
+// and copy them to Graphbuffer
+bool downloadSamplesEM(){
+	
+	// 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
+	uint8_t got[6000];
+	GetFromBigBuf(got, sizeof(got), 0);
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
+		PrintAndLog("command execution time out");
+		return FALSE;
+	}
+	setGraphBuf(got, sizeof(got));
+	return TRUE;
+}
+//search for given preamble in given BitStream and return success=1 or fail=0 and startIndex
+bool doPreambleSearch(size_t *startIdx){
+	
+	// sanity check
+	if ( DemodBufferLen < EM_PREAMBLE_LEN) 
+		return FALSE;
+	
+	// skip first two 0 bits as they might have been missed in the demod 
+	uint8_t preamble[EM_PREAMBLE_LEN] = {0,0,1,0,1,0};
+	
+	// set size to 10 to only test first 4 positions for the preamble
+	size_t size = (10 > DemodBufferLen) ? DemodBufferLen : 10;
+	*startIdx = 0; 
+	uint8_t found = 0;
+	
+	// em only sends preamble once, so look for it once in the first x bits
+	for (int idx = 0; idx < size - EM_PREAMBLE_LEN; idx++){
+		if (memcmp(DemodBuffer+idx, preamble, EM_PREAMBLE_LEN) == 0){
+			//first index found
+			*startIdx = idx;
+			found = 1;
+			break;
+		}
+	}
+	
+	if ( !found) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", *startIdx);
+		return FALSE;
+	} 
+
+	return TRUE;
+}
+
 bool detectFSK(){
 	// detect fsk clock
 	if (!GetFskClock("", FALSE, FALSE)) {
@@ -581,24 +622,15 @@ bool detectASK_BI(){
 	}
 	return TRUE;
 }
-bool doPreambleSearch(size_t *startIdx){
 
-	// skip first two 0 bits as they might have been missed in the demod 
-	uint8_t preamble[EM_PREAMBLE_LEN] = {0,0,1,0,1,0};
-	
-	// set size to 10 to only test first 4 positions for the preamble
-	size_t size = (10 > DemodBufferLen) ? DemodBufferLen : 10;
-	*startIdx = 0; 
-
-	if (g_debugMode) PrintAndLog("Before:: startindex: %u | size: %u", *startIdx, size);
-
-	uint8_t errChk = !EMpreambleSearch(DemodBuffer, preamble, EM_PREAMBLE_LEN, size, startIdx);
-	if ( errChk == 0) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", *startIdx);
-		return FALSE;
-	} 
-	if (g_debugMode) PrintAndLog("After:: startindex: %u | size: %u", *startIdx, size);	
-	return TRUE;
+// param: idx - start index in demoded data.
+int setDemodBufferEM(uint8_t bitsNeeded, size_t idx){
+	if ( bitsNeeded < DemodBufferLen) {
+		setDemodBuf(DemodBuffer + idx + EM_PREAMBLE_LEN, bitsNeeded, 0);
+		CmdPrintDemodBuff("x");
+		return 1;
+	}
+	return -1;
 }
 
 // FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE 
@@ -609,26 +641,17 @@ int demodEM4x05resp(uint8_t bitsNeeded) {
 	size_t startIdx = 0;	
 	
 	if (detectASK_MAN() && doPreambleSearch( &startIdx ))
-		goto EXIT_SET;
+		return setDemodBufferEM(bitsNeeded, startIdx);
 	
 	if (detectASK_BI() && doPreambleSearch( &startIdx ))
-		goto EXIT_SET;
+		return setDemodBufferEM(bitsNeeded, startIdx);
 	
 	if (detectFSK() && doPreambleSearch( &startIdx ))
-		goto EXIT_SET;
+		return setDemodBufferEM(bitsNeeded, startIdx);
 	
-
-	if (detectPSK() && doPreambleSearch( &startIdx ))
-		goto EXIT_SET;
+	if (detectPSK() && doPreambleSearch( &startIdx )) 
+		return setDemodBufferEM(bitsNeeded, startIdx);
 	
-	return -1;
-
-EXIT_SET:	
-	if ( bitsNeeded < DemodBufferLen) {
-		setDemodBuf(DemodBuffer + startIdx + EM_PREAMBLE_LEN, bitsNeeded, 0);
-		CmdPrintDemodBuff("x");
-		return 1;
-	}
 	return -1;
 }
 
@@ -660,17 +683,13 @@ int CmdReadWord(const char *Cmd) {
 		PrintAndLog("Command timed out");
 		return -1;
 	}
-	
-	uint8_t got[6000];
-	GetFromBigBuf(got, sizeof(got), 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
-		PrintAndLog("command execution time out");
+
+	if (!downloadSamplesEM())
 		return -1;
-	}
-	setGraphBuf(got, sizeof(got));
+	
 	int testLen = (GraphTraceLen < 1000) ? GraphTraceLen : 1000;
 	if (graphJustNoise(GraphBuffer, testLen)) {
-		PrintAndLog("no tag not found");
+		PrintAndLog("Tag not found");
 		return -1;
 	}
 
@@ -679,26 +698,11 @@ int CmdReadWord(const char *Cmd) {
 	return demodEM4x05resp(32);
 }
 
-int usage_lf_em_write(void) {
-	PrintAndLog("Write EM4x05/EM4x69.  Tag must be on antenna. ");
-	PrintAndLog("");
-	PrintAndLog("Usage:  lf em writeword [h] <address> <data> <pwd>");
-	PrintAndLog("Options:");
-	PrintAndLog("       h         - this help");
-	PrintAndLog("       address   - memory address to write to. (0-15)");
-	PrintAndLog("       data      - data to write (hex)");	
-	PrintAndLog("       pwd       - password (hex) (optional)");
-	PrintAndLog("samples:");
-	PrintAndLog("      lf em writeword 1");
-	PrintAndLog("      lf em writeword 1 deadc0de 11223344");
-	return 0;
-}
 int CmdWriteWord(const char *Cmd) {
 	uint8_t ctmp = param_getchar(Cmd, 0);
 	if ( strlen(Cmd) == 0 || ctmp == 'H' || ctmp == 'h' ) return usage_lf_em_write();
 	
-	bool usePwd = false;
-		
+	bool usePwd = false;		
 	int addr = 16; // default to invalid address
 	int data = 0xFFFFFFFF; // default to blank data
 	int pwd = 0xFFFFFFFF; // default to blank password
@@ -729,23 +733,17 @@ int CmdWriteWord(const char *Cmd) {
 		return -1;
 	}
 	
-	//get response if there is one
-	uint8_t got[6000]; // 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
-	GetFromBigBuf(got, sizeof(got), 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
-		PrintAndLog("command execution time out");
-		return -2;
-	}
-	setGraphBuf(got, sizeof(got));
-	
+	if (!downloadSamplesEM())
+		return -1;
+
 	//todo: check response for 00001010 then write data for write confirmation!
 	
 	//attempt demod:
 	//need 0 bits demoded (after preamble) to verify write cmd
 	int result = demodEM4x05resp(0);
-	if (result == 1) {
+	if (result == 1)
 		PrintAndLog("Write Verified");
-	}
+
 	return result;
 }
 
