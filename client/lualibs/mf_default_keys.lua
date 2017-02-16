@@ -414,6 +414,11 @@ local _keys = {
 	Data from 
 	--]]
 	'8829da9daf76',
+	--[[
+	Data from Salto A/B
+	--]]
+	'6A1987C40A21',
+	'7F33625BC129', 
 }
 
 ---
