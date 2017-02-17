@@ -31,13 +31,13 @@ int usage_lf_guard_sim(void) {
 	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
 	PrintAndLog("Currently work only on 26bit");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf guard sim <format> <Card-Number>");
+	PrintAndLog("Usage:  lf guard sim <format> <Facility-Code> <Card-Number>");
 	PrintAndLog("Options :");
 	PrintAndLog("         <format> :  format length 26|32|36|40");	
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf guard sim 123 11223");
+	PrintAndLog("Sample  : lf guard sim 26 123 11223");
 	return 0;
 }
 
@@ -207,7 +207,7 @@ int CmdGuardSim(const char *Cmd) {
 	uint8_t bs[96];
 	memset(bs, 0x00, sizeof(bs));
 	
-	if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn ) != 2) return usage_lf_guard_sim();
+	if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn ) != 3) return usage_lf_guard_sim();
 
 	fmtlen &= 0x7F;
 	facilitycode = (fc & 0x000000FF);
