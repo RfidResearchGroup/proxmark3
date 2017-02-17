@@ -21,7 +21,7 @@ int usage_lf_guard_clone(void){
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf guard clone 123 11223");
+	PrintAndLog("Sample  : lf guard clone 26 123 11223");
 	return 0;
 }
 
@@ -159,7 +159,7 @@ int CmdGuardClone(const char *Cmd) {
 		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
 		blocks[0] = T5555_MODULATION_FSK2 | ((50-2)>>1) << T5555_BITRATE_SHIFT | 3 << T5555_MAXBLOCK_SHIFT;
 
-	if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn ) != 2) return usage_lf_guard_clone();
+	if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn ) != 3) return usage_lf_guard_clone();
 
 	fmtlen &= 0x7f;
 	facilitycode = (fc & 0x000000FF);
