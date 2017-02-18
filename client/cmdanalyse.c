@@ -87,7 +87,7 @@ static uint16_t calcSumCrumbAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
     return sum;
 }
 static uint16_t calcSumCrumbAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask) {
-	return ~calcSumCrumbAdd(bytes, len, mask);
+	return (~calcSumCrumbAdd(bytes, len, mask) & mask);
 }
 static uint16_t calcSumNibbleAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
     uint8_t sum = 0;
@@ -99,7 +99,7 @@ static uint16_t calcSumNibbleAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
     return sum;
 }
 static uint16_t calcSumNibbleAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask){
-	return ~calcSumNibbleAdd(bytes, len, mask);
+	return (~calcSumNibbleAdd(bytes, len, mask) & mask);
 }
 static uint16_t calcSumCrumbXor(  uint8_t* bytes, uint8_t len, uint32_t mask) {
     uint8_t sum = 0;
@@ -137,7 +137,7 @@ static uint16_t calcSumByteAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
 }
 // Ones complement
 static uint16_t calcSumByteAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask) {
-	return ~calcSumByteAdd(bytes, len, mask);
+	return (~calcSumByteAdd(bytes, len, mask) & mask);
 }
 
 static uint16_t calcSumByteSub( uint8_t* bytes, uint8_t len, uint32_t mask) {
@@ -148,7 +148,7 @@ static uint16_t calcSumByteSub( uint8_t* bytes, uint8_t len, uint32_t mask) {
     return sum;
 }
 static uint16_t calcSumByteSubOnes( uint8_t* bytes, uint8_t len, uint32_t mask){
-	return ~calcSumByteSub(bytes, len, mask);
+	return (~calcSumByteSub(bytes, len, mask) & mask);
 }
 static uint16_t calcSumNibbleSub( uint8_t* bytes, uint8_t len, uint32_t mask) {
     uint8_t sum = 0;
@@ -160,7 +160,7 @@ static uint16_t calcSumNibbleSub( uint8_t* bytes, uint8_t len, uint32_t mask) {
     return sum;
 }
 static uint16_t calcSumNibbleSubOnes( uint8_t* bytes, uint8_t len, uint32_t mask) {
-	return ~calcSumNibbleSub(bytes, len, mask);
+	return (~calcSumNibbleSub(bytes, len, mask) & mask);
 }
 
 // BSD shift checksum 8bit version
@@ -188,8 +188,6 @@ static uint16_t calcBSDchecksum4( uint8_t* bytes, uint8_t len, uint32_t mask){
 	sum &= mask;
 	return sum;
 }
-
-
 
 // measuring LFSR maximum length
 int CmdAnalyseLfsr(const char *Cmd){
@@ -324,10 +322,10 @@ int CmdAnalyseCHKSUM(const char *Cmd){
 	
 	if (useHeader) {
 		PrintAndLog("     add          | sub         | add 1's compl    | sub 1's compl   | xor");
-		PrintAndLog("byte nibble crumb | byte nibble | byte nibble cumb | byte nibble     | byte nibble cumb |  BSD");
+		PrintAndLog("byte nibble crumb | byte nibble | byte nibble cumb | byte nibble     | byte nibble cumb |  BSD       |");
 		PrintAndLog("------------------+-------------+------------------+-----------------+--------------------");
 	}
-	PrintAndLog("0x%X 0x%X   0x%X  | 0x%X 0x%X   | 0x%X 0x%X   0x%X | 0x%X 0x%X       | 0x%X 0x%X   0x%X  | 0x%X  0x%X\n",	
+	PrintAndLog("0x%X 0x%X   0x%X  | 0x%X 0x%X   | 0x%X 0x%X   0x%X | 0x%X 0x%X       | 0x%X 0x%X   0x%X  | 0x%X  0x%X |\n",	
 				  calcSumByteAdd(data, len, mask)
 				, calcSumNibbleAdd(data, len, mask)
 				, calcSumCrumbAdd(data, len, mask)
@@ -342,7 +340,7 @@ int CmdAnalyseCHKSUM(const char *Cmd){
 				, calcSumNibbleXor(data, len, mask)
 				, calcSumCrumbXor(data, len, mask)
 				, calcBSDchecksum8(data, len, mask)
-				, calcBSDchecksum4(data, len, mask)				
+				, calcBSDchecksum4(data, len, mask)
 			);	
 	return 0;
 }
