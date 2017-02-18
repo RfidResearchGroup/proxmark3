@@ -129,7 +129,7 @@ I do tend to rename and move stuff around, the official PM3-GUI from Gaucho will
 ##Development
 This fork now compiles just fine on 
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
-   - Ubuntuu 1404, 1510
+   - Ubuntu 1404, 1510, 1604
    - Mac OS X
 
 ##Setup and build for UBUNTU
