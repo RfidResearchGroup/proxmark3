@@ -129,36 +129,18 @@ I do tend to rename and move stuff around, the official PM3-GUI from Gaucho will
 ##Development
 This fork now compiles just fine on 
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
-   - Ubuntuu 1404, 1510
+   - Ubuntu 1404, 1510, 1604
    - Mac OS X
 
 ##Setup and build for UBUNTU
-GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS or 15.10
+GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS, 15.10 or 16.04
 See https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux
 
+A nice and cool install script made by @daveio is found here: 
+https://github.com/daveio/attacksurface/blob/master/proxmark3/pm3-setup.sh
+
 - Run		
-`sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev`
-	
-Follow these instructions
-Get devkitARM release 41 from SourceForge (choose either the 64/32 bit depending on your architecture, it is assumed you know how to check and recognize your architecture):
-
-(64-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-x86_64-linux.tar.bz2/download
-(32-bit) http://sourceforge.net/projects/devkitpro/files/devkitARM/previous/devkitARM_r41-i686-linux.tar.bz2/download
-
-- Extract the contents of the .tar.bz2	
-`tar jxvf devkitARM_r41-<arch>-linux.tar.bz2`
-
-- Create a directory for the arm dev kit	
-`sudo mkdir -p /opt/devkitpro/`
-
-- Move the ARM developer kit to the newly created directory	
-`sudo mv devkitARM /opt/devkitpro/`
-
-- Add the appropriate environment variable		
-`export PATH=${PATH}:/opt/devkitpro/devkitARM/bin/`
-
-- Add the environment variable to your profile	
-`echo 'PATH=${PATH}:/opt/devkitpro/devkitARM/bin/ ' >> ~/.bashrc`
+`sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi`
 
 - Clone iceman fork		
 `git clone https://github.com/iceman1001/proxmark3.git`
@@ -166,10 +148,13 @@ Get devkitARM release 41 from SourceForge (choose either the 64/32 bit depending
 - Get the latest commits	
 `git pull`
 
-- Install the blacklist rules
+- Install the blacklist rules	
 `make udev`
 
-- Clean and complete compilation
+- add user to dialout group (if you on a Linux/ubuntu/debian). If you do this one, you need to logout and login in again to make sure your rights got changed.	
+`sudo adduser $USER dialout`
+
+- Clean and complete compilation	
 `make clean && make all`
 	
 - Flash the BOOTROM		
