@@ -1690,7 +1690,7 @@ void EM4xLogin(uint32_t pwd) {
 	len = Prepare_Cmd( FWD_CMD_LOGIN );
 	len += Prepare_Data( pwd & 0xFFFF, pwd >> 16 );
 	SendForward(len);
-	//WaitMS(20); - no wait for login command.
+	WaitMS(20); // no wait for login command.
 	// should receive
 	// 0000 1010 ok.
 	// 0000 0001 fail
@@ -1719,7 +1719,7 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 
 	SendForward(len);
 
-	DoAcquisition_config(TRUE);
+	DoAcquisition_default(0, TRUE);
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,0,0,0,0);
@@ -1752,8 +1752,12 @@ void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
 
 	SendForward(len);
 
-	//Wait 20ms for write to complete
-	WaitMS(20);
+	//Wait 20ms for write to complete?
+	WaitMS(10);
+
+	//Capture response if one exists
+	DoAcquisition_default(20, TRUE);
+	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,0,0,0,0);
 	LED_A_OFF();
