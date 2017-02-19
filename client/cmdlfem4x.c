@@ -708,7 +708,7 @@ bool setDemodBufferEM(uint32_t *word, size_t idx){
 
 	//test for even parity bits.
 	uint8_t parity[45] = {0};
-	memcpy( parity, 45, DemodBuffer);
+	memcpy( parity, DemodBuffer, 45);
 	if (!EMwordparitytest(parity) ){
 		PrintAndLog("DEBUG: Error - EM Parity tests failed");
 		return FALSE;
