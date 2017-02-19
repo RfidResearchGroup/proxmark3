@@ -1757,9 +1757,7 @@ int CmdFDXBdemodBI(const char *Cmd){
 //attempt to psk1 demod graph buffer
 int PSKDemod(const char *Cmd, bool verbose)
 {
-	int invert=0;
-	int clk=0;
-	int maxErr=100;
+	int invert = 0, clk = 0, maxErr = 100;
 	sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
 	if (clk==1){
 		invert=1;
@@ -1769,25 +1767,26 @@ int PSKDemod(const char *Cmd, bool verbose)
 		if (g_debugMode || verbose) PrintAndLog("Invalid argument: %s", Cmd);
 		return 0;
 	}
-	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
+	uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t BitLen = getFromGraphBuf(BitStream);
 	if (BitLen==0) return 0;
-	uint8_t carrier=countFC(BitStream, BitLen, 0);
+	
+	uint8_t carrier = countFC(BitStream, BitLen, 0);
 	if (carrier!=2 && carrier!=4 && carrier!=8){
 		//invalid carrier
 		return 0;
 	}
-	if (g_debugMode){
-		PrintAndLog("Carrier: rf/%d",carrier);
-	}
+	
+	if (g_debugMode) PrintAndLog("Carrier: rf/%d",carrier);
+
 	int errCnt=0;
 	errCnt = pskRawDemod(BitStream, &BitLen, &clk, &invert);
 	if (errCnt > maxErr){
-		if (g_debugMode || verbose) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
+		if (g_debugMode || verbose) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
 		return 0;
 	} 
 	if (errCnt<0|| BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
-		if (g_debugMode || verbose) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
+		if (g_debugMode || verbose) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
 		return 0;
 	}
 	if (verbose || g_debugMode){
@@ -1797,7 +1796,7 @@ int PSKDemod(const char *Cmd, bool verbose)
 		}
 	}
 	//prime demod buffer for output
-	setDemodBuf(BitStream,BitLen,0);
+	setDemodBuf(BitStream, BitLen, 0);
 	return 1;
 }
 

@@ -615,6 +615,7 @@ bool tryDetectModulation(){
 				tests[hits].ST = FALSE;
 				++hits;
 			}
+			//ICEMAN: are these PSKDemod calls needed?
 			// PSK2 - needs a call to psk1TOpsk2.
 			if ( PSKDemod("0 0 6", FALSE)) {
 				psk1TOpsk2(DemodBuffer, DemodBufferLen);

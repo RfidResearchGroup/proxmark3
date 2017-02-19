@@ -774,14 +774,14 @@ int CmdEM4x05Dump(const char *Cmd) {
 	// for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
 	pwd = param_get32ex(Cmd, 0, 1, 16);
 	
-	if ( pwd != 1 ) {
+	if ( pwd != 1 )
 		usePwd = true;
-	}
+
 	int success = 1;
 	for (; addr < 16; addr++) {
 		if (addr == 2) {
 			if (usePwd) {
-				PrintAndLog("PWD Address %02u | %08X",addr,pwd);
+				PrintAndLog("PWD Address %02u | %08X", addr, pwd);
 			} else {
 				PrintAndLog("PWD Address 02 | cannot read");
 			}
@@ -792,7 +792,7 @@ int CmdEM4x05Dump(const char *Cmd) {
 
 	return success;
 }
-
+//ICEMAN;  mentalnote to self: -1 is not doable for uint32_t..
 int CmdEM4x05Read(const char *Cmd) {
 	int addr, pwd;
 	bool usePwd = false;
