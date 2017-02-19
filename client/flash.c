@@ -318,10 +318,9 @@ static int enter_bootloader(char *serial_port_name)
 	if (get_proxmark_state(&state) < 0)
 		return -1;
 
-	if (state & DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM) {
-		/* Already in flash state, we're done. */
+	/* Already in flash state, we're done. */
+	if (state & DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM)
 		return 0;
-	}
 
 	if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
 		fprintf(stderr,"Entering bootloader...\n");
@@ -329,8 +328,7 @@ static int enter_bootloader(char *serial_port_name)
 		memset(&c, 0, sizeof (c));
 
 		if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
-			&& (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT))
-		{
+			&& (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
 			// New style handover: Send CMD_START_FLASH, which will reset the board
 			// and enter the bootrom on the next boot.
 			c.cmd = CMD_START_FLASH;
@@ -342,16 +340,15 @@ static int enter_bootloader(char *serial_port_name)
 			SendCommand(&c);
 			fprintf(stderr,"Press and hold down button NOW if your bootloader requires it.\n");
 		}
-    msleep(100);
+		msleep(100);
 		CloseProxmark();
 
 		fprintf(stderr,"Waiting for Proxmark to reappear on %s",serial_port_name);
-    do {
+		do {
 			sleep(1);
 			fprintf(stderr, ".");
 		} while (!OpenProxmark(0));
 		fprintf(stderr," Found.\n");
-
 		return 0;
 	}
 
@@ -359,11 +356,11 @@ static int enter_bootloader(char *serial_port_name)
 	return -1;
 }
 
-static int wait_for_ack(UsbCommand *ack)
+static int wait_for_ack(UsbCommand *ack) 
 {
 	ReceiveCommand(ack);
 	if (ack->cmd != CMD_ACK) {
-		printf("Error: Unexpected reply 0x%04"llx" (expected ACK)\n", ack->cmd);
+		printf("Error: Unexpected reply 0x%04"llx" %s (expected ACK)\n", ack->cmd, (ack->cmd==CMD_NACK)?"NACK":"");
 		return -1;
 	}
 	return 0;
@@ -407,23 +404,20 @@ int flash_start_flashing(int enable_bl_writes,char *serial_port_name)
 static int write_block(uint32_t address, uint8_t *data, uint32_t length)
 {
 	uint8_t block_buf[BLOCK_SIZE];
-
 	memset(block_buf, 0xFF, BLOCK_SIZE);
 	memcpy(block_buf, data, length);
-  UsbCommand c;
-	c.cmd = CMD_FINISH_WRITE;
-	c.arg[0] = address;
+	UsbCommand c = {CMD_FINISH_WRITE, {address, 0, 0}};
 	memcpy(c.d.asBytes, block_buf, length);
-  SendCommand(&c);
+	SendCommand(&c);
 	int ret = wait_for_ack(&c);
 	if (ret && c.arg[0]) {
 		uint32_t lock_bits = c.arg[0] >> 16;
 		bool lock_error = c.arg[0] & AT91C_MC_LOCKE;
 		bool prog_error = c.arg[0] & AT91C_MC_PROGE;
 		bool security_bit = c.arg[0] & AT91C_MC_SECURITY;
-		printf("%s", lock_error?"       Lock Error\n":"");
-		printf("%s", prog_error?"       Invalid Command or bad Keyword\n":"");
-		printf("%s", security_bit?"       Security Bit is set!\n":"");
+		printf("%s", lock_error ? "       Lock Error\n" : "");
+		printf("%s", prog_error ? "       Invalid Command or bad Keyword\n" : "");
+		printf("%s", security_bit ? "       Security Bit is set!\n" : "");
 		printf("       Lock Bits:      0x%04x\n", lock_bits);
 	}
 	return ret;
@@ -486,7 +480,7 @@ void flash_free(flash_file_t *ctx)
 // just reset the unit
 int flash_stop_flashing(void) {
 	UsbCommand c = {CMD_HARDWARE_RESET};
-  SendCommand(&c);
-  msleep(100);
-  return 0;
+	SendCommand(&c);
+	msleep(100);
+	return 0;
 }
