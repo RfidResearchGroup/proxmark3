@@ -225,30 +225,67 @@ int CmdEM410xWrite(const char *Cmd)
 
 bool EM_EndParityTest(uint8_t *BitStream, size_t size, uint8_t rows, uint8_t cols, uint8_t pType)
 {
-	if (rows*cols>size) return false;
+	if (rows*cols>size) return FALSE;
 	uint8_t colP=0;
 	//assume last col is a parity and do not test
 	for (uint8_t colNum = 0; colNum < cols-1; colNum++) {
 		for (uint8_t rowNum = 0; rowNum < rows; rowNum++) {
 			colP ^= BitStream[(rowNum*cols)+colNum];
 		}
-		if (colP != pType) return false;
+		if (colP != pType) return FALSE;
 	}
-	return true;
+	return TRUE;
 }
 
 bool EM_ByteParityTest(uint8_t *BitStream, size_t size, uint8_t rows, uint8_t cols, uint8_t pType)
 {
-	if (rows*cols>size) return false;
+	if (rows*cols>size) return FALSE;
 	uint8_t rowP=0;
 	//assume last row is a parity row and do not test
 	for (uint8_t rowNum = 0; rowNum < rows-1; rowNum++) {
 		for (uint8_t colNum = 0; colNum < cols; colNum++) {
 			rowP ^= BitStream[(rowNum*cols)+colNum];
 		}
-		if (rowP != pType) return false;
+		if (rowP != pType) return FALSE;
 	}
-	return true;
+	return TRUE;
+}
+
+// EM word parity test.
+// 9*5 = 45 bits in total
+// 012345678|r1
+// 012345678|r2
+// 012345678|r3
+// 012345678|r4
+// ------------
+//c012345678| 0  
+//            |- must be zero
+
+bool EMwordparitytest(uint8_t *bits){
+
+	// last row/col parity must be 0
+	if (bits[44] != 0 ) return FALSE;
+	
+	// col parity check
+	uint8_t c1 = bytebits_to_byte(bits, 8) ^ bytebits_to_byte(bits+9, 8) ^ bytebits_to_byte(bits+18, 8) ^ bytebits_to_byte(bits+27, 8);
+	uint8_t c2 = bytebits_to_byte(bits+36, 8);
+	if ( c1 != c2 ) return FALSE;
+
+	// row parity check
+	uint8_t rowP = 0;
+	for ( uint8_t i = 0; i < 36; ++i ) {
+
+		rowP ^= bits[i];
+		if ( i>0 && (i % 9) == 0) {
+			
+			if ( rowP != EVEN )	
+				return FALSE;
+
+			rowP = 0;
+		}
+	}
+	// all checks ok.
+	return TRUE;
 }
 
 
@@ -542,7 +579,6 @@ int CmdEM4x50Read(const char *Cmd) {
 	if ( ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x50_read();	
 	return EM4x50Read(Cmd, true);
 }
-
 int CmdEM4x50Write(const char *Cmd){
 	uint8_t ctmp = param_getchar(Cmd, 0);
 	if ( ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x50_write();
@@ -671,30 +707,22 @@ bool detectASK_BI(){
 bool setDemodBufferEM(uint32_t *word, size_t idx){
 
 	//test for even parity bits.
-	size_t size = removeParity(DemodBuffer, idx + EM_PREAMBLE_LEN, 9, 0, 44);
-	if (!size) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error -EM Parity not detected");
+	uint8_t parity[45] = {0};
+	memcpy( parity, 45, DemodBuffer);
+	if (!EMwordparitytest(parity) ){
+		PrintAndLog("DEBUG: Error - EM Parity tests failed");
 		return FALSE;
 	}
-
-	//todo test last 8 bits for even parity || (xor)
+	
+	size_t size = removeParity(DemodBuffer, idx + EM_PREAMBLE_LEN, 9, 0, 44);
+	if (!size) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM Parity not detected");
+		return FALSE;
+	}
+	// set & copy to output
 	setDemodBuf(DemodBuffer, 40, 0);
-
 	*word = bytebits_to_byteLSBF(DemodBuffer, 32);
-
-	uint8_t lo  = (uint8_t) bytebits_to_byteLSBF(DemodBuffer     , 8);
-	uint8_t lo2 = (uint8_t) bytebits_to_byteLSBF(DemodBuffer +  8, 8);
-	uint8_t hi  = (uint8_t) bytebits_to_byteLSBF(DemodBuffer + 16, 8);
-	uint8_t hi2 = (uint8_t) bytebits_to_byteLSBF(DemodBuffer + 24, 8);
-	uint8_t cs  = (uint8_t) bytebits_to_byteLSBF(DemodBuffer + 32, 8);
-	uint8_t cs2 = lo ^ lo2 ^ hi ^ hi2;
-	if (g_debugMode) PrintAndLog("EM4x05/4x69 : %08X CS: %02X %s"
-						, *word
-						, cs
-						, (cs2==cs) ? "Passed" : "Failed"
-					);
-
-	return (cs2==cs);
+	return TRUE;
 }
 
 // FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE 
@@ -766,7 +794,7 @@ int usage_lf_em4x05_write(void) {
 
 int CmdEM4x05Dump(const char *Cmd) {
 	uint8_t addr = 0;
-	uint32_t pwd;
+	uint32_t pwd = 0;
 	bool usePwd = false;
 	uint8_t ctmp = param_getchar(Cmd, 0);
 	if ( ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x05_dump();
@@ -778,12 +806,14 @@ int CmdEM4x05Dump(const char *Cmd) {
 		usePwd = true;
 
 	int success = 1;
+	PrintAndLog("Addr | data   | ascii");
+	PrintAndLog("-----+--------+------");
 	for (; addr < 16; addr++) {
 		if (addr == 2) {
 			if (usePwd) {
-				PrintAndLog("PWD Address %02u | %08X", addr, pwd);
+				PrintAndLog(" %02u | %08X", addr, pwd);
 			} else {
-				PrintAndLog("PWD Address 02 | cannot read");
+				PrintAndLog(" 02 | cannot read");
 			}
 		} else {
 			//success &= EM4x05Read(addr, pwd, usePwd);
