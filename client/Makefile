@@ -191,8 +191,9 @@ proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(QTGUI)
 snooper: $(OBJDIR)/snooper.o $(COREOBJS) $(CMDOBJS) $(OBJDIR)/guidummy.o
 	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
 
+cli: LDLIBS+=$(LUALIB)
 cli: $(OBJDIR)/cli.o $(COREOBJS) $(CMDOBJS) $(OBJDIR)/guidummy.o
-	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
+	$(CXX) $(CXXFLAGS) -lpthread  $^ $(LDLIBS) -o $@
 
 flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS)
 	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
