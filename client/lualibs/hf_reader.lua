@@ -145,7 +145,7 @@ local function read15693()
 		return nil, "15693 sysinfo: no answer"
 	end
 
-	local count,cmd,recvLen,arg1,arg2 = bin.unpack('LLLL',result)
+	local count,cmd,recvlen,arg1,arg2 = bin.unpack('LLLL',result)
 	data = string.sub(result,recvlen)
 	info, err = parse15693(data)
 	
