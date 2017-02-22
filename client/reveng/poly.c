@@ -799,15 +799,15 @@ prev(poly_t *poly) {
 	unsigned long fulllength = poly->length + ofs;
 	bmp_t accu;
 
-	if(ofs)
+	if(ofs) {
 		/* removable optimisation */
 		if(poly->length < (unsigned long) BMP_BIT) {
 			*poly->bitmap = rev(*poly->bitmap >> ofs, (int) poly->length) << ofs;
 			return;
 		}
-
-		/* claim remaining bits of last word (as we use public function pshift()) */
-		poly->length = fulllength;
+	}
+	/* claim remaining bits of last word (as we use public function pshift()) */
+	poly->length = fulllength;
 
 	/* reverse and swap words in the array, leaving it right-justified */
 	while(leftidx < rightidx) {

@@ -25,9 +25,6 @@ THE SOFTWARE.
 #include "crypto1_bs.h"
 #include <inttypes.h>
 #define __STDC_FORMAT_MACROS
-#define llx PRIx64
-#define lli PRIi64
-#define lu PRIu32
 
 // The following functions use this global or thread-local state
 // It is sized to fit exactly KEYSTREAM_SIZE more states next to the initial state
@@ -117,7 +114,7 @@ void crypto1_bs_print_states(bitslice_t bitsliced_states[]){
     state_t values[MAX_BITSLICES]  = {{0x00}};
     crypto1_bs_convert_states(bitsliced_states, values);
     for(slice_idx = 0; slice_idx < MAX_BITSLICES; slice_idx++){
-        printf("State %03zu: %012"llx"\n", slice_idx, values[slice_idx].value);
+        printf("State %03zu: %012" PRIx64 "\n", slice_idx, values[slice_idx].value);
     }
 }
 

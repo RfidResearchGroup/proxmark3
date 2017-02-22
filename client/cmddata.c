@@ -376,21 +376,21 @@ void printEM410x(uint32_t hi, uint64_t id)
 		}
 		if (hi){
 			//output 88 bit em id
-			PrintAndLog("\nEM TAG ID      : %06X%016llX", hi, id);
+			PrintAndLog("\nEM TAG ID      : %06X%016" PRIX64, hi, id);
 		} else{
 			//output 40 bit em id
-			PrintAndLog("\nEM TAG ID      : %010llX", id);
-			PrintAndLog("Unique TAG ID  : %010llX",  id2lo);
+			PrintAndLog("\nEM TAG ID      : %010" PRIX64, id);
+			PrintAndLog("Unique TAG ID  : %010" PRIX64, id2lo);
 			PrintAndLog("\nPossible de-scramble patterns");
 			PrintAndLog("HoneyWell IdentKey {");
-			PrintAndLog("DEZ 8          : %08lld",id & 0xFFFFFF);
-			PrintAndLog("DEZ 10         : %010lld",id & 0xFFFFFFFF);
-			PrintAndLog("DEZ 5.5        : %05lld.%05lld",(id>>16LL) & 0xFFFF,(id & 0xFFFF));
-			PrintAndLog("DEZ 3.5A       : %03lld.%05lld",(id>>32ll),(id & 0xFFFF));
-			PrintAndLog("DEZ 3.5B       : %03lld.%05lld",(id & 0xFF000000) >> 24,(id & 0xFFFF));
-			PrintAndLog("DEZ 3.5C       : %03lld.%05lld",(id & 0xFF0000) >> 16,(id & 0xFFFF));
-			PrintAndLog("DEZ 14/IK2     : %014lld",id);
-			PrintAndLog("DEZ 15/IK3     : %015lld",id2lo);
+			PrintAndLog("DEZ 8          : %08" PRIu64, id & 0xFFFFFF);
+			PrintAndLog("DEZ 10         : %010" PRIu64, id & 0xFFFFFFFF);
+			PrintAndLog("DEZ 5.5        : %05" PRIu64 ".%05" PRIu64, (id>>16LL) & 0xFFFF, (id & 0xFFFF));
+			PrintAndLog("DEZ 3.5A       : %03" PRIu64 ".%05" PRIu64, (id>>32ll), (id & 0xFFFF));
+			PrintAndLog("DEZ 3.5B       : %03" PRIu64 ".%05" PRIu64, (id & 0xFF000000) >> 24, (id & 0xFFFF));
+			PrintAndLog("DEZ 3.5C       : %03" PRIu64 ".%05" PRIu64, (id & 0xFF0000) >> 16, (id & 0xFFFF));
+			PrintAndLog("DEZ 14/IK2     : %014" PRIu64, id);
+			PrintAndLog("DEZ 15/IK3     : %015" PRIu64, id2lo);
 			PrintAndLog("DEZ 20/ZK      : %02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld",
 			    (id2lo & 0xf000000000) >> 36,
 			    (id2lo & 0x0f00000000) >> 32,
@@ -404,8 +404,8 @@ void printEM410x(uint32_t hi, uint64_t id)
 			    (id2lo & 0x000000000f)
 			);
 			uint64_t paxton = (((id>>32) << 24) | (id & 0xffffff))  + 0x143e00;
-			PrintAndLog("}\nOther          : %05lld_%03lld_%08lld",(id&0xFFFF),((id>>16LL) & 0xFF),(id & 0xFFFFFF));  
-			PrintAndLog("Pattern Paxton : %lld [0x%llX]", paxton, paxton);
+			PrintAndLog("}\nOther          : %05" PRIu64 "_%03" PRIu64 "_%08" PRIu64, (id&0xFFFF), ((id>>16LL) & 0xFF), (id & 0xFFFFFF));  
+			PrintAndLog("Pattern Paxton : %" PRIu64 " [0x%" PRIX64 "]", paxton, paxton);
 
 			uint32_t p1id = (id & 0xFFFFFF);
 			uint8_t arr[32] = {0x00};
@@ -1735,8 +1735,8 @@ int CmdFDXBdemodBI(const char *Cmd){
 	if (g_debugMode) PrintAndLog("Raw ID Hex: %s", sprint_hex(raw,8));
 
 	uint16_t calcCrc = crc16_ccitt_kermit(raw, 8);
-	PrintAndLog("Animal ID:     %04u-%012llu", countryCode, NationalCode);
-	PrintAndLog("National Code: %012llu", NationalCode);
+	PrintAndLog("Animal ID:     %04u-%012" PRIu64, countryCode, NationalCode);
+	PrintAndLog("National Code: %012" PRIu64, NationalCode);
 	PrintAndLog("CountryCode:   %04u", countryCode);
 
 	PrintAndLog("Reserved/RFU:      %u", reservedCode);

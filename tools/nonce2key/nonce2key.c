@@ -1,7 +1,6 @@
 #include "crapto1.h"
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-#define llx PRIx64
 #include <stdio.h>
 #include <time.h>
 typedef unsigned char byte_t;
@@ -19,15 +18,15 @@ int main(const int argc, const char* argv[]) {
 		printf("\nsyntax: %s <uid> <nt> <par> <ks>\n\n",argv[0]);
 		return 1;
 	}
-	sscanf(argv[1],"%08x",&uid);
-	sscanf(argv[2],"%08x",&nt);
-	sscanf(argv[3],"%016"llx,&par_info);
-	sscanf(argv[4],"%016"llx,&ks_info);
+	sscanf(argv[1],"%08x", &uid);
+	sscanf(argv[2],"%08x", &nt);
+	sscanf(argv[3],"%016" SCNx64 ,&par_info);
+	sscanf(argv[4],"%016" SCNx64 ,&ks_info);
   
 	// Reset the last three significant bits of the reader nonce
 	nr &= 0xffffff1f;
 
-	printf("\nuid(%08x) nt(%08x) par(%016"llx") ks(%016"llx")\n\n",uid,nt,par_info,ks_info);
+	printf("\nuid(%08x) nt(%08x) par(%016" PRIx64 ") ks(%016" PRIx64 ")\n\n", uid, nt, par_info, ks_info);
 
 	for ( pos = 0; pos < 8; pos++ ) {
 		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
@@ -56,7 +55,7 @@ int main(const int argc, const char* argv[]) {
 	state = lfsr_common_prefix(nr,rr,ks3x,par);
 	lfsr_rollback_word(state,uid^nt,0);
 	crypto1_get_lfsr(state,&key_recovered);
-	printf("\nkey recovered: %012"llx"\n\n",key_recovered);
+	printf("\nkey recovered: %012" PRIx64 "\n\n", key_recovered);
 	crypto1_destroy(state);
   
 	t1 = clock() - t1;

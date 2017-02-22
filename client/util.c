@@ -75,7 +75,7 @@ void AddLogUint64(char *fileName, char *extData, const uint64_t data) {
 	char buf[20] = {0};
 	memset(buf, 0x00, sizeof(buf));
 	//sprintf(buf, "%X%X", (unsigned int)((data & 0xFFFFFFFF00000000) >> 32), (unsigned int)(data & 0xFFFFFFFF));
-	sprintf(buf, "%012"llx"", data);
+	sprintf(buf, "%012" PRIx64 "", data);
 	AddLogLine(fileName, extData, buf);
 }
 

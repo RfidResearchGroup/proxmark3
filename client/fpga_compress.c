@@ -14,6 +14,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <inttypes.h>
 #include "zlib.h"
 
 #define MAX(a,b) ((a)>(b)?(a):(b))
@@ -140,7 +141,7 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile)
 		ret = deflate(&compressed_fpga_stream, Z_FINISH);
 	}
 	
-	fprintf(stderr, "compressed %u input bytes to %lu output bytes\n", i, compressed_fpga_stream.total_out);
+	fprintf(stderr, "compressed %u input bytes to %" PRIu32 " output bytes\n", i, compressed_fpga_stream.total_out);
 
 	if (ret != Z_STREAM_END) {
 		fprintf(stderr, "Error in deflate(): %d %s\n", ret, compressed_fpga_stream.msg);

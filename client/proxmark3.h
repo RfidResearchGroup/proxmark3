@@ -8,7 +8,6 @@
 //-----------------------------------------------------------------------------
 // Main binary
 //-----------------------------------------------------------------------------
-
 #ifndef PROXMARK3_H__
 #define PROXMARK3_H__
 
@@ -28,14 +27,11 @@
 #include <inttypes.h>
 #include "usb_cmd.h"
 
+/*
 #define lu PRIu32
 #define lx  PRIx32
-#define llx PRIx64
-#define lli PRIi64
-#define llu PRIu64
-#define hhu PRIu8
+*/
 #define PROXPROMPT "pm3 --> "
 
 void SendCommand(UsbCommand *c);
-
 #endif

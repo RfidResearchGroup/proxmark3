@@ -170,7 +170,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 		free(statelists[1].head.slhead);
 		num_to_bytes(key64, 6, resultKey);
 
-		PrintAndLog("UID: %08x target block:%3u key type: %c  -- Found key [%012"llx"]",
+		PrintAndLog("UID: %08x target block:%3u key type: %c  -- Found key [%012" PRIx64 "]",
 			uid,
 			(uint16_t)resp.arg[2] & 0xff,
 			(resp.arg[2] >> 8) ? 'B' : 'A',
@@ -627,7 +627,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
 			lfsr_rollback_word(revstate, nr_enc, 1);
 			lfsr_rollback_word(revstate, cuid ^ nt, 0);
 			crypto1_get_lfsr(revstate, &key);
-			PrintAndLog("Found Key: [%012"llx"]", key);
+			PrintAndLog("Found Key: [%012" PRIx64 "]", key);
 			
 			//if ( tryMfk64(cuid, nt, nr_enc, ar_enc, at_enc, &key) )
 			AddLogUint64(logHexFileName, "Found Key: ", key); 

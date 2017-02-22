@@ -39,13 +39,14 @@ int split(char *str, char *arr[MAX_ARGS]){
     int wordCnt = 0;
 
     while(1){
-        while(isspace(str[beginIndex])){
+        while(isspace(str[beginIndex])) {
             ++beginIndex;
         }
-        if(str[beginIndex] == '\0')
+        if(str[beginIndex] == '\0') {
             break;
+		}
         endIndex = beginIndex;
-        while (str[endIndex] && !isspace(str[endIndex])){
+        while (str[endIndex] && !isspace(str[endIndex])) {
             ++endIndex;
         }
         int len = endIndex - beginIndex;
@@ -151,7 +152,7 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 		 * searched.
 		 */
 		/* scan against preset models */
-		if(~uflags & C_FORCE) {
+		if (~uflags & C_FORCE) {
 			pass = 0;
 			Cnt = 0;
 			do {
@@ -161,34 +162,36 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 					mbynum(&pset, --psets);
 					
 					/* skip if different width, or refin or refout don't match */
-				if(plen(pset.spoly) != width[0] || (model.flags ^ pset.flags) & (P_REFIN | P_REFOUT))
+					if( plen(pset.spoly) != width[0] || (model.flags ^ pset.flags) & (P_REFIN | P_REFOUT))
 						continue;
 					/* skip if the preset doesn't match specified parameters */
-					if(rflags & R_HAVEP && pcmp(&model.spoly, &pset.spoly))
+					if (rflags & R_HAVEP && pcmp(&model.spoly, &pset.spoly))
 						continue;
-					if(rflags & R_HAVEI && psncmp(&model.init, &pset.init))
+					if (rflags & R_HAVEI && psncmp(&model.init, &pset.init))
 						continue;
-					if(rflags & R_HAVEX && psncmp(&model.xorout, &pset.xorout))
+					if (rflags & R_HAVEX && psncmp(&model.xorout, &pset.xorout))
 						continue;
 			
-				//for additional args (not used yet, maybe future?)
+					//for additional args (not used yet, maybe future?)
 					apoly = pclone(pset.xorout);
-					if(pset.flags & P_REFOUT)
+					
+					if (pset.flags & P_REFOUT)
 						prev(&apoly);
-				
-					for(qptr = apolys; qptr < pptr; ++qptr) {
+					
+					
+					for (qptr = apolys; qptr < pptr; ++qptr) {
 						crc = pcrc(*qptr, pset.spoly, pset.init, apoly, 0);
-						if(ptst(crc)) {
+						if (ptst(crc)) {
 							pfree(&crc);
 							break;
-						} else
-							pfree(&crc);
+						}
+						pfree(&crc);
 					}
 					pfree(&apoly);
-					if(qptr == pptr) {
+					
+					if (qptr == pptr) {
 
 						/* the selected model solved all arguments */
-
 						mcanon(&pset);
 						
 						size_t size = (pset.name && *pset.name) ? strlen(pset.name) : 6;
@@ -198,7 +201,7 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 							PrintAndLog("out of memory?");
 							return 0;
 						}
-					width[Cnt] = width[0];
+						width[Cnt] = width[0];
 						memcpy(tmp, pset.name, size);
 						Models[Cnt++] = tmp;
 						*count = Cnt;
@@ -208,44 +211,50 @@ int GetModels(char *Models[], int *count, uint8_t *width){
 				mfree(&pset);
 
 				/* toggle refIn/refOut and reflect arguments */
-				if(~rflags & R_HAVERI) {
+				if (~rflags & R_HAVERI) {
 					model.flags ^= P_REFIN | P_REFOUT;
-					for(qptr = apolys; qptr < pptr; ++qptr)
+					for (qptr = apolys; qptr < pptr; ++qptr) {
 						prevch(qptr, ibperhx);
+					}
 				}
-			} while(~rflags & R_HAVERI && ++pass < 2);
+			} while (~rflags & R_HAVERI && ++pass < 2);
 		}
 		//got everything now free the memory...
 
-		if(uflags & C_RESULT) {
-			for(qptr = apolys; qptr < pptr; ++qptr)
+		if (uflags & C_RESULT) {
+			for (qptr = apolys; qptr < pptr; ++qptr) {
 				pfree(qptr);
+			}
 		}
-		if(!(model.flags & P_REFIN) != !(model.flags & P_REFOUT))
+		if (!(model.flags & P_REFIN) != !(model.flags & P_REFOUT))
 			return uerr("cannot search for crossed-endian models");
 
 		pass = 0;
 		do {
 			mptr = candmods = reveng(&model, qpoly, rflags, args, apolys);
-			if(mptr && plen(mptr->spoly))
+			if (mptr && plen(mptr->spoly)) {
 				uflags |= C_RESULT;
-			while(mptr && plen(mptr->spoly)) {
+			}
+			while (mptr && plen(mptr->spoly)) {
 				mfree(mptr++);
 			}
 			free(candmods);
-			if(~rflags & R_HAVERI) {
+			if (~rflags & R_HAVERI) {
 				model.flags ^= P_REFIN | P_REFOUT;
-				for(qptr = apolys; qptr < pptr; ++qptr)
+				for (qptr = apolys; qptr < pptr; ++qptr) {
 					prevch(qptr, ibperhx);
+				}
 			}
-		} while(~rflags & R_HAVERI && ++pass < 2);
-		for(qptr = apolys; qptr < pptr; ++qptr)
+		} while (~rflags & R_HAVERI && ++pass < 2);
+		
+		for (qptr = apolys; qptr < pptr; ++qptr) {
 			pfree(qptr);
+		}
 		free(apolys);
-		if(~uflags & C_RESULT)
+		if (~uflags & C_RESULT)
 			return uerr("no models found");
+		
 		mfree(&model);
-
 	}
 	return 1;
 }
@@ -281,11 +290,11 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
 
 	SETBMP();
 	//set model
-	if(!(c = mbynam(&model, inModel))) {
+	if (!(c = mbynam(&model, inModel))) {
 		PrintAndLog("error: preset model '%s' not found.  Use reveng -D to list presets.", inModel);
 		return 0;
 	}
-	if(c < 0)
+	if (c < 0)
 		return uerr("no preset models available");
 
 	rflags |= R_HAVEP | R_HAVEI | R_HAVERI | R_HAVERO | R_HAVEX;
@@ -340,7 +349,7 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
 		 * Consequently Init is the mirror image of the
 		 * one resulting from -V, and so we have:
 		 */
-		if(~model.flags & P_REFOUT) {
+		if (~model.flags & P_REFOUT) {
 			prev(&model.init);
 			prev(&model.xorout);
 		}
@@ -355,17 +364,17 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
 	/* in the Williams model, xorout is applied after the refout stage.
 	 * as refout is part of ptostr(), we reverse xorout here.
 	 */
-	if(model.flags & P_REFOUT)
+	if (model.flags & P_REFOUT)
 		prev(&model.xorout);
 
 	apoly = strtop(inHexStr, model.flags, ibperhx);
 
-	if(reverse)
+	if (reverse)
 		prev(&apoly);
 
 	crc = pcrc(apoly, model.spoly, model.init, model.xorout, model.flags);
 
-	if(reverse)
+	if (reverse)
 		prev(&crc);
 
 	string = ptostr(crc, model.flags, obperhx);

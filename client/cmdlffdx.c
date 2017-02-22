@@ -175,8 +175,8 @@ int CmdFdxDemod(const char *Cmd) {
 	uint16_t calcCrc = crc16_ccitt_kermit(raw, 8);
 	
 	PrintAndLog("\nFDX-B / ISO 11784/5 Animal Tag ID Found:  Raw : %s", sprint_hex(raw, 8));
-	PrintAndLog("Animal ID          %04u-%012llu", countryCode, NationalCode);
-	PrintAndLog("National Code      %012llu (0x%llX)", NationalCode, NationalCode);
+	PrintAndLog("Animal ID          %04u-%012" PRIu64, countryCode, NationalCode);
+	PrintAndLog("National Code      %012" PRIu64 " (0x%" PRIx64 ")", NationalCode, NationalCode);
 	PrintAndLog("Country Code       %04u", countryCode);
 	PrintAndLog("Reserved/RFU       %u (0x04%X)", reservedCode,  reservedCode);
 	PrintAndLog("");

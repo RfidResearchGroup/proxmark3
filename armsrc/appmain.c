@@ -1229,6 +1229,26 @@ void UsbPacketReceived(uint8_t *packet, int len)
         case CMD_EMV_DUMP_CARD:
             EMVdumpcard();
 			break;
+/*			
+       case CMD_EMV_READ_RECORD:
+            EMVReadRecord(c->arg[0], c->arg[1], NULL);
+            break; 
+        case CMD_EMV_TRANSACTION:
+            EMVTransaction(); 
+            break;
+        case CMD_EMV_CLONE:
+            EMVClone(c->arg[0], c->arg[1]);
+            break;
+       case CMD_EMV_SIM:
+            EMVSim();
+            break;
+        case CMD_EMV_TEST:
+            EMVTest();
+            break;
+        case CMD_EMV_FUZZ_RATS:
+            EMVFuzz_RATS(c->arg[0],c->d.asBytes);
+            break;
+			*/
 #endif
 #ifdef WITH_ICLASS
 		// Makes use of ISO14443a FPGA Firmware
@@ -1303,7 +1323,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			// arg0 = startindex
 			// arg1 = length bytes to transfer
 			// arg2 = RFU
-			//Dbprintf("transfer to client parameters: %llu | %llu | %llu", c->arg[0], c->arg[1], c->arg[2]);
+			//Dbprintf("transfer to client parameters: %" PRIu64 " | %" PRIu64 " | %" PRIu64, c->arg[0], c->arg[1], c->arg[2]);
 			
 			for(size_t i = 0; i < c->arg[1]; i += USB_CMD_DATA_SIZE) {
 				len = MIN( (c->arg[1] - i), USB_CMD_DATA_SIZE);

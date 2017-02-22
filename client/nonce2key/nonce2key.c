@@ -19,7 +19,7 @@ int nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_
 	// Reset the last three significant bits of the reader nonce
 	nr &= 0xffffff1f;
   
-	PrintAndLog("uid(%08x) nt(%08x) par(%016"llx") ks(%016"llx") nr(%08x)", uid, nt, par_info, ks_info, nr);
+	PrintAndLog("uid(%08x) nt(%08x) par(%016" PRIx64") ks(%016" PRIx64") nr(%08x)", uid, nt, par_info, ks_info, nr);
 
 	for ( pos = 0; pos < 8; pos++ ) {
 		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
@@ -121,11 +121,11 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 		free(last_keylist);
 		last_keylist = state_s;
 		PrintAndLog("parity is all zero, testing special attack. First call, this attack needs at least two calls. Hold on...");		
-		PrintAndLog("uid(%08x) nt(%08x) ks(%016"llx") nr(%08x)", uid, nt, ks_info, nr);
+		PrintAndLog("uid(%08x) nt(%08x) ks(%016" PRIx64") nr(%08x)", uid, nt, ks_info, nr);
 		return 1;
 	}
 
-	PrintAndLog("uid(%08x) nt(%08x) ks(%016"llx") nr(%08x)", uid, nt, ks_info, nr);
+	PrintAndLog("uid(%08x) nt(%08x) ks(%016" PRIx64") nr(%08x)", uid, nt, ks_info, nr);
 		
 	//Create the intersection:
 	int64_t *p1, *p2, *p3;
@@ -134,7 +134,12 @@ int nonce2key_ex(uint8_t blockno, uint8_t keytype, uint32_t uid, uint32_t nt, ui
 		
 	while ( *p1 != -1 && *p2 != -1 ) {
 		if (compar_intA(p1, p2) == 0) {
-			PrintAndLog("p1:%"llx" p2:%"llx" p3:%"llx" key:%012"llx,(uint64_t)(p1-last_keylist),(uint64_t)(p2-state_s),(uint64_t)(p3-last_keylist),*p1);
+			PrintAndLog("p1:%" PRIx64" p2:%" PRIx64" p3:%" PRIx64" key:%012" PRIx64
+				, (uint64_t)(p1-last_keylist)
+				, (uint64_t)(p2-state_s)
+				, (uint64_t)(p3-last_keylist)
+				, *p1
+			);
 			*p3++ = *p1++;
 			p2++;
 		}
@@ -316,7 +321,7 @@ int tryMfk64(uint32_t uid, uint32_t nt, uint32_t nr_enc, uint32_t ar_enc, uint32
 	lfsr_rollback_word(revstate, uid ^ nt, 0);
 	crypto1_get_lfsr(revstate, &key);
 
-	PrintAndLog("Found Key: [%012"llx"]", key);
+	PrintAndLog("Found Key: [%012" PRIx64 "]", key);
 	t1 = clock() - t1;
 	if ( t1 > 0 ) PrintAndLog("Time in mfkey64: %.0f ticks", (float)t1);
 

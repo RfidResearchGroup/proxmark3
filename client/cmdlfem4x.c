@@ -147,7 +147,8 @@ int CmdEM410xWatch(const char *Cmd)
 		}
 		
 		CmdLFRead("s");
-		getSamples("8201",true); //capture enough to get 2 complete preambles (4096*2+9)	
+		//getSamples("8201",true); //capture enough to get 2 complete preambles (4096*2+9)	
+		getSamples("6144",true);
 	} while (!CmdEM410xRead(""));
 
 	return 0;
@@ -159,7 +160,7 @@ int CmdEM410xWatchnSpoof(const char *Cmd)
 {
 	// loops if the captured ID was in XL-format.
 	CmdEM410xWatch(Cmd);
-	PrintAndLog("# Replaying captured ID: %llu", g_em410xid);
+	PrintAndLog("# Replaying captured ID: %" PRIu64 , g_em410xid);
 	CmdLFaskSim("");
 	return 0;
 }
@@ -593,8 +594,7 @@ int CmdEM4x50Dump(const char *Cmd){
 }
 
 #define EM_PREAMBLE_LEN 6
-// download samples from device
-// and copy them to Graphbuffer
+// download samples from device and copy to Graphbuffer
 bool downloadSamplesEM(){
 	
 	// 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
@@ -607,7 +607,8 @@ bool downloadSamplesEM(){
 	setGraphBuf(got, sizeof(got));
 	return TRUE;
 }
-//search for given preamble in given BitStream and return success=1 or fail=0 and startIndex
+
+// em_demod 
 bool doPreambleSearch(size_t *startIdx){
 	
 	// sanity check
@@ -615,26 +616,14 @@ bool doPreambleSearch(size_t *startIdx){
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 demodbuffer too small");
 		return FALSE;
 	}
-	
-	// skip first two 0 bits as they might have been missed in the demod 
+
+	// set size to 20 to only test first 14 positions for the preamble
+	size_t size = (20 > DemodBufferLen) ? DemodBufferLen : 20;
+	*startIdx = 0; 
+	// skip first two 0 bits as they might have been missed in the demod
 	uint8_t preamble[EM_PREAMBLE_LEN] = {0,0,1,0,1,0};
 	
-	// set size to 15 to only test first 4 positions for the preamble
-	size_t size = (15 > DemodBufferLen) ? DemodBufferLen : 15;
-	*startIdx = 0; 
-	uint8_t found = 0;
-	
-	// em only sends preamble once, so look for it once in the first x bits
-	for (int idx = 0; idx < size - EM_PREAMBLE_LEN; idx++){
-		if (memcmp(DemodBuffer+idx, preamble, EM_PREAMBLE_LEN) == 0){
-			//first index found
-			*startIdx = idx;
-			found = 1;
-			break;
-		}
-	}
-	
-	if ( !found) {
+	if ( !preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, TRUE)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", *startIdx);
 		return FALSE;
 	} 
@@ -714,12 +703,10 @@ bool setDemodBufferEM(uint32_t *word, size_t idx){
 		return FALSE;
 	}
 	
-	size_t size = removeParity(DemodBuffer, idx + EM_PREAMBLE_LEN, 9, 0, 44);
-	if (!size) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - EM Parity not detected");
+	if (!removeParity(DemodBuffer, idx + EM_PREAMBLE_LEN, 9, 0, 44)) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - EM, failed removing parity");
 		return FALSE;
 	}
-	// set & copy to output
 	setDemodBuf(DemodBuffer, 40, 0);
 	*word = bytebits_to_byteLSBF(DemodBuffer, 32);
 	return TRUE;
@@ -910,8 +897,7 @@ int CmdEM4x05Write(const char *Cmd) {
 	if (!downloadSamplesEM())
 		return -1;
 
-	//todo: check response for 00001010 then write data for write confirmation!
-	
+
 	//attempt demod:
 	//need 0 bits demoded (after preamble) to verify write cmd
 	uint32_t dummy = 0;

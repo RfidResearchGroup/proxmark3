@@ -1388,25 +1388,6 @@ int CmdHFiClassReadTagFile(const char *Cmd) {
 	return 0;
 }
 
-/*
-uint64_t xorcheck(uint64_t sdiv,uint64_t hdiv) {
-	uint64_t new_div = 0x00;
-	new_div ^= sdiv;
-	new_div ^= hdiv;
-	return new_div;
-}
-
-uint64_t hexarray_to_uint64(uint8_t *key) {
-	char temp[17];
-	uint64_t uint_key;
-	for (int i = 0;i < 8;i++)
-		sprintf(&temp[(i *2)],"%02X",key[i]);
-	temp[16] = '\0';
-	if (sscanf(temp,"%016"llX,&uint_key) < 1)
-		return 0;
-	return uint_key;
-}
-*/
 void HFiClassCalcDivKey(uint8_t	*CSN, uint8_t	*KEY, uint8_t *div_key, bool elite){
 	uint8_t keytable[128] = {0};
 	uint8_t key_index[8] = {0};

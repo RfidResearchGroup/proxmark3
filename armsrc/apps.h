@@ -179,7 +179,7 @@ size_t enciphered_data_length (const desfiretag_t tag, const size_t nbytes, int 
 void cmac_generate_subkeys (desfirekey_t key);
 void cmac (const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
 
-/// iso15693.h
+// iso15693.h
 void RecordRawAdcSamplesIso15693(void);
 void AcquireRawAdcSamplesIso15693(void);
 void ReaderIso15693(uint32_t parameter);	// Simulate an ISO15693 reader - greg
@@ -188,7 +188,7 @@ void BruteforceIso15693Afi(uint32_t speed); // find an AFI of a tag - atrox
 void DirectTag15693Command(uint32_t datalen,uint32_t speed, uint32_t recv, uint8_t data[]); // send arbitrary commands from CLI - atrox 
 void SetDebugIso15693(uint32_t flag);
 
-/// iclass.h
+// iclass.h
 void RAMFUNC SnoopIClass(void);
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void ReaderIClass(uint8_t arg0);
@@ -225,6 +225,18 @@ void EMVTransaction(void);
 void EMVgetUDOL(void);
 void EMVloadvalue(uint32_t tag, uint8_t* datain);
 void EMVdumpcard(void);
+
+/*
+//void EMVSelect(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
+void EMVFuzz_RATS(uint8_t len, uint8_t* RATS);
+void EMVReadRecord(uint8_t arg0, uint8_t arg1,emvcard* inputcard);
+void EMVSelectPPSE();
+void EMVSelectAID(uint8_t *AID, uint8_t AIDlen, emvcard* inputcard);
+void EMVTransaction(); //perform an EMV transaction
+void EMVClone(uint8_t maxsfi, uint8_t maxrecord); //clone an EMV card.
+void EMVSim();
+void EMVTest(); //test function for emv stuff.
+*/
 
 #ifdef __cplusplus
 }

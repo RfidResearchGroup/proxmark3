@@ -145,7 +145,7 @@ static int l_nonce2key(lua_State *L){
     uint8_t dest_key[8];
     num_to_bytes(key,sizeof(dest_key),dest_key);
 
-    //printf("Pushing to lua stack: %012"llx"\n",key);
+    //printf("Pushing to lua stack: %012" PRIx64 "\n",key);
     lua_pushlstring(L,(const char *) dest_key,sizeof(dest_key));
 
     return 2; //Two return values
@@ -531,7 +531,7 @@ static int l_hardnested(lua_State *L){
     uint8_t dest_key[6];
     num_to_bytes(foundkey, sizeof(dest_key), dest_key);
 
-    //printf("Pushing to lua stack: %012"llx"\n",key);
+    //printf("Pushing to lua stack: %012" PRIx64 "\n",key);
     lua_pushlstring(L, (const char *) dest_key, sizeof(dest_key));
     return 2; //Two return values
 }

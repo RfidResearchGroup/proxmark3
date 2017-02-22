@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define llx PRIx64
-#define lli PRIi64
 int main (int argc, char *argv[]) {
 	struct Crypto1State *s,*t;
 	uint64_t key;     // recovered key
@@ -64,7 +62,7 @@ int main (int argc, char *argv[]) {
 		crypto1_word(t, uid ^ nt, 0);
 		crypto1_word(t, nr1_enc, 1);
 		if (ar1_enc == (crypto1_word(t, 0, 0) ^ p64)) {
-			printf("\nFound Key: [%012"llx"]\n\n",key);
+			printf("\nFound Key: [%012" PRIx64 "]\n\n",key);
 			break;}
 	}
 	free(s);

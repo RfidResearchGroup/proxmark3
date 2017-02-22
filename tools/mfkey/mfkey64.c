@@ -5,9 +5,6 @@
 #include <inttypes.h>
 #include "crapto1.h"
 
-#define llx PRIx64
-#define lli PRIi64
-
 int main (int argc, char *argv[]) {
 	struct Crypto1State *revstate;
 	uint64_t key;     // recovered key
@@ -98,7 +95,7 @@ int main (int argc, char *argv[]) {
 	lfsr_rollback_word(revstate, nr_enc, 1);
 	lfsr_rollback_word(revstate, uid ^ nt, 0);
 	crypto1_get_lfsr(revstate, &key);
-	printf("\nFound Key: [%012"llx"]\n\n", key);
+	printf("\nFound Key: [%012" PRIx64 "]\n\n", key);
 	crypto1_destroy(revstate);
   
 	t1 = clock() - t1;

@@ -226,7 +226,7 @@ start:
 			c.arg[0] = false;
 			goto start;
 		} else {
-			PrintAndLog("Found valid key: %012"llx" \n", r_key);
+			PrintAndLog("Found valid key: %012" PRIx64 " \n", r_key);
 			goto END;
 		}
 	}
@@ -246,10 +246,10 @@ start:
 		uint64_t key64 = 0;
 		int res = mfCheckKeys(blockNo, keytype - 0x60 , false, 1, keyblock, &key64);
 		if ( res > 0 ) {
-			PrintAndLog("Candidate Key found (%012"llx") - Test authentication failed. [%d] Restarting darkside attack", r_key, res);	
+			PrintAndLog("Candidate Key found (%012" PRIx64 ") - Test authentication failed. [%d] Restarting darkside attack", r_key, res);	
 			goto start;
 		}
-		PrintAndLog("Found valid key: %012"llx" \n", r_key);
+		PrintAndLog("Found valid key: %012" PRIx64 " \n", r_key);
 	}
 END:
 	t1 = clock() - t1;
@@ -313,9 +313,7 @@ int CmdHF14AMfRdBl(const char *Cmd) {
 	uint8_t blockNo = 0;
 	uint8_t keyType = 0;
 	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-	
-	char cmdp	= 0x00;
-
+	char cmdp = 0x00;
 
 	if (strlen(Cmd)<3) {
 		PrintAndLog("Usage:  hf mf rdbl    <block number> <key A/B> <key (12 hex symbols)>");
@@ -1207,7 +1205,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 					}
 					memset(keyBlock + 6 * keycnt, 0, 6);
 					num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6*keycnt);
-					PrintAndLog("check key[%2d] %012"llx, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
+					PrintAndLog("check key[%2d] %012" PRIx64, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
 					keycnt++;
 					memset(buf, 0, sizeof(buf));
 				}
@@ -1400,7 +1398,7 @@ void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
 		uint8_t sector = data.sector;
 		uint8_t keytype = data.keytype;
 
-		PrintAndLog("Reader is trying authenticate with: Key %s, sector %02d: [%012"llx"]"
+		PrintAndLog("Reader is trying authenticate with: Key %s, sector %02d: [%012" PRIx64 "]"
 			, keytype ? "B" : "A"
 			, sector
 			, key
@@ -1707,7 +1705,7 @@ int CmdHF14AMfKeyBrute(const char *Cmd) {
 	time(&start);
 	
 	if (mfKeyBrute( blockNo, keytype, key, &foundkey))
-		PrintAndLog("Found valid key: %012"llx" \n", foundkey);
+		PrintAndLog("Found valid key: %012" PRIx64 " \n", foundkey);
 	else
 		PrintAndLog("Key not found");
 	
@@ -1725,7 +1723,7 @@ void printKeyTable( uint8_t sectorscnt, sector *e_sector ){
 	PrintAndLog("|sec|key A           |res|key B           |res|");
 	PrintAndLog("|---|----------------|---|----------------|---|");
 	for (uint8_t i = 0; i < sectorscnt; ++i) {
-		PrintAndLog("|%03d|  %012"llx"  | %d |  %012"llx"  | %d |", i,
+		PrintAndLog("|%03d|  %012" PRIx64 "  | %d |  %012" PRIx64 "  | %d |", i,
 			e_sector[i].Key[0], e_sector[i].foundKey[0], 
 			e_sector[i].Key[1], e_sector[i].foundKey[1]
 		);
@@ -1774,7 +1772,6 @@ int CmdHF14AMfESet(const char *Cmd)
 {
 	uint8_t memBlock[16];
 	uint8_t blockNo = 0;
-
 	memset(memBlock, 0x00, sizeof(memBlock));
 
 	if (strlen(Cmd) < 3 || param_getchar(Cmd, 0) == 'h') {
@@ -2056,7 +2053,7 @@ int CmdHF14AMfEKeyPrn(const char *Cmd)
 		}
 		keyA = bytes_to_num(data, 6);
 		keyB = bytes_to_num(data + 10, 6);
-		PrintAndLog("|%03d|  %012"llx"  |  %012"llx"  |", i, keyA, keyB);
+		PrintAndLog("|%03d|  %012" PRIx64 "  |  %012" PRIx64 "  |", i, keyA, keyB);
 	}
 	PrintAndLog("|---|----------------|----------------|");
 	

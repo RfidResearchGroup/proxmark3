@@ -527,7 +527,7 @@ int CmdLegicRdmem(const char *Cmd) {
 // int phase, int frame, int reqresp
 int CmdLegicRfSim(const char *Cmd) {
 	UsbCommand c = {CMD_SIMULATE_TAG_LEGIC_RF, {6,3,0}};
-	sscanf(Cmd, " %"lli" %"lli" %"lli, &c.arg[0], &c.arg[1], &c.arg[2]);
+	sscanf(Cmd, " %" SCNi64 " %" SCNi64 " %" SCNi64 , &c.arg[0], &c.arg[1], &c.arg[2]);
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;

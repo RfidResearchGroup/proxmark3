@@ -341,7 +341,7 @@ int CmdHIDWiegand(const char *Cmd) {
 		uint8_t shifts = 64-fmtlen[i];		
 		wiegand >>= shifts;
 		
-		PrintAndLog(" %u | %03u | %03u  | %llu  | %llX  |  %llX",
+		PrintAndLog(" %u | %03u | %03u  | %" PRIu64 "  | %" PRIX64 "  |  %" PRIX64 ,
 			fmtlen[i],
 			oem,
 			fc,

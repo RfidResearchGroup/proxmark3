@@ -214,7 +214,7 @@ int CmdHfEmvSim(const char *Cmd) {
 	if(errors) return usage_hf_emv_sim();	
 	
 	UsbCommand c = {CMD_SIMULATE_TAG_LEGIC_RF, {6,3,0}};
-	sscanf(Cmd, " %"lli" %"lli" %"lli, &c.arg[0], &c.arg[1], &c.arg[2]);
+	sscanf(Cmd, " %" SCNi64 " %" SCNi64 " %" SCNi64 , &c.arg[0], &c.arg[1], &c.arg[2]);
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;

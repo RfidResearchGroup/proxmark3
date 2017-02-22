@@ -723,8 +723,8 @@ static void simulate_acquire_nonces()
 	cuid = (rand() & 0xff) << 24 | (rand() & 0xff) << 16 | (rand() & 0xff) << 8 | (rand() & 0xff);
 	known_target_key = ((uint64_t)rand() & 0xfff) << 36 | ((uint64_t)rand() & 0xfff) << 24 | ((uint64_t)rand() & 0xfff) << 12 | ((uint64_t)rand() & 0xfff);
 	
-	printf("Simulating nonce acquisition for target key %012"llx", cuid %08x ...\n", known_target_key, cuid);
-	fprintf(fstats, "%012"llx";%08x;", known_target_key, cuid);
+	printf("Simulating nonce acquisition for target key %012" PRIx64 ", cuid %08x ...\n", known_target_key, cuid);
+	fprintf(fstats, "%012" PRIx64 ";%08x;", known_target_key, cuid);
 	
 	do {
 		uint32_t nt_enc = 0;
@@ -1247,7 +1247,7 @@ static bool TestIfKeyExists(uint64_t key)
 
 	uint32_t state_odd = pcs->odd & 0x00ffffff;
 	uint32_t state_even = pcs->even & 0x00ffffff;
-	//printf("Tests: searching for key %llx after first byte 0x%02x (state_odd = 0x%06x, state_even = 0x%06x) ...\n", key, best_first_bytes[0], state_odd, state_even);
+	//printf("Tests: searching for key %" PRIx64 " after first byte 0x%02x (state_odd = 0x%06x, state_even = 0x%06x) ...\n", key, best_first_bytes[0], state_odd, state_even);
 	printf("Validating key search space\n");
 	uint64_t count = 0;
 	for (statelist_t *p = candidates; p != NULL; p = p->next) {
@@ -1271,7 +1271,7 @@ static bool TestIfKeyExists(uint64_t key)
 		count += (p_odd - p->states[ODD_STATE]) * (p_even - p->states[EVEN_STATE]);
 		if (found_odd && found_even) {
 			if (known_target_key != -1) {
-				PrintAndLog("Key Found after testing %llu (2^%1.1f) out of %lld (2^%1.1f) keys.", 
+				PrintAndLog("Key Found after testing %" PRIu64 " (2^%1.1f) out of %lld (2^%1.1f) keys.", 
 					count,
 					log(count)/log(2), 
 					maximum_states,
