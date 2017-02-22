@@ -142,67 +142,102 @@ uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits)
 }
 
 //by marshmellow
+// search for given preamble in given BitStream and return success=1 or fail=0 and startIndex (where it was found)
+bool preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx){
+	return preambleSearchEx(BitStream, preamble, pLen, size, startIdx, false);
+}
+//by marshmellow
 //search for given preamble in given BitStream and return success=1 or fail=0 and startIndex and length
-uint8_t preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx)
+// param @findone:  look for a repeating preamble or only the first.
+// em4x05/4x69 only sends preamble once, so look for it once in the first pLen bits
+bool preambleSearchEx(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx, bool findone)
 {
 	// Sanity check.  If preamble length is bigger than bitstream length.
-	if ( *size <= pLen ) return 0;
+	if ( *size <= pLen ) return false;
 	
 	uint8_t foundCnt = 0;
 	for (int idx = 0; idx < *size - pLen; idx++){
 		if (memcmp(BitStream+idx, preamble, pLen) == 0){
+			if (g_debugMode) prnt("DEBUG: preamble found at %u", idx);
 			//first index found
 			foundCnt++;
 			if (foundCnt == 1){
 				*startIdx = idx;
+				if (findone) return true;
 			}
 			if (foundCnt == 2){
 				*size = idx - *startIdx;
-				return 1;
+				return true;
 			}
 		}
 	}
-	return 0;
+	return false;
+}
+
+// find start of modulating data (for fsk and psk) in case of beginning noise or slow chip startup.
+size_t findModStart(uint8_t dest[], size_t size, uint8_t threshold_value, uint8_t expWaveSize) {
+	size_t i = 0;
+	size_t waveSizeCnt = 0;
+	uint8_t thresholdCnt = 0;
+	bool isAboveThreshold = dest[i++] >= threshold_value;
+	for (; i < size-20; i++ ) {
+		if(dest[i] < threshold_value && isAboveThreshold) {
+			thresholdCnt++;
+			if (thresholdCnt > 2 && waveSizeCnt < expWaveSize+1) break;			
+			isAboveThreshold = false;
+			waveSizeCnt = 0;
+		} else if (dest[i] >= threshold_value && !isAboveThreshold) {
+			thresholdCnt++;
+			if (thresholdCnt > 2 && waveSizeCnt < expWaveSize+1) break;			
+			isAboveThreshold = true;
+			waveSizeCnt = 0;
+		} else {
+			waveSizeCnt++;
+		}
+		if (thresholdCnt > 10) break;
+	}
+	if (g_debugMode == 2) prnt("DEBUG: threshold Count reached at %u, count: %u",i, thresholdCnt);
+	return i;
 }
 
 //by marshmellow
 //takes 1s and 0s and searches for EM410x format - output EM ID
-int Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo)
+// actually, no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
+uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo)
 {
-	//no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
-	//  otherwise could be a void with no arguments
-	//set defaults
-	uint32_t i = 0;
-	if (BitStream[1]>1) return -1;  //allow only 1s and 0s
-
-	// 111111111 bit pattern represent start of frame
-	//  include 0 in front to help get start pos
-	uint8_t preamble[] = {0,1,1,1,1,1,1,1,1,1};
-	uint32_t idx = 0;
-	uint32_t parityBits = 0;
-	uint8_t errChk = 0;
-	uint8_t FmtLen = 10;
+	//allow only 1s and 0s
+	// only checking first bitvalue?!
+	if (BitStream[1] > 1) return 0; 
+	
+	uint32_t i = 0, idx = 0, parityBits = 0;
+	uint8_t fmtlen = 0;
 	*startIdx = 0;
-	errChk = preambleSearch(BitStream, preamble, sizeof(preamble), size, startIdx);
-	if (errChk == 0 ) return -4;
-	if (*size < 64) return -3;
-	if (*size > 64) FmtLen = 22;
-	*startIdx += 1; //get rid of 0 from preamble
-	idx = *startIdx + 9;
-	for (i=0; i<FmtLen; i++){ //loop through 10 or 22 sets of 5 bits (50-10p = 40 bits or 88 bits)
-		parityBits = bytebits_to_byte(BitStream+(i*5)+idx,5);
-		//check even parity - quit if failed
-		if (parityTest(parityBits, 5, 0) == 0) return -5;
+	
+	// preamble 0111111111
+	// include 0 in front to help get start pos
+	uint8_t preamble[] = {0,1,1,1,1,1,1,1,1,1};
+	if (!preambleSearch(BitStream, preamble, sizeof(preamble), size, startIdx)) 
+		return 0;
+	if (*size < 64) return 0;
+	
+	fmtlen = (*size > 64) ? 22 : 10;
+
+	idx = *startIdx + sizeof(preamble);
+	
+	//loop through 10 or 22 sets of 5 bits (50-10p = 40 bits or 88 bits)
+	for (i=0; i < fmtlen; i++){ 
+		parityBits = bytebits_to_byte(BitStream + (i*5) + idx, 5);
+		//check even parity
+		if (parityTest(parityBits, 5, 0) == 0) return 0;
 		//set uint64 with ID from BitStream
-		for (uint8_t ii=0; ii<4; ii++){
+		for (uint8_t j = 0; j < 4; j++){
 			*hi = (*hi << 1) | (*lo >> 63);
-			*lo = (*lo << 1) | (BitStream[(i*5)+ii+idx]);
+			*lo = (*lo << 1) | (BitStream[(i*5) + j + idx]);
 		}
 	}
-	if (errChk != 0) return 1;
 	//skip last 5 bit parity test for simplicity.
 	// *size = 64 | 128;
-	return 0;
+	return 1;
 }
 
 //by marshmellow
@@ -457,9 +492,11 @@ int gProxII_Demod(uint8_t BitStream[], size_t *size)
 	size_t startIdx=0;
 	uint8_t preamble[] = {1,1,1,1,1,0};
 
-	uint8_t errChk = preambleSearch(BitStream, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -3; //preamble not found
+	if (!preambleSearch(BitStream, preamble, sizeof(preamble), size, &startIdx)) 
+		return -3; //preamble not found
+
 	if (*size != 96) return -2; //should have found 96 bits
+	
 	//check first 6 spacer bits to verify format
 	if (!BitStream[startIdx+5] && !BitStream[startIdx+10] && !BitStream[startIdx+15] && !BitStream[startIdx+20] && !BitStream[startIdx+25] && !BitStream[startIdx+30]){
 		//confirmed proper separator bits found
@@ -474,7 +511,6 @@ size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow
 {
 	size_t last_transition = 0;
 	size_t idx = 1;
-	//uint32_t maxVal=0;
 	if (fchigh==0) fchigh=10;
 	if (fclow==0) fclow=8;
 	//set the threshold close to 0 (graph) or 128 std to avoid static
@@ -484,28 +520,8 @@ size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow
 	size_t currSample = 0;
 	if ( size < 1024 ) return 0; // not enough samples
 
-	// jump to modulating data by finding the first 4 threshold crossings (or first 2 waves)
-	// in case you have junk or noise at the beginning of the trace...
-	uint8_t thresholdCnt = 0;
-	size_t waveSizeCnt = 0;
-	bool isAboveThreshold = dest[idx++] >= threshold_value;
-	for (; idx < size-20; idx++ ) {
-		if(dest[idx] < threshold_value && isAboveThreshold) {
-			thresholdCnt++;
-			if (thresholdCnt > 2 && waveSizeCnt < fchigh+1) break;			
-			isAboveThreshold = false;
-			waveSizeCnt = 0;
-		} else if (dest[idx] >= threshold_value && !isAboveThreshold) {
-			thresholdCnt++;
-			if (thresholdCnt > 2 && waveSizeCnt < fchigh+1) break;			
-			isAboveThreshold = true;
-			waveSizeCnt = 0;
-		} else {
-			waveSizeCnt++;
-		}
-		if (thresholdCnt > 10) break;
-	}
-	if (g_debugMode == 2) prnt("threshold Count reached at %u",idx);
+	//find start of modulating data in trace 
+	idx = findModStart(dest, size, threshold_value, fchigh);
 
 	// Need to threshold first sample
 	if(dest[idx] < threshold_value) dest[0] = 0;
@@ -613,9 +629,8 @@ int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32
 	if (*size < 96*2) return -2;
 	// 00011101 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
 	uint8_t preamble[] = {0,0,0,1,1,1,0,1};
-	// find bitstring in array  
-	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -3; //preamble not found
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) 
+		return -3; //preamble not found
 
 	numStart = startIdx + sizeof(preamble);
 	// final loop, go over previously decoded FSK data and manchester decode into usable tag ID
@@ -647,9 +662,8 @@ int ParadoxdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, ui
 
 	// 00001111 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
 	uint8_t preamble[] = {0,0,0,0,1,1,1,1};
-
-	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -3; //preamble not found
+	if (preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) 
+		return -3; //preamble not found
 
 	numStart = startIdx + sizeof(preamble);
 	// final loop, go over previously decoded FSK data and manchester decode into usable tag ID
@@ -686,8 +700,8 @@ int IOdemodFSK(uint8_t *dest, size_t size)
 	//Handle the data
 	size_t startIdx = 0;
 	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,1};
-	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), &size, &startIdx);
-	if (errChk == 0) return -4; //preamble not found
+	if (! preambleSearch(dest, preamble, sizeof(preamble), &size, &startIdx))
+		return -4; //preamble not found
 
 	if (!dest[startIdx+8] && dest[startIdx+17]==1 && dest[startIdx+26]==1 && dest[startIdx+35]==1 && dest[startIdx+44]==1 && dest[startIdx+53]==1){
 		//confirmed proper separator bits found
@@ -704,8 +718,9 @@ int VikingDemod_AM(uint8_t *dest, size_t *size) {
 	if (*size < 64*2) return -2;
 	size_t startIdx = 0;
 	uint8_t preamble[] = {1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -4; //preamble not found
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) 
+		return -4; //preamble not found
+	
 	uint32_t checkCalc = bytebits_to_byte(dest+startIdx,8) ^ 
 						 bytebits_to_byte(dest+startIdx+8,8) ^ 
 						 bytebits_to_byte(dest+startIdx+16,8) ^ 
@@ -726,8 +741,8 @@ int Visa2kDemod_AM(uint8_t *dest, size_t *size) {
 	if (*size < 96) return -1; //make sure buffer has data
 	size_t startIdx = 0;
 	uint8_t preamble[] = {0,1,0,1,0,1,1,0,0,1,0,0,1,0,0,1,0,1,0,1,0,0,1,1,0,0,1,1,0,0,1,0};
-	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -2; //preamble not found
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+		return -2; //preamble not found
 	if (*size != 96) return -3; //wrong demoded size
 	//return start position
 	return (int)startIdx;
@@ -738,8 +753,8 @@ int NoralsyDemod_AM(uint8_t *dest, size_t *size) {
 	if (*size < 96) return -1; //make sure buffer has data
 	size_t startIdx = 0;
 	uint8_t preamble[] = {1,0,1,1,1,0,1,1,0,0,0,0};
-	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -2; //preamble not found
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+		return -2; //preamble not found
 	if (*size != 96) return -3; //wrong demoded size
 	//return start position
 	return (int)startIdx;
@@ -749,8 +764,8 @@ int PrescoDemod(uint8_t *dest, size_t *size) {
 	if (*size < 128*2) return -1; //make sure buffer has data
 	size_t startIdx = 0;
 	uint8_t preamble[] = {0,0,0,1,0,0,0,0,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0};
-	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -2; //preamble not found
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+		return -2; //preamble not found
 	if (*size != 128) return -3; //wrong demoded size
 	//return start position
 	return (int)startIdx;
@@ -762,8 +777,8 @@ int FDXBdemodBI(uint8_t *dest, size_t *size) {
 	if (*size < 128*2) return -1; 	//make sure buffer has enough data
 	size_t startIdx = 0;
 	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,1};
-	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -2; //preamble not found
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+		return -2; //preamble not found
 	if (*size != 128) return -3; //wrong demoded size
 	//return start position
 	return (int)startIdx;
@@ -777,8 +792,8 @@ int JablotronDemod(uint8_t *dest, size_t *size){
 	if (*size < 64*2) return -1;	//make sure buffer has enough data
 	size_t startIdx = 0;
 	uint8_t preamble[] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0};
-	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -2; //preamble not found
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) 
+		return -2; //preamble not found
 	if (*size != 64) return -3; // wrong demoded size
 	
 	uint8_t checkchksum = 0;
@@ -806,8 +821,8 @@ int AWIDdemodFSK(uint8_t *dest, size_t *size)
 
 	uint8_t preamble[] = {0,0,0,0,0,0,0,1};
 	size_t startIdx = 0;
-	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -4; //preamble not found
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+		return -4; //preamble not found
 	if (*size != 96) return -5;
 	return (int)startIdx;
 }
@@ -825,11 +840,10 @@ int PyramiddemodFSK(uint8_t *dest, size_t *size)
 	// FSK demodulator
 	*size = fskdemod(dest, *size, 50, 1, 10, 8);  // fsk2a RF/50 
 	if (*size < 128) return -2;  //did we get a good demod?
-
-	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1};
 	size_t startIdx = 0;
-	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -4; //preamble not found
+	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1};
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+		return -4; //preamble not found
 	if (*size != 128) return -3;
 	return (int)startIdx;
 }
@@ -842,8 +856,8 @@ int NedapDemod(uint8_t *dest, size_t *size) {
 	size_t startIdx = 0;
 	//uint8_t preamble[] = {1,1,1,1,1,1,1,1,1,0,0,0,1};
 	uint8_t preamble[] = {1,1,1,1,1,1,1,1,1,0};
-	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -4; //preamble not found
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+		return -4; //preamble not found
 	return (int) startIdx;
 }
 
@@ -854,8 +868,8 @@ int IdteckDemodPSK(uint8_t *dest, size_t *size) {
 	if (*size < 64*2) return -1;	
 	size_t startIdx = 0;
 	uint8_t preamble[] = {0,1,0,0,1,0,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,0,1,0,1,1};
-	uint8_t errChk = preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx);
-	if (errChk == 0) return -2; //preamble not found
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+		return -2; //preamble not found
 	if (*size != 64) return -3; // wrong demoded size
 	return (int) startIdx;
 }
@@ -1390,7 +1404,10 @@ uint8_t detectFSKClk(uint8_t *BitStream, size_t size, uint8_t fcHigh, uint8_t fc
 			continue;		
 		// else new peak 
 		// if we got less than the small fc + tolerance then set it to the small fc
-		if (fcCounter < fcLow+fcTol) 
+		// if it is inbetween set it to the last counter
+		if (fcCounter < fcHigh && fcCounter > fcLow)
+			fcCounter = lastFCcnt;
+		else if (fcCounter < fcLow+fcTol) 
 			fcCounter = fcLow;
 		else //set it to the large fc
 			fcCounter = fcHigh;
@@ -1456,7 +1473,7 @@ uint8_t detectFSKClk(uint8_t *BitStream, size_t size, uint8_t fcHigh, uint8_t fc
 		}
 	}
 
-	if (ii<0) return 0; // oops we went too far
+	if (ii<2) return 0; // oops we went too far
 
 	return clk[ii];
 }
@@ -1561,42 +1578,26 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
 	size_t numBits=0;
 	uint8_t curPhase = *invert;
 	size_t i=0, waveStart=1, waveEnd=0, firstFullWave=0, lastClkBit=0;
-	uint8_t fc=0, fullWaveLen=0, tol=1;
-	uint16_t errCnt=0, waveLenCnt=0;
-	fc = countFC(dest, *size, 0);
+	uint16_t fc=0, fullWaveLen=0, tol=1;
+	uint16_t errCnt=0, waveLenCnt=0, errCnt2=0;
+	fc = countFC(dest, *size, 1);
+	uint8_t fc2 = fc >> 8;
+	if (fc2 == 10) return -1; //fsk found - quit
+	fc = fc & 0xFF;
 	if (fc!=2 && fc!=4 && fc!=8) return -1;
 	//prnt("DEBUG: FC: %d",fc);
 	*clock = DetectPSKClock(dest, *size, *clock);
 	if (*clock == 0) return -1;
-	// jump to modulating data by finding the first 2 threshold crossings (or first 1 waves)
-	// in case you have junk or noise at the beginning of the trace...
-	uint8_t thresholdCnt = 0;
-	size_t waveSizeCnt = 0;
+
+	//find start of modulating data in trace 
 	uint8_t threshold_value = 123; //-5
-	bool isAboveThreshold = dest[i++] >= threshold_value;
-	for (; i < *size-20; i++ ) {
-		if(dest[i] < threshold_value && isAboveThreshold) {
-			thresholdCnt++;
-			if (thresholdCnt > 2 && waveSizeCnt < fc+1) break;			
-			isAboveThreshold = false;
-			waveSizeCnt = 0;
-		} else if (dest[i] >= threshold_value && !isAboveThreshold) {
-			thresholdCnt++;
-			if (thresholdCnt > 2 && waveSizeCnt < fc+1) break;			
-			isAboveThreshold = true;
-			waveSizeCnt = 0;
-		} else {
-			waveSizeCnt++;
-		}
-		if (thresholdCnt > 10) break;
-	}
-	if (g_debugMode == 2) prnt("DEBUG PSK: threshold Count reached at %u, count: %u",i, thresholdCnt);
+	i = findModStart(dest, *size, threshold_value, fc);
 
-
-	int avgWaveVal=0, lastAvgWaveVal=0;
-	waveStart = i+1;
 	//find first phase shift
+	int avgWaveVal=0, lastAvgWaveVal=0;
+	waveStart = i;
 	for (; i<loopCnt; i++){
+		// find peak 
 		if (dest[i]+fc < dest[i+1] && dest[i+1] >= dest[i+2]){
 			waveEnd = i+1;
 			if (g_debugMode == 2) prnt("DEBUG PSK: waveEnd: %u, waveStart: %u",waveEnd, waveStart);
@@ -1605,8 +1606,8 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
 				lastAvgWaveVal = avgWaveVal/(waveLenCnt);
 				firstFullWave = waveStart;
 				fullWaveLen=waveLenCnt;
-				//if average wave value is > graph 0 then it is an up wave or a 1
-				if (lastAvgWaveVal > threshold_value) curPhase ^= 1;  //fudge graph 0 a little 123 vs 128
+				//if average wave value is > graph 0 then it is an up wave or a 1 (could cause inverting)
+				if (lastAvgWaveVal > threshold_value) curPhase ^= 1;
 				break;
 			} 
 			waveStart = i+1;
@@ -1627,7 +1628,7 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
 	//set start of wave as clock align
 	lastClkBit = firstFullWave;
 	if (g_debugMode==2) prnt("DEBUG PSK: firstFullWave: %u, waveLen: %u",firstFullWave,fullWaveLen);  
-	if (g_debugMode==2) prnt("DEBUG: clk: %d, lastClkBit: %u, fc: %u", *clock, lastClkBit,(unsigned int) fc);
+	if (g_debugMode==2) prnt("DEBUG PSK: clk: %d, lastClkBit: %u, fc: %u", *clock, lastClkBit,(unsigned int) fc);
 	waveStart = 0;
 	dest[numBits++] = curPhase; //set first read bit
 	for (i = firstFullWave + fullWaveLen - 1; i < *size-3; i++){
@@ -1658,6 +1659,9 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert)
 				} else if (i+1 > lastClkBit + *clock + tol + fc){
 					lastClkBit += *clock; //no phase shift but clock bit
 					dest[numBits++] = curPhase;
+				} else if (waveLenCnt < fc - 1) { //wave is smaller than field clock (shouldn't happen often)
+					errCnt2++;
+					if(errCnt2 > 101) return errCnt2;
 				}
 				avgWaveVal = 0;
 				waveStart = i+1;

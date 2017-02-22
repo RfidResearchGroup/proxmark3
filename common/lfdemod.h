@@ -41,7 +41,8 @@ int      ManchesterEncode(uint8_t *BitStream, size_t size);
 int      manrawdecode(uint8_t *BitStream, size_t *size, uint8_t invert);
 int      nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert);
 uint8_t  parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType);
-uint8_t  preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx);
+bool	 preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx);
+bool	 preambleSearchEx(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx, bool findone);
 int      pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert);
 void     psk2TOpsk1(uint8_t *BitStream, size_t size);
 void     psk1TOpsk2(uint8_t *BitStream, size_t size);
@@ -49,7 +50,7 @@ size_t   removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t
 
 //tag specific
 int AWIDdemodFSK(uint8_t *dest, size_t *size);
-int Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo);
+uint8_t  Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo);
 int FDXBdemodBI(uint8_t *dest, size_t *size);
 int gProxII_Demod(uint8_t BitStream[], size_t *size);
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);
