@@ -35,17 +35,17 @@
  */
 #include "printf.h"
 
-typedef uint32_t uintmax_t;
-typedef int32_t intmax_t;
-
 typedef unsigned char u_char;
 typedef unsigned int u_int;
-typedef unsigned long u_long;
-typedef unsigned short u_short;
 typedef unsigned long long u_quad_t;
 typedef long long quad_t;
-
+typedef unsigned long u_long;
+typedef unsigned short u_short;
 typedef int ssize_t;
+/*
+typedef uint32_t uintmax_t;
+typedef int32_t intmax_t;
+*/
 
 #define NBBY    8               /* number of bits in a byte */
 

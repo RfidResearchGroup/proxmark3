@@ -12,7 +12,6 @@
 
 #define DUMP(varname) Dbprintf("%s=", #varname);
 
-int EMV_DBGLEVEL = EMV_DBG_ALL;
 //uint8_t PCB = 0x00; //track Protocol Control Byte externally
 
 //util functions
@@ -1365,8 +1364,7 @@ int emv_select(uint8_t* AID, uint8_t AID_len, void* data)
 int emv_readrecord(uint8_t recordnumber, uint8_t sfi, void* data)
 {
     uint16_t readRecordCmd_len = 5; 
-    uint8_t readRecordCmd[readRecordCmd_len];
-    
+    uint8_t readRecordCmd[readRecordCmd_len];    
     readRecordCmd[0] = 0x00;
     readRecordCmd[1] = 0xB2;
     readRecordCmd[2] = recordnumber;
@@ -1378,8 +1376,7 @@ int emv_readrecord(uint8_t recordnumber, uint8_t sfi, void* data)
 int emv_getprocessingoptions(uint8_t* pdol, uint8_t pdol_len, void* data)
 {
     uint16_t processingCmd_len = 4 + 1 + 2 + pdol_len + 1; 
-    uint8_t processingCmd[processingCmd_len];
-    
+    uint8_t processingCmd[processingCmd_len];    
     processingCmd[0] = 0x80;
     processingCmd[1] = 0xA8;
     processingCmd[2] = 0x00;
@@ -1396,8 +1393,7 @@ int emv_getprocessingoptions(uint8_t* pdol, uint8_t pdol_len, void* data)
 int emv_computecryptogram(uint8_t* UDOL, uint8_t UDOL_len, void *data)
 {
     uint16_t cryptogramCmd_len = 4 + 1 + UDOL_len + 1; 
-    uint8_t cryptogramCmd[cryptogramCmd_len];
-    
+    uint8_t cryptogramCmd[cryptogramCmd_len];   
     cryptogramCmd[0] = 0x80;
     cryptogramCmd[1] = 0x2A;
     cryptogramCmd[2] = 0x8E;
@@ -1405,7 +1401,6 @@ int emv_computecryptogram(uint8_t* UDOL, uint8_t UDOL_len, void *data)
     cryptogramCmd[4] = UDOL_len;
     memcpy(&(cryptogramCmd[5]), UDOL, UDOL_len);
     cryptogramCmd[cryptogramCmd_len-1] = 0x00;
- 
     return iso14_apdu(cryptogramCmd, cryptogramCmd_len, data);
 }
 
@@ -1413,13 +1408,11 @@ int emv_getchallenge(void *data)
 {
     uint16_t challengeCmd_len = 5; 
     uint8_t challengeCmd[challengeCmd_len];
-    
     challengeCmd[0] = 0x00;
     challengeCmd[1] = 0x84;
     challengeCmd[2] = 0x00;
     challengeCmd[3] = 0x00; 
-    challengeCmd[4] = 0x00;
-     
+    challengeCmd[4] = 0x00;     
     return iso14_apdu(challengeCmd, challengeCmd_len, data);
 }
 
@@ -1427,7 +1420,6 @@ int emv_loopback(uint8_t* transData , uint8_t transData_len, void *data)
 {
     uint16_t loopbackCmd_len = 4 + 1 + transData_len + 1; 
     uint8_t loopbackCmd[loopbackCmd_len];
-    
     loopbackCmd[0] = 0x00;
     loopbackCmd[1] = 0xEE;
     loopbackCmd[2] = 0x00;
@@ -1441,8 +1433,7 @@ int emv_loopback(uint8_t* transData , uint8_t transData_len, void *data)
 int emv_generateAC(uint8_t refcontrolparam, uint8_t* cdolinput, uint8_t cdolinputlen, void* data)
 {
     uint16_t acCmd_len = 4 + 1 + cdolinputlen + 1; 
-    uint8_t acCmd[acCmd_len];
-    
+    uint8_t acCmd[acCmd_len];    
     acCmd[0] = 0x80;
     acCmd[1] = 0xAE;
     acCmd[2] = refcontrolparam;
@@ -1462,22 +1453,14 @@ int emv_decodeAFL(uint8_t* AFL, uint8_t AFLlen ){
 //Print out AIP Bit meanings
 int emv_decodeAIP(uint8_t* AIP)
 {
-    if((AIP[0] & AIP_SDA_SUPPORTED) == AIP_SDA_SUPPORTED)
-        Dbprintf("SDA supported");
-    if((AIP[0] & AIP_DDA_SUPPORTED) == AIP_DDA_SUPPORTED)
-        Dbprintf("DDA supported");  
-    if((AIP[0] & AIP_CARDHOLDER_VERIFICATION)==AIP_CARDHOLDER_VERIFICATION)
-        Dbprintf("Cardholder verification is supported");  
-    if((AIP[0] & AIP_TERMINAL_RISK) == AIP_TERMINAL_RISK)
-        Dbprintf("Terminal risk management is to be performed");  
-    if((AIP[0] & AIP_ISSUER_AUTH) == AIP_ISSUER_AUTH)
-        Dbprintf("Issuer authentication is supported ");  
-    if((AIP[0] & AIP_CDA_SUPPORTED) == AIP_CDA_SUPPORTED)
-        Dbprintf("CDA supported");  
-    if((AIP[1] & AIP_CHIP_SUPPORTED) == AIP_CHIP_SUPPORTED)
-        Dbprintf("Chip supported");
-    if((AIP[1] & AIP_MSR_SUPPORTED) == AIP_MSR_SUPPORTED)
-        Dbprintf("MSR supported"); 
+    if ((AIP[0] & AIP_SDA_SUPPORTED) == AIP_SDA_SUPPORTED)   Dbprintf("SDA supported");
+    if ((AIP[0] & AIP_DDA_SUPPORTED) == AIP_DDA_SUPPORTED)   Dbprintf("DDA supported");  
+    if ((AIP[0] & AIP_CARDHOLDER_VERIFICATION) == AIP_CARDHOLDER_VERIFICATION) Dbprintf("Cardholder verification is supported");  
+    if ((AIP[0] & AIP_TERMINAL_RISK) == AIP_TERMINAL_RISK)   Dbprintf("Terminal risk management is to be performed");  
+    if ((AIP[0] & AIP_ISSUER_AUTH) == AIP_ISSUER_AUTH)       Dbprintf("Issuer authentication is supported ");  
+    if ((AIP[0] & AIP_CDA_SUPPORTED) == AIP_CDA_SUPPORTED)   Dbprintf("CDA supported");  
+    if ((AIP[1] & AIP_CHIP_SUPPORTED) == AIP_CHIP_SUPPORTED) Dbprintf("Chip supported");
+    if ((AIP[1] & AIP_MSR_SUPPORTED) == AIP_MSR_SUPPORTED)   Dbprintf("MSR supported"); 
     return 0;
 }
 
@@ -1490,59 +1473,33 @@ int emv_decodeCVM(uint8_t* CVM, uint8_t CVMlen)
     amountX = bytes_to_num(CVM, 4);
     amountY = bytes_to_num(CVM+4, 4); 
     counter +=8;
-    while(counter < CVMlen)
+    while (counter < CVMlen)
     {
-        if((CVM[counter] & 0x40) == 0x40){
-            if((CVM[counter] & 0x3F)== 0x00){
-                Dbprintf("Fail CVM processing");
-            }
-            if((CVM[counter] & 0x3F) == 0x01){
-                Dbprintf("Plaintext PIN verification performed by ICC");
-            }
-            if((CVM[counter] & 0x3F) == 0x02){
-                Dbprintf("Enciphered PIN verified online");
-            }
-            if((CVM[counter] & 0x3F) == 0x03){
-                Dbprintf("Plaintext PIN verification performed by ICC and signature (paper)");
-            }
-            if((CVM[counter] & 0x3F) == 0x04){
-                Dbprintf("Enciphered PIN verification performed by ICC");
-            }  
-            if((CVM[counter] & 0x3F) == 0x05){
-                Dbprintf("Enciphered PIN verification performed by ICC and signature (paper)");
-            }  
-            if((CVM[counter] & 0x3F) == 0x30){
-                Dbprintf("Signature (paper)");
-            }  
-            if((CVM[counter] & 0x7F) == 0x40){ // iceman, wrong masked used? changed from 0x3f -> 0x7f
-                Dbprintf("No CVM required");
-            }
+        if ((CVM[counter] & 0x40) == 0x40){
+            if ((CVM[counter] & 0x3F)== 0x00){  Dbprintf("Fail CVM processing");}
+            if ((CVM[counter] & 0x3F) == 0x01){ Dbprintf("Plaintext PIN verification performed by ICC");}
+            if ((CVM[counter] & 0x3F) == 0x02){ Dbprintf("Enciphered PIN verified online");}
+            if ((CVM[counter] & 0x3F) == 0x03){ Dbprintf("Plaintext PIN verification performed by ICC and signature (paper)");}
+            if ((CVM[counter] & 0x3F) == 0x04){ Dbprintf("Enciphered PIN verification performed by ICC");}  
+            if ((CVM[counter] & 0x3F) == 0x05){ Dbprintf("Enciphered PIN verification performed by ICC and signature (paper)");}  
+            if ((CVM[counter] & 0x3F) == 0x30){ Dbprintf("Signature (paper)");}  
+			 // iceman, wrong masked used? changed from 0x3f -> 0x7f
+            if ((CVM[counter] & 0x7F) == 0x40){ Dbprintf("No CVM required");}
             counter +=2; 
-        }
-        else{
+        } else {
             Dbprintf("Fail cardholder verification if this CVM is unsuccessful"); 
             counter +=2; 
         }
-        if(CVM[counter+1] == 0x00){
-            Dbprintf("Always");}
-        if(CVM[counter+1] == 0x01){
-            Dbprintf("If unattended cash");}
-        if(CVM[counter+1] == 0x02){
-            Dbprintf("If not unattended cash and not manual cash and not purchase with cashback");}
-        if(CVM[counter+1] == 0x03){
-            Dbprintf("If terminal supports the CVM");}
-        if(CVM[counter+1] == 0x04){
-            Dbprintf("If manual cash");}
-        if(CVM[counter+1] == 0x05){
-            Dbprintf("If purchase with cashback");}
-        if(CVM[counter+1] == 0x06){
-            Dbprintf("If transaction is in the application currency and is under %lu value", amountX);}
-         if(CVM[counter+1] == 0x07){
-            Dbprintf("If transaction is in the application currency and is over %lu value", amountX);}
-         if(CVM[counter+1] == 0x08){
-            Dbprintf("If transaction is in the application currency and is under %lu value", amountY);}
-         if(CVM[counter+1] == 0x09){
-            Dbprintf("If transaction is in the application currency and is over %lu value", amountY);}
+        if (CVM[counter+1] == 0x00){ Dbprintf("Always");}
+        if (CVM[counter+1] == 0x01){ Dbprintf("If unattended cash");}
+        if (CVM[counter+1] == 0x02){ Dbprintf("If not unattended cash and not manual cash and not purchase with cashback");}
+        if (CVM[counter+1] == 0x03){ Dbprintf("If terminal supports the CVM");}
+        if (CVM[counter+1] == 0x04){ Dbprintf("If manual cash");}
+        if (CVM[counter+1] == 0x05){ Dbprintf("If purchase with cashback");}
+        if (CVM[counter+1] == 0x06){ Dbprintf("If transaction is in the application currency and is under %" PRIu32 " value", amountX);}
+        if (CVM[counter+1] == 0x07){ Dbprintf("If transaction is in the application currency and is over %" PRIu32 " value", amountX);}
+        if (CVM[counter+1] == 0x08){ Dbprintf("If transaction is in the application currency and is under %" PRIu32 " value", amountY);}
+        if (CVM[counter+1] == 0x09){ Dbprintf("If transaction is in the application currency and is over %" PRIu32 " value", amountY);}
      }
     return 0;
 }
@@ -1559,8 +1516,7 @@ void dumpCard(emvtags* currentcard){
     DUMP(currentcard->SAK2);
     Dbhexdump(1,  &currentcard->SAK2, false);
     DUMP(currentcard->ATS);
-    Dbhexdump(currentcard->ATS_len,  currentcard->ATS, false);
-    
+    Dbhexdump(currentcard->ATS_len,  currentcard->ATS, false);    
     DUMP(currentcard->tag_4F);
     Dbhexdump(currentcard->tag_4F_len,  currentcard->tag_4F, false);
     DUMP(currentcard->tag_50);
@@ -1579,9 +1535,9 @@ void dumpCard(emvtags* currentcard){
     Dbhexdump(currentcard->tag_86_len,  currentcard->tag_86, false);
     DUMP(currentcard->tag_87);
     Dbhexdump(1,  currentcard->tag_87, false);
-DUMP(currentcard->tag_88);
+	DUMP(currentcard->tag_88);
     Dbhexdump(1,  currentcard->tag_88, false);
-DUMP(currentcard->tag_8A);
+	DUMP(currentcard->tag_8A);
     Dbhexdump(2,  currentcard->tag_8A, false); 
     DUMP(currentcard->tag_8C);
     Dbhexdump(currentcard->tag_8C_len,  currentcard->tag_8C, false);

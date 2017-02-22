@@ -27,10 +27,6 @@
 #include <inttypes.h>
 #include "usb_cmd.h"
 
-/*
-#define lu PRIu32
-#define lx  PRIx32
-*/
 #define PROXPROMPT "pm3 --> "
 
 void SendCommand(UsbCommand *c);

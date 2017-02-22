@@ -567,23 +567,19 @@ int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum) {
 uint64_t emlGetKey(int sectorNum, int keyType) {
 	uint8_t key[6] = {0x00};
 	uint8_t* emCARD = BigBuf_get_EM_addr();
-	
 	memcpy(key, emCARD + 16 * (FirstBlockOfSector(sectorNum) + NumBlocksPerSector(sectorNum) - 1) + keyType * 10, 6);
 	return bytes_to_num(key, 6);
 }
 
 void emlClearMem(void) {
-	int b;
-	
 	const uint8_t trailer[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x07, 0x80, 0x69, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 	const uint8_t uid[]   =   {0xe6, 0x84, 0x87, 0xf3, 0x16, 0x88, 0x04, 0x00, 0x46, 0x8e, 0x45, 0x55, 0x4d, 0x70, 0x41, 0x04};
 	uint8_t* emCARD = BigBuf_get_EM_addr();
-	
 	memset(emCARD, 0, CARD_MEMORY_SIZE);
 	
 	// fill sectors trailer data
-	for(b = 3; b < 256; b<127?(b+=4):(b+=16))
-		emlSetMem((uint8_t *)trailer, b , 1);
+	for(uint8_t b = 3; b < 256; b < 127 ? (b += 4) : (b += 16))
+		emlSetMem((uint8_t *)trailer, b, 1);
 
 	// uid
 	emlSetMem((uint8_t *)uid, 0, 1);

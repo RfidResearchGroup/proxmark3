@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 #include "reveng.h"
 
 /* Private declarations */
@@ -116,7 +117,7 @@ mtostr(const model_t *model) {
 	if((string = malloc(size))) {
 		sprintf(strbuf, "\"%s\"", model->name);
 		sprintf(string,
-				"width=%lu  "
+				"width=%" PRIu32 ""
 				"poly=0x%s  "
 				"init=0x%s  "
 				"refin=%s  "

@@ -34,7 +34,7 @@ void EMVReadRecord(uint8_t arg0, uint8_t arg1,emvtags *currentcard)
     // perform read 
     // write the result to the provided card 
     if(!emv_readrecord(record,sfi,receivedAnswer)) {
-        if(EMV_DBGLEVEL >= 1) Dbprintf("readrecord failed");
+        if(MF_DBGLEVEL >= 1) Dbprintf("readrecord failed");
     }
     if(*(receivedAnswer+1) == 0x70){ 
         decode_ber_tlv_item(receivedAnswer+1, &inputtag);
@@ -42,7 +42,7 @@ void EMVReadRecord(uint8_t arg0, uint8_t arg1,emvtags *currentcard)
     } 
     else
     {
-        if(EMV_DBGLEVEL >= 1) 
+        if(MF_DBGLEVEL >= 1) 
             Dbprintf("Record not found SFI=%i RECORD=%i", sfi, record); 
     }
     return;
@@ -56,7 +56,7 @@ void EMVSelectAID(uint8_t *AID, uint8_t AIDlen, emvtags* inputcard)
     tlvtag inputtag; // create the tag structure
     // perform select 
     if(!emv_select(AID, AIDlen, receivedAnswer)){
-        if(EMV_DBGLEVEL >= 1) Dbprintf("AID Select failed");
+        if(MF_DBGLEVEL == 1) Dbprintf("AID Select failed");
         return; 
     }
     // write the result to the provided card 
@@ -80,7 +80,7 @@ void EMVSelectAID(uint8_t *AID, uint8_t AIDlen, emvtags* inputcard)
         if(currentcard.tag_61_len !=0){
                 emv_decode_field(currentcard.tag_61, currentcard.tag_61_len, &currentcard);}
     }
-    if(EMV_DBGLEVEL >= 2) 
+    if(MF_DBGLEVEL >= 2) 
         DbpString("SELECT AID COMPLETED");
 }
 
@@ -92,7 +92,7 @@ int EMVGetProcessingOptions(uint8_t *PDOL, uint8_t PDOLlen, emvtags* inputcard)
     tlvtag inputtag; //create the tag structure
     // perform pdol 
     if(!emv_getprocessingoptions(PDOL, PDOLlen, receivedAnswer)){
-        if(EMV_DBGLEVEL >= 1) Dbprintf("get processing options failed");
+        if(MF_DBGLEVEL >= 1) Dbprintf("get processing options failed");
         return 0; 
     }
     // write the result to the provided card 
@@ -111,7 +111,7 @@ int EMVGetProcessingOptions(uint8_t *PDOL, uint8_t PDOLlen, emvtags* inputcard)
         // store 82 and 94 tags (AIP, AFL) 
         emv_decode_field(inputtag.value, inputtag.valuelength, &currentcard); 
     } 
-    if(EMV_DBGLEVEL >= 2) 
+    if(MF_DBGLEVEL >= 2) 
         DbpString("GET PROCESSING OPTIONS COMPLETE");
     return 1;
 }
@@ -123,7 +123,7 @@ int EMVGetChallenge(emvtags* inputcard)
     // tlvtag inputtag; //create the tag structure
     // perform select 
     if(!emv_getchallenge(receivedAnswer)){
-        if(EMV_DBGLEVEL >= 1) Dbprintf("get processing options failed");
+        if(MF_DBGLEVEL >= 1) Dbprintf("get processing options failed");
         return 1; 
     }
     return 0;
@@ -146,7 +146,7 @@ int EMVGenerateAC(uint8_t refcontrol, emvtags* inputcard)
     // tlvtag inputtag; //create the tag structure
     // perform select 
     if(!emv_generateAC(refcontrol, cdolcommand, cdolcommandlen,receivedAnswer)){
-        if(EMV_DBGLEVEL >= 1) Dbprintf("get processing options failed");
+        if(MF_DBGLEVEL >= 1) Dbprintf("get processing options failed");
         return 1; 
     }
     if(receivedAnswer[2] == 0x77) //format 2 data field returned
@@ -189,7 +189,7 @@ int EMV_PaywaveTransaction()
     Dbhexdump(pdolcommandlen, pdolcommand,false);
 
     if(!EMVGetProcessingOptions(pdolcommand,pdolcommandlen, &currentcard)) {
-        if(EMV_DBGLEVEL >= 1) Dbprintf("PDOL failed");
+        if(MF_DBGLEVEL >= 1) Dbprintf("PDOL failed");
         return 1; 
     }
 
@@ -253,7 +253,7 @@ int EMV_PaypassTransaction()
         emv_generateDOL(currentcard.tag_9F38, currentcard.tag_9F38_len, &currentcard, pdolcommand, &pdolcommandlen); 
     }
     if(EMVGetProcessingOptions(pdolcommand,pdolcommandlen, &currentcard)) {
-        if(EMV_DBGLEVEL >= 1) Dbprintf("PDOL failed");
+        if(MF_DBGLEVEL >= 1) Dbprintf("PDOL failed");
         return 1; 
     }
     
@@ -337,7 +337,7 @@ void EMVTransaction()
 	
     while(true) { 
         if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
-            if(EMV_DBGLEVEL >= 1) Dbprintf("Can't select card");
+            if(MF_DBGLEVEL >= 1) Dbprintf("Can't select card");
             break;
         }
         //selectPPSE 
@@ -355,7 +355,7 @@ void EMVTransaction()
         //TODO: add other card schemes like AMEX, JCB, China Unionpay etc 
         break;
     }
-    if (EMV_DBGLEVEL >= 2) DbpString("EMV TRANSACTION FINISHED");
+    if (MF_DBGLEVEL >= 2) DbpString("EMV TRANSACTION FINISHED");
         //finish up
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();

@@ -14,6 +14,7 @@
 
 #include <stdarg.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include "proxmark3.h"
 #include "apps.h"
 #include "tlv.h"
@@ -29,15 +30,6 @@
 // mifare 4bit card answers
 // reader voltage field detector
 #define EMV_MINFIELDV      4000
-
-// debug
-// 0 - no debug messages 1 - error messages 2 - all messages 4 - extended debug mode
-#define EMV_DBG_NONE          0
-#define EMV_DBG_ERROR         1
-#define EMV_DBG_ALL           2
-#define EMV_DBG_EXTENDED      4
-
-extern int EMV_DBGLEVEL;
 
 //EMV emulator states need to update
 #define EMVEMUL_NOFIELD      0
