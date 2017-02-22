@@ -67,8 +67,7 @@ static bool all_feof(FILE *infile[], uint8_t num_infiles)
 		if (!feof(infile[i])) {
 			return false;
 		}
-	}
-	
+	}	
 	return true;
 }
 
@@ -88,7 +87,7 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile)
 	do {
 
 		if (i >= num_infiles * FPGA_CONFIG_SIZE) {
-			fprintf(stderr, "Input files too big (total > %d bytes). These are probably not PM3 FPGA config files.\n", num_infiles*FPGA_CONFIG_SIZE);
+			fprintf(stderr, "Input files too big (total > %d bytes). These are probably not PM3 FPGA config files.\n", num_infiles * FPGA_CONFIG_SIZE);
 			for(uint16_t j = 0; j < num_infiles; j++) {
 				fclose(infile[j]);
 			}
@@ -141,7 +140,7 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile)
 		ret = deflate(&compressed_fpga_stream, Z_FINISH);
 	}
 	
-	fprintf(stderr, "compressed %u input bytes to %" PRIu32 " output bytes\n", i, compressed_fpga_stream.total_out);
+	fprintf(stderr, "compressed %u input bytes to %" PRIu64 " output bytes\n", i, compressed_fpga_stream.total_out);
 
 	if (ret != Z_STREAM_END) {
 		fprintf(stderr, "Error in deflate(): %d %s\n", ret, compressed_fpga_stream.msg);
