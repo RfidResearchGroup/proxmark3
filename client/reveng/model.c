@@ -117,7 +117,7 @@ mtostr(const model_t *model) {
 	if((string = malloc(size))) {
 		sprintf(strbuf, "\"%s\"", model->name);
 		sprintf(string,
-				"width=%" PRIu64 ""
+				"width=%lu"
 				"poly=0x%s  "
 				"init=0x%s  "
 				"refin=%s  "
