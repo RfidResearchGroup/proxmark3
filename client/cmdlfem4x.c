@@ -51,14 +51,14 @@ int CmdEM410xRead(const char *Cmd)
 int usage_lf_em410x_sim(void) {
 	PrintAndLog("Simulating EM410x tag");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf em4x em410xsim [h] <uid> <clock>");
+	PrintAndLog("Usage:  lf em 410xsim [h] <uid> <clock>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       uid       - uid (10 HEX symbols)");
 	PrintAndLog("       clock     - clock (32|64) (optional)");
 	PrintAndLog("samples:");
-	PrintAndLog("      lf em4x em410xsim 0F0368568B");
-	PrintAndLog("      lf em4x em410xsim 0F0368568B 32");
+	PrintAndLog("      lf em 410xsim 0F0368568B");
+	PrintAndLog("      lf em 410xsim 0F0368568B 32");
 	return 0;
 }
 
@@ -147,7 +147,6 @@ int CmdEM410xWatch(const char *Cmd)
 		}
 		
 		CmdLFRead("s");
-		//getSamples("8201",true); //capture enough to get 2 complete preambles (4096*2+9)	
 		getSamples("6144",true);
 	} while (!CmdEM410xRead(""));
 
@@ -1081,12 +1080,12 @@ static command_t CommandTable[] = {
 	{"help", 		CmdHelp, 			1, "This help"},
 	{"410xdemod",	CmdEMdemodASK, 		0, "[findone] -- Extract ID from EM410x tag (option 0 for continuous loop, 1 for only 1 tag)"},  
 	{"410xread",	CmdEM410xRead, 		1, "[clock rate] -- Extract ID from EM410x tag in GraphBuffer"},
-	{"410xsim",		CmdEM410xSim, 		0, "<UID> -- Simulate EM410x tag"},
+	{"410xsim",		CmdEM410xSim, 		0, "simulate EM410x tag"},
 	{"410xwatch",	CmdEM410xWatch, 	0, "['h'] -- Watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
 	{"410xspoof",	CmdEM410xWatchnSpoof, 0, "['h'] --- Watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
 	{"410xwrite",	CmdEM410xWrite, 	0, "<UID> <'0' T5555> <'1' T55x7> [clock rate] -- Write EM410x UID to T5555(Q5) or T55x7 tag, optionally setting clock rate"},
 	{"4x05dump",	CmdEM4x05Dump,		0, "dump EM4205/4305 tag"},
-	{"4x05info",    CmdEM4x05Info,      0, "Tag information EM4x05/EM4x69"},
+	{"4x05info",    CmdEM4x05Info,      0, "tag information EM4x05/EM4x69"},
 	{"4x05read",	CmdEM4x05Read, 		0, "read word data from EM4205/4305"},
 	{"4x05write",	CmdEM4x05Write,		0, "write word data to EM4205/4305"},
 	{"4x50read",	CmdEM4x50Read, 		0, "read word data from EM4x50"},

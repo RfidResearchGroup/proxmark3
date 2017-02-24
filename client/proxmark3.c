@@ -25,6 +25,8 @@
 #include "sleep.h"
 #include "cmdparser.h"
 #include "cmdhw.h"
+#include "whereami.h"
+
 
 // a global mutex to prevent interlaced printing from different threads
 pthread_mutex_t print_lock;
@@ -71,7 +73,7 @@ byte_t* prx = rx;
 	// printf("██████╔╝██╔████╔██║ ████╔╝\n");
 	// printf("██╔═══╝ ██║╚██╔╝██║   ══█║    iceman@icesql.net\n");
 	// printf("██║     ██║ ╚═╝ ██║ ████╔╝ https://github.com/iceman1001/proxmark3\n");
-	// printf("╚═╝     ╚═╝     ╚═╝ ╚═══╝v1.6.8\n");
+	// printf("╚═╝     ╚═╝     ╚═╝ ╚═══╝v1.7.0\n");
 // }
 
 
@@ -190,7 +192,6 @@ static void *main_loop(void *targ) {
 
 	if (script_file) {
 		fclose(script_file);
-		script_file = NULL;
 	}
 	
 	write_history(".history");
@@ -218,6 +219,33 @@ static void dumpAllHelp(int markdown)
 	dumpCommandsRecursive(cmds, markdown);
 }
 
+static char *my_executable_path = NULL;
+static char *my_executable_directory = NULL;
+
+const char const *get_my_executable_path(void)
+{
+	return my_executable_path;
+}
+
+const char const *get_my_executable_directory(void)
+{
+	return my_executable_directory;
+}
+
+static void set_my_executable_path(void)
+{
+	int path_length = wai_getExecutablePath(NULL, 0, NULL);
+	if (path_length != -1) {
+		my_executable_path = (char*)malloc(path_length + 1);
+		int dirname_length = 0;
+		if (wai_getExecutablePath(my_executable_path, path_length, &dirname_length) != -1) {
+			my_executable_path[path_length] = '\0';
+			my_executable_directory = (char *)malloc(dirname_length + 2);
+			strncpy(my_executable_directory, my_executable_path, dirname_length+1);
+		}
+	}
+}
+
 int main(int argc, char* argv[]) {
 	srand(time(0));
   
@@ -240,6 +268,9 @@ int main(int argc, char* argv[]) {
 		dumpAllHelp(1);
 		return 0;
 	}
+
+	set_my_executable_path();
+	
 	// Make sure to initialize
 	struct main_loop_arg marg = {
 		.usb_present = 0,
