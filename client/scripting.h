@@ -28,6 +28,11 @@
 #include "cmdcrc.h"
 #include "cmdhfmfhard.h"
 
+
+#define LUA_LIBRARIES_DIRECTORY 	"lualibs/"
+#define LUA_SCRIPTS_DIRECTORY 		"scripts/"
+#define LUA_LIBRARIES_WILDCARD 		"?.lua"
+
 /**
  * @brief set_libraries loads the core components of pm3 into the 'pm3'
  *  namespace within the given lua_State

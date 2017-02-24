@@ -97,6 +97,7 @@ CMDSRCS =	mifarehost.c \
 			loclass/ikeys.c \
 			loclass/elite_crack.c \
 			loclass/fileutils.c \
+			whereami.c \
 			parity.c \
 			crc.c \
 			crc16.c \

@@ -221,10 +221,10 @@ static int l_iso14443b_crc(lua_State *L)
                      unsigned char *TransmitFirst,
                      unsigned char *TransmitSecond)
 	*/
+	unsigned char buf[USB_CMD_DATA_SIZE] = {0x00};
     size_t size = 0;	
     const char *data = luaL_checklstring(L, 1, &size);
 
-	unsigned char buf[USB_CMD_DATA_SIZE] = {0x00};
 	
 	for (int i = 0; i < size; i += 2)
 		sscanf(&data[i], "%02x", (unsigned int *)&buf[i / 2]);	
@@ -605,7 +605,11 @@ int set_pm3_libraries(lua_State *L)
 
     //-- Last but not least, add to the LUA_PATH (package.path in lua)
     // so we can load libraries from the ./lualib/ - directory
-    setLuaPath(L,"./lualibs/?.lua");
+	char libraries_path[strlen(get_my_executable_directory()) + strlen(LUA_LIBRARIES_DIRECTORY) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
+	strcpy(libraries_path, get_my_executable_directory());
+	strcat(libraries_path, LUA_LIBRARIES_DIRECTORY);
+	strcat(libraries_path, LUA_LIBRARIES_WILDCARD);
+	setLuaPath(L, libraries_path);
 
     return 1;
 }
