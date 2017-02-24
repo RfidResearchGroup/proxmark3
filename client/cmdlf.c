@@ -27,11 +27,11 @@ int usage_lf_cmdread(void) {
 	return 0;
 }
 int usage_lf_read(void){
-	PrintAndLog("Usage: lf read [h] [s]");
+	PrintAndLog("Usage: lf read [h] [s] [t]");
 	PrintAndLog("Options:");
 	PrintAndLog("       h            This help");
 	PrintAndLog("       s            silent run no printout");
-	PrintAndLog("This function takes no arguments. ");
+	PrintAndLog("       t            waits for device to respond with no timeout");
 	PrintAndLog("Use 'lf config' to set parameters.");
 	return 0;
 }
@@ -545,19 +545,47 @@ int CmdLFSetConfig(const char *Cmd) {
 
 int CmdLFRead(const char *Cmd) {
 	bool arg1 = false;
-	uint8_t cmdp =  param_getchar(Cmd, 0);
+	bool thresholdRead = false;	
+	uint8_t cmdp = 0;
+	while(param_getchar(Cmd, cmdp) != 0x00) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+			return usage_lf_read();
+		case 's':
+		case 'S':
+			arg1 = true;
+			cmdp++;
+			break;
+		case 't':
+		case 'T':
+			thresholdRead = true;
+			cmdp++;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = 1;
+			break;
+		}
+		if(errors) break;
+	}
 	
-	if ( cmdp == 'h' || cmdp == 'H') return usage_lf_read();
-	
-	 //suppress print
-	if ( cmdp == 's' || cmdp == 'S') arg1 = true;
+	// No args
+	if (cmdp == 0) errors = 1;
+
+	//Validations
+	if (errors) return usage_lf_read();
 
 	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, {arg1,0,0}};
 	clearCommandBuffer();
 	SendCommand(&c);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL ,2500) ) {
-		PrintAndLog("command execution time out");
-		return 1;
+	if ( thresholdRead ) {
+		WaitForResponse(CMD_ACK,NULL);	
+	} else {
+		if ( !WaitForResponseTimeout(CMD_ACK, NULL ,2500) ) {
+			PrintAndLog("command execution time out");
+			return 1;
+		}
 	}
 	return 0;
 }
