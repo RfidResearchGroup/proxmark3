@@ -116,10 +116,10 @@ void LFSetupFPGAForADC(int divisor, bool lf_field) {
  * @param silent - is true, now outputs are made. If false, dbprints the status
  * @return the number of bits occupied by the samples.
  */
-uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold, bool silent) {
+uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold, bool silent, int bufsize) {
 	//bigbuf, to hold the aquired raw data signal
 	uint8_t *dest = BigBuf_get_addr();
-    uint16_t bufsize = BigBuf_max_traceLen();
+    bufsize = (bufsize > 0 && bufsize < BigBuf_max_traceLen()) ? bufsize : BigBuf_max_traceLen();
 
 	//BigBuf_Clear_ext(false);	  //creates issues with cmdread (marshmellow)
 
@@ -208,14 +208,19 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
  * @return number of bits sampled
  */
 uint32_t DoAcquisition_default(int trigger_threshold, bool silent) {
-	return DoAcquisition(1,8,0,trigger_threshold,silent);
+	return DoAcquisition(1, 8, 0,trigger_threshold, silent, 0);
 }
 uint32_t DoAcquisition_config( bool silent) {
 	return DoAcquisition(config.decimation
 				  ,config.bits_per_sample
 				  ,config.averaging
 				  ,config.trigger_threshold
-				  ,silent);
+				  ,silent
+				  ,0);
+}
+
+uint32_t DoPartialAcquisition(int trigger_threshold, bool silent, int sample_size) {
+	return DoAcquisition(1, 8, 0, trigger_threshold, silent, sample_size);
 }
 
 uint32_t ReadLF(bool activeField, bool silent) {
@@ -252,9 +257,9 @@ uint32_t SnoopLF() {
 **/
 void doT55x7Acquisition(size_t sample_size) {
 
-	#define T55xx_READ_UPPER_THRESHOLD 128+40  // 60 grph
-	#define T55xx_READ_LOWER_THRESHOLD 128-40  // -60 grph
-	#define T55xx_READ_TOL   2
+	#define T55xx_READ_UPPER_THRESHOLD 128+60  // 60 grph
+	#define T55xx_READ_LOWER_THRESHOLD 128-60  // -60 grph
+	#define T55xx_READ_TOL   5
 	
 	uint8_t *dest = BigBuf_get_addr();
 	uint16_t bufsize = BigBuf_max_traceLen();
@@ -319,6 +324,9 @@ void doT55x7Acquisition(size_t sample_size) {
 #define COTAG_T2 (COTAG_T1>>1)
 #define COTAG_ONE_THRESHOLD 128+30
 #define COTAG_ZERO_THRESHOLD 128-30
+#ifndef COTAG_BITS
+#define COTAG_BITS 264
+#endif
 void doCotagAcquisition(size_t sample_size) {
 
 	uint8_t *dest = BigBuf_get_addr();

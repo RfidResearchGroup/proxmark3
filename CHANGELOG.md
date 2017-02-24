@@ -2,8 +2,19 @@
 All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
-## [unreleased][unreleased]  
-  -  `lf em4x em4x50***` refactoring of em4x50 commands. (iceman)
+## [unreleased][unreleased]	
+  - correctly using stdtypes.h printf and scanf format string macros (PRIx64 et al) (pwpivi)
+  - fix linker warning re missing entry point when linking fullimage.elf (pwpivi)
+  - small changes to lf psk and fsk demods to improve results when the trace begins with noise or the chip isn't broadcasting yet (marshmellow)
+  - NOTE CHANGED ALL `lf em4x em*` cmds to simpler `lf em ` - example: `lf em4x em410xdemod` is now `lf em 410xdemod`
+  - Renamed and rebuilt `lf em readword` && readwordpwd to `lf em 4x05read` - it now demods and outputs the read block (marshmellow/iceman)
+  - Renamed and rebuilt `lf em writeword` && writewordpwd to `lf em 4x05write` - it now also reads validation output from the tag (marshmellow/iceman)
+  - Fixed bug in lf sim and continuous demods not turning off antenna when finished
+  - Added lua script path fixes (pwpivi)
+  - `lf search` - Added EM4x05/EM4x69 chip detection (marshmellow) 
+  - Added lf em 4x05dump command to read and output all the blocks of the chip (marshmellow)
+  - Added lf em 4x05info command to read and display information about the chip (marshmellow)
+  - `lf em4x em4x50***` refactoring of em4x50 commands. (iceman)
   
 ## [1.6.9][icemanfork] [2017-02-06]
   - Serial speedup,  if possible 408600baud otherwise default to 115200baud (iceman)
@@ -113,11 +124,11 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Adjusted lf t55xx dump to allow overriding the safety check and warning text (marshmellow)
 - Adjusted lf t55xx write input variables (marshmellow)
 - Adjusted lf t55xx read with password safety check and warning text and adjusted the input variables (marshmellow & iceman)
-- Adjusted LF FSK demod to account for cross threshold fluctuations (898 count waves will adjust the 9 to 8 now...) more accurate.
+- Adjusted LF FSK demod to account for cross threshold fluctuations (898 count waves will adjust the 9 to 8 now...) more accurate. (marshmellow)
 - Adjusted timings for t55xx commands.  more reliable now. (marshmellow & iceman)
 - `lf cmdread` adjusted input methods and added help text (marshmellow & iceman)
 - changed `lf config t <threshold>` to be 0 - 128 and will trigger on + or - threshold value (marshmellow) 
-- `hf iclass dump` cli options - can now dump AA1 and AA2 with different keys in one run (does not go to multiple pages for the larger tags yet)
+- `hf iclass dump` cli options - can now dump AA1 and AA2 with different keys in one run (does not go to multiple pages for the larger tags yet) (marshmellow)
 - Revised workflow for StandAloneMode14a (Craig Young)
 - EPA functions (`hf epa`) now support both ISO 14443-A and 14443-B cards (frederikmoellers)
 - 'hw version' only talks to ARM at startup, after that the info is cached. (pwpiwi)

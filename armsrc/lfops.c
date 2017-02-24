@@ -326,7 +326,6 @@ void AcquireTiType(void)
 // if not provided a valid crc will be computed from the data and written.
 void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 {
-	StartTicks();
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	if(crc == 0) {
 		crc = update_crc16(crc, (idlo)&0xff);
@@ -347,8 +346,10 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 	// whether we're modulating the antenna (high)
 	// or listening to the antenna (low)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
+	StartTicks();
+	
 	LED_A_ON();
-
+	
 	// steal this pin from the SSP and use it to control the modulation
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
@@ -361,7 +362,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 	// then write 80 bits of data (or 64 bit data + 16 bit crc if you prefer)
 	// finally end with 0x0300 (write frame)
 	// all data is sent lsb first
-	// finish with 15ms programming time
+	// finish with 50ms programming time
 
 	// modulate antenna
 	HIGH(GPIO_SSC_DOUT);
@@ -399,7 +400,8 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	int i = 0;
 	uint8_t *buf = BigBuf_get_addr();
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
+	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
 
@@ -420,8 +422,9 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 
 	// power on antenna
-	// OPEN_COIL();
-	// SpinDelay(50);
+	OPEN_COIL();
+	// charge time
+	WaitMS(50);
 		
 	for(;;) {
 		WDT_HIT();
@@ -1699,7 +1702,6 @@ void EM4xLogin(uint32_t pwd) {
 void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 
 	LED_A_ON();
-
 	uint8_t len;
 	
 	//clear buffer now so it does not interfere with timing later
@@ -1719,7 +1721,9 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 
 	SendForward(len);
 
-	DoAcquisition_default(0, TRUE);
+	WaitUS(400);
+	// Now do the acquisition
+	DoPartialAcquisition(20, true, 6000);
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,0,0,0,0);
@@ -1753,10 +1757,10 @@ void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
 	SendForward(len);
 
 	//Wait 20ms for write to complete?
-	WaitMS(10);
+	WaitMS(6);
 
 	//Capture response if one exists
-	DoAcquisition_default(20, TRUE);
+	DoPartialAcquisition(20, true, 6000);
 	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	cmd_send(CMD_ACK,0,0,0,0,0);

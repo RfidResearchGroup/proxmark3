@@ -36,6 +36,9 @@ uint32_t SampleLF(bool silent);
 
 uint32_t SnoopLF();
 
+// adds sample size to default options
+uint32_t DoPartialAcquisition(int trigger_threshold, bool silent, int sample_size);
+
 /**
  * @brief Does sample acquisition, ignoring the config values set in the sample_config.
  * This method is typically used by tag-specific readers who just wants to read the samples
