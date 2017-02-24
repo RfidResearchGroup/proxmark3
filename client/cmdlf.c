@@ -544,8 +544,9 @@ int CmdLFSetConfig(const char *Cmd) {
 }
 
 int CmdLFRead(const char *Cmd) {
-	bool arg1 = false;
-	bool thresholdRead = false;	
+	bool errors = FALSE;
+	bool arg1 = FALSE;
+	bool thresholdRead = FALSE;	
 	uint8_t cmdp = 0;
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
@@ -554,12 +555,12 @@ int CmdLFRead(const char *Cmd) {
 			return usage_lf_read();
 		case 's':
 		case 'S':
-			arg1 = true;
+			arg1 = TRUE;
 			cmdp++;
 			break;
 		case 't':
 		case 'T':
-			thresholdRead = true;
+			thresholdRead = TRUE;
 			cmdp++;
 			break;
 		default:
