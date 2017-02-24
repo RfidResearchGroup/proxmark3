@@ -702,12 +702,13 @@ bool setDemodBufferEM(uint32_t *word, size_t idx){
 		PrintAndLog("DEBUG: Error - EM Parity tests failed");
 		return FALSE;
 	}
-	
-	if (!removeParity(DemodBuffer, idx + EM_PREAMBLE_LEN, 9, 0, 44)) {
+		   
+    // test for even parity bits and remove them. (leave out the end row of parities so 36 bits)	
+	if (!removeParity(DemodBuffer, idx + EM_PREAMBLE_LEN, 9, 0, 36)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM, failed removing parity");
 		return FALSE;
 	}
-	setDemodBuf(DemodBuffer, 40, 0);
+	setDemodBuf(DemodBuffer, 32, 0);
 	*word = bytebits_to_byteLSBF(DemodBuffer, 32);
 	return TRUE;
 }
@@ -776,6 +777,18 @@ int usage_lf_em4x05_write(void) {
 	PrintAndLog("samples:");
 	PrintAndLog("      lf em 4x05write 1 deadc0de");
 	PrintAndLog("      lf em 4x05write 1 deadc0de 11223344");
+	return 0;
+}
+int usage_lf_em4x05_info(void) {
+	PrintAndLog("Tag information EM4205/4305/4469//4569 tags.  Tag must be on antenna.");
+	PrintAndLog("");
+	PrintAndLog("Usage:  lf em 4x05info [h] <pwd>");
+	PrintAndLog("Options:");
+	PrintAndLog("       h         - this help");
+	PrintAndLog("       pwd       - password (hex) (optional)");
+	PrintAndLog("samples:");
+	PrintAndLog("      lf em 4x05info");
+	PrintAndLog("      lf em 4x05info deadc0de");
 	return 0;
 }
 
@@ -904,8 +917,164 @@ int CmdEM4x05Write(const char *Cmd) {
 	int isOk = demodEM4x05resp(&dummy);
 	if (isOk)
 		PrintAndLog("Write Verified");
-
+	else
+		PrintAndLog("Write could not be verified");	
 	return isOk;
+}
+
+void printEM4x05config(uint32_t wordData) {
+	uint16_t datarate = (((wordData & 0x3F)+1)*2);
+	uint8_t encoder = ((wordData >> 6) & 0xF);
+	char enc[14];
+	memset(enc,0,sizeof(enc));
+
+	uint8_t PSKcf = (wordData >> 10) & 0x3;
+	char cf[10];
+	memset(cf,0,sizeof(cf));
+	uint8_t delay = (wordData >> 12) & 0x3;
+	char cdelay[33];
+	memset(cdelay,0,sizeof(cdelay));
+	uint8_t LWR = (wordData >> 14) & 0xF; //last word read
+
+	switch (encoder) {
+		case 0: snprintf(enc,sizeof(enc),"NRZ"); break;
+		case 1: snprintf(enc,sizeof(enc),"Manchester"); break;
+		case 2: snprintf(enc,sizeof(enc),"Biphase"); break;
+		case 3: snprintf(enc,sizeof(enc),"Miller"); break;
+		case 4: snprintf(enc,sizeof(enc),"PSK1"); break;
+		case 5: snprintf(enc,sizeof(enc),"PSK2"); break;
+		case 6: snprintf(enc,sizeof(enc),"PSK3"); break;
+		case 7: snprintf(enc,sizeof(enc),"Unknown"); break;
+		case 8: snprintf(enc,sizeof(enc),"FSK1"); break;
+		case 9: snprintf(enc,sizeof(enc),"FSK2"); break;
+		default: snprintf(enc,sizeof(enc),"Unknown"); break;
+	}
+
+	switch (PSKcf) {
+		case 0: snprintf(cf,sizeof(cf),"RF/2"); break;
+		case 1: snprintf(cf,sizeof(cf),"RF/8"); break;
+		case 2: snprintf(cf,sizeof(cf),"RF/4"); break;
+		case 3: snprintf(cf,sizeof(cf),"unknown"); break;
+	}
+
+	switch (delay) {
+		case 0: snprintf(cdelay, sizeof(cdelay),"no delay"); break;
+		case 1: snprintf(cdelay, sizeof(cdelay),"BP/8 or 1/8th bit period delay"); break;
+		case 2: snprintf(cdelay, sizeof(cdelay),"BP/4 or 1/4th bit period delay"); break;
+		case 3: snprintf(cdelay, sizeof(cdelay),"no delay"); break;
+	}
+	PrintAndLog("ConfigWord: %08X (Word 4)\n", wordData);
+	PrintAndLog("Config Breakdown:", wordData);
+	PrintAndLog(" Data Rate:  %02u | RF/%u", wordData & 0x3F, datarate);
+	PrintAndLog("   Encoder:   %u | %s", encoder, enc);
+	PrintAndLog("    PSK CF:   %u | %s", PSKcf, cf);
+	PrintAndLog("     Delay:   %u | %s", delay, cdelay);
+	PrintAndLog(" LastWordR:  %02u | Address of last word for default read", LWR);
+	PrintAndLog(" ReadLogin:   %u | Read Login is %s", (wordData & 0x40000)>>18, (wordData & 0x40000) ? "Required" : "Not Required");	
+	PrintAndLog("   ReadHKL:   %u | Read Housekeeping Words Login is %s", (wordData & 0x80000)>>19, (wordData & 0x80000) ? "Required" : "Not Required");	
+	PrintAndLog("WriteLogin:   %u | Write Login is %s", (wordData & 0x100000)>>20, (wordData & 0x100000) ? "Required" : "Not Required");	
+	PrintAndLog("  WriteHKL:   %u | Write Housekeeping Words Login is %s", (wordData & 0x200000)>>21, (wordData & 0x200000) ? "Required" : "Not Required");	
+	PrintAndLog("    R.A.W.:   %u | Read After Write is %s", (wordData & 0x400000)>>22, (wordData & 0x400000) ? "On" : "Off");
+	PrintAndLog("   Disable:   %u | Disable Command is %s", (wordData & 0x800000)>>23, (wordData & 0x800000) ? "Accepted" : "Not Accepted");
+	PrintAndLog("    R.T.F.:   %u | Reader Talk First is %s", (wordData & 0x1000000)>>24, (wordData & 0x1000000) ? "Enabled" : "Disabled");
+	PrintAndLog("    Pigeon:   %u | Pigeon Mode is %s\n", (wordData & 0x4000000)>>26, (wordData & 0x4000000) ? "Enabled" : "Disabled");
+}
+
+void printEM4x05info(uint8_t chipType, uint8_t cap, uint16_t custCode, uint32_t serial) {
+	switch (chipType) {
+		case 9: PrintAndLog("\n Chip Type:   %u | EM4305", chipType); break;
+		case 4: PrintAndLog(" Chip Type:   %u | Unknown", chipType); break;
+		case 2: PrintAndLog(" Chip Type:   %u | EM4469", chipType); break;
+		//add more here when known
+		default: PrintAndLog(" Chip Type:   %u Unknown", chipType); break;
+	}
+
+	switch (cap) {
+		case 3: PrintAndLog("  Cap Type:   %u | 330pF",cap); break;
+		case 2: PrintAndLog("  Cap Type:   %u | %spF",cap, (chipType==2)? "75":"210"); break;
+		case 1: PrintAndLog("  Cap Type:   %u | 250pF",cap); break;
+		case 0: PrintAndLog("  Cap Type:   %u | no resonant capacitor",cap); break;
+		default: PrintAndLog("  Cap Type:   %u | unknown",cap); break;
+	}
+
+	PrintAndLog(" Cust Code: %03u | %s", custCode, (custCode == 0x200) ? "Default": "Unknown");
+	if (serial != 0) {
+		PrintAndLog("\n  Serial #: %08X\n", serial);
+	}
+}
+
+void printEM4x05ProtectionBits(uint32_t wordData) {
+	for (uint8_t i = 0; i < 15; i++) {
+		PrintAndLog("      Word:  %02u | %s", i, (((1 << i) & wordData ) || i < 2) ? "Is Write Locked" : "Is Not Write Locked");
+		if (i==14) {
+			PrintAndLog("      Word:  %02u | %s", i+1, (((1 << i) & wordData ) || i < 2) ? "Is Write Locked" : "Is Not Write Locked");
+		}
+	}
+}
+
+//quick test for EM4x05/EM4x69 tag
+bool EM4x05Block0Test(uint32_t *wordData) {
+//	return (EM4x05ReadWord_ext(0,0,false,wordData) == 1);
+	return false;
+}
+
+int CmdEM4x05Info(const char *Cmd) {
+	/*
+	uint32_t pwd;
+	uint32_t wordData = 0;
+  	bool usePwd = false;
+	uint8_t ctmp = param_getchar(Cmd, 0);
+	if ( ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x05_info();
+
+	// for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
+	pwd = param_get32ex(Cmd, 0, 1, 16);
+	
+	if ( pwd != 1 )
+		usePwd = true;
+
+	// read word 0 (chip info)
+	// block 0 can be read even without a password.
+	if ( !EM4x05Block0Test(&wordData) ) 
+		return -1;
+	
+	uint8_t chipType = (wordData >> 1) & 0xF;
+	uint8_t cap = (wordData >> 5) & 3;
+	uint16_t custCode = (wordData >> 9) & 0x3FF;
+	
+	// read word 1 (serial #) doesn't need pwd
+	wordData = 0;
+	if (EM4x05ReadWord_ext(1, 0, false, &wordData) != 1) {
+		//failed, but continue anyway...
+	}
+	printEM4x05info(chipType, cap, custCode, wordData);
+
+	// read word 4 (config block) 
+	// needs password if one is set
+	wordData = 0;
+	if ( EM4x05ReadWord_ext(4, pwd, usePwd, &wordData) != 1 )
+		return 0;
+	
+	printEM4x05config(wordData);
+
+	// read word 14 and 15 to see which is being used for the protection bits
+	wordData = 0;
+	if ( EM4x05ReadWord_ext(14, pwd, usePwd, &wordData) != 1 ) {
+		return 0;
+	}
+	// if status bit says this is not the used protection word
+	if (!(wordData & 0x8000)) {
+		if ( EM4x05ReadWord_ext(15, pwd, usePwd, &wordData) != 1 ) {
+			return 0;
+		}
+	}
+	if (!(wordData & 0x8000)) {
+		//something went wrong
+		return 0;
+	}
+	printEM4x05ProtectionBits(wordData);
+	
+	*/
+	return 1;
 }
 
 static command_t CommandTable[] = {
@@ -916,9 +1085,10 @@ static command_t CommandTable[] = {
 	{"410xwatch",	CmdEM410xWatch, 	0, "['h'] -- Watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
 	{"410xspoof",	CmdEM410xWatchnSpoof, 0, "['h'] --- Watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
 	{"410xwrite",	CmdEM410xWrite, 	0, "<UID> <'0' T5555> <'1' T55x7> [clock rate] -- Write EM410x UID to T5555(Q5) or T55x7 tag, optionally setting clock rate"},
+	{"4x05dump",	CmdEM4x05Dump,		0, "dump EM4205/4305 tag"},
+	{"4x05info",    CmdEM4x05Info,      0, "Tag information EM4x05/EM4x69"},
 	{"4x05read",	CmdEM4x05Read, 		0, "read word data from EM4205/4305"},
 	{"4x05write",	CmdEM4x05Write,		0, "write word data to EM4205/4305"},
-	{"4x05dump",	CmdEM4x05Dump,		0, "dump EM4205/4305 tag"},
 	{"4x50read",	CmdEM4x50Read, 		0, "read word data from EM4x50"},
 	{"4x50write",	CmdEM4x50Write, 	0, "write word data to EM4x50"},
 	{"4x50dump",	CmdEM4x50Dump,		0, "dump EM4x50 tag"},

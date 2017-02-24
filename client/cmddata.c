@@ -380,8 +380,8 @@ void printEM410x(uint32_t hi, uint64_t id)
 		} else{
 			//output 40 bit em id
 			PrintAndLog("\nEM TAG ID      : %010" PRIX64, id);
-			PrintAndLog("Unique TAG ID  : %010" PRIX64, id2lo);
 			PrintAndLog("\nPossible de-scramble patterns");
+			PrintAndLog("Unique TAG ID  : %010" PRIX64, id2lo);
 			PrintAndLog("HoneyWell IdentKey {");
 			PrintAndLog("DEZ 8          : %08" PRIu64, id & 0xFFFFFF);
 			PrintAndLog("DEZ 10         : %010" PRIu64, id & 0xFFFFFFFF);
@@ -391,7 +391,7 @@ void printEM410x(uint32_t hi, uint64_t id)
 			PrintAndLog("DEZ 3.5C       : %03" PRIu64 ".%05" PRIu64, (id & 0xFF0000) >> 16, (id & 0xFFFF));
 			PrintAndLog("DEZ 14/IK2     : %014" PRIu64, id);
 			PrintAndLog("DEZ 15/IK3     : %015" PRIu64, id2lo);
-			PrintAndLog("DEZ 20/ZK      : %02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld%02lld",
+			PrintAndLog("DEZ 20/ZK      : %02" PRIu64 "%02" PRIu64 "%02" PRIu64 "%02" PRIu64 "%02" PRIu64 "%02" PRIu64 "%02" PRIu64 "%02" PRIu64 "%02" PRIu64 "%02" PRIu64,
 			    (id2lo & 0xf000000000) >> 36,
 			    (id2lo & 0x0f00000000) >> 32,
 			    (id2lo & 0x00f0000000) >> 28,

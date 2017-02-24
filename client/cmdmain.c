@@ -50,7 +50,7 @@ static command_t CommandTable[] =
 	{"hf",		CmdHF,		1, "{ High Frequency commands... }"},
 	{"hw",		CmdHW,		1, "{ Hardware commands... }"},
 	{"lf",		CmdLF,		1, "{ Low Frequency commands... }"},
-	{"reveng",	CmdRev, 	1, "Crc calculations from the software reveng 1.40"},
+	{"reveng",	CmdRev, 	1, "Crc calculations from the software reveng 1.44"},
 	{"script",	CmdScript,	1, "{ Scripting commands }"},	
 	{"quit",	CmdQuit,	1, "Exit program"},
 	{"exit",	CmdQuit,	1, "Exit program"},

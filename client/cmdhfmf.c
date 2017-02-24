@@ -470,10 +470,9 @@ int CmdHF14AMfDump(const char *Cmd) {
 	size_t bytes_read;
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		bytes_read = fread( keyA[sectorNo], 1, 6, fin );
-		if ( bytes_read == 0) {
+		if ( bytes_read != 6) {
 			PrintAndLog("File reading error.");
 			fclose(fin);
-			fin = NULL;
 			return 2;
 		}
 	}
@@ -481,16 +480,14 @@ int CmdHF14AMfDump(const char *Cmd) {
 	// Read keys B from file
 	for (sectorNo=0; sectorNo<numSectors; sectorNo++) {
 		bytes_read = fread( keyB[sectorNo], 1, 6, fin );
-		if ( bytes_read == 0) {
+		if ( bytes_read != 6) {
 			PrintAndLog("File reading error.");
 			fclose(fin);
-			fin = NULL;
 			return 2;
 		}
 	}
 	
 	fclose(fin);
-	fin = NULL;
 			
 	PrintAndLog("|-----------------------------------------|");
 	PrintAndLog("|------ Reading sector access bits...-----|");
@@ -643,20 +640,18 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	size_t bytes_read;
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		bytes_read = fread( keyA[sectorNo], 1, 6, fkeys );
-		if ( bytes_read == 0) {
+		if ( bytes_read != 6) {
 			PrintAndLog("File reading error (dumpkeys.bin).");
 			fclose(fkeys);
-			fkeys = NULL;
 			return 2;
 		}
 	}
 
 	for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
 		bytes_read = fread( keyB[sectorNo], 1, 6, fkeys );
-		if ( bytes_read == 0) {
+		if ( bytes_read != 6) {
 			PrintAndLog("File reading error (dumpkeys.bin).");
 			fclose(fkeys);
-			fkeys = NULL;
 			return 2;
 		}
 	}
@@ -674,7 +669,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 			UsbCommand c = {CMD_MIFARE_WRITEBL, {FirstBlockOfSector(sectorNo) + blockNo, keyType, 0}};
 			memcpy(c.d.asBytes, key, 6);			
 			bytes_read = fread(bldata, 1, 16, fdump);
-			if ( bytes_read == 0) {
+			if ( bytes_read != 16) {
 				PrintAndLog("File reading error (dumpdata.bin).");
 				fclose(fdump);
 				fdump = NULL;				
@@ -713,7 +708,6 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	}
 	
 	fclose(fdump);
-	fdump = NULL;	
 	return 0;
 }
 
@@ -789,7 +783,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 		switch (isOK) {
 			case -1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
 			case -2 : PrintAndLog("Button pressed. Aborted.\n"); break;
-			case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (its random number generator is not predictable).\n"); break;
+			case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (random number generator is not predictable).\n"); break;
 			case -4 : PrintAndLog("No valid key found"); break;
 			case -5 : 
 				key64 = bytes_to_num(keyBlock, 6);
@@ -1584,7 +1578,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 
 			if (res == 1) {								// there is (more) data to be transferred
 				if (pckNum == 0) {						// first packet, (re)allocate necessary buffer
-					if (traceLen > bufsize) {
+					if (traceLen > bufsize || buf == NULL) {
 						uint8_t *p;
 						if (buf == NULL)				// not yet allocated
 							p = malloc(traceLen);
