@@ -2797,7 +2797,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				//test if auth OK
 				if (cardRr != prng_successor(nonce, 64)){
 					
-					if (MF_DBGLEVEL >= 3) 
+					if (MF_DBGLEVEL >= 3) {
 						Dbprintf("AUTH FAILED for sector %d with key %c. [nr=%08x  cardRr=%08x] [nt=%08x succ=%08x]"
 							, cardAUTHSC
 							, (cardAUTHKEY == 0) ? 'A' : 'B'
@@ -2805,8 +2805,8 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 							, cardRr
 							, nonce // nt
 							, prng_successor(nonce, 64)
-
 						);
+					}
 					// Shouldn't we respond anything here?
 					// Right now, we don't nack or anything, which causes the
 					// reader to do a WUPA after a while. /Martin
@@ -2852,13 +2852,11 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 					// load key into crypto
 					crypto1_create(pcs, emlGetKey(cardAUTHSC, cardAUTHKEY));
 
-					if (!encrypted_data) { 
+					if (!encrypted_data) {
 						// first authentication
 						// Update crypto state init  (UID ^ NONCE)
 						crypto1_word(pcs, cuid ^ nonce, 0);
 						num_to_bytes(nonce, 4, rAUTH_AT);
-					} 
-
 					} else {
 						// nested authentication
 						ans = nonce ^ crypto1_word(pcs, cuid ^ nonce, 0); 
