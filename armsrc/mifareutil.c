@@ -157,7 +157,7 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 
 	// some statistic
 	if (!ntptr && (MF_DBGLEVEL >= 3))
-		Dbprintf("auth uid: %08x nt: %08x", uid, nt);  
+		Dbprintf("auth uid: %08x | nr: %08x | nt: %08x", uid, nr, nt);
 	
 	// save Nt
 	if (ntptr)

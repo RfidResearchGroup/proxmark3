@@ -1,4 +1,4 @@
- //-----------------------------------------------------------------------------
+  //-----------------------------------------------------------------------------
 // Merlok - June 2011, 2012
 // Gerhard de Koning Gans - May 2008
 // Hagen Fritsch - June 2010
@@ -2791,34 +2791,37 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 					}
 				}
 
-				/*
-				// Interactive mode flag, means we need to send ACK
+				crypto1_word(pcs, nr , 1);
+				uint32_t cardRr = ar ^ crypto1_word(pcs, 0, 0);
 				
-				crypto1_word(pcs, ar , 1);
-				cardRr = nr ^ crypto1_word(pcs, 0, 0);
-				
-				test if auth OK
+				//test if auth OK
 				if (cardRr != prng_successor(nonce, 64)){
 					
-					if (MF_DBGLEVEL >= 4) Dbprintf("AUTH FAILED for sector %d with key %c. cardRr=%08x, succ=%08x",
-						cardAUTHSC, cardAUTHKEY == 0 ? 'A' : 'B',
-							cardRr, prng_successor(nonce, 64));
-					Shouldn't we respond anything here?
-					Right now, we don't nack or anything, which causes the
-					reader to do a WUPA after a while. /Martin
-					-- which is the correct response. /piwi
+					if (MF_DBGLEVEL >= 3) 
+						Dbprintf("AUTH FAILED for sector %d with key %c. [nr=%08x  cardRr=%08x] [nt=%08x succ=%08x]"
+							, cardAUTHSC
+							, (cardAUTHKEY == 0) ? 'A' : 'B'
+							, nr
+							, cardRr
+							, nonce // nt
+							, prng_successor(nonce, 64)
+
+						);
+					// Shouldn't we respond anything here?
+					// Right now, we don't nack or anything, which causes the
+					// reader to do a WUPA after a while. /Martin
+					// -- which is the correct response. /piwi
 					cardSTATE_TO_IDLE();
 					LogTrace(Uart.output, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
 					break;
 				}
-				*/
 				
 				ans = prng_successor(nonce, 96) ^ crypto1_word(pcs, 0, 0);
 				num_to_bytes(ans, 4, rAUTH_AT);
 				EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));
 				LED_C_ON();
 				
-				if (MF_DBGLEVEL >= 4) {
+				if (MF_DBGLEVEL >= 1) {
 					Dbprintf("AUTH COMPLETED for sector %d with key %c. time=%d", 
 						cardAUTHSC, 
 						cardAUTHKEY == 0 ? 'A' : 'B',
@@ -2842,24 +2845,26 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 				                 receivedCmd[0] == MIFARE_AUTH_KEYB)  ) {
 
 					authTimer = GetTickCount();
-					cardAUTHSC = receivedCmd[1] / 4;  // received block num
-					cardAUTHKEY = receivedCmd[0] - 0x60; // & 1
+					cardAUTHSC = receivedCmd[1] / 4;  // received block -> sector
+					cardAUTHKEY = receivedCmd[0] & 0x1;
 					crypto1_destroy(pcs);
+					
+					// load key into crypto
 					crypto1_create(pcs, emlGetKey(cardAUTHSC, cardAUTHKEY));
 
 					if (!encrypted_data) { 
 						// first authentication
-						crypto1_word(pcs, cuid ^ nonce, 0);// Update crypto state
-						num_to_bytes(nonce, 4, rAUTH_AT); // Send nonce
-						
-						if (MF_DBGLEVEL >= 4) Dbprintf("Reader authenticating for block %d (0x%02x) with key %d",receivedCmd[1] ,receivedCmd[1],cardAUTHKEY  );
+						// Update crypto state init  (UID ^ NONCE)
+						crypto1_word(pcs, cuid ^ nonce, 0);
+						num_to_bytes(nonce, 4, rAUTH_AT);
+					} 
 
 					} else {
 						// nested authentication
 						ans = nonce ^ crypto1_word(pcs, cuid ^ nonce, 0); 
 						num_to_bytes(ans, 4, rAUTH_AT);
 
-						if (MF_DBGLEVEL >= 4) Dbprintf("Reader doing nested authentication for block %d (0x%02x) with key %d",receivedCmd[1] ,receivedCmd[1],cardAUTHKEY );
+						if (MF_DBGLEVEL >= 3) Dbprintf("Reader doing nested authentication for block %d (0x%02x) with key %c", receivedCmd[1], receivedCmd[1], 	cardAUTHKEY == 0 ? 'A' : 'B');
 					}
 
 					EmSendCmd(rAUTH_AT, sizeof(rAUTH_AT));

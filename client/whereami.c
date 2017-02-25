@@ -135,6 +135,7 @@ int WAI_PREFIX(getExecutablePath)(char* out, int capacity, int* dirname_length)
   return WAI_PREFIX(getModulePath_)(NULL, out, capacity, dirname_length);
 }
 
+/*
 WAI_NOINLINE
 WAI_FUNCSPEC
 int WAI_PREFIX(getModulePath)(char* out, int capacity, int* dirname_length)
@@ -146,8 +147,7 @@ int WAI_PREFIX(getModulePath)(char* out, int capacity, int* dirname_length)
 #pragma warning(push)
 #pragma warning(disable: 4054)
 #endif
-//  if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCTSTR)WAI_RETURN_ADDRESS(), &module))
-	module = GetModuleHandle("proxmark3.exe");
+  if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCTSTR)WAI_RETURN_ADDRESS(), &module))
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
@@ -157,6 +157,7 @@ int WAI_PREFIX(getModulePath)(char* out, int capacity, int* dirname_length)
 
   return length;
 }
+*/
 
 #elif defined(__linux__)
 
