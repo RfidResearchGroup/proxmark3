@@ -37,6 +37,8 @@ int CmdReadWord(const char *Cmd);
 int CmdWriteWord(const char *Cmd);
 int EM4x50Read(const char *Cmd, bool verbose);
 
+bool EM4x05IsBlock0(uint32_t *word);
+
 int usage_lf_em410x_sim(void);
 int usage_lf_em_read(void);
 int usage_lf_em_write(void);

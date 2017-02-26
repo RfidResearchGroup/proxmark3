@@ -33,16 +33,16 @@ int CmdEMdemodASK(const char *Cmd)
  */
 int CmdEM410xRead(const char *Cmd)
 {
-	uint32_t hi=0;
-	uint64_t lo=0;
+	uint32_t hi = 0;
+	uint64_t lo = 0;
 
 	if(!AskEm410xDemod("", &hi, &lo, false)) return 0;
-	PrintAndLog("EM410x pattern found: ");
-	printEM410x(hi, lo);
-	if (hi){
+	if (hi)
 		PrintAndLog ("EM410x XL pattern found");
-		return 0;
-	}
+	else
+ 		PrintAndLog("EM410x pattern found: ");
+
+	printEM410x(hi, lo);
 	g_em410xid = lo;
 	return 1;
 }
@@ -138,18 +138,15 @@ int CmdEM410xSim(const char *Cmd)
  *  Changed by martin, 4000 x 4 = 16000, 
  *  see http://www.proxmark.org/forum/viewtopic.php?pid=7235#p7235
 */
-int CmdEM410xWatch(const char *Cmd)
-{
+int CmdEM410xWatch(const char *Cmd) {
 	do {
 		if (ukbhit()) {
 			printf("\naborted via keyboard!\n");
 			break;
-		}
-		
+		}		
 		CmdLFRead("s");
 		getSamples("6144",true);
 	} while (!CmdEM410xRead(""));
-
 	return 0;
 }
 
@@ -717,7 +714,7 @@ bool setDemodBufferEM(uint32_t *word, size_t idx){
 // the rest will need to be manually demoded for now...
 bool demodEM4x05resp(uint32_t *word) {
 	size_t idx = 0;	
-	
+	*word = 0;
 	if (detectASK_MAN() && doPreambleSearch( &idx ))
 		return setDemodBufferEM(word, idx);
 	
@@ -791,6 +788,26 @@ int usage_lf_em4x05_info(void) {
 	return 0;
 }
 
+int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
+	UsbCommand c = {CMD_EM4X_READ_WORD, {addr, pwd, usePwd}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;	
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)){
+		PrintAndLog("Command timed out");
+		return -1;
+	}
+	if ( !downloadSamplesEM() ) {
+		return -1;
+	}
+	int testLen = (GraphTraceLen < 1000) ? GraphTraceLen : 1000;
+	if (graphJustNoise(GraphBuffer, testLen)) {
+		PrintAndLog("no tag not found");
+		return -1;
+	}
+	return demodEM4x05resp(word);
+}
+
 int CmdEM4x05Dump(const char *Cmd) {
 	uint8_t addr = 0;
 	uint32_t pwd = 0;
@@ -805,69 +822,53 @@ int CmdEM4x05Dump(const char *Cmd) {
 		usePwd = true;
 
 	int success = 1;
+	uint32_t word = 0;
 	PrintAndLog("Addr | data   | ascii");
 	PrintAndLog("-----+--------+------");
 	for (; addr < 16; addr++) {
+		
 		if (addr == 2) {
 			if (usePwd) {
-				PrintAndLog(" %02u | %08X", addr, pwd);
+				PrintAndLog(" %02u | %08X", addr, pwd, word );
 			} else {
 				PrintAndLog(" 02 | cannot read");
 			}
 		} else {
-			//success &= EM4x05Read(addr, pwd, usePwd);
+			success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
 		}
 	}
 
 	return success;
 }
-//ICEMAN;  mentalnote to self: -1 is not doable for uint32_t..
+
 int CmdEM4x05Read(const char *Cmd) {
-	int addr, pwd;
+	uint8_t addr;
+	uint32_t pwd;
 	bool usePwd = false;
 	uint8_t ctmp = param_getchar(Cmd, 0);
 	if ( strlen(Cmd) == 0 || ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x05_read();
 
-	addr = param_get8ex(Cmd, 0, -1, 10);
-	pwd =  param_get32ex(Cmd, 1, -1, 16);
+	addr = param_get8ex(Cmd, 0, 50, 10);
+	pwd =  param_get32ex(Cmd, 1, 1, 16);
 	
-	if ( (addr > 15) || (addr < 0 ) || ( addr == -1) ) {
+	if (addr > 15) {
 		PrintAndLog("Address must be between 0 and 15");
 		return 1;
 	}
-	if ( pwd == -1 )
-		PrintAndLog("Reading address %d", addr);
+	if ( pwd == 1 ) {
+		PrintAndLog("Reading address %02u", addr);
+	}
 	else {
 		usePwd = true;
-		PrintAndLog("Reading address %d | password %08X", addr, pwd);
+		PrintAndLog("Reading address %02u | password %08X", addr, pwd);
 	}
 	
-	UsbCommand c = {CMD_EM4X_READ_WORD, {addr, pwd, usePwd}};
-	clearCommandBuffer();
-	SendCommand(&c);
-	UsbCommand resp;	
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)){
-		PrintAndLog("Command timed out");
-		return -1;
-	}
-
-	if (!downloadSamplesEM())
-		return -1;
-	
-	int testLen = (GraphTraceLen < 1000) ? GraphTraceLen : 1000;
-	if (graphJustNoise(GraphBuffer, testLen)) {
-		PrintAndLog("Tag not found");
-		return -1;
-	}
-
-	//attempt demod
 	uint32_t word = 0;
-	int isOk = demodEM4x05resp(&word);
+	int isOk = EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
 	if (isOk)
-		PrintAndLog("Got Address %02d | %08X",addr, word);
+		PrintAndLog("Address %02d | %08X - %s", addr, word, (addr > 13) ? "Lock" : "");
 	else
-		PrintAndLog("Read failed");
-	
+		PrintAndLog("Read Address %02d | failed",addr);
 	return isOk;
 }
 
@@ -876,15 +877,15 @@ int CmdEM4x05Write(const char *Cmd) {
 	if ( strlen(Cmd) == 0 || ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x05_write();
 	
 	bool usePwd = false;		
-	int addr = 16; // default to invalid address
-	int data = 0xFFFFFFFF; // default to blank data
-	int pwd = 0xFFFFFFFF; // default to blank password
+	uint8_t addr = 50; // default to invalid address
+	uint32_t data = 0; // default to blank data
+	uint32_t pwd = 1; // default to blank password
 	
-	addr = param_get8ex(Cmd, 0, -1, 10);
-	data = param_get32ex(Cmd, 1, -1, 16);
-	pwd =  param_get32ex(Cmd, 2, -1, 16);
+	addr = param_get8ex(Cmd, 0, 50, 10);
+	data = param_get32ex(Cmd, 1, 0, 16);
+	pwd =  param_get32ex(Cmd, 2, 1, 16);
 	
-	if ( (addr > 15) || (addr < 0 ) || ( addr == -1) ) {
+	if ( addr > 15 ) {
 		PrintAndLog("Address must be between 0 and 15");
 		return 1;
 	}
@@ -909,8 +910,6 @@ int CmdEM4x05Write(const char *Cmd) {
 	if (!downloadSamplesEM())
 		return -1;
 
-
-	//attempt demod:
 	//need 0 bits demoded (after preamble) to verify write cmd
 	uint32_t dummy = 0;
 	int isOk = demodEM4x05resp(&dummy);
@@ -979,48 +978,53 @@ void printEM4x05config(uint32_t wordData) {
 	PrintAndLog("    Pigeon:   %u | Pigeon Mode is %s\n", (wordData & 0x4000000)>>26, (wordData & 0x4000000) ? "Enabled" : "Disabled");
 }
 
-void printEM4x05info(uint8_t chipType, uint8_t cap, uint16_t custCode, uint32_t serial) {
+void printEM4x05info(uint32_t block0, uint32_t serial) {
+		
+	uint8_t chipType = (block0 >> 1) & 0xF;
+	uint8_t cap = (block0 >> 5) & 3;
+	uint16_t custCode = (block0 >> 9) & 0x3FF;
+	
 	switch (chipType) {
-		case 9: PrintAndLog("\n Chip Type:   %u | EM4305", chipType); break;
-		case 4: PrintAndLog(" Chip Type:   %u | Unknown", chipType); break;
-		case 2: PrintAndLog(" Chip Type:   %u | EM4469", chipType); break;
+		case 9:  PrintAndLog("\n Chip Type:   %u | EM4305", chipType); break;
+		case 4:  PrintAndLog(" Chip Type:   %u | Unknown", chipType); break;
+		case 2:  PrintAndLog(" Chip Type:   %u | EM4469", chipType); break;
 		//add more here when known
 		default: PrintAndLog(" Chip Type:   %u Unknown", chipType); break;
 	}
 
 	switch (cap) {
-		case 3: PrintAndLog("  Cap Type:   %u | 330pF",cap); break;
-		case 2: PrintAndLog("  Cap Type:   %u | %spF",cap, (chipType==2)? "75":"210"); break;
-		case 1: PrintAndLog("  Cap Type:   %u | 250pF",cap); break;
-		case 0: PrintAndLog("  Cap Type:   %u | no resonant capacitor",cap); break;
+		case 3:  PrintAndLog("  Cap Type:   %u | 330pF",cap); break;
+		case 2:  PrintAndLog("  Cap Type:   %u | %spF",cap, (chipType==2)? "75":"210"); break;
+		case 1:  PrintAndLog("  Cap Type:   %u | 250pF",cap); break;
+		case 0:  PrintAndLog("  Cap Type:   %u | no resonant capacitor",cap); break;
 		default: PrintAndLog("  Cap Type:   %u | unknown",cap); break;
 	}
 
 	PrintAndLog(" Cust Code: %03u | %s", custCode, (custCode == 0x200) ? "Default": "Unknown");
-	if (serial != 0) {
+	if (serial != 0)
 		PrintAndLog("\n  Serial #: %08X\n", serial);
-	}
 }
 
-void printEM4x05ProtectionBits(uint32_t wordData) {
+void printEM4x05ProtectionBits(uint32_t word) {
 	for (uint8_t i = 0; i < 15; i++) {
-		PrintAndLog("      Word:  %02u | %s", i, (((1 << i) & wordData ) || i < 2) ? "Is Write Locked" : "Is Not Write Locked");
-		if (i==14) {
-			PrintAndLog("      Word:  %02u | %s", i+1, (((1 << i) & wordData ) || i < 2) ? "Is Write Locked" : "Is Not Write Locked");
-		}
+		PrintAndLog("      Word:  %02u | %s", i, (((1 << i) & word ) || i < 2) ? "Is Write Locked" : "Is Not Write Locked");
+		if (i==14) 
+			PrintAndLog("      Word:  %02u | %s", i+1, (((1 << i) & word ) || i < 2) ? "Is Write Locked" : "Is Not Write Locked");
 	}
 }
 
 //quick test for EM4x05/EM4x69 tag
-bool EM4x05Block0Test(uint32_t *wordData) {
-//	return (EM4x05ReadWord_ext(0,0,false,wordData) == 1);
-	return false;
+bool EM4x05IsBlock0(uint32_t *word) {
+	return EM4x05ReadWord_ext(0, 0, FALSE, word);
 }
 
 int CmdEM4x05Info(const char *Cmd) {
-	/*
+#define EM_SERIAL_BLOCK 1
+#define EM_CONFIG_BLOCK 4
+#define EM_PROT1_BLOCK 14
+#define EM_PROT2_BLOCK 15
 	uint32_t pwd;
-	uint32_t wordData = 0;
+	uint32_t word = 0, block0 = 0, serial = 0;
   	bool usePwd = false;
 	uint8_t ctmp = param_getchar(Cmd, 0);
 	if ( ctmp == 'H' || ctmp == 'h' ) return usage_lf_em4x05_info();
@@ -1033,46 +1037,33 @@ int CmdEM4x05Info(const char *Cmd) {
 
 	// read word 0 (chip info)
 	// block 0 can be read even without a password.
-	if ( !EM4x05Block0Test(&wordData) ) 
+	if ( !EM4x05IsBlock0(&block0) ) 
 		return -1;
 	
-	uint8_t chipType = (wordData >> 1) & 0xF;
-	uint8_t cap = (wordData >> 5) & 3;
-	uint16_t custCode = (wordData >> 9) & 0x3FF;
-	
 	// read word 1 (serial #) doesn't need pwd
-	wordData = 0;
-	if (EM4x05ReadWord_ext(1, 0, false, &wordData) != 1) {
-		//failed, but continue anyway...
-	}
-	printEM4x05info(chipType, cap, custCode, wordData);
+	// continue if failed, .. non blocking fail.
+	EM4x05ReadWord_ext(EM_SERIAL_BLOCK, 0, false, &serial);
+	printEM4x05info(block0, serial);
 
 	// read word 4 (config block) 
 	// needs password if one is set
-	wordData = 0;
-	if ( EM4x05ReadWord_ext(4, pwd, usePwd, &wordData) != 1 )
+	if ( EM4x05ReadWord_ext(EM_CONFIG_BLOCK, pwd, usePwd, &word) != 1 )
 		return 0;
 	
-	printEM4x05config(wordData);
+	printEM4x05config(word);
 
 	// read word 14 and 15 to see which is being used for the protection bits
-	wordData = 0;
-	if ( EM4x05ReadWord_ext(14, pwd, usePwd, &wordData) != 1 ) {
+	if ( EM4x05ReadWord_ext(EM_PROT1_BLOCK, pwd, usePwd, &word) != 1 ) {
 		return 0;
 	}
 	// if status bit says this is not the used protection word
-	if (!(wordData & 0x8000)) {
-		if ( EM4x05ReadWord_ext(15, pwd, usePwd, &wordData) != 1 ) {
+	if (!(word & 0x8000)) {
+		if ( EM4x05ReadWord_ext(EM_PROT2_BLOCK, pwd, usePwd, &word) != 1 )
 			return 0;
-		}
 	}
-	if (!(wordData & 0x8000)) {
-		//something went wrong
-		return 0;
-	}
-	printEM4x05ProtectionBits(wordData);
-	
-	*/
+	//something went wrong
+	if (!(word & 0x8000)) return 0;
+	printEM4x05ProtectionBits(word);
 	return 1;
 }
 

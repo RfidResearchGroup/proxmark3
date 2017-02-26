@@ -1030,6 +1030,33 @@ int CmdVchDemod(const char *Cmd) {
 	return 0;
 }
 
+
+//by marshmellow
+int CheckChipset(bool getDeviceData) {
+
+	if (!getDeviceData) return 0;
+	
+	uint32_t word = 0;
+	save_restoreGB(1);
+	
+	//check for em4x05/em4x69 chips first
+	if (EM4x05IsBlock0(&word)) {
+		save_restoreGB(0);
+		PrintAndLog("\nValid EM4x05/EM4x69 Chipset found\nTry `lf em 4x05` commands\n");
+		return 1;
+	}
+
+	//TODO check for t55xx chip...
+	// if ( t55xxIsBlock0(() {
+	// save_restoreGB(0);
+	// PrintAndLog("\nValid T55xx Chipset found\nTry `lf t55xx` commands\n");
+	// return 1;
+	// }
+
+	save_restoreGB(0);
+	return 0;
+}
+
 //by marshmellow
 int CmdLFfind(const char *Cmd) {
 	int ans = 0;
@@ -1038,7 +1065,9 @@ int CmdLFfind(const char *Cmd) {
 	char testRaw = param_getchar(Cmd, 1);
 	if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') return usage_lf_find();
 
-	if (!offline && (cmdp != '1')){
+	bool getDeviceData = (!offline && (cmdp != '1') );
+	
+	if (getDeviceData) {
 		CmdLFRead("s");
 		getSamples("30000", false);
 	} else if (GraphTraceLen < minLength) {
@@ -1054,10 +1083,13 @@ int CmdLFfind(const char *Cmd) {
 	size_t testLen = minLength;
 	
 	// only run these tests if device is online
-	if (!offline && (cmdp != '1')){
+	if (getDeviceData) {
 
 		// only run if graphbuffer is just noise as it should be for hitag/cotag
 		if (graphJustNoise(GraphBuffer, testLen)) {
+			
+			if (CheckChipset(getDeviceData) )
+				return 1;			
 			
 			ans=CmdLFHitagReader("26");
 			if (ans==0)
@@ -1073,6 +1105,9 @@ int CmdLFfind(const char *Cmd) {
 		}
 	}
 
+	// identify chipset
+	CheckChipset(getDeviceData);
+	
 	ans=CmdFSKdemodIO("");
 	if (ans>0) {
 		PrintAndLog("\nValid IO Prox ID Found!");
