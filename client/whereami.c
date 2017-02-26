@@ -160,7 +160,7 @@ int WAI_PREFIX(getModulePath)(char* out, int capacity, int* dirname_length)
 */
 
 #elif defined(__linux__)
-
+#define _DEFAULT_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
