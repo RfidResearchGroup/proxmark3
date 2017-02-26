@@ -222,12 +222,12 @@ static void dumpAllHelp(int markdown)
 static char *my_executable_path = NULL;
 static char *my_executable_directory = NULL;
 
-const char const *get_my_executable_path(void)
+const char *get_my_executable_path(void)
 {
 	return my_executable_path;
 }
 
-const char const *get_my_executable_directory(void)
+const char *get_my_executable_directory(void)
 {
 	return my_executable_directory;
 }
