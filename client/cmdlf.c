@@ -8,6 +8,9 @@
 // Low frequency commands
 //-----------------------------------------------------------------------------
 #include "cmdlf.h"
+
+bool g_lf_threshold_set = FALSE;
+
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_cmdread(void) {
@@ -27,11 +30,10 @@ int usage_lf_cmdread(void) {
 	return 0;
 }
 int usage_lf_read(void){
-	PrintAndLog("Usage: lf read [h] [s] [t]");
+	PrintAndLog("Usage: lf read [h] [s]");
 	PrintAndLog("Options:");
 	PrintAndLog("       h            This help");
 	PrintAndLog("       s            silent run no printout");
-	PrintAndLog("       t            waits for device to respond with no timeout");
 	PrintAndLog("Use 'lf config' to set parameters.");
 	return 0;
 }
@@ -503,7 +505,10 @@ int CmdLFSetConfig(const char *Cmd) {
 		case 't':
 			errors |= param_getdec(Cmd, cmdp+1, &unsigned_trigg);
 			cmdp+=2;
-			if(!errors) trigger_threshold = unsigned_trigg;
+			if(!errors) {
+				trigger_threshold = unsigned_trigg;
+				g_lf_threshold_set = (trigger_threshold > 0);
+			}
 			break;
 		case 'b':
 			errors |= param_getdec(Cmd, cmdp+1, &bps);
@@ -544,9 +549,11 @@ int CmdLFSetConfig(const char *Cmd) {
 }
 
 int CmdLFRead(const char *Cmd) {
+	
+	if (offline) return 0;
+	
 	bool errors = FALSE;
 	bool arg1 = FALSE;
-	bool thresholdRead = FALSE;	
 	uint8_t cmdp = 0;
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
@@ -556,11 +563,6 @@ int CmdLFRead(const char *Cmd) {
 		case 's':
 		case 'S':
 			arg1 = TRUE;
-			cmdp++;
-			break;
-		case 't':
-		case 'T':
-			thresholdRead = TRUE;
 			cmdp++;
 			break;
 		default:
@@ -580,7 +582,7 @@ int CmdLFRead(const char *Cmd) {
 	UsbCommand c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, {arg1,0,0}};
 	clearCommandBuffer();
 	SendCommand(&c);
-	if ( thresholdRead ) {
+	if ( g_lf_threshold_set ) {
 		WaitForResponse(CMD_ACK,NULL);	
 	} else {
 		if ( !WaitForResponseTimeout(CMD_ACK, NULL ,2500) ) {

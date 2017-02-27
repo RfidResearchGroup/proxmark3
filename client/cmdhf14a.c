@@ -108,6 +108,7 @@ const manufactureName manufactureMapping[] = {
 	{ 0x42, "3Alogics Inc Korea" },
 	{ 0x43, "Top TroniQ Asia Limited Hong Kong" },
 	{ 0x44, "Gentag Inc. USA" },
+	{ 0x56, "Sensible Object. UK" },
 	{ 0x00, "no tag-info available" } // must be the last entry
 };
 
