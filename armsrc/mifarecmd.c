@@ -1358,25 +1358,29 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 }
 
 void MifareCIdent(){
-	
+	#define GEN_1A 1
+	#define GEN_1B 2
 	// variables
-	bool isOK = true;	
+	uint8_t isGen = 0;
 	uint8_t receivedAnswer[1] = {0x00};
 	uint8_t receivedAnswerPar[1] = {0x00};
 
 	ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
 	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-		isOK = false;
+		goto OUT;
 	}
-
+	isGen |= GEN_1B;
+	
 	ReaderTransmit(wupC2, sizeof(wupC2), NULL);
 	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-		isOK = false;
-	}
+		goto OUT;
+	}	
+	isGen = GEN_1A;
 
+OUT:	
 	// removed the if,  since some magic tags misbehavies and send an answer to it.
 	mifare_classic_halt(NULL, 0);
-	cmd_send(CMD_ACK,isOK,0,0,0,0);
+	cmd_send(CMD_ACK,isGen, 0, 0, 0, 0);
 }
 
 void OnSuccessMagic(){
