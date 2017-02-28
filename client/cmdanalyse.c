@@ -30,9 +30,10 @@ int usage_analyse_checksum(void) {
 	PrintAndLog("The bytes will be added with eachother and than limited with the applied mask");
 	PrintAndLog("Finally compute ones' complement of the least significant bytes");
 	PrintAndLog("");
-	PrintAndLog("Usage:  analyse chksum [h] b <bytes> m <mask>");
+	PrintAndLog("Usage:  analyse chksum [h] [v] b <bytes> m <mask>");
 	PrintAndLog("Options:");
 	PrintAndLog("           h          This help");
+	PrintAndLog("           v          supress header");
 	PrintAndLog("           b <bytes>  bytes to calc missing XOR in a LCR");
 	PrintAndLog("           m <mask>   bit mask to limit the outpuyt");
 	PrintAndLog("");
