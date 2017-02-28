@@ -1179,6 +1179,10 @@ void TurnReadLFOn(uint32_t delay) {
 	// Give it a bit of time for the resonant antenna to settle.
 	WaitUS(delay);
 }
+void TurnReadLF_off(uint32_t delay) {
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	WaitUS(delay);
+}
 
 // Write one bit to card
 void T55xxWriteBit(int bit) {
@@ -1649,15 +1653,8 @@ void SendForward(uint8_t fwd_bit_count) {
 // 55FC * 8us == 440us / 21.3 === 20.65 steps.  could be too short. Go for 56FC instead
 // 32FC * 8us == 256us / 21.3 ==  12.018 steps. ok
 // 16FC * 8us == 128us / 21.3 ==  6.009 steps. ok 
-
 #ifndef EM_START_GAP
-#define EM_START_GAP 60*8
-#endif
-#ifndef EM_ONE_GAP
-#define EM_ONE_GAP 32*8
-#endif
-#ifndef EM_ZERO_GAP
-# define EM_ZERO_GAP 16*8
+#define EM_START_GAP 55*8
 #endif
 
 	fwd_write_ptr = forwardLink_data;
@@ -1670,19 +1667,16 @@ void SendForward(uint8_t fwd_bit_count) {
 	fwd_bit_sz--; //prepare next bit modulation
 	fwd_write_ptr++;
 	
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	WaitUS(EM_START_GAP);
-	TurnReadLFOn(16);
+	TurnReadLF_off(EM_START_GAP);
+	TurnReadLFOn(18*8);
 
 	// now start writting with bitbanging the antenna.
 	while(fwd_bit_sz-- > 0) { //prepare next bit modulation
-		if(((*fwd_write_ptr++) & 1) == 1)
-			WaitUS(EM_ONE_GAP);
-		else {
-			//These timings work for 4469/4269/4305
-			FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-			WaitUS(20);			
-			TurnReadLFOn(12);
+		if(((*fwd_write_ptr++) & 1) == 1) {
+			WaitUS(32);
+		} else {
+			TurnReadLF_off(23*8);
+			TurnReadLFOn(18*8);
 		}
 	}
 }
@@ -1693,7 +1687,7 @@ void EM4xLogin(uint32_t pwd) {
 	len = Prepare_Cmd( FWD_CMD_LOGIN );
 	len += Prepare_Data( pwd & 0xFFFF, pwd >> 16 );
 	SendForward(len);
-	WaitMS(20); // no wait for login command.
+	//WaitUS(20); // no wait for login command.
 	// should receive
 	// 0000 1010 ok.
 	// 0000 0001 fail
@@ -1722,7 +1716,7 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 	SendForward(len);
 
 	WaitUS(400);
-	// Now do the acquisition
+
 	DoPartialAcquisition(20, true, 6000);
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1757,7 +1751,7 @@ void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
 	SendForward(len);
 
 	//Wait 20ms for write to complete?
-	WaitMS(6);
+	WaitMS(7);
 
 	//Capture response if one exists
 	DoPartialAcquisition(20, true, 6000);

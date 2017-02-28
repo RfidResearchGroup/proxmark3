@@ -1845,6 +1845,10 @@ bool DetectST(uint8_t buffer[], size_t *size, int *foundclock) {
 			for(i=0; i < clk/2-tol; ++i) {
 				buffer[dataloc+i] = high+5;
 			}
+		} //test for single sample outlier (high between two lows) in the case of very strong waves
+		if (buffer[dataloc] >= high && buffer[dataloc+2] <= low) {
+			buffer[dataloc] = buffer[dataloc+2];
+			buffer[dataloc+1] = buffer[dataloc+2];
 		}
 		for (i=0; i<datalen; ++i) {
 			if (i+newloc < bufsize) {
