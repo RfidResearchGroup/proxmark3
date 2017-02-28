@@ -1360,24 +1360,48 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 void MifareCIdent(){
 	#define GEN_1A 1
 	#define GEN_1B 2
+	#define GEN_2  4
 	// variables
 	uint8_t isGen = 0;
-	uint8_t receivedAnswer[1] = {0x00};
-	uint8_t receivedAnswerPar[1] = {0x00};
-
+	uint8_t rec[1] = {0x00};
+	uint8_t recpar[1] = {0x00};
+	
+	// Generation 1 test
 	ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
-	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-		goto OUT;
-	}
-	isGen |= GEN_1B;
+	if(!ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
+		goto TEST2;
+	};
+	isGen = GEN_1B;
 	
 	ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-	if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+	if(!ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
 		goto OUT;
-	}	
+	};	
 	isGen = GEN_1A;
+	goto OUT;
 
-OUT:	
+TEST2:;
+/*
+	// Generation 2 test
+	struct Crypto1State mpcs = {0, 0};
+	struct Crypto1State *pcs = &mpcs;
+
+	// halt previous.
+	mifare_classic_halt(NULL, 0);
+	
+	//select
+	if (!iso14443a_select_card(NULL, NULL, NULL, true, 0)) {
+		goto OUT;
+	};
+	
+	// MIFARE_CLASSIC_WRITEBLOCK 0xA0
+	// ACK 0x0a
+	uint16_t len = mifare_sendcmd_short(pcs, 1, 0xA0, 0, rec, recpar, NULL);
+	if ((len != 1) || (rec[0] != 0x0A)) {   
+		isGen = GEN_2;	
+	};
+	*/
+OUT:;
 	// removed the if,  since some magic tags misbehavies and send an answer to it.
 	mifare_classic_halt(NULL, 0);
 	cmd_send(CMD_ACK,isGen, 0, 0, 0, 0);

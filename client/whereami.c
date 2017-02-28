@@ -10,7 +10,10 @@
 extern "C" {
 #endif
 
+#if defined(__linux__)
+// make realpath() available:
 #define _DEFAULT_SOURCE
+#endif
 
 #if !defined(WAI_MALLOC) || !defined(WAI_FREE) || !defined(WAI_REALLOC)
 #include <stdlib.h>

@@ -567,14 +567,11 @@ int CmdLFRead(const char *Cmd) {
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-			errors = 1;
+			errors = TRUE;
 			break;
 		}
 		if(errors) break;
 	}
-	
-	// No args
-	if (cmdp == 0) errors = 1;
 
 	//Validations
 	if (errors) return usage_lf_read();

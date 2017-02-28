@@ -797,7 +797,7 @@ int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) 
 	}
 	int testLen = (GraphTraceLen < 1000) ? GraphTraceLen : 1000;
 	if (graphJustNoise(GraphBuffer, testLen)) {
-		PrintAndLog("no tag not found");
+		PrintAndLog("no tag found");
 		return -1;
 	}
 	return demodEM4x05resp(word);
@@ -981,6 +981,7 @@ void printEM4x05info(uint32_t block0, uint32_t serial) {
 	
 	switch (chipType) {
 		case 9:  PrintAndLog("\n Chip Type:   %u | EM4305", chipType); break;
+		case 8:  PrintAndLog("\n Chip Type:   %u | EM4205", chipType); break;
 		case 4:  PrintAndLog(" Chip Type:   %u | Unknown", chipType); break;
 		case 2:  PrintAndLog(" Chip Type:   %u | EM4469", chipType); break;
 		//add more here when known

@@ -391,18 +391,21 @@ int CmdHF14AReader(const char *Cmd) {
 	
 	// try to see if card responses to "chinese magic backdoor" commands.
 	uint8_t isGeneration = 0;
-	
 	clearCommandBuffer();
 	c.cmd = CMD_MIFARE_CIDENT;
 	c.arg[0] = 0;
 	c.arg[1] = 0;
 	c.arg[2] = 0;	
 	SendCommand(&c);
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500))
 		isGeneration = resp.arg[0] & 0xff;
-	}
-	if ( isGeneration )
-		PrintAndLog("Answers to magic commands (GEN %s): YES", ((isGeneration & 0x2 )==2)?"1B":"1A");
+	
+	switch( isGeneration ){
+		case 1: PrintAndLog("Answers to magic commands (GEN 1a): YES"); break;
+		case 2: PrintAndLog("Answers to magic commands (GEN 1b): YES"); break;
+		//case 4: PrintAndLog("Answers to magic commands (GEN 2): YES"); break;
+		default: PrintAndLog("Answers to magic commands: NO"); break;
+	}		
 
 	// disconnect
 	SendCommand(&cDisconnect);
