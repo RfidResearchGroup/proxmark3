@@ -203,10 +203,10 @@ size_t findModStart(uint8_t dest[], size_t size, uint8_t threshold_value, uint8_
 //by marshmellow
 //takes 1s and 0s and searches for EM410x format - output EM ID
 // actually, no arguments needed - built this way in case we want this to be a direct call from "data " cmds in the future
-uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo)
+int Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo)
 {
 	// sanity check
-	if (BitStream[1] > 1) return 0; 
+	if (BitStream[1] > 1) return -1; 
 	
 	uint8_t fmtlen;
 	*startIdx = 0;
@@ -215,8 +215,8 @@ uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_
 	// include 0 in front to help get start pos
 	uint8_t preamble[] = {0,1,1,1,1,1,1,1,1,1};
 	if (!preambleSearch(BitStream, preamble, sizeof(preamble), size, startIdx)) 
-		return 0;
-	if (*size < 64) return 0;
+		return -2;
+	if (*size < 64) return -3;
 	
 	fmtlen = (*size == 110) ? 22 : 10;
 
@@ -236,8 +236,7 @@ uint8_t Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_
 		*lo = ((uint64_t)(bytebits_to_byte(BitStream + 24, 32)) << 32) | (bytebits_to_byte(BitStream + 24 + 32, 32));
 		break;
 	    } 
-	    default: return 0;
-	
+	    default: return -4;	
 	}
 	return 1;
 }

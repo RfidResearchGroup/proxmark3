@@ -364,7 +364,7 @@ int CmdGetBitStream(const char *Cmd)
 //print 64 bit EM410x ID in multiple formats
 void printEM410x(uint32_t hi, uint64_t id)
 {
-	//if (!id && !hi) return;
+	if (!id && !hi) return;
 	
 	PrintAndLog("EM410x %s pattern found", (hi) ? "XL" : "" );
 
@@ -471,11 +471,11 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo )
 		if (g_debugMode){
 			if (ans == -1)
 				PrintAndLog("DEBUG: Error - Em410x not only 0|1 in decoded bitstream");
+			else if (ans == -2)
+				PrintAndLog("DEBUG: Error - Em410x preamble not found");
 			else if (ans == -3)
 				PrintAndLog("DEBUG: Error - Em410x Size not correct: %d", size);
 			else if (ans == -4)
-				PrintAndLog("DEBUG: Error - Em410x preamble not found");
-			else if (ans == -5)
 				PrintAndLog("DEBUG: Error - Em410x parity failed");
 		}
 		return 0;

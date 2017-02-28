@@ -50,7 +50,7 @@ size_t   removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t
 
 //tag specific
 int AWIDdemodFSK(uint8_t *dest, size_t *size);
-uint8_t  Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo);
+int Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo);
 int FDXBdemodBI(uint8_t *dest, size_t *size);
 int gProxII_Demod(uint8_t BitStream[], size_t *size);
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo);
