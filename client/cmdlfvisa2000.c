@@ -62,7 +62,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 	// save GraphBuffer - to restore it later	
 	save_restoreGB(1);
 	
-	CmdAskEdgeDetect("");
+	//sCmdAskEdgeDetect("");
 	
 	//ASK / Manchester
 	bool st = TRUE;
@@ -88,7 +88,8 @@ int CmdVisa2kDemod(const char *Cmd) {
 		return 0;
 	}
 	setDemodBuf(DemodBuffer, 96, ans);
-	
+	setGrid_Clock(64);
+		
 	//got a good demod
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
 	uint32_t raw2 = bytebits_to_byte(DemodBuffer+32, 32);
@@ -110,7 +111,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 
 int CmdVisa2kRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("16000",TRUE);
+	getSamples("12000",TRUE);
 	return CmdVisa2kDemod(Cmd);
 }
 

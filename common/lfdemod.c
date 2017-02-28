@@ -243,6 +243,7 @@ int Em410xDecode(uint8_t *BitStream, size_t *size, size_t *startIdx, uint32_t *h
 
 //by marshmellow
 //demodulates strong heavily clipped samples
+//RETURN: num of errors.  if 0, is ok.
 int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int high, int low)
 {
 	size_t bitCnt=0, smplCnt=0, errCnt=0;
@@ -386,25 +387,30 @@ int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr
 //by marshmellow
 //take 10 and 01 and manchester decode
 //run through 2 times and take least errCnt
-int manrawdecode(uint8_t * BitStream, size_t *size, uint8_t invert){
+int manrawdecode(uint8_t *BitStream, size_t *size, uint8_t invert){
+
+	// sanity check
+	if (*size < 16) return -1;
+	
 	int errCnt = 0, bestErr = 1000;
 	uint16_t bitnum = 0, MaxBits = 512, bestRun = 0;
 	size_t i, k;
-	if (*size < 16) return -1;
+
 	//find correct start position [alignment]
-	for (k=0; k < 2; ++k){
-		for (i=k; i<*size-3; i += 2)
+	for (k = 0; k < 2; ++k){
+		for (i = k; i < *size-3; i += 2) {
 			if (BitStream[i] == BitStream[i+1])
 				errCnt++;
-
+		}
 		if (bestErr > errCnt){
 			bestErr = errCnt;
 			bestRun = k;
 		}
-		errCnt=0;
+		errCnt = 0;
 	}
+	
 	//decode
-	for (i=bestRun; i < *size-3; i += 2){
+	for (i = bestRun; i < *size-3; i += 2){
 		if (BitStream[i] == 1 && (BitStream[i+1] == 0)){
 			BitStream[bitnum++] = invert;
 		} else if ((BitStream[i] == 0) && BitStream[i+1] == 1){
@@ -412,9 +418,9 @@ int manrawdecode(uint8_t * BitStream, size_t *size, uint8_t invert){
 		} else {
 			BitStream[bitnum++] = 7;
 		}
-		if (bitnum>MaxBits) break;
+		if (bitnum > MaxBits) break;
 	}
-	*size=bitnum;
+	*size = bitnum;
 	return bestErr;
 }
 

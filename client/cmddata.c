@@ -834,7 +834,7 @@ int CmdVikingDemod(const char *Cmd)
 		return 0;
 	}
 	size_t size = DemodBufferLen;
-	//call lfdemod.c demod for Viking
+
 	int ans = VikingDemod_AM(DemodBuffer, &size);
 	if (ans < 0) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - Viking Demod %d %s", ans, (ans == -5)?"[chksum error]":"");
@@ -2095,6 +2095,11 @@ int CmdGrid(const char *Cmd)
 	RepaintGraphWindow();
 	return 0;
 }
+void setGrid_Clock(uint8_t clock){
+	PlotGridXdefault = clock;
+	RepaintGraphWindow();
+}
+
 
 int CmdHexsamples(const char *Cmd)
 {

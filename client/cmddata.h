@@ -80,6 +80,8 @@ int NRZrawDemod(const char *Cmd, bool verbose);
 void printEM410x(uint32_t hi, uint64_t id);
 int getSamples(const char *Cmd, bool silent);
 
+void setGrid_Clock(uint8_t clock);
+
 int CmdDataIIR(const char *Cmd);
 
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];

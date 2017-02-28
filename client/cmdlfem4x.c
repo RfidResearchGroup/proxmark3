@@ -443,7 +443,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 			}
 		}
 		if (!clk) {
-			PrintAndLog("ERROR: EM4x50 - didn't find a clock");
+			if (verbose || g_debugMode) PrintAndLog("ERROR: EM4x50 - didn't find a clock");
 			return 0;
 		}
 	} else tol = clk/8;

@@ -97,6 +97,7 @@ int CmdJablotronDemod(const char *Cmd) {
 	}
 
 	setDemodBuf(DemodBuffer+ans, 64, 0);
+	setGrid_Clock(64);
 	
 	//got a good demod
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
@@ -125,7 +126,7 @@ int CmdJablotronDemod(const char *Cmd) {
 
 int CmdJablotronRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("12000", TRUE);
+	getSamples("10000", TRUE);
 	return CmdJablotronDemod(Cmd);
 }
 
