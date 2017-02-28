@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]	
+  - added json support in lua (vitorio)
+  - added a buspirate settings file for at91sam7s512 (adamlaurie)
+  - `lf read` timeouts is now depended on what threshold level you set in `lf config`  (marshmellow)
+  - `hf mf sim` fixed a bug which made sim fail auths. (iceman)
+  - `hf 14a read` added magic tag generation 1a and 1b detection  (iceman)
   - correctly using stdtypes.h printf and scanf format string macros (PRIx64 et al) (pwpivi)
   - fix linker warning re missing entry point when linking fullimage.elf (pwpivi)
   - small changes to lf psk and fsk demods to improve results when the trace begins with noise or the chip isn't broadcasting yet (marshmellow)
