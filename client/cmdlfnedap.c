@@ -136,7 +136,8 @@ int CmdLFNedapDemod(const char *Cmd) {
 	raw[2] = bytebits_to_byte(DemodBuffer+idx+32,32);
 	raw[3] = bytebits_to_byte(DemodBuffer+idx,32);
 	setDemodBuf(DemodBuffer,128,idx);
-
+	setGrid_Clock(64);
+	
 	uint8_t firstParity = GetParity( DemodBuffer, EVEN, 63);
 	if ( firstParity != DemodBuffer[63]  ) {
 		PrintAndLog("DEBUG: Error - Nedap 1st 64bit parity check failed:  %d|%d ", DemodBuffer[63], firstParity);

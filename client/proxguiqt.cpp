@@ -99,7 +99,7 @@ ProxGuiQT::~ProxGuiQT(void)
 void ProxWidget::paintEvent(QPaintEvent *event)
 {
 	QPainter painter(this);
-	QPainterPath penPath, whitePath, greyPath, lightgreyPath, cursorAPath, cursorBPath;
+	QPainterPath penPath, whitePath, greyPath, lightgreyPath, cursorAPath, cursorBPath, cursorCPath, cursorDPath;
 	QRect r;
 	QBrush brush(QColor(100, 255, 100));
 	QPen pen(QColor(100, 255, 100));
@@ -114,6 +114,10 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 
 	if(CursorBPos > GraphTraceLen)
 		CursorBPos= 0;
+	if(CursorCPos > GraphTraceLen)
+		CursorCPos= 0;
+	if(CursorDPos > GraphTraceLen)
+		CursorDPos= 0;
 
 	r = rect();
 
@@ -238,13 +242,17 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 			penPath.moveTo(x,y);
 		}
 
-		if(i == CursorAPos || i == CursorBPos) {
+		if(i == CursorAPos || i == CursorBPos || i == CursorCPos || i == CursorDPos) {
 			QPainterPath *cursorPath;
 
-			if(i == CursorAPos)
+			if (i == CursorAPos)
 				cursorPath = &cursorAPath;
-			else
+			else if (i == CursorBPos)
 				cursorPath = &cursorBPath;
+			else if (i == CursorCPos)
+				cursorPath = &cursorCPath;
+			else
+				cursorPath = &cursorDPath;
 			
 			cursorPath->moveTo(x, r.top());
 			cursorPath->lineTo(x, r.bottom());
@@ -263,6 +271,10 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 	painter.drawPath(cursorAPath);
 	painter.setPen(QColor(255, 0, 255));
 	painter.drawPath(cursorBPath);
+	painter.setPen(QColor(255, 153, 0)); //orange
+	painter.drawPath(cursorCPath);
+	painter.setPen(QColor(0, 0, 205)); //light blue
+	painter.drawPath(cursorDPath);
 
 	char str[200];
 	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f] zoom=%.3f CursorA=%d [%d] CursorB=%d [%d]    GridX=%d GridY=%d (%s)",

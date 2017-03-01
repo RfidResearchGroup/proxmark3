@@ -34,6 +34,7 @@ int      DetectNRZClock(uint8_t dest[], size_t size, int clock);
 int      DetectPSKClock(uint8_t dest[], size_t size, int clock);
 int      DetectStrongAskClock(uint8_t dest[], size_t size, uint8_t high, uint8_t low);
 bool     DetectST(uint8_t buffer[], size_t *size, int *foundclock);
+bool     DetectST_ext(uint8_t buffer[], size_t *size, int *foundclock, size_t *ststart, size_t *stend);
 int      fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow);
 int      getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo);
 uint32_t manchesterEncode2Bytes(uint16_t datain);

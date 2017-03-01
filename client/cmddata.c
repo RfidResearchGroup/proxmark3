@@ -531,6 +531,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 	int clk = 0;
 	int maxErr = 100;
 	int maxLen = 0;
+	uint8_t askamp = 0;
 	char amp = param_getchar(Cmd, 0);
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
 	sscanf(Cmd, "%i %i %i %i %c", &clk, &invert, &maxErr, &maxLen, &amp);
@@ -553,14 +554,16 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 		askAmp(BitStream, BitLen); 
 
 	bool st = false;
-	if (*stCheck) st = DetectST(BitStream, &BitLen, &foundclk);
+	size_t ststart = 0, stend = 0;
+	if (*stCheck) st = DetectST_ext(BitStream, &BitLen, &foundclk, &ststart, &stend);
 	if (st) {
 		*stCheck = st;
 		clk = (clk == 0) ? foundclk : clk;
-		if (verbose || g_debugMode) PrintAndLog("\nFound Sequence Terminator");
+		CursorCPos = ststart;
+		CursorDPos = stend;
+		if (verbose || g_debugMode) PrintAndLog("\nFound Sequence Terminator - First one is shown by orange and blue graph markers");
 	}
-		
-	int errCnt = askdemod(BitStream, &BitLen, &clk, &invert, maxErr, 0, askType);
+	int errCnt = askdemod(BitStream, &BitLen, &clk, &invert, maxErr, askamp, askType);
 	if (errCnt<0 || BitLen<16){  //if fatal error (or -1)
 		if (g_debugMode) PrintAndLog("DEBUG: no data found %d, errors:%d, bitlen:%d, clock:%d",errCnt,invert,BitLen,clk);
 		return 0;
@@ -2100,6 +2103,11 @@ void setGrid_Clock(uint8_t clock){
 	RepaintGraphWindow();
 }
 
+int CmdSetGraphMarkers(const char *Cmd) {
+	sscanf(Cmd, "%i %i", &CursorCPos, &CursorDPos);
+	RepaintGraphWindow();
+	return 0;
+}
 
 int CmdHexsamples(const char *Cmd)
 {
@@ -2361,6 +2369,22 @@ int CmdRtrim(const char *Cmd)
 	return 0;
 }
 
+// trim graph (middle) piece
+int CmdMtrim(const char *Cmd) {
+	int start = 0, stop = 0;
+	sscanf(Cmd, "%i %i", &start, &stop);
+
+	if (start > GraphTraceLen	|| stop > GraphTraceLen || start > stop) return 0;
+	start++; //leave start position sample
+
+	GraphTraceLen -= stop - start;
+	for (int i = 0; i < GraphTraceLen; i++) {
+		GraphBuffer[start+i] = GraphBuffer[stop+i];
+	}
+	return 0;
+}
+
+
 int CmdNorm(const char *Cmd)
 {
 	int i;
@@ -2593,6 +2617,7 @@ static command_t CommandTable[] =
 	{"load",            CmdLoad,            1, "<filename> -- Load trace (to graph window"},
 	{"ltrim",           CmdLtrim,           1, "<samples> -- Trim samples from left of trace"},
 	{"rtrim",           CmdRtrim,           1, "<location to end trace> -- Trim samples from right of trace"},
+	{"mtrim",           CmdMtrim,           1, "<start> <stop> -- Trim out samples from the specified start to the specified stop"},
 	{"manrawdecode",    Cmdmandecoderaw,    1, "[invert] [maxErr] -- Manchester decode binary stream in DemodBuffer"},
 	{"norm",            CmdNorm,            1, "Normalize max/min to +/-128"},
 	{"plot",            CmdPlot,            1, "Show graph window (hit 'h' in window for keystroke help)"},
@@ -2602,6 +2627,7 @@ static command_t CommandTable[] =
 	{"rawdemod",        CmdRawDemod,        1, "[modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary"},  
 	{"samples",         CmdSamples,         0, "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
 	{"save",            CmdSave,            1, "<filename> -- Save trace (from graph window)"},
+	{"setgraphmarkers", CmdSetGraphMarkers, 1, "[orange_marker] [blue_marker] (in graph window)"},
 	{"scale",           CmdScale,           1, "<int> -- Set cursor display scale"},
 	{"setdebugmode",    CmdSetDebugMode,    1, "<0|1|2> -- Turn on or off Debugging Level for lf demods"},
 	{"shiftgraphzero",  CmdGraphShiftZero,  1, "<shift> -- Shift 0 for Graphed wave + or - shift value"},

@@ -11,7 +11,7 @@
 
 #include "ui.h"
 double CursorScaleFactor;
-int PlotGridX, PlotGridY, PlotGridXdefault= 64, PlotGridYdefault= 64;
+int PlotGridX, PlotGridY, PlotGridXdefault= 64, PlotGridYdefault= 64, CursorCPos= 0, CursorDPos= 0;
 int offline;
 int flushAfterWrite = 0;
 extern pthread_mutex_t print_lock;

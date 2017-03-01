@@ -137,6 +137,7 @@ int CmdPrescoDemod(const char *Cmd) {
 		return 0;
 	}
 	setDemodBuf(DemodBuffer, 128, ans);
+	setGrid_Clock(32);
 	
 	//got a good demod
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);

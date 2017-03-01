@@ -2,7 +2,12 @@
 All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
-## [unreleased][unreleased]	
+## [unreleased][unreleased]
+  - hf mf dump - added retry loops to try each read attempt up to 3 times.  makes getting a complete dump easier with many antennas. (marshmellow)
+
+  - Added markers in the graph around found Sequence Terminator after askmandemod. (marshmellow)
+  - Added data mtrim <start> <stop> command to trim out samples between start and stop. (marshmellow)
+  - Added data setgraphmarkers <orange> <blue> command to set two extra markers on the graph (marshmellow)
   - added json support in lua (vitorio)
   - added a buspirate settings file for at91sam7s512 (adamlaurie)
   - `lf read` timeouts is now depended on what threshold level you set in `lf config`  (marshmellow)

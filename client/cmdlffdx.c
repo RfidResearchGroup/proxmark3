@@ -149,6 +149,7 @@ int CmdFdxDemod(const char *Cmd) {
 	}
 
 	setDemodBuf(DemodBuffer, 128, ans);
+	setGrid_Clock(32);
 	// remove marker bits (1's every 9th digit after preamble) (pType = 2)
 	size = removeParity(DemodBuffer, 11, 9, 2, 117);
 	if ( size != 104 ) {
