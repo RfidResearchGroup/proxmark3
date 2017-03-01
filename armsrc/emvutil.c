@@ -16,7 +16,7 @@
 
 //util functions
 //print detected tag name over the serial link
-int emv_printtag(uint8_t* selected_tag, emvtags* inputcard, uint8_t* outputstring, uint8_t* outputlen)
+int emv_printtag(uint8_t* selected_tag, emvcard* inputcard, uint8_t* outputstring, uint8_t* outputlen)
 {
     //search tag list and print the match
     //get the value of the tag 
@@ -36,8 +36,8 @@ int emv_printtag(uint8_t* selected_tag, emvtags* inputcard, uint8_t* outputstrin
     return 0;
 }
 
-//returns the value of the emv tag in the supplied emvtags structure
-int emv_lookuptag(uint8_t* tag, emvtags *currentcard, uint8_t* outputval, uint8_t* outputvallen)
+//returns the value of the emv tag in the supplied emvcard structure
+int emv_lookuptag(uint8_t* tag, emvcard *currentcard, uint8_t* outputval, uint8_t* outputvallen)
 {
     //loop through tag and return the appropriate value
     uint8_t returnedtag[255]; 
@@ -367,7 +367,7 @@ exitfunction:  //goto label to exit search quickly once found
 }  
 
 //function to 
-int emv_settag(uint32_t tag, uint8_t *datain, emvtags *currentcard){
+int emv_settag(uint32_t tag, uint8_t *datain, emvcard *currentcard){
     char binarydata[255] = {0};
     
 	/*
@@ -807,13 +807,13 @@ int emv_settag(uint32_t tag, uint8_t *datain, emvtags *currentcard){
 }
 
 /* generates an emv template based off tag values supplied */ 
-int emv_generatetemplate(uint8_t* templateval,emvtags* currentcard, uint8_t* returnedval, uint8_t* returnedlen,uint8_t numtags, ...)
+int emv_generatetemplate(uint8_t* templateval,emvcard* currentcard, uint8_t* returnedval, uint8_t* returnedlen,uint8_t numtags, ...)
 {
     va_list arguments;
     uint8_t* currenttag; //value of the current tag
-    uint8_t tagval[255]; //buffer to hold the extracted tag value 
+    uint8_t tagval[256]; //buffer to hold the extracted tag value 
     uint8_t taglen = 0; //extracted tag length 
-    uint8_t bufferval[255]; 
+    uint8_t bufferval[256]; 
     uint8_t counter = 0; 
     uint32_t encodedlen = 0; 
     va_start(arguments, numtags);
@@ -830,7 +830,7 @@ int emv_generatetemplate(uint8_t* templateval,emvtags* currentcard, uint8_t* ret
 }
 
 //generate a valid pdol list
-int emv_generateDOL(uint8_t* DOL, uint8_t DOLlen,emvtags* currentcard,uint8_t* DOLoutput, uint8_t* DOLoutputlen)
+int emv_generateDOL(uint8_t* DOL, uint8_t DOLlen,emvcard* currentcard,uint8_t* DOLoutput, uint8_t* DOLoutputlen)
 {
     if(!DOL || !currentcard || !DOLoutput) // null pointer checks
         return 1; 
@@ -866,7 +866,7 @@ int emv_generateDOL(uint8_t* DOL, uint8_t DOLlen,emvtags* currentcard,uint8_t* D
 
 
 //decode the tag inputted and fill in the supplied structure. clean up the cleanup_passpass function
-int emv_emvtags_decode_tag(tlvtag* inputtag, emvtags* currentcard)
+int emv_emvtags_decode_tag(tlvtag* inputtag, emvcard* currentcard)
 {
     if(!inputtag || !currentcard) {
         return 1;
@@ -1324,7 +1324,7 @@ else
    return 0;
 }
 
-int emv_decode_field(uint8_t* inputfield,uint16_t inputlength, emvtags *result)
+int emv_decode_field(uint8_t* inputfield,uint16_t inputlength, emvcard *result)
 {
     uint16_t lengthcounter=0; 
     tlvtag newtag; 
@@ -1337,7 +1337,7 @@ int emv_decode_field(uint8_t* inputfield,uint16_t inputlength, emvtags *result)
     {
         //decode the tlv tag 
         decode_ber_tlv_item((inputfield+lengthcounter),&newtag);
-        //write the emvtags strucutre 
+        //write the emvcard strucutre 
         emv_emvtags_decode_tag(&newtag,result); 
         //move to next value and decode 
         lengthcounter += newtag.fieldlength-1; 
@@ -1503,18 +1503,85 @@ int emv_decodeCVM(uint8_t* CVM, uint8_t CVMlen)
      }
     return 0;
 }
+//simulate a emvcard card
+//input is a structure containing values to simulate
+//clones an EMV card 
+void emvsnoop() {
+    //states
+    int cardSTATE = EMVEMUL_NOFIELD; 
+    int vHf = 0;
+    int res;
+    uint16_t len = 0; 
+    uint8_t* receivedCmd = BigBuf_malloc(MAX_MIFARE_FRAME_SIZE); 
+	uint8_t par[MAX_MIFARE_PARITY_SIZE] = {0x00};
+    uint8_t rATQA[] = {0x04,0x00};
+    uint8_t rUIDBCC[] = {0x8F,0x2F,0x27,0xE1, 0x66};
+    uint8_t rSAK[] = {0x28, 0xB4, 0xFC};
+   
+    iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
+    bool finished = FALSE;
+
+    while (!BUTTON_PRESS() && !finished){
+        WDT_HIT();
+        //find reader field
+        if(cardSTATE == EMVEMUL_NOFIELD){
+            vHf = (33000 * AvgAdc(ADC_CHAN_HF)) >> 10;
+            if(vHf > EMV_MINFIELDV){
+                cardSTATE_TO_IDLE();
+                LED_A_ON();
+            }
+        }
+        if(cardSTATE == EMVEMUL_NOFIELD) continue;
+
+        //get data
+
+        res = EmGetCmd(receivedCmd, &len, par);
+        if(res == 2) { //field is off
+            cardSTATE = EMVEMUL_NOFIELD;
+            LEDsoff();
+            continue;
+        }
+        else if(res==1){
+            break; // button press
+        }
+
+        if(len==1 && ((receivedCmd[0] == 0x26 && cardSTATE != EMVEMUL_HALTED) || receivedCmd[0] == 0x52)){
+            EmSendCmdEx(rATQA, sizeof(rATQA), (receivedCmd[0] == 0x52));
+            cardSTATE = EMVEMUL_SELECT1;
+            continue;
+        }
+        switch(cardSTATE){
+            case EMVEMUL_NOFIELD:
+            case EMVEMUL_HALTED:
+            case EMVEMUL_IDLE:{
+                break;
+            }
+            case EMVEMUL_SELECT1:{
+                //select all
+                if(len==2 && (receivedCmd[0] == 0x93 && receivedCmd[1] == 0x20)) {
+                    EmSendCmd(rUIDBCC, sizeof(rUIDBCC));
+                    break;
+                }
+                if(len==2 && (receivedCmd[0] == 0x93 && receivedCmd[1] == 0x70 && memcmp(&receivedCmd[2], rUIDBCC, 4) == 0)) {
+                    EmSendCmd(rSAK, sizeof(rSAK));
+                    break;
+                }
+            }
+        }
+    }
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+}
 
 //ICEMAN: move to client 
 //dump the current card to the console
-void dumpCard(emvtags* currentcard){
+void dumpCard(emvcard* currentcard){
     DUMP(currentcard->ATQA);
     Dbhexdump(sizeof(currentcard->ATQA), currentcard->ATQA, false);
     DUMP(currentcard->UID);
     Dbhexdump(currentcard->UID_len,  currentcard->UID, false);
-    DUMP(currentcard->SAK1);
-    Dbhexdump(1,  &currentcard->SAK1, false);
-    DUMP(currentcard->SAK2);
-    Dbhexdump(1,  &currentcard->SAK2, false);
+    DUMP(currentcard->SAK);
+    Dbhexdump(1,  &currentcard->SAK, false);
     DUMP(currentcard->ATS);
     Dbhexdump(currentcard->ATS_len,  currentcard->ATS, false);    
     DUMP(currentcard->tag_4F);

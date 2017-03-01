@@ -18,7 +18,6 @@
 #include "string.h"
 #include "iso14443crc.h"
 #include "iso14443a.h"
-#include "mifare.h"
 #include "emvcmd.h"
 #include "emvutil.h"
 #include "emvdataels.h"
@@ -31,4 +30,5 @@
 
 #define MASTERCARD_MSR      0
 #define MASTERCARD_MCHIP    1 
+
 #endif

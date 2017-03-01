@@ -759,7 +759,7 @@ static void Code4bitAnswerAsTag(uint8_t cmd) {
 // Stop when button is pressed
 // Or return TRUE when command is captured
 //-----------------------------------------------------------------------------
-static int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len) {
+int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len) {
     // Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
     // only, since we are receiving, not transmitting).
     // Signal field is off with the appropriate LED
@@ -1361,40 +1361,6 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 	BigBuf_free_keep_EM();
 	LED_A_OFF();
 
-	/*	
-	if(flags & FLAG_NR_AR_ATTACK && MF_DBGLEVEL >= 1) {
-
-		for ( uint8_t	i = 0; i < ATTACK_KEY_COUNT; i++) {
-			if (ar_nr_collected[i] == 2) {
-				Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i<ATTACK_KEY_COUNT/2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
-				Dbprintf("../tools/mfkey/mfkey32 %08x %08x %08x %08x %08x %08x",
-						ar_nr_resp[i].cuid,  //UID
-						ar_nr_resp[i].nonce, //NT
-						ar_nr_resp[i].nr,    //NR1
-						ar_nr_resp[i].ar,    //AR1
-						ar_nr_resp[i].nr2,   //NR2
-						ar_nr_resp[i].ar2    //AR2
-						);
-			}
-		}	
-
-		for ( uint8_t	i = ATTACK_KEY_COUNT; i < ATTACK_KEY_COUNT*2; i++) {
-			if (ar_nr_collected[i] == 2) {
-				Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i<ATTACK_KEY_COUNT/2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
-				Dbprintf("../tools/mfkey/mfkey32v2 %08x %08x %08x %08x %08x %08x %08x",
-						ar_nr_resp[i].cuid,  //UID
-						ar_nr_resp[i].nonce, //NT
-						ar_nr_resp[i].nr,    //NR1
-						ar_nr_resp[i].ar,    //AR1
-						ar_nr_resp[i].nonce2,//NT2
-						ar_nr_resp[i].nr2,   //NR2
-						ar_nr_resp[i].ar2    //AR2
-						);
-			}
-		}
-	}
-	*/
-		
 	if (MF_DBGLEVEL >= 4){
 		Dbprintf("-[ Wake ups after halt  [%d]", happened);
 		Dbprintf("-[ Messages after halt  [%d]", happened2);
@@ -1567,7 +1533,7 @@ void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *p
 // Stop when button is pressed (return 1) or field was gone (return 2)
 // Or return 0 when command is captured
 //-----------------------------------------------------------------------------
-static int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity) {
+int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity) {
 	*len = 0;
 
 	uint32_t timer = 0, vtime = 0;

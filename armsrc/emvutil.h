@@ -48,8 +48,7 @@
 int emv_select(uint8_t* AID, uint8_t AID_len, void* data);
 int emv_selectPPSE();
 int emv_readrecord(uint8_t recordnumber, uint8_t sfi, void* data);
-int emv_getprocessingoptions(uint8_t* pdol, uint8_t pdol_len, void* data
-); 
+int emv_getprocessingoptions(uint8_t* pdol, uint8_t pdol_len, void* data); 
 int emv_computecryptogram(uint8_t* UDOL, uint8_t UDOL_len, void *data);
 //return 8 8byte ICC random number. 
 int emv_getchallenge(void *data); 
@@ -59,18 +58,21 @@ int emv_decodeAFL(uint8_t* AFL, uint8_t AFLlen);
 int emv_decodeAIP(uint8_t* AIP);
 int emv_decodeCVM(uint8_t* CVM, uint8_t CVMlen);
 
+//emulator
+void EMVsim();
+
 //utils
-int emv_printtag(uint8_t* selected_tag,emvtags* inputcard, uint8_t* outputstring, uint8_t* outputlen);
-int emv_decode_field(uint8_t* inputfield,uint16_t inputlength, emvtags *result);
-int emv_emvtags_decode_tag(tlvtag* inputtag, emvtags* currentcard);
+int emv_printtag(uint8_t* selected_tag, emvcard* inputcard, uint8_t* outputstring, uint8_t* outputlen);
+int emv_decode_field(uint8_t* inputfield,uint16_t inputlength, emvcard *result);
+int emv_emvtags_decode_tag(tlvtag* inputtag, emvcard* currentcard);
 //look up a tag in the current structure 
-int emv_lookuptag(uint8_t* tag, emvtags* currentcard, uint8_t* outputval, uint8_t* outputvallen);
+int emv_lookuptag(uint8_t* tag, emvcard* currentcard, uint8_t* outputval, uint8_t* outputvallen);
 //set a tag from external impurt
-int emv_settag(uint32_t tag, uint8_t *datain, emvtags *currentcard) ;
-void dumpCard(emvtags* currentcard);
+int emv_settag(uint32_t tag, uint8_t *datain, emvcard *currentcard) ;
+void dumpCard(emvcard* currentcard);
 
 //generate a valid PDOL list from the returned card value, used in get processing options
-int emv_generateDOL(uint8_t* DOL, uint8_t DOLlen,emvtags* currentcard, uint8_t* DOLoutput, uint8_t* DOLoutputlen);
+int emv_generateDOL(uint8_t* DOL, uint8_t DOLlen,emvcard* currentcard, uint8_t* DOLoutput, uint8_t* DOLoutputlen);
 
-int emv_generatetemplate(uint8_t* templateval,emvtags* currentcard, uint8_t* returnedval, uint8_t* returnedlen, uint8_t numtags, ...);
+int emv_generatetemplate(uint8_t* templateval,emvcard* currentcard, uint8_t* returnedval, uint8_t* returnedlen, uint8_t numtags, ...);
 #endif

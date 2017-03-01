@@ -82,13 +82,6 @@ typedef struct {
 	uint8_t *parity;
 } tUart;
 
-typedef struct {
-	uint8_t* response;
-	size_t   response_n;
-	uint8_t* modulation;
-	size_t   modulation_n;
-	uint32_t ProxToAirDuration;
-} tag_response_info_t;
 
 extern void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 extern void AppendCrc14443a(uint8_t *data, int len);
@@ -109,6 +102,7 @@ int EmSend4bit(uint8_t resp);
 int EmSendCmdExPar(uint8_t *resp, uint16_t respLen, bool correctionNeeded, uint8_t *par);
 int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool correctionNeeded);
 extern int EmSendCmd(uint8_t *resp, uint16_t respLen);
+extern int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity);
 int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
 				uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);

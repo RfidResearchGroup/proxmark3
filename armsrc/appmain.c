@@ -1233,9 +1233,6 @@ void UsbPacketReceived(uint8_t *packet, int len)
        case CMD_EMV_READ_RECORD:
             EMVReadRecord(c->arg[0], c->arg[1], NULL);
             break; 
-        case CMD_EMV_TRANSACTION:
-            EMVTransaction(); 
-            break;
         case CMD_EMV_CLONE:
             EMVClone(c->arg[0], c->arg[1]);
             break;

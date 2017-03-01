@@ -37,7 +37,13 @@ typedef enum ISO14A_COMMAND {
 	ISO14A_TOPAZMODE =			(1 << 8)
 } iso14a_command_t;
 
-
+typedef struct {
+	uint8_t* response;
+	size_t   response_n;
+	uint8_t* modulation;
+	size_t   modulation_n;
+	uint32_t ProxToAirDuration;
+} tag_response_info_t;
 //-----------------------------------------------------------------------------
 // ISO 14443B
 //-----------------------------------------------------------------------------

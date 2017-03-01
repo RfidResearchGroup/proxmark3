@@ -23,10 +23,8 @@ extern "C" {
 #include "util.h"
 #include "string.h"
 #include "iso14443crc.h"
-
 #include "mifare.h"
 #include "protocols.h"
-//#include "mifareutil.h"	
 
 extern void AppendCrc14443b(uint8_t *data, int len);
 void SendRawCommand14443B_Ex(UsbCommand *c);

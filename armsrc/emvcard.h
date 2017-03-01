@@ -240,6 +240,6 @@ typedef struct {
     uint8_t tag_BF0C[222]; //File Control Information (FCI) Issuer Discretionary Data 
     uint8_t tag_DFName[16];
     uint8_t tag_DFName_len;
-} emvtags;
+} emvcard;
 
 #endif //__EMVCARD_H

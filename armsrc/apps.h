@@ -29,6 +29,8 @@ extern "C" {
 #include "pcf7931.h"
 #include "desfire.h"
 #include "iso14443b.h"
+//#include "iso14443a.h"
+#include "emvcard.h"
 
 extern int rsamples;   // = 0;
 extern int tracing;    // = TRUE;
@@ -118,6 +120,9 @@ void ReaderIso14443a(UsbCommand * c);
 //bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t len, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
 void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *parity);
 void iso14a_set_trigger(bool enable);
+// also used in emv
+bool prepare_allocated_tag_modulation(tag_response_info_t * response_info);
+int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *parity, int *len);
 
 // epa.h
 void EPA_PACE_Collect_Nonce(UsbCommand * c);
@@ -220,23 +225,22 @@ bool cmd_send(uint32_t cmd, uint32_t arg0, uint32_t arg1, uint32_t arg2, void* d
 // util.h
 void HfSnoop(int , int);
 
-//EMV functions emvcmd.h
+//EMV functions
+// emvcmd.h
 void EMVTransaction(void);
 void EMVgetUDOL(void);
 void EMVloadvalue(uint32_t tag, uint8_t* datain);
 void EMVdumpcard(void);
-
-/*
 //void EMVSelect(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *data);
-void EMVFuzz_RATS(uint8_t len, uint8_t* RATS);
+void EMVFuzz_RATS(uint8_t ratslen, uint8_t* RATS);
 void EMVReadRecord(uint8_t arg0, uint8_t arg1,emvcard* inputcard);
 void EMVSelectPPSE();
 void EMVSelectAID(uint8_t *AID, uint8_t AIDlen, emvcard* inputcard);
-void EMVTransaction(); //perform an EMV transaction
-void EMVClone(uint8_t maxsfi, uint8_t maxrecord); //clone an EMV card.
+void EMVTransaction();
+void EMVClone(uint8_t maxsfi, uint8_t maxrecord);
 void EMVSim();
-void EMVTest(); //test function for emv stuff.
-*/
+void EMVTest();
+void SimulateEMVcard();
 
 #ifdef __cplusplus
 }
