@@ -46,6 +46,7 @@ void SetLogFilename(char *fn);
 
 extern double CursorScaleFactor;
 extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, CursorCPos, CursorDPos;
+extern int PlotClock, PlockClockStartIndex;
 extern int offline;
 extern int flushAfterWrite;   //buzzy
 

@@ -10,8 +10,12 @@
 //-----------------------------------------------------------------------------
 
 #include "ui.h"
+
+// set QT vars
 double CursorScaleFactor;
-int PlotGridX, PlotGridY, PlotGridXdefault= 64, PlotGridYdefault= 64, CursorCPos= 0, CursorDPos= 0;
+int PlotGridX, PlotGridY, PlotGridXdefault = 64, PlotGridYdefault = 64, CursorCPos = 0, CursorDPos = 0;
+int PlotClock = 0, PlockClockStartIndex = 0;
+
 int offline;
 int flushAfterWrite = 0;
 extern pthread_mutex_t print_lock;

@@ -1053,29 +1053,30 @@ int CmdDetectClockRate(const char *Cmd)
 	if (strlen(Cmd) > 6 || strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H')
 		return usage_data_detectclock();
 
-	int ans = 0;
+	int clock = 0;
 	switch ( cmdp ) {
 		case 'a' :
 		case 'A' :
-			ans = GetAskClock(Cmd+1, true, false);
+			clock = GetAskClock(Cmd+1, true, false);
 			break;
 		case 'f' :
 		case 'F' :
-			ans = GetFskClock("", true, false);
+			clock = GetFskClock("", true, false);
 			break;
 		case 'n' :
 		case 'N' :
-			ans = GetNrzClock("", true, false);
+			clock = GetNrzClock("", true, false);
 			break;
 		case 'p' :
 		case 'P' :
-			ans = GetPskClock("", true, false);
+			clock = GetPskClock("", true, false);
 			break;
 		default :
 			PrintAndLog ("Please specify a valid modulation to detect the clock of - see option h for help");
 			break;
 	}
-	return ans;
+	RepaintGraphWindow();
+	return clock;
 }
 
 char *GetFSKType(uint8_t fchigh, uint8_t fclow, uint8_t invert)

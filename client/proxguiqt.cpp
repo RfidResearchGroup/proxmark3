@@ -96,33 +96,41 @@ ProxGuiQT::~ProxGuiQT(void)
 	}
 }
 
+// solid colors
+#define QT_ORANGE QColor(255, 153, 0)
+#define QT_WHITE QColor(255, 255, 255)
+#define QT_YELLOW QColor(255, 255, 0)
+#define QT_MAGENTA QColor(255, 0, 255)
+#define QT_LIGHTBLUE QColor(0, 0, 205)
+#define QT_LIGHTGREEN QColor(100, 255, 100)
+#define QT_GRAY QColor(100,100,100)
+#define QT_BLACK QColor(0,0,0)
+// transparent colors
+#define QT_ORANGE_TS QColor(255, 153, 0, 96)
+#define QT_RED_TS QColor(255, 0, 0, 64)
+#define QT_BLACK_TS QColor(0,0,0,0)
+	
 void ProxWidget::paintEvent(QPaintEvent *event)
 {
 	QPainter painter(this);
 	QPainterPath penPath, whitePath, greyPath, lightgreyPath, cursorAPath, cursorBPath, cursorCPath, cursorDPath;
 	QRect r;
-	QBrush brush(QColor(100, 255, 100));
-	QPen pen(QColor(100, 255, 100));
+	QBrush brush(QT_LIGHTGREEN);
+	QPen pen(QT_LIGHTGREEN);
 
 	painter.setFont(QFont("Arial", 10));
 
-	if(GraphStart < 0)
+	if(GraphStart < 0) 
 		GraphStart = 0;
 
-	if (CursorAPos > GraphTraceLen)
-		CursorAPos= 0;
-
-	if(CursorBPos > GraphTraceLen)
-		CursorBPos= 0;
-	if(CursorCPos > GraphTraceLen)
-		CursorCPos= 0;
-	if(CursorDPos > GraphTraceLen)
-		CursorDPos= 0;
+	if (CursorAPos > GraphTraceLen) CursorAPos = 0;
+	if (CursorBPos > GraphTraceLen) CursorBPos = 0;
+	if (CursorCPos > GraphTraceLen) CursorCPos = 0;
+	if (CursorDPos > GraphTraceLen) CursorDPos = 0;
 
 	r = rect();
-
-	painter.fillRect(r, QColor(0, 0, 0));
-
+	painter.fillRect(r, QT_BLACK);
+	
 	whitePath.moveTo(r.left() + 40, r.top());
 	whitePath.lineTo(r.left() + 40, r.bottom());
 
@@ -130,33 +138,33 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 
 	greyPath.moveTo(r.left(), zeroHeight);
 	greyPath.lineTo(r.right(), zeroHeight);
-	painter.setPen(QColor(100, 100, 100));
+	painter.setPen(QT_GRAY);
 	painter.drawPath(greyPath);
 
-	PageWidth= (int)((r.right() - r.left() - 40) / GraphPixelsPerPoint);
+	PageWidth = (int)((r.right() - r.left() - 40) / GraphPixelsPerPoint);
 	
-        // plot X and Y grid lines
-        int i;
-        if ((PlotGridX > 0) && ((PlotGridX * GraphPixelsPerPoint) > 1)) {
-        	for(i = 40 + (GridOffset * GraphPixelsPerPoint); i < r.right(); i += (int)(PlotGridX * GraphPixelsPerPoint)) {
-        		//SelectObject(hdc, GreyPenLite);
-        		//MoveToEx(hdc, r.left + i, r.top, NULL);
-        		//LineTo(hdc, r.left + i, r.bottom);
-        		lightgreyPath.moveTo(r.left()+i,r.top());
-				lightgreyPath.lineTo(r.left()+i,r.bottom());
-				painter.drawPath(lightgreyPath);
-        	} 
-        } 
-        if ((PlotGridY > 0) && ((PlotGridY * GraphPixelsPerPoint) > 1)){
-        	for(i = 0; i < ((r.top() + r.bottom())>>1); i += (int)(PlotGridY * GraphPixelsPerPoint)) {
-       			lightgreyPath.moveTo(r.left() + 40,zeroHeight + i);
-				lightgreyPath.lineTo(r.right(),zeroHeight + i);
-				painter.drawPath(lightgreyPath);
-        		lightgreyPath.moveTo(r.left() + 40,zeroHeight - i);
-				lightgreyPath.lineTo(r.right(),zeroHeight - i);
-				painter.drawPath(lightgreyPath);
-        	}
-        }
+	// plot X and Y grid lines
+	int i;
+	if ((PlotGridX > 0) && ((PlotGridX * GraphPixelsPerPoint) > 1)) {
+		for(i = 40 + (GridOffset * GraphPixelsPerPoint); i < r.right(); i += (int)(PlotGridX * GraphPixelsPerPoint)) {
+			//SelectObject(hdc, GreyPenLite);
+			//MoveToEx(hdc, r.left + i, r.top, NULL);
+			//LineTo(hdc, r.left + i, r.bottom);
+			lightgreyPath.moveTo(r.left()+i,r.top());
+			lightgreyPath.lineTo(r.left()+i,r.bottom());
+			painter.drawPath(lightgreyPath);
+		} 
+	} 
+	if ((PlotGridY > 0) && ((PlotGridY * GraphPixelsPerPoint) > 1)){
+		for(i = 0; i < ((r.top() + r.bottom())>>1); i += (int)(PlotGridY * GraphPixelsPerPoint)) {
+			lightgreyPath.moveTo(r.left() + 40,zeroHeight + i);
+			lightgreyPath.lineTo(r.right(),zeroHeight + i);
+			painter.drawPath(lightgreyPath);
+			lightgreyPath.moveTo(r.left() + 40,zeroHeight - i);
+			lightgreyPath.lineTo(r.right(),zeroHeight - i);
+			painter.drawPath(lightgreyPath);
+		}
+	}
 
 	startMax = (GraphTraceLen - (int)((r.right() - r.left() - 40) / GraphPixelsPerPoint));
 	
@@ -168,11 +176,11 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 
 	int absYMax = 1;
 
-	for(i = GraphStart; ; i++) {
+	for(i = GraphStart; ;i++) {
 
 		if(i >= GraphTraceLen) break;
 		
-		if(fabs((double)GraphBuffer[i]) > absYMax)
+		if (fabs((double)GraphBuffer[i]) > absYMax)
 			absYMax = (int)fabs((double)GraphBuffer[i]);
 		
 		int x = 40 + (int)((i - GraphStart)*GraphPixelsPerPoint);
@@ -196,11 +204,15 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 	int yMax = INT_MIN;
 	int yMean = 0;
 	int n = 0;
+	//int stt_x1 = 0, stt_x2 = 0;
 
 	for(i = GraphStart; ; i++) {
 		if(i >= GraphTraceLen) break;
 
-		int x = 40 + (int)((i - GraphStart)*GraphPixelsPerPoint);
+		// x == pixel pos.
+		int x = 40 + (int)((i - GraphStart) * GraphPixelsPerPoint);
+
+		// if x reaches end of box, stop loop
 		if(x > r.right() + GraphPixelsPerPoint) break;
 
 		int y = GraphBuffer[i];
@@ -221,6 +233,7 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 			penPath.lineTo(x, y);
 		
 
+		// small white boxes (the dots on the signal)
 		if(GraphPixelsPerPoint > 10) {
 			QRect f(QPoint(x - 3, y - 3),QPoint(x + 3, y + 3));
 			painter.fillRect(f, brush);
@@ -233,7 +246,7 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 			char str[100];
 			sprintf(str, "+%d", (i - GraphStart));
 
-			painter.setPen(QColor(255, 255, 255));
+			painter.setPen( QT_WHITE );
 			QRect size;
 			QFontMetrics metrics(painter.font());
 			size = metrics.boundingRect(str);
@@ -245,36 +258,55 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 		if(i == CursorAPos || i == CursorBPos || i == CursorCPos || i == CursorDPos) {
 			QPainterPath *cursorPath;
 
-			if (i == CursorAPos)
+			if ( i == CursorAPos ) 
 				cursorPath = &cursorAPath;
-			else if (i == CursorBPos)
+			else if ( i == CursorBPos ) 
 				cursorPath = &cursorBPath;
-			else if (i == CursorCPos)
+			else if ( i == CursorCPos ) 
 				cursorPath = &cursorCPath;
-			else
+			else 
 				cursorPath = &cursorDPath;
 			
 			cursorPath->moveTo(x, r.top());
 			cursorPath->lineTo(x, r.bottom());
-			penPath.moveTo(x, y);
+			penPath.moveTo(x, y);		
 		}
 	}
+	
+	// Mark STT block in signal
+	if ( CursorCPos > 0 ){
+		int foo = 40 + (int)((CursorCPos - GraphStart) * GraphPixelsPerPoint);	
+		int bar = 40 + ((CursorDPos - GraphStart) * GraphPixelsPerPoint);	
+		QRect r_stt(foo, r.top(), bar-foo, r.bottom() );
+		painter.fillRect(r_stt, QBrush( QT_ORANGE_TS ));
+		painter.drawRect(r_stt);
+	}
+	
+	// Mark Clock pulse
+	//extern int PlotClock, PlockClockStartIndex;
+	if ( PlotClock > 0){
+		for(int i = PlockClockStartIndex; ; i += PlotClock * 2) {
 
+			if(i >= GraphTraceLen ) break;
+			if ((CursorCPos > 0) && (i >= CursorCPos)) break;
+			
+			int foo = 40 + (int)((i - GraphStart) * GraphPixelsPerPoint);	
+			int bar = 40 + ((i + PlotClock - GraphStart) * GraphPixelsPerPoint);	
+			QRect r_clock(foo, r.top(), bar-foo, r.bottom() );
+			painter.fillRect(r_clock, QBrush( QT_RED_TS ));
+			painter.drawRect(r_clock);
+		}
+	}
+	
 	if(n != 0)
 		yMean /= n;
 
-	painter.setPen(QColor(255, 255, 255));
-	painter.drawPath(whitePath);
-	painter.setPen(pen);
-	painter.drawPath(penPath);
-	painter.setPen(QColor(255, 255, 0));
-	painter.drawPath(cursorAPath);
-	painter.setPen(QColor(255, 0, 255));
-	painter.drawPath(cursorBPath);
-	painter.setPen(QColor(255, 153, 0)); //orange
-	painter.drawPath(cursorCPath);
-	painter.setPen(QColor(0, 0, 205)); //light blue
-	painter.drawPath(cursorDPath);
+	painter.setPen( QT_WHITE ); painter.drawPath(whitePath);
+	painter.setPen(pen); painter.drawPath(penPath);
+	painter.setPen( QT_YELLOW ); painter.drawPath(cursorAPath);
+	painter.setPen( QT_MAGENTA ); painter.drawPath(cursorBPath);
+	//painter.setPen( QT_ORANGE ); painter.drawPath(cursorCPath);
+	//painter.setPen( QT_LIGHTBLUE ); painter.drawPath(cursorDPath);
 
 	char str[200];
 	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f] zoom=%.3f CursorA=%d [%d] CursorB=%d [%d]    GridX=%d GridY=%d (%s)",
@@ -291,7 +323,7 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 			GridLocked ? "Locked" : "Unlocked"
 		);
 
-	painter.setPen(QColor(255, 255, 255));
+	painter.setPen( QT_WHITE );
 	painter.drawText(50, r.bottom() - 20, str);
 }
 
@@ -299,10 +331,10 @@ ProxWidget::ProxWidget(QWidget *parent) : QWidget(parent), GraphStart(0), GraphP
 {
 	resize(600, 300);
 
-	QPalette palette(QColor(0,0,0,0));
-	palette.setColor(QPalette::WindowText, QColor(255,255,255));
-	palette.setColor(QPalette::Text, QColor(255,255,255));
-	palette.setColor(QPalette::Button, QColor(100, 100, 100));
+	QPalette palette( QT_BLACK_TS );
+	palette.setColor(QPalette::WindowText, QT_WHITE );
+	palette.setColor(QPalette::Text, QT_WHITE );
+	palette.setColor(QPalette::Button, QT_GRAY );
 	setPalette(palette);
 	setAutoFillBackground(true);
 	CursorAPos = 0;
