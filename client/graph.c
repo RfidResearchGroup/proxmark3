@@ -123,6 +123,11 @@ void DetectHighLowInGraph(int *high, int *low, bool addFuzz) {
 	}
 }
 
+void SetGraphClock( int clock, int startidx){
+	PlotClock = clock;
+	PlockClockStartIndex = startidx;	
+}
+
 // Get or auto-detect ask clock rate
 int GetAskClock(const char str[], bool printAns, bool verbose)
 {
@@ -149,6 +154,7 @@ int GetAskClock(const char str[], bool printAns, bool verbose)
 	// Only print this message if we're not looping something
 	if (printAns)
 		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
+	SetGraphClock(clock, start);
 	return clock;
 }
 

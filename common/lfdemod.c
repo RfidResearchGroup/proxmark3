@@ -940,10 +940,6 @@ int DetectStrongAskClock(uint8_t dest[], size_t size, uint8_t high, uint8_t low)
 	}
 	return 0;
 }
-void SetGraphClock( int clock, int startidx){
-	PlotClock = clock;
-	PlockClockStartIndex = startidx;	
-}
 
 // by marshmellow
 // not perfect especially with lower clocks or VERY good antennas (heavy wave clipping)
@@ -1030,8 +1026,6 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 			if (g_debugMode == 2) prnt("DEBUG ASK: clk %d, err %d, startpos %d, endpos %d", clk[clkCnt], errCnt, ii, i);
 			if (errCnt==0 && clkCnt<7) { 
 				if (!clockFnd) *clock = clk[clkCnt];
-				
-				SetGraphClock(*clock, ii);
 				return ii;
 			}
 			//if we found errors see if it is lowest so far and save it as best run
@@ -1055,7 +1049,6 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 	}
 	if (!clockFnd) *clock = clk[best];
 	
-	SetGraphClock(*clock, bestStart[best]);
 	return bestStart[best];
 }
 
