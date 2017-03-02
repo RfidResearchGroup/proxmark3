@@ -23,6 +23,8 @@ class ProxWidget : public QWidget
 		double GraphPixelsPerPoint;
 		int CursorAPos;
 		int CursorBPos;
+		//int CursorCPos;
+		//int CursorDPos;
 
 	public:
 		ProxWidget(QWidget *parent = 0);

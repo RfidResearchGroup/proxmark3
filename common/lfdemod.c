@@ -940,6 +940,10 @@ int DetectStrongAskClock(uint8_t dest[], size_t size, uint8_t high, uint8_t low)
 	}
 	return 0;
 }
+void SetGraphClock( int clock, int startidx){
+	PlotClock = clock;
+	PlockClockStartIndex = startidx;	
+}
 
 // by marshmellow
 // not perfect especially with lower clocks or VERY good antennas (heavy wave clipping)
@@ -947,15 +951,15 @@ int DetectStrongAskClock(uint8_t dest[], size_t size, uint8_t high, uint8_t low)
 // return start index of best starting position for that clock and return clock (by reference)
 int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 {
-	size_t i=1;
+	size_t i = 1;
 	uint8_t clk[] = {255,8,16,32,40,50,64,100,128,255};
 	uint8_t clkEnd = 9;
 	uint8_t loopCnt = 255;  //don't need to loop through entire array...
-	if (size <= loopCnt+60) return -1; //not enough samples
+	if (size <= loopCnt + 60) return -1; //not enough samples
 	size -= 60; //sometimes there is a strange end wave - filter out this....
 	//if we already have a valid clock
-	uint8_t clockFnd=0;
-	for (;i<clkEnd;++i)
+	uint8_t clockFnd = 0;
+	for (; i < clkEnd; ++i)
 		if (clk[i] == *clock) clockFnd = i;
 		//clock found but continue to find best startpos
 
@@ -985,15 +989,15 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 	size_t errCnt = 0;
 	size_t arrLoc, loopEnd;
 
-	if (clockFnd>0) {
+	if (clockFnd > 0) {
 		clkCnt = clockFnd;
 		clkEnd = clockFnd+1;
 	} else {
-		clkCnt=1;
+		clkCnt = 1;
 	}
 
 	//test each valid clock from smallest to greatest to see which lines up
-	for(; clkCnt < clkEnd; clkCnt++) {
+	for (; clkCnt < clkEnd; clkCnt++) {
 		if (clk[clkCnt] <= 32) {
 			tol=1;
 		} else {
@@ -1026,6 +1030,8 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 			if (g_debugMode == 2) prnt("DEBUG ASK: clk %d, err %d, startpos %d, endpos %d", clk[clkCnt], errCnt, ii, i);
 			if (errCnt==0 && clkCnt<7) { 
 				if (!clockFnd) *clock = clk[clkCnt];
+				
+				SetGraphClock(*clock, ii);
 				return ii;
 			}
 			//if we found errors see if it is lowest so far and save it as best run
@@ -1048,6 +1054,8 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 		if (g_debugMode == 2) prnt("DEBUG ASK: clk %d, # Errors %d, Current Best Clk %d, bestStart %d", clk[k], bestErr[k], clk[best], bestStart[best]);
 	}
 	if (!clockFnd) *clock = clk[best];
+	
+	SetGraphClock(*clock, bestStart[best]);
 	return bestStart[best];
 }
 
@@ -1056,27 +1064,30 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr)
 // a phase shift is determined by measuring the sample length of each wave
 int DetectPSKClock(uint8_t dest[], size_t size, int clock)
 {
-	uint8_t clk[]={255,16,32,40,50,64,100,128,255}; //255 is not a valid clock
+	uint8_t clk[] = {255,16,32,40,50,64,100,128,255}; //255 is not a valid clock
 	uint16_t loopCnt = 4096;  //don't need to loop through entire array...
-	if (size == 0) return 0;
-	if (size<loopCnt) loopCnt = size-20;
 
 	//if we already have a valid clock quit
 	size_t i=1;
 	for (; i < 8; ++i)
 		if (clk[i] == clock) return clock;
+	
+	if (size < 160+20) return 0;
+	
+	// size must be larger than 20 here, and 160 later on.
+	if (size < loopCnt) loopCnt = size-20;
 
 	size_t waveStart=0, waveEnd=0, firstFullWave=0, lastClkBit=0;
 	uint8_t clkCnt, fc=0, fullWaveLen=0, tol=1;
 	uint16_t peakcnt=0, errCnt=0, waveLenCnt=0;
-	uint16_t bestErr[]={1000,1000,1000,1000,1000,1000,1000,1000,1000};
-	uint16_t peaksdet[]={0,0,0,0,0,0,0,0,0};
+	uint16_t bestErr[] = {1000,1000,1000,1000,1000,1000,1000,1000,1000};
+	uint16_t peaksdet[] = {0,0,0,0,0,0,0,0,0};
 	fc = countFC(dest, size, 0);
 	if (fc!=2 && fc!=4 && fc!=8) return -1;
 	if (g_debugMode==2) prnt("DEBUG PSK: FC: %d",fc);
 
 	//find first full wave
-	for (i=160; i<loopCnt; i++){
+	for (i=160; i < loopCnt; i++){
 		if (dest[i] < dest[i+1] && dest[i+1] >= dest[i+2]){
 			if (waveStart == 0) {
 				waveStart = i+1;
@@ -1094,10 +1105,10 @@ int DetectPSKClock(uint8_t dest[], size_t size, int clock)
 			}
 		}
 	}
-	if (g_debugMode ==2) prnt("DEBUG PSK: firstFullWave: %d, waveLen: %d",firstFullWave,fullWaveLen);
+	if (g_debugMode == 2) prnt("DEBUG PSK: firstFullWave: %d, waveLen: %d",firstFullWave,fullWaveLen);
 	
 	//test each valid clock from greatest to smallest to see which lines up
-	for(clkCnt=7; clkCnt >= 1 ; clkCnt--){
+	for (clkCnt=7; clkCnt >= 1 ; clkCnt--){
 		lastClkBit = firstFullWave; //set end of wave as clock align
 		waveStart = 0;
 		errCnt=0;
@@ -1131,19 +1142,17 @@ int DetectPSKClock(uint8_t dest[], size_t size, int clock)
 				}
 			}
 		}
-		if (errCnt == 0){
-			return clk[clkCnt];
-		}
-		if (errCnt <= bestErr[clkCnt]) bestErr[clkCnt]=errCnt;
-		if (peakcnt > peaksdet[clkCnt]) peaksdet[clkCnt]=peakcnt;
+		if (errCnt == 0) return clk[clkCnt];
+		if (errCnt <= bestErr[clkCnt]) bestErr[clkCnt] = errCnt;
+		if (peakcnt > peaksdet[clkCnt]) peaksdet[clkCnt] = peakcnt;
 	} 
 	//all tested with errors 
 	//return the highest clk with the most peaks found
-	uint8_t best=7;
-	for (i=7; i>=1; i--){
-		if (peaksdet[i] > peaksdet[best]) {
+	uint8_t best = 7;
+	for (i=7; i >= 1; i--){
+		if (peaksdet[i] > peaksdet[best])
 			best = i;
-		}
+
 		if (g_debugMode == 2) prnt("DEBUG PSK: Clk: %d, peaks: %d, errs: %d, bestClk: %d",clk[i],peaksdet[i],bestErr[i],clk[best]);
 	}
 	return clk[best];
@@ -1180,16 +1189,20 @@ int DetectStrongNRZClk(uint8_t *dest, size_t size, int peak, int low){
 
 //by marshmellow
 //detect nrz clock by reading #peaks vs no peaks(or errors)
+//iceman: shouldn't param clock be reference?  like DetectASKClock
 int DetectNRZClock(uint8_t dest[], size_t size, int clock)
 {
-	size_t i=0;
-	uint8_t clk[]={8,16,32,40,50,64,100,128,255};
+	size_t i = 0;
+	uint8_t clk[] = {8,16,32,40,50,64,100,128,255};
 	size_t loopCnt = 4096;  //don't need to loop through entire array...
-	if (size == 0) return 0;
-	if (size<loopCnt) loopCnt = size-20;
+
 	//if we already have a valid clock quit
 	for (; i < 8; ++i)
 		if (clk[i] == clock) return clock;
+	
+	if (size < 20) return 0;
+	// size must be larger than 20 here
+	if (size < loopCnt) loopCnt = size-20;
 
 	//get high and low peak
 	int peak, low;
@@ -1210,7 +1223,7 @@ int DetectNRZClock(uint8_t dest[], size_t size, int clock)
 			if (!firstpeak) continue;
 			smplCnt++;
 		} else {
-			firstpeak=true;
+			firstpeak = true;
 			if (smplCnt > 6 ){
 				if (maxPeak > smplCnt){
 					maxPeak = smplCnt;
@@ -1218,7 +1231,7 @@ int DetectNRZClock(uint8_t dest[], size_t size, int clock)
 				}
 				peakcnt++;
 				//prnt("maxPk: %d, smplCnt: %d, peakcnt: %d",maxPeak,smplCnt,peakcnt);
-				smplCnt=0;
+				smplCnt = 0;
 			}
 		}
 	}
@@ -1228,7 +1241,7 @@ int DetectNRZClock(uint8_t dest[], size_t size, int clock)
 	uint8_t ignoreWindow = 4;
 	bool lastPeakHigh = 0;
 	int lastBit = 0; 
-	peakcnt=0;
+	peakcnt = 0;
 	//test each valid clock from smallest to greatest to see which lines up
 	for(clkCnt=0; clkCnt < 8; ++clkCnt){
 		//ignore clocks smaller than smallest peak
@@ -1248,7 +1261,7 @@ int DetectNRZClock(uint8_t dest[], size_t size, int clock)
 						if (dest[i] >= peak || dest[i] <= low) {
 							//if same peak don't count it
 							if ((dest[i] >= peak && !lastPeakHigh) || (dest[i] <= low && lastPeakHigh)) {
-						peakcnt++;
+								peakcnt++;
 							}
 							lastPeakHigh = (dest[i] >= peak);
 							bitHigh = true;
@@ -1260,9 +1273,10 @@ int DetectNRZClock(uint8_t dest[], size_t size, int clock)
 						}
 					//else if not a clock bit and no peaks
 					} else if (dest[i] < peak && dest[i] > low){
-						if (ignoreCnt==0){
+						if (ignoreCnt == 0){
 							bitHigh=false;
-							if (errBitHigh==true) peakcnt--;
+							if (errBitHigh==true) 
+								peakcnt--;
 							errBitHigh=false;
 						} else {
 							ignoreCnt--;
@@ -1273,23 +1287,23 @@ int DetectNRZClock(uint8_t dest[], size_t size, int clock)
 						errBitHigh=true;
 					}
 				}
-				if(peakcnt>peaksdet[clkCnt]) {
-					peaksdet[clkCnt]=peakcnt;
+				if (peakcnt > peaksdet[clkCnt]) {
+					peaksdet[clkCnt] = peakcnt;
 				}
 			}
 		}
 	}
-	int iii=7;
-	uint8_t best=0;
-	for (iii=7; iii > 0; iii--){
-		if ((peaksdet[iii] >= (peaksdet[best]-1)) && (peaksdet[iii] <= peaksdet[best]+1) && lowestTransition) {
-			if (clk[iii] > (lowestTransition - (clk[iii]/8)) && clk[iii] < (lowestTransition + (clk[iii]/8))) {
-			best = iii;
+
+	uint8_t best = 0;
+	for (int m = 7; m > 0; m--){
+		if ((peaksdet[m] >= (peaksdet[best]-1)) && (peaksdet[m] <= peaksdet[best]+1) && lowestTransition) {
+			if (clk[m] > (lowestTransition - (clk[m]/8)) && clk[m] < (lowestTransition + (clk[m]/8))) {
+				best = m;
+			}
+		} else if (peaksdet[m] > peaksdet[best]){
+			best = m;
 		}
-		} else if (peaksdet[iii] > peaksdet[best]){
-			best = iii;
-		}
-		if (g_debugMode==2) prnt("DEBUG NRZ: Clk: %d, peaks: %d, maxPeak: %d, bestClk: %d, lowestTrs: %d",clk[iii],peaksdet[iii],maxPeak, clk[best], lowestTransition);
+		if (g_debugMode==2) prnt("DEBUG NRZ: Clk: %d, peaks: %d, maxPeak: %d, bestClk: %d, lowestTrs: %d", clk[m], peaksdet[m], maxPeak, clk[best], lowestTransition);
 	}
 
 	return clk[best];

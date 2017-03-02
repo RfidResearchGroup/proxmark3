@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include <iostream>
+#include <QT>
 #include <QPainterPath>
 #include <QBrush>
 #include <QPen>
@@ -278,8 +279,10 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 		int foo = 40 + (int)((CursorCPos - GraphStart) * GraphPixelsPerPoint);	
 		int bar = 40 + ((CursorDPos - GraphStart) * GraphPixelsPerPoint);	
 		QRect r_stt(foo, r.top(), bar-foo, r.bottom() );
-		painter.fillRect(r_stt, QBrush( QT_ORANGE_TS ));
-		painter.drawRect(r_stt);
+		QBrush b_stt( QBrush( QT_ORANGE_TS ));
+		b_stt.setStyle(Qt::Dense1Pattern);
+		painter.setPen(Qt::NoPen);
+		painter.fillRect(r_stt, b_stt);
 	}
 	
 	// Mark Clock pulse
@@ -293,8 +296,11 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 			int foo = 40 + (int)((i - GraphStart) * GraphPixelsPerPoint);	
 			int bar = 40 + ((i + PlotClock - GraphStart) * GraphPixelsPerPoint);	
 			QRect r_clock(foo, r.top(), bar-foo, r.bottom() );
-			painter.fillRect(r_clock, QBrush( QT_RED_TS ));
-			painter.drawRect(r_clock);
+			
+			QBrush b_clk( QBrush( QT_RED_TS ));
+			b_clk.setStyle(Qt::Dense1Pattern);
+			painter.setPen(Qt::NoPen);
+			painter.fillRect(r_clock, b_clk);
 		}
 	}
 	

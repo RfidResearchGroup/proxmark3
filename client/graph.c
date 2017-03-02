@@ -20,30 +20,27 @@ int GraphTraceLen;
 /* write a manchester bit to the graph */
 void AppendGraph(int redraw, int clock, int bit)
 {
-  int i;
-  //set first half the clock bit (all 1's or 0's for a 0 or 1 bit) 
-  for (i = 0; i < (int)(clock / 2); ++i)
-    GraphBuffer[GraphTraceLen++] = bit ;
-  //set second half of the clock bit (all 0's or 1's for a 0 or 1 bit)
-  for (i = (int)(clock / 2); i < clock; ++i)
-    GraphBuffer[GraphTraceLen++] = bit ^ 1;
+	int i;
+	//set first half the clock bit (all 1's or 0's for a 0 or 1 bit) 
+	for (i = 0; i < (int)(clock / 2); ++i)
+		GraphBuffer[GraphTraceLen++] = bit ;
+	//set second half of the clock bit (all 0's or 1's for a 0 or 1 bit)
+	for (i = (int)(clock / 2); i < clock; ++i)
+		GraphBuffer[GraphTraceLen++] = bit ^ 1;
 
-  if (redraw)
-    RepaintGraphWindow();
+	if (redraw)
+		RepaintGraphWindow();
 }
 
 // clear out our graph window
 int ClearGraph(int redraw)
 {
-  int gtl = GraphTraceLen;
-  memset(GraphBuffer, 0x00, GraphTraceLen);
-
-  GraphTraceLen = 0;
-
-  if (redraw)
-    RepaintGraphWindow();
-
-  return gtl;
+	int gtl = GraphTraceLen;
+	memset(GraphBuffer, 0x00, GraphTraceLen);
+	GraphTraceLen = 0;
+	if (redraw)
+		RepaintGraphWindow();
+	return gtl;
 }
 // option '1' to save GraphBuffer any other to restore
 void save_restoreGB(uint8_t saveOpt)
@@ -70,14 +67,15 @@ void setGraphBuf(uint8_t *buff, size_t size)
 {
 	if ( buff == NULL ) return;
 	
-	uint16_t i = 0;  
+	ClearGraph(0);
+	
 	if ( size > MAX_GRAPH_TRACE_LEN )
 		size = MAX_GRAPH_TRACE_LEN;
-	ClearGraph(0);
-	for (; i < size; ++i){
-		GraphBuffer[i]=buff[i]-128;
-	}
-	GraphTraceLen=size;
+	
+	for (uint16_t i = 0; i < size; ++i)
+		GraphBuffer[i] = buff[i] - 128;
+
+	GraphTraceLen = size;
 	RepaintGraphWindow();
 	return;
 }
@@ -85,10 +83,10 @@ size_t getFromGraphBuf(uint8_t *buff)
 {
 	if (buff == NULL ) return 0;
 	uint32_t i;
-	for (i=0;i<GraphTraceLen;++i){
-		if (GraphBuffer[i]>127) GraphBuffer[i]=127; //trim
-		if (GraphBuffer[i]<-127) GraphBuffer[i]=-127; //trim
-		buff[i]=(uint8_t)(GraphBuffer[i]+128);
+	for (i=0; i < GraphTraceLen; ++i){
+		if (GraphBuffer[i] > 127) GraphBuffer[i] = 127; //trim
+		if (GraphBuffer[i] < -127) GraphBuffer[i] = -127; //trim
+		buff[i] = (uint8_t)(GraphBuffer[i]+128);
 	}
 	return i;
 }
@@ -133,8 +131,8 @@ int GetAskClock(const char str[], bool printAns, bool verbose)
 	if (!strcmp(str, ""))
 		clock = 0;
 
-	if (clock != 0) 
-		return clock;
+	if (clock != 0) return clock;
+	
 	// Auto-detect clock
 	uint8_t grph[MAX_GRAPH_TRACE_LEN]={0};
 	size_t size = getFromGraphBuf(grph);
@@ -145,15 +143,12 @@ int GetAskClock(const char str[], bool printAns, bool verbose)
 	}
 	bool st = DetectST(grph, &size, &clock);
 	int start = 0;
-	if (st == false) {
+	if (st == false)
 		start = DetectASKClock(grph, size, &clock, 20);
-	}
+
 	// Only print this message if we're not looping something
-	if (printAns){
+	if (printAns)
 		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
-	}
-	PlotClock = clock;
-	PlockClockStartIndex = start;
 	return clock;
 }
 
@@ -193,9 +188,6 @@ int GetPskClock(const char str[], bool printAns, bool verbose)
 	clock = DetectPSKClock(grph, size, 0);
 	// Only print this message if we're not looping something
 	if (printAns) PrintAndLog("Auto-detected clock rate: %d", clock);
-
-	PlotClock = clock;
-//	PlockClockStartIndex = start;
 	return clock;
 }
 
@@ -221,8 +213,6 @@ uint8_t GetNrzClock(const char str[], bool printAns, bool verbose)
 	if (printAns)
 		PrintAndLog("Auto-detected clock rate: %d", clock);
 
-	PlotClock = clock;
-	//PlockClockStartIndex = start;	
 	return clock;
 }
 //by marshmellow
@@ -247,8 +237,6 @@ uint8_t GetFskClock(const char str[], bool printAns, bool verbose)
 		PrintAndLog("DEBUG: unknown fsk field clock detected");
 		PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
 	}
-	//PlotClock = clock;
-	//PlockClockStartIndex = start;	
 	return 0;
 }
 uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose)
