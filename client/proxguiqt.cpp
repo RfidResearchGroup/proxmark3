@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include <iostream>
-#include <QT>
+//#include <QT>
 #include <QPainterPath>
 #include <QBrush>
 #include <QPen>
