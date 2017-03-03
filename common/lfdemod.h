@@ -19,6 +19,7 @@
 #include <stdlib.h>  // for
 
 //generic
+void	 SetGraphClock( int clock, int startidx);
 uint8_t  justNoise(uint8_t *bits, size_t size);
 size_t   addParity(uint8_t *BitSource, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType);
 int      askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType);
@@ -30,9 +31,12 @@ uint16_t countFC(uint8_t *BitStream, size_t size, uint8_t fskAdj);
 int      DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr);
 uint8_t  DetectCleanAskWave(uint8_t dest[], size_t size, uint8_t high, uint8_t low);
 uint8_t  detectFSKClk(uint8_t *BitStream, size_t size, uint8_t fcHigh, uint8_t fcLow);
+uint8_t  detectFSKClk_ext(uint8_t *BitStream, size_t size, uint8_t fcHigh, uint8_t fcLow, int *firstClockEdge);
 int      DetectNRZClock(uint8_t dest[], size_t size, int clock);
+int      DetectNRZClock_ext(uint8_t dest[], size_t size, int clock, int *clockStartIdx);
 int      DetectPSKClock(uint8_t dest[], size_t size, int clock);
-int      DetectStrongAskClock(uint8_t dest[], size_t size, uint8_t high, uint8_t low);
+int      DetectPSKClock_ext(uint8_t dest[], size_t size, int clock, int *firstPhaseShift);
+int      DetectStrongAskClock(uint8_t dest[], size_t size, uint8_t high, uint8_t low, int *clock);
 bool     DetectST(uint8_t buffer[], size_t *size, int *foundclock);
 bool     DetectST_ext(uint8_t buffer[], size_t *size, int *foundclock, size_t *ststart, size_t *stend);
 int      fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow);

@@ -62,7 +62,6 @@ void save_restoreGB(uint8_t saveOpt)
 }
 
 // DETECT CLOCK NOW IN LFDEMOD.C
-
 void setGraphBuf(uint8_t *buff, size_t size)
 {
 	if ( buff == NULL ) return;
@@ -123,11 +122,6 @@ void DetectHighLowInGraph(int *high, int *low, bool addFuzz) {
 	}
 }
 
-void SetGraphClock( int clock, int startidx){
-	PlotClock = clock;
-	PlockClockStartIndex = startidx;	
-}
-
 // Get or auto-detect ask clock rate
 int GetAskClock(const char str[], bool printAns, bool verbose)
 {
@@ -151,7 +145,6 @@ int GetAskClock(const char str[], bool printAns, bool verbose)
 	if (st == false)
 		start = DetectASKClock(grph, size, &clock, 20);
 
-	// Only print this message if we're not looping something
 	if (printAns)
 		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
 	SetGraphClock(clock, start);
@@ -191,9 +184,13 @@ int GetPskClock(const char str[], bool printAns, bool verbose)
 		if (verbose) PrintAndLog("Failed to copy from graphbuffer");
 		return -1;
 	}
-	clock = DetectPSKClock(grph, size, 0);
-	// Only print this message if we're not looping something
-	if (printAns) PrintAndLog("Auto-detected clock rate: %d", clock);
+	int start = 0;
+	clock = DetectPSKClock_ext(grph, size, 0,  &start);
+
+	if (printAns)
+		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
+	
+	SetGraphClock(clock, start);
 	return clock;
 }
 
@@ -214,11 +211,13 @@ uint8_t GetNrzClock(const char str[], bool printAns, bool verbose)
 			PrintAndLog("Failed to copy from graphbuffer");
 		return -1;
 	}
-	clock = DetectNRZClock(grph, size, 0);
+	int start = 0;	
+	clock = DetectNRZClock_ext(grph, size, 0, &start);
 	// Only print this message if we're not looping something
 	if (printAns)
-		PrintAndLog("Auto-detected clock rate: %d", clock);
+		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
 
+	SetGraphClock(clock, start);
 	return clock;
 }
 //by marshmellow
@@ -258,11 +257,15 @@ uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose)
 	*fc1 = (ans >> 8) & 0xFF;
 	*fc2 = ans & 0xFF;
 
-	*rf1 = detectFSKClk(BitStream, size, *fc1, *fc2);
+	int start = 0;	
+	*rf1 = detectFSKClk_ext(BitStream, size, *fc1, *fc2, &start);
 	if (*rf1 == 0) {
 		if (verbose || g_debugMode) PrintAndLog("DEBUG: Clock detect error");
 		return 0;
 	}
+	
+	PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d | Best Starting Position: %d", *fc1, *fc2, *rf1, start);
+	SetGraphClock(*rf1, start);	
 	return 1;
 }
 
@@ -271,7 +274,6 @@ bool graphJustNoise(int *BitStream, int size)
 {
 	//might not be high enough for noisy environments
 	#define THRESHOLD 15; 
-
 	bool isNoise = TRUE;
 	for(int i=0; i < size && isNoise; i++){
 		isNoise = BitStream[i] < THRESHOLD;
