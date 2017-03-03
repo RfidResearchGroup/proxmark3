@@ -14,21 +14,20 @@ void dummy(char *fmt, ...){}
 void dummy_sgc (int clock, int startidx) {}
 
 #ifndef ON_DEVICE
-# include "ui.h"
+# include "ui.h"		 // plotclock, plotclockstartindex
 # include "cmdparser.h"
 # include "cmddata.h"
 # define prnt PrintAndLog
 # define sgc SetGraphClock
-#else 
-  uint8_t g_debugMode=0;
-# define prnt dummy
-# define sgc dummy_sgc
-#endif
-
 void SetGraphClock(int clock, int startidx){
 	PlotClock = clock;
 	PlockClockStartIndex = startidx;	
 }
+#else 
+  uint8_t g_debugMode = 0;
+# define prnt dummy
+# define sgc dummy_sgc
+#endif
 
 //test samples are not just noise
 uint8_t justNoise(uint8_t *bits, size_t size) {
