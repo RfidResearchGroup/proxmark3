@@ -17,9 +17,9 @@
 #include <stdbool.h> // for bool
 #include <string.h>  // for strcmp 
 #include <stdlib.h>  // for
-
+#include "ui.h"		 // plotclock, plotclockstartindex
 //generic
-void	 SetGraphClock( int clock, int startidx);
+void	 SetGraphClock(int clock, int startidx);
 uint8_t  justNoise(uint8_t *bits, size_t size);
 size_t   addParity(uint8_t *BitSource, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType);
 int      askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType);

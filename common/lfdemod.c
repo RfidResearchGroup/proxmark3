@@ -22,10 +22,10 @@ void dummy_sgc (int clock, int startidx) {}
 #else 
   uint8_t g_debugMode=0;
 # define prnt dummy
-# define sgc dummy
+# define sgc dummy_sgc
 #endif
 
-void SetGraphClock( int clock, int startidx){
+void SetGraphClock(int clock, int startidx){
 	PlotClock = clock;
 	PlockClockStartIndex = startidx;	
 }
