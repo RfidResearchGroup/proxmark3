@@ -289,7 +289,7 @@ int CmdPing(const char *Cmd)
 	UsbCommand c = {CMD_PING};
 	SendCommand(&c);
 	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
-		PrintAndLog("Ping successfull");
+		PrintAndLog("Ping successful");
 	else
 		PrintAndLog("Ping failed");	
 	return 0;
