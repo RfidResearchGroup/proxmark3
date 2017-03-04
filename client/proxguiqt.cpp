@@ -315,7 +315,7 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 	//painter.setPen( QT_LIGHTBLUE ); painter.drawPath(cursorDPath);
 
 	char str[200];
-	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f] zoom=%.3f CursorA=%d [%d] CursorB=%d [%d]    GridX=%d GridY=%d (%s)",
+	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f] zoom=%.3f CursorA=%d [%d] CursorB=%d [%d]  GridX=%d GridY=%d (%s)  [Clock RF/%d]",
 			GraphStart, yMax, yMin, yMean, n, GraphTraceLen,
 			CursorBPos - CursorAPos,
 			(CursorBPos - CursorAPos)/CursorScaleFactor,
@@ -326,11 +326,12 @@ void ProxWidget::paintEvent(QPaintEvent *event)
 			GraphBuffer[CursorBPos],
 			PlotGridXdefault,
 			PlotGridYdefault,
-			GridLocked ? "Locked" : "Unlocked"
+			GridLocked ? "Locked" : "Unlocked",
+			PlotClock
 		);
 
 	painter.setPen( QT_WHITE );
-	painter.drawText(50, r.bottom() - 20, str);
+	painter.drawText(50, r.bottom() - 10, str);
 }
 
 ProxWidget::ProxWidget(QWidget *parent) : QWidget(parent), GraphStart(0), GraphPixelsPerPoint(1)
@@ -345,6 +346,7 @@ ProxWidget::ProxWidget(QWidget *parent) : QWidget(parent), GraphStart(0), GraphP
 	setAutoFillBackground(true);
 	CursorAPos = 0;
 	CursorBPos = 0;
+	PlotClock = 0;
 }
 
 void ProxWidget::closeEvent(QCloseEvent *event)

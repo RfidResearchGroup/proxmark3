@@ -263,8 +263,8 @@ uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose)
 		if (verbose || g_debugMode) PrintAndLog("DEBUG: Clock detect error");
 		return 0;
 	}
-	
-	PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d | Best Starting Position: %d", *fc1, *fc2, *rf1, start);
+	if (verbose || g_debugMode)
+		PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d | Best Starting Position: %d", *fc1, *fc2, *rf1, start);
 	SetGraphClock(*rf1, start);	
 	return 1;
 }
