@@ -182,7 +182,7 @@ typedef struct {
     uint8_t tag_9F34[3]; //Cardholder Verification Method (CVM) Results 
     uint8_t tag_9F35[1]; //Terminal Type
     uint8_t tag_9F36[2]; //Application Transaction Counter (ATC)
-    uint8_t tag_9F37[4]; //Unpredictable Number
+    uint8_t tag_9F37[8]; //Unpredictable Number
     uint8_t tag_9F38_len; 
     uint8_t tag_9F38[255]; //PDOL 
     uint8_t tag_9F39[1]; //Point-of-Service (POS) Entry Mode
@@ -213,7 +213,7 @@ typedef struct {
     uint8_t tag_9F63[6]; //Track 1 Bit Map for UN and ATC (PUNATCTRACK1)
     uint8_t tag_9F64[1]; //Track 1 Number of ATC Digits (NATCTRACK1)
     uint8_t tag_9F65[2]; //rack 2 Bit Map for CVC3 (PCVC3TRACK2)
-    uint8_t tag_9F66[2];   //Track 2 Bit Map for UN and ATC (PUNATCTRACK2), or VISA card type
+    uint8_t tag_9F66[4];   //Track 2 Bit Map for UN and ATC (PUNATCTRACK2), or VISA card type
     uint8_t tag_9F67[1];   //Track 2 Number of ATC Digits (NATCTRACK2)
     uint8_t tag_9F68_len; 
     uint8_t tag_9F68[252]; //Mag Stripe CVM List

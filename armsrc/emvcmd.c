@@ -1068,7 +1068,7 @@ void EMVFuzz_RATS(uint8_t ratslen, uint8_t* RATS)
 	uint8_t *receivedCmdPar = BigBuf_malloc(MAX_PARITY_SIZE);
 	
 	// To control where we are in the protocol
-	int order;
+	int order = 0;
 
 	// We need to listen to the high-frequency, peak-detected path.
 	iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
