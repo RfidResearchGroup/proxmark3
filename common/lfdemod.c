@@ -945,9 +945,10 @@ int DetectStrongAskClock(uint8_t dest[], size_t size, uint8_t high, uint8_t low,
 	// set clock
 	if (g_debugMode==2) prnt("DEBUG ASK: detectstrongASKclk smallest wave: %d",minClk);
 	for (uint8_t clkCnt = 0; clkCnt<7; clkCnt++) {
-		if (minClk >= clocks[clkCnt]-(clocks[clkCnt]/8) && minClk <= clocks[clkCnt]+1)
+		if (minClk >= clocks[clkCnt]-(clocks[clkCnt]/8) && minClk <= clocks[clkCnt]+1) {
 			*clock = clocks[clkCnt];
 			return shortestWaveIdx;
+		}
 	}
 	return 0;
 }
