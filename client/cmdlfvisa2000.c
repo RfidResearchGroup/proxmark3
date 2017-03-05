@@ -54,6 +54,10 @@ static uint8_t visa_parity( uint32_t id) {
 		,0,1,1,0
 	};	
 	uint8_t par = 0;
+	par |= par_lut[ NIBBLE_HIGH( (id >> 24) & 0xFF) ] << 7;
+	par |= par_lut[ NIBBLE_LOW( (id >> 24) & 0xFF) ] << 6;
+	par |= par_lut[ NIBBLE_HIGH( (id >> 16) & 0xFF) ] << 5;
+	par |= par_lut[ NIBBLE_LOW( (id >> 16) & 0xFF) ] << 4;
 	par |= par_lut[ NIBBLE_HIGH( (id >> 8) & 0xFF) ] << 3;
 	par |= par_lut[ NIBBLE_LOW( (id >> 8) & 0xFF) ] << 2;
 	par |= par_lut[ NIBBLE_HIGH( id & 0xFF ) ] << 1;
@@ -124,7 +128,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 	}
 	// parity
 	uint8_t calc_par = visa_parity(raw2);
-	uint8_t chk_par = (raw3 & 0xF0) >> 4;
+	uint8_t chk_par = (raw3 & 0xFF0) >> 4;
 	if ( calc_par != chk_par) {
 		printf("DEBUG: error: Visa2000 parity failed %x - %x\n", chk_par, calc_par);
 		save_restoreGB(0);
