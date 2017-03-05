@@ -45,6 +45,23 @@ static uint8_t visa_chksum( uint32_t id ) {
     return sum & 0xF;
 }
 
+static uint8_t visa_parity( uint32_t id) {
+	// 4bit parity LUT
+	uint8_t par_lut[] = {
+		0,1,1,0
+		,1,0,0,1
+		,1,0,0,1
+		,0,1,1,0
+	};	
+	uint8_t par = 0;
+	par |= par_lut[ NIBBLE_HIGH( (id >> 8) & 0xFF) ] << 3;
+	par |= par_lut[ NIBBLE_LOW( (id >> 8) & 0xFF) ] << 2;
+	par |= par_lut[ NIBBLE_HIGH( id & 0xFF ) ] << 1;
+	par |= par_lut[ NIBBLE_LOW( id & 0xFF) ];
+	return par;	
+}
+
+
 /**
 *
 * 56495332 00096ebd 00000077 —> tag id 618173
@@ -98,11 +115,20 @@ int CmdVisa2kDemod(const char *Cmd) {
 	// chksum
 	uint8_t calc = visa_chksum(raw2);
 	uint8_t chk = raw3 & 0xF;	
+		
 	// test checksums
 	if ( chk != calc ) { 
 		printf("DEBUG: error: Visa2000 checksum failed %x - %x\n", chk, calc);
 		save_restoreGB(0);
 		return 0;
+	}
+	// parity
+	uint8_t calc_par = visa_parity(raw2);
+	uint8_t chk_par = (raw3 & 0xF0) >> 4;
+	if ( calc_par != chk_par) {
+		printf("DEBUG: error: Visa2000 parity failed %x - %x\n", chk_par, calc_par);
+		save_restoreGB(0);
+		return 0;		
 	}
 	PrintAndLog("Visa2000 Tag Found: Card ID %u,  Raw: %08X%08X%08X", raw2,  raw1 ,raw2, raw3);
 	save_restoreGB(0);
@@ -133,7 +159,7 @@ int CmdVisa2kClone(const char *Cmd) {
 	
 	// 
 	blocks[2] = id;
-	blocks[3] = visa_chksum(id);
+	blocks[3] =  (visa_parity(id) << 4) | visa_chksum(id);	
 
 	PrintAndLog("Preparing to clone Visa2000 to T55x7 with CardId: %u", id);
 	PrintAndLog("Blk | Data ");
@@ -175,7 +201,7 @@ int CmdVisa2kSim(const char *Cmd) {
 
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};
 
-	uint32_t blocks[3] = { BL0CK1, id,  visa_chksum(id) };
+	uint32_t blocks[3] = { BL0CK1, id, (visa_parity(id) << 4) | visa_chksum(id) };
 
 	for(int i=0; i<3; ++i)
 		num_to_bytebits(blocks[i], 32, c.d.asBytes + i*32);
