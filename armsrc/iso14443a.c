@@ -1604,9 +1604,16 @@ int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen, bool correctionNeeded) {
 	// Modulate Manchester
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_MOD);
 
-	// include correction bit if necessary
-	if (Uart.parityBits & 0x01) {
-		correctionNeeded = TRUE;
+	// Include correction bit if necessary
+	if (Uart.bitCount == 7)
+	{
+		// Short tags (7 bits) don't have parity, determine the correct value from MSB
+		correctionNeeded = Uart.output[0] & 0x40;
+	}
+	else
+	{
+		// The parity bits are left-aligned
+		correctionNeeded = Uart.parity[(Uart.len-1)/8] & (0x80 >> ((Uart.len-1) & 7));
 	}
 	// 1236, so correction bit needed
 	i = (correctionNeeded) ? 0 : 1;
