@@ -961,7 +961,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 
 	uint8_t blockNo = arg0 & 0xFF;
 	uint8_t keyType = (arg0 >> 8) & 0xFF;
-	uint8_t searchType = (arg1 >> 8 ) & 0xFF;
+	//uint8_t searchType = (arg1 >> 8 ) & 0xFF;
 	bool clearTrace = arg1 & 0xFF;
 	uint8_t keyCount = arg2;
 	uint64_t ui64Key = 0;
