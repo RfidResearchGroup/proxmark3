@@ -58,7 +58,7 @@ typedef struct {
 typedef struct {
 	uint64_t Key[2];
 	int foundKey[2];
-} sector;
+} sector_t;
  
 extern int compar_int(const void * a, const void * b);
 extern char logHexFileName[FILE_PATH_SIZE];

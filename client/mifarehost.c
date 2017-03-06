@@ -192,8 +192,10 @@ out:
 }
 
 int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key){
-	*key = 0;
-	UsbCommand c = {CMD_MIFARE_CHKKEYS, { (blockNo | (keyType<<8)), clear_trace, keycnt}};
+#define STD_SEARCH 1
+#define EXT_SEARCH 2
+	*key = 0;	
+	UsbCommand c = {CMD_MIFARE_CHKKEYS, { (blockNo | (keyType << 8)), ((EXT_SEARCH << 8) | clear_trace), keycnt}};
 	memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
 	clearCommandBuffer();
 	SendCommand(&c);

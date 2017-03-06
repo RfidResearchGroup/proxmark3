@@ -9,6 +9,7 @@
 // The main application code. This is the first thing called after start.c
 // executes.
 //-----------------------------------------------------------------------------
+#include <stdarg.h>
 #include "usb_cdc.h"
 #include "proxmark3.h"
 #include "apps.h"

@@ -29,7 +29,6 @@ extern "C" {
 #include "pcf7931.h"
 #include "desfire.h"
 #include "iso14443b.h"
-//#include "iso14443a.h"
 #include "emvcard.h"
 
 extern int rsamples;   // = 0;

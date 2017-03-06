@@ -721,7 +721,7 @@ int CmdHF14AMfRestore(const char *Cmd) {
 
 int CmdHF14AMfNested(const char *Cmd) {
 	int i, j, res, iterations;
-	sector *e_sector = NULL;
+	sector_t *e_sector = NULL;
 	uint8_t blockNo = 0;
 	uint8_t keyType = 0;
 	uint8_t trgBlockNo = 0;
@@ -823,7 +823,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 		time_t start, end;
 		time(&start);
 		
-		e_sector = calloc(SectorsCnt, sizeof(sector));
+		e_sector = calloc(SectorsCnt, sizeof(sector_t));
 		if (e_sector == NULL) return 1;
 		
 		//test current key and additional standard keys first
@@ -1083,7 +1083,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 	uint8_t *keyBlock = NULL, *p;
 	uint8_t stKeyBlock = 20;
 	
-	sector *e_sector = NULL;
+	sector_t *e_sector = NULL;
 	
 	int i, res;
 	int	keycnt = 0;
@@ -1230,7 +1230,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 	}
 	
 	// initialize storage for found keys
-	e_sector = calloc(SectorsCnt, sizeof(sector));
+	e_sector = calloc(SectorsCnt, sizeof(sector_t));
 	if (e_sector == NULL) {
 		free(keyBlock);
 		return 1;
@@ -1362,13 +1362,13 @@ int CmdHF14AMfChk(const char *Cmd) {
 	return 0;
 }
 
-sector *k_sector = NULL;
+sector_t *k_sector = NULL;
 uint8_t k_sectorsCount = 16;
 static void emptySectorTable(){
 
 	// initialize storage for found keys
 	if (k_sector == NULL)
-		k_sector = calloc(k_sectorsCount, sizeof(sector));
+		k_sector = calloc(k_sectorsCount, sizeof(sector_t));
 	if (k_sector == NULL) 
 		return;
 		
@@ -1720,7 +1720,7 @@ int CmdHF14AMfKeyBrute(const char *Cmd) {
 	return 0;	
 }
 
-void printKeyTable( uint8_t sectorscnt, sector *e_sector ){
+void printKeyTable( uint8_t sectorscnt, sector_t *e_sector ){
 	PrintAndLog("|---|----------------|---|----------------|---|");
 	PrintAndLog("|sec|key A           |res|key B           |res|");
 	PrintAndLog("|---|----------------|---|----------------|---|");

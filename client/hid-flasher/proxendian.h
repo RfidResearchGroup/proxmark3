@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 # define HOST_LITTLE_ENDIAN
 #else
 # include <sys/types.h>

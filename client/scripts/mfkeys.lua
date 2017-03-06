@@ -30,6 +30,7 @@ If you want to add more, just put them inside /lualibs/mf_default_keys.lua\n"):f
 
 Arguments:
 	-h             : this help
+	-p             : print keys
 ]]
 
 local TIMEOUT = 10000 -- 10 seconds
@@ -179,12 +180,20 @@ local function dumptofile(results)
 		file:close()
 	end
 end
+local function printkeys() 
+	for i=0,#keys do
+		print(i,keys[i])
+		
+	end
+	print ('Number of keys: '..#keys)
+end
 
 local function main( args)
 
 	-- Arguments for the script
-	for o, a in getopt.getopt(args, 'h') do
+	for o, a in getopt.getopt(args, 'hp') do
 		if o == "h" then return help() end			
+		if o == "p" then return printkeys() end
 	end
 	
 	result, err = reader.read1443a()

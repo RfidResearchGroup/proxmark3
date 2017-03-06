@@ -2,8 +2,7 @@
 #define OPTIMIZED_CIPHER_H
 
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stddef.h>
 #include <stdbool.h>
 
 /**

@@ -16,14 +16,12 @@
 #include <string.h>
 #include <ctype.h>
 #include "proxmark3.h"
-
 #include "iso14443crc.h"
 #include "data.h"
 #include "ui.h"
 #include "cmdparser.h"
 #include "common.h"
 #include "util.h"
-//#include "mifarehost.h"
 #include "mifare.h" // nonces_t struct
 #include "cmdhfmfhard.h"
 #include "nonce2key/nonce2key.h"
@@ -63,5 +61,5 @@ int CmdHf14MfDecryptBytes(const char *Cmd);
 
 void showSectorTable(void);
 void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose);
-void printKeyTable( uint8_t sectorscnt, sector *e_sector );
+void printKeyTable( uint8_t sectorscnt, sector_t *e_sector );
 #endif

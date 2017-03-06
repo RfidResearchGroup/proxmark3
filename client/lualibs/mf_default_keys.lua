@@ -181,27 +181,27 @@ local _keys = {
     hotel system cards,
 	http://www.proxmark.org/forum/viewtopic.php?id=2430
     --]]	
-	  '44ab09010845',
-      '85fed980ea5a',
+	'44ab09010845',
+    '85fed980ea5a',
 	  
-	 --[[
-	 VIGIK1
-	 --]]
-	 '314B49474956',
-	 '564c505f4d41',
+	--[[
+	VIGIK1
+	--]]
+	'314B49474956',
+	'564c505f4d41',
 	 
-	 --[[
-	 BCARD keyB
-	 --]]
-	 'f4a9ef2afc6d',
+	--[[
+	BCARD keyB
+	--]]
+	'f4a9ef2afc6d',
 	 
-	 --[[	 
-	 --]]
-	 'a9f953def0a3',
+	--[[	 
+	--]]
+	'a9f953def0a3',
 	 
-	 --[[
-	 mystery Key A and B for Mifare 1k EV1 (S50) Sector 17!
-	 --]]
+	--[[
+	mystery Key A and B for Mifare 1k EV1 (S50) Sector 17!
+	--]]
 	'75ccb59c9bed',
 	'4b791bea7bcc',
 	
@@ -451,6 +451,9 @@ local _keys = {
 	'0ffbf65b5a14',
 	'c5cfe06d9ea3',
 	'c0dece673829',	
+	--[[
+	--]]
+	'a56c2df9a26d',
 }
 
 ---

@@ -956,9 +956,13 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 // 
 //-----------------------------------------------------------------------------
 void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
-	uint8_t blockNo = arg0 & 0xff;
-	uint8_t keyType = (arg0 >> 8) & 0xff;
-	bool clearTrace = arg1;
+#define STD_SEARCH 1
+#define EXT_SEARCH 2
+
+	uint8_t blockNo = arg0 & 0xFF;
+	uint8_t keyType = (arg0 >> 8) & 0xFF;
+	uint8_t searchType = (arg1 >> 8 ) & 0xFF;
+	bool clearTrace = arg1 & 0xFF;
 	uint8_t keyCount = arg2;
 	uint64_t ui64Key = 0;
 	
@@ -1026,8 +1030,16 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 			
 			continue;
 		}
-		isOK = 1;
-		break;
+		
+		// found a key.
+		//
+		//if ( searchType == EXT_SEARCH) {
+			
+		//}
+		//else {
+			isOK = 1;
+			break;
+		//}
 	}
 	
 	LED_B_ON();
