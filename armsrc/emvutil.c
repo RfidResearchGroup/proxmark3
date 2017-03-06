@@ -1546,7 +1546,7 @@ void emvsnoop() {
         }
 
         if(len==1 && ((receivedCmd[0] == 0x26 && cardSTATE != EMVEMUL_HALTED) || receivedCmd[0] == 0x52)){
-            EmSendCmdEx(rATQA, sizeof(rATQA), (receivedCmd[0] == 0x52));
+            EmSendCmd(rATQA, sizeof(rATQA));
             cardSTATE = EMVEMUL_SELECT1;
             continue;
         }

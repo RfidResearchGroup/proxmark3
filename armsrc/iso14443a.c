@@ -1080,15 +1080,15 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 				uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
 				emlGetMemBt( emdata, start, 16);
 				AppendCrc14443a(emdata, 16);
-				EmSendCmdEx(emdata, sizeof(emdata));
+				EmSendCmd(emdata, sizeof(emdata));
 				// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
 				p_response = NULL;
 			} else { // all other tags (16 byte block tags)
 				uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
 				emlGetMemBt( emdata, block, 16);
 				AppendCrc14443a(emdata, 16);
-				EmSendCmdEx(emdata, sizeof(emdata));
-				// EmSendCmdEx(data+(4*receivedCmd[1]),16);
+				EmSendCmd(emdata, sizeof(emdata));
+				// EmSendCmd(data+(4*receivedCmd[1]),16);
 				// Dbprintf("Read request from reader: %x %x",receivedCmd[0],receivedCmd[1]);
 				// We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
 				p_response = NULL;
@@ -1100,7 +1100,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 			int len   = (receivedCmd[2] - receivedCmd[1] + 1) * 4;
 			emlGetMemBt( emdata, start, len);
 			AppendCrc14443a(emdata, len);
-			EmSendCmdEx(emdata, len+2);				
+			EmSendCmd(emdata, len+2);				
 			p_response = NULL;		
 		} else if(receivedCmd[0] == MIFARE_ULEV1_READSIG && tagType == 7) {	// Received a READ SIGNATURE -- 
 			// first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
@@ -1108,7 +1108,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 			uint8_t emdata[34];
 			emlGetMemBt( emdata, start, 32);
 			AppendCrc14443a(emdata, 32);
-			EmSendCmdEx(emdata, sizeof(emdata));
+			EmSendCmd(emdata, sizeof(emdata));
 			p_response = NULL;					
 		} else if (receivedCmd[0] == MIFARE_ULEV1_READ_CNT && tagType == 7) {	// Received a READ COUNTER -- 
 			uint8_t index = receivedCmd[1];
@@ -1117,7 +1117,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 				num_to_bytes(counters[index], 3, cmd);
 				AppendCrc14443a(cmd, sizeof(cmd)-2);
 			}
-			EmSendCmdEx(cmd,sizeof(cmd));				
+			EmSendCmd(cmd,sizeof(cmd));				
 			p_response = NULL;
 		} else if (receivedCmd[0] == MIFARE_ULEV1_INCR_CNT && tagType == 7) {	// Received a INC COUNTER -- 
 			// number of counter
@@ -1127,7 +1127,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 		
 			// send ACK
 			uint8_t ack[] = {0x0a};
-			EmSendCmdEx(ack,sizeof(ack));
+			EmSendCmd(ack,sizeof(ack));
 			p_response = NULL;			
 		} else if(receivedCmd[0] == MIFARE_ULEV1_CHECKTEAR && tagType == 7) {	// Received a CHECK_TEARING_EVENT -- 
 			// first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
@@ -1136,7 +1136,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 			if (receivedCmd[1]<3) counter = receivedCmd[1];
 			emlGetMemBt( emdata, 10+counter, 1);
 			AppendCrc14443a(emdata, sizeof(emdata)-2);
-			EmSendCmdEx(emdata, sizeof(emdata));	
+			EmSendCmd(emdata, sizeof(emdata));	
 			p_response = NULL;		
 		} else if(receivedCmd[0] == ISO14443A_CMD_HALT) {	// Received a HALT
 			LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
@@ -1146,7 +1146,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 				uint8_t emdata[10];
 				emlGetMemBt( emdata, 0, 8 );
 				AppendCrc14443a(emdata, sizeof(emdata)-2);
-				EmSendCmdEx(emdata, sizeof(emdata));
+				EmSendCmd(emdata, sizeof(emdata));
 				p_response = NULL;
 			} else {
 								
@@ -1242,7 +1242,7 @@ void SimulateIso14443aTag(int tagType, int flags, byte_t* data) {
 				uint8_t emdata[4];
 				emlGetMemBt( emdata, start, 2);
 				AppendCrc14443a(emdata, 2);
-				EmSendCmdEx(emdata, sizeof(emdata));
+				EmSendCmd(emdata, sizeof(emdata));
 				p_response = NULL;
 				uint32_t pwd = bytes_to_num(receivedCmd+1,4);
 				
@@ -1693,12 +1693,6 @@ int EmSendCmdExPar(uint8_t *resp, uint16_t respLen, uint8_t *par){
 				(LastTimeProxToAirStart + LastProxToAirDuration)*16 + DELAY_ARM2AIR_AS_TAG, 
 				par);
 	return res;
-}
-
-int EmSendCmdEx(uint8_t *resp, uint16_t respLen){
-	uint8_t par[MAX_PARITY_SIZE] = {0x00};
-	GetParity(resp, respLen, par);
-	return EmSendCmdExPar(resp, respLen, par);
 }
 
 int EmSendCmd(uint8_t *resp, uint16_t respLen){
@@ -2596,7 +2590,7 @@ void Mifare1ksim(uint8_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *
 		// this if-statement doesn't match the specification above. (iceman)
 		if (len == 1 && ((receivedCmd[0] == ISO14443A_CMD_REQA && cardSTATE != MFEMUL_HALTED) || receivedCmd[0] == ISO14443A_CMD_WUPA)) {
 			selTimer = GetTickCount();
-			EmSendCmdEx(atqa, sizeof(atqa));
+			EmSendCmd(atqa, sizeof(atqa));
 			cardSTATE = MFEMUL_SELECT1;
 			crypto1_destroy(pcs);
 			cardAUTHKEY = 0xff;
