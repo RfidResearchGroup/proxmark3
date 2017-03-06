@@ -977,7 +977,7 @@ void SimulateEMVcard()
 		cmdsRecvd++;
 
 		if (p_response != NULL) {
-			EmSendCmd14443aRaw(p_response->modulation, p_response->modulation_n, receivedCmd[0] == 0x52);
+			EmSendCmd14443aRaw(p_response->modulation, p_response->modulation_n);
 			// do the tracing for the previous reader request and this tag answer:
 
 	
@@ -1096,11 +1096,11 @@ void EMVFuzz_RATS(uint8_t ratslen, uint8_t* RATS)
 	    } 
 	    if (receivedCmd[0] == 0xE0) {	// Received a RATS request
 	    	p_response = &responses[3]; order = 70;
-            EmSendCmd14443aRaw(p_response->modulation, p_response->modulation_n, (receivedCmd[0] == 0x52) || (receivedCmd[0] == 0x26));
+            EmSendCmd14443aRaw(p_response->modulation, p_response->modulation_n);
             break;
 	    }
         if (p_response != NULL){
-            EmSendCmd14443aRaw(p_response->modulation, p_response->modulation_n, (receivedCmd[0] == 0x52) || (receivedCmd[0] == 0x26));
+            EmSendCmd14443aRaw(p_response->modulation, p_response->modulation_n);
         } else {
             break;
         } 
