@@ -98,7 +98,6 @@ extern void iso14a_set_trigger(bool enable);
 
 int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen);
 int EmSend4bit(uint8_t resp);
-int EmSendCmdExPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
 extern int EmSendCmd(uint8_t *resp, uint16_t respLen);
 extern int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *parity);
 int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);

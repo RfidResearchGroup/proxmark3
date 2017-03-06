@@ -1678,7 +1678,7 @@ int EmSend4bit(uint8_t resp){
 	return res;
 }
 
-int EmSendCmdExPar(uint8_t *resp, uint16_t respLen, uint8_t *par){
+int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par){
 	CodeIso14443aAsTagPar(resp, respLen, par);
 	int res = EmSendCmd14443aRaw(ToSend, ToSendMax);
 	// do the tracing for the previous reader request and this tag answer:
@@ -1698,11 +1698,7 @@ int EmSendCmdExPar(uint8_t *resp, uint16_t respLen, uint8_t *par){
 int EmSendCmd(uint8_t *resp, uint16_t respLen){
 	uint8_t par[MAX_PARITY_SIZE] = {0x00};
 	GetParity(resp, respLen, par);
-	return EmSendCmdExPar(resp, respLen, par);
-}
-
-int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par){
-	return EmSendCmdExPar(resp, respLen, par);
+	return EmSendCmdPar(resp, respLen, par);
 }
 
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
