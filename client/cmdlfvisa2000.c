@@ -139,9 +139,10 @@ int CmdVisa2kDemod(const char *Cmd) {
 	return 1;
 }
 
+// 64*96*2=12288 samples just in case we just missed the first preamble we can still catch 2 of them
 int CmdVisa2kRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("12000",TRUE);
+	getSamples("12500",TRUE);
 	return CmdVisa2kDemod(Cmd);
 }
 
@@ -207,7 +208,7 @@ int CmdVisa2kSim(const char *Cmd) {
 
 	uint32_t blocks[3] = { BL0CK1, id, (visa_parity(id) << 4) | visa_chksum(id) };
 
-	for(int i=0; i<3; ++i)
+	for(int i = 0; i < 3; ++i)
 		num_to_bytebits(blocks[i], 32, c.d.asBytes + i*32);
 
 	clearCommandBuffer();
@@ -217,6 +218,7 @@ int CmdVisa2kSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",	CmdHelp,		1, "This help"},
+	{"demod",	CmdVisa2kDemod,	1, "Attempt to demod from GraphBuffer"},	
 	{"read",	CmdVisa2kRead,	0, "Attempt to read and extract tag data"},
 	{"clone",	CmdVisa2kClone,	0, "clone Visa2000 tag"},
 	{"sim",		CmdVisa2kSim,	0, "simulate Visa2000 tag"},
