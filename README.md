@@ -46,7 +46,7 @@ Among the stuff is
 	* other obscure patches like for the sammy-mode,  (offline you know), tagidentifications, defaultkeys. 
 	* Minor textual changes here and there.
 	* Simulation of Ultralight/Ntag.
-	* Marshmellow's and my "RevEng" addon for the client.  Ref: http://reveng.sourceforge.net/    Now using reveng1.31
+	* Marshmellow's and my "RevEng" addon for the client.  Ref: http://reveng.sourceforge.net/    Now using reveng1.44
 	* J-Run alternative bruteforce Mifare nested auths.. (you need one other exe to make it work)
 	* A Bruteforce for T55XX passwords against tag.
 	* A Bruteforce for AWID 26, starting w a facilitycode then trying all 0xFFFF cardnumbers via simulation. To be used against a AWID Reader.
@@ -54,66 +54,6 @@ Among the stuff is
 	* Blaposts Crapto1 v3.3
     * Icsom's  legic script and legic enhancements
     * Aczid's bitsliced bruteforce solver in 'hf mf hardnested'
-
-##Straight from the CHANGELOG
-=============================
-## [1.6.9][icemanfork] [2017-02-06]
-  - Serial speedup,  if possible 408600baud otherwise default to 115200baud (iceman)
-  - `hf emv` - Added Peter Fillmore's EMV branch now compiles on iceman fork.  See seperate issue. (iceman)
-  - `hf 14a reader` - Aztek detection. (iceman)
-  - `standalone mode` - added more detection of tags and refactored (iceman)
-  - `script run ufodump` - dumps an Aztek tag. (iceman)
-  - `script run hard_autopwn` - runs hardnested attack against all sectors on tag (iceman)
-  - Added lf cotag read, and added it to lf search (iceman)
-  - Added hitag2 read UID only and added that to lf search (marshmellow)
-  - `lf search` -  check for if signal is only noice (marshmellow)
-  - `hf 14a reader` - fixed a bug when card has sak 0x00 but still is not UL/NTAG etc. (iceman)
-  - `hf mf sim` / `hf 14a sim` - use random nonce. (micolous)
-  - `hw tune` - only prints out if voltage is detected from antenna. (iceman)
-  - `hf iclass decrypt` - only decrypt Application1 (iceman)
-  - `lf t55xx detect` - when finding multiple possible config blocks, see if a known configblock exists and select. (iceman)
-  
-  -  Added `hf mf key_brute` - adds J-Runs 2nd phase bruteforce ref: https://github.com/J-Run/mf_key_brute   (iceman)
-  -  Added `lf jablotron` - adds demod/clone/sim of Jablotron LF tags. (iceman)
-  -  Added `lf t55xx recoverpw` - adds a new password recovery using bitflips and partial flips if password write went bad. (alexgrin)
-  - `hf legic` - added improved legic data mapping. (jason)
-  - `hf mf mifare` - added possibility to target key A|B (douniwan5788)
-  -  Added `analyse lcr` - added a new main command group,  to help analysing bytes & bits & nibbles. (iceman)
-  -  Added `lf nedap` - added identification of a NEDAP tag. (iceman)
-  - `lf viking clone` - fixed a bug. (iceman)
-  -  Added bitsliced bruteforce solver in `hf mf hardnested` (Aczid)
-  - `hf mf chk` speedup (iceman)
-  - `hf 14a/mf sim x` attack mode,  now uses also moebius version of mfkey32 to try finding the key. (iceman)
-  - `hf 14a sim` Added emulation of Mifare cards with 10byte UID length. (iceman)
-  - `hf mf sim` Added emulation of Mifare cards with 10byte UID length. (iceman)
-  -  Added `lf guard clone/sim` (iceman)
-  -  Added `lf pyramd clone/sim` (iceman) 
-  - trying to fix `hf 14b` command to be able to read CALYPSO card.	 (iceman)
-  - `hf legic load`, it now loads faster and a casting bug is gone. (iceman)
-  -  Added `hf legic calccrc8` added a method to calculate the legic crc-8 value (iceman)
-  - `hf legic decode` fixed the output overflow bugs, better printing (iceman)
-  - Coverity Scan fixes a lot of resource leaks, etc (iceman)
-  -  Added `lf presco *` commands started (iceman) 
-  -  Added `lf hid wiegand` added a method to calculate WIEGAND in different formats, (iceman)
-  - `hf mf chkkeys` better printing, same table output as nested, faster execution and added Adam Lauries "try to read Key B if Key A is found" (iceman)
-  - `hf mf nested` better printing and added Adam Lauries "try to read Key B if Key A is found" (iceman)
-  - `hf mf mifare` fixing the zero parity path, which doesn't got called. (iceman) 
-  - Updated the @blapost's Crapto1 implementation to v3.3 (blapost) 
-  - `hf mf c*` updated the calling structure and refactored of the chinese magic commands (iceman, marshmellow)
-  - Started to add Peter Fillmore's  EMV fork into Iceman fork. ref: https://github.com/peterfillmore/proxmark3  (peter fillmore,  iceman)
-  - Added Travis-CI automatic build integration with GitHub fork. (iceman)
-  - Updated the Reveng 1.30 sourcecode to 1.31 from Reveng project homepage (iceman)
-  - Updated the Reveng 1.31 sourcecode to 1.40 from Reveng project homepage (iceman)
-  
-  - Added possibility to write direct to a Legic Prime Tag (MIM256/1024) without using values from the 'BigBuffer' -> 'hf legic writeRaw <addr> <value>' (icsom)
-  - Added possibility to decrease DCF values at address 0x05 & 0x06 on a Legic Prime Tag 
-		DCF-value will be pulled from the BigBuffer (address 0x05 & 0x06) so you have to 
-		load the data into the BigBuffer before with 'hf legic load <path/to/legic.dump>' & then
-		write the DCF-Values (both at once) with 'hf legic write 0x05 0x02'  (icsom)
-  - Added script `legic.lua` for display and edit Data of Legic-Prime Tags (icsom)
-  - Added the experimental HITAG_S support (spenneb)
-  - Added topaz detection to `hf search` (iceman)
-  - Fixed the silent mode for 14b to be used inside `hf search` (iceman)
 	
 ---	
 ##Why don't you merged with offical PM3 Master?
@@ -130,7 +70,8 @@ I do tend to rename and move stuff around, the official PM3-GUI from Gaucho will
 This fork now compiles just fine on 
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
    - Ubuntu 1404, 1510, 1604
-   - Mac OS X
+   - Mac OS X / Homebrew
+   - Docker container
 
 ##Setup and build for UBUNTU
 GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS, 15.10 or 16.04
