@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+
+## [1.7.0 iceman fork] [2017-03-07]
   - hf mf dump - added retry loops to try each read attempt up to 3 times.  makes getting a complete dump easier with many antennas. (marshmellow)
 
   - Added markers in the graph around found Sequence Terminator after askmandemod. (marshmellow)
@@ -26,7 +28,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - Added lf em 4x05info command to read and display information about the chip (marshmellow)
   - `lf em4x em4x50***` refactoring of em4x50 commands. (iceman)
   
-## [1.6.9][icemanfork] [2017-02-06]
+## [1.6.9 iceman fork] [2017-02-06]
   - Serial speedup,  if possible 408600baud otherwise default to 115200baud (iceman)
   - `hf emv` - Added Peter Fillmore's EMV branch now compiles on iceman fork.  See seperate issue. (iceman)
   - `hf 14a reader` - Aztek detection. (iceman)
@@ -42,7 +44,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
   - `hf iclass decrypt` - only decrypt Application1 (iceman)
   - `lf t55xx detect` - when finding multiple possible config blocks, see if a known configblock exists and select. (iceman)
   
-## [1.6.7][icemanfork] [2017-01-05]
+## [1.6.7 iceman fork] [2017-01-05]
   - `lf animal` - FDX-B animal commands (iceman)
   -  Fixed bugs in `lf sim` and other lf continuous demods not turning off antenna when finished (marshmellow)
   -  `hf iclass write` - fixed bugs, added crc. (?)
