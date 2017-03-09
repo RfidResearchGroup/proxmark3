@@ -159,6 +159,7 @@ local _commands = {
 	CMD_MIFAREU_WRITEBL_COMPAT =                                         0x0723,
 	
 	CMD_MIFARE_CHKKEYS =                                                 0x0623,
+	CMD_MIFARE_SETMOD =                                                  0x0624,
 
 	CMD_MIFARE_SNIFFER =                                                 0x0630,
 
