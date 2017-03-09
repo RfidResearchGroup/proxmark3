@@ -285,14 +285,15 @@ local Utils =
 		return rev
 	end,
 	
-	ConvertHexToAscii = function(s)
+	ConvertHexToAscii = function(s, useSafechars)
 		if s == nil then return '' end
 		if #s == 0 then return '' end
 		local t={}
 		for k in s:gmatch"(%x%x)" do
-			local n = tonumber(k,16)
+
+			local n = tonumber(k,16)		
 			local c 
-			if  (n < 32) or (n == 127) then
+			if useSafechars and ( (n < 32) or (n == 127) ) then
 				c = '.';
 			else
 				c = string.char(n)

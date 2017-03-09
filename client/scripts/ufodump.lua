@@ -71,7 +71,6 @@ end
 -- @param usbpacket the data received from the device
 function showdata(blockno, data)
 	local xorkey = '55AA55AA55AA55AA6262'
-	--local s = data.." | "..utils.ConvertHexToAscii(data).." | "
 	local s = data.." | "
 	local dex = ''
 	local rs 
@@ -86,7 +85,6 @@ function showdata(blockno, data)
 		end
 		dex = (dex..'%04X'):format(rs)
 	end 
-	--s = s..dex.." | "..utils.ConvertHexToAscii(dex)
 	s = s..dex.." | "
 	print( (" %02d | %s"):format(blockno,s))
 end

@@ -31,7 +31,7 @@ Arguments:
 	-o             : filename for the saved dumps
 ]]
 local RANDOM = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
-local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
+local TIMEOUT = 2500 -- Shouldn't take longer than 2 seconds
 local DEBUG = false -- the debug flag
 local numBlocks = 64
 local numSectors = 16
@@ -80,17 +80,17 @@ local function readdumpkeys(infile)
 end
 
 local function waitCmd()
-	local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
+	local response = core.WaitForResponseTimeout(cmds.CMD_ACK, TIMEOUT)
 	if response then
-		local count,cmd,arg0 = bin.unpack('LL',response)
+		local count, cmd, arg0 = bin.unpack('LL',response)
 		if(arg0==1) then
 			local count,arg1,arg2,data = bin.unpack('LLH511',response,count)
 			return data:sub(1,32)
 		else
-			return nil, "Couldn't read block.." 
+			return nil, "Couldn't read block.. ["..arg0.."]"
 		end
 	end
-	return nil, "No response from device"
+	return nil, 'No response from device'
 end
 
 local function main(args)
@@ -149,6 +149,7 @@ local function main(args)
 	if usePreCalc then
 		local pre = require('precalc')
 		akeys = pre.GetAll(result.uid)
+		dbg(akeys)
 	else
 		print('Loading dumpkeys.bin')
 		local hex, err = utils.ReadDumpFile(input)
@@ -159,7 +160,8 @@ local function main(args)
 	end
 	
 	-- Read block 0
-	cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = 0,arg2 = 0,arg3 = 0, data = keyA}
+	dbg('Reading block 0')
+	cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = 0, arg2 = 0, arg3 = 0, data = keyA}
 	err = core.SendCommand(cmd:getBytes())
 	if err then return oops(err) end
 	local block0, err = waitCmd()
@@ -168,7 +170,8 @@ local function main(args)
 	core.clearCommandBuffer()
 	
 	-- Read block 1
-	cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = 1,arg2 = 0,arg3 = 0, data = keyA}
+	dbg('Reading block 1')
+	cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = 1, arg2 = 0, arg3 = 0, data = keyA}
 	err = core.SendCommand(cmd:getBytes())
 	if err then return oops(err) end
 	local block1, err = waitCmd()
@@ -187,6 +190,8 @@ local function main(args)
 	io.write('Reading blocks > ')
 	for blockNo = 0, numBlocks-1, 1 do
 
+		io.flush()
+		
 		if core.ukbhit() then
 			print("aborted by user")
 			break
