@@ -2451,6 +2451,43 @@ int CmdHf14MfDecryptBytes(const char *Cmd){
 	return tryDecryptWord( nt, ar_enc, at_enc, data, len);
 }
 
+int CmdHf14AMfSetMod(const char *Cmd) {
+	uint8_t key[6] = {0, 0, 0, 0, 0, 0};
+	uint8_t mod = 2;
+
+	char ctmp = param_getchar(Cmd, 0);
+	if (ctmp == '0') {
+		mod = 0;
+	} else if (ctmp == '1') {
+		mod = 1;
+	}
+	int gethexfail = param_gethex(Cmd, 1, key, 12);
+	if (mod == 2 || gethexfail) {
+		PrintAndLog("Sets the load modulation strength of a MIFARE Classic EV1 card.");
+		PrintAndLog("Usage: hf mf setmod <0/1> <block 0 key A>");
+		PrintAndLog("       0 = normal modulation");
+		PrintAndLog("       1 = strong modulation (default)");
+		return 1;
+	}
+
+	UsbCommand c = {CMD_MIFARE_SETMOD, {mod, 0, 0}};
+	memcpy(c.d.asBytes, key, 6);
+	clearCommandBuffer();
+	SendCommand(&c);
+
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+		uint8_t ok = resp.arg[0] & 0xff;
+		PrintAndLog("isOk:%02x", ok);
+		if (!ok) {
+			PrintAndLog("Failed.");
+		}
+	} else {
+		PrintAndLog("Command execute timeout");
+	}
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,				1, "This help"},
 	{"dbg",			CmdHF14AMfDbg,			0, "Set default debug mode"},
@@ -2480,6 +2517,7 @@ static command_t CommandTable[] = {
 	{"cload",		CmdHF14AMfCLoad,		0, "Load dump into magic Chinese card"},
 	{"csave",		CmdHF14AMfCSave,		0, "Save dump from magic Chinese card into file or emulator"},
 	{"decrypt",		CmdHf14MfDecryptBytes,  1, "[nt] [ar_enc] [at_enc] [data] - to decrypt snoop or trace"},
+	{"setmod",		CmdHf14AMfSetMod, 		0, "Set MIFARE Classic EV1 load modulation strength"},
 	{NULL, NULL, 0, NULL}
 };
 

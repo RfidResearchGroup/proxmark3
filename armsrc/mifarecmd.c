@@ -1429,6 +1429,64 @@ void OnErrorMagic(uint8_t reason){
 	cmd_send(CMD_ACK,0,reason,0,0,0);
 	OnSuccessMagic();
 }
+
+void MifareSetMod(uint8_t mod, uint8_t *key) {
+	uint64_t ui64Key = bytes_to_num(key, 6);
+
+	// variables
+	uint8_t isOK = 0;
+	uint8_t uid[10] = {0};
+	uint32_t cuid = 0;
+	struct Crypto1State mpcs = {0, 0};
+	struct Crypto1State *pcs = &mpcs;
+	int respLen = 0;
+	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0};
+	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0};
+
+	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+
+	clear_trace();
+	set_tracing(true);
+
+	LED_A_ON();
+	LED_B_OFF();
+	LED_C_OFF();
+
+	while (true) {
+		if(!iso14443a_select_card(uid, NULL, &cuid, true, 0)) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("Can't select card");
+			break;
+		}
+
+		if(mifare_classic_auth(pcs, cuid, 0, 0, ui64Key, AUTH_FIRST)) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("Auth error");
+			break;
+		}
+
+		if (((respLen = mifare_sendcmd_short(pcs, 1, 0x43, mod, receivedAnswer, receivedAnswerPar, NULL)) != 1) || (receivedAnswer[0] != 0x0a)) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("SetMod error; response[0]: %hhX, len: %d", receivedAnswer[0], respLen);
+			break;
+		}
+
+		if(mifare_classic_halt(pcs, cuid)) {
+			if (MF_DBGLEVEL >= 1)	Dbprintf("Halt error");
+			break;
+		}
+
+		isOK = 1;
+		break;
+	}
+
+	crypto1_destroy(pcs);
+
+	LED_B_ON();
+	cmd_send(CMD_ACK, isOK, 0, 0, 0, 0);
+	LED_B_OFF();
+
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
+}
+
 //
 // DESFIRE
 //

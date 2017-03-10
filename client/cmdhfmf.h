@@ -58,6 +58,7 @@ int CmdHF14AMfCGetSc(const char* cmd);
 int CmdHF14AMfCLoad(const char* cmd);
 int CmdHF14AMfCSave(const char* cmd);
 int CmdHf14MfDecryptBytes(const char *Cmd);
+int CmdHf14AMfSetMod(const char *Cmd);
 
 void showSectorTable(void);
 void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose);

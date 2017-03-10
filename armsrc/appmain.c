@@ -1196,6 +1196,10 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			SniffMifare(c->arg[0]);
 			break;
 
+		case CMD_MIFARE_SETMOD:
+			MifareSetMod(c->arg[0], c->d.asBytes);
+			break;
+
 		//mifare desfire
 		case CMD_MIFARE_DESFIRE_READBL:	break;
 		case CMD_MIFARE_DESFIRE_WRITEBL: break;
