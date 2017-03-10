@@ -18,6 +18,7 @@
 #define	CRC_14443_B	0xFFFF  /* ISO/IEC 13239 (formerly ISO/IEC 3309) */
 #define CRC_ICLASS	0xE012  /* ICLASS PREFIX */
 
+unsigned short UpdateCrc14443(unsigned char ch, unsigned short *lpwCrc);
 void ComputeCrc14443(int CrcType,
                      const unsigned char *Data, int Length,
                      unsigned char *TransmitFirst,

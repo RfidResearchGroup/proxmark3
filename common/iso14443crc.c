@@ -8,7 +8,7 @@
 
 #include "iso14443crc.h"
 
-static unsigned short UpdateCrc14443(unsigned char ch, unsigned short *lpwCrc)
+unsigned short UpdateCrc14443(unsigned char ch, unsigned short *lpwCrc)
 {
     ch = (ch ^ (unsigned char) ((*lpwCrc) & 0x00FF));
     ch = (ch ^ (ch << 4));

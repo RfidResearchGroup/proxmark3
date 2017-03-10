@@ -22,7 +22,7 @@ int usage_analyse_lcr(void) {
 	PrintAndLog("           <bytes>    bytes to calc missing XOR in a LCR");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
-	PrintAndLog("           analyse lcr 04008064BA");
+	PrintAndLog("      analyse lcr 04008064BA");
 	PrintAndLog("expected output: Target (BA) requires final LRC XOR byte value: 5A");
 	return 0;
 }
@@ -38,7 +38,7 @@ int usage_analyse_checksum(void) {
 	PrintAndLog("           m <mask>   bit mask to limit the outpuyt");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
-	PrintAndLog("           analyse chksum b 137AF00A0A0D m FF");
+	PrintAndLog("      analyse chksum b 137AF00A0A0D m FF");
 	PrintAndLog("expected output: 0x61");
 	return 0;
 }
@@ -51,7 +51,7 @@ int usage_analyse_crc(void){
 	PrintAndLog("           <bytes>    bytes to calc crc");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
-	PrintAndLog("           analyse crc 137AF00A0A0D");
+	PrintAndLog("      analyse crc 137AF00A0A0D");
 	return 0;
 }
 int usage_analyse_hid(void){
@@ -65,7 +65,19 @@ int usage_analyse_hid(void){
 	PrintAndLog("           <bytes>    input bytes");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
-	PrintAndLog("           analyse hid r 0123456789abcdef");
+	PrintAndLog("      analyse hid r 0123456789abcdef");
+	return 0;
+}
+int usage_analyse_nuid(void){
+	PrintAndLog("Generate 4byte NUID from 7byte UID");
+	PrintAndLog("");
+	PrintAndLog("Usage:  analyse hid [h] <bytes>");
+	PrintAndLog("Options:");
+	PrintAndLog("           h          This help");
+	PrintAndLog("           <bytes>  input bytes (14 hexsymbols)");
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("      analyse nuid 11223344556677");
 	return 0;
 }
 
@@ -521,6 +533,53 @@ int CmdAnalyseHid(const char *Cmd){
 	return 0;
 }
 
+void generate4bNUID(uint8_t *uid, uint8_t *nuid){
+	uint16_t crc;
+	uint8_t first, second;
+		
+	ComputeCrc14443(CRC_14443_A, uid, 3, &first, &second);
+	nuid[0] |= (second & 0xE0) | 0xF;
+	nuid[1] = first;
+	
+	crc = first;
+	crc |= second << 8;
+	
+	UpdateCrc14443(uid[3], &crc);
+	UpdateCrc14443(uid[4], &crc);
+	UpdateCrc14443(uid[5], &crc);
+	UpdateCrc14443(uid[6], &crc);
+		
+	nuid[2] = (crc >> 8) & 0xFF ;
+	nuid[3] = crc & 0xFF;
+}
+
+int CmdAnalyseNuid(const char *Cmd){
+	uint8_t nuid[4] = {0};	
+	uint8_t uid[7] = {0};
+	int len = 0;
+	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) == 0|| cmdp == 'h' || cmdp == 'H') return usage_analyse_nuid();
+
+	/* selftest  UID 040D681AB52281  -> NUID 8F430FEF */
+	if (cmdp == 't' || cmdp == 'T') {
+		memcpy(uid, "\x04\x0d\x68\x1a\xb5\x22\x81", 7);
+		generate4bNUID(uid, nuid);
+		if ( 0 == memcmp(nuid, "\x8f\x43\x0f\xef", 4))
+			printf("Selftest OK\n");
+		else
+			printf("Selftest Failed\n");
+		return 0;
+	}
+
+	param_gethex_ex(Cmd, 0, uid, &len);
+	if ( len%2  || len != 14) return usage_analyse_nuid();
+
+	generate4bNUID(uid, nuid);
+	
+	printf("UID  | %s \n", sprint_hex(uid, 7));
+	printf("NUID | %s \n", sprint_hex(nuid, 4));
+	return 0;
+}
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,            1, "This help"},
 	{"lcr",		CmdAnalyseLCR,		1, "Generate final byte for XOR LRC"},
@@ -531,6 +590,7 @@ static command_t CommandTable[] = {
 	{"lfsr",	CmdAnalyseLfsr,		1,	"LFSR tests"},
 	{"a",		CmdAnalyseA,		1,	"num bits test"},
 	{"hid",		CmdAnalyseHid,		1,	"Permute function from 'heart of darkness' paper"},
+	{"nuid",	CmdAnalyseNuid,		1,	"create NUID from 7byte UID"},
 	{NULL, NULL, 0, NULL}
 };
 
