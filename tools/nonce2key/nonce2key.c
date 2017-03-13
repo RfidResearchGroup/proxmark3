@@ -2,14 +2,12 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <stdio.h>
-#include <time.h>
-typedef unsigned char byte_t;
 
 int main(const int argc, const char* argv[]) {
 	struct Crypto1State *state;
-	uint32_t pos, uid, nt, nr, rr, nr_diff, ks1, ks2;
-	byte_t bt, i, ks3x[8], par[8][8];
-	uint64_t key, key_recovered;
+	uint32_t pos, uid, nt, nr, rr, nr_diff;
+	uint8_t bt, i, ks3x[8], par[8][8];
+	uint64_t key_recovered;
 	uint64_t par_info;
 	uint64_t ks_info;
 	nr = rr = 0;
@@ -49,16 +47,11 @@ int main(const int argc, const char* argv[]) {
 		printf("%01x|\n", par[i][7]);
 	}
 	printf("+----+--------+---+-----+---------------+\n");
-
-	clock_t t1 = clock();
-  
+ 
 	state = lfsr_common_prefix(nr,rr,ks3x,par);
 	lfsr_rollback_word(state,uid^nt,0);
 	crypto1_get_lfsr(state,&key_recovered);
 	printf("\nkey recovered: %012" PRIx64 "\n\n", key_recovered);
 	crypto1_destroy(state);
-  
-	t1 = clock() - t1;
-	if ( t1 > 0 ) printf("Time in nonce2key: %.0f ticks \n", (float)t1);
 	return 0;
 }

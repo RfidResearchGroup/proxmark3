@@ -3,7 +3,6 @@
 #include "crapto1.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 int main (int argc, char *argv[]) {
 	struct Crypto1State *s,*t;
@@ -44,9 +43,7 @@ int main (int argc, char *argv[]) {
 	uint32_t p64 = prng_successor(nt, 64);
 	printf("  nt': %08x\n", p64);
 	printf(" nt'': %08x\n", prng_successor(p64, 32));
-
-	clock_t t1 = clock();
-		
+	
 	// Extract the keystream from the messages
 	printf("\nKeystream used to generate {ar} and {at}:\n");
 	ks2 = ar0_enc ^ p64;
@@ -66,7 +63,5 @@ int main (int argc, char *argv[]) {
 			break;}
 	}
 	free(s);
-	t1 = clock() - t1;
-	if ( t1 > 0 ) printf("Time : %.0f ticks \n", (float)t1);
 	return 0;
 }

@@ -61,8 +61,6 @@ int main (int argc, char *argv[]) {
 	printf("  nt': %08x\n",prng_successor(nt, 64));
 	printf(" nt'': %08x\n",prng_successor(nt, 96));
 	
-	clock_t t1 = clock();
-	
 	// Extract the keystream from the messages
 	printf("\nKeystream used to generate {ar} and {at}:\n");
 	ks2 = ar_enc ^ prng_successor(nt, 64);
@@ -97,8 +95,5 @@ int main (int argc, char *argv[]) {
 	crypto1_get_lfsr(revstate, &key);
 	printf("\nFound Key: [%012" PRIx64 "]\n\n", key);
 	crypto1_destroy(revstate);
-  
-	t1 = clock() - t1;
-	if ( t1 > 0 ) printf("Time : %.0f ticks \n", (float)t1);
 	return 0;
 }

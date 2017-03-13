@@ -6,14 +6,16 @@ LDFLAGS =
 OBJS = crapto1.o crypto1.o
 HEADERS = crapto1.h
 EXES = mfkey64 mfkey32 mfkey32v2
-WINEXE = mfkey64.exe mfkey32.exe mfkey32v2.exe
-LIBS =
+WINEXE = $(patsubst %, %.exe, $(EXES))
 	
-all: $(OBJS) $(EXES) $(LIBS)
+all: $(OBJS) $(EXES)
 
-% : %.c $(OBJS)
-	$(LD) $(CFLAGS) -o $@ $< $(OBJS) $(LDFLAGS)
+%.o : %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+% : %.c
+	$(LD) $(CFLAGS) -o $@ $(OBJS) $<
 
 clean: 
-	rm -f $(OBJS) $(EXES) $(LIBS) $(WINEXE)
+	rm -f $(OBJS) $(EXES) $(WINEXE)
 
