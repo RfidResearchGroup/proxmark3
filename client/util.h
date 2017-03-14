@@ -47,6 +47,16 @@
 #endif
 
 // Byte swapping
+#ifndef BSWAP_64
+#define	BSWAP_64(x)     (((uint64_t)(x) << 56) | \\
+                        (((uint64_t)(x) << 40) & 0xff000000000000ULL) | \\
+                        (((uint64_t)(x) << 24) & 0xff0000000000ULL) | \\
+                        (((uint64_t)(x) << 8)  & 0xff00000000ULL) | \\
+                        (((uint64_t)(x) >> 8)  & 0xff000000ULL) | \\
+                        (((uint64_t)(x) >> 24) & 0xff0000ULL) | \\
+                        (((uint64_t)(x) >> 40) & 0xff00ULL) | \\
+                        ((uint64_t)(x)  >> 56))
+#endif
 #ifndef BSWAP_32
 # define BSWAP_32(x) \
      ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) | \
@@ -93,55 +103,54 @@
 # define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
 #endif
 
-int ukbhit(void);
+extern int ukbhit(void);
+extern void AddLogLine(char *fileName, char *extData, char *c);
+extern void AddLogHex(char *fileName, char *extData, const uint8_t * data, const size_t len);
+extern void AddLogUint64(char *fileName, char *extData, const uint64_t data);
+extern void AddLogCurrentDT(char *fileName);
+extern void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext, int byteCount);
 
-void AddLogLine(char *fileName, char *extData, char *c);
-void AddLogHex(char *fileName, char *extData, const uint8_t * data, const size_t len);
-void AddLogUint64(char *fileName, char *extData, const uint64_t data);
-void AddLogCurrentDT(char *fileName);
-void FillFileNameByUID(char *fileName, uint8_t * uid, char *ext, int byteCount);
+extern void print_hex(const uint8_t * data, const size_t len);
+extern void print_hex_break(const uint8_t *data, const size_t len, const uint8_t breaks);
+extern char *sprint_hex(const uint8_t * data, const size_t len);
+extern char *sprint_bin(const uint8_t * data, const size_t len);
+extern char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks);
+extern char *sprint_hex_ascii(const uint8_t *data, const size_t len);
+extern char *sprint_ascii(const uint8_t *data, const size_t len);
 
-void print_hex(const uint8_t * data, const size_t len);
-void print_hex_break(const uint8_t *data, const size_t len, const uint8_t breaks);
-char *sprint_hex(const uint8_t * data, const size_t len);
-char *sprint_bin(const uint8_t * data, const size_t len);
-char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks);
-char *sprint_hex_ascii(const uint8_t *data, const size_t len);
-char *sprint_ascii(const uint8_t *data, const size_t len);
+extern void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
+extern uint64_t bytes_to_num(uint8_t* src, size_t len);
+extern void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
+extern void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
+extern uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
+extern void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSize, uint8_t *dest);
 
-void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
-uint64_t bytes_to_num(uint8_t* src, size_t len);
-void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
-void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
-uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
-void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSize, uint8_t *dest);
+extern char param_getchar(const char *line, int paramnum);
+extern int param_getptr(const char *line, int *bg, int *en, int paramnum);
+extern uint8_t param_get8(const char *line, int paramnum);
+extern uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base);
+extern uint32_t param_get32ex(const char *line, int paramnum, int deflt, int base);
+extern uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base);
+extern uint8_t param_getdec(const char *line, int paramnum, uint8_t *destination);
+extern uint8_t param_isdec(const char *line, int paramnum);
+extern int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt);
+extern int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt);
+extern int param_getstr(const char *line, int paramnum, char * str);
 
-char param_getchar(const char *line, int paramnum);
-int param_getptr(const char *line, int *bg, int *en, int paramnum);
-uint8_t param_get8(const char *line, int paramnum);
-uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base);
-uint32_t param_get32ex(const char *line, int paramnum, int deflt, int base);
-uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base);
-uint8_t param_getdec(const char *line, int paramnum, uint8_t *destination);
-uint8_t param_isdec(const char *line, int paramnum);
-int param_gethex(const char *line, int paramnum, uint8_t * data, int hexcnt);
-int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt);
-int param_getstr(const char *line, int paramnum, char * str);
+extern int hextobinarray( char *target,  char *source);
+extern int hextobinstring( char *target,  char *source);
+extern int binarraytohex( char *target,  char *source,  int length);
+extern void binarraytobinstring(char *target,  char *source,  int length);
+extern uint8_t GetParity( uint8_t *string, uint8_t type,  int length);
+extern void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
 
-int hextobinarray( char *target,  char *source);
-int hextobinstring( char *target,  char *source);
-int binarraytohex( char *target,  char *source,  int length);
-void binarraytobinstring(char *target,  char *source,  int length);
-uint8_t GetParity( uint8_t *string, uint8_t type,  int length);
-void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
-
-void xor(unsigned char * dst, unsigned char * src, size_t len);
-int32_t le24toh (uint8_t data[3]);
-uint32_t le32toh (uint8_t *data);
-uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits);
-void rol(uint8_t *data, const size_t len);
-uint32_t SwapBits(uint32_t value, int nrbits);
-uint32_t reflect(uint32_t v, int b);
-uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
+extern void xor(unsigned char * dst, unsigned char * src, size_t len);
+extern int32_t le24toh (uint8_t data[3]);
+extern uint32_t le32toh (uint8_t *data);
+extern uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits);
+extern void rol(uint8_t *data, const size_t len);
+extern uint32_t SwapBits(uint32_t value, int nrbits);
+extern uint32_t reflect(uint32_t v, int b);
+extern uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
 
 #endif
