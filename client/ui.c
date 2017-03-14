@@ -33,7 +33,7 @@ void PrintAndLog(char *fmt, ...)
 	// struct tm* tm_info;
 	// char buffer[26] = {0};
 		
-	// lock this section to avoid interlacing prints from different threats
+	// lock this section to avoid interlacing prints from different threads
 	pthread_mutex_lock(&print_lock);
   
 	if (logging && !logfile) {
