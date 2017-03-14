@@ -48,13 +48,13 @@
 
 // Byte swapping
 #ifndef BSWAP_64
-#define	BSWAP_64(x)     (((uint64_t)(x) << 56) | \\
-                        (((uint64_t)(x) << 40) & 0xff000000000000ULL) | \\
-                        (((uint64_t)(x) << 24) & 0xff0000000000ULL) | \\
-                        (((uint64_t)(x) << 8)  & 0xff00000000ULL) | \\
-                        (((uint64_t)(x) >> 8)  & 0xff000000ULL) | \\
-                        (((uint64_t)(x) >> 24) & 0xff0000ULL) | \\
-                        (((uint64_t)(x) >> 40) & 0xff00ULL) | \\
+#define	BSWAP_64(x)     (((uint64_t)(x) << 56) | \
+                        (((uint64_t)(x) << 40) & 0xff000000000000ULL) | \
+                        (((uint64_t)(x) << 24) & 0xff0000000000ULL) | \
+                        (((uint64_t)(x) << 8)  & 0xff00000000ULL) | \
+                        (((uint64_t)(x) >> 8)  & 0xff000000ULL) | \
+                        (((uint64_t)(x) >> 24) & 0xff0000ULL) | \
+                        (((uint64_t)(x) >> 40) & 0xff00ULL) | \
                         ((uint64_t)(x)  >> 56))
 #endif
 #ifndef BSWAP_32
