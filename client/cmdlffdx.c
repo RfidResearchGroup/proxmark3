@@ -31,8 +31,8 @@
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_fdx_clone(void){
-	PrintAndLog("clone a FDX-B Animal tag to a T55x7 tag.");
-	PrintAndLog("Usage: lf fdx clone [h] <country id> <animal id> <Q5>");
+	PrintAndLog("Clone a FDX-B animal tag to a T55x7 tag.");
+	PrintAndLog("Usage: lf animal clone [h] <country id> <animal id> <Q5>");
 	PrintAndLog("Options:");
 	PrintAndLog("      h            : This help");
 	PrintAndLog("      <country id> : Country id");
@@ -41,23 +41,23 @@ int usage_lf_fdx_clone(void){
 	//reserved/rfu
 	//is animal tag
 	// extended data
-	PrintAndLog("      <Q5>        : specify write to Q5 (t5555 instead of t55x7)");
+	PrintAndLog("      <Q5>        : Specify write to Q5 (t5555 instead of t55x7)");
 	PrintAndLog("");
-	PrintAndLog("Sample: lf fdx clone 999 112233");
+	PrintAndLog("Sample: lf animal clone 999 112233");
 	return 0;
 }
 
 int usage_lf_fdx_sim(void) {
-	PrintAndLog("Enables simulation of FDX-B Animal tag");
+	PrintAndLog("Enables simulation of FDX-B animal tag");
 	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf fdx sim [h] <country id> <animal id>");
+	PrintAndLog("Usage:  lf animal sim [h] <country id> <animal id>");
 	PrintAndLog("Options:");
 	PrintAndLog("      h            : This help");
-	PrintAndLog("      <country id> : Country id");
-	PrintAndLog("      <animal id>  : Animal id");
+	PrintAndLog("      <country id> : Country ID");
+	PrintAndLog("      <animal id>  : Animal ID");
 	PrintAndLog("");
-	PrintAndLog("Sample: lf fdx sim 999 112233");
+	PrintAndLog("Sample: lf animal sim 999 112233");
 	return 0;
 }
 // clearing the topbit needed for the preambl detection. 
@@ -290,7 +290,7 @@ int CmdFdxSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",	CmdHelp,	1, "This help"},
-	{"demod",	CmdFdxDemod,1, "Attempt extract tag data from graphbuf"},
+	{"demod",	CmdFdxDemod,1, "Attempt to extract tag data from graphbuf"},
 	{"read",	CmdFdxRead,	0, "Attempt to read and extract tag data"},
 	{"clone",	CmdFdxClone,0, "Clone animal ID tag to T55x7"},
 	{"sim",		CmdFdxSim,	0, "Animal ID tag simulator"},
