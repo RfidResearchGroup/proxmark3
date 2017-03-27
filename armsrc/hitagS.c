@@ -1863,8 +1863,7 @@ void check_challenges(bool file_given, byte_t* data) {
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 
 // Set fpga in edge detect with reader field, we can modulate as reader now
-	FpgaWriteConfWord(
-	FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
 
 // Set Frequency divisor which will drive the FPGA and analog mux selection
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95);					//125Khz

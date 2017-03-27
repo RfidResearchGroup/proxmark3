@@ -400,10 +400,8 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	int i = 0;
 	uint8_t *buf = BigBuf_get_addr();
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
-	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
 
 	// set frequency,  get values from 'lf config' command
 	sample_config *sc = getSamplingConfig();
@@ -415,16 +413,16 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	else
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
 	
-	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+	//SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 	
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 
 	// power on antenna
-	OPEN_COIL();
+	//OPEN_COIL();
 	// charge time
-	WaitMS(50);
+	//WaitMS(50);
 		
 	for(;;) {
 		WDT_HIT();
