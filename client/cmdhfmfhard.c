@@ -1431,7 +1431,7 @@ static const uint64_t crack_states_bitsliced(statelist_t *p){
 #endif
 
 		if ( !lstate_p )	{
-			__sync_fetch_and_add(&total_states_tested, bucket_states_tested);
+			__atomic_fetch_add(&total_states_tested, bucket_states_tested, __ATOMIC_SEQ_CST);
 			return key;
 		}
 				
@@ -1618,7 +1618,7 @@ out:
 #endif		
 		
     }
-    __sync_fetch_and_add(&total_states_tested, bucket_states_tested);
+    __atomic_fetch_add(&total_states_tested, bucket_states_tested, __ATOMIC_SEQ_CST);
     return key;
 }
 
@@ -1636,8 +1636,8 @@ static void* crack_states_thread(void* x){
 			if (keys_found) break;
 			else if(key != -1) {
 				if (TestIfKeyExists(key)) {
-                __sync_fetch_and_add(&keys_found, 1);
-				__sync_fetch_and_add(&foundkey, key);
+                __atomic_fetch_add(&keys_found, 1, __ATOMIC_SEQ_CST);
+				__atomic_fetch_add(&foundkey, key, __ATOMIC_SEQ_CST);
 					printf("*");
 					fflush(stdout);
                 break;
