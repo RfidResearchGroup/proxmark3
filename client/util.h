@@ -31,6 +31,10 @@
   #include <windows.h>
 #endif
 
+#ifdef ANDROID
+  #include <endian.h>
+#endif
+
 
 #ifndef BITMASK
 # define BITMASK(X) (1 << (X))
@@ -146,7 +150,9 @@ extern void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length)
 
 extern void xor(unsigned char * dst, unsigned char * src, size_t len);
 extern int32_t le24toh (uint8_t data[3]);
+#ifndef ANDROID
 extern uint32_t le32toh (uint8_t *data);
+#endif
 extern uint32_t PackBits(uint8_t start, uint8_t len, uint8_t* bits);
 extern void rol(uint8_t *data, const size_t len);
 extern uint32_t SwapBits(uint32_t value, int nrbits);
