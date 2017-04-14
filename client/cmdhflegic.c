@@ -24,8 +24,8 @@ int usage_legic_calccrc(void){
 	PrintAndLog("      c <8|16>      : Crc type");
 	PrintAndLog("");
 	PrintAndLog("Samples:");
-	PrintAndLog("      hf legic crc b deadbeef1122");
-	PrintAndLog("      hf legic crc b deadbeef1122 u 9A c 16");
+	PrintAndLog("      hf legic crc d deadbeef1122");
+	PrintAndLog("      hf legic crc d deadbeef1122 u 9A c 16");
 	return 0;
 }
 int usage_legic_rdmem(void){	
@@ -678,8 +678,8 @@ int CmdLegicCalcCrc(const char *Cmd){
 	
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
-		case 'b':
-		case 'B':
+		case 'd':
+		case 'D':
 			// peek at length of the input string so we can
 			// figure out how many elements to malloc in "data"
 			bg=en=0;
