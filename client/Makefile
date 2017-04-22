@@ -7,7 +7,7 @@ include ../common/Makefile.common
 
 CC = gcc
 CXX = g++
-COMMON_FLAGS += -std=c99 -O3 -march=native -g
+COMMON_FLAGS += -std=c99 -O3 -march=x86-64 -g
 
 #VPATH = ../common ../zlib
 OBJDIR = obj
