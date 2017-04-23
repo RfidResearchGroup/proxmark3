@@ -7,7 +7,7 @@ include ../common/Makefile.common
 
 CC = gcc
 CXX = g++
-COMMON_FLAGS += -std=c99 -O3 -march=x86-64 -g
+COMMON_FLAGS += -std=c99 -O3 -g
 
 #VPATH = ../common ../zlib
 OBJDIR = obj
@@ -20,7 +20,7 @@ LUAPLATFORM = generic
 
 ifneq (,$(findstring MINGW,$(platform))) 
     LDLIBS +=  -L/mingw/lib -lgdi32
-	CFLAGS +=  -I/mingw/include -D__USE_MINGW_ANSI_STDIO=1
+    CFLAGS +=  -I/mingw/include -D__USE_MINGW_ANSI_STDIO=1 -march=x86-64
     CXXFLAGS = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
     MOC = $(QTDIR)/bin/moc
     LUAPLATFORM = mingw
@@ -46,7 +46,8 @@ else ifeq ($(platform),Darwin)
 	# OS X, QT5 detection needs this.
 	export PKG_CONFIG_PATH=/usr/local/Cellar/qt5/5.6.1-1/lib/pkgconfig/
 
-	CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
+    CFLAGS +=  -march=native
+    CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
     QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
     MOC = $(shell pkg-config --variable=moc_location QtCore)
 
@@ -64,6 +65,7 @@ else ifeq ($(platform),Darwin)
 
     LUAPLATFORM = macosx
 else
+    CFLAGS +=  -march=native
     CXXFLAGS = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null) -Wall -O3
     QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
     LUALIB +=  -ldl
