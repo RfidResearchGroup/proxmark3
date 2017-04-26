@@ -2,22 +2,22 @@ The iceman fork
 ===============
 [![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)  [![Coverity Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3_iceman_fork)  [![Latest release] (https://img.shields.io/github/release/iceman1001/proxmark3.svg)](https://github.com/iceman1001/proxmark3/releases/latest)
 
-##This fork is HIGHLY experimental (or bleeding edge)
+## This fork is HIGHLY experimental (or bleeding edge)
 
-##Donate
+## Donate
 https://paypal.me/iceman1001/
 Feel free to donate. All support is welcome.
 
-##Notice      
+## Notice      
 There is so much in this fork,  with all fixes and additions its basically the most enhanced fork to this day for the Proxmark3 device. Which makes it so awesum to play with. Do please play with it. Get excited and experiment. As a side note with all coverity scan fixes this client is much more stable than PM3 Master even if I tend to break it sometimes. I'll try to make a release when this fork becomes stable between my experiments.
 
-##Official
+## Official
 The official Proxmark repository is found here: https://github.com/Proxmark/proxmark3
 
-##Coverity Scan Config & Run
+## Coverity Scan Config & Run
 Download the Coverity Scan Self-buld and install it.
 You will need to configure  ARM-NON-EABI- Compiler for it to use:
-
+```
 - Configure
 `cov-configure --comptype gcc --compiler  /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc`
 
@@ -28,8 +28,9 @@ You will need to configure  ARM-NON-EABI- Compiler for it to use:
 `tar czvf proxmark3.tgz cov-int`
 
 - upload it to coverity.com
+```
 
-##Whats changed?
+## Whats changed?
 Whats so special with this fork?  I have scraped the web for different enhancements to the PM3 source code and not all of them ever found their way to the master branch. 
 Among the stuff is
 
@@ -56,24 +57,24 @@ Among the stuff is
     * Aczid's bitsliced bruteforce solver in 'hf mf hardnested'
 	
 ---	
-##Why don't you merged with offical PM3 Master?
+## Why don't you merged with offical PM3 Master?
 I don't actually know how to make small pull-request to github :( and that is the number one reason for me not pushing a lot of things back to the PM3 master.
 Me fiddling with the code so much, there is a nightmare in merging a PR.  Luckily I have @marshmellow42 who takes some stuff and push PR's back.
 
-##Why don't you add nnnn or mmmm functionality?
+## Why don't you add nnnn or mmmm functionality?
 Give me a hint, and I'll see if I can't merge in the stuff you have. 
 	
-##PM3 GUI
+## PM3 GUI
 I do tend to rename and move stuff around, the official PM3-GUI from Gaucho will not work so well. *sorry*	
 
-##Development
+## Development
 This fork now compiles just fine on 
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
    - Ubuntu 1404, 1510, 1604
    - Mac OS X / Homebrew
    - Docker container
 
-##Setup and build for UBUNTU
+## Setup and build for UBUNTU
 GC made updates to allow this to build easily on Ubuntu 14.04.2 LTS, 15.10 or 16.04
 See https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux
 
@@ -110,7 +111,7 @@ https://github.com/daveio/attacksurface/blob/master/proxmark3/pm3-setup.sh
 - Run the client	
 `./proxmark3 /dev/ttyACM0`
 						   
-##Homebrew (Mac OS X)
+## Homebrew (Mac OS X)
 These instructions comes from @Chrisfu, where I got the proxmark3.rb scriptfile from.
 Further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.com/chrisfu/)
 
@@ -120,7 +121,7 @@ Further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.com/c
 
 3. Install Proxmark3: `brew install proxmark3` for stable release or `brew install --HEAD proxmark3` for latest non-stable from GitHub.
 
-##Docker container
+## Docker container
 I recently added a docker container on Docker HUB.  You find it here: https://hub.docker.com/r/iceman1001/proxmark3/
 Follow those instructions to get it up and running.  No need for the old proxspace-environment anymore.
 
@@ -206,40 +207,21 @@ Assuming you have Proxmark3 Windows drivers installed you can run the Proxmark s
 - Run the client	
 `proxmark3.exe comX`
 
-##Buying a proxmark3
+## Buying a proxmark3
 The Proxmark 3 device is available for purchase (assembled and tested) from the following locations:
 
    * http://proxmark3.tictail.com/ (For buyers in EU, most likely in Sweden)
  
    * http://www.elechouse.com/  (new and revised hardware package 2015, located in China)  
 
+Enjoy!
 
-##Enjoy
-
-January 2015, Sweden
 iceman at host iuse.se
+January 2015, Sweden
 
 
 
-
-##Note from Jonathan Westhues
-Most of the ultra-low-volume contract assemblers could put
-something like this together with a reasonable yield. A run of around
-a dozen units is probably cost-effective. The BOM includes (possibly-
-outdated) component pricing, and everything is available from Digikey
-and the usual distributors.
-
-If you've never assembled a modern circuit board by hand, then this is
-not a good place to start. Some of the components (e.g. the crystals)
-must not be assembled with a soldering iron, and require hot air.
-
-The schematics are included; the component values given are not
-necessarily correct for all situations, but it should be possible to do
-nearly anything you would want with appropriate population options.
-
-The printed circuit board artwork is also available, as Gerbers and an
-Excellon drill file.
-
+## Note from Jonathan Westhues
 
 LICENSING:
 
