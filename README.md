@@ -1,6 +1,6 @@
 The iceman fork
 ===============
-[![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)![Coverity Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/project/proxmark3_iceman_fork)[![Latest release](https://img.shields.io/github/release/iceman1001/proxmark3.svg)](https://github.com/iceman1001/proxmark3/releases/latest)
+[![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)![Coverity Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/project/proxmark3_iceman_fork)![![Latest release](https://img.shields.io/github/release/iceman1001/proxmark3.svg)](https://github.com/iceman1001/proxmark3/releases/latest)
 
 
 ## This fork is HIGHLY experimental and bleeding edge
