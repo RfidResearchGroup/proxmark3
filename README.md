@@ -1,8 +1,11 @@
 The iceman fork
 ===============
-[![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)  [![Coverity Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/projects/proxmark3_iceman_fork)  [![Latest release] (https://img.shields.io/github/release/iceman1001/proxmark3.svg)](https://github.com/iceman1001/proxmark3/releases/latest)
+[![Build Status](https://travis-ci.org/iceman1001/proxmark3.svg?branch=master)](https://travis-ci.org/iceman1001/proxmark3)  
+[![Coverity Status](https://scan.coverity.com/projects/5117/badge.svg)](https://scan.coverity.com/project/proxmark3_iceman_fork)
+[![Latest release](https://img.shields.io/github/release/iceman1001/proxmark3.svg)](https://github.com/iceman1001/proxmark3/releases/latest)
 
-## This fork is HIGHLY experimental (or bleeding edge)
+
+## This fork is HIGHLY experimental and bleeding edge
 
 ## Donate
 https://paypal.me/iceman1001/
@@ -10,9 +13,6 @@ Feel free to donate. All support is welcome.
 
 ## Notice      
 There is so much in this fork,  with all fixes and additions its basically the most enhanced fork to this day for the Proxmark3 device. Which makes it so awesum to play with. Do please play with it. Get excited and experiment. As a side note with all coverity scan fixes this client is much more stable than PM3 Master even if I tend to break it sometimes. I'll try to make a release when this fork becomes stable between my experiments.
-
-## Official
-The official Proxmark repository is found here: https://github.com/Proxmark/proxmark3
 
 ## Coverity Scan Config & Run
 Download the Coverity Scan Self-buld and install it.
@@ -61,7 +61,7 @@ Among the stuff is
 I don't actually know how to make small pull-request to github :( and that is the number one reason for me not pushing a lot of things back to the PM3 master.
 Me fiddling with the code so much, there is a nightmare in merging a PR.  Luckily I have @marshmellow42 who takes some stuff and push PR's back.
 
-## Why don't you add nnnn or mmmm functionality?
+## Why don't you add this or that functionality?
 Give me a hint, and I'll see if I can't merge in the stuff you have. 
 	
 ## PM3 GUI
@@ -125,9 +125,9 @@ Further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.com/c
 I recently added a docker container on Docker HUB.  You find it here: https://hub.docker.com/r/iceman1001/proxmark3/
 Follow those instructions to get it up and running.  No need for the old proxspace-environment anymore.
 
-[1.6.0] How to start:   https://www.youtube.com/watch?v=b5Zta89Cf6Q
-[1.6.0] How to connect: https://youtu.be/0ZS2t5C-caI
-[1.6.1] How to flash:   https://www.youtube.com/watch?v=WXouhuGYEiw
+-[1.6.0] How to start:   https://www.youtube.com/watch?v=b5Zta89Cf6Q
+-[1.6.0] How to connect: https://youtu.be/0ZS2t5C-caI
+-[1.6.1] How to flash:   https://www.youtube.com/watch?v=WXouhuGYEiw
 
 Recommendations:  Use only latest container.
 
