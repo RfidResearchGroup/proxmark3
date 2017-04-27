@@ -834,9 +834,9 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 		ul_switch_off_field();
 		memset(MAC,0,4);
 		// AA2 authenticate credit key and git c_div_key - later store in dump block 4
-		if (!select_and_auth(CreditKEY, MAC, c_div_key, true, false, false, false)){
+		if (!select_and_auth(CreditKEY, MAC, c_div_key, true, elite, rawkey, false)){
 			//try twice - for some reason it sometimes fails the first time...
-			if (!select_and_auth(CreditKEY, MAC, c_div_key, true, false, false, false)){
+			if (!select_and_auth(CreditKEY, MAC, c_div_key, true, elite, rawkey, false)){
 				ul_switch_off_field();
 				return 0;
 			}
