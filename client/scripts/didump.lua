@@ -5,17 +5,16 @@ local lib14a = require('read14a')
 
 example =[[
 	script run didump
-	script run didump -k aabbccddeeff
+	script run didump -t
 ]]
 author = "Iceman"
-usage = "script run didump -k <key> "
+usage = "script run didump -h -t"
 desc = [[
 This is a script to dump and decrypt the data of a specific type of Mifare Mini token.
 
 Arguments:
 	-h             : this help
 	-t			   : selftest
-	-k <key>       : Mifare Key A.
 ]]
 
 local band=bit32.band
@@ -27,6 +26,7 @@ local rshift=bit32.rshift
 
 local FOO = 'AF62D2EC0491968CC52A1A7165F865FE'
 local BAR = '286329204469736E65792032303133'
+local MIS = '0A14FD0507FF4BCD026BA83F0A3B89A9'
 local RANDOM = FOO..BAR
 local outputTemplate = os.date("toydump_%Y-%m-%d_%H%M%S");
 local TIMEOUT = 2000
@@ -362,6 +362,19 @@ local function waitCmd()
 	return nil, "No response from device"
 end
 
+local function keygen(uid)
+	local data = MIS..uid..BAR
+	local hash = utils.ConvertAsciiToBytes(utils.Sha1Hex(data))
+	return string.format("%02X%02X%02X%02X%02X%02X",
+		hash[3+1],
+		hash[2+1],
+		hash[1+1],
+		hash[0+1],
+		hash[7+1],
+		hash[6+1]
+		)
+end
+
 local function selftest()
 	local testdata = '000F42430D0A14000001D11F'..'5D738517'
 	local chksum = getChecksum(testdata)
@@ -381,6 +394,10 @@ local function selftest()
 	print  ('DATA          :: '..testdata:sub(1,24))	
 	print (('VALID CHKSUM  :: %s'):format(validStr ))	
 	print (('UPDATE CHKSUM :: %s'):format(revalidated))	
+	
+	local testkey = keygen('0456263a873a80')
+	print ('TEST KEY       :: '..testkey)
+	print ('VALID KEY      :: 29564af75805')
 end
 --- 
 -- The main entry point
@@ -394,18 +411,11 @@ function main(args)
 	local magic = ''
 	
 	-- Read the parameters
-	for o, a in getopt.getopt(args, 'hk:t') do
+	for o, a in getopt.getopt(args, 'ht') do
 		if o == "h" then help() return end
-		if o == "k" then keyA = a end
 		if o == "t" then return selftest() end
 	end
-	
-	-- validate input args.
-	keyA =  keyA or '6dd747e86975'
-	if #(keyA) ~= 12 then
-		return oops( string.format('Wrong length of write key (was %d) expected 12', #keyA))
-	end
-	
+
 	-- Turn off Debug
 	local cmdSetDbgOff = "hf mf dbg 0"
 	core.console( cmdSetDbgOff) 
@@ -417,6 +427,8 @@ function main(args)
 		return oops(err)
 	end
 	core.clearCommandBuffer()
+	
+	local keyA = keygen(result.uid)
 	
 	-- Show tag info
 	print((' Found tag %s'):format(result.name))
