@@ -5,4 +5,4 @@ init:
 
     set PATH=%PATH%;%QTDIR%\bin;C:\MinGW\bin;C:\MinGW\msys\1.0\bin
 build_script:
-- cmd: make
+- cmd: make all
