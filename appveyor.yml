@@ -1,17 +1,8 @@
-os: Windows Server 2012
-platform: mingw
-qt: mingw492_32
+version: 1.0.{build}
+init:
+- cmd: >-
+    set QTDIR=C:\Qt\5.5\mingw492_32
 
-branches:
-  only:
-    - master
-
-install:
- - set QTDIR=C:\Qt\5.5\mingw492_32
- - set PATH=%PATH%;%QTDIR%\bin;C:\MinGW\bin
-  
-before_build:
- - make clean
- 
-build:
-  - make all
+    set PATH=%PATH%;%QTDIR%\bin;C:\MinGW\bin;C:\MinGW\msys\1.0\bin
+build_script:
+- cmd: make
