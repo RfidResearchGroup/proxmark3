@@ -31,7 +31,7 @@ void HfSnoop(int samplesToSkip, int triggersToSkip)
 	BigBuf_free(); BigBuf_Clear();
 	
 	Dbprintf("Skipping first %d sample pairs, Skipping %d triggers.\n", samplesToSkip, triggersToSkip);
-	bool trigger_cnt;
+	int trigger_cnt;
 
 	LED_D_ON();
 	// Select correct configs
