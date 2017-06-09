@@ -15,18 +15,21 @@ There is so much in this fork,  with all fixes and additions its basically the m
 ## Coverity Scan Config & Run
 Download the Coverity Scan Self-buld and install it.
 You will need to configure  ARM-NON-EABI- Compiler for it to use:
-```
+
 - Configure
+
 `cov-configure --comptype gcc --compiler  /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc`
 
-- run it (I'm running on Ubuntu)
+- Run it (I'm running on Ubuntu)
+
 `cov-build --dir cov-int make all`
 
-- make a tarball
+- Make a tarball
+
 `tar czvf proxmark3.tgz cov-int`
 
-- upload it to coverity.com
-```
+- Upload it to coverity.com
+
 
 ## Whats changed?
 Whats so special with this fork?  I have scraped the web for different enhancements to the PM3 source code and not all of them ever found their way to the master branch. 
