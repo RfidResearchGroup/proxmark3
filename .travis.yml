@@ -2,18 +2,21 @@
 language: c
 
 #default linux build env is: Ubuntu 14.04 trusty
-dist: trusty
-sudo: required
 
-#install:
-compiler: gcc
+compiler: 
+ - gcc
 
 # multi platform build test
-# build matrix,  
 # LINUX : Using trusty beta build environment,  based on Ubuntu 14.04
-# MAC OS: 
+# MAC OS: 10.12 or it will not compile
+#   meaning xcode7.3 (10.11) will not compile :(
 matrix:
   include:
+    - os: linux
+      dist: trusty
+      sudo: required
+    - os: osx
+      osx_image: xcode8.3
     - os: osx
       osx_image: xcode7.3
   allow_failures:
@@ -27,12 +30,14 @@ matrix:
 before_script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-add-repository 'deb http://archive.ubuntu.com/ubuntu trusty main universe multiverse restricted'; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -qq; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y gcc-arm-none-eabi; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev gcc-arm-none-eabi libusb-0.1-4 libusb-dev libqt4-dev ncurses-dev perl pkg-config wget libtolua-dev; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then git fetch --all; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install perl; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew tap iceman1001/proxmark3; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install proxmark3; fi
+  
 
-  #make command
-script: "make all"
+# osx homebrew auto compiles as part of install.
+script: 
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make all; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install -v --HEAD proxmark3; fi
