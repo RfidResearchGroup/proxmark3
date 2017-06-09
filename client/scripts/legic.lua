@@ -1,11 +1,11 @@
---[[	
+--[[
 if it don't works with you tag-layout - be so kind and let me know ;-)
 
 Tested on Tags with those Layouts:
 
 (example)	Legic-Prime Layout with 'Kaba Group Header'
       +----+----+----+----+----+----+----+----+
-  0x00|MCD |MSN0|MSN1|MSN2|MCC | 60 | ea | 9f |		
+  0x00|MCD |MSN0|MSN1|MSN2|MCC | 60 | ea | 9f |
       +----+----+----+----+----+----+----+----+
   0x08| ff | 00 | 00 | 00 | 11 |Bck0|Bck1|Bck2|
       +----+----+----+----+----+----+----+----+
@@ -33,7 +33,7 @@ kghC  = crc8 over MCD + MSN0..MSN2 + UID
 
 (example)	Legic-Cash on MIM256/1024 tag' (37 bytes)
       +----+----+----+----+----+----+----+----+
-  0x00|Seg0|Seg1|Seg2|Seg3|SegC|STP0|STP1|STP2|		
+  0x00|Seg0|Seg1|Seg2|Seg3|SegC|STP0|STP1|STP2|
       +----+----+----+----+----+----+----+----+
   0x08|STP3|STP4|STP5|STP6| 01 |CURh|CURl|LIMh|
       +----+----+----+----+----+----+----+----+
@@ -58,7 +58,7 @@ CHK = crc16 over SHD + LRS + CV
 
 (example)	Legic-Prime Layout 'gantner unsegmented user-credential'
       +----+----+----+----+----+----+----+----+
-  0x00|MCD |MSN0|MSN1|MSN2|MCC | 60 | ea | 08 |		
+  0x00|MCD |MSN0|MSN1|MSN2|MCC | 60 | ea | 08 |
       +----+----+----+----+----+----+----+----+
   0x08|Stp0|Stp1|Stp2|Stp3|Stp4|Dat0|Dat1|uCRC| <- addr 0x08..0x0f is WRP
       +----+----+----+----+----+----+----+----+
@@ -75,11 +75,11 @@ uCRC  = crc8 over addr 0x00..0x03+0x07..0x0E
 
 (example)	Legic-Prime Layout 'gantner unsegmented Master-Token (IAM) with a stamp_len of 4'
       +----+----+----+----+----+----+----+----+
-  0x00|MCD |MSN0|MSN1|MSN2|MCC | 20 | f8 | 08 |		
+  0x00|MCD |MSN0|MSN1|MSN2|MCC | 20 | f8 | 08 |
       +----+----+----+----+----+----+----+----+
   0x08|Stp0|Stp1|Stp2|Stp3| 00 | 00 | 00 |CRC1|
       +----+----+----+----+----+----+----+----+
-  0x10| 00 | 00 | 00 | 00 | 00 |CRC2| 
+  0x10| 00 | 00 | 00 | 00 | 00 |CRC2|
       +----+----+----+----+----+----+
 MCD   = Manufacturer ID
 MSN   = Manufacturer SerialNumber
@@ -106,36 +106,36 @@ it's kinda interactive with following commands in three categories:
   rt => read    Tag             as => add    Segment                mt => make Token
   wt => write   Tag             es => edit   Segment Header         et => edit Token data
                                 ed => edit   Segment Data           tk => toggle KGH-Flag
-      File I/O                  rs => remove Segment           
-  -----------------             cc => check  Segment-CRC         
-  lf => load   File             ck => check  KGH                  
-  sf => save   File             ds => dump   Segments            
-  xf => xor to File                                              
-                                                                
- 
+      File I/O                  rs => remove Segment
+  -----------------             cc => check  Segment-CRC
+  lf => load   File             ck => check  KGH
+  sf => save   File             ds => dump   Segments
+  xf => xor to File
+
+
  (partially) known Segments              Virtual Tags                     Script Output
  ---------------------------    -------------------------------     ------------------------
  dlc => dump  Legic-Cash        ct => copy  mainTag to backupTag    tac => toggle ansicolors
- elc => edit  Legic-Cash        tc => copy  backupTag to mainTag                                     
- d3p => dump  3rd-Party-Cash    tt => switch mainTag & backupTag                                    
- e3p => edit  3rd-Party-Cash    di => dump  mainTag 
+ elc => edit  Legic-Cash        tc => copy  backupTag to mainTag
+ d3p => dump  3rd-Party-Cash    tt => switch mainTag & backupTag
+ e3p => edit  3rd-Party-Cash    di => dump  mainTag
                                 do => dump  backupTag
-                                  
 
- 
+
+
  rt: 'read tag'         - reads a tag placed near to the PM3
  wt: 'write tag'        - writes the content of the 'virtual inTag' to a tag placed near to th PM3
                           without the need of changing anything - MCD,MSN,MCC will be read from the tag
                           before and applied to the output.
- 
+
  lf: 'load file'        - load a (xored) file from the local Filesystem into the 'virtual inTag'
  sf: 'save file'        - saves the 'virtual inTag' to the local Filesystem (xored with Tag-MCC)
  xf: 'xor file'         - saves the 'virtual inTag' to the local Filesystem (xored with choosen MCC - use '00' for plain values)
- 
+
  ct: 'copy tag'         - copy the 'virtual Tag' to a second 'virtual TAG' - not usefull yet, but inernally needed
  tc: 'copy tag'         - copy the 'second virtual Tag' to 'virtual TAG' - not usefull yet, but inernally needed
  tt: 'toggle tag'       - copy mainTag to BackupTag and backupTag to mainTag
- 
+
  di: 'dump mainTag'     - shows the current content of the 'virtual Tag'
  do: 'dump backupTag'   - shows the current content of the 'virtual outTag'
  ds: 'dump Segments'    - will show the content of a selected Segment
@@ -151,25 +151,25 @@ it's kinda interactive with following commands in three categories:
                           'Kaba Group Header CRC calculation'
  tk: 'toggle KGH'       - toglle the (script-internal) flag for kgh-calculation for a segment
  xc: 'etra c'           - show string that was used to calculate the kgh-crc of a segment
- 
+
 dlc: 'dump Legic-Cash'  - show balance and checksums of a Legic-Cash Segment
 elc: 'edit Legic-Cash'  - edit values of a Legic-Cash Segment
 
 d3p: 'dump 3rd Party'   - show balance, history and checksums of a (yet) unknown 3rd-Party Cash Segment
 e3p: 'edit 3rd Party'   - edit Data in 3rd-Party Cash Segment
- 
+
 tac: 'toggle ansicolors'- switch on and off the colored text-output of this script
                           default can be changed by setting the variable 'colored_output' to false
 ]]
 currentTag="inTAG"
 
---- 
+---
 -- requirements
 local utils       = require('utils')
 local getopt      = require('getopt')
 local ansicolors  = require('ansicolors')
 
---- 
+---
 -- global variables / defines
 local bxor    = bit32.bxor
 local bbit    = bit32.extract
@@ -201,7 +201,7 @@ function load_colors(onoff)
     acmagenta= ansicolors.magenta
     acoff   = ansicolors.reset
   else
-    -- 'no color' 
+    -- 'no color'
     acgreen = ""
     accyan  = ""
     acred   = ""
@@ -215,20 +215,20 @@ end
 ---
 -- curency-codes for Legic-Cash-Segments (ISO 4217)
 local currency = {
-  ["03d2"]="EUR", 
-  ["0348"]="USD", 
+  ["03d2"]="EUR",
+  ["0348"]="USD",
   ["033A"]="GBP",
   ["02F4"]="CHF"
 }
 
---- 
+---
 -- This is only meant to be used when errors occur
 function oops(err)
 	print(acred.."ERROR: "..acoff ,err)
 	return nil, err
 end
 
----  
+---
 -- Usage help
 function help()
 	print(desc)
@@ -236,10 +236,10 @@ function help()
 	print("Example usage: "..example)
 end
 
---- 
+---
 -- table check helper
-function istable(t) 
-  return type(t) == 'table' 
+function istable(t)
+  return type(t) == 'table'
 end
 
 ---
@@ -262,7 +262,7 @@ function deepCopy(object)
     return _copy(object)
 end
 
---- 
+---
 -- xor single byte
 function xorme(hex, xor, index)
 	if ( index >= 23 ) then
@@ -272,7 +272,7 @@ function xorme(hex, xor, index)
 	end
 end
 
---- 
+---
 -- (de)obfuscate bytes
 function xorBytes(inBytes, crc)
 	local bytes = {}
@@ -289,13 +289,14 @@ function xorBytes(inBytes, crc)
 	end
 end
 
---- 
+---
 -- check availability of file
 function file_check(file_name)
-  local file_found=io.open(file_name, "r")      
+  local file_found=io.open(file_name, "r")
   if file_found==nil then
     return false
   else
+    file_found:close()
     return true
   end
 end
@@ -334,20 +335,19 @@ function bytesToTable(bytes, bstart, bend)
   return t
 end
 
---- 
+---
 -- read file into table
 function getInputBytes(infile)
 	local line
 	local bytes = {}
-	local fhi,err = io.open(infile)
+	local fhi,err = io.open(infile,"rb")
 	if err then oops("faild to read from file ".. infile); return false; end
-	while true do
-		line = fhi:read()
-		if line == nil then break end
-		for byte in line:gmatch("%w+") do 
-			table.insert(bytes, byte)
-		end
-	end
+
+  file_data = fhi:read("*a");
+  for i = 1, #file_data
+  do
+    bytes[i] = string.format("%x",file_data:byte(i))
+  end
 	fhi:close()
   if (bytes[7]=='00') then return false end
   print(#bytes .. " bytes from "..infile.." loaded")
@@ -357,7 +357,7 @@ end
 ---
 -- create tag-table helper
 function createTagTable()
-  local t={  
+  local t={
         ['MCD'] = '00',
         ['MSN0']= '11',
         ['MSN1']= '22',
@@ -381,7 +381,7 @@ function createTagTable()
   return t
 end
 
---- 
+---
 -- put bytes into tag-table
 function bytesToTag(bytes, tag)
   if(istable(tag)) then
@@ -407,14 +407,14 @@ function bytesToTag(bytes, tag)
     tag.data=bytesToTable(bytes, 10, 13)
     tag.Bck=bytesToTable(bytes, 14, 20)
     tag.MTC=bytesToTable(bytes, 21, 22)
-    
+
     print(acgreen.."Tag-Type: ".. tag.Type..acoff)
     if (tag.Type=="SAM" and #bytes>23) then
       tag=segmentsToTag(bytes, tag)
       print(acgreen..(#tag.SEG+1).." Segment(s) found"..acoff)
     -- unsegmented Master-Token
-    -- only tag-data 
-    else 
+    -- only tag-data
+    else
       for i=0, #tag.Bck do
         table.insert(tag.data, tag.Bck[i])
       end
@@ -429,8 +429,8 @@ function bytesToTag(bytes, tag)
   return oops("tag is no table in: bytesToTag ("..type(tag)..")")
 end
 
---- 
--- put segments from byte-table to tag-table 
+---
+-- put segments from byte-table to tag-table
 function segmentsToTag(bytes, tag)
   if(#bytes>23) then
     local start=23
@@ -447,7 +447,7 @@ function segmentsToTag(bytes, tag)
       return tag
     else return oops("tag is no table in: segmentsToTag ("..type(tag)..")") end
   else print("no Segments: must be a MIM22") end
-end 
+end
 
 ---
 -- read Tag-Table in bytes-table
@@ -501,14 +501,14 @@ function tagToBytes(tag)
 end
 
 --- PM3 I/O ---
---- 
+---
 -- read from pm3 into virtual-tag
 function readFromPM3()
-  local tag, bytes, infile 
+  local tag, bytes, infile
     infile="legic.temp"
     core.console("hf legic reader")
-    core.console("hf legic save "..infile)
-    tag=readFile(infile)
+    core.console("hf legic esave "..infile)
+    tag=readFile(infile..".bin")
     return tag
 end
 
@@ -522,7 +522,7 @@ function writeToTag(tag)
     return
   end
   -- get used bytes / tag-len
-  if(istable(tag.SEG)) then 
+  if(istable(tag.SEG)) then
       if (istable(tag.Bck)) then
       for i=0, #tag.SEG do
         taglen=taglen+tag.SEG[i].len+5
@@ -539,7 +539,7 @@ function writeToTag(tag)
   tag.MSN2 = outbytes[4]
   tag.MCC  = outbytes[5]
   -- recheck all segments-crc/kghcrc (only on a credential)
-  if(istable(tag.Bck)) then 
+  if(istable(tag.Bck)) then
     checkAllSegCrc(tag)
     checkAllKghCrc(tag)
     local uid_new=tag.MCD..tag.MSN0..tag.MSN1..tag.MSN2
@@ -555,10 +555,10 @@ function writeToTag(tag)
   bytes=tagToBytes(tag)
   -- master-token-crc
   if (tag.Type~="SAM") then bytes[22]=calcMtCrc(bytes) end
-  if (bytes) then 
+  if (bytes) then
     print("write temp-file '"..filename.."'")
     print(accyan)
-    writeFile(bytes, filename)      
+    writeFile(bytes, filename)
     --writeToTag(bytes, taglen, 'MylegicClone.hex')
     print(acoff)
   end
@@ -577,14 +577,14 @@ function writeToTag(tag)
 				core.console(cmd)
         --print(cmd)
 			elseif (i == 6) then
-				-- write DCF in reverse order (requires 'mosci-patch')        
+				-- write DCF in reverse order (requires 'mosci-patch')
 				cmd = 'hf legic write 0x05 0x02'
         print(acgreen..cmd..acoff)
 				core.console(cmd)
         --print(cmd)
 			else
 				print(acgreen.."skip byte 0x05 - will be written next step"..acoff)
-			end				
+			end
 			utils.Sleep(0.2)
 		end
 	end
@@ -601,7 +601,7 @@ function readFile(filename)
 		return oops("input file: "..filename.." not found")
 	else
 		bytes = getInputBytes(filename)
-		if (bytes == false) then return oops('couldnt get input bytes') 
+		if (bytes == false) then return oops('couldnt get input bytes')
     else
       -- make plain bytes
       bytes = xorBytes(bytes,bytes[5])
@@ -616,7 +616,7 @@ function readFile(filename)
   return tag
 end
 
---- 
+---
 -- write bytes to file
 function writeFile(bytes, filename)
   if (filename~='MylegicClone.hex') then
@@ -631,9 +631,9 @@ function writeFile(bytes, filename)
 	if err then oops("OOps ... faild to open output-file ".. filename) end
   bytes=xorBytes(bytes, bytes[5])
 	for i = 1, #bytes do
-		if (bcnt == 0) then 
+		if (bcnt == 0) then
 			line=bytes[i]
-		elseif (bcnt <= 7) then 
+		elseif (bcnt <= 7) then
 			line=line.." "..bytes[i]
 		end
 		if (bcnt == 7) then
@@ -651,12 +651,12 @@ function writeFile(bytes, filename)
 end
 
 --- Map related ---
---- 
+---
 -- make tagMap
 function makeTagMap()
   local tagMap={}
-  if (#tagMap==0) then 
-    tagMap['name']=input(accyan.."enter Name for this Map: "..acoff , "newTagMap") 
+  if (#tagMap==0) then
+    tagMap['name']=input(accyan.."enter Name for this Map: "..acoff , "newTagMap")
     tagMap['mappings']={}
     tagMap['crc8']={}
     -- insert fixed Tag-CRC
@@ -664,8 +664,8 @@ function makeTagMap()
     tagMap['crc16']={}
   end
   print(accyan.."new tagMap created"..acoff)
-  return tagMap                  
-end 
+  return tagMap
+end
 
 ---
 -- save mapping to file
@@ -676,11 +676,11 @@ function saveTagMap(map, filename)
       if (answer==false) then return print("user abort") end
     end
   end
-  
+
   local line
 	local fho,err = io.open(filename, "w")
 	if err then oops("OOps ... faild to open output-file ".. filename) end
-	
+
   -- write line to new file
   for k, v in pairs(map) do
     if (istable(v)) then
@@ -757,17 +757,17 @@ function loadTagMap(filename)
 		local fhi,err = io.open(filename)
   	while true do
   		line = fhi:read()
-  		if line == nil then 
-        break 
+  		if line == nil then
+        break
       else
         fields=split(line)
       end
-  		if (#fields==2) then 
+  		if (#fields==2) then
         if (fields[1]=='offset') then
           offset=tonumber(fields[2],10)
         end
         -- map-name
-        map[fields[1]]=fields[2] 
+        map[fields[1]]=fields[2]
       elseif (fields[1]=='mappings') then
         m=m+1
         temp={}
@@ -775,9 +775,9 @@ function loadTagMap(filename)
         temp['name']=fields[3]
         temp['start']=tonumber(fields[4], 10)
         temp['end']=tonumber(fields[5], 10)
-        if(temp['start']>22) then 
-          temp['start']=temp['start']+offset 
-          temp['end']=temp['end']+offset 
+        if(temp['start']>22) then
+          temp['start']=temp['start']+offset
+          temp['end']=temp['end']+offset
         end
         if (tonumber(fields[6], 10)==1) then temp['highlight']= true
         else temp['highlight']= false end
@@ -792,8 +792,8 @@ function loadTagMap(filename)
         temp['seq']=seqstr2tbl(s)
         for k, v in pairs(temp['seq']) do
           if(tonumber(v, 10)>22) then v=tonumber(v, 10)+offset end
-          temp['seq'][k]=tonumber(v, 10) 
-        end  
+          temp['seq'][k]=tonumber(v, 10)
+        end
         table.insert(map.crc8, temp)
       end
   	end
@@ -854,18 +854,18 @@ function checkMapCrc8(tagMap, bytes, n)
   local res=false
   if (#tagMap.crc8>0) then
     if(istable(tagMap.crc8[n])) then
-      temp=""     
+      temp=""
       for k2, v2 in pairs(tagMap.crc8[n]) do
         if (istable(v2)) then
             temp=temp..tbl2seqstr(v2)
         end
-      end     
+      end
       local tempres=""
       local tempres=getSequences(bytes, temp)
       tempres=("%02x"):format(utils.Crc8Legic(tempres))
       if (bytes[tagMap.crc8[n]['pos']]==tempres) then
         res=true
-      end    
+      end
     end
   end
   return res
@@ -875,19 +875,19 @@ end
 -- edit existing Map
 function editTagMap(tag, tagMap)
   local t = [[
-    Data:  dm = show         dr = dump raw      
+    Data:  dm = show         dr = dump raw
 Mappings:  im = insert       am = add       rm = remove
-    CRC8: ac8 = add         sc8 = show     rc8 = remove                    
+    CRC8: ac8 = add         sc8 = show     rc8 = remove
         :   q = exit          h = Help
   ]]
   --if(#tagMap.mappings==0) then oops("no mappings in tagMap"); return tagMap end
   print("tagMap edit-mode submenu")
-  repeat 
+  repeat
     x=input('tagMap submenu:', 'h')
       if      (x=='h') then print(t)
       elseif  (x=='dm') then tagMmap=dumpTagMap(tag, tagMap)
       elseif  (x=='dr') then tagMmap=dumpMap(tag, tagMap)
-      elseif  (x=='rc8') then 
+      elseif  (x=='rc8') then
         if (istable(tagMap.crc8)) then
           local x1 = selectTableEntry(tagMap.crc8, "select number of CRC8 to remove:")
           if (istable(tagMap.crc8[x1])) then
@@ -913,14 +913,14 @@ Mappings:  im = insert       am = add       rm = remove
             table.insert(tagMap.crc8, temp)
           end
         end
-      elseif  (string.sub(x, 1, 3)=='sc8') then 
+      elseif  (string.sub(x, 1, 3)=='sc8') then
         local bytes=tagToBytes(tag)
         local res, pos
         -- trigger manually by sc8 <'4digit' checkadd> <'seqeuence-string'>
         -- e.g.: sc8 0027 1-4,23-36
-        if (string.len(x)>=9) then 
+        if (string.len(x)>=9) then
           pos=tonumber(string.sub(x, 5, 8), 10)
-          x=string.sub(x, 9, string.len(x)) 
+          x=string.sub(x, 9, string.len(x))
           print("x: "..x.."  - pos:"..pos)
         else
           x=selectTableEntry(tagMap.crc8, "select CRC:")
@@ -960,23 +960,23 @@ function dumpMap(tag, tagMap)
   print(accyan.."Tag uses "..dend.." bytes:"..acoff)
   for i=dstart, dend do
     if (check4MappedByte(i, tagMap) and not check4MapCrc8(i, tagMap) and not check4Highlight(i, tagMap)) then io.write(""..acyellow)
-    elseif (check4MapCrc8(i, tagMap)) then 
+    elseif (check4MapCrc8(i, tagMap)) then
       if ( checkMapCrc8(tagMap, bytes, isPosCrc8(tagMap, i) ) ) then
         io.write(""..acgreen)
-      else 
+      else
         io.write(""..acred)
       end
-    else 
-      io.write(""..acoff) 
+    else
+      io.write(""..acoff)
     end
     -- highlighted mapping
     if (check4Highlight(i, tagMap)) then io.write(""..acmagenta) end
-    
+
     io.write(bytes[i])
-    if (i%8==0) then io.write("\n") 
+    if (i%8==0) then io.write("\n")
       else io.write(" ") end
   end
-  
+
   io.write("\n"..acoff)
 end
 
@@ -1053,14 +1053,14 @@ end
 ---
 -- add interactive mapping
 function addMapping(tag, tagMap, x)
-  if (type(x)~="number") then x=#tagMap.mappings+1 end 
+  if (type(x)~="number") then x=#tagMap.mappings+1 end
   local bytes=tagToBytes(tag)
   local myMapping={}
   myMapping['name'] =input(accyan.."enter Maping-Name:"..acoff, string.format("mapping %d", #tagMap.mappings+1))
   myMapping['start']=tonumber(input(accyan.."enter start-addr:"..acoff, '1'), 10)
   myMapping['end']  =tonumber(input(accyan.."enter end-addr:"..acoff, #bytes), 10)
   myMapping['highlight']=confirm("set highlighted")
-  table.insert(tagMap.mappings, x, myMapping)  
+  table.insert(tagMap.mappings, x, myMapping)
   return tagMap
 end
 
@@ -1074,7 +1074,7 @@ function deleteMapping(tag, tagMap)
     else oops("deleteMapping: got type = "..type(d).." - expected type = 'number'")
     end
   end
-  return tagMap 
+  return tagMap
 end
 
 ---
@@ -1107,7 +1107,7 @@ function mapAllSegments(tag, tagMap)
       --tagMap=mapTokenData(tagMap, 'Segment '..("%02d"):format(v['index']).." HDR", v['start'], v['start']+3)
       tagMap=mapTokenData(tagMap, 'Segment '..("%02d"):format(v['index']).." CRC", v['start']+4, v['start']+4, true)
       table.insert(tagMap.crc8, {name = 'Segment '..("%02d"):format(v['index']).." CRC", pos=v['start']+4, seq={1,4,v['start'],v['start']+3}} )
-      if(WRC>WRP) then 
+      if(WRC>WRP) then
         WRPC=WRC
         tagMap=mapTokenData(tagMap, 'Segment '..("%02d"):format(v['index']).." WRC", v['start']+5, v['start']+5+WRC-1, true)
       elseif (WRP>WRC and WRC>0) then
@@ -1119,7 +1119,7 @@ function mapAllSegments(tag, tagMap)
         tagMap=mapTokenData(tagMap, 'Segment '..("%02d"):format(v['index']).." WRP", v['start']+5, v['start']+5+WRP-1, true)
       end
       tagMap=mapTokenData(tagMap, 'Segment '..("%02d"):format(v['index']).." data", v['start']+5+WRPC, v['end'], false)
-      
+
     end
     print(#segs.." Segments mapped")
   else
@@ -1128,7 +1128,7 @@ function mapAllSegments(tag, tagMap)
   return tagMap
 end
 
---- 
+---
 -- map all token data
 function mapTokenData(tagMap, mname, mstart, mend, mhigh)
   --if ( not mhigh ) then mhigh=false end
@@ -1137,7 +1137,7 @@ function mapTokenData(tagMap, mname, mstart, mend, mhigh)
   myMapping['start']=mstart
   myMapping['end']  =mend
   myMapping['highlight']=mhigh
-  table.insert(tagMap.mappings, myMapping) 
+  table.insert(tagMap.mappings, myMapping)
   return tagMap
 end
 
@@ -1189,7 +1189,7 @@ function dumpCDF(tag)
     res = res..accyan.."MCD: "..acoff..tag.MCD..accyan.." MSN: "..acoff..tag.MSN0.." "..tag.MSN1.." "..tag.MSN2..accyan.." MCC: "..acoff..tag.MCC.."\n"
     res = res.."DCF: "..tag.DCFl.." "..tag.DCFh..", Token_Type="..tag.Type.." (OLE="..tag.OLE.."), Stamp_len="..tag.Stamp_len.."\n"
     res = res.."WRP="..tag.WRP..", WRC="..tag.WRC..", RD="..tag.RD..", raw="..tag.raw..((tag.raw=='9f') and (", SSC="..tag.SSC.."\n") or "\n")
-    
+
     -- credential (end-user tag)
     if (tag.Type=="SAM" and tag.raw=='9f') then
       res = res.."Remaining Header Area\n"
@@ -1204,8 +1204,8 @@ function dumpCDF(tag)
       for i=0, (#tag.MTC) do
         res = res..tag.MTC[i].." "
       end
-    
-    
+
+
     -- Master Token specific
     elseif (tag.Type~="SAM") then
       res = res .."Master-Token Area\nStamp: "
@@ -1221,13 +1221,13 @@ function dumpCDF(tag)
       local mtcrc=calcMtCrc(bytes)
       res=res.."\nMaster-Token CRC: "
       res = res ..tag.MTC[1].." ("..((tag.MTC[1]==mtcrc) and "valid" or "error")..")"
-      
-    
+
+
     -- 'Gantner User-Credential' specific
     elseif (tag.Type=="SAM" and (tag.raw=='08' or tag.raw=='09')) then
       print(acgreen.."Gantner Detected"..acoff)
     end
-    
+
     return res
   else print("no valid Tag in dumpCDF") end
 end
@@ -1241,13 +1241,13 @@ function dumpSegment(tag, index)
   local res="" --result
   local raw="" --raw-header
   -- segment
-  if ( (istable(tag.SEG[i])) and tag.Type=="SAM" and tag.raw=="9f") then 
+  if ( (istable(tag.SEG[i])) and tag.Type=="SAM" and tag.raw=="9f") then
     if (istable(tag.SEG[i].raw)) then
       for k,v in pairs(tag.SEG[i].raw) do
         raw=raw..v.." "
       end
     end
-    
+
     -- segment header
     res = res..accyan.."Segment "..("%02d"):format(tag.SEG[i].index)..acoff..": "
     res = res .."raw header: "..string.sub(raw,0,-2)..", flag="..tag.SEG[i].flag..", (valid="..("%x"):format(tag.SEG[i].valid)..", last="..("%x"):format(tag.SEG[i].last).."), "
@@ -1255,7 +1255,7 @@ function dumpSegment(tag, index)
     res = res .."RD="..("%02x"):format(tag.SEG[i].RD)..", CRC="..tag.SEG[i].crc.." "
     res = res .."("..(checkSegmentCrc(tag, i) and acgreen.."valid" or acred.."error") ..acoff..")"
     raw=""
-    
+
 
     -- WRC protected
     if ((tag.SEG[i].WRC>0)) then
@@ -1265,7 +1265,7 @@ function dumpSegment(tag, index)
         dp=dp+1
       end
     end
-    
+
     -- WRP mprotected
     if (tag.SEG[i].WRP>tag.SEG[i].WRC) then
       res = res .."\nRemaining write protected area:\n"
@@ -1274,7 +1274,7 @@ function dumpSegment(tag, index)
         dp=dp+1
       end
     end
-    
+
     -- payload
     if (#tag.SEG[i].data-dp>0) then
      res = res .."\nRemaining segment payload:\n"
@@ -1282,14 +1282,14 @@ function dumpSegment(tag, index)
        res = res..tag.SEG[i].data[dp].." "
        dp=dp+1
      end
-     if (tag.SEG[i].kgh) then 
+     if (tag.SEG[i].kgh) then
        res = res..tag.SEG[i].data[dp].." (KGH: "..(checkKghCrc(tag, i) and acgreen.."valid" or acred.."error") ..acoff..")"
      else  res = res..tag.SEG[i].data[dp] end
     end
     dp=0
-    return res   
+    return res
   else
-    return print("Segment not found") 
+    return print("Segment not found")
   end
 end
 
@@ -1317,30 +1317,30 @@ function dump3rdPartyCash1(tag , seg)
   local lastbal0=tonumber(tag.SEG[seg].data[39]..tag.SEG[seg].data[40] ,16)
   local lastbal1=tonumber(tag.SEG[seg].data[41]..tag.SEG[seg].data[42] ,16)
   local lastbal2=tonumber(tag.SEG[seg].data[43]..tag.SEG[seg].data[44] ,16)
-  
+
   test=""
   -- display decoded/known stuff
   print("\n------------------------------")
   print("Tag-ID:\t\t      "..uid)
-  print("Stamp:\t\t      "..stamp)   
+  print("Stamp:\t\t      "..stamp)
   print("UID-Mapping: \t\t"..("%06d"):format(tonumber(tag.SEG[seg].data[46]..tag.SEG[seg].data[47]..tag.SEG[seg].data[48], 16)))
-  print("------------------------------")           
-  print("checksum 1:\t\t    "..tag.SEG[seg].data[31].." ("..compareCrc(utils.Crc8Legic(uid..dumpTable(tag.SEG[seg].data, "", 19, 30)), tag.SEG[seg].data[31])..")")   
+  print("------------------------------")
+  print("checksum 1:\t\t    "..tag.SEG[seg].data[31].." ("..compareCrc(utils.Crc8Legic(uid..dumpTable(tag.SEG[seg].data, "", 19, 30)), tag.SEG[seg].data[31])..")")
   print("checksum 2:\t\t    "..tag.SEG[seg].data[34].." ("..compareCrc(utils.Crc8Legic(uid..dumpTable(tag.SEG[seg].data, "", 32, 33)), tag.SEG[seg].data[34])..")")
-  print("checksum 3:\t\t    "..tag.SEG[seg].data[37].." ("..compareCrc(utils.Crc8Legic(uid..dumpTable(tag.SEG[seg].data, "", 35, 36)), tag.SEG[seg].data[37])..")") 
-  
+  print("checksum 3:\t\t    "..tag.SEG[seg].data[37].." ("..compareCrc(utils.Crc8Legic(uid..dumpTable(tag.SEG[seg].data, "", 35, 36)), tag.SEG[seg].data[37])..")")
+
   print("checksum 4:\t\t    "..tag.SEG[seg].data[55].." ("..compareCrc(utils.Crc8Legic(uid..dumpTable(tag.SEG[seg].data, "", 46, 54)), tag.SEG[seg].data[55])..")")
-  print("checksum 5:\t\t    "..tag.SEG[seg].data[62].." ("..compareCrc(utils.Crc8Legic(uid..dumpTable(tag.SEG[seg].data, "", 56, 61)), tag.SEG[seg].data[62])..")") 
+  print("checksum 5:\t\t    "..tag.SEG[seg].data[62].." ("..compareCrc(utils.Crc8Legic(uid..dumpTable(tag.SEG[seg].data, "", 56, 61)), tag.SEG[seg].data[62])..")")
   print("checksum 6:\t\t    "..tag.SEG[seg].data[73].." ("..compareCrc(utils.Crc8Legic(uid..dumpTable(tag.SEG[seg].data, "", 63, 72)), tag.SEG[seg].data[73])..")")
-  print("checksum 7:\t\t    "..tag.SEG[seg].data[89].." ("..compareCrc(utils.Crc8Legic(uid..dumpTable(tag.SEG[seg].data, "", 74, 88)), tag.SEG[seg].data[89])..")")  
-  print("------------------------------")                    
+  print("checksum 7:\t\t    "..tag.SEG[seg].data[89].." ("..compareCrc(utils.Crc8Legic(uid..dumpTable(tag.SEG[seg].data, "", 74, 88)), tag.SEG[seg].data[89])..")")
+  print("------------------------------")
   print(string.format("Balance:\t\t  %3.2f", balance/100).." ".."("..compareCrc(balancecrc, tag.SEG[seg].data[34])..")")
-  print(string.format("Shadow:\t\t\t  %3.2f", mirror/100).." ".."("..compareCrc(balancecrc, tag.SEG[seg].data[37])..")")     
-  print("------------------------------")                  
-  print(string.format("History 1:\t\t  %3.2f", lastbal0/100))            
-  print(string.format("History 2:\t\t  %3.2f", lastbal1/100))          
-  print(string.format("History 3:\t\t  %3.2f", lastbal2/100))        
-  print("------------------------------\n") 
+  print(string.format("Shadow:\t\t\t  %3.2f", mirror/100).." ".."("..compareCrc(balancecrc, tag.SEG[seg].data[37])..")")
+  print("------------------------------")
+  print(string.format("History 1:\t\t  %3.2f", lastbal0/100))
+  print(string.format("History 2:\t\t  %3.2f", lastbal1/100))
+  print(string.format("History 3:\t\t  %3.2f", lastbal2/100))
+  print("------------------------------\n")
 end
 
 ---
@@ -1387,11 +1387,11 @@ function print3rdPartyCash1(tag, x)
      print()
      print("\t\tyet unknown: "..tag.SEG[x].data[38])
      print()
-     print("\t\tHisatory 1:  "..dumpTable(tag.SEG[x].data, "", 39, 40))  
-     print("\t\tHisatory 2:  "..dumpTable(tag.SEG[x].data, "", 41, 42))  
-     print("\t\tHisatory 3:  "..dumpTable(tag.SEG[x].data, "", 43, 44))   
+     print("\t\tHisatory 1:  "..dumpTable(tag.SEG[x].data, "", 39, 40))
+     print("\t\tHisatory 2:  "..dumpTable(tag.SEG[x].data, "", 41, 42))
+     print("\t\tHisatory 3:  "..dumpTable(tag.SEG[x].data, "", 43, 44))
      print()
-     print("\t\tyet unknown: "..tag.SEG[x].data[45])         
+     print("\t\tyet unknown: "..tag.SEG[x].data[45])
      print()
      print("\t\tKGH-UID HEX:  "..dumpTable(tag.SEG[x].data, "", 46, 48))
      print("\t\tBlock 4:  "..dumpTable(tag.SEG[x].data, "", 49, 54))
@@ -1428,12 +1428,12 @@ function makeToken()
     ttype=ttype..k..") "..v.."  "
   end
   mtq=tonumber(input("select number for Token-Type\n"..ttype, '1'), 10)
-  if (type(mtq)~="number") then return print("selection invalid!") 
+  if (type(mtq)~="number") then return print("selection invalid!")
   elseif (mtq>#mt.Type) then return print("selection invalid!")
   else print("Token-Type '"..mt.Type[mtq].."' selected") end
   local raw=calcHeaderRaw(mt.WRP[mtq], mt.WRC[mtq], mt.RD[mtq])
   local mtCRC="00"
-  
+
   bytes={"01", "02", "03", "04", "cb", string.sub(mt.DCF[mtq], 0, 2), string.sub(mt.DCF[mtq], 3), raw,
          "00", "00", "00", "00", "00", "00", "00", "00",
          "00", "00", "00", "00", "00", "00"}
@@ -1453,7 +1453,7 @@ function makeToken()
   return bytesToTag(bytes, tempTag)
 end
 
---- 
+---
 -- edit token-data
 function editTag(tag)
   -- for simulation it makes sense to edit everything
@@ -1463,14 +1463,14 @@ function editTag(tag)
   if (confirm(acyellow.."do you want to edit non-writeable values (e.g. for simulation)?"..acoff)) then
     edit_tag=edit_sim
   else edit_tag=edit_real end
-    
+
   if(istable(tag)) then
     for k,v in pairs(tag) do
       if(type(v)~="table" and type(v)~="boolean" and string.find(edit_tag, k)) then
         tag[k]=input("value for: "..accyan..k..acoff, v)
       end
     end
-    
+
     if (tag.Type=="SAM") then ttype="Header"; else ttype="Stamp"; end
       if (confirm(acyellow.."do you want to edit "..ttype.." Data?"..acoff)) then
       -- master-token specific
@@ -1481,9 +1481,9 @@ function editTag(tag)
         -- rest of stamp-bytes are in tag.data 0..n
         for i=0, (tonumber(0xfc ,10)-("%d"):format('0x'..tag.DCFh))-2 do
         tag.data[i]=input(ttype.. i+1 ..": ", tag.data[i])
-        end  
+        end
       else
-        --- on credentials byte7 should always be 9f and byte8 ff 
+        --- on credentials byte7 should always be 9f and byte8 ff
         -- on Master-Token not (even on SAM63/64 not)
         -- tag.SSC=input(ttype.."0: ", tag.SSC)
         for i=0, #tag.data do
@@ -1491,18 +1491,18 @@ function editTag(tag)
         end
       end
     end
-    
+
     bytes=tagToBytes(tag)
-   
+
     --- check data-consistency (calculate tag.raw)
     bytes[8]=calcHeaderRaw(tag.WRP, tag.WRC, tag.RD)
-   
+
     --- Master-Token specific
     -- should be triggered if a SAM was converted to a non-SAM (user-Token to Master-Token)
     -- or a Master-Token has being edited (also SAM64 & SAM63 - which are in fact Master-Token)
-    if(tag.Type~="SAM" or bytes[6]..bytes[7]~="60ea") then 
+    if(tag.Type~="SAM" or bytes[6]..bytes[7]~="60ea") then
       -- calc new Master-Token crc
-      bytes[22]=calcMtCrc(bytes)   
+      bytes[22]=calcMtCrc(bytes)
     else
       -- ensure tag.SSC set to 'ff' on credential-token (SAM)
       bytes[9]='ff'
@@ -1511,7 +1511,7 @@ function editTag(tag)
       bytes[21]='00'
       bytes[22]='00'
     end
-   
+
     tag=bytesToTag(bytes, tag)
   end
 end
@@ -1522,16 +1522,16 @@ function calcHeaderRaw(wrp, wrc, rd)
   local res
   wrp=("%02x"):format(tonumber(wrp, 10))
   rd=tonumber(rd, 16)
-  res=("%02x"):format(tonumber(wrp, 16)+tonumber(wrc.."0", 16)+((rd>0) and tonumber("8"..(rd-1), 16) or 0))         
+  res=("%02x"):format(tonumber(wrp, 16)+tonumber(wrc.."0", 16)+((rd>0) and tonumber("8"..(rd-1), 16) or 0))
   return res
 end
 
---- 
+---
 -- determine TagType (bits 0..6 of DCFlow)
 function getTokenType(DCFl)
   --[[
-    0x00–0x2f IAM 
-    0x30–0x6f SAM 
+    0x00–0x2f IAM
+    0x30–0x6f SAM
     0x70–0x7f GAM
   ]]--
   local tt = tonumber(bbit("0x"..DCFl,0,7),10)
@@ -1571,8 +1571,8 @@ function getSegmentData(bytes, start, index)
     ['data']  = {},
     ['kgh']   = false
   }
-  if (bytes[start]) then 
-    local i 
+  if (bytes[start]) then
+    local i
     -- #index
 	  segment.index = index
 	  -- flag = high nibble of byte 1
@@ -1598,12 +1598,12 @@ function getSegmentData(bytes, start, index)
       segment.data[i]=bytes[start+5+i]
     end
     return segment
-  else return false; 
+  else return false;
   end
 end
 
 ---
--- get index, start-aadr, length and content 
+-- get index, start-aadr, length and content
 function getSegmentStats(bytes)
   local sStats = {}
   local sValid, sLast, sLen, sStart, x
@@ -1679,7 +1679,7 @@ function editSegment(tag, index)
   else print("Segment with Index: "..("%02d"):format(index).." not found in Tag")
     return false
   end
-  regenSegmentHeader(tag.SEG[index]) 
+  regenSegmentHeader(tag.SEG[index])
   print("\n"..dumpSegment(tag, index).."\n")
   return tag
 end
@@ -1692,7 +1692,7 @@ function editSegmentData(data)
   if (istable(data)) then
     for i=0, #data-1 do
       data[i]=input(accyan.."Data"..i..acoff..": ", data[i])
-    end 
+    end
     if (lc) then data=fixLegicCash(data) end
     return data
   else
@@ -1704,7 +1704,7 @@ end
 -- list available segmets in virtual tag
 function segmentList(tag)
   local i
-  local res = "" 
+  local res = ""
   if (istable(tag.SEG[0])) then
     for i=0, #tag.SEG do
       res = res .. tag.SEG[i].index .. "  "
@@ -1719,7 +1719,7 @@ end
 -- helper to selecting a segment
 function selectSegment(tag)
   local sel
-  if (istable(tag.SEG[0])) then 
+  if (istable(tag.SEG[0])) then
     print("availabe Segments:\n"..segmentList(tag))
     sel=input("select Segment: ", '00')
     sel=tonumber(sel,10)
@@ -1730,7 +1730,7 @@ function selectSegment(tag)
     return false
   end
 end
-  
+
 ---
 -- add segment
 function addSegment(tag)
@@ -1768,16 +1768,16 @@ function getSegmentStamp(seg, bytes)
   local stamp=""
   local stamp_len=7
   --- the 'real' stamp on MIM is not really easy to tell for me since the 'data-block' covers stamp0..stampn+data0..datan
-  -- there a no stamps longer than 7 bytes & they are write-protected by default , and I have not seen user-credntials 
+  -- there a no stamps longer than 7 bytes & they are write-protected by default , and I have not seen user-credntials
   -- with stamps smaller 3 bytes (except: Master-Token)
-  -- WRP -> Read/Write Protection 
+  -- WRP -> Read/Write Protection
   -- WRC -> Read/Write Condition
   -- RD depends on WRC - if WRC > 0 and RD=1: only reader with matching #WRC of Stamp-bytes in thier Database have Read-Access to the Tag
   if (seg.WRP<7) then stamp_len=(seg.WRP) end
   for i=1, (stamp_len) do
     stamp=stamp..seg.data[i-1]
   end
-  if (bytes) then 
+  if (bytes) then
     stamp=str2bytes(stamp)
     return stamp
   else return stamp end
@@ -1807,15 +1807,15 @@ function autoSelectSegment(tag, s)
   --- search for desired segment-type
   -- 3rd Party Segment
   if (s=="3rdparty") then
-    repeat 
+    repeat
       io.write(". ")
       x=x-1
       res=check43rdPartyCash1(uid, tag.SEG[x].data)
     until ( res or x==0 )
-   end  
+   end
   -- Legic-Cash Segment
   if (s=="legiccash") then
-    repeat 
+    repeat
       io.write(". ")
       x=x-1
       res=check4LegicCash(tag.SEG[x].data)
@@ -1828,9 +1828,9 @@ function autoSelectSegment(tag, s)
      return x
    end
    ---
-   -- nothing found   
-   io.write(acyellow.."no Segment found\n"..acoff) 
-   return -1 
+   -- nothing found
+   io.write(acyellow.."no Segment found\n"..acoff)
+   return -1
 end
 
 ---
@@ -1906,8 +1906,8 @@ function edit3rdPartyCash1(tag, x)
     print(" done")
     -- fix known checksums
     tag.SEG[x].data=fix3rdPartyCash1(uid, tag.SEG[x].data)
-  end    
-  return tag  
+  end
+  return tag
 end
 
 ---
@@ -1924,7 +1924,7 @@ function editLegicCash(data)
   rid=tonumber(data[18]..data[19]..data[20], 16)
   -- transaction counter value
   tcv=tonumber(data[29], 16)
-  
+
   -- edit currency
   if (confirm(accyan.."change Currency?"..acoff)) then
     for k, v in pairs(currency) do io.write(k .. " = " .. v .. "\n") end
@@ -1932,7 +1932,7 @@ function editLegicCash(data)
     data[8]=string.sub(curr, 1, 2)
     data[9]=string.sub(curr, 3, 4)
   end
-  
+
   -- edit limit
   if (confirm(accyan.."change Limit?"..acoff)) then
     limit=string.format("%06x", input(accyan.."enter the Decimal for the new Limit:"..acoff, limit))
@@ -1940,7 +1940,7 @@ function editLegicCash(data)
     data[11]=string.sub(limit, 3, 4)
     data[12]=string.sub(limit, 5, 6)
   end
-  
+
   -- edit balance
   if (confirm(accyan.."change Balance?"..acoff)) then
     balance=string.format("%06x", input(accyan.."enter the Decimal for the new Balance:"..acoff, balance))
@@ -1948,14 +1948,14 @@ function editLegicCash(data)
     data[15]=string.sub(balance, 1, 2)
     data[16]=string.sub(balance, 3, 4)
     data[17]=string.sub(balance, 5, 6)
-  end  
-  
+  end
+
   -- edit transaction-counter
   if (confirm(accyan.."change Transaction-Counter?"..acoff)) then
     tcv=string.format("%02x", input(accyan.."enter the 4-digit Hex for the new Currency:"..acoff, data[29]))
     data[29]=tcv
   end
-  
+
   -- edit reader.id
   if (confirm(accyan.."change Last-Reader-ID?"..acoff)) then
     rid=string.format("%06x", input(accyan.."enter the Decimal for the new Balance:"..acoff, rid))
@@ -1964,7 +1964,7 @@ function editLegicCash(data)
     data[19]=string.sub(rid, 3, 4)
     data[20]=string.sub(rid, 5, 6)
   end
-  
+
   return fixLegicCash(data)
 end
 
@@ -2007,7 +2007,7 @@ function check43rdPartyCash1(uid, data)
           --end
           --end
       --end
-    end 
+    end
   end
   return false
 end
@@ -2015,7 +2015,7 @@ end
 --- CRC related ---
 ---
 -- build segmentCrc credentials
-function segmentCrcCredentials(tag, segid) 
+function segmentCrcCredentials(tag, segid)
   if (istable(tag.SEG[0])) then
     local cred = tag.MCD..tag.MSN0..tag.MSN1..tag.MSN2
     cred = cred ..tag.SEG[segid].raw[1]..tag.SEG[segid].raw[2]..tag.SEG[segid].raw[3]..tag.SEG[segid].raw[4]
@@ -2025,7 +2025,7 @@ end
 
 ---
 -- build kghCrc credentials
-function kghCrcCredentials(tag, segid) 
+function kghCrcCredentials(tag, segid)
   if (istable(tag) and istable(tag.SEG[0])) then
     local x='00'
     if (type(segid)=="string") then segid=tonumber(segid,10) end
@@ -2107,7 +2107,7 @@ end
 
 ---
 -- calculate Master-Token crc
-function calcMtCrc(bytes) 
+function calcMtCrc(bytes)
   --print(#bytes)
   local cmd=bytes[1]..bytes[2]..bytes[3]..bytes[4]..bytes[7]..bytes[6]..bytes[8]
   local len=(tonumber(0xfc ,10)-("%d"):format('0x'..bytes[7]))
@@ -2129,7 +2129,7 @@ function calcSegmentCrc(tag, segid)
 end
 
 ---
--- calcuate kghCRC for a given segment 
+-- calcuate kghCRC for a given segment
 function calcKghCrc(tag, segid)
   if (istable(tag.SEG[0])) then
   -- check if a 'Kaber Group Header' exists
@@ -2156,7 +2156,7 @@ function checkAllKghCrc(tag)
   if (istable(tag.SEG[0])) then
     for i=0, #tag.SEG do
       crc=calcKghCrc(tag, i)
-      if (tag.SEG[i].kgh) then 
+      if (tag.SEG[i].kgh) then
         tag.SEG[i].data[#tag.SEG[i].data-1]=crc
       end
     end
@@ -2167,7 +2167,7 @@ end
 -- validate segmentCRC for a given segment
 function checkSegmentCrc(tag, segid)
     local data=segmentCrcCredentials(tag, segid)
-    if (("%02x"):format(utils.Crc8Legic(data))==tag.SEG[segid].crc) then 
+    if (("%02x"):format(utils.Crc8Legic(data))==tag.SEG[segid].crc) then
       return true
     end
     return false
@@ -2179,7 +2179,7 @@ function checkKghCrc(tag, segid)
   if (type(tag.SEG[segid])=='table') then
     if (tag.data[3]=="11" and tag.raw=="9f" and tag.SSC=="ff") then
       local data=kghCrcCredentials(tag, segid)
-      if (("%02x"):format(utils.Crc8Legic(data))==tag.SEG[segid].data[tag.SEG[segid].len-5-1]) then return true; end 
+      if (("%02x"):format(utils.Crc8Legic(data))==tag.SEG[segid].data[tag.SEG[segid].len-5-1]) then return true; end
       else return false; end
   else oops(acred.."'Kaba Group header' detected but no Segment-Data found"..ansocolors.reset) end
 end
@@ -2188,70 +2188,70 @@ end
 -- helptext for modify-mode
 function modifyHelp()
   local t=[[
-    
+
          Data I/O                    Segment Manipulation                Token-Data
      -----------------               --------------------           ---------------------
      rt => read    Tag               as => add    Segment           mt => make Token
      wt => write   Tag               es => edit   Segment Header    et => edit Token data
                                      ed => edit   Segment Data      tk => toggle KGH-Flag
-         File I/O                    rs => remove Segment           
-     -----------------               cc => check  Segment-CRC       
-     lf => load   File               ck => check  KGH               
-     sf => save   File               ds => dump   Segments          
-     xf => xor to File                                              
-                                                                                                                                        
-                                                                    
-         Virtual Tags                       tagMap                   (partial) known Segments 
+         File I/O                    rs => remove Segment
+     -----------------               cc => check  Segment-CRC
+     lf => load   File               ck => check  KGH
+     sf => save   File               ds => dump   Segments
+     xf => xor to File
+
+
+         Virtual Tags                       tagMap                   (partial) known Segments
  --------------------------------    ---------------------          ---------------------------
- ct => copy  mainTag to backupTag    mm => make (new) Map           dlc => dump  Legic-Cash    
- tc => copy  backupTag to mainTag    em => edit Map submenu         elc => edit  Legic-Cash    
+ ct => copy  mainTag to backupTag    mm => make (new) Map           dlc => dump  Legic-Cash
+ tc => copy  backupTag to mainTag    em => edit Map submenu         elc => edit  Legic-Cash
  tt => switch mainTag & backupTag    lm => load map from file       d3p => dump  3rd-Party-Cash
  di => dump  mainTag                 sm => save map to file         e3p => edit  3rd-Party-Cash
- do => dump  backupTag                      
-                           
+ do => dump  backupTag
+
                             h => this help                q => quit
-  ]]                      
+  ]]
   return t
 end
 
---- 
+---
 -- modify Tag (interactive)
 function modifyMode()
   local i, backupTAG,  outTAG, inTAG, outfile, infile, sel, segment, bytes, outbytes, tagMap
-  
+
   actions = {
     ---
     -- helptext
-     ["h"] = function(x) 
-              print("  Version: "..version); 
+     ["h"] = function(x)
+              print("  Version: "..version);
               print(modifyHelp().."\n".."tags im Memory: "..(istable(inTAG) and ((currentTag=='inTAG') and acgreen.."*mainTAG"..acoff or "mainTAG") or "").."  "..(istable(backupTAG) and ((currentTag=='backupTAG') and acgreen.."*backupTAG"..acoff or "backupTAG") or ""))
             end,
     ---
     -- read real Tag with PM3 into virtual 'mainTAG'
-    ["rt"] = function(x) 
-                inTAG=readFromPM3(); 
-                --actions.di() 
+    ["rt"] = function(x)
+                inTAG=readFromPM3();
+                --actions.di()
               end,
     ---
     -- write content of virtual 'mainTAG' to real Tag with PM3
-    ["wt"] = function(x)  
+    ["wt"] = function(x)
                 writeToTag(inTAG)
               end,
     ---
-    -- copy mainTAG to backupTAG        
-    ["ct"] = function(x)  
-                print(accyan.."copy mainTAG to backupTAG"..acoff)  
+    -- copy mainTAG to backupTAG
+    ["ct"] = function(x)
+                print(accyan.."copy mainTAG to backupTAG"..acoff)
                   backupTAG=deepCopy(inTAG)
             end,
     ---
     -- copy backupTAG to mainTAG
-    ["tc"] = function(x)  
+    ["tc"] = function(x)
                 print(accyan.."copy backupTAG to mainTAG"..acoff)
                 inTAG=deepCopy(backupTAG)
             end,
     ---
     -- toggle between mainTAG and backupTAG
-    ["tt"] = function(x)  
+    ["tt"] = function(x)
                 -- copy main to temp
                 outTAG=deepCopy(inTAG)
                 -- copy backup to main
@@ -2264,8 +2264,8 @@ function modifyMode()
             end,
     ---
     -- load file into mainTAG
-    ["lf"] = function(x)  
-              
+    ["lf"] = function(x)
+
               if (type(x)=='string' and file_check(x)) then filename=x
               else  filename=input("enter filename: ", "legic.temp") end
               inTAG=readFile(filename)
@@ -2274,130 +2274,130 @@ function modifyMode()
                 if(confirm(accyan.."Mapping-File for "..acoff..filename..accyan.." found - load it also?"..acoff)) then
                   tagMap=loadTagMap(filename..".map")
                 end
-              end         
+              end
             end,
     ---
     -- save values of mainTAG to a file (xored with MCC of mainTAG)
-    ["sf"] = function(x)  
+    ["sf"] = function(x)
               if(istable(inTAG)) then
                 outfile=input("enter filename:", "legic.temp")
                 bytes=tagToBytes(inTAG)
                 --bytes=xorBytes(bytes, inTAG.MCC)
-                if (bytes) then             
+                if (bytes) then
                   writeFile(bytes, outfile)
                 end
                end
               end,
     ---
-    -- save values of mainTAG to a file (xored with 'specific' MCC) 
-    ["xf"] = function(x)  
+    -- save values of mainTAG to a file (xored with 'specific' MCC)
+    ["xf"] = function(x)
               if(istable(inTAG)) then
                 outfile=input("enter filename:", "legic.temp")
                 crc=input("enter new crc: ('00' for a plain dump)", inTAG.MCC)
                 print("obfuscate witth: "..crc)
                 bytes=tagToBytes(inTAG)
                 bytes[5]=crc
-                if (bytes) then             
+                if (bytes) then
                   writeFile(bytes, outfile)
                 end
               end
              end,
     ---
     -- dump mainTAG (and all Segments)
-    ["di"] = function(x) 
-                if (istable(inTAG)) then 
+    ["di"] = function(x)
+                if (istable(inTAG)) then
                   local uid=inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
                   if(istable(inTAG.SEG[0])) then
                     for i=0, #inTAG.SEG do
                       if(check43rdPartyCash1(uid, inTAG.SEG[i].data)) then
-                        io.write(accyan.."in Segment index: "..inTAG.SEG[i].index ..acoff.. "\n")                      
+                        io.write(accyan.."in Segment index: "..inTAG.SEG[i].index ..acoff.. "\n")
                       elseif(check4LegicCash(inTAG.SEG[i].data)) then
                         io.write(accyan.."in Segment index: "..inTAG.SEG[i].index..acoff.."\n")
-                        lc=true; 
+                        lc=true;
                         lci=inTAG.SEG[i].index;
                       end
                     end
                   end
-                  print("\n"..dumpTag(inTAG).."\n") 
+                  print("\n"..dumpTag(inTAG).."\n")
                   if (lc) then actions["dlc"](lci) end
                   lc=false
-                end 
+                end
               end,
     ---
     -- dump backupTAG (and all Segments)
     ["do"] = function(x) if (istable(backupTAG)) then print("\n"..dumpTag(backupTAG).."\n") end end,
     ---
     -- create a empty tagMap
-    ["mm"] = function(x) 
+    ["mm"] = function(x)
                 -- clear existing tagMap and init
-                if (istable(inTAG)) then 
+                if (istable(inTAG)) then
                   tagMap=makeTagMap()
                 end
               end,
     ---
     -- edit a tagMap
-    ["em"] = function(x) 
-                if (istable(inTAG)==false) then 
-                  if (confirm("no mainTAG in memory!\nread from PM3?")) then 
-                    actions['rt']() 
-                  elseif (confirm("load from File?")) then 
-                    actions['lf']() 
+    ["em"] = function(x)
+                if (istable(inTAG)==false) then
+                  if (confirm("no mainTAG in memory!\nread from PM3?")) then
+                    actions['rt']()
+                  elseif (confirm("load from File?")) then
+                    actions['lf']()
                     else return
-                  end  
+                  end
                 end
-                if (istable(tagMap)==false) then actions['mm']() end                
+                if (istable(tagMap)==false) then actions['mm']() end
                 -- edit
                 tagMap=editTagMap(inTAG, tagMap)
               end,
     ---
     -- save a tagMap
-    ["sm"] = function(x) 
+    ["sm"] = function(x)
                 if (istable(tagMap)) then
                   if (istable(tagMap) and #tagMap.mappings>0) then
                     print(accyan.."Map contains "..acoff..#tagMap..accyan.." mappings"..acoff)
                     saveTagMap(tagMap, input(accyan.."enter filename:"..acoff, "Legic.map"))
-                  else 
+                  else
                     print(acyellow.."no mappings in tagMap!"..acoff)
                   end
-                end 
+                end
               end,
     ---
     -- load a tagMap
-    ["lm"] = function(x) 
+    ["lm"] = function(x)
                 tagMap=loadTagMap(input(accyan.."enter filename:"..acoff, "Legic.map"))
               end,
     ---
     -- dump single segment
-    ["ds"] = function(x) 
+    ["ds"] = function(x)
                 if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
                 else sel=selectSegment(inTAG) end
-                if (sel) then print("\n"..(dumpSegment(inTAG, sel) or acred.."no Segments available") ..acoff.."\n") end 
+                if (sel) then print("\n"..(dumpSegment(inTAG, sel) or acred.."no Segments available") ..acoff.."\n") end
               end,
     ---
     -- edit segment header
-    ["es"] = function(x) 
+    ["es"] = function(x)
               if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
               else sel=selectSegment(inTAG) end
-              if (sel) then 
+              if (sel) then
                 if(istable(inTAG.SEG[0])) then
                   inTAG=editSegment(inTAG, sel)
                   inTAG.SEG[sel]=regenSegmentHeader(inTAG.SEG[sel])
-              else print(acyellow.."no Segments in Tag"..acoff) end 
+              else print(acyellow.."no Segments in Tag"..acoff) end
               end
             end,
     ---
     -- add segment
-    ["as"] = function(x) 
+    ["as"] = function(x)
               if (istable(inTAG.SEG[0])) then
                 inTAG=addSegment(inTAG)
                 inTAG.SEG[#inTAG.SEG-1]=regenSegmentHeader(inTAG.SEG[#inTAG.SEG-1])
-                inTAG.SEG[#inTAG.SEG]=regenSegmentHeader(inTAG.SEG[#inTAG.SEG]) 
+                inTAG.SEG[#inTAG.SEG]=regenSegmentHeader(inTAG.SEG[#inTAG.SEG])
                 else print(accyan.."Master-Token / unsegmented Tag!"..acoff)
               end
             end,
     ---
     -- remove segment
-    ["rs"] = function(x) 
+    ["rs"] = function(x)
               if (istable(inTAG.SEG[0])) then
                 if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
                 else sel=selectSegment(inTAG) end
@@ -2409,16 +2409,16 @@ function modifyMode()
             end,
     ---
     -- edit data-portion of single segment
-    ["ed"] = function(x) 
+    ["ed"] = function(x)
               if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
               else sel=selectSegment(inTAG) end
-              if (istable(inTAG.SEG[sel])) then 
-                inTAG.SEG[sel].data=editSegmentData(inTAG.SEG[sel].data) 
+              if (istable(inTAG.SEG[sel])) then
+                inTAG.SEG[sel].data=editSegmentData(inTAG.SEG[sel].data)
               end
             end,
     ---
     -- edit Tag (MCD, MSN, MCC etc.)
-    ["et"] = function(x) 
+    ["et"] = function(x)
                 if (istable(inTAG)) then
                   editTag(inTAG)
                 end
@@ -2428,14 +2428,14 @@ function modifyMode()
     ["mt"] = function(x) inTAG=makeToken(); actions.di() end,
     ---
     -- fix segment-crc on single segment
-    ["ts"] = function(x) 
+    ["ts"] = function(x)
                if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
                else sel=selectSegment(inTAG) end
-                regenSegmentHeader(inTAG.SEG[sel]) 
+                regenSegmentHeader(inTAG.SEG[sel])
               end,
     ---
-    -- toggle kgh-crc-flag on a single segment 
-    ["tk"] = function(x) 
+    -- toggle kgh-crc-flag on a single segment
+    ["tk"] = function(x)
                if (istable(inTAG) and istable(inTAG.SEG[0])) then
                 if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
                 else sel=selectSegment(inTAG) end
@@ -2447,7 +2447,7 @@ function modifyMode()
     -- calculate LegicCrc8
     ["k"] = function(x)
               if (type(x)=="string" and string.len(x)>0) then
-                print(("%02x"):format(utils.Crc8Legic(x))) 
+                print(("%02x"):format(utils.Crc8Legic(x)))
               end
              end,
     ---
@@ -2455,32 +2455,32 @@ function modifyMode()
     ["xb"] = function(x)
           end,
     ---
-    -- print string for LegicCrc8-calculation about single segment 
-    ["xc"] = function(x) 
+    -- print string for LegicCrc8-calculation about single segment
+    ["xc"] = function(x)
                if (istable(inTAG) and istable(inTAG.SEG[0])) then
                  if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
-                 else sel=selectSegment(inTAG) end 
-                 print("k "..kghCrcCredentials(inTAG, sel)) 
-               end 
+                 else sel=selectSegment(inTAG) end
+                 print("k "..kghCrcCredentials(inTAG, sel))
+               end
               end,
     ---
     -- fix legic-cash checksums
-    ["flc"] = function(x) 
+    ["flc"] = function(x)
                 if (type(x)=="string" and string.len(x)>0) then x=tonumber(x,10)
-                else x=selectSegment(inTAG) end 
+                else x=selectSegment(inTAG) end
                 inTAG.SEG[x].data=fixLegicCash(inTAG.SEG[x].data)
               end,
     ---
     -- edit legic-cash values fixLegicCash(data)
-    ["elc"] = function(x) 
+    ["elc"] = function(x)
                 x=autoSelectSegment(inTAG, "legiccash")
                 inTAG.SEG[x].data=editLegicCash(inTAG.SEG[x].data)
               end,
     ---
     -- dump legic-cash human-readable
-    ["dlc"] = function(x) 
+    ["dlc"] = function(x)
                 -- if segment index was user defined
-                if (type(x)=="string" and string.len(x)>0) then 
+                if (type(x)=="string" and string.len(x)>0) then
                   x=tonumber(x,10)
                   print(string.format("User-Selected Index %02d", x))
                 -- or try to find match
@@ -2493,11 +2493,11 @@ function modifyMode()
     ["d3p"] = function(x)
                 local uid=inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
                 -- if segment index was user defined
-                if (type(x)=="string" and string.len(x)>0) then 
+                if (type(x)=="string" and string.len(x)>0) then
                   x=tonumber(x,10)
                   print(string.format("User-Selected Index %02d", x))
                 -- or try to find match
-                else x=autoSelectSegment(inTAG, "3rdparty") end                  
+                else x=autoSelectSegment(inTAG, "3rdparty") end
                 if (istable(inTAG) and istable(inTAG.SEG[x]) and inTAG.SEG[x].len == 100) then
                   uid=inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
                   if (check43rdPartyCash1(uid, inTAG.SEG[x].data)) then
@@ -2510,7 +2510,7 @@ function modifyMode()
     ["r3p"] = function(x)
                 local uid=inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
                 -- if segment index was user defined
-                if (type(x)=="string" and string.len(x)>0) then 
+                if (type(x)=="string" and string.len(x)>0) then
                   x=tonumber(x,10)
                   print(string.format("User-Selected Index %02d", x))
                 -- or try to find match
@@ -2519,14 +2519,14 @@ function modifyMode()
               end,
     ---
     -- edit 3rd-party-cash-segment values (Balance, Mapping-UID, Stamp)
-    ["e3p"] = function(x) 
+    ["e3p"] = function(x)
                 local uid=inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
                 -- if segment index was user defined
-                if (type(x)=="string" and string.len(x)>0) then 
+                if (type(x)=="string" and string.len(x)>0) then
                   x=tonumber(x,10)
                   print(string.format("User-Selected Index %02d", x))
                 -- or try to find match
-                else x=autoSelectSegment(inTAG, "3rdparty") end                 
+                else x=autoSelectSegment(inTAG, "3rdparty") end
                 if (istable(inTAG) and istable(inTAG.SEG[x]) and inTAG.SEG[x].len == 100) then
                   inTAG=edit3rdPartyCash1(inTAG, x)
                     dump3rdPartyCash1(inTAG, x)
@@ -2534,16 +2534,16 @@ function modifyMode()
               end,
     ---
     -- force fixing 3rd-party-checksums
-    ["f3p"] = function(x) 
+    ["f3p"] = function(x)
                if(type(x)=="string" and string.len(x)>=2) then x=tonumber(x, 10)
                else x=selectSegment(inTAG) end
-               if (istable(inTAG.SEG[x])) then 
+               if (istable(inTAG.SEG[x])) then
                   local uid=inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
                   inTAG.SEG[x].data=fix3rdPartyCash1(uid, inTAG.SEG[x].data)
-               end 
+               end
               end,
     ---
-    -- get stamp from single segment 
+    -- get stamp from single segment
     ["gs"] = function(x)
                 if(type(x)=="string" and string.len(x)>=2) then x=tonumber(x, 10)
                 else x=selectSegment(inTAG) end
@@ -2554,7 +2554,7 @@ function modifyMode()
               end,
     ---
     -- calculate crc16
-    ["c6"] = function(x) local crc16=string.format("%4.04x", utils.Crc16(x)) 
+    ["c6"] = function(x) local crc16=string.format("%4.04x", utils.Crc16(x))
                   print(string.sub(crc16, 0,2).." "..string.sub(crc16, 3,4))
               end,
     ---
@@ -2562,27 +2562,27 @@ function modifyMode()
     ["cc"] = function(x) if (istable(inTAG)) then checkAllSegCrc(inTAG) end end,
     ---
     -- set backup-area-bytes to '00'
-    ["cb"] = function(x) 
+    ["cb"] = function(x)
                 if (istable(inTAG)) then
                   print(accyan.."purge BackupArea"..acoff)
-                  inTAG=clearBackupArea(inTAG) 
-                end 
-             end, 
+                  inTAG=clearBackupArea(inTAG)
+                end
+             end,
     ---
     -- check and fix all segments inTAG.SEG[x].kgh toggled 'on'
     ["ck"] = function(x) if (istable(inTAG)) then checkAllKghCrc(inTAG) end end,
     ---
     -- check and fix all segments inTAG.SEG[x].kgh toggled 'on'
-    ["tac"] = function(x) 
-                if (colored_output) then 
+    ["tac"] = function(x)
+                if (colored_output) then
                   colored_output=false
                 else
                   colored_output=true
-                end 
+                end
                 load_colors(colored_output)
               end,
   }
-  repeat 
+  repeat
     -- defualt message / prompt
     ic=input("Legic command? ('h' for help - 'q' for quit)", "h")
     -- command actions decisions (first match, longer commands before shorter)
@@ -2607,51 +2607,51 @@ function main(args)
 	-- just a spacer for better readability
   print()
   --- parse arguments
-	for o, a in getopt.getopt(args, 'hrmi:do:c:') do  
+	for o, a in getopt.getopt(args, 'hrmi:do:c:') do
     -- display help
     if o == "h" then return help(); end
     -- read tag from PM3
     if o == "r" then inTAG=readFromPM3() end
     -- input file
 		if o == "i" then inTAG=readFile(a) end
-    -- dump virtual-Tag 
+    -- dump virtual-Tag
     if o == "d" then dfs=true end
     -- interacive modifying
     if o == "m" then interactive=true; modifyMode() end
     -- xor (e.g. for clone or plain file)
     if o == "c" then cfs=true; crc=a end
     -- output file
-		if o == "o" then outfile=a; ofs=true end		
+		if o == "o" then outfile=a; ofs=true end
   end
-  
+
   -- file conversion (output to file)
   if (ofs) then
     -- dump infile / tag-read
-    if (dfs) then 
-      print("-----------------------------------------") 
+    if (dfs) then
+      print("-----------------------------------------")
       print(dumpTag(inTAG))
     end
     bytes=tagToBytes(inTAG)
-    if (cfs) then 
+    if (cfs) then
       -- xor willl be done in function writeFile
       -- with the value of byte[5]
-      bytes[5]=crc 
+      bytes[5]=crc
     end
     -- write to outfile
-    if (bytes) then 
+    if (bytes) then
       writeFile(bytes, outfile)
-      --- read real tag into virtual tag 
+      --- read real tag into virtual tag
       -- inTAG=readFromPM3() end
       --- or simply use the bytes that where wriiten
       inTAG=bytesToTag(bytes, inTAG)
       -- show new content
-      if (dfs) then  
+      if (dfs) then
         print("-----------------------------------------")
-        print(dumpTag(inTAG)) 
+        print(dumpTag(inTAG))
       end
     end
   end
-  
+
 end
 
 ---

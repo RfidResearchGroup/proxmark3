@@ -1081,7 +1081,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 	char filename[FILE_PATH_SIZE]={0};
 	char buf[13];
 	uint8_t *keyBlock = NULL, *p;
-	uint8_t stKeyBlock = 20;
+	uint16_t stKeyBlock = 20;
 	
 	sector_t *e_sector = NULL;
 	

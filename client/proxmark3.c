@@ -242,6 +242,7 @@ static void set_my_executable_path(void)
 			my_executable_path[path_length] = '\0';
 			my_executable_directory = (char *)malloc(dirname_length + 2);
 			strncpy(my_executable_directory, my_executable_path, dirname_length+1);
+			my_executable_directory[dirname_length+1] = '\0';
 		}
 	}
 }

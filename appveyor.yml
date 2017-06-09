@@ -1,17 +1,27 @@
-os: Windows Server 2012
-platform: mingw
-qt: mingw492_32
+version: 1.0.{build}
+environment:
+  global:
+    CYG_ROOT: C:\cygwin
+    CYG_MIRROR: http://cygwin.mirror.constant.com
+    CYG_CACHE: C:\cygwin\var\cache\setup
+    CYG_BASH: C:\cygwin\bin\bash
 
-branches:
-  only:
-    - master
-
-install:
- - set QTDIR=C:\Qt\5.5\mingw492_32
- - set PATH=%PATH%;%QTDIR%\bin;C:\MinGW\bin
-  
-before_build:
- - make clean
- 
-build:
-  - make all
+init:
+- cmd:
+    - set QTDIR=C:\Qt\5.5\mingw492_32
+    - set PATH=%PATH%;%QTDIR%\bin;C:\MinGW\bin;C:\MinGW\msys\1.0\bin
+    - c:\cygwin\setup-x86.exe --quiet-mode --no-shortcuts --only-site --root "%CYG_ROOT%" --site "%CYG_MIRROR%" --local-package-dir "%CYG_CACHE%" --packages autoconf,automake,bison,gcc-core,gcc-g++,mingw-runtime,mingw-binutils,mingw-gcc-core,mingw-gcc-g++,mingw-pthreads,mingw-w32api,libtool,make,gettext-devel,gettext,intltool,libiconv,pkg-config,git,curl,libxslt,libreadline-devel,libreadline7 > NUL 2>&1'
+    - '%CYG_BASH% -lc "cygcheck -dc cygwin"'
+    - if not exist "make.zip" curl -L -o make.zip http://gnuwin32.sourceforge.net/downlinks/make-bin-zip.php
+    - if not exist "make-dep.zip" curl -L -o make-dep.zip http://gnuwin32.sourceforge.net/downlinks/make-dep-zip.php
+    - if not exist "gcc-arm-none-eabi.zip" curl -L -o gcc-arm-none-eabi.zip https://launchpad.net/gcc-arm-embedded/4.8/4.8-2014-q1-update/+download/gcc-arm-none-eabi-4_8-2014q1-20140314-win32.zip
+    - if not exist "C:\strawberry" cinst strawberryperl #once I workout how to install Digest::SHA for perl, this won't be required
+    - set PATH=C:\strawberry\perl\bin;C:\strawberry\perl\site\bin;C:\strawberry\c\bin;%PATH%
+    - unzip -o -q gcc-arm-none-eabi.zip -d c:\gcc\
+    - unzip make.zip -d c:\gnuwin32\
+    - unzip make-dep.zip -d c:\gnuwin32\
+    - set PATH=C:\Program Files\git\bin;%PATH:C:\Program Files\git\bin;=% #move git to begining of PATH so find works correctly
+    - set PATH=%PATH%;c:\gnuwin32\bin;c:\gcc\bin
+    - set PATH=%PATH%;c:\gcc\bin
+build_script:
+- cmd: make all
