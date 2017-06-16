@@ -11,8 +11,10 @@ ACTION!="add|change", GOTO="mm_usb_device_blacklist_end"
 SUBSYSTEM!="tty", GOTO="mm_ignore"
 
 ATTRS{idVendor}=="2d2d" ATTRS{idProduct}=="504d", ENV{ID_MM_DEVICE_IGNORE}="1" SYMLINK+="pm3-%n"
+ATTRS{idVendor}=="9ac4" ATTRS{idProduct}=="4b8f", ENV{ID_MM_DEVICE_IGNORE}="1" SYMLINK+="pm3-%n"
 
 LABEL="mm_ignore"
 ATTRS{idVendor}=="2d2d" ATTRS{idProduct}=="504d", ENV{ID_MM_DEVICE_IGNORE}="1"
+ATTRS{idVendor}=="9ac4" ATTRS{idProduct}=="4b8f", ENV{ID_MM_DEVICE_IGNORE}="1"
 
 LABEL="mm_usb_device_blacklist_end"
