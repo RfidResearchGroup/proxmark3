@@ -6,6 +6,8 @@
 05D73B9F,
 # ref. http://www.proxmark.org/forum/viewtopic.php?=
 89A69E60,
+# ref lock
+314159E0,
 # Default pwd, simple:
 00000000,
 11111111,
