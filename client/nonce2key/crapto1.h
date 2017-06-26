@@ -21,6 +21,7 @@
 #define CRAPTO1_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "bucketsort.h"
 
 #ifdef __cplusplus
@@ -49,6 +50,7 @@ uint8_t lfsr_rollback_bit(struct Crypto1State* s, uint32_t in, int fb);
 uint8_t lfsr_rollback_byte(struct Crypto1State* s, uint32_t in, int fb);
 uint32_t lfsr_rollback_word(struct Crypto1State* s, uint32_t in, int fb);
 int nonce_distance(uint32_t from, uint32_t to);
+extern bool validate_prng_nonce(uint32_t nonce);
 #define SWAPENDIAN(x)\
 	(x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
 	

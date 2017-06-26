@@ -214,9 +214,11 @@ int CmdHF14AReader(const char *Cmd) {
 	PrintAndLog("ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
 	PrintAndLog(" SAK : %02x [%d]", card.sak, resp.arg[0]);
 
+	bool isMifareClassic = true;
 	switch (card.sak) {
 		case 0x00: 
-
+			isMifareClassic = false;
+			
 			// ******** is card of the MFU type (UL/ULC/NTAG/ etc etc)
 			ul_switch_off_field();
 			
@@ -409,6 +411,14 @@ int CmdHF14AReader(const char *Cmd) {
 
 	// disconnect
 	SendCommand(&cDisconnect);
+	
+	if (isMifareClassic) {		
+		if ( detect_classic_prng() )
+			PrintAndLog("Prng detection: WEAK (darkside)");
+		else
+			PrintAndLog("Prng detection: HARDEND (hardnested)");		
+	}
+	
 	return select_status;
 }
 
@@ -450,15 +460,15 @@ int CmdHF14ACUIDs(const char *Cmd) {
 // ## simulate iso14443a tag
 // ## greg - added ability to specify tag UID
 int CmdHF14ASim(const char *Cmd) {
-	bool errors = FALSE;
+	bool errors = false;
 	uint8_t flags = 0;
 	uint8_t tagtype = 1;	
 	uint8_t cmdp = 0;
 	uint8_t uid[10] = {0,0,0,0,0,0,0,0,0,0};
 	int uidlen = 0;
-	bool useUIDfromEML = TRUE;
-	bool setEmulatorMem = FALSE;
-	bool verbose = FALSE;
+	bool useUIDfromEML = true;
+	bool setEmulatorMem = false;
+	bool verbose = false;
 	nonces_t data[1];
 	
 	while(param_getchar(Cmd, cmdp) != 0x00) {
@@ -471,7 +481,7 @@ int CmdHF14ASim(const char *Cmd) {
 				// Retrieve the tag type
 				tagtype = param_get8ex(Cmd, cmdp+1, 0, 10);
 				if (tagtype == 0)
-					errors = TRUE; 
+					errors = true; 
 				cmdp += 2;
 				break;
 			case 'u':
@@ -482,17 +492,17 @@ int CmdHF14ASim(const char *Cmd) {
 					//case 20: flags |= FLAG_10B_UID_IN_DATA; break;
 					case 14: flags |= FLAG_7B_UID_IN_DATA; break;
 					case  8: flags |= FLAG_4B_UID_IN_DATA; break;
-					default: errors = TRUE;	break;
+					default: errors = true;	break;
 				}				
 				if (!errors) {
 					PrintAndLog("Emulating ISO/IEC 14443 type A tag with %d byte UID (%s)", uidlen>>1, sprint_hex(uid, uidlen>>1));
-					useUIDfromEML = FALSE;
+					useUIDfromEML = false;
 				}
 				cmdp += 2;
 				break;
 			case 'v':
 			case 'V':
-				verbose = TRUE;
+				verbose = true;
 				cmdp++;
 				break;
 			case 'x':
@@ -502,12 +512,12 @@ int CmdHF14ASim(const char *Cmd) {
 				break;
 			case 'e':
 			case 'E':
-				setEmulatorMem = TRUE;
+				setEmulatorMem = true;
 				cmdp++;
 				break;				
 			default:
 				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-				errors = TRUE;
+				errors = true;
 				break;
 			}
 		if(errors) break;
@@ -541,32 +551,31 @@ int CmdHF14ASim(const char *Cmd) {
 
 int CmdHF14ASniff(const char *Cmd) {
 	int param = 0;	
-	uint8_t ctmp = param_getchar(Cmd, 0) ;
-	if (ctmp == 'h' || ctmp == 'H') return usage_hf_14a_sniff();
-	
+	uint8_t ctmp;
 	for (int i = 0; i < 2; i++) {
 		ctmp = param_getchar(Cmd, i);
+		if (ctmp == 'h' || ctmp == 'H') return usage_hf_14a_sniff();
 		if (ctmp == 'c' || ctmp == 'C') param |= 0x01;
 		if (ctmp == 'r' || ctmp == 'R') param |= 0x02;
 	}
 
-  UsbCommand c = {CMD_SNOOP_ISO_14443a, {param, 0, 0}};
-  clearCommandBuffer();
-  SendCommand(&c);
-  return 0;
+	UsbCommand c = {CMD_SNOOP_ISO_14443a, {param, 0, 0}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	return 0;
 }
 
 int CmdHF14ACmdRaw(const char *cmd) {
     UsbCommand c = {CMD_READER_ISO_14443a, {0, 0, 0}};
     bool reply=1;
-    bool crc = FALSE;
-    bool power = FALSE;
-    bool active = FALSE;
-    bool active_select = FALSE;
+    bool crc = false;
+    bool power = false;
+    bool active = false;
+    bool active_select = false;
     uint16_t numbits=0;
-	bool bTimeout = FALSE;
+	bool bTimeout = false;
 	uint32_t timeout=0;
-	bool topazmode = FALSE;
+	bool topazmode = false;
     char buf[5]="";
     int i=0;
     uint8_t data[USB_CMD_DATA_SIZE];
@@ -586,19 +595,19 @@ int CmdHF14ACmdRaw(const char *cmd) {
 				case 'h':
 					return usage_hf_14a_raw();
                 case 'r': 
-                    reply = FALSE;
+                    reply = false;
                     break;
                 case 'c':
-                    crc = TRUE;
+                    crc = true;
                     break;
                 case 'p':
-                    power = TRUE;
+                    power = true;
                     break;
                 case 'a':
-                    active = TRUE;
+                    active = true;
                     break;
                 case 's':
-                    active_select = TRUE;
+                    active_select = true;
                     break;
                 case 'b': 
                     sscanf(cmd+i+2,"%d",&temp);
@@ -608,7 +617,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
                     i-=2;
                     break;
 				case 't':
-					bTimeout = TRUE;
+					bTimeout = true;
 					sscanf(cmd+i+2,"%d",&temp);
 					timeout = temp;
 					i+=3;
@@ -616,7 +625,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
 					i-=2;
 					break;
                 case 'T':
-					topazmode = TRUE;
+					topazmode = true;
 					break;
                 default:
                     return usage_hf_14a_raw();
@@ -706,8 +715,7 @@ int CmdHF14ACmdRaw(const char *cmd) {
     return 0;
 }
 
-static void waitCmd(uint8_t iSelect)
-{
+static void waitCmd(uint8_t iSelect) {
     UsbCommand resp;
     uint16_t len = 0;
 

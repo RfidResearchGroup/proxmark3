@@ -675,3 +675,34 @@ int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data,
 	crypto1_destroy(s);
 	return 0;
 }
+
+/* Detect Tag Prng, 
+* function performs a partial AUTH,  where it tries to authenticate against block0, key A, but only collects tag nonce.
+* the tag nonce is check to see if it has a predictable PRNG.
+* @returns 
+*	TRUE if tag uses WEAK prng (ie Darkside attack possible)
+*   FALSE is tag uses HARDEND prng (ie hardnested attack possible, with known key)
+*/
+bool detect_classic_prng(){
+
+	UsbCommand resp, respA;	
+	uint8_t cmd[] = {MIFARE_AUTH_KEYA, 0x00};
+	uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC;
+	
+	UsbCommand cAuth = {CMD_READER_ISO_14443a, {flags, sizeof(cmd), 0}};
+	memcpy(cAuth.d.asBytes, cmd, sizeof(cmd));
+
+	clearCommandBuffer();
+	SendCommand(&cAuth);
+	WaitForResponse(CMD_ACK, &resp);
+	WaitForResponse(CMD_ACK, &respA);
+		
+	// if select tag failed.
+	if ( resp.arg[0] == 0 ) {
+		printf("Error:  selecting tag failed,  can't detect prng\n");
+		return false;
+	}
+
+	uint32_t nonce = bytes_to_num(respA.d.asBytes, respA.arg[0]);
+	return validate_prng_nonce(nonce);
+}
