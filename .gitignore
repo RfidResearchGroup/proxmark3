@@ -12,19 +12,26 @@
 *.s19
 *.map
 *.bin
+!client/hardnested/*.bin
+!client/hardnested/tables/*.bin
 *.dll
 *.moc.cpp
 *.z
+usb_cmd.lua
+version.c
+client/ui/ui_overlays.h
+*.Td
+
 *.exe
 *.dsym
 hardnested_stats.txt
-proxmark
 proxmark3
 flasher
-fpga_compress
-version.c
 lua
 luac
+fpga_compress
+mfkey32
+mfkey64
 
 fpga/*
 !fpga/tests
@@ -39,4 +46,5 @@ fpga/*
 !fpga/sim.tcl
 
 #client/*
+# my own traces folder
 client/traces/*
