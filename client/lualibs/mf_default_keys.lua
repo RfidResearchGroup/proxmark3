@@ -7,6 +7,7 @@ local _keys = {
     '000000000000', -- Blank key
     'a0a1a2a3a4a5', -- NFCForum MAD key
     'b0b1b2b3b4b5',
+	'c0c1c2c3c4c5',
     'aabbccddeeff',
     '4d3a99c351dd',
     '1a982c7e459a',
@@ -454,6 +455,63 @@ local _keys = {
 	--[[
 	--]]
 	'a56c2df9a26d',
+	--[[
+	Intratone Cogelec 
+	Data from http://bouzdeck.com/rfid/32-cloning-a-mifare-classic-1k-tag.html
+	--]]	
+	'484558414354',
+	'a22ae129c013',
+	'49fae4e3849f', 
+	'38fcf33072e0', 
+	'8ad5517b4b18', 
+	'509359f131b1', 
+	'6c78928e1317', 
+	'aa0720018738', 
+	'a6cac2886412', 
+	'62d0c424ed8e', 
+	'e64a986a5d94', 
+	'8fa1d601d0a2', 
+	'89347350bd36', 
+	'66d2b7dc39ef',
+	'6bc1e1ae547d',
+	'22729a9bd40f',
+--[[
+ Data from a oyster card
+--]]
+	'374bf468607f',
+	'bfc8e353af63',
+	'15cafd6159f6',
+	'62efd80ab715',
+	'987a7f7f1a35',
+	'c4104fa3c526',
+	'4c961f23e6be',
+	'67546972bc69',
+	'f4cd5d4c13ff',
+	'94414c1a07dc',
+	'16551d52fd20',
+	'9cb290282f7d',
+	'77a84170b574',
+	'ed646c83a4f3',
+	'e703589db50b',
+	'513c85d06cde',
+	'95093f0b2e22',
+	'543b01b27a95',
+	'c6d375b99972',
+	'ee4cc572b40e',
+	'5106ca7e4a69',
+	'c96bd1ce607f',
+	'167a1be102e0',
+	'a8d0d850a606',
+	'a2abb693ce34',
+	'7b296c40c486',
+	'91f93a5564c9',
+	'e10623e7a016',
+	'b725f9cbf183',
+--[[
+ Data from forum post
+--]]
+	"123F8888F322",
+	"050908080008",
 }
 
 ---

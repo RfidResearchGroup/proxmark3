@@ -685,11 +685,11 @@ bool detect_classic_prng(){
 	uint8_t cmd[] = {MIFARE_AUTH_KEYA, 0x00};
 	uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC;
 	
-	UsbCommand cAuth = {CMD_READER_ISO_14443a, {flags, sizeof(cmd), 0}};
-	memcpy(cAuth.d.asBytes, cmd, sizeof(cmd));
+	UsbCommand c = {CMD_READER_ISO_14443a, {flags, sizeof(cmd), 0}};
+	memcpy(c.d.asBytes, cmd, sizeof(cmd));
 
 	clearCommandBuffer();
-	SendCommand(&cAuth);
+	SendCommand(&c);
 	WaitForResponse(CMD_ACK, &resp);
 	WaitForResponse(CMD_ACK, &respA);
 		

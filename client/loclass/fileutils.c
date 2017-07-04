@@ -84,10 +84,8 @@ int saveFile(const char *preferredName, const char *suffix, const void* data, si
 		return 1;
 	}
 	fwrite(data, 1,	datalen, f);
-	if (f) {
+	if (f)
 		fclose(f);
-		f = NULL;
-	}
 	prnlog("Saved data to '%s'", fileName);
 	free(fileName);
 	return 0;

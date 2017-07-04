@@ -565,16 +565,12 @@ static command_t CommandTable[] =
 };
 
 int CmdHFTopaz(const char *Cmd) {
-	// flush
 	clearCommandBuffer();
-	
-	// parse
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }
 
-static int CmdHelp(const char *Cmd)
-{
+static int CmdHelp(const char *Cmd) {
 	CmdsHelp(CommandTable);
 	return 0;
 }

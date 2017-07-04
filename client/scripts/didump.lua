@@ -1,19 +1,25 @@
+--- 
+-- requirements
 local cmds = require('commands')
 local getopt = require('getopt')
 local utils = require('utils')
 local lib14a = require('read14a')
+local json = require('dkjson')
+local toys = require('default_toys_di')
 
 example =[[
 	script run didump
 	script run didump -t
+	script run didump -r
 ]]
 author = "Iceman"
 usage = "script run didump -h -t"
 desc = [[
 This is a script to dump and decrypt the data of a specific type of Mifare Mini token.
-
+The dump is decrypted. If a raw dump is wanted, use the -r parameter
 Arguments:
 	-h             : this help
+	-r		: raw
 	-t			   : selftest
 ]]
 
@@ -21,38 +27,55 @@ local band=bit32.band
 local bor=bit32.bor
 local bnot=bit32.bnot
 local bxor=bit32.bxor
-local lshift=bit32.lshift
-local rshift=bit32.rshift
+local lsh=bit32.lshift
+local rsh=bit32.rshift
 
 local FOO = 'AF62D2EC0491968CC52A1A7165F865FE'
 local BAR = '286329204469736E65792032303133'
 local MIS = '0A14FD0507FF4BCD026BA83F0A3B89A9'
-local RANDOM = FOO..BAR
 local outputTemplate = os.date("toydump_%Y-%m-%d_%H%M%S");
 local TIMEOUT = 2000
-local DEBUG = false
+local DEBUG = true
 local numBlocks = 20
 local numSectors = 5
 local CHECKSUM_OFFSET = 12; -- +1???
+
 --- 
 -- A debug printout-function
-function dbg(args)
-	if DEBUG then
+local function dbg(args)
+    if not DEBUG then return end
+	if type(args) == "table" then
+		local i = 1
+		while args[i] do
+			print("###", args[i])
+			i = i+1
+		end
+	else
 		print("###", args)
 	end
 end 
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
+local function oops(err)
 	print("ERROR: ",err)
 	core.clearCommandBuffer()
+	return false	
 end
 --- 
 -- Usage help
-function help()
+local function help()
 	print(desc)
 	print("Example usage")
 	print(example)
+end
+---
+--
+local function print_info(tagdata)
+	--got table with data.
+	local h = tagdata[2]:sub(1,8)
+	local t = tostring( tonumber( h, 16 ) )
+	local item = toys.Find(t)
+	print( ("Modelid : %s , %s,  v.%s.0"):format(t, item[3], item[2]))
 end
 ---
 -- Get checksum,
@@ -333,7 +356,7 @@ _tbl[255] = { 0x2D02EF8D }
 	for i,item in pairs(data) do
 		local tmp =  band(ret, 0xFF)
 		local index = band( bxor(tmp, item), 0xFF)
-		ret = bxor(rshift(ret,8), _tbl[index][1])
+		ret = bxor(rsh(ret,8), _tbl[index][1])
 	end
 	return ret
 end
@@ -375,10 +398,111 @@ local function keygen(uid)
 		)
 end
 
+--- encode 'table' into a json formatted string
+-- 
+local function convert_to_json( obj )
+	if type(obj) == "table" then
+		return json.encode (obj, { indent = true })
+	end
+	return oops('[fail] input object must be a lua-TABLE')
+end
+--
+-- Save 
+local function save_json(filename, data)
+	jsondata = convert_to_json(data)
+	filename = filename or 'dumpdata.json'
+	local f = io.open(filename, "w")
+	if not f then return oops(string.format("Could not write to file %s", tostring(filename))) end	
+	f:write(jsondata)
+	io.close(f)
+	return filename   
+end
+--- loads a json formatted text file with 
+--
+-- @param filename the file containing the json-dump  (defaults to dumpdata.json)
+local function load_json(filename)
+	filename = filename or 'dumpdata.json'
+	local f = io.open(filename, "rb")
+	if not f then return oops(string.format("Could not read file %s", tostring(filename)))	end
+	
+	-- Read file
+	local t = f:read("*all")
+	io.close(f)
+
+	local obj, pos, err = json.decode(t, 1, nil)
+	if err then return oops(string.format("importing json file failed. %s", err)) end
+
+	dbg(string.format('loaded file %s', input))
+	return obj
+
+--	local len, hex = bin.unpack( ("H%d"):format(#t), t)
+end
+---
+-- Generate encryption key
+local function create_key(uid)
+	local key = ''
+	local sha = utils.Sha1Hex( FOO..BAR..uid )
+	sha  = utils.ConvertBytesToHex( utils.ConvertAsciiToBytes(sha:sub(1,16)) )
+	key = utils.SwapEndiannessStr( sha:sub(1,8) , 32 )
+	key = key..utils.SwapEndiannessStr( sha:sub(9,16), 32 )
+	key = key..utils.SwapEndiannessStr( sha:sub(17,24), 32 )
+	key = key..utils.SwapEndiannessStr( sha:sub(25,32), 32 )
+	return key
+end
+--- reads all blocks from tag
+--
+local function readtag(mfkey, aeskey )
+	
+	local tagdata = {}
+	
+	for blockNo = 0, numBlocks-1 do
+
+		if core.ukbhit() then
+			print("[fail] aborted by user")
+			return nil
+		end
+
+		-- read block from tag.
+		cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = blockNo ,arg2 = 0,arg3 = 0, data = mfkey}
+		local err = core.SendCommand(cmd:getBytes())
+		if err then return oops(err) end
+		local blockdata, err = waitCmd()
+		if err then return oops(err) end	
+
+		-- rules:
+		-- the following blocks is NOT encrypted
+		-- block 0 (manufacturing) and 18 
+		-- block with all zeros
+		-- sector trailor
+		if blockNo == 0 or blockNo == 18 then
+		
+		elseif  blockNo%4 ~= 3 then
+			
+			if not string.find(blockdata, '^0+$') then
+				if aeskey then					
+					local decrypted, err = core.aes128_decrypt_ecb(aeskey, blockdata)
+					if err then dbg(err) end
+					blockdata  =  utils.ConvertAsciiToHex(decrypted)					
+				end
+			end
+		else
+			-- Sectorblocks, not encrypted, but we add our known key to it since it is normally zeros.
+			blockdata = mfkey..blockdata:sub(13,20)..mfkey
+			--dbg(blockdata:sub(13,20))			
+		end
+		table.insert(tagdata, blockdata)
+	end
+	return tagdata
+end
+---
+-- simple selftest of functionality
 local function selftest()
 	local testdata = '000F42430D0A14000001D11F'..'5D738517'
 	local chksum = getChecksum(testdata)
 	local calc = calculateChecksum( utils.ConvertHexToBytes(testdata:sub(1,24)))
+	print (  testdata:sub(1,24) )
+	print (  ('%x - %x'):format(chksum, calc))
+	
 	local isValid = false
 	local validStr = "FAIL"
 	if calc == chksum then
@@ -399,6 +523,15 @@ local function selftest()
 	print ('TEST KEY       :: '..testkey)
 	print ('VALID KEY      :: 29564af75805')
 end
+local function setdevicedebug( status )
+	local c = 'hf mf dbg '
+	if status then
+		c = c..'1'
+	else
+		c = c..'0'
+	end 
+	core.console(c) 
+end
 --- 
 -- The main entry point
 -- -d decrypt
@@ -406,74 +539,60 @@ end
 -- -v validate
 function main(args)
 
-	local cmd, result, err, blockNo, keyA
+	local cmd, tag, err, blockNo, mfkey
+	local shall_validate = false
+	local shall_dec = false
+	local shall_enc = false
 	local blocks = {}
-	local magic = ''
+	local aeskey = ''
+	local input = ''
 	
 	-- Read the parameters
-	for o, a in getopt.getopt(args, 'ht') do
+	for o, a in getopt.getopt(args, 'htdevi:') do
 		if o == "h" then help() return end
 		if o == "t" then return selftest() end
+		if o == "d" then shall_dec = true end
+		if o == "e" then shall_enc = true end
+		if o == "v" then shall_validate = true end
+		if o == "i" then input = load_json(a) end
 	end
 
 	-- Turn off Debug
-	local cmdSetDbgOff = "hf mf dbg 0"
-	core.console( cmdSetDbgOff) 
+	setdevicedebug(false)
 
 	-- GET TAG UID
-	
-	result, err = lib14a.read1443a(false)
-	if not result then
-		return oops(err)
-	end
+	tag, err = lib14a.read1443a(false)
+	if not tag then return oops(err) end
 	core.clearCommandBuffer()
 	
-	local keyA = keygen(result.uid)
-	
-	-- Show tag info
-	print((' Found tag %s'):format(result.name))
-	
-	local longrandom = RANDOM..result.uid
-	local res = utils.Sha1Hex(longrandom)
-	res  = utils.ConvertBytesToHex(utils.ConvertAsciiToBytes(res:sub(1,16)))
-	magic = utils.SwapEndiannessStr(res:sub(1,8) , 32)
-	magic = magic..utils.SwapEndiannessStr( res:sub(9,16),32)
-	magic = magic..utils.SwapEndiannessStr( res:sub(17,24),32)
-	magic = magic..utils.SwapEndiannessStr( res:sub(25,32),32)
-	print('Reading card data')
-	print('Raw','Decrypted')
-	for blockNo = 0, numBlocks-1, 1 do
-
-		if core.ukbhit() then
-			print("aborted by user")
-			break
+	-- simple tag check
+	if 0x09 ~= tag.sak then
+		if 0x4400 ~= tag.atqa then 
+			return oops(('[fail] found tag %s :: looking for Mifare Mini 0.3k'):format(tag.name)) 
 		end
-
-		cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = blockNo ,arg2 = 0,arg3 = 0, data = keyA}
-		local err = core.SendCommand(cmd:getBytes())
-		if err then return oops(err) end
-		local blockdata, err = waitCmd()
-		if err then return oops(err) end	
-			
-		if  blockNo%4 ~= 3 then
-			
-			-- blocks with zero not encrypted.
-			if string.find(blockdata, '^0+$') then
-				print(blockdata, blockdata)
-			else
-				local aes = core.aes128_decrypt_ecb(magic, blockdata)
-				local bytes =  utils.ConvertAsciiToBytes(aes)
-				local hex = utils.ConvertBytesToHex(bytes)
-				print(blockdata , hex)
 			end
-		elseif blockNo == 0 then
-			print(blockdata,blockdata)
-		else
-			-- Sectorblocks, not encrypted
-			local sectortrailer = keyA..blockdata:sub(13,20)..keyA
-			print(sectortrailer, sectortrailer, blockdata:sub(13,20))
-		end
-	end
+	dbg ('[ok] found '..tag.name)
+	
+	-- tag key
+	mfkey = keygen(tag.uid)
+	dbg('[ok] using mf keyA : '.. mfkey)
+	
+	-- AES key
+	aeskey = create_key(tag.uid)
+	dbg('[ok] using AES key : '.. aeskey)
+
+	-- read tag data, complete, enc/dec	
+	tagdata = readtag(mfkey, aeskey)
+	dbg('[ok] read card data')
+
+	-- show information?
+	print_info(tagdata)
+
+	-- save 
+	res = save_json(nil, tagdata)
+	if not res then return oops('[fail] saving json file') end
+	
+	dbg('[ok] read card data')
 end
 
 main(args)
