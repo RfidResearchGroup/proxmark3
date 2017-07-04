@@ -35,6 +35,9 @@
 #ifndef _USB_CDC_H_
 #define _USB_CDC_H_
 
+#include <wchar.h>
+#include "at91sam7s512.h"
+#include "config_gpio.h"
 #include "common.h"
 
 void usb_disable();
@@ -44,6 +47,36 @@ bool usb_poll();
 bool usb_poll_validate_length();
 uint32_t usb_read(byte_t* data, size_t len);
 uint32_t usb_write(const byte_t* data, const size_t len);
+
+typedef const struct __attribute__((__packed__)) {
+	const uint32_t dwLength;
+	const uint16_t bcdVersion;
+	const uint16_t wIndex;
+	const uint16_t wCount;
+
+	const uint32_t dwSize;
+	const uint32_t dwPropertyDataType;
+	const uint16_t wPropertyNameLength;
+	const wchar_t bPropertyName[20];
+	const uint32_t dwPropertyDataLength;
+	const wchar_t bPropertyData[39];
+
+	const uint32_t dwSize2;
+	const uint32_t dwPropertyDataType2;
+	const uint16_t wPropertyNameLength2;
+	const wchar_t bPropertyName2[6];
+	const uint32_t dwPropertyDataLength2;
+	const wchar_t bPropertyData2[19];
+
+	const uint32_t dwSize3;
+	const uint32_t dwPropertyDataType3;
+	const uint16_t wPropertyNameLength3;
+	const wchar_t bPropertyName3[6];
+	const uint32_t dwPropertyDataLength3;
+	const wchar_t bPropertyData3[39];
+} g_sOSProperties;
+
+extern const g_sOSProperties g_pOSProperties;
 
 #endif // _USB_CDC_H_
 
