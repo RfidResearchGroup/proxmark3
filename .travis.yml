@@ -2,43 +2,43 @@
 language: c
 
 #default linux build env is: Ubuntu 14.04 trusty
+compiler: gcc
 
-compiler: 
- - gcc
-
-# multi platform build test
-# LINUX : Using trusty beta build environment,  based on Ubuntu 14.04
-# MAC OS: 10.12 or it will not compile
-#   meaning xcode7.3 (10.11) will not compile :(
+# Test on Linux and MacOS
 matrix:
   include:
+    - os: osx
+      osx_image: xcode7.3	# OS X 10.11
+    - os: osx
+      osx_image: xcode8.3   # OS X 10.12
     - os: linux
       dist: trusty
       sudo: required
-    - os: osx
-      osx_image: xcode8.3
-    - os: osx
-      osx_image: xcode7.3
-  allow_failures:
-    - os: osx
 
-#before_install:
-  
-  
-## Install mainline ARM toolchain.  gcc-arm-none-eabi is available
-## in Ubuntu >= 14.04, but this external PPA is needed for 12.04.
+before_install:
+## Install ARM toolchain on Linux.
+## add our homebrew tap for MacOS
+## Note: all dependencies on MacOS should be resolved by the brew install command
+  if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
+    sudo apt-get update -qq;
+    sudo apt-get install -y gcc-arm-none-eabi;
+  elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+    brew tap iceman1001/proxmark3;
+  fi
+
+install:
+  if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
+    brew install --HEAD proxmark3;
+  elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
+    make all;
+  fi
+
 before_script:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-; fi
-#  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-add-repository 'deb http://archive.ubuntu.com/ubuntu trusty main universe multiverse restricted'; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -qq; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install p7zip git build-essential libreadline5 libreadline-dev gcc-arm-none-eabi libusb-0.1-4 libusb-dev libqt4-dev ncurses-dev perl pkg-config wget libtolua-dev; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then git fetch --all; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install perl; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew tap iceman1001/proxmark3; fi
-  
 
-# osx homebrew auto compiles as part of install.
 script: 
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make all; fi
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install -v --HEAD proxmark3; fi
+## for the time being we are satisfied if it can be build and then successfully started
+  if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
+    proxmark3 -h ;
+  elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
+    ./client/proxmark3 -h ;
+fi
