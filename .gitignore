@@ -1,7 +1,6 @@
 # .gitignore
 # don't push these files to the repository
 
-.idea
 .history
 *.log
 *.eml
@@ -13,10 +12,10 @@
 *.map
 *.bin
 !client/hardnested/*.bin
-!client/hardnested/tables/*.bin
 *.dll
 *.moc.cpp
 *.z
+!client/hardnested/tables/*.z
 usb_cmd.lua
 version.c
 client/ui/ui_overlays.h

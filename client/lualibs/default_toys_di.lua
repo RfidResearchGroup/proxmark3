@@ -1,9 +1,8 @@
-local _names = {
     --[[ 
-		decimal, di version, model name
+		decimal, di edition, model name
     --]]
-{
-"1000001","1","Mr. Incredible"},
+local _names = {
+{"1000001","1","Mr. Incredible"},
 {"1000002","1","Sully"},
 {"1000003","1","Captain Jack Sparrow"},
 {"1000004","1","Lone Ranger"},
@@ -320,6 +319,9 @@ local _names = {
 {"4000226","3","?? unknown ??"},
 {"4000227","3","?? unknown ??"},
 {"4000229","3","Quad Jumper"},
+--[[ 
+	these below are Portals. Not to be used for tags.
+--]]
 {"8032384","0","Infinity Base - 3DS"},
 {"8032385","0","Infinity Base - Xbox"},
 {"8032386","0","Infinity Base"},
@@ -327,18 +329,17 @@ local _names = {
 {"8039228","0","Infinity Base - Vita"},
 {"8040889","0","Infinity Base - Bluetooth"},
 }
-local function find( main, sub)
+local function find( main )
     main = main:lower()
-	sub = sub:lower()
     for k, v in pairs(_names) do
-		if ( v[2]:lower()  == main  and v[3]:lower() == sub) then
+		if ( v[1]:lower() == main ) then
 			return v
 		end
 	end
 	return nil
 end
 local function list()
-	print ("Type\tVer\t Model name")
+	print ("Type\tEdition\t Model name")
 	print (string.rep('=', 54))
     for k, v in pairs(_names) do
 		print(("%s\t%s\t%s"):format(v[1],v[2],v[3] ))

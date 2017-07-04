@@ -26,7 +26,7 @@ local ISO14A_COMMAND = {
 }
 
 local ISO14443a_TYPES = {}		
-ISO14443a_TYPES[0x00] = "NXP MIFARE Ultralight | Ultralight C"
+ISO14443a_TYPES[0x00] = "NXP MIFARE Ultralight | Ultralight C | NTAG"
 ISO14443a_TYPES[0x01] = "NXP MIFARE TNP3xxx Activision Game Appliance"
 ISO14443a_TYPES[0x04] = "NXP MIFARE (various !DESFire !DESFire EV1)"
 ISO14443a_TYPES[0x08] = "NXP MIFARE CLASSIC 1k | Plus 2k"
@@ -78,7 +78,7 @@ end
 --			nil, errormessage if unsuccessfull
 
 local function sendToDevice(command, ignoreresponse)
-	--core.clearCommandBuffer(
+	--core.clearCommandBuffer()
 	local err = core.SendCommand(command:getBytes())
 	if err then
 		print(err)

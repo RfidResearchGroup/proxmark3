@@ -140,7 +140,7 @@ local Utils =
 	
 	
 	------------ CRC-64 ecma checksums
-	-- Takes a hex string and calculates a crc64 ecma
+	-- Takes a hex string and calculates a crc64 ecma hash
 	Crc64 = function(s)
 		if s == nil then return nil end
 		if #s == 0 then return nil end
@@ -148,6 +148,19 @@ local Utils =
 			local utils = require('utils')
 			local asc = utils.ConvertHexToAscii(s)
 			local hash = core.crc64(asc)
+			return hash
+		end
+		return nil
+	end,
+	------------ CRC-64 ecma 182 checksums
+	-- Takes a hex string and calculates a crc64 ecma182 hash
+	Crc64_ecma182 = function(s)
+		if s == nil then return nil end
+		if #s == 0 then return nil end
+		if  type(s) == 'string' then
+			local utils = require('utils')
+			local asc = utils.ConvertHexToAscii(s)
+			local hash = core.crc64_ecma182(asc)
 			return hash
 		end
 		return nil
