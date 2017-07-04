@@ -182,6 +182,8 @@ start:
 		(void)tmpchar;
 	}
 
+	UsbCommand resp;
+	
 	// wait cycle
 	while (true) {
         printf(".");
@@ -193,7 +195,6 @@ start:
 			break;
 		}
 		
-		UsbCommand resp;
 		if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 			isOK  = resp.arg[0];
 			printf("\n");
@@ -238,8 +239,7 @@ start:
 		PrintAndLog("Failing is expected to happen in 25%% of all cases. Trying again with a different reader nonce...");
 		c.arg[0] = false;
 		goto start;
-	} else {
-		
+	} else {		
 		// nonce2key found a candidate key.  Lets verify it.
 		uint8_t keyblock[] = {0,0,0,0,0,0};
 		num_to_bytes(r_key, 6, keyblock);

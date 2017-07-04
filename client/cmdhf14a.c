@@ -247,14 +247,14 @@ int CmdHF14AReader(const char *Cmd) {
 			}
 			break;
 		case 0x01: PrintAndLog("TYPE : NXP TNP3xxx Activision Game Appliance"); break;
-		case 0x04: PrintAndLog("TYPE : NXP MIFARE (various !DESFire !DESFire EV1)"); break;
+		case 0x04: PrintAndLog("TYPE : NXP MIFARE (various !DESFire !DESFire EV1)"); isMifareClassic = false; break;
 		case 0x08: PrintAndLog("TYPE : NXP MIFARE CLASSIC 1k | Plus 2k SL1"); break;
 		case 0x09: PrintAndLog("TYPE : NXP MIFARE Mini 0.3k"); break;
 		case 0x10: PrintAndLog("TYPE : NXP MIFARE Plus 2k SL2"); break;
 		case 0x11: PrintAndLog("TYPE : NXP MIFARE Plus 4k SL2"); break;
 		case 0x18: PrintAndLog("TYPE : NXP MIFARE Classic 4k | Plus 4k SL1"); break;
-		case 0x20: PrintAndLog("TYPE : NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k SL3 | JCOP 31/41"); break;
-		case 0x24: PrintAndLog("TYPE : NXP MIFARE DESFire | DESFire EV1"); break;
+		case 0x20: PrintAndLog("TYPE : NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k SL3 | JCOP 31/41"); isMifareClassic = false; break;
+		case 0x24: PrintAndLog("TYPE : NXP MIFARE DESFire | DESFire EV1"); isMifareClassic = false; break;
 		case 0x28: PrintAndLog("TYPE : JCOP31 or JCOP41 v2.3.1"); break;
 		case 0x38: PrintAndLog("TYPE : Nokia 6212 or 6131 MIFARE CLASSIC 4K"); break;
 		case 0x88: PrintAndLog("TYPE : Infineon MIFARE CLASSIC 1K"); break;
@@ -414,7 +414,7 @@ int CmdHF14AReader(const char *Cmd) {
 	
 	if (isMifareClassic) {		
 		if ( detect_classic_prng() )
-			PrintAndLog("Prng detection: WEAK (darkside)");
+			PrintAndLog("Prng detection: WEAK");
 		else
 			PrintAndLog("Prng detection: HARDEND (hardnested)");		
 	}

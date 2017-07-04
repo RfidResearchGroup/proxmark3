@@ -134,7 +134,6 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 	
 	// Transmit MIFARE_CLASSIC_AUTH
 	len = mifare_sendcmd_short(pcs, isNested, 0x60 + (keyType & 0x01), blockNo, receivedAnswer, receivedAnswerPar, timing);
-	if (MF_DBGLEVEL >= 4)	Dbprintf("rand tag nonce len: %x", len);  
 	if (len != 4) return 1;
 	
 	// Save the tag nonce (nt)

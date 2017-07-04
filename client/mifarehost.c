@@ -212,7 +212,7 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
 	#define KEYS_IN_BLOCK 85
 	#define KEYBLOCK_SIZE 510
 	#define CANDIDATE_SIZE 0xFFFF * 6
-	uint8_t found = FALSE;
+	uint8_t found = false;
 	uint64_t key64 = 0;
 	uint8_t candidates[CANDIDATE_SIZE] = {0x00};
 	uint8_t keyBlock[KEYBLOCK_SIZE] = {0x00};
@@ -239,9 +239,9 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
 		memcpy(keyBlock, candidates + i, KEYBLOCK_SIZE);
 
 		// check a block of generated candidate keys.
-		if (!mfCheckKeys(blockNo, keyType, TRUE, KEYS_IN_BLOCK, keyBlock, &key64)) {
+		if (!mfCheckKeys(blockNo, keyType, true, KEYS_IN_BLOCK, keyBlock, &key64)) {
 			*resultkey = key64;
-			found = TRUE;
+			found = true;
 			break;
 		}
 		
@@ -414,7 +414,6 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
 			PrintAndLog("No trace file found or reading error.");
 			if (f) {
 				fclose(f);
-				f = NULL;
 			}
 			return 2;
 		}
@@ -424,7 +423,6 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
 			PrintAndLog("File content error. Block data must include 32 HEX symbols");
 			if (f) {
 				fclose(f);
-				f = NULL;
 			}
 			return 2;
 		}
@@ -437,7 +435,6 @@ int loadTraceCard(uint8_t *tuid, uint8_t uidlen) {
 	}
 	if (f) {
 		fclose(f);
-		f = NULL;
 	}
 	return 0;
 }
@@ -458,7 +455,6 @@ int saveTraceCard(void) {
 	fflush(f);
 	if (f) {
 		fclose(f);
-		f = NULL;
 	}
 	return 0;
 }
@@ -670,7 +666,7 @@ int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data,
 	ks2 = ar_enc ^ prng_successor(nt, 64);
 	ks3 = at_enc ^ prng_successor(nt, 96);
 	s = lfsr_recovery64(ks2, ks3);
-	mf_crypto1_decrypt(s, data, len, FALSE);
+	mf_crypto1_decrypt(s, data, len, false);
 	PrintAndLog("Decrypted data: [%s]", sprint_hex(data, len) );
 	crypto1_destroy(s);
 	return 0;
@@ -680,7 +676,7 @@ int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data,
 * function performs a partial AUTH,  where it tries to authenticate against block0, key A, but only collects tag nonce.
 * the tag nonce is check to see if it has a predictable PRNG.
 * @returns 
-*	TRUE if tag uses WEAK prng (ie Darkside attack possible)
+*	TRUE if tag uses WEAK prng (ie Now the NACK bug also needs to be present for Darkside attack)
 *   FALSE is tag uses HARDEND prng (ie hardnested attack possible, with known key)
 */
 bool detect_classic_prng(){
