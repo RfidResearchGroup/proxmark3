@@ -41,4 +41,4 @@ script:
     proxmark3 -h ;
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
     ./client/proxmark3 -h ;
-fi
+  fi
