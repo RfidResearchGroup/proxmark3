@@ -43,9 +43,13 @@ void fuse_config(const picopass_hdr *hdr) {
 		else 
 			prnt("	Coding: ISO 14443B only");
 	}
-	if( isset (fuses,FUSE_CRYPT1 | FUSE_CRYPT0 )) prnt("	Crypt: Secured page, keys not locked");
-	if( isset (fuses,FUSE_CRYPT1) && notset( fuses, FUSE_CRYPT0 )) prnt("	Crypt: Secured page, keys not locked");
+	// 1 1
+	if( isset (fuses,FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0 )) prnt("	Crypt: Secured page, keys not locked");
+	// 1 0
+	if( isset (fuses,FUSE_CRYPT1) && notset( fuses, FUSE_CRYPT0 )) prnt("	Crypt: Secured page, keys locked");
+	// 0 1
 	if( notset (fuses,FUSE_CRYPT1) && isset( fuses, FUSE_CRYPT0 )) prnt("	Crypt: Non secured page");
+	// 0 0
 	if( notset (fuses,FUSE_CRYPT1) && notset( fuses, FUSE_CRYPT0 )) prnt("	Crypt: No auth possible. Read only if RA is enabled");
 
 	if( isset( fuses, FUSE_RA))
@@ -91,6 +95,7 @@ void mem_app_config(const picopass_hdr *hdr) {
 	uint8_t mem = hdr->conf.mem_config;
 	uint8_t chip = hdr->conf.chip_config;
 	uint8_t applimit = hdr->conf.app_limit;
+	
 	if (applimit < 6) applimit = 26;
 	uint8_t kb = 2;
 	uint8_t app_areas = 2;
@@ -99,7 +104,7 @@ void mem_app_config(const picopass_hdr *hdr) {
 	prnt("  Mem: %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
 	prnt("	AA1: blocks 06-%02X", applimit);
 	prnt("	AA2: blocks %02X-%02X", applimit+1, max_blk);
-	
+	prnt("	OTP: 0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
 	prnt("");
 	uint8_t book = isset(mem, 0x20);
 	if (book) {
