@@ -1174,9 +1174,16 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
 	uint8_t MAC[4]={0x00,0x00,0x00,0x00};
 	uint8_t div_key[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
-	if (!select_and_auth(KEY, MAC, div_key, (keyType==0x18), elite, rawkey, verbose))
-		return 0;
-
+	// block 0,1 should always be able to read,  and block 5 on some cards.
+	if (blockno >= 2 ) {
+		if (!select_and_auth(KEY, MAC, div_key, (keyType==0x18), elite, rawkey, verbose))
+			return 0;
+	} else {
+		uint8_t CSN[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+		uint8_t CCNR[12]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+		if (!select_only(CSN, CCNR, false, verbose))
+			return false;
+	}
 	UsbCommand resp;
 	UsbCommand w = {CMD_ICLASS_READBLOCK, {blockno}};
 	clearCommandBuffer();

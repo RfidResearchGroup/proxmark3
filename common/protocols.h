@@ -362,6 +362,7 @@ void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *
 #define T55x7_MODULATION_MANCHESTER	0x00008000
 #define T55x7_MODULATION_BIPHASE	0x00010000
 #define T55x7_MODULATION_DIPHASE	0x00018000
+#define T55x7_X_MODE                0x00020000
 #define T55x7_BITRATE_RF_8			0
 #define T55x7_BITRATE_RF_16			0x00040000
 #define T55x7_BITRATE_RF_32			0x00080000
@@ -388,11 +389,43 @@ void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *
 #define T5555_PSK_RF_8				0x00000200
 #define T5555_USE_PWD				0x00000400
 #define T5555_USE_AOR				0x00000800
+#define T5555_SET_BITRATE(x)        (((x-2)/2)<<12)
+#define T5555_GET_BITRATE(x)        ((((x >> 12) & 0x3F)*2)+2)
 #define T5555_BITRATE_SHIFT         12 //(RF=2n+2)   ie 64=2*0x1F+2   or n = (RF-2)/2
 #define T5555_FAST_WRITE			0x00004000
 #define T5555_PAGE_SELECT			0x00008000
 
+#define T55XX_WRITE_TIMEOUT 1500
+
 uint32_t GetT55xxClockBit(uint32_t clock);
+										  
+
+// em4x05 & em4x69 chip configuration register definitions
+#define EM4x05_GET_BITRATE(x)         (((x & 0x3F)*2)+2)
+#define EM4x05_SET_BITRATE(x)         ((x-2)/2)
+#define EM4x05_MODULATION_NRZ         0x00000000
+#define EM4x05_MODULATION_MANCHESTER  0x00000040
+#define EM4x05_MODULATION_BIPHASE     0x00000080
+#define EM4x05_MODULATION_MILLER      0x000000C0 //not supported by all 4x05/4x69 chips
+#define EM4x05_MODULATION_PSK1        0x00000100 //not supported by all 4x05/4x69 chips
+#define EM4x05_MODULATION_PSK2        0x00000140 //not supported by all 4x05/4x69 chips
+#define EM4x05_MODULATION_PSK3        0x00000180 //not supported by all 4x05/4x69 chips
+#define EM4x05_MODULATION_FSK1        0x00000200 //not supported by all 4x05/4x69 chips
+#define EM4x05_MODULATION_FSK2        0x00000240 //not supported by all 4x05/4x69 chips
+#define EM4x05_PSK_RF_2               0
+#define EM4x05_PSK_RF_4               0x00000400
+#define EM4x05_PSK_RF_8               0x00000800
+#define EM4x05_MAXBLOCK_SHIFT         14
+#define EM4x05_FIRST_USER_BLOCK       5
+#define EM4x05_SET_NUM_BLOCKS(x)      ((x+5-1)<<14) //# of blocks sent during default read mode
+#define EM4x05_GET_NUM_BLOCKS(x)      (((x>>14) & 0xF)-5+1)
+#define EM4x05_READ_LOGIN_REQ         1<<18
+#define EM4x05_READ_HK_LOGIN_REQ      1<<19
+#define EM4x05_WRITE_LOGIN_REQ        1<<20
+#define EM4x05_WRITE_HK_LOGIN_REQ     1<<21
+#define EM4x05_READ_AFTER_WRITE       1<<22
+#define EM4x05_DISABLE_ALLOWED        1<<23
+#define EM4x05_READER_TALK_FIRST      1<<24
 
 // iclass / picopass chip config structures and shared routines
 typedef struct {

@@ -95,12 +95,15 @@ void mem_app_config(const picopass_hdr *hdr) {
 	uint8_t mem = hdr->conf.mem_config;
 	uint8_t chip = hdr->conf.chip_config;
 	uint8_t applimit = hdr->conf.app_limit;
-	
-	if (applimit < 6) applimit = 26;
 	uint8_t kb = 2;
 	uint8_t app_areas = 2;
 	uint8_t max_blk = 31;
+
 	getMemConfig(mem, chip, &max_blk, &app_areas, &kb);
+	
+	if (applimit < 6) applimit = 26;
+	if (kb == 2 && (applimit > 0x1f) ) applimit = 26;
+	
 	prnt("  Mem: %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
 	prnt("	AA1: blocks 06-%02X", applimit);
 	prnt("	AA2: blocks %02X-%02X", applimit+1, max_blk);
