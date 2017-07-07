@@ -239,7 +239,7 @@ void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-	set_tracing(FALSE);
+	set_tracing(false);
 }
 
 // arg0 = blockNo (start)
@@ -338,7 +338,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
 	BigBuf_free();
-	set_tracing(FALSE);
+	set_tracing(false);
 }
 
 //-----------------------------------------------------------------------------
@@ -406,7 +406,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain)
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-	set_tracing(FALSE);
+	set_tracing(false);
 }
 
 /* // Command not needed but left for future testing 
@@ -517,7 +517,7 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain)
 	cmd_send(CMD_ACK,1,0,0,0,0);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-	set_tracing(FALSE);
+	set_tracing(false);
 }
 
 void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
@@ -588,7 +588,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain){
 	cmd_send(CMD_ACK,1,0,0,0,0);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-	set_tracing(FALSE);
+	set_tracing(false);
 }
 
 // Return 1 if the nonce is invalid else return 0
@@ -638,7 +638,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 
 	BigBuf_free(); BigBuf_Clear_ext(false);	
 	clear_trace();
-	set_tracing(FALSE);
+	set_tracing(false);
 	
 	if (initialize) {
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -725,7 +725,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 	if (field_off) {
 		FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 		LEDsoff();
-		set_tracing(FALSE);
+		set_tracing(false);
 	}
 }
 
@@ -894,13 +894,9 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 			if (MF_DBGLEVEL >= 3) Dbprintf("Nonce#%d: Testing nt1=%08x nt2enc=%08x nt2par=%02x", i+1, nt1, nt2, par[0]);
 			
 			// Parity validity check
-//			for (j = 0; j < 4; j++) {
-//				par_array[j] = (oddparity8(receivedAnswer[j]) != ((par[0] >> (7-j)) & 0x01));
-//			}
-			par_array[0] = (oddparity8(receivedAnswer[0]) != ((par[0] >> (7-0)) & 0x01));
-			par_array[1] = (oddparity8(receivedAnswer[1]) != ((par[0] >> (7-1)) & 0x01));
-			par_array[2] = (oddparity8(receivedAnswer[2]) != ((par[0] >> (7-2)) & 0x01));
-			par_array[3] = (oddparity8(receivedAnswer[3]) != ((par[0] >> (7-3)) & 0x01));
+			for (j = 0; j < 4; j++) {
+				par_array[j] = (oddparity8(receivedAnswer[j]) != ((par[0] >> (7-j)) & 0x01));
+			}
 			
 			ncount = 0;
 			nttest = prng_successor(nt1, dmin - 1);
@@ -933,7 +929,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 	
 	crypto1_destroy(pcs);
 	
-	byte_t buf[4 + 4 * 4] = {0};
+	uint8_t buf[4 + 4 * 4] = {0};
 	memcpy(buf, &cuid, 4);
 	memcpy(buf+4, &target_nt[0], 4);
 	memcpy(buf+8, &target_ks[0], 4);
@@ -948,7 +944,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-	set_tracing(FALSE);
+	set_tracing(false);
 }
 
 //-----------------------------------------------------------------------------
@@ -956,17 +952,14 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t calibrate, uint8_t *dat
 // 
 //-----------------------------------------------------------------------------
 void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
-#define STD_SEARCH 1
-#define EXT_SEARCH 2
 
 	uint8_t blockNo = arg0 & 0xFF;
 	uint8_t keyType = (arg0 >> 8) & 0xFF;
-	//uint8_t searchType = (arg1 >> 8 ) & 0xFF;
 	bool clearTrace = arg1 & 0xFF;
 	uint8_t keyCount = arg2;
 	uint64_t ui64Key = 0;
 	
-	bool have_uid = FALSE;
+	bool have_uid = false;
 	uint8_t cascade_levels = 0;
 	uint32_t timeout = 0;
 	
@@ -990,18 +983,19 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 	if (clearTrace) 
 		clear_trace();
 	
-	set_tracing(TRUE);
+	set_tracing(true);
 	
 	for (i = 0; i < keyCount; ++i) {
 
 		//mifare_classic_halt(pcs, cuid);
 
-		// this part is from Piwi's faster nonce collecting part in Hardnested.
+		// Iceman: use piwi's faster nonce collecting part in hardnested.
 		if (!have_uid) { // need a full select cycle to get the uid first
 			iso14a_card_select_t card_info;		
 			if(!iso14443a_select_card(uid, &card_info, &cuid, true, 0)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (ALL)");
-				break;
+				--i; // try same key once again
+				continue;
 			}
 			switch (card_info.uidlen) {
 				case 4 : cascade_levels = 1; break;
@@ -1009,10 +1003,11 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 				case 10: cascade_levels = 3; break;
 				default: break;
 			}
-			have_uid = TRUE;	
+			have_uid = true;	
 		} else { // no need for anticollision. We can directly select the card
 			if(!iso14443a_select_card(uid, NULL, NULL, false, cascade_levels)) {
 				if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (UID)");
+				--i; // try same key once again
 				continue;
 			}
 		}
@@ -1030,27 +1025,20 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 			
 			continue;
 		}
-		
-		// found a key.
-		//
-		//if ( searchType == EXT_SEARCH) {
-			
-		//}
-		//else {
-			isOK = 1;
-			break;
-		//}
+		isOK = 1;
+		break;
 	}
 	
 	LED_B_ON();
     cmd_send(CMD_ACK, isOK, 0, 0, datain + i * 6, 6);
 
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	LEDsoff();
+	
 	// restore debug level
 	MF_DBGLEVEL = OLD_MF_DBGLEVEL;	
 	
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	LEDsoff();
-	set_tracing(FALSE);
+	set_tracing(false);
 	crypto1_destroy(pcs);
 }
 
@@ -1116,7 +1104,7 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 	
 	clear_trace();
-	set_tracing(TRUE);
+	set_tracing(true);
 	
 	bool isOK = true;
 
@@ -1172,7 +1160,7 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datai
 	
 	if (MF_DBGLEVEL >= 2) DbpString("EMUL FILL SECTORS FINISHED");
 
-	set_tracing(FALSE);
+	set_tracing(false);
 }
 
 
@@ -1198,6 +1186,9 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 	// params
 	uint8_t workFlags = arg0;
 	uint8_t blockNo = arg1;
+
+	// detect 1a/1b
+	bool is1b = false;
 	
 	// variables
 	bool isOK = false; //assume we will get an error
@@ -1214,7 +1205,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 		LED_B_OFF();
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 		clear_trace();
-		set_tracing(TRUE);
+		set_tracing(true);
 	}
 
 	//loop doesn't loop just breaks out if error
@@ -1257,11 +1248,13 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 				break;
 			}
 
-			ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-				if (MF_DBGLEVEL >= MF_DBG_ERROR)	Dbprintf("wupC2 error");
-				errormsg = MAGIC_WUPC;
-				break;
+			if ( !is1b ) {
+				ReaderTransmit(wupC2, sizeof(wupC2), NULL);
+				if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+					if (MF_DBGLEVEL >= MF_DBG_ALL) Dbprintf("Assuming Magic Gen 1B tag. [wupC2 failed]");
+					is1b = true;
+					continue;
+				}
 			}
 		}
 
@@ -1281,7 +1274,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 			break;
 		}	
 	
-		if (workFlags & MAGIC_OFF) 
+		if (workFlags & MAGIC_HALT) 
 			mifare_classic_halt_ex(NULL);
 		
 		isOK = true;
@@ -1305,6 +1298,9 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 	uint8_t errormsg = 0x00;
 	bool isOK = false; //assume we will get an error
 	
+	// detect 1a/1b
+	bool is1b = false;
+	
 	// variables
 	uint8_t data[MAX_MIFARE_FRAME_SIZE];
 	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
@@ -1317,7 +1313,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 		LED_B_OFF();
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);	
 		clear_trace();
-		set_tracing(TRUE);
+		set_tracing(true);
 	}
 
 	//loop doesn't loop just breaks out if error or done
@@ -1330,11 +1326,13 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain){
 				break;
 			}
 
-			ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-			if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-				if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("wupC2 error");
-				errormsg = MAGIC_WUPC;
-				break;
+			if ( !is1b )  {
+				ReaderTransmit(wupC2, sizeof(wupC2), NULL);
+				if(!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+					if (MF_DBGLEVEL >= MF_DBG_ALL) Dbprintf("Assuming Magic Gen 1B tag. [wupC2 failed]");
+					is1b = true;
+					continue;
+				}				
 			}
 		}
 
@@ -1415,14 +1413,14 @@ TEST2:;
 	*/
 OUT:;
 	// removed the if,  since some magic tags misbehavies and send an answer to it.
-	mifare_classic_halt(NULL, 0);
+	mifare_classic_halt_ex(NULL);
 	cmd_send(CMD_ACK,isGen, 0, 0, 0, 0);
 }
 
 void OnSuccessMagic(){
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-	set_tracing(FALSE);	
+	set_tracing(false);	
 }
 void OnErrorMagic(uint8_t reason){
 	//          ACK, ISOK, reason,0,0,0
@@ -1537,5 +1535,5 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain){
 	cmd_send(CMD_ACK, isOK, 0, 0, dataout, sizeof(dataout));
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-	set_tracing(FALSE);
+	set_tracing(false);
 }
