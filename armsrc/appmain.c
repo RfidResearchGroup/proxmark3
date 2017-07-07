@@ -10,6 +10,7 @@
 // executes.
 //-----------------------------------------------------------------------------
 #include <stdarg.h>
+#include <inttypes.h>
 #include "usb_cdc.h"
 #include "proxmark3.h"
 #include "apps.h"
@@ -39,7 +40,7 @@
 
 #define TOSEND_BUFFER_SIZE (9*MAX_FRAME_SIZE + 1 + 1 + 2)  // 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits 
 uint8_t ToSend[TOSEND_BUFFER_SIZE];
-int ToSendMax = 0;
+int ToSendMax = -1;
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
 
@@ -51,7 +52,7 @@ void ToSendReset(void)
 
 void ToSendStuffBit(int b) {
 	if(ToSendBit >= 8) {
-		++ToSendMax;
+		ToSendMax++;
 		ToSend[ToSendMax] = 0;
 		ToSendBit = 0;
 	}
@@ -59,7 +60,7 @@ void ToSendStuffBit(int b) {
 	if(b)
 		ToSend[ToSendMax] |= (1 << (7 - ToSendBit));
 
-	++ToSendBit;
+	ToSendBit++;
 
 	if(ToSendMax >= sizeof(ToSend)) {
 		ToSendBit = 0;
@@ -149,7 +150,7 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 		ascii[l]=0;
 		
 		// filter safe ascii
-		for (i=0; i<l; ++i)
+		for (i=0; i<l; i++)
 			if (ascii[i]<32 || ascii[i]>126) ascii[i]='.';
         
 		if (bAsci)
@@ -192,7 +193,7 @@ static int ReadAdc(int ch)
 
 	AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
 
-	while (!(AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ch))) ;
+	while (!(AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ch))) {};
 	
 	d = AT91C_BASE_ADC->ADC_CDR[ch];
 	return d;
@@ -201,7 +202,7 @@ static int ReadAdc(int ch)
 int AvgAdc(int ch) // was static - merlok
 {
 	int i, a = 0;
-	for(i = 0; i < 32; ++i)
+	for(i = 0; i < 32; i++)
 		a += ReadAdc(ch);
 
 	return (a + 15) >> 5;
@@ -340,8 +341,8 @@ void printUSBSpeed(void)
 	}
 	LED_B_OFF();
 
-	Dbprintf("  Time elapsed:      %dms", end_time - start_time);
-	Dbprintf("  Bytes transferred: %d", bytes_transferred);
+	Dbprintf("  Time elapsed............%dms", end_time - start_time);
+	Dbprintf("  Bytes transferred.......%d", bytes_transferred);
 	Dbprintf("  USB Transfer Speed PM3 -> Client = %d Bytes/s", 
 		1000 * bytes_transferred / (end_time - start_time));
 
@@ -356,11 +357,10 @@ void SendStatus(void) {
 	printConfig(); //LF Sampling config
 	printUSBSpeed();
 	Dbprintf("Various");
-	Dbprintf("  MF_DBGLEVEL........%d", MF_DBGLEVEL);
-	Dbprintf("  ToSendMax..........%d", ToSendMax);
-	Dbprintf("  ToSendBit..........%d", ToSendBit);
-	Dbprintf("  ToSend BUFFERSIZE..%d", TOSEND_BUFFER_SIZE);
-
+	Dbprintf("  MF_DBGLEVEL.............%d", MF_DBGLEVEL);
+	Dbprintf("  ToSendMax...............%d", ToSendMax);
+	Dbprintf("  ToSendBit...............%d", ToSendBit);
+	Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
 	cmd_send(CMD_ACK,1,0,0,0,0);
 }
 
@@ -401,7 +401,7 @@ void StandAloneMode14a()
 	int cardRead[OPTS] = {0};
 
 	card_clone_t uids[OPTS];
-	iso14a_card_select_t card_info[OPTS];
+	iso14a_card_select_t card[OPTS];
 	uint8_t params = (MAGIC_SINGLE | MAGIC_DATAIN);
 					
 	LED(selected + 1, 0);
@@ -420,7 +420,7 @@ void StandAloneMode14a()
 			LED(LED_RED2, 0);
 
 			// record
-			Dbprintf("Enabling iso14443a reader mode for [Bank: %u]...", selected);
+			Dbprintf("Enabling iso14443a reader mode for [Bank: %d]...", selected);
 			/* need this delay to prevent catching some weird data */
 			SpinDelay(500);
 			iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
@@ -443,22 +443,22 @@ void StandAloneMode14a()
 						SpinDelay(300);
 					}
 				}
-				if (!iso14443a_select_card(NULL, &card_info[selected], NULL, true, 0))
+				if (!iso14443a_select_card(NULL, &card[selected], NULL, true, 0))
 					continue;
 				else
 				{
 					Dbprintf("Read UID:"); 
-					Dbhexdump(card_info[selected].uidlen, card_info[selected].uid, 0);
+					Dbhexdump(card[selected].uidlen, card[selected].uid, 0);
 					
-					if (memcmp(uids[(selected+1)%OPTS].uid, card_info[selected].uid, card_info[selected].uidlen ) == 0 ) {
+					if (memcmp(uids[(selected+1)%OPTS].uid, card[selected].uid, card[selected].uidlen ) == 0 ) {
 						Dbprintf("Card selected has same UID as what is stored in the other bank. Skipping.");
 					}
 					else {
 						
-						uids[selected].sak = card_info[selected].sak;
-						uids[selected].uidlen = card_info[selected].uidlen;						
-						memcpy(uids[selected].uid , card_info[selected].uid, uids[selected].uidlen);						
-						memcpy(uids[selected].atqa, card_info[selected].atqa, 2);
+						uids[selected].sak = card[selected].sak;
+						uids[selected].uidlen = card[selected].uidlen;						
+						memcpy(uids[selected].uid , card[selected].uid, uids[selected].uidlen);						
+						memcpy(uids[selected].atqa, card[selected].atqa, 2);
 												
 						if (uids[selected].uidlen > 4)
 							Dbprintf("Bank[%d] received a 7-byte UID", selected);
@@ -492,18 +492,18 @@ void StandAloneMode14a()
 			LED(selected + 1, 0);
 			LED(LED_ORANGE, 250);
 
-			// magiccards holds 4bytes uid.
-			uint64_t tmpuid = bytes_to_num(uids[selected].uid, 4);
+			// magiccards holds 4bytes uid.  *usually*
+			uint32_t tmpuid = bytes_to_num(uids[selected].uid, 4);
 			
 			// record
-			Dbprintf("Preparing to Clone card [Bank: %x]; uid: %08x", selected, tmpuid & 0xFFFFFFFF);
+			Dbprintf("Preparing to Clone card [Bank: %d]; uid: %08x", selected, tmpuid);
 
 			// wait for button to be released
 			// Delay cloning until card is in place
 			while(BUTTON_PRESS())
 				WDT_HIT();
 
-			Dbprintf("Starting clone. [Bank: %u]", selected);
+			Dbprintf("Starting clone. [Bank: %d]", selected);
 			// need this delay to prevent catching some weird data
 			SpinDelay(500);
 			// Begin clone function here:
@@ -592,9 +592,9 @@ void StandAloneMode14a()
 									
 						if (  uids[selected].uidlen == 7 ) {
 							flags = FLAG_7B_UID_IN_DATA;
-							Dbprintf("Simulating ISO14443a tag with uid: %02x%08x [Bank: %u]", tmpuid >> 32, tmpuid & 0xFFFFFFFF , selected);
+							Dbprintf("Simulating ISO14443a tag with uid: %014" PRIx64 " [Bank: %d]", tmpuid, selected);
 						} else {
-							Dbprintf("Simulating ISO14443a tag with uid: %08x [Bank: %u]", tmpuid & 0xFFFFFFFF , selected);
+							Dbprintf("Simulating ISO14443a tag with uid: %08" PRIx64 " [Bank: %d]", tmpuid, selected);
 						}
 						
 						if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0) {
@@ -620,7 +620,7 @@ void StandAloneMode14a()
 					}
 					else if (button_action == BUTTON_SINGLE_CLICK) {
 						selected = (selected + 1) % OPTS;
-						Dbprintf("Done playing. Switching to record mode on bank %d",selected);
+						Dbprintf("Done playing. Switching to record mode on bank %d", selected);
 						iGotoRecord = 1;
 						break;
 					}
@@ -644,7 +644,7 @@ void StandAloneMode14a()
 	}
 }
 #elif WITH_LF
-// samy's sniff and repeat routine
+// samy's sniff and repeat routine for LF
 void SamyRun()
 {
 	StandAloneMode();
@@ -659,8 +659,13 @@ void SamyRun()
 	LED(selected + 1, 0);
 
 	for (;;) {
-		usb_poll();
+		
 		WDT_HIT();
+		
+		// exit from SammyRun,   send a usbcommand.
+		if (usb_poll_validate_length()) {
+			break;
+		}
 
 		// Was our button held down or pressed?
 		int button_pressed = BUTTON_HELD(1000);
@@ -1267,6 +1272,8 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		    ReaderIClass_Replay(c->arg[0], c->d.asBytes);
 			break;
 		case CMD_ICLASS_EML_MEMSET:
+			//iceman, should call FPGADOWNLOAD before, since it corrupts BigBuf
+			FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 			emlSet(c->d.asBytes,c->arg[0], c->arg[1]);
 			break;
 		case CMD_ICLASS_WRITEBLOCK:
