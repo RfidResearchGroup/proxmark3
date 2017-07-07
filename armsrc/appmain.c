@@ -574,72 +574,67 @@ void StandAloneMode14a()
 			LED(selected + 1, 0);
 
 			// Begin transmitting
-			if (playing)
-			{
-				LED(LED_GREEN, 0);
-				DbpString("Playing");
-				for ( ; ; ) {
-					WDT_HIT();
-					int button_action = BUTTON_HELD(1000);
-					if (button_action == 0) { // No button action, proceed with sim
+			LED(LED_GREEN, 0);
+			DbpString("Playing");
+			for ( ; ; ) {
+				WDT_HIT();
+				int button_action = BUTTON_HELD(1000);
+				if (button_action == 0) { // No button action, proceed with sim
 
-						uint8_t flags = FLAG_4B_UID_IN_DATA;
-						uint8_t data[USB_CMD_DATA_SIZE] = {0}; // in case there is a read command received we shouldn't break
+					uint8_t flags = FLAG_4B_UID_IN_DATA;
+					uint8_t data[USB_CMD_DATA_SIZE] = {0}; // in case there is a read command received we shouldn't break
 
-						memcpy(data, uids[selected].uid, uids[selected].uidlen);
-						
-						uint64_t tmpuid = bytes_to_num(uids[selected].uid, uids[selected].uidlen);
-									
-						if (  uids[selected].uidlen == 7 ) {
-							flags = FLAG_7B_UID_IN_DATA;
-							Dbprintf("Simulating ISO14443a tag with uid: %014" PRIx64 " [Bank: %d]", tmpuid, selected);
-						} else {
-							Dbprintf("Simulating ISO14443a tag with uid: %08" PRIx64 " [Bank: %d]", tmpuid, selected);
-						}
-						
-						if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0) {
-							DbpString("Mifare Classic 1k");
-							SimulateIso14443aTag(1, flags, data);
-						} else if (uids[selected].sak == 0x18 && uids[selected].atqa[0] == 0x02 && uids[selected].atqa[1] == 0) {
-							DbpString("Mifare Classic 4k (4b uid)");
-							SimulateIso14443aTag(8, flags, data);
-						} else if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
-							DbpString("Mifare Classic 4k (7b uid)");
-							SimulateIso14443aTag(8, flags, data);
-						} else if (uids[selected].sak == 0x00 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
-							DbpString("Mifare Ultralight");
-							SimulateIso14443aTag(2, flags, data);
-						} else if (uids[selected].sak == 0x20 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0x03) {
-							DbpString("Mifare DESFire");
-							SimulateIso14443aTag(3, flags, data);
-						}
-						else {
-							Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");
-							SimulateIso14443aTag(1, flags, data);
-						}
+					memcpy(data, uids[selected].uid, uids[selected].uidlen);
+					
+					uint64_t tmpuid = bytes_to_num(uids[selected].uid, uids[selected].uidlen);
+								
+					if (  uids[selected].uidlen == 7 ) {
+						flags = FLAG_7B_UID_IN_DATA;
+						Dbprintf("Simulating ISO14443a tag with uid: %014" PRIx64 " [Bank: %d]", tmpuid, selected);
+					} else {
+						Dbprintf("Simulating ISO14443a tag with uid: %08" PRIx64 " [Bank: %d]", tmpuid, selected);
 					}
-					else if (button_action == BUTTON_SINGLE_CLICK) {
-						selected = (selected + 1) % OPTS;
-						Dbprintf("Done playing. Switching to record mode on bank %d", selected);
-						iGotoRecord = 1;
-						break;
+					
+					if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0) {
+						DbpString("Mifare Classic 1k");
+						SimulateIso14443aTag(1, flags, data);
+					} else if (uids[selected].sak == 0x18 && uids[selected].atqa[0] == 0x02 && uids[selected].atqa[1] == 0) {
+						DbpString("Mifare Classic 4k (4b uid)");
+						SimulateIso14443aTag(8, flags, data);
+					} else if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
+						DbpString("Mifare Classic 4k (7b uid)");
+						SimulateIso14443aTag(8, flags, data);
+					} else if (uids[selected].sak == 0x00 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
+						DbpString("Mifare Ultralight");
+						SimulateIso14443aTag(2, flags, data);
+					} else if (uids[selected].sak == 0x20 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0x03) {
+						DbpString("Mifare DESFire");
+						SimulateIso14443aTag(3, flags, data);
 					}
-					else if (button_action == BUTTON_HOLD) {
-						Dbprintf("Playtime over. Begin cloning...");
-						iGotoClone = 1;
-						break;
+					else {
+						Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");
+						SimulateIso14443aTag(1, flags, data);
 					}
-					WDT_HIT();
 				}
-
-				/* We pressed a button so ignore it here with a delay */
-				SpinDelay(300);
-				LEDsoff();
-				LED(selected + 1, 0);
+				else if (button_action == BUTTON_SINGLE_CLICK) {
+					selected = (selected + 1) % OPTS;
+					Dbprintf("Done playing. Switching to record mode on bank %d", selected);
+					iGotoRecord = 1;
+					break;
+				}
+				else if (button_action == BUTTON_HOLD) {
+					Dbprintf("Playtime over. Begin cloning...");
+					iGotoClone = 1;
+					break;
+				}
+				WDT_HIT();
 			}
-			else
-				while(BUTTON_PRESS())
-					WDT_HIT();
+
+			/* We pressed a button so ignore it here with a delay */
+			SpinDelay(300);
+			LEDsoff();
+			LED(selected + 1, 0);
+
 		}
 	}
 }

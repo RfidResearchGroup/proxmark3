@@ -879,11 +879,6 @@ int CmdHFSearch(const char *Cmd){
 		PrintAndLog("\nValid ISO14443-A Tag Found - Quiting Search\n");
 		return ans;
 	} 
-	ans = HF14BReader(false); //CmdHF14BReader("s");
-	if (ans) {
-		PrintAndLog("\nValid ISO14443-B Tag Found - Quiting Search\n");
-		return ans;
-	}
 	ans = HF15Reader("", false);
 	if (ans) {
 		PrintAndLog("\nValid ISO15693 Tag Found - Quiting Search\n");
@@ -898,6 +893,12 @@ int CmdHFSearch(const char *Cmd){
 	if (ans == 0) {
 		PrintAndLog("\nValid Topaz Tag Found - Quiting Search\n");
 		return 1;
+	}
+	// 14b and iclass is the longest test (put last)
+	ans = HF14BReader(false); //CmdHF14BReader("s");
+	if (ans) {
+		PrintAndLog("\nValid ISO14443-B Tag Found - Quiting Search\n");
+		return ans;
 	}
 	ans = HFiClassReader("", false, false);
 	if (ans) {

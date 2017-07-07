@@ -719,7 +719,7 @@ static void waitCmd(uint8_t iSelect) {
     UsbCommand resp;
     uint16_t len = 0;
 
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {        
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {        
         len = iSelect ? (resp.arg[1] & 0xffff) : (resp.arg[0]  & 0xffff);
         PrintAndLog("received %i octets", len);
         if(!len)

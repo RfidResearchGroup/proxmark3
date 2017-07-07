@@ -15,9 +15,9 @@ module hi_read_rx_xcorr(
     input pck0, ck_1356meg, ck_1356megb;
     output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
     input [7:0] adc_d;
-    output adc_clk, ssp_frame, ssp_din;
+    output adc_clk;
     input ssp_dout;
-    output ssp_clk;
+    output ssp_frame, ssp_din, ssp_clk;
     input cross_hi, cross_lo;
     output dbg;
     input xcorr_is_848, snoop;
@@ -28,11 +28,18 @@ assign pwr_oe1 = 1'b0;
 assign pwr_oe3 = 1'b0;
 assign pwr_oe4 = 1'b0;
 
-wire adc_clk = ck_1356megb;
-
-reg fc_div_2;
+// Clock divider
+reg [0:0] fc_divider;
 always @(negedge ck_1356megb)
-    fc_div_2 <= fc_div_2 + 1;
+    fc_divider <= fc_divider + 1;
+wire fc_div2 = fc_divider[0];
+
+reg adc_clk;
+always @(ck_1356megb)
+	if (xcorr_is_848)
+		adc_clk <= ck_1356megb;
+	else
+		adc_clk <= fc_div2;
 
 // When we're a reader, we just need to do the BPSK demod; but when we're an
 // eavesdropper, we also need to pick out the commands sent by the reader,
@@ -77,7 +84,6 @@ reg ssp_frame;
 
 always @(negedge adc_clk)
 begin
-	if (xcorr_is_848 | fc_div_2)
 		corr_i_cnt <= corr_i_cnt + 1;
 end		
 		
@@ -137,7 +143,7 @@ begin
     begin
         ssp_clk <= 1'b1;
         // Don't shift if we just loaded new data, obviously.
-        if(corr_i_cnt != 7'd0)
+        if(corr_i_cnt != 6'd0)
         begin
             corr_i_out[7:0] <= {corr_i_out[6:0], corr_q_out[7]};
             corr_q_out[7:1] <= corr_q_out[6:0];

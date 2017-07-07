@@ -116,7 +116,7 @@ static u32 hitag2_byte(u64 *x) {
 
 #define HITAG_FRAME_LEN 					20
 #define HITAG_T_STOP  						36  /* T_EOF should be > 36 */
-#define HITAG_T_LOW						8   /* T_LOW should be 4..10 */
+#define HITAG_T_LOW							8   /* T_LOW should be 4..10 */
 #define HITAG_T_0_MIN 						15  /* T[0] should be 18..22 */
 #define HITAG_T_1_MIN 						25  /* T[1] should be 26..30 */
 //#define HITAG_T_EOF   40 /* T_EOF should be > 36 */
@@ -127,16 +127,16 @@ static u32 hitag2_byte(u64 *x) {
 
 #define HITAG_T_TAG_ONE_HALF_PERIOD				10
 #define HITAG_T_TAG_TWO_HALF_PERIOD				25
-#define HITAG_T_TAG_THREE_HALF_PERIOD				41 
-#define HITAG_T_TAG_FOUR_HALF_PERIOD    			57
+#define HITAG_T_TAG_THREE_HALF_PERIOD			41 
+#define HITAG_T_TAG_FOUR_HALF_PERIOD    		57
 	
 #define HITAG_T_TAG_HALF_PERIOD					16
 #define HITAG_T_TAG_FULL_PERIOD					32
 	
-#define HITAG_T_TAG_CAPTURE_ONE_HALF				13
-#define HITAG_T_TAG_CAPTURE_TWO_HALF				25
-#define HITAG_T_TAG_CAPTURE_THREE_HALF				41
-#define HITAG_T_TAG_CAPTURE_FOUR_HALF   			57
+#define HITAG_T_TAG_CAPTURE_ONE_HALF			13
+#define HITAG_T_TAG_CAPTURE_TWO_HALF			25
+#define HITAG_T_TAG_CAPTURE_THREE_HALF			41
+#define HITAG_T_TAG_CAPTURE_FOUR_HALF   		57
 
 #define DEBUG 0
 
@@ -167,25 +167,25 @@ static void hitag_send_bit(int bit) {
 		if (bit == 0) {
 			// AC Coding --__
 			HIGH(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 32)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
+				
 			LOW(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 64)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 64)	{};
+				
 		} else {
 			// AC coding -_-_
 			HIGH(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 16)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
+				
 			LOW(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 32)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
+				
 			HIGH(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 48)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 48) {};
+				
 			LOW(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 64)
-				;;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 64) {};
+				
 		}
 		LED_A_OFF();
 		break;
@@ -193,25 +193,24 @@ static void hitag_send_bit(int bit) {
 		if (bit == 0) {
 			// AC Coding --__
 			HIGH(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_HALF_PERIOD)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_HALF_PERIOD) {};
+				
 			LOW(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_FULL_PERIOD)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_FULL_PERIOD) {};
+				
 		} else {
 			// AC coding -_-_
 			HIGH(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 8)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 8) {};
+				
 			LOW(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 16)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
+				
 			HIGH(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 24)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 24) {};
+				
 			LOW(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 32)
-				;;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
 		}
 		LED_A_OFF();
 		break;
@@ -219,19 +218,19 @@ static void hitag_send_bit(int bit) {
 		if (bit == 0) {
 			// Manchester: Unloaded, then loaded |__--|
 			LOW(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 16)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
+				
 			HIGH(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 32)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
+				
 		} else {
 			// Manchester: Loaded, then unloaded |--__|
 			HIGH(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 16)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
+				
 			LOW(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 32)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
+				
 		}
 		LED_A_OFF();
 		break;
@@ -239,19 +238,19 @@ static void hitag_send_bit(int bit) {
 		if (bit == 0) {
 			// Manchester: Unloaded, then loaded |__--|
 			LOW(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 8)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 8) {};
+				
 			HIGH(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 16)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
+				
 		} else {
 			// Manchester: Loaded, then unloaded |--__|
 			HIGH(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 8)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 8) {};
+				
 			LOW(GPIO_SSC_DOUT);
-			while (AT91C_BASE_TC0->TC_CV < T0 * 16)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
+				
 		}
 		LED_A_OFF();
 		break;
@@ -288,8 +287,8 @@ static void hitag_reader_send_bit(int bit) {
 	HIGH(GPIO_SSC_DOUT);
 	if (test == 1) {
 		// Wait for 4-10 times the carrier period
-		while (AT91C_BASE_TC0->TC_CV < T0 * 6)
-			;
+		while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
+			
 		//	SpinDelayUs(8*8);
 
 		// Disable modulation, just activates the field again
@@ -297,19 +296,19 @@ static void hitag_reader_send_bit(int bit) {
 
 		if (bit == 0) {
 			// Zero bit: |_-|
-			while (AT91C_BASE_TC0->TC_CV < T0 * 11)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 11) {};
+				
 			//		SpinDelayUs(16*8);
 		} else {
 			// One bit: |_--|
-			while (AT91C_BASE_TC0->TC_CV < T0 * 14)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 14) {};
+				
 			//		SpinDelayUs(22*8);
 		}
 	} else {
 		// Wait for 4-10 times the carrier period
-		while (AT91C_BASE_TC0->TC_CV < T0 * 6)
-			;
+		while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
+			
 		//	SpinDelayUs(8*8);
 
 		// Disable modulation, just activates the field again
@@ -317,13 +316,13 @@ static void hitag_reader_send_bit(int bit) {
 
 		if (bit == 0) {
 			// Zero bit: |_-|
-			while (AT91C_BASE_TC0->TC_CV < T0 * 22)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 22) {};
+				
 			//		SpinDelayUs(16*8);
 		} else {
 			// One bit: |_--|
-			while (AT91C_BASE_TC0->TC_CV < T0 * 28)
-				;
+			while (AT91C_BASE_TC0->TC_CV < T0 * 28) {};
+				
 			//		SpinDelayUs(22*8);
 		}
 	}
@@ -344,8 +343,8 @@ static void hitag_reader_send_frame(const byte_t* frame, size_t frame_len) {
 // Enable modulation, which means, drop the the field
 	HIGH(GPIO_SSC_DOUT);
 // Wait for 4-10 times the carrier period
-	while (AT91C_BASE_TC0->TC_CV < T0 * 6)
-		;
+	while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
+		
 // Disable modulation, just activates the field again
 	LOW(GPIO_SSC_DOUT);
 }
@@ -988,39 +987,39 @@ void SimulateHitagSTag(bool tag_mem_supplied, byte_t* data) {
 		tag.max_page=0;
 	//con1
 	tag.auth=0;
-	if((tag.pages[1][2]&0x80)==1)
+	if((tag.pages[1][2]&0x80) == 0x80)
 		tag.auth=1;
 	tag.LCON=0;
-	if((tag.pages[1][2]&0x2)==1)
+	if((tag.pages[1][2]&0x2) == 0x02)
 		tag.LCON=1;
 	tag.LKP=0;
-	if((tag.pages[1][2]&0x1)==1)
+	if((tag.pages[1][2]&0x1) == 0x01)
 		tag.LKP=1;
 	//con2
 	//0=read write 1=read only
 	tag.LCK7=0;
-	if((tag.pages[1][1]&0x80)==1)
+	if((tag.pages[1][1]&0x80) == 0x80)
 		tag.LCK7=1;
 	tag.LCK6=0;
-	if((tag.pages[1][1]&0x40)==1)
+	if((tag.pages[1][1]&0x40) == 0x040)
 		tag.LCK6=1;
 	tag.LCK5=0;
-	if((tag.pages[1][1]&0x20)==1)
+	if((tag.pages[1][1]&0x20) == 0x20)
 		tag.LCK5=1;
 	tag.LCK4=0;
-	if((tag.pages[1][1]&0x10)==1)
+	if((tag.pages[1][1]&0x10) == 0x10)
 		tag.LCK4=1;
 	tag.LCK3=0;
-	if((tag.pages[1][1]&0x8)==1)
+	if((tag.pages[1][1]&0x8) == 0x08)
 		tag.LCK3=1;
 	tag.LCK2=0;
-	if((tag.pages[1][1]&0x4)==1)
+	if((tag.pages[1][1]&0x4) == 0x04)
 		tag.LCK2=1;
 	tag.LCK1=0;
-	if((tag.pages[1][1]&0x2)==1)
+	if((tag.pages[1][1]&0x2) == 0x02)
 		tag.LCK1=1;
 	tag.LCK0=0;
-	if((tag.pages[1][1]&0x1)==1)
+	if((tag.pages[1][1]&0x1) == 0x01)
 		tag.LCK0=1;
 
 // Set up simulator mode, frequency divisor which will drive the FPGA
