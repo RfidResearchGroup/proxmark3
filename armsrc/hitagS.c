@@ -955,7 +955,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, byte_t* data) {
 	BigBuf_free(); BigBuf_Clear_ext(false);
 
 	// Clean up trace and prepare it for storing frames
-	set_tracing(TRUE);
+	set_tracing(true);
 	clear_trace();
 
 	DbpString("Starting HitagS simulation");
@@ -1219,7 +1219,7 @@ void ReadHitagS(hitag_function htf, hitag_data* htd) {
 	bSuccessful = false;
 
 // Clean up trace and prepare it for storing frames
-	set_tracing(TRUE);
+	set_tracing(true);
 	clear_trace();
 
 	bQuiet = false;
@@ -1563,7 +1563,7 @@ void WritePageHitagS(hitag_function htf, hitag_data* htd,int page_) {
 	tag.tstate = HT_NO_OP;
 
 // Clean up trace and prepare it for storing frames
-	set_tracing(TRUE);
+	set_tracing(true);
 	clear_trace();
 
 	bQuiet = false;
@@ -1850,7 +1850,7 @@ void check_challenges(bool file_given, byte_t* data) {
 	bSuccessful = false;
 
 // Clean up trace and prepare it for storing frames
-	set_tracing(TRUE);
+	set_tracing(true);
 	clear_trace();
 
 	bQuiet = false;

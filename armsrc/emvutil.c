@@ -1519,7 +1519,7 @@ void emvsnoop() {
     uint8_t rSAK[] = {0x28, 0xB4, 0xFC};
    
     iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
-    bool finished = FALSE;
+    bool finished = false;
 
     while (!BUTTON_PRESS() && !finished){
         WDT_HIT();

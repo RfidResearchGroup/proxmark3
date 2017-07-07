@@ -465,7 +465,7 @@ static int l_reveng_RunModel(lua_State *L){
 
 static int l_hardnested(lua_State *L){
 
-	bool haveTarget = TRUE;
+	bool haveTarget = true;
     size_t size;
     const char *p_blockno = luaL_checklstring(L, 1, &size);
     if(size != 2)  return returnToLuaWithError(L,"Wrong size of blockNo, got %d bytes, expected 2", (int) size);

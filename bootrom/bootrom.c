@@ -13,7 +13,7 @@
 void DbpString(char *str) {
 	byte_t len = 0;
 	while (str[len] != 0x00)
-		++len;
+		len++;
 	
 	cmd_send(CMD_DEBUG_PRINT_STRING,len,0,0,(byte_t*)str,len);
 }

@@ -85,7 +85,7 @@ static RAMFUNC int OutOfNDecoding(int bit)
 
 	if(!Uart.bitBuffer) {
 		Uart.bitBuffer = bit ^ 0xFF0;
-		return FALSE;
+		return false;
 	}
 	else {
 		Uart.bitBuffer <<= 4;
@@ -96,7 +96,7 @@ static RAMFUNC int OutOfNDecoding(int bit)
 		Uart.output[Uart.byteCnt] = Uart.bitBuffer & 0xFF;
 		Uart.byteCnt++;
 		Uart.swapper = 0;
-		if(Uart.byteCnt > 15) { return true; }
+		if(Uart.byteCnt > 15) return true;
 	}
 	else {
 		Uart.swapper = 1;
@@ -312,7 +312,7 @@ static RAMFUNC int OutOfNDecoding(int bit)
 		}
 	}
 
-    return FALSE;
+    return false;
 }
 
 //=============================================================================
@@ -365,7 +365,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 
 	if(Demod.buff < 3) {
 		Demod.buff++;
-		return FALSE;
+		return false;
 	}
 
 	if(Demod.state==DEMOD_UNSYNCD) {
@@ -421,7 +421,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 				if(!(Demod.buffer2 & Demod.syncBit) || !(Demod.buffer3 & Demod.syncBit)) {
 					Demod.state = DEMOD_UNSYNCD;
 					error = 0x88;
-					return FALSE;
+					return false;
 				}
 				
 				// TODO: use this error value to print?  Ask Holiman.
@@ -615,7 +615,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 
 	} // end (state != UNSYNCED)
 
-    return FALSE;
+    return false;
 }
 
 //=============================================================================
@@ -633,7 +633,7 @@ void RAMFUNC SnoopIClass(void)
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
     // response from the tag.
-    //int triggered = FALSE; // FALSE to wait first for card
+    //int triggered = false; // false to wait first for card
 
     // The command (reader -> tag) that we're receiving.
 	// The length of a received command will in most cases be no more than 18 bytes.
@@ -653,7 +653,7 @@ void RAMFUNC SnoopIClass(void)
 	clear_trace();
 	set_tracing(true);
 	
-    iso14a_set_trigger(FALSE);
+    iso14a_set_trigger(false);
 
     int lastRxCounter;
     uint8_t *upTo;
@@ -739,7 +739,7 @@ void RAMFUNC SnoopIClass(void)
 		decbyter <<= 2;
 		decbyter ^= (smpl & 0x30);
 
-		++div;
+	div++;
 	
 		if (( div + 1) % 2 == 0) {
 			smpl = decbyter;	
@@ -780,7 +780,7 @@ void RAMFUNC SnoopIClass(void)
 				if(tracing)	{
 					uint8_t parity[MAX_PARITY_SIZE];
 					GetParity(Demod.output, Demod.len, parity);
-					LogTrace(Demod.output, Demod.len, time_start, time_stop, parity, FALSE);
+					LogTrace(Demod.output, Demod.len, time_start, time_stop, parity, false);
 				}
 
 				// And ready to receive another response.
@@ -812,7 +812,7 @@ done:
     Dbprintf("%x %x %x", maxBehindBy, Uart.state, Uart.byteCnt);
 	Dbprintf("%x %x %x", Uart.byteCntMax, BigBuf_get_traceLen(), (int)Uart.output[0]);
 	LEDsoff();
-	set_tracing(FALSE);	
+	set_tracing(false);	
 }
 
 void rotateCSN(uint8_t* originalCSN, uint8_t* rotatedCSN) {
@@ -842,7 +842,7 @@ static int GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen)
     for(;;) {
         WDT_HIT();
 
-        if(BUTTON_PRESS()) return FALSE;
+        if(BUTTON_PRESS()) return false;
 
         if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = 0x00;
@@ -1037,7 +1037,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 		Dbprintf("The mode is not implemented, reserved for future use");
 	}
 	Dbprintf("Done...");
-	set_tracing(FALSE);	
+	set_tracing(false);	
 }
 void AppendCrc(uint8_t* data, int len)
 {
@@ -1325,7 +1325,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 
 			if (trace_data != NULL) {
 				GetParity(trace_data, trace_data_size, parity);
-				LogTrace(trace_data, trace_data_size, (t2r_time-time_0) << 4, (t2r_time-time_0) << 4, parity, FALSE);
+				LogTrace(trace_data, trace_data_size, (t2r_time-time_0) << 4, (t2r_time-time_0) << 4, parity, false);
 			}
 			if(!tracing)
 				DbpString("Trace full");
@@ -1527,13 +1527,13 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
 	uint8_t b;
 	if (elapsed) *elapsed = 0;
 
-	bool skip = FALSE;
+	bool skip = false;
 
 	c = 0;
 	for(;;) {
 		WDT_HIT();
 
-	    if(BUTTON_PRESS()) return FALSE;
+	    if(BUTTON_PRESS()) return false;
 
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = 0x00;  // To make use of exact timing of next command from reader!!
@@ -1543,7 +1543,7 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
 			if(c < timeout)
 				c++;
 			else 
-				return FALSE;
+				return false;
 			
 			b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 			
@@ -1562,14 +1562,14 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
 int ReaderReceiveIClass(uint8_t* receivedAnswer)
 {
   int samples = 0;
-  if (!GetIClassAnswer(receivedAnswer,160,&samples,0)) return FALSE;
+  if (!GetIClassAnswer(receivedAnswer,160,&samples,0)) return false;
   rsamples += samples;
   if (tracing) {
 	uint8_t parity[MAX_PARITY_SIZE];
 	GetParity(receivedAnswer, Demod.len, parity);
-	LogTrace(receivedAnswer,Demod.len,rsamples,rsamples,parity,FALSE);
+	LogTrace(receivedAnswer,Demod.len,rsamples,rsamples,parity,false);
   }
-  if(samples == 0) return FALSE;
+  if(samples == 0) return false;
   return Demod.len;
 }
 
@@ -1658,7 +1658,7 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key)
 	//Flag that we got to at least stage 1, read CSN
 	read_status = 1;
 
-	// Card selected, now read e-purse (cc)
+	// Card selected, now read e-purse (cc) (only 8 bytes no CRC)
 	ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
 	if(ReaderReceiveIClass(resp) == 8) {
 		//Save CC (e-purse) in response data
@@ -1769,14 +1769,13 @@ void ReaderIClass(uint8_t arg0) {
 		LED_B_OFF();
 		userCancelled = BUTTON_PRESS() || usb_poll_validate_length();
 	}
-	
 	if (userCancelled)
 		cmd_send(CMD_ACK, 0xFF, 0, 0, card_data, 0);
 	else
 		cmd_send(CMD_ACK, 0, 0, 0, card_data, 0);		
     
     LEDsoff();
-	set_tracing(FALSE);		
+	set_tracing(false);		
 }
 
 void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
@@ -1895,8 +1894,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 		}
 
 		//Send off any remaining data
-		if(stored_data_length > 0)
-		{
+		if (stored_data_length > 0) {
 			cmd_send(CMD_ACK,
 					 stored_data_length,//data length
 					 failedRead,//Failed blocks?
@@ -1914,7 +1912,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 			 card_data, 0);
 
 	LED_A_OFF();
-	set_tracing(FALSE);		
+	set_tracing(false);		
 }
 
 void iClass_ReadCheck(uint8_t	blockNo, uint8_t keyType) {
@@ -2016,11 +2014,11 @@ bool iClass_WriteBlock_ext(uint8_t blockNo, uint8_t *data) {
 
 void iClass_WriteBlock(uint8_t blockNo, uint8_t *data) {
 	bool isOK = iClass_WriteBlock_ext(blockNo, data);
-	if (isOK){
+	if (isOK)
 		Dbprintf("Write block [%02x] successful",blockNo);
-				}else {
+    else
 		Dbprintf("Write block [%02x] failed",blockNo);		
-	}
+	
 	cmd_send(CMD_ACK,isOK,0,0,0,0);	
 }
 

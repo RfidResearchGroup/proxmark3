@@ -12,6 +12,7 @@
 #ifndef __BIGBUF_H
 #define __BIGBUF_H
 
+#include <stdbool.h> // for bool
 #include "proxmark3.h"
 #include "string.h"
 #include "ticks.h"
@@ -30,6 +31,7 @@ extern uint16_t BigBuf_max_traceLen(void);
 extern void BigBuf_Clear(void);
 extern void BigBuf_Clear_ext(bool verbose);
 extern void BigBuf_Clear_keep_EM(void);
+extern void BigBuf_Clear_EM(void);
 extern uint8_t *BigBuf_malloc(uint16_t);
 extern void BigBuf_free(void);
 extern void BigBuf_free_keep_EM(void);

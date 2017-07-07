@@ -343,7 +343,7 @@ static void hitag2_handle_reader_command(byte_t* rx, const size_t rxlen, byte_t*
 				
 				// Unknown command
 				default:
-					Dbprintf("Uknown command: %02x %02x",rx[0],rx[1]);
+					Dbprintf("Unknown command: %02x %02x",rx[0],rx[1]);
 					return;
 				break;
 			}
@@ -754,7 +754,7 @@ void SnoopHitag(uint32_t type) {
 	
 	// Clean up trace and prepare it for storing frames
 	clear_trace();
-	set_tracing(TRUE);
+	set_tracing(true);
 	
 	auth_table_len = 0;
 	auth_table_pos = 0;
@@ -946,7 +946,7 @@ void SnoopHitag(uint32_t type) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LED_A_OFF();
-	set_tracing(TRUE);
+	set_tracing(false);
 //	Dbprintf("frame received: %d",frame_count);
 //	Dbprintf("Authentication Attempts: %d",(auth_table_len/8));
 //	DbpString("All done");
@@ -970,7 +970,7 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 
 	// Clean up trace and prepare it for storing frames
 	clear_trace();
-	set_tracing(TRUE);
+	set_tracing(true);
 	
 	auth_table_len = 0;
 	auth_table_pos = 0;
@@ -1138,7 +1138,7 @@ void SimulateHitagTag(bool tag_mem_supplied, byte_t* data) {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	
 	DbpString("Sim Stopped");
-	set_tracing(TRUE);
+	set_tracing(false);
 }
 
 void ReaderHitag(hitag_function htf, hitag_data* htd) {
@@ -1163,7 +1163,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
   
 	// Clean up trace and prepare it for storing frames
 	clear_trace();
-	set_tracing(TRUE);
+	set_tracing(true);
 	
 	//DbpString("Starting Hitag reader family");
 
@@ -1216,7 +1216,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 		} break;
 		default: {
 			Dbprintf("Error, unknown function: %d",htf);
-			set_tracing(FALSE);
+			set_tracing(false);
 			return;
 		} break;
 	}
@@ -1284,7 +1284,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
     //DbpString("Configured for hitag2 reader");
 	} else {
 		Dbprintf("Error, unknown hitag reader type: %d",htf);
-		set_tracing(FALSE);	
+		set_tracing(false);	
 		return;
 	}
 	uint8_t attempt_count=0;
@@ -1328,7 +1328,7 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 			} break;
 			default: {
 				Dbprintf("Error, unknown function: %d",htf);
-				set_tracing(FALSE);
+				set_tracing(false);
 				return;
 			} break;
 		}
@@ -1443,5 +1443,5 @@ void ReaderHitag(hitag_function htf, hitag_data* htd) {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 //	Dbprintf("DONE: frame received: %d",frame_count);
 	cmd_send(CMD_ACK,bSuccessful,0,0,(byte_t*)tag.sectors,48);
-  	set_tracing(FALSE);
+  	set_tracing(false);
 }

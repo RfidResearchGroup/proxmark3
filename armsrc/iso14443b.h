@@ -27,15 +27,15 @@ extern "C" {
 #include "protocols.h"
 
 extern void AppendCrc14443b(uint8_t *data, int len);
-void SendRawCommand14443B_Ex(UsbCommand *c);
-void iso14443b_setup();
-uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response);
-uint8_t iso14443b_select_card(iso14b_card_select_t* card);
-uint8_t iso14443b_select_card_srx(iso14b_card_select_t* card);
+extern void SendRawCommand14443B_Ex(UsbCommand *c);
+extern void iso14443b_setup();
+extern uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response);
+extern uint8_t iso14443b_select_card(iso14b_card_select_t* card);
+extern uint8_t iso14443b_select_card_srx(iso14b_card_select_t* card);
 
 // testfunctions
-void WaitForFpgaDelayQueueIsEmpty( uint16_t delay );
-void ClearFpgaShiftingRegisters(void);
+extern void WaitForFpgaDelayQueueIsEmpty( uint16_t delay );
+extern void ClearFpgaShiftingRegisters(void);
 
 // States for 14B SIM command
 #define SIM_NOFIELD		0

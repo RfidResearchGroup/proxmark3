@@ -21,7 +21,7 @@ bool InitDesfireCard(){
 	iso14a_card_select_t card;
 	
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-	set_tracing(TRUE);
+	set_tracing(true);
 
 	if (!iso14443a_select_card(NULL, &card, NULL, true, 0)) {
 		if (MF_DBGLEVEL >= MF_DBG_ERROR) DbpString("Can't select card");
@@ -101,7 +101,7 @@ void MifareDesfireGetInformation(){
 		CID == 0x00 first card?		
 	*/
 	clear_trace();
-	set_tracing(TRUE);
+	set_tracing(true);
 	iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 	// card select - information
@@ -511,7 +511,7 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout){
 	len = ReaderReceive(resp, par);
 	if ( !len ) {
 		if (MF_DBGLEVEL >= 4) Dbprintf("fukked");
-		return FALSE; //DATA LINK ERROR
+		return false; //DATA LINK ERROR
 	}
 	// if we received an I- or R(ACK)-Block with a block number equal to the
 	// current block number, toggle the current block number
@@ -558,7 +558,7 @@ void OnSuccess(){
 	mifare_ultra_halt();
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LEDsoff();
-	set_tracing(FALSE);	
+	set_tracing(false);	
 }
 
 void OnError(uint8_t reason){

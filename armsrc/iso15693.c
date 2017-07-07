@@ -285,11 +285,11 @@ static int GetIso15693AnswerFromTag(uint8_t *receivedResponse, int maxLen, int *
 {
 	uint8_t *dest = BigBuf_get_addr();
 
-	int c = 0, getNext = FALSE;
+	int c = 0, getNext = false;
 	int8_t prev = 0;
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	SpinDelay(100);	// greg - experiment to get rid of some of the 0 byte/failed reads
+	//SpinDelay(60);	// greg - experiment to get rid of some of the 0 byte/failed reads
 
 	for(;;) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
@@ -412,11 +412,11 @@ static int GetIso15693AnswerFromSniff(uint8_t *receivedResponse, int maxLen, int
 {
 	uint8_t *dest = BigBuf_get_addr();
 
-	int c = 0, getNext = FALSE;
+	int c = 0, getNext = false;
 	int8_t prev = 0;
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-	SpinDelay(100);	// greg - experiment to get rid of some of the 0 byte/failed reads
+	//SpinDelay(60);	// greg - experiment to get rid of some of the 0 byte/failed reads
 
 	for(;;) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
@@ -538,7 +538,7 @@ void AcquireRawAdcSamplesIso15693(void)
 {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
-	int c = 0, getNext = FALSE;
+	int c = 0, getNext = false;
 	int8_t prev = 0;
 	volatile uint32_t r;
 
@@ -602,7 +602,7 @@ void RecordRawAdcSamplesIso15693(void)
 {
 	uint8_t *dest = BigBuf_get_addr();
 
-	int c = 0, getNext = FALSE;
+	int c = 0, getNext = false;
 	int8_t prev = 0;
 
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -983,7 +983,7 @@ void ReaderIso15693(uint32_t parameter)
 				Dbhexdump(answerLen2, answer2, true);
 				if ( *((uint32_t*) answer2) == 0x07160101 ) break; // exit on NoPageErr 
 			} 
-			++i;
+			i++;
 		} 
 	}
 

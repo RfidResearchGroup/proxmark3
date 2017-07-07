@@ -175,7 +175,7 @@ static void switch_off(void){
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	SpinDelay(100);
 	FpgaDisableSscDma();
-	set_tracing(FALSE);
+	set_tracing(false);
 	LEDsoff();	
 }
 
@@ -435,14 +435,14 @@ static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
 			Uart.state = STATE_UNSYNCD;
 			break;
 	}
-	return FALSE;
+	return false;
 }
 
 //-----------------------------------------------------------------------------
 // Receive a command (from the reader to us, where we are the simulated tag),
 // and store it in the given buffer, up to the given maximum length. Keeps
 // spinning, waiting for a well-framed command, until either we get one
-// (returns TRUE) or someone presses the pushbutton on the board (FALSE).
+// (returns true) or someone presses the pushbutton on the board (false).
 //
 // Assume that we're called with the SSC (to the FPGA) and ADC path set
 // correctly.
@@ -484,7 +484,7 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
 			}
 		}
 	}	
-	return FALSE;
+	return false;
 }
 
 void ClearFpgaShiftingRegisters(void){
@@ -667,19 +667,19 @@ void SimulateIso14443bTag(uint32_t pupi) {
 			}
 			case SIM_SELECTING: {
 				TransmitFor14443b_AsTag( encodedATQB, encodedATQBLen );
-				LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, FALSE);
+				LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
 				cardSTATE = SIM_WORK;
 				break;
 			}
 			case SIM_HALTING: {
 				TransmitFor14443b_AsTag( encodedOK, encodedOKLen );
-				LogTrace(respOK, sizeof(respOK), 0, 0, NULL, FALSE);
+				LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
 				cardSTATE = SIM_HALTED;
 				break;
 			}
 			case SIM_ACKNOWLEDGE: {
 				TransmitFor14443b_AsTag( encodedOK, encodedOKLen );
-				LogTrace(respOK, sizeof(respOK), 0, 0, NULL, FALSE);
+				LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
 				cardSTATE = SIM_IDLE;			
 				break;
 			}
@@ -940,7 +940,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 			LED_C_OFF();
 			break;
 	}
-	return FALSE;
+	return false;
 }
 
 
@@ -949,7 +949,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
  *  quiet: set to 'TRUE' to disable debug output
  */
 static void GetTagSamplesFor14443bDemod() {
-	bool gotFrame = FALSE, finished = FALSE;
+	bool gotFrame = false, finished = false;
 	int lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
 	int ci = 0, cq = 0;
 	uint32_t time_0 = 0, time_stop = 0;
@@ -1016,10 +1016,10 @@ static void GetTagSamplesFor14443bDemod() {
 	
 	// print the last batch of IQ values from FPGA
 	if (MF_DBGLEVEL == 4)
-		Dbhexdump(ISO14443B_DMA_BUFFER_SIZE, (uint8_t *)dmaBuf, FALSE);	
+		Dbhexdump(ISO14443B_DMA_BUFFER_SIZE, (uint8_t *)dmaBuf, false);	
 	
 	if ( Demod.len > 0 )
-		LogTrace(Demod.output, Demod.len, time_0, time_stop, NULL, FALSE);
+		LogTrace(Demod.output, Demod.len, time_0, time_stop, NULL, false);
 }
 
 
@@ -1408,7 +1408,7 @@ void ReadSTMemoryIso14443b(uint8_t numofblocks)
 
 	if (Demod.len == 0) {
 		DbpString("No response from tag");
-		set_tracing(FALSE);	
+		set_tracing(false);	
 		return;
 	} else {
 		Dbprintf("Randomly generated Chip ID (+ 2 byte CRC): %02x %02x %02x",
@@ -1424,20 +1424,20 @@ void ReadSTMemoryIso14443b(uint8_t numofblocks)
 	GetTagSamplesFor14443bDemod(); //no
 	if (Demod.len != 3) {
 		Dbprintf("Expected 3 bytes from tag, got %d", Demod.len);
-		set_tracing(FALSE);	
+		set_tracing(false);	
 		return;
 	}
 	// Check the CRC of the answer:
 	ComputeCrc14443(CRC_14443_B, Demod.output, 1 , &cmd1[2], &cmd1[3]);
 	if(cmd1[2] != Demod.output[1] || cmd1[3] != Demod.output[2]) {
 		DbpString("CRC Error reading select response.");
-		set_tracing(FALSE);	
+		set_tracing(false);	
 		return;
 	}
 	// Check response from the tag: should be the same UID as the command we just sent:
 	if (cmd1[1] != Demod.output[0]) {
 		Dbprintf("Bad response to SELECT from Tag, aborting: %02x %02x", cmd1[1], Demod.output[0]);
-		set_tracing(FALSE);	
+		set_tracing(false);	
 		return;
 	}
 
@@ -1449,7 +1449,7 @@ void ReadSTMemoryIso14443b(uint8_t numofblocks)
 	GetTagSamplesFor14443bDemod(); //no
 	if (Demod.len != 10) {
 		Dbprintf("Expected 10 bytes from tag, got %d", Demod.len);
-		set_tracing(FALSE);	
+		set_tracing(false);	
 		return;
 	}
 	// The check the CRC of the answer (use cmd1 as temporary variable):
@@ -1499,7 +1499,7 @@ void ReadSTMemoryIso14443b(uint8_t numofblocks)
 		++i;
 	}
 	
-	set_tracing(FALSE);
+	set_tracing(false);
 }
 
 
@@ -1567,8 +1567,8 @@ void RAMFUNC SnoopIso14443b(void) {
 	// a good trigger condition to get started is probably when we see a
 	// response from the tag.
 	bool triggered = true;			// TODO: set and evaluate trigger condition		
-	bool TagIsActive = FALSE;
-	bool ReaderIsActive = FALSE;
+	bool TagIsActive = false;
+	bool ReaderIsActive = false;
 
 	iso1444b_setup_snoop();
 	
@@ -1660,7 +1660,7 @@ void RAMFUNC SnoopIso14443b(void) {
 				
 				time_stop = GetCountSspClk() - time_0;
 				
-				LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, FALSE);
+				LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, false);
 
 				triggered = true;
 
@@ -1761,7 +1761,7 @@ void SendRawCommand14443B_Ex(UsbCommand *c)
 	
 	// turn off trigger (LED_A)
 	if ((param & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER)
-		iso14b_set_trigger(FALSE);
+		iso14b_set_trigger(false);
 
 	// turn off antenna et al
 	// we don't send a HALT command.

@@ -98,7 +98,7 @@ static struct {
 static uint8_t apdu_lengths_replay[5];
 
 // type of card (ISO 14443 A or B)
-static char iso_type;
+static char iso_type = 0;
 
 //-----------------------------------------------------------------------------
 // Wrapper for sending APDUs to type A and B cards

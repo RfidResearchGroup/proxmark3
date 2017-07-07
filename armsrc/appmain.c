@@ -1325,22 +1325,28 @@ void UsbPacketReceived(uint8_t *packet, int len)
 
 		case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K: {
 			LED_B_ON();
-			uint8_t *BigBuf = BigBuf_get_addr();
+			uint8_t *mem = BigBuf_get_addr();
+			bool isok = false;
 			size_t len = 0;
-			size_t startidx = c->arg[0];
-			uint8_t isok = FALSE;
+			uint32_t startidx = c->arg[0];
+			uint32_t numofbytes = c->arg[1];
 			// arg0 = startindex
 			// arg1 = length bytes to transfer
-			// arg2 = RFU
-			//Dbprintf("transfer to client parameters: %" PRIu64 " | %" PRIu64 " | %" PRIu64, c->arg[0], c->arg[1], c->arg[2]);
+			// arg2 = BigBuf tracelen
+			//Dbprintf("transfer to client parameters: %" PRIu32 " | %" PRIu32 " | %" PRIu32, startidx, numofbytes, c->arg[2]);
 			
-			for(size_t i = 0; i < c->arg[1]; i += USB_CMD_DATA_SIZE) {
-				len = MIN( (c->arg[1] - i), USB_CMD_DATA_SIZE);
-				isok = cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), BigBuf + startidx + i, len);
+			for(size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
+				len = MIN( (numofbytes - i), USB_CMD_DATA_SIZE);
+				isok = cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
 				if (!isok) 
-					Dbprintf("transfer to client failed ::  | bytes %d", len);
+					Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
+			// iceman,  when did sending samplingconfig array got attached here?!?
+			// arg0 = status of download transfer
+			// arg1 = RFU
+			// arg2 = tracelen?
+			// asbytes = samplingconfig array
 			cmd_send(CMD_ACK, 1, 0, BigBuf_get_traceLen(), getSamplingConfig(), sizeof(sample_config));
 			LED_B_OFF();
 			break;
@@ -1354,21 +1360,33 @@ void UsbPacketReceived(uint8_t *packet, int len)
 				FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 			else 
 				FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-			uint8_t *b = BigBuf_get_addr();
-			memcpy( b + c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
+			
+			uint8_t *mem = BigBuf_get_addr();
+			memcpy( mem + c->arg[0], c->d.asBytes, USB_CMD_DATA_SIZE);
 			cmd_send(CMD_ACK,1,0,0,0,0);
 			break;
 		}
 		case CMD_DOWNLOAD_EML_BIGBUF: {
 			LED_B_ON();
-			uint8_t *cardmem = BigBuf_get_EM_addr();
+			uint8_t *mem = BigBuf_get_EM_addr();
+			bool isok = false;			
 			size_t len = 0;
-			for(size_t i=0; i < c->arg[1]; i += USB_CMD_DATA_SIZE) {
-				len = MIN((c->arg[1] - i), USB_CMD_DATA_SIZE);
-				cmd_send(CMD_DOWNLOADED_EML_BIGBUF, i, len, CARD_MEMORY_SIZE, cardmem + c->arg[0] + i, len);
+			uint32_t startidx = c->arg[0];
+			uint32_t numofbytes = c->arg[1];
+
+			// arg0 = startindex
+			// arg1 = length bytes to transfer
+			// arg2 = RFU
+			//Dbprintf("transfer to client parameters: %" PRIu32 " | %" PRIu32 " | %" PRIu32, startidx, numofbytes, c->arg[2]);
+
+			for(size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
+				len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
+				isok = cmd_send(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
+				if (!isok) 
+					Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
 			}
 			// Trigger a finish downloading signal with an ACK frame
-			cmd_send(CMD_ACK, 1, 0, CARD_MEMORY_SIZE, 0, 0);
+			cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
 			LED_B_OFF();
 			break;
 		}
