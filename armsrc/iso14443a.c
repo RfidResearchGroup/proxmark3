@@ -1,4 +1,4 @@
-  //-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Merlok - June 2011, 2012
 // Gerhard de Koning Gans - May 2008
 // Hagen Fritsch - June 2010
@@ -242,10 +242,8 @@ static RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 		// Sequence X followed by Sequence Y followed by Sequence Z     (111100x1 11111111 00x11111)
 		// we therefore look for a ...xx1111 11111111 00x11111xxxxxx... pattern 
 		// (12 '1's followed by 2 '0's, eventually followed by another '0', followed by 5 '1's)
-		//
-#define ISO14443A_STARTBIT_MASK		0x07FFEF80		// mask is    00001111 11111111 1110 1111 10000000
-#define ISO14443A_STARTBIT_PATTERN	0x07FF8F80		// pattern is 00001111 11111111 1000 1111 10000000
-
+		#define ISO14443A_STARTBIT_MASK		0x07FFEF80							// mask is    00000111 11111111 11101111 10000000
+		#define ISO14443A_STARTBIT_PATTERN	0x07FF8F80							// pattern is 00000111 11111111 10001111 10000000
 		if		((Uart.fourBits & (ISO14443A_STARTBIT_MASK >> 0)) == ISO14443A_STARTBIT_PATTERN >> 0) Uart.syncBit = 7;
 		else if ((Uart.fourBits & (ISO14443A_STARTBIT_MASK >> 1)) == ISO14443A_STARTBIT_PATTERN >> 1) Uart.syncBit = 6;
 		else if ((Uart.fourBits & (ISO14443A_STARTBIT_MASK >> 2)) == ISO14443A_STARTBIT_PATTERN >> 2) Uart.syncBit = 5;
@@ -714,7 +712,7 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *par
 	ToSend[++ToSendMax] = SEC_F;
 
 	// Convert from last byte pos to length
-	++ToSendMax;
+	ToSendMax++;
 }
 
 static void CodeIso14443aAsTag(const uint8_t *cmd, uint16_t len) {
@@ -1409,12 +1407,12 @@ void PrepareDelayedTransfer(uint16_t delay) {
 	uint8_t bits_shifted = 0;
 	uint16_t i = 0;
 
-	for (i = 0; i < delay; ++i)
+	for (i = 0; i < delay; i++)
 		bitmask |= (0x01 << i);
 
 	ToSend[ToSendMax++] = 0x00;
 
-	for (i = 0; i < ToSendMax; ++i) {
+	for (i = 0; i < ToSendMax; i++) {
 			bits_to_shift = ToSend[i] & bitmask;
 			ToSend[i] = ToSend[i] >> delay;
 			ToSend[i] = ToSend[i] | (bits_shifted << (8 - delay));
@@ -1432,6 +1430,7 @@ void PrepareDelayedTransfer(uint16_t delay) {
 // if != 0: delay transfer until time specified
 //-------------------------------------------------------------------------------------
 static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing) {
+
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 
 	uint32_t ThisTransferTime = 0;
@@ -1460,7 +1459,7 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 	for(;;) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
 			AT91C_BASE_SSC->SSC_THR = cmd[c];
-			++c;
+			c++;
 			if(c >= len)
 				break;
 		}
@@ -1770,9 +1769,9 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
 	for(;;) {
 		WDT_HIT();
 
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+		if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 			b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-			if(ManchesterDecoding(b, offset, 0)) {
+			if (ManchesterDecoding(b, offset, 0)) {
 				NextTransferTime = MAX(NextTransferTime, Demod.endTime - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER)/16 + FRAME_DELAY_TIME_PICC_TO_PCD);
 				return true;
 			} else if (c++ > iso14a_timeout && Demod.state == DEMOD_UNSYNCD) {
@@ -1829,14 +1828,14 @@ int ReaderReceive(uint8_t *receivedAnswer, uint8_t *parity) {
 // fills the card info record unless NULL
 // if anticollision is false, then the UID must be provided in uid_ptr[] 
 // and num_cascades must be set (1: 4 Byte UID, 2: 7 Byte UID, 3: 10 Byte UID)
-int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades) {
+int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades) {
 	uint8_t wupa[]       = { ISO14443A_CMD_WUPA };  // 0x26 - ISO14443A_CMD_REQA  0x52 - ISO14443A_CMD_WUPA
 	uint8_t sel_all[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT,0x20 };
 	uint8_t sel_uid[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT,0x70,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 	uint8_t rats[]       = { ISO14443A_CMD_RATS,0x80,0x00,0x00 }; // FSD=256, FSDI=8, CID=0
 	uint8_t resp[MAX_FRAME_SIZE] = {0}; // theoretically. A usual RATS will be much smaller
 	uint8_t resp_par[MAX_PARITY_SIZE] = {0};
-	byte_t uid_resp[4] = {0};
+	uint8_t uid_resp[4] = {0};
 	size_t uid_resp_len = 0;
 
 	uint8_t sak = 0x04; // cascade uid
@@ -1849,10 +1848,10 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 	// Receive the ATQA
 	if(!ReaderReceive(resp, resp_par)) return 0;
 
-	if(p_hi14a_card) {
-		memcpy(p_hi14a_card->atqa, resp, 2);
-		p_hi14a_card->uidlen = 0;
-		memset(p_hi14a_card->uid,0,10);
+	if(p_card) {
+		memcpy(p_card->atqa, resp, 2);
+		p_card->uidlen = 0;
+		memset(p_card->uid,0,10);
 	}
 
 	if (anticollision) {
@@ -1950,15 +1949,15 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 		if(uid_ptr && anticollision)
 			memcpy(uid_ptr + (cascade_level*3), uid_resp, uid_resp_len);
 
-		if(p_hi14a_card) {
-			memcpy(p_hi14a_card->uid + (cascade_level*3), uid_resp, uid_resp_len);
-			p_hi14a_card->uidlen += uid_resp_len;
+		if(p_card) {
+			memcpy(p_card->uid + (cascade_level*3), uid_resp, uid_resp_len);
+			p_card->uidlen += uid_resp_len;
 		}
 	}
 
-	if(p_hi14a_card) {
-		p_hi14a_card->sak = sak;
-		p_hi14a_card->ats_len = 0;
+	if(p_card) {
+		p_card->sak = sak;
+		p_card->ats_len = 0;
 	}
 
 	// non iso14443a compliant tag
@@ -1970,9 +1969,9 @@ int iso14443a_select_card(byte_t *uid_ptr, iso14a_card_select_t *p_hi14a_card, u
 
 	if (!(len = ReaderReceive(resp, resp_par))) return 0;
 	
-	if(p_hi14a_card) {
-		memcpy(p_hi14a_card->ats, resp, sizeof(p_hi14a_card->ats));
-		p_hi14a_card->ats_len = len;
+	if(p_card) {
+		memcpy(p_card->ats, resp, sizeof(p_card->ats));
+		p_card->ats_len = len;
 	}
 
 	// set default timeout based on ATS
@@ -2035,7 +2034,6 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, void *data) {
 	return len;
 }
 
-
 //-----------------------------------------------------------------------------
 // Read an ISO 14443a tag. Send out commands and store answers.
 //-----------------------------------------------------------------------------
@@ -2051,46 +2049,45 @@ void ReaderIso14443a(UsbCommand *c) {
 	uint32_t timeout = c->arg[2];
 	uint8_t *cmd = c->d.asBytes;
 	uint32_t arg0 = 0;
-	byte_t buf[USB_CMD_DATA_SIZE] = {0x00};
+	uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
 	uint8_t par[MAX_PARITY_SIZE] = {0x00};
   
-	if ((param & ISO14A_CONNECT) == ISO14A_CONNECT)
+	if ((param & ISO14A_CONNECT))
 		clear_trace();
 
 	set_tracing(true);
 
-	if ((param & ISO14A_REQUEST_TRIGGER) == ISO14A_REQUEST_TRIGGER)
-		iso14a_set_trigger(TRUE);
+	if ((param & ISO14A_REQUEST_TRIGGER))
+		iso14a_set_trigger(true);
 
-	if ((param & ISO14A_CONNECT) == ISO14A_CONNECT) {
-		
+	if ((param & ISO14A_CONNECT)) {
 		iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
 		// notify client selecting status.
 		// if failed selecting, turn off antenna and quite.
-		if((param & ISO14A_NO_SELECT) != ISO14A_NO_SELECT) {
+		if( !(param & ISO14A_NO_SELECT) ) {
 			iso14a_card_select_t *card = (iso14a_card_select_t*)buf;
 			arg0 = iso14443a_select_card(NULL, card, NULL, true, 0);
 			cmd_send(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));
-			if ( arg0 == 0 ) 
+			if ( arg0 == 0 )
 				goto OUT;
 		}
 	}
 
-	if ((param & ISO14A_SET_TIMEOUT) == ISO14A_SET_TIMEOUT)
+	if ((param & ISO14A_SET_TIMEOUT))
 		iso14a_set_timeout(timeout);
 
-	if ((param & ISO14A_APDU) == ISO14A_APDU) {
+	if ((param & ISO14A_APDU)) {
 		arg0 = iso14_apdu(cmd, len, buf);
 		cmd_send(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
 	}
 
-	if ((param & ISO14A_RAW) == ISO14A_RAW) {
-		
-		if ((param & ISO14A_APPEND_CRC) == ISO14A_APPEND_CRC) {
+	if ((param & ISO14A_RAW)) {
+	
+		if ((param & ISO14A_APPEND_CRC)) {
 			// Don't append crc on empty bytearray...
 			if ( len > 0 ) {
-				if ((param & ISO14A_TOPAZMODE) == ISO14A_TOPAZMODE)
+				if ((param & ISO14A_TOPAZMODE))
 					AppendCrc14443b(cmd, len);
 				else
 					AppendCrc14443a(cmd, len);
@@ -2101,7 +2098,7 @@ void ReaderIso14443a(UsbCommand *c) {
 		}
 		
 		if (lenbits > 0) {				// want to send a specific number of bits (e.g. short commands)
-			if ((param & ISO14A_TOPAZMODE) == ISO14A_TOPAZMODE) {
+			if ((param & ISO14A_TOPAZMODE)) {
 				int bits_to_send = lenbits;
 				uint16_t i = 0;
 				ReaderTransmitBitsPar(&cmd[i++], MIN(bits_to_send, 7), NULL, NULL);		// first byte is always short (7bits) and no parity
@@ -2115,7 +2112,7 @@ void ReaderIso14443a(UsbCommand *c) {
 				ReaderTransmitBitsPar(cmd, lenbits, par, NULL);							// bytes are 8 bit with odd parity
 			}
 		} else {					// want to send complete bytes only
-			if ((param & ISO14A_TOPAZMODE) == ISO14A_TOPAZMODE) {
+			if ((param & ISO14A_TOPAZMODE)) {
 				uint16_t i = 0;
 				ReaderTransmitBitsPar(&cmd[i++], 7, NULL, NULL);						// first byte: 7 bits, no paritiy
 				while (i < len) {
@@ -2129,14 +2126,15 @@ void ReaderIso14443a(UsbCommand *c) {
 		cmd_send(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
 	}
 
-	if ((param & ISO14A_REQUEST_TRIGGER) == ISO14A_REQUEST_TRIGGER)
+	if ((param & ISO14A_REQUEST_TRIGGER))
 		iso14a_set_trigger(false);
 
-	if ((param & ISO14A_NO_DISCONNECT) == ISO14A_NO_DISCONNECT)
+	if ((param & ISO14A_NO_DISCONNECT))
 		return;
 
 OUT:	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+	SpinDelay(200);
 	set_tracing(false);
 	LEDsoff();
 }
@@ -2192,7 +2190,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype ) {
 	uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
 	uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 	uint8_t par[1] = {0};	// maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
-	byte_t nt_diff = 0;
+	uint8_t nt_diff = 0;
 	uint32_t nt = 0;
 	uint32_t previous_nt = 0;	
 	uint32_t cuid = 0;

@@ -28,6 +28,7 @@ void FpgaSetupSsc(void);
 void SetupSpi(int mode);
 bool FpgaSetupSscDma(uint8_t *buf, int len);
 void Fpga_print_status();
+int FpgaGetCurrent();
 #define FpgaDisableSscDma(void)	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 #define FpgaEnableSscDma(void) AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
 void SetAdcMuxFor(uint32_t whichGpio);
@@ -66,7 +67,6 @@ void SetAdcMuxFor(uint32_t whichGpio);
 // Options for the HF reader, correlating against rx from tag
 #define FPGA_HF_READER_RX_XCORR_848_KHZ				(1<<0)
 #define FPGA_HF_READER_RX_XCORR_SNOOP				(1<<1)
-#define FPGA_HF_READER_RX_XCORR_QUARTER_FREQ		(1<<2)
 // Options for the HF simulated tag, how to modulate
 #define FPGA_HF_SIMULATOR_NO_MODULATION				(0<<0) // 0000
 #define FPGA_HF_SIMULATOR_MODULATE_BPSK				(1<<0) // 0001

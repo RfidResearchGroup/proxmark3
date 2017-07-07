@@ -143,7 +143,7 @@ void FpgaSetupSscExt(uint8_t clearPCER) {
 	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_RXEN | AT91C_SSC_TXEN;
 }
 void FpgaSetupSsc(void) {
-	FpgaSetupSscExt(TRUE);
+	FpgaSetupSscExt(true);
 }
 //-----------------------------------------------------------------------------
 // Set up DMA to receive samples from the FPGA. We will use the PDC, with
@@ -183,7 +183,7 @@ static int get_from_fpga_combined_stream(z_streamp compressed_fpga_stream, uint8
 			return res;
 	}
 
-	++uncompressed_bytes_cnt;
+	uncompressed_bytes_cnt++;
 
 	return *fpga_image_ptr++;
 }
@@ -547,10 +547,15 @@ void SetAdcMuxFor(uint32_t whichGpio)
 	HIGH(whichGpio);
 }
 
-void Fpga_print_status(void)
-{
+void Fpga_print_status(void) {
 	Dbprintf("Fgpa");
-	if(downloaded_bitstream == FPGA_BITSTREAM_HF) Dbprintf("  mode.............HF");
-	else if(downloaded_bitstream == FPGA_BITSTREAM_LF) Dbprintf("  mode.............LF");
-	else Dbprintf("  mode.............%d", downloaded_bitstream);
+	switch(downloaded_bitstream) {
+		case FPGA_BITSTREAM_HF: Dbprintf("  mode....................HF"); break;
+		case FPGA_BITSTREAM_LF: Dbprintf("  mode....................LF"); break;
+		default:		Dbprintf("  mode....................%d", downloaded_bitstream); break;
+	}
+}
+
+int FpgaGetCurrent() {
+	return downloaded_bitstream;
 }

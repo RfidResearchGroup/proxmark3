@@ -196,7 +196,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 	}
 	traceLen += num_paritybytes;
 
-	return TRUE;
+	return true;
 }
 
 
@@ -239,7 +239,7 @@ int LogTraceHitag(const uint8_t * btBytes, int iBits, int iSamples, uint32_t dwP
 	memcpy(trace + traceLen, btBytes, iLen);
 	traceLen += iLen;
 
-	return TRUE;
+	return true;
 }
 
 

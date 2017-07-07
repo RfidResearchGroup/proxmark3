@@ -173,7 +173,7 @@ int usage_hf_iclass_managekeys(void) {
 	return 0;
 }
 int usage_hf_iclass_reader(void) {
-	PrintAndLog("HELP :  Act as a Iclass reader:\n");
+	PrintAndLog("HELP :  Act as a Iclass reader.  Look for iClass tags until a key or the pm3 button is pressed\n");
 	PrintAndLog("Usage:  hf iclass reader [h] [1]\n");
 	PrintAndLog("Options:");
 	PrintAndLog("    h   This help text");
@@ -314,12 +314,11 @@ int CmdHFiClassSim(const char *Cmd) {
 
 int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 	bool tagFound = false;
-	UsbCommand c = {CMD_READER_ICLASS, {FLAG_ICLASS_READER_CSN |
-					FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_AA}};
+	UsbCommand c = {CMD_READER_ICLASS, {FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_AA}};
 	// loop in client not device - else on windows have a communication error
 	c.arg[0] |= FLAG_ICLASS_READER_ONLY_ONCE | FLAG_ICLASS_READER_ONE_TRY;
 	UsbCommand resp;
-	while(!ukbhit()){
+	while (!ukbhit()){
 		clearCommandBuffer();
 		SendCommand(&c);
 		if (WaitForResponseTimeout(CMD_ACK,&resp, 4500)) {
@@ -327,8 +326,9 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 			uint8_t *data = resp.d.asBytes;
 
 			if (verbose) PrintAndLog("Readstatus:%02x", readStatus);
-			if( readStatus == 0){
-				//Aborted
+			// no tag found or button pressed
+			if( (readStatus == 0 && !loop) || readStatus == 0xFF) {
+				// abort
 				if (verbose) PrintAndLog("Quitting...");
 				return 0;
 			}
@@ -1692,7 +1692,7 @@ static command_t CommandTable[] = {
 	{"loclass",     CmdHFiClass_loclass,        	1,	"[options..] Use loclass to perform bruteforce of reader attack dump"},
 	{"managekeys",  CmdHFiClassManageKeys,      	1,	"[options..] Manage the keys to use with iClass"},
 	{"readblk",     CmdHFiClass_ReadBlock,      	0,	"[options..] Authenticate and Read iClass block"},
-	{"reader",		CmdHFiClassReader,				0,	"Read an iClass tag"},
+	{"reader",		CmdHFiClassReader,				0,	"Act like an iClass reader"},
 	{"readtagfile", CmdHFiClassReadTagFile,     	1,	"[options..] Display Content from tagfile"},
 	{"replay",      CmdHFiClassReader_Replay,   	0,	"<mac>       Read an iClass tag via Reply Attack"},
 	{"sim",         CmdHFiClassSim,             	0,	"[options..] Simulate iClass tag"},

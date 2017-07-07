@@ -17,6 +17,8 @@
 
 #ifdef _WIN32
 # define unlink(x)
+#else
+# include <unistd.h>
 #endif
 
 static serial_port sp;

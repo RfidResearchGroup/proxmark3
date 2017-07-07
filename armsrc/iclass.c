@@ -45,6 +45,7 @@
 #include "iso15693tools.h"
 #include "protocols.h"
 #include "optimized_cipher.h"
+#include "usb_cdc.h" // for usb_poll_validate_length
 
 static int timeout = 4096;
 
@@ -95,7 +96,7 @@ static RAMFUNC int OutOfNDecoding(int bit)
 		Uart.output[Uart.byteCnt] = Uart.bitBuffer & 0xFF;
 		Uart.byteCnt++;
 		Uart.swapper = 0;
-		if(Uart.byteCnt > 15) { return TRUE; }
+		if(Uart.byteCnt > 15) { return true; }
 	}
 	else {
 		Uart.swapper = 1;
@@ -137,7 +138,7 @@ static RAMFUNC int OutOfNDecoding(int bit)
 						Uart.byteCnt++;
 					}
 					else {
-						return TRUE;
+						return true;
 					}
 				}
 				else if(Uart.state != STATE_START_OF_COMMUNICATION) {
@@ -256,7 +257,7 @@ static RAMFUNC int OutOfNDecoding(int bit)
 				Uart.byteCnt++;
 				Uart.output[Uart.byteCnt] = 0xAA;
 				Uart.byteCnt++;
-				return TRUE;
+				return true;
 			}*/
 		}
 
@@ -468,7 +469,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 					Demod.len++;
 					Demod.state = DEMOD_UNSYNCD;
 //					error = 0x0f;
-					return TRUE;
+					return true;
 				}
 				else {
 					Demod.state = DEMOD_ERROR_WAIT;
@@ -552,7 +553,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 						}
 
 						Demod.state = DEMOD_UNSYNCD;
-						return TRUE;
+						return true;
 					}
 					else {
 						Demod.output[Demod.len] = 0xad;
@@ -607,7 +608,7 @@ static RAMFUNC int ManchesterDecoding(int v)
 				Demod.len++;
 				Demod.output[Demod.len] = 0xBB;
 				Demod.len++;
-				return TRUE;
+				return true;
 			}
 
 		}
@@ -650,7 +651,7 @@ void RAMFUNC SnoopIClass(void)
     uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
  
 	clear_trace();
-	set_tracing(TRUE);
+	set_tracing(true);
 	
     iso14a_set_trigger(FALSE);
 
@@ -747,12 +748,12 @@ void RAMFUNC SnoopIClass(void)
 				time_stop = (GetCountSspClk()-time_0) << 4;
 				LED_C_ON();
 
-				//if(!LogTrace(Uart.output,Uart.byteCnt, rsamples, Uart.parityBits,TRUE)) break;
-				//if(!LogTrace(NULL, 0, Uart.endTime*16 - DELAY_READER_AIR2ARM_AS_SNIFFER, 0, TRUE)) break;
+				//if(!LogTrace(Uart.output,Uart.byteCnt, rsamples, Uart.parityBits,true)) break;
+				//if(!LogTrace(NULL, 0, Uart.endTime*16 - DELAY_READER_AIR2ARM_AS_SNIFFER, 0, true)) break;
 				if(tracing)	{
 					uint8_t parity[MAX_PARITY_SIZE];
 					GetParity(Uart.output, Uart.byteCnt, parity);
-					LogTrace(Uart.output,Uart.byteCnt, time_start, time_stop, parity, TRUE);
+					LogTrace(Uart.output,Uart.byteCnt, time_start, time_stop, parity, true);
 				}
 
 				/* And ready to receive another command. */
@@ -851,7 +852,7 @@ static int GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen)
 
 			if(OutOfNDecoding(b & 0x0f)) {
 				*len = Uart.byteCnt;
-				return TRUE;
+				return true;
 			}
         }
     }
@@ -987,7 +988,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 
 	// Enable and clear the trace
 	clear_trace();
-	set_tracing(TRUE);
+	set_tracing(true);
 
 	//Use the emulator memory for SIM
 	uint8_t *emulator = BigBuf_get_EM_addr();
@@ -1320,7 +1321,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 		if (tracing) {
 			uint8_t parity[MAX_PARITY_SIZE];
 			GetParity(receivedCmd, len, parity);
-			LogTrace(receivedCmd,len, (r2t_time-time_0)<< 4, (r2t_time-time_0) << 4, parity, TRUE);
+			LogTrace(receivedCmd,len, (r2t_time-time_0)<< 4, (r2t_time-time_0) << 4, parity, true);
 
 			if (trace_data != NULL) {
 				GetParity(trace_data, trace_data_size, parity);
@@ -1408,7 +1409,7 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
 
 
 	uint8_t sendbyte;
-	bool firstpart = TRUE;
+	bool firstpart = true;
 	c = 0;
 	for(;;) {
 		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
@@ -1500,7 +1501,7 @@ void ReaderTransmitIClass(uint8_t* frame, int len)
 	if (tracing) {
 		uint8_t par[MAX_PARITY_SIZE];
 		GetParity(frame, len, par);
-		LogTrace(frame, len, rsamples, rsamples, par, TRUE);
+		LogTrace(frame, len, rsamples, rsamples, par, true);
 	}
 }
 
@@ -1552,7 +1553,7 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
 		
 			if(ManchesterDecoding(b & 0x0f)) {
 				*samples = c << 3;
-				return  TRUE;
+				return  true;
 			}
 		}
 	}
@@ -1577,7 +1578,7 @@ void setupIclassReader()
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     // Reset trace buffer
 	clear_trace();
-	set_tracing(TRUE);
+	set_tracing(true);
 	
     // Setup SSC
     FpgaSetupSsc();
@@ -1675,34 +1676,37 @@ uint8_t handshakeIclassTag(uint8_t *card_data){
 // Reader iClass Anticollission
 void ReaderIClass(uint8_t arg0) {
 
-	uint8_t card_data[6 * 8]={0};
+	uint8_t card_data[6 * 8] = {0};
 	memset(card_data, 0xFF, sizeof(card_data));
-    uint8_t last_csn[8]={0};
+    uint8_t last_csn[8] = {0};
 	
 	//Read conf block CRC(0x01) => 0xfa 0x22
-	uint8_t readConf[] = { ICLASS_CMD_READ_OR_IDENTIFY,0x01, 0xfa, 0x22};
+	uint8_t readConf[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x01, 0xfa, 0x22};
 	//Read conf block CRC(0x05) => 0xde  0x64
-	uint8_t readAA[] = { ICLASS_CMD_READ_OR_IDENTIFY,0x05, 0xde, 0x64};
-
+	uint8_t readAA[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
 
     int read_status= 0;
 	uint8_t result_status = 0;
     bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;
 	bool try_once = arg0 & FLAG_ICLASS_READER_ONE_TRY;
 	bool use_credit_key = false;
-	if (arg0 & FLAG_ICLASS_READER_CEDITKEY)
+	uint16_t tryCnt = 0;
+	
+	if ((arg0 & FLAG_ICLASS_READER_CEDITKEY) == FLAG_ICLASS_READER_CEDITKEY)
 		use_credit_key = true;
-	set_tracing(TRUE);
+	
+	set_tracing(true);
+	
     setupIclassReader();
 
-	uint16_t tryCnt=0;
-    while(!BUTTON_PRESS())
-    {
-		if (try_once && tryCnt > 5) break; 
+	bool userCancelled = BUTTON_PRESS() || usb_poll_validate_length();
+	while (!userCancelled) {
+		// if only looking for one card try 2 times if we missed it the first time
+		if (try_once && tryCnt > 2) break; 
 		
 		tryCnt++;
 		
-		if(!tracing) {
+		if (!tracing) {
 			DbpString("Trace full");
 			break;
 		}
@@ -1710,19 +1714,17 @@ void ReaderIClass(uint8_t arg0) {
 
 		read_status = handshakeIclassTag_ext(card_data, use_credit_key);
 
-		if(read_status == 0) continue;
-		if(read_status == 1) result_status = FLAG_ICLASS_READER_CSN;
-		if(read_status == 2) result_status = FLAG_ICLASS_READER_CSN|FLAG_ICLASS_READER_CC;
+		if (read_status == 0) continue;
+		if (read_status == 1) result_status = FLAG_ICLASS_READER_CSN;
+		if (read_status == 2) result_status = FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CC;
 
 		// handshakeIclass returns CSN|CC, but the actual block
 		// layout is CSN|CONFIG|CC, so here we reorder the data,
 		// moving CC forward 8 bytes
-		memcpy(card_data+16,card_data+8, 8);
+		memcpy(card_data+16, card_data+8, 8);
 		//Read block 1, config
-		if(arg0 & FLAG_ICLASS_READER_CONF)
-		{
-			if(sendCmdGetResponseWithRetries(readConf, sizeof(readConf),card_data+8, 10, 10))
-			{
+		if ( (arg0 & FLAG_ICLASS_READER_CONF) == FLAG_ICLASS_READER_CONF ) {
+			if (sendCmdGetResponseWithRetries(readConf, sizeof(readConf), card_data+8, 10, 10)) {
 				result_status |= FLAG_ICLASS_READER_CONF;
 			} else {
 				Dbprintf("Failed to dump config block");
@@ -1730,9 +1732,8 @@ void ReaderIClass(uint8_t arg0) {
 		}
 
 		//Read block 5, AA
-		if(arg0 & FLAG_ICLASS_READER_AA){
-			if(sendCmdGetResponseWithRetries(readAA, sizeof(readAA),card_data+(8*4), 10, 10))
-			{
+		if ( (arg0 & FLAG_ICLASS_READER_AA) == FLAG_ICLASS_READER_AA ) {
+			if (sendCmdGetResponseWithRetries(readAA, sizeof(readAA), card_data+(8*5), 10, 10)) {
 				result_status |= FLAG_ICLASS_READER_AA;
 			} else {
 				//Dbprintf("Failed to dump AA block");
@@ -1748,16 +1749,16 @@ void ReaderIClass(uint8_t arg0) {
 		//Then we can 'ship' back the 8 * 5 bytes of data,
 		// with 0xFF:s in block 3 and 4.
 
-                    LED_B_ON();
-                    //Send back to client, but don't bother if we already sent this
-                    if(memcmp(last_csn, card_data, 8) != 0)
-		{
+		LED_B_ON();
+		//Send back to client, but don't bother if we already sent this
+		if(memcmp(last_csn, card_data, 8) != 0)	{
 			// If caller requires that we get CC, continue until we got it
+			//  only useful if looping in arm (not try_once && not abort_after_read)			
 			if( (arg0 & read_status & FLAG_ICLASS_READER_CC) || !(arg0 & FLAG_ICLASS_READER_CC))
 			{
-				cmd_send(CMD_ACK,result_status,0,0,card_data,sizeof(card_data));
-				if(abort_after_read) {
-					LED_A_OFF();
+				cmd_send(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data) );
+				if (abort_after_read) {
+					LEDsoff();
 					set_tracing(FALSE);	
 					return;
 				}
@@ -1766,9 +1767,15 @@ void ReaderIClass(uint8_t arg0) {
 			}
 		}
 		LED_B_OFF();
-    }
-    cmd_send(CMD_ACK,0,0,0,card_data, 0);
-    LED_A_OFF();
+		userCancelled = BUTTON_PRESS() || usb_poll_validate_length();
+	}
+	
+	if (userCancelled)
+		cmd_send(CMD_ACK, 0xFF, 0, 0, card_data, 0);
+	else
+		cmd_send(CMD_ACK, 0, 0, 0, card_data, 0);		
+    
+    LEDsoff();
 	set_tracing(FALSE);		
 }
 
@@ -1803,7 +1810,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *MAC) {
 	uint8_t resp[ICLASS_BUFFER_SIZE];
 	
     setupIclassReader();
-	set_tracing(TRUE);
+	set_tracing(true);
 
 	while(!BUTTON_PRESS()) {
 	

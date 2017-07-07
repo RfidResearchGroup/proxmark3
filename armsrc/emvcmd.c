@@ -458,7 +458,7 @@ void EMVTransaction()
     //setup stuff
 	BigBuf_free(); BigBuf_Clear_ext(false);
     clear_trace();
-    set_tracing(TRUE);
+    set_tracing(true);
  
     
     uint8_t *resp  = BigBuf_malloc(256);
@@ -777,7 +777,7 @@ void SimulateEMVcard()
     BigBuf_malloc((allocatedtaglen*8) +(allocatedtaglen) + (TAG_RESPONSE_COUNT * 3));
     // clear trace
 	clear_trace();
-	set_tracing(TRUE);
+	set_tracing(true);
 
 	// Prepare the responses of the anticollision phase
 	// there will be not enough time to do this at the moment the reader sends it REQA
@@ -854,7 +854,7 @@ void SimulateEMVcard()
 		    //we're an EMV card - so no read commands	
             p_response = NULL;
 		} else if(receivedCmd[0] == 0x50) {	// Received a HALT
-			LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
+			LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
 			p_response = NULL;
 			order = HLTA;
 		} else if(receivedCmd[0] == 0x60 || receivedCmd[0] == 0x61) {	// Received an authentication request
@@ -865,7 +865,7 @@ void SimulateEMVcard()
 			p_response = &responses[ATS];
 			order = RATS;
 		} else if (order == AUTH && len == 8) { // Received {nr] and {ar} (part of authentication)
-			LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
+			LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
 			uint32_t nr = bytes_to_num(receivedCmd,4);
 			uint32_t ar = bytes_to_num(receivedCmd+4,4);
 			Dbprintf("Auth attempt {nr}{ar}: %08x %08x",nr,ar);
@@ -935,7 +935,7 @@ void SimulateEMVcard()
                 
 				default: {
 					// Never seen this command before
-					LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
+					LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
 					Dbprintf("Received unknown command (len=%d):",len);
 					Dbhexdump(len,receivedCmd,false);
 					// Do not respond
@@ -952,12 +952,12 @@ void SimulateEMVcard()
 				dynamic_response_info.response_n += 2;
                 if(dynamic_response_info.response_n > readerPacketLen){ //throw error if our reader doesn't support the send packet length
                     Dbprintf("Error: tag response is longer then what the reader supports, TODO:implement command chaining");
-					LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
+					LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
 					break;
                 }
 				if (prepare_tag_modulation(&dynamic_response_info,DYNAMIC_MODULATION_BUFFER_SIZE) == false) {
 					Dbprintf("Error preparing tag response");
-					LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, TRUE);
+					LogTrace(receivedCmd, Uart.len, Uart.startTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime*16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
 					break;
 				}
 				p_response = &dynamic_response_info;

@@ -35,6 +35,7 @@
 #include "cmdhfmfu.h"
 #include "cmdhf.h"
 #include "protocols.h"	// picopass structs,
+#include "usb_cdc.h" // for usb_poll_validate_length
 
 int CmdHFiClass(const char *Cmd);
 

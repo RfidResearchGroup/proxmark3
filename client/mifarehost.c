@@ -702,3 +702,15 @@ bool detect_classic_prng(){
 	uint32_t nonce = bytes_to_num(respA.d.asBytes, respA.arg[0]);
 	return validate_prng_nonce(nonce);
 }
+/* Detect Mifare Classic NACK bug 
+*  
+*/
+bool detect_classic_nackbug(){
+	
+	// get nonce?
+	
+	// loop max 256 times, 
+	// fixed nonce, different parity every call
+	
+	return false;
+}

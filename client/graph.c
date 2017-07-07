@@ -274,7 +274,7 @@ bool graphJustNoise(int *BitStream, int size)
 {
 	//might not be high enough for noisy environments
 	#define THRESHOLD 15; 
-	bool isNoise = TRUE;
+	bool isNoise = true;
 	for(int i=0; i < size && isNoise; i++){
 		isNoise = BitStream[i] < THRESHOLD;
 	}

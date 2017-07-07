@@ -93,7 +93,7 @@ static void print_crc(crc_t *crc) {
 // width=8  poly=0x31  init=0x00  refin=true  refout=true  xorout=0x00  check=0xA1  name="CRC-8/MAXIM"
 uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
 	crc_t crc;
-	crc_init_ref(&crc, 8, 0x31, 0, 0, TRUE, TRUE);	
+	crc_init_ref(&crc, 8, 0x31, 0, 0, true, true);	
 	for ( int i=0; i < size; ++i)
 		crc_update2(&crc, buff[i], 8);
 	return crc_finish(&crc);
@@ -102,7 +102,7 @@ uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
 // width=4  poly=0xC, reversed poly=0x7  init=0x5   refin=true  refout=true  xorout=0x0000  check=  name="CRC-4/LEGIC"
 uint32_t CRC4Legic(uint8_t *cmd, size_t size) {
  	crc_t crc;
- 	crc_init_ref(&crc, 4, 0x19 >> 1, 0x5, 0, TRUE, TRUE);
+ 	crc_init_ref(&crc, 4, 0x19 >> 1, 0x5, 0, true, true);
 	crc_update2(&crc, 1, 1); /* CMD_READ */
 	crc_update2(&crc, cmd[0], 8);
 	crc_update2(&crc, cmd[1], 8);
@@ -112,7 +112,7 @@ uint32_t CRC4Legic(uint8_t *cmd, size_t size) {
 // the CRC needs to be reversed before returned.
 uint32_t CRC8Legic(uint8_t *buff, size_t size) {
 	crc_t crc;
-	crc_init_ref(&crc, 8, 0x63, 0x55, 0, TRUE, TRUE);
+	crc_init_ref(&crc, 8, 0x63, 0x55, 0, true, true);
 	for ( int i = 0; i < size; ++i)
 		crc_update2(&crc, buff[i], 8);
 	return reflect(crc_finish(&crc), 8);
@@ -127,7 +127,7 @@ uint32_t CRC16Legic(uint8_t *buff, size_t size, uint8_t uidcrc) {
 	//uint16_t initial = uidcrc;
 	initial |= initial << 8;
 	crc_t crc;
-	crc_init_ref(&crc, 16, CRC16_POLY_LEGIC, initial, 0, TRUE, TRUE);
+	crc_init_ref(&crc, 16, CRC16_POLY_LEGIC, initial, 0, true, true);
 	for ( int i=0; i < size; ++i)
 		crc_update(&crc, buff[i], 8);
 	return reflect(crc_finish(&crc), 16);
@@ -136,7 +136,7 @@ uint32_t CRC16Legic(uint8_t *buff, size_t size, uint8_t uidcrc) {
 //w=16  poly=0x3d65  init=0x0000  refin=true  refout=true  xorout=0xffff  check=0xea82  name="CRC-16/DNP"
 uint32_t CRC16_DNP(uint8_t *buff, size_t size) {
 	crc_t crc;
-	crc_init_ref(&crc, 16, 0x3d65, 0, 0xffff, TRUE, TRUE);
+	crc_init_ref(&crc, 16, 0x3d65, 0, 0xffff, true, true);
 	for ( int i=0; i < size; ++i)
 		crc_update2(&crc, buff[i], 8);
 	

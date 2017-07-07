@@ -420,7 +420,7 @@ static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
 					LED_A_OFF(); // Finished receiving
 					Uart.state = STATE_UNSYNCD;
 					if (Uart.byteCnt != 0)
-						return TRUE;
+						return true;
 					
 				} else {
 					// this is an error
@@ -479,7 +479,7 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
 			for ( mask = 0x80; mask != 0; mask >>= 1) {
 				if ( Handle14443bReaderUartBit(b & mask)) {
 					*len = Uart.byteCnt;
-					return TRUE;
+					return true;
 				}
 			}
 		}
@@ -564,7 +564,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
 	BigBuf_free();
 	BigBuf_Clear_ext(false);
 	clear_trace(); //sim
-	set_tracing(TRUE);
+	set_tracing(true);
 	
 	// connect Demodulated Signal to ADC:
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -643,7 +643,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
 		if (len == 5 ) {
 				if ( (receivedCmd[0] == ISO14443B_REQB && (receivedCmd[2] & 0x8)== 0x8 && cardSTATE == SIM_HALTED) ||
             	      receivedCmd[0] == ISO14443B_REQB ){
-				LogTrace(receivedCmd, len, 0, 0, NULL, TRUE);						  
+				LogTrace(receivedCmd, len, 0, 0, NULL, true);						  
 				cardSTATE = SIM_SELECTING;
 			}
 		}
@@ -662,7 +662,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
 			//case SIM_NOFIELD:
 			case SIM_HALTED:
 			case SIM_IDLE: {
-				LogTrace(receivedCmd, len, 0, 0, NULL, TRUE);	
+				LogTrace(receivedCmd, len, 0, 0, NULL, true);	
 				break;
 			}
 			case SIM_SELECTING: {
@@ -928,7 +928,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 						LED_C_OFF();
 						
 						// This is EOF (start, stop and all data bits == '0'
-						if (s == 0) return TRUE;
+						if (s == 0) return true;
 					}
 				}
 				Demod.posCount = 0;
@@ -1168,7 +1168,7 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len) {
 
 	if(trigger) LED_A_ON();
 
-	LogTrace(cmd, len, time_start, GetCountSspClk()-time_start, NULL, TRUE);
+	LogTrace(cmd, len, time_start, GetCountSspClk()-time_start, NULL, true);
 }
 
 /* Sends an APDU to the tag
@@ -1388,7 +1388,7 @@ void ReadSTMemoryIso14443b(uint8_t numofblocks)
 	// confusing things will happen if we don't reset them between reads.
 	switch_off();  // before ReadStMemory
 
-	set_tracing(TRUE);
+	set_tracing(true);
 
 	uint8_t i = 0x00;
 
@@ -1510,7 +1510,7 @@ static void iso1444b_setup_snoop(void){
 	BigBuf_free();
 	BigBuf_Clear_ext(false); 
 	clear_trace();//setup snoop
-	set_tracing(TRUE);
+	set_tracing(true);
 
 	// Initialize Demod and Uart structs
 	DemodInit(BigBuf_malloc(MAX_FRAME_SIZE));
@@ -1566,7 +1566,7 @@ void RAMFUNC SnoopIso14443b(void) {
 	// We won't start recording the frames that we acquire until we trigger;
 	// a good trigger condition to get started is probably when we see a
 	// response from the tag.
-	bool triggered = TRUE;			// TODO: set and evaluate trigger condition		
+	bool triggered = true;			// TODO: set and evaluate trigger condition		
 	bool TagIsActive = FALSE;
 	bool ReaderIsActive = FALSE;
 
@@ -1622,7 +1622,7 @@ void RAMFUNC SnoopIso14443b(void) {
 				time_stop = GetCountSspClk() - time_0;
 				
 				if (triggered)
-					LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, TRUE);
+					LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
 
 				/* And ready to receive another command. */
 				UartReset();
@@ -1638,7 +1638,7 @@ void RAMFUNC SnoopIso14443b(void) {
 				time_stop = GetCountSspClk() - time_0;
 				
 				if (triggered)
-					LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, TRUE);
+					LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
 
 				/* And ready to receive another command. */
 				UartReset();
@@ -1662,7 +1662,7 @@ void RAMFUNC SnoopIso14443b(void) {
 				
 				LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, FALSE);
 
-				triggered = TRUE;
+				triggered = true;
 
 				// And ready to receive another response.
 				DemodReset();
@@ -1713,7 +1713,7 @@ void SendRawCommand14443B_Ex(UsbCommand *c)
 	
 	// turn on trigger (LED_A)
 	if ((param & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER)
-		iso14b_set_trigger(TRUE);
+		iso14b_set_trigger(true);
 	
 	if ((param & ISO14B_CONNECT) == ISO14B_CONNECT) {
 		// Make sure that we start from off, since the tags are stateful;
@@ -1722,7 +1722,7 @@ void SendRawCommand14443B_Ex(UsbCommand *c)
 		iso14443b_setup();
 	}
 	
-	set_tracing(TRUE);
+	set_tracing(true);
 
 	if ((param & ISO14B_SELECT_STD) == ISO14B_SELECT_STD) {
 		iso14b_card_select_t *card = (iso14b_card_select_t*)buf;
