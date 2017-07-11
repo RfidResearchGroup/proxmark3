@@ -953,7 +953,6 @@ int CmdT55xxWriteBlock(const char *Cmd) {
 	bool usepwd = false;
 	bool page1 = false;	
 	bool gotdata = false;
-	bool testMode = false;
 	bool errors = false;
 	uint8_t cmdp = 0;
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
