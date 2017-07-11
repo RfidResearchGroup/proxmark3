@@ -229,7 +229,8 @@ void MeasureAntennaTuning(void) {
   
   	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-		
+	SpinDelay(50);
+	
 	for  (i = 255; i >= 19; i--) {
 		WDT_HIT();
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);

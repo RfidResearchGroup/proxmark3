@@ -41,7 +41,7 @@ void HfSnoop(int samplesToSkip, int triggersToSkip)
 	// connect Demodulated Signal to ADC:
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SNOOP);
-	SpinDelay(100);
+	SpinDelay(50);
 	
 	AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(16); // Setting Frame Mode For better performance on high speed data transfer.
 

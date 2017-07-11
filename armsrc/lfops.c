@@ -400,9 +400,9 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	int i = 0;
 	uint8_t *buf = BigBuf_get_addr();
 
-	//FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
-
+	SpinDelay(20);
+	
 	// set frequency,  get values from 'lf config' command
 	sample_config *sc = getSamplingConfig();
 

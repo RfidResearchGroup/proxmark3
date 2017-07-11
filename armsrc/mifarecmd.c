@@ -985,7 +985,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 	
 	set_tracing(true);
 	
-	for (i = 0; i < keyCount; ++i) {
+	for (i = 0; i < keyCount; i++) {
 
 		//mifare_classic_halt(pcs, cuid);
 
@@ -993,7 +993,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 		if (!have_uid) { // need a full select cycle to get the uid first
 			iso14a_card_select_t card_info;		
 			if(!iso14443a_select_card(uid, &card_info, &cuid, true, 0)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (ALL)");
+				//if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (ALL)");
 				--i; // try same key once again
 				continue;
 			}
@@ -1006,7 +1006,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 			have_uid = true;	
 		} else { // no need for anticollision. We can directly select the card
 			if(!iso14443a_select_card(uid, NULL, NULL, false, cascade_levels)) {
-				if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (UID)");
+				//if (MF_DBGLEVEL >= 1)	Dbprintf("ChkKeys: Can't select card (UID)");
 				--i; // try same key once again
 				continue;
 			}

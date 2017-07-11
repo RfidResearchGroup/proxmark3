@@ -390,7 +390,7 @@ void SendCmdPCF7931(uint32_t * tab){
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU );
-
+	
 	LED_A_ON();
 
 	// steal this pin from the SSP and use it to control the modulation

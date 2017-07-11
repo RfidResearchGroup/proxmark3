@@ -1026,6 +1026,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, byte_t* data) {
 // and analog mux selection.
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+	SpinDelay(20);
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 	RELAY_OFF();
@@ -1863,7 +1864,8 @@ void check_challenges(bool file_given, byte_t* data) {
 
 // Set fpga in edge detect with reader field, we can modulate as reader now
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
-
+	SpinDelay(50);
+	
 // Set Frequency divisor which will drive the FPGA and analog mux selection
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95);					//125Khz
 	SetAdcMuxFor(GPIO_MUXSEL_LOPKD);

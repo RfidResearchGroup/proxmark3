@@ -1994,7 +1994,8 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 		LED_D_ON();
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | fpga_minor_mode);
-
+	SpinDelay(50);
+ 
 	// Start the timer
 	StartCountSspClk();
 	

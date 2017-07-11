@@ -690,6 +690,7 @@ void RAMFUNC SnoopIClass(void)
     // Signal field is off with the appropriate LED
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_SNIFFER);
+	SpinDelay(20);
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
 	uint32_t time_0 = GetCountSspClk();
@@ -833,7 +834,7 @@ static int GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen)
     // Signal field is off with the appropriate LED
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
-
+	
     // Now run a `software UART' on the stream of incoming samples.
     Uart.output = received;
     Uart.byteCntMax = maxLen;
@@ -1154,7 +1155,7 @@ int doIClassSimulation( int simulationMode, uint8_t *reader_mac_buf)
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	//SpinDelay(200);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
-	SpinDelay(100);
+	SpinDelay(20);
 	StartCountSspClk();
 	// We need to listen to the high-frequency, peak-detected path.
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -1348,7 +1349,7 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, int delay)
 
 	//FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR|FPGA_HF_SIMULATOR_MODULATE_424K);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR|FPGA_HF_SIMULATOR_MODULATE_424K_8BIT);
-
+	
 	AT91C_BASE_SSC->SSC_THR = 0x00;
 	FpgaSetupSsc();
 	while(!BUTTON_PRESS()) {
