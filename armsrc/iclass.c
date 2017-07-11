@@ -1760,7 +1760,7 @@ void ReaderIClass(uint8_t arg0) {
 				cmd_send(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data) );
 				if (abort_after_read) {
 					LEDsoff();
-					set_tracing(FALSE);	
+					set_tracing(false);	
 					return;
 				}
 				//Save that we already sent this....

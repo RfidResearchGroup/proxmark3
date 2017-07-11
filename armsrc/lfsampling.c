@@ -20,11 +20,11 @@ sample_config config = { 1, 8, 1, 95, 0 } ;
 
 void printConfig() {
 	Dbprintf("LF Sampling config: ");
-	Dbprintf("  [q] divisor:           %d (%d KHz)", config.divisor, 12000 / (config.divisor+1));
-	Dbprintf("  [b] bps:               %d ", config.bits_per_sample);
-	Dbprintf("  [d] decimation:        %d ", config.decimation);
-	Dbprintf("  [a] averaging:         %s ", (config.averaging) ? "Yes" : "No");
-	Dbprintf("  [t] trigger threshold: %d ", config.trigger_threshold);
+	Dbprintf("  [q] divisor..............%d (%d KHz)", config.divisor, 12000 / (config.divisor+1));
+	Dbprintf("  [b] bps..................%d", config.bits_per_sample);
+	Dbprintf("  [d] decimation...........%d", config.decimation);
+	Dbprintf("  [a] averaging............%s", (config.averaging) ? "Yes" : "No");
+	Dbprintf("  [t] trigger threshold....%d", config.trigger_threshold);
 }
 
 /**
@@ -121,7 +121,6 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
 	uint8_t *dest = BigBuf_get_addr();
     bufsize = (bufsize > 0 && bufsize < BigBuf_max_traceLen()) ? bufsize : BigBuf_max_traceLen();
 
-	//BigBuf_Clear_ext(false);	  //creates issues with cmdread (marshmellow)
 
 	if(bits_per_sample < 1) bits_per_sample = 1;
 	if(bits_per_sample > 8) bits_per_sample = 8;
@@ -175,8 +174,8 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
 				dest[sample_total_saved-1] = sample;
 				data.numbits = sample_total_saved << 3;//Get the return value correct
 				if(sample_total_saved >= bufsize) break;
-			}
-			else{
+				
+			} else {
 				pushBit(&data, sample & 0x80);
 				if(bits_per_sample > 1)	pushBit(&data, sample & 0x40);
 				if(bits_per_sample > 2)	pushBit(&data, sample & 0x20);

@@ -237,10 +237,10 @@ void WriteTIbyte(uint8_t b)
 			HIGH(GPIO_SSC_DOUT); 
 			WaitUS(1000);
 		} else {
-			// stop modulating antenna 1ms
+			// stop modulating antenna 0.3ms
 			LOW(GPIO_SSC_DOUT);
 			WaitUS(300);
-			// modulate antenna 1m
+			// modulate antenna 1.7ms
 			HIGH(GPIO_SSC_DOUT);
 			WaitUS(1700);
 		}
@@ -337,7 +337,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 		crc = update_crc16(crc, (idhi>>16)&0xff);
 		crc = update_crc16(crc, (idhi>>24)&0xff);
 	}
-	Dbprintf("Writing to tag: %x%08x, crc=%x",	(unsigned int) idhi, (unsigned int) idlo, crc);
+	Dbprintf("Writing to tag: %x%08x, crc=%x",	idhi, idlo, crc);
 
 	// TI tags charge at 134.2Khz
 	FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
@@ -413,17 +413,11 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	else
 		FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
 	
-	//SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 	
 	AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 
-	// power on antenna
-	//OPEN_COIL();
-	// charge time
-	//WaitMS(50);
-		
 	for(;;) {
 		WDT_HIT();
 
@@ -529,7 +523,7 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt)
 	uint8_t wavesPerClock = clock/fc;
 	uint8_t mod = clock % fc;    //modifier
 	uint8_t modAdj = fc/mod;     //how often to apply modifier
-	bool modAdjOk = !(fc % mod); //if (fc % mod==0) modAdjOk=TRUE;
+	bool modAdjOk = !(fc % mod); //if (fc % mod==0) modAdjOk = true;
 	// loop through clock - step field clock
 	for (uint8_t idx=0; idx < wavesPerClock; idx++){
 		// put 1/2 FC length 1's and 1/2 0's per field clock wave (to create the wave)
@@ -557,7 +551,7 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt)
 void CmdHIDsimTAG(int hi, int lo, int ledcontrol)
 {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	set_tracing(FALSE);
+	set_tracing(false);
 		
 	int n = 0, i = 0;
 	/*
@@ -619,7 +613,7 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 	// free eventually allocated BigBuf memory
 	BigBuf_free(); BigBuf_Clear_ext(false);
 	clear_trace();
-	set_tracing(FALSE);
+	set_tracing(false);
 	
 	int ledcontrol = 1, n = 0, i = 0;
 	uint8_t fcHigh = arg1 >> 8;
@@ -689,7 +683,7 @@ static void stAskSimBit(int *n, uint8_t clock) {
 void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);	
-	set_tracing(FALSE);
+	set_tracing(false);
 	
 	int ledcontrol = 1, n = 0, i = 0;
 	uint8_t clk = (arg1 >> 8) & 0xFF;
@@ -758,7 +752,7 @@ static void pskSimBit(uint8_t waveLen, int *n, uint8_t clk, uint8_t *curPhase, b
 void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);	
-	set_tracing(FALSE);
+	set_tracing(false);
 	
 	int ledcontrol = 1, n = 0, i = 0;
 	uint8_t clk = arg1 >> 8;
@@ -767,9 +761,9 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *BitStream)
 	uint8_t curPhase = 0;
 	for (i=0; i<size; i++){
 		if (BitStream[i] == curPhase){
-			pskSimBit(carrier, &n, clk, &curPhase, FALSE);
+			pskSimBit(carrier, &n, clk, &curPhase, false);
 		} else {
-			pskSimBit(carrier, &n, clk, &curPhase, TRUE);
+			pskSimBit(carrier, &n, clk, &curPhase, true);
 		}
 	}
 	
@@ -1145,10 +1139,10 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
  * Q5 tags seems to have issues when these values changes. 
  */
 
-#define START_GAP 50*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
+#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
 #define WRITE_GAP 20*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
 #define WRITE_0   18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
-#define WRITE_1   54*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550
+#define WRITE_1   50*8 // was 400 // SPEC: 48*8 to 64*8 - typ 56*8 (56fc)  432 for T55x7; 448 for E5550
 #define READ_GAP  15*8 
 
 //  VALUES TAKEN FROM EM4x function: SendForward
@@ -1200,6 +1194,9 @@ void T55xxResetRead(void) {
 
 	// Set up FPGA, 125kHz
 	LFSetupFPGAForADC(95, true);
+	StartTicks();
+	// make sure tag is fully powered up...
+	WaitMS(5);
 
 	// Trigger T55x7 in mode.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1209,7 +1206,6 @@ void T55xxResetRead(void) {
 	T55xxWriteBit(0);
 	T55xxWriteBit(0);
 
-	// Turn field on to read the response
 	TurnReadLFOn(READ_GAP);
 
 	// Acquisition
@@ -1230,7 +1226,9 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 
 	// Set up FPGA, 125kHz
 	LFSetupFPGAForADC(95, true);
-	
+	StartTicks();
+	// make sure tag is fully powered up...
+	WaitMS(5);
 	// Trigger T55x7 in mode.
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	WaitUS(START_GAP);
@@ -1290,8 +1288,9 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 
 	// Set up FPGA, 125kHz to power up the tag
 	LFSetupFPGAForADC(95, true);
-	//SpinDelay(3);
-	
+	StartTicks();
+	// make sure tag is fully powered up...
+	WaitMS(5);
 	// Trigger T55x7 Direct Access Mode with start gap
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	WaitUS(START_GAP);
@@ -1314,7 +1313,9 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 			T55xxWriteBit(Block & i);
 
 	// Turn field on to read the response
-	TurnReadLFOn(READ_GAP);
+	// 137*8 seems to get to the start of data pretty well... 
+	//  but we want to go past the start and let the repeating data settle in...
+	TurnReadLFOn(210*8); 
 	
 	// Acquisition
 	doT55x7Acquisition(7679);
@@ -1331,6 +1332,9 @@ void T55xxWakeUp(uint32_t Pwd){
 	
 	// Set up FPGA, 125kHz
 	LFSetupFPGAForADC(95, true);
+	StartTicks();
+	// make sure tag is fully powered up...
+	WaitMS(5);
 	
 	// Trigger T55x7 Direct Access Mode
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1658,7 +1662,7 @@ void SendForward(uint8_t fwd_bit_count) {
 	fwd_write_ptr = forwardLink_data;
 	fwd_bit_sz = fwd_bit_count;
 
-	// Set up FPGA, 125kHz
+	// Set up FPGA, 125kHz or 95 divisor
 	LFSetupFPGAForADC(95, true);
 	
 	// force 1st mod pulse (start gap must be longer for 4305)
@@ -1671,10 +1675,10 @@ void SendForward(uint8_t fwd_bit_count) {
 	// now start writting with bitbanging the antenna.
 	while(fwd_bit_sz-- > 0) { //prepare next bit modulation
 		if(((*fwd_write_ptr++) & 1) == 1) {
-			WaitUS(32);
+			WaitUS(32*8);
 		} else {
 			TurnReadLF_off(23*8);
-			TurnReadLFOn(16*8);
+			TurnReadLFOn(18*8);
 		}
 	}
 }
@@ -1699,6 +1703,7 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_ext(false);
 	
+	StartTicks();	
 	/* should we read answer from Logincommand?
 	*
 	* should receive
@@ -1732,7 +1737,7 @@ void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
 	
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_ext(false);
-
+	StartTicks();
 	/* should we read answer from Logincommand?
 	*
 	* should receive

@@ -350,7 +350,7 @@ void LegicCommonInit(bool clear_mem) {
 		memset(cardmem, 0x00, LEGIC_CARD_MEMSIZE);
 
 	clear_trace();
-	set_tracing(TRUE);
+	set_tracing(true);
 	crc_init(&legic_crc, 4, 0x19 >> 1, 0x5, 0);
 	
 	StartTicks();
@@ -470,7 +470,7 @@ int LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
 	uint8_t isOK = 1;
 	legic_card_select_t card;
 	
-	LegicCommonInit(TRUE);
+	LegicCommonInit(true);
 	
 	if ( legic_select_card_iv(&card, iv) ) {
 		isOK = 0;
@@ -513,7 +513,7 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 		goto OUT;
 	}
 	
-	LegicCommonInit(TRUE);
+	LegicCommonInit(false);
 	
 	if ( legic_select_card_iv(&card, iv) ) {
 		isOK = 0;
@@ -613,7 +613,7 @@ void LegicRfInfo(void){
 	uint8_t buf[sizeof(legic_card_select_t)] = {0x00};
 	legic_card_select_t *card = (legic_card_select_t*) buf;
 	
-	LegicCommonInit(FALSE);
+	LegicCommonInit(false);
 
 	if ( legic_select_card(card) ) {
 		cmd_send(CMD_ACK,0,0,0,0,0);
@@ -653,7 +653,7 @@ static void frame_handle_tag(struct legic_frame const * const f)
 {
 	// log
 	//uint8_t cmdbytes[] = {bits,	BYTEx(data, 0),	BYTEx(data, 1)};
-	//LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, FALSE);
+	//LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, false);
 	//Dbprintf("ICE: enter frame_handle_tag: %02x ", f->bits);
 		
 	/* First Part of Handshake (IV) */
