@@ -8,6 +8,10 @@
 89A69E60,
 # ref lock
 314159E0,
+# ref. http://www.proxmark.org/forum/viewtopic.php?pid=28115#p28115
+AA55BBBB,
+# paxton bullit?
+575F4F4B, 
 # Default pwd, simple:
 00000000,
 11111111,
