@@ -7,7 +7,7 @@
 make clean
 
 ## coverity build
-cov-build --dir cov-int make all
+/home/user/cov-analysis-linux-2017.07/bin/cov-build --dir cov-int make all
 
 ## delete all previous tarballs
 rm proxmark3.all.*.tgz

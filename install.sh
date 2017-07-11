@@ -1,3 +1,8 @@
+#!/bin/bash
+
+set -x
+
+# This for linux ppl
 #for linux ppl
 # this should work fine on Ubuntu distros. Don't know about Kali, ...
 
@@ -14,10 +19,20 @@ sudo apt-get autoclean -y
 sudo apt-get clean -y
 sudo apt-get update
 
-# Copy blacklist rules into /etc/udev/rules.d
-# check the Makefile for details
-sudo make udev
+# install proxmark3 
+git clone https://github.com/Proxmark/proxmark3.git
+(
+   cd proxmark3 || exit 1
+   git reset --hard
+   git clean -dfx
+   make clean
+   make all
+   # Copy blacklist rules into /etc/udev/rules.d
+   # check the Makefile for details
+   sudo make udev
+)
 
 # Where is my device?
 #dmesg | tail -10
 
+echo "Done."
