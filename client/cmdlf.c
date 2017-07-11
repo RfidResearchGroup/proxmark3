@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 #include "cmdlf.h"
 
-bool g_lf_threshold_set = FALSE;
+bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
 
@@ -125,8 +125,8 @@ int usage_lf_find(void){
 /* send a LF command before reading */
 int CmdLFCommandRead(const char *Cmd) {
 
-	bool errors = FALSE;
-	bool useHighFreq = FALSE;
+	bool errors = false;
+	bool useHighFreq = false;
 	uint16_t one = 0, zero = 0;
   	uint8_t cmdp = 0;
 	UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, {0,0,0}};
@@ -136,7 +136,7 @@ int CmdLFCommandRead(const char *Cmd) {
 		case 'h':
 			return usage_lf_cmdread();
 		case 'H':
-			useHighFreq = TRUE;
+			useHighFreq = true;
 			cmdp++;
 			break;
 		case 'L':
@@ -166,7 +166,7 @@ int CmdLFCommandRead(const char *Cmd) {
 		if(errors) break;
 	}
 	// No args
-	if (cmdp == 0) errors = TRUE;
+	if (cmdp == 0) errors = true;
 
 	//Validations
 	if (errors) return usage_lf_cmdread();
@@ -481,7 +481,7 @@ int CmdLFSetConfig(const char *Cmd) {
 	uint8_t bps = 0; // Bits per sample
 	uint8_t decimation = 0; //How many to keep
 	bool averaging = 1; // Defaults to true
-	bool errors = FALSE;
+	bool errors = false;
 	int trigger_threshold = -1;//Means no change
 	uint8_t unsigned_trigg = 0;
 
@@ -654,7 +654,7 @@ int CmdLFfskSim(const char *Cmd)
 	// otherwise will need FChigh, FClow, Clock, and bitstream
 	uint8_t fcHigh = 0, fcLow = 0, clk = 0;
 	uint8_t invert = 0;
-	bool errors = FALSE;
+	bool errors = false;
 	char hexData[32] = {0x00}; // store entered hex data
 	uint8_t data[255] = {0x00}; 
 	int dataLen = 0;
@@ -687,17 +687,17 @@ int CmdLFfskSim(const char *Cmd)
 			case 'd':
 				dataLen = param_getstr(Cmd, cmdp+1, hexData);
 				if (dataLen == 0)
-					errors = TRUE; 
+					errors = true; 
 				else
 					dataLen = hextobinarray((char *)data, hexData);
 				   
-				if (dataLen == 0) errors = TRUE; 
+				if (dataLen == 0) errors = true; 
 				if (errors) PrintAndLog ("Error getting hex data");
 				cmdp+=2;
 				break;
 			default:
 				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-				errors = TRUE;
+				errors = true;
 				break;
 		}
 		if(errors) break;
@@ -705,7 +705,7 @@ int CmdLFfskSim(const char *Cmd)
 	
 	// No args
 	if(cmdp == 0 && DemodBufferLen == 0)
-		errors = TRUE;
+		errors = true;
 
 	//Validations
 	if(errors) return usage_lf_simfsk();
@@ -751,7 +751,7 @@ int CmdLFaskSim(const char *Cmd)
 	// autodetect clock from Graphbuffer if using demod buffer
 	// needs clock, invert, manchester/raw as m or r, separator as s, and bitstream
 	uint8_t encoding = 1, separator = 0, clk = 0, invert = 0;
-	bool errors = FALSE;
+	bool errors = false;
 	char hexData[32] = {0x00}; 
 	uint8_t data[255]= {0x00}; // store entered hex data
 	int dataLen = 0;
@@ -788,17 +788,17 @@ int CmdLFaskSim(const char *Cmd)
 			case 'd':
 				dataLen = param_getstr(Cmd, cmdp+1, hexData);
 				if (dataLen == 0)
-					errors = TRUE; 
+					errors = true; 
 				else
 					dataLen = hextobinarray((char *)data, hexData);
 				
-				if (dataLen == 0) errors = TRUE; 
+				if (dataLen == 0) errors = true; 
 				if (errors) PrintAndLog ("Error getting hex data, datalen: %d", dataLen);
 				cmdp += 2;
 				break;
 			default:
 				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-				errors = TRUE;
+				errors = true;
 				break;
 		}
 		if(errors) break;
@@ -806,7 +806,7 @@ int CmdLFaskSim(const char *Cmd)
 
 	// No args
 	if(cmdp == 0 && DemodBufferLen == 0)
-		errors = TRUE;
+		errors = true;
 
 	//Validations
 	if(errors) return usage_lf_simask();
@@ -818,7 +818,7 @@ int CmdLFaskSim(const char *Cmd)
 		setDemodBuf(data, dataLen, 0);
 	}
 	if (clk == 0) clk = 64;
-	if (encoding == 0) clk >>= 2; //askraw needs to double the clock speed
+	if (encoding == 0) clk /= 2; //askraw needs to double the clock speed
 	
 	size_t size = DemodBufferLen;
 
@@ -847,7 +847,7 @@ int CmdLFpskSim(const char *Cmd) {
 	//will need carrier, Clock, and bitstream
 	uint8_t carrier=0, clk=0;
 	uint8_t invert=0;
-	bool errors = FALSE;
+	bool errors = false;
 	char hexData[32] = {0x00}; // store entered hex data
 	uint8_t data[255] = {0x00}; 
 	int dataLen = 0;
@@ -885,24 +885,24 @@ int CmdLFpskSim(const char *Cmd) {
 			case 'd':
 				dataLen = param_getstr(Cmd, cmdp+1, hexData);
 				if (dataLen == 0)
-					errors = TRUE; 
+					errors = true; 
 				else
 					dataLen = hextobinarray((char *)data, hexData);
 				    
-				if (dataLen == 0) errors = TRUE; 
+				if (dataLen == 0) errors = true; 
 				if (errors) PrintAndLog ("Error getting hex data");
 				cmdp+=2;
 				break;
 			default:
 				PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-				errors = TRUE;
+				errors = true;
 				break;
 			}
 		if (errors) break;
 	}
 	// No args
 	if (cmdp == 0 && DemodBufferLen == 0)
-		errors = TRUE;
+		errors = true;
 
 	//Validations
 	if (errors) return usage_lf_simpsk();
@@ -910,10 +910,10 @@ int CmdLFpskSim(const char *Cmd) {
 	if (dataLen == 0){ //using DemodBuffer
 		PrintAndLog("Getting Clocks");
 		
-		if (clk==0) clk = GetPskClock("", FALSE, FALSE);
+		if (clk==0) clk = GetPskClock("", false, false);
 		PrintAndLog("clk: %d",clk);
 		
-		if (!carrier) carrier = GetPskCarrier("", FALSE, FALSE); 
+		if (!carrier) carrier = GetPskCarrier("", false, false); 
 		PrintAndLog("carrier: %d", carrier);
 		
 	} else {
@@ -1232,9 +1232,9 @@ int CmdLFfind(const char *Cmd) {
 			}
 		}
 
-		ans=GetFskClock("",FALSE,FALSE); 
+		ans=GetFskClock("",false,false); 
 		if (ans != 0){ //fsk
-			ans=FSKrawDemod("",TRUE);
+			ans=FSKrawDemod("",true);
 			if (ans>0) {
 				PrintAndLog("\nUnknown FSK Modulated Tag Found!");
 				return 1;

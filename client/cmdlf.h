@@ -12,6 +12,9 @@
 #define CMDLF_H__
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <stdint.h>
+
 #include <string.h>
 #include <limits.h>
 #include "proxmark3.h"
@@ -46,28 +49,29 @@
 
 int CmdLF(const char *Cmd);
 
-int CmdLFSetConfig(const char *Cmd);
+extern int CmdLFSetConfig(const char *Cmd);
 
-int CmdLFCommandRead(const char *Cmd);
-int CmdFlexdemod(const char *Cmd);
-int CmdIndalaDemod(const char *Cmd);
-int CmdIndalaClone(const char *Cmd);
-int CmdLFRead(const char *Cmd);
-int CmdLFSim(const char *Cmd);
-int CmdLFaskSim(const char *Cmd);
-int CmdLFfskSim(const char *Cmd);
-int CmdLFpskSim(const char *Cmd);
-int CmdLFSimBidir(const char *Cmd);
-int CmdLFSnoop(const char *Cmd);
-int CmdVchDemod(const char *Cmd);
-int CmdLFfind(const char *Cmd);
+extern int CmdLFCommandRead(const char *Cmd);
+extern int CmdFlexdemod(const char *Cmd);
+extern int CmdIndalaDemod(const char *Cmd);
+extern int CmdIndalaClone(const char *Cmd);
+extern int CmdLFRead(const char *Cmd);
+extern int CmdLFSim(const char *Cmd);
+extern int CmdLFaskSim(const char *Cmd);
+extern int CmdLFfskSim(const char *Cmd);
+extern int CmdLFpskSim(const char *Cmd);
+extern int CmdLFSimBidir(const char *Cmd);
+extern int CmdLFSnoop(const char *Cmd);
+extern int CmdVchDemod(const char *Cmd);
+extern int CmdLFfind(const char *Cmd);
+
 
 // usages helptext
-int usage_lf_cmdread(void);
-int usage_lf_read(void);
-int usage_lf_snoop(void);
-int usage_lf_config(void);
-int usage_lf_simfsk(void);
-int usage_lf_simask(void);
-int usage_lf_simpsk(void);
+extern int usage_lf_cmdread(void);
+extern int usage_lf_read(void);
+extern int usage_lf_snoop(void);
+extern int usage_lf_config(void);
+extern int usage_lf_simfsk(void);
+extern int usage_lf_simask(void);
+extern int usage_lf_simpsk(void);
 #endif

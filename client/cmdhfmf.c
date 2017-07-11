@@ -377,6 +377,7 @@ start:
 		c.arg[0] = false;
 		goto start;
 	} else {		
+		
 		// nonce2key found a candidate key.  Lets verify it.
 		uint8_t keyblock[] = {0,0,0,0,0,0};
 		num_to_bytes(r_key, 6, keyblock);
@@ -1053,7 +1054,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 				key64 = bytes_to_num(data+10, 6);
 				if (key64) {
 					PrintAndLog("Data:%s", sprint_hex(data+10, 6));
-					e_sector[i].foundKey[1] = TRUE;
+					e_sector[i].foundKey[1] = true;
 					e_sector[i].Key[1] = key64;
 				}
 			}
@@ -1333,11 +1334,12 @@ int CmdHF14AMfChk(const char *Cmd) {
 					}
 					memset(keyBlock + 6 * keycnt, 0, 6);
 					num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6*keycnt);
-					PrintAndLog("check key[%2d] %012" PRIx64, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
+					//PrintAndLog("check key[%2d] %012" PRIx64, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
 					keycnt++;
 					memset(buf, 0, sizeof(buf));
 				}
 				fclose(f);
+				PrintAndLog("Loaded %2d keys from %s", keycnt, filename);
 			} else {
 				PrintAndLog("File: %s: not found or locked.", filename);
 				free(keyBlock);
@@ -1366,8 +1368,8 @@ int CmdHF14AMfChk(const char *Cmd) {
 	for(int i = 0; i < SectorsCnt; ++i){
 		e_sector[i].Key[0] = 0xffffffffffff;
 		e_sector[i].Key[1] = 0xffffffffffff;
-		e_sector[i].foundKey[0] = FALSE;
-		e_sector[i].foundKey[1] = FALSE;
+		e_sector[i].foundKey[0] = false;
+		e_sector[i].foundKey[1] = false;
 	}
 		
 	
@@ -1502,8 +1504,8 @@ static void emptySectorTable(){
 	for(int i = 0; i < k_sectorsCount; ++i){
 		k_sector[i].Key[0] = 0xffffffffffff;
 		k_sector[i].Key[1] = 0xffffffffffff;
-		k_sector[i].foundKey[0] = FALSE;
-		k_sector[i].foundKey[1] = FALSE;
+		k_sector[i].foundKey[0] = false;
+		k_sector[i].foundKey[1] = false;
 	}
 }
 void showSectorTable(){
@@ -1516,7 +1518,7 @@ void showSectorTable(){
 void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
 
 	uint64_t key = 0;	
-	bool success = FALSE;
+	bool success = false;
 	
 	if (k_sector == NULL)
 		emptySectorTable();
@@ -1533,7 +1535,7 @@ void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
 		);
 
 		k_sector[sector].Key[keytype] = key;
-		k_sector[sector].foundKey[keytype] = TRUE;
+		k_sector[sector].foundKey[keytype] = true;
 
 		//set emulator memory for keys
 		if (setEmulatorMem) {
@@ -1557,16 +1559,16 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 	uint8_t flags = (FLAG_UID_IN_EMUL | FLAG_4B_UID_IN_DATA);
 	int uidlen = 0;
 	uint8_t cmdp = 0;
-	bool errors = FALSE;
-	bool verbose = FALSE;
-	bool setEmulatorMem = FALSE;
+	bool errors = false;
+	bool verbose = false;
+	bool setEmulatorMem = false;
 	nonces_t data[1];
 		
 	while(param_getchar(Cmd, cmdp) != 0x00) {
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'e':
 		case 'E':
-			setEmulatorMem = TRUE;
+			setEmulatorMem = true;
 			cmdp++;
 			break;
 		case 'h':
@@ -1595,7 +1597,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 			break;
 		case 'v':
 		case 'V':
-			verbose = TRUE;
+			verbose = true;
 			cmdp++;
 			break;
 		case 'x':
@@ -1605,7 +1607,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-			errors = TRUE;
+			errors = true;
 			break;
 		}
 		if(errors) break;
@@ -1642,10 +1644,10 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 }
 
 int CmdHF14AMfSniff(const char *Cmd){
-	bool wantLogToFile = FALSE;
-	bool wantDecrypt = FALSE;
-	//bool wantSaveToEml = FALSE; TODO
-	bool wantSaveToEmlFile = FALSE;
+	bool wantLogToFile = false;
+	bool wantDecrypt = false;
+	//bool wantSaveToEml = false; TODO
+	bool wantSaveToEmlFile = false;
 
 	//var 
 	int tmpchar;
@@ -1658,7 +1660,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 	uint8_t uid_len = 0;
 	uint8_t atqa[2] = {0x00, 0x00};
 	uint8_t sak = 0;
-	bool isTag = FALSE;
+	bool isTag = false;
 	uint8_t *buf = NULL;
 	uint16_t bufsize = 0;
 	uint8_t *bufPtr = NULL;

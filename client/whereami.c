@@ -140,8 +140,9 @@ int WAI_PREFIX(getExecutablePath)(char* out, int capacity, int* dirname_length)
   return WAI_PREFIX(getModulePath_)(NULL, out, capacity, dirname_length);
 }
 
-/*
-WAI_NOINLINE
+// GetModuleHandleEx() is not available on old mingw environments. We don't need getModulePath() yet. 
+// Sacrifice it for the time being to improve backwards compatibility
+/* WAI_NOINLINE
 WAI_FUNCSPEC
 int WAI_PREFIX(getModulePath)(char* out, int capacity, int* dirname_length)
 {
@@ -165,6 +166,7 @@ int WAI_PREFIX(getModulePath)(char* out, int capacity, int* dirname_length)
 */
 
 #elif defined(__linux__)
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -257,7 +259,7 @@ int WAI_PREFIX(getModulePath)(char* out, int capacity, int* dirname_length)
       if (!fgets(buffer, sizeof(buffer), maps))
         break;
 
-      if (sscanf(buffer, "%" PRIx64 "-%" PRIx64 " %s %" PRIx64 " %x:%x %u %s\n", &low, &high, perms, &offset, &major, &minor, &inode, path) == 8)
+      if (sscanf(buffer, "%" SCNx64 "-%" SCNx64 " %s %" SCNx64 " %x:%x %u %s\n", &low, &high, perms, &offset, &major, &minor, &inode, path) == 8)
       {
         uint64_t addr = (uint64_t)(uintptr_t)WAI_RETURN_ADDRESS();
         if (low <= addr && addr <= high)

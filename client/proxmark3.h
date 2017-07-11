@@ -28,9 +28,16 @@
 #include "usb_cmd.h"
 
 #define PROXPROMPT "pm3 --> "
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void SendCommand(UsbCommand *c);
 const char *get_my_executable_path(void);
 const char *get_my_executable_directory(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

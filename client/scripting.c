@@ -82,11 +82,9 @@ static int l_WaitForResponseTimeout(lua_State *L){
     }
 
     UsbCommand response;
-    if(WaitForResponseTimeout(cmd, &response, ms_timeout))
-    {
+    if(WaitForResponseTimeout(cmd, &response, ms_timeout)) {
         //Push it as a string
          lua_pushlstring(L,(const char *)&response, sizeof(UsbCommand));
-
         return 1;// return 1 to signal one return value
     }else{
         //Push a Nil instead
@@ -177,7 +175,6 @@ static int l_foobar(lua_State *L)
     num_to_bytes(x,sizeof(x),destination);
     lua_pushlstring(L,(const char *)&x,sizeof(x));
     lua_pushlstring(L,(const char *)destination,sizeof(destination));
-
     return 2;
 }
 
@@ -484,7 +481,7 @@ static int l_hardnested(lua_State *L){
 
     const char *p_trgkey = luaL_checklstring(L, 6, &size);
     if(size != 12)
-		haveTarget = FALSE;
+		haveTarget = false;
 
 	const char *p_nonce_file_read = luaL_checklstring(L, 7, &size);
     if(size != 1)  return returnToLuaWithError(L,"Wrong size of nonce_file_read, got %d bytes, expected 1", (int) size);
@@ -544,8 +541,7 @@ static int l_hardnested(lua_State *L){
  * @param path
  * @return
  */
-int setLuaPath( lua_State* L, const char* path )
-{
+int setLuaPath( lua_State* L, const char* path ) {
     lua_getglobal( L, "package" );
     lua_getfield( L, -1, "path" ); // get field "path" from table at top of stack (-1)
     const char* cur_path = lua_tostring( L, -1 ); // grab path string from top of stack
@@ -560,8 +556,7 @@ int setLuaPath( lua_State* L, const char* path )
 	return 0; // all done!
 }
 
-int set_pm3_libraries(lua_State *L)
-{
+int set_pm3_libraries(lua_State *L) {
     static const luaL_Reg libs[] = {
         {"SendCommand",                 l_SendCommand},
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},

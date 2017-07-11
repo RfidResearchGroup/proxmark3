@@ -208,8 +208,11 @@ void UsbCommandReceived(UsbCommand *UC)
 			// arg0 = offset in transfer. Startindex of this chunk
 			// arg1 = length bytes to transfer
 			// arg2 = bigbuff tracelength (?)
-			memcpy( sample_buf + (UC->arg[0]), UC->d.asBytes, UC->arg[1]);
-			//printf("DBG:: Download from device. chunk %" PRIu64 " | size %" PRIu64 " | tracelen:%" PRIu64 " \n", UC->arg[0], UC->arg[1], UC->arg[2]);
+			uint32_t offset = UC->arg[0];
+			uint32_t len = UC->arg[1];
+			//uint32_t tracelen = UC->arg[2];
+			memcpy( sample_buf + offset, UC->d.asBytes, len);
+			//printf("ICE:: Download from device. chunk %" PRIu32 " | size %" PRIu32 " | tracelen:%" PRIu32 " \n", offset, len, UC->arg[2]);			
 			break;
 		}
 		default: {

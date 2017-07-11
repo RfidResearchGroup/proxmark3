@@ -26,6 +26,7 @@
   #include <termios.h>
   #include <sys/ioctl.h>
   #include <sys/time.h>
+  #include <unistd.h>  
 #else
   #include <conio.h>
   #include <windows.h>
