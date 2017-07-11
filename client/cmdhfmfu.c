@@ -131,21 +131,20 @@ uint16_t ul_ev1_packgenC(uint8_t* uid){
 	return 0xaa55;
 }
 
-
-void ul_ev1_pwdgen_selftest(){
+int ul_ev1_pwdgen_selftest(){
 	
-	uint8_t uid1[] = {0x04,0x11,0x12,0x11,0x12,0x11,0x10};
+	uint8_t uid1[] = {0x04, 0x11, 0x12, 0x11, 0x12, 0x11, 0x10};
 	uint32_t pwd1 = ul_ev1_pwdgenA(uid1);
 	PrintAndLog("UID | %s | %08X | %s", sprint_hex(uid1,7), pwd1, (pwd1 == 0x8432EB17)?"OK":"->8432EB17<-");
 
-	uint8_t uid2[] = {0x04,0x1f,0x98,0xea,0x1e,0x3e,0x81};		
+	uint8_t uid2[] = {0x04, 0x1f, 0x98, 0xea, 0x1e, 0x3e, 0x81};		
 	uint32_t pwd2 = ul_ev1_pwdgenB(uid2);
 	PrintAndLog("UID | %s | %08X | %s", sprint_hex(uid2,7), pwd2, (pwd2 == 0x5fd37eca)?"OK":"->5fd37eca<--");
 
-	uint8_t uid3[] = {0x04,0x62, 0xB6, 0x8A, 0xB4, 0x42, 0x80};
+	uint8_t uid3[] = {0x04, 0x62, 0xB6, 0x8A, 0xB4, 0x42, 0x80};
 	uint32_t pwd3 = ul_ev1_pwdgenC(uid3);
 	PrintAndLog("UID | %s | %08X | %s", sprint_hex(uid3,7), pwd3, (pwd3 == 0x5a349515)?"OK":"->5a349515<--");
-	return;
+	return 0;
 }
 
 static int CmdHelp(const char *Cmd);
@@ -279,6 +278,10 @@ static int ulev1_requestAuthentication( uint8_t *pwd, uint8_t *pack, uint16_t pa
 
 	uint8_t cmd[] = {MIFARE_ULEV1_AUTH, pwd[0], pwd[1], pwd[2], pwd[3]};
 	int len = ul_send_cmd_raw(cmd, sizeof(cmd), pack, packLength);
+	// NACK tables different tags,  but between 0-9 is a NEGATIVE response.
+	// ACK == 0xA
+	if ( len == 1 && pack[0] <= 0x09 ) 
+		return -1;
 	return len;
 }
 
@@ -293,7 +296,7 @@ static int ul_auth_select( iso14a_card_select_t *card, TagTypeUL_t tagtype, bool
 		if ( !ul_select(card) ) return 0;
 
 		if (hasAuthKey) {
-			if (ulev1_requestAuthentication(authenticationkey, pack, packSize) < 2) {
+			if ( ulev1_requestAuthentication(authenticationkey, pack, packSize > -1 )) {
 				ul_switch_off_field();
 				PrintAndLog("Error: Authentication Failed UL-EV1/NTAG");
 				return 0;
@@ -467,6 +470,10 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces){
 		PrintAndLog("%sTYPE : NTAG I%sC 888bytes (NT3H1101FHK)", spacer, "\xFD");
 	else if ( tagtype & NTAG_I2C_2K )	
 		PrintAndLog("%sTYPE : NTAG I%sC 1904bytes (NT3H1201FHK)", spacer, "\xFD");
+	else if ( tagtype & NTAG_I2C_1K_PLUS )
+		PrintAndLog("%sTYPE : NTAG I%sC plus 888bytes (NT3H2111FHK)", spacer, "\xFD");
+	else if ( tagtype & NTAG_I2C_2K_PLUS )	
+		PrintAndLog("%sTYPE : NTAG I%sC plus 1912bytes (NT3H2211FHK)", spacer, "\xFD");
 	else if ( tagtype & MY_D )
 		PrintAndLog("%sTYPE : INFINEON my-d\x99 (SLE 66RxxS)", spacer);
 	else if ( tagtype & MY_D_NFC )
@@ -658,7 +665,6 @@ uint32_t GetHF14AMfU_Type(void){
 
 		switch (len) {
 			case 0x0A: {
-
 				if ( version[2] == 0x03 && version[6] == 0x0B )
 					tagtype = UL_EV1_48;
 				else if ( version[2] == 0x03 && version[6] != 0x0B )
@@ -673,10 +679,14 @@ uint32_t GetHF14AMfU_Type(void){
 					tagtype = NTAG_215;
 				else if ( version[2] == 0x04 && version[3] == 0x02 && version[6] == 0x13 )
 					tagtype = NTAG_216;
-				else if ( version[2] == 0x04 && version[3] == 0x05 && version[6] == 0x13 )
+				else if ( memcmp(version+2, "\x04\x05\x02\x01\x13", 5) == 0)
 					tagtype = NTAG_I2C_1K;
-				else if ( version[2] == 0x04 && version[3] == 0x05 && version[6] == 0x15 )
+				else if ( memcmp(version+2, "\x04\x05\x02\x01\x15", 5) == 0)
 					tagtype = NTAG_I2C_2K;
+				else if ( memcmp(version+2, "\x04\x05\x02\x02\x13", 5) == 0)
+					tagtype = NTAG_I2C_1K_PLUS;
+				else if ( memcmp(version+2, "\x04\x05\x02\x02\x15", 5) == 0)
+					tagtype = NTAG_I2C_2K_PLUS;
 				else if ( version[2] == 0x04 )
 					tagtype = NTAG;
 
@@ -878,7 +888,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	}
 
 	// Read signature
-	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216 | NTAG_I2C_1K | NTAG_I2C_2K	))) {
+	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_213 | NTAG_215 | NTAG_216 | NTAG_I2C_1K | NTAG_I2C_2K	| NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
 		uint8_t ulev1_signature[32] = {0x00};
 		status = ulev1_readSignature( ulev1_signature, sizeof(ulev1_signature));
 		if ( status == -1 ) {
@@ -894,7 +904,7 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	}
 
 	// Get Version
-	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_210 | NTAG_212 | NTAG_213 | NTAG_215 | NTAG_216 | NTAG_I2C_1K | NTAG_I2C_2K))) {
+	if ((tagtype & (UL_EV1_48 | UL_EV1_128 | NTAG_210 | NTAG_212 | NTAG_213 | NTAG_215 | NTAG_216 | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
 		uint8_t version[10] = {0x00};
 		status  = ulev1_getVersion(version, sizeof(version));
 		if ( status == -1 ) {
@@ -939,31 +949,31 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			// test pwd gen A
 			num_to_bytes( ul_ev1_pwdgenA(card.uid), 4, key);
 			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
-			if (len >= 1) {
+			if (len > -1)
 				PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
-			}
+
 			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
 			
 			// test pwd gen B
 			num_to_bytes( ul_ev1_pwdgenB(card.uid), 4, key);
 			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
-			if (len >= 1) {
+			if (len > -1)
 				PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
-			}
+
 			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;
 
 			// test pwd gen C
 			num_to_bytes( ul_ev1_pwdgenC(card.uid), 4, key);
 			len = ulev1_requestAuthentication(key, pack, sizeof(pack));
-			if (len >= 1) {
+			if (len > -1)
 				PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
-			}
+			
 			if (!ul_auth_select( &card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack))) return -1;			
 			
 			for (uint8_t i = 0; i < KEYS_PWD_COUNT; ++i ) {
 				key = default_pwd_pack[i];
 				len = ulev1_requestAuthentication(key, pack, sizeof(pack));
-				if (len >= 1) {
+				if (len > -1) {
 					PrintAndLog("Found a default password: %s || Pack: %02X %02X",sprint_hex(key, 4), pack[0], pack[1]);
 					break;
 				} else {
@@ -1361,9 +1371,14 @@ int  usage_hf_mfu_gendiverse(void){
 }
 
 int  usage_hf_mfu_pwdgen(void){
-	PrintAndLog("Usage:  hf mfu pwdgen <uid (14 hex symbols)>");
-	PrintAndLog("");
-	PrintAndLog("sample: hf mfu pwdgen 11223344556677");
+	PrintAndLog("Usage:  hf mfu pwdgen [h] [r] <uid (14 hex symbols)>");
+	PrintAndLog("  Options:");
+	PrintAndLog("    h       : this help");
+	PrintAndLog("    r       : read uid from tag");
+	PrintAndLog("    <uid>   : 7 byte UID (optional)");
+	PrintAndLog("samples:");
+	PrintAndLog("        hf mfu pwdgen r");
+	PrintAndLog("        hf mfu pwdgen 11223344556677");
 	PrintAndLog("");
 	return 0;
 }
@@ -2028,12 +2043,39 @@ int CmdHF14AMfUSim(const char *Cmd) {
 }
 
 int CmdHF14AMfuPwdGen(const char *Cmd){
+	
 	uint8_t uid[7] = {0x00};	
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') return usage_hf_mfu_pwdgen();
-
-	if (param_gethex(Cmd, 0, uid, 14)) return usage_hf_mfu_pwdgen();
+	if (cmdp == 't' || cmdp == 'T') return 	ul_ev1_pwdgen_selftest();
 	
+	if ( cmdp == 'r' || cmdp == 'R') {
+			// read uid from tag
+		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
+		clearCommandBuffer();
+		SendCommand(&c);
+		UsbCommand resp;
+		WaitForResponse(CMD_ACK, &resp);
+		iso14a_card_select_t card;
+		memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
+		
+		uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+		if(select_status == 0) {
+			PrintAndLog("iso14443a card select failed");
+			return 1;
+		}
+		if ( card.uidlen != 7 ) {
+			PrintAndLog("Wrong sized UID, expected 7bytes got %d", card.uidlen);
+			return 1;
+		}
+		memcpy(uid, card.uid, sizeof(uid));	
+	}
+	else {
+		if (param_gethex(Cmd, 0, uid, 14)) return usage_hf_mfu_pwdgen();
+	}
+	PrintAndLog("---------------------------------");
+	PrintAndLog(" Using UID : %s", sprint_hex(uid, 7));
+	PrintAndLog("---------------------------------");
 	PrintAndLog(" algo | pwd      | pack");
 	PrintAndLog("------+----------+-----");
 	PrintAndLog(" EV1  | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
