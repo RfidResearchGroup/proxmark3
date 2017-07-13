@@ -1828,7 +1828,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 		if ( keylen == 16 )
 			p_authkey = SwapEndian64(authkey, keylen, 8);
 		else
-			p_authkey = SwapEndian64(authkey, len, 4);
+			p_authkey = SwapEndian64(authkey, keylen, 4);
 	}
 		
 	for (uint8_t b = 0; b < pages; b++) {
@@ -1854,7 +1854,8 @@ int CmdHF14AMfURestore(const char *Cmd){
 		UsbCommand resp;
 		if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 			uint8_t isOK  = resp.arg[0] & 0xff;
-			PrintAndLog("isOk:%02x", isOK);
+			if ( !isOK )
+				PrintAndLog("failed to write block %d", b);
 		} else {
 			PrintAndLog("Command execute timeout");
 		}
@@ -2268,6 +2269,11 @@ int CmdHF14AMfuPwdGen(const char *Cmd){
 	PrintAndLog(" EV1  | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
 	PrintAndLog(" Ami  | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
 	PrintAndLog(" LD   | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
+	PrintAndLog("------+----------+-----");
+	PrintAndLog(" Vingcard algo");
+	PrintAndLog("--------------------");	
+	PrintAndLog(" OTP  | %08X", ul_ev1_otpgenA(uid));
+	PrintAndLog(" KeyA | % " PRIx64, classic_keygenA(uid));
 	return 0;
 }
 //------------------------------------
