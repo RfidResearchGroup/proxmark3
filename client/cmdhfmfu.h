@@ -4,6 +4,17 @@
 #ifndef CMDHFMFU_H__
 #define CMDHFMFU_H__
 
+typedef struct {
+	uint8_t version[8];
+	uint8_t tbo[2];
+	uint8_t	tearing[3];
+	uint8_t	pack[2];
+	uint8_t tbo1[1];
+	uint8_t	signature[32];	
+	//uint8_t	counter[3];
+	uint8_t data[1024];
+} mfu_dump_t;
+
 extern int CmdHF14AMfUWrBl(const char *Cmd);
 extern int CmdHF14AMfURdBl(const char *Cmd);
 
@@ -16,6 +27,7 @@ extern int CmdHF14AMfuPwdGen(const char *Cmd);
 
 //general stuff
 extern int CmdHF14AMfUDump(const char *Cmd);
+extern int CmdHF14AMfURestore(const char *Cmd);
 extern int CmdHF14AMfUInfo(const char *Cmd);
 extern int CmdHF14AMfUeLoad(const char *Cmd);
 extern int CmdHF14AMfUSim(const char *Cmd);
@@ -23,6 +35,9 @@ extern int CmdHF14AMfUSim(const char *Cmd);
 extern uint32_t GetHF14AMfU_Type(void);
 extern int ul_print_type(uint32_t tagtype, uint8_t spacer);
 extern void ul_switch_off_field(void);
+
+void printMFUdump(mfu_dump_t* card);
+void printMFUdumpEx(mfu_dump_t* card, uint16_t pages, uint8_t startpage);
 
 extern int usage_hf_mfu_info(void);
 extern int usage_hf_mfu_dump(void);
@@ -76,5 +91,6 @@ typedef enum TAGTYPE_UL {
 	UL_C_MAGIC		= UL_C | MAGIC,
 	UL_ERROR		= 0xFFFFFF,
 } TagTypeUL_t;
+
 
 #endif

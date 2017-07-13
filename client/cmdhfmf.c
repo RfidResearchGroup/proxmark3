@@ -143,6 +143,14 @@ int usage_hf14_keybrute(void){
 	PrintAndLog("           hf mf keybrute 1 A 000011223344");
 	return 0;
 }
+int usage_hf14_restore(void){
+	PrintAndLog("Usage:   hf mf restore [card memory]");
+	PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+	PrintAndLog("");
+	PrintAndLog("Samples: hf mf restore");
+	PrintAndLog("         hf mf restore 4");	
+	return 0;
+}
 
 int usage_hf14_eget(void){
 	PrintAndLog("Usage:  hf mf eget <block number>");
@@ -188,7 +196,7 @@ int usage_hf14_ecfill(void){
 	PrintAndLog("          hf mf ecfill A 4");
 	return 0;
 }
-int usage_hf14a_ekeyprn(void){
+int usage_hf14_ekeyprn(void){
 	PrintAndLog("It prints the keys loaded in the emulator memory");
 	PrintAndLog("Usage:  hf mf ekeyprn [card memory]");
 	PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
@@ -772,14 +780,8 @@ int CmdHF14AMfRestore(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	numSectors = NumOfSectors(cmdp);
 
-	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') {
-		PrintAndLog("Usage:   hf mf restore [card memory]");
-		PrintAndLog("  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-		PrintAndLog("");
-		PrintAndLog("Samples: hf mf restore");
-		PrintAndLog("         hf mf restore 4");
-		return 0;
-	}
+	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H')
+		return usage_hf14_restore();
 
 	if ((fkeys = fopen("dumpkeys.bin","rb")) == NULL) {
 		PrintAndLog("Could not find file dumpkeys.bin");
@@ -2116,7 +2118,7 @@ int CmdHF14AMfEKeyPrn(const char *Cmd) {
 	char c = param_getchar(Cmd, 0);
 	
 	if ( c == 'h' || c == 'H' )
-		return usage_hf14a_ekeyprn();
+		return usage_hf14_ekeyprn();
 
 	numSectors = NumOfSectors(c);
 	

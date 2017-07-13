@@ -285,10 +285,10 @@ static int ulev1_requestAuthentication( uint8_t *pwd, uint8_t *pack, uint16_t pa
 	return len;
 }
 
-static int ul_auth_select( iso14a_card_select_t *card, TagTypeUL_t tagtype, bool hasAuthKey, uint8_t *authenticationkey, uint8_t *pack, uint8_t packSize){
+static int ul_auth_select( iso14a_card_select_t *card, TagTypeUL_t tagtype, bool hasAuthKey, uint8_t *authkey, uint8_t *pack, uint8_t packSize){
 	if ( hasAuthKey && (tagtype & UL_C)) {
 		//will select card automatically and close connection on error
-		if (!ulc_authentication(authenticationkey, false)) {
+		if (!ulc_authentication(authkey, false)) {
 			PrintAndLog("Error: Authentication Failed UL-C");
 			return 0;
 		}
@@ -296,7 +296,7 @@ static int ul_auth_select( iso14a_card_select_t *card, TagTypeUL_t tagtype, bool
 		if ( !ul_select(card) ) return 0;
 
 		if (hasAuthKey) {
-			if ( ulev1_requestAuthentication(authenticationkey, pack, packSize > -1 )) {
+			if ( ulev1_requestAuthentication(authkey, pack, packSize) == -1 ) {
 				ul_switch_off_field();
 				PrintAndLog("Error: Authentication Failed UL-EV1/NTAG");
 				return 0;
@@ -1272,6 +1272,21 @@ int usage_hf_mfu_dump(void) {
 	return 0;
 }
 
+int usage_hf_mfu_restore(void){
+	PrintAndLog("Restore dumpfile onto card.");
+	PrintAndLog("Usage:  hf mfu restore [h] [l] [s] k <key> n <filename w/o .bin> ");
+	PrintAndLog("  Options :");
+	PrintAndLog("  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
+	PrintAndLog("  l       : (optional) swap entered key's endianness");
+	PrintAndLog("  s       : (optional) enable special write -MAGIC TAG ONLY-");
+	PrintAndLog("  f <FN>  : filename w/o .bin to restore");	
+	PrintAndLog("");
+	PrintAndLog("   samples:");
+	PrintAndLog("          : hf mfu restore s f myfile");
+	PrintAndLog("          : hf mfu restore k AABBCCDDD s f myfile\n");
+	return 0;
+}
+
 int usage_hf_mfu_rdbl(void) {
 	PrintAndLog("Read a block and print. It autodetects card type.\n");	
 	PrintAndLog("Usage:  hf mfu rdbl b <block number> k <key> l\n");
@@ -1362,17 +1377,22 @@ int usage_hf_mfu_ucsetuid(void) {
 	return 0;
 }
 
-int  usage_hf_mfu_gendiverse(void){
-	PrintAndLog("Usage:  hf mfu gen <uid (8 hex symbols)>");
-	PrintAndLog("");
-	PrintAndLog("sample: hf mfu gen 11223344");
+int usage_hf_mfu_gendiverse(void){
+	PrintAndLog("Usage:  hf mfu gen [h] [r] <uid (8 hex symbols)>");
+	PrintAndLog("options:");
+	PrintAndLog("    h       : this help");
+	PrintAndLog("    r       : read uid from tag");
+	PrintAndLog("    <uid>   : 4 byte UID (optional)");
+	PrintAndLog("samples:");
+	PrintAndLog("        hf mfu gen r");
+	PrintAndLog("        hf mfu gen 11223344");
 	PrintAndLog("");
 	return 0;
 }
 
-int  usage_hf_mfu_pwdgen(void){
+int usage_hf_mfu_pwdgen(void){
 	PrintAndLog("Usage:  hf mfu pwdgen [h] [r] <uid (14 hex symbols)>");
-	PrintAndLog("  Options:");
+	PrintAndLog("options:");
 	PrintAndLog("    h       : this help");
 	PrintAndLog("    r       : read uid from tag");
 	PrintAndLog("    <uid>   : 7 byte UID (optional)");
@@ -1384,6 +1404,105 @@ int  usage_hf_mfu_pwdgen(void){
 }
 
 #define DUMP_PREFIX_LENGTH 48 
+void printMFUdump(mfu_dump_t* card) {
+	printMFUdumpEx(card, 255, 0);
+}
+
+void printMFUdumpEx(mfu_dump_t* card, uint16_t pages, uint8_t startpage) {
+	PrintAndLog("\n*special* data\n");
+	PrintAndLog("\nDataType  | Data                    | Ascii");
+	PrintAndLog("----------+-------------------------+---------");
+	PrintAndLog("Version   | %s| %s", sprint_hex(card->version, sizeof(card->version)), sprint_ascii(card->version, sizeof(card->version)) );
+	PrintAndLog("TBD       | %-24s| %s", sprint_hex(card->tbo, sizeof(card->tbo)), sprint_ascii(card->tbo, sizeof(card->tbo)));
+	PrintAndLog("Tearing   | %-24s| %s", sprint_hex(card->tearing, sizeof(card->tearing)), sprint_ascii(card->tearing, sizeof(card->tearing)));
+	PrintAndLog("Pack      | %-24s| %s", sprint_hex(card->pack, sizeof(card->pack)), sprint_ascii(card->pack, sizeof(card->pack)));
+	PrintAndLog("TBD       | %-24s| %s", sprint_hex(card->tbo1, sizeof(card->tbo1)), sprint_ascii(card->tbo1, sizeof(card->tbo1)));
+	PrintAndLog("Signature1| %s| %s", sprint_hex(card->signature, 16), sprint_ascii(card->signature, 16));
+	PrintAndLog("Signature2| %s| %s", sprint_hex(card->signature+16, 16), sprint_ascii(card->signature+16, 16));
+	PrintAndLog("-------------------------------------------------------------");
+	PrintAndLog("\nBlock#   | Data        |lck| Ascii");
+	PrintAndLog("---------+-------------+---+------");
+
+	uint8_t j = 0;
+	bool lckbit = false;
+	uint8_t *data = card->data;
+	
+	uint8_t lockbytes_sta[] = {0,0};
+	uint8_t lockbytes_dyn[] = {0,0};
+	bool bit_stat[16]  = {0};
+	bool bit_dyn[16] = {0};
+	
+	// Load static lock bytes.	
+	lockbytes_sta[0] = *data + 10;
+	lockbytes_sta[1] = *data + 11;
+	for(j = 0; j < 16; j++){
+		bit_stat[j] = lockbytes_sta[j/8] & ( 1 <<(7-j%8));
+	}
+
+	// Load dynamic lockbytes if available
+	// TODO -- FIGURE OUT LOCK BYTES FOR TO EV1 and/or NTAG
+	if ( pages == 44 ) {		
+		lockbytes_dyn[0] = *data + (40*4) + 3;
+		lockbytes_dyn[1] = *data + (40*4) + 4;
+		for (j = 0; j < 16; j++) {
+			bit_dyn[j] = lockbytes_dyn[j/8] & ( 1 <<(7-j%8));
+		}
+	}
+	
+	for (uint8_t i = 0; i < pages; ++i) {
+		if ( i < 3 ) {
+			PrintAndLog("%3d/0x%02X | %s|   | %s", i+startpage, i+startpage, sprint_hex(data + i * 4, 4), sprint_ascii(data + i * 4,4) );
+			continue;
+		}
+		switch(i){
+			case  3: lckbit = bit_stat[4]; break;
+			case  4: lckbit = bit_stat[3]; break;
+			case  5: lckbit = bit_stat[2]; break;
+			case  6: lckbit = bit_stat[1]; break;
+			case  7: lckbit = bit_stat[0]; break;
+			case  8: lckbit = bit_stat[15]; break;
+			case  9: lckbit = bit_stat[14]; break;
+			case 10: lckbit = bit_stat[13]; break;
+			case 11: lckbit = bit_stat[12]; break;
+			case 12: lckbit = bit_stat[11]; break;
+			case 13: lckbit = bit_stat[10]; break;
+			case 14: lckbit = bit_stat[9]; break;
+			case 15: lckbit = bit_stat[8]; break;
+			case 16:
+			case 17:
+			case 18:
+			case 19: lckbit = bit_dyn[6]; break;
+			case 20:
+			case 21:
+			case 22:
+			case 23: lckbit = bit_dyn[5]; break; 
+			case 24:
+			case 25:
+			case 26:
+			case 27: lckbit = bit_dyn[4]; break;
+			case 28:
+			case 29:
+			case 30:
+			case 31: lckbit = bit_dyn[2]; break;
+			case 32:
+			case 33:
+			case 34:
+			case 35: lckbit = bit_dyn[1]; break; 
+			case 36:
+			case 37:
+			case 38:
+			case 39: lckbit = bit_dyn[0]; break; 
+			case 40: lckbit = bit_dyn[12]; break;
+			case 41: lckbit = bit_dyn[11]; break;
+			case 42: lckbit = bit_dyn[10]; break; //auth0
+			case 43: lckbit = bit_dyn[9]; break;  //auth1
+			default: break;
+		}
+		PrintAndLog("%3d/0x%02X | %s| %d | %s", i+startpage, i+startpage, sprint_hex(data + i * 4, 4), lckbit, sprint_ascii(data + i * 4,4));
+	}
+	PrintAndLog("---------------------------------");
+}
+
 //
 //  Mifare Ultralight / Ultralight-C / Ultralight-EV1
 //  Read and Dump Card Contents,  using auto detection of tag size.
@@ -1392,17 +1511,11 @@ int CmdHF14AMfUDump(const char *Cmd){
 	FILE *fout;
 	char filename[FILE_PATH_SIZE] = {0x00};
 	char *fnameptr = filename;
-	uint8_t *lockbytes_t = NULL;
-	uint8_t lockbytes[2] = {0x00};
-	uint8_t *lockbytes_t2 = NULL;
-	uint8_t lockbytes2[2] = {0x00};
-	bool bit[16]  = {0x00};
-	bool bit2[16] = {0x00};
+
 	uint8_t data[1024] = {0x00};
 	bool hasAuthKey = false;
 	int i = 0;
 	int Pages = 16;
-	bool tmplockbit = false;
 	uint8_t dataLen = 0;
 	uint8_t cmdp = 0;
 	uint8_t authenticationkey[16] = {0x00};
@@ -1497,7 +1610,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	clearCommandBuffer();
 	SendCommand(&c);
 	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp,1500)) {
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
 		PrintAndLog("Command execute time-out");
 		return 1;
 	}
@@ -1516,31 +1629,11 @@ int CmdHF14AMfUDump(const char *Cmd){
 	WaitForResponse(CMD_ACK,NULL);
 
 	Pages = bufferSize/4;
-	// Load lock bytes.
-	int j = 0;
-
-	lockbytes_t = data + 8;
-	lockbytes[0] = lockbytes_t[2];
-	lockbytes[1] = lockbytes_t[3];
-	for(j = 0; j < 16; j++){
-		bit[j] = lockbytes[j/8] & ( 1 <<(7-j%8));
-	}
-
-	// Load bottom lockbytes if available
-	// TODO -- FIGURE OUT LOCK BYTES FOR TO EV1 and/or NTAG
-	if ( Pages == 44 ) {
-		lockbytes_t2 = data + (40*4);
-		lockbytes2[0] = lockbytes_t2[2];
-		lockbytes2[1] = lockbytes_t2[3];
-		for (j = 0; j < 16; j++) {
-			bit2[j] = lockbytes2[j/8] & ( 1 <<(7-j%8));
-		}
-	}
-
+	
 	uint8_t	get_pack[] = {0,0};
 	iso14a_card_select_t card;
-	uint8_t dump_file_data[1024+DUMP_PREFIX_LENGTH] = {0x00};
-	uint8_t get_version[] = {0,0,0,0,0,0,0,0,0};
+	mfu_dump_t dump_file_data;
+	uint8_t get_version[] = {0,0,0,0,0,0,0,0};
 	uint8_t	get_tearing[] = {0,0,0};
 	uint8_t	get_counter[] = {0,0,0};
 	uint8_t	dummy_pack[] = {0,0};
@@ -1558,23 +1651,25 @@ int CmdHF14AMfUDump(const char *Cmd){
 		ul_switch_off_field();
 		// add pack to block read
 		memcpy(data + (Pages*4) - 4, get_pack, sizeof(get_pack));
-	if ( hasAuthKey )
-		ul_auth_select( &card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
-	else
-		ul_select(&card);
+		if ( hasAuthKey )
+			ul_auth_select( &card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+		else
+			ul_select(&card);
 
-	ulev1_getVersion( get_version, sizeof(get_version) );
-	for ( uint8_t i = 0; i<3; ++i) {
-		ulev1_readTearing(i, get_tearing+i, 1);
-		ulev1_readCounter(i, get_counter, sizeof(get_counter) );
-	}
-	ul_switch_off_field();
-	if ( hasAuthKey )
-		ul_auth_select( &card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
-	else
-		ul_select(&card);
-	ulev1_readSignature( get_signature, sizeof(get_signature));
-	ul_switch_off_field();
+		ulev1_getVersion( get_version, sizeof(get_version) );
+		for ( uint8_t i = 0; i<3; ++i) {
+			ulev1_readTearing(i, get_tearing+i, 1);
+			ulev1_readCounter(i, get_counter, sizeof(get_counter) );
+		}
+		
+		ul_switch_off_field();
+		if ( hasAuthKey )
+			ul_auth_select( &card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+		else
+			ul_select(&card);
+		
+		ulev1_readSignature( get_signature, sizeof(get_signature));
+		ul_switch_off_field();
 	}
 
 	// format and add keys to block dump output
@@ -1597,89 +1692,15 @@ int CmdHF14AMfUDump(const char *Cmd){
 	}
 
 	//add *special* blocks to dump
-	//get version
-	memcpy(dump_file_data, get_version, sizeof(get_version));
-	//tearing
-	memcpy(dump_file_data+10, get_tearing, sizeof(get_tearing));
-	//pack
-	memcpy(dump_file_data+13, get_pack, sizeof(get_pack));
-	//signature
-	memcpy(dump_file_data+16, get_signature, sizeof(get_signature));
-	//add regular block read data to dump
-	memcpy(dump_file_data+DUMP_PREFIX_LENGTH, data, Pages*4);
+	//iceman:  need to add counters and pwd values to the dump format
+	memcpy(dump_file_data.version, get_version, sizeof(dump_file_data.version));
+	memcpy(dump_file_data.tearing, get_tearing, sizeof(dump_file_data.tearing));
+	memcpy(dump_file_data.pack, get_pack, sizeof(dump_file_data.pack));
+	memcpy(dump_file_data.signature, get_signature, sizeof(dump_file_data.signature));
+	memcpy(dump_file_data.data, data, Pages*4);
 
-	PrintAndLog("\n*Special* block data:");
-	PrintAndLog("\nDataType| Data        |   | Ascii");
-	PrintAndLog("---------------------------------");
-	PrintAndLog("GetVer-1| %s|   | %s", sprint_hex(dump_file_data, 4), sprint_ascii(dump_file_data, 4));
-	PrintAndLog("GetVer-2| %s|   | %s", sprint_hex(dump_file_data+4, 4), sprint_ascii(dump_file_data+4,4));
-	PrintAndLog("TBD     | 00 00       |   | ");
-	PrintAndLog("Tearing |    %s|   | %s", sprint_hex(dump_file_data+10, 3), sprint_ascii(dump_file_data+10,3) );
-	PrintAndLog("Pack    |    %s   |   | %s", sprint_hex(dump_file_data+13, 2), sprint_ascii(dump_file_data+13,2) );
-	PrintAndLog("TBD     |          00 |   | ");
-	PrintAndLog("Sig-1   | %s|   | %s", sprint_hex(dump_file_data+16, 4), sprint_ascii(dump_file_data+16,4));
-	PrintAndLog("Sig-2   | %s|   | %s", sprint_hex(dump_file_data+20, 4), sprint_ascii(dump_file_data+20,4));
-	PrintAndLog("Sig-3   | %s|   | %s", sprint_hex(dump_file_data+24, 4), sprint_ascii(dump_file_data+24,4));
-	PrintAndLog("Sig-4   | %s|   | %s", sprint_hex(dump_file_data+28, 4), sprint_ascii(dump_file_data+28,4));
-	PrintAndLog("Sig-5   | %s|   | %s", sprint_hex(dump_file_data+32, 4), sprint_ascii(dump_file_data+32,4));
-	PrintAndLog("Sig-6   | %s|   | %s", sprint_hex(dump_file_data+36, 4), sprint_ascii(dump_file_data+36,4));
-	PrintAndLog("Sig-7   | %s|   | %s", sprint_hex(dump_file_data+40, 4), sprint_ascii(dump_file_data+40,4));
-	PrintAndLog("Sig-8   | %s|   | %s", sprint_hex(dump_file_data+44, 4), sprint_ascii(dump_file_data+44,4));
-	PrintAndLog("\nBlock#  | Data        |lck| Ascii");
-	PrintAndLog("---------------------------------");
-	for (i = 0; i < Pages; ++i) {
-		if ( i < 3 ) {
-			PrintAndLog("%02d/0x%02X | %s|   | %s", i+startPage, i+startPage, sprint_hex(data + i * 4, 4), sprint_ascii(data + i * 4,4) );
-			continue;
-		}
-		switch(i){
-			case 3: tmplockbit = bit[4]; break;
-			case 4:	tmplockbit = bit[3]; break;
-			case 5:	tmplockbit = bit[2]; break;
-			case 6:	tmplockbit = bit[1]; break;
-			case 7:	tmplockbit = bit[0]; break;
-			case 8:	tmplockbit = bit[15]; break;
-			case 9: tmplockbit = bit[14]; break;
-			case 10: tmplockbit = bit[13]; break;
-			case 11: tmplockbit = bit[12]; break;
-			case 12: tmplockbit = bit[11]; break;
-			case 13: tmplockbit = bit[10]; break;
-			case 14: tmplockbit = bit[9]; break;
-			case 15: tmplockbit = bit[8]; break;
-			case 16:
-			case 17:
-			case 18:
-			case 19: tmplockbit = bit2[6]; break;
-			case 20:
-			case 21:
-			case 22:
-			case 23: tmplockbit = bit2[5]; break; 
-			case 24:
-			case 25:
-			case 26:
-			case 27: tmplockbit = bit2[4]; break;
-			case 28:
-			case 29:
-			case 30:
-			case 31: tmplockbit = bit2[2]; break;
-			case 32:
-			case 33:
-			case 34:
-			case 35: tmplockbit = bit2[1]; break; 
-			case 36:
-			case 37:
-			case 38:
-			case 39: tmplockbit = bit2[0]; break; 
-			case 40: tmplockbit = bit2[12]; break;
-			case 41: tmplockbit = bit2[11]; break;
-			case 42: tmplockbit = bit2[10]; break; //auth0
-			case 43: tmplockbit = bit2[9]; break;  //auth1
-			default: break;
-		}
-		PrintAndLog("%02d/0x%02X | %s| %d | %s", i+startPage, i+startPage, sprint_hex(data + i * 4, 4), tmplockbit, sprint_ascii(data + i * 4,4));
-	}
-	PrintAndLog("---------------------------------");
-
+	printMFUdumpEx(&dump_file_data, Pages, startPage);
+	
 	// user supplied filename?
 	if (fileNlen < 1) {
 		// UID = data 0-1-2 4-5-6-7  (skips a beat)
@@ -1693,13 +1714,171 @@ int CmdHF14AMfUDump(const char *Cmd){
 		PrintAndLog("Could not create file name %s", filename);
 		return 1;
 	}
-	fwrite( dump_file_data, 1, Pages*4 + DUMP_PREFIX_LENGTH, fout );
-	if (fout) {
+	fwrite( &dump_file_data, 1, Pages*4 + DUMP_PREFIX_LENGTH, fout );
+	if (fout)
 		fclose(fout);
-		fout = NULL;
-	}
 	PrintAndLog("Dumped %d pages, wrote %d bytes to %s", Pages+(DUMP_PREFIX_LENGTH/4), Pages*4 + DUMP_PREFIX_LENGTH, filename);
 	return 0;
+}
+
+int CmdHF14AMfURestore(const char *Cmd){
+
+	char tempStr[50] = {0};
+	char filename[FILE_PATH_SIZE] = {0};
+	uint8_t authkey[16] = {0};	
+	uint8_t	*p_authkey = authkey;
+	uint8_t cmdp = 0, keylen = 0;
+	//uint8_t bldata[16] = {0x00};
+	bool hasKey = false;
+	bool swapEndian = false;
+	bool errors = false;
+	bool write_special = false;
+	size_t filelen = 0;
+	FILE *f;
+	UsbCommand c = {CMD_MIFAREU_WRITEBL, {0,0,0}};
+
+	memset(authkey, 0x00, sizeof(authkey));
+	
+	while(param_getchar(Cmd, cmdp) != 0x00)
+	{
+		switch(param_getchar(Cmd, cmdp))
+		{
+		case 'h':
+		case 'H':
+			return usage_hf_mfu_restore();
+		case 'k':
+		case 'K':
+			keylen = param_getstr(Cmd, cmdp+1, tempStr);
+			if (keylen == 32 || keylen == 8) { //ul-c or ev1/ntag key length
+				errors = param_gethex(tempStr, 0, authkey, keylen);
+				keylen /= 2;
+			} else {
+				PrintAndLog("\nERROR: Key is incorrect length\n");
+				errors = true;
+			}
+			cmdp += 2;
+			hasKey = true;
+			break;
+		case 'l':
+		case 'L':
+			swapEndian = true;
+			cmdp++;
+			break;
+		case 'f':
+		case 'F':
+			filelen = param_getstr(Cmd, cmdp+1, filename);
+			if (filelen > FILE_PATH_SIZE-5) filelen = FILE_PATH_SIZE-5;
+			
+			if ( filelen < 0) {
+				sprintf(filename, "dumpdata.bin");
+			} 			
+			cmdp += 2;
+			break;
+		case 's':
+		case 'S':
+			cmdp++;
+			write_special = true;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+		if(errors) break;
+	}
+
+	//Validations
+	if(errors) return usage_hf_mfu_restore();
+	
+	if ((f = fopen(filename,"rb")) == NULL) {
+		PrintAndLog("Could not find file %s", filename);
+		return 1;
+	}	
+
+	// get filesize to know how memory to allocate
+	fseek(f, 0, SEEK_END);
+	long fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	if (fsize < 0) 	{
+		PrintAndLog("Error, when getting filesize");
+		fclose(f);
+		return 1;
+	}
+
+	uint8_t *dump = malloc(fsize);
+
+	// read all data
+	size_t bytes_read = fread(dump, 1, fsize, f);
+	fclose(f);
+	if ( bytes_read < 48 ) {
+		PrintAndLog("Error, dump file is too small");
+		return 1;
+	}
+	
+	PrintAndLog("Restoring %s to card", filename);
+	
+	mfu_dump_t *mem = (mfu_dump_t*)dump;
+	uint8_t pages = (bytes_read-48)/4;
+	
+	// print dump
+	printMFUdumpEx(mem, pages, 0);
+	
+	// Swap endianness 
+	if (swapEndian && hasKey) {
+		if ( keylen == 16 )
+			p_authkey = SwapEndian64(authkey, keylen, 8);
+		else
+			p_authkey = SwapEndian64(authkey, len, 4);
+	}
+		
+	for (uint8_t b = 0; b < pages; b++) {
+
+		// only magic tags can write to block 0,1,2,3
+		if ( b < 4 && !write_special ) 
+			continue;
+		
+		//Send write Block
+		c.arg[0] = b;
+
+		memcpy(c.d.asBytes, mem->data + (b*4), 4);
+
+		if ( hasKey ){
+			c.arg[1] = (keylen == 16) ? 1 : 2;
+			memcpy(c.d.asBytes+4, p_authkey, keylen);
+		}
+		if ( b < 4)
+			printf("data written block %u - %s\n", b, sprint_hex(c.d.asBytes, 8) );
+		
+		clearCommandBuffer();
+		SendCommand(&c);
+		UsbCommand resp;
+		if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+			uint8_t isOK  = resp.arg[0] & 0xff;
+			PrintAndLog("isOk:%02x", isOK);
+		} else {
+			PrintAndLog("Command execute timeout");
+		}
+	}
+	
+	if ( write_special ) {
+			// write version, signature, pack
+	}
+	
+	ul_switch_off_field();
+	free(dump);
+	return 0;	
+}
+
+int CmdHF14AMfUeLoad(const char *Cmd){
+	char c = param_getchar(Cmd, 0);
+	if ( c == 'h' || c == 'H' || c == 0x00) return usage_hf_mfu_eload();
+	return CmdHF14AMfELoad(Cmd);
+}
+
+int CmdHF14AMfUSim(const char *Cmd){
+	char c = param_getchar(Cmd, 0);
+	if ( c == 'h' || c == 'H' || c == 0x00) return usage_hf_mfu_sim();
+	return CmdHF14ASim(Cmd);
 }
 
 //-------------------------------------------------------------------------------
@@ -1937,8 +2116,7 @@ int CmdHF14AMfucSetUid(const char *Cmd){
 	if (!WaitForResponseTimeout(CMD_ACK,&resp,1500) ) {
 		PrintAndLog("Command execute timeout");
 		return 5;
-	}
-	
+	}	
 	return 0;
 }
 
@@ -1948,10 +2126,31 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0  || cmdp == 'h' || cmdp == 'H') return usage_hf_mfu_gendiverse();
 
-	if (param_gethex(Cmd, 0, uid, 8)) {
-		PrintAndLog("UID must include 8 HEX symbols");
-		return 1;
+	if ( cmdp == 'r' || cmdp == 'R') {
+			// read uid from tag
+		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
+		clearCommandBuffer();
+		SendCommand(&c);
+		UsbCommand resp;
+		WaitForResponse(CMD_ACK, &resp);
+		iso14a_card_select_t card;
+		memcpy(&card, (iso14a_card_select_t *)resp.d.asBytes, sizeof(iso14a_card_select_t));
+		
+		uint64_t select_status = resp.arg[0];		// 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+		if(select_status == 0) {
+			PrintAndLog("iso14443a card select failed");
+			return 1;
+		}
+		if ( card.uidlen != 4 ) {
+			PrintAndLog("Wrong sized UID, expected 4bytes got %d", card.uidlen);
+			return 1;
+		}
+		memcpy(uid, card.uid, sizeof(uid));	
 	}
+	else {
+		if (param_gethex(Cmd, 0, uid, 8)) return usage_hf_mfu_gendiverse();
+	}
+	
 	
 	uint8_t iv[8] = { 0x00 };
 	uint8_t block = 0x01;
@@ -2030,18 +2229,6 @@ int CmdHF14AMfuGenDiverseKeys(const char *Cmd){
 	return 0;
 }
 
-int CmdHF14AMfUeLoad(const char *Cmd) {
-	char ctmp = param_getchar(Cmd, 0);
-	if ( ctmp == 'h' || ctmp == 'H' || ctmp == 0x00) return usage_hf_mfu_eload();
-	return CmdHF14AMfELoad(Cmd);
-}
-
-int CmdHF14AMfUSim(const char *Cmd) {
-	char ctmp = param_getchar(Cmd, 0);
-	if ( ctmp == 'h' || ctmp == 'H' || ctmp == 0x00) return usage_hf_mfu_sim();
-	return CmdHF14ASim(Cmd);
-}
-
 int CmdHF14AMfuPwdGen(const char *Cmd){
 	
 	uint8_t uid[7] = {0x00};	
@@ -2092,6 +2279,7 @@ static command_t CommandTable[] =
 	{"dbg",		CmdHF14AMfDbg,		0, "Set default debug mode"},
 	{"info",	CmdHF14AMfUInfo,	0, "Tag information"},
 	{"dump",	CmdHF14AMfUDump,	0, "Dump Ultralight / Ultralight-C / NTAG tag to binary file"},
+	{"restore", CmdHF14AMfURestore, 0, "Restore a dump onto a MFU MAGIC tag"},
 	{"eload",	CmdHF14AMfUeLoad,   0, "load Ultralight .eml dump file into emulator memory"},	
 	{"rdbl",	CmdHF14AMfURdBl,	0, "Read block"},
 	{"wrbl",	CmdHF14AMfUWrBl,	0, "Write block"},
