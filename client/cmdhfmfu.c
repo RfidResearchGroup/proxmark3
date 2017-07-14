@@ -1278,7 +1278,8 @@ int usage_hf_mfu_restore(void){
 	PrintAndLog("  Options :");
 	PrintAndLog("  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
 	PrintAndLog("  l       : (optional) swap entered key's endianness");
-	PrintAndLog("  s       : (optional) enable special write -MAGIC TAG ONLY-");
+	PrintAndLog("  s       : (optional) enable special write UID -MAGIC TAG ONLY-");
+	PrintAndLog("  e       : (optional) enable special write version/signature -MAGIC NTAG 21* ONLY-");
 	PrintAndLog("  f <FN>  : filename w/o .bin to restore");	
 	PrintAndLog("");
 	PrintAndLog("   samples:");
@@ -1721,6 +1722,16 @@ int CmdHF14AMfUDump(const char *Cmd){
 	return 0;
 }
 
+static void wait4response(uint8_t b){
+	UsbCommand resp;
+	if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+		uint8_t isOK  = resp.arg[0] & 0xff;
+		if ( !isOK )
+			PrintAndLog("failed to write block %d", b);
+	} else {
+		PrintAndLog("Command execute timeout");
+	}
+}
 int CmdHF14AMfURestore(const char *Cmd){
 
 	char tempStr[50] = {0};
@@ -1728,11 +1739,11 @@ int CmdHF14AMfURestore(const char *Cmd){
 	uint8_t authkey[16] = {0};	
 	uint8_t	*p_authkey = authkey;
 	uint8_t cmdp = 0, keylen = 0;
-	//uint8_t bldata[16] = {0x00};
 	bool hasKey = false;
 	bool swapEndian = false;
 	bool errors = false;
 	bool write_special = false;
+	bool write_extra = false;
 	size_t filelen = 0;
 	FILE *f;
 	UsbCommand c = {CMD_MIFAREU_WRITEBL, {0,0,0}};
@@ -1778,6 +1789,11 @@ int CmdHF14AMfURestore(const char *Cmd){
 		case 'S':
 			cmdp++;
 			write_special = true;
+			break;
+		case 'e':
+		case 'E':
+			cmdp++;
+			write_extra = true;
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -1830,7 +1846,13 @@ int CmdHF14AMfURestore(const char *Cmd){
 		else
 			p_authkey = SwapEndian64(authkey, keylen, 4);
 	}
-		
+
+	// set key - only once
+	if ( hasKey ){
+		c.arg[1] = (keylen == 16) ? 1 : 2;
+		memcpy(c.d.asBytes+4, p_authkey, keylen);
+	}
+
 	for (uint8_t b = 0; b < pages; b++) {
 
 		// only magic tags can write to block 0,1,2,3
@@ -1842,27 +1864,44 @@ int CmdHF14AMfURestore(const char *Cmd){
 
 		memcpy(c.d.asBytes, mem->data + (b*4), 4);
 
-		if ( hasKey ){
-			c.arg[1] = (keylen == 16) ? 1 : 2;
-			memcpy(c.d.asBytes+4, p_authkey, keylen);
-		}
 		if ( b < 4)
-			printf("data written block %u - %s\n", b, sprint_hex(c.d.asBytes, 8) );
+			printf("special block written %u - %s\n", b, sprint_hex(c.d.asBytes, 8) );
 		
 		clearCommandBuffer();
 		SendCommand(&c);
-		UsbCommand resp;
-		if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-			uint8_t isOK  = resp.arg[0] & 0xff;
-			if ( !isOK )
-				PrintAndLog("failed to write block %d", b);
-		} else {
-			PrintAndLog("Command execute timeout");
-		}
+		wait4response(b);
 	}
-	
-	if ( write_special ) {
-			// write version, signature, pack
+
+	// write version, signature, pack
+	if ( write_extra ) {
+		
+		// pack
+		c.arg[0] = 0xF1;
+		memcpy(c.d.asBytes, mem->pack, sizeof(mem->pack) );
+		printf("special block written %x - %s\n", 0xF1, sprint_hex(c.d.asBytes, 8) );	
+		clearCommandBuffer();
+		SendCommand(&c);
+		wait4response(0xF1);
+		
+		// Signature
+		for (uint8_t s = 0xF2, i=0; s < 0xFA; s++, i += 4){
+			c.arg[0] = s;
+			memcpy(c.d.asBytes, mem->signature+i, 4);
+			printf("special block written %x - %s\n", s, sprint_hex(c.d.asBytes, 8) );	
+			clearCommandBuffer();
+			SendCommand(&c);
+			wait4response(s);		
+		}
+		
+		// Version
+		for (uint8_t s = 0xFA, i=0; s < 0xFC; s++, i += 4){		
+			c.arg[0] = s;
+			memcpy(c.d.asBytes, mem->version+i, 4 );
+			printf("special block written %x - %s\n", s, sprint_hex(c.d.asBytes, 8) );	
+			clearCommandBuffer();
+			SendCommand(&c);
+			wait4response(s);
+		}
 	}
 	
 	ul_switch_off_field();
@@ -2270,10 +2309,7 @@ int CmdHF14AMfuPwdGen(const char *Cmd){
 	PrintAndLog(" Ami  | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
 	PrintAndLog(" LD   | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
 	PrintAndLog("------+----------+-----");
-	PrintAndLog(" Vingcard algo");
-	PrintAndLog("--------------------");	
-	PrintAndLog(" OTP  | %08X", ul_ev1_otpgenA(uid));
-	PrintAndLog(" KeyA | % " PRIx64, classic_keygenA(uid));
+
 	return 0;
 }
 //------------------------------------
