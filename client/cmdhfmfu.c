@@ -770,10 +770,8 @@ int CmdHF14AMfUInfo(const char *Cmd){
 	int len = 0;
 	char tempStr[50];
 
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
 			return usage_hf_mfu_info();
@@ -800,11 +798,10 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			errors = true;
 			break;
 		}
-		if(errors) break;
 	}
 
 	//Validations
-	if(errors) return usage_hf_mfu_info();
+	if (errors) return usage_hf_mfu_info();
 
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
 	if (tagtype == UL_ERROR) return -1;
@@ -1008,10 +1005,8 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authKeyPtr = authenticationkey;
 
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
 			case 'H':
 				return usage_hf_mfu_wrbl();
@@ -1064,10 +1059,10 @@ int CmdHF14AMfUWrBl(const char *Cmd){
 				errors = true;
 				break;
 		}
-		//Validations
-		if(errors) return usage_hf_mfu_wrbl();
 	}
-
+	//Validations
+	if (errors || cmdp == 0) return usage_hf_mfu_wrbl();
+		
 	if ( blockNo == -1 ) return usage_hf_mfu_wrbl();
 	// starting with getting tagtype
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
@@ -1133,10 +1128,8 @@ int CmdHF14AMfURdBl(const char *Cmd){
 	uint8_t authenticationkey[16] = {0x00};
 	uint8_t *authKeyPtr = authenticationkey;
 
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
 			case 'H':
 				return usage_hf_mfu_rdbl();
@@ -1180,10 +1173,10 @@ int CmdHF14AMfURdBl(const char *Cmd){
 				errors = true;
 				break;
 		}
-		//Validations
-		if(errors) return usage_hf_mfu_rdbl();
 	}
-
+	//Validations
+	if (errors || cmdp == 0) return usage_hf_mfu_rdbl();
+	
 	if ( blockNo == -1 ) return usage_hf_mfu_rdbl();
 	// start with getting tagtype
 	TagTypeUL_t tagtype = GetHF14AMfU_Type();
@@ -1429,25 +1422,26 @@ void printMFUdumpEx(mfu_dump_t* card, uint16_t pages, uint8_t startpage) {
 	uint8_t *data = card->data;
 	
 	uint8_t lockbytes_sta[] = {0,0};
-	uint8_t lockbytes_dyn[] = {0,0};
+	uint8_t lockbytes_dyn[] = {0,0,0};
 	bool bit_stat[16]  = {0};
 	bool bit_dyn[16] = {0};
 	
 	// Load static lock bytes.	
-	lockbytes_sta[0] = *data + 10;
-	lockbytes_sta[1] = *data + 11;
+	memcpy(lockbytes_sta, data+10, sizeof(lockbytes_sta));
 	for(j = 0; j < 16; j++){
 		bit_stat[j] = lockbytes_sta[j/8] & ( 1 <<(7-j%8));
 	}
-
+	
 	// Load dynamic lockbytes if available
 	// TODO -- FIGURE OUT LOCK BYTES FOR TO EV1 and/or NTAG
-	if ( pages == 44 ) {		
-		lockbytes_dyn[0] = *data + (40*4) + 3;
-		lockbytes_dyn[1] = *data + (40*4) + 4;
+	if ( pages == 44 ) {
+
+		memcpy(lockbytes_dyn, data+(40*4), sizeof(lockbytes_dyn));
+
 		for (j = 0; j < 16; j++) {
 			bit_dyn[j] = lockbytes_dyn[j/8] & ( 1 <<(7-j%8));
 		}
+		printf("DYNAMIC LOCK: %s\n", sprint_hex(lockbytes_dyn,3));
 	}
 	
 	for (uint8_t i = 0; i < pages; ++i) {
@@ -1529,10 +1523,8 @@ int CmdHF14AMfUDump(const char *Cmd){
 	uint8_t startPage = 0;
 	char tempStr[50];
 
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
 			return usage_hf_mfu_dump();
@@ -1578,11 +1570,10 @@ int CmdHF14AMfUDump(const char *Cmd){
 			errors = true;
 			break;
 		}
-		if(errors) break;
 	}
 
 	//Validations
-	if(errors) return usage_hf_mfu_dump();
+	if (errors || cmdp == 0) return usage_hf_mfu_dump();
 
 	//if we entered a key in little endian and set the swapEndian switch - switch it...
 	if (swapEndian && hasAuthKey) 
@@ -1652,6 +1643,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 		ul_switch_off_field();
 		// add pack to block read
 		memcpy(data + (Pages*4) - 4, get_pack, sizeof(get_pack));
+		
 		if ( hasAuthKey )
 			ul_auth_select( &card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
 		else
@@ -1750,10 +1742,8 @@ int CmdHF14AMfURestore(const char *Cmd){
 
 	memset(authkey, 0x00, sizeof(authkey));
 	
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
 			return usage_hf_mfu_restore();
@@ -1800,11 +1790,10 @@ int CmdHF14AMfURestore(const char *Cmd){
 			errors = true;
 			break;
 		}
-		if(errors) break;
 	}
 
 	//Validations
-	if(errors) return usage_hf_mfu_restore();
+	if (errors || cmdp == 0) return usage_hf_mfu_restore();
 	
 	if ((f = fopen(filename,"rb")) == NULL) {
 		PrintAndLog("Could not find file %s", filename);
@@ -1853,6 +1842,54 @@ int CmdHF14AMfURestore(const char *Cmd){
 		memcpy(c.d.asBytes+4, p_authkey, keylen);
 	}
 
+	// write version, signature, pack
+	// only magic NTAG cards
+	if ( write_extra ) {
+		
+		#define MFU_NTAG_SPECIAL_PWD		0xF0
+		#define MFU_NTAG_SPECIAL_PACK		0xF1
+		#define MFU_NTAG_SPECIAL_VERSION	0xFA
+		#define MFU_NTAG_SPECIAL_SIGNATURE	0xF2
+		// pwd
+		if ( hasKey ) {
+			c.arg[0] = MFU_NTAG_SPECIAL_PWD;
+			memcpy(c.d.asBytes,  p_authkey, 4 );
+			printf("special block written %x - %s\n", MFU_NTAG_SPECIAL_PWD, sprint_hex(c.d.asBytes, 8) );
+			clearCommandBuffer();
+			SendCommand(&c);
+			wait4response(MFU_NTAG_SPECIAL_PWD);
+		}
+		
+		// pack
+		c.arg[0] = MFU_NTAG_SPECIAL_PACK;
+		memcpy(c.d.asBytes, mem->pack, sizeof(mem->pack) );
+		printf("special block written %x - %s\n", MFU_NTAG_SPECIAL_PACK, sprint_hex(c.d.asBytes, 8) );	
+		clearCommandBuffer();
+		SendCommand(&c);
+		wait4response(MFU_NTAG_SPECIAL_PACK);
+		
+		// Signature
+		for (uint8_t s = MFU_NTAG_SPECIAL_SIGNATURE, i=0; s < MFU_NTAG_SPECIAL_SIGNATURE+8; s++, i += 4){
+			c.arg[0] = s;
+			memcpy(c.d.asBytes, mem->signature+i, 4);
+			printf("special block written %x - %s\n", s, sprint_hex(c.d.asBytes, 8) );	
+			clearCommandBuffer();
+			SendCommand(&c);
+			wait4response(s);		
+		}
+		
+		// Version
+		for (uint8_t s = MFU_NTAG_SPECIAL_VERSION, i=0; s < MFU_NTAG_SPECIAL_VERSION+2; s++, i += 4){		
+			c.arg[0] = s;
+			memcpy(c.d.asBytes, mem->version+i, 4 );
+			printf("special block written %x - %s\n", s, sprint_hex(c.d.asBytes, 8) );	
+			clearCommandBuffer();
+			SendCommand(&c);
+			wait4response(s);
+		}
+	}	
+	
+	// write all other data
 	for (uint8_t b = 0; b < pages; b++) {
 
 		// only magic tags can write to block 0,1,2,3
@@ -1870,38 +1907,6 @@ int CmdHF14AMfURestore(const char *Cmd){
 		clearCommandBuffer();
 		SendCommand(&c);
 		wait4response(b);
-	}
-
-	// write version, signature, pack
-	if ( write_extra ) {
-		
-		// pack
-		c.arg[0] = 0xF1;
-		memcpy(c.d.asBytes, mem->pack, sizeof(mem->pack) );
-		printf("special block written %x - %s\n", 0xF1, sprint_hex(c.d.asBytes, 8) );	
-		clearCommandBuffer();
-		SendCommand(&c);
-		wait4response(0xF1);
-		
-		// Signature
-		for (uint8_t s = 0xF2, i=0; s < 0xFA; s++, i += 4){
-			c.arg[0] = s;
-			memcpy(c.d.asBytes, mem->signature+i, 4);
-			printf("special block written %x - %s\n", s, sprint_hex(c.d.asBytes, 8) );	
-			clearCommandBuffer();
-			SendCommand(&c);
-			wait4response(s);		
-		}
-		
-		// Version
-		for (uint8_t s = 0xFA, i=0; s < 0xFC; s++, i += 4){		
-			c.arg[0] = s;
-			memcpy(c.d.asBytes, mem->version+i, 4 );
-			printf("special block written %x - %s\n", s, sprint_hex(c.d.asBytes, 8) );	
-			clearCommandBuffer();
-			SendCommand(&c);
-			wait4response(s);
-		}
 	}
 	
 	ul_switch_off_field();

@@ -92,5 +92,4 @@ typedef enum TAGTYPE_UL {
 	UL_ERROR		= 0xFFFFFF,
 } TagTypeUL_t;
 
-
 #endif
