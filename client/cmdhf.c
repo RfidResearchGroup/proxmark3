@@ -458,7 +458,6 @@ uint8_t iso14443A_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
  *          1 : CRC-command, CRC ok
  *          2 : Not crc-command
  */
-
 uint8_t iso14443B_CRC_check(bool isResponse, uint8_t* data, uint8_t len)
 {
 	uint8_t b1,b2;
@@ -706,7 +705,6 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 			case ISO_14443B:	annotateIso14443b(explanation,sizeof(explanation),frame,data_len); break;
 			case TOPAZ:			annotateTopaz(explanation,sizeof(explanation),frame,data_len); break;
 			case ISO_7816_4:	annotateIso7816(explanation,sizeof(explanation),frame,data_len); break;
-
 			default:			break;
 		}
 	}
@@ -941,7 +939,7 @@ static command_t CommandTable[] = {
 	{"tune",		CmdHFTune,	      0, "Continuously measure HF antenna tuning"},
 	{"list",        CmdHFList,        1, "List protocol data in trace buffer"},
 	{"search",      CmdHFSearch,      1, "Search for known HF tags [preliminary]"},
-	{"snoop",       CmdHFSnoop,       0, "<samples to skip (10000)> <triggers to skip (1)> Generic LF/HF Snoop in Testing stage"},
+	{"snoop",       CmdHFSnoop,       0, "<samples to skip (10000)> <triggers to skip (1)> Generic HF Snoop"},
 	{NULL, NULL, 0, NULL}
 };
 

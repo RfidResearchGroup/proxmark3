@@ -471,7 +471,7 @@ int CmdHF14ASim(const char *Cmd) {
 	bool verbose = false;
 	nonces_t data[1];
 	
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
 			case 'H':
@@ -520,11 +520,10 @@ int CmdHF14ASim(const char *Cmd) {
 				errors = true;
 				break;
 			}
-		if(errors) break;
 	}
 
 	//Validations
-	if (errors) return usage_hf_14a_sim();
+	if (errors || cmdp == 0) return usage_hf_14a_sim();
 
 	if ( useUIDfromEML ) 
 		flags |= FLAG_UID_IN_EMUL;

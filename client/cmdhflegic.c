@@ -541,7 +541,7 @@ int CmdLegicRfWrite(const char *Cmd) {
 	int len = 0, bg, en;
 	uint32_t offset = 0, IV = 0x55;
 	
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'd':
 		case 'D':
@@ -602,10 +602,9 @@ int CmdLegicRfWrite(const char *Cmd) {
 			errors = true;
 			break;
 		}
-		if (errors) break;
 	}
 	//Validations
-	if (errors){
+	if (errors || cmdp == 0){
 		if (data) 
 			free(data);
 		return usage_legic_write();
@@ -676,7 +675,7 @@ int CmdLegicCalcCrc(const char *Cmd){
 	int len = 0;
 	int bg, en;
 	
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'd':
 		case 'D':
@@ -733,10 +732,9 @@ int CmdLegicCalcCrc(const char *Cmd){
 			errors = true;
 			break;
 		}
-		if (errors) break;
 	}
 	//Validations
-	if (errors){
+	if (errors || cmdp == 0){
 		if (data) free(data);
 		return usage_legic_calccrc();
 	}
@@ -848,7 +846,7 @@ int CmdLegicDump(const char *Cmd){
 	
 	memset(filename, 0, sizeof(filename));
 	
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
 			case 'H':
@@ -867,11 +865,9 @@ int CmdLegicDump(const char *Cmd){
 				errors = true;
 				break;
 		}
-		if(errors) break;
 	}
-
 	//Validations
-	if(errors) return usage_legic_dump();
+	if (errors) return usage_legic_dump();
 	
 	// tagtype
 	legic_card_select_t card;
@@ -932,6 +928,7 @@ int CmdLegicDump(const char *Cmd){
 		return 5;
 	}
 	fwrite(data, 1, readlen, f);
+	fflush(f);
 	fclose(f);
 	free(data);
 	PrintAndLog("Wrote %d bytes to %s", readlen, filename);
@@ -944,13 +941,13 @@ int CmdLegicRestore(const char *Cmd){
 	char filename[FILE_PATH_SIZE] = {0x00};
 	char *fnameptr = filename;
 	size_t fileNlen = 0;
-	bool errors = true;
+	bool errors = false;
 	uint16_t numofbytes;	
 	uint8_t cmdp = 0;
 	
 	memset(filename, 0, sizeof(filename));
 	
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
 			case 'H':
@@ -961,8 +958,6 @@ int CmdLegicRestore(const char *Cmd){
 				fileNlen = param_getstr(Cmd, cmdp+1, filename);
 				if (!fileNlen) 
 					errors = true;
-				else 
-					errors = false;
 				
 				if (fileNlen > FILE_PATH_SIZE-5) 
 					fileNlen = FILE_PATH_SIZE-5;
@@ -973,11 +968,9 @@ int CmdLegicRestore(const char *Cmd){
 				errors = true;
 				break;
 		}
-		if (errors) break;
 	}
-
 	//Validations
-	if(errors) return usage_legic_restore();
+	if (errors || cmdp == 0) return usage_legic_restore();
 	
 	// tagtype
 	legic_card_select_t card;

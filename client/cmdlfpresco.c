@@ -47,7 +47,7 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
 	int stringlen = 0;
 	memset(id, 0x00, sizeof(id));
 	
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
 				return -1;
@@ -74,13 +74,9 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
 				errors = 1;
 				break;
 		}
-		if(errors) break;
 	}
-	// No args
-	if(cmdp == 0) errors = 1;
-
 	//Validations
-	if(errors) return -1;
+	if (errors || cmdp == 0) return -1;
 
 	if (!hex) {
 		for (int index =0; index < strlen(id); ++index) {

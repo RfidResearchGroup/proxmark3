@@ -1400,7 +1400,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 				res = mfCheckKeys(b, trgKeyType, true, size, &keyBlock[6*c], &key64);
 				if (!res) {
 					e_sector[i].Key[trgKeyType] = key64;
-					e_sector[i].foundKey[trgKeyType] = TRUE;
+					e_sector[i].foundKey[trgKeyType] = true;
 					break;
 				}
 			}
@@ -1566,7 +1566,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 	bool setEmulatorMem = false;
 	nonces_t data[1];
 		
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'e':
 		case 'E':
@@ -1612,10 +1612,9 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 			errors = true;
 			break;
 		}
-		if(errors) break;
 	}
 	//Validations
-	if(errors) return usage_hf14_mf1ksim();
+	if (errors || cmdp == 0) return usage_hf14_mf1ksim();
 	
 	PrintAndLog(" uid:%s, numreads:%d, flags:%d (0x%02x) "
 				, (uidlen == 0 ) ? "N/A" : sprint_hex(uid, uidlen>>1)
@@ -2403,7 +2402,7 @@ int CmdHF14AMfCSave(const char *Cmd) {
 	memset(filename, 0, sizeof(filename));
 	memset(buf, 0, sizeof(buf));
 
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		ctmp = param_getchar(Cmd, cmdp);
 		switch(ctmp) {	
 		case 'e':
@@ -2462,14 +2461,13 @@ int CmdHF14AMfCSave(const char *Cmd) {
 			errors = true;
 			break;
 		}
-		if (errors) break;
 	}
 
 	// must have filename when saving.
 	if (!hasname && !fillFromEmulator) errors = true;
 	
 	//Validations
-	if (errors) return usage_hf14_csave();
+	if (errors || cmdp == 0) return usage_hf14_csave();
 	
 	if (fillFromEmulator) {
 		// put into emulator

@@ -12,7 +12,7 @@
 #define CMDHF_H__
 
 int CmdHF(const char *Cmd);
-int CmdHFTune(const char *Cmd);
-int CmdHFList(const char *Cmd);
-int CmdHFSearch(const char *Cmd);
+extern int CmdHFTune(const char *Cmd);
+extern int CmdHFList(const char *Cmd);
+extern int CmdHFSearch(const char *Cmd);
 #endif

@@ -350,7 +350,7 @@ int HFiClassReader(const char *Cmd, bool loop, bool verbose) {
 int CmdHFiClassReader(const char *Cmd) {	
 	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') return usage_hf_iclass_reader();
-	bool findone = (cmdp == '1') ? FALSE : TRUE;
+	bool findone = (cmdp == '1') ? false : true;
 	return HFiClassReader(Cmd, findone, true);
 }
 
@@ -683,10 +683,8 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 	bool errors = false;
 	uint8_t cmdp = 0;
 
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
 			return usage_hf_iclass_dump();
@@ -754,10 +752,9 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 			errors = true;
 			break;
 		}
-		if(errors) return usage_hf_iclass_dump();
 	}
-
-	if (cmdp < 2) return usage_hf_iclass_dump();
+	if (errors || cmdp < 2) return usage_hf_iclass_dump();
+	
 	// if no debit key given try credit key on AA1 (not for iclass but for some picopass this will work)
 	if (!have_debit_key && have_credit_key) use_credit_key = true;
 
@@ -885,7 +882,6 @@ int CmdHFiClassReader_Dump(const char *Cmd) {
 	// print the dump
 	printf("------+--+-------------------------+\n");
 	printf("CSN   |00| %s|\n", sprint_hex(tag_data, 8));	
-	//printIclassDumpContents(tag_data, 1, (gotBytes/8)-1, gotBytes-8);
 	printIclassDumpContents(tag_data, 1, (gotBytes/8), gotBytes);
 
 	if (filename[0] == 0){
@@ -940,10 +936,8 @@ int CmdHFiClass_WriteBlock(const char *Cmd) {
 	bool rawkey= false;
 	bool errors = false;
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
 			return usage_hf_iclass_writeblock();
@@ -1003,10 +997,9 @@ int CmdHFiClass_WriteBlock(const char *Cmd) {
 			errors = true;
 			break;
 		}
-		if(errors) return usage_hf_iclass_writeblock();
 	}
+	if (errors || cmdp < 6) return usage_hf_iclass_writeblock();
 
-	if (cmdp < 6) return usage_hf_iclass_writeblock();
 	int ans = WriteBlock(blockno, bldata, KEY, use_credit_key, elite, rawkey, true);
 	ul_switch_off_field();
 	return ans;
@@ -1026,10 +1019,8 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 	bool rawkey = false;
 	bool errors = false;
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
 			return usage_hf_iclass_clone();
@@ -1097,10 +1088,9 @@ int CmdHFiClassCloneTag(const char *Cmd) {
 			errors = true;
 			break;
 		}
-		if(errors) return usage_hf_iclass_clone();
 	}
 
-	if (cmdp < 8) return usage_hf_iclass_clone();
+	if (errors || cmdp < 8) return usage_hf_iclass_clone();
 
 	FILE *f;
 
@@ -1214,10 +1204,8 @@ int CmdHFiClass_ReadBlock(const char *Cmd) {
 	bool rawkey = false;
 	bool errors = false;
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
 			return usage_hf_iclass_readblock();
@@ -1268,10 +1256,8 @@ int CmdHFiClass_ReadBlock(const char *Cmd) {
 			errors = true;
 			break;
 		}
-		if(errors) return usage_hf_iclass_readblock();
 	}
-
-	if (cmdp < 4) return usage_hf_iclass_readblock();
+	if (errors || cmdp < 4) return usage_hf_iclass_readblock();
 
 	return ReadBlock(KEY, blockno, keyType, elite, rawkey, true);
 }
@@ -1294,7 +1280,7 @@ int CmdHFiClass_loclass(const char *Cmd) {
 		PrintAndLog("                  ... totalling N*24 bytes");
 		return 0;
 	}
-	char fileName[255] = {0};
+	char fileName[FILE_PATH_SIZE] = {0};
 	if(opt == 'f') 	{
 		if(param_getstr(Cmd, 1, fileName) > 0) {
 			return bruteforceFileNoKeys(fileName);
@@ -1449,10 +1435,8 @@ int CmdHFiClassCalcNewKey(const char *Cmd) {
 	bool elite = false;
 	bool errors = false;
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
 			return usage_hf_iclass_calc_newkey();
@@ -1514,11 +1498,9 @@ int CmdHFiClassCalcNewKey(const char *Cmd) {
 			errors = true;
 			break;
 		}
-		if(errors) return usage_hf_iclass_calc_newkey();
 	}
-
-	if (cmdp < 4) return usage_hf_iclass_calc_newkey();
-
+	if (errors || cmdp < 4) return usage_hf_iclass_calc_newkey();
+		
 	if (!givenCSN)
 		if (!select_only(CSN, CCNR, false, true))
 			return 0;
@@ -1598,10 +1580,8 @@ int CmdHFiClassManageKeys(const char *Cmd) {
 	char tempStr[20];
 	uint8_t cmdp = 0;
 
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
 			return usage_hf_iclass_managekeys();
@@ -1655,8 +1635,9 @@ int CmdHFiClassManageKeys(const char *Cmd) {
 			errors = true;
 			break;
 		}
-		if(errors) return usage_hf_iclass_managekeys();
 	}
+	if (errors) return usage_hf_iclass_managekeys();
+		
 	if (operation == 0){
 		PrintAndLog("no operation specified (load, save, or print)\n");
 		return usage_hf_iclass_managekeys();

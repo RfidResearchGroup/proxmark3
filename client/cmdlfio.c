@@ -233,7 +233,7 @@ int CmdIOClone(const char *Cmd) {
 
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,		1, "This help"},
-	//{"demod",	CmdIOProxDemod,	1, "Demodulate Stream"},
+//	{"demod",	CmdIOProxDemod,	1, "Demodulate Stream"},
 	{"fskdemod",CmdIODemodFSK,	0, "['1'] Realtime IO FSK demodulator (option '1' for one tag only)"},
 	{"sim",		CmdIOSim,		0, "<version> <facility-code> <card number> -- IOProx tag simulator"},
 	{"clone",	CmdIOClone,		0, "<version> <facility-code> <card number> <Q5> -- Clone IOProx to T55x7"},

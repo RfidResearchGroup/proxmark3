@@ -200,7 +200,7 @@ int CmdHfEmvELoad(const char *Cmd) {
 	bool errors = false;
 	uint8_t cmdp = 0;
 
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
 			case 'H':
@@ -220,11 +220,9 @@ int CmdHfEmvELoad(const char *Cmd) {
 				errors = true;
 				break;
 		}
-		if(errors) break;
 	}
-
 	//Validations
-	if(errors) return usage_hf_emv_eload();
+	if (errors || cmdp == 0) return usage_hf_emv_eload();
 
 	// open file
 	f = fopen(filename,"r");
@@ -267,7 +265,7 @@ int CmdHfEmvDump(const char *Cmd){
 
 	bool errors = false;
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
 			case 'H':
@@ -277,11 +275,9 @@ int CmdHfEmvDump(const char *Cmd){
 				errors = true;
 				break;
 		}
-		if(errors) break;
 	}
-
 	//Validations
-	if(errors) return usage_hf_emv_dump();
+	if (errors) return usage_hf_emv_dump();
 	
     UsbCommand c = {CMD_EMV_DUMP_CARD, {0, 0, 0}};
 	clearCommandBuffer();
@@ -298,7 +294,7 @@ int CmdHfEmvSim(const char *Cmd) {
 	
 	bool errors = false;	
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
 			case 'H':
@@ -308,11 +304,9 @@ int CmdHfEmvSim(const char *Cmd) {
 				errors = true;
 				break;
 		}
-		if(errors) break;
 	}
-
 	//Validations
-	if(errors) return usage_hf_emv_sim();	
+	if (errors) return usage_hf_emv_sim();	
 	
 	UsbCommand c = {CMD_EMV_SIM, {0,0,0}};
 	clearCommandBuffer();

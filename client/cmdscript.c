@@ -162,20 +162,16 @@ int CmdRun(const char *Cmd)
 
     printf("--- Executing: %s%s, args '%s'\n", script_name, suffix, arguments);
 
-
-
     // run the Lua script
-
     int error = luaL_loadfile(lua_state, script_path);
-    if(!error)
-    {
+    if (!error) {
         lua_pushstring(lua_state, arguments);
         lua_setglobal(lua_state, "args");
 
         //Call it with 0 arguments
          error = lua_pcall(lua_state, 0, LUA_MULTRET, 0); // once again, returns non-0 on error,
     }
-    if(error) // if non-0, then an error
+    if (error) // if non-0, then an error
     {
         // the top of the stack should be the error string
         if (!lua_isstring(lua_state, lua_gettop(lua_state)))

@@ -189,11 +189,9 @@ int CmdT55xxSetConfig(const char *Cmd) {
 	uint8_t rates[9] = {8,16,32,40,50,64,100,128,0};
 	uint8_t cmdp = 0;
 	bool errors = false;
-	while(param_getchar(Cmd, cmdp) != 0x00 && !errors)
-	{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		tmp = param_getchar(Cmd, cmdp);
-		switch(tmp)
-		{
+		switch(tmp)	{
 		case 'h':
 		case 'H':
 			return usage_t55xx_config();

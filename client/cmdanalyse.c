@@ -87,9 +87,26 @@ static uint8_t calculateLRC( uint8_t* bytes, uint8_t len) {
         LRC ^= bytes[i];
     return LRC;
 }
+/*
+static uint16_t matrixadd ( uint8_t* bytes, uint8_t len){
+      -----------
+ 0x9c | 1001 1100
+ 0x97 | 1001 0111
+ 0x72 | 0111 0010
+ 0x5e | 0101 1110
+ -----------------
+        C32F 9d74 
 
+	return 0;
+}
+*/
+/*
+static uint16_t shiftadd ( uint8_t* bytes, uint8_t len){
+	return 0;
+}
+*/
 static uint16_t calcSumCrumbAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
-    uint8_t sum = 0;
+    uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum += CRUMB(bytes[i], 0);
 		sum += CRUMB(bytes[i], 2);
@@ -103,7 +120,7 @@ static uint16_t calcSumCrumbAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask)
 	return (~calcSumCrumbAdd(bytes, len, mask) & mask);
 }
 static uint16_t calcSumNibbleAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
-    uint8_t sum = 0;
+    uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum += NIBBLE_LOW(bytes[i]);
 		sum += NIBBLE_HIGH(bytes[i]);
@@ -115,7 +132,7 @@ static uint16_t calcSumNibbleAddOnes( uint8_t* bytes, uint8_t len, uint32_t mask
 	return (~calcSumNibbleAdd(bytes, len, mask) & mask);
 }
 static uint16_t calcSumCrumbXor(  uint8_t* bytes, uint8_t len, uint32_t mask) {
-    uint8_t sum = 0;
+    uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum ^= CRUMB(bytes[i], 0);
 		sum ^= CRUMB(bytes[i], 2);
@@ -126,7 +143,7 @@ static uint16_t calcSumCrumbXor(  uint8_t* bytes, uint8_t len, uint32_t mask) {
     return sum;
 }
 static uint16_t calcSumNibbleXor( uint8_t* bytes, uint8_t len, uint32_t mask) {
-    uint8_t sum = 0;
+    uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum ^= NIBBLE_LOW(bytes[i]);
 		sum ^= NIBBLE_HIGH(bytes[i]);
@@ -135,14 +152,14 @@ static uint16_t calcSumNibbleXor( uint8_t* bytes, uint8_t len, uint32_t mask) {
     return sum;
 }
 static uint16_t calcSumByteXor( uint8_t* bytes, uint8_t len, uint32_t mask) {
-    uint8_t sum = 0;
+    uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++)
         sum ^= bytes[i];
 	sum &= mask;	
     return sum;
 }
 static uint16_t calcSumByteAdd( uint8_t* bytes, uint8_t len, uint32_t mask) {
-    uint8_t sum = 0;
+    uint16_t sum = 0;
     for (uint8_t i = 0; i < len; i++)
         sum += bytes[i];
 	sum &= mask;	
@@ -301,7 +318,7 @@ int CmdAnalyseCHKSUM(const char *Cmd){
 	int len = 0;
 	memset(data, 0x0, sizeof(data));
 	
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'b':
 		case 'B':
@@ -328,10 +345,9 @@ int CmdAnalyseCHKSUM(const char *Cmd){
 			errors = true;
 			break;
 		}
-		if(errors) break;
 	}
 	//Validations
-	if(errors) return usage_analyse_checksum();
+	if (errors || cmdp == 0 ) return usage_analyse_checksum();
 	
 	if (useHeader) {
 		PrintAndLog("     add          | sub         | add 1's compl    | sub 1's compl   | xor");

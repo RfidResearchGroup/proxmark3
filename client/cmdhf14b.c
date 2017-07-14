@@ -135,7 +135,7 @@ int CmdHF14BSnoop(const char *Cmd) {
 }
 
 int CmdHF14BCmdRaw (const char *Cmd) {
-	bool reply = TRUE, power = FALSE, select = FALSE;
+	bool reply = true, power = false, select = false;
 	char buf[5] = "";
 	int i = 0;
 	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
@@ -157,7 +157,7 @@ int CmdHF14BCmdRaw (const char *Cmd) {
 					return usage_hf_14b_raw();
                 case 'r': 
                 case 'R': 
-                    reply = FALSE;
+                    reply = false;
                     break;
                 case 'c':
                 case 'C':                
@@ -165,11 +165,11 @@ int CmdHF14BCmdRaw (const char *Cmd) {
                     break;
                 case 'p': 
                 case 'P': 
-					power = TRUE;
+					power = true;
                     break;
 				case 's':
 				case 'S':
-					select = TRUE;
+					select = true;
 					if (Cmd[i+2]=='s' || Cmd[i+2]=='S') {
 						flags |= ISO14B_SELECT_SR;
 						++i;
@@ -218,7 +218,7 @@ int CmdHF14BCmdRaw (const char *Cmd) {
 
 	if (!reply) return 1; 
 
-	bool success = TRUE;
+	bool success = true;
 	// get back iso14b_card_select_t, don't print it.
 	if (select) 
 		success = waitCmd(FALSE);
@@ -375,7 +375,7 @@ static void print_st_general_info(uint8_t *data, uint8_t len){
 // 14b get and print Full Info (as much as we know)
 bool HF14B_Std_Info(bool verbose){
 	//add more info here
-	return FALSE;
+	return false;
 }
 
 // SRx get and print full info (needs more info...)
@@ -388,7 +388,7 @@ bool HF14B_ST_Info(bool verbose){
 
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 		if (verbose) PrintAndLog("timeout while waiting for reply.");
-		return FALSE;
+		return false;
     }
 
 	iso14b_card_select_t card;
@@ -419,23 +419,23 @@ bool HF14B_ST_Info(bool verbose){
 	// if (datalen != resplen || !crc) return rawClose();
 	//print_ST_Lock_info(data[5]>>2);
 	switch_off_field_14b();
-	return TRUE;
+	return true;
 }
 
 // get and print all info known about any known 14b tag
 bool HF14BInfo(bool verbose){
 
 	// try std 14b (atqb)
-	if (HF14B_Std_Info(verbose)) return TRUE;
+	if (HF14B_Std_Info(verbose)) return true;
 
 	// try st 14b
-	if (HF14B_ST_Info(verbose)) return TRUE;
+	if (HF14B_ST_Info(verbose)) return true;
 
 	// try unknown 14b read commands (to be identified later)
 	//   could be read of calypso, CEPAS, moneo, or pico pass.
 
 	if (verbose) PrintAndLog("no 14443B tag found");
-	return FALSE;
+	return false;
 }
 
 // menu command to get and print all info known about any known 14b tag
@@ -449,7 +449,7 @@ int CmdHF14Binfo(const char *Cmd){
 
 bool HF14B_ST_Reader(bool verbose){
 
-	bool isSuccess = FALSE;
+	bool isSuccess = false;
 
 	switch_on_field_14b();
 	
@@ -460,7 +460,7 @@ bool HF14B_ST_Reader(bool verbose){
 	UsbCommand resp;
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 		if (verbose) PrintAndLog("timeout while waiting for reply.");
-		return FALSE;
+		return false;
     }
 	
 	iso14b_card_select_t card;
@@ -471,7 +471,7 @@ bool HF14B_ST_Reader(bool verbose){
 	switch( status ){
 		case 0: 
 			print_st_general_info(card.uid, card.uidlen);
-			isSuccess = TRUE;
+			isSuccess = true;
 			break;
 		case 1:
 			if (verbose) PrintAndLog("iso14443-3 random chip id fail");
@@ -493,7 +493,7 @@ bool HF14B_ST_Reader(bool verbose){
 
 bool HF14B_Std_Reader(bool verbose){
 
-	bool isSuccess = FALSE;
+	bool isSuccess = false;
 
 	// 14b get and print UID only (general info) 
 	UsbCommand c = {CMD_ISO_14443B_COMMAND, {ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0}};
@@ -503,7 +503,7 @@ bool HF14B_Std_Reader(bool verbose){
 	
 	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 		if (verbose) PrintAndLog("timeout while waiting for reply.");
-		return FALSE;
+		return false;
     }
 	
 	iso14b_card_select_t card;
@@ -517,7 +517,7 @@ bool HF14B_Std_Reader(bool verbose){
 			PrintAndLog(" ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
 			PrintAndLog(" CHIPID : %02X", card.chipid);
 			print_atqb_resp(card.atqb, card.cid);
-			isSuccess = TRUE;
+			isSuccess = true;
 			break;
 		case 2:
 			if (verbose) PrintAndLog("iso14443-3 ATTRIB fail");
@@ -571,7 +571,7 @@ bool HF14B_Other_Reader(){
 		// PrintAndLog ("Unknown tag type answered to a 0x0A command ans:");
 		// // PrintAndLog ("%s", sprint_hex(data, datalen));
 		// rawClose();
-		// return TRUE;
+		// return true;
 	// }
 
 	// c.arg1 = 1;
@@ -586,28 +586,28 @@ bool HF14B_Other_Reader(){
 		// PrintAndLog ("Unknown tag type answered to a 0x0C command ans:");
 		// PrintAndLog ("%s", sprint_hex(data, datalen));
 		// rawClose();
-		// return TRUE;
+		// return true;
 	// }
 	
 	// rawClose();
-	return FALSE;
+	return false;
 }
 
 // get and print general info about all known 14b chips
 bool HF14BReader(bool verbose){
 	
 	// try std 14b (atqb)
-	if (HF14B_Std_Reader(verbose)) return TRUE;
+	if (HF14B_Std_Reader(verbose)) return true;
 
 	// try ST Microelectronics 14b
-	if (HF14B_ST_Reader(verbose)) return TRUE;
+	if (HF14B_ST_Reader(verbose)) return true;
 
 	// try unknown 14b read commands (to be identified later)
 	//   could be read of calypso, CEPAS, moneo, or pico pass.
-	if (HF14B_Other_Reader()) return TRUE;
+	if (HF14B_Other_Reader()) return true;
 
 	if (verbose) PrintAndLog("no 14443B tag found");
-	return FALSE;
+	return false;
 }
 
 // menu command to get and print general info about all known 14b chips
@@ -804,7 +804,7 @@ int srix4kValid(const char *Cmd){
 
 bool waitCmd(bool verbose) {
 
-	bool crc = FALSE;
+	bool crc = false;
 	uint8_t b1 = 0, b2 = 0;
 	uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
 	uint8_t status = 0;
@@ -814,7 +814,7 @@ bool waitCmd(bool verbose) {
     if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 
 		status = (resp.arg[0] & 0xFF);
-		if ( status > 0 ) return FALSE;
+		if ( status > 0 ) return false;
 			
 		len = (resp.arg[1] & 0xFFFF);
 		
@@ -836,10 +836,10 @@ bool waitCmd(bool verbose) {
 				PrintAndLog("[LEN %u] %s", len,	sprint_hex(data, len) );
 			}
 		}	
-		return TRUE;
+		return true;
     } else {
         PrintAndLog("timeout while waiting for reply.");
-		return FALSE;
+		return false;
     }
 }
 

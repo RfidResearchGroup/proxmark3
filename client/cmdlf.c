@@ -131,7 +131,7 @@ int CmdLFCommandRead(const char *Cmd) {
   	uint8_t cmdp = 0;
 	UsbCommand c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, {0,0,0}};
 	
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 			return usage_lf_cmdread();
@@ -163,13 +163,10 @@ int CmdLFCommandRead(const char *Cmd) {
 			errors = 1;
 			break;
 		}
-		if(errors) break;
 	}
-	// No args
-	if (cmdp == 0) errors = true;
 
 	//Validations
-	if (errors) return usage_lf_cmdread();
+	if (errors || cmdp == 0)  return usage_lf_cmdread();
 	
 	// zero and one lengths
 	c.arg[1] = (uint32_t)(zero << 16 | one);
@@ -486,7 +483,7 @@ int CmdLFSetConfig(const char *Cmd) {
 	uint8_t unsigned_trigg = 0;
 
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 			return usage_lf_config();
@@ -527,14 +524,10 @@ int CmdLFSetConfig(const char *Cmd) {
 			errors = 1;
 			break;
 		}
-		if(errors) break;
 	}
 
-	// No args
-	if (cmdp == 0) errors = 1;
-
 	//Validations
-	if (errors) return usage_lf_config();
+	if (errors || cmdp == 0) return usage_lf_config();
 	
 	//Bps is limited to 8
 	if (bps >> 4) bps = 8;
@@ -552,25 +545,24 @@ int CmdLFRead(const char *Cmd) {
 	
 	if (offline) return 0;
 	
-	bool errors = FALSE;
-	bool arg1 = FALSE;
+	bool errors = false;
+	bool arg1 = false;
 	uint8_t cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
 			return usage_lf_read();
 		case 's':
 		case 'S':
-			arg1 = TRUE;
+			arg1 = true;
 			cmdp++;
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-			errors = TRUE;
+			errors = true;
 			break;
 		}
-		if(errors) break;
 	}
 
 	//Validations
@@ -660,7 +652,7 @@ int CmdLFfskSim(const char *Cmd)
 	int dataLen = 0;
 	uint8_t cmdp = 0;
 	
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)){
 			case 'h':
 				return usage_lf_simfsk();
@@ -700,15 +692,13 @@ int CmdLFfskSim(const char *Cmd)
 				errors = true;
 				break;
 		}
-		if(errors) break;
 	}
 	
 	// No args
-	if(cmdp == 0 && DemodBufferLen == 0)
-		errors = true;
+	if (cmdp == 0 && DemodBufferLen == 0) return usage_lf_simfsk();
 
 	//Validations
-	if(errors) return usage_lf_simfsk();
+	if (errors) return usage_lf_simfsk();
 
 	if (dataLen == 0){ //using DemodBuffer 
 		if (clk == 0 || fcHigh == 0 || fcLow == 0){ //manual settings must set them all
@@ -757,7 +747,7 @@ int CmdLFaskSim(const char *Cmd)
 	int dataLen = 0;
 	uint8_t cmdp = 0;
 	
-	while(param_getchar(Cmd, cmdp) != 0x00) {
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 			case 'H':
 			case 'h': return usage_lf_simask();
@@ -801,15 +791,13 @@ int CmdLFaskSim(const char *Cmd)
 				errors = true;
 				break;
 		}
-		if(errors) break;
 	}
 
 	// No args
-	if(cmdp == 0 && DemodBufferLen == 0)
-		errors = true;
+	if (cmdp == 0 && DemodBufferLen == 0) return usage_lf_simask();
 
 	//Validations
-	if(errors) return usage_lf_simask();
+	if (errors) return usage_lf_simask();
 	
 	if (dataLen == 0){ //using DemodBuffer
 		if (clk == 0) 
@@ -854,7 +842,7 @@ int CmdLFpskSim(const char *Cmd) {
 	uint8_t cmdp = 0;
 	uint8_t pskType = 1;
 	
-	while(param_getchar(Cmd, cmdp) != 0x00)	{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 		switch(param_getchar(Cmd, cmdp)) {
 			case 'h':
 				return usage_lf_simpsk();
@@ -898,7 +886,6 @@ int CmdLFpskSim(const char *Cmd) {
 				errors = true;
 				break;
 			}
-		if (errors) break;
 	}
 	// No args
 	if (cmdp == 0 && DemodBufferLen == 0)

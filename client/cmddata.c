@@ -295,10 +295,8 @@ int CmdPrintDemodBuff(const char *Cmd)
 	uint32_t offset = 0; //could be size_t but no param_get16...
 	uint32_t length = 512;
 	char cmdp = 0;
-	while(param_getchar(Cmd, cmdp) != 0x00)
-	{
-		switch(param_getchar(Cmd, cmdp))
-		{
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
 		case 'h':
 		case 'H':
 			return usage_data_printdemodbuf();
@@ -324,10 +322,9 @@ int CmdPrintDemodBuff(const char *Cmd)
 			errors = true;
 			break;
 		}
-		if(errors) break;
 	}
 	//Validations
-	if(errors) return usage_data_printdemodbuf();
+	if (errors) return usage_data_printdemodbuf();
 	
 	if (DemodBufferLen == 0) {
 		PrintAndLog("Demodbuffer is empty");
