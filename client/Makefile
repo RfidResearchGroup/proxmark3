@@ -139,9 +139,12 @@ CMDSRCS =	mifarehost.c \
 			cmdlft55xx.c \
 			cmdlfpcf7931.c \
 			cmdlfviking.c \
+			cmdlfpac.c \
 			cmdlfpresco.c \
 			cmdlfpyramid.c \
+			cmdlfsecurakey.c \
 			cmdlfguard.c \
+			cmdlfnexwatch.c \
 			cmdlfnedap.c \
 			cmdlfjablotron.c \
 			cmdlfvisa2000.c \

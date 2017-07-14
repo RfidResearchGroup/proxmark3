@@ -3,8 +3,10 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Generic CRC calculation code.
+// Parity functions
 //-----------------------------------------------------------------------------
+
+// all functions defined in header file by purpose. Allows compiler optimizations. 
 
 #ifndef __PARITY_H
 #define __PARITY_H
@@ -14,25 +16,42 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <stdbool.h>
 
 extern const uint8_t OddByteParity[256];
-extern const uint8_t EvenByteParity[256];
 
-static inline uint8_t oddparity8(uint8_t bt)
-{
-	return OddByteParity[bt];
+
+static inline bool oddparity8(const uint8_t x) {
+	return OddByteParity[x];
 }
 
-static inline uint8_t evenparity8(const uint8_t bt)
-{
-	return EvenByteParity[bt];
+
+static inline bool evenparity8(const uint8_t x) {
+	return !OddByteParity[x];
 }
 
-static inline uint8_t evenparity32(uint32_t x) 
+
+static inline bool evenparity32(uint32_t x) 
 {
+#if !defined __GNUC__
 	x ^= x >> 16;
 	x ^= x >> 8;
-	return EvenByteParity[x & 0xff];
+	return evenparity8(x);
+#else
+	return __builtin_parity(x);
+#endif
+}
+
+
+static inline bool oddparity32(uint32_t x) 
+{
+#if !defined __GNUC__
+	x ^= x >> 16;
+	x ^= x >> 8;
+	return oddparity8(x);
+#else
+	return !__builtin_parity(x);
+#endif
 }
 
 #ifdef __cplusplus

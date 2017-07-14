@@ -1196,7 +1196,12 @@ int CmdLFfind(const char *Cmd) {
 	if (ans>0) {
 		PrintAndLog("\nValid Presco ID Found!");
 		return 1;
-	}
+	}				 
+	ans=CmdPacDemod("");
+	if (ans>0) {
+		PrintAndLog("\nValid PAC/Stanley ID Found!");
+		return 1;
+	}	
 
 	// TIdemod?
 	PrintAndLog("\nNo Known Tags Found!\n");
@@ -1273,12 +1278,15 @@ static command_t CommandTable[] = {
 	{"io",			CmdLFIO,			1, "{ IOPROX RFIDs... }"},
 	{"jablotron",	CmdLFJablotron,		1, "{ Jablotron RFIDs... }"},
 	{"nedap",		CmdLFNedap,			1, "{ Nedap RFIDs... }"},
+	{"nexwatch",    CmdLFNexWatch,      1, "{ NexWatch RFIDs...          }"},
 	{"noralsy",		CmdLFNoralsy,		1, "{ Noralsy RFIDs... }"},	
+	{"pac",         CmdLFPac,           1, "{ PAC/Stanley RFIDs...}"},
 	{"pcf7931",     CmdLFPCF7931,       1, "{ PCF7931 RFIDs... }"},
 	{"presco",      CmdLFPresco,        1, "{ Presco RFIDs... }"},
 	{"pyramid",		CmdLFPyramid,       1, "{ Farpointe/Pyramid RFIDs... }"},	
 	{"ti",          CmdLFTI,            1, "{ TI RFIDs... }"},
 	{"t55xx",       CmdLFT55XX,         1, "{ T55xx RFIDs... }"},
+	{"securakey",   CmdLFSecurakey,     1, "{ Securakey RFIDs...         }"},
 	{"viking",      CmdLFViking,        1, "{ Viking RFIDs... }"},
 	{"visa2000",    CmdLFVisa2k,        1, "{ Visa2000 RFIDs... }"},
 	{"config",      CmdLFSetConfig,     0, "Set config for LF sampling, bit/sample, decimation, frequency"},

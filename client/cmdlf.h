@@ -44,6 +44,9 @@
 #include "cmdlfnoralsy.h"	// for NORALSY meny
 #include "cmdlffdx.h"		// for FDX-B meny
 #include "cmdlfcotag.h"		// for COTAG meny
+#include "cmdlfnexwatch.h"	//for nexwatch menu
+#include "cmdlfsecurakey.h"	//for securakey menu
+#include "cmdlfpac.h"		// for pac menu
 
 #define T55XX_WRITE_TIMEOUT	1500
 
