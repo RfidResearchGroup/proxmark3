@@ -221,10 +221,10 @@ int CmdHF14BCmdRaw (const char *Cmd) {
 	bool success = true;
 	// get back iso14b_card_select_t, don't print it.
 	if (select) 
-		success = waitCmd(FALSE);
+		success = waitCmd(false);
 
 	// get back response from the raw bytes you sent.
-	if (success && datalen>0) waitCmd(TRUE);
+	if (success && datalen>0) waitCmd(true);
 
     return 1;
 }

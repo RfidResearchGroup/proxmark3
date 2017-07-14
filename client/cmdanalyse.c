@@ -521,13 +521,13 @@ int CmdAnalyseHid(const char *Cmd){
 	uint8_t key_std_format[8] = {0};
 	uint8_t key_iclass_format[8] = {0};
 	uint8_t data[16] = {0};
-	bool isReverse = FALSE;
+	bool isReverse = false;
 	int len = 0;
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0|| cmdp == 'h' || cmdp == 'H') return usage_analyse_hid();
 		
 	if ( cmdp == 'r' || cmdp == 'R' ) 
-		isReverse = TRUE;
+		isReverse = true;
 	
 	param_gethex_ex(Cmd, 1, data, &len);
 	if ( len%2 ) return usage_analyse_hid();

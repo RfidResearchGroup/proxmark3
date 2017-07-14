@@ -97,7 +97,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 	SendCommand(&c);
 	msleep(delay);
 	sendPing();
-	return TRUE;
+	return true;
 }
 
 int CmdHIDDemodFSK(const char *Cmd) {
@@ -393,11 +393,11 @@ int CmdHIDBrute(const char *Cmd){
 		case 'A':
 			fmtlen = param_get8(Cmd, cmdp+1);			
 			cmdp += 2;
-			bool is_ftm_ok = FALSE;
+			bool is_ftm_ok = false;
 			uint8_t ftms[] = {26,33,34,35,37};
 			for ( uint8_t i = 0; i < sizeof(ftms); i++){
 				if ( ftms[i] == fmtlen ) {
-					is_ftm_ok = TRUE;
+					is_ftm_ok = true;
 				}
 			}
 			// negated

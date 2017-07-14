@@ -101,7 +101,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 	PrintAndLog("Trying FC: %u; CN: %u", fc, cn);		
 	if ( !getAWIDBits(fmtlen, fc, cn, bs)) {
 		PrintAndLog("Error with tag bitstream generation.");
-		return FALSE;
+		return false;
 	}
 
 	uint64_t arg1 = (10<<8) + 8; // fcHigh = 10, fcLow = 8
@@ -112,7 +112,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 	SendCommand(&c);
 	msleep(delay);
 	sendPing();
-	return TRUE;
+	return true;
 }
 
 int CmdAWIDDemodFSK(const char *Cmd) {

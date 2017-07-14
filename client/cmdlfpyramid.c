@@ -5,6 +5,7 @@
 // the license.
 //-----------------------------------------------------------------------------
 // Low frequency Farpoint / Pyramid tag commands
+// FSK2a, rf/50, 128 bits (complete)
 //-----------------------------------------------------------------------------
 #include <string.h>
 #include <inttypes.h>
@@ -14,7 +15,7 @@ static int CmdHelp(const char *Cmd);
 int usage_lf_pyramid_clone(void){
 	PrintAndLog("clone a Farpointe/Pyramid tag to a T55x7 tag.");
 	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
-	PrintAndLog("Currently work only on 26bit");
+	PrintAndLog("Currently only works on 26bit");
 	PrintAndLog("");
 	PrintAndLog("Usage: lf pyramid clone <Facility-Code> <Card-Number>");
 	PrintAndLog("Options :");

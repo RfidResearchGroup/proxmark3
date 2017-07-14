@@ -831,7 +831,7 @@ int HFLegicReader(const char *Cmd, bool verbose) {
 	return 0;
 }
 int CmdLegicReader(const char *Cmd){
-	return HFLegicReader(Cmd, TRUE);
+	return HFLegicReader(Cmd, true);
 }
 
 int CmdLegicDump(const char *Cmd){

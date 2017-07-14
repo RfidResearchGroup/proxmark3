@@ -4,7 +4,7 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency Presco tag commands
+// Low frequency Jablotron tag commands
 //-----------------------------------------------------------------------------
 
 #include "cmdlfjablotron.h"
@@ -74,7 +74,7 @@ int CmdJablotronDemod(const char *Cmd) {
 
 	//Differential Biphase / di-phase (inverted biphase)
 	//get binary from ask wave
-	if (!ASKbiphaseDemod("0 64 1 0", FALSE)) {
+	if (!ASKbiphaseDemod("0 64 1 0", false)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - Jablotron ASKbiphaseDemod failed");
 		return 0;
 	}

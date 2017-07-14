@@ -5,6 +5,7 @@
 // the license.
 //-----------------------------------------------------------------------------
 // Low frequency Noralsy tag commands
+// ASK/Manchester, STT, RF/32, 96 bits long (some bits unknown)
 //-----------------------------------------------------------------------------
 #include "cmdlfnoralsy.h"
 
@@ -73,13 +74,14 @@ int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits) {
 
 /*
 *
-* 2520116 | BB0314FF2529900116360000 | 10111011 00000011 00010100 11111111 00100101 00101001 10010000 00000001 00010110 00110110 00000000 00000000
-*			aaaaaaaaiii***iiiicc----                                       iiiiiiii iiiiYYYY YYYY**** iiiiiiii iiiiiiii cccccccc
+* 2520116 | BB0214FF2529900116360000 | 10111011 00000011 00010100 11111111 00100101 00101001 10010000 00000001 00010110 00110110 00000000 00000000
+*           aaa*aaaaiiiYY*iiiicc----                ****                   iiiiiiii iiiiYYYY YYYY**** iiiiiiii iiiiiiii cccccccc
 *
-* a = fixed value BB0314FF 
+* a = fixed value BB0*14FF 
 * i = printed id, BCD-format
 * Y = year
 * c = checksum
+* * = unknown
 * 
 **/
 
@@ -88,10 +90,12 @@ int CmdNoralsyDemod(const char *Cmd) {
 
 	//ASK / Manchester
 	bool st = true;
-	if (!ASKDemod_ext("32 0 0", FALSE, FALSE, 1, &st)) {
+	if (!ASKDemod_ext("32 0 0", false, false, 1, &st)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - Noralsy: ASK/Manchester Demod failed");
 		return 0;
 	}
+	if (!st) return 0;
+
 	size_t size = DemodBufferLen;
 	int ans = NoralsyDemod_AM(DemodBuffer, &size);
 	if (ans < 0){

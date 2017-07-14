@@ -84,7 +84,7 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 
 int CmdLFNedapDemod(const char *Cmd) {
 	//raw ask demod no start bit finding just get binary from wave
-	if (!ASKbiphaseDemod("0 64 0 0", FALSE)) {
+	if (!ASKbiphaseDemod("0 64 0 0", false)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - Nedap ASKbiphaseDemod failed");
 		return 0;
 	}

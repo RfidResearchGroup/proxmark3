@@ -604,13 +604,13 @@ int Cmdaskmandemod(const char *Cmd)
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) > 45 || cmdp == 'h' || cmdp == 'H') return usage_data_rawdemod_am();
 
-	bool st = TRUE;
+	bool st = true;
 	if (Cmd[0]=='s') 
-		return ASKDemod_ext(Cmd++, TRUE, TRUE, 1, &st);
+		return ASKDemod_ext(Cmd++, true, true, 1, &st);
 	else if (Cmd[1] == 's')
-		return ASKDemod_ext(Cmd+=2, TRUE, TRUE, 1, &st);
+		return ASKDemod_ext(Cmd+=2, true, true, 1, &st);
 
-	return ASKDemod(Cmd, TRUE, TRUE, 1);
+	return ASKDemod(Cmd, true, true, 1);
 }
 
 //by marshmellow
@@ -857,7 +857,7 @@ int Cmdaskrawdemod(const char *Cmd)
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) > 25 || cmdp == 'h' || cmdp == 'H')	return usage_data_rawdemod_ar();
 	
-	return ASKDemod(Cmd, TRUE, FALSE, 0);
+	return ASKDemod(Cmd, true, false, 0);
 }
 
 int AutoCorrelate(int window, bool SaveGrph, bool verbose)
@@ -910,7 +910,7 @@ int CmdAutoCorr(const char *Cmd)
 	if (cmdp == 'h' || cmdp == 'H') return usage_data_autocorr();
 	int window = 4000; //set default
 	char grph = 0;
-	bool updateGrph = FALSE;
+	bool updateGrph = false;
 	sscanf(Cmd, "%i %c", &window, &grph);
 
 	if (window >= GraphTraceLen) {
@@ -955,10 +955,9 @@ int CmdBuffClear(const char *Cmd)
 
 int CmdDec(const char *Cmd)
 {
-	for (int i = 0; i < (GraphTraceLen >> 2); ++i)
+	for (int i = 0; i < (GraphTraceLen / 2); ++i)
 		GraphBuffer[i] = GraphBuffer[i * 2];
-
-	GraphTraceLen >>= 2;
+	GraphTraceLen /= 2;
 	PrintAndLog("decimated by 2");
 	RepaintGraphWindow();
 	return 0;
@@ -1968,7 +1967,7 @@ int CmdNRZrawDemod(const char *Cmd)
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) > 16 || cmdp == 'h' || cmdp == 'H') return usage_data_rawdemod_nr();
 
-	return NRZrawDemod(Cmd, TRUE);
+	return NRZrawDemod(Cmd, true);
 }
 
 // by marshmellow
@@ -1981,7 +1980,7 @@ int CmdPSK1rawDemod(const char *Cmd)
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) > 16 || cmdp == 'h' || cmdp == 'H') return usage_data_rawdemod_p1();
 
-	ans = PSKDemod(Cmd, TRUE);
+	ans = PSKDemod(Cmd, true);
 	//output
 	if (!ans){
 		if (g_debugMode) PrintAndLog("Error demoding: %d",ans); 
@@ -2001,7 +2000,7 @@ int CmdPSK2rawDemod(const char *Cmd)
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) > 16 || cmdp == 'h' || cmdp == 'H')	return usage_data_rawdemod_p2();
 
-	ans = PSKDemod(Cmd, TRUE);
+	ans = PSKDemod(Cmd, true);
 	if (!ans){
 		if (g_debugMode) PrintAndLog("Error demoding: %d",ans);  
 		return 0;
