@@ -4,7 +4,7 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency T55xx commands
+// Low frequency Farpoint / Pyramid commands
 //-----------------------------------------------------------------------------
 #ifndef CMDLFPYRAMID_H__
 #define CMDLFPYRAMID_H__

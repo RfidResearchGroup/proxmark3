@@ -128,7 +128,7 @@ int CmdFdxDemod(const char *Cmd) {
 
 	//Differential Biphase / di-phase (inverted biphase)
 	//get binary from ask wave
-	if (!ASKbiphaseDemod("0 32 1 0", FALSE)) {
+	if (!ASKbiphaseDemod("0 32 1 0", false)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - FDX-B ASKbiphaseDemod failed");
 		return 0;
 	}

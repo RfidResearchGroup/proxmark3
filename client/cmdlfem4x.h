@@ -12,6 +12,7 @@
 #define CMDLFEM4X_H__
 
 #include <stdio.h>
+#include <stdbool.h>    // for bool
 #include <string.h>
 #include <inttypes.h>
 #include "proxmark3.h"
@@ -25,17 +26,17 @@
 #include "cmdlf.h"
 #include "lfdemod.h"
 
-int CmdEMdemodASK(const char *Cmd);
-int CmdEM410xRead(const char *Cmd);
-int CmdEM410xSim(const char *Cmd);
-int CmdEM410xWatch(const char *Cmd);
-int CmdEM410xWatchnSpoof(const char *Cmd);
-int CmdEM410xWrite(const char *Cmd);
-int CmdEM4x50Read(const char *Cmd);
-int CmdLFEM4X(const char *Cmd);
-int CmdReadWord(const char *Cmd);
-int CmdWriteWord(const char *Cmd);
-int EM4x50Read(const char *Cmd, bool verbose);
+extern int CmdEMdemodASK(const char *Cmd);
+extern int CmdEM410xRead(const char *Cmd);
+extern int CmdEM410xSim(const char *Cmd);
+extern int CmdEM410xWatch(const char *Cmd);
+extern int CmdEM410xWatchnSpoof(const char *Cmd);
+extern int CmdEM410xWrite(const char *Cmd);
+extern int CmdEM4x50Read(const char *Cmd);
+extern int CmdLFEM4X(const char *Cmd);
+extern int CmdReadWord(const char *Cmd);
+extern int CmdWriteWord(const char *Cmd);
+extern int EM4x50Read(const char *Cmd, bool verbose);
 
 bool EM4x05IsBlock0(uint32_t *word);
 

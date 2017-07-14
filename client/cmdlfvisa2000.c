@@ -4,7 +4,9 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency Presco tag commands
+// Low frequency visa 2000 tag commands
+// by iceman
+// ASK/Manchester, RF/64, STT, 96 bits (complete)
 //-----------------------------------------------------------------------------
 
 #include "cmdlfvisa2000.h"
@@ -54,14 +56,14 @@ static uint8_t visa_parity( uint32_t id) {
 		,0,1,1,0
 	};	
 	uint8_t par = 0;
-	par |= par_lut[ NIBBLE_HIGH( (id >> 24) & 0xFF) ] << 7;
-	par |= par_lut[ NIBBLE_LOW( (id >> 24) & 0xFF) ] << 6;
-	par |= par_lut[ NIBBLE_HIGH( (id >> 16) & 0xFF) ] << 5;
-	par |= par_lut[ NIBBLE_LOW( (id >> 16) & 0xFF) ] << 4;
-	par |= par_lut[ NIBBLE_HIGH( (id >> 8) & 0xFF) ] << 3;
-	par |= par_lut[ NIBBLE_LOW( (id >> 8) & 0xFF) ] << 2;
-	par |= par_lut[ NIBBLE_HIGH( id & 0xFF ) ] << 1;
-	par |= par_lut[ NIBBLE_LOW( id & 0xFF) ];
+	par |= par_lut[ (id >> 28) & 0xF ] << 7;
+	par |= par_lut[ (id >> 24) & 0xF ] << 6;
+	par |= par_lut[ (id >> 20) & 0xF ] << 5;
+	par |= par_lut[ (id >> 16) & 0xF ] << 4;
+	par |= par_lut[ (id >> 12) & 0xF ] << 3;
+	par |= par_lut[ (id >>  8) & 0xF ] << 2;
+	par |= par_lut[ (id >>  4) & 0xF ] << 1;
+	par |= par_lut[ (id & 0xF) ];
 	return par;	
 }
 
@@ -69,12 +71,12 @@ static uint8_t visa_parity( uint32_t id) {
 /**
 *
 * 56495332 00096ebd 00000077 —> tag id 618173
-* aaaaaaaa iiiiiiii -----..c
+* aaaaaaaa iiiiiiii -----ppc
 *
 * a = fixed value  ascii 'VIS2'
 * i = card id
+* p = even parity bit for each nibble in card id.
 * c = checksum  (xor of card id)
-* . = unknown 
 * 
 **/
 //see ASKDemod for what args are accepted
@@ -86,8 +88,8 @@ int CmdVisa2kDemod(const char *Cmd) {
 	//sCmdAskEdgeDetect("");
 	
 	//ASK / Manchester
-	bool st = TRUE;
-	if (!ASKDemod_ext("64 0 0", FALSE, FALSE, 1, &st)) {
+	bool st = true;
+	if (!ASKDemod_ext("64 0 0", false, false, 1, &st)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - Visa2k: ASK/Manchester Demod failed");
 		save_restoreGB(0);
 		return 0;
@@ -142,7 +144,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 // 64*96*2=12288 samples just in case we just missed the first preamble we can still catch 2 of them
 int CmdVisa2kRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("12500",TRUE);
+	getSamples("12500",true);
 	return CmdVisa2kDemod(Cmd);
 }
 
@@ -162,7 +164,6 @@ int CmdVisa2kClone(const char *Cmd) {
 		blocks[0] = T5555_MODULATION_MANCHESTER | ((64-2)>>1) << T5555_BITRATE_SHIFT | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 	}
 	
-	// 
 	blocks[2] = id;
 	blocks[3] =  (visa_parity(id) << 4) | visa_chksum(id);	
 

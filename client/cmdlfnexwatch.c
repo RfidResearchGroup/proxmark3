@@ -60,7 +60,7 @@ int CmdPSKNexWatch(const char *Cmd)
 	//output
 	PrintAndLog("NexWatch ID: %d", ID);
 	if (invert){
-		PrintAndLog("Had to Invert - probably NexKey");
+		PrintAndLog("DEBUG: Error - NexWatch had to Invert - probably NexKey");
 		for (uint8_t idx=0; idx<size; idx++)
 			DemodBuffer[idx] ^= 1;
 	} 

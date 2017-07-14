@@ -4,7 +4,7 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency T55xx commands
+// Low frequency Jablotron tag commands
 //-----------------------------------------------------------------------------
 #ifndef CMDLFJABLOTRON_H__
 #define CMDLFJABLOTRON_H__

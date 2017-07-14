@@ -58,13 +58,12 @@ int CmdEM410xRead(const char *Cmd)
 }
 
 // emulate an EM410X tag
-int CmdEM410xSim(const char *Cmd)
-{
-	int i, n, j, binary[4], parity[4];
-	uint8_t uid[5] = {0x00};
-
+int CmdEM410xSim(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if (cmdp == 'h' || cmdp == 'H') return usage_lf_em410x_sim();
+
+	int i, n, j, binary[4], parity[4];
+	uint8_t uid[5] = {0x00};
 
 	/* clock is 64 in EM410x tags */
 	uint8_t clock = 64;
@@ -132,6 +131,8 @@ int CmdEM410xSim(const char *Cmd)
  *       rate gets lower, then grow the number of samples
  *  Changed by martin, 4000 x 4 = 16000, 
  *  see http://www.proxmark.org/forum/viewtopic.php?pid=7235#p7235
+ *
+ *  EDIT -- capture enough to get 2 complete preambles at the slowest data rate known to be used (rf/64) (64*64*2+9 = 8201)	marshmellow
 */
 int CmdEM410xWatch(const char *Cmd) {
 	do {
@@ -224,9 +225,9 @@ bool EM_EndParityTest(uint8_t *BitStream, size_t size, uint8_t rows, uint8_t col
 		for (uint8_t rowNum = 0; rowNum < rows; rowNum++) {
 			colP ^= BitStream[(rowNum*cols)+colNum];
 		}
-		if (colP != pType) return FALSE;
+		if (colP != pType) return false;
 	}
-	return TRUE;
+	return true;
 }
 
 bool EM_ByteParityTest(uint8_t *BitStream, size_t size, uint8_t rows, uint8_t cols, uint8_t pType)
@@ -238,9 +239,9 @@ bool EM_ByteParityTest(uint8_t *BitStream, size_t size, uint8_t rows, uint8_t co
 		for (uint8_t colNum = 0; colNum < cols; colNum++) {
 			rowP ^= BitStream[(rowNum*cols)+colNum];
 		}
-		if (rowP != pType) return FALSE;
+		if (rowP != pType) return false;
 	}
-	return TRUE;
+	return true;
 }
 
 // EM word parity test.
@@ -256,12 +257,12 @@ bool EM_ByteParityTest(uint8_t *BitStream, size_t size, uint8_t rows, uint8_t co
 bool EMwordparitytest(uint8_t *bits){
 
 	// last row/col parity must be 0
-	if (bits[44] != 0 ) return FALSE;
+	if (bits[44] != 0 ) return false;
 	
 	// col parity check
 	uint8_t c1 = bytebits_to_byte(bits, 8) ^ bytebits_to_byte(bits+9, 8) ^ bytebits_to_byte(bits+18, 8) ^ bytebits_to_byte(bits+27, 8);
 	uint8_t c2 = bytebits_to_byte(bits+36, 8);
-	if ( c1 != c2 ) return FALSE;
+	if ( c1 != c2 ) return false;
 
 	// row parity check
 	uint8_t rowP = 0;
@@ -271,13 +272,13 @@ bool EMwordparitytest(uint8_t *bits){
 		if ( i>0 && (i % 9) == 0) {
 			
 			if ( rowP != EVEN )	
-				return FALSE;
+				return false;
 
 			rowP = 0;
 		}
 	}
 	// all checks ok.
-	return TRUE;
+	return true;
 }
 
 
@@ -354,7 +355,6 @@ uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose, bool 
 	}
 	return code;
 }
-
 
 /* Read the transmitted data of an EM4x50 tag from the graphbuffer
  * Format:
@@ -593,10 +593,10 @@ bool downloadSamplesEM(){
 	GetFromBigBuf(got, sizeof(got), 0);
 	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500) ) {
 		PrintAndLog("command execution time out");
-		return FALSE;
+		return false;
 	}
 	setGraphBuf(got, sizeof(got));
-	return TRUE;
+	return true;
 }
 
 // em_demod 
@@ -605,7 +605,7 @@ bool doPreambleSearch(size_t *startIdx){
 	// sanity check
 	if ( DemodBufferLen < EM_PREAMBLE_LEN) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 demodbuffer too small");
-		return FALSE;
+		return false;
 	}
 
 	// set size to 20 to only test first 14 positions for the preamble
@@ -614,73 +614,73 @@ bool doPreambleSearch(size_t *startIdx){
 	// skip first two 0 bits as they might have been missed in the demod
 	uint8_t preamble[EM_PREAMBLE_LEN] = {0,0,1,0,1,0};
 	
-	if ( !preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, TRUE)) {
+	if ( !preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM4305 preamble not found :: %d", *startIdx);
-		return FALSE;
+		return false;
 	} 
-	return TRUE;
+	return true;
 }
 
 bool detectFSK(){
 	// detect fsk clock
-	if (!GetFskClock("", FALSE, FALSE)) {
+	if (!GetFskClock("", false, false)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM: FSK clock failed");
-		return FALSE;
+		return false;
 	}
 	// demod
-	int ans = FSKrawDemod("0 0", FALSE);
+	int ans = FSKrawDemod("0 0", false);
 	if (!ans) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM: FSK Demod failed");
-		return FALSE;
+		return false;
 	}
-	return TRUE;
+	return true;
 }
 // PSK clocks should be easy to detect ( but difficult to demod a non-repeating pattern... )
 bool detectPSK(){	
-	int	ans = GetPskClock("", FALSE, FALSE);
+	int	ans = GetPskClock("", false, false);
 	if (ans <= 0) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM: PSK clock failed");
-		return FALSE;
+		return false;
 	}
 	//demod
 	//try psk1 -- 0 0 6 (six errors?!?)
-	ans = PSKDemod("0 0 6", FALSE);
+	ans = PSKDemod("0 0 6", false);
 	if (!ans) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM: PSK1 Demod failed");
 
 		//try psk1 inverted
-		ans = PSKDemod("0 1 6", FALSE);
+		ans = PSKDemod("0 1 6", false);
 		if (!ans) {
 			if (g_debugMode) PrintAndLog("DEBUG: Error - EM: PSK1 inverted Demod failed");
-			return FALSE;
+			return false;
 		}
 	}
 	// either PSK1 or PSK1 inverted is ok from here.
 	// lets check PSK2 later.
-	return TRUE;
+	return true;
 }
 // try manchester - NOTE: ST only applies to T55x7 tags.
 bool detectASK_MAN(){
-	bool stcheck = FALSE;
-	int ans = ASKDemod_ext("0 0 0", FALSE, FALSE, 1, &stcheck);
+	bool stcheck = false;
+	int ans = ASKDemod_ext("0 0 0", false, false, 1, &stcheck);
 	if (!ans) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM: ASK/Manchester Demod failed");
-		return FALSE;
+		return false;
 	} 
-	return TRUE;
+	return true;
 }
 bool detectASK_BI(){
-	int ans = ASKbiphaseDemod("0 0 1", FALSE);
+	int ans = ASKbiphaseDemod("0 0 1", false);
 	if (!ans) { 
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM: ASK/biphase normal demod failed");
 		
-		ans = ASKbiphaseDemod("0 1 1", FALSE);
+		ans = ASKbiphaseDemod("0 1 1", false);
 		if (!ans) {
 			if (g_debugMode) PrintAndLog("DEBUG: Error - EM: ASK/biphase inverted demod failed");
-			return FALSE;
+			return false;
 		}
 	}
-	return TRUE;
+	return true;
 }
 
 // param: idx - start index in demoded data.
@@ -691,17 +691,17 @@ bool setDemodBufferEM(uint32_t *word, size_t idx){
 	memcpy( parity, DemodBuffer, 45);
 	if (!EMwordparitytest(parity) ){
 		PrintAndLog("DEBUG: Error - EM Parity tests failed");
-		return FALSE;
+		return false;
 	}
 		   
     // test for even parity bits and remove them. (leave out the end row of parities so 36 bits)	
 	if (!removeParity(DemodBuffer, idx + EM_PREAMBLE_LEN, 9, 0, 36)) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM, failed removing parity");
-		return FALSE;
+		return false;
 	}
 	setDemodBuf(DemodBuffer, 32, 0);
 	*word = bytebits_to_byteLSBF(DemodBuffer, 32);
-	return TRUE;
+	return true;
 }
 
 // FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE 
@@ -727,7 +727,7 @@ bool demodEM4x05resp(uint32_t *word) {
 		if (doPreambleSearch( &idx ))
 			return setDemodBufferEM(word, idx);
 	}
-	return FALSE;
+	return false;
 }
 
 //////////////// 4205 / 4305 commands
@@ -1011,7 +1011,7 @@ void printEM4x05ProtectionBits(uint32_t word) {
 
 //quick test for EM4x05/EM4x69 tag
 bool EM4x05IsBlock0(uint32_t *word) {
-	return EM4x05ReadWord_ext(0, 0, FALSE, word);
+	return EM4x05ReadWord_ext(0, 0, false, word);
 }
 
 int CmdEM4x05Info(const char *Cmd) {

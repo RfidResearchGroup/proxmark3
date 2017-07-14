@@ -55,7 +55,7 @@ int usage_t55xx_read(){
 	return 0;
 }
 int usage_t55xx_write(){
-	PrintAndLog("Usage:  lf t55xx wr [b <block>] [d <data>] [p <password>] [1]");
+	PrintAndLog("Usage:  lf t55xx write [b <block>] [d <data>] [p <password>] [1]");
 	PrintAndLog("Options:");
 	PrintAndLog("     b <block>    - block number to write. Between 0-7");
 	PrintAndLog("     d <data>     - 4 bytes of data to write (8 hex characters)");
