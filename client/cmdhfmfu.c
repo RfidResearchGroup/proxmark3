@@ -799,7 +799,6 @@ int CmdHF14AMfUInfo(const char *Cmd){
 			break;
 		}
 	}
-
 	//Validations
 	if (errors) return usage_hf_mfu_info();
 
@@ -1273,11 +1272,13 @@ int usage_hf_mfu_restore(void){
 	PrintAndLog("  l       : (optional) swap entered key's endianness");
 	PrintAndLog("  s       : (optional) enable special write UID -MAGIC TAG ONLY-");
 	PrintAndLog("  e       : (optional) enable special write version/signature -MAGIC NTAG 21* ONLY-");
+	PrintAndLog("  r       : (optional) use the password found in dumpfile to configure tag. requires 'e' parameter to work");
 	PrintAndLog("  f <FN>  : filename w/o .bin to restore");	
 	PrintAndLog("");
 	PrintAndLog("   samples:");
 	PrintAndLog("          : hf mfu restore s f myfile");
 	PrintAndLog("          : hf mfu restore k AABBCCDDD s f myfile\n");
+	PrintAndLog("          : hf mfu restore k AABBCCDDD s e r f myfile\n");
 	return 0;
 }
 
@@ -1573,7 +1574,7 @@ int CmdHF14AMfUDump(const char *Cmd){
 	}
 
 	//Validations
-	if (errors || cmdp == 0) return usage_hf_mfu_dump();
+	if (errors) return usage_hf_mfu_dump();
 
 	//if we entered a key in little endian and set the swapEndian switch - switch it...
 	if (swapEndian && hasAuthKey) 
@@ -1736,6 +1737,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 	bool errors = false;
 	bool write_special = false;
 	bool write_extra = false;
+	bool read_key = false;
 	size_t filelen = 0;
 	FILE *f;
 	UsbCommand c = {CMD_MIFAREU_WRITEBL, {0,0,0}};
@@ -1768,11 +1770,13 @@ int CmdHF14AMfURestore(const char *Cmd){
 		case 'f':
 		case 'F':
 			filelen = param_getstr(Cmd, cmdp+1, filename);
-			if (filelen > FILE_PATH_SIZE-5) filelen = FILE_PATH_SIZE-5;
+
+			if (filelen > FILE_PATH_SIZE-5)
+				filelen = FILE_PATH_SIZE-5;
 			
-			if ( filelen < 0) {
+			if (filelen < 0)
 				sprintf(filename, "dumpdata.bin");
-			} 			
+
 			cmdp += 2;
 			break;
 		case 's':
@@ -1784,6 +1788,11 @@ int CmdHF14AMfURestore(const char *Cmd){
 		case 'E':
 			cmdp++;
 			write_extra = true;
+			break;
+		case 'r':
+		case 'R':
+			cmdp++;
+			read_key = true;
 			break;
 		default:
 			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -1841,7 +1850,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 		c.arg[1] = (keylen == 16) ? 1 : 2;
 		memcpy(c.d.asBytes+4, p_authkey, keylen);
 	}
-
+	
 	// write version, signature, pack
 	// only magic NTAG cards
 	if ( write_extra ) {
@@ -1851,9 +1860,16 @@ int CmdHF14AMfURestore(const char *Cmd){
 		#define MFU_NTAG_SPECIAL_VERSION	0xFA
 		#define MFU_NTAG_SPECIAL_SIGNATURE	0xF2
 		// pwd
-		if ( hasKey ) {
+		if ( hasKey || read_key) {
 			c.arg[0] = MFU_NTAG_SPECIAL_PWD;
-			memcpy(c.d.asBytes,  p_authkey, 4 );
+
+			if (read_key) {
+				// try reading key from dump and use.
+				memcpy(c.d.asBytes, mem->data + ( bytes_read - 48 - 8), 4);
+			} else {
+				memcpy(c.d.asBytes,  p_authkey, 4 );
+			}
+
 			printf("special block written %x - %s\n", MFU_NTAG_SPECIAL_PWD, sprint_hex(c.d.asBytes, 8) );
 			clearCommandBuffer();
 			SendCommand(&c);
