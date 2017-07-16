@@ -248,11 +248,11 @@ int CmdHF14AReader(const char *Cmd) {
 			break;
 		case 0x01: PrintAndLog("TYPE : NXP TNP3xxx Activision Game Appliance"); break;
 		case 0x04: PrintAndLog("TYPE : NXP MIFARE (various !DESFire !DESFire EV1)"); isMifareClassic = false; break;
-		case 0x08: PrintAndLog("TYPE : NXP MIFARE CLASSIC 1k | Plus 2k SL1"); break;
+		case 0x08: PrintAndLog("TYPE : NXP MIFARE CLASSIC 1k | Plus 2k SL1 | 1k Ev1"); break;
 		case 0x09: PrintAndLog("TYPE : NXP MIFARE Mini 0.3k"); break;
 		case 0x10: PrintAndLog("TYPE : NXP MIFARE Plus 2k SL2"); break;
 		case 0x11: PrintAndLog("TYPE : NXP MIFARE Plus 4k SL2"); break;
-		case 0x18: PrintAndLog("TYPE : NXP MIFARE Classic 4k | Plus 4k SL1"); break;
+		case 0x18: PrintAndLog("TYPE : NXP MIFARE Classic 4k | Plus 4k SL1 | 4k Ev1"); break;
 		case 0x20: PrintAndLog("TYPE : NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k SL3 | JCOP 31/41"); isMifareClassic = false; break;
 		case 0x24: PrintAndLog("TYPE : NXP MIFARE DESFire | DESFire EV1"); isMifareClassic = false; break;
 		case 0x28: PrintAndLog("TYPE : JCOP31 or JCOP41 v2.3.1"); break;
