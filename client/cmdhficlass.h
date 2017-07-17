@@ -39,26 +39,26 @@
 
 int CmdHFiClass(const char *Cmd);
 
-int CmdHFiClassCalcNewKey(const char *Cmd);
-int CmdHFiClassCloneTag(const char *Cmd);
-int CmdHFiClassDecrypt(const char *Cmd);
-int CmdHFiClassEncryptBlk(const char *Cmd);
-int CmdHFiClassELoad(const char *Cmd);
-int CmdHFiClassList(const char *Cmd);
-int HFiClassReader(const char *Cmd, bool loop, bool verbose);
-int CmdHFiClassReader(const char *Cmd);
-int CmdHFiClassReader_Dump(const char *Cmd);
-int CmdHFiClassReader_Replay(const char *Cmd);
-int CmdHFiClassReadKeyFile(const char *filename);
-int CmdHFiClassReadTagFile(const char *Cmd);
-int CmdHFiClass_ReadBlock(const char *Cmd);
-int CmdHFiClass_TestMac(const char *Cmd);
-int CmdHFiClassManageKeys(const char *Cmd);
-int CmdHFiClass_loclass(const char *Cmd);
-int CmdHFiClassSnoop(const char *Cmd);
-int CmdHFiClassSim(const char *Cmd);
-int CmdHFiClassWriteKeyFile(const char *Cmd);
-int CmdHFiClass_WriteBlock(const char *Cmd);
+extern int CmdHFiClassCalcNewKey(const char *Cmd);
+extern int CmdHFiClassCloneTag(const char *Cmd);
+extern int CmdHFiClassDecrypt(const char *Cmd);
+extern int CmdHFiClassEncryptBlk(const char *Cmd);
+extern int CmdHFiClassELoad(const char *Cmd);
+extern int CmdHFiClassList(const char *Cmd);
+extern int HFiClassReader(const char *Cmd, bool loop, bool verbose);
+extern int CmdHFiClassReader(const char *Cmd);
+extern int CmdHFiClassReader_Dump(const char *Cmd);
+extern int CmdHFiClassReader_Replay(const char *Cmd);
+extern int CmdHFiClassReadKeyFile(const char *filename);
+extern int CmdHFiClassReadTagFile(const char *Cmd);
+extern int CmdHFiClass_ReadBlock(const char *Cmd);
+extern int CmdHFiClass_TestMac(const char *Cmd);
+extern int CmdHFiClassManageKeys(const char *Cmd);
+extern int CmdHFiClass_loclass(const char *Cmd);
+extern int CmdHFiClassSnoop(const char *Cmd);
+extern int CmdHFiClassSim(const char *Cmd);
+extern int CmdHFiClassWriteKeyFile(const char *Cmd);
+extern int CmdHFiClass_WriteBlock(const char *Cmd);
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize);
 void HFiClassCalcDivKey(uint8_t	*CSN, uint8_t	*KEY, uint8_t *div_key, bool elite);
 #endif
