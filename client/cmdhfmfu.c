@@ -1870,16 +1870,24 @@ int CmdHF14AMfURestore(const char *Cmd){
 				memcpy(c.d.asBytes,  p_authkey, 4 );
 			}
 
-			printf("special block written %x - %s\n", MFU_NTAG_SPECIAL_PWD, sprint_hex(c.d.asBytes, 8) );
+			printf("special PWD     block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PWD, sprint_hex(c.d.asBytes, 8));
 			clearCommandBuffer();
 			SendCommand(&c);
 			wait4response(MFU_NTAG_SPECIAL_PWD);
+			
+			// copy the new key
+			c.arg[1] = 2;
+			memcpy(authkey, c.d.asBytes, 4);
+			memcpy(c.d.asBytes+4, authkey, 4);
 		}
 		
 		// pack
 		c.arg[0] = MFU_NTAG_SPECIAL_PACK;
-		memcpy(c.d.asBytes, mem->pack, sizeof(mem->pack) );
-		printf("special block written %x - %s\n", MFU_NTAG_SPECIAL_PACK, sprint_hex(c.d.asBytes, 8) );	
+		c.d.asBytes[0] = mem->pack[0];
+		c.d.asBytes[1] = mem->pack[1];
+		c.d.asBytes[2] = 0;
+		c.d.asBytes[3] = 0;
+		printf("special PACK    block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PACK, sprint_hex(c.d.asBytes, 8));
 		clearCommandBuffer();
 		SendCommand(&c);
 		wait4response(MFU_NTAG_SPECIAL_PACK);
@@ -1888,7 +1896,7 @@ int CmdHF14AMfURestore(const char *Cmd){
 		for (uint8_t s = MFU_NTAG_SPECIAL_SIGNATURE, i=0; s < MFU_NTAG_SPECIAL_SIGNATURE+8; s++, i += 4){
 			c.arg[0] = s;
 			memcpy(c.d.asBytes, mem->signature+i, 4);
-			printf("special block written %x - %s\n", s, sprint_hex(c.d.asBytes, 8) );	
+			printf("special SIG     block written 0x%X - %s\n", s, sprint_hex(c.d.asBytes, 8) );
 			clearCommandBuffer();
 			SendCommand(&c);
 			wait4response(s);		
@@ -1897,32 +1905,48 @@ int CmdHF14AMfURestore(const char *Cmd){
 		// Version
 		for (uint8_t s = MFU_NTAG_SPECIAL_VERSION, i=0; s < MFU_NTAG_SPECIAL_VERSION+2; s++, i += 4){		
 			c.arg[0] = s;
-			memcpy(c.d.asBytes, mem->version+i, 4 );
-			printf("special block written %x - %s\n", s, sprint_hex(c.d.asBytes, 8) );	
+			memcpy(c.d.asBytes, mem->version+i, 4 );			
+			printf("special VERSION block written 0x%X - %s\n", s, sprint_hex(c.d.asBytes, 8) );
 			clearCommandBuffer();
 			SendCommand(&c);
 			wait4response(s);
 		}
-	}	
+	}
 	
-	// write all other data
-	for (uint8_t b = 0; b < pages; b++) {
-
-		// only magic tags can write to block 0,1,2,3
-		if ( b < 4 && !write_special ) 
-			continue;
+	printf("Restoring data blocks.");
+	// write all other data 
+	// Skip block 0,1,2,3 (only magic tags can write to them)
+	// Skip last 5 blocks usually is configuration
+	for (uint8_t b = 4; b < pages-5; b++) {
 		
 		//Send write Block
 		c.arg[0] = b;
-
 		memcpy(c.d.asBytes, mem->data + (b*4), 4);
-
-		if ( b < 4)
-			printf("special block written %u - %s\n", b, sprint_hex(c.d.asBytes, 8) );
-		
 		clearCommandBuffer();
 		SendCommand(&c);
 		wait4response(b);
+		printf(".");
+	}
+	printf("\n");
+	
+	// write special data last
+	if (write_special) {
+		
+		printf("Restoring configuration blocks.\n");
+		
+		printf("authentication with keytype[%x]  %s\n", (uint8_t)(c.arg[1] & 0xff), sprint_hex(p_authkey,4));
+		
+		// otp, uid, lock, cfg1, cfg0, dynlockbits
+		uint8_t blocks[] = {3, 0, 1, 2, pages-5, pages-4, pages-3};
+		for ( uint8_t i = 0; i < sizeof(blocks); i++){
+			uint8_t b = blocks[i];
+			c.arg[0] = b;
+			memcpy(c.d.asBytes, mem->data + (b*4), 4);
+			clearCommandBuffer();
+			SendCommand(&c);
+			wait4response(b);
+			printf("special block written %u - %s\n", b, sprint_hex(c.d.asBytes, 8) );
+		}
 	}
 	
 	ul_switch_off_field();
