@@ -34,7 +34,7 @@ local _keys = {
     'a0478cc39091', -- Key from mfoc
     '533cb6c723f6', -- Key from mfoc
     '8fd0a4f256e9', -- Key from mfoc
-
+		
     --[[
     Data from: http://pastebin.com/wcTHXLZZ
     --]]
@@ -44,6 +44,7 @@ local _keys = {
     '00000ffe2488', -- RKF SL Key B
     '5c598c9c58b5', -- RKF SL Key B
     'e4d2770a89be', -- RKF SL Key B
+	
 
 	--[[	 
     Data from: http://pastebin.com/svGjN30Q
@@ -54,7 +55,7 @@ local _keys = {
     '47524f555042', -- RKF JOJO GROUP Key B
     '505249564141', -- RKF JOJO PRIVA Key A
     '505249564142', -- RKF JOJO PRIVA Key B
-
+	
 	--[[	 
     Data from: http://pastebin.com/d7sSetef
 	--]]	
