@@ -20,7 +20,6 @@
 #include "common.h"
 #include "mifare.h" 	// nonces_t struct
 #include "ui.h"			// PrintAndLog
-#include "util.h"       // FALSE / TRUE
 #include "proxmark3.h"
 #include "mifarehost.h"
 

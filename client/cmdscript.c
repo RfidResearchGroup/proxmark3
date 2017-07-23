@@ -8,6 +8,9 @@
 // Some lua scripting glue to proxmark core.
 //-----------------------------------------------------------------------------
 
+// this define is needed for scandir/alphasort to work
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,32 +71,32 @@ int CmdHelp(const char * Cmd)
 }
 
 /**
-* Generate list of available commands, what it does is 
+* Generate a sorted list of available commands, what it does is 
 * generate a file listing of the script-directory for files
 * ending with .lua
-*
 */
-int CmdList(const char *Cmd)
-{
-    DIR *dp;
-    struct dirent *ep;
+int CmdList(const char *Cmd) {
+
 	char script_directory_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
 	strcpy(script_directory_path, get_my_executable_directory());
 	strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
-    dp = opendir(script_directory_path);
 
-    if (dp != NULL)
-    {
-	while ((ep = readdir (dp)) != NULL)
-	{
-		if(str_ends_with(ep->d_name, ".lua"))
-			PrintAndLog("%-21s %s", ep->d_name, "A script file");
+	struct dirent **namelist;
+	int n;
+
+	n = scandir(script_directory_path, &namelist, NULL, alphasort);
+	if (n == -1) {
+		PrintAndLog ("Couldn't open the scripts-directory");
+		return 1;
 	}
-	(void) closedir (dp);
-    }
-    else
-        PrintAndLog ("Couldn't open the scripts-directory");
-    return 0;
+
+	for (uint16_t i = 0; i < n; i++) {
+		if(str_ends_with(namelist[i]->d_name, ".lua"))
+			PrintAndLog("%-21s %s", namelist[i]->d_name, "A script file");
+		free(namelist[i]);
+	}
+	free(namelist);
+	return 0;
 }
 
 
