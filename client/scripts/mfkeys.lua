@@ -20,7 +20,7 @@ local utils = require('utils')
 example =[[
 	 script run mfkeys
 ]]
-author = "Iceman"
+author = "Holiman"
 usage = "script run mfkeys"
 desc = ("This script implements Mifare check keys. It utilises a large list of default keys (currently %d keys).\
 If you want to add more, just put them inside /lualibs/mf_default_keys.lua\n"):format(#keylist) ..
@@ -101,7 +101,6 @@ local function checkBlock(blockno, testkeys, keytype)
 end
 
 -- A function to display the results
--- TODO: iceman 2016,  still screws up output when a key is not found.
 local function display_results(keys)
 	local sector, keyA, keyB, succA, succB
 	print('')

@@ -6,7 +6,7 @@ example = "script run mifare_autopwn"
 author = "Martin Holst Swende"
 desc =
 [[
-This is a which automates cracking and dumping mifare classic cards. It sets itself into 
+This is a script which automates cracking and dumping mifare classic cards. It sets itself into 
 'listening'-mode, after which it cracks and dumps any mifare classic card that you 
 place by the device. 
 
@@ -149,9 +149,9 @@ end
 
 function nested(key,sak)
 	local typ = 1
-	if 0x18 == sak then --NXP MIFARE Classic 4k | Plus 4k
+	if 0x18 == sak then --NXP MIFARE Classic 4k | Plus 4k | Ev1 4k
 		typ = 4
-	elseif 0x08 == sak then -- NXP MIFARE CLASSIC 1k | Plus 2k
+	elseif 0x08 == sak then -- NXP MIFARE CLASSIC 1k | Plus 2k | Ev1 1K
 		typ= 1
 	elseif 0x09 == sak then -- NXP MIFARE Mini 0.3k
 		typ = 0
@@ -186,7 +186,7 @@ end
 -- The main entry point
 function main(args)
 
-	local verbose, exit,res,uid,err,_,sak
+	local verbose, exit, res, uid, err, _, sak
 	local seen_uids = {}
 	local print_message = true
 	-- Read the parameters
