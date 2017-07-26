@@ -109,7 +109,7 @@ int CmdHIDDemodFSK(const char *Cmd) {
 }
 
 int CmdHIDSim(const char *Cmd) {
-	unsigned int hi = 0, lo = 0;
+	uint32_t hi = 0, lo = 0;
 	int n = 0, i = 0;
 
 	uint8_t ctmp = param_getchar(Cmd, 0);
@@ -120,7 +120,7 @@ int CmdHIDSim(const char *Cmd) {
 		lo = (lo << 4) | (n & 0xf);
 	}
 
-	PrintAndLog("Emulating tag with ID %x%16x", hi, lo);
+	PrintAndLog("Emulating tag with ID %x%08x", hi, lo);
 	PrintAndLog("Press pm3-button to abort simulation");
 
 	UsbCommand c = {CMD_HID_SIM_TAG, {hi, lo, 0}};
