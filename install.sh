@@ -2,9 +2,7 @@
 
 set -x
 
-# This for linux ppl
-#for linux ppl
-# this should work fine on Ubuntu distros. Don't know about Kali, ...
+# This is for linux ppl and it works on Ubuntu distros. Don't know about Kali.
 
 echo "Updating your system..."
 
@@ -19,8 +17,8 @@ sudo apt-get autoclean -y
 sudo apt-get clean -y
 sudo apt-get update
 
-# install proxmark3 
-git clone https://github.com/Proxmark/proxmark3.git
+# install iceman fork - proxmark3 
+git clone https://github.com/iceman1001/proxmark3.git
 (
    cd proxmark3 || exit 1
    git reset --hard
