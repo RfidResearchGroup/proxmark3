@@ -71,9 +71,6 @@
 # define BSWAP_16(x) ((( ((x) & 0xFF00 ) >> 8))| ( (((x) & 0x00FF) << 8)))
 #endif
 
-// Boolean
-#define TRUE                        1
-#define FALSE                       0
 #define EVEN                        0
 #define ODD                         1
 
@@ -130,6 +127,7 @@ extern void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
 extern uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
 extern void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSize, uint8_t *dest);
 
+extern int param_getlength(const char *line, int paramnum);
 extern char param_getchar(const char *line, int paramnum);
 extern int param_getptr(const char *line, int *bg, int *en, int paramnum);
 extern uint8_t param_get8(const char *line, int paramnum);

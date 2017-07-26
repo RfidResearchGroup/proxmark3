@@ -274,7 +274,7 @@ void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSiz
 
 //  -------------------------------------------------------------------------
 //  line     - param line
-//  bg, en   - symbol numbers in param line of beginning an ending parameter
+//  bg, en   - symbol numbers in param line of beginning and ending parameter
 //  paramnum - param number (from 0)
 //  -------------------------------------------------------------------------
 int param_getptr(const char *line, int *bg, int *en, int paramnum)
@@ -304,6 +304,15 @@ int param_getptr(const char *line, int *bg, int *en, int paramnum)
 	(*en)--;
 
 	return 0;
+}
+
+int param_getlength(const char *line, int paramnum)
+{
+	int bg, en;
+	
+	if (param_getptr(line, &bg, &en, paramnum)) return 0;
+
+	return en - bg + 1;
 }
 
 char param_getchar(const char *line, int paramnum)
