@@ -16,6 +16,22 @@
 #include <stdbool.h> //bool
 #include "cmdparser.h" // for command_t
 
+#include <stdio.h>    // also included in util.h
+#include <string.h>   // also included in util.h
+#include <inttypes.h>
+#include <limits.h>   // for CmdNorm INT_MIN && INT_MAX
+#include "data.h"     // also included in util.h
+#include "util.h"
+#include "cmdmain.h"
+#include "proxmark3.h"	// sendcommand
+#include "ui.h"       // for show graph controls
+#include "graph.h"    // for graph data
+#include "usb_cmd.h"  // already included in cmdmain.h and proxmark3.h
+#include "lfdemod.h"  // for demod code
+#include "crc.h"      // for pyramid checksum maxim
+#include "crc16.h"    // for FDXB demod checksum
+#include "loclass/cipherutils.h" // for decimating samples in getsamples
+
 command_t * CmdDataCommands();
 
 int CmdData(const char *Cmd);

@@ -9,21 +9,6 @@
 //-----------------------------------------------------------------------------
 #include "cmddata.h"
 
-#include <stdio.h>    // also included in util.h
-#include <string.h>   // also included in util.h
-#include <inttypes.h>
-#include <limits.h>   // for CmdNorm INT_MIN && INT_MAX
-#include "data.h"     // also included in util.h
-#include "util.h"
-#include "cmdmain.h"
-#include "ui.h"       // for show graph controls
-#include "graph.h"    // for graph data
-#include "cmdparser.h"// already included in cmdmain.h
-#include "usb_cmd.h"  // already included in cmdmain.h and proxmark3.h
-#include "lfdemod.h"  // for demod code
-#include "crc.h"      // for pyramid checksum maxim
-#include "crc16.h"    // for FDXB demod checksum
-#include "loclass/cipherutils.h" // for decimating samples in getsamples
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 uint8_t g_debugMode = 0;
