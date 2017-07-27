@@ -860,17 +860,17 @@ int Cmdaskrawdemod(const char *Cmd)
 	return ASKDemod(Cmd, true, false, 0);
 }
 
-int AutoCorrelate(int window, bool SaveGrph, bool verbose)
+int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph, bool verbose)
 {
 	static int CorrelBuffer[MAX_GRAPH_TRACE_LEN];
 	size_t Correlation = 0;
 	int maxSum = 0;
 	int lastMax = 0;
 	if (verbose) PrintAndLog("performing %d correlations", GraphTraceLen - window);
-	for (int i = 0; i < GraphTraceLen - window; ++i) {
+	for (int i = 0; i < len - window; ++i) {
 		int sum = 0;
 		for (int j = 0; j < window; ++j) {
-			sum += (GraphBuffer[j]*GraphBuffer[i + j]) / 256;
+			sum += (in[j]*in[i + j]) / 256;
 		}
 		CorrelBuffer[i] = sum;
 		if (sum >= maxSum-100 && sum <= maxSum+100){
@@ -885,20 +885,19 @@ int AutoCorrelate(int window, bool SaveGrph, bool verbose)
 	}
 	if (Correlation==0){
 		//try again with wider margin
-		for (int i = 0; i < GraphTraceLen - window; i++){
+		for (int i = 0; i < len - window; i++) {
 			if (CorrelBuffer[i] >= maxSum-(maxSum*0.05) && CorrelBuffer[i] <= maxSum+(maxSum*0.05)){
 				//another max
 				Correlation = i-lastMax;
 				lastMax = i;
-				//if (CorrelBuffer[i] > maxSum) maxSum = sum;
 			}
 		}
 	}
 	if (verbose && Correlation > 0) PrintAndLog("Possible Correlation: %d samples",Correlation);
 
 	if (SaveGrph){
-		GraphTraceLen = GraphTraceLen - window;
-		memcpy(GraphBuffer, CorrelBuffer, GraphTraceLen * sizeof (int));
+		//GraphTraceLen = GraphTraceLen - window;
+		memcpy(out, CorrelBuffer, len * sizeof(int));
 		RepaintGraphWindow();  
 	}
 	return Correlation;
@@ -918,7 +917,7 @@ int CmdAutoCorr(const char *Cmd)
 		return 0;
 	}
 	if (grph == 'g') updateGrph = true;
-	return AutoCorrelate(window, updateGrph, true);
+	return AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, window, updateGrph, true);
 }
 
 int CmdBitsamples(const char *Cmd)

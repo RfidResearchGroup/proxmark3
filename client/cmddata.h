@@ -29,7 +29,7 @@ int CmdVikingDemod(const char *Cmd);
 int CmdG_Prox_II_Demod(const char *Cmd);
 int Cmdaskrawdemod(const char *Cmd);
 int Cmdaskmandemod(const char *Cmd);
-int AutoCorrelate(int window, bool SaveGrph, bool verbose);
+int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph, bool verbose);
 int CmdAskEdgeDetect(const char *Cmd);
 int CmdAutoCorr(const char *Cmd);
 int CmdBiphaseDecodeRaw(const char *Cmd);
