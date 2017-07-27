@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 #include "sleep.h"
 #include "proxmark3.h"
 #include "flash.h"
