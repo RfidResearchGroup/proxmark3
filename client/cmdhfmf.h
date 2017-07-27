@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
 #include "proxmark3.h"
 #include "iso14443crc.h"
 #include "data.h"
@@ -26,6 +27,8 @@
 #include "mfkey.h"  // mfkey32_moebious
 #include "cmdhfmfhard.h"
 #include "mifarehost.h"
+#include "util_posix.h" // msclock
+
 
 extern int CmdHFMF(const char *Cmd);
 

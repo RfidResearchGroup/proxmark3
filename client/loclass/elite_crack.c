@@ -47,6 +47,7 @@
 #include "elite_crack.h"
 #include "fileutils.h"
 #include "des.h"
+#include "util_posix.h"
 
 /**
  * @brief Permutes a key from standard NIST format to Iclass specific format
