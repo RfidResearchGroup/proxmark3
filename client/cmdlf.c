@@ -1195,7 +1195,7 @@ int CmdLFfind(const char *Cmd) {
 	if (testRaw=='u' || testRaw=='U'){
 		//test unknown tag formats (raw mode)
 		PrintAndLog("\nChecking for Unknown tags:\n");
-		ans=AutoCorrelate(4000, FALSE, FALSE);
+		ans=AutoCorrelate(4000, false, false);
 	
 		if (ans > 0) {
 
@@ -1232,8 +1232,8 @@ int CmdLFfind(const char *Cmd) {
 				return 1;
 			}
 		}
-		bool st = TRUE;
-		ans=ASKDemod_ext("0 0 0",TRUE,FALSE,1,&st);
+		bool st = true;
+		ans=ASKDemod_ext("0 0 0",true,false,1,&st);
 		if (ans>0) {
 		  PrintAndLog("\nUnknown ASK Modulated and Manchester encoded Tag Found!");
 		  PrintAndLog("\nif it does not look right it could instead be ASK/Biphase - try 'data rawdemod ab'");

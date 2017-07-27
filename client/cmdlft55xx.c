@@ -496,9 +496,9 @@ bool tryDetectModulation(){
 	int bitRate=0;
 	uint8_t fc1 = 0, fc2 = 0, clk=0;
 	
-	if (GetFskClock("", FALSE, FALSE)){ 
-		fskClocks(&fc1, &fc2, &clk, FALSE);
-		if ( FSKrawDemod("0 0", FALSE) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)){
+	if (GetFskClock("", false, false)){ 
+		fskClocks(&fc1, &fc2, &clk, false);
+		if ( FSKrawDemod("0 0", false) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)){
 			tests[hits].modulation = DEMOD_FSK;
 			if (fc1==8 && fc2 == 5)
 				tests[hits].modulation = DEMOD_FSK1a;
@@ -570,23 +570,23 @@ bool tryDetectModulation(){
 		}
 		//undo trim from ask
 		//save_restoreGB(0);
-		clk = GetNrzClock("", FALSE, FALSE);
+		clk = GetNrzClock("", false, false);
 		if (clk>0) {
-			if ( NRZrawDemod("0 0 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+			if ( NRZrawDemod("0 0 1", false)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
 				tests[hits].modulation = DEMOD_NRZ;
 				tests[hits].bitrate = bitRate;
-				tests[hits].inverted = FALSE;
+				tests[hits].inverted = false;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-				tests[hits].ST = FALSE;
+				tests[hits].ST = false;
 				++hits;
 			}
 
-			if ( NRZrawDemod("0 1 1", FALSE)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+			if ( NRZrawDemod("0 1 1", false)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
 				tests[hits].modulation = DEMOD_NRZ;
 				tests[hits].bitrate = bitRate;
-				tests[hits].inverted = TRUE;
+				tests[hits].inverted = true;
 				tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
-				tests[hits].ST = FALSE;
+				tests[hits].ST = false;
 				++hits;
 			}
 		}
@@ -595,9 +595,9 @@ bool tryDetectModulation(){
 		// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
 		save_restoreGB(1);
 		CmdLtrim("160");
-		clk = GetPskClock("", FALSE, FALSE);
+		clk = GetPskClock("", false, false);
 		if (clk>0) {
-			if ( PSKDemod("0 0 6", FALSE) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+			if ( PSKDemod("0 0 6", false) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
 				tests[hits].modulation = DEMOD_PSK1;
 				tests[hits].bitrate = bitRate;
 				tests[hits].inverted = false;

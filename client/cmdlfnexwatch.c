@@ -76,7 +76,7 @@ int CmdNexWatchRead(const char *Cmd) {
 	//lf_read(true, 10000);
 	
 	CmdLFRead("s");
-	getSamples("10000",TRUE);
+	getSamples("10000",true);
 	
 	// demod and output viking ID	
 	return CmdPSKNexWatch(Cmd);

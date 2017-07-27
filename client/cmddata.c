@@ -497,8 +497,8 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo )
 
 int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose)
 {
-	bool st = TRUE;
-	if (!ASKDemod_ext(Cmd, FALSE, FALSE, 1, &st)) return 0;
+	bool st = true;
+	if (!ASKDemod_ext(Cmd, false, false, 1, &st)) return 0;
 	return AskEm410xDecode(verbose, hi, lo);
 }
 
@@ -751,7 +751,7 @@ int Cmdaskbiphdemod(const char *Cmd)
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) > 25 || cmdp == 'h' || cmdp == 'H') return usage_data_rawdemod_ab();
 
-	return ASKbiphaseDemod(Cmd, TRUE);
+	return ASKbiphaseDemod(Cmd, true);
 }
 
 //by marshmellow
@@ -761,7 +761,7 @@ int Cmdaskbiphdemod(const char *Cmd)
 //if successful it will push askraw data back to demod buffer ready for emulation
 int CmdG_Prox_II_Demod(const char *Cmd)
 {
-	if (!ASKbiphaseDemod(Cmd, FALSE)){
+	if (!ASKbiphaseDemod(Cmd, false)){
 		if (g_debugMode) PrintAndLog("DEBUG: Error - gProxII ASKbiphaseDemod failed 1st try");
 		return 0;
 	}
@@ -802,7 +802,7 @@ int CmdG_Prox_II_Demod(const char *Cmd)
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer+ans,32);
 	uint32_t raw2 = bytebits_to_byte(DemodBuffer+ans+32, 32);
 	uint32_t raw3 = bytebits_to_byte(DemodBuffer+ans+64, 32);
-	bool unknown = FALSE;
+	bool unknown = false;
 	switch(fmtLen) {
 		case 36:
 			FC = ((ByteStream[3] & 0x7F)<<7) | (ByteStream[4]>>1);
@@ -813,7 +813,7 @@ int CmdG_Prox_II_Demod(const char *Cmd)
 			Card = ((ByteStream[4]&0x7F)<<9) | (ByteStream[5]<<1) | (ByteStream[6]>>7);
 			break;
 		default :
-			unknown = TRUE;
+			unknown = true;
 			break;
 	}
 	if ( !unknown)
@@ -917,8 +917,8 @@ int CmdAutoCorr(const char *Cmd)
 		PrintAndLog("window must be smaller than trace (%d samples)", GraphTraceLen);
 		return 0;
 	}
-	if (grph == 'g') updateGrph = TRUE;
-	return AutoCorrelate(window, updateGrph, TRUE);
+	if (grph == 'g') updateGrph = true;
+	return AutoCorrelate(window, updateGrph, true);
 }
 
 int CmdBitsamples(const char *Cmd)
@@ -1164,7 +1164,7 @@ int CmdFSKrawdemod(const char *Cmd)
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) > 20 || cmdp == 'h' || cmdp == 'H') return usage_data_rawdemod_fs();
 
-	return FSKrawDemod(Cmd, TRUE);
+	return FSKrawDemod(Cmd, true);
 }
 
 //by marshmellow (based on existing demod + holiman's refactor)

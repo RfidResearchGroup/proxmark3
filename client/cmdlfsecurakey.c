@@ -125,7 +125,7 @@ int CmdSecurakeyDemod(const char *Cmd) {
 int CmdSecurakeyRead(const char *Cmd) {
 	//lf_read(true, 8000);
 	CmdLFRead("s");
-	getSamples("8000",TRUE);
+	getSamples("8000",true);
 	return CmdSecurakeyDemod(Cmd);
 }
 

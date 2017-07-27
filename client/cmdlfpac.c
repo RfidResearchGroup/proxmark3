@@ -79,7 +79,7 @@ int CmdPacDemod(const char *Cmd) {
 int CmdPacRead(const char *Cmd) {
 	//lf_read(true, 4096*2 + 20);
 	CmdLFRead("s");
-	getSamples("8192",TRUE);
+	getSamples("8192",true);
 	return CmdPacDemod(Cmd);
 }
 

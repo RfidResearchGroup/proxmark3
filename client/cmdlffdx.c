@@ -195,7 +195,7 @@ int CmdFdxDemod(const char *Cmd) {
 
 int CmdFdxRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("12000", TRUE);
+	getSamples("12000", true);
 	return CmdFdxDemod(Cmd);
 }
 

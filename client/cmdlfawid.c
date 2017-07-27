@@ -127,7 +127,7 @@ int CmdAWIDDemodFSK(const char *Cmd) {
 
 int CmdAWIDRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("12000", TRUE);
+	getSamples("12000", true);
 	return CmdFSKdemodAWID(Cmd);
 }
 

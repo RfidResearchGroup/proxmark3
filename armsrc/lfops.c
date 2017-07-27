@@ -1817,7 +1817,7 @@ void Cotag(uint32_t arg0) {
 	switch(rawsignal) {
 		case 0: doCotagAcquisition(50000); break;
 		case 1: doCotagAcquisitionManchester(); break;
-		case 2: DoAcquisition_config(TRUE); break;
+		case 2: DoAcquisition_config(true); break;
 	}
 	
 	// Turn the field off

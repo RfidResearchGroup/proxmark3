@@ -290,14 +290,14 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
 	// UID
 	memcpy(block0, uid, 4); 
 	// Mifare UID BCC
-	block0[4] = block0[0]^block0[1]^block0[2]^block0[3];
+	block0[4] = block0[0] ^ block0[1] ^ block0[2] ^ block0[3];
 	// mifare classic SAK(byte 5) and ATQA(byte 6 and 7, reversed)
 	if ( sak != NULL )
-		block0[5]=sak[0];
+		block0[5] = sak[0];
 	
 	if ( atqa != NULL ) {
-		block0[6]=atqa[1];
-		block0[7]=atqa[0];
+		block0[6] = atqa[1];
+		block0[7] = atqa[0];
 	}
 	PrintAndLog("new block 0:  %s", sprint_hex(block0,16));
 	

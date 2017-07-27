@@ -150,7 +150,7 @@ int CmdNoralsyDemod(const char *Cmd) {
 
 int CmdNoralsyRead(const char *Cmd) {
 	CmdLFRead("s");
-	getSamples("8000",TRUE);
+	getSamples("8000",true);
 	return CmdNoralsyDemod(Cmd);
 }
 

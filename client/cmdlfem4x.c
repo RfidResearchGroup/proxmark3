@@ -218,7 +218,7 @@ int CmdEM410xWrite(const char *Cmd)
 
 bool EM_EndParityTest(uint8_t *BitStream, size_t size, uint8_t rows, uint8_t cols, uint8_t pType)
 {
-	if (rows*cols>size) return FALSE;
+	if (rows*cols>size) return false;
 	uint8_t colP=0;
 	//assume last col is a parity and do not test
 	for (uint8_t colNum = 0; colNum < cols-1; colNum++) {
@@ -232,7 +232,7 @@ bool EM_EndParityTest(uint8_t *BitStream, size_t size, uint8_t rows, uint8_t col
 
 bool EM_ByteParityTest(uint8_t *BitStream, size_t size, uint8_t rows, uint8_t cols, uint8_t pType)
 {
-	if (rows*cols>size) return FALSE;
+	if (rows*cols>size) return false;
 	uint8_t rowP=0;
 	//assume last row is a parity row and do not test
 	for (uint8_t rowNum = 0; rowNum < rows-1; rowNum++) {

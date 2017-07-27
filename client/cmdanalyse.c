@@ -8,7 +8,7 @@
 // Analyse bytes commands
 //-----------------------------------------------------------------------------
 #include "cmdanalyse.h"
-#include "nonce2key/nonce2key.h"
+//#include "nonce2key/nonce2key.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -438,12 +438,12 @@ uint64_t d2[] = {0x6e442129, 0x8f699195, 0x0000004, 0x00040f0f0305030e};
 uid(3e172b29) nt(039b7bd2) ks(0c0e0f0505080800) nr(00000001)
 uid(3e172b29) nt(039b7bd2) ks(0e06090d03000b0f) nr(00000002)
 */
-	uint64_t key = 0;
-	uint64_t d1[] = {0x3e172b29, 0x039b7bd2, 0x0000001, 0x0c0e0f0505080800};
-	uint64_t d2[] = {0x3e172b29, 0x039b7bd2, 0x0000002, 0x0e06090d03000b0f};
+	// uint64_t key = 0;
+	// uint64_t d1[] = {0x3e172b29, 0x039b7bd2, 0x0000001, 0x0c0e0f0505080800};
+	// uint64_t d2[] = {0x3e172b29, 0x039b7bd2, 0x0000002, 0x0e06090d03000b0f};
 	
-	nonce2key_ex(0, 0 , d1[0], d1[1], d1[2], d1[3], &key);
-	nonce2key_ex(0, 0 , d2[0], d2[1], d2[2], d2[3], &key);
+	// nonce2key_ex(0, 0 , d1[0], d1[1], d1[2], d1[3], &key);
+	// nonce2key_ex(0, 0 , d2[0], d2[1], d2[2], d2[3], &key);
 	return 0;
 }
 

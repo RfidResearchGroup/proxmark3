@@ -14,7 +14,7 @@
 //-----------------------------------------------------------------------------
 
 #include "mifarecmd.h"
-
+#include <inttypes.h>
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag. 
 // read block
@@ -957,8 +957,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 	uint8_t keyType = (arg0 >> 8) & 0xFF;
 	bool clearTrace = arg1 & 0xFF;
 	uint8_t keyCount = arg2;
-	uint64_t ui64Key = 0;
-	
+	uint64_t key = 0;
 	bool have_uid = false;
 	uint8_t cascade_levels = 0;
 	uint32_t timeout = 0;
@@ -1012,9 +1011,8 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 			}
 		}
 	
-		ui64Key = bytes_to_num(datain + i * 6, 6);
-		
-		if (mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
+		key = bytes_to_num(datain + i * 6, 6);
+		if (mifare_classic_auth(pcs, cuid, blockNo, keyType, key, AUTH_FIRST)) {
 
 			uint8_t dummy_answer = 0;
 			ReaderTransmit(&dummy_answer, 1, NULL);

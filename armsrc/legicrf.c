@@ -218,7 +218,7 @@ void frame_sendAsReader(uint32_t data, uint8_t bits){
 	
 	// log
 	uint8_t cmdbytes[] = {bits, BYTEx(data,0), BYTEx(data,1), BYTEx(data,2), BYTEx(send,0), BYTEx(send,1), BYTEx(send,2)};
-	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, TRUE);
+	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, true);
 }
 
 /* Receive a frame from the card in reader emulation mode, the FPGA and
@@ -291,7 +291,7 @@ static void frame_receiveAsReader(struct legic_frame * const f, uint8_t bits) {
 	
 	// log
 	uint8_t cmdbytes[] = {bits,	BYTEx(data, 0),	BYTEx(data, 1)};
-	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, FALSE);
+	LogTrace(cmdbytes, sizeof(cmdbytes), starttime, GET_TICKS, NULL, false);
 }
 
 // Setup pm3 as a Legic Reader
@@ -460,7 +460,7 @@ OUT: ;
 	legic_prng_forward(1);
 	
 	uint8_t cmdbytes[] = {1, isOK, BYTEx(steps, 0), BYTEx(steps, 1) };
-	LogTrace(cmdbytes, sizeof(cmdbytes), start, GET_TICKS, NULL, FALSE);
+	LogTrace(cmdbytes, sizeof(cmdbytes), start, GET_TICKS, NULL, false);
 	return isOK;
 }
 
@@ -833,7 +833,7 @@ void LegicRfSimulate(int phase, int frame, int reqresp)
 	cardmem = BigBuf_get_EM_addr();
 	
 	clear_trace();
-	set_tracing(TRUE);
+	set_tracing(true);
 
 	crc_init(&legic_crc, 4, 0x19 >> 1, 0x5, 0);
 
@@ -1163,7 +1163,7 @@ static struct {
 			// break;
 	// }
 
-	// return FALSE;
+	// return false;
 // }
 /*
 
@@ -1362,7 +1362,7 @@ static RAMFUNC int HandleLegicSamplesDemod(int ci, int cq)
 						
 						if(s == 0x000) {
 							// This is EOF (start, stop and all data bits == '0'
-							return TRUE;
+							return true;
 						}
 					}
 				}
@@ -1375,7 +1375,7 @@ static RAMFUNC int HandleLegicSamplesDemod(int ci, int cq)
 			LED_C_OFF();
 			break;
 	}
-	return FALSE;
+	return false;
 }
 */
 /*
@@ -1409,7 +1409,7 @@ static void DemodInit(uint8_t *data) {
  static void GetSamplesForLegicDemod(int n, bool quiet)
 {
 	int max = 0;
-	bool gotFrame = FALSE;
+	bool gotFrame = false;
 	int lastRxCounter = LEGIC_DMA_BUFFER_SIZE;
 	int	ci, cq, samples = 0;
 
@@ -1478,7 +1478,7 @@ static void DemodInit(uint8_t *data) {
 	//Tracing
 	if (Demod.len > 0) {
 		uint8_t parity[MAX_PARITY_SIZE] = {0x00};
-		LogTrace(Demod.output, Demod.len, 0, 0, parity, FALSE);
+		LogTrace(Demod.output, Demod.len, 0, 0, parity, false);
 	}
 }
 
@@ -1583,7 +1583,7 @@ static void CodeLegicBitsAsReader(const uint8_t *cmd, uint8_t cmdlen, int bits)
 	TransmitForLegic();
 	if (tracing) {
 		uint8_t parity[1] = {0x00};
-		LogTrace(cmd, cmdlen, 0, 0, parity, TRUE);
+		LogTrace(cmd, cmdlen, 0, 0, parity, true);
 	}
 }
 
@@ -1596,7 +1596,7 @@ void ice_legic_setup() {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	BigBuf_free(); BigBuf_Clear_ext(false);
 	clear_trace();
-	set_tracing(TRUE);
+	set_tracing(true);
 	DemodReset();
 	UartReset();
 	
