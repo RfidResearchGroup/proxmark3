@@ -2397,6 +2397,33 @@ int CmdScale(const char *Cmd)
 	RepaintGraphWindow();
 	return 0;
 }
+int directionalThreshold(const int* in, int *out, size_t len, int8_t up, int8_t down)
+{
+	int lastValue = in[0];
+	out[0] = 0; // Will be changed at the end, but init 0 as we adjust to last samples value if no threshold kicks in.
+
+	for (size_t i = 1; i < len; ++i) {
+		// Apply first threshold to samples heading up
+		if (in[i] >= up && in[i] > lastValue)
+		{
+			lastValue = out[i]; // Buffer last value as we overwrite it.
+			out[i] = 1;
+		}
+		// Apply second threshold to samples heading down
+		else if (in[i] <= down && in[i] < lastValue)
+		{
+			lastValue = out[i]; // Buffer last value as we overwrite it.
+			out[i] = -1;
+		}
+		else
+		{
+			lastValue = out[i]; // Buffer last value as we overwrite it.
+			out[i] = out[i-1];
+		}
+	}
+	out[0] = out[1]; // Align with first edited sample.
+	return 0;
+}
 
 int CmdDirectionalThreshold(const char *Cmd)
 {
@@ -2405,29 +2432,7 @@ int CmdDirectionalThreshold(const char *Cmd)
 
 	printf("Applying Up Threshold: %d, Down Threshold: %d\n", upThres, downThres);
 
-	int lastValue = GraphBuffer[0];
-	GraphBuffer[0] = 0; // Will be changed at the end, but init 0 as we adjust to last samples value if no threshold kicks in.
-
-	for (int i = 1; i < GraphTraceLen; ++i) {
-		// Apply first threshold to samples heading up
-		if (GraphBuffer[i] >= upThres && GraphBuffer[i] > lastValue)
-		{
-			lastValue = GraphBuffer[i]; // Buffer last value as we overwrite it.
-			GraphBuffer[i] = 1;
-		}
-		// Apply second threshold to samples heading down
-		else if (GraphBuffer[i] <= downThres && GraphBuffer[i] < lastValue)
-		{
-			lastValue = GraphBuffer[i]; // Buffer last value as we overwrite it.
-			GraphBuffer[i] = -1;
-		}
-		else
-		{
-			lastValue = GraphBuffer[i]; // Buffer last value as we overwrite it.
-			GraphBuffer[i] = GraphBuffer[i-1];
-		}
-	}
-	GraphBuffer[0] = GraphBuffer[1]; // Aline with first edited sample.
+	directionalThreshold(GraphBuffer, GraphBuffer,GraphTraceLen, upThres, downThres);
 	RepaintGraphWindow();
 	return 0;
 }

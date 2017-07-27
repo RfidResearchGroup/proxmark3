@@ -16,9 +16,6 @@
 #include <stdbool.h> //bool
 #include "cmdparser.h" // for command_t
 
-#define MAX_DEMOD_BUF_LEN (1024*128)
-#define BIGBUF_SIZE 40000
-
 command_t * CmdDataCommands();
 
 int CmdData(const char *Cmd);
@@ -80,11 +77,15 @@ void printEM410x(uint32_t hi, uint64_t id);
 int getSamples(const char *Cmd, bool silent);
 
 void setGrid_Clock(uint8_t clock);
-
+int directionalThreshold(const int* in, int *out, size_t len, int8_t up, int8_t down);
 int CmdDataIIR(const char *Cmd);
 
+#define MAX_DEMOD_BUF_LEN (1024*128)
+#define BIGBUF_SIZE 40000
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 extern size_t DemodBufferLen;
+extern int g_DemodStartIdx;
+extern int g_DemodClock;
 extern uint8_t g_debugMode;
 
 #endif
