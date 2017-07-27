@@ -10,28 +10,9 @@
 #ifndef __UTIL_H_
 #define __UTIL_H_
 
-#include <stdio.h>
 #include <stdint.h>		//included in data.h
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <math.h>		// math.pow
-#include <time.h>       // time, gmtime
-#include <inttypes.h>	// PRIx64 defines
-#include "proxmark3.h"	// time_t
-#include "data.h"		// for FILE_PATH_SIZE
-
-#include <time.h>
-// Handle platform specific includes
-#ifndef _WIN32
-  #include <termios.h>
-  #include <sys/ioctl.h>
-  #include <sys/time.h>
-  #include <unistd.h>  
-#else
-  #include <conio.h>
-  #include <windows.h>
-#endif
+#include <stddef.h>
+#include <inttypes.h>
 
 #ifdef ANDROID
   #include <endian.h>

@@ -9,10 +9,25 @@
 //-----------------------------------------------------------------------------
 
 #include "util.h"
+
+#include <stdint.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+#include "data.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #define MAX_BIN_BREAK_LENGTH   (3072+384+1)
 
 #ifndef _WIN32
-#include <sys/ttydefaults.h>
+#include <termios.h>
+#include <sys/ioctl.h> 
+#include <unistd.h>
 
 int ukbhit(void) {
   int cnt = 0;
@@ -39,6 +54,7 @@ int ukbhit(void) {
 
 #else
 
+#include <conio.h>
 int ukbhit(void) {
 	return kbhit();
 }

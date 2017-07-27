@@ -22,11 +22,8 @@
 #include <math.h>	
 #include <complex.h>
 
-
-#include "loclass/cipherutils.h"
 #include "util.h"
 #include "cmdmain.h"
-#include "cmddata.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327
