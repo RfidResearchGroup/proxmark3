@@ -1195,7 +1195,7 @@ int CmdLFfind(const char *Cmd) {
 	if (testRaw=='u' || testRaw=='U'){
 		//test unknown tag formats (raw mode)
 		PrintAndLog("\nChecking for Unknown tags:\n");
-		ans=AutoCorrelate(4000, false, false);
+		ans=AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, 4000, false, false);
 	
 		if (ans > 0) {
 
