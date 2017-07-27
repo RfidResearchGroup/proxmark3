@@ -17,6 +17,7 @@
 #include <ctype.h>
 #include <math.h>		// math.pow
 #include <time.h>       // time, gmtime
+#include <inttypes.h>	// PRIx64 defines
 #include "proxmark3.h"	// time_t
 #include "data.h"		// for FILE_PATH_SIZE
 
