@@ -442,7 +442,6 @@ bool usb_check() {
 	return (btConfiguration) ? true : false;
 }
 
-
 bool usb_poll()
 {
 	if (!usb_check()) return false;

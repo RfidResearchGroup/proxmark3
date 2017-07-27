@@ -61,9 +61,6 @@
 #define SPI_FPGA_MODE	0
 #define SPI_LCD_MODE	1
 
-#define TRUE 1
-#define FALSE 0
-
 #ifndef COTAG_BITS
 #define COTAG_BITS 264
 #endif

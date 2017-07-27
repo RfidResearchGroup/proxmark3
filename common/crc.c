@@ -23,8 +23,8 @@ void crc_init(crc_t *crc, int order, uint32_t polynom, uint32_t initial_value, u
 	crc->initial_value = initial_value;
 	crc->final_xor = final_xor;
 	crc->mask = (1L<<order)-1;
-	crc->refin = FALSE;
-	crc->refout = FALSE;
+	crc->refin = false;
+	crc->refout = false;
 	crc_clear(crc);
 }
 
@@ -98,7 +98,15 @@ uint32_t CRC8Maxim(uint8_t *buff, size_t size) {
 		crc_update2(&crc, buff[i], 8);
 	return crc_finish(&crc);
 }
-
+// width=8  poly=0x1d, reversed poly=0x??  init=0xe3  refin=true  refout=true  xorout=0x0000  check=0xC6  name="CRC-8/MAD"
+// the CRC needs to be reversed before returned.
+uint32_t CRC8Mad(uint8_t *buff, size_t size) {
+	crc_t crc;
+	crc_init_ref(&crc, 8, 0x1d, 0xe3, 0, true, true);
+	for ( int i = 0; i < size; ++i)
+		crc_update2(&crc, buff[i], 8);
+	return reflect(crc_finish(&crc), 8);
+}
 // width=4  poly=0xC, reversed poly=0x7  init=0x5   refin=true  refout=true  xorout=0x0000  check=  name="CRC-4/LEGIC"
 uint32_t CRC4Legic(uint8_t *cmd, size_t size) {
  	crc_t crc;

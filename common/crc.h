@@ -53,6 +53,9 @@ extern uint32_t crc_finish(crc_t *crc);
 // Calculate CRC-8/Maxim checksum
 uint32_t CRC8Maxim(uint8_t *buff, size_t size);
 
+// Calculate CRC-8 Mifare MAD checksum
+uint32_t CRC8Mad(uint8_t *buff, size_t size);
+
 // Calculate CRC-4/Legic checksum
 uint32_t CRC4Legic(uint8_t *buff, size_t size);
 
@@ -78,8 +81,8 @@ uint32_t CRC16_ICLASS(uint8_t *buff, size_t size);
 	.initial_value = (_initial_value), \
 	.final_xor = (_final_xor), \
 	.mask = ((1L<<(_order))-1) \
-	.refin = FALSE, \
-	.refout = FALSE \
+	.refin = false, \
+	.refout = false \
 	}
 
 #endif /* __CRC_H */
