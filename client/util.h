@@ -156,4 +156,5 @@ extern uint32_t SwapBits(uint32_t value, int nrbits);
 extern uint32_t reflect(uint32_t v, int b);
 extern uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
 
+extern int num_CPUs(void);			// number of logical CPUs
 #endif

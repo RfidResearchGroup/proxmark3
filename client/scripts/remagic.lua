@@ -14,21 +14,21 @@ Arguments:
 ]]
 --- 
 -- A debug printout-function
-function dbg(args)
+local function dbg(args)
 	if DEBUG then
-		print("###", args)
+		print('###', args)
 	end
 end 
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
-	print("ERROR: ",err)
+local function oops(err)
+	print('ERROR: ',err)
 end
 --- 
 -- Usage help
-function help()
+local function help()
 	print(desc)
-	print("Example usage")
+	print('Example usage')
 	print(example)
 end
 

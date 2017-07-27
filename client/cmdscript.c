@@ -33,6 +33,10 @@
 #include <lualib.h>
 #include <lauxlib.h>
 
+#ifdef _WIN32
+#include "scandir.h"
+#endif
+
 static int CmdHelp(const char *Cmd);
 static int CmdList(const char *Cmd);
 static int CmdRun(const char *Cmd);
@@ -92,7 +96,7 @@ int CmdList(const char *Cmd) {
 
 	for (uint16_t i = 0; i < n; i++) {
 		if(str_ends_with(namelist[i]->d_name, ".lua"))
-			PrintAndLog("%-21s %s", namelist[i]->d_name, "A script file");
+			PrintAndLog("%-21s", namelist[i]->d_name);
 		free(namelist[i]);
 	}
 	free(namelist);

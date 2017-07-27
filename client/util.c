@@ -19,11 +19,12 @@ int ukbhit(void) {
   int error;
   static struct termios Otty, Ntty;
 
-	if ( tcgetattr(STDIN_FILENO, &Otty) == -1) return -1;
+  if ( tcgetattr(STDIN_FILENO, &Otty) == -1) return -1;
 
   Ntty = Otty;
-	Ntty.c_iflag		= 0x000;	// input mode
-	Ntty.c_oflag		= 0x000;	// output mode
+
+  Ntty.c_iflag          = 0x0000;   // input mode
+  Ntty.c_oflag          = 0x0000;   // output mode
 	Ntty.c_lflag		&= ~ICANON;	// control mode = raw
 	Ntty.c_cc[VMIN]		= 1;		// return if at least 1 character is in the queue
 	Ntty.c_cc[VTIME]	= 0;		// no timeout. Wait forever
@@ -37,6 +38,7 @@ int ukbhit(void) {
 }
 
 #else
+
 int ukbhit(void) {
 	return kbhit();
 }
@@ -61,10 +63,7 @@ void AddLogLine(char *file, char *extData, char *c) {
 	fprintf(f, "%s", extData);
 	fprintf(f, "%s\n", c);
 	fflush(f);
-	if (f) {
-		fclose(f);
-		f = NULL;
-	}
+	fclose(f);
 }
 
 void AddLogHex(char *fileName, char *extData, const uint8_t * data, const size_t len){
@@ -74,8 +73,7 @@ void AddLogHex(char *fileName, char *extData, const uint8_t * data, const size_t
 void AddLogUint64(char *fileName, char *extData, const uint64_t data) {
 	char buf[20] = {0};
 	memset(buf, 0x00, sizeof(buf));
-	//sprintf(buf, "%X%X", (unsigned int)((data & 0xFFFFFFFF00000000) >> 32), (unsigned int)(data & 0xFFFFFFFF));
-	sprintf(buf, "%012" PRIx64 "", data);
+	sprintf(buf, "%016" PRIx64 "", data);
 	AddLogLine(fileName, extData, buf);
 }
 
@@ -318,7 +316,7 @@ int param_getlength(const char *line, int paramnum)
 char param_getchar(const char *line, int paramnum)
 {
 	int bg, en;
-	if (param_getptr(line, &bg, &en, paramnum)) return 0x00;
+	if (param_getptr(line, &bg, &en, paramnum)) return 0;
 	return line[bg];
 }
 
@@ -408,9 +406,6 @@ int param_gethex_ex(const char *line, int paramnum, uint8_t * data, int *hexcnt)
 	int bg, en, i;
 	uint32_t temp;
 
-	//if (hexcnt % 2)
-	//	return 1;
-	
 	if (param_getptr(line, &bg, &en, paramnum)) return 1;
 
 	*hexcnt = en - bg + 1;
@@ -601,4 +596,20 @@ uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor) {
    if(!(quotient == 0 && remainder == 0))
    result += HornerScheme(quotient, divider, factor) * factor + remainder;
    return result;
+}
+
+// determine number of logical CPU cores (use for multithreaded functions)
+extern int num_CPUs(void)
+{
+#if defined(_WIN32)
+	#include <sysinfoapi.h>
+	SYSTEM_INFO sysinfo;
+	GetSystemInfo(&sysinfo);
+	return sysinfo.dwNumberOfProcessors;
+#elif defined(__linux__) || defined(__APPLE__)
+	#include <unistd.h>
+	return sysconf(_SC_NPROCESSORS_ONLN);
+#else
+	return 1;
+#endif
 }
