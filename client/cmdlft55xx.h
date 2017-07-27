@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <time.h>
 #include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"

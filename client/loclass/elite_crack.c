@@ -502,7 +502,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[])
 	uint8_t i;
 	int errors = 0;
 	size_t itemsize = sizeof(dumpdata);
-	clock_t t1 = clock();
+	uint64_t t1 = msclock();
 
 	dumpdata* attack = (dumpdata* ) malloc(itemsize);
 
@@ -512,7 +512,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[])
 		errors += bruteforceItem(*attack, keytable);
 	}
 	free(attack);
-	t1 = clock() - t1;
+	t1 = msclock() - t1;
 	float diff = ((float)t1 / CLOCKS_PER_SEC );
 	prnlog("\nPerformed full crack in %f seconds",diff);
 

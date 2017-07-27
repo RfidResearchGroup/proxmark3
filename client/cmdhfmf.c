@@ -864,10 +864,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 		return 2;
 	}
 	else { // ------------------------------------  multiple sectors working
-		clock_t t1 = clock();
-		unsigned long elapsed_time;
-		time_t start, end;
-		time(&start);
+		uint64_t t1 = msclock();
 		
 		e_sector = calloc(SectorsCnt, sizeof(sector_t));
 		if (e_sector == NULL) return 1;
@@ -892,12 +889,10 @@ int CmdHF14AMfNested(const char *Cmd) {
 					e_sector[i].foundKey[j] = true;
 				}
 			}
-		}
-		clock_t t2 = clock() - t1;
-		time(&end);
-		elapsed_time = difftime(end, start);	
-		if ( t2 > 0 )
-			PrintAndLog("Time to check 6 known keys: %.0f ticks %u seconds\n", (float)t2 , elapsed_time);
+		}						   
+		
+		uint64_t t2 = msclock() - t1;
+		PrintAndLog("Time to check 6 known keys: %.0f seconds\n", (float)t2/1000.0 );
 		
 		PrintAndLog("enter nested...");	
 		
@@ -935,11 +930,8 @@ int CmdHF14AMfNested(const char *Cmd) {
 			}
 		}
 		
-		t1 = clock() - t1;
-		time(&end);
-		elapsed_time = difftime(end, start);	
-		if ( t1 > 0 )
-			PrintAndLog("Time in nested: %.0f ticks %u seconds\n", (float)t1, elapsed_time);
+		t1 = msclock() - t1;
+		PrintAndLog("Time in nested: %.0f seconds\n", (float)t1/1000.0);
 
 
 		// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
@@ -1293,9 +1285,8 @@ int CmdHF14AMfChk(const char *Cmd) {
 	uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE/6) ? (USB_CMD_DATA_SIZE/6) : keycnt;
 	
 	// time
-	clock_t t1 = clock();
-	time_t start, end;
-	time(&start);
+	uint64_t t1 = msclock();
+
 	
 	// check keys.
 	for (trgKeyType = !keyType;  trgKeyType < 2;  (keyType==2) ? (++trgKeyType) : (trgKeyType=2) ) {
@@ -1321,11 +1312,8 @@ int CmdHF14AMfChk(const char *Cmd) {
 			b < 127 ? ( b +=4 ) : ( b += 16 );	
 		}
 	}
-	t1 = clock() - t1;
-	time(&end);
-	unsigned long elapsed_time = difftime(end, start);	
-	if ( t1 > 0 )
-		PrintAndLog("\nTime in checkkeys: %.0f ticks %u seconds\n", (float)t1, elapsed_time);
+	t1 = msclock() - t1;
+	PrintAndLog("\nTime in checkkeys: %.0f seconds\n", (float)t1/1000.0);
 
 		
 	// 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
@@ -1745,21 +1733,15 @@ int CmdHF14AMfKeyBrute(const char *Cmd) {
 	// key
 	if (param_gethex(Cmd, 2, key, 12)) return usage_hf14_keybrute();
 	
-	clock_t t1 = clock();
-	time_t start, end;
-	time(&start);
+	uint64_t t1 = msclock();
 	
 	if (mfKeyBrute( blockNo, keytype, key, &foundkey))
 		PrintAndLog("Found valid key: %012" PRIx64 " \n", foundkey);
 	else
 		PrintAndLog("Key not found");
 	
-	t1 = clock() - t1;
-	time(&end);
-	unsigned long elapsed_time = difftime(end, start);	
-	if ( t1 > 0 )
-		PrintAndLog("\nTime in keybrute: %.0f ticks %u seconds\n", (float)t1, elapsed_time);
-	
+	t1 = msclock() - t1;
+	PrintAndLog("\nTime in keybrute: %.0f seconds\n", (float)t1/1000.0);
 	return 0;	
 }
 
