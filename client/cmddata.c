@@ -1020,6 +1020,18 @@ int CmdGraphShiftZero(const char *Cmd)
 	return 0;
 }
 
+int AskEdgeDetect(const int *in, int *out, int len, int threshold) {
+	int last = 0;
+	for(int i = 1; i<len; i++) {
+		if (in[i]-in[i-1] >= threshold) //large jump up
+			last = 127;
+		else if(in[i]-in[i-1] <= -1 * threshold) //large jump down
+			last = -127;
+		out[i-1] = last;
+	}
+	return 0;
+}
+
 //by marshmellow
 //use large jumps in read samples to identify edges of waves and then amplify that wave to max
 //similar to dirtheshold, threshold commands 
@@ -1027,19 +1039,12 @@ int CmdGraphShiftZero(const char *Cmd)
 int CmdAskEdgeDetect(const char *Cmd)
 {
 	int thresLen = 25;
-	int last = 0;
+	int ans = 0;
 	sscanf(Cmd, "%i", &thresLen); 
 
-	for(int i = 1; i < GraphTraceLen; ++i){
-		if (GraphBuffer[i] - GraphBuffer[i-1] >= thresLen) //large jump up
-			last = 127;
-		else if(GraphBuffer[i] - GraphBuffer[i-1] <= -1 * thresLen) //large jump down
-			last = -127;
-			
-		GraphBuffer[i-1] = last;
-	}
+	ans = AskEdgeDetect(GraphBuffer, GraphBuffer, GraphTraceLen, thresLen);
 	RepaintGraphWindow();
-	return 0;
+	return ans;
 }
 
 /* Print our clock rate */

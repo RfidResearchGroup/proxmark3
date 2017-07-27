@@ -78,6 +78,8 @@ int getSamples(const char *Cmd, bool silent);
 
 void setGrid_Clock(uint8_t clock);
 int directionalThreshold(const int* in, int *out, size_t len, int8_t up, int8_t down);
+extern int AskEdgeDetect(const int *in, int *out, int len, int threshold);
+
 int CmdDataIIR(const char *Cmd);
 
 #define MAX_DEMOD_BUF_LEN (1024*128)
