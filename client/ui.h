@@ -16,18 +16,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <readline/readline.h>
 #include <pthread.h>
-#include <math.h>
+#include <math.h>	
 #include <complex.h>
 
-// Handle platform specific includes
-#ifndef _WIN32
-  #include <sys/time.h>
-#else
-  #include <time.h>
-  #include <windows.h>
-#endif
 
 #include "loclass/cipherutils.h"
 #include "util.h"
@@ -45,10 +39,11 @@ void PrintAndLog(char *fmt, ...);
 void SetLogFilename(char *fn);
 
 extern double CursorScaleFactor;
-extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, CursorCPos, CursorDPos;
-extern int PlotClock, PlockClockStartIndex;
+extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, CursorCPos, CursorDPos, GridOffset;
 extern int offline;
 extern int flushAfterWrite;   //buzzy
+extern bool GridLocked;
+extern bool showDemod;
 
 void iceIIR_Butterworth(int * data, const size_t len);
 void iceSimple_Filter(int *data, const size_t len, uint8_t k);

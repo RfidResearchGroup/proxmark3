@@ -19,9 +19,6 @@
 #include <stdlib.h>  // for
 
 //generic
-#ifndef ON_DEVICE
-void	 SetGraphClock(int clock, int startidx);
-#endif
 uint8_t  justNoise(uint8_t *bits, size_t size);
 size_t   addParity(uint8_t *BitSource, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, uint8_t pType);
 int      askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType);
@@ -47,7 +44,7 @@ uint32_t manchesterEncode2Bytes(uint16_t datain);
 int      ManchesterEncode(uint8_t *BitStream, size_t size);
 int      manrawdecode(uint8_t *BitStream, size_t *size, uint8_t invert);
 int      nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert);
-uint8_t  parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType);
+extern bool     parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType);
 bool	 preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx);
 bool	 preambleSearchEx(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx, bool findone);
 int      pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert);

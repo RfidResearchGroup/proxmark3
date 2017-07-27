@@ -5,28 +5,55 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency demod/decode commands
+// Low frequency demod/decode commands   - by marshmellow, holiman, iceman and
+//                                         many others who came before
+//
+// NOTES: 
+// LF Demod functions are placed here to allow the flexability to use client or
+// device side. Most BUT NOT ALL of these functions are currenlty safe for 
+// device side use currently. (DetectST for example...)
+//
+// There are likely many improvements to the code that could be made, please
+// make suggestions...
+//
+// we tried to include author comments so any questions could be directed to 
+// the source.
+//
+// There are 4 main sections of code below:
+// Utilities Section: 
+//    for general utilities used by multiple other functions
+// Clock / Bitrate Detection Section:
+//    for clock detection functions for each modulation
+// Modulation Demods &/or Decoding Section:
+//    for main general modulation demodulating and encoding decoding code.
+// Tag format detection section:
+//    for detection of specific tag formats within demodulated data
+//
+// marshmellow
 //-----------------------------------------------------------------------------
+
+#include <string.h>  // for memset, memcmp and size_t
 #include "lfdemod.h"
+#include <stdint.h>  // for uint_32+
+#include <stdbool.h> // for bool
+#include "parity.h"  // for parity test
 
-//un_comment to allow debug print calls when used not on device
+//**********************************************************************************************
+//---------------------------------Utilities Section--------------------------------------------
+//**********************************************************************************************
+#define LOWEST_DEFAULT_CLOCK 32
+#define FSK_PSK_THRESHOLD   123
+
+//to allow debug print calls when used not on device
 void dummy(char *fmt, ...){}
-void dummy_sgc (int clock, int startidx) {}
-
 #ifndef ON_DEVICE
 # include "ui.h"		 // plotclock, plotclockstartindex
 # include "cmdparser.h"
 # include "cmddata.h"
 # define prnt PrintAndLog
-# define sgc SetGraphClock
-void SetGraphClock(int clock, int startidx){
-	PlotClock = clock;
-	PlockClockStartIndex = startidx;	
-}
 #else 
   uint8_t g_debugMode = 0;
 # define prnt dummy
-# define sgc dummy_sgc
 #endif
 
 //test samples are not just noise
@@ -49,7 +76,7 @@ int getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi
 		if (BitStream[i] > *high) *high = BitStream[i];
 		if (BitStream[i] < *low) *low = BitStream[i];
 	}
-	if (*high < 123) return -1; // just noise
+	if (*high < FSK_PSK_THRESHOLD) return -1; // just noise
 	*high = ((*high-128)*fuzzHi + 12800)/100;
 	*low = ((*low-128)*fuzzLo + 12800)/100;
 	return 1;
@@ -58,18 +85,12 @@ int getHiLo(uint8_t *BitStream, size_t size, int *high, int *low, uint8_t fuzzHi
 // by marshmellow
 // pass bits to be tested in bits, length bits passed in bitLen, and parity type (even=0 | odd=1) in pType
 // returns 1 if passed
-uint8_t parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType)
-{
-	uint8_t ans = 0;
-	for (uint8_t i = 0; i < bitLen; i++){
-		ans ^= ((bits >> i) & 1);
-	}
-	if (g_debugMode) prnt("DEBUG: ans: %d, ptype: %d, bits: %08X",ans,pType,bits);
-	return (ans == pType);
+bool parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType) {
+	return oddparity32(bits) ^ pType;
 }
 
 //by marshmellow
-// takes a array of binary values, start position, length of bits per parity (includes parity bit),
+// takes a array of binary values, start position, length of bits per parity (includes parity bit - MAX 32),
 //   Parity Type (1 for odd; 0 for even; 2 for Always 1's; 3 for Always 0's), and binary Length (length to run) 
 size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen)
 {
@@ -77,6 +98,7 @@ size_t removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t p
 	size_t j = 0, bitCnt = 0;
 	for (int word = 0; word < (bLen); word += pLen){
 		for (int bit=0; bit < pLen; bit++){
+			if (word+bit >= bLen) break;
 			parityWd = (parityWd << 1) | BitStream[startIdx+word+bit];
 			BitStream[j++] = (BitStream[startIdx+word+bit]);
 		}
@@ -328,8 +350,6 @@ int askdemod(uint8_t *BinStream, size_t *size, int *clk, int *invert, int maxErr
 	if (*invert != 1) *invert = 0;
 	if (amp==1) askAmp(BinStream, *size);
 	if (g_debugMode==2) prnt("DEBUG ASK: clk %d, beststart %d, amp %d", *clk, start, amp);
-
-	sgc(*clk, start);
 		
 	uint8_t initLoopMax = 255;
 	if (initLoopMax > *size) initLoopMax = *size;
@@ -446,16 +466,18 @@ uint32_t manchesterEncode2Bytes(uint16_t datain) {
 
 //by marshmellow
 //encode binary data into binary manchester 
-int ManchesterEncode(uint8_t *BitStream, size_t size)
-{
-	size_t modIdx=20000, i=0;
-	if (size>modIdx) return -1;
+//NOTE: BitStream must have triple the size of "size" available in memory to do the swap
+int ManchesterEncode(uint8_t *BitStream, size_t size) {
+	//allow up to 4K out (means BitStream must be at least 2048+4096 to handle the swap)
+	size = (size>2048) ? 2048 : size;
+	size_t modIdx = size;
+	size_t i;
 	for (size_t idx=0; idx < size; idx++){
 		BitStream[idx+modIdx++] = BitStream[idx];
 		BitStream[idx+modIdx++] = BitStream[idx]^1;
 	}
-	for (; i<(size*2); i++){
-		BitStream[i] = BitStream[i+20000];
+	for (i=0; i<(size*2); i++){
+		BitStream[i] = BitStream[i+size];
 	}
 	return i;
 }
@@ -910,6 +932,11 @@ uint8_t DetectCleanAskWave(uint8_t dest[], size_t size, uint8_t high, uint8_t lo
 	}
 	return allArePeaks;
 }
+
+//**********************************************************************************************
+//-------------------Clock / Bitrate Detection Section------------------------------------------
+//**********************************************************************************************
+
 // by marshmellow
 // to help detect clocks on heavily clipped samples
 // based on count of low to low
@@ -1584,6 +1611,7 @@ uint16_t countFC(uint8_t *BitStream, size_t size, uint8_t fskAdj)
 			best3=i;
 		}
 		if (g_debugMode==2) prnt("DEBUG countfc: FC %u, Cnt %u, best fc: %u, best2 fc: %u",fcLens[i],fcCnts[i],fcLens[best1],fcLens[best2]);
+		if (fcLens[i]==0) break;
 	}
 	if (fcLens[best1]==0) return 0;
 	uint8_t fcH=0, fcL=0;
@@ -1602,7 +1630,7 @@ uint16_t countFC(uint8_t *BitStream, size_t size, uint8_t fskAdj)
 
 	uint16_t fcs = (((uint16_t)fcH)<<8) | fcL;
 	if (fskAdj) return fcs;	
-	return fcLens[best1];
+	return (uint16_t)fcLens[best2] << 8 | fcLens[best1];
 }
 
 //by marshmellow - demodulate PSK1 wave 

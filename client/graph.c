@@ -14,9 +14,13 @@
 #include "ui.h"
 #include "graph.h"
 #include "lfdemod.h"
+#include "cmddata.h" //for g_debugmode
 
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 int GraphTraceLen;
+
+int s_Buff[MAX_GRAPH_TRACE_LEN];
+
 /* write a manchester bit to the graph */
 void AppendGraph(int redraw, int clock, int bit)
 {
@@ -46,16 +50,19 @@ int ClearGraph(int redraw)
 void save_restoreGB(uint8_t saveOpt)
 {
 	static int SavedGB[MAX_GRAPH_TRACE_LEN];
-	static int SavedGBlen;
+	static int SavedGBlen=0;
 	static bool GB_Saved = false;
+	static int SavedGridOffsetAdj=0;
 
-	if (saveOpt==1) { //save
+	if (saveOpt == GRAPH_SAVE) { //save
 		memcpy(SavedGB, GraphBuffer, sizeof(GraphBuffer));
 		SavedGBlen = GraphTraceLen;
 		GB_Saved=true;
+		SavedGridOffsetAdj = GridOffset;
 	} else if (GB_Saved){ //restore
 		memcpy(GraphBuffer, SavedGB, sizeof(GraphBuffer));
 		GraphTraceLen = SavedGBlen;
+		GridOffset = SavedGridOffsetAdj;
 		RepaintGraphWindow();
 	}
 	return;
@@ -147,7 +154,6 @@ int GetAskClock(const char str[], bool printAns, bool verbose)
 
 	if (printAns)
 		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
-	SetGraphClock(clock, start);
 	return clock;
 }
 
@@ -190,7 +196,6 @@ int GetPskClock(const char str[], bool printAns, bool verbose)
 	if (printAns)
 		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
 	
-	SetGraphClock(clock, start);
 	return clock;
 }
 
@@ -217,7 +222,6 @@ uint8_t GetNrzClock(const char str[], bool printAns, bool verbose)
 	if (printAns)
 		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
 
-	SetGraphClock(clock, start);
 	return clock;
 }
 //by marshmellow
@@ -263,9 +267,6 @@ uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose)
 		if (verbose || g_debugMode) PrintAndLog("DEBUG: Clock detect error");
 		return 0;
 	}
-	if (verbose || g_debugMode)
-		PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d | Best Starting Position: %d", *fc1, *fc2, *rf1, start);
-	SetGraphClock(*rf1, start);	
 	return 1;
 }
 

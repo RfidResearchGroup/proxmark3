@@ -11,13 +11,14 @@
 
 #include "ui.h"
 
-// set QT vars
-double CursorScaleFactor;
-int PlotGridX, PlotGridY, PlotGridXdefault = 64, PlotGridYdefault = 64, CursorCPos = 0, CursorDPos = 0;
-int PlotClock = 0, PlockClockStartIndex = 0;
-
+double CursorScaleFactor = 1;
+int PlotGridX=0, PlotGridY=0, PlotGridXdefault= 64, PlotGridYdefault= 64, CursorCPos= 0, CursorDPos= 0;
 int offline;
-int flushAfterWrite = 0;
+int flushAfterWrite = 0;  //buzzy
+int GridOffset = 0;
+bool GridLocked = false;
+bool showDemod = true;
+
 extern pthread_mutex_t print_lock;
 
 static char *logfilename = "proxmark3.log";
@@ -29,9 +30,6 @@ void PrintAndLog(char *fmt, ...)
 	va_list argptr, argptr2;
 	static FILE *logfile = NULL;
 	static int logging = 1;
-	// time_t current_time;
-	// struct tm* tm_info;
-	// char buffer[26] = {0};
 		
 	// lock this section to avoid interlacing prints from different threads
 	pthread_mutex_lock(&print_lock);
@@ -44,6 +42,8 @@ void PrintAndLog(char *fmt, ...)
 		}
 	}
 	
+#ifdef RL_STATE_READCMD
+	// We are using GNU readline.
 	int need_hack = (rl_readline_state & RL_STATE_READCMD) > 0;
 
 	if (need_hack) {
@@ -53,6 +53,10 @@ void PrintAndLog(char *fmt, ...)
 		rl_replace_line("", 0);
 		rl_redisplay();
 	}
+#else
+	// We are using libedit (OSX), which doesn't support this flag.
+	int need_hack = 0;
+#endif
 	
 	va_start(argptr, fmt);
 	va_copy(argptr2, argptr);
@@ -70,16 +74,6 @@ void PrintAndLog(char *fmt, ...)
 	}
 	
 	if (logging && logfile) {
-
-		/*
-		// Obtain current time.
-		current_time = time(NULL);
-		// Convert to local time format.
-		tm_info = localtime(&current_time);		
-		strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-		fprintf(logfile, "%s  ", buffer);
-		*/
-		
 		vfprintf(logfile, fmt, argptr2);
 		fprintf(logfile,"\n");
 		fflush(logfile);
