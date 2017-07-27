@@ -17,7 +17,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget_overlays">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab">
       <property name="focusPolicy">
@@ -29,17 +29,17 @@
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
         <layout class="QFormLayout" name="formLayout">
-         <item row="0" column="0">
-          <widget class="QLabel" name="label">
-           <property name="text">
-            <string>Window size</string>
-           </property>
-          </widget>
-         </item>
          <item row="0" column="1">
           <widget class="QLabel" name="label_5">
            <property name="text">
             <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Window size</string>
            </property>
           </widget>
          </item>
@@ -78,8 +78,60 @@
      </widget>
      <widget class="QWidget" name="tab_3">
       <attribute name="title">
-       <string>Askdemod</string>
+       <string>AskEdge</string>
       </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_4">
+       <item>
+        <layout class="QFormLayout" name="formLayout_4">
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_8">
+           <property name="text">
+            <string>Edge Jump Threshold</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLabel" name="label_9">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QSlider" name="horizontalSlider_askedge">
+         <property name="minimum">
+          <number>5</number>
+         </property>
+         <property name="maximum">
+          <number>80</number>
+         </property>
+         <property name="value">
+          <number>20</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
      </widget>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
@@ -174,7 +226,7 @@
      <item>
       <widget class="QPushButton" name="pushButton_sticky">
        <property name="text">
-        <string>Sticky</string>
+        <string>Restore</string>
        </property>
       </widget>
      </item>
@@ -194,7 +246,7 @@
      <item>
       <widget class="QLabel" name="label_4">
        <property name="text">
-        <string>TextLabel</string>
+        <string/>
        </property>
       </widget>
      </item>
@@ -211,8 +263,8 @@
    <slot>setNum(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>29</x>
-     <y>90</y>
+     <x>46</x>
+     <y>118</y>
     </hint>
     <hint type="destinationlabel">
      <x>597</x>
@@ -227,8 +279,8 @@
    <slot>setNum(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>153</x>
-     <y>84</y>
+     <x>170</x>
+     <y>118</y>
     </hint>
     <hint type="destinationlabel">
      <x>161</x>
@@ -243,8 +295,8 @@
    <slot>setNum(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>53</x>
-     <y>92</y>
+     <x>70</x>
+     <y>118</y>
     </hint>
     <hint type="destinationlabel">
      <x>68</x>
@@ -259,12 +311,28 @@
    <slot>setNum(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>184</x>
-     <y>161</y>
+     <x>201</x>
+     <y>185</y>
     </hint>
     <hint type="destinationlabel">
      <x>149</x>
      <y>135</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>horizontalSlider_askedge</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>label_9</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>149</x>
+     <y>102</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>250</x>
+     <y>70</y>
     </hint>
    </hints>
   </connection>
