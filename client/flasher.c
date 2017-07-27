@@ -53,8 +53,7 @@ void ReceiveCommand(UsbCommand* rxcmd) {
 	byte_t* prx = prxcmd;
 	size_t rxlen;
 	while (true) {
-		rxlen = sizeof(UsbCommand) - (prx-prxcmd);
-		if (uart_receive(sp,prx,&rxlen)) {
+		if (uart_receive(sp, prx, sizeof(UsbCommand) - (prx-prxcmd), &rxlen)) {
 			prx += rxlen;
 			if ((prx-prxcmd) >= sizeof(UsbCommand)) {
 				return;
