@@ -82,8 +82,8 @@ CORESRCS =  uart_posix.c \
 			uart_win32.c \
 			util.c \
 			util_posix.c \
-			scandir.c
-#			sleep.c
+			scandir.c \
+			sleep.c
 
 CMDSRCS =	crapto1/crapto1.c\
 			crapto1/crypto1.c\
