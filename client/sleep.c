@@ -8,7 +8,7 @@
 // platform-independant sleep macros
 //-----------------------------------------------------------------------------
 
-#ifndef __WIN32
+#ifndef _WIN32
 
 #define _POSIX_C_SOURCE	199309L
 #include "sleep.h"
