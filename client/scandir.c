@@ -12,6 +12,8 @@
 
 #include "scandir.h"
 
+#ifdef _WIN32
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -89,3 +91,5 @@ int alphasort (const struct dirent **a, const struct dirent **b)
 #ifdef __cplusplus
 }
 #endif
+
+#endif  // win32
