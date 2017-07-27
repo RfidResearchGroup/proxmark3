@@ -10,8 +10,22 @@
 
 #include "proxgui.h"
 #include "proxguiqt.h"
+#include "proxmark3.h"
 
 static ProxGuiQT *gui = NULL;
+static WorkerThread *main_loop_thread = NULL;
+
+WorkerThread::WorkerThread(char *script_cmds_file, bool usb_present) : script_cmds_file(script_cmds_file), usb_present(usb_present)
+{
+}
+
+WorkerThread::~WorkerThread() 
+{
+}
+
+void WorkerThread::run() {
+	main_loop(script_cmds_file, usb_present);
+}
 
 extern "C" void ShowGraphWindow(void)
 {
@@ -42,10 +56,11 @@ extern "C" void MainGraphics(void)
   if (!gui)
     return;
 
+	main_loop_thread->start();
   gui->MainLoop();
 }
 
-extern "C" void InitGraphics(int argc, char **argv)
+extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, bool usb_present)
 {
 #ifdef Q_WS_X11
   bool useGUI = getenv("DISPLAY") != 0;
@@ -56,13 +71,17 @@ extern "C" void InitGraphics(int argc, char **argv)
     return;
 
   gui = new ProxGuiQT(argc, argv);
+	main_loop_thread = new WorkerThread(script_cmds_file, usb_present);
+	QObject::connect(main_loop_thread, SIGNAL(finished()), main_loop_thread, SLOT(deleteLater()));
+	QObject::connect(main_loop_thread, SIGNAL(finished()), gui, SLOT(_Exit()));
 }
+
 
 extern "C" void ExitGraphics(void)
 {
   if (!gui)
     return;
 
-  delete gui;
+  gui->Exit();
   gui = NULL;
 }

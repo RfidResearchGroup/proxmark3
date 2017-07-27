@@ -22,11 +22,9 @@
 #include "cmdmain.h"
 #include "uart.h"
 #include "ui.h"
-#include "sleep.h"
 #include "cmdparser.h"
 #include "cmdhw.h"
 #include "whereami.h"
-
 
 // a global mutex to prevent interlaced printing from different threads
 pthread_mutex_t print_lock;
@@ -36,8 +34,10 @@ static UsbCommand txcmd;
 volatile static bool txcmd_pending = false;
 
 void SendCommand(UsbCommand *c) {
-	#if 0
+	#if 1
+	pthread_mutex_lock(&print_lock);
 	printf("Sending %d bytes\n", sizeof(UsbCommand));
+	pthread_mutex_unlock(&print_lock);
 	#endif
 
 	if (offline) {
@@ -59,12 +59,7 @@ struct receiver_arg {
 	int run;
 };
 
-struct main_loop_arg {
-	int usb_present;
-	char *script_cmds_file;
-};
-
-byte_t rx[0x1000000];
+byte_t rx[sizeof(UsbCommand)];
 byte_t* prx = rx;
 
 // static void showBanner(void){
@@ -73,29 +68,23 @@ byte_t* prx = rx;
 	// printf("██████╔╝██╔████╔██║ ████╔╝\n");
 	// printf("██╔═══╝ ██║╚██╔╝██║   ══█║    iceman@icesql.net\n");
 	// printf("██║     ██║ ╚═╝ ██║ ████╔╝ https://github.com/iceman1001/proxmark3\n");
-	// printf("╚═╝     ╚═╝     ╚═╝ ╚═══╝v1.7.0\n");
+	// printf("╚═╝     ╚═╝     ╚═╝ ╚═══╝v1.7.2\n");
 // }
 
 
 static void *uart_receiver(void *targ) {
 	struct receiver_arg *arg = (struct receiver_arg*)targ;
 	size_t rxlen;
-	size_t cmd_count;
 
 	while (arg->run) {
-
-		rxlen = sizeof(UsbCommand);
-
-		if (uart_receive(sp, prx, &rxlen)) {
+		rxlen = 0;
+		if (uart_receive(sp, prx, sizeof(UsbCommand) - (prx-rx), &rxlen)) {
 			prx += rxlen;
-			if (((prx-rx) % sizeof(UsbCommand)) != 0)
+			if (prx-rx < sizeof(UsbCommand)) {
 				continue;
+			}
 			
-			cmd_count = (prx-rx) / sizeof(UsbCommand);
-
-			for (size_t i = 0; i < cmd_count; i++)
-				UsbCommandReceived((UsbCommand*)( rx + ( i * sizeof(UsbCommand))));
-
+			UsbCommandReceived((UsbCommand*)rx);
 		}
 		prx = rx;
 
@@ -111,13 +100,13 @@ static void *uart_receiver(void *targ) {
 	return NULL;
 }
 
-static void *main_loop(void *targ) {
-	struct main_loop_arg *arg = (struct main_loop_arg*)targ;
+
+void main_loop(char *script_cmds_file, bool usb_present) {
 	struct receiver_arg rarg;
 	char *cmd = NULL;
 	pthread_t reader_thread;
   
-	if (arg->usb_present == 1) {
+	if (usb_present) {
 		rarg.run = 1;
 		pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
 		// cache Version information now:
@@ -127,11 +116,11 @@ static void *main_loop(void *targ) {
 	FILE *script_file = NULL;
 	char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
 
-	if (arg->script_cmds_file) {
-		script_file = fopen(arg->script_cmds_file, "r");
+	if (script_cmds_file) {
+		script_file = fopen(script_cmds_file, "r");
 		
 		if (script_file)
-			printf("using 'scripting' commands file %s\n", arg->script_cmds_file);
+			printf("using 'scripting' commands file %s\n", script_cmds_file);
 	}
 
 	read_history(".history");
@@ -159,7 +148,10 @@ static void *main_loop(void *targ) {
 				if ((cmd = (char*) malloc( newlen + 1)) != NULL) {
 					memset(cmd, 0x00, newlen);
 					strcpy(cmd, script_cmd_buf);
+					
+					pthread_mutex_lock(&print_lock);
 					printf("%s\n", cmd);
+					pthread_mutex_unlock(&print_lock);
 				}
 			}
 		} else {
@@ -185,7 +177,9 @@ static void *main_loop(void *targ) {
 			free(cmd);
 			cmd = 0;
 		} else {
+			pthread_mutex_lock(&print_lock);
 			printf("\n");
+			pthread_mutex_unlock(&print_lock);
 			break;
 		}
 	}
@@ -199,14 +193,11 @@ static void *main_loop(void *targ) {
 	free(cmd);
 	cmd = 0;
 			
-	if (arg->usb_present == 1) {
+	if (usb_present) {
 		rarg.run = 0;
 		pthread_join(reader_thread, NULL);
 	}
 
-	ExitGraphics();
-	pthread_exit(NULL);
-	return NULL;
 }
 
 static void dumpAllHelp(int markdown)
@@ -272,25 +263,20 @@ int main(int argc, char* argv[]) {
 
 	set_my_executable_path();
 	
-	// Make sure to initialize
-	struct main_loop_arg marg = {
-		.usb_present = 0,
-		.script_cmds_file = NULL
-	};
-	
-	pthread_t main_loop_threat;
+	bool usb_present = false;
+	char *script_cmds_file = NULL;
 
   	sp = uart_open(argv[1]);
 	if (sp == INVALID_SERIAL_PORT) {
 		printf("ERROR: invalid serial port\n");
-		marg.usb_present = 0;
+		usb_present = false;
 		offline = 1;
 	} else if (sp == CLAIMED_SERIAL_PORT) {
 		printf("ERROR: serial port is claimed by another process\n");
-		marg.usb_present = 0;
+		usb_present = false;
 		offline = 1;
 	} else {
-		marg.usb_present = 1;
+		usb_present = true;
 		offline = 0;
 	}
 
@@ -306,22 +292,22 @@ int main(int argc, char* argv[]) {
 			flushAfterWrite = 1;
 		}
 		else {
-			marg.script_cmds_file = argv[2];
+			script_cmds_file = argv[2];
 		}
 	}
 
 	// create a mutex to avoid interlacing print commands from our different threads
 	pthread_mutex_init(&print_lock, NULL);
 
-	pthread_create(&main_loop_threat, NULL, &main_loop, &marg);
-	InitGraphics(argc, argv);
-
+#ifdef HAVE_GUI
+	InitGraphics(argc, argv, script_cmds_file, usb_present);
 	MainGraphics();
-
-	pthread_join(main_loop_threat, NULL);
+#else
+	main_loop(script_cmds_file, usb_present);
+#endif	
 
 	// Clean up the port
-	if (offline == 0)
+	if (usb_present)
 		uart_close(sp);
   
 	// clean up mutex

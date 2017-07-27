@@ -7,9 +7,10 @@
 //-----------------------------------------------------------------------------
 // GUI (QT)
 //-----------------------------------------------------------------------------
+#include "proxguiqt.h"
 
+#include <stdbool.h>
 #include <iostream>
-//#include <QT>
 #include <QPainterPath>
 #include <QBrush>
 #include <QPen>
@@ -20,13 +21,18 @@
 #include <math.h>
 #include <limits.h>
 #include <stdio.h>
-#include "proxguiqt.h"
+#include <QSlider>
+#include <QHBoxLayout>
+#include <string.h>
 #include "proxgui.h"
+#include <QtGui>
+//#include <ctime>
 
-int GridOffset= 0;
-bool GridLocked= 0;
+bool g_useOverlays = false;
+int g_absVMax = 0;
 int startMax;
 int PageWidth;
+int unlockStart = 0;
 
 void ProxGuiQT::ShowGraphWindow(void)
 {
@@ -41,6 +47,11 @@ void ProxGuiQT::RepaintGraphWindow(void)
 void ProxGuiQT::HideGraphWindow(void)
 {
 	emit HideGraphWindowSignal();
+}
+
+void ProxGuiQT::Exit(void)
+{
+	emit ExitSignal();
 }
 
 void ProxGuiQT::_ShowGraphWindow(void)
@@ -70,6 +81,10 @@ void ProxGuiQT::_HideGraphWindow(void)
 	plotwidget->hide();
 }
 
+void ProxGuiQT::_Exit(void) {
+	delete this;
+}
+
 void ProxGuiQT::MainLoop()
 {
 	plotapp = new QApplication(argc, argv);
@@ -77,288 +92,492 @@ void ProxGuiQT::MainLoop()
 	connect(this, SIGNAL(ShowGraphWindowSignal()), this, SLOT(_ShowGraphWindow()));
 	connect(this, SIGNAL(RepaintGraphWindowSignal()), this, SLOT(_RepaintGraphWindow()));
 	connect(this, SIGNAL(HideGraphWindowSignal()), this, SLOT(_HideGraphWindow()));
+	connect(this, SIGNAL(ExitSignal()), this, SLOT(_Exit()));
 
 	plotapp->exec();
 }
 
-ProxGuiQT::ProxGuiQT(int argc, char **argv) : plotapp(NULL), plotwidget(NULL), argc(argc), argv(argv) {}
+ProxGuiQT::ProxGuiQT(int argc, char **argv) : plotapp(NULL), plotwidget(NULL),
+	argc(argc), argv(argv)
+{
+}
 
 ProxGuiQT::~ProxGuiQT(void)
 {
-	if (plotwidget) {
-		delete plotwidget;
-		plotwidget = NULL;
-	}
-
+	//if (plotwidget) {
+		//plotwidget->destroy(true,true);
+	//	delete plotwidget;
+	//	plotwidget = NULL;
+	//}
 	if (plotapp) {
 		plotapp->quit();
-		delete plotapp;
+		// delete plotapp;
 		plotapp = NULL;
 	}
 }
 
-// solid colors
-#define QT_ORANGE QColor(255, 153, 0)
-#define QT_WHITE QColor(255, 255, 255)
-#define QT_YELLOW QColor(255, 255, 0)
-#define QT_MAGENTA QColor(255, 0, 255)
-#define QT_LIGHTBLUE QColor(0, 0, 205)
-#define QT_LIGHTGREEN QColor(100, 255, 100)
-#define QT_GRAY QColor(100,100,100)
-#define QT_BLACK QColor(0,0,0)
-// transparent colors
-#define QT_ORANGE_TS QColor(255, 153, 0, 96)
-#define QT_RED_TS QColor(255, 0, 0, 64)
-#define QT_BLACK_TS QColor(0,0,0,0)
-	
-void ProxWidget::paintEvent(QPaintEvent *event)
+//--------------------
+void ProxWidget::applyOperation()
 {
-	QPainter painter(this);
-	QPainterPath penPath, whitePath, greyPath, lightgreyPath, cursorAPath, cursorBPath, cursorCPath, cursorDPath;
-	QRect r;
-	QBrush brush(QT_LIGHTGREEN);
-	QPen pen(QT_LIGHTGREEN);
+	//printf("ApplyOperation()");
+	save_restoreGB(GRAPH_SAVE);
+	memcpy(GraphBuffer, s_Buff, sizeof(int) * GraphTraceLen);
+	RepaintGraphWindow();
+}
+void ProxWidget::stickOperation()
+{
+	save_restoreGB(GRAPH_RESTORE);
+	//printf("stickOperation()");
+}
+void ProxWidget::vchange_autocorr(int v)
+{
+	int ans;
+	ans = AutoCorrelate(GraphBuffer, s_Buff, GraphTraceLen, v, true, false);
+	if (g_debugMode) printf("vchange_autocorr(w:%d): %d\n", v, ans);
+	g_useOverlays = true;
+	RepaintGraphWindow();
+}
+void ProxWidget::vchange_askedge(int v)
+{
+	int ans;
+	//extern int AskEdgeDetect(const int *in, int *out, int len, int threshold);
+	ans = AskEdgeDetect(GraphBuffer, s_Buff, GraphTraceLen, v);
+	if (g_debugMode) printf("vchange_askedge(w:%d)%d\n", v, ans);
+	g_useOverlays = true;
+	RepaintGraphWindow();
+}
+void ProxWidget::vchange_dthr_up(int v)
+{
+	int down = opsController->horizontalSlider_dirthr_down->value();
+	directionalThreshold(GraphBuffer, s_Buff, GraphTraceLen, v, down);
+	//printf("vchange_dthr_up(%d)", v);
+	g_useOverlays = true;
+	RepaintGraphWindow();
+}
+void ProxWidget::vchange_dthr_down(int v)
+{
+	//printf("vchange_dthr_down(%d)", v);
+	int up = opsController->horizontalSlider_dirthr_up->value();
+	directionalThreshold(GraphBuffer,s_Buff, GraphTraceLen, v, up);
+	g_useOverlays = true;
+	RepaintGraphWindow();
+}
+ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent)
+{
+	this->master = master;
+	resize(800,500);
 
-	painter.setFont(QFont("Arial", 10));
+	/** Setup the controller widget **/
 
-	if(GraphStart < 0) 
-		GraphStart = 0;
+	controlWidget = new QWidget();
+	opsController = new Ui::Form();
+	opsController->setupUi(controlWidget);
+	//Due to quirks in QT Designer, we need to fiddle a bit
+	opsController->horizontalSlider_dirthr_down->setMinimum(-128);
+	opsController->horizontalSlider_dirthr_down->setMaximum(0);
+	opsController->horizontalSlider_dirthr_down->setValue(-20);
+	opsController->horizontalSlider_dirthr_up->setMinimum(-40);
+	opsController->horizontalSlider_dirthr_up->setMaximum(128);
+	opsController->horizontalSlider_dirthr_up->setValue(20);
+	opsController->horizontalSlider_askedge->setValue(25);
+	opsController->horizontalSlider_window->setValue(4000);
 
-	if (CursorAPos > GraphTraceLen) CursorAPos = 0;
-	if (CursorBPos > GraphTraceLen) CursorBPos = 0;
-	if (CursorCPos > GraphTraceLen) CursorCPos = 0;
-	if (CursorDPos > GraphTraceLen) CursorDPos = 0;
 
-	r = rect();
-	painter.fillRect(r, QT_BLACK);
-	
-	whitePath.moveTo(r.left() + 40, r.top());
-	whitePath.lineTo(r.left() + 40, r.bottom());
+	QObject::connect(opsController->pushButton_apply, SIGNAL(clicked()), this, SLOT(applyOperation()));
+	QObject::connect(opsController->pushButton_sticky, SIGNAL(clicked()), this, SLOT(stickOperation()));
+	QObject::connect(opsController->horizontalSlider_window, SIGNAL(valueChanged(int)), this, SLOT(vchange_autocorr(int)));
+	QObject::connect(opsController->horizontalSlider_dirthr_up, SIGNAL(valueChanged(int)), this, SLOT(vchange_dthr_up(int)));
+	QObject::connect(opsController->horizontalSlider_dirthr_down, SIGNAL(valueChanged(int)), this, SLOT(vchange_dthr_down(int)));
+	QObject::connect(opsController->horizontalSlider_askedge, SIGNAL(valueChanged(int)), this, SLOT(vchange_askedge(int)));
 
-	int zeroHeight = r.top() + (r.bottom() - r.top()) / 2;
+	controlWidget->show();
 
-	greyPath.moveTo(r.left(), zeroHeight);
-	greyPath.lineTo(r.right(), zeroHeight);
-	painter.setPen(QT_GRAY);
-	painter.drawPath(greyPath);
+	// Set up the plot widget, which does the actual plotting
 
-	PageWidth = (int)((r.right() - r.left() - 40) / GraphPixelsPerPoint);
-	
-	// plot X and Y grid lines
-	int i;
-	if ((PlotGridX > 0) && ((PlotGridX * GraphPixelsPerPoint) > 1)) {
-		for(i = 40 + (GridOffset * GraphPixelsPerPoint); i < r.right(); i += (int)(PlotGridX * GraphPixelsPerPoint)) {
-			//SelectObject(hdc, GreyPenLite);
-			//MoveToEx(hdc, r.left + i, r.top, NULL);
-			//LineTo(hdc, r.left + i, r.bottom);
-			lightgreyPath.moveTo(r.left()+i,r.top());
-			lightgreyPath.lineTo(r.left()+i,r.bottom());
-			painter.drawPath(lightgreyPath);
-		} 
-	} 
-	if ((PlotGridY > 0) && ((PlotGridY * GraphPixelsPerPoint) > 1)){
-		for(i = 0; i < ((r.top() + r.bottom())>>1); i += (int)(PlotGridY * GraphPixelsPerPoint)) {
-			lightgreyPath.moveTo(r.left() + 40,zeroHeight + i);
-			lightgreyPath.lineTo(r.right(),zeroHeight + i);
-			painter.drawPath(lightgreyPath);
-			lightgreyPath.moveTo(r.left() + 40,zeroHeight - i);
-			lightgreyPath.lineTo(r.right(),zeroHeight - i);
-			painter.drawPath(lightgreyPath);
-		}
-	}
-
-	startMax = (GraphTraceLen - (int)((r.right() - r.left() - 40) / GraphPixelsPerPoint));
-	
-	if(startMax < 0) 
-		startMax = 0;
-	
-	if(GraphStart > startMax) 
-		GraphStart = startMax;
-
-	int absYMax = 1;
-
-	for(i = GraphStart; ;i++) {
-
-		if(i >= GraphTraceLen) break;
-		
-		if (fabs((double)GraphBuffer[i]) > absYMax)
-			absYMax = (int)fabs((double)GraphBuffer[i]);
-		
-		int x = 40 + (int)((i - GraphStart)*GraphPixelsPerPoint);
-
-		if(x > r.right()) break;
-	}
-
-	absYMax = (int)(absYMax*1.2 + 1);
-	
-	// number of points that will be plotted
-	int span = (int)((r.right() - r.left()) / GraphPixelsPerPoint);
-	
-	// one label every 100 pixels, let us say
-	int labels = (r.right() - r.left() - 40) / 100;
-	if(labels <= 0) labels = 1;
-	
-	int pointsPerLabel = span / labels;
-	if(pointsPerLabel <= 0) pointsPerLabel = 1;
-
-	int yMin = INT_MAX;
-	int yMax = INT_MIN;
-	int yMean = 0;
-	int n = 0;
-	//int stt_x1 = 0, stt_x2 = 0;
-
-	for(i = GraphStart; ; i++) {
-		if(i >= GraphTraceLen) break;
-
-		// x == pixel pos.
-		int x = 40 + (int)((i - GraphStart) * GraphPixelsPerPoint);
-
-		// if x reaches end of box, stop loop
-		if(x > r.right() + GraphPixelsPerPoint) break;
-
-		int y = GraphBuffer[i];
-		if(y < yMin)
-			yMin = y;
-
-		if(y > yMax)
-			yMax = y;
-
-		yMean += y;
-		n++;
-
-		y = (y * (r.top() - r.bottom()) / (2*absYMax)) + zeroHeight;
-		
-		if(i == GraphStart)
-			penPath.moveTo(x, y);
-		else
-			penPath.lineTo(x, y);
-		
-
-		// small white boxes (the dots on the signal)
-		if(GraphPixelsPerPoint > 10) {
-			QRect f(QPoint(x - 3, y - 3),QPoint(x + 3, y + 3));
-			painter.fillRect(f, brush);
-		}
-
-		if(((i - GraphStart) % pointsPerLabel == 0) && i != GraphStart) {
-			whitePath.moveTo(x, zeroHeight - 3);
-			whitePath.lineTo(x, zeroHeight + 3);
-
-			char str[100];
-			sprintf(str, "+%d", (i - GraphStart));
-
-			painter.setPen( QT_WHITE );
-			QRect size;
-			QFontMetrics metrics(painter.font());
-			size = metrics.boundingRect(str);
-			painter.drawText(x - (size.right() - size.left()), zeroHeight + 9, str);
-
-			penPath.moveTo(x,y);
-		}
-
-		if(i == CursorAPos || i == CursorBPos || i == CursorCPos || i == CursorDPos) {
-			QPainterPath *cursorPath;
-
-			if ( i == CursorAPos ) 
-				cursorPath = &cursorAPath;
-			else if ( i == CursorBPos ) 
-				cursorPath = &cursorBPath;
-			else if ( i == CursorCPos ) 
-				cursorPath = &cursorCPath;
-			else 
-				cursorPath = &cursorDPath;
-			
-			cursorPath->moveTo(x, r.top());
-			cursorPath->lineTo(x, r.bottom());
-			penPath.moveTo(x, y);		
-		}
-	}
-	
-	// Mark STT block in signal
-	if ( CursorCPos > 0 ){
-		int foo = 40 + (int)((CursorCPos - GraphStart) * GraphPixelsPerPoint);	
-		int bar = 40 + ((CursorDPos - GraphStart) * GraphPixelsPerPoint);	
-		QRect r_stt(foo, r.top(), bar-foo, r.bottom() );
-		QBrush b_stt( QBrush( QT_ORANGE_TS ));
-		b_stt.setStyle(Qt::Dense1Pattern);
-		painter.setPen(Qt::NoPen);
-		painter.fillRect(r_stt, b_stt);
-	}
-	
-	// Mark Clock pulse
-	//extern int PlotClock, PlockClockStartIndex;
-	if ( PlotClock > 0){
-		for(int i = PlockClockStartIndex; ; i += PlotClock * 2) {
-
-			if(i >= GraphTraceLen ) break;
-			if ((CursorCPos > 0) && (i >= CursorCPos)) break;
-			
-			int foo = 40 + (int)((i - GraphStart) * GraphPixelsPerPoint);	
-			int bar = 40 + ((i + PlotClock - GraphStart) * GraphPixelsPerPoint);	
-			QRect r_clock(foo, r.top(), bar-foo, r.bottom() );
-			
-			QBrush b_clk( QBrush( QT_RED_TS ));
-			b_clk.setStyle(Qt::Dense1Pattern);
-			painter.setPen(Qt::NoPen);
-			painter.fillRect(r_clock, b_clk);
-		}
-	}
-	
-	if(n != 0)
-		yMean /= n;
-
-	painter.setPen( QT_WHITE ); painter.drawPath(whitePath);
-	painter.setPen(pen); painter.drawPath(penPath);
-	painter.setPen( QT_YELLOW ); painter.drawPath(cursorAPath);
-	painter.setPen( QT_MAGENTA ); painter.drawPath(cursorBPath);
-	//painter.setPen( QT_ORANGE ); painter.drawPath(cursorCPath);
-	//painter.setPen( QT_LIGHTBLUE ); painter.drawPath(cursorDPath);
-
-	char str[200];
-	sprintf(str, "@%d   max=%d min=%d mean=%d n=%d/%d    dt=%d [%.3f] zoom=%.3f CursorA=%d [%d] CursorB=%d [%d]  GridX=%d GridY=%d (%s)  [Clock RF/%d]",
-			GraphStart, yMax, yMin, yMean, n, GraphTraceLen,
-			CursorBPos - CursorAPos,
-			(CursorBPos - CursorAPos)/CursorScaleFactor,
-			GraphPixelsPerPoint,
-			CursorAPos,
-			GraphBuffer[CursorAPos],
-			CursorBPos,
-			GraphBuffer[CursorBPos],
-			PlotGridXdefault,
-			PlotGridYdefault,
-			GridLocked ? "Locked" : "Unlocked",
-			PlotClock
-		);
-
-	painter.setPen( QT_WHITE );
-	painter.drawText(50, r.bottom() - 10, str);
+	plot = new Plot(this);
+	/*
+	QSlider* slider = new QSlider(Qt::Horizontal);
+	slider->setFocusPolicy(Qt::StrongFocus);
+	slider->setTickPosition(QSlider::TicksBothSides);
+	slider->setTickInterval(10);
+	slider->setSingleStep(1);
+	*/
+	QVBoxLayout *layout = new QVBoxLayout;
+	//layout->addWidget(slider);
+	layout->addWidget(plot);
+	setLayout(layout);
+	//printf("Proxwidget Constructor just set layout\r\n");
 }
 
-ProxWidget::ProxWidget(QWidget *parent) : QWidget(parent), GraphStart(0), GraphPixelsPerPoint(1)
+// not 100% sure what i need in this block
+// feel free to fix - marshmellow...
+ProxWidget::~ProxWidget(void)
 {
-	resize(600, 300);
+	if (controlWidget) {
+		controlWidget->close();
+		delete controlWidget;
+		controlWidget = NULL;
+	}
 
-	QPalette palette( QT_BLACK_TS );
-	palette.setColor(QPalette::WindowText, QT_WHITE );
-	palette.setColor(QPalette::Text, QT_WHITE );
-	palette.setColor(QPalette::Button, QT_GRAY );
-	setPalette(palette);
-	setAutoFillBackground(true);
-	CursorAPos = 0;
-	CursorBPos = 0;
-	PlotClock = 0;
+	if (opsController) {
+		delete opsController;
+		opsController = NULL;
+	}
+
+	if (plot) {
+		plot->close();
+		delete plot;
+		plot = NULL;
+	}
 }
-
 void ProxWidget::closeEvent(QCloseEvent *event)
 {
 	event->ignore();
 	this->hide();
+	g_useOverlays = false;
+}
+void ProxWidget::hideEvent(QHideEvent *event) {
+	controlWidget->hide();
+	plot->hide();
+}
+void ProxWidget::showEvent(QShowEvent *event) {
+	controlWidget->show();
+	plot->show();
 }
 
-void ProxWidget::mouseMoveEvent(QMouseEvent *event)
+//----------- Plotting
+
+int Plot::xCoordOf(int i, QRect r )
+{
+	return r.left() + (int)((i - GraphStart)*GraphPixelsPerPoint);
+}
+
+int Plot::yCoordOf(int v, QRect r, int maxVal)
+{
+	int z = (r.bottom() - r.top())/2;
+	return -(z * v) / maxVal + z;
+}
+
+int Plot::valueOf_yCoord(int y, QRect r, int maxVal)
+{
+	int z = (r.bottom() - r.top())/2;
+	return (y-z) * maxVal / z;
+}
+static const QColor GREEN = QColor(100,255,100);
+static const QColor RED   = QColor(255,100,100);
+static const QColor BLUE  = QColor(100,100,255);
+static const QColor GRAY = QColor(240,240,240);
+
+QColor Plot::getColor(int graphNum)
+{
+	switch (graphNum) {
+	case 0: return GREEN;  //Green
+	case 1: return RED;    //Red
+	case 2: return BLUE;   //Blue
+	default: return GRAY;  //Gray
+	}
+}
+
+void Plot::setMaxAndStart(int *buffer, int len, QRect plotRect)
+{
+	if (len == 0) return;
+	startMax = (len - (int)((plotRect.right() - plotRect.left() - 40) / GraphPixelsPerPoint));
+	if(startMax < 0) {
+		startMax = 0;
+	}
+	if(GraphStart > startMax) {
+		GraphStart = startMax;
+	}
+	if (GraphStart > len) return;
+	int vMin = INT_MAX, vMax = INT_MIN, v = 0;
+	int sample_index = GraphStart ;
+	for( ; sample_index < len && xCoordOf(sample_index,plotRect) < plotRect.right() ; sample_index++) {
+
+		v = buffer[sample_index];
+		if(v < vMin) vMin = v;
+		if(v > vMax) vMax = v;
+	}
+
+	g_absVMax = 0;
+	if(fabs( (double) vMin) > g_absVMax) g_absVMax = (int)fabs( (double) vMin);
+	if(fabs( (double) vMax) > g_absVMax) g_absVMax = (int)fabs( (double) vMax);
+	g_absVMax = (int)(g_absVMax*1.25 + 1);
+}
+
+void Plot::PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotationRect, QPainter *painter, int graphNum, int plotOffset)
+{
+	if (len == 0 || PlotGridX <= 0) return;
+	//clock_t begin = clock();
+	QPainterPath penPath;
+
+	int grid_delta_x = PlotGridX;
+	int first_delta_x = grid_delta_x; //(plotOffset > 0) ? PlotGridX : (PlotGridX +);
+	if (GraphStart > plotOffset) first_delta_x -= (GraphStart-plotOffset);
+	int DemodStart = GraphStart;
+	if (plotOffset > GraphStart) DemodStart = plotOffset;
+
+	int BitStart = 0;
+	// round down
+	if (DemodStart-plotOffset > 0) BitStart = (int)(((DemodStart-plotOffset)+(PlotGridX-1))/PlotGridX)-1;
+	first_delta_x += BitStart * PlotGridX;
+	if (BitStart > (int)len) return;
+	int delta_x = 0;
+	int v = 0;
+	//printf("first_delta_x %i, grid_delta_x %i, DemodStart %i, BitStart %i\n",first_delta_x,grid_delta_x,DemodStart, BitStart);
+
+	painter->setPen(getColor(graphNum));
+	char str[5];
+  int absVMax = (int)(100*1.05+1);
+	int x = xCoordOf(DemodStart, plotRect);
+	int y = yCoordOf((buffer[BitStart]*200-100)*-1,plotRect,absVMax);
+	penPath.moveTo(x, y);
+	delta_x = 0;
+	int clk = first_delta_x;
+	for(int i = BitStart; i < (int)len && xCoordOf(delta_x+DemodStart, plotRect) < plotRect.right(); i++) {
+		for (int ii = 0; ii < (clk) && i < (int)len && xCoordOf(DemodStart+delta_x+ii, plotRect) < plotRect.right() ; ii++ ) {
+			x = xCoordOf(DemodStart+delta_x+ii, plotRect);
+			v = buffer[i]*200-100;
+
+			y = yCoordOf( v, plotRect, absVMax);
+
+			penPath.lineTo(x, y);
+
+			if(GraphPixelsPerPoint > 10) {
+				QRect f(QPoint(x - 3, y - 3),QPoint(x + 3, y + 3));
+				painter->fillRect(f, QColor(100, 255, 100));
+			}
+			if (ii == (int)clk/2) {
+				//print label
+				sprintf(str, "%u",buffer[i]);
+				painter->drawText(x-8, y + ((buffer[i] > 0) ? 18 : -6), str);
+			}
+		}
+		delta_x += clk;
+		clk = grid_delta_x;
+	}
+
+	//Graph annotations
+	painter->drawPath(penPath);
+}
+
+void Plot::PlotGraph(int *buffer, int len, QRect plotRect, QRect annotationRect, QPainter *painter, int graphNum)
+{
+	if (len == 0) return;
+	//clock_t begin = clock();
+	QPainterPath penPath;
+	int vMin = INT_MAX, vMax = INT_MIN, vMean = 0, v = 0, i = 0;
+	int x = xCoordOf(GraphStart, plotRect);
+	int y = yCoordOf(buffer[GraphStart],plotRect,g_absVMax);
+	penPath.moveTo(x, y);
+	for(i = GraphStart; i < len && xCoordOf(i, plotRect) < plotRect.right(); i++) {
+
+		x = xCoordOf(i, plotRect);
+		v = buffer[i];
+
+		y = yCoordOf( v, plotRect, g_absVMax);
+
+		penPath.lineTo(x, y);
+
+		if(GraphPixelsPerPoint > 10) {
+			QRect f(QPoint(x - 3, y - 3),QPoint(x + 3, y + 3));
+			painter->fillRect(f, QColor(100, 255, 100));
+		}
+		//catch stats
+		if(v < vMin) vMin = v;
+		if(v > vMax) vMax = v;
+		vMean += v;
+	}
+	vMean /= (i - GraphStart);
+
+	painter->setPen(getColor(graphNum));
+
+	//Draw y-axis
+	int xo = 5+(graphNum*40);
+	painter->drawLine(xo, plotRect.top(),xo, plotRect.bottom());
+
+	int vMarkers = (g_absVMax - (g_absVMax % 10)) / 5;
+	int minYDist = 40; //Minimum pixel-distance between markers
+
+	char yLbl[20];
+
+	int n = 0;
+	int lasty0 = 65535;
+
+	for(v = vMarkers; yCoordOf(v,plotRect,g_absVMax) > plotRect.top() && n < 20; v+= vMarkers ,n++)
+	{
+		int y0 = yCoordOf(v,plotRect,g_absVMax);
+		int y1 = yCoordOf(-v,plotRect,g_absVMax);
+
+		if(lasty0 - y0 < minYDist) continue;
+
+		painter->drawLine(xo-5,y0, xo+5, y0);
+
+		sprintf(yLbl, "%d", v);
+		painter->drawText(xo+8,y0+7,yLbl);
+
+		painter->drawLine(xo-5, y1, xo+5, y1);
+		sprintf(yLbl, "%d",-v);
+		painter->drawText(xo+8, y1+5 , yLbl);
+		lasty0 = y0;
+	}
+
+	//Graph annotations
+	painter->drawPath(penPath);
+	char str[200];
+	sprintf(str, "max=%d  min=%d  mean=%d  n=%d/%d  CursorAVal=[%d]  CursorBVal=[%d]",
+			vMax, vMin, vMean, i, len, buffer[CursorAPos], buffer[CursorBPos]);
+	painter->drawText(20, annotationRect.bottom() - 23 - 20 * graphNum, str);
+
+	//clock_t end = clock();
+	//double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+	//printf("Plot time %f\n", elapsed_secs);
+}
+
+void Plot::plotGridLines(QPainter* painter,QRect r)
+{
+	// set GridOffset
+	if (PlotGridX <= 0) return;
+	int offset = GridOffset;
+	if (GridLocked && PlotGridX) {
+		offset = GridOffset + PlotGridX - (GraphStart % PlotGridX);
+	} else if (!GridLocked && GraphStart > 0 && PlotGridX) {
+		offset = PlotGridX-((GraphStart - offset) % PlotGridX) + GraphStart - unlockStart;
+	}
+	offset %= PlotGridX;
+	if (offset < 0) offset += PlotGridX;
+
+	int i;
+	int grid_delta_x = (int) (PlotGridX * GraphPixelsPerPoint);
+	int grid_delta_y = PlotGridY;
+	if ((PlotGridX > 0) && ((PlotGridX * GraphPixelsPerPoint) > 1)) {
+		for(i = (offset * GraphPixelsPerPoint); i < r.right(); i += grid_delta_x) {
+			painter->drawLine(r.left()+i, r.top(), r.left()+i, r.bottom());
+		} 
+	}
+	if (PlotGridY > 0) {
+		for(i = 0; yCoordOf(i,r,g_absVMax) > r.top(); i += grid_delta_y) {
+			painter->drawLine( r.left(), yCoordOf(i,r,g_absVMax), r.right(), yCoordOf(i,r,g_absVMax) );
+			painter->drawLine( r.left(), yCoordOf(i*-1,r,g_absVMax), r.right(), yCoordOf(i*-1,r,g_absVMax) );
+		}
+	}
+}
+
+#define HEIGHT_INFO 60
+#define WIDTH_AXES 80
+
+void Plot::paintEvent(QPaintEvent *event)
+{
+
+	QPainter painter(this);
+	QBrush brush(QColor(100, 255, 100));
+	QPen pen(QColor(100, 255, 100));
+
+	painter.setFont(QFont("Courier New", 10));
+
+	if(GraphStart < 0) {
+		GraphStart = 0;
+	}
+
+	if (CursorAPos > GraphTraceLen)
+		CursorAPos= 0;
+	if(CursorBPos > GraphTraceLen)
+		CursorBPos= 0;
+	if(CursorCPos > GraphTraceLen)
+		CursorCPos= 0;
+	if(CursorDPos > GraphTraceLen)
+		CursorDPos= 0;
+
+	QRect plotRect(WIDTH_AXES, 0, width()-WIDTH_AXES, height()-HEIGHT_INFO);
+	QRect infoRect(0, height()-HEIGHT_INFO, width(), HEIGHT_INFO);
+
+	//Grey background
+	painter.fillRect(rect(), QColor(60, 60, 60));
+	//Black foreground
+	painter.fillRect(plotRect, QColor(0, 0, 0));
+
+	//init graph variables
+	setMaxAndStart(GraphBuffer,GraphTraceLen,plotRect);
+
+	// center line
+	int zeroHeight = plotRect.top() + (plotRect.bottom() - plotRect.top()) / 2;
+	painter.setPen(QColor(100, 100, 100));
+	painter.drawLine(plotRect.left(), zeroHeight, plotRect.right(), zeroHeight);
+	// plot X and Y grid lines
+	plotGridLines(&painter, plotRect);
+
+	//Start painting graph
+	PlotGraph(GraphBuffer, GraphTraceLen,plotRect,infoRect,&painter,0);
+	if (showDemod && DemodBufferLen	> 8) {
+		PlotDemod(DemodBuffer, DemodBufferLen,plotRect,infoRect,&painter,2,g_DemodStartIdx);
+	}
+	if (g_useOverlays) {
+		//init graph variables
+		setMaxAndStart(s_Buff,GraphTraceLen,plotRect);
+		PlotGraph(s_Buff, GraphTraceLen,plotRect,infoRect,&painter,1);
+	}
+	// End graph drawing
+
+	//Draw the cursors
+	if(CursorAPos > GraphStart && xCoordOf(CursorAPos, plotRect) < plotRect.right())
+	{
+		painter.setPen(QColor(255, 255, 0));
+		painter.drawLine(xCoordOf(CursorAPos, plotRect),plotRect.top(),xCoordOf(CursorAPos, plotRect),plotRect.bottom());
+	}
+	if(CursorBPos > GraphStart && xCoordOf(CursorBPos, plotRect) < plotRect.right())
+	{
+		painter.setPen(QColor(255, 0, 255));
+		painter.drawLine(xCoordOf(CursorBPos, plotRect),plotRect.top(),xCoordOf(CursorBPos, plotRect),plotRect.bottom());
+	}
+	if(CursorCPos > GraphStart && xCoordOf(CursorCPos, plotRect) < plotRect.right())
+	{
+		painter.setPen(QColor(255, 153, 0)); //orange
+		painter.drawLine(xCoordOf(CursorCPos, plotRect),plotRect.top(),xCoordOf(CursorCPos, plotRect),plotRect.bottom());
+	}
+	if(CursorDPos > GraphStart && xCoordOf(CursorDPos, plotRect) < plotRect.right())
+	{
+		painter.setPen(QColor(0, 0, 205)); //light blue
+		painter.drawLine(xCoordOf(CursorDPos, plotRect),plotRect.top(),xCoordOf(CursorDPos, plotRect),plotRect.bottom());
+	}
+
+	//Draw annotations
+	char str[200];
+	sprintf(str, "@%d  dt=%d [%2.2f] zoom=%2.2f  CursorAPos=%d  CursorBPos=%d  GridX=%d  GridY=%d (%s) GridXoffset=%d",
+			GraphStart,	CursorBPos - CursorAPos, (CursorBPos - CursorAPos)/CursorScaleFactor,
+			GraphPixelsPerPoint,CursorAPos,CursorBPos,PlotGridXdefault,PlotGridYdefault,GridLocked?"Locked":"Unlocked",GridOffset);
+	painter.setPen(QColor(255, 255, 255));
+	painter.drawText(20, infoRect.bottom() - 3, str);
+
+}
+
+Plot::Plot(QWidget *parent) : QWidget(parent), GraphStart(0), GraphPixelsPerPoint(1)
+{
+	//Need to set this, otherwise we don't receive keypress events
+	setFocusPolicy( Qt::StrongFocus);
+	resize(600, 300);
+
+	QPalette palette(QColor(0,0,0,0));
+	palette.setColor(QPalette::WindowText, QColor(255,255,255));
+	palette.setColor(QPalette::Text, QColor(255,255,255));
+	palette.setColor(QPalette::Button, QColor(100, 100, 100));
+	setPalette(palette);
+	setAutoFillBackground(true);
+	CursorAPos = 0;
+	CursorBPos = 0;
+
+	setWindowTitle(tr("Sliders"));
+}
+
+void Plot::closeEvent(QCloseEvent *event)
+{
+	event->ignore();
+	this->hide();
+	g_useOverlays = false;
+}
+
+void Plot::mouseMoveEvent(QMouseEvent *event)
 {
 	int x = event->x();
-	x -= 40;
+	x -= WIDTH_AXES;
 	x = (int)(x / GraphPixelsPerPoint);
 	x += GraphStart;
 	if((event->buttons() & Qt::LeftButton)) {
@@ -367,15 +586,13 @@ void ProxWidget::mouseMoveEvent(QMouseEvent *event)
 		CursorBPos = x;
 	}
 
+
 	this->update();
 }
 
-void ProxWidget::keyPressEvent(QKeyEvent *event)
+void Plot::keyPressEvent(QKeyEvent *event)
 {
 	int	offset;
-	int	gridchanged;
-
-	gridchanged= 0;
 
 	if(event->modifiers() & Qt::ShiftModifier) {
 		if (PlotGridX)
@@ -403,52 +620,17 @@ void ProxWidget::keyPressEvent(QKeyEvent *event)
 
 		case Qt::Key_Right:
 			if(GraphPixelsPerPoint < 20) {
-				if (PlotGridX && GridLocked && GraphStart < startMax){
-					GridOffset -= offset;
-					GridOffset %= PlotGridX;
-					gridchanged= 1;
-				}
 				GraphStart += offset;
 			} else {
-				if (PlotGridX && GridLocked && GraphStart < startMax){
-					GridOffset--;
-					GridOffset %= PlotGridX;
-					gridchanged= 1;
-				}
 				GraphStart++;
 			}
-			if(GridOffset < 0) {
-				GridOffset += PlotGridX;
-			}
-			if (gridchanged)
-				if (GraphStart > startMax) {
-					GridOffset += (GraphStart - startMax);
-					GridOffset %= PlotGridX;
-				}
 			break;
 
 		case Qt::Key_Left:
 			if(GraphPixelsPerPoint < 20) {
-				if (PlotGridX && GridLocked && GraphStart > 0){
-					GridOffset += offset;
-					GridOffset %= PlotGridX;
-					gridchanged= 1;
-				}
 				GraphStart -= offset;
 			} else {
-				if (PlotGridX && GridLocked && GraphStart > 0){
-					GridOffset++;
-					GridOffset %= PlotGridX;
-					gridchanged= 1;
-				}
 				GraphStart--;
-			}
-			if (gridchanged){
-				if (GraphStart < 0)
-					GridOffset += GraphStart;
-				if(GridOffset < 0)
-					GridOffset += PlotGridX;
-			GridOffset %= PlotGridX;
 			}
 			break;
 
@@ -459,7 +641,7 @@ void ProxWidget::keyPressEvent(QKeyEvent *event)
 			} else {
 				PlotGridX= PlotGridXdefault;
 				PlotGridY= PlotGridYdefault;
-				}
+			}
 			break;
 
 		case Qt::Key_H:
@@ -484,7 +666,11 @@ void ProxWidget::keyPressEvent(QKeyEvent *event)
 			break;
 
 		case Qt::Key_L:
-			GridLocked= !GridLocked;
+			GridLocked = !GridLocked;
+			if (GridLocked)
+				GridOffset += (GraphStart - unlockStart);
+			else
+				unlockStart = GraphStart;
 			break;
 
 		case Qt::Key_Q:
