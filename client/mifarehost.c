@@ -7,34 +7,257 @@
 //-----------------------------------------------------------------------------
 // mifare commands
 //-----------------------------------------------------------------------------
-
 #include "mifarehost.h"
 
 // MIFARE
-extern int compar_int(const void * a, const void * b) {
+static int compare_uint64(const void *a, const void *b) {
 	// didn't work: (the result is truncated to 32 bits)
-	//return (*(uint64_t*)b - *(uint64_t*)a);
+	//return (*(int64_t*)b - *(int64_t*)a);
 
 	// better:
-	if (*(uint64_t*)b > *(uint64_t*)a) return 1;
-	if (*(uint64_t*)b < *(uint64_t*)a) return -1;	
-	return 0;
+	if (*(uint64_t*)b == *(uint64_t*)a) return 0;
+	if (*(uint64_t*)b < *(uint64_t*)a) return 1;
+	return -1;
+}
 
-	//return (*(uint64_t*)b > *(uint64_t*)a) - (*(uint64_t*)b < *(uint64_t*)a);
+// create the intersection (common members) of two sorted lists. Lists are terminated by -1. Result will be in list1. Number of elements is returned.
+static uint32_t intersection(uint64_t *list1, uint64_t *list2) {
+	if (list1 == NULL || list2 == NULL)
+		return 0;
+		
+	uint64_t *p1, *p2, *p3;
+	p1 = p3 = list1;
+	p2 = list2;
+
+	while ( *p1 != -1 && *p2 != -1 ) {
+		if (compare_uint64(p1, p2) == 0) {
+			*p3++ = *p1++;
+			p2++;
+		}
+		else {
+			while (compare_uint64(p1, p2) < 0) ++p1;
+			while (compare_uint64(p1, p2) > 0) ++p2;
+		}
+	}
+	*p3 = -1;
+	return p3 - list1;
+}
+
+// Darkside attack (hf mf mifare)
+// if successful it will return a list of keys, not just one.
+static uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint64_t par_info, uint64_t ks_info, uint64_t **keys) {
+	struct Crypto1State *states;
+	uint32_t i, pos, rr;
+	uint8_t bt, ks3x[8], par[8][8];
+	uint64_t key_recovered;
+	static uint64_t *keylist;
+	rr = 0;
+
+	// Reset the last three significant bits of the reader nonce
+	nr &= 0xffffff1f;
+
+	for ( pos = 0; pos < 8; pos++ ) {
+		ks3x[7-pos] = (ks_info >> (pos*8)) & 0x0f;
+		bt = (par_info >> (pos*8)) & 0xff;
+		for ( i = 0; i < 8; i++)	{
+				par[7-pos][i] = (bt >> i) & 0x01;
+		}
+	}
+
+	states = lfsr_common_prefix(nr, rr, ks3x, par, (par_info == 0));
+
+	if (!states) {
+		PrintAndLog("Failed getting states");
+		*keys = NULL;
+		return 0;
+	}
+
+	keylist = (uint64_t*)states;
+
+	for (i = 0; keylist[i]; i++) {
+		lfsr_rollback_word(states+i, uid^nt, 0);
+		crypto1_get_lfsr(states+i, &key_recovered);
+		keylist[i] = key_recovered;
+	}
+	keylist[i] = -1;
+
+	*keys = keylist;
+	return i;
+}
+
+int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key)
+{
+	uint32_t uid = 0;
+	uint32_t nt = 0, nr = 0;
+	uint64_t par_list = 0, ks_list = 0;
+	uint64_t *keylist = NULL, *last_keylist = NULL;
+	uint32_t keycount = 0;
+	int16_t isOK = 0;
+	
+	UsbCommand c = {CMD_READER_MIFARE, {true, blockno, key_type}};
+
+	// message
+	printf("-------------------------------------------------------------------------\n");
+	printf("Executing command. Expected execution time: 25sec on average\n");
+	printf("Press button on the proxmark3 device to abort both proxmark3 and client.\n");
+	printf("-------------------------------------------------------------------------\n");
+
+
+	while (true) {
+		clearCommandBuffer();
+		SendCommand(&c);
+
+		//flush queue
+		while (ukbhit()) {
+			int gc = getchar(); (void) gc;
+		}
+
+		// wait cycle
+		while (true) {
+			printf(".");
+			fflush(stdout);
+			if (ukbhit()) {
+				int gc = getchar(); (void) gc;
+				return -5;
+				break;
+			}
+
+			UsbCommand resp;
+			if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+				isOK  = resp.arg[0];
+				if (isOK < 0) 
+					return isOK;
+				
+				uid = (uint32_t)bytes_to_num(resp.d.asBytes +  0, 4);
+				nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
+				par_list = bytes_to_num(resp.d.asBytes +  8, 8);
+				ks_list = bytes_to_num(resp.d.asBytes +  16, 8);
+				nr = bytes_to_num(resp.d.asBytes + 24, 4);
+				break;
+			}
+		}
+
+		if (par_list == 0 && c.arg[0] == true) {
+			PrintAndLog("Parity is all zero. Most likely this card sends NACK on every failed authentication.");
+			PrintAndLog("Attack will take a few seconds longer because we need two consecutive successful runs.");
+		}
+		c.arg[0] = false;
+
+		keycount = nonce2key(uid, nt, nr, par_list, ks_list, &keylist);
+
+		if (keycount == 0) {
+			PrintAndLog("Key not found (lfsr_common_prefix list is null). Nt=%08x", nt);
+			PrintAndLog("This is expected to happen in 25%% of all cases. Trying again with a different reader nonce...");
+			continue;
+		}
+
+		qsort(keylist, keycount, sizeof(*keylist), compare_uint64);
+		keycount = intersection(last_keylist, keylist);
+		if (keycount == 0) {
+			free(last_keylist);
+			last_keylist = keylist;
+			continue;
+		}
+
+		if (keycount > 1) {
+			PrintAndLog("Found %u candidate keys. Trying to verify with authentication...\n", keycount);
+		} else {
+			PrintAndLog("Found a candidate key. Trying to verify it with authentication...\n");
+		}
+
+		*key = -1;
+		uint8_t keyBlock[USB_CMD_DATA_SIZE];
+		int max_keys = USB_CMD_DATA_SIZE/6;
+		for (int i = 0; i < keycount; i += max_keys) {
+			int size = keycount - i > max_keys ? max_keys : keycount - i;
+			for (int j = 0; j < size; j++) {
+				if (last_keylist == NULL) {
+					num_to_bytes(keylist[i*max_keys + j], 6, keyBlock);
+				} else {
+					num_to_bytes(last_keylist[i*max_keys + j], 6, keyBlock);
+				}
+			}
+			if (!mfCheckKeys(blockno, key_type - 0x60, false, size, keyBlock, key)) {
+				break;
+			}
+		}
+
+		if (*key != -1) {
+			free(last_keylist);
+			free(keylist);
+			break;
+		} else {
+			PrintAndLog("Test authentication failed. Restarting darkside attack");
+			free(last_keylist);
+			last_keylist = keylist;
+		}
+	}
+	return 0;
+}
+int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key){
+	*key = 0;	
+	UsbCommand c = {CMD_MIFARE_CHKKEYS, { (blockNo | (keyType << 8)), clear_trace, keycnt}};
+	memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) return 1;
+	if ((resp.arg[0] & 0xff) != 0x01) return 2;
+	*key = bytes_to_num(resp.d.asBytes, 6);
+	return 0;
+}
+// PM3 imp of J-Run mf_key_brute (part 2)
+// ref: https://github.com/J-Run/mf_key_brute
+int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey){
+
+	#define KEYS_IN_BLOCK 85
+	#define KEYBLOCK_SIZE 510
+	#define CANDIDATE_SIZE 0xFFFF * 6
+	uint8_t found = false;
+	uint64_t key64 = 0;
+	uint8_t candidates[CANDIDATE_SIZE] = {0x00};
+	uint8_t keyBlock[KEYBLOCK_SIZE] = {0x00};
+
+	memset(candidates, 0, sizeof(candidates));
+	memset(keyBlock, 0, sizeof(keyBlock));
+	
+	// Generate all possible keys for the first two unknown bytes.
+	for (uint16_t i = 0; i < 0xFFFF; ++i) {		
+		uint32_t j = i * 6;		
+		candidates[0 + j] = i >> 8;	
+		candidates[1 + j] = i;
+		candidates[2 + j] = key[2];
+		candidates[3 + j] = key[3];
+		candidates[4 + j] = key[4];
+		candidates[5 + j] = key[5];
+	}
+	uint32_t counter, i;
+	for ( i = 0, counter = 1; i < CANDIDATE_SIZE; i += KEYBLOCK_SIZE, ++counter){
+
+		key64 = 0;
+		
+		// copy candidatekeys to test key block
+		memcpy(keyBlock, candidates + i, KEYBLOCK_SIZE);
+
+		// check a block of generated candidate keys.
+		if (!mfCheckKeys(blockNo, keyType, true, KEYS_IN_BLOCK, keyBlock, &key64)) {
+			*resultkey = key64;
+			found = true;
+			break;
+		}
+		
+		// progress 
+		if ( counter % 20 == 0 )
+			PrintAndLog("tried : %s.. \t %u keys", sprint_hex(candidates + i, 6),  counter * KEYS_IN_BLOCK  );
+	}
+	return found;
 }
 
 // Compare 16 Bits out of cryptostate
 int Compare16Bits(const void * a, const void * b) {
-	 if ((*(uint64_t*)b & 0x00ff000000ff0000) > (*(uint64_t*)a & 0x00ff000000ff0000)) return 1;	
-	 if ((*(uint64_t*)b & 0x00ff000000ff0000) < (*(uint64_t*)a & 0x00ff000000ff0000)) return -1;
-	 return 0;
-
-/*	return 
-		((*(uint64_t*)b & 0x00ff000000ff0000) > (*(uint64_t*)a & 0x00ff000000ff0000))
-		-
-		((*(uint64_t*)b & 0x00ff000000ff0000) < (*(uint64_t*)a & 0x00ff000000ff0000))
-		;
-*/
+	if ((*(uint64_t*)b & 0x00ff000000ff0000) == (*(uint64_t*)a & 0x00ff000000ff0000)) return 0;
+	if ((*(uint64_t*)b & 0x00ff000000ff0000) < (*(uint64_t*)a & 0x00ff000000ff0000)) return 1;
+	return -1;
 }
 
 // wrapper function for multi-threaded lfsr_recovery32
@@ -44,11 +267,12 @@ void* nested_worker_thread(void *arg)
 	StateList_t *statelist = arg;
 	statelist->head.slhead = lfsr_recovery32(statelist->ks1, statelist->nt ^ statelist->uid);	
 	
-	for (p1 = statelist->head.slhead; *(uint64_t *)p1 != 0; p1++);
+	for (p1 = statelist->head.slhead; *(uint64_t *)p1 != 0; p1++) {};
 	
 	statelist->len = p1 - statelist->head.slhead;
 	statelist->tail.sltail = --p1;
 	qsort(statelist->head.slhead, statelist->len, sizeof(uint64_t), Compare16Bits);
+	
 	return statelist->head.slhead;
 }
 
@@ -129,27 +353,13 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	statelists[1].tail.sltail = --p4;
 
 	// the statelists now contain possible keys. The key we are searching for must be in the
-	// intersection of both lists. Create the intersection:
-	qsort(statelists[0].head.keyhead, statelists[0].len, sizeof(uint64_t), compar_int);
-	qsort(statelists[1].head.keyhead, statelists[1].len, sizeof(uint64_t), compar_int);
-	
-	uint64_t *p5, *p6, *p7;
-	p5 = p7 = statelists[0].head.keyhead; 
-	p6 = statelists[1].head.keyhead;
-	
-	while (p5 <= statelists[0].tail.keytail && p6 <= statelists[1].tail.keytail) {
-		if (compar_int(p5, p6) == 0) {
-			*p7++ = *p5++;
-			p6++;
-		}
-		else {
-			while (compar_int(p5, p6) == -1) p5++;
-			while (compar_int(p5, p6) == 1) p6++;
-		}
-	}
-	statelists[0].len = p7 - statelists[0].head.keyhead;
-	statelists[0].tail.keytail = --p7;
+	// intersection of both lists
+	qsort(statelists[0].head.keyhead, statelists[0].len, sizeof(uint64_t), compare_uint64);
+	qsort(statelists[1].head.keyhead, statelists[1].len, sizeof(uint64_t), compare_uint64);
+	// Create the intersection
+	statelists[0].len = intersection(statelists[0].head.keyhead, statelists[1].head.keyhead);
 
+	//statelists[0].tail.keytail = --p7;
 	uint32_t numOfCandidates = statelists[0].len;
 	if ( numOfCandidates == 0 ) goto out;
 	
@@ -160,6 +370,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t * key, uint8_t trgBlockNo
 	// uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE/6) ? (USB_CMD_DATA_SIZE/6) : keycnt;
 	uint8_t keyBlock[USB_CMD_DATA_SIZE] = {0x00};
 
+	// ugly assumption that we have less than 85 candidate keys.
 	for (i = 0; i < numOfCandidates; ++i){
 		crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
 		num_to_bytes(key64, 6, keyBlock + i * 6);
@@ -189,65 +400,6 @@ out:
 	free(statelists[0].head.slhead);
 	free(statelists[1].head.slhead);
 	return -4;
-}
-
-int mfCheckKeys (uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t * keyBlock, uint64_t * key){
-	*key = 0;	
-	UsbCommand c = {CMD_MIFARE_CHKKEYS, { (blockNo | (keyType << 8)), clear_trace, keycnt}};
-	memcpy(c.d.asBytes, keyBlock, 6 * keycnt);
-	clearCommandBuffer();
-	SendCommand(&c);
-	UsbCommand resp;
-	if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) return 1;
-	if ((resp.arg[0] & 0xff) != 0x01) return 2;
-	*key = bytes_to_num(resp.d.asBytes, 6);
-	return 0;
-}
-// PM3 imp of J-Run mf_key_brute (part 2)
-// ref: https://github.com/J-Run/mf_key_brute
-int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey){
-
-	#define KEYS_IN_BLOCK 85
-	#define KEYBLOCK_SIZE 510
-	#define CANDIDATE_SIZE 0xFFFF * 6
-	uint8_t found = false;
-	uint64_t key64 = 0;
-	uint8_t candidates[CANDIDATE_SIZE] = {0x00};
-	uint8_t keyBlock[KEYBLOCK_SIZE] = {0x00};
-
-	memset(candidates, 0, sizeof(candidates));
-	memset(keyBlock, 0, sizeof(keyBlock));
-	
-	// Generate all possible keys for the first two unknown bytes.
-	for (uint16_t i = 0; i < 0xFFFF; ++i) {		
-		uint32_t j = i * 6;		
-		candidates[0 + j] = i >> 8;	
-		candidates[1 + j] = i;
-		candidates[2 + j] = key[2];
-		candidates[3 + j] = key[3];
-		candidates[4 + j] = key[4];
-		candidates[5 + j] = key[5];
-	}
-	uint32_t counter, i;
-	for ( i = 0, counter = 1; i < CANDIDATE_SIZE; i += KEYBLOCK_SIZE, ++counter){
-
-		key64 = 0;
-		
-		// copy candidatekeys to test key block
-		memcpy(keyBlock, candidates + i, KEYBLOCK_SIZE);
-
-		// check a block of generated candidate keys.
-		if (!mfCheckKeys(blockNo, keyType, true, KEYS_IN_BLOCK, keyBlock, &key64)) {
-			*resultkey = key64;
-			found = true;
-			break;
-		}
-		
-		// progress 
-		if ( counter % 20 == 0 )
-			PrintAndLog("tried : %s.. \t %u keys", sprint_hex(candidates + i, 6),  counter * KEYS_IN_BLOCK  );
-	}
-	return found;
 }
 
 // EMULATOR

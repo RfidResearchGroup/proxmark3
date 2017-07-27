@@ -23,8 +23,9 @@
 #include "common.h"
 #include "util.h"
 #include "mifare.h" // nonces_t struct
+#include "mfkey.h"  // mfkey32_moebious
 #include "cmdhfmfhard.h"
-#include "nonce2key/nonce2key.h"
+#include "mifarehost.h"
 
 extern int CmdHFMF(const char *Cmd);
 

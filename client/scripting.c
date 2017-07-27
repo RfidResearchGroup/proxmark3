@@ -106,35 +106,12 @@ static int returnToLuaWithError(lua_State *L, const char* fmt, ...)
     return 2;
 }
 
-static int l_nonce2key(lua_State *L){
-
-    size_t size;
-    const char *p_uid = luaL_checklstring(L, 1, &size);
-    if(size != 4)  return returnToLuaWithError(L,"Wrong size of uid, got %d bytes, expected 4", (int) size);
-
-    const char *p_nt = luaL_checklstring(L, 2, &size);
-    if(size != 4)  return returnToLuaWithError(L,"Wrong size of nt, got %d bytes, expected 4", (int) size);
-
-    const char *p_nr = luaL_checklstring(L, 3, &size);
-    if(size != 4)  return returnToLuaWithError(L,"Wrong size of nr, got %d bytes, expected 4", (int) size);
-
-    const char *p_par_info = luaL_checklstring(L, 4, &size);
-    if(size != 8)  return returnToLuaWithError(L,"Wrong size of par_info, got %d bytes, expected 8", (int) size);
-
-    const char *p_pks_info = luaL_checklstring(L, 5, &size);
-    if(size != 8)  return returnToLuaWithError(L,"Wrong size of ks_info, got %d bytes, expected 8", (int) size);
-
-
-    uint32_t uid = bytes_to_num(( uint8_t *)p_uid,4);
-    uint32_t nt = bytes_to_num(( uint8_t *)p_nt,4);
-
-    uint32_t nr = bytes_to_num(( uint8_t*)p_nr,4);
-    uint64_t par_info = bytes_to_num(( uint8_t *)p_par_info,8);
-    uint64_t ks_info = bytes_to_num(( uint8_t *)p_pks_info,8);
-
-    uint64_t key = 0;
-
-    int retval = nonce2key(uid,nt, nr, par_info,ks_info, &key);
+static int l_mfDarkside(lua_State *L){
+	// blockno, keytype
+	
+	uint64_t key;
+	
+	int retval = mfDarkside(0, 0, &key);
 
     //Push the retval on the stack
     lua_pushinteger(L,retval);
@@ -519,7 +496,8 @@ static int l_hardnested(lua_State *L){
 	}
 	
     uint64_t foundkey = 0;
-	int retval = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, haveTarget ? trgkey : NULL, nonce_file_read,  nonce_file_write,  slow,  tests, &foundkey);
+//	int retval = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, haveTarget ? trgkey : NULL, nonce_file_read,  nonce_file_write,  slow,  tests, &foundkey);
+	int retval = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, haveTarget ? trgkey : NULL, nonce_file_read,  nonce_file_write,  slow,  tests);
 
     //Push the retval on the stack
     lua_pushinteger(L,retval);
@@ -560,7 +538,7 @@ int set_pm3_libraries(lua_State *L) {
     static const luaL_Reg libs[] = {
         {"SendCommand",                 l_SendCommand},
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},
-        {"nonce2key",                   l_nonce2key},
+		{"mfDarkside",                  l_mfDarkside},
         //{"PrintAndLog",                 l_PrintAndLog},
         {"foobar",                      l_foobar},
         {"ukbhit",                      l_ukbhit},

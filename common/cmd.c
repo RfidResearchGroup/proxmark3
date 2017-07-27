@@ -35,7 +35,7 @@
 bool cmd_receive(UsbCommand* cmd) {
  
   // Check if there is a usb packet available
-  if (!usb_poll()) return false;
+  if (!usb_poll_validate_length()) return false;
   
   // Try to retrieve the available command frame
   size_t rxlen = usb_read((byte_t*)cmd,sizeof(UsbCommand));

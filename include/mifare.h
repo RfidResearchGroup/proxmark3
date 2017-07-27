@@ -71,16 +71,17 @@ typedef enum ISO14B_COMMAND {
 // "hf 14a sim x", "hf mf sim x" attacks
 //-----------------------------------------------------------------------------
 typedef struct {
-  uint32_t cuid;
-  uint32_t nonce;
-  uint32_t ar;
-  uint32_t nr;
-  uint32_t nonce2;
-  uint32_t ar2;
-  uint32_t nr2;
-  uint8_t  sector;
-  uint8_t  keytype;
-  enum {
+	uint32_t cuid;
+	uint32_t nonce;
+	uint32_t ar;
+	uint32_t nr;
+	uint32_t at;  
+	uint32_t nonce2;
+	uint32_t ar2;
+	uint32_t nr2;
+	uint8_t  sector;
+	uint8_t  keytype;
+	enum {
 		EMPTY,
 		FIRST,
 		SECOND,

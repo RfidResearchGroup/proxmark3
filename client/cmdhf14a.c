@@ -26,7 +26,7 @@
 #include "mifare.h"
 #include "cmdhfmf.h"
 #include "cmdhfmfu.h"
-#include "nonce2key/nonce2key.h"
+#include "mifarehost.h"
 #include "cmdhf.h"
 
 static int CmdHelp(const char *Cmd);

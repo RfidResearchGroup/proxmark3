@@ -290,119 +290,30 @@ int usage_hf14_csave(void){
 }
 
 int CmdHF14AMifare(const char *Cmd) {
-	uint32_t uid = 0;
-	uint32_t nt = 0, nr = 0;
-	uint64_t par_list = 0, ks_list = 0, r_key = 0;
-	int16_t isOK = 0;
-	int tmpchar; 
-	uint8_t blockNo = 0, keytype = MIFARE_AUTH_KEYA;
+	uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
+	uint64_t key = 0;
 	
 	char cmdp = param_getchar(Cmd, 0);	
 	if ( cmdp == 'H' || cmdp == 'h') return usage_hf14_mifare();
 	
-	blockNo = param_get8(Cmd, 0);	 
+	blockno = param_get8(Cmd, 0);	 
 	
 	cmdp = param_getchar(Cmd, 1);
 	if (cmdp == 'B' || cmdp == 'b')
-		keytype = MIFARE_AUTH_KEYB;
-	
-	UsbCommand c = {CMD_READER_MIFARE, {true, blockNo, keytype}};
+		key_type = MIFARE_AUTH_KEYB;
 
-	// message
-	printf("-------------------------------------------------------------------------\n");
-	printf("Executing darkside attack. Expected execution time: 25sec on average :-)\n");
-	printf("Press button on the proxmark3 device to abort both proxmark3 and client.\n");
-	printf("-------------------------------------------------------------------------\n");
-	clock_t t1 = clock();
-	time_t start, end;
-	time(&start);
-	
-start:
-    clearCommandBuffer();
-    SendCommand(&c);
-	
-	//flush queue
-	while (ukbhit()) {
-		tmpchar = getchar();
-		(void)tmpchar;
+	int isOK = mfDarkside(blockno, key_type, &key);
+	switch (isOK) {
+		case -1 : PrintAndLog("Button pressed. Aborted."); return 1;
+		case -2 : PrintAndLog("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests)."); return 1;
+		case -3 : PrintAndLog("Card is not vulnerable to Darkside attack (its random number generator is not predictable)."); return 1;
+		case -4 : PrintAndLog("Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
+				  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour."); return 1;
+		case -5 : PrintAndLog("Aborted via keyboard.");  return 1;
+		default : PrintAndLog("Found valid key: %012" PRIx64 "\n", key); break;
 	}
 
-	UsbCommand resp;
-	
-	// wait cycle
-	while (true) {
-        printf(".");
-		fflush(stdout);
-		if (ukbhit()) {
-			tmpchar = getchar();
-			(void)tmpchar;
-			printf("\naborted via keyboard!\n");
-			break;
-		}
-		
-		if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-			isOK  = resp.arg[0];
-			printf("\n");
-			uid = (uint32_t)bytes_to_num(resp.d.asBytes +  0, 4);
-			nt =  (uint32_t)bytes_to_num(resp.d.asBytes +  4, 4);
-			par_list = bytes_to_num(resp.d.asBytes +  8, 8);
-			ks_list = bytes_to_num(resp.d.asBytes +  16, 8);
-			nr = bytes_to_num(resp.d.asBytes + 24, 4);
-
-			switch (isOK) {
-				case -1 : PrintAndLog("Button pressed. Aborted.\n"); break;
-				case -2 : PrintAndLog("Card isn't vulnerable to Darkside attack (doesn't send NACK on authentication requests).\n"); break;
-				case -3 : PrintAndLog("Card isn't vulnerable to Darkside attack (its random number generator is not predictable).\n"); break;
-				case -4 : PrintAndLog("Card isn't vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
-						  PrintAndLog("generating polynomial with 16 effective bits only, but shows unexpected behaviour.\n"); break;
-				default: ;
-			}
-			break;
-		}
-	}	
-	printf("\n");
-	// error
-	if (isOK != 1) return 1;
-	
-	if (par_list == 0 && ks_list != 0) {
-		// this special attack when parities is zero, uses checkkeys. Which now with block/keytype option also needs. 
-		// but it uses 0|1 instead of 0x60|0x61...
-		if (nonce2key_ex(blockNo, keytype - 0x60 , uid, nt, nr, ks_list, &r_key) ){
-			PrintAndLog("Trying again with a different reader nonce...");
-			c.arg[0] = false;
-			goto start;
-		} else {
-			PrintAndLog("Found valid key: %012" PRIx64 " \n", r_key);
-			goto END;
-		}
-	}
-
-	// execute original function from util nonce2key
-	if (nonce2key(uid, nt, nr, par_list, ks_list, &r_key)) {
-		isOK = 2;
-		PrintAndLog("Key not found (lfsr_common_prefix list is null). Nt=%08x", nt);	
-		PrintAndLog("Failing is expected to happen in 25%% of all cases. Trying again with a different reader nonce...");
-		c.arg[0] = false;
-		goto start;
-	} else {		
-		
-		// nonce2key found a candidate key.  Lets verify it.
-		uint8_t keyblock[] = {0,0,0,0,0,0};
-		num_to_bytes(r_key, 6, keyblock);
-		uint64_t key64 = 0;
-		int res = mfCheckKeys(blockNo, keytype - 0x60 , false, 1, keyblock, &key64);
-		if ( res > 0 ) {
-			PrintAndLog("Candidate Key found (%012" PRIx64 ") - Test authentication failed. [%d] Restarting darkside attack", r_key, res);	
-			goto start;
-		}
-		PrintAndLog("Found valid key: %012" PRIx64 " \n", r_key);
-	}
-END:
-	t1 = clock() - t1;
-	time(&end);
-	unsigned long elapsed_time = difftime(end, start);	
-	if ( t1 > 0 )
-		PrintAndLog("Time in darkside: %.0f ticks %u seconds\n", (float)t1, elapsed_time);
+	PrintAndLog("");
 	return 0;
 }
 
@@ -926,7 +837,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 		switch (isOK) {
 			case -1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
 			case -2 : PrintAndLog("Button pressed. Aborted.\n"); break;
-			case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (random number generator is not predictable).\n"); break;
+			case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n"); break;
 			case -4 : PrintAndLog("No valid key found"); break;
 			case -5 : 
 				key64 = bytes_to_num(keyBlock, 6);
@@ -978,7 +889,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 				
 				if (!res) {
 					e_sector[i].Key[j] = key64;
-					e_sector[i].foundKey[j] = TRUE;
+					e_sector[i].foundKey[j] = true;
 				}
 			}
 		}
@@ -1004,7 +915,7 @@ int CmdHF14AMfNested(const char *Cmd) {
 					switch (isOK) {
 						case -1 : PrintAndLog("Error: No response from Proxmark.\n"); break;
 						case -2 : PrintAndLog("Button pressed. Aborted.\n"); break;
-						case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (its random number generator is not predictable).\n"); break;
+						case -3 : PrintAndLog("Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n"); break;
 						case -4 : //key not found
 							calibrate = false;
 							iterations++;
@@ -1131,6 +1042,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 	bool slow = false;
 	int tests = 0;
 	
+
 	if (ctmp == 'R' || ctmp == 'r') {
 		nonce_file_read = true;
 		if (!param_gethex(Cmd, 1, trgkey, 12)) {
@@ -1138,6 +1050,9 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 		}
 	} else if (ctmp == 'T' || ctmp == 't') {
 		tests = param_get32ex(Cmd, 1, 100, 10);
+		if (!param_gethex(Cmd, 2, trgkey, 12)) {
+			know_target_key = true;
+		}
 	} else {
 		blockNo = param_get8(Cmd, 0);
 		ctmp = param_getchar(Cmd, 1);
@@ -1193,8 +1108,7 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			slow ? "Yes" : "No",
 			tests);
 
-	uint64_t foundkey = 0;
-	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey);
+	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key?trgkey:NULL, nonce_file_read, nonce_file_write, slow, tests);
 
 	if (isOK) {
 		switch (isOK) {
@@ -1525,7 +1439,7 @@ void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
 	if (k_sector == NULL)
 		emptySectorTable();
 
-	success = tryMfk32_moebius(data, &key, verbose);
+	success = mfkey32_moebius(data, &key);
 	if (success) {
 		uint8_t sector = data.sector;
 		uint8_t keytype = data.keytype;

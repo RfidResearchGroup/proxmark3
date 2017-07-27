@@ -10,6 +10,7 @@
 #ifndef SCRIPTING_H__
 #define SCRIPTING_H__
 
+#include <stdlib.h>
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
@@ -17,7 +18,7 @@
 #include "usb_cmd.h"
 #include "cmdmain.h"
 #include "util.h"
-#include "nonce2key/nonce2key.h"
+#include "mifarehost.h"
 #include "../common/iso15693tools.h"
 #include "iso14443crc.h"
 #include "../common/crc.h"

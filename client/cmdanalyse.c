@@ -8,7 +8,6 @@
 // Analyse bytes commands
 //-----------------------------------------------------------------------------
 #include "cmdanalyse.h"
-//#include "nonce2key/nonce2key.h"
 
 static int CmdHelp(const char *Cmd);
 

