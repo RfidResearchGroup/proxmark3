@@ -6,7 +6,7 @@ BEGIN {
 	print "local _keys = {"
 }
 
-$1 ~ /^[A-Fa-f0-9]+/ { sub(/\r/, ""); print "'"substr($1,0,12)"'," }
+$1 ~ /^[A-Fa-f0-9]+/ { sub(/\r/, ""); print "   '"substr($1,1,12)"'," }
 
 END {
 	print "}"
