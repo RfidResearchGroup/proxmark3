@@ -85,9 +85,9 @@ CORESRCS =  uart_posix.c \
 			scandir.c \
 			sleep.c
 
-CMDSRCS =	crapto1/crapto1.c\
-			crapto1/crypto1.c\
-			mfkey.c\
+CMDSRCS =	crapto1/crapto1.c \
+			crapto1/crypto1.c \
+			mfkey.c \
 			loclass/cipher.c \
 			loclass/cipherutils.c \
 			loclass/des.c \
@@ -95,7 +95,7 @@ CMDSRCS =	crapto1/crapto1.c\
 			loclass/elite_crack.c \
 			loclass/fileutils.c \
 			whereami.c \
-			mifarehost.c\
+			mifarehost.c \
 			parity.c \
 			crc.c \
 			crc16.c \
@@ -213,18 +213,18 @@ endif
 			
 BINS = proxmark3 flasher fpga_compress
 WINBINS = $(patsubst %, %.exe, $(BINS))
-CLEAN = $(BINS) $(WINBINS) $(COREOBJS) $(CMDOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h
+CLEAN = $(BINS) $(WINBINS) $(COREOBJS) $(CMDOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/usb_cmd.lua
 
 # need to assign dependancies to build these first...
 all: lua_build $(BINS) 
 
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: proxmark3 flasher fpga_compress
-	
+
 proxmark3: LDLIBS+=$(LUALIB) $(QTLDLIBS)
 proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) lualibs/usb_cmd.lua
 	$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(LDLIBS) -o $@
-
+	
 flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS)
 	$(LD) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
