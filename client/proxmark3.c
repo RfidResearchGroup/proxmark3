@@ -34,7 +34,7 @@ static UsbCommand txcmd;
 volatile static bool txcmd_pending = false;
 
 void SendCommand(UsbCommand *c) {
-	#if 1
+	#if 0
 	pthread_mutex_lock(&print_lock);
 	printf("Sending %d bytes\n", sizeof(UsbCommand));
 	pthread_mutex_unlock(&print_lock);

@@ -1499,7 +1499,6 @@ void  __attribute__((noreturn)) AppMain(void)
 	for(;;) {
 		if ( usb_poll_validate_length() ) {
 			rx_len = usb_read(rx, sizeof(UsbCommand));
-			Dbprintf("ice  recive len: %u", rx_len);			
 			if (rx_len) {
 				UsbPacketReceived(rx, rx_len);
 			}
