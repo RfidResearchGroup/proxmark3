@@ -1679,27 +1679,32 @@ void ReaderIClass(uint8_t arg0) {
 
 	uint8_t card_data[6 * 8] = {0};
 	memset(card_data, 0xFF, sizeof(card_data));
-    uint8_t last_csn[8] = {0};
-	
+	uint8_t last_csn[8]={0,0,0,0,0,0,0,0};
+	uint8_t resp[ICLASS_BUFFER_SIZE];
+	memset(resp, 0xFF, sizeof(resp));
 	//Read conf block CRC(0x01) => 0xfa 0x22
 	uint8_t readConf[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x01, 0xfa, 0x22};
-	//Read conf block CRC(0x05) => 0xde  0x64
+	//Read App Issuer Area block CRC(0x05) => 0xde  0x64
 	uint8_t readAA[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
 
     int read_status= 0;
 	uint8_t result_status = 0;
+	// flag to read until one tag is found successfully
     bool abort_after_read = arg0 & FLAG_ICLASS_READER_ONLY_ONCE;
+	// flag to only try 5 times to find one tag then return
 	bool try_once = arg0 & FLAG_ICLASS_READER_ONE_TRY;
-	bool use_credit_key = false;
-	uint16_t tryCnt = 0;
-	
-	if ((arg0 & FLAG_ICLASS_READER_CEDITKEY) == FLAG_ICLASS_READER_CEDITKEY)
-		use_credit_key = true;
-	
-	set_tracing(true);
-	
-    setupIclassReader();
+	// if neither abort_after_read nor try_once then continue reading until button pressed.
 
+	bool use_credit_key = arg0 & FLAG_ICLASS_READER_CEDITKEY;
+	// test flags for what blocks to be sure to read
+	uint8_t flagReadConfig = arg0 & FLAG_ICLASS_READER_CONF;
+	uint8_t flagReadCC = arg0 & FLAG_ICLASS_READER_CC;
+	uint8_t flagReadAA = arg0 & FLAG_ICLASS_READER_AA;
+
+	set_tracing(true);
+	setupIclassReader();
+
+	uint16_t tryCnt = 0;
 	bool userCancelled = BUTTON_PRESS() || usb_poll_validate_length();
 	while (!userCancelled) {
 		// if only looking for one card try 2 times if we missed it the first time
@@ -1724,18 +1729,22 @@ void ReaderIClass(uint8_t arg0) {
 		// moving CC forward 8 bytes
 		memcpy(card_data+16, card_data+8, 8);
 		//Read block 1, config
-		if ( (arg0 & FLAG_ICLASS_READER_CONF) == FLAG_ICLASS_READER_CONF ) {
-			if (sendCmdGetResponseWithRetries(readConf, sizeof(readConf), card_data+8, 10, 10)) {
+		if(flagReadConfig) {
+			if(sendCmdGetResponseWithRetries(readConf, sizeof(readConf), resp, 10, 10))
+			{
 				result_status |= FLAG_ICLASS_READER_CONF;
+				memcpy(card_data+8, resp, 8);
 			} else {
 				Dbprintf("Failed to dump config block");
 			}
 		}
 
 		//Read block 5, AA
-		if ( (arg0 & FLAG_ICLASS_READER_AA) == FLAG_ICLASS_READER_AA ) {
-			if (sendCmdGetResponseWithRetries(readAA, sizeof(readAA), card_data+(8*5), 10, 10)) {
+		if(flagReadAA) {
+			if(sendCmdGetResponseWithRetries(readAA, sizeof(readAA), resp, 10, 10))
+			{
 				result_status |= FLAG_ICLASS_READER_AA;
+				memcpy(card_data+(8*5), resp, 8);
 			} else {
 				//Dbprintf("Failed to dump AA block");
 			}
@@ -1751,12 +1760,12 @@ void ReaderIClass(uint8_t arg0) {
 		// with 0xFF:s in block 3 and 4.
 
 		LED_B_ON();
-		//Send back to client, but don't bother if we already sent this
-		if(memcmp(last_csn, card_data, 8) != 0)	{
-			// If caller requires that we get CC, continue until we got it
+		//Send back to client, but don't bother if we already sent this - 
 			//  only useful if looping in arm (not try_once && not abort_after_read)			
-			if( (arg0 & read_status & FLAG_ICLASS_READER_CC) || !(arg0 & FLAG_ICLASS_READER_CC))
+		if(memcmp(last_csn, card_data, 8) != 0)
 			{
+			// If caller requires that we get Conf, CC, AA, continue until we got it
+			if( (result_status ^ FLAG_ICLASS_READER_CSN ^ flagReadConfig ^ flagReadCC ^ flagReadAA) == 0) {
 				cmd_send(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data) );
 				if (abort_after_read) {
 					LEDsoff();

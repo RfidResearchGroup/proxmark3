@@ -17,7 +17,7 @@
 #include "string.h"
 #include "iso14443crc.h"
 #include "iso14443a.h"
-#include "crapto1.h"
+#include "crapto1/crapto1.h"
 #include "mifareutil.h"
 #include "common.h"
 
