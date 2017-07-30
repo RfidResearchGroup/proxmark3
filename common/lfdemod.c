@@ -1586,7 +1586,7 @@ int pskRawDemod_ext(uint8_t dest[], size_t *size, int *clock, int *invert, int *
 	uint8_t curPhase = *invert;
 	uint8_t fc=0;
 	size_t i=0, numBits=0, waveStart=1, waveEnd=0, firstFullWave=0, lastClkBit=0;
-	uint16_t fullWaveLen=0, waveLenCnt=0, avgWaveVal;
+	uint16_t fullWaveLen=0, waveLenCnt=0, avgWaveVal=0;
 	uint16_t errCnt=0, errCnt2=0;
 
 	*clock = DetectPSKClock(dest, *size, *clock, &firstFullWave, &curPhase, &fc);
