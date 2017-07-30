@@ -106,7 +106,7 @@ void msleep(uint32_t n) {
 
 
 // a milliseconds timer for performance measurement
-uint64_t msclock() {
+uint64_t msclock(void) {
 #if defined(_WIN32)
 	#include <sys/types.h>
 

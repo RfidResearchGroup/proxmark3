@@ -21,17 +21,21 @@
 #include "cmdlf.h"
 #include "protocols.h"  // for T55xx config register definitions
 #include "lfdemod.h"    // parityTest
-int CmdLFJablotron(const char *Cmd);
-int CmdJablotronClone(const char *Cmd);
-int CmdJablotronSim(const char *Cmd);
-int CmdJablotronRead(const char *Cmd);
-int CmdJablotronDemod(const char *Cmd);
 
-int getJablotronBits(uint64_t fullcode, uint8_t *bits);
+extern int CmdLFJablotron(const char *Cmd);
 
-int usage_lf_jablotron_clone(void);
-int usage_lf_jablotron_sim(void);
-int usage_lf_jablotron_read(void);
-int usage_lf_jablotron_demod(void);
+extern int CmdJablotronDemod(const char *Cmd);
+extern int CmdJablotronRead(const char *Cmd);
+extern int CmdJablotronClone(const char *Cmd);
+extern int CmdJablotronSim(const char *Cmd);
+
+extern int detectJablotron(uint8_t *bits, size_t *size);
+extern int getJablotronBits(uint64_t fullcode, uint8_t *bits);
+
+//extern int usage_lf_jablotron_demod(void);
+//extern int usage_lf_jablotron_read(void);
+extern int usage_lf_jablotron_clone(void);
+extern int usage_lf_jablotron_sim(void);
+
 #endif
 

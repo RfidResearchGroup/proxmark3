@@ -8,23 +8,12 @@
 // NRZ, RF/32, 128 bits long (unknown cs)
 //-----------------------------------------------------------------------------
 #include "cmdlfpac.h"
-#include <string.h>
-#include <inttypes.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdmain.h"
-#include "cmdlf.h"
-#include "lfdemod.h"    // preamble test
 
 static int CmdHelp(const char *Cmd);
 
 // by marshmellow
 // find PAC preamble in already demoded data
-int PacFind(uint8_t *dest, size_t *size) {
+int detectPac(uint8_t *dest, size_t *size) {
 	if (*size < 128) return -1; //make sure buffer has data
 	size_t startIdx = 0;
 	uint8_t preamble[] = {1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,0,0,1,0};
@@ -44,7 +33,7 @@ int CmdPacDemod(const char *Cmd) {
 		return 0;
 	}
 	size_t size = DemodBufferLen;
-	int ans = PacFind(DemodBuffer, &size);
+	int ans = detectPac(DemodBuffer, &size);
 	if (ans < 0) {
 		if (g_debugMode) {
 			if (ans == -1)
@@ -59,7 +48,7 @@ int CmdPacDemod(const char *Cmd) {
 		return 0;
 	}
 	setDemodBuf(DemodBuffer, 128, ans);
-//	setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
+	setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
 
 	//got a good demod
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer   , 32);
@@ -77,15 +66,13 @@ int CmdPacDemod(const char *Cmd) {
 }
 
 int CmdPacRead(const char *Cmd) {
-	//lf_read(true, 4096*2 + 20);
-	CmdLFRead("s");
-	getSamples("8192",true);
+	lf_read(true, 4096*2 + 20);
 	return CmdPacDemod(Cmd);
 }
 
 static command_t CommandTable[] = {
 	{"help",  CmdHelp,    1, "This help"},
-	{"demod", CmdPacDemod,1, "Attempt to read and extract tag data from the GraphBuffer"},
+	{"demod", CmdPacDemod,1, "Demodulate an PAC tag from the GraphBuffer"},
 	{"read",  CmdPacRead, 0, "Attempt to read and extract tag data from the antenna"},
 	{NULL, NULL, 0, NULL}
 };

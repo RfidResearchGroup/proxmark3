@@ -7,50 +7,67 @@
 // Low frequency Honeywell NexWatch tag commands
 // PSK1 RF/16, RF/2, 128 bits long (known)
 //-----------------------------------------------------------------------------
-#include <stdio.h>
-#include <string.h>
-#include <inttypes.h>
-#include <stdbool.h>
+
 #include "cmdlfnexwatch.h"
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdlf.h"
-#include "lfdemod.h"
 
 static int CmdHelp(const char *Cmd);
 
-int CmdPSKNexWatch(const char *Cmd)
-{
-	if (!PSKDemod("", false)) return 0;
+int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
 
-	uint8_t preamble[28] = {0,0,0,0,0,1,0,1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-	size_t startIdx = 0, size = DemodBufferLen;
-
+	uint8_t preamble[28]   = {0,0,0,0,0,1,0,1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	uint8_t preamble_i[28] = {1,1,1,1,1,0,1,0,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
 	// sanity check. 
-	if ( size < sizeof(preamble) + 100) return 0;
+	if ( *size < sizeof(preamble) + 100) return -1;
 
-	bool invert = false;
-	if (!preambleSearch(DemodBuffer, preamble, sizeof(preamble), &size, &startIdx)){
+	size_t startIdx = 0;
+
+	if (!preambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx)){
 		// if didn't find preamble try again inverting
-		if (!PSKDemod("1", false)) return 0;
-		
-		size = DemodBufferLen;
-		if (!preambleSearch(DemodBuffer, preamble, sizeof(preamble), &size, &startIdx)) return 0;
-		invert = true;
+		if (!preambleSearch(DemodBuffer, preamble_i, sizeof(preamble_i), size, &startIdx)) return -4;
+		*invert ^= 1;
 	}
-	if (size != 128) return 0;
-	setDemodBuf(DemodBuffer, size, startIdx+4);
-	//setClockGrid(g_DemodClock, g_DemodStartIdx + ((startIdx+4)*g_DemodClock));
-	startIdx = 8+32; // 8 = preamble, 32 = reserved bits (always 0)
+	
+	// size tests?
+	return (int) startIdx;
+}
+
+int CmdNexWatchDemod(const char *Cmd) {
+
+	if (!PSKDemod("", false)) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - NexWatch can't demod signal");
+		return 0;
+	}
+	bool invert = false;
+	size_t size = DemodBufferLen;
+	int idx = detectNexWatch(DemodBuffer, &size, &invert);
+	if (idx <= 0){
+		if (g_debugMode){
+			if (idx == -1)
+				PrintAndLog("DEBUG: Error - NexWatch not enough samples");
+			// else if (idx == -2)
+				// PrintAndLog("DEBUG: Error - NexWatch only noise found");
+			// else if (idx == -3)
+				// PrintAndLog("DEBUG: Error - NexWatch problem during PSK demod");
+			else if (idx == -4)
+				PrintAndLog("DEBUG: Error - NexWatch preamble not found");
+			// else if (idx == -5)
+				// PrintAndLog("DEBUG: Error - NexWatch size not correct: %d", size);
+			else
+				PrintAndLog("DEBUG: Error - NexWatch error %d",idx);
+		}
+		return 0;
+	}
+	
+	setDemodBuf(DemodBuffer, size, idx+4);
+	setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx+4)*g_DemodClock));
+	
+	idx = 8+32; // 8 = preamble, 32 = reserved bits (always 0)
+	
 	//get ID
 	uint32_t ID = 0;
-	for (uint8_t wordIdx=0; wordIdx<4; wordIdx++){
-		for (uint8_t idx=0; idx<8; idx++){
-			ID = (ID << 1) | DemodBuffer[startIdx+wordIdx+(idx*4)];
+	for (uint8_t k = 0; k < 4; k++){
+		for (uint8_t m = 0; m < 8; m++){
+			ID = (ID << 1) | DemodBuffer[m + k + (m*4)];
 		}	
 	}
 	//parity check (TBD)
@@ -60,9 +77,9 @@ int CmdPSKNexWatch(const char *Cmd)
 	//output
 	PrintAndLog("NexWatch ID: %d", ID);
 	if (invert){
-		PrintAndLog("DEBUG: Error - NexWatch had to Invert - probably NexKey");
-		for (uint8_t idx=0; idx<size; idx++)
-			DemodBuffer[idx] ^= 1;
+		PrintAndLog("Had to Invert - probably NexKey");
+		for (size_t i = 0; i < size; i++)
+			DemodBuffer[i] ^= 1;
 	} 
 
 	CmdPrintDemodBuff("x");
@@ -72,24 +89,18 @@ int CmdPSKNexWatch(const char *Cmd)
 //by marshmellow
 //see ASKDemod for what args are accepted
 int CmdNexWatchRead(const char *Cmd) {
-	// read lf silently
-	//lf_read(true, 10000);
-	
-	CmdLFRead("s");
-	getSamples("10000",true);
-	
-	// demod and output viking ID	
-	return CmdPSKNexWatch(Cmd);
+	lf_read(true, 10000);
+	return CmdNexWatchDemod(Cmd);
 }
 
 static command_t CommandTable[] = {
-	{"help",  CmdHelp,          1, "This help"},
-	{"demod", CmdPSKNexWatch,   1, "Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer"},
-	{"read",  CmdNexWatchRead,  0, "Attempt to Read and Extract tag data from the antenna"},
+	{"help",  CmdHelp,			1, "This help"},
+	{"demod", CmdNexWatchDemod,	1, "Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer"},
+	{"read",  CmdNexWatchRead,	0, "Attempt to Read and Extract tag data from the antenna"},
 	{NULL, NULL, 0, NULL}
 };
 
-int CmdLFNexWatch(const char *Cmd) {
+int CmdLFNEXWATCH(const char *Cmd) {
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }

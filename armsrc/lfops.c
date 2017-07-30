@@ -77,7 +77,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t periods, uint3
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
 	// now do the read
-	DoAcquisition_config(false);
+	DoAcquisition_config(false, 0);
 	
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 }
@@ -459,7 +459,6 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 OUT: 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	LED_D_OFF();
-	DbpString("Simulation stopped");
 	return;	
 }
 
@@ -784,6 +783,7 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 	size_t size = 0; 
 	uint32_t hi2=0, hi=0, lo=0;
 	int idx=0;
+	int dummyIdx = 0;
 	// Configure to go in 125Khz listen mode
 	LFSetupFPGAForADC(95, true);
 
@@ -795,10 +795,10 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
 
-		DoAcquisition_default(0, true);
+		DoAcquisition_default(-1,true);
 		// FSK demodulator
 		size = 50*128*2; //big enough to catch 2 sequences of largest format
-		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo);
+		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo, &dummyIdx);
 		
 		if (idx>0 && lo>0 && (size==96 || size==192)){
 			// go over previously decoded manchester data and decode into usable tag ID
@@ -880,7 +880,7 @@ void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = BigBuf_get_addr();
 	size_t size; 
-	int idx=0;
+	int idx=0, dummyIdx=0;
 	//clear read buffer
 	BigBuf_Clear_keep_EM();
 	// Configure to go in 125Khz listen mode
@@ -894,87 +894,74 @@ void CmdAWIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		DoAcquisition_default(-1,true);
 		// FSK demodulator
 		size = 50*128*2; //big enough to catch 2 sequences of largest format
-		idx = AWIDdemodFSK(dest, &size);
+		idx = detectAWID(dest, &size, &dummyIdx);
 		
 		if (idx<=0 || size!=96) continue;
-	        // Index map
-	        // 0            10            20            30              40            50              60
-	        // |            |             |             |               |             |               |
-	        // 01234567 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 - to 96
-	        // -----------------------------------------------------------------------------
-	        // 00000001 000 1 110 1 101 1 011 1 101 1 010 0 000 1 000 1 010 0 001 0 110 1 100 0 000 1 000 1
-	        // premable bbb o bbb o bbw o fff o fff o ffc o ccc o ccc o ccc o ccc o ccc o wxx o xxx o xxx o - to 96
-	        //          |---26 bit---|    |-----117----||-------------142-------------|
-	        // b = format bit len, o = odd parity of last 3 bits
-	        // f = facility code, c = card number
-	        // w = wiegand parity
-	        // (26 bit format shown)
+		// Index map
+		// 0            10            20            30              40            50              60
+		// |            |             |             |               |             |               |
+		// 01234567 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 - to 96
+		// -----------------------------------------------------------------------------
+		// 00000001 000 1 110 1 101 1 011 1 101 1 010 0 000 1 000 1 010 0 001 0 110 1 100 0 000 1 000 1
+		// premable bbb o bbb o bbw o fff o fff o ffc o ccc o ccc o ccc o ccc o ccc o wxx o xxx o xxx o - to 96
+		//          |---26 bit---|    |-----117----||-------------142-------------|
+		// b = format bit len, o = odd parity of last 3 bits
+		// f = facility code, c = card number
+		// w = wiegand parity
+		// (26 bit format shown)
 
-	        //get raw ID before removing parities
-	        uint32_t rawLo = bytebits_to_byte(dest+idx+64,32);
-	        uint32_t rawHi = bytebits_to_byte(dest+idx+32,32);
-	        uint32_t rawHi2 = bytebits_to_byte(dest+idx,32);
+		//get raw ID before removing parities
+		uint32_t rawLo = bytebits_to_byte(dest+idx+64,32);
+		uint32_t rawHi = bytebits_to_byte(dest+idx+32,32);
+		uint32_t rawHi2 = bytebits_to_byte(dest+idx,32);
 
-	        size = removeParity(dest, idx+8, 4, 1, 88);
+		size = removeParity(dest, idx+8, 4, 1, 88);
 		if (size != 66) continue;
+		// ok valid card found!
 
-	        // Index map
-	        // 0           10         20        30          40        50        60
-	        // |           |          |         |           |         |         |
-	        // 01234567 8 90123456 7890123456789012 3 456789012345678901234567890123456
-	        // -----------------------------------------------------------------------------
-	        // 00011010 1 01110101 0000000010001110 1 000000000000000000000000000000000
-	        // bbbbbbbb w ffffffff cccccccccccccccc w xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	        // |26 bit|   |-117--| |-----142------|
-			//
-			// 00110010 0 0000011111010000000000000001000100101000100001111 0 00000000 
-			// bbbbbbbb w ffffffffffffffffccccccccccccccccccccccccccccccccc w xxxxxxxx
-			// |50 bit|   |----4000------||-----------2248975-------------| 			
-			//
-	        // b = format bit len, o = odd parity of last 3 bits
-	        // f = facility code, c = card number
-	        // w = wiegand parity
+		// Index map
+		// 0           10         20        30          40        50        60
+		// |           |          |         |           |         |         |
+		// 01234567 8 90123456 7890123456789012 3 456789012345678901234567890123456
+		// -----------------------------------------------------------------------------
+		// 00011010 1 01110101 0000000010001110 1 000000000000000000000000000000000
+		// bbbbbbbb w ffffffff cccccccccccccccc w xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+		// |26 bit|   |-117--| |-----142------|
+		// b = format bit len, o = odd parity of last 3 bits
+		// f = facility code, c = card number
+		// w = wiegand parity
+		// (26 bit format shown)
 
-	        uint32_t fc = 0;
-	        uint32_t cardnum = 0;
-	        uint32_t code1 = 0;
-	        uint32_t code2 = 0;
-	        uint8_t fmtLen = bytebits_to_byte(dest,8);
-			switch(fmtLen) {
-				case 26: 
-					fc = bytebits_to_byte(dest + 9, 8);
-					cardnum = bytebits_to_byte(dest + 17, 16);
-					code1 = bytebits_to_byte(dest + 8,fmtLen);
-					Dbprintf("AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
-					break;
-				case 50:
-					fc = bytebits_to_byte(dest + 9, 16);
-					cardnum = bytebits_to_byte(dest + 25, 32);
-					code1 = bytebits_to_byte(dest + 8, (fmtLen-32) );
-					code2 = bytebits_to_byte(dest + 8 + (fmtLen-32), 32);
-					Dbprintf("AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
-					break;
-				default:
-					if (fmtLen > 32 ) {
-						cardnum = bytebits_to_byte(dest+8+(fmtLen-17), 16);
-						code1 = bytebits_to_byte(dest+8,fmtLen-32);
-						code2 = bytebits_to_byte(dest+8+(fmtLen-32),32);
-						Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%u) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
-					} else {
-						cardnum = bytebits_to_byte(dest+8+(fmtLen-17), 16);
-						code1 = bytebits_to_byte(dest+8,fmtLen);
-						Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%u) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
-					}
-					break;		
+		uint32_t fc = 0;
+		uint32_t cardnum = 0;
+		uint32_t code1 = 0;
+		uint32_t code2 = 0;
+		uint8_t fmtLen = bytebits_to_byte(dest,8);
+		if (fmtLen==26){
+			fc = bytebits_to_byte(dest+9, 8);
+			cardnum = bytebits_to_byte(dest+17, 16);
+			code1 = bytebits_to_byte(dest+8,fmtLen);
+			Dbprintf("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
+		} else {
+			cardnum = bytebits_to_byte(dest+8+(fmtLen-17), 16);
+			if (fmtLen>32){
+				code1 = bytebits_to_byte(dest+8,fmtLen-32);
+				code2 = bytebits_to_byte(dest+8+(fmtLen-32),32);
+				Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+			} else{
+				code1 = bytebits_to_byte(dest+8,fmtLen);
+				Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
 			}
-			if (findone)
-				break;
-
+		}
+		if (findone){
+			if (ledcontrol)	LED_A_OFF();
+			break;
+		}
+		// reset
 		idx = 0;
 		WDT_HIT();
 	}
-
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);	
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	DbpString("Stopped");
 	if (ledcontrol) LED_A_OFF();
 }
@@ -1044,14 +1031,15 @@ void CmdEM410xdemod(int findone, int *high, int *low, int ledcontrol)
 void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 {
 	uint8_t *dest = BigBuf_get_addr();
-	int idx=0;
+	int dummyIdx = 0;
+	int idx = 0;
 	uint32_t code=0, code2=0;
 	uint8_t version=0;
 	uint8_t facilitycode=0;
 	uint16_t number=0;
 	uint8_t crc = 0;
 	uint16_t calccrc = 0;
-
+	size_t size = BigBuf_max_traceLen();
 	//clear read buffer
 	BigBuf_Clear_keep_EM();
 	
@@ -1064,7 +1052,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		DoAcquisition_default(-1,true);
 		//fskdemod and get start index
 		WDT_HIT();
-		idx = IOdemodFSK(dest, BigBuf_max_traceLen());
+		idx = detectIOProx(dest, &size, &dummyIdx);
 		if (idx<0) continue;
 			//valid tag found
 
@@ -1210,7 +1198,7 @@ void T55xxResetRead(void) {
 	TurnReadLFOn(READ_GAP);
 
 	// Acquisition
-	doT55x7Acquisition(BigBuf_max_traceLen());
+	DoPartialAcquisition(0, true, BigBuf_max_traceLen());
 
 	// Turn the field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
@@ -1223,6 +1211,7 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 	LED_A_ON();
 	bool PwdMode = arg & 0x1;
 	uint8_t Page = (arg & 0x2)>>1;
+	bool testMode = arg & 0x4;
 	uint32_t i = 0;
 
 	// Set up FPGA, 125kHz
@@ -1234,9 +1223,11 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	WaitUS(START_GAP);
 
-	// Opcode 10
-	T55xxWriteBit(1);
-	T55xxWriteBit(Page); //Page 0
+	if (testMode) Dbprintf("TestMODE");
+	// Std Opcode 10
+	T55xxWriteBit(testMode ? 0 : 1);
+	T55xxWriteBit(testMode ? 1 : Page); //Page 0
+
 	if (PwdMode){
 		// Send Pwd
 		for (i = 0x80000000; i != 0; i >>= 1)
@@ -1255,12 +1246,32 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 
 	// Perform write (nominal is 5.6 ms for T55x7 and 18ms for E5550,
 	// so wait a little more)
-	TurnReadLFOn(20 * 1000);
+
+	// "there is a clock delay before programming" 
+	//  - programming takes ~5.6ms for t5577 ~18ms for E5550 or t5567
+	//  so we should wait 1 clock + 5.6ms then read response? 
+	//  but we need to know we are dealing with t5577 vs t5567 vs e5550 (or q5) marshmellow...
+	if (testMode) {
+		//TESTMODE TIMING TESTS: 
+		// <566us does nothing 
+		// 566-568 switches between wiping to 0s and doing nothing
+		// 5184 wipes and allows 1 block to be programmed.
+		// indefinite power on wipes and then programs all blocks with bitshifted data sent.
+		TurnReadLFOn(5184); 
+
+	} else {
+		TurnReadLFOn(20 * 1000);
 	
-	//could attempt to do a read to confirm write took
-	// as the tag should repeat back the new block 
-	// until it is reset, but to confirm it we would 
-	// need to know the current block 0 config mode
+		//could attempt to do a read to confirm write took
+		// as the tag should repeat back the new block 
+		// until it is reset, but to confirm it we would 
+		// need to know the current block 0 config mode for
+		// modulation clock an other details to demod the response...
+		// response should be (for t55x7) a 0 bit then (ST if on) 
+		// block data written in on repeat until reset. 
+
+		//DoPartialAcquisition(20, true, 12000);
+	}
 	
 	// turn field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1279,7 +1290,7 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	bool PwdMode = arg0 & 0x1;
 	uint8_t Page = (arg0 & 0x2) >> 1;
 	uint32_t i = 0;
-	bool RegReadMode = (Block == 0xFF);
+	bool RegReadMode = (Block == 0xFF);//regular read mode
 	
 	//clear buffer now so it does not interfere with timing later
 	BigBuf_Clear_keep_EM();
@@ -1319,7 +1330,8 @@ void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd) {
 	TurnReadLFOn(210*8); 
 	
 	// Acquisition
-	doT55x7Acquisition(7679);
+	// Now do the acquisition
+	DoPartialAcquisition(0, true, 12000);
 	
 	// Turn the field off
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
@@ -1398,7 +1410,7 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 	data[0] = T55x7_BITRATE_RF_50 | T55x7_MODULATION_FSK2a | last_block << T55x7_MAXBLOCK_SHIFT;
 
 	//TODO add selection of chip for Q5 or T55x7
-	// data[0] = (((50-2)>>1)<<T5555_BITRATE_SHIFT) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | last_block << T5555_MAXBLOCK_SHIFT;
+	// data[0] = T5555_SET_BITRATE(50) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | last_block << T5555_MAXBLOCK_SHIFT;
 
 	LED_D_ON();
 	WriteT55xx(data, 0, last_block+1);
@@ -1408,8 +1420,7 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 void CopyIOtoT55x7(uint32_t hi, uint32_t lo) {
 	uint32_t data[] = {T55x7_BITRATE_RF_64 | T55x7_MODULATION_FSK2a | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
 	//TODO add selection of chip for Q5 or T55x7
-	//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-	// data[0] = ( ((64-2)>>1) << T5555_BITRATE_SHIFT) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | 2 << T5555_MAXBLOCK_SHIFT;
+	// data[0] = T5555_SET_BITRATE(64) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | 2 << T5555_MAXBLOCK_SHIFT;
 
 	LED_D_ON();
 	// Program the data blocks for supplied ID
@@ -1424,7 +1435,7 @@ void CopyIndala64toT55x7(uint32_t hi, uint32_t lo) {
 	// and the Config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
 	uint32_t data[] = { T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
 	//TODO add selection of chip for Q5 or T55x7
-	// data[0] = (((32-2)>>1)<<T5555_BITRATE_SHIFT) | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
+	// data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
 
 	WriteT55xx(data, 0, 3);
 	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
@@ -1446,8 +1457,7 @@ void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t 
 // clone viking tag to T55xx
 void CopyVikingtoT55xx(uint32_t block1, uint32_t block2, uint8_t Q5) {
 	uint32_t data[] = {T55x7_BITRATE_RF_32 | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT), block1, block2};
-	//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-	if (Q5) data[0] = (((32-2)>>1) << T5555_BITRATE_SHIFT) | T5555_MODULATION_MANCHESTER | 2 << T5555_MAXBLOCK_SHIFT;
+	if (Q5) data[0] = T5555_SET_BITRATE(32) | T5555_MODULATION_MANCHESTER | 2 << T5555_MAXBLOCK_SHIFT;
 	// Program the data blocks for supplied ID and the block 0 config
 	WriteT55xx(data, 0, 3);
 	LED_D_OFF();
@@ -1531,8 +1541,7 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
 		}
 		data[0] = clock | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT);
 	} else { //t5555 (Q5)
-		// t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-		data[0] = ( ((clock-2) >> 1) << T5555_BITRATE_SHIFT) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
+		data[0] = T5555_SET_BITRATE(clock) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
 	}
  
 	WriteT55xx(data, 0, 3);
@@ -1818,7 +1827,7 @@ void Cotag(uint32_t arg0) {
 	switch(rawsignal) {
 		case 0: doCotagAcquisition(50000); break;
 		case 1: doCotagAcquisitionManchester(); break;
-		case 2: DoAcquisition_config(true); break;
+		case 2: DoAcquisition_config(true, 0); break;
 	}
 	
 	// Turn the field off

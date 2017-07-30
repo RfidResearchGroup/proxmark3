@@ -11,9 +11,28 @@
 #ifndef CMDCRC_H__
 #define CMDCRC_H__
 
-int CmdCrc(const char *Cmd);
+#ifdef _WIN32
+#  include <io.h>
+#  include <fcntl.h>
+#  ifndef STDIN_FILENO
+#    define STDIN_FILENO 0
+#  endif /* STDIN_FILENO */
+#endif /* _WIN32 */
 
-int CmdrevengSearch(const char *Cmd);
-int GetModels(char *Models[], int *count, uint8_t *width);
-int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *result);
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include "cmdmain.h"
+#include "reveng/reveng.h"
+#include "ui.h"
+#include "util.h"
+
+
+
+extern int CmdCrc(const char *Cmd);
+
+extern int CmdrevengSearch(const char *Cmd);
+extern int GetModels(char *Models[], int *count, uint8_t *width);
+extern int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *result);
 #endif

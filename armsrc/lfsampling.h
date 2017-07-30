@@ -27,13 +27,12 @@ void doT55x7Acquisition(size_t sample_size);
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SampleLF(bool silent);
+uint32_t SampleLF(bool silent, int sample_size);
 
 /**
 * Initializes the FPGA for snoop-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-
 uint32_t SnoopLF();
 
 // adds sample size to default options
@@ -55,7 +54,7 @@ uint32_t DoAcquisition_default(int trigger_threshold, bool silent);
  * @return number of bits sampled
  */
 
-uint32_t DoAcquisition_config( bool silent);
+uint32_t DoAcquisition_config(bool silent, int sample_size);
 
 /**
 * Setup the FPGA to listen for samples. This method downloads the FPGA bitstream

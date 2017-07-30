@@ -1,20 +1,30 @@
+//-----------------------------------------------------------------------------
+//
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
+//-----------------------------------------------------------------------------
+// Low frequency ioProx commands
+// FSK2a, rf/64, 64 bits (complete)
+//-----------------------------------------------------------------------------
+
 #include "cmdlfio.h"
 
 static int CmdHelp(const char *Cmd);
 
-int usage_lf_io_fskdemod(void) {
+int usage_lf_io_read(void) {
 	PrintAndLog("Enables IOProx compatible reader mode printing details of scanned tags.");
 	PrintAndLog("By default, values are printed and logged until the button is pressed or another USB command is issued.");
 	PrintAndLog("If the [1] option is provided, reader mode is exited after reading a single card.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf io fskdemod [h] [1]");
+	PrintAndLog("Usage:  lf io read [h] [1]");
 	PrintAndLog("Options :");
 	PrintAndLog("      h :  This help");
 	PrintAndLog("      1 : (optional) stop after reading a single card");
 	PrintAndLog("");
 	PrintAndLog("Samples");
-	PrintAndLog("        lf io fskdemod");
-	PrintAndLog("        lf io fskdemod 1");
+	PrintAndLog("        lf io read");
+	PrintAndLog("        lf io read 1");
 	return 0;
 }
 
@@ -51,29 +61,124 @@ int usage_lf_io_clone(void) {
 	return 0;
 }
 
-int CmdIODemodFSK(const char *Cmd) {
-	if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_io_fskdemod();
+// this read is the "normal" read,  which download lf signal and tries to demod here.
+int CmdIOProxRead(const char *Cmd) {
+	lf_read(true, 12000);
+	return CmdIOProxDemod(Cmd);
+}
+// this read loops on device side.
+// uses the demod in lfops.c
+int CmdIOProxRead_device(const char *Cmd) {
+	if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_io_read();
 	int findone = (Cmd[0]=='1') ? 1 : 0;
-	UsbCommand c = {CMD_IO_DEMOD_FSK};
-	c.arg[0] = findone;
+	UsbCommand c = {CMD_IO_DEMOD_FSK, {findone, 0, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
 }
-/*
-int CmdIOProxDemod(const char *Cmd){
-  if (GraphTraceLen < 4800) {
-    PrintAndLog("too short; need at least 4800 samples");
-    return 0;
-  }
-  GraphTraceLen = 4800;
-  for (int i = 0; i < GraphTraceLen; ++i) {
-    GraphBuffer[i] = (GraphBuffer[i] < 0) ? 0 : 1;
-  }
-  RepaintGraphWindow();
-  return 0;
-}  
-*/
+
+//by marshmellow
+//IO-Prox demod - FSK RF/64 with preamble of 000000001
+//print ioprox ID and some format details
+int CmdIOProxDemod(const char *Cmd) {
+	int retval = 0;
+	int idx = 0;
+	char crcStr[20];
+	memset(crcStr, 0x00, sizeof(crcStr) );
+
+	//something in graphbuffer?
+	if (GraphTraceLen < 65) {
+		if (g_debugMode)PrintAndLog("DEBUG: Error - IO prox not enough samples in GraphBuffer");
+		return retval;
+	}
+	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
+	size_t bitlen = getFromGraphBuf(BitStream);
+	if (bitlen == 0) return retval;
+
+	int waveIdx = 0;
+	//get binary from fsk wave
+	idx = detectIOProx(BitStream, &bitlen, &waveIdx);
+	if (idx<0){
+		if (g_debugMode){
+			if (idx==-1){
+				PrintAndLog("DEBUG: Error - IO prox just noise detected");     
+			} else if (idx == -2) {
+				PrintAndLog("DEBUG: Error - IO prox not enough samples");
+			} else if (idx == -3) {
+				PrintAndLog("DEBUG: Error - IO prox error during fskdemod");        
+			} else if (idx == -4) {
+				PrintAndLog("DEBUG: Error - IO prox preamble not found");
+			} else if (idx == -5) {
+				PrintAndLog("DEBUG: Error - IO prox separator bits not found");
+			} else {
+				PrintAndLog("DEBUG: Error - IO prox error demoding fsk %d", idx);
+			}
+		}
+		return retval;
+	}
+	if (idx==0){
+		if (g_debugMode){
+			PrintAndLog("DEBUG: Error - IO prox data not found - FSK Bits: %d", bitlen);
+			if (bitlen > 92) PrintAndLog("%s", sprint_bin_break(BitStream,92,16));
+		} 
+		return retval;
+	}
+		//Index map
+		//0           10          20          30          40          50          60
+		//|           |           |           |           |           |           |
+		//01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
+		//-----------------------------------------------------------------------------
+		//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
+		//
+		//XSF(version)facility:codeone+codetwo (raw)
+		//Handle the data
+	if (idx + 64 > bitlen) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - IO prox not enough bits found - bitlen: %d", bitlen);
+		return retval;
+	}
+	
+	if (g_debugMode) {
+		PrintAndLog("%d%d%d%d%d%d%d%d %d", BitStream[idx], BitStream[idx+1], BitStream[idx+2], BitStream[idx+3], BitStream[idx+4], BitStream[idx+5], BitStream[idx+6], BitStream[idx+7], BitStream[idx+8]);
+		PrintAndLog("%d%d%d%d%d%d%d%d %d", BitStream[idx+9], BitStream[idx+10], BitStream[idx+11],BitStream[idx+12],BitStream[idx+13],BitStream[idx+14],BitStream[idx+15],BitStream[idx+16],BitStream[idx+17]);
+		PrintAndLog("%d%d%d%d%d%d%d%d %d facility", BitStream[idx+18], BitStream[idx+19], BitStream[idx+20],BitStream[idx+21],BitStream[idx+22],BitStream[idx+23],BitStream[idx+24],BitStream[idx+25],BitStream[idx+26]);
+		PrintAndLog("%d%d%d%d%d%d%d%d %d version", BitStream[idx+27], BitStream[idx+28], BitStream[idx+29],BitStream[idx+30],BitStream[idx+31],BitStream[idx+32],BitStream[idx+33],BitStream[idx+34],BitStream[idx+35]);
+		PrintAndLog("%d%d%d%d%d%d%d%d %d code1", BitStream[idx+36], BitStream[idx+37], BitStream[idx+38],BitStream[idx+39],BitStream[idx+40],BitStream[idx+41],BitStream[idx+42],BitStream[idx+43],BitStream[idx+44]);
+		PrintAndLog("%d%d%d%d%d%d%d%d %d code2", BitStream[idx+45], BitStream[idx+46], BitStream[idx+47],BitStream[idx+48],BitStream[idx+49],BitStream[idx+50],BitStream[idx+51],BitStream[idx+52],BitStream[idx+53]);
+		PrintAndLog("%d%d%d%d%d%d%d%d %d%d checksum", BitStream[idx+54],BitStream[idx+55],BitStream[idx+56],BitStream[idx+57],BitStream[idx+58],BitStream[idx+59],BitStream[idx+60],BitStream[idx+61],BitStream[idx+62],BitStream[idx+63]);
+	}
+	
+	uint32_t code = bytebits_to_byte(BitStream+idx,32);
+	uint32_t code2 = bytebits_to_byte(BitStream+idx+32,32);
+	uint8_t version = bytebits_to_byte(BitStream+idx+27,8); //14,4
+	uint8_t facilitycode = bytebits_to_byte(BitStream+idx+18,8) ;
+	uint16_t number = (bytebits_to_byte(BitStream+idx+36,8)<<8)|(bytebits_to_byte(BitStream+idx+45,8)); //36,9
+	uint8_t crc = bytebits_to_byte(BitStream+idx+54,8);
+	uint16_t calccrc = 0;
+
+	for (uint8_t i = 1; i < 6; ++i){
+		calccrc += bytebits_to_byte(BitStream + idx + 9 * i ,8);
+	}
+	calccrc &= 0xff;
+	calccrc = 0xff - calccrc;
+
+	if  (crc == calccrc) {
+		snprintf(crcStr, 3, "ok");
+		retval = 1;
+	} else {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - IO prox crc failed");
+			
+		snprintf(crcStr, 20, "failed 0x%02X != 0x%02X", crc, calccrc);
+		retval = 0;
+	}
+
+	PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x) [crc %s]",version,facilitycode,number,code,code2, crcStr);
+	setDemodBuf(BitStream,64,idx);
+	if (g_debugMode){
+		PrintAndLog("DEBUG: IO prox idx: %d, Len: %d, Printing demod buffer:", idx, 64);
+		printDemodBuff();
+	}	
+	return retval;
+}
 
 //Index map
 //0           10          20          30          40          50          60
@@ -140,7 +245,7 @@ int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits) {
 	return 1;
 }
 
-int CmdIOSim(const char *Cmd) {
+int CmdIOProxSim(const char *Cmd) {
 	uint16_t cn = 0;
 	uint8_t version = 0, fc = 0;
 	uint8_t bits[64];
@@ -183,7 +288,7 @@ int CmdIOSim(const char *Cmd) {
 	return 0;
 }
 
-int CmdIOClone(const char *Cmd) {
+int CmdIOProxClone(const char *Cmd) {
 	
 	uint32_t blocks[3] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
 	uint16_t cn = 0;
@@ -233,10 +338,10 @@ int CmdIOClone(const char *Cmd) {
 
 static command_t CommandTable[] = {
 	{"help",	CmdHelp,		1, "This help"},
-//	{"demod",	CmdIOProxDemod,	1, "Demodulate Stream"},
-	{"fskdemod",CmdIODemodFSK,	0, "['1'] Realtime IO FSK demodulator (option '1' for one tag only)"},
-	{"sim",		CmdIOSim,		0, "<version> <facility-code> <card number> -- IOProx tag simulator"},
-	{"clone",	CmdIOClone,		0, "<version> <facility-code> <card number> <Q5> -- Clone IOProx to T55x7"},
+	{"demod",	CmdIOProxDemod,	1, "Demodulate an IOProx tag from the GraphBuffer"},
+	{"read",	CmdIOProxRead,	1, "Attempt to read and extract tag data"},
+	{"sim",		CmdIOProxSim,	0, "IOProx tag simulator"},
+	{"clone",	CmdIOProxClone,	0, "Clone IOProx to T55x7"},
 	{NULL, NULL, 0, NULL}
 };
 

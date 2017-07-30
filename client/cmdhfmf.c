@@ -1100,7 +1100,8 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			slow ? "Yes" : "No",
 			tests);
 
-	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key?trgkey:NULL, nonce_file_read, nonce_file_write, slow, tests);
+	uint64_t foundkey = 0;
+	int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey);
 
 	if (isOK) {
 		switch (isOK) {
@@ -1350,7 +1351,7 @@ int CmdHF14AMfChk(const char *Cmd) {
 	}
 
 
-	//print them
+	//print keys
 	printKeyTable( SectorsCnt, e_sector );
 	
 	if (transferToEml) {
@@ -1533,7 +1534,7 @@ int CmdHF14AMf1kSim(const char *Cmd) {
 	if(flags & FLAG_INTERACTIVE) {
 		PrintAndLog("Press pm3-button or send another cmd to abort simulation");
 
-		while( !ukbhit() ){
+		while( !ukbhit() ){	
 			if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500) ) continue;
 			if ( !(flags & FLAG_NR_AR_ATTACK) ) break;
 			if ( (resp.arg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD ) break;
@@ -1553,7 +1554,6 @@ int CmdHF14AMfSniff(const char *Cmd){
 	bool wantSaveToEmlFile = false;
 
 	//var 
-	int tmpchar;
 	int res = 0;
 	int len = 0;
 	int blockLen = 0;
@@ -1597,8 +1597,7 @@ int CmdHF14AMfSniff(const char *Cmd){
 		printf(".");
 		fflush(stdout);
 		if (ukbhit()) {
-			tmpchar = getchar();
-			(void)tmpchar;
+			int gc = getchar(); (void)gc;
 			printf("\naborted via keyboard!\n");
 			break;
 		}

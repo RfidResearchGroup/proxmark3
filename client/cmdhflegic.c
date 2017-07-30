@@ -172,18 +172,33 @@ int CmdLegicInfo(const char *Cmd) {
 	int i = 0, k = 0, segmentNum = 0, segment_len = 0, segment_flag = 0;
 	int crc = 0, wrp = 0, wrc = 0;
 	uint8_t stamp_len = 0;
-	uint8_t data[1024]; // receiver buffer
+	uint16_t datalen = 0;
 	char token_type[5] = {0,0,0,0,0};
 	int dcf = 0;
 	int bIsSegmented = 0;
 
-	CmdLegicRdmem("0 22 55");
-	
-	// copy data from device
-	GetEMLFromBigBuf(data, sizeof(data), 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2000)){
-		PrintAndLog("Command execute timeout");
+	// tagtype
+	legic_card_select_t card;
+	if (legic_get_type(&card)) {
+		PrintAndLog("Failed to identify tagtype");
 		return 1;
+	}
+
+	PrintAndLog("Reading tag memory %d b...", card.cardsize);
+	
+	// allocate receiver buffer
+	uint8_t *data = malloc(card.cardsize);
+	 if (!data) {
+		PrintAndLog("Cannot allocate memory");
+		return 2;
+	}
+	memset(data, 0, card.cardsize);
+
+	int status = legic_read_mem(0, card.cardsize, 0x55, data, &datalen);
+	if ( status > 0 ) {
+		PrintAndLog("Failed reading memory");
+		free(data);
+		return 3;
 	}
 	
 	// Output CDF System area (9 bytes) plus remaining header area (12 bytes)
@@ -298,8 +313,9 @@ int CmdLegicInfo(const char *Cmd) {
 	uint32_t segCalcCRC = 0;
 	uint32_t segCRC = 0;
 
-	// Data card?
-	if(dcf <= 60000) {
+	// Not Data card?
+	if (dcf > 60000)
+		goto out;
 	
 		PrintAndLog("\nADF: User Area");
 		PrintAndLog("------------------------------------------------------");
@@ -398,7 +414,8 @@ int CmdLegicInfo(const char *Cmd) {
 				PrintAndLog("-----+------------------------------------------------\n");
 
 				// end with last segment
-				if (segment_flag & 0x8) return 0;
+			if (segment_flag & 0x8) 
+				goto out;
 
 			} // end for loop
 		
@@ -449,7 +466,9 @@ int CmdLegicInfo(const char *Cmd) {
 		
 			PrintAndLog("-----+------------------------------------------------\n");
 		}
-	}
+
+out:
+	free(data);
 	return 0;
 }
 
@@ -461,65 +480,28 @@ int CmdLegicRdmem(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	if ( cmdp == 'H' || cmdp == 'h' ) return usage_legic_rdmem();
 	
-	uint32_t offset = 0, len = 0, IV = 1;
-	sscanf(Cmd, "%x %x %x", &offset, &len, &IV);
-
-	// tagtype
-	legic_card_select_t card;
-	if (legic_get_type(&card)) {
-		PrintAndLog("Failed to identify tagtype");
-		return 1;
-	}
-
-	legic_print_type(card.cardsize, 0);
-
-	// OUT-OF-BOUNDS check
-	// UID 4 bytes can't be written to.
-	if ( len + offset >= card.cardsize ) {
-		len = card.cardsize - offset;
-		PrintAndLog("Out-of-bounds, Cardsize = %d, Trunc offset+len = %d", card.cardsize, len + offset);
-	}
+	uint32_t offset = 0, len = 0, iv = 1;
+	uint16_t datalen = 0;
+	sscanf(Cmd, "%x %x %x", &offset, &len, &iv);
 	
-	legic_chk_iv(&IV);
+	PrintAndLog("Reading %d bytes, from offset %d", len, offset);
 	
-	UsbCommand c = {CMD_READER_LEGIC_RF, {offset, len, IV}};
-	clearCommandBuffer();
-	SendCommand(&c);
-	UsbCommand resp;
-	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 3000) ) {
-		PrintAndLog("command execution time out");
-		return 1;
-	}
-
-	uint8_t isOK = resp.arg[0] & 0xFF;
-	uint16_t readlen = resp.arg[1];
-	if ( !isOK ) {
-		PrintAndLog("failed reading tag");
-		return 2;
-	}
-	
-	uint8_t *data = malloc(readlen);
+	// allocate receiver buffer
+	uint8_t *data = malloc(len);
 	if ( !data ){
 		PrintAndLog("Cannot allocate memory");
 		return 2;
 	}
-			
-	if ( readlen != len )
-		PrintAndLog("Fail, only managed to read 0x%02X bytes", readlen);
-			
-	// copy data from device
-	GetEMLFromBigBuf(data, readlen, 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500)){
-		PrintAndLog("Command execute timeout");
-		free(data);
-		return 1;
-	}
+	memset(data, 0, len);
 	
+	int status = legic_read_mem(offset, len, iv, data, &datalen);
+	if ( status == 0 ) {
 	PrintAndLog("\n ##  |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F");
 	PrintAndLog("-----+------------------------------------------------------------------------------------------------");
-	print_hex_break( data, readlen, 32);
+		print_hex_break(data, datalen, 32);
+	}
 	free(data);
-	return 0;
+	return status;
 }
 
 // should say which tagtype
@@ -752,6 +734,37 @@ int CmdLegicCalcCrc(const char *Cmd){
 	return 0;
 } 
 
+int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uint16_t *outlen) {
+	
+	legic_chk_iv(&iv);
+	
+	UsbCommand c = {CMD_READER_LEGIC_RF, {offset, len, iv}};
+	clearCommandBuffer();
+	SendCommand(&c);
+	UsbCommand resp;
+	if ( !WaitForResponseTimeout(CMD_ACK, &resp, 3000) ) {
+		PrintAndLog("command execution time out");
+		return 1;
+	}
+
+	uint8_t isOK = resp.arg[0] & 0xFF;
+	*outlen = resp.arg[1];
+	if ( !isOK ) {
+		PrintAndLog("failed reading tag");
+		return 2;
+	}
+	
+	if ( *outlen != len )
+		PrintAndLog("Fail, only managed to read %u bytes", *outlen);
+	
+	// copy data from device
+	if ( !GetEMLFromBigBuf(out, *outlen, 0) ) {
+		PrintAndLog("Fail, transfer from device time-out");
+		return 4;
+	}
+	return 0;
+}
+
 int legic_print_type(uint32_t tagtype, uint8_t spaces){
 	char spc[11] = "          ";
 	spc[10]=0x00;
@@ -798,8 +811,9 @@ void legic_chk_iv(uint32_t *iv){
 }
 void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 	size_t len = 0;
+
 	UsbCommand c = {CMD_LEGIC_ESET, {0, 0, 0}};	
-	for(size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
+	for(size_t i = offset; i < numofbytes; i += USB_CMD_DATA_SIZE) {
 		
 		len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);		
 		c.arg[0] = i; // offset
@@ -810,6 +824,7 @@ void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 	}
 }
 
+
 int HFLegicReader(const char *Cmd, bool verbose) {
 
 	char cmdp = param_getchar(Cmd, 0);
@@ -818,9 +833,10 @@ int HFLegicReader(const char *Cmd, bool verbose) {
 	legic_card_select_t card;
 	switch(legic_get_type(&card)){
 		case 1: 
+			return 2;
+		case 2: 
 			if ( verbose ) PrintAndLog("command execution time out"); 
 			return 1;
-		case 2: 
 		case 3: 
 			if ( verbose ) PrintAndLog("legic card select failed");
 			return 2;
@@ -878,7 +894,7 @@ int CmdLegicDump(const char *Cmd){
 	dumplen = card.cardsize;
 	
 	legic_print_type(dumplen, 0);	
-	PrintAndLog("Reading tag memory...");
+	PrintAndLog("Reading tag memory %d b...", dumplen);
 
 	UsbCommand c = {CMD_READER_LEGIC_RF, {0x00, dumplen, 0x55}};
 	clearCommandBuffer();
@@ -907,8 +923,7 @@ int CmdLegicDump(const char *Cmd){
 		PrintAndLog("Fail, only managed to read 0x%02X bytes of 0x%02X", readlen, dumplen);
 
 	// copy data from device
-	GetEMLFromBigBuf(data, readlen, 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
+	if (!GetEMLFromBigBuf(data, readlen, 0) ) {
 		PrintAndLog("Fail, transfer from device time-out");
 		free(data);
 		return 4;
@@ -1154,8 +1169,7 @@ int CmdLegicESave(const char *Cmd) {
 		
 	// download emulator memory
 	PrintAndLog("Reading emulator memory...");	
-	GetEMLFromBigBuf(data, numofbytes, 0);
-	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
+	if (!GetEMLFromBigBuf(data, numofbytes, 0)) {
 		PrintAndLog("Fail, transfer from device time-out");
 		free(data);
 		return 4;

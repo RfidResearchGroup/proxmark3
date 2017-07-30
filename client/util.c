@@ -30,16 +30,16 @@
 #include <unistd.h>
 
 int ukbhit(void) {
-  int cnt = 0;
-  int error;
-  static struct termios Otty, Ntty;
+	int cnt = 0;
+	int error;
+	static struct termios Otty, Ntty;
 
-  if ( tcgetattr(STDIN_FILENO, &Otty) == -1) return -1;
+	if ( tcgetattr(STDIN_FILENO, &Otty) == -1) return -1;
 
-  Ntty = Otty;
+	Ntty = Otty;
 
-  Ntty.c_iflag          = 0x0000;   // input mode
-  Ntty.c_oflag          = 0x0000;   // output mode
+	Ntty.c_iflag          = 0x0000;   // input mode
+	Ntty.c_oflag          = 0x0000;   // output mode
 	Ntty.c_lflag		&= ~ICANON;	// control mode = raw
 	Ntty.c_cc[VMIN]		= 1;		// return if at least 1 character is in the queue
 	Ntty.c_cc[VTIME]	= 0;		// no timeout. Wait forever
@@ -47,9 +47,8 @@ int ukbhit(void) {
 	if (0 == (error = tcsetattr(STDIN_FILENO, TCSANOW, &Ntty))) {	// set new attributes
 		error += ioctl(STDIN_FILENO, FIONREAD, &cnt);				// get number of characters available
 		error += tcsetattr(STDIN_FILENO, TCSANOW, &Otty);			// reset attributes
-  }
-
-  return ( error == 0 ? cnt : -1 );
+	}
+	return ( error == 0 ? cnt : -1 );
 }
 
 #else

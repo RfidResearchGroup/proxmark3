@@ -6,8 +6,7 @@
 //-----------------------------------------------------------------------------
 // Low frequency Presco tag commands
 //-----------------------------------------------------------------------------
-#include <string.h>
-#include <inttypes.h>
+
 #include "cmdlfpresco.h"
 static int CmdHelp(const char *Cmd);
 
@@ -37,6 +36,18 @@ int usage_lf_presco_sim(void) {
 	return 0;
 }
 
+// find presco preamble 0x10D in already demoded data
+int detectPresco(uint8_t *dest, size_t *size) {
+	if (*size < 128*2) return -1; //make sure buffer has data
+	size_t startIdx = 0;
+	uint8_t preamble[] = {0,0,0,1,0,0,0,0,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0};
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+		return -2; //preamble not found
+	if (*size != 128) return -3; //wrong demoded size
+	//return start position
+	return (int)startIdx;
+}
+
 // convert base 12 ID to sitecode & usercode & 8 bit other unknown code
 int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5) {
 	
@@ -57,12 +68,12 @@ int GetWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
 				*fullcode = param_get32ex(Cmd, cmdp+1, 0, 16);
 				cmdp+=2;
 				break;
-			case 'P':
-			case 'p':
+			case 'D':
+			case 'd':
 				//param get string int param_getstr(const char *line, int paramnum, char * str)
 				stringlen = param_getstr(Cmd, cmdp+1, id);
 				if (stringlen < 2) return -1;
-				cmdp+=2;
+				cmdp += 2;
 				break;
 			case 'Q':
 			case 'q':
@@ -117,8 +128,7 @@ int CmdPrescoDemod(const char *Cmd) {
 		return 0;
 	}
 	size_t size = DemodBufferLen;
-	//call lfdemod.c demod for Presco
-	int ans = PrescoDemod(DemodBuffer, &size);
+	int ans = detectPresco(DemodBuffer, &size);
 	if (ans < 0) {
 		if (g_debugMode){
 			if (ans == -1)
@@ -133,7 +143,7 @@ int CmdPrescoDemod(const char *Cmd) {
 		return 0;
 	}
 	setDemodBuf(DemodBuffer, 128, ans);
-	setGrid_Clock(32);
+	setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
 	
 	//got a good demod
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
@@ -155,12 +165,7 @@ int CmdPrescoDemod(const char *Cmd) {
 //see ASKDemod for what args are accepted
 int CmdPrescoRead(const char *Cmd) {
 	//	Presco Number: 123456789 --> Sitecode 30 | usercode 8665
-
-	// read lf silently
-	CmdLFRead("s");
-	// get samples silently
-	getSamples("12000", true);
-	// demod and output Presco ID	
+	lf_read(true, 12000);
 	return CmdPrescoDemod(Cmd);
 }
 

@@ -1,11 +1,11 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// Authored by Iceman
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency AWID commands
+// Low frequency COTAG commands
 //-----------------------------------------------------------------------------
 
 #ifndef CMDLFCOTAG_H__
@@ -23,9 +23,9 @@
 #define COTAG_BITS 264
 #endif
 
-int CmdLFCOTAG(const char *Cmd);
-int CmdCOTAGRead(const char *Cmd);
-int CmdCOTAGDemod(const char *Cmd);
+extern int CmdLFCOTAG(const char *Cmd);
+extern int CmdCOTAGRead(const char *Cmd);
+extern int CmdCOTAGDemod(const char *Cmd);
 
-int usage_lf_cotag_read(void);
+extern int usage_lf_cotag_read(void);
 #endif

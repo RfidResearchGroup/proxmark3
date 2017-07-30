@@ -87,9 +87,9 @@ static uint32_t bucket_count = 0;
 static statelist_t* buckets[128];
 static uint32_t keys_found = 0;
 static uint64_t num_keys_tested;
+static uint64_t found_bs_key = 0;
 
-
-uint8_t trailing_zeros(uint8_t byte) 
+inline uint8_t trailing_zeros(uint8_t byte) 
 {
 	static const uint8_t trailing_zeros_LUT[256] = {
 		8, 0, 1, 0, 2, 0, 1, 0,	3, 0, 1, 0, 2, 0, 1, 0,
@@ -163,10 +163,12 @@ static void* crack_states_thread(void* x){
 #endif			
             const uint64_t key = crack_states_bitsliced(thread_arg->cuid, thread_arg->best_first_bytes, bucket, &keys_found, &num_keys_tested, nonces_to_bruteforce, bf_test_nonce_2nd_byte, thread_arg->nonces);
             if(key != -1){
-                __sync_fetch_and_add(&keys_found, 1);
+                __atomic_fetch_add(&keys_found, 1, __ATOMIC_SEQ_CST);
+				__atomic_fetch_add(&found_bs_key, key, __ATOMIC_SEQ_CST);
+
 				char progress_text[80];
 				sprintf(progress_text, "Brute force phase completed. Key found: %012" PRIx64, key);
-				hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, 0.0, 0);
+				hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, 0.0, 0);				
                 break;
             } else if(keys_found){
                 break;
@@ -282,21 +284,17 @@ static void write_benchfile(statelist_t *candidates) {
 #endif
 
 
-bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint32_t num_acquired_nonces, uint64_t maximum_states, noncelist_t *nonces, uint8_t *best_first_bytes)
+bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint32_t num_acquired_nonces, uint64_t maximum_states, noncelist_t *nonces, uint8_t *best_first_bytes, uint64_t *foundkey)
 {
 #if defined (WRITE_BENCH_FILE)
 	write_benchfile(candidates);
 #endif
 	bool silent = (bf_rate != NULL);
 	
-	// if (!silent) {
-		// PrintAndLog("Brute force phase starting.");
-		// PrintAndLog("Using %u-bit bitslices", MAX_BITSLICES);
-	// }
-	
 	keys_found = 0;
 	num_keys_tested = 0;
-
+	found_bs_key = 0;
+	
 	bitslice_test_nonces(nonces_to_bruteforce, bf_test_nonce, bf_test_nonce_par);
 	
 	// count number of states to go
@@ -309,14 +307,6 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
 	}
 
 	uint64_t start_time = msclock();
-	// enumerate states using all hardware threads, each thread handles one bucket
-	// if (!silent) {
-		// PrintAndLog("Starting %u cracking threads to search %u buckets containing a total of %" PRIu64" states...\n", NUM_BRUTE_FORCE_THREADS, bucket_count, maximum_states);
-		// printf("Common bits of first 4 2nd nonce bytes: %u %u %u\n",
-			// trailing_zeros(bf_test_nonce_2nd_byte[1] ^ bf_test_nonce_2nd_byte[0]),
-			// trailing_zeros(bf_test_nonce_2nd_byte[2] ^ bf_test_nonce_2nd_byte[1]),
-			// trailing_zeros(bf_test_nonce_2nd_byte[3] ^ bf_test_nonce_2nd_byte[2]));
-	// }
 
 	pthread_t threads[NUM_BRUTE_FORCE_THREADS];
 	struct args {
@@ -345,18 +335,11 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
 
 	uint64_t elapsed_time = msclock() - start_time;
 
-	// if (!silent) {
-		// printf("Brute force completed after testing %" PRIu64" (2^%1.1f) keys in %1.1f seconds at a rate of %1.0f (2^%1.1f) keys per second.\n", 
-			// num_keys_tested,
-			// log(num_keys_tested) / log(2.0),
-			// (float)elapsed_time/1000.0,
-			// (float)num_keys_tested / ((float)elapsed_time / 1000.0), 
-			// log((float)num_keys_tested / ((float)elapsed_time/1000.0)) / log(2.0));
-	// }
-
-	if (bf_rate != NULL) {
+	if (bf_rate != NULL)
 		*bf_rate = (float)num_keys_tested / ((float)elapsed_time / 1000.0);
-	}
+	
+	if ( keys_found > 0)
+		*foundkey = found_bs_key;
 	
 	return (keys_found != 0);
 }
@@ -433,8 +416,7 @@ static bool read_bench_data(statelist_t *test_candidates) {
 }
 
 
-float brute_force_benchmark()
-{
+float brute_force_benchmark() {
 	statelist_t test_candidates[NUM_BRUTE_FORCE_THREADS];
 
 	test_candidates[0].states[ODD_STATE] = malloc((TEST_BENCH_SIZE+1) * sizeof(uint32_t));
@@ -461,7 +443,8 @@ float brute_force_benchmark()
 	uint64_t maximum_states = TEST_BENCH_SIZE*TEST_BENCH_SIZE*(uint64_t)NUM_BRUTE_FORCE_THREADS;
 
 	float bf_rate;
-	brute_force_bs(&bf_rate, test_candidates, 0, 0, maximum_states, NULL, 0);
+	uint64_t found_key = 0;
+	brute_force_bs(&bf_rate, test_candidates, 0, 0, maximum_states, NULL, 0, &found_key);
 	
 	free(test_candidates[0].states[ODD_STATE]);
 	free(test_candidates[0].states[EVEN_STATE]);

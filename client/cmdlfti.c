@@ -295,7 +295,7 @@ int CmdTIWrite(const char *Cmd)
 
 static command_t CommandTable[] = {
   {"help",      CmdHelp,        1, "This help"},
-  {"demod",     CmdTIDemod,     1, "Demodulate raw bits for TI-type LF tag"},
+  {"demod",     CmdTIDemod,     1, "Demodulate raw bits for TI-type LF tag from the GraphBuffer"},
   {"read",      CmdTIRead,      0, "Read and decode a TI 134 kHz tag"},
   {"write",     CmdTIWrite,     0, "Write new data to a r/w TI 134 kHz tag"},
   {NULL, NULL, 0, NULL}

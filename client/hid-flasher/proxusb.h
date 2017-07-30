@@ -13,8 +13,16 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <usb.h>
+#include <strings.h>
+#include <errno.h>
+#include "proxmark3.h"
 #include "usb_cmd.h"
+#include "util_posix.h"
 
 extern unsigned char return_on_error;
 extern unsigned char error_occured;

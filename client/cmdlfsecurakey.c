@@ -8,26 +8,12 @@
 // ASK/Manchester, RF/40, 96 bits long (unknown cs)
 //-----------------------------------------------------------------------------
 #include "cmdlfsecurakey.h"
-#include <string.h>
-#include <inttypes.h>
-#include <math.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdmain.h"
-#include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // preamble test
-#include "parity.h"     // for wiegand parity test
 
 static int CmdHelp(const char *Cmd);
 
 // by marshmellow
 // find Securakey preamble in already demoded data
-int SecurakeyFind(uint8_t *dest, size_t *size) {
+int detectSecurakey(uint8_t *dest, size_t *size) {
 	if (*size < 96) return -1; //make sure buffer has data
 	size_t startIdx = 0;
 	uint8_t preamble[] = {0,1,1,1,1,1,1,1,1,1,0,0,1};
@@ -49,7 +35,7 @@ int CmdSecurakeyDemod(const char *Cmd) {
 	}
 	if (st) return 0;
 	size_t size = DemodBufferLen;
-	int ans = SecurakeyFind(DemodBuffer, &size);
+	int ans = detectSecurakey(DemodBuffer, &size);
 	if (ans < 0) {
 		if (g_debugMode) {
 			if (ans == -1)
@@ -64,7 +50,7 @@ int CmdSecurakeyDemod(const char *Cmd) {
 		return 0;
 	}
 	setDemodBuf(DemodBuffer, 96, ans);
-	//setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
+	setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
 
 	//got a good demod
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer   , 32);
@@ -123,15 +109,13 @@ int CmdSecurakeyDemod(const char *Cmd) {
 }
 
 int CmdSecurakeyRead(const char *Cmd) {
-	//lf_read(true, 8000);
-	CmdLFRead("s");
-	getSamples("8000",true);
+	lf_read(true, 8000);
 	return CmdSecurakeyDemod(Cmd);
 }
 
 static command_t CommandTable[] = {
 	{"help",  CmdHelp,          1, "This help"},
-	{"demod", CmdSecurakeyDemod,1, "Attempt to read and extract tag data from the GraphBuffer"},
+	{"demod", CmdSecurakeyDemod,1, "Demodulate an Securakey tag from the GraphBuffer"},
 	{"read",  CmdSecurakeyRead, 0, "Attempt to read and extract tag data from the antenna"},
     {NULL, NULL, 0, NULL}
 };

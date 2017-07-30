@@ -109,7 +109,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key)
 
 		//flush queue
 		while (ukbhit()) {
-			int gc = getchar(); (void) gc;
+			int gc = getchar(); (void)gc;
 		}
 
 		// wait cycle
@@ -117,7 +117,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key)
 			printf(".");
 			fflush(stdout);
 			if (ukbhit()) {
-				int gc = getchar(); (void) gc;
+				int gc = getchar(); (void)gc;
 				return -5;
 				break;
 			}

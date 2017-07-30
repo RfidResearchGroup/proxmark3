@@ -1,6 +1,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2015, 2016 by piwi
-//
+// fiddled with 2016 Azcid (hardnested bitsliced Bruteforce imp)
+// fiddled with 2016 Matrix ( sub testing of nonces while collecting )
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -507,12 +508,7 @@ static void init_sum_bitarrays(void)
 			bitarray_OR(sum_a0_bitarrays[ODD_STATE][sum_a0_idx], part_sum_a0_bitarrays[ODD_STATE][p]);
 		}
 	}
-	// for (uint16_t sum_a0 = 0; sum_a0 < NUM_SUMS; sum_a0++) {
-		// for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
-			// uint32_t count = count_states(sum_a0_bitarrays[odd_even][sum_a0]);
-			// printf("sum_a0_bitarray[%s][%d] has %d states (%5.2f%%)\n", odd_even==EVEN_STATE?"even":"odd ", sums[sum_a0], count, (float)count/(1<<24)*100.0);
-		// }
-	// }
+
 }
 
 
@@ -658,19 +654,7 @@ static void free_nonces_memory(void)
 }
 
 
-// static double p_hypergeometric_cache[257][NUM_SUMS][257];
 
-// #define CACHE_INVALID -1.0
-// static void init_p_hypergeometric_cache(void)
-// {
-	// for (uint16_t n = 0; n <= 256; n++) {
-		// for (uint16_t i_K = 0; i_K < NUM_SUMS; i_K++) {
-			// for (uint16_t k = 0; k <= 256; k++) {
-				// p_hypergeometric_cache[n][i_K][k] = CACHE_INVALID;
-			// }
-		// }
-	// }
-// }
 
 
 static double p_hypergeometric(uint16_t i_K, uint16_t n, uint16_t k) 
@@ -688,9 +672,7 @@ static double p_hypergeometric(uint16_t i_K, uint16_t n, uint16_t k)
 	uint16_t const N = 256;
 	uint16_t K = sums[i_K];
 
-	// if (p_hypergeometric_cache[n][i_K][k] != CACHE_INVALID) {
-		// return p_hypergeometric_cache[n][i_K][k];
-	// }
+
 	
 	if (n-k > N-K || k > K) return 0.0;	// avoids log(x<=0) in calculation below
 	if (k == 0) {
@@ -702,7 +684,6 @@ static double p_hypergeometric(uint16_t i_K, uint16_t n, uint16_t k)
 		for (int16_t i = N; i >= N-n+1; i--) {
 			log_result -= log(i);
 		}
-		// p_hypergeometric_cache[n][i_K][k] = exp(log_result);
 		return exp(log_result);
 	} else {
 		if (n-k == N-K) {	// special case. The published recursion below would fail with a divide by zero exception
@@ -713,7 +694,6 @@ static double p_hypergeometric(uint16_t i_K, uint16_t n, uint16_t k)
 			for (int16_t i = K+1; i <= N; i++) {
 				log_result -= log(i);
 			}
-			// p_hypergeometric_cache[n][i_K][k] = exp(log_result);
 			return exp(log_result);
 		} else { 			// recursion
 			return (p_hypergeometric(i_K, n, k-1) * (K-k+1) * (n-k+1) / (k * (N-K-n+k)));
@@ -1459,7 +1439,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 	bool reported_suma8 = false;
 	FILE *fnonces = NULL;
 	UsbCommand resp;
-
+	uint8_t timeout = 0;
 	num_acquired_nonces = 0;
 	
 	clearCommandBuffer();
@@ -1472,17 +1452,28 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 		UsbCommand c = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags}};
 		memcpy(c.d.asBytes, key, 6);
 
+		clearCommandBuffer();
 		SendCommand(&c);
 		
 		if (field_off) break;
 		
 		if (initialize) {
-			if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) return 1;
+			while(!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+				timeout++;
+				printf(".");
+				if (timeout > 3) {
+					PrintAndLog("\nNo response from Proxmark. Aborting...");
+					if (fnonces) fclose(fnonces);
+					return 1;
+				}
+			}
 
-			if (resp.arg[0]) return resp.arg[0];  // error during nested_hard
+			if (resp.arg[0]) {
+				if (fnonces) fclose(fnonces);
+				return resp.arg[0];  // error during nested_hard
+			}
 
 			cuid = resp.arg[1];
-			// PrintAndLog("Acquiring nonces for CUID 0x%08x", cuid); 
 			if (nonce_file_write && fnonces == NULL) {
 				if ((fnonces = fopen("nonces.bin","wb")) == NULL) { 
 					PrintAndLog("Could not create file nonces.bin");
@@ -1493,7 +1484,9 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 				fwrite(write_buf, 1, 4, fnonces);
 				fwrite(&trgBlockNo, 1, 1, fnonces);
 				fwrite(&trgKeyType, 1, 1, fnonces);
+				fflush(fnonces);
 			}
+			initialize = false;			
 		}
 
 		if (!initialize) {
@@ -1513,6 +1506,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 
 				if (nonce_file_write) {
 					fwrite(bufp, 1, 9, fnonces);
+				fflush(fnonces);
 				}
 				bufp += 9;
 			}
@@ -2171,12 +2165,12 @@ static void pre_XOR_nonces(void)
 }
 	
 
-static bool brute_force(void)
+static bool brute_force(uint64_t *found_key)
 {
 	if (known_target_key != -1) {
 		TestIfKeyExists(known_target_key);
 	}
-	return brute_force_bs(NULL, candidates, cuid, num_acquired_nonces, maximum_states, nonces, best_first_bytes);
+	return brute_force_bs(NULL, candidates, cuid, num_acquired_nonces, maximum_states, nonces, best_first_bytes, found_key);
 }
 
 
@@ -2253,7 +2247,7 @@ static void set_test_state(uint8_t byte)
 }
 
 
-int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *trgkey, bool nonce_file_read, bool nonce_file_write, bool slow, int tests) 
+int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *trgkey, bool nonce_file_read, bool nonce_file_write, bool slow, int tests, uint64_t *foundkey) 
 {
 	char progress_text[80];
 
@@ -2324,8 +2318,8 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 				best_first_bytes[0] = best_first_byte_smallest_bitarray;
 				pre_XOR_nonces();
 				prepare_bf_test_nonces(nonces, best_first_bytes[0]);
-				hardnested_print_progress(num_acquired_nonces, "Starting brute force...", expected_brute_force1, 0);
-				key_found = brute_force();
+				//hardnested_print_progress(num_acquired_nonces, "Starting brute force...", expected_brute_force1, 0);
+				key_found = brute_force(foundkey);
 				free(candidates->states[ODD_STATE]);
 				free(candidates->states[EVEN_STATE]);
 				free_candidates_memory(candidates);
@@ -2344,8 +2338,8 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 					// printf("Estimated remaining states: %" PRIu64 " (2^%1.1f)\n", nonces[best_first_bytes[0]].sum_a8_guess[j].num_states, log(nonces[best_first_bytes[0]].sum_a8_guess[j].num_states)/log(2.0));
 					generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].sum_a8_guess[j].sum_a8_idx);
 					// printf("Time for generating key candidates list: %1.0f sec (%1.1f sec CPU)\n", difftime(time(NULL), start_time), (float)(msclock() - start_clock)/1000.0);
-					hardnested_print_progress(num_acquired_nonces, "Starting brute force...", expected_brute_force, 0);
-					key_found = brute_force();
+					//hardnested_print_progress(num_acquired_nonces, "Starting brute force...", expected_brute_force, 0);
+					key_found = brute_force(foundkey);
 					free_statelist_cache();
 					free_candidates_memory(candidates);
 					candidates = NULL;
@@ -2439,8 +2433,8 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 			best_first_bytes[0] = best_first_byte_smallest_bitarray;
 			pre_XOR_nonces();
 			prepare_bf_test_nonces(nonces, best_first_bytes[0]);
-			hardnested_print_progress(num_acquired_nonces, "Starting brute force...", expected_brute_force1, 0);
-			key_found = brute_force();
+			//hardnested_print_progress(num_acquired_nonces, "Starting brute force...", expected_brute_force1, 0);
+			key_found = brute_force(foundkey);
 			free(candidates->states[ODD_STATE]);
 			free(candidates->states[EVEN_STATE]);
 			free_candidates_memory(candidates);
@@ -2459,8 +2453,8 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 				// printf("Estimated remaining states: %" PRIu64 " (2^%1.1f)\n", nonces[best_first_bytes[0]].sum_a8_guess[j].num_states, log(nonces[best_first_bytes[0]].sum_a8_guess[j].num_states)/log(2.0));
 				generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].sum_a8_guess[j].sum_a8_idx);
 				// printf("Time for generating key candidates list: %1.0f sec (%1.1f sec CPU)\n", difftime(time(NULL), start_time), (float)(msclock() - start_clock)/1000.0);
-				hardnested_print_progress(num_acquired_nonces, "Starting brute force...", expected_brute_force, 0);
-				key_found = brute_force();
+				//hardnested_print_progress(num_acquired_nonces, "Starting brute force...", expected_brute_force, 0);
+				key_found = brute_force(foundkey);
 				free_statelist_cache();
 				free_candidates_memory(candidates);
 				candidates = NULL;

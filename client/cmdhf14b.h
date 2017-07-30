@@ -54,5 +54,5 @@ int CmdHF14BCmdRaw (const char *Cmd);
 int CmdHF14BReadSri(const char *Cmd);
 int CmdHF14BWriteSri(const char *Cmd);
 
-bool waitCmd(bool verbose);
+bool waitCmd14b(bool verbose);
 #endif

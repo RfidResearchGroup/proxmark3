@@ -4,10 +4,11 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency Farpoint / Pyramid tag commands
+// Low frequency Farpoint G Prox II / Pyramid tag commands
+// Biphase, rf/ , 96 bits  (unknown key calc + some bits)
 //-----------------------------------------------------------------------------
-
 #include "cmdlfguard.h"
+
 static int CmdHelp(const char *Cmd);
 
 int usage_lf_guard_clone(void){
@@ -136,10 +137,103 @@ int GetGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 	return 1;
 }
 
+// by marshmellow
+// demod gProxIIDemod 
+// error returns as -x 
+// success returns start position in BitStream
+// BitStream must contain previously askrawdemod and biphasedemoded data
+int detectGProxII(uint8_t BitStream[], size_t *size) {
+	size_t startIdx=0;
+	uint8_t preamble[] = {1,1,1,1,1,0};
+
+	if (!preambleSearch(BitStream, preamble, sizeof(preamble), size, &startIdx)) 
+		return -3; //preamble not found
+
+	if (*size != 96) return -2; //should have found 96 bits
+	
+	//check first 6 spacer bits to verify format
+	if (!BitStream[startIdx+5] && !BitStream[startIdx+10] && !BitStream[startIdx+15] && !BitStream[startIdx+20] && !BitStream[startIdx+25] && !BitStream[startIdx+30]){
+		//confirmed proper separator bits found
+		//return start position
+		return (int) startIdx;
+	}
+	return -5; //spacer bits not found - not a valid gproxII
+}
+
+//by marshmellow
+//attempts to demodulate and identify a G_Prox_II verex/chubb card
+//WARNING: if it fails during some points it will destroy the DemodBuffer data
+// but will leave the GraphBuffer intact.
+//if successful it will push askraw data back to demod buffer ready for emulation
+int CmdGuardDemod(const char *Cmd) {
+	if (!ASKbiphaseDemod(Cmd, false)){
+		if (g_debugMode) PrintAndLog("DEBUG: Error - gProxII ASKbiphaseDemod failed 1st try");
+		return 0;
+	}
+	size_t size = DemodBufferLen;
+	//call lfdemod.c demod for gProxII
+	int ans = detectGProxII(DemodBuffer, &size);
+	if (ans < 0){
+		if (g_debugMode) PrintAndLog("DEBUG: Error - gProxII demod");
+		return 0;
+	}
+	//got a good demod of 96 bits
+	uint8_t ByteStream[8] = {0x00};
+	uint8_t xorKey = 0;
+	size_t startIdx = ans + 6; //start after 6 bit preamble
+
+	uint8_t bits_no_spacer[90];
+	//so as to not mess with raw DemodBuffer copy to a new sample array
+	memcpy(bits_no_spacer, DemodBuffer + startIdx, 90);
+	// remove the 18 (90/5=18) parity bits (down to 72 bits (96-6-18=72))
+	size_t bitLen = removeParity(bits_no_spacer, 0, 5, 3, 90); //source, startloc, paritylen, ptype, length_to_run
+	if (bitLen != 72) {
+		if (g_debugMode) 
+			PrintAndLog("DEBUG: Error - gProxII spacer removal did not produce 72 bits: %u, start: %u", bitLen, startIdx);
+		return 0;
+	}
+	// get key and then get all 8 bytes of payload decoded
+	xorKey = (uint8_t)bytebits_to_byteLSBF(bits_no_spacer, 8);
+	for (size_t idx = 0; idx < 8; idx++) {
+		ByteStream[idx] = ((uint8_t)bytebits_to_byteLSBF(bits_no_spacer+8 + (idx*8),8)) ^ xorKey;
+		if (g_debugMode) PrintAndLog("DEBUG: gProxII byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
+	}
+	
+	//ByteStream contains 8 Bytes (64 bits) of decrypted raw tag data
+	uint8_t fmtLen = ByteStream[0]>>2;
+	uint32_t FC = 0;
+	uint32_t Card = 0;
+	//get raw 96 bits to print
+	uint32_t raw1 = bytebits_to_byte(DemodBuffer+ans,32);
+	uint32_t raw2 = bytebits_to_byte(DemodBuffer+ans+32, 32);
+	uint32_t raw3 = bytebits_to_byte(DemodBuffer+ans+64, 32);
+	bool unknown = false;
+	switch(fmtLen) {
+		case 36:
+			FC = ((ByteStream[3] & 0x7F)<<7) | (ByteStream[4]>>1);
+			Card = ((ByteStream[4]&1)<<19) | (ByteStream[5]<<11) | (ByteStream[6]<<3) | (ByteStream[7]>>5);
+			break;
+		case 26: 
+			FC = ((ByteStream[3] & 0x7F)<<1) | (ByteStream[4]>>7);
+			Card = ((ByteStream[4]&0x7F)<<9) | (ByteStream[5]<<1) | (ByteStream[6]>>7);
+			break;
+		default :
+			unknown = true;
+			break;
+	}
+	if ( !unknown)
+		PrintAndLog("G-Prox-II Found: Format Len: %ubit - FC: %u - Card: %u, Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
+	else
+		PrintAndLog("Unknown G-Prox-II Fmt Found: Format Len: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
+
+	setDemodBuf(DemodBuffer, 96, ans);
+	setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
+	return 1;
+}
+
 int CmdGuardRead(const char *Cmd) {
-	CmdLFRead("s");
-	getSamples("12000", true);
-	return CmdG_Prox_II_Demod("");
+	lf_read(true, 10000);
+	return CmdGuardDemod(Cmd);
 }
 
 int CmdGuardClone(const char *Cmd) {
@@ -240,9 +334,10 @@ int CmdGuardSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",	CmdHelp,		1, "This help"},
-	{"read",	CmdGuardRead,  0, "Attempt to read and extract tag data"},
-	{"clone",	CmdGuardClone, 0, "<Facility-Code> <Card Number>  clone Guardall tag"},
-	{"sim",		CmdGuardSim,   0, "<Facility-Code> <Card Number>  simulate Guardall tag"},
+	{"demod",	CmdGuardDemod,	1, "Demodulate a G Prox II tag from the GraphBuffer"},
+	{"read",	CmdGuardRead,	0, "Attempt to read and extract tag data from the antenna"},
+	{"clone",	CmdGuardClone,	0, "<Facility-Code> <Card Number>  clone Guardall tag"},
+	{"sim",		CmdGuardSim,	0, "<Facility-Code> <Card Number>  simulate Guardall tag"},
     {NULL, NULL, 0, NULL}
 };
 

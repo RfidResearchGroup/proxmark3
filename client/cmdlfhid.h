@@ -18,23 +18,26 @@
 #include "graph.h"
 #include "cmdparser.h"
 #include "util.h"		// wiegand_add_parity etc
-#include "cmdmain.h"
-#include "sleep.h"
+#include "cmddata.h"  //for g_debugMode, demodbuff cmds
+#include "cmdlf.h"	  // lf_read
+#include "cmdmain.h"			   
+#include "util_posix.h"
 #include "lfdemod.h"
 
-int CmdLFHID(const char *Cmd);
-//int CmdHIDDemod(const char *Cmd);
-int CmdHIDDemodFSK(const char *Cmd);
-int CmdHIDSim(const char *Cmd);
-int CmdHIDClone(const char *Cmd);
-int CmdHIDWiegand(const char *Cmd);
-int CmdHIDBrute(const char *Cmd);
+extern int CmdLFHID(const char *Cmd);
+extern int CmdHIDDemod(const char *Cmd);
+extern int CmdHIDRead(const char *Cmd);
+extern int CmdHIDSim(const char *Cmd);
+extern int CmdHIDClone(const char *Cmd);
+extern int CmdHIDWiegand(const char *Cmd);
+extern int CmdHIDBrute(const char *Cmd);
 
-int usage_lf_hid_wiegand(void);
-int usage_lf_hid_sim(void);
-int usage_lf_hid_clone(void);
-int usage_lf_hid_brute(void);
+extern int usage_lf_hid_read(void);
+extern int usage_lf_hid_wiegand(void);
+extern int usage_lf_hid_sim(void);
+extern int usage_lf_hid_clone(void);
+extern int usage_lf_hid_brute(void);
 
 //void calc26(uint16_t fc, uint32_t cardno, uint8_t *out);
-void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits);
+extern void calcWiegand(uint8_t fmtlen, uint16_t fc, uint64_t cardno, uint8_t *bits);
 #endif

@@ -3,9 +3,10 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// parity functions
+// parity functions (all defined in parity.h)
 //-----------------------------------------------------------------------------
 #include <parity.h>
+#include <stdint.h>
 
 const uint8_t OddByteParity[256] = {
   1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,

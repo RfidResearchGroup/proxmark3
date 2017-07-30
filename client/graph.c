@@ -147,13 +147,18 @@ int GetAskClock(const char str[], bool printAns, bool verbose)
 			PrintAndLog("Failed to copy from graphbuffer");
 		return -1;
 	}
-	bool st = DetectST(grph, &size, &clock);
-	int start = 0;
-	if (st == false)
+	//, size_t *ststart, size_t *stend
+	size_t ststart = 0, stend = 0;
+	bool st = DetectST(grph, &size, &clock, &ststart, &stend);
+	int start = stend;
+	if (st == false) {
 		start = DetectASKClock(grph, size, &clock, 20);
-
-	if (printAns)
+	}
+	setClockGrid(clock, start);
+	// Only print this message if we're not looping something
+	if (printAns || g_debugMode) {
 		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
+	}
 	return clock;
 }
 
@@ -167,11 +172,13 @@ uint8_t GetPskCarrier(const char str[], bool printAns, bool verbose)
 			PrintAndLog("Failed to copy from graphbuffer");
 		return 0;
 	}
-	carrier = countFC(grph, size, 0);
+	uint16_t fc = countFC(grph, size, 0);
+	carrier = fc & 0xFF;
+	if (carrier != 2 && carrier != 4 && carrier != 8) return 0;
+	if (( fc >> 8) == 10 && carrier == 8) return 0;
 	// Only print this message if we're not looping something
 	if (printAns)
 		PrintAndLog("Auto-detected PSK carrier rate: %d", carrier);
-
 	return carrier;
 }
 
@@ -190,12 +197,14 @@ int GetPskClock(const char str[], bool printAns, bool verbose)
 		if (verbose) PrintAndLog("Failed to copy from graphbuffer");
 		return -1;
 	}
-	int start = 0;
-	clock = DetectPSKClock_ext(grph, size, 0,  &start);
-
-	if (printAns)
-		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
-	
+	size_t firstPhaseShiftLoc = 0;
+	uint8_t curPhase = 0, fc = 0;
+	clock = DetectPSKClock(grph, size, 0, &firstPhaseShiftLoc, &curPhase, &fc);
+	setClockGrid(clock, firstPhaseShiftLoc);
+	// Only print this message if we're not looping something
+	if (printAns){
+		PrintAndLog("Auto-detected clock rate: %d", clock);
+	}
 	return clock;
 }
 
@@ -216,12 +225,13 @@ uint8_t GetNrzClock(const char str[], bool printAns, bool verbose)
 			PrintAndLog("Failed to copy from graphbuffer");
 		return -1;
 	}
-	int start = 0;	
-	clock = DetectNRZClock_ext(grph, size, 0, &start);
+	size_t clkStartIdx = 0;
+	clock = DetectNRZClock(grph, size, 0, &clkStartIdx);
+	setClockGrid(clock, clkStartIdx);
 	// Only print this message if we're not looping something
-	if (printAns)
-		PrintAndLog("Auto-detected clock rate: %d, Best Starting Position: %d", clock, start);
-
+	if (printAns){
+		PrintAndLog("Auto-detected clock rate: %d", clock);
+	}
 	return clock;
 }
 //by marshmellow
@@ -236,10 +246,12 @@ uint8_t GetFskClock(const char str[], bool printAns, bool verbose)
 
 
 	uint8_t fc1=0, fc2=0, rf1=0;
-	uint8_t ans = fskClocks(&fc1, &fc2, &rf1, verbose);
+	int firstClockEdge = 0;
+	uint8_t ans = fskClocks(&fc1, &fc2, &rf1, verbose, &firstClockEdge);
 	if (ans == 0) return 0;
 	if ((fc1==10 && fc2==8) || (fc1==8 && fc2==5)){
 		if (printAns) PrintAndLog("Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
+		setClockGrid(rf1, firstClockEdge);
 		return rf1;
 	}
 	if (verbose){
@@ -248,7 +260,7 @@ uint8_t GetFskClock(const char str[], bool printAns, bool verbose)
 	}
 	return 0;
 }
-uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose)
+uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose, int *firstClockEdge)
 {
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
 	size_t size = getFromGraphBuf(BitStream);
@@ -260,9 +272,8 @@ uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose)
 	}
 	*fc1 = (ans >> 8) & 0xFF;
 	*fc2 = ans & 0xFF;
-
-	int start = 0;	
-	*rf1 = detectFSKClk_ext(BitStream, size, *fc1, *fc2, &start);
+	//int firstClockEdge = 0;
+	*rf1 = detectFSKClk(BitStream, size, *fc1, *fc2, firstClockEdge);
 	if (*rf1 == 0) {
 		if (verbose || g_debugMode) PrintAndLog("DEBUG: Clock detect error");
 		return 0;
@@ -271,13 +282,13 @@ uint8_t fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, bool verbose)
 }
 
 // test samples are not just noise
-bool graphJustNoise(int *BitStream, int size)
+bool graphJustNoise(int *bits, int size)
 {
 	//might not be high enough for noisy environments
 	#define THRESHOLD 15; 
 	bool isNoise = true;
 	for(int i=0; i < size && isNoise; i++){
-		isNoise = BitStream[i] < THRESHOLD;
+		isNoise = bits[i] < THRESHOLD;
 	}
 	return isNoise;
 }

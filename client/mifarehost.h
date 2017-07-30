@@ -58,8 +58,16 @@ typedef struct {
 	
 typedef struct {
 	uint64_t Key[2];
-	int foundKey[2];
+	uint8_t foundKey[2];
 } sector_t;
+
+typedef struct {
+	uint8_t keyA[6];
+	uint8_t keyB[6];
+	//uint8_t foundKey[2];
+} icesector_t;
+
+ 
 
 extern char logHexFileName[FILE_PATH_SIZE];
 

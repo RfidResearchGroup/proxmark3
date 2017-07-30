@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
-//
+// 2016,2017, marshmellow, iceman
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -16,27 +16,43 @@
 
 static int CmdHelp(const char *Cmd);
 
+int usage_lf_hid_read(void){
+	PrintAndLog("Enables HID compatible reader mode printing details.");
+	PrintAndLog("By default, values are printed and logged until the button is pressed or another USB command is issued.");
+	PrintAndLog("If the [1] option is provided, reader mode is exited after reading a single HID card.");
+	PrintAndLog("");
+	PrintAndLog("Usage:  lf hid read [h] [1]");
+	PrintAndLog("Options:");
+	PrintAndLog("      h :  This help");	
+	PrintAndLog("      1 : (optional) stop after reading a single card");
+	PrintAndLog("");
+	PrintAndLog("Samples:");
+	PrintAndLog("       lf hid read");
+	PrintAndLog("       lf hid read 1");	
+	return 0;
+}
 int usage_lf_hid_wiegand(void){
 	PrintAndLog("This command converts facility code/card number to Wiegand code");
+	PrintAndLog("");
   	PrintAndLog("Usage: lf hid wiegand [h] [OEM] [FC] [CN]");
-
 	PrintAndLog("Options:");
 	PrintAndLog("       h             - This help");
 	PrintAndLog("       OEM           - OEM number / site code");
 	PrintAndLog("       FC            - facility code");
 	PrintAndLog("       CN            - card number");
-	PrintAndLog("Examples:");
+	PrintAndLog("Samples:");
 	PrintAndLog("      lf hid wiegand 0 101 2001");
 	return 0;
 }
 int usage_lf_hid_sim(void){
-	PrintAndLog("HID Tag simulator");
+	PrintAndLog("Enables simulation of HID card with card number.");
+	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf hid sim [h] [ID]");
 	PrintAndLog("Options:");
 	PrintAndLog("       h	- This help");
 	PrintAndLog("       ID  - HID id");
-	PrintAndLog("Examples:");
+	PrintAndLog("Samples:");
 	PrintAndLog("      lf hid sim 224");
 	return 0;
 }
@@ -48,7 +64,7 @@ int usage_lf_hid_clone(void){
 	PrintAndLog("       h	- This help");
 	PrintAndLog("       ID  - HID id");
 	PrintAndLog("       L   - 84bit ID");
-	PrintAndLog("Examples:");
+	PrintAndLog("Samples:");
 	PrintAndLog("      lf hid clone 224");
 	PrintAndLog("      lf hid clone 224 L");
 	return 0;
@@ -100,7 +116,105 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 	return true;
 }
 
-int CmdHIDDemodFSK(const char *Cmd) {
+//by marshmellow (based on existing demod + holiman's refactor)
+//HID Prox demod - FSK RF/50 with preamble of 00011101 (then manchester encoded)
+//print full HID Prox ID and some bit format details if found
+int CmdHIDDemod(const char *Cmd) {
+	//raw fsk demod no manchester decoding no start bit finding just get binary from wave
+	uint32_t hi2=0, hi=0, lo=0;
+
+	uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
+	size_t BitLen = getFromGraphBuf(BitStream);
+	if (BitLen==0) return 0;
+	//get binary from fsk wave
+	int waveIdx = 0;
+	int idx = HIDdemodFSK(BitStream,&BitLen,&hi2,&hi,&lo, &waveIdx);
+
+	if (idx < 0) {
+		if (g_debugMode){
+			if (idx==-1){
+				PrintAndLog("DEBUG: Error - HID just noise detected");
+			} else if (idx == -2) {
+				PrintAndLog("DEBUG: Error - HID problem during FSK demod");
+			} else if (idx == -3) {
+				PrintAndLog("DEBUG: Error - HID preamble not found");
+			} else if (idx == -4) {
+				PrintAndLog("DEBUG: Error - HID error in Manchester data, SIZE: %d", BitLen);
+			} else {
+				PrintAndLog("DEBUG: Error - HID error demoding fsk %d", idx);
+			}   
+		}
+		return 0;
+	}
+	
+	if (hi2==0 && hi==0 && lo==0) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - HID no values found");
+		return 0;
+	}
+	
+	if (hi2 != 0){ //extra large HID tags
+		PrintAndLog("HID Prox TAG ID: %x%08x%08x (%u)", hi2, hi, lo, (lo>>1) & 0xFFFF);
+	}
+	else {  //standard HID tags <38 bits
+		uint8_t fmtLen = 0;
+		uint32_t fc = 0;
+		uint32_t cardnum = 0;
+		if ((( hi >> 5) & 1) == 1){//if bit 38 is set then < 37 bit format is used
+			uint32_t lo2=0;
+			lo2=(((hi & 31) << 12) | (lo >> 20)); //get bits 21-37 to check for format len bit
+			uint8_t idx3 = 1;
+			while ( lo2 > 1){ //find last bit set to 1 (format len bit)
+				lo2 >>= 1;
+				idx3++;
+			}
+			fmtLen = idx3 + 19;
+			fc = 0;
+			cardnum = 0;
+			if(fmtLen==26){
+				cardnum = (lo >> 1) & 0xFFFF;
+				fc = ( lo >> 17) & 0xFF;
+			}
+			if(fmtLen==34){
+				cardnum = (lo >> 1) & 0xFFFF;
+				fc= ((hi & 1)<< 15) | (lo >> 17);
+			}
+			if(fmtLen==35){
+				cardnum = (lo >> 1) & 0xFFFFF;
+				fc = ((hi & 1) << 11 ) | (lo >> 21);
+			}
+		}
+		else { //if bit 38 is not set then 37 bit format is used
+			fmtLen = 37;
+			fc = 0;
+			cardnum = 0;
+			if(fmtLen == 37){
+				cardnum = (lo >> 1 ) & 0x7FFFF;
+				fc = ((hi & 0xF) << 12) | (lo >> 20);
+			}
+		}
+		PrintAndLog("HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - FC: %u - Card: %u", hi, lo, (lo>>1) & 0xFFFF, fmtLen, fc, cardnum);
+	}
+	setDemodBuf(BitStream,BitLen,idx);
+	setClockGrid(50, waveIdx + (idx*50));
+
+	if (g_debugMode){ 
+		PrintAndLog("DEBUG: HID idx: %d, Len: %d, Printing Demod Buffer:", idx, BitLen);
+		printDemodBuff();
+	}
+	return 1;
+}
+
+// this read is the "normal" read,  which download lf signal and tries to demod here.
+int CmdHIDRead(const char *Cmd) {
+	lf_read(true, 12000);
+	return CmdHIDDemod(Cmd);
+}
+
+// this read loops on device side.
+// uses the demod in lfops.c
+int CmdHIDRead_device(const char *Cmd) {
+	
+	if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_hid_read();
 	uint8_t findone = ( Cmd[0] == '1' ) ? 1 : 0;
 	UsbCommand c = {CMD_HID_DEMOD_FSK, {findone, 0 , 0}};
 	clearCommandBuffer();
@@ -426,6 +540,7 @@ int CmdHIDBrute(const char *Cmd){
 		}
 		
 		if (ukbhit()) {
+			int gc = getchar(); (void)gc;
 			PrintAndLog("aborted via keyboard!");
 			return sendPing();
 		}
@@ -443,12 +558,13 @@ int CmdHIDBrute(const char *Cmd){
 }
 
 static command_t CommandTable[] = {
-	{"help",    CmdHelp,        1, "This help"},
-	{"fskdemod",CmdHIDDemodFSK, 0, "Realtime HID FSK demodulator"},
-	{"sim",     CmdHIDSim,      0, "HID tag simulator"},
-	{"clone",   CmdHIDClone,    0, "Clone HID to T55x7"},
-	{"wiegand", CmdHIDWiegand,  1, "Convert facility code/card number to Wiegand code"},
-	{"brute",   CmdHIDBrute,	0, "Bruteforce card number against reader"},
+	{"help",	CmdHelp,        1, "This help"},
+	{"demod",	CmdHIDDemod,	0, "Demodulate HID Prox tag from the GraphBuffer"},
+	{"read",	CmdHIDRead,		0, "Attempt to read and extract tag data"},
+	{"sim",		CmdHIDSim,		0, "HID tag simulator"},
+	{"clone",	CmdHIDClone,	0, "Clone HID to T55x7"},
+	{"wiegand",	CmdHIDWiegand,	1, "Convert facility code/card number to Wiegand code"},
+	{"brute",	CmdHIDBrute,	0, "Bruteforce card number against reader"},
 	{NULL, NULL, 0, NULL}
 };
 

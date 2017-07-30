@@ -82,8 +82,8 @@ CORESRCS =  uart_posix.c \
 			uart_win32.c \
 			util.c \
 			util_posix.c \
-			scandir.c \
-			sleep.c
+			scandir.c
+
 
 CMDSRCS =	crapto1/crapto1.c \
 			crapto1/crypto1.c \
@@ -133,11 +133,13 @@ CMDSRCS =	crapto1/crapto1.c \
 			cmdlfhid.c \
 			cmdlfhitag.c \
 			cmdlfio.c \
+			cmdlfindala.c \
 			cmdlfjablotron.c \
 			cmdlfnexwatch.c \
 			cmdlfnedap.c \
 			cmdlfnoralsy.c \
 			cmdlfpac.c \
+			cmdlfparadox.c \
 			cmdlfpcf7931.c \
 			cmdlfpresco.c \
 			cmdlfpyramid.c \
@@ -181,7 +183,7 @@ ifeq ($(MULTIARCHSRCS), )
 endif
 		
 ZLIBSRCS = deflate.c adler32.c trees.c zutil.c inflate.c inffast.c inftrees.c
-ZLIBFLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED 
+ZLIBFLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED
 #-DDEBUG -Dverbose=1
 
 QTGUISRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp guidummy.cpp

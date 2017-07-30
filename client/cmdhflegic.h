@@ -26,25 +26,26 @@
 
 int CmdHFLegic(const char *Cmd);
 
-int CmdLegicInfo(const char *Cmd);
-int CmdLegicRdmem(const char *Cmd);
-int CmdLegicLoad(const char *Cmd);
-int CmdLegicRfSim(const char *Cmd);
-int CmdLegicRfWrite(const char *Cmd);
-int CmdLegicCalcCrc(const char *Cmd);
-int CmdLegicDump(const char *Cmd);
-int CmdLegicRestore(const char *Cmd);
-int CmdLegicReader(const char *Cmd);
-int CmdLegicELoad(const char *Cmd);
-int CmdLegicESave(const char *Cmd);
-int CmdLegicList(const char *Cmd);
-int CmdLegicWipe(const char *Cmd);
+extern int CmdLegicInfo(const char *Cmd);
+extern int CmdLegicRdmem(const char *Cmd);
+extern int CmdLegicLoad(const char *Cmd);
+extern int CmdLegicRfSim(const char *Cmd);
+extern int CmdLegicRfWrite(const char *Cmd);
+extern int CmdLegicCalcCrc(const char *Cmd);
+extern int CmdLegicDump(const char *Cmd);
+extern int CmdLegicRestore(const char *Cmd);
+extern int CmdLegicReader(const char *Cmd);
+extern int CmdLegicELoad(const char *Cmd);
+extern int CmdLegicESave(const char *Cmd);
+extern int CmdLegicList(const char *Cmd);
+extern int CmdLegicWipe(const char *Cmd);
 
 int HFLegicReader(const char *Cmd, bool verbose);
 int legic_print_type(uint32_t tagtype, uint8_t spaces);
 int legic_get_type(legic_card_select_t *card);
 void legic_chk_iv(uint32_t *iv);
 void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes);
+int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uint16_t *outlen);
 
 int usage_legic_calccrc(void);
 int usage_legic_load(void);

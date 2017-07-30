@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "sleep.h"
+#include "util_posix.h"
 #include "proxusb.h"
 #include "flash.h"
 

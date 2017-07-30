@@ -5,6 +5,7 @@
 // the license.
 //-----------------------------------------------------------------------------
 // Low frequency Jablotron tag commands
+// Differential Biphase, RF/64, 64 bits long (complete)
 //-----------------------------------------------------------------------------
 
 #include "cmdlfjablotron.h"
@@ -58,6 +59,24 @@ int getJablotronBits(uint64_t fullcode, uint8_t *bits) {
 	return 1;
 }
 
+// ASK/Diphase fc/64 (inverted Biphase)
+// Note: this is not a demod, this is only a detection
+// the parameter *bits needs to be demoded before call
+// 0xFFFF preamble, 64bits
+int detectJablotron(uint8_t *bits, size_t *size) {
+	if (*size < 64*2) return -1; //make sure buffer has enough data
+	size_t startIdx = 0;
+	uint8_t preamble[] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0};
+	if (preambleSearch(bits, preamble, sizeof(preamble), size, &startIdx) == 0)
+		return -2; //preamble not found
+	if (*size != 64) return -3; // wrong demoded size
+	
+	uint8_t checkchksum = jablontron_chksum(bits+startIdx);
+	uint8_t crc = bytebits_to_byte(bits+startIdx+56, 8);
+	if ( checkchksum != crc ) return -5;
+	return (int)startIdx;
+}
+
 static uint64_t getJablontronCardId( uint64_t rawcode ){
 	uint64_t id = 0;
 	uint8_t bytes[] = {0,0,0,0,0};
@@ -79,7 +98,7 @@ int CmdJablotronDemod(const char *Cmd) {
 		return 0;
 	}
 	size_t size = DemodBufferLen;
-	int ans = JablotronDemod(DemodBuffer, &size);
+	int ans = detectJablotron(DemodBuffer, &size);
 	if (ans < 0){
 		if (g_debugMode){
 			if (ans == -1)
@@ -96,8 +115,8 @@ int CmdJablotronDemod(const char *Cmd) {
 		return 0;
 	}
 
-	setDemodBuf(DemodBuffer+ans, 64, 0);
-	setGrid_Clock(64);
+	setDemodBuf(DemodBuffer, 64, ans);
+	setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
 	
 	//got a good demod
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
@@ -106,7 +125,7 @@ int CmdJablotronDemod(const char *Cmd) {
 	uint64_t rawid = bytebits_to_byte(DemodBuffer+16, 40);
 	uint64_t id = getJablontronCardId(rawid);
 
-	PrintAndLog("Jablotron Tag Found: Card ID %u  :: Raw: %08X%08X", id, raw1 ,raw2);
+	PrintAndLog("Jablotron Tag Found: Card ID: %"PRIx64" :: Raw: %08X%08X", id, raw1, raw2);
 
 	uint8_t chksum = raw2 & 0xFF;
 	PrintAndLog("Checksum: %02X [%s]",
@@ -125,8 +144,7 @@ int CmdJablotronDemod(const char *Cmd) {
 }
 
 int CmdJablotronRead(const char *Cmd) {
-	CmdLFRead("s");
-	getSamples("10000", true);
+	lf_read(true, 10000);
 	return CmdJablotronDemod(Cmd);
 }
 
@@ -161,7 +179,6 @@ int CmdJablotronClone(const char *Cmd) {
 		return 1;
 	}	
 	
-	// 
 	blocks[1] = bytebits_to_byte(bs,32);
 	blocks[2] = bytebits_to_byte(bs+32,32);
 
@@ -219,7 +236,8 @@ int CmdJablotronSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",	CmdHelp,			1, "This help"},
-	{"read",	CmdJablotronRead,	0, "Attempt to read and extract tag data"},
+	{"demod",	CmdJablotronDemod,	1, "Demodulate an Jablotron tag from the GraphBuffer"},
+	{"read",	CmdJablotronRead,	0, "Attempt to read and extract tag data from the antenna"},
 	{"clone",	CmdJablotronClone,	0, "clone jablotron tag"},
 	{"sim",		CmdJablotronSim,	0, "simulate jablotron tag"},
     {NULL, NULL, 0, NULL}

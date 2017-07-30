@@ -221,10 +221,10 @@ int CmdHF14BCmdRaw (const char *Cmd) {
 	bool success = true;
 	// get back iso14b_card_select_t, don't print it.
 	if (select) 
-		success = waitCmd(false);
+		success = waitCmd14b(false);
 
 	// get back response from the raw bytes you sent.
-	if (success && datalen>0) waitCmd(true);
+	if (success && datalen>0) waitCmd14b(true);
 
     return 1;
 }
@@ -802,7 +802,7 @@ int srix4kValid(const char *Cmd){
 	return 0;
 }
 
-bool waitCmd(bool verbose) {
+bool waitCmd14b(bool verbose) {
 
 	bool crc = false;
 	uint8_t b1 = 0, b2 = 0;

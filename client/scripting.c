@@ -47,6 +47,49 @@ static int l_SendCommand(lua_State *L){
     SendCommand((UsbCommand* )data);
     return 0; // no return values
 }
+
+/**
+ * @brief The following params expected:
+ * uint8_t *dest
+ * int bytes
+ * int start_index
+ * @param L
+ * @return
+ */
+static int l_GetFromBigBuf(lua_State *L){
+	
+	int len = 0;
+    int startindex = 0;
+	
+    //Check number of arguments
+    int n = lua_gettop(L);
+    if(n == 0) {
+        //signal error by returning Nil, errorstring
+        lua_pushnil(L);
+        lua_pushstring(L,"You need to supply number of len and startindex");
+        return 2; // two return values
+    }
+    if(n >= 2) {
+        len = luaL_checknumber(L, 1);
+        startindex = luaL_checknumber(L, 2);
+    }
+
+	uint8_t *data = malloc(len);
+	if ( data == NULL ) {
+        //signal error by returning Nil, errorstring
+        lua_pushnil(L);
+        lua_pushstring(L,"Allocating memory failed");
+        return 2; // two return values
+	}
+		
+	GetFromBigBuf(data, len, startindex);	
+	WaitForResponse(CMD_ACK, NULL);
+	//Push it as a string
+	lua_pushlstring(L,(const char *)data, len);
+	if (data) 
+		free(data);
+	return 1;// return 1 to signal one return value
+}
 /**
  * @brief The following params expected:
  * uint32_t cmd
@@ -369,6 +412,33 @@ static int l_crc64(lua_State *L)
 	return 1;
 }
 
+static int l_crc64_ecma182(lua_State *L)
+{
+	//size_t size;
+	uint64_t crc = 0; 
+	unsigned char outdata[8] = {0x00};
+	//const char *p_str = luaL_checklstring(L, 1, &size);
+
+	//init
+	//crc64_ecma182(NULL, 0, &crc);
+	crc = 0x338103260CC4;
+
+	// calc hash
+	//crc64_ecma182((uint8_t*) p_str, size, &crc);
+	
+	outdata[0] = (uint8_t)(crc >> 56) & 0xff;
+	outdata[1] = (uint8_t)(crc >> 48) & 0xff;
+	outdata[2] = (uint8_t)(crc >> 40) & 0xff;
+	outdata[3] = (uint8_t)(crc >> 32) & 0xff;
+	outdata[4] = (uint8_t)(crc >> 24) & 0xff;
+	outdata[5] = (uint8_t)(crc >> 16) & 0xff;
+	outdata[6] = (uint8_t)(crc >> 8) & 0xff;
+	outdata[7] = crc & 0xff;
+	lua_pushlstring(L,(const char *)&outdata, sizeof(outdata));
+	return 1;
+}
+
+
 static int l_sha1(lua_State *L)
 {
 	size_t size;
@@ -496,8 +566,7 @@ static int l_hardnested(lua_State *L){
 	}
 	
     uint64_t foundkey = 0;
-//	int retval = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, haveTarget ? trgkey : NULL, nonce_file_read,  nonce_file_write,  slow,  tests, &foundkey);
-	int retval = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, haveTarget ? trgkey : NULL, nonce_file_read,  nonce_file_write,  slow,  tests);
+	int retval = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, haveTarget ? trgkey : NULL, nonce_file_read,  nonce_file_write,  slow,  tests, &foundkey);
 
     //Push the retval on the stack
     lua_pushinteger(L,retval);
@@ -509,6 +578,18 @@ static int l_hardnested(lua_State *L){
     //printf("Pushing to lua stack: %012" PRIx64 "\n",key);
     lua_pushlstring(L, (const char *) dest_key, sizeof(dest_key));
     return 2; //Two return values
+}
+
+/**
+ * @brief l_validate_prng is a function to test is a nonce is using the weak PRNG
+ * @param L
+ * @return
+ */
+static int l_detect_prng(lua_State *L) {
+       bool valid = detect_classic_prng();
+	//Push the retval on the stack
+	lua_pushinteger(L, valid);
+	return 1;
 }
 
 /**
@@ -537,6 +618,7 @@ int setLuaPath( lua_State* L, const char* path ) {
 int set_pm3_libraries(lua_State *L) {
     static const luaL_Reg libs[] = {
         {"SendCommand",                 l_SendCommand},
+		{"GetFromBigBuf",               l_GetFromBigBuf},
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},
 		{"mfDarkside",                  l_mfDarkside},
         //{"PrintAndLog",                 l_PrintAndLog},
@@ -553,10 +635,12 @@ int set_pm3_libraries(lua_State *L) {
 		{"crc8legic",					l_crc8legic},
 		{"crc16",                       l_crc16},
 		{"crc64",                       l_crc64},
+		{"crc64_ecma182",				l_crc64_ecma182},
 		{"sha1",						l_sha1},
 		{"reveng_models",				l_reveng_models},
 		{"reveng_runmodel",				l_reveng_RunModel},
 		{"hardnested",					l_hardnested},
+		{"detect_prng",					l_detect_prng},
         {NULL, NULL}
     };
 

@@ -9,25 +9,7 @@
 //-----------------------------------------------------------------------------
 // High frequency ISO14443A commands
 //-----------------------------------------------------------------------------
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include "util.h"
-#include "iso14443crc.h"
-#include "data.h"
-#include "proxmark3.h"
-#include "ui.h"
-#include "cmdparser.h"
 #include "cmdhf14a.h"
-#include "common.h"
-#include "cmdmain.h"
-#include "mifare.h"
-#include "cmdhfmf.h"
-#include "cmdhfmfu.h"
-#include "mifarehost.h"
-#include "cmdhf.h"
 
 static int CmdHelp(const char *Cmd);
 static void waitCmd(uint8_t iLen);
@@ -430,7 +412,7 @@ int CmdHF14ACUIDs(const char *Cmd) {
 	n = n > 0 ? n : 1;
 
 	PrintAndLog("Collecting %d UIDs", n);
-	PrintAndLog("Start: %u", time(NULL));
+	PrintAndLog("Start: %" PRIu64, msclock()/1000);
 	// repeat n times
 	for (int i = 0; i < n; i++) {
 		// execute anticollision procedure
@@ -453,7 +435,7 @@ int CmdHF14ACUIDs(const char *Cmd) {
 			PrintAndLog("%s", uid_string);
 		}
 	}
-	PrintAndLog("End: %u", time(NULL));
+	PrintAndLog("End: %" PRIu64, msclock()/1000);
 	return 1;
 }
 

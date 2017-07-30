@@ -1,22 +1,16 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Data utilities
+// Low frequency Paradox tag commands
 //-----------------------------------------------------------------------------
+#ifndef CMDLFPARADOX_H__
+#define CMDLFPARADOX_H__
+extern int CmdLFParadox(const char *Cmd);
+extern int CmdParadoxDemod(const char *Cmd);
+extern int CmdParadoxRead(const char *Cmd);
 
-#ifndef DATA_H__
-#define DATA_H__
-#include <stdint.h>
-#include <stdbool.h>
-#include "util.h"
-
-#define FILE_PATH_SIZE 1000												
-
-extern uint8_t* sample_buf;
-extern void GetFromBigBuf(uint8_t *dest, int bytes, int start_index);
-extern bool GetEMLFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index);
+extern int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx);
 #endif

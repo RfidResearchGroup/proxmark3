@@ -67,6 +67,18 @@ static uint8_t visa_parity( uint32_t id) {
 	return par;	
 }
 
+// by iceman
+// find Visa2000 preamble in already demoded data
+int detectVisa2k(uint8_t *dest, size_t *size) {
+	if (*size < 96) return -1; //make sure buffer has data
+	size_t startIdx = 0;
+	uint8_t preamble[] = {0,1,0,1,0,1,1,0,0,1,0,0,1,0,0,1,0,1,0,1,0,0,1,1,0,0,1,1,0,0,1,0};
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+		return -2; //preamble not found
+	if (*size != 96) return -3; //wrong demoded size
+	//return start position
+	return (int)startIdx;
+}
 
 /**
 *
@@ -95,7 +107,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 		return 0;
 	}
 	size_t size = DemodBufferLen;
-	int ans = Visa2kDemod_AM(DemodBuffer, &size);
+	int ans = detectVisa2k(DemodBuffer, &size);
 	if (ans < 0){
 		if (g_debugMode){
 			if (ans == -1)
@@ -111,7 +123,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 		return 0;
 	}
 	setDemodBuf(DemodBuffer, 96, ans);
-	setGrid_Clock(64);
+	setClockGrid(g_DemodClock, g_DemodStartIdx + (ans*g_DemodClock));
 		
 	//got a good demod
 	uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
@@ -143,8 +155,7 @@ int CmdVisa2kDemod(const char *Cmd) {
 
 // 64*96*2=12288 samples just in case we just missed the first preamble we can still catch 2 of them
 int CmdVisa2kRead(const char *Cmd) {
-	CmdLFRead("s");
-	getSamples("12500",true);
+	lf_read(true, 12500);
 	return CmdVisa2kDemod(Cmd);
 }
 
@@ -219,10 +230,10 @@ int CmdVisa2kSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",	CmdHelp,		1, "This help"},
-	{"demod",	CmdVisa2kDemod,	1, "Attempt to demod from GraphBuffer"},	
-	{"read",	CmdVisa2kRead,	0, "Attempt to read and extract tag data"},
-	{"clone",	CmdVisa2kClone,	0, "clone Visa2000 tag"},
-	{"sim",		CmdVisa2kSim,	0, "simulate Visa2000 tag"},
+	{"demod",	CmdVisa2kDemod,	1, "Demodulate an VISA2000 tag from the GraphBuffer"},	
+	{"read",	CmdVisa2kRead,	0, "Attempt to read and extract tag data from the antenna"},
+	{"sim",		CmdVisa2kSim,	0, "Visa2000 tag simulator"},
+	{"clone",	CmdVisa2kClone,	0, "clone Visa2000 to t55x7"},
     {NULL, NULL, 0, NULL}
 };
 

@@ -7,23 +7,7 @@
 //-----------------------------------------------------------------------------
 // CRC Calculations from the software reveng commands
 //-----------------------------------------------------------------------------
-
-#include <stdlib.h>
-#ifdef _WIN32
-#  include <io.h>
-#  include <fcntl.h>
-#  ifndef STDIN_FILENO
-#    define STDIN_FILENO 0
-#  endif /* STDIN_FILENO */
-#endif /* _WIN32 */
-
-#include <stdio.h>
-#include <string.h>
-#include "cmdmain.h"
 #include "cmdcrc.h"
-#include "reveng/reveng.h"
-#include "ui.h"
-#include "util.h"
 
 #define MAX_ARGS 20
 

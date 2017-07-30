@@ -68,7 +68,7 @@ byte_t* prx = rx;
 	// printf("██████╔╝██╔████╔██║ ████╔╝\n");
 	// printf("██╔═══╝ ██║╚██╔╝██║   ══█║    iceman@icesql.net\n");
 	// printf("██║     ██║ ╚═╝ ██║ ████╔╝ https://github.com/iceman1001/proxmark3\n");
-	// printf("╚═╝     ╚═╝     ╚═╝ ╚═══╝v1.7.2\n");
+	// printf("╚═╝     ╚═╝     ╚═╝ ╚═══╝v3.0.2n");
 // }
 
 

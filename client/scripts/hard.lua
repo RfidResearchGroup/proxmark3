@@ -17,7 +17,7 @@ Examples :
 
 local numBlocks = 64
 local numSectors = 16
-local DEBUG = TRUE
+local DEBUG = true
 --- 
 -- A debug printout-function
 function dbg(args)

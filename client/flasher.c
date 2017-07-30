@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
-#include "sleep.h"
+#include "util_posix.h"
 #include "proxmark3.h"
 #include "flash.h"
 #include "uart.h"

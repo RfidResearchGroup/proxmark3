@@ -7,26 +7,7 @@
 //-----------------------------------------------------------------------------
 // High frequency commands
 //-----------------------------------------------------------------------------
-
-#include <stdio.h>
-#include <string.h>
-#include "proxmark3.h"
-#include "graph.h"
-#include "ui.h"
-#include "cmdparser.h"
 #include "cmdhf.h"
-#include "cmdhf14a.h"
-#include "cmdhf14b.h"
-#include "cmdhf15.h"
-#include "cmdhfepa.h"
-#include "cmdhflegic.h"	 // LEGIC
-#include "cmdhficlass.h" // ICLASS
-#include "cmdhfmf.h"	 // CLASSIC
-#include "cmdhfmfu.h"	 // ULTRALIGHT/NTAG etc
-#include "cmdhfmfdes.h"	 // DESFIRE
-#include "cmdhftopaz.h"	 // TOPAZ
-#include "cmdhfemv.h"	 // EMV
-#include "protocols.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -658,14 +639,8 @@ uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, ui
 
 	for (int j = 0; j < data_len && j/16 < 16; j++) {
 
-		int oddparity = 0x01;
-		int k;
-
-		for (k=0 ; k<8 ; k++) {
-			oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
-		}
 		uint8_t parityBits = parityBytes[j>>3];
-		if (protocol != LEGIC && protocol != ISO_14443B && protocol != ISO_7816_4 &&  (isResponse || protocol == ISO_14443A)  && (oddparity != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
+		if (protocol != LEGIC && protocol != ISO_14443B && protocol != ISO_7816_4 &&  (isResponse || protocol == ISO_14443A)  && (oddparity8(frame[j]) != ((parityBits >> (7-(j&0x0007))) & 0x01))) {
 			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x! ", frame[j]);
 		} else {
 			snprintf(line[j/16]+(( j % 16) * 4),110, "%02x  ", frame[j]);
@@ -751,6 +726,10 @@ int usage_hf_list(){
 	PrintAndLog("    14a    - interpret data as iso14443a communications");
 	PrintAndLog("    14b    - interpret data as iso14443b communications");
 	PrintAndLog("    des 	- interpret data as DESFire communications");
+#ifdef WITH_EMV
+	PrintAndLog("    emv    - interpret data as EMV / communications");
+#endif	
+
 	PrintAndLog("    iclass - interpret data as iclass communications");
 	PrintAndLog("    topaz  - interpret data as topaz communications");
 	PrintAndLog("    7816   - interpret data as iso7816-4 communications");
@@ -809,14 +788,14 @@ int CmdHFList(const char *Cmd) {
 	param_getstr(Cmd,0,type);
 	
 	// validate type of output
-	if(strcmp(type, "iclass") == 0)		protocol = ICLASS;
-	else if(strcmp(type, "14a") == 0)	protocol = ISO_14443A;
-	else if(strcmp(type, "14b") == 0)	protocol = ISO_14443B;
-	else if(strcmp(type, "topaz")== 0)	protocol = TOPAZ;
-	else if(strcmp(type, "7816")== 0)	protocol = ISO_7816_4;	
-	else if(strcmp(type,"des")== 0)		protocol = MFDES;
-	else if(strcmp(type,"legic")==0)	protocol = LEGIC;
-	else if(strcmp(type, "raw")== 0) 	protocol = -1;//No crc, no annotations
+	if (strcmp(type,     "iclass") == 0)	protocol = ICLASS;
+	else if(strcmp(type, "14a") == 0)		protocol = ISO_14443A;
+	else if(strcmp(type, "14b") == 0)		protocol = ISO_14443B;
+	else if(strcmp(type, "topaz")== 0)		protocol = TOPAZ;
+	else if(strcmp(type, "7816")== 0)		protocol = ISO_7816_4;	
+	else if(strcmp(type, "des")== 0)		protocol = MFDES;
+	else if(strcmp(type, "legic")==0)		protocol = LEGIC;
+	else if(strcmp(type, "raw")== 0)		protocol = -1;//No crc, no annotations
 	else errors = true;
 
 	if (errors) return usage_hf_list();
@@ -923,19 +902,19 @@ int CmdHFSnoop(const char *Cmd) {
 
 static command_t CommandTable[] = {
 	{"help",        CmdHelp,          1, "This help"},
-	{"14a",         CmdHF14A,         1, "{ ISO14443A RFIDs... }"},
-	{"14b",         CmdHF14B,         1, "{ ISO14443B RFIDs... }"},
-	{"15",          CmdHF15,          1, "{ ISO15693 RFIDs... }"},
+	{"14a",         CmdHF14A,         1, "{ ISO14443A RFIDs...            }"},
+	{"14b",         CmdHF14B,         1, "{ ISO14443B RFIDs...            }"},
+	{"15",          CmdHF15,          1, "{ ISO15693 RFIDs...             }"},
 	{"epa",         CmdHFEPA,         1, "{ German Identification Card... }"},
 #ifdef WITH_EMV
-	{"emv",         CmdHFEmv,         1, "{ EMV RFIDs... }"},
+	{"emv",         CmdHFEmv,         1, "{ EMV RFIDs...                  }"},
 #endif	
-	{"legic",       CmdHFLegic,       1, "{ LEGIC RFIDs... }"},
-	{"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs... }"},
-	{"mf",      	CmdHFMF,		  1, "{ MIFARE RFIDs... }"},
-	{"mfu",         CmdHFMFUltra,     1, "{ MIFARE Ultralight RFIDs... }"},
-	{"mfdes",		CmdHFMFDes,		  1, "{ MIFARE Desfire RFIDs... }"},
-	{"topaz",		CmdHFTopaz,		  1, "{ TOPAZ (NFC Type 1) RFIDs... }"},
+	{"legic",       CmdHFLegic,       1, "{ LEGIC RFIDs...                }"},
+	{"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs...               }"},
+	{"mf",      	CmdHFMF,		  1, "{ MIFARE RFIDs...               }"},
+	{"mfu",         CmdHFMFUltra,     1, "{ MIFARE Ultralight RFIDs...    }"},
+	{"mfdes",		CmdHFMFDes,		  1, "{ MIFARE Desfire RFIDs...       }"},
+	{"topaz",		CmdHFTopaz,		  1, "{ TOPAZ (NFC Type 1) RFIDs...   }"},
 	{"tune",		CmdHFTune,	      0, "Continuously measure HF antenna tuning"},
 	{"list",        CmdHFList,        1, "List protocol data in trace buffer"},
 	{"search",      CmdHFSearch,      1, "Search for known HF tags [preliminary]"},

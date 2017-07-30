@@ -12,6 +12,7 @@
 #include <string.h>
 #include "proxmark3.h"
 #include "ui.h"
+#include "util.h"
 #include "graph.h"
 #include "cmdparser.h"
 #include "cmddata.h"
@@ -156,8 +157,7 @@ int CmdLFPCF7931Write(const char *Cmd){
 	return 0;
 }
 
-static command_t CommandTable[] = 
-{
+static command_t CommandTable[] = {
 	{"help", 	CmdHelp,			1, "This help"},
 	{"read",   CmdLFPCF7931Read,   0, "Read content of a PCF7931 transponder"},
 	{"write",  CmdLFPCF7931Write,  0, "Write data on a PCF7931 transponder."},

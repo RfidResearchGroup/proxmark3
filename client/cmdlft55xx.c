@@ -55,12 +55,13 @@ int usage_t55xx_read(){
 	return 0;
 }
 int usage_t55xx_write(){
-	PrintAndLog("Usage:  lf t55xx write [b <block>] [d <data>] [p <password>] [1]");
+	PrintAndLog("Usage:  lf t55xx write [b <block>] [d <data>] [p <password>] [1] [t]");
 	PrintAndLog("Options:");
 	PrintAndLog("     b <block>    - block number to write. Between 0-7");
 	PrintAndLog("     d <data>     - 4 bytes of data to write (8 hex characters)");
 	PrintAndLog("     p <password> - OPTIONAL password 4bytes (8 hex characters)");
 	PrintAndLog("     1            - OPTIONAL write Page 1 instead of Page 0");
+	PrintAndLog("     t            - OPTIONAL test mode write - ****DANGER****");	
     PrintAndLog("");
 	PrintAndLog("Examples:");
 	PrintAndLog("      lf t55xx write b 3 d 11223344            - write 11223344 to block 3");
@@ -112,6 +113,20 @@ int usage_t55xx_detect(){
 	PrintAndLog("      lf t55xx detect");
 	PrintAndLog("      lf t55xx detect 1");
 	PrintAndLog("      lf t55xx detect p 11223344");
+	PrintAndLog("");
+	return 0;
+}
+int usage_t55xx_detectP1(){
+	PrintAndLog("Command: Detect Page 1 of a t55xx chip");
+	PrintAndLog("Usage:  lf t55xx p1detect [1] [p <password>]");
+	PrintAndLog("Options:");
+	PrintAndLog("     1             - if set, use Graphbuffer otherwise read data from tag.");
+	PrintAndLog("     p <password>  - OPTIONAL password (8 hex characters)");
+	PrintAndLog("");
+	PrintAndLog("Examples:");
+	PrintAndLog("      lf t55xx p1detect");
+	PrintAndLog("      lf t55xx p1detect 1");
+	PrintAndLog("      lf t55xx p1detect p 11223344");
 	PrintAndLog("");
 	return 0;
 }
@@ -395,23 +410,23 @@ bool DecodeT55xxBlock(){
 			break;
 		case DEMOD_PSK1:
 			// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
-			save_restoreGB(1);
+			save_restoreGB(GRAPH_SAVE);
 			CmdLtrim("160");
 			snprintf(cmdStr, sizeof(buf),"%d %d 6", bitRate[config.bitrate], config.inverted );
 			ans = PSKDemod(cmdStr, false);
 			//undo trim samples
-			save_restoreGB(0);
+			save_restoreGB(GRAPH_RESTORE);
 			break;
 		case DEMOD_PSK2: //inverted won't affect this
 		case DEMOD_PSK3: //not fully implemented
 			// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
-			save_restoreGB(1);
+			save_restoreGB(GRAPH_SAVE);
 			CmdLtrim("160");
 			snprintf(cmdStr, sizeof(buf),"%d 0 6", bitRate[config.bitrate] );
 			ans = PSKDemod(cmdStr, false);
 			psk1TOpsk2(DemodBuffer, DemodBufferLen);
 			//undo trim samples
-			save_restoreGB(0);
+			save_restoreGB(GRAPH_RESTORE);
 			break;
 		case DEMOD_NRZ:
 			snprintf(cmdStr, sizeof(buf),"%d %d 1", bitRate[config.bitrate], config.inverted );
@@ -494,10 +509,10 @@ bool tryDetectModulation(){
 	uint8_t hits = 0;
 	t55xx_conf_block_t tests[15];
 	int bitRate=0;
-	uint8_t fc1 = 0, fc2 = 0, clk=0;
-	
-	if (GetFskClock("", false, false)){ 
-		fskClocks(&fc1, &fc2, &clk, false);
+	uint8_t fc1 = 0, fc2 = 0, ans = 0;
+	int clk = 0, firstClockEdge = 0;
+	ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, false, &firstClockEdge);
+	if (ans && ((fc1==10 && fc2==8) || (fc1==8 && fc2==5))) {
 		if ( FSKrawDemod("0 0", false) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)){
 			tests[hits].modulation = DEMOD_FSK;
 			if (fc1==8 && fc2 == 5)
@@ -568,10 +583,8 @@ bool tryDetectModulation(){
 				++hits;
 			}
 		}
-		//undo trim from ask
-		//save_restoreGB(0);
 		clk = GetNrzClock("", false, false);
-		if (clk>0) {
+		if (clk>8) { //clock of rf/8 is likely a false positive, so don't use it.
 			if ( NRZrawDemod("0 0 1", false)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
 				tests[hits].modulation = DEMOD_NRZ;
 				tests[hits].bitrate = bitRate;
@@ -591,12 +604,12 @@ bool tryDetectModulation(){
 			}
 		}
 		
-		// allow undo
-		// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
-		save_restoreGB(1);
-		CmdLtrim("160");
 		clk = GetPskClock("", false, false);
 		if (clk>0) {
+			// allow undo
+			save_restoreGB(GRAPH_SAVE);
+			// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
+			CmdLtrim("160");
 			if ( PSKDemod("0 0 6", false) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
 				tests[hits].modulation = DEMOD_PSK1;
 				tests[hits].bitrate = bitRate;
@@ -638,9 +651,9 @@ bool tryDetectModulation(){
 					++hits;
 				}
 			} // inverse waves does not affect this demod
-		}
 		//undo trim samples
-		save_restoreGB(0);
+			save_restoreGB(GRAPH_RESTORE);
+		}
 	}		
 	if ( hits == 1) {
 		config.modulation = tests[0].modulation;
@@ -829,9 +842,7 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
 		// moved test to here, since this gets most faults first.
 		if ( resv > 0x00) continue;
 
-		uint8_t xtRate   = PackBits(si, 3, DemodBuffer); si += 3;     //extended mode part of rate
-		int bitRate  = PackBits(si, 3, DemodBuffer); si += 3;     //bit rate
-		if (bitRate > 7) continue;
+		int bitRate      = PackBits(si, 6, DemodBuffer); si += 6;     //bit rate (includes extended mode part of rate)
 		uint8_t extend   = PackBits(si, 1, DemodBuffer); si += 1;     //bit 15 extended mode
 		uint8_t modread  = PackBits(si, 5, DemodBuffer); si += 5+2+1; 
 		//uint8_t pskcr   = PackBits(si, 2, DemodBuffer); si += 2+1;  //could check psk cr
@@ -842,11 +853,14 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
 		bool extMode =( (safer == 0x6 || safer == 0x9) && extend) ? true : false;
 
 		if (!extMode){
-			if (xtRate) continue;  //nml01 || nml02 ||  caused issues on noralys tags
+			if (bitRate > 7) continue;
+			if (!testBitRate(bitRate, clk)) continue;
+		} else { //extended mode bitrate = same function to calc bitrate as em4x05
+			if (EM4x05_GET_BITRATE(bitRate) != clk) continue;
+
 		}
 		//test modulation
 		if (!testModulation(mode, modread)) continue;
-		if (!testBitRate(bitRate, clk)) continue;
 		*fndBitRate = bitRate;
 		*offset = idx;
 		*Q5 = false;
@@ -905,7 +919,7 @@ int special(const char *Cmd) {
 int printConfiguration( t55xx_conf_block_t b){
 	PrintAndLog("Chip Type  : %s", (b.Q5) ? "T5555(Q5)" : "T55x7");
 	PrintAndLog("Modulation : %s", GetSelectedModulationStr(b.modulation) );
-	PrintAndLog("Bit Rate   : %s", GetBitRateStr(b.bitrate) );
+	PrintAndLog("Bit Rate   : %s", GetBitRateStr(b.bitrate, (b.block0 & T55x7_X_MODE && (b.block0>>28==6 || b.block0>>28==9))) );
 	PrintAndLog("Inverted   : %s", (b.inverted) ? "Yes" : "No" );
 	PrintAndLog("Offset     : %d", b.offset);
 	PrintAndLog("Seq. Term. : %s", (b.ST) ? "Yes" : "No" );
@@ -951,6 +965,7 @@ int CmdT55xxWriteBlock(const char *Cmd) {
 	bool usepwd = false;
 	bool page1 = false;	
 	bool gotdata = false;
+	bool testMode = false;
 	bool errors = false;
 	uint8_t cmdp = 0;
 	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -975,6 +990,11 @@ int CmdT55xxWriteBlock(const char *Cmd) {
 			usepwd = true;
 			cmdp += 2;
 			break;
+		case 't':
+		case 'T':
+			testMode = true;
+			cmdp++;
+			break;
 		case '1':
 			page1 = true;
 			cmdp++;
@@ -995,6 +1015,7 @@ int CmdT55xxWriteBlock(const char *Cmd) {
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {data, block, 0}};
 	UsbCommand resp;
  	c.d.asBytes[0] = (page1) ? 0x2 : 0; 
+ 	c.d.asBytes[0] |= (testMode) ? 0x4 : 0; 
 
 	char pwdStr[16] = {0};
 	snprintf(pwdStr, sizeof(pwdStr), "pwd: 0x%08X", password);
@@ -1227,7 +1248,7 @@ int CmdT55xxInfo(const char *Cmd){
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" Safer key                 : %s", GetSaferStr(safer));
 	PrintAndLog(" reserved                  : %d", resv);
-	PrintAndLog(" Data bit rate             : %s", GetBitRateStr(dbr));
+	PrintAndLog(" Data bit rate             : %s", GetBitRateStr(dbr, extend));
 	PrintAndLog(" eXtended mode             : %s", (extend) ? "Yes - Warning":"No");
 	PrintAndLog(" Modulation                : %s", GetModulationStr(datamod));
 	PrintAndLog(" PSK clock frequency       : %d", pskcf);
@@ -1298,10 +1319,13 @@ int AquireData( uint8_t page, uint8_t block, bool pwdmode, uint32_t password ){
 	return 1;
 }
 
-char * GetBitRateStr(uint32_t id){
+char * GetBitRateStr(uint32_t id, bool xmode) {
  	static char buf[25];
 
 	char *retStr = buf;
+	if (xmode) { //xmode bitrate calc is same as em4x05 calc
+		snprintf(retStr,sizeof(buf),"%d - RF/%d", id, EM4x05_GET_BITRATE(id));
+	} else {
 		switch (id){
 		case 0:   snprintf(retStr,sizeof(buf),"%d - RF/8",id);   break;
 		case 1:   snprintf(retStr,sizeof(buf),"%d - RF/16",id);  break;
@@ -1313,6 +1337,7 @@ char * GetBitRateStr(uint32_t id){
 		case 7:   snprintf(retStr,sizeof(buf),"%d - RF/128",id); break;
 		default:  snprintf(retStr,sizeof(buf),"%d - (Unknown)",id); break;
 		}
+	}
 	return buf;
 }
 
@@ -1455,8 +1480,7 @@ int CmdT55xxWipe(const char *Cmd) {
 
 bool IsCancelled(void) {
 	if (ukbhit()) {
-		int ch = getchar();
-		(void)ch;
+		int gc = getchar(); (void)gc;
 		printf("\naborted via keyboard!\n");
 		return true;
 	}
@@ -1713,12 +1737,160 @@ int CmdT55xxRecoverPW(const char *Cmd) {
 
 	return 0;
 }
+// note length of data returned is different for different chips.  
+//   some return all page 1 (64 bits) and others return just that block (32 bits) 
+//   unfortunately the 64 bits makes this more likely to get a false positive...
+bool tryDetectP1(bool getData) {
+	uint8_t preamble[] = {1,1,1,0,0,0,0,0,0,0,0,1,0,1,0,1};
+	size_t startIdx = 0;
+	uint8_t fc1 = 0, fc2 = 0, ans = 0;
+	int clk = 0, firstClockEdge = 0;
+	bool st = true;
+
+	if ( getData ) {
+		if ( !AquireData(T55x7_PAGE1, 1, false, 0) )
+			return false;
+	}
+
+	// try fsk clock detect. if successful it cannot be any other type of modulation...  (in theory...)
+	ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, false, &firstClockEdge);
+	if (ans && ((fc1==10 && fc2==8) || (fc1==8 && fc2==5))) {
+		if ( FSKrawDemod("0 0", false) && 
+			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+			return true;
+		}
+		if ( FSKrawDemod("0 1", false) && 
+			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+			return true;
+		}
+		return false;
+	}
+
+	// try psk clock detect. if successful it cannot be any other type of modulation... (in theory...)
+	clk = GetPskClock("", false, false);
+	if (clk>0) {
+		// allow undo
+		// save_restoreGB(1);
+		// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
+		//CmdLtrim("160");
+		if ( PSKDemod("0 0 6", false) &&
+			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+			//save_restoreGB(0);
+			return true;
+		}
+		if ( PSKDemod("0 1 6", false) &&
+			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+			//save_restoreGB(0);
+			return true;
+		}
+		// PSK2 - needs a call to psk1TOpsk2.
+		if ( PSKDemod("0 0 6", false)) {
+			psk1TOpsk2(DemodBuffer, DemodBufferLen);
+			if (preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+				  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+				//save_restoreGB(0);
+				return true;
+			}
+		} // inverse waves does not affect PSK2 demod
+		//undo trim samples
+		//save_restoreGB(0); 
+		// no other modulation clocks = 2 or 4 so quit searching
+		if (fc1 != 8) return false;
+	}
+
+	// try ask clock detect.  it could be another type even if successful.
+	clk = GetAskClock("", false, false);
+	if (clk>0) {
+		if ( ASKDemod_ext("0 0 1", false, false, 1, &st) &&
+			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+			return true;
+		}
+		st = true;
+		if ( ASKDemod_ext("0 1 1", false, false, 1, &st)  &&
+			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+			return true;
+		}
+		if ( ASKbiphaseDemod("0 0 0 2", false) &&
+			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+			return true;
+		}
+		if ( ASKbiphaseDemod("0 0 1 2", false) &&
+			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+			return true;
+		}
+	}
+
+	// try NRZ clock detect.  it could be another type even if successful.
+	clk = GetNrzClock("", false, false); //has the most false positives :(
+	if (clk>0) {
+		if ( NRZrawDemod("0 0 1", false)  &&
+			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+			return true;
+		}
+		if ( NRZrawDemod("0 1 1", false)  &&
+			  preambleSearchEx(DemodBuffer,preamble,sizeof(preamble),&DemodBufferLen,&startIdx,false) && 
+			  (DemodBufferLen == 32 || DemodBufferLen == 64) ) {
+			return true;
+		}
+	}
+	return false;
+}
+//  does this need to be a callable command?
+int CmdT55xxDetectPage1(const char *Cmd){
+	bool errors = false;
+	bool useGB = false;
+	bool usepwd = false;
+	uint32_t password = 0;
+	uint8_t cmdp = 0;
+
+	while(param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+		switch(param_getchar(Cmd, cmdp)) {
+		case 'h':
+		case 'H':
+			return usage_t55xx_detectP1();
+		case 'p':
+		case 'P':
+			password = param_get32ex(Cmd, cmdp+1, 0, 16);
+			usepwd = true;
+			cmdp += 2;
+			break;
+		case '1':
+			// use Graphbuffer data
+			useGB = true;
+			cmdp++;
+			break;
+		default:
+			PrintAndLog("Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+			errors = true;
+			break;
+		}
+	}
+	if (errors) return usage_t55xx_detectP1();
+
+	if ( !useGB ) {
+		if ( !AquireData(T55x7_PAGE1, 1, usepwd, password) )
+			return false;
+	}
+	bool success = tryDetectP1(false);
+	if (success) PrintAndLog("T55xx chip found!");
+	return success;
+}
 
 static command_t CommandTable[] = {
 	{"help",		CmdHelp,           1, "This help"},
 	{"bruteforce",	CmdT55xxBruteForce,0, "<start password> <end password> [i <*.dic>] Simple bruteforce attack to find password"},
 	{"config",		CmdT55xxSetConfig, 1, "Set/Get T55XX configuration (modulation, inverted, offset, rate)"},
 	{"detect",		CmdT55xxDetect,    1, "[1] Try detecting the tag modulation from reading the configuration block."},
+	{"p1detect",	CmdT55xxDetectPage1,1, "[1] Try detecting if this is a t55xx tag by reading page 1"},
 	{"dump",		CmdT55xxDump,      0, "[password] [o] Dump T55xx card block 0-7. Optional [password], [override]"},
 	{"info",		CmdT55xxInfo,      1, "[1] Show T55x7 configuration data (page 0/ blk 0)"},
 	{"read",		CmdT55xxReadBlock, 0, "b <block> p [password] [o] [1] -- Read T55xx block data. Optional [p password], [override], [page1]"},

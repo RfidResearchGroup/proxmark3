@@ -67,4 +67,5 @@ extern int CmdHf14AMfSetMod(const char *Cmd);
 void showSectorTable(void);
 void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose);
 void printKeyTable( uint8_t sectorscnt, sector_t *e_sector );
+void printKeyTable_fast( uint8_t sectorscnt, icesector_t *e_sector, uint64_t bar, uint64_t foo );
 #endif

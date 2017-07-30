@@ -33,7 +33,8 @@ int CmdCOTAGDemod(const char *Cmd) {
 	size_t bitlen = COTAG_BITS;
 	memcpy(bits, DemodBuffer, COTAG_BITS);
 	
-	int err = manrawdecode(bits, &bitlen, 1);
+	uint8_t alignPos = 0;
+	int err = manrawdecode(bits, &bitlen, 1, &alignPos);
 	if (err){
 		if (g_debugMode) PrintAndLog("DEBUG: Error - COTAG too many errors: %d", err);
 		return -1;
@@ -85,7 +86,7 @@ int CmdCOTAGRead(const char *Cmd) {
 		case 2: {
 			CmdPlot("");
 			CmdGrid("384");
-			getSamples("", true); break;
+			getSamples(0, true); break;
 		}
 		case 1: {
 			GetFromBigBuf(DemodBuffer, COTAG_BITS, 0);

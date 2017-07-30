@@ -17,9 +17,10 @@
 #include "cmdparser.h"
 #include "common.h"
 #include "util.h"
+#include "parity.h"
 #include "hitag2.h"
 #include "hitagS.h"
-#include "sleep.h"
+#include "util_posix.h"
 #include "cmdmain.h"
 
 static int CmdHelp(const char *Cmd);
@@ -107,15 +108,9 @@ int CmdLFHitagList(const char *Cmd) {
 		char line[1000] = "";
 		int j;
 		for (j = 0; j < len; j++) {
-		  int oddparity = 0x01;
-		  int k;
-
-		  for (k=0;k<8;k++) {
-			oddparity ^= (((frame[j] & 0xFF) >> k) & 0x01);
-		  }
 
 		  //if((parityBits >> (len - j - 1)) & 0x01) {
-		  if (isResponse && (oddparity != ((parityBits >> (len - j - 1)) & 0x01))) {
+		  if (isResponse && (oddparity8(frame[j]) != ((parityBits >> (len - j - 1)) & 0x01))) {
 			sprintf(line+(j*4), "%02x!  ", frame[j]);
 		  }
 		  else {
@@ -355,7 +350,9 @@ int CmdLFHitagWP(const char *Cmd) {
 			c.arg[2]= param_get32ex(Cmd, 2, 0, 10);
 			num_to_bytes(param_get32ex(Cmd,3,0,16),4,htd->auth.data);
 		} break;
-		case 04: { //WHTSF_KEY
+		case 04:
+		case 24:
+		 { //WHTSF_KEY
 			num_to_bytes(param_get64ex(Cmd,1,0,16),6,htd->crypto.key);
 			c.arg[2]= param_get32ex(Cmd, 2, 0, 10);
 			num_to_bytes(param_get32ex(Cmd,3,0,16),4,htd->crypto.data);
@@ -387,15 +384,15 @@ int CmdLFHitagWP(const char *Cmd) {
 
 static command_t CommandTable[] = 
 {
-	{"help",    CmdHelp,           1, "This help"},
-	{"list",    CmdLFHitagList,    1, "<outfile> List Hitag trace history"},
-	{"reader",  CmdLFHitagReader,  1, "Act like a Hitag Reader"},
-	{"sim",     CmdLFHitagSim,     1, "<infile> Simulate Hitag transponder"},
-	{"snoop",   CmdLFHitagSnoop,   1, "Eavesdrop Hitag communication"},
-  {"writer",   		CmdLFHitagWP,      1, "Act like a Hitag Writer" },
-  {"simS",   		CmdLFHitagSimS,    1, "<hitagS.hts> Simulate HitagS transponder" }, 
-  {"checkChallenges",	CmdLFHitagCheckChallenges,   1, "<challenges.cc> test all challenges" }, {
-				NULL,NULL, 0, NULL }
+	{"help",	CmdHelp,           1, "This help"},
+	{"list",	CmdLFHitagList,    1, "<outfile> List Hitag trace history"},
+	{"reader",	CmdLFHitagReader,  1, "Act like a Hitag Reader"},
+	{"sim",		CmdLFHitagSim,     1, "<infile> Simulate Hitag transponder"},
+	{"simS",	CmdLFHitagSimS,    1, "<hitagS.hts> Simulate HitagS transponder" }, 
+	{"snoop",	CmdLFHitagSnoop,   1, "Eavesdrop Hitag communication"},
+	{"writer",	CmdLFHitagWP,      1, "Act like a Hitag Writer" },
+	{"check_challenges",	CmdLFHitagCheckChallenges,   1, "<challenges.cc> test all challenges" },
+	{ NULL,NULL, 0, NULL }
 };
 
 int CmdLFHitag(const char *Cmd) {

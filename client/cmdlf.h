@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
-
 #include <string.h>
 #include <limits.h>
 #include "proxmark3.h"
@@ -44,6 +43,10 @@
 #include "cmdlfnoralsy.h"	// for NORALSY meny
 #include "cmdlffdx.h"		// for FDX-B meny
 #include "cmdlfcotag.h"		// for COTAG meny
+#include "cmdlfindala.h" // for indala menu
+#include "cmdlfguard.h"// for gproxii menu
+#include "cmdlffdx.h"    // for fdx-b menu
+#include "cmdlfparadox.h"// for paradox menu
 #include "cmdlfnexwatch.h"	//for nexwatch menu
 #include "cmdlfsecurakey.h"	//for securakey menu
 #include "cmdlfpac.h"		// for pac menu
@@ -56,8 +59,6 @@ extern int CmdLFSetConfig(const char *Cmd);
 
 extern int CmdLFCommandRead(const char *Cmd);
 extern int CmdFlexdemod(const char *Cmd);
-extern int CmdIndalaDemod(const char *Cmd);
-extern int CmdIndalaClone(const char *Cmd);
 extern int CmdLFRead(const char *Cmd);
 extern int CmdLFSim(const char *Cmd);
 extern int CmdLFaskSim(const char *Cmd);
@@ -68,6 +69,7 @@ extern int CmdLFSnoop(const char *Cmd);
 extern int CmdVchDemod(const char *Cmd);
 extern int CmdLFfind(const char *Cmd);
 
+extern bool lf_read(bool silent, uint32_t samples);
 
 // usages helptext
 extern int usage_lf_cmdread(void);

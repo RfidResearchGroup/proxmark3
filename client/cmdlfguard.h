@@ -4,7 +4,7 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency T55xx commands
+// Low frequency G Prox II tag commands
 //-----------------------------------------------------------------------------
 #ifndef CMDLFGUARD_H__
 #define CMDLFGUARD_H__
@@ -22,11 +22,12 @@
 #include "lfdemod.h"    // parityTest
 #include "crc.h"
 
-int CmdLFGuard(const char *Cmd);
-int CmdGuardClone(const char *Cmd);
-int CmdGuardSim(const char *Cmd);
+extern int CmdLFGuard(const char *Cmd);
+extern int CmdGuardDemod(const char *Cmd);
+extern int CmdGuardRead(const char *Cmd);
+extern int CmdGuardClone(const char *Cmd);
+extern int CmdGuardSim(const char *Cmd);
 
-int usage_lf_guard_clone(void);
-int usage_lf_quard_sim(void);
+extern int usage_lf_guard_clone(void);
+extern int usage_lf_quard_sim(void);
 #endif
-

@@ -1,40 +1,39 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency AWID commands
+// Low frequency Indala commands
 //-----------------------------------------------------------------------------
 
-#ifndef CMDLFAWID_H__
-#define CMDLFAWID_H__
+#ifndef CMDLFINDALA_H__
+#define CMDLFINDALA_H__
 
 #include <stdio.h>      // sscanf
-#include <stdbool.h>	// bool
+#include <stdlib.h>
+#include <string.h>
 #include "proxmark3.h"  // Definitions, USB controls, etc
 #include "ui.h"         // PrintAndLog
 #include "cmdparser.h"  // CmdsParse, CmdsHelp
 #include "lfdemod.h"    // parityTest
 #include "util.h"       // weigandparity
-#include "cmdlf.h"	    // lf read
 #include "protocols.h"  // for T55xx config register definitions
+#include "data.h"
 #include "cmdmain.h"
-#include "util_posix.h"
+#include "cmddata.h"
+#include "cmdlf.h"		// lf_read
+#include "lfdemod.h"    // bitbytes_to_byte
 
+extern int CmdLFINDALA(const char *Cmd);
 
-extern int CmdLFAWID(const char *Cmd);
-extern int CmdAWIDDemod(const char *Cmd);
-extern int CmdAWIDRead(const char *Cmd);
-extern int CmdAWIDSim(const char *Cmd);
-extern int CmdAWIDClone(const char *Cmd);
-extern int CmdAWIDBrute(const char *Cmd);
-extern int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits);
+extern int CmdIndalaDemod(const char *Cmd);
+extern int CmdIndalaDemodAlt(const char *Cmd);
+extern int CmdIndalaRead(const char *Cmd);
+extern int CmdIndalaClone(const char *Cmd);
+extern int CmdIndalaSim(const char *Cmd);
 
-extern int usage_lf_awid_read(void);
-extern int usage_lf_awid_sim(void);
-extern int usage_lf_awid_clone(void);
-extern int usage_lf_awid_brute(void);
-
+extern int usage_lf_indala_demod(void);
+extern int usage_lf_indala_clone(void);
+extern int usage_lf_indala_sim(void);
 #endif

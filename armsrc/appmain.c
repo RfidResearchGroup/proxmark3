@@ -930,7 +930,7 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			setSamplingConfig((sample_config *) c->d.asBytes);
 			break;
 		case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K:
-			cmd_send(CMD_ACK, SampleLF(c->arg[0]),0,0,0,0);
+			cmd_send(CMD_ACK,SampleLF(c->arg[0], c->arg[1]),0,0,0,0);
 			break;
 		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			ModThenAcquireRawAdcSamples125k(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
@@ -1085,7 +1085,15 @@ void UsbPacketReceived(uint8_t *packet, int len)
 			LegicRfInfo();
 			break;
 		case CMD_LEGIC_ESET:
-			LegicEMemSet(c->arg[0], c->arg[1], c->d.asBytes);
+			//-----------------------------------------------------------------------------
+			// Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_HF) here although FPGA is not
+			// involved in dealing with emulator memory. But if it is called later, it might
+			// destroy the Emulator Memory.
+			//-----------------------------------------------------------------------------
+			// arg0 = offset
+			// arg1 = num of bytes
+			FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+			emlSet(c->d.asBytes, c->arg[0], c->arg[1]);
 			break;
 #endif
 
@@ -1499,9 +1507,9 @@ void  __attribute__((noreturn)) AppMain(void)
 	for(;;) {
 		if ( usb_poll_validate_length() ) {
 			rx_len = usb_read(rx, sizeof(UsbCommand));
-			if (rx_len) {
+			
+			if (rx_len)
 				UsbPacketReceived(rx, rx_len);
-			}
 		}
 		WDT_HIT();
 

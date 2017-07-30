@@ -7,16 +7,7 @@
 //-----------------------------------------------------------------------------
 // Commands related to the German electronic Identification Card
 //-----------------------------------------------------------------------------
-
 #include "cmdhfepa.h"
-#include <time.h>
-#include "util.h"
-#include "proxmark3.h"
-#include "ui.h"
-#include "cmdparser.h"
-#include "common.h"
-#include "cmdmain.h"
-#include "sleep.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -24,11 +15,11 @@ static int CmdHelp(const char *Cmd);
 int CmdHFEPACollectPACENonces(const char *Cmd)
 {
 	// requested nonce size
-	unsigned int m = 0;
+	uint32_t m = 0;
 	// requested number of Nonces
-	unsigned int n = 0;
+	uint32_t n = 0;
 	// delay between requests
-	unsigned int d = 0;
+	uint32_t d = 0;
 
 	sscanf(Cmd, "%u %u %u", &m, &n, &d);
 
@@ -37,14 +28,14 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 	n = n > 0 ? n : 1;
 
 	PrintAndLog("Collecting %u %u byte nonces", n, m);
-	PrintAndLog("Start: %u", time(NULL));
+	PrintAndLog("Start: %" PRIu64, msclock()/1000);
 	// repeat n times
-	for (unsigned int i = 0; i < n; i++) {
+	for (uint32_t i = 0; i < n; i++) {
 		// execute PACE
 		UsbCommand c = {CMD_EPA_PACE_COLLECT_NONCE, {(int)m, 0, 0}};
+		clearCommandBuffer();
 		SendCommand(&c);
 		UsbCommand resp;
-
 		WaitForResponse(CMD_ACK,&resp);
 
 		// check if command failed
@@ -64,12 +55,9 @@ int CmdHFEPACollectPACENonces(const char *Cmd)
 			sleep(d);
 		}
 	}
-	PrintAndLog("End: %u", time(NULL));
+	PrintAndLog("End: %" PRIu64, msclock()/1000);
 	return 1;
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////The commands lie below here/////////////////////////////////////////////////////////////////////////////////////////
 
 // perform the PACE protocol by replaying APDUs
 int CmdHFEPAPACEReplay(const char *Cmd)
@@ -139,6 +127,8 @@ int CmdHFEPAPACEReplay(const char *Cmd)
 			memcpy(usb_cmd.d.asBytes, // + (j * sizeof(usb_cmd.d.asBytes)),
 			       apdus[i] + (j * sizeof(usb_cmd.d.asBytes)),
 			       packet_length);
+				   
+			clearCommandBuffer();				   
 			SendCommand(&usb_cmd);
 			WaitForResponse(CMD_ACK, &resp);
 			if (resp.arg[0] != 0) {
@@ -150,6 +140,7 @@ int CmdHFEPAPACEReplay(const char *Cmd)
 
 	// now perform the replay
 	usb_cmd.arg[0] = 0;
+	clearCommandBuffer();
 	SendCommand(&usb_cmd);
 	WaitForResponse(CMD_ACK, &resp);
 	if (resp.arg[0] != 0) {
@@ -168,35 +159,25 @@ int CmdHFEPAPACEReplay(const char *Cmd)
 		PrintAndLog("GA Perform Key Agreement: %u us", resp.d.asDwords[3]);
 		PrintAndLog("GA Mutual Authenticate: %u us", resp.d.asDwords[4]);
 	}
-
-
 	return 1;
 }
-
-////////////////////////////////The new commands lie above here/////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // UI-related stuff
 
 static const command_t CommandTable[] = {
-  {"help",    CmdHelp,                   1, "This help"},
-  {"cnonces", CmdHFEPACollectPACENonces, 0,
-              "<m> <n> <d> Acquire n>0 encrypted PACE nonces of size m>0 with d sec pauses"},
-  {"preplay", CmdHFEPAPACEReplay,        0,
-   "<mse> <get> <map> <pka> <ma> Perform PACE protocol by replaying given APDUs"},
-  {NULL, NULL, 0, NULL}
+	{"help",    CmdHelp,                   1, "This help"},
+	{"cnonces", CmdHFEPACollectPACENonces, 0, "<m> <n> <d> Acquire n>0 encrypted PACE nonces of size m>0 with d sec pauses"},
+	{"preplay", CmdHFEPAPACEReplay,        0, "<mse> <get> <map> <pka> <ma> Perform PACE protocol by replaying given APDUs"},
+ 	{NULL, NULL, 0, NULL}
 };
 
 int CmdHelp(const char *Cmd) {
-  CmdsHelp(CommandTable);
-  return 0;
+ 	CmdsHelp(CommandTable);
+	return 0;
 }
 
 int CmdHFEPA(const char *Cmd) {
-	// flush
 	clearCommandBuffer();
-	//WaitForResponseTimeout(CMD_ACK,NULL,100);
-	// parse
 	CmdsParse(CommandTable, Cmd);
 	return 0;
 }

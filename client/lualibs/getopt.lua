@@ -92,14 +92,14 @@ local function getopt(args, ostr)
       else
         table.remove(args, 1);
         if #args == 0 then -- an option requiring argument is the last one
-          place = 0;
-          if ostr:sub(1, 1) == ':' then return ':' end
+           place = 0;
+           if ostr:sub(1, 1) == ':' then return ':' end
           return '?';
         else arg = args[1] end
-      end
-      table.remove(args, 1);
-      place = 0;
-    end
+		end
+			table.remove(args, 1);
+			place = 0;
+		end
     return optopt, arg;
   end
 end

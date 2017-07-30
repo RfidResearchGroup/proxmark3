@@ -23,10 +23,20 @@ void GetFromBigBuf(uint8_t *dest, int bytes, int start_index) {
 	clearCommandBuffer();
 	SendCommand(&c);
 }
-void GetEMLFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index) {
+// this will download the EMULATOR memory part from device, 
+// inside the BigBuf EML zon.
+bool GetEMLFromBigBuf(uint8_t *dest, uint32_t bytes, uint32_t start_index) {
 	sample_buf = dest;
 	UsbCommand c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, bytes, 0}};
 	clearCommandBuffer();
 	SendCommand(&c);
+	
+	// the download will be done inside cmdmain.c function UsbCommandReceived(UsbCommand *UC)
+	
+	// we are waiting for the ACK	
+	if ( !WaitForResponseTimeout(CMD_ACK, NULL, 2500))
+		return false;
+	
+	return true;
 }
 

@@ -31,6 +31,7 @@ extern "C" {
 #include "iso14443b.h"
 #include "emvcard.h"
 
+extern const uint8_t OddByteParity[256];
 extern int rsamples;   // = 0;
 extern int tracing;    // = TRUE;
 extern uint8_t trigger;
