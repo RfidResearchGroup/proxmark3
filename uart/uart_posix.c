@@ -223,14 +223,14 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) 
     
     // Write error
     if (res < 0) {
-		printf("write error\n");
-      return false;
+		printf("UART:: write error\n");
+		return false;
     }
     
     // Write time-out
     if (res == 0) {
-		printf("write time-out\n");
-      return false;
+		printf("UART:: write time-out\n");
+		return false;
     }
     
     // Send away the bytes
@@ -238,7 +238,7 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) 
     
     // Stop if the OS has some troubles sending the data
     if (res <= 0) {
-		printf("os troubles\n");
+		printf("UART:: os troubles\n");
 		return false;
 	}
     

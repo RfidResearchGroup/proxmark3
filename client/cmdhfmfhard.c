@@ -1439,7 +1439,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 	bool reported_suma8 = false;
 	FILE *fnonces = NULL;
 	UsbCommand resp;
-	uint8_t timeout = 0;
+
 	num_acquired_nonces = 0;
 	
 	clearCommandBuffer();
@@ -1458,20 +1458,13 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 		if (field_off) break;
 		
 		if (initialize) {
-			while(!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-				timeout++;
-				printf(".");
-				if (timeout > 3) {
-					PrintAndLog("\nNo response from Proxmark. Aborting...");
-					if (fnonces) fclose(fnonces);
-					return 1;
-				}
+			if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
+				UsbCommand c = {CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4}};
+				clearCommandBuffer();
+				SendCommand(&c);
+				return 1;
 			}
-
-			if (resp.arg[0]) {
-				if (fnonces) fclose(fnonces);
-				return resp.arg[0];  // error during nested_hard
-			}
+			if (resp.arg[0]) return resp.arg[0];  // error during nested_hard
 
 			cuid = resp.arg[1];
 			if (nonce_file_write && fnonces == NULL) {
@@ -1486,7 +1479,6 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 				fwrite(&trgKeyType, 1, 1, fnonces);
 				fflush(fnonces);
 			}
-			initialize = false;			
 		}
 
 		if (!initialize) {
@@ -1506,7 +1498,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 
 				if (nonce_file_write) {
 					fwrite(bufp, 1, 9, fnonces);
-				fflush(fnonces);
+					fflush(fnonces);
 				}
 				bufp += 9;
 			}

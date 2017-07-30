@@ -438,7 +438,6 @@ static int l_crc64_ecma182(lua_State *L)
 	return 1;
 }
 
-
 static int l_sha1(lua_State *L)
 {
 	size_t size;
@@ -586,7 +585,7 @@ static int l_hardnested(lua_State *L){
  * @return
  */
 static int l_detect_prng(lua_State *L) {
-       bool valid = detect_classic_prng();
+	bool valid = detect_classic_prng();
 	//Push the retval on the stack
 	lua_pushinteger(L, valid);
 	return 1;
@@ -621,7 +620,6 @@ int set_pm3_libraries(lua_State *L) {
 		{"GetFromBigBuf",               l_GetFromBigBuf},
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},
 		{"mfDarkside",                  l_mfDarkside},
-        //{"PrintAndLog",                 l_PrintAndLog},
         {"foobar",                      l_foobar},
         {"ukbhit",                      l_ukbhit},
         {"clearCommandBuffer",          l_clearCommandBuffer},
