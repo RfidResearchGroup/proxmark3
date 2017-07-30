@@ -929,15 +929,19 @@ void UsbPacketReceived(uint8_t *packet, int len)
 		case CMD_SET_LF_SAMPLING_CONFIG:
 			setSamplingConfig((sample_config *) c->d.asBytes);
 			break;
-		case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K:
-			cmd_send(CMD_ACK,SampleLF(c->arg[0], c->arg[1]),0,0,0,0);
+		case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K: {
+			uint32_t bits = SampleLF(c->arg[0], c->arg[1]);
+			cmd_send(CMD_ACK, bits, 0, 0, 0, 0);
 			break;
+		}
 		case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
 			ModThenAcquireRawAdcSamples125k(c->arg[0], c->arg[1], c->arg[2], c->d.asBytes);
 			break;
-		case CMD_LF_SNOOP_RAW_ADC_SAMPLES:
-			cmd_send(CMD_ACK,SnoopLF(),0,0,0,0);
+		case CMD_LF_SNOOP_RAW_ADC_SAMPLES: {
+			uint32_t bits = SnoopLF();
+			cmd_send(CMD_ACK, bits, 0, 0, 0, 0);
 			break;
+		}
 		case CMD_HID_DEMOD_FSK:
 			CmdHIDdemodFSK(c->arg[0], 0, 0, 1);
 			break;

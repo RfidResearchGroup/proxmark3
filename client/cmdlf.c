@@ -335,7 +335,8 @@ bool lf_read(bool silent, uint32_t samples) {
 			return false;
 		}
 	}
-	getSamples(resp.arg[0], silent);
+	// resp.arg[0] is bits read not bytes read.
+	getSamples(resp.arg[0]/8, silent);
 
 	return true;
 }
@@ -816,13 +817,13 @@ int CheckChipType(bool getDeviceData) {
 
 	if (!getDeviceData) return 0;
 	
-	uint32_t word = 0;
-	save_restoreGB(GRAPH_SAVE);
-	
+	save_restoreDB(GRAPH_SAVE);
+
 	//check for em4x05/em4x69 chips first
+	uint32_t word = 0;
 	if (EM4x05IsBlock0(&word)) {
+		PrintAndLog("\nValid EM4x05/EM4x69 Chip Found\nTry lf em 4x05... commands\n");
 		save_restoreGB(GRAPH_RESTORE);
-		PrintAndLog("\nValid EM4x05/EM4x69 Chipset found\nTry `lf em 4x05` commands\n");
 		return 1;
 	}
 
@@ -830,7 +831,6 @@ int CheckChipType(bool getDeviceData) {
 	if (tryDetectP1(true)) {
 		PrintAndLog("\nValid T55xx Chip Found\nTry `lf t55xx` commands\n");
 		save_restoreGB(GRAPH_RESTORE);
-
 		return 1;		
 	}
 
@@ -866,20 +866,13 @@ int CmdLFfind(const char *Cmd) {
 	if (getDeviceData) {
 
 		// only run if graphbuffer is just noise as it should be for hitag/cotag
-		if (graphJustNoise(GraphBuffer, testLen)) {
+		if (is_justnoise(GraphBuffer, testLen)) {
 			
 			if (CheckChipType(getDeviceData) )
 				return 1;			
 			
-			ans=CmdLFHitagReader("26");
-			if (ans==0)
-				return 1;
-
-			ans=CmdCOTAGRead("");
-			if (ans>0){
-				PrintAndLog("\nValid COTAG ID Found!");
-				return 1;
-			}
+			ans=CmdLFHitagReader("26");	if (ans==0) {PrintAndLog("\nValid Hitag Found!");return 1;}
+			ans=CmdCOTAGRead("");		if (ans>0) {PrintAndLog("\nValid COTAG ID Found!");	return 1;}
 			PrintAndLog("Signal looks just like noise. Quitting.");
 		    return 0;
 		}
@@ -888,135 +881,32 @@ int CmdLFfind(const char *Cmd) {
 	// identify chipset
 	CheckChipType(getDeviceData);
 	
-	ans=CmdIOProxDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid IO Prox ID Found!");
-		return CheckChipType(getDeviceData);
-	}
+	ans=CmdAWIDDemod("");		if (ans>0) { PrintAndLog("\nValid AWID ID Found!");	return CheckChipType(getDeviceData);}
+	ans=CmdEM410xDemod(""); 	if (ans>0) { PrintAndLog("\nValid EM410x ID Found!"); return CheckChipType(getDeviceData);}
+	ans=EM4x50Read("", false); 	if (ans>0) { PrintAndLog("\nValid EM4x50 ID Found!"); return 1;}	
+	ans=CmdFdxDemod(""); 		if (ans>0) { PrintAndLog("\nValid FDX-B ID Found!"); return CheckChipType(getDeviceData);}
+	ans=CmdGuardDemod(""); 		if (ans>0) { PrintAndLog("\nValid Guardall G-Prox II ID Found!"); return CheckChipType(getDeviceData);}
+	ans=CmdHIDDemod("");		if (ans>0) { PrintAndLog("\nValid HID Prox ID Found!"); return CheckChipType(getDeviceData);}
+	ans=CmdPSKIdteck(""); 		if (ans>0) { PrintAndLog("\nValid Idteck ID Found!");	return CheckChipType(getDeviceData);}
 
-	ans=CmdPyramidDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid Pyramid ID Found!");
-		return CheckChipType(getDeviceData);
-	}
+	ans=CmdIndalaDemod("");		if (ans>0) { PrintAndLog("\nValid Indala ID Found!"); return CheckChipType(getDeviceData);}
+	ans=CmdIOProxDemod(""); 	if (ans>0) { PrintAndLog("\nValid IO Prox ID Found!");return CheckChipType(getDeviceData);}
+	ans=CmdJablotronDemod(""); 	if (ans>0) { PrintAndLog("\nValid Jablotron ID Found!");	return CheckChipType(getDeviceData);}
 
-	ans=CmdParadoxDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid Paradox ID Found!");
-		return CheckChipType(getDeviceData);
-	}
+	ans=CmdLFNedapDemod(""); 	if (ans>0) { PrintAndLog("\nValid NEDAP ID Found!"); return CheckChipType(getDeviceData);}
+	ans=CmdNexWatchDemod(""); 	if (ans>0) { PrintAndLog("\nValid NexWatch ID Found!"); return CheckChipType(getDeviceData);}
+	ans=CmdNoralsyDemod(""); 	if (ans>0) { PrintAndLog("\nValid Noralsy ID Found!"); return CheckChipType(getDeviceData);}
 
-	ans=CmdAWIDDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid AWID ID Found!");
-		return CheckChipType(getDeviceData);
-	}
+	ans=CmdPacDemod(""); 		if (ans>0) { PrintAndLog("\nValid PAC/Stanley ID Found!");	return CheckChipType(getDeviceData);}	
+	ans=CmdParadoxDemod("");	if (ans>0) { PrintAndLog("\nValid Paradox ID Found!"); return CheckChipType(getDeviceData);}
+	ans=CmdPrescoDemod(""); 	if (ans>0) { PrintAndLog("\nValid Presco ID Found!"); return CheckChipType(getDeviceData);}				 
+	ans=CmdPyramidDemod("");	if (ans>0) { PrintAndLog("\nValid Pyramid ID Found!"); return CheckChipType(getDeviceData);}
 
-	ans=CmdHIDDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid HID Prox ID Found!");
-		return CheckChipType(getDeviceData);
-	}
+	ans=CmdSecurakeyDemod(""); 	if (ans>0) { PrintAndLog("\nValid Securakey ID Found!");	return CheckChipType(getDeviceData);}
+	ans=CmdVikingDemod("");		if (ans>0) { PrintAndLog("\nValid Viking ID Found!"); return CheckChipType(getDeviceData);}	
+	ans=CmdVisa2kDemod("");		if (ans>0) { PrintAndLog("\nValid Visa2000 ID Found!"); return CheckChipType(getDeviceData);}
 
-	ans=CmdAskEM410xDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid EM410x ID Found!");
-		return CheckChipType(getDeviceData);
-	}
-
-	ans=CmdVisa2kDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid Visa2000 ID Found!");
-		return CheckChipType(getDeviceData);		
-	}
 	
-	ans=CmdGuardDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid Guardall G-Prox II ID Found!");
-		return CheckChipType(getDeviceData);
-	}
-
-	ans=CmdFdxDemod(""); //biphase
-	if (ans>0) {
-		PrintAndLog("\nValid FDX-B ID Found!");
-		return CheckChipType(getDeviceData);
-	}
-	ans=EM4x50Read("", false);
-	if (ans>0) {
-		PrintAndLog("\nValid EM4x50 ID Found!");
-		return 1;
-	}	
-
-	ans=CmdJablotronDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid Jablotron ID Found!");
-		return CheckChipType(getDeviceData);
-	}
-
-	ans=CmdNoralsyDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid Noralsy ID Found!");
-		return CheckChipType(getDeviceData);
-	}
-
-	ans=CmdSecurakeyDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid Securakey ID Found!");
-		return CheckChipType(getDeviceData);
-	}
-
-	ans=CmdVikingDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid Viking ID Found!");
-		return CheckChipType(getDeviceData);
-	}	
-	ans=CmdIndalaDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid Indala ID Found!");
-		return CheckChipType(getDeviceData);
-	}
-
-	ans=CmdNexWatchDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid NexWatch ID Found!");
-		return CheckChipType(getDeviceData);
-	}
-	ans=CmdPSKIdteck("");
-	if (ans>0) {
-		PrintAndLog("\nValid Idteck ID Found!");
-		return CheckChipType(getDeviceData);
-	}
-	ans=CmdJablotronDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid Jablotron ID Found!");
-		return CheckChipType(getDeviceData);
-	}
-	ans=CmdLFNedapDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid NEDAP ID Found!");
-		return CheckChipType(getDeviceData);
-	}
-	ans=CmdVisa2kDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid Visa2000 ID Found!");
-		return CheckChipType(getDeviceData);
-	}
-	ans=CmdNoralsyDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid Noralsy ID Found!");
-		return CheckChipType(getDeviceData);
-	}
-	ans=CmdPrescoDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid Presco ID Found!");
-		return CheckChipType(getDeviceData);
-	}				 
-	ans=CmdPacDemod("");
-	if (ans>0) {
-		PrintAndLog("\nValid PAC/Stanley ID Found!");
-		return CheckChipType(getDeviceData);
-	}	
-
 	// TIdemod?
 	PrintAndLog("\nNo Known Tags Found!\n");
 	if (testRaw=='u' || testRaw=='U'){
@@ -1074,6 +964,7 @@ int CmdLFfind(const char *Cmd) {
 			PrintAndLog("\nCould also be NRZ - try 'data nrzrawdemod");
 			return  CheckChipType(getDeviceData);
 		}
+		ans = CheckChipType(getDeviceData);
 		PrintAndLog("\nNo Data Found!\n");
 	}
 	return 0;

@@ -16,16 +16,16 @@ static int CmdHelp(const char *Cmd);
 
 //////////////// 410x commands
 int usage_lf_em410x_demod(void){
-	PrintAndLog("Usage:  data askem410xdemod [clock] <0|1> [maxError]");
+	PrintAndLog("Usage:  lf em 410x_demod [clock] <0|1> [maxError]");
 	PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
 	PrintAndLog("     <invert>, 1 for invert output");
 	PrintAndLog("     [set maximum allowed errors], default = 100.");
 	PrintAndLog("");
-	PrintAndLog("    sample: data askem410xdemod        = demod an EM410x Tag ID from GraphBuffer");
-	PrintAndLog("          : data askem410xdemod 32     = demod an EM410x Tag ID from GraphBuffer using a clock of RF/32");
-	PrintAndLog("          : data askem410xdemod 32 1   = demod an EM410x Tag ID from GraphBuffer using a clock of RF/32 and inverting data");
-	PrintAndLog("          : data askem410xdemod 1      = demod an EM410x Tag ID from GraphBuffer while inverting data");
-	PrintAndLog("          : data askem410xdemod 64 1 0 = demod an EM410x Tag ID from GraphBuffer using a clock of RF/64 and inverting data and allowing 0 demod errors");
+	PrintAndLog("    sample: lf em 410x_demod        = demod an EM410x Tag ID from GraphBuffer");
+	PrintAndLog("          : lf em 410x_demod 32     = demod an EM410x Tag ID from GraphBuffer using a clock of RF/32");
+	PrintAndLog("          : lf em 410x_demod 32 1   = demod an EM410x Tag ID from GraphBuffer using a clock of RF/32 and inverting data");
+	PrintAndLog("          : lf em 410x_demod 1      = demod an EM410x Tag ID from GraphBuffer while inverting data");
+	PrintAndLog("          : lf em 410x_demod 64 1 0 = demod an EM410x Tag ID from GraphBuffer using a clock of RF/64 and inverting data and allowing 0 demod errors");
 	return 0;
 }
 int usage_lf_em410x_write(void) {
@@ -188,6 +188,14 @@ int usage_lf_em4x05_info(void) {
 	return 0;
 }
 
+/* Read the ID of an EM410x tag.
+ * Format:
+ *   1111 1111 1           <-- standard non-repeatable header
+ *   XXXX [row parity bit] <-- 10 rows of 5 bits for our 40 bit tag ID
+ *   ....
+ *   CCCC                  <-- each bit here is parity for the 10 bits above in corresponding column
+ *   0                     <-- stop bit, end of tag
+ */
 
 // Construct the graph for emulating an EM410X tag
 void ConstructEM410xEmulGraph(const char *uid,const  uint8_t clock) {
@@ -342,19 +350,25 @@ void printEM410x(uint32_t hi, uint64_t id) {
  */
 int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo ) {
 	size_t idx = 0;
-	size_t size = DemodBufferLen;
-	uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
-	memcpy(BitStream, DemodBuffer, size); 
-	int ans = Em410xDecode(BitStream, &size, &idx, hi, lo);
+	uint8_t bits[512] = {0};
+	size_t size = sizeof(bits);	
+	if ( !getDemodBuf(bits, &size) ) {
+		PrintAndLog("DEBUG: Error - Em410x problem during copy from ASK demod");
+		return 0;
+	}
+	
+	int ans = Em410xDecode(bits, &size, &idx, hi, lo);
 	if ( ans < 0){
 		if (g_debugMode){
 			if (ans == -1)
 				PrintAndLog("DEBUG: Error - Em410x not only 0|1 in decoded bitstream");
 			else if (ans == -2)
-				PrintAndLog("DEBUG: Error - Em410x preamble not found");
-			else if (ans == -3)
-				PrintAndLog("DEBUG: Error - Em410x Size not correct: %d", size);
+				PrintAndLog("DEBUG: Error - Em410x not enough samples after demod");
 			else if (ans == -4)
+				PrintAndLog("DEBUG: Error - Em410x preamble not found");
+			else if (ans == -5)
+				PrintAndLog("DEBUG: Error - Em410x Size not correct: %d", size);
+			else if (ans == -6)
 				PrintAndLog("DEBUG: Error - Em410x parity failed");
 		}
 		return 0;
@@ -365,12 +379,14 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo ) {
 	}
 		
 	//set GraphBuffer for clone or sim command
-	setDemodBuf(BitStream, size, idx);
+	setDemodBuf(DemodBuffer, (size==40) ? 64 : 128, idx+1);
+	setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx+1)*g_DemodClock));
 	if (g_debugMode){
 		PrintAndLog("DEBUG: Em410x idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
 		printDemodBuff();
 	}
 	
+	printf("ice B %d \n", verbose);	
 	if (verbose)
 		printEM410x(*hi, *lo);
 
@@ -382,21 +398,16 @@ int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose) {
 	return AskEm410xDecode(verbose, hi, lo);
 }
 
-//by marshmellow
-//takes 3 arguments - clock, invert and maxErr as integers
-//attempts to demodulate ask while decoding manchester
-//prints binary found and saves in graphbuffer for further commands
-int CmdAskEM410xDemod(const char *Cmd) {
-	char cmdp = param_getchar(Cmd, 0);
-	if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H')		
-		return usage_lf_em410x_demod();
-
-	uint64_t lo = 0;
-	uint32_t hi = 0;
-	return AskEm410xDemod(Cmd, &hi, &lo, true);
+// this read is the "normal" read,  which download lf signal and tries to demod here.
+int CmdEM410xRead(const char *Cmd) {
+	lf_read(true, 8192);
+	CmdEM410xDemod(Cmd);
+	return 0;
 }
 
-int CmdEMdemodASK(const char *Cmd) {
+// this read loops on device side.
+// uses the demod in lfops.c
+int CmdEM410xRead_device(const char *Cmd) {
 	char cmdp = param_getchar(Cmd, 0);
 	uint8_t findone = (cmdp == '1') ? 1 : 0;
 	UsbCommand c = {CMD_EM410X_DEMOD, {findone, 0, 0}};
@@ -404,21 +415,19 @@ int CmdEMdemodASK(const char *Cmd) {
 	return 0;
 }
 
-/* Read the ID of an EM410x tag.
- * Format:
- *   1111 1111 1           <-- standard non-repeatable header
- *   XXXX [row parity bit] <-- 10 rows of 5 bits for our 40 bit tag ID
- *   ....
- *   CCCC                  <-- each bit here is parity for the 10 bits above in corresponding column
- *   0                     <-- stop bit, end of tag
- */
-int CmdEM410xRead(const char *Cmd) {
+ //by marshmellow
+//takes 3 arguments - clock, invert and maxErr as integers
+//attempts to demodulate ask while decoding manchester
+//prints binary found and saves in graphbuffer for further commands
+int CmdEM410xDemod(const char *Cmd) {
+	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) > 10 || cmdp == 'h' || cmdp == 'H')	return usage_lf_em410x_demod();
+	
 	uint32_t hi = 0;
 	uint64_t lo = 0;
 
-	if(!AskEm410xDemod("", &hi, &lo, false)) return 0;
-
-	printEM410x(hi, lo);
+	if(AskEm410xDemod(Cmd, &hi, &lo, true) != 1) return 0;
+	
 	g_em410xid = lo;
 	return 1;
 }
@@ -1138,7 +1147,7 @@ int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) 
 		return -1;
 	}
 	int testLen = (GraphTraceLen < 1000) ? GraphTraceLen : 1000;
-	if (graphJustNoise(GraphBuffer, testLen)) {
+	if (is_justnoise(GraphBuffer, testLen)) {
 		PrintAndLog("no tag found");
 		return -1;
 	}
@@ -1414,7 +1423,8 @@ int CmdEM4x05Info(const char *Cmd) {
 
 static command_t CommandTable[] = {
 	{"help", 		CmdHelp, 			1, "This help"},
-	{"410x_demod",	CmdEMdemodASK, 		0, "Extract ID from EM410x tag on antenna)"},  
+	//{"410x_demod",	CmdEMdemodASK, 		0, "Extract ID from EM410x tag on antenna)"},  
+	{"410x_demod",	CmdEM410xDemod, 	0, "Extract ID from EM410x tag on antenna)"},  
 	{"410x_read",	CmdEM410xRead, 		1, "Extract ID from EM410x tag from GraphBuffer"},
 	{"410x_sim",	CmdEM410xSim, 		0, "simulate EM410x tag"},
 	{"410x_brute",  CmdEM410xBrute,		0, "Reader bruteforce attack by simulating EM410x tags"},

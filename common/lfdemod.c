@@ -176,6 +176,7 @@ bool preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *
 //by marshmellow
 // search for given preamble in given BitStream and return success=1 or fail=0 and startIndex (where it was found) and length if not fineone 
 // fineone does not look for a repeating preamble for em4x05/4x69 sends preamble once, so look for it once in the first pLen bits
+//(iceman) FINDONE,  only finds start index. NOT SIZE!.  I see Em410xDecode (lfdemod.c) uses SIZE to determine success
 bool preambleSearchEx(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx, bool findone)
 {
 	// Sanity check.  If preamble length is bigger than bitstream length.
@@ -184,20 +185,21 @@ bool preambleSearchEx(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t
 	uint8_t foundCnt = 0;
 	for (size_t idx = 0; idx < *size - pLen; idx++) {
 		if (memcmp(BitStream+idx, preamble, pLen) == 0){
-			if (g_debugMode) prnt("DEBUG: preamble found at %i", idx);
 			//first index found
 			foundCnt++;
 			if (foundCnt == 1){
+				if (g_debugMode) prnt("DEBUG: (preambleSearchEx) preamble found at %i", idx);
 				*startIdx = idx;
 				if (findone) return true;
 			}
 			if (foundCnt == 2){
+				if (g_debugMode) prnt("DEBUG: (preambleSearchEx) preamble 2 found at %i", idx);
 				*size = idx - *startIdx;
 				return true;
 			}
 		}
 	}
-	return false;
+	return (foundCnt > 0);
 }
 
 // find start of modulating data (for fsk and psk) in case of beginning noise or slow chip startup.
@@ -445,7 +447,7 @@ int DetectASKClock(uint8_t dest[], size_t size, int *clock, int maxErr) {
 	if (!clockFnd){
 		if (DetectCleanAskWave(dest, size, peak, low)==1){
 			int ans = DetectStrongAskClock(dest, size, peak, low, clock);
-			if (g_debugMode==2) prnt("DEBUG ASK: detectaskclk Clean Ask Wave Detected: clk %i, ShortestWave: %i", clock ,ans);
+			if (g_debugMode==2) prnt("DEBUG ASK: detectaskclk Clean Ask Wave Detected: clk %i, ShortestWave: %i", *clock ,ans);
 			if (ans > 0){
 				return ans; //return shortest wave start position
 			}
@@ -1262,7 +1264,7 @@ int cleanAskRawDemod(uint8_t *BinStream, size_t *size, int clk, int invert, int 
 				if (smplCnt > clk-(clk/4)-1) { //full clock
 					if (smplCnt > clk + (clk/4)+1) { //too many samples
 						errCnt++;
-						if (g_debugMode==2) prnt("DEBUG ASK: Modulation Error at: %u", i);
+						if (g_debugMode==2) prnt("DEBUG:(cleanAskRawDemod) ASK Modulation Error at: %u", i);
 						BinStream[bitCnt++] = 7;
 					} else if (waveHigh) {
 						BinStream[bitCnt++] = invert;
@@ -1320,20 +1322,22 @@ int askdemod_ext(uint8_t *BinStream, size_t *size, int *clk, int *invert, int ma
 	size_t errCnt = 0;
 	// if clean clipped waves detected run alternate demod
 	if (DetectCleanAskWave(BinStream, *size, high, low)) {
+
 		if (g_debugMode==2) prnt("DEBUG ASK: Clean Wave Detected - using clean wave demod");
+		
 		errCnt = cleanAskRawDemod(BinStream, size, *clk, *invert, high, low, startIdx);
-		if (askType) { //askman
+
+		if (askType) { //ask/manchester
 			uint8_t alignPos = 0;
 			errCnt = manrawdecode(BinStream, size, 0, &alignPos);
 			*startIdx += *clk/2 * alignPos;
-			if (g_debugMode) prnt("DEBUG ASK CLEAN: startIdx %i, alignPos %u", *startIdx, alignPos);
+			if (g_debugMode) 
+				prnt("DEBUG: (askdemod_ext) CLEAN: startIdx %i, alignPos %u", *startIdx, alignPos);
+		} 
 		return errCnt;
-		} else { //askraw
-			return errCnt;
-		}
 	}
-	if (g_debugMode) prnt("DEBUG ASK WEAK: startIdx %i", *startIdx);
-	if (g_debugMode==2) prnt("DEBUG ASK: Weak Wave Detected - using weak wave demod");
+	if (g_debugMode) prnt("DEBUG: (askdemod_ext) WEAK: startIdx %i", *startIdx);
+	if (g_debugMode==2) prnt("DEBUG: (askdemod_ext) Weak Wave Detected - using weak wave demod");
 
 	int lastBit;  //set first clock check - can go negative
 	size_t i, bitnum = 0;     //output counter
@@ -1351,7 +1355,7 @@ int askdemod_ext(uint8_t *BinStream, size_t *size, int *clk, int *invert, int ma
 				BinStream[bitnum++] = *invert ^ 1;
 			} else if (i-lastBit >= *clk+tol) {
 				if (bitnum > 0) {
-					if (g_debugMode==2) prnt("DEBUG ASK: Modulation Error at: %u", i);
+					if (g_debugMode==2) prnt("DEBUG: (askdemod_ext) Modulation Error at: %u", i);
 					BinStream[bitnum++]=7;
 					errCnt++;						
 				} 
@@ -1426,8 +1430,8 @@ int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startId
 size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow, int *startIdx) {
 	size_t last_transition = 0;
 	size_t idx = 1;
-	if (fchigh==0) fchigh=10;
-	if (fclow==0) fclow=8;
+	if (fchigh == 0) fchigh = 10;
+	if (fclow == 0) fclow = 8;
 	//set the threshold close to 0 (graph) or 128 std to avoid static
 	size_t preLastSample = 0;
 	size_t LastSample = 0;
@@ -1486,16 +1490,16 @@ size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow
 //rfLen = clock, fchigh = larger field clock, fclow = smaller field clock
 size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, int *startIdx) {
 	uint8_t lastval = dest[0];
-	size_t idx=0;
-	size_t numBits=0;
-	uint32_t n=1;
-	for( idx=1; idx < size; idx++) {
+	size_t idx = 0;
+	size_t numBits = 0;
+	uint32_t n = 1;
+	for( idx = 1; idx < size; idx++) {
 		n++;
-		if (dest[idx]==lastval) continue; //skip until we hit a transition
+		if (dest[idx] == lastval) continue; //skip until we hit a transition
 		
 		//find out how many bits (n) we collected (use 1/2 clk tolerance)
 		//if lastval was 1, we have a 1->0 crossing
-		if (dest[idx-1]==1) {
+		if (dest[idx-1] == 1) {
 			n = (n * fclow + rfLen/2) / rfLen;
 		} else {// 0->1 crossing 
 			n = (n * fchigh + rfLen/2) / rfLen; 
@@ -1506,27 +1510,27 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert,
 		if (numBits == 0) {
 			if (lastval == 1) {  //high to low
 				*startIdx += (fclow * idx) - (n*rfLen);
-				if (g_debugMode==2) prnt("DEBUG FSK: startIdx %i, fclow*idx %i, n*rflen %u", *startIdx, fclow*(idx), n*rfLen);
+				if (g_debugMode == 2) prnt("DEBUG (aggregate_bits) FSK startIdx %i, fclow*idx %i, n*rflen %u", *startIdx, fclow*(idx), n*rfLen);
 			} else {
 				*startIdx += (fchigh * idx) - (n*rfLen);
-				if (g_debugMode==2) prnt("DEBUG FSK: startIdx %i, fchigh*idx %i, n*rflen %u", *startIdx, fchigh*(idx), n*rfLen);
+				if (g_debugMode == 2) prnt("DEBUG (aggregate_bits) FSK startIdx %i, fchigh*idx %i, n*rflen %u", *startIdx, fchigh*(idx), n*rfLen);
 			}
 		}
 
 		//add to our destination the bits we collected		
-		memset(dest+numBits, dest[idx-1]^invert , n);
+		memset(dest+numBits, dest[idx-1] ^ invert , n);
 		numBits += n;
-		n=0;
-		lastval=dest[idx];
+		n = 0;
+		lastval = dest[idx];
 	}//end for
 	// if valid extra bits at the end were all the same frequency - add them in
 	if (n > rfLen/fchigh) {
-		if (dest[idx-2]==1) {
+		if (dest[idx-2] == 1) {
 			n = (n * fclow + rfLen/2) / rfLen;
 		} else {
 			n = (n * fchigh + rfLen/2) / rfLen;
 		}
-		memset(dest+numBits, dest[idx-1]^invert , n);
+		memset(dest+numBits, dest[idx-1] ^ invert , n);
 		numBits += n;
 	}
 	return numBits;
@@ -1695,9 +1699,9 @@ int detectAWID(uint8_t *dest, size_t *size, int *waveStartIdx) {
 //takes 1s and 0s and searches for EM410x format - output EM ID
 int Em410xDecode(uint8_t *bits, size_t *size, size_t *startIdx, uint32_t *hi, uint64_t *lo) {
 	// sanity check
-	if (*size < 64) return -3;	
 	if (bits[1] > 1) return -1; 
-						   
+	if (*size < 64) return -2;	
+
 	uint8_t fmtlen;
 	*startIdx = 0;
 	
@@ -1705,11 +1709,8 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *startIdx, uint32_t *hi, ui
 	// include 0 in front to help get start pos
 	uint8_t preamble[] = {0,1,1,1,1,1,1,1,1,1};
 	if (!preambleSearch(bits, preamble, sizeof(preamble), size, startIdx))
-		return -2;
+		return -4;
 
-	//XL and normal size.
-	if (*size != 64 && *size != 128) return -3;
-	
 	fmtlen = (*size == 128) ? 22 : 10;
 
 	//skip last 4bit parity row for simplicity
@@ -1728,7 +1729,7 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *startIdx, uint32_t *hi, ui
 		*lo = ((uint64_t)(bytebits_to_byte(bits + 24, 32)) << 32) | (bytebits_to_byte(bits + 24 + 32, 32));
 		break;
 	    } 
-	    default: return -4;	
+	    default: return -6;	
 	}
 	return 1;
 }

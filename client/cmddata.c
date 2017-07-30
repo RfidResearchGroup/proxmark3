@@ -299,15 +299,14 @@ int CmdSetDebugMode(const char *Cmd) {
 //by marshmellow
 // max output to 512 bits if we have more - should be plenty
 void printDemodBuff(void) {
-	int bitLen = DemodBufferLen;
-	if (bitLen < 1) {
-		PrintAndLog("no bits found in demod buffer");
+	int len = DemodBufferLen;
+	if (len < 1) {
+		PrintAndLog("(printDemodBuff) no bits found in demod buffer");
 		return;
 	}
-	if (bitLen > 512) bitLen = 512; 
+	if (len > 512) len = 512; 
 
-	char *bin = sprint_bin_break(DemodBuffer, bitLen,16);
-	PrintAndLog("%s",bin);
+	PrintAndLog("%s", sprint_bin_break(DemodBuffer, len, 16) );
 }
 
 int CmdPrintDemodBuff(const char *Cmd) {
@@ -392,20 +391,29 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 	uint8_t askamp = 0;
 	char amp = param_getchar(Cmd, 0);
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN] = {0};
+
 	sscanf(Cmd, "%i %i %i %i %c", &clk, &invert, &maxErr, &maxLen, &amp);
-	if (!maxLen) maxLen = BIGBUF_SIZE;
+
+	if (!maxLen) maxLen = MAX_GRAPH_TRACE_LEN;
+
 	if (invert != 0 && invert != 1) {
 		PrintAndLog("Invalid argument: %s", Cmd);
 		return 0;
 	}
-	if (clk==1){
-		invert=1;
-		clk=0;
+
+	if (clk == 1) {
+		invert = 1;
+		clk = 0;
 	}
+
 	size_t BitLen = getFromGraphBuf(BitStream);
-	if (g_debugMode) PrintAndLog("DEBUG: Bitlen from grphbuff: %d", BitLen);
-	if (BitLen<255) return 0;
-	if (maxLen<BitLen && maxLen != 0) BitLen = maxLen;
+
+	if (g_debugMode) PrintAndLog("DEBUG: (ASKDemod_ext) Bitlen from grphbuff: %d", BitLen);
+
+	if (BitLen < 255) return 0;
+
+	if (maxLen < BitLen && maxLen != 0) BitLen = maxLen;
+
 	int foundclk = 0;
 	//amp before ST check
 	if (amp == 'a' || amp == 'A')
@@ -414,31 +422,39 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 	bool st = false;
 	size_t ststart = 0, stend = 0;
 	if (*stCheck) st = DetectST(BitStream, &BitLen, &foundclk, &ststart, &stend);
+
 	if (st) {
 		*stCheck = st;
 		clk = (clk == 0) ? foundclk : clk;
 		CursorCPos = ststart;
 		CursorDPos = stend;
-		if (verbose || g_debugMode) PrintAndLog("\nFound Sequence Terminator - First one is shown by orange and blue graph markers");
+		if (verbose || g_debugMode) 
+			PrintAndLog("Found Sequence Terminator - First one is shown by orange and blue graph markers");
 	}
+
 	int startIdx = 0;
 	int errCnt = askdemod_ext(BitStream, &BitLen, &clk, &invert, maxErr, askamp, askType, &startIdx);
-	if (errCnt<0 || BitLen<16){  //if fatal error (or -1)
-		if (g_debugMode) PrintAndLog("DEBUG: no data found %d, errors:%d, bitlen:%d, clock:%d",errCnt,invert,BitLen,clk);
+
+	if (errCnt < 0 || BitLen < 16){  //if fatal error (or -1)
+		if (g_debugMode) 
+			PrintAndLog("DEBUG: (ASKDemod_ext) No data found errors:%d, invert:%d, bitlen:%d, clock:%d", errCnt, invert, BitLen, clk);
 		return 0;
 	}
+
 	if (errCnt > maxErr){
-		if (g_debugMode) PrintAndLog("DEBUG: Too many errors found, errors:%d, bits:%d, clock:%d",errCnt, BitLen, clk);
+		if (g_debugMode) 
+			PrintAndLog("DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%d, clock:%d", errCnt, BitLen, clk);
 		return 0;
 	}
-	if (verbose || g_debugMode) PrintAndLog("\nUsing Clock:%d, Invert:%d, Bits Found:%d",clk,invert,BitLen);
+	
+	if (verbose || g_debugMode) PrintAndLog("DEBUG: (ASKDemod_ext) Using clock:%d, invert:%d, bits found:%d", clk, invert, BitLen);
 
 	//output
 	setDemodBuf(BitStream,BitLen,0);
 	setClockGrid(clk, startIdx);
 
 	if (verbose || g_debugMode){
-		if (errCnt>0) 
+		if (errCnt > 0) 
 			PrintAndLog("# Errors during Demoding (shown as 7 in bit stream): %d",errCnt);
 		if (askType) 
 			PrintAndLog("ASK/Manchester - Clock: %d - Decoded bitstream:",clk);
@@ -636,11 +652,16 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
 	size_t Correlation = 0;
 	int maxSum = 0;
 	int lastMax = 0;
+	
+	// sanity check
+	if ( window > len ) window = len;
+	
 	if (verbose) PrintAndLog("performing %d correlations", GraphTraceLen - window);
+
 	for (int i = 0; i < len - window; ++i) {
 		int sum = 0;
 		for (int j = 0; j < window; ++j) {
-			sum += (in[j]*in[i + j]) / 256;
+			sum += (in[j] * in[i + j]) / 256;
 		}
 		CorrelBuffer[i] = sum;
 		if (sum >= maxSum-100 && sum <= maxSum+100){
@@ -649,7 +670,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, int window, bool SaveGrph
 			lastMax = i;
 			if (sum > maxSum) maxSum = sum;
 		} else if (sum > maxSum){
-			maxSum=sum;
+			maxSum = sum;
 			lastMax = i;
 		}
 	}
@@ -789,9 +810,9 @@ int CmdGraphShiftZero(const char *Cmd) {
 int AskEdgeDetect(const int *in, int *out, int len, int threshold) {
 	int last = 0;
 	for(int i = 1; i<len; i++) {
-		if (in[i]-in[i-1] >= threshold) //large jump up
+		if (in[i] - in[i-1] >= threshold) //large jump up
 			last = 127;
-		else if(in[i]-in[i-1] <= -1 * threshold) //large jump down
+		else if (in[i] - in[i-1] <= -1 * threshold) //large jump down
 			last = -127;
 		out[i-1] = last;
 	}
@@ -919,7 +940,7 @@ int FSKrawDemod(const char *Cmd, bool verbose)
 
 		// Now output the bitstream to the scrollback by line of 16 bits
 		if (verbose || g_debugMode) {
-			PrintAndLog("\nUsing Clock:%u, invert:%u, fchigh:%u, fclow:%u", rfLen, invert, fchigh, fclow);
+			PrintAndLog("DEBUG: (FSKrawDemod) Using Clock:%u, invert:%u, fchigh:%u, fclow:%u", rfLen, invert, fchigh, fclow);
 			PrintAndLog("%s decoded bitstream:", GetFSKType(fchigh, fclow, invert));
 			printDemodBuff();
 		}
@@ -963,17 +984,17 @@ int PSKDemod(const char *Cmd, bool verbose)
 	int startIdx = 0;
 	errCnt = pskRawDemod_ext(BitStream, &BitLen, &clk, &invert, &startIdx);
 	if (errCnt > maxErr){
-		if (g_debugMode || verbose) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
+		if (g_debugMode || verbose) PrintAndLog("DEBUG: (PSKdemod) Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
 		return 0;
 	} 
 	if (errCnt<0|| BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
-		if (g_debugMode || verbose) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
+		if (g_debugMode || verbose) PrintAndLog("DEBUG: (PSKdemod) no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
 		return 0;
 	}
 	if (verbose || g_debugMode){
-		PrintAndLog("\nUsing Clock:%d, invert:%d, Bits Found:%d",clk,invert,BitLen);
+		PrintAndLog("DEBUG: (PSKdemod) Using Clock:%d, invert:%d, Bits Found:%d",clk,invert,BitLen);
 		if (errCnt>0){
-			PrintAndLog("# Errors during Demoding (shown as 7 in bit stream): %d",errCnt);
+			PrintAndLog("DEBUG: (PSKdemod) errors during Demoding (shown as 7 in bit stream): %d",errCnt);
 		}
 	}
 	//prime demod buffer for output
@@ -1055,7 +1076,7 @@ int NRZrawDemod(const char *Cmd, bool verbose)
 		clk=0;
 	}
 	if (invert != 0 && invert != 1) {
-		PrintAndLog("Invalid argument: %s", Cmd);
+		PrintAndLog("(NRZrawDemod) Invalid argument: %s", Cmd);
 		return 0;
 	}
 	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
@@ -1065,20 +1086,20 @@ int NRZrawDemod(const char *Cmd, bool verbose)
 	int clkStartIdx = 0;
 	errCnt = nrzRawDemod(BitStream, &BitLen, &clk, &invert, &clkStartIdx);
 	if (errCnt > maxErr){
-		if (g_debugMode) PrintAndLog("Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
+		if (g_debugMode) PrintAndLog("DEBUG: (NRZrawDemod) Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
 		return 0;
 	} 
 	if (errCnt<0 || BitLen<16){  //throw away static - allow 1 and -1 (in case of threshold command first)
-		if (g_debugMode) PrintAndLog("no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
+		if (g_debugMode) PrintAndLog("DEBUG: (NRZrawDemod) no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d",clk,invert,BitLen,errCnt);
 		return 0;
 	}
-	if (verbose || g_debugMode) PrintAndLog("Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
+	if (verbose || g_debugMode) PrintAndLog("DEBUG: (NRZrawDemod) Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %d",clk,invert,BitLen);
 	//prime demod buffer for output
 	setDemodBuf(BitStream,BitLen,0);
 	setClockGrid(clk, clkStartIdx);
 
 
-	if (errCnt>0 && (verbose || g_debugMode)) PrintAndLog("# Errors during Demoding (shown as 7 in bit stream): %d",errCnt);
+	if (errCnt>0 && (verbose || g_debugMode)) PrintAndLog("DEBUG: (NRZrawDemod) Errors during Demoding (shown as 7 in bit stream): %d",errCnt);
 	if (verbose || g_debugMode) {
 		PrintAndLog("NRZ demoded bitstream:");
 		// Now output the bitstream to the scrollback by line of 16 bits
@@ -1170,7 +1191,7 @@ int CmdRawDemod(const char *Cmd)
 void setClockGrid(int clk, int offset) {
 	g_DemodStartIdx = offset;
 	g_DemodClock = clk;
-	if (g_debugMode) PrintAndLog("demodoffset %d, clk %d",offset,clk);
+	if (g_debugMode) PrintAndLog("DBEUG: (setClockGrid) demodoffset %d, clk %d",offset,clk);
 
 	if (offset > clk) offset %= clk;
 	if (offset < 0) offset += clk;
@@ -1338,7 +1359,7 @@ int getSamples(int n, bool silent)
 		GraphTraceLen = n;
 	}
 
-	setClockGrid(0,0);
+	setClockGrid(0, 0);
 	DemodBufferLen = 0;
 	RepaintGraphWindow();
 	return 0;

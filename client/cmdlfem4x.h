@@ -28,10 +28,9 @@
 
 extern int CmdLFEM4X(const char *Cmd);
 
-extern int CmdEMdemodASK(const char *Cmd);
-extern int CmdAskEM410xDemod(const char *Cmd);
-extern int CmdEM410xRead(const char *Cmd);
 
+extern int CmdEM410xDemod(const char *Cmd);
+extern int CmdEM410xRead(const char *Cmd);
 extern int CmdEM410xSim(const char *Cmd);
 extern int CmdEM410xBrute(const char *Cmd);
 extern int CmdEM410xWatch(const char *Cmd);
@@ -51,7 +50,6 @@ bool EM4x05IsBlock0(uint32_t *word);
 extern void printEM410x(uint32_t hi, uint64_t id);
 extern int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo );
 extern int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose);
-
 
 extern int usage_lf_em410x_sim(void);  
 extern int usage_lf_em410x_ws(void);
