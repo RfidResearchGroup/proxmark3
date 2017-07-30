@@ -42,7 +42,7 @@ void SendCommand(UsbCommand *c)
       usb_close(devh);
       devh = NULL;
     }
-    while(!OpenProxmark(0)) { sleep(1); }
+    while(!OpenProxmark(0)) { msleep(1000); }
     printf(PROXPROMPT);
     fflush(NULL);
 
@@ -69,7 +69,7 @@ bool ReceiveCommandPoll(UsbCommand *c)
         usb_close(devh);
         devh = NULL;
       }
-      while(!OpenProxmark(0)) { sleep(1); }
+      while(!OpenProxmark(0)) { msleep(1000); }
       printf(PROXPROMPT);
       fflush(NULL);
 

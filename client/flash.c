@@ -336,7 +336,7 @@ static int enter_bootloader(char *serial_port_name)
 
 		fprintf(stderr,"Waiting for Proxmark to reappear on %s",serial_port_name);
 		do {
-			sleep(1);
+			msleep(1000);
 			fprintf(stderr, ".");
 		} while (!OpenProxmark(0));
 		fprintf(stderr," Found.\n");

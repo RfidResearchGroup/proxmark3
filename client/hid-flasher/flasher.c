@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 
 	fprintf(stderr, "Waiting for Proxmark to appear on USB...");
 	while (!OpenProxmark(1)) {
-		sleep(1);
+		msleep(1000);
 		fprintf(stderr, ".");
 	}
 	fprintf(stderr, " Found.\n");
