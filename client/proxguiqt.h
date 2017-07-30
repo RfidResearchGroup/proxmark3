@@ -32,16 +32,16 @@ class Plot: public QWidget
 		double GraphPixelsPerPoint;
 		int CursorAPos;
 		int CursorBPos;
-	void PlotGraph(int *buffer, int len, QRect r,QRect r2, QPainter* painter, int graphNum);
-	void PlotDemod(uint8_t *buffer, size_t len, QRect r,QRect r2, QPainter* painter, int graphNum, int plotOffset);
-	void plotGridLines(QPainter* painter,QRect r);
-	int xCoordOf(int i, QRect r );
-	int yCoordOf(int v, QRect r, int maxVal);
-	int valueOf_yCoord(int y, QRect r, int maxVal);
-	void setMaxAndStart(int *buffer, int len, QRect plotRect);
-	QColor getColor(int graphNum);
+		void PlotGraph(int *buffer, int len, QRect r,QRect r2, QPainter* painter, int graphNum);
+		void PlotDemod(uint8_t *buffer, size_t len, QRect r,QRect r2, QPainter* painter, int graphNum, int plotOffset);
+		void plotGridLines(QPainter* painter,QRect r);
+		int xCoordOf(int i, QRect r );
+		int yCoordOf(int v, QRect r, int maxVal);
+		int valueOf_yCoord(int y, QRect r, int maxVal);
+		void setMaxAndStart(int *buffer, int len, QRect plotRect);
+		QColor getColor(int graphNum);
 	public:
-	Plot(QWidget *parent = 0);
+		Plot(QWidget *parent = 0);
 
 	protected:
 		void paintEvent(QPaintEvent *event);
@@ -128,7 +128,7 @@ public:
 	void run();
 private:
 	char *script_cmds_file = NULL;
-	bool usb_present = false;
+	bool usb_present;
 };
 
 #endif // PROXGUI_QT
