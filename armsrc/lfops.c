@@ -1449,7 +1449,7 @@ void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t 
 	//Config for Indala (RF/32;PSK1 with RF/2;Maxblock=7)
 	data[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (7 << T55x7_MAXBLOCK_SHIFT);
 	//TODO add selection of chip for Q5 or T55x7
-	// data[0] = (((32-2)>>1) << T5555_BITRATE_SHIFT) | T5555_MODULATION_PSK1 | 7 << T5555_MAXBLOCK_SHIFT;
+	// data[0] =  T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 7 << T5555_MAXBLOCK_SHIFT;
 	WriteT55xx(data, 0, 8);
 	//Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
 	//	T5567WriteBlock(0x603E10E2,0);

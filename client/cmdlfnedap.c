@@ -245,8 +245,7 @@ int CmdLFNedapClone(const char *Cmd) {
 	blocks[0] = T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_64 | 7 << T55x7_MAXBLOCK_SHIFT;
 
 	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
-		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-		blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | ((64-2)>>1) << T5555_BITRATE_SHIFT | 7 <<T5555_MAXBLOCK_SHIFT;
+		blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 7 <<T5555_MAXBLOCK_SHIFT;
 
 	blocks[1] = bytebits_to_byte(bs,32);
 	blocks[2] = bytebits_to_byte(bs+32,32);

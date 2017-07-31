@@ -185,10 +185,8 @@ int CmdNoralsyClone(const char *Cmd) {
 	year = param_get32ex(Cmd, 1, 2000, 10);
 	
 	//Q5
-	if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q') {
-		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-		blocks[0] = T5555_MODULATION_MANCHESTER | ((32-2)>>1) << T5555_BITRATE_SHIFT | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
-	}
+	if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q')
+		blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 	
 	 if ( !getnoralsyBits(id, year, bs)) {
 		PrintAndLog("Error with tag bitstream generation.");

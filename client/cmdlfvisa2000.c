@@ -170,10 +170,8 @@ int CmdVisa2kClone(const char *Cmd) {
 	id = param_get32ex(Cmd, 0, 0, 10);
 	
 	//Q5
-	if (param_getchar(Cmd, 1) == 'Q' || param_getchar(Cmd, 1) == 'q') {
-		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-		blocks[0] = T5555_MODULATION_MANCHESTER | ((64-2)>>1) << T5555_BITRATE_SHIFT | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
-	}
+	if (param_getchar(Cmd, 1) == 'Q' || param_getchar(Cmd, 1) == 'q')
+		blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 	
 	blocks[2] = id;
 	blocks[3] =  (visa_parity(id) << 4) | visa_chksum(id);	

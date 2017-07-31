@@ -416,7 +416,7 @@ int CmdAWIDClone(const char *Cmd) {
 	
 	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
 		//t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-		blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | ((50-2)>>1) << T5555_BITRATE_SHIFT | 3<<T5555_MAXBLOCK_SHIFT;
+		blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(50) | 3<<T5555_MAXBLOCK_SHIFT;
 
 	verify_values(&fmtlen, &fc, &cn);
 		
