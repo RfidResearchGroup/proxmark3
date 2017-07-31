@@ -825,12 +825,19 @@ int CmdHF14AMfNested(const char *Cmd) {
 	}
 
 	ctmp = param_getchar(Cmd, 4);
-	if		(ctmp == 't' || ctmp == 'T') transferToEml = true;
-	else if (ctmp == 'd' || ctmp == 'D') createDumpFile = true;
+	transferToEml |= (ctmp == 't' || ctmp == 'T');
+	createDumpFile |= (ctmp == 'd' || ctmp == 'D');
 	
 	ctmp = param_getchar(Cmd, 6);
 	transferToEml |= (ctmp == 't' || ctmp == 'T');
-	transferToEml |= (ctmp == 'd' || ctmp == 'D');
+	createDumpFile |= (ctmp == 'd' || ctmp == 'D');
+	
+	// check if we can authenticate to sector
+	res = mfCheckKeys(blockNo, keyType, true, 1, key, &key64);
+	if (res) {
+		PrintAndLog("Key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+		return 3;
+	}	
 	
 	if (cmdp == 'o') {
 		int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, true);
@@ -1090,6 +1097,14 @@ int CmdHF14AMfNestedHard(const char *Cmd) {
 			i++;
 		}
 	}
+	
+	uint64_t key64 = 0;
+	// check if we can authenticate to sector
+	int res = mfCheckKeys(blockNo, keyType, true, 1, key, &key64);
+	if (res) {
+		PrintAndLog("Key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+		return 3;
+	}	
 
 	PrintAndLog("--target block no:%3d, target key type:%c, known target key: 0x%02x%02x%02x%02x%02x%02x%s, file action: %s, Slow: %s, Tests: %d ", 
 			trgBlockNo, 
