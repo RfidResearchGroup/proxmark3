@@ -150,8 +150,8 @@ static int returnToLuaWithError(lua_State *L, const char* fmt, ...) {
 
 static int l_mfDarkside(lua_State *L){
 
-	uint8_t blockno = 0;
-	uint8_t keytype = 0;
+	uint32_t blockno = 0;
+	uint32_t keytype = 0;
 	uint64_t key = 0;
 	size_t size;
 
@@ -172,7 +172,7 @@ static int l_mfDarkside(lua_State *L){
 		default : break;
 	}
 
-	int retval = mfDarkside(blockno, keytype, &key);
+	int retval = mfDarkside(blockno & 0xFF, keytype & 0xFF, &key);
 
     //Push the retval on the stack
     lua_pushinteger(L,retval);
