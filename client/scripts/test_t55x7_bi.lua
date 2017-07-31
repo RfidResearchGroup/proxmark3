@@ -15,7 +15,7 @@ The outlined procedure is as following:
 --BIPHASE 00010040
 --
 
-"lf t55xx write 0 00010040"
+"lf t55xx write b 0 d 00010040"
 "lf t55xx detect"
 "lf t55xx info"
 
@@ -51,7 +51,7 @@ local procedurecmds = {
 }
 --- 
 -- A debug printout-function
-function dbg(args)
+local function dbg(args)
 	if not DEBUG then
 		return
 	end
@@ -68,26 +68,26 @@ function dbg(args)
 end	
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
+local function oops(err)
 	print("ERROR: ",err)
 end
 --- 
 -- Usage help
-function help()
+local function help()
 	print(desc)
 	print("Example usage")
 	print(example)
 end
 --
 -- Exit message
-function ExitMsg(msg)
+local function ExitMsg(msg)
 	print( string.rep('--',20) )
 	print( string.rep('--',20) )
 	print(msg)
 	print()
 end
 
-function test()
+local function test()
 	local y
 	local block = "00"
 	for y = 1, 0x1D, 4 do
@@ -99,7 +99,7 @@ function test()
 			elseif _ == 1 then
 
 				local config = pcmd:format(config1, y, config2)
-				dbg(('lf t55xx write 0 %s'):format(config))
+				dbg(('lf t55xx write b 0 d %s'):format(config))
 		
 				config = tonumber(config,16) 		
 				local writecmd = Command:new{cmd = cmds.CMD_T55XX_WRITE_BLOCK,arg1 = config, arg2 = block, arg3 = "00", data = "00"}

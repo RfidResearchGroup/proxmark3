@@ -6,7 +6,6 @@ local utils = require('utils')
 example =[[
 	1. script run test_t55x7_psk
 	2. script run test_t55x7_psk -o 
-
 ]]
 author = "Iceman"
 usage = "script run test_t55x7_psk"
@@ -14,13 +13,9 @@ desc =[[
 This script will program a T55x7 TAG with the configuration: block 0x00 data 0x00088040
 The outlined procedure is as following:
 
-"lf t55xx write 0 00088040"
-"lf read"
-"data samples"
-"data pskdet"
-"data psknrz"
-"data pskindala"
-"data psknrzraw"
+"lf t55xx write b 0 d 00088040"
+"lf t55xx detect"
+"lf t55xx info"
 
 Loop OUTER:
 	change the configuretion block 0 with:
@@ -43,17 +38,6 @@ Arguments:
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = true -- the debug flag
 
-	
--- local procedurecmds = {
-	-- [1] = '%s%s%s%s',
-	-- [2] = 'lf read',
-	-- --[3] = '',
-	-- [3] = 'data samples',
-	-- [4] = 'data pskdetectclock',
-	-- [5] = 'data psknrzrawdemod',
-	-- [6] = 'data pskindalademod',
--- }
-
 -- --BLOCK 0 = 00 08 80 40 PSK
              -- -----------
 			   -- 08------- bitrate
@@ -64,12 +48,11 @@ local DEBUG = true -- the debug flag
 local procedurecmds = {
 	[1] = '00%02X%X%X40',
 	[2] = 'lf t55xx detect',
-	--[3] = '',
 	[3] = 'lf t55xx info',
 }
 --- 
 -- A debug printout-function
-function dbg(args)
+local function dbg(args)
 	if not DEBUG then
 		return
 	end
@@ -86,26 +69,26 @@ function dbg(args)
 end	
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
+local function oops(err)
 	print("ERROR: ",err)
 end
 --- 
 -- Usage help
-function help()
+local function help()
 	print(desc)
 	print("Example usage")
 	print(example)
 end
 --
 -- Exit message
-function ExitMsg(msg)
+local function ExitMsg(msg)
 	print( string.rep('--',20) )
 	print( string.rep('--',20) )
 	print(msg)
 	print()
 end
 
-function test(modulation)
+local function test(modulation)
 	local bitrate
 	local clockrate
 	local block = "00"
@@ -123,7 +106,7 @@ function test(modulation)
 					dbg("Writing to T55x7 TAG")
 
 					local config = cmd:format(bitrate, modulation, clockrate)
-					dbg(('lf t55xx write 0 %s'):format(config))
+					dbg(('lf t55xx write b 0  d %s'):format(config))
 					
 					config = tonumber(config,16) 
 					local writecmd = Command:new{cmd = cmds.CMD_T55XX_WRITE_BLOCK,arg1 = config, arg2 = block, arg3 = "00", data = "00"}
