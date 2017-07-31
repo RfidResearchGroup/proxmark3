@@ -164,6 +164,8 @@ local function main(args)
 				nested(key,sak)
 				-- Dump info
 				dump(uid)
+			else
+				print("Card found, darkside attack useless PRNG hardend on UID", uid)
 			end
 			print_message = true
 		end
