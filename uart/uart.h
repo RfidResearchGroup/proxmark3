@@ -39,6 +39,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "common.h"
+#include "util_posix.h" // msclock
 
 /* serial_port is declared as a void*, which you should cast to whatever type
  * makes sense to your connection method. Both the posix and win32
