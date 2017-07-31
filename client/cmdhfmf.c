@@ -77,7 +77,7 @@ int usage_hf14_nested(void){
 	PrintAndLog("      h    this help");
 	PrintAndLog("      card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
 	PrintAndLog("      t    transfer keys into emulator memory");
-	PrintAndLog("      d    write keys to binary file");
+	PrintAndLog("      d    write keys to binary file `dumpkeys.bin`");
 	PrintAndLog(" ");
 	PrintAndLog("samples:");
 	PrintAndLog("      hf mf nested 1 0 A FFFFFFFFFFFF ");
@@ -863,7 +863,8 @@ int CmdHF14AMfNested(const char *Cmd) {
 						num_to_bytes(key64, 6, keyBlock);
 					else
 						num_to_bytes(key64, 6, &keyBlock[10]);
-					mfEmlSetMem(keyBlock, sectortrailer, 1);		
+					mfEmlSetMem(keyBlock, sectortrailer, 1);	
+					PrintAndLog("Key transferred to emulator memory.");
 				}
 				return 0;
 			default : PrintAndLog("Unknown Error.\n");
@@ -985,38 +986,39 @@ int CmdHF14AMfNested(const char *Cmd) {
 				if (e_sector[i].foundKey[1])
 					num_to_bytes(e_sector[i].Key[1], 6, &keyBlock[10]);
 				mfEmlSetMem(keyBlock, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
+				PrintAndLog("Key transferred to emulator memory.");
 			}		
 		}
 		
 		// Create dump file
 		if (createDumpFile) {
+			
 			if ((fkeys = fopen("dumpkeys.bin","wb")) == NULL) { 
 				PrintAndLog("Could not create file dumpkeys.bin");
 				free(e_sector);
 				return 1;
 			}
+			
 			PrintAndLog("Printing keys to binary file dumpkeys.bin...");
-			for(i=0; i<SectorsCnt; i++) {
+			for (i=0; i<SectorsCnt; i++) {
 				if (e_sector[i].foundKey[0]){
 					num_to_bytes(e_sector[i].Key[0], 6, tempkey);
 					fwrite ( tempkey, 1, 6, fkeys );
-				}
-				else{
+				} else {
 					fwrite ( &standart, 1, 6, fkeys );
 				}
 			}
-			for(i=0; i<SectorsCnt; i++) {
+			for( i=0; i<SectorsCnt; i++) {
 				if (e_sector[i].foundKey[1]){
 					num_to_bytes(e_sector[i].Key[1], 6, tempkey);
 					fwrite ( tempkey, 1, 6, fkeys );
-				}
-				else{
+				} else {
 					fwrite ( &standart, 1, 6, fkeys );
 				}
 			}
+			fflush(fkeys);
 			fclose(fkeys);
-		}
-		
+		}		
 		free(e_sector);
 	}
 	return 0;
