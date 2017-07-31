@@ -136,8 +136,7 @@ static int l_WaitForResponseTimeout(lua_State *L){
     }
 }
 
-static int returnToLuaWithError(lua_State *L, const char* fmt, ...)
-{
+static int returnToLuaWithError(lua_State *L, const char* fmt, ...) {
     char buffer[200];
     va_list args;
     va_start(args,fmt);
@@ -150,11 +149,30 @@ static int returnToLuaWithError(lua_State *L, const char* fmt, ...)
 }
 
 static int l_mfDarkside(lua_State *L){
-	// blockno, keytype
-	
-	uint64_t key;
-	
-	int retval = mfDarkside(0, 0, &key);
+
+	uint8_t blockno = 0;
+	uint8_t keytype = 0;
+	uint64_t key = 0;
+	size_t size;
+
+    //Check number of arguments
+    int n = lua_gettop(L);
+	switch (n) {
+		case 2:{
+			const char *p_keytype = luaL_checklstring(L, 2, &size);
+			if(size != 2)  return returnToLuaWithError(L,"Wrong size of keytype, got %d bytes, expected 1", (int) size);
+			sscanf(p_keytype, "%x", &keytype);			
+		}
+		case 1: {
+			const char *p_blockno = luaL_checklstring(L, 1, &size);
+			if(size != 2)  return returnToLuaWithError(L,"Wrong size of blockno, got %d bytes, expected 2", (int) size);
+			sscanf(p_blockno, "%02x", &blockno);
+			break;
+		}
+		default : break;
+	}
+
+	int retval = mfDarkside(blockno, keytype, &key);
 
     //Push the retval on the stack
     lua_pushinteger(L,retval);
@@ -178,8 +196,7 @@ static int l_clearCommandBuffer(lua_State *L){
  * @param L
  * @return
  */
-static int l_foobar(lua_State *L)
-{
+static int l_foobar(lua_State *L) {
     //Check number of arguments
     int n = lua_gettop(L);
     printf("foobar called with %d arguments" , n);
@@ -190,7 +207,7 @@ static int l_foobar(lua_State *L)
     // UsbCommand response =  {CMD_MIFARE_READBL, {1337, 1338, 1339}};
 
     printf("Now returning a uint64_t as a string");
-    uint64_t x = 0xDEADBEEF;
+    uint64_t x = 0xDEADC0DE;
     uint8_t destination[8];
     num_to_bytes(x,sizeof(x),destination);
     lua_pushlstring(L,(const char *)&x,sizeof(x));
@@ -204,8 +221,7 @@ static int l_foobar(lua_State *L)
  * @param L
  * @return boolean, true if kbhit, false otherwise.
  */
-static int l_ukbhit(lua_State *L)
-{
+static int l_ukbhit(lua_State *L) {
     lua_pushboolean(L,ukbhit() ? true : false);
     return 1;
 }
@@ -215,24 +231,22 @@ static int l_ukbhit(lua_State *L)
  * @param L
  * @return
  */
-static int l_CmdConsole(lua_State *L)
-{
+static int l_CmdConsole(lua_State *L) {
     CommandReceived((char *)luaL_checkstring(L, 1));
     return 0;
 }
 
-static int l_iso15693_crc(lua_State *L)
-{
+static int l_iso15693_crc(lua_State *L) {
     //    uint16_t Iso15693Crc(uint8_t *v, int n);
     size_t size;
     const char *v = luaL_checklstring(L, 1, &size);
+	// iceman, should be size / 2 ?!?
     uint16_t retval = Iso15693Crc((uint8_t *) v, size);
     lua_pushinteger(L, (int) retval);
     return 1;
 }
 
-static int l_iso14443b_crc(lua_State *L)
-{
+static int l_iso14443b_crc(lua_State *L) {
 	/* void ComputeCrc14443(int CrcType,
                      const unsigned char *Data, int Length,
                      unsigned char *TransmitFirst,
@@ -241,7 +255,6 @@ static int l_iso14443b_crc(lua_State *L)
 	unsigned char buf[USB_CMD_DATA_SIZE] = {0x00};
     size_t size = 0;	
     const char *data = luaL_checklstring(L, 1, &size);
-
 	
 	for (int i = 0; i < size; i += 2)
 		sscanf(&data[i], "%02x", (unsigned int *)&buf[i / 2]);	
@@ -256,8 +269,7 @@ static int l_iso14443b_crc(lua_State *L)
  Simple AES 128 cbc hook up to OpenSSL.
  params:  key, input
 */
-static int l_aes128decrypt_cbc(lua_State *L)
-{
+static int l_aes128decrypt_cbc(lua_State *L) {
 	//Check number of arguments
 	int i;
     size_t size;
