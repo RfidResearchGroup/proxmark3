@@ -62,15 +62,15 @@ struct receiver_arg {
 byte_t rx[sizeof(UsbCommand)];
 byte_t* prx = rx;
 
-// static void showBanner(void){
-	// printf("██████╗ ███╗   ███╗ ████╗     ...Iceman fork\n");
-	// printf("██╔══██╗████╗ ████║   ══█║\n");
-	// printf("██████╔╝██╔████╔██║ ████╔╝\n");
-	// printf("██╔═══╝ ██║╚██╔╝██║   ══█║    iceman@icesql.net\n");
-	// printf("██║     ██║ ╚═╝ ██║ ████╔╝ https://github.com/iceman1001/proxmark3\n");
-	// printf("╚═╝     ╚═╝     ╚═╝ ╚═══╝v3.0.2n");
-// }
-
+static void showBanner(void){
+	printf("██████╗ ███╗   ███╗ ████╗     ...Iceman fork\n");
+	printf("██╔══██╗████╗ ████║   ══█║\n");
+	printf("██████╔╝██╔████╔██║ ████╔╝\n");
+	printf("██╔═══╝ ██║╚██╔╝██║   ══█║    iceman@icesql.net\n");
+	printf("██║     ██║ ╚═╝ ██║ ████╔╝ https://github.com/iceman1001/proxmark3\n");
+	printf("╚═╝     ╚═╝     ╚═╝ ╚═══╝v3.0.0\n");
+	printf("\n\n");
+}
 
 static void *uart_receiver(void *targ) {
 	struct receiver_arg *arg = (struct receiver_arg*)targ;
@@ -124,7 +124,7 @@ void main_loop(char *script_cmds_file, bool usb_present) {
 	}
 
 	read_history(".history");
-
+	
 	while(1)  {
 
 		// If there is a script file

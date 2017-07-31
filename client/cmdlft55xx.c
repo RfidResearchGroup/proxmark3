@@ -1210,7 +1210,7 @@ int CmdT55xxInfo(const char *Cmd){
 	if (strlen(Cmd) > 1 || cmdp == 'h' || cmdp == 'H') return usage_t55xx_info();
 	
 	if (strlen(Cmd)==0){
-				// sanity check.
+		// sanity check.
 		if (!SanityOfflineCheck(false)) return 1;
 		
 		if ( !AquireData( T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, pwdmode, password ) )
@@ -1223,10 +1223,10 @@ int CmdT55xxInfo(const char *Cmd){
 	if ( DemodBufferLen < 32) return 1;
 
 	// 
-	PrintAndLog("Offset+32 ==%d\n DemodLen == %d", config.offset + 32,DemodBufferLen );
+	//PrintAndLog("Offset+32 ==%d\n DemodLen == %d", config.offset + 32, DemodBufferLen);
 
 	uint8_t si = config.offset;
-	uint32_t bl0      = PackBits(si, 32, DemodBuffer);	
+	uint32_t block0   = PackBits(si, 32, DemodBuffer);	
 	uint32_t safer    = PackBits(si, 4, DemodBuffer); si += 4;	
 	uint32_t resv     = PackBits(si, 7, DemodBuffer); si += 7;
 	uint32_t dbr      = PackBits(si, 3, DemodBuffer); si += 3;
@@ -1262,9 +1262,8 @@ int CmdT55xxInfo(const char *Cmd){
 	PrintAndLog(" POR-Delay                 : %s", (por) ? "Yes":"No");
 	PrintAndLog("-------------------------------------------------------------");
 	PrintAndLog(" Raw Data - Page 0");
-	PrintAndLog("     Block 0  : 0x%08X  %s", bl0, sprint_bin(DemodBuffer+config.offset,32) );
+	PrintAndLog("     Block 0  : 0x%08X  %s", block0, sprint_bin(DemodBuffer + config.offset, 32) );
 	PrintAndLog("-------------------------------------------------------------");
-	
 	return 0;
 }
 
