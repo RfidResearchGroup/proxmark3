@@ -186,8 +186,7 @@ int CmdLFCommandRead(const char *Cmd) {
 	return 0;
 }
 
-int CmdFlexdemod(const char *Cmd)
-{
+int CmdFlexdemod(const char *Cmd) {
 #define LONG_WAIT 100	
 	int i, j, start, bit, sum;
 	int phase = 0;
@@ -435,8 +434,7 @@ int CmdLFSim(const char *Cmd) {
 
 // by marshmellow - sim fsk data given clock, fcHigh, fcLow, invert 
 // - allow pull data from DemodBuffer
-int CmdLFfskSim(const char *Cmd)
-{
+int CmdLFfskSim(const char *Cmd) {
 	//might be able to autodetect FCs and clock from Graphbuffer if using demod buffer
 	// otherwise will need FChigh, FClow, Clock, and bitstream
 	uint8_t fcHigh = 0, fcLow = 0, clk = 0;
@@ -532,8 +530,7 @@ int CmdLFfskSim(const char *Cmd)
 
 // by marshmellow - sim ask data given clock, invert, manchester or raw, separator 
 // - allow pull data from DemodBuffer
-int CmdLFaskSim(const char *Cmd)
-{
+int CmdLFaskSim(const char *Cmd) {
 	// autodetect clock from Graphbuffer if using demod buffer
 	// needs clock, invert, manchester/raw as m or r, separator as s, and bitstream
 	uint8_t encoding = 1, separator = 0, clk = 0, invert = 0;
@@ -844,76 +841,68 @@ int CmdLFfind(const char *Cmd) {
 	size_t minLength = 1000;
 	char cmdp = param_getchar(Cmd, 0);
 	char testRaw = param_getchar(Cmd, 1);
-	if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') return usage_lf_find();
-
-	bool getDeviceData = (!offline && (cmdp != '1') );
 	
-	if (getDeviceData) {
+	if (strlen(Cmd) > 3 || cmdp == 'h' || cmdp == 'H') return usage_lf_find();
+	
+	if (cmdp == 'u' || cmdp == 'U') testRaw = 'u';
+	
+	bool isOnline = (!offline && (cmdp != '1') );
+	
+	if (isOnline)
 		lf_read(true, 30000);
-	} else if (GraphTraceLen < minLength) {
+	
+	if (GraphTraceLen < minLength) {
 		PrintAndLog("Data in Graphbuffer was too small.");
 		return 0;
 	}
-	if (cmdp == 'u' || cmdp == 'U') testRaw = 'u';
 
 	PrintAndLog("NOTE: some demods output possible binary\n  if it finds something that looks like a tag");
 	PrintAndLog("False Positives ARE possible\n");  
 	PrintAndLog("\nChecking for known tags:\n");
-
-	size_t testLen = minLength;
 	
 	// only run these tests if device is online
-	if (getDeviceData) {
+	if (isOnline) {
 
 		// only run if graphbuffer is just noise as it should be for hitag/cotag
-		if (is_justnoise(GraphBuffer, testLen)) {
+		if (is_justnoise(GraphBuffer, minLength)) {
 			
-			if (CheckChipType(getDeviceData) )
-				return 1;			
-			
-			ans=CmdLFHitagReader("26");	if (ans==0) {PrintAndLog("\nValid Hitag Found!");return 1;}
-			ans=CmdCOTAGRead("");		if (ans>0) {PrintAndLog("\nValid COTAG ID Found!");	return 1;}
+			if (CheckChipType(isOnline) ) return 1;			
+			if (CmdLFHitagReader("26")) { PrintAndLog("\nValid Hitag Found!"); return 1;}
+			if (CmdCOTAGRead("")) 		{ PrintAndLog("\nValid COTAG ID Found!"); return 1;}
+
 			PrintAndLog("Signal looks just like noise. Quitting.");
 		    return 0;
 		}
 	}
+	if (EM4x50Read("", false))	{ PrintAndLog("\nValid EM4x50 ID Found!"); return 1;}
+	if (CmdAWIDDemod(""))		{ PrintAndLog("\nValid AWID ID Found!"); goto out;}
+	if (CmdEM410xDemod(""))		{ PrintAndLog("\nValid EM410x ID Found!"); goto out;}
+	if (CmdFdxDemod(""))		{ PrintAndLog("\nValid FDX-B ID Found!"); goto out;}	
+	if (CmdGuardDemod(""))		{ PrintAndLog("\nValid Guardall G-Prox II ID Found!"); goto out; }
+	if (CmdHIDDemod(""))		{ PrintAndLog("\nValid HID Prox ID Found!"); goto out;}
+	if (CmdPSKIdteck(""))		{ PrintAndLog("\nValid Idteck ID Found!"); goto out;}
+	if (CmdIndalaDemod(""))		{ PrintAndLog("\nValid Indala ID Found!");  goto out;}
+	if (CmdIOProxDemod(""))		{ PrintAndLog("\nValid IO Prox ID Found!"); goto out;}
+	if (CmdJablotronDemod(""))	{ PrintAndLog("\nValid Jablotron ID Found!"); goto out;}
+	if (CmdLFNedapDemod(""))	{ PrintAndLog("\nValid NEDAP ID Found!"); goto out;}
+	if (CmdNexWatchDemod("")) 	{ PrintAndLog("\nValid NexWatch ID Found!"); goto out;}
+	if (CmdNoralsyDemod(""))	{ PrintAndLog("\nValid Noralsy ID Found!"); goto out;}
+	if (CmdPacDemod(""))		{ PrintAndLog("\nValid PAC/Stanley ID Found!"); goto out;}	
+	if (CmdParadoxDemod(""))	{ PrintAndLog("\nValid Paradox ID Found!"); goto out;}
+	if (CmdPrescoDemod(""))		{ PrintAndLog("\nValid Presco ID Found!"); goto out;}				 
+	if (CmdPyramidDemod(""))	{ PrintAndLog("\nValid Pyramid ID Found!"); goto out;}
+	if (CmdSecurakeyDemod(""))	{ PrintAndLog("\nValid Securakey ID Found!"); goto out;}
+	if (CmdVikingDemod(""))		{ PrintAndLog("\nValid Viking ID Found!"); goto out;}	
+	if (CmdVisa2kDemod(""))		{ PrintAndLog("\nValid Visa2000 ID Found!"); goto out;}
 
-	// identify chipset
-	CheckChipType(getDeviceData);
+	// TIdemod?  flexdemod?
 	
-	ans=CmdAWIDDemod("");		if (ans>0) { PrintAndLog("\nValid AWID ID Found!");	return CheckChipType(getDeviceData);}
-	ans=CmdEM410xDemod(""); 	if (ans>0) { PrintAndLog("\nValid EM410x ID Found!"); return CheckChipType(getDeviceData);}
-	ans=EM4x50Read("", false); 	if (ans>0) { PrintAndLog("\nValid EM4x50 ID Found!"); return 1;}	
-	ans=CmdFdxDemod(""); 		if (ans>0) { PrintAndLog("\nValid FDX-B ID Found!"); return CheckChipType(getDeviceData);}
-	ans=CmdGuardDemod(""); 		if (ans>0) { PrintAndLog("\nValid Guardall G-Prox II ID Found!"); return CheckChipType(getDeviceData);}
-	ans=CmdHIDDemod("");		if (ans>0) { PrintAndLog("\nValid HID Prox ID Found!"); return CheckChipType(getDeviceData);}
-	ans=CmdPSKIdteck(""); 		if (ans>0) { PrintAndLog("\nValid Idteck ID Found!");	return CheckChipType(getDeviceData);}
-
-	ans=CmdIndalaDemod("");		if (ans>0) { PrintAndLog("\nValid Indala ID Found!"); return CheckChipType(getDeviceData);}
-	ans=CmdIOProxDemod(""); 	if (ans>0) { PrintAndLog("\nValid IO Prox ID Found!");return CheckChipType(getDeviceData);}
-	ans=CmdJablotronDemod(""); 	if (ans>0) { PrintAndLog("\nValid Jablotron ID Found!");	return CheckChipType(getDeviceData);}
-
-	ans=CmdLFNedapDemod(""); 	if (ans>0) { PrintAndLog("\nValid NEDAP ID Found!"); return CheckChipType(getDeviceData);}
-	ans=CmdNexWatchDemod(""); 	if (ans>0) { PrintAndLog("\nValid NexWatch ID Found!"); return CheckChipType(getDeviceData);}
-	ans=CmdNoralsyDemod(""); 	if (ans>0) { PrintAndLog("\nValid Noralsy ID Found!"); return CheckChipType(getDeviceData);}
-
-	ans=CmdPacDemod(""); 		if (ans>0) { PrintAndLog("\nValid PAC/Stanley ID Found!");	return CheckChipType(getDeviceData);}	
-	ans=CmdParadoxDemod("");	if (ans>0) { PrintAndLog("\nValid Paradox ID Found!"); return CheckChipType(getDeviceData);}
-	ans=CmdPrescoDemod(""); 	if (ans>0) { PrintAndLog("\nValid Presco ID Found!"); return CheckChipType(getDeviceData);}				 
-	ans=CmdPyramidDemod("");	if (ans>0) { PrintAndLog("\nValid Pyramid ID Found!"); return CheckChipType(getDeviceData);}
-
-	ans=CmdSecurakeyDemod(""); 	if (ans>0) { PrintAndLog("\nValid Securakey ID Found!");	return CheckChipType(getDeviceData);}
-	ans=CmdVikingDemod("");		if (ans>0) { PrintAndLog("\nValid Viking ID Found!"); return CheckChipType(getDeviceData);}	
-	ans=CmdVisa2kDemod("");		if (ans>0) { PrintAndLog("\nValid Visa2000 ID Found!"); return CheckChipType(getDeviceData);}
-
-	
-	// TIdemod?
 	PrintAndLog("\nNo Known Tags Found!\n");
+	
 	if (testRaw=='u' || testRaw=='U'){
 		//test unknown tag formats (raw mode)
 		PrintAndLog("\nChecking for Unknown tags:\n");
-		ans=AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, 4000, false, false);
-	
+		ans = AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, 4000, false, false);
 		if (ans > 0) {
 
 			PrintAndLog("Possible Auto Correlation of %d repeating samples",ans);
@@ -941,32 +930,32 @@ int CmdLFfind(const char *Cmd) {
 			}
 		}
 
-		ans=GetFskClock("",false,false); 
-		if (ans != 0){ //fsk
-			ans=FSKrawDemod("",true);
-			if (ans>0) {
-				PrintAndLog("\nUnknown FSK Modulated Tag Found!");
-				return CheckChipType(getDeviceData);;
+		 //fsk
+		if ( GetFskClock("",false,false) ) {
+			if ( FSKrawDemod("",true) ) { 
+				PrintAndLog("\nUnknown FSK Modulated Tag Found!"); goto out;
 			}
 		}
+		
 		bool st = true;
-		ans=ASKDemod_ext("0 0 0",true,false,1,&st);
-		if (ans>0) {
+		if ( ASKDemod_ext("0 0 0",true,false,1,&st) ) {
 		  PrintAndLog("\nUnknown ASK Modulated and Manchester encoded Tag Found!");
 		  PrintAndLog("\nif it does not look right it could instead be ASK/Biphase - try 'data rawdemod ab'");
-		  return CheckChipType(getDeviceData);
+		  goto out;
 		}
 		
-		ans=CmdPSK1rawDemod("");
-		if (ans>0) {
+		if ( CmdPSK1rawDemod("") ) {
 			PrintAndLog("Possible unknown PSK1 Modulated Tag Found above!\n\nCould also be PSK2 - try 'data rawdemod p2'");
 			PrintAndLog("\nCould also be PSK3 - [currently not supported]");
 			PrintAndLog("\nCould also be NRZ - try 'data nrzrawdemod");
-			return  CheckChipType(getDeviceData);
+			goto out;
 		}
-		ans = CheckChipType(getDeviceData);
+		
 		PrintAndLog("\nNo Data Found!\n");
 	}
+out:
+	// identify chipset
+	CheckChipType(isOnline);
 	return 0;
 }
 

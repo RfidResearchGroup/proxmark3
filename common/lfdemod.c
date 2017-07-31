@@ -1711,6 +1711,7 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *startIdx, uint32_t *hi, ui
 	if (!preambleSearch(bits, preamble, sizeof(preamble), size, startIdx))
 		return -4;
 
+	// (iceman) if the preamble doesn't find two occuriences, this identification fails.
 	fmtlen = (*size == 128) ? 22 : 10;
 
 	//skip last 4bit parity row for simplicity
