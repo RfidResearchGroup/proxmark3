@@ -26,7 +26,7 @@
 #include <string.h>
 #include "proxgui.h"
 #include <QtGui>
-//#include <ctime>
+// #include <ctime>
 
 bool g_useOverlays = false;
 int g_absVMax = 0;
@@ -34,28 +34,23 @@ int startMax;
 int PageWidth;
 int unlockStart = 0;
 
-void ProxGuiQT::ShowGraphWindow(void)
-{
+void ProxGuiQT::ShowGraphWindow(void) {
 	emit ShowGraphWindowSignal();
 }
 
-void ProxGuiQT::RepaintGraphWindow(void)
-{
+void ProxGuiQT::RepaintGraphWindow(void) {
 	emit RepaintGraphWindowSignal();
 }
 
-void ProxGuiQT::HideGraphWindow(void)
-{
+void ProxGuiQT::HideGraphWindow(void) {
 	emit HideGraphWindowSignal();
 }
 
-void ProxGuiQT::Exit(void)
-{
+void ProxGuiQT::Exit(void) {
 	emit ExitSignal();
 }
 
-void ProxGuiQT::_ShowGraphWindow(void)
-{
+void ProxGuiQT::_ShowGraphWindow(void) {
 	if(!plotapp)
 		return;
 
@@ -65,16 +60,14 @@ void ProxGuiQT::_ShowGraphWindow(void)
 	plotwidget->show();
 }
 
-void ProxGuiQT::_RepaintGraphWindow(void)
-{
+void ProxGuiQT::_RepaintGraphWindow(void) {
 	if (!plotapp || !plotwidget)
 		return;
 
 	plotwidget->update();
 }
 
-void ProxGuiQT::_HideGraphWindow(void)
-{
+void ProxGuiQT::_HideGraphWindow(void) {
 	if (!plotapp || !plotwidget)
 		return;
 
@@ -85,8 +78,7 @@ void ProxGuiQT::_Exit(void) {
 	delete this;
 }
 
-void ProxGuiQT::MainLoop()
-{
+void ProxGuiQT::MainLoop() {
 	plotapp = new QApplication(argc, argv);
 
 	connect(this, SIGNAL(ShowGraphWindowSignal()), this, SLOT(_ShowGraphWindow()));
@@ -99,68 +91,52 @@ void ProxGuiQT::MainLoop()
 
 ProxGuiQT::ProxGuiQT(int argc, char **argv) : plotapp(NULL), plotwidget(NULL), argc(argc), argv(argv) {}
 
-ProxGuiQT::~ProxGuiQT(void)
-{
-	//if (plotwidget) {
-		//plotwidget->destroy(true,true);
-	//	delete plotwidget;
-	//	plotwidget = NULL;
-	//}
+ProxGuiQT::~ProxGuiQT(void) {
 	if (plotapp) {
 		plotapp->quit();
-		// delete plotapp;
 		plotapp = NULL;
 	}
 }
 
 //--------------------
-void ProxWidget::applyOperation()
-{
+void ProxWidget::applyOperation() {
 	//printf("ApplyOperation()");
 	save_restoreGB(GRAPH_SAVE);
 	memcpy(GraphBuffer, s_Buff, sizeof(int) * GraphTraceLen);
 	RepaintGraphWindow();
 }
-void ProxWidget::stickOperation()
-{
+void ProxWidget::stickOperation() {
 	save_restoreGB(GRAPH_RESTORE);
 	//printf("stickOperation()");
 }
-void ProxWidget::vchange_autocorr(int v)
-{
-	int ans;
-	ans = AutoCorrelate(GraphBuffer, s_Buff, GraphTraceLen, v, true, false);
+void ProxWidget::vchange_autocorr(int v) {
+	int ans = AutoCorrelate(GraphBuffer, s_Buff, GraphTraceLen, v, true, false);
 	if (g_debugMode) printf("vchange_autocorr(w:%d): %d\n", v, ans);
 	g_useOverlays = true;
 	RepaintGraphWindow();
 }
-void ProxWidget::vchange_askedge(int v)
-{
-	int ans;
+void ProxWidget::vchange_askedge(int v) {
 	//extern int AskEdgeDetect(const int *in, int *out, int len, int threshold);
-	ans = AskEdgeDetect(GraphBuffer, s_Buff, GraphTraceLen, v);
+	int ans = AskEdgeDetect(GraphBuffer, s_Buff, GraphTraceLen, v);
 	if (g_debugMode) printf("vchange_askedge(w:%d)%d\n", v, ans);
 	g_useOverlays = true;
 	RepaintGraphWindow();
 }
-void ProxWidget::vchange_dthr_up(int v)
-{
+void ProxWidget::vchange_dthr_up(int v) {
 	int down = opsController->horizontalSlider_dirthr_down->value();
 	directionalThreshold(GraphBuffer, s_Buff, GraphTraceLen, v, down);
 	//printf("vchange_dthr_up(%d)", v);
 	g_useOverlays = true;
 	RepaintGraphWindow();
 }
-void ProxWidget::vchange_dthr_down(int v)
-{
+void ProxWidget::vchange_dthr_down(int v) {
 	//printf("vchange_dthr_down(%d)", v);
 	int up = opsController->horizontalSlider_dirthr_up->value();
 	directionalThreshold(GraphBuffer,s_Buff, GraphTraceLen, v, up);
 	g_useOverlays = true;
 	RepaintGraphWindow();
 }
-ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent)
-{
+ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
 	this->master = master;
 	resize(800,500);
 
@@ -208,8 +184,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent)
 
 // not 100% sure what i need in this block
 // feel free to fix - marshmellow...
-ProxWidget::~ProxWidget(void)
-{
+ProxWidget::~ProxWidget(void) {
 	if (controlWidget) {
 		controlWidget->close();
 		delete controlWidget;
@@ -227,8 +202,7 @@ ProxWidget::~ProxWidget(void)
 		plot = NULL;
 	}
 }
-void ProxWidget::closeEvent(QCloseEvent *event)
-{
+void ProxWidget::closeEvent(QCloseEvent *event) {
 	event->ignore();
 	this->hide();
 	g_useOverlays = false;
@@ -244,22 +218,20 @@ void ProxWidget::showEvent(QShowEvent *event) {
 
 //----------- Plotting
 
-int Plot::xCoordOf(int i, QRect r )
-{
+int Plot::xCoordOf(int i, QRect r ) {
 	return r.left() + (int)((i - GraphStart)*GraphPixelsPerPoint);
 }
 
-int Plot::yCoordOf(int v, QRect r, int maxVal)
-{
+int Plot::yCoordOf(int v, QRect r, int maxVal) {
 	int z = (r.bottom() - r.top())/2;
 	return -(z * v) / maxVal + z;
 }
 
-int Plot::valueOf_yCoord(int y, QRect r, int maxVal)
-{
+int Plot::valueOf_yCoord(int y, QRect r, int maxVal) {
 	int z = (r.bottom() - r.top())/2;
 	return (y-z) * maxVal / z;
 }
+
 static const QColor GREEN = QColor(100,255,100);
 static const QColor RED   = QColor(255,100,100);
 static const QColor BLUE  = QColor(100,100,255);
@@ -353,14 +325,13 @@ void Plot::PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotati
 		clk = grid_delta_x;
 	}
 
-	//Graph annotations
+	// Graph annotations
 	painter->drawPath(penPath);
 }
 
-void Plot::PlotGraph(int *buffer, int len, QRect plotRect, QRect annotationRect, QPainter *painter, int graphNum)
-{
+void Plot::PlotGraph(int *buffer, int len, QRect plotRect, QRect annotationRect, QPainter *painter, int graphNum) {
 	if (len == 0) return;
-	//clock_t begin = clock();
+	// clock_t begin = clock();
 	QPainterPath penPath;
 	int vMin = INT_MAX, vMax = INT_MIN, vMean = 0, v = 0, i = 0;
 	int x = xCoordOf(GraphStart, plotRect);
@@ -379,7 +350,7 @@ void Plot::PlotGraph(int *buffer, int len, QRect plotRect, QRect annotationRect,
 			QRect f(QPoint(x - 3, y - 3),QPoint(x + 3, y + 3));
 			painter->fillRect(f, QColor(100, 255, 100));
 		}
-		//catch stats
+		// catch stats
 		if(v < vMin) vMin = v;
 		if(v > vMax) vMax = v;
 		vMean += v;
@@ -388,12 +359,12 @@ void Plot::PlotGraph(int *buffer, int len, QRect plotRect, QRect annotationRect,
 
 	painter->setPen(getColor(graphNum));
 
-	//Draw y-axis
+	// Draw y-axis
 	int xo = 5+(graphNum*40);
 	painter->drawLine(xo, plotRect.top(),xo, plotRect.bottom());
 
 	int vMarkers = (g_absVMax - (g_absVMax % 10)) / 5;
-	int minYDist = 40; //Minimum pixel-distance between markers
+	int minYDist = 40; // Minimum pixel-distance between markers
 
 	char yLbl[20];
 
@@ -430,8 +401,7 @@ void Plot::PlotGraph(int *buffer, int len, QRect plotRect, QRect annotationRect,
 	//printf("Plot time %f\n", elapsed_secs);
 }
 
-void Plot::plotGridLines(QPainter* painter,QRect r)
-{
+void Plot::plotGridLines(QPainter* painter,QRect r) {
 	// set GridOffset
 	if (PlotGridX <= 0) return;
 	int offset = GridOffset;
