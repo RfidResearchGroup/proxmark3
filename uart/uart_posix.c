@@ -35,7 +35,8 @@
 #include "uart.h"
 
 // Test if we are dealing with posix operating systems
-#ifndef _WIN32
+#ifndef _WIN32	 
+
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -45,6 +46,7 @@
 #include <limits.h>
 #include <sys/time.h>
 #include <errno.h>
+
 
 typedef struct termios term_info;
 typedef struct {
@@ -58,6 +60,9 @@ const struct timeval timeout = {
   .tv_sec  =     0, // 0 second
   .tv_usec = 30000  // 30000 micro seconds
 };
+
+// Overall timeout for receives -- 300ms
+#define RECV_TOTAL_TIMEOUT_MS 300
 
 serial_port uart_open(const char* pcPortName)
 {
@@ -118,8 +123,7 @@ serial_port uart_open(const char* pcPortName)
   // set speed, works for UBUNTU 14.04
   bool err = uart_set_speed(sp, 460800);
   if (!err)
-	  uart_set_speed(sp, 115200);
-  
+	  uart_set_speed(sp, 115200);  		  
   return sp;
 }
 
@@ -154,6 +158,7 @@ bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t pszMaxRxLen, size_
   int byteCount;
   fd_set rfds;
   struct timeval tv;
+  uint64_t timeout_at = msclock() + RECV_TOTAL_TIMEOUT_MS;
   
   // Reset the output count
   *pszRxLen = 0;
@@ -203,8 +208,8 @@ bool uart_receive(const serial_port sp, byte_t* pbtRx, size_t pszMaxRxLen, size_
       return true;
     }
     
-  } while (byteCount);
-
+//  } while (byteCount);
+  } while (msclock() < timeout_at);
   return true;
 }
 
@@ -217,7 +222,7 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) 
   while (szPos < szTxLen) {
     // Reset file descriptor
     FD_ZERO(&rfds);
-    FD_SET(((serial_port_unix*)sp)->fd,&rfds);
+    FD_SET(((serial_port_unix*)sp)->fd, &rfds);
     tv = timeout;
     res = select(((serial_port_unix*)sp)->fd+1, NULL, &rfds, NULL, &tv);
     
@@ -234,7 +239,7 @@ bool uart_send(const serial_port sp, const byte_t* pbtTx, const size_t szTxLen) 
     }
     
     // Send away the bytes
-    res = write(((serial_port_unix*)sp)->fd,pbtTx+szPos,szTxLen-szPos);
+    res = write(((serial_port_unix*)sp)->fd, pbtTx + szPos, szTxLen-szPos);
     
     // Stop if the OS has some troubles sending the data
     if (res <= 0) {
@@ -286,16 +291,16 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
   struct termios ti;
   if (tcgetattr(spu->fd,&ti) == -1) return false;
   // Set port speed (Input and Output)
-  cfsetispeed(&ti,stPortSpeed);
-  cfsetospeed(&ti,stPortSpeed);
-  return (tcsetattr(spu->fd,TCSANOW,&ti) != -1);
+  cfsetispeed(&ti, stPortSpeed);
+  cfsetospeed(&ti, stPortSpeed);
+  return (tcsetattr(spu->fd, TCSANOW, &ti) != -1);
 }
 
 uint32_t uart_get_speed(const serial_port sp) {
   struct termios ti;
   uint32_t uiPortSpeed;
   const serial_port_unix* spu = (serial_port_unix*)sp;
-  if (tcgetattr(spu->fd,&ti) == -1) return 0;
+  if (tcgetattr(spu->fd, &ti) == -1) return 0;
   // Set port speed (Input)
   speed_t stPortSpeed = cfgetispeed(&ti);
   switch (stPortSpeed) {
