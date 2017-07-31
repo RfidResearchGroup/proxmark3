@@ -385,8 +385,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo ) {
 		PrintAndLog("DEBUG: Em410x idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
 		printDemodBuff();
 	}
-	
-	printf("ice B %d \n", verbose);	
+
 	if (verbose)
 		printEM410x(*hi, *lo);
 

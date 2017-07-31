@@ -394,7 +394,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 
 	sscanf(Cmd, "%i %i %i %i %c", &clk, &invert, &maxErr, &maxLen, &amp);
 
-	if (!maxLen) maxLen = MAX_GRAPH_TRACE_LEN;
+	if (!maxLen) maxLen = BIGBUF_SIZE;
 
 	if (invert != 0 && invert != 1) {
 		PrintAndLog("Invalid argument: %s", Cmd);
