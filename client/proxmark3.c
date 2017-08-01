@@ -52,7 +52,7 @@ void SendCommand(UsbCommand *c) {
 	while(txcmd_pending);
 
 	txcmd = *c;
-	txcmd_pending = true;
+	 __atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
 }
 
 struct receiver_arg {
@@ -88,12 +88,15 @@ static void *uart_receiver(void *targ) {
 		}
 		prx = rx;
 
-		if (txcmd_pending) {
+		bool tmpsignal;
+		__atomic_load(&txcmd_pending, &tmpsignal, __ATOMIC_SEQ_CST);
+		if ( tmpsignal ) {
 			bool res = uart_send(sp, (byte_t*) &txcmd, sizeof(UsbCommand));
 			if (!res) {
 				PrintAndLog("Sending bytes to proxmark failed");
 			}
-			txcmd_pending = false;
+			 __atomic_clear(&txcmd_pending, __ATOMIC_SEQ_CST);
+			//txcmd_pending = false;
 		}
 	}
 	pthread_exit(NULL);
@@ -184,9 +187,8 @@ void main_loop(char *script_cmds_file, bool usb_present) {
 		}
 	}
 
-	if (script_file) {
+	if (script_file)
 		fclose(script_file);
-	}
 	
 	write_history(".history");
 
@@ -197,11 +199,9 @@ void main_loop(char *script_cmds_file, bool usb_present) {
 		rarg.run = 0;
 		pthread_join(reader_thread, NULL);
 	}
-
 }
 
-static void dumpAllHelp(int markdown)
-{
+static void dumpAllHelp(int markdown) {
 	printf("\n%sProxmark3 command dump%s\n\n",markdown?"# ":"",markdown?"":"\n======================");
 	printf("Some commands are available only if a Proxmark is actually connected.%s\n",markdown?"  ":"");
 	printf("Check column \"offline\" for their availability.\n");
@@ -213,18 +213,15 @@ static void dumpAllHelp(int markdown)
 static char *my_executable_path = NULL;
 static char *my_executable_directory = NULL;
 
-const char *get_my_executable_path(void)
-{
+const char *get_my_executable_path(void) {
 	return my_executable_path;
 }
 
-const char *get_my_executable_directory(void)
-{
+const char *get_my_executable_directory(void) {
 	return my_executable_directory;
 }
 
-static void set_my_executable_path(void)
-{
+static void set_my_executable_path(void) {
 	int path_length = wai_getExecutablePath(NULL, 0, NULL);
 	if (path_length != -1) {
 		my_executable_path = (char*)malloc(path_length + 1);
