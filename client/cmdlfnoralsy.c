@@ -106,7 +106,10 @@ int CmdNoralsyDemod(const char *Cmd) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - Noralsy: ASK/Manchester Demod failed");
 		return 0;
 	}
-	if (!st) return 0;
+	if (!st) {
+		if (g_debugMode) PrintAndLog("DEBUG: Error - Noralsy: sequence terminator not found");
+		return 0;
+	}
 
 	size_t size = DemodBufferLen;
 	int ans = detectNoralsy(DemodBuffer, &size);

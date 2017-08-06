@@ -421,7 +421,8 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 
 	bool st = false;
 	size_t ststart = 0, stend = 0;
-	if (*stCheck) st = DetectST(BitStream, &BitLen, &foundclk, &ststart, &stend);
+	if (*stCheck) 
+		st = DetectST(BitStream, &BitLen, &foundclk, &ststart, &stend);
 
 	if (st) {
 		*stCheck = st;

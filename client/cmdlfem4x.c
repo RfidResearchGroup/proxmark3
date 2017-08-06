@@ -1064,8 +1064,7 @@ bool detectPSK(){
 // try manchester - NOTE: ST only applies to T55x7 tags.
 bool detectASK_MAN(){
 	bool stcheck = false;
-	int ans = ASKDemod_ext("0 0 0", false, false, 1, &stcheck);
-	if (!ans) {
+	if ( !ASKDemod_ext("0 0 0", false, false, 1, &stcheck) ) {
 		if (g_debugMode) PrintAndLog("DEBUG: Error - EM: ASK/Manchester Demod failed");
 		return false;
 	} 

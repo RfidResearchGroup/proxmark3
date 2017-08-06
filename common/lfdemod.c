@@ -1050,7 +1050,7 @@ bool DetectST(uint8_t buffer[], size_t *size, int *foundclock, size_t *ststart, 
 	// now do it again to find the end
 	int dummy1 = 0;
 	end = skip;
-	i+=3;
+	i += 3;
 	if (!findST(&dummy1, &end, tmpbuff, waveLen, clk, tol, j, &i)) {
 	//didn't find second ST - ERROR
 		if (g_debugMode==2) prnt("DEBUG STT: second STT not found - quitting");
