@@ -27,7 +27,7 @@
 #endif
 
 // Craig Young - 14a stand-alone code
-#ifdef WITH_ISO14443a_StandAlone
+#ifdef WITH_HF_YOUNG
  #include "iso14443a.h"
  #include "protocols.h"
 #endif
@@ -320,6 +320,37 @@ void SendVersion(void)
 	cmd_send(CMD_ACK, *(AT91C_DBGU_CIDR), text_and_rodata_section_size + compressed_data_section_size, 0, VersionString, strlen(VersionString));
 }
 
+// detection of which Standalone Modes is installed
+// (iceman)
+void printStandAloneModes(void){
+	#if defined(WITH_HF_YOUNG) || defined(WITH_LF_SAMYRUN)
+	DbpString("Installed StandAlone Mods");
+	#endif
+	#if defined(WITH_ICEMAN)
+	DbpString("LF sniff/clone/simulation -  aka IceRun (iceman)");
+	#endif
+	#if defined(WITH_HF_YOUNG) // WITH_HF_YOUNG
+	DbpString("HF Mifare sniff/simulation - (Craig Young)");
+	#endif
+	#if defined(WITH_LF_SAMYRUN)  // 
+	DbpString("LF HID26 standalone - aka SamyRun (Samy Kamkar)");
+	#endif
+	#if defined(WITH_LF_PROXBRUTE)
+	DbpString("LF HID ProxII bruteforce - aka Proxbrute (Brad Antoniewicz)");
+	#endif 
+	#if defined(WITH_LF_HIDCORP)
+	DbpString("LF HID corporate 1000 bruteforce - (Federi Codotta)");
+	#endif 
+	#if defined(WITH_HF_MATTYRUN)
+	DbpString("HF Mifare sniff/clone - aka MattyRun (Matta Real)");
+	#endif 
+	
+	//.. add your own standalone detection based on with compiler directive you are used.
+	// don't "reuse" the already taken ones, this will make things easier when trying to detect the different modes
+	// 2017-08-06  must adapt the makefile and have individual compilation flags for all mods
+	// 
+}
+
 // measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the UsbCommand structure included.
 void printUSBSpeed(void) 
@@ -362,10 +393,11 @@ void SendStatus(void) {
 	Dbprintf("  ToSendMax...............%d", ToSendMax);
 	Dbprintf("  ToSendBit...............%d", ToSendBit);
 	Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
+	printStandAloneModes();
 	cmd_send(CMD_ACK,1,0,0,0,0);
 }
 
-#if defined(WITH_ISO14443a_StandAlone) || defined(WITH_LF)
+#if defined(WITH_HF_YOUNG) || defined(WITH_LF_SAMYRUN)
 
 #define OPTS 2
 void StandAloneMode()
@@ -384,7 +416,7 @@ void StandAloneMode()
 }
 #endif
 
-#ifdef WITH_ISO14443a_StandAlone
+#ifdef WITH_HF_YOUNG
 
 typedef struct {
 	uint8_t uid[10];
@@ -639,7 +671,7 @@ void StandAloneMode14a()
 		}
 	}
 }
-#elif WITH_LF
+#elif WITH_LF_SAMYRUN
 // samy's sniff and repeat routine for LF
 void SamyRun()
 {
@@ -1522,14 +1554,14 @@ void  __attribute__((noreturn)) AppMain(void)
 		}
 		WDT_HIT();
 
-#ifdef WITH_LF
-#ifndef WITH_ISO14443a_StandAlone
+#ifdef WITH_LF_SAMYRUN
+#ifndef WITH_HF_YOUNG
 		if (BUTTON_HELD(1000) > 0)
 			SamyRun();
 #endif
 #endif
 #ifdef WITH_ISO14443a
-#ifdef WITH_ISO14443a_StandAlone
+#ifdef WITH_HF_YOUNG
 		if (BUTTON_HELD(1000) > 0)
 			StandAloneMode14a();
 #endif
