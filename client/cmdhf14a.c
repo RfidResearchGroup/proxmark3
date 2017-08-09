@@ -411,10 +411,18 @@ int CmdHF14ACUIDs(const char *Cmd) {
 	// collect at least 1 (e.g. if no parameter was given)
 	n = n > 0 ? n : 1;
 
+	uint64_t t1 =  msclock();
 	PrintAndLog("Collecting %d UIDs", n);
-	PrintAndLog("Start: %" PRIu64, msclock()/1000);
+
 	// repeat n times
 	for (int i = 0; i < n; i++) {
+
+		if (ukbhit()) {
+			int gc = getchar(); (void)gc;
+			printf("\naborted via keyboard!\n");
+			break;
+		}
+		
 		// execute anticollision procedure
 		UsbCommand c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}};
 		SendCommand(&c);
@@ -435,7 +443,7 @@ int CmdHF14ACUIDs(const char *Cmd) {
 			PrintAndLog("%s", uid_string);
 		}
 	}
-	PrintAndLog("End: %" PRIu64, msclock()/1000);
+	PrintAndLog("End: %" PRIu64 " seconds", (msclock()-t1)/1000);
 	return 1;
 }
 
