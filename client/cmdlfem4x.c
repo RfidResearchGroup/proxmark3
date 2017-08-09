@@ -16,10 +16,12 @@ static int CmdHelp(const char *Cmd);
 
 //////////////// 410x commands
 int usage_lf_em410x_demod(void){
-	PrintAndLog("Usage:  lf em 410x_demod [clock] <0|1> [maxError]");
-	PrintAndLog("     [set clock as integer] optional, if not set, autodetect.");
-	PrintAndLog("     <invert>, 1 for invert output");
-	PrintAndLog("     [set maximum allowed errors], default = 100.");
+	PrintAndLog("Usage:  lf em 410x_demod [h] [clock] <0|1> [maxError]");
+	PrintAndLog("Options:");
+	PrintAndLog("     h                   - this help");
+	PrintAndLog("     clock               -  set clock as integer, optional, if not set, autodetect.");
+	PrintAndLog("     <0|1>               - 0 normal output, 1 for invert output");
+	PrintAndLog("     maxerror            - set maximum allowed errors, default = 100.");
 	PrintAndLog("");
 	PrintAndLog("    sample: lf em 410x_demod        = demod an EM410x Tag ID from GraphBuffer");
 	PrintAndLog("          : lf em 410x_demod 32     = demod an EM410x Tag ID from GraphBuffer using a clock of RF/32");
@@ -31,66 +33,66 @@ int usage_lf_em410x_demod(void){
 int usage_lf_em410x_write(void) {
 	PrintAndLog("Writes EM410x ID to a T55x7 / T5555 (Q5) tag");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf em 410xwrite [h] <id> <card> [clock]");
+	PrintAndLog("Usage:  lf em 410x_write [h] <id> <card> [clock]");
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       <id>      - ID number");
 	PrintAndLog("       <card>    - 0|1 T5555 (Q5) / T55x7");
 	PrintAndLog("       <clock>   - 16|32|40|64, optional, set R/F clock rate, defaults to 64");
 	PrintAndLog("samples:");
-	PrintAndLog("      lf em 410xwrite 0F0368568B");
+	PrintAndLog("      lf em 410x_write 0F0368568B");
 	return 0;
 }
 int usage_lf_em410x_ws(void) {
 	PrintAndLog("Watch 'nd Spoof, activates reader, waits until a EM410x tag gets presented then it starts simulating the found UID");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf em 410xspoof [h]");
+	PrintAndLog("Usage:  lf em 410x_spoof [h]");
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("samples:");
-	PrintAndLog("      lf em 410xspoof");
+	PrintAndLog("      lf em 410x_spoof");
 	return 0;
 }
 int usage_lf_em410x_clone(void) {
 	PrintAndLog("Simulating EM410x tag");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf em 410xclone [h] <uid> <clock>");
+	PrintAndLog("Usage:  lf em 410x_clone [h] <uid> <clock>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       uid       - uid (10 HEX symbols)");
 	PrintAndLog("       clock     - clock (32|64) (optional)");
 	PrintAndLog("samples:");
-	PrintAndLog("      lf em 410xclone 0F0368568B");
-	PrintAndLog("      lf em 410xclone 0F0368568B 32");
+	PrintAndLog("      lf em 410x_clone 0F0368568B");
+	PrintAndLog("      lf em 410x_clone 0F0368568B 32");
 	return 0;
 }
 int usage_lf_em410x_sim(void) {
 	PrintAndLog("Simulating EM410x tag");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf em 410xsim [h] <uid> <clock>");
+	PrintAndLog("Usage:  lf em 410x_sim [h] <uid> <clock>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       uid       - uid (10 HEX symbols)");
 	PrintAndLog("       clock     - clock (32|64) (optional)");
 	PrintAndLog("samples:");
-	PrintAndLog("      lf em 410xsim 0F0368568B");
-	PrintAndLog("      lf em 410xsim 0F0368568B 32");
+	PrintAndLog("      lf em 410x_sim 0F0368568B");
+	PrintAndLog("      lf em 410x_sim 0F0368568B 32");
 	return 0;
 }
 int usage_lf_em410x_brute(void) {
 	PrintAndLog("Bruteforcing by emulating EM410x tag");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf em 410xbrute [h] ids.txt [d 2000] [c clock]");
+	PrintAndLog("Usage:  lf em 410x_brute [h] ids.txt [d 2000] [c clock]");
 	PrintAndLog("Options:");
 	PrintAndLog("       h             - this help");
 	PrintAndLog("       ids.txt       - file with UIDs in HEX format, one per line");
 	PrintAndLog("       d (2000)      - pause delay in milliseconds between UIDs simulation, default 1000 ms (optional)");
 	PrintAndLog("       c (32)        - clock (32|64), default 64 (optional)");
 	PrintAndLog("samples:");
-	PrintAndLog("      lf em 410xbrute ids.txt");
-	PrintAndLog("      lf em 410xbrute ids.txt c 32");
-	PrintAndLog("      lf em 410xbrute ids.txt d 3000");
-	PrintAndLog("      lf em 410xbrute ids.txt d 3000 c 32");
+	PrintAndLog("      lf em 410x_brute ids.txt");
+	PrintAndLog("      lf em 410x_brute ids.txt c 32");
+	PrintAndLog("      lf em 410x_brute ids.txt d 3000");
+	PrintAndLog("      lf em 410x_brute ids.txt d 3000 c 32");
 	return 0;
 }
 
@@ -98,40 +100,40 @@ int usage_lf_em410x_brute(void) {
 int usage_lf_em4x50_dump(void) {
 	PrintAndLog("Dump EM4x50/EM4x69.  Tag must be on antenna. ");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf em 4x50dump [h] <pwd>");
+	PrintAndLog("Usage:  lf em 4x50_dump [h] <pwd>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       pwd       - password (hex) (optional)");
 	PrintAndLog("samples:");
-	PrintAndLog("      lf em 4x50dump");
-	PrintAndLog("      lf em 4x50dump 11223344");
+	PrintAndLog("      lf em 4x50_dump");
+	PrintAndLog("      lf em 4x50_dump 11223344");
 	return 0;
 }
 int usage_lf_em4x50_read(void) {
 	PrintAndLog("Read EM 4x50/EM4x69.  Tag must be on antenna. ");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf em 4x50read [h] <address> <pwd>");
+	PrintAndLog("Usage:  lf em 4x50_read [h] <address> <pwd>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       address   - memory address to read. (0-15)");
 	PrintAndLog("       pwd       - password (hex) (optional)");
 	PrintAndLog("samples:");
-	PrintAndLog("      lf em 4x50read 1");
-	PrintAndLog("      lf em 4x50read 1 11223344");
+	PrintAndLog("      lf em 4x50_read 1");
+	PrintAndLog("      lf em 4x50_read 1 11223344");
 	return 0;
 }
 int usage_lf_em4x50_write(void) {
 	PrintAndLog("Write EM 4x50/4x69.  Tag must be on antenna. ");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf em 4x50write [h] <address> <data> <pwd>");
+	PrintAndLog("Usage:  lf em 4x50_write [h] <address> <data> <pwd>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       address   - memory address to write to. (0-15)");
 	PrintAndLog("       data      - data to write (hex)");	
 	PrintAndLog("       pwd       - password (hex) (optional)");
 	PrintAndLog("samples:");
-	PrintAndLog("      lf em 4x50write 1 deadc0de");
-	PrintAndLog("      lf em 4x50write 1 deadc0de 11223344");
+	PrintAndLog("      lf em 4x50_write 1 deadc0de");
+	PrintAndLog("      lf em 4x50_write 1 deadc0de 11223344");
 	return 0;
 }
 
@@ -139,52 +141,52 @@ int usage_lf_em4x50_write(void) {
 int usage_lf_em4x05_dump(void) {
 	PrintAndLog("Dump EM4x05/EM4x69.  Tag must be on antenna. ");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf em 4x05dump [h] <pwd>");
+	PrintAndLog("Usage:  lf em 4x05_dump [h] <pwd>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       pwd       - password (hex) (optional)");
 	PrintAndLog("samples:");
-	PrintAndLog("      lf em 4x05dump");
-	PrintAndLog("      lf em 4x05dump 11223344");
+	PrintAndLog("      lf em 4x05_dump");
+	PrintAndLog("      lf em 4x05_dump 11223344");
 	return 0;
 }
 int usage_lf_em4x05_read(void) {
 	PrintAndLog("Read EM4x05/EM4x69.  Tag must be on antenna. ");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf em 4x05read [h] <address> <pwd>");
+	PrintAndLog("Usage:  lf em 4x05_read [h] <address> <pwd>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       address   - memory address to read. (0-15)");
 	PrintAndLog("       pwd       - password (hex) (optional)");
 	PrintAndLog("samples:");
-	PrintAndLog("      lf em 4x05read 1");
-	PrintAndLog("      lf em 4x05read 1 11223344");
+	PrintAndLog("      lf em 4x05_read 1");
+	PrintAndLog("      lf em 4x05_read 1 11223344");
 	return 0;
 }
 int usage_lf_em4x05_write(void) {
 	PrintAndLog("Write EM4x05/4x69.  Tag must be on antenna. ");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf em 4x05write [h] <address> <data> <pwd>");
+	PrintAndLog("Usage:  lf em 4x05_write [h] <address> <data> <pwd>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       address   - memory address to write to. (0-15)");
 	PrintAndLog("       data      - data to write (hex)");	
 	PrintAndLog("       pwd       - password (hex) (optional)");
 	PrintAndLog("samples:");
-	PrintAndLog("      lf em 4x05write 1 deadc0de");
-	PrintAndLog("      lf em 4x05write 1 deadc0de 11223344");
+	PrintAndLog("      lf em 4x05_write 1 deadc0de");
+	PrintAndLog("      lf em 4x05_write 1 deadc0de 11223344");
 	return 0;
 }
 int usage_lf_em4x05_info(void) {
 	PrintAndLog("Tag information EM4205/4305/4469//4569 tags.  Tag must be on antenna.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf em 4x05info [h] <pwd>");
+	PrintAndLog("Usage:  lf em 4x05_info [h] <pwd>");
 	PrintAndLog("Options:");
 	PrintAndLog("       h         - this help");
 	PrintAndLog("       pwd       - password (hex) (optional)");
 	PrintAndLog("samples:");
-	PrintAndLog("      lf em 4x05info");
-	PrintAndLog("      lf em 4x05info deadc0de");
+	PrintAndLog("      lf em 4x05_info");
+	PrintAndLog("      lf em 4x05_info deadc0de");
 	return 0;
 }
 
@@ -1422,20 +1424,20 @@ int CmdEM4x05Info(const char *Cmd) {
 static command_t CommandTable[] = {
 	{"help", 		CmdHelp, 			1, "This help"},
 	//{"410x_demod",	CmdEMdemodASK, 		0, "Extract ID from EM410x tag on antenna)"},  
-	{"410x_demod",	CmdEM410xDemod, 	0, "Extract ID from EM410x tag on antenna)"},  
-	{"410x_read",	CmdEM410xRead, 		1, "Extract ID from EM410x tag from GraphBuffer"},
+	{"410x_demod",	CmdEM410xDemod, 	0, "demodulate a EM410x tag from the GraphBuffer"},  
+	{"410x_read",	CmdEM410xRead, 		1, "attempt to read and extract tag data"},
 	{"410x_sim",	CmdEM410xSim, 		0, "simulate EM410x tag"},
-	{"410x_brute",  CmdEM410xBrute,		0, "Reader bruteforce attack by simulating EM410x tags"},
-	{"410x_watch",	CmdEM410xWatch, 	0, "Watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
-	{"410x_spoof",	CmdEM410xWatchnSpoof, 0, "Watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
-	{"410x_write",	CmdEM410xWrite, 	0, "Write EM410x UID to T5555(Q5) or T55x7 tag"},
+	{"410x_brute",  CmdEM410xBrute,		0, "reader bruteforce attack by simulating EM410x tags"},
+	{"410x_watch",	CmdEM410xWatch, 	0, "watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
+	{"410x_spoof",	CmdEM410xWatchnSpoof, 0, "watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
+	{"410x_write",	CmdEM410xWrite, 	0, "write EM410x UID to T5555(Q5) or T55x7 tag"},
 	{"4x05_dump",	CmdEM4x05Dump,		0, "dump EM4x05/EM4x69 tag"},
 	{"4x05_info",   CmdEM4x05Info,      0, "tag information EM4x05/EM4x69"},
 	{"4x05_read",	CmdEM4x05Read, 		0, "read word data from EM4x05/EM4x69"},
 	{"4x05_write",	CmdEM4x05Write,		0, "write word data to EM4x05/EM4x69"},
+	{"4x50_dump",	CmdEM4x50Dump,		0, "dump EM4x50 tag"},
 	{"4x50_read",	CmdEM4x50Read, 		0, "read word data from EM4x50"},
 	{"4x50_write",	CmdEM4x50Write, 	0, "write word data to EM4x50"},
-	{"4x50_dump",	CmdEM4x50Dump,		0, "dump EM4x50 tag"},
 	{NULL, NULL, 0, NULL}
 };
 

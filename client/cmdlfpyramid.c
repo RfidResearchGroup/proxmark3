@@ -16,8 +16,9 @@ int usage_lf_pyramid_clone(void){
 	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
 	PrintAndLog("Currently only works on 26bit");
 	PrintAndLog("");
-	PrintAndLog("Usage: lf pyramid clone <Facility-Code> <Card-Number>");
+	PrintAndLog("Usage: lf pyramid clone [h] <Facility-Code> <Card-Number>");
 	PrintAndLog("Options :");
+	PrintAndLog("  h               : this help");
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("  Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
@@ -32,8 +33,9 @@ int usage_lf_pyramid_sim(void) {
 	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
 	PrintAndLog("Currently work only on 26bit");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf pyramid sim <Card-Number>");
+	PrintAndLog("Usage:  lf pyramid sim [h] <Card-Number>");
 	PrintAndLog("Options :");
+	PrintAndLog("  h               : this help");
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("");
@@ -333,11 +335,11 @@ int CmdPyramidSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",	CmdHelp,		1, "This help"},
-	{"demod",	CmdPyramidDemod,0, "Demodulate a Pyramid FSK tag from the GraphBuffer"},	
-	{"read",	CmdPyramidRead,	0, "Attempt to read and extract tag data"},
-	{"clone",	CmdPyramidClone,0, "<Facility-Code> <Card Number>  clone pyramid tag"},
-	{"sim",		CmdPyramidSim,	0, "<Facility-Code> <Card Number>  simulate pyramid tag"},
+    {"help",	CmdHelp,		1, "this help"},
+	{"demod",	CmdPyramidDemod,0, "demodulate a Pyramid FSK tag from the GraphBuffer"},
+	{"read",	CmdPyramidRead,	0, "attempt to read and extract tag data"},
+	{"clone",	CmdPyramidClone,0, "clone pyramid tag"},
+	{"sim",		CmdPyramidSim,	0, "simulate pyramid tag"},
     {NULL, NULL, 0, NULL}
 };
 

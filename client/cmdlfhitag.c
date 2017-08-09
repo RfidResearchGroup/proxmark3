@@ -382,8 +382,7 @@ int CmdLFHitagWP(const char *Cmd) {
 	return 0;
 }
 
-static command_t CommandTable[] = 
-{
+static command_t CommandTable[] = {
 	{"help",	CmdHelp,           1, "This help"},
 	{"list",	CmdLFHitagList,    1, "<outfile> List Hitag trace history"},
 	{"reader",	CmdLFHitagReader,  1, "Act like a Hitag Reader"},

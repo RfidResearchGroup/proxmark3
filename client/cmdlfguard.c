@@ -16,13 +16,13 @@ int usage_lf_guard_clone(void){
 	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
 	PrintAndLog("Currently work only on 26bit");
 	PrintAndLog("");
-	PrintAndLog("Usage: lf guard clone <format> <Facility-Code> <Card-Number>");
+	PrintAndLog("Usage: lf gprox clone [h] <format> <Facility-Code> <Card-Number>");
 	PrintAndLog("Options :");
 	PrintAndLog("         <format> :  format length 26|32|36|40");	
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf guard clone 26 123 11223");
+	PrintAndLog("Sample  : lf gprox clone 26 123 11223");
 	return 0;
 }
 
@@ -32,13 +32,13 @@ int usage_lf_guard_sim(void) {
 	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
 	PrintAndLog("Currently work only on 26bit");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf guard sim <format> <Facility-Code> <Card-Number>");
+	PrintAndLog("Usage:  lf gprox sim [h] <format> <Facility-Code> <Card-Number>");
 	PrintAndLog("Options :");
 	PrintAndLog("         <format> :  format length 26|32|36|40");	
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
 	PrintAndLog("  <Card Number>   : 16-bit value card number");
 	PrintAndLog("");
-	PrintAndLog("Sample  : lf guard sim 26 123 11223");
+	PrintAndLog("Sample  : lf gprox sim 26 123 11223");
 	return 0;
 }
 
@@ -332,11 +332,11 @@ int CmdGuardSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",	CmdHelp,		1, "This help"},
-	{"demod",	CmdGuardDemod,	1, "Demodulate a G Prox II tag from the GraphBuffer"},
-	{"read",	CmdGuardRead,	0, "Attempt to read and extract tag data from the antenna"},
-	{"clone",	CmdGuardClone,	0, "<Facility-Code> <Card Number>  clone Guardall tag"},
-	{"sim",		CmdGuardSim,	0, "<Facility-Code> <Card Number>  simulate Guardall tag"},
+    {"help",	CmdHelp,		1, "this help"},
+	{"demod",	CmdGuardDemod,	1, "demodulate a G Prox II tag from the GraphBuffer"},
+	{"read",	CmdGuardRead,	0, "attempt to read and extract tag data from the antenna"},
+	{"clone",	CmdGuardClone,	0, "clone Guardall tag"},
+	{"sim",		CmdGuardSim,	0, "simulate Guardall tag"},
     {NULL, NULL, 0, NULL}
 };
 
