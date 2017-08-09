@@ -62,7 +62,6 @@ int usage_lf_fdx_sim(void) {
 	return 0;
 }
 
-
 // Ask/Biphase Demod then try to locate an ISO 11784/85 ID
 // BitStream must contain previously askrawdemod and biphasedemoded data
 int detectFDXB(uint8_t *dest, size_t *size) {
@@ -378,6 +377,7 @@ int CmdFdxSim(const char *Cmd) {
 	
 	verify_values(countryid, animalid);
 	
+	// 32, no STT, BIPHASE INVERTED == diphase
 	uint8_t clk = 32, encoding = 2, separator = 0, invert = 1;
 	uint16_t arg1, arg2;
 	size_t size = 128;
