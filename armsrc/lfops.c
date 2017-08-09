@@ -397,6 +397,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc)
 
 void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 {
+	#define BREAK_OUT_LIMIT 	
 	int i = 0;
 	uint8_t *buf = BigBuf_get_addr();
 
@@ -419,8 +420,8 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 	AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 	AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 
+	
 	for(;;) {
-		WDT_HIT();
 
 		if (ledcontrol) LED_D_ON();
 				
@@ -440,7 +441,8 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 		//wait until SSC_CLK goes LOW
 		while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
 			WDT_HIT();
-			if ( usb_poll_validate_length() || BUTTON_PRESS() )
+			//if ( usb_poll_validate_length() || BUTTON_PRESS() )
+			if ( BUTTON_PRESS() )
 				goto OUT;
 		}
 				
@@ -448,7 +450,6 @@ void SimulateTagLowFrequency(int period, int gap, int ledcontrol)
 		if(i == period) {
 			i = 0;
 			if (gap) {
-				WDT_HIT();
 				SHORT_COIL();
 				SpinDelayUs(gap);
 			}
