@@ -21,6 +21,20 @@
 #include "lfdemod.h"
 static int CmdHelp(const char *Cmd);
 
+int usage_lf_paradox_sim(void) {
+	PrintAndLog("Enables simulation of Paradox card with specified card number.");
+	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
+	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
+	PrintAndLog("");
+	PrintAndLog("Usage:  lf paradox sim [h] <Facility-Code> <Card-Number>");
+	PrintAndLog("Options :");
+	PrintAndLog("  h               : this help");
+	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
+	PrintAndLog("  <Card Number>   : 16-bit value card number");
+	PrintAndLog("");
+	PrintAndLog("Sample  : lf paradox sim 123 11223");
+	return 0;
+}
 
 // loop to get raw paradox waveform then FSK demodulate the TAG ID from it
 int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx) {
@@ -41,13 +55,14 @@ int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint
 	for (size_t idx = numStart; (idx-numStart) < *size - sizeof(preamble); idx+=2){
 		if (dest[idx] == dest[idx+1]) 
 			return -4; //not manchester data
-		*hi2 = (*hi2<<1)|(*hi>>31);
-		*hi = (*hi<<1)|(*lo>>31);
+		
+		*hi2 = (*hi2 << 1) | (*hi >> 31);
+		*hi = (*hi << 1) | (*lo >> 31);
 		//Then, shift in a 0 or one into low
 		if (dest[idx] && !dest[idx+1])	// 1 0
-			*lo=(*lo<<1)|1;
+			*lo = (*lo << 1) | 1;
 		else // 0 1
-			*lo=(*lo<<1)|0;
+			*lo = (*lo << 1) | 0;
 	}
 	return (int)startIdx;
 }
@@ -117,12 +132,51 @@ int CmdParadoxRead(const char *Cmd) {
 	return CmdParadoxDemod(Cmd);
 }
 
+
+int CmdParadoxSim(const char *Cmd) {
+
+	char cmdp = param_getchar(Cmd, 0);
+	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_paradox_sim();
+
+	uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
+	
+	uint8_t bs[96];
+	size_t size = sizeof(bs);
+	memset(bs, 0x00, size);
+	
+	// Paradox uses:  fcHigh: 10, fcLow: 8, clk: 50, invert: 1  FSK2a
+	uint8_t clk = 50, invert = 1, high = 10, low = 8;
+	uint16_t arg1, arg2;	
+	arg1 = high << 8 | low;
+	arg2 = invert << 8 | clk;
+	
+	if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) return usage_lf_paradox_sim();
+
+	facilitycode = (fc & 0x000000FF);
+	cardnumber = (cn & 0x0000FFFF);
+	
+	// if ( !GetParadoxBits(facilitycode, cardnumber, bs)) {
+		// PrintAndLog("Error with tag bitstream generation.");
+		// return 1;
+	// }	
+
+	PrintAndLog("Simulating Paradox - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber );
+	
+	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};
+	memcpy(c.d.asBytes, bs, size);
+	clearCommandBuffer();
+	SendCommand(&c);
+
+	PrintAndLog("UNFINISHED");
+	return 0;
+}
+
 static command_t CommandTable[] = {
 	{"help",  CmdHelp,			1, "This help"},
 	{"demod", CmdParadoxDemod,	1, "Demodulate a Paradox FSK tag from the GraphBuffer"},
 	{"read",  CmdParadoxRead,	0, "Attempt to read and Extract tag data from the antenna"},
 //	{"clone",	CmdParadoxClone,0, "clone paradox tag"},
-//	{"sim",		CmdParadoxSim,	0, "simulate paradox tag"},	
+	{"sim",		CmdParadoxSim,	0, "simulate paradox tag"},	
 	{NULL, NULL, 0, NULL}
 };
 
