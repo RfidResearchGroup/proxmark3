@@ -98,9 +98,9 @@ int CmdIOProxDemod(const char *Cmd) {
 	int waveIdx = 0;
 	//get binary from fsk wave
 	idx = detectIOProx(BitStream, &bitlen, &waveIdx);
-	if (idx<0){
+	if (idx < 0){
 		if (g_debugMode){
-			if (idx==-1){
+			if (idx == -1){
 				PrintAndLog("DEBUG: Error - IO prox just noise detected");     
 			} else if (idx == -2) {
 				PrintAndLog("DEBUG: Error - IO prox not enough samples");
@@ -123,19 +123,14 @@ int CmdIOProxDemod(const char *Cmd) {
 		} 
 		return retval;
 	}
-		//Index map
-		//0           10          20          30          40          50          60
-		//|           |           |           |           |           |           |
-		//01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
-		//-----------------------------------------------------------------------------
-		//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
-		//
-		//XSF(version)facility:codeone+codetwo (raw)
-		//Handle the data
-	if (idx + 64 > bitlen) {
-		if (g_debugMode) PrintAndLog("DEBUG: Error - IO prox not enough bits found - bitlen: %d", bitlen);
-		return retval;
-	}
+	//Index map
+	//0           10          20          30          40          50          60
+	//|           |           |           |           |           |           |
+	//01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
+	//-----------------------------------------------------------------------------
+	//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
+	//
+	//XSF(version)facility:codeone+codetwo (raw)
 	
 	if (g_debugMode) {
 		PrintAndLog("%d%d%d%d%d%d%d%d %d", BitStream[idx], BitStream[idx+1], BitStream[idx+2], BitStream[idx+3], BitStream[idx+4], BitStream[idx+5], BitStream[idx+6], BitStream[idx+7], BitStream[idx+8]);
@@ -171,8 +166,8 @@ int CmdIOProxDemod(const char *Cmd) {
 		retval = 0;
 	}
 
-	PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x) [crc %s]",version,facilitycode,number,code,code2, crcStr);
-	setDemodBuf(BitStream,64,idx);
+	PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x) [crc %s]", version, facilitycode, number, code, code2, crcStr);
+	setDemodBuf(BitStream, 64, idx);
 	if (g_debugMode){
 		PrintAndLog("DEBUG: IO prox idx: %d, Len: %d, Printing demod buffer:", idx, 64);
 		printDemodBuff();
@@ -188,7 +183,7 @@ int CmdIOProxDemod(const char *Cmd) {
 //00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
 //XSF(version)facility:codeone+codetwo (raw)
 int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits) {
-#define SEPARATOR 1	
+	#define SEPARATOR 1	
 	uint8_t pos=0;
 	// the return bits, preamble 0000 0000 0
 	uint8_t pre[64];
@@ -249,13 +244,9 @@ int CmdIOProxSim(const char *Cmd) {
 	uint16_t cn = 0;
 	uint8_t version = 0, fc = 0;
 	uint8_t bits[64];
-	uint8_t *bs = bits;
 	size_t size = sizeof(bits);
-	memset(bs, 0x00, size);
-
-	uint64_t arg1 = ( 10 << 8 ) + 8; // fcHigh = 10, fcLow = 8
-	uint64_t arg2 = (64 << 8)| + 1; // clk RF/64 invert=1
-  
+	memset(bits, 0x00, size);
+ 
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_io_sim();
 	
@@ -270,19 +261,25 @@ int CmdIOProxSim(const char *Cmd) {
 		PrintAndLog("Card Number Truncated to 16-bits (IOProx): %u", cn);
 	}
 	
+	// clock 64, FSK2a fcHIGH 10 | fcLOW 8
+	uint8_t clk = 64, invert = 1, high = 10, low = 8;
+	uint16_t arg1, arg2;	
+	arg1 = high << 8 | low;
+	arg2 = invert << 8 | clk;
+
 	PrintAndLog("Emulating IOProx Version: %u FC: %u; CN: %u\n", version, fc, cn);
 	PrintAndLog("Press pm3-button to abort simulation or run another command");
 	
-	if ( !getIOProxBits(version, fc, cn, bs)) {
+	if ( !getIOProxBits(version, fc, cn, bits)) {
 		PrintAndLog("Error with tag bitstream generation.");
 		return 1;
 	}
 	// IOProx uses: fcHigh: 10, fcLow: 8, clk: 64, invert: 1
 	// arg1 --- fcHigh<<8 + fcLow
-	// arg2 --- Inversion and clk setting
-	// 64   --- Bitstream length: 64-bits == 8 bytes
+	// arg2 --- Invert and clk setting
+	// size --- 64 bits == 8 bytes
 	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};  
-	memcpy(c.d.asBytes, bs, size);
+	memcpy(c.d.asBytes, bits, size);
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
@@ -312,7 +309,7 @@ int CmdIOProxClone(const char *Cmd) {
 	}
 	
 	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
-		blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(50) | 2 << T5555_MAXBLOCK_SHIFT;
+		blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
 
 	if ( !getIOProxBits(version, fc, cn, bs)) {
 		PrintAndLog("Error with tag bitstream generation.");
