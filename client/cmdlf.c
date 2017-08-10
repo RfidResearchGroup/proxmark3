@@ -702,7 +702,8 @@ int CmdLFpskSim(const char *Cmd) {
 
 	if (clk <= 0) clk = 32;
 
-	if (carrier == 0) carrier = 2;
+	if (carrier != 2 && carrier != 4 && carrier != 8 )
+		carrier = 2;
   
 	if (pskType != 1){
 		if (pskType == 2){

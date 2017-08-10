@@ -796,10 +796,11 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		WDT_HIT();
 		if (ledcontrol) LED_A_ON();
 
-		DoAcquisition_default(-1,true);
+		DoAcquisition_default(-1, true);
 		// FSK demodulator
 		size = 50*128*2; //big enough to catch 2 sequences of largest format
 		idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo, &dummyIdx);
+		if ( idx < 0 ) continue;
 		
 		if (idx>0 && lo>0 && (size==96 || size==192)){
 			// go over previously decoded manchester data and decode into usable tag ID
@@ -869,7 +870,6 @@ void CmdHIDdemodFSK(int findone, int *high, int *low, int ledcontrol)
 			// reset
 		}
 		hi2 = hi = lo = idx = 0;
-		WDT_HIT();
 	}
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 	DbpString("Stopped");
@@ -1054,7 +1054,7 @@ void CmdIOdemodFSK(int findone, int *high, int *low, int ledcontrol)
 		//fskdemod and get start index
 		WDT_HIT();
 		idx = detectIOProx(dest, &size, &dummyIdx);
-		if (idx<0) continue;
+		if (idx < 0) continue;
 			//valid tag found
 
 			//Index map

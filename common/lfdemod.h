@@ -46,8 +46,8 @@ extern int      nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, 
 extern bool     parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType);
 extern bool		preambleSearch(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx);
 extern bool		preambleSearchEx(uint8_t *BitStream, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx, bool findone);
-extern int      pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert);
-extern int      pskRawDemod_ext(uint8_t dest[], size_t *size, int *clock, int *invert, int *startIdx);
+extern int      pskRawDemod(uint8_t *dest, size_t *size, int *clock, int *invert);
+extern int      pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *startIdx);
 extern void     psk2TOpsk1(uint8_t *BitStream, size_t size);
 extern void     psk1TOpsk2(uint8_t *BitStream, size_t size);
 extern size_t   removeParity(uint8_t *BitStream, size_t startIdx, uint8_t pLen, uint8_t pType, size_t bLen);
@@ -58,5 +58,4 @@ extern int Em410xDecode(uint8_t *dest, size_t *size, size_t *startIdx, uint32_t 
 extern int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx);
 extern int detectIdteck(uint8_t *dest, size_t *size);
 extern int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx);
-extern int detectIndala26(uint8_t *bitStream, size_t *size, uint8_t *invert);
 #endif

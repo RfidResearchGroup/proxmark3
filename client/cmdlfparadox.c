@@ -68,7 +68,7 @@ int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint
 }
 
 //by marshmellow
-//Paradox Prox demod - FSK RF/50 with preamble of 00001111 (then manchester encoded)
+//Paradox Prox demod - FSK2a RF/50 with preamble of 00001111 (then manchester encoded)
 //print full Paradox Prox ID and some bit format details if found
 int CmdParadoxDemod(const char *Cmd) {
 	//raw fsk demod no manchester decoding no start bit finding just get binary from wave

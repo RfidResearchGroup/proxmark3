@@ -491,7 +491,6 @@ int param_getstr(const char *line, int paramnum, char * str)
 The following methods comes from Rfidler sourcecode.
 https://github.com/ApertureLabsLtd/RFIDler/blob/master/firmware/Pic32/RFIDler.X/src/
 */
-
 // convert hex to sequence of 0/1 bit values
 // returns number of bits converted
 int hextobinarray(char *target, char *source)

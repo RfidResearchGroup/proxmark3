@@ -26,34 +26,49 @@ int usage_lf_indala_demod(void) {
 }
 
 int usage_lf_indala_sim(void) {
-	PrintAndLog("Enables simulation of Indala card with specified facility-code and card number.");
+	PrintAndLog("Enables simulation of Indala card with specified uid.");
 	PrintAndLog("Simulation runs until the button is pressed or another USB command is issued.");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf indala sim [h] <version> <facility-code> <card-number>");
+	PrintAndLog("Usage:  lf indala sim [h] <uid>");
 	PrintAndLog("Options :");
-	PrintAndLog("                h :  This help");	
-	PrintAndLog("        <version> :  8bit version");
-	PrintAndLog("  <facility-code> :  8bit value facility code");
-	PrintAndLog("    <card number> :  16bit value card number");
+	PrintAndLog("            h :  This help");	
+	PrintAndLog("        <uid> :  64/224 UID");
 	PrintAndLog("");
 	PrintAndLog("Samples");
-	PrintAndLog("       lf indala sim 26 101 1337");
+	PrintAndLog("       lf indala sim deadc0de");
 	return 0;
 }
 
 int usage_lf_indala_clone(void) {
-	PrintAndLog("Enables cloning of Indala card with specified facility-code and card number onto T55x7.");
+	PrintAndLog("Enables cloning of Indala card with specified uid onto T55x7.");
 	PrintAndLog("The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
 	PrintAndLog("");
 	PrintAndLog("Usage:  lf indala clone [h] <uid> [Q5]");
 	PrintAndLog("Options :");
 	PrintAndLog("            h :  This help");	
-	PrintAndLog("        <uid> :  64/221 UID");
+	PrintAndLog("        <uid> :  64/224 UID");
 	PrintAndLog("           Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
 	PrintAndLog("");
 	PrintAndLog("Samples");
 	PrintAndLog("       lf indala clone 112233");
 	return 0;
+}
+
+// redesigned by marshmellow adjusted from existing decode functions
+// indala id decoding - only tested on 26 bit tags, but attempted to make it work for more
+int detectIndala26(uint8_t *dest, size_t *size, uint8_t *invert) {
+	//26 bit 40134 format  (don't know other formats)
+	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+	uint8_t preamble_i[] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0};
+	size_t startidx = 0; 
+	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startidx)){
+		// if didn't find preamble try again inverting
+		if (!preambleSearch(dest, preamble_i, sizeof(preamble_i), size, &startidx)) return -1;
+		*invert ^= 1;
+	} 
+	if (*size != 64 && *size != 224) return -2;
+	
+	return (int) startidx;
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
@@ -124,7 +139,6 @@ int CmdIndalaDemod(const char *Cmd) {
 // but the other appears to currently be more accurate than this approach most of the time.
 int CmdIndalaDemodAlt(const char *Cmd) {
 	// Usage: recover 64bit UID by default, specify "224" as arg to recover a 224bit UID
-
 	int state = -1;
 	int count = 0;
 	int i, j;
@@ -319,25 +333,44 @@ int CmdIndalaDemodAlt(const char *Cmd) {
 }
 
 int CmdIndalaSim(const char *Cmd) {
-	uint16_t cn = 0;
-	uint8_t bits[64];
-	uint8_t *bs = bits;
-	size_t size = sizeof(bits);
-	memset(bs, 0x00, size);
 
-	uint64_t arg1 = ( 10 << 8 ) + 8; // fcHigh = 10, fcLow = 8
-	uint64_t arg2 = (64 << 8)| + 1; // clk RF/64 invert=1
-  
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_indala_sim();
 
+	uint8_t bits[224];
+	size_t size = sizeof(bits);
+	memset(bits, 0x00, size);
+
+	// uid
+	uint8_t hexuid[100];
+	int len = 0;
+	param_gethex_ex(Cmd, 0, hexuid, &len);
+	if ( len > 28 ) 
+		return usage_lf_indala_sim();
 	
+	// convert to binarray
+	uint8_t counter = 224;
+	for (uint8_t i=0; i< len; i++) {
+		for(uint8_t j=0; j<8; j++) {
+			bits[counter--] = hexuid[i] & 1;
+			hexuid[i] >>= 1;
+		}
+	}
 	
-	PrintAndLog("Emulating Indala UID: %u \n", cn);
-	PrintAndLog("Press pm3-button to abort simulation or run another command");
+	// indala PSK 
+	uint8_t clk = 32, carrier = 2, invert = 0;
+	uint16_t arg1, arg2;
+	arg1 = clk << 8 | carrier;
+	arg2 = invert;
+	
+	// It has to send either 64bits (8bytes) or 224bits (28bytes).  Zero padding needed if not.
+	// lf simpsk 1 c 32 r 2 d 0102030405060708
+	
+//	PrintAndLog("Emulating Indala UID: %u \n", cn);
+//	PrintAndLog("Press pm3-button to abort simulation or run another command");
 	
 	UsbCommand c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}};  
-	memcpy(c.d.asBytes, bs, size);
+	memcpy(c.d.asBytes, bits, size);
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;
@@ -347,7 +380,6 @@ int CmdIndalaSim(const char *Cmd) {
 int CmdIndalaClone(const char *Cmd) {
 	UsbCommand c;
 	uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
-
 	uid1 =  uid2 = uid3 = uid4 = uid5 = uid6 = uid7 = 0;
 	int n = 0, i = 0;
 

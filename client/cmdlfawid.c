@@ -43,7 +43,7 @@ int usage_lf_awid_sim(void) {
 	PrintAndLog("");
 	PrintAndLog("Samples:");
 	PrintAndLog("       lf awid sim 26 224 1337");
-	PrintAndLog("       lf awid sim 50 2001 13371337");
+	PrintAndLog("       lf awid sim 50 2001 deadc0de");
 	return 0;
 }
 
@@ -98,15 +98,16 @@ static int sendPing(void){
 }
 
 static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bs, size_t bs_len){
-
 	PrintAndLog("Trying FC: %u; CN: %u", fc, cn);		
 	if ( !getAWIDBits(fmtlen, fc, cn, bs)) {
 		PrintAndLog("Error with tag bitstream generation.");
 		return false;
 	}
 
-	uint64_t arg1 = (10<<8) + 8; // fcHigh = 10, fcLow = 8
-	uint64_t arg2 = 50; 		 // clk RF/50 invert=0
+	uint8_t clk = 50, high = 10, low = 8, invert = 1;
+	uint64_t arg1 = (high << 8) + low;
+	uint64_t arg2 = (invert << 8) + clk;
+
 	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, bs_len}};
 	memcpy(c.d.asBytes, bs, bs_len);
 	clearCommandBuffer();
@@ -228,7 +229,7 @@ int CmdAWIDRead_device(const char *Cmd) {
 }
 
 //by marshmellow
-//AWID Prox demod - FSK RF/50 with preamble of 00000001  (always a 96 bit data stream)
+//AWID Prox demod - FSK2a RF/50 with preamble of 00000001  (always a 96 bit data stream)
 //print full AWID Prox ID and some bit format details if found
 int CmdAWIDDemod(const char *Cmd) {
 	uint8_t bits[MAX_GRAPH_TRACE_LEN]={0};
@@ -277,7 +278,8 @@ int CmdAWIDDemod(const char *Cmd) {
 	uint32_t rawHi = bytebits_to_byte(bits + idx + 32, 32);
 	uint32_t rawHi2 = bytebits_to_byte(bits + idx, 32);
 	setDemodBuf(bits, 96, idx);
-
+	setClockGrid(g_DemodClock, g_DemodStartIdx + (idx*g_DemodClock));
+	
 	size = removeParity(bits, idx+8, 4, 1, 88);
 	if (size != 66){
 		if (g_debugMode) PrintAndLog("DEBUG: Error - AWID at parity check-tag size does not match AWID format");
@@ -362,13 +364,9 @@ int CmdAWIDSim(const char *Cmd) {
 	uint32_t fc = 0, cn = 0;
 	uint8_t fmtlen = 0;
 	uint8_t bits[96];
-	uint8_t *bs = bits;
 	size_t size = sizeof(bits);
-	memset(bs, 0x00, size);
+	memset(bits, 0x00, size);
 
-	uint64_t arg1 = ( 10 << 8 ) + 8; // fcHigh = 10, fcLow = 8
-	uint64_t arg2 = 50; // clk RF/50 invert=0
-  
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_awid_sim();
 	
@@ -382,16 +380,22 @@ int CmdAWIDSim(const char *Cmd) {
 	PrintAndLog("Emulating AWID %u -- FC: %u; CN: %u\n", fmtlen, fc, cn);
 	PrintAndLog("Press pm3-button to abort simulation or run another command");
 	
-	if (!getAWIDBits(fmtlen, fc, cn, bs)) {
+	if (!getAWIDBits(fmtlen, fc, cn, bits)) {
 		PrintAndLog("Error with tag bitstream generation.");
 		return 1;
 	}
-	// AWID uses: fcHigh: 10, fcLow: 8, clk: 50, invert: 0
+	
+	uint8_t clk = 50, high = 10, low = 8, invert = 1;
+	uint64_t arg1 = (high << 8) + low;
+	uint64_t arg2 = (invert << 8) + clk;
+
+	
+	// AWID uses: FSK2a fcHigh: 10, fcLow: 8, clk: 50, invert: 1
 	// arg1 --- fcHigh<<8 + fcLow
 	// arg2 --- Inversion and clk setting
 	// 96   --- Bitstream length: 96-bits == 12 bytes
 	UsbCommand c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}};  
-	memcpy(c.d.asBytes, bs, size);
+	memcpy(c.d.asBytes, bits, size);
 	clearCommandBuffer();
 	SendCommand(&c);
 	return 0;

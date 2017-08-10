@@ -133,12 +133,14 @@ int CmdHIDDemod(const char *Cmd) {
 	if (idx < 0) {
 		if (g_debugMode){
 			if (idx==-1){
-				PrintAndLog("DEBUG: Error - HID just noise detected");
+				PrintAndLog("DEBUG: Error - HID not enough samples");
 			} else if (idx == -2) {
-				PrintAndLog("DEBUG: Error - HID problem during FSK demod");
+				PrintAndLog("DEBUG: Error - HID just noise detected");
 			} else if (idx == -3) {
-				PrintAndLog("DEBUG: Error - HID preamble not found");
+				PrintAndLog("DEBUG: Error - HID problem during FSK demod");
 			} else if (idx == -4) {
+				PrintAndLog("DEBUG: Error - HID preamble not found");
+			} else if (idx == -5) {				
 				PrintAndLog("DEBUG: Error - HID error in Manchester data, SIZE: %d", BitLen);
 			} else {
 				PrintAndLog("DEBUG: Error - HID error demoding fsk %d", idx);

@@ -1488,49 +1488,53 @@ size_t fsk_wave_demod(uint8_t * dest, size_t size, uint8_t fchigh, uint8_t fclow
 
 //translate 11111100000 to 10
 //rfLen = clock, fchigh = larger field clock, fclow = smaller field clock
-size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, int *startIdx) {
+size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t clk, uint8_t invert, uint8_t fchigh, uint8_t fclow, int *startIdx) {
 	uint8_t lastval = dest[0];
-	size_t idx = 0;
+	size_t i = 0;
 	size_t numBits = 0;
 	uint32_t n = 1;
-	for( idx = 1; idx < size; idx++) {
+	uint8_t hclk = clk/2;
+	
+	for( i = 1; i < size; i++) {
 		n++;
-		if (dest[idx] == lastval) continue; //skip until we hit a transition
+		if (dest[i] == lastval) continue; //skip until we hit a transition
 		
 		//find out how many bits (n) we collected (use 1/2 clk tolerance)
 		//if lastval was 1, we have a 1->0 crossing
-		if (dest[idx-1] == 1) {
-			n = (n * fclow + rfLen/2) / rfLen;
+		if (dest[i-1] == 1) {
+			n = (n * fclow + hclk) / clk;
 		} else {// 0->1 crossing 
-			n = (n * fchigh + rfLen/2) / rfLen; 
+			n = (n * fchigh + hclk) / clk; 
 		}
 		if (n == 0) n = 1;
 
 		//first transition - save startidx
 		if (numBits == 0) {
 			if (lastval == 1) {  //high to low
-				*startIdx += (fclow * idx) - (n*rfLen);
-				if (g_debugMode == 2) prnt("DEBUG (aggregate_bits) FSK startIdx %i, fclow*idx %i, n*rflen %u", *startIdx, fclow*(idx), n*rfLen);
+				*startIdx += (fclow * i) - (n*clk);
+				if (g_debugMode == 2) prnt("DEBUG (aggregate_bits) FSK startIdx %i, fclow*idx %i, n*clk %u", *startIdx, fclow*i, n*clk);
 			} else {
-				*startIdx += (fchigh * idx) - (n*rfLen);
-				if (g_debugMode == 2) prnt("DEBUG (aggregate_bits) FSK startIdx %i, fchigh*idx %i, n*rflen %u", *startIdx, fchigh*(idx), n*rfLen);
+				*startIdx += (fchigh * i) - (n*clk);
+				if (g_debugMode == 2) prnt("DEBUG (aggregate_bits) FSK startIdx %i, fchigh*idx %i, n*clk %u", *startIdx, fchigh*i, n*clk);
 			}
 		}
 
 		//add to our destination the bits we collected		
-		memset(dest+numBits, dest[idx-1] ^ invert , n);
+		memset(dest+numBits, dest[i-1] ^ invert , n);
+		if (g_debugMode == 2) prnt("ICCE::  n %u | numbits %u", n, numBits);
 		numBits += n;
 		n = 0;
-		lastval = dest[idx];
+		lastval = dest[i];
+
 	}//end for
 	// if valid extra bits at the end were all the same frequency - add them in
-	if (n > rfLen/fchigh) {
-		if (dest[idx-2] == 1) {
-			n = (n * fclow + rfLen/2) / rfLen;
+	if (n > clk/fchigh) {
+		if (dest[i-2] == 1) {
+			n = (n * fclow + clk/2) / clk;
 		} else {
-			n = (n * fchigh + rfLen/2) / rfLen;
+			n = (n * fchigh + clk/2) / clk;
 		}
-		memset(dest+numBits, dest[idx-1] ^ invert , n);
+		memset(dest+numBits, dest[i-1] ^ invert , n);
 		numBits += n;
 	}
 	return numBits;
@@ -1579,13 +1583,10 @@ void psk2TOpsk1(uint8_t *bits, size_t size) {
 
 //by marshmellow - demodulate PSK1 wave 
 //uses wave lengths (# Samples) 
-int pskRawDemod_ext(uint8_t dest[], size_t *size, int *clock, int *invert, int *startIdx) {
+int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, int *invert, int *startIdx) {
 	
 	// sanity check
 	if (*size < 170) return -1;
-
-	uint16_t loopCnt = 4096;  //don't need to loop through entire array...
-	if (*size < loopCnt) loopCnt = *size;
 
 	uint8_t curPhase = *invert;
 	uint8_t fc=0;
@@ -1598,18 +1599,18 @@ int pskRawDemod_ext(uint8_t dest[], size_t *size, int *clock, int *invert, int *
 	//if clock detect found firstfullwave...
 	uint16_t tol = fc/2;
 	if (firstFullWave == 0) {
-	//find start of modulating data in trace 
+		//find start of modulating data in trace 
 		i = findModStart(dest, *size, fc);
-	//find first phase shift
+		//find first phase shift
 		firstFullWave = pskFindFirstPhaseShift(dest, *size, &curPhase, i, fc, &fullWaveLen);
-	if (firstFullWave == 0) {
-		// no phase shift detected - could be all 1's or 0's - doesn't matter where we start
-		// so skip a little to ensure we are past any Start Signal
-		firstFullWave = 160;
-		memset(dest, curPhase, firstFullWave / *clock);
-	} else {
-		memset(dest, curPhase^1, firstFullWave / *clock);
-	}
+		if (firstFullWave == 0) {
+			// no phase shift detected - could be all 1's or 0's - doesn't matter where we start
+			// so skip a little to ensure we are past any Start Signal
+			firstFullWave = 160;
+			memset(dest, curPhase, firstFullWave / *clock);
+		} else {
+			memset(dest, curPhase^1, firstFullWave / *clock);
+		}
 	} else {
 		memset(dest, curPhase^1, firstFullWave / *clock);
 	}
@@ -1664,7 +1665,7 @@ int pskRawDemod_ext(uint8_t dest[], size_t *size, int *clock, int *invert, int *
 	return errCnt;
 }
 
-int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert) {
+int pskRawDemod(uint8_t *dest, size_t *size, int *clock, int *invert) {
 	int startIdx = 0;
 	return pskRawDemod_ext(dest, size, clock, invert, &startIdx);
 }
@@ -1678,14 +1679,16 @@ int pskRawDemod(uint8_t dest[], size_t *size, int *clock, int *invert) {
 // by marshmellow
 // FSK Demod then try to locate an AWID ID
 int detectAWID(uint8_t *dest, size_t *size, int *waveStartIdx) {
-	//make sure buffer has enough data
+	//make sure buffer has enough data (96bits * 50clock samples)
 	if (*size < 96*50) return -1;
 
 	if (justNoise(dest, *size)) return -2;
 
-	// FSK demodulator
-	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx);  // fsk2a RF/50 
-	if (*size < 96) return -3;  //did we get a good demod?
+	// FSK2a demodulator  clock 50, invert 1, fcHigh 10, fcLow 8
+	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx);
+
+	//did we get a good demod?
+	if (*size < 96) return -3;
 
 	uint8_t preamble[] = {0,0,0,0,0,0,0,1};
 	size_t startIdx = 0;
@@ -1737,23 +1740,29 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *startIdx, uint32_t *hi, ui
 
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx) {
-
-	if (justNoise(dest, *size)) return -1;
-
-	size_t numStart=0, startIdx=0; 
+	//make sure buffer has data
+	if (*size < 96*50) return -1;
+	
+	if (justNoise(dest, *size)) return -2;
+		
 	// FSK demodulator  fsk2a so invert and fc/10/8
 	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx);
-	if (*size < 96*2) return -2;
+
+	//did we get a good demod?
+	if (*size < 96*2) return -3;
+
 	// 00011101 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
 	uint8_t preamble[] = {0,0,0,1,1,1,0,1};
+	size_t startIdx = 0;	
 	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) 
-		return -3; //preamble not found
+		return -4; //preamble not found
 
+	size_t numStart = 0; 
 	numStart = startIdx + sizeof(preamble);
 	// final loop, go over previously decoded FSK data and manchester decode into usable tag ID
 	for (size_t idx = numStart; (idx-numStart) < *size - sizeof(preamble); idx+=2){
 		if (dest[idx] == dest[idx+1]){
-			return -4; //not manchester data
+			return -5; //not manchester data
 		}
 		*hi2 = (*hi2<<1)|(*hi>>31);
 		*hi = (*hi<<1)|(*lo>>31);
@@ -1781,12 +1790,17 @@ int detectIdteck(uint8_t *dest, size_t *size) {
 }
 
 int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx) {
-	if (justNoise(dest, *size)) return -1;
 	//make sure buffer has data
-	if (*size < 66*64) return -2;
+	if (*size < 66*64) return -1;
+	
+	if (justNoise(dest, *size)) return -2;
+	
 	// FSK demodulator  RF/64, fsk2a so invert, and fc/10/8
 	*size = fskdemod(dest, *size, 64, 1, 10, 8, waveStartIdx); 
-	if (*size < 65) return -3;  //did we get a good demod?
+	
+	//did we get a good demod?
+	if (*size < 64) return -3;
+	
 	//Index map
 	//0           10          20          30          40          50          60
 	//|           |           |           |           |           |           |
@@ -1795,9 +1809,9 @@ int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx) {
 	//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
 	//
 	//XSF(version)facility:codeone+codetwo
-	//Handle the data
-	size_t startIdx = 0;
+
 	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,1};
+	size_t startIdx = 0;
 	if (! preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
 		return -4; //preamble not found
 
@@ -1807,21 +1821,4 @@ int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx) {
 		return (int) startIdx;
 	}
 	return -5;
-}
-
-// redesigned by marshmellow adjusted from existing decode functions
-// indala id decoding - only tested on 26 bit tags, but attempted to make it work for more
-int detectIndala26(uint8_t *dest, size_t *size, uint8_t *invert) {
-	//26 bit 40134 format  (don't know other formats)
-	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
-	uint8_t preamble_i[] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0};
-	size_t startidx = 0; 
-	if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startidx)){
-		// if didn't find preamble try again inverting
-		if (!preambleSearch(dest, preamble_i, sizeof(preamble_i), size, &startidx)) return -1;
-		*invert ^= 1;
-	} 
-	if (*size != 64 && *size != 224) return -2;
-	
-	return (int) startidx;
 }

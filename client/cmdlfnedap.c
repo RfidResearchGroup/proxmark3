@@ -49,14 +49,13 @@ int detectNedap(uint8_t *dest, size_t *size) {
 	return (int) startIdx;
 }
 
-
 int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 
 	uint8_t pre[128];
 	memset(pre, 0x00, sizeof(pre));
 
-	// preamble  1111 1111 10 = 0XF8
-	num_to_bytebits(0xF8, 10, pre);
+	// preamble  1111 1111 10 = 0xFF8
+	num_to_bytebits(0xFF8, 12, pre);
 
 	// fixed tagtype code?  0010 1101 = 0x2D
 	num_to_bytebits(0x2D, 8, pre+10);
@@ -64,7 +63,7 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 	// 46 encrypted bits - UNKNOWN ALGO
 	//    -- 16 bits checksum. Should be 4x4 checksum,  based on UID and 2 constant values.
 	//    -- 30 bits undocumented?  
-	num_to_bytebits(cn, 46, pre+18);
+	//num_to_bytebits(cn, 46, pre+18);
 
 	//----from this part, the UID in clear text, with a 1bit ZERO as separator between bytes.
 	pre[64] = 0;
@@ -95,10 +94,10 @@ int GetNedapBits(uint32_t cn, uint8_t *nedapBits) {
 
 	pre[63] = GetParity( DemodBuffer, EVEN, 63);
 	pre[127] = GetParity( DemodBuffer+64, EVEN, 63);
-
 	
 	memcpy(nedapBits, pre, 128);
-//1111111110001011010000010110100011001001000010110101001101011001000110011010010000000000100001110001001000000001000101011100111
+
+	// 1111111110001011010000010110100011001001000010110101001101011001000110011010010000000000100001110001001000000001000101011100111
 	return 1;
 }
 /*
@@ -317,6 +316,7 @@ int CmdLFNedapSim(const char *Cmd) {
 		return 1;
 	}	
 
+	PrintAndLog("bin  %s", sprint_bin_break(bs, 128, 32));
 	PrintAndLog("Simulating Nedap - CardNumber: %u", cardnumber );
 	
 	UsbCommand c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}};

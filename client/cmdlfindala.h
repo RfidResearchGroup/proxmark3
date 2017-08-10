@@ -33,6 +33,8 @@ extern int CmdIndalaRead(const char *Cmd);
 extern int CmdIndalaClone(const char *Cmd);
 extern int CmdIndalaSim(const char *Cmd);
 
+extern int detectIndala26(uint8_t *bitStream, size_t *size, uint8_t *invert);
+
 extern int usage_lf_indala_demod(void);
 extern int usage_lf_indala_clone(void);
 extern int usage_lf_indala_sim(void);

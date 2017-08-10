@@ -101,9 +101,9 @@ int CmdIOProxDemod(const char *Cmd) {
 	if (idx < 0){
 		if (g_debugMode){
 			if (idx == -1){
-				PrintAndLog("DEBUG: Error - IO prox just noise detected");     
+				PrintAndLog("DEBUG: Error - IO prox not enough samples");				
 			} else if (idx == -2) {
-				PrintAndLog("DEBUG: Error - IO prox not enough samples");
+				PrintAndLog("DEBUG: Error - IO prox just noise detected");
 			} else if (idx == -3) {
 				PrintAndLog("DEBUG: Error - IO prox error during fskdemod");        
 			} else if (idx == -4) {
