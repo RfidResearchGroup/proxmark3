@@ -154,8 +154,7 @@ int CmdJablotronClone(const char *Cmd) {
 	uint32_t blocks[3] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
 
 	uint8_t bits[64];
-	uint8_t *bs = bits;
-	memset(bs, 0, sizeof(bits));
+	memset(bits, 0, sizeof(bits));
 	
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_jablotron_clone();
@@ -172,25 +171,21 @@ int CmdJablotronClone(const char *Cmd) {
 		PrintAndLog("Card Number Truncated to 39bits: %"PRIx64, fullcode);
 	}
 	
-	if ( !getJablotronBits(fullcode, bs)) {
+	if ( !getJablotronBits(fullcode, bits)) {
 		PrintAndLog("Error with tag bitstream generation.");
 		return 1;
 	}	
 	
-	blocks[1] = bytebits_to_byte(bs,32);
-	blocks[2] = bytebits_to_byte(bs+32,32);
+	blocks[1] = bytebits_to_byte(bits, 32);
+	blocks[2] = bytebits_to_byte(bits + 32, 32);
 
 	PrintAndLog("Preparing to clone Jablotron to T55x7 with FullCode: %"PRIx64, fullcode);
-	PrintAndLog("Blk | Data ");
-	PrintAndLog("----+------------");
-	PrintAndLog(" 00 | 0x%08x", blocks[0]);
-	PrintAndLog(" 01 | 0x%08x", blocks[1]);
-	PrintAndLog(" 02 | 0x%08x", blocks[2]);
+	print_blocks(blocks, 3);
 	
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
-	for (int i = 2; i >= 0; --i) {
+	for (uint8_t i=0; i<4; i++) {
 		c.arg[0] = blocks[i];
 		c.arg[1] = i;
 		clearCommandBuffer();

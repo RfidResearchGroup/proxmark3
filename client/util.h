@@ -13,6 +13,7 @@
 #include <stdint.h>		//included in data.h
 #include <stddef.h>
 #include <inttypes.h>
+#include "ui.h"			// PrintAndLog
 
 #ifdef ANDROID
   #include <endian.h>
@@ -101,6 +102,8 @@ extern char *sprint_bin(const uint8_t * data, const size_t len);
 extern char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t breaks);
 extern char *sprint_hex_ascii(const uint8_t *data, const size_t len);
 extern char *sprint_ascii(const uint8_t *data, const size_t len);
+
+extern void print_blocks(uint32_t *data, size_t len);
 
 extern void num_to_bytes(uint64_t n, size_t len, uint8_t* dest);
 extern uint64_t bytes_to_num(uint8_t* src, size_t len);

@@ -53,7 +53,7 @@ int usage_lf_hid_sim(void){
 	PrintAndLog("       h	- This help");
 	PrintAndLog("       ID  - HID id");
 	PrintAndLog("Samples:");
-	PrintAndLog("      lf hid sim 224");
+	PrintAndLog("      lf hid sim 2006ec0c86");
 	return 0;
 }
 int usage_lf_hid_clone(void){
@@ -156,8 +156,7 @@ int CmdHIDDemod(const char *Cmd) {
 	
 	if (hi2 != 0){ //extra large HID tags
 		PrintAndLog("HID Prox TAG ID: %x%08x%08x (%u)", hi2, hi, lo, (lo>>1) & 0xFFFF);
-	}
-	else {  //standard HID tags <38 bits
+	} else {  //standard HID tags <38 bits
 		uint8_t fmtLen = 0;
 		uint32_t fc = 0;
 		uint32_t cardnum = 0;
@@ -196,7 +195,7 @@ int CmdHIDDemod(const char *Cmd) {
 		}
 		PrintAndLog("HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - FC: %u - Card: %u", hi, lo, (lo>>1) & 0xFFFF, fmtLen, fc, cardnum);
 	}
-	setDemodBuf(BitStream,BitLen,idx);
+	setDemodBuf(BitStream, BitLen, idx);
 	setClockGrid(50, waveIdx + (idx*50));
 
 	if (g_debugMode){ 

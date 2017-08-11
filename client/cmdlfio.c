@@ -91,13 +91,13 @@ int CmdIOProxDemod(const char *Cmd) {
 		if (g_debugMode)PrintAndLog("DEBUG: Error - IO prox not enough samples in GraphBuffer");
 		return retval;
 	}
-	uint8_t BitStream[MAX_GRAPH_TRACE_LEN]={0};
-	size_t bitlen = getFromGraphBuf(BitStream);
+	uint8_t bits[MAX_GRAPH_TRACE_LEN]={0};
+	size_t bitlen = getFromGraphBuf(bits);
 	if (bitlen == 0) return retval;
 
 	int waveIdx = 0;
 	//get binary from fsk wave
-	idx = detectIOProx(BitStream, &bitlen, &waveIdx);
+	idx = detectIOProx(bits, &bitlen, &waveIdx);
 	if (idx < 0){
 		if (g_debugMode){
 			if (idx == -1){
@@ -119,10 +119,13 @@ int CmdIOProxDemod(const char *Cmd) {
 	if (idx==0){
 		if (g_debugMode){
 			PrintAndLog("DEBUG: Error - IO prox data not found - FSK Bits: %d", bitlen);
-			if (bitlen > 92) PrintAndLog("%s", sprint_bin_break(BitStream,92,16));
+			if (bitlen > 92) PrintAndLog("%s", sprint_bin_break(bits,92,16));
 		} 
 		return retval;
 	}
+	setDemodBuf(bits, bitlen, idx);
+	setClockGrid(64, waveIdx + (idx*64));
+	
 	//Index map
 	//0           10          20          30          40          50          60
 	//|           |           |           |           |           |           |
@@ -133,30 +136,30 @@ int CmdIOProxDemod(const char *Cmd) {
 	//XSF(version)facility:codeone+codetwo (raw)
 	
 	if (g_debugMode) {
-		PrintAndLog("%d%d%d%d%d%d%d%d %d", BitStream[idx], BitStream[idx+1], BitStream[idx+2], BitStream[idx+3], BitStream[idx+4], BitStream[idx+5], BitStream[idx+6], BitStream[idx+7], BitStream[idx+8]);
-		PrintAndLog("%d%d%d%d%d%d%d%d %d", BitStream[idx+9], BitStream[idx+10], BitStream[idx+11],BitStream[idx+12],BitStream[idx+13],BitStream[idx+14],BitStream[idx+15],BitStream[idx+16],BitStream[idx+17]);
-		PrintAndLog("%d%d%d%d%d%d%d%d %d facility", BitStream[idx+18], BitStream[idx+19], BitStream[idx+20],BitStream[idx+21],BitStream[idx+22],BitStream[idx+23],BitStream[idx+24],BitStream[idx+25],BitStream[idx+26]);
-		PrintAndLog("%d%d%d%d%d%d%d%d %d version", BitStream[idx+27], BitStream[idx+28], BitStream[idx+29],BitStream[idx+30],BitStream[idx+31],BitStream[idx+32],BitStream[idx+33],BitStream[idx+34],BitStream[idx+35]);
-		PrintAndLog("%d%d%d%d%d%d%d%d %d code1", BitStream[idx+36], BitStream[idx+37], BitStream[idx+38],BitStream[idx+39],BitStream[idx+40],BitStream[idx+41],BitStream[idx+42],BitStream[idx+43],BitStream[idx+44]);
-		PrintAndLog("%d%d%d%d%d%d%d%d %d code2", BitStream[idx+45], BitStream[idx+46], BitStream[idx+47],BitStream[idx+48],BitStream[idx+49],BitStream[idx+50],BitStream[idx+51],BitStream[idx+52],BitStream[idx+53]);
-		PrintAndLog("%d%d%d%d%d%d%d%d %d%d checksum", BitStream[idx+54],BitStream[idx+55],BitStream[idx+56],BitStream[idx+57],BitStream[idx+58],BitStream[idx+59],BitStream[idx+60],BitStream[idx+61],BitStream[idx+62],BitStream[idx+63]);
+		PrintAndLog("%d%d%d%d%d%d%d%d %d", bits[idx], bits[idx+1], bits[idx+2], bits[idx+3], bits[idx+4], bits[idx+5], bits[idx+6], bits[idx+7], bits[idx+8]);
+		PrintAndLog("%d%d%d%d%d%d%d%d %d", bits[idx+9], bits[idx+10], bits[idx+11],bits[idx+12],bits[idx+13],bits[idx+14],bits[idx+15],bits[idx+16],bits[idx+17]);
+		PrintAndLog("%d%d%d%d%d%d%d%d %d facility", bits[idx+18], bits[idx+19], bits[idx+20],bits[idx+21],bits[idx+22],bits[idx+23],bits[idx+24],bits[idx+25],bits[idx+26]);
+		PrintAndLog("%d%d%d%d%d%d%d%d %d version", bits[idx+27], bits[idx+28], bits[idx+29],bits[idx+30],bits[idx+31],bits[idx+32],bits[idx+33],bits[idx+34],bits[idx+35]);
+		PrintAndLog("%d%d%d%d%d%d%d%d %d code1", bits[idx+36], bits[idx+37], bits[idx+38],bits[idx+39],bits[idx+40],bits[idx+41],bits[idx+42],bits[idx+43],bits[idx+44]);
+		PrintAndLog("%d%d%d%d%d%d%d%d %d code2", bits[idx+45], bits[idx+46], bits[idx+47],bits[idx+48],bits[idx+49],bits[idx+50],bits[idx+51],bits[idx+52],bits[idx+53]);
+		PrintAndLog("%d%d%d%d%d%d%d%d %d%d checksum", bits[idx+54],bits[idx+55],bits[idx+56],bits[idx+57],bits[idx+58],bits[idx+59],bits[idx+60],bits[idx+61],bits[idx+62],bits[idx+63]);
 	}
 	
-	uint32_t code = bytebits_to_byte(BitStream+idx,32);
-	uint32_t code2 = bytebits_to_byte(BitStream+idx+32,32);
-	uint8_t version = bytebits_to_byte(BitStream+idx+27,8); //14,4
-	uint8_t facilitycode = bytebits_to_byte(BitStream+idx+18,8) ;
-	uint16_t number = (bytebits_to_byte(BitStream+idx+36,8)<<8)|(bytebits_to_byte(BitStream+idx+45,8)); //36,9
-	uint8_t crc = bytebits_to_byte(BitStream+idx+54,8);
+	uint32_t code = bytebits_to_byte(bits+idx,32);
+	uint32_t code2 = bytebits_to_byte(bits+idx+32,32);
+	uint8_t version = bytebits_to_byte(bits+idx+27,8); //14,4
+	uint8_t facilitycode = bytebits_to_byte(bits+idx+18,8) ;
+	uint16_t number = (bytebits_to_byte(bits+idx+36,8)<<8)|(bytebits_to_byte(bits+idx+45,8)); //36,9
+	uint8_t crc = bytebits_to_byte(bits+idx+54,8);
 	uint16_t calccrc = 0;
 
 	for (uint8_t i = 1; i < 6; ++i){
-		calccrc += bytebits_to_byte(BitStream + idx + 9 * i ,8);
+		calccrc += bytebits_to_byte(bits + idx + 9 * i ,8);
 	}
 	calccrc &= 0xff;
 	calccrc = 0xff - calccrc;
 
-	if  (crc == calccrc) {
+	if (crc == calccrc) {
 		snprintf(crcStr, 3, "ok");
 		retval = 1;
 	} else {
@@ -167,7 +170,7 @@ int CmdIOProxDemod(const char *Cmd) {
 	}
 
 	PrintAndLog("IO Prox XSF(%02d)%02x:%05d (%08x%08x) [crc %s]", version, facilitycode, number, code, code2, crcStr);
-	setDemodBuf(BitStream, 64, idx);
+
 	if (g_debugMode){
 		PrintAndLog("DEBUG: IO prox idx: %d, Len: %d, Printing demod buffer:", idx, 64);
 		printDemodBuff();
@@ -237,6 +240,8 @@ int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits) {
 	pre[++pos] = SEPARATOR;
 
 	memcpy(bits, pre, sizeof(pre));
+	
+	printf("IO raw bits:\n %s \n", sprint_bin(bits, 64));
 	return 1;
 }
 
@@ -291,8 +296,7 @@ int CmdIOProxClone(const char *Cmd) {
 	uint16_t cn = 0;
 	uint8_t version = 0, fc = 0;
 	uint8_t bits[64];
-	uint8_t *bs=bits;
-	memset(bs,0,sizeof(bits));
+	memset(bits,0,sizeof(bits));
 	
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_io_clone();
@@ -308,23 +312,20 @@ int CmdIOProxClone(const char *Cmd) {
 		PrintAndLog("Card Number Truncated to 16-bits (IOProx): %u", cn);
 	}
 	
+	if ( !getIOProxBits(version, fc, cn, bits)) {
+		PrintAndLog("Error with tag bitstream generation.");
+		return 1;
+	}
+	
 	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
 		blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
 
-	if ( !getIOProxBits(version, fc, cn, bs)) {
-		PrintAndLog("Error with tag bitstream generation.");
-		return 1;
-	}	
-
-	blocks[1] = bytebits_to_byte(bs,32);
-	blocks[2] = bytebits_to_byte(bs+32,32);
+	blocks[1] = bytebits_to_byte(bits, 32);
+	blocks[2] = bytebits_to_byte(bits + 32, 32);
 
 	PrintAndLog("Preparing to clone IOProx to T55x7 with Version: %u FC: %u, CN: %u", version, fc, cn);
-	PrintAndLog("Blk | Data ");
-	PrintAndLog("----+------------");
-	PrintAndLog(" 00 | 0x%08x", blocks[0]);
-	PrintAndLog(" 01 | 0x%08x", blocks[1]);
-	PrintAndLog(" 02 | 0x%08x", blocks[2]);
+	print_blocks(blocks, 3);
+	
 	//UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 	UsbCommand c = {CMD_IO_CLONE_TAG, {blocks[1],blocks[2],0}};
 	clearCommandBuffer();

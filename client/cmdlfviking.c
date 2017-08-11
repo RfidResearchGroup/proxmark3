@@ -117,11 +117,15 @@ int CmdVikingClone(const char *Cmd) {
 	rawID = getVikingBits(id);
 	
 	PrintAndLog("Cloning - ID: %08X, Raw: %08X%08X",id,(uint32_t)(rawID >> 32),(uint32_t) (rawID & 0xFFFFFFFF));
-	UsbCommand c = {CMD_VIKING_CLONE_TAG,{rawID >> 32, rawID & 0xFFFFFFFF, Q5}};
+	
+	UsbCommand c = {CMD_VIKING_CLONE_TAG, {rawID >> 32, rawID & 0xFFFFFFFF, Q5}};
 	clearCommandBuffer();
     SendCommand(&c);
-	//check for ACK
-	WaitForResponse(CMD_ACK,NULL);
+	UsbCommand resp;
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
+		PrintAndLog("Error occurred, device did not respond during write operation.");
+		return -1;
+	}
     return 0;
 }
 

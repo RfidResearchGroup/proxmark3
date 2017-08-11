@@ -19,12 +19,11 @@ int GridOffset = 0;
 bool GridLocked = false;
 bool showDemod = true;
 
-extern pthread_mutex_t print_lock;
+pthread_mutex_t print_lock;
 
 static char *logfilename = "proxmark3.log";
 
-void PrintAndLog(char *fmt, ...)
-{
+void PrintAndLog(char *fmt, ...) {
 	char *saved_line;
 	int saved_point;
 	va_list argptr, argptr2;
@@ -130,7 +129,7 @@ void iceIIR_Butterworth(int *data, const size_t len){
 					 
         // compute instantaneous frequency by looking at phase difference
         // between adjacent samples
-        float freq = cargf(x*conjf(x_prime));
+        float freq = cargf(x * conjf(x_prime));
         x_prime = x;    // retain this sample for next iteration
 
 		output[i] =(freq > 0) ? 127 : -127;

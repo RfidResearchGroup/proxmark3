@@ -201,18 +201,12 @@ int CmdPrescoClone(const char *Cmd) {
 	blocks[4] = fullcode;
 
 	PrintAndLog("Preparing to clone Presco to T55x7 with SiteCode: %u, UserCode: %u, FullCode: %08x", sitecode, usercode, fullcode);
-	PrintAndLog("Blk | Data ");
-	PrintAndLog("----+------------");
-	PrintAndLog(" 00 | 0x%08x", blocks[0]);
-	PrintAndLog(" 01 | 0x%08x", blocks[1]);
-	PrintAndLog(" 02 | 0x%08x", blocks[2]);
-	PrintAndLog(" 03 | 0x%08x", blocks[3]);	
-	PrintAndLog(" 04 | 0x%08x", blocks[4]);	
+	print_blocks(blocks, 5);
 	
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
-	for (int i=4; i>=0; i--) {
+	for (uint8_t i=0; i<5; i++) {
 		c.arg[0] = blocks[i];
 		c.arg[1] = i;
 		clearCommandBuffer();

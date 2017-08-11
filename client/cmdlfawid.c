@@ -165,6 +165,9 @@ int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
 	size_t bitLen = addParity(pre, bits+8, 66, 4, 1);
 
 	if (bitLen != 88) return 0;
+	
+	printf("awid raw bits:\n %s \n", sprint_bin(bits, bitLen));
+	
 	return 1;
 }
 
@@ -260,6 +263,10 @@ int CmdAWIDDemod(const char *Cmd) {
 		return 0;
 	}
 
+	setDemodBuf(bits, size, idx);
+	setClockGrid(50, waveIdx + (idx*50));
+
+
 	// Index map
 	// 0            10            20            30              40            50              60
 	// |            |             |             |               |             |               |
@@ -277,9 +284,7 @@ int CmdAWIDDemod(const char *Cmd) {
 	uint32_t rawLo = bytebits_to_byte(bits + idx + 64, 32);
 	uint32_t rawHi = bytebits_to_byte(bits + idx + 32, 32);
 	uint32_t rawHi2 = bytebits_to_byte(bits + idx, 32);
-	setDemodBuf(bits, 96, idx);
-	setClockGrid(g_DemodClock, g_DemodStartIdx + (idx*g_DemodClock));
-	
+
 	size = removeParity(bits, idx+8, 4, 1, 88);
 	if (size != 66){
 		if (g_debugMode) PrintAndLog("DEBUG: Error - AWID at parity check-tag size does not match AWID format");
@@ -389,7 +394,6 @@ int CmdAWIDSim(const char *Cmd) {
 	uint64_t arg1 = (high << 8) + low;
 	uint64_t arg2 = (invert << 8) + clk;
 
-	
 	// AWID uses: FSK2a fcHigh: 10, fcLow: 8, clk: 50, invert: 1
 	// arg1 --- fcHigh<<8 + fcLow
 	// arg2 --- Inversion and clk setting
@@ -429,17 +433,12 @@ int CmdAWIDClone(const char *Cmd) {
 		return 1;
 	}	
 
-	blocks[1] = bytebits_to_byte(bs,32);
-	blocks[2] = bytebits_to_byte(bs+32,32);
-	blocks[3] = bytebits_to_byte(bs+64,32);
+	blocks[1] = bytebits_to_byte(bs, 32);
+	blocks[2] = bytebits_to_byte(bs + 32, 32);
+	blocks[3] = bytebits_to_byte(bs + 64, 32);
 
 	PrintAndLog("Preparing to clone AWID %u to T55x7 with FC: %u, CN: %u", fmtlen, fc, cn);
-	PrintAndLog("Blk | Data ");
-	PrintAndLog("----+------------");
-	PrintAndLog(" 00 | 0x%08x", blocks[0]);
-	PrintAndLog(" 01 | 0x%08x", blocks[1]);
-	PrintAndLog(" 02 | 0x%08x", blocks[2]);
-	PrintAndLog(" 03 | 0x%08x", blocks[3]);	
+	print_blocks(blocks, 4);
 	
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};

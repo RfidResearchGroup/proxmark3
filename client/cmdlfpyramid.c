@@ -16,7 +16,7 @@ int usage_lf_pyramid_clone(void){
 	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
 	PrintAndLog("Currently only works on 26bit");
 	PrintAndLog("");
-	PrintAndLog("Usage: lf pyramid clone [h] <Facility-Code> <Card-Number>");
+	PrintAndLog("Usage: lf pyramid clone [h] <Facility-Code> <Card-Number> [Q5]");
 	PrintAndLog("Options :");
 	PrintAndLog("  h               : this help");
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
@@ -33,7 +33,7 @@ int usage_lf_pyramid_sim(void) {
 	PrintAndLog("The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
 	PrintAndLog("Currently work only on 26bit");
 	PrintAndLog("");
-	PrintAndLog("Usage:  lf pyramid sim [h] <Card-Number>");
+	PrintAndLog("Usage:  lf pyramid sim [h] <Facility-Code> <Card-Number>");
 	PrintAndLog("Options :");
 	PrintAndLog("  h               : this help");
 	PrintAndLog("  <Facility-Code> :  8-bit value facility code");
@@ -53,7 +53,7 @@ int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx) {
 	if (justNoise(dest, *size)) return -1;
 
 	// FSK demodulator
-	*size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx);  // fsk2a RF/50 
+	*size = fskdemod(dest, *size, 50, 0, 10, 8, waveStartIdx);  // fsk2 RF/50 
 	if (*size < 128) return -2;  //did we get a good demod?
 	size_t startIdx = 0;
 	uint8_t preamble[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1};
@@ -252,7 +252,6 @@ int CmdPyramidClone(const char *Cmd) {
 
 	uint32_t facilitycode=0, cardnumber=0, fc = 0, cn = 0;
 	uint32_t blocks[5];
-	uint8_t i;
 	uint8_t bs[128];
 	memset(bs, 0x00, sizeof(bs));
 
@@ -269,24 +268,22 @@ int CmdPyramidClone(const char *Cmd) {
 	//Pyramid - compat mode, FSK2a, data rate 50, 4 data blocks
 	blocks[0] = T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 4 << T55x7_MAXBLOCK_SHIFT;
 
+	// Q5
 	if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q')
 		blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(50) | 4 << T5555_MAXBLOCK_SHIFT;
 
-	blocks[1] = bytebits_to_byte(bs,32);
-	blocks[2] = bytebits_to_byte(bs+32,32);
-	blocks[3] = bytebits_to_byte(bs+64,32);
-	blocks[4] = bytebits_to_byte(bs+96,32);
+	blocks[1] = bytebits_to_byte(bs, 32);
+	blocks[2] = bytebits_to_byte(bs + 32, 32);
+	blocks[3] = bytebits_to_byte(bs + 64, 32);
+	blocks[4] = bytebits_to_byte(bs + 96, 32);
 
 	PrintAndLog("Preparing to clone Farpointe/Pyramid to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
-	PrintAndLog("Blk | Data ");
-	PrintAndLog("----+------------");
-	for ( i = 0; i<5; ++i )
-		PrintAndLog(" %02d | 0x%08" PRIx32, i, blocks[i]);
+	print_blocks(blocks, 5);
 
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
-	for ( i = 0; i<5; ++i ) {
+	for (uint8_t i = 0; i < 5; ++i ) {
 		c.arg[0] = blocks[i];
 		c.arg[1] = i;
 		clearCommandBuffer();
@@ -311,10 +308,11 @@ int CmdPyramidSim(const char *Cmd) {
 	memset(bs, 0x00, size);
 	
 	// Pyramid uses:  fcHigh: 10, fcLow: 8, clk: 50, invert: 0
-	uint64_t arg1, arg2;
-	arg1 = (10 << 8) + 8;
-	arg2 = 50 | 0;
-
+	uint8_t clk = 50, invert = 0, high = 10, low = 8;
+	uint16_t arg1, arg2;	
+	arg1 = high << 8 | low;
+	arg2 = invert << 8 | clk;
+	
 	if (sscanf(Cmd, "%u %u", &fc, &cn ) != 2) return usage_lf_pyramid_sim();
 
 	facilitycode = (fc & 0x000000FF);

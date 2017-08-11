@@ -726,7 +726,7 @@ uint16_t countFC(uint8_t *BitStream, size_t size, uint8_t fskAdj) {
 			if (fcCounter>0 && fcLensFnd<15){
 				//add new fc length 
 				fcCnts[fcLensFnd]++;
-				fcLens[fcLensFnd++]=fcCounter;
+				fcLens[fcLensFnd++] = fcCounter;
 			}
 			fcCounter=0;
 		} else {
@@ -1521,7 +1521,7 @@ size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t clk, uint8_t invert, u
 
 		//add to our destination the bits we collected		
 		memset(dest+numBits, dest[i-1] ^ invert , n);
-		if (g_debugMode == 2) prnt("ICCE::  n %u | numbits %u", n, numBits);
+		//if (g_debugMode == 2) prnt("ICCE::  n %u | numbits %u", n, numBits);
 		numBits += n;
 		n = 0;
 		lastval = dest[i];

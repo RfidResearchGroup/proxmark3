@@ -269,11 +269,8 @@ int CmdGuardClone(const char *Cmd) {
 	memset(bs, 0x00, sizeof(bs));
 	
 	//GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
-	uint32_t blocks[5] = {T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
+	uint32_t blocks[4] = {T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
 	
-	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
-		blocks[0] = T5555_MODULATION_FSK2 | T5555_SET_BITRATE(50) | 3 << T5555_MAXBLOCK_SHIFT;
-
 	if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn ) != 3) return usage_lf_guard_clone();
 
 	fmtlen &= 0x7f;
@@ -285,15 +282,16 @@ int CmdGuardClone(const char *Cmd) {
 		return 1;
 	}	
 
-	blocks[1] = bytebits_to_byte(bs,32);
-	blocks[2] = bytebits_to_byte(bs+32,32);
-	blocks[3] = bytebits_to_byte(bs+64,32);
+	// Q5
+	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
+		blocks[0] = T5555_MODULATION_FSK2 | T5555_SET_BITRATE(50) | 3 << T5555_MAXBLOCK_SHIFT;
+
+	blocks[1] = bytebits_to_byte(bs, 32);
+	blocks[2] = bytebits_to_byte(bs + 32, 32);
+	blocks[3] = bytebits_to_byte(bs + 64, 32);
 
 	PrintAndLog("Preparing to clone Guardall to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
-	PrintAndLog("Blk | Data ");
-	PrintAndLog("----+------------");
-	for ( i = 0; i<4; ++i )
-		PrintAndLog(" %02d | 0x%08x", i, blocks[i]);
+	print_blocks(blocks, 4);
 
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};

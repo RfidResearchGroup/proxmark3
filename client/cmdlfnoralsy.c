@@ -178,8 +178,7 @@ int CmdNoralsyClone(const char *Cmd) {
 	uint32_t id = 0;
 	uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | T55x7_ST_TERMINATOR | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0};
 	uint8_t bits[96];
-	uint8_t *bs = bits;
-	memset(bs, 0, sizeof(bits));
+	memset(bits, 0, sizeof(bits));
 	
 	char cmdp = param_getchar(Cmd, 0);
 	if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_noralsy_clone();
@@ -191,28 +190,23 @@ int CmdNoralsyClone(const char *Cmd) {
 	if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q')
 		blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 	
-	 if ( !getnoralsyBits(id, year, bs)) {
+	 if ( !getnoralsyBits(id, year, bits)) {
 		PrintAndLog("Error with tag bitstream generation.");
 		return 1;
 	}	
 	
 	// 
-	blocks[1] = bytebits_to_byte(bs,32);
-	blocks[2] = bytebits_to_byte(bs+32,32);
-	blocks[3] = bytebits_to_byte(bs+64,32);
+	blocks[1] = bytebits_to_byte(bits, 32);
+	blocks[2] = bytebits_to_byte(bits + 32, 32);
+	blocks[3] = bytebits_to_byte(bits + 64, 32);
 
 	PrintAndLog("Preparing to clone Noralsy to T55x7 with CardId: %u", id);
-	PrintAndLog("Blk | Data ");
-	PrintAndLog("----+------------");
-	PrintAndLog(" 00 | 0x%08x", blocks[0]);
-	PrintAndLog(" 01 | 0x%08x", blocks[1]);
-	PrintAndLog(" 02 | 0x%08x", blocks[2]);
-	PrintAndLog(" 03 | 0x%08x", blocks[3]);
+	print_blocks(blocks, 4);
 	
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
-	for (int i = 3; i >= 0; --i) {
+	for (uint8_t i=0; i<4; i++) {
 		c.arg[0] = blocks[i];
 		c.arg[1] = i;
 		clearCommandBuffer();

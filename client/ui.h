@@ -32,8 +32,8 @@ void ShowGui(void);
 void HideGraphWindow(void);
 void ShowGraphWindow(void);
 void RepaintGraphWindow(void);
-void PrintAndLog(char *fmt, ...);
-void SetLogFilename(char *fn);
+extern void PrintAndLog(char *fmt, ...);
+extern void SetLogFilename(char *fn);
 
 extern double CursorScaleFactor;
 extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, CursorCPos, CursorDPos, GridOffset;
@@ -42,6 +42,6 @@ extern int flushAfterWrite;   //buzzy
 extern bool GridLocked;
 extern bool showDemod;
 
-void iceIIR_Butterworth(int * data, const size_t len);
-void iceSimple_Filter(int *data, const size_t len, uint8_t k);
+extern void iceIIR_Butterworth(int * data, const size_t len);
+extern void iceSimple_Filter(int *data, const size_t len, uint8_t k);
 #endif

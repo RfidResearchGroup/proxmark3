@@ -163,7 +163,7 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 	if ( breaks > 0 && len % breaks != 0) 
 		rowlen = ( len+(len/breaks) > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len+(len/breaks);
 	
-	//printf("(sprint_bin_break) rowlen %d\n", rowlen);
+	printf("(sprint_bin_break) rowlen %d\n", rowlen);
 	
 	static char buf[MAX_BIN_BREAK_LENGTH]; // 3072 + end of line characters if broken at 8 bits
 	//clear memory
@@ -182,8 +182,7 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
 		}
 		in_index++;
 	}
-	// last char.
-	sprintf(tmp++, "%u", data[in_index]);
+
 	return buf;
 }
 /*
@@ -261,6 +260,18 @@ char *sprint_ascii(const uint8_t *data, const size_t len) {
 		++i;
 	}
 	return buf;
+}
+
+void print_blocks(uint32_t *data, size_t len) {
+	PrintAndLog("Blk | Data ");
+	PrintAndLog("----+------------");
+
+	if ( !data ) {
+		PrintAndLog("..empty data");
+	} else {
+		for (uint8_t i=0; i<len; i++)
+			PrintAndLog(" %02d | 0x%08X", i, data[i]);
+	}
 }
 
 void num_to_bytes(uint64_t n, size_t len, uint8_t* dest) {

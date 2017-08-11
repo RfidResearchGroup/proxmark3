@@ -241,15 +241,14 @@ int CmdLFNedapClone(const char *Cmd) {
 
 	uint32_t cardnumber=0, cn = 0;
 	uint32_t blocks[5];
-	uint8_t i;
-	uint8_t bs[128];
-	memset(bs, 0x00, sizeof(bs));
+	uint8_t bits[128];
+	memset(bits, 0x00, sizeof(bits));
 
 	if (sscanf(Cmd, "%u", &cn ) != 1) return usage_lf_nedap_clone();
 
 	cardnumber = (cn & 0x00FFFFFF);
 	
-	if ( !GetNedapBits(cardnumber, bs)) {
+	if ( !GetNedapBits(cardnumber, bits)) {
 		PrintAndLog("Error with tag bitstream generation.");
 		return 1;
 	}	
@@ -262,21 +261,18 @@ int CmdLFNedapClone(const char *Cmd) {
 	if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
 		blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 7 <<T5555_MAXBLOCK_SHIFT;
 
-	blocks[1] = bytebits_to_byte(bs,32);
-	blocks[2] = bytebits_to_byte(bs+32,32);
-	blocks[3] = bytebits_to_byte(bs+64,32);
-	blocks[4] = bytebits_to_byte(bs+96,32);
+	blocks[1] = bytebits_to_byte(bits, 32);
+	blocks[2] = bytebits_to_byte(bits + 32, 32);
+	blocks[3] = bytebits_to_byte(bits + 64, 32);
+	blocks[4] = bytebits_to_byte(bits + 96, 32);
 
 	PrintAndLog("Preparing to clone NEDAP to T55x7 with card number: %u", cardnumber);
-	PrintAndLog("Blk | Data ");
-	PrintAndLog("----+------------");
-	for ( i = 0; i<5; ++i )
-		PrintAndLog(" %02d | %08" PRIx32, i, blocks[i]);
+	print_blocks(blocks, 5);
 
 	UsbCommand resp;
 	UsbCommand c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}};
 
-	for ( i = 0; i<5; ++i ) {
+	for (uint8_t i = 0; i<5; ++i ) {
 		c.arg[0] = blocks[i];
 		c.arg[1] = i;
 		clearCommandBuffer();
